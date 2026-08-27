@@ -1,0 +1,15 @@
+<UserControl x:Class="XinSpect.FieldRow"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <Grid Margin="0,4">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="160"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}"
+                   Text="{Binding Label, RelativeSource={RelativeSource AncestorType={x:Type local:FieldRow}}}"/>
+        <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}"
+                   Text="{Binding Value, RelativeSource={RelativeSource AncestorType={x:Type local:FieldRow}}}"/>
+    </Grid>
+</UserControl>

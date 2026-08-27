@@ -1,0 +1,17 @@
+<UserControl x:Class="XinSpect.Oscilloscope"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             MinHeight="96">
+    <Border CornerRadius="8" Background="#0A1410" BorderThickness="1" BorderBrush="#12351F" ClipToBounds="True">
+        <Grid>
+            <Canvas x:Name="GridLines" IsHitTestVisible="False"/>
+            <Canvas x:Name="Plot" IsHitTestVisible="False"/>
+            <Grid Margin="9,6,9,0" VerticalAlignment="Top">
+                <TextBlock x:Name="CaptionText" FontSize="11.5" FontWeight="SemiBold"
+                           Foreground="#5FB98A" HorizontalAlignment="Left"/>
+                <TextBlock x:Name="ValueText" FontSize="12.5" FontWeight="SemiBold"
+                           Foreground="#7DF7B4" HorizontalAlignment="Right"/>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

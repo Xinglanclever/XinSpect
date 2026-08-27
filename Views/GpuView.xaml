@@ -1,0 +1,191 @@
+<UserControl x:Class="XinSpect.GpuView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <TextBlock Style="{StaticResource SectionHeader}" Text="顯示卡"/>
+
+            <!-- 運算平台（CUDA 版本；無 NVIDIA CUDA 驅動時顯示 ****） -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding Live.HasGpu, Converter={StaticResource BoolToVis}}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="CUDA 版本"
+                               VerticalAlignment="Center" Margin="0,0,14,0"/>
+                    <TextBlock Grid.Column="1" Text="{Binding CudaVersion}" FontSize="20" FontWeight="SemiBold"
+                               Foreground="{StaticResource GoodBrush}" VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+
+            <Border Style="{StaticResource Card}"
+                    Visibility="{Binding Live.HasGpu, Converter={StaticResource InverseBoolToVis}}">
+                <TextBlock Style="{StaticResource FieldLabel}"
+                           Text="未偵測到獨立顯示卡感測器，或顯示卡未提供即時資料。"
+                           HorizontalAlignment="Center" Margin="0,18"/>
+            </Border>
+
+            <ItemsControl ItemsSource="{Binding Live.Gpus}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <local:BrandBadge Kind="Gpu" EmblemSize="48" Margin="0,0,0,8"
+                                                  Brand="{Binding Brand}" Model="{Binding Name}"/>
+                                <local:FieldRow Label="廠商" Value="{Binding VendorText}"/>
+
+                                <Grid Margin="0,4,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <local:FieldRow Label="核心時脈" Value="{Binding CoreClockText}"/>
+                                        <local:FieldRow Label="記憶體時脈" Value="{Binding MemClockText}"/>
+                                        <local:FieldRow Label="顯示記憶體" Value="{Binding VramText}"/>
+                                        <local:FieldRow Label="功耗" Value="{Binding PowerText}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1">
+                                        <local:FieldRow Label="使用率" Value="{Binding LoadText}"/>
+                                        <local:FieldRow Label="風扇" Value="{Binding FanText}"/>
+                                        <local:FieldRow Label="溫度" Value="{Binding TempText}"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <Grid Margin="0,10,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="使用率"
+                                               VerticalAlignment="Center"/>
+                                    <ProgressBar Grid.Column="1" Style="{StaticResource LoadBar}" Value="{Binding LoadPercent, Mode=OneWay}"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- 深度規格 (CPU-Z) -->
+            <Border Style="{StaticResource Card}" Margin="0,2,0,12"
+                    Visibility="{Binding HasGpuDetails, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="深度規格 (CPU-Z)"/>
+                    <ItemsControl ItemsSource="{Binding GpuDetails}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <local:BrandBadge Kind="Gpu" EmblemSize="34" Margin="0,0,0,8"
+                                                          Brand="{Binding Brand}" Model="{Binding Title}"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                                <local:FieldRow Label="核心代號" Value="{Binding Codename}"/>
+                                                <local:FieldRow Label="核心家族" Value="{Binding CoreFamily}"/>
+                                                <local:FieldRow Label="製程" Value="{Binding Technology}"/>
+                                                <local:FieldRow Label="著色器單元" Value="{Binding Cores}"/>
+                                                <local:FieldRow Label="光柵單元 (ROP)" Value="{Binding RopUnits}"/>
+                                                <local:FieldRow Label="紋理單元 (TMU)" Value="{Binding TmUnits}"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                                <local:FieldRow Label="顯示記憶體" Value="{Binding MemorySize}"/>
+                                                <local:FieldRow Label="記憶體類型" Value="{Binding MemoryType}"/>
+                                                <local:FieldRow Label="記憶體位元寬度" Value="{Binding MemoryBusWidth}"/>
+                                                <local:FieldRow Label="核心時脈" Value="{Binding BaseCoreClock}"/>
+                                                <local:FieldRow Label="記憶體時脈" Value="{Binding BaseMemClock}"/>
+                                                <local:FieldRow Label="驅動版本" Value="{Binding DriverVersion}"/>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,8"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                                <local:FieldRow Label="供應商 ID" Value="{Binding VendorId}"/>
+                                                <local:FieldRow Label="裝置 ID" Value="{Binding ModelId}"/>
+                                                <local:FieldRow Label="修訂 ID" Value="{Binding RevisionId}"/>
+                                                <local:FieldRow Label="硬體修訂" Value="{Binding Revision}"/>
+                                                <local:FieldRow Label="板卡製造商" Value="{Binding BoardManufacturer}"/>
+                                                <local:FieldRow Label="板卡料號" Value="{Binding BoardPartNumber}"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                                <local:FieldRow Label="加速核心時脈" Value="{Binding BoostCoreClock}"/>
+                                                <local:FieldRow Label="加速記憶體時脈" Value="{Binding BoostMemClock}"/>
+                                                <local:FieldRow Label="功耗上限" Value="{Binding PowerLimit}"/>
+                                                <local:FieldRow Label="溫度上限" Value="{Binding ThermalLimit}"/>
+                                                <local:FieldRow Label="WDDM 版本" Value="{Binding Wddm}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- NVML 深度資訊（NVIDIA 官方介面即時讀取；每欄失敗即誠實省略） -->
+            <Border Style="{StaticResource Card}" Margin="0,2,0,12"
+                    DataContext="{Binding GpuOc}"
+                    Visibility="{Binding HasNvmlGroups, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="NVML 硬核資訊"/>
+                        <Border Background="{StaticResource GoodBrush}" CornerRadius="5" Padding="6,1" Margin="10,2,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="NVIDIA 官方介面・真實讀取" Foreground="White" FontSize="10.5" FontWeight="SemiBold"/>
+                        </Border>
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding NvmlGroups}" Margin="0,4,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,10" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource AccentBrush}" Margin="0,0,0,6"/>
+                                        <ItemsControl ItemsSource="{Binding Fields}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <UniformGrid Columns="2"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <local:FieldRow Label="{Binding Label}" Value="{Binding Value}" Margin="0,0,12,0"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- 即時走勢（主顯示卡：使用率 / 溫度 / 顯示記憶體占用） -->
+            <Border Style="{StaticResource Card}" Margin="0,2,0,0"
+                    Visibility="{Binding Live.HasGpu, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="即時走勢（近 90 秒）"/>
+                    <local:HistoryGraph Height="110" Caption="GPU 使用率 (%)" Margin="0,0,0,10"
+                                        History="{Binding GpuHist}" Stroke="{StaticResource WarningBrush}"/>
+                    <local:HistoryGraph Height="110" Caption="GPU 溫度 (°C)" Margin="0,0,0,10"
+                                        History="{Binding GpuTempHist}" Stroke="{StaticResource SeriousBrush}"/>
+                    <local:HistoryGraph Height="110" Caption="顯示記憶體占用 (MB)"
+                                        History="{Binding GpuVramHist}" Stroke="{StaticResource AccentBrush}"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

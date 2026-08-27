@@ -1,0 +1,125 @@
+<UserControl x:Class="XinSpect.StorageView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <TextBlock Style="{StaticResource SectionHeader}" Text="儲存"/>
+
+            <!-- 磁碟空間甜甜圈（各邏輯磁碟已用比例）── 置於最頂 -->
+            <Border Style="{StaticResource Card}" local:Anim.RevealDelay="0">
+                <StackPanel>
+                    <Grid Margin="0,0,0,4">
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="磁碟空間" Margin="2,0,0,0"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" HorizontalAlignment="Right"
+                                   Text="{Binding Volumes.SummaryText}"/>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Volumes.Volumes}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <local:DonutChart Margin="6,8"
+                                                  Fraction="{Binding UsedFraction}"
+                                                  Caption="{Binding CaptionText}"
+                                                  Caption2="{Binding FreeText}"
+                                                  SubText="{Binding SizeText}"
+                                                  RingBrush="{Binding Severity, Converter={StaticResource SeverityToBrush}}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- 儲存裝置（即時 S.M.A.R.T. 與 WMI 深度靜態資訊整合為單一區塊，消除重複顯示） -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="70"
+                    Visibility="{Binding Live.HasDrives, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="儲存裝置"/>
+                    <ItemsControl ItemsSource="{Binding Live.Drives}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,0,10">
+                                    <StackPanel>
+                                        <!-- 標題列：品牌徽章＋型號，右側即時溫度/已用 -->
+                                        <Grid Margin="0,0,0,10">
+                                            <local:BrandBadge Kind="Disk" EmblemSize="34" HorizontalAlignment="Left"
+                                                              Brand="{Binding Brand}" Model="{Binding DisplayModel}"/>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <Border Style="{StaticResource Chip}" Margin="0,0,8,0">
+                                                    <TextBlock Text="{Binding TypeText}" Style="{StaticResource FieldValue}" FontSize="12.5"/>
+                                                </Border>
+                                                <TextBlock Style="{StaticResource FieldValue}" VerticalAlignment="Center" Margin="4,0,0,0"
+                                                           Text="{Binding TempText}"
+                                                           Foreground="{Binding TempSeverity, Converter={StaticResource SeverityToBrush}}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                                <local:FieldRow Label="磁碟編號" Value="{Binding CountText}"/>
+                                                <local:FieldRow Label="容量" Value="{Binding CapacityText}"/>
+                                                <local:FieldRow Label="介面" Value="{Binding InterfaceType}"/>
+                                                <local:FieldRow Label="匯流排" Value="{Binding BusText}"/>
+                                                <local:FieldRow Label="媒體類型" Value="{Binding MediaType}"/>
+                                                <local:FieldRow Label="剩餘壽命" Value="{Binding LifeText}"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                                <local:FieldRow Label="序號" Value="{Binding SerialNumber}"/>
+                                                <local:FieldRow Label="韌體" Value="{Binding Firmware}"/>
+                                                <local:FieldRow Label="分割數" Value="{Binding PartitionsText}"/>
+                                                <local:FieldRow Label="磁區大小" Value="{Binding SectorText}"/>
+                                                <local:FieldRow Label="已用空間" Value="{Binding UsedText}"/>
+                                                <local:FieldRow Label="健康狀態" Value="{Binding HealthText}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- 磁碟活動走勢（可切換：全部顯示 / 單獨顯示） -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="140"
+                    Visibility="{Binding Live.HasDrives, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <Grid Margin="0,0,0,8">
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="磁碟活動時間（近 90 秒）" Margin="2,0,0,0"/>
+                        <ComboBox Style="{StaticResource DarkCombo}" Width="220" HorizontalAlignment="Right"
+                                  ItemsSource="{Binding DiskViewChoices}" SelectedIndex="{Binding DiskViewIndex, Mode=TwoWay}"
+                                  ToolTip="選擇顯示全部硬碟或單一硬碟"/>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding DiskActivityView}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,0,0,12">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                        <local:BrandBadge Kind="Disk" Compact="True" EmblemSize="22" ShowModel="False"
+                                                          Brand="{Binding Brand}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Name}"
+                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="　・ 使用中 " VerticalAlignment="Center"/>
+                                        <TextBlock Style="{StaticResource FieldValue}" Text="{Binding ActivityText}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <local:HistoryGraph Height="80" History="{Binding ActivityHist}"
+                                                        Stroke="{StaticResource AccentBrush}" Caption="活動時間 (%)" ShowValue="False"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Style="{StaticResource FieldLabel}" Margin="4,10,0,0"
+                       Text="剩餘壽命與溫度來自 S.M.A.R.T.，部分裝置或未提供。"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

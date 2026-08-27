@@ -1,0 +1,575 @@
+<UserControl x:Class="XinSpect.BenchView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <TextBlock Style="{StaticResource SectionHeader}" Text="效能測試"/>
+
+            <!-- ===== 象棋跑分（原生 perft，無執行緒上限 + 原版 Fritz 對照） ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="0">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="象棋跑分（原生節點吞吐）"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                   Text="{Binding Chess.LogicalCores, StringFormat=本機 {0} 邏輯核心}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="以西洋棋 perft（合法走法產生 + 走子/還原）為確定性運算負載，量測節點速率（kN/s）與相對倍率（×）。每執行緒各持獨立引擎、無鎖競爭，可超額訂閱實體核心。"/>
+
+                    <!-- 執行緒選擇 -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="執行緒" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                        <Button x:Name="ChessT1" Style="{StaticResource ToolButton}" Content="單執行緒" Margin="0,0,6,0" Click="ChessT1_Click"/>
+                        <Button x:Name="ChessTAll" Style="{StaticResource ToolButton}" Margin="0,0,6,0" Click="ChessTAll_Click"
+                                Content="全部核心"/>
+                        <Button x:Name="ChessT64" Style="{StaticResource ToolButton}" Content="64" Margin="0,0,6,0" Click="ChessT64_Click"/>
+                        <Button x:Name="ChessT128" Style="{StaticResource ToolButton}" Content="128" Margin="0,0,6,0" Click="ChessT128_Click"/>
+                        <Button x:Name="ChessT256" Style="{StaticResource ToolButton}" Content="256" Margin="0,0,12,0" Click="ChessT256_Click"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="自訂" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBox x:Name="ChessCustom" Width="72" VerticalContentAlignment="Center"
+                                 Text="{Binding Chess.ThreadCount, UpdateSourceTrigger=LostFocus}"
+                                 Background="{StaticResource Surface2Brush}" Foreground="{StaticResource PrimaryInkBrush}"
+                                 BorderBrush="{StaticResource HairlineBrush}" Padding="6,4"/>
+                    </StackPanel>
+
+                    <!-- 測試時間 + 起停 -->
+                    <DockPanel Margin="0,12,0,0" LastChildFill="False">
+                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="測試時間" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <Button x:Name="ChessD5" Style="{StaticResource ToolButton}" Content="5 秒" Margin="0,0,6,0" Click="ChessD5_Click"/>
+                            <Button x:Name="ChessD10" Style="{StaticResource ToolButton}" Content="10 秒" Margin="0,0,6,0" Click="ChessD10_Click"/>
+                            <Button x:Name="ChessD30" Style="{StaticResource ToolButton}" Content="30 秒" Click="ChessD30_Click"/>
+                        </StackPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="ChessStop" Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
+                                    Click="ChessStop_Click" IsEnabled="{Binding Chess.IsRunning}"/>
+                            <Button x:Name="ChessStart" Style="{StaticResource PrimaryButton}" Content="開始跑分"
+                                    Click="ChessStart_Click" IsEnabled="{Binding Chess.CanStart}"/>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <ProgressBar Style="{StaticResource LoadBar}" Margin="0,14,0,0"
+                                 Value="{Binding Chess.ProgressPercent, Mode=OneWay}"/>
+                    <DockPanel Margin="0,8,0,0" LastChildFill="False">
+                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource FieldValue}" Text="{Binding Chess.Phase}"/>
+                        <TextBlock DockPanel.Dock="Right" Style="{StaticResource FieldValue}" Text="{Binding Chess.ThreadText}"/>
+                    </DockPanel>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap"
+                               Text="{Binding Chess.StatusLine}"/>
+
+                    <!-- 結果數值 -->
+                    <UniformGrid Rows="1" Columns="3" Margin="0,14,0,0">
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="0,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="單執行緒" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding Chess.SingleText}" FontSize="24" Margin="0,2,0,0"
+                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                <TextBlock Text="{Binding Chess.SingleFactorText}" Style="{StaticResource FieldLabel}"
+                                           Margin="0,2,0,0" Foreground="{StaticResource AccentBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="5,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="多執行緒" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding Chess.MultiText}" FontSize="24" Margin="0,2,0,0"
+                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                <TextBlock Text="{Binding Chess.MultiFactorText}" Style="{StaticResource FieldLabel}"
+                                           Margin="0,2,0,0" Foreground="{StaticResource AccentBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="5,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="加速比" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding Chess.SpeedupText}" FontSize="24" Margin="0,2,0,0"
+                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                <TextBlock Text="{Binding Chess.BestText}" Style="{StaticResource FieldLabel}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+
+                    <!-- 原版 Fritz 對照 -->
+                    <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,12" Margin="0,12,0,0">
+                        <DockPanel LastChildFill="True">
+                            <Button x:Name="FritzBtn" DockPanel.Dock="Right" Style="{StaticResource ToolButton}"
+                                    Content="啟動原版 Fritz" Click="Fritz_Click" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="原版 Fritz Chess Benchmark（16 執行緒對照）" Style="{StaticResource FieldValue}"/>
+                                <TextBlock Text="{Binding Chess.FritzStatus}" Style="{StaticResource Subtitle}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- 參考對照表 -->
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="參考對照（示意，非實測）" Margin="2,14,0,6"/>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="90"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource ColHead}" Text="機型"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="約略速率"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="倍率" TextAlignment="Right"/>
+                    </Grid>
+                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,4"/>
+                    <ItemsControl ItemsSource="{Binding Chess.Reference}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="28">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="150"/>
+                                        <ColumnDefinition Width="90"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldValue}" Text="{Binding Machine}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Rate}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding Factor}" TextAlignment="Right"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== 烤機（穩定度壓力測試） ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="40">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="烤機（穩定度壓力測試）"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                   Text="{Binding Stress.Threads, StringFormat=全部 {0} 執行緒滿載}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="以全部邏輯執行緒持續高強度運算，將 CPU 推至滿載，觀察長時間高負載下的溫度、頻率與是否降頻。請搭配下方「即時走勢」的溫度 / 頻率曲線一同判讀。"/>
+
+                    <DockPanel LastChildFill="False">
+                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="烤機時間" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <Button x:Name="StressD60" Style="{StaticResource ToolButton}" Content="1 分鐘" Margin="0,0,6,0" Click="StressD60_Click"/>
+                            <Button x:Name="StressD300" Style="{StaticResource ToolButton}" Content="5 分鐘" Margin="0,0,6,0" Click="StressD300_Click"/>
+                            <Button x:Name="StressD600" Style="{StaticResource ToolButton}" Content="10 分鐘" Margin="0,0,6,0" Click="StressD600_Click"/>
+                            <Button x:Name="StressDInf" Style="{StaticResource ToolButton}" Content="持續" Click="StressDInf_Click"/>
+                        </StackPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="StressStop" Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
+                                    Click="StressStop_Click" IsEnabled="{Binding Stress.IsRunning}"/>
+                            <Button x:Name="StressStart" Style="{StaticResource PrimaryButton}" Content="開始烤機"
+                                    Click="StressStart_Click" IsEnabled="{Binding Stress.CanStart}"/>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <ProgressBar Style="{StaticResource LoadBar}" Margin="0,14,0,0"
+                                 Value="{Binding Stress.ProgressPercent, Mode=OneWay}"/>
+                    <DockPanel Margin="0,8,0,0" LastChildFill="False">
+                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource FieldValue}" Text="{Binding Stress.Phase}"/>
+                        <TextBlock DockPanel.Dock="Right" Style="{StaticResource FieldValue}" Text="{Binding Stress.ElapsedText}"/>
+                    </DockPanel>
+
+                    <!-- 極值與穩定度 -->
+                    <UniformGrid Rows="1" Columns="4" Margin="0,14,0,0">
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="最高溫度" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding Stress.MaxTempText}" FontSize="22" Margin="0,2,0,0"
+                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="最高頻率" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding Stress.MaxClockText}" FontSize="22" Margin="0,2,0,0"
+                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="最低頻率（滿載）" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding Stress.MinClockText}" FontSize="22" Margin="0,2,0,0"
+                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="穩定度" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding Stress.StabilityText}" FontSize="15" Margin="0,4,0,0" TextWrapping="Wrap"
+                                           Foreground="{Binding Stress.StabilitySeverity, Converter={StaticResource SeverityToBrush}}"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Text="{Binding Stress.StatusLine}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== 綜合效能測試（單/多執行緒運算 + 記憶體頻寬） ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="60">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="綜合效能測試"/>
+                    <DockPanel LastChildFill="False">
+                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="測試時間" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <Button x:Name="Dur10" Style="{StaticResource ToolButton}" Content="10 秒" Margin="0,0,6,0" Click="Dur10_Click"/>
+                            <Button x:Name="Dur30" Style="{StaticResource ToolButton}" Content="30 秒" Margin="0,0,6,0" Click="Dur30_Click"/>
+                            <Button x:Name="Dur60" Style="{StaticResource ToolButton}" Content="60 秒" Click="Dur60_Click"/>
+                        </StackPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="StopBtn" Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
+                                    Click="Stop_Click" IsEnabled="{Binding Bench.IsRunning}"/>
+                            <Button x:Name="StartBtn" Style="{StaticResource PrimaryButton}" Content="開始測試"
+                                    Click="Start_Click" IsEnabled="{Binding Bench.CanStart}"/>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <ProgressBar Style="{StaticResource LoadBar}" Margin="0,16,0,0"
+                                 Value="{Binding Bench.ProgressPercent, Mode=OneWay}"/>
+                    <DockPanel Margin="0,8,0,0" LastChildFill="False">
+                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource FieldValue}" Text="{Binding Bench.Phase}"/>
+                        <TextBlock DockPanel.Dock="Right" Style="{StaticResource FieldValue}"
+                                   Text="{Binding Bench.ProgressPercent, StringFormat={}{0:0} %}"/>
+                    </DockPanel>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap"
+                               Text="{Binding Bench.StatusLine}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 測試期間即時走勢 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="120">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="測試期間即時走勢（近 90 秒）"/>
+                    <UniformGrid Rows="1" Columns="3">
+                        <local:HistoryGraph Height="120" Margin="0,0,6,0" Caption="CPU 使用率"
+                                            History="{Binding CpuLoadHist}" Stroke="{StaticResource AccentBrush}"/>
+                        <local:HistoryGraph Height="120" Margin="3,0,3,0" Caption="CPU 溫度"
+                                            History="{Binding CpuTempHist}" Stroke="{StaticResource SeriousBrush}"/>
+                        <local:HistoryGraph Height="120" Margin="6,0,0,0" Caption="CPU 頻率"
+                                            History="{Binding CpuClockHist}" Stroke="{StaticResource WarningBrush}"/>
+                    </UniformGrid>
+                </StackPanel>
+            </Border>
+
+            <!-- 綜合測試結果 -->
+            <Border Style="{StaticResource Card}" local:Anim.RevealDelay="180">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="綜合測試結果"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- 綜合分數 -->
+                        <Border Grid.Column="0" Background="{StaticResource Surface2Brush}" CornerRadius="12"
+                                Padding="28,20" Margin="0,4,20,4" VerticalAlignment="Center">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding Bench.CompositeText}" FontSize="46" FontWeight="Bold"
+                                           HorizontalAlignment="Center"
+                                           Foreground="{StaticResource AccentBrush}"/>
+                                <TextBlock Text="綜合分數" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                <TextBlock Text="{Binding Bench.BestText}" Style="{StaticResource Subtitle}"
+                                           HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 分項結果 -->
+                        <UniformGrid Grid.Column="1" Rows="1" Columns="3" VerticalAlignment="Center">
+                            <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="0,4,5,4">
+                                <StackPanel>
+                                    <TextBlock Text="單執行緒" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{Binding Bench.SingleText}" FontSize="28" Margin="0,2,0,0"
+                                               Foreground="{StaticResource PrimaryInkBrush}"/>
+                                    <TextBlock Text="MOPS ・ 每秒百萬次運算" Style="{StaticResource FieldLabel}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="5,4,5,4">
+                                <StackPanel>
+                                    <TextBlock Text="多執行緒" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{Binding Bench.MultiText}" FontSize="28" Margin="0,2,0,0"
+                                               Foreground="{StaticResource PrimaryInkBrush}"/>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,2,0,0"
+                                               Text="{Binding Bench.Threads, StringFormat=MOPS ・ {0} 執行緒}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="5,4,0,4">
+                                <StackPanel>
+                                    <TextBlock Text="記憶體頻寬" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{Binding Bench.MemText}" FontSize="28" Margin="0,2,0,0"
+                                               Foreground="{StaticResource PrimaryInkBrush}"/>
+                                    <TextBlock Text="GB/s ・ 大區塊複製" Style="{StaticResource FieldLabel}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Style="{StaticResource FieldLabel}" Margin="4,10,0,14" TextWrapping="Wrap"
+                       Text="綜合分數 = 單執行緒 × 2 + 多執行緒 + 記憶體頻寬 × 20；分數為相對值，用於同機前後比較。測試期間請避免其他高負載程式。"/>
+
+            <!-- ===== 快取 / 記憶體延遲 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="200">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="快取 / 記憶體延遲"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button x:Name="CacheStop" Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
+                                    Click="CacheStop_Click" IsEnabled="{Binding Cache.IsRunning}"/>
+                            <Button x:Name="CacheStart" Style="{StaticResource PrimaryButton}" Content="開始測試"
+                                    Click="CacheStart_Click" IsEnabled="{Binding Cache.CanStart}"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="以指標追逐法量測不同工作集大小的隨機存取延遲，藉延遲跳升推估各級快取與主記憶體的存取延遲（數值越低越快）。"/>
+
+                    <UniformGrid Rows="1" Columns="4" Margin="0,0,0,4">
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="L1 快取" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding Cache.L1Text}" FontSize="20" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="L2 快取" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding Cache.L2Text}" FontSize="20" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="L3 快取" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding Cache.L3Text}" FontSize="20" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="主記憶體" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding Cache.RamText}" FontSize="20" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+
+                    <ProgressBar Style="{StaticResource LoadBar}" Margin="0,12,0,0" Value="{Binding Cache.ProgressPercent, Mode=OneWay}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding Cache.StatusLine}"/>
+
+                    <!-- 各工作集延遲曲線（長條） -->
+                    <ItemsControl ItemsSource="{Binding Cache.Rows}" Margin="0,10,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="26">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="90"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldValue}" Text="{Binding SizeText}" VerticalAlignment="Center"/>
+                                    <ProgressBar Grid.Column="1" Style="{StaticResource LoadBar}" Maximum="1" VerticalAlignment="Center"
+                                                 Margin="0,0,10,0" Value="{Binding BarFraction, Mode=OneWay}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding LatencyText}"
+                                               TextAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== SuperPI 圓周率運算 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="240">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="SuperPI 圓周率運算"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="以 Chudnovsky 級數搭配二分裂解計算圓周率至指定位數，為單執行緒純運算負載；「完成所需時間」即為分數（越短越好），常用於比較單核運算效能。計時僅涵蓋實際運算，不含將上億位結果轉為十進位字串的輸出步驟。5000 萬／1 億位極耗時（數分鐘至數小時）且佔用大量記憶體，請斟酌選用。"/>
+
+                    <DockPanel LastChildFill="True">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="12,0,0,0">
+                            <Button x:Name="PiStop" Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
+                                    Click="PiStop_Click" IsEnabled="{Binding SuperPi.IsRunning}"/>
+                            <Button x:Name="PiStart" Style="{StaticResource PrimaryButton}" Content="開始計算"
+                                    Click="PiStart_Click" IsEnabled="{Binding SuperPi.CanStart}"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="位數"/>
+                            <WrapPanel Margin="0,6,0,0">
+                                <Button x:Name="PiD1" Style="{StaticResource ToolButton}" Content="10 萬位" Margin="0,0,6,6" Click="PiD1_Click"/>
+                                <Button x:Name="PiD2" Style="{StaticResource ToolButton}" Content="50 萬位" Margin="0,0,6,6" Click="PiD2_Click"/>
+                                <Button x:Name="PiD3" Style="{StaticResource ToolButton}" Content="100 萬位" Margin="0,0,6,6" Click="PiD3_Click"/>
+                                <Button x:Name="PiD4" Style="{StaticResource ToolButton}" Content="1000 萬位" Margin="0,0,6,6" Click="PiD4_Click"/>
+                                <Button x:Name="PiD5" Style="{StaticResource ToolButton}" Content="5000 萬位" Margin="0,0,6,6" Click="PiD5_Click"/>
+                                <Button x:Name="PiD6" Style="{StaticResource ToolButton}" Content="1 億位" Margin="0,0,0,6" Click="PiD6_Click"/>
+                            </WrapPanel>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Background="{StaticResource Surface2Brush}" CornerRadius="12"
+                                Padding="28,18" Margin="0,0,16,0" VerticalAlignment="Center">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding SuperPi.ElapsedText}" FontSize="34" FontWeight="Bold"
+                                           HorizontalAlignment="Center" Foreground="{StaticResource AccentBrush}"/>
+                                <TextBlock Text="完成時間（越短越好）" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <ProgressBar Style="{StaticResource LoadBar}" Value="{Binding SuperPi.ProgressPercent, Mode=OneWay}"/>
+                            <DockPanel Margin="0,8,0,0" LastChildFill="False">
+                                <TextBlock DockPanel.Dock="Left" Style="{StaticResource FieldValue}" Text="{Binding SuperPi.Phase}"/>
+                                <TextBlock DockPanel.Dock="Right" Style="{StaticResource FieldValue}" Text="{Binding SuperPi.DigitsText}"/>
+                            </DockPanel>
+                            <TextBlock Style="{StaticResource FieldLabel}" Margin="0,8,0,0" Text="計算結果（前 40 位）"/>
+                            <TextBlock Style="{StaticResource FieldValue}" Margin="0,2,0,0" Text="{Binding SuperPi.Preview}" TextWrapping="Wrap"
+                                       FontFamily="Consolas"/>
+                            <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" Text="{Binding SuperPi.BestText}"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,10,0,0" TextWrapping="Wrap" Text="{Binding SuperPi.StatusLine}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== 磁碟效能測試 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="280">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="磁碟效能測試"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="於所選磁碟建立約 512 MB 暫存檔，量測循序讀寫（MB/s）與隨機 4K 讀寫（IOPS），完成後自動刪除暫存檔。全程採未緩衝直接 I/O（繞過作業系統讀寫快取，避免讀到快取殘留而失真），隨機 4K 為佇列深度 1（QD1）。"/>
+
+                    <DockPanel LastChildFill="False">
+                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="目標磁碟" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <ComboBox Style="{StaticResource DarkCombo}" Width="240"
+                                      ItemsSource="{Binding DiskBench.Drives}"
+                                      SelectedIndex="{Binding DiskBench.SelectedDriveIndex, Mode=TwoWay}"/>
+                        </StackPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="DiskBenchStop" Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
+                                    Click="DiskBenchStop_Click" IsEnabled="{Binding DiskBench.IsRunning}"/>
+                            <Button x:Name="DiskBenchStart" Style="{StaticResource PrimaryButton}" Content="開始測試"
+                                    Click="DiskBenchStart_Click" IsEnabled="{Binding DiskBench.CanStart}"/>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <ProgressBar Style="{StaticResource LoadBar}" Margin="0,14,0,0" Value="{Binding DiskBench.ProgressPercent, Mode=OneWay}"/>
+                    <DockPanel Margin="0,8,0,0" LastChildFill="False">
+                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource FieldValue}" Text="{Binding DiskBench.Phase}"/>
+                        <TextBlock DockPanel.Dock="Right" Style="{StaticResource FieldValue}"
+                                   Text="{Binding DiskBench.ProgressPercent, Mode=OneWay, StringFormat={}{0:0}%}"/>
+                    </DockPanel>
+
+                    <UniformGrid Rows="1" Columns="4" Margin="0,14,0,0">
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="循序讀取" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding DiskBench.SeqReadText}" FontSize="20" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="循序寫入" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding DiskBench.SeqWriteText}" FontSize="20" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="隨機 4K 讀取" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding DiskBench.RandReadText}" FontSize="20" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="隨機 4K 寫入" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding DiskBench.RandWriteText}" FontSize="20" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,10,0,0" TextWrapping="Wrap" Text="{Binding DiskBench.StatusLine}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== Windows 體驗指數（WinSAT） ===== -->
+            <Border Style="{StaticResource Card}" local:Anim.RevealDelay="240">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="Windows 體驗指數（WinSAT）"/>
+                        <Button x:Name="WinsatBtn" Style="{StaticResource ToolButton}" Content="重新評分"
+                                HorizontalAlignment="Right" VerticalAlignment="Center"
+                                Click="Winsat_Click" IsEnabled="{Binding Winsat.CanRun}"/>
+                    </Grid>
+                    <Grid Margin="0,6,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- 基礎分（WinSPR） -->
+                        <Border Grid.Column="0" Background="{StaticResource Surface2Brush}" CornerRadius="12"
+                                Padding="30,20" Margin="0,4,20,4" VerticalAlignment="Center">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding Winsat.BaseScoreText}" FontSize="46" FontWeight="Bold"
+                                           HorizontalAlignment="Center" Foreground="{StaticResource AccentBrush}"/>
+                                <TextBlock Text="基礎分數 WinSPR" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                <TextBlock Text="{Binding Winsat.StateText}" Style="{StaticResource Subtitle}"
+                                           HorizontalAlignment="Center" Margin="0,8,0,0" TextWrapping="Wrap" MaxWidth="200" TextAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 子分數 -->
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <UniformGrid Rows="1" Columns="5">
+                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="10,12" Margin="0,0,4,0">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding Winsat.CpuText}" FontSize="22" HorizontalAlignment="Center" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                        <TextBlock Text="處理器" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="10,12" Margin="4,0,4,0">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding Winsat.MemoryText}" FontSize="22" HorizontalAlignment="Center" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                        <TextBlock Text="記憶體" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="10,12" Margin="4,0,4,0">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding Winsat.GraphicsText}" FontSize="22" HorizontalAlignment="Center" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                        <TextBlock Text="圖形" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="10,12" Margin="4,0,4,0">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding Winsat.D3DText}" FontSize="22" HorizontalAlignment="Center" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                        <TextBlock Text="遊戲繪圖" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="10,12" Margin="4,0,0,0">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding Winsat.DiskText}" FontSize="22" HorizontalAlignment="Center" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                        <TextBlock Text="主硬碟" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
+                            <Grid Margin="0,10,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <local:FieldRow Grid.Column="0" Label="評分日期" Value="{Binding Winsat.AssessedText}"/>
+                                <local:FieldRow Grid.Column="1" Label="記憶體頻寬" Value="{Binding Winsat.MemBandwidthText}"/>
+                                <local:FieldRow Grid.Column="2" Label="磁碟吞吐" Value="{Binding Winsat.DiskThroughputText}"/>
+                            </Grid>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Text="{Binding Winsat.StatusLine}"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Style="{StaticResource FieldLabel}" Margin="4,10,0,4" TextWrapping="Wrap"
+                       Text="WinSAT 為 Windows 內建評分（1.0–9.9），基礎分取各子項最低值。重新評分需數分鐘；遠端桌面或無圖形環境下 D3D／遊戲項可能略過，屬正常。"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

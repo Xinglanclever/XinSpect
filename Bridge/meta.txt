@@ -1,0 +1,217 @@
+
+שששששש Intel.Overclocking.SDK.XtuMetadata.KnobMetadata
+  P String Id
+  P String Ids
+  P String Name
+  P String Units
+  P String FormatString
+  P String Description
+  P String ControlType
+  P UInt32 ControlId
+  P UInt32 ControlIds
+  P String Category
+  P String ShowDisabled
+  P String Enumeration
+  P Int32 CategoryOrder
+  P String Ratio
+  M Boolean Equals(Object obj)
+  M String ToString()
+  M Int32 GetHashCode()
+  M Type GetType()
+
+שששששש Intel.Overclocking.SDK.XtuMetadata.KnobMetadataManager
+  ctor pub()
+  M List`1 GetAllEntries()
+  M Boolean TryGetKnob(UInt32 id, ref KnobMetadata& metadata)
+  M Void Initialize()
+  M Void Initialize(Stream knobMetadataStream, String knobExcludesPath)
+  M Boolean Equals(Object obj)
+  M Int32 GetHashCode()
+  M Type GetType()
+  M String ToString()
+
+שששששש Intel.Overclocking.SDK.XtuMetadata.MonitorMetadata
+  P String Id
+  P String Name
+  P String Units
+  P String FormatString
+  P String Description
+  P UInt32 MonitorId
+  M Boolean Equals(Object obj)
+  M String ToString()
+  M Int32 GetHashCode()
+  M Type GetType()
+
+שששששש Intel.Overclocking.SDK.XtuMetadata.MonitorMetadataManager
+  ctor pub()
+  M List`1 GetAllEntries()
+  M Boolean TryGetMonitor(UInt32 id, ref MonitorMetadata& metadata)
+  M Void Initialize()
+  M Void Initialize(Stream monitorMetadataStream)
+  M Boolean Equals(Object obj)
+  M Int32 GetHashCode()
+  M Type GetType()
+  M String ToString()
+
+שששששש Intel.Overclocking.SDK.Tuning.ClientTuningControl
+  ctor pub()
+  P UInt32 Id
+  P Decimal DefaultValue
+  P Decimal ActiveValue
+  P Decimal ProposedValue
+  P Decimal BootValue
+  P Boolean RequiresReboot
+  P List`1 SupportedValues
+  P Boolean IsFavoredCore
+  P Boolean ReadOnly
+  P Boolean Enabled
+  P String Name
+  P String Category
+  P String ShowDisabled
+  P String Description
+  P String Units
+  P String ControlType
+  P String Enumeration
+  P Int32 CategoryOrder
+  P Decimal Ratio
+  P UInt32 TrailLength
+  M String GetMinPossibleValue()
+  M String GetMaxPossibleValue()
+  M Int32 CompareTo(Object obj)
+  M Boolean Equals(Object obj)
+  M Int32 GetHashCode()
+  M Type GetType()
+  M String ToString()
+
+שששששש Intel.Overclocking.SDK.Tuning.ClientTuningProposal
+  P UInt32 Id
+  P Decimal Value
+  M Boolean Equals(Object obj)
+  M Int32 GetHashCode()
+  M String ToString()
+  M Type GetType()
+
+שששששש Intel.Overclocking.SDK.Profile.XtuTuningChangeList
+  ctor pub()
+  ctor pub(XtuTuningChangeList changeList)
+  P List`1 ProposedValues
+  P Boolean RebootRequired
+  M Void Merge(XtuTuningChangeList otherList)
+  M Boolean Equals(Object obj)
+  M Int32 GetHashCode()
+  M Type GetType()
+  M String ToString()
+
+שששששש Intel.Overclocking.SDK.Profile.TuningControlItem
+  ctor pub()
+  ctor pub(TuningControlItem tuningControl)
+  P UInt32 TrailLength
+  P Int32 SortOrder
+  P Boolean Hidden
+  P Boolean IsCompoundControl
+  P Int32 TuningOrder
+  P String Id
+  P ControlType ControlType
+  P String FormatString
+  P String Category
+  P String PrimaryCategory
+  P String SubCategory1
+  P String SubCategory2
+  P String SubCategory3
+  P Boolean ShowDisabled
+  P Boolean IsSettable
+  P String Error
+  P Decimal Ratio
+  P Boolean IsLockedPart
+  P String Name
+  P Boolean IsDisplayedInDap
+  P String Description
+  P String RelatedControls
+  P TuningValue BootValue
+  P TuningValue DefaultValue
+  P TuningValue ActiveValue
+  P TuningValue ProposedValue
+  P Boolean IsRebootRequired
+  P Boolean IsEnabled
+  P TuningValue SessionStartValue
+  P Boolean AllowForceReboot
+  P List`1 PossibleValues
+  P String Units
+  P String Enumeration
+  M Boolean Equals(Object obj)
+  M Int32 GetHashCode()
+  M Type GetType()
+  M String ToString()
+
+שששששש Intel.Overclocking.SDK.Profile.TuningItem
+  ctor pub(String controlId, TuningValue proposedValue, Boolean enabled, Boolean reboot)
+  ctor pub(TuningItem tuningItem)
+  P Boolean IsEnabled
+  P Boolean IsRebootRequired
+  P String ControlId
+  P TuningValue ProposedValue
+  M Boolean Equals(Object obj)
+  M Int32 GetHashCode()
+  M Int32 CompareTo(TuningItem other)
+  M String ToString()
+  M Type GetType()
+
+שששששש Intel.Overclocking.SDK.Profile.TuningValue
+  ctor pub(TuningValue value)
+  P String Display
+  P Decimal Value
+  P String Metadata1
+  P String Metadata2
+  M Int32 GetHashCode()
+  M String ToString()
+  M Boolean Equals(Object obj)
+  M Type GetType()
+  Fs TuningValue UndefinedTuningValue
+
+שששששש Intel.Overclocking.SDK.ServiceInfo.IProcessorInfo [interface]
+  P IEnumerable`1 Cores
+  M String GetBrandString()
+  M Boolean IsIntelSpeedOptimizerSupported()
+  M Boolean IsIntelSpeedOptimizerSupported(IsoType isoType)
+  M Boolean IsOptimizedProcessor()
+  M UInt32 GetPhysicalCpuCoreCount()
+  M UInt32 GetPhysicalCpuEfficientCoreCount()
+  M UInt32 GetLogicalCpuCoreCount()
+  M UInt32 GetMemoryChannelCount()
+  M UInt32 GetMemoryFrequencyPointCount()
+  M Int32 GetOverclockableTurboBins()
+  M Boolean IsSystemUnlocked()
+  M Boolean IsOverclockSupported()
+  M Boolean IsTurboBoostTechnologyEnabled()
+  M String GetCpuFeatureFlags()
+  M String GetSupportedCpuInstructions()
+  M Int64 GetMicrocodeUpdateVersion()
+  M Boolean IsIntegratedGraphicsPresent()
+  M String ProcessorFamily()
+  M String ProcessorModel()
+  M String NumAllowedOCTurboBins()
+  M Boolean TurboOverclockable()
+  M Boolean IsEistIsCapable()
+  M Boolean IsEistIsEnabled()
+  M Boolean IsTurboEnabled()
+  M Boolean IsProcessorGfxOCEnabled()
+  M Boolean IsProcessorIACoreOCEnabled()
+  M Boolean IsProcessorClrOCEnabled()
+  M Boolean IsFavoredCoreSupported()
+  M Boolean IsHwpEnabled()
+  M Boolean IsFIVRSupported()
+  M Boolean IsHybridArchitecture()
+  M Boolean IsAVXDisabled()
+  M Boolean IsAVX512Disabled()
+  M Boolean IsUnderVoltProtectionEnabled()
+  M Boolean IsClient()
+  M Boolean IsVFCurveSupported()
+  M Int32 MaxMemoryFrequencyPoints()
+  M Int32 MaxMemoryChannels()
+  M Boolean IsFllOcMode()
+
+שששששש ¹ֱ¸ױ§Y®ֹ¦Cֱ| KnobMetadata¡G
+  ¥HµL°ׁ«״÷c₪l«״¥ß¹ך¨ׂ
+  ? ₪ט×k GetAllEntries() ¦^¶ַ List`1
+    ¡]×ֵ¶°¦X¡^
+

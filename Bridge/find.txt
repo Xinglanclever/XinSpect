@@ -1,0 +1,83 @@
+
+═══ Intel.Overclocking.SDK.Profile.ProfileLibrary
+  ctor int()
+  M Boolean IsSqliteProfileDbPresent()
+  M Boolean IsXmlProfileDbPresent()
+  M List`1 GetProfiles()
+  M XtuTuningProfile GetProfile(String profileName)
+  M ImportState ImportProfile(String filepath, ref String& profileName)
+  M Void AddControlsThatAreNotAtDefaultValueToThisProfileAtTheirDefaultValue(XtuTuningProfile profile)
+  M Boolean IsReservedProfile(String name)
+  M TuningResult ProposeProfile(String profileName)
+  M ImportResolutionControlsList GetImportedControlList()
+  M ExportState ExportProfile(String profileName, String filepath)
+  M ExportState ExportDefaultProfile(String profileName, String filepath)
+  M Void AddProfile(XtuTuningProfile profile, String hashTag, Boolean isRename, Boolean overrideReserved)
+  M Boolean RemoveProfile(String profileName)
+  M Void UpdateProfile(XtuTuningProfile profile)
+  M Void UpdateProfile(XtuTuningProfile profile, String hashTag, Boolean isRename)
+  M Boolean Equals(Object obj)
+  M Int32 GetHashCode()
+  M Type GetType()
+  M String ToString()
+  Ps ProfileLibrary Instance
+  Ms ImportState AddDefaultProfile(String filename)
+  Ms String GetDefaultProfilePath()
+
+═══ Intel.Overclocking.SDK.ProcessLauncher.ProcessLibrary
+  ctor pub()
+  M Process LaunchShellExecAsUser(String path, String args, Boolean launchTopMost)
+  M Process LaunchProcess(String path, String args)
+  M Process LaunchProcess(String path, String args, UInt32 flags)
+  M Process ValidateAndLaunchProcess(String path, String args, String workingDirectory)
+  M Boolean LaunchUriProcess(Uri uri)
+  M Boolean LaunchDeelevatedProcess(String path)
+  M Process LaunchDeelevatedProcess(String path, String args)
+  M Boolean Equals(Object obj)
+  M Int32 GetHashCode()
+  M Type GetType()
+  M String ToString()
+  Fs String UiLauncherBindingUri
+
+═══ Intel.Overclocking.SDK.Profile.AppProfileLibrary
+  ctor pub()
+  P Decimal BatteryThreshold
+  P Boolean IsHotkeyPairingRunning
+  P IReadOnlyDictionary`2 HotkeyPairs
+  M Void Dispose()
+  M Void EnableBatteryLevelWatch()
+  M Void DisableBatteryLevelWatch()
+  M Boolean IsAppProfilePairingRunning()
+  M Void Start()
+  M Void Stop(Boolean manualTrigger)
+  M List`1 GetProcessProfilePairs()
+  M Boolean HavePairsBeenRemoved()
+  M Boolean AddProcessProfile(String processName, String acProfileName, String batteryProfileName)
+  M Boolean RemoveProcessProfile(String processName)
+  M Boolean UpdateProcessProfile(String processName, String acProfileName, String dcProfileName)
+  M Boolean EnableProcessProfile(String processName, Boolean enable)
+  M Void LoadProcessProfiles()
+  M Boolean IsProcessProfilesFormatValid()
+  M Void StartHotkeyPairing()
+  M Boolean StopHotkeyPairing()
+  M Boolean RegisterHotkeyPairing(HotkeyPattern hotkeyPattern, String profileName)
+  M Boolean RemoveHotkeyPairing(HotkeyPattern hotkeyPattern)
+  M Boolean RemoveHotkeyPairing(String profileName)
+  M Boolean Equals(Object obj)
+  M Int32 GetHashCode()
+  M Type GetType()
+  M String ToString()
+  Fs String BaselineProfileName
+  Ps AppProfileLibrary Instance
+
+═══ 全組件掃描：回傳涉及 ClientTuningControl / TuningControlItem 的方法/屬性：
+  M ITuningLibrary.GetAvailableControls() -> List`1<ClientTuningControl>
+  M ITuningLibrary.RescanAvailableControls() -> List`1<ClientTuningControl>
+  M ITuningLibrary.GetControl(UInt32 controlId) -> ClientTuningControl
+  P ImportResolutionItemList.Control -> TuningControlItem
+  M IProfileHelperMethods.RefreshControlCacheFromTuningLibrary() -> List`1<TuningControlItem>
+  M IProfileHelperMethods.GetTuningControls() -> List`1<TuningControlItem>
+  M ProfileHelperMethods.RefreshControlCacheFromTuningLibrary() -> List`1<TuningControlItem>
+  M ProfileHelperMethods.GetTuningControls() -> List`1<TuningControlItem>
+  P XtuTuningProfile.Controls -> List`1<TuningControlItem>
+

@@ -1,0 +1,110 @@
+<Window x:Class="XinSpect.IconGalleryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:XinSpect"
+        Title="曦覽 XinSpect — 特殊型號徽章一覽" Width="772" SizeToContent="Height" MaxHeight="1180"
+        WindowStartupLocation="CenterScreen" Background="#0E1116">
+    <Window.Resources>
+        <Style x:Key="Sec" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#9FB0C0"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="4,16,0,8"/>
+        </Style>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="#181D25"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="BorderBrush" Value="#242B35"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <!-- 「朕知道了」關閉鈕：朱批朱紅底 + 金框（呼應御批硃筆意象） -->
+        <Style x:Key="CloseBtn" TargetType="Button">
+            <Setter Property="Foreground" Value="#FFF4E2"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="28,9"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" CornerRadius="8" Padding="{TemplateBinding Padding}"
+                                BorderThickness="1.2" BorderBrush="#E8B23A">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#C7382B" Offset="0"/>
+                                    <GradientStop Color="#8A1710" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#D8443A"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#6E1109"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <DockPanel>
+        <!-- 底部固定頁腳：關閉鈕常駐可見（不隨內容捲動） -->
+        <Border DockPanel.Dock="Bottom" Background="#0E1116"
+                BorderBrush="#242B35" BorderThickness="0,1,0,0" Padding="18,12">
+            <Button Content="朕知道了" Style="{StaticResource CloseBtn}"
+                    HorizontalAlignment="Right" Click="Close_Click"/>
+        </Border>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="18,14,18,20">
+                <TextBlock Text="曦覽 XinSpect — 特殊型號徽章示意圖" Foreground="#F2F5F8" FontSize="18" FontWeight="Bold"/>
+                <TextBlock Text="By：Xinglanclever ・ Claude Opus 4.8 ・ 原創向量徽章（非官方商標重製）"
+                           Foreground="#6B7A8A" FontSize="11" Margin="0,3,0,4"/>
+
+                <TextBlock Style="{StaticResource Sec}" Text="Intel 至尊 / 限定"/>
+                <UniformGrid Columns="3">
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Core i7-8086K" Model="Core i7-8086K"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Core i9-9990XE" Model="Core i9-9990XE"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Core i9-10980XE" Model="Core i9-10980XE"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Core i9-9900X" Model="Core i9-9900X"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Core i7-3960X" Model="Core i7-3960X"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Everest" Model="Everest 訂製版"/></Border>
+                </UniformGrid>
+
+                <TextBlock Style="{StaticResource Sec}" Text="Intel Xeon（左上 Xeon；Scalable 右上級別斜面 銅/銀/金/白金、W・E 系右上字母）"/>
+                <UniformGrid Columns="3">
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Xeon Platinum 8480" Model="Xeon Platinum 8480+"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Xeon Gold 6248R" Model="Xeon Gold 6248R"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Xeon Silver 4214" Model="Xeon Silver 4214"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Xeon Bronze 3204" Model="Xeon Bronze 3204"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Xeon W-2295" Model="Xeon W-2295"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Xeon E-2288G" Model="Xeon E-2288G"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Xeon E3-1230 v6" Model="Xeon E3-1230 v6"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Xeon E5-2680 v4" Model="Xeon E5-2680 v4"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Xeon E7-8890 v4" Model="Xeon E7-8890 v4"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Xeon 5160" Model="Xeon 5160"/></Border>
+                </UniformGrid>
+
+                <TextBlock Style="{StaticResource Sec}" Text="AMD ・ Intel Pentium Gold ・ 工程樣品"/>
+                <UniformGrid Columns="3">
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="AMD Ryzen Threadripper 3990X" Model="Ryzen Threadripper 3990X"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="AMD Ryzen 9 5950X" Model="Ryzen 9 5950X"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Pentium Gold G7400" Model="Pentium Gold G7400"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Genuine Intel(R) CPU 0000" Model="工程樣品 0000"/></Border>
+                </UniformGrid>
+
+                <TextBlock Style="{StaticResource Sec}" Text="NVIDIA 顯示卡（Titan 黑底銀邊 ・ Titan V / CEO 銀底金邊 ・ Tesla 綠）"/>
+                <UniformGrid Columns="3">
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Gpu" EmblemSize="54" Model="NVIDIA TITAN RTX"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Gpu" EmblemSize="54" Model="NVIDIA TITAN V"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Gpu" EmblemSize="54" Model="NVIDIA TITAN V CEO Edition"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Gpu" EmblemSize="54" Model="NVIDIA Tesla V100"/></Border>
+                </UniformGrid>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

@@ -1,0 +1,110 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <!-- 磁碟效能測試以未緩衝 I/O 搭配磁區對齊的原生緩衝區（指標），需允許 unsafe -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- app.manifest 的 DPI 設定供 WPF 主體使用；抑制 WinForms 對此的 WFO0003 提醒 -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+
+    <!-- Product metadata -->
+    <AssemblyName>XinSpect</AssemblyName>
+    <Product>曦覽 XinSpect</Product>
+    <AssemblyTitle>曦覽 XinSpect 硬體資訊總覽</AssemblyTitle>
+    <Company>Xinglanclever</Company>
+    <Version>1.2.0</Version>
+    <FileVersion>1.2.0.0</FileVersion>
+    <Copyright>By：Xinglanclever ・ Claude Opus 4.8 ・ 2026年8月24日</Copyright>
+    <UseAppHost>true</UseAppHost>
+    <!-- 應用程式圖示（原創「曦覽」曉光儀表標記；由 make_icon.ps1 產生的多尺寸 .ico）-->
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4129.50" />
+    <PackageReference Include="System.Management" Version="10.0.11" />
+  </ItemGroup>
+
+  <!-- 特殊 CPU 型號的官方 logo 圖檔（選配）：放入 Assets\cpu\{id}.png 即自動採用。
+       以 WPF Resource 編入組件，單檔發佈亦可；缺檔時徽章自動退回原創向量圖，不影響建置。 -->
+  <ItemGroup>
+    <Resource Include="Assets\cpu\*.png" />
+    <!-- 視窗圖示（標題列／工作列）；以 Resource 編入，單檔發佈亦可用 pack URI 讀取 -->
+    <Resource Include="Assets\app.ico" />
+  </ItemGroup>
+
+  <!-- 內嵌原版 Fritz Chess Benchmark（單一自含執行檔），供「啟動原版對照」一鍵解壓執行 -->
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\xiangqi.exe">
+      <LogicalName>XinSpect.Fritz.xiangqi.exe</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <!-- 內嵌 CPU / 顯示卡效能天梯榜資料（JSON；資料來源 topcpu.net），供「天梯」分頁離線讀取 -->
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\data\cpu-ranking.json">
+      <LogicalName>XinSpect.data.cpu-ranking.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Assets\data\gpu-ranking.json">
+      <LogicalName>XinSpect.data.gpu-ranking.json</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <!-- WinForms 僅供系統匣（TrayService）使用；移除其全域 using 以免與 WPF 的 System.Windows.* 型別衝突 -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <!-- ── 超頻橋接程式（net48）：不納入本體檔案集 ─────────────────────────────────
+       Bridge\ 內是承載 Intel XTU SDK 的獨立 net48 專案，使用 net10 沒有的 API
+       （System.Web.Script.Serialization、舊版 WCF），其原始碼與 obj 產生的 .cs 若被
+       本體的預設 glob 收入，會直接破壞 net10 編譯。故一律自各預設項目類型排除。 -->
+  <ItemGroup>
+    <Compile Remove="Bridge\**\*.cs" />
+    <EmbeddedResource Remove="Bridge\**" />
+    <Content Remove="Bridge\**" />
+    <None Remove="Bridge\**" />
+    <Page Remove="Bridge\**" />
+    <Resource Remove="Bridge\**" />
+  </ItemGroup>
+
+  <!-- ── 建置並內嵌 XtuBridge.exe（把工具內建進 App）──────────────────────────────
+       本體不編譯 Bridge 原始碼；改在建置時以巢狀 MSBuild 用其自身的 net48 執行階段建置，
+       再把產出的 XtuBridge.exe 以邏輯名 XinSpect.bridge.XtuBridge.exe 內嵌為資源。
+       執行時 BridgeBootstrap 依此邏輯名取出資源、解壓到 %LOCALAPPDATA%\XinSpect\bridge\，
+       以獨立程序啟動之。單檔發佈時資源隨 XinSpect.dll 一同打包，使用者無須另裝任何檔案。
+       Restore 與 Build 分兩次呼叫（避免同次呼叫沿用過期評估）；巢狀 MSBuild 僅傳入 Configuration，
+       使 Bridge 以自身預設平台（AnyCPU/PlatformTarget=x64）建置，不受本體 win-x64 影響。 -->
+  <Target Name="BuildAndEmbedXtuBridge" BeforeTargets="PrepareForBuild;BeforeCompile">
+    <PropertyGroup>
+      <XtuBridgeProj>$(MSBuildProjectDirectory)\Bridge\XtuBridge.csproj</XtuBridgeProj>
+      <XtuBridgeExe>$(MSBuildProjectDirectory)\Bridge\bin\$(Configuration)\net48\XtuBridge.exe</XtuBridgeExe>
+    </PropertyGroup>
+    <MSBuild Projects="$(XtuBridgeProj)" Targets="Restore" Properties="Configuration=$(Configuration)" />
+    <MSBuild Projects="$(XtuBridgeProj)" Targets="Build" Properties="Configuration=$(Configuration)" />
+    <Error Condition="!Exists('$(XtuBridgeExe)')" Text="超頻橋接程式建置後仍找不到產出：$(XtuBridgeExe)" />
+    <ItemGroup>
+      <EmbeddedResource Include="$(XtuBridgeExe)">
+        <LogicalName>XinSpect.bridge.XtuBridge.exe</LogicalName>
+        <Visible>false</Visible>
+      </EmbeddedResource>
+      <!-- 一併內嵌其組態檔（指定 .NET 4.8 執行階段），與已驗證可用的執行環境完全一致 -->
+      <EmbeddedResource Include="$(XtuBridgeExe).config" Condition="Exists('$(XtuBridgeExe).config')">
+        <LogicalName>XinSpect.bridge.XtuBridge.exe.config</LogicalName>
+        <Visible>false</Visible>
+      </EmbeddedResource>
+    </ItemGroup>
+  </Target>
+
+</Project>

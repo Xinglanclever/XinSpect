@@ -1,0 +1,109 @@
+<UserControl x:Class="XinSpect.BrowserView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             xmlns:local="clr-namespace:XinSpect">
+    <UserControl.Resources>
+        <!-- 網址列與工具列樣式（本檢視自帶，主題未定義 TextBox） -->
+        <Style x:Key="AddressBox" TargetType="TextBox">
+            <Setter Property="Background" Value="#26282C"/>
+            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="CaretBrush" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="8"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="NavBtn" TargetType="Button">
+            <Setter Property="Width" Value="34"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#33FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.35"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 工具列 -->
+        <Border Grid.Row="0" Background="{StaticResource SurfaceBrush}" Padding="8,8" Margin="0,0,0,8"
+                CornerRadius="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="BackBtn" Style="{StaticResource NavBtn}" Click="Back_Click"   Content="‹"  ToolTip="上一頁"/>
+                    <Button x:Name="FwdBtn"  Style="{StaticResource NavBtn}" Click="Forward_Click" Content="›"  ToolTip="下一頁"/>
+                    <Button x:Name="ReloadBtn" Style="{StaticResource NavBtn}" Click="Reload_Click" Content="⟳" ToolTip="重新整理"/>
+                    <Button x:Name="HomeBtn" Style="{StaticResource NavBtn}" Click="Home_Click"   Content="⌂"  ToolTip="首頁（Bing）"/>
+                </StackPanel>
+
+                <TextBox x:Name="AddressBar" Grid.Column="1" Style="{StaticResource AddressBox}" Margin="8,0"
+                         KeyDown="AddressBar_KeyDown"/>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource NavBtn}" Click="Go_Click" Content="→" ToolTip="前往"/>
+                    <Button Style="{StaticResource NavBtn}" Click="OpenExternal_Click" Content="↗" ToolTip="以系統瀏覽器開啟目前網址"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- WebView2 承載區（含未安裝執行階段時的後備提示） -->
+        <Border Grid.Row="1" CornerRadius="10" ClipToBounds="True" Background="#1E2023">
+            <Grid>
+                <wv2:WebView2 x:Name="Web"/>
+                <Border x:Name="Fallback" Visibility="Collapsed" Background="{StaticResource SurfaceBrush}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520">
+                        <TextBlock Text="內建瀏覽器無法啟動" FontSize="18" FontWeight="Bold"
+                                   Foreground="{StaticResource PrimaryInkBrush}" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="FallbackMsg" TextWrapping="Wrap" Margin="0,10,0,0"
+                                   Foreground="{StaticResource SecondaryInkBrush}" TextAlignment="Center"/>
+                        <TextBlock Margin="0,14,0,0" HorizontalAlignment="Center">
+                            <Hyperlink NavigateUri="https://developer.microsoft.com/microsoft-edge/webview2/"
+                                       RequestNavigate="Link_RequestNavigate"
+                                       Foreground="{StaticResource AccentBrush}">下載 WebView2 執行階段</Hyperlink>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

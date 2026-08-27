@@ -1,0 +1,128 @@
+<Window x:Class="XinSpect.OcRiskWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:XinSpect"
+        Title="超頻風險確認"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ShowInTaskbar="False" ResizeMode="NoResize" SizeToContent="Height"
+        Width="560" WindowStartupLocation="CenterOwner"
+        FontFamily="{StaticResource AppFont}" UseLayoutRounding="True">
+    <Window.Resources>
+        <!-- 主要行動鈕（繼續 / 高風險） -->
+        <Style x:Key="RiskPrimary" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="16,11"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="B" CornerRadius="9" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="B" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- 次要 / 中性鈕 -->
+        <Style x:Key="RiskSecondary" TargetType="Button" BasedOn="{StaticResource RiskPrimary}">
+            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="Background" Value="{StaticResource Surface2Brush}"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+        </Style>
+    </Window.Resources>
+
+    <Border CornerRadius="16" Background="{StaticResource SurfaceBrush}"
+            BorderBrush="{StaticResource CriticalBrush}" BorderThickness="1.4">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.55" Color="#000000"/>
+        </Border.Effect>
+
+        <Grid x:Name="Header" Margin="0" Background="Transparent" MouseLeftButtonDown="Header_Drag">
+            <!-- ── 第一階段：風險告知 ─────────────────────────────────────── -->
+            <StackPanel x:Name="Stage1" Margin="28,26,28,24">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                    <Border Width="6" Height="26" CornerRadius="3" Background="{StaticResource CriticalBrush}" Margin="0,0,12,0"/>
+                    <TextBlock Text="超頻風險告知" FontSize="20" FontWeight="Bold"
+                               Foreground="{StaticResource PrimaryInkBrush}" VerticalAlignment="Center"/>
+                    <Border Background="{StaticResource WarningBrush}" CornerRadius="5" Padding="7,2" Margin="12,2,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="測試版" FontSize="11.5" FontWeight="SemiBold" Foreground="#1b1b1b"/>
+                    </Border>
+                </StackPanel>
+
+                <TextBlock Text="投資有風險，超頻需謹慎，此功能面向專業玩家"
+                           FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" LineHeight="26"
+                           Foreground="{StaticResource PrimaryInkBrush}" Margin="0,0,0,22"/>
+
+                <Button x:Name="BtnA" Style="{StaticResource RiskSecondary}" Margin="0,0,0,10" Click="OptionA_Click">
+                    <StackPanel>
+                        <TextBlock Text="嚇哭了" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="離開超頻功能，回到安全的地方" FontSize="11.5" Opacity="0.7" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="BtnB" Style="{StaticResource RiskPrimary}" Margin="0,0,0,10" Click="OptionB_Click">
+                    <StackPanel>
+                        <TextBlock Text="我要超 10GHz 讓全人類感謝我" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="我明白風險，繼續進入" FontSize="11.5" Opacity="0.85" Margin="0,2,0,0" Foreground="White"/>
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="BtnC" Style="{StaticResource RiskSecondary}" Click="OptionC_Click">
+                    <StackPanel>
+                        <TextBlock Text="我知道我在做什麼（今後不再顯示）" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="繼續進入，且不再顯示此風險提示" FontSize="11.5" Opacity="0.7" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <!-- ── 第二階段：免責聲明 ─────────────────────────────────────── -->
+            <StackPanel x:Name="Stage2" Margin="28,26,28,24" Visibility="Collapsed">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                    <Border Width="6" Height="26" CornerRadius="3" Background="{StaticResource CriticalBrush}" Margin="0,0,12,0"/>
+                    <TextBlock Text="免責聲明" FontSize="20" FontWeight="Bold"
+                               Foreground="{StaticResource PrimaryInkBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <TextBlock TextWrapping="Wrap" LineHeight="26" FontSize="14.5"
+                           Foreground="{StaticResource SecondaryInkBrush}" Margin="0,0,0,16">
+                    <Run Text="此為" /><Run Text="測試版功能" FontWeight="Bold" Foreground="{StaticResource WarningBrush}"/><Run Text="，尚未開發完全，仍在持續完善中。" /><LineBreak/>
+                    <Run Text="超頻屬進階操作，可能造成系統不穩定。使用本功能所導致的任何後果，包含但不限於：" /><LineBreak/>
+                </TextBlock>
+
+                <StackPanel Margin="6,0,0,18">
+                    <TextBlock Text="•  檔案丟失" FontSize="14.5" Foreground="{StaticResource PrimaryInkBrush}" Margin="0,0,0,6"/>
+                    <TextBlock Text="•  硬體損毀" FontSize="14.5" Foreground="{StaticResource PrimaryInkBrush}" Margin="0,0,0,6"/>
+                    <TextBlock Text="•  軟體崩潰" FontSize="14.5" Foreground="{StaticResource PrimaryInkBrush}"/>
+                </StackPanel>
+
+                <TextBlock Text="開發者一概不負任何責任。請確認你已了解並自行承擔風險。"
+                           TextWrapping="Wrap" LineHeight="24" FontSize="14.5" FontWeight="SemiBold"
+                           Foreground="{StaticResource PrimaryInkBrush}" Margin="0,0,0,22"/>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="1.4*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Style="{StaticResource RiskSecondary}" HorizontalContentAlignment="Center" Click="Back_Click">
+                        <TextBlock Text="返回" FontSize="14"/>
+                    </Button>
+                    <Button Grid.Column="2" Style="{StaticResource RiskPrimary}" HorizontalContentAlignment="Center" Click="Confirm_Click">
+                        <TextBlock Text="我已了解風險，繼續" FontSize="14" FontWeight="SemiBold" Foreground="White"/>
+                    </Button>
+                </Grid>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

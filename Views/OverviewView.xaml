@@ -1,0 +1,131 @@
+<UserControl x:Class="XinSpect.OverviewView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <TextBlock Style="{StaticResource SectionHeader}" Text="系統總覽"/>
+
+            <!-- 即時儀表 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="0">
+                <UniformGrid Rows="1" Columns="4">
+                    <local:RadialGauge Caption="CPU 使用率" Unit="%"
+                                       Value="{Binding Live.CpuLoad, FallbackValue=0, TargetNullValue=0}"/>
+                    <local:RadialGauge Caption="CPU 溫度" Unit="°C" Max="100"
+                                       Value="{Binding Live.CpuTemp, FallbackValue=0, TargetNullValue=0}"
+                                       ArcBrush="{Binding Live.CpuTempSeverity, Converter={StaticResource SeverityToBrush}}"/>
+                    <local:RadialGauge Caption="記憶體使用率" Unit="%"
+                                       Value="{Binding Live.MemLoad, FallbackValue=0, TargetNullValue=0}"/>
+                    <local:RadialGauge Caption="GPU 使用率" Unit="%"
+                                       Value="{Binding Live.PrimaryGpu.LoadPercent, FallbackValue=0, TargetNullValue=0}"/>
+                </UniformGrid>
+            </Border>
+
+            <!-- 即時走勢 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="60">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="即時走勢（近 90 秒）"/>
+                    <UniformGrid Rows="1" Columns="4">
+                        <local:HistoryGraph Height="104" Margin="0,0,6,0" Caption="CPU 使用率"
+                                            History="{Binding CpuLoadHist}" Stroke="{StaticResource AccentBrush}"/>
+                        <local:HistoryGraph Height="104" Margin="3,0,3,0" Caption="CPU 溫度"
+                                            History="{Binding CpuTempHist}" Stroke="{StaticResource SeriousBrush}"/>
+                        <local:HistoryGraph Height="104" Margin="3,0,3,0" Caption="記憶體"
+                                            History="{Binding MemHist}" Stroke="{StaticResource GoodBrush}"/>
+                        <local:HistoryGraph Height="104" Margin="6,0,0,0" Caption="GPU 使用率"
+                                            History="{Binding GpuHist}" Stroke="{StaticResource WarningBrush}"/>
+                    </UniformGrid>
+                </StackPanel>
+            </Border>
+
+            <!-- AI 評價（獨立入口；可就地評價或開啟完整 AI 助手分頁） -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="90">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="AI 評價" Margin="0,0,0,2"/>
+                        <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" MaxWidth="560" HorizontalAlignment="Left"
+                                   Text="由 AI 依本機真實數據客觀評價效能與配置。可用本機免費 Ollama 或 OpenAI 相容 API，於「設定 › AI 評價」調整。"/>
+                        <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"
+                                   Text="{Binding Ai.StatusText}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
+                        <Button Style="{StaticResource ToolButton}" Content="一鍵評價本機" Margin="0,0,10,0"
+                                IsEnabled="{Binding Ai.CanSend}" Click="AiEvaluate_Click"/>
+                        <Button Style="{StaticResource PrimaryButton}" Content="開啟 AI 助手　▸" Click="OpenAi_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- 硬體識別（自繪向量徽章） -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="120">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="硬體識別"/>
+                    <UniformGrid Columns="2" Rows="2">
+                        <local:BrandBadge Margin="0,8,12,8" Kind="Cpu" EmblemSize="46"
+                                          Brand="{Binding Cpu.Brand}" Model="{Binding Cpu.Name}"
+                                          CpuModel="{Binding Cpu.Name}"/>
+                        <local:BrandBadge Margin="0,8,0,8" Kind="Gpu" EmblemSize="46"
+                                          Brand="{Binding Live.PrimaryGpu.Brand, FallbackValue={x:Static local:Brand.Unknown}}"
+                                          Model="{Binding Live.PrimaryGpu.Name, FallbackValue=未偵測到顯示卡}"/>
+                        <local:BrandBadge Margin="0,8,12,8" Kind="Board" EmblemSize="46"
+                                          Brand="{Binding System.BoardBrand}" Model="{Binding System.BoardModel}"/>
+                        <local:BrandBadge Margin="0,8,0,8" Kind="Ram" EmblemSize="46"
+                                          Brand="{Binding Modules[0].Brand, FallbackValue={x:Static local:Brand.Unknown}}"
+                                          Model="{Binding Modules[0].PartNumber, FallbackValue=—}"/>
+                    </UniformGrid>
+                </StackPanel>
+            </Border>
+
+            <!-- 資訊卡（雙欄） -->
+            <Grid local:Anim.RevealDelay="180">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,7,0">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="作業系統"/>
+                        <local:FieldRow Label="系統" Value="{Binding System.OsName}"/>
+                        <local:FieldRow Label="版本" Value="{Binding System.OsVersion}"/>
+                        <local:FieldRow Label="系統架構" Value="{Binding System.OsArch}"/>
+                        <local:FieldRow Label="主機名稱" Value="{Binding System.HostName}"/>
+                        <local:FieldRow Label="使用者" Value="{Binding System.UserName}"/>
+                        <local:FieldRow Label="開機時間" Value="{Binding System.BootTime}"/>
+                        <local:FieldRow Label="已運行" Value="{Binding System.Uptime}"/>
+                        <local:FieldRow Label="安裝日期" Value="{Binding System.InstallDate}"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="1" Style="{StaticResource Card}" Margin="7,0,0,0">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="機器與主機板"/>
+                        <local:FieldRow Label="製造商" Value="{Binding System.SystemManufacturer}"/>
+                        <local:FieldRow Label="機型" Value="{Binding System.SystemModel}"/>
+                        <local:FieldRow Label="主機板廠商" Value="{Binding System.BoardVendor}"/>
+                        <local:FieldRow Label="主機板型號" Value="{Binding System.BoardModel}"/>
+                        <local:FieldRow Label="BIOS 廠商" Value="{Binding System.BiosVendor}"/>
+                        <local:FieldRow Label="BIOS 版本" Value="{Binding System.BiosVersion}"/>
+                        <local:FieldRow Label="BIOS 日期" Value="{Binding System.BiosDate}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- 快速規格 -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="240">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="核心規格"/>
+                    <local:FieldRow Label="處理器" Value="{Binding Cpu.Name}"/>
+                    <local:FieldRow Label="實體核心" Value="{Binding Cpu.Cores, StringFormat={}{0} 核}"/>
+                    <local:FieldRow Label="邏輯處理器" Value="{Binding Cpu.Threads, StringFormat={}{0} 執行緒}"/>
+                    <local:FieldRow Label="記憶體" Value="{Binding Live.MemUsageText}"/>
+                    <local:FieldRow Label="顯示卡" Value="{Binding Live.PrimaryGpu.Name}"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

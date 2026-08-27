@@ -1,0 +1,135 @@
+<UserControl x:Class="XinSpect.MotherboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <TextBlock Style="{StaticResource SectionHeader}" Text="主機板"/>
+
+            <!-- 品牌徽章 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="0">
+                <local:BrandBadge Kind="Board" EmblemSize="54"
+                                  Brand="{Binding Mainboard.Brand}" Model="{Binding Mainboard.Model}"/>
+            </Border>
+
+            <Grid local:Anim.RevealDelay="60">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 主機板 -->
+                <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,7,0">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="主機板"/>
+                        <local:FieldRow Label="製造商" Value="{Binding Mainboard.Vendor}"/>
+                        <local:FieldRow Label="型號" Value="{Binding Mainboard.Model}"/>
+                        <local:FieldRow Label="匯流排規格" Value="{Binding Mainboard.BusSpec}"/>
+                        <local:FieldRow Label="繪圖介面" Value="{Binding Mainboard.GraphicInterface}"/>
+                        <local:FieldRow Label="PCIe 連結寬度" Value="{Binding Mainboard.PcieLinkWidth}"/>
+                        <local:FieldRow Label="PCIe 連結速度" Value="{Binding Mainboard.PcieLinkSpeed}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- BIOS / UEFI -->
+                <Border Grid.Column="1" Style="{StaticResource Card}" Margin="7,0,0,0">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="BIOS / UEFI"/>
+                        <local:FieldRow Label="模式" Value="{Binding Mainboard.Uefi}"/>
+                        <local:FieldRow Label="BIOS 品牌" Value="{Binding Mainboard.BiosVendor}"/>
+                        <local:FieldRow Label="版本 (CPU-Z)" Value="{Binding Mainboard.BiosMsg}"/>
+                        <local:FieldRow Label="BIOS 版本 (SMBIOS)" Value="{Binding System.BiosVersion}"/>
+                        <local:FieldRow Label="日期" Value="{Binding Mainboard.BiosDate}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- 系統資訊 (WMI) -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="100">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="系統資訊"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                            <local:FieldRow Label="系統製造商" Value="{Binding System.SystemManufacturer}"/>
+                            <local:FieldRow Label="系統型號" Value="{Binding System.SystemModel}"/>
+                            <local:FieldRow Label="系統類型" Value="{Binding System.SystemType}"/>
+                            <local:FieldRow Label="產品序號 (SKU)" Value="{Binding System.SystemSku}"/>
+                            <local:FieldRow Label="系統 UUID" Value="{Binding System.SystemUuid}"/>
+                            <local:FieldRow Label="邏輯處理器數" Value="{Binding System.LogicalProcessors}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                            <local:FieldRow Label="主機板廠商" Value="{Binding System.BoardVendor}"/>
+                            <local:FieldRow Label="主機板型號" Value="{Binding System.BoardModel}"/>
+                            <local:FieldRow Label="主機板版本" Value="{Binding System.BoardVersion}"/>
+                            <local:FieldRow Label="主機板序號" Value="{Binding System.BoardSerial}"/>
+                            <local:FieldRow Label="BIOS 廠商" Value="{Binding System.BiosVendor}"/>
+                            <local:FieldRow Label="BIOS 日期" Value="{Binding System.BiosDate}"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Grid Margin="0,14,0,0" local:Anim.RevealDelay="120">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 晶片組 -->
+                <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,7,0">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="晶片組"/>
+                        <local:FieldRow Label="晶片組型號" Value="{Binding Mainboard.ChipsetName}"/>
+                        <local:FieldRow Label="北橋 / SoC" Value="{Binding Mainboard.Northbridge}"/>
+                        <local:FieldRow Label="南橋 / PCH" Value="{Binding Mainboard.Southbridge}"/>
+                        <local:FieldRow Label="記憶體類型" Value="{Binding Mainboard.MemoryType}"/>
+                        <local:FieldRow Label="記憶體容量" Value="{Binding Mainboard.MemorySize}"/>
+                        <local:FieldRow Label="通道" Value="{Binding Mainboard.Channels}"/>
+                        <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,8"
+                                Visibility="{Binding Mainboard.HasChipsetFeatures, Converter={StaticResource BoolToVis}}"/>
+                        <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap"
+                                   Text="{Binding Mainboard.ChipsetFeatures}"
+                                   Visibility="{Binding Mainboard.HasChipsetFeatures, Converter={StaticResource BoolToVis}}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- LPCIO / 感測晶片 -->
+                <Border Grid.Column="1" Style="{StaticResource Card}" Margin="7,0,0,0">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="LPCIO（超級 I/O）"/>
+                        <local:FieldRow Label="製造商" Value="{Binding Mainboard.LpcioVendor}"/>
+                        <local:FieldRow Label="型號" Value="{Binding Mainboard.LpcioModel}"/>
+                        <TextBlock Style="{StaticResource Subtitle}" Margin="0,10,0,0" TextWrapping="Wrap"
+                                   Text="LPCIO（Super I/O）晶片負責風扇轉速、電壓與溫度感測；其型號決定可讀取的感測通道。"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- 音效裝置 -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="160"
+                    Visibility="{Binding HasSoundDevices, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="音效裝置"/>
+                    <ItemsControl ItemsSource="{Binding SoundDevices}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0,3">
+                                    <Border Width="6" Height="6" CornerRadius="3" Background="{StaticResource AccentBrush}"
+                                            VerticalAlignment="Center" Margin="2,0,10,0"/>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Style="{StaticResource FieldLabel}" Margin="4,14,0,0" TextWrapping="Wrap"
+                       Text="主機板深度規格由背景 CPU-Z 報告解析（約開機後 10 餘秒）；製造商與型號另以 WMI 補入。若部分欄位為「—」，表示該平台未提供或報告尚在讀取。"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

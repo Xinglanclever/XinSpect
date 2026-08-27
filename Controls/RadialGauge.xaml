@@ -1,0 +1,37 @@
+<UserControl x:Class="XinSpect.RadialGauge"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect"
+             Width="132" Height="176">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="132"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <!-- 底環 -->
+            <Ellipse Width="112" Height="112" HorizontalAlignment="Center" VerticalAlignment="Center"
+                     Stroke="{StaticResource HairlineBrush}" StrokeThickness="9"/>
+            <!-- 數值弧（動畫掃掠） -->
+            <Path x:Name="ValueArc" StrokeThickness="9"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                  Stroke="{Binding ArcBrush, RelativeSource={RelativeSource AncestorType={x:Type local:RadialGauge}}}">
+                <Path.Effect>
+                    <DropShadowEffect x:Name="ArcGlow" BlurRadius="12" ShadowDepth="0" Opacity="0.6" Color="#3987e5"/>
+                </Path.Effect>
+            </Path>
+            <!-- 中央數字 + 單位 -->
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock x:Name="NumberText" Text="0" FontSize="27" FontWeight="SemiBold"
+                           Foreground="{StaticResource PrimaryInkBrush}" VerticalAlignment="Center"/>
+                <TextBlock x:Name="UnitText" FontSize="13" Margin="3,0,0,4"
+                           Foreground="{StaticResource SecondaryInkBrush}" VerticalAlignment="Bottom"/>
+            </StackPanel>
+        </Grid>
+
+        <TextBlock Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center"
+                   FontSize="12.5" Foreground="{StaticResource SecondaryInkBrush}"
+                   Text="{Binding Caption, RelativeSource={RelativeSource AncestorType={x:Type local:RadialGauge}}}"/>
+    </Grid>
+</UserControl>

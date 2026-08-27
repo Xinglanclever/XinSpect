@@ -1,0 +1,108 @@
+<UserControl x:Class="XinSpect.ToolboxView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <TextBlock Style="{StaticResource SectionHeader}" Text="工具箱"/>
+
+            <!-- ===== 螢幕色域（EDID） ===== -->
+            <Border Style="{StaticResource Card}" local:Anim.RevealDelay="0">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="螢幕色域"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="自顯示器 EDID 解析 CIE 色度座標，計算色域三角形對 sRGB、Adobe RGB、DCI-P3 三種標準的覆蓋率。"/>
+
+                    <ItemsControl ItemsSource="{Binding Monitors}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="0,0,0,10">
+                                    <StackPanel>
+                                        <DockPanel LastChildFill="False">
+                                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource FieldValue}" Text="{Binding Name}" FontSize="16"/>
+                                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource FieldLabel}" Text="{Binding Manufacturer}" VerticalAlignment="Center"/>
+                                        </DockPanel>
+
+                                        <!-- 三種標準覆蓋率 -->
+                                        <UniformGrid Rows="1" Columns="3" Margin="0,12,0,0"
+                                                     Visibility="{Binding Valid, Converter={StaticResource BoolToVis}}">
+                                            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="8" Padding="12,10" Margin="0,0,5,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="sRGB" Style="{StaticResource FieldLabel}"/>
+                                                    <TextBlock Text="{Binding SrgbText}" FontSize="22" Margin="0,2,0,0" Foreground="{StaticResource AccentBrush}"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="8" Padding="12,10" Margin="5,0,5,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="Adobe RGB" Style="{StaticResource FieldLabel}"/>
+                                                    <TextBlock Text="{Binding AdobeText}" FontSize="22" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="8" Padding="12,10" Margin="5,0,0,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="DCI-P3" Style="{StaticResource FieldLabel}"/>
+                                                    <TextBlock Text="{Binding DciText}" FontSize="22" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </UniformGrid>
+
+                                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" Text="{Binding PrimariesText}"
+                                                   Visibility="{Binding Valid, Converter={StaticResource BoolToVis}}"/>
+                                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,2,0,0" Text="{Binding WhitePointText}"
+                                                   Visibility="{Binding Valid, Converter={StaticResource BoolToVis}}"/>
+                                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,2,0,0" Text="{Binding AreaText}"
+                                                   Visibility="{Binding Valid, Converter={StaticResource BoolToVis}}"/>
+                                        <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding Assessment}"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap"
+                               Visibility="{Binding HasNoMonitors, Converter={StaticResource BoolToVis}}"
+                               Text="未從系統取得可用的 EDID 色度資訊。遠端桌面、虛擬顯示器或部分螢幕可能不提供，此為正常情形。"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== 系統工具 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="80">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="系統工具"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,4" TextWrapping="Wrap"
+                               Text="一鍵開啟 Windows 內建的診斷與管理工具。第三方硬體工具基於安全與授權考量不隨附於本程式，一律導向官方下載頁面。"/>
+
+                    <ItemsControl ItemsSource="{Binding Toolbox.Groups}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,12,0,0">
+                                    <TextBlock Text="{Binding Title}" Style="{StaticResource FieldLabel}" Foreground="{StaticResource AccentBrush}"/>
+                                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,4,0,8"/>
+                                    <ItemsControl ItemsSource="{Binding Items}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel Orientation="Horizontal"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Style="{StaticResource ToolButton}" Margin="0,0,8,8"
+                                                        Content="{Binding Name}" ToolTip="{Binding Description}"
+                                                        Tag="{Binding}" Click="Tool_Click"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,12,0,0" TextWrapping="Wrap" Text="{Binding Toolbox.StatusLine}"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Style="{StaticResource FieldLabel}" Margin="4,12,0,4" TextWrapping="Wrap"
+                       Text="部分系統工具（如記憶體診斷、磁碟管理）可能要求系統管理員權限；DDU 建議於安全模式下使用。"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

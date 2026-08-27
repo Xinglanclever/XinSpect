@@ -1,0 +1,107 @@
+<Window x:Class="XinSpect.CoreDetailWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:XinSpect"
+        Title="每核心明細（溫度・電壓・波形）"
+        Width="560" Height="720"
+        WindowStartupLocation="CenterOwner"
+        FontFamily="{StaticResource AppFont}"
+        Background="{StaticResource PagePlaneBrush}">
+    <!-- DataContext = OverclockService（由開啟端設定）。此視窗僅呈現既有的即時資料與設定值，
+         不進行任何寫入；每核心「電壓」為 XTU 覆寫設定值（非即時量測），已於標題誠實標注。 -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16,16,10,16">
+        <StackPanel>
+
+            <!-- ══ 每核心即時溫度 / 頻率 / 負載 ══════════════════════════════ -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <TextBlock Text="每核心即時溫度" Style="{StaticResource SectionHeader}"/>
+                    <TextBlock Text="溫度／頻率／負載皆為感測器實測值；取不到時顯示「—」。" FontSize="12" Margin="0,0,0,8"
+                               Foreground="{StaticResource MutedInkBrush}"/>
+                    <ItemsControl ItemsSource="{Binding Cores}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="8" Padding="12,8" Margin="0,0,0,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold"
+                                                   VerticalAlignment="Center" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding ClockText}" FontSize="13" MinWidth="90" TextAlignment="Right"
+                                                   VerticalAlignment="Center" Foreground="{StaticResource SecondaryInkBrush}"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding LoadText}" FontSize="13" MinWidth="64" TextAlignment="Right"
+                                                   VerticalAlignment="Center" Foreground="{StaticResource MutedInkBrush}"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding TempText}" FontSize="14.5" FontWeight="Bold" MinWidth="72" TextAlignment="Right"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{Binding TempSeverity, Converter={StaticResource SeverityToBrush}}"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <local:CoreHeatmap Cores="{Binding Cores}" Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ══ 每核心電壓（XTU 覆寫設定值）════════════════════════════════ -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14"
+                    Visibility="{Binding HasCoreTuneRows, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <TextBlock Text="每核心電壓（設定值）" Style="{StaticResource SectionHeader}"/>
+                    <TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="18" Margin="0,0,0,8"
+                               Foreground="{StaticResource MutedInkBrush}"
+                               Text="以下為各核心的電壓覆寫「設定值」與偏移量（來自 XTU 可調項），非每核心即時量測——多數平台僅能量測封裝級 Vcore（見下方波形）。整數倍頻上限一併列出。"/>
+                    <ItemsControl ItemsSource="{Binding CoreTuneRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="8" Padding="12,8" Margin="0,0,0,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Title}" FontSize="13.5" FontWeight="SemiBold" MinWidth="78"
+                                                   VerticalAlignment="Center" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                        <TextBlock Grid.Column="2" MinWidth="96" TextAlignment="Right" VerticalAlignment="Center" FontSize="13"
+                                                   Foreground="{StaticResource SecondaryInkBrush}"
+                                                   Visibility="{Binding HasVoltage, Converter={StaticResource BoolToVis}}"
+                                                   Text="{Binding Voltage.TargetText}"/>
+                                        <TextBlock Grid.Column="3" MinWidth="96" TextAlignment="Right" VerticalAlignment="Center" FontSize="13" Margin="12,0,0,0"
+                                                   Foreground="{StaticResource MutedInkBrush}"
+                                                   Visibility="{Binding HasRatio, Converter={StaticResource BoolToVis}}"
+                                                   Text="{Binding Ratio.TargetText}"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- ══ 封裝級 Vcore 波形（即時量測）══════════════════════════════ -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="封裝 Vcore 波形（即時）" Style="{StaticResource SectionHeader}"/>
+                    <Grid Margin="0,4,0,0">
+                        <TextBlock Text="目前電壓" Style="{StaticResource FieldLabel}" HorizontalAlignment="Left"/>
+                        <TextBlock Text="{Binding VoltageValueText}" HorizontalAlignment="Right" FontSize="15" FontWeight="Bold"
+                                   Foreground="{StaticResource PrimaryInkBrush}"/>
+                    </Grid>
+                    <local:Oscilloscope Height="120" Margin="0,8,0,0"
+                                        History="{Binding OscilloVolt}"
+                                        TraceBrush="#35E06A" Caption="Vcore 波形"/>
+                    <local:Oscilloscope Height="120" Margin="0,12,0,0"
+                                        History="{Binding OscilloCurrent}"
+                                        TraceBrush="#F0C24A" Caption="電流波形（估算 P÷V）"/>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</Window>

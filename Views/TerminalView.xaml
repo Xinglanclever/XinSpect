@@ -1,0 +1,69 @@
+<UserControl x:Class="XinSpect.TerminalView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect"
+             FontFamily="{StaticResource AppFont}">
+    <Grid Margin="0,0,6,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 標題 -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2,0,0,4">
+            <TextBlock Style="{StaticResource Title}" Text="終端"/>
+            <Border Background="{StaticResource WarningBrush}" CornerRadius="5" Padding="7,2" Margin="12,3,0,0" VerticalAlignment="Center">
+                <TextBlock Text="真實 Shell・沿用本程式權限" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+            </Border>
+        </StackPanel>
+        <TextBlock Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Center"
+                   Foreground="{StaticResource SecondaryInkBrush}" FontSize="12"
+                   Text="{Binding ShellName, StringFormat=目前：{0}}"/>
+
+        <!-- 工具列 -->
+        <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,6,0,10" Padding="14,10">
+            <StackPanel Orientation="Horizontal">
+                <CheckBox Content="使用 PowerShell（取消勾選＝命令提示字元 cmd）" VerticalAlignment="Center"
+                          Foreground="{StaticResource PrimaryInkBrush}" FontSize="13"
+                          IsChecked="{Binding UsePowerShell, Mode=TwoWay}"/>
+                <Button Style="{StaticResource PrimaryButton}" Content="啟動／重啟" Margin="16,0,0,0" Click="Restart_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="中止" Margin="8,0,0,0" Click="Interrupt_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="清除輸出" Margin="8,0,0,0" Click="Clear_Click"/>
+                <Ellipse Width="10" Height="10" Margin="16,0,6,0" VerticalAlignment="Center"
+                         Fill="{Binding IsRunning, Converter={StaticResource BoolToRunBrush}}"/>
+                <TextBlock VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource MutedInkBrush}"
+                           Text="{Binding IsRunning, Converter={StaticResource BoolToRunText}}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 輸出 -->
+        <Border Grid.Row="2" CornerRadius="10" Background="#FF0C0C0C"
+                BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1">
+            <TextBox x:Name="OutputBox" Text="{Binding Output, Mode=OneWay}" IsReadOnly="True"
+                     Background="Transparent" BorderThickness="0" Foreground="#FFD6D6D6"
+                     FontFamily="Consolas, 'Cascadia Mono', monospace" FontSize="13"
+                     Padding="12,10" TextWrapping="NoWrap" IsReadOnlyCaretVisible="False"
+                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                     VerticalContentAlignment="Top"/>
+        </Border>
+
+        <!-- 輸入 -->
+        <Grid Grid.Row="3" Margin="0,10,0,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="{Binding UsePowerShell, Converter={StaticResource BoolToPrompt}}"
+                       VerticalAlignment="Center" Margin="2,0,8,0" FontFamily="Consolas"
+                       FontSize="15" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"/>
+            <TextBox x:Name="InputBox" Grid.Column="1" FontFamily="Consolas" FontSize="14"
+                     Background="{StaticResource Surface2Brush}" Foreground="{StaticResource PrimaryInkBrush}"
+                     BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" Padding="10,8"
+                     CaretBrush="{StaticResource AccentBrush}" KeyDown="Input_KeyDown"/>
+            <Button x:Name="RunButton" Grid.Column="2" Style="{StaticResource PrimaryButton}" Content="執行" Margin="10,0,0,0" Click="Run_Click"/>
+        </Grid>
+    </Grid>
+</UserControl>

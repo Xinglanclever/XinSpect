@@ -1,0 +1,200 @@
+<UserControl x:Class="XinSpect.MemoryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <TextBlock Style="{StaticResource SectionHeader}" Text="記憶體"/>
+
+            <!-- 品牌徽章（取第一條模組） -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="0">
+                <local:BrandBadge Kind="Ram" EmblemSize="54"
+                                  Brand="{Binding Modules[0].Brand, FallbackValue={x:Static local:Brand.Unknown}}"
+                                  Model="{Binding Modules[0].PartNumber, FallbackValue=—}"/>
+            </Border>
+
+            <Grid local:Anim.RevealDelay="60">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 時序 -->
+                <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,7,0">
+                    <StackPanel>
+                        <Grid>
+                            <TextBlock Style="{StaticResource SectionHeader}" Text="時序 (CPU-Z)"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Timings.Status}"
+                                       HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        </Grid>
+                        <local:FieldRow Label="記憶體類型" Value="{Binding Timings.MemoryTypeText}"/>
+                        <local:FieldRow Label="通道" Value="{Binding Timings.ChannelsText}"/>
+                        <local:FieldRow Label="DRAM 頻率" Value="{Binding Timings.FrequencyText}"/>
+                        <local:FieldRow Label="資料速率" Value="{Binding Timings.DataRateText}"/>
+                        <local:FieldRow Label="主要時序" Value="{Binding Timings.PrimaryTimingsText}"/>
+                        <local:FieldRow Label="CAS 延遲 (CL)" Value="{Binding Timings.CL}"/>
+                        <local:FieldRow Label="tRCD" Value="{Binding Timings.TRCD}"/>
+                        <local:FieldRow Label="tRP" Value="{Binding Timings.TRP}"/>
+                        <local:FieldRow Label="tRAS" Value="{Binding Timings.TRAS}"/>
+                        <local:FieldRow Label="tRFC" Value="{Binding Timings.TRFC}"/>
+                        <local:FieldRow Label="命令率 (CR)" Value="{Binding Timings.CommandRate}"/>
+                        <local:FieldRow Label="Uncore" Value="{Binding Timings.UncoreText}"/>
+                        <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,8,0,8"/>
+                        <TextBlock Style="{StaticResource ColHead}" Text="次要時序 / 晶片組" Margin="0,0,0,4"/>
+                        <local:FieldRow Label="tCCD" Value="{Binding Timings.TCCD}"/>
+                        <local:FieldRow Label="tCCD_L" Value="{Binding Timings.TCCDL}"/>
+                        <local:FieldRow Label="tCCD_WR" Value="{Binding Timings.TCCDWR}"/>
+                        <local:FieldRow Label="tCCD_WR_L" Value="{Binding Timings.TCCDWRL}"/>
+                        <local:FieldRow Label="記憶體總量" Value="{Binding Timings.MemorySizeText}"/>
+                        <local:FieldRow Label="主橋 (Host Bridge)" Value="{Binding Timings.HostBridge}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 使用量 -->
+                <Border Grid.Column="1" Style="{StaticResource Card}" Margin="7,0,0,0">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="即時使用量"/>
+                        <local:FieldRow Label="總容量" Value="{Binding Live.MemTotalGB, StringFormat={}{0:0.0} GB}"/>
+                        <local:FieldRow Label="已使用" Value="{Binding Live.MemUsedGB, StringFormat={}{0:0.0} GB}"/>
+                        <local:FieldRow Label="可用" Value="{Binding Live.MemAvailGB, StringFormat={}{0:0.0} GB}"/>
+                        <local:FieldRow Label="使用率" Value="{Binding Live.MemLoadText}"/>
+                        <ProgressBar Style="{StaticResource LoadBar}" Value="{Binding Live.MemLoad, Mode=OneWay}" Margin="0,10,0,0"/>
+                        <local:HistoryGraph Height="108" Margin="0,12,0,0" Caption="使用率走勢 (%)"
+                                            History="{Binding MemHist}" Stroke="{StaticResource GoodBrush}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- 模組 -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="120">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="實體模組"/>
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="1.4*"/>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="80"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource ColHead}" Text="插槽"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="製造商"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="型號"/>
+                        <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="類型"/>
+                        <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="型式"/>
+                        <TextBlock Grid.Column="5" Style="{StaticResource ColHead}" Text="容量"/>
+                        <TextBlock Grid.Column="6" Style="{StaticResource ColHead}" Text="速率"/>
+                        <TextBlock Grid.Column="7" Style="{StaticResource ColHead}" Text="電壓"/>
+                    </Grid>
+                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,4"/>
+                    <ItemsControl ItemsSource="{Binding Modules}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="30">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="1.4*"/>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="110"/>
+                                        <ColumnDefinition Width="80"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldValue}" Text="{Binding Slot}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Manufacturer}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding PartNumber}"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding MemoryType}"/>
+                                    <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" Text="{Binding FormFactor}"/>
+                                    <TextBlock Grid.Column="5" Style="{StaticResource FieldValue}" Text="{Binding CapacityText}"/>
+                                    <TextBlock Grid.Column="6" Style="{StaticResource FieldValue}" Text="{Binding SpeedText}"/>
+                                    <TextBlock Grid.Column="7" Style="{StaticResource FieldValue}" Text="{Binding Voltage}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- SPD 深度資料 (CPU-Z) -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="180"
+                    Visibility="{Binding HasSpdModules, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="SPD 深度資料 (CPU-Z)"/>
+                    <ItemsControl ItemsSource="{Binding SpdModules}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <local:BrandBadge Kind="Ram" EmblemSize="34" Margin="0,0,0,8"
+                                                          Brand="{Binding Brand}" Model="{Binding Header}"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                                <local:FieldRow Label="插槽" Value="{Binding Slot}"/>
+                                                <local:FieldRow Label="類型" Value="{Binding MemoryType}"/>
+                                                <local:FieldRow Label="模組格式" Value="{Binding ModuleFormat}"/>
+                                                <local:FieldRow Label="容量" Value="{Binding Size}"/>
+                                                <local:FieldRow Label="製造商" Value="{Binding Manufacturer}"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                                <local:FieldRow Label="料號" Value="{Binding PartNumber}"/>
+                                                <local:FieldRow Label="最高頻寬" Value="{Binding MaxBandwidth}"/>
+                                                <local:FieldRow Label="最高 JEDEC" Value="{Binding MaxJedec}"/>
+                                                <local:FieldRow Label="製造日期" Value="{Binding ManufacturingDate}"/>
+                                                <local:FieldRow Label="標稱電壓" Value="{Binding NominalVoltage}"/>
+                                                <local:FieldRow Label="XMP/EXPO" Value="{Binding XmpSummary}"/>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <!-- JEDEC 標準時序表 -->
+                                        <StackPanel Margin="0,6,0,0"
+                                                    Visibility="{Binding HasJedec, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Style="{StaticResource ColHead}" Text="JEDEC 標準時序" Margin="0,0,0,4"/>
+                                            <ItemsControl ItemsSource="{Binding Jedec}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <local:FieldRow Label="{Binding Label}" Value="{Binding Values}"/>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+
+                                        <ItemsControl ItemsSource="{Binding XmpProfiles}" Margin="0,4,0,0"
+                                                      Visibility="{Binding HasXmp, Converter={StaticResource BoolToVis}}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Margin="0,6,0,0">
+                                                        <TextBlock Style="{StaticResource FieldLabel}"
+                                                                   Text="{Binding Name, StringFormat=效能設定檔：{0}}"/>
+                                                        <local:FieldRow Label="規格" Value="{Binding Specification}"/>
+                                                        <local:FieldRow Label="電壓" Value="{Binding Voltage}"/>
+                                                        <local:FieldRow Label="最高 CL" Value="{Binding MaxCL}"/>
+                                                        <ItemsControl ItemsSource="{Binding Timings}" Margin="0,2,0,0"
+                                                                      Visibility="{Binding HasTimings, Converter={StaticResource BoolToVis}}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <local:FieldRow Label="{Binding Label}" Value="{Binding Values}"/>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

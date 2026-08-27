@@ -1,0 +1,34 @@
+# ---- 建置產物 ----
+[Bb]in/
+[Oo]bj/
+publish/
+Bridge/[Bb]in/
+Bridge/[Oo]bj/
+
+# ---- Visual Studio / Rider ----
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# ---- NuGet ----
+*.nupkg
+*.snupkg
+packages/
+project.lock.json
+project.assets.json
+
+# ---- 執行階段 / 暫存 ----
+*.log
+*.tmp
+*.cache
+
+# ---- 專案內暫存檔（非原始碼）----
+*.zip
+cpuz_probe.txt
+Bridge/dump2.txt
+Bridge/s2.txt
+Bridge/server_out.txt
+Bridge/test_in.txt
