@@ -15,14 +15,14 @@ namespace XinSpect;
 /// </summary>
 public partial class BrowserView : UserControl
 {
-    private const string HomeUrl = "https://www.bing.com/";
     private bool _initStarted;
     private bool _ready;
+    private bool _isLoading;
 
     public BrowserView()
     {
         InitializeComponent();
-        AddressBar.Text = HomeUrl;
+        AddressBar.Text = "";
         Loaded += BrowserView_Loaded;
     }
 
@@ -50,10 +50,12 @@ public partial class BrowserView : UserControl
             core.SourceChanged += (_, _) => SyncAddress();
             core.HistoryChanged += (_, _) => SyncNavButtons();
             core.NewWindowRequested += Core_NewWindowRequested;
+            core.NavigationStarting += (_, _) => SetLoading(true);
+            core.NavigationCompleted += (_, _) => SetLoading(false);
 
             _ready = true;
             SyncNavButtons();
-            Web.Source = new Uri(HomeUrl);
+            GoHome();   // 首頁改為內建的離線「硬體導航」起始頁（A）
         }
         catch (Exception ex)
         {
@@ -76,9 +78,10 @@ public partial class BrowserView : UserControl
 
     private void SyncAddress()
     {
+        if (AddressBar.IsKeyboardFocused) return;
         var src = Web.Source?.ToString();
-        if (!string.IsNullOrEmpty(src) && !AddressBar.IsKeyboardFocused)
-            AddressBar.Text = src;
+        // 起始頁以 NavigateToString 載入，Source 為 about:blank／空 → 網址列留空
+        AddressBar.Text = (string.IsNullOrEmpty(src) || src == "about:blank") ? "" : src;
     }
 
     private void SyncNavButtons()
@@ -88,11 +91,11 @@ public partial class BrowserView : UserControl
         FwdBtn.IsEnabled = core?.CanGoForward ?? false;
     }
 
-    // 將使用者輸入解析為「直接前往的網址」或「以 Bing 搜尋的關鍵字」。
-    private static Uri ResolveInput(string raw)
+    // 將使用者輸入解析為「直接前往的網址」或「以 Bing 搜尋的關鍵字」；空字串回 null（表示回起始頁）。
+    private static Uri? ResolveInput(string raw)
     {
         var text = raw.Trim();
-        if (text.Length == 0) return new Uri(HomeUrl);
+        if (text.Length == 0) return null;
 
         // 已含協定 → 直接前往
         if (text.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
@@ -111,7 +114,8 @@ public partial class BrowserView : UserControl
     private void Navigate()
     {
         if (!_ready) return;
-        try { Web.Source = ResolveInput(AddressBar.Text); }
+        var target = ResolveInput(AddressBar.Text);
+        try { if (target is null) GoHome(); else Web.Source = target; }
         catch { /* 無效輸入時不動作 */ }
     }
 
@@ -123,8 +127,30 @@ public partial class BrowserView : UserControl
     private void Go_Click(object sender, RoutedEventArgs e) => Navigate();
     private void Back_Click(object sender, RoutedEventArgs e) { if (Web.CoreWebView2?.CanGoBack == true) Web.CoreWebView2.GoBack(); }
     private void Forward_Click(object sender, RoutedEventArgs e) { if (Web.CoreWebView2?.CanGoForward == true) Web.CoreWebView2.GoForward(); }
-    private void Reload_Click(object sender, RoutedEventArgs e) => Web.CoreWebView2?.Reload();
-    private void Home_Click(object sender, RoutedEventArgs e) { if (_ready) Web.Source = new Uri(HomeUrl); }
+    // 載入中時作為「停止」鍵，否則為「重新整理」（B）
+    private void Reload_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isLoading) Web.CoreWebView2?.Stop();
+        else Web.CoreWebView2?.Reload();
+    }
+    private void Home_Click(object sender, RoutedEventArgs e) => GoHome();
+
+    // 回到內建離線起始頁（硬體導航）。以 NavigateToString 載入，不需外部檔案。
+    private void GoHome()
+    {
+        if (!_ready) return;
+        AddressBar.Text = "";
+        try { Web.NavigateToString(BrowserHome.Html); } catch { }
+    }
+
+    // 切換載入狀態：顯示／隱藏頂端進度條，並讓重新整理鍵在「停止」與「重新整理」間切換。
+    private void SetLoading(bool on)
+    {
+        _isLoading = on;
+        LoadBar.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+        ReloadBtn.Content = on ? "✕" : "⟳";
+        ReloadBtn.ToolTip = on ? "停止載入" : "重新整理";
+    }
 
     private void OpenExternal_Click(object sender, RoutedEventArgs e)
     {

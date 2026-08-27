@@ -99,7 +99,7 @@ public sealed class WingetService : ObservableObject
         new() { Name = "通訊社群", Packages = new List<WingetPackage>
         {
             new() { Id = "Tencent.QQ", Name = "QQ", Desc = "騰訊即時通訊" },
-            new() { Id = "Tencent.WeChat", Name = "微信", Desc = "微信桌面版" },
+            new() { Id = "XPFCC4CD725961", Name = "LINE", Desc = "LINE 桌面版通訊軟體（Microsoft Store）" },
             new() { Id = "Telegram.TelegramDesktop", Name = "Telegram", Desc = "跨平台即時通訊" },
             new() { Id = "Discord.Discord", Name = "Discord", Desc = "語音與社群平台" },
         } },

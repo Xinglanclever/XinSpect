@@ -15,7 +15,7 @@ public enum ToolKind
 }
 
 /// <summary>單一工具箱項目。</summary>
-public sealed class ToolItem
+public sealed class ToolItem : ObservableObject
 {
     public required string Name { get; init; }
     public required string Description { get; init; }
@@ -26,6 +26,36 @@ public sealed class ToolItem
     public string[] Candidates { get; init; } = Array.Empty<string>();
     /// <summary>分組標題（供畫面分類）。</summary>
     public required string Group { get; init; }
+
+    /// <summary>是否可裝入本機執行檔（Windows 內建系統工具不需要，故隱藏插槽）。</summary>
+    public bool CanSlot => Kind != ToolKind.System;
+
+    private string? _slotPath;
+    /// <summary>使用者裝入插槽的本機可執行檔路徑（下載後「裝進去」，之後主鈕即直接啟動它）。</summary>
+    public string? SlotPath
+    {
+        get => _slotPath;
+        set
+        {
+            if (SetProperty(ref _slotPath, value))
+            {
+                OnPropertyChanged(nameof(HasSlot));
+                OnPropertyChanged(nameof(SlotLabel));
+                OnPropertyChanged(nameof(SlotTip));
+            }
+        }
+    }
+
+    /// <summary>插槽已裝入且該檔案確實存在。</summary>
+    public bool HasSlot => !string.IsNullOrEmpty(_slotPath) && File.Exists(_slotPath);
+
+    /// <summary>插槽按鈕文字：未裝入顯示「裝入」，已裝入顯示勾號。</summary>
+    public string SlotLabel => HasSlot ? "✓ 已裝入" : "裝入";
+
+    /// <summary>插槽按鈕的提示說明。</summary>
+    public string SlotTip => HasSlot
+        ? $"已裝入：{_slotPath}\n主鈕即直接啟動此檔；點此可更換，右鍵可移除或開啟所在資料夾。"
+        : "下載此工具後，點「裝入」選擇它的可執行檔（.exe）放進插槽，之後即可從工具箱直接啟動。";
 }
 
 /// <summary>工具箱的分組（供畫面依類別呈現）。</summary>
@@ -225,11 +255,24 @@ public sealed class ToolboxService : ObservableObject
         .Select(g => new ToolGroup { Title = g.Key, Items = g.ToList() })
         .ToList();
 
-    /// <summary>依項目類型啟動系統工具、開啟官方網頁，或偵測第三方工具後啟動 / 導向下載。</summary>
+    /// <summary>依項目類型啟動系統工具、開啟官方網頁，或偵測第三方工具後啟動 / 導向下載。
+    /// 若該工具已裝入插槽（使用者下載後放進的本機執行檔），一律優先直接啟動插槽內的檔案。</summary>
     public void Launch(ToolItem tool)
     {
         try
         {
+            // 插槽優先：已裝入且檔案存在時，直接啟動使用者放進去的本機執行檔。
+            if (tool.HasSlot && tool.SlotPath is { } slot)
+            {
+                Process.Start(new ProcessStartInfo(slot)
+                {
+                    UseShellExecute = true,
+                    WorkingDirectory = Path.GetDirectoryName(slot) ?? "",
+                });
+                StatusLine = $"已啟動插槽內的 {tool.Name}";
+                return;
+            }
+
             switch (tool.Kind)
             {
                 case ToolKind.System:
@@ -269,4 +312,35 @@ public sealed class ToolboxService : ObservableObject
 
     private static void OpenUrl(string url)
         => Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+
+    // ── 插槽（下載後裝入的本機執行檔）─────────────────────────────
+    private SettingsService? _settings;
+
+    /// <summary>接上設定服務並套用已保存的插槽路徑；於主視窗初始化時呼叫一次。
+    /// （工具箱先於設定服務建立，故插槽需由此處回填，而非建構子。）</summary>
+    public void AttachSettings(SettingsService settings)
+    {
+        _settings = settings;
+        foreach (var t in Tools)
+            if (settings.ToolSlots.TryGetValue(t.Name, out var path))
+                t.SlotPath = path;
+    }
+
+    /// <summary>將某工具裝入指定的本機執行檔並持久化。</summary>
+    public void AssignSlot(ToolItem tool, string path)
+    {
+        tool.SlotPath = path;
+        _settings?.SetToolSlot(tool.Name, path);
+        StatusLine = tool.HasSlot
+            ? $"已將 {tool.Name} 裝入插槽，之後可從工具箱直接啟動。"
+            : $"選擇的檔案不存在：{path}";
+    }
+
+    /// <summary>移除某工具的插槽並持久化。</summary>
+    public void ClearSlot(ToolItem tool)
+    {
+        tool.SlotPath = null;
+        _settings?.SetToolSlot(tool.Name, null);
+        StatusLine = $"已移除 {tool.Name} 的插槽。";
+    }
 }

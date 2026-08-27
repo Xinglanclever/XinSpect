@@ -37,12 +37,12 @@ public partial class MainWindow : Window
             new BenchView(),
             new OverclockView(),
             new GpuOcView(),
+            new FanControlView(),
             new HealthView(),
             new ToolboxView(),
             new RankingView(),
             new SetupView(),
             new BrowserView(),
-            new ProcessesView(),
             new TerminalView(),
             new SettingsView(),
             new AboutView(),
@@ -66,13 +66,17 @@ public partial class MainWindow : Window
         };
     }
 
-    // 感測器總表為每秒最重的一段格式化工作；僅在該分頁顯示時才更新
+    // 感測器總表為每秒最重的一段格式化工作；僅在該分頁顯示時才更新。
+    // 系統風扇即時值同理：僅在「系統風扇控制」分頁顯示時才每秒讀取。
     private void ApplySensorsVisibility()
     {
         int i = Nav.SelectedIndex;
-        bool onSensors = i >= 0 && i < _views.Length && _views[i] is SensorsView;
+        bool valid = i >= 0 && i < _views.Length;
         if (_vm.Live is not null)
-            _vm.Live.DetailedSensorsVisible = onSensors;
+        {
+            _vm.Live.DetailedSensorsVisible = valid && _views[i] is SensorsView;
+            _vm.Live.FanControlsVisible = valid && _views[i] is FanControlView;
+        }
     }
 
     private void Nav_SelectionChanged(object sender, SelectionChangedEventArgs e)

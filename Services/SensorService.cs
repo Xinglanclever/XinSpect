@@ -109,6 +109,9 @@ public sealed partial class SensorService : ObservableObject, IDisposable
         // 感測器分頁：把列舉到的所有感測列一次性加入繫結集合（之後每秒就地更新其數值）
         foreach (var (_, row) in _sensorRows)
             AllSensors.Add(row);
+
+        // 系統風扇控制：列舉主機板／SuperIO 上可由軟體寫入的風扇（顯示卡風扇由顯示卡超頻頁以 NVML 控制）
+        CollectFanControls();
     }
 
     private void BuildCpu(IHardware hw)
@@ -256,6 +259,9 @@ public sealed partial class SensorService : ObservableObject, IDisposable
             b.Row.VramUsedMB = Val(b.VramUsed) ?? 0;
             b.Row.VramTotalMB = Val(b.VramTotal) ?? 0;
         }
+
+        // 系統風扇：即時輸出%與轉速（僅「系統風扇控制」分頁可見時才更新，省去無謂開銷）
+        if (FanControlsVisible) TickFans();
 
         foreach (var b in _diskBinds)
         {
@@ -514,6 +520,8 @@ public sealed partial class SensorService : ObservableObject, IDisposable
         {
             if (_disposed) return;
             _disposed = true;
+            // 關閉硬體前，先把所有被手動接管的系統風扇交回 BIOS／自動控制，避免風扇卡在固定轉速
+            try { RestoreAllFansToAuto(); } catch { }
             try { _computer.Close(); } catch { }
         }
     }

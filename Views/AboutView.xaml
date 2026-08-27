@@ -13,7 +13,7 @@
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0"
                                Text="硬體資訊總覽 ・ 即時偵測工具"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,2,0,0"
-                               Text="版本 1.2 ・ 便攜單一執行檔"/>
+                               Text="版本 1.3 ・ 便攜單一執行檔"/>
 
                     <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,16"/>
 
@@ -104,16 +104,17 @@
                     <local:FieldRow Label="記憶體" Value="真實時序・使用量・實體模組・SPD／XMP 深度資料"/>
                     <local:FieldRow Label="主機板" Value="晶片組・BIOS／UEFI・PCIe 連結・LPCIO 超級 I/O"/>
                     <local:FieldRow Label="顯示卡" Value="時脈・使用率・顯示記憶體・溫度・CPU-Z 深度規格"/>
+                    <local:FieldRow Label="顯示卡超頻" Value="NVML 功耗／風扇／溫度上限・NVAPI 核心與記憶體時脈偏移"/>
+                    <local:FieldRow Label="系統風扇" Value="主機板／Super I/O 可控風扇手動調速・一鍵還原自動（真實寫入）"/>
                     <local:FieldRow Label="儲存裝置" Value="容量・溫度・S.M.A.R.T. 剩餘壽命"/>
                     <local:FieldRow Label="網路" Value="網路介面・連線速率・即時上下行流量"/>
-                    <local:FieldRow Label="行程" Value="占用排行・即時更新"/>
                     <local:FieldRow Label="感測器" Value="所有感測器讀值・最小・最大"/>
                     <local:FieldRow Label="效能" Value="象棋跑分（原生／原版 Fritz）・綜合測試・WinSAT"/>
                     <local:FieldRow Label="健康" Value="狀態燈・綜合分數・溫度與容量警示"/>
                     <local:FieldRow Label="AI 評價" Value="本機免費 Ollama 或 OpenAI 相容 API・客觀評價・可自訂提示詞"/>
                     <local:FieldRow Label="效能天梯" Value="CPU／顯示卡跑分排行・搜尋・自動標示本機硬體"/>
                     <local:FieldRow Label="一鍵裝機" Value="依分類批次安裝常用軟體（Windows 內建 winget）"/>
-                    <local:FieldRow Label="工具箱" Value="Windows 內建工具＋數十款硬體工具官方下載捷徑"/>
+                    <local:FieldRow Label="工具箱" Value="內建螢幕／滑鼠／鍵盤檢測＋Windows 系統工具＋數十款硬體工具官方下載捷徑"/>
                 </StackPanel>
             </Border>
 

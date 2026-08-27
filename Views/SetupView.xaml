@@ -17,7 +17,7 @@
             <StackPanel>
                 <TextBlock Style="{StaticResource SectionHeader}" Text="一鍵裝機"/>
                 <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" MaxWidth="720" HorizontalAlignment="Left"
-                           Text="勾選常用軟體後一鍵批次安裝，全程由 Windows 內建的 winget 從官方來源下載安裝；本程式不含任何安裝檔。"/>
+                           Text="勾選常用軟體後一鍵批次安裝，全程由 Windows 內建的 winget 從官方來源下載安裝；本程式不含任何安裝檔。（此功能直接沿用圖吧工具箱 WinUI3）"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
                 <Button Style="{StaticResource ToolButton}" Content="勾選推薦" Margin="0,0,8,0" Click="SelectRec_Click"/>

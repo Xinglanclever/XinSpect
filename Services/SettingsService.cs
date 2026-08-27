@@ -80,6 +80,19 @@ public sealed class SettingsService : ObservableObject
     /// <summary>系統提示詞（可由使用者自訂；一鍵重置回內建預設）。</summary>
     public string AiSystemPrompt { get => _aiSystemPrompt; set { if (SetProperty(ref _aiSystemPrompt, value)) Save(); } }
 
+    // ── 工具箱插槽 ───────────────────────────────────────
+    private Dictionary<string, string> _toolSlots = new(StringComparer.Ordinal);
+    /// <summary>工具箱「插槽」：工具名稱 → 使用者裝入的本機可執行檔路徑（下載後裝進插槽，之後直接啟動）。</summary>
+    public IReadOnlyDictionary<string, string> ToolSlots => _toolSlots;
+
+    /// <summary>設定或移除某工具的插槽路徑（path 為空即移除），並立即持久化。</summary>
+    public void SetToolSlot(string name, string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) _toolSlots.Remove(name);
+        else _toolSlots[name] = path;
+        Save();
+    }
+
     public SettingsService() => Load();
 
     private sealed class Persist
@@ -100,6 +113,7 @@ public sealed class SettingsService : ObservableObject
         public string? AiModel { get; set; }
         public double AiTemperature { get; set; } = 0.7;
         public string? AiSystemPrompt { get; set; }
+        public Dictionary<string, string>? ToolSlots { get; set; }
     }
 
     private void Load()
@@ -128,6 +142,7 @@ public sealed class SettingsService : ObservableObject
                     if (!string.IsNullOrWhiteSpace(p.AiModel)) _aiModel = p.AiModel;
                     _aiTemperature = Math.Clamp(p.AiTemperature, 0, 2);
                     if (!string.IsNullOrWhiteSpace(p.AiSystemPrompt)) _aiSystemPrompt = p.AiSystemPrompt;
+                    if (p.ToolSlots is not null) _toolSlots = new(p.ToolSlots, StringComparer.Ordinal);
                 }
             }
         }
@@ -159,6 +174,7 @@ public sealed class SettingsService : ObservableObject
                 AiModel = _aiModel,
                 AiTemperature = _aiTemperature,
                 AiSystemPrompt = _aiSystemPrompt,
+                ToolSlots = _toolSlots.Count > 0 ? _toolSlots : null,
             };
             File.WriteAllText(FilePath, JsonSerializer.Serialize(p, new JsonSerializerOptions { WriteIndented = true }));
         }

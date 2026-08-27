@@ -17,9 +17,6 @@ public sealed class MainViewModel : ObservableObject
     private NetworkService? _net;
     public NetworkService? Net { get => _net; private set => SetProperty(ref _net, value); }
 
-    private ProcessService? _proc;
-    public ProcessService? Proc { get => _proc; private set => SetProperty(ref _proc, value); }
-
     private SystemSummary _system = new();
     public SystemSummary System { get => _system; private set => SetProperty(ref _system, value); }
 
@@ -200,6 +197,9 @@ public sealed class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(EraIndex));
         }
 
+        // 0.1) 工具箱插槽：回填已保存的本機執行檔路徑（工具箱先於設定建立，故於此接上設定服務）
+        try { Toolbox.AttachSettings(Settings); } catch { /* 插槽為附加功能 */ }
+
         // 1) 靜態資訊（WMI）於背景讀取
         // 整段以 try/catch 包覆：Initialize 為 async void，任何 WMI 呼叫拋例外都會直接終結整個應用程式；
         // 失敗時記錄狀態並向下降級（感測器/網路/行程等後續步驟仍各自嘗試初始化），不得中斷啟動。
@@ -243,9 +243,8 @@ public sealed class MainViewModel : ObservableObject
             StatusText = "感測器初始化失敗（溫度/頻率不可用）：" + ex.Message;
         }
 
-        // 3) 網路與行程監控
+        // 3) 網路監控
         try { Net = await Task.Run(() => new NetworkService()); } catch { /* 網路資訊為附加功能 */ }
-        try { Proc = new ProcessService(); } catch { /* 行程監控為附加功能，建構失敗不應中斷初始化 */ }
 
         // 3.5) 磁碟容量 / 類型 / HDD 健康（WMI 較慢：背景查詢，回 UI 執行緒就地套用到磁碟列）
         if (Live is not null)
@@ -324,8 +323,6 @@ public sealed class MainViewModel : ObservableObject
                     try { Alerts.Check(live, Settings); } catch { /* 警示為附加 */ }
                 }
                 try { Net?.Refresh(); } catch { }
-                if (tick % 2 == 0 && Proc is not null)
-                    try { await Proc.RefreshAsync(); } catch { }  // 行程列舉較重：背景列舉、UI 就地更新，每 2 秒一次
                 if (tick % 5 == 0) { try { Volumes.Refresh(); } catch { } } // 磁碟容量變動慢，每 5 秒一次
                 try { Health.Update(live, Volumes); } catch { }             // 彙整健康總評（讀取現值，成本低）
                 try { await Overclock.TickAsync(live); } catch { }           // 超頻模組即時遙測（電壓/溫度/頻率/看門狗）；IPC 讀值在背景執行緒
@@ -343,6 +340,20 @@ public sealed class MainViewModel : ObservableObject
         // 5) 深度規格（背景呼叫 CPU-Z 產生報告，約需 10 餘秒）＋ WinSAT 快取分數
         _ = LoadTimingsAsync();
         _ = Winsat.LoadCachedAsync();
+
+        // 6) 首次啟動即自動環境自檢：待感測器首拍、超頻/顯卡引擎與 winget 偵測稍稍就緒後於背景執行一次。
+        _ = RunStartupEnvCheckAsync();
+    }
+
+    // 首次啟動的環境自檢：略候片刻讓各引擎與感測器就緒，再於背景跑一次；失敗不影響主程式。
+    private async Task RunStartupEnvCheckAsync()
+    {
+        try
+        {
+            await Task.Delay(2500);
+            if (!EnvCheck.HasRun && !EnvCheck.IsRunning) await EnvCheck.RunAsync(this);
+        }
+        catch { /* 環境自檢為附加功能，失敗不影響其餘功能 */ }
     }
 
     /// <summary>所有功能一鍵初始化：重新執行各模組的偵測與載入（不重建每秒計時器），供設定頁「一鍵初始化」重整。</summary>
@@ -371,10 +382,9 @@ public sealed class MainViewModel : ObservableObject
         }
         catch (Exception ex) { StatusText = "重新初始化：靜態資訊讀取失敗 — " + ex.Message; }
 
-        // 感測器 / 網路 / 行程引擎：先前失敗者重試建立
+        // 感測器 / 網路引擎：先前失敗者重試建立
         if (Live is null) { try { Live = await Task.Run(() => new SensorService()); } catch { /* 感測器不可用 */ } }
         if (Net is null) { try { Net = await Task.Run(() => new NetworkService()); } catch { /* 網路資訊為附加 */ } }
-        if (Proc is null) { try { Proc = new ProcessService(); } catch { /* 行程監控為附加 */ } }
 
         // 磁碟靜態資訊 / 磁碟效能清單 / 螢幕色域 / CUDA 版本
         if (Live is not null)

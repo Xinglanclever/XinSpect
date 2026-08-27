@@ -1,0 +1,21 @@
+<Window x:Class="XinSpect.ScreenTestWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="螢幕檢測" WindowStyle="None" ResizeMode="NoResize"
+        WindowState="Maximized" WindowStartupLocation="CenterScreen"
+        Topmost="True" Background="White" Cursor="None"
+        KeyDown="Window_KeyDown" MouseLeftButtonDown="Window_Click">
+    <Grid x:Name="Root" Background="White">
+        <Border x:Name="Hint" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,54"
+                Background="#B0000000" CornerRadius="12" Padding="20,14">
+            <StackPanel>
+                <TextBlock x:Name="HintTitle" Foreground="White" FontSize="15" FontWeight="Bold"
+                           HorizontalAlignment="Center" Text="螢幕檢測"/>
+                <TextBlock Foreground="#DDDDDD" FontSize="12.5" Margin="0,8,0,0" HorizontalAlignment="Center"
+                           Text="點擊／空白鍵／→：下一色　　←：上一色　　H：隱藏提示　　Esc：離開"/>
+                <TextBlock Foreground="#AAAAAA" FontSize="11.5" Margin="0,5,0,0" HorizontalAlignment="Center"
+                           Text="純色畫面用於檢查亮點／暗點（壞點）；黑色畫面用於檢查漏光與背光均勻度"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

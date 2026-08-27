@@ -73,7 +73,7 @@
                     <Button x:Name="BackBtn" Style="{StaticResource NavBtn}" Click="Back_Click"   Content="‹"  ToolTip="上一頁"/>
                     <Button x:Name="FwdBtn"  Style="{StaticResource NavBtn}" Click="Forward_Click" Content="›"  ToolTip="下一頁"/>
                     <Button x:Name="ReloadBtn" Style="{StaticResource NavBtn}" Click="Reload_Click" Content="⟳" ToolTip="重新整理"/>
-                    <Button x:Name="HomeBtn" Style="{StaticResource NavBtn}" Click="Home_Click"   Content="⌂"  ToolTip="首頁（Bing）"/>
+                    <Button x:Name="HomeBtn" Style="{StaticResource NavBtn}" Click="Home_Click"   Content="⌂"  ToolTip="首頁（硬體導航）"/>
                 </StackPanel>
 
                 <TextBox x:Name="AddressBar" Grid.Column="1" Style="{StaticResource AddressBox}" Margin="8,0"
@@ -103,6 +103,10 @@
                         </TextBlock>
                     </StackPanel>
                 </Border>
+                <!-- B：頂端細載入進度條（NavigationStarting 顯示、Completed 隱藏） -->
+                <ProgressBar x:Name="LoadBar" Height="3" VerticalAlignment="Top" IsIndeterminate="True"
+                             Background="Transparent" BorderThickness="0"
+                             Foreground="{StaticResource AccentBrush}" Visibility="Collapsed"/>
             </Grid>
         </Border>
     </Grid>

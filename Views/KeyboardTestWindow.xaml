@@ -1,0 +1,48 @@
+<Window x:Class="XinSpect.KeyboardTestWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="鍵盤檢測" WindowStyle="None" ResizeMode="NoResize"
+        WindowState="Maximized" WindowStartupLocation="CenterScreen"
+        Topmost="True" Background="#0E0F13" Focusable="True"
+        PreviewKeyDown="Win_PreviewKeyDown" PreviewKeyUp="Win_PreviewKeyUp">
+    <Grid>
+        <!-- 頂部標題 -->
+        <StackPanel VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,22,0,0">
+            <TextBlock Text="鍵盤檢測" Foreground="White" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Foreground="#9AA0AA" FontSize="12.5" Margin="0,6,0,0" HorizontalAlignment="Center"
+                       Text="逐鍵按下確認觸發（按過的鍵會保持標記）　同時按多鍵測試防鬼鍵／NKRO　連按兩下 Esc：離開"/>
+        </StackPanel>
+
+        <!-- 中央：虛擬鍵盤（由程式碼依版面產生） -->
+        <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                Background="#12151C" CornerRadius="14" Padding="18" Margin="0,20,0,0">
+            <StackPanel x:Name="KeyRows"/>
+        </Border>
+
+        <!-- 右下角：即時數據 -->
+        <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,40,40"
+                Background="#C0161821" CornerRadius="12" Padding="20,16" Width="300">
+            <StackPanel>
+                <TextBlock Text="即時數據" Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="最後按鍵" Foreground="#9AA0AA" FontSize="12.5"/>
+                    <TextBlock x:Name="LastKeyText" Grid.Row="0" Grid.Column="1" Text="—" Foreground="#E6E9EF" FontSize="12.5"/>
+                    <TextBlock Grid.Row="1" Text="虛擬鍵碼 / 掃描碼" Foreground="#9AA0AA" FontSize="12.5"/>
+                    <TextBlock x:Name="CodeText" Grid.Row="1" Grid.Column="1" Text="—" Foreground="#E6E9EF" FontSize="12.5"/>
+                    <TextBlock Grid.Row="2" Text="目前同時按住" Foreground="#9AA0AA" FontSize="12.5"/>
+                    <TextBlock x:Name="HeldText" Grid.Row="2" Grid.Column="1" Text="0" Foreground="#E6E9EF" FontSize="12.5"/>
+                    <TextBlock Grid.Row="3" Text="最多同時按鍵" Foreground="#9AA0AA" FontSize="12.5"/>
+                    <TextBlock x:Name="MaxHeldText" Grid.Row="3" Grid.Column="1" Text="0" Foreground="{StaticResource AccentBrush}" FontSize="12.5" FontWeight="Bold"/>
+                    <TextBlock Grid.Row="4" Text="已測試鍵數" Foreground="#9AA0AA" FontSize="12.5"/>
+                    <TextBlock x:Name="TestedText" Grid.Row="4" Grid.Column="1" Text="0" Foreground="#E6E9EF" FontSize="12.5"/>
+                </Grid>
+                <TextBlock Foreground="#6B7280" FontSize="11" Margin="0,12,0,0" TextWrapping="Wrap"
+                           Text="同時按住越多鍵仍全部亮起，代表防鬼鍵／NKRO 能力越好；普通薄膜鍵盤通常僅保證特定組合。"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

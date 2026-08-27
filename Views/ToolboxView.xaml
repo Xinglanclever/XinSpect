@@ -6,6 +6,23 @@
         <StackPanel>
             <TextBlock Style="{StaticResource SectionHeader}" Text="工具箱"/>
 
+            <!-- ===== 硬體檢測（本程式內建，無需下載） ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="0">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="硬體檢測"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="本程式內建的全螢幕檢測工具，純以實際輸入／顯示事件判讀，不需安裝任何外部程式。開啟後依畫面提示操作，按 Esc 離開。"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Style="{StaticResource ToolButton}" Content="螢幕檢測" Margin="0,0,8,0"
+                                ToolTip="全螢幕純色循環，檢查亮點／暗點（壞點）、漏光與背光均勻度" Click="ScreenTest_Click"/>
+                        <Button Style="{StaticResource ToolButton}" Content="滑鼠檢測" Margin="0,0,8,0"
+                                ToolTip="測試左／右／中／側鍵、滾輪與移動軌跡，估計回報率並偵測連點抖動" Click="MouseTest_Click"/>
+                        <Button Style="{StaticResource ToolButton}" Content="鍵盤檢測"
+                                ToolTip="虛擬鍵盤逐鍵確認觸發，統計同時按鍵數（防鬼鍵／NKRO）與鍵碼" Click="KeyboardTest_Click"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
             <!-- ===== 螢幕色域（EDID） ===== -->
             <Border Style="{StaticResource Card}" local:Anim.RevealDelay="0">
                 <StackPanel>
@@ -70,7 +87,7 @@
                 <StackPanel>
                     <TextBlock Style="{StaticResource SectionHeader}" Text="系統工具"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,4" TextWrapping="Wrap"
-                               Text="一鍵開啟 Windows 內建的診斷與管理工具。第三方硬體工具基於安全與授權考量不隨附於本程式，一律導向官方下載頁面。"/>
+                               Text="一鍵開啟 Windows 內建的診斷與管理工具。第三方硬體工具基於安全與授權考量不隨附於本程式，一律導向官方下載頁面；下載後可按工具旁的「裝入」把它的執行檔放進插槽，之後便能從此處直接啟動。"/>
 
                     <ItemsControl ItemsSource="{Binding Toolbox.Groups}">
                         <ItemsControl.ItemTemplate>
@@ -86,9 +103,23 @@
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <Button Style="{StaticResource ToolButton}" Margin="0,0,8,8"
-                                                        Content="{Binding Name}" ToolTip="{Binding Description}"
-                                                        Tag="{Binding}" Click="Tool_Click"/>
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,8,8">
+                                                    <Button Style="{StaticResource ToolButton}"
+                                                            Content="{Binding Name}" ToolTip="{Binding Description}"
+                                                            Tag="{Binding}" Click="Tool_Click"/>
+                                                    <Button Style="{StaticResource ToolButton}" Margin="4,0,0,0"
+                                                            Content="{Binding SlotLabel}" ToolTip="{Binding SlotTip}"
+                                                            Tag="{Binding}" Click="Slot_Click"
+                                                            Visibility="{Binding CanSlot, Converter={StaticResource BoolToVis}}">
+                                                        <Button.ContextMenu>
+                                                            <ContextMenu>
+                                                                <MenuItem Header="更換插槽…" Tag="{Binding}" Click="Slot_Click"/>
+                                                                <MenuItem Header="開啟所在資料夾" Tag="{Binding}" Click="SlotOpenFolder_Click"/>
+                                                                <MenuItem Header="移除插槽" Tag="{Binding}" Click="SlotClear_Click"/>
+                                                            </ContextMenu>
+                                                        </Button.ContextMenu>
+                                                    </Button>
+                                                </StackPanel>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>

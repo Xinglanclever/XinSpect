@@ -21,8 +21,8 @@
     <Product>曦覽 XinSpect</Product>
     <AssemblyTitle>曦覽 XinSpect 硬體資訊總覽</AssemblyTitle>
     <Company>Xinglanclever</Company>
-    <Version>1.2.0</Version>
-    <FileVersion>1.2.0.0</FileVersion>
+    <Version>1.3.0</Version>
+    <FileVersion>1.3.0.0</FileVersion>
     <Copyright>By：Xinglanclever ・ Claude Opus 4.8 ・ 2026年8月24日</Copyright>
     <UseAppHost>true</UseAppHost>
     <!-- 應用程式圖示（原創「曦覽」曉光儀表標記；由 make_icon.ps1 產生的多尺寸 .ico）-->

@@ -77,6 +77,11 @@
                                Foreground="{StaticResource SecondaryInkBrush}"
                                Text="{Binding Live.CpuClock, StringFormat={}{0:0} MHz, FallbackValue=—, TargetNullValue=—}"/>
                 </Grid>
+
+                <!-- 示波線：CPU / GPU 使用率即時波形 -->
+                <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,11,0,9"/>
+                <local:Oscilloscope Height="46" MinHeight="0" Caption="CPU 使用率" History="{Binding CpuLoadHist}"/>
+                <local:Oscilloscope Height="46" MinHeight="0" Margin="0,8,0,0" Caption="GPU 使用率" History="{Binding GpuHist}"/>
             </StackPanel>
         </Border>
     </Grid>

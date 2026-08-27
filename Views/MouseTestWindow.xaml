@@ -1,0 +1,75 @@
+<Window x:Class="XinSpect.MouseTestWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="滑鼠檢測" WindowStyle="None" ResizeMode="NoResize"
+        WindowState="Maximized" WindowStartupLocation="CenterScreen"
+        Topmost="True" Background="#0E0F13" Focusable="True"
+        KeyDown="Window_KeyDown"
+        MouseDown="Any_MouseDown" MouseUp="Any_MouseUp"
+        MouseMove="Win_MouseMove" MouseWheel="Win_MouseWheel">
+    <Grid>
+        <Canvas x:Name="TrailCanvas" ClipToBounds="True"/>
+
+        <!-- 頂部標題 -->
+        <StackPanel VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,26,0,0" IsHitTestVisible="False">
+            <TextBlock Text="滑鼠檢測" Foreground="White" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Foreground="#9AA0AA" FontSize="12.5" Margin="0,6,0,0" HorizontalAlignment="Center"
+                       Text="移動畫軌跡　按各鍵測試觸發　滾輪測試上下　C：清除計數　Esc：離開"/>
+        </StackPanel>
+
+        <!-- 中央：滑鼠示意圖（按下的鍵會亮起） -->
+        <Viewbox Width="210" Height="320" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+            <Canvas Width="200" Height="320">
+                <Path Data="M100,20 C58,20 38,56 38,112 L38,232 C38,286 68,302 100,302 C132,302 162,286 162,232 L162,112 C162,56 142,20 100,20 Z"
+                      Fill="#14171E" Stroke="#3A4150" StrokeThickness="2.5"/>
+                <Path x:Name="LeftBtn" Data="M99,24 C62,25 43,58 42,108 L99,108 Z" Fill="#1C2029"/>
+                <Path x:Name="RightBtn" Data="M101,24 C138,25 157,58 158,108 L101,108 Z" Fill="#1C2029"/>
+                <Border x:Name="MidBtn" Canvas.Left="90" Canvas.Top="44" Width="20" Height="46"
+                        CornerRadius="10" Background="#1C2029"/>
+                <Border x:Name="SideBackBtn" Canvas.Left="24" Canvas.Top="120" Width="16" Height="26"
+                        CornerRadius="4" Background="#1C2029"/>
+                <Border x:Name="SideFwdBtn" Canvas.Left="24" Canvas.Top="150" Width="16" Height="26"
+                        CornerRadius="4" Background="#1C2029"/>
+                <Line X1="100" Y1="110" X2="100" Y2="150" Stroke="#3A4150" StrokeThickness="2"/>
+            </Canvas>
+        </Viewbox>
+
+        <!-- 右側統計 -->
+        <Border HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,42,0" IsHitTestVisible="False"
+                Background="#C0161821" CornerRadius="12" Padding="22,18" Width="316">
+            <StackPanel>
+                <TextBlock Text="即時數據" Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                        <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="座標" Foreground="#9AA0AA" FontSize="12.5"/>
+                    <TextBlock x:Name="CoordText" Grid.Row="0" Grid.Column="1" Text="—" Foreground="#E6E9EF" FontSize="12.5"/>
+                    <TextBlock Grid.Row="1" Text="左鍵次數" Foreground="#9AA0AA" FontSize="12.5"/>
+                    <TextBlock x:Name="LeftCount" Grid.Row="1" Grid.Column="1" Text="0" Foreground="#E6E9EF" FontSize="12.5"/>
+                    <TextBlock Grid.Row="2" Text="右鍵次數" Foreground="#9AA0AA" FontSize="12.5"/>
+                    <TextBlock x:Name="RightCount" Grid.Row="2" Grid.Column="1" Text="0" Foreground="#E6E9EF" FontSize="12.5"/>
+                    <TextBlock Grid.Row="3" Text="中鍵次數" Foreground="#9AA0AA" FontSize="12.5"/>
+                    <TextBlock x:Name="MidCount" Grid.Row="3" Grid.Column="1" Text="0" Foreground="#E6E9EF" FontSize="12.5"/>
+                    <TextBlock Grid.Row="4" Text="側鍵（前/後）" Foreground="#9AA0AA" FontSize="12.5"/>
+                    <TextBlock x:Name="SideCount" Grid.Row="4" Grid.Column="1" Text="0 / 0" Foreground="#E6E9EF" FontSize="12.5"/>
+                    <TextBlock Grid.Row="5" Text="滾輪（上/下）" Foreground="#9AA0AA" FontSize="12.5"/>
+                    <TextBlock x:Name="WheelCount" Grid.Row="5" Grid.Column="1" Text="0 / 0" Foreground="#E6E9EF" FontSize="12.5"/>
+                    <TextBlock Grid.Row="6" Text="最短點擊間隔" Foreground="#9AA0AA" FontSize="12.5"/>
+                    <TextBlock x:Name="MinIntervalText" Grid.Row="6" Grid.Column="1" Text="—" Foreground="#E6E9EF" FontSize="12.5"/>
+                    <TextBlock Grid.Row="7" Text="估計回報率" Foreground="#9AA0AA" FontSize="12.5"/>
+                    <TextBlock x:Name="PollRateText" Grid.Row="7" Grid.Column="1" Text="—" Foreground="#E6E9EF" FontSize="12.5"/>
+                </Grid>
+                <Border x:Name="ChatterBox" Background="#40E0552E" BorderBrush="#E0552E" BorderThickness="1"
+                        CornerRadius="8" Padding="12,8" Margin="0,14,0,0" Visibility="Collapsed">
+                    <TextBlock x:Name="ChatterText" Foreground="#FFD9CC" FontSize="12" TextWrapping="Wrap"
+                               Text="偵測到極短點擊間隔，可能為微動開關抖動（單擊變雙擊）。"/>
+                </Border>
+                <TextBlock Foreground="#6B7280" FontSize="11" Margin="0,12,0,0" TextWrapping="Wrap"
+                           Text="回報率為估計值，受系統事件合併與畫面更新率影響，僅供參考；精確測量請用專用工具。"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

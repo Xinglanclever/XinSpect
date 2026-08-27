@@ -2,7 +2,7 @@
 
 > 一款專為 Windows 打造的原生硬體資訊總覽工具 — 即時感測、效能評測、超頻控制與一鍵裝機，全部整合於單一桌面應用程式。
 
-![版本](https://img.shields.io/badge/version-1.2.0-4C8DFF)
+![版本](https://img.shields.io/badge/version-1.3.0-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![授權](https://img.shields.io/badge/license-MIT-green)
@@ -21,6 +21,8 @@
 - **效能天梯** — 離線 CPU / 顯示卡天梯榜(資料來源 topcpu.net),快速定位自己的硬體排名。
 - **CPU 超頻** — 透過內建 Intel XTU 橋接程式調整倍頻 / 電壓。
 - **顯卡超頻** — NVML 功耗 / 風扇 / 溫度監控 + NVAPI 時脈調整。
+- **系統風扇控制** — 主機板 / Super I/O 上可控風扇的手動調速與一鍵還原自動（與感測共用同一套 LibreHardwareMonitor 引擎，真實寫入硬體）。
+- **硬體檢測** — 內建全螢幕螢幕壞點檢測、滑鼠按鍵 / 滾輪 / 回報率檢測、鍵盤逐鍵 / 防鬼鍵（NKRO）檢測，純原生輸入事件、零外部相依。
 - **一鍵裝機** — 整合 winget,勾選常用軟體批次安裝。
 - **內建瀏覽器與終端** — WebView2 內嵌瀏覽,以及真實 `cmd.exe` 終端。
 - **AI 評價** — 接 Ollama 或任意 OpenAI 相容端點,對本機硬體給出評語(提示詞可自訂)。
