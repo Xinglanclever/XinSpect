@@ -1,0 +1,141 @@
+<UserControl x:Class="XinSpect.DiskScanView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect"
+             FontFamily="{StaticResource AppFont}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="B2V"/>
+        <Style x:Key="PathBox" TargetType="TextBox">
+            <Setter Property="Background" Value="{StaticResource Surface2Brush}"/>
+            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border CornerRadius="8" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,6,0">
+        <StackPanel>
+            <StackPanel Margin="2,0,0,10">
+                <TextBlock Style="{StaticResource SectionHeader}" Text="大檔／重複檔掃描"/>
+                <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
+                           Text="遞迴掃描資料夾，列出最占空間的大檔；勾選後並以逐位元組 SHA-256 比對，真實判定內容完全相同的重複檔與可回收空間。存取被拒的目錄自動略過。為安全起見僅提供定位，刪除請於檔案總管確認後自行處理。"/>
+            </StackPanel>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="PathBox" Grid.Column="0" Style="{StaticResource PathBox}" Margin="0,0,8,0"/>
+                        <Button x:Name="PickBtn" Grid.Column="1" Style="{StaticResource ToolButton}"
+                                Content="選擇資料夾" Click="Pick_Click" Padding="14,8"/>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button x:Name="ScanBtn" Style="{StaticResource PrimaryButton}" Content="開始掃描"
+                                Click="Scan_Click"/>
+                        <CheckBox x:Name="DupCheck" Content="同時偵測重複檔案（較慢）" VerticalAlignment="Center"
+                                  Margin="16,0,0,0" Foreground="{StaticResource SecondaryInkBrush}" FontSize="13"/>
+                    </StackPanel>
+                    <TextBlock x:Name="ProgressText" FontSize="12.5" Margin="0,12,0,0"
+                               Foreground="{StaticResource SecondaryInkBrush}" Text="尚未開始"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 最大檔案 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="最大檔案（前 100）" Margin="0,0,0,8"/>
+                    <ItemsControl x:Name="LargeList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="8"
+                                        Padding="12,9" Margin="0,0,0,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                            <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource PrimaryInkBrush}"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Dir}" FontSize="11" Margin="0,2,0,0"
+                                                       Foreground="{StaticResource MutedInkBrush}"
+                                                       TextTrimming="CharacterEllipsis" FontFamily="Consolas"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="{Binding SizeText}" VerticalAlignment="Center"
+                                                   FontSize="13.5" FontWeight="SemiBold" Margin="0,0,12,0"
+                                                   Foreground="{StaticResource AccentBrush}"/>
+                                        <Button Grid.Column="2" Style="{StaticResource ToolButton}" Content="定位"
+                                                Click="Locate_Click" Padding="12,6" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock x:Name="LargeEmpty" Text="—" FontSize="12"
+                               Foreground="{StaticResource MutedInkBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 重複檔案 -->
+            <Border x:Name="DupCard" Style="{StaticResource Card}" Margin="0,0,0,4"
+                    Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock x:Name="DupHeader" Style="{StaticResource FieldLabel}" Text="重複檔案" Margin="0,0,0,8"/>
+                    <ItemsControl x:Name="DupList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="8"
+                                        Padding="12,10" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Header}" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource WarningBrush}"/>
+                                        <ItemsControl ItemsSource="{Binding Files}" Margin="0,6,0,0">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="0,2">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="{Binding FullPath}" FontSize="11.5"
+                                                                   Foreground="{StaticResource SecondaryInkBrush}"
+                                                                   TextTrimming="CharacterEllipsis" FontFamily="Consolas"
+                                                                   VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                                        <Button Grid.Column="1" Style="{StaticResource ToolButton}" Content="定位"
+                                                                Click="Locate_Click" Padding="10,5" VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <TextBlock x:Name="StatusText" FontSize="12" Margin="2,0,0,4" TextWrapping="Wrap"
+                       Foreground="{StaticResource MutedInkBrush}"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

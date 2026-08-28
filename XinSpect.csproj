@@ -21,8 +21,8 @@
     <Product>曦覽 XinSpect</Product>
     <AssemblyTitle>曦覽 XinSpect 硬體資訊總覽</AssemblyTitle>
     <Company>Xinglanclever</Company>
-    <Version>1.3.0</Version>
-    <FileVersion>1.3.0.0</FileVersion>
+    <Version>1.3.1</Version>
+    <FileVersion>1.3.1.0</FileVersion>
     <Copyright>By：Xinglanclever ・ Claude Opus 4.8 ・ 2026年8月24日</Copyright>
     <UseAppHost>true</UseAppHost>
     <!-- 應用程式圖示（原創「曦覽」曉光儀表標記；由 make_icon.ps1 產生的多尺寸 .ico）-->
@@ -41,6 +41,8 @@
     <Resource Include="Assets\cpu\*.png" />
     <!-- 視窗圖示（標題列／工作列）；以 Resource 編入，單檔發佈亦可用 pack URI 讀取 -->
     <Resource Include="Assets\app.ico" />
+    <!-- 關於頁「By：Xinglanclever」旁的動畫 GIF；以 Resource 編入，pack URI 讀取後逐格輪播 -->
+    <Resource Include="Assets\hug.gif" />
   </ItemGroup>
 
   <!-- 內嵌原版 Fritz Chess Benchmark（單一自含執行檔），供「啟動原版對照」一鍵解壓執行 -->

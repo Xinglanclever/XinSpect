@@ -1,0 +1,164 @@
+<UserControl x:Class="XinSpect.PortUsageView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect"
+             FontFamily="{StaticResource AppFont}">
+    <UserControl.Resources>
+        <!-- 深色核取方塊（沿用風扇分頁樣式） -->
+        <Style x:Key="DarkCheck" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                            <Border x:Name="box" Width="18" Height="18" CornerRadius="5" VerticalAlignment="Center"
+                                    Background="{StaticResource Surface2Brush}"
+                                    BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1.2">
+                                <Path x:Name="check" Width="11" Height="11" Stretch="Uniform"
+                                      Data="M2,8 L6,12 L14,3" Stroke="White" StrokeThickness="2"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" Visibility="Collapsed"/>
+                            </Border>
+                            <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="box" Property="Background" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="check" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="0,0,6,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 標題 -->
+        <StackPanel Grid.Row="0" Margin="2,0,0,10">
+            <TextBlock Style="{StaticResource SectionHeader}" Text="連接埠占用"/>
+            <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
+                       Text="列出本機所有 TCP／UDP 連線與監聽埠，並標出占用該埠的行程。純本機讀取（Windows IP Helper API），可一鍵結束占用行程。"/>
+        </StackPanel>
+
+        <!-- 工具列 -->
+        <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,12" Padding="14,10">
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource PrimaryButton}" Content="重新整理" Click="Refresh_Click"/>
+                    <CheckBox x:Name="ListenOnly" Style="{StaticResource DarkCheck}" Content="只顯示監聽埠"
+                              Margin="16,0,0,0" Checked="Filter_Changed" Unchecked="Filter_Changed"/>
+                    <CheckBox x:Name="AutoRefresh" Style="{StaticResource DarkCheck}" Content="每 3 秒自動更新"
+                              Margin="16,0,0,0" Checked="AutoRefresh_Changed" Unchecked="AutoRefresh_Changed"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock Text="搜尋" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <Border Background="{StaticResource Surface2Brush}" CornerRadius="6" BorderBrush="{StaticResource HairlineBrush}"
+                            BorderThickness="1" Width="200" Height="30">
+                        <TextBox x:Name="SearchBox" Background="Transparent" BorderThickness="0" VerticalAlignment="Center"
+                                 Margin="8,0" Foreground="{StaticResource PrimaryInkBrush}" CaretBrush="{StaticResource AccentBrush}"
+                                 VerticalContentAlignment="Center" TextChanged="Filter_Changed"
+                                 ToolTip="可輸入埠號、行程名稱或位址"/>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 清單 -->
+        <Border Grid.Row="2" Style="{StaticResource Card}" Padding="0" Margin="0,0,0,4">
+            <Grid>
+                <DataGrid x:Name="Grid" AutoGenerateColumns="False" IsReadOnly="True"
+                          Background="Transparent" RowBackground="Transparent" AlternatingRowBackground="{StaticResource Surface2Brush}"
+                          BorderThickness="0" GridLinesVisibility="Horizontal"
+                          HorizontalGridLinesBrush="{StaticResource HairlineBrush}"
+                          HeadersVisibility="Column" CanUserAddRows="False" CanUserResizeRows="False"
+                          Foreground="{StaticResource PrimaryInkBrush}" RowHeight="30"
+                          ColumnHeaderHeight="34" SelectionMode="Single" FontSize="12.5"
+                          VirtualizingPanel.IsVirtualizing="True" EnableRowVirtualization="True">
+                    <DataGrid.Resources>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="{StaticResource SecondaryInkBrush}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="FontSize" Value="12"/>
+                            <Setter Property="Padding" Value="10,0"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                            <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}"/>
+                            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                        </Style>
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Padding" Value="10,0"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="DataGridCell">
+                                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.Resources>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="協定" Binding="{Binding Protocol}" Width="64"/>
+                        <DataGridTextColumn Header="本機位址" Binding="{Binding LocalText}" Width="2*"/>
+                        <DataGridTextColumn Header="遠端位址" Binding="{Binding RemoteText}" Width="2*"/>
+                        <DataGridTextColumn Header="狀態" Binding="{Binding State}" Width="Auto" MinWidth="80"/>
+                        <DataGridTextColumn Header="PID" Binding="{Binding PidText}" Width="64"/>
+                        <DataGridTextColumn Header="行程" Binding="{Binding ProcessText}" Width="*"/>
+                        <DataGridTemplateColumn Header="" Width="80">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="結束" Click="Kill_Click" Tag="{Binding}"
+                                            Padding="10,3" FontSize="11.5" Cursor="Hand"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="b" Background="{StaticResource Surface2Brush}" CornerRadius="5"
+                                                        BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1"
+                                                        Padding="{TemplateBinding Padding}">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="b" Property="Background" Value="{StaticResource CriticalBrush}"/>
+                                                        <Setter Property="Foreground" Value="White"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <!-- 狀態列 -->
+                <Border VerticalAlignment="Bottom" Background="{StaticResource Surface2Brush}" Padding="12,6"
+                        CornerRadius="0,0,10,10">
+                    <TextBlock x:Name="StatusText" FontSize="11.5" Foreground="{StaticResource SecondaryInkBrush}"/>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

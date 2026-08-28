@@ -40,7 +40,7 @@ public partial class MainWindow : Window
             new FanControlView(),
             new HealthView(),
             new ToolboxView(),
-            new RankingView(),
+            new UtilitiesView(),
             new SetupView(),
             new BrowserView(),
             new TerminalView(),
@@ -127,6 +127,15 @@ public partial class MainWindow : Window
     {
         int i = Array.FindIndex(_views, v => v is AiView);
         if (i >= 0) Nav.SelectedIndex = i;
+    }
+
+    /// <summary>切換至內建瀏覽器分頁並前往指定網址（供網速測試的 HKBN 節點等呼叫）。</summary>
+    public void NavigateToBrowser(string url)
+    {
+        int i = Array.FindIndex(_views, v => v is BrowserView);
+        if (i < 0) return;
+        Nav.SelectedIndex = i;   // 切換分頁（觸發 BrowserView 首次載入的非同步初始化）
+        if (_views[i] is BrowserView b) b.NavigateTo(url);   // 未就緒時 NavigateTo 會暫存待就緒補跳
     }
 
     // ===== 迷你浮動監視器 + 系統匣 =====

@@ -232,9 +232,9 @@
                         <StackPanel Orientation="Horizontal">
                             <Viewbox Width="18" Height="18" Margin="0,0,12,0">
                                 <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="F1 M3,20 H7 V10 H3 Z M10,20 H14 V4 H10 Z M17,20 H21 V13 H17 Z"/>
+                                      Data="M3,3 h7 v7 h-7 z M14,3 h7 v7 h-7 z M3,14 h7 v7 h-7 z M14,14 h7 v7 h-7 z"/>
                             </Viewbox>
-                            <TextBlock Text="效能天梯" VerticalAlignment="Center"
+                            <TextBlock Text="實用工具" VerticalAlignment="Center"
                                        Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                         </StackPanel>
                     </ListBoxItem>

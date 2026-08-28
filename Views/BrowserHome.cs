@@ -70,11 +70,11 @@ internal static class BrowserHome
         <a href="https://www.nvidia.com/zh-tw/drivers/">NVIDIA 驅動</a>
       </div>
       <div class="card">
-        <h3>系統 ・ 工具</h3>
-        <a href="https://github.com/luolangaga/tubatools">圖吧工具箱</a>
-        <a href="https://www.ventoy.net/">Ventoy</a>
-        <a href="https://rufus.ie/">Rufus</a>
-        <a href="https://apps.microsoft.com/detail/9pm860492szd">Microsoft PC Manager</a>
+        <h3>常用網站</h3>
+        <a href="https://www.google.com/">Google</a>
+        <a href="https://www.bing.com/">Bing</a>
+        <a href="https://www.yahoo.com/">Yahoo</a>
+        <a href="https://github.com/">GitHub</a>
       </div>
     </div>
     <div class="foot">曦覽 XinSpect ・ 連結於本分頁內開啟</div>

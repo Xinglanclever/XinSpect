@@ -1,0 +1,52 @@
+<UserControl x:Class="XinSpect.BatteryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect"
+             FontFamily="{StaticResource AppFont}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="0,0,6,0">
+            <StackPanel Margin="2,0,0,10">
+                <TextBlock Style="{StaticResource SectionHeader}" Text="電池分析"/>
+                <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
+                           Text="讀取電池設計容量、目前滿充容量與耗損率，並可產生 Windows 官方完整電池報告。僅適用於筆電／平板。"/>
+            </StackPanel>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12" Padding="14,10">
+                <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource PrimaryButton}" Content="重新讀取" Click="Read_Click"/>
+                    <Button Style="{StaticResource ToolButton}" Content="產生完整電池報告" Click="Report_Click" Margin="10,0,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 無電池提示 -->
+            <Border x:Name="EmptyCard" Style="{StaticResource Card}" Visibility="Collapsed">
+                <TextBlock x:Name="EmptyText" TextWrapping="Wrap" FontSize="13"
+                           Foreground="{StaticResource SecondaryInkBrush}"/>
+            </Border>
+
+            <!-- 電池資訊 -->
+            <Border x:Name="InfoCard" Style="{StaticResource Card}" Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock x:Name="NameText" FontSize="16" FontWeight="Bold" Foreground="{StaticResource PrimaryInkBrush}"/>
+                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,12"/>
+                    <local:FieldRow x:Name="ChargeRow" Label="目前電量"/>
+                    <local:FieldRow x:Name="StatusRow" Label="狀態"/>
+                    <local:FieldRow x:Name="ChemRow" Label="化學類型"/>
+                    <local:FieldRow x:Name="DesignRow" Label="設計容量"/>
+                    <local:FieldRow x:Name="FullRow" Label="目前滿充容量"/>
+                    <local:FieldRow x:Name="CycleRow" Label="充放電循環次數"/>
+
+                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,14"/>
+                    <TextBlock Text="電池健康度（耗損率）" Style="{StaticResource FieldLabel}"/>
+                    <Grid Margin="0,8,0,0">
+                        <Border Height="14" CornerRadius="7" Background="{StaticResource Surface2Brush}"/>
+                        <Border x:Name="WearBar" Height="14" CornerRadius="7" HorizontalAlignment="Left"
+                                Background="{StaticResource GoodBrush}" Width="0"/>
+                    </Grid>
+                    <TextBlock x:Name="WearText" Margin="0,8,0,0" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{StaticResource SecondaryInkBrush}"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

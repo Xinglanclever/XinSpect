@@ -18,6 +18,7 @@ public partial class BrowserView : UserControl
     private bool _initStarted;
     private bool _ready;
     private bool _isLoading;
+    private string? _pendingNavUrl;   // 於瀏覽器就緒前收到的導覽請求（如自網速頁跳轉），就緒後補跳
 
     public BrowserView()
     {
@@ -55,7 +56,12 @@ public partial class BrowserView : UserControl
 
             _ready = true;
             SyncNavButtons();
-            GoHome();   // 首頁改為內建的離線「硬體導航」起始頁（A）
+            if (_pendingNavUrl is { } pending)   // 有待處理的跳轉（如自網速頁）優先，否則載入起始頁
+            {
+                _pendingNavUrl = null;
+                NavigateTo(pending);
+            }
+            else GoHome();   // 首頁改為內建的離線「硬體導航」起始頁（A）
         }
         catch (Exception ex)
         {
@@ -134,6 +140,16 @@ public partial class BrowserView : UserControl
         else Web.CoreWebView2?.Reload();
     }
     private void Home_Click(object sender, RoutedEventArgs e) => GoHome();
+
+    // 供其他分頁（如網速測試的 HKBN 節點）跳轉至指定網址。
+    // 若瀏覽器尚未就緒（首次載入的非同步初始化未完成），先暫存，待就緒後自動補跳。
+    public void NavigateTo(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return;
+        if (!_ready) { _pendingNavUrl = url; return; }
+        try { Web.Source = new Uri(url); AddressBar.Text = url; }
+        catch { /* 無效網址時不動作 */ }
+    }
 
     // 回到內建離線起始頁（硬體導航）。以 NavigateToString 載入，不需外部檔案。
     private void GoHome()

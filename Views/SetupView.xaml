@@ -24,7 +24,8 @@
                 <Button Style="{StaticResource ToolButton}" Content="清除勾選" Margin="0,0,8,0" Click="Clear_Click"/>
                 <Button Style="{StaticResource PrimaryButton}" Click="Install_Click"
                         IsEnabled="{Binding CanInstall}"
-                        Content="{Binding SelectedCount, StringFormat=開始安裝（{0}）}"/>
+                        FontSize="15.5" FontWeight="SemiBold" Padding="28,12" MinWidth="150"
+                        Content="{Binding SelectedCount, StringFormat=安裝（{0}）}"/>
             </StackPanel>
         </Grid>
 

@@ -203,6 +203,9 @@
                 </StackPanel>
             </Border>
 
+            <!-- ===== GPU 燒機（FurMark 施加負載 + XinSpect 原生即時監測；置於 CPU 烤機下方） ===== -->
+            <local:GpuStressView local:Anim.RevealDelay="50"/>
+
             <!-- ===== 綜合效能測試（單/多執行緒運算 + 記憶體頻寬） ===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="60">
                 <StackPanel>

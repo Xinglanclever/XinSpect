@@ -1,0 +1,170 @@
+<UserControl x:Class="XinSpect.GpuStressView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect"
+             FontFamily="{StaticResource AppFont}"
+             IsVisibleChanged="OnVisibleChanged">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="B2V"/>
+        <!-- 可編輯的小型數值輸入框 -->
+        <Style x:Key="NumBox" TargetType="TextBox">
+            <Setter Property="Background" Value="{StaticResource Surface2Brush}"/>
+            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Width" Value="90"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border CornerRadius="8" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <!-- 內嵌於效能頁（CPU 烤機下方）：不自帶 ScrollViewer，交由外層效能頁捲動，避免巢狀捲動搶滾輪 -->
+    <StackPanel>
+            <StackPanel Margin="2,0,0,10">
+                <TextBlock Style="{StaticResource SectionHeader}" Text="GPU 燒機測試"/>
+                <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
+                           Text="以公認的第三方負載產生器 FurMark 2 對顯示卡施加滿載，並由 XinSpect 誠實呈現即時溫度、功耗、時脈與風扇。FurMark 為 Geeks3D 專有免費軟體，本程式不內含其執行檔，首次使用以 Windows 內建 winget 從官方來源安裝。"/>
+            </StackPanel>
+            <!-- 安全警告 -->
+            <Border CornerRadius="10" BorderBrush="{StaticResource WarningBrush}" BorderThickness="1"
+                    Background="{StaticResource Surface2Brush}" Padding="14,11" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="⚠ 燒機安全提醒" FontSize="13.5" FontWeight="Bold"
+                               Foreground="{StaticResource WarningBrush}"/>
+                    <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,5,0,0"
+                               Foreground="{StaticResource SecondaryInkBrush}"
+                               Text="燒機會將顯示卡推至極限高溫與高功耗，請確保散熱與供電充足；筆電與散熱不良的機器尤須謹慎。本頁已內建智能熱保護：即時溫度達設定上限時自動停止。測試數值僅供參考，使用風險自負。"/>
+                </StackPanel>
+            </Border>
+
+            <!-- FurMark 準備 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="FurMark 狀態" Margin="0,0,0,6"/>
+                    <TextBlock Text="{Binding PathText}" FontSize="12.5" TextWrapping="Wrap"
+                               Foreground="{StaticResource SecondaryInkBrush}" FontFamily="Consolas"/>
+                    <WrapPanel Margin="0,12,0,0">
+                        <Button Style="{StaticResource PrimaryButton}" Content="一鍵安裝 FurMark"
+                                Click="Install_Click" IsEnabled="{Binding CanInstall}"
+                                Visibility="{Binding NotAvailable, Converter={StaticResource B2V}}" Margin="0,0,10,8"/>
+                        <Button Style="{StaticResource ToolButton}" Content="手動指定路徑"
+                                Click="Manual_Click" Padding="14,8" Margin="0,0,10,8"/>
+                        <Button Style="{StaticResource ToolButton}" Content="重新偵測"
+                                Click="Redetect_Click" Padding="14,8" Margin="0,0,10,8"/>
+                        <Button Style="{StaticResource ToolButton}" Content="官方下載頁"
+                                Click="Official_Click" Padding="14,8" Margin="0,0,10,8"/>
+                        <Button Style="{StaticResource ToolButton}" Content="開啟圖形介面"
+                                Click="Gui_Click" IsEnabled="{Binding Available}" Padding="14,8" Margin="0,0,0,8"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+            <!-- 燒機設定 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="燒機設定" Margin="0,0,0,10"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="解析度" VerticalAlignment="Center" FontSize="13"
+                                   Foreground="{StaticResource SecondaryInkBrush}" Width="72"/>
+                        <TextBox Style="{StaticResource NumBox}"
+                                 Text="{Binding Width, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="×" VerticalAlignment="Center" Margin="8,0" FontSize="14"
+                                   Foreground="{StaticResource SecondaryInkBrush}"/>
+                        <TextBox Style="{StaticResource NumBox}"
+                                 Text="{Binding Height, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Style="{StaticResource ToolButton}" Content="填入原生"
+                                Click="Native_Click" Padding="12,7" Margin="10,0,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="時長" VerticalAlignment="Center" FontSize="13"
+                                   Foreground="{StaticResource SecondaryInkBrush}" Width="72"/>
+                        <Button Style="{StaticResource ToolButton}" Content="5 分" Tag="5" Click="Dur_Click" Padding="12,7" Margin="0,0,8,0"/>
+                        <Button Style="{StaticResource ToolButton}" Content="10 分" Tag="10" Click="Dur_Click" Padding="12,7" Margin="0,0,8,0"/>
+                        <Button Style="{StaticResource ToolButton}" Content="15 分" Tag="15" Click="Dur_Click" Padding="12,7" Margin="0,0,8,0"/>
+                        <Button Style="{StaticResource ToolButton}" Content="30 分" Tag="30" Click="Dur_Click" Padding="12,7" Margin="0,0,8,0"/>
+                        <Button Style="{StaticResource ToolButton}" Content="持續" Tag="0" Click="Dur_Click" Padding="12,7" Margin="0,0,12,0"/>
+                        <TextBlock Text="{Binding DurationText}" VerticalAlignment="Center" FontSize="13"
+                                   FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,4">
+                        <CheckBox Content="全螢幕" IsChecked="{Binding Fullscreen}" VerticalAlignment="Center"
+                                  Foreground="{StaticResource SecondaryInkBrush}" FontSize="13" Margin="0,0,20,0"/>
+                        <CheckBox Content="使用 Vulkan（預設 OpenGL）" IsChecked="{Binding UseVulkan}" VerticalAlignment="Center"
+                                  Foreground="{StaticResource SecondaryInkBrush}" FontSize="13"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <CheckBox Content="智能熱保護：溫度達上限自動停止" IsChecked="{Binding AutoProtect}" VerticalAlignment="Center"
+                                  Foreground="{StaticResource SecondaryInkBrush}" FontSize="13" Margin="0,0,12,0"/>
+                        <TextBox Style="{StaticResource NumBox}" Width="70"
+                                 Text="{Binding ThermalCeilingC, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="°C" VerticalAlignment="Center" Margin="6,0,0,0" FontSize="13"
+                                   Foreground="{StaticResource SecondaryInkBrush}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 動作 -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                <Button Style="{StaticResource PrimaryButton}" Content="{Binding StartStopText}"
+                        Click="Smart_Click"/>
+                <TextBlock Text="{Binding Status}" VerticalAlignment="Center" Margin="14,0,0,0"
+                           FontSize="12.5" TextWrapping="Wrap" MaxWidth="620"
+                           Foreground="{StaticResource SecondaryInkBrush}"/>
+            </StackPanel>
+            <!-- 即時監測 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,4">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="即時監測（XinSpect 原生讀值）" Margin="0,0,0,8"/>
+
+                    <StackPanel Visibility="{Binding HasGpu, Converter={StaticResource B2V}}">
+                        <TextBlock Text="{Binding Gpu.Name}" FontSize="14.5" FontWeight="SemiBold"
+                                   Foreground="{StaticResource PrimaryInkBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                        <local:FieldRow Label="使用率" Value="{Binding Gpu.LoadText}"/>
+                        <local:FieldRow Label="核心溫度" Value="{Binding Gpu.TempText}"/>
+                        <local:FieldRow Label="熱點溫度" Value="{Binding HotSpotText}"/>
+                        <local:FieldRow Label="功耗" Value="{Binding Gpu.PowerText}"/>
+                        <local:FieldRow Label="核心時脈" Value="{Binding Gpu.CoreClockText}"/>
+                        <local:FieldRow Label="記憶體時脈" Value="{Binding Gpu.MemClockText}"/>
+                        <local:FieldRow Label="風扇（占空比）" Value="{Binding Gpu.FanText}"/>
+                        <local:FieldRow Label="風扇轉速" Value="{Binding FanRpmText}"/>
+
+                        <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,10"/>
+
+                        <local:FieldRow Label="已歷時" Value="{Binding ElapsedText}"/>
+                        <local:FieldRow Label="本輪最高核心溫" Value="{Binding MaxTempText}"/>
+                        <local:FieldRow Label="本輪最高熱點溫" Value="{Binding MaxHotText}"/>
+                        <local:FieldRow Label="平均溫度" Value="{Binding AvgTempText}"/>
+                        <local:FieldRow Label="最高功耗" Value="{Binding MaxPowerText}"/>
+                        <local:FieldRow Label="最高負載" Value="{Binding MaxLoadText}"/>
+
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="8" Padding="12,10" Margin="0,10,0,0"
+                                Visibility="{Binding VerdictText.Length, Converter={StaticResource CountToVis}}">
+                            <TextBlock Text="{Binding VerdictText}" TextWrapping="Wrap" FontSize="13"
+                                       FontWeight="SemiBold" Foreground="{StaticResource PrimaryInkBrush}"/>
+                        </Border>
+                    </StackPanel>
+
+                    <TextBlock Visibility="{Binding NotAvailable, Converter={StaticResource B2V}}"
+                               Text="燒機工具就緒後，這裡會即時顯示顯示卡的溫度、功耗與時脈。"
+                               FontSize="12.5" Foreground="{StaticResource MutedInkBrush}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+
+
+        </StackPanel>
+</UserControl>
