@@ -338,6 +338,20 @@ public static class PageRegistry
             Factory = () => new RankingView(),
             Hint = "CPU／顯示卡跑分排行與本機定位", Keywords = ["ranking", "天梯", "排行", "跑分", "排名", "ladder"],
         },
+        new()
+        {
+            Key = "frametime", Title = "幀時間監測", Group = GTools,
+            IconData = "M1,7.5 h3 v-3 h2 v3 h2 v-5 h2 v7 h2 v-4 h2 v4 h1 v2 h-14 z",
+            Factory = () => new FrameTimeView(),
+            Hint = "任何程式的真實幀時間與 1% Low（ETW，不注入）", Keywords = ["frame time", "fps", "幀時間", "掉幀", "頓", "遊戲", "1% low"],
+        },
+        new()
+        {
+            Key = "dpc", Title = "DPC 延遲", Group = GTools,
+            IconData = "M2,2 h5 v3 h-5 z M9,2 h5 v5 h-5 z M2,7 h5 v7 h-5 z M9,9 h5 v5 h-5 z",
+            Factory = () => new DpcLatencyView(),
+            Hint = "排出造成音訊爆音／輸入停頓的肇事驅動（ETW）", Keywords = ["dpc", "isr", "延遲", "latency", "爆音", "驅動", "latencymon"],
+        },
     ];
 
     /// <summary>以 <see cref="PageDef.Key"/> 取頁；找不到回傳 null。</summary>

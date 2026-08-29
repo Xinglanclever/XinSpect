@@ -199,51 +199,47 @@ public sealed class CpuIdService
 
         /// <summary>leaf 0x04 單一子葉 → 快取列；type 欄位為 0 表示子葉列舉終止（回 null）。</summary>
         public static CpuIdCacheRow? DecodeCacheSubleaf(uint eax, uint ebx, uint ecx, uint edx)
+            => DecodeCacheRaw(eax, ebx, ecx, edx)?.ToRow();
+
+        /// <summary>原始解碼（供延遲曲線的「實測 vs 宣稱」配對）；type 為 0 表示終止。</summary>
+        public static RawCache? DecodeCacheRaw(uint eax, uint ebx, uint ecx, uint edx)
         {
             uint type = eax & 0x1F;
             if (type == 0) return null;
-            uint level = (eax >> 5) & 0x7;
-            uint shared = ((eax >> 14) & 0xFFF) + 1;
-            uint ways = ((ebx >> 22) & 0x3FF) + 1;
-            uint part = ((ebx >> 12) & 0x3FF) + 1;
-            uint line = (ebx & 0xFFF) + 1;
-            uint sets = ecx + 1;
-            long capacity = (long)ways * part * line * sets;
-
-            string levelName = level switch
-            {
-                1 => "L1",
-                2 => "L2",
-                3 => "L3",
-                _ => $"L{level}",
-            };
-            string typeName = type switch
-            {
-                1 => "資料",
-                2 => "指令",
-                3 => "統一",
-                _ => "?",
-            };
-            string inclusive = ((edx & 0x2) != 0) ? "含括" : ((edx & 0x1) != 0) ? "非含括" : "—";
-
-            return new CpuIdCacheRow(
-                $"{levelName} {typeName}",
-                FormatCapacity(capacity),
-                $"{ways} 路",
-                $"{line} B",
-                sets.ToString("N0"),
-                $"{shared} 核共用",
-                inclusive);
+            return new RawCache(
+                type, (eax >> 5) & 0x7, ((eax >> 14) & 0xFFF) + 1,
+                ((ebx >> 22) & 0x3FF) + 1, ((ebx >> 12) & 0x3FF) + 1, (ebx & 0xFFF) + 1, ecx + 1, edx);
         }
 
-        private static string FormatCapacity(long bytes)
+        /// <summary>leaf 0x04 的原始快取幾何。</summary>
+        public readonly record struct RawCache(
+            uint Type, uint Level, uint SharedCores,
+            uint Ways, uint Partitions, uint LineBytes, uint Sets, uint EdxFlags)
         {
-            return bytes switch
+            public long CapacityBytes => (long)Ways * Partitions * LineBytes * Sets;
+
+            public string LevelName
             {
-                >= 1024 * 1024 => $"{bytes / (1024.0 * 1024.0):0.##} MB",
-                >= 1024 => $"{bytes / 1024.0:0.#} KB",
-                _ => $"{bytes} B",
-            };
+                get
+                {
+                    string lv = Level switch { 1 => "L1", 2 => "L2", 3 => "L3", _ => $"L{Level}" };
+                    string ty = Type switch { 1 => "資料", 2 => "指令", 3 => "統一", _ => "?" };
+                    return $"{lv} {ty}";
+                }
+            }
+
+            public CpuIdCacheRow ToRow()
+            {
+                long bytes = CapacityBytes;
+                string cap = bytes switch
+                {
+                    >= 1024 * 1024 => $"{bytes / (1024.0 * 1024.0):0.##} MB",
+                    >= 1024 => $"{bytes / 1024.0:0.#} KB",
+                    _ => $"{bytes} B",
+                };
+                string inclusive = (EdxFlags & 0x2) != 0 ? "含括" : (EdxFlags & 0x1) != 0 ? "非含括" : "—";
+                return new CpuIdCacheRow(LevelName, cap, $"{Ways} 路", $"{LineBytes} B", Sets.ToString("N0"), $"{SharedCores} 核共用", inclusive);
+            }
         }
 
         /// <summary>leaf 0x16：base／max／bus MHz（廠商標稱值）。</summary>

@@ -1,0 +1,81 @@
+<UserControl x:Class="XinSpect.FrameTimeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <StackPanel Margin="2,0,0,10">
+                <TextBlock Style="{StaticResource SectionHeader}" Text="幀時間監測"/>
+                <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                           Text="訂閱 DXGI Present 事件（ETW），取得任何程式的每一幀時間戳——不注入目標程序、不掛勾、不碰驅動，反作弊軟體無從區別。1%／0.1% Low 採「最差 1%／0.1% 幀的平均 FPS」定義；Present 模式與 GPU 忙碌時間本版未解析，解析不了就不顯示。"/>
+            </StackPanel>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="監測目標"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
+                                    Click="Stop_Click" IsEnabled="{Binding FrameTime.IsRunning}"/>
+                            <Button Style="{StaticResource PrimaryButton}" Content="開始監測"
+                                    Click="Start_Click" IsEnabled="{Binding FrameTime.CanStart}"/>
+                        </StackPanel>
+                    </Grid>
+                    <Grid Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="90"/><ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="行程" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Column="1" Style="{StaticResource DarkCombo}" x:Name="ProcPicker"
+                                  ItemsSource="{Binding FrameTime.Processes}" DisplayMemberPath="Label"
+                                  SelectionChanged="ProcPicker_SelectionChanged"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding FrameTime.Status}"/>
+                </StackPanel>
+            </Border>
+
+            <UniformGrid Rows="1" Columns="5" Margin="0,0,0,12">
+                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="12,10" Margin="0,0,4,0">
+                    <StackPanel>
+                        <TextBlock Text="平均 FPS" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding FrameTime.Stats.AvgFps}" FontSize="20" Foreground="{StaticResource PrimaryInkBrush}"/>
+                    </StackPanel>
+                </Border>
+                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="12,10" Margin="4,0">
+                    <StackPanel>
+                        <TextBlock Text="1% Low" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding FrameTime.Stats.Low1}" FontSize="20" Foreground="{StaticResource PrimaryInkBrush}"/>
+                    </StackPanel>
+                </Border>
+                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="12,10" Margin="4,0">
+                    <StackPanel>
+                        <TextBlock Text="0.1% Low" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding FrameTime.Stats.Low01}" FontSize="20" Foreground="{StaticResource PrimaryInkBrush}"/>
+                    </StackPanel>
+                </Border>
+                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="12,10" Margin="4,0">
+                    <StackPanel>
+                        <TextBlock Text="幀時間中位" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding FrameTime.Stats.MedianMs}" FontSize="20" Foreground="{StaticResource PrimaryInkBrush}"/>
+                    </StackPanel>
+                </Border>
+                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="12,10" Margin="4,0,0,0">
+                    <StackPanel>
+                        <TextBlock Text="最大幀時間" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding FrameTime.Stats.MaxMs}" FontSize="20" Foreground="{StaticResource PrimaryInkBrush}"/>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="幀間隔（越平穩越順，長條竄高就是頓的那一下）"/>
+                    <local:FrameTimeChart x:Name="Chart" Height="200" Margin="0,8,0,0"
+                                          Intervals="{Binding FrameTime.Intervals}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding FrameTime.Stats.Frames, StringFormat=已觀測 {0} 幀。幀時間變異（長條忽高忽低）是頓感的真正來源，平均 FPS 看不出來。}"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

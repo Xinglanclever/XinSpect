@@ -169,6 +169,42 @@
                     </ItemsControl>
                 </StackPanel>
             </Border>
+
+            <!-- ===== SLC 快取耗盡曲線 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="SLC 快取耗盡曲線"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
+                                    Click="SlcStop_Click" IsEnabled="{Binding SlcCache.IsRunning}"/>
+                            <Button Style="{StaticResource PrimaryButton}" Content="開始測試"
+                                    Click="SlcStart_Click" IsEnabled="{Binding SlcCache.CanStart}"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="持續寫入選定磁碟區（每秒強制 FlushToDisk，量到的是真的落到裝置的速度），畫出速度曲線並偵測 SLC 快取耗盡後的斷崖——廠商規格表絕不會寫的數字。斷崖點由曲線推導，會受溫度與背景活動影響。測試檔結束後自動刪除。"/>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/><ColumnDefinition Width="160"/><ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Style="{StaticResource DarkCombo}" x:Name="SlcVolume"
+                                  ItemsSource="{Binding Volumes.Volumes}" DisplayMemberPath="CaptionText" SelectedIndex="0"
+                                  SelectionChanged="SlcVolume_SelectionChanged"/>
+                        <ComboBox Grid.Column="1" Style="{StaticResource DarkCombo}" Margin="8,0,0,0" x:Name="SlcTarget"
+                                  ItemsSource="{Binding SlcCache.TargetTexts}" SelectedIndex="{Binding SlcCache.TargetIndex, Mode=TwoWay}"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" Margin="12,0,0,0" VerticalAlignment="Center"
+                                   Text="{Binding SlcCache.PeakText, StringFormat=尖峰：{0}}"/>
+                    </Grid>
+                    <ProgressBar Style="{StaticResource LoadBar}" Value="{Binding SlcCache.ProgressPercent, Mode=OneWay}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding SlcCache.Status}"/>
+                    <local:SlcCurveChart Height="220" Margin="0,10,0,0"
+                                         Times="{Binding SlcCache.Times}" Speeds="{Binding SlcCache.Speeds}"
+                                         CliffMarks="{Binding SlcCache.CliffMarks}"/>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding SlcCache.CliffText}"/>
+                    <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Text="{Binding SlcCache.PostText}"/>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

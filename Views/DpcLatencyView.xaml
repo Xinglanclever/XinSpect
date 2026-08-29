@@ -1,0 +1,76 @@
+<UserControl x:Class="XinSpect.DpcLatencyView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <StackPanel Margin="2,0,0,10">
+                <TextBlock Style="{StaticResource SectionHeader}" Text="DPC／ISR 延遲"/>
+                <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                           Text="量每一支驅動的 DPC／ISR 在 CPU 上的執行時長，排出肇事模組排行（ETW 核心追蹤，零驅動安裝）。音訊爆音、滑鼠瞬間停頓、串流掉幀，往往是某支驅動的 DPC 吃掉數百微秒——這個資料只有作業系統知道。經驗法則：單次超過 1000 µs 就值得注意，但它只是統計不是判決。"/>
+            </StackPanel>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="量測"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
+                                    Click="Stop_Click" IsEnabled="{Binding DpcLatency.IsRunning}"/>
+                            <Button Style="{StaticResource PrimaryButton}" Content="開始量測"
+                                    Click="Start_Click" IsEnabled="{Binding DpcLatency.CanStart}"/>
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="量測時長" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <RadioButton Content="10 秒" Margin="0,0,10,0" GroupName="DpcDur" Tag="10" Checked="Dur_Checked"/>
+                        <RadioButton Content="15 秒" Margin="0,0,10,0" GroupName="DpcDur" Tag="15" IsChecked="True" Checked="Dur_Checked"/>
+                        <RadioButton Content="30 秒" Margin="0,0,10,0" GroupName="DpcDur" Tag="30" Checked="Dur_Checked"/>
+                        <RadioButton Content="60 秒" GroupName="DpcDur" Tag="60" Checked="Dur_Checked"/>
+                    </StackPanel>
+                    <ProgressBar Style="{StaticResource LoadBar}" Margin="0,10,0,0" Value="{Binding DpcLatency.ProgressPercent, Mode=OneWay}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding DpcLatency.Status}"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/><ColumnDefinition Width="70"/>
+                            <ColumnDefinition Width="80"/><ColumnDefinition Width="90"/><ColumnDefinition Width="90"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource ColHead}" Text="驅動模組"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="類別"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="次數"/>
+                        <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="最大"/>
+                        <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="平均"/>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding DpcLatency.Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid x:Name="Row" MinHeight="26">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="80"/><ColumnDefinition Width="90"/><ColumnDefinition Width="90"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Module}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Kind}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding CountText}"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding MaxText}"/>
+                                    <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" Text="{Binding AvgText}"/>
+                                </Grid>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" Value="True">
+                                        <Setter TargetName="Row" Property="Background" Value="{StaticResource Surface2Brush}"/>
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
