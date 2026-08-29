@@ -120,6 +120,55 @@
 
             <TextBlock Style="{StaticResource FieldLabel}" Margin="4,10,0,0"
                        Text="剩餘壽命與溫度來自 S.M.A.R.T.，部分裝置或未提供。"/>
+
+            <!-- ===== S.M.A.R.T. 原始資料 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="S.M.A.R.T. 原始資料"/>
+                        <Button Style="{StaticResource PrimaryButton}" Content="讀取" HorizontalAlignment="Right"
+                                VerticalAlignment="Center" Click="SmartRead_Click" IsEnabled="{Binding DiskSmart.CanRead}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="NVMe 直讀健康紀錄（log page 0x02）；SATA 走 SMART_RCV_DRIVE_DATA（磁碟類別驅動代理）。屬性的原始值照韌體回報原樣列出（十六進位＋小端整數），不套任何廠商換算公式——換算就是猜。刻意不用會卡死 IRP 的原始 ATA_PASS-THROUGH；匯流排預檢不通過（USB 橋接等）時如實顯示不支援。"/>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Style="{StaticResource DarkCombo}" x:Name="SmartDrives"
+                                  ItemsSource="{Binding DiskSmart.Drives}" DisplayMemberPath="Label" SelectedIndex="0"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}" Margin="12,0,0,0" VerticalAlignment="Center"
+                                   Text="{Binding DiskSmart.KindText, StringFormat=來源：{0}}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,0,0,6" TextWrapping="Wrap" Text="{Binding DiskSmart.Status}"/>
+                    <Grid Margin="0,0,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="240"/><ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="90"/><ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource ColHead}" Text="屬性"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="現值"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="最差"/>
+                        <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="原始值"/>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding DiskSmart.Rows}" MaxHeight="420">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="24">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="240"/><ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="90"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Name}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding ValueText}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding WorstText}"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding RawText}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>
