@@ -4,10 +4,10 @@
              xmlns:local="clr-namespace:XinSpect"
              FontFamily="{StaticResource AppFont}">
     <UserControl.Resources>
-        <!-- 節點選擇：水平分段選擇器 -->
+        <!-- 節點選擇：分段選擇器；ItemsPanel 為 WrapPanel，寬度不足時自動換行（低 DPI／窄窗不截斷） -->
         <Style x:Key="NodeItem" TargetType="ListBoxItem">
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Margin" Value="0,0,8,8"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
@@ -46,7 +46,7 @@
                              ItemContainerStyle="{StaticResource NodeItem}"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                         <ListBox.ItemsPanel>
-                            <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                            <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
                         </ListBox.ItemsPanel>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
