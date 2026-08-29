@@ -120,6 +120,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>計時器地基：QPC 來源、解析度、Invariant TSC（健康分頁卡片，零特權）。</summary>
     public TimerFoundationService TimerFoundation { get; } = new();
 
+    /// <summary>韌體與開機信任鏈：Secure Boot 四態、Hypervisor、微碼（主機板分頁卡片）。</summary>
+    public FirmwareService Firmware { get; } = new();
+
     /// <summary>記憶體圖樣檢測（寫入／回讀比對，抓卡死位元、鄰位干擾與位址解碼錯誤）。</summary>
     public MemoryTestService MemTest { get; } = new();
 

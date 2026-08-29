@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Controls;
 
 namespace XinSpect;
@@ -6,4 +7,10 @@ namespace XinSpect;
 public partial class MotherboardView : UserControl
 {
     public MotherboardView() => InitializeComponent();
+
+    private MainViewModel? Vm =>
+        DataContext as MainViewModel
+        ?? Application.Current?.MainWindow?.DataContext as MainViewModel;
+
+    private void FirmwareRefresh_Click(object sender, RoutedEventArgs e) => Vm?.Firmware.Refresh();
 }
