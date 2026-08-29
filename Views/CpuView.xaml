@@ -425,6 +425,34 @@
                     </ItemsControl>
                 </StackPanel>
             </Border>
+
+            <!-- ===== 黏滯節流位元 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="黏滯節流位元"/>
+                        <Button Style="{StaticResource PrimaryButton}" Content="讀取" HorizontalAlignment="Right"
+                                VerticalAlignment="Center" Click="StickyRead_Click" IsEnabled="{Binding ThermalSticky.CanRefresh}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="IA32_PACKAGE_THERM_STATUS（0x1B1）的 log 位元是「發生過就保持為 1」的紀錄：使用者說會頓但開監控時又不頓，這裡能回答自開機以來到底有沒有撞過溫度牆／功耗牆。唯讀，本程式不清除位元。"/>
+                    <ItemsControl ItemsSource="{Binding ThermalSticky.Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="26">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="180"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Name}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" TextAlignment="Right"
+                                               Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding StateText}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding ThermalSticky.Status}"/>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

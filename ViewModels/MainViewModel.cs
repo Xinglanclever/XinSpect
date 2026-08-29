@@ -108,6 +108,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>SLC 快取耗盡曲線：持續寫入與斷崖偵測（儲存分頁卡片）。</summary>
     public SlcCacheBenchService SlcCache { get; } = new();
 
+    /// <summary>黏滯節流位元：封裝溫度牆／功耗牆的自開機以來紀錄（CPU 分頁卡片，唯讀 MSR）。</summary>
+    public ThermalStickyService ThermalSticky { get; } = new();
+
     /// <summary>記憶體圖樣檢測（寫入／回讀比對，抓卡死位元、鄰位干擾與位址解碼錯誤）。</summary>
     public MemoryTestService MemTest { get; } = new();
 
