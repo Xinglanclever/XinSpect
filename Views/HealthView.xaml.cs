@@ -12,11 +12,17 @@ public partial class HealthView : UserControl, IPageLifecycle
 {
     public HealthView() => InitializeComponent();
 
-    public void OnActivated() => Vm?.RefreshUpgrade();
+    public void OnActivated()
+    {
+        Vm?.RefreshUpgrade();
+        Vm?.Whea.Refresh();   // 進頁自動讀一次；WHEA 事件不是每秒資料，跟著頁面走即可
+    }
 
     public void OnDeactivated() { }
 
     private void RefreshUpgrade_Click(object sender, RoutedEventArgs e) => Vm?.RefreshUpgrade();
+
+    private void WheaRefresh_Click(object sender, RoutedEventArgs e) => Vm?.Whea.Refresh();
 
     // Host.Content 延遲載入時 DataContext 由父容器繼承；仍以主視窗為後備。
     private MainViewModel? Vm =>

@@ -90,6 +90,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>SMBIOS 原始表全解：插槽使用狀態、記憶體條序號／型號／Rank 等 WMI 未轉譯的欄位。</summary>
     public SmbiosService Smbios { get; } = new();
 
+    /// <summary>WHEA 硬體錯誤紀錄：事件檢視器 Microsoft-Windows-WHEA-Logger 的近 30 天彙整（零特權）。</summary>
+    public WheaErrorService Whea { get; } = new();
+
     /// <summary>記憶體圖樣檢測（寫入／回讀比對，抓卡死位元、鄰位干擾與位址解碼錯誤）。</summary>
     public MemoryTestService MemTest { get; } = new();
 

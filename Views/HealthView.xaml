@@ -149,6 +149,37 @@
                 </StackPanel>
             </Border>
 
+            <!-- ===== WHEA 硬體錯誤紀錄 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="WHEA 硬體錯誤紀錄"/>
+                        <Button Style="{StaticResource ToolButton}" Content="重新讀取" HorizontalAlignment="Right"
+                                VerticalAlignment="Center" Click="WheaRefresh_Click" IsEnabled="{Binding Whea.CanRefresh}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="事件檢視器 Microsoft-Windows-WHEA-Logger 頻道的近 30 天紀錄：CPU 內部錯誤、PCIe 可修正／不可修正錯誤、記憶體與快取階層的韌體級錯誤都在這裡。零特權、由 Windows 收集，可靠；0 筆是好事，就照實說。"/>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,0,0,6" TextWrapping="Wrap"
+                               Text="{Binding Whea.Summary}"/>
+                    <ItemsControl ItemsSource="{Binding Whea.Rows}" MaxHeight="260">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="24" Margin="0,1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="110"/><ColumnDefinition Width="56"/>
+                                        <ColumnDefinition Width="64"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Time}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Level}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding Id}"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Text="{Binding Message}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <TextBlock Style="{StaticResource FieldLabel}" Margin="4,10,0,0"
                        Text="溫度 / 壽命來自感測器與 S.M.A.R.T.；磁碟空間取用量最高的磁碟區。部分裝置或未提供資料。"/>
         </StackPanel>
