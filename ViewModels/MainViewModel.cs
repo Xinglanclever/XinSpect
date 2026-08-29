@@ -84,6 +84,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>CPUID 晶片直讀：快取幾何、指令集位元、標稱頻率與拓樸（CPU 分頁卡片，建構即讀取、零特權）。</summary>
     public CpuIdService CpuId { get; } = new();
 
+    /// <summary>記憶體延遲曲線：半倍頻步進的指標追逐，邊界由曲線推導並與 CPUID 宣稱並列。</summary>
+    public LatencyCurveService LatencyCurve { get; } = new();
+
     /// <summary>記憶體圖樣檢測（寫入／回讀比對，抓卡死位元、鄰位干擾與位址解碼錯誤）。</summary>
     public MemoryTestService MemTest { get; } = new();
 

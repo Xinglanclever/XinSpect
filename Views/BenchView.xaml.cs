@@ -24,6 +24,7 @@ public partial class BenchView : UserControl
     private WinsatService? Winsat => Vm?.Winsat;
     private StressTestService? Stress => Vm?.Stress;
     private CacheBenchService? Cache => Vm?.Cache;
+    private LatencyCurveService? LatCurve => Vm?.LatencyCurve;
     private SuperPiService? SuperPi => Vm?.SuperPi;
     private DiskBenchService? DiskBench => Vm?.DiskBench;
 
@@ -113,6 +114,10 @@ public partial class BenchView : UserControl
     // ===== 快取 / 記憶體延遲 =====
     private void CacheStart_Click(object sender, RoutedEventArgs e) => Cache?.Start();
     private void CacheStop_Click(object sender, RoutedEventArgs e) => Cache?.Cancel();
+
+    // ===== 記憶體延遲曲線 =====
+    private void LatCurveStart_Click(object sender, RoutedEventArgs e) => LatCurve?.Start();
+    private void LatCurveStop_Click(object sender, RoutedEventArgs e) => LatCurve?.Cancel();
 
     // ===== SuperPI =====
     // 六檔位：10萬 / 50萬 / 100萬 / 1000萬 / 5000萬 / 1億

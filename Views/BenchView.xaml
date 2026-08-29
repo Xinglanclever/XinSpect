@@ -415,6 +415,44 @@
                 </StackPanel>
             </Border>
 
+            <!-- ===== 記憶體延遲曲線（實測 vs 宣稱）===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="210">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="記憶體延遲曲線"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
+                                    Click="LatCurveStop_Click" IsEnabled="{Binding LatencyCurve.IsRunning}"/>
+                            <Button Style="{StaticResource PrimaryButton}" Content="開始量測"
+                                    Click="LatCurveStart_Click" IsEnabled="{Binding LatencyCurve.CanStart}"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="以指標追逐法掃描 1 KB → 1 GB（半倍頻步進）的平均存取延遲；快取邊界由曲線階梯推導（量到的），與 CPUID leaf 0x04 宣稱的容量並列對照。工作集上限受可用記憶體約束（保留 1 GB）。"/>
+                    <ProgressBar Style="{StaticResource LoadBar}" Value="{Binding LatencyCurve.ProgressPercent, Mode=OneWay}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding LatencyCurve.StatusLine}"/>
+                    <local:LatencyCurveChart Height="230" Margin="0,10,0,0"
+                                             Xs="{Binding LatencyCurve.Sizes}" Ys="{Binding LatencyCurve.Latencies}"
+                                             BoundaryMarks="{Binding LatencyCurve.Boundaries}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,2" TextWrapping="Wrap"
+                               Text="{Binding LatencyCurve.ClaimedNote, StringFormat={}{0}}"/>
+                    <ItemsControl ItemsSource="{Binding LatencyCurve.BoundaryRows}" Margin="0,0,0,4">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="26">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="140"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldValue}" Text="{Binding Derived}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Claimed}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <!-- ===== SuperPI 圓周率運算 ===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="240">
                 <StackPanel>
