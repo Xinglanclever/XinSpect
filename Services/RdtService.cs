@@ -32,6 +32,12 @@ public sealed class RdtCoreRow
 /// 誠實界線：RMID 全核統一指派，得到「全系統＋逐核心」視角；逐<b>行程</b>歸屬需要核心層 RMID 排程，
 /// 使用者態做不到。MSR 寫入經 WinRing0 橋接（使用者已同意；風險聲明見 WinRing0Bridge）。
 /// MBM 計數會溢位回繞——差分為負時視為回繞或重置，該秒不計。
+/// <para>
+/// 本機（36 LP／CPUID 0x0F.0 EBX=0x8F、0x0F.1 upscaling=73728、maxRmid=143、events=0x7）實測：
+/// 逐核心釘選後寫 PQR_ASSOC 會落地（回讀 0x1_0000_0000，RMID 欄位＝1），QM_CTR 也沒有回 Error／
+/// Unavailable 旗標，但三個事件在相隔一秒的兩次取樣中都是 0——即計數器有效卻不遞增。
+/// 這是平台／韌體未開放 RDT 監測的樣子，如實顯示 0，不用估計值頂替。
+/// </para>
 /// </remarks>
 public sealed class RdtService : ObservableObject, IDisposable
 {
@@ -47,12 +53,15 @@ public sealed class RdtService : ObservableObject, IDisposable
     private const uint EventL3Occupancy = 1;
     private const uint EventTotalMbm = 2;
     private const uint EventLocalMbm = 3;
+    /// <summary>本工具統一指派的 RMID。0 是預設／未分類，故用 1。</summary>
+    private const int UsedRmid = 1;
 
     private WinRing0Bridge? _bridge;
     private Thread? _worker;
     private CancellationTokenSource? _cts;
     private double _upscaling = 1;
     private int _maxRmid;
+    private bool _hasOccupancy, _hasTotalBw, _hasLocalBw;
     private int[] _lps = [];
     private ulong _processMask;
 
@@ -86,6 +95,9 @@ public sealed class RdtService : ObservableObject, IDisposable
             Status = "WinRing0 橋接不可用：" + _bridge?.Error;
             return;
         }
+        // 先取得核心清單，DetectSupport 的說明文字才不會顯示「0 邏輯處理器」。
+        _processMask = (ulong)Process.GetCurrentProcess().ProcessorAffinity.ToInt64();
+        _lps = CoreLatencyService.LogicalProcessorsFromMask(_processMask).ToArray();
         DetectSupport();
         if (!RdtSupported) { Status = SupportText; return; }
 
@@ -146,8 +158,45 @@ public sealed class RdtService : ObservableObject, IDisposable
         var r1 = X86Base.CpuId(0x0F, 1);
         var upscaling = (uint)r1.Ebx;
         var maxRmid = (int)((uint)r1.Ecx);
+        // EDX bit0＝L3 占用、bit1＝總頻寬、bit2＝本機頻寬。能力要如實列出，不能假設三者都有。
+        var edx = (uint)r1.Edx;
+        bool hasOcc = (edx & 0x1) != 0, hasTotal = (edx & 0x2) != 0, hasLocal = (edx & 0x4) != 0;
+
+        _upscaling = upscaling == 0 ? 1 : upscaling;   // 0 視為不可用，退回 1 並在文字上標明
+        _maxRmid = maxRmid;
+        _hasOccupancy = hasOcc;
+        _hasTotalBw = hasTotal;
+        _hasLocalBw = hasLocal;
+
+        if (maxRmid < UsedRmid)
+        {
+            RdtSupported = false;
+            SupportText = $"最大 RMID 為 {maxRmid}，不足以使用 RMID {UsedRmid}（CPUID 0x0F.1 ECX）";
+            return;
+        }
+
         RdtSupported = true;
-        SupportText = $"支援：upscaling {upscaling:0}、最大 RMID {maxRmid}、{_lps.Length} 邏輯處理器";
+        string events = string.Join("／", new[]
+        {
+            hasOcc ? "L3 占用" : null,
+            hasTotal ? "總頻寬" : null,
+            hasLocal ? "本機頻寬" : null,
+        }.Where(s => s is not null));
+        SupportText = $"支援：upscaling {_upscaling:0} bytes、最大 RMID {maxRmid}、"
+                    + $"可用事件 {(events.Length == 0 ? "（無）" : events)}、{_lps.Length} 邏輯處理器"
+                    + (upscaling == 0 ? "（CPUID 回報 upscaling 為 0，占用值不可信）" : "");
+    }
+
+    /// <summary>
+    /// 讀 QM_CTR（0xC8E）：位 63＝Error（RMID 或事件無效）、位 62＝Unavailable（本次無資料），
+    /// 資料在位 61:0。任一旗標成立即回 null——**不得把錯誤碼當成讀值**。
+    /// </summary>
+    private ulong? ReadQmCtr()
+    {
+        if (_bridge!.ReadMsrPair64(MsrQmCtr) is not { } raw) return null;
+        if ((raw & (1UL << 63)) != 0) return null;   // Error
+        if ((raw & (1UL << 62)) != 0) return null;   // Unavailable
+        return raw & 0x3FFF_FFFF_FFFF_FFFFUL;
     }
 
     private void WorkerLoop(CancellationToken ct)
@@ -157,9 +206,16 @@ public sealed class RdtService : ObservableObject, IDisposable
         DetectSupport();
         if (!RdtSupported || _lps.Length == 0) { _status = SupportText; return; }
 
-        // 指派 RMID 1 給每個核心（PQR_ASSOC 的 RMID 在位 51:32）
+        // 指派 RMID 給每個邏輯處理器（PQR_ASSOC 的 RMID 在位 51:32）。
+        // MSR 寫入只作用於「當下執行的那顆核心」，所以每寫一次都必須先把自己釘到該核心上，
+        // 否則只有恰好排到的那一顆被指派，其餘核心讀出來永遠是 0。
         foreach (var lp in _lps)
-            _bridge!.WriteMsrPair(MsrPqrAssoc, 0, 1);   // RMID 1（位 51:32 → EAX=0、EDX=1）
+        {
+            if (SetThreadAffinityMask(GetCurrentThread(), 1UL << lp) == IntPtr.Zero) continue;
+            try { _bridge!.WriteMsrPair(MsrPqrAssoc, 0, UsedRmid); }   // EAX=0、EDX=RMID（位 51:32）
+            catch { }
+            finally { SetThreadAffinityMask(GetCurrentThread(), _processMask); }
+        }
 
         var lastTotal = new ulong[_lps.Length];
         var lastLocal = new ulong[_lps.Length];
@@ -185,15 +241,24 @@ public sealed class RdtService : ObservableObject, IDisposable
                 bool tOk = false, lOk = false;
                 try
                 {
-                    _bridge!.WriteMsrPair(MsrQmEvtsel, EventL3Occupancy, 1);
-                    if (_bridge.ReadMsrPair64(MsrQmCtr) is { } occRaw)
-                        occ = occRaw * _upscaling / (1024.0 * 1024.0);
+                    if (_hasOccupancy)
+                    {
+                        _bridge!.WriteMsrPair(MsrQmEvtsel, EventL3Occupancy, UsedRmid);
+                        if (ReadQmCtr() is { } occRaw)
+                            occ = occRaw * _upscaling / (1024.0 * 1024.0);
+                    }
 
-                    _bridge.WriteMsrPair(MsrQmEvtsel, EventTotalMbm, 1);
-                    tOk = _bridge.ReadMsrPair64(MsrQmCtr) is { } tv && (t = tv) >= 0;
+                    if (_hasTotalBw)
+                    {
+                        _bridge!.WriteMsrPair(MsrQmEvtsel, EventTotalMbm, UsedRmid);
+                        if (ReadQmCtr() is { } tv) { t = tv; tOk = true; }
+                    }
 
-                    _bridge.WriteMsrPair(MsrQmEvtsel, EventLocalMbm, 1);
-                    lOk = _bridge.ReadMsrPair64(MsrQmCtr) is { } lv && (l = lv) >= 0;
+                    if (_hasLocalBw)
+                    {
+                        _bridge!.WriteMsrPair(MsrQmEvtsel, EventLocalMbm, UsedRmid);
+                        if (ReadQmCtr() is { } lv) { l = lv; lOk = true; }
+                    }
                 }
                 catch { }
                 finally
@@ -201,11 +266,13 @@ public sealed class RdtService : ObservableObject, IDisposable
                     SetThreadAffinityMask(GetCurrentThread(), _processMask);
                 }
 
+                // MBM 計數的單位同樣要乘 upscaling 才是位元組；差分為負＝回繞或重置，該秒不計。
                 double dBw = -1, lBw = -1;
                 if (tOk && hasPrev[i] && t >= lastTotal[i])
-                    dBw = (t - lastTotal[i]) * 8.0 / dt / 1e6;
+                    dBw = (t - lastTotal[i]) * _upscaling / dt / (1024.0 * 1024.0);
                 if (lOk && hasPrev[i] && l >= lastLocal[i])
-                    lBw = (l - lastLocal[i]) * 8.0 / dt / 1e6;
+                    lBw = (l - lastLocal[i]) * _upscaling / dt / (1024.0 * 1024.0);
+
                 if (tOk) lastTotal[i] = t;
                 if (lOk) lastLocal[i] = l;
                 hasPrev[i] = true;
@@ -218,24 +285,30 @@ public sealed class RdtService : ObservableObject, IDisposable
                 _snapshot = snap;
                 _snapshotAt = DateTime.Now;
             }
-            // 誠實提示：全部讀值為 0 時，最可能是本機 BIOS／平台未開放 RDT 監測
-            // （X299 韌體有此開關；本機實測 0xC81 啟用位元寫入後計數仍為 0）
-            if (snap.All(s => s.Item2 <= 0 && s.Item3 <= 0) && ct.IsCancellationRequested == false)
+            // 誠實提示：全部讀值為 0／讀不到時，最可能是本機 BIOS／平台未開放 RDT 監測。
+            // 註：監測（CMT／MBM）不需要任何全域啟用位元——IA32_L3_QOS_CFG（0xC81）bit0 是 L3 CAT 的
+            // CDP 啟用，與監測無關，不要為了「讓數字動起來」去寫它。
+            if (snap.All(s => s.Item2 <= 0 && s.Item3 <= 0) && !ct.IsCancellationRequested)
                 _status = "監測中…（讀值全部為 0：本機 BIOS／平台可能未開放 RDT 監測，資料如實呈現）";
+
             else
                 _status = $"監測中…（{_lps.Length} 核心）";
             Thread.Sleep(1000);
         }
     }
 
+    /// <summary>把每個核心的 RMID 歸零。同樣必須逐核心釘選，否則只會清掉一顆。</summary>
     private void UnassignRmid()
     {
-        try
+        if (_bridge is null) return;
+        if (_processMask == 0) _processMask = (ulong)Process.GetCurrentProcess().ProcessorAffinity.ToInt64();
+        foreach (var lp in _lps)
         {
-            foreach (var lp in _lps)
-                _bridge?.WriteMsrPair(MsrPqrAssoc, 0, 0);   // 歸零
+            if (SetThreadAffinityMask(GetCurrentThread(), 1UL << lp) == IntPtr.Zero) continue;
+            try { _bridge.WriteMsrPair(MsrPqrAssoc, 0, 0); }
+            catch { }
+            finally { SetThreadAffinityMask(GetCurrentThread(), _processMask); }
         }
-        catch { }
     }
 
     public void Dispose()
