@@ -36,7 +36,7 @@
             <StackPanel Margin="2,0,0,10">
                 <TextBlock Style="{StaticResource SectionHeader}" Text="網速測試"/>
                 <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
-                           Text="量測對外網路的延遲、下載與上傳速度。需連外，測試期間會消耗流量。NTU 台大為學術網路節點（台灣）；HKBN 香港寬頻未提供公開量測端點，將跳轉至內建瀏覽器開啟其官方測速頁；Cloudflare 節點目前量測不穩定（Bug），暫置於末位。"/>
+                           Text="量測對外網路的延遲、下載與上傳速度。需連外，測試期間會消耗流量。NTU 台大（台灣學術網路）與 SGIX（新加坡交換中心）可原生量測；CTM 澳門電訊（官方自助檢測）與測速網（中國大陸）未提供公開量測端點，將跳轉至內建瀏覽器開啟其官方頁面；Cloudflare 節點目前量測不穩定（Bug），暫置於末位。"/>
             </StackPanel>
 
             <Border Style="{StaticResource Card}" Margin="0,0,0,12">
