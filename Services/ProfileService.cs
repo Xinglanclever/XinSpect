@@ -408,7 +408,7 @@ public sealed class ProfileService : ObservableObject
                 CustomGpuPower = Custom.GpuPowerPercent,
                 CustomGpuTemp = Custom.GpuTempLimitC,
             };
-            File.WriteAllText(_file, JsonSerializer.Serialize(p, new JsonSerializerOptions { WriteIndented = true }));
+            AtomicWrite.AllText(_file, JsonSerializer.Serialize(p, new JsonSerializerOptions { WriteIndented = true }));
         }
         catch { /* 存檔失敗僅影響下次啟動的預設值 */ }
     }

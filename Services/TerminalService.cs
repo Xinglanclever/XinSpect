@@ -18,6 +18,7 @@ public sealed class TerminalService : ObservableObject, IDisposable
     private readonly StringBuilder _buf = new();
     private readonly object _bufLock = new();
     private Process? _proc;
+    private DispatcherTimer? _flushTimer;   // 沖刷節流（見 ScheduleFlush）
 
     // ── 可觀察狀態 ──────────────────────────────────────────────────────────────
     private string _output = "";
@@ -110,6 +111,8 @@ public sealed class TerminalService : ObservableObject, IDisposable
 
     public void Stop()
     {
+        _flushTimer?.Stop();
+        _flushTimer = null;
         var p = _proc;
         _proc = null;
         if (p is null) return;
@@ -125,9 +128,20 @@ public sealed class TerminalService : ObservableObject, IDisposable
             _buf.Append(text);
             if (_buf.Length > MaxChars) _buf.Remove(0, _buf.Length - MaxChars);
         }
-        // 輸出可能來自執行緒池的 *DataReceived 回呼，統一切回 UI 執行緒更新繫結
-        if (_ui.CheckAccess()) Flush();
-        else _ui.BeginInvoke(Flush);
+        // 輸出可能來自執行緒池的 *DataReceived 回呼，統一切回 UI 執行緒排程沖刷
+        if (_ui.CheckAccess()) ScheduleFlush();
+        else _ui.BeginInvoke(ScheduleFlush);
+    }
+
+    // 沖刷節流：每收到一行輸出就把整個緩衝（上限 24 萬字元）重建一次字串並讓 TextBox 全文重繪，
+    // 遇上 dir /s 這類大量輸出的指令會每秒配置數百次。改為 80ms 合併沖刷一次：
+    // 首行顯示延遲 80ms（肉眼無感），高吞吐時的配置與重繪開銷只剩原先的零頭。
+    private void ScheduleFlush()
+    {
+        if (_flushTimer is not null) return;   // 已有排程在等，直接累積進緩衝
+        _flushTimer = new DispatcherTimer(
+            TimeSpan.FromMilliseconds(80), DispatcherPriority.Background,
+            (_, _) => { _flushTimer?.Stop(); _flushTimer = null; Flush(); }, _ui);
     }
 
     private void Flush()

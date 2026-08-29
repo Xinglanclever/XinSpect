@@ -261,6 +261,6 @@ public sealed class BenchLog : ObservableObject
     private void Save()
     {
         Directory.CreateDirectory(_folder);
-        File.WriteAllText(FilePath, JsonSerializer.Serialize(_runs));
+        AtomicWrite.AllText(FilePath, JsonSerializer.Serialize(_runs));   // 跑分紀錄簿寫毀了就是整本消失
     }
 }

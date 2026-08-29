@@ -47,7 +47,7 @@ public sealed class OcSettings
         try
         {
             EnsureDir(RootDir);
-            File.WriteAllText(SettingsPath, JsonSerializer.Serialize(this, Json));
+            AtomicWrite.AllText(SettingsPath, JsonSerializer.Serialize(this, Json));
         }
         catch { /* 無法寫入設定不影響本次操作 */ }
     }
@@ -59,7 +59,7 @@ public sealed class OcSettings
     {
         EnsureDir(ProfilesDir);
         string path = Path.Combine(ProfilesDir, Sanitize(p.Name) + ".ocp");
-        File.WriteAllText(path, JsonSerializer.Serialize(p, Json));
+        AtomicWrite.AllText(path, JsonSerializer.Serialize(p, Json));
         return path;
     }
 
@@ -90,7 +90,7 @@ public sealed class OcSettings
 
     public static void SaveLastStable(OcProfile p)
     {
-        try { EnsureDir(RootDir); File.WriteAllText(LastStablePath, JsonSerializer.Serialize(p, Json)); }
+        try { EnsureDir(RootDir); AtomicWrite.AllText(LastStablePath, JsonSerializer.Serialize(p, Json)); }
         catch { }
     }
 

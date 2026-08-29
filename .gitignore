@@ -32,3 +32,6 @@ Bridge/dump2.txt
 Bridge/s2.txt
 Bridge/server_out.txt
 Bridge/test_in.txt
+
+# Bridge 的 SDK 探勘／除錯傾印
+Bridge/*.txt

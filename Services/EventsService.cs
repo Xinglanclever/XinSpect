@@ -320,7 +320,7 @@ public sealed class EventsService : ObservableObject
                     T = e.Time.Ticks, K = (int)e.Kind, A = e.Title, D = e.Detail, S = (int)e.Severity,
                 });
             Directory.CreateDirectory(Path.GetDirectoryName(_file)!);
-            File.WriteAllText(_file, JsonSerializer.Serialize(p, new JsonSerializerOptions
+            AtomicWrite.AllText(_file, JsonSerializer.Serialize(p, new JsonSerializerOptions
             {
                 WriteIndented = false,
                 Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,

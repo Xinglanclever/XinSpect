@@ -62,7 +62,7 @@ public sealed class AiChatStore
             if (rows.Count > MaxRows) rows = rows.Skip(rows.Count - MaxRows).ToList();
 
             Directory.CreateDirectory(Path.GetDirectoryName(_file)!);
-            File.WriteAllText(_file, JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+            AtomicWrite.AllText(_file, JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
         }
         catch { /* 權限或磁碟問題：保存是加值功能，失敗不打斷對話 */ }
     }

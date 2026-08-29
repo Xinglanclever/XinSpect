@@ -456,10 +456,10 @@ public sealed class OverclockService : ObservableObject, IDisposable
             }
             catch { /* 單次遙測讀取失敗不影響後續 */ }
         }
-        TickCore(live, engineVcore, engineVrm);
+        await TickCore(live, engineVcore, engineVrm);
     }
 
-    private void TickCore(SensorService? live, double? engineVcore, double? engineVrm)
+    private async Task TickCore(SensorService? live, double? engineVcore, double? engineVrm)
     {
         if (Cores is null && live?.CpuCores is not null) { Cores = live.CpuCores; OnPropertyChanged(nameof(Cores)); }
 
@@ -550,7 +550,8 @@ public sealed class OverclockService : ObservableObject, IDisposable
             {
                 _stressGuardTripped = true;
                 _stress.Cancel();
-                var r = RollbackToStable();
+                // 回復含阻塞式 IPC，移至背景執行緒，避免凍結 UI（見 RollbackToStable）
+                var r = await Task.Run(RollbackToStable);
                 SetAction($"⚠ 燒機過程偵測到 {ht:0}°C（≥100°C），已自動停止並回復：{r}", Severity.Critical);
             }
             // 誠實告知：讀不到 CPU 溫度時過熱保護無法運作，套用超頻後燒機風險由使用者承擔（僅提示一次）
@@ -568,7 +569,9 @@ public sealed class OverclockService : ObservableObject, IDisposable
             if (WatchdogSecondsLeft > 0) WatchdogSecondsLeft--;
             if (WatchdogSecondsLeft <= 0)
             {
-                var r = RollbackToStable();
+                // 回復含逐項阻塞式 IPC（最壞情況每項 30 秒逾時），移至背景執行緒，
+                // 讓 UI 與下一次心跳照常運作；完成後（續於 UI 執行緒）才解除與回報。
+                var r = await Task.Run(RollbackToStable);
                 DisarmWatchdog();
                 SetAction($"看門狗逾時：未在時限內確認穩定，已自動回復至最後穩定設定。{r}", Severity.Warning);
             }

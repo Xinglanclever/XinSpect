@@ -52,16 +52,20 @@ public sealed class SettingsService : ObservableObject
     public bool AlertsEnabled { get => _alertsEnabled; set { if (SetProperty(ref _alertsEnabled, value)) Save(); } }
 
     private double _cpuTempThreshold = 90;
-    public double CpuTempThreshold { get => _cpuTempThreshold; set { if (SetProperty(ref _cpuTempThreshold, value)) Save(); } }
+    /// <summary>CPU 溫度警示門檻（°C），50–110。</summary>
+    public double CpuTempThreshold { get => _cpuTempThreshold; set { if (SetProperty(ref _cpuTempThreshold, Math.Clamp(value, 50, 110))) Save(); } }
 
     private double _gpuTempThreshold = 85;
-    public double GpuTempThreshold { get => _gpuTempThreshold; set { if (SetProperty(ref _gpuTempThreshold, value)) Save(); } }
+    /// <summary>GPU 溫度警示門檻（°C），40–110。</summary>
+    public double GpuTempThreshold { get => _gpuTempThreshold; set { if (SetProperty(ref _gpuTempThreshold, Math.Clamp(value, 40, 110))) Save(); } }
 
     private double _cpuLoadThreshold = 95;
-    public double CpuLoadThreshold { get => _cpuLoadThreshold; set { if (SetProperty(ref _cpuLoadThreshold, value)) Save(); } }
+    /// <summary>CPU 負載警示門檻（%），10–100。</summary>
+    public double CpuLoadThreshold { get => _cpuLoadThreshold; set { if (SetProperty(ref _cpuLoadThreshold, Math.Clamp(value, 10, 100))) Save(); } }
 
     private double _memLoadThreshold = 92;
-    public double MemLoadThreshold { get => _memLoadThreshold; set { if (SetProperty(ref _memLoadThreshold, value)) Save(); } }
+    /// <summary>記憶體負載警示門檻（%），10–100。</summary>
+    public double MemLoadThreshold { get => _memLoadThreshold; set { if (SetProperty(ref _memLoadThreshold, Math.Clamp(value, 10, 100))) Save(); } }
 
     // ── AI 評價 ──────────────────────────────────────────
     private int _aiProvider;   // 0=Ollama（本機免費）、1=OpenAI 相容 API
@@ -211,10 +215,10 @@ public sealed class SettingsService : ObservableObject
                     _historyEnabled = p.HistoryEnabled;
                     _historyRetentionDays = Math.Clamp(p.HistoryRetentionDays, 1, 120);
                     _alertsEnabled = p.AlertsEnabled;
-                    _cpuTempThreshold = p.CpuTempThreshold;
-                    _gpuTempThreshold = p.GpuTempThreshold;
-                    _cpuLoadThreshold = p.CpuLoadThreshold;
-                    _memLoadThreshold = p.MemLoadThreshold;
+                    _cpuTempThreshold = Math.Clamp(p.CpuTempThreshold, 50, 110);
+                    _gpuTempThreshold = Math.Clamp(p.GpuTempThreshold, 40, 110);
+                    _cpuLoadThreshold = Math.Clamp(p.CpuLoadThreshold, 10, 100);
+                    _memLoadThreshold = Math.Clamp(p.MemLoadThreshold, 10, 100);
                     _aiProvider = p.AiProvider;
                     if (!string.IsNullOrWhiteSpace(p.AiBaseUrl)) _aiBaseUrl = p.AiBaseUrl;
                     _aiApiKey = p.AiApiKey ?? "";
@@ -279,7 +283,8 @@ public sealed class SettingsService : ObservableObject
                 DashboardTiles = _dashboardTiles.Length > 0 ? _dashboardTiles : null,
                 ToolSlots = _toolSlots.Count > 0 ? _toolSlots : null,
             };
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(p, new JsonSerializerOptions { WriteIndented = true }));
+            // 原子寫入：寫一半的 settings.json 會讓下次載入整份回落預設值（見 AtomicWrite）
+            AtomicWrite.AllText(FilePath, JsonSerializer.Serialize(p, new JsonSerializerOptions { WriteIndented = true }));
         }
         catch { /* 存檔失敗（權限/磁碟）不影響執行期設定 */ }
     }

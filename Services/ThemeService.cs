@@ -231,7 +231,7 @@ public static class ThemeService
             var json = JsonSerializer.Serialize(
                 new Prefs { Theme = _theme.ToString(), Accent = _accent.Key },
                 new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(PrefPath, json);
+            AtomicWrite.AllText(PrefPath, json);
         }
         catch { /* 存檔失敗不影響本次執行期外觀 */ }
     }
