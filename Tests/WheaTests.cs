@@ -29,3 +29,17 @@ public class WheaTests
         Assert.Equal((0, 0, 0), (crit, err, warn));
     }
 }
+
+public class WheaClassifyTests
+{
+    [Fact]
+    public void WHEA事件ID分類()
+    {
+        Assert.Equal("修正的記憶體硬體錯誤", WheaErrorService.ClassifyEvent(17));
+        Assert.Equal("不可修正的記憶體硬體錯誤", WheaErrorService.ClassifyEvent(18));
+        Assert.Equal("PCIe 修正錯誤", WheaErrorService.ClassifyEvent(19));
+        Assert.Equal("修正的硬體錯誤（機器檢查）", WheaErrorService.ClassifyEvent(46));
+        Assert.Equal("不可修正的硬體錯誤（機器檢查）", WheaErrorService.ClassifyEvent(47));
+        Assert.Equal("其他 WHEA 事件", WheaErrorService.ClassifyEvent(100));
+    }
+}

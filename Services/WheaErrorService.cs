@@ -57,7 +57,14 @@ public sealed class WheaErrorService : ObservableObject
                 if (crit > 0) parts.Add($"重大 {crit}");
                 if (err > 0) parts.Add($"錯誤 {err}");
                 if (warn > 0) parts.Add($"警告 {warn}");
-                Summary = $"近 {days} 天：{entries.Count} 筆（{string.Join("・", parts)}）。重大／錯誤事件建議對照事件內文與最近硬體變更。";
+                // 硬體劣化訊號分類：修正的錯誤＝系統沒崩但硬體在出錯，計數往上跑就是最早警訊
+                var hw = entries.GroupBy(e => ClassifyEvent(e.Id))
+                                .Where(g => g.Key != "其他 WHEA 事件")
+                                .OrderByDescending(g => g.Count())
+                                .Select(g => $"{g.Key}×{g.Count()}")
+                                .ToList();
+                Summary = $"近 {days} 天：{entries.Count} 筆（{string.Join("・", parts)}）。"
+                        + (hw.Count > 0 ? "硬體相關：" + string.Join("・", hw) : "無已分類的硬體錯誤事件。");
             }
             foreach (var e in entries.Take(60))
                 Rows.Add(new WheaRow(
@@ -104,4 +111,19 @@ public sealed class WheaErrorService : ObservableObject
     public static (int Critical, int Error, int Warning) Summarize(
         IReadOnlyList<(DateTime Time, byte Level, int Id, string Message)> entries)
         => (entries.Count(e => e.Level == 1), entries.Count(e => e.Level == 2), entries.Count(e => e.Level == 3));
+
+    /// <summary>
+    /// 純函式：WHEA 事件 ID → 類別。17／18＝修正／不可修正的記憶體錯誤、19＝PCIe 錯誤、
+    /// 46＝修正的硬體錯誤（MCx）、47＝不可修正的硬體錯誤——硬體無聲劣化的最早訊號通常在這裡。
+    /// 不認得的 ID 回「其他 WHEA 事件」。
+    /// </summary>
+    public static string ClassifyEvent(int id) => id switch
+    {
+        17 => "修正的記憶體硬體錯誤",
+        18 => "不可修正的記憶體硬體錯誤",
+        19 => "PCIe 修正錯誤",
+        46 => "修正的硬體錯誤（機器檢查）",
+        47 => "不可修正的硬體錯誤（機器檢查）",
+        _ => "其他 WHEA 事件",
+    };
 }
