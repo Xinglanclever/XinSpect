@@ -18,6 +18,7 @@ public partial class HealthView : UserControl, IPageLifecycle
         Vm?.Whea.Refresh();          // 進頁自動讀一次；WHEA 事件不是每秒資料，跟著頁面走即可
         Vm?.Reliability.Refresh();
         Vm?.Mca.Refresh();
+        Vm?.TimerFoundation.Refresh();
     }
 
     public void OnDeactivated() { }

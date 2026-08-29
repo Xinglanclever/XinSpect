@@ -240,6 +240,29 @@
                 </StackPanel>
             </Border>
 
+            <!-- ===== 計時器地基 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="計時器地基"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="所有量測的精度來源：QPC 走 TSC 還是被 useplatformclock 降級到 HPET、系統計時器解析度被誰拉高、Invariant TSC 支援與否。誠實的工具必須先交代地基。"/>
+                    <ItemsControl ItemsSource="{Binding TimerFoundation.Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="26" Margin="0,1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="260"/><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Key}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding Value}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Text="{Binding Note}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <TextBlock Style="{StaticResource FieldLabel}" Margin="4,10,0,0"
                        Text="溫度 / 壽命來自感測器與 S.M.A.R.T.；磁碟空間取用量最高的磁碟區。部分裝置或未提供資料。"/>
         </StackPanel>
