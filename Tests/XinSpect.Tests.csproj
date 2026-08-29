@@ -1,9 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- 曦覽 XinSpect 純邏輯單元測試。
+  <!-- 曦覽 XinSpect 測試。
        目標框架須與本體一致（net10.0-windows + UseWPF）：受測型別散落在同一組件中，
        其中部分檔案相依 WPF 型別（Geometry / Brush），故測試組件亦需 WPF 參考。
-       測試本身不建立任何視窗、不觸碰硬體，全為純函式驗證。 -->
+       絕大多數為純函式驗證；唯一例外是 UiSmokeTests（真的建構各頁檢視以攔繫結錯誤，
+       細節與安全性論證見該檔類別註解）。 -->
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
