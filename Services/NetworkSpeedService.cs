@@ -6,12 +6,12 @@ using System.Net.Http;
 namespace XinSpect;
 
 /// <summary>
-/// 測速協定：Cloudflare（__down/__up）、LibreSpeed（garbage.php/empty.php）、
+/// 測速協定：LibreSpeed（garbage.php/empty.php）、
 /// NtuSpeed5（台大 speed5 自訂端點 ?module=download/upload）、
 /// OpenSpeedTest（downloading/upload，如新加坡 SGIX 交換中心），
 /// 以及 WebPage（無公開端點，改以瀏覽器開啟官方測速頁）。
 /// </summary>
-public enum NodeProtocol { Cloudflare, LibreSpeed, NtuSpeed5, OpenSpeedTest, WebPage }
+public enum NodeProtocol { LibreSpeed, NtuSpeed5, OpenSpeedTest, WebPage }
 
 /// <summary>一個測速節點的定義（端點與協定）。</summary>
 public sealed class SpeedNode
@@ -34,9 +34,8 @@ public sealed record SpeedSample(
 /// <summary>
 /// 網速測試：對所選節點量測延遲／抖動、下載與上傳吞吐量。多執行緒串流、時間窗取樣，
 /// 支援 NTU 台大（speed5 學術網路，台灣）與 SGIX（新加坡交換中心，OpenSpeedTest）等原生量測節點；
-/// CTM 澳門電訊（官方自助檢測）與測速網（中國大陸）未提供可供程式直接量測的公開端點，
-/// 故改跳轉至內建瀏覽器開啟其官方測速頁（WebPage）。
-/// Cloudflare 節點目前量測結果不穩定（標註 Bug），暫置於清單末位。
+/// HKBN 香港寬頻與測速網（中國大陸）未提供可供程式直接量測的公開端點，
+/// 故改跳轉至內建瀏覽器開啟其官方測速頁（WebPage），測完可由瀏覽器的「回到測速頁面」返回。
 /// 需連外；除本測試外不傳送任何本機資料。各節點端點均經實際探測驗證（2026-08-29）。
 /// </summary>
 public sealed class NetworkSpeedService
@@ -47,20 +46,14 @@ public sealed class NetworkSpeedService
                 DownloadUrl = "http://speed5.ntu.edu.tw/speed5/server/?module=download&size=",
                 UploadUrl   = "http://speed5.ntu.edu.tw/speed5/server/?module=upload",
                 PingUrl     = "http://speed5.ntu.edu.tw/speed5/server/" },
-        new() { Name = "HKBN 香港寬頻", Note = "官方網頁測速", Protocol = NodeProtocol.WebPage,
+        new() { Name = "HKBN 香港寬頻", Note = "官方測速・香港", Protocol = NodeProtocol.WebPage,
                 WebUrl = "https://www.hkbn.net/personal/broadband/tc/speedtest" },
-        new() { Name = "CTM 澳門電訊", Note = "官方自助檢測・澳門", Protocol = NodeProtocol.WebPage,
-                WebUrl = "https://www.ctm.net/zh-TW/person/T3-010010230020/20241/8c08f45b409444b99322756960f03c88.html" },
         new() { Name = "SGIX 新加坡", Note = "交換中心・新加坡", Protocol = NodeProtocol.OpenSpeedTest,
                 DownloadUrl = "http://speedtest.sgix.sg/downloading",   // 每次 30MB 固定串流，由 worker 迴圈持續拉取
                 UploadUrl   = "http://speedtest.sgix.sg/upload",
                 PingUrl     = "http://speedtest.sgix.sg/upload" },
         new() { Name = "測速網", Note = "官方測速頁・中國大陸", Protocol = NodeProtocol.WebPage,
                 WebUrl = "https://www.speedtest.cn/" },
-        new() { Name = "Cloudflare", Note = "全球公開・Bug", Protocol = NodeProtocol.Cloudflare,
-                DownloadUrl = "https://speed.cloudflare.com/__down",
-                UploadUrl   = "https://speed.cloudflare.com/__up",
-                PingUrl     = "https://speed.cloudflare.com/__down?bytes=0" },
     };
 
     private const int StreamCount = 4;
@@ -193,10 +186,9 @@ public sealed class NetworkSpeedService
             {
                 string url = node.Protocol switch
                 {
-                    NodeProtocol.Cloudflare => $"{node.DownloadUrl}?bytes=104857600&r={Guid.NewGuid():N}",   // 100MB／次，靠時間窗截斷
-                    NodeProtocol.NtuSpeed5  => $"{node.DownloadUrl}104857600&id={Guid.NewGuid():N}",          // speed5：?module=download&size=<bytes>&id=
-                    NodeProtocol.OpenSpeedTest => $"{node.DownloadUrl}?r={Guid.NewGuid():N}",                 // OpenSpeedTest：30MB／次，時間窗內持續換新
-                    _                       => $"{node.DownloadUrl}?ckSize=1024&r={Guid.NewGuid():N}",        // LibreSpeed 亂數資料
+                    NodeProtocol.NtuSpeed5     => $"{node.DownloadUrl}104857600&id={Guid.NewGuid():N}",   // speed5：?module=download&size=<bytes>&id=
+                    NodeProtocol.OpenSpeedTest => $"{node.DownloadUrl}?r={Guid.NewGuid():N}",             // OpenSpeedTest：30MB／次，時間窗內持續換新
+                    _                          => $"{node.DownloadUrl}?ckSize=1024&r={Guid.NewGuid():N}", // LibreSpeed 亂數資料
                 };
                 using var resp = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
                 resp.EnsureSuccessStatusCode();

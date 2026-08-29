@@ -22,10 +22,11 @@ public partial class NetworkSpeedView : UserControl
         if (_running) { _cts?.Cancel(); return; }
         if (NodePicker.SelectedItem is not SpeedNode node) return;
 
-        // WebPage 節點（如 HKBN）無可供程式直接量測的公開端點，改跳轉至內建瀏覽器開啟其官方測速頁。
+        // WebPage 節點（如 HKBN、測速網）無可供程式直接量測的公開端點，改跳轉至內建瀏覽器開啟其官方測速頁，
+        // 並帶上返回鍵：瀏覽器工具列會出現「回到測速頁面」，測完不用自己找路回來。
         if (node.Protocol == NodeProtocol.WebPage)
         {
-            (Application.Current?.MainWindow as MainWindow)?.NavigateToBrowser(node.WebUrl);
+            (Application.Current?.MainWindow as MainWindow)?.NavigateToBrowser(node.WebUrl, "netspeed");
             LiveText.Text = "已跳轉至內建瀏覽器";
             StatusText.Text = $"{node.Name} 未提供可供程式直接量測的公開端點，已跳轉至內建瀏覽器開啟其官方測速頁。";
             return;

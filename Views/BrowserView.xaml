@@ -51,6 +51,11 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- 由他頁跳轉而來（如網速測試）時的返回鈕：文字寬度自動 -->
+        <Style x:Key="ReturnBtn" TargetType="Button" BasedOn="{StaticResource NavBtn}">
+            <Setter Property="Width" Value="Auto"/>
+            <Setter Property="FontSize" Value="12.5"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="0">
@@ -74,6 +79,8 @@
                     <Button x:Name="FwdBtn"  Style="{StaticResource NavBtn}" Click="Forward_Click" Content="›"  ToolTip="下一頁"/>
                     <Button x:Name="ReloadBtn" Style="{StaticResource NavBtn}" Click="Reload_Click" Content="⟳" ToolTip="重新整理"/>
                     <Button x:Name="HomeBtn" Style="{StaticResource NavBtn}" Click="Home_Click"   Content="⌂"  ToolTip="首頁（硬體導航）"/>
+                    <Button x:Name="ReturnUtilityBtn" Style="{StaticResource ReturnBtn}" Click="ReturnUtility_Click"
+                            Content="⟨ 回到測速頁面" ToolTip="回到網速測試頁" Visibility="Collapsed" Margin="6,0,2,0"/>
                 </StackPanel>
 
                 <TextBox x:Name="AddressBar" Grid.Column="1" Style="{StaticResource AddressBox}" Margin="8,0"

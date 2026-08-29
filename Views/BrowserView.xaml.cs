@@ -19,6 +19,7 @@ public partial class BrowserView : UserControl
     private bool _ready;
     private bool _isLoading;
     private string? _pendingNavUrl;   // 於瀏覽器就緒前收到的導覽請求（如自網速頁跳轉），就緒後補跳
+    private string? _returnUtilityKey;   // 自他頁跳轉而來（如網速測試）時的返回目標子工具鍵；非空時顯示返回鈕
 
     public BrowserView()
     {
@@ -141,7 +142,7 @@ public partial class BrowserView : UserControl
     }
     private void Home_Click(object sender, RoutedEventArgs e) => GoHome();
 
-    // 供其他分頁（如網速測試的 HKBN 節點）跳轉至指定網址。
+    // 供其他分頁（如網速測試的官方測速頁節點）跳轉至指定網址。
     // 若瀏覽器尚未就緒（首次載入的非同步初始化未完成），先暫存，待就緒後自動補跳。
     public void NavigateTo(string url)
     {
@@ -149,6 +150,22 @@ public partial class BrowserView : UserControl
         if (!_ready) { _pendingNavUrl = url; return; }
         try { Web.Source = new Uri(url); AddressBar.Text = url; }
         catch { /* 無效網址時不動作 */ }
+    }
+
+    /// <summary>設定「回到測速頁面」一類的返回鈕：帶子工具鍵即顯示，傳 null 隱藏。</summary>
+    public void SetReturnUtility(string? utilityKey)
+    {
+        _returnUtilityKey = utilityKey;
+        ReturnUtilityBtn.Visibility = string.IsNullOrEmpty(utilityKey) ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    // 返回鈕：切回跳轉來源頁（目前僅網速測試）。點過即收，避免按鈕留在一般瀏覽狀態。
+    private void ReturnUtility_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(_returnUtilityKey)) return;
+        var key = _returnUtilityKey;
+        SetReturnUtility(null);
+        (Application.Current?.MainWindow as MainWindow)?.NavigateToUtility(key);
     }
 
     // 回到內建離線起始頁（硬體導航）。以 NavigateToString 載入，不需外部檔案。

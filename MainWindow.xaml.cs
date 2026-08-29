@@ -140,11 +140,16 @@ public partial class MainWindow : Window
     /// <summary>切換至 AI 分頁（供設定頁 / 總覽的「開啟 AI 助手」按鈕呼叫）。</summary>
     public void NavigateToAi() => NavigateToKey("ai");
 
-    /// <summary>切換至內建瀏覽器分頁並前往指定網址（供網速測試的節點連結等呼叫）。</summary>
-    public void NavigateToBrowser(string url)
+    /// <summary>切換至內建瀏覽器分頁並前往指定網址（供網速測試的節點連結等呼叫）。
+    /// returnUtilityKey 非空時，瀏覽器會顯示「回到測速頁面」一類的返回鈕。</summary>
+    public void NavigateToBrowser(string url, string? returnUtilityKey = null)
     {
         NavigateToKey("browser");
-        if (_current is BrowserView b) b.NavigateTo(url);   // 未就緒時 NavigateTo 會暫存待就緒補跳
+        if (_current is BrowserView b)
+        {
+            b.SetReturnUtility(returnUtilityKey);
+            b.NavigateTo(url);   // 未就緒時 NavigateTo 會暫存待就緒補跳
+        }
     }
 
     /// <summary>切換至「實用工具」並選定其中一個子工具（供命令面板深層跳轉）。</summary>
