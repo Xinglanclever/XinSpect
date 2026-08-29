@@ -111,6 +111,12 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>黏滯節流位元：封裝溫度牆／功耗牆的自開機以來紀錄（CPU 分頁卡片，唯讀 MSR）。</summary>
     public ThermalStickyService ThermalSticky { get; } = new();
 
+    /// <summary>機器檢查銀行（MCA）：逐核逐銀行的已修正／不可修正錯誤計數（健康分頁卡片，唯讀 MSR）。</summary>
+    public McaService Mca { get; } = new();
+
+    /// <summary>安全緩解狀態：ARCH_CAPABILITIES 免疫位元＋SPEC_CTRL 目前啟用（CPU 分頁卡片，唯讀 MSR）。</summary>
+    public CpuSecurityService CpuSecurity { get; } = new();
+
     /// <summary>記憶體圖樣檢測（寫入／回讀比對，抓卡死位元、鄰位干擾與位址解碼錯誤）。</summary>
     public MemoryTestService MemTest { get; } = new();
 

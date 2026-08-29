@@ -15,4 +15,7 @@ public partial class CpuView : UserControl
 
     // ===== 黏滯節流位元 =====
     private void StickyRead_Click(object sender, RoutedEventArgs e) => Vm?.ThermalSticky.Refresh();
+
+    // ===== 安全緩解狀態 =====
+    private void SecurityRead_Click(object sender, RoutedEventArgs e) => Vm?.CpuSecurity.Refresh();
 }

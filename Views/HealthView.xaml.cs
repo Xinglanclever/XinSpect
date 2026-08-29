@@ -15,8 +15,9 @@ public partial class HealthView : UserControl, IPageLifecycle
     public void OnActivated()
     {
         Vm?.RefreshUpgrade();
-        Vm?.Whea.Refresh();        // 進頁自動讀一次；WHEA 事件不是每秒資料，跟著頁面走即可
+        Vm?.Whea.Refresh();          // 進頁自動讀一次；WHEA 事件不是每秒資料，跟著頁面走即可
         Vm?.Reliability.Refresh();
+        Vm?.Mca.Refresh();
     }
 
     public void OnDeactivated() { }
@@ -26,6 +27,8 @@ public partial class HealthView : UserControl, IPageLifecycle
     private void WheaRefresh_Click(object sender, RoutedEventArgs e) => Vm?.Whea.Refresh();
 
     private void ReliabilityRefresh_Click(object sender, RoutedEventArgs e) => Vm?.Reliability.Refresh();
+
+    private void McaRefresh_Click(object sender, RoutedEventArgs e) => Vm?.Mca.Refresh();
 
     // Host.Content 延遲載入時 DataContext 由父容器繼承；仍以主視窗為後備。
     private MainViewModel? Vm =>

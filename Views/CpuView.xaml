@@ -453,6 +453,34 @@
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding ThermalSticky.Status}"/>
                 </StackPanel>
             </Border>
+
+            <!-- ===== 安全緩解狀態 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="安全緩解狀態"/>
+                        <Button Style="{StaticResource PrimaryButton}" Content="讀取" HorizontalAlignment="Right"
+                                VerticalAlignment="Center" Click="SecurityRead_Click" IsEnabled="{Binding CpuSecurity.CanRefresh}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="IA32_ARCH_CAPABILITIES（0x10A）＝晶片自己宣告的免疫位元；IA32_SPEC_CTRL（0x48）＝作業系統目前實際啟用的緩解。兩者並列即為誠實呈現——全部量到，不需要會過期的漏洞資料庫；不宣稱「你受某 CVE 影響」。"/>
+                    <ItemsControl ItemsSource="{Binding CpuSecurity.Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="26">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="90"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Key}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" TextAlignment="Right"
+                                               Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding Value}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding CpuSecurity.Status}"/>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

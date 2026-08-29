@@ -209,6 +209,37 @@
                 </StackPanel>
             </Border>
 
+            <!-- ===== 機器檢查銀行（MCA）===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="機器檢查銀行（MCA）"/>
+                        <Button Style="{StaticResource ToolButton}" Content="重新掃描" HorizontalAlignment="Right"
+                                VerticalAlignment="Center" Click="McaRefresh_Click" IsEnabled="{Binding Mca.CanRefresh}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,8" TextWrapping="Wrap"
+                               Text="逐核逐銀行讀 IA32_MCi_STATUS：位 63 valid、位 61 不可修正、位 38–52 為已修正錯誤計數。已修正＝系統沒崩、使用者無感——但計數往上跑就是記憶體／IMC 劣化的最早訊號。只列出有內容的銀行；歷史紀錄另見上方 WHEA 卡片。"/>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,0,0,6" TextWrapping="Wrap" Text="{Binding Mca.Summary}"/>
+                    <ItemsControl ItemsSource="{Binding Mca.Rows}" MaxHeight="200">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="24" Margin="0,1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90"/><ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="90"/><ColumnDefinition Width="110"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Core}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Bank}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding Kind}"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding Corrected}"/>
+                                    <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" Text="{Binding Detail}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <TextBlock Style="{StaticResource FieldLabel}" Margin="4,10,0,0"
                        Text="溫度 / 壽命來自感測器與 S.M.A.R.T.；磁碟空間取用量最高的磁碟區。部分裝置或未提供資料。"/>
         </StackPanel>
