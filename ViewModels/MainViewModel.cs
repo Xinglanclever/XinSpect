@@ -117,6 +117,10 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>安全緩解狀態：ARCH_CAPABILITIES 免疫位元＋SPEC_CTRL 目前啟用（CPU 分頁卡片，唯讀 MSR）。</summary>
     public CpuSecurityService CpuSecurity { get; } = new();
 
+
+    /// <summary>記憶體真實面貌：認可尖峰 vs 實體（記憶體分頁卡片，零特權）。</summary>
+    public MemoryTruthService MemoryTruth { get; } = new();
+
     /// <summary>計時器地基：QPC 來源、解析度、Invariant TSC（健康分頁卡片，零特權）。</summary>
     public TimerFoundationService TimerFoundation { get; } = new();
 

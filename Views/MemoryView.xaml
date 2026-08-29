@@ -284,6 +284,45 @@
                 </StackPanel>
             </Border>
 
+            <!-- ===== 記憶體真實面貌 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="記憶體真實面貌（認可）"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="「已使用 12 GB」掩蓋一半事實——認可（Commit）才是程式真正要求過的量。認可尖峰超過實體＝系統曾經真的動用分頁檔（開機至今累積），卡頓的常見源頭。"/>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200"/><ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource FieldValue}" Text="目前認可"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding MemoryTruth.CommitText}"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200"/><ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource FieldValue}" Text="認可尖峰"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding MemoryTruth.PeakText}"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200"/><ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource FieldValue}" Text="頁面大小"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding MemoryTruth.PageSizeText}"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200"/><ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource FieldValue}" Text="判定"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Foreground="{StaticResource PrimaryInkBrush}"
+                                   Text="{Binding MemoryTruth.Verdict}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" Text="{Binding MemoryTruth.VerdictText}"/>
+                </StackPanel>
+            </Border>
+
             <!-- ===== SMBIOS 記憶體裝置（Type 17 直讀）===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
