@@ -93,6 +93,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>WHEA 硬體錯誤紀錄：事件檢視器 Microsoft-Windows-WHEA-Logger 的近 30 天彙整（零特權）。</summary>
     public WheaErrorService Whea { get; } = new();
 
+    /// <summary>可靠性歷史：非預期關機、藍屏、應用程式當機與開機耗時的近 30 天時間軸。</summary>
+    public ReliabilityHistoryService Reliability { get; } = new();
+
     /// <summary>S.M.A.R.T. 原始資料直讀：NVMe log page 0x02／SATA SMART READ DATA（儲存分頁卡片）。</summary>
     public StorageSmartService DiskSmart { get; } = new();
 

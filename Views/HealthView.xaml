@@ -180,6 +180,35 @@
                 </StackPanel>
             </Border>
 
+            <!-- ===== 可靠性歷史 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="可靠性歷史"/>
+                        <Button Style="{StaticResource ToolButton}" Content="重新讀取" HorizontalAlignment="Right"
+                                VerticalAlignment="Center" Click="ReliabilityRefresh_Click" IsEnabled="{Binding Reliability.CanRefresh}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,8" TextWrapping="Wrap"
+                               Text="近 30 天的機器病歷：非預期關機（Kernel-Power 41／6008）、藍屏（BugCheck 1001）、應用程式當機與停止回應（1000／1002），以及開機耗時趨勢（Diagnostics-Performance 100）。只呈現事件與時間，不下診斷結論。"/>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,0,0,4" TextWrapping="Wrap" Text="{Binding Reliability.Summary}"/>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,0,0,6" TextWrapping="Wrap" Text="{Binding Reliability.BootTrend}"/>
+                    <ItemsControl ItemsSource="{Binding Reliability.Rows}" MaxHeight="220">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="24" Margin="0,1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="110"/><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Time}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Category}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Text="{Binding Detail}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <TextBlock Style="{StaticResource FieldLabel}" Margin="4,10,0,0"
                        Text="溫度 / 壽命來自感測器與 S.M.A.R.T.；磁碟空間取用量最高的磁碟區。部分裝置或未提供資料。"/>
         </StackPanel>
