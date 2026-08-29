@@ -64,33 +64,22 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 工具列 -->
+        <!-- 工具列：WrapPanel 自動換行——窄窗／低 DPI 時網址列與按鈕折到下一行，不再水平截斷。
+             網址列以固定寬度參與折行（WrapPanel 不支援 * 填滿），寬窗時一行容納，窄窗時自動獨立一行。 -->
         <Border Grid.Row="0" Background="{StaticResource SurfaceBrush}" Padding="8,8" Margin="0,0,0,8"
                 CornerRadius="10">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button x:Name="BackBtn" Style="{StaticResource NavBtn}" Click="Back_Click"   Content="‹"  ToolTip="上一頁"/>
-                    <Button x:Name="FwdBtn"  Style="{StaticResource NavBtn}" Click="Forward_Click" Content="›"  ToolTip="下一頁"/>
-                    <Button x:Name="ReloadBtn" Style="{StaticResource NavBtn}" Click="Reload_Click" Content="⟳" ToolTip="重新整理"/>
-                    <Button x:Name="HomeBtn" Style="{StaticResource NavBtn}" Click="Home_Click"   Content="⌂"  ToolTip="首頁（硬體導航）"/>
-                    <Button x:Name="ReturnUtilityBtn" Style="{StaticResource ReturnBtn}" Click="ReturnUtility_Click"
-                            Content="⟨ 回到測速頁面" ToolTip="回到網速測試頁" Visibility="Collapsed" Margin="6,0,2,0"/>
-                </StackPanel>
-
-                <TextBox x:Name="AddressBar" Grid.Column="1" Style="{StaticResource AddressBox}" Margin="8,0"
-                         KeyDown="AddressBar_KeyDown"/>
-
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Style="{StaticResource NavBtn}" Click="Go_Click" Content="→" ToolTip="前往"/>
-                    <Button Style="{StaticResource NavBtn}" Click="OpenExternal_Click" Content="↗" ToolTip="以系統瀏覽器開啟目前網址"/>
-                </StackPanel>
-            </Grid>
+            <WrapPanel VerticalAlignment="Center">
+                <Button x:Name="BackBtn" Style="{StaticResource NavBtn}" Click="Back_Click"   Content="‹"  ToolTip="上一頁"/>
+                <Button x:Name="FwdBtn"  Style="{StaticResource NavBtn}" Click="Forward_Click" Content="›"  ToolTip="下一頁"/>
+                <Button x:Name="ReloadBtn" Style="{StaticResource NavBtn}" Click="Reload_Click" Content="⟳" ToolTip="重新整理"/>
+                <Button x:Name="HomeBtn" Style="{StaticResource NavBtn}" Click="Home_Click"   Content="⌂"  ToolTip="首頁（硬體導航）"/>
+                <Button x:Name="ReturnUtilityBtn" Style="{StaticResource ReturnBtn}" Click="ReturnUtility_Click"
+                        Content="⟨ 回到測速頁面" ToolTip="回到網速測試頁" Visibility="Collapsed" Margin="6,0,2,0"/>
+                <TextBox x:Name="AddressBar" Width="420" MinWidth="200" Margin="8,4" VerticalAlignment="Center"
+                         Style="{StaticResource AddressBox}" KeyDown="AddressBar_KeyDown"/>
+                <Button Style="{StaticResource NavBtn}" Click="Go_Click" Content="→" ToolTip="前往" VerticalAlignment="Center"/>
+                <Button Style="{StaticResource NavBtn}" Click="OpenExternal_Click" Content="↗" ToolTip="以系統瀏覽器開啟目前網址" VerticalAlignment="Center"/>
+            </WrapPanel>
         </Border>
 
         <!-- WebView2 承載區（含未安裝執行階段時的後備提示） -->
