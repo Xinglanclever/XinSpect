@@ -28,6 +28,39 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- 深色核取方塊（與其他分頁同一風格；各檢視自帶樣式） -->
+        <Style x:Key="AiCheck" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                            <Border x:Name="box" Width="17" Height="17" CornerRadius="5" VerticalAlignment="Center"
+                                    Background="{StaticResource Surface2Brush}"
+                                    BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1.2">
+                                <Path x:Name="check" Width="10" Height="10" Stretch="Uniform"
+                                      Data="M2,8 L6,12 L14,3" Stroke="White" StrokeThickness="2"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" Visibility="Collapsed"/>
+                            </Border>
+                            <ContentPresenter Margin="7,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="box" Property="Background" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="check" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="4,0,12,12">
@@ -41,7 +74,7 @@
         <StackPanel Grid.Row="0">
             <TextBlock Style="{StaticResource Title}" Text="AI 評價" Margin="0,0,0,2"/>
             <TextBlock Style="{StaticResource Subtitle}" Margin="0,0,0,12" TextWrapping="Wrap"
-                       Text="以你選定的 AI 模型評價本機硬體，或就配置、升級、散熱等問題自由提問。所有硬體數據皆為真實讀值。可於「設定 › AI 評價」調整供應商、模型、溫度與提示詞。"/>
+                       Text="以你選定的 AI 模型評價本機硬體，或就配置、升級、散熱等問題自由提問。所有硬體數據皆為真實讀值。開啟「診斷代理」後，AI 能自己查溫度、事件、磁碟健康、記憶體時序、天梯名次與升級建議等 23 項本機唯讀資料——它看得到整台機器，但不會動到任何設定。"/>
         </StackPanel>
 
         <!-- 工具列：模型 / 溫度 / 動作 -->
@@ -51,6 +84,8 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="160"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
@@ -61,11 +96,17 @@
                 <Slider Grid.Column="2" Minimum="0" Maximum="2" TickFrequency="0.1" IsSnapToTickEnabled="True"
                         VerticalAlignment="Center" Value="{Binding Settings.AiTemperature, Mode=TwoWay}"
                         Foreground="{StaticResource AccentBrush}"/>
-                <Button Grid.Column="4" Style="{StaticResource ToolButton}" Content="清除對話" Margin="0,0,10,0"
+                <CheckBox Grid.Column="3" Style="{StaticResource AiCheck}" Margin="18,0,0,0" Content="診斷代理"
+                          ToolTip="允許 AI 主動呼叫本機唯讀查詢工具（溫度、事件、磁碟健康、歷史統計等）"
+                          IsChecked="{Binding Settings.AiAgentMode, Mode=TwoWay}"/>
+                <CheckBox Grid.Column="4" Style="{StaticResource AiCheck}" Margin="14,0,0,0" Content="逐字串流"
+                          ToolTip="回覆邊產生邊顯示；端點不支援時自動退回整段模式"
+                          IsChecked="{Binding Settings.AiStreaming, Mode=TwoWay}"/>
+                <Button Grid.Column="6" Style="{StaticResource ToolButton}" Content="清除對話" Margin="0,0,10,0"
                         Click="Clear_Click"/>
-                <Button Grid.Column="5" Style="{StaticResource PrimaryButton}" Content="一鍵評價本機　▸"
+                <Button Grid.Column="7" Style="{StaticResource PrimaryButton}" Content="一鍵評價本機　▸"
                         IsEnabled="{Binding Ai.CanSend}" Click="Evaluate_Click"/>
-                <TextBlock Grid.Column="3" Style="{StaticResource Subtitle}" VerticalAlignment="Center"
+                <TextBlock Grid.Column="5" Style="{StaticResource Subtitle}" VerticalAlignment="Center"
                            HorizontalAlignment="Right" Margin="16,0,16,0" TextTrimming="CharacterEllipsis"
                            Text="{Binding Ai.StatusText}"/>
             </Grid>
@@ -85,9 +126,9 @@
                                 <Border x:Name="bubble" CornerRadius="10" Padding="12,9" Margin="6,5" MaxWidth="640"
                                         Background="{StaticResource Surface2Brush}" HorizontalAlignment="Left">
                                     <StackPanel>
-                                        <TextBlock Text="{Binding RoleText}" FontSize="11.5" FontWeight="SemiBold"
+                                        <TextBlock x:Name="role" Text="{Binding RoleText}" FontSize="11.5" FontWeight="SemiBold"
                                                    Foreground="{StaticResource AccentBrush}" Margin="0,0,0,3"/>
-                                        <TextBlock Text="{Binding Text}" TextWrapping="Wrap"
+                                        <TextBlock x:Name="body" Text="{Binding Text}" TextWrapping="Wrap"
                                                    Foreground="{StaticResource PrimaryInkBrush}" FontSize="13.5" LineHeight="20"/>
                                     </StackPanel>
                                 </Border>
@@ -95,6 +136,19 @@
                                     <DataTrigger Binding="{Binding IsUser}" Value="True">
                                         <Setter TargetName="bubble" Property="HorizontalAlignment" Value="Right"/>
                                         <Setter TargetName="bubble" Property="Background" Value="{StaticResource AccentBrush}"/>
+                                    </DataTrigger>
+                                    <!-- 代理查詢紀錄：低調的單行灰字，讓人一眼看出 AI 去讀了哪些真實讀值 -->
+                                    <DataTrigger Binding="{Binding IsTool}" Value="True">
+                                        <Setter TargetName="bubble" Property="Background" Value="Transparent"/>
+                                        <Setter TargetName="bubble" Property="BorderBrush" Value="{StaticResource HairlineBrush}"/>
+                                        <Setter TargetName="bubble" Property="BorderThickness" Value="1"/>
+                                        <Setter TargetName="bubble" Property="Padding" Value="10,6"/>
+                                        <Setter TargetName="bubble" Property="MaxWidth" Value="760"/>
+                                        <Setter TargetName="role" Property="Foreground" Value="{StaticResource MutedInkBrush}"/>
+                                        <Setter TargetName="role" Property="FontSize" Value="10.5"/>
+                                        <Setter TargetName="body" Property="Foreground" Value="{StaticResource SecondaryInkBrush}"/>
+                                        <Setter TargetName="body" Property="FontSize" Value="12"/>
+                                        <Setter TargetName="body" Property="LineHeight" Value="17"/>
                                     </DataTrigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>
@@ -104,16 +158,45 @@
             </Grid>
         </Border>
 
-        <!-- 輸入列 -->
-        <Grid Grid.Row="3" Margin="0,10,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBox x:Name="Input" Grid.Column="0" Style="{StaticResource ChatInput}" MinHeight="52" MaxHeight="120"
-                     PreviewKeyDown="Input_PreviewKeyDown"/>
-            <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Content="送出" MinWidth="88" Margin="10,0,0,0"
-                    VerticalAlignment="Stretch" IsEnabled="{Binding Ai.CanSend}" Click="Send_Click"/>
-        </Grid>
+        <!-- 輸入列（上方為快問快答：一點就送出常見問題，讓代理自己去查該查的工具）-->
+        <StackPanel Grid.Row="3" Margin="0,10,0,0">
+            <WrapPanel Margin="0,0,0,8">
+                <TextBlock Style="{StaticResource FieldLabel}" Text="快問" VerticalAlignment="Center" Margin="2,0,8,0"/>
+                <Button Style="{StaticResource ToolButton}" Margin="0,0,7,7" Content="該升級什麼"
+                        Tag="這台電腦目前最該升級哪個部分？請先查升級建議與歷史統計，依優先度說明理由與預期效益。"
+                        IsEnabled="{Binding Ai.CanSend}" Click="Chip_Click"/>
+                <Button Style="{StaticResource ToolButton}" Margin="0,0,7,7" Content="溫度正常嗎"
+                        Tag="這台機器的溫度正常嗎？請查所有溫度、風扇現況與歷史統計，判斷有沒有過熱或降頻。"
+                        IsEnabled="{Binding Ai.CanSend}" Click="Chip_Click"/>
+                <Button Style="{StaticResource ToolButton}" Margin="0,0,7,7" Content="適合玩遊戲嗎"
+                        Tag="這套配置玩遊戲夠用嗎？請查規格、顯示卡與天梯名次，說明大概能對應什麼畫質設定。"
+                        IsEnabled="{Binding Ai.CanSend}" Click="Chip_Click"/>
+                <Button Style="{StaticResource ToolButton}" Margin="0,0,7,7" Content="記憶體插對了嗎"
+                        Tag="記憶體有插對雙通道、有吃到標定頻率嗎？請查記憶體時序與 SPD 後回答。"
+                        IsEnabled="{Binding Ai.CanSend}" Click="Chip_Click"/>
+                <Button Style="{StaticResource ToolButton}" Margin="0,0,7,7" Content="磁碟健康嗎"
+                        Tag="磁碟健康狀況如何？請查磁碟健康與剩餘壽命，若有風險請說明該做什麼。"
+                        IsEnabled="{Binding Ai.CanSend}" Click="Chip_Click"/>
+                <Button Style="{StaticResource ToolButton}" Margin="0,0,7,7" Content="最近有異常嗎"
+                        Tag="最近有沒有藍屏、熱降頻或其他異常？請查事件時間軸與藍屏傾印記錄後回答。"
+                        IsEnabled="{Binding Ai.CanSend}" Click="Chip_Click"/>
+                <Button Style="{StaticResource ToolButton}" Margin="0,0,7,7" Content="開機為什麼慢"
+                        Tag="開機與登入偏慢的可能原因是什麼？請查開機啟動項與系統碟型別後回答。"
+                        IsEnabled="{Binding Ai.CanSend}" Click="Chip_Click"/>
+                <Button Style="{StaticResource ToolButton}" Margin="0,0,7,7" Content="這顆 CPU 算強嗎"
+                        Tag="這顆處理器與這張顯示卡在同級中算強嗎？請查天梯名次與相鄰對手後回答，並說明天梯分數僅供參考。"
+                        IsEnabled="{Binding Ai.CanSend}" Click="Chip_Click"/>
+            </WrapPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="Input" Grid.Column="0" Style="{StaticResource ChatInput}" MinHeight="52" MaxHeight="120"
+                         PreviewKeyDown="Input_PreviewKeyDown"/>
+                <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Content="送出" MinWidth="88" Margin="10,0,0,0"
+                        VerticalAlignment="Stretch" IsEnabled="{Binding Ai.CanSend}" Click="Send_Click"/>
+            </Grid>
+        </StackPanel>
     </Grid>
 </UserControl>

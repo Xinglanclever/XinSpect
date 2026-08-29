@@ -17,7 +17,15 @@ public partial class DonutChart : UserControl
     public DonutChart()
     {
         InitializeComponent();
-        Loaded += (_, _) => { ApplyGlow(); Redraw(); };
+        Loaded += (_, _) =>
+        {
+            ThemeService.Changed -= ApplyGlow;   // 重複 Loaded 不重覆訂閱
+            ThemeService.Changed += ApplyGlow;
+            ApplyGlow();
+            Redraw();
+        };
+        // 弧色是共用的資源筆刷會自己變，但輝光是把色值拷進 DropShadowEffect，得補上這一手
+        Unloaded += (_, _) => ThemeService.Changed -= ApplyGlow;
     }
 
     public static readonly DependencyProperty FractionProperty = DependencyProperty.Register(
@@ -68,16 +76,12 @@ public partial class DonutChart : UserControl
         g.BeginAnimation(AnimatedFractionProperty, anim, HandoffBehavior.SnapshotAndReplace);
     }
 
-    private static Brush MakeAccent()
-    {
-        if (Application.Current?.Resources["AccentBrush"] is SolidColorBrush sb) return sb;
-        var b = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#3987e5"));
-        b.Freeze();
-        return b;
-    }
+    // 預設弧色＝主題強調色的「同一顆」筆刷，換強調色時未指定 RingBrush 的圖一起變
+    private static Brush MakeAccent() => VizPalette.Accent;
 
     private void ApplyGlow()
     {
+        if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(ApplyGlow); return; }
         if (ArcGlow is null) return;
         if (RingBrush is SolidColorBrush sb) ArcGlow.Color = sb.Color;
     }

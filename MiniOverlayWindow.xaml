@@ -4,12 +4,14 @@
         xmlns:local="clr-namespace:XinSpect"
         Title="曦覽 監視器"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
-        Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize"
+        Topmost="{Binding Settings.MiniTopmost, Mode=OneWay}"
+        ShowInTaskbar="False" ResizeMode="NoResize"
         SizeToContent="WidthAndHeight" WindowStartupLocation="Manual"
         FontFamily="{StaticResource AppFont}" UseLayoutRounding="True">
     <Grid>
-        <!-- 半透明底板 -->
-        <Border CornerRadius="14" Background="{StaticResource SurfaceBrush}" Opacity="0.9"
+        <!-- 半透明底板：只有底板變淡，上層讀值文字維持不透明才讀得清楚 -->
+        <Border CornerRadius="14" Background="{StaticResource SurfaceBrush}"
+                Opacity="{Binding Settings.MiniOpacity, Mode=OneWay}"
                 BorderBrush="{StaticResource AccentBrush}" BorderThickness="1.2">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
@@ -26,6 +28,15 @@
                         <TextBlock Text="曦覽 監視器" FontWeight="SemiBold" FontSize="13"
                                    Foreground="{StaticResource PrimaryInkBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
+                    <!-- 收起 / 釘選 / 關閉：原本要回主視窗或系統匣才關得掉，這裡就地給出口 -->
+                    <Button DockPanel.Dock="Right" Style="{StaticResource MiniIconButton}"
+                            Click="Close_Click" Content="✕" ToolTip="關閉監視器"/>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource MiniIconButton}" Margin="0,0,2,0"
+                            Click="Pin_Click" Content="{Binding Settings.MiniTopmost, Converter={StaticResource BoolToPinGlyph}}"
+                            ToolTip="切換是否永遠置頂"/>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource MiniIconButton}" Margin="0,0,2,0"
+                            Click="Compact_Click" Content="{Binding Settings.MiniCompact, Converter={StaticResource BoolToCompactGlyph}}"
+                            ToolTip="精簡／展開（收起波形）"/>
                 </DockPanel>
 
                 <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,9"/>
@@ -78,10 +89,12 @@
                                Text="{Binding Live.CpuClock, StringFormat={}{0:0} MHz, FallbackValue=—, TargetNullValue=—}"/>
                 </Grid>
 
-                <!-- 示波線：CPU / GPU 使用率即時波形 -->
-                <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,11,0,9"/>
-                <local:Oscilloscope Height="46" MinHeight="0" Caption="CPU 使用率" History="{Binding CpuLoadHist}"/>
-                <local:Oscilloscope Height="46" MinHeight="0" Margin="0,8,0,0" Caption="GPU 使用率" History="{Binding GpuHist}"/>
+                <!-- 示波線：CPU / GPU 使用率即時波形（精簡模式收起） -->
+                <StackPanel Visibility="{Binding Settings.MiniCompact, Converter={StaticResource InverseBoolToVis}}">
+                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,11,0,9"/>
+                    <local:Oscilloscope Height="46" MinHeight="0" Caption="CPU 使用率" History="{Binding CpuLoadHist}"/>
+                    <local:Oscilloscope Height="46" MinHeight="0" Margin="0,8,0,0" Caption="GPU 使用率" History="{Binding GpuHist}"/>
+                </StackPanel>
             </StackPanel>
         </Border>
     </Grid>

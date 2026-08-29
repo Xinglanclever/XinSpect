@@ -1,0 +1,121 @@
+<UserControl x:Class="XinSpect.EventsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect"
+             FontFamily="{StaticResource AppFont}">
+    <UserControl.Resources>
+        <!-- 單筆事件：時刻 ・ 嚴重度色條 ・ 類別 ・ 標題與細節 -->
+        <DataTemplate x:Key="EventRow">
+            <Border CornerRadius="6" Padding="10,7" Margin="0,1" Background="Transparent">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="128"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="64"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="76"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource FieldValue}" Text="{Binding ClockText}"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding DayText}" FontSize="11"/>
+                    </StackPanel>
+                    <Rectangle Grid.Column="1" Width="4" RadiusX="2" RadiusY="2" Margin="0,1,12,1"
+                               Fill="{Binding Severity, Converter={StaticResource SeverityToBrush}}"/>
+                    <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" Text="{Binding KindText}"
+                               VerticalAlignment="Center"/>
+                    <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="4,0,8,0">
+                        <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Title}"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Detail}" FontSize="11"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                    <TextBlock Grid.Column="4" Style="{StaticResource FieldLabel}" Text="{Binding AgoText}"
+                               FontSize="11" TextAlignment="Right" VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <!-- DataContext 設於首個子元素：根元素繫結在 Host.Content 延遲載入時不解析 -->
+    <Grid Margin="0,0,8,0" DataContext="{Binding Events}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 標題 -->
+        <Grid Grid.Row="0" Margin="2,0,0,12">
+            <StackPanel>
+                <TextBlock Style="{StaticResource Title}" Text="事件時間軸"/>
+                <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0"
+                           Text="警示 ・ 降頻 ・ 磁碟壽命 ・ 藍屏 ・ 工作階段彙整為單一時序；雙擊任一筆即跳至歷史回放"/>
+            </StackPanel>
+            <Button Style="{StaticResource ToolButton}" Content="清空時間軸" HorizontalAlignment="Right"
+                    VerticalAlignment="Center" Click="Clear_Click"/>
+        </Grid>
+
+        <!-- 篩選 -->
+        <Grid Grid.Row="1" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <ComboBox Grid.Column="0" Style="{StaticResource DarkCombo}" Width="118" VerticalAlignment="Center"
+                      SelectedIndex="{Binding KindFilter, Mode=TwoWay}" ToolTip="只顯示某一類事件">
+                <ComboBoxItem Content="全部類別"/>
+                <ComboBoxItem Content="工作階段"/>
+                <ComboBoxItem Content="警示"/>
+                <ComboBoxItem Content="降頻"/>
+                <ComboBoxItem Content="磁碟"/>
+                <ComboBoxItem Content="藍屏"/>
+                <ComboBoxItem Content="測試"/>
+                <ComboBoxItem Content="調校"/>
+            </ComboBox>
+            <TextBox Grid.Column="1" Margin="10,0,0,0"
+                     Text="{Binding Search, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     Background="{StaticResource Surface2Brush}" Foreground="{StaticResource PrimaryInkBrush}"
+                     BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" Padding="10,7"
+                     CaretBrush="{StaticResource AccentBrush}" VerticalContentAlignment="Center"
+                     ToolTip="以標題或細節關鍵字搜尋事件"/>
+        </Grid>
+
+        <!-- 事件列表 -->
+        <Border Grid.Row="2" Style="{StaticResource Card}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="10,0,10,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="128"/>
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="64"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="76"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Style="{StaticResource ColHead}" Text="時刻"/>
+                    <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="類別"/>
+                    <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="事件" Margin="4,0,0,0"/>
+                    <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="距今" TextAlignment="Right"/>
+                </Grid>
+                <ListBox x:Name="List" Grid.Row="1" ItemsSource="{Binding View}"
+                         ItemTemplate="{StaticResource EventRow}"
+                         Background="Transparent" BorderThickness="0"
+                         HorizontalContentAlignment="Stretch"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         VirtualizingStackPanel.IsVirtualizing="True"
+                         VirtualizingStackPanel.VirtualizationMode="Recycling"
+                         MouseDoubleClick="List_MouseDoubleClick"/>
+                <TextBlock Grid.Row="1" Style="{StaticResource FieldLabel}" Text="尚無事件紀錄"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Visibility="{Binding HasEvents, Converter={StaticResource InverseBoolToVis}}"/>
+            </Grid>
+        </Border>
+
+        <TextBlock Grid.Row="3" Style="{StaticResource FieldLabel}" Margin="4,10,0,0" TextWrapping="Wrap"
+                   Text="事件持久化於 %APPDATA%\XinSpect\events.json，重開機後仍在；最多保留最近 800 筆。"/>
+    </Grid>
+</UserControl>

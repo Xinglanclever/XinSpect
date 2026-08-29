@@ -118,6 +118,31 @@
                 </StackPanel>
             </Border>
 
+            <!-- 曲線總控：狀態、樣板一鍵套用、全部停用 -->
+            <Border x:Name="CurveBar" Style="{StaticResource Card}" Margin="0,0,0,14" Visibility="Collapsed">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="轉速曲線"/>
+                        <TextBlock x:Name="CurveStatus" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                   FontSize="12" Foreground="{StaticResource AccentBrush}"/>
+                    </Grid>
+                    <TextBlock Margin="0,4,0,0" TextWrapping="Wrap" FontSize="12.5" Foreground="{StaticResource SecondaryInkBrush}"
+                               Text="啟用後由曲線每秒依溫度自動調速，切到其他分頁仍持續生效。畫布上可直接拖動控制點、空白處雙擊新增、右鍵移除。"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <CheckBox x:Name="AllowStop" Style="{StaticResource GpuCheck}"
+                                  Content="允許曲線低於 20 %（含停轉，後果自負）"
+                                  Checked="AllowStop_Changed" Unchecked="AllowStop_Changed"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="全部套用樣板" VerticalAlignment="Center"/>
+                        <Button Style="{StaticResource ToolButton}" Content="靜音" Tag="0" Click="PresetAll_Click" Margin="10,0,0,0"/>
+                        <Button Style="{StaticResource ToolButton}" Content="均衡" Tag="1" Click="PresetAll_Click" Margin="8,0,0,0"/>
+                        <Button Style="{StaticResource ToolButton}" Content="效能" Tag="2" Click="PresetAll_Click" Margin="8,0,0,0"/>
+                        <Button Style="{StaticResource ToolButton}" Content="全部停用曲線" Click="DisableCurves_Click" Margin="18,0,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <!-- 空狀態 -->
             <Border x:Name="Empty" Style="{StaticResource Card}" Margin="0,0,0,14" Visibility="Collapsed">
                 <StackPanel>
@@ -137,34 +162,75 @@
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Style="{StaticResource SectionHeader}" Text="{Binding Name}"/>
                                         <Border Background="{StaticResource Surface2Brush}" CornerRadius="5" Padding="7,1" Margin="10,1,0,0" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding ModeText}" FontSize="11" Foreground="{StaticResource SecondaryInkBrush}"/>
+                                            <TextBlock Text="{Binding Fan.ModeText}" FontSize="11" Foreground="{StaticResource SecondaryInkBrush}"/>
+                                        </Border>
+                                        <Border Background="{StaticResource AccentBrush}" CornerRadius="5" Padding="7,1" Margin="8,1,0,0" VerticalAlignment="Center"
+                                                Visibility="{Binding Enabled, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="{Binding StateText}" FontSize="11" Foreground="White" FontWeight="SemiBold"/>
                                         </Border>
                                     </StackPanel>
                                     <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource MutedInkBrush}"
-                                               FontSize="11.5" Text="{Binding Location}"/>
+                                               FontSize="11.5" Text="{Binding Fan.Location}"/>
                                 </Grid>
                                 <Grid Margin="0,8,0,0">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Style="{StaticResource FieldLabel}" Text="目前輸出" VerticalAlignment="Bottom"/>
                                         <TextBlock Margin="8,0,0,0" Foreground="{StaticResource AccentBrush}" FontWeight="Bold" FontSize="14"
-                                                   VerticalAlignment="Bottom" Text="{Binding CurrentText}"/>
+                                                   VerticalAlignment="Bottom" Text="{Binding Fan.CurrentText}"/>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                         <TextBlock Style="{StaticResource FieldLabel}" Text="轉速" VerticalAlignment="Bottom"/>
                                         <TextBlock Margin="8,0,0,0" Foreground="{StaticResource PrimaryInkBrush}" FontWeight="SemiBold" FontSize="14"
-                                                   VerticalAlignment="Bottom" Text="{Binding RpmText}"/>
+                                                   VerticalAlignment="Bottom" Text="{Binding Fan.RpmText}"/>
                                     </StackPanel>
                                 </Grid>
                                 <Grid Margin="0,12,0,2">
                                     <TextBlock Style="{StaticResource FieldLabel}" Text="手動目標"/>
                                     <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontWeight="Bold" FontSize="14"
-                                               Text="{Binding SetPoint, StringFormat={}{0:0} %}"/>
+                                               Text="{Binding Fan.SetPoint, StringFormat={}{0:0} %}"/>
                                 </Grid>
                                 <Slider Style="{StaticResource GpuSlider}" Minimum="0" Maximum="100"
-                                        Value="{Binding SetPoint, Mode=TwoWay}"/>
+                                        Value="{Binding Fan.SetPoint, Mode=TwoWay}"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                                    <Button Style="{StaticResource PrimaryButton}" Content="套用" Click="Apply_Click" Tag="{Binding}"/>
-                                    <Button Style="{StaticResource ToolButton}" Content="還原自動" Click="Restore_Click" Tag="{Binding}" Margin="10,0,0,0"/>
+                                    <Button Style="{StaticResource PrimaryButton}" Content="套用" Click="Apply_Click" Tag="{Binding Fan}"/>
+                                    <Button Style="{StaticResource ToolButton}" Content="還原自動" Click="Restore_Click" Tag="{Binding Fan}" Margin="10,0,0,0"/>
+                                </StackPanel>
+
+                                <!-- 轉速曲線：啟用、溫度來源、遲滯、可拖動畫布 -->
+                                <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,16,0,0"/>
+                                <Grid Margin="0,14,0,0">
+                                    <CheckBox Style="{StaticResource GpuCheck}" Content="以曲線自動調速"
+                                              IsChecked="{Binding Enabled, Mode=TwoWay}"/>
+                                    <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="12.5"
+                                               Foreground="{StaticResource AccentBrush}" Text="{Binding TargetText}"/>
+                                </Grid>
+                                <Grid Margin="0,12,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="150"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="溫度來源" VerticalAlignment="Center"/>
+                                    <ComboBox Grid.Column="1" Style="{StaticResource DarkCombo}" Margin="10,0,0,0"
+                                              ItemsSource="{Binding Source={x:Static local:FanCurve.SourceNames}}"
+                                              SelectedIndex="{Binding SourceIndex, Mode=TwoWay}"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldLabel}" Text="遲滯" VerticalAlignment="Center"/>
+                                    <Slider Grid.Column="4" Style="{StaticResource GpuSlider}" Margin="10,0,0,0"
+                                            Minimum="0" Maximum="15" Value="{Binding Hysteresis, Mode=TwoWay}"/>
+                                    <TextBlock Grid.Column="5" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="13"
+                                               Foreground="{StaticResource PrimaryInkBrush}" FontWeight="SemiBold"
+                                               Text="{Binding Hysteresis, StringFormat={}{0:0} °C}"/>
+                                </Grid>
+                                <local:FanCurveEditor Margin="0,12,0,0" Curve="{Binding}"
+                                                      Temp="{Binding LiveTempC}" Output="{Binding Fan.CurrentPercent}"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="套用樣板" VerticalAlignment="Center"/>
+                                    <Button Style="{StaticResource ToolButton}" Content="靜音" Tag="0" Click="Preset_Click" Margin="10,0,0,0"/>
+                                    <Button Style="{StaticResource ToolButton}" Content="均衡" Tag="1" Click="Preset_Click" Margin="8,0,0,0"/>
+                                    <Button Style="{StaticResource ToolButton}" Content="效能" Tag="2" Click="Preset_Click" Margin="8,0,0,0"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>

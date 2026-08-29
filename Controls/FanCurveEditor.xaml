@@ -1,0 +1,19 @@
+<UserControl x:Class="XinSpect.FanCurveEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect"
+             MinHeight="176">
+    <!-- 曲線編輯畫布：左鍵拖動控制點、雙擊新增、右鍵移除；灰線為即時溫度 -->
+    <Border Background="{StaticResource Surface2Brush}" CornerRadius="8"
+            BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1">
+        <Grid x:Name="Root" Background="Transparent" ClipToBounds="True"
+              MouseLeftButtonDown="Root_Down"
+              MouseMove="Root_Move"
+              MouseLeftButtonUp="Root_Up"
+              MouseRightButtonDown="Root_RightDown"
+              MouseLeave="Root_Leave">
+            <Canvas x:Name="Plot"/>
+            <Canvas x:Name="Live" IsHitTestVisible="False"/>
+        </Grid>
+    </Border>
+</UserControl>

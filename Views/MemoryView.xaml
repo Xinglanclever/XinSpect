@@ -195,6 +195,94 @@
                     </ItemsControl>
                 </StackPanel>
             </Border>
+            <!-- ===== 記憶體圖樣檢測 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="240">
+                <StackPanel>
+                    <DockPanel LastChildFill="False">
+                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource SectionHeader}" Text="圖樣檢測" VerticalAlignment="Center"/>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="測試量" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <ComboBox Style="{StaticResource DarkCombo}" Width="110" Margin="0,0,12,0"
+                                      IsEnabled="{Binding MemTest.CanStart}"
+                                      ItemsSource="{Binding MemTest.SizeChoices}"
+                                      SelectedIndex="{Binding MemTest.SizeIndex, Mode=TwoWay}"/>
+                            <Button Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
+                                    Click="MemTestStop_Click" IsEnabled="{Binding MemTest.IsRunning}"/>
+                            <Button Style="{StaticResource PrimaryButton}" Content="開始測試"
+                                    Click="MemTestStart_Click" IsEnabled="{Binding MemTest.CanStart}"/>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                               Text="在一段實際配置到的記憶體上寫入特定圖樣再整段回讀比對，抓永遠卡在某一態的位元、相鄰位元干擾與位址解碼錯誤。測試期間可正常操作，但整機會變慢。"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap"
+                               Text="{Binding MemTest.PlanText}"/>
+
+                    <UniformGrid Rows="1" Columns="4" Margin="0,12,0,0">
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="測試範圍" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding MemTest.TestedText}" FontSize="20" Margin="0,2,0,0"
+                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="不符處數" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding MemTest.ErrorText}" FontSize="20" Margin="0,2,0,0"
+                                           Foreground="{Binding MemTest.Verdict, Converter={StaticResource SeverityToBrush}}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="耗時" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding MemTest.ElapsedText}" FontSize="20" Margin="0,2,0,0"
+                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="讀寫吞吐" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding MemTest.SpeedText}" FontSize="20" Margin="0,2,0,0"
+                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+
+                    <ProgressBar Style="{StaticResource LoadBar}" Margin="0,12,0,0"
+                                 Value="{Binding MemTest.ProgressPercent, Mode=OneWay}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding MemTest.StatusLine}"/>
+
+                    <ItemsControl ItemsSource="{Binding MemTest.Rows}" Margin="0,10,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="30">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="96"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="110"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldValue}" Text="{Binding Name}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding ResultText}" VerticalAlignment="Center"
+                                               Foreground="{Binding Severity, Converter={StaticResource SeverityToBrush}}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" Text="{Binding NoteText}" Margin="0,0,12,0"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding NoteText}"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldLabel}" Text="{Binding TimeText}"
+                                               TextAlignment="Right" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" Text="{Binding ThroughputText}"
+                                               TextAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,10,0,0" TextWrapping="Wrap" Opacity="0.75"
+                               Text="這不是 MemTest86 的替代品：作業系統的虛擬記憶體讓程式無法指定實體位址，也碰不到已被系統與其他行程佔用的頁面，因此本檢測只覆蓋當下配置得到的那一段——通過不代表整條記憶體沒問題，但只要出現一處不符，那就是真的量到了。要徹底確認請在開機前環境跑滿整條記憶體。"/>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

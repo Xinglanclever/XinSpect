@@ -7,10 +7,17 @@ using System.Windows.Shapes;
 namespace XinSpect;
 
 /// <summary>
-/// 示波器風格即時波形（CRT 綠磷光）：資料來源為 <see cref="MetricHistory"/>。
-/// 深色底 + 綠色分格線 + 發光掃描線 + 尾端光點；視覺物件僅建立一次，之後就地更新幾何。
+/// 示波器風格即時波形（CRT 磷光）：資料來源為 <see cref="MetricHistory"/>。
+/// 暗底 + 分格線 + 發光掃描線 + 尾端光點；視覺物件僅建立一次，之後就地更新幾何。
 /// 未顯示時略過重繪；重新顯示時補畫最新快照。與 HistoryGraph 同一套省負載策略。
 /// </summary>
+/// <remarks>
+/// 整支示波器只吃<b>一個</b>顏色輸入：<see cref="TraceBrush"/>。面板底色、描邊、分格線、
+/// 光暈、掃描光點、抬頭文字全部由它推導，所以呼叫端把通道色設成琥珀色時，不會出現
+/// 「琥珀波形壓在綠色格線上」這種前後不一致（改版前正是如此）。
+/// <para>沒指定 <see cref="TraceBrush"/> 時跟著目前強調色走——迷你懸浮視窗就是這樣換色的。
+/// 面板本身刻意不跟深淺主題翻白：磷光管的可讀性來自暗底亮跡。</para>
+/// </remarks>
 public partial class Oscilloscope : UserControl
 {
     private MetricHistory? _hooked;
@@ -20,6 +27,12 @@ public partial class Oscilloscope : UserControl
     private readonly Line[] _vGrid = new Line[9];
     private Polyline _trace = null!;
     private SolidColorBrush _traceBrush = null!;
+    private SolidColorBrush _gridBrush = null!;
+    private SolidColorBrush _plateBrush = null!;
+    private SolidColorBrush _edgeBrush = null!;
+    private SolidColorBrush _beamBrush = null!;
+    private SolidColorBrush _captionBrush = null!;
+    private SolidColorBrush _valueBrush = null!;
     private Ellipse _beam = null!;
     private TranslateTransform _beamXf = null!;
 
@@ -30,8 +43,22 @@ public partial class Oscilloscope : UserControl
     {
         InitializeComponent();
         SizeChanged += (_, _) => Redraw();
-        Loaded += (_, _) => Redraw();
+        Loaded += (_, _) =>
+        {
+            ThemeService.Changed -= OnThemeChanged;   // 重複 Loaded 不重覆訂閱
+            ThemeService.Changed += OnThemeChanged;
+            Redraw();
+        };
+        Unloaded += (_, _) => ThemeService.Changed -= OnThemeChanged;
         IsVisibleChanged += (_, _) => { if (IsVisible) Redraw(); };
+    }
+
+    /// <summary>換強調色時重推整組顏色（未指定 TraceBrush 的場合）。守衛要先清掉才會重算。</summary>
+    private void OnThemeChanged()
+    {
+        if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(OnThemeChanged); return; }
+        _lastCol = Colors.Transparent;
+        Redraw();
     }
 
     public static readonly DependencyProperty HistoryProperty =
@@ -66,15 +93,16 @@ public partial class Oscilloscope : UserControl
         else Dispatcher.BeginInvoke(OnData);
     }
 
-    private Color TraceColor() => TraceBrush is SolidColorBrush b ? b.Color : Color.FromRgb(0x35, 0xE0, 0x6A);
+    /// <summary>波形色：未指定 <see cref="TraceBrush"/> 時跟著目前強調色走。</summary>
+    private Color TraceColor() => TraceBrush is SolidColorBrush b ? b.Color : VizPalette.AccentColor;
 
     private void EnsureBuilt()
     {
         if (_built) return;
 
-        var gridBrush = new SolidColorBrush(Color.FromArgb(0x22, 0x3D, 0xE0, 0x8A));
-        for (int i = 0; i < _hGrid.Length; i++) { _hGrid[i] = new Line { Stroke = gridBrush, StrokeThickness = 1 }; GridLines.Children.Add(_hGrid[i]); }
-        for (int i = 0; i < _vGrid.Length; i++) { _vGrid[i] = new Line { Stroke = gridBrush, StrokeThickness = 1 }; GridLines.Children.Add(_vGrid[i]); }
+        _gridBrush = new SolidColorBrush();
+        for (int i = 0; i < _hGrid.Length; i++) { _hGrid[i] = new Line { Stroke = _gridBrush, StrokeThickness = 1 }; GridLines.Children.Add(_hGrid[i]); }
+        for (int i = 0; i < _vGrid.Length; i++) { _vGrid[i] = new Line { Stroke = _gridBrush, StrokeThickness = 1 }; GridLines.Children.Add(_vGrid[i]); }
 
         _traceBrush = new SolidColorBrush();
         _trace = new Polyline
@@ -83,13 +111,24 @@ public partial class Oscilloscope : UserControl
             StrokeThickness = 1.8,
             StrokeLineJoin = PenLineJoin.Round,
             StrokeEndLineCap = PenLineCap.Round,
-            Effect = new DropShadowEffect { BlurRadius = 8, ShadowDepth = 0, Opacity = 0.9, Color = Color.FromRgb(0x35, 0xE0, 0x6A) },
+            Effect = new DropShadowEffect { BlurRadius = 8, ShadowDepth = 0, Opacity = 0.9 },
         };
         Plot.Children.Add(_trace);
 
+        _beamBrush = new SolidColorBrush();
         _beamXf = new TranslateTransform();
-        _beam = new Ellipse { Width = 6, Height = 6, Fill = Brushes.White, RenderTransform = _beamXf, Opacity = 0.9 };
+        _beam = new Ellipse { Width = 6, Height = 6, Fill = _beamBrush, RenderTransform = _beamXf, Opacity = 0.9 };
         Plot.Children.Add(_beam);
+
+        _plateBrush = new SolidColorBrush();
+        _edgeBrush = new SolidColorBrush();
+        Plate.Background = _plateBrush;
+        Plate.BorderBrush = _edgeBrush;
+
+        _captionBrush = new SolidColorBrush();
+        _valueBrush = new SolidColorBrush();
+        CaptionText.Foreground = _captionBrush;
+        ValueText.Foreground = _valueBrush;
 
         _built = true;
         _lastW = _lastH = 0;
@@ -100,6 +139,22 @@ public partial class Oscilloscope : UserControl
     {
         if (Plot is null) return;
         EnsureBuilt();
+
+        // 顏色先推導：面板底色與抬頭文字跟尺寸無關，太小而提早退出時也該是對的
+        var col = TraceColor();
+        if (col != _lastCol)
+        {
+            var black = Colors.Black;
+            _traceBrush.Color = col;
+            if (_trace.Effect is DropShadowEffect g) g.Color = col;
+            _gridBrush.Color = Color.FromArgb(0x22, col.R, col.G, col.B);
+            _plateBrush.Color = VizPalette.Blend(col, black, 0.92);        // 近黑的管面，僅帶一點通道色
+            _edgeBrush.Color = VizPalette.Blend(col, black, 0.78);
+            _beamBrush.Color = VizPalette.Blend(col, Colors.White, 0.75);  // 掃描光點：偏白但仍屬同一色系
+            _captionBrush.Color = VizPalette.Blend(col, Colors.White, 0.30);
+            _valueBrush.Color = VizPalette.Blend(col, Colors.White, 0.50);
+            _lastCol = col;
+        }
 
         double w = ActualWidth, h = ActualHeight;
         bool tooSmall = w < 8 || h < 8;
@@ -113,18 +168,12 @@ public partial class Oscilloscope : UserControl
             _lastW = w; _lastH = h;
         }
 
-        var col = TraceColor();
-        if (col != _lastCol)
-        {
-            _traceBrush.Color = col;
-            if (_trace.Effect is DropShadowEffect g) g.Color = col;
-            _lastCol = col;
-        }
-
         ValueText.Text = History?.CurrentText ?? "";
 
         var data = History?.Snapshot();
-        if (data is null || data.Length < 2) { _trace.Visibility = _beam.Visibility = Visibility.Collapsed; return; }
+        // 與 HistoryGraph 同一原則：完全沒讀到的項目不畫波形，避免 0 值直線被當成量測結果
+        if (data is null || data.Length < 2 || History?.HasData != true)
+        { _trace.Visibility = _beam.Visibility = Visibility.Collapsed; return; }
 
         double max = History!.FixedMax ?? 0, min = 0;
         if (max <= 0)

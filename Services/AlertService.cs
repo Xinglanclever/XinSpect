@@ -34,6 +34,17 @@ public sealed class AlertService : ObservableObject
     /// <summary>由主視窗接上系統匣氣泡通知（標題, 內文）。</summary>
     public Action<string, string>? Balloon { get; set; }
 
+    /// <summary>
+    /// 警示觸發時的追加處理（項目名稱, 訊息），供「主動診斷」接上 AI。
+    /// 同一項目在 <see cref="DiagnoseCooldown"/> 內只會回呼一次，避免臨界值反覆越線就連發請求。
+    /// </summary>
+    public Action<string, string>? Diagnose { get; set; }
+
+    /// <summary>同一警示項目再次觸發主動診斷的最短間隔。</summary>
+    public static readonly TimeSpan DiagnoseCooldown = TimeSpan.FromMinutes(10);
+
+    private readonly Dictionary<string, DateTime> _lastDiagnose = new(StringComparer.Ordinal);
+
     /// <summary>由主計時器每拍呼叫。</summary>
     public void Check(SensorService live, SettingsService s)
     {
@@ -71,7 +82,7 @@ public sealed class AlertService : ObservableObject
         if (over && !activeFlag)
         {
             activeFlag = true;
-            Raise($"{label} {valueText} 已超過上限 {threshold:0}{unit}");
+            Raise(label, $"{label} {valueText} 已超過上限 {threshold:0}{unit}");
         }
         else if (!over && activeFlag && value < threshold - margin)
         {
@@ -80,12 +91,18 @@ public sealed class AlertService : ObservableObject
         if (activeFlag) activeSink.Add($"{label} {valueText}");
     }
 
-    private void Raise(string message)
+    private void Raise(string label, string message)
     {
         var ev = new AlertEvent(DateTime.Now.ToString("HH:mm:ss"), message, Severity.Critical);
         Events.Insert(0, ev);
         while (Events.Count > 100) Events.RemoveAt(Events.Count - 1);
         OnPropertyChanged(nameof(HasEvents));
         try { Balloon?.Invoke("曦覽 XinSpect ・ 硬體警示", message); } catch { /* 通知為附加 */ }
+
+        if (Diagnose is null) return;
+        var now = DateTime.UtcNow;
+        if (_lastDiagnose.TryGetValue(label, out var last) && now - last < DiagnoseCooldown) return;
+        _lastDiagnose[label] = now;
+        try { Diagnose.Invoke(label, message); } catch { /* 主動診斷為附加 */ }
     }
 }

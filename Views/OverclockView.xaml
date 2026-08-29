@@ -538,6 +538,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="80">
                 <StackPanel>
                     <TextBlock Text="即時波形" Style="{StaticResource SectionHeader}"/>
+                    <!-- 通道色固定：兩條線同時在畫面上，顏色是識別而非裝飾（同 CoreDetailWindow） -->
                     <local:Oscilloscope Height="126" Margin="0,4,0,0"
                                         History="{Binding Overclock.OscilloVolt}"
                                         TraceBrush="#35E06A" Caption="Vcore 波形"/>

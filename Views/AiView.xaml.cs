@@ -31,6 +31,15 @@ public partial class AiView : UserControl
 
     private void Clear_Click(object sender, RoutedEventArgs e) => Vm?.Ai.Clear();
 
+    // 快問按鈕：Tag 帶的是實際送出的完整問題（按鈕上只顯示短標籤）
+    private async void Chip_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string prompt } || prompt.Length == 0) return;
+        var ai = Vm?.Ai;
+        if (ai is null || !ai.CanSend) return;
+        await ai.SendAsync(prompt);
+    }
+
     // Enter 送出、Shift+Enter 換行。
     private async void Input_PreviewKeyDown(object sender, KeyEventArgs e)
     {

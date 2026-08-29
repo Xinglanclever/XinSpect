@@ -15,7 +15,7 @@
                                    Text="{Binding Chess.LogicalCores, StringFormat=本機 {0} 邏輯核心}"/>
                     </Grid>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
-                               Text="以西洋棋 perft（合法走法產生 + 走子/還原）為確定性運算負載，量測節點速率（kN/s）與相對倍率（×）。每執行緒各持獨立引擎、無鎖競爭，可超額訂閱實體核心。"/>
+                               Text="以西洋棋 perft（合法走法產生 + 走子/還原）為確定性運算負載，量測節點速率（kN/s）。每執行緒各持獨立引擎、無鎖競爭，可超額訂閱實體核心。本測試不提供跨機器的參考分數：可比的對象是本機歷次成績，或在同一台機器上實跑下方的原版 Fritz。"/>
 
                     <!-- 執行緒選擇 -->
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -58,15 +58,15 @@
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap"
                                Text="{Binding Chess.StatusLine}"/>
 
-                    <!-- 結果數值 -->
+                    <!-- 結果數值：小字一律是本機歷次成績的對照，沒有任何外部參考分數 -->
                     <UniformGrid Rows="1" Columns="3" Margin="0,14,0,0">
                         <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="0,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="單執行緒" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding Chess.SingleText}" FontSize="24" Margin="0,2,0,0"
                                            Foreground="{StaticResource PrimaryInkBrush}"/>
-                                <TextBlock Text="{Binding Chess.SingleFactorText}" Style="{StaticResource FieldLabel}"
-                                           Margin="0,2,0,0" Foreground="{StaticResource AccentBrush}"/>
+                                <TextBlock Text="{Binding Chess.SingleDeltaText}" Style="{StaticResource FieldLabel}"
+                                           Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{StaticResource AccentBrush}"/>
                             </StackPanel>
                         </Border>
                         <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="5,0,5,0">
@@ -74,8 +74,8 @@
                                 <TextBlock Text="多執行緒" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding Chess.MultiText}" FontSize="24" Margin="0,2,0,0"
                                            Foreground="{StaticResource PrimaryInkBrush}"/>
-                                <TextBlock Text="{Binding Chess.MultiFactorText}" Style="{StaticResource FieldLabel}"
-                                           Margin="0,2,0,0" Foreground="{StaticResource AccentBrush}"/>
+                                <TextBlock Text="{Binding Chess.MultiDeltaText}" Style="{StaticResource FieldLabel}"
+                                           Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{StaticResource AccentBrush}"/>
                             </StackPanel>
                         </Border>
                         <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="5,0,0,0">
@@ -83,10 +83,17 @@
                                 <TextBlock Text="加速比" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding Chess.SpeedupText}" FontSize="24" Margin="0,2,0,0"
                                            Foreground="{StaticResource PrimaryInkBrush}"/>
-                                <TextBlock Text="{Binding Chess.BestText}" Style="{StaticResource FieldLabel}" Margin="0,2,0,0"/>
+                                <TextBlock Text="{Binding Chess.EfficiencyText}" Style="{StaticResource FieldLabel}"
+                                           Margin="0,2,0,0" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
                     </UniformGrid>
+
+                    <!-- 本機重複性與量測條件：一個分數不附帶溫度／頻率，就無從判斷它是在冷機還是溫度牆下量到的 -->
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="2,10,0,0" TextWrapping="Wrap"
+                               Text="{Binding Chess.RepeatText}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="2,4,0,0" TextWrapping="Wrap"
+                               Text="{Binding Chess.ConditionText}"/>
 
                     <!-- 原版 Fritz 對照 -->
                     <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,12" Margin="0,12,0,0">
@@ -100,35 +107,11 @@
                         </DockPanel>
                     </Border>
 
-                    <!-- 參考對照表 -->
-                    <TextBlock Style="{StaticResource FieldLabel}" Text="參考對照（示意，非實測）" Margin="2,14,0,6"/>
-                    <Grid Margin="0,0,0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="150"/>
-                            <ColumnDefinition Width="90"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Style="{StaticResource ColHead}" Text="機型"/>
-                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="約略速率"/>
-                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="倍率" TextAlignment="Right"/>
-                    </Grid>
-                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,4"/>
-                    <ItemsControl ItemsSource="{Binding Chess.Reference}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid MinHeight="28">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="150"/>
-                                        <ColumnDefinition Width="90"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldValue}" Text="{Binding Machine}"/>
-                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Rate}"/>
-                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding Factor}" TextAlignment="Right"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <!-- 曾經此處有一張「參考對照（示意，非實測）」表：內建的 Pentium III 1 GHz 基準與各機型倍率
+                         都不是量出來的，只是把猜測寫得像量測，且本測試的 perft 負載與原版 Fritz 的引擎不同，
+                         兩者的「×」不可互換。整張表已移除，改以本機歷次紀錄（下方卡片）作唯一基準。 -->
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="2,14,0,0" TextWrapping="Wrap"
+                               Text="不提供各機型的參考倍率：那類對照表無法誠實——同型號的機器換一支散熱膏、換一種電源計劃就差一成，標成「約略」也只是把猜測寫得像量測。要跟別台電腦比，請在兩台機器上各跑一次上面的原版 Fritz。"/>
                 </StackPanel>
             </Border>
 
@@ -270,7 +253,8 @@
                                            HorizontalAlignment="Center"
                                            Foreground="{StaticResource AccentBrush}"/>
                                 <TextBlock Text="綜合分數" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
-                                <TextBlock Text="{Binding Bench.BestText}" Style="{StaticResource Subtitle}"
+                                <TextBlock Text="{Binding Bench.DeltaText}" Style="{StaticResource Subtitle}" MaxWidth="180"
+                                           TextWrapping="Wrap" TextAlignment="Center"
                                            HorizontalAlignment="Center" Margin="0,10,0,0"/>
                             </StackPanel>
                         </Border>
@@ -304,11 +288,65 @@
                             </Border>
                         </UniformGrid>
                     </Grid>
+
+                    <!-- 本機重複性與量測條件（同上：唯一的基準是這台機器自己的紀錄） -->
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="2,12,0,0" TextWrapping="Wrap"
+                               Text="{Binding Bench.RepeatText}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="2,4,0,0" TextWrapping="Wrap"
+                               Text="{Binding Bench.ConditionText}"/>
                 </StackPanel>
             </Border>
 
             <TextBlock Style="{StaticResource FieldLabel}" Margin="4,10,0,14" TextWrapping="Wrap"
-                       Text="綜合分數 = 單執行緒 × 2 + 多執行緒 + 記憶體頻寬 × 20；分數為相對值，用於同機前後比較。測試期間請避免其他高負載程式。"/>
+                       Text="綜合分數 = 單執行緒 × 2 + 多執行緒 + 記憶體頻寬 × 20。這組權重是本程式自訂的，沒有跨機器的意義，只能用於同一台機器的前後比較；測試期間請避免其他高負載程式。"/>
+
+            <!-- ===== 本機跑分紀錄（實測對照） =====
+                 曦覽不內建任何別台機器的參考分數。可信的比較對象只有這台機器自己量到的數字，
+                 因此每次跑完都記下設定與當時的溫度／頻率，讓「這次比上次低」能分清是硬體變了還是當時比較熱。 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="190"
+                    Visibility="{Binding Benchmarks.Recent.Count, Converter={StaticResource CountToVis}}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="本機跑分紀錄（實測對照）"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="本機歷次成績，新的在上。同項目、同設定才可直接相比；「量測條件」是跑分當時實際讀到的溫度與頻率，沒有感測器時留空而不以 0 充數。紀錄存於 %APPDATA%\XinSpect\bench-history.json，可在設定頁一併清除。"/>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="88"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="2*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource ColHead}" Text="時間"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="項目"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="設定"/>
+                        <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="成績" TextAlignment="Right"/>
+                        <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="量測條件" Margin="12,0,0,0"/>
+                    </Grid>
+                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,4"/>
+                    <ItemsControl ItemsSource="{Binding Benchmarks.Recent}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="28">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="88"/>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="2*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="{Binding TimeText}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Title}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" Text="{Binding Config}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding ScoreText}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="4" Style="{StaticResource FieldLabel}" Text="{Binding Conditions}" Margin="12,0,0,0"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
 
             <!-- ===== 快取 / 記憶體延遲 ===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="200">
@@ -426,7 +464,12 @@
                             <TextBlock Style="{StaticResource FieldLabel}" Margin="0,8,0,0" Text="計算結果（前 40 位）"/>
                             <TextBlock Style="{StaticResource FieldValue}" Margin="0,2,0,0" Text="{Binding SuperPi.Preview}" TextWrapping="Wrap"
                                        FontFamily="Consolas"/>
-                            <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" Text="{Binding SuperPi.BestText}"/>
+                            <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap"
+                                       Text="{Binding SuperPi.DeltaText}"/>
+                            <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                                       Text="{Binding SuperPi.RepeatText}"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" Margin="0,2,0,0" TextWrapping="Wrap"
+                                       Text="{Binding SuperPi.ConditionText}"/>
                         </StackPanel>
                     </Grid>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,10,0,0" TextWrapping="Wrap" Text="{Binding SuperPi.StatusLine}"/>

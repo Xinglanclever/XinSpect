@@ -51,7 +51,6 @@
             <Setter Property="ItemTemplate" Value="{StaticResource RankRowTemplate}"/>
         </Style>
     </UserControl.Resources>
-    <!-- __RANKVIEW_BODY__ -->
     <!-- DataContext 指定於此子 Grid（而非 UserControl 根）：根元素 DataContext 繫結在 Host.Content 延遲載入時不解析，改於首個子元素設定方能正確解析 Ranking -->
     <Grid Margin="0,0,8,0" DataContext="{Binding Ranking}">
         <Grid.RowDefinitions>

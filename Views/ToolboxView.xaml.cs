@@ -27,6 +27,8 @@ public partial class ToolboxView : UserControl
     private void ScreenTest_Click(object sender, RoutedEventArgs e) => Open(new ScreenTestWindow());
     private void MouseTest_Click(object sender, RoutedEventArgs e) => Open(new MouseTestWindow());
     private void KeyboardTest_Click(object sender, RoutedEventArgs e) => Open(new KeyboardTestWindow());
+    private void SpeakerTest_Click(object sender, RoutedEventArgs e) => Open(new SpeakerTestWindow());
+    private void MotionTest_Click(object sender, RoutedEventArgs e) => Open(new MotionTestWindow());
 
     private void Open(Window w)
     {

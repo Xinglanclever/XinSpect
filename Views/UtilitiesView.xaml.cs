@@ -3,41 +3,51 @@ using System.Windows.Controls;
 namespace XinSpect;
 
 /// <summary>
-/// 實用工具分頁：內建小工具的容器頁。左側子導覽切換各工具，右側承載工具面板。
-/// 每個工具為獨立自持的 UserControl（自帶服務執行個體），採「一個一個加入」的方式擴充：
-/// 於 _tools 陣列與左側 ListBox 相同索引處各加入一筆即可。
-/// 目前收錄：連接埠占用。後續預定：垃圾清理、Hosts 編輯、藍屏(minidump)分析、右鍵選單管理……
+/// 實用工具分頁：內建小工具的容器頁。左側子導覽由 <see cref="PageRegistry.Utilities"/> 資料繫結產生，
+/// 工具檢視於首次選取時才建立（延遲實體化），並支援以鍵值程式化跳轉（命令面板用）。
+/// 新增一個工具＝在 <see cref="PageRegistry.Utilities"/> 加一筆，不需改動本檔或 XAML。
 /// </summary>
-public partial class UtilitiesView : UserControl
+public partial class UtilitiesView : UserControl, IPageLifecycle
 {
-    // 與左側 SubNav 的 ListBoxItem 平行對應（同索引 = 同工具）。
-    private readonly UserControl[] _tools;
+    private readonly Dictionary<string, UserControl> _cache = new(StringComparer.OrdinalIgnoreCase);
+    private UserControl? _current;
 
     public UtilitiesView()
     {
         InitializeComponent();
-        _tools = new UserControl[]
-        {
-            new PortUsageView(),
-            new HostsEditorView(),
-            new BsodView(),
-            new CleanupView(),
-            new BatteryView(),
-            new ContextMenuView(),
-            new NetworkSpeedView(),
-            new MemoryCleanView(),
-            new StartupView(),
-            new DnsView(),
-            new DiskScanView(),
-            new RankingView(),
-        };
+        SubNav.ItemsSource = PageRegistry.Utilities;
         SubNav.SelectedIndex = 0;
     }
 
     private void SubNav_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        int i = SubNav.SelectedIndex;
-        if (i >= 0 && i < _tools.Length)
-            ToolHost.Content = _tools[i];
+        if (SubNav.SelectedItem is not PageDef def) return;
+
+        if (!_cache.TryGetValue(def.Key, out var view))
+        {
+            view = def.Factory();
+            _cache[def.Key] = view;
+        }
+        if (ReferenceEquals(_current, view)) return;
+
+        (_current as IPageLifecycle)?.OnDeactivated();
+        _current = view;
+        ToolHost.Content = view;
+        (view as IPageLifecycle)?.OnActivated();
     }
+
+    /// <summary>切換到指定鍵值的子工具（供命令面板深層跳轉）。找不到則不動作。</summary>
+    public void SelectTool(string key)
+    {
+        int i = 0;
+        foreach (var d in PageRegistry.Utilities)
+        {
+            if (string.Equals(d.Key, key, StringComparison.OrdinalIgnoreCase)) { SubNav.SelectedIndex = i; return; }
+            i++;
+        }
+    }
+
+    // 容器頁的生命週期向下轉交給目前顯示的子工具
+    public void OnActivated() => (_current as IPageLifecycle)?.OnActivated();
+    public void OnDeactivated() => (_current as IPageLifecycle)?.OnDeactivated();
 }

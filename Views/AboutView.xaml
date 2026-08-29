@@ -13,7 +13,7 @@
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0"
                                Text="硬體資訊總覽 ・ 即時偵測工具"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,2,0,0"
-                               Text="版本 1.3 ・ 便攜單一執行檔"/>
+                               Text="版本 1.3.2 ・ 便攜單一執行檔"/>
 
                     <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,16"/>
 

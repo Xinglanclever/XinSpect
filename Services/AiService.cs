@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -8,11 +9,15 @@ namespace XinSpect;
 /// <summary>AI 評價供應商：本機免費（Ollama）或任何 OpenAI 相容的 API 端點。</summary>
 public enum AiProvider { Ollama, OpenAiCompatible }
 
-/// <summary>對話中的一則訊息（使用者 / AI），供聊天列表繫結。</summary>
+/// <summary>對話中的一則訊息（使用者 / AI / 本機工具查詢紀錄），供聊天列表繫結。</summary>
 public sealed class AiMessage : ObservableObject
 {
     public bool IsUser { get; init; }
-    public string RoleText => IsUser ? "你" : "AI";
+    /// <summary>是否為「診斷代理呼叫本機唯讀工具」的紀錄列（僅供人看，不當成對話內容送回模型）。</summary>
+    public bool IsTool { get; init; }
+    /// <summary>是否為模型的一般回覆（用於聊天氣泡樣式判斷）。</summary>
+    public bool IsAssistant => !IsUser && !IsTool;
+    public string RoleText => IsUser ? "你" : IsTool ? "查詢" : "AI";
     private string _text = "";
     public string Text { get => _text; set => SetProperty(ref _text, value); }
 }
@@ -38,11 +43,25 @@ public sealed class AiService : ObservableObject
     }
 
     private readonly SettingsService _settings;
+    private readonly AiChatStore _chat;
 
     /// <summary>由主檢視模型注入：即時彙整目前硬體規格與感測數據為文字快照。</summary>
     public Func<string>? SnapshotProvider { get; set; }
 
-    public AiService(SettingsService settings) => _settings = settings;
+    /// <summary>診斷代理可呼叫的本機唯讀工具箱（由 <c>AiToolboxBuilder</c> 建立並注入）。</summary>
+    public AiToolbox? Tools { get; set; }
+
+    public AiService(SettingsService settings, string? chatFolder = null)
+    {
+        _settings = settings;
+        _chat = new AiChatStore(chatFolder);
+        if (!_settings.AiKeepHistory) return;
+
+        foreach (var m in _chat.Load()) Messages.Add(m);
+        if (Messages.Count == 0) return;
+        HasMessages = true;
+        StatusText = $"已接續上次對話（{Messages.Count} 則）。";
+    }
 
     /// <summary>內建的預設提示詞：要求 AI 客觀、公正、只依真實數據評價，不偏袒任何品牌。</summary>
     public const string DefaultSystemPrompt =
@@ -54,6 +73,18 @@ public sealed class AiService : ObservableObject
         "4. 給出務實的升級或最佳化建議；若無明顯需求，也請如實說明無須升級。\n" +
         "要求：只根據提供的數據作答，不臆測未提供的資訊；不誇大、不貶低、不偏袒任何品牌；" +
         "以繁體中文分段或條列回覆，語氣專業而友善。";
+
+    /// <summary>診斷代理模式下附加的說明：告訴模型有哪些本機唯讀工具，以及「不准編造」的鐵則。</summary>
+    public const string AgentPrompt =
+        "【診斷代理】你可以呼叫本機的唯讀查詢工具，主動取得更多真實數據："
+        + "完整規格、處理器拓樸、即時讀值、所有溫度、感測器總表、風扇與曲線現況、磁碟健康、"
+        + "事件時間軸、歷史統計、顯示卡與處理器調校現況、場景設定、健康總評、環境自檢、效能測試成績、"
+        + "記憶體時序與 SPD（含 XMP／EXPO）、網路組態與流量、螢幕 EDID 色域、效能天梯名次與同級對手、"
+        + "升級建議規則引擎、電池健康、開機啟動項、藍屏傾印記錄。\n"
+        + "規則：需要資料時先呼叫工具，不要憑印象猜測；一次可以呼叫多個工具；"
+        + "工具回報「尚未測試」「無資料」或「不可用」時，就如實說明本機沒有該項資料，絕不編造數值；"
+        + "工具明確標示某項推算值不是實測（如 EDID 色域、天梯分數、升級效益範圍）時，轉述時也必須標明；"
+        + "取得足夠資料後，再用繁體中文給出結論與建議。";
 
     // ── 對話狀態（供獨立 AI 分頁繫結）──────────────────────────────
     public ObservableCollection<AiMessage> Messages { get; } = new();
@@ -153,18 +184,35 @@ public sealed class AiService : ObservableObject
     private bool _hasMessages;
     public bool HasMessages { get => _hasMessages; private set => SetProperty(ref _hasMessages, value); }
 
-    /// <summary>清空對話。</summary>
+    /// <summary>清空對話（同時刪除本機保存檔）。</summary>
     public void Clear()
     {
         Messages.Clear();
         HasMessages = false;
+        _chat.Delete();
         StatusText = "對話已清除。";
     }
 
     /// <summary>一鍵評價：以內建（或使用者自訂）提示詞＋硬體快照，請 AI 產出整機評價。</summary>
     public Task EvaluateAsync() => SendAsync("請根據上述硬體資訊，對這台電腦做一次完整、客觀的評價。");
 
-    /// <summary>送出一則使用者訊息並取得 AI 回覆（含硬體快照作為系統背景）。</summary>
+    /// <summary>
+    /// 主動診斷：溫度／負載警示觸發時自動請 AI 就地分析一次。
+    /// 端點或模型還沒填、或此刻正在對話中，就安靜略過——寧可不診斷，也不要打斷使用者或丟出失敗訊息。
+    /// 呼叫端負責檢查 <see cref="SettingsService.AiProactive"/> 與觸發頻率。
+    /// </summary>
+    public Task ProactiveAsync(string label, string alertText)
+    {
+        if (IsBusy) return Task.CompletedTask;
+        if (string.IsNullOrWhiteSpace(_settings.AiBaseUrl) || string.IsNullOrWhiteSpace(_settings.AiModel))
+            return Task.CompletedTask;
+
+        return SendAsync($"【主動診斷】本機剛剛觸發硬體警示：{alertText}。"
+            + $"請針對「{label}」呼叫必要的唯讀工具查明現況（例如即時讀值、所有溫度、事件時間軸、歷史統計、風扇現況），"
+            + "說明最可能的原因，以及現在具體該做什麼。查不到的資料請如實說明沒有，不要臆測。");
+    }
+
+    /// <summary>送出一則使用者訊息並取得 AI 回覆（含硬體快照作為系統背景；代理模式下可自行查工具）。</summary>
     public async Task SendAsync(string userText)
     {
         if (IsBusy) return;
@@ -172,7 +220,7 @@ public sealed class AiService : ObservableObject
         if (userText.Length == 0) return;
 
         Messages.Add(new AiMessage { IsUser = true, Text = userText });
-        var reply = new AiMessage { IsUser = false, Text = "思考中…" };
+        var reply = new AiMessage { IsUser = false, Text = Placeholder };
         Messages.Add(reply);
         HasMessages = true;
 
@@ -180,53 +228,127 @@ public sealed class AiService : ObservableObject
         StatusText = "正在呼叫 AI 模型…";
         try
         {
-            var text = await CompleteAsync();
-            reply.Text = text;
+            await RunAsync(reply);
             StatusText = $"完成 ・ {_settings.AiModel}（{ProviderLabel(_settings.AiProviderEnum)}）";
         }
         catch (Exception ex)
         {
-            reply.Text = "⚠ 呼叫失敗：" + Explain(ex);
+            // 已經串流出部分內容時保留它，只在末尾附註中斷原因——不假造完整結論。
+            if (reply.Text is Placeholder or "") reply.Text = "⚠ 呼叫失敗：" + Explain(ex);
+            else reply.Text += "\n\n⚠ 回覆中斷：" + Explain(ex);
             StatusText = "呼叫失敗 — 請檢查設定中的端點、模型與金鑰。";
         }
-        finally { IsBusy = false; }
+        finally
+        {
+            IsBusy = false;
+            if (_settings.AiKeepHistory) _chat.Save(Messages);
+        }
     }
+
+    private const string Placeholder = "思考中…";
 
     private static string ProviderLabel(AiProvider p) => p == AiProvider.Ollama ? "本機 Ollama" : "OpenAI 相容 API";
 
-    // ── 實際 HTTP 呼叫（OpenAI 相容 chat/completions）──────────────
-    private async Task<string> CompleteAsync()
+    // ── 代理迴圈（OpenAI 相容 chat/completions＋tool calling）──────
+    /// <summary>最多允許模型連續查工具的輪數；超過即要求它直接以文字作答，避免無止境迴圈。</summary>
+    private const int MaxToolRounds = 5;
+
+    /// <summary>模型要求執行的一次工具呼叫。</summary>
+    private sealed record ToolCall(string Id, string Name, string Args);
+
+    /// <summary>一輪呼叫的結果：模型說的文字，以及它要求執行的工具（空表示這就是最終答案）。</summary>
+    private sealed record Round(string Content, List<ToolCall> Calls);
+
+    /// <summary>端點不接受 <c>stream=true</c> 時內部使用，用來退回整段模式重試一次。</summary>
+    private sealed class StreamUnsupportedException(string message) : Exception(message);
+
+    /// <summary>把模型輸出逐段寫進聊天氣泡；第一段會清掉「思考中…」占位字。</summary>
+    private sealed class ReplySink(AiMessage target)
     {
-        string baseUrl = (_settings.AiBaseUrl ?? "").Trim().TrimEnd('/');
-        if (baseUrl.Length == 0) throw new InvalidOperationException("尚未設定 API 端點（Base URL）。");
-        // 端點正規化：使用者可填 http://host:port 或 .../v1；統一補到 /v1/chat/completions。
-        string url = baseUrl.EndsWith("/chat/completions") ? baseUrl
-                   : baseUrl.EndsWith("/v1") ? baseUrl + "/chat/completions"
-                   : baseUrl + "/v1/chat/completions";
-
-        string model = (_settings.AiModel ?? "").Trim();
-        if (model.Length == 0) throw new InvalidOperationException("尚未設定模型名稱。");
-
-        string sys = string.IsNullOrWhiteSpace(_settings.AiSystemPrompt) ? DefaultSystemPrompt : _settings.AiSystemPrompt;
-        string snapshot = "";
-        try { snapshot = SnapshotProvider?.Invoke() ?? ""; } catch { /* 快照彙整失敗不阻斷對話 */ }
-        if (snapshot.Length > 0) sys += "\n\n===== 本機硬體資訊（真實讀值）=====\n" + snapshot;
-
-        var msgs = new List<object> { new { role = "system", content = sys } };
-        foreach (var m in Messages)
+        private bool _started;
+        public void Append(string chunk)
         {
-            if (ReferenceEquals(m, Messages[^1])) continue;            // 最後一則是占位的 AI 回覆
-            if (!m.IsUser && m.Text is "思考中…") continue;
-            msgs.Add(new { role = m.IsUser ? "user" : "assistant", content = m.Text });
+            if (chunk.Length == 0) return;
+            if (!_started) { target.Text = ""; _started = true; }
+            target.Text += chunk;
         }
+        /// <summary>工具查詢後模型繼續說話時換段，避免前後文黏在一起。</summary>
+        public void Break() { if (_started && target.Text.Length > 0 && !target.Text.EndsWith('\n')) target.Text += "\n\n"; }
+        /// <summary>全程沒有任何文字時的收尾說明（絕不假造內容）。</summary>
+        public void Fallback(string text) { if (!_started) { target.Text = text; _started = true; } }
+    }
 
-        var payload = new
+    private async Task RunAsync(AiMessage reply)
+    {
+        string url = ResolveUrl();
+        string model = ResolveModel();
+        bool useTools = _settings.AiAgentMode && Tools is { HasTools: true };
+        var msgs = BuildMessages(useTools);
+        var sink = new ReplySink(reply);
+
+        for (int round = 1; ; round++)
         {
-            model,
-            messages = msgs,
-            temperature = _settings.AiTemperature,
-            stream = false,
+            bool allowTools = useTools && round <= MaxToolRounds;
+            var r = await CallAsync(url, model, msgs, allowTools, sink);
+
+            if (r.Calls.Count == 0)
+            {
+                sink.Fallback("（模型沒有回覆任何內容）");
+                return;
+            }
+
+            // 先把「助理要求呼叫工具」原樣記回對話，模型才認得後續的 tool 結果。
+            msgs.Add(new Dictionary<string, object?>
+            {
+                ["role"] = "assistant",
+                ["content"] = r.Content.Length > 0 ? r.Content : null,
+                ["tool_calls"] = r.Calls.Select(c => new
+                {
+                    id = c.Id,
+                    type = "function",
+                    function = new { name = c.Name, arguments = c.Args },
+                }).ToList(),
+            });
+
+            StatusText = $"代理正在查詢本機讀值（第 {round} 輪，{r.Calls.Count} 項）…";
+            foreach (var c in r.Calls)
+            {
+                string result = Tools!.Invoke(c.Name, c.Args);
+                InsertToolRow(reply, c, result);
+                msgs.Add(new Dictionary<string, object?>
+                {
+                    ["role"] = "tool",
+                    ["tool_call_id"] = c.Id,
+                    ["name"] = c.Name,
+                    ["content"] = Trim(result, 6000),
+                });
+            }
+            sink.Break();
+        }
+    }
+
+    // 串流優先；端點拒收 stream=true 時自動退回整段模式重試一次。
+    private async Task<Round> CallAsync(string url, string model, List<object> msgs, bool allowTools, ReplySink sink)
+    {
+        if (_settings.AiStreaming)
+        {
+            try { return await SendOnceAsync(url, model, msgs, allowTools, sink, stream: true); }
+            catch (StreamUnsupportedException) { /* 改走整段模式，錯誤訊息由第二次呼叫如實回報 */ }
+        }
+        return await SendOnceAsync(url, model, msgs, allowTools, sink, stream: false);
+    }
+
+    private async Task<Round> SendOnceAsync(string url, string model, List<object> msgs,
+                                            bool allowTools, ReplySink sink, bool stream)
+    {
+        var payload = new Dictionary<string, object?>
+        {
+            ["model"] = model,
+            ["messages"] = msgs,
+            ["temperature"] = _settings.AiTemperature,
+            ["stream"] = stream,
         };
+        if (allowTools) payload["tools"] = Tools!.ToSchema();
 
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
@@ -235,24 +357,182 @@ public sealed class AiService : ObservableObject
         string key = (_settings.AiApiKey ?? "").Trim();
         if (key.Length > 0) req.Headers.TryAddWithoutValidation("Authorization", "Bearer " + key);
 
-        using var resp = await Http.SendAsync(req);
-        string body = await resp.Content.ReadAsStringAsync();
-        if (!resp.IsSuccessStatusCode)
-            throw new HttpRequestException($"HTTP {(int)resp.StatusCode}：{Trim(body, 300)}");
+        using var resp = await Http.SendAsync(req, stream
+            ? HttpCompletionOption.ResponseHeadersRead : HttpCompletionOption.ResponseContentRead);
 
-        using var doc = JsonDocument.Parse(body);
-        var root = doc.RootElement;
-        if (root.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0
-            && choices[0].TryGetProperty("message", out var message)
-            && message.TryGetProperty("content", out var content))
+        if (!resp.IsSuccessStatusCode)
         {
-            var text = content.GetString();
-            if (!string.IsNullOrWhiteSpace(text)) return text!.Trim();
+            string err = await resp.Content.ReadAsStringAsync();
+            string msg = $"HTTP {(int)resp.StatusCode}：{Trim(err, 300)}";
+            // 串流失敗先當成「端點不支援串流」，退回整段模式再試；若真是金鑰或模型問題，
+            // 第二次會以相同狀態碼失敗，使用者看到的仍是真實原因。
+            throw stream ? new StreamUnsupportedException(msg) : new HttpRequestException(msg);
         }
-        // 部分相容端點的錯誤格式
-        if (root.TryGetProperty("error", out var err))
-            throw new InvalidOperationException(err.TryGetProperty("message", out var em) ? em.GetString() ?? body : Trim(body, 300));
-        throw new InvalidOperationException("回應格式無法解析：" + Trim(body, 300));
+
+        bool sse = (resp.Content.Headers.ContentType?.MediaType ?? "")
+            .Contains("event-stream", StringComparison.OrdinalIgnoreCase);
+        if (stream && sse) return await ReadStreamAsync(resp, sink);
+
+        return ParseWhole(await resp.Content.ReadAsStringAsync(), sink);
+    }
+
+    private static async Task<Round> ReadStreamAsync(HttpResponseMessage resp, ReplySink sink)
+    {
+        var content = new StringBuilder();
+        var accs = new SortedDictionary<int, ToolAcc>();
+
+        using var raw = await resp.Content.ReadAsStreamAsync();
+        using var rd = new StreamReader(raw, Encoding.UTF8);
+        while (await rd.ReadLineAsync() is string line)
+        {
+            line = line.Trim();
+            if (!line.StartsWith("data:", StringComparison.OrdinalIgnoreCase)) continue;
+            string json = line[5..].Trim();
+            if (json.Length == 0) continue;
+            if (json == "[DONE]") break;
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                if (!doc.RootElement.TryGetProperty("choices", out var ch)
+                    || ch.ValueKind != JsonValueKind.Array || ch.GetArrayLength() == 0) continue;
+                if (!ch[0].TryGetProperty("delta", out var d)) continue;
+
+                if (d.TryGetProperty("content", out var t) && t.ValueKind == JsonValueKind.String)
+                {
+                    string piece = t.GetString() ?? "";
+                    if (piece.Length > 0) { content.Append(piece); sink.Append(piece); }
+                }
+                if (d.TryGetProperty("tool_calls", out var tc) && tc.ValueKind == JsonValueKind.Array)
+                    foreach (var call in tc.EnumerateArray()) Accumulate(accs, call);
+            }
+            catch (JsonException) { /* 中轉站偶爾插入非 JSON 心跳列，略過即可 */ }
+        }
+
+        var calls = accs.Values.Where(a => a.Name.Length > 0)
+            .Select(a => new ToolCall(a.Id.Length > 0 ? a.Id : "call_" + a.Name, a.Name, a.Args.ToString()))
+            .ToList();
+        return new Round(content.ToString(), calls);
+    }
+
+    /// <summary>串流中逐塊拼回一個工具呼叫（名稱、參數會被切成很多片送來）。</summary>
+    private sealed class ToolAcc
+    {
+        public string Id = "";
+        public string Name = "";
+        public StringBuilder Args = new();
+    }
+
+    private static void Accumulate(SortedDictionary<int, ToolAcc> accs, JsonElement call)
+    {
+        int idx = call.TryGetProperty("index", out var i) && i.TryGetInt32(out int n) ? n : accs.Count;
+        if (!accs.TryGetValue(idx, out var a)) accs[idx] = a = new ToolAcc();
+
+        if (call.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.String
+            && !string.IsNullOrEmpty(id.GetString())) a.Id = id.GetString()!;
+        if (!call.TryGetProperty("function", out var f)) return;
+        if (f.TryGetProperty("name", out var nm) && nm.ValueKind == JsonValueKind.String
+            && !string.IsNullOrEmpty(nm.GetString())) a.Name = nm.GetString()!;
+        if (f.TryGetProperty("arguments", out var ar) && ar.ValueKind == JsonValueKind.String)
+            a.Args.Append(ar.GetString());
+    }
+
+    private static Round ParseWhole(string body, ReplySink sink)
+    {
+        JsonDocument doc;
+        try { doc = JsonDocument.Parse(body); }
+        catch (JsonException) { throw new InvalidOperationException("回應不是有效的 JSON：" + Trim(body, 300)); }
+
+        using (doc)
+        {
+            var root = doc.RootElement;
+            if (root.ValueKind == JsonValueKind.Object
+                && root.TryGetProperty("choices", out var choices)
+                && choices.ValueKind == JsonValueKind.Array && choices.GetArrayLength() > 0
+                && choices[0].TryGetProperty("message", out var message))
+            {
+                string text = message.TryGetProperty("content", out var c) && c.ValueKind == JsonValueKind.String
+                    ? (c.GetString() ?? "") : "";
+                var calls = new List<ToolCall>();
+                if (message.TryGetProperty("tool_calls", out var tc) && tc.ValueKind == JsonValueKind.Array)
+                    foreach (var call in tc.EnumerateArray())
+                    {
+                        if (!call.TryGetProperty("function", out var f)) continue;
+                        string name = f.TryGetProperty("name", out var nm) ? nm.GetString() ?? "" : "";
+                        if (name.Length == 0) continue;
+                        string args = f.TryGetProperty("arguments", out var ar)
+                            ? (ar.ValueKind == JsonValueKind.String ? ar.GetString() ?? "" : ar.GetRawText())
+                            : "";
+                        string id = call.TryGetProperty("id", out var i) ? i.GetString() ?? "" : "";
+                        calls.Add(new ToolCall(id.Length > 0 ? id : "call_" + name, name, args));
+                    }
+
+                if (text.Trim().Length > 0) sink.Append(text.Trim());
+                if (text.Trim().Length > 0 || calls.Count > 0) return new Round(text, calls);
+            }
+
+            // 部分相容端點的錯誤格式
+            if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("error", out var err))
+                throw new InvalidOperationException(err.ValueKind == JsonValueKind.Object
+                    && err.TryGetProperty("message", out var em)
+                    ? em.GetString() ?? Trim(body, 300) : Trim(body, 300));
+            throw new InvalidOperationException("回應格式無法解析：" + Trim(body, 300));
+        }
+    }
+
+    // 系統提示 ＋ 硬體快照 ＋ 既有對話（工具紀錄與失敗提示不回送模型）
+    private List<object> BuildMessages(bool useTools)
+    {
+        string sys = string.IsNullOrWhiteSpace(_settings.AiSystemPrompt) ? DefaultSystemPrompt : _settings.AiSystemPrompt;
+        string snapshot = "";
+        try { snapshot = SnapshotProvider?.Invoke() ?? ""; } catch { /* 快照彙整失敗不阻斷對話 */ }
+        if (snapshot.Length > 0) sys += "\n\n===== 本機硬體資訊（真實讀值）=====\n" + snapshot;
+        if (useTools) sys += "\n\n" + AgentPrompt;
+
+        var msgs = new List<object> { new { role = "system", content = sys } };
+        for (int i = 0; i < Messages.Count - 1; i++)     // 最後一則是占位的 AI 回覆
+        {
+            var m = Messages[i];
+            if (m.IsTool) continue;                     // 工具紀錄只給人看
+            if (m.Text.Length == 0) continue;
+            if (!m.IsUser && (m.Text == Placeholder || m.Text.StartsWith('⚠'))) continue;
+            msgs.Add(new { role = m.IsUser ? "user" : "assistant", content = m.Text });
+        }
+        return msgs;
+    }
+
+    // 工具紀錄插在回覆氣泡之前，讓「先查詢、後結論」的順序在畫面上讀得順。
+    private void InsertToolRow(AiMessage reply, ToolCall call, string result)
+    {
+        string args = call.Args.Trim();
+        if (args is "{}" or "null") args = "";
+        var row = new AiMessage
+        {
+            IsUser = false,
+            IsTool = true,
+            Text = call.Name + (args.Length > 0 ? " " + Trim(args, 120) : "")
+                   + " → " + Trim(OneLine(result), 160),
+        };
+        int at = Messages.IndexOf(reply);
+        if (at < 0) Messages.Add(row); else Messages.Insert(at, row);
+    }
+
+    private static string OneLine(string s) => s.Replace("\r", "").Replace('\n', '；');
+
+    private string ResolveUrl()
+    {
+        string baseUrl = (_settings.AiBaseUrl ?? "").Trim().TrimEnd('/');
+        if (baseUrl.Length == 0) throw new InvalidOperationException("尚未設定 API 端點（Base URL）。");
+        // 端點正規化：使用者可填 http://host:port 或 .../v1；統一補到 /v1/chat/completions。
+        return baseUrl.EndsWith("/chat/completions") ? baseUrl
+             : baseUrl.EndsWith("/v1") ? baseUrl + "/chat/completions"
+             : baseUrl + "/v1/chat/completions";
+    }
+
+    private string ResolveModel()
+    {
+        string model = (_settings.AiModel ?? "").Trim();
+        if (model.Length == 0) throw new InvalidOperationException("尚未設定模型名稱。");
+        return model;
     }
 
     private static string Trim(string s, int max) => s.Length <= max ? s : s.Substring(0, max) + "…";

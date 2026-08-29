@@ -71,11 +71,12 @@ public static class EdidService
         return list;
     }
 
-    private static bool ValidHeader(byte[] e)
+    // 以下兩者為純位元組解析（無登錄／無硬體相依），故放寬至 internal 供單元測試直接餵入 EDID 區塊。
+    internal static bool ValidHeader(byte[] e)
         => e[0] == 0x00 && e[1] == 0xFF && e[2] == 0xFF && e[3] == 0xFF
         && e[4] == 0xFF && e[5] == 0xFF && e[6] == 0xFF && e[7] == 0x00;
 
-    private static MonitorGamutInfo Parse(byte[] e, string fallbackName)
+    internal static MonitorGamutInfo Parse(byte[] e, string fallbackName)
     {
         string mfr = ManufacturerId(e);
         string name = MonitorName(e) ?? fallbackName;

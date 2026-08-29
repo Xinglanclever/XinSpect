@@ -13,12 +13,16 @@
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
                                Text="本程式內建的全螢幕檢測工具，純以實際輸入／顯示事件判讀，不需安裝任何外部程式。開啟後依畫面提示操作，按 Esc 離開。"/>
                     <WrapPanel Orientation="Horizontal">
-                        <Button Style="{StaticResource ToolButton}" Content="螢幕檢測" Margin="0,0,8,0"
+                        <Button Style="{StaticResource ToolButton}" Content="螢幕檢測" Margin="0,0,8,8"
                                 ToolTip="全螢幕純色循環，檢查亮點／暗點（壞點）、漏光與背光均勻度" Click="ScreenTest_Click"/>
-                        <Button Style="{StaticResource ToolButton}" Content="滑鼠檢測" Margin="0,0,8,0"
+                        <Button Style="{StaticResource ToolButton}" Content="滑鼠檢測" Margin="0,0,8,8"
                                 ToolTip="測試左／右／中／側鍵、滾輪與移動軌跡，估計回報率並偵測連點抖動" Click="MouseTest_Click"/>
-                        <Button Style="{StaticResource ToolButton}" Content="鍵盤檢測"
+                        <Button Style="{StaticResource ToolButton}" Content="鍵盤檢測" Margin="0,0,8,8"
                                 ToolTip="虛擬鍵盤逐鍵確認觸發，統計同時按鍵數（防鬼鍵／NKRO）與鍵碼" Click="KeyboardTest_Click"/>
+                        <Button Style="{StaticResource ToolButton}" Content="喇叭檢測" Margin="0,0,8,8"
+                                ToolTip="即時合成左／右／雙聲道測試音與 20 Hz～20 kHz 掃頻，確認接線、聲道對調與破音" Click="SpeakerTest_Click"/>
+                        <Button Style="{StaticResource ToolButton}" Content="動態檢測" Margin="0,0,0,8"
+                                ToolTip="移動條判讀拖影與過衝，並實測每幀呈現間隔、長幀與中斷次數" Click="MotionTest_Click"/>
                     </WrapPanel>
                 </StackPanel>
             </Border>

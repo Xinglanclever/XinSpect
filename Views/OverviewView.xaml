@@ -2,12 +2,14 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect">
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
-        <StackPanel>
-            <TextBlock Style="{StaticResource SectionHeader}" Text="系統總覽"/>
+    <UserControl.Resources>
+        <!-- ═══ 磁貼樣板 ═══
+             資源鍵固定為 Tile.{識別碼}，由 DashboardTileTemplateSelector 依磁貼身分查表取用；
+             新增一塊磁貼＝在 DashboardLayout.Catalog 加一筆、在這裡補一個同名樣板，版面碼不必動。
+             樣板的 DataContext 是磁貼本身，所以根元素改綁 Vm，內層才能沿用原本的繫結路徑。 -->
 
-            <!-- 即時儀表 -->
-            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="0">
+        <DataTemplate x:Key="Tile.gauges">
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" DataContext="{Binding Vm}">
                 <UniformGrid Rows="1" Columns="4">
                     <local:RadialGauge Caption="CPU 使用率" Unit="%"
                                        Value="{Binding Live.CpuLoad, FallbackValue=0, TargetNullValue=0}"/>
@@ -20,9 +22,10 @@
                                        Value="{Binding Live.PrimaryGpu.LoadPercent, FallbackValue=0, TargetNullValue=0}"/>
                 </UniformGrid>
             </Border>
+        </DataTemplate>
 
-            <!-- 即時走勢 -->
-            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="60">
+        <DataTemplate x:Key="Tile.trends">
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" DataContext="{Binding Vm}">
                 <StackPanel>
                     <TextBlock Style="{StaticResource SectionHeader}" Text="即時走勢（近 90 秒）"/>
                     <UniformGrid Rows="1" Columns="4">
@@ -37,9 +40,27 @@
                     </UniformGrid>
                 </StackPanel>
             </Border>
+        </DataTemplate>
 
-            <!-- AI 評價（獨立入口；可就地評價或開啟完整 AI 助手分頁） -->
-            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="90">
+        <!-- 預設不顯示：想看頻率與顯示記憶體的人自己打開，總覽第一眼仍以四項主指標為主 -->
+        <DataTemplate x:Key="Tile.trends2">
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" DataContext="{Binding Vm}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="更多走勢（近 90 秒）"/>
+                    <UniformGrid Rows="1" Columns="3">
+                        <local:HistoryGraph Height="104" Margin="0,0,6,0" Caption="CPU 頻率"
+                                            History="{Binding CpuClockHist}" Stroke="{StaticResource GoodBrush}"/>
+                        <local:HistoryGraph Height="104" Margin="3,0,3,0" Caption="GPU 溫度"
+                                            History="{Binding GpuTempHist}" Stroke="{StaticResource SeriousBrush}"/>
+                        <local:HistoryGraph Height="104" Margin="6,0,0,0" Caption="顯示記憶體"
+                                            History="{Binding GpuVramHist}" Stroke="{StaticResource AccentBrush}"/>
+                    </UniformGrid>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="Tile.ai">
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" DataContext="{Binding Vm}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -59,9 +80,10 @@
                     </StackPanel>
                 </Grid>
             </Border>
+        </DataTemplate>
 
-            <!-- 硬體識別（自繪向量徽章） -->
-            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="120">
+        <DataTemplate x:Key="Tile.brands">
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" DataContext="{Binding Vm}">
                 <StackPanel>
                     <TextBlock Style="{StaticResource SectionHeader}" Text="硬體識別"/>
                     <UniformGrid Columns="2" Rows="2">
@@ -79,9 +101,9 @@
                     </UniformGrid>
                 </StackPanel>
             </Border>
-
-            <!-- 資訊卡（雙欄） -->
-            <Grid local:Anim.RevealDelay="180">
+        </DataTemplate>
+        <DataTemplate x:Key="Tile.sysinfo">
+            <Grid Margin="0,0,0,14" DataContext="{Binding Vm}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
@@ -114,9 +136,10 @@
                     </StackPanel>
                 </Border>
             </Grid>
+        </DataTemplate>
 
-            <!-- 快速規格 -->
-            <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="240">
+        <DataTemplate x:Key="Tile.specs">
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" DataContext="{Binding Vm}">
                 <StackPanel>
                     <TextBlock Style="{StaticResource SectionHeader}" Text="核心規格"/>
                     <local:FieldRow Label="處理器" Value="{Binding Cpu.Name}"/>
@@ -126,6 +149,101 @@
                     <local:FieldRow Label="顯示卡" Value="{Binding Live.PrimaryGpu.Name}"/>
                 </StackPanel>
             </Border>
+        </DataTemplate>
+
+        <local:DashboardTileTemplateSelector x:Key="TileTemplate"/>
+        <!-- 深色核取方塊（與歷史回放／風扇分頁同一視覺語彙）-->
+        <Style x:Key="TileCheck" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="FontSize" Value="13.5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                            <Border x:Name="box" Width="17" Height="17" CornerRadius="4" VerticalAlignment="Center"
+                                    Background="{StaticResource Surface2Brush}"
+                                    BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1.2">
+                                <Path x:Name="check" Width="11" Height="11" Stretch="Uniform"
+                                      Data="M2,8 L6,12 L14,3" Stroke="White" StrokeThickness="2"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" Visibility="Collapsed"/>
+                            </Border>
+                            <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="box" Property="Background" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="check" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <DockPanel LastChildFill="False">
+                <TextBlock DockPanel.Dock="Left" Style="{StaticResource SectionHeader}" Text="系統總覽"/>
+                <Button DockPanel.Dock="Right" Style="{StaticResource ToolButton}" VerticalAlignment="Top"
+                        Content="自訂磁貼" Click="Customize_Click"
+                        ToolTip="選擇要顯示哪些區塊、調整上下順序"/>
+            </DockPanel>
+
+            <!-- 自訂面板：只在按下「自訂磁貼」時展開，平時不佔畫面 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14"
+                    Visibility="{Binding Dashboard.Editing, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <DockPanel LastChildFill="False">
+                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource SectionHeader}" Text="自訂磁貼"/>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource ToolButton}" VerticalAlignment="Top"
+                                Content="回復預設" Click="TileReset_Click" ToolTip="還原內建的顯示項目與順序"/>
+                    </DockPanel>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="勾選要顯示的區塊，用 ▲ ▼ 調整上下順序。變更立即生效，並記憶為下次啟動的版面。"/>
+
+                    <ItemsControl ItemsSource="{Binding Dashboard.Tiles}" Margin="0,10,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                        <CheckBox Style="{StaticResource TileCheck}" Content="{Binding Title}"
+                                                  IsChecked="{Binding Visible, Mode=TwoWay}"/>
+                                        <TextBlock Style="{StaticResource Subtitle}" Margin="25,1,0,0"
+                                                   TextWrapping="Wrap" Text="{Binding Hint}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                                        <Button Style="{StaticResource MiniIconButton}" Content="▲" Margin="0,0,4,0"
+                                                ToolTip="上移" Click="TileUp_Click" IsEnabled="{Binding CanMoveUp}"/>
+                                        <Button Style="{StaticResource MiniIconButton}" Content="▼"
+                                                ToolTip="下移" Click="TileDown_Click" IsEnabled="{Binding CanMoveDown}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+            <!-- 磁貼本體：順序來自使用者設定，隱藏者收起（不留空隙）。
+                 進場延遲綁在容器上而非樣板裡，才會跟著實際順位交錯，而不是固定寫死的那幾個數字。 -->
+            <ItemsControl ItemsSource="{Binding Dashboard.Tiles}"
+                          ItemTemplateSelector="{StaticResource TileTemplate}">
+                <ItemsControl.ItemContainerStyle>
+                    <Style TargetType="ContentPresenter">
+                        <Setter Property="Visibility" Value="{Binding Visible, Converter={StaticResource BoolToVis}}"/>
+                        <Setter Property="local:Anim.RevealDelay" Value="{Binding RevealDelay}"/>
+                    </Style>
+                </ItemsControl.ItemContainerStyle>
+            </ItemsControl>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

@@ -12,13 +12,26 @@ namespace XinSpect;
 /// （該步驟為超線性字串轉換、與圓周率運算無關，會遠比運算本身耗時且無意義）。
 /// 前 40 位預覽直接由實際計算結果擷取，兼作演算法正確性核對。
 /// </summary>
+/// <remarks>
+/// 耗時只有在同一位數之間才可相比，故紀錄簿以位數作設定簽章；比較對象是本機歷次成績
+/// （<see cref="BenchLog"/>），不與任何外部分數對照。
+/// </remarks>
 public sealed class SuperPiService : ObservableObject
 {
     // Chudnovsky 常數：π = 426880·√10005·Q / T
     private const int A = 13591409;
     private const int B = 545140134;
 
+    /// <summary>紀錄簿中的項目代號。</summary>
+    private const string KindPi = "superpi";
+
     private CancellationTokenSource? _cts;
+    private readonly BenchLog _log;
+
+    /// <summary>量測期間的實機條件（由每秒脈動餵入）。</summary>
+    public BenchConditions Conditions { get; } = new();
+
+    public SuperPiService(BenchLog? log = null) => _log = log ?? new BenchLog();
 
     // 可選位數：10萬 / 50萬 / 100萬 / 1000萬 / 5000萬 / 1億
     private int _digits = 100_000;
@@ -41,9 +54,17 @@ public sealed class SuperPiService : ObservableObject
     private string _elapsed = "—";
     public string ElapsedText { get => _elapsed; private set => SetProperty(ref _elapsed, value); }
 
-    private double? _bestSeconds;
-    private int _bestDigits;
-    public string BestText => _bestSeconds is double s ? $"本次工作階段最佳：{s:0.000} 秒（{_bestDigits:#,0} 位）" : "本次工作階段尚無紀錄";
+    // ── 與本機歷次成績的對照（唯一誠實的基準）────────────────────────────────
+    // 原先此處是「本次工作階段最佳」：關掉程式就沒了，也看不出當時的溫度與頻率。
+    // 改為落地的紀錄簿之後，同位數的歷次耗時、離散度與量測條件都留得住。
+    private string _delta = "", _repeat = "", _conditionText = "";
+
+    /// <summary>耗時與本機上次同位數的比較。</summary>
+    public string DeltaText { get => _delta; private set => SetProperty(ref _delta, value); }
+    /// <summary>本機同位數的重複量測統計（次數／範圍／離散度）。</summary>
+    public string RepeatText { get => _repeat; private set => SetProperty(ref _repeat, value); }
+    /// <summary>本次量測期間的溫度／頻率條件；沒取到感測值時為空字串。</summary>
+    public string ConditionText { get => _conditionText; private set => SetProperty(ref _conditionText, value); }
 
     private string _preview = "—";
     /// <summary>計算結果前數十位（供核對正確性：3.14159265358979…）。</summary>
@@ -71,6 +92,8 @@ public sealed class SuperPiService : ObservableObject
         ProgressFraction = 0;
         ElapsedText = "—";
         Preview = "計算中…";
+        DeltaText = RepeatText = ConditionText = "";
+        Conditions.Reset();
         StatusLine = $"正在計算圓周率至 {digits:#,0} 位…";
 
         var prog = new Progress<(double Frac, string Status)>(t => { ProgressFraction = t.Frac; StatusLine = t.Status; });
@@ -85,7 +108,14 @@ public sealed class SuperPiService : ObservableObject
             double secs = sw.Elapsed.TotalSeconds;
             ElapsedText = $"{secs:0.000} 秒";
             Preview = pi.Length > 42 ? pi[..42] + "…" : pi;
-            if (_bestSeconds is not double b || secs < b) { _bestSeconds = secs; _bestDigits = digits; OnPropertyChanged(nameof(BestText)); }
+
+            // 記入本機紀錄簿：耗時只有同位數之間才可相比，故以位數作設定簽章
+            string config = $"{digits:#,0} 位";
+            string cond = Conditions.Text();
+            ConditionText = cond;
+            Record(config, secs, cond);
+            DeltaText = _log.DeltaText(KindPi, config);
+            RepeatText = _log.Stats(KindPi, config).Text;
 
             Phase = "完成";
             ProgressFraction = 1;
@@ -95,7 +125,7 @@ public sealed class SuperPiService : ObservableObject
         {
             Phase = "已停止";
             Preview = "—";
-            StatusLine = "計算已停止。";
+            StatusLine = "計算已停止（未完成的量測不列入紀錄）。";
         }
         catch (Exception ex)
         {
@@ -109,6 +139,19 @@ public sealed class SuperPiService : ObservableObject
             _cts?.Dispose();
             _cts = null;
         }
+    }
+
+    private void Record(string config, double seconds, string conditions)
+    {
+        try
+        {
+            _log.Add(new BenchRun
+            {
+                Kind = KindPi, Title = "SuperPI 圓周率", Config = config, Score = seconds, Unit = "秒",
+                HigherIsBetter = false, Format = "0.000", UtcTime = DateTime.UtcNow, Conditions = conditions,
+            });
+        }
+        catch { /* 紀錄失敗不影響已量到的成績 */ }
     }
 
     /// <summary>

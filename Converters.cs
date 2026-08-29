@@ -26,13 +26,20 @@ public sealed class CountToVisibilityConverter : IValueConverter
 }
 
 /// <summary>Severity → 前景色（對應 dataviz status 配色）。數值標籤永遠可見，故顏色非唯一線索。</summary>
+/// <remarks>
+/// 四階狀態色是主題資源（<c>GoodBrush</c> 等），淺色主題會換成加深的一組以保持對比度，
+/// 所以這裡回傳的是<b>活的</b>共用筆刷而非凍結副本——換主題時已經畫在畫面上的徽章會自己跟著變。
+/// 因此呼叫端不可改它的 <c>Color</c>／<c>Opacity</c>。
+/// </remarks>
 public sealed class SeverityToBrushConverter : IValueConverter
 {
-    public static readonly SolidColorBrush Good = Freeze("#0ca30c");
-    public static readonly SolidColorBrush Warning = Freeze("#fab219");
-    public static readonly SolidColorBrush Serious = Freeze("#ec835a");
-    public static readonly SolidColorBrush Critical = Freeze("#d03b3b");
-    public static readonly SolidColorBrush Neutral = Freeze("#c3c2b7");
+    public static SolidColorBrush Good => VizPalette.Of("GoodBrush", "#0ca30c");
+    public static SolidColorBrush Warning => VizPalette.Of("WarningBrush", "#fab219");
+    public static SolidColorBrush Serious => VizPalette.Of("SeriousBrush", "#ec835a");
+    public static SolidColorBrush Critical => VizPalette.Of("CriticalBrush", "#d03b3b");
+
+    /// <summary>非 Severity 或 <see cref="Severity.Neutral"/>：走次要文字色，不強調。</summary>
+    public static SolidColorBrush Neutral => VizPalette.Of("SecondaryInkBrush", "#c3c2b7");
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         => value is Severity s ? Brush(s) : Neutral;
@@ -48,33 +55,16 @@ public sealed class SeverityToBrushConverter : IValueConverter
         Severity.Critical => Critical,
         _ => Neutral,
     };
-
-    private static SolidColorBrush Freeze(string hex)
-    {
-        var b = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
-        b.Freeze();
-        return b;
-    }
 }
 
-/// <summary>終端執行狀態 → 指示燈顏色（執行中綠、停止灰）。</summary>
+/// <summary>終端執行狀態 → 指示燈顏色（執行中綠、停止灰）。與狀態徽章同一套主題色。</summary>
 public sealed class BoolToRunBrushConverter : IValueConverter
 {
-    private static readonly SolidColorBrush Run = Frozen("#0ca30c");
-    private static readonly SolidColorBrush Stop = Frozen("#7a7a72");
-
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is true ? Run : Stop;
+        => value is true ? SeverityToBrushConverter.Good : VizPalette.Muted;
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => Binding.DoNothing;
-
-    private static SolidColorBrush Frozen(string hex)
-    {
-        var b = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
-        b.Freeze();
-        return b;
-    }
 }
 
 /// <summary>終端執行狀態 → 文字（執行中／已停止）。</summary>
@@ -95,4 +85,38 @@ public sealed class BoolToPromptConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => Binding.DoNothing;
+}
+
+/// <summary>是否置頂 → 圖釘字符（置頂時實心，取消時空心）。</summary>
+public sealed class BoolToPinGlyphConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is true ? "📌" : "○";
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => Binding.DoNothing;
+}
+
+/// <summary>是否精簡 → 展開／收起箭頭（精簡時朝下＝可展開，展開時朝上＝可收起）。</summary>
+public sealed class BoolToCompactGlyphConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is true ? "▾" : "▴";
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => Binding.DoNothing;
+}
+
+/// <summary>總覽磁貼 → 對應的版面樣板（以資源鍵 <c>Tile.{識別碼}</c> 查找）。</summary>
+/// <remarks>
+/// 磁貼順序是資料、外觀是宣告：把七塊卡片各包成一個 <c>DataTemplate</c> 放在
+/// <c>OverviewView.xaml</c> 的資源裡，這裡只做「識別碼 → 樣板」的查表，
+/// 新增磁貼時不必動到任何 C#。查不到樣板就回傳 <c>null</c>（該格空白），不丟例外。
+/// </remarks>
+public sealed class DashboardTileTemplateSelector : System.Windows.Controls.DataTemplateSelector
+{
+    public override DataTemplate? SelectTemplate(object? item, DependencyObject container)
+        => item is DashboardTile t && container is FrameworkElement fe
+            ? fe.TryFindResource("Tile." + t.Id) as DataTemplate
+            : null;
 }

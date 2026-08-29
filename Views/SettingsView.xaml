@@ -121,7 +121,80 @@
 
             <TextBlock Style="{StaticResource Title}" Text="設定" Margin="0,0,0,2"/>
             <TextBlock Style="{StaticResource Subtitle}" Margin="0,0,0,14"
-                       Text="更新頻率、開機自啟、感測器記錄與硬體警示。設定即時生效並自動儲存。"/>
+                       Text="外觀、更新頻率、開機自啟、感測器記錄與硬體警示。設定即時生效並自動儲存。"/>
+
+            <!-- ═══ 外觀 ═══ -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="外觀"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="深／淺色主題與八種強調色。選擇後整個介面立即換色（無須重啟），並記憶為下次啟動的外觀。"/>
+
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="主題" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Column="1" x:Name="ThemeCombo" Style="{StaticResource DarkCombo}"
+                                  HorizontalAlignment="Left" Width="220"
+                                  SelectionChanged="Theme_Changed"/>
+                    </Grid>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="強調色" Margin="0,16,0,8"/>
+                    <ItemsControl x:Name="AccentList">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Style="{StaticResource ToolButton}" Margin="0,0,10,10"
+                                        Tag="{Binding Key}" Click="Accent_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="16" Height="16" CornerRadius="8" VerticalAlignment="Center"
+                                                Background="{Binding Swatch}"
+                                                BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1"/>
+                                        <TextBlock Text="{Binding Name}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock x:Name="AccentHint" Style="{StaticResource Subtitle}" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ═══ 迷你浮動監視器 ═══ -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="迷你浮動監視器"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="常駐畫面一角的精簡讀值面板（工具列「迷你」鈕或系統匣選單開啟）。拖曳後會記住位置，下次顯示回到原處；若那台螢幕已拔除，則自動貼回工作區右上角。"/>
+
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="90"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="底板不透明度" VerticalAlignment="Center"/>
+                        <Slider Grid.Column="1" Style="{StaticResource SetSlider}" VerticalAlignment="Center"
+                                Minimum="0.4" Maximum="1.0" SmallChange="0.05" LargeChange="0.1"
+                                Value="{Binding Settings.MiniOpacity, Mode=TwoWay}"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                   Text="{Binding Settings.MiniOpacity, StringFormat={}{0:P0}}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                               Text="只有底板變淡，讀值文字維持不透明才讀得清楚。"/>
+
+                    <CheckBox Style="{StaticResource SetCheck}" Margin="0,12,0,0" Content="精簡模式：收起 CPU／GPU 波形，只留四行讀值"
+                              IsChecked="{Binding Settings.MiniCompact, Mode=TwoWay}"/>
+                    <CheckBox Style="{StaticResource SetCheck}" Margin="0,10,0,0" Content="釘選於最上層"
+                              IsChecked="{Binding Settings.MiniTopmost, Mode=TwoWay}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
+                               Text="取消後會被其他視窗蓋住，但仍留在畫面上。這兩項也能在監視器自己的標題列上就地切換。"/>
+                </StackPanel>
+            </Border>
 
             <!-- ═══ 環境自檢 ═══ -->
             <Border Style="{StaticResource Card}">
@@ -253,6 +326,51 @@
                         <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource FieldLabel}" Text="目前檔案" Margin="0,6,0,0"/>
                         <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding SensorLog.CurrentFile}" Margin="0,6,0,0" TextWrapping="Wrap"/>
                     </Grid>
+                </StackPanel>
+            </Border>
+            <!-- ═══ 歷史記錄 ═══ -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="歷史記錄"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="供「歷史回放」查詢的資料倉：最近一小時保留秒級原始取樣，更早則按分鐘存下最小／平均／最大值。落地於 %APPDATA%\XinSpect\history.bin，一個月約數 MB。"/>
+
+                    <CheckBox Style="{StaticResource SetCheck}" Margin="0,12,0,0" Content="持續累積歷史資料"
+                              IsChecked="{Binding Settings.HistoryEnabled, Mode=TwoWay}"/>
+
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="90"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="保留天數" VerticalAlignment="Center"/>
+                        <Slider Grid.Column="1" Style="{StaticResource SetSlider}" VerticalAlignment="Center"
+                                Minimum="1" Maximum="120" Value="{Binding Settings.HistoryRetentionDays, Mode=TwoWay}"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                   Text="{Binding Settings.HistoryRetentionDays, StringFormat={}{0} 天}"/>
+                    </Grid>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,12,0,0" TextWrapping="Wrap"
+                               Text="{Binding HistoryView.StoreText}"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                        <Button Style="{StaticResource ToolButton}" Content="開啟歷史回放" Click="OpenHistory_Click"/>
+                        <Button Style="{StaticResource ToolButton}" Content="清空歷史資料" Margin="12,0,0,0"
+                                Click="ClearHistory_Click"/>
+                    </StackPanel>
+
+                    <!-- 跑分紀錄簿：與感測歷史分開，因為它是「跑分基準」本身，清掉就沒有可比的對象了 -->
+                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,16,0,14"/>
+                    <TextBlock Style="{StaticResource FieldValue}" Text="跑分紀錄簿"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="本機歷次跑分成績（含當時的溫度與頻率），存於 %APPDATA%\XinSpect\bench-history.json，最多保留 300 筆。曦覽不內建任何別台機器的參考分數，這份紀錄就是「與上次相比」「重複性」的唯一依據——清空後在累積出新紀錄前，跑分只會有單次數字而無從比較。"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <TextBlock Style="{StaticResource FieldLabel}" VerticalAlignment="Center"
+                                   Text="{Binding Benchmarks.Count, StringFormat=目前 {0} 筆}"/>
+                        <Button Style="{StaticResource ToolButton}" Content="清空跑分紀錄" Margin="12,0,0,0"
+                                Click="ClearBenchLog_Click"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
             <!-- ═══ 溫度／負載警示 ═══ -->
@@ -387,6 +505,28 @@
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0"
                                Text="越低越保守一致（適合客觀評測），越高越發散有創意。"/>
 
+                    <!-- 診斷代理 / 串流 / 保留對話 -->
+                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,16,0,14"/>
+                    <CheckBox Style="{StaticResource SetCheck}" Content="診斷代理：允許 AI 主動查詢本機唯讀資料"
+                              IsChecked="{Binding Settings.AiAgentMode, Mode=TwoWay}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
+                               Text="開啟後，AI 可自行呼叫 23 項唯讀查詢工具（完整規格、處理器拓樸、即時讀值、所有溫度、感測器總表、風扇與曲線、磁碟健康、事件時間軸、歷史統計、顯示卡與處理器調校現況、場景、健康總評、環境自檢、效能成績、記憶體時序與 SPD、網路組態與流量、螢幕 EDID 色域、效能天梯名次、升級建議、電池健康、開機啟動項、藍屏傾印），並在對話中列出每次查詢。全部只讀不寫：不會改設定、不會動硬體、不會啟動任何程式。關閉則只送出一次硬體快照。"/>
+
+                    <CheckBox Style="{StaticResource SetCheck}" Margin="0,14,0,0" Content="主動診斷：警示觸發時自動請 AI 分析"
+                              IsChecked="{Binding Settings.AiProactive, Mode=TwoWay}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
+                               Text="預設關閉。開啟後，只要溫度或負載越過上方的警示上限，就會自動在 AI 分頁發起一次診斷（同一項目最少間隔 10 分鐘）。這會在你沒開口時送出請求——若你用的是計費 API，費用會照算；端點或模型還沒填妥時則安靜略過。"/>
+
+                    <CheckBox Style="{StaticResource SetCheck}" Margin="0,14,0,0" Content="逐字串流回覆"
+                              IsChecked="{Binding Settings.AiStreaming, Mode=TwoWay}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
+                               Text="邊產生邊顯示，長篇評價不必乾等；端點不接受串流時會自動退回整段模式，不會失敗。"/>
+
+                    <CheckBox Style="{StaticResource SetCheck}" Margin="0,14,0,0" Content="保留對話（下次啟動接續）"
+                              IsChecked="{Binding Settings.AiKeepHistory, Mode=TwoWay}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
+                               Text="對話存於 %APPDATA%\XinSpect\aichat.json（僅本機純文字，不含金鑰），最多保留最後 240 則。按 AI 分頁的「清除對話」即一併刪檔。"/>
+
                     <TextBlock Style="{StaticResource FieldLabel}" Text="系統提示詞（要求 AI 客觀公正；可自行修改）" Margin="0,16,0,4"/>
                     <TextBox Style="{StaticResource SetTextBox}" Height="150" TextWrapping="Wrap" AcceptsReturn="True"
                              VerticalScrollBarVisibility="Auto"
@@ -397,6 +537,27 @@
                         <Button Style="{StaticResource ToolButton}" Content="開啟 AI 助手分頁　▸" Margin="12,0,0,0" Click="OpenAiTab_Click"/>
                     </StackPanel>
                     <TextBlock x:Name="AiPromptHint" Style="{StaticResource Subtitle}" Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ═══ 報告匯出 ═══ -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="報告匯出"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="把整機規格、即時讀值、健康評分、跑分紀錄、升級建議與 AI 評價寫成一份報告。HTML 為單一自帶樣式的檔案（不外連字型或指令碼），在瀏覽器按「列印／另存 PDF」即得已排好版的 A4 文件；Markdown 適合貼上論壇或議題；純文字適合貼進信件或工單。"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                        <Button Style="{StaticResource PrimaryButton}" Content="匯出報告…" Click="ExportReport_Click" MinWidth="120"/>
+                        <Button Style="{StaticResource ToolButton}" Content="複製為 Markdown" Margin="12,0,0,0" Click="CopyMarkdown_Click"/>
+                    </StackPanel>
+                    <TextBlock x:Name="ReportHint" Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+
+                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,16,0,14"/>
+                    <CheckBox Style="{StaticResource SetCheck}" Content="遮蔽可識別資訊"
+                              IsChecked="{Binding Settings.ReportMaskIdentity, Mode=TwoWay}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
+                               Text="開啟後，報告中的主機名稱、使用者名稱、MAC 位址與磁碟序號改以「（已遮蔽）」輸出，其餘規格與讀值照實不動。要把報告貼到公開場合時再開；自己留存的報告該是完整的。曦覽不提供「產生分享網址」——那必然得把這台機器的硬體資訊送到別人的伺服器上存放，送出就收不回來；要分享請直接分享這份檔案。"/>
                 </StackPanel>
             </Border>
 

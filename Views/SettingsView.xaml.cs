@@ -10,12 +10,42 @@ public partial class SettingsView : UserControl
     public SettingsView()
     {
         InitializeComponent();
+
+        // 外觀：主題下拉與強調色色票皆由 ThemeService 提供（靜態服務，故於程式碼指派而非繫結）
+        ThemeCombo.ItemsSource = ThemeService.ThemeNames;
+        ThemeCombo.SelectedIndex = ThemeService.ThemeIndex;
+        AccentList.ItemsSource = ThemeService.Presets;
+        ShowAccentHint();
+
         // 首次進入設定頁時自動跑一次環境自檢（背景偵測，不阻塞 UI）；之後由使用者按鈕手動重檢。
         Loaded += (_, _) =>
         {
             if (Vm is { } vm && !vm.EnvCheck.HasRun && !vm.EnvCheck.IsRunning)
                 _ = vm.EnvCheck.RunAsync(vm);
         };
+    }
+
+    // ── 外觀 ────────────────────────────────────────────────────────────────
+
+    // 主題切換：ThemeService 立即改寫共用筆刷，整棵視覺樹同步換色並持久化。
+    private void Theme_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (ThemeCombo.SelectedIndex >= 0) ThemeService.ThemeIndex = ThemeCombo.SelectedIndex;
+        ShowAccentHint();
+    }
+
+    // 強調色色票：以 Tag 帶回預設鍵值。
+    private void Accent_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is not string key) return;
+        ThemeService.Accent = ThemeService.FindAccent(key);
+        ShowAccentHint();
+    }
+
+    private void ShowAccentHint()
+    {
+        if (AccentHint is not null)
+            AccentHint.Text = $"目前：{ThemeService.ThemeNames[ThemeService.ThemeIndex]}主題 ・ {ThemeService.Accent.Name}（{ThemeService.Accent.Main}）";
     }
 
     // Host.Content 延遲載入時 DataContext 由父容器繼承；點選當下已就緒。仍以主視窗為後備。
@@ -37,6 +67,40 @@ public partial class SettingsView : UserControl
     // 於檔案總管開啟目前的記錄輸出資料夾。
     private void OpenLogFolder_Click(object sender, RoutedEventArgs e)
         => Vm?.SensorLog.OpenFolder(Vm.Settings);
+
+    // ── 歷史記錄 ────────────────────────────────────────────────────────────
+
+    private void OpenHistory_Click(object sender, RoutedEventArgs e)
+        => (Window.GetWindow(this) as MainWindow)?.NavigateToKey("history");
+
+    // 清空歷史倉：記憶體環與磁碟檔一併歸零，無法復原故先確認。
+    private void ClearHistory_Click(object sender, RoutedEventArgs e)
+    {
+        var vm = Vm;
+        if (vm is null) return;
+
+        var answer = MessageBox.Show(
+            $"確定要清空全部歷史資料嗎？目前已保留 {vm.History.MinuteCount} 筆分鐘紀錄（{vm.History.SizeText}）。此動作無法復原。",
+            "歷史記錄", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+        if (answer != MessageBoxResult.OK) return;
+
+        try { vm.History.Clear(); vm.HistoryView.Reload(); } catch { /* 清空失敗維持原狀 */ }
+    }
+
+    // 清空跑分紀錄簿：這份紀錄是跑分唯一的比較基準，清掉就沒有可比的對象了，故先確認。
+    private void ClearBenchLog_Click(object sender, RoutedEventArgs e)
+    {
+        var vm = Vm;
+        if (vm is null) return;
+
+        var answer = MessageBox.Show(
+            $"確定要清空跑分紀錄簿嗎？目前已保留 {vm.Benchmarks.Count} 筆成績。\n\n"
+            + "曦覽不內建其他機器的參考分數，這份紀錄是「與上次相比」「重複性」的唯一依據；清空後在重新累積出紀錄前，跑分只會有單次數字而無從比較。此動作無法復原。",
+            "跑分紀錄簿", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+        if (answer != MessageBoxResult.OK) return;
+
+        try { vm.Benchmarks.Clear(); } catch { /* 清空失敗維持原狀 */ }
+    }
 
     // 切換 AI 供應商時，若端點/模型仍為另一供應商的預設或留空，帶入本供應商的建議預設值。
     private void AiProvider_Changed(object sender, SelectionChangedEventArgs e)
@@ -105,6 +169,37 @@ public partial class SettingsView : UserControl
         if ((sender as FrameworkElement)?.Tag is not string url || url.Length == 0) return;
         try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
         catch { /* 無可用瀏覽器時靜默略過 */ }
+    }
+
+    // ── 報告匯出 ────────────────────────────────────────────────────────────
+
+    // 匯出報告：格式由使用者在另存對話框選的副檔名決定（.html / .md / .txt）。
+    private void ExportReport_Click(object sender, RoutedEventArgs e)
+    {
+        var vm = Vm;
+        if (vm is null) return;
+        try
+        {
+            string? path = ReportService.Export(vm);
+            if (ReportHint is not null)
+                ReportHint.Text = path is null ? "已取消匯出。" : "已匯出並開啟：" + path;
+        }
+        catch (Exception ex)
+        {
+            if (ReportHint is not null) ReportHint.Text = "匯出失敗：" + ex.Message;
+        }
+    }
+
+    // 複製為 Markdown：整份報告直接進剪貼簿，不落地檔案。
+    private void CopyMarkdown_Click(object sender, RoutedEventArgs e)
+    {
+        var vm = Vm;
+        if (vm is null) return;
+        bool ok = ReportService.CopyMarkdown(vm);
+        if (ReportHint is not null)
+            ReportHint.Text = ok
+                ? "已複製 Markdown 報告到剪貼簿，可直接貼上論壇或議題。"
+                : "剪貼簿目前被其他程式佔用，請稍後再試（或改用「匯出報告…」存成 .md）。";
     }
 
     // 所有功能一鍵初始化：重新執行各模組偵測與載入（非破壞性，不重建計時器）。

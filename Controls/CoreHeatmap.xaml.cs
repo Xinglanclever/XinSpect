@@ -21,10 +21,11 @@ public partial class CoreHeatmap : UserControl
     public IEnumerable? Cores { get => (IEnumerable?)GetValue(CoresProperty); set => SetValue(CoresProperty, value); }
 }
 
-/// <summary>核心溫度(°C) → 熱區底色。null（無讀值）給中性灰。</summary>
+/// <summary>核心溫度(°C) → 熱區底色。null（無讀值）退回卡片底色，不假裝有溫度。</summary>
 public sealed class HeatConverter : IValueConverter
 {
-    // 溫度色階：冷藍 → 青綠 → 黃綠 → 琥珀 → 熱紅
+    // 溫度色階是資料語意（冷藍 → 青綠 → 黃綠 → 琥珀 → 熱紅），不隨主題或強調色改：
+    // 換了主題，60 °C 還是同一個顏色，否則讀者記住的色溫對照就失效了。
     private static readonly (double T, Color C)[] Stops =
     {
         (30, Color.FromRgb(0x1E, 0x6E, 0xDC)),
@@ -38,7 +39,7 @@ public sealed class HeatConverter : IValueConverter
     {
         double? t = value as double?;
         if (t is not double temp || double.IsNaN(temp))
-            return new SolidColorBrush(Color.FromRgb(0x3A, 0x3A, 0x40));   // 無讀值：中性灰
+            return VizPalette.Card;   // 無讀值：退回卡片底色（跟著主題走，才不會在淺色主題出現一格深灰）
 
         if (temp <= Stops[0].T) return Solid(Stops[0].C);
         if (temp >= Stops[^1].T) return Solid(Stops[^1].C);

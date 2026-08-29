@@ -1,21 +1,32 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
-using System.Windows.Media;
 
 namespace XinSpect;
 
-/// <summary>主視窗：承載導覽與各分頁檢視，並管理檢視模型生命週期。</summary>
+/// <summary>
+/// 主視窗（外殼）：依 <see cref="PageRegistry"/> 建構側邊欄、延遲實體化各頁、轉交頁面生命週期，
+/// 並承載命令面板、系統匣與迷你浮動監視器。
+/// </summary>
+/// <remarks>
+/// 2.0 相對 1.x 的三項結構改變：
+/// (1) 側邊欄改為資料繫結註冊表，不再有「XAML 手寫項目 ↔ _views[] 索引」的平行對應；
+/// (2) 檢視於首次進入才建立，啟動時不再一次 new 出全部分頁；
+/// (3) 「哪些頁面顯示時該做昂貴工作」由 <see cref="PageDef.LiveGate"/> 宣告，外殼不再硬寫型別判斷。
+/// </remarks>
 public partial class MainWindow : Window
 {
     private readonly MainViewModel _vm = new();
-    private readonly UserControl[] _views;
+    private readonly Dictionary<string, UserControl> _cache = new(StringComparer.OrdinalIgnoreCase);
+    private UserControl? _current;
+    private PageDef? _currentDef;
     private TrayService? _tray;
     private MiniOverlayWindow? _mini;
     private bool _ocRiskCleared;   // 本次執行是否已通過超頻風險兩階段確認
-    private bool _initialized;      // Loaded 可能多次觸發（隱藏至系統匣後再顯示等）；確保只初始化一次
+    private bool _initialized;     // Loaded 可能多次觸發（隱藏至系統匣後再顯示等）；確保只初始化一次
 
     public MainWindow()
     {
@@ -23,38 +34,17 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = _vm;
 
-        _views = new UserControl[]
-        {
-            new OverviewView(),
-            new AiView(),
-            new CpuView(),
-            new MemoryView(),
-            new MotherboardView(),
-            new GpuView(),
-            new StorageView(),
-            new NetworkView(),
-            new SensorsView(),
-            new BenchView(),
-            new OverclockView(),
-            new GpuOcView(),
-            new FanControlView(),
-            new HealthView(),
-            new ToolboxView(),
-            new UtilitiesView(),
-            new SetupView(),
-            new BrowserView(),
-            new TerminalView(),
-            new SettingsView(),
-            new AboutView(),
-        };
-
+        BuildNav();
         ApplyAccentGlow();
 
-        // Live 於背景載入完成後，套用目前分頁對應的感測器總表可見狀態
+        // 感測引擎於背景載入完成後，重放當前頁的感測閘門（引擎晚到時閘門才有對象可套用）
         _vm.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(MainViewModel.Live)) ApplySensorsVisibility();
+            if (e.PropertyName == nameof(MainViewModel.Live)) ApplyLiveGates();
         };
+
+        // 主題／強調色變更（設定頁）後重新套用標題輝光
+        ThemeService.Changed += ApplyAccentGlow;
 
         Loaded += (_, _) =>
         {
@@ -66,42 +56,109 @@ public partial class MainWindow : Window
         };
     }
 
-    // 感測器總表為每秒最重的一段格式化工作；僅在該分頁顯示時才更新。
-    // 系統風扇即時值同理：僅在「系統風扇控制」分頁顯示時才每秒讀取。
-    private void ApplySensorsVisibility()
+    // ===== 導覽 =====
+
+    // 以註冊表建立側邊欄項目來源，並依 Group 分組（順序即註冊順序）。
+    private void BuildNav()
     {
-        int i = Nav.SelectedIndex;
-        bool valid = i >= 0 && i < _views.Length;
-        if (_vm.Live is not null)
-        {
-            _vm.Live.DetailedSensorsVisible = valid && _views[i] is SensorsView;
-            _vm.Live.FanControlsVisible = valid && _views[i] is FanControlView;
-        }
+        var src = new CollectionViewSource { Source = PageRegistry.Pages };
+        src.GroupDescriptions.Add(new PropertyGroupDescription(nameof(PageDef.Group)));
+        Nav.ItemsSource = src.View;
     }
 
     private void Nav_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        int i = Nav.SelectedIndex;
+        if (Nav.SelectedItem is not PageDef def) return;
 
-        // 超頻分頁：進入前的兩階段風險確認。本次執行僅需通過一次；選「今後不再顯示」則永久略過。
-        if (i >= 0 && i < _views.Length && _views[i] is OverclockView && !_ocRiskCleared)
+        // 超頻類分頁：進入前的兩階段風險確認。本次執行僅需通過一次；選「今後不再顯示」則永久略過。
+        if (def.RequiresRiskConsent && !_ocRiskCleared)
         {
             if (!ConfirmOverclockRisk())
             {
-                // 使用者放棄進入：還原到先前分頁（若無則回總覽）
-                int back = e.RemovedItems.Count > 0 ? Nav.Items.IndexOf(e.RemovedItems[0]) : 0;
-                Nav.SelectedIndex = back >= 0 ? back : 0;
+                // 使用者放棄進入：還原到先前分頁（若無則回第一頁）
+                Nav.SelectedItem = e.RemovedItems.Count > 0 ? e.RemovedItems[0] : PageRegistry.Pages[0];
                 return;
             }
             _ocRiskCleared = true;
         }
 
-        if (i >= 0 && i < _views.Length)
+        ShowPage(def);
+    }
+
+    // 切頁：延遲建立檢視 → 轉交生命週期 → 重放感測閘門 → 播放進場動畫。
+    private void ShowPage(PageDef def)
+    {
+        if (!_cache.TryGetValue(def.Key, out var view))
         {
-            Host.Content = _views[i];
+            try
+            {
+                view = def.Factory();
+                _cache[def.Key] = view;
+            }
+            catch (Exception ex)
+            {
+                // 單一頁面建構失敗（缺少執行階段元件等）不得讓整個外殼倒下
+                _vm.StatusText = $"「{def.Title}」頁面載入失敗：{ex.Message}";
+                return;
+            }
+        }
+
+        if (!ReferenceEquals(_current, view))
+        {
+            (_current as IPageLifecycle)?.OnDeactivated();
+            _current = view;
+            _currentDef = def;
+            Host.Content = view;
+            (view as IPageLifecycle)?.OnActivated();
             PageTransition.PlayEnter(Host);   // 切頁淡入 + 輕微上滑
         }
-        ApplySensorsVisibility();
+        else
+        {
+            _currentDef = def;
+        }
+
+        ApplyLiveGates();
+    }
+
+    // 對所有頁面統一重放感測閘門：只有當前頁得到 true。
+    // 宣告式且可重入，故感測引擎晚到時只要再呼叫一次即可，不需任何型別判斷。
+    private void ApplyLiveGates()
+    {
+        var live = _vm.Live;
+        if (live is null) return;
+        foreach (var d in PageRegistry.Pages)
+            d.LiveGate?.Invoke(live, ReferenceEquals(d, _currentDef));
+    }
+
+    /// <summary>切換至指定鍵值的分頁（命令面板與跨頁按鈕皆走此路）。</summary>
+    public void NavigateToKey(string key)
+    {
+        var def = PageRegistry.Find(key);
+        if (def is not null) Nav.SelectedItem = def;
+    }
+
+    /// <summary>切換至 AI 分頁（供設定頁 / 總覽的「開啟 AI 助手」按鈕呼叫）。</summary>
+    public void NavigateToAi() => NavigateToKey("ai");
+
+    /// <summary>切換至內建瀏覽器分頁並前往指定網址（供網速測試的節點連結等呼叫）。</summary>
+    public void NavigateToBrowser(string url)
+    {
+        NavigateToKey("browser");
+        if (_current is BrowserView b) b.NavigateTo(url);   // 未就緒時 NavigateTo 會暫存待就緒補跳
+    }
+
+    /// <summary>切換至「實用工具」並選定其中一個子工具（供命令面板深層跳轉）。</summary>
+    public void NavigateToUtility(string toolKey)
+    {
+        NavigateToKey("utilities");
+        if (_current is UtilitiesView u) u.SelectTool(toolKey);
+    }
+
+    /// <summary>切換至歷史回放，並把時間窗對到指定時刻（供事件時間軸點擊某筆事件呼叫）。</summary>
+    public void NavigateToHistory(DateTime utc)
+    {
+        NavigateToKey("history");
+        if (_current is HistoryView h) h.JumpTo(utc);
     }
 
     // 顯示超頻風險兩階段對話框；使用者確認進入回傳 true。選「今後不再顯示」時持久化旗標。
@@ -120,23 +177,30 @@ public partial class MainWindow : Window
         return dlg.Proceed;
     }
 
+    // ===== 命令面板 =====
+
+    private void Palette_Click(object sender, RoutedEventArgs e) => OpenPalette();
+
+    private void OpenPalette() => Palette.Open(PaletteCatalog.Build(this, _vm));
+
+    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (Palette.IsOpen)
+        {
+            if (Palette.HandleKey(e.Key)) e.Handled = true;
+            return;
+        }
+
+        bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
+        // Ctrl+K 為主，Ctrl+P 沿用編輯器慣例一併接受
+        if (ctrl && (e.Key == Key.K || e.Key == Key.P))
+        {
+            OpenPalette();
+            e.Handled = true;
+        }
+    }
+
     private void Export_Click(object sender, RoutedEventArgs e) => _vm.ExportReport();
-
-    /// <summary>切換至獨立的 AI 評價分頁（供設定頁 / 總覽的「開啟 AI 助手」按鈕呼叫）。</summary>
-    public void NavigateToAi()
-    {
-        int i = Array.FindIndex(_views, v => v is AiView);
-        if (i >= 0) Nav.SelectedIndex = i;
-    }
-
-    /// <summary>切換至內建瀏覽器分頁並前往指定網址（供網速測試的 HKBN 節點等呼叫）。</summary>
-    public void NavigateToBrowser(string url)
-    {
-        int i = Array.FindIndex(_views, v => v is BrowserView);
-        if (i < 0) return;
-        Nav.SelectedIndex = i;   // 切換分頁（觸發 BrowserView 首次載入的非同步初始化）
-        if (_views[i] is BrowserView b) b.NavigateTo(url);   // 未就緒時 NavigateTo 會暫存待就緒補跳
-    }
 
     // ===== 迷你浮動監視器 + 系統匣 =====
     private void Mini_Click(object sender, RoutedEventArgs e) => ToggleMini();
@@ -161,16 +225,18 @@ public partial class MainWindow : Window
         Activate();
     }
 
-    private void ToggleMini()
+    /// <summary>切換迷你浮動監視器（供命令面板呼叫）。</summary>
+    public void ToggleMini()
     {
         _mini ??= new MiniOverlayWindow { DataContext = _vm };
         _mini.Toggle();
     }
 
-    // ===== 固定外觀（強調色輝光一次套用；主題固定深色） =====
+    // ===== 外觀 =====
     private void ApplyAccentGlow()
     {
         if (AccentGlow is not null) AccentGlow.Color = ThemeService.Accent.MainColor;
+        ApplyTitleBar(ThemeService.Theme == AppTheme.Dark);
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -181,6 +247,7 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        ThemeService.Changed -= ApplyAccentGlow;
         _vm.Stop();
         _tray?.Dispose();
         if (_mini is not null) { _mini.Close(); _mini = null; }

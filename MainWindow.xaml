@@ -9,7 +9,8 @@
         FontFamily="{StaticResource AppFont}"
         Background="{StaticResource PagePlaneBrush}"
         TextOptions.TextFormattingMode="Ideal"
-        UseLayoutRounding="True">
+        UseLayoutRounding="True"
+        PreviewKeyDown="Window_PreviewKeyDown">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -34,6 +35,18 @@
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button x:Name="PaletteButton" Style="{StaticResource ToolButton}" Click="Palette_Click"
+                            VerticalAlignment="Center" Margin="0,0,10,0" ToolTip="命令面板（Ctrl+K）：搜尋任何頁面、工具與動作">
+                        <StackPanel Orientation="Horizontal">
+                            <Viewbox Width="15" Height="15" Margin="0,0,7,0">
+                                <Path Fill="{StaticResource PrimaryInkBrush}"
+                                      Data="F1 M10,2 a8,8 0 1,0 4.9,14.3 l5.4,5.4 1.4,-1.4 -5.4,-5.4 A8,8 0 0 0 10,2 Z M10,4 a6,6 0 1,1 0,12 a6,6 0 0 1 0,-12 Z"/>
+                            </Viewbox>
+                            <TextBlock Text="搜尋" Foreground="{StaticResource PrimaryInkBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="Ctrl+K" Foreground="{StaticResource MutedInkBrush}" VerticalAlignment="Center"
+                                       FontSize="11" Margin="8,1,0,0"/>
+                        </StackPanel>
+                    </Button>
                     <Button x:Name="MiniButton" Style="{StaticResource ToolButton}" Click="Mini_Click"
                             VerticalAlignment="Center" Margin="0,0,10,0" ToolTip="切換迷你浮動監視器">
                         <StackPanel Orientation="Horizontal">
@@ -66,7 +79,6 @@
                 </StackPanel>
             </Grid>
         </Border>
-
         <!-- ===== 主體：導覽 + 內容 ===== -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -74,220 +86,33 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
+            <!-- 側邊欄：ItemsSource 來自 PageRegistry（宣告式註冊表），依 Group 自動分組。
+                 1.x 的 210 行手寫 ListBoxItem ↔ _views[] 索引平行對應已完全移除。 -->
             <Border Grid.Column="0" Background="{StaticResource PagePlaneBrush}"
                     BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,1,0">
-                <ListBox x:Name="Nav" Style="{StaticResource NavList}" Margin="0,12"
+                <ListBox x:Name="Nav" Style="{StaticResource NavList}" Margin="0,6,0,12"
                          SelectionChanged="Nav_SelectionChanged">
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="M3,3 H10 V11 H3 Z M13,3 H21 V8 H13 Z M13,11 H21 V21 H13 Z M3,14 H10 V21 H3 Z"/>
-                            </Viewbox>
-                            <TextBlock Text="總覽" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="F1 M5,4 H19 A3,3 0 0 1 22,7 V14 A3,3 0 0 1 19,17 H11 L6,21 V17 H5 A3,3 0 0 1 2,14 V7 A3,3 0 0 1 5,4 Z M7.5,10.5 a1.3,1.3 0 1,0 2.6,0 a1.3,1.3 0 1,0 -2.6,0 Z M10.7,10.5 a1.3,1.3 0 1,0 2.6,0 a1.3,1.3 0 1,0 -2.6,0 Z M13.9,10.5 a1.3,1.3 0 1,0 2.6,0 a1.3,1.3 0 1,0 -2.6,0 Z"/>
-                            </Viewbox>
-                            <TextBlock Text="AI 評價" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="F0 M8,2 H10 V5 H8 Z M14,2 H16 V5 H14 Z M2,8 H5 V10 H2 Z M2,14 H5 V16 H2 Z M19,8 H22 V10 H19 Z M19,14 H22 V16 H19 Z M8,19 H10 V22 H8 Z M14,19 H16 V22 H14 Z M5,5 H19 V19 H5 Z M9,9 H15 V15 H9 Z"/>
-                            </Viewbox>
-                            <TextBlock Text="處理器" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="M2,7 H22 V16 H2 Z M5,16 H8 V20 H5 Z M11,16 H14 V20 H11 Z M17,16 H20 V20 H17 Z"/>
-                            </Viewbox>
-                            <TextBlock Text="記憶體" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="F0 M4,3 H20 A1,1 0 0 1 21,4 V20 A1,1 0 0 1 20,21 H4 A1,1 0 0 1 3,20 V4 A1,1 0 0 1 4,3 Z M7,6 H12 V11 H7 Z M15,6 H18 V9 H15 Z M7,14 H17 V16 H7 Z M7,17.5 H17 V19 H7 Z"/>
-                            </Viewbox>
-                            <TextBlock Text="主機板" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="F0 M2,6 H22 V16 H8 L2,16 Z M7,11 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 Z M14,8 H20 V10 H14 Z M14,12 H20 V14 H14 Z"/>
-                            </Viewbox>
-                            <TextBlock Text="顯示卡" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="F0 M4,4 H20 V20 H4 Z M12,12 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0 Z M12,12 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0 Z"/>
-                            </Viewbox>
-                            <TextBlock Text="儲存裝置" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="F0 M12,3 a9,9 0 1,0 0.01,0 Z M3.5,9 H20.5 V11 H3.5 Z M3.5,13 H20.5 V15 H3.5 Z M11,3.5 H13 V20.5 H11 Z"/>
-                            </Viewbox>
-                            <TextBlock Text="網路" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="M9.5,3 a2.5,2.5 0 0 1 5,0 V13.5 A4.5,4.5 0 1 1 9.5,13.5 Z"/>
-                            </Viewbox>
-                            <TextBlock Text="感測器" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="F1 M13,2 L4,14 L10,14 L9,22 L20,9 L13,9 Z"/>
-                            </Viewbox>
-                            <TextBlock Text="效能" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="F1 M20.38,8.57 l-1.23,1.85 a8,8 0 0 1 -0.22,7.58 H5.07 A8,8 0 0 1 15.58,6.85 l1.85,-1.23 A10,10 0 0 0 3.35,19 a2,2 0 0 0 1.72,1 h13.85 a2,2 0 0 0 1.74,-1 10,10 0 0 0 -0.27,-10.44 z M10.59,15.41 a2,2 0 0 0 2.83,0 l5.66,-8.49 -8.49,5.66 a2,2 0 0 0 0,2.83 z"/>
-                            </Viewbox>
-                            <TextBlock Text="超頻" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="F0 M2,5 H22 V17 H2 Z M4,7 H20 V15 H4 Z M12,11 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 Z M12,11 m-1.3,0 a1.3,1.3 0 1,0 2.6,0 a1.3,1.3 0 1,0 -2.6,0 Z M6,19 H18 V21 H6 Z"/>
-                            </Viewbox>
-                            <TextBlock Text="顯示卡超頻" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="F1 M12,12 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0 Z M12,10 C12,6 13,3 16,3 C19,3 19,7 15,9 C13.8,9.6 12.8,10 12,10 Z M14,12 C18,12 21,13 21,16 C21,19 17,19 15,15 C14.4,13.8 14,12.8 14,12 Z M12,14 C12,18 11,21 8,21 C5,21 5,17 9,15 C10.2,14.4 11.2,14 12,14 Z M10,12 C6,12 3,11 3,8 C3,5 7,5 9,9 C9.6,10.2 10,11.2 10,12 Z"/>
-                            </Viewbox>
-                            <TextBlock Text="系統風扇" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="F1 M12,21.35 L10.55,20.03 C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3 9.24,3 10.91,3.81 12,5.09 13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5 22,12.28 18.6,15.36 13.45,20.04 L12,21.35 Z"/>
-                            </Viewbox>
-                            <TextBlock Text="健康" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="M22.7,19 l-9.1,-9.1 c0.9,-2.3 0.4,-5 -1.5,-6.9 -2,-2 -5,-2.4 -7.4,-1.3 l4.3,4.3 -3,3 -4.3,-4.3 C0.5,9.1 1,12.1 3,14.1 c1.9,1.9 4.6,2.4 6.9,1.5 l9.1,9.1 c0.4,0.4 1,0.4 1.4,0 l2.3,-2.3 c0.5,-0.4 0.5,-1.1 0.1,-1.5 z"/>
-                            </Viewbox>
-                            <TextBlock Text="工具箱" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="M3,3 h7 v7 h-7 z M14,3 h7 v7 h-7 z M3,14 h7 v7 h-7 z M14,14 h7 v7 h-7 z"/>
-                            </Viewbox>
-                            <TextBlock Text="實用工具" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="F0 M4,3 H20 A1,1 0 0 1 21,4 V17 A1,1 0 0 1 20,18 H13 V20 H16 V22 H8 V20 H11 V18 H4 A1,1 0 0 1 3,17 V4 A1,1 0 0 1 4,3 Z M11,6 H13 V9 H16 V11 H13 V14 H11 V11 H8 V9 H11 Z"/>
-                            </Viewbox>
-                            <TextBlock Text="一鍵裝機" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="F0 M12,2 a10,10 0 1,0 0.01,0 Z M3,12 H21 M12,2.5 C15,6 15,18 12,21.5 C9,18 9,6 12,2.5 Z M4.5,7 H19.5 M4.5,17 H19.5"/>
-                            </Viewbox>
-                            <TextBlock Text="瀏覽器" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="F1 M2,5 L22,5 L22,19 L2,19 Z M4,7 L20,7 L20,17 L4,17 Z M6.2,9.3 L9,11.5 L6.2,13.7 L7.3,13.7 L10.1,11.5 L7.3,9.3 Z M11.5,12.6 H16.5 V13.8 H11.5 Z"/>
-                            </Viewbox>
-                            <TextBlock Text="終端" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="F1 M12,8 a4,4 0 1,0 0.01,0 Z M12,10 a2,2 0 1,1 -0.01,0 Z M10.5,1.5 h3 l0.5,2.6 a7.5,7.5 0 0 1 2.1,1.2 l2.5,-1 2,3.4 -2,1.7 a7.5,7.5 0 0 1 0,2.4 l2,1.7 -2,3.4 -2.5,-1 a7.5,7.5 0 0 1 -2.1,1.2 l-0.5,2.6 h-3 l-0.5,-2.6 a7.5,7.5 0 0 1 -2.1,-1.2 l-2.5,1 -2,-3.4 2,-1.7 a7.5,7.5 0 0 1 0,-2.4 l-2,-1.7 2,-3.4 2.5,1 a7.5,7.5 0 0 1 2.1,-1.2 Z"/>
-                            </Viewbox>
-                            <TextBlock Text="設定" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="18" Height="18" Margin="0,0,12,0">
-                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                      Data="F0 M12,3 a9,9 0 1,0 0.01,0 Z M11,7 H13 V9 H11 Z M11,10.5 H13 V17 H11 Z"/>
-                            </Viewbox>
-                            <TextBlock Text="關於" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                        </StackPanel>
-                    </ListBoxItem>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="{x:Type local:PageDef}">
+                            <StackPanel Orientation="Horizontal" ToolTip="{Binding Hint}">
+                                <Viewbox Width="18" Height="18" Margin="0,0,12,0">
+                                    <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                          Data="{Binding Icon}"/>
+                                </Viewbox>
+                                <TextBlock Text="{Binding Title}" VerticalAlignment="Center"
+                                           Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    <ListBox.GroupStyle>
+                        <GroupStyle>
+                            <GroupStyle.HeaderTemplate>
+                                <DataTemplate>
+                                    <TextBlock Style="{StaticResource NavGroupHeader}" Text="{Binding Name}"/>
+                                </DataTemplate>
+                            </GroupStyle.HeaderTemplate>
+                        </GroupStyle>
+                    </ListBox.GroupStyle>
                 </ListBox>
             </Border>
 
@@ -315,5 +140,9 @@
                            Text="曦覽 XinSpect ・ By Xinglanclever"/>
             </Grid>
         </Border>
+
+        <!-- ===== 命令面板（Ctrl+K）：覆蓋全窗，未開啟時完全不佔用版面 ===== -->
+        <local:CommandPalette x:Name="Palette" Grid.Row="0" Grid.RowSpan="3" Panel.ZIndex="100"
+                              Visibility="Collapsed"/>
     </Grid>
 </Window>

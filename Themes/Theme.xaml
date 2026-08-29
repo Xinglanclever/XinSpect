@@ -44,6 +44,8 @@
     <local:BoolToRunBrushConverter x:Key="BoolToRunBrush"/>
     <local:BoolToRunTextConverter x:Key="BoolToRunText"/>
     <local:BoolToPromptConverter x:Key="BoolToPrompt"/>
+    <local:BoolToPinGlyphConverter x:Key="BoolToPinGlyph"/>
+    <local:BoolToCompactGlyphConverter x:Key="BoolToCompactGlyph"/>
 
     <!-- ===== 文字樣式 ===== -->
     <Style TargetType="TextBlock">
@@ -167,6 +169,43 @@
         <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
     </Style>
 
+    <!-- 命令面板結果列（2.0）：無邊框、選取時以強調色底線＋亮色文字標示 -->
+    <Style x:Key="PaletteItemStyle" TargetType="ListBoxItem">
+        <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+        <Setter Property="Foreground" Value="{StaticResource SecondaryInkBrush}"/>
+        <Setter Property="Padding" Value="14,9"/>
+        <Setter Property="Margin" Value="6,1"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Border x:Name="bd" Background="Transparent" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Stretch"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Surface2Brush}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource AccentDimBrush}"/>
+                            <Setter Property="Foreground" Value="#ffffff"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 側邊欄分組標頭（2.0 導覽註冊表分組用；細體、字距放寬、置頂不滾動） -->
+    <Style x:Key="NavGroupHeader" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+        <Setter Property="Foreground" Value="{StaticResource MutedInkBrush}"/>
+        <Setter Property="FontSize" Value="10.5"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Margin" Value="22,14,0,4"/>
+        <Setter Property="Opacity" Value="0.85"/>
+    </Style>
+
     <!-- ===== 工具按鈕（標題列匯出等） ===== -->
     <Style x:Key="ToolButton" TargetType="Button">
         <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
@@ -193,6 +232,34 @@
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="bd" Property="Opacity" Value="0.4"/>
                             <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ===== 迷你監視器的小圖示鈕（無底色，滑過才浮出） ===== -->
+    <Style x:Key="MiniIconButton" TargetType="Button">
+        <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+        <Setter Property="Foreground" Value="{StaticResource MutedInkBrush}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Width" Value="20"/>
+        <Setter Property="Height" Value="20"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" CornerRadius="5" Background="Transparent">
+                        <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Surface2Brush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource AccentDimBrush}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

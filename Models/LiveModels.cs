@@ -6,11 +6,21 @@ namespace XinSpect;
 /// 固定容量的時間序列環形緩衝，供即時走勢圖使用。
 /// 每次 Push 後觸發 <see cref="Updated"/>，走勢圖控制項據此重繪。
 /// </summary>
+/// <remarks>
+/// 「沒讀到」與「量到 0」在此嚴格分開：<see cref="Push(double?)"/> 傳入 <c>null</c>（或 NaN／±∞）
+/// 代表本機沒有這顆感測器或本輪讀取失敗，該點<b>不計入</b>最小／平均／最大，數值文字顯示「—」。
+/// 若不這麼做，沒有溫度感測器的機器會在畫面上看到「0 °C」與一條貼底的直線——那是假數字，不是量測結果。
+/// 緩衝本身仍存 0，是為了讓走勢圖的時間軸保持等距（NaN 會讓幾何運算失效）；圖層則在
+/// <see cref="HasData"/> 為 false 時整段隱藏，不畫出那條 0 值線。
+/// </remarks>
 public sealed class MetricHistory : ObservableObject
 {
     private readonly double[] _buf;
+    private readonly bool[] _real;  // 對應 _buf 各格是否為真實讀值
     private int _count;
     private int _head;              // 下一個寫入位置
+    private int _measured;          // 緩衝內真實讀值的個數
+    private bool _lastReal;         // 最後一次 Push 是否為真實讀值
     private readonly string _fmt;
 
     public int Capacity { get; }
@@ -27,6 +37,7 @@ public sealed class MetricHistory : ObservableObject
         FixedMax = fixedMax;
         _fmt = fmt;
         _buf = new double[Capacity];
+        _real = new bool[Capacity];
     }
 
     public double Current { get; private set; }
@@ -34,37 +45,55 @@ public sealed class MetricHistory : ObservableObject
     public double Max { get; private set; }
     public double Avg { get; private set; }
 
-    public string CurrentText => Text(Current);
+    /// <summary>緩衝內是否有任何真實讀值；false 表示這台機器沒有這項讀值，畫面不應畫線也不應報數字。</summary>
+    public bool HasData => _measured > 0;
+
+    public string CurrentText => _lastReal ? Text(Current) : "—";
     public string MinText => Text(Min);
     public string MaxText => Text(Max);
     public string AvgText => Text(Avg);
 
     private string Text(double v) =>
-        _count == 0 ? "—" : $"{v.ToString(_fmt, CultureInfo.InvariantCulture)} {Unit}".TrimEnd();
+        _measured == 0 ? "—" : $"{v.ToString(_fmt, CultureInfo.InvariantCulture)} {Unit}".TrimEnd();
 
-    public void Push(double value)
+    /// <summary>推入一筆讀值。<c>null</c>／NaN／±∞ 一律視為「沒讀到」，不計入統計。</summary>
+    public void Push(double? value)
     {
-        if (double.IsNaN(value) || double.IsInfinity(value)) value = 0;
-        _buf[_head] = value;
+        bool real = value is double raw && !double.IsNaN(raw) && !double.IsInfinity(raw);
+        double v = real ? value!.Value : 0;
+
+        _buf[_head] = v;
+        _real[_head] = real;
         _head = (_head + 1) % Capacity;
         if (_count < Capacity) _count++;
 
-        Current = value;
+        Current = v;
+        _lastReal = real;
+
+        // 統計只看真實讀值：沒讀到的點既不拉低最小值，也不稀釋平均
         double min = double.MaxValue, max = double.MinValue, sum = 0;
+        int n = 0;
         for (int i = 0; i < _count; i++)
         {
-            double v = _buf[(_head - _count + i + Capacity) % Capacity];
-            if (v < min) min = v;
-            if (v > max) max = v;
-            sum += v;
+            int slot = (_head - _count + i + Capacity) % Capacity;
+            if (!_real[slot]) continue;
+            double s = _buf[slot];
+            if (s < min) min = s;
+            if (s > max) max = s;
+            sum += s;
+            n++;
         }
-        Min = min; Max = max; Avg = sum / _count;
+        _measured = n;
+        Min = n > 0 ? min : 0;
+        Max = n > 0 ? max : 0;
+        Avg = n > 0 ? sum / n : 0;
 
         OnPropertyChanged(nameof(Current));
         OnPropertyChanged(nameof(CurrentText));
         OnPropertyChanged(nameof(MinText));
         OnPropertyChanged(nameof(MaxText));
         OnPropertyChanged(nameof(AvgText));
+        OnPropertyChanged(nameof(HasData));
         Updated?.Invoke();
     }
 

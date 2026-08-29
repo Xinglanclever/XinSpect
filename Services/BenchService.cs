@@ -9,14 +9,30 @@ namespace XinSpect;
 /// 加權為綜合分數。時間可設定、可取消，並即時回報階段與進度。
 /// 測試期間 CPU 溫度 / 頻率的變化由主計時器照常擷取，於畫面上以走勢圖呈現。
 /// </summary>
+/// <remarks>
+/// 綜合分數的權重（單 × 2 + 多 + 頻寬 × 20）是本程式自訂的，沒有跨機器的意義，
+/// 因此不與任何外部分數對照。可信的比較對象是本機歷次成績（<see cref="BenchLog"/>）：
+/// 同一測試時間才算同設定，並一併記下量測期間的溫度與頻率，
+/// 好讓「這次比上次低」能分清是硬體變了還是當時比較熱。
+/// </remarks>
 public sealed class BenchService : ObservableObject
 {
     // 防止 JIT 將運算視為無用而消除
     private static double _sink;
 
+    /// <summary>紀錄簿中的項目代號。</summary>
+    private const string KindComposite = "bench.composite";
+
     private CancellationTokenSource? _cts;
+    private readonly BenchLog _log;
+
+    /// <summary>量測期間的實機條件（由每秒脈動餵入）。</summary>
+    public BenchConditions Conditions { get; } = new();
+
+    public BenchService(BenchLog? log = null) => _log = log ?? new BenchLog();
 
     public int Threads => Environment.ProcessorCount;
+
 
     private int _duration = 30;
     /// <summary>總測試秒數（三個階段平分）。</summary>
@@ -53,9 +69,15 @@ public sealed class BenchService : ObservableObject
     public double? Composite { get => _composite; private set { if (SetProperty(ref _composite, value)) OnPropertyChanged(nameof(CompositeText)); } }
     public string CompositeText => _composite is double v ? $"{v:0}" : "—";
 
-    private double _best;
-    public double BestComposite { get => _best; private set { if (SetProperty(ref _best, value)) OnPropertyChanged(nameof(BestText)); } }
-    public string BestText => _best > 0 ? $"本次工作階段最佳：{_best:0} 分" : "本次工作階段尚無紀錄";
+    // ── 與本機歷次成績的對照（唯一誠實的基準）────────────────────────────────
+    private string _delta = "", _repeat = "", _conditionText = "";
+
+    /// <summary>綜合分數與本機上次同設定的比較。</summary>
+    public string DeltaText { get => _delta; private set => SetProperty(ref _delta, value); }
+    /// <summary>本機同設定的重複量測統計（次數／範圍／離散度）。</summary>
+    public string RepeatText { get => _repeat; private set => SetProperty(ref _repeat, value); }
+    /// <summary>本次量測期間的溫度／頻率條件；沒取到感測值時為空字串。</summary>
+    public string ConditionText { get => _conditionText; private set => SetProperty(ref _conditionText, value); }
 
     /// <summary>由 UI 執行緒呼叫（Progress&lt;T&gt; 需在此擷取同步內容以回送 UI）。</summary>
     public void Start()
@@ -76,6 +98,8 @@ public sealed class BenchService : ObservableObject
         ProgressFraction = 0;
         StatusLine = "測試進行中，請避免其他高負載程式以取得穩定結果…";
         SingleScore = MultiScore = MemBandwidth = Composite = null;
+        DeltaText = RepeatText = ConditionText = "";
+        Conditions.Reset();
 
         var prog = new Progress<double>(p => ProgressFraction = Math.Clamp(p, 0, 1));
         var ip = (IProgress<double>)prog;
@@ -106,16 +130,23 @@ public sealed class BenchService : ObservableObject
 
             double composite = Math.Round(single * 2 + multi + gb * 20);
             Composite = composite;
-            if (composite > BestComposite) BestComposite = composite;
+
+            // 記入本機紀錄簿：同一測試時間才算同設定，比較對象只有這台機器自己
+            string config = $"{DurationSeconds} 秒 ・ {Threads} 執行緒";
+            string cond = Conditions.Text();
+            ConditionText = cond;
+            Record(config, composite, cond);
+            DeltaText = _log.DeltaText(KindComposite, config);
+            RepeatText = _log.Stats(KindComposite, config).Text;
 
             Phase = "完成";
             ProgressFraction = 1;
-            StatusLine = $"測試完成 ・ 綜合分數 {composite:0} 分";
+            StatusLine = $"測試完成 ・ 綜合分數 {composite:0} 分 ・ {RepeatText}";
         }
         catch (OperationCanceledException)
         {
             Phase = "已取消";
-            StatusLine = "測試已取消。";
+            StatusLine = "測試已取消（未完成的量測不列入紀錄）。";
         }
         catch (Exception ex)
         {
@@ -131,6 +162,19 @@ public sealed class BenchService : ObservableObject
     }
 
     // ---- 運算核心與各階段 --------------------------------------------------
+
+    private void Record(string config, double composite, string conditions)
+    {
+        try
+        {
+            _log.Add(new BenchRun
+            {
+                Kind = KindComposite, Title = "綜合跑分", Config = config, Score = composite, Unit = "分",
+                HigherIsBetter = true, Format = "#,0", UtcTime = DateTime.UtcNow, Conditions = conditions,
+            });
+        }
+        catch { /* 紀錄失敗不影響已量到的成績 */ }
+    }
 
     /// <summary>混合整數 / 浮點的運算核心；回傳累加值以避免被最佳化消除。</summary>
     private static double Kernel(int iters)

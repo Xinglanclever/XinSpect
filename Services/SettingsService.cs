@@ -38,6 +38,15 @@ public sealed class SettingsService : ObservableObject
     /// <summary>CSV 記錄檔輸出資料夾。</summary>
     public string LogFolder { get => _logFolder; set { if (SetProperty(ref _logFolder, value)) Save(); } }
 
+    // ── 歷史記錄（歷史回放頁的資料來源）─────────────────────
+    private bool _historyEnabled = true;
+    /// <summary>是否持續累積歷史資料（關閉後歷史回放頁只剩既有資料）。</summary>
+    public bool HistoryEnabled { get => _historyEnabled; set { if (SetProperty(ref _historyEnabled, value)) Save(); } }
+
+    private int _historyRetentionDays = 30;
+    /// <summary>歷史資料保留天數，1–120。</summary>
+    public int HistoryRetentionDays { get => _historyRetentionDays; set { if (SetProperty(ref _historyRetentionDays, Math.Clamp(value, 1, 120))) Save(); } }
+
     // ── 警示閾值 ─────────────────────────────────────────
     private bool _alertsEnabled = true;
     public bool AlertsEnabled { get => _alertsEnabled; set { if (SetProperty(ref _alertsEnabled, value)) Save(); } }
@@ -80,6 +89,61 @@ public sealed class SettingsService : ObservableObject
     /// <summary>系統提示詞（可由使用者自訂；一鍵重置回內建預設）。</summary>
     public string AiSystemPrompt { get => _aiSystemPrompt; set { if (SetProperty(ref _aiSystemPrompt, value)) Save(); } }
 
+    private bool _aiStreaming = true;
+    /// <summary>逐字串流回覆（SSE）：關閉則等模型整段產生完才顯示。端點不支援時會自動退回整段模式。</summary>
+    public bool AiStreaming { get => _aiStreaming; set { if (SetProperty(ref _aiStreaming, value)) Save(); } }
+
+    private bool _aiAgentMode = true;
+    /// <summary>診斷代理：允許 AI 主動呼叫本機唯讀查詢工具（溫度、事件、磁碟健康、歷史統計等）。</summary>
+    public bool AiAgentMode { get => _aiAgentMode; set { if (SetProperty(ref _aiAgentMode, value)) Save(); } }
+
+    private bool _aiKeepHistory = true;
+    /// <summary>保留對話：把 AI 對話存於本機 aichat.json，下次啟動自動接續。</summary>
+    public bool AiKeepHistory { get => _aiKeepHistory; set { if (SetProperty(ref _aiKeepHistory, value)) Save(); } }
+
+    private bool _aiProactive;
+    /// <summary>
+    /// 主動診斷：溫度／負載警示觸發時，自動請 AI 就地分析一次原因與處置。
+    /// 預設關閉——這會在使用者沒開口時送出請求（本機 Ollama 之外還可能計費），必須由使用者明示同意。
+    /// </summary>
+    public bool AiProactive { get => _aiProactive; set { if (SetProperty(ref _aiProactive, value)) Save(); } }
+
+    // ── 報告匯出 ─────────────────────────────────────────
+    private bool _reportMaskIdentity;
+    /// <summary>
+    /// 匯出報告時遮蔽可識別資訊：主機名稱、使用者名稱、MAC 位址與磁碟序號改為「（已遮蔽）」。
+    /// 預設關閉——自己留存的報告該是完整的；要貼到公開場合再開。其餘規格與讀值一律照實輸出。
+    /// </summary>
+    public bool ReportMaskIdentity { get => _reportMaskIdentity; set { if (SetProperty(ref _reportMaskIdentity, value)) Save(); } }
+
+    // ── 迷你浮動監視器 ───────────────────────────────────
+    private double? _miniLeft;
+    private double? _miniTop;
+    /// <summary>上次拖曳到的位置；<c>null</c> 表示尚未擺放過，改由程式貼齊右上角。</summary>
+    /// <remarks>用可空型別而非 NaN：System.Text.Json 預設不接受 NaN，寫檔會整份失敗。</remarks>
+    public double? MiniLeft { get => _miniLeft; set { if (SetProperty(ref _miniLeft, value)) Save(); } }
+    public double? MiniTop { get => _miniTop; set { if (SetProperty(ref _miniTop, value)) Save(); } }
+
+    private double _miniOpacity = 0.9;
+    /// <summary>底板不透明度 0.4–1.0（讀值文字本身不跟著淡，維持可讀）。</summary>
+    public double MiniOpacity { get => _miniOpacity; set { if (SetProperty(ref _miniOpacity, Math.Clamp(value, 0.4, 1.0))) Save(); } }
+
+    private bool _miniCompact;
+    /// <summary>精簡模式：只留四行讀值，收起兩條波形，佔用更小。</summary>
+    public bool MiniCompact { get => _miniCompact; set { if (SetProperty(ref _miniCompact, value)) Save(); } }
+
+    private bool _miniTopmost = true;
+    /// <summary>釘選在最上層。取消後會被其他視窗蓋住，但仍留在畫面上。</summary>
+    public bool MiniTopmost { get => _miniTopmost; set { if (SetProperty(ref _miniTopmost, value)) Save(); } }
+
+    // ── 總覽儀表板磁貼 ───────────────────────────────────
+    private string _dashboardTiles = "";
+    /// <summary>
+    /// 總覽頁磁貼的順序與顯示狀態，格式見 <see cref="DashboardLayout"/>（逗號分隔的識別碼，隱藏者加減號）。
+    /// 空字串＝沿用內建版面。
+    /// </summary>
+    public string DashboardTiles { get => _dashboardTiles; set { if (SetProperty(ref _dashboardTiles, value)) Save(); } }
+
     // ── 工具箱插槽 ───────────────────────────────────────
     private Dictionary<string, string> _toolSlots = new(StringComparer.Ordinal);
     /// <summary>工具箱「插槽」：工具名稱 → 使用者裝入的本機可執行檔路徑（下載後裝進插槽，之後直接啟動）。</summary>
@@ -102,6 +166,8 @@ public sealed class SettingsService : ObservableObject
         public int DefaultEra { get; set; }
         public int LogIntervalSec { get; set; } = 2;
         public string? LogFolder { get; set; }
+        public bool HistoryEnabled { get; set; } = true;
+        public int HistoryRetentionDays { get; set; } = 30;
         public bool AlertsEnabled { get; set; } = true;
         public double CpuTempThreshold { get; set; } = 90;
         public double GpuTempThreshold { get; set; } = 85;
@@ -113,6 +179,17 @@ public sealed class SettingsService : ObservableObject
         public string? AiModel { get; set; }
         public double AiTemperature { get; set; } = 0.7;
         public string? AiSystemPrompt { get; set; }
+        public bool AiStreaming { get; set; } = true;
+        public bool AiAgentMode { get; set; } = true;
+        public bool AiKeepHistory { get; set; } = true;
+        public bool AiProactive { get; set; }
+        public bool ReportMaskIdentity { get; set; }
+        public double? MiniLeft { get; set; }
+        public double? MiniTop { get; set; }
+        public double MiniOpacity { get; set; } = 0.9;
+        public bool MiniCompact { get; set; }
+        public bool MiniTopmost { get; set; } = true;
+        public string? DashboardTiles { get; set; }
         public Dictionary<string, string>? ToolSlots { get; set; }
     }
 
@@ -131,6 +208,8 @@ public sealed class SettingsService : ObservableObject
                     _defaultEra = p.DefaultEra;
                     _logIntervalSec = Math.Clamp(p.LogIntervalSec, 1, 60);
                     if (!string.IsNullOrWhiteSpace(p.LogFolder)) _logFolder = p.LogFolder;
+                    _historyEnabled = p.HistoryEnabled;
+                    _historyRetentionDays = Math.Clamp(p.HistoryRetentionDays, 1, 120);
                     _alertsEnabled = p.AlertsEnabled;
                     _cpuTempThreshold = p.CpuTempThreshold;
                     _gpuTempThreshold = p.GpuTempThreshold;
@@ -142,6 +221,17 @@ public sealed class SettingsService : ObservableObject
                     if (!string.IsNullOrWhiteSpace(p.AiModel)) _aiModel = p.AiModel;
                     _aiTemperature = Math.Clamp(p.AiTemperature, 0, 2);
                     if (!string.IsNullOrWhiteSpace(p.AiSystemPrompt)) _aiSystemPrompt = p.AiSystemPrompt;
+                    _aiStreaming = p.AiStreaming;
+                    _aiAgentMode = p.AiAgentMode;
+                    _aiKeepHistory = p.AiKeepHistory;
+                    _aiProactive = p.AiProactive;
+                    _reportMaskIdentity = p.ReportMaskIdentity;
+                    _miniLeft = p.MiniLeft;
+                    _miniTop = p.MiniTop;
+                    _miniOpacity = Math.Clamp(p.MiniOpacity, 0.4, 1.0);
+                    _miniCompact = p.MiniCompact;
+                    _miniTopmost = p.MiniTopmost;
+                    _dashboardTiles = p.DashboardTiles ?? "";
                     if (p.ToolSlots is not null) _toolSlots = new(p.ToolSlots, StringComparer.Ordinal);
                 }
             }
@@ -163,6 +253,8 @@ public sealed class SettingsService : ObservableObject
                 DefaultEra = _defaultEra,
                 LogIntervalSec = _logIntervalSec,
                 LogFolder = _logFolder,
+                HistoryEnabled = _historyEnabled,
+                HistoryRetentionDays = _historyRetentionDays,
                 AlertsEnabled = _alertsEnabled,
                 CpuTempThreshold = _cpuTempThreshold,
                 GpuTempThreshold = _gpuTempThreshold,
@@ -174,6 +266,17 @@ public sealed class SettingsService : ObservableObject
                 AiModel = _aiModel,
                 AiTemperature = _aiTemperature,
                 AiSystemPrompt = _aiSystemPrompt,
+                AiStreaming = _aiStreaming,
+                AiAgentMode = _aiAgentMode,
+                AiKeepHistory = _aiKeepHistory,
+                AiProactive = _aiProactive,
+                ReportMaskIdentity = _reportMaskIdentity,
+                MiniLeft = _miniLeft,
+                MiniTop = _miniTop,
+                MiniOpacity = _miniOpacity,
+                MiniCompact = _miniCompact,
+                MiniTopmost = _miniTopmost,
+                DashboardTiles = _dashboardTiles.Length > 0 ? _dashboardTiles : null,
                 ToolSlots = _toolSlots.Count > 0 ? _toolSlots : null,
             };
             File.WriteAllText(FilePath, JsonSerializer.Serialize(p, new JsonSerializerOptions { WriteIndented = true }));

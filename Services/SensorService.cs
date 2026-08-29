@@ -415,12 +415,17 @@ public sealed partial class SensorService : ObservableObject, IDisposable
 
     // ---- 靜態工具 ---------------------------------------------------------
 
-    private static double? Val(ISensor? s) => s?.Value is float f && !float.IsNaN(f) ? f : (double?)null;
+    /// <summary>
+    /// 取單一感測器的當前值，並通過 <see cref="SensorSanity"/> 合理性閘門。
+    /// 讀不到或值不可能為真（NaN／±∞／哨兵值／離譜跳點）時回 <c>null</c>——絕不代換為 0。
+    /// </summary>
+    private static double? Val(ISensor? s) => s is null ? null : SensorSanity.Plausible(s.SensorType, s.Value);
 
     private static int CoreIndex(string name)
     {
         var m = CoreRegex().Match(name);
-        return m.Success ? int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture) : -1;
+        // 名稱中的數字可能長到溢出 int（LHM 名稱由硬體字串拼成），故用 TryParse 而非 Parse
+        return m.Success && int.TryParse(m.Groups[1].Value, CultureInfo.InvariantCulture, out int i) ? i : -1;
     }
 
     private static ISensor? First(IHardware hw, SensorType type, params string[] nameContains)
@@ -452,9 +457,11 @@ public sealed partial class SensorService : ObservableObject, IDisposable
         return null;
     }
 
+    // 感測器總表的單格文字。與 Val() 走同一道合理性閘門：哨兵值與雜訊一律顯示「—」，
+    // 不讓總表變成唯一會出現假數字的地方（LHM 累積的 Min/Max 尤其容易留著哨兵值）。
     private static string Fmt(float? value, SensorType type)
     {
-        if (value is not float v || float.IsNaN(v)) return "—";
+        if (SensorSanity.Plausible(type, value) is not double v) return "—";
         return type switch
         {
             SensorType.Temperature => $"{v:0.0} °C",

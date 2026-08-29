@@ -17,7 +17,15 @@ public partial class RadialGauge : UserControl
     public RadialGauge()
     {
         InitializeComponent();
-        Loaded += (_, _) => { ApplyGlow(); Redraw(); };
+        Loaded += (_, _) =>
+        {
+            ThemeService.Changed -= ApplyGlow;   // 重複 Loaded 不重覆訂閱
+            ThemeService.Changed += ApplyGlow;
+            ApplyGlow();
+            Redraw();
+        };
+        // 弧色是共用的資源筆刷會自己變，但輝光是把色值「拷」進 DropShadowEffect，得補上這一手
+        Unloaded += (_, _) => ThemeService.Changed -= ApplyGlow;
     }
 
     // ---- 對外相依屬性 -----------------------------------------------------
@@ -70,15 +78,12 @@ public partial class RadialGauge : UserControl
         g.BeginAnimation(AnimatedValueProperty, anim, HandoffBehavior.SnapshotAndReplace);
     }
 
-    private static Brush MakeAccent()
-    {
-        var b = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#3987e5"));
-        b.Freeze();
-        return b;
-    }
+    // 預設弧色＝主題強調色的「同一顆」筆刷，換強調色時所有未指定 ArcBrush 的儀表一起變
+    private static Brush MakeAccent() => VizPalette.Accent;
 
     private void ApplyGlow()
     {
+        if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(ApplyGlow); return; }
         if (ArcGlow is null) return;
         if (ArcBrush is SolidColorBrush sb) ArcGlow.Color = sb.Color;
     }

@@ -21,8 +21,8 @@
     <Product>曦覽 XinSpect</Product>
     <AssemblyTitle>曦覽 XinSpect 硬體資訊總覽</AssemblyTitle>
     <Company>Xinglanclever</Company>
-    <Version>1.3.1</Version>
-    <FileVersion>1.3.1.0</FileVersion>
+    <Version>1.3.2</Version>
+    <FileVersion>1.3.2.0</FileVersion>
     <Copyright>By：Xinglanclever ・ Claude Opus 4.8 ・ 2026年8月24日</Copyright>
     <UseAppHost>true</UseAppHost>
     <!-- 應用程式圖示（原創「曦覽」曉光儀表標記；由 make_icon.ps1 產生的多尺寸 .ico）-->
@@ -79,6 +79,18 @@
     <None Remove="Bridge\**" />
     <Page Remove="Bridge\**" />
     <Resource Remove="Bridge\**" />
+  </ItemGroup>
+
+  <!-- ── 單元測試專案：不納入本體檔案集 ───────────────────────────────────────
+       Tests\ 內是獨立的 xunit 專案（ProjectReference 回指本體）。其 .cs 若被本體的
+       預設 glob 收入會造成重複定義與循環相依，故一律自各預設項目類型排除。 -->
+  <ItemGroup>
+    <Compile Remove="Tests\**\*.cs" />
+    <EmbeddedResource Remove="Tests\**" />
+    <Content Remove="Tests\**" />
+    <None Remove="Tests\**" />
+    <Page Remove="Tests\**" />
+    <Resource Remove="Tests\**" />
   </ItemGroup>
 
   <!-- ── 建置並內嵌 XtuBridge.exe（把工具內建進 App）──────────────────────────────

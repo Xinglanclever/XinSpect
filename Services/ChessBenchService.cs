@@ -4,36 +4,38 @@ using System.Threading.Tasks;
 
 namespace XinSpect;
 
-/// <summary>參考對照表的一列（示意，非實測）。</summary>
-public sealed class ChessRefRow
-{
-    public ChessRefRow(string machine, string rate, string factor)
-    {
-        Machine = machine; Rate = rate; Factor = factor;
-    }
-    public string Machine { get; }
-    public string Rate { get; }     // 約略節點速率
-    public string Factor { get; }   // 相對倍率
-}
-
 /// <summary>
 /// 原生象棋節點吞吐跑分：以 perft（西洋棋合法走法產生 + 走子/還原）作為確定性運算負載，
-/// 量測「節點/秒（kN/s）」與相對倍率（×，同 Fritz 之單位精神）。
-/// 每執行緒各持獨立引擎，無鎖無競爭，可選 1 / 全部核心 / 64 / 128 / 256 / 自訂執行緒（含超額訂閱）。
+/// 量測「節點/秒（kN/s）」。每執行緒各持獨立引擎，無鎖無競爭，
+/// 可選 1 / 全部核心 / 64 / 128 / 256 / 自訂執行緒（含超額訂閱）。
 /// 另提供一鍵啟動內建原版 Fritz 作 16 執行緒對照。
 /// </summary>
+/// <remarks>
+/// 本測試不提供跨機器的參考分數。曾經內建的「約當 Pentium III 1 GHz = 1.0×」基準與各機型對照表
+/// 都不是量出來的，只是把猜測寫得像量測；且本測試的 perft 負載與原版 Fritz 的引擎不同，
+/// 兩者的「×」不可互換。可信的對照有兩條路：一是本機歷次成績（<see cref="BenchLog"/>），
+/// 二是在同一台機器上實跑原版 Fritz（下方按鈕）自行比對。
+/// </remarks>
 public sealed class ChessBenchService : ObservableObject
 {
-    // 曦覽 perft 基準（示意）：約當 Pentium III 1GHz 等級之節點速率，作為 1.0× 參考點。
-    private const double BaselineKNps = 480.0;
     private const int PerftDepth = 4;         // 每回合 perft 深度（節點適中、時間檢查靈敏）
     private const double SingleSeconds = 3.0; // 單執行緒相位固定秒數
+
+    /// <summary>紀錄簿中的項目代號。</summary>
+    private const string KindSingle = "chess.single", KindMulti = "chess.multi";
 
     private static long _sink;   // 防最佳化消除
 
     private CancellationTokenSource? _cts;
+    private readonly BenchLog _log;
+
+    /// <summary>量測期間的實機條件（由每秒脈動餵入）。</summary>
+    public BenchConditions Conditions { get; } = new();
+
+    public ChessBenchService(BenchLog? log = null) => _log = log ?? new BenchLog();
 
     public int LogicalCores => Environment.ProcessorCount;
+
 
     private int _threads = Environment.ProcessorCount;
     /// <summary>多執行緒相位採用的執行緒數（1–4096，可超額訂閱實體核心）。</summary>
@@ -63,36 +65,38 @@ public sealed class ChessBenchService : ObservableObject
     public string StatusLine { get => _status; private set => SetProperty(ref _status, value); }
 
     private double? _singleKNps;
-    public double? SingleKNps { get => _singleKNps; private set { if (SetProperty(ref _singleKNps, value)) { OnPropertyChanged(nameof(SingleText)); OnPropertyChanged(nameof(SingleFactorText)); } } }
+    public double? SingleKNps { get => _singleKNps; private set { if (SetProperty(ref _singleKNps, value)) OnPropertyChanged(nameof(SingleText)); } }
     public string SingleText => _singleKNps is double v ? $"{v:#,0} kN/s" : "—";
-    public string SingleFactorText => _singleKNps is double v ? $"{v / BaselineKNps:0.0}×" : "—";
 
     private double? _multiKNps;
-    public double? MultiKNps { get => _multiKNps; private set { if (SetProperty(ref _multiKNps, value)) { OnPropertyChanged(nameof(MultiText)); OnPropertyChanged(nameof(MultiFactorText)); } } }
+    public double? MultiKNps { get => _multiKNps; private set { if (SetProperty(ref _multiKNps, value)) OnPropertyChanged(nameof(MultiText)); } }
     public string MultiText => _multiKNps is double v ? $"{v:#,0} kN/s" : "—";
-    public string MultiFactorText => _multiKNps is double v ? $"{v / BaselineKNps:0.0}×" : "—";
 
     private double? _speedup;
-    public double? Speedup { get => _speedup; private set { if (SetProperty(ref _speedup, value)) OnPropertyChanged(nameof(SpeedupText)); } }
+    public double? Speedup { get => _speedup; private set { if (SetProperty(ref _speedup, value)) { OnPropertyChanged(nameof(SpeedupText)); OnPropertyChanged(nameof(EfficiencyText)); } } }
     public string SpeedupText => _speedup is double v ? $"{v:0.0}×（多／單）" : "—";
 
-    private double _bestFactor;
-    public double BestFactor { get => _bestFactor; private set { if (SetProperty(ref _bestFactor, value)) OnPropertyChanged(nameof(BestText)); } }
-    public string BestText => _bestFactor > 0 ? $"本次工作階段最佳：{_bestFactor:0.0}×" : "本次工作階段尚無紀錄";
+    /// <summary>平行效率＝加速比／執行緒數；超額訂閱時本就不可能接近 100%，如實呈現。</summary>
+    public string EfficiencyText => _speedup is double v && _threadsUsed > 0
+        ? $"平行效率 {v / _threadsUsed * 100:0}%（{_threadsUsed} 執行緒）" : "—";
+
+    private int _threadsUsed;
+
+    // ── 與本機歷次成績的對照（唯一誠實的基準）────────────────────────────────
+    private string _singleDelta = "", _multiDelta = "", _repeat = "", _conditionText = "";
+
+    /// <summary>單執行緒成績與本機上次同設定的比較。</summary>
+    public string SingleDeltaText { get => _singleDelta; private set => SetProperty(ref _singleDelta, value); }
+    /// <summary>多執行緒成績與本機上次同設定的比較。</summary>
+    public string MultiDeltaText { get => _multiDelta; private set => SetProperty(ref _multiDelta, value); }
+    /// <summary>本機同設定的重複量測統計（次數／範圍／離散度）。</summary>
+    public string RepeatText { get => _repeat; private set => SetProperty(ref _repeat, value); }
+    /// <summary>本次量測期間的溫度／頻率條件；沒取到感測值時為空字串。</summary>
+    public string ConditionText { get => _conditionText; private set => SetProperty(ref _conditionText, value); }
 
     private string _fritzStatus = "可啟動內建原版 Fritz Chess Benchmark 作 16 執行緒對照。";
     public string FritzStatus { get => _fritzStatus; private set => SetProperty(ref _fritzStatus, value); }
 
-    /// <summary>參考對照（示意，非實測）——僅供理解倍率量級，實際數值以本機實測為準。</summary>
-    public IReadOnlyList<ChessRefRow> Reference { get; } = new List<ChessRefRow>
-    {
-        new("Pentium III 1.0 GHz（曦覽基準 1.0×，示意）", "≈ 480 kN/s", "1.0×"),
-        new("雙核心筆電（示意）", "≈ 4,000 kN/s", "≈ 8×"),
-        new("四核心桌機（示意）", "≈ 12,000 kN/s", "≈ 25×"),
-        new("八核心桌機（示意）", "≈ 30,000 kN/s", "≈ 60×"),
-        new("16C／32T 工作站（示意）", "≈ 80,000 kN/s", "≈ 165×"),
-        new("32C／64T 伺服器（示意）", "≈ 160,000 kN/s", "≈ 330×"),
-    };
 
     public void SetThreads(int t) => ThreadCount = t;
     public void SetDuration(int s) => DurationSeconds = s;
@@ -116,12 +120,16 @@ public sealed class ChessBenchService : ObservableObject
         _cts = new CancellationTokenSource();
         var ct = _cts.Token;
         int threads = ThreadCount;
+        _threadsUsed = threads;
+        string config = $"{threads} 執行緒 ・ {DurationSeconds} 秒 ・ 深度 {PerftDepth}";
 
         IsRunning = true;
         Phase = "準備中";
         ProgressFraction = 0;
         StatusLine = "跑分進行中，請避免其他高負載程式以取得穩定結果…";
         SingleKNps = MultiKNps = Speedup = null;
+        SingleDeltaText = MultiDeltaText = RepeatText = ConditionText = "";
+        Conditions.Reset();
 
         var prog = new Progress<double>(p => ProgressFraction = Math.Clamp(p, 0, 1));
         var ip = (IProgress<double>)prog;
@@ -143,17 +151,25 @@ public sealed class ChessBenchService : ObservableObject
             MultiKNps = multi / 1000.0;
 
             Speedup = single > 0 ? multi / single : 0;
-            double factor = multi / 1000.0 / BaselineKNps;
-            if (factor > BestFactor) BestFactor = factor;
+
+            // 記入本機紀錄簿，並據此給出「與上次相比」「重複性」——比較對象只有這台機器自己
+            string cond = Conditions.Text();
+            string singleConfig = $"單執行緒 ・ 深度 {PerftDepth}";
+            ConditionText = cond;
+            Record(KindSingle, "象棋 單執行緒", singleConfig, single / 1000.0, cond);
+            Record(KindMulti, "象棋 多執行緒", config, multi / 1000.0, cond);
+            SingleDeltaText = _log.DeltaText(KindSingle, singleConfig);
+            MultiDeltaText = _log.DeltaText(KindMulti, config);
+            RepeatText = _log.Stats(KindMulti, config).Text;
 
             Phase = "完成";
             ProgressFraction = 1;
-            StatusLine = $"跑分完成 ・ 多執行緒 {multi / 1000.0:#,0} kN/s ・ {factor:0.0}×（相對曦覽 perft 基準，示意）";
+            StatusLine = $"跑分完成 ・ 多執行緒 {multi / 1000.0:#,0} kN/s ・ {RepeatText}";
         }
         catch (OperationCanceledException)
         {
             Phase = "已取消";
-            StatusLine = "跑分已取消。";
+            StatusLine = "跑分已取消（未完成的量測不列入紀錄）。";
         }
         catch (Exception ex)
         {
@@ -166,6 +182,19 @@ public sealed class ChessBenchService : ObservableObject
             _cts?.Dispose();
             _cts = null;
         }
+    }
+
+    private void Record(string kind, string title, string config, double kNps, string conditions)
+    {
+        try
+        {
+            _log.Add(new BenchRun
+            {
+                Kind = kind, Title = title, Config = config, Score = kNps, Unit = "kN/s",
+                HigherIsBetter = true, Format = "#,0", UtcTime = DateTime.UtcNow, Conditions = conditions,
+            });
+        }
+        catch { /* 紀錄失敗不影響已量到的成績 */ }
     }
 
     /// <summary>以指定執行緒數在固定時間內反覆 perft，回傳合計節點/秒。</summary>

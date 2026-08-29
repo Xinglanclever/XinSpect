@@ -1,0 +1,228 @@
+<UserControl x:Class="XinSpect.ScenesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect"
+             FontFamily="{StaticResource AppFont}">
+    <UserControl.Resources>
+        <!-- 深色核取方塊（與風扇頁同一風格） -->
+        <Style x:Key="SceneCheck" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                            <Border x:Name="box" Width="19" Height="19" CornerRadius="5" VerticalAlignment="Center"
+                                    Background="{StaticResource Surface2Brush}"
+                                    BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1.2">
+                                <Path x:Name="check" Width="11" Height="11" Stretch="Uniform"
+                                      Data="M2,8 L6,12 L14,3" Stroke="White" StrokeThickness="2"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" Visibility="Collapsed"/>
+                            </Border>
+                            <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="box" Property="Background" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="check" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- 深色滑桿 -->
+        <Style x:Key="SceneSlider" TargetType="Slider">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="IsMoveToPointEnabled" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid VerticalAlignment="Center">
+                            <Border Height="5" CornerRadius="3" Background="{StaticResource HairlineBrush}"/>
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="Slider.DecreaseLarge" Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="5" CornerRadius="3" Background="{StaticResource AccentBrush}"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="Slider.IncreaseLarge" Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Background="Transparent"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb>
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Ellipse Width="16" Height="16" Fill="White"
+                                                         Stroke="{StaticResource AccentBrush}" StrokeThickness="2.5"/>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <!-- DataContext 設於首個子元素：根元素繫結在 Host.Content 延遲載入時不解析 -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto" DataContext="{Binding Profiles}">
+        <StackPanel Margin="0,0,6,0">
+            <!-- 標題 -->
+            <StackPanel Orientation="Horizontal" Margin="2,0,0,4">
+                <TextBlock Style="{StaticResource Title}" Text="場景設定檔"/>
+                <Border Background="{StaticResource WarningBrush}" CornerRadius="5" Padding="7,2" Margin="12,3,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="真實寫入硬體" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+                </Border>
+            </StackPanel>
+            <TextBlock Style="{StaticResource Subtitle}" Margin="2,0,0,14"
+                       Text="一鍵把風扇曲線、Windows 電源計劃與顯示卡功耗／溫度上限調成同一個取向。缺少的能力（例如無可控風扇或非 NVIDIA 顯示卡）會自動略過並如實說明。"/>
+
+            <!-- 目前狀態 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="目前狀態"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="場景" VerticalAlignment="Center"/>
+                            <Border Background="{StaticResource AccentBrush}" CornerRadius="5" Padding="8,2" Margin="8,0,0,0">
+                                <TextBlock Text="{Binding ActiveName}" Foreground="White" FontSize="11.5" FontWeight="SemiBold"/>
+                            </Border>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="電源計劃" Margin="16,0,0,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding PowerPlanText}" Margin="8,0,0,0" VerticalAlignment="Center"
+                                       FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource PrimaryInkBrush}"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" FontSize="12.5"
+                               Foreground="{StaticResource SecondaryInkBrush}" Text="{Binding StatusText}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 場景卡片 -->
+            <ItemsControl ItemsSource="{Binding Scenes}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                            <StackPanel>
+                                <Grid>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Width="22" Height="22" Stretch="Uniform" VerticalAlignment="Center"
+                                              Fill="{StaticResource AccentBrush}" Data="{Binding IconData}"/>
+                                        <TextBlock Style="{StaticResource SectionHeader}" Text="{Binding Name}" Margin="10,0,0,0"/>
+                                        <Border Background="{StaticResource AccentBrush}" CornerRadius="5" Padding="7,1" Margin="10,1,0,0"
+                                                VerticalAlignment="Center"
+                                                Visibility="{Binding IsActive, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="使用中" FontSize="11" Foreground="White" FontWeight="SemiBold"/>
+                                        </Border>
+                                    </StackPanel>
+                                    <Button Style="{StaticResource PrimaryButton}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                            Content="{Binding ActionText}" Tag="{Binding Key}" Click="Apply_Click"
+                                            IsEnabled="{Binding DataContext.NotBusy, RelativeSource={RelativeSource AncestorType=ScrollViewer}}"/>
+                                </Grid>
+                                <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" FontSize="12.5"
+                                           Foreground="{StaticResource SecondaryInkBrush}" Text="{Binding Summary}"/>
+
+                                <!-- 內建場景：逐項列出會動到什麼 -->
+                                <ItemsControl Margin="0,10,0,0" ItemsSource="{Binding Details}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                <Ellipse Width="5" Height="5" Margin="2,0,9,0" VerticalAlignment="Center"
+                                                         Fill="{StaticResource AccentBrush}"/>
+                                                <TextBlock Text="{Binding}" FontSize="12.5" TextWrapping="Wrap"
+                                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- 自訂場景：可調欄位（外層判斷是否顯示，內層才換成 Custom 的內容） -->
+                                <StackPanel Margin="0,12,0,0" Visibility="{Binding IsCustom, Converter={StaticResource BoolToVis}}">
+                                 <StackPanel DataContext="{Binding DataContext.Custom, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+                                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,12"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="200"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox Grid.Column="0" Style="{StaticResource SceneCheck}" Content="風扇曲線樣板"
+                                                  IsChecked="{Binding ApplyFan, Mode=TwoWay}"/>
+                                        <ComboBox Grid.Column="1" Style="{StaticResource DarkCombo}" Width="150" HorizontalAlignment="Left"
+                                                  IsEnabled="{Binding ApplyFan}"
+                                                  ItemsSource="{Binding Source={x:Static local:FanCurveService.PresetNames}}"
+                                                  SelectedIndex="{Binding FanPreset, Mode=TwoWay}"/>
+                                    </Grid>
+                                    <Grid Margin="0,10,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="200"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox Grid.Column="0" Style="{StaticResource SceneCheck}" Content="Windows 電源計劃"
+                                                  IsChecked="{Binding ApplyPowerPlan, Mode=TwoWay}"/>
+                                        <ComboBox Grid.Column="1" Style="{StaticResource DarkCombo}" Width="150" HorizontalAlignment="Left"
+                                                  IsEnabled="{Binding ApplyPowerPlan}"
+                                                  ItemsSource="{Binding Source={x:Static local:ProfileService.PowerPlanNames}}"
+                                                  SelectedIndex="{Binding PowerPlanIndex, Mode=TwoWay}"/>
+                                    </Grid>
+                                    <CheckBox Margin="0,12,0,0" Style="{StaticResource SceneCheck}"
+                                              Content="顯示卡功耗與溫度上限（需 NVIDIA + NVML）"
+                                              IsChecked="{Binding ApplyGpu, Mode=TwoWay}"/>
+                                    <Grid Margin="0,8,0,0" IsEnabled="{Binding ApplyGpu}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="70"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="70"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="功耗上限" VerticalAlignment="Center"/>
+                                        <Slider Grid.Column="1" Style="{StaticResource SceneSlider}" Margin="10,0,0,0"
+                                                Minimum="50" Maximum="130" Value="{Binding GpuPowerPercent, Mode=TwoWay}"/>
+                                        <TextBlock Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource AccentBrush}"
+                                                   Text="{Binding GpuPowerPercent, StringFormat={}{0:0} %}"/>
+                                        <TextBlock Grid.Column="3" Style="{StaticResource FieldLabel}" Text="溫度上限" Margin="16,0,0,0" VerticalAlignment="Center"/>
+                                        <Slider Grid.Column="4" Style="{StaticResource SceneSlider}" Margin="10,0,0,0"
+                                                Minimum="65" Maximum="93" Value="{Binding GpuTempLimitC, Mode=TwoWay}"/>
+                                        <TextBlock Grid.Column="5" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource AccentBrush}"
+                                                   Text="{Binding GpuTempLimitC, StringFormat={}{0:0} °C}"/>
+                                    </Grid>
+                                 </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- 說明 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,4">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="說明"/>
+                    <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" FontSize="12.5" Foreground="{StaticResource SecondaryInkBrush}"
+                               Text="風扇部分沿用「系統風扇」分頁的曲線引擎，套用後由每秒脈動持續依溫度調速；離開程式時所有接管的風扇都會交回 BIOS。電源計劃以 powercfg 切換，Windows 11 若隱藏了「高效能／最佳效能」，會自動以 duplicatescheme 建立後再切換——這是系統支援的做法，不會改動其他計劃。顯示卡功耗與溫度上限需要 NVIDIA 驅動的 NVML 介面；AMD／Intel 顯示卡會被如實略過。"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

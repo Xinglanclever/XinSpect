@@ -38,9 +38,26 @@ public partial class HistoryGraph : UserControl
     {
         InitializeComponent();
         SizeChanged += (_, _) => Redraw();
-        Loaded += (_, _) => Redraw();
+        Loaded += (_, _) =>
+        {
+            ThemeService.Changed -= OnThemeChanged;   // 重複 Loaded（換分頁重掛）不重覆訂閱
+            ThemeService.Changed += OnThemeChanged;
+            Redraw();
+        };
+        Unloaded += (_, _) => ThemeService.Changed -= OnThemeChanged;
         // 切回本分頁（重新可見）時補畫最新快照；切走時 OnData 會自動略過
         IsVisibleChanged += (_, _) => { if (IsVisible) Redraw(); };
+    }
+
+    /// <summary>
+    /// 換主題／換強調色時重畫。格線用的是資源筆刷會自己變色，但折線、端點與面積漸層是本地物件，
+    /// 且藏在 <c>_lastCol</c> 這個「顏色沒變就不重算」的守衛後面，所以得先把守衛清掉再重畫。
+    /// </summary>
+    private void OnThemeChanged()
+    {
+        if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(OnThemeChanged); return; }
+        _lastCol = Colors.Transparent;
+        Redraw();
     }
 
     public static readonly DependencyProperty HistoryProperty =
@@ -82,10 +99,11 @@ public partial class HistoryGraph : UserControl
         else Dispatcher.BeginInvoke(OnData);
     }
 
+    /// <summary>折線色：未指定 <see cref="Stroke"/> 時跟著目前強調色走。</summary>
     private Color StrokeColor()
     {
         if (Stroke is SolidColorBrush b) return b.Color;
-        return Color.FromRgb(0x39, 0x87, 0xe5);
+        return VizPalette.AccentColor;
     }
 
     /// <summary>建立一次性的視覺物件並依 z 序加入畫布（格線 → 面積 → 折線 → 端點）。</summary>
@@ -93,15 +111,16 @@ public partial class HistoryGraph : UserControl
     {
         if (_built) return;
 
-        var gridBrush = new SolidColorBrush(Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
+        // 共用資源筆刷（換主題時就地變色），淡化一律設在線本身而不是筆刷上——筆刷是全域共用的
+        var gridBrush = VizPalette.Grid;
         for (int i = 0; i < _hGrid.Length; i++)
         {
-            _hGrid[i] = new Line { Stroke = gridBrush, StrokeThickness = 1 };
+            _hGrid[i] = new Line { Stroke = gridBrush, StrokeThickness = 1, Opacity = 0.5 };
             GridLines.Children.Add(_hGrid[i]);
         }
         for (int i = 0; i < _vGrid.Length; i++)
         {
-            _vGrid[i] = new Line { Stroke = gridBrush, StrokeThickness = 1 };
+            _vGrid[i] = new Line { Stroke = gridBrush, StrokeThickness = 1, Opacity = 0.5 };
             GridLines.Children.Add(_vGrid[i]);
         }
 
@@ -182,7 +201,8 @@ public partial class HistoryGraph : UserControl
         ValueText.Text = ShowValue ? (History?.CurrentText ?? "") : "";
 
         var data = History?.Snapshot();
-        if (data is null || data.Length < 2)
+        // 沒有任何真實讀值時（本機沒有這顆感測器）不畫線：否則會出現一條貼底的 0 值曲線，看起來像量測結果
+        if (data is null || data.Length < 2 || History?.HasData != true)
         {
             _area.Visibility = _line.Visibility = _dot.Visibility = Visibility.Collapsed;
             return;

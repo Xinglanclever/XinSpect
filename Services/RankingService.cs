@@ -70,8 +70,6 @@ public sealed class RankingService : ObservableObject
         => o is RankRow r && r.IsLaptop == (_gpuScope == 1)
            && (_gpuFilter.Length == 0 || r.Name.Contains(_gpuFilter, StringComparison.OrdinalIgnoreCase));
 
-    // __RANK_PLACEHOLDER__
-
     private static string? ReadResource(string logicalName)
     {
         var asm = Assembly.GetExecutingAssembly();
@@ -160,17 +158,30 @@ public sealed class RankingService : ObservableObject
     private static int Num(JsonElement e, string name)
         => e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var n) ? n : 0;
 
+    /// <summary>本機處理器在榜單上命中的那一列；近似比對未命中時為 null（此時一律不談名次）。</summary>
+    public RankRow? LocalCpu { get; private set; }
+
+    /// <summary>本機顯示卡在榜單上命中的那一列；近似比對未命中時為 null。</summary>
+    public RankRow? LocalGpu { get; private set; }
+
+    /// <summary>處理器榜單的總筆數（桌機與筆電分開計算，名次百分位才有意義）。</summary>
+    public int CpuTotal(bool laptop) => _cpu.Count(r => r.IsLaptop == laptop);
+
+    /// <summary>顯示卡榜單的總筆數（桌機與筆電分開計算）。</summary>
+    public int GpuTotal(bool laptop) => _gpu.Count(r => r.IsLaptop == laptop);
+
     /// <summary>依本機偵測到的處理器 / 顯示卡名稱，於榜單中比對並高亮最相符的一列（近似比對，僅供參考）。</summary>
     public void Highlight(string? cpuName, string? gpuName)
     {
-        MarkBest(_cpu, cpuName);
-        MarkBest(_gpu, gpuName);
+        // 顯示卡名稱較晚才由感測引擎補到，屆時會只帶 gpuName 再呼叫一次；已命中的結果須保留
+        LocalCpu = MarkBest(_cpu, cpuName) ?? LocalCpu;
+        LocalGpu = MarkBest(_gpu, gpuName) ?? LocalGpu;
     }
 
-    private static void MarkBest(List<RankRow> rows, string? hardwareName)
+    private static RankRow? MarkBest(List<RankRow> rows, string? hardwareName)
     {
         var key = Normalize(hardwareName);
-        if (key.Length < 3) return;
+        if (key.Length < 3) return null;
         RankRow? best = null;
         int bestScore = 0;
         foreach (var r in rows)
@@ -179,11 +190,13 @@ public sealed class RankingService : ObservableObject
             if (s > bestScore) { bestScore = s; best = r; }
         }
         // 需達足夠的重疊字元數才視為命中，避免誤標
-        if (best is not null && bestScore >= 6) best.IsLocal = true;
+        if (best is not null && bestScore >= 6) { best.IsLocal = true; return best; }
+        return null;
     }
 
     // 移除品牌雜訊與符號，保留型號關鍵字（含數字），統一為小寫無空白
-    private static string Normalize(string? s)
+    // （與 MatchScore 同為純字串函式，放寬至 internal 供單元測試驗證比對規則）
+    internal static string Normalize(string? s)
     {
         if (string.IsNullOrWhiteSpace(s)) return "";
         s = s.ToLowerInvariant();
@@ -195,7 +208,7 @@ public sealed class RankingService : ObservableObject
     }
 
     // 以最長共同數字/型號片段的長度近似評估相符程度
-    private static int MatchScore(string a, string b)
+    internal static int MatchScore(string a, string b)
     {
         if (a.Length == 0 || b.Length == 0) return 0;
         if (a.Contains(b) || b.Contains(a)) return Math.Min(a.Length, b.Length);

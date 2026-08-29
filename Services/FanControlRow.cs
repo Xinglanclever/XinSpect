@@ -19,7 +19,8 @@ public sealed class FanControlRow : ObservableObject
         _pct = pct;
         _rpm = rpm;
         Name = index >= 0 ? $"風扇 #{index}" : pct.Name;
-        _setPoint = pct.Value is float v && !float.IsNaN(v) ? System.Math.Clamp(v, 0, 100) : 50;
+        // 讀不到目前輸出時滑桿停在 50%（中間值），但畫面上的「目前」欄仍會顯示「—」，不假裝讀到了
+        _setPoint = SensorSanity.Plausible(pct.SensorType, pct.Value) ?? 50;
     }
 
     /// <summary>風扇顯示名（如「風扇 #2」）。</summary>
@@ -61,8 +62,9 @@ public sealed class FanControlRow : ObservableObject
     /// <summary>每秒由 SensorService.Publish 呼叫，更新目前輸出%與轉速。</summary>
     internal void Tick()
     {
-        CurrentPercent = _pct.Value is float p && !float.IsNaN(p) ? p : double.NaN;
-        _rpmVal = _rpm?.Value is float r && !float.IsNaN(r) ? r : (double?)null;
+        // 與其他讀值走同一道合理性閘門：擋掉哨兵值（如 6553.5%），讀不到就顯示「—」
+        CurrentPercent = SensorSanity.Plausible(_pct.SensorType, _pct.Value) ?? double.NaN;
+        _rpmVal = _rpm is null ? null : SensorSanity.Plausible(_rpm.SensorType, _rpm.Value);
         OnPropertyChanged(nameof(RpmText));
     }
 

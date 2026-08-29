@@ -71,6 +71,84 @@
                 </StackPanel>
             </Border>
 
+            <!-- 升級建議：瓶頸判定 + 依優先度排序的建議 -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="140">
+                <StackPanel>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource ToolButton}" Content="重新分析"
+                                VerticalAlignment="Top" Click="RefreshUpgrade_Click"/>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="升級建議"/>
+                    </DockPanel>
+
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" CornerRadius="4"
+                                Background="{Binding Upgrade.BottleneckSeverity, Converter={StaticResource SeverityToBrush}}"/>
+                        <StackPanel Grid.Column="1" Margin="14,0,0,0">
+                            <TextBlock Text="{Binding Upgrade.Bottleneck}" FontSize="18" FontWeight="SemiBold"
+                                       TextWrapping="Wrap" Foreground="{StaticResource PrimaryInkBrush}"/>
+                            <TextBlock Text="{Binding Upgrade.BottleneckDetail}" TextWrapping="Wrap" Margin="0,5,0,0"
+                                       FontSize="13.5" Foreground="{StaticResource SecondaryInkBrush}"/>
+                            <TextBlock Text="{Binding Upgrade.Confidence}" Style="{StaticResource FieldLabel}"
+                                       TextWrapping="Wrap" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,14,0,0" TextWrapping="Wrap"
+                               Text="目前的讀值還不足以支撐任何一條建議。累積一段時間的歷史記錄（設定頁可開啟）後再回來看會更準——曦覽寧可少說，也不以「一般情況」代替你這台機器的實際數字。"
+                               Visibility="{Binding Upgrade.HasItems, Converter={StaticResource InverseBoolToVis}}"/>
+
+                    <ItemsControl ItemsSource="{Binding Upgrade.Items}" Margin="0,12,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="9" Margin="0,0,0,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="6"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" CornerRadius="9,0,0,9"
+                                                Background="{Binding Severity, Converter={StaticResource SeverityToBrush}}"/>
+                                        <StackPanel Grid.Column="1" Margin="16,12,16,13">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border CornerRadius="4" Padding="7,1" VerticalAlignment="Center"
+                                                        Background="{Binding Severity, Converter={StaticResource SeverityToBrush}}">
+                                                    <TextBlock Text="{Binding PriorityText}" Foreground="White" FontSize="11.5"/>
+                                                </Border>
+                                                <Border CornerRadius="4" Padding="7,1" Margin="7,0,0,0" VerticalAlignment="Center"
+                                                        Background="{StaticResource SurfaceBrush}">
+                                                    <TextBlock Text="{Binding PartText}" Foreground="{StaticResource SecondaryInkBrush}" FontSize="11.5"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding Title}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                                           FontSize="15" FontWeight="SemiBold"
+                                                           Foreground="{StaticResource PrimaryInkBrush}" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Evidence, StringFormat=依據：{0}}" TextWrapping="Wrap"
+                                                       Margin="0,8,0,0" FontSize="13"
+                                                       Foreground="{StaticResource SecondaryInkBrush}"/>
+                                            <TextBlock Text="{Binding Action, StringFormat=做法：{0}}" TextWrapping="Wrap"
+                                                       Margin="0,4,0,0" FontSize="13"
+                                                       Foreground="{StaticResource SecondaryInkBrush}"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                <TextBlock Text="{Binding GainText}" Style="{StaticResource FieldLabel}"/>
+                                                <TextBlock Text="{Binding CostText}" Style="{StaticResource FieldLabel}" Margin="18,0,0,0"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="每條建議的「依據」都是本機實際讀到的數字；讀值不足以支撐的規則會整條跳過。「預期效益」寫的是同類升級的經驗範圍，不是本機實測結果。"
+                               Visibility="{Binding Upgrade.HasItems, Converter={StaticResource BoolToVis}}"/>
+                </StackPanel>
+            </Border>
+
             <TextBlock Style="{StaticResource FieldLabel}" Margin="4,10,0,0"
                        Text="溫度 / 壽命來自感測器與 S.M.A.R.T.；磁碟空間取用量最高的磁碟區。部分裝置或未提供資料。"/>
         </StackPanel>

@@ -93,6 +93,8 @@
                         <TextBlock Text="{Binding VoltageValueText}" HorizontalAlignment="Right" FontSize="15" FontWeight="Bold"
                                    Foreground="{StaticResource PrimaryInkBrush}"/>
                     </Grid>
+                    <!-- 兩條波形同時在畫面上，通道色是「哪一條線」的識別，故固定不隨強調色走；
+                         示波器其餘用色（管面、格線、光暈、讀值）都由這裡的色推導 -->
                     <local:Oscilloscope Height="120" Margin="0,8,0,0"
                                         History="{Binding OscilloVolt}"
                                         TraceBrush="#35E06A" Caption="Vcore 波形"/>

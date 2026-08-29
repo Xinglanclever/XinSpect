@@ -72,7 +72,8 @@ public static class CpuzReportService
 
     // ---- 解析 ----------------------------------------------------------------
 
-    private static void Parse(string[] L, CpuzReport r)
+    // 純文字解析（不啟動任何子行程），放寬至 internal 讓單元測試直接餵入報告行陣列。
+    internal static void Parse(string[] L, CpuzReport r)
     {
         int cpuStart = Header(L, "Processors Information");
         int threadDumps = Header(L, "Thread dumps", cpuStart + 1);
