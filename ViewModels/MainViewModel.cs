@@ -121,6 +121,12 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>記憶體真實面貌：認可尖峰 vs 實體（記憶體分頁卡片，零特權）。</summary>
     public MemoryTruthService MemoryTruth { get; } = new();
 
+    /// <summary>Intel RDT 監測：逐核心 L3 占用與記憶體頻寬（CPU 分頁卡片，需 MSR 寫入）。</summary>
+    public RdtService Rdt { get; } = new();
+
+    /// <summary>Top-down Level 1：逐實體核心的管線四桶歸因（效能分頁卡片，需 PMU 編程）。</summary>
+    public TopDownService TopDown { get; } = new();
+
     /// <summary>計時器地基：QPC 來源、解析度、Invariant TSC（健康分頁卡片，零特權）。</summary>
     public TimerFoundationService TimerFoundation { get; } = new();
 

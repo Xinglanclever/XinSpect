@@ -126,6 +126,8 @@ public sealed class RdtService : ObservableObject, IDisposable
     public void Tick()
     {
         if (!IsRunning) return;
+        // 背景執行緒直接寫 _status 欄位（不能在非 UI 執行緒發通知），所以由這裡代為通知。
+        OnPropertyChanged(nameof(Status));
         (int, double, double, double)[] snap;
         lock (_lock) snap = _snapshot;
         Rows.Clear();

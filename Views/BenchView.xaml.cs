@@ -27,6 +27,7 @@ public partial class BenchView : UserControl
     private LatencyCurveService? LatCurve => Vm?.LatencyCurve;
     private SuperPiService? SuperPi => Vm?.SuperPi;
     private DiskBenchService? DiskBench => Vm?.DiskBench;
+    private TopDownService? TopDown => Vm?.TopDown;
 
     // ===== 綜合效能測試 =====
     private void Dur10_Click(object sender, RoutedEventArgs e) => SetDuration(10);
@@ -114,6 +115,10 @@ public partial class BenchView : UserControl
     // ===== 快取 / 記憶體延遲 =====
     private void CacheStart_Click(object sender, RoutedEventArgs e) => Cache?.Start();
     private void CacheStop_Click(object sender, RoutedEventArgs e) => Cache?.Cancel();
+
+    // ===== Top-down 管線歸因 =====
+    private void TdStart_Click(object sender, RoutedEventArgs e) => TopDown?.Start();
+    private void TdStop_Click(object sender, RoutedEventArgs e) => TopDown?.Cancel();
 
     // ===== 記憶體延遲曲線 =====
     private void LatCurveStart_Click(object sender, RoutedEventArgs e) => LatCurve?.Start();

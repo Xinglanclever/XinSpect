@@ -348,6 +348,110 @@
                 </StackPanel>
             </Border>
 
+            <!-- ===== Top-down 管線歸因（PMU 實測） ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="195">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="管線歸因 Top-down（PMU 實測）"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button x:Name="TdStop" Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
+                                    Click="TdStop_Click" IsEnabled="{Binding TopDown.IsRunning}"/>
+                            <Button x:Name="TdStart" Style="{StaticResource PrimaryButton}" Content="開始取樣"
+                                    Click="TdStart_Click" IsEnabled="{Binding TopDown.CanStart}"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,4" TextWrapping="Wrap"
+                               Text="直接編程 Intel PMU 的四個通用計數器，量測「目前系統正在跑的負載」把每周期 4 個發射插槽花在哪裡：退休／錯誤推測／前端受限／後端受限。這不是跑分——它量的是此刻的真實負載，不會自己製造負載。"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,0,0,10" TextWrapping="Wrap"
+                               Text="誠實界線：① 錯誤推測一桶不含 INT_MISC.RECOVERY_CYCLES 項（硬體只有 4 個通用計數器，五個事件放不下），故該桶略微低估、後端受限略微高估。② 逐實體核心序列取樣，各核心的取樣時間點不同，非同一瞬間的快照。③ 以 AnyThread 量整顆實體核心（SMT 兩執行緒合計），因為前端事件本質是核心層事件。④ 取樣前後完整存讀並還原 PERFEVTSEL0–3 與 GLOBAL_CTRL，不變動作業系統正在使用的固定計數器；若同時有 VTune／PCM 在用計數器，兩者會互相覆蓋。"/>
+
+                    <ItemsControl ItemsSource="{Binding TopDown.Buckets}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,10" Margin="0,0,0,6">
+                                    <StackPanel>
+                                        <Grid>
+                                            <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Name}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding PercentText}" FontSize="18" HorizontalAlignment="Right"
+                                                       Foreground="{StaticResource PrimaryInkBrush}"/>
+                                        </Grid>
+                                        <ProgressBar Style="{StaticResource LoadBar}" Maximum="1" Margin="0,6,0,0"
+                                                     Value="{Binding BarFraction, Mode=OneWay}"/>
+                                        <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap" Text="{Binding Note}"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <UniformGrid Rows="1" Columns="2" Margin="0,4,0,0">
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="每周期退休插槽" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding TopDown.SlotsRetiredText}" FontSize="20" Margin="0,2,0,0"
+                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="解讀" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding TopDown.VerdictText}" Margin="0,2,0,0" TextWrapping="Wrap"
+                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+
+                    <ProgressBar Style="{StaticResource LoadBar}" Margin="0,12,0,0" Value="{Binding TopDown.ProgressPercent, Mode=OneWay}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding TopDown.StatusLine}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap" Text="{Binding TopDown.SupportText}"/>
+
+                    <!-- 逐實體核心明細 -->
+                    <Grid Margin="0,10,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="66"/>
+                            <ColumnDefinition Width="66"/>
+                            <ColumnDefinition Width="66"/>
+                            <ColumnDefinition Width="66"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="實體核心"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}" Text="退休占比"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" Text="退休" TextAlignment="Right"/>
+                        <TextBlock Grid.Column="3" Style="{StaticResource FieldLabel}" Text="錯誤推測" TextAlignment="Right"/>
+                        <TextBlock Grid.Column="4" Style="{StaticResource FieldLabel}" Text="前端" TextAlignment="Right"/>
+                        <TextBlock Grid.Column="5" Style="{StaticResource FieldLabel}" Text="後端" TextAlignment="Right"/>
+                    </Grid>
+                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,4"/>
+                    <ItemsControl ItemsSource="{Binding TopDown.Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="26">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="66"/>
+                                        <ColumnDefinition Width="66"/>
+                                        <ColumnDefinition Width="66"/>
+                                        <ColumnDefinition Width="66"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Style="{StaticResource FieldValue}" Text="{Binding CoreText}"/>
+                                        <TextBlock Style="{StaticResource Subtitle}" FontSize="10" Text="{Binding LpText}"/>
+                                    </StackPanel>
+                                    <ProgressBar Grid.Column="1" Style="{StaticResource LoadBar}" Maximum="1" VerticalAlignment="Center"
+                                                 Margin="0,0,10,0" Value="{Binding BarFraction, Mode=OneWay}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding RetiringText}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding BadSpecText}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" Text="{Binding FrontendText}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="5" Style="{StaticResource FieldValue}" Text="{Binding BackendText}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <!-- ===== 快取 / 記憶體延遲 ===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="200">
                 <StackPanel>

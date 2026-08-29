@@ -335,6 +335,78 @@
                 </StackPanel>
             </Border>
 
+            <!-- ===== Intel RDT 監測（逐核心 L3 占用與記憶體頻寬） ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="L3 占用與記憶體頻寬（Intel RDT）"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
+                                    Click="RdtStop_Click" IsEnabled="{Binding Rdt.IsRunning}"/>
+                            <Button Style="{StaticResource PrimaryButton}" Content="開始監測"
+                                    Click="RdtStart_Click" IsEnabled="{Binding Rdt.CanStart}"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,4" TextWrapping="Wrap"
+                               Text="全核指派同一個 RMID（PQR_ASSOC），每秒逐核心經 QM_EVTSEL／QM_CTR 讀 L3 快取占用（即時值）與記憶體頻寬（區間差分）。占用量以 CPUID 0x0F.1 的 upscaling 換算成位元組，與 Linux resctrl 的 mon_scale 是同一個值。"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,0,0,10" TextWrapping="Wrap"
+                               Text="誠實界線：RMID 全核統一指派，因此得到的是「全系統＋逐核心」視角，做不到逐行程歸屬（那需要核心層的 RMID 排程）。QM_CTR 回報 Error／Unavailable 旗標時顯示「—」，絕不把錯誤碼當讀值。若整片為 0，最可能是本機 BIOS／平台未開放 RDT 監測——那就如實顯示 0。"/>
+                    <UniformGrid Rows="1" Columns="2" Margin="0,0,0,6">
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="全系統記憶體頻寬" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding Rdt.TotalBwText}" FontSize="20" Margin="0,2,0,0"
+                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="狀態" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding Rdt.Status}" Margin="0,2,0,0" TextWrapping="Wrap"
+                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,0,0,6" TextWrapping="Wrap" Text="{Binding Rdt.SupportText}"/>
+                    <Grid Margin="0,4,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="70"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="110"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="邏輯處理器"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}" Text="L3 占用"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" Text="占用量" TextAlignment="Right"/>
+                        <TextBlock Grid.Column="3" Style="{StaticResource FieldLabel}" Text="總頻寬" TextAlignment="Right"/>
+                        <TextBlock Grid.Column="4" Style="{StaticResource FieldLabel}" Text="本機頻寬" TextAlignment="Right"/>
+                    </Grid>
+                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,4"/>
+                    <ItemsControl ItemsSource="{Binding Rdt.Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="24">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="110"/>
+                                        <ColumnDefinition Width="110"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldValue}" Text="{Binding Lp}" VerticalAlignment="Center"/>
+                                    <ProgressBar Grid.Column="1" Style="{StaticResource LoadBar}" Maximum="1" VerticalAlignment="Center"
+                                                 Margin="0,0,10,0" Value="{Binding BarFraction, Mode=OneWay}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding OccupancyText}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding TotalBwText}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" Text="{Binding LocalBwText}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <!-- ===== CPUID 晶片直讀 ===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
