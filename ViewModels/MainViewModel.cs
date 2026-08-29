@@ -87,6 +87,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>記憶體延遲曲線：半倍頻步進的指標追逐，邊界由曲線推導並與 CPUID 宣稱並列。</summary>
     public LatencyCurveService LatencyCurve { get; } = new();
 
+    /// <summary>SMBIOS 原始表全解：插槽使用狀態、記憶體條序號／型號／Rank 等 WMI 未轉譯的欄位。</summary>
+    public SmbiosService Smbios { get; } = new();
+
     /// <summary>記憶體圖樣檢測（寫入／回讀比對，抓卡死位元、鄰位干擾與位址解碼錯誤）。</summary>
     public MemoryTestService MemTest { get; } = new();
 

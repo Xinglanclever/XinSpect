@@ -283,6 +283,63 @@
                                Text="這不是 MemTest86 的替代品：作業系統的虛擬記憶體讓程式無法指定實體位址，也碰不到已被系統與其他行程佔用的頁面，因此本檢測只覆蓋當下配置得到的那一段——通過不代表整條記憶體沒問題，但只要出現一處不符，那就是真的量到了。要徹底確認請在開機前環境跑滿整條記憶體。"/>
                 </StackPanel>
             </Border>
+
+            <!-- ===== SMBIOS 記憶體裝置（Type 17 直讀）===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="SMBIOS 記憶體裝置"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="直讀韌體 Type 17 結構：每條記憶體的插槽位置、標稱／設定速度、序號、型號與 Rank——這些是韌體回報的資料（位移核對 dmidecode 3.x），未填的欄位顯示「—」。"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Smbios.MemoryArray.Count, Mode=OneWay, StringFormat=記憶體陣列資訊（{0} 組）}"/>
+                    <ItemsControl ItemsSource="{Binding Smbios.MemoryArray}" Margin="0,2,0,8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Style="{StaticResource FieldValue}" Margin="0,1">
+                                    <Run Text="{Binding Key, Mode=OneWay}"/>
+                                    <Run Text="{Binding Value, Mode=OneWay}"/>
+                                </TextBlock>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ItemsControl ItemsSource="{Binding Smbios.MemoryDevices}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="8" Padding="12,8" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <Grid>
+                                            <TextBlock FontWeight="SemiBold" Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding Locator}"/>
+                                            <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource PrimaryInkBrush}"
+                                                       Text="{Binding Size}"/>
+                                        </Grid>
+                                        <Grid Margin="0,4,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="150"/><ColumnDefinition Width="150"/>
+                                                <ColumnDefinition Width="150"/><ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Type}"/>
+                                            <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}">
+                                                <Run Text="標稱 "/><Run Text="{Binding Speed, Mode=OneWay}"/>
+                                            </TextBlock>
+                                            <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}">
+                                                <Run Text="設定 "/><Run Text="{Binding Configured, Mode=OneWay}"/>
+                                            </TextBlock>
+                                            <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding Bank}"/>
+                                        </Grid>
+                                        <TextBlock Style="{StaticResource FieldValue}" Margin="0,3,0,0" TextWrapping="Wrap"
+                                                   Text="{Binding Manufacturer, StringFormat=製造商：{0}}"/>
+                                        <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"
+                                                   Text="{Binding Part, StringFormat=型號：{0}}"/>
+                                        <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"
+                                                   Text="{Binding Serial, StringFormat=序號：{0}}"/>
+                                        <TextBlock Style="{StaticResource FieldValue}"
+                                                   Text="{Binding Rank, StringFormat=Rank：{0}}"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

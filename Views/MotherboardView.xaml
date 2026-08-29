@@ -130,6 +130,97 @@
 
             <TextBlock Style="{StaticResource FieldLabel}" Margin="4,14,0,0" TextWrapping="Wrap"
                        Text="主機板深度規格由背景 CPU-Z 報告解析（約開機後 10 餘秒）；製造商與型號另以 WMI 補入。若部分欄位為「—」，表示該平台未提供或報告尚在讀取。"/>
+
+            <!-- ===== SMBIOS 原始表 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="SMBIOS 原始表"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="直接解析韌體的 SMBIOS 表（位移核對 dmidecode 3.x）。沒填的欄位顯示「—」；不認得的列舉值顯示原始位元組，不硬掰。"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Smbios.VersionText, StringFormat=表版本：{0}}"/>
+                    <ItemsControl ItemsSource="{Binding Smbios.Bios}" Margin="0,6,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Key}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Value}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ItemsControl ItemsSource="{Binding Smbios.System}" Margin="0,6,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Key}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Value}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ItemsControl ItemsSource="{Binding Smbios.Board}" Margin="0,6,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Key}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Value}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ItemsControl ItemsSource="{Binding Smbios.Processor}" Margin="0,6,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Key}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Value}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,12,0,4"
+                               Text="{Binding Smbios.Slots.Count, Mode=OneWay, StringFormat=系統插槽（{0} 個）}"/>
+                    <Grid Margin="0,0,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/><ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="110"/><ColumnDefinition Width="90"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource ColHead}" Text="插槽"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="類型"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="寬度"/>
+                        <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="狀態"/>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Smbios.Slots}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="24">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150"/><ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="110"/><ColumnDefinition Width="90"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Designation}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Type}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding Width}"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding Usage}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>
