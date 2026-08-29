@@ -40,7 +40,6 @@ public sealed class DpcLatencyService : ObservableObject, IDisposable
 
     private TraceEventSession? _session;
     private CancellationTokenSource? _cts;
-    private Thread? _pump;
     private readonly object _lock = new();
     private readonly Dictionary<(string Module, string Kind), long> _counts = new();
     private readonly List<double> _rateSamples = [];
