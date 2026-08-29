@@ -81,6 +81,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>核心到核心延遲矩陣：原子交換往返延遲的 N×N 熱圖（CPU 分頁卡片，使用者手動觸發）。</summary>
     public CoreLatencyService CoreLatency { get; } = new();
 
+    /// <summary>CPUID 晶片直讀：快取幾何、指令集位元、標稱頻率與拓樸（CPU 分頁卡片，建構即讀取、零特權）。</summary>
+    public CpuIdService CpuId { get; } = new();
+
     /// <summary>記憶體圖樣檢測（寫入／回讀比對，抓卡死位元、鄰位干擾與位址解碼錯誤）。</summary>
     public MemoryTestService MemTest { get; } = new();
 

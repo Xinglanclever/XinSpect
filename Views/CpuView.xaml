@@ -334,6 +334,97 @@
                                Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding HoverText, ElementName=Heat}"/>
                 </StackPanel>
             </Border>
+
+            <!-- ===== CPUID 晶片直讀 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="CPUID 晶片直讀"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="以 .NET 內建的 CPUID 指令直接問矽晶片：快取真實幾何、指令集位元、標稱頻率與拓樸層級。超出最大葉位的葉絕不讀取（會回傳無意義值）；讀不到的項目顯示「—」。"/>
+                    <ItemsControl ItemsSource="{Binding CpuId.Info}" Margin="0,0,0,12">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="200"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Key}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Value}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="快取幾何（leaf 0x04，實測容量＝路數×分割×行×集合）"/>
+                    <Grid Margin="0,4,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110"/><ColumnDefinition Width="90"/><ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="70"/><ColumnDefinition Width="80"/><ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="70"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource ColHead}" Text="層級"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="容量"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="相聯度"/>
+                        <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="行大小"/>
+                        <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="集合數"/>
+                        <TextBlock Grid.Column="5" Style="{StaticResource ColHead}" Text="共用"/>
+                        <TextBlock Grid.Column="6" Style="{StaticResource ColHead}" Text="含括"/>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding CpuId.Caches}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="110"/><ColumnDefinition Width="90"/><ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="70"/><ColumnDefinition Width="80"/><ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="70"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Level}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Capacity}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding Ways}"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding Line}"/>
+                                    <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" Text="{Binding Sets}"/>
+                                    <TextBlock Grid.Column="5" Style="{StaticResource FieldValue}" Text="{Binding Shared}"/>
+                                    <TextBlock Grid.Column="6" Style="{StaticResource FieldValue}" Text="{Binding Inclusive}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,12,0,4" Text="{Binding CpuId.FrequencyText, StringFormat=標稱頻率：{0}}"/>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="拓樸層級（0x1F／0x0B）"/>
+                    <ItemsControl ItemsSource="{Binding CpuId.Topology}" Margin="0,4,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Style="{StaticResource FieldValue}" Margin="0,2">
+                                    <Run Text="{Binding Leaf, Mode=OneWay}"/>
+                                    <Run Text="{Binding Level, Mode=OneWay}"/>
+                                    <Run Text="{Binding Count, Mode=OneWay}"/>
+                                    <Run Text="{Binding Shift, Mode=OneWay}"/>
+                                </TextBlock>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,12,0,4"
+                               Text="{Binding CpuId.Features.Count, Mode=OneWay, StringFormat=指令集與功能位元（{0} 項支援）}"/>
+                    <ItemsControl ItemsSource="{Binding CpuId.Features}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="6" Padding="8,3" Margin="0,0,6,6"
+                                        ToolTip="{Binding Source}">
+                                    <TextBlock FontSize="12" Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding Name}"/>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>
