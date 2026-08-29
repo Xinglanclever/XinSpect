@@ -13,6 +13,7 @@ public sealed class SettingsService : ObservableObject
     private static readonly string FilePath = Path.Combine(Dir, "settings.json");
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string RunValue = "XinSpect";
+    private const string TaskName = "XinSpect";   // 工作排程器上的排定名稱
 
     private bool _loading;   // 載入期間不觸發存檔，避免逐欄寫檔
 
@@ -22,7 +23,8 @@ public sealed class SettingsService : ObservableObject
     public int UpdateIntervalSec { get => _updateIntervalSec; set { if (SetProperty(ref _updateIntervalSec, Math.Clamp(value, 1, 10))) Save(); } }
 
     private bool _startWithWindows;
-    /// <summary>開機時自動啟動（寫入 HKCU Run 機碼；僅影響目前使用者，可還原）。</summary>
+    /// <summary>開機時自動啟動：以工作排程器註冊「登入觸發・最高權限」排定工作（requireAdministrator
+    /// 的程式掛 HKCU Run 在登入時會被 UAC 擋下，形同不生效）；僅影響目前使用者，可還原。</summary>
     public bool StartWithWindows { get => _startWithWindows; set { if (SetProperty(ref _startWithWindows, value)) { ApplyAutoStart(value); Save(); } } }
 
     private int _defaultEra;
@@ -289,7 +291,61 @@ public sealed class SettingsService : ObservableObject
         catch { /* 存檔失敗（權限/磁碟）不影響執行期設定 */ }
     }
 
+    // ── 開機自啟 ───────────────────────────────────────────────────────────
+    //
+    // requireAdministrator 的程式掛在 HKCU Run，登入時無法靜默通過 UAC、Windows 會直接擋下，
+    // 形同不生效。故改以工作排程器註冊「登入觸發＋最高權限」的排定工作（COM API：僅註冊者本人
+    // 登入時觸發、互動權杖、不設執行時限），登入即可靜默啟動。排程不可用（受限環境）時退回
+    // HKCU Run（行為同 1.3.1）；走排程時一律清掉 Run 舊值，避免兩個入口重複啟動。
     private static void ApplyAutoStart(bool enable)
+    {
+        try
+        {
+            bool viaTask = enable ? RegisterLogonTask() : DeleteLogonTask();
+            ApplyRunKey(viaTask ? false : enable);
+        }
+        catch { /* 開機自啟為選用；失敗不影響其餘設定 */ }
+    }
+
+    private static bool RegisterLogonTask()
+    {
+        try
+        {
+            var exe = Environment.ProcessPath;
+            if (string.IsNullOrEmpty(exe)) return false;
+
+            // Task Scheduler COM 以動態繫結操作，毋須額外套件；常數取自 TASK_* 列舉。
+            dynamic ts = Activator.CreateInstance(Type.GetTypeFromProgID("Schedule.Service")!)!;
+            ts.Connect();
+            dynamic td = ts.NewTask(0);
+            td.Principal.RunLevel = 1;               // TASK_RUNLEVEL_HIGHEST
+            td.Principal.LogonType = 3;              // TASK_LOGON_INTERACTIVE_TOKEN
+            td.Settings.DisallowStartIfOnBatteries = false;
+            td.Settings.StopIfGoingOnBatteries = false;
+            td.Settings.ExecutionTimeLimit = "PT0S"; // 監控常駐：取消預設的 72 小時執行時限
+            td.Triggers.Create(9);                   // TASK_TRIGGER_LOGON（僅註冊者本人登入）
+            dynamic action = td.Actions.Create(0);   // TASK_ACTION_EXEC
+            action.Path = exe;
+            ts.GetFolder("\\").RegisterTaskDefinition(TaskName, td, 6, null, null, 3);   // TASK_CREATE_OR_UPDATE
+            return true;
+        }
+        catch { return false; }
+    }
+
+    private static bool DeleteLogonTask()
+    {
+        try
+        {
+            dynamic ts = Activator.CreateInstance(Type.GetTypeFromProgID("Schedule.Service")!)!;
+            ts.Connect();
+            ts.GetFolder("\\").DeleteTask(TaskName, 0);
+            return true;
+        }
+        catch { return false; }   // 工作不存在或環境受限 → 視為未走排程，交由 Run 機碼處理
+    }
+
+    // 退路與清理：HKCU Run 機碼（排程不可用時沿用舊機制；亦用於清掉 1.3.1 之前寫入的殘留值）
+    private static void ApplyRunKey(bool enable)
     {
         try
         {
@@ -302,6 +358,6 @@ public sealed class SettingsService : ObservableObject
             }
             else key.DeleteValue(RunValue, throwOnMissingValue: false);
         }
-        catch { /* 開機自啟為選用；寫入登錄失敗（權限）不影響其餘設定 */ }
+        catch { /* 寫入登錄失敗（權限）不影響其餘設定 */ }
     }
 }

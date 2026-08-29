@@ -1,11 +1,13 @@
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Threading;
 
 namespace XinSpect;
 
 /// <summary>
-/// 應用程式進入點。除了 WPF 樣板外，這裡只負責一件事：<b>攔住所有沒人接的例外</b>，
-/// 把它落地成紀錄並讓使用者知道，而不是讓視窗無聲消失或帶著壞掉的狀態繼續跑。
+/// 應用程式進入點。除了 WPF 樣板外，這裡負責兩件事：<b>單一執行個體防護</b>，以及
+/// <b>攔住所有沒人接的例外</b>——把它落地成紀錄並讓使用者知道，而不是讓視窗無聲消失或帶著壞掉的狀態繼續跑。
 /// </summary>
 public partial class App : Application
 {
@@ -13,9 +15,25 @@ public partial class App : Application
     private const int MaxDialogs = 3;
 
     private int _dialogs;
+    /// <summary>具名信號須跟著行程活著，GC 前被收走等於沒防護；存欄位維持引用。</summary>
+    private EventWaitHandle? _singleInstance;
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // 單一執行個體：開兩份會重複開 Ring0 驅動、競寫同一份歷史與設定、系統匣出現兩顆圖示。
+        // 已有實例時把它帶到前景（縮在系統匣時由使用者自圖示開啟），然後結束自己。
+        _singleInstance = new EventWaitHandle(true, EventResetMode.AutoReset,
+            @"Local\XinSpect.SingleInstance", out bool createdNew);
+        if (!createdNew)
+        {
+            BringExistingToFront();
+            MessageBox.Show(
+                "曦覽已在執行中，僅能開啟一份。\n若主視窗不在畫面上，請由系統匣圖示開啟。",
+                "曦覽 XinSpect", MessageBoxButton.OK, MessageBoxImage.Information);
+            Shutdown();
+            return;
+        }
+
         // UI 執行緒（多半可續跑）
         DispatcherUnhandledException += OnDispatcherException;
         // 任何執行緒的致命例外（行程即將結束，只能留下紀錄）
@@ -24,6 +42,26 @@ public partial class App : Application
         TaskScheduler.UnobservedTaskException += OnTaskException;
 
         base.OnStartup(e);
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+
+    // 把既有實例的主視窗帶到前景；縮到系統匣（視窗隱藏）時帶不到，僅靠提示文字引導。
+    private static void BringExistingToFront()
+    {
+        try
+        {
+            var other = Process.GetProcessesByName("XinSpect")
+                .FirstOrDefault(p => p.Id != Environment.ProcessId && p.MainWindowHandle != IntPtr.Zero);
+            if (other is null) return;
+            ShowWindowAsync(other.MainWindowHandle, 9);   // SW_RESTORE
+            SetForegroundWindow(other.MainWindowHandle);
+        }
+        catch { /* 帶不到前景也無妨，僅靠提示 */ }
     }
 
     private void OnDispatcherException(object? sender, DispatcherUnhandledExceptionEventArgs e)

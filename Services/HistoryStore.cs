@@ -553,7 +553,8 @@ public sealed class HistoryStore : IDisposable
                 }
             }
         }
-        File.Copy(tmp, FilePath, true);
+        // File.Move（同磁碟）比 File.Copy 原子：中途斷電不會在 FilePath 留下半截內容
+        File.Move(tmp, FilePath, overwrite: true);
         try { File.Delete(tmp); } catch { }
     }
 }

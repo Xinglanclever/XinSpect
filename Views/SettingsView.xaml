@@ -265,7 +265,7 @@
                     </Grid>
 
                     <CheckBox Style="{StaticResource SetCheck}" Margin="0,14,0,0"
-                              Content="開機時自動啟動（登錄 HKCU Run，僅目前使用者、可還原）"
+                              Content="開機時自動啟動（工作排程器・最高權限，登入靜默啟動、可還原）"
                               IsChecked="{Binding Settings.StartWithWindows, Mode=TwoWay}"/>
 
                     <Grid Margin="0,14,0,0">
