@@ -78,6 +78,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>快取 / 記憶體延遲測試（指標追逐法，推估 L1/L2/L3/RAM 延遲）。</summary>
     public CacheBenchService Cache { get; } = new();
 
+    /// <summary>核心到核心延遲矩陣：原子交換往返延遲的 N×N 熱圖（CPU 分頁卡片，使用者手動觸發）。</summary>
+    public CoreLatencyService CoreLatency { get; } = new();
+
     /// <summary>記憶體圖樣檢測（寫入／回讀比對，抓卡死位元、鄰位干擾與位址解碼錯誤）。</summary>
     public MemoryTestService MemTest { get; } = new();
 

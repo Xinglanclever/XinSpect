@@ -1,3 +1,15 @@
+using System.Windows;
 using System.Windows.Controls;
+
 namespace XinSpect;
-public partial class CpuView : UserControl { public CpuView() => InitializeComponent(); }
+
+public partial class CpuView : UserControl
+{
+    public CpuView() => InitializeComponent();
+
+    private MainViewModel? Vm => DataContext as MainViewModel;
+
+    // ===== 核心到核心延遲 =====
+    private void CoreLatencyStart_Click(object sender, RoutedEventArgs e) => Vm?.CoreLatency.Start();
+    private void CoreLatencyStop_Click(object sender, RoutedEventArgs e) => Vm?.CoreLatency.Cancel();
+}

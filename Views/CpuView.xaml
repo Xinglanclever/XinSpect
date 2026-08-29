@@ -311,6 +311,29 @@
                     </ItemsControl>
                 </StackPanel>
             </Border>
+
+            <!-- ===== 核心到核心延遲 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="核心到核心延遲"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
+                                    Click="CoreLatencyStop_Click" IsEnabled="{Binding CoreLatency.IsRunning}"/>
+                            <Button Style="{StaticResource PrimaryButton}" Content="開始量測"
+                                    Click="CoreLatencyStart_Click" IsEnabled="{Binding CoreLatency.CanStart}"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="兩個執行緒各自釘在指定的邏輯處理器上，對同一條快取線做原子交換，量其往返延遲（多輪取中位數，ns）。可看出 SMT 兄弟（同實體核）、同 mesh 與跨 mesh 的層次差異。量測期間參與的邏輯處理器滿載；僅支援單一處理器群組（≤64 邏輯處理器）。"/>
+                    <ProgressBar Style="{StaticResource LoadBar}" Value="{Binding CoreLatency.ProgressPercent, Mode=OneWay}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding CoreLatency.StatusLine}"/>
+                    <local:CoreLatencyHeatmap x:Name="Heat" Margin="0,10,0,0" MinHeight="300"
+                                              Data="{Binding CoreLatency.MatrixNs}" Lps="{Binding CoreLatency.Lps}"/>
+                    <TextBlock Margin="0,4,0,0" FontSize="13" TextWrapping="Wrap"
+                               Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding HoverText, ElementName=Heat}"/>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>
