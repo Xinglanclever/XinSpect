@@ -22,6 +22,9 @@ public sealed class TimerFoundationService : ObservableObject
     [DllImport("ntdll.dll")]
     private static extern uint NtQueryTimerResolution(out uint minRes, out uint maxRes, out uint currentRes);
 
+    [DllImport("kernel32.dll")]
+    private static extern bool QueryPerformanceFrequency(out long frequency);
+
     private bool _loading;
     public bool IsLoading { get => _loading; private set { if (SetProperty(ref _loading, value)) OnPropertyChanged(nameof(CanRefresh)); } }
     public bool CanRefresh => !_loading;
