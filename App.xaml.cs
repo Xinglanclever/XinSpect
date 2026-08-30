@@ -66,7 +66,9 @@ public partial class App : Application
     /// 完成信號刻意在 UI 執行緒<b>真的顯示完視窗之後</b>才設定，不是收到請求就先回報。
     /// 因為第二份實例拿這個信號當「可以安靜退場了」的依據——若這裡提前回報，UI 執行緒卡住時
     /// 使用者會什麼都沒看到；照實回報，對方逾時就會退回提示文字。
-    /// 視窗還沒建好（啟動途中）時同樣不回報，理由一樣。
+    ///
+    /// 請求信號是 AutoReset，被讀掉就沒有第二次。而「啟動途中就被再點一次」正是主視窗還沒建好的時刻，
+    /// 若當下直接放棄，這次請求就白白消失，對方只能乾等到逾時看提示。故在這裡自行重試到視窗出現為止。
     /// </remarks>
     private void StartActivationListener()
     {
@@ -79,18 +81,45 @@ public partial class App : Application
                 try
                 {
                     request.WaitOne();
-                    Shell.BeginOnUi(() =>
+                    // 上限 2 秒，仍在對方 3 秒逾時之內；等不到就讓對方走提示文字那條路
+                    for (int i = 0; i < 20; i++)
                     {
-                        if (Shell.Main is not { } w) return;
-                        w.RestoreToForeground();
-                        try { _activateDone?.Set(); } catch { /* 對方已放棄等待 */ }
-                    });
+                        if (TryShowMainWindow())
+                        {
+                            try { _activateDone?.Set(); } catch { /* 對方已放棄等待 */ }
+                            break;
+                        }
+                        Thread.Sleep(100);
+                    }
                 }
                 catch (Exception ex) { Diag.Swallow("等待喚回主視窗的信號", ex, "本次不再接聽喚回請求"); return; }
             }
         })
         { IsBackground = true, Name = "XinActivate" };
         t.Start();
+    }
+
+    /// <summary>在 UI 執行緒上把主視窗顯示出來；視窗還沒建好回 false（由呼叫端決定要不要再等）。</summary>
+    /// <remarks>用同步 <c>Invoke</c> 而非 <c>BeginOnUi</c>，因為呼叫端要知道「到底顯示成功了沒有」
+    /// 才能決定回報完成或繼續重試。UI 執行緒不會反過來等這個執行緒，沒有互鎖風險。</remarks>
+    private static bool TryShowMainWindow()
+    {
+        var d = Shell.Dispatcher;
+        if (d is null) return false;
+        try
+        {
+            return d.Invoke(() =>
+            {
+                if (Shell.Main is not { } w) return false;
+                w.RestoreToForeground();
+                return true;
+            });
+        }
+        catch (Exception ex)
+        {
+            Diag.Swallow("喚回主視窗", ex, "本次喚回未完成，第二份實例會改以提示文字引導");
+            return false;
+        }
     }
 
     /// <summary>

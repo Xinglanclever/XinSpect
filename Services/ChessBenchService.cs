@@ -249,15 +249,24 @@ public sealed class ChessBenchService : ObservableObject
                 : $"⚠ {rounds:#,0} 輪中有 {faults:#,0} 輪節點數不等於 {leaves:#,0}。"
                   + "perft 節點數是數學常數，算出別的數就是這台機器算錯了——先查超頻穩定度、記憶體與散熱，分數暫時不必看。";
 
-            // 記入本機紀錄簿；比較對象只有這台機器自己，且同引擎同深度才算同一件事
+            // 記入本機紀錄簿；比較對象只有這台機器自己，且同引擎同深度才算同一件事。
+            // 逐輪核對有出錯就一律不記：算錯的速率不是成績。寫進去會污染 Delta、重複性統計與
+            // AI 讀到的分數，取消時都說「未完成的量測不列入紀錄」，算錯更沒有理由留下。
             string cond = Conditions.Text();
             string singleConfig = $"單執行緒 ・ {NameOf(kind)} ・ 深度 {depth}";
             ConditionText = cond;
-            Record(KindSingle, $"{NameOf(kind)} 單執行緒", singleConfig, one.NodesPerSec / 1000.0, cond);
-            Record(KindMulti, $"{NameOf(kind)} 多執行緒", config, all.NodesPerSec / 1000.0, cond);
-            SingleDeltaText = _log.DeltaText(KindSingle, singleConfig);
-            MultiDeltaText = _log.DeltaText(KindMulti, config);
-            RepeatText = _log.Stats(KindMulti, config).Text;
+            if (faults == 0)
+            {
+                Record(KindSingle, $"{NameOf(kind)} 單執行緒", singleConfig, one.NodesPerSec / 1000.0, cond);
+                Record(KindMulti, $"{NameOf(kind)} 多執行緒", config, all.NodesPerSec / 1000.0, cond);
+                SingleDeltaText = _log.DeltaText(KindSingle, singleConfig);
+                MultiDeltaText = _log.DeltaText(KindMulti, config);
+                RepeatText = _log.Stats(KindMulti, config).Text;
+            }
+            else
+            {
+                SingleDeltaText = MultiDeltaText = RepeatText = "本次偵測到運算錯誤，這筆不列入紀錄簿。";
+            }
 
             Phase = faults == 0 ? "完成" : "完成（但算錯）";
             ProgressFraction = 1;
