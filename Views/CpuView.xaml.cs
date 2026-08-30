@@ -36,6 +36,9 @@ public partial class CpuView : UserControl
         Vm?.Rdt.Stop();
     }
 
+    // ===== 頻率真相 =====
+    private void FreqTruthRead_Click(object sender, RoutedEventArgs e) => Vm?.FreqTruth.Start();
+
     // ===== 黏滯節流位元 =====
     private void StickyRead_Click(object sender, RoutedEventArgs e) => Vm?.ThermalSticky.Refresh();
 

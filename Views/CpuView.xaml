@@ -407,6 +407,98 @@
                 </StackPanel>
             </Border>
 
+            <!-- ===== 頻率真相（倍頻表、實際 BCLK、逐核有效時脈） ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="頻率真相（倍頻表與實際 BCLK）"/>
+                        <Button Style="{StaticResource PrimaryButton}" Content="讀取並量測" HorizontalAlignment="Right"
+                                VerticalAlignment="Center" Click="FreqTruthRead_Click" IsEnabled="{Binding FreqTruth.CanStart}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,4" TextWrapping="Wrap"
+                               Text="全部來自 MSR 直讀與實測，不解析任何第三方報告：0xCE（PLATFORM_INFO）給基頻／最低效能倍頻與倍頻是否解鎖；0x10（TSC）對 QPC 實測 TSC 頻率，除以基頻倍頻得到實際 BCLK（不假設 100 MHz）；0x1AD／0x1AE 給渦輪倍頻表；0xE7／0xE8（MPERF／APERF）差分給逐邏輯處理器的有效時脈。"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,0,0,10" TextWrapping="Wrap"
+                               Text="誠實界線：倍頻表是「目前的設定」而非原廠規格——BIOS 解鎖改過就是改過的值，本工具不還原成規格書數字。有效時脈是取樣窗內的平均，不是瞬時峰值。「黃金核心」需要 HWP 的逐核心 Highest Performance（MSR 0x771）；讀不到就不宣稱任何一顆是黃金核心。"/>
+                    <UniformGrid Rows="1" Columns="4" Margin="0,0,0,6">
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="實際 BCLK" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding FreqTruth.BclkText}" FontSize="20" Margin="0,2,0,0"
+                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="實測 TSC 頻率" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding FreqTruth.TscText}" FontSize="20" Margin="0,2,0,0"
+                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="基頻倍頻" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding FreqTruth.BaseText}" FontSize="17" Margin="0,2,0,0"
+                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                <TextBlock Text="{Binding FreqTruth.MinText}" Style="{StaticResource Subtitle}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="倍頻鎖定" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding FreqTruth.UnlockText}" Margin="0,2,0,0" TextWrapping="Wrap"
+                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap" Text="{Binding FreqTruth.Status}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap" Text="{Binding FreqTruth.HwpText}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap" Text="{Binding FreqTruth.CrossCheckText}"/>
+
+                    <TextBlock Text="渦輪倍頻表" Style="{StaticResource FieldLabel}" Margin="0,12,0,0"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,6" TextWrapping="Wrap" Text="{Binding FreqTruth.TurboNote}"/>
+                    <ItemsControl ItemsSource="{Binding FreqTruth.TurboRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="24" Opacity="{Binding Opacity}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="110"/>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="110"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldValue}" Text="{Binding CoresText}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding RatioText}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding FreqText}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource Subtitle}" Text="{Binding Note}" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Text="逐邏輯處理器有效時脈（實測）" Style="{StaticResource FieldLabel}" Margin="0,12,0,0"/>
+                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,4,0,4"/>
+                    <ItemsControl ItemsSource="{Binding FreqTruth.ClockRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="24">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="110"/>
+                                        <ColumnDefinition Width="110"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldValue}" Text="{Binding LpText}" VerticalAlignment="Center"/>
+                                    <ProgressBar Grid.Column="1" Style="{StaticResource LoadBar}" Maximum="1" VerticalAlignment="Center"
+                                                 Margin="0,0,10,0" Value="{Binding BarFraction, Mode=OneWay}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding MhzText}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding RatioText}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <!-- ===== CPUID 晶片直讀 ===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>

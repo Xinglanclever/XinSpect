@@ -127,6 +127,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>Top-down Level 1：逐實體核心的管線四桶歸因（效能分頁卡片，需 PMU 編程）。</summary>
     public TopDownService TopDown { get; } = new();
 
+    /// <summary>頻率真相：倍頻表、實測 BCLK、逐核有效時脈（CPU 分頁卡片，MSR 唯讀）。</summary>
+    public FrequencyTruthService FreqTruth { get; } = new();
+
     /// <summary>計時器地基：QPC 來源、解析度、Invariant TSC（健康分頁卡片，零特權）。</summary>
     public TimerFoundationService TimerFoundation { get; } = new();
 
