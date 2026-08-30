@@ -23,15 +23,10 @@ public partial class ToolboxView : UserControl
             Vm?.Toolbox.Launch(tool);
     }
 
-    // ── 內建硬體檢測的五顆按鈕已改由工具目錄的「曦覽內建」那一組驅動
-    //    （ToolboxService 的 BuiltinWindow 項目），避免同一件事在兩個地方各寫一份。──
-
-    // 點選「曦覽內建：<頁名>」：跳到本程式自己涵蓋同一件事的那一頁。
-    private void Native_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: ToolItem tool } && tool.Native is { Length: > 0 } key)
-            ToolboxService.NavigateTo(key);
-    }
+    // ── 工具箱不做導覽 ────────────────────────────────────────────
+    //    1.6.2 起這一頁沒有任何「跳到曦覽某頁」或「開啟內建檢測視窗」的按鈕：
+    //    硬體檢測搬到「實用工具 → 硬體檢測」，其餘自家功能本來就在左側欄與 Ctrl+K。
+    //    「曦覽內建：X」只是一枚不可點的對照標籤（見 ToolboxView.xaml），不需事件處理。──
 
     // 清除搜尋詞與「只看曦覽做得到的」篩選。
     private void ClearFilter_Click(object sender, RoutedEventArgs e) => Vm?.Toolbox.ClearFilter();

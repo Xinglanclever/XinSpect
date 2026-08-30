@@ -35,14 +35,15 @@
         <StackPanel>
             <TextBlock Style="{StaticResource SectionHeader}" Text="工具箱"/>
 
-            <!-- ===== 工具目錄（曦覽內建 ＋ Windows 內建 ＋ 第三方導向） =====
-                 「曦覽內建」那一組不是裝飾：它是這個工具箱與一般「整合包」的分別——
-                 先講清楚哪些事本程式自己就做得到，第三方項目再逐一標注曦覽的對應頁與其不足。 -->
+            <!-- ===== 工具目錄（Windows 內建 ＋ 第三方導向） =====
+                 1.6.2 起這裡不再放曦覽自己的功能按鈕：那些頁面本來就在左側欄與 Ctrl+K 裡，
+                 在工具箱再擺一排跳頁鈕只是同一件事出現兩次。自家功能改以不可點的
+                 「曦覽內建：X」標籤掛在對應的第三方項目旁，當作「這個你不必再裝」的註記。 -->
             <Border Style="{StaticResource Card}" local:Anim.RevealDelay="0">
                 <StackPanel>
                     <TextBlock Style="{StaticResource SectionHeader}" Text="工具目錄"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
-                               Text="三種來源混編：標「曦覽內建」的由本程式自己完成；Windows 內建工具一鍵開啟；第三方工具一律導向官方下載頁，本程式不內含任何外部執行檔。第三方項目若有對應的內建功能，右側會多一顆「曦覽內建：…」按鈕可直接前往，滑過主按鈕的提示會誠實寫出兩者差在哪。"/>
+                               Text="兩種來源混編：Windows 內建工具一鍵開啟；第三方工具一律導向官方下載頁，本程式不內含任何外部執行檔。若曦覽已經做到同一件事，項目旁會掛一枚「曦覽內建：…」標籤（僅供對照，不可點；該頁請由左側欄或 Ctrl+K 前往），滑過主按鈕的提示會誠實寫出兩者差在哪。"/>
 
                     <Grid Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
@@ -56,7 +57,7 @@
                         <CheckBox Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="13"
                                   Foreground="{StaticResource SecondaryInkBrush}"
                                   Content="只看曦覽做得到的"
-                                  ToolTip="只留下曦覽自己有做的項目，以及有對應內建功能的第三方工具——用來確認哪些軟體其實不必再裝。"
+                                  ToolTip="只留下曦覽已經做到同一件事的項目——用來確認哪些軟體其實不必再裝。"
                                   IsChecked="{Binding Toolbox.OnlyBuiltin, Mode=TwoWay}"/>
                         <Button Grid.Column="2" Style="{StaticResource ToolButton}" Margin="12,0,0,0"
                                 Content="清除" Click="ClearFilter_Click" ToolTip="清空搜尋詞與篩選"/>
@@ -80,10 +81,16 @@
                                                     <Button Style="{StaticResource ToolButton}"
                                                             Content="{Binding Name}" ToolTip="{Binding Tip}"
                                                             Tag="{Binding}" Click="Tool_Click"/>
-                                                    <Button Style="{StaticResource ToolButton}" Margin="4,0,0,0"
-                                                            Content="{Binding NativeLabel}" ToolTip="{Binding NativeTip}"
-                                                            Tag="{Binding}" Click="Native_Click"
-                                                            Visibility="{Binding HasNative, Converter={StaticResource BoolToVis}}"/>
+                                                    <!-- 「曦覽內建：X」是標籤而非按鈕：工具箱不做導覽（左側欄與 Ctrl+K 才是），
+                                                         它只回答「這個第三方工具我還需不需要裝」。 -->
+                                                    <Border Margin="4,0,0,0" VerticalAlignment="Center" Padding="8,5"
+                                                            CornerRadius="6" Background="{StaticResource Surface2Brush}"
+                                                            BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1"
+                                                            ToolTip="{Binding NativeTip}"
+                                                            Visibility="{Binding HasNative, Converter={StaticResource BoolToVis}}">
+                                                        <TextBlock Text="{Binding NativeLabel}" FontSize="12"
+                                                                   Foreground="{StaticResource SecondaryInkBrush}"/>
+                                                    </Border>
                                                     <Button Style="{StaticResource ToolButton}" Margin="4,0,0,0"
                                                             Content="{Binding SlotLabel}" ToolTip="{Binding SlotTip}"
                                                             Tag="{Binding}" Click="Slot_Click"

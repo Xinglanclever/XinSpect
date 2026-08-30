@@ -5,7 +5,7 @@ namespace XinSpect.Tests;
 /// <summary>
 /// 工具箱搜尋核心（<see cref="ToolboxFilter"/>）與工具目錄本身的一致性測試。
 /// 後者最重要的一項是「<see cref="ToolItem.Native"/> 指的頁面鍵真的存在」——
-/// 打錯一個字不會編譯失敗，只會讓那顆「曦覽內建：…」按鈕悄悄消失，正是需要測試盯著的失敗模式。
+/// 打錯一個字不會編譯失敗，只會讓那枚「曦覽內建：…」標籤悄悄消失，正是需要測試盯著的失敗模式。
 /// </summary>
 public class ToolboxFilterTests
 {
@@ -96,22 +96,35 @@ public class ToolboxFilterTests
     }
 
     [Fact]
-    public void 內建項目的Target都指得到真實的頁面或檢測視窗()
+    public void 工具箱不再放曦覽自己的功能()
     {
+        // 1.6.2 起工具箱只有 Windows 內建工具與第三方導向；自家功能一律走左側欄與 Ctrl+K，
+        // 這裡只留不可點的「曦覽內建：X」對照標籤。若有人又把跳頁項目塞回來，這條會擋下。
         var svc = new ToolboxService();
-        string[] windows = ["screen", "mouse", "keyboard", "speaker", "motion"];
-        var bad = svc.Tools.Where(t => t.Kind == ToolKind.Builtin && PageRegistry.FindAny(t.Target) is null)
-            .Concat(svc.Tools.Where(t => t.Kind == ToolKind.BuiltinWindow && !windows.Contains(t.Target)))
-            .Select(t => $"{t.Name} → {t.Target}")
+        var bad = svc.Tools
+            .Where(t => t.Kind is not (ToolKind.System or ToolKind.WebLink or ToolKind.DetectApp))
+            .Select(t => $"{t.Name}（{t.Kind}）")
             .ToList();
-        Assert.True(bad.Count == 0, "以下內建項目的 Target 無效：\n" + string.Join("\n", bad));
+        Assert.True(bad.Count == 0, "工具箱不該有非「系統／網頁／偵測」類的項目：\n" + string.Join("\n", bad));
+        Assert.DoesNotContain("曦覽內建", svc.Tools.Select(t => t.Group));
     }
 
     [Fact]
-    public void 內建項目不提供插槽()
+    public void 五項全螢幕檢測都在實用工具裡找得到()
+    {
+        // 檢測從工具箱搬到「實用工具 → 硬體檢測」；這一頁不存在的話那五項就徹底沒有入口了。
+        var def = PageRegistry.FindUtility("hwtest");
+        Assert.NotNull(def);
+        Assert.Equal("硬體檢測", def.Title);
+        foreach (var kw in new[] { "螢幕", "壞點", "滑鼠", "鍵盤", "喇叭", "動態" })
+            Assert.Contains(kw, def.Keywords);
+    }
+
+    [Fact]
+    public void Windows內建工具不提供插槽()
     {
         var svc = new ToolboxService();
-        Assert.All(svc.Tools.Where(t => t.IsBuiltin), t => Assert.False(t.CanSlot));
+        Assert.All(svc.Tools.Where(t => t.Kind == ToolKind.System), t => Assert.False(t.CanSlot));
     }
 
     [Fact]
@@ -125,9 +138,10 @@ public class ToolboxFilterTests
     public void 只看內建會濾掉沒有對應功能的第三方項目()
     {
         var svc = new ToolboxService { OnlyBuiltin = true };
-        Assert.All(svc.FilteredGroups.SelectMany(g => g.Items), t => Assert.True(t.IsBuiltin || t.HasNative));
-        Assert.True(svc.FilteredGroups.SelectMany(g => g.Items).Count() < svc.Tools.Count,
-                    "篩選後應少於全部項目，否則等於篩選沒有作用。");
+        Assert.All(svc.FilteredGroups.SelectMany(g => g.Items), t => Assert.True(t.HasNative));
+        var kept = svc.FilteredGroups.SelectMany(g => g.Items).Count();
+        Assert.True(kept > 0, "應該還留得下有自家對應頁面的項目，否則這個篩選沒有意義。");
+        Assert.True(kept < svc.Tools.Count, "篩選後應少於全部項目，否則等於篩選沒有作用。");
     }
 
     [Fact]

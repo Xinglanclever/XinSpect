@@ -189,7 +189,7 @@ public static class PageRegistry
                      + "C0.5,9.1 1,12.1 3,14.1 c1.9,1.9 4.6,2.4 6.9,1.5 l9.1,9.1 c0.4,0.4 1,0.4 1.4,0 l2.3,-2.3 c0.5,-0.4 0.5,-1.1 0.1,-1.5 z",
             Factory = () => new ToolboxView(),
             Hint = "Windows 內建工具與第三方工具導向",
-            Keywords = ["toolbox", "工具箱", "圖吧", "檢測"],
+            Keywords = ["toolbox", "工具箱", "圖吧", "下載"],
         },
         new()
         {
@@ -361,6 +361,18 @@ public static class PageRegistry
             IconData = "M2,2 h5 v3 h-5 z M9,2 h5 v5 h-5 z M2,7 h5 v7 h-5 z M9,9 h5 v5 h-5 z",
             Factory = () => new DpcLatencyView(),
             Hint = "排出造成音訊爆音／輸入停頓的肇事驅動（ETW）", Keywords = ["dpc", "isr", "延遲", "latency", "爆音", "驅動", "latencymon"],
+        },
+        new()
+        {
+            // 螢幕壞點、滑鼠、鍵盤、喇叭、動態五項全螢幕檢測。1.6.2 前掛在工具箱的「曦覽內建」組裡，
+            // 現已全部移到這裡（工具箱不再有任何內建按鈕）。
+            Key = "hwtest", Title = "硬體檢測", Group = GTools,
+            IconData = "M1,2 h14 v9 h-14 z M2.2,3.2 h11.6 v6.6 h-11.6 z M5,5 h1.8 v1.8 h-1.8 z "
+                     + "M9.2,6.6 h1.8 v1.8 h-1.8 z M6.5,11.6 h3 v1.4 h-3 z M4.3,13.4 h7.4 v1.1 h-7.4 z",
+            Factory = () => new HardwareTestView(),
+            Hint = "螢幕壞點／滑鼠／鍵盤／喇叭／動態五項全螢幕檢測（原生、不連網）",
+            Keywords = ["hardware test", "硬體檢測", "螢幕", "熒屏", "壞點", "亮點", "dead pixel", "滑鼠", "mouse",
+                        "鍵盤", "keyboard", "防鬼鍵", "nkro", "喇叭", "speaker", "聲道", "動態", "拖影", "testufo"],
         },
     ];
 

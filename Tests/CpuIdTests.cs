@@ -23,7 +23,7 @@ public class CpuIdTests
     [Fact]
     public void 快取子葉解碼_典型L1資料快取()
     {
-        // type=1（資料）level=1 共用2核；8 路、1 分割、64B 行、64 集合 → 32 KB
+        // type=1（資料）level=1，EAX 25:14＝1 → 最多 2 個邏輯處理器可定址；8 路、1 分割、64B 行、64 集合 → 32 KB
         uint eax = 1 | (1u << 5) | (1u << 14);
         uint ebx = (7u << 22) | 63u;
         var row = CpuIdService.Decoder.DecodeCacheSubleaf(eax, ebx, 63, 0);
@@ -33,8 +33,32 @@ public class CpuIdTests
         Assert.Equal("8 路", row.Ways);
         Assert.Equal("64 B", row.Line);
         Assert.Equal("64", row.Sets);
-        Assert.Equal("2 核共用", row.Shared);
+        // 欄位數的是邏輯處理器（且向上取 2 的冪次），不是核心；措辭必須是執行緒上界
+        Assert.Equal("最多 2 執行緒", row.Shared);
+        // L1 之下沒有更低階快取，含括性對它無意義
         Assert.Equal("—", row.Inclusive);
+    }
+
+    [Fact]
+    public void 快取子葉_含括性只看EDX位1_不看位0()
+    {
+        // level=3（L3）、EAX 25:14＝63 → 最多 64 個邏輯處理器（18C/36T 機器實測值）
+        uint eax = 3 | (3u << 5) | (63u << 14);
+        uint ebx = (10u << 22) | 63u;
+
+        // EDX＝0：位 1 為 0 → 非含括。1.6.2 之前誤用位 0 當判據，於此會顯示「—」
+        var noninc = CpuIdService.Decoder.DecodeCacheSubleaf(eax, ebx, 1023, 0);
+        Assert.NotNull(noninc);
+        Assert.Equal("最多 64 執行緒", noninc.Shared);
+        Assert.Equal("非含括", noninc.Inclusive);
+
+        // 只設位 0（WBINVD／INVD 行為）不該讓它變成含括
+        var wbinvdOnly = CpuIdService.Decoder.DecodeCacheSubleaf(eax, ebx, 1023, 0x1);
+        Assert.Equal("非含括", wbinvdOnly!.Inclusive);
+
+        // 設位 1 才是含括下層
+        var inclusive = CpuIdService.Decoder.DecodeCacheSubleaf(eax, ebx, 1023, 0x2);
+        Assert.Equal("含括", inclusive!.Inclusive);
     }
 
     [Fact]
@@ -50,13 +74,23 @@ public class CpuIdTests
     }
 
     [Fact]
-    public void 拓樸子葉_核心層級十八個()
+    public void 拓樸子葉_核心層數的是每封裝邏輯處理器數()
     {
-        var row = CpuIdService.Decoder.DecodeTopologySubleaf(5, 18, 2u << 8, 1);
+        // 18 核 36 執行緒：核心層的 EBX 15:0 ＝ 36（每封裝的邏輯處理器數），不是 36 個核心
+        var row = CpuIdService.Decoder.DecodeTopologySubleaf(6, 36, 2u << 8, 1);
         Assert.NotNull(row);
-        Assert.Equal("核心", row.Level);
-        Assert.Equal("18 個", row.Count);
-        Assert.Equal("右移 5 bits", row.Shift);
+        Assert.Equal("核心層", row.Level);
+        Assert.Equal("36 個邏輯處理器", row.Count);
+        Assert.Equal("APIC ID 右移 6 bits", row.Shift);
+    }
+
+    [Fact]
+    public void 拓樸子葉_SMT層數的是每核心執行緒數()
+    {
+        var row = CpuIdService.Decoder.DecodeTopologySubleaf(1, 2, 1u << 8, 0);
+        Assert.NotNull(row);
+        Assert.Equal("執行緒（SMT）層", row.Level);
+        Assert.Equal("2 個邏輯處理器", row.Count);
     }
 
     [Fact]

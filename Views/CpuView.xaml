@@ -524,7 +524,7 @@
                     <Grid Margin="0,4,0,2">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="110"/><ColumnDefinition Width="90"/><ColumnDefinition Width="80"/>
-                            <ColumnDefinition Width="70"/><ColumnDefinition Width="80"/><ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="70"/><ColumnDefinition Width="80"/><ColumnDefinition Width="140"/>
                             <ColumnDefinition Width="70"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Style="{StaticResource ColHead}" Text="層級"/>
@@ -532,8 +532,8 @@
                         <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="相聯度"/>
                         <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="行大小"/>
                         <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="集合數"/>
-                        <TextBlock Grid.Column="5" Style="{StaticResource ColHead}" Text="共用"/>
-                        <TextBlock Grid.Column="6" Style="{StaticResource ColHead}" Text="含括"/>
+                        <TextBlock Grid.Column="5" Style="{StaticResource ColHead}" Text="共用上界"/>
+                        <TextBlock Grid.Column="6" Style="{StaticResource ColHead}" Text="含括下層"/>
                     </Grid>
                     <ItemsControl ItemsSource="{Binding CpuId.Caches}">
                         <ItemsControl.ItemTemplate>
@@ -541,7 +541,7 @@
                                 <Grid Margin="0,2">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="110"/><ColumnDefinition Width="90"/><ColumnDefinition Width="80"/>
-                                        <ColumnDefinition Width="70"/><ColumnDefinition Width="80"/><ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="70"/><ColumnDefinition Width="80"/><ColumnDefinition Width="140"/>
                                         <ColumnDefinition Width="70"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Level}"/>
@@ -555,6 +555,8 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,6,0,0" TextWrapping="Wrap"
+                               Text="「共用上界」是 CPUID 給的可定址邏輯處理器數（EAX 25:14＋1），硬體會向上取到 2 的冪次，只能當上界看：18 核 36 執行緒的 L3 會回「最多 64 執行緒」，那不代表有 64 個核心。「含括下層」讀 EDX 位 1；L1 之下沒有更低階快取，這一欄對它沒有意義，故留「—」。"/>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,12,0,4" Text="{Binding CpuId.FrequencyText, StringFormat=標稱頻率：{0}}"/>
 
@@ -571,6 +573,8 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,6,0,0" TextWrapping="Wrap"
+                               Text="每一列的數字是「該層在上一層範圍內的邏輯處理器數」（EBX 15:0），不是那一層有幾個實例：SMT 層是每個核心的執行緒數，核心層是每個封裝的邏輯處理器數（18 核 36 執行緒會回 36）。"/>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,12,0,4"
                                Text="{Binding CpuId.Features.Count, Mode=OneWay, StringFormat=指令集與功能位元（{0} 項支援）}"/>

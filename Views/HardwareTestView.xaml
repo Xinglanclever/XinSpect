@@ -1,0 +1,107 @@
+<UserControl x:Class="XinSpect.HardwareTestView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect"
+             FontFamily="{StaticResource AppFont}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,6,0">
+        <StackPanel>
+            <!-- 標題 -->
+            <StackPanel Margin="2,0,0,10">
+                <TextBlock Style="{StaticResource SectionHeader}" Text="硬體檢測"/>
+                <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
+                           Text="五項全螢幕檢測，全部由曦覽自己實作：純原生輸入／顯示事件，不連網、不需要安裝任何外部程式。每一項都會另開一個全螢幕視窗，按 Esc 隨時離開。"/>
+            </StackPanel>
+
+            <!-- 螢幕 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,10" local:Anim.RevealDelay="0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Style="{StaticResource FieldValue}" FontSize="16" Text="螢幕檢測"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,12,0" TextWrapping="Wrap"
+                                   Text="全螢幕純色循環（黑／白／紅／綠／藍／灰），用來找亮點、暗點（壞點）、漏光與背光不均。滑鼠點擊或方向鍵換色，Esc 離開。"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" VerticalAlignment="Center"
+                            Content="開始檢測" Tag="screen" Click="Test_Click"
+                            ToolTip="開啟全螢幕純色檢測（Esc 離開）"/>
+                </Grid>
+            </Border>
+
+            <!-- 滑鼠 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,10" local:Anim.RevealDelay="60">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Style="{StaticResource FieldValue}" FontSize="16" Text="滑鼠檢測"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,12,0" TextWrapping="Wrap"
+                                   Text="左／右／中／側鍵與滾輪逐一確認，畫出移動軌跡並估計回報率；連點抖動（同一下被讀成兩下）會直接標出來。Esc 離開。"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" VerticalAlignment="Center"
+                            Content="開始檢測" Tag="mouse" Click="Test_Click"
+                            ToolTip="開啟滑鼠按鍵／滾輪／回報率檢測（Esc 離開）"/>
+                </Grid>
+            </Border>
+            <!-- 鍵盤 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,10" local:Anim.RevealDelay="120">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Style="{StaticResource FieldValue}" FontSize="16" Text="鍵盤檢測"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,12,0" TextWrapping="Wrap"
+                                   Text="虛擬鍵盤逐鍵確認觸發與鍵碼，並統計同時按下的鍵數，用來看這把鍵盤到底能不能防鬼鍵（NKRO）。Esc 離開。"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" VerticalAlignment="Center"
+                            Content="開始檢測" Tag="keyboard" Click="Test_Click"
+                            ToolTip="開啟逐鍵／防鬼鍵檢測（Esc 離開）"/>
+                </Grid>
+            </Border>
+
+            <!-- 喇叭 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,10" local:Anim.RevealDelay="180">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Style="{StaticResource FieldValue}" FontSize="16" Text="喇叭檢測"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,12,0" TextWrapping="Wrap"
+                                   Text="即時合成左／右／雙聲道測試音與 20 Hz～20 kHz 掃頻，確認接線、左右聲道是否對調與有無破音。1～5 選音、S 停止、Esc 離開。"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" VerticalAlignment="Center"
+                            Content="開始檢測" Tag="speaker" Click="Test_Click"
+                            ToolTip="開啟聲道與掃頻檢測（Esc 離開）"/>
+                </Grid>
+            </Border>
+            <!-- 動態 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,10" local:Anim.RevealDelay="240">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Style="{StaticResource FieldValue}" FontSize="16" Text="動態檢測"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,12,0" TextWrapping="Wrap"
+                                   Text="移動條判讀拖影與過衝，同時實測每一幀的呈現間隔、長幀次數與中斷（TestUFO 的原生替代，不需連網）。← → 調速、↑ ↓ 換背景、空白鍵暫停、R 重設、Esc 離開。"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" VerticalAlignment="Center"
+                            Content="開始檢測" Tag="motion" Click="Test_Click"
+                            ToolTip="開啟拖影與幀間隔檢測（Esc 離開）"/>
+                </Grid>
+            </Border>
+
+            <TextBlock x:Name="Status" Style="{StaticResource Subtitle}" Margin="4,4,0,8" TextWrapping="Wrap"
+                       Text="檢測視窗會蓋滿整個螢幕；若使用多螢幕，它會出現在曦覽所在的那一面。"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

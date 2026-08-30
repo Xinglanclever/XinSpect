@@ -208,6 +208,10 @@
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="ItemContainerStyle" Value="{StaticResource NavItem}"/>
         <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+        <!-- 改用像素捲動：側邊欄有分組，邏輯捲動下「一個單位」＝一整個 GroupItem，
+             滑鼠滾一格（3 單位）會直接跳過三整組、看起來像一滾就到底。39 個項目
+             不需要虛擬化，關掉 CanContentScroll 換回逐像素、緩慢向下的手感。 -->
+        <Setter Property="ScrollViewer.CanContentScroll" Value="False"/>
     </Style>
 
     <!-- 命令面板結果列（2.0）：無邊框、選取時以強調色底線＋亮色文字標示 -->

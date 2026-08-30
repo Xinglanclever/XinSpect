@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.IO;
-using System.Windows;
 
 namespace XinSpect;
 
@@ -13,11 +12,6 @@ public enum ToolKind
     WebLink,
     /// <summary>偵測是否已安裝：找到則啟動，否則開啟官方下載頁。</summary>
     DetectApp,
-    /// <summary>曦覽自己做的功能：<see cref="ToolItem.Target"/> 為
-    /// <see cref="PageRegistry"/> 的頁面鍵（主頁面或「實用工具」子頁皆可），點選即跳頁。</summary>
-    Builtin,
-    /// <summary>曦覽自己做的全螢幕硬體檢測視窗（<see cref="ToolItem.Target"/> 為視窗代號）。</summary>
-    BuiltinWindow,
 }
 
 /// <summary>單一工具箱項目。</summary>
@@ -26,8 +20,7 @@ public sealed class ToolItem : ObservableObject
     public required string Name { get; init; }
     public required string Description { get; init; }
     public required ToolKind Kind { get; init; }
-    /// <summary>System：可執行檔 / .msc / .cpl 名稱；WebLink／DetectApp：URL；
-    /// Builtin：PageRegistry 頁面鍵；BuiltinWindow：檢測視窗代號。</summary>
+    /// <summary>System：可執行檔 / .msc / .cpl 名稱；WebLink／DetectApp：URL。</summary>
     public required string Target { get; init; }
     /// <summary>DetectApp：候選安裝路徑（找到即啟動）。</summary>
     public string[] Candidates { get; init; } = Array.Empty<string>();
@@ -42,28 +35,27 @@ public sealed class ToolItem : ObservableObject
     /// <summary>對照說明：曦覽的那一頁做到什麼、以及與這個第三方工具的差別（誠實寫出不足）。</summary>
     public string? NativeNote { get; init; }
 
-    /// <summary>本身就是曦覽做的功能（跳頁或開檢測視窗）。</summary>
-    public bool IsBuiltin => Kind is ToolKind.Builtin or ToolKind.BuiltinWindow;
-
     /// <summary>有標註曦覽的對應頁面（且該頁確實存在於註冊表中）。</summary>
     public bool HasNative => Native is { Length: > 0 } && PageRegistry.FindAny(Native) is not null;
 
-    /// <summary>對應頁面的顯示標題（供徽章文字與搜尋比對）。</summary>
+    /// <summary>對應頁面的顯示標題（供標籤文字與搜尋比對）。</summary>
     public string NativeTitle => Native is { Length: > 0 } ? PageRegistry.FindAny(Native)?.Title ?? "" : "";
 
-    /// <summary>對應頁面徽章的文字。</summary>
+    /// <summary>對應頁面標籤的文字。</summary>
     public string NativeLabel => $"曦覽內建：{NativeTitle}";
 
-    /// <summary>對應頁面徽章的提示（帶誠實的差異說明）。</summary>
+    /// <summary>對應頁面標籤的提示（帶誠實的差異說明）。
+    /// 1.6.2 起這只是一枚說明用的標籤，不再是可點的跳頁按鈕——工具箱不做導覽，
+    /// 導覽一律走左側欄與 Ctrl+K；這裡的價值是告訴你「這個第三方工具其實不必再裝」。</summary>
     public string NativeTip => string.IsNullOrEmpty(NativeNote)
-        ? $"曦覽的「{NativeTitle}」頁已涵蓋同一件事，點此直接前往。"
-        : $"曦覽的「{NativeTitle}」頁已涵蓋同一件事，點此直接前往。\n\n{NativeNote}";
+        ? $"曦覽的「{NativeTitle}」頁已涵蓋同一件事（可由左側欄或 Ctrl+K 前往）。"
+        : $"曦覽的「{NativeTitle}」頁已涵蓋同一件事（可由左側欄或 Ctrl+K 前往）。\n\n{NativeNote}";
 
     /// <summary>主按鈕的提示：說明加上（若有）與曦覽自家功能的差異對照。</summary>
     public string Tip => string.IsNullOrEmpty(NativeNote) ? Description : $"{Description}\n\n{NativeNote}";
 
-    /// <summary>是否可裝入本機執行檔（Windows 內建工具與曦覽自己的功能都不需要插槽）。</summary>
-    public bool CanSlot => Kind is not (ToolKind.System or ToolKind.Builtin or ToolKind.BuiltinWindow);
+    /// <summary>是否可裝入本機執行檔（Windows 內建工具不需要插槽）。</summary>
+    public bool CanSlot => Kind is not ToolKind.System;
 
     private string? _slotPath;
     /// <summary>使用者裝入插槽的本機可執行檔路徑（下載後「裝進去」，之後主鈕即直接啟動它）。</summary>
@@ -101,10 +93,9 @@ public sealed class ToolGroup
 }
 
 /// <summary>
-/// 系統工具箱。三種來源刻意混在同一份目錄裡並標明出處：
-/// ①「曦覽內建」——本程式自己實作的功能，點了就在程式內完成，不需要下載任何東西；
-/// ② Windows 內建診斷 / 管理工具的一鍵啟動；
-/// ③ 第三方硬體工具的「偵測並啟動，未安裝則前往官方下載」。
+/// 系統工具箱。兩種來源刻意混在同一份目錄裡並標明出處：
+/// ① Windows 內建診斷 / 管理工具的一鍵啟動；
+/// ② 第三方硬體工具的「偵測並啟動，未安裝則前往官方下載」。
 /// 基於安全與授權考量，本程式不內含任何第三方執行檔，一律導向官方來源，
 /// 避免第三方整合包可能夾帶的廣告或風險軟體。
 /// <para>
@@ -112,6 +103,11 @@ public sealed class ToolGroup
 /// 並在 <see cref="ToolItem.NativeNote"/> 誠實寫出兩者差別——包含曦覽做不到的部分。
 /// 這是本工具箱與「整合包」的分別：目的是讓使用者知道哪些工具其實不必再裝，
 /// 而不是把清單堆長。
+/// </para>
+/// <para>
+/// 1.6.2 起工具箱<b>不再放曦覽自己的功能</b>：那些頁面本來就在左側欄與 Ctrl+K 裡，
+/// 在這裡再擺一排跳頁鈕只是同一件事出現兩次。自家功能只以「曦覽內建：X」標籤出現在
+/// 對應的第三方項目旁邊，當作「這個你不必再裝」的註記，不可點。
 /// </para>
 /// </summary>
 public sealed class ToolboxService : ObservableObject
@@ -121,49 +117,6 @@ public sealed class ToolboxService : ObservableObject
 
     public IReadOnlyList<ToolItem> Tools { get; } = new List<ToolItem>
     {
-        // ── 曦覽內建（本程式自己做的，點了就在程式內完成）──────────
-        new() { Group = "曦覽內建", Name = "螢幕檢測",       Description = "全螢幕純色循環，檢查亮點／暗點（壞點）、漏光與背光均勻度。按 Esc 離開。",
-                Kind = ToolKind.BuiltinWindow, Target = "screen", Keywords = ["dead pixel", "壞點", "亮點", "螢幕", "純色"] },
-        new() { Group = "曦覽內建", Name = "滑鼠檢測",       Description = "測試左／右／中／側鍵、滾輪與移動軌跡，估計回報率並偵測連點抖動。按 Esc 離開。",
-                Kind = ToolKind.BuiltinWindow, Target = "mouse", Keywords = ["mouse", "滑鼠", "雙擊", "回報率", "polling"] },
-        new() { Group = "曦覽內建", Name = "鍵盤檢測",       Description = "虛擬鍵盤逐鍵確認觸發，統計同時按鍵數（防鬼鍵／NKRO）與鍵碼。按 Esc 離開。",
-                Kind = ToolKind.BuiltinWindow, Target = "keyboard", Keywords = ["keyboard", "鍵盤", "按鍵", "卡鍵"] },
-        new() { Group = "曦覽內建", Name = "喇叭檢測",       Description = "即時合成左／右／雙聲道測試音與 20 Hz～20 kHz 掃頻，確認接線、聲道對調與破音。按 Esc 離開。",
-                Kind = ToolKind.BuiltinWindow, Target = "speaker", Keywords = ["speaker", "喇叭", "聲道", "音訊", "audio"] },
-        new() { Group = "曦覽內建", Name = "動態檢測",       Description = "移動條判讀拖影與過衝，並實測每幀呈現間隔、長幀與中斷次數（TestUFO 的原生替代，不需連網）。按 Esc 離開。",
-                Kind = ToolKind.BuiltinWindow, Target = "motion", Keywords = ["testufo", "拖影", "殘影", "更新率", "motion"] },
-
-        new() { Group = "曦覽內建", Name = "處理器完整規格", Description = "CPUID / MSR 直讀的規格、頻率真相與管線歸因",
-                Kind = ToolKind.Builtin, Target = "cpu", Keywords = ["cpu", "cpuid", "msr", "處理器", "頻率"] },
-        new() { Group = "曦覽內建", Name = "感測器總表",     Description = "溫度 / 電壓 / 風扇 / 功耗的即時讀值與記錄",
-                Kind = ToolKind.Builtin, Target = "sensors", Keywords = ["sensor", "感測", "溫度", "電壓", "風扇"] },
-        new() { Group = "曦覽內建", Name = "健康與體檢",     Description = "整機健康評估、MCA / WHEA、平台可信度與電源政策",
-                Kind = ToolKind.Builtin, Target = "health", Keywords = ["health", "健康", "體檢", "mca", "whea"] },
-        new() { Group = "曦覽內建", Name = "效能測試與烤機", Description = "棋類跑分、綜合分數、烤機穩定度與 Top-down 歸因",
-                Kind = ToolKind.Builtin, Target = "bench", Keywords = ["bench", "跑分", "烤機", "stress", "topdown"] },
-        new() { Group = "曦覽內建", Name = "DPC 延遲分析",   Description = "以 ETW 排出造成爆音 / 停頓的肇事驅動",
-                Kind = ToolKind.Builtin, Target = "dpc", Keywords = ["dpc", "isr", "latencymon", "延遲", "爆音"] },
-        new() { Group = "曦覽內建", Name = "幀時間監測",     Description = "遊戲幀時間與 1% / 0.1% low 統計",
-                Kind = ToolKind.Builtin, Target = "frametime", Keywords = ["frametime", "fps", "幀", "capframex"] },
-        new() { Group = "曦覽內建", Name = "藍屏傾印分析",   Description = "解析 minidump 找出當機模組與錯誤碼",
-                Kind = ToolKind.Builtin, Target = "bsod", Keywords = ["bsod", "藍屏", "dump", "當機", "bluescreenview"] },
-        new() { Group = "曦覽內建", Name = "開機啟動項",     Description = "檢視與停用開機自啟項目",
-                Kind = ToolKind.Builtin, Target = "startup", Keywords = ["startup", "autoruns", "啟動", "開機"] },
-        new() { Group = "曦覽內建", Name = "大檔空間掃描",   Description = "掃出佔空間的大檔與資料夾",
-                Kind = ToolKind.Builtin, Target = "diskscan", Keywords = ["wiztree", "windirstat", "空間", "大檔", "掃描"] },
-        new() { Group = "曦覽內建", Name = "垃圾清理",       Description = "暫存 / 快取 / 更新殘留清理（列出後再決定刪除）",
-                Kind = ToolKind.Builtin, Target = "cleanup", Keywords = ["cleanup", "cleanmgr", "垃圾", "清理", "暫存"] },
-        new() { Group = "曦覽內建", Name = "連接埠占用",     Description = "查出是哪個行程占著某個埠",
-                Kind = ToolKind.Builtin, Target = "port", Keywords = ["port", "netstat", "連接埠", "占用"] },
-        new() { Group = "曦覽內建", Name = "系統風扇控制",   Description = "自訂風扇曲線並可一鍵還原自動",
-                Kind = ToolKind.Builtin, Target = "fan", Keywords = ["fan", "fancontrol", "風扇", "轉速", "曲線"] },
-        new() { Group = "曦覽內建", Name = "顯示卡超頻",     Description = "功耗 / 風扇 / 溫度上限與核心 / 記憶體偏移",
-                Kind = ToolKind.Builtin, Target = "gpuoc", Keywords = ["afterburner", "超頻", "顯示卡", "overclock", "nvml"] },
-        new() { Group = "曦覽內建", Name = "記憶體真實面貌", Description = "認可量、認可上限與尖峰，說清楚什麼叫「用掉」",
-                Kind = ToolKind.Builtin, Target = "memory", Keywords = ["rammap", "記憶體", "commit", "認可", "分頁檔"] },
-        new() { Group = "曦覽內建", Name = "電池損耗分析",   Description = "設計容量 / 目前滿電容量 / 循環次數與損耗率",
-                Kind = ToolKind.Builtin, Target = "battery", Keywords = ["battery", "電池", "循環", "損耗", "batteryinfoview"] },
-
         // ── 系統診斷 ──────────────────────────────────────────────
         new() { Group = "系統診斷", Name = "裝置管理員",       Description = "檢視與管理硬體裝置、驅動程式", Kind = ToolKind.System, Target = "devmgmt.msc" },
         new() { Group = "系統診斷", Name = "DirectX 診斷",     Description = "顯示 DirectX、顯示卡與音效資訊", Kind = ToolKind.System, Target = "dxdiag" },
@@ -482,7 +435,9 @@ public sealed class ToolboxService : ObservableObject
                 Description = "線上檢測螢幕更新率與運動模糊，Blur Busters 官方",
                 Kind = ToolKind.WebLink, Target = "https://www.testufo.com/",
                 Keywords = ["testufo", "拖影", "更新率", "模糊"],
-                NativeNote = "曦覽的「動態拖影檢測」是同一件事的原生替代（不需連網）；TestUFO 的測試圖樣種類多得多。" },
+                Native = "hwtest",
+                NativeNote = "曦覽的「硬體檢測 → 動態檢測」是同一件事的原生替代（不需連網），並實測每幀呈現間隔與長幀；"
+                           + "TestUFO 的測試圖樣種類多得多。" },
         new() { Group = "顯示器工具", Name = "Windows HDR 校準",
                 Description = "微軟官方 HDR 校準工具（Microsoft Store）",
                 Kind = ToolKind.WebLink, Target = "https://apps.microsoft.com/detail/9n7f2sm5d1lr" },
@@ -532,7 +487,7 @@ public sealed class ToolboxService : ObservableObject
     }
 
     private bool _onlyBuiltin;
-    /// <summary>只列出曦覽自己做得到的項目（本身內建，或有標註自家對應頁面者）。</summary>
+    /// <summary>只列出「曦覽已經做到同一件事」的項目（即有標註自家對應頁面者）。</summary>
     public bool OnlyBuiltin
     {
         get => _onlyBuiltin;
@@ -566,7 +521,8 @@ public sealed class ToolboxService : ObservableObject
     {
         var hit = Tools.Where(t =>
         {
-            if (_onlyBuiltin && !t.IsBuiltin && !t.HasNative) return false;
+            // 工具箱裡已無曦覽自家項目，「只看曦覽做得到的」＝只留有自家對應頁面的第三方／系統工具。
+            if (_onlyBuiltin && !t.HasNative) return false;
             return ToolboxFilter.Matches(_query, t.Name, t.Description, t.Group, t.NativeTitle,
                                          t.Keywords.Length == 0 ? null : string.Join(' ', t.Keywords));
         }).ToList();
@@ -581,8 +537,7 @@ public sealed class ToolboxService : ObservableObject
 
     public ToolboxService() => RefreshFilter();
 
-    /// <summary>依項目類型跳到曦覽自家頁面、開啟內建檢測視窗、啟動系統工具、開啟官方網頁，
-    /// 或偵測第三方工具後啟動 / 導向下載。
+    /// <summary>啟動系統工具、開啟官方網頁，或偵測第三方工具後啟動 / 導向下載。
     /// 若該工具已裝入插槽（使用者下載後放進的本機執行檔），一律優先直接啟動插槽內的檔案。</summary>
     public void Launch(ToolItem tool)
     {
@@ -602,16 +557,6 @@ public sealed class ToolboxService : ObservableObject
 
             switch (tool.Kind)
             {
-                case ToolKind.Builtin:
-                    if (NavigateTo(tool.Target)) StatusLine = $"已前往曦覽內建的「{tool.Name}」";
-                    else StatusLine = $"找不到頁面 {tool.Target}（內部錯誤，請回報）";
-                    break;
-
-                case ToolKind.BuiltinWindow:
-                    if (OpenTestWindow(tool.Target)) StatusLine = $"已開啟內建檢測：{tool.Name}";
-                    else StatusLine = $"未知的檢測視窗代號 {tool.Target}（內部錯誤，請回報）";
-                    break;
-
                 case ToolKind.System:
                     Process.Start(new ProcessStartInfo(tool.Target) { UseShellExecute = true });
                     StatusLine = $"已啟動：{tool.Name}";
@@ -645,34 +590,6 @@ public sealed class ToolboxService : ObservableObject
         {
             StatusLine = $"啟動 {tool.Name} 失敗：{ex.Message}";
         }
-    }
-
-    /// <summary>跳到曦覽自家頁面（主頁面或「實用工具」子頁）；找不到該鍵時回傳 false。</summary>
-    public static bool NavigateTo(string pageKey)
-    {
-        if (Shell.Main is not { } shell) return false;
-        if (PageRegistry.Find(pageKey) is not null) { shell.NavigateToKey(pageKey); return true; }
-        if (PageRegistry.FindUtility(pageKey) is not null) { shell.NavigateToUtility(pageKey); return true; }
-        return false;
-    }
-
-    // 內建全螢幕檢測視窗（零外部相依，純輸入／顯示事件）。代號集中在此，
-    // 以免 XAML 與服務兩邊各記一份而走鏽。
-    private static bool OpenTestWindow(string code)
-    {
-        Window? w = code switch
-        {
-            "screen"   => new ScreenTestWindow(),
-            "mouse"    => new MouseTestWindow(),
-            "keyboard" => new KeyboardTestWindow(),
-            "speaker"  => new SpeakerTestWindow(),
-            "motion"   => new MotionTestWindow(),
-            _          => null,
-        };
-        if (w is null) return false;
-        w.Owner = Shell.TopWindow;
-        w.Show();
-        return true;
     }
 
     private static void OpenUrl(string url)

@@ -324,9 +324,16 @@ public sealed class CpuIdService
                 ((ebx >> 22) & 0x3FF) + 1, ((ebx >> 12) & 0x3FF) + 1, (ebx & 0xFFF) + 1, ecx + 1, edx);
         }
 
-        /// <summary>leaf 0x04 的原始快取幾何。</summary>
+        /// <summary>
+        /// leaf 0x04 的原始快取幾何。
+        /// <para>
+        /// <b><see cref="SharedLogical"/> 數的是「可定址的邏輯處理器」，不是核心</b>（EAX 25:14＋1），
+        /// 而且硬體會把它向上取到 2 的冪次：18 核 36 執行緒的 L3 會回 64。
+        /// 所以這個欄位只能當上界解讀，不能當實數，更不能寫成「64 核共用」。
+        /// </para>
+        /// </summary>
         public readonly record struct RawCache(
-            uint Type, uint Level, uint SharedCores,
+            uint Type, uint Level, uint SharedLogical,
             uint Ways, uint Partitions, uint LineBytes, uint Sets, uint EdxFlags)
         {
             public long CapacityBytes => (long)Ways * Partitions * LineBytes * Sets;
@@ -350,8 +357,14 @@ public sealed class CpuIdService
                     >= 1024 => $"{bytes / 1024.0:0.#} KB",
                     _ => $"{bytes} B",
                 };
-                string inclusive = (EdxFlags & 0x2) != 0 ? "含括" : (EdxFlags & 0x1) != 0 ? "非含括" : "—";
-                return new CpuIdCacheRow(LevelName, cap, $"{Ways} 路", $"{LineBytes} B", Sets.ToString("N0"), $"{SharedCores} 核共用", inclusive);
+                // 含括性只由 EDX 位 1 決定（1＝含括下層、0＝不含括）。位 0 講的是 WBINVD／INVD
+                // 對下層快取的行為，與含括性無關——1.6.2 之前把位 0 當成「非含括」的判據，於是
+                // 位 0 為 0 的機器（本機 EDX＝0）每一列都顯示「—」，看起來像讀不到。
+                // L1 之下沒有更低階快取，這一欄對它本來就沒有意義，故留「—」而不是硬填一個值。
+                string inclusive = Level <= 1 ? "—" : (EdxFlags & 0x2) != 0 ? "含括" : "非含括";
+                // 共用欄寫「最多 N 執行緒」：欄位數的是邏輯處理器且向上取 2 的冪次（見型別註解）。
+                return new CpuIdCacheRow(LevelName, cap, $"{Ways} 路", $"{LineBytes} B", Sets.ToString("N0"),
+                                         $"最多 {SharedLogical} 執行緒", inclusive);
             }
         }
 
@@ -381,7 +394,14 @@ public sealed class CpuIdService
             return $"{phys} / {virt} bits";
         }
 
-        /// <summary>leaf 0x0B／0x1F 子葉 → 拓樸列；EBX 計數為 0 表示列舉終止（回 null）。</summary>
+        /// <summary>
+        /// leaf 0x0B／0x1F 子葉 → 拓樸列；EBX 計數為 0 表示列舉終止（回 null）。
+        /// <para>
+        /// <b>EBX 15:0 數的是「該層在上一層範圍內的邏輯處理器數」，不是那一層有幾個實例。</b>
+        /// 核心層在 18 核 36 執行緒的機器上回 36（每封裝的邏輯處理器數），不是 36 個核心——
+        /// 1.6.2 之前寫成「核心 36 個」，那是在說謊。
+        /// </para>
+        /// </summary>
         public static CpuIdTopologyRow? DecodeTopologySubleaf(uint eax, uint ebx, uint ecx, uint subleaf)
         {
             uint count = ebx & 0xFFFF;
@@ -390,15 +410,15 @@ public sealed class CpuIdService
             uint shift = eax & 0x1F;
             string level = levelType switch
             {
-                1 => "執行緒（SMT）",
-                2 => "核心",
-                3 => "模組",
-                4 => "Tile",
-                5 => "Die",
-                6 => "Die 群組",
+                1 => "執行緒（SMT）層",
+                2 => "核心層",
+                3 => "模組層",
+                4 => "Tile 層",
+                5 => "Die 層",
+                6 => "Die 群組層",
                 _ => $"層級 {levelType}",
             };
-            return new CpuIdTopologyRow($"0x1F #{subleaf}", level, $"{count} 個", $"右移 {shift} bits");
+            return new CpuIdTopologyRow($"0x1F #{subleaf}", level, $"{count} 個邏輯處理器", $"APIC ID 右移 {shift} bits");
         }
 
         /// <summary>leaf 0x80000007 EDX 位 8：TSC 是否恆速（不隨 P-state／C-state 變頻）。</summary>
