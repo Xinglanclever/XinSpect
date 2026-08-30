@@ -587,6 +587,59 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,4" Text="熱能與電源管理能力（leaf 0x06）"
+                               Visibility="{Binding CpuId.HasPower, Converter={StaticResource BoolToVis}}"/>
+                    <ItemsControl ItemsSource="{Binding CpuId.Power}"
+                                  Visibility="{Binding CpuId.HasPower, Converter={StaticResource BoolToVis}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="200"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Key}" TextWrapping="Wrap"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Value}" TextWrapping="Wrap"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,4" Text="架構效能監測單元（leaf 0x0A，決定 Top-down 卡片能不能跑）"
+                               Visibility="{Binding CpuId.HasPmu, Converter={StaticResource BoolToVis}}"/>
+                    <ItemsControl ItemsSource="{Binding CpuId.Pmu}"
+                                  Visibility="{Binding CpuId.HasPmu, Converter={StaticResource BoolToVis}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="200"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Key}" TextWrapping="Wrap"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Value}" TextWrapping="Wrap"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,4" Text="XSAVE 狀態元件（leaf 0x0D，每次執行緒切換要搬多少位元組）"
+                               Visibility="{Binding CpuId.HasXSave, Converter={StaticResource BoolToVis}}"/>
+                    <ItemsControl ItemsSource="{Binding CpuId.XSave}"
+                                  Visibility="{Binding CpuId.HasXSave, Converter={StaticResource BoolToVis}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="240"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Key}" TextWrapping="Wrap"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Value}" TextWrapping="Wrap"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
             </Border>
 
@@ -643,6 +696,67 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding CpuSecurity.Status}"/>
+                </StackPanel>
+            </Border>
+            <!-- ===== 逐核時間歸因（NtQuerySystemInformation） ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="逐核時間歸因（閒置／使用者／核心／DPC／中斷）"/>
+                        <Button Style="{StaticResource PrimaryButton}" Content="取樣" HorizontalAlignment="Right"
+                                VerticalAlignment="Center" Click="CoreTimeSample_Click" IsEnabled="{Binding CoreTime.CanRefresh}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,4" TextWrapping="Wrap"
+                               Text="工作管理員與 perfmon 用的同一份計數器（NtQuerySystemInformation，零特權）。取兩次樣求差約一秒——不報自開機以來的累計平均，那會把三天前的一次編譯攤平成看不出問題的數字。"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,0,0,10" TextWrapping="Wrap"
+                               Text="{Binding CoreTime.ReadingNotice}"/>
+
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="70"/><ColumnDefinition Width="*"/><ColumnDefinition Width="70"/>
+                            <ColumnDefinition Width="70"/><ColumnDefinition Width="80"/><ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="110"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource ColHead}" Text="處理器"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="忙碌"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" TextAlignment="Right" Text="忙碌%"/>
+                        <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" TextAlignment="Right" Text="使用者"/>
+                        <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" TextAlignment="Right" Text="核心"/>
+                        <TextBlock Grid.Column="5" Style="{StaticResource ColHead}" TextAlignment="Right" Text="DPC"/>
+                        <TextBlock Grid.Column="6" Style="{StaticResource ColHead}" TextAlignment="Right" Text="中斷"/>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding CoreTime.Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="22">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/><ColumnDefinition Width="*"/><ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="70"/><ColumnDefinition Width="80"/><ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="110"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Name}"/>
+                                    <ProgressBar Grid.Column="1" Style="{StaticResource LoadBar}" Margin="0,6,10,6"
+                                                 Value="{Binding BusyPercent, Mode=OneWay}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" TextAlignment="Right"
+                                               Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding BusyText}"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" TextAlignment="Right" Text="{Binding UserText}"/>
+                                    <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" TextAlignment="Right" Text="{Binding KernelText}"/>
+                                    <TextBlock Grid.Column="5" Style="{StaticResource FieldValue}" TextAlignment="Right"
+                                               Foreground="{Binding Severity, Converter={StaticResource SeverityToBrush}}" Text="{Binding DpcText}"/>
+                                    <TextBlock Grid.Column="6" Style="{StaticResource FieldValue}" TextAlignment="Right"
+                                               Foreground="{Binding Severity, Converter={StaticResource SeverityToBrush}}" Text="{Binding InterruptText}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding CoreTime.Summary}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap" Text="{Binding CoreTime.IdleCycles}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap" Text="{Binding CoreTime.GroupNotice}"
+                               Visibility="{Binding CoreTime.HasGroupNotice, Converter={StaticResource BoolToVis}}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap" Text="{Binding CoreTime.ResolutionNotice}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap" Text="{Binding CoreTime.Status}"/>
                 </StackPanel>
             </Border>
         </StackPanel>

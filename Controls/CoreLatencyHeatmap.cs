@@ -70,8 +70,10 @@ public sealed class CoreLatencyHeatmap : FrameworkElement
         // 標籤：格太小時隔列／隔欄標
         int step = (int)Math.Ceiling(n / (cell >= 15 ? n : (cell >= 8 ? n / 2.0 : n / 4.0)));
         var labelFg = new SolidColorBrush(Color.FromRgb(0x9A, 0xA0, 0xAA)); labelFg.Freeze();
-        var lps = Lps ?? Enumerable.Range(0, n).ToArray();
-        for (int i = 0; i < n; i += Math.Max(1, step))
+        // Data 與 Lps 是兩個獨立的相依屬性，中間可能被夾進一次繪製；長度不符時寧可不標，
+        // 也不要標錯的編號（更不要越界）。下一次兩者都到位的繪製會補上。
+        var lps = HeatmapMath.LabelsFor(Lps, n);
+        for (int i = 0; lps is not null && i < n; i += Math.Max(1, step))
         {
             string s = lps[i].ToString();
             dc.DrawText(new FormattedText(s, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
@@ -147,8 +149,10 @@ public sealed class CoreLatencyHeatmap : FrameworkElement
         else
         {
             _hoverA = a; _hoverB = b;
-            var lps = Lps ?? Enumerable.Range(0, n).ToArray();
-            HoverText = $"LP{lps[a]} ↔ LP{lps[b]}：{m[a, b]:0.0} ns（原子交換往返）";
+            var lps = HeatmapMath.LabelsFor(Lps, n);
+            HoverText = lps is null
+                ? $"列 {a} ↔ 列 {b}：{m[a, b]:0.0} ns（原子交換往返；邏輯處理器編號尚未就緒）"
+                : $"LP{lps[a]} ↔ LP{lps[b]}：{m[a, b]:0.0} ns（原子交換往返）";
         }
         InvalidateVisual();
     }
@@ -159,4 +163,15 @@ public sealed class CoreLatencyHeatmap : FrameworkElement
         HoverText = "";
         InvalidateVisual();
     }
+}
+
+/// <summary>熱圖的純函式（單元測試涵蓋）。</summary>
+public static class HeatmapMath
+{
+    /// <summary>
+    /// 行列標籤：長度與矩陣階數相符才採用，否則回 null（呼叫端應改為不標籤）。
+    /// 標錯的編號比不標更糟——那會讓使用者以為量的是別顆核心。
+    /// </summary>
+    public static int[]? LabelsFor(int[]? lps, int n)
+        => lps is not null && n > 0 && lps.Length == n ? lps : null;
 }

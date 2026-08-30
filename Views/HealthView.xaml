@@ -240,6 +240,38 @@
                 </StackPanel>
             </Border>
 
+            <!-- ===== 平台可信度 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="平台可信度（讀到的數字算不算原生）"/>
+                        <Button Style="{StaticResource ToolButton}" Content="重新讀取" HorizontalAlignment="Right"
+                                VerticalAlignment="Center" Click="PlatformTrustRefresh_Click" IsEnabled="{Binding PlatformTrust.CanRefresh}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,8" TextWrapping="Wrap"
+                               Text="VBS／HVCI 開啟時 Windows 本身是 Hyper-V 上的一個分割區，MSR 可能被攔截或回傳虛擬值、PMU 計數可能不被轉送、TSC 可能被偏移。本程式所有 MSR 類卡片（Top-down、頻率真相、RDT、MCA、安全位元）的可信度都取決於這張卡片，所以先把資格條件講清楚。全部唯讀。"/>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,0,0,8" TextWrapping="Wrap"
+                               Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding PlatformTrust.Verdict}"/>
+                    <ItemsControl ItemsSource="{Binding PlatformTrust.Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="26" Margin="0,1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="280"/><ColumnDefinition Width="200"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Text="{Binding Key}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" TextWrapping="Wrap"
+                                               Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding Value}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Text="{Binding Note}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding PlatformTrust.Status}"/>
+                </StackPanel>
+            </Border>
+
             <!-- ===== 計時器地基 ===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
@@ -260,6 +292,70 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== 電源政策實況 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="電源政策實況（藏在進階設定裡的那幾項）"/>
+                        <Button Style="{StaticResource PrimaryButton}" Content="讀取" HorizontalAlignment="Right"
+                                VerticalAlignment="Center" Click="PowerPolicyRefresh_Click" IsEnabled="{Binding PowerPolicy.CanRefresh}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="核心停放、PCIe ASPM、USB 選擇性暫停這三項會直接造成間歇卡頓或裝置掉線，而它們在 Windows 的進階電源設定裡預設是隱藏的。這裡把目前計劃的實際值攤開。"/>
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/><ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource FieldValue}" Text="作用中電源計劃"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" TextWrapping="Wrap"
+                                   Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding PowerPolicy.PlanName}"/>
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding PowerPolicy.Settings}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="26" Margin="0,1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="240"/><ColumnDefinition Width="150"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Name}" TextWrapping="Wrap"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" TextWrapping="Wrap"
+                                               Foreground="{Binding Severity, Converter={StaticResource SeverityToBrush}}" Text="{Binding Value}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Text="{Binding Note}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,12,0,2" Text="逐邏輯處理器（CallNtPowerInformation）"/>
+                    <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"
+                               Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding PowerPolicy.ProcessorSummary}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap"
+                               Text="{Binding PowerPolicy.CurrentMhzNotice}"/>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,12,0,2" Text="平台睡眠能力（平台自己宣告的，不是建議）"/>
+                    <ItemsControl ItemsSource="{Binding PowerPolicy.SleepStates}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="24" Margin="0,1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="240"/><ColumnDefinition Width="90"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Name}" TextWrapping="Wrap"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}"
+                                               Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding Value}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Text="{Binding Note}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,10,0,0" TextWrapping="Wrap" Text="{Binding PowerPolicy.ScopeNotice}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap" Text="{Binding PowerPolicy.Status}"/>
                 </StackPanel>
             </Border>
 

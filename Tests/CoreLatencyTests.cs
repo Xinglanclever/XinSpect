@@ -65,4 +65,19 @@ public class CoreLatencyTests
         var (min, med, max) = CoreLatencyService.Stats(m);
         Assert.True(double.IsNaN(min) && double.IsNaN(med) && double.IsNaN(max));
     }
+
+    [Fact]
+    public void 熱圖標籤長度與矩陣階數相符才採用()
+        => Assert.Equal(new[] { 0, 1, 2 }, HeatmapMath.LabelsFor([0, 1, 2], 3));
+
+    [Fact]
+    public void 熱圖標籤長度不符時回空以免索引越界()
+    {
+        // 1.4.0 的 IndexOutOfRangeException：Lps 是不通知的自動屬性，繫結永遠停在空陣列，
+        // 而 Data 已是 36×36，標籤迴圈就越界了。
+        Assert.Null(HeatmapMath.LabelsFor([], 36));
+        Assert.Null(HeatmapMath.LabelsFor([0, 1], 36));
+        Assert.Null(HeatmapMath.LabelsFor(null, 36));
+        Assert.Null(HeatmapMath.LabelsFor([0, 1, 2], 0));
+    }
 }

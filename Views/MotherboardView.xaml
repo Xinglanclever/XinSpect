@@ -289,6 +289,86 @@
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding Firmware.Status}"/>
                 </StackPanel>
             </Border>
+            <!-- ===== BIOS／Intel ME 韌體與微碼 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="BIOS／Intel ME 韌體與微碼"/>
+                        <Button Style="{StaticResource PrimaryButton}" Content="讀取" HorizontalAlignment="Right"
+                                VerticalAlignment="Center" Click="BiosMeRefresh_Click" IsEnabled="{Binding BiosMe.CanRefresh}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="BIOS 版本與日期、Intel ME 韌體版本（以 MEI 介面發 MKHI GET_FW_VERSION 直接問 ME 本身，不是報驅動版本）、微碼的「目前生效 vs Windows 自帶」對照。全部唯讀。"/>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="BIOS"/>
+                    <ItemsControl ItemsSource="{Binding BiosMe.Bios}" Margin="0,2,0,8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="24" Margin="0,1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="220"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Key}" TextWrapping="Wrap"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Value}" TextWrapping="Wrap"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Intel ME／CSME"/>
+                    <ItemsControl ItemsSource="{Binding BiosMe.Me}" Margin="0,2,0,8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="24" Margin="0,1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="220"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Key}" TextWrapping="Wrap"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Value}" TextWrapping="Wrap"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="微碼"/>
+                    <ItemsControl ItemsSource="{Binding BiosMe.Microcode}" Margin="0,2,0,8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="24" Margin="0,1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="220"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Key}" TextWrapping="Wrap"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Value}" TextWrapping="Wrap"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap" Text="{Binding BiosMe.Status}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== 危險區：修改 BIOS 設定／刷寫韌體 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" BorderBrush="#B3462B" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Foreground="#E06C4B" Text="危險區：修改 BIOS 設定／刷寫韌體"/>
+                    <TextBlock Margin="0,6,0,10" TextWrapping="Wrap" FontSize="12" LineHeight="19"
+                               Foreground="#E06C4B" Text="{Binding BiosMe.DangerNotice}"/>
+                    <CheckBox Margin="0,0,0,10" Foreground="{StaticResource PrimaryInkBrush}"
+                              IsChecked="{Binding BiosMe.RiskAccepted, Mode=TwoWay}"
+                              Content="我了解：寫壞 BIOS／ME 會讓主機板無法開機，且曦覽不會、也不能替我救回來。"/>
+                    <WrapPanel>
+                        <Button Style="{StaticResource PrimaryButton}" Margin="0,0,8,8" Content="重開機進入 UEFI 設定"
+                                Click="RebootToFirmware_Click" IsEnabled="{Binding BiosMe.CanActDangerously}"/>
+                        <Button Style="{StaticResource ToolButton}" Margin="0,0,8,8" Content="開啟主機板廠官方 BIOS 下載頁"
+                                Click="OpenVendorBios_Click" IsEnabled="{Binding BiosMe.HasVendorUrl}"/>
+                        <Button Style="{StaticResource ToolButton}" Margin="0,0,8,8" Content="Intel CSME 版本偵測工具（唯讀）"
+                                Click="OpenMeTool_Click"/>
+                    </WrapPanel>
+                    <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" Text="{Binding BiosMe.ActionStatus}"/>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

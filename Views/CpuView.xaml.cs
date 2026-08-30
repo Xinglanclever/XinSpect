@@ -44,4 +44,7 @@ public partial class CpuView : UserControl
 
     // ===== 安全緩解狀態 =====
     private void SecurityRead_Click(object sender, RoutedEventArgs e) => Vm?.CpuSecurity.Refresh();
+
+    // ===== 逐核時間歸因 =====
+    private void CoreTimeSample_Click(object sender, RoutedEventArgs e) => Vm?.CoreTime.Refresh();
 }

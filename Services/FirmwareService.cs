@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
-using LibreHardwareMonitor.PawnIo;
 
 namespace XinSpect;
 
@@ -204,16 +203,25 @@ public sealed class FirmwareService : ObservableObject
             virt.Add(new FirmwareRow("可信度", "偵測不到 Hypervisor：裸機執行，MSR／計時讀值為原生。"));
         }
 
-        // 微碼修訂版：CPUID leaf 1 觸發後自 IA32_BIOS_SIGN_ID（0x8B）高 32 位讀取
+        // 微碼修訂版：CPUID leaf 1 觸發後自 IA32_BIOS_SIGN_ID（0x8B）高 32 位讀取。
+        // 走 WinRing0Bridge：2026-08-30 實測 PawnIO 的 IntelMsr 在本機對每個 MSR 都回報成功卻回 0，
+        // 用它會把「讀不到」誤報成「微碼版本 0」。
         try
         {
-            var msr = new IntelMsr();
-            System.Runtime.Intrinsics.X86.X86Base.CpuId(1, 0);   // 觸發微碼修訂版寫入 0x8B
-            if (msr.ReadMsr(0x8B, out ulong sign) && (sign >> 32) != 0)
-                mc.Add(new FirmwareRow("微碼修訂版（0x8B）", $"0x{(sign >> 32):X8}（本核讀值）"));
+            using var bridge = WinRing0Bridge.Create();
+            if (!bridge.Available)
+            {
+                mc.Add(new FirmwareRow("微碼修訂版（0x8B）", "—（MSR 橋接無法初始化：" + bridge.Error + "）"));
+            }
             else
-                mc.Add(new FirmwareRow("微碼修訂版（0x8B）", "—（讀值為 0：可能需先執行特定觸發，或 PawnIO 拒讀）"));
-            msr.Close();
+            {
+                System.Runtime.Intrinsics.X86.X86Base.CpuId(1, 0);   // 觸發微碼修訂版寫入 0x8B
+                ulong? sign = bridge.ReadMsrPair64(0x8B);
+                mc.Add(new FirmwareRow("微碼修訂版（0x8B）",
+                    sign is null ? "—（MSR 讀取失敗）"
+                    : (sign.Value >> 32) == 0 ? "—（高 32 位為 0：本平台未回報微碼版本）"
+                    : $"0x{(sign.Value >> 32):X8}（本核讀值）"));
+            }
         }
         catch (Exception ex)
         {

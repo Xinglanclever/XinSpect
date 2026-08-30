@@ -19,6 +19,8 @@ public partial class HealthView : UserControl, IPageLifecycle
         Vm?.Reliability.Refresh();
         Vm?.Mca.Refresh();
         Vm?.TimerFoundation.Refresh();
+        Vm?.PlatformTrust.Refresh();
+        Vm?.PowerPolicy.Refresh();
     }
 
     public void OnDeactivated() { }
@@ -30,6 +32,10 @@ public partial class HealthView : UserControl, IPageLifecycle
     private void ReliabilityRefresh_Click(object sender, RoutedEventArgs e) => Vm?.Reliability.Refresh();
 
     private void McaRefresh_Click(object sender, RoutedEventArgs e) => Vm?.Mca.Refresh();
+
+    private void PlatformTrustRefresh_Click(object sender, RoutedEventArgs e) => Vm?.PlatformTrust.Refresh();
+
+    private void PowerPolicyRefresh_Click(object sender, RoutedEventArgs e) => Vm?.PowerPolicy.Refresh();
 
     // Host.Content 延遲載入時 DataContext 由父容器繼承；仍以主視窗為後備。
     private MainViewModel? Vm =>

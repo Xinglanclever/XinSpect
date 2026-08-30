@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using LibreHardwareMonitor.PawnIo;
 
 namespace XinSpect;
 
@@ -20,7 +19,8 @@ public sealed class StickyBitRow
 /// <remarks>
 /// 誠實界線：本版只解碼經 Intel SDM 與社群除錯紀錄（CoreFreq／Framework）確認的兩個位元：
 /// bit1（封裝熱狀態 log）與 bit11（封裝 PL2 功耗限制 log）。其餘位元不做解讀。
-/// MSR 讀取經 LHM 0.9.6 的 PawnIO（`LibreHardwareMonitor.PawnIo.IntelMsr`），實測可讀（2026-08-29）。
+/// MSR 讀取走 <see cref="WinRing0Bridge"/>。2026-08-30 實測：PawnIO 的 IntelMsr 在本機對每個 MSR
+/// 都回報成功卻回 0，用它會把「讀不到」偽裝成「從未觸發」，因此已改掉。
 /// </remarks>
 public sealed class ThermalStickyService : ObservableObject
 {
@@ -63,17 +63,24 @@ public sealed class ThermalStickyService : ObservableObject
 
     private List<StickyBitRow> ReadSticky()
     {
-        var msr = new IntelMsr();
-        if (!msr.ReadMsr(0x1B1, out ulong v))
-            throw new InvalidOperationException("IA32_PACKAGE_THERM_STATUS 讀取失敗。");
+        // 走 WinRing0Bridge：2026-08-30 實測 PawnIO 的 IntelMsr 在本機對每個 MSR 都回報成功卻回 0，
+        // 那會讓三個黏滯位全部顯示「從未觸發」——把讀不到偽裝成好消息。
+        using var bridge = WinRing0Bridge.Create();
+        if (!bridge.Available)
+            throw new InvalidOperationException("MSR 橋接無法初始化：" + bridge.Error);
+        ulong v = bridge.ReadMsrPair64(0x1B1)
+            ?? throw new InvalidOperationException("IA32_PACKAGE_THERM_STATUS（0x1B1）讀取失敗。");
 
-        msr.Close();
-        return
-        [
+        var rows = new List<StickyBitRow>
+        {
             new("溫度牆紀錄（封裝熱狀態 log，bit1）", (v & 0x2) != 0 ? "曾觸發" : "從未觸發"),
             new("PL2 功耗牆紀錄（bit11）", (v & 0x800) != 0 ? "曾觸發" : "從未觸發"),
             new("目前封裝熱狀態（bit0，即時）", (v & 0x1) != 0 ? "正在降頻中" : "未作用"),
             new("原始值", $"0x{v:X16}"),
-        ];
+        };
+        // 位 22:16 是溫度讀數，運作中的封裝不可能全為 0；整個暫存器為 0 時不該當成「從未觸發」。
+        if (v == 0)
+            rows.Add(new("⚠ 讀值可信度", "整個暫存器為 0（連溫度讀數欄都是 0）——這更像是沒真的讀到，而不是「從未觸發」。"));
+        return rows;
     }
 }

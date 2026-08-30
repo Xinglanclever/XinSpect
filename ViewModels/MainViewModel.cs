@@ -117,6 +117,12 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>安全緩解狀態：ARCH_CAPABILITIES 免疫位元＋SPEC_CTRL 目前啟用（CPU 分頁卡片，唯讀 MSR）。</summary>
     public CpuSecurityService CpuSecurity { get; } = new();
 
+    /// <summary>逐核時間歸因：閒置／使用者／核心／DPC／中斷（CPU 分頁卡片，NtQuerySystemInformation，零特權）。</summary>
+    public CoreTimeService CoreTime { get; } = new();
+
+    /// <summary>電源政策實況：核心停放／ASPM／USB 選擇性暫停與逐核頻率上限（健康分頁卡片，零特權唯讀）。</summary>
+    public PowerPolicyService PowerPolicy { get; } = new();
+
 
     /// <summary>記憶體真實面貌：認可尖峰 vs 實體（記憶體分頁卡片，零特權）。</summary>
     public MemoryTruthService MemoryTruth { get; } = new();
@@ -133,8 +139,14 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>計時器地基：QPC 來源、解析度、Invariant TSC（健康分頁卡片，零特權）。</summary>
     public TimerFoundationService TimerFoundation { get; } = new();
 
+    /// <summary>平台可信度：hypervisor／VBS／HVCI 是否介入，決定所有 MSR 卡片的可信度（健康分頁卡片，零特權）。</summary>
+    public PlatformTrustService PlatformTrust { get; } = new();
+
     /// <summary>韌體與開機信任鏈：Secure Boot 四態、Hypervisor、微碼（主機板分頁卡片）。</summary>
     public FirmwareService Firmware { get; } = new();
+
+    /// <summary>BIOS／Intel ME 韌體與微碼：唯讀直讀（含 MKHI 直詢 ME 韌體版本）＋官方刷寫路徑導向，本身不寫韌體。</summary>
+    public BiosMeService BiosMe { get; } = new();
 
     /// <summary>記憶體圖樣檢測（寫入／回讀比對，抓卡死位元、鄰位干擾與位址解碼錯誤）。</summary>
     public MemoryTestService MemTest { get; } = new();

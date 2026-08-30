@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
 
 namespace XinSpect;
@@ -68,6 +70,25 @@ public sealed class CpuIdService
     public ObservableCollection<CpuIdCacheRow> Caches { get; } = [];
     public ObservableCollection<CpuIdFeatureChip> Features { get; } = [];
     public ObservableCollection<CpuIdTopologyRow> Topology { get; } = [];
+
+    /// <summary>熱能與電源管理能力（leaf 0x06）：這顆晶片有沒有 HWP、Turbo、PLN、MPERF/APERF 回饋。</summary>
+    public ObservableCollection<CpuIdInfoRow> Power { get; } = [];
+
+    /// <summary>架構效能監測單元（leaf 0x0A）：版本、通用／固定計數器數量與位寬。</summary>
+    public ObservableCollection<CpuIdInfoRow> Pmu { get; } = [];
+
+    /// <summary>XSAVE 狀態元件（leaf 0x0D）：每個元件的大小與在儲存區中的位移。</summary>
+    public ObservableCollection<CpuIdInfoRow> XSave { get; } = [];
+
+    public bool HasPower => Power.Count > 0;
+    public bool HasPmu => Pmu.Count > 0;
+    public bool HasXSave => XSave.Count > 0;
+
+    /// <summary>CPUID 拓樸與作業系統列舉的交叉驗證結論。</summary>
+    public string TopologyCheckText { get; } = "—";
+
+    /// <summary>恆定 TSC（leaf 0x80000007 EDX 位 8）：TSC 換算時間是否成立的前提。</summary>
+    public string InvariantTscText { get; } = "—";
 
     public CpuIdService()
     {
@@ -144,6 +165,7 @@ public sealed class CpuIdService
 
         // 擴充拓樸（0x1F 優先，無則 0x0B）
         uint topoLeaf = maxStd >= 0x1F ? 0x1Fu : (maxStd >= 0x0B ? 0x0Bu : 0u);
+        int threadsPerCore = 0, logicalPerPackage = 0;
         if (topoLeaf != 0)
         {
             for (uint sub = 0; sub < 64; sub++)
@@ -152,6 +174,12 @@ public sealed class CpuIdService
                 var row = Decoder.DecodeTopologySubleaf((uint)r.Eax, (uint)r.Ebx, (uint)r.Ecx, sub);
                 if (row is null) break;   // EBX 計數為 0＝最後一層之後
                 Topology.Add(row);
+
+                // 交叉驗證用的原始數字：EBX 是「該層級以下的邏輯處理器累計數」，
+                // 故 SMT 層＝每核心執行緒數，最大者＝每封裝邏輯處理器數。
+                int count = (int)((uint)r.Ebx & 0xFFFF);
+                if (((uint)r.Ecx >> 8 & 0xFF) == 1) threadsPerCore = count;
+                if (count > logicalPerPackage) logicalPerPackage = count;
             }
         }
 
@@ -162,6 +190,50 @@ public sealed class CpuIdService
             HybridText = Decoder.DecodeHybrid((uint)r.Eax);
         }
         Info.Add(new CpuIdInfoRow("混合架構（0x1A）", HybridText));
+
+        // 恆定 TSC（0x80000007 EDX 位 8）：頻率真相／延遲量測全靠它，讀不到就明說葉位不存在
+        InvariantTscText = maxExt >= 0x80000007
+            ? Decoder.DecodeInvariantTsc((uint)X86Base.CpuId(unchecked((int)0x80000007), 0).Edx)
+            : "—（0x80000007 葉位不存在，未讀取）";
+        Info.Add(new CpuIdInfoRow("恆定 TSC（0x80000007）", InvariantTscText));
+
+        // 熱能與電源管理能力（0x06）
+        if (maxStd >= 0x06)
+        {
+            var r = X86Base.CpuId(0x06, 0);
+            foreach (var row in Decoder.DecodePower((uint)r.Eax, (uint)r.Ebx, (uint)r.Ecx)) Power.Add(row);
+        }
+
+        // 架構效能監測單元（0x0A）
+        if (maxStd >= 0x0A)
+        {
+            var r = X86Base.CpuId(0x0A, 0);
+            foreach (var row in Decoder.DecodePmu((uint)r.Eax, (uint)r.Ebx, (uint)r.Edx)) Pmu.Add(row);
+        }
+
+        // XSAVE 狀態元件（0x0D）：只讀 XCR0／IA32_XSS 位圖中為 1 的元件子葉。
+        // 不能「讀到 0 就停」——中間有未支援的元件時，後面仍可能有支援的（AVX-512 三件就在 5–7）。
+        if (maxStd >= 0x0D)
+        {
+            var m = X86Base.CpuId(0x0D, 0);
+            var s1 = X86Base.CpuId(0x0D, 1);
+            XSave.Add(Decoder.DecodeXSaveMain((uint)m.Eax, (uint)m.Edx, (uint)m.Ebx, (uint)m.Ecx));
+            XSave.Add(Decoder.DecodeXSaveExtras((uint)s1.Eax, (uint)s1.Ebx, (uint)s1.Ecx));
+            ulong bitmap = ((uint)m.Eax | ((ulong)(uint)m.Edx << 32)) | (uint)s1.Ecx;
+            for (int i = 2; i < 63; i++)
+            {
+                if ((bitmap & (1UL << i)) == 0) continue;
+                var r = X86Base.CpuId(0x0D, i);
+                var row = Decoder.DecodeXSaveComponent(i, (uint)r.Eax, (uint)r.Ebx, (uint)r.Ecx);
+                if (row is not null) XSave.Add(row);
+            }
+        }
+
+        // 拓樸交叉驗證：CPUID 說的每封裝執行緒／核心數，對得上作業系統列舉的實際數量嗎
+        var os = EnumerateOsTopology();
+        TopologyCheckText = Decoder.CrossCheckTopology(
+            threadsPerCore, logicalPerPackage, os.PhysicalCores, os.Logical);
+        Info.Add(new CpuIdInfoRow("拓樸交叉驗證（CPUID vs 作業系統）", TopologyCheckText));
 
         // 指令集／功能位元：只列「確實支援」的（讀到為 1 才列出，來源葉位一併標明）。
         // FeatureTable 中 leaf 以負值代表擴充葉 0x8000000x；超出最大葉位者絕不讀取。
@@ -175,6 +247,47 @@ public sealed class CpuIdService
             if ((v & (1u << bit)) != 0)
                 Features.Add(new CpuIdFeatureChip(name, $"0x{absLeaf:X}/{sub} {(reg switch { 0 => "EAX", 1 => "EBX", 2 => "ECX", _ => "EDX" })}.{bit}"));
         }
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GetLogicalProcessorInformationEx(int relationship, nint buffer, ref uint returnedLength);
+
+    private const int RelationProcessorCore = 0;
+    private const int ErrorInsufficientBuffer = 122;
+
+    /// <summary>
+    /// 作業系統看到的實體核心數與邏輯處理器數（GetLogicalProcessorInformationEx，含所有處理器群組）。
+    /// 讀不到就回 (0, 0)——交叉驗證會據此說「資料不足」而不是拿 0 去比。
+    /// </summary>
+    private static (int PhysicalCores, int Logical) EnumerateOsTopology()
+    {
+        uint len = 0;
+        GetLogicalProcessorInformationEx(RelationProcessorCore, 0, ref len);
+        if (len == 0 || Marshal.GetLastWin32Error() != ErrorInsufficientBuffer) return (0, 0);
+
+        nint buf = Marshal.AllocHGlobal((int)len);
+        try
+        {
+            if (!GetLogicalProcessorInformationEx(RelationProcessorCore, buf, ref len)) return (0, 0);
+            int off = 0, cores = 0, logical = 0;
+            while (off + 8 <= (int)len)
+            {
+                nint rec = buf + off;
+                int size = Marshal.ReadInt32(rec + 4);
+                if (size <= 0) break;
+                nint pl = rec + 8;                                  // PROCESSOR_RELATIONSHIP
+                int groupCount = (ushort)Marshal.ReadInt16(pl + 22);
+                cores++;
+                for (int g = 0; g < groupCount; g++)
+                {
+                    ulong mask = (ulong)Marshal.ReadInt64(pl + 24 + g * 16);   // GROUP_AFFINITY.Mask
+                    logical += BitOperations.PopCount(mask);
+                }
+                off += size;
+            }
+            return (cores, logical);
+        }
+        finally { Marshal.FreeHGlobal(buf); }
     }
 
     /// <summary>CPUID 位元解碼的純函式集合（單元測試直接餘 synthetic 暫存器值）。</summary>
@@ -286,6 +399,181 @@ public sealed class CpuIdService
                 _ => $"層級 {levelType}",
             };
             return new CpuIdTopologyRow($"0x1F #{subleaf}", level, $"{count} 個", $"右移 {shift} bits");
+        }
+
+        /// <summary>leaf 0x80000007 EDX 位 8：TSC 是否恆速（不隨 P-state／C-state 變頻）。</summary>
+        public static string DecodeInvariantTsc(uint edx)
+            => (edx & (1u << 8)) != 0
+                ? "支援（EDX 位 8＝1）：TSC 恆速，以 TSC 換算時間成立。"
+                : "不支援（EDX 位 8＝0）：TSC 會隨頻率變動，任何以 TSC 換算時間的量測都不可信。";
+
+        /// <summary>leaf 0x06 EAX 的熱能／電源管理能力位元。</summary>
+        public static readonly (int Bit, string Name)[] PowerEaxFlags =
+        {
+            (0, "數位溫度感測器（DTS）"),
+            (1, "Turbo Boost"),
+            (2, "APIC 計時器恆速（ARAT）"),
+            (4, "功耗限制通知（PLN）"),
+            (5, "延伸時脈調變（ECMD）"),
+            (6, "封裝熱管理（PTM）"),
+            (7, "硬體 P-state（HWP）"),
+            (8, "HWP 通知"),
+            (9, "HWP 活動視窗"),
+            (10, "HWP 能耗偏好"),
+            (11, "HWP 封裝層級請求"),
+            (13, "硬體工作週期控制（HDC）"),
+            (14, "Turbo Boost Max 3.0"),
+            (15, "HWP 最高效能變更通知"),
+            (16, "HWP PECI 覆寫"),
+            (17, "彈性 HWP"),
+            (18, "IA32_HWP_REQUEST 快速存取"),
+            (19, "硬體回饋介面（HFI）"),
+            (20, "忽略閒置邏輯處理器的 HWP 請求"),
+            (23, "Thread Director"),
+        };
+
+        public static List<CpuIdInfoRow> DecodePower(uint eax, uint ebx, uint ecx)
+        {
+            var rows = new List<CpuIdInfoRow>();
+            var on = PowerEaxFlags.Where(f => (eax & (1u << f.Bit)) != 0).Select(f => f.Name).ToArray();
+            rows.Add(new CpuIdInfoRow("已回報的能力（EAX）", on.Length == 0 ? "—（EAX 為 0）" : string.Join("、", on)));
+            // HWP 缺席要明說：沒有 HWP，就沒有作業系統可讀的「硬體偏好核心」名單
+            rows.Add(new CpuIdInfoRow("硬體 P-state（HWP）",
+                (eax & (1u << 7)) != 0
+                    ? "支援：頻率由硬體自行決定，作業系統只提供偏好值。"
+                    : "不支援：頻率由作業系統的 P-state 請求決定；本平台沒有硬體偏好核心名單可讀。"));
+            rows.Add(new CpuIdInfoRow("溫度中斷閾值數（EBX 位 3:0）", $"{ebx & 0xF} 個"));
+            rows.Add(new CpuIdInfoRow("硬體協調回饋（ECX 位 0）",
+                (ecx & 1) != 0 ? "支援：MPERF／APERF 可用，有效時脈量測成立。" : "不支援：無 MPERF／APERF，無法量測有效時脈。"));
+            rows.Add(new CpuIdInfoRow("能耗偏好（ECX 位 3）",
+                (ecx & 8) != 0 ? "支援 IA32_ENERGY_PERF_BIAS（EPB）" : "不支援 EPB"));
+            rows.Add(new CpuIdInfoRow("原始值", $"EAX＝0x{eax:X8} ・ EBX＝0x{ebx:X8} ・ ECX＝0x{ecx:X8}"));
+            return rows;
+        }
+
+        /// <summary>架構效能事件名稱（leaf 0x0A EBX 位向量的順序）。</summary>
+        public static readonly string[] ArchEventNames =
+            { "核心週期", "指令退休", "參考週期", "LLC 參考", "LLC 失誤", "分支指令退休", "分支預測失敗退休", "Topdown 插槽" };
+
+        /// <summary>
+        /// EBX 的位為 1 代表該架構事件<b>不可用</b>（SDM 的定義是反的；寫成「支援」就是把 0 說成 1）。
+        /// </summary>
+        public static string DescribeArchEvents(uint ebx, uint vectorLength)
+        {
+            int n = (int)Math.Min(vectorLength, (uint)ArchEventNames.Length);
+            if (n == 0) return "—（EBX 位向量長度為 0）";
+            var missing = Enumerable.Range(0, n).Where(i => (ebx & (1u << i)) != 0).Select(i => ArchEventNames[i]).ToArray();
+            return missing.Length == 0
+                ? $"前 {n} 個架構事件全部可用（EBX 的位為 1 才代表不可用）"
+                : "不可用：" + string.Join("、", missing);
+        }
+
+        /// <summary>leaf 0x0A：架構效能監測單元的版本與計數器幾何。</summary>
+        public static List<CpuIdInfoRow> DecodePmu(uint eax, uint ebx, uint edx)
+        {
+            var rows = new List<CpuIdInfoRow>();
+            uint ver = eax & 0xFF;
+            if (ver == 0)
+            {
+                rows.Add(new CpuIdInfoRow("架構 PMU", "版本 0：此處理器不提供架構效能監測（Top-down 等 PMU 卡片無法運作）。"));
+                return rows;
+            }
+            uint gp = (eax >> 8) & 0xFF, gpWidth = (eax >> 16) & 0xFF, vecLen = (eax >> 24) & 0xFF;
+            uint fixedCnt = edx & 0x1F, fixedWidth = (edx >> 5) & 0xFF;
+            rows.Add(new CpuIdInfoRow("架構 PMU 版本", $"版本 {ver}"));
+            rows.Add(new CpuIdInfoRow("通用計數器", $"每邏輯處理器 {gp} 個 × {gpWidth} 位元"));
+            rows.Add(new CpuIdInfoRow("固定功能計數器", $"{fixedCnt} 個 × {fixedWidth} 位元"));
+            rows.Add(new CpuIdInfoRow("架構事件可用性（EBX）", DescribeArchEvents(ebx, vecLen)));
+            rows.Add(new CpuIdInfoRow("原始值", $"EAX＝0x{eax:X8} ・ EBX＝0x{ebx:X8} ・ EDX＝0x{edx:X8}"));
+            return rows;
+        }
+
+        /// <summary>XSAVE 狀態元件（XCR0／IA32_XSS 的位索引）名稱。</summary>
+        public static string XSaveComponentName(int index) => index switch
+        {
+            0 => "x87 FPU",
+            1 => "SSE（XMM）",
+            2 => "AVX（YMM 高 128 位）",
+            3 => "MPX 邊界暫存器",
+            4 => "MPX 邊界設定",
+            5 => "AVX-512 遮罩暫存器（k0–k7）",
+            6 => "AVX-512 ZMM 高 256 位（zmm0–15）",
+            7 => "AVX-512 zmm16–31",
+            8 => "Processor Trace（監督者狀態）",
+            9 => "PKRU（保護鍵）",
+            10 => "PASID",
+            11 => "CET 使用者狀態",
+            12 => "CET 監督者狀態",
+            13 => "HDC",
+            14 => "UINTR",
+            15 => "LBR",
+            16 => "HWP",
+            17 => "AMX TILECFG",
+            18 => "AMX TILEDATA",
+            _ => $"元件 {index}",
+        };
+
+        /// <summary>leaf 0x0D 子葉 0：XCR0 位圖與儲存區大小。</summary>
+        public static CpuIdInfoRow DecodeXSaveMain(uint eaxLow, uint edxHigh, uint ebx, uint ecx)
+        {
+            ulong mask = eaxLow | ((ulong)edxHigh << 32);
+            if (mask == 0) return new CpuIdInfoRow("XCR0 支援的狀態元件", "—（位圖為 0）");
+            var names = Enumerable.Range(0, 63).Where(i => (mask & (1UL << i)) != 0).Select(XSaveComponentName);
+            return new CpuIdInfoRow("XCR0 支援的狀態元件",
+                $"0x{mask:X}：{string.Join("、", names)} ・ 目前啟用需 {ebx:N0} 位元組、全部支援共 {ecx:N0} 位元組");
+        }
+
+        /// <summary>leaf 0x0D 子葉 1：XSAVE 指令變體與監督者狀態位圖。</summary>
+        public static CpuIdInfoRow DecodeXSaveExtras(uint eax, uint ebx, uint ecx)
+        {
+            var flags = new List<string>();
+            if ((eax & 0x01) != 0) flags.Add("XSAVEOPT");
+            if ((eax & 0x02) != 0) flags.Add("XSAVEC");
+            if ((eax & 0x04) != 0) flags.Add("XGETBV（ECX＝1）");
+            if ((eax & 0x08) != 0) flags.Add("XSAVES／XRSTORS");
+            if ((eax & 0x10) != 0) flags.Add("XFD（延遲功能停用）");
+            string sup = ecx == 0
+                ? "無"
+                : string.Join("、", Enumerable.Range(0, 32).Where(i => (ecx & (1u << i)) != 0).Select(XSaveComponentName));
+            return new CpuIdInfoRow("XSAVE 指令變體（0x0D/1）",
+                $"{(flags.Count == 0 ? "—" : string.Join("、", flags))} ・ 含監督者狀態共需 {ebx:N0} 位元組 ・ 監督者狀態：{sup}");
+        }
+
+        /// <summary>
+        /// leaf 0x0D 子葉 n≥2：EAX 元件大小、EBX 在儲存區中的位移；
+        /// ECX 位 0 為 1 表示監督者狀態（位移無意義），位 1 表示需 64 位元組對齊。大小為 0 即未支援（回 null）。
+        /// </summary>
+        public static CpuIdInfoRow? DecodeXSaveComponent(int index, uint eax, uint ebx, uint ecx)
+        {
+            if (eax == 0) return null;
+            bool supervisor = (ecx & 1) != 0, aligned = (ecx & 2) != 0;
+            string where = supervisor ? "監督者狀態（不在使用者 XSAVE 儲存區中）" : $"位移 {ebx:N0}";
+            return new CpuIdInfoRow($"{XSaveComponentName(index)}（0x0D/{index}）",
+                $"{eax:N0} 位元組 ・ {where}{(aligned ? " ・ 需 64 位元組對齊" : "")}");
+        }
+
+        /// <summary>
+        /// 拓樸交叉驗證：CPUID 的每封裝數字乘出來的實體核心數，對不對得上作業系統列舉的數量。
+        /// 任一邊缺資料就說「不做推論」——拿 0 去比會得出「一致」這種假結論。
+        /// </summary>
+        public static string CrossCheckTopology(int threadsPerCore, int logicalPerPackage, int osPhysicalCores, int osLogical)
+        {
+            if (threadsPerCore <= 0 || logicalPerPackage <= 0 || osPhysicalCores <= 0 || osLogical <= 0)
+                return "—（CPUID 拓樸葉位或作業系統列舉缺一，不做推論）";
+            int coresPerPackage = logicalPerPackage / threadsPerCore;
+            if (coresPerPackage <= 0)
+                return "—（CPUID 的每封裝執行緒數小於每核心執行緒數，兩個數字互相矛盾，不做推論）";
+
+            string basis = $"CPUID：每核心 {threadsPerCore} 執行緒、每封裝 {logicalPerPackage} 邏輯處理器（＝{coresPerPackage} 核）；"
+                         + $"作業系統：{osPhysicalCores} 實體核心、{osLogical} 邏輯處理器。";
+            if (osLogical % logicalPerPackage != 0)
+                return "⚠ 不一致：" + basis + "邏輯處理器數不是每封裝數的整數倍——可能有核心被韌體停用，或行程親和性受限。";
+
+            int packages = osLogical / logicalPerPackage;
+            int expected = coresPerPackage * packages;
+            return expected == osPhysicalCores
+                ? $"一致（推得 {packages} 個封裝）：{basis}"
+                : $"⚠ 不一致：{basis}依 CPUID 應有 {expected} 顆實體核心。";
         }
 
         /// <summary>leaf 0x1A：混合架構的核心類型。</summary>

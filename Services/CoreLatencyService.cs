@@ -40,8 +40,11 @@ public sealed class CoreLatencyService : ObservableObject
     private string _status = "按「開始量測」跑滿全部邏輯處理器兩兩組合（全程約數秒，期間對應核心滿載）。";
     public string StatusLine { get => _status; private set => SetProperty(ref _status, value); }
 
+    private int[] _lps = [];
     /// <summary>實際參與量測的邏輯處理器編號（依親和性遮罩由低到高）；熱圖的行列順序與此一致。</summary>
-    public int[] Lps { get; private set; } = [];
+    /// <remarks>必須走 SetProperty：熱圖的 Lps 是獨立繫結，不通知就永遠是空陣列，
+    /// 而 Data 已經是 N×N——標籤索引會越界（1.4.0 的 IndexOutOfRangeException 即出於此）。</remarks>
+    public int[] Lps { get => _lps; private set => SetProperty(ref _lps, value); }
 
     private double[,]? _matrixNs;
     /// <summary>延遲矩陣（ns，往返）；對角線為 NaN（自己對自己不量）。</summary>
@@ -72,8 +75,8 @@ public sealed class CoreLatencyService : ObservableObject
             Phase = "量測中";
             StatusLine = "量測中…（期間對應核心滿載）";
             var (matrix, lps) = await Task.Run(() => MeasureAll(ct));
+            Lps = lps;          // 先給行列標籤，再給矩陣：Data 的變更會立刻觸發一次繪製
             MatrixNs = matrix;
-            Lps = lps;
             var (min, med, max) = Stats(matrix);
             MinText = $"{min:0} ns";
             MedianText = $"{med:0} ns";

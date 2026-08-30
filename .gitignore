@@ -2,6 +2,7 @@
 [Bb]in/
 [Oo]bj/
 publish/
+publish-*/
 Bridge/[Bb]in/
 Bridge/[Oo]bj/
 
