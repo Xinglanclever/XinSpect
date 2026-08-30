@@ -6,16 +6,25 @@
         <StackPanel>
             <TextBlock Style="{StaticResource SectionHeader}" Text="效能測試"/>
 
-            <!-- ===== 象棋跑分（原生 perft，無執行緒上限 + 原版 Fritz 對照） ===== -->
+            <!-- ===== 棋類跑分（原生 perft，無執行緒上限；分數同時是運算正確性的檢核碼） ===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="0">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="象棋跑分（原生節點吞吐）"/>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="棋類跑分（原生節點吞吐・自我驗證）"/>
                         <TextBlock Style="{StaticResource FieldLabel}" HorizontalAlignment="Right" VerticalAlignment="Center"
                                    Text="{Binding Chess.LogicalCores, StringFormat=本機 {0} 邏輯核心}"/>
                     </Grid>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
-                               Text="以西洋棋 perft（合法走法產生 + 走子/還原）為確定性運算負載，量測節點速率（kN/s）。每執行緒各持獨立引擎、無鎖競爭，可超額訂閱實體核心。本測試不提供跨機器的參考分數：可比的對象是本機歷次成績，或在同一台機器上實跑下方的原版 Fritz。"/>
+                               Text="以 perft（合法走法產生 + 走子/還原）為確定性整數負載，量測節點速率（kN/s）。每執行緒各持獨立引擎、無鎖競爭，可超額訂閱實體核心。固定局面固定深度的節點數是數學常數，因此每一輪都順便核對：算出別的數字代表這台機器算錯了，而不是它比較慢。"/>
+
+                    <!-- 棋種選擇：兩種引擎的分支型態與記憶體足跡不同，是兩種負載，不是換皮 -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,10">
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="棋種" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                        <Button x:Name="EngXiangqi" Style="{StaticResource ToolButton}" Content="中國象棋" Margin="0,0,6,0" Click="EngXiangqi_Click"/>
+                        <Button x:Name="EngChess" Style="{StaticResource ToolButton}" Content="西洋棋" Margin="0,0,12,0" Click="EngChess_Click"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" VerticalAlignment="Center" TextWrapping="Wrap"
+                                   Text="{Binding Chess.EngineNote}"/>
+                    </StackPanel>
 
                     <!-- 執行緒選擇 -->
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -95,23 +104,29 @@
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="2,4,0,0" TextWrapping="Wrap"
                                Text="{Binding Chess.ConditionText}"/>
 
-                    <!-- 原版 Fritz 對照 -->
+                    <!-- 運算正確性：取代舊的「原版對照」。外部程式只能給另一個分數，
+                         數學常數能給出對或錯——一個算錯的高分沒有意義，所以它跟速度並列。 -->
                     <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,12" Margin="0,12,0,0">
-                        <DockPanel LastChildFill="True">
-                            <Button x:Name="FritzBtn" DockPanel.Dock="Right" Style="{StaticResource ToolButton}"
-                                    Content="啟動原版 Fritz" Click="Fritz_Click" VerticalAlignment="Center" Margin="12,0,0,0"/>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="原版 Fritz Chess Benchmark（16 執行緒對照）" Style="{StaticResource FieldValue}"/>
-                                <TextBlock Text="{Binding Chess.FritzStatus}" Style="{StaticResource Subtitle}" TextWrapping="Wrap" Margin="0,2,0,0"/>
-                            </StackPanel>
-                        </DockPanel>
+                        <StackPanel>
+                            <DockPanel LastChildFill="True">
+                                <TextBlock DockPanel.Dock="Left" Text="運算正確性" Style="{StaticResource FieldValue}" Margin="0,0,10,0"/>
+                                <TextBlock Text="⚠ 偵測到運算錯誤" Style="{StaticResource FieldValue}" HorizontalAlignment="Right"
+                                           Foreground="{StaticResource CriticalBrush}"
+                                           Visibility="{Binding Chess.HasFault, Converter={StaticResource BoolToVis}}"/>
+                            </DockPanel>
+                            <TextBlock Text="{Binding Chess.VerifyText}" Style="{StaticResource Subtitle}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                            <TextBlock Text="{Binding Chess.IntegrityText}" Style="{StaticResource Subtitle}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                       Text="固定局面、固定深度的 perft 節點數與 CPU 型號、時脈、執行緒數都無關，是一個唯一的整數。本測試每輪都拿它核對一次，因此除了速度，也會回報這台機器算得對不對——不穩的超頻常常先表現為極少數的靜默計算錯誤，而分支密集的整數負載出錯的方式與 Prime95 的 FFT 不同，兩者互補。"/>
+                        </StackPanel>
                     </Border>
 
-                    <!-- 曾經此處有一張「參考對照（示意，非實測）」表：內建的 Pentium III 1 GHz 基準與各機型倍率
-                         都不是量出來的，只是把猜測寫得像量測，且本測試的 perft 負載與原版 Fritz 的引擎不同，
-                         兩者的「×」不可互換。整張表已移除，改以本機歷次紀錄（下方卡片）作唯一基準。 -->
+                    <!-- 曾經此處有一張「參考對照（示意，非實測）」表與一顆「啟動原版對照」按鈕：
+                         內建的 Pentium III 1 GHz 基準與各機型倍率都不是量出來的，只是把猜測寫得像量測；
+                         而那顆按鈕靠內嵌一份他家的評測執行檔才能運作，既非本專案授權範圍，
+                         給出的分數也只能跟它自己比。兩者都已移除，改以數學常數作為對照基準。 -->
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="2,14,0,0" TextWrapping="Wrap"
-                               Text="不提供各機型的參考倍率：那類對照表無法誠實——同型號的機器換一支散熱膏、換一種電源計劃就差一成，標成「約略」也只是把猜測寫得像量測。要跟別台電腦比，請在兩台機器上各跑一次上面的原版 Fritz。"/>
+                               Text="不提供各機型的參考倍率：那類對照表無法誠實——同型號的機器換一支散熱膏、換一種電源計劃就差一成，標成「約略」也只是把猜測寫得像量測。要跟別台電腦比，請在兩台機器上各選同一個棋種與同樣的執行緒數／時間跑一次：兩邊算的是同一個數學常數，工作量嚴格相等，這個比較才成立。"/>
                 </StackPanel>
             </Border>
 

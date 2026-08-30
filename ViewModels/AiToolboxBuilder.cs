@@ -422,7 +422,7 @@ internal static partial class AiToolboxBuilder
 
         box.Add("get_benchmark_scores",
             "取得本機已跑過的效能測試成績：綜合跑分（單／多執行緒與記憶體頻寬）、SuperPI 圓周率、"
-            + "快取與記憶體延遲、磁碟讀寫、象棋節點吞吐、Windows 體驗指數，以及最近一次烤機的穩定度。"
+            + "快取與記憶體延遲、磁碟讀寫、棋類 perft 節點吞吐（含運算正確性核對）、Windows 體驗指數，以及最近一次烤機的穩定度。"
             + "未跑過的項目會如實說明沒有成績。本程式不內建任何其他機器的參考分數，"
             + "成績後方的「與上次相比／重複性／量測條件」都來自本機歷次紀錄，請勿據此推測與別台電腦的高下。",
             _ =>
@@ -450,10 +450,11 @@ internal static partial class AiToolboxBuilder
 
                 var ch = vm.Chess;
                 sb.AppendLine(ch.MultiKNps is null
-                    ? "象棋節點吞吐：尚未測試"
-                    : $"象棋節點吞吐：單執行緒 {ch.SingleText}・多執行緒 {ch.MultiText}"
+                    ? "棋類 perft 節點吞吐：尚未測試"
+                    : $"棋類 perft 節點吞吐（{ch.EngineName}）：單執行緒 {ch.SingleText}・多執行緒 {ch.MultiText}"
                       + $"・加速比 {ch.SpeedupText}・{ch.EfficiencyText}"
-                      + Tail(ch.MultiDeltaText, ch.RepeatText, ch.ConditionText));
+                      + Tail(ch.MultiDeltaText, ch.RepeatText, ch.ConditionText)
+                      + (string.IsNullOrEmpty(ch.IntegrityText) ? "" : "・" + ch.IntegrityText));
 
                 var w = vm.Winsat;
                 sb.AppendLine(w.HasData

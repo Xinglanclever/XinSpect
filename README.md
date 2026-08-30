@@ -2,7 +2,7 @@
 
 > 一款專為 Windows 打造的原生硬體資訊總覽工具 — 即時感測、效能評測、超頻控制與一鍵裝機，全部整合於單一桌面應用程式。
 
-![版本](https://img.shields.io/badge/version-1.6.0-4C8DFF)
+![版本](https://img.shields.io/badge/version-1.6.1-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![授權](https://img.shields.io/badge/license-MIT-green)
@@ -17,7 +17,7 @@
 - **即時感測** — 溫度、時脈、電壓、風扇、負載即時儀表,支援迷你懸浮視窗與系統匣。
 - **溫度負載警示** — 可設定門檻,超標時橫幅提示 + 系統匣氣泡通知。
 - **感測記錄** — 一鍵匯出 CSV,長期追蹤。
-- **效能評測** — 內建多項基準測試,並可啟動原版對照。
+- **效能評測** — 內建多項基準測試,並可自我驗證:棋類跑分(中國象棋／西洋棋)以 perft 葉節點數當檢核碼,那是數學常數,算出別的數字就是這台機器算錯了,而不是比較慢。
 - **效能天梯** — 離線 CPU / 顯示卡天梯榜(資料來源 topcpu.net),快速定位自己的硬體排名。
 - **CPU 超頻** — 透過內建 Intel XTU 橋接程式調整倍頻 / 電壓。
 - **顯卡超頻** — NVML 功耗 / 風扇 / 溫度監控 + NVAPI 時脈調整。
@@ -77,7 +77,7 @@ dotnet publish -c Release -r win-x64
 
 本專案以 [MIT License](LICENSE) 釋出。
 
-> 注意:內建的第三方元件(Intel XTU SDK、內嵌評測執行檔等)受其各自授權條款約束,不在本專案 MIT 授權範圍內。
+> 注意:內建的第三方元件(Intel XTU SDK 等)受其各自授權條款約束,不在本專案 MIT 授權範圍內。
 
 ## 作者
 

@@ -12,6 +12,7 @@ public partial class BenchView : UserControl
         {
             UpdateDurationButtons();
             UpdateChessDurationButtons();
+            UpdateChessEngineButtons();
             UpdateStressDurationButtons();
             UpdatePiDigitButtons();
             if (Chess is not null) ChessTAll.Content = $"全部核心（{Chess.LogicalCores}）";
@@ -50,7 +51,7 @@ public partial class BenchView : UserControl
     private void Start_Click(object sender, RoutedEventArgs e) => Bench?.Start();
     private void Stop_Click(object sender, RoutedEventArgs e) => Bench?.Cancel();
 
-    // ===== 象棋跑分 =====
+    // ===== 棋類跑分 =====
     private void ChessT1_Click(object sender, RoutedEventArgs e) => SetChessThreads(1);
     private void ChessTAll_Click(object sender, RoutedEventArgs e) => SetChessThreads(Chess?.LogicalCores ?? 1);
     private void ChessT64_Click(object sender, RoutedEventArgs e) => SetChessThreads(64);
@@ -81,7 +82,21 @@ public partial class BenchView : UserControl
 
     private void ChessStart_Click(object sender, RoutedEventArgs e) => Chess?.Start();
     private void ChessStop_Click(object sender, RoutedEventArgs e) => Chess?.Cancel();
-    private void Fritz_Click(object sender, RoutedEventArgs e) => Chess?.LaunchOriginalFritz();
+
+    private void EngXiangqi_Click(object sender, RoutedEventArgs e) => SetEngine(BoardEngineKind.Xiangqi);
+    private void EngChess_Click(object sender, RoutedEventArgs e) => SetEngine(BoardEngineKind.Chess);
+
+    private void SetEngine(BoardEngineKind kind)
+    {
+        if (Chess is { IsRunning: false } c) { c.SetEngine(kind); UpdateChessEngineButtons(); }
+    }
+
+    private void UpdateChessEngineButtons()
+    {
+        bool xq = Chess?.IsXiangqi ?? true;
+        EngXiangqi.Content = xq ? "✓ 中國象棋" : "中國象棋";
+        EngChess.Content = xq ? "西洋棋" : "✓ 西洋棋";
+    }
 
     // ===== WinSAT =====
     private async void Winsat_Click(object sender, RoutedEventArgs e)

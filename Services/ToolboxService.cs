@@ -139,7 +139,7 @@ public sealed class ToolboxService : ObservableObject
                 Kind = ToolKind.Builtin, Target = "sensors", Keywords = ["sensor", "感測", "溫度", "電壓", "風扇"] },
         new() { Group = "曦覽內建", Name = "健康與體檢",     Description = "整機健康評估、MCA / WHEA、平台可信度與電源政策",
                 Kind = ToolKind.Builtin, Target = "health", Keywords = ["health", "健康", "體檢", "mca", "whea"] },
-        new() { Group = "曦覽內建", Name = "效能測試與烤機", Description = "象棋跑分、綜合分數、烤機穩定度與 Top-down 歸因",
+        new() { Group = "曦覽內建", Name = "效能測試與烤機", Description = "棋類跑分、綜合分數、烤機穩定度與 Top-down 歸因",
                 Kind = ToolKind.Builtin, Target = "bench", Keywords = ["bench", "跑分", "烤機", "stress", "topdown"] },
         new() { Group = "曦覽內建", Name = "DPC 延遲分析",   Description = "以 ETW 排出造成爆音 / 停頓的肇事驅動",
                 Kind = ToolKind.Builtin, Target = "dpc", Keywords = ["dpc", "isr", "latencymon", "延遲", "爆音"] },
@@ -428,7 +428,7 @@ public sealed class ToolboxService : ObservableObject
                 Kind = ToolKind.WebLink, Target = "https://www.maxon.net/en/cinebench",
                 Keywords = ["跑分", "算圖", "多核", "cinebench"],
                 Native = "bench",
-                NativeNote = "曦覽的象棋跑分是確定性整數負載，量的東西與 Cinebench 的算圖不同；"
+                NativeNote = "曦覽的棋類跑分是確定性整數負載，量的東西與 Cinebench 的算圖不同；"
                            + "要業界通行的可比分數請用 Cinebench。" },
         // 記憶體
         new() { Group = "記憶體工具", Name = "Thaiphoon Burner",

@@ -215,7 +215,7 @@ public partial class MainWindow : Window
         try
         {
             _tray = new TrayService();
-            _tray.ShowMainRequested += ShowMainFromTray;
+            _tray.ShowMainRequested += RestoreToForeground;
             _tray.ToggleMiniRequested += ToggleMini;
             _tray.ExitRequested += () => Application.Current.Shutdown();
             _vm.Alerts.Balloon = (t, m) => _tray?.ShowBalloon(t, m);   // 硬體警示→系統匣氣泡
@@ -223,7 +223,8 @@ public partial class MainWindow : Window
         catch { /* 系統匣為附加功能，失敗不影響主程式 */ }
     }
 
-    private void ShowMainFromTray()
+    /// <summary>把主視窗帶回畫面：系統匣圖示與「使用者又點了一次曦覽」都走這條路。</summary>
+    public void RestoreToForeground()
     {
         Show();
         if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;

@@ -13,7 +13,7 @@
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0"
                                Text="硬體資訊總覽 ・ 即時偵測工具"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,2,0,0"
-                               Text="版本 1.6.0 ・ 便攜單一執行檔"/>
+                               Text="版本 1.6.1 ・ 便攜單一執行檔"/>
 
                     <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,16"/>
 
@@ -108,7 +108,7 @@
                     <local:FieldRow Label="儲存裝置" Value="容量・溫度・S.M.A.R.T. 剩餘壽命"/>
                     <local:FieldRow Label="網路" Value="網路介面・連線速率・即時上下行流量"/>
                     <local:FieldRow Label="感測器" Value="所有感測器讀值・最小・最大"/>
-                    <local:FieldRow Label="效能" Value="象棋跑分（原生／原版 Fritz）・綜合測試・CPU 烤機・GPU 燒機（FurMark＋原生監測）・WinSAT"/>
+                    <local:FieldRow Label="效能" Value="棋類跑分（中國象棋／西洋棋 perft・自我驗證）・綜合測試・CPU 烤機・GPU 燒機（FurMark＋原生監測）・WinSAT"/>
                     <local:FieldRow Label="健康" Value="狀態燈・綜合分數・溫度與容量警示"/>
                     <local:FieldRow Label="AI 評價" Value="本機免費 Ollama 或 OpenAI 相容 API・客觀評價・可自訂提示詞"/>
                     <local:FieldRow Label="一鍵裝機" Value="依分類批次安裝常用軟體（Windows 內建 winget）"/>

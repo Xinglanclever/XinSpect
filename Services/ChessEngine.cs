@@ -1,6 +1,23 @@
 namespace XinSpect;
 
 /// <summary>
+/// 棋類 perft 引擎的共同介面，讓跑分迴圈能以同一段程式驅動不同棋種。
+/// </summary>
+/// <remarks>
+/// 只有兩個成員，因為跑分只需要這兩件事：回到固定的起始局面，然後數出固定深度的葉節點數。
+/// 「固定局面 + 固定深度 = 固定節點數」是這個介面存在的全部意義——它同時是工作量的度量單位
+/// 與運算正確性的檢核碼。
+/// </remarks>
+internal interface IPerftEngine
+{
+    /// <summary>回到起始局面。</summary>
+    void Reset();
+
+    /// <summary>數出到指定深度的合法走法葉節點數。</summary>
+    long PerftLeaves(int depth);
+}
+
+/// <summary>
 /// 精簡但「正確」的西洋棋走法產生器（10×12 mailbox 表示），用於 perft 節點吞吐量測。
 /// 每個工作執行緒各自持有一份實例（獨立棋盤與走法緩衝），因此完全無鎖、無競爭，
 /// 可線性擴充到任意（含超額）執行緒數。節點計數 = 搜尋樹中造訪的合法局面數（含內部節點與葉節點）。
@@ -9,7 +26,7 @@ namespace XinSpect;
 /// 故 perft(n) 之葉節點數與公認值相符（起始局面 depth1=20、depth2=400、depth3=8902、depth4=197281）。
 /// 這是真正的西洋棋走子運算，而非任意迴圈，量得的節點/秒具實質意義。
 /// </summary>
-internal sealed class ChessEngine
+internal sealed class ChessEngine : IPerftEngine
 {
     private const int W = 0, B = 8;   // 顏色位元（同時作為「該方」標記）
     private const int OFF = -1;       // 邊界哨兵
@@ -72,6 +89,32 @@ internal sealed class ChessEngine
         _nodes = 0;
         Search(depth);
         return _nodes;
+    }
+
+    /// <summary>
+    /// 從目前局面數到指定深度的<b>葉節點</b>數（perft 的標準定義，每次呼叫前歸零）。
+    /// 起始局面的值是公認常數，可用來核對運算正確性——算出別的數就是機器算錯了。
+    /// </summary>
+    public long PerftLeaves(int depth)
+    {
+        _nodes = 0;
+        Leaves(depth);
+        return _nodes;
+    }
+
+    private void Leaves(int depth)
+    {
+        if (depth == 0) { _nodes++; return; }
+
+        Move[] mv = _pool[depth];
+        int n = Generate(mv);
+        int me = _side;
+        for (int i = 0; i < n; i++)
+        {
+            Make(in mv[i], out var u);
+            if (!IsAttacked(FindKing(me), _side)) Leaves(depth - 1);
+            Unmake(in mv[i], in u);
+        }
     }
 
     private void Search(int depth)

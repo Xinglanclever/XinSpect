@@ -21,8 +21,8 @@
     <Product>曦覽 XinSpect</Product>
     <AssemblyTitle>曦覽 XinSpect 硬體資訊總覽</AssemblyTitle>
     <Company>Xinglanclever</Company>
-    <Version>1.6.0</Version>
-    <FileVersion>1.6.0.0</FileVersion>
+    <Version>1.6.1</Version>
+    <FileVersion>1.6.1.0</FileVersion>
     <!-- 內嵌 PDB：發佈維持單一執行檔，CrashLog 記錄的堆疊仍帶行號（portable PDB 預設會另產生 XinSpect.pdb） -->
     <DebugType>embedded</DebugType>
     <Copyright>By：Xinglanclever ・ Claude Opus 4.8 ・ 2026年8月24日</Copyright>
@@ -49,13 +49,6 @@
     <Resource Include="Assets\app.ico" />
     <!-- 關於頁「By：Xinglanclever」旁的動畫 GIF；以 Resource 編入，pack URI 讀取後逐格輪播 -->
     <Resource Include="Assets\hug.gif" />
-  </ItemGroup>
-
-  <!-- 內嵌原版 Fritz Chess Benchmark（單一自含執行檔），供「啟動原版對照」一鍵解壓執行 -->
-  <ItemGroup>
-    <EmbeddedResource Include="Assets\xiangqi.exe">
-      <LogicalName>XinSpect.Fritz.xiangqi.exe</LogicalName>
-    </EmbeddedResource>
   </ItemGroup>
 
   <!-- 內嵌 CPU / 顯示卡效能天梯榜資料（JSON；資料來源 topcpu.net），供「天梯」分頁離線讀取 -->

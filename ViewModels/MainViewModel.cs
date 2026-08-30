@@ -190,7 +190,7 @@ public sealed class MainViewModel : ObservableObject
     public IReadOnlyList<GpuDetail> GpuDetails { get => _gpuDetails; internal set { if (SetProperty(ref _gpuDetails, value)) OnPropertyChanged(nameof(HasGpuDetails)); } }
     public bool HasGpuDetails => _gpuDetails.Count > 0;
 
-    /// <summary>原生象棋節點吞吐跑分（perft，無執行緒上限）＋ 原版 Fritz 對照啟動。</summary>
+    /// <summary>原生棋類節點吞吐跑分（中國象棋／西洋棋 perft，無執行緒上限，逐輪核對節點數）。</summary>
     public ChessBenchService Chess { get; }
 
     /// <summary>Windows 體驗指數（WinSAT）：讀取快取分數，可手動重新評分。</summary>
