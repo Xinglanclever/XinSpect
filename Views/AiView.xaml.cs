@@ -20,7 +20,7 @@ public partial class AiView : UserControl
 
     private MainViewModel? Vm =>
         DataContext as MainViewModel
-        ?? Application.Current?.MainWindow?.DataContext as MainViewModel;
+        ?? Shell.Vm;
 
     private async void Send_Click(object sender, RoutedEventArgs e) => await SendAsync();
 

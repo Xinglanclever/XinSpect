@@ -187,11 +187,12 @@ public sealed class FrameTimeService : ObservableObject, IDisposable
     }
 
     /// <summary>把狀態更新切回 UI 執行緒（ETW 泵執行緒用）。</summary>
-    private static void BeginOnUi(Action a)
-    {
-        var win = Application.Current?.MainWindow;
-        win?.Dispatcher.BeginInvoke(a);
-    }
+    /// <remarks>
+    /// 必須走 <see cref="Shell.BeginOnUi"/>：原本讀 <c>Application.Current.MainWindow</c> 取 Dispatcher，
+    /// 而那個 getter 會做 VerifyAccess——在 ETW 泵執行緒上讀它會丟例外，
+    /// 而這裡正是「ETW 事件流中斷」的錯誤路徑，等於錯誤處理本身把行程弄掛。
+    /// </remarks>
+    private static void BeginOnUi(Action a) => Shell.BeginOnUi(a);
 
     public void Dispose()
     {

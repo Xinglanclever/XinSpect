@@ -22,7 +22,7 @@ public partial class MemoryView : UserControl
     // Host.Content 延遲載入時 DataContext 由父容器繼承；仍以主視窗為後備。
     private MainViewModel? Vm =>
         DataContext as MainViewModel
-        ?? Application.Current?.MainWindow?.DataContext as MainViewModel;
+        ?? Shell.Vm;
 
     private void MemTestStart_Click(object sender, RoutedEventArgs e) => Vm?.MemTest.Start();
     private void MemTestStop_Click(object sender, RoutedEventArgs e) => Vm?.MemTest.Cancel();

@@ -50,7 +50,8 @@ public sealed class NetworkService : ObservableObject
             // 以「開機至今累計位元組」作為基準，避免首次 Refresh() 將整段歷史流量除以極短時距，
             // 誤報一筆遠超實際頻寬的虛假尖峰。讀不到統計時退回 0（首拍仍可能偏高，但屬少數例外）。
             long rx0 = 0, tx0 = 0;
-            try { var st = nic.GetIPStatistics(); rx0 = st.BytesReceived; tx0 = st.BytesSent; } catch { }
+            try { var st = nic.GetIPStatistics(); rx0 = st.BytesReceived; tx0 = st.BytesSent; }
+            catch (Exception ex) { Diag.Swallow("讀取網卡累計流量基準", ex, $"{row.Name} 首拍速率可能偏高"); }
             _prev[nic.Id] = new Prev { Rx = rx0, Tx = tx0, Ticks = _clock.ElapsedTicks };
         }
     }

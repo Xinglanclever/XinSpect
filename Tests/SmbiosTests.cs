@@ -37,8 +37,7 @@ public class SmbiosTests
     public void 解析器切出結構並還原字串區()
     {
         var structs = SmbiosParser.Parse(BuildType17Table());
-        Assert.Equal(1, structs.Count);    // Type 127 為表尾，不列入
-        var s = structs[0];
+        var s = Assert.Single(structs);    // Type 127 為表尾，不列入
         Assert.Equal(17, s.Type);
         Assert.Equal(0x1100, s.Handle);
         Assert.Equal(5, s.Strings.Length);

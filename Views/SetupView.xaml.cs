@@ -11,7 +11,7 @@ public partial class SetupView : UserControl
 
     private WingetService? Vm =>
         (DataContext as WingetService)
-        ?? (Application.Current?.MainWindow?.DataContext as MainViewModel)?.Winget;
+        ?? Shell.Vm?.Winget;
 
     private void SelectRec_Click(object sender, RoutedEventArgs e) => Vm?.SelectRecommended();
 

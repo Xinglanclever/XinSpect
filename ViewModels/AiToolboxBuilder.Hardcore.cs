@@ -362,7 +362,7 @@ internal static partial class AiToolboxBuilder
 
                 Line(sb, "全系統總頻寬", s.TotalBwText);
                 sb.AppendLine("逐核（快取占用／總頻寬／本地頻寬）：");
-                Rows(sb, s.Rows, 12, r => $"LP{r.Lp}：{r.OccupancyText}／{r.TotalBwText}／{r.LocalBwText}");
+                Rows(sb, s.Rows, 12, r => $"{r.LpText}：{r.OccupancyText}／{r.TotalBwText}／{r.LocalBwText}");
                 sb.AppendLine("限制（轉述時必須說明）：使用者模式下無法做行程層級歸因，只有全系統與逐核；"
                     + "MBM 計數器會繞回，該秒的負差值直接捨棄；"
                     + "若三項讀值全為 0 且無錯誤旗標，那是平台／韌體未開放 RDT 監測的樣子，如實顯示 0，不用估計值頂替。");

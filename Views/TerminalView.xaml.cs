@@ -22,7 +22,7 @@ public partial class TerminalView : UserControl
     {
         // UserControl 根層級的 DataContext="{Binding Terminal}" 在此宿主結構（延後掛入 Host.Content）
         // 下無法解析為 TerminalService，改由程式碼於載入時自主視窗的 MainViewModel 取得並指派。
-        if (DataContext is not TerminalService && Application.Current.MainWindow?.DataContext is MainViewModel vm)
+        if (DataContext is not TerminalService && Shell.Vm is { } vm)
             DataContext = vm.Terminal;
 
         if (Term is { } t)

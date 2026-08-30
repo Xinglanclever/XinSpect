@@ -10,7 +10,7 @@ public partial class MotherboardView : UserControl
 
     private MainViewModel? Vm =>
         DataContext as MainViewModel
-        ?? Application.Current?.MainWindow?.DataContext as MainViewModel;
+        ?? Shell.Vm;
 
     private void FirmwareRefresh_Click(object sender, RoutedEventArgs e) => Vm?.Firmware.Refresh();
 

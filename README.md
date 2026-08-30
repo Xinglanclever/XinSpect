@@ -2,7 +2,7 @@
 
 > 一款專為 Windows 打造的原生硬體資訊總覽工具 — 即時感測、效能評測、超頻控制與一鍵裝機，全部整合於單一桌面應用程式。
 
-![版本](https://img.shields.io/badge/version-1.3.0-4C8DFF)
+![版本](https://img.shields.io/badge/version-1.6.0-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![授權](https://img.shields.io/badge/license-MIT-green)
@@ -26,6 +26,10 @@
 - **一鍵裝機** — 整合 winget,勾選常用軟體批次安裝。
 - **內建瀏覽器與終端** — WebView2 內嵌瀏覽,以及真實 `cmd.exe` 終端。
 - **AI 評價** — 接 Ollama 或任意 OpenAI 相容端點,對本機硬體給出評語(提示詞可自訂)。
+- **硬核唯讀量測** — 直接編程 Intel PMU／MSR 的底層事實：Top-down 管線歸因、頻率真相（MPERF／APERF 與 Turbo 階梯）、平台可信度、BIOS 與 ME 微碼、逐核時間歸因、電源政策、記憶體真實面貌、機器檢查（MCA／WHEA）、核心間延遲矩陣、RDT 快取佔用。全部唯讀，取樣前後完整還原計數器；**量不到的項目一律拒絕出數字**而不是猜一個看起來合理的值。
+- **診斷紀錄** — 所有「已接住、功能降級」的例外（MSR 被拒、WMI 失敗、感測器不存在）連同對使用者的實際後果，都列在設定頁並落地 `diag.log`；「量不到」與「程式有缺陷」不再長得一模一樣。
+- **歷史回放與報告匯出** — 分鐘級極值長期落地,可回放任意時間窗;整機報告可匯出 HTML／Markdown／純文字(可選遮蔽可識別資訊)。
+- **命令面板** — `Ctrl+K` 模糊搜尋直達 38 個分頁與工具。
 - **集中設定** — 所有偏好以 JSON 持久化,支援一鍵初始化。
 
 ## 系統需求

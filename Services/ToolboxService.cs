@@ -650,7 +650,7 @@ public sealed class ToolboxService : ObservableObject
     /// <summary>跳到曦覽自家頁面（主頁面或「實用工具」子頁）；找不到該鍵時回傳 false。</summary>
     public static bool NavigateTo(string pageKey)
     {
-        if (Application.Current?.MainWindow is not MainWindow shell) return false;
+        if (Shell.Main is not { } shell) return false;
         if (PageRegistry.Find(pageKey) is not null) { shell.NavigateToKey(pageKey); return true; }
         if (PageRegistry.FindUtility(pageKey) is not null) { shell.NavigateToUtility(pageKey); return true; }
         return false;
@@ -670,7 +670,7 @@ public sealed class ToolboxService : ObservableObject
             _          => null,
         };
         if (w is null) return false;
-        w.Owner = Application.Current?.MainWindow;
+        w.Owner = Shell.TopWindow;
         w.Show();
         return true;
     }

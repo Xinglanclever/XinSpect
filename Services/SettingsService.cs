@@ -183,8 +183,18 @@ public sealed class SettingsService : ObservableObject
 
     public SettingsService() => Load();
 
+    /// <summary>
+    /// 現行設定檔結構版本。1 ＝ <see cref="EraMode"/> 於 1.5.1 重編號之後的編號體系。
+    /// </summary>
+    public const int CurrentSchema = 1;
+
     private sealed class Persist
     {
+        /// <summary>
+        /// 設定檔結構版本。缺少（舊檔）＝0；<see cref="CurrentSchema"/> 為現行版本。
+        /// 只在「同一個欄位的意思改變了」時才需要遞增——新增欄位不必，因為缺欄位會拿到預設值。
+        /// </summary>
+        public int SchemaVersion { get; set; }
         public int UpdateIntervalSec { get; set; } = 1;
         public bool StartWithWindows { get; set; }
         public int DefaultEra { get; set; }
@@ -222,6 +232,7 @@ public sealed class SettingsService : ObservableObject
     private void Load()
     {
         _loading = true;
+        bool upgraded = false;
         try
         {
             if (File.Exists(FilePath))
@@ -229,9 +240,13 @@ public sealed class SettingsService : ObservableObject
                 var p = JsonSerializer.Deserialize<Persist>(File.ReadAllText(FilePath));
                 if (p is not null)
                 {
+                    upgraded = p.SchemaVersion < CurrentSchema;
                     _updateIntervalSec = Math.Clamp(p.UpdateIntervalSec, 1, 10);
                     _startWithWindows = p.StartWithWindows;
-                    _defaultEra = p.DefaultEra;
+                    // 舊結構（SchemaVersion 缺或 0）存的是 1.5.1 之前的紀年編號，意思與現行不同，須遷移。
+                    _defaultEra = (int)(p.SchemaVersion < 1
+                        ? EraCalendar.MigrateLegacyValue(p.DefaultEra)
+                        : EraCalendar.Coerce(p.DefaultEra));
                     _logIntervalSec = Math.Clamp(p.LogIntervalSec, 1, 60);
                     if (!string.IsNullOrWhiteSpace(p.LogFolder)) _logFolder = p.LogFolder;
                     _historyEnabled = p.HistoryEnabled;
@@ -264,8 +279,12 @@ public sealed class SettingsService : ObservableObject
                 }
             }
         }
-        catch { /* 設定毀損則沿用預設值 */ }
+        catch (Exception ex) { Diag.Swallow("設定載入", ex, "設定檔毀損或無法讀取，本次沿用預設值"); }
         finally { _loading = false; }
+
+        // 遷移後立刻回寫，讓檔案帶上新的 SchemaVersion：否則下次載入會把「已是新編號」的值
+        // 再當成舊編號遷移一次（民國 → 宣統），變成每次啟動都往後跳一格。
+        if (upgraded) Save();
     }
 
     private void Save()
@@ -276,6 +295,7 @@ public sealed class SettingsService : ObservableObject
             Directory.CreateDirectory(Dir);
             var p = new Persist
             {
+                SchemaVersion = CurrentSchema,
                 UpdateIntervalSec = _updateIntervalSec,
                 StartWithWindows = _startWithWindows,
                 DefaultEra = _defaultEra,

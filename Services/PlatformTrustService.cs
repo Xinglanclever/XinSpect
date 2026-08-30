@@ -189,7 +189,7 @@ public sealed class PlatformTrustService : ObservableObject
             if (v is int[] i) return i.Select(x => (uint)x).ToArray();
             if (v is Array a) return a.Cast<object>().Select(Convert.ToUInt32).ToArray();
         }
-        catch { }
+        catch (Exception ex) { Diag.Swallow("WMI 陣列欄位轉型", ex, "該欄位視為空陣列（如 PCR 演算法清單顯示 —）"); }
         return [];
     }
 }

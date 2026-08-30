@@ -361,7 +361,11 @@
                         </StackPanel>
                     </Grid>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,4" TextWrapping="Wrap"
-                               Text="直接編程 Intel PMU 的四個通用計數器，量測「目前系統正在跑的負載」把每周期 4 個發射插槽花在哪裡：退休／錯誤推測／前端受限／後端受限。這不是跑分——它量的是此刻的真實負載，不會自己製造負載。"/>
+                               Text="直接編程 Intel PMU 的四個通用計數器，量測「目前系統正在跑的負載」把每周期的發射插槽花在哪裡：退休／錯誤推測／前端受限／後端受限。這不是跑分——它量的是此刻的真實負載，不會自己製造負載。"/>
+                    <!-- 分母（插槽總數＝配發寬度 × 未停頓周期）必須攤在畫面上：寬度逐代不同（Skylake 4、
+                         Sunny Cove 5、Golden Cove 6、Lion Cove 8），寫錯的話四桶會整組偏掉，而且偏得像真的。 -->
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,4" TextWrapping="Wrap"
+                               Text="{Binding TopDown.MicroarchText, StringFormat=分母來源：{0}}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,0,0,10" TextWrapping="Wrap"
                                Text="誠實界線：① 錯誤推測一桶不含 INT_MISC.RECOVERY_CYCLES 項（硬體只有 4 個通用計數器，五個事件放不下），故該桶略微低估、後端受限略微高估。② 逐實體核心序列取樣，各核心的取樣時間點不同，非同一瞬間的快照。③ 以 AnyThread 量整顆實體核心（SMT 兩執行緒合計），因為前端事件本質是核心層事件。④ 取樣前後完整存讀並還原 PERFEVTSEL0–3 與 GLOBAL_CTRL，不變動作業系統正在使用的固定計數器；若同時有 VTune／PCM 在用計數器，兩者會互相覆蓋。"/>
 

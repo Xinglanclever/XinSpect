@@ -83,15 +83,21 @@ internal sealed class MetricsPump
                     if (!string.IsNullOrWhiteSpace(gpuName))
                     {
                         _rankGpuDone = true;
-                        try { _vm.Ranking.Highlight(null, gpuName); } catch { /* 天梯高亮為附加功能 */ }
+                        try { _vm.Ranking.Highlight(null, gpuName); }
+                        catch (Exception ex) { Diag.Swallow("天梯榜高亮", ex, "天梯頁不會標出本機那一列"); }
                     }
                 }
 
-                try { _vm.SensorLog.Sample(live, _vm.Settings); } catch { /* 記錄失敗不影響心跳 */ }
-                try { _vm.Alerts.Check(live, _vm.Settings); } catch { /* 警示失敗不影響心跳 */ }
-                try { _vm.History.Sample(live); } catch { /* 歷史取樣失敗不影響心跳 */ }
-                try { _vm.Events.Check(live); } catch { /* 事件偵測失敗不影響心跳 */ }
-                try { _vm.FanCurves.Tick(live); } catch { /* 風扇曲線寫入失敗不影響心跳 */ }
+                try { _vm.SensorLog.Sample(live, _vm.Settings); }
+                catch (Exception ex) { Diag.Swallow("感測記錄取樣", ex, "本拍未寫入 CSV"); }
+                try { _vm.Alerts.Check(live, _vm.Settings); }
+                catch (Exception ex) { Diag.Swallow("警示檢查", ex, "本拍不會發出警示"); }
+                try { _vm.History.Sample(live); }
+                catch (Exception ex) { Diag.Swallow("歷史倉取樣", ex, "歷史回放少了這一拍"); }
+                try { _vm.Events.Check(live); }
+                catch (Exception ex) { Diag.Swallow("事件偵測", ex, "本拍不會加入事件時間軸"); }
+                try { _vm.FanCurves.Tick(live); }
+                catch (Exception ex) { Diag.Swallow("風扇曲線寫入", ex, "本拍未依曲線調整轉速"); }
             }
 
             _vm.Net?.Refresh();
@@ -109,8 +115,14 @@ internal sealed class MetricsPump
 
             _tick++;
             _vm.UpdateClock();
+            _vm.Diagnostics.RefreshIfChanged();   // 只在筆數有變時重建清單
         }
-        catch { /* 任一模組異常都不得中斷心跳，下一拍再試 */ }
+        catch (Exception ex)
+        {
+            // 任一模組異常都不得中斷心跳，下一拍再試；但不能連「出過事」都不留痕跡——
+            // 心跳靜靜跳過一拍，看起來和「這台機器就是量不到」一模一樣。
+            Diag.Swallow("每秒心跳", ex, "本拍的即時數值未更新，下一拍會再試");
+        }
         finally { _ticking = false; }
     }
 

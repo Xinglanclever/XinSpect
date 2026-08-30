@@ -26,7 +26,7 @@ public partial class NetworkSpeedView : UserControl
         // 並帶上返回鍵：瀏覽器工具列會出現「回到測速頁面」，測完不用自己找路回來。
         if (node.Protocol == NodeProtocol.WebPage)
         {
-            (Application.Current?.MainWindow as MainWindow)?.NavigateToBrowser(node.WebUrl, "netspeed");
+            Shell.Main?.NavigateToBrowser(node.WebUrl, "netspeed");
             LiveText.Text = "已跳轉至內建瀏覽器";
             StatusText.Text = $"{node.Name} 未提供可供程式直接量測的公開端點，已跳轉至內建瀏覽器開啟其官方測速頁。";
             return;

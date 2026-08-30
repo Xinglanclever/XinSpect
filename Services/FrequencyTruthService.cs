@@ -24,14 +24,19 @@ public sealed class TurboRatioRow
 /// <summary>單一邏輯處理器的實測有效時脈。</summary>
 public sealed class EffectiveClockRow
 {
-    public EffectiveClockRow(int lp, double mhz, double ratio)
-    { Lp = lp; Mhz = mhz; Ratio = ratio; }
-    public int Lp { get; }
+    public EffectiveClockRow(ProcessorRef lp, double mhz, double ratio, bool multiGroup = false)
+    { Ref = lp; Mhz = mhz; Ratio = ratio; MultiGroup = multiGroup; }
+
+    /// <summary>此列對應的邏輯處理器（含處理器群組）。</summary>
+    public ProcessorRef Ref { get; }
+    /// <summary>是否為多群組機器（決定標籤要不要標明群組）。</summary>
+    public bool MultiGroup { get; }
+    public int Lp => Ref.Index;
     /// <summary>有效時脈（MHz）；-1＝讀不到。</summary>
     public double Mhz { get; }
     /// <summary>APERF/MPERF 比值；乘以 TSC 頻率即有效時脈。</summary>
     public double Ratio { get; }
-    public string LpText => $"LP {Lp}";
+    public string LpText => MultiGroup ? $"G{Ref.Group}·LP {Ref.Index}" : $"LP {Ref.Index}";
     public string MhzText => Mhz < 0 ? "—" : $"{Mhz:0} MHz";
     public string RatioText => Mhz < 0 ? "—" : $"{Ratio:0.00}×TSC";
     public double BarFraction { get; set; }
@@ -55,12 +60,6 @@ public sealed class EffectiveClockRow
 /// </remarks>
 public sealed class FrequencyTruthService : ObservableObject
 {
-    [DllImport("kernel32.dll")]
-    private static extern IntPtr GetCurrentThread();
-
-    [DllImport("kernel32.dll")]
-    private static extern IntPtr SetThreadAffinityMask(IntPtr hThread, ulong affinityMask);
-
     private const uint MsrTsc = 0x10;
     private const uint MsrPlatformInfo = 0xCE;
     private const uint MsrMperf = 0xE7;
@@ -150,12 +149,16 @@ public sealed class FrequencyTruthService : ObservableObject
         double max = r.Clocks.Count > 0 ? r.Clocks.Max(c => c.Mhz) : 0;
         if (max <= 0) max = 1;
         foreach (var (lp, mhz, ratio) in r.Clocks)
-            ClockRows.Add(new EffectiveClockRow(lp, mhz, ratio)
+            ClockRows.Add(new EffectiveClockRow(lp, mhz, ratio, r.MultiGroup)
             {
                 BarFraction = mhz < 0 ? 0 : Math.Clamp(mhz / max, 0.02, 1),
             });
 
-        Status = $"完成：{r.LpCount} 個邏輯處理器、倍頻表 {TurboRows.Count} 組，取樣窗 {WindowMs} ms。";
+        Status = $"完成：{r.LpCount} 個邏輯處理器、倍頻表 {TurboRows.Count} 組，取樣窗 {WindowMs} ms。"
+               + (r.MultiGroup
+                    ? $" 本機有 {CpuAffinity.GroupCount} 個處理器群組，全部群組皆已列入；"
+                    + "多群組路徑未在實機驗證過。"
+                    : "");
     }
 
     private sealed record Measurement
@@ -171,8 +174,10 @@ public sealed class FrequencyTruthService : ObservableObject
         public string CrossCheckText { get; init; } = "";
         public string TurboNote { get; init; } = "";
         public int LpCount { get; init; }
+        /// <summary>是否為多群組機器（＞64 邏輯處理器）；決定標籤是否標明群組並在狀態列如實聲明。</summary>
+        public bool MultiGroup { get; init; }
         public IReadOnlyList<(int Cores, int Ratio)> TurboGroups { get; init; } = [];
-        public IReadOnlyList<(int Lp, double Mhz, double Ratio)> Clocks { get; init; } = [];
+        public IReadOnlyList<(ProcessorRef Lp, double Mhz, double Ratio)> Clocks { get; init; } = [];
     }
 
     private Measurement Measure()
@@ -181,8 +186,7 @@ public sealed class FrequencyTruthService : ObservableObject
         using var bridge = WinRing0Bridge.Create();
         if (!bridge.Available) return new Measurement { Error = "WinRing0 橋接不可用：" + bridge.Error };
 
-        ulong processMask = (ulong)Process.GetCurrentProcess().ProcessorAffinity.ToInt64();
-        var lps = CoreLatencyService.LogicalProcessorsFromMask(processMask);
+        var lps = CpuAffinity.AllLogicalProcessors();
         if (lps.Count == 0) return new Measurement { Error = "取不到可用的邏輯處理器。" };
 
         if (bridge.ReadMsrPair64(MsrPlatformInfo) is not { } platform)
@@ -190,7 +194,7 @@ public sealed class FrequencyTruthService : ObservableObject
         var (maxNonTurbo, minEff, minOp, unlocked) = FrequencyTruthMath.DecodePlatformInfo(platform);
 
         // TSC 頻率：QPC 夾在 TSC 讀取「前後」，取中點，抵銷橋接呼叫本身的延遲造成的系統性偏低。
-        double tscHz = MeasureTscHz(bridge, lps[0], processMask);
+        double tscHz = MeasureTscHz(bridge, lps[0]);
         double bclk = FrequencyTruthMath.BclkMhz(tscHz, maxNonTurbo);
 
         // 倍頻表
@@ -226,7 +230,7 @@ public sealed class FrequencyTruthService : ObservableObject
                 + "沒有逐核心最佳性能等級可讀，因此不宣稱哪一顆是「黃金核心」。下表的有效時脈是實測值，不是體質評級。";
         }
 
-        var clocks = MeasureEffectiveClocks(bridge, lps, processMask, tscHz);
+        var clocks = MeasureEffectiveClocks(bridge, lps, tscHz);
 
         return new Measurement
         {
@@ -240,6 +244,7 @@ public sealed class FrequencyTruthService : ObservableObject
             CrossCheckText = CrossCheck(tscHz, maxNonTurbo),
             TurboNote = turboNote,
             LpCount = lps.Count,
+            MultiGroup = CpuAffinity.IsMultiGroup,
             TurboGroups = groups,
             Clocks = clocks,
         };
@@ -284,18 +289,15 @@ public sealed class FrequencyTruthService : ObservableObject
     }
 
     /// <summary>實測 TSC 頻率（Hz）。釘選單一核心，QPC 取中點以抵銷 MSR 讀取的呼叫延遲。</summary>
-    private static double MeasureTscHz(WinRing0Bridge bridge, int lp, ulong processMask)
+    private static double MeasureTscHz(WinRing0Bridge bridge, ProcessorRef target)
     {
-        if (SetThreadAffinityMask(GetCurrentThread(), 1UL << lp) == IntPtr.Zero) return 0;
-        try
-        {
-            if (!Sample(out double q0, out ulong t0)) return 0;
-            Thread.Sleep(WindowMs);
-            if (!Sample(out double q1, out ulong t1)) return 0;
-            double sec = (q1 - q0) / Stopwatch.Frequency;
-            return sec > 0 && t1 > t0 ? (t1 - t0) / sec : 0;
-        }
-        finally { SetThreadAffinityMask(GetCurrentThread(), processMask); }
+        using var pin = CpuAffinity.Pinned(target);
+        if (!pin.Ok) { Diag.Swallow("TSC 實測釘選核心", null, "TSC／BCLK 顯示 —"); return 0; }
+        if (!Sample(out double q0, out ulong t0)) return 0;
+        Thread.Sleep(WindowMs);
+        if (!Sample(out double q1, out ulong t1)) return 0;
+        double sec = (q1 - q0) / Stopwatch.Frequency;
+        return sec > 0 && t1 > t0 ? (t1 - t0) / sec : 0;
 
         bool Sample(out double qpcMid, out ulong tsc)
         {
@@ -312,8 +314,8 @@ public sealed class FrequencyTruthService : ObservableObject
     /// 逐邏輯處理器的有效時脈。<b>兩趟掃描共用同一個取樣窗</b>（先全部讀起始值、睡一次、再全部讀結束值），
     /// 而不是每顆各睡一次——後者要 36×窗長，且各核的量測期不同段，無法互相比較。
     /// </summary>
-    private static List<(int Lp, double Mhz, double Ratio)> MeasureEffectiveClocks(
-        WinRing0Bridge bridge, List<int> lps, ulong processMask, double tscHz)
+    private static List<(ProcessorRef Lp, double Mhz, double Ratio)> MeasureEffectiveClocks(
+        WinRing0Bridge bridge, List<ProcessorRef> lps, double tscHz)
     {
         int n = lps.Count;
         var m0 = new ulong[n]; var a0 = new ulong[n]; var ok0 = new bool[n];
@@ -323,14 +325,14 @@ public sealed class FrequencyTruthService : ObservableObject
         {
             for (int i = 0; i < n; i++)
             {
-                if (SetThreadAffinityMask(GetCurrentThread(), 1UL << lps[i]) == IntPtr.Zero) continue;
+                using var pin = CpuAffinity.Pinned(lps[i]);
+                if (!pin.Ok) continue;
                 try
                 {
                     if (bridge.ReadMsrPair64(MsrMperf) is { } mv && bridge.ReadMsrPair64(MsrAperf) is { } av)
                     { m[i] = mv; a[i] = av; ok[i] = true; }
                 }
-                catch { }
-                finally { SetThreadAffinityMask(GetCurrentThread(), processMask); }
+                catch (Exception ex) { Diag.Swallow("MPERF／APERF 讀取", ex, $"{lps[i].Label(true)} 的有效時脈顯示 —"); }
             }
         }
 
@@ -338,7 +340,7 @@ public sealed class FrequencyTruthService : ObservableObject
         Thread.Sleep(WindowMs);
         Pass(m1, a1, ok1);
 
-        var result = new List<(int, double, double)>(n);
+        var result = new List<(ProcessorRef, double, double)>(n);
         for (int i = 0; i < n; i++)
         {
             if (!ok0[i] || !ok1[i]) { result.Add((lps[i], -1, 0)); continue; }

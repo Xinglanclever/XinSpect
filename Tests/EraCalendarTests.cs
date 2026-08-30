@@ -59,4 +59,85 @@ public class EraCalendarTests
         foreach (var mode in Enum.GetValues<EraMode>())
             Assert.Contains("13:05:09", EraCalendar.Format(Sample, mode));
     }
+
+    // ── 舊設定檔遷移 ────────────────────────────────────────────────────────
+    //
+    // EraMode 的數值在 1.5.1 重排過，而 settings.json 存的是裸整數。不遷移的話，
+    // 舊使用者選的「民國」(舊 3) 會靜默變成「宣統」(新 3)——設定沒壞但意思變了，
+    // 比當掉更難察覺，所以這組測試把每一格舊編號都釘住。
+
+    [Theory]
+    [InlineData(0, EraMode.Gregorian)]
+    [InlineData(1, EraMode.Huangdi)]
+    [InlineData(2, EraMode.Xuantong)]
+    [InlineData(3, EraMode.Minguo)]     // 關鍵那一格：舊 3 是民國，不是新 3 的宣統
+    [InlineData(5, EraMode.Doraemon)]
+    public void MigrateLegacyValue_PreservesTheUsersOriginalChoice(int legacy, EraMode expected)
+        => Assert.Equal(expected, EraCalendar.MigrateLegacyValue(legacy));
+
+    [Fact]
+    public void MigrateLegacyValue_RemovedDahan_FallsBackToTheNearestAncientEra()
+    {
+        // 「大漢紀年」(舊 4) 已移除，無法照原意還原；退回同屬上古中國連續紀元的黃帝紀元，
+        // 保住「使用者想要某種古代紀年」的意圖，而不是悄悄丟回西元。
+        Assert.Equal(EraMode.Huangdi, EraCalendar.MigrateLegacyValue(4));
+    }
+
+    [Theory]
+    [InlineData(6)]
+    [InlineData(99)]
+    [InlineData(-1)]
+    public void MigrateLegacyValue_OutOfRange_FallsBackToGregorianWithoutGuessing(int legacy)
+        => Assert.Equal(EraMode.Gregorian, EraCalendar.MigrateLegacyValue(legacy));
+
+    [Fact]
+    public void MigrateLegacyValue_CoversEveryLegacyNumberInUse()
+    {
+        // 舊編號 0–5 全部要對到合法的現行紀年，不能有哪一格落到範圍外
+        for (int legacy = 0; legacy <= 5; legacy++)
+            Assert.Contains(EraCalendar.MigrateLegacyValue(legacy), Enum.GetValues<EraMode>());
+    }
+
+    // ── 讀入時的夾取 ────────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(0, EraMode.Gregorian)]
+    [InlineData(1, EraMode.Minguo)]
+    [InlineData(4, EraMode.Doraemon)]
+    public void Coerce_PassesValidValuesThrough(int value, EraMode expected)
+        => Assert.Equal(expected, EraCalendar.Coerce(value));
+
+    [Theory]
+    [InlineData(5)]
+    [InlineData(1000)]
+    [InlineData(-3)]
+    public void Coerce_OutOfRange_ReturnsGregorianInsteadOfThrowing(int value)
+        => Assert.Equal(EraMode.Gregorian, EraCalendar.Coerce(value));
+
+    [Fact]
+    public void Coerce_AcceptsEverythingNamesCanDisplay()
+    {
+        // Coerce 的合法範圍就是 Names 的索引範圍；否則下拉選單會撞到範圍外
+        for (int i = 0; i < EraCalendar.Names.Length; i++)
+            Assert.Equal(i, (int)EraCalendar.Coerce(i));
+        Assert.Equal(EraMode.Gregorian, EraCalendar.Coerce(EraCalendar.Names.Length));
+    }
+
+    [Fact]
+    public void Migration_IsIdempotentOnceTheSchemaIsStamped()
+    {
+        // 遷移後必須回寫 SchemaVersion；否則下次啟動會把「已是新編號」的值再遷移一次，
+        // 民國 → 宣統，每次啟動往後跳一格。這裡驗的是「第二次走的是 Coerce 而非 Migrate」。
+        var once = EraCalendar.MigrateLegacyValue(3);            // 舊 3（民國）→ Minguo(1)
+        var twice = EraCalendar.Coerce((int)once);               // 已標記結構版本 → 原值通過
+        Assert.Equal(EraMode.Minguo, once);
+        Assert.Equal(EraMode.Minguo, twice);
+
+        // 反面對照：若忘記回寫版本、第二次仍走遷移，就會變成黃帝——這正是要避免的漂移
+        Assert.NotEqual(once, EraCalendar.MigrateLegacyValue((int)once));
+    }
+
+    [Fact]
+    public void SettingsSchema_IsStampedAtTheVersionThatRenumberedEras()
+        => Assert.Equal(1, SettingsService.CurrentSchema);
 }

@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
 
 namespace XinSpect;
@@ -8,9 +7,16 @@ namespace XinSpect;
 /// <summary>單一邏輯處理器的 RDT 讀值列。</summary>
 public sealed class RdtCoreRow
 {
-    public RdtCoreRow(int lp, double occupancyMb, double totalBw, double localBw)
-    { Lp = lp; OccupancyMb = occupancyMb; TotalBw = totalBw; LocalBw = localBw; }
-    public int Lp { get; }
+    public RdtCoreRow(ProcessorRef lp, double occupancyMb, double totalBw, double localBw, bool multiGroup = false)
+    { Ref = lp; OccupancyMb = occupancyMb; TotalBw = totalBw; LocalBw = localBw; MultiGroup = multiGroup; }
+
+    /// <summary>此列對應的邏輯處理器（含處理器群組）。</summary>
+    public ProcessorRef Ref { get; }
+    /// <summary>是否為多群組機器（決定標籤要不要標明群組）。</summary>
+    public bool MultiGroup { get; }
+    public int Lp => Ref.Index;
+    /// <summary>顯示用標籤；多群組時標明群組，否則兩個群組的「LP0」會長得一模一樣。</summary>
+    public string LpText => Ref.Label(MultiGroup);
     /// <summary>L3 占用（MB，即時值）；-1＝讀不到。</summary>
     public double OccupancyMb { get; }
     /// <summary>總記憶體頻寬（MB/s，區間差分）；-1＝尚無樣本。</summary>
@@ -41,12 +47,6 @@ public sealed class RdtCoreRow
 /// </remarks>
 public sealed class RdtService : ObservableObject, IDisposable
 {
-    [DllImport("kernel32.dll")]
-    private static extern IntPtr GetCurrentThread();
-
-    [DllImport("kernel32.dll")]
-    private static extern IntPtr SetThreadAffinityMask(IntPtr hThread, ulong affinityMask);
-
     private const uint MsrPqrAssoc = 0xC8F;
     private const uint MsrQmEvtsel = 0xC8D;
     private const uint MsrQmCtr = 0xC8E;
@@ -62,12 +62,12 @@ public sealed class RdtService : ObservableObject, IDisposable
     private double _upscaling = 1;
     private int _maxRmid;
     private bool _hasOccupancy, _hasTotalBw, _hasLocalBw;
-    private int[] _lps = [];
-    private ulong _processMask;
+    private ProcessorRef[] _lps = [];
+    private bool _multiGroup;
 
     // 背景執行緒寫入、UI（Tick）讀取的快照
     private readonly object _lock = new();
-    private (int Lp, double Occ, double Total, double Local)[] _snapshot = [];
+    private (ProcessorRef Lp, double Occ, double Total, double Local)[] _snapshot = [];
     private DateTime _snapshotAt = DateTime.MinValue;
 
     public bool RdtSupported { get; private set; }
@@ -96,8 +96,8 @@ public sealed class RdtService : ObservableObject, IDisposable
             return;
         }
         // 先取得核心清單，DetectSupport 的說明文字才不會顯示「0 邏輯處理器」。
-        _processMask = (ulong)Process.GetCurrentProcess().ProcessorAffinity.ToInt64();
-        _lps = CoreLatencyService.LogicalProcessorsFromMask(_processMask).ToArray();
+        _lps = CpuAffinity.AllLogicalProcessors().ToArray();
+        _multiGroup = CpuAffinity.IsMultiGroup;
         DetectSupport();
         if (!RdtSupported) { Status = SupportText; return; }
 
@@ -128,7 +128,7 @@ public sealed class RdtService : ObservableObject, IDisposable
         if (!IsRunning) return;
         // 背景執行緒直接寫 _status 欄位（不能在非 UI 執行緒發通知），所以由這裡代為通知。
         OnPropertyChanged(nameof(Status));
-        (int, double, double, double)[] snap;
+        (ProcessorRef, double, double, double)[] snap;
         lock (_lock) snap = _snapshot;
         Rows.Clear();
         double max = snap.Length > 0 ? snap.Max(s => s.Item2) : 0;
@@ -137,7 +137,7 @@ public sealed class RdtService : ObservableObject, IDisposable
         foreach (var (lp, occ, totalBw, localBw) in snap)
         {
             if (totalBw > 0) total += totalBw;
-            Rows.Add(new RdtCoreRow(lp, occ, totalBw, localBw)
+            Rows.Add(new RdtCoreRow(lp, occ, totalBw, localBw, _multiGroup)
             {
                 BarFraction = Math.Clamp(occ / max, 0.02, 1),
             });
@@ -186,6 +186,7 @@ public sealed class RdtService : ObservableObject, IDisposable
         }.Where(s => s is not null));
         SupportText = $"支援：upscaling {_upscaling:0} bytes、最大 RMID {maxRmid}、"
                     + $"可用事件 {(events.Length == 0 ? "（無）" : events)}、{_lps.Length} 邏輯處理器"
+                    + (_multiGroup ? $"（跨 {CpuAffinity.GroupCount} 個處理器群組，此路徑未在實機驗證過）" : "")
                     + (upscaling == 0 ? "（CPUID 回報 upscaling 為 0，占用值不可信）" : "");
     }
 
@@ -203,20 +204,22 @@ public sealed class RdtService : ObservableObject, IDisposable
 
     private void WorkerLoop(CancellationToken ct)
     {
-        _processMask = (ulong)Process.GetCurrentProcess().ProcessorAffinity.ToInt64();
-        _lps = CoreLatencyService.LogicalProcessorsFromMask(_processMask).ToArray();
+        _lps = CpuAffinity.AllLogicalProcessors().ToArray();
+        _multiGroup = CpuAffinity.IsMultiGroup;
         DetectSupport();
         if (!RdtSupported || _lps.Length == 0) { _status = SupportText; return; }
 
         // 指派 RMID 給每個邏輯處理器（PQR_ASSOC 的 RMID 在位 51:32）。
         // MSR 寫入只作用於「當下執行的那顆核心」，所以每寫一次都必須先把自己釘到該核心上，
         // 否則只有恰好排到的那一顆被指派，其餘核心讀出來永遠是 0。
+        // 釘選走 CpuAffinity：離開 using 範圍時以「原本的群組親和性」還原，
+        // 而不是塞回一份自己記的遮罩——後者在多群組機器上會把工作執行緒鎖死在群組 0。
         foreach (var lp in _lps)
         {
-            if (SetThreadAffinityMask(GetCurrentThread(), 1UL << lp) == IntPtr.Zero) continue;
+            using var pin = CpuAffinity.Pinned(lp);
+            if (!pin.Ok) { Diag.Swallow("RDT 指派 RMID 釘選", null, $"{lp.Label(true)} 未指派到 RMID，該核讀值會是 0"); continue; }
             try { _bridge!.WriteMsrPair(MsrPqrAssoc, 0, UsedRmid); }   // EAX=0、EDX=RMID（位 51:32）
-            catch { }
-            finally { SetThreadAffinityMask(GetCurrentThread(), _processMask); }
+            catch (Exception ex) { Diag.Swallow("RDT 寫入 PQR_ASSOC", ex, $"{lp.Label(true)} 未指派到 RMID，該核讀值會是 0"); }
         }
 
         var lastTotal = new ulong[_lps.Length];
@@ -227,45 +230,45 @@ public sealed class RdtService : ObservableObject, IDisposable
 
         while (!ct.IsCancellationRequested)
         {
-            var snap = new (int, double, double, double)[_lps.Length];
+            var snap = new (ProcessorRef, double, double, double)[_lps.Length];
             double elapsed = sw.Elapsed.TotalSeconds;
             double dt = Math.Max(elapsed - lastSec, 0.05);
             lastSec = elapsed;
 
             for (int i = 0; i < _lps.Length; i++)
             {
-                ulong mask = 1UL << _lps[i];
-                if (SetThreadAffinityMask(GetCurrentThread(), mask) == IntPtr.Zero)
-                { snap[i] = (_lps[i], -1, -1, -1); continue; }
-
                 double occ = -1;
                 ulong t = 0, l = 0;
                 bool tOk = false, lOk = false;
-                try
-                {
-                    if (_hasOccupancy)
-                    {
-                        _bridge!.WriteMsrPair(MsrQmEvtsel, EventL3Occupancy, UsedRmid);
-                        if (ReadQmCtr() is { } occRaw)
-                            occ = occRaw * _upscaling / (1024.0 * 1024.0);
-                    }
 
-                    if (_hasTotalBw)
-                    {
-                        _bridge!.WriteMsrPair(MsrQmEvtsel, EventTotalMbm, UsedRmid);
-                        if (ReadQmCtr() is { } tv) { t = tv; tOk = true; }
-                    }
-
-                    if (_hasLocalBw)
-                    {
-                        _bridge!.WriteMsrPair(MsrQmEvtsel, EventLocalMbm, UsedRmid);
-                        if (ReadQmCtr() is { } lv) { l = lv; lOk = true; }
-                    }
-                }
-                catch { }
-                finally
+                using (var pin = CpuAffinity.Pinned(_lps[i]))
                 {
-                    SetThreadAffinityMask(GetCurrentThread(), _processMask);
+                    if (!pin.Ok) { snap[i] = (_lps[i], -1, -1, -1); continue; }
+                    try
+                    {
+                        if (_hasOccupancy)
+                        {
+                            _bridge!.WriteMsrPair(MsrQmEvtsel, EventL3Occupancy, UsedRmid);
+                            if (ReadQmCtr() is { } occRaw)
+                                occ = occRaw * _upscaling / (1024.0 * 1024.0);
+                        }
+
+                        if (_hasTotalBw)
+                        {
+                            _bridge!.WriteMsrPair(MsrQmEvtsel, EventTotalMbm, UsedRmid);
+                            if (ReadQmCtr() is { } tv) { t = tv; tOk = true; }
+                        }
+
+                        if (_hasLocalBw)
+                        {
+                            _bridge!.WriteMsrPair(MsrQmEvtsel, EventLocalMbm, UsedRmid);
+                            if (ReadQmCtr() is { } lv) { l = lv; lOk = true; }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Diag.Swallow("RDT 取樣", ex, $"{_lps[i].Label(true)} 本次讀值顯示 —");
+                    }
                 }
 
                 // MBM 計數的單位同樣要乘 upscaling 才是位元組；差分為負＝回繞或重置，該秒不計。
@@ -303,19 +306,18 @@ public sealed class RdtService : ObservableObject, IDisposable
     private void UnassignRmid()
     {
         if (_bridge is null) return;
-        if (_processMask == 0) _processMask = (ulong)Process.GetCurrentProcess().ProcessorAffinity.ToInt64();
         foreach (var lp in _lps)
         {
-            if (SetThreadAffinityMask(GetCurrentThread(), 1UL << lp) == IntPtr.Zero) continue;
+            using var pin = CpuAffinity.Pinned(lp);
+            if (!pin.Ok) { Diag.Swallow("RDT 歸零 RMID 釘選", null, $"{lp.Label(true)} 的 RMID 仍指向 {UsedRmid}"); continue; }
             try { _bridge.WriteMsrPair(MsrPqrAssoc, 0, 0); }
-            catch { }
-            finally { SetThreadAffinityMask(GetCurrentThread(), _processMask); }
+            catch (Exception ex) { Diag.Swallow("RDT 歸零 PQR_ASSOC", ex, $"{lp.Label(true)} 的 RMID 仍指向 {UsedRmid}"); }
         }
     }
 
     public void Dispose()
     {
         _cts?.Cancel();
-        try { _bridge?.Dispose(); } catch { }
+        try { _bridge?.Dispose(); } catch (Exception ex) { Diag.Swallow("RDT 橋接釋放", ex, "無；程式即將結束"); }
     }
 }

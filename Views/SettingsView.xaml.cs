@@ -21,6 +21,7 @@ public partial class SettingsView : UserControl
         Loaded += (_, _) =>
         {
             SyncKeyBox();
+            Vm?.Diagnostics.Refresh();   // 進頁面就是最新的一份，不必等下一拍心跳
             if (Vm is { } vm && !vm.EnvCheck.HasRun && !vm.EnvCheck.IsRunning)
                 _ = vm.EnvCheck.RunAsync(vm);
         };
@@ -76,7 +77,7 @@ public partial class SettingsView : UserControl
     // Host.Content 延遲載入時 DataContext 由父容器繼承；點選當下已就緒。仍以主視窗為後備。
     private MainViewModel? Vm =>
         DataContext as MainViewModel
-        ?? Application.Current?.MainWindow?.DataContext as MainViewModel;
+        ?? Shell.Vm;
 
     // 開始 / 停止感測器記錄：依目前狀態切換，記錄時鎖定於背景每拍寫入。
     private void LogToggle_Click(object sender, RoutedEventArgs e)
@@ -126,6 +127,17 @@ public partial class SettingsView : UserControl
 
         try { vm.Benchmarks.Clear(); } catch { /* 清空失敗維持原狀 */ }
     }
+
+    // ── 診斷紀錄 ────────────────────────────────────────────────────────────
+
+    private void DiagRefresh_Click(object sender, RoutedEventArgs e) => Vm?.Diagnostics.Refresh();
+
+    private void DiagOpenFile_Click(object sender, RoutedEventArgs e) => Vm?.Diagnostics.OpenFile();
+
+    private void DiagOpenFolder_Click(object sender, RoutedEventArgs e) => Vm?.Diagnostics.OpenFolder();
+
+    // 只清畫面上那份；diag.log 不動——要附給別人看的是檔案，把它一起刪掉就本末倒置了。
+    private void DiagClear_Click(object sender, RoutedEventArgs e) => Vm?.Diagnostics.Clear();
 
     // 切換 AI 供應商時，若端點/模型仍為另一供應商的預設或留空，帶入本供應商的建議預設值。
     private void AiProvider_Changed(object sender, SelectionChangedEventArgs e)
@@ -179,7 +191,7 @@ public partial class SettingsView : UserControl
 
     // 開啟獨立的 AI 助手分頁。
     private void OpenAiTab_Click(object sender, RoutedEventArgs e)
-        => (Application.Current?.MainWindow as MainWindow)?.NavigateToAi();
+        => Shell.Main?.NavigateToAi();
 
     // 一鍵獲取：向目前端點查詢可用模型清單，成功後於下拉選單列出。
     private async void FetchModels_Click(object sender, RoutedEventArgs e)

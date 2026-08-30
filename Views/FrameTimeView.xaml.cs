@@ -19,7 +19,7 @@ public partial class FrameTimeView : UserControl
 
     private MainViewModel? Vm =>
         DataContext as MainViewModel
-        ?? Application.Current?.MainWindow?.DataContext as MainViewModel;
+        ?? Shell.Vm;
 
     private void Start_Click(object sender, RoutedEventArgs e) => Vm?.FrameTime.Start();
     private void Stop_Click(object sender, RoutedEventArgs e) => Vm?.FrameTime.Stop();

@@ -29,12 +29,6 @@ public sealed class McaRow
 /// </remarks>
 public sealed class McaService : ObservableObject
 {
-    [DllImport("kernel32.dll")]
-    private static extern IntPtr GetCurrentThread();
-
-    [DllImport("kernel32.dll")]
-    private static extern IntPtr SetThreadAffinityMask(IntPtr hThread, ulong affinityMask);
-
     private bool _loading;
     public bool IsLoading { get => _loading; private set { if (SetProperty(ref _loading, value)) OnPropertyChanged(nameof(CanRefresh)); } }
     public bool CanRefresh => !_loading;
@@ -81,17 +75,17 @@ public sealed class McaService : ObservableObject
         if (!bridge.Available)
             throw new InvalidOperationException("MSR 橋接無法初始化：" + bridge.Error);
 
-        ulong processMask = (ulong)Process.GetCurrentProcess().ProcessorAffinity.ToInt64();
-        var lps = CoreLatencyService.LogicalProcessorsFromMask(processMask).ToArray();
-        if (lps.Length == 0)
+        var lps = CpuAffinity.AllLogicalProcessors();
+        if (lps.Count == 0)
             throw new InvalidOperationException("取不到可用的邏輯處理器清單。");
+        bool multiGroup = CpuAffinity.IsMultiGroup;
 
         // 銀行數：MCG_CAP 位 7:0。逐核心讀（各核應一致，不一致時如實列出）。
         int banks = 0;
-        var capPerLp = new Dictionary<int, ulong?>();
-        foreach (int lp in lps)
+        var capPerLp = new Dictionary<ProcessorRef, ulong?>();
+        foreach (var lp in lps)
         {
-            ulong? cap = ReadPinned(bridge, lp, 0x179, processMask);
+            ulong? cap = ReadPinned(bridge, lp, 0x179);
             capPerLp[lp] = cap;
             if (cap is not null) banks = Math.Max(banks, (int)(cap.Value & 0xFF));
         }
@@ -102,23 +96,24 @@ public sealed class McaService : ObservableObject
         int totalUc = 0, unreadable = 0;
         var rows = new List<McaRow>();
 
-        foreach (int lp in lps)
+        foreach (var lp in lps)
         {
             int lpBanks = capPerLp[lp] is { } c ? (int)(c & 0xFF) : 0;
             for (int b = 0; b < lpBanks; b++)
             {
-                ulong? status = ReadPinned(bridge, lp, StatusMsr(b), processMask);
+                ulong? status = ReadPinned(bridge, lp, StatusMsr(b));
                 if (status is null) { unreadable++; continue; }
                 var d = DecodeStatus(status.Value);
                 if (!d.Valid) continue;
                 totalCorrected += d.CorrectedCount;
                 if (d.Uc) totalUc++;
-                rows.Add(new McaRow($"LP {lp}", $"銀行 {b}", d.Uc ? "不可修正" : "可修正",
+                rows.Add(new McaRow(lp.Label(multiGroup), $"銀行 {b}", d.Uc ? "不可修正" : "可修正",
                     d.CorrectedCount.ToString("N0"), d.AddressValid ? "位址有效（詳見 MCi_ADDR）" : ""));
             }
         }
 
-        string scope = $"掃描 {lps.Length} 個邏輯處理器 × {banks} 個銀行";
+        string scope = $"掃描 {lps.Count} 個邏輯處理器 × {banks} 個銀行"
+                     + (multiGroup ? $"（跨 {CpuAffinity.GroupCount} 個處理器群組）" : "");
         string tail = unreadable > 0 ? $"（{unreadable} 個銀行讀不到，未計入）" : "";
         var summaryText = totalUc > 0
             ? $"⚠ {scope}{tail}：發現 {totalUc} 個不可修正事件（嚴重，請對照 WHEA 卡片與記憶體測試）。"
@@ -130,11 +125,12 @@ public sealed class McaService : ObservableObject
     }
 
     /// <summary>釘選到指定邏輯處理器讀一個 MSR（MCA 銀行為每核心私有，不釘選等於重複讀同一顆）。</summary>
-    private static ulong? ReadPinned(WinRing0Bridge bridge, int lp, uint msr, ulong restoreMask)
+    private static ulong? ReadPinned(WinRing0Bridge bridge, ProcessorRef target, uint msr)
     {
-        if (SetThreadAffinityMask(GetCurrentThread(), 1UL << lp) == IntPtr.Zero) return null;
+        using var pin = CpuAffinity.Pinned(target);
+        if (!pin.Ok) return null;
         try { return bridge.ReadMsrPair64(msr); }
-        finally { SetThreadAffinityMask(GetCurrentThread(), restoreMask); }
+        catch (Exception ex) { Diag.Swallow("MCA MSR 讀取", ex, $"{target.Label(true)} 的該銀行計入「讀不到」"); return null; }
     }
 
     // ── 解碼純函式（單元測試涵蓋）──────────────────────────────────────────

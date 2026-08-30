@@ -165,7 +165,7 @@ public partial class BrowserView : UserControl
         if (string.IsNullOrEmpty(_returnUtilityKey)) return;
         var key = _returnUtilityKey;
         SetReturnUtility(null);
-        (Application.Current?.MainWindow as MainWindow)?.NavigateToUtility(key);
+        Shell.Main?.NavigateToUtility(key);
     }
 
     // 回到內建離線起始頁（硬體導航）。以 NavigateToString 載入，不需外部檔案。

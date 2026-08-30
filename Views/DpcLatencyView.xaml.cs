@@ -10,7 +10,7 @@ public partial class DpcLatencyView : UserControl
 
     private MainViewModel? Vm =>
         DataContext as MainViewModel
-        ?? Application.Current?.MainWindow?.DataContext as MainViewModel;
+        ?? Shell.Vm;
 
     private void Dur_Checked(object sender, RoutedEventArgs e)
     {

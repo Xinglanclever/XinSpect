@@ -12,31 +12,35 @@ namespace XinSpect;
 /// 不接觸硬體，可單元測試。
 /// </summary>
 /// <remarks>
-/// Intel TMA Level 1（v1，Skylake 世代公式）：
+/// Intel TMA Level 1（事件式，Sandy Bridge → Rocket Lake 適用）：
 /// <list type="bullet">
-/// <item>SLOTS ＝ 4 × CPU_CLK_UNHALTED（每周期 4 個發射插槽）</item>
+/// <item>SLOTS ＝ 管線配發寬度 × CPU_CLK_UNHALTED</item>
 /// <item>Retiring ＝ UOPS_RETIRED.RETIRE_SLOTS ÷ SLOTS</item>
 /// <item>Frontend Bound ＝ IDQ_UOPS_NOT_DELIVERED.CORE ÷ SLOTS</item>
 /// <item>Bad Speculation ＝ (UOPS_ISSUED.ANY − UOPS_RETIRED.RETIRE_SLOTS) ÷ SLOTS</item>
 /// <item>Backend Bound ＝ 1 − 其餘三者</item>
 /// </list>
+/// <b>配發寬度不是常數</b>：Skylake 世代 4、Sunny／Willow／Cypress Cove 5、Golden Cove 之後 6 或 8。
+/// 故本類別不內建寬度，一律由呼叫端從 <see cref="MicroarchProfile"/> 查表後傳入——
+/// 寫死 4 會在 Ice Lake 之後讓分母偏小、四桶整組偏大，而畫面上仍是「一個合理的數字」，
+/// 這種錯比讀不到值危險得多。
+///
 /// 誠實界線：Bad Speculation 的標準式另含 4 × INT_MISC.RECOVERY_CYCLES ÷ SLOTS 一項，
 /// 但本機只有 4 個通用計數器，四個都用在上面的事件上（第五個事件無處可放），故<b>不含</b> recovery 項——
 /// 這會讓 Bad Speculation 略微低估、Backend Bound 略微高估。UI 必須寫明這一點，不得假裝是完整公式。
 /// </remarks>
 public static class TopDownMath
 {
-    /// <summary>每個時鐘周期的發射插槽數（Intel Core／Xeon 為 4）。</summary>
-    public const int SlotsPerCycle = 4;
-
     /// <summary>
-    /// 由四個原始計數算出四桶百分比。<paramref name="issued"/> 小於 <paramref name="retireSlots"/> 時
-    /// 差值必須以 <c>double</c> 計算——<c>ulong</c> 相減會下溢成接近 2^64，夾限後變成 100%，整列失真。
+    /// 由四個原始計數與該架構的配發寬度算出四桶百分比。<paramref name="issued"/> 小於
+    /// <paramref name="retireSlots"/> 時差值必須以 <c>double</c> 計算——<c>ulong</c> 相減會下溢成接近
+    /// 2^64，夾限後變成 100%，整列失真。<paramref name="slotsPerCycle"/> 非正數時回全 0（不猜分母）。
     /// </summary>
     public static (double Retiring, double BadSpec, double Frontend, double Backend) Compute(
-        ulong coreClks, ulong notDelivered, ulong retireSlots, ulong issued)
+        ulong coreClks, ulong notDelivered, ulong retireSlots, ulong issued, int slotsPerCycle)
     {
-        double slots = coreClks * (double)SlotsPerCycle;
+        if (slotsPerCycle <= 0) return (0, 0, 0, 0);
+        double slots = coreClks * (double)slotsPerCycle;
         if (slots <= 0) return (0, 0, 0, 0);
         double ret = Frac(retireSlots / slots);
         double fe = Frac(notDelivered / slots);
@@ -47,9 +51,14 @@ public static class TopDownMath
 
     private static double Frac(double v) => double.IsFinite(v) ? Math.Clamp(v, 0, 1) : 0;
 
-    /// <summary>每周期退休插槽數（0～4）。IPC 需要 INST_RETIRED，本方案不動固定計數器故不提供 IPC。</summary>
-    public static double SlotsPerCycleRetired(ulong coreClks, ulong retireSlots)
-        => coreClks == 0 ? 0 : Math.Clamp(retireSlots / (double)coreClks, 0, SlotsPerCycle);
+    /// <summary>
+    /// 每周期退休插槽數（0～<paramref name="slotsPerCycle"/>）。
+    /// IPC 需要 INST_RETIRED，本方案不動固定計數器故不提供 IPC。
+    /// </summary>
+    public static double SlotsPerCycleRetired(ulong coreClks, ulong retireSlots, int slotsPerCycle)
+        => coreClks == 0 || slotsPerCycle <= 0
+            ? 0
+            : Math.Clamp(retireSlots / (double)coreClks, 0, slotsPerCycle);
 
     /// <summary>取占比最大的一桶，給出一句如實的解讀（不誇大、不建議調參）。</summary>
     public static string Verdict(double retiring, double badSpec, double frontend, double backend)
@@ -121,12 +130,6 @@ public sealed class TopDownCoreRow
 /// </remarks>
 public sealed class TopDownService : ObservableObject, IDisposable
 {
-    [DllImport("kernel32.dll")]
-    private static extern IntPtr GetCurrentThread();
-
-    [DllImport("kernel32.dll")]
-    private static extern IntPtr SetThreadAffinityMask(IntPtr hThread, ulong affinityMask);
-
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool GetLogicalProcessorInformationEx(int relationship, nint buffer, ref uint returnedLength);
 
@@ -180,6 +183,13 @@ public sealed class TopDownService : ObservableObject, IDisposable
     private string _support = "尚未檢測";
     public string SupportText { get => _support; private set => SetProperty(ref _support, value); }
 
+    private string _microarch = "尚未檢測";
+    /// <summary>偵測到的微架構與配發寬度（分母的來源）。畫面必須顯示這一行，讀值才有可檢核的依據。</summary>
+    public string MicroarchText { get => _microarch; private set => SetProperty(ref _microarch, value); }
+
+    /// <summary>本次取樣採用的配發寬度（SLOTS 係數）。0 表示尚未偵測或架構不適用。</summary>
+    public int SlotsPerCycle { get; private set; }
+
     public ObservableCollection<TopDownBucket> Buckets { get; } = new();
     public ObservableCollection<TopDownCoreRow> Rows { get; } = new();
 
@@ -224,8 +234,9 @@ public sealed class TopDownService : ObservableObject, IDisposable
                 return;
             }
 
-            _processMask = (ulong)Process.GetCurrentProcess().ProcessorAffinity.ToInt64();
-            var cores = EnumeratePhysicalCores(_processMask);
+            bool multiGroup = CpuAffinity.IsMultiGroup;
+            _processMask = multiGroup ? ulong.MaxValue : (ulong)Process.GetCurrentProcess().ProcessorAffinity.ToInt64();
+            var cores = EnumeratePhysicalCores(multiGroup, _processMask);
             if (cores.Count == 0)
             {
                 Phase = "不可用";
@@ -236,16 +247,17 @@ public sealed class TopDownService : ObservableObject, IDisposable
             var samples = await Task.Run(() => SampleAll(cores, ct, report), ct);
 
             ulong tc = 0, tn = 0, tr = 0, ti = 0;
+            int w = SlotsPerCycle;
             foreach (var (core, lpText, v) in samples)
             {
                 bool valid = v[0] > 0;
-                var (ret, bs, fe, be) = TopDownMath.Compute(v[0], v[1], v[2], v[3]);
+                var (ret, bs, fe, be) = TopDownMath.Compute(v[0], v[1], v[2], v[3], w);
                 Rows.Add(new TopDownCoreRow(core, lpText, valid, ret, bs, fe, be,
-                                            TopDownMath.SlotsPerCycleRetired(v[0], v[2])));
+                                            TopDownMath.SlotsPerCycleRetired(v[0], v[2], w)));
                 tc += v[0]; tn += v[1]; tr += v[2]; ti += v[3];
             }
 
-            var (aRet, aBs, aFe, aBe) = TopDownMath.Compute(tc, tn, tr, ti);
+            var (aRet, aBs, aFe, aBe) = TopDownMath.Compute(tc, tn, tr, ti, w);
             Buckets.Add(new TopDownBucket("退休 Retiring", "真正完成有效工作的插槽占比，越高越好。", aRet));
             Buckets.Add(new TopDownBucket("錯誤推測 Bad Speculation",
                 "分支預測失敗等白做工的插槽。本式不含 INT_MISC.RECOVERY_CYCLES 項（只有 4 個計數器），故略微低估。", aBs));
@@ -254,13 +266,17 @@ public sealed class TopDownService : ObservableObject, IDisposable
                 "執行資源不足或等記憶體，由前三者相減得出，故承接上一桶低估的部分。", aBe));
 
             VerdictText = TopDownMath.Verdict(aRet, aBs, aFe, aBe);
-            SlotsRetiredText = tc == 0 ? "—" : $"{TopDownMath.SlotsPerCycleRetired(tc, tr):0.00} / 4";
+            SlotsRetiredText = tc == 0 ? "—" : $"{TopDownMath.SlotsPerCycleRetired(tc, tr, w):0.00} / {w}";
             int idle = Rows.Count(r => !r.Valid);
             Phase = "完成";
             ProgressFraction = 1;
             StatusLine = $"完成 ・ {cores.Count} 顆實體核心 × {WindowMs} ms"
                        + (idle > 0 ? $"（其中 {idle} 顆取樣期間閒置，顯示為 —）" : "")
-                       + " ・ 計數器已還原原值。";
+                       + " ・ 計數器已還原原值。"
+                       + (multiGroup
+                            ? $" 本機有 {CpuAffinity.GroupCount} 個處理器群組（共 {CpuAffinity.TotalLogicalProcessors} 個邏輯處理器），"
+                            + "全部群組皆已取樣；此路徑未在多群組實機上驗證過，如與其他工具不符請以其他工具為準。"
+                            : "");
         }
         catch (OperationCanceledException)
         {
@@ -283,9 +299,12 @@ public sealed class TopDownService : ObservableObject, IDisposable
     /// <summary>
     /// CPUID 0x0A（Architectural Performance Monitoring）：EAX 位 7:0＝版本、位 15:8＝通用計數器個數。
     /// 事件編碼是 Intel Family 6 專屬，AMD 的同號事件意義完全不同——非 Intel 一律拒絕，不要硬套。
+    /// 另以 <see cref="MicroarchProfile"/> 查出配發寬度：分母錯了，四桶就整組錯，且錯得像真的。
     /// </summary>
     public bool DetectSupport()
     {
+        SlotsPerCycle = 0;
+        MicroarchText = "—";
         if (!X86Base.IsSupported) { SupportText = "非 x86 平台，無 Intel PMU。"; return false; }
 
         var v = X86Base.CpuId(0, 0);
@@ -300,9 +319,15 @@ public sealed class TopDownService : ObservableObject, IDisposable
         }
 
         var one = X86Base.CpuId(1, 0);
-        uint sig = (uint)one.Eax;
-        int family = (int)((sig >> 8) & 0xF) + (int)((sig >> 20) & 0xFF);
-        int model = (int)((sig >> 4) & 0xF) | (int)((sig >> 12) & 0xF0);
+        var (family, model) = MicroarchProfile.DecodeSignature((uint)one.Eax);
+
+        // 混合架構下核型決定微架構與寬度；leaf 0x1A 不存在時回 Unknown（非混合部件的正常情形）。
+        var kind = (uint)v.Eax >= 0x1A
+            ? MicroarchProfile.CoreKindFromCpuid1A((uint)X86Base.CpuId(0x1A, 0).Eax)
+            : CoreKind.Unknown;
+        var uarch = MicroarchProfile.Identify(family, model, kind);
+        MicroarchText = $"Intel Family {family} Model 0x{model:X} ・ {uarch.DisplayName}"
+                      + (uarch.IsHybrid ? $" ・ {MicroarchProfile.CoreKindText(kind)}" : "");
 
         var pm = X86Base.CpuId(0x0A, 0);
         int version = (int)((uint)pm.Eax & 0xFF);
@@ -314,20 +339,38 @@ public sealed class TopDownService : ObservableObject, IDisposable
             return false;
         }
 
-        SupportText = $"Intel Family {family} Model 0x{model:X}、PMU 版本 {version}、"
-                    + $"通用計數器 {nGp} 個（{gpWidth} 位元）。事件編碼以 Intel Core／Xeon（Family 6）為準"
-                    + (family == 6 ? "" : "；本機非 Family 6，讀值僅供參考")
-                    + "；本工具只使用 PMC0–3，不變動作業系統正在使用的固定計數器。";
+        // 寬度或事件配方不適用時就拒絕，不退回猜一個 4 硬算——這是本頁最容易產出「錯得像真的」數字的地方。
+        if (!uarch.LegacyTmaUsable)
+        {
+            SupportText = (uarch.IsKnown
+                              ? $"偵測到 {uarch.DisplayName}"
+                              : $"型號 Family {family} Model 0x{model:X} 不在本工具的微架構表內")
+                        + "：" + uarch.TmaNote;
+            return false;
+        }
+
+        SlotsPerCycle = uarch.PipelineWidth;
+        SupportText = $"{uarch.DisplayName} ・ PMU 版本 {version}、通用計數器 {nGp} 個（{gpWidth} 位元）。"
+                    + uarch.TmaNote
+                    + "本工具只使用 PMC0–3，不變動作業系統正在使用的固定計數器。";
         return true;
     }
 
     /// <summary>
-    /// 以 GetLogicalProcessorInformationEx(RelationProcessorCore) 取實體核心 → 邏輯處理器遮罩。
-    /// 只處理處理器群組 0（≤64 邏輯處理器）；跨群組的機器會漏掉其餘群組，如實少列而不假造。
+    /// 以 GetLogicalProcessorInformationEx(RelationProcessorCore) 取實體核心 → 群組 ＋ 邏輯處理器遮罩。
     /// </summary>
-    private static List<(int Core, ulong Mask, string LpText)> EnumeratePhysicalCores(ulong processMask)
+    /// <remarks>
+    /// 1.6 起<b>不再只處理群組 0</b>：超過 64 個邏輯處理器的機器會被 Windows 切成多個處理器群組，
+    /// 原本的實作把群組 1 以後整批靜默跳過，畫面上少了一半核心卻沒有任何說明。
+    /// 現在全部群組都列，釘選改走 <see cref="CpuAffinity"/> 的 SetThreadGroupAffinity。
+    ///
+    /// 行程親和性遮罩只在單一群組時用來過濾（<c>Process.ProcessorAffinity</c> 本身表達不了多群組），
+    /// 多群組機器一律採用韌體回報的完整遮罩。
+    /// </remarks>
+    private static List<(int Core, ProcessorRef First, string LpText)> EnumeratePhysicalCores(
+        bool multiGroup, ulong group0Mask)
     {
-        var list = new List<(int, ulong, string)>();
+        var list = new List<(int, ProcessorRef, string)>();
         uint len = 0;
         GetLogicalProcessorInformationEx(RelationProcessorCore, 0, ref len);
         if (len == 0 || Marshal.GetLastWin32Error() != ErrorInsufficientBuffer) return list;
@@ -346,11 +389,12 @@ public sealed class TopDownService : ObservableObject, IDisposable
                 ushort groupCount = (ushort)Marshal.ReadInt16(pl + 22);
                 ulong mask = groupCount == 0 ? 0 : (ulong)Marshal.ReadIntPtr(pl + 24).ToInt64();
                 ushort group = groupCount == 0 ? (ushort)0 : (ushort)Marshal.ReadInt16(pl + 32);
-                mask &= processMask;                                  // 只用行程真的能跑的邏輯處理器
-                if (group == 0 && mask != 0)
+                if (!multiGroup && group == 0) mask &= group0Mask;    // 只用行程真的能跑的邏輯處理器
+                if (mask != 0)
                 {
-                    var lps = CoreLatencyService.LogicalProcessorsFromMask(mask);
-                    list.Add((core, mask, string.Join("／", lps.Select(l => $"LP{l}"))));
+                    var idx = CpuAffinity.IndicesFromMask(mask);
+                    list.Add((core, new ProcessorRef(group, idx[0]),
+                              string.Join("／", idx.Select(i => new ProcessorRef(group, i).Label(multiGroup)))));
                 }
                 core++;
                 off += size;
@@ -361,18 +405,17 @@ public sealed class TopDownService : ObservableObject, IDisposable
     }
 
     private List<(int Core, string LpText, ulong[] Values)> SampleAll(
-        List<(int Core, ulong Mask, string LpText)> cores, CancellationToken ct, IProgress<(double, string)> report)
+        List<(int Core, ProcessorRef First, string LpText)> cores, CancellationToken ct, IProgress<(double, string)> report)
     {
         var result = new List<(int, string, ulong[])>();
         for (int i = 0; i < cores.Count; i++)
         {
             ct.ThrowIfCancellationRequested();
-            var (core, mask, lpText) = cores[i];
-            int lp = CoreLatencyService.LogicalProcessorsFromMask(mask).First();
-            var v = SampleOne(lp, ct);
+            var (core, first, lpText) = cores[i];
+            var v = SampleOne(first, ct);
             result.Add((core, lpText, v));
             report.Report(((i + 1) / (double)cores.Count,
-                $"取樣核心 {core}（{lpText}）… " + (v[0] == 0 ? "閒置" : $"{TopDownMath.Compute(v[0], v[1], v[2], v[3]).Retiring:0.0}% 退休")));
+                $"取樣核心 {core}（{lpText}）… " + (v[0] == 0 ? "閒置" : $"{TopDownMath.Compute(v[0], v[1], v[2], v[3], SlotsPerCycle).Retiring:0.0}% 退休")));
         }
         return result;
     }
@@ -381,10 +424,11 @@ public sealed class TopDownService : ObservableObject, IDisposable
     /// 在指定邏輯處理器上取樣一次。存原值 → 停通用計數器 → 編程 → 啟用 → 等視窗 → 讀 → 還原。
     /// 讀不到（橋接失敗）時回全 0，上層會視為閒置並顯示 —，不會拿舊值或估計值頂替。
     /// </summary>
-    private ulong[] SampleOne(int lp, CancellationToken ct)
+    private ulong[] SampleOne(ProcessorRef target, CancellationToken ct)
     {
         var v = new ulong[4];
-        if (SetThreadAffinityMask(GetCurrentThread(), 1UL << lp) == IntPtr.Zero) return v;
+        using var pin = CpuAffinity.Pinned(target);
+        if (!pin.Ok) { Diag.Swallow("Top-down 釘選核心", null, $"核心 {target.Label(true)} 無法釘選，該列顯示 —"); return v; }
         try
         {
             ulong savedGlobal = _bridge!.ReadMsrPair64(MsrGlobalCtrl) ?? 0;
@@ -410,8 +454,11 @@ public sealed class TopDownService : ObservableObject, IDisposable
                 Write64(MsrGlobalCtrl, savedGlobal);
             }
         }
-        catch { return new ulong[4]; }
-        finally { SetThreadAffinityMask(GetCurrentThread(), _processMask); }
+        catch (Exception ex)
+        {
+            Diag.Swallow("Top-down PMU 取樣", ex, $"核心 {target.Label(true)} 的四桶顯示 —");
+            return new ulong[4];
+        }
         ct.ThrowIfCancellationRequested();
         return v;
     }
@@ -422,6 +469,7 @@ public sealed class TopDownService : ObservableObject, IDisposable
     public void Dispose()
     {
         _cts?.Cancel();
-        try { _bridge?.Dispose(); } catch { }
+        try { _bridge?.Dispose(); }
+        catch (Exception ex) { Diag.Swallow("Top-down 橋接釋放", ex, "無；程式即將結束"); }
     }
 }

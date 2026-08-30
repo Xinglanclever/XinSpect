@@ -40,5 +40,5 @@ public partial class HealthView : UserControl, IPageLifecycle
     // Host.Content 延遲載入時 DataContext 由父容器繼承；仍以主視窗為後備。
     private MainViewModel? Vm =>
         DataContext as MainViewModel
-        ?? Application.Current?.MainWindow?.DataContext as MainViewModel;
+        ?? Shell.Vm;
 }

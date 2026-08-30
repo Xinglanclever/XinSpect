@@ -13,7 +13,7 @@ public partial class ToolboxView : UserControl
     // Host.Content 延遲載入時 DataContext 由父容器繼承；仍以主視窗為後備。
     private MainViewModel? Vm =>
         DataContext as MainViewModel
-        ?? Application.Current?.MainWindow?.DataContext as MainViewModel;
+        ?? Shell.Vm;
 
     // 點選工具按鈕：由 Tag 取回對應項目，交由工具箱服務啟動 / 導向下載
     // （若該工具已裝入插槽，服務會優先啟動插槽內的本機執行檔）

@@ -394,7 +394,7 @@
                                         <ColumnDefinition Width="110"/>
                                         <ColumnDefinition Width="110"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldValue}" Text="{Binding Lp}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldValue}" Text="{Binding LpText}" VerticalAlignment="Center"/>
                                     <ProgressBar Grid.Column="1" Style="{StaticResource LoadBar}" Maximum="1" VerticalAlignment="Center"
                                                  Margin="0,0,10,0" Value="{Binding BarFraction, Mode=OneWay}"/>
                                     <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding OccupancyText}" TextAlignment="Right" VerticalAlignment="Center"/>

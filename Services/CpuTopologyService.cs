@@ -155,7 +155,8 @@ public static class CpuTopologyService
         };
         foreach (var (id, name) in map)
         {
-            try { if (IsProcessorFeaturePresent(id)) t.Features.Add(name); } catch { }
+            try { if (IsProcessorFeaturePresent(id)) t.Features.Add(name); }
+            catch (Exception ex) { Diag.Swallow("查詢處理器功能位元", ex, $"「{name}」未列入功能清單（不代表這台機器沒有）"); }
         }
     }
 }

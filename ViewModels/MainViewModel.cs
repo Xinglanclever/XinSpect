@@ -228,6 +228,12 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>歷史回放：時間窗操作（區間、縮放、平移、跟隨）與每項指標的統計。</summary>
     public HistoryViewModel HistoryView { get; }
 
+    /// <summary>
+    /// 降級紀錄：把 <see cref="Diag"/> 收下的「已接住、功能降級」例外搬上設定頁。
+    /// 沒有這條路，那些紀錄就只是寫給沒人看的檔案。
+    /// </summary>
+    public DiagViewModel Diagnostics { get; } = new();
+
     /// <summary>環境自檢：偵測各功能所需執行階段／驅動／服務是否就緒，缺少者附官方取得連結。</summary>
     public EnvCheckService EnvCheck { get; } = new();
 

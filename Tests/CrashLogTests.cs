@@ -9,6 +9,7 @@ namespace XinSpect.Tests;
 /// <see cref="CrashLog"/> 的行為驗證：紀錄格式要能讓人回報問題（時間、來源、型別、訊息、堆疊、內層例外），
 /// 而寫檔本身不得成為新的當機來源。所有測試都改指到暫存資料夾，不動使用者真正的 crash.log。
 /// </summary>
+[Collection(CrashFolderCollection.Name)]
 public class CrashLogTests : IDisposable
 {
     private readonly string _dir;

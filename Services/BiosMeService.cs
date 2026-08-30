@@ -218,7 +218,7 @@ public sealed class BiosMeService : ObservableObject
                 break;
             }
         }
-        catch { /* WMI 讀不到就留 null，下面照實說 */ }
+        catch (Exception ex) { Diag.Swallow("查詢 HECI／MEI 驅動", ex, "裝置與驅動版本兩列顯示 —"); }
 
         rows.Add(new FirmwareRow("HECI／MEI 裝置", device ?? "—（找不到 Intel Management Engine Interface 裝置）"));
         rows.Add(new FirmwareRow("驅動版本", driver ?? "—"));

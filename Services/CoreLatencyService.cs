@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 
 namespace XinSpect;
 
@@ -10,25 +9,20 @@ namespace XinSpect;
 /// </summary>
 /// <remarks>
 /// 誠實界線：量的是「快取線經由原子交換往返」的時間（中位數，ns），不是記憶體延遲、
-/// 也不是任何廠商定義的指標。僅支援單一處理器群組（≤64 邏輯處理器）；超過時如實回報不支援。
+/// 也不是任何廠商定義的指標。釘選走 <see cref="CpuAffinity"/>，跨處理器群組（＞64 邏輯處理器）
+/// 的機器也會全部列入——但多群組路徑<b>未在真實硬體上驗證過</b>，狀態列會如實聲明。
 /// 量測期間參與的兩顆邏輯處理器會滿載（忙等），屬測試本質，狀態列會先告知。
 /// </remarks>
 public sealed class CoreLatencyService : ObservableObject
 {
-    [DllImport("kernel32.dll")]
-    private static extern IntPtr GetCurrentThread();
-
-    [DllImport("kernel32.dll")]
-    private static extern IntPtr SetThreadAffinityMask(IntPtr hThread, ulong affinityMask);
-
     private CancellationTokenSource? _cts;
 
     private bool _running;
     public bool IsRunning { get => _running; private set { if (SetProperty(ref _running, value)) OnPropertyChanged(nameof(CanStart)); } }
     public bool CanStart => !_running && IsSupported;
 
-    /// <summary>是否可執行：需要至少兩個邏輯處理器，且不跨處理器群組（單一群組上限 64）。</summary>
-    public static bool IsSupported => Environment.ProcessorCount is >= 2 and <= 64;
+    /// <summary>是否可執行：需要至少兩個邏輯處理器（跨群組的機器亦可，見類別備註的誠實界線）。</summary>
+    public static bool IsSupported => CpuAffinity.TotalLogicalProcessors >= 2;
 
     private string _phase = "尚未量測";
     public string Phase { get => _phase; private set => SetProperty(ref _phase, value); }
@@ -41,7 +35,9 @@ public sealed class CoreLatencyService : ObservableObject
     public string StatusLine { get => _status; private set => SetProperty(ref _status, value); }
 
     private int[] _lps = [];
-    /// <summary>實際參與量測的邏輯處理器編號（依親和性遮罩由低到高）；熱圖的行列順序與此一致。</summary>
+    /// <summary>
+    /// 實際參與量測的邏輯處理器編號（全機序號，跨群組時為連續編號）；熱圖的行列順序與此一致。
+    /// </summary>
     /// <remarks>必須走 SetProperty：熱圖的 Lps 是獨立繫結，不通知就永遠是空陣列，
     /// 而 Data 已經是 N×N——標籤索引會越界（1.4.0 的 IndexOutOfRangeException 即出於此）。</remarks>
     public int[] Lps { get => _lps; private set => SetProperty(ref _lps, value); }
@@ -82,7 +78,10 @@ public sealed class CoreLatencyService : ObservableObject
             MedianText = $"{med:0} ns";
             MaxText = $"{max:0} ns";
             Phase = "完成";
-            StatusLine = $"完成 ・ {lps.Length} 個邏輯處理器、{lps.Length * (lps.Length - 1)} 組兩兩量測。";
+            StatusLine = $"完成 ・ {lps.Length} 個邏輯處理器、{lps.Length * (lps.Length - 1)} 組兩兩量測。"
+                       + (CpuAffinity.IsMultiGroup
+                            ? $" 本機有 {CpuAffinity.GroupCount} 個處理器群組，全部群組皆已列入；多群組路徑未在實機驗證過。"
+                            : "");
         }
         catch (OperationCanceledException)
         {
@@ -103,12 +102,28 @@ public sealed class CoreLatencyService : ObservableObject
 
     private (double[,] Matrix, int[] Lps) MeasureAll(CancellationToken ct)
     {
-        var proc = Process.GetCurrentProcess();
-        var lps = LogicalProcessorsFromMask((ulong)proc.ProcessorAffinity.ToInt64());
-        if (lps.Count < 2)
+        var refs = CpuAffinity.AllLogicalProcessors();
+        if (refs.Count < 2)
             throw new InvalidOperationException("可用的邏輯處理器少於兩個，無法量測。");
 
-        int n = lps.Count;
+        // 先在本執行緒逐一試釘一遍：釘不上的核心必須在開工前就剔除。
+        // 若留到量測執行緒裡才發現，對方會永遠等不到旗標翻轉——Join 卡死，整頁凍結。
+        var usable = new List<ProcessorRef>(refs.Count);
+        foreach (var p in refs)
+        {
+            using var probe = CpuAffinity.Pinned(p);
+            if (probe.Ok) usable.Add(p);
+            else Diag.Swallow("核心延遲釘選試探", null, $"{p.Label(true)} 釘不上，已從矩陣剔除");
+        }
+        if (usable.Count < 2)
+            throw new InvalidOperationException("能成功釘選的邏輯處理器少於兩個，無法量測。");
+
+        var sizes = CpuAffinity.GroupSizes();
+        var labels = new int[usable.Count];
+        for (int i = 0; i < usable.Count; i++)
+            labels[i] = CpuAffinity.Global(usable[i], sizes) ?? i;
+
+        int n = usable.Count;
         var m = new double[n, n];
         int total = n * (n - 1), done = 0;
         for (int i = 0; i < n; i++)
@@ -117,14 +132,14 @@ public sealed class CoreLatencyService : ObservableObject
             {
                 if (i == j) { m[i, j] = double.NaN; continue; }
                 ct.ThrowIfCancellationRequested();
-                m[i, j] = MeasurePair(lps[i], lps[j], ct);
+                m[i, j] = MeasurePair(usable[i], usable[j], ct);
                 done++;
                 ProgressFraction = done / (double)total;
                 if (done % 32 == 0)
                     StatusLine = $"量測中… {done} / {total} 組（目前最小 {Stats(m).min:0} ns）";
             }
         }
-        return (m, lps.ToArray());
+        return (m, labels);
     }
 
     /// <summary>
@@ -132,7 +147,11 @@ public sealed class CoreLatencyService : ObservableObject
     /// 是偽控制代碼，必須在執行緒自己身上呼叫才釘得到），拉高優先權降低排程雜訊；
     /// 先跑一輪暖機不計，其後取多輪批次平均值的中位數。
     /// </summary>
-    private static double MeasurePair(int lpA, int lpB, CancellationToken ct)
+    /// <remarks>
+    /// 釘選在此為<b>盡力而為</b>：呼叫端已在 <see cref="MeasureAll"/> 試釘過一遍，此處再失敗也不丟例外——
+    /// 在忙等執行緒裡丟例外會讓對方永遠等不到旗標，Join 直接卡死。釘不上就照量，並如實記進診斷。
+    /// </remarks>
+    private static double MeasurePair(ProcessorRef lpA, ProcessorRef lpB, CancellationToken ct)
     {
         const long Iters = 512;
         const int Batches = 3;   // 另有一輪暖機不計
@@ -146,7 +165,7 @@ public sealed class CoreLatencyService : ObservableObject
 
             var ta = new Thread(() =>
             {
-                Pin(lpA);
+                using var pin = Pin(lpA);
                 Thread.CurrentThread.Priority = ThreadPriority.Highest;
                 for (long i = 1; i <= Iters; i++)
                 {
@@ -157,7 +176,7 @@ public sealed class CoreLatencyService : ObservableObject
             });
             var tb = new Thread(() =>
             {
-                Pin(lpB);
+                using var pin = Pin(lpB);
                 Thread.CurrentThread.Priority = ThreadPriority.Highest;
                 for (long i = 1; i <= Iters; i++)
                 {
@@ -175,22 +194,21 @@ public sealed class CoreLatencyService : ObservableObject
         return Median(avgs);
     }
 
-    private static void Pin(int lp)
+    private static CpuAffinity.Pin Pin(ProcessorRef p)
     {
-        if (SetThreadAffinityMask(GetCurrentThread(), 1UL << lp) == IntPtr.Zero)
-            throw new InvalidOperationException($"無法將執行緒釘在邏輯處理器 {lp}。");
+        var pin = CpuAffinity.Pinned(p);
+        if (!pin.Ok) Diag.Swallow("核心延遲釘選", null, $"{p.Label(true)} 釘不上，該列數值不代表該核心");
+        return pin;
     }
 
     // ── 純函式（單元測試涵蓋）──────────────────────────────────────────────
 
     /// <summary>由親和性遮罩展開出邏輯處理器編號（由低到高）。</summary>
-    public static List<int> LogicalProcessorsFromMask(ulong mask)
-    {
-        var lps = new List<int>();
-        for (int i = 0; i < 64; i++)
-            if ((mask & (1UL << i)) != 0) lps.Add(i);
-        return lps;
-    }
+    /// <remarks>
+    /// 單一群組的遮罩語意；跨群組的列舉走 <see cref="CpuAffinity.AllLogicalProcessors"/>。
+    /// 實作轉呼 <see cref="CpuAffinity.IndicesFromMask"/>，避免同一段位元展開存在兩份。
+    /// </remarks>
+    public static List<int> LogicalProcessorsFromMask(ulong mask) => CpuAffinity.IndicesFromMask(mask);
 
     /// <summary>中位數（偶數取兩中間值平均）。輸入須非空。</summary>
     public static double Median(IEnumerable<double> xs)

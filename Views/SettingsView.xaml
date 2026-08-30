@@ -637,6 +637,68 @@
                 </StackPanel>
             </Border>
 
+            <!-- ═══ 診斷紀錄 ═══ -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="診斷紀錄"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="曦覽遇到讀不到的東西時（MSR 被拒、WMI 查詢失敗、感測器不存在、驅動沒開放）會讓那一欄顯示「—」並繼續跑，而不是整頁掛掉。但「量不到」和「程式有缺陷」在畫面上長得一模一樣——這份清單就是用來分辨兩者的：每一筆記下發生位置、例外型別與訊息，以及對你的實際後果。"/>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,12,0,0" TextWrapping="Wrap"
+                               Text="{Binding Diagnostics.SummaryText}"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button Style="{StaticResource ToolButton}" Content="重新整理" Click="DiagRefresh_Click"/>
+                        <Button Style="{StaticResource ToolButton}" Content="開啟 diag.log" Margin="12,0,0,0"
+                                Click="DiagOpenFile_Click"/>
+                        <Button Style="{StaticResource ToolButton}" Content="開啟資料夾" Margin="12,0,0,0"
+                                Click="DiagOpenFolder_Click"/>
+                        <Button Style="{StaticResource ToolButton}" Content="清空畫面紀錄" Margin="12,0,0,0"
+                                Click="DiagClear_Click"/>
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding Diagnostics.HintText}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="{Binding Diagnostics.FilePath, StringFormat=紀錄檔：{0}}"/>
+
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,12,0,0" TextWrapping="Wrap"
+                               Text="目前沒有降級紀錄可列。"
+                               Visibility="{Binding Diagnostics.HasEntries, Converter={StaticResource InverseBoolToVis}}"/>
+                    <ItemsControl ItemsSource="{Binding Diagnostics.Recent}" MaxHeight="260" Margin="0,12,0,0"
+                                  Visibility="{Binding Diagnostics.HasEntries, Converter={StaticResource BoolToVis}}">
+                        <ItemsControl.Template>
+                            <ControlTemplate TargetType="ItemsControl">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto"><ItemsPresenter/></ScrollViewer>
+                            </ControlTemplate>
+                        </ItemsControl.Template>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="6" Margin="0,0,0,5" Padding="10,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="72"/>
+                                            <ColumnDefinition Width="130"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding TimeText}" Foreground="{StaticResource SecondaryInkBrush}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Site}" Foreground="{StaticResource PrimaryInkBrush}" TextWrapping="Wrap"/>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Foreground="{StaticResource PrimaryInkBrush}" TextWrapping="Wrap">
+                                                <Run Text="{Binding Type}" Foreground="{StaticResource SecondaryInkBrush}"/>
+                                                <Run Text="{Binding Message}"/>
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding Consequence, StringFormat=→ {0}}" Margin="0,2,0,0"
+                                                       Foreground="{StaticResource SecondaryInkBrush}" TextWrapping="Wrap"
+                                                       Visibility="{Binding Consequence.Length, Converter={StaticResource CountToVis}}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <!-- ═══ 所有功能一鍵初始化 ═══ -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>

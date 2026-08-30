@@ -100,7 +100,7 @@ public class UiSmokeTests
                 }
                 catch (Exception ex)
                 {
-                    failures.Add($"{name} 建構／量測失敗：{ex.GetType().Name}：{ex.Message}");
+                    failures.Add($"{name} 建構／量測失敗：{Describe(ex)}");
                 }
             }
 
@@ -119,5 +119,24 @@ public class UiSmokeTests
         {
             PresentationTraceSources.DataBindingSource.Listeners.Remove(listener);
         }
+    }
+
+    /// <summary>
+    /// 把例外連同<b>全部內層例外</b>攤成一行。XamlParseException 的訊息只說「設定屬性時擲回例外狀況」，
+    /// 真正的原因永遠在 InnerException 裡——只印外層等於把診斷資訊丟掉。
+    /// </summary>
+    private static string Describe(Exception ex)
+    {
+        var sb = new StringBuilder();
+        for (Exception? e = ex; e is not null; e = e.InnerException)
+        {
+            if (sb.Length > 0) sb.Append(" ← ");
+            sb.Append(e.GetType().Name).Append('：').Append(e.Message);
+        }
+        var deepest = ex;
+        while (deepest.InnerException is not null) deepest = deepest.InnerException;
+        if (deepest.StackTrace is { Length: > 0 } st)
+            sb.Append("\n    最內層堆疊：").Append(st.Trim().Replace("\n", "\n    "));
+        return sb.ToString();
     }
 }
