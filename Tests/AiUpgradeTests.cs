@@ -5,8 +5,8 @@ using Xunit;
 namespace XinSpect.Tests;
 
 /// <summary>
-/// 軸三「AI 升級」的回歸測試：工具箱真的長到 33 項且名稱不重複、硬核工具在使用者尚未量測時
-/// 必須說「尚未量測」而不是回一個 0、介面上寫的「33 項」要與工具箱實際數量一致，
+/// 軸三「AI 升級」的回歸測試：工具箱真的長到 34 項且名稱不重複、硬核工具在使用者尚未量測時
+/// 必須說「尚未量測」而不是回一個 0、介面上寫的「34 項」要與工具箱實際數量一致，
 /// 以及「保留對話」關閉時真的把檔案刪掉。
 /// </summary>
 /// <remarks>
@@ -17,16 +17,16 @@ namespace XinSpect.Tests;
 /// </remarks>
 public class AiUpgradeTests
 {
-    /// <summary>硬核批次的 10 項工具名稱（AiToolboxBuilder.Hardcore.cs）。</summary>
+    /// <summary>硬核批次的 11 項工具名稱（AiToolboxBuilder.Hardcore.cs）。</summary>
     private static readonly string[] HardcoreTools =
     [
         "get_topdown_pipeline", "get_frequency_truth", "get_platform_trust", "get_firmware_versions",
         "get_core_time_breakdown", "get_power_policy", "get_memory_commit_truth", "get_machine_check",
-        "get_cpu_security_bits", "get_rdt_monitoring",
+        "get_cpu_security_bits", "get_rdt_monitoring", "get_performance_ceiling",
     ];
 
     /// <summary>介面文案宣稱的工具數；與 <see cref="ToolCount"/> 一起改，不容各說各話。</summary>
-    private const int ToolCount = 33;
+    private const int ToolCount = 34;
 
     /// <summary>在 STA 執行緒上跑一段需要 WPF 環境的工作，並把例外原樣帶回。</summary>
     private static void OnSta(Action work)
@@ -49,7 +49,7 @@ public class AiUpgradeTests
     }
 
     [Fact]
-    public void 工具箱共33項且名稱不重複()
+    public void 工具箱共34項且名稱不重複()
     {
         OnSta(() =>
         {
@@ -109,8 +109,9 @@ public class AiUpgradeTests
         {
             string text = File.ReadAllText(Path.Combine(root!, rel));
             Assert.Contains($"{ToolCount} 項", text);
-            // 舊數字留在文案裡就是介面在說謊——例如把 33 項寫成 23 項。
-            Assert.DoesNotContain("23 項本機唯讀", text);
+            // 舊數字留在文案裡就是介面在說謊——例如工具加到 34 項了，文案還寫著 33 項。
+            Assert.DoesNotContain("33 項本機唯讀", text);
+            Assert.DoesNotContain("10 項是硬核", text);
         }
     }
 

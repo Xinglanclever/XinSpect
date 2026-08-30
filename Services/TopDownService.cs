@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
 using System.Threading;
 using System.Threading.Tasks;
@@ -130,12 +129,6 @@ public sealed class TopDownCoreRow
 /// </remarks>
 public sealed class TopDownService : ObservableObject, IDisposable
 {
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool GetLogicalProcessorInformationEx(int relationship, nint buffer, ref uint returnedLength);
-
-    private const int RelationProcessorCore = 0;
-    private const int ErrorInsufficientBuffer = 122;
-
     private const uint MsrPerfEvtSel0 = 0x186;
     private const uint MsrPmc0 = 0xC1;
     private const uint MsrGlobalCtrl = 0x38F;
@@ -364,45 +357,11 @@ public sealed class TopDownService : ObservableObject, IDisposable
     /// 原本的實作把群組 1 以後整批靜默跳過，畫面上少了一半核心卻沒有任何說明。
     /// 現在全部群組都列，釘選改走 <see cref="CpuAffinity"/> 的 SetThreadGroupAffinity。
     ///
-    /// 行程親和性遮罩只在單一群組時用來過濾（<c>Process.ProcessorAffinity</c> 本身表達不了多群組），
-    /// 多群組機器一律採用韌體回報的完整遮罩。
+    /// 1.6.2 起實作本體搬到 <see cref="CpuAffinity.PhysicalCores"/>，與效能天花板頁共用同一份列舉，
+    /// 免得兩處各自維護同一段 PROCESSOR_RELATIONSHIP 位移解析。
     /// </remarks>
     private static List<(int Core, ProcessorRef First, string LpText)> EnumeratePhysicalCores(
-        bool multiGroup, ulong group0Mask)
-    {
-        var list = new List<(int, ProcessorRef, string)>();
-        uint len = 0;
-        GetLogicalProcessorInformationEx(RelationProcessorCore, 0, ref len);
-        if (len == 0 || Marshal.GetLastWin32Error() != ErrorInsufficientBuffer) return list;
-
-        nint buf = Marshal.AllocHGlobal((int)len);
-        try
-        {
-            if (!GetLogicalProcessorInformationEx(RelationProcessorCore, buf, ref len)) return list;
-            int off = 0, core = 0;
-            while (off + 8 <= (int)len)
-            {
-                nint rec = buf + off;
-                int size = Marshal.ReadInt32(rec + 4);
-                if (size <= 0) break;
-                nint pl = rec + 8;                                   // PROCESSOR_RELATIONSHIP
-                ushort groupCount = (ushort)Marshal.ReadInt16(pl + 22);
-                ulong mask = groupCount == 0 ? 0 : (ulong)Marshal.ReadIntPtr(pl + 24).ToInt64();
-                ushort group = groupCount == 0 ? (ushort)0 : (ushort)Marshal.ReadInt16(pl + 32);
-                if (!multiGroup && group == 0) mask &= group0Mask;    // 只用行程真的能跑的邏輯處理器
-                if (mask != 0)
-                {
-                    var idx = CpuAffinity.IndicesFromMask(mask);
-                    list.Add((core, new ProcessorRef(group, idx[0]),
-                              string.Join("／", idx.Select(i => new ProcessorRef(group, i).Label(multiGroup)))));
-                }
-                core++;
-                off += size;
-            }
-        }
-        finally { Marshal.FreeHGlobal(buf); }
-        return list;
-    }
+        bool multiGroup, ulong group0Mask) => CpuAffinity.PhysicalCores(multiGroup, group0Mask);
 
     private List<(int Core, string LpText, ulong[] Values)> SampleAll(
         List<(int Core, ProcessorRef First, string LpText)> cores, CancellationToken ct, IProgress<(double, string)> report)

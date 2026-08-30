@@ -132,6 +132,16 @@ public static class PageRegistry
         },
         new()
         {
+            Key = "ceiling", Title = "效能天花板", Group = GMonitor,
+            IconData = "F0 M3,3 H21 V5.6 H3 Z M11,7.4 H13 V13 H11 Z M12,21.6 L7.4,15 H16.6 Z "
+                     + "M4.6,8.4 H6.4 V12 H4.6 Z M17.6,8.4 H19.4 V12 H17.6 Z",
+            Factory = () => new CeilingView(),
+            Hint = "為什麼跑不到該有的頻率：溫度牆／功耗牆／電流牆／向量降頻",
+            Keywords = ["ceiling", "天花板", "上限", "節流", "降頻", "throttle", "溫度牆", "功耗牆",
+                        "電流", "prochot", "rapl", "pl1", "pl2", "tcc", "限制原因", "avx", "降頻原因"],
+        },
+        new()
+        {
             Key = "scenes", Title = "場景", Group = GTune,
             IconData = "F1 M12,2 L14.6,8.6 L21.6,9.2 L16.3,13.8 L17.9,20.7 L12,17 L6.1,20.7 L7.7,13.8 "
                      + "L2.4,9.2 L9.4,8.6 Z",

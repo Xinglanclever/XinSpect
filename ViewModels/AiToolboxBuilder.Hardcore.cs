@@ -43,6 +43,7 @@ internal static partial class AiToolboxBuilder
         AddMachineCheck(box, vm);
         AddSecurityBits(box, vm);
         AddRdt(box, vm);
+        AddCeiling(box, vm);
     }
 
     // ── Top-down 管線歸因 ───────────────────────────────────────────────────
@@ -368,6 +369,66 @@ internal static partial class AiToolboxBuilder
                     + "若三項讀值全為 0 且無錯誤旗標，那是平台／韌體未開放 RDT 監測的樣子，如實顯示 0，不用估計值頂替。");
                 Line(sb, "說明", s.Status);
                 return Done(sb, NotMeasured("RDT 快取／頻寬監測", "處理器 › RDT 監測"));
+            });
+    }
+
+    // ── 效能天花板（硬性上限＋撞牆量測＋限制原因歸因）─────────────────────────
+
+    private static void AddCeiling(AiToolbox box, MainViewModel vm)
+    {
+        box.Add("get_performance_ceiling",
+            "取得「這顆 CPU 為什麼跑不到它該有的頻率」的完整證據：直接讀自 MSR 的硬性上限"
+            + "（節流溫度 TCC、PL1／PL2、倍頻表、電流與供電警報）、自開機以來撞過的牆（黏滯紀錄位）、"
+            + "以及使用者按下撞牆量測後的逐窗實測（基線／整數／AVX2／AVX-512 的有效倍頻、作用中核心數、最高溫）"
+            + "與最終歸因判決。要回答「為什麼頻率上不去」「是溫度牆還是功耗牆」時用這個。"
+            + "此項不會自動量測：進入「效能天花板」頁只會做靜態讀取，逐窗實測需使用者親自按「開始撞牆量測」"
+            + "（會把全核壓滿數十秒），代理不得代為發動。",
+            _ =>
+            {
+                var s = vm.Ceiling;
+                if (s.LimitRows.Count == 0 && s.HistoryRows.Count == 0 && s.Windows.Count == 0)
+                    return NotMeasured("效能天花板", "效能天花板");
+
+                var sb = new StringBuilder();
+                Line(sb, "量測狀態", s.Status);
+                if (s.HasVerdict)
+                {
+                    Line(sb, "判決", s.VerdictHeadline);
+                    Line(sb, "判決依據", s.VerdictDetail);
+                }
+                else
+                    sb.AppendLine("判決：尚未做逐窗實測，故沒有歸因判決——"
+                        + "以下只有靜態讀取到的硬性上限與開機至今的黏滯紀錄。");
+
+                if (s.Windows.Count > 0)
+                {
+                    sb.AppendLine("逐負載窗實測（有效倍頻為 APERF／MPERF 逐核差分，作用中核心數由 MPERF 醒著比例量得）：");
+                    Rows(sb, s.Windows, 6, w => $"{w.Label}：{w.RatioText}　{w.MhzText}　"
+                                              + $"作用核心 {w.CoresText}　溫度 {w.TempText}　"
+                                              + $"能量計數 {w.EnergyCounts}（{w.Seconds:0.0} 秒、{w.Samples} 次取樣）");
+                    Line(sb, "能量計驗證", s.EnergyText);
+                }
+
+                if (s.LimitRows.Count > 0)
+                {
+                    sb.AppendLine("硬性上限（此刻真正生效的值，全部直接讀自 MSR，不是規格書數字）：");
+                    Rows(sb, s.LimitRows, 20, r => $"{r.Name}：{r.Value}"
+                                                 + (r.HasEvidence ? $"（出處 {r.Evidence}）" : ""));
+                }
+
+                if (s.HistoryRows.Count > 0)
+                {
+                    sb.AppendLine("開機至今撞過的牆（黏滯紀錄位，本工具不清除故涵蓋整個開機期間）：");
+                    Rows(sb, s.HistoryRows, 20, r => $"{r.Name}：{r.Value}");
+                    Line(sb, "限制原因暫存器", s.ReasonRegText);
+                }
+
+                sb.AppendLine("限制（轉述時必須一併說明）：本頁全程唯讀，不寫入也不清除任何黏滯位；"
+                    + "溫度是「TCC 活化點減去數位讀數」，讀不到 TCC 就不換算攝氏；"
+                    + "封裝能量計未通過自我驗證時只給原始計數、不換算成瓦（硬換算會得出荒謬的低瓦數）；"
+                    + "限制原因暫存器中 Intel 未公開用途的位元不翻譯、也不當成節流證據；"
+                    + "判決若說「找不到硬體天花板」，代表缺口不在硬體，該往作業系統的電源政策查。");
+                return Done(sb, NotMeasured("效能天花板", "效能天花板"));
             });
     }
 }

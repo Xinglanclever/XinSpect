@@ -173,6 +173,60 @@ public static class CpuAffinity
         return new Pin(ok, prev);
     }
 
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GetLogicalProcessorInformationEx(int relationship, nint buffer, ref uint returnedLength);
+
+    private const int RelationProcessorCore = 0;
+    private const int ErrorInsufficientBuffer = 122;
+
+    /// <summary>
+    /// 以 <c>GetLogicalProcessorInformationEx(RelationProcessorCore)</c> 取實體核心 → 群組 ＋ 邏輯處理器遮罩。
+    /// </summary>
+    /// <remarks>
+    /// 「一核一次」的量測（Top-down、逐核歸因、效能天花板的溫度掃描）都需要這份清單：
+    /// 直接列邏輯處理器會把 SMT 兄弟核當成兩顆核，溫度與計數器都會重複計算。
+    /// <c>First</c> 是該實體核心的第一個邏輯處理器（釘選用），<c>LpText</c> 是整組 LP 的顯示字串。
+    ///
+    /// 全部處理器群組都會列出。<paramref name="group0Mask"/> 只在單一群組機器上用來過濾
+    /// （<c>Process.ProcessorAffinity</c> 本身表達不了多群組），多群組時一律採用韌體回報的完整遮罩。
+    /// 取不到拓撲時回空清單，呼叫端必須據實說明而不是退回猜一個核心數。
+    /// </remarks>
+    public static List<(int Core, ProcessorRef First, string LpText)> PhysicalCores(bool multiGroup, ulong group0Mask)
+    {
+        var list = new List<(int, ProcessorRef, string)>();
+        uint len = 0;
+        GetLogicalProcessorInformationEx(RelationProcessorCore, 0, ref len);
+        if (len == 0 || Marshal.GetLastWin32Error() != ErrorInsufficientBuffer) return list;
+
+        nint buf = Marshal.AllocHGlobal((int)len);
+        try
+        {
+            if (!GetLogicalProcessorInformationEx(RelationProcessorCore, buf, ref len)) return list;
+            int off = 0, core = 0;
+            while (off + 8 <= (int)len)
+            {
+                nint rec = buf + off;
+                int size = Marshal.ReadInt32(rec + 4);
+                if (size <= 0) break;
+                nint pl = rec + 8;                                   // PROCESSOR_RELATIONSHIP
+                ushort groupCount = (ushort)Marshal.ReadInt16(pl + 22);
+                ulong mask = groupCount == 0 ? 0 : (ulong)Marshal.ReadIntPtr(pl + 24).ToInt64();
+                ushort group = groupCount == 0 ? (ushort)0 : (ushort)Marshal.ReadInt16(pl + 32);
+                if (!multiGroup && group == 0) mask &= group0Mask;    // 只用行程真的能跑的邏輯處理器
+                if (mask != 0)
+                {
+                    var idx = IndicesFromMask(mask);
+                    list.Add((core, new ProcessorRef(group, idx[0]),
+                              string.Join("／", idx.Select(i => new ProcessorRef(group, i).Label(multiGroup)))));
+                }
+                core++;
+                off += size;
+            }
+        }
+        finally { Marshal.FreeHGlobal(buf); }
+        return list;
+    }
+
     /// <summary>釘選的作用範圍。<see cref="Ok"/> 為 false 表示沒釘上，呼叫端必須跳過該核心而不是照讀。</summary>
     public readonly struct Pin : IDisposable
     {

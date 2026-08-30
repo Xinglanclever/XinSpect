@@ -553,7 +553,7 @@
                     <CheckBox Style="{StaticResource SetCheck}" Content="診斷代理：允許 AI 主動查詢本機唯讀資料"
                               IsChecked="{Binding Settings.AiAgentMode, Mode=TwoWay}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
-                               Text="開啟後，AI 可自行呼叫 33 項唯讀查詢工具（完整規格、處理器拓樸、即時讀值、所有溫度、感測器總表、風扇與曲線、磁碟健康、事件時間軸、歷史統計、顯示卡與處理器調校現況、場景、健康總評、環境自檢、效能成績、記憶體時序與 SPD、網路組態與流量、螢幕 EDID 色域、效能天梯名次、升級建議、電池健康、開機啟動項、藍屏傾印，以及 10 項硬核底層事實：Top-down 管線歸因、頻率真相、平台可信度、BIOS 與 ME 微碼、逐核時間歸因、電源政策、記憶體認可帳本、機器檢查與 WHEA、處理器免疫位元、RDT 監測），並在對話中列出每次查詢。全部只讀不寫：不會改設定、不會動硬體、不會啟動任何程式，也不會自己去發動 PMU／MSR 量測——硬核項目你沒按過量測，AI 就只會說「本機尚未量測」。關閉則只送出一次硬體快照。"/>
+                               Text="開啟後，AI 可自行呼叫 34 項唯讀查詢工具（完整規格、處理器拓樸、即時讀值、所有溫度、感測器總表、風扇與曲線、磁碟健康、事件時間軸、歷史統計、顯示卡與處理器調校現況、場景、健康總評、環境自檢、效能成績、記憶體時序與 SPD、網路組態與流量、螢幕 EDID 色域、效能天梯名次、升級建議、電池健康、開機啟動項、藍屏傾印，以及 11 項硬核底層事實：Top-down 管線歸因、頻率真相、平台可信度、BIOS 與 ME 微碼、逐核時間歸因、電源政策、記憶體認可帳本、機器檢查與 WHEA、處理器免疫位元、RDT 監測、效能天花板），並在對話中列出每次查詢。全部只讀不寫：不會改設定、不會動硬體、不會啟動任何程式，也不會自己去發動 PMU／MSR 量測——硬核項目你沒按過量測，AI 就只會說「本機尚未量測」。關閉則只送出一次硬體快照。"/>
 
                     <CheckBox Style="{StaticResource SetCheck}" Margin="0,14,0,0" Content="主動診斷：警示觸發時自動請 AI 分析"
                               IsChecked="{Binding Settings.AiProactive, Mode=TwoWay}"/>

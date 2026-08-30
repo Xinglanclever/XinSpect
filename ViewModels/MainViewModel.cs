@@ -136,6 +136,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>頻率真相：倍頻表、實測 BCLK、逐核有效時脈（CPU 分頁卡片，MSR 唯讀）。</summary>
     public FrequencyTruthService FreqTruth { get; } = new();
 
+    /// <summary>效能天花板：硬性上限直讀 ＋ 自製負載撞牆 ＋ 限制原因歸因（獨立分頁，MSR 唯讀）。</summary>
+    public CeilingService Ceiling { get; } = new();
+
     /// <summary>計時器地基：QPC 來源、解析度、Invariant TSC（健康分頁卡片，零特權）。</summary>
     public TimerFoundationService TimerFoundation { get; } = new();
 

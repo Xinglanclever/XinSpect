@@ -1,0 +1,180 @@
+<UserControl x:Class="XinSpect.CeilingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <UserControl.Resources>
+        <!-- 一列證據：左側色條表嚴重度，下面兩行分別是 MSR 出處與人話說明。 -->
+        <DataTemplate x:Key="CeilingRowTemplate">
+            <Border Background="{StaticResource Surface2Brush}" CornerRadius="9" Margin="0,0,0,7">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="6"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" CornerRadius="9,0,0,9"
+                            Background="{Binding Severity, Converter={StaticResource SeverityToBrush}}"/>
+                    <StackPanel Grid.Column="1" Margin="14,10,14,11">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Name}" FontSize="14.5" FontWeight="SemiBold" TextWrapping="Wrap"
+                                       Foreground="{StaticResource PrimaryInkBrush}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Value}" Margin="12,0,0,0" FontSize="14.5"
+                                       FontWeight="SemiBold" TextAlignment="Right" TextWrapping="Wrap"
+                                       Foreground="{Binding Severity, Converter={StaticResource SeverityToBrush}}"/>
+                        </Grid>
+                        <TextBlock Text="{Binding Note}" TextWrapping="Wrap" Margin="0,5,0,0" FontSize="13"
+                                   Foreground="{StaticResource SecondaryInkBrush}"
+                                   Visibility="{Binding HasNote, Converter={StaticResource BoolToVis}}"/>
+                        <TextBlock Text="{Binding Evidence, StringFormat=出處：{0}}" TextWrapping="Wrap"
+                                   Margin="0,4,0,0" FontSize="11.5" FontFamily="Consolas"
+                                   Foreground="{StaticResource MutedInkBrush}"
+                                   Visibility="{Binding HasEvidence, Converter={StaticResource BoolToVis}}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <StackPanel Margin="2,0,0,10">
+                <TextBlock Style="{StaticResource SectionHeader}" Text="效能天花板"/>
+                <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                           Text="回答一個問題：這顆 CPU 為什麼跑不到它該有的頻率。先把所有硬性上限直接從 MSR 讀出來（節流溫度、PL1／PL2、倍頻表、電流與供電警報），再自己製造負載去撞，最後用限制原因暫存器指出撞到的是哪一面牆。溫度牆、功耗牆、電流牆、向量降頻——它們在閒置時完全看不見，只有壓上去才會現形。"/>
+                <TextBlock Style="{StaticResource FieldLabel}" Margin="0,8,0,0" TextWrapping="Wrap"
+                           Text="{Binding Ceiling.ScopeNotice}"/>
+            </StackPanel>
+
+            <!-- ===== 量測控制 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="量測"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
+                                    Click="Stop_Click" IsEnabled="{Binding Ceiling.IsRunning}"/>
+                            <Button Style="{StaticResource ToolButton}" Content="只讀硬性上限" Margin="0,0,10,0"
+                                    Click="Static_Click" IsEnabled="{Binding Ceiling.CanStart}"/>
+                            <Button Style="{StaticResource PrimaryButton}" Content="開始撞牆量測"
+                                    Click="Start_Click" IsEnabled="{Binding Ceiling.CanStart}"/>
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="每窗計數" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <RadioButton Content="3 秒" Margin="0,0,10,0" GroupName="CeilDur" Tag="3" Checked="Dur_Checked"/>
+                        <RadioButton Content="5 秒" Margin="0,0,10,0" GroupName="CeilDur" Tag="5" IsChecked="True" Checked="Dur_Checked"/>
+                        <RadioButton Content="8 秒" Margin="0,0,10,0" GroupName="CeilDur" Tag="8" Checked="Dur_Checked"/>
+                        <RadioButton Content="15 秒" GroupName="CeilDur" Tag="15" Checked="Dur_Checked"/>
+                    </StackPanel>
+                    <ProgressBar Style="{StaticResource LoadBar}" Margin="0,10,0,0"
+                                 Value="{Binding Ceiling.ProgressPercent, Mode=OneWay}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding Ceiling.Status}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,6,0,0" TextWrapping="Wrap"
+                               Text="{Binding Ceiling.VectorSupportText}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="「開始撞牆量測」會把全部核心壓滿數十秒（依窗數與秒數而定）：機器會變燙、風扇會轉起來，這正是量測的一部分。要中止隨時按停止，負載執行緒會立刻結束。"/>
+                </StackPanel>
+            </Border>
+            <!-- ===== 判決 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding Ceiling.HasVerdict, Converter={StaticResource BoolToVis}}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="7"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" CornerRadius="4" Margin="0,2,0,2"
+                            Background="{Binding Ceiling.VerdictSeverity, Converter={StaticResource SeverityToBrush}}"/>
+                    <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="判決"/>
+                        <TextBlock Text="{Binding Ceiling.VerdictHeadline}" FontSize="18" FontWeight="SemiBold"
+                                   TextWrapping="Wrap" Margin="0,3,0,0"
+                                   Foreground="{Binding Ceiling.VerdictSeverity, Converter={StaticResource SeverityToBrush}}"/>
+                        <TextBlock Text="{Binding Ceiling.VerdictDetail}" TextWrapping="Wrap" Margin="0,7,0,0"
+                                   FontSize="13.5" Foreground="{StaticResource SecondaryInkBrush}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ===== 各負載窗對照 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding Ceiling.Windows.Count, Converter={StaticResource CountToVis}}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="各負載窗實測對照"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,8" TextWrapping="Wrap"
+                               Text="同一台機器、同一段時間內的四種負載。倍頻是 APERF／MPERF 逐核差分算出來的有效值（不是瞬時峰值、也不是報告值）；「作用中核心」是用 MPERF 只在 C0 前進這個性質量出來的，倍頻表就是按這個數字查的。"/>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/><ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="90"/><ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="130"/><ColumnDefinition Width="110"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource ColHead}" Text="負載型態"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="有效倍頻"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="有效時脈"/>
+                        <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="作用核心"/>
+                        <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="最高溫"/>
+                        <TextBlock Grid.Column="5" Style="{StaticResource ColHead}" Text="能量計數"/>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Ceiling.Windows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid x:Name="Row" MinHeight="28">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="90"/><ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="130"/><ColumnDefinition Width="110"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Label}"/>
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding LoadNote}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding RatioText}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding MhzText}"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding CoresText}"/>
+                                    <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" Text="{Binding TempText}"/>
+                                    <TextBlock Grid.Column="5" Style="{StaticResource FieldValue}" Text="{Binding EnergyCounts}"/>
+                                </Grid>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" Value="True">
+                                        <Setter TargetName="Row" Property="Background" Value="{StaticResource Surface2Brush}"/>
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding Ceiling.EnergyText}"/>
+                </StackPanel>
+            </Border>
+            <!-- ===== 硬性上限 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding Ceiling.LimitRows.Count, Converter={StaticResource CountToVis}}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="硬性上限（此刻真正生效的值）"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,8" TextWrapping="Wrap"
+                               Text="全部直接讀自 MSR，是「這台機器現在的設定」而不是規格書上的數字——BIOS 改過就是改過的值。每一列都附原始暫存器值與取用的位元範圍，你可以自己覆核。"/>
+                    <ItemsControl ItemsSource="{Binding Ceiling.LimitRows}"
+                                  ItemTemplate="{StaticResource CeilingRowTemplate}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== 開機至今撞過的牆 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding Ceiling.HistoryRows.Count, Converter={StaticResource CountToVis}}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="開機至今撞過的牆（黏滯紀錄位）"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,8" TextWrapping="Wrap"
+                               Text="限制原因暫存器與 THERM_STATUS 的紀錄位會一直保持，直到有人寫入清除或重新開機。本工具不清除它們——清除需要寫入，而寫入會毀掉別的工具（也包括你下一次自己看）的證據。所以這裡看到的是自開機以來的完整帳。"/>
+                    <ItemsControl ItemsSource="{Binding Ceiling.HistoryRows}"
+                                  ItemTemplate="{StaticResource CeilingRowTemplate}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding Ceiling.ReasonRegText}"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
