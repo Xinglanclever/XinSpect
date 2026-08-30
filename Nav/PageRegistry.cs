@@ -362,6 +362,17 @@ public static class PageRegistry
         return null;
     }
 
+    /// <summary>以 <see cref="PageDef.Key"/> 取「實用工具」子頁；找不到回傳 null。</summary>
+    public static PageDef? FindUtility(string key)
+    {
+        for (int i = 0; i < Utilities.Count; i++)
+            if (string.Equals(Utilities[i].Key, key, StringComparison.OrdinalIgnoreCase)) return Utilities[i];
+        return null;
+    }
+
+    /// <summary>以 <see cref="PageDef.Key"/> 在主頁面與子工具兩份註冊表中查找；找不到回傳 null。</summary>
+    public static PageDef? FindAny(string key) => Find(key) ?? FindUtility(key);
+
     /// <summary>以 <see cref="PageDef.Key"/> 取頁在側邊欄中的索引；找不到回傳 -1。</summary>
     public static int IndexOf(string key)
     {

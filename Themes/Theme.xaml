@@ -162,7 +162,48 @@
         </Setter>
     </Style>
 
-    <Style x:Key="NavList" TargetType="ListBox">
+    <!-- ===== 清單容器（隱式套用到所有 ListBox）=====
+         系統預設的 ListBox 樣板在 IsEnabled=False 時，會把外框底色換成系統的
+         ListBox.Disabled.Background（純白），而且無視你自己設的 Background——
+         深色主題下就變成一整塊白板。網速測試在測量期間會停用節點選擇器
+         （NetworkSpeedView.xaml.cs 的 NodePicker.IsEnabled = false），
+         那塊白板幾乎填滿整張卡片，看起來就像「這一頁的卡片變成白底」。
+         DnsView 切換 DNS 時停用整個檢視，同樣會白。
+         因此改用不含任何系統色的樣板：底色一律吃自己的 Background，停用時只降透明度。 -->
+    <Style TargetType="ListBox">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="{StaticResource SecondaryInkBrush}"/>
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBox">
+                    <Border x:Name="Bd" SnapsToDevicePixels="True" CornerRadius="8"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <ScrollViewer Focusable="False" Padding="{TemplateBinding Padding}"
+                                      CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}"
+                                      HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
+                                      VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}">
+                            <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                        </ScrollViewer>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- 停用時只降透明度：讓使用者看得出「現在不能改」，而不是換成另一個主題的顏色 -->
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Bd" Property="Opacity" Value="0.5"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 側邊導覽清單；BasedOn 指向上面的隱式樣式（WPF 的具名樣式不會自動繼承隱式樣式） -->
+    <Style x:Key="NavList" TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="ItemContainerStyle" Value="{StaticResource NavItem}"/>

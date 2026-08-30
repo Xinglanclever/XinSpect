@@ -31,6 +31,9 @@ public partial class AiView : UserControl
 
     private void Clear_Click(object sender, RoutedEventArgs e) => Vm?.Ai.Clear();
 
+    // 停止目前的請求（已串流出的文字會留在畫面上並註明是中途停止）。
+    private void Stop_Click(object sender, RoutedEventArgs e) => Vm?.Ai.Cancel();
+
     // 快問按鈕：Tag 帶的是實際送出的完整問題（按鈕上只顯示短標籤）
     private async void Chip_Click(object sender, RoutedEventArgs e)
     {

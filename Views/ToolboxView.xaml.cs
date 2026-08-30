@@ -23,18 +23,18 @@ public partial class ToolboxView : UserControl
             Vm?.Toolbox.Launch(tool);
     }
 
-    // ── 內建硬體檢測：開啟全螢幕原生檢測視窗（純輸入／顯示事件，零外部相依）──
-    private void ScreenTest_Click(object sender, RoutedEventArgs e) => Open(new ScreenTestWindow());
-    private void MouseTest_Click(object sender, RoutedEventArgs e) => Open(new MouseTestWindow());
-    private void KeyboardTest_Click(object sender, RoutedEventArgs e) => Open(new KeyboardTestWindow());
-    private void SpeakerTest_Click(object sender, RoutedEventArgs e) => Open(new SpeakerTestWindow());
-    private void MotionTest_Click(object sender, RoutedEventArgs e) => Open(new MotionTestWindow());
+    // ── 內建硬體檢測的五顆按鈕已改由工具目錄的「曦覽內建」那一組驅動
+    //    （ToolboxService 的 BuiltinWindow 項目），避免同一件事在兩個地方各寫一份。──
 
-    private void Open(Window w)
+    // 點選「曦覽內建：<頁名>」：跳到本程式自己涵蓋同一件事的那一頁。
+    private void Native_Click(object sender, RoutedEventArgs e)
     {
-        w.Owner = Window.GetWindow(this);
-        w.Show();
+        if (sender is FrameworkElement { Tag: ToolItem tool } && tool.Native is { Length: > 0 } key)
+            ToolboxService.NavigateTo(key);
     }
+
+    // 清除搜尋詞與「只看曦覽做得到的」篩選。
+    private void ClearFilter_Click(object sender, RoutedEventArgs e) => Vm?.Toolbox.ClearFilter();
 
     // 裝入 / 更換插槽：選擇下載好的本機可執行檔放進插槽。
     private void Slot_Click(object sender, RoutedEventArgs e)

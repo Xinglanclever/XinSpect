@@ -55,6 +55,15 @@ public sealed class AiService : ObservableObject
     {
         _settings = settings;
         _chat = new AiChatStore(chatFolder);
+
+        // 「保留對話」關閉的那一刻就把檔案刪掉。設定頁寫著「關閉時會一併刪檔」，
+        // 若只是停止續寫，舊檔會留在磁碟上——那就是介面在說謊。
+        _settings.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SettingsService.AiKeepHistory) && !_settings.AiKeepHistory)
+                _chat.Delete();
+        };
+
         if (!_settings.AiKeepHistory) return;
 
         foreach (var m in _chat.Load()) Messages.Add(m);
@@ -81,9 +90,17 @@ public sealed class AiService : ObservableObject
         + "事件時間軸、歷史統計、顯示卡與處理器調校現況、場景設定、健康總評、環境自檢、效能測試成績、"
         + "記憶體時序與 SPD（含 XMP／EXPO）、網路組態與流量、螢幕 EDID 色域、效能天梯名次與同級對手、"
         + "升級建議規則引擎、電池健康、開機啟動項、藍屏傾印記錄。\n"
+        + "另有一批「硬核」工具，量的是別的工具問不到的底層事實："
+        + "Top-down 管線歸因（慢在哪個環節）、頻率真相（BCLK／倍頻表／逐核有效時脈）、"
+        + "平台可信度（MSR 讀值可不可信）、BIOS 與 ME 韌體與微碼版本、逐核時間歸因（中斷與 DPC 吃掉哪顆核）、"
+        + "電源政策、記憶體認可帳本、機器檢查與 WHEA 硬體錯誤、處理器免疫位元、RDT 快取占用與記憶體頻寬。\n"
         + "規則：需要資料時先呼叫工具，不要憑印象猜測；一次可以呼叫多個工具；"
-        + "工具回報「尚未測試」「無資料」或「不可用」時，就如實說明本機沒有該項資料，絕不編造數值；"
-        + "工具明確標示某項推算值不是實測（如 EDID 色域、天梯分數、升級效益範圍）時，轉述時也必須標明；"
+        + "工具回報「尚未測試」「尚未量測」「無資料」或「不可用」時，就如實說明本機沒有該項資料，"
+        + "並可以告訴使用者要開哪一頁按哪個按鈕才量得到——但絕不編造數值；"
+        + "硬核工具多半要使用者先按下量測，沒量過就是沒有，不要把 0 當成量到的結果；"
+        + "要解讀任何 MSR 類讀值（Top-down、頻率真相、機器檢查、免疫位元）之前，先查平台可信度；"
+        + "工具明確標示某項推算值不是實測、或列出量測限制（如 EDID 色域、天梯分數、升級效益範圍、"
+        + "Bad Speculation 低估、逐核非同一瞬間、認可帳本不等於實際寫出頁面）時，轉述時也必須一併說明；"
         + "取得足夠資料後，再用繁體中文給出結論與建議。";
 
     // ── 對話狀態（供獨立 AI 分頁繫結）──────────────────────────────
@@ -175,8 +192,32 @@ public sealed class AiService : ObservableObject
     }
 
     private bool _isBusy;
-    public bool IsBusy { get => _isBusy; private set { if (SetProperty(ref _isBusy, value)) OnPropertyChanged(nameof(CanSend)); } }
+    public bool IsBusy
+    {
+        get => _isBusy;
+        private set
+        {
+            if (!SetProperty(ref _isBusy, value)) return;
+            OnPropertyChanged(nameof(CanSend));
+            OnPropertyChanged(nameof(CanCancel));
+        }
+    }
     public bool CanSend => !_isBusy;
+
+    /// <summary>是否有進行中的請求可以取消（供 AI 分頁的「停止」按鈕繫結）。</summary>
+    public bool CanCancel => _isBusy;
+
+    // 進行中請求的取消來源；沒有請求時為 null。
+    private CancellationTokenSource? _cts;
+
+    /// <summary>
+    /// 停止目前的請求。已經串流出來的文字會留在畫面上並註明是中途停止的——
+    /// 半截的回答就該看得出是半截，不能讓它看起來像完整結論。
+    /// </summary>
+    public void Cancel()
+    {
+        try { _cts?.Cancel(); } catch (ObjectDisposedException) { /* 已收尾，無事可做 */ }
+    }
 
     private string _statusText = "尚未連線 — 於「設定 › AI 評價」選擇供應商與模型後即可使用。";
     public string StatusText { get => _statusText; private set => SetProperty(ref _statusText, value); }
@@ -226,10 +267,19 @@ public sealed class AiService : ObservableObject
 
         IsBusy = true;
         StatusText = "正在呼叫 AI 模型…";
+        var cts = new CancellationTokenSource();
+        _cts = cts;
         try
         {
-            await RunAsync(reply);
+            await RunAsync(reply, cts.Token);
             StatusText = $"完成 ・ {_settings.AiModel}（{ProviderLabel(_settings.AiProviderEnum)}）";
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        {
+            // 使用者按了「停止」：這不是錯誤，但也不能假裝回答已經完成。
+            if (reply.Text is Placeholder or "") reply.Text = "（已停止，這次沒有取得任何回覆）";
+            else reply.Text += "\n\n（已由你手動停止，以上內容並非完整回答）";
+            StatusText = "已停止。";
         }
         catch (Exception ex)
         {
@@ -240,12 +290,15 @@ public sealed class AiService : ObservableObject
         }
         finally
         {
+            _cts = null;
+            cts.Dispose();
             IsBusy = false;
             if (_settings.AiKeepHistory) _chat.Save(Messages);
         }
     }
 
-    private const string Placeholder = "思考中…";
+    /// <summary>回覆尚未有內容時的占位字（測試會據此驗證占位訊息不會被回送模型）。</summary>
+    internal const string Placeholder = "思考中…";
 
     private static string ProviderLabel(AiProvider p) => p == AiProvider.Ollama ? "本機 Ollama" : "OpenAI 相容 API";
 
@@ -262,23 +315,46 @@ public sealed class AiService : ObservableObject
     /// <summary>端點不接受 <c>stream=true</c> 時內部使用，用來退回整段模式重試一次。</summary>
     private sealed class StreamUnsupportedException(string message) : Exception(message);
 
-    /// <summary>把模型輸出逐段寫進聊天氣泡；第一段會清掉「思考中…」占位字。</summary>
+    /// <summary>
+    /// 把模型輸出逐段寫進聊天氣泡；第一段會清掉「思考中…」占位字。
+    /// 內部以 <see cref="StringBuilder"/> 累積、再整份指派給氣泡：
+    /// 直接對 <c>Text</c> 做 <c>+=</c> 會每個 token 配置一條新字串（O(n²)），
+    /// 長篇回覆到後段會明顯卡頓。
+    /// </summary>
     private sealed class ReplySink(AiMessage target)
     {
+        private readonly StringBuilder _buf = new();
         private bool _started;
+
         public void Append(string chunk)
         {
             if (chunk.Length == 0) return;
-            if (!_started) { target.Text = ""; _started = true; }
-            target.Text += chunk;
+            if (!_started) { _buf.Clear(); _started = true; }
+            _buf.Append(chunk);
+            target.Text = _buf.ToString();
         }
+
         /// <summary>工具查詢後模型繼續說話時換段，避免前後文黏在一起。</summary>
-        public void Break() { if (_started && target.Text.Length > 0 && !target.Text.EndsWith('\n')) target.Text += "\n\n"; }
+        public void Break()
+        {
+            if (!_started || _buf.Length == 0) return;
+            if (_buf[^1] == '\n') return;
+            _buf.Append("\n\n");
+            target.Text = _buf.ToString();
+        }
+
         /// <summary>全程沒有任何文字時的收尾說明（絕不假造內容）。</summary>
-        public void Fallback(string text) { if (!_started) { target.Text = text; _started = true; } }
+        public void Fallback(string text)
+        {
+            if (_started) return;
+            _buf.Clear();
+            _buf.Append(text);
+            _started = true;
+            target.Text = text;
+        }
     }
 
-    private async Task RunAsync(AiMessage reply)
+    private async Task RunAsync(AiMessage reply, CancellationToken ct)
     {
         string url = ResolveUrl();
         string model = ResolveModel();
@@ -289,7 +365,7 @@ public sealed class AiService : ObservableObject
         for (int round = 1; ; round++)
         {
             bool allowTools = useTools && round <= MaxToolRounds;
-            var r = await CallAsync(url, model, msgs, allowTools, sink);
+            var r = await CallAsync(url, model, msgs, allowTools, sink, ct);
 
             if (r.Calls.Count == 0)
             {
@@ -313,6 +389,7 @@ public sealed class AiService : ObservableObject
             StatusText = $"代理正在查詢本機讀值（第 {round} 輪，{r.Calls.Count} 項）…";
             foreach (var c in r.Calls)
             {
+                ct.ThrowIfCancellationRequested();
                 string result = Tools!.Invoke(c.Name, c.Args);
                 InsertToolRow(reply, c, result);
                 msgs.Add(new Dictionary<string, object?>
@@ -328,18 +405,24 @@ public sealed class AiService : ObservableObject
     }
 
     // 串流優先；端點拒收 stream=true 時自動退回整段模式重試一次。
-    private async Task<Round> CallAsync(string url, string model, List<object> msgs, bool allowTools, ReplySink sink)
+    private async Task<Round> CallAsync(string url, string model, List<object> msgs,
+                                        bool allowTools, ReplySink sink, CancellationToken ct)
     {
         if (_settings.AiStreaming)
         {
-            try { return await SendOnceAsync(url, model, msgs, allowTools, sink, stream: true); }
+            try { return await SendOnceAsync(url, model, msgs, allowTools, sink, stream: true, ct); }
             catch (StreamUnsupportedException) { /* 改走整段模式，錯誤訊息由第二次呼叫如實回報 */ }
         }
-        return await SendOnceAsync(url, model, msgs, allowTools, sink, stream: false);
+        return await SendOnceAsync(url, model, msgs, allowTools, sink, stream: false, ct);
     }
 
+    // 只有這些狀態碼才可能代表「這個端點不吃 stream=true」。
+    // 401/403/429/5xx 是金鑰、額度或伺服器問題，退回整段模式重試只是白等一次，
+    // 而且會讓錯誤訊息晚一輪才出現——直接照實拋出。
+    internal static bool MayRejectStreaming(int status) => status is 400 or 404 or 405 or 422 or 501;
+
     private async Task<Round> SendOnceAsync(string url, string model, List<object> msgs,
-                                            bool allowTools, ReplySink sink, bool stream)
+                                            bool allowTools, ReplySink sink, bool stream, CancellationToken ct)
     {
         var payload = new Dictionary<string, object?>
         {
@@ -348,6 +431,7 @@ public sealed class AiService : ObservableObject
             ["temperature"] = _settings.AiTemperature,
             ["stream"] = stream,
         };
+        if (_settings.AiMaxTokens > 0) payload["max_tokens"] = _settings.AiMaxTokens;
         if (allowTools) payload["tools"] = Tools!.ToSchema();
 
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
@@ -358,33 +442,37 @@ public sealed class AiService : ObservableObject
         if (key.Length > 0) req.Headers.TryAddWithoutValidation("Authorization", "Bearer " + key);
 
         using var resp = await Http.SendAsync(req, stream
-            ? HttpCompletionOption.ResponseHeadersRead : HttpCompletionOption.ResponseContentRead);
+            ? HttpCompletionOption.ResponseHeadersRead : HttpCompletionOption.ResponseContentRead, ct);
 
         if (!resp.IsSuccessStatusCode)
         {
-            string err = await resp.Content.ReadAsStringAsync();
-            string msg = $"HTTP {(int)resp.StatusCode}：{Trim(err, 300)}";
-            // 串流失敗先當成「端點不支援串流」，退回整段模式再試；若真是金鑰或模型問題，
-            // 第二次會以相同狀態碼失敗，使用者看到的仍是真實原因。
-            throw stream ? new StreamUnsupportedException(msg) : new HttpRequestException(msg);
+            string err = await resp.Content.ReadAsStringAsync(ct);
+            int status = (int)resp.StatusCode;
+            string msg = $"HTTP {status}：{Trim(err, 300)}";
+            // 只在狀態碼真有可能是「不支援串流」時才退回整段模式重試一次；
+            // 其餘一律當成真實錯誤立刻回報，不讓使用者多等一輪才看到 401。
+            throw stream && MayRejectStreaming(status)
+                ? new StreamUnsupportedException(msg)
+                : new HttpRequestException(msg);
         }
 
         bool sse = (resp.Content.Headers.ContentType?.MediaType ?? "")
             .Contains("event-stream", StringComparison.OrdinalIgnoreCase);
-        if (stream && sse) return await ReadStreamAsync(resp, sink);
+        if (stream && sse) return await ReadStreamAsync(resp, sink, ct);
 
-        return ParseWhole(await resp.Content.ReadAsStringAsync(), sink);
+        return ParseWhole(await resp.Content.ReadAsStringAsync(ct), sink);
     }
 
-    private static async Task<Round> ReadStreamAsync(HttpResponseMessage resp, ReplySink sink)
+    private static async Task<Round> ReadStreamAsync(HttpResponseMessage resp, ReplySink sink, CancellationToken ct)
     {
         var content = new StringBuilder();
         var accs = new SortedDictionary<int, ToolAcc>();
 
-        using var raw = await resp.Content.ReadAsStreamAsync();
+        using var raw = await resp.Content.ReadAsStreamAsync(ct);
         using var rd = new StreamReader(raw, Encoding.UTF8);
-        while (await rd.ReadLineAsync() is string line)
+        while (await rd.ReadLineAsync(ct) is string line)
         {
+            ct.ThrowIfCancellationRequested();
             line = line.Trim();
             if (!line.StartsWith("data:", StringComparison.OrdinalIgnoreCase)) continue;
             string json = line[5..].Trim();
@@ -408,11 +496,19 @@ public sealed class AiService : ObservableObject
             catch (JsonException) { /* 中轉站偶爾插入非 JSON 心跳列，略過即可 */ }
         }
 
-        var calls = accs.Values.Where(a => a.Name.Length > 0)
-            .Select(a => new ToolCall(a.Id.Length > 0 ? a.Id : "call_" + a.Name, a.Name, a.Args.ToString()))
+        var calls = accs.Select((kv, n) => new ToolCall(SyntheticId(kv.Value.Id, kv.Value.Name, n),
+                                                       kv.Value.Name, kv.Value.Args.ToString()))
+            .Where(c => c.Name.Length > 0)
             .ToList();
         return new Round(content.ToString(), calls);
     }
+
+    /// <summary>
+    /// 端點沒給 tool_call id 時自己補一個。必須帶序號：同一輪呼叫兩次同名工具時，
+    /// 若兩者 id 相同，模型會把兩筆 tool 結果對到同一次呼叫，配對就錯了。
+    /// </summary>
+    internal static string SyntheticId(string id, string name, int index)
+        => id.Length > 0 ? id : $"call_{name}_{index}";
 
     /// <summary>串流中逐塊拼回一個工具呼叫（名稱、參數會被切成很多片送來）。</summary>
     private sealed class ToolAcc
@@ -463,7 +559,7 @@ public sealed class AiService : ObservableObject
                             ? (ar.ValueKind == JsonValueKind.String ? ar.GetString() ?? "" : ar.GetRawText())
                             : "";
                         string id = call.TryGetProperty("id", out var i) ? i.GetString() ?? "" : "";
-                        calls.Add(new ToolCall(id.Length > 0 ? id : "call_" + name, name, args));
+                        calls.Add(new ToolCall(SyntheticId(id, name, calls.Count), name, args));
                     }
 
                 if (text.Trim().Length > 0) sink.Append(text.Trim());
@@ -488,16 +584,43 @@ public sealed class AiService : ObservableObject
         if (snapshot.Length > 0) sys += "\n\n===== 本機硬體資訊（真實讀值）=====\n" + snapshot;
         if (useTools) sys += "\n\n" + AgentPrompt;
 
+        // 先挑出「真的該回送」的訊息，再由後往前只留最近 N 則。
+        var keep = SelectHistory(Messages, _settings.AiHistoryTurns, out int dropped);
+        // 有裁掉東西就讓模型知道，否則它會以為自己看到的是完整對話而誤引「你剛才說過」。
+        if (dropped > 0) sys += $"\n\n（註：為控制長度，本次僅回送最近 {keep.Count} 則對話，較早的 {dropped} 則已省略。）";
+
         var msgs = new List<object> { new { role = "system", content = sys } };
-        for (int i = 0; i < Messages.Count - 1; i++)     // 最後一則是占位的 AI 回覆
+        foreach (var m in keep)
+            msgs.Add(new { role = m.IsUser ? "user" : "assistant", content = m.Text });
+        return msgs;
+    }
+
+    /// <summary>
+    /// 挑出該回送給模型的歷史訊息：略過最後一則（占位中的 AI 回覆）、工具紀錄（只給人看）、
+    /// 空字串與失敗提示，再依 <paramref name="limit"/> 由前往後裁掉過舊的幾則。
+    /// 硬體快照本身就佔掉不少上下文，整段歷史一併送出會越談越貴，也容易撞上模型上限。
+    /// <paramref name="limit"/> 為 0 表示不裁。<paramref name="dropped"/> 回報裁掉幾則——
+    /// 呼叫端必須把這個數字告訴模型，不能讓它以為自己看到的是完整對話。
+    /// </summary>
+    internal static List<AiMessage> SelectHistory(IReadOnlyList<AiMessage> all, int limit, out int dropped)
+    {
+        var keep = new List<AiMessage>();
+        for (int i = 0; i < all.Count - 1; i++)          // 最後一則是占位的 AI 回覆
         {
-            var m = Messages[i];
-            if (m.IsTool) continue;                     // 工具紀錄只給人看
+            var m = all[i];
+            if (m.IsTool) continue;                      // 工具紀錄只給人看
             if (m.Text.Length == 0) continue;
             if (!m.IsUser && (m.Text == Placeholder || m.Text.StartsWith('⚠'))) continue;
-            msgs.Add(new { role = m.IsUser ? "user" : "assistant", content = m.Text });
+            keep.Add(m);
         }
-        return msgs;
+
+        dropped = 0;
+        if (limit > 0 && keep.Count > limit)
+        {
+            dropped = keep.Count - limit;
+            keep.RemoveRange(0, dropped);
+        }
+        return keep;
     }
 
     // 工具紀錄插在回覆氣泡之前，讓「先查詢、後結論」的順序在畫面上讀得順。

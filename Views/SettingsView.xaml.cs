@@ -20,10 +20,35 @@ public partial class SettingsView : UserControl
         // 首次進入設定頁時自動跑一次環境自檢（背景偵測，不阻塞 UI）；之後由使用者按鈕手動重檢。
         Loaded += (_, _) =>
         {
+            SyncKeyBox();
             if (Vm is { } vm && !vm.EnvCheck.HasRun && !vm.EnvCheck.IsRunning)
                 _ = vm.EnvCheck.RunAsync(vm);
         };
     }
+
+    // ── API 金鑰 ────────────────────────────────────────────────────────────
+    // PasswordBox 的 Password 不是依賴屬性，無法繫結，故以程式碼雙向同步。
+    // _syncingKey 防止「寫回設定 → 設定通知 → 再寫回欄位」把游標彈到開頭。
+    private bool _syncingKey;
+
+    private void SyncKeyBox()
+    {
+        if (Vm is not { } vm || AiKeyMasked is null) return;
+        string key = vm.Settings.AiApiKey ?? "";
+        if (AiKeyMasked.Password == key) return;
+        _syncingKey = true;
+        try { AiKeyMasked.Password = key; }
+        finally { _syncingKey = false; }
+    }
+
+    private void AiKeyMasked_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_syncingKey || Vm is not { } vm) return;
+        vm.Settings.AiApiKey = AiKeyMasked.Password;
+    }
+
+    // 收回明碼時把遮蔽欄位補成最新值（明碼欄位是直接繫結，可能已被改過）。
+    private void AiKeyShow_Unchecked(object sender, RoutedEventArgs e) => SyncKeyBox();
 
     // ── 外觀 ────────────────────────────────────────────────────────────────
 
@@ -134,10 +159,22 @@ public partial class SettingsView : UserControl
         if (AiPromptHint is not null) AiPromptHint.Text = "已重置為內建預設提示詞。";
     }
 
-    // 儲存提示詞：設定於變更時已自動存檔，此處提供明確回饋。
+    // 儲存提示詞：設定會在每次輸入時自動存檔，所以這顆按鈕真正做的是「收尾整理」——
+    // 去掉頭尾空白、統一換行，全空白則退回內建預設（空提示詞會讓模型完全失去客觀性要求），
+    // 然後告訴使用者實際存到哪、存了多長。不做事只印「已儲存」的按鈕是裝飾品。
     private void SavePrompt_Click(object sender, RoutedEventArgs e)
     {
-        if (AiPromptHint is not null) AiPromptHint.Text = "提示詞已儲存。";
+        var vm = Vm;
+        if (vm is null) return;
+
+        string text = (vm.Settings.AiSystemPrompt ?? "").Replace("\r\n", "\n").Replace('\r', '\n').Trim();
+        bool reset = text.Length == 0;
+        if (reset) text = AiService.DefaultSystemPrompt;
+        vm.Settings.AiSystemPrompt = text;
+
+        if (AiPromptHint is null) return;
+        AiPromptHint.Text = (reset ? "提示詞原本是空的，已退回內建預設（" : "已整理並儲存（")
+            + $"{text.Length} 字）→ {SettingsService.FilePath}";
     }
 
     // 開啟獨立的 AI 助手分頁。

@@ -10,7 +10,8 @@ public sealed class SettingsService : ObservableObject
 {
     private static readonly string Dir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "XinSpect");
-    private static readonly string FilePath = Path.Combine(Dir, "settings.json");
+    /// <summary>設定檔的實際位置（設定頁會據實顯示這條路徑，而不是寫死一句「已儲存」）。</summary>
+    public static string FilePath { get; } = Path.Combine(Dir, "settings.json");
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string RunValue = "XinSpect";
     private const string TaskName = "XinSpect";   // 工作排程器上的排定名稱
@@ -104,8 +105,25 @@ public sealed class SettingsService : ObservableObject
     public bool AiAgentMode { get => _aiAgentMode; set { if (SetProperty(ref _aiAgentMode, value)) Save(); } }
 
     private bool _aiKeepHistory = true;
-    /// <summary>保留對話：把 AI 對話存於本機 aichat.json，下次啟動自動接續。</summary>
+    /// <summary>
+    /// 保留對話：把 AI 對話存於本機 aichat.json，下次啟動自動接續。
+    /// 關閉時 <see cref="AiService"/> 會立刻刪除該檔——說「不保留」就真的不留，不是只停止續寫。
+    /// </summary>
     public bool AiKeepHistory { get => _aiKeepHistory; set { if (SetProperty(ref _aiKeepHistory, value)) Save(); } }
+
+    private int _aiMaxTokens;
+    /// <summary>
+    /// 單次回覆的最大 token 數（<c>max_tokens</c>）。0 表示不送這個欄位，由端點自行決定上限。
+    /// 上限 32768：設得比模型實際能力大只會被端點自己夾回去，不會失敗。
+    /// </summary>
+    public int AiMaxTokens { get => _aiMaxTokens; set { if (SetProperty(ref _aiMaxTokens, Math.Clamp(value, 0, 32768))) Save(); } }
+
+    private int _aiHistoryTurns = 12;
+    /// <summary>
+    /// 每次請求最多回送幾則舊對話（不含系統提示與硬體快照）。0 表示全部送出。
+    /// 硬體快照本身就很長，整段歷史一併送出會越談越貴、也容易撞上模型的上下文上限。
+    /// </summary>
+    public int AiHistoryTurns { get => _aiHistoryTurns; set { if (SetProperty(ref _aiHistoryTurns, Math.Clamp(value, 0, 240))) Save(); } }
 
     private bool _aiProactive;
     /// <summary>
@@ -188,6 +206,8 @@ public sealed class SettingsService : ObservableObject
         public bool AiStreaming { get; set; } = true;
         public bool AiAgentMode { get; set; } = true;
         public bool AiKeepHistory { get; set; } = true;
+        public int AiMaxTokens { get; set; }
+        public int AiHistoryTurns { get; set; } = 12;
         public bool AiProactive { get; set; }
         public bool ReportMaskIdentity { get; set; }
         public double? MiniLeft { get; set; }
@@ -230,6 +250,8 @@ public sealed class SettingsService : ObservableObject
                     _aiStreaming = p.AiStreaming;
                     _aiAgentMode = p.AiAgentMode;
                     _aiKeepHistory = p.AiKeepHistory;
+                    _aiMaxTokens = Math.Clamp(p.AiMaxTokens, 0, 32768);
+                    _aiHistoryTurns = Math.Clamp(p.AiHistoryTurns, 0, 240);
                     _aiProactive = p.AiProactive;
                     _reportMaskIdentity = p.ReportMaskIdentity;
                     _miniLeft = p.MiniLeft;
@@ -275,6 +297,8 @@ public sealed class SettingsService : ObservableObject
                 AiStreaming = _aiStreaming,
                 AiAgentMode = _aiAgentMode,
                 AiKeepHistory = _aiKeepHistory,
+                AiMaxTokens = _aiMaxTokens,
+                AiHistoryTurns = _aiHistoryTurns,
                 AiProactive = _aiProactive,
                 ReportMaskIdentity = _reportMaskIdentity,
                 MiniLeft = _miniLeft,

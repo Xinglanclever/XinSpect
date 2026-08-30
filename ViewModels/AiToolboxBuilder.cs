@@ -33,6 +33,10 @@ internal static partial class AiToolboxBuilder
         AddStartup(box);
         AddBsod(box);
 
+        // 第三批：硬核唯讀單元（AiToolboxBuilder.Hardcore.cs）。
+        // 這批多半要使用者先開到對應頁面按量測，沒量過的工具會明說「尚未量測」而非回傳 0。
+        AddHardcore(box, vm);
+
         return box;
     }
 

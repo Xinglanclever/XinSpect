@@ -113,6 +113,30 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- 遮蔽輸入欄（API 金鑰）：與 SetTextBox 同形，但字元以圓點顯示 -->
+        <Style x:Key="SetPasswordBox" TargetType="PasswordBox">
+            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="CaretBrush" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="FontSize" Value="13.5"/>
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="PasswordChar" Value="●"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="PasswordBox">
+                        <Border x:Name="bd" CornerRadius="7" Background="{StaticResource Surface2Brush}"
+                                BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1.2">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <!-- @@SETTINGS_BODY@@ -->
     </UserControl.Resources>
 
@@ -468,7 +492,26 @@
                     <TextBox Style="{StaticResource SetTextBox}" Text="{Binding Settings.AiBaseUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Text="API 金鑰（本機 Ollama 可留空）" Margin="0,14,0,4"/>
-                    <TextBox Style="{StaticResource SetTextBox}" Text="{Binding Settings.AiApiKey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    <!-- 金鑰預設遮蔽：這個畫面常出現在截圖與螢幕分享裡。
+                         勾「顯示」才換成明碼欄位——兩個欄位同時只有一個可見，內容都寫回同一個設定。 -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid Grid.Column="0">
+                            <PasswordBox x:Name="AiKeyMasked" Style="{StaticResource SetPasswordBox}"
+                                         PasswordChanged="AiKeyMasked_Changed"
+                                         Visibility="{Binding IsChecked, ElementName=AiKeyShow, Converter={StaticResource InverseBoolToVis}}"/>
+                            <TextBox x:Name="AiKeyPlain" Style="{StaticResource SetTextBox}"
+                                     Text="{Binding Settings.AiApiKey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     Visibility="{Binding IsChecked, ElementName=AiKeyShow, Converter={StaticResource BoolToVis}}"/>
+                        </Grid>
+                        <CheckBox x:Name="AiKeyShow" Grid.Column="1" Style="{StaticResource SetCheck}" Content="顯示"
+                                  Margin="12,0,0,0" VerticalAlignment="Center" Unchecked="AiKeyShow_Unchecked"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="金鑰只存在本機 %APPDATA%\XinSpect\settings.json（純文字，未加密——同一台電腦上的其他程式讀得到）。曦覽不會把金鑰寫進報告、記錄檔或任何對外請求以外的地方。"/>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Text="模型名稱" Margin="0,14,0,4"/>
                     <Grid>
@@ -510,7 +553,7 @@
                     <CheckBox Style="{StaticResource SetCheck}" Content="診斷代理：允許 AI 主動查詢本機唯讀資料"
                               IsChecked="{Binding Settings.AiAgentMode, Mode=TwoWay}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
-                               Text="開啟後，AI 可自行呼叫 23 項唯讀查詢工具（完整規格、處理器拓樸、即時讀值、所有溫度、感測器總表、風扇與曲線、磁碟健康、事件時間軸、歷史統計、顯示卡與處理器調校現況、場景、健康總評、環境自檢、效能成績、記憶體時序與 SPD、網路組態與流量、螢幕 EDID 色域、效能天梯名次、升級建議、電池健康、開機啟動項、藍屏傾印），並在對話中列出每次查詢。全部只讀不寫：不會改設定、不會動硬體、不會啟動任何程式。關閉則只送出一次硬體快照。"/>
+                               Text="開啟後，AI 可自行呼叫 33 項唯讀查詢工具（完整規格、處理器拓樸、即時讀值、所有溫度、感測器總表、風扇與曲線、磁碟健康、事件時間軸、歷史統計、顯示卡與處理器調校現況、場景、健康總評、環境自檢、效能成績、記憶體時序與 SPD、網路組態與流量、螢幕 EDID 色域、效能天梯名次、升級建議、電池健康、開機啟動項、藍屏傾印，以及 10 項硬核底層事實：Top-down 管線歸因、頻率真相、平台可信度、BIOS 與 ME 微碼、逐核時間歸因、電源政策、記憶體認可帳本、機器檢查與 WHEA、處理器免疫位元、RDT 監測），並在對話中列出每次查詢。全部只讀不寫：不會改設定、不會動硬體、不會啟動任何程式，也不會自己去發動 PMU／MSR 量測——硬核項目你沒按過量測，AI 就只會說「本機尚未量測」。關閉則只送出一次硬體快照。"/>
 
                     <CheckBox Style="{StaticResource SetCheck}" Margin="0,14,0,0" Content="主動診斷：警示觸發時自動請 AI 分析"
                               IsChecked="{Binding Settings.AiProactive, Mode=TwoWay}"/>
@@ -525,7 +568,40 @@
                     <CheckBox Style="{StaticResource SetCheck}" Margin="0,14,0,0" Content="保留對話（下次啟動接續）"
                               IsChecked="{Binding Settings.AiKeepHistory, Mode=TwoWay}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
-                               Text="對話存於 %APPDATA%\XinSpect\aichat.json（僅本機純文字，不含金鑰），最多保留最後 240 則。按 AI 分頁的「清除對話」即一併刪檔。"/>
+                               Text="對話存於 %APPDATA%\XinSpect\aichat.json（僅本機純文字，不含金鑰），最多保留最後 240 則。取消勾選會立刻刪除該檔，不只是停止續寫；按 AI 分頁的「清除對話」同樣會一併刪檔。"/>
+
+                    <!-- 送出長度：上下文不是免費的，這兩項直接決定每次請求要花多少 -->
+                    <Grid Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="90"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="回覆長度上限" VerticalAlignment="Center"/>
+                        <Slider Grid.Column="1" Style="{StaticResource SetSlider}" VerticalAlignment="Center"
+                                Minimum="0" Maximum="8192" TickFrequency="256" IsSnapToTickEnabled="True"
+                                Value="{Binding Settings.AiMaxTokens, Mode=TwoWay}"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                   Text="{Binding Settings.AiMaxTokens, StringFormat={}{0:0}}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                               Text="單次回覆的 max_tokens。0 表示不送這個欄位、由端點自行決定——本機 Ollama 建議留 0；計費 API 想控制花費時再設上限。設太小會讓長篇評價在中途被截斷（截斷是端點做的，畫面上就會看到話沒說完）。"/>
+
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="90"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="回送舊對話則數" VerticalAlignment="Center"/>
+                        <Slider Grid.Column="1" Style="{StaticResource SetSlider}" VerticalAlignment="Center"
+                                Minimum="0" Maximum="60" TickFrequency="2" IsSnapToTickEnabled="True"
+                                Value="{Binding Settings.AiHistoryTurns, Mode=TwoWay}"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                   Text="{Binding Settings.AiHistoryTurns, StringFormat={}{0:0}}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                               Text="每次請求最多回送幾則舊對話（0 表示全部）。硬體快照本身就佔掉不少上下文，整段歷史一併送出會越談越貴、也容易撞上模型上限。有省略時會在系統提示中告知模型，避免它以為看到的是完整對話。"/>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Text="系統提示詞（要求 AI 客觀公正；可自行修改）" Margin="0,16,0,4"/>
                     <TextBox Style="{StaticResource SetTextBox}" Height="150" TextWrapping="Wrap" AcceptsReturn="True"

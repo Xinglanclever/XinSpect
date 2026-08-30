@@ -2,33 +2,116 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect">
+    <UserControl.Resources>
+        <!-- 搜尋框：與 DiskScanView 的 PathBox 同形，但可輸入 -->
+        <Style x:Key="SearchBox" TargetType="TextBox">
+            <Setter Property="Background" Value="{StaticResource Surface2Brush}"/>
+            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="CaretBrush" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="b" CornerRadius="8" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
             <TextBlock Style="{StaticResource SectionHeader}" Text="工具箱"/>
 
-            <!-- ===== 硬體檢測（本程式內建，無需下載） ===== -->
-            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="0">
+            <!-- ===== 工具目錄（曦覽內建 ＋ Windows 內建 ＋ 第三方導向） =====
+                 「曦覽內建」那一組不是裝飾：它是這個工具箱與一般「整合包」的分別——
+                 先講清楚哪些事本程式自己就做得到，第三方項目再逐一標注曦覽的對應頁與其不足。 -->
+            <Border Style="{StaticResource Card}" local:Anim.RevealDelay="0">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="硬體檢測"/>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="工具目錄"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
-                               Text="本程式內建的全螢幕檢測工具，純以實際輸入／顯示事件判讀，不需安裝任何外部程式。開啟後依畫面提示操作，按 Esc 離開。"/>
-                    <WrapPanel Orientation="Horizontal">
-                        <Button Style="{StaticResource ToolButton}" Content="螢幕檢測" Margin="0,0,8,8"
-                                ToolTip="全螢幕純色循環，檢查亮點／暗點（壞點）、漏光與背光均勻度" Click="ScreenTest_Click"/>
-                        <Button Style="{StaticResource ToolButton}" Content="滑鼠檢測" Margin="0,0,8,8"
-                                ToolTip="測試左／右／中／側鍵、滾輪與移動軌跡，估計回報率並偵測連點抖動" Click="MouseTest_Click"/>
-                        <Button Style="{StaticResource ToolButton}" Content="鍵盤檢測" Margin="0,0,8,8"
-                                ToolTip="虛擬鍵盤逐鍵確認觸發，統計同時按鍵數（防鬼鍵／NKRO）與鍵碼" Click="KeyboardTest_Click"/>
-                        <Button Style="{StaticResource ToolButton}" Content="喇叭檢測" Margin="0,0,8,8"
-                                ToolTip="即時合成左／右／雙聲道測試音與 20 Hz～20 kHz 掃頻，確認接線、聲道對調與破音" Click="SpeakerTest_Click"/>
-                        <Button Style="{StaticResource ToolButton}" Content="動態檢測" Margin="0,0,0,8"
-                                ToolTip="移動條判讀拖影與過衝，並實測每幀呈現間隔、長幀與中斷次數" Click="MotionTest_Click"/>
-                    </WrapPanel>
+                               Text="三種來源混編：標「曦覽內建」的由本程式自己完成；Windows 內建工具一鍵開啟；第三方工具一律導向官方下載頁，本程式不內含任何外部執行檔。第三方項目若有對應的內建功能，右側會多一顆「曦覽內建：…」按鈕可直接前往，滑過主按鈕的提示會誠實寫出兩者差在哪。"/>
+
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0" Style="{StaticResource SearchBox}"
+                                 Text="{Binding Toolbox.Query, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="以空白分隔多個詞彙；全部命中才會列出（例如「ssd 健康」）。名稱、說明、分類、英文別名都在搜尋範圍內。"/>
+                        <CheckBox Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="13"
+                                  Foreground="{StaticResource SecondaryInkBrush}"
+                                  Content="只看曦覽做得到的"
+                                  ToolTip="只留下曦覽自己有做的項目，以及有對應內建功能的第三方工具——用來確認哪些軟體其實不必再裝。"
+                                  IsChecked="{Binding Toolbox.OnlyBuiltin, Mode=TwoWay}"/>
+                        <Button Grid.Column="2" Style="{StaticResource ToolButton}" Margin="12,0,0,0"
+                                Content="清除" Click="ClearFilter_Click" ToolTip="清空搜尋詞與篩選"/>
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding Toolbox.FilteredGroups}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,12,0,0">
+                                    <TextBlock Text="{Binding Title}" Style="{StaticResource FieldLabel}" Foreground="{StaticResource AccentBrush}"/>
+                                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,4,0,8"/>
+                                    <ItemsControl ItemsSource="{Binding Items}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel Orientation="Horizontal"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,8,8">
+                                                    <Button Style="{StaticResource ToolButton}"
+                                                            Content="{Binding Name}" ToolTip="{Binding Tip}"
+                                                            Tag="{Binding}" Click="Tool_Click"/>
+                                                    <Button Style="{StaticResource ToolButton}" Margin="4,0,0,0"
+                                                            Content="{Binding NativeLabel}" ToolTip="{Binding NativeTip}"
+                                                            Tag="{Binding}" Click="Native_Click"
+                                                            Visibility="{Binding HasNative, Converter={StaticResource BoolToVis}}"/>
+                                                    <Button Style="{StaticResource ToolButton}" Margin="4,0,0,0"
+                                                            Content="{Binding SlotLabel}" ToolTip="{Binding SlotTip}"
+                                                            Tag="{Binding}" Click="Slot_Click"
+                                                            Visibility="{Binding CanSlot, Converter={StaticResource BoolToVis}}">
+                                                        <Button.ContextMenu>
+                                                            <ContextMenu>
+                                                                <MenuItem Header="更換插槽…" Tag="{Binding}" Click="Slot_Click"/>
+                                                                <MenuItem Header="開啟所在資料夾" Tag="{Binding}" Click="SlotOpenFolder_Click"/>
+                                                                <MenuItem Header="移除插槽" Tag="{Binding}" Click="SlotClear_Click"/>
+                                                            </ContextMenu>
+                                                        </Button.ContextMenu>
+                                                    </Button>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,12,0,0" TextWrapping="Wrap" Text="{Binding Toolbox.FilterSummary}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap" Text="{Binding Toolbox.StatusLine}"/>
                 </StackPanel>
             </Border>
 
             <!-- ===== 螢幕色域（EDID） ===== -->
-            <Border Style="{StaticResource Card}" local:Anim.RevealDelay="0">
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="80">
                 <StackPanel>
                     <TextBlock Style="{StaticResource SectionHeader}" Text="螢幕色域"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
@@ -83,56 +166,6 @@
                     <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap"
                                Visibility="{Binding HasNoMonitors, Converter={StaticResource BoolToVis}}"
                                Text="未從系統取得可用的 EDID 色度資訊。遠端桌面、虛擬顯示器或部分螢幕可能不提供，此為正常情形。"/>
-                </StackPanel>
-            </Border>
-
-            <!-- ===== 系統工具 ===== -->
-            <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="80">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="系統工具"/>
-                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,4" TextWrapping="Wrap"
-                               Text="一鍵開啟 Windows 內建的診斷與管理工具。第三方硬體工具基於安全與授權考量不隨附於本程式，一律導向官方下載頁面；下載後可按工具旁的「裝入」把它的執行檔放進插槽，之後便能從此處直接啟動。"/>
-
-                    <ItemsControl ItemsSource="{Binding Toolbox.Groups}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Margin="0,12,0,0">
-                                    <TextBlock Text="{Binding Title}" Style="{StaticResource FieldLabel}" Foreground="{StaticResource AccentBrush}"/>
-                                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,4,0,8"/>
-                                    <ItemsControl ItemsSource="{Binding Items}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <WrapPanel Orientation="Horizontal"/>
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,8,8">
-                                                    <Button Style="{StaticResource ToolButton}"
-                                                            Content="{Binding Name}" ToolTip="{Binding Description}"
-                                                            Tag="{Binding}" Click="Tool_Click"/>
-                                                    <Button Style="{StaticResource ToolButton}" Margin="4,0,0,0"
-                                                            Content="{Binding SlotLabel}" ToolTip="{Binding SlotTip}"
-                                                            Tag="{Binding}" Click="Slot_Click"
-                                                            Visibility="{Binding CanSlot, Converter={StaticResource BoolToVis}}">
-                                                        <Button.ContextMenu>
-                                                            <ContextMenu>
-                                                                <MenuItem Header="更換插槽…" Tag="{Binding}" Click="Slot_Click"/>
-                                                                <MenuItem Header="開啟所在資料夾" Tag="{Binding}" Click="SlotOpenFolder_Click"/>
-                                                                <MenuItem Header="移除插槽" Tag="{Binding}" Click="SlotClear_Click"/>
-                                                            </ContextMenu>
-                                                        </Button.ContextMenu>
-                                                    </Button>
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,12,0,0" TextWrapping="Wrap" Text="{Binding Toolbox.StatusLine}"/>
                 </StackPanel>
             </Border>
 

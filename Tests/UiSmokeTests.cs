@@ -50,16 +50,9 @@ public class UiSmokeTests
 
     private static void Run(List<string> failures)
     {
-        // WPF 環境：StaticResource 解析需要 Application 與佈景資源字典（合併內容與 App.xaml 相同）
-        var app = Application.Current;
-        if (app is null)
-        {
-            app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
-            app.Resources.MergedDictionaries.Add(new ResourceDictionary
-            {
-                Source = new Uri("pack://application:,,,/XinSpect;component/Themes/Theme.xaml"),
-            });
-        }
+        // WPF 環境：StaticResource 解析需要 Application 與佈景資源字典（合併內容與 App.xaml 相同）。
+        // 建立動作集中在 WpfEnv：一個 AppDomain 只能有一個 Application，平行跑的測試類別必須共用同一把鎖。
+        var app = WpfEnv.Ensure();
 
         PresentationTraceSources.Refresh();
         var listener = new CollectingListener();
