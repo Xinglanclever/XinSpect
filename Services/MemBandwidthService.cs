@@ -196,13 +196,11 @@ public sealed class MemBandwidthService : ObservableObject
     {
         ct.ThrowIfCancellationRequested();
         int w = Vector<double>.Count;
-        int slice = Math.Max(w, (n / threads) / w * w);
         var tasks = new Task[threads];
         var sw = Stopwatch.StartNew();
         for (int t = 0; t < threads; t++)
         {
-            int lo = t * slice;
-            int hi = t == threads - 1 ? n : Math.Min(n, lo + slice);
+            var (lo, hi) = MemBandwidthMath.Slice(n, threads, t, w);
             tasks[t] = lo >= hi ? Task.CompletedTask : Task.Run(() => body(a, b, c, lo, hi), CancellationToken.None);
         }
         Task.WaitAll(tasks);
@@ -252,6 +250,12 @@ public sealed class MemBandwidthService : ObservableObject
     /// 負載延遲：施壓執行緒在背景不斷讀取大陣列，同時在另一條執行緒上做指標追逐量延遲，
     /// 並記下同一個時間窗內施壓執行緒實際搬了多少位元組——延遲與達成頻寬是<b>同時</b>量的，才能配成一對。
     /// </summary>
+    /// <remarks>
+    /// 每條施壓執行緒只讀<b>自己那一段</b>（<see cref="MemBandwidthMath.Slice"/>），記帳也只記自己那一段。
+    /// 早期版本讓每條都讀整個陣列卻各記一整份，於是第一條把快取行拉進 L3 之後其他都變成快取命中，
+    /// 「達成頻寬」被算成 156 GB/s——比同一頁上方印出的理論上限 115 GB/s 還高，也是實測峰值的 2.6 倍。
+    /// 那是記帳錯誤，不是這台機器真的搬得動那麼多。
+    /// </remarks>
     private static List<LoadedLatencyRow> MeasureLoadedLatency(double[] load, long chaseBytes, int lp,
                                                               IProgress<(double, string)> report,
                                                               int stepBase, int totalSteps, CancellationToken ct)
@@ -259,7 +263,7 @@ public sealed class MemBandwidthService : ObservableObject
         var chase = BuildChase(chaseBytes);
         var ladder = MemBandwidthMath.LoadLadder(lp);
         var points = new List<(int Loaders, double Gbps, double Ns)>();
-        long arrayBytes = (long)load.Length * sizeof(double);
+        int vw = Vector<double>.Count;
 
         for (int i = 0; i < ladder.Length; i++)
         {
@@ -271,12 +275,14 @@ public sealed class MemBandwidthService : ObservableObject
             for (int t = 0; t < loaders; t++)
             {
                 var token = stop.Token;
-                tasks[t] = Task.Run(() =>
+                var (lo, hi) = MemBandwidthMath.Slice(load.Length, loaders, t, vw);
+                long myBytes = (long)(hi - lo) * sizeof(double);
+                tasks[t] = lo >= hi ? Task.CompletedTask : Task.Run(() =>
                 {
                     while (!token.IsCancellationRequested)
                     {
-                        Read(load, 0, load.Length);
-                        Interlocked.Add(ref moved[0], arrayBytes);
+                        Read(load, lo, hi);
+                        Interlocked.Add(ref moved[0], myBytes);
                     }
                 }, CancellationToken.None);
             }

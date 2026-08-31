@@ -36,3 +36,6 @@ Bridge/test_in.txt
 
 # Bridge 的 SDK 探勘／除錯傾印
 Bridge/*.txt
+
+# wrangler 本機狀態（部署快取、暫存設定；不屬於原始碼）
+cloudflare/**/.wrangler/

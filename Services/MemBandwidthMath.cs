@@ -89,6 +89,26 @@ public static class MemBandwidthMath
         => gbps <= 0 ? "—" : $"{gbps:0.00} GB/s";
 
     /// <summary>
+    /// 把 <paramref name="n"/> 個元素切成 <paramref name="threads"/> 段，回傳第 <paramref name="index"/>
+    /// 段的 [Lo, Hi)（起點對齊向量寬度 <paramref name="width"/>，最後一段吃到底）。
+    /// </summary>
+    /// <remarks>
+    /// 為什麼要有這個函式：施壓／量測的每條執行緒都必須讀<b>自己那一段</b>。
+    /// 若所有執行緒讀同一段，第一條把快取行拉進 L3 之後，其餘全部變成快取命中，
+    /// 但每條仍各自記帳一整份位元組——於是「達成頻寬」會超過這台機器物理上做得到的上限。
+    /// 這裡把切法集中成一處純函式並以單元測試釘住「互斥且覆蓋」，避免同樣的記帳錯誤再犯。
+    /// </remarks>
+    public static (int Lo, int Hi) Slice(int n, int threads, int index, int width = 1)
+    {
+        if (n <= 0 || threads <= 0 || index < 0 || index >= threads) return (0, 0);
+        int w = Math.Max(1, width);
+        int slice = Math.Max(w, (n / threads) / w * w);
+        int lo = Math.Min(n, (int)Math.Min((long)index * slice, n));
+        int hi = index == threads - 1 ? n : (int)Math.Min(n, (long)lo + slice);
+        return (lo, Math.Max(lo, hi));
+    }
+
+    /// <summary>
     /// 負載延遲的施壓等級：0（無負載）、1、2、4…到「邏輯處理器數 − 1」——
     /// 一定要留一個核心給量延遲的那條執行緒，否則量到的是排程等待不是記憶體延遲。
     /// </summary>

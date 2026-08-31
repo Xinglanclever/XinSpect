@@ -656,6 +656,8 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding MemBandwidth.LoadedVerdict}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap"
+                               Text="「同時達成頻寬」量的是施壓執行緒在穩態下的合計吞吐——沒有每一輪重啟執行緒的成本，也不必等最慢那條收工，所以合理地會高於上面那張 STREAM 式階梯的峰值；兩個數字量的不是同一件事。但它一定不會超過本卡片最上方推算的理論上限，超過就是記帳錯了而不是機器變快了。"/>
                 </StackPanel>
             </Border>
 

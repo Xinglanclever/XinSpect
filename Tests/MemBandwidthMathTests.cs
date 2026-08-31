@@ -236,4 +236,56 @@ public class MemBandwidthMathTests
         Assert.Equal("42.50 GB/s", row.GbpsText);
         Assert.Equal("83%", row.Note);
     }
+
+    // ── 切段：互斥且覆蓋 ────────────────────────────────────────────────────
+    // 這組測試釘住的是一個曾經真的發生過的記帳錯誤：讓每條執行緒都讀「整個」陣列卻各記一整份
+    // 位元組，第一條把快取行拉進 L3 之後其餘全變快取命中，於是「達成頻寬」被算成 156 GB/s——
+    // 比同一頁印出的理論上限 115 GB/s 還高。每條執行緒必須各有一段、記帳只記自己那段。
+
+    [Theory]
+    [InlineData(1000, 1, 1)]
+    [InlineData(1000, 4, 1)]
+    [InlineData(1000, 7, 4)]
+    [InlineData(1000, 36, 4)]
+    [InlineData(24_000_000, 35, 8)]
+    [InlineData(10, 36, 4)]      // 執行緒比元素還多
+    public void 切段_每段互斥且合起來覆蓋整個範圍(int n, int threads, int width)
+    {
+        var covered = new bool[n];
+        int prevHi = 0;
+        for (int t = 0; t < threads; t++)
+        {
+            var (lo, hi) = MemBandwidthMath.Slice(n, threads, t, width);
+            Assert.True(lo <= hi, $"第 {t} 段起點大於終點：{lo} > {hi}");
+            Assert.InRange(lo, 0, n);
+            Assert.InRange(hi, 0, n);
+            Assert.True(lo >= prevHi, $"第 {t} 段與前一段重疊：lo={lo} < 前一段 hi={prevHi}");
+            for (int i = lo; i < hi; i++)
+            {
+                Assert.False(covered[i], $"元素 {i} 被兩條執行緒同時算到");
+                covered[i] = true;
+            }
+            prevHi = Math.Max(prevHi, hi);
+        }
+        Assert.All(covered, c => Assert.True(c, "有元素沒被任何一段覆蓋"));
+    }
+
+    [Fact]
+    public void 切段_起點對齊向量寬度()
+    {
+        for (int t = 0; t < 8; t++)
+        {
+            var (lo, _) = MemBandwidthMath.Slice(1_000_003, 8, t, 4);
+            Assert.Equal(0, lo % 4);
+        }
+    }
+
+    [Fact]
+    public void 切段_參數不合理時回傳空段而不是丟例外()
+    {
+        Assert.Equal((0, 0), MemBandwidthMath.Slice(0, 4, 0));
+        Assert.Equal((0, 0), MemBandwidthMath.Slice(100, 0, 0));
+        Assert.Equal((0, 0), MemBandwidthMath.Slice(100, 4, -1));
+        Assert.Equal((0, 0), MemBandwidthMath.Slice(100, 4, 4));
+    }
 }
