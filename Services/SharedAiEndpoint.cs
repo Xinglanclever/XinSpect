@@ -1,7 +1,8 @@
 namespace XinSpect;
 
 /// <summary>
-/// 「免費共用」AI 額度的連線設定：由作者自付費用、經自建中轉分享給所有使用者。
+/// 「免費共用」AI 額度的連線設定：模型由 <b>Cloudflare Workers AI</b> 提供，經作者自架的中轉
+/// 分享給所有使用者。介面上一律標注上游是誰——這條額度不是作者自己訓練或自己託管的模型。
 /// </summary>
 /// <remarks>
 /// <para>
@@ -46,9 +47,12 @@ public static class SharedAiEndpoint
     /// <summary>共用額度是否可用（作者是否已填入中轉網址）。</summary>
     public static bool IsConfigured => BaseUrl.Trim().Length > 0;
 
-    /// <summary>介面上的選項文字。</summary>
+    /// <summary>
+    /// 介面上的選項文字。已啟用時直接標出上游是 Cloudflare Workers AI：使用者有權知道
+    /// 自己的硬體資料交給了誰，而「作者提供」這種說法會讓人誤以為模型是作者自己的。
+    /// </summary>
     public static string OptionText => IsConfigured
-        ? "免費共用（作者提供・無須金鑰）"
+        ? "免費共用（Cloudflare Workers AI）"
         : "免費共用（作者尚未啟用）";
 
     /// <summary>這條額度目前允許哪一種請求。</summary>
@@ -57,7 +61,8 @@ public static class SharedAiEndpoint
     /// <summary>不允許時顯示給使用者的說明（要說清楚替代方案，不能只說不行）。</summary>
     public const string NotAllowedText =
         "共用額度只開放「一鍵評價」。\n\n" +
-        "這條額度是作者自付費用分享的，額度有限，所以自由對話、主動診斷與診斷代理沒有納入——"
+        "這條額度的模型由 Cloudflare Workers AI 提供，每天只有固定的免費用量，"
+        + "所以自由對話、主動診斷與診斷代理沒有納入——"
         + "代理模式一次提問可能連續發出六、七次請求，很快就會把大家的額度用完。\n\n"
         + "想要不受限的完整體驗，請到「設定 → AI 評價」改成：\n"
         + "・本機 Ollama：免費、離線、資料不出本機（建議）\n"

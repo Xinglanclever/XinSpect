@@ -1,7 +1,8 @@
 # 免費共用額度中轉（Cloudflare Worker）
 
-曦覽的「免費共用（作者提供）」那個 AI 選項，連的就是這支 Worker。
+曦覽的「免費共用（Cloudflare Workers AI）」那個 AI 選項，連的就是這支 Worker。
 上游用的是 Cloudflare 自家的 **Workers AI**，所以整條路上沒有任何 API 金鑰。
+介面上一律標注上游是 Cloudflare Workers AI，不寫成「作者提供」——模型不是作者的。
 
 ## 為什麼不把金鑰直接編進 exe
 

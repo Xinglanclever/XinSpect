@@ -2,7 +2,7 @@
 
 > 一款專為 Windows 打造的原生硬體資訊總覽工具 — 即時感測、效能評測、超頻控制與一鍵裝機，全部整合於單一桌面應用程式。
 
-![版本](https://img.shields.io/badge/version-1.7.3-4C8DFF)
+![版本](https://img.shields.io/badge/version-1.7.4-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![授權](https://img.shields.io/badge/license-MIT-green)

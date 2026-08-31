@@ -8,7 +8,8 @@ namespace XinSpect;
 
 /// <summary>
 /// AI 評價供應商：本機免費（Ollama）、任何 OpenAI 相容的 API 端點，
-/// 或作者自付費用分享的免費共用額度（走自建中轉，程式裡不含任何金鑰，見 <see cref="SharedAiEndpoint"/>）。
+/// 或免費共用額度（模型由 Cloudflare Workers AI 提供，走作者自架中轉，程式裡不含任何金鑰，
+/// 見 <see cref="SharedAiEndpoint"/>）。
 /// </summary>
 /// <remarks>列舉值直接對應設定頁下拉選單的 <c>SelectedIndex</c>，並以整數存進 settings.json；
 /// 只能往後追加，不可調換既有順序，否則舊設定檔會選到別的供應商。</remarks>
@@ -165,7 +166,7 @@ public sealed class AiService : ObservableObject
         "使用者若說明了用途、預算或實際困擾，就以他的需求重排建議順序——他的問題優先於這裡的固定結構。\n" +
         "\n" +
         "【語氣與禁忌】\n" +
-        "以繁體中文、台灣慣用術語書寫，分段與條列並用，專業而友善，像對懂電腦但不熟細節的人解釋。\n" +
+        "以繁體中文慣用術語書寫，分段與條列並用，專業而友善，像對懂電腦但不熟細節的人解釋。\n" +
         "不誇大、不貶低、不偏袒任何品牌，禁用行銷腔（「猛獸」「無情輾壓」「毫無懸念」之類）。\n" +
         "優點與不足都要講：硬體較舊或較低階不等於差，只依它是否勝任可判斷的用途來評價；規格高也不等於沒問題。\n" +
         "寧可少下一個結論，也不要下一個沒有數據支撐的結論。";
@@ -409,7 +410,7 @@ public sealed class AiService : ObservableObject
     internal static string ProviderLabel(AiProvider p) => p switch
     {
         AiProvider.Ollama => "本機 Ollama",
-        AiProvider.SharedFree => "免費共用",
+        AiProvider.SharedFree => "Cloudflare Workers AI",
         _ => "OpenAI 相容 API",
     };
 

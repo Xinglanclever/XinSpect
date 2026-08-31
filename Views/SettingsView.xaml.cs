@@ -187,9 +187,10 @@ public partial class SettingsView : UserControl
             ? Visibility.Visible : Visibility.Collapsed;
         AiSharedNote.Text = !SharedAiEndpoint.IsConfigured
             ? "免費共用額度目前尚未啟用（這個版本裡還沒有中轉網址），請用本機 Ollama 或自填端點與金鑰。"
-            : "共用額度由作者自付費用分享，只開放「一鍵評價」：自由對話、主動診斷與診斷代理不走這條額度（"
-              + "代理一次提問可能連續發出六、七次請求）。額度有限、可能用完或隨時關閉；"
-              + "端點、模型與用量上限都在作者的中轉那一側，這支程式裡不含任何金鑰。";
+            : "共用額度的模型由 Cloudflare Workers AI 提供，經作者自架的中轉分享（這支程式裡不含任何金鑰），"
+              + "只開放「一鍵評價」：自由對話、主動診斷與診斷代理不走這條額度（"
+              + "代理一次提問可能連續發出六、七次請求）。Workers AI 每天的免費用量是固定的、UTC 零時歸零，"
+              + "所以額度可能用完，也可能被隨時關閉；選這一項時，硬體規格與感測數據會經中轉送到 Cloudflare 的模型。";
     }
 
     // 一鍵重置：把系統提示詞還原為內建預設（要求 AI 客觀公正的版本）。

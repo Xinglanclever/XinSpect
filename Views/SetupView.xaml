@@ -19,7 +19,7 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0" Margin="0,0,16,0">
-                <local:SectionHead Text="一鍵裝機" HelpKey="setup/一鍵裝機"/>
+                <local:SectionHead Text="一鍵裝機"/>
                 <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" MaxWidth="720" HorizontalAlignment="Left"
                            Text="勾選常用軟體後一鍵批次安裝，全程由 Windows 內建的 winget 從官方來源下載安裝；本程式不含任何安裝檔。每一類只留互相不能取代的幾個——曦覽自己就在做的檢測工具（CPU-Z／GPU-Z 之類）與系統內建的軟體都不列入。"/>
             </StackPanel>
@@ -55,10 +55,7 @@
                     <DataTemplate>
                         <Border Style="{StaticResource Card}" Margin="0,0,0,10">
                             <StackPanel>
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                                    <TextBlock Style="{StaticResource SectionHeader}" Text="{Binding Name}" FontSize="15" Margin="2,0,0,10"/>
-                                    <local:HelpDot HelpKey="setup/套件分類" Margin="6,0,0,10"/>
-                                </StackPanel>
+                                <TextBlock Style="{StaticResource SectionHeader}" Text="{Binding Name}" FontSize="15" Margin="2,0,0,10"/>
                                 <ItemsControl ItemsSource="{Binding Packages}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>

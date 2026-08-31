@@ -23,14 +23,15 @@ public class SharedAiAndFeedbackTests
 
     /// <summary>
     /// 選項文字必須和實際狀態一致：作者還沒填中轉網址時要說「尚未啟用」，
-    /// 否則使用者會選了一個註定連線失敗的選項。
+    /// 否則使用者會選了一個註定連線失敗的選項。已啟用時要標出上游是 Cloudflare Workers AI——
+    /// 不能讓人誤以為模型是作者自己的。
     /// </summary>
     [Fact]
     public void 選項文字與是否已啟用一致()
     {
         if (SharedAiEndpoint.IsConfigured)
         {
-            Assert.Contains("無須金鑰", SharedAiEndpoint.OptionText);
+            Assert.Contains("Cloudflare Workers AI", SharedAiEndpoint.OptionText);
             Assert.DoesNotContain("尚未啟用", SharedAiEndpoint.OptionText);
         }
         else
@@ -76,7 +77,7 @@ public class SharedAiAndFeedbackTests
     {
         Assert.Equal("本機 Ollama", AiService.ProviderLabel(AiProvider.Ollama));
         Assert.Equal("OpenAI 相容 API", AiService.ProviderLabel(AiProvider.OpenAiCompatible));
-        Assert.Equal("免費共用", AiService.ProviderLabel(AiProvider.SharedFree));
+        Assert.Equal("Cloudflare Workers AI", AiService.ProviderLabel(AiProvider.SharedFree));
     }
 
     // ── 留言建議 ────────────────────────────────────────────────────────────
@@ -114,16 +115,24 @@ public class SharedAiAndFeedbackTests
         else Assert.NotEqual("", fb.UnavailableReason);
     }
 
-    /// <summary>送出後狀態列要有話說，不能靜默失敗。</summary>
+    /// <summary>
+    /// 送出失敗時狀態列要有話說，而且不准把使用者寫的字吞掉。
+    ///
+    /// <b>這裡刻意走「內容太長」這條路，不是「中轉未啟用」。</b>中轉一旦啟用（現在就是），
+    /// <c>SendAsync</c> 會對作者的收件匣發出一次真實的 POST——每跑一次測試就多一則垃圾留言，
+    /// 還會吃掉中轉那側「同一個 IP 每小時 3 則」的配額，讓真正想留言的人收到 429。
+    /// 長度檢查在發請求之前就 return 了，所以這條路能驗到同樣的行為又完全不連外。
+    /// </summary>
     [Fact]
-    public async Task 中轉未啟用時送出會如實說明()
+    public async Task 送不出去時會如實說明且不吞掉使用者寫的字()
     {
-        var fb = new FeedbackService { Text = "測試建議" };
-        await fb.SendAsync("1.7.2");
-        if (!FeedbackService.IsConfigured)
-        {
-            Assert.NotEqual("", fb.Status);
-            Assert.Equal("測試建議", fb.Text);   // 失敗時內容必須留著
-        }
+        int tooLong = FeedbackService.MaxLength + 1;
+        var fb = new FeedbackService { Text = new string('字', tooLong) };
+        await fb.SendAsync("1.7.3");
+
+        Assert.NotEqual("", fb.Status);          // 不准靜默失敗
+        Assert.Equal(tooLong, fb.Text.Length);   // 送不出去時內容必須留著
+        // 沒端點或沒網路的機器會先被 CanSend 擋下，那時 Status 說的是那個原因，不是長度
+        if (fb.IsAvailable) Assert.Contains("內容太長", fb.Status);
     }
 }

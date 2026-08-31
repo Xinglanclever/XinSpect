@@ -13,7 +13,7 @@
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0"
                                Text="硬體資訊總覽 ・ 即時偵測工具"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,2,0,0"
-                               Text="版本 1.7.3 ・ 便攜單一執行檔"/>
+                               Text="版本 1.7.4 ・ 便攜單一執行檔"/>
 
                     <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,16"/>
 
@@ -22,7 +22,7 @@
 
                     <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,10,0,0"
                                Foreground="{StaticResource SecondaryInkBrush}"
-                               Text="即時感測資料由 LibreHardwareMonitor 提供；靜態規格取自 WMI；記憶體真實時序於背景透過 CPU-Z 讀取。"/>
+                               Text="即時感測資料由 LibreHardwareMonitor 提供；靜態規格取自 WMI；記憶體真實時序於背景透過 CPU-Z 讀取；「免費共用」那條 AI 額度的模型由 Cloudflare Workers AI 提供。"/>
 
                     <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,16"/>
 
