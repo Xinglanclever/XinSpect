@@ -4,13 +4,13 @@
              xmlns:local="clr-namespace:XinSpect">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
-            <TextBlock Style="{StaticResource SectionHeader}" Text="儲存"/>
+            <local:SectionHead Text="儲存" HelpKey="storage/儲存"/>
 
             <!-- 磁碟空間甜甜圈（各邏輯磁碟已用比例）── 置於最頂 -->
             <Border Style="{StaticResource Card}" local:Anim.RevealDelay="0">
                 <StackPanel>
                     <Grid Margin="0,0,0,4">
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="磁碟空間" Margin="2,0,0,0"/>
+                        <local:SectionHead Text="磁碟空間" HelpKey="storage/磁碟空間" Margin="2,0,0,0"/>
                         <TextBlock Style="{StaticResource FieldLabel}" HorizontalAlignment="Right"
                                    Text="{Binding Volumes.SummaryText}"/>
                     </Grid>
@@ -38,7 +38,7 @@
             <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="70"
                     Visibility="{Binding Live.HasDrives, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="儲存裝置"/>
+                    <local:SectionHead Text="儲存裝置" HelpKey="storage/儲存裝置"/>
                     <ItemsControl ItemsSource="{Binding Live.Drives}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -92,7 +92,7 @@
                     Visibility="{Binding Live.HasDrives, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
                     <Grid Margin="0,0,0,8">
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="磁碟活動時間（近 90 秒）" Margin="2,0,0,0"/>
+                        <local:SectionHead Text="磁碟活動時間（近 90 秒）" HelpKey="storage/磁碟活動時間（近 90 秒）" Margin="2,0,0,0"/>
                         <ComboBox Style="{StaticResource DarkCombo}" Width="220" HorizontalAlignment="Right"
                                   ItemsSource="{Binding DiskViewChoices}" SelectedIndex="{Binding DiskViewIndex, Mode=TwoWay}"
                                   ToolTip="選擇顯示全部硬碟或單一硬碟"/>
@@ -125,7 +125,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="S.M.A.R.T. 原始資料"/>
+                        <local:SectionHead Text="S.M.A.R.T. 原始資料" HelpKey="storage/S.M.A.R.T. 原始資料"/>
                         <Button Style="{StaticResource PrimaryButton}" Content="讀取" HorizontalAlignment="Right"
                                 VerticalAlignment="Center" Click="SmartRead_Click" IsEnabled="{Binding DiskSmart.CanRead}"/>
                     </Grid>
@@ -174,7 +174,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="SLC 快取耗盡曲線"/>
+                        <local:SectionHead Text="SLC 快取耗盡曲線" HelpKey="storage/SLC 快取耗盡曲線"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <Button Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
                                     Click="SlcStop_Click" IsEnabled="{Binding SlcCache.IsRunning}"/>

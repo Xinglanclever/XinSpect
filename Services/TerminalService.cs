@@ -5,10 +5,10 @@ using System.Windows.Threading;
 namespace XinSpect;
 
 /// <summary>
-/// 內建終端：以重導向標準輸入/輸出的方式承載一個「真實」的常駐 Shell 行程
+/// 內建終端機：以重導向標準輸入/輸出的方式承載一個「真實」的常駐 Shell 行程
 /// （命令提示字元 cmd 或 PowerShell），使用者輸入的每一行都真正送入該行程執行，
 /// stdout／stderr 原樣串流回顯——不模擬、不偽造輸出。行程沿用本 App 的權限
-/// （若以系統管理員身分啟動，終端亦具管理員權限）。關閉分頁或結束程式即終止該行程。
+/// （若以系統管理員身分啟動，終端機亦具管理員權限）。關閉分頁或結束程式即終止該行程。
 /// </summary>
 public sealed class TerminalService : ObservableObject, IDisposable
 {
@@ -77,7 +77,7 @@ public sealed class TerminalService : ObservableObject, IDisposable
         catch (Exception ex)
         {
             IsRunning = false;
-            Append($"[終端啟動失敗] {ex.Message}\n");
+            Append($"[終端機啟動失敗] {ex.Message}\n");
         }
     }
 
@@ -85,7 +85,7 @@ public sealed class TerminalService : ObservableObject, IDisposable
     public void Send(string command)
     {
         if (command is null) return;
-        if (!IsRunning || _proc is null) { Append("[終端未執行，請先啟動]\n"); return; }
+        if (!IsRunning || _proc is null) { Append("[終端機未執行，請先啟動]\n"); return; }
 
         if (command.Length > 0 && (_history.Count == 0 || _history[^1] != command))
             _history.Add(command);
@@ -99,7 +99,7 @@ public sealed class TerminalService : ObservableObject, IDisposable
     public void Interrupt()
     {
         if (!IsRunning) return;
-        Append("[已中止目前行程並重啟終端]\n");
+        Append("[已中止目前行程並重啟終端機]\n");
         Start();
     }
 

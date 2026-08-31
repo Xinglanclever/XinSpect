@@ -4,13 +4,13 @@
              xmlns:local="clr-namespace:XinSpect">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
-            <TextBlock Style="{StaticResource SectionHeader}" Text="效能測試"/>
+            <local:SectionHead Text="效能測試" HelpKey="bench/效能測試"/>
 
             <!-- ===== 棋類跑分（原生 perft，無執行緒上限；分數同時是運算正確性的檢核碼） ===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="0">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="棋類跑分（原生節點吞吐・自我驗證）"/>
+                        <local:SectionHead Text="棋類跑分（原生節點吞吐・自我驗證）" HelpKey="bench/棋類跑分（原生節點吞吐・自我驗證）"/>
                         <TextBlock Style="{StaticResource FieldLabel}" HorizontalAlignment="Right" VerticalAlignment="Center"
                                    Text="{Binding Chess.LogicalCores, StringFormat=本機 {0} 邏輯核心}"/>
                     </Grid>
@@ -134,7 +134,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="40">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="烤機（穩定度壓力測試）"/>
+                        <local:SectionHead Text="烤機（穩定度壓力測試）" HelpKey="bench/烤機（穩定度壓力測試）"/>
                         <TextBlock Style="{StaticResource FieldLabel}" HorizontalAlignment="Right" VerticalAlignment="Center"
                                    Text="{Binding Stress.Threads, StringFormat=全部 {0} 執行緒滿載}"/>
                     </Grid>
@@ -207,7 +207,7 @@
             <!-- ===== 綜合效能測試（單/多執行緒運算 + 記憶體頻寬） ===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="60">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="綜合效能測試"/>
+                    <local:SectionHead Text="綜合效能測試" HelpKey="bench/綜合效能測試"/>
                     <DockPanel LastChildFill="False">
                         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Style="{StaticResource FieldLabel}" Text="測試時間" VerticalAlignment="Center" Margin="0,0,12,0"/>
@@ -238,7 +238,7 @@
             <!-- 測試期間即時走勢 -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="120">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="測試期間即時走勢（近 90 秒）"/>
+                    <local:SectionHead Text="測試期間即時走勢（近 90 秒）" HelpKey="bench/測試期間即時走勢（近 90 秒）"/>
                     <UniformGrid Rows="1" Columns="3">
                         <local:HistoryGraph Height="120" Margin="0,0,6,0" Caption="CPU 使用率"
                                             History="{Binding CpuLoadHist}" Stroke="{StaticResource AccentBrush}"/>
@@ -253,7 +253,7 @@
             <!-- 綜合測試結果 -->
             <Border Style="{StaticResource Card}" local:Anim.RevealDelay="180">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="綜合測試結果"/>
+                    <local:SectionHead Text="綜合測試結果" HelpKey="bench/綜合測試結果"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -321,7 +321,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="190"
                     Visibility="{Binding Benchmarks.Recent.Count, Converter={StaticResource CountToVis}}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="本機跑分紀錄（實測對照）"/>
+                    <local:SectionHead Text="本機跑分紀錄（實測對照）" HelpKey="bench/本機跑分紀錄（實測對照）"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
                                Text="本機歷次成績，新的在上。同項目、同設定才可直接相比；「量測條件」是跑分當時實際讀到的溫度與頻率，沒有感測器時留空而不以 0 充數。紀錄存於 %APPDATA%\XinSpect\bench-history.json，可在設定頁一併清除。"/>
                     <Grid Margin="0,0,0,4">
@@ -367,7 +367,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="195">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="管線歸因 Top-down（PMU 實測）"/>
+                        <local:SectionHead Text="管線歸因 Top-down（PMU 實測）" HelpKey="bench/管線歸因 Top-down（PMU 實測）"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <Button x:Name="TdStop" Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
                                     Click="TdStop_Click" IsEnabled="{Binding TopDown.IsRunning}"/>
@@ -475,7 +475,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="200">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="快取 / 記憶體延遲"/>
+                        <local:SectionHead Text="快取 / 記憶體延遲" HelpKey="bench/快取 / 記憶體延遲"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <Button x:Name="CacheStop" Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
                                     Click="CacheStop_Click" IsEnabled="{Binding Cache.IsRunning}"/>
@@ -542,7 +542,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="210">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="記憶體延遲曲線"/>
+                        <local:SectionHead Text="記憶體延遲曲線" HelpKey="bench/記憶體延遲曲線"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <Button Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
                                     Click="LatCurveStop_Click" IsEnabled="{Binding LatencyCurve.IsRunning}"/>
@@ -576,10 +576,93 @@
                 </StackPanel>
             </Border>
 
+            <!-- ===== 記憶體頻寬與負載延遲（STREAM 式 ＋ MLC 式）===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="225">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="記憶體頻寬與負載延遲" HelpKey="bench/記憶體頻寬與負載延遲"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
+                                    Click="MemBwStop_Click" IsEnabled="{Binding MemBandwidth.IsRunning}"/>
+                            <Button Style="{StaticResource PrimaryButton}" Content="開始量測"
+                                    Click="MemBwStart_Click" IsEnabled="{Binding MemBandwidth.CanStart}"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="延遲曲線回答「一次存取多久」，這裡回答「同時能搬多少」與「被搶的時候會慢多少」。讀取／複製／相加／三元運算四種型態逐級加執行緒量到飽和，再一邊用其他核心把記憶體塞滿、一邊量單一存取的延遲。通道插錯與「一跑編譯整台機器就鈍」只有這裡看得出來。"/>
+                    <ProgressBar Style="{StaticResource LoadBar}" Value="{Binding MemBandwidth.ProgressPercent, Mode=OneWay}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding MemBandwidth.StatusLine}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" TextWrapping="Wrap" Text="{Binding MemBandwidth.PeakNote}"/>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,6,0,8" TextWrapping="Wrap" Text="{Binding MemBandwidth.Verdict}"/>
+
+                    <Grid Margin="0,4,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110"/><ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="*"/><ColumnDefinition Width="110"/><ColumnDefinition Width="70"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource ColHead}" Text="存取型態"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="執行緒"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="相對"/>
+                        <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="頻寬"/>
+                        <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="達成率"/>
+                    </Grid>
+                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,4"/>
+                    <ItemsControl ItemsSource="{Binding MemBandwidth.Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="24">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="110"/><ColumnDefinition Width="110"/>
+                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="110"/><ColumnDefinition Width="70"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Kernel}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding ThreadsText}" VerticalAlignment="Center"/>
+                                    <ProgressBar Grid.Column="2" Style="{StaticResource LoadBar}" Maximum="1" VerticalAlignment="Center"
+                                                 Margin="0,0,10,0" Value="{Binding BarFraction, Mode=OneWay}"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding GbpsText}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" Text="{Binding Note}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <local:SectionHead Text="負載延遲（重壓下的等待）" HelpKey="bench/負載延遲（重壓下的等待）" Margin="0,14,0,2"/>
+                    <Grid Margin="0,2,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/><ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="120"/><ColumnDefinition Width="100"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource ColHead}" Text="施壓等級"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="相對延遲"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="同時達成頻寬"/>
+                        <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="延遲"/>
+                    </Grid>
+                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,4"/>
+                    <ItemsControl ItemsSource="{Binding MemBandwidth.LoadedRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="24">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150"/><ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="120"/><ColumnDefinition Width="100"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding LoadText}" VerticalAlignment="Center"/>
+                                    <ProgressBar Grid.Column="1" Style="{StaticResource LoadBar}" Maximum="1" VerticalAlignment="Center"
+                                                 Margin="0,0,10,0" Value="{Binding BarFraction, Mode=OneWay}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding GbpsText}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding LatencyText}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding MemBandwidth.LoadedVerdict}"/>
+                </StackPanel>
+            </Border>
+
             <!-- ===== SuperPI 圓周率運算 ===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="240">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="SuperPI 圓周率運算"/>
+                    <local:SectionHead Text="SuperPI 圓周率運算" HelpKey="bench/SuperPI 圓周率運算"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
                                Text="以 Chudnovsky 級數搭配二分裂解計算圓周率至指定位數，為單執行緒純運算負載；「完成所需時間」即為分數（越短越好），常用於比較單核運算效能。計時僅涵蓋實際運算，不含將上億位結果轉為十進位字串的輸出步驟。5000 萬／1 億位極耗時（數分鐘至數小時）且佔用大量記憶體，請斟酌選用。"/>
 
@@ -640,7 +723,7 @@
             <!-- ===== 磁碟效能測試 ===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="280">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="磁碟效能測試"/>
+                    <local:SectionHead Text="磁碟效能測試" HelpKey="bench/磁碟效能測試"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
                                Text="於所選磁碟建立約 512 MB 暫存檔，量測循序讀寫（MB/s）與隨機 4K 讀寫（IOPS），完成後自動刪除暫存檔。全程採未緩衝直接 I/O（繞過作業系統讀寫快取，避免讀到快取殘留而失真），隨機 4K 為佇列深度 1（QD1）。"/>
 
@@ -701,7 +784,7 @@
             <Border Style="{StaticResource Card}" local:Anim.RevealDelay="240">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="Windows 體驗指數（WinSAT）"/>
+                        <local:SectionHead Text="Windows 體驗指數（WinSAT）" HelpKey="bench/Windows 體驗指數（WinSAT）"/>
                         <Button x:Name="WinsatBtn" Style="{StaticResource ToolButton}" Content="重新評分"
                                 HorizontalAlignment="Right" VerticalAlignment="Center"
                                 Click="Winsat_Click" IsEnabled="{Binding Winsat.CanRun}"/>

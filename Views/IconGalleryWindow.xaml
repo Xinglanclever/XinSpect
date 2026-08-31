@@ -72,6 +72,11 @@
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Core i9-10980XE" Model="Core i9-10980XE"/></Border>
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Core i9-9900X" Model="Core i9-9900X"/></Border>
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Core i7-3960X" Model="Core i7-3960X"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel(R) Core(TM) i7 CPU 975 @ 3.33GHz" Model="Core i7-975 至尊"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel(R) Core(TM)2 Extreme CPU QX9650" Model="Core 2 Extreme QX9650"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel(R) Pentium(R) Extreme Edition CPU 965" Model="Pentium EE 965"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel(R) Core(TM) i7-5960X CPU @ 3.00GHz" Model="Core i7-5960X 至尊"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel(R) Core(TM) i7-6950X CPU @ 3.00GHz" Model="Core i7-6950X 至尊"/></Border>
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Everest" Model="Everest 訂製版"/></Border>
                 </UniformGrid>
 

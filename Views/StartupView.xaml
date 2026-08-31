@@ -25,7 +25,7 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="2,0,0,10">
-            <TextBlock Style="{StaticResource SectionHeader}" Text="開機啟動項管理"/>
+            <local:SectionHead Text="開機啟動項管理" HelpKey="startup/開機啟動項管理"/>
             <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
                        Text="列舉登錄 Run 機碼與啟動資料夾中的開機自啟項目。停用＝寫入與工作管理員相同、可逆的核准旗標，不刪除原始項目或捷徑，隨時可還原。變更「全部使用者」項目需系統管理員權限。"/>
         </StackPanel>

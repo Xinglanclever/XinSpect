@@ -4,7 +4,7 @@
              xmlns:local="clr-namespace:XinSpect">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
-            <TextBlock Style="{StaticResource SectionHeader}" Text="記憶體"/>
+            <local:SectionHead Text="記憶體" HelpKey="memory/記憶體"/>
 
             <!-- 品牌徽章（取第一條模組） -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="0">
@@ -23,7 +23,7 @@
                 <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,7,0">
                     <StackPanel>
                         <Grid>
-                            <TextBlock Style="{StaticResource SectionHeader}" Text="時序 (CPU-Z)"/>
+                            <local:SectionHead Text="時序 (CPU-Z)" HelpKey="memory/時序 (CPU-Z)"/>
                             <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Timings.Status}"
                                        HorizontalAlignment="Right" VerticalAlignment="Center"/>
                         </Grid>
@@ -53,7 +53,7 @@
                 <!-- 使用量 -->
                 <Border Grid.Column="1" Style="{StaticResource Card}" Margin="7,0,0,0">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="即時使用量"/>
+                        <local:SectionHead Text="即時使用量" HelpKey="memory/即時使用量"/>
                         <local:FieldRow Label="總容量" Value="{Binding Live.MemTotalGB, StringFormat={}{0:0.0} GB}"/>
                         <local:FieldRow Label="已使用" Value="{Binding Live.MemUsedGB, StringFormat={}{0:0.0} GB}"/>
                         <local:FieldRow Label="可用" Value="{Binding Live.MemAvailGB, StringFormat={}{0:0.0} GB}"/>
@@ -65,10 +65,32 @@
                 </Border>
             </Grid>
 
+            <!-- 插槽配置圖：先看「哪裡還能插、有沒有插對通道」，再往下看逐條規格 -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="100"
+                    Visibility="{Binding Dimms.HasData, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <local:SectionHead Text="插槽配置" HelpKey="memory/插槽配置"/>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="{Binding Dimms.Headline}"/>
+                    <local:DimmMap Layout="{Binding Dimms}" Margin="0,12,0,0"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,12,0,0" TextWrapping="Wrap"
+                               Text="{Binding Dimms.Detail}"/>
+                    <ItemsControl ItemsSource="{Binding Dimms.Notes}" Margin="0,8,0,0"
+                                  Visibility="{Binding Dimms.HasNotes, Converter={StaticResource BoolToVis}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,3,0,0"
+                                           Text="{Binding StringFormat=・{0}}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <!-- 模組 -->
             <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="120">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="實體模組"/>
+                    <local:SectionHead Text="實體模組" HelpKey="memory/實體模組"/>
                     <Grid Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="100"/>
@@ -123,7 +145,7 @@
             <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="180"
                     Visibility="{Binding HasSpdModules, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="SPD 深度資料 (CPU-Z)"/>
+                    <local:SectionHead Text="SPD 深度資料 (CPU-Z)" HelpKey="memory/SPD 深度資料 (CPU-Z)"/>
                     <ItemsControl ItemsSource="{Binding SpdModules}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -199,7 +221,7 @@
             <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="240">
                 <StackPanel>
                     <DockPanel LastChildFill="False">
-                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource SectionHeader}" Text="圖樣檢測" VerticalAlignment="Center"/>
+                        <local:SectionHead Text="圖樣檢測" HelpKey="memory/圖樣檢測" DockPanel.Dock="Left" VerticalAlignment="Center"/>
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Style="{StaticResource FieldLabel}" Text="測試量" VerticalAlignment="Center" Margin="0,0,10,0"/>
                             <ComboBox Style="{StaticResource DarkCombo}" Width="110" Margin="0,0,12,0"
@@ -287,7 +309,7 @@
             <!-- ===== 記憶體真實面貌 ===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="記憶體真實面貌（認可）"/>
+                    <local:SectionHead Text="記憶體真實面貌（認可）" HelpKey="memory/記憶體真實面貌（認可）"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
                                Text="「已使用 12 GB」掩蓋一半事實——認可（Commit）才是程式真正要求過的量。認可尖峰超過實體＝系統曾經真的動用分頁檔（開機至今累積），卡頓的常見源頭。"/>
                     <Grid Margin="0,0,0,4">
@@ -326,7 +348,7 @@
             <!-- ===== SMBIOS 記憶體裝置（Type 17 直讀）===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="SMBIOS 記憶體裝置"/>
+                    <local:SectionHead Text="SMBIOS 記憶體裝置" HelpKey="memory/SMBIOS 記憶體裝置"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
                                Text="直讀韌體 Type 17 結構：每條記憶體的插槽位置、標稱／設定速度、序號、型號與 Rank——這些是韌體回報的資料（位移核對 dmidecode 3.x），未填的欄位顯示「—」。"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Smbios.MemoryArray.Count, Mode=OneWay, StringFormat=記憶體陣列資訊（{0} 組）}"/>

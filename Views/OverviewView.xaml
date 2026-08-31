@@ -24,10 +24,44 @@
             </Border>
         </DataTemplate>
 
+        <!-- 七段數字面板：遠一點也讀得到的大字。off 段保留為極淡的殘影，所以數字不會跳位。 -->
+        <DataTemplate x:Key="Tile.digits">
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" DataContext="{Binding Vm}">
+                <StackPanel>
+                    <local:SectionHead Text="數字面板" HelpKey="overview/數字面板"/>
+                    <UniformGrid Rows="1" Columns="4" Margin="0,12,0,0">
+                        <StackPanel>
+                            <local:OutlineDigits DigitHeight="48" HorizontalAlignment="Left"
+                                                 Text="{Binding Live.CpuLoad, StringFormat={}{0:0}, FallbackValue=--, TargetNullValue=--}"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="CPU 使用率 %" Margin="0,5,0,0"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <local:OutlineDigits DigitHeight="48" HorizontalAlignment="Left"
+                                                 Foreground="{Binding Live.CpuTempSeverity, Converter={StaticResource SeverityToBrush}}"
+                                                 Text="{Binding Live.CpuTemp, StringFormat={}{0:0}, FallbackValue=--, TargetNullValue=--}"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="封裝溫度 °C" Margin="0,5,0,0"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <local:OutlineDigits DigitHeight="48" HorizontalAlignment="Left"
+                                                 Text="{Binding Live.CpuPowerW, StringFormat={}{0:0}, FallbackValue=--, TargetNullValue=--}"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="封裝功耗 W" Margin="0,5,0,0"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <local:OutlineDigits DigitHeight="48" HorizontalAlignment="Left"
+                                                 Text="{Binding Live.MemLoad, StringFormat={}{0:0}, FallbackValue=--, TargetNullValue=--}"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="記憶體使用率 %" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </UniformGrid>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Text="「--」代表這台機器沒有這項讀值（多為缺少驅動權限或平台未暴露該感測），不是 0。"/>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
         <DataTemplate x:Key="Tile.trends">
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" DataContext="{Binding Vm}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="即時走勢（近 90 秒）"/>
+                    <local:SectionHead Text="即時走勢（近 90 秒）" HelpKey="overview/即時走勢（近 90 秒）"/>
                     <UniformGrid Rows="1" Columns="4">
                         <local:HistoryGraph Height="104" Margin="0,0,6,0" Caption="CPU 使用率"
                                             History="{Binding CpuLoadHist}" Stroke="{StaticResource AccentBrush}"/>
@@ -46,7 +80,7 @@
         <DataTemplate x:Key="Tile.trends2">
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" DataContext="{Binding Vm}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="更多走勢（近 90 秒）"/>
+                    <local:SectionHead Text="更多走勢（近 90 秒）" HelpKey="overview/更多走勢（近 90 秒）"/>
                     <UniformGrid Rows="1" Columns="3">
                         <local:HistoryGraph Height="104" Margin="0,0,6,0" Caption="CPU 頻率"
                                             History="{Binding CpuClockHist}" Stroke="{StaticResource GoodBrush}"/>
@@ -67,7 +101,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="AI 評價" Margin="0,0,0,2"/>
+                        <local:SectionHead Text="AI 評價" HelpKey="overview/AI 評價" Margin="0,0,0,2"/>
                         <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" MaxWidth="560" HorizontalAlignment="Left"
                                    Text="由 AI 依本機真實數據客觀評價效能與配置。可用本機免費 Ollama 或 OpenAI 相容 API，於「設定 › AI 評價」調整。"/>
                         <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"
@@ -85,7 +119,7 @@
         <DataTemplate x:Key="Tile.brands">
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" DataContext="{Binding Vm}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="硬體識別"/>
+                    <local:SectionHead Text="硬體識別" HelpKey="overview/硬體識別"/>
                     <UniformGrid Columns="2" Rows="2">
                         <local:BrandBadge Margin="0,8,12,8" Kind="Cpu" EmblemSize="46"
                                           Brand="{Binding Cpu.Brand}" Model="{Binding Cpu.Name}"
@@ -111,7 +145,7 @@
 
                 <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,7,0">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="作業系統"/>
+                        <local:SectionHead Text="作業系統" HelpKey="overview/作業系統"/>
                         <local:FieldRow Label="系統" Value="{Binding System.OsName}"/>
                         <local:FieldRow Label="版本" Value="{Binding System.OsVersion}"/>
                         <local:FieldRow Label="系統架構" Value="{Binding System.OsArch}"/>
@@ -125,7 +159,7 @@
 
                 <Border Grid.Column="1" Style="{StaticResource Card}" Margin="7,0,0,0">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="機器與主機板"/>
+                        <local:SectionHead Text="機器與主機板" HelpKey="overview/機器與主機板"/>
                         <local:FieldRow Label="製造商" Value="{Binding System.SystemManufacturer}"/>
                         <local:FieldRow Label="機型" Value="{Binding System.SystemModel}"/>
                         <local:FieldRow Label="主機板廠商" Value="{Binding System.BoardVendor}"/>
@@ -141,7 +175,7 @@
         <DataTemplate x:Key="Tile.specs">
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" DataContext="{Binding Vm}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="核心規格"/>
+                    <local:SectionHead Text="核心規格" HelpKey="overview/核心規格"/>
                     <local:FieldRow Label="處理器" Value="{Binding Cpu.Name}"/>
                     <local:FieldRow Label="實體核心" Value="{Binding Cpu.Cores, StringFormat={}{0} 核}"/>
                     <local:FieldRow Label="邏輯處理器" Value="{Binding Cpu.Threads, StringFormat={}{0} 執行緒}"/>
@@ -189,7 +223,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
             <DockPanel LastChildFill="False">
-                <TextBlock DockPanel.Dock="Left" Style="{StaticResource SectionHeader}" Text="系統總覽"/>
+                <local:SectionHead Text="系統總覽" HelpKey="overview/系統總覽" DockPanel.Dock="Left"/>
                 <Button DockPanel.Dock="Right" Style="{StaticResource ToolButton}" VerticalAlignment="Top"
                         Content="自訂磁貼" Click="Customize_Click"
                         ToolTip="選擇要顯示哪些區塊、調整上下順序"/>
@@ -200,7 +234,7 @@
                     Visibility="{Binding Dashboard.Editing, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
                     <DockPanel LastChildFill="False">
-                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource SectionHeader}" Text="自訂磁貼"/>
+                        <local:SectionHead Text="自訂磁貼" HelpKey="overview/自訂磁貼" DockPanel.Dock="Left"/>
                         <Button DockPanel.Dock="Right" Style="{StaticResource ToolButton}" VerticalAlignment="Top"
                                 Content="回復預設" Click="TileReset_Click" ToolTip="還原內建的顯示項目與順序"/>
                     </DockPanel>

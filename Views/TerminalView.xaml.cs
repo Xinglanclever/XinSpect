@@ -4,7 +4,7 @@ using System.Windows.Input;
 
 namespace XinSpect;
 
-/// <summary>終端分頁：驅動 <see cref="TerminalService"/>——Enter 執行、上/下鍵回溯歷史、輸出自動捲到底。</summary>
+/// <summary>終端機分頁：驅動 <see cref="TerminalService"/>——Enter 執行、上/下鍵回溯歷史、輸出自動捲到底。</summary>
 public partial class TerminalView : UserControl
 {
     private int _histIndex = -1;   // -1＝目前輸入（未在瀏覽歷史）

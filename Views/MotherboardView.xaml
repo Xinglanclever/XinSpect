@@ -4,7 +4,7 @@
              xmlns:local="clr-namespace:XinSpect">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
-            <TextBlock Style="{StaticResource SectionHeader}" Text="主機板"/>
+            <local:SectionHead Text="主機板" HelpKey="mainboard/主機板"/>
 
             <!-- 品牌徽章 -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="0">
@@ -21,7 +21,7 @@
                 <!-- 主機板 -->
                 <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,7,0">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="主機板"/>
+                        <local:SectionHead Text="主機板" HelpKey="mainboard/主機板#2"/>
                         <local:FieldRow Label="製造商" Value="{Binding Mainboard.Vendor}"/>
                         <local:FieldRow Label="型號" Value="{Binding Mainboard.Model}"/>
                         <local:FieldRow Label="匯流排規格" Value="{Binding Mainboard.BusSpec}"/>
@@ -34,7 +34,7 @@
                 <!-- BIOS / UEFI -->
                 <Border Grid.Column="1" Style="{StaticResource Card}" Margin="7,0,0,0">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="BIOS / UEFI"/>
+                        <local:SectionHead Text="BIOS / UEFI" HelpKey="mainboard/BIOS / UEFI"/>
                         <local:FieldRow Label="模式" Value="{Binding Mainboard.Uefi}"/>
                         <local:FieldRow Label="BIOS 品牌" Value="{Binding Mainboard.BiosVendor}"/>
                         <local:FieldRow Label="版本 (CPU-Z)" Value="{Binding Mainboard.BiosMsg}"/>
@@ -47,7 +47,7 @@
             <!-- 系統資訊 (WMI) -->
             <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="100">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="系統資訊"/>
+                    <local:SectionHead Text="系統資訊" HelpKey="mainboard/系統資訊"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -82,7 +82,7 @@
                 <!-- 晶片組 -->
                 <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,7,0">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="晶片組"/>
+                        <local:SectionHead Text="晶片組" HelpKey="mainboard/晶片組"/>
                         <local:FieldRow Label="晶片組型號" Value="{Binding Mainboard.ChipsetName}"/>
                         <local:FieldRow Label="北橋 / SoC" Value="{Binding Mainboard.Northbridge}"/>
                         <local:FieldRow Label="南橋 / PCH" Value="{Binding Mainboard.Southbridge}"/>
@@ -100,7 +100,7 @@
                 <!-- LPCIO / 感測晶片 -->
                 <Border Grid.Column="1" Style="{StaticResource Card}" Margin="7,0,0,0">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="LPCIO（超級 I/O）"/>
+                        <local:SectionHead Text="LPCIO（超級 I/O）" HelpKey="mainboard/LPCIO（超級 I/O）"/>
                         <local:FieldRow Label="製造商" Value="{Binding Mainboard.LpcioVendor}"/>
                         <local:FieldRow Label="型號" Value="{Binding Mainboard.LpcioModel}"/>
                         <TextBlock Style="{StaticResource Subtitle}" Margin="0,10,0,0" TextWrapping="Wrap"
@@ -113,7 +113,7 @@
             <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="160"
                     Visibility="{Binding HasSoundDevices, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="音效裝置"/>
+                    <local:SectionHead Text="音效裝置" HelpKey="mainboard/音效裝置"/>
                     <ItemsControl ItemsSource="{Binding SoundDevices}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -134,7 +134,7 @@
             <!-- ===== SMBIOS 原始表 ===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="SMBIOS 原始表"/>
+                    <local:SectionHead Text="SMBIOS 原始表" HelpKey="mainboard/SMBIOS 原始表"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
                                Text="直接解析韌體的 SMBIOS 表（位移核對 dmidecode 3.x）。沒填的欄位顯示「—」；不認得的列舉值顯示原始位元組，不硬掰。"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Smbios.VersionText, StringFormat=表版本：{0}}"/>
@@ -225,7 +225,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="韌體與開機信任鏈"/>
+                        <local:SectionHead Text="韌體與開機信任鏈" HelpKey="mainboard/韌體與開機信任鏈"/>
                         <Button Style="{StaticResource PrimaryButton}" Content="讀取" HorizontalAlignment="Right"
                                 VerticalAlignment="Center" Click="FirmwareRefresh_Click" IsEnabled="{Binding Firmware.CanRefresh}"/>
                     </Grid>
@@ -293,7 +293,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="BIOS／Intel ME 韌體與微碼"/>
+                        <local:SectionHead Text="BIOS／Intel ME 韌體與微碼" HelpKey="mainboard/BIOS／Intel ME 韌體與微碼"/>
                         <Button Style="{StaticResource PrimaryButton}" Content="讀取" HorizontalAlignment="Right"
                                 VerticalAlignment="Center" Click="BiosMeRefresh_Click" IsEnabled="{Binding BiosMe.CanRefresh}"/>
                     </Grid>
@@ -352,7 +352,7 @@
             <!-- ===== 危險區：修改 BIOS 設定／刷寫韌體 ===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" BorderBrush="#B3462B" BorderThickness="1">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Foreground="#E06C4B" Text="危險區：修改 BIOS 設定／刷寫韌體"/>
+                    <local:SectionHead Text="危險區：修改 BIOS 設定／刷寫韌體" HelpKey="mainboard/危險區：修改 BIOS 設定／刷寫韌體" Foreground="#E06C4B"/>
                     <TextBlock Margin="0,6,0,10" TextWrapping="Wrap" FontSize="12" LineHeight="19"
                                Foreground="#E06C4B" Text="{Binding BiosMe.DangerNotice}"/>
                     <CheckBox Margin="0,0,0,10" Foreground="{StaticResource PrimaryInkBrush}"

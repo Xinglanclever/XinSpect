@@ -4,7 +4,7 @@
              xmlns:local="clr-namespace:XinSpect">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
-            <TextBlock Style="{StaticResource SectionHeader}" Text="健康總評"/>
+            <local:SectionHead Text="健康總評" HelpKey="health/健康總評"/>
 
             <!-- 綜合評分（大儀表 + 評語） -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="0">
@@ -34,7 +34,7 @@
             <!-- 指標狀態燈 -->
             <Border Style="{StaticResource Card}" local:Anim.RevealDelay="80">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="指標狀態"/>
+                    <local:SectionHead Text="指標狀態" HelpKey="health/指標狀態"/>
                     <ItemsControl ItemsSource="{Binding Health.Items}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -77,7 +77,7 @@
                     <DockPanel>
                         <Button DockPanel.Dock="Right" Style="{StaticResource ToolButton}" Content="重新分析"
                                 VerticalAlignment="Top" Click="RefreshUpgrade_Click"/>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="升級建議"/>
+                        <local:SectionHead Text="升級建議" HelpKey="health/升級建議"/>
                     </DockPanel>
 
                     <Grid Margin="0,10,0,0">
@@ -153,7 +153,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="WHEA 硬體錯誤紀錄"/>
+                        <local:SectionHead Text="WHEA 硬體錯誤紀錄" HelpKey="health/WHEA 硬體錯誤紀錄"/>
                         <Button Style="{StaticResource ToolButton}" Content="重新讀取" HorizontalAlignment="Right"
                                 VerticalAlignment="Center" Click="WheaRefresh_Click" IsEnabled="{Binding Whea.CanRefresh}"/>
                     </Grid>
@@ -184,7 +184,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="可靠性歷史"/>
+                        <local:SectionHead Text="可靠性歷史" HelpKey="health/可靠性歷史"/>
                         <Button Style="{StaticResource ToolButton}" Content="重新讀取" HorizontalAlignment="Right"
                                 VerticalAlignment="Center" Click="ReliabilityRefresh_Click" IsEnabled="{Binding Reliability.CanRefresh}"/>
                     </Grid>
@@ -213,7 +213,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="機器檢查銀行（MCA）"/>
+                        <local:SectionHead Text="機器檢查銀行（MCA）" HelpKey="health/機器檢查銀行（MCA）"/>
                         <Button Style="{StaticResource ToolButton}" Content="重新掃描" HorizontalAlignment="Right"
                                 VerticalAlignment="Center" Click="McaRefresh_Click" IsEnabled="{Binding Mca.CanRefresh}"/>
                     </Grid>
@@ -244,7 +244,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="平台可信度（讀到的數字算不算原生）"/>
+                        <local:SectionHead Text="平台可信度（讀到的數字算不算原生）" HelpKey="health/平台可信度（讀到的數字算不算原生）"/>
                         <Button Style="{StaticResource ToolButton}" Content="重新讀取" HorizontalAlignment="Right"
                                 VerticalAlignment="Center" Click="PlatformTrustRefresh_Click" IsEnabled="{Binding PlatformTrust.CanRefresh}"/>
                     </Grid>
@@ -275,7 +275,7 @@
             <!-- ===== 計時器地基 ===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="計時器地基"/>
+                    <local:SectionHead Text="計時器地基" HelpKey="health/計時器地基"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
                                Text="所有量測的精度來源：QPC 走 TSC 還是被 useplatformclock 降級到 HPET、系統計時器解析度被誰拉高、Invariant TSC 支援與否。誠實的工具必須先交代地基。"/>
                     <ItemsControl ItemsSource="{Binding TimerFoundation.Rows}">
@@ -299,7 +299,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="電源政策實況（藏在進階設定裡的那幾項）"/>
+                        <local:SectionHead Text="電源政策實況（藏在進階設定裡的那幾項）" HelpKey="health/電源政策實況（藏在進階設定裡的那幾項）"/>
                         <Button Style="{StaticResource PrimaryButton}" Content="讀取" HorizontalAlignment="Right"
                                 VerticalAlignment="Center" Click="PowerPolicyRefresh_Click" IsEnabled="{Binding PowerPolicy.CanRefresh}"/>
                     </Grid>

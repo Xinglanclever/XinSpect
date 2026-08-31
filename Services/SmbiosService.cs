@@ -233,8 +233,15 @@ public sealed class SmbiosService
                      : (ext & 0xFFC00) != 0 ? $"{ext >> 10} GiB"
                      : $"{ext >> 20} TiB";
         }
+        else if ((size & 0x8000) != 0)
+        {
+            // 規格（Type 17 偏移 0x0C）：位 15 為 1 時單位是 <b>kB</b>，不是 MB——
+            // 誤當成 MB 會把 16 MB 的小模組寫成 16 GB。dmidecode 也是這樣解。
+            int kb = size & 0x7FFF;
+            sizeText = kb >= 1024 ? $"{kb / 1024.0:0.#} MB" : $"{kb} kB";
+        }
         else
-            sizeText = (size & 0x8000) != 0 ? $"{size & 0x7FFF} MB" : $"{size / 1024.0:0.#} GB";
+            sizeText = $"{size / 1024.0:0.#} GB";
 
         ushort speed = s.WordAt(0x15);
         ushort configured = s.Length >= 0x22 ? s.WordAt(0x20) : (ushort)0;

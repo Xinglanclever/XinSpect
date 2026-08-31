@@ -37,6 +37,14 @@ public static class PageRegistry
         },
         new()
         {
+            Key = "bottleneck", Title = "瓶頸診斷", Group = GOverview,
+            IconData = "F1 M3,3 H21 L14,12 V19.5 L10,21.5 V12 Z",
+            Factory = () => new BottleneckView(),
+            Hint = "把已量到的讀值合起來看：現在卡住這台機器的是什麼",
+            Keywords = ["bottleneck", "瓶頸", "卡", "卡住", "慢", "卡頓", "診斷", "為什麼慢"],
+        },
+        new()
+        {
             Key = "cpu", Title = "處理器", Group = GHardware,
             IconData = "F0 M8,2 H10 V5 H8 Z M14,2 H16 V5 H14 Z M2,8 H5 V10 H2 Z M2,14 H5 V16 H2 Z M19,8 H22 V10 H19 Z "
                      + "M19,14 H22 V16 H19 Z M8,19 H10 V22 H8 Z M14,19 H16 V22 H14 Z M5,5 H19 V19 H5 Z M9,9 H15 V15 H9 Z",
@@ -218,12 +226,12 @@ public static class PageRegistry
         },
         new()
         {
-            Key = "terminal", Title = "終端", Group = GTools,
+            Key = "terminal", Title = "終端機", Group = GTools,
             IconData = "F1 M2,5 L22,5 L22,19 L2,19 Z M4,7 L20,7 L20,17 L4,17 Z "
                      + "M6.2,9.3 L9,11.5 L6.2,13.7 L7.3,13.7 L10.1,11.5 L7.3,9.3 Z M11.5,12.6 H16.5 V13.8 H11.5 Z",
             Factory = () => new TerminalView(),
-            Hint = "常駐 cmd／PowerShell 真實終端",
-            Keywords = ["terminal", "cmd", "powershell", "終端", "命令列", "shell"],
+            Hint = "常駐 cmd／PowerShell 真實終端機",
+            Keywords = ["terminal", "cmd", "powershell", "終端機", "終端", "命令列", "shell"],
         },
         new()
         {
@@ -361,6 +369,15 @@ public static class PageRegistry
             IconData = "M2,2 h5 v3 h-5 z M9,2 h5 v5 h-5 z M2,7 h5 v7 h-5 z M9,9 h5 v5 h-5 z",
             Factory = () => new DpcLatencyView(),
             Hint = "排出造成音訊爆音／輸入停頓的肇事驅動（ETW）", Keywords = ["dpc", "isr", "延遲", "latency", "爆音", "驅動", "latencymon"],
+        },
+        new()
+        {
+            Key = "pcie", Title = "PCIe 鏈路", Group = GTools,
+            IconData = "M1,4 h9 v2 h-9 z M1,10 h9 v2 h-9 z M11,2 h1.6 v12 h-1.6 z M13.4,6.4 h1.6 v3.2 h-1.6 z",
+            Factory = () => new PcieLinkView(),
+            Hint = "目前協商到的速度／寬度對裝置能力（唯讀 PCI 設定空間）",
+            Keywords = ["pcie", "pci", "鏈路", "link", "通道", "lane", "x16", "x4", "gen4", "gen5",
+                        "顯示卡", "nvme", "m.2", "分流", "bifurcation", "頻寬"],
         },
         new()
         {

@@ -198,6 +198,8 @@ public sealed class ChessBenchService : ObservableObject
         string config = $"{threads} 執行緒 ・ {DurationSeconds} 秒 ・ {NameOf(kind)} ・ 深度 {depth}";
 
         IsRunning = true;
+        // 跑分期間停掉全站動畫：每一幀重繪都要花 GPU 與封裝功耗，那會進到節點數裡。
+        using var quiet = Motion.Suspend();
         Phase = "準備中";
         ProgressFraction = 0;
         StatusLine = "跑分進行中，請避免其他高負載程式以取得穩定結果…";

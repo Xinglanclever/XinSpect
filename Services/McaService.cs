@@ -52,6 +52,9 @@ public sealed class McaService : ObservableObject
         IsLoading = true;
         Status = "掃描中…";
         Rows.Clear();
+        // 連 Summary 也要一起清成「還沒讀」：逐核逐銀行掃要好幾秒，這段時間裡 Rows 是空的，
+        // 若 Summary 還留著上一輪的字樣，讀這兩者的人（卡點診斷）會把「掃描中」當成「掃完了，0 件」。
+        Summary = "—";
         try
         {
             var (summary, rows) = await Task.Run(ScanAll);

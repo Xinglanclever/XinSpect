@@ -1,0 +1,154 @@
+<UserControl x:Class="XinSpect.BottleneckView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <UserControl.Resources>
+        <!-- 一條卡點：左側色條表嚴重度；徽章是優先度與部位；底下三行分別是證據、做法、去哪看。 -->
+        <DataTemplate x:Key="FindingTemplate">
+            <Border Background="{StaticResource Surface2Brush}" CornerRadius="9" Margin="0,0,0,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="6"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" CornerRadius="9,0,0,9"
+                            Background="{Binding Severity, Converter={StaticResource SeverityToBrush}}"/>
+                    <StackPanel Grid.Column="1" Margin="16,12,16,13">
+                        <StackPanel Orientation="Horizontal">
+                            <Border CornerRadius="4" Padding="7,1" VerticalAlignment="Center"
+                                    Background="{Binding Severity, Converter={StaticResource SeverityToBrush}}">
+                                <TextBlock Text="{Binding PriorityText}" Foreground="White" FontSize="11.5"/>
+                            </Border>
+                            <Border CornerRadius="4" Padding="7,1" Margin="7,0,0,0" VerticalAlignment="Center"
+                                    Background="{StaticResource SurfaceBrush}">
+                                <TextBlock Text="{Binding KindText}" FontSize="11.5"
+                                           Foreground="{StaticResource SecondaryInkBrush}"/>
+                            </Border>
+                            <TextBlock Text="{Binding Title}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                       FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"
+                                       Foreground="{StaticResource PrimaryInkBrush}"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding Evidence, StringFormat=依據：{0}}" TextWrapping="Wrap"
+                                   Margin="0,8,0,0" FontSize="13"
+                                   Foreground="{StaticResource SecondaryInkBrush}"/>
+                        <TextBlock Text="{Binding Advice, StringFormat=做法：{0}}" TextWrapping="Wrap"
+                                   Margin="0,4,0,0" FontSize="13"
+                                   Foreground="{StaticResource SecondaryInkBrush}"/>
+                        <TextBlock Text="{Binding Where, StringFormat=量得更清楚：{0}}" TextWrapping="Wrap"
+                                   Margin="0,6,0,0" Style="{StaticResource FieldLabel}"
+                                   Visibility="{Binding HasWhere, Converter={StaticResource BoolToVis}}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <StackPanel Margin="2,0,0,10">
+                <local:SectionHead Text="瓶頸診斷" HelpKey="bottleneck/瓶頸診斷"/>
+                <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                           Text="其他頁各自量一件事，這一頁把它們合起來看一次，回答「現在是什麼在拖住這台機器」。用的全是本機已經讀到的數字：沒讀到的不談，也不預估「提升幾 %」——那需要 A／B 對照，本頁沒做。"/>
+            </StackPanel>
+
+            <!-- ===== 此刻 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="此刻" HelpKey="bottleneck/此刻"/>
+                    <UniformGrid Columns="4" Margin="0,12,0,0">
+                        <StackPanel>
+                            <local:OutlineDigits DigitHeight="42" HorizontalAlignment="Left"
+                                                 Text="{Binding Live.CpuLoad, StringFormat={}{0:0}, FallbackValue=--, TargetNullValue=--}"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="處理器負載 %" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <local:OutlineDigits DigitHeight="42" HorizontalAlignment="Left"
+                                                 Text="{Binding Live.CpuTemp, StringFormat={}{0:0}, FallbackValue=--, TargetNullValue=--}"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="封裝溫度 °C" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <local:OutlineDigits DigitHeight="42" HorizontalAlignment="Left"
+                                                 Text="{Binding Live.CpuPowerW, StringFormat={}{0:0}, FallbackValue=--, TargetNullValue=--}"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="封裝功耗 W" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <local:OutlineDigits DigitHeight="42" HorizontalAlignment="Left"
+                                                 Text="{Binding Live.MemLoad, StringFormat={}{0:0}, FallbackValue=--, TargetNullValue=--}"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="記憶體使用率 %" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </UniformGrid>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Text="「--」代表這台機器沒有這項讀值（多為缺少驅動權限或平台未暴露該感測），不是 0。"/>
+                    <local:CoreColumns Cores="{Binding Live.CpuCores}" Height="128" Margin="0,12,0,0"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,6,0,0" TextWrapping="Wrap"
+                               Text="逐核液柱：液面高度是該核使用率，顏色是該核溫度（與熱區圖同一套色階），管壁上的細線是最近數秒的高點。灰管＝拿不到那顆核心的溫度。"/>
+                </StackPanel>
+            </Border>
+            <!-- ===== 判定 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource ToolButton}" Content="重新分析"
+                                VerticalAlignment="Top" Click="Refresh_Click"/>
+                        <local:SectionHead Text="判定" HelpKey="bottleneck/判定"/>
+                    </DockPanel>
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" CornerRadius="4"
+                                Background="{Binding Bottleneck.Severity, Converter={StaticResource SeverityToBrush}}"/>
+                        <StackPanel Grid.Column="1" Margin="14,0,0,0">
+                            <TextBlock Text="{Binding Bottleneck.Headline}" FontSize="18" FontWeight="SemiBold"
+                                       TextWrapping="Wrap" Foreground="{StaticResource PrimaryInkBrush}"/>
+                            <TextBlock Text="{Binding Bottleneck.Detail}" TextWrapping="Wrap" Margin="0,5,0,0"
+                                       FontSize="13.5" Foreground="{StaticResource SecondaryInkBrush}"/>
+                            <TextBlock Text="{Binding Bottleneck.Confidence}" Style="{StaticResource FieldLabel}"
+                                       TextWrapping="Wrap" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== 卡點清單 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding Bottleneck.HasFindings, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <local:SectionHead Text="卡點清單" HelpKey="bottleneck/卡點清單"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="依「該先看」的順序排。同時出現多條時，上面那條通常是因、下面那些是果——例如撞了功耗牆才導致全核頻率壓低。"/>
+                    <ItemsControl ItemsSource="{Binding Bottleneck.Findings}"
+                                  ItemTemplate="{StaticResource FindingTemplate}"/>
+                </StackPanel>
+            </Border>
+            <!-- ===== 還沒納入判斷的部分 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding Bottleneck.HasUnknowns, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <local:SectionHead Text="還沒納入判斷的部分" HelpKey="bottleneck/還沒納入判斷的部分"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="這一段的存在本身就是結論的一部分：有了它，你才分得出「檢查過沒問題」與「根本沒檢查」。要納入哪一項，就去括號裡的那一頁按一下量測——本頁不會替你發動任何會讓機器發熱的動作。"/>
+                    <ItemsControl ItemsSource="{Binding Bottleneck.Unknowns}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="・" Foreground="{StaticResource MutedInkBrush}" FontSize="13"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding}" TextWrapping="Wrap" FontSize="13"
+                                               Foreground="{StaticResource SecondaryInkBrush}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Style="{StaticResource FieldLabel}" Margin="2,0,0,14" TextWrapping="Wrap"
+                       Text="本頁全程唯讀：只讀取與彙整，不寫入任何暫存器、不改任何設定。停留期間會每兩秒重算一次（用的是感測引擎已經在跑的那份讀值，不額外增加取樣）；離開這一頁就停。"/>
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

@@ -160,6 +160,18 @@ public sealed class SettingsService : ObservableObject
     /// <summary>釘選在最上層。取消後會被其他視窗蓋住，但仍留在畫面上。</summary>
     public bool MiniTopmost { get => _miniTopmost; set { if (SetProperty(ref _miniTopmost, value)) Save(); } }
 
+    // ── 動態視覺效果 ─────────────────────────────────────
+    private bool _motionEnabled = true;
+    /// <summary>
+    /// 動態視覺效果（七段數字的跳動過場、逐核液柱的波紋與氣泡、風扇葉片旋轉）。
+    /// </summary>
+    /// <remarks>
+    /// 這是量測工具，所以動畫必須關得掉：每一幀重繪都要吃 GPU 與封裝功耗，而本程式自己在量
+    /// 「頻率真相」「效能天花板」「DPC 延遲」——畫面越忙，量到的數字就越不是機器閒置時的樣子。
+    /// 關掉之後所有控制項照樣顯示當下讀值，只是不再補間、不再有計時器在跑。
+    /// </remarks>
+    public bool MotionEnabled { get => _motionEnabled; set { if (SetProperty(ref _motionEnabled, value)) Save(); } }
+
     // ── 總覽儀表板磁貼 ───────────────────────────────────
     private string _dashboardTiles = "";
     /// <summary>
@@ -225,6 +237,7 @@ public sealed class SettingsService : ObservableObject
         public double MiniOpacity { get; set; } = 0.9;
         public bool MiniCompact { get; set; }
         public bool MiniTopmost { get; set; } = true;
+        public bool MotionEnabled { get; set; } = true;
         public string? DashboardTiles { get; set; }
         public Dictionary<string, string>? ToolSlots { get; set; }
     }
@@ -274,6 +287,7 @@ public sealed class SettingsService : ObservableObject
                     _miniOpacity = Math.Clamp(p.MiniOpacity, 0.4, 1.0);
                     _miniCompact = p.MiniCompact;
                     _miniTopmost = p.MiniTopmost;
+                    _motionEnabled = p.MotionEnabled;
                     _dashboardTiles = p.DashboardTiles ?? "";
                     if (p.ToolSlots is not null) _toolSlots = new(p.ToolSlots, StringComparer.Ordinal);
                 }
@@ -326,6 +340,7 @@ public sealed class SettingsService : ObservableObject
                 MiniOpacity = _miniOpacity,
                 MiniCompact = _miniCompact,
                 MiniTopmost = _miniTopmost,
+                MotionEnabled = _motionEnabled,
                 DashboardTiles = _dashboardTiles.Length > 0 ? _dashboardTiles : null,
                 ToolSlots = _toolSlots.Count > 0 ? _toolSlots : null,
             };

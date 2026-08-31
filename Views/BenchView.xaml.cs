@@ -26,6 +26,7 @@ public partial class BenchView : UserControl
     private StressTestService? Stress => Vm?.Stress;
     private CacheBenchService? Cache => Vm?.Cache;
     private LatencyCurveService? LatCurve => Vm?.LatencyCurve;
+    private MemBandwidthService? MemBw => Vm?.MemBandwidth;
     private SuperPiService? SuperPi => Vm?.SuperPi;
     private DiskBenchService? DiskBench => Vm?.DiskBench;
     private TopDownService? TopDown => Vm?.TopDown;
@@ -138,6 +139,10 @@ public partial class BenchView : UserControl
     // ===== 記憶體延遲曲線 =====
     private void LatCurveStart_Click(object sender, RoutedEventArgs e) => LatCurve?.Start();
     private void LatCurveStop_Click(object sender, RoutedEventArgs e) => LatCurve?.Cancel();
+
+    // ===== 記憶體頻寬與負載延遲 =====
+    private void MemBwStart_Click(object sender, RoutedEventArgs e) => MemBw?.Start();
+    private void MemBwStop_Click(object sender, RoutedEventArgs e) => MemBw?.Cancel();
 
     // ===== SuperPI =====
     // 六檔位：10萬 / 50萬 / 100萬 / 1000萬 / 5000萬 / 1億

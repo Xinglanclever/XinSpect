@@ -33,6 +33,7 @@ public sealed class DashboardLayout : ObservableObject
         new("brands",  "硬體識別",          "處理器／顯示卡／主機板／記憶體的廠牌徽章", true),
         new("sysinfo", "作業系統與主機板",  "系統版本、開機時間、機型與 BIOS 兩欄資訊", true),
         new("specs",   "核心規格",          "處理器、核心數、記憶體與顯示卡摘要", true),
+        new("digits",  "數字面板",          "七段數字顯示：CPU 使用率、封裝溫度、封裝功耗與記憶體使用率", true),
     };
 
     /// <summary>

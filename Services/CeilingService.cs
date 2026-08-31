@@ -282,6 +282,9 @@ public sealed class CeilingService : ObservableObject
         var cts = new CancellationTokenSource();
         _cts = cts;
         var report = new Progress<(double Frac, string Text)>(t => { Progress = t.Frac; Status = t.Text; });
+        // 撞牆量測期間停掉全站動畫：每一幀重繪都會加進封裝功耗，而封裝功耗正是這裡要量的東西。
+        // 只在有負載時暫停（純讀 MSR 不受影響），且走 Suspend() 而非改設定——使用者的偏好不該被量測動到。
+        using var quiet = withLoad ? Motion.Suspend() : null;
         try
         {
             int dur = DurationSec;

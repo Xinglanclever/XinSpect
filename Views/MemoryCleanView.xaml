@@ -6,7 +6,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,6,0">
         <StackPanel>
             <StackPanel Margin="2,0,0,10">
-                <TextBlock Style="{StaticResource SectionHeader}" Text="記憶體整理"/>
+                <local:SectionHead Text="記憶體整理" HelpKey="memclean/記憶體整理"/>
                 <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
                            Text="採 RAMMap 等級的系統記憶體清單操作，真正把待命快取釋回可用記憶體，而非只是移動單一行程的工作集數字。"/>
             </StackPanel>

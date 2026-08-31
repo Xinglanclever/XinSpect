@@ -8,27 +8,135 @@ using Microsoft.Diagnostics.Tracing.Session;
 
 namespace XinSpect;
 
-/// <summary>單一核心模組的 DPC／ISR 頻次列。</summary>
+/// <summary>單一核心模組的 DPC／ISR 統計列（頻次＋單次執行時長）。</summary>
 public sealed class DpcRow
 {
-    public DpcRow(string module, string kind, long count, double barFraction)
-    { Module = module; Kind = kind; Count = count; BarFraction = barFraction; }
+    public DpcRow(string module, string kind, long count, double maxUs, double meanUs, double busyPercent, double barFraction)
+    {
+        Module = module; Kind = kind; Count = count;
+        MaxUs = maxUs; MeanUs = meanUs; BusyPercent = busyPercent; BarFraction = barFraction;
+    }
     public string Module { get; }
     public string Kind { get; }
     public long Count { get; }
-    public string CountText => $"{Count:N0}";
+    /// <summary>這段量測裡最久的一次（微秒）。爆音與停頓看的是這個，不是平均。</summary>
+    public double MaxUs { get; }
+    public double MeanUs { get; }
+    /// <summary>佔整段量測時間的比例（％）。同一支驅動在多顆核心上跑時可以超過 100 %。</summary>
+    public double BusyPercent { get; }
     public double BarFraction { get; }
+
+    public string CountText => $"{Count:N0}";
+    public string MaxText => MaxUs > 0 ? $"{MaxUs:N0} µs" : "—";
+    public string AvgText => MeanUs > 0 ? $"{MeanUs:N1} µs" : "—";
+    public string BusyText => BusyPercent > 0 ? $"{BusyPercent:0.##} %" : "—";
+}
+
+/// <summary>一次 DPC／ISR 事件裡我們用得到的東西（供彙整器測試）。</summary>
+public readonly record struct DpcSample(string Module, string Kind, double DurationMs);
+
+/// <summary>單一（模組，類別）的累計量：次數、總時長、最久一次。</summary>
+public sealed class DpcStat
+{
+    public long Count { get; private set; }
+    public double SumMs { get; private set; }
+    public double MaxMs { get; private set; }
+
+    public void Add(double ms)
+    {
+        Count++;
+        // 極短的常式 ETW 會回 0（時間戳解析度不足），照實累加，最後顯示成「—」而不是假的 0.0 µs
+        if (ms > 0) SumMs += ms;
+        if (ms > MaxMs) MaxMs = ms;
+    }
 }
 
 /// <summary>
-/// DPC／ISR 頻次排行（純 ETW kernel tracer，零驅動安裝、零注入）：訂閱核心的 DPC／ISR 事件，
-/// 依<b>發生頻次</b>排出最忙碌的驅動模組，並畫出每秒總量的時間分佈。
-/// DPC 風暴與音訊爆音、輸入停頓、串流掉幀高度相關；哪支驅動最常打斷 CPU，排行榜直接指出。
+/// DPC／ISR 統計的彙整與判讀（純函式，單元測試涵蓋）。
+/// 排序以<b>單次最長時長</b>為主鍵、次數為次鍵——會造成爆音與停頓的是「某一次跑太久」，
+/// 不是「跑很多次但每次都很短」。時長全為 0 的平台會自然退化成純頻次排行。
+/// </summary>
+public static class DpcAggregator
+{
+    /// <summary>值得注意的門檻（微秒）。音訊緩衝常在 1–3 ms，單次 500 µs 已吃掉可觀的餘裕。</summary>
+    public const double AttentionUs = 500;
+    /// <summary>經驗上的問題門檻（微秒）。LatencyMon 一類工具也用 1 ms 附近當警示線。</summary>
+    public const double ProblemUs = 1000;
+
+    /// <summary>把事件序列累成統計表（測試與小量資料用；量測時服務是逐事件即時累加的）。</summary>
+    public static Dictionary<(string Module, string Kind), DpcStat> Accumulate(IEnumerable<DpcSample> samples)
+    {
+        var stats = new Dictionary<(string Module, string Kind), DpcStat>();
+        foreach (var s in samples)
+        {
+            var key = (s.Module, s.Kind);
+            if (!stats.TryGetValue(key, out var st)) stats[key] = st = new DpcStat();
+            st.Add(s.DurationMs);
+        }
+        return stats;
+    }
+
+    /// <summary>統計表 → 排行列。<paramref name="windowSeconds"/> 用來換算佔用比例，≤ 0 時佔用一律為 0。</summary>
+    public static List<DpcRow> Rank(IReadOnlyDictionary<(string Module, string Kind), DpcStat> stats, double windowSeconds, int top = 20)
+    {
+        double windowMs = windowSeconds > 0 ? windowSeconds * 1000 : 0;
+        var rows = stats.Where(kv => kv.Value.Count > 0).Select(kv =>
+        {
+            var st = kv.Value;
+            double maxUs = st.MaxMs * 1000;
+            double meanUs = st.SumMs > 0 ? st.SumMs * 1000 / st.Count : 0;
+            double busy = windowMs > 0 ? st.SumMs / windowMs * 100 : 0;
+            return new DpcRow(kv.Key.Module, kv.Key.Kind, st.Count, maxUs, meanUs, busy, 0);
+        }).ToList();
+
+        double maxOfMax = rows.Count > 0 ? rows.Max(r => r.MaxUs) : 0;
+        long maxOfCount = rows.Count > 0 ? rows.Max(r => r.Count) : 0;
+
+        return rows
+            .OrderByDescending(r => r.MaxUs)
+            .ThenByDescending(r => r.Count)
+            .ThenBy(r => r.Module, StringComparer.OrdinalIgnoreCase)
+            .Take(top)
+            // 條長以時長為準；平台完全沒給時長時退回以次數為準，長條才不會全部一樣長
+            .Select(r => new DpcRow(r.Module, r.Kind, r.Count, r.MaxUs, r.MeanUs, r.BusyPercent,
+                        Math.Clamp(maxOfMax > 0 ? r.MaxUs / maxOfMax
+                                 : maxOfCount > 0 ? r.Count / (double)maxOfCount : 0, 0.02, 1)))
+            .ToList();
+    }
+
+    /// <summary>0＝沒問題、1＝值得注意、2＝已達經驗上的問題門檻。</summary>
+    public static int Judge(double maxUs) => maxUs >= ProblemUs ? 2 : maxUs >= AttentionUs ? 1 : 0;
+
+    /// <summary>依排行寫出一句結論。沒量到事件、或平台不給時長，都要如實說出來。</summary>
+    public static string Verdict(IReadOnlyList<DpcRow> rows)
+    {
+        if (rows.Count == 0) return "完成 ・ 這段時間沒有量到 DPC／ISR 事件（系統非常安靜）。";
+
+        var top = rows[0];
+        if (top.MaxUs <= 0)
+            return $"完成 ・ 本機的 ETW 事件沒有帶回執行時長（全部為 0），只能給頻次排行：榜首 {top.Module}（{top.Kind}，{top.CountText} 次）。";
+
+        string head = $"完成 ・ 單次最久是 {top.Module}（{top.Kind}）的 {top.MaxText}，共 {top.CountText} 次、平均 {top.AvgText}";
+        return Judge(top.MaxUs) switch
+        {
+            2 => $"⚠ {head}——超過 {ProblemUs:0} µs 的經驗門檻，音訊爆音／輸入停頓多半出自這裡。這是統計不是判決：先查它的驅動版本與電源設定。",
+            1 => $"{head}——落在 {AttentionUs:0}–{ProblemUs:0} µs 之間，尚可但已吃掉不少餘裕；若你聽得到爆音，從這支查起。",
+            _ => $"{head}——都在 {AttentionUs:0} µs 以下，沒有哪支驅動吃住 CPU。",
+        };
+    }
+}
+
+/// <summary>
+/// DPC／ISR 延遲排行（純 ETW kernel tracer，零驅動安裝、零注入）：訂閱核心的 DPC／ISR 事件，
+/// 依<b>單次執行時長</b>排出肇事驅動模組，並畫出每秒總量的時間分佈。
+/// DPC 風暴與音訊爆音、輸入停頓、串流掉幀高度相關；哪支驅動吃掉數百微秒，排行榜直接指出。
 /// </summary>
 /// <remarks>
-/// 誠實界線（重要）：經典 ETW 的 DPC／ISR 事件只帶「常式指標＋時間戳」，
-/// <b>不包含單次執行時長</b>——LatencyMon 的微秒級時長排行需要它自己的核心驅動。
-/// 本頁提供的是頻次與時間分佈（量得到的），時長排行做不了就不做。
+/// 誠實界線：時長來自經典 ETW 的 <c>DPCTraceData.ElapsedTimeMSec</c>／<c>ISRTraceData.ElapsedTimeMSec</c>
+/// （1.7.0 起使用；在此之前本頁只做頻次，並誤以為時長非得自帶核心驅動才拿得到——那是錯的）。
+/// 極短的常式時長會回 0，這種列顯示「—」而不是 0.0 µs。模組歸屬用
+/// <c>EnumDeviceDrivers</c> 的基底位址近似，相鄰模組的極端情況可能錯置。
+/// 門檻（500／1000 µs）是經驗值，不是規格，本頁只給統計不下判決。
 /// </remarks>
 public sealed class DpcLatencyService : ObservableObject, IDisposable
 {
@@ -41,10 +149,12 @@ public sealed class DpcLatencyService : ObservableObject, IDisposable
     private TraceEventSession? _session;
     private CancellationTokenSource? _cts;
     private readonly object _lock = new();
-    private readonly Dictionary<(string Module, string Kind), long> _counts = new();
+    private readonly Dictionary<(string Module, string Kind), DpcStat> _stats = new();
     private readonly List<double> _rateSamples = [];
     private DateTime _startedAt;
     private Dictionary<ulong, string> _kernelModules = [];
+    private ulong[] _sortedBases = [];
+    private string[] _sortedNames = [];
 
     private int _durationSec = 15;
     /// <summary>量測時長（秒），5–60。</summary>
@@ -90,12 +200,15 @@ public sealed class DpcLatencyService : ObservableObject, IDisposable
         ProgressFraction = 0;
         Rows.Clear();
         RatePerSecond = [];
-        lock (_lock) { _counts.Clear(); _rateSamples.Clear(); }
+        lock (_lock) { _stats.Clear(); _rateSamples.Clear(); }
         _startedAt = DateTime.Now;
 
         try
         {
             _kernelModules = await Task.Run(LoadKernelModules);
+            var ordered = _kernelModules.OrderBy(kv => kv.Key).ToList();
+            _sortedBases = ordered.Select(kv => kv.Key).ToArray();
+            _sortedNames = ordered.Select(kv => kv.Value).ToArray();
 
             _session = new TraceEventSession("XinSpect-Dpc", TraceEventSessionOptions.Create);
             try
@@ -111,8 +224,12 @@ public sealed class DpcLatencyService : ObservableObject, IDisposable
             var pump = Task.Run(() =>
             {
                 var source = _session!.Source;
-                source.Kernel.PerfInfoDPC += e => Count("DPC", e.Routine, source);
-                source.Kernel.PerfInfoISR += e => Count("ISR", e.Routine, source);
+                // 三種 DPC 事件都要收：一般 DPC、計時器 DPC、執行緒化 DPC。
+                // 只收 PerfInfoDPC 會漏掉計時器 DPC，而那往往正是量最大的一群。
+                source.Kernel.PerfInfoDPC += e => Record("DPC", e.Routine, e.ElapsedTimeMSec);
+                source.Kernel.PerfInfoTimerDPC += e => Record("計時器 DPC", e.Routine, e.ElapsedTimeMSec);
+                source.Kernel.PerfInfoThreadedDPC += e => Record("執行緒 DPC", e.Routine, e.ElapsedTimeMSec);
+                source.Kernel.PerfInfoISR += e => Record("ISR", e.Routine, e.ElapsedTimeMSec);
                 source.Process();
             }, CancellationToken.None);
 
@@ -132,9 +249,7 @@ public sealed class DpcLatencyService : ObservableObject, IDisposable
             foreach (var r in rows) Rows.Add(r);
             Phase = "完成";
             ProgressFraction = 1;
-            Status = rows.Count > 0
-                ? $"完成 ・ 榜首 {rows[0].Module}（{rows[0].Kind}，{rows[0].CountText} 次）。頻次排行反映「誰最常打斷 CPU」；單次時長需核心驅動，零驅動做不了。"
-                : "完成 ・ 這段時間沒有量到 DPC／ISR 事件（系統非常安靜）。";
+            Status = DpcAggregator.Verdict(rows);
         }
         catch (OperationCanceledException)
         {
@@ -154,15 +269,16 @@ public sealed class DpcLatencyService : ObservableObject, IDisposable
         }
     }
 
-    private void Count(string kind, ulong routine, TraceEventDispatcher source)
+    private void Record(string kind, ulong routine, double elapsedMs)
     {
         lock (_lock)
         {
-            var module = ResolveModule(routine);
-            var key = (module, kind);
-            _counts[key] = _counts.TryGetValue(key, out var c) ? c + 1 : 1;
+            var key = (ResolveModule(routine), kind);
+            if (!_stats.TryGetValue(key, out var st)) _stats[key] = st = new DpcStat();
+            st.Add(elapsedMs);
+
             double sec = (DateTime.Now - _startedAt).TotalSeconds;
-            if (_rateSamples.Count == 0 || sec - _rateSamples.Count > 0 || _rateSamples.Count <= (int)sec)
+            if (sec >= 0)
             {
                 // 每秒一格：把目前秒數的格子補滿
                 while (_rateSamples.Count < (int)sec + 1) _rateSamples.Add(0);
@@ -173,12 +289,13 @@ public sealed class DpcLatencyService : ObservableObject, IDisposable
 
     private string ResolveModule(ulong routine)
     {
-        // 模組實際長度拿不到（EnumDeviceDrivers 給基底），以「最高不超過常式的基底」近似歸屬；
+        // 模組實際長度拿不到（EnumDeviceDrivers 只給基底），以「最高不超過常式位址的基底」近似歸屬；
         // 相鄰模組的極端情況可能錯置，但排行層級通常仍正確。
-        foreach (var kv in _kernelModules.OrderByDescending(kv => kv.Key))
-            if (routine >= kv.Key)
-                return kv.Value;
-        return $"0x{routine:X}";
+        // 位址表事先排好序並用二分搜尋：一秒可能進來上萬個事件，這裡不能每次都排序一遍。
+        if (_sortedBases.Length == 0) return $"0x{routine:X}";
+        int i = Array.BinarySearch(_sortedBases, routine);
+        if (i < 0) i = ~i - 1;                       // 取插入點的前一個＝不超過它的最大基底
+        return i >= 0 ? _sortedNames[i] : $"0x{routine:X}";
     }
 
     /// <summary>列舉核心驅動模組（基底位址→名稱）。管理員權限下位址準確。</summary>
@@ -206,18 +323,16 @@ public sealed class DpcLatencyService : ObservableObject, IDisposable
 
     private List<DpcRow> BuildRows()
     {
-        List<DpcRow> rows;
+        Dictionary<(string Module, string Kind), DpcStat> snapshot;
+        double window;
         lock (_lock)
         {
-            rows = _counts.Select(kv => new DpcRow(kv.Key.Module, kv.Key.Kind, kv.Value, 0)).ToList();
+            snapshot = new Dictionary<(string Module, string Kind), DpcStat>(_stats);
             RatePerSecond = _rateSamples.ToArray();
+            // 實際跑了多久：使用者按停止時可能短於設定值，用實際時間算佔用比例才不會低估
+            window = Math.Max(0.001, Math.Min((DateTime.Now - _startedAt).TotalSeconds, DurationSec));
         }
-        long max = rows.Count > 0 ? rows.Max(r => r.Count) : 0;
-        if (max <= 0) max = 1;
-        return rows.OrderByDescending(r => r.Count)
-                   .Select(r => new DpcRow(r.Module, r.Kind, r.Count, Math.Clamp(r.Count / (double)max, 0.02, 1)))
-                   .Take(20)
-                   .ToList();
+        return DpcAggregator.Rank(snapshot, window);
     }
 
     public void Dispose() { try { _session?.Dispose(); } catch { } }

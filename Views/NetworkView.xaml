@@ -4,7 +4,7 @@
              xmlns:local="clr-namespace:XinSpect">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
-            <TextBlock Style="{StaticResource SectionHeader}" Text="網路"/>
+            <local:SectionHead Text="網路" HelpKey="network/網路"/>
 
             <!-- 即時總流量 -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="0">
@@ -44,7 +44,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="20"
                     Visibility="{Binding HasInstalledNics, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="已安裝網路卡（實體）"/>
+                    <local:SectionHead Text="已安裝網路卡（實體）" HelpKey="network/已安裝網路卡（實體）"/>
                     <ItemsControl ItemsSource="{Binding InstalledNics}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -76,7 +76,7 @@
             </Border>
 
             <!-- 各介面卡 -->
-            <TextBlock Style="{StaticResource SectionHeader}" Text="運作中介面（即時流量）" Margin="2,0,0,8"/>
+            <local:SectionHead Text="運作中介面（即時流量）" HelpKey="network/運作中介面（即時流量）" Margin="2,0,0,8"/>
             <ItemsControl ItemsSource="{Binding Net.Adapters}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>

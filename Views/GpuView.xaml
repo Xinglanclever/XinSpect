@@ -4,7 +4,7 @@
              xmlns:local="clr-namespace:XinSpect">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
-            <TextBlock Style="{StaticResource SectionHeader}" Text="顯示卡"/>
+            <local:SectionHead Text="顯示卡" HelpKey="gpu/顯示卡"/>
 
             <!-- 運算平台（CUDA 版本；無 NVIDIA CUDA 驅動時顯示 ****） -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,12"
@@ -74,7 +74,7 @@
             <Border Style="{StaticResource Card}" Margin="0,2,0,12"
                     Visibility="{Binding HasGpuDetails, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="深度規格 (CPU-Z)"/>
+                    <local:SectionHead Text="深度規格 (CPU-Z)" HelpKey="gpu/深度規格 (CPU-Z)"/>
                     <ItemsControl ItemsSource="{Binding GpuDetails}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -141,7 +141,7 @@
                     Visibility="{Binding HasNvmlGroups, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="NVML 硬核資訊"/>
+                        <local:SectionHead Text="NVML 硬核資訊" HelpKey="gpu/NVML 硬核資訊"/>
                         <Border Background="{StaticResource GoodBrush}" CornerRadius="5" Padding="6,1" Margin="10,2,0,0" VerticalAlignment="Center">
                             <TextBlock Text="NVIDIA 官方介面・真實讀取" Foreground="White" FontSize="10.5" FontWeight="SemiBold"/>
                         </Border>
@@ -177,7 +177,7 @@
             <Border Style="{StaticResource Card}" Margin="0,2,0,0"
                     Visibility="{Binding Live.HasGpu, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="即時走勢（近 90 秒）"/>
+                    <local:SectionHead Text="即時走勢（近 90 秒）" HelpKey="gpu/即時走勢（近 90 秒）"/>
                     <local:HistoryGraph Height="110" Caption="GPU 使用率 (%)" Margin="0,0,0,10"
                                         History="{Binding GpuHist}" Stroke="{StaticResource WarningBrush}"/>
                     <local:HistoryGraph Height="110" Caption="GPU 溫度 (°C)" Margin="0,0,0,10"

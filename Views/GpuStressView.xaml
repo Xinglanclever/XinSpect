@@ -32,7 +32,7 @@
     <!-- 內嵌於效能頁（CPU 烤機下方）：不自帶 ScrollViewer，交由外層效能頁捲動，避免巢狀捲動搶滾輪 -->
     <StackPanel>
             <StackPanel Margin="2,0,0,10">
-                <TextBlock Style="{StaticResource SectionHeader}" Text="GPU 燒機測試"/>
+                <local:SectionHead Text="GPU 燒機測試" HelpKey="bench/GPU 燒機測試"/>
                 <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
                            Text="以公認的第三方負載產生器 FurMark 2 對顯示卡施加滿載，並由 XinSpect 誠實呈現即時溫度、功耗、時脈與風扇。FurMark 為 Geeks3D 專有免費軟體，本程式不內含其執行檔，首次使用以 Windows 內建 winget 從官方來源安裝。"/>
             </StackPanel>

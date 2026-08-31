@@ -41,6 +41,9 @@ public sealed class FanControlRow : ObservableObject
     public string CurrentText => double.IsNaN(_current) ? "—" : $"{_current:0} %";
 
     private double? _rpmVal;
+    /// <summary>轉速（RPM）數值；<c>null</c> ＝這顆風扇沒有轉速感測或讀值不合理。</summary>
+    /// <remarks>葉片動畫（<see cref="FanBlade"/>）要的是數字而不是「1200 RPM」這串字。</remarks>
+    public double? Rpm => _rpmVal;
     public string RpmText => _rpmVal is double r ? $"{r:0} RPM" : "—";
 
     private double _setPoint;
@@ -65,6 +68,7 @@ public sealed class FanControlRow : ObservableObject
         // 與其他讀值走同一道合理性閘門：擋掉哨兵值（如 6553.5%），讀不到就顯示「—」
         CurrentPercent = SensorSanity.Plausible(_pct.SensorType, _pct.Value) ?? double.NaN;
         _rpmVal = _rpm is null ? null : SensorSanity.Plausible(_rpm.SensorType, _rpm.Value);
+        OnPropertyChanged(nameof(Rpm));
         OnPropertyChanged(nameof(RpmText));
     }
 

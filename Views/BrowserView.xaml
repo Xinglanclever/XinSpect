@@ -79,6 +79,7 @@
                          Style="{StaticResource AddressBox}" KeyDown="AddressBar_KeyDown"/>
                 <Button Style="{StaticResource NavBtn}" Click="Go_Click" Content="→" ToolTip="前往" VerticalAlignment="Center"/>
                 <Button Style="{StaticResource NavBtn}" Click="OpenExternal_Click" Content="↗" ToolTip="以系統瀏覽器開啟目前網址" VerticalAlignment="Center"/>
+                <local:HelpDot HelpKey="browser/瀏覽器" Margin="8,0,0,0"/>
             </WrapPanel>
         </Border>
 

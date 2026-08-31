@@ -13,7 +13,7 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
-            <TextBlock Style="{StaticResource SectionHeader}" Text="所有感測器"/>
+            <local:SectionHead Text="所有感測器" HelpKey="sensors/所有感測器"/>
 
             <Border Style="{StaticResource Card}">
                 <StackPanel>

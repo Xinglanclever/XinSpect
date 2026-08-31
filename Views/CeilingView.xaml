@@ -40,7 +40,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
             <StackPanel Margin="2,0,0,10">
-                <TextBlock Style="{StaticResource SectionHeader}" Text="效能天花板"/>
+                <local:SectionHead Text="效能天花板" HelpKey="ceiling/效能天花板"/>
                 <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
                            Text="回答一個問題：這顆 CPU 為什麼跑不到它該有的頻率。先把所有硬性上限直接從 MSR 讀出來（節流溫度、PL1／PL2、倍頻表、電流與供電警報），再自己製造負載去撞，最後用限制原因暫存器指出撞到的是哪一面牆。溫度牆、功耗牆、電流牆、向量降頻——它們在閒置時完全看不見，只有壓上去才會現形。"/>
                 <TextBlock Style="{StaticResource FieldLabel}" Margin="0,8,0,0" TextWrapping="Wrap"
@@ -51,7 +51,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="量測"/>
+                        <local:SectionHead Text="量測" HelpKey="ceiling/量測"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <Button Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
                                     Click="Stop_Click" IsEnabled="{Binding Ceiling.IsRunning}"/>
@@ -103,7 +103,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,12"
                     Visibility="{Binding Ceiling.Windows.Count, Converter={StaticResource CountToVis}}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="各負載窗實測對照"/>
+                    <local:SectionHead Text="各負載窗實測對照" HelpKey="ceiling/各負載窗實測對照"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,8" TextWrapping="Wrap"
                                Text="同一台機器、同一段時間內的四種負載。倍頻是 APERF／MPERF 逐核差分算出來的有效值（不是瞬時峰值、也不是報告值）；「作用中核心」是用 MPERF 只在 C0 前進這個性質量出來的，倍頻表就是按這個數字查的。"/>
                     <Grid Margin="0,0,0,4">
@@ -154,7 +154,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,12"
                     Visibility="{Binding Ceiling.LimitRows.Count, Converter={StaticResource CountToVis}}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="硬性上限（此刻真正生效的值）"/>
+                    <local:SectionHead Text="硬性上限（此刻真正生效的值）" HelpKey="ceiling/硬性上限（此刻真正生效的值）"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,8" TextWrapping="Wrap"
                                Text="全部直接讀自 MSR，是「這台機器現在的設定」而不是規格書上的數字——BIOS 改過就是改過的值。每一列都附原始暫存器值與取用的位元範圍，你可以自己覆核。"/>
                     <ItemsControl ItemsSource="{Binding Ceiling.LimitRows}"
@@ -166,7 +166,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,12"
                     Visibility="{Binding Ceiling.HistoryRows.Count, Converter={StaticResource CountToVis}}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="開機至今撞過的牆（黏滯紀錄位）"/>
+                    <local:SectionHead Text="開機至今撞過的牆（黏滯紀錄位）" HelpKey="ceiling/開機至今撞過的牆（黏滯紀錄位）"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,8" TextWrapping="Wrap"
                                Text="限制原因暫存器與 THERM_STATUS 的紀錄位會一直保持，直到有人寫入清除或重新開機。本工具不清除它們——清除需要寫入，而寫入會毀掉別的工具（也包括你下一次自己看）的證據。所以這裡看到的是自開機以來的完整帳。"/>
                     <ItemsControl ItemsSource="{Binding Ceiling.HistoryRows}"

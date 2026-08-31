@@ -94,6 +94,9 @@ public sealed class BenchService : ObservableObject
         var ct = _cts.Token;
 
         IsRunning = true;
+        // 跑分期間停掉全站動畫：重繪要花 GPU 與封裝功耗，而那會進到成績裡。
+        // 走 Suspend() 而不是改設定，跑完自動恢復，使用者的偏好不受影響。
+        using var quiet = Motion.Suspend();
         Phase = "準備中";
         ProgressFraction = 0;
         StatusLine = "測試進行中，請避免其他高負載程式以取得穩定結果…";

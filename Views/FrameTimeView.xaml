@@ -5,7 +5,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
             <StackPanel Margin="2,0,0,10">
-                <TextBlock Style="{StaticResource SectionHeader}" Text="幀時間監測"/>
+                <local:SectionHead Text="幀時間監測" HelpKey="frametime/幀時間監測"/>
                 <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
                            Text="訂閱 DXGI Present 事件（ETW），取得任何程式的每一幀時間戳——不注入目標程序、不掛勾、不碰驅動，反作弊軟體無從區別。1%／0.1% Low 採「最差 1%／0.1% 幀的平均 FPS」定義；Present 模式與 GPU 忙碌時間本版未解析，解析不了就不顯示。"/>
             </StackPanel>
@@ -13,7 +13,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="監測目標"/>
+                        <local:SectionHead Text="監測目標" HelpKey="frametime/監測目標"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <Button Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
                                     Click="Stop_Click" IsEnabled="{Binding FrameTime.IsRunning}"/>

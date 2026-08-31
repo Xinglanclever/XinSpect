@@ -33,7 +33,7 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
-            <TextBlock Style="{StaticResource SectionHeader}" Text="工具箱"/>
+            <local:SectionHead Text="工具箱" HelpKey="toolbox/工具箱"/>
 
             <!-- ===== 工具目錄（Windows 內建 ＋ 第三方導向） =====
                  1.6.2 起這裡不再放曦覽自己的功能按鈕：那些頁面本來就在左側欄與 Ctrl+K 裡，
@@ -41,7 +41,7 @@
                  「曦覽內建：X」標籤掛在對應的第三方項目旁，當作「這個你不必再裝」的註記。 -->
             <Border Style="{StaticResource Card}" local:Anim.RevealDelay="0">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="工具目錄"/>
+                    <local:SectionHead Text="工具目錄" HelpKey="toolbox/工具目錄"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
                                Text="兩種來源混編：Windows 內建工具一鍵開啟；第三方工具一律導向官方下載頁，本程式不內含任何外部執行檔。若曦覽已經做到同一件事，項目旁會掛一枚「曦覽內建：…」標籤（僅供對照，不可點；該頁請由左側欄或 Ctrl+K 前往），滑過主按鈕的提示會誠實寫出兩者差在哪。"/>
 
@@ -120,7 +120,7 @@
             <!-- ===== 螢幕色域（EDID） ===== -->
             <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="80">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="螢幕色域"/>
+                    <local:SectionHead Text="螢幕色域" HelpKey="toolbox/螢幕色域"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
                                Text="自顯示器 EDID 解析 CIE 色度座標，計算色域三角形對 sRGB、Adobe RGB、DCI-P3 三種標準的覆蓋率。"/>
 

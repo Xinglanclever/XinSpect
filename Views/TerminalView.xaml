@@ -13,7 +13,8 @@
 
         <!-- 標題 -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2,0,0,4">
-            <TextBlock Style="{StaticResource Title}" Text="終端"/>
+            <TextBlock Style="{StaticResource Title}" Text="終端機"/>
+            <local:HelpDot HelpKey="terminal/終端機"/>
             <Border Background="{StaticResource WarningBrush}" CornerRadius="5" Padding="7,2" Margin="12,3,0,0" VerticalAlignment="Center">
                 <TextBlock Text="真實 Shell・沿用本程式權限" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
             </Border>

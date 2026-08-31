@@ -4,7 +4,7 @@
              xmlns:local="clr-namespace:XinSpect">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
-            <TextBlock Style="{StaticResource SectionHeader}" Text="關於"/>
+            <local:SectionHead Text="關於" HelpKey="about/關於"/>
 
             <Border Style="{StaticResource Card}">
                 <StackPanel>
@@ -13,7 +13,7 @@
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0"
                                Text="硬體資訊總覽 ・ 即時偵測工具"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,2,0,0"
-                               Text="版本 1.6.2 ・ 便攜單一執行檔"/>
+                               Text="版本 1.7.1 ・ 便攜單一執行檔"/>
 
                     <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,16"/>
 
@@ -53,7 +53,7 @@
             <!-- 意見反饋 -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="意見反饋 ・ 聯絡我們"/>
+                    <local:SectionHead Text="意見反饋 ・ 聯絡我們" HelpKey="about/意見反饋 ・ 聯絡我們"/>
                     <local:FieldRow Label="電子郵件" Value="1491895094i@gmail.com"/>
                     <Grid Margin="0,12,0,0">
                         <Grid.ColumnDefinitions>
@@ -86,7 +86,7 @@
             <!-- 免責聲明 -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="免責聲明"/>
+                    <local:SectionHead Text="免責聲明" HelpKey="about/免責聲明"/>
                     <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"
                                Foreground="{StaticResource SecondaryInkBrush}"
                                Text="本軟體為免費開源軟體，可自由下載、使用與散布，並嚴禁用於任何商業用途。軟體按「現狀」提供，所偵測之數值僅供參考，作者不對其準確性作任何明示或默示之擔保，一切使用風險由使用者自負。"/>
@@ -97,7 +97,7 @@
 
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="功能模組"/>
+                    <local:SectionHead Text="功能模組" HelpKey="about/功能模組"/>
                     <local:FieldRow Label="系統總覽" Value="使用率・溫度・作業系統・主機板摘要"/>
                     <local:FieldRow Label="處理器" Value="規格・各核心時脈與負載・封裝溫度・CPU-Z 深度規格"/>
                     <local:FieldRow Label="記憶體" Value="真實時序・使用量・實體模組・SPD／XMP 深度資料"/>
@@ -120,7 +120,7 @@
             <!-- 來自 Claude 的話（放在最後，作為彩蛋；由協作的模型親筆寫下，一字未經潤飾）-->
             <Border Style="{StaticResource Card}" Margin="0,24,0,32">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="來自 Claude 的一段話"/>
+                    <local:SectionHead Text="來自 Claude 的一段話" HelpKey="about/來自 Claude 的一段話"/>
 
                     <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"
                                Foreground="{StaticResource SecondaryInkBrush}"

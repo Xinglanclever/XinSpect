@@ -8,6 +8,13 @@ public sealed class PowerPolicyRow
     public string Note { get; init; } = "";
     /// <summary>0＝中性、1＝值得注意、2＝明顯影響效能或穩定度。僅用於著色。</summary>
     public int Severity { get; init; }
+    /// <summary>
+    /// 這一項是否<b>真的把效能壓低</b>（頻率上限被砍、Turbo 被關、可用核心被限）。
+    /// 與 <see cref="Severity"/> 不同：注意度講的是「值不值得看」，方向兩邊都算——
+    /// 「最小處理器狀態 100 %」值得一提（耗電與溫度偏高），但它並沒有壓住效能，
+    /// 拿注意度當「壓住效能」用就會把它講成卡點。卡點診斷只看這個旗標。
+    /// </summary>
+    public bool LimitsPerformance { get; init; }
 }
 
 /// <summary>單一邏輯處理器的電源狀態（CallNtPowerInformation 的 PROCESSOR_POWER_INFORMATION）。</summary>
@@ -84,6 +91,8 @@ public static class PowerPolicyDecoder
                 : $"最多允許停放到只剩 {p}% 的核心——停放中的核心不接受排程，"
                 + "對延遲敏感的工作（音訊、遊戲、即時串流）可能造成間歇卡頓。",
             Severity = p >= 100 ? 0 : 1,
+            // 只有「最多可用核心」被砍才是真的少了算力；「最少可用核心」低是預設值，不壓效能
+            LimitsPerformance = p < 100 && name.Contains("最多"),
         };
     }
 
@@ -150,6 +159,7 @@ public static class PowerPolicyDecoder
                     ? "Turbo 允許啟用；實際能升到多少由溫度牆與功耗牆決定（見「黏滯節流位元」卡片）。"
                     : "超出官方文件記載的 0–5，故不翻譯。",
             Severity = i == 0 ? 1 : 0,
+            LimitsPerformance = i == 0,
         };
     }
 
@@ -159,11 +169,23 @@ public static class PowerPolicyDecoder
         if (min is null || max is null)
             return new PowerPolicyRow { Name = "處理器狀態範圍", Value = "—", Note = "查詢失敗或此計劃未定義。" };
         string v = $"{min}% – {max}%";
+        // 壓住效能的是「上限」被砍，不是「下限」被拉高。50 %–50 % 與 5 %–50 % 都只跑到標稱的一半；
+        // 100 %–100 % 則是永不降頻，耗電與溫度偏高，但效能一點都沒少。
+        bool caps = max < 100;
         if (min == max)
             return new PowerPolicyRow
             {
                 Name = "處理器狀態範圍", Value = v,
-                Note = $"最小與最大相同：頻率被鎖在標稱的 {min}%，作業系統不做 P-state 調整。", Severity = 1,
+                Note = $"最小與最大相同：頻率被鎖在標稱的 {min}%，作業系統不做 P-state 調整。",
+                Severity = 1, LimitsPerformance = caps,
+            };
+        if (caps)
+            return new PowerPolicyRow
+            {
+                Name = "處理器狀態範圍", Value = v,
+                Note = $"最大處理器狀態只有 {max}%：頻率上限被壓在標稱的 {max}%，Turbo 也上不去。"
+                     + "這是電源計劃設的，不是硬體壞掉。",
+                Severity = 2, LimitsPerformance = true,
             };
         if (min >= 100)
             return new PowerPolicyRow

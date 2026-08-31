@@ -88,6 +88,8 @@ public sealed class SuperPiService : ObservableObject
         int digits = _digits;
 
         IsRunning = true;
+        // 計算期間停掉全站動畫：重繪的功耗與 GPU 佔用會拖長這裡量的秒數。
+        using var quiet = Motion.Suspend();
         Phase = "計算中";
         ProgressFraction = 0;
         ElapsedText = "—";

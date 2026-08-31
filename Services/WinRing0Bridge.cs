@@ -10,44 +10,80 @@ namespace XinSpect;
 /// 以反射呼叫其 internal Hardware.Ring0 的 Open／ReadMsr／WriteMsr（值以 EAX/EDX 分離傳遞）。
 /// </summary>
 /// <remarks>
+/// <para>
 /// ⚠ 風險聲明（使用者已同意啟用）：WinRing0 是 AV 常標記的舊驅動，介面無權限區分——
 /// 驅動載入後到重開機前，同機其他程序理論上也能透過它存取 MSR。用途限 RDT 的
 /// PQR_ASSOC／QM_EVTSEL 寫入與計數讀取；驅動本身到重開機才卸載。
+/// </para>
+/// <para>
+/// <b>全程序共用一個會話（引用計數）。</b>Ring0 的 Open／Close 操作的是同一個<i>具名核心服務</i>，
+/// 而 Ring0 的狀態是靜態的——兩份會話同時存在時，先做完的那個 Dispose 會把還在讀的那個的驅動關掉。
+/// 這在實機上就是「黏滯位元讀一個 MSR 幾毫秒就回來，MCA 要逐核逐銀行掃好幾秒」這種組合：
+/// 快的把驅動收掉，慢的後半段全部讀失敗，畫面顯示「無法讀取」。所以這裡改成載入一次、
+/// 引用計數歸零才真正 Close；反射快取永久保留（隔離用的 ALC 不可回收，重載只會多疊一份）。
+/// </para>
 /// </remarks>
 public sealed class WinRing0Bridge : IDisposable
 {
     private const BindingFlags All = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
 
-    private readonly AssemblyLoadContext? _context;
-    private readonly Type? _ring0Type;
-    private readonly MethodInfo? _open;
-    private readonly MethodInfo? _close;
-    private readonly MethodInfo? _readMsr;    // bool ReadMsr(uint index, out uint eax, out uint edx)
-    private readonly MethodInfo? _writeMsr;   // bool WriteMsr(uint index, uint eax, uint edx)
+    /// <summary>反射快取：載入成功後永久保留，之後每次 <see cref="Create"/> 只做 Open／計數。</summary>
+    /// <remarks>
+    /// PCI 設定空間的兩個方法是<b>選用</b>的（宣告為可為 null）：找不到它們只影響「PCIe 鏈路」一頁，
+    /// 不該讓所有靠 MSR 的頁面一起失效。
+    /// </remarks>
+    private sealed record Ring0Methods(MethodInfo Open, MethodInfo Close, MethodInfo ReadMsr, MethodInfo WriteMsr,
+                                       MethodInfo? ReadPciConfig, MethodInfo? GetPciAddress);
+
+    private static readonly object Gate = new();
+    private static Ring0Methods? _cached;
+    private static string _cachedError = "";
+    private static int _refs;
+
+    private readonly Ring0Methods? _m;
+    private bool _disposed;
 
     public bool Available { get; }
     public string Error { get; }
 
-    private WinRing0Bridge(AssemblyLoadContext? context, Type? ring0Type, string error = "")
+    private WinRing0Bridge(Ring0Methods? methods, string error = "")
     {
-        _context = context;
-        _ring0Type = ring0Type;
+        _m = methods;
         Error = error;
-        if (ring0Type is null) return;
-        var ty = ring0Type;
-        _open = ty.GetMethod("Open", All, Type.EmptyTypes);
-        _close = ty.GetMethod("Close", All, Type.EmptyTypes);
-        _readMsr = ty.GetMethod("ReadMsr", All, new[] { typeof(uint), typeof(uint).MakeByRefType(), typeof(uint).MakeByRefType() });
-        _writeMsr = ty.GetMethod("WriteMsr", All, new[] { typeof(uint), typeof(uint), typeof(uint) });
-        Available = _open is not null && _readMsr is not null && _writeMsr is not null;
-        if (!Available) Error = "Ring0 缺少 Open／ReadMsr／WriteMsr（版本不符）。";
+        Available = methods is not null;
     }
 
-    public static WinRing0Bridge CreateFailed(string error) => new(null, null, error);
+    public static WinRing0Bridge CreateFailed(string error) => new(null, error);
 
-    /// <summary>從 NuGet 快取載入 LHM 0.9.4 並開啟驅動。失敗時回傳 Available=false、Error 帶原因。</summary>
+    /// <summary>
+    /// 取得一份 MSR 存取權（第一位使用者才真正載入 LHM 0.9.4 並開啟驅動）。
+    /// 失敗時回傳 Available=false、Error 帶原因。用完務必 <see cref="Dispose"/>。
+    /// </summary>
     public static WinRing0Bridge Create()
     {
+        lock (Gate)
+        {
+            if (_cached is null)
+            {
+                _cached = Load(out _cachedError);
+                if (_cached is null) return CreateFailed(_cachedError);
+            }
+
+            if (_refs == 0)
+            {
+                // 內部會 Extract＋建服務＋啟動；已經開著時重複 Open 是多餘的，所以只在第一位使用者做
+                try { _cached.Open.Invoke(null, null); }
+                catch (Exception ex) { return CreateFailed("驅動開啟失敗：" + ex.Message); }
+            }
+            _refs++;
+            return new WinRing0Bridge(_cached);
+        }
+    }
+
+    /// <summary>把 LHM 0.9.4 載入隔離 ALC 並反射出四個方法；失敗回 null 並填入原因。</summary>
+    private static Ring0Methods? Load(out string error)
+    {
+        error = "";
         var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         var candidates = new[]
         {
@@ -56,7 +92,10 @@ public sealed class WinRing0Bridge : IDisposable
         };
         var dll = candidates.FirstOrDefault(File.Exists);
         if (dll is null)
-            return CreateFailed("找不到 LHM 0.9.4 套件（WinRing0 來源）。");
+        {
+            error = "找不到 LHM 0.9.4 套件（WinRing0 來源）。";
+            return null;
+        }
 
         var context = new AssemblyLoadContext("XinSpect-LHM094", isCollectible: false);
         context.Resolving += (alc, name) =>
@@ -67,21 +106,26 @@ public sealed class WinRing0Bridge : IDisposable
         try
         {
             var asm = context.LoadFromAssemblyPath(dll);
-            var ring0Type = asm.GetType("LibreHardwareMonitor.Hardware.Ring0")
+            var ty = asm.GetType("LibreHardwareMonitor.Hardware.Ring0")
                 ?? throw new InvalidOperationException("找不到 Hardware.Ring0 類別");
-            var bridge = new WinRing0Bridge(context, ring0Type);
-            if (!bridge.Available)
+            var open = ty.GetMethod("Open", All, Type.EmptyTypes);
+            var close = ty.GetMethod("Close", All, Type.EmptyTypes);
+            var read = ty.GetMethod("ReadMsr", All, new[] { typeof(uint), typeof(uint).MakeByRefType(), typeof(uint).MakeByRefType() });
+            var write = ty.GetMethod("WriteMsr", All, new[] { typeof(uint), typeof(uint), typeof(uint) });
+            if (open is null || close is null || read is null || write is null)
             {
-                context.Unload();
-                return CreateFailed(bridge.Error);
+                error = "Ring0 缺少 Open／ReadMsr／WriteMsr（版本不符）。";
+                return null;
             }
-            bridge._open!.Invoke(null, null);   // 內部會 Extract＋建服務＋啟動
-            return bridge;
+            // 選用：PCI 設定空間（0xCF8／0xCFC）——「PCIe 鏈路」一頁靠它，缺了不影響 MSR 各頁
+            var readPci = ty.GetMethod("ReadPciConfig", All, new[] { typeof(uint), typeof(uint), typeof(uint).MakeByRefType() });
+            var pciAddr = ty.GetMethod("GetPciAddress", All, new[] { typeof(byte), typeof(byte), typeof(byte) });
+            return new Ring0Methods(open, close, read, write, readPci, pciAddr);
         }
         catch (Exception ex)
         {
-            try { context.Unload(); } catch { }
-            return CreateFailed("驅動開啟失敗：" + ex.Message);
+            error = "載入 WinRing0 失敗：" + ex.Message;
+            return null;
         }
     }
 
@@ -90,9 +134,10 @@ public sealed class WinRing0Bridge : IDisposable
     {
         var args = new object?[] { index, 0u, 0u };
         eax = edx = 0;
+        if (_m is null || _disposed) return false;
         try
         {
-            if (_readMsr!.Invoke(null, args) is not true) return false;
+            if (_m.ReadMsr.Invoke(null, args) is not true) return false;
             eax = (uint)args[1]!;
             edx = (uint)args[2]!;
             return true;
@@ -104,9 +149,10 @@ public sealed class WinRing0Bridge : IDisposable
     public ulong? ReadMsrPair64(uint index)
     {
         var args = new object?[] { index, 0u, 0u };
+        if (_m is null || _disposed) return null;
         try
         {
-            if (_readMsr!.Invoke(null, args) is not true) return null;
+            if (_m.ReadMsr.Invoke(null, args) is not true) return null;
             return (uint)args[1]! | ((ulong)(uint)args[2]! << 32);
         }
         catch { return null; }
@@ -116,12 +162,41 @@ public sealed class WinRing0Bridge : IDisposable
     public bool WriteMsrPair(uint index, uint eax, uint edx)
     {
         var args = new object?[] { index, eax, edx };
-        try { return _writeMsr!.Invoke(null, args) is true; }
+        if (_m is null || _disposed) return false;
+        try { return _m.WriteMsr.Invoke(null, args) is true; }
         catch { return false; }
     }
 
+    /// <summary>本機的 Ring0 是否提供 PCI 設定空間讀取（LHM 0.9.4 有；缺了就只是這一頁不能用）。</summary>
+    public bool PciAvailable => _m?.ReadPciConfig is not null && _m.GetPciAddress is not null && !_disposed;
+
+    /// <summary>
+    /// 讀 PCI 設定空間的一個 DWORD（bus／device／function ＋ 暫存器位移，位移須 4 位元組對齊）。
+    /// 失敗或不支援回 null——<b>0xFFFFFFFF 代表該功能不存在</b>，這裡照實回傳，由呼叫方判斷。
+    /// </summary>
+    public uint? ReadPciConfig(byte bus, byte device, byte function, uint register)
+    {
+        if (_m?.ReadPciConfig is null || _m.GetPciAddress is null || _disposed) return null;
+        try
+        {
+            if (_m.GetPciAddress.Invoke(null, new object?[] { bus, device, function }) is not uint addr) return null;
+            var args = new object?[] { addr, register, 0u };
+            if (_m.ReadPciConfig.Invoke(null, args) is not true) return null;
+            return (uint)args[2]!;
+        }
+        catch { return null; }
+    }
+
+    /// <summary>交還這一份會話；最後一位使用者離開時才真正 Close 驅動服務。</summary>
     public void Dispose()
     {
-        try { _close?.Invoke(null, null); } catch { }
+        if (_m is null) return;                 // 失敗的橋接沒有計數，也沒有東西要關
+        lock (Gate)
+        {
+            if (_disposed) return;              // 重複 Dispose 不能把別人的計數扣掉
+            _disposed = true;
+            if (--_refs > 0) return;            // 還有人在讀，驅動留著
+            try { _m.Close.Invoke(null, null); } catch { }
+        }
     }
 }

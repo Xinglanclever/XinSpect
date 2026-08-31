@@ -61,6 +61,24 @@ public sealed class MainViewModel : ObservableObject
         catch { /* 取值失敗就沿用上一份分析 */ }
     }
 
+    private BottleneckReport _bottleneck = new();
+    /// <summary>
+    /// 卡點診斷：把散在各頁的讀值合起來看一次，回答「現在是什麼在拖住這台機器」。
+    /// </summary>
+    /// <remarks>
+    /// 與 <see cref="Upgrade"/> 分工不同：升級建議談的是「換什麼硬體會有感」，這裡談的是
+    /// 「不換硬體、現在就卡在哪」。它的輸入含即時讀值，所以瓶頸診斷頁在停留期間會定期重算；
+    /// 其他頁不算，避免沒人看的時候還在耗電。初始值是一份空分析。
+    /// </remarks>
+    public BottleneckReport Bottleneck { get => _bottleneck; private set => SetProperty(ref _bottleneck, value); }
+
+    /// <summary>依當下讀值重算卡點診斷。失敗時保留上一份結果，不清成空白。</summary>
+    public void RefreshBottleneck()
+    {
+        try { Bottleneck = BottleneckAnalyzer.Analyze(BottleneckFactsCollector.Collect(this)); }
+        catch { /* 取值失敗就沿用上一份分析 */ }
+    }
+
     /// <summary>
     /// 跑分紀錄簿：本機歷次成績的落地紀錄，是曦覽唯一承認的跑分基準。
     /// </summary>
@@ -87,8 +105,18 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>記憶體延遲曲線：半倍頻步進的指標追逐，邊界由曲線推導並與 CPUID 宣稱並列。</summary>
     public LatencyCurveService LatencyCurve { get; } = new();
 
+    /// <summary>記憶體頻寬與負載延遲：STREAM 式四種型態逐級加執行緒＋MLC 式重壓下延遲（效能測試分頁卡片）。</summary>
+    public MemBandwidthService MemBandwidth { get; } = new();
+
     /// <summary>SMBIOS 原始表全解：插槽使用狀態、記憶體條序號／型號／Rank 等 WMI 未轉譯的欄位。</summary>
     public SmbiosService Smbios { get; } = new();
+
+    private DimmLayoutView? _dimms;
+    /// <summary>
+    /// 記憶體插槽配置圖：從 SMBIOS Type 17 的 Locator 命名推斷通道分組。
+    /// SMBIOS 在建構時一次讀完就不會再變（插拔記憶體要關機），所以算一次快取起來。
+    /// </summary>
+    public DimmLayoutView Dimms => _dimms ??= DimmLayout.Build(Smbios.MemoryDevices);
 
     /// <summary>WHEA 硬體錯誤紀錄：事件檢視器 Microsoft-Windows-WHEA-Logger 的近 30 天彙整（零特權）。</summary>
     public WheaErrorService Whea { get; } = new();
@@ -104,6 +132,9 @@ public sealed class MainViewModel : ObservableObject
 
     /// <summary>DPC／ISR 延遲排行：ETW 核心追蹤（實用工具子頁）。</summary>
     public DpcLatencyService DpcLatency { get; } = new();
+
+    /// <summary>PCIe 鏈路實況：目前協商的速度／寬度對裝置能力（實用工具子頁，唯讀 PCI 設定空間）。</summary>
+    public PcieLinkService PcieLink { get; } = new();
 
     /// <summary>SLC 快取耗盡曲線：持續寫入與斷崖偵測（儲存分頁卡片）。</summary>
     public SlcCacheBenchService SlcCache { get; } = new();
@@ -204,7 +235,7 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>顯示卡超頻模組（測試版）：NVML（功耗上限／風扇）＋ NVAPI（核心/顯示記憶體頻率偏移、溫度上限）真實寫入與即時遙測。</summary>
     public GpuOcService GpuOc { get; } = new();
 
-    /// <summary>內建終端：常駐 cmd／PowerShell 行程，重導向 I/O 執行真實指令（不模擬輸出）。</summary>
+    /// <summary>內建終端機：常駐 cmd／PowerShell 行程，重導向 I/O 執行真實指令（不模擬輸出）。</summary>
     public TerminalService Terminal { get; } = new();
 
     /// <summary>集中式使用者設定（更新間隔／開機自啟／預設紀年／記錄與警示閾值），JSON 持久化。</summary>

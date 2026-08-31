@@ -13,7 +13,7 @@ public class SmbiosTests
         data[0] = 17; data[1] = 0x1C; data[2] = 0x00; data[3] = 0x11;   // handle 0x1100
         data[0x08] = 64; data[0x09] = 0;                                 // Total Width 64 bit
         data[0x0A] = 64; data[0x0B] = 0;                                 // Data Width 64 bit
-        data[0x0C] = 0x00; data[0x0D] = 0xC0;                            // Size = 0xC000（bit15=1 → 0x4000 = 16384 MB）
+        data[0x0C] = 0x00; data[0x0D] = 0x40;                            // Size = 0x4000（bit15=0 → 16384 MB = 16 GB）
         data[0x0E] = 0x08;                                               // Form Factor DIMM
         data[0x10] = 1; data[0x11] = 2;                                  // Locator / Bank 字串索引
         data[0x12] = 0x1A;                                               // DDR4
@@ -72,7 +72,7 @@ public class SmbiosTests
         Assert.NotNull(row);
         Assert.Equal("ChannelA-DIMM0", row.Locator);
         Assert.Equal("BANK 0", row.Bank);
-        Assert.Equal("16384 MB", row.Size);
+        Assert.Equal("16 GB", row.Size);
         Assert.Equal("DDR4", row.Type);
         Assert.Equal("3232 MT/s", row.Speed);
         Assert.Equal("Kingston", row.Manufacturer);
@@ -81,6 +81,31 @@ public class SmbiosTests
         Assert.Equal("2", row.Rank);
         Assert.Equal("—", row.Configured);   // 結構長度未達 0x22 → 不猜
     }
+
+    /// <summary>只帶容量欄位的 Type 17（長度 0x1C，無字串），用來單獨驗容量單位。</summary>
+    private static string SizeOf(ushort size)
+    {
+        var data = new byte[0x1C];
+        data[0] = 17; data[1] = 0x1C;
+        data[0x0C] = (byte)(size & 0xFF); data[0x0D] = (byte)(size >> 8);
+        var table = new List<byte>(data) { 0, 0 };
+        var row = SmbiosService.DecodeMemoryDeviceStruct(SmbiosParser.Parse(table.ToArray())[0]);
+        Assert.NotNull(row);
+        return row.Size;
+    }
+
+    [Fact]
+    public void Type17解碼_容量位15為1時單位是kB不是MB()
+    {
+        // 規格 Type 17 偏移 0x0C：位 15 為 1 → 值的單位是 kB。
+        // 0xC000 是 16384 kB＝16 MB 的小模組；當成 MB 讀會變成 16 GB，整整差一千倍。
+        Assert.Equal("16 MB", SizeOf(0xC000));
+        // 不足 1 MB 時直接顯示 kB，不做會捨去成 0 的換算
+        Assert.Equal("512 kB", SizeOf(0x8200));
+    }
+
+    [Fact]
+    public void Type17解碼_容量未知時不猜() => Assert.Equal("—", SizeOf(0xFFFF));
 
     [Fact]
     public void Type17解碼_未安裝插槽回報未安裝而非空白()

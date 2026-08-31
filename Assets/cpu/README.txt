@@ -13,8 +13,13 @@ App 啟動後會自動偵測 CPU 型號並「優先」顯示這裡的官方圖;
                       7800X/7820X/7900X/7920X/7940X/7960X、
                       9800X/9820X/9900X/9920X/9940X/9960X、
                       10900X/10920X/10940X、Kaby-X 7640X/7740X
-  i7-extreme.png      Core 2 Extreme・i7-980X/990X/3960X/3970X/   至尊版 Extreme / 黑色 + ✕
-                      4960X（經典 Gulftown / Sandy·Ivy-E 至尊）
+  i7-extreme-blue.png Haswell-E / Broadwell-E 至尊:              至尊版 Extreme / 藍色 + ✕
+                      i7-5960X、i7-6950X
+  i7-extreme.png      整條經典至尊血脈:Pentium 4 EE(3.46/3.73)、  至尊版 Extreme / 黑色 + ✕
+                      Pentium EE 840/955/965、Core 2 Extreme
+                      (X6800・QX6700/6850/9650/9770/9775)、
+                      i7-965/975、i7-980X/990X、
+                      i7-3960X/3970X/4960X
   es-sample.png       工程／驗證樣品（ES・QS・0000）              工程樣品 ES / 紅色 + ES 字
 
 建議規格:正方形、透明背景 PNG、邊長 ≥ 128px(顯示時會等比縮放)。

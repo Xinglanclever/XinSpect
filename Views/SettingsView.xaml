@@ -150,7 +150,7 @@
             <!-- ═══ 外觀 ═══ -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="外觀"/>
+                    <local:SectionHead Text="外觀" HelpKey="settings/外觀"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
                                Text="深／淺色主題與八種強調色。選擇後整個介面立即換色（無須重啟），並記憶為下次啟動的外觀。"/>
 
@@ -185,13 +185,23 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     <TextBlock x:Name="AccentHint" Style="{StaticResource Subtitle}" Margin="0,2,0,0"/>
+
+                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,18,0,0"/>
+                    <local:SectionHead Text="動態視覺效果" HelpKey="settings/動態視覺效果" Margin="0,16,0,0"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="逐核液柱的波紋與氣泡、風扇葉片的旋轉、七段數字的漸亮——這些都對應真實讀值，但每一次重繪都要花 GPU 與封裝功耗。曦覽是量測工具，所以這件事必須關得掉。"/>
+                    <CheckBox Style="{StaticResource SetCheck}" Margin="0,12,0,0"
+                              Content="開啟動態效果（液柱波紋、風扇葉片、數字漸亮）"
+                              IsChecked="{Binding Settings.MotionEnabled, Mode=TwoWay}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="關掉之後讀值照樣即時更新，只是液面直接跳到位、葉片停住不轉。看不見的控制項本來就不會重繪（切到別頁即停），所以這個開關管的是「正在看的那一頁」。"/>
                 </StackPanel>
             </Border>
 
             <!-- ═══ 迷你浮動監視器 ═══ -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="迷你浮動監視器"/>
+                    <local:SectionHead Text="迷你浮動監視器" HelpKey="settings/迷你浮動監視器"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
                                Text="常駐畫面一角的精簡讀值面板（工具列「迷你」鈕或系統匣選單開啟）。拖曳後會記住位置，下次顯示回到原處；若那台螢幕已拔除，則自動貼回工作區右上角。"/>
 
@@ -223,7 +233,7 @@
             <!-- ═══ 環境自檢 ═══ -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="環境自檢"/>
+                    <local:SectionHead Text="環境自檢" HelpKey="settings/環境自檢"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
                                Text="偵測各分頁功能所需的執行階段／驅動／服務是否就緒（.NET、系統管理員、感測器核心驅動、WebView2 內建瀏覽器、winget 一鍵裝機、NVIDIA 顯示卡超頻、Intel XTU CPU 超頻）。缺少的項目會標示並附官方取得連結。全為真實偵測。"/>
 
@@ -273,7 +283,7 @@
             <!-- ═══ 一般 ═══ -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="一般"/>
+                    <local:SectionHead Text="一般" HelpKey="settings/一般"/>
 
                     <Grid Margin="0,10,0,0">
                         <Grid.ColumnDefinitions>
@@ -306,7 +316,7 @@
             <!-- ═══ 感測器記錄 ═══ -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="感測器記錄（CSV）"/>
+                    <local:SectionHead Text="感測器記錄（CSV）" HelpKey="settings/感測器記錄（CSV）"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
                                Text="持續把 CPU／GPU 溫度、頻率、負載、記憶體、顯示記憶體等即時值寫入 CSV，可用 Excel／試算表事後分析。全為真實讀值。"/>
 
@@ -355,7 +365,7 @@
             <!-- ═══ 歷史記錄 ═══ -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="歷史記錄"/>
+                    <local:SectionHead Text="歷史記錄" HelpKey="settings/歷史記錄"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
                                Text="供「歷史回放」查詢的資料倉：最近一小時保留秒級原始取樣，更早則按分鐘存下最小／平均／最大值。落地於 %APPDATA%\XinSpect\history.bin，一個月約數 MB。"/>
 
@@ -400,7 +410,7 @@
             <!-- ═══ 溫度／負載警示 ═══ -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="溫度／負載警示"/>
+                    <local:SectionHead Text="溫度／負載警示" HelpKey="settings/溫度／負載警示"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
                                Text="任一即時值超過下列上限時，於內容區頂端顯示紅色橫幅並發出系統匣氣泡通知（回落一段幅度後自動解除）。"/>
 
@@ -471,7 +481,7 @@
             <!-- ═══ AI 評價 ═══ -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="AI 評價"/>
+                    <local:SectionHead Text="AI 評價" HelpKey="settings/AI 評價"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
                                Text="把本機真實硬體規格與即時感測數據交給 AI 做客觀評價。可用本機免費模型（Ollama，無須金鑰、資料不出本機），或填入任何 OpenAI 相容的 API 端點與金鑰。"/>
 
@@ -619,7 +629,7 @@
             <!-- ═══ 報告匯出 ═══ -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="報告匯出"/>
+                    <local:SectionHead Text="報告匯出" HelpKey="settings/報告匯出"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
                                Text="把整機規格、即時讀值、健康評分、跑分紀錄、升級建議與 AI 評價寫成一份報告。HTML 為單一自帶樣式的檔案（不外連字型或指令碼），在瀏覽器按「列印／另存 PDF」即得已排好版的 A4 文件；Markdown 適合貼上論壇或議題；純文字適合貼進信件或工單。"/>
 
@@ -640,7 +650,7 @@
             <!-- ═══ 診斷紀錄 ═══ -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="診斷紀錄"/>
+                    <local:SectionHead Text="診斷紀錄" HelpKey="settings/診斷紀錄"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
                                Text="曦覽遇到讀不到的東西時（MSR 被拒、WMI 查詢失敗、感測器不存在、驅動沒開放）會讓那一欄顯示「—」並繼續跑，而不是整頁掛掉。但「量不到」和「程式有缺陷」在畫面上長得一模一樣——這份清單就是用來分辨兩者的：每一筆記下發生位置、例外型別與訊息，以及對你的實際後果。"/>
 
@@ -702,7 +712,7 @@
             <!-- ═══ 所有功能一鍵初始化 ═══ -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="一鍵初始化"/>
+                    <local:SectionHead Text="一鍵初始化" HelpKey="settings/一鍵初始化"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
                                Text="重新執行所有模組的偵測與載入（系統與硬體資訊、感測器引擎、網路／行程、磁碟資訊、螢幕色域、CUDA、超頻／顯示卡超頻引擎、winget、深度規格與體驗指數）。若某項功能在啟動時未就緒，可於此重試，不會中斷每秒監控。"/>
                     <StackPanel Orientation="Horizontal" Margin="0,12,0,0">

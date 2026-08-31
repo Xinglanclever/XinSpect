@@ -199,6 +199,35 @@ public class PowerPolicyTests
     }
 
     [Fact]
+    public void 只有上限被砍才算壓住效能()
+    {
+        // 上限被砍：真的跑不到全速
+        Assert.True(PowerPolicyDecoder.DescribeProcessorStateRange(5, 50).LimitsPerformance);
+        Assert.True(PowerPolicyDecoder.DescribeProcessorStateRange(50, 50).LimitsPerformance);
+        // 下限拉高只是耗電與溫度偏高，效能一點都沒少——不能講成卡點
+        Assert.False(PowerPolicyDecoder.DescribeProcessorStateRange(100, 100).LimitsPerformance);
+        Assert.False(PowerPolicyDecoder.DescribeProcessorStateRange(5, 100).LimitsPerformance);
+        Assert.False(PowerPolicyDecoder.DescribeProcessorStateRange(null, null).LimitsPerformance);
+    }
+
+    [Fact]
+    public void Turbo關掉算壓住效能其餘不算()
+    {
+        Assert.True(PowerPolicyDecoder.DescribeBoostMode(0).LimitsPerformance);
+        Assert.False(PowerPolicyDecoder.DescribeBoostMode(1).LimitsPerformance);
+        Assert.False(PowerPolicyDecoder.DescribeBoostMode(2).LimitsPerformance);
+    }
+
+    [Fact]
+    public void 核心停放只有最多可用核心被砍才算壓住效能()
+    {
+        Assert.True(PowerPolicyDecoder.DescribeCoreParking("核心停放：最多可用核心", 50).LimitsPerformance);
+        Assert.False(PowerPolicyDecoder.DescribeCoreParking("核心停放：最多可用核心", 100).LimitsPerformance);
+        // 最少可用核心低是預設值，不代表算力被砍
+        Assert.False(PowerPolicyDecoder.DescribeCoreParking("核心停放：最少可用核心", 25).LimitsPerformance);
+    }
+
+    [Fact]
     public void 睡眠矩陣_八列且不支援S3時解釋現代待命取代之()
     {
         var rows = PowerPolicyDecoder.DescribeSleepStates(

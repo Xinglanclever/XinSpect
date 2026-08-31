@@ -4,7 +4,7 @@
              xmlns:local="clr-namespace:XinSpect">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
-            <TextBlock Style="{StaticResource SectionHeader}" Text="處理器"/>
+            <local:SectionHead Text="處理器" HelpKey="cpu/處理器"/>
 
             <!-- 品牌徽章 -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="0">
@@ -21,7 +21,7 @@
 
                 <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,7,0">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="規格"/>
+                        <local:SectionHead Text="規格" HelpKey="cpu/規格"/>
                         <local:FieldRow Label="型號" Value="{Binding Cpu.Name}"/>
                         <local:FieldRow Label="製造商" Value="{Binding Cpu.Manufacturer}"/>
                         <local:FieldRow Label="插槽" Value="{Binding Cpu.Socket}"/>
@@ -35,7 +35,7 @@
 
                 <Border Grid.Column="1" Style="{StaticResource Card}" Margin="7,0,0,0">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="即時狀態"/>
+                        <local:SectionHead Text="即時狀態" HelpKey="cpu/即時狀態"/>
                         <local:FieldRow Label="目前最高時脈" Value="{Binding Live.CpuClockText}"/>
                         <local:FieldRow Label="總使用率" Value="{Binding Live.CpuLoadText}"/>
                         <local:FieldRow Label="封裝溫度" Value="{Binding Live.CpuTempText}"/>
@@ -49,7 +49,7 @@
             <!-- 完整規格（合併識別碼 / 深度規格 CPU-Z / 拓撲 / 快取 / 指令集，去除重複欄位） -->
             <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="80">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="完整規格"/>
+                    <local:SectionHead Text="完整規格" HelpKey="cpu/完整規格"/>
 
                     <!-- 識別碼與平台能力（WMI，永遠可用） -->
                     <TextBlock Style="{StaticResource ColHead}" Text="識別碼與平台能力" Margin="0,0,0,6"/>
@@ -222,7 +222,7 @@
             <!-- 即時走勢 -->
             <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="120">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="即時走勢（近 90 秒）"/>
+                    <local:SectionHead Text="即時走勢（近 90 秒）" HelpKey="cpu/即時走勢（近 90 秒）"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -242,7 +242,7 @@
             <!-- 各邏輯處理器使用率（仿 Windows 工作管理員格狀曲線） -->
             <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="150">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="各邏輯處理器使用率（仿工作管理員）"/>
+                    <local:SectionHead Text="各邏輯處理器使用率（仿工作管理員）" HelpKey="cpu/各邏輯處理器使用率（仿工作管理員）"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,0,0,10"
                                Text="{Binding CoreLoads.Count, StringFormat=每格為一顆邏輯處理器（共 {0} 顆）・ 0–100% ・ 近 90 秒}"/>
                     <ItemsControl ItemsSource="{Binding CoreLoads.Cells}">
@@ -265,7 +265,11 @@
 
             <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="180">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="各核心即時"/>
+                    <local:SectionHead Text="各核心即時" HelpKey="cpu/各核心即時"/>
+                    <!-- 逐核液柱：一核一管，液面＝使用率、顏色＝溫度（與熱區圖同一套色階） -->
+                    <local:CoreColumns Cores="{Binding Live.CpuCores}" Height="150" Margin="0,10,0,4"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,10" TextWrapping="Wrap"
+                               Text="管壁上的細線是最近數秒的高點——瞬間的滿載不會留在每秒取樣裡，這條線會。灰管＝拿不到那顆核心的溫度，不是它涼。"/>
                     <!-- 表頭 -->
                     <Grid Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>
@@ -316,7 +320,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="核心到核心延遲"/>
+                        <local:SectionHead Text="核心到核心延遲" HelpKey="cpu/核心到核心延遲"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <Button Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
                                     Click="CoreLatencyStop_Click" IsEnabled="{Binding CoreLatency.IsRunning}"/>
@@ -339,7 +343,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="L3 占用與記憶體頻寬（Intel RDT）"/>
+                        <local:SectionHead Text="L3 占用與記憶體頻寬（Intel RDT）" HelpKey="cpu/L3 占用與記憶體頻寬（Intel RDT）"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <Button Style="{StaticResource ToolButton}" Content="停止" Margin="0,0,10,0"
                                     Click="RdtStop_Click" IsEnabled="{Binding Rdt.IsRunning}"/>
@@ -411,7 +415,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="頻率真相（倍頻表與實際 BCLK）"/>
+                        <local:SectionHead Text="頻率真相（倍頻表與實際 BCLK）" HelpKey="cpu/頻率真相（倍頻表與實際 BCLK）"/>
                         <Button Style="{StaticResource PrimaryButton}" Content="讀取並量測" HorizontalAlignment="Right"
                                 VerticalAlignment="Center" Click="FreqTruthRead_Click" IsEnabled="{Binding FreqTruth.CanStart}"/>
                     </Grid>
@@ -502,7 +506,7 @@
             <!-- ===== CPUID 晶片直讀 ===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="CPUID 晶片直讀"/>
+                    <local:SectionHead Text="CPUID 晶片直讀" HelpKey="cpu/CPUID 晶片直讀"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
                                Text="以 .NET 內建的 CPUID 指令直接問矽晶片：快取真實幾何、指令集位元、標稱頻率與拓樸層級。超出最大葉位的葉絕不讀取（會回傳無意義值）；讀不到的項目顯示「—」。"/>
                     <ItemsControl ItemsSource="{Binding CpuId.Info}" Margin="0,0,0,12">
@@ -651,7 +655,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="黏滯節流位元"/>
+                        <local:SectionHead Text="黏滯節流位元" HelpKey="cpu/黏滯節流位元"/>
                         <Button Style="{StaticResource PrimaryButton}" Content="讀取" HorizontalAlignment="Right"
                                 VerticalAlignment="Center" Click="StickyRead_Click" IsEnabled="{Binding ThermalSticky.CanRefresh}"/>
                     </Grid>
@@ -679,7 +683,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="安全緩解狀態"/>
+                        <local:SectionHead Text="安全緩解狀態" HelpKey="cpu/安全緩解狀態"/>
                         <Button Style="{StaticResource PrimaryButton}" Content="讀取" HorizontalAlignment="Right"
                                 VerticalAlignment="Center" Click="SecurityRead_Click" IsEnabled="{Binding CpuSecurity.CanRefresh}"/>
                     </Grid>
@@ -706,7 +710,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="逐核時間歸因（閒置／使用者／核心／DPC／中斷）"/>
+                        <local:SectionHead Text="逐核時間歸因（閒置／使用者／核心／DPC／中斷）" HelpKey="cpu/逐核時間歸因（閒置／使用者／核心／DPC／中斷）"/>
                         <Button Style="{StaticResource PrimaryButton}" Content="取樣" HorizontalAlignment="Right"
                                 VerticalAlignment="Center" Click="CoreTimeSample_Click" IsEnabled="{Binding CoreTime.CanRefresh}"/>
                     </Grid>

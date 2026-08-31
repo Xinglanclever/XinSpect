@@ -109,7 +109,7 @@
             <!-- 可用性 / 權限 -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="狀態"/>
+                    <local:SectionHead Text="狀態" HelpKey="gpuoc/狀態"/>
                     <TextBlock Text="{Binding AvailabilityText}" TextWrapping="Wrap" Margin="0,4,0,0"
                                Foreground="{StaticResource SecondaryInkBrush}" FontSize="12.5"/>
                     <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource MutedInkBrush}"
@@ -120,7 +120,7 @@
             <!-- 即時遙測 -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeader}" Text="即時狀態"/>
+                    <local:SectionHead Text="即時狀態" HelpKey="gpuoc/即時狀態"/>
                     <UniformGrid Columns="5" Margin="0,6,0,0">
                         <StackPanel Margin="0,0,10,0">
                             <TextBlock Style="{StaticResource FieldLabel}" Text="核心時脈"/>
@@ -150,7 +150,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="最大功耗限制"/>
+                        <local:SectionHead Text="最大功耗限制" HelpKey="gpuoc/最大功耗限制"/>
                         <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="15" FontWeight="Bold"
                                    Text="{Binding PowerLimitPercent, StringFormat={}{0:0} %}"/>
                     </Grid>
@@ -175,7 +175,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="最高溫度限制"/>
+                        <local:SectionHead Text="最高溫度限制" HelpKey="gpuoc/最高溫度限制"/>
                         <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="15" FontWeight="Bold"
                                    Text="{Binding TargetTempLimitC, StringFormat={}{0:0} °C}"/>
                     </Grid>
@@ -196,7 +196,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="核心頻率偏移"/>
+                        <local:SectionHead Text="核心頻率偏移" HelpKey="gpuoc/核心頻率偏移"/>
                         <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="15" FontWeight="Bold"
                                    Text="{Binding TargetCoreOffsetMhz, StringFormat={}{0:+0;-0;0} MHz}"/>
                     </Grid>
@@ -217,7 +217,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="顯示記憶體頻率偏移"/>
+                        <local:SectionHead Text="顯示記憶體頻率偏移" HelpKey="gpuoc/顯示記憶體頻率偏移"/>
                         <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="15" FontWeight="Bold"
                                    Text="{Binding TargetMemOffsetMhz, StringFormat={}{0:+0;-0;0} MHz}"/>
                     </Grid>
@@ -238,7 +238,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="風扇轉速控制"/>
+                        <local:SectionHead Text="風扇轉速控制" HelpKey="gpuoc/風扇轉速控制"/>
                         <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" FontSize="15" FontWeight="Bold"
                                    Text="{Binding TargetFanPercent, StringFormat={}{0:0} %}"/>
                     </Grid>

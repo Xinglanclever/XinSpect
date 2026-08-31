@@ -57,7 +57,7 @@ public sealed class SeverityToBrushConverter : IValueConverter
     };
 }
 
-/// <summary>終端執行狀態 → 指示燈顏色（執行中綠、停止灰）。與狀態徽章同一套主題色。</summary>
+/// <summary>終端機執行狀態 → 指示燈顏色（執行中綠、停止灰）。與狀態徽章同一套主題色。</summary>
 public sealed class BoolToRunBrushConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -67,7 +67,7 @@ public sealed class BoolToRunBrushConverter : IValueConverter
         => Binding.DoNothing;
 }
 
-/// <summary>終端執行狀態 → 文字（執行中／已停止）。</summary>
+/// <summary>終端機執行狀態 → 文字（執行中／已停止）。</summary>
 public sealed class BoolToRunTextConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)

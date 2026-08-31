@@ -36,13 +36,20 @@ public sealed class HeatConverter : IValueConverter
     };
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        double? t = value as double?;
-        if (t is not double temp || double.IsNaN(temp))
-            return VizPalette.Card;   // 無讀值：退回卡片底色（跟著主題走，才不會在淺色主題出現一格深灰）
+        => ColorFor(value as double?) is Color c
+            ? Solid(c)
+            : VizPalette.Card;   // 無讀值：退回卡片底色（跟著主題走，才不會在淺色主題出現一格深灰）
 
-        if (temp <= Stops[0].T) return Solid(Stops[0].C);
-        if (temp >= Stops[^1].T) return Solid(Stops[^1].C);
+    /// <summary>
+    /// 溫度 → 色階上的顏色；無讀值（<c>null</c>／NaN）回 <c>null</c>，由呼叫端決定怎麼表示「不知道」。
+    /// </summary>
+    /// <remarks>逐核液柱（<see cref="CoreColumns"/>）與熱區圖共用這一份對照，換了控制項色溫仍然一致。</remarks>
+    public static Color? ColorFor(double? value)
+    {
+        if (value is not double temp || double.IsNaN(temp)) return null;
+
+        if (temp <= Stops[0].T) return Stops[0].C;
+        if (temp >= Stops[^1].T) return Stops[^1].C;
         for (int i = 0; i < Stops.Length - 1; i++)
         {
             var (t0, c0) = Stops[i];
@@ -50,10 +57,10 @@ public sealed class HeatConverter : IValueConverter
             if (temp >= t0 && temp <= t1)
             {
                 double f = (temp - t0) / (t1 - t0);
-                return Solid(Lerp(c0, c1, f));
+                return Lerp(c0, c1, f);
             }
         }
-        return Solid(Stops[^1].C);
+        return Stops[^1].C;
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

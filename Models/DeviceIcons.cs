@@ -41,6 +41,7 @@ public static class DeviceIcons
     private static readonly string[] Gold    = { "#F3C64B", "#8A5E08" };                 // 金色：現代 i9 至尊
     private static readonly string[] Silver  = { "#E6EAEE", "#8A9099" };                 // 銀色：Core X 系列（非至尊）
     private static readonly string[] Black   = { "#3C3C42", "#050506" };                 // 黑色：經典至尊 / 8086K / Everest
+    private static readonly string[] ExtBlue = { "#3E86E0", "#0A2A6E" };                 // 深海藍：Haswell-E／Broadwell-E 至尊
     private static readonly string[] RedES   = { "#EF4136", "#8A0D08" };                 // 紅色：工程樣品
     private static readonly string[] Rainbow = { "#FF3B3B", "#FF9F1C", "#FFE01B",        // 彩虹：炫彩邊框（9990XE / Everest）
                                                  "#43C94A", "#2E9BF0", "#5A4BE8", "#B24BF5" };
@@ -138,11 +139,35 @@ public static class DeviceIcons
             "Core X 系列", "x", "", SilverInk,
             Silver, ChipSilver),
 
-        // ── 經典至尊 Extreme Edition：黑底 + 交叉 ✕ + 紅膠囊。
-        //    Core 2 Extreme、i7-980X / 990X（Gulftown）、i7-3960X / 3970X / 4960X。
-        //    980X 舊機常報為 "Core(TM) i7 CPU X 980"（X 與數字分離），故比對放寬。
+        // ── Haswell-E／Broadwell-E 至尊（i7-5960X / 6950X）：藍底 + 交叉 ✕ + 紅膠囊。
+        //    這兩代 Intel 官方仍掛 Extreme Edition 名號，但徽記已換成藍色系（CPU-Z 亦以藍徽記呈現），
+        //    故自經典黑底至尊分家、另立一色；膠囊仍用至尊紅，血脈關係看得出來。
+        //    prefix 59 / 69 不在上方 Core X 白名單內，故不會被銀底規則先行攔走。
+        new("i7-extreme-blue",
+            @"\b(?:5960|6950)x\b",
+            "至尊版 Extreme Edition", "x", "", White,
+            ExtBlue, ChipRed),
+
+        // ── 經典至尊 Extreme Edition：黑底 + 交叉 ✕ + 紅膠囊。整條至尊血脈統一歸此一類：
+        //    Pentium 4 EE（Gallatin 3.4 / 3.46、Prescott 2M 3.73）、Pentium EE 840 / 955 / 965、
+        //    Core 2 Extreme（X6800、QX6700/6850/9650/9770/9775、行動 QX9300 等）、
+        //    i7-965 / 975（Bloomfield）、i7-980X / 990X（Gulftown）、i7-3960X / 3970X / 4960X。
+        //    （Haswell-E 之後的 5960X / 6950X 徽記轉藍，見上方 i7-extreme-blue。）
+        //    比對分三路，因為韌體字串的至尊線索並不一致：
+        //      ① 字串自稱 "Extreme"（Core 2 Extreme、多數 P4 EE / Pentium EE 皆屬此路）；
+        //      ② 至尊獨佔的型號編號（QX 四位、X6800、Pentium 955/965、i7 965/975/980X/990X…）；
+        //      ③ 至尊獨佔的標稱頻率 3.46 / 3.73 GHz——奔騰世代非至尊只有 3.4 / 3.6 / 3.8 GHz。
+        //    980X 舊機常報為 "Core(TM) i7 CPU X 980"（X 與數字分離），故該路比對放寬。
+        //    註：3.4 GHz 的初代 P4 EE 與 Pentium 4 550 / 3.4E 名稱完全相同，僅憑名稱無法分辨，
+        //        故不以 3.4 GHz 入列（寧可漏判，不可把普通 P4 誤掛至尊）。
         new("i7-extreme",
-            @"core(?:\(tm\)|\(r\))?\s*2\s*extreme|\b(?:980|990)x\b|\bi7\b.*\bx\s?9[89]0\b|\b(?:3960|3970|4960)x\b",
+            @"\bextreme\b"                                                     // ① 自稱至尊
+            + @"|\b(?:x6800|qx\d{4})\b"                                        // ② Core 2 Extreme 專屬編號
+            + @"|pentium.*\b(?:955|965)\b"                                     // ② Pentium EE 955 / 965
+            + @"|\bi7\b.*\b(?:965|975)\b"                                      // ② Bloomfield 至尊
+            + @"|\b(?:980|990)x\b|\bi7\b.*\bx\s?9[89]0\b"                      // ② Gulftown 至尊（含分離寫法）
+            + @"|\b(?:3960|3970|4960)x\b"                                      // ② Sandy·Ivy-E 至尊
+            + @"|pentium.*\b3\.(?:46|73)\s*ghz",                               // ③ 至尊獨佔頻率
             "至尊版 Extreme Edition", "x", "", White,
             Black, ChipRed),
 

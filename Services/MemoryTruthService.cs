@@ -60,6 +60,11 @@ public sealed class MemoryTruthService : ObservableObject
     /// <summary>判定說明（含量測界線）。</summary>
     public string VerdictText { get => _verdictText; private set => SetProperty(ref _verdictText, value); }
 
+    private MemoryTruthMath.Reading? _reading;
+    /// <summary>最後一次成功讀到的數值（GB）；<c>null</c> ＝還沒讀到過（或上次讀取失敗）。</summary>
+    /// <remarks>畫面用上面那些字串就夠了；<see cref="BottleneckAnalyzer"/> 需要的是能比大小的數字。</remarks>
+    public MemoryTruthMath.Reading? Reading { get => _reading; private set => SetProperty(ref _reading, value); }
+
     /// <summary>重讀一次。失敗時如實顯示失敗原因，不留舊值假裝成功。</summary>
     public void Refresh()
     {
@@ -70,10 +75,12 @@ public sealed class MemoryTruthService : ObservableObject
                 int err = Marshal.GetLastWin32Error();
                 CommitText = PeakText = PageSizeText = Verdict = "—";
                 VerdictText = $"讀取失敗（GetPerformanceInfo，Win32 錯誤 {err}）。";
+                Reading = null;
                 return;
             }
 
             var r = MemoryTruthMath.ToGigabytes(pi.CommitTotal, pi.CommitLimit, pi.CommitPeak, pi.PhysicalTotal, pi.PageSize);
+            Reading = r;
             CommitText = $"{r.CommitGb:0.0} / 上限 {r.LimitGb:0.0} GB";
             PeakText = $"{r.PeakGb:0.0} GB（實體 {r.PhysicalGb:0.0} GB）";
             PageSizeText = $"{pi.PageSize / 1024.0:0} KB";
@@ -89,6 +96,7 @@ public sealed class MemoryTruthService : ObservableObject
         {
             CommitText = PeakText = PageSizeText = Verdict = "—";
             VerdictText = "讀取失敗：" + ex.Message;
+            Reading = null;
         }
     }
 }

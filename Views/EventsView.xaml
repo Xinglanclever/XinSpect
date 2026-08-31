@@ -48,7 +48,10 @@
         <!-- 標題 -->
         <Grid Grid.Row="0" Margin="2,0,0,12">
             <StackPanel>
-                <TextBlock Style="{StaticResource Title}" Text="事件時間軸"/>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Style="{StaticResource Title}" Text="事件時間軸"/>
+                    <local:HelpDot HelpKey="events/事件時間軸"/>
+                </StackPanel>
                 <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0"
                            Text="警示 ・ 降頻 ・ 磁碟壽命 ・ 藍屏 ・ 工作階段彙整為單一時序；雙擊任一筆即跳至歷史回放"/>
             </StackPanel>

@@ -84,6 +84,8 @@ public sealed class CacheBenchService : ObservableObject
         var ct = _cts.Token;
 
         IsRunning = true;
+        // 量延遲期間停掉全站動畫：動畫本身會踩快取、也會搶記憶體頻寬，直接污染這裡的讀值。
+        using var quiet = Motion.Suspend();
         Phase = "測試中";
         ProgressFraction = 0;
         Rows.Clear();

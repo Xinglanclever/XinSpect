@@ -30,7 +30,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,6,0">
         <StackPanel>
             <StackPanel Margin="2,0,0,10">
-                <TextBlock Style="{StaticResource SectionHeader}" Text="大檔／重複檔掃描"/>
+                <local:SectionHead Text="大檔／重複檔掃描" HelpKey="diskscan/大檔／重複檔掃描"/>
                 <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
                            Text="遞迴掃描資料夾，列出最占空間的大檔；勾選後並以逐位元組 SHA-256 比對，真實判定內容完全相同的重複檔與可回收空間。存取被拒的目錄自動略過。為安全起見僅提供定位，刪除請於檔案總管確認後自行處理。"/>
             </StackPanel>

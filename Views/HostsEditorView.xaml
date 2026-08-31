@@ -11,7 +11,7 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="2,0,0,10">
-            <TextBlock Style="{StaticResource SectionHeader}" Text="Hosts 編輯器"/>
+            <local:SectionHead Text="Hosts 編輯器" HelpKey="hosts/Hosts 編輯器"/>
             <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
                        Text="編輯 Windows hosts 檔（網域→IP 對應）。儲存前自動備份，可一鍵還原上一版並清除 DNS 快取。需以系統管理員身分執行方能寫入。"/>
         </StackPanel>

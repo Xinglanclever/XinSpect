@@ -82,7 +82,10 @@
         <!-- 標題與時間窗控制 -->
         <Grid Grid.Row="0" Margin="2,0,0,10">
             <StackPanel>
-                <TextBlock Style="{StaticResource Title}" Text="歷史回放"/>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Style="{StaticResource Title}" Text="歷史回放"/>
+                    <local:HelpDot HelpKey="history/歷史回放"/>
+                </StackPanel>
                 <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0"
                            Text="滾輪縮放 ・ 拖曳平移 ・ 雙擊還原 ・ 游標讀值"/>
             </StackPanel>

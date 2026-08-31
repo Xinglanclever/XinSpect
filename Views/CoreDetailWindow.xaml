@@ -15,7 +15,7 @@
             <!-- ══ 每核心即時溫度 / 頻率 / 負載 ══════════════════════════════ -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
-                    <TextBlock Text="每核心即時溫度" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="每核心即時溫度" HelpKey="coredetail/每核心即時溫度"/>
                     <TextBlock Text="溫度／頻率／負載皆為感測器實測值；取不到時顯示「—」。" FontSize="12" Margin="0,0,0,8"
                                Foreground="{StaticResource MutedInkBrush}"/>
                     <ItemsControl ItemsSource="{Binding Cores}">
@@ -51,7 +51,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14"
                     Visibility="{Binding HasCoreTuneRows, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Text="每核心電壓（設定值）" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="每核心電壓（設定值）" HelpKey="coredetail/每核心電壓（設定值）"/>
                     <TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="18" Margin="0,0,0,8"
                                Foreground="{StaticResource MutedInkBrush}"
                                Text="以下為各核心的電壓覆寫「設定值」與偏移量（來自 XTU 可調項），非每核心即時量測——多數平台僅能量測封裝級 Vcore（見下方波形）。整數倍頻上限一併列出。"/>
@@ -87,7 +87,7 @@
             <!-- ══ 封裝級 Vcore 波形（即時量測）══════════════════════════════ -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Text="封裝 Vcore 波形（即時）" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="封裝 Vcore 波形（即時）" HelpKey="coredetail/封裝 Vcore 波形（即時）"/>
                     <Grid Margin="0,4,0,0">
                         <TextBlock Text="目前電壓" Style="{StaticResource FieldLabel}" HorizontalAlignment="Left"/>
                         <TextBlock Text="{Binding VoltageValueText}" HorizontalAlignment="Right" FontSize="15" FontWeight="Bold"

@@ -33,6 +33,7 @@ public partial class MainWindow : Window
         ThemeService.Initialize();     // 解析 XAML 前套用已存主題/強調色，避免首格閃色
         InitializeComponent();
         DataContext = _vm;
+        Motion.Attach(_vm.Settings);   // 動態效果總開關跟著設定走（關掉後所有繪圖控制項停下計時器）
 
         BuildNav();
         ApplyAccentGlow();

@@ -11,7 +11,7 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="2,0,0,10">
-            <TextBlock Style="{StaticResource SectionHeader}" Text="藍屏分析"/>
+            <local:SectionHead Text="藍屏分析" HelpKey="bsod/藍屏分析"/>
             <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
                        Text="掃描系統小型記憶體傾印（%SystemRoot%\Minidump），解析停止代碼與參數並判讀常見原因。深入定位肇事驅動需 WinDbg 符號分析。"/>
         </StackPanel>

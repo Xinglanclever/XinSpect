@@ -1,0 +1,25 @@
+<UserControl x:Class="XinSpect.SectionHead"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect"
+             HorizontalAlignment="Left" Margin="2,0,0,10" FontSize="15"
+             Foreground="{StaticResource PrimaryInkBrush}">
+    <!-- 卡片標題 ＋ 圓圈問號。原本各頁都是一行
+         <TextBlock Style="{StaticResource SectionHeader}" Text="…"/>，
+         換成這個控制項後標題旁自動多一顆說明問號，版面不必為了塞問號改成 StackPanel。
+         外距沿用 SectionHeader 樣式原本的 2,0,0,10，改用這個控制項不會位移。
+         標題顏色走繫結而非樣式設定值：樣式設定值會壓過繼承值，若不繫結，
+         「危險區」那種刻意染紅的標題（Foreground="#E06C4B"）就會被吃掉。 -->
+    <StackPanel Orientation="Horizontal">
+        <TextBlock x:Name="Head" Style="{StaticResource SectionHeader}" Margin="0"
+                   VerticalAlignment="Center"
+                   FontSize="{Binding FontSize,
+                       RelativeSource={RelativeSource AncestorType={x:Type local:SectionHead}}}"
+                   Foreground="{Binding Foreground,
+                       RelativeSource={RelativeSource AncestorType={x:Type local:SectionHead}}}"
+                   Text="{Binding Text,
+                       RelativeSource={RelativeSource AncestorType={x:Type local:SectionHead}}}"/>
+        <local:HelpDot x:Name="Dot" HelpKey="{Binding HelpKey,
+                           RelativeSource={RelativeSource AncestorType={x:Type local:SectionHead}}}"/>
+    </StackPanel>
+</UserControl>

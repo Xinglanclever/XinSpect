@@ -354,7 +354,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="40"
                     Visibility="{Binding Overclock.HasFrequencyPlanner, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Text="目標時脈規劃" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="目標時脈規劃" HelpKey="oc/目標時脈規劃"/>
                     <TextBlock Text="{Binding Overclock.TargetFrequencyText}" FontSize="30" FontWeight="Bold"
                                Foreground="{StaticResource AccentBrush}" Margin="0,4,0,4"/>
                     <TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="19" Margin="0,0,0,12"
@@ -430,7 +430,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="50"
                     Visibility="{Binding Overclock.HasCacheKnobs, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Text="快取 Cache（Uncore／Ring）" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="快取 Cache（Uncore／Ring）" HelpKey="oc/快取 Cache（Uncore／Ring）"/>
                     <TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="19" Margin="0,0,0,4"
                                Foreground="{StaticResource MutedInkBrush}"
                                Text="快取（環匯流排）倍頻與電壓／電壓偏移集中於此，緊接目標時脈規劃之下。倍頻為整數倍；電壓偏移範圍限 −1 V～+1 V、預設 0 V。細節見各列 ❓ 說明。"/>
@@ -441,7 +441,7 @@
             <!-- ══ 核心電壓 Vcore ════════════════════════════════════════════ -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="60">
                 <StackPanel>
-                    <TextBlock Text="核心電壓 Vcore" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="核心電壓 Vcore" HelpKey="oc/核心電壓 Vcore"/>
                     <!-- 聚合說明：此平台僅逐核心覆寫時，說明本卡滑桿會一次套用至全部核心（無此情況時字串為空、不顯示） -->
                     <TextBlock Text="{Binding Overclock.VcoreScopeText}" TextWrapping="Wrap" FontSize="12" LineHeight="18"
                                Foreground="{StaticResource MutedInkBrush}" Margin="0,2,0,0"
@@ -537,7 +537,7 @@
             <!-- ══ 示波器（電壓 / 電流波形）══════════════════════════════════ -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="80">
                 <StackPanel>
-                    <TextBlock Text="即時波形" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="即時波形" HelpKey="oc/即時波形"/>
                     <!-- 通道色固定：兩條線同時在畫面上，顏色是識別而非裝飾（同 CoreDetailWindow） -->
                     <local:Oscilloscope Height="126" Margin="0,4,0,0"
                                         History="{Binding Overclock.OscilloVolt}"
@@ -551,7 +551,7 @@
             <!-- ══ 即時遙測 ══════════════════════════════════════════════════ -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="100">
                 <StackPanel>
-                    <TextBlock Text="即時遙測" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="即時遙測" HelpKey="oc/即時遙測"/>
                     <Grid Margin="0,4,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -586,7 +586,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="120">
                 <StackPanel>
                     <Grid>
-                        <TextBlock Text="核心熱區圖" Style="{StaticResource SectionHeader}" HorizontalAlignment="Left"/>
+                        <local:SectionHead Text="核心熱區圖" HelpKey="oc/核心熱區圖" HorizontalAlignment="Left"/>
                         <Button HorizontalAlignment="Right" VerticalAlignment="Top" Style="{StaticResource ToolButton}"
                                 Click="OpenCoreDetail_Click" Content="每核心明細 ↗"
                                 ToolTip="開啟獨立視窗：每核心即時溫度、每核心電壓設定值與封裝 Vcore／電流波形"/>
@@ -600,7 +600,7 @@
             <!-- ══ 體質評分（矽晶品質）═══════════════════════════════════════ -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="140">
                 <StackPanel>
-                    <TextBlock Text="體質評分" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="體質評分" HelpKey="oc/體質評分"/>
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                         <TextBlock Text="{Binding Overclock.SiliconScoreText}" FontSize="46" FontWeight="Bold"
                                    Foreground="{Binding Overclock.SiliconSeverity, Converter={StaticResource SeverityToBrush}}"
@@ -628,7 +628,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="160"
                     Visibility="{Binding Overclock.HasCoreKnobs, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Text="核心 Core" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="核心 Core" HelpKey="oc/核心 Core"/>
                     <ItemsControl ItemsSource="{Binding Overclock.CoreKnobs}" ItemTemplate="{StaticResource KnobRow}" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
@@ -637,7 +637,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="180"
                     Visibility="{Binding Overclock.HasPowerKnobs, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Text="功耗 Power" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="功耗 Power" HelpKey="oc/功耗 Power"/>
                     <ItemsControl ItemsSource="{Binding Overclock.PowerKnobs}" ItemTemplate="{StaticResource KnobRow}" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
@@ -646,7 +646,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="200"
                     Visibility="{Binding Overclock.HasMemoryKnobs, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Text="記憶體 Memory" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="記憶體 Memory" HelpKey="oc/記憶體 Memory"/>
                     <ItemsControl ItemsSource="{Binding Overclock.MemoryKnobs}" ItemTemplate="{StaticResource KnobRow}" Margin="0,4,0,0"/>
                     <TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="19" Margin="0,2,0,0"
                                Foreground="{StaticResource MutedInkBrush}"
@@ -658,7 +658,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="220"
                     Visibility="{Binding Overclock.HasBusKnobs, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Text="匯流排 Bus" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="匯流排 Bus" HelpKey="oc/匯流排 Bus"/>
                     <ItemsControl ItemsSource="{Binding Overclock.BusKnobs}" ItemTemplate="{StaticResource KnobRow}" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
@@ -667,7 +667,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="230"
                     Visibility="{Binding Overclock.HasCoreTuneRows, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Text="每核心獨立調節 Per-Core" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="每核心獨立調節 Per-Core" HelpKey="oc/每核心獨立調節 Per-Core"/>
                     <TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="19" Margin="0,0,0,4"
                                Foreground="{StaticResource MutedInkBrush}"
                                Text="每顆實體核心的倍頻上限、電壓覆寫與電壓偏移合併於同一區塊；倍頻為整數倍。並非所有平台都開放單核調節，未提供的項目不顯示。細節見各列 ❓ 說明。"/>
@@ -703,7 +703,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="240"
                     Visibility="{Binding Overclock.HasAdvancedKnobs, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Text="進階 Advanced" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="進階 Advanced" HelpKey="oc/進階 Advanced"/>
                     <TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="19" Margin="0,2,0,0"
                                Foreground="{StaticResource MutedInkBrush}"
                                Text="含 PL1 時間窗、各負載核心數倍頻上限等進階項目，數量較多；預設收合以保持畫面整潔，需要時再展開。"/>
@@ -720,7 +720,7 @@
             <!-- ══ 負載線校準 LLC ════════════════════════════════════════════ -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="260">
                 <StackPanel>
-                    <TextBlock Text="負載線校準 LLC" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="負載線校準 LLC" HelpKey="oc/負載線校準 LLC"/>
                     <Grid Margin="0,4,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -744,7 +744,7 @@
             <!-- ══ 看門狗 / 開機還原 ═════════════════════════════════════════ -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="280">
                 <StackPanel>
-                    <TextBlock Text="看門狗與安全網" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="看門狗與安全網" HelpKey="oc/看門狗與安全網"/>
                     <CheckBox Style="{StaticResource OcCheck}" Margin="0,6,0,0"
                               IsChecked="{Binding Overclock.WatchdogEnabled, Mode=TwoWay}"
                               Content="啟用看門狗（套用後 30 秒無回應即自動還原設定）"/>
@@ -768,7 +768,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="300"
                     Visibility="{Binding Overclock.SpeedOptimizerSupported, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Text="一鍵加速 Speed Optimizer" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="一鍵加速 Speed Optimizer" HelpKey="oc/一鍵加速 Speed Optimizer"/>
                     <TextBlock Text="{Binding Overclock.SpeedOptimizerStatusText}" FontSize="13" Margin="0,4,0,0"
                                TextWrapping="Wrap" Foreground="{StaticResource SecondaryInkBrush}"/>
                     <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
@@ -782,7 +782,7 @@
             <!-- ══ 設定檔（Profile）══════════════════════════════════════════ -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="320">
                 <StackPanel>
-                    <TextBlock Text="設定檔" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="設定檔" HelpKey="oc/設定檔"/>
 
                     <Grid Margin="0,6,0,0">
                         <Grid.ColumnDefinitions>
@@ -822,7 +822,7 @@
             <!-- ══ 簡易燒機 ══════════════════════════════════════════════════ -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="340">
                 <StackPanel>
-                    <TextBlock Text="簡易燒機（穩定度測試）" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="簡易燒機（穩定度測試）" HelpKey="oc/簡易燒機（穩定度測試）"/>
                     <TextBlock Text="約 5 分鐘全核心壓力測試，記錄最高溫；若核心溫度超過 100°C 將自動暫停並回退電壓。"
                                FontSize="12.5" TextWrapping="Wrap" LineHeight="20" Margin="0,4,0,0"
                                Foreground="{StaticResource MutedInkBrush}"/>
@@ -863,7 +863,7 @@
             <!-- ══ 全域動作列 ════════════════════════════════════════════════ -->
             <Border Style="{StaticResource Card}" local:Anim.RevealDelay="360">
                 <StackPanel>
-                    <TextBlock Text="套用與還原" Style="{StaticResource SectionHeader}"/>
+                    <local:SectionHead Text="套用與還原" HelpKey="oc/套用與還原"/>
                     <TextBlock Text="{Binding Overclock.ActionStatus}" FontSize="13" Margin="0,4,0,0" TextWrapping="Wrap"
                                Foreground="{Binding Overclock.ActionSeverity, Converter={StaticResource SeverityToBrush}}"/>
                     <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
