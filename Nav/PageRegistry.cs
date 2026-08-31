@@ -331,6 +331,16 @@ public static class PageRegistry
         },
         new()
         {
+            Key = "driver", Title = "驅動稽核", Group = GTools,
+            IconData = "M2,2 h12 v3 h-12 z M2,6.5 h12 v3 h-12 z M2,11 h12 v3 h-12 z "
+                     + "M11.4,3.1 h1.3 v0.9 h-1.3 z M11.4,7.6 h1.3 v0.9 h-1.3 z M11.4,12.1 h1.3 v0.9 h-1.3 z",
+            Factory = () => new DriverAuditView(),
+            Hint = "已安裝驅動的簽章狀態與驅動日期（唯讀 WMI）",
+            Keywords = ["driver", "驅動", "驅動程式", "簽章", "signed", "未簽章", "unsigned", "inf",
+                        "版本", "過舊", "裝置管理員", "device manager", "pnp"],
+        },
+        new()
+        {
             Key = "dns", Title = "DNS 切換", Group = GTools,
             IconData = "M8,1 a7,7 0 1 0 0.01,0 z M8,2.4 c1.2,0 2.6,2 2.8,5.1 h-5.6 c0.2,-3.1 1.6,-5.1 2.8,-5.1 z "
                      + "M2.5,7.5 h2.9 c0.05,-1.7 0.4,-3.2 0.95,-4.3 a5.6,5.6 0 0 0 -3.85,4.3 z "

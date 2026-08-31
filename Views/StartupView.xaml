@@ -27,16 +27,24 @@
         <StackPanel Grid.Row="0" Margin="2,0,0,10">
             <local:SectionHead Text="開機啟動項管理" HelpKey="startup/開機啟動項管理"/>
             <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
-                       Text="列舉登錄 Run 機碼與啟動資料夾中的開機自啟項目。停用＝寫入與工作管理員相同、可逆的核准旗標，不刪除原始項目或捷徑，隨時可還原。變更「全部使用者」項目需系統管理員權限。"/>
+                       Text="列舉登錄 Run 機碼、啟動資料夾，以及登入／開機觸發的排程工作——工作管理員的「啟動」分頁看不到排程工作，很多常駐更新程式正是靠它起來的。停用登錄與資料夾項目＝寫入與工作管理員相同、可逆的核准旗標；停用排程工作＝走 Windows 自己的 schtasks，兩者都不刪除原始項目，隨時可還原。變更「全部使用者」或系統排程工作需系統管理員權限。"/>
         </StackPanel>
 
         <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,12" Padding="14,10">
             <Grid>
-                <Button Style="{StaticResource PrimaryButton}" Content="重新掃描" Click="Scan_Click"
-                        HorizontalAlignment="Left"/>
-                <TextBlock x:Name="MsgText" HorizontalAlignment="Right" VerticalAlignment="Center"
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Style="{StaticResource PrimaryButton}" Content="重新掃描" Click="Scan_Click"/>
+                <CheckBox x:Name="SysTasks" Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center"
+                          FontSize="13" Foreground="{StaticResource SecondaryInkBrush}"
+                          Content="顯示 Windows 內建的排程工作" Click="SysTasks_Click"
+                          ToolTip="\Microsoft\… 底下的工作是作業系統自己的維護工作，預設不列出"/>
+                <TextBlock x:Name="MsgText" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center"
                            FontSize="12.5" Foreground="{StaticResource SecondaryInkBrush}"
-                           TextTrimming="CharacterEllipsis" MaxWidth="520"/>
+                           TextTrimming="CharacterEllipsis" MaxWidth="420"/>
             </Grid>
         </Border>
 

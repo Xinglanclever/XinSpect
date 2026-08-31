@@ -136,6 +136,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>PCIe 鏈路實況：目前協商的速度／寬度對裝置能力（實用工具子頁，唯讀 PCI 設定空間）。</summary>
     public PcieLinkService PcieLink { get; } = new();
 
+    /// <summary>驅動程式稽核：已安裝驅動的簽章狀態與驅動日期（實用工具子頁，唯讀 WMI）。</summary>
+    public DriverAuditService DriverAudit { get; } = new();
+
     /// <summary>SLC 快取耗盡曲線：持續寫入與斷崖偵測（儲存分頁卡片）。</summary>
     public SlcCacheBenchService SlcCache { get; } = new();
 

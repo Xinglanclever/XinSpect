@@ -23,17 +23,24 @@ public partial class StartupView : UserControl
             if (e.PropertyName == nameof(_svc.Status))
                 Dispatcher.Invoke(() => StatusText.Text = _svc.Status);
         };
-        Loaded += (_, _) => { if (!_loaded) { _loaded = true; Scan(); } };
+        Loaded += (_, _) => { if (!_loaded) { _loaded = true; _ = ScanAsync(); } };
     }
 
-    private void Scan()
+    /// <summary>排程工作那一段要開幾百個檔案，所以掃描是非同步的——期間畫面仍然可以操作。</summary>
+    private async Task ScanAsync()
     {
         MsgText.Text = "掃描中…";
-        _svc.Scan();
+        await _svc.ScanAsync();
         MsgText.Text = "";
     }
 
-    private void Scan_Click(object sender, RoutedEventArgs e) => Scan();
+    private void Scan_Click(object sender, RoutedEventArgs e) => _ = ScanAsync();
+
+    private void SysTasks_Click(object sender, RoutedEventArgs e)
+    {
+        _svc.ShowSystemTasks = SysTasks.IsChecked == true;
+        MsgText.Text = "";
+    }
 
     private void Toggle_Click(object sender, RoutedEventArgs e)
     {
@@ -51,6 +58,14 @@ public partial class StartupView : UserControl
         if (sender is not FrameworkElement fe || fe.DataContext is not StartupEntry entry) return;
         try
         {
+            // 排程工作 → 開工作排程器。這種項目的「所在位置」是工作排程器裡的那條路徑，
+            // 不是磁碟上的某個檔案，開檔案總管反而答錯問題。
+            if (entry.IsTask)
+            {
+                Process.Start(new ProcessStartInfo("taskschd.msc") { UseShellExecute = true });
+                MsgText.Text = $"已開啟工作排程器　・　此項位於 {entry.TaskPath}";
+                return;
+            }
             // 有可解析的實體路徑（捷徑或可執行檔）→ 於檔案總管中選取
             if (!string.IsNullOrEmpty(entry.ItemPath) && File.Exists(entry.ItemPath))
             {

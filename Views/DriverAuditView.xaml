@@ -1,0 +1,128 @@
+<UserControl x:Class="XinSpect.DriverAuditView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <UserControl.Resources>
+        <!-- 狀態小標籤。文字色刻意寫在樣式裡而不是元素上：DataTemplate.Triggers 的 Setter
+             蓋不過元素上的區域值，寫成區域值嚴重度就永遠變不了顏色。 -->
+        <Style x:Key="ChipTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10.5"/>
+            <Setter Property="Foreground" Value="{StaticResource SecondaryInkBrush}"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="0,0,6,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="2,0,0,10">
+            <local:SectionHead Text="驅動程式稽核" HelpKey="driver/驅動程式稽核"/>
+            <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                       Text="列出這台機器實際安裝的每一支驅動，把簽章狀態與驅動日期攤開來比。未簽章的驅動、以及顯示／網路／儲存／晶片組這些關鍵類別裡老到不合理的版本，在裝置管理員裡得一個一個點進內容才看得到。全程唯讀，不安裝也不移除任何驅動。"/>
+        </StackPanel>
+
+        <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,12">
+            <StackPanel>
+                <Grid>
+                    <local:SectionHead Text="掃描" HelpKey="driver/掃描"/>
+                    <Button Style="{StaticResource PrimaryButton}" Content="重新掃描"
+                            HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Click="Refresh_Click" IsEnabled="{Binding DriverAudit.CanRefresh}"/>
+                </Grid>
+                <TextBlock Style="{StaticResource FieldValue}" Margin="0,8,0,0" TextWrapping="Wrap"
+                           Text="{Binding DriverAudit.Summary}"/>
+                <Grid Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0" Style="{StaticResource SetTextBox}" MaxLength="80"
+                             Text="{Binding DriverAudit.Filter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             ToolTip="搜尋裝置、類別、版本、提供者或 INF 檔名"/>
+                    <CheckBox Grid.Column="1" Margin="14,0,2,0" VerticalAlignment="Center" FontSize="13"
+                              Foreground="{StaticResource SecondaryInkBrush}"
+                              Content="只顯示需要注意的"
+                              IsChecked="{Binding DriverAudit.OnlyFlagged, Mode=TwoWay}"/>
+                </Grid>
+                <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap"
+                           Text="{Binding DriverAudit.Status}"/>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="2" Style="{StaticResource Card}" Padding="14,10" Margin="0,0,0,4">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <local:SectionHead Grid.Row="0" Text="驅動清單" HelpKey="driver/驅動清單"/>
+                <Grid Grid.Row="1" Margin="0,8,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/><ColumnDefinition Width="104"/>
+                        <ColumnDefinition Width="124"/><ColumnDefinition Width="92"/>
+                        <ColumnDefinition Width="150"/><ColumnDefinition Width="76"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Style="{StaticResource ColHead}" Text="裝置"/>
+                    <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="類別"/>
+                    <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="版本"/>
+                    <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="驅動日期"/>
+                    <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="提供者"/>
+                    <TextBlock Grid.Column="5" Style="{StaticResource ColHead}" Text="簽章"/>
+                </Grid>
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding DriverAudit.Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel x:Name="Row" Margin="0,3,0,5">
+                                    <Grid MinHeight="22">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/><ColumnDefinition Width="104"/>
+                                            <ColumnDefinition Width="124"/><ColumnDefinition Width="92"/>
+                                            <ColumnDefinition Width="150"/><ColumnDefinition Width="76"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Device}"
+                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                                   ToolTip="{Binding Device}"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding ClassText}"
+                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding VersionText}"
+                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center" FontFamily="Consolas"/>
+                                        <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding DateText}"
+                                                   VerticalAlignment="Center" FontFamily="Consolas"/>
+                                        <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" Text="{Binding ProviderText}"
+                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                                   ToolTip="{Binding InfText}"/>
+                                        <Border Grid.Column="5" CornerRadius="4" Padding="6,1" VerticalAlignment="Center"
+                                                HorizontalAlignment="Left" Background="{StaticResource SurfaceBrush}">
+                                            <TextBlock x:Name="ChipText" Style="{StaticResource ChipTextStyle}"
+                                                       Text="{Binding SignText}"/>
+                                        </Border>
+                                    </Grid>
+                                    <TextBlock Style="{StaticResource FieldLabel}" FontSize="11" TextWrapping="Wrap"
+                                               Text="{Binding Verdict}"/>
+                                    <TextBlock Style="{StaticResource FieldLabel}" FontSize="10.5"
+                                               Text="{Binding InstancesText}"/>
+                                </StackPanel>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding Severity}" Value="2">
+                                        <Setter TargetName="ChipText" Property="Foreground" Value="{StaticResource CriticalBrush}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Severity}" Value="1">
+                                        <Setter TargetName="ChipText" Property="Foreground" Value="{StaticResource WarningBrush}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" Value="True">
+                                        <Setter TargetName="Row" Property="Background" Value="{StaticResource Surface2Brush}"/>
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

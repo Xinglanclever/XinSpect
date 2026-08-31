@@ -2,6 +2,29 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect">
+    <UserControl.Resources>
+        <!-- 一筆版本紀錄。逐項改動併成單一 TextBlock（ItemsText 已加好項目符號與換行）：
+             巢狀 ItemsControl 在外層 ScrollViewer 裡量測成本高，而這裡只是靜態文字。 -->
+        <DataTemplate x:Key="ChangeEntryTemplate">
+            <Border Margin="0,0,0,12" Padding="12,10" CornerRadius="6"
+                    Background="{StaticResource Surface2Brush}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Version}" FontSize="15" FontWeight="Bold"
+                                   Foreground="{StaticResource AccentBrush}"/>
+                        <TextBlock Text="{Binding DateText}" Style="{StaticResource FieldLabel}"
+                                   Margin="10,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Title}" FontSize="13.5" FontWeight="SemiBold"
+                               TextWrapping="Wrap" Margin="0,4,0,0"
+                               Foreground="{StaticResource PrimaryInkBrush}"/>
+                    <TextBlock Text="{Binding ItemsText}" Style="{StaticResource FieldValue}"
+                               TextWrapping="Wrap" Margin="0,6,0,0" LineHeight="20"
+                               Foreground="{StaticResource SecondaryInkBrush}"/>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
             <local:SectionHead Text="關於" HelpKey="about/關於"/>
@@ -13,7 +36,7 @@
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0"
                                Text="硬體資訊總覽 ・ 即時偵測工具"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,2,0,0"
-                               Text="版本 1.7.4 ・ 便攜單一執行檔"/>
+                               Text="版本 1.7.5 ・ 便攜單一執行檔"/>
 
                     <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,16"/>
 
@@ -47,6 +70,20 @@
                             Click="OpenGallery_Click"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,6,0,0"
                                Text="收錄 8086K・至尊・Xeon・撕裂者・Titan・工程樣品等專屬原創徽章"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 版本更新紀錄：資料在 Nav/ChangelogCatalog.cs，ItemsSource 於程式碼後置指定 -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <local:SectionHead Text="版本更新紀錄" HelpKey="about/版本更新紀錄"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,0,0,12"
+                               Text="每一版做了什麼，由新到舊。1.2.0 起的每一條都對得上 Git 紀錄；1.2.0 之前的四個階段在進入版本控制之前，沒有留下逐項紀錄，因此只寫到階段層級——不補一份想像出來的清單。"/>
+                    <ItemsControl x:Name="ChangelogRecent" ItemTemplate="{StaticResource ChangeEntryTemplate}"/>
+                    <ItemsControl x:Name="ChangelogOlder" Visibility="Collapsed"
+                                  ItemTemplate="{StaticResource ChangeEntryTemplate}"/>
+                    <Button x:Name="ChangelogToggle" Style="{StaticResource ToolButton}"
+                            HorizontalAlignment="Left" Margin="0,2,0,0" Click="ChangelogToggle_Click"/>
                 </StackPanel>
             </Border>
 
