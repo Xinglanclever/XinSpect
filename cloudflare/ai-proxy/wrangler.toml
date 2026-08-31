@@ -1,0 +1,26 @@
+# 曦覽 XinSpect ・ 免費共用額度中轉
+#
+# 這個檔案裡沒有任何秘密：預設走 Cloudflare 自家的 Workers AI，連金鑰都不需要。
+# 部署步驟見 README.md。
+
+name = "xinspect-ai"
+main = "worker.js"
+compatibility_date = "2026-08-01"
+
+# Workers AI 綁定：有了它就不必任何外部 API 金鑰，免費方案每天有一定額度。
+[ai]
+binding = "AI"
+
+# 模型與總開關不是秘密，放這裡方便日後改（改完要重新 deploy 才生效）。
+[vars]
+MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+ENABLED = "1"          # 緊急煞車：改成 "0" 再 deploy，共用額度就整條關閉
+# 想改用外部的 OpenAI 相容端點，就把下面這行取消註解，再 `wrangler secret put UPSTREAM_KEY`。
+# 一旦設了 UPSTREAM_KEY，Worker 就走外部端點，不再用 Workers AI。
+# UPSTREAM_URL = "https://api.openai.com/v1/chat/completions"
+
+# 次數上限與留言都存在這個 KV 裡。id 由 `wrangler kv namespace create QUOTA` 產生後填回來。
+# 沒綁 KV 也跑得動，但就沒有任何防濫用機制，也收不到留言。
+[[kv_namespaces]]
+binding = "QUOTA"
+id = "PUT_KV_NAMESPACE_ID_HERE"

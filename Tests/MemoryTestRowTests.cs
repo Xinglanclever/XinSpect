@@ -67,17 +67,23 @@ public sealed class MemoryTestRowTests
         Assert.Equal(0, svc.ProgressFraction);
     }
 
+    /// <remarks>
+    /// 不能拿這台機器「當下」的可用記憶體來驗：當可用量不足時，1 GB 檔與 4 GB 檔都會被夾到同一個
+    /// 上限，PlanText 一模一樣，測試就會隨機紅一次。所以改成餵一個固定的可用量進 Planned() 驗算式本身，
+    /// 再另外確認 PlanText 有話說。
+    /// </remarks>
     [Fact]
     public void 切換測試量會重算計畫說明()
     {
         var svc = new MemoryTestService();
-        string before = svc.PlanText;
+        const long roomy = 64L * 1024 * 1024 * 1024;   // 假設有 64 GB 可用，兩個檔位都塞得下
 
+        long small = svc.Planned(roomy);
         svc.SizeIndex = svc.SizeChoices.Length - 1;   // 最大檔
+        long big = svc.Planned(roomy);
 
         Assert.NotEqual(0, svc.SizeIndex);
+        Assert.True(big > small, $"最大檔應該比預設檔測更多：{big} vs {small}");
         Assert.False(string.IsNullOrWhiteSpace(svc.PlanText));
-        // 可用記憶體足夠時大小檔的說明必然不同；不足時兩者同樣落在「無法測試」，不強求相異
-        Assert.True(svc.PlanText != before || svc.PlanText.Contains("無法測試"));
     }
 }

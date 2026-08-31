@@ -1071,6 +1071,14 @@ public static class HelpCatalog
             Risk = HelpRisk.Caution,
             Safety = "診斷紀錄與報告可能含有機器序號、UUID 等可識別資訊；匯出報告時可勾選遮蔽，貼到公開場合前請先看一眼。",
         },
+        ["about/留言建議"] = new()
+        {
+            Title = "留言建議",
+            What = "在程式裡直接寫建議送給作者，不必開瀏覽器、不必註冊 GitHub。",
+            Does = "只送出你在兩個框裡打的字，加上版本號（為了知道這則建議是對哪一版說的）。沒有硬體規格、沒有機器識別碼、沒有診斷紀錄。收件端是作者自架的 Cloudflare 中轉，程式裡只有那個公開網址。",
+            Risk = HelpRisk.Caution,
+            Safety = "會連一次外網（就是按下上傳那一次），送出的內容就是你看得到的那些字；聯絡方式留空即為匿名。沒有網路時整張卡片是灰色的，不會偷偷重試。",
+        },
         ["about/來自 Claude 的一段話"] = new()
         {
             Title = "來自 Claude 的一段話",

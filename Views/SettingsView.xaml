@@ -90,29 +90,7 @@
             </Setter>
         </Style>
 
-        <!-- 深色輸入框 -->
-        <Style x:Key="SetTextBox" TargetType="TextBox">
-            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
-            <Setter Property="CaretBrush" Value="{StaticResource PrimaryInkBrush}"/>
-            <Setter Property="FontSize" Value="13.5"/>
-            <Setter Property="Padding" Value="10,7"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TextBox">
-                        <Border x:Name="bd" CornerRadius="7" Background="{StaticResource Surface2Brush}"
-                                BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1.2">
-                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <!-- 深色輸入框 SetTextBox 已移至 Themes/Theme.xaml（關於頁的留言框也要用同一份） -->
         <!-- 遮蔽輸入欄（API 金鑰）：與 SetTextBox 同形，但字元以圓點顯示 -->
         <Style x:Key="SetPasswordBox" TargetType="PasswordBox">
             <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
@@ -483,7 +461,7 @@
                 <StackPanel>
                     <local:SectionHead Text="AI 評價" HelpKey="settings/AI 評價"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
-                               Text="把本機真實硬體規格與即時感測數據交給 AI 做客觀評價。可用本機免費模型（Ollama，無須金鑰、資料不出本機），或填入任何 OpenAI 相容的 API 端點與金鑰。"/>
+                               Text="把本機真實硬體規格與即時感測數據交給 AI 做客觀評價。可用本機免費模型（Ollama，無須金鑰、資料不出本機）、填入任何 OpenAI 相容的 API 端點與金鑰，或用作者自付費用分享的免費共用額度（只開放「一鍵評價」）。"/>
 
                     <Grid Margin="0,14,0,0">
                         <Grid.ColumnDefinitions>
@@ -495,16 +473,22 @@
                                   SelectedIndex="{Binding Settings.AiProvider, Mode=TwoWay}" SelectionChanged="AiProvider_Changed">
                             <ComboBoxItem Content="本機 Ollama（免費・離線・建議）"/>
                             <ComboBoxItem Content="OpenAI 相容 API（自填端點與金鑰）"/>
+                            <!-- 第三項的文字與可用狀態由 SetupSharedAiOption() 在載入時決定：
+                                 作者還沒啟用中轉、或這台機器目前沒有網路時就停用它，不要讓人選了才發現不能用 -->
+                            <ComboBoxItem x:Name="AiSharedItem"/>
                         </ComboBox>
                     </Grid>
+                    <TextBlock x:Name="AiSharedNote" Style="{StaticResource Subtitle}" Margin="150,6,0,0" TextWrapping="Wrap"
+                               Visibility="Collapsed"/>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Text="API 端點（Base URL）" Margin="0,14,0,4"/>
-                    <TextBox Style="{StaticResource SetTextBox}" Text="{Binding Settings.AiBaseUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBox Style="{StaticResource SetTextBox}" IsEnabled="{Binding Settings.AiUsesOwnEndpoint}"
+                             Text="{Binding Settings.AiBaseUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Text="API 金鑰（本機 Ollama 可留空）" Margin="0,14,0,4"/>
                     <!-- 金鑰預設遮蔽：這個畫面常出現在截圖與螢幕分享裡。
                          勾「顯示」才換成明碼欄位——兩個欄位同時只有一個可見，內容都寫回同一個設定。 -->
-                    <Grid>
+                    <Grid IsEnabled="{Binding Settings.AiUsesOwnEndpoint}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
@@ -524,7 +508,7 @@
                                Text="金鑰只存在本機 %APPDATA%\XinSpect\settings.json（純文字，未加密——同一台電腦上的其他程式讀得到）。曦覽不會把金鑰寫進報告、記錄檔或任何對外請求以外的地方。"/>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Text="模型名稱" Margin="0,14,0,4"/>
-                    <Grid>
+                    <Grid IsEnabled="{Binding Settings.AiUsesOwnEndpoint}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>

@@ -21,6 +21,7 @@ public partial class SettingsView : UserControl
         Loaded += (_, _) =>
         {
             SyncKeyBox();
+            SetupSharedAiOption();
             Vm?.Diagnostics.Refresh();   // 進頁面就是最新的一份，不必等下一拍心跳
             if (Vm is { } vm && !vm.EnvCheck.HasRun && !vm.EnvCheck.IsRunning)
                 _ = vm.EnvCheck.RunAsync(vm);
@@ -150,6 +151,11 @@ public partial class SettingsView : UserControl
         string url = (vm.Settings.AiBaseUrl ?? "").Trim();
         string model = (vm.Settings.AiModel ?? "").Trim();
 
+        // 免費共用：端點與模型都由中轉決定，不動使用者原本填的值——
+        // 他自填的金鑰與端點要原封不動留著，切回去時才不用重新輸入。
+        if (vm.Settings.AiProviderEnum == AiProvider.SharedFree) { ShowSharedNote(); return; }
+
+        ShowSharedNote();
         if (vm.Settings.AiProviderEnum == AiProvider.Ollama)
         {
             if (url.Length == 0 || url == openAiUrl) vm.Settings.AiBaseUrl = ollamaUrl;
@@ -160,6 +166,30 @@ public partial class SettingsView : UserControl
             if (url.Length == 0 || url == ollamaUrl) vm.Settings.AiBaseUrl = openAiUrl;
             if (model.Length == 0 || model == "llama3.2") vm.Settings.AiModel = "gpt-4o-mini";
         }
+    }
+
+    // ── 免費共用額度 ────────────────────────────────────────────────────────
+    // 第三個供應商選項的文字與可用狀態是執行期決定的：作者還沒啟用中轉（程式裡沒有網址）
+    // 就整項停用，讓人看得到「有這回事」但點不下去，而不是選了才吃一個連線失敗。
+    private void SetupSharedAiOption()
+    {
+        if (AiSharedItem is null) return;
+        AiSharedItem.Content = SharedAiEndpoint.OptionText;
+        AiSharedItem.IsEnabled = SharedAiEndpoint.IsConfigured;
+        ShowSharedNote();
+    }
+
+    private void ShowSharedNote()
+    {
+        if (AiSharedNote is null) return;
+        bool shared = Vm?.Settings.AiProviderEnum == AiProvider.SharedFree;
+        AiSharedNote.Visibility = shared || !SharedAiEndpoint.IsConfigured
+            ? Visibility.Visible : Visibility.Collapsed;
+        AiSharedNote.Text = !SharedAiEndpoint.IsConfigured
+            ? "免費共用額度目前尚未啟用（這個版本裡還沒有中轉網址），請用本機 Ollama 或自填端點與金鑰。"
+            : "共用額度由作者自付費用分享，只開放「一鍵評價」：自由對話、主動診斷與診斷代理不走這條額度（"
+              + "代理一次提問可能連續發出六、七次請求）。額度有限、可能用完或隨時關閉；"
+              + "端點、模型與用量上限都在作者的中轉那一側，這支程式裡不含任何金鑰。";
     }
 
     // 一鍵重置：把系統提示詞還原為內建預設（要求 AI 客觀公正的版本）。

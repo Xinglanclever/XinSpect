@@ -6,8 +6,27 @@ using System.Text.Json;
 
 namespace XinSpect;
 
-/// <summary>AI 評價供應商：本機免費（Ollama）或任何 OpenAI 相容的 API 端點。</summary>
-public enum AiProvider { Ollama, OpenAiCompatible }
+/// <summary>
+/// AI 評價供應商：本機免費（Ollama）、任何 OpenAI 相容的 API 端點，
+/// 或作者自付費用分享的免費共用額度（走自建中轉，程式裡不含任何金鑰，見 <see cref="SharedAiEndpoint"/>）。
+/// </summary>
+/// <remarks>列舉值直接對應設定頁下拉選單的 <c>SelectedIndex</c>，並以整數存進 settings.json；
+/// 只能往後追加，不可調換既有順序，否則舊設定檔會選到別的供應商。</remarks>
+public enum AiProvider { Ollama, OpenAiCompatible, SharedFree }
+
+/// <summary>
+/// 一次請求的來源。共用額度只開放 <see cref="Evaluate"/>——
+/// 判斷寫在 <see cref="SharedAiEndpoint.Allows"/>，這裡只負責如實標記請求是誰發的。
+/// </summary>
+public enum AiRequestKind
+{
+    /// <summary>使用者在對話框裡自己打的字。</summary>
+    Chat,
+    /// <summary>「一鍵評價」：一次性的整機評價。</summary>
+    Evaluate,
+    /// <summary>硬體警示觸發的主動診斷。</summary>
+    Proactive,
+}
 
 /// <summary>對話中的一則訊息（使用者 / AI / 本機工具查詢紀錄），供聊天列表繫結。</summary>
 public sealed class AiMessage : ObservableObject
@@ -72,16 +91,84 @@ public sealed class AiService : ObservableObject
         StatusText = $"已接續上次對話（{Messages.Count} 則）。";
     }
 
-    /// <summary>內建的預設提示詞：要求 AI 客觀、公正、只依真實數據評價，不偏袒任何品牌。</summary>
+    /// <summary>
+    /// 內建的預設提示詞：要求 AI 客觀、公正、只依真實數據評價，不偏袒任何品牌。
+    /// 除了角色與六段回覆結構，還把幾個最容易被模型誤讀的前提寫成鐵則——
+    /// 「沒量到不等於量到 0」、「快照只是某一瞬間」、「健康總評是本程式的規則引擎結論而非原始讀值」——
+    /// 並要求動筆前先盤點資料、認出機器形態、用負載讀值推定取樣情境，再去對照互相矛盾的欄位。
+    /// 這是本程式全程真實讀值的延伸：資料誠實，講解也要誠實。
+    /// </summary>
     public const string DefaultSystemPrompt =
-        "你是一位客觀、公正、專業的電腦硬體評測顧問。以下會提供一台電腦的真實硬體規格與即時感測數據。\n" +
-        "請僅根據這些真實數據，做出中肯、平衡的評價：\n" +
-        "1. 先簡述這套配置的整體定位（入門 / 主流 / 高階 / 工作站等）。\n" +
-        "2. 分析各主要元件（處理器、記憶體、顯示卡、儲存、散熱與溫度表現）的優點與不足。\n" +
-        "3. 指出目前是否有潛在瓶頸、過熱或搭配不均衡之處。\n" +
-        "4. 給出務實的升級或最佳化建議；若無明顯需求，也請如實說明無須升級。\n" +
-        "要求：只根據提供的數據作答，不臆測未提供的資訊；不誇大、不貶低、不偏袒任何品牌；" +
-        "以繁體中文分段或條列回覆，語氣專業而友善。";
+        "你是一位客觀、公正、專業的電腦硬體評測顧問，服務對象是這台電腦的持有者。\n" +
+        "下方「本機硬體資訊（真實讀值）」是 XinSpect 從這台機器實際讀到的規格與即時感測數據，也是你唯一的事實來源。\n" +
+        "\n" +
+        "【鐵則】\n" +
+        "1. 只依提供的數據作答。沒有的就寫「資料未提供」，並說明缺這一項會讓哪個判斷無法定論；" +
+        "絕不編造型號、跑分、功耗、價格、市場排名或世代比較的數字。\n" +
+        "2. 讀值是「—」「未測試」「尚未量測」「不支援」「N/A」或 0 時，代表沒量到，不是量到 0，不可據此下結論；" +
+        "並告訴使用者可以到哪一頁按下量測、或開啟「診斷代理」讓工具去讀。\n" +
+        "3. 感測數據是送出訊息那一瞬間的快照，不是長期表現；描述時用「此刻讀值」而不是「這台機器就是這樣」。\n" +
+        "4. 明顯不合理的讀值（風扇 0 RPM、負溫度、時脈為 0、容量或電壓離譜）先標為" +
+        "「讀值可疑，可能是感測器不支援或讀取失敗」，不拿它下結論。\n" +
+        "5. 區分「實測事實」與「依規格推論」，推論要寫出依據；不確定就說不確定。\n" +
+        "6. 「健康總評」是 XinSpect 自己的規則引擎給的分數，可以引用，但你要獨立判斷；" +
+        "若它與原始讀值對不上，指出矛盾，不要照抄分數當結論。\n" +
+        "\n" +
+        "【動筆前先做三件事】\n" +
+        "甲、盤點：先確認哪些類別真的有讀值、哪些沒有。有資料的才展開寫，整批缺的合併成一句帶過" +
+        "（例如「本次快照未包含風扇轉速、SMART 屬性、供電與網路」），不要為了填滿結構而灌水。\n" +
+        "乙、認形態：從「機型」與作業系統判斷這是桌機、筆電、一體機、伺服器還是虛擬機，並據此調整結論與建議——" +
+        "筆電換不了顯示卡、散熱與功耗天花板本來就低、溫度基準也與桌機不同；" +
+        "伺服器與虛擬機常缺大部分感測讀值，也不適用消費級調校建議。看不出形態就說看不出，不要預設是桌機。\n" +
+        "丙、定取樣情境：用負載讀值推定這份快照是待機還是負載中" +
+        "（處理器或顯示卡負載約一成以下視為待機、一到五成輕中載、八成以上接近滿載），" +
+        "並明說這是依負載讀值推定。待機溫度不能當散熱結論；只有連負載都讀不到時，才同時給出待機與滿載兩種解讀。\n" +
+        "\n" +
+        "【交叉檢查：最有價值的發現常在互相矛盾的欄位之間】\n" +
+        "即時頻率對基準時脈與負載：低載卻低於基準、或高載時掉下來，是降頻或電源政策的線索。\n" +
+        "即時功耗對 TDP：貼著上限跑代表撞到功耗牆，這時改善散熱通常比換零件有用。\n" +
+        "溫度對負載與功耗：高溫而功耗也高是「發熱本來就多」；高溫但負載與功耗都低，才是散熱異常。\n" +
+        "記憶體時序與模組數：只有一條模組、或時序顯示未啟用 XMP／EXPO，代表可能跑在單通道或標稱值以下。\n" +
+        "磁碟區容量與剩餘空間：系統碟剩餘吃緊會直接拖慢整機，比升級零件更該先處理。\n" +
+        "處理器與顯示卡的層級落差：只在兩邊資料都齊時才下判斷。\n" +
+        "任何一組對不上的數字都要寫出來，並給最可能的解釋與驗證方式。\n" +
+        "\n" +
+        "【回覆結構】\n" +
+        "一、整體定位：判定為入門／主流／中高階／高階／旗艦／工作站／伺服器或特化用途，" +
+        "用兩三句說明依據（核心數與世代、記憶體容量與通道、顯示卡層級、儲存介面、平台特性），" +
+        "並指出它最勝任與最不勝任哪些用途（文書、遊戲、內容創作、程式編譯、虛擬化、AI 推論等）。\n" +
+        "二、逐項分析：處理器、記憶體、顯示卡、儲存、主機板與平台、散熱與溫度、供電與功耗、網路與其他。" +
+        "每項照「關鍵讀值 → 優點 → 不足或風險 → 現在是否構成限制」四段寫，並引用你依據的實際數字；" +
+        "整類無資料就寫「未提供，無法評估」。\n" +
+        "三、瓶頸與均衡度：檢視處理器與顯示卡等級是否相稱、記憶體容量／通道／時脈是否拖累平台、" +
+        "儲存介面與健康度（SMART、剩餘空間）是否有隱憂、溫度與時脈是否顯示降頻或撞上功耗牆、散熱是否跟得上發熱量。" +
+        "結論明確歸為「均衡」「單點瓶頸（指名哪一點）」或「資料不足以判定」，" +
+        "並說明該瓶頸在哪些情境才會被觸發、哪些情境不受影響。\n" +
+        "四、溫度與穩定性判讀：對每個有讀值的溫度來源，歸類為偏涼／正常／偏高但安全／接近上限／需處理，" +
+        "並說明理由，且要把判斷綁在前面推定的取樣情境上（同一個 70 °C 在待機與滿載是兩回事）；" +
+        "連負載都讀不到時，才同時給出兩種解讀。\n" +
+        "五、建議：先列免錢或低成本的最佳化（清灰、風扇曲線、電源計畫、驅動與 BIOS、釋放儲存空間、" +
+        "確認 XMP／EXPO 是否已啟用——僅在數據看得出來時才提），再列需要花錢的升級；" +
+        "細節依下方【建議要分級，也要說風險】。\n" +
+        "六、一句話總結：兩三句收尾，含最重要的一個行動建議，或「維持現狀即可」。\n" +
+        "\n" +
+        "【建議要分級，也要說風險】\n" +
+        "依「先免費、再便宜、最後花大錢」排序，每項寫清楚改善什麼場景、大致的改善幅度、" +
+        "以及這個平台的相容前提（插槽、記憶體世代、介面、機殼與電源餘裕；資料不足就註明「需先確認」）。\n" +
+        "涉及拆機、刷新 BIOS、調電壓或超頻的建議，一律標明風險、是否可逆、以及有沒有更安全的替代做法。\n" +
+        "若整機均衡、沒有明顯瓶頸，就直接說「目前無須升級」，並說明出現什麼徵兆時才值得動手。" +
+        "不主動推薦特定品牌型號或報價。\n" +
+        "\n" +
+        "【篇幅與追問】\n" +
+        "首次評價約六百到一千二百字，重點清楚即可；不要把快照原封不動複述一遍，只引用支撐論點的數字（含單位）。\n" +
+        "使用者追問時，只回答被問的那一段，不要每次重跑整份六段報告。\n" +
+        "使用者若說明了用途、預算或實際困擾，就以他的需求重排建議順序——他的問題優先於這裡的固定結構。\n" +
+        "\n" +
+        "【語氣與禁忌】\n" +
+        "以繁體中文、台灣慣用術語書寫，分段與條列並用，專業而友善，像對懂電腦但不熟細節的人解釋。\n" +
+        "不誇大、不貶低、不偏袒任何品牌，禁用行銷腔（「猛獸」「無情輾壓」「毫無懸念」之類）。\n" +
+        "優點與不足都要講：硬體較舊或較低階不等於差，只依它是否勝任可判斷的用途來評價；規格高也不等於沒問題。\n" +
+        "寧可少下一個結論，也不要下一個沒有數據支撐的結論。";
 
     /// <summary>診斷代理模式下附加的說明：告訴模型有哪些本機唯讀工具，以及「不准編造」的鐵則。</summary>
     public const string AgentPrompt =
@@ -112,6 +199,12 @@ public sealed class AiService : ObservableObject
     /// <summary>向目前端點查詢可用模型清單（Ollama /api/tags 或 OpenAI 相容 /v1/models）。</summary>
     public async Task FetchModelsAsync()
     {
+        if (_settings.AiProviderEnum == AiProvider.SharedFree)
+        {
+            StatusText = "共用額度用哪個模型由中轉決定，這裡不需要（也無法）選擇模型。";
+            return;
+        }
+
         string baseUrl = (_settings.AiBaseUrl ?? "").Trim().TrimEnd('/');
         if (baseUrl.Length == 0) { StatusText = "請先填入 API 端點（Base URL）再獲取模型。"; return; }
 
@@ -234,8 +327,9 @@ public sealed class AiService : ObservableObject
         StatusText = "對話已清除。";
     }
 
-    /// <summary>一鍵評價：以內建（或使用者自訂）提示詞＋硬體快照，請 AI 產出整機評價。</summary>
-    public Task EvaluateAsync() => SendAsync("請根據上述硬體資訊，對這台電腦做一次完整、客觀的評價。");
+    /// <summary>一鍵評價：以內建（或自訂）提示詞＋硬體快照，請 AI 產出整機評價。共用額度只開放這一種請求。</summary>
+    public Task EvaluateAsync() => SendAsync(
+        "請根據上述硬體資訊，對這台電腦做一次完整、客觀的評價。", AiRequestKind.Evaluate);
 
     /// <summary>
     /// 主動診斷：溫度／負載警示觸發時自動請 AI 就地分析一次。
@@ -245,16 +339,19 @@ public sealed class AiService : ObservableObject
     public Task ProactiveAsync(string label, string alertText)
     {
         if (IsBusy) return Task.CompletedTask;
+        // 共用額度不開放主動診斷：安靜略過，不要冒出一則「不允許」的訊息去打斷使用者。
+        if (_settings.AiProviderEnum == AiProvider.SharedFree) return Task.CompletedTask;
         if (string.IsNullOrWhiteSpace(_settings.AiBaseUrl) || string.IsNullOrWhiteSpace(_settings.AiModel))
             return Task.CompletedTask;
 
         return SendAsync($"【主動診斷】本機剛剛觸發硬體警示：{alertText}。"
             + $"請針對「{label}」呼叫必要的唯讀工具查明現況（例如即時讀值、所有溫度、事件時間軸、歷史統計、風扇現況），"
-            + "說明最可能的原因，以及現在具體該做什麼。查不到的資料請如實說明沒有，不要臆測。");
+            + "說明最可能的原因，以及現在具體該做什麼。查不到的資料請如實說明沒有，不要臆測。",
+            AiRequestKind.Proactive);
     }
 
     /// <summary>送出一則使用者訊息並取得 AI 回覆（含硬體快照作為系統背景；代理模式下可自行查工具）。</summary>
-    public async Task SendAsync(string userText)
+    public async Task SendAsync(string userText, AiRequestKind kind = AiRequestKind.Chat)
     {
         if (IsBusy) return;
         userText = (userText ?? "").Trim();
@@ -265,6 +362,15 @@ public sealed class AiService : ObservableObject
         Messages.Add(reply);
         HasMessages = true;
 
+        // 共用額度的範圍限制：直接把原因與替代方案寫在氣泡裡，不發出請求也不假裝失敗。
+        if (_settings.AiProviderEnum == AiProvider.SharedFree && !SharedAiEndpoint.Allows(kind))
+        {
+            reply.Text = SharedAiEndpoint.NotAllowedText;
+            StatusText = "共用額度只開放一鍵評價。";
+            if (_settings.AiKeepHistory) _chat.Save(Messages);
+            return;
+        }
+
         IsBusy = true;
         StatusText = "正在呼叫 AI 模型…";
         var cts = new CancellationTokenSource();
@@ -272,7 +378,7 @@ public sealed class AiService : ObservableObject
         try
         {
             await RunAsync(reply, cts.Token);
-            StatusText = $"完成 ・ {_settings.AiModel}（{ProviderLabel(_settings.AiProviderEnum)}）";
+            StatusText = $"完成 ・ {ResolveModel()}（{ProviderLabel(_settings.AiProviderEnum)}）";
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested)
         {
@@ -300,7 +406,12 @@ public sealed class AiService : ObservableObject
     /// <summary>回覆尚未有內容時的占位字（測試會據此驗證占位訊息不會被回送模型）。</summary>
     internal const string Placeholder = "思考中…";
 
-    private static string ProviderLabel(AiProvider p) => p == AiProvider.Ollama ? "本機 Ollama" : "OpenAI 相容 API";
+    internal static string ProviderLabel(AiProvider p) => p switch
+    {
+        AiProvider.Ollama => "本機 Ollama",
+        AiProvider.SharedFree => "免費共用",
+        _ => "OpenAI 相容 API",
+    };
 
     // ── 代理迴圈（OpenAI 相容 chat/completions＋tool calling）──────
     /// <summary>最多允許模型連續查工具的輪數；超過即要求它直接以文字作答，避免無止境迴圈。</summary>
@@ -358,7 +469,10 @@ public sealed class AiService : ObservableObject
     {
         string url = ResolveUrl();
         string model = ResolveModel();
-        bool useTools = _settings.AiAgentMode && Tools is { HasTools: true };
+        // 共用額度不開放診斷代理：代理一次提問會連續發出多次請求（每輪工具查詢都是一次），
+        // 一個人就能把大家的額度吃光。想用代理請改本機 Ollama 或自填金鑰。
+        bool useTools = _settings.AiAgentMode && Tools is { HasTools: true }
+                        && _settings.AiProviderEnum != AiProvider.SharedFree;
         var msgs = BuildMessages(useTools);
         var sink = new ReplySink(reply);
 
@@ -438,7 +552,7 @@ public sealed class AiService : ObservableObject
         {
             Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
         };
-        string key = (_settings.AiApiKey ?? "").Trim();
+        string key = ResolveKey();
         if (key.Length > 0) req.Headers.TryAddWithoutValidation("Authorization", "Bearer " + key);
 
         using var resp = await Http.SendAsync(req, stream
@@ -643,20 +757,39 @@ public sealed class AiService : ObservableObject
 
     private string ResolveUrl()
     {
+        // 共用額度：端點寫死在程式裡（不吃使用者設定），這樣就算他填過別的端點也不會把
+        // 共用金鑰以外的東西送錯地方——不過這裡本來就沒有金鑰可送，驗證由中轉那側做。
+        if (_settings.AiProviderEnum == AiProvider.SharedFree)
+        {
+            if (!SharedAiEndpoint.IsConfigured)
+                throw new InvalidOperationException("免費共用額度目前尚未啟用，請改用本機 Ollama 或自填端點與金鑰。");
+            return Normalize(SharedAiEndpoint.BaseUrl.Trim().TrimEnd('/'));
+        }
+
         string baseUrl = (_settings.AiBaseUrl ?? "").Trim().TrimEnd('/');
         if (baseUrl.Length == 0) throw new InvalidOperationException("尚未設定 API 端點（Base URL）。");
+        return Normalize(baseUrl);
+
         // 端點正規化：使用者可填 http://host:port 或 .../v1；統一補到 /v1/chat/completions。
-        return baseUrl.EndsWith("/chat/completions") ? baseUrl
-             : baseUrl.EndsWith("/v1") ? baseUrl + "/chat/completions"
-             : baseUrl + "/v1/chat/completions";
+        static string Normalize(string b)
+            => b.EndsWith("/chat/completions") ? b
+             : b.EndsWith("/v1") ? b + "/chat/completions"
+             : b + "/v1/chat/completions";
     }
 
     private string ResolveModel()
     {
+        // 共用額度刻意不讓使用者挑模型：送一個代號過去，用哪個模型由中轉決定。
+        if (_settings.AiProviderEnum == AiProvider.SharedFree) return SharedAiEndpoint.Model;
+
         string model = (_settings.AiModel ?? "").Trim();
         if (model.Length == 0) throw new InvalidOperationException("尚未設定模型名稱。");
         return model;
     }
+
+    /// <summary>這次請求要帶的 API 金鑰；共用額度不帶（金鑰在中轉那側，程式裡沒有）。</summary>
+    private string ResolveKey()
+        => _settings.AiProviderEnum == AiProvider.SharedFree ? "" : (_settings.AiApiKey ?? "").Trim();
 
     private static string Trim(string s, int max) => s.Length <= max ? s : s.Substring(0, max) + "…";
 

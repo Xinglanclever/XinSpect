@@ -92,7 +92,7 @@ public sealed class MemoryTestService : ObservableObject
         }
     }
 
-    private long Planned(long avail)
+    internal long Planned(long avail)
     {
         long size = Math.Min(Requested, Math.Max(0, avail - Reserve));
         return size - size % BlockBytes;

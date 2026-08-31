@@ -274,6 +274,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>AI 評價：把真實硬體規格與即時感測數據交給使用者自選的 AI 模型（本機免費 Ollama 或 OpenAI 相容 API）評價。</summary>
     public AiService Ai { get; }
 
+    /// <summary>留言建議：關於頁那張卡片，把使用者自己打的字送到作者的中轉（只送那些字，不夾任何硬體資訊）。</summary>
+    public FeedbackService Feedback { get; } = new();
+
     /// <summary>總覽儀表板版面：使用者自選要顯示哪些磁貼、以什麼順序排（持久化於設定）。</summary>
     public DashboardLayout Dashboard { get; }
 

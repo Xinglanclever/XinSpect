@@ -71,10 +71,26 @@ public sealed class SettingsService : ObservableObject
     public double MemLoadThreshold { get => _memLoadThreshold; set { if (SetProperty(ref _memLoadThreshold, Math.Clamp(value, 10, 100))) Save(); } }
 
     // ── AI 評價 ──────────────────────────────────────────
-    private int _aiProvider;   // 0=Ollama（本機免費）、1=OpenAI 相容 API
+    private int _aiProvider;   // 0=Ollama（本機免費）、1=OpenAI 相容 API、2=免費共用（作者提供的中轉）
     /// <summary>AI 供應商（對應 <see cref="AiProvider"/>）。</summary>
-    public int AiProvider { get => _aiProvider; set { if (SetProperty(ref _aiProvider, value)) { OnPropertyChanged(nameof(AiProviderEnum)); Save(); } } }
+    public int AiProvider
+    {
+        get => _aiProvider;
+        set
+        {
+            if (!SetProperty(ref _aiProvider, value)) return;
+            OnPropertyChanged(nameof(AiProviderEnum));
+            OnPropertyChanged(nameof(AiUsesOwnEndpoint));
+            Save();
+        }
+    }
     public AiProvider AiProviderEnum => (AiProvider)_aiProvider;
+
+    /// <summary>
+    /// 是否由使用者自己指定端點／金鑰／模型（供設定頁把那三個欄位停用）。
+    /// 選了免費共用時，端點與模型都由中轉決定、金鑰不存在於本機，欄位留著能編輯只會誤導人。
+    /// </summary>
+    public bool AiUsesOwnEndpoint => AiProviderEnum != XinSpect.AiProvider.SharedFree;
 
     private string _aiBaseUrl = "";
     /// <summary>API 端點（OpenAI 相容）。預設留空，請自行填入，例：本機 Ollama 為 http://localhost:11434/v1。</summary>
@@ -269,7 +285,11 @@ public sealed class SettingsService : ObservableObject
                     _gpuTempThreshold = Math.Clamp(p.GpuTempThreshold, 40, 110);
                     _cpuLoadThreshold = Math.Clamp(p.CpuLoadThreshold, 10, 100);
                     _memLoadThreshold = Math.Clamp(p.MemLoadThreshold, 10, 100);
-                    _aiProvider = p.AiProvider;
+                    // 供應商代號夾在有效範圍內：設定檔可能是別的版本寫的（或被手改過），
+                    // 直接 cast 成列舉會得到一個不存在的供應商，後面每個 switch 都會走到預設分支。
+                    // 另外，選的是免費共用但作者尚未啟用時退回本機 Ollama——否則一開 AI 頁就只會看到錯誤。
+                    _aiProvider = Math.Clamp(p.AiProvider, 0, (int)XinSpect.AiProvider.SharedFree);
+                    if (_aiProvider == (int)XinSpect.AiProvider.SharedFree && !SharedAiEndpoint.IsConfigured) _aiProvider = 0;
                     if (!string.IsNullOrWhiteSpace(p.AiBaseUrl)) _aiBaseUrl = p.AiBaseUrl;
                     _aiApiKey = p.AiApiKey ?? "";
                     if (!string.IsNullOrWhiteSpace(p.AiModel)) _aiModel = p.AiModel;

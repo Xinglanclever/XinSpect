@@ -83,6 +83,59 @@
                 </StackPanel>
             </Border>
 
+            <!-- 留言建議：直接在程式裡寫、直接送給作者。只送使用者打的字，別的什麼都不送。 -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <local:SectionHead Text="留言建議" HelpKey="about/留言建議"/>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                               Text="不想開瀏覽器、不想註冊 GitHub 也沒關係，在這裡寫完按上傳就到我這邊了。只會送出你在下面兩個框裡打的字與版本號——沒有硬體規格、沒有機器識別碼、沒有記錄檔，一個位元都不會夾帶。"/>
+
+                    <!-- 沒網路或作者還沒開收件端點時，整個輸入區停用；按鈕變灰一定要說得出為什麼 -->
+                    <Border Margin="0,12,0,0" Padding="12,10" CornerRadius="6"
+                            Background="{StaticResource Surface2Brush}"
+                            Visibility="{Binding Feedback.IsAvailable, Converter={StaticResource InverseBoolToVis}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                                       VerticalAlignment="Center" Margin="0,0,12,0"
+                                       Text="{Binding Feedback.UnavailableReason}"/>
+                            <Button Grid.Column="1" Content="重新檢查" Style="{StaticResource ToolButton}"
+                                    VerticalAlignment="Center" Click="FeedbackRefresh_Click"/>
+                        </Grid>
+                    </Border>
+
+                    <StackPanel IsEnabled="{Binding Feedback.IsAvailable}">
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,4" Text="你的建議"/>
+                        <TextBox Style="{StaticResource SetTextBox}" MaxLength="2000"
+                                 AcceptsReturn="True" TextWrapping="Wrap" MinHeight="110"
+                                 VerticalScrollBarVisibility="Auto" VerticalContentAlignment="Top"
+                                 Text="{Binding Feedback.Text, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,12,0,4"
+                                   Text="聯絡方式（選填，想收到回覆再填；留空就是匿名）"/>
+                        <TextBox Style="{StaticResource SetTextBox}" MaxLength="120"
+                                 Text="{Binding Feedback.Contact, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" x:Name="FeedbackStatus" Style="{StaticResource FieldLabel}"
+                                       TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0"
+                                       Text="{Binding Feedback.Status}"/>
+                            <Button Grid.Column="1" Content="上傳" Style="{StaticResource PrimaryButton}"
+                                    MinWidth="120" Padding="24,10"
+                                    IsEnabled="{Binding Feedback.CanSend}" Click="SendFeedback_Click"/>
+                        </Grid>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <!-- 免責聲明 -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
