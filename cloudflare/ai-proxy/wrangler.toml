@@ -23,4 +23,4 @@ ENABLED = "1"          # 緊急煞車：改成 "0" 再 deploy，共用額度就�
 # 沒綁 KV 也跑得動，但就沒有任何防濫用機制，也收不到留言。
 [[kv_namespaces]]
 binding = "QUOTA"
-id = "PUT_KV_NAMESPACE_ID_HERE"
+id = "03b9b44b1ba74d90b07a2a265add2738"

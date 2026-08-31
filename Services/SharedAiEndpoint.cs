@@ -15,9 +15,10 @@ namespace XinSpect;
 /// GitHub 的祕密掃描偵測、由供應商自動吊銷。
 /// </para>
 /// <para>
-/// 走中轉之後，這支執行檔裡<b>一個祕密都沒有</b>，只有一個公開網址：真正的金鑰放在
-/// Cloudflare Workers 的 Secret 裡，永遠不離開伺服器。限流、模型白名單、每日總量上限與
-/// 隨時可關的開關也都在伺服器那一側——被濫用時作者關得掉，而且不必重新發版。
+/// 走中轉之後，這支執行檔裡<b>一個祕密都沒有</b>，只有一個公開網址：模型是由 Cloudflare 的
+/// Workers AI 綁定在伺服器那一側呼叫的，這台程式從頭到尾拿不到、也不需要任何金鑰
+/// （日後若改接外部端點，金鑰放在 Worker 的 Secret 裡，同樣不離開伺服器）。限流、模型選擇、
+/// 每日總量上限與隨時可關的開關也都在伺服器那一側——被濫用時作者關得掉，而且不必重新發版。
 /// 部署方式見 <c>cloudflare/ai-proxy/README.md</c>。
 /// </para>
 /// <para>
@@ -31,10 +32,10 @@ public static class SharedAiEndpoint
 {
     /// <summary>
     /// 中轉端點（OpenAI 相容）。空字串代表作者尚未啟用這條共用額度，介面上該選項會停用。
-    /// 部署好 Worker 之後把網址填在這裡即可，例如
-    /// <c>https://xinspect-ai.&lt;你的子網域&gt;.workers.dev/v1</c>。
+    /// 這是<b>公開網址</b>，不是祕密：真正的權限在 Worker 那一側，端點被誰知道都無所謂。
+    /// 換一個部署位置就改這裡，另見 <c>cloudflare/ai-proxy/README.md</c>。
     /// </summary>
-    public static readonly string BaseUrl = "";
+    public static readonly string BaseUrl = "https://xinspect-ai.xinspect-tools.workers.dev/v1";
 
     /// <summary>
     /// 送給中轉的模型名稱。<b>刻意寫死成一個代號</b>：實際用哪個模型由中轉決定，
