@@ -6,9 +6,10 @@
  * 執行檔裡）。所以 exe 裡只放這支 Worker 的網址——那是公開資訊，被誰知道都無所謂；真正的金鑰
  * 只存在 Cloudflare 的 Secret 裡，連作者自己在儀表板上也看不到明文。
  *
- * 這支 Worker 同時做兩件事：
+ * 這支 Worker 同時做三件事：
  *   POST /v1/chat/completions   OpenAI 相容的聊天中轉（只給「一鍵評價」用）
  *   POST /feedback              收「留言建議」（只收使用者自己打的字）
+ *   GET  /inbox?k=…             作者自己看留言的唯讀列表（要帶 INBOX_KEY）
  *
  * 部署方式見同一個資料夾的 README.md。
  */
@@ -38,6 +39,8 @@ export default {
         return await handleChat(request, env);
       if (url.pathname === "/feedback" && request.method === "POST")
         return await handleFeedback(request, env);
+      if (url.pathname === "/inbox" && request.method === "GET")
+        return await handleInbox(request, env);
       return json({ error: { message: "沒有這個路徑。" } }, 404);
     } catch (e) {
       // 上游或 KV 出錯時，如實回一句話就好——不要把內部細節（更不要把金鑰）倒出去。
@@ -184,6 +187,108 @@ async function handleFeedback(request, env) {
   return json({ ok: true });
 }
 
+// ── 作者收件匣 ──────────────────────────────────────────────────────────────
+
+/** 一頁幾則。KV 每讀一筆算一個子請求，免費方案單次請求上限 50 個，所以一頁不能貪多。 */
+const INBOX_PAGE = 30;
+
+/**
+ * 唯讀的留言列表，只有作者看得到：帶對 INBOX_KEY 才回內容，只讀不寫，不提供刪除
+ * （要刪還是回儀表板或 wrangler，避免手機上誤觸就少一則建議）。
+ * 密碼放網址的 k 參數是為了手機點一下就能看，代價是它會留在瀏覽器歷史紀錄裡——
+ * 所以這裡一律 no-store、noindex、no-referrer，並且對同一個 IP 也套次數上限，讓猜密碼不划算。
+ */
+async function handleInbox(request, env) {
+  const url = new URL(request.url);
+  if (!env.INBOX_KEY)
+    return page(503, "收件匣尚未啟用", "還沒設定 INBOX_KEY，先跑一次 <code>wrangler secret put INBOX_KEY</code>。");
+  if (!env.QUOTA)
+    return page(503, "沒有資料來源", "這支 Worker 沒有綁 KV，留言沒有存下來的地方。");
+
+  const gate = await checkQuota(env, clientIp(request), "ib", 60, 0);
+  if (gate) return gate;
+
+  const auth = request.headers.get("authorization") || "";
+  const given = url.searchParams.get("k") || (auth.startsWith("Bearer ") ? auth.slice(7) : "");
+  if (!safeEqual(given, String(env.INBOX_KEY)))
+    return page(401, "密碼不對", "網址後面要帶 <code>?k=你設定的那組密碼</code>。");
+
+  // key 名開頭就是 ISO 時間戳，字典序等於時間序；倒過來就是最新的在最前面。
+  const keys = [];
+  let cursor, truncated = false;
+  for (let i = 0; i < 3; i++) {
+    const r = await env.QUOTA.list({ prefix: "feedback:", limit: 1000, cursor });
+    for (const k of r.keys) keys.push(k.name);
+    if (r.list_complete) { truncated = false; break; }
+    cursor = r.cursor;
+    truncated = true;                                       // 還沒列完就用光了配額
+  }
+  keys.reverse();
+
+  const skip = Math.max(0, Number(url.searchParams.get("skip")) || 0);
+  const slice = keys.slice(skip, skip + INBOX_PAGE);
+  const values = await Promise.all(slice.map(k => env.QUOTA.get(k)));
+  return renderInbox(given, keys.length, skip, slice, values, truncated);
+}
+
+/** 把一頁留言排成卡片。壞掉的紀錄原樣列出，不要因為一筆爛資料就整頁看不到。 */
+function renderInbox(key, total, skip, keys, values, truncated) {
+  const cards = keys.map((name, i) => {
+    let r = null;
+    try { r = JSON.parse(values[i] || ""); } catch { /* 下面會原樣列出 */ }
+    if (!r || typeof r !== "object")
+      return `<div class="c"><div class="m">${esc(name)}</div>`
+           + `<pre>（這筆不是合法 JSON，原樣列出）\n${esc(values[i] || "")}</pre></div>`;
+    const meta = [
+      taipei(r.at),
+      r.version ? "v" + r.version : "",
+      r.country || "",
+      r.contact ? "聯絡：" + r.contact : "",             // 沒留聯絡方式就整段不顯示
+    ].filter(Boolean).map(esc).join(" ・ ");
+    return `<div class="c"><div class="m">${meta}</div><pre>${esc(r.message || "")}</pre></div>`;
+  }).join("\n");
+
+  const q = s => `?k=${encodeURIComponent(key)}${s > 0 ? "&skip=" + s : ""}`;
+  const nav = [];
+  if (skip > 0) nav.push(`<a href="${esc(q(Math.max(0, skip - INBOX_PAGE)))}">← 較新的</a>`);
+  if (skip + INBOX_PAGE < total) nav.push(`<a href="${esc(q(skip + INBOX_PAGE))}">較早的 →</a>`);
+  const sub = total === 0
+    ? "目前沒有任何留言。"
+    : `共 ${total} 則${truncated ? "（超過 3000 則，只列到前 3000）" : ""}`
+      + ` ・ 顯示第 ${skip + 1}–${skip + keys.length} 則 ・ 最新的在最上面`;
+
+  return page(200, "留言建議",
+    `<p class="sub">${esc(sub)}</p>${cards}<p class="sub">${nav.join(" ・ ")}</p>`);
+}
+
+/**
+ * ISO 時間轉台北時間，格式 2026-8-31 12:10:19。轉不動就原樣顯示，不要為了好看而編一個時間出來。
+ * 直接加 8 小時而不靠 Intl：台北沒有日光節約時間，這個偏移永遠成立，也不必擔心執行環境的時區資料。
+ */
+function taipei(iso) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return String(iso || "");
+  const t = new Date(d.getTime() + 8 * 3600 * 1000);
+  const p = n => String(n).padStart(2, "0");
+  return `${t.getUTCFullYear()}-${t.getUTCMonth() + 1}-${t.getUTCDate()} `
+       + `${p(t.getUTCHours())}:${p(t.getUTCMinutes())}:${p(t.getUTCSeconds())}`;
+}
+
+function esc(s) {
+  return String(s === undefined || s === null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+// 逐字比到底、不提前 return：不讓回應時間洩漏「前幾個字猜對了」。長度會洩漏，那個無妨。
+function safeEqual(a, b) {
+  a = String(a); b = String(b);
+  if (a.length !== b.length || a.length === 0) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 // ── 額度與工具 ──────────────────────────────────────────────────────────────
 
 // 總開關：把 ENABLED 設成 0／false／off 就整條關掉（額度用完或被濫用時的緊急煞車）。
@@ -233,6 +338,42 @@ function json(obj, status = 200) {
     status,
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
   }));
+}
+
+/**
+ * 收件匣用的 HTML 外殼。刻意不套 cors()：這一頁是給作者自己看的，不該讓任何網站跨站讀走。
+ * 密碼在網址裡，所以 no-store（不留快取）、noindex（不進搜尋引擎）、no-referrer（不外洩網址）。
+ */
+function page(status, title, bodyHtml) {
+  const html = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>${esc(title)} ・ 曦覽收件匣</title>
+<style>
+:root{color-scheme:light dark}
+body{margin:0;padding:16px;font:15px/1.7 "Microsoft JhengHei",system-ui,sans-serif;
+     background:#f6f7f9;color:#1b1d21;max-width:820px;margin:0 auto}
+h1{font-size:18px;margin:0 0 2px}
+.sub{color:#7a8290;font-size:13px;margin:0 0 14px}
+.c{background:#fff;border:1px solid #e2e5ea;border-left:3px solid #4C8DFF;
+   border-radius:6px;padding:10px 12px;margin:0 0 10px}
+.m{color:#7a8290;font-size:12px;margin-bottom:6px}
+pre{margin:0;white-space:pre-wrap;word-break:break-word;font:inherit}
+a{color:#4C8DFF;text-decoration:none}
+code{font-size:13px}
+@media(prefers-color-scheme:dark){
+  body{background:#15171b;color:#e6e8ec}
+  .c{background:#1e2126;border-color:#2c3037}
+}
+</style></head><body><h1>曦覽 XinSpect ・ 留言建議</h1>${bodyHtml}</body></html>`;
+  return new Response(html, {
+    status,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+      "referrer-policy": "no-referrer",
+      "x-robots-tag": "noindex, nofollow",
+    },
+  });
 }
 
 function cors(resp) {

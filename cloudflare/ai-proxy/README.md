@@ -62,6 +62,7 @@ curl https://xinspect-ai.你的子網域.workers.dev/
 |------|------|
 | `POST /v1/chat/completions` | OpenAI 相容聊天中轉。模型由中轉決定，客端送什麼 `model` 都不看。 |
 | `POST /feedback` | 收留言建議，只認 `message`、`contact`、`version` 三個欄位。 |
+| `GET /inbox?k=…` | 作者自己看留言的唯讀列表。要帶 `INBOX_KEY`，沒設就回 503。 |
 | `GET /` | 健康檢查與總開關狀態。 |
 
 Workers AI 回的不是 OpenAI 的形狀，Worker 會把它包成 `chat.completion` 再回給程式。
@@ -78,14 +79,29 @@ Workers AI 回的不是 OpenAI 的形狀，Worker 會把它包成 `chat.completi
 
 ## 看留言
 
+最省事的是開網頁。先設一組只有自己知道的密碼（設過就不用再設）：
+
 ```bash
-npx wrangler kv key list --binding QUOTA --prefix feedback:
+npx wrangler secret put INBOX_KEY
+```
+
+然後開 `https://<你的 Worker 網址>/inbox?k=<那組密碼>`——一頁 30 則，最新的在最上面，
+每則自成一格，時間換算成台北時間，手機上也能看。這一頁只讀不寫，沒有刪除按鈕。
+
+密碼寫在網址裡，所以它會留在瀏覽器的歷史紀錄與書籤裡；Worker 那側已經設好
+`no-store`、`noindex`、`no-referrer`，並且同一個 IP 每小時只能開 60 次，讓暴力猜密碼不划算。
+密碼想換就再跑一次 `wrangler secret put INBOX_KEY`，舊網址立刻失效。
+
+也可以走 CLI（不必設密碼，但 `--remote` 不能省，少了它讀的是本機模擬的空 KV）：
+
+```bash
+npx wrangler kv key list --binding QUOTA --prefix feedback: --remote
 ```
 
 拿到 key 之後：
 
 ```bash
-npx wrangler kv key get --binding QUOTA "feedback:2026-08-31T..."
+npx wrangler kv key get --binding QUOTA --remote "feedback:2026-08-31T..."
 ```
 
 ## 換模型或換上游
