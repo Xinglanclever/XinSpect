@@ -56,9 +56,9 @@ public sealed class WingetService : ObservableObject
     public WingetService()
     {
         Categories = BuildCatalog();
-        // 任一套件勾選狀態變動時，更新已選數量顯示
+        // 任一套件勾選狀態變動時，更新已選數量與安裝按鈕文字
         foreach (var p in Categories.SelectMany(c => c.Packages))
-            p.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(WingetPackage.IsSelected)) OnPropertyChanged(nameof(SelectedCount)); };
+            p.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(WingetPackage.IsSelected)) RaiseSelectionChanged(); };
         _ = DetectAsync();
     }
 
@@ -157,18 +157,34 @@ public sealed class WingetService : ObservableObject
     /// <summary>已勾選的套件總數。</summary>
     public int SelectedCount => Categories.SelectMany(c => c.Packages).Count(p => p.IsSelected);
 
+    /// <summary>
+    /// 安裝按鈕上的文字。<b>必須是字串屬性</b>：<c>Button.Content</c> 的型別是 <see cref="object"/>，
+    /// WPF 在目標為 object 時會忽略繫結上的 <c>StringFormat</c>，直接把數字本身丟上去顯示成「0」。
+    /// </summary>
+    public string InstallButtonText => InstallLabel(SelectedCount);
+
+    /// <summary>安裝按鈕文字的產生規則（沒勾任何項目時不顯示括號裡的 0）。</summary>
+    internal static string InstallLabel(int selected) => selected > 0 ? $"安裝（{selected}）" : "安裝";
+
+    /// <summary>勾選狀態變動後一併更新數量與按鈕文字。</summary>
+    private void RaiseSelectionChanged()
+    {
+        OnPropertyChanged(nameof(SelectedCount));
+        OnPropertyChanged(nameof(InstallButtonText));
+    }
+
     /// <summary>勾選所有標記為推薦、且 winget 認為還沒裝的套件（已裝的不重複勾）。</summary>
     public void SelectRecommended()
     {
         foreach (var p in Categories.SelectMany(c => c.Packages)) p.IsSelected = p.Recommended && !p.IsInstalled;
-        OnPropertyChanged(nameof(SelectedCount));
+        RaiseSelectionChanged();
     }
 
     /// <summary>清除所有勾選。</summary>
     public void ClearSelection()
     {
         foreach (var p in Categories.SelectMany(c => c.Packages)) p.IsSelected = false;
-        OnPropertyChanged(nameof(SelectedCount));
+        RaiseSelectionChanged();
     }
 
     /// <summary>

@@ -77,6 +77,18 @@ public class WingetCatalogTests
         Assert.Equal("已安裝", p.StateText);
     }
 
+    // ── 安裝按鈕文字 ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void 安裝按鈕文字_沒勾東西時不顯示括號裡的0()
+    {
+        // Button.Content 是 object 型別，WPF 會忽略其上的 StringFormat，
+        // 所以這段文字必須由字串屬性產生（先前直接繫結數字，畫面上只會出現「0」）。
+        Assert.Equal("安裝", WingetService.InstallLabel(0));
+        Assert.Equal("安裝（1）", WingetService.InstallLabel(1));
+        Assert.Equal("安裝（12）", WingetService.InstallLabel(12));
+    }
+
     // ── winget export 匯出檔 ────────────────────────────────────────────────
 
     private const string ExportJson = """
