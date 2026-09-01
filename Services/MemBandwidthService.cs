@@ -46,8 +46,28 @@ public sealed class MemBandwidthService : ObservableObject
     private string _loadedVerdict = "—";
     public string LoadedVerdict { get => _loadedVerdict; private set => SetProperty(ref _loadedVerdict, value); }
 
+    private string _saturationText = "—";
+    /// <summary>飽和點判讀文字：以讀取頻寬為代表，說明幾核飽和。</summary>
+    public string SaturationText { get => _saturationText; private set => SetProperty(ref _saturationText, value); }
+
     /// <summary>各存取型態在各執行緒數下的頻寬。</summary>
     public ObservableCollection<MemBandwidthRow> Rows { get; } = [];
+
+    /// <summary>飽和曲線的原始數據，供圖表使用。</summary>
+    public MemBandwidthMath.ThreadScaleAnalysis? ThreadScale { get; private set; }
+
+    /// <summary>讀取型態的飽和曲線（供圖表綁定）。</summary>
+    public ObservableCollection<MemBandwidthMath.ThreadScalePoint> ReadScale { get; } = [];
+    /// <summary>複製型態的飽和曲線（供圖表綁定）。</summary>
+    public ObservableCollection<MemBandwidthMath.ThreadScalePoint> CopyScale { get; } = [];
+    /// <summary>相加型態的飽和曲線（供圖表綁定）。</summary>
+    public ObservableCollection<MemBandwidthMath.ThreadScalePoint> AddScale { get; } = [];
+    /// <summary>三元運算型態的飽和曲線（供圖表綁定）。</summary>
+    public ObservableCollection<MemBandwidthMath.ThreadScalePoint> TriadScale { get; } = [];
+
+    private int _saturationPoint;
+    /// <summary>飽和點執行緒數（讀取頻寬曲線飽和時的執行緒數）。0 表示無法判定。</summary>
+    public int SaturationPoint { get => _saturationPoint; private set => SetProperty(ref _saturationPoint, value); }
 
     /// <summary>負載延遲：施壓執行緒數 → 當時達成的頻寬與量到的延遲。</summary>
     public ObservableCollection<LoadedLatencyRow> LoadedRows { get; } = [];
@@ -68,8 +88,12 @@ public sealed class MemBandwidthService : ObservableObject
         ProgressPercent = 0;
         Rows.Clear();
         LoadedRows.Clear();
+        ReadScale.Clear(); CopyScale.Clear(); AddScale.Clear(); TriadScale.Clear();
+        ThreadScale = null;
+        SaturationPoint = 0;
         Verdict = "—";
         LoadedVerdict = "—";
+        SaturationText = "—";
 
         try
         {
@@ -91,6 +115,21 @@ public sealed class MemBandwidthService : ObservableObject
 
             foreach (var r in result.Bandwidth) Rows.Add(r);
             foreach (var r in result.Loaded) LoadedRows.Add(r);
+
+            // 飽和曲線：從原始數據分組
+            ReadScale.Clear(); CopyScale.Clear(); AddScale.Clear(); TriadScale.Clear();
+            var readPoints = result.Raw.Where(r => r.Kernel == "讀取").Select(r => (r.Threads, r.Gbps)).ToList();
+            var copyPoints = result.Raw.Where(r => r.Kernel == "複製").Select(r => (r.Threads, r.Gbps)).ToList();
+            var addPoints = result.Raw.Where(r => r.Kernel == "相加").Select(r => (r.Threads, r.Gbps)).ToList();
+            var triadPoints = result.Raw.Where(r => r.Kernel == "三元運算").Select(r => (r.Threads, r.Gbps)).ToList();
+            var scale = MemBandwidthMath.BuildThreadScaleAnalysis(readPoints, copyPoints, addPoints, triadPoints);
+            ThreadScale = scale;
+            foreach (var p in scale.Read) ReadScale.Add(p);
+            foreach (var p in scale.Copy) CopyScale.Add(p);
+            foreach (var p in scale.Add) AddScale.Add(p);
+            foreach (var p in scale.Triad) TriadScale.Add(p);
+            SaturationText = scale.SaturationText;
+            SaturationPoint = MemBandwidthMath.SaturationThreads(readPoints);
 
             var (text, _) = MemBandwidthMath.Judge(result.BestGbps, mtps, modules);
             Verdict = text;
@@ -133,7 +172,9 @@ public sealed class MemBandwidthService : ObservableObject
     }
 
     private sealed record MeasureResult(List<MemBandwidthRow> Bandwidth, List<LoadedLatencyRow> Loaded,
-                                        double BestGbps, long ArrayMib, long ChaseMib);
+                                        double BestGbps, long ArrayMib, long ChaseMib,
+                                        IReadOnlyList<(string Kernel, int Threads, double Gbps)> Raw);
+
 
     /// <summary>四種存取型態 × 執行緒階梯，再加負載延遲；全程可取消。</summary>
     private MeasureResult Measure(double peakGbps, IProgress<(double, string)> report, CancellationToken ct)
@@ -188,7 +229,7 @@ public sealed class MemBandwidthService : ObservableObject
                       .ToList();
 
         var loaded = MeasureLoadedLatency(a, chaseBytes, lp, report, step, totalSteps, ct);
-        return new MeasureResult(rows, loaded, top, arrayBytes / Mib, chaseBytes / Mib);
+        return new MeasureResult(rows, loaded, top, arrayBytes / Mib, chaseBytes / Mib, raw);
     }
     /// <summary>把 [0, n) 切成 threads 段（對齊向量寬度）同時跑一遍，回傳耗時（秒）。</summary>
     private static double RunParallel(double[] a, double[] b, double[] c, int n, int threads,

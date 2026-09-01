@@ -133,10 +133,16 @@ public sealed class StorageSmartService : ObservableObject
                 return bus switch
                 {
                     16 or 17 => TryReadNvme(index) is { } nvme
-                        ? ("NVMe 健康紀錄（log page 0x02，DeviceIoControl 直讀；匯流排 " + busName + "）", DecodeNvmeHealth(nvme))
+                        ? ("NVMe 健康紀錄（log page 0x02，DeviceIoControl 直讀；匯流排 " + busName + "）", DecodeNvmeHealth(nvme)
+                           .Concat(new[] { new SmartRow("── 硬體識別 ──", "", "", "") })
+                           .Concat(TryReadNvmeIdentify(index) is { } nvi ? DecodeNvmeIdentify(nvi) : new[] { new SmartRow("NVMe Identify Controller", "不支援（儲存堆疊未回應協定查詢）", "", "") })
+                           .ToList())
                         : throw new InvalidOperationException("NVMe 裝置的健康紀錄讀取失敗（儲存堆疊未回應協定查詢）。"),
                     3 or 10 or 11 => TryReadAtaSmartClassic(index) is { } ata
-                        ? ("ATA S.M.A.R.T. 屬性（SMART_RCV_DRIVE_DATA，原始欄位照列；匯流排 " + busName + "）", DecodeAtaAttributes(ata))
+                        ? ("ATA S.M.A.R.T. 屬性（SMART_RCV_DRIVE_DATA，原始欄位照列；匯流排 " + busName + "）", DecodeAtaAttributes(ata)
+                           .Concat(new[] { new SmartRow("── 硬體識別 ──", "", "", "") })
+                           .Concat(TryReadAtaIdentify(index) is { } ati ? DecodeAtaIdentify(ati) : new[] { new SmartRow("ATA IDENTIFY DEVICE", "不支援（驅動拒絕命令）", "", "") })
+                           .ToList())
                         : throw new InvalidOperationException("此磁碟不支援 SMART 讀取（驅動拒絕 SMART_RCV_DRIVE_DATA）。"),
                     _ => throw new InvalidOperationException($"此匯流排（{busName}）不支援 SMART 直讀；不送可能卡住的原始命令。"),
                 };
@@ -342,4 +348,163 @@ public sealed class StorageSmartService : ObservableObject
         241 => "累計寫入 LBA", 242 => "累計讀取 LBA",
         _ => "廠商自訂",
     };
+
+    // ── 硬體識別：NVMe Identify Controller + SATA IDENTIFY DEVICE ─────────
+
+    private const uint NvmeDataTypeIdentify = 0;     // CNS=Identify
+    private const uint NvmeCnsController = 1;       // CNS=1 為 Controller
+
+    /// <summary>
+    /// 取得 NVMe Identify Controller 資料區（4096B；回傳前 4096 位元組，後段是命名空間列表，現用不到）。
+    /// 失敗回 null。
+    /// </summary>
+    public static byte[]? TryReadNvmeIdentify(int index)
+    {
+        var handle = OpenDrive(index);
+        if (handle == IntPtr.Zero) return null;
+        try
+        {
+            const int header = 48;
+            var buf = new byte[header + 4096];
+            BitConverter.GetBytes(PropertyIdProtocolSpecificDevice).CopyTo(buf, 0);
+            BitConverter.GetBytes(0u).CopyTo(buf, 4);                              // PropertyStandardQuery
+            BitConverter.GetBytes(ProtocolTypeNvme).CopyTo(buf, 8);
+            BitConverter.GetBytes(NvmeDataTypeIdentify).CopyTo(buf, 12);
+            BitConverter.GetBytes(NvmeCnsController).CopyTo(buf, 16);              // RequestValue = CNS=1
+            BitConverter.GetBytes(0u).CopyTo(buf, 20);
+            BitConverter.GetBytes((uint)header).CopyTo(buf, 24);
+            BitConverter.GetBytes(4096u).CopyTo(buf, 28);
+
+            if (!DeviceIoControl(handle, IoctlStorageQueryProperty, buf, (uint)buf.Length, buf, (uint)buf.Length, out uint ret, IntPtr.Zero))
+                return null;
+            if (ret < header + 4096) return null;
+            var data = new byte[4096];
+            Array.Copy(buf, header, data, 0, 4096);
+            return data;
+        }
+        finally { CloseHandle(handle); }
+    }
+
+    /// <summary>
+    /// 取得 ATA IDENTIFY DEVICE 結果（512B）。用 SMART 0xEC 簽章走 SMART_RCV_DRIVE_DATA 同一路徑。
+    /// 失敗回 null。
+    /// </summary>
+    public static byte[]? TryReadAtaIdentify(int index)
+    {
+        var handle = OpenDrive(index);
+        if (handle == IntPtr.Zero) return null;
+        try
+        {
+            var input = new byte[16 + 512];
+            BitConverter.GetBytes(512u).CopyTo(input, 0);
+            input[4] = 0x00;   // bFeaturesReg
+            input[5] = 0x01;   // bSectorCountReg
+            input[6] = 0x01;   // bSectorNumberReg
+            input[7] = 0x4F;   // bCylLowReg
+            input[8] = 0xC2;   // bCylHighReg
+            input[9] = 0xA0;   // bDriveHeadReg
+            input[10] = 0xEC;  // bCommandReg = IDENTIFY DEVICE
+            input[12] = (byte)index;
+
+            var output = new byte[16 + 512];
+            if (!DeviceIoControl(handle, IoctlSmartRcvDriveData, input, (uint)input.Length, output, (uint)output.Length, out uint ret, IntPtr.Zero))
+                return null;
+            if (output[4] != 0) return null;
+            if (ret < 16 + 512) return null;
+            var data = new byte[512];
+            Array.Copy(output, 16, data, 0, 512);
+            return data;
+        }
+        finally { CloseHandle(handle); }
+    }
+
+    /// <summary>NVMe Identify Controller（4096B）→ 識別資訊列。位元組位移依 NVMe 1.3+ 規格。</summary>
+    public static List<SmartRow> DecodeNvmeIdentify(byte[] data)
+    {
+        if (data.Length < 4096) throw new InvalidOperationException("NVMe Identify Controller 長度不足 4096 位元組。");
+
+        // 字串欄位是 ASCII（大端：字元在低位元組、高位元組為 0）
+        string AsciiString(int offset, int byteLen)
+        {
+            var chars = new char[byteLen / 2];
+            int w = 0;
+            for (int i = 0; i < chars.Length; i++)
+            {
+                byte lo = data[offset + i * 2];
+                if (lo == 0) break;
+                chars[w++] = (char)lo;
+            }
+            return new string(chars, 0, w).Trim();
+        }
+
+        static string Status(ushort s) =>
+            (s & 1) != 0 ? "未就緒" : (s & 0) != 0 ? "就緒" : "就緒（RDY=0）";
+
+        var rows = new List<SmartRow>
+        {
+            new("廠商（Vendor ID）", AsciiString(0, 4), "", ""),
+            new("型號（Model）", AsciiString(24, 40), "", ""),
+            new("序號（Serial）", AsciiString(4, 20), "", ""),
+            new("韌體版本（Firmware）", AsciiString(64, 8), "", ""),
+            new("總命名空間數（NN）", $"{data[513] + (data[514] << 8)}", "", ""),
+            new("容量（NCAP）", $"{(ulong)BitConverter.ToUInt32(data, 0x38) * 512:N0} 位元組", "", ""),
+            new("最大資料傳輸大小（MDTS）", $"{1UL << ((data[77] >> 0) & 0xF):N0} 頁（4 KiB 倍數）", "", ""),
+            new("Controller 狀態（CC.EN）", Status((ushort)(data[0x4C] | (data[0x4D] << 8))), "", ""),
+        };
+        return rows;
+    }
+
+    /// <summary>ATA IDENTIFY DEVICE（512B）→ 識別資訊列。位移依 ATA/ATAPI-8 規格，word 為 16 位元小端。</summary>
+    public static List<SmartRow> DecodeAtaIdentify(byte[] data)
+    {
+        if (data.Length < 512) throw new InvalidOperationException("ATA IDENTIFY DEVICE 長度不足 512 位元組。");
+
+        ushort Le16(int o) => (ushort)(data[o] | (data[o + 1] << 8));
+        ulong Le32(int o) => (ulong)(data[o] | (data[o + 1] << 8) | (data[o + 2] << 16) | (data[o + 3] << 24));
+        static string AsciiString(byte[] d, int offset, int wordCount)
+        {
+            int len = wordCount * 2;
+            var chars = new char[len];
+            int w = 0;
+            for (int i = 0; i < len; i += 2)
+            {
+                byte lo = d[offset + i];
+                byte hi = d[offset + i + 1];
+                if (lo == 0 && hi == 0) break;                  // 全 0 結尾
+                if (lo == 0x20 && hi == 0) continue;            // 跳過 0x20 補位空格
+                chars[w++] = (char)lo;
+            }
+            return new string(chars, 0, w).Trim();
+        }
+
+        // Word 0：General configuration (bit 15 = ATA device)
+        bool isAta = (Le16(0) & 0x8000) != 0;
+        // Word 10-19：Model number (20 words)
+        // Word 23-26：Firmware revision (4 words)
+        // Word 27-46：User addressable sectors (max LBA for 28-bit) 已被 48-bit LBA 取代
+        // Word 69 bit 14 = supports Trim
+        // Word 78 bit 5 = supports DevSleep
+        // Word 82-83：48-bit LBA supported sectors
+        // Word 100-103：Total logical sectors (16-byte)
+        // Word 106：Physical/Logical sector size (bit 12 = 4K logical, bit 13 = 4K physical)
+        // Word 217：Nominal media rotation rate (SSD = 0x0001)
+        // Word 128：Security status
+
+        var rows = new List<SmartRow>
+        {
+            new("型號（Model）", AsciiString(data, 2 * 27, 20), "", ""),
+            new("序號（Serial）", AsciiString(data, 2 * 10, 10), "", ""),
+            new("韌體（Firmware）", AsciiString(data, 2 * 23, 4), "", ""),
+            new("裝置類型", isAta ? "ATA" : "ATAPI／未知", "", ""),
+            new("最大 LBA（48-bit）", Le32(2 * 100) != 0 ? $"{Le32(2 * 100):N0} 磁區（≈{Le32(2 * 100) * 512 / 1e12:0.00} TB）" : "—", "", ""),
+            new("邏輯磁區大小", (Le16(2 * 106) & 0x1000) != 0 ? "4 KiB" : "512 B", "", ""),
+            new("實體磁區大小", (Le16(2 * 106) & 0x2000) != 0 ? "4 KiB" : "512 B", "", ""),
+            new("支援 TRIM", (Le16(2 * 69) & 0x4000) != 0 ? "是（Data Set Management）" : "否", "", ""),
+            new("支援 DevSleep", (Le16(2 * 78) & 0x20) != 0 ? "是" : "否", "", ""),
+            new("媒體旋轉率（Word 217）", Le16(2 * 217) switch { 0x0001 => "SSD（無旋轉）", 0 => "未回報", var w => $"{w} RPM" }, "", ""),
+            new("安全狀態（Word 128）", $"0x{Le16(2 * 128):X4}（0x0001 = 支援、0x0002 = 已啟用）", "", ""),
+            new("ATA 版本（Word 80）", $"0x{Le16(2 * 80):X4}（位 15:8 = 最高支援版本）", "", ""),
+        };
+        return rows;
+    }
 }

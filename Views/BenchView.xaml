@@ -556,7 +556,9 @@
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding LatencyCurve.StatusLine}"/>
                     <local:LatencyCurveChart Height="230" Margin="0,10,0,0"
                                              Xs="{Binding LatencyCurve.Sizes}" Ys="{Binding LatencyCurve.Latencies}"
-                                             BoundaryMarks="{Binding LatencyCurve.Boundaries}"/>
+                                             BoundaryMarks="{Binding LatencyCurve.Boundaries}"
+                                             BoundaryLabels="{Binding LatencyCurve.BoundaryLabels}"
+                                             BoundaryConfidence="{Binding LatencyCurve.BoundaryConfidence}"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,2" TextWrapping="Wrap"
                                Text="{Binding LatencyCurve.ClaimedNote, StringFormat={}{0}}"/>
                     <ItemsControl ItemsSource="{Binding LatencyCurve.BoundaryRows}" Margin="0,0,0,4">
@@ -569,6 +571,27 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Style="{StaticResource FieldValue}" Text="{Binding Derived}" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Claimed}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,4" TextWrapping="Wrap"
+                               Text="邊界可信度（偏差 &lt; 20% 高可信、20–50% 中可信、&gt; 50% 低可信；未配對宣稱值不列入）。"/>
+                    <ItemsControl ItemsSource="{Binding LatencyCurve.DeviationRows}" Margin="0,0,0,4">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="22">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="90"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="{Binding LevelName}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding DerivedSize}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" Text="{Binding ClaimedSize}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding Deviation}" VerticalAlignment="Center"
+                                               TextAlignment="Right" Foreground="{Binding ConfidenceClass, Converter={StaticResource SeverityToBrushConverter}}"/>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -658,6 +681,18 @@
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding MemBandwidth.LoadedVerdict}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap"
                                Text="「同時達成頻寬」量的是施壓執行緒在穩態下的合計吞吐——沒有每一輪重啟執行緒的成本，也不必等最慢那條收工，所以合理地會高於上面那張 STREAM 式階梯的峰值；兩個數字量的不是同一件事。但它一定不會超過本卡片最上方推算的理論上限，超過就是記帳錯了而不是機器變快了。"/>
+
+                    <local:SectionHead Text="記憶體頻寬飽和曲線（執行緒 → 頻寬）" HelpKey="bench/記憶體頻寬飽和曲線" Margin="0,14,0,2"/>
+                    <local:ThreadScaleChart Height="230" Margin="0,4,0,0"
+                                            ReadData="{Binding MemBandwidth.ReadScale}"
+                                            CopyData="{Binding MemBandwidth.CopyScale}"
+                                            AddData="{Binding MemBandwidth.AddScale}"
+                                            TriadData="{Binding MemBandwidth.TriadScale}"
+                                            SaturationThread="{Binding MemBandwidth.SaturationPoint}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding MemBandwidth.SaturationText}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="四條曲線分別是讀取／複製／相加／三元運算四種存取型態在 1 → N 執行緒下的達成頻寬。曲線趨平表示記憶體控制器已被吃滿，再往上加執行緒只會浪費核心。"/>
                 </StackPanel>
             </Border>
 

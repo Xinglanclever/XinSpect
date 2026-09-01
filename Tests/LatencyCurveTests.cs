@@ -64,4 +64,57 @@ public class LatencyCurveTests
         var map = LatencyCurveMath.PairNearest(boundaries, claimed);
         Assert.Equal(-1, map[0]);   // 差了三個數量級，不該硬湊
     }
+
+    [Fact]
+    public void 偏差評估_偏差小於20Percent判定為高可信()
+    {
+        double[] boundaries = { 38_000 };
+        int[] map = { 0 };
+        double[] claimed = { 32_000 };
+        var rows = LatencyCurveMath.AssessDeviation(boundaries, map, claimed);
+        var r = Assert.Single(rows);
+        Assert.Equal(DeviationConfidence.High, r.Confidence);
+        Assert.True(r.DeviationPct > 0 && r.DeviationPct < 20);
+    }
+
+    [Fact]
+    public void 偏差評估_偏差在20至50Percent判定為中可信()
+    {
+        double[] boundaries = { 45_000 };
+        int[] map = { 0 };
+        double[] claimed = { 32_000 };
+        var rows = LatencyCurveMath.AssessDeviation(boundaries, map, claimed);
+        var r = Assert.Single(rows);
+        Assert.Equal(DeviationConfidence.Medium, r.Confidence);
+    }
+
+    [Fact]
+    public void 偏差評估_偏差大於50Percent判定為低可信()
+    {
+        double[] boundaries = { 80_000 };
+        int[] map = { 0 };
+        double[] claimed = { 32_000 };
+        var rows = LatencyCurveMath.AssessDeviation(boundaries, map, claimed);
+        var r = Assert.Single(rows);
+        Assert.Equal(DeviationConfidence.Low, r.Confidence);
+    }
+
+    [Fact]
+    public void 偏差評估_未配對的邊界不列入評估()
+    {
+        double[] boundaries = { 38_000, 90_000 };
+        int[] map = { 0, -1 };   // 第二個邊界未配對
+        double[] claimed = { 32_000 };
+        var rows = LatencyCurveMath.AssessDeviation(boundaries, map, claimed);
+        Assert.Single(rows);
+    }
+
+    [Fact]
+    public void 偏差評估_無宣稱值時不評估()
+    {
+        double[] boundaries = { 38_000 };
+        int[] map = { 0 };
+        double[] claimed = { 0 };
+        Assert.Empty(LatencyCurveMath.AssessDeviation(boundaries, map, claimed));
+    }
 }

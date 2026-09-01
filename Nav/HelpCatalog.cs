@@ -411,8 +411,8 @@ public static class HelpCatalog
         ["storage/S.M.A.R.T. 原始資料"] = new()
         {
             Title = "S.M.A.R.T. 原始資料",
-            What = "磁碟韌體自己記錄的健康屬性原始值：通電時數、寫入量、耗損指標、錯誤計數等。",
-            Does = "NVMe 直讀健康紀錄（log page 0x02）；SATA 走 SMART_RCV_DRIVE_DATA（磁碟類別驅動代理）。原始值照韌體回報原樣列出（十六進位＋小端整數），不套任何廠商換算公式——換算就是猜。",
+            What = "磁碟韌體自己記錄的健康屬性原始值（通電時數、寫入量、耗損指標、錯誤計數等），以及從 Identify Controller / IDENTIFY DEVICE 讀出的硬體識別（型號、序號、韌體、容量、磁區大小、TRIM 支援等）。",
+            Does = "NVMe 直讀健康紀錄（log page 0x02）與 Identify Controller；SATA 走 SMART_RCV_DRIVE_DATA（磁碟類別驅動代理）與 IDENTIFY DEVICE。原始值照韌體回報原樣列出（十六進位＋小端整數），不套任何廠商換算公式——換算就是猜。",
             Safety = "唯讀，而且刻意不使用會卡死 IRP 的原始 ATA_PASS_THROUGH；匯流排預檢不通過的磁碟直接跳過，不會讓程式僵在那裡。",
         },
         ["storage/SLC 快取耗盡曲線"] = new()
@@ -603,6 +603,14 @@ public static class HelpCatalog
             Does = "「跑大型編譯或轉檔時整台機器都變鈍」的量化證據。壓力下延遲上升是必然的（大家在排隊），漲到三倍以上才代表記憶體子系統是瓶頸；那種情況要往通道數與頻率去改善，不是往 CPU。施壓執行緒數刻意留一個核心給量延遲的那條，否則量到的會是排程等待。",
             Risk = HelpRisk.Caution,
             Safety = "同上，唯讀硬體、只動自己的記憶體。施壓期間 CPU 與記憶體都會滿載，隨時可按停止。",
+        },
+        ["bench/記憶體頻寬飽和曲線"] = new()
+        {
+            Title = "記憶體頻寬飽和曲線（執行緒 → 頻寬）",
+            What = "讀取／複製／相加／三元運算四種存取型態在 1 → N 執行緒下的達成頻寬曲線。曲線趨平表示記憶體控制器已被吃滿，再往上加執行緒只會浪費核心。",
+            Does = "以「讀取」曲線為代表，當某級的增益 < 5% 時判定該級已飽和，此時的執行緒數即為飽和點。飽和點以上加執行緒只會增加爭用，不會提高實際吞吐。飽和點約在幾核，對「是否值得升級到更多核心」有參考價值。",
+            Risk = HelpRisk.Caution,
+            Safety = "與頻寬量測共用工作集，量測期間機器明顯變慢；結束即釋放。",
         },
         ["bench/SuperPI 圓周率運算"] = new()
         {

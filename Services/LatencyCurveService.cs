@@ -12,6 +12,25 @@ public sealed class LatencyBoundaryRow
     public string Claimed { get; }
 }
 
+/// <summary>邊界可信度：推導值與 CPUID 宣稱值的偏差評估。</summary>
+public sealed class LatencyDeviationRow
+{
+    public LatencyDeviationRow(string levelName, string derivedSize, string claimedSize, string deviation, string confidence)
+    { LevelName = levelName; DerivedSize = derivedSize; ClaimedSize = claimedSize; Deviation = deviation; Confidence = confidence; }
+    public string LevelName { get; }
+    public string DerivedSize { get; }
+    public string ClaimedSize { get; }
+    public string Deviation { get; }
+    public string Confidence { get; }
+    public string ConfidenceClass => Confidence.Contains('高') ? "Good" : Confidence.Contains('低') ? "Critical" : "Warning";
+}
+
+/// <summary>邊界偏移的可信度等級。</summary>
+public enum DeviationConfidence { High, Medium, Low }
+
+/// <summary>一個推導邊界與對應宣稱值的偏差資訊。</summary>
+public sealed record DeviationInfo(double BoundaryBytes, double ClaimedBytes, double DeviationPct, DeviationConfidence Confidence);
+
 /// <summary>
 /// 記憶體延遲曲線：以指標追逐法在 1 KB → 1 GB（半倍頻步進）的工作集上量測平均存取延遲，
 /// 由曲線的階梯<b>推導</b>出 L1／L2／L3／DRAM 的邊界，再與 CPUID leaf 0x04 <b>宣稱</b>的快取容量並列對照。
@@ -53,7 +72,17 @@ public sealed class LatencyCurveService : ObservableObject
     /// <summary>由曲線階梯推導的邊界（位元組，幾何平均點）。</summary>
     public double[] Boundaries { get => _boundaries; private set => SetProperty(ref _boundaries, value); }
 
+    private string[] _boundaryLabels = [];
+    /// <summary>各邊界旁要顯示的偏差標籤（與 Boundaries 一一對應），如 "+8%"、"-22%"。</summary>
+    public string[] BoundaryLabels { get => _boundaryLabels; private set => SetProperty(ref _boundaryLabels, value); }
+
+    private string[] _boundaryConfidence = [];
+    /// <summary>各邊界的可信度（"high"/"medium"/"low"），決定圖表上邊界線顏色。</summary>
+    public string[] BoundaryConfidence { get => _boundaryConfidence; private set => SetProperty(ref _boundaryConfidence, value); }
+
     public ObservableCollection<LatencyBoundaryRow> BoundaryRows { get; } = [];
+
+    public ObservableCollection<LatencyDeviationRow> DeviationRows { get; } = [];
 
     private string _claimedNote = "CPUID 宣稱：尚未量測。";
     public string ClaimedNote { get => _claimedNote; private set => SetProperty(ref _claimedNote, value); }
@@ -121,6 +150,41 @@ public sealed class LatencyCurveService : ObservableObject
                     ? $"對照 {claimed[pairs[i]].Name} 宣稱 {FormatBytes(claimed[pairs[i]].Bytes)}（{(bl[i] / claimed[pairs[i]].Bytes - 1.0):+0%;-0%}）"
                     : "附近無 CPUID 宣稱值可對照";
                 BoundaryRows.Add(new LatencyBoundaryRow(derived, claimedText));
+            }
+
+            // 偏差可信度評估（也用來填 BoundaryLabels / BoundaryConfidence 給圖表）
+            DeviationRows.Clear();
+            var deviations = LatencyCurveMath.AssessDeviation(bl.ToArray(), pairs, claimed.Select(c => (double)c.Bytes).ToArray());
+            string[] levelNames = ["L1", "L2", "L3", "L4", "L5"];
+            var labels = new string[bl.Count];
+            var confs = new string[bl.Count];
+            for (int i = 0; i < bl.Count; i++)
+            {
+                if (pairs[i] < 0) continue;   // 未配對的邊界不顯示偏差
+                var dev = deviations.FirstOrDefault(d => Math.Abs(d.BoundaryBytes - bl[i]) < 1.0);
+                if (dev is null) continue;
+                labels[i] = dev.DeviationPct == 0 ? "—" : $"{dev.DeviationPct:+0.0;-0.0}%";
+                confs[i] = dev.Confidence switch
+                {
+                    DeviationConfidence.High => "high",
+                    DeviationConfidence.Medium => "medium",
+                    _ => "low",
+                };
+            }
+            BoundaryLabels = labels;
+            BoundaryConfidence = confs;
+
+            for (int i = 0; i < deviations.Count; i++)
+            {
+                var d = deviations[i];
+                string name = i < levelNames.Length ? levelNames[i] : $"邊界{i + 1}";
+                string conf = d.Confidence switch
+                {
+                    DeviationConfidence.High => "高可信",
+                    DeviationConfidence.Medium => "中可信",
+                    _ => "低可信",
+                };
+                DeviationRows.Add(new LatencyDeviationRow(name, FormatBytes((long)d.BoundaryBytes), FormatBytes((long)d.ClaimedBytes), $"{d.DeviationPct:+0.0;-0.0}%", conf));
             }
 
             Phase = "完成";
@@ -298,5 +362,27 @@ public static class LatencyCurveMath
         }
         for (int b = 0; b < map.Length; b++) map[b] -= 1;
         return map;
+    }
+
+    /// <summary>
+    /// 評估推導邊界與宣稱值的偏移可信度：
+    /// 偏差 &lt; 20% → 高可信；20–50% → 中可信；&gt; 50% → 低可信。
+    /// 未配對的邊界不列入評估。
+    /// </summary>
+    public static List<DeviationInfo> AssessDeviation(double[] boundaries, int[] pairMap, double[] claimed)
+    {
+        var result = new List<DeviationInfo>();
+        if (boundaries.Length == 0 || claimed.Length == 0) return result;
+        for (int b = 0; b < boundaries.Length; b++)
+        {
+            int c = pairMap[b];
+            if (c < 0 || c >= claimed.Length || claimed[c] <= 0) continue;
+            double devPct = (boundaries[b] / claimed[c] - 1.0) * 100;
+            var conf = Math.Abs(devPct) < 20 ? DeviationConfidence.High
+                     : Math.Abs(devPct) < 50 ? DeviationConfidence.Medium
+                     : DeviationConfidence.Low;
+            result.Add(new DeviationInfo(boundaries[b], claimed[c], devPct, conf));
+        }
+        return result;
     }
 }

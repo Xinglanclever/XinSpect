@@ -288,4 +288,48 @@ public class MemBandwidthMathTests
         Assert.Equal((0, 0), MemBandwidthMath.Slice(100, 4, -1));
         Assert.Equal((0, 0), MemBandwidthMath.Slice(100, 4, 4));
     }
+
+    // ── 飽和曲線：執行緒數 → 頻寬，判定飽和點 ──────────────────────────────
+
+    [Fact]
+    public void 飽和點_增益小於5Percent時判定為飽和()
+    {
+        // 1→2→4 顯著增益，4→8 增益 < 5% → 在 4 執行緒時飽和
+        var points = new (int, double)[] { (1, 10), (2, 19), (4, 35), (8, 36) };
+        Assert.Equal(4, MemBandwidthMath.SaturationThreads(points));
+    }
+
+    [Fact]
+    public void 飽和點_持續增益不判定為飽和()
+    {
+        var points = new (int, double)[] { (1, 10), (2, 19), (4, 35), (8, 60) };
+        Assert.Equal(8, MemBandwidthMath.SaturationThreads(points));
+    }
+
+    [Fact]
+    public void 飽和點_只有一個點時不判定()
+    {
+        Assert.Equal(0, MemBandwidthMath.SaturationThreads(new (int, double)[] { (1, 10) }));
+    }
+
+    [Fact]
+    public void 飽和點_資料未排序時也能正確處理()
+    {
+        var points = new (int, double)[] { (4, 35), (1, 10), (8, 36), (2, 19) };
+        Assert.Equal(4, MemBandwidthMath.SaturationThreads(points));
+    }
+
+    [Fact]
+    public void 飽和分析_標記飽和點為true()
+    {
+        var points = new (int, double)[] { (1, 10), (2, 19), (4, 35), (8, 36) };
+        var analysis = MemBandwidthMath.BuildThreadScaleAnalysis(
+            points, points, points, points);
+        Assert.Single(analysis.Read.Where(p => p.IsSaturation));
+        var sat = analysis.Read.First(p => p.IsSaturation);
+        Assert.Equal(4, sat.Threads);
+        Assert.False(analysis.Read.First(p => p.Threads == 1).IsSaturation);
+        Assert.False(analysis.Read.First(p => p.Threads == 2).IsSaturation);
+        Assert.False(analysis.Read.First(p => p.Threads == 8).IsSaturation);
+    }
 }

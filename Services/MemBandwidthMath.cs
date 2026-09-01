@@ -128,6 +128,89 @@ public static class MemBandwidthMath
         return eff <= 0 ? "—" : $"{eff:0%}";
     }
 
+    /// <summary>一個存取型態在各執行緒數下的頻寬，供飽和曲線使用。</summary>
+    public sealed class ThreadScalePoint
+    {
+        public ThreadScalePoint(int threads, double gbps) { Threads = threads; Gbps = gbps; }
+        public int Threads { get; }
+        public double Gbps { get; }
+        public string ThreadsText => $"{Threads} 執行緒";
+        public string GbpsText => MemBandwidthMath.FormatGbps(Gbps);
+        /// <summary>是否為飽和點本身（該型態的下一個執行緒不再顯著增益）。</summary>
+        public bool IsSaturation { get; set; }
+    }
+
+    /// <summary>飽和分析結果：每個存取型態的單點曲線，加上判讀文字。</summary>
+    public sealed class ThreadScaleAnalysis
+    {
+        public ThreadScaleAnalysis(IReadOnlyList<ThreadScalePoint> read, IReadOnlyList<ThreadScalePoint> copy,
+                                   IReadOnlyList<ThreadScalePoint> add, IReadOnlyList<ThreadScalePoint> triad,
+                                   string saturationText)
+        {
+            Read = read; Copy = copy; Add = add; Triad = triad; SaturationText = saturationText;
+        }
+        public IReadOnlyList<ThreadScalePoint> Read { get; }
+        public IReadOnlyList<ThreadScalePoint> Copy { get; }
+        public IReadOnlyList<ThreadScalePoint> Add { get; }
+        public IReadOnlyList<ThreadScalePoint> Triad { get; }
+        public string SaturationText { get; }
+    }
+
+    /// <summary>
+    /// 由某一種存取型態的「執行緒數 → 頻寬」序列推導飽和點：當某一級的增益 &lt; 5% 且之後不再顯著超過，
+    /// 就判定那一級已飽和。回傳「飽和所在執行緒數」，資料不足或無增益時回 0。
+    /// </summary>
+    public static int SaturationThreads(IReadOnlyList<(int Threads, double Gbps)> points)
+    {
+        if (points.Count < 2) return 0;
+        var sorted = points.OrderBy(p => p.Threads).ToList();
+        double prev = sorted[0].Gbps;
+        for (int i = 1; i < sorted.Count; i++)
+        {
+            double gain = sorted[i].Gbps / Math.Max(prev, 1e-9) - 1.0;
+            if (gain < 0.05)
+            {
+                // 飽和點：這一級不再顯著增益。取「前一級」作為飽和所在（再上去都在浪費核心）。
+                return sorted[i - 1].Threads;
+            }
+            prev = sorted[i].Gbps;
+        }
+        return sorted[^1].Threads;
+    }
+
+    /// <summary>
+    /// 由四種存取型態的原始序列組裝飽和分析：標記每條曲線的飽和點，並給出一句判讀。
+    /// </summary>
+    public static ThreadScaleAnalysis BuildThreadScaleAnalysis(
+        IReadOnlyList<(int Threads, double Gbps)> read,
+        IReadOnlyList<(int Threads, double Gbps)> copy,
+        IReadOnlyList<(int Threads, double Gbps)> add,
+        IReadOnlyList<(int Threads, double Gbps)> triad)
+    {
+        var r = WithSaturation(read);
+        var c = WithSaturation(copy);
+        var a = WithSaturation(add);
+        var t = WithSaturation(triad);
+
+        // 以「讀取」曲線為代表做判讀（最純真的頻寬量測），四條一起看更全面
+        int sat = SaturationThreads(read);
+        string text = sat > 0
+            ? $"以讀取頻寬為代表，約在 {sat} 執行緒時達到飽和（再往上增益 &lt; 5%）。記憶體控制器約在此被吃滿。"
+            : "資料不足，無法判定飽和點。";
+        // 若四條曲線的最高頻寬接近理論上限而飽和很低，補充說明
+        return new ThreadScaleAnalysis(r, c, a, t, text);
+    }
+
+    private static List<ThreadScalePoint> WithSaturation(IReadOnlyList<(int Threads, double Gbps)> points)
+    {
+        var list = points.OrderBy(p => p.Threads)
+                         .Select(p => new ThreadScalePoint(p.Threads, p.Gbps))
+                         .ToList();
+        int sat = SaturationThreads(points);
+        foreach (var p in list) p.IsSaturation = p.Threads == sat;
+        return list;
+    }
+
     /// <summary>
     /// 判讀：<b>0＝正常、1＝達成率偏低值得查、2＝疑似實際只跑單通道</b>。
     /// </summary>
