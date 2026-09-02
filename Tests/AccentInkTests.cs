@@ -4,11 +4,14 @@ using Xunit;
 namespace XinSpect.Tests;
 
 /// <summary>
-/// 強調色上的墨色選擇。
+/// 主要動作按鈕的底色與文字色。
 ///
-/// 外觀修好之後，八個強調色第一次真的會出現在畫面上——於是暴露一件先前不可能被發現的事：
-/// 主要動作按鈕的文字寫死白色，配上琥珀那種亮底只有約 2.5:1 的對比，低於 WCAG AA 對一般文字
-/// 要求的 4.5:1。這一份守的是「墨色依底色亮度自動挑，挑對比高的那一個」。
+/// 外觀修好之後，八個強調色第一次真的會被畫出來——於是暴露一件先前不可能被發現的事：
+/// 按鈕的文字寫死白色，配上琥珀那種亮底只有約 2.5:1，低於 WCAG AA 對一般文字要求的 4.5:1。
+///
+/// 這一份守的是「壓暗底色而不是換掉字色」。換字色是 Material 那一套的標準解，但在這裡不成立：
+/// 按鈕底是一道跨度很大的漸層，深字在暗端只有 2.7:1——換字色只是把問題從一端搬到另一端。
+/// 所以規則是：白字保留，底色整組壓暗到最亮的那一點也達標，且壓暗只動亮度不動色相。
 /// </summary>
 public class AccentInkTests
 {
@@ -23,43 +26,73 @@ public class AccentInkTests
     }
 
     [Fact]
-    public void 亮底挑深字暗底挑白字()
+    public void 壓暗只動亮度_色相比例不變()
     {
-        Assert.True(AccentInk.PickIsDark(Hex("#ffffff")));
-        Assert.False(AccentInk.PickIsDark(Hex("#000000")));
-    }
-
-    [Fact]
-    public void 琥珀這種亮底必須挑深字()
-    {
-        // 白字落在 #e0932a 上只有約 2.5:1；深字約 7.3:1
         var amber = Hex("#e0932a");
-        Assert.True(AccentInk.PickIsDark(amber));
-        Assert.True(AccentInk.Contrast(AccentInk.Pick(amber), amber) > AccentInk.Contrast(Colors.White, amber));
+        var dim = AccentInk.Scale(amber, 0.5);
+
+        Assert.True(AccentInk.Luminance(dim) < AccentInk.Luminance(amber));
+        // 三個通道的相對關係維持（紅 > 綠 > 藍）：琥珀壓暗後還是琥珀，不會變成別的顏色
+        Assert.True(dim.R > dim.G && dim.G > dim.B);
     }
 
     [Fact]
-    public void 挑出來的墨色一定是兩個候選裡對比較高的那個()
+    public void 本來就達標的底色一個位元都不改()
+    {
+        var top = Hex("#1c3f6e");     // 深藍：白字本來就過
+        var c = AccentInk.ButtonColors(top, top, top);
+
+        Assert.Equal(top, c.Top);
+        Assert.Equal(top, c.Bottom);
+        Assert.Equal(top, c.Solid);
+        Assert.Equal(AccentInk.Ink, c.Ink);
+    }
+
+    [Fact]
+    public void 亮底會被壓暗_但仍是同一個色相()
+    {
+        var top = Hex("#f0a83f");     // 琥珀的漸層亮端
+        var c = AccentInk.ButtonColors(top, Hex("#9c6111"), Hex("#e0932a"));
+
+        Assert.True(AccentInk.Luminance(c.Top) < AccentInk.Luminance(top));
+        Assert.True(c.Top.R > c.Top.G && c.Top.G > c.Top.B);
+        Assert.Equal(AccentInk.Ink, c.Ink);
+    }
+
+    [Fact]
+    public void 漸層的三個底色一起壓_順序不會反過來()
+    {
+        var c = AccentInk.ButtonColors(Hex("#f0a83f"), Hex("#9c6111"), Hex("#e0932a"));
+        // 壓暗前亮端 > 純色 > 暗端；壓暗後這個順序必須維持，否則漸層方向會反
+        Assert.True(AccentInk.Luminance(c.Top) > AccentInk.Luminance(c.Solid));
+        Assert.True(AccentInk.Luminance(c.Solid) > AccentInk.Luminance(c.Bottom));
+    }
+
+    [Fact]
+    public void 八個強調色的三個底色配白字都要達到AA()
     {
         foreach (var p in ThemeService.Presets)
         {
-            // 按鈕底色最亮的部分是漸層頂端，最不利的情況就在那裡
-            var bg = p.GradTopColor;
-            var picked = AccentInk.Pick(bg);
-            double best = Math.Max(AccentInk.Contrast(AccentInk.DarkInk, bg),
-                                   AccentInk.Contrast(AccentInk.LightInk, bg));
-            Assert.Equal(best, AccentInk.Contrast(picked, bg), 3);
+            var c = AccentInk.ButtonColors(p.GradTopColor, p.DimColor, p.MainColor);
+
+            foreach (var (name, bg) in new[] { ("漸層亮端", c.Top), ("漸層暗端", c.Bottom), ("滑過純色", c.Solid) })
+            {
+                double ratio = AccentInk.Contrast(c.Ink, bg);
+                Assert.True(ratio >= AccentInk.AaNormalText,
+                    $"{p.Name}（{p.Main}）的{name}對比只有 {ratio:0.00}:1，低於 AA 的 4.5:1");
+            }
         }
     }
 
     [Fact]
-    public void 八個強調色挑完之後都要達到AA的四點五比一()
+    public void 沒有任何強調色被壓成近乎全黑()
     {
+        // 壓暗是為了對比，不是為了把顏色弄不見：最亮那一端壓完仍要看得出是彩色
         foreach (var p in ThemeService.Presets)
         {
-            var bg = p.GradTopColor;
-            double c = AccentInk.Contrast(AccentInk.Pick(bg), bg);
-            Assert.True(c >= 4.5, $"{p.Name}（{p.GradTop}）挑完墨色後對比只有 {c:0.00}:1，低於 AA 的 4.5:1");
+            var c = AccentInk.ButtonColors(p.GradTopColor, p.DimColor, p.MainColor);
+            Assert.True(AccentInk.Luminance(c.Top) > 0.02,
+                $"{p.Name} 的漸層亮端被壓到亮度 {AccentInk.Luminance(c.Top):0.000}，幾乎全黑了");
         }
     }
 }

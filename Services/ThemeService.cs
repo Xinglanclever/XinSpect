@@ -178,12 +178,15 @@ public static class ThemeService
         Set("AccentBrush", Accent.Main);
         Set("AccentDimBrush", Accent.Dim);
 
-        // 落在強調色上的文字色：算對比度挑白或深，不寫死。按鈕底是漸層，最不利的是亮端，
-        // 所以拿漸層頂端當底色來挑；八個強調色挑完都達到 WCAG AA 的 4.5:1（見 AccentInkTests）。
-        SetBrush("AccentInkBrush", AccentInk.Pick(Accent.GradTopColor));
+        // 按鈕底色與其上的文字色：白字要在整道漸層上都達到 WCAG AA 的 4.5:1，
+        // 做法是把按鈕自己的底色整組壓暗（只動亮度、不動色相），而不是換掉字色——
+        // 換字色只會把問題從漸層的一端搬到另一端。見 Services/AccentInk.cs 與 AccentInkTests。
+        var btn = AccentInk.ButtonColors(Accent.GradTopColor, Accent.DimColor, Accent.MainColor);
+        SetBrush("AccentInkBrush", btn.Ink);
+        SetBrush("AccentButtonBrush", btn.Solid);
 
-        // 強調漸層：頂=亮端、底=暗端
-        SetGradient("AccentGradientBrush", Accent.GradTopColor, Accent.DimColor);
+        // 強調漸層（按鈕底）：頂=亮端、底=暗端，兩端都已壓到白字達標
+        SetGradient("AccentGradientBrush", btn.Top, btn.Bottom);
 
         // 標題列漸層：以強調色調染頁面底色（深色偏暗、淺色偏亮）
         Color plane = Hex(p.PagePlane);

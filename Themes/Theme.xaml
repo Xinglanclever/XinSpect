@@ -14,8 +14,10 @@
     <SolidColorBrush x:Key="BaselineBrush" Color="#383835"/>
     <SolidColorBrush x:Key="AccentBrush" Color="#3987e5"/>
     <SolidColorBrush x:Key="AccentDimBrush" Color="#1c5cab"/>
-    <!-- 落在強調色上的文字色：由 ThemeService 依對比度自動挑（白或深），不寫死 -->
+    <!-- 落在強調色上的文字色（白字）；底色由 ThemeService 壓到白字達 WCAG AA 4.5:1 -->
     <SolidColorBrush x:Key="AccentInkBrush" Color="#ffffff"/>
+    <!-- 按鈕滑過時的純色底：與漸層同樣壓過，別直接用 AccentBrush（那一支別處當文字色用） -->
+    <SolidColorBrush x:Key="AccentButtonBrush" Color="#3987e5"/>
     <SolidColorBrush x:Key="GoodBrush" Color="#0ca30c"/>
     <SolidColorBrush x:Key="WarningBrush" Color="#fab219"/>
     <SolidColorBrush x:Key="SeriousBrush" Color="#ec835a"/>
@@ -352,7 +354,7 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentButtonBrush}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentDimBrush}"/>

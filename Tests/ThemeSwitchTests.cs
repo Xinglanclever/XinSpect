@@ -22,7 +22,7 @@ public class ThemeSwitchTests
     [
         "PagePlaneBrush", "SurfaceBrush", "Surface2Brush",
         "PrimaryInkBrush", "SecondaryInkBrush", "MutedInkBrush",
-        "HairlineBrush", "BaselineBrush", "AccentBrush", "AccentDimBrush", "AccentInkBrush",
+        "HairlineBrush", "BaselineBrush", "AccentBrush", "AccentDimBrush", "AccentInkBrush", "AccentButtonBrush",
         "GoodBrush", "WarningBrush", "SeriousBrush", "CriticalBrush",
         "AccentGradientBrush", "HeaderGradientBrush",
     ];
