@@ -21,6 +21,30 @@ public class InterruptAffinityTests
     }
 
     [Fact]
+    public void 邊收邊累加與留全量事件必須得到相同結果()
+    {
+        // 服務在量測時是即時累加成計數字典的（不留原始事件，否則忙碌機器一分鐘上百萬筆）。
+        // 兩條路徑若給出不同答案，畫面上的數字就不可信了。
+        var samples = Samples(("a.sys", 0, 7), ("b.sys", 3, 11), ("a.sys", 3, 5));
+        var counts = InterruptAffinityAggregator.Accumulate(samples);
+
+        var viaSamples = InterruptAffinityAggregator.ByCpu(samples);
+        var viaCounts = InterruptAffinityAggregator.ByCpu(counts);
+        Assert.Equal(viaSamples.Count, viaCounts.Count);
+        for (int i = 0; i < viaSamples.Count; i++)
+        {
+            Assert.Equal(viaSamples[i].Cpu, viaCounts[i].Cpu);
+            Assert.Equal(viaSamples[i].Count, viaCounts[i].Count);
+            Assert.Equal(viaSamples[i].TopModule, viaCounts[i].TopModule);
+        }
+
+        var mSamples = InterruptAffinityAggregator.ByModule(samples);
+        var mCounts = InterruptAffinityAggregator.ByModule(counts);
+        Assert.Equal(mSamples.Select(r => (r.Module, r.Count, r.TopCpu)),
+                     mCounts.Select(r => (r.Module, r.Count, r.TopCpu)));
+    }
+
+    [Fact]
     public void 沒有事件時兩張表都是空的且不下判決()
     {
         Assert.Empty(InterruptAffinityAggregator.ByCpu([]));

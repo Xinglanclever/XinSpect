@@ -53,15 +53,36 @@ public static class InterruptAffinityAggregator
     /// <summary>單一核心吃下這麼高比例的中斷才算「被打爆」。</summary>
     private const double ConcentratedPercent = 40;
 
-    public static List<CpuInterruptRow> ByCpu(IEnumerable<IsrSample> samples)
+    /// <summary>
+    /// 把事件序列累成「(驅動, 核心) → 次數」。量測時服務是<b>邊收邊累加</b>的：
+    /// 忙碌的機器一分鐘可以產生上百萬筆 ISR，留全量只是白佔記憶體。
+    /// 這個多載給測試與小量資料用，兩條路徑必須得到相同結果。
+    /// </summary>
+    public static Dictionary<(string Module, int Cpu), long> Accumulate(IEnumerable<IsrSample> samples)
+    {
+        var counts = new Dictionary<(string, int), long>();
+        foreach (var s in samples)
+        {
+            var key = (s.Module, s.Cpu);
+            counts[key] = counts.GetValueOrDefault(key) + 1;
+        }
+        return counts;
+    }
+
+    public static List<CpuInterruptRow> ByCpu(IEnumerable<IsrSample> samples) => ByCpu(Accumulate(samples));
+
+    public static List<ModuleAffinityRow> ByModule(IEnumerable<IsrSample> samples, int top = 20)
+        => ByModule(Accumulate(samples), top);
+
+    public static List<CpuInterruptRow> ByCpu(IReadOnlyDictionary<(string Module, int Cpu), long> counts)
     {
         var perCpu = new Dictionary<int, Dictionary<string, long>>();
         long total = 0;
-        foreach (var s in samples)
+        foreach (var ((module, cpu), n) in counts)
         {
-            if (!perCpu.TryGetValue(s.Cpu, out var mods)) perCpu[s.Cpu] = mods = [];
-            mods[s.Module] = mods.GetValueOrDefault(s.Module) + 1;
-            total++;
+            if (!perCpu.TryGetValue(cpu, out var mods)) perCpu[cpu] = mods = [];
+            mods[module] = mods.GetValueOrDefault(module) + n;
+            total += n;
         }
         if (total == 0) return [];
 
@@ -86,13 +107,13 @@ public static class InterruptAffinityAggregator
         return rows;
     }
 
-    public static List<ModuleAffinityRow> ByModule(IEnumerable<IsrSample> samples, int top = 20)
+    public static List<ModuleAffinityRow> ByModule(IReadOnlyDictionary<(string Module, int Cpu), long> counts, int top = 20)
     {
         var perModule = new Dictionary<string, Dictionary<int, long>>();
-        foreach (var s in samples)
+        foreach (var ((module, cpu), n) in counts)
         {
-            if (!perModule.TryGetValue(s.Module, out var cpus)) perModule[s.Module] = cpus = [];
-            cpus[s.Cpu] = cpus.GetValueOrDefault(s.Cpu) + 1;
+            if (!perModule.TryGetValue(module, out var cpus)) perModule[module] = cpus = [];
+            cpus[cpu] = cpus.GetValueOrDefault(cpu) + n;
         }
 
         var rows = new List<ModuleAffinityRow>();

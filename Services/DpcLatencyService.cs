@@ -152,8 +152,12 @@ public sealed class DpcLatencyService : ObservableObject, IDisposable
     private readonly Dictionary<(string Module, string Kind), DpcStat> _stats = new();
     private readonly List<double> _rateSamples = [];
 
-    /// <summary>ISR 事件的（驅動、核心）配對。只收 ISR：DPC 可能被排到別的核上執行，混在一起會失去意義。</summary>
-    private readonly List<IsrSample> _isr = [];
+    /// <summary>
+    /// ISR 的（驅動、核心）→ 次數。<b>邊收邊累加</b>，不留原始事件：
+    /// 忙碌的機器一分鐘可以產生上百萬筆 ISR，留全量只是白佔記憶體。
+    /// 只收 ISR：DPC 可能被排到別的核上執行，混在一起會失去意義。
+    /// </summary>
+    private readonly Dictionary<(string Module, int Cpu), long> _isr = [];
     private DateTime _startedAt;
     private Dictionary<ulong, string> _kernelModules = [];
     private ulong[] _sortedBases = [];
@@ -246,7 +250,8 @@ public sealed class DpcLatencyService : ObservableObject, IDisposable
                 {
                     Record("ISR", e.Routine, e.ElapsedTimeMSec);
                     // 中斷是在哪顆核上被服務的——這一欄讓「哪顆核被打爆」變成「是誰打爆它」
-                    lock (_lock) _isr.Add(new IsrSample(ResolveModule(e.Routine), e.ProcessorNumber));
+                    var key = (ResolveModule(e.Routine), (int)e.ProcessorNumber);
+                    lock (_lock) _isr[key] = _isr.GetValueOrDefault(key) + 1;
                 };
                 source.Process();
             }, CancellationToken.None);
@@ -266,8 +271,8 @@ public sealed class DpcLatencyService : ObservableObject, IDisposable
             Rows.Clear();
             foreach (var r in rows) Rows.Add(r);
 
-            List<IsrSample> isr;
-            lock (_lock) isr = [.. _isr];
+            Dictionary<(string Module, int Cpu), long> isr;
+            lock (_lock) isr = new(_isr);
             var byCpu = InterruptAffinityAggregator.ByCpu(isr);
             var byModule = InterruptAffinityAggregator.ByModule(isr);
             ByCpu.Clear();

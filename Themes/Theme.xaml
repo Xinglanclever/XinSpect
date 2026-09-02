@@ -3,10 +3,6 @@
                     xmlns:local="clr-namespace:XinSpect">
 
     <!-- ===== 調色盤（dataviz 驗證過的深色面板配色） ===== -->
-    <Color x:Key="PagePlaneColor">#0d0d0d</Color>
-    <Color x:Key="SurfaceColor">#1a1a19</Color>
-    <Color x:Key="Surface2Color">#232322</Color>
-    <Color x:Key="AccentColor">#3987e5</Color>
 
     <SolidColorBrush x:Key="PagePlaneBrush" Color="#0d0d0d"/>
     <SolidColorBrush x:Key="SurfaceBrush" Color="#1a1a19"/>
@@ -18,6 +14,8 @@
     <SolidColorBrush x:Key="BaselineBrush" Color="#383835"/>
     <SolidColorBrush x:Key="AccentBrush" Color="#3987e5"/>
     <SolidColorBrush x:Key="AccentDimBrush" Color="#1c5cab"/>
+    <!-- 落在強調色上的文字色：由 ThemeService 依對比度自動挑（白或深），不寫死 -->
+    <SolidColorBrush x:Key="AccentInkBrush" Color="#ffffff"/>
     <SolidColorBrush x:Key="GoodBrush" Color="#0ca30c"/>
     <SolidColorBrush x:Key="WarningBrush" Color="#fab219"/>
     <SolidColorBrush x:Key="SeriousBrush" Color="#ec835a"/>
@@ -234,7 +232,7 @@
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentDimBrush}"/>
-                            <Setter Property="Foreground" Value="#ffffff"/>
+                            <Setter Property="Foreground" Value="{DynamicResource AccentInkBrush}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -340,7 +338,7 @@
     <!-- ===== 主要動作按鈕（強調色填滿） ===== -->
     <Style x:Key="PrimaryButton" TargetType="Button">
         <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-        <Setter Property="Foreground" Value="#ffffff"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentInkBrush}"/>
         <Setter Property="FontSize" Value="13.5"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Cursor" Value="Hand"/>

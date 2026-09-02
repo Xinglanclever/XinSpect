@@ -174,14 +174,13 @@ public static class ThemeService
         Set("HairlineBrush", p.Hairline);
         Set("BaselineBrush", p.Baseline);
 
-        SetColor("PagePlaneColor", p.PagePlane);
-        SetColor("SurfaceColor", p.Surface);
-        SetColor("Surface2Color", p.Surface2);
-
         // 強調色
         Set("AccentBrush", Accent.Main);
         Set("AccentDimBrush", Accent.Dim);
-        SetColor("AccentColor", Accent.Main);
+
+        // 落在強調色上的文字色：算對比度挑白或深，不寫死。按鈕底是漸層，最不利的是亮端，
+        // 所以拿漸層頂端當底色來挑；八個強調色挑完都達到 WCAG AA 的 4.5:1（見 AccentInkTests）。
+        SetBrush("AccentInkBrush", AccentInk.Pick(Accent.GradTopColor));
 
         // 強調漸層：頂=亮端、底=暗端
         SetGradient("AccentGradientBrush", Accent.GradTopColor, Accent.DimColor);
@@ -293,8 +292,14 @@ public static class ThemeService
         LiveBrushes[key] = new SolidColorBrush(c);
     }
 
-    private static void SetColor(string key, string hex)
-        => Application.Current.Resources[key] = Hex(hex);
+    /// <summary>換掉一支純色筆刷資源（已有 <see cref="Color"/> 時用這個，不必再繞一趟字串）。</summary>
+    private static void SetBrush(string key, Color c)
+    {
+        var b = new SolidColorBrush(c);
+        b.Freeze();
+        Application.Current.Resources[key] = b;
+        SetLive(key, c);
+    }
 
     private static void SetGradient(string key, Color top, Color bottom)
         => SetGradientStops(key, (0.0, top), (1.0, bottom));

@@ -49,7 +49,7 @@ public sealed class ReliabilityHistoryService : ObservableObject
         {
             const int days = 30;
             var since = DateTime.Now.AddDays(-days);
-            var (unexpected, bugchecks, appCrashes, bootTimes, rows) =
+            var (unexpected, bugchecks, appCrashes, bootTimes, rows, bootChannelMissing) =
                 await Task.Run(() => Collect(since));
 
             Summary = $"近 {days} 天："
@@ -63,7 +63,12 @@ public sealed class ReliabilityHistoryService : ObservableObject
                           + string.Join("・", bootTimes.Take(5).Select(b => $"{b.Ms:N0} ms"))
                           + (bootTimes[0].Ms > bootTimes[^1].Ms * 1.3 ? "（近期有變慢跡象；來源：Diagnostics-Performance 100）" : "");
             }
-            else BootTrend = bootTimes.Count == 1 ? $"僅一筆開機紀錄：{bootTimes[0].Ms:N0} ms" : "無開機耗時紀錄";
+            else if (bootTimes.Count == 1) BootTrend = $"僅一筆開機紀錄：{bootTimes[0].Ms:N0} ms";
+            else if (bootChannelMissing)
+                BootTrend = "開機耗時：這個 Windows 版本沒有 Diagnostics-Performance 頻道"
+                          + "（Windows Server 不隨附它，用戶端的 Windows 10／11 才有），所以沒有資料來源。"
+                          + "「開機耗時分解」那張卡也是同一個原因。";
+            else BootTrend = "無開機耗時紀錄（頻道存在但還沒有事件）。";
 
             foreach (var r in rows.Take(80)) Rows.Add(r);
         }
@@ -77,7 +82,8 @@ public sealed class ReliabilityHistoryService : ObservableObject
         }
     }
 
-    private static (int Unexpected, int Bugchecks, int AppCrashes, List<(DateTime Time, long Ms)> BootTimes, List<ReliabilityRow> Rows)
+    private static (int Unexpected, int Bugchecks, int AppCrashes, List<(DateTime Time, long Ms)> BootTimes,
+                    List<ReliabilityRow> Rows, bool BootChannelMissing)
         Collect(DateTime since)
     {
         int unexpected = 0, bugchecks = 0, appCrashes = 0;
@@ -130,6 +136,7 @@ public sealed class ReliabilityHistoryService : ObservableObject
         }
 
         // 開機耗時：Diagnostics-Performance 事件 100（第 3 個屬性為 BootTime ms）
+        bool bootChannelMissing = false;
         try
         {
             using var reader = new EventLogReader(new EventLogQuery(
@@ -148,11 +155,17 @@ public sealed class ReliabilityHistoryService : ObservableObject
                 }
             }
         }
-        catch { /* 頻道不存在則略過開機趨勢 */ }
+        catch (EventLogNotFoundException)
+        {
+            // 這台機器根本沒有這個頻道（Windows Server 不隨附）——與「頻道存在但沒紀錄」是兩件事，
+            // 訊息必須分開，否則使用者只看到一片空白，不知道是沒事還是讀不到。
+            bootChannelMissing = true;
+        }
+        catch { /* 其他讀取失敗則略過開機趨勢 */ }
 
         rows.Sort((a, b) => string.CompareOrdinal(b.Time, a.Time));
         bootTimes.Sort((a, b) => b.Item1.CompareTo(a.Item1));
-        return (unexpected, bugchecks, appCrashes, bootTimes, rows);
+        return (unexpected, bugchecks, appCrashes, bootTimes, rows, bootChannelMissing);
     }
 
     private static string SafeFormat(EventRecord rec)
