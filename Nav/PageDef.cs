@@ -55,4 +55,10 @@ public sealed class PageDef
             return _icon;
         }
     }
+
+    /// <summary>
+    /// 導覽清單的項目名稱：ListBoxItem 的自動化名稱（螢幕閱讀器唸的那個）取自項目物件的 ToString，
+    /// 不看 DataTemplate 裡的文字。沒有這行，43 頁的導覽項目一律唸成「XinSpect.PageDef」。
+    /// </summary>
+    public override string ToString() => Title;
 }

@@ -10,6 +10,9 @@ public sealed class SmartDriveRow
     public SmartDriveRow(int index, string label) { Index = index; Label = label; }
     public int Index { get; }
     public string Label { get; }
+
+    /// <summary>下拉項目的自動化名稱取自 ToString（DisplayMemberPath 只影響畫面），沒有這行會唸成型別名稱。</summary>
+    public override string ToString() => Label;
 }
 
 /// <summary>一列 S.M.A.R.T. 資料：NVMe 時填 Name／ValueText，SATA 時四欄都填。</summary>
@@ -73,6 +76,12 @@ public sealed class StorageSmartService : ObservableObject
 
     public ObservableCollection<SmartRow> Rows { get; } = [];
 
+    /// <summary>
+    /// 直讀到裝置自己回報的序號時發出（磁碟編號, 序號）。
+    /// WMI 給的序號是 Windows 重組過的十六進位，與裝置自己說的常常不一樣；有真值就該用真值。
+    /// </summary>
+    public event Action<int, string>? SerialResolved;
+
     public StorageSmartService() => _ = RefreshDrivesAsync();
 
     /// <summary>重新列舉實體磁碟（Win32_DiskDrive：Index／型號／容量）。</summary>
@@ -105,6 +114,25 @@ public sealed class StorageSmartService : ObservableObject
 
     /// <summary>查詢未回應（逾時未完成）的磁碟：本次執行不再嘗試，避免每次都留下一個卡死的執行緒。</summary>
     private readonly HashSet<int> _noResponse = new();
+
+    /// <summary>
+    /// 依下拉選單目前的索引讀取。選單以 XAML 字面值指定 SelectedIndex 時，會在 ItemsSource
+    /// （繫結、且 DataContext 由外殼延遲繼承）還空著時被強制成 -1 且不會自己回到 0——
+    /// 舊版就是因此按下「讀取」完全沒反應。索引無效時退回第一顆，清單為空時如實回報並重新列舉。
+    /// </summary>
+    /// <returns>實際使用的選單索引；清單為空時回傳 -1。</returns>
+    public int ReadSelected(int uiIndex)
+    {
+        if (Drives.Count == 0)
+        {
+            Status = "尚未列舉到實體磁碟（Win32_DiskDrive 無結果）；正在重新列舉，稍候再按一次。";
+            _ = RefreshDrivesAsync();
+            return -1;
+        }
+        int i = uiIndex >= 0 && uiIndex < Drives.Count ? uiIndex : 0;
+        Read(Drives[i].Index);
+        return i;
+    }
 
     /// <summary>讀取指定實體磁碟的 SMART：先判匯流排，NVMe 走協定查詢、SATA/ATA 走 SMART_RCV_DRIVE_DATA。</summary>
     public void Read(int physicalDriveIndex)
@@ -159,10 +187,14 @@ public sealed class StorageSmartService : ObservableObject
                 return;
             }
 
-            var (kind, rows) = task.Result;   // 已完成，Result 不會阻塞
+            // 已完成，await 不會等待；用 await 而非 Result 是為了讓失敗訊息保持原句——
+            // Result 會包成 AggregateException，畫面上就會多出一句「One or more errors occurred.」
+            var (kind, rows) = await task;
             KindText = kind;
             foreach (var r in rows) Rows.Add(r);
             Status = "讀取完成。";
+            // 識別資料裡有裝置自己回報的序號就往外送，讓儲存卡片改用真值（沒讀就不主動發 IOCTL）
+            if (SerialFromRows(rows) is { } serial) SerialResolved?.Invoke(index, serial);
         }
         catch (Exception ex)
         {
@@ -350,6 +382,21 @@ public sealed class StorageSmartService : ObservableObject
     };
 
     // ── 硬體識別：NVMe Identify Controller + SATA IDENTIFY DEVICE ─────────
+
+    /// <summary>
+    /// 從識別列中取出裝置自己回報的序號（NVMe Identify 與 ATA IDENTIFY 的序號列都以「序號」起頭）。
+    /// 找不到或韌體回空字串時回傳 null——沒讀到就別假裝讀到了。
+    /// </summary>
+    public static string? SerialFromRows(IEnumerable<SmartRow> rows)
+    {
+        foreach (var r in rows)
+        {
+            if (!r.Name.StartsWith("序號", StringComparison.Ordinal)) continue;
+            string v = r.ValueText.Trim();
+            if (v.Length > 0) return v;
+        }
+        return null;
+    }
 
     private const uint NvmeDataTypeIdentify = 0;     // CNS=Identify
     private const uint NvmeCnsController = 1;       // CNS=1 為 Controller

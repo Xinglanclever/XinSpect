@@ -358,6 +358,7 @@ public sealed partial class SensorService : ObservableObject, IDisposable
         row.SectorText = d.SectorText;
         row.MediaType = d.MediaType;
         row.CountText = d.CountText;
+        row.DiskIndex = d.Index;
     }
 
 

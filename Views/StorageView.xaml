@@ -1,7 +1,8 @@
 <UserControl x:Class="XinSpect.StorageView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:XinSpect">
+             xmlns:local="clr-namespace:XinSpect"
+             Loaded="StorageView_Loaded">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
             <local:SectionHead Text="儲存" HelpKey="storage/儲存"/>
@@ -71,7 +72,7 @@
                                                 <local:FieldRow Label="剩餘壽命" Value="{Binding LifeText}"/>
                                             </StackPanel>
                                             <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                                                <local:FieldRow Label="序號" Value="{Binding SerialNumber}"/>
+                                                <local:FieldRow Label="{Binding SerialLabel}" Value="{Binding SerialText}"/>
                                                 <local:FieldRow Label="韌體" Value="{Binding Firmware}"/>
                                                 <local:FieldRow Label="分割數" Value="{Binding PartitionsText}"/>
                                                 <local:FieldRow Label="磁區大小" Value="{Binding SectorText}"/>

@@ -304,6 +304,14 @@ public sealed class MainViewModel : ObservableObject
         HistoryView = new HistoryViewModel(History, Events, Settings);
         FanCurves.Events = Events;
 
+        // S.M.A.R.T. 直讀到裝置自己回報的序號時，回填到儲存頁的卡片：WMI 那串是 Windows 重組過的
+        // 十六進位，裝置自己說的才是外殼標籤上那個。讀過哪顆才換哪顆，不主動對每顆磁碟發 IOCTL。
+        DiskSmart.SerialResolved += (index, serial) =>
+        {
+            var row = Live?.Drives.FirstOrDefault(d => d.DiskIndex == index);
+            if (row is not null) row.IdentifySerial = serial;
+        };
+
         // 總覽磁貼版面：樣板要靠磁貼身上的 Vm 才接得回既有繫結，故必須在建構式（而非初始式）建立
         Dashboard = new DashboardLayout(this, Settings);
 

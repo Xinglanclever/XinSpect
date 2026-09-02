@@ -197,4 +197,59 @@ public class SmartDecoderTests
     {
         Assert.Throws<InvalidOperationException>(() => StorageSmartService.DecodeAtaIdentify(new byte[100]));
     }
+
+    // ── 序號回填：識別資料 → 儲存卡片 ────────────────────────────────────────
+
+    [Fact]
+    public void 序號取自識別列_NVMe與ATA都認得()
+    {
+        Assert.Equal("SER12345",
+            StorageSmartService.SerialFromRows(StorageSmartService.DecodeNvmeIdentify(BuildNvmeIdentify())));
+        Assert.Equal("SN12345678",
+            StorageSmartService.SerialFromRows(StorageSmartService.DecodeAtaIdentify(BuildAtaIdentify())));
+    }
+
+    [Fact]
+    public void 序號取自識別列_沒有或空白時回傳null()
+    {
+        // 匯流排預檢不通過時放進來的那種「不支援」列：沒有序號可用，就不能假裝有
+        SmartRow[] unsupported = [new("NVMe Identify Controller", "不支援（儲存堆疊未回應協定查詢）", "", "")];
+        Assert.Null(StorageSmartService.SerialFromRows(unsupported));
+
+        // 韌體把序號欄位留空（合法但沒用）
+        SmartRow[] blank = [new("序號（Serial）", "   ", "", "")];
+        Assert.Null(StorageSmartService.SerialFromRows(blank));
+
+        Assert.Null(StorageSmartService.SerialFromRows([]));
+    }
+
+    [Fact]
+    public void 儲存卡片序號_直讀值優先於WMI值並標注來源()
+    {
+        var row = new StorageRow("INTEL SSDPELKX010T8") { SerialNumber = "0025_3852_31A2_D3AC." };
+
+        // 還沒直讀過：顯示 WMI 的值，且標明是 WMI 說的
+        Assert.Equal("0025_3852_31A2_D3AC.", row.SerialText);
+        Assert.Equal("序號（WMI）", row.SerialLabel);
+
+        var changed = new List<string?>();
+        row.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        row.IdentifySerial = StorageSmartService.SerialFromRows(
+            StorageSmartService.DecodeNvmeIdentify(BuildNvmeIdentify()));
+
+        Assert.Equal("SER12345", row.SerialText);
+        Assert.Equal("序號（裝置直讀）", row.SerialLabel);
+        Assert.Contains(nameof(StorageRow.SerialText), changed);
+        Assert.Contains(nameof(StorageRow.SerialLabel), changed);
+    }
+
+    [Fact]
+    public void 儲存卡片序號_直讀失敗不覆蓋WMI值()
+    {
+        var row = new StorageRow("ST1000LM024 HN-M101MBB") { SerialNumber = "S2ZZJ9CD123456" };
+        row.IdentifySerial = null;
+        Assert.Equal("S2ZZJ9CD123456", row.SerialText);
+        Assert.Equal("序號（WMI）", row.SerialLabel);
+    }
 }

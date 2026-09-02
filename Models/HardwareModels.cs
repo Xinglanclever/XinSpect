@@ -269,6 +269,32 @@ public sealed class StorageRow : ObservableObject
     public string SectorText { get; set; } = "—";
     public string MediaType { get; set; } = "—";
     public string CountText { get; set; } = "—";
+
+    /// <summary>實體磁碟編號（Win32_DiskDrive.Index），供 S.M.A.R.T. 直讀結果回填時比對。</summary>
+    public int DiskIndex { get; set; } = -1;
+
+    private string? _identifySerial;
+    /// <summary>
+    /// 裝置自己回報的序號（NVMe Identify Controller／ATA IDENTIFY DEVICE）。
+    /// 只有使用者在 S.M.A.R.T. 區塊按過「讀取」才會有——進頁不主動對每顆磁碟發 IOCTL，
+    /// 因為部分儲存堆疊對協定查詢不回應（見 StorageSmartService 的斷路器）。
+    /// </summary>
+    public string? IdentifySerial
+    {
+        get => _identifySerial;
+        set
+        {
+            if (!SetProperty(ref _identifySerial, value)) return;
+            OnPropertyChanged(nameof(SerialText));
+            OnPropertyChanged(nameof(SerialLabel));
+        }
+    }
+
+    /// <summary>序號：直讀到裝置回報值就用它，否則退回 WMI 的值。</summary>
+    public string SerialText => string.IsNullOrWhiteSpace(_identifySerial) ? SerialNumber : _identifySerial!;
+
+    /// <summary>來源如實標注：WMI 那串是 Windows 重組過的十六進位，跟裝置標籤上印的常常不是同一個東西。</summary>
+    public string SerialLabel => string.IsNullOrWhiteSpace(_identifySerial) ? "序號（WMI）" : "序號（裝置直讀）";
     /// <summary>顯示卡片時作為標題的裝置型號（無深度資料時退回感測器名稱）。</summary>
     public string DisplayModel => Model != "—" ? Model : Name;
     public string HealthText => string.IsNullOrEmpty(HealthDetail) ? LifeText : HealthDetail;

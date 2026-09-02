@@ -34,7 +34,7 @@ public sealed class MemBandwidthService : ObservableObject
     private double _progress;
     public double ProgressPercent { get => _progress; private set => SetProperty(ref _progress, value); }
 
-    private string _status = "按「開始量測」逐級加執行緒量出頻寬飽和點，並在重壓下量一次延遲（約 30 秒）。";
+    private string _status = "按「開始量測」逐級加執行緒量出頻寬飽和點，並在重壓下量一次延遲（時間隨核心數而異，進度見上方進度列）。";
     public string StatusLine { get => _status; private set => SetProperty(ref _status, value); }
 
     private string _peakNote = "理論上限：尚未量測。";

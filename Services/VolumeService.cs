@@ -26,6 +26,9 @@ public sealed class VolumeInfo : ObservableObject
     public string CaptionText => string.IsNullOrWhiteSpace(Label) ? Name : $"{Name}　{Label}";
     public Severity Severity => Health.Space(UsedFraction * 100);
 
+    /// <summary>下拉項目的自動化名稱取自 ToString（DisplayMemberPath 只影響畫面），沒有這行會唸成型別名稱。</summary>
+    public override string ToString() => CaptionText;
+
     private void RaiseCalc()
     {
         OnPropertyChanged(nameof(UsedBytes));
