@@ -166,6 +166,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>Windows 授權狀態：是不是正版、重裝會不會掉、能不能轉移（實用工具子頁，唯讀 WMI）。</summary>
     public LicenseService License { get; } = new();
 
+    /// <summary>這台機器多老了：安裝日期／韌體日期／磁碟通電時數三個線索的推估（健康分頁卡片）。</summary>
+    public MachineAgeService MachineAge { get; } = new();
+
 
     /// <summary>驅動程式稽核：已安裝驅動的簽章狀態與驅動日期（實用工具子頁，唯讀 WMI）。</summary>
     public DriverAuditService DriverAudit { get; } = new();

@@ -18,6 +18,7 @@ public partial class HealthView : UserControl, IPageLifecycle
         Vm?.Whea.Refresh();          // 進頁自動讀一次；WHEA 事件不是每秒資料，跟著頁面走即可
         Vm?.Reliability.Refresh();
         Vm?.BootBreakdown.EnsureLoaded();   // 開機紀錄不會變，進頁讀一次就夠
+        if (Vm is { } vm) vm.MachineAge.Update(vm.System);   // 兩個日期零特權，進頁算一次
         Vm?.Mca.Refresh();
         Vm?.TimerFoundation.Refresh();
         Vm?.PlatformTrust.Refresh();
@@ -31,6 +32,9 @@ public partial class HealthView : UserControl, IPageLifecycle
     private void WheaRefresh_Click(object sender, RoutedEventArgs e) => Vm?.Whea.Refresh();
 
     private void ReliabilityRefresh_Click(object sender, RoutedEventArgs e) => Vm?.Reliability.Refresh();
+
+    /// <summary>磁碟通電時數：需要系統管理員身分，所以由使用者按下才讀。</summary>
+    private void MachineAgeReadDisks_Click(object sender, RoutedEventArgs e) => Vm?.MachineAge.ReadDisks();
 
     /// <summary>開機耗時分解：唯讀讀取事件記錄。</summary>
     private void BootBreakdownRefresh_Click(object sender, RoutedEventArgs e) => Vm?.BootBreakdown.Refresh();

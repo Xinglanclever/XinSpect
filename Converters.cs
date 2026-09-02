@@ -133,3 +133,13 @@ public sealed class DashboardTileTemplateSelector : System.Windows.Controls.Data
             ? fe.TryFindResource("Tile." + t.Id) as DataTemplate
             : null;
 }
+
+/// <summary>通電小時 → 「N 小時（全天候運轉約 M 年）」。換算規則只寫在 MachineAgeDecoder 裡一份。</summary>
+public sealed class HoursToTextConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => MachineAgeDecoder.HoursText(value is long h ? h : 0);
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => Binding.DoNothing;
+}

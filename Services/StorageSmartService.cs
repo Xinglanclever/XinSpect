@@ -398,6 +398,38 @@ public sealed class StorageSmartService : ObservableObject
         return null;
     }
 
+    /// <summary>
+    /// 讀一顆磁碟的累計通電小時；讀不到回 0。
+    /// </summary>
+    /// <remarks>
+    /// NVMe 取健康紀錄（log 0x02）偏移 0x80 的 128 位元計數器的低 64 位元；
+    /// SATA 取屬性 9（通電時間）的原始值低三個位元組——那是業界通用的小時數，
+    /// 不套任何廠商公式。讀不到就回 0，由呼叫端顯示「讀不到」，不猜。
+    /// </remarks>
+    public static long TryReadPowerOnHours(int index)
+    {
+        uint bus = TryGetBusType(index, out _);
+
+        if (bus is 16 or 17)
+        {
+            byte[]? log = TryReadNvme(index);
+            if (log is null || log.Length < 0x88) return 0;
+            ulong v = 0;
+            for (int i = 7; i >= 0; i--) v = (v << 8) | log[0x80 + i];
+            return v > long.MaxValue ? 0 : (long)v;
+        }
+
+        byte[]? sector = TryReadAtaSmartClassic(index);
+        if (sector is null || sector.Length < 362) return 0;
+        // SMART 資料區：偏移 2 起，每 12 位元組一筆屬性；[0]=ID、[5..7]=原始值低三位元組
+        for (int o = 2; o + 12 <= 362; o += 12)
+        {
+            if (sector[o] != 9) continue;
+            return sector[o + 5] | (sector[o + 6] << 8) | (sector[o + 7] << 16);
+        }
+        return 0;
+    }
+
     private const uint NvmeDataTypeIdentify = 0;     // CNS=Identify
     private const uint NvmeCnsController = 1;       // CNS=1 為 Controller
     private const uint NvmeDataTypeFeature = 3;     // STORAGE_PROTOCOL_NVME_DATA_TYPE::NVMeDataTypeFeature

@@ -199,7 +199,7 @@
                     <local:FieldRow Label="網路" Value="網路介面・連線速率・即時上下行流量"/>
                     <local:FieldRow Label="感測器" Value="所有感測器讀值・最小・最大"/>
                     <local:FieldRow Label="效能" Value="棋類跑分（中國象棋／西洋棋 perft・自我驗證）・綜合測試・CPU 烤機・GPU 燒機（FurMark＋原生監測）・WinSAT"/>
-                    <local:FieldRow Label="健康" Value="狀態燈・綜合分數・溫度與容量警示・開機耗時分解"/>
+                    <local:FieldRow Label="健康" Value="狀態燈・綜合分數・溫度與容量警示・開機耗時分解・這台機器多老了"/>
                     <local:FieldRow Label="AI 評價" Value="本機免費 Ollama 或 OpenAI 相容 API・客觀評價・可自訂提示詞"/>
                     <local:FieldRow Label="一鍵裝機" Value="依分類批次安裝常用軟體（Windows 內建 winget）"/>
                     <local:FieldRow Label="工具箱" Value="Windows 系統工具一鍵開啟＋數十款硬體工具官方下載捷徑（不內含任何外部執行檔）"/>
