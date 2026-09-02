@@ -7,25 +7,27 @@
          說明文字一律來自 Nav/HelpCatalog.cs（不寫死在版面裡），找不到鍵值時整個圓圈隱藏，
          寧可沒有問號也不要掛一個空白提示。外框顏色代表風險等級（唯讀灰／注意黃／危險紅）。 -->
     <Border x:Name="Dot" Width="17" Height="17" CornerRadius="9" Cursor="Help"
-            Background="{StaticResource PagePlaneBrush}"
-            BorderBrush="{StaticResource MutedInkBrush}" BorderThickness="1"
+            Background="{DynamicResource PagePlaneBrush}"
+            BorderBrush="{DynamicResource MutedInkBrush}" BorderThickness="1"
             ToolTipService.InitialShowDelay="120" ToolTipService.ShowDuration="90000"
             ToolTipService.BetweenShowDelay="0">
         <TextBlock x:Name="Glyph" Text="?" FontSize="11" FontWeight="Bold"
                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                   Foreground="{StaticResource SecondaryInkBrush}"/>
+                   Foreground="{DynamicResource SecondaryInkBrush}"/>
         <Border.ToolTip>
-            <!-- 深灰底：說明文字為淺色，白底會看不見（超頻頁的問號早先也踩過這一點）。 -->
-            <ToolTip MaxWidth="430" Background="#3A3D42" BorderBrush="{StaticResource HairlineBrush}"
+            <!-- 底色走佈景的浮出面（深色比卡片亮一階、淺色比卡片暗一階），說明文字才在兩種主題下都讀得到。
+                 先前寫死深灰底：淺色主題的墨色是近黑，黑字落在深灰底上等於看不見。 -->
+            <ToolTip MaxWidth="430" Background="{DynamicResource Surface2Brush}" BorderBrush="{DynamicResource HairlineBrush}"
                      BorderThickness="1" Padding="13,11" HasDropShadow="True">
                 <StackPanel>
                     <TextBlock x:Name="TipTitle" FontSize="13.5" FontWeight="Bold" TextWrapping="Wrap"
-                               Foreground="{StaticResource PrimaryInkBrush}"/>
+                               Foreground="{DynamicResource PrimaryInkBrush}"/>
                     <TextBlock x:Name="TipWhat" FontSize="12.5" LineHeight="19" TextWrapping="Wrap" Margin="0,7,0,0"
-                               Foreground="{StaticResource PrimaryInkBrush}"/>
+                               Foreground="{DynamicResource PrimaryInkBrush}"/>
                     <TextBlock x:Name="TipDoes" FontSize="12.5" LineHeight="19" TextWrapping="Wrap" Margin="0,6,0,0"
-                               Foreground="{StaticResource PrimaryInkBrush}"/>
-                    <Border x:Name="TipRiskBox" Margin="0,9,0,0" CornerRadius="5" Padding="9,7" Background="#2C2F34">
+                               Foreground="{DynamicResource PrimaryInkBrush}"/>
+                    <Border x:Name="TipRiskBox" Margin="0,9,0,0" CornerRadius="5" Padding="9,7"
+                            Background="{DynamicResource SurfaceBrush}">
                         <TextBlock x:Name="TipRisk" FontSize="12" LineHeight="18" TextWrapping="Wrap"/>
                     </Border>
                 </StackPanel>

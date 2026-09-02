@@ -38,7 +38,7 @@
         <Border Grid.Row="1" Margin="0,0,0,10" CornerRadius="8" Background="#33E0552E" BorderBrush="#E0552E" BorderThickness="1"
                 Visibility="{Binding NotAvailable, Converter={StaticResource BoolToVis}}">
             <StackPanel Orientation="Horizontal" Margin="14,10">
-                <TextBlock Text="未偵測到 winget（應用程式安裝程式）。" Foreground="{StaticResource PrimaryInkBrush}"
+                <TextBlock Text="未偵測到 winget（應用程式安裝程式）。" Foreground="{DynamicResource PrimaryInkBrush}"
                            VerticalAlignment="Center" Margin="0,0,12,0"/>
                 <Button Style="{StaticResource ToolButton}" Content="前往 Microsoft Store 取得" Click="GetWinget_Click"/>
             </StackPanel>
@@ -63,17 +63,17 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,4,18,4"
-                                                      Foreground="{StaticResource PrimaryInkBrush}"
+                                                      Foreground="{DynamicResource PrimaryInkBrush}"
                                                       ToolTip="{Binding Id}">
                                                 <StackPanel>
                                                     <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="{Binding Name}" Foreground="{StaticResource PrimaryInkBrush}" FontSize="13"/>
+                                                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource PrimaryInkBrush}" FontSize="13"/>
                                                         <!-- 「已安裝」只在 winget 認得它已裝時出現；沒有這個字樣不代表沒裝（msstore／手動安裝的它看不到） -->
                                                         <Border Margin="6,0,0,0" Padding="5,1" CornerRadius="4" VerticalAlignment="Center"
                                                                 Background="#333F8F5B" BorderBrush="#3F8F5B" BorderThickness="1"
                                                                 Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVis}}">
                                                             <TextBlock Text="{Binding StateText}" FontSize="10"
-                                                                       Foreground="{StaticResource SecondaryInkBrush}"/>
+                                                                       Foreground="{DynamicResource SecondaryInkBrush}"/>
                                                         </Border>
                                                     </StackPanel>
                                                     <TextBlock Text="{Binding Desc}" Style="{StaticResource FieldLabel}" FontSize="11"/>
@@ -90,11 +90,11 @@
         </ScrollViewer>
 
         <!-- 安裝記錄 -->
-        <Border Grid.Row="4" Margin="0,10,0,0" CornerRadius="10" Background="{StaticResource Surface2Brush}"
-                BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" MaxHeight="150">
+        <Border Grid.Row="4" Margin="0,10,0,0" CornerRadius="10" Background="{DynamicResource Surface2Brush}"
+                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" MaxHeight="150">
             <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="10,8">
                 <TextBox Text="{Binding Log, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"
-                         Background="Transparent" BorderThickness="0" Foreground="{StaticResource SecondaryInkBrush}"
+                         Background="Transparent" BorderThickness="0" Foreground="{DynamicResource SecondaryInkBrush}"
                          FontFamily="Consolas" FontSize="12" MinHeight="60"
                          VerticalScrollBarVisibility="Disabled"/>
             </ScrollViewer>

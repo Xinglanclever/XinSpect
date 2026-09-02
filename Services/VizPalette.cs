@@ -5,15 +5,18 @@ using System.Windows.Media;
 namespace XinSpect;
 
 /// <summary>
-/// 自繪圖表的取色點：一律回傳 <c>Themes/Theme.xaml</c> 裡的「同一顆」筆刷物件。
+/// 自繪圖表與轉換器的取色點：一律回傳<b>同一顆</b>會跟著主題走的筆刷物件。
 /// </summary>
 /// <remarks>
-/// <see cref="ThemeService"/> 換主題的手法是就地改寫未凍結筆刷的 <c>.Color</c>，所以自繪元件
-/// 只要把資源筆刷指給 <c>Stroke</c>／<c>Fill</c>，換主題時就會自己跟著變色——不必重畫，
-/// 也不必改用 DynamicResource。這是這裡存在的唯一理由：讓程式碼繪製的圖表和 XAML 走同一套色。
+/// 佈景色有兩條路：XAML 以 <c>{DynamicResource}</c> 取用，換色時整支資源被換掉；
+/// 而程式碼拿到的是筆刷「物件」，換掉資源的通知傳不到它身上。所以這裡回的不是資源字典裡那一支
+/// （放進字典的筆刷會被 WPF 凍結、改不動），而是 <see cref="ThemeService"/> 另外持有的一份
+/// 未凍結筆刷——換主題時就地改它的 <c>.Color</c>，已經畫上去的內容與已求值的繫結都會自己跟著變。
 /// <para>反過來說，回傳的筆刷是全域共用的：呼叫端<b>絕對不可以</b>改它的 <c>Color</c> 或
 /// <c>Opacity</c>（要淡化請設在圖形本身的 <c>Opacity</c> 上），否則會連帶改掉整個應用程式的配色。</para>
-/// <para>取不到資源時（設計時期預覽、單元測試沒有 <see cref="Application"/>）回傳凍結的後備色，
+/// <para>只有<b>複製色值</b>（如 <see cref="AccentColor"/>、<see cref="Blend"/>）的呼叫端仍需自行
+/// 重畫，因為那是當下的一份快照；請於建構時呼叫 <c>this.RepaintOnThemeChange()</c>。</para>
+/// <para>取不到時（設計時期預覽、單元測試沒有 <see cref="Application"/>）回傳凍結的後備色，
 /// 讓繪圖照樣畫得出來而不是直接丟例外。後備色與 Theme.xaml 的深色預設一致。</para>
 /// </remarks>
 public static class VizPalette
@@ -21,11 +24,12 @@ public static class VizPalette
     // 後備筆刷依色碼共用一份：格線每次重畫都會取色，不該每次配置新物件。
     private static readonly ConcurrentDictionary<string, SolidColorBrush> Fallbacks = new();
 
-    /// <summary>取資源筆刷；沒有 <see cref="Application"/>、該鍵不存在或不是純色筆刷時回傳後備色。</summary>
+    /// <summary>取共用筆刷；取不到（或不在建立它的執行緒上）時回傳後備色。</summary>
     public static SolidColorBrush Of(string key, string fallbackHex)
     {
         try
         {
+            if (ThemeService.LiveBrush(key) is { } live && live.CheckAccess()) return live;
             if (Application.Current?.Resources[key] is SolidColorBrush b) return b;
         }
         catch { /* 非 UI 執行緒或資源字典尚未就緒：退回後備色 */ }

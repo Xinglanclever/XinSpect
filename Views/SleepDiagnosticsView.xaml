@@ -1,0 +1,49 @@
+<UserControl x:Class="XinSpect.SleepDiagnosticsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <StackPanel Margin="2,0,0,10">
+                <local:SectionHead Text="睡眠與喚醒" HelpKey="sleep/睡眠與喚醒"/>
+                <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                           Text="兩個常見又難查的問題：半夜自己醒來，以及明明沒在用卻睡不下去。Windows 其實把答案放在 powercfg 的幾條查詢裡，只是很少有人知道。這一頁把它們一次跑完並原樣呈現——刻意不解析輸出文字，因為那些字會隨系統語言翻譯，比對關鍵字會在別的語言上靜靜失效，而「解析失敗」與「沒事」長得一模一樣。"/>
+            </StackPanel>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="查詢" HelpKey="sleep/查詢"/>
+                        <Button Style="{StaticResource PrimaryButton}" Content="重新查詢"
+                                HorizontalAlignment="Right" VerticalAlignment="Center"
+                                IsEnabled="{Binding Sleep.CanRefresh}" Click="Refresh_Click"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding Sleep.Status}"/>
+                </StackPanel>
+            </Border>
+
+            <ItemsControl ItemsSource="{Binding Sleep.Sections}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="Bold"
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                <TextBlock Text="{Binding Command}" FontFamily="Consolas" FontSize="12"
+                                           Margin="0,4,0,0" Foreground="{DynamicResource AccentBrush}"/>
+                                <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                           Foreground="{DynamicResource SecondaryInkBrush}" Text="{Binding What}"/>
+                                <Border Margin="0,10,0,0" Padding="12,10" CornerRadius="6"
+                                        Background="{DynamicResource Surface2Brush}">
+                                    <TextBlock Text="{Binding Output}" FontFamily="Consolas" FontSize="12"
+                                               TextWrapping="Wrap" Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

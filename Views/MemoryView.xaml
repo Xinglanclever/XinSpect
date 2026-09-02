@@ -39,7 +39,7 @@
                         <local:FieldRow Label="tRFC" Value="{Binding Timings.TRFC}"/>
                         <local:FieldRow Label="命令率 (CR)" Value="{Binding Timings.CommandRate}"/>
                         <local:FieldRow Label="Uncore" Value="{Binding Timings.UncoreText}"/>
-                        <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,8,0,8"/>
+                        <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,8,0,8"/>
                         <TextBlock Style="{StaticResource ColHead}" Text="次要時序 / 晶片組" Margin="0,0,0,4"/>
                         <local:FieldRow Label="tCCD" Value="{Binding Timings.TCCD}"/>
                         <local:FieldRow Label="tCCD_L" Value="{Binding Timings.TCCDL}"/>
@@ -60,7 +60,7 @@
                         <local:FieldRow Label="使用率" Value="{Binding Live.MemLoadText}"/>
                         <ProgressBar Style="{StaticResource LoadBar}" Value="{Binding Live.MemLoad, Mode=OneWay}" Margin="0,10,0,0"/>
                         <local:HistoryGraph Height="108" Margin="0,12,0,0" Caption="使用率走勢 (%)"
-                                            History="{Binding MemHist}" Stroke="{StaticResource GoodBrush}"/>
+                                            History="{Binding MemHist}" Stroke="{DynamicResource GoodBrush}"/>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -111,7 +111,7 @@
                         <TextBlock Grid.Column="6" Style="{StaticResource ColHead}" Text="速率"/>
                         <TextBlock Grid.Column="7" Style="{StaticResource ColHead}" Text="電壓"/>
                     </Grid>
-                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,4"/>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,0,0,4"/>
                     <ItemsControl ItemsSource="{Binding Modules}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -149,7 +149,7 @@
                     <ItemsControl ItemsSource="{Binding SpdModules}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,0,8">
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,0,8">
                                     <StackPanel>
                                         <local:BrandBadge Kind="Ram" EmblemSize="34" Margin="0,0,0,8"
                                                           Brand="{Binding Brand}" Model="{Binding Header}"/>
@@ -241,32 +241,32 @@
                                Text="{Binding MemTest.PlanText}"/>
 
                     <UniformGrid Rows="1" Columns="4" Margin="0,12,0,0">
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="測試範圍" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding MemTest.TestedText}" FontSize="20" Margin="0,2,0,0"
-                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="不符處數" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding MemTest.ErrorText}" FontSize="20" Margin="0,2,0,0"
                                            Foreground="{Binding MemTest.Verdict, Converter={StaticResource SeverityToBrush}}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="耗時" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding MemTest.ElapsedText}" FontSize="20" Margin="0,2,0,0"
-                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
                             <StackPanel>
                                 <TextBlock Text="讀寫吞吐" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding MemTest.SpeedText}" FontSize="20" Margin="0,2,0,0"
-                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
                     </UniformGrid>
@@ -338,7 +338,7 @@
                             <ColumnDefinition Width="200"/><ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Style="{StaticResource FieldValue}" Text="判定"/>
-                        <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Foreground="{StaticResource PrimaryInkBrush}"
+                        <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Foreground="{DynamicResource PrimaryInkBrush}"
                                    Text="{Binding MemoryTruth.Verdict}"/>
                     </Grid>
                     <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" Text="{Binding MemoryTruth.VerdictText}"/>
@@ -365,11 +365,11 @@
                     <ItemsControl ItemsSource="{Binding Smbios.MemoryDevices}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="8" Padding="12,8" Margin="0,0,0,8">
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="8" Padding="12,8" Margin="0,0,0,8">
                                     <StackPanel>
                                         <Grid>
-                                            <TextBlock FontWeight="SemiBold" Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding Locator}"/>
-                                            <TextBlock HorizontalAlignment="Right" Foreground="{StaticResource PrimaryInkBrush}"
+                                            <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource PrimaryInkBrush}" Text="{Binding Locator}"/>
+                                            <TextBlock HorizontalAlignment="Right" Foreground="{DynamicResource PrimaryInkBrush}"
                                                        Text="{Binding Size}"/>
                                         </Grid>
                                         <Grid Margin="0,4,0,0">
@@ -399,6 +399,74 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- L3 未命中與 DRAM 實際流量：架構事件＋自我驗證 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="L3 未命中與 DRAM 實際流量" HelpKey="memory/L3 未命中與 DRAM 實際流量"/>
+                        <Button Style="{StaticResource PrimaryButton}" Content="開始量測"
+                                HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="120"
+                                IsEnabled="{Binding DramTraffic.CanMeasure}" Click="DramTrafficMeasure_Click"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,8,0,0"
+                               Text="每一次末級快取未命中，就是一條 64 位元組的快取行真的從記憶體被搬上來。這裡數的是那個次數——與「本程式能跑出多少頻寬」是不同的問題。"/>
+
+                    <local:FieldRow Label="L3 未命中" Value="{Binding DramTraffic.MissText}"/>
+                    <local:FieldRow Label="L3 參照" Value="{Binding DramTraffic.ReferenceText}"/>
+                    <local:FieldRow Label="L3 命中率" Value="{Binding DramTraffic.HitText}"/>
+                    <local:FieldRow Label="DRAM 讀取流量" Value="{Binding DramTraffic.TrafficText}"/>
+
+                    <Border Margin="0,12,0,0" Padding="12,10" CornerRadius="6"
+                            Background="{DynamicResource Surface2Brush}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"
+                                       Text="{Binding DramTraffic.ValidationText}"
+                                       Foreground="{Binding DramTraffic.Severity, Converter={StaticResource SeverityToBrush}}"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,8,0,0"
+                                       Text="{Binding DramTraffic.ChannelNote}"/>
+                            <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" Margin="0,8,0,0"
+                                       Text="{Binding DramTraffic.Status}"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- 大頁與位址轉換成本：同一份亂序鏈，只有頁面大小不同 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,32">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="大頁與位址轉換成本" HelpKey="memory/大頁與位址轉換成本"/>
+                        <Button Style="{StaticResource PrimaryButton}" Content="開始量測"
+                                HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="120"
+                                IsEnabled="{Binding LargePage.CanMeasure}" Click="LargePageMeasure_Click"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,8,0,0"
+                               Text="4 KB 頁的 TLB 覆蓋範圍只有幾 MB，資料集一大就每次存取都要走一次分頁表——那個成本不會出現在任何一張「記憶體使用量」的圖上，只表現為「頻寬夠、延遲卻高」。量法是同一份亂序指標鏈、同樣 256 MB 工作集各跑一次，唯一的差別是頁面大小。"/>
+
+                    <local:FieldRow Label="大頁單位" Value="{Binding LargePage.SizeText}"/>
+                    <local:FieldRow Label="鎖定記憶體權限" Value="{Binding LargePage.PrivilegeText}"/>
+                    <local:FieldRow Label="現在配得出來嗎" Value="{Binding LargePage.AllocText}"/>
+                    <local:FieldRow Label="4 KB 頁 ・ 每次存取" Value="{Binding LargePage.SmallText}"/>
+                    <local:FieldRow Label="大頁 ・ 每次存取" Value="{Binding LargePage.LargeText}"/>
+
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding LargePage.Progress}"
+                               Visibility="{Binding LargePage.IsBusy, Converter={StaticResource BoolToVis}}"/>
+
+                    <Border Margin="0,12,0,0" Padding="12,10" CornerRadius="6"
+                            Background="{DynamicResource Surface2Brush}">
+                        <StackPanel>
+                            <TextBlock FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"
+                                       Text="{Binding LargePage.Verdict.Headline}"
+                                       Foreground="{Binding LargePage.Verdict.Severity, Converter={StaticResource SeverityToBrush}}"/>
+                            <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                       Foreground="{DynamicResource SecondaryInkBrush}"
+                                       Text="{Binding LargePage.Verdict.Detail}"/>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </Border>
         </StackPanel>

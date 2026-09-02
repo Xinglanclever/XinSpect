@@ -56,6 +56,29 @@ internal static class NvmlInterop
     [DllImport(Dll, EntryPoint = "nvmlDeviceGetPowerManagementDefaultLimit")] public static extern int GetPowerLimitDefault(IntPtr device, out uint milliwatts);
     [DllImport(Dll, EntryPoint = "nvmlDeviceGetPowerManagementLimitConstraints")] public static extern int GetPowerLimitConstraints(IntPtr device, out uint minMw, out uint maxMw);
 
+    // ── PCIe 實際流量與目前鏈路（唯讀）─────────────────────────────────────────
+    //
+    // nvmlDeviceGetPcieThroughput 回的是「最近約 20 毫秒的平均」，單位 KB/s；
+    // counter：0＝傳送、1＝接收、2＝封包計數。這是驅動自己量的，不是我們推的。
+
+    public const int PCIE_UTIL_TX_BYTES = 0;
+    public const int PCIE_UTIL_RX_BYTES = 1;
+
+    [DllImport(Dll, EntryPoint = "nvmlDeviceGetPcieThroughput")]
+    public static extern int GetPcieThroughput(IntPtr device, int counter, out uint kbPerSec);
+
+    [DllImport(Dll, EntryPoint = "nvmlDeviceGetCurrPcieLinkGeneration")]
+    public static extern int GetCurrPcieLinkGeneration(IntPtr device, out uint gen);
+
+    [DllImport(Dll, EntryPoint = "nvmlDeviceGetCurrPcieLinkWidth")]
+    public static extern int GetCurrPcieLinkWidth(IntPtr device, out uint width);
+
+    [DllImport(Dll, EntryPoint = "nvmlDeviceGetMaxPcieLinkGeneration")]
+    public static extern int GetMaxPcieLinkGeneration(IntPtr device, out uint gen);
+
+    [DllImport(Dll, EntryPoint = "nvmlDeviceGetMaxPcieLinkWidth")]
+    public static extern int GetMaxPcieLinkWidth(IntPtr device, out uint width);
+
     // ── 深度靜態資訊（唯讀，用於「顯示卡」分頁的 NVML 硬核規格卡）───────────────────
     public const int CLOCK_VIDEO = 3;   // 影像編解碼時脈網域
 

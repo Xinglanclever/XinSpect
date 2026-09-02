@@ -1,0 +1,75 @@
+<UserControl x:Class="XinSpect.NetAdapterView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <StackPanel Margin="2,0,0,10">
+                <local:SectionHead Text="網卡進階屬性" HelpKey="netadv/網卡進階屬性"/>
+                <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                           Text="裝置管理員「進階」分頁裡那幾十項設定，一次攤開。其中 RSS（接收端調整）最值得看：它決定收包處理能不能分到多顆核心上——「中斷落在哪顆核」那張卡若點名某顆核被網卡打爆，答案常常就在這裡。屬性一律原樣呈現並附上登錄關鍵字，那是跨語言唯一穩定的識別。全程唯讀。"/>
+            </StackPanel>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="讀取" HelpKey="netadv/讀取"/>
+                        <Button Style="{StaticResource PrimaryButton}" Content="重新讀取"
+                                HorizontalAlignment="Right" VerticalAlignment="Center"
+                                IsEnabled="{Binding NetAdapter.CanRefresh}" Click="Refresh_Click"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding NetAdapter.Status}"/>
+                </StackPanel>
+            </Border>
+
+            <ItemsControl ItemsSource="{Binding NetAdapter.Rows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="Bold"
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                           Text="{Binding QueueText}"/>
+                                <Border Margin="0,8,0,0" Padding="12,10" CornerRadius="6"
+                                        Background="{DynamicResource Surface2Brush}">
+                                    <TextBlock Text="{Binding RssText}" TextWrapping="Wrap" FontSize="13"
+                                               Foreground="{Binding RssSeverity, Converter={StaticResource SeverityToBrush}}"/>
+                                </Border>
+
+                                <Grid Margin="0,12,0,4" Visibility="{Binding HasProperties, Converter={StaticResource BoolToVis}}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="180"/>
+                                        <ColumnDefinition Width="220"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource ColHead}" Text="屬性"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="目前值"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="登錄關鍵字"/>
+                                </Grid>
+                                <ItemsControl ItemsSource="{Binding Properties}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,2,0,2">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="180"/>
+                                                    <ColumnDefinition Width="220"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Name}"
+                                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Value}"
+                                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" Text="{Binding Keyword}"
+                                                           FontFamily="Consolas" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

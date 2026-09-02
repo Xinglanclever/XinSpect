@@ -25,6 +25,9 @@ public partial class FanCurveEditor : UserControl
         InitializeComponent();
         SizeChanged += (_, _) => { Render(); RenderLive(); };
         Loaded += (_, _) => { Render(); RenderLive(); };
+        // 曲線與刻度是用「複製出來的色值」畫的（見 Render 裡的 VizPalette.AccentColor），
+        // 換強調色後不會自己變，必須重畫一次
+        this.OnThemeChange(() => { Render(); RenderLive(); });
     }
 
     // ── 對外屬性 ────────────────────────────────────────────────────────────

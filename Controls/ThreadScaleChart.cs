@@ -42,6 +42,7 @@ public sealed class ThreadScaleChart : FrameworkElement
 
     public ThreadScaleChart()
     {
+        this.RepaintOnThemeChange();
         ClipToBounds = true;
         MinHeight = 200;
     }

@@ -38,8 +38,8 @@
                         <TextBlock Style="{StaticResource FieldLabel}" Text="自訂" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBox x:Name="ChessCustom" Width="72" VerticalContentAlignment="Center"
                                  Text="{Binding Chess.ThreadCount, UpdateSourceTrigger=LostFocus}"
-                                 Background="{StaticResource Surface2Brush}" Foreground="{StaticResource PrimaryInkBrush}"
-                                 BorderBrush="{StaticResource HairlineBrush}" Padding="6,4"/>
+                                 Background="{DynamicResource Surface2Brush}" Foreground="{DynamicResource PrimaryInkBrush}"
+                                 BorderBrush="{DynamicResource HairlineBrush}" Padding="6,4"/>
                     </StackPanel>
 
                     <!-- 測試時間 + 起停 -->
@@ -69,29 +69,29 @@
 
                     <!-- 結果數值：小字一律是本機歷次成績的對照，沒有任何外部參考分數 -->
                     <UniformGrid Rows="1" Columns="3" Margin="0,14,0,0">
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="0,0,5,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="0,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="單執行緒" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding Chess.SingleText}" FontSize="24" Margin="0,2,0,0"
-                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
                                 <TextBlock Text="{Binding Chess.SingleDeltaText}" Style="{StaticResource FieldLabel}"
-                                           Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{StaticResource AccentBrush}"/>
+                                           Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{DynamicResource AccentBrush}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="5,0,5,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="5,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="多執行緒" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding Chess.MultiText}" FontSize="24" Margin="0,2,0,0"
-                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
                                 <TextBlock Text="{Binding Chess.MultiDeltaText}" Style="{StaticResource FieldLabel}"
-                                           Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{StaticResource AccentBrush}"/>
+                                           Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{DynamicResource AccentBrush}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="5,0,0,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="5,0,0,0">
                             <StackPanel>
                                 <TextBlock Text="加速比" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding Chess.SpeedupText}" FontSize="24" Margin="0,2,0,0"
-                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
                                 <TextBlock Text="{Binding Chess.EfficiencyText}" Style="{StaticResource FieldLabel}"
                                            Margin="0,2,0,0" TextWrapping="Wrap"/>
                             </StackPanel>
@@ -106,12 +106,12 @@
 
                     <!-- 運算正確性：取代舊的「原版對照」。外部程式只能給另一個分數，
                          數學常數能給出對或錯——一個算錯的高分沒有意義，所以它跟速度並列。 -->
-                    <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,12" Margin="0,12,0,0">
+                    <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="16,12" Margin="0,12,0,0">
                         <StackPanel>
                             <DockPanel LastChildFill="True">
                                 <TextBlock DockPanel.Dock="Left" Text="運算正確性" Style="{StaticResource FieldValue}" Margin="0,0,10,0"/>
                                 <TextBlock Text="⚠ 偵測到運算錯誤" Style="{StaticResource FieldValue}" HorizontalAlignment="Right"
-                                           Foreground="{StaticResource CriticalBrush}"
+                                           Foreground="{DynamicResource CriticalBrush}"
                                            Visibility="{Binding Chess.HasFault, Converter={StaticResource BoolToVis}}"/>
                             </DockPanel>
                             <TextBlock Text="{Binding Chess.VerifyText}" Style="{StaticResource Subtitle}" TextWrapping="Wrap" Margin="0,4,0,0"/>
@@ -166,28 +166,28 @@
 
                     <!-- 極值與穩定度 -->
                     <UniformGrid Rows="1" Columns="4" Margin="0,14,0,0">
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="最高溫度" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding Stress.MaxTempText}" FontSize="22" Margin="0,2,0,0"
-                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="最高頻率" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding Stress.MaxClockText}" FontSize="22" Margin="0,2,0,0"
-                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="最低頻率（滿載）" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding Stress.MinClockText}" FontSize="22" Margin="0,2,0,0"
-                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
                             <StackPanel>
                                 <TextBlock Text="穩定度" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding Stress.StabilityText}" FontSize="15" Margin="0,4,0,0" TextWrapping="Wrap"
@@ -241,11 +241,11 @@
                     <local:SectionHead Text="測試期間即時走勢（近 90 秒）" HelpKey="bench/測試期間即時走勢（近 90 秒）"/>
                     <UniformGrid Rows="1" Columns="3">
                         <local:HistoryGraph Height="120" Margin="0,0,6,0" Caption="CPU 使用率"
-                                            History="{Binding CpuLoadHist}" Stroke="{StaticResource AccentBrush}"/>
+                                            History="{Binding CpuLoadHist}" Stroke="{DynamicResource AccentBrush}"/>
                         <local:HistoryGraph Height="120" Margin="3,0,3,0" Caption="CPU 溫度"
-                                            History="{Binding CpuTempHist}" Stroke="{StaticResource SeriousBrush}"/>
+                                            History="{Binding CpuTempHist}" Stroke="{DynamicResource SeriousBrush}"/>
                         <local:HistoryGraph Height="120" Margin="6,0,0,0" Caption="CPU 頻率"
-                                            History="{Binding CpuClockHist}" Stroke="{StaticResource WarningBrush}"/>
+                                            History="{Binding CpuClockHist}" Stroke="{DynamicResource WarningBrush}"/>
                     </UniformGrid>
                 </StackPanel>
             </Border>
@@ -261,12 +261,12 @@
                         </Grid.ColumnDefinitions>
 
                         <!-- 綜合分數 -->
-                        <Border Grid.Column="0" Background="{StaticResource Surface2Brush}" CornerRadius="12"
+                        <Border Grid.Column="0" Background="{DynamicResource Surface2Brush}" CornerRadius="12"
                                 Padding="28,20" Margin="0,4,20,4" VerticalAlignment="Center">
                             <StackPanel HorizontalAlignment="Center">
                                 <TextBlock Text="{Binding Bench.CompositeText}" FontSize="46" FontWeight="Bold"
                                            HorizontalAlignment="Center"
-                                           Foreground="{StaticResource AccentBrush}"/>
+                                           Foreground="{DynamicResource AccentBrush}"/>
                                 <TextBlock Text="綜合分數" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
                                 <TextBlock Text="{Binding Bench.DeltaText}" Style="{StaticResource Subtitle}" MaxWidth="180"
                                            TextWrapping="Wrap" TextAlignment="Center"
@@ -276,28 +276,28 @@
 
                         <!-- 分項結果 -->
                         <UniformGrid Grid.Column="1" Rows="1" Columns="3" VerticalAlignment="Center">
-                            <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="0,4,5,4">
+                            <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="0,4,5,4">
                                 <StackPanel>
                                     <TextBlock Text="單執行緒" Style="{StaticResource FieldLabel}"/>
                                     <TextBlock Text="{Binding Bench.SingleText}" FontSize="28" Margin="0,2,0,0"
-                                               Foreground="{StaticResource PrimaryInkBrush}"/>
+                                               Foreground="{DynamicResource PrimaryInkBrush}"/>
                                     <TextBlock Text="MOPS ・ 每秒百萬次運算" Style="{StaticResource FieldLabel}" Margin="0,2,0,0"/>
                                 </StackPanel>
                             </Border>
-                            <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="5,4,5,4">
+                            <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="5,4,5,4">
                                 <StackPanel>
                                     <TextBlock Text="多執行緒" Style="{StaticResource FieldLabel}"/>
                                     <TextBlock Text="{Binding Bench.MultiText}" FontSize="28" Margin="0,2,0,0"
-                                               Foreground="{StaticResource PrimaryInkBrush}"/>
+                                               Foreground="{DynamicResource PrimaryInkBrush}"/>
                                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,2,0,0"
                                                Text="{Binding Bench.Threads, StringFormat=MOPS ・ {0} 執行緒}"/>
                                 </StackPanel>
                             </Border>
-                            <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="5,4,0,4">
+                            <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="5,4,0,4">
                                 <StackPanel>
                                     <TextBlock Text="記憶體頻寬" Style="{StaticResource FieldLabel}"/>
                                     <TextBlock Text="{Binding Bench.MemText}" FontSize="28" Margin="0,2,0,0"
-                                               Foreground="{StaticResource PrimaryInkBrush}"/>
+                                               Foreground="{DynamicResource PrimaryInkBrush}"/>
                                     <TextBlock Text="GB/s ・ 大區塊複製" Style="{StaticResource FieldLabel}" Margin="0,2,0,0"/>
                                 </StackPanel>
                             </Border>
@@ -338,7 +338,7 @@
                         <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="成績" TextAlignment="Right"/>
                         <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="量測條件" Margin="12,0,0,0"/>
                     </Grid>
-                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,4"/>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,0,0,4"/>
                     <ItemsControl ItemsSource="{Binding Benchmarks.Recent}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -387,12 +387,12 @@
                     <ItemsControl ItemsSource="{Binding TopDown.Buckets}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,10" Margin="0,0,0,6">
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,10" Margin="0,0,0,6">
                                     <StackPanel>
                                         <Grid>
                                             <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Name}" VerticalAlignment="Center"/>
                                             <TextBlock Text="{Binding PercentText}" FontSize="18" HorizontalAlignment="Right"
-                                                       Foreground="{StaticResource PrimaryInkBrush}"/>
+                                                       Foreground="{DynamicResource PrimaryInkBrush}"/>
                                         </Grid>
                                         <ProgressBar Style="{StaticResource LoadBar}" Maximum="1" Margin="0,6,0,0"
                                                      Value="{Binding BarFraction, Mode=OneWay}"/>
@@ -404,18 +404,18 @@
                     </ItemsControl>
 
                     <UniformGrid Rows="1" Columns="2" Margin="0,4,0,0">
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="每周期退休插槽" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding TopDown.SlotsRetiredText}" FontSize="20" Margin="0,2,0,0"
-                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
                             <StackPanel>
                                 <TextBlock Text="解讀" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding TopDown.VerdictText}" Margin="0,2,0,0" TextWrapping="Wrap"
-                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
                     </UniformGrid>
@@ -441,7 +441,7 @@
                         <TextBlock Grid.Column="4" Style="{StaticResource FieldLabel}" Text="前端" TextAlignment="Right"/>
                         <TextBlock Grid.Column="5" Style="{StaticResource FieldLabel}" Text="後端" TextAlignment="Right"/>
                     </Grid>
-                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,4"/>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,0,0,4"/>
                     <ItemsControl ItemsSource="{Binding TopDown.Rows}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -487,28 +487,28 @@
                                Text="以指標追逐法量測不同工作集大小的隨機存取延遲，藉延遲跳升推估各級快取與主記憶體的存取延遲（數值越低越快）。"/>
 
                     <UniformGrid Rows="1" Columns="4" Margin="0,0,0,4">
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="L1 快取" Style="{StaticResource FieldLabel}"/>
-                                <TextBlock Text="{Binding Cache.L1Text}" FontSize="20" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                <TextBlock Text="{Binding Cache.L1Text}" FontSize="20" Margin="0,2,0,0" Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="L2 快取" Style="{StaticResource FieldLabel}"/>
-                                <TextBlock Text="{Binding Cache.L2Text}" FontSize="20" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                <TextBlock Text="{Binding Cache.L2Text}" FontSize="20" Margin="0,2,0,0" Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="L3 快取" Style="{StaticResource FieldLabel}"/>
-                                <TextBlock Text="{Binding Cache.L3Text}" FontSize="20" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                <TextBlock Text="{Binding Cache.L3Text}" FontSize="20" Margin="0,2,0,0" Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
                             <StackPanel>
                                 <TextBlock Text="主記憶體" Style="{StaticResource FieldLabel}"/>
-                                <TextBlock Text="{Binding Cache.RamText}" FontSize="20" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                <TextBlock Text="{Binding Cache.RamText}" FontSize="20" Margin="0,2,0,0" Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
                     </UniformGrid>
@@ -629,7 +629,7 @@
                         <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="頻寬"/>
                         <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="達成率"/>
                     </Grid>
-                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,4"/>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,0,0,4"/>
                     <ItemsControl ItemsSource="{Binding MemBandwidth.Rows}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -660,7 +660,7 @@
                         <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="同時達成頻寬"/>
                         <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="延遲"/>
                     </Grid>
-                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,4"/>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,0,0,4"/>
                     <ItemsControl ItemsSource="{Binding MemBandwidth.LoadedRows}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -728,11 +728,11 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Background="{StaticResource Surface2Brush}" CornerRadius="12"
+                        <Border Grid.Column="0" Background="{DynamicResource Surface2Brush}" CornerRadius="12"
                                 Padding="28,18" Margin="0,0,16,0" VerticalAlignment="Center">
                             <StackPanel HorizontalAlignment="Center">
                                 <TextBlock Text="{Binding SuperPi.ElapsedText}" FontSize="34" FontWeight="Bold"
-                                           HorizontalAlignment="Center" Foreground="{StaticResource AccentBrush}"/>
+                                           HorizontalAlignment="Center" Foreground="{DynamicResource AccentBrush}"/>
                                 <TextBlock Text="完成時間（越短越好）" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
                             </StackPanel>
                         </Border>
@@ -808,28 +808,28 @@
                     </DockPanel>
 
                     <UniformGrid Rows="1" Columns="4" Margin="0,14,0,0">
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="循序讀取" Style="{StaticResource FieldLabel}"/>
-                                <TextBlock Text="{Binding DiskBench.SeqReadText}" FontSize="20" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                <TextBlock Text="{Binding DiskBench.SeqReadText}" FontSize="20" Margin="0,2,0,0" Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="循序寫入" Style="{StaticResource FieldLabel}"/>
-                                <TextBlock Text="{Binding DiskBench.SeqWriteText}" FontSize="20" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                <TextBlock Text="{Binding DiskBench.SeqWriteText}" FontSize="20" Margin="0,2,0,0" Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="隨機 4K 讀取" Style="{StaticResource FieldLabel}"/>
-                                <TextBlock Text="{Binding DiskBench.RandReadText}" FontSize="20" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                <TextBlock Text="{Binding DiskBench.RandReadText}" FontSize="20" Margin="0,2,0,0" Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
                             <StackPanel>
                                 <TextBlock Text="隨機 4K 寫入" Style="{StaticResource FieldLabel}"/>
-                                <TextBlock Text="{Binding DiskBench.RandWriteText}" FontSize="20" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                <TextBlock Text="{Binding DiskBench.RandWriteText}" FontSize="20" Margin="0,2,0,0" Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
                     </UniformGrid>
@@ -880,11 +880,11 @@
                         </Grid.ColumnDefinitions>
 
                         <!-- 基礎分（WinSPR） -->
-                        <Border Grid.Column="0" Background="{StaticResource Surface2Brush}" CornerRadius="12"
+                        <Border Grid.Column="0" Background="{DynamicResource Surface2Brush}" CornerRadius="12"
                                 Padding="30,20" Margin="0,4,20,4" VerticalAlignment="Center">
                             <StackPanel HorizontalAlignment="Center">
                                 <TextBlock Text="{Binding Winsat.BaseScoreText}" FontSize="46" FontWeight="Bold"
-                                           HorizontalAlignment="Center" Foreground="{StaticResource AccentBrush}"/>
+                                           HorizontalAlignment="Center" Foreground="{DynamicResource AccentBrush}"/>
                                 <TextBlock Text="基礎分數 WinSPR" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
                                 <TextBlock Text="{Binding Winsat.StateText}" Style="{StaticResource Subtitle}"
                                            HorizontalAlignment="Center" Margin="0,8,0,0" TextWrapping="Wrap" MaxWidth="200" TextAlignment="Center"/>
@@ -894,33 +894,33 @@
                         <!-- 子分數 -->
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <UniformGrid Rows="1" Columns="5">
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="10,12" Margin="0,0,4,0">
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="10,12" Margin="0,0,4,0">
                                     <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="{Binding Winsat.CpuText}" FontSize="22" HorizontalAlignment="Center" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                        <TextBlock Text="{Binding Winsat.CpuText}" FontSize="22" HorizontalAlignment="Center" Foreground="{DynamicResource PrimaryInkBrush}"/>
                                         <TextBlock Text="處理器" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </Border>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="10,12" Margin="4,0,4,0">
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="10,12" Margin="4,0,4,0">
                                     <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="{Binding Winsat.MemoryText}" FontSize="22" HorizontalAlignment="Center" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                        <TextBlock Text="{Binding Winsat.MemoryText}" FontSize="22" HorizontalAlignment="Center" Foreground="{DynamicResource PrimaryInkBrush}"/>
                                         <TextBlock Text="記憶體" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </Border>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="10,12" Margin="4,0,4,0">
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="10,12" Margin="4,0,4,0">
                                     <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="{Binding Winsat.GraphicsText}" FontSize="22" HorizontalAlignment="Center" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                        <TextBlock Text="{Binding Winsat.GraphicsText}" FontSize="22" HorizontalAlignment="Center" Foreground="{DynamicResource PrimaryInkBrush}"/>
                                         <TextBlock Text="圖形" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </Border>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="10,12" Margin="4,0,4,0">
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="10,12" Margin="4,0,4,0">
                                     <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="{Binding Winsat.D3DText}" FontSize="22" HorizontalAlignment="Center" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                        <TextBlock Text="{Binding Winsat.D3DText}" FontSize="22" HorizontalAlignment="Center" Foreground="{DynamicResource PrimaryInkBrush}"/>
                                         <TextBlock Text="遊戲繪圖" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </Border>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="10,12" Margin="4,0,0,0">
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="10,12" Margin="4,0,0,0">
                                     <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="{Binding Winsat.DiskText}" FontSize="22" HorizontalAlignment="Center" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                        <TextBlock Text="{Binding Winsat.DiskText}" FontSize="22" HorizontalAlignment="Center" Foreground="{DynamicResource PrimaryInkBrush}"/>
                                         <TextBlock Text="主硬碟" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </Border>

@@ -4,8 +4,8 @@
              xmlns:local="clr-namespace:XinSpect"
              MinHeight="176">
     <!-- 曲線編輯畫布：左鍵拖動控制點、雙擊新增、右鍵移除；灰線為即時溫度 -->
-    <Border Background="{StaticResource Surface2Brush}" CornerRadius="8"
-            BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1">
+    <Border Background="{DynamicResource Surface2Brush}" CornerRadius="8"
+            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
         <Grid x:Name="Root" Background="Transparent" ClipToBounds="True"
               MouseLeftButtonDown="Root_Down"
               MouseMove="Root_Move"

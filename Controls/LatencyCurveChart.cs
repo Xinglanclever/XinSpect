@@ -40,6 +40,7 @@ public sealed class LatencyCurveChart : FrameworkElement
 
     public LatencyCurveChart()
     {
+        this.RepaintOnThemeChange();
         ClipToBounds = true;
         MinHeight = 200;
     }

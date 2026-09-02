@@ -78,9 +78,9 @@
             </ComboBox>
             <TextBox Grid.Column="1" Margin="10,0,0,0"
                      Text="{Binding Search, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                     Background="{StaticResource Surface2Brush}" Foreground="{StaticResource PrimaryInkBrush}"
-                     BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" Padding="10,7"
-                     CaretBrush="{StaticResource AccentBrush}" VerticalContentAlignment="Center"
+                     Background="{DynamicResource Surface2Brush}" Foreground="{DynamicResource PrimaryInkBrush}"
+                     BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" Padding="10,7"
+                     CaretBrush="{DynamicResource AccentBrush}" VerticalContentAlignment="Center"
                      ToolTip="以標題或細節關鍵字搜尋事件"/>
         </Grid>
 

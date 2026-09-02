@@ -18,6 +18,7 @@ public sealed class FrameTimeChart : FrameworkElement
 
     public FrameTimeChart()
     {
+        this.RepaintOnThemeChange();
         ClipToBounds = true;
         MinHeight = 160;
     }

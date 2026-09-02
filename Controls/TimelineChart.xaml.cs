@@ -55,6 +55,7 @@ public partial class TimelineChart : UserControl
         }
         SizeChanged += (_, _) => Render();
         MouseLeave += (_, _) => Overlay.Children.Clear();
+        this.OnThemeChange(Render);   // 格線／刻度取自佈景色，換主題後重畫一次
     }
 
     // ── 輸入（由檢視設定後呼叫 Render）────────────────────────────────────

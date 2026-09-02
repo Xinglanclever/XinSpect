@@ -63,6 +63,7 @@ public sealed class OutlineDigits : FrameworkElement
 
     public OutlineDigits()
     {
+        this.RepaintOnThemeChange();
         SnapsToDevicePixels = true;
         IsVisibleChanged += (_, _) => { if (IsVisible) Settle(); else Stop(); };
         Loaded += (_, _) => Motion.Changed += OnMotionChanged;

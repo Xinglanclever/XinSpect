@@ -391,6 +391,44 @@ public static class PageRegistry
         },
         new()
         {
+            Key = "netadv", Title = "網卡進階屬性", Group = GTools,
+            IconData = "M1,4 h14 v7 h-14 z M2.4,5.4 h11.2 v4.2 h-11.2 z M4,12 h8 v1.2 h-8 z M6.4,2 h3.2 v1.4 h-3.2 z",
+            Factory = () => new NetAdapterView(),
+            Hint = "RSS 接收佇列與驅動開放的每一項設定（唯讀 WMI）",
+            Keywords = ["網卡", "網路卡", "nic", "rss", "佇列", "queue", "中斷節流", "卸載", "offload",
+                        "緩衝區", "buffer", "進階屬性", "驅動設定", "收包", "丟包"],
+        },
+        new()
+        {
+            Key = "sleep", Title = "睡眠與喚醒", Group = GTools,
+            IconData = "F1 M8,1 a7,7 0 1,0 7,7 a5.5,5.5 0 0,1 -7,-7 Z M11.4,2.2 h3.2 v1 l-2,2.2 h2 v1 h-3.4 v-1 l2,-2.2 h-1.8 z",
+            Factory = () => new SleepDiagnosticsView(),
+            Hint = "半夜自己醒來、或睡不下去：喚醒來源、喚醒計時器與電源請求（唯讀）",
+            Keywords = ["睡眠", "休眠", "待機", "喚醒", "wake", "sleep", "s3", "s0", "現代待機",
+                        "自己開機", "自己醒", "睡不著", "powercfg", "電源請求", "計時器"],
+        },
+        new()
+        {
+            Key = "displaylink", Title = "顯示鏈路", Group = GTools,
+            IconData = "M1,2 h14 v9 h-14 z M2.4,3.4 h11.2 v6.2 h-11.2 z M6,12 h4 v1.4 h-4 z M4.6,13.4 h6.8 v1.2 h-6.8 z",
+            Factory = () => new DisplayLinkView(),
+            Hint = "4K144 開起來了但被壓成 4:2:2？色彩編碼、位元深度與所需頻寬（唯讀）",
+            Keywords = ["顯示", "螢幕", "鏈路", "display", "displayport", "dp", "hdmi", "色度", "4:2:2",
+                        "420", "422", "444", "rgb", "ycbcr", "位元深度", "10bit", "hdr", "刷新率",
+                        "144hz", "4k", "頻寬", "發糊", "模糊"],
+        },
+        new()
+        {
+            Key = "nvmepower", Title = "NVMe 電源狀態", Group = GTools,
+            IconData = "M2,3 h12 v10 h-12 z M3.4,4.4 h9.2 v2 h-9.2 z "
+                     + "M7.2,7.6 h1.6 v4 h-1.6 z M5,9.2 h6 v1.4 h-6 z",
+            Factory = () => new NvmePowerView(),
+            Hint = "閒置後第一筆讀取為什麼慢：宣告的離開延遲對實測（唯讀）",
+            Keywords = ["nvme", "電源狀態", "省電", "apst", "閒置", "延遲", "尖峰", "卡頓", "喚醒",
+                        "離開延遲", "exit latency", "ps0", "睡眠", "ssd", "固態", "p99"],
+        },
+        new()
+        {
             Key = "usb", Title = "USB 鏈路", Group = GTools,
             IconData = "M6.4,1 h3.2 v3 h-3.2 z M7.4,4 h1.2 v10 h-1.2 z "
                      + "M3.4,7.4 h4 v1.2 h-4 z M3.4,6.2 h1.2 v2.4 h-1.2 z "

@@ -12,7 +12,7 @@
         <Grid Grid.Row="0">
             <!-- 底環 -->
             <Ellipse Width="118" Height="118" HorizontalAlignment="Center" VerticalAlignment="Center"
-                     Stroke="{StaticResource HairlineBrush}" StrokeThickness="14"/>
+                     Stroke="{DynamicResource HairlineBrush}" StrokeThickness="14"/>
             <!-- 已用弧（動畫掃掠） -->
             <Path x:Name="UsedArc" StrokeThickness="14"
                   StrokeStartLineCap="Round" StrokeEndLineCap="Round"
@@ -24,17 +24,17 @@
             <!-- 中央百分比 + 副標 -->
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                 <TextBlock x:Name="CenterLabel" Text="0%" FontSize="24" FontWeight="SemiBold"
-                           Foreground="{StaticResource PrimaryInkBrush}" HorizontalAlignment="Center"/>
-                <TextBlock x:Name="SubLabel" FontSize="11" Foreground="{StaticResource MutedInkBrush}"
+                           Foreground="{DynamicResource PrimaryInkBrush}" HorizontalAlignment="Center"/>
+                <TextBlock x:Name="SubLabel" FontSize="11" Foreground="{DynamicResource MutedInkBrush}"
                            HorizontalAlignment="Center" Margin="0,1,0,0"/>
             </StackPanel>
         </Grid>
 
         <StackPanel Grid.Row="1" VerticalAlignment="Top">
             <TextBlock x:Name="CaptionLabel" FontSize="13.5" FontWeight="SemiBold"
-                       Foreground="{StaticResource PrimaryInkBrush}" HorizontalAlignment="Center"
+                       Foreground="{DynamicResource PrimaryInkBrush}" HorizontalAlignment="Center"
                        TextTrimming="CharacterEllipsis"/>
-            <TextBlock x:Name="Caption2Label" FontSize="11.5" Foreground="{StaticResource MutedInkBrush}"
+            <TextBlock x:Name="Caption2Label" FontSize="11.5" Foreground="{DynamicResource MutedInkBrush}"
                        HorizontalAlignment="Center" Margin="0,2,0,0"/>
         </StackPanel>
     </Grid>

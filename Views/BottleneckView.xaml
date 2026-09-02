@@ -5,7 +5,7 @@
     <UserControl.Resources>
         <!-- 一條卡點：左側色條表嚴重度；徽章是優先度與部位；底下三行分別是證據、做法、去哪看。 -->
         <DataTemplate x:Key="FindingTemplate">
-            <Border Background="{StaticResource Surface2Brush}" CornerRadius="9" Margin="0,0,0,8">
+            <Border Background="{DynamicResource Surface2Brush}" CornerRadius="9" Margin="0,0,0,8">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="6"/>
@@ -20,20 +20,20 @@
                                 <TextBlock Text="{Binding PriorityText}" Foreground="White" FontSize="11.5"/>
                             </Border>
                             <Border CornerRadius="4" Padding="7,1" Margin="7,0,0,0" VerticalAlignment="Center"
-                                    Background="{StaticResource SurfaceBrush}">
+                                    Background="{DynamicResource SurfaceBrush}">
                                 <TextBlock Text="{Binding KindText}" FontSize="11.5"
-                                           Foreground="{StaticResource SecondaryInkBrush}"/>
+                                           Foreground="{DynamicResource SecondaryInkBrush}"/>
                             </Border>
                             <TextBlock Text="{Binding Title}" Margin="10,0,0,0" VerticalAlignment="Center"
                                        FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"
-                                       Foreground="{StaticResource PrimaryInkBrush}"/>
+                                       Foreground="{DynamicResource PrimaryInkBrush}"/>
                         </StackPanel>
                         <TextBlock Text="{Binding Evidence, StringFormat=依據：{0}}" TextWrapping="Wrap"
                                    Margin="0,8,0,0" FontSize="13"
-                                   Foreground="{StaticResource SecondaryInkBrush}"/>
+                                   Foreground="{DynamicResource SecondaryInkBrush}"/>
                         <TextBlock Text="{Binding Advice, StringFormat=做法：{0}}" TextWrapping="Wrap"
                                    Margin="0,4,0,0" FontSize="13"
-                                   Foreground="{StaticResource SecondaryInkBrush}"/>
+                                   Foreground="{DynamicResource SecondaryInkBrush}"/>
                         <TextBlock Text="{Binding Where, StringFormat=量得更清楚：{0}}" TextWrapping="Wrap"
                                    Margin="0,6,0,0" Style="{StaticResource FieldLabel}"
                                    Visibility="{Binding HasWhere, Converter={StaticResource BoolToVis}}"/>
@@ -100,9 +100,9 @@
                                 Background="{Binding Bottleneck.Severity, Converter={StaticResource SeverityToBrush}}"/>
                         <StackPanel Grid.Column="1" Margin="14,0,0,0">
                             <TextBlock Text="{Binding Bottleneck.Headline}" FontSize="18" FontWeight="SemiBold"
-                                       TextWrapping="Wrap" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                       TextWrapping="Wrap" Foreground="{DynamicResource PrimaryInkBrush}"/>
                             <TextBlock Text="{Binding Bottleneck.Detail}" TextWrapping="Wrap" Margin="0,5,0,0"
-                                       FontSize="13.5" Foreground="{StaticResource SecondaryInkBrush}"/>
+                                       FontSize="13.5" Foreground="{DynamicResource SecondaryInkBrush}"/>
                             <TextBlock Text="{Binding Bottleneck.Confidence}" Style="{StaticResource FieldLabel}"
                                        TextWrapping="Wrap" Margin="0,8,0,0"/>
                         </StackPanel>
@@ -136,9 +136,9 @@
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="・" Foreground="{StaticResource MutedInkBrush}" FontSize="13"/>
+                                    <TextBlock Text="・" Foreground="{DynamicResource MutedInkBrush}" FontSize="13"/>
                                     <TextBlock Grid.Column="1" Text="{Binding}" TextWrapping="Wrap" FontSize="13"
-                                               Foreground="{StaticResource SecondaryInkBrush}"/>
+                                               Foreground="{DynamicResource SecondaryInkBrush}"/>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

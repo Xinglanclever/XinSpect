@@ -12,7 +12,7 @@
         <Grid Grid.Row="0">
             <!-- 底環 -->
             <Ellipse Width="112" Height="112" HorizontalAlignment="Center" VerticalAlignment="Center"
-                     Stroke="{StaticResource HairlineBrush}" StrokeThickness="9"/>
+                     Stroke="{DynamicResource HairlineBrush}" StrokeThickness="9"/>
             <!-- 數值弧（動畫掃掠） -->
             <Path x:Name="ValueArc" StrokeThickness="9"
                   StrokeStartLineCap="Round" StrokeEndLineCap="Round"
@@ -24,14 +24,14 @@
             <!-- 中央數字 + 單位 -->
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <TextBlock x:Name="NumberText" Text="0" FontSize="27" FontWeight="SemiBold"
-                           Foreground="{StaticResource PrimaryInkBrush}" VerticalAlignment="Center"/>
+                           Foreground="{DynamicResource PrimaryInkBrush}" VerticalAlignment="Center"/>
                 <TextBlock x:Name="UnitText" FontSize="13" Margin="3,0,0,4"
-                           Foreground="{StaticResource SecondaryInkBrush}" VerticalAlignment="Bottom"/>
+                           Foreground="{DynamicResource SecondaryInkBrush}" VerticalAlignment="Bottom"/>
             </StackPanel>
         </Grid>
 
         <TextBlock Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center"
-                   FontSize="12.5" Foreground="{StaticResource SecondaryInkBrush}"
+                   FontSize="12.5" Foreground="{DynamicResource SecondaryInkBrush}"
                    Text="{Binding Caption, RelativeSource={RelativeSource AncestorType={x:Type local:RadialGauge}}}"/>
     </Grid>
 </UserControl>

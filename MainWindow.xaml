@@ -7,7 +7,7 @@
         MinHeight="600" MinWidth="980"
         WindowStartupLocation="CenterScreen"
         FontFamily="{StaticResource AppFont}"
-        Background="{StaticResource PagePlaneBrush}"
+        Background="{DynamicResource PagePlaneBrush}"
         TextOptions.TextFormattingMode="Ideal"
         UseLayoutRounding="True"
         PreviewKeyDown="Window_PreviewKeyDown">
@@ -19,11 +19,11 @@
         </Grid.RowDefinitions>
 
         <!-- ===== 標題列 ===== -->
-        <Border Grid.Row="0" Background="{StaticResource HeaderGradientBrush}"
-                BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Background="{DynamicResource HeaderGradientBrush}"
+                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,0,1">
             <Grid Margin="24,15">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="10" Height="30" CornerRadius="4" Background="{StaticResource AccentGradientBrush}"
+                    <Border Width="10" Height="30" CornerRadius="4" Background="{DynamicResource AccentGradientBrush}"
                             Margin="0,0,15,0">
                         <Border.Effect>
                             <DropShadowEffect x:Name="AccentGlow" BlurRadius="14" ShadowDepth="0" Opacity="0.7" Color="#3987e5"/>
@@ -39,11 +39,11 @@
                             VerticalAlignment="Center" Margin="0,0,10,0" ToolTip="命令面板（Ctrl+K）：搜尋任何頁面、工具與動作">
                         <StackPanel Orientation="Horizontal">
                             <Viewbox Width="15" Height="15" Margin="0,0,7,0">
-                                <Path Fill="{StaticResource PrimaryInkBrush}"
+                                <Path Fill="{DynamicResource PrimaryInkBrush}"
                                       Data="F1 M10,2 a8,8 0 1,0 4.9,14.3 l5.4,5.4 1.4,-1.4 -5.4,-5.4 A8,8 0 0 0 10,2 Z M10,4 a6,6 0 1,1 0,12 a6,6 0 0 1 0,-12 Z"/>
                             </Viewbox>
-                            <TextBlock Text="搜尋" Foreground="{StaticResource PrimaryInkBrush}" VerticalAlignment="Center"/>
-                            <TextBlock Text="Ctrl+K" Foreground="{StaticResource MutedInkBrush}" VerticalAlignment="Center"
+                            <TextBlock Text="搜尋" Foreground="{DynamicResource PrimaryInkBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="Ctrl+K" Foreground="{DynamicResource MutedInkBrush}" VerticalAlignment="Center"
                                        FontSize="11" Margin="8,1,0,0"/>
                         </StackPanel>
                     </Button>
@@ -51,20 +51,20 @@
                             VerticalAlignment="Center" Margin="0,0,10,0" ToolTip="切換迷你浮動監視器">
                         <StackPanel Orientation="Horizontal">
                             <Viewbox Width="15" Height="15" Margin="0,0,7,0">
-                                <Path Fill="{StaticResource PrimaryInkBrush}"
+                                <Path Fill="{DynamicResource PrimaryInkBrush}"
                                       Data="F1 M3,4 H21 A1,1 0 0 1 22,5 V17 A1,1 0 0 1 21,18 H3 A1,1 0 0 1 2,17 V5 A1,1 0 0 1 3,4 Z M4,6 H20 V16 H4 Z M13,11 H19 V15 H13 Z"/>
                             </Viewbox>
-                            <TextBlock Text="迷你" Foreground="{StaticResource PrimaryInkBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="迷你" Foreground="{DynamicResource PrimaryInkBrush}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button x:Name="ExportButton" Style="{StaticResource ToolButton}" Click="Export_Click"
                             VerticalAlignment="Center" Margin="0,0,18,0">
                         <StackPanel Orientation="Horizontal">
                             <Viewbox Width="15" Height="15" Margin="0,0,7,0">
-                                <Path Fill="{StaticResource PrimaryInkBrush}"
+                                <Path Fill="{DynamicResource PrimaryInkBrush}"
                                       Data="F1 M11,2 H5 A2,2 0 0 0 3,4 V20 A2,2 0 0 0 5,22 H19 A2,2 0 0 0 21,20 V9 L14,2 Z M13,3.5 L19.5,10 H13 Z M11.5,12 H12.5 V16 L14.2,14.3 L14.9,15 L12,17.9 L9.1,15 L9.8,14.3 L11.5,16 Z"/>
                             </Viewbox>
-                            <TextBlock Text="匯出報告" Foreground="{StaticResource PrimaryInkBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="匯出報告" Foreground="{DynamicResource PrimaryInkBrush}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <ComboBox Style="{StaticResource DarkCombo}" Width="184" VerticalAlignment="Center"
@@ -88,8 +88,8 @@
 
             <!-- 側邊欄：ItemsSource 來自 PageRegistry（宣告式註冊表），依 Group 自動分組。
                  1.x 的 210 行手寫 ListBoxItem ↔ _views[] 索引平行對應已完全移除。 -->
-            <Border Grid.Column="0" Background="{StaticResource PagePlaneBrush}"
-                    BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,1,0">
+            <Border Grid.Column="0" Background="{DynamicResource PagePlaneBrush}"
+                    BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,1,0">
                 <ListBox x:Name="Nav" Style="{StaticResource NavList}" Margin="0,6,0,12"
                          SelectionChanged="Nav_SelectionChanged">
                     <ListBox.ItemTemplate>
@@ -132,8 +132,8 @@
         </Grid>
 
         <!-- ===== 狀態列 ===== -->
-        <Border Grid.Row="2" Background="{StaticResource SurfaceBrush}"
-                BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,1,0,0">
+        <Border Grid.Row="2" Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0">
             <Grid Margin="24,8">
                 <TextBlock Style="{StaticResource Subtitle}" Text="{Binding StatusText}" VerticalAlignment="Center"/>
                 <TextBlock Style="{StaticResource Subtitle}" HorizontalAlignment="Right" VerticalAlignment="Center"

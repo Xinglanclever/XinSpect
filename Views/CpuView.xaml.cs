@@ -20,6 +20,9 @@ public partial class CpuView : UserControl
     private MainViewModel? Vm => DataContext as MainViewModel;
 
     // ===== 核心到核心延遲 =====
+    /// <summary>隱形停頓：使用者按下才取樣（兩次唯讀 MSR，相隔約一秒）。</summary>
+    private void InvisibleStallMeasure_Click(object sender, RoutedEventArgs e) => Vm?.InvisibleStall.Measure();
+
     private void CoreLatencyStart_Click(object sender, RoutedEventArgs e) => Vm?.CoreLatency.Start();
     private void CoreLatencyStop_Click(object sender, RoutedEventArgs e) => Vm?.CoreLatency.Cancel();
 

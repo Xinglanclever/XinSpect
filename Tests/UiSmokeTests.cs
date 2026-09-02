@@ -190,6 +190,148 @@ public class UiSmokeTests
         }
     }
 
+    /// <summary>
+    /// 同一個道理，NVMe 電源狀態頁有三張清單（電源狀態表、APST 表、實測樣本），
+    /// 三個樣板都只有在有資料時才會被套用。
+    /// </summary>
+    [Fact]
+    public void NVMe電源狀態頁的清單樣板_有資料時也沒有繫結錯誤()
+    {
+        var failures = new List<string>();
+        var thread = new Thread(() => RunNvmePowerTemplate(failures));
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.IsBackground = true;
+        thread.Start();
+
+        if (!thread.Join(TimeSpan.FromMinutes(1)))
+            failures.Add("NVMe 電源狀態樣板煙霧測試逾時（1 分鐘未完成）。");
+
+        Assert.True(failures.Count == 0,
+            $"NVMe 電源狀態頁樣板發現 {failures.Count} 項問題：\n" + string.Join("\n", failures));
+    }
+
+    /// <summary>只提供 NvmePower 一個屬性的最小宿主。</summary>
+    private sealed class NvmeOnly { public NvmePowerService NvmePower { get; } = new(); }
+
+    private static void RunNvmePowerTemplate(List<string> failures)
+    {
+        WpfEnv.Ensure();
+
+        PresentationTraceSources.Refresh();
+        var listener = new CollectingListener();
+        PresentationTraceSources.DataBindingSource.Listeners.Add(listener);
+        PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Warning;
+
+        try
+        {
+            var host = new NvmeOnly();
+            host.NvmePower.States.Add(new NvmePowerStateRow
+            {
+                State = 0, NonOperational = false, MaxPowerW = 9,
+                RelRead = 0, RelReadLatency = 0, RelWrite = 0, RelWriteLatency = 0,
+            });
+            host.NvmePower.States.Add(new NvmePowerStateRow
+            {
+                State = 3, NonOperational = true, MaxPowerW = 0.05,
+                EntryLatencyUs = 5_000, ExitLatencyUs = 8_000,
+                RelRead = 0, RelReadLatency = 0, RelWrite = 0, RelWriteLatency = 0,
+            });
+            host.NvmePower.Apst.Add(new NvmeApstRow { State = 0, IdleMs = 100, TargetState = 3 });
+            host.NvmePower.Samples.Add(new IdleLatencySample(0, 120));
+            host.NvmePower.Samples.Add(new IdleLatencySample(2000, 8_100));
+
+            var view = new NvmePowerView { DataContext = host };
+            view.Measure(new Size(1280, 900));
+            view.Arrange(new Rect(0, 0, 1280, 900));
+            view.UpdateLayout();
+
+            foreach (var line in listener.Drain().Split('\n'))
+            {
+                var t = line.Trim();
+                if (t.Length == 0) continue;
+                if (t.Contains("BindingExpression path error") ||
+                    t.Contains("Cannot convert") ||
+                    t.Contains("Cannot find governing FrameworkElement"))
+                    failures.Add("繫結錯誤：" + t);
+            }
+        }
+        catch (Exception ex)
+        {
+            failures.Add("套用樣板失敗：" + Describe(ex));
+        }
+        finally
+        {
+            PresentationTraceSources.DataBindingSource.Listeners.Remove(listener);
+        }
+    }
+
+    /// <summary>顯示鏈路頁的卡片樣板（含嚴重度顏色轉換器）同樣只有在有資料時才會套用。</summary>
+    [Fact]
+    public void 顯示鏈路頁的清單樣板_有資料時也沒有繫結錯誤()
+    {
+        var failures = new List<string>();
+        var thread = new Thread(() => RunTemplate(failures, "顯示鏈路", () =>
+        {
+            var host = new DisplayOnly();
+            host.DisplayLink.Rows.Add(new DisplayLinkRow
+            {
+                Name = "測試螢幕", ConnectionText = "DisplayPort（外接）",
+                ModeText = "3840 × 2160 ・ 143.98 Hz", PixelClockText = "1188.00 MHz",
+                EncodingText = "YCbCr 4:2:2", DepthText = "每通道 8 位元", HdrText = "支援但未啟用",
+                RequiredText = "19.01 Gb/s", Verdict = "色度被降到 YCbCr 4:2:2。", Severity = Severity.Warning,
+            });
+            return new DisplayLinkView { DataContext = host };
+        }));
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.IsBackground = true;
+        thread.Start();
+
+        if (!thread.Join(TimeSpan.FromMinutes(1)))
+            failures.Add("顯示鏈路樣板煙霧測試逾時（1 分鐘未完成）。");
+
+        Assert.True(failures.Count == 0,
+            $"顯示鏈路頁樣板發現 {failures.Count} 項問題：\n" + string.Join("\n", failures));
+    }
+
+    private sealed class DisplayOnly { public DisplayLinkService DisplayLink { get; } = new(); }
+
+    /// <summary>共用的樣板套用檢查：建好帶資料的檢視，逼它排版，攔下繫結錯誤。</summary>
+    private static void RunTemplate(List<string> failures, string what, Func<FrameworkElement> make)
+    {
+        WpfEnv.Ensure();
+
+        PresentationTraceSources.Refresh();
+        var listener = new CollectingListener();
+        PresentationTraceSources.DataBindingSource.Listeners.Add(listener);
+        PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Warning;
+
+        try
+        {
+            var view = make();
+            view.Measure(new Size(1280, 900));
+            view.Arrange(new Rect(0, 0, 1280, 900));
+            view.UpdateLayout();
+
+            foreach (var line in listener.Drain().Split('\n'))
+            {
+                var t = line.Trim();
+                if (t.Length == 0) continue;
+                if (t.Contains("BindingExpression path error") ||
+                    t.Contains("Cannot convert") ||
+                    t.Contains("Cannot find governing FrameworkElement"))
+                    failures.Add("繫結錯誤：" + t);
+            }
+        }
+        catch (Exception ex)
+        {
+            failures.Add($"{what}套用樣板失敗：" + Describe(ex));
+        }
+        finally
+        {
+            PresentationTraceSources.DataBindingSource.Listeners.Remove(listener);
+        }
+    }
+
     private static UsbPortRow SampleUsbRow(int depth, string location)
     {
         var (verdict, severity) = UsbLinkDecoder.Judge(2, 2, 4, true);

@@ -5,8 +5,8 @@
              FontFamily="{StaticResource AppFont}">
     <UserControl.Resources>
         <Style x:Key="ChatInput" TargetType="TextBox">
-            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
-            <Setter Property="CaretBrush" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource PrimaryInkBrush}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Padding" Value="12,10"/>
             <Setter Property="AcceptsReturn" Value="True"/>
@@ -15,13 +15,13 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
-                        <Border x:Name="bd" CornerRadius="9" Background="{StaticResource Surface2Brush}"
-                                BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1.2">
+                        <Border x:Name="bd" CornerRadius="9" Background="{DynamicResource Surface2Brush}"
+                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1.2">
                             <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -30,7 +30,7 @@
         </Style>
         <!-- 深色核取方塊（與其他分頁同一風格；各檢視自帶樣式） -->
         <Style x:Key="AiCheck" TargetType="CheckBox">
-            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
             <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -39,8 +39,8 @@
                     <ControlTemplate TargetType="CheckBox">
                         <StackPanel Orientation="Horizontal" Background="Transparent">
                             <Border x:Name="box" Width="17" Height="17" CornerRadius="5" VerticalAlignment="Center"
-                                    Background="{StaticResource Surface2Brush}"
-                                    BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1.2">
+                                    Background="{DynamicResource Surface2Brush}"
+                                    BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1.2">
                                 <Path x:Name="check" Width="10" Height="10" Stretch="Uniform"
                                       Data="M2,8 L6,12 L14,3" Stroke="White" StrokeThickness="2"
                                       StrokeStartLineCap="Round" StrokeEndLineCap="Round" Visibility="Collapsed"/>
@@ -49,12 +49,12 @@
                         </StackPanel>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="box" Property="Background" Value="{StaticResource AccentBrush}"/>
-                                <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="box" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                 <Setter TargetName="check" Property="Visibility" Value="Visible"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -98,7 +98,7 @@
                 <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="18,0,8,0" Text="溫度"/>
                 <Slider Grid.Column="2" Minimum="0" Maximum="2" TickFrequency="0.1" IsSnapToTickEnabled="True"
                         VerticalAlignment="Center" Value="{Binding Settings.AiTemperature, Mode=TwoWay}"
-                        Foreground="{StaticResource AccentBrush}"/>
+                        Foreground="{DynamicResource AccentBrush}"/>
                 <CheckBox Grid.Column="3" Style="{StaticResource AiCheck}" Margin="18,0,0,0" Content="診斷代理"
                           ToolTip="允許 AI 主動呼叫本機唯讀查詢工具（溫度、事件、磁碟健康、歷史統計等）"
                           IsChecked="{Binding Settings.AiAgentMode, Mode=TwoWay}"/>
@@ -133,29 +133,29 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border x:Name="bubble" CornerRadius="10" Padding="12,9" Margin="6,5" MaxWidth="640"
-                                        Background="{StaticResource Surface2Brush}" HorizontalAlignment="Left">
+                                        Background="{DynamicResource Surface2Brush}" HorizontalAlignment="Left">
                                     <StackPanel>
                                         <TextBlock x:Name="role" Text="{Binding RoleText}" FontSize="11.5" FontWeight="SemiBold"
-                                                   Foreground="{StaticResource AccentBrush}" Margin="0,0,0,3"/>
+                                                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,3"/>
                                         <TextBlock x:Name="body" Text="{Binding Text}" TextWrapping="Wrap"
-                                                   Foreground="{StaticResource PrimaryInkBrush}" FontSize="13.5" LineHeight="20"/>
+                                                   Foreground="{DynamicResource PrimaryInkBrush}" FontSize="13.5" LineHeight="20"/>
                                     </StackPanel>
                                 </Border>
                                 <DataTemplate.Triggers>
                                     <DataTrigger Binding="{Binding IsUser}" Value="True">
                                         <Setter TargetName="bubble" Property="HorizontalAlignment" Value="Right"/>
-                                        <Setter TargetName="bubble" Property="Background" Value="{StaticResource AccentBrush}"/>
+                                        <Setter TargetName="bubble" Property="Background" Value="{DynamicResource AccentBrush}"/>
                                     </DataTrigger>
                                     <!-- 代理查詢紀錄：低調的單行灰字，讓人一眼看出 AI 去讀了哪些真實讀值 -->
                                     <DataTrigger Binding="{Binding IsTool}" Value="True">
                                         <Setter TargetName="bubble" Property="Background" Value="Transparent"/>
-                                        <Setter TargetName="bubble" Property="BorderBrush" Value="{StaticResource HairlineBrush}"/>
+                                        <Setter TargetName="bubble" Property="BorderBrush" Value="{DynamicResource HairlineBrush}"/>
                                         <Setter TargetName="bubble" Property="BorderThickness" Value="1"/>
                                         <Setter TargetName="bubble" Property="Padding" Value="10,6"/>
                                         <Setter TargetName="bubble" Property="MaxWidth" Value="760"/>
-                                        <Setter TargetName="role" Property="Foreground" Value="{StaticResource MutedInkBrush}"/>
+                                        <Setter TargetName="role" Property="Foreground" Value="{DynamicResource MutedInkBrush}"/>
                                         <Setter TargetName="role" Property="FontSize" Value="10.5"/>
-                                        <Setter TargetName="body" Property="Foreground" Value="{StaticResource SecondaryInkBrush}"/>
+                                        <Setter TargetName="body" Property="Foreground" Value="{DynamicResource SecondaryInkBrush}"/>
                                         <Setter TargetName="body" Property="FontSize" Value="12"/>
                                         <Setter TargetName="body" Property="LineHeight" Value="17"/>
                                     </DataTrigger>

@@ -5,7 +5,7 @@
     <UserControl.Resources>
         <!-- 一列證據：左側色條表嚴重度，下面兩行分別是 MSR 出處與人話說明。 -->
         <DataTemplate x:Key="CeilingRowTemplate">
-            <Border Background="{StaticResource Surface2Brush}" CornerRadius="9" Margin="0,0,0,7">
+            <Border Background="{DynamicResource Surface2Brush}" CornerRadius="9" Margin="0,0,0,7">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="6"/>
@@ -20,17 +20,17 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="{Binding Name}" FontSize="14.5" FontWeight="SemiBold" TextWrapping="Wrap"
-                                       Foreground="{StaticResource PrimaryInkBrush}"/>
+                                       Foreground="{DynamicResource PrimaryInkBrush}"/>
                             <TextBlock Grid.Column="1" Text="{Binding Value}" Margin="12,0,0,0" FontSize="14.5"
                                        FontWeight="SemiBold" TextAlignment="Right" TextWrapping="Wrap"
                                        Foreground="{Binding Severity, Converter={StaticResource SeverityToBrush}}"/>
                         </Grid>
                         <TextBlock Text="{Binding Note}" TextWrapping="Wrap" Margin="0,5,0,0" FontSize="13"
-                                   Foreground="{StaticResource SecondaryInkBrush}"
+                                   Foreground="{DynamicResource SecondaryInkBrush}"
                                    Visibility="{Binding HasNote, Converter={StaticResource BoolToVis}}"/>
                         <TextBlock Text="{Binding Evidence, StringFormat=出處：{0}}" TextWrapping="Wrap"
                                    Margin="0,4,0,0" FontSize="11.5" FontFamily="Consolas"
-                                   Foreground="{StaticResource MutedInkBrush}"
+                                   Foreground="{DynamicResource MutedInkBrush}"
                                    Visibility="{Binding HasEvidence, Converter={StaticResource BoolToVis}}"/>
                     </StackPanel>
                 </Grid>
@@ -94,7 +94,7 @@
                                    TextWrapping="Wrap" Margin="0,3,0,0"
                                    Foreground="{Binding Ceiling.VerdictSeverity, Converter={StaticResource SeverityToBrush}}"/>
                         <TextBlock Text="{Binding Ceiling.VerdictDetail}" TextWrapping="Wrap" Margin="0,7,0,0"
-                                   FontSize="13.5" Foreground="{StaticResource SecondaryInkBrush}"/>
+                                   FontSize="13.5" Foreground="{DynamicResource SecondaryInkBrush}"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -140,7 +140,7 @@
                                 </Grid>
                                 <DataTemplate.Triggers>
                                     <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" Value="True">
-                                        <Setter TargetName="Row" Property="Background" Value="{StaticResource Surface2Brush}"/>
+                                        <Setter TargetName="Row" Property="Background" Value="{DynamicResource Surface2Brush}"/>
                                     </DataTrigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>

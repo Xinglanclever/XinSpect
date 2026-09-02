@@ -7,7 +7,7 @@
              蓋不過元素上的區域值，寫成區域值嚴重度就永遠變不了顏色。 -->
         <Style x:Key="ChipTextStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="10.5"/>
-            <Setter Property="Foreground" Value="{StaticResource SecondaryInkBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryInkBrush}"/>
         </Style>
     </UserControl.Resources>
 
@@ -43,7 +43,7 @@
                              Text="{Binding DriverAudit.Filter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                              ToolTip="搜尋裝置、類別、版本、提供者或 INF 檔名"/>
                     <CheckBox Grid.Column="1" Margin="14,0,2,0" VerticalAlignment="Center" FontSize="13"
-                              Foreground="{StaticResource SecondaryInkBrush}"
+                              Foreground="{DynamicResource SecondaryInkBrush}"
                               Content="只顯示需要注意的"
                               IsChecked="{Binding DriverAudit.OnlyFlagged, Mode=TwoWay}"/>
                 </Grid>
@@ -97,7 +97,7 @@
                                                    TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
                                                    ToolTip="{Binding InfText}"/>
                                         <Border Grid.Column="5" CornerRadius="4" Padding="6,1" VerticalAlignment="Center"
-                                                HorizontalAlignment="Left" Background="{StaticResource SurfaceBrush}">
+                                                HorizontalAlignment="Left" Background="{DynamicResource SurfaceBrush}">
                                             <TextBlock x:Name="ChipText" Style="{StaticResource ChipTextStyle}"
                                                        Text="{Binding SignText}"/>
                                         </Border>
@@ -109,13 +109,13 @@
                                 </StackPanel>
                                 <DataTemplate.Triggers>
                                     <DataTrigger Binding="{Binding Severity}" Value="2">
-                                        <Setter TargetName="ChipText" Property="Foreground" Value="{StaticResource CriticalBrush}"/>
+                                        <Setter TargetName="ChipText" Property="Foreground" Value="{DynamicResource CriticalBrush}"/>
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding Severity}" Value="1">
-                                        <Setter TargetName="ChipText" Property="Foreground" Value="{StaticResource WarningBrush}"/>
+                                        <Setter TargetName="ChipText" Property="Foreground" Value="{DynamicResource WarningBrush}"/>
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" Value="True">
-                                        <Setter TargetName="Row" Property="Background" Value="{StaticResource Surface2Brush}"/>
+                                        <Setter TargetName="Row" Property="Background" Value="{DynamicResource Surface2Brush}"/>
                                     </DataTrigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>

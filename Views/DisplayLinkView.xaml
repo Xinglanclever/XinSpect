@@ -1,0 +1,77 @@
+<UserControl x:Class="XinSpect.DisplayLinkView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <StackPanel Margin="2,0,0,10">
+                <local:SectionHead Text="顯示鏈路真相" HelpKey="displaylink/顯示鏈路真相"/>
+                <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                           Text="解析度與刷新率開起來了，不代表畫面沒有被犧牲：頻寬不夠時驅動會自己把色度降成 YCbCr 4:2:2 或 4:2:0，或把每通道位元數壓到 8 位元——設定裡照樣寫著 4K144，只有文字邊緣與細紅字會發糊。這一頁把連接技術、實際像素時鐘、目前的色彩編碼與位元深度擺出來，並算出這個模式需要多少影像資料率。全程唯讀查詢。"/>
+            </StackPanel>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="讀取" HelpKey="displaylink/讀取"/>
+                        <Button Style="{StaticResource PrimaryButton}" Content="重新讀取"
+                                HorizontalAlignment="Right" VerticalAlignment="Center"
+                                IsEnabled="{Binding DisplayLink.CanRefresh}" Click="Refresh_Click"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding DisplayLink.Status}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,6,0,0" TextWrapping="Wrap"
+                               Text="協商後的鏈路速率與通道數（例如 DisplayPort 的 HBR3 × 4 lane）Windows 沒有提供，要靠各家廠商的私有 API；本頁因此不印那個數字，只講「這個模式需要多少」與「色彩有沒有被壓」。"/>
+                </StackPanel>
+            </Border>
+
+            <ItemsControl ItemsSource="{Binding DisplayLink.Rows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="Bold"
+                                               TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding ConnectionText}"
+                                               FontSize="13" FontWeight="SemiBold" Margin="12,0,0,0"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource AccentBrush}"/>
+                                </Grid>
+
+                                <local:FieldRow Label="目前模式" Value="{Binding ModeText}"/>
+                                <local:FieldRow Label="實際像素時鐘" Value="{Binding PixelClockText}"/>
+                                <local:FieldRow Label="色彩編碼" Value="{Binding EncodingText}"/>
+                                <local:FieldRow Label="位元深度" Value="{Binding DepthText}"/>
+                                <local:FieldRow Label="HDR" Value="{Binding HdrText}"/>
+                                <local:FieldRow Label="影像資料率" Value="{Binding RequiredText}"/>
+
+                                <Border Margin="0,10,0,0" Padding="12,10" CornerRadius="6"
+                                        Background="{DynamicResource Surface2Brush}">
+                                    <TextBlock Text="{Binding Verdict}" TextWrapping="Wrap" FontSize="13"
+                                               Foreground="{Binding Severity, Converter={StaticResource SeverityToBrush}}"/>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,32">
+                <StackPanel>
+                    <local:SectionHead Text="怎麼讀這一頁" HelpKey="displaylink/怎麼讀這一頁"/>
+                    <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,0,0,8"
+                               Foreground="{DynamicResource SecondaryInkBrush}"
+                               Text="「影像資料率」＝實際像素時鐘 × 每像素位元數。每像素位元數隨色彩編碼變：RGB 與 YCbCr 4:4:4 是每像素三個取樣，4:2:2 兩個，4:2:0 一點五個。所以同一個解析度與刷新率，降色度就能省下三分之一到一半的頻寬——這正是驅動在頻寬不足時偷偷做的事。"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                               Text="這個數字是影像本身的資料率，不是線路上的位元率：DisplayPort 1.x 的 8b/10b 編碼要再多兩成，HDMI 的 TMDS 亦有各自的開銷。兩者不該混為一談，本頁只給前者。"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

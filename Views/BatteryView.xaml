@@ -21,14 +21,14 @@
             <!-- 無電池提示 -->
             <Border x:Name="EmptyCard" Style="{StaticResource Card}" Visibility="Collapsed">
                 <TextBlock x:Name="EmptyText" TextWrapping="Wrap" FontSize="13"
-                           Foreground="{StaticResource SecondaryInkBrush}"/>
+                           Foreground="{DynamicResource SecondaryInkBrush}"/>
             </Border>
 
             <!-- 電池資訊 -->
             <Border x:Name="InfoCard" Style="{StaticResource Card}" Visibility="Collapsed">
                 <StackPanel>
-                    <TextBlock x:Name="NameText" FontSize="16" FontWeight="Bold" Foreground="{StaticResource PrimaryInkBrush}"/>
-                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,12"/>
+                    <TextBlock x:Name="NameText" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryInkBrush}"/>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,12"/>
                     <local:FieldRow x:Name="ChargeRow" Label="目前電量"/>
                     <local:FieldRow x:Name="StatusRow" Label="狀態"/>
                     <local:FieldRow x:Name="ChemRow" Label="化學類型"/>
@@ -36,15 +36,15 @@
                     <local:FieldRow x:Name="FullRow" Label="目前滿充容量"/>
                     <local:FieldRow x:Name="CycleRow" Label="充放電循環次數"/>
 
-                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,14"/>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,14"/>
                     <TextBlock Text="電池健康度（耗損率）" Style="{StaticResource FieldLabel}"/>
                     <Grid Margin="0,8,0,0">
-                        <Border Height="14" CornerRadius="7" Background="{StaticResource Surface2Brush}"/>
+                        <Border Height="14" CornerRadius="7" Background="{DynamicResource Surface2Brush}"/>
                         <Border x:Name="WearBar" Height="14" CornerRadius="7" HorizontalAlignment="Left"
-                                Background="{StaticResource GoodBrush}" Width="0"/>
+                                Background="{DynamicResource GoodBrush}" Width="0"/>
                     </Grid>
                     <TextBlock x:Name="WearText" Margin="0,8,0,0" FontSize="13" FontWeight="SemiBold"
-                               Foreground="{StaticResource SecondaryInkBrush}"/>
+                               Foreground="{DynamicResource SecondaryInkBrush}"/>
                 </StackPanel>
             </Border>
         </StackPanel>

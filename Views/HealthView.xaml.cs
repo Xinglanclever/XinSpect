@@ -17,6 +17,7 @@ public partial class HealthView : UserControl, IPageLifecycle
         Vm?.RefreshUpgrade();
         Vm?.Whea.Refresh();          // 進頁自動讀一次；WHEA 事件不是每秒資料，跟著頁面走即可
         Vm?.Reliability.Refresh();
+        Vm?.BootBreakdown.EnsureLoaded();   // 開機紀錄不會變，進頁讀一次就夠
         Vm?.Mca.Refresh();
         Vm?.TimerFoundation.Refresh();
         Vm?.PlatformTrust.Refresh();
@@ -30,6 +31,9 @@ public partial class HealthView : UserControl, IPageLifecycle
     private void WheaRefresh_Click(object sender, RoutedEventArgs e) => Vm?.Whea.Refresh();
 
     private void ReliabilityRefresh_Click(object sender, RoutedEventArgs e) => Vm?.Reliability.Refresh();
+
+    /// <summary>開機耗時分解：唯讀讀取事件記錄。</summary>
+    private void BootBreakdownRefresh_Click(object sender, RoutedEventArgs e) => Vm?.BootBreakdown.Refresh();
 
     private void McaRefresh_Click(object sender, RoutedEventArgs e) => Vm?.Mca.Refresh();
 

@@ -89,7 +89,7 @@
                         <local:FieldRow Label="記憶體類型" Value="{Binding Mainboard.MemoryType}"/>
                         <local:FieldRow Label="記憶體容量" Value="{Binding Mainboard.MemorySize}"/>
                         <local:FieldRow Label="通道" Value="{Binding Mainboard.Channels}"/>
-                        <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,8"
+                        <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,8"
                                 Visibility="{Binding Mainboard.HasChipsetFeatures, Converter={StaticResource BoolToVis}}"/>
                         <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap"
                                    Text="{Binding Mainboard.ChipsetFeatures}"
@@ -118,7 +118,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" Margin="0,3">
-                                    <Border Width="6" Height="6" CornerRadius="3" Background="{StaticResource AccentBrush}"
+                                    <Border Width="6" Height="6" CornerRadius="3" Background="{DynamicResource AccentBrush}"
                                             VerticalAlignment="Center" Margin="2,0,10,0"/>
                                     <TextBlock Style="{StaticResource FieldValue}" Text="{Binding}" TextWrapping="Wrap"/>
                                 </StackPanel>
@@ -355,7 +355,7 @@
                     <local:SectionHead Text="危險區：修改 BIOS 設定／刷寫韌體" HelpKey="mainboard/危險區：修改 BIOS 設定／刷寫韌體" Foreground="#E06C4B"/>
                     <TextBlock Margin="0,6,0,10" TextWrapping="Wrap" FontSize="12" LineHeight="19"
                                Foreground="#E06C4B" Text="{Binding BiosMe.DangerNotice}"/>
-                    <CheckBox Margin="0,0,0,10" Foreground="{StaticResource PrimaryInkBrush}"
+                    <CheckBox Margin="0,0,0,10" Foreground="{DynamicResource PrimaryInkBrush}"
                               IsChecked="{Binding BiosMe.RiskAccepted, Mode=TwoWay}"
                               Content="我了解：寫壞 BIOS／ME 會讓主機板無法開機，且曦覽不會、也不能替我救回來。"/>
                     <WrapPanel>

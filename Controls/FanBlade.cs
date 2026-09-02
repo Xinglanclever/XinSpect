@@ -46,6 +46,7 @@ public sealed class FanBlade : FrameworkElement
 
     public FanBlade()
     {
+        this.RepaintOnThemeChange();
         Width = 44;
         Height = 44;
         IsVisibleChanged += (_, _) => Sync();

@@ -151,6 +151,9 @@ public sealed class DpcLatencyService : ObservableObject, IDisposable
     private readonly object _lock = new();
     private readonly Dictionary<(string Module, string Kind), DpcStat> _stats = new();
     private readonly List<double> _rateSamples = [];
+
+    /// <summary>ISR 事件的（驅動、核心）配對。只收 ISR：DPC 可能被排到別的核上執行，混在一起會失去意義。</summary>
+    private readonly List<IsrSample> _isr = [];
     private DateTime _startedAt;
     private Dictionary<ulong, string> _kernelModules = [];
     private ulong[] _sortedBases = [];
@@ -179,6 +182,16 @@ public sealed class DpcLatencyService : ObservableObject, IDisposable
 
     public ObservableCollection<DpcRow> Rows { get; } = [];
 
+    /// <summary>中斷落在哪顆核（僅 ISR 事件；DPC 不算，那是另一段執行）。</summary>
+    public ObservableCollection<CpuInterruptRow> ByCpu { get; } = [];
+
+    /// <summary>每一支驅動的中斷集中在哪顆核。</summary>
+    public ObservableCollection<ModuleAffinityRow> ByModule { get; } = [];
+
+    private string _affinityVerdict = "量測後才知道中斷落在哪幾顆核上。";
+    /// <summary>一句話：有沒有哪顆核被中斷壓住。</summary>
+    public string AffinityVerdict { get => _affinityVerdict; private set => SetProperty(ref _affinityVerdict, value); }
+
     public void Start()
     {
         if (IsRunning) return;
@@ -200,7 +213,7 @@ public sealed class DpcLatencyService : ObservableObject, IDisposable
         ProgressFraction = 0;
         Rows.Clear();
         RatePerSecond = [];
-        lock (_lock) { _stats.Clear(); _rateSamples.Clear(); }
+        lock (_lock) { _stats.Clear(); _rateSamples.Clear(); _isr.Clear(); }
         _startedAt = DateTime.Now;
 
         try
@@ -229,7 +242,12 @@ public sealed class DpcLatencyService : ObservableObject, IDisposable
                 source.Kernel.PerfInfoDPC += e => Record("DPC", e.Routine, e.ElapsedTimeMSec);
                 source.Kernel.PerfInfoTimerDPC += e => Record("計時器 DPC", e.Routine, e.ElapsedTimeMSec);
                 source.Kernel.PerfInfoThreadedDPC += e => Record("執行緒 DPC", e.Routine, e.ElapsedTimeMSec);
-                source.Kernel.PerfInfoISR += e => Record("ISR", e.Routine, e.ElapsedTimeMSec);
+                source.Kernel.PerfInfoISR += e =>
+                {
+                    Record("ISR", e.Routine, e.ElapsedTimeMSec);
+                    // 中斷是在哪顆核上被服務的——這一欄讓「哪顆核被打爆」變成「是誰打爆它」
+                    lock (_lock) _isr.Add(new IsrSample(ResolveModule(e.Routine), e.ProcessorNumber));
+                };
                 source.Process();
             }, CancellationToken.None);
 
@@ -247,6 +265,16 @@ public sealed class DpcLatencyService : ObservableObject, IDisposable
             var rows = await Task.Run(BuildRows);
             Rows.Clear();
             foreach (var r in rows) Rows.Add(r);
+
+            List<IsrSample> isr;
+            lock (_lock) isr = [.. _isr];
+            var byCpu = InterruptAffinityAggregator.ByCpu(isr);
+            var byModule = InterruptAffinityAggregator.ByModule(isr);
+            ByCpu.Clear();
+            foreach (var r in byCpu) ByCpu.Add(r);
+            ByModule.Clear();
+            foreach (var r in byModule) ByModule.Add(r);
+            AffinityVerdict = InterruptAffinityAggregator.Verdict(byCpu, byModule);
             Phase = "完成";
             ProgressFraction = 1;
             Status = DpcAggregator.Verdict(rows);

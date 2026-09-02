@@ -22,9 +22,9 @@
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Health.Summary}" TextWrapping="Wrap"
                                    FontSize="20" FontWeight="SemiBold"
-                                   Foreground="{StaticResource PrimaryInkBrush}"/>
+                                   Foreground="{DynamicResource PrimaryInkBrush}"/>
                         <TextBlock Text="{Binding Health.Advice}" TextWrapping="Wrap" Margin="0,10,0,0"
-                                   FontSize="14" Foreground="{StaticResource SecondaryInkBrush}"/>
+                                   FontSize="14" Foreground="{DynamicResource SecondaryInkBrush}"/>
                         <TextBlock Text="評分越高越健康 ・ 依各項指標嚴重度即時扣分計算"
                                    Style="{StaticResource FieldLabel}" Margin="0,14,0,0"/>
                     </StackPanel>
@@ -43,7 +43,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="9" Margin="5">
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="9" Margin="5">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="6"/>
@@ -59,7 +59,7 @@
                                                 <TextBlock Text="{Binding Label}" Style="{StaticResource FieldLabel}"/>
                                             </DockPanel>
                                             <TextBlock Text="{Binding ValueText}" FontSize="21" Margin="0,2,0,0"
-                                                       Foreground="{StaticResource PrimaryInkBrush}"/>
+                                                       Foreground="{DynamicResource PrimaryInkBrush}"/>
                                             <TextBlock Text="{Binding Detail}" Style="{StaticResource FieldLabel}"
                                                        TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
                                         </StackPanel>
@@ -89,9 +89,9 @@
                                 Background="{Binding Upgrade.BottleneckSeverity, Converter={StaticResource SeverityToBrush}}"/>
                         <StackPanel Grid.Column="1" Margin="14,0,0,0">
                             <TextBlock Text="{Binding Upgrade.Bottleneck}" FontSize="18" FontWeight="SemiBold"
-                                       TextWrapping="Wrap" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                       TextWrapping="Wrap" Foreground="{DynamicResource PrimaryInkBrush}"/>
                             <TextBlock Text="{Binding Upgrade.BottleneckDetail}" TextWrapping="Wrap" Margin="0,5,0,0"
-                                       FontSize="13.5" Foreground="{StaticResource SecondaryInkBrush}"/>
+                                       FontSize="13.5" Foreground="{DynamicResource SecondaryInkBrush}"/>
                             <TextBlock Text="{Binding Upgrade.Confidence}" Style="{StaticResource FieldLabel}"
                                        TextWrapping="Wrap" Margin="0,8,0,0"/>
                         </StackPanel>
@@ -104,7 +104,7 @@
                     <ItemsControl ItemsSource="{Binding Upgrade.Items}" Margin="0,12,0,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="9" Margin="0,0,0,8">
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="9" Margin="0,0,0,8">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="6"/>
@@ -119,19 +119,19 @@
                                                     <TextBlock Text="{Binding PriorityText}" Foreground="White" FontSize="11.5"/>
                                                 </Border>
                                                 <Border CornerRadius="4" Padding="7,1" Margin="7,0,0,0" VerticalAlignment="Center"
-                                                        Background="{StaticResource SurfaceBrush}">
-                                                    <TextBlock Text="{Binding PartText}" Foreground="{StaticResource SecondaryInkBrush}" FontSize="11.5"/>
+                                                        Background="{DynamicResource SurfaceBrush}">
+                                                    <TextBlock Text="{Binding PartText}" Foreground="{DynamicResource SecondaryInkBrush}" FontSize="11.5"/>
                                                 </Border>
                                                 <TextBlock Text="{Binding Title}" Margin="10,0,0,0" VerticalAlignment="Center"
                                                            FontSize="15" FontWeight="SemiBold"
-                                                           Foreground="{StaticResource PrimaryInkBrush}" TextWrapping="Wrap"/>
+                                                           Foreground="{DynamicResource PrimaryInkBrush}" TextWrapping="Wrap"/>
                                             </StackPanel>
                                             <TextBlock Text="{Binding Evidence, StringFormat=依據：{0}}" TextWrapping="Wrap"
                                                        Margin="0,8,0,0" FontSize="13"
-                                                       Foreground="{StaticResource SecondaryInkBrush}"/>
+                                                       Foreground="{DynamicResource SecondaryInkBrush}"/>
                                             <TextBlock Text="{Binding Action, StringFormat=做法：{0}}" TextWrapping="Wrap"
                                                        Margin="0,4,0,0" FontSize="13"
-                                                       Foreground="{StaticResource SecondaryInkBrush}"/>
+                                                       Foreground="{DynamicResource SecondaryInkBrush}"/>
                                             <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                                                 <TextBlock Text="{Binding GainText}" Style="{StaticResource FieldLabel}"/>
                                                 <TextBlock Text="{Binding CostText}" Style="{StaticResource FieldLabel}" Margin="18,0,0,0"/>
@@ -251,7 +251,7 @@
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,8" TextWrapping="Wrap"
                                Text="VBS／HVCI 開啟時 Windows 本身是 Hyper-V 上的一個分割區，MSR 可能被攔截或回傳虛擬值、PMU 計數可能不被轉送、TSC 可能被偏移。本程式所有 MSR 類卡片（Top-down、頻率真相、RDT、MCA、安全位元）的可信度都取決於這張卡片，所以先把資格條件講清楚。全部唯讀。"/>
                     <TextBlock Style="{StaticResource FieldValue}" Margin="0,0,0,8" TextWrapping="Wrap"
-                               Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding PlatformTrust.Verdict}"/>
+                               Foreground="{DynamicResource PrimaryInkBrush}" Text="{Binding PlatformTrust.Verdict}"/>
                     <ItemsControl ItemsSource="{Binding PlatformTrust.Rows}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -261,7 +261,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Text="{Binding Key}"/>
                                     <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" TextWrapping="Wrap"
-                                               Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding Value}"/>
+                                               Foreground="{DynamicResource PrimaryInkBrush}" Text="{Binding Value}"/>
                                     <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Text="{Binding Note}"/>
                                 </Grid>
                             </DataTemplate>
@@ -286,7 +286,7 @@
                                         <ColumnDefinition Width="260"/><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Key}"/>
-                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding Value}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Foreground="{DynamicResource PrimaryInkBrush}" Text="{Binding Value}"/>
                                     <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Text="{Binding Note}"/>
                                 </Grid>
                             </DataTemplate>
@@ -312,7 +312,7 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Style="{StaticResource FieldValue}" Text="作用中電源計劃"/>
                         <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" TextWrapping="Wrap"
-                                   Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding PowerPolicy.PlanName}"/>
+                                   Foreground="{DynamicResource PrimaryInkBrush}" Text="{Binding PowerPolicy.PlanName}"/>
                     </Grid>
 
                     <ItemsControl ItemsSource="{Binding PowerPolicy.Settings}">
@@ -333,7 +333,7 @@
 
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,12,0,2" Text="逐邏輯處理器（CallNtPowerInformation）"/>
                     <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"
-                               Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding PowerPolicy.ProcessorSummary}"/>
+                               Foreground="{DynamicResource PrimaryInkBrush}" Text="{Binding PowerPolicy.ProcessorSummary}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap"
                                Text="{Binding PowerPolicy.CurrentMhzNotice}"/>
 
@@ -347,7 +347,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Name}" TextWrapping="Wrap"/>
                                     <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}"
-                                               Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding Value}"/>
+                                               Foreground="{DynamicResource PrimaryInkBrush}" Text="{Binding Value}"/>
                                     <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Text="{Binding Note}"/>
                                 </Grid>
                             </DataTemplate>
@@ -356,6 +356,54 @@
 
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,10,0,0" TextWrapping="Wrap" Text="{Binding PowerPolicy.ScopeNotice}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap" Text="{Binding PowerPolicy.Status}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 開機耗時分解：Windows 早就把名單寫下來了，只是沒人去看 -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="開機耗時分解" HelpKey="health/開機耗時分解"/>
+                        <Button Style="{StaticResource ToolButton}" Content="重新讀取"
+                                HorizontalAlignment="Right" VerticalAlignment="Center"
+                                Click="BootBreakdownRefresh_Click" IsEnabled="{Binding BootBreakdown.CanRefresh}"/>
+                    </Grid>
+                    <local:FieldRow Label="最近一次開機" Value="{Binding BootBreakdown.WhenText}"/>
+                    <local:FieldRow Label="總時間" Value="{Binding BootBreakdown.BootText}"/>
+                    <local:FieldRow Label="主路徑（核心／驅動／服務）" Value="{Binding BootBreakdown.MainPathText}"/>
+                    <local:FieldRow Label="登入後（啟動項）" Value="{Binding BootBreakdown.PostBootText}"/>
+
+                    <Border Margin="0,12,0,0" Padding="12,10" CornerRadius="6"
+                            Background="{DynamicResource Surface2Brush}">
+                        <StackPanel>
+                            <TextBlock FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"
+                                       Text="{Binding BootBreakdown.Verdict.Headline}"
+                                       Foreground="{Binding BootBreakdown.Verdict.Severity, Converter={StaticResource SeverityToBrush}}"/>
+                            <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                       Foreground="{DynamicResource SecondaryInkBrush}"
+                                       Text="{Binding BootBreakdown.Verdict.Detail}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <ItemsControl ItemsSource="{Binding BootBreakdown.Culprits}" Margin="0,10,0,0" MaxHeight="260">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3,0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="96"/><ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="110"/><ColumnDefinition Width="130"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Kind}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Name}"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding TotalText}"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" VerticalAlignment="Center"
+                                               Text="{Binding DegradationText, StringFormat=多花 {0}}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
             </Border>
 

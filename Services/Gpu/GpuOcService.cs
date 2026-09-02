@@ -12,6 +12,30 @@ namespace XinSpect;
 public sealed class GpuOcService : ObservableObject, IDisposable
 {
     private IntPtr _dev;
+
+    // ── PCIe 實際流量（NVML 量的，不是推的）───────────────────────────────────
+
+    private string _pcieTx = "—";
+    /// <summary>顯示卡往主機端傳送的速率。</summary>
+    public string PcieTxText { get => _pcieTx; private set => SetProperty(ref _pcieTx, value); }
+
+    private string _pcieRx = "—";
+    /// <summary>顯示卡從主機端接收的速率。</summary>
+    public string PcieRxText { get => _pcieRx; private set => SetProperty(ref _pcieRx, value); }
+
+    private string _pcieLink = "—";
+    /// <summary>目前協商到的世代與寬度，附規格容量。</summary>
+    public string PcieLinkText { get => _pcieLink; private set => SetProperty(ref _pcieLink, value); }
+
+    private string _pcieUtil = "—";
+    /// <summary>傳送＋接收佔鏈路容量的比例。</summary>
+    public string PcieUtilText { get => _pcieUtil; private set => SetProperty(ref _pcieUtil, value); }
+
+    private string _pcieVerdict = "尚未讀取。";
+    public string PcieLinkVerdict { get => _pcieVerdict; private set => SetProperty(ref _pcieVerdict, value); }
+
+    private Severity _pcieSeverity = Severity.Neutral;
+    public Severity PcieLinkSeverity { get => _pcieSeverity; private set => SetProperty(ref _pcieSeverity, value); }
     private bool _nvmlInited;
     private uint _numFans;
 
@@ -305,6 +329,31 @@ public sealed class GpuOcService : ObservableObject, IDisposable
             if (NvmlInterop.GetPowerUsage(_dev, out var pw) == 0) PowerW = pw / 1000.0;
             if (NvmlInterop.GetFanSpeed(_dev, out var f) == 0) FanPercent = f;
             if (NvmlInterop.GetPowerLimit(_dev, out var lim) == 0) PowerLimitW = lim / 1000.0;
+
+            // PCIe 實際流量與目前鏈路：NVML 自己量的（最近約 20 毫秒平均），不是我們推的
+            uint? tx = NvmlInterop.GetPcieThroughput(_dev, NvmlInterop.PCIE_UTIL_TX_BYTES, out var txKb) == 0 ? txKb : null;
+            uint? rx = NvmlInterop.GetPcieThroughput(_dev, NvmlInterop.PCIE_UTIL_RX_BYTES, out var rxKb) == 0 ? rxKb : null;
+            PcieTxText = GpuPcieDecoder.RateText(tx);
+            PcieRxText = GpuPcieDecoder.RateText(rx);
+
+            uint curGen = NvmlInterop.GetCurrPcieLinkGeneration(_dev, out var cg) == 0 ? cg : 0;
+            uint curWidth = NvmlInterop.GetCurrPcieLinkWidth(_dev, out var cw) == 0 ? cw : 0;
+            uint maxGen = NvmlInterop.GetMaxPcieLinkGeneration(_dev, out var mg) == 0 ? mg : 0;
+            uint maxWidth = NvmlInterop.GetMaxPcieLinkWidth(_dev, out var mw) == 0 ? mw : 0;
+
+            PcieLinkText = curGen > 0 && curWidth > 0
+                ? $"Gen{curGen} x{curWidth}"
+                  + (GpuPcieDecoder.LinkCapacityGbPerSec(curGen, curWidth) is { } cap ? $"（約 {cap:0.0} GB/s）" : "")
+                : "讀不到";
+
+            var (linkText, linkSev) = GpuPcieDecoder.JudgeLink(curGen, curWidth, maxGen, maxWidth);
+            PcieLinkVerdict = linkText;
+            PcieLinkSeverity = linkSev;
+
+            PcieUtilText = tx is { } t2 && rx is { } r2
+                        && GpuPcieDecoder.UtilizationPercent(t2, r2, curGen, curWidth) is { } pct
+                ? $"{pct:0.0}%"
+                : "算不出來（缺流量或鏈路資訊）";
         }
         catch { /* 單拍讀取失敗不影響後續 */ }
         RefreshWriteReadbacks();   // 頻率偏移／溫度上限的目前值一併每拍更新

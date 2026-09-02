@@ -135,9 +135,17 @@ public sealed class PcieLinkService : ObservableObject
         if (maxSpeed == 0 && maxWidth == 0) return null;
 
         var (verdict, severity) = PcieLinkDecoder.Judge(curSpeed, curWidth, maxSpeed, maxWidth);
+
+        // 錯誤旗標：裝置狀態（PCIe 能力 +0x08 的高半字）與傳統 PCI 狀態（位移 0x04 的高半字）。
+        // 兩者都在傳統設定空間內，讀得到；AER 在延伸空間 0x100 起，CF8/CFC 到不了，故不讀。
+        ushort devStatus = (ushort)((bridge.ReadPciConfig(bus, dev, fn, capOffset + 0x08) ?? 0) >> 16);
+        ushort pciStatus = (ushort)((bridge.ReadPciConfig(bus, dev, fn, 0x04) ?? 0) >> 16);
+        var (errText, errSev) = PcieLinkDecoder.DecodeErrorFlags(devStatus, pciStatus);
+
         string name = names.TryGetValue((ven, did), out var n) ? n : $"PCI 裝置 {ven:X4}:{did:X4}";
         return new PcieLinkRow(name, $"{bus:X2}:{dev:X2}.{fn}", PcieLinkDecoder.PortTypeName(portType),
-                               curSpeed, curWidth, maxSpeed, maxWidth, verdict, severity);
+                               curSpeed, curWidth, maxSpeed, maxWidth, verdict, severity,
+                               errText, errSev);
     }
 
     /// <summary>

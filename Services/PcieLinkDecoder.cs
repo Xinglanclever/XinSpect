@@ -5,12 +5,31 @@ public sealed class PcieLinkRow
 {
     public PcieLinkRow(string name, string location, string kind,
                        int curSpeed, int curWidth, int maxSpeed, int maxWidth,
-                       string verdict, int severity)
+                       string verdict, int severity,
+                       string errorText = "未讀取", int errorSeverity = 0)
     {
         Name = name; Location = location; Kind = kind;
         CurSpeed = curSpeed; CurWidth = curWidth; MaxSpeed = maxSpeed; MaxWidth = maxWidth;
         Verdict = verdict; Severity = severity;
+        ErrorText = errorText; ErrorSeverity = errorSeverity;
     }
+
+    /// <summary>自開機以來偵測到過的錯誤（黏滯位；不是計數器）。</summary>
+    public string ErrorText { get; }
+
+    /// <summary>0＝沒有偵測到、1＝可修正或不支援的請求、2＝不可修正／致命／同位錯誤。</summary>
+    public int ErrorSeverity { get; }
+
+    /// <summary>
+    /// 錯誤旗標的顏色語意（供 SeverityToBrush 使用）。
+    /// 型別要完整限定：本類別有一個同名的 <see cref="Severity"/> 整數屬性，會蓋掉列舉型別名稱。
+    /// </summary>
+    public global::XinSpect.Severity ErrorBadge => ErrorSeverity switch
+    {
+        2 => global::XinSpect.Severity.Critical,
+        1 => global::XinSpect.Severity.Warning,
+        _ => global::XinSpect.Severity.Neutral,
+    };
     public string Name { get; }
     /// <summary>bus:device.function（PCI 位置，和裝置管理員顯示的一致）。</summary>
     public string Location { get; }
@@ -139,5 +158,50 @@ public static class PcieLinkDecoder
         if (slow > 0)
             return $"共 {rows.Count} 條鏈路，寬度全部與能力相符；{slow} 條目前速度較低——閒置降速是正常行為，在負載中重量一次就會升回去。";
         return $"共 {rows.Count} 條鏈路，速度與寬度全部與裝置能力相符。";
+    }
+
+    // ── 錯誤旗標（自開機以來的黏滯位）──────────────────────────────────────
+
+    /// <summary>裝置狀態暫存器在 PCIe 能力結構內的位移（16 位元，位於 +0x08 的高半字）。</summary>
+    public const uint DeviceStatusOffset = 0x0A;
+
+    /// <summary>
+    /// 解 PCIe 裝置狀態與傳統 PCI 狀態裡的錯誤位元。
+    /// </summary>
+    /// <remarks>
+    /// 這些是<b>黏滯位</b>：一旦偵測到就一直是 1，直到有人寫 1 去清。所以只知道「發生過」，
+    /// <b>不知道發生了幾次</b>——PCIe 的標準結構裡沒有錯誤計數器（AER 也沒有，它同樣是狀態位）。
+    /// 本程式唯讀，絕不清除：清掉就會抹去別的工具或使用者正在追的線索。
+    /// <para>
+    /// 也刻意不去讀 AER 擴充能力：它落在延伸設定空間（位移 0x100 起），
+    /// 而本程式的設定空間讀取走的是傳統 CF8/CFC 機制，只到 0xFF。到不了就不假裝讀得到。
+    /// </para>
+    /// </remarks>
+    public static (string Text, int Severity) DecodeErrorFlags(ushort deviceStatus, ushort pciStatus)
+    {
+        var flags = new List<string>();
+        int severity = 0;
+
+        void Add(string name, int level) { flags.Add(name); severity = Math.Max(severity, level); }
+
+        // PCIe 裝置狀態：bit 4（AUX 電源）與 bit 5（傳輸進行中）不是錯誤，不能列進來
+        if ((deviceStatus & 0x0001) != 0) Add("可修正錯誤", 1);
+        if ((deviceStatus & 0x0002) != 0) Add("不可修正（非致命）錯誤", 2);
+        if ((deviceStatus & 0x0004) != 0) Add("致命錯誤", 2);
+        if ((deviceStatus & 0x0008) != 0) Add("不支援的請求", 1);
+
+        // 傳統 PCI 狀態暫存器（位移 0x06）
+        if ((pciStatus & 0x0100) != 0) Add("主控端資料同位錯誤", 2);
+        if ((pciStatus & 0x0800) != 0) Add("發出目標中止", 1);
+        if ((pciStatus & 0x1000) != 0) Add("收到目標中止", 1);
+        if ((pciStatus & 0x2000) != 0) Add("收到主控中止", 1);
+        if ((pciStatus & 0x4000) != 0) Add("發出系統錯誤", 2);
+        if ((pciStatus & 0x8000) != 0) Add("偵測到同位錯誤", 2);
+
+        if (flags.Count == 0) return ("沒有偵測到錯誤", 0);
+
+        return (string.Join("、", flags)
+              + "（自開機以來偵測到過；這些是黏滯位而非計數器，所以不知道次數。本程式唯讀，不清除它們）",
+                severity);
     }
 }

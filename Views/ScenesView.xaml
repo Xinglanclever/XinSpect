@@ -6,7 +6,7 @@
     <UserControl.Resources>
         <!-- 深色核取方塊（與風扇頁同一風格） -->
         <Style x:Key="SceneCheck" TargetType="CheckBox">
-            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -15,8 +15,8 @@
                     <ControlTemplate TargetType="CheckBox">
                         <StackPanel Orientation="Horizontal" Background="Transparent">
                             <Border x:Name="box" Width="19" Height="19" CornerRadius="5" VerticalAlignment="Center"
-                                    Background="{StaticResource Surface2Brush}"
-                                    BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1.2">
+                                    Background="{DynamicResource Surface2Brush}"
+                                    BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1.2">
                                 <Path x:Name="check" Width="11" Height="11" Stretch="Uniform"
                                       Data="M2,8 L6,12 L14,3" Stroke="White" StrokeThickness="2"
                                       StrokeStartLineCap="Round" StrokeEndLineCap="Round" Visibility="Collapsed"/>
@@ -25,12 +25,12 @@
                         </StackPanel>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="box" Property="Background" Value="{StaticResource AccentBrush}"/>
-                                <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="box" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                 <Setter TargetName="check" Property="Visibility" Value="Visible"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -45,13 +45,13 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Slider">
                         <Grid VerticalAlignment="Center">
-                            <Border Height="5" CornerRadius="3" Background="{StaticResource HairlineBrush}"/>
+                            <Border Height="5" CornerRadius="3" Background="{DynamicResource HairlineBrush}"/>
                             <Track x:Name="PART_Track">
                                 <Track.DecreaseRepeatButton>
                                     <RepeatButton Command="Slider.DecreaseLarge" Focusable="False">
                                         <RepeatButton.Template>
                                             <ControlTemplate TargetType="RepeatButton">
-                                                <Border Height="5" CornerRadius="3" Background="{StaticResource AccentBrush}"/>
+                                                <Border Height="5" CornerRadius="3" Background="{DynamicResource AccentBrush}"/>
                                             </ControlTemplate>
                                         </RepeatButton.Template>
                                     </RepeatButton>
@@ -70,7 +70,7 @@
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
                                                 <Ellipse Width="16" Height="16" Fill="White"
-                                                         Stroke="{StaticResource AccentBrush}" StrokeThickness="2.5"/>
+                                                         Stroke="{DynamicResource AccentBrush}" StrokeThickness="2.5"/>
                                             </ControlTemplate>
                                         </Thumb.Template>
                                     </Thumb>
@@ -89,7 +89,7 @@
             <!-- 標題 -->
             <StackPanel Orientation="Horizontal" Margin="2,0,0,4">
                 <TextBlock Style="{StaticResource Title}" Text="場景設定檔"/>
-                <Border Background="{StaticResource WarningBrush}" CornerRadius="5" Padding="7,2" Margin="12,3,0,0" VerticalAlignment="Center">
+                <Border Background="{DynamicResource WarningBrush}" CornerRadius="5" Padding="7,2" Margin="12,3,0,0" VerticalAlignment="Center">
                     <TextBlock Text="真實寫入硬體" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
                 </Border>
             </StackPanel>
@@ -103,16 +103,16 @@
                         <local:SectionHead Text="目前狀態" HelpKey="scenes/目前狀態"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <TextBlock Style="{StaticResource FieldLabel}" Text="場景" VerticalAlignment="Center"/>
-                            <Border Background="{StaticResource AccentBrush}" CornerRadius="5" Padding="8,2" Margin="8,0,0,0">
+                            <Border Background="{DynamicResource AccentBrush}" CornerRadius="5" Padding="8,2" Margin="8,0,0,0">
                                 <TextBlock Text="{Binding ActiveName}" Foreground="White" FontSize="11.5" FontWeight="SemiBold"/>
                             </Border>
                             <TextBlock Style="{StaticResource FieldLabel}" Text="電源計劃" Margin="16,0,0,0" VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding PowerPlanText}" Margin="8,0,0,0" VerticalAlignment="Center"
-                                       FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                       FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryInkBrush}"/>
                         </StackPanel>
                     </Grid>
                     <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" FontSize="12.5"
-                               Foreground="{StaticResource SecondaryInkBrush}" Text="{Binding StatusText}"/>
+                               Foreground="{DynamicResource SecondaryInkBrush}" Text="{Binding StatusText}"/>
                 </StackPanel>
             </Border>
 
@@ -125,10 +125,10 @@
                                 <Grid>
                                     <StackPanel Orientation="Horizontal">
                                         <Path Width="22" Height="22" Stretch="Uniform" VerticalAlignment="Center"
-                                              Fill="{StaticResource AccentBrush}" Data="{Binding IconData}"/>
+                                              Fill="{DynamicResource AccentBrush}" Data="{Binding IconData}"/>
                                         <TextBlock Style="{StaticResource SectionHeader}" Text="{Binding Name}" Margin="10,0,0,0"/>
                                         <local:HelpDot HelpKey="scenes/場景"/>
-                                        <Border Background="{StaticResource AccentBrush}" CornerRadius="5" Padding="7,1" Margin="10,1,0,0"
+                                        <Border Background="{DynamicResource AccentBrush}" CornerRadius="5" Padding="7,1" Margin="10,1,0,0"
                                                 VerticalAlignment="Center"
                                                 Visibility="{Binding IsActive, Converter={StaticResource BoolToVis}}">
                                             <TextBlock Text="使用中" FontSize="11" Foreground="White" FontWeight="SemiBold"/>
@@ -139,7 +139,7 @@
                                             IsEnabled="{Binding DataContext.NotBusy, RelativeSource={RelativeSource AncestorType=ScrollViewer}}"/>
                                 </Grid>
                                 <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" FontSize="12.5"
-                                           Foreground="{StaticResource SecondaryInkBrush}" Text="{Binding Summary}"/>
+                                           Foreground="{DynamicResource SecondaryInkBrush}" Text="{Binding Summary}"/>
 
                                 <!-- 內建場景：逐項列出會動到什麼 -->
                                 <ItemsControl Margin="0,10,0,0" ItemsSource="{Binding Details}">
@@ -147,9 +147,9 @@
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                                                 <Ellipse Width="5" Height="5" Margin="2,0,9,0" VerticalAlignment="Center"
-                                                         Fill="{StaticResource AccentBrush}"/>
+                                                         Fill="{DynamicResource AccentBrush}"/>
                                                 <TextBlock Text="{Binding}" FontSize="12.5" TextWrapping="Wrap"
-                                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
                                             </StackPanel>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
@@ -158,7 +158,7 @@
                                 <!-- 自訂場景：可調欄位（外層判斷是否顯示，內層才換成 Custom 的內容） -->
                                 <StackPanel Margin="0,12,0,0" Visibility="{Binding IsCustom, Converter={StaticResource BoolToVis}}">
                                  <StackPanel DataContext="{Binding DataContext.Custom, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
-                                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,12"/>
+                                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,0,0,12"/>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="200"/>
@@ -199,13 +199,13 @@
                                         <Slider Grid.Column="1" Style="{StaticResource SceneSlider}" Margin="10,0,0,0"
                                                 Minimum="50" Maximum="130" Value="{Binding GpuPowerPercent, Mode=TwoWay}"/>
                                         <TextBlock Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold"
-                                                   Foreground="{StaticResource AccentBrush}"
+                                                   Foreground="{DynamicResource AccentBrush}"
                                                    Text="{Binding GpuPowerPercent, StringFormat={}{0:0} %}"/>
                                         <TextBlock Grid.Column="3" Style="{StaticResource FieldLabel}" Text="溫度上限" Margin="16,0,0,0" VerticalAlignment="Center"/>
                                         <Slider Grid.Column="4" Style="{StaticResource SceneSlider}" Margin="10,0,0,0"
                                                 Minimum="65" Maximum="93" Value="{Binding GpuTempLimitC, Mode=TwoWay}"/>
                                         <TextBlock Grid.Column="5" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold"
-                                                   Foreground="{StaticResource AccentBrush}"
+                                                   Foreground="{DynamicResource AccentBrush}"
                                                    Text="{Binding GpuTempLimitC, StringFormat={}{0:0} °C}"/>
                                     </Grid>
                                  </StackPanel>
@@ -220,7 +220,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,4">
                 <StackPanel>
                     <local:SectionHead Text="說明" HelpKey="scenes/說明"/>
-                    <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" FontSize="12.5" Foreground="{StaticResource SecondaryInkBrush}"
+                    <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" FontSize="12.5" Foreground="{DynamicResource SecondaryInkBrush}"
                                Text="風扇部分沿用「系統風扇」分頁的曲線引擎，套用後由每秒脈動持續依溫度調速；離開程式時所有接管的風扇都會交回 BIOS。電源計劃以 powercfg 切換，Windows 11 若隱藏了「高效能／最佳效能」，會自動以 duplicatescheme 建立後再切換——這是系統支援的做法，不會改動其他計劃。顯示卡功耗與溫度上限需要 NVIDIA 驅動的 NVML 介面；AMD／Intel 顯示卡會被如實略過。"/>
                 </StackPanel>
             </Border>

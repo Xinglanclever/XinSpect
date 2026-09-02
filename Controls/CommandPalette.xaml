@@ -8,8 +8,8 @@
         <Rectangle Fill="#B0000000" MouseLeftButtonDown="Backdrop_Click"/>
 
         <Border Width="660" MaxHeight="480" VerticalAlignment="Top" Margin="0,110,0,0"
-                CornerRadius="12" Background="{StaticResource SurfaceBrush}"
-                BorderBrush="{StaticResource AccentBrush}" BorderThickness="1">
+                CornerRadius="12" Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="36" ShadowDepth="6" Opacity="0.6" Color="#000000"/>
             </Border.Effect>
@@ -27,20 +27,20 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <Viewbox Grid.Column="0" Width="18" Height="18" Margin="0,0,12,0" VerticalAlignment="Center">
-                        <Path Fill="{StaticResource AccentBrush}"
+                        <Path Fill="{DynamicResource AccentBrush}"
                               Data="F1 M10,2 a8,8 0 1,0 4.9,14.3 l5.4,5.4 1.4,-1.4 -5.4,-5.4 A8,8 0 0 0 10,2 Z M10,4 a6,6 0 1,1 0,12 a6,6 0 0 1 0,-12 Z"/>
                     </Viewbox>
                     <Grid Grid.Column="1">
                         <TextBox x:Name="Query" Background="Transparent" BorderThickness="0" FontSize="17"
-                                 Foreground="{StaticResource PrimaryInkBrush}" CaretBrush="{StaticResource AccentBrush}"
+                                 Foreground="{DynamicResource PrimaryInkBrush}" CaretBrush="{DynamicResource AccentBrush}"
                                  VerticalAlignment="Center" TextChanged="Query_TextChanged"/>
                         <TextBlock x:Name="Placeholder" IsHitTestVisible="False" FontSize="17"
-                                   Foreground="{StaticResource MutedInkBrush}" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource MutedInkBrush}" VerticalAlignment="Center"
                                    Text="搜尋頁面、工具、設定與動作…"/>
                     </Grid>
                 </Grid>
 
-                <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource HairlineBrush}"/>
+                <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{DynamicResource HairlineBrush}"/>
 
                 <!-- 結果清單 -->
                 <ListBox x:Name="Results" Grid.Row="1" Background="Transparent" BorderThickness="0"
@@ -63,13 +63,13 @@
                                     <TextBlock Text="{Binding Title}" FontSize="13.5"
                                                Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                     <TextBlock Text="{Binding Subtitle}" FontSize="11.5" Margin="0,1,0,0"
-                                               Foreground="{StaticResource MutedInkBrush}" TextTrimming="CharacterEllipsis"/>
+                                               Foreground="{DynamicResource MutedInkBrush}" TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
                                 <Border Grid.Column="2" CornerRadius="5" Padding="7,2" VerticalAlignment="Center"
-                                        Background="{StaticResource Surface2Brush}" BorderThickness="1"
-                                        BorderBrush="{StaticResource HairlineBrush}">
+                                        Background="{DynamicResource Surface2Brush}" BorderThickness="1"
+                                        BorderBrush="{DynamicResource HairlineBrush}">
                                     <TextBlock Text="{Binding Kind}" FontSize="10.5"
-                                               Foreground="{StaticResource SecondaryInkBrush}"/>
+                                               Foreground="{DynamicResource SecondaryInkBrush}"/>
                                 </Border>
                             </Grid>
                         </DataTemplate>
@@ -78,12 +78,12 @@
 
                 <TextBlock x:Name="Empty" Grid.Row="1" Visibility="Collapsed" Margin="0,28"
                            HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13"
-                           Foreground="{StaticResource MutedInkBrush}" Text="沒有符合的項目"/>
+                           Foreground="{DynamicResource MutedInkBrush}" Text="沒有符合的項目"/>
 
                 <!-- 提示列 -->
-                <Border Grid.Row="2" Background="{StaticResource Surface2Brush}" CornerRadius="0,0,11,11"
-                        BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,1,0,0">
-                    <TextBlock Margin="18,7" FontSize="11" Foreground="{StaticResource MutedInkBrush}"
+                <Border Grid.Row="2" Background="{DynamicResource Surface2Brush}" CornerRadius="0,0,11,11"
+                        BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0">
+                    <TextBlock Margin="18,7" FontSize="11" Foreground="{DynamicResource MutedInkBrush}"
                                Text="↑↓ 選擇　・　Enter 執行　・　Esc 關閉"/>
                 </Border>
             </Grid>

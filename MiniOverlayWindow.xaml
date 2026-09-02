@@ -10,9 +10,9 @@
         FontFamily="{StaticResource AppFont}" UseLayoutRounding="True">
     <Grid>
         <!-- 半透明底板：只有底板變淡，上層讀值文字維持不透明才讀得清楚 -->
-        <Border CornerRadius="14" Background="{StaticResource SurfaceBrush}"
+        <Border CornerRadius="14" Background="{DynamicResource SurfaceBrush}"
                 Opacity="{Binding Settings.MiniOpacity, Mode=OneWay}"
-                BorderBrush="{StaticResource AccentBrush}" BorderThickness="1.2">
+                BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.2">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
             </Border.Effect>
@@ -24,9 +24,9 @@
             <StackPanel Width="196">
                 <DockPanel LastChildFill="False" Margin="0,0,0,8">
                     <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
-                        <Border Width="6" Height="16" CornerRadius="3" Background="{StaticResource AccentGradientBrush}" Margin="0,0,8,0"/>
+                        <Border Width="6" Height="16" CornerRadius="3" Background="{DynamicResource AccentGradientBrush}" Margin="0,0,8,0"/>
                         <TextBlock Text="曦覽 監視器" FontWeight="SemiBold" FontSize="13"
-                                   Foreground="{StaticResource PrimaryInkBrush}" VerticalAlignment="Center"/>
+                                   Foreground="{DynamicResource PrimaryInkBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
                     <!-- 收起 / 釘選 / 關閉：原本要回主視窗或系統匣才關得掉，這裡就地給出口 -->
                     <Button DockPanel.Dock="Right" Style="{StaticResource MiniIconButton}"
@@ -39,7 +39,7 @@
                             ToolTip="精簡／展開（收起波形）"/>
                 </DockPanel>
 
-                <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,9"/>
+                <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,0,0,9"/>
 
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -56,9 +56,9 @@
 
                     <!-- CPU -->
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="CPU" FontSize="12.5" VerticalAlignment="Center"
-                               Foreground="{StaticResource SecondaryInkBrush}"/>
+                               Foreground="{DynamicResource SecondaryInkBrush}"/>
                     <TextBlock Grid.Row="0" Grid.Column="1" FontSize="16" FontWeight="SemiBold" Margin="0,1"
-                               Foreground="{StaticResource PrimaryInkBrush}"
+                               Foreground="{DynamicResource PrimaryInkBrush}"
                                Text="{Binding Live.CpuLoad, StringFormat={}{0:0} %, FallbackValue=—, TargetNullValue=—}"/>
                     <TextBlock Grid.Row="0" Grid.Column="2" FontSize="13" VerticalAlignment="Center"
                                Foreground="{Binding Live.CpuTempSeverity, Converter={StaticResource SeverityToBrush}}"
@@ -66,9 +66,9 @@
 
                     <!-- GPU -->
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="GPU" FontSize="12.5" VerticalAlignment="Center"
-                               Foreground="{StaticResource SecondaryInkBrush}"/>
+                               Foreground="{DynamicResource SecondaryInkBrush}"/>
                     <TextBlock Grid.Row="1" Grid.Column="1" FontSize="16" FontWeight="SemiBold" Margin="0,1"
-                               Foreground="{StaticResource PrimaryInkBrush}"
+                               Foreground="{DynamicResource PrimaryInkBrush}"
                                Text="{Binding Live.PrimaryGpu.LoadPercent, StringFormat={}{0:0} %, FallbackValue=—, TargetNullValue=—}"/>
                     <TextBlock Grid.Row="1" Grid.Column="2" FontSize="13" VerticalAlignment="Center"
                                Foreground="{Binding Live.PrimaryGpu.TempSeverity, Converter={StaticResource SeverityToBrush}}"
@@ -76,22 +76,22 @@
 
                     <!-- 記憶體 -->
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="記憶體" FontSize="12.5" VerticalAlignment="Center"
-                               Foreground="{StaticResource SecondaryInkBrush}"/>
+                               Foreground="{DynamicResource SecondaryInkBrush}"/>
                     <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" FontSize="16" FontWeight="SemiBold" Margin="0,1"
-                               Foreground="{StaticResource PrimaryInkBrush}"
+                               Foreground="{DynamicResource PrimaryInkBrush}"
                                Text="{Binding Live.MemLoad, StringFormat={}{0:0} %, FallbackValue=—, TargetNullValue=—}"/>
 
                     <!-- 頻率 -->
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="頻率" FontSize="12.5" VerticalAlignment="Center"
-                               Foreground="{StaticResource SecondaryInkBrush}"/>
+                               Foreground="{DynamicResource SecondaryInkBrush}"/>
                     <TextBlock Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" FontSize="13.5" Margin="0,1"
-                               Foreground="{StaticResource SecondaryInkBrush}"
+                               Foreground="{DynamicResource SecondaryInkBrush}"
                                Text="{Binding Live.CpuClock, StringFormat={}{0:0} MHz, FallbackValue=—, TargetNullValue=—}"/>
                 </Grid>
 
                 <!-- 示波線：CPU / GPU 使用率即時波形（精簡模式收起） -->
                 <StackPanel Visibility="{Binding Settings.MiniCompact, Converter={StaticResource InverseBoolToVis}}">
-                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,11,0,9"/>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,11,0,9"/>
                     <local:Oscilloscope Height="46" MinHeight="0" Caption="CPU 使用率" History="{Binding CpuLoadHist}"/>
                     <local:Oscilloscope Height="46" MinHeight="0" Margin="0,8,0,0" Caption="GPU 使用率" History="{Binding GpuHist}"/>
                 </StackPanel>

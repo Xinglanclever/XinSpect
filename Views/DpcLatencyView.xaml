@@ -67,9 +67,64 @@
                                 </Grid>
                                 <DataTemplate.Triggers>
                                     <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" Value="True">
-                                        <Setter TargetName="Row" Property="Background" Value="{StaticResource Surface2Brush}"/>
+                                        <Setter TargetName="Row" Property="Background" Value="{DynamicResource Surface2Brush}"/>
                                     </DataTrigger>
                                 </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- 中斷落在哪顆核：把「哪顆核被壓住」變成「是誰壓住它」 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,32">
+                <StackPanel>
+                    <local:SectionHead Text="中斷落在哪顆核" HelpKey="dpc/中斷落在哪顆核"/>
+                    <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,0,0,10"
+                               Text="{Binding DpcLatency.AffinityVerdict}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,0,0,10"
+                               Text="只統計 ISR（中斷服務常式）真正在哪顆核上執行；DPC 可能被排到別的核，混在一起會失去意義。歸屬的粒度是驅動映像，不是裝置實例——同型號的兩張網卡是同一支 .sys。"/>
+
+                    <ItemsControl ItemsSource="{Binding DpcLatency.ByCpu}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3,0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="76"/><ColumnDefinition Width="96"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}"
+                                               Text="{Binding CountText}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}"
+                                               Text="{Binding Text}" VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,10"
+                            Visibility="{Binding DpcLatency.ByModule.Count, Converter={StaticResource CountToVis}}"/>
+                    <TextBlock Style="{StaticResource ColHead}" Text="每一支驅動的中斷集中在哪裡"
+                               Visibility="{Binding DpcLatency.ByModule.Count, Converter={StaticResource CountToVis}}"/>
+                    <ItemsControl ItemsSource="{Binding DpcLatency.ByModule}" Margin="0,4,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3,0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="96"/>
+                                        <ColumnDefinition Width="260"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Module}"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}"
+                                               Text="{Binding CountText}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}"
+                                               Text="{Binding SpreadText}" VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

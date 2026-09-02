@@ -21,8 +21,8 @@
     <Product>曦覽 XinSpect</Product>
     <AssemblyTitle>曦覽 XinSpect 硬體資訊總覽</AssemblyTitle>
     <Company>Xinglanclever</Company>
-    <Version>1.8.0</Version>
-    <FileVersion>1.8.0.0</FileVersion>
+    <Version>1.8.1</Version>
+    <FileVersion>1.8.1.0</FileVersion>
     <!-- 內嵌 PDB：發佈維持單一執行檔，CrashLog 記錄的堆疊仍帶行號（portable PDB 預設會另產生 XinSpect.pdb） -->
     <DebugType>embedded</DebugType>
     <Copyright>By：Xinglanclever ・ Claude Opus 4.8 ・ 2026年8月24日</Copyright>

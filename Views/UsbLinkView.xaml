@@ -39,7 +39,7 @@
                         <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="裝置能力"/>
                         <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="埠支援"/>
                     </Grid>
-                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,4"/>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,0,0,4"/>
                     <ItemsControl ItemsSource="{Binding UsbLink.Rows}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -67,7 +67,7 @@
                                 </StackPanel>
                                 <DataTemplate.Triggers>
                                     <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" Value="True">
-                                        <Setter TargetName="Row" Property="Background" Value="{StaticResource Surface2Brush}"/>
+                                        <Setter TargetName="Row" Property="Background" Value="{DynamicResource Surface2Brush}"/>
                                     </DataTrigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>

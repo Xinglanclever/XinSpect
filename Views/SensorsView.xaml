@@ -31,7 +31,7 @@
                         <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="最小" TextAlignment="Right"/>
                         <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="最大" TextAlignment="Right"/>
                     </Grid>
-                    <Border Height="1" Background="{StaticResource HairlineBrush}"/>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}"/>
 
                     <ItemsControl ItemsSource="{Binding Source={StaticResource GroupedSensors}}">
                         <ItemsControl.ItemTemplate>
@@ -62,7 +62,7 @@
                                 <GroupStyle.HeaderTemplate>
                                     <DataTemplate>
                                         <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Name}"
-                                                   Foreground="{StaticResource AccentBrush}"
+                                                   Foreground="{DynamicResource AccentBrush}"
                                                    FontWeight="SemiBold" Margin="0,14,0,4"/>
                                     </DataTemplate>
                                 </GroupStyle.HeaderTemplate>

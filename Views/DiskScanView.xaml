@@ -6,9 +6,9 @@
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="B2V"/>
         <Style x:Key="PathBox" TargetType="TextBox">
-            <Setter Property="Background" Value="{StaticResource Surface2Brush}"/>
-            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Surface2Brush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="10,7"/>
             <Setter Property="FontSize" Value="12.5"/>
@@ -50,10 +50,10 @@
                         <Button x:Name="ScanBtn" Style="{StaticResource PrimaryButton}" Content="開始掃描"
                                 Click="Scan_Click"/>
                         <CheckBox x:Name="DupCheck" Content="同時偵測重複檔案（較慢）" VerticalAlignment="Center"
-                                  Margin="16,0,0,0" Foreground="{StaticResource SecondaryInkBrush}" FontSize="13"/>
+                                  Margin="16,0,0,0" Foreground="{DynamicResource SecondaryInkBrush}" FontSize="13"/>
                     </StackPanel>
                     <TextBlock x:Name="ProgressText" FontSize="12.5" Margin="0,12,0,0"
-                               Foreground="{StaticResource SecondaryInkBrush}" Text="尚未開始"/>
+                               Foreground="{DynamicResource SecondaryInkBrush}" Text="尚未開始"/>
                 </StackPanel>
             </Border>
 
@@ -64,7 +64,7 @@
                     <ItemsControl x:Name="LargeList">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="8"
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="8"
                                         Padding="12,9" Margin="0,0,0,6">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -74,15 +74,15 @@
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" Margin="0,0,12,0">
                                             <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold"
-                                                       Foreground="{StaticResource PrimaryInkBrush}"
+                                                       Foreground="{DynamicResource PrimaryInkBrush}"
                                                        TextTrimming="CharacterEllipsis"/>
                                             <TextBlock Text="{Binding Dir}" FontSize="11" Margin="0,2,0,0"
-                                                       Foreground="{StaticResource MutedInkBrush}"
+                                                       Foreground="{DynamicResource MutedInkBrush}"
                                                        TextTrimming="CharacterEllipsis" FontFamily="Consolas"/>
                                         </StackPanel>
                                         <TextBlock Grid.Column="1" Text="{Binding SizeText}" VerticalAlignment="Center"
                                                    FontSize="13.5" FontWeight="SemiBold" Margin="0,0,12,0"
-                                                   Foreground="{StaticResource AccentBrush}"/>
+                                                   Foreground="{DynamicResource AccentBrush}"/>
                                         <Button Grid.Column="2" Style="{StaticResource ToolButton}" Content="定位"
                                                 Click="Locate_Click" Padding="12,6" VerticalAlignment="Center"/>
                                     </Grid>
@@ -91,7 +91,7 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     <TextBlock x:Name="LargeEmpty" Text="—" FontSize="12"
-                               Foreground="{StaticResource MutedInkBrush}"/>
+                               Foreground="{DynamicResource MutedInkBrush}"/>
                 </StackPanel>
             </Border>
 
@@ -103,11 +103,11 @@
                     <ItemsControl x:Name="DupList">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="8"
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="8"
                                         Padding="12,10" Margin="0,0,0,8">
                                     <StackPanel>
                                         <TextBlock Text="{Binding Header}" FontSize="13" FontWeight="SemiBold"
-                                                   Foreground="{StaticResource WarningBrush}"/>
+                                                   Foreground="{DynamicResource WarningBrush}"/>
                                         <ItemsControl ItemsSource="{Binding Files}" Margin="0,6,0,0">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
@@ -117,7 +117,7 @@
                                                             <ColumnDefinition Width="Auto"/>
                                                         </Grid.ColumnDefinitions>
                                                         <TextBlock Grid.Column="0" Text="{Binding FullPath}" FontSize="11.5"
-                                                                   Foreground="{StaticResource SecondaryInkBrush}"
+                                                                   Foreground="{DynamicResource SecondaryInkBrush}"
                                                                    TextTrimming="CharacterEllipsis" FontFamily="Consolas"
                                                                    VerticalAlignment="Center" Margin="0,0,10,0"/>
                                                         <Button Grid.Column="1" Style="{StaticResource ToolButton}" Content="定位"
@@ -135,7 +135,7 @@
             </Border>
 
             <TextBlock x:Name="StatusText" FontSize="12" Margin="2,0,0,4" TextWrapping="Wrap"
-                       Foreground="{StaticResource MutedInkBrush}"/>
+                       Foreground="{DynamicResource MutedInkBrush}"/>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

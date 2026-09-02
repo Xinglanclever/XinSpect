@@ -33,6 +33,7 @@ public sealed class CoreLatencyHeatmap : FrameworkElement
 
     public CoreLatencyHeatmap()
     {
+        this.RepaintOnThemeChange();
         ClipToBounds = true;
         MinHeight = 240;
         SnapsToDevicePixels = true;

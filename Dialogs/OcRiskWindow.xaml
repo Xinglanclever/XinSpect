@@ -11,7 +11,7 @@
         <!-- 主要行動鈕（繼續 / 高風險） -->
         <Style x:Key="RiskPrimary" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Padding" Value="16,11"/>
@@ -35,14 +35,14 @@
         </Style>
         <!-- 次要 / 中性鈕 -->
         <Style x:Key="RiskSecondary" TargetType="Button" BasedOn="{StaticResource RiskPrimary}">
-            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
-            <Setter Property="Background" Value="{StaticResource Surface2Brush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Surface2Brush}"/>
             <Setter Property="FontWeight" Value="Normal"/>
         </Style>
     </Window.Resources>
 
-    <Border CornerRadius="16" Background="{StaticResource SurfaceBrush}"
-            BorderBrush="{StaticResource CriticalBrush}" BorderThickness="1.4">
+    <Border CornerRadius="16" Background="{DynamicResource SurfaceBrush}"
+            BorderBrush="{DynamicResource CriticalBrush}" BorderThickness="1.4">
         <Border.Effect>
             <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.55" Color="#000000"/>
         </Border.Effect>
@@ -51,17 +51,17 @@
             <!-- ── 第一階段：風險告知 ─────────────────────────────────────── -->
             <StackPanel x:Name="Stage1" Margin="28,26,28,24">
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                    <Border Width="6" Height="26" CornerRadius="3" Background="{StaticResource CriticalBrush}" Margin="0,0,12,0"/>
+                    <Border Width="6" Height="26" CornerRadius="3" Background="{DynamicResource CriticalBrush}" Margin="0,0,12,0"/>
                     <TextBlock Text="超頻風險告知" FontSize="20" FontWeight="Bold"
-                               Foreground="{StaticResource PrimaryInkBrush}" VerticalAlignment="Center"/>
-                    <Border Background="{StaticResource WarningBrush}" CornerRadius="5" Padding="7,2" Margin="12,2,0,0" VerticalAlignment="Center">
+                               Foreground="{DynamicResource PrimaryInkBrush}" VerticalAlignment="Center"/>
+                    <Border Background="{DynamicResource WarningBrush}" CornerRadius="5" Padding="7,2" Margin="12,2,0,0" VerticalAlignment="Center">
                         <TextBlock Text="測試版" FontSize="11.5" FontWeight="SemiBold" Foreground="#1b1b1b"/>
                     </Border>
                 </StackPanel>
 
                 <TextBlock Text="投資有風險，超頻需謹慎，此功能面向專業玩家"
                            FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" LineHeight="26"
-                           Foreground="{StaticResource PrimaryInkBrush}" Margin="0,0,0,22"/>
+                           Foreground="{DynamicResource PrimaryInkBrush}" Margin="0,0,0,22"/>
 
                 <Button x:Name="BtnA" Style="{StaticResource RiskSecondary}" Margin="0,0,0,10" Click="OptionA_Click">
                     <StackPanel>
@@ -88,26 +88,26 @@
             <!-- ── 第二階段：免責聲明 ─────────────────────────────────────── -->
             <StackPanel x:Name="Stage2" Margin="28,26,28,24" Visibility="Collapsed">
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                    <Border Width="6" Height="26" CornerRadius="3" Background="{StaticResource CriticalBrush}" Margin="0,0,12,0"/>
+                    <Border Width="6" Height="26" CornerRadius="3" Background="{DynamicResource CriticalBrush}" Margin="0,0,12,0"/>
                     <TextBlock Text="免責聲明" FontSize="20" FontWeight="Bold"
-                               Foreground="{StaticResource PrimaryInkBrush}" VerticalAlignment="Center"/>
+                               Foreground="{DynamicResource PrimaryInkBrush}" VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <TextBlock TextWrapping="Wrap" LineHeight="26" FontSize="14.5"
-                           Foreground="{StaticResource SecondaryInkBrush}" Margin="0,0,0,16">
-                    <Run Text="此為" /><Run Text="測試版功能" FontWeight="Bold" Foreground="{StaticResource WarningBrush}"/><Run Text="，尚未開發完全，仍在持續完善中。" /><LineBreak/>
+                           Foreground="{DynamicResource SecondaryInkBrush}" Margin="0,0,0,16">
+                    <Run Text="此為" /><Run Text="測試版功能" FontWeight="Bold" Foreground="{DynamicResource WarningBrush}"/><Run Text="，尚未開發完全，仍在持續完善中。" /><LineBreak/>
                     <Run Text="超頻屬進階操作，可能造成系統不穩定。使用本功能所導致的任何後果，包含但不限於：" /><LineBreak/>
                 </TextBlock>
 
                 <StackPanel Margin="6,0,0,18">
-                    <TextBlock Text="•  檔案丟失" FontSize="14.5" Foreground="{StaticResource PrimaryInkBrush}" Margin="0,0,0,6"/>
-                    <TextBlock Text="•  硬體損毀" FontSize="14.5" Foreground="{StaticResource PrimaryInkBrush}" Margin="0,0,0,6"/>
-                    <TextBlock Text="•  軟體崩潰" FontSize="14.5" Foreground="{StaticResource PrimaryInkBrush}"/>
+                    <TextBlock Text="•  檔案丟失" FontSize="14.5" Foreground="{DynamicResource PrimaryInkBrush}" Margin="0,0,0,6"/>
+                    <TextBlock Text="•  硬體損毀" FontSize="14.5" Foreground="{DynamicResource PrimaryInkBrush}" Margin="0,0,0,6"/>
+                    <TextBlock Text="•  軟體崩潰" FontSize="14.5" Foreground="{DynamicResource PrimaryInkBrush}"/>
                 </StackPanel>
 
                 <TextBlock Text="開發者一概不負任何責任。請確認你已了解並自行承擔風險。"
                            TextWrapping="Wrap" LineHeight="24" FontSize="14.5" FontWeight="SemiBold"
-                           Foreground="{StaticResource PrimaryInkBrush}" Margin="0,0,0,22"/>
+                           Foreground="{DynamicResource PrimaryInkBrush}" Margin="0,0,0,22"/>
 
                 <Grid>
                     <Grid.ColumnDefinitions>

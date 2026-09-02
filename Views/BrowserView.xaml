@@ -4,12 +4,13 @@
              xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
              xmlns:local="clr-namespace:XinSpect">
     <UserControl.Resources>
-        <!-- 網址列與工具列樣式（本檢視自帶，主題未定義 TextBox） -->
+        <!-- 網址列與工具列樣式（本檢視自帶，主題未定義 TextBox）。底色一律走佈景資源：
+             寫死深色會讓淺色主題的網址列變成深底黑字。 -->
         <Style x:Key="AddressBox" TargetType="TextBox">
-            <Setter Property="Background" Value="#26282C"/>
-            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
-            <Setter Property="CaretBrush" Value="{StaticResource PrimaryInkBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Surface2Brush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource PrimaryInkBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="10,6"/>
             <Setter Property="FontSize" Value="13"/>
@@ -29,7 +30,7 @@
             <Setter Property="Width" Value="34"/>
             <Setter Property="Height" Value="34"/>
             <Setter Property="Margin" Value="2,0"/>
-            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FontSize" Value="15"/>
@@ -41,7 +42,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#33FFFFFF"/>
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource Surface2Brush}"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.35"/>
@@ -66,7 +67,7 @@
 
         <!-- 工具列：WrapPanel 自動換行——窄窗／低 DPI 時網址列與按鈕折到下一行，不再水平截斷。
              網址列以固定寬度參與折行（WrapPanel 不支援 * 填滿），寬窗時一行容納，窄窗時自動獨立一行。 -->
-        <Border Grid.Row="0" Background="{StaticResource SurfaceBrush}" Padding="8,8" Margin="0,0,0,8"
+        <Border Grid.Row="0" Background="{DynamicResource SurfaceBrush}" Padding="8,8" Margin="0,0,0,8"
                 CornerRadius="10">
             <WrapPanel VerticalAlignment="Center">
                 <Button x:Name="BackBtn" Style="{StaticResource NavBtn}" Click="Back_Click"   Content="‹"  ToolTip="上一頁"/>
@@ -84,26 +85,26 @@
         </Border>
 
         <!-- WebView2 承載區（含未安裝執行階段時的後備提示） -->
-        <Border Grid.Row="1" CornerRadius="10" ClipToBounds="True" Background="#1E2023">
+        <Border Grid.Row="1" CornerRadius="10" ClipToBounds="True" Background="{DynamicResource PagePlaneBrush}">
             <Grid>
                 <wv2:WebView2 x:Name="Web"/>
-                <Border x:Name="Fallback" Visibility="Collapsed" Background="{StaticResource SurfaceBrush}">
+                <Border x:Name="Fallback" Visibility="Collapsed" Background="{DynamicResource SurfaceBrush}">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520">
                         <TextBlock Text="內建瀏覽器無法啟動" FontSize="18" FontWeight="Bold"
-                                   Foreground="{StaticResource PrimaryInkBrush}" HorizontalAlignment="Center"/>
+                                   Foreground="{DynamicResource PrimaryInkBrush}" HorizontalAlignment="Center"/>
                         <TextBlock x:Name="FallbackMsg" TextWrapping="Wrap" Margin="0,10,0,0"
-                                   Foreground="{StaticResource SecondaryInkBrush}" TextAlignment="Center"/>
+                                   Foreground="{DynamicResource SecondaryInkBrush}" TextAlignment="Center"/>
                         <TextBlock Margin="0,14,0,0" HorizontalAlignment="Center">
                             <Hyperlink NavigateUri="https://developer.microsoft.com/microsoft-edge/webview2/"
                                        RequestNavigate="Link_RequestNavigate"
-                                       Foreground="{StaticResource AccentBrush}">下載 WebView2 執行階段</Hyperlink>
+                                       Foreground="{DynamicResource AccentBrush}">下載 WebView2 執行階段</Hyperlink>
                         </TextBlock>
                     </StackPanel>
                 </Border>
                 <!-- B：頂端細載入進度條（NavigationStarting 顯示、Completed 隱藏） -->
                 <ProgressBar x:Name="LoadBar" Height="3" VerticalAlignment="Top" IsIndeterminate="True"
                              Background="Transparent" BorderThickness="0"
-                             Foreground="{StaticResource AccentBrush}" Visibility="Collapsed"/>
+                             Foreground="{DynamicResource AccentBrush}" Visibility="Collapsed"/>
             </Grid>
         </Border>
     </Grid>

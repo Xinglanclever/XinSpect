@@ -27,6 +27,7 @@ public sealed class SlcCurveChart : FrameworkElement
 
     public SlcCurveChart()
     {
+        this.RepaintOnThemeChange();
         ClipToBounds = true;
         MinHeight = 200;
     }

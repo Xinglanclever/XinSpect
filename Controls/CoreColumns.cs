@@ -49,6 +49,7 @@ public sealed class CoreColumns : FrameworkElement
 
     public CoreColumns()
     {
+        this.RepaintOnThemeChange();
         MinHeight = 150;
         ClipToBounds = true;
         IsVisibleChanged += (_, _) => Sync();

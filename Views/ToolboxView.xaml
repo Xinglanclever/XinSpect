@@ -5,10 +5,10 @@
     <UserControl.Resources>
         <!-- 搜尋框：與 DiskScanView 的 PathBox 同形，但可輸入 -->
         <Style x:Key="SearchBox" TargetType="TextBox">
-            <Setter Property="Background" Value="{StaticResource Surface2Brush}"/>
-            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
-            <Setter Property="CaretBrush" Value="{StaticResource PrimaryInkBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Surface2Brush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource PrimaryInkBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="10,7"/>
             <Setter Property="FontSize" Value="13"/>
@@ -22,7 +22,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="b" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -55,7 +55,7 @@
                                  Text="{Binding Toolbox.Query, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  ToolTip="以空白分隔多個詞彙；全部命中才會列出（例如「ssd 健康」）。名稱、說明、分類、英文別名都在搜尋範圍內。"/>
                         <CheckBox Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="13"
-                                  Foreground="{StaticResource SecondaryInkBrush}"
+                                  Foreground="{DynamicResource SecondaryInkBrush}"
                                   Content="只看曦覽做得到的"
                                   ToolTip="只留下曦覽已經做到同一件事的項目——用來確認哪些軟體其實不必再裝。"
                                   IsChecked="{Binding Toolbox.OnlyBuiltin, Mode=TwoWay}"/>
@@ -67,8 +67,8 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Margin="0,12,0,0">
-                                    <TextBlock Text="{Binding Title}" Style="{StaticResource FieldLabel}" Foreground="{StaticResource AccentBrush}"/>
-                                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,4,0,8"/>
+                                    <TextBlock Text="{Binding Title}" Style="{StaticResource FieldLabel}" Foreground="{DynamicResource AccentBrush}"/>
+                                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,4,0,8"/>
                                     <ItemsControl ItemsSource="{Binding Items}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
@@ -84,12 +84,12 @@
                                                     <!-- 「曦覽內建：X」是標籤而非按鈕：工具箱不做導覽（左側欄與 Ctrl+K 才是），
                                                          它只回答「這個第三方工具我還需不需要裝」。 -->
                                                     <Border Margin="4,0,0,0" VerticalAlignment="Center" Padding="8,5"
-                                                            CornerRadius="6" Background="{StaticResource Surface2Brush}"
-                                                            BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1"
+                                                            CornerRadius="6" Background="{DynamicResource Surface2Brush}"
+                                                            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
                                                             ToolTip="{Binding NativeTip}"
                                                             Visibility="{Binding HasNative, Converter={StaticResource BoolToVis}}">
                                                         <TextBlock Text="{Binding NativeLabel}" FontSize="12"
-                                                                   Foreground="{StaticResource SecondaryInkBrush}"/>
+                                                                   Foreground="{DynamicResource SecondaryInkBrush}"/>
                                                     </Border>
                                                     <Button Style="{StaticResource ToolButton}" Margin="4,0,0,0"
                                                             Content="{Binding SlotLabel}" ToolTip="{Binding SlotTip}"
@@ -127,7 +127,7 @@
                     <ItemsControl ItemsSource="{Binding Monitors}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="0,0,0,10">
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="0,0,0,10">
                                     <StackPanel>
                                         <DockPanel LastChildFill="False">
                                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource FieldValue}" Text="{Binding Name}" FontSize="16"/>
@@ -137,22 +137,22 @@
                                         <!-- 三種標準覆蓋率 -->
                                         <UniformGrid Rows="1" Columns="3" Margin="0,12,0,0"
                                                      Visibility="{Binding Valid, Converter={StaticResource BoolToVis}}">
-                                            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="8" Padding="12,10" Margin="0,0,5,0">
+                                            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="12,10" Margin="0,0,5,0">
                                                 <StackPanel>
                                                     <TextBlock Text="sRGB" Style="{StaticResource FieldLabel}"/>
-                                                    <TextBlock Text="{Binding SrgbText}" FontSize="22" Margin="0,2,0,0" Foreground="{StaticResource AccentBrush}"/>
+                                                    <TextBlock Text="{Binding SrgbText}" FontSize="22" Margin="0,2,0,0" Foreground="{DynamicResource AccentBrush}"/>
                                                 </StackPanel>
                                             </Border>
-                                            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="8" Padding="12,10" Margin="5,0,5,0">
+                                            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="12,10" Margin="5,0,5,0">
                                                 <StackPanel>
                                                     <TextBlock Text="Adobe RGB" Style="{StaticResource FieldLabel}"/>
-                                                    <TextBlock Text="{Binding AdobeText}" FontSize="22" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                                    <TextBlock Text="{Binding AdobeText}" FontSize="22" Margin="0,2,0,0" Foreground="{DynamicResource PrimaryInkBrush}"/>
                                                 </StackPanel>
                                             </Border>
-                                            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="8" Padding="12,10" Margin="5,0,0,0">
+                                            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="12,10" Margin="5,0,0,0">
                                                 <StackPanel>
                                                     <TextBlock Text="DCI-P3" Style="{StaticResource FieldLabel}"/>
-                                                    <TextBlock Text="{Binding DciText}" FontSize="22" Margin="0,2,0,0" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                                    <TextBlock Text="{Binding DciText}" FontSize="22" Margin="0,2,0,0" Foreground="{DynamicResource PrimaryInkBrush}"/>
                                                 </StackPanel>
                                             </Border>
                                         </UniformGrid>

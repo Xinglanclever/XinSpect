@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect"
              HorizontalAlignment="Left" Margin="2,0,0,10" FontSize="15"
-             Foreground="{StaticResource PrimaryInkBrush}">
+             Foreground="{DynamicResource PrimaryInkBrush}">
     <!-- 卡片標題 ＋ 圓圈問號。原本各頁都是一行
          <TextBlock Style="{StaticResource SectionHeader}" Text="…"/>，
          換成這個控制項後標題旁自動多一顆說明問號，版面不必為了塞問號改成 StackPanel。

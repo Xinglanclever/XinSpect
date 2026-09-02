@@ -30,9 +30,23 @@ public sealed record AccentPreset(string Key, string Name, string Main, string D
 
 /// <summary>
 /// 外觀套用引擎：深／淺色主題 ＋ 八色強調色，執行期即時切換並持久化。
-/// 核心手法：Theme.xaml 內的 SolidColorBrush / LinearGradientBrush 皆未凍結、以 {StaticResource} 取用
-/// （解析為同一筆刷物件）；改寫其 .Color / 漸層停駐點即可讓全部已載入的視覺樹同步換色，
-/// 不需 DynamicResource、不需重建視窗。
+/// <para>
+/// 手法：Theme.xaml 宣告全部佈景筆刷的初值，XAML 一律以 <c>{DynamicResource}</c> 取用；
+/// 換色時把資源項目<b>整支換掉</b>，WPF 便通知所有動態引用重新解析，
+/// 已經在畫面上的元素同步換色，不必重建視窗。
+/// </para>
+/// <para>
+/// ⚠ 不要改回「就地改寫筆刷的 .Color ＋ {StaticResource}」：放進資源字典的 <see cref="Freezable"/>
+/// 會被 WPF 自動凍結（Application 的資源可跨執行緒查找），凍結後改不動，整套換色會<b>靜靜落空</b>
+/// ——不拋例外、不留繫結錯誤。1.8.0 之前正是如此，淺色主題與另外七個強調色從加進來的那天起
+/// 就沒有生效過（深色＋曦藍剛好等於 Theme.xaml 的字面值，所以看起來像是正常的）。
+/// 守這件事的是 <c>Tests/ThemeSwitchTests.cs</c>：它會實際重繪並比對像素。
+/// </para>
+/// <para>
+/// 程式碼繪製的圖表另有一條路：<see cref="VizPalette"/> 每次取色都重新查資源，
+/// 但已經畫上去的內容不會自己更新，故自繪控制項須訂閱 <see cref="Changed"/> 重畫
+/// （見 <c>Controls/ThemeAware.cs</c>）。
+/// </para>
 /// </summary>
 public static class ThemeService
 {
@@ -237,27 +251,72 @@ public static class ThemeService
     }
 
     // ---- 資源改寫工具 ----------------------------------------------------
+    //
+    // 手法是「換掉資源項目」，不是「就地改筆刷的色」。原因見類別註解：放進資源字典的
+    // Freezable 一律被 WPF 凍結（Application 的資源可跨執行緒查找），改不動。
+    // 換掉項目會通知所有 {DynamicResource} 重新解析，已在畫面上的元素因此同步換色。
 
+    /// <summary>換掉一支純色筆刷資源，並同步供程式碼取用的「活的」同名筆刷。</summary>
     private static void Set(string key, string hex)
     {
-        if (Application.Current.Resources[key] is SolidColorBrush b && !b.IsFrozen)
-            b.Color = Hex(hex);
+        var c = Hex(hex);
+
+        var b = new SolidColorBrush(c);
+        b.Freeze();   // 凍結的筆刷可跨執行緒共用，繪製也少一層變更通知
+        Application.Current.Resources[key] = b;
+
+        SetLive(key, c);
+    }
+
+    // ---- 供程式碼繪製與轉換器取用的「活的」筆刷 ---------------------------
+    //
+    // 自繪元件與 IValueConverter 拿到的是筆刷「物件」，不是動態資源引用：換掉資源項目的通知
+    // 傳不到它們身上（已經畫進視覺內容的筆刷、已經求值完的繫結都不會再問一次）。
+    // 但凍結只發生在「放進資源字典」這一步——存在靜態欄位裡的筆刷不會被凍結，
+    // 於是就地改它的 .Color 就能讓已經畫上去的內容與已求值的繫結一起換色。
+    // 兩條路並用：XAML 走 DynamicResource，程式碼走這裡（VizPalette）。
+
+    private static readonly Dictionary<string, SolidColorBrush> LiveBrushes = [];
+
+    /// <summary>取供程式碼使用的共用筆刷（<see cref="VizPalette"/> 的來源）；未建立則回 null。</summary>
+    public static SolidColorBrush? LiveBrush(string key)
+        => LiveBrushes.TryGetValue(key, out var b) ? b : null;
+
+    private static void SetLive(string key, Color c)
+    {
+        if (LiveBrushes.TryGetValue(key, out var b))
+        {
+            // 建立它的執行緒之外改不動（測試可能在另一條 STA 執行緒重跑）；改不動就換一支新的
+            try { b.Color = c; return; }
+            catch (InvalidOperationException) { }
+        }
+        LiveBrushes[key] = new SolidColorBrush(c);
     }
 
     private static void SetColor(string key, string hex)
-    {
-        if (Application.Current.Resources.Contains(key))
-            Application.Current.Resources[key] = Hex(hex);
-    }
+        => Application.Current.Resources[key] = Hex(hex);
 
     private static void SetGradient(string key, Color top, Color bottom)
         => SetGradientStops(key, (0.0, top), (1.0, bottom));
 
+    /// <summary>
+    /// 換掉一支漸層筆刷資源。以現有筆刷的複本為底改色，方向（StartPoint／EndPoint）與停駐點位置
+    /// 因此仍由 Theme.xaml 決定，不在這裡重複一份。
+    /// </summary>
     private static void SetGradientStops(string key, params (double off, Color col)[] stops)
     {
-        if (Application.Current.Resources[key] is not LinearGradientBrush g || g.IsFrozen) return;
+        if (Application.Current.Resources[key] is not LinearGradientBrush cur)
+        {
+            Diag.Swallow($"ThemeService.SetGradientStops({key})", null,
+                $"佈景資源 {key} 不是 LinearGradientBrush：該處顏色不會跟著主題走。");
+            return;
+        }
+
+        var g = cur.CloneCurrentValue();
         for (int i = 0; i < stops.Length && i < g.GradientStops.Count; i++)
             g.GradientStops[i].Color = stops[i].col;
+        g.Freeze();
+        Application.Current.Resources[key] = g;
     }
 
     private static Color Hex(string h) => (Color)ColorConverter.ConvertFromString(h);

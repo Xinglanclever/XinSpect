@@ -17,7 +17,7 @@
                     <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="CUDA 版本"
                                VerticalAlignment="Center" Margin="0,0,14,0"/>
                     <TextBlock Grid.Column="1" Text="{Binding CudaVersion}" FontSize="20" FontWeight="SemiBold"
-                               Foreground="{StaticResource GoodBrush}" VerticalAlignment="Center"/>
+                               Foreground="{DynamicResource GoodBrush}" VerticalAlignment="Center"/>
                 </Grid>
             </Border>
 
@@ -78,7 +78,7 @@
                     <ItemsControl ItemsSource="{Binding GpuDetails}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,0,8">
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,0,8">
                                     <StackPanel>
                                         <local:BrandBadge Kind="Gpu" EmblemSize="34" Margin="0,0,0,8"
                                                           Brand="{Binding Brand}" Model="{Binding Title}"/>
@@ -105,7 +105,7 @@
                                             </StackPanel>
                                         </Grid>
 
-                                        <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,8"/>
+                                        <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,8"/>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
@@ -142,17 +142,17 @@
                 <StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <local:SectionHead Text="NVML 硬核資訊" HelpKey="gpu/NVML 硬核資訊"/>
-                        <Border Background="{StaticResource GoodBrush}" CornerRadius="5" Padding="6,1" Margin="10,2,0,0" VerticalAlignment="Center">
+                        <Border Background="{DynamicResource GoodBrush}" CornerRadius="5" Padding="6,1" Margin="10,2,0,0" VerticalAlignment="Center">
                             <TextBlock Text="NVIDIA 官方介面・真實讀取" Foreground="White" FontSize="10.5" FontWeight="SemiBold"/>
                         </Border>
                     </StackPanel>
                     <ItemsControl ItemsSource="{Binding NvmlGroups}" Margin="0,4,0,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,10" Margin="0,0,0,8">
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,10" Margin="0,0,0,8">
                                     <StackPanel>
                                         <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
-                                                   Foreground="{StaticResource AccentBrush}" Margin="0,0,0,6"/>
+                                                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,6"/>
                                         <ItemsControl ItemsSource="{Binding Fields}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
@@ -179,11 +179,11 @@
                 <StackPanel>
                     <local:SectionHead Text="即時走勢（近 90 秒）" HelpKey="gpu/即時走勢（近 90 秒）"/>
                     <local:HistoryGraph Height="110" Caption="GPU 使用率 (%)" Margin="0,0,0,10"
-                                        History="{Binding GpuHist}" Stroke="{StaticResource WarningBrush}"/>
+                                        History="{Binding GpuHist}" Stroke="{DynamicResource WarningBrush}"/>
                     <local:HistoryGraph Height="110" Caption="GPU 溫度 (°C)" Margin="0,0,0,10"
-                                        History="{Binding GpuTempHist}" Stroke="{StaticResource SeriousBrush}"/>
+                                        History="{Binding GpuTempHist}" Stroke="{DynamicResource SeriousBrush}"/>
                     <local:HistoryGraph Height="110" Caption="顯示記憶體占用 (MB)"
-                                        History="{Binding GpuVramHist}" Stroke="{StaticResource AccentBrush}"/>
+                                        History="{Binding GpuVramHist}" Stroke="{DynamicResource AccentBrush}"/>
                 </StackPanel>
             </Border>
         </StackPanel>

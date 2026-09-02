@@ -1,0 +1,164 @@
+<UserControl x:Class="XinSpect.NvmePowerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <StackPanel Margin="2,0,0,10">
+                <local:SectionHead Text="NVMe 電源狀態" HelpKey="nvmepower/NVMe 電源狀態"/>
+                <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                           Text="固態硬碟閒著的時候會自己降到省電狀態，被喚醒時要先花「離開延遲」爬回來——於是閒置之後的第一筆讀取特別慢。這是規格允許的行為，不是故障，但在檔案總管裡完全看不出來。這一頁把碟自己宣告的電源狀態表，和實際量到的「閒置 N 毫秒後第一筆讀取要多久」擺在一起看。全程唯讀：不改電源狀態、不設 Features。"/>
+            </StackPanel>
+
+            <!-- 磁碟選擇與讀取 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="磁碟" HelpKey="nvmepower/磁碟"/>
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Grid.Column="0" Style="{StaticResource DarkCombo}" MinWidth="260"
+                                  AutomationProperties.Name="NVMe 磁碟"
+                                  ItemsSource="{Binding NvmePower.Drives}"
+                                  SelectedIndex="{Binding NvmePower.SelectedIndex, Mode=TwoWay}"/>
+                        <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Content="讀取"
+                                Margin="12,0,0,0" MinWidth="110"
+                                IsEnabled="{Binding NvmePower.CanRead}" Click="Read_Click"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Text="{Binding NvmePower.Status}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 宣告的電源狀態表 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding NvmePower.States.Count, Converter={StaticResource CountToVis}}">
+                <StackPanel>
+                    <local:SectionHead Text="碟宣告的電源狀態" HelpKey="nvmepower/碟宣告的電源狀態"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,0,0,10"
+                               Text="以下每一個數字都是裝置自己宣告的，不是量到的。「離開延遲」是控制器承諾的上限：閒置後的第一筆 I/O 最多會被這麼久拖住。"/>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="70"/><ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="96"/><ColumnDefinition Width="104"/>
+                            <ColumnDefinition Width="104"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource ColHead}" Text="狀態"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="類型"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="最大功耗"/>
+                        <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="進入延遲"/>
+                        <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="離開延遲"/>
+                    </Grid>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,0,0,4"/>
+                    <ItemsControl ItemsSource="{Binding NvmePower.States}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,3,0,5">
+                                    <Grid MinHeight="22">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="70"/><ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="96"/><ColumnDefinition Width="104"/>
+                                            <ColumnDefinition Width="104"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}"
+                                                   Text="{Binding KindText}" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}"
+                                                   Text="{Binding MaxPowerText}" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}"
+                                                   Text="{Binding EntryLatencyText}" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}"
+                                                   Text="{Binding ExitLatencyText}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,2,0,0"
+                                               Text="{Binding RelativeText}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+            <!-- APST：閒置多久之後降到哪一階 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding NvmePower.States.Count, Converter={StaticResource CountToVis}}">
+                <StackPanel>
+                    <local:SectionHead Text="自主降態（APST）" HelpKey="nvmepower/自主降態（APST）"/>
+                    <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,0,0,8"
+                               Text="{Binding NvmePower.ApstStatus}"/>
+                    <ItemsControl ItemsSource="{Binding NvmePower.Apst}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="22" Margin="0,2,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}"
+                                               Text="{Binding Text}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- 實測：閒置之後的第一筆 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,32">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="實測：閒置之後的第一筆讀取" HelpKey="nvmepower/實測：閒置之後的第一筆讀取"/>
+                        <Button Style="{StaticResource PrimaryButton}" Content="開始量測"
+                                HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="120"
+                                IsEnabled="{Binding NvmePower.CanMeasure}" Click="Measure_Click"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,8,0,0"
+                               Text="逐級刻意閒置（0 到 4000 毫秒），每一級結束後只讀一筆 4K、只計時那一筆。未緩衝讀取，位移每次不同，避免快取讓第二次變快而看不出降態。整趟約 8 秒，全部是讀取。"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap"
+                               Text="{Binding NvmePower.Progress}"
+                               Visibility="{Binding NvmePower.IsBusy, Converter={StaticResource BoolToVis}}"/>
+
+                    <Border Margin="0,12,0,0" Padding="12,10" CornerRadius="6"
+                            Background="{DynamicResource Surface2Brush}">
+                        <StackPanel>
+                            <TextBlock FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"
+                                       Text="{Binding NvmePower.VerdictHeadline}"
+                                       Foreground="{Binding NvmePower.VerdictBadge, Converter={StaticResource SeverityToBrush}}"/>
+                            <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                       Foreground="{DynamicResource SecondaryInkBrush}"
+                                       Text="{Binding NvmePower.VerdictDetail}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Grid Margin="0,12,0,4"
+                          Visibility="{Binding NvmePower.Samples.Count, Converter={StaticResource CountToVis}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/><ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource ColHead}" Text="刻意閒置"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="之後第一筆 4K 讀取"/>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding NvmePower.Samples}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="22" Margin="0,2,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="140"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding IdleText}"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}"
+                                               Text="{Binding ReadText}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

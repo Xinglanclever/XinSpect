@@ -36,7 +36,7 @@
                 <Button Style="{StaticResource PrimaryButton}" Content="重新掃描" Click="Scan_Click"
                         HorizontalAlignment="Left"/>
                 <TextBlock x:Name="MsgText" HorizontalAlignment="Right" VerticalAlignment="Center"
-                           FontSize="12.5" Foreground="{StaticResource SecondaryInkBrush}"
+                           FontSize="12.5" Foreground="{DynamicResource SecondaryInkBrush}"
                            TextTrimming="CharacterEllipsis" MaxWidth="520"/>
             </Grid>
         </Border>
@@ -51,7 +51,7 @@
                     <ItemsControl x:Name="List" Margin="14,12">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="8"
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="8"
                                         Padding="14,11" Margin="0,0,0,8">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -61,24 +61,24 @@
                                         <StackPanel Grid.Column="0" Margin="0,0,12,0">
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="{Binding DisplayName}" FontSize="14" FontWeight="SemiBold"
-                                                           Foreground="{StaticResource PrimaryInkBrush}"
+                                                           Foreground="{DynamicResource PrimaryInkBrush}"
                                                            TextTrimming="CharacterEllipsis"/>
                                                 <Border CornerRadius="4" Padding="6,1" Margin="8,0,0,0"
-                                                        Background="{StaticResource SurfaceBrush}" VerticalAlignment="Center">
+                                                        Background="{DynamicResource SurfaceBrush}" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding StateText}" FontSize="10.5"
-                                                               Foreground="{StaticResource SecondaryInkBrush}"/>
+                                                               Foreground="{DynamicResource SecondaryInkBrush}"/>
                                                 </Border>
                                             </StackPanel>
                                             <TextBlock FontSize="11.5" Margin="0,3,0,0"
-                                                       Foreground="{StaticResource MutedInkBrush}">
+                                                       Foreground="{DynamicResource MutedInkBrush}">
                                                 <Run Text="{Binding Scope, Mode=OneWay}"/><Run Text=" ・ "/><Run Text="{Binding Kind, Mode=OneWay}"/><Run Text=" ・ "/><Run Text="{Binding Verb, Mode=OneWay}"/>
                                             </TextBlock>
                                             <TextBlock Text="{Binding CommandText}" FontSize="11" Margin="0,3,0,0"
-                                                       Foreground="{StaticResource SecondaryInkBrush}"
+                                                       Foreground="{DynamicResource SecondaryInkBrush}"
                                                        TextWrapping="Wrap" MaxHeight="34" TextTrimming="CharacterEllipsis"
                                                        FontFamily="Consolas"/>
                                             <TextBlock Text="{Binding RegistryPath}" FontSize="10" Margin="0,2,0,0"
-                                                       Foreground="{StaticResource MutedInkBrush}"
+                                                       Foreground="{DynamicResource MutedInkBrush}"
                                                        TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -94,8 +94,8 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
-                <Border Grid.Row="1" Background="{StaticResource Surface2Brush}" Padding="12,6" CornerRadius="0,0,10,10">
-                    <TextBlock x:Name="StatusText" FontSize="11.5" Foreground="{StaticResource SecondaryInkBrush}" TextWrapping="Wrap"/>
+                <Border Grid.Row="1" Background="{DynamicResource Surface2Brush}" Padding="12,6" CornerRadius="0,0,10,10">
+                    <TextBlock x:Name="StatusText" FontSize="11.5" Foreground="{DynamicResource SecondaryInkBrush}" TextWrapping="Wrap"/>
                 </Border>
             </Grid>
         </Border>

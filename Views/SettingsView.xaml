@@ -11,18 +11,18 @@
             <Setter Property="IsMoveToPointEnabled" Value="True"/>
             <Setter Property="IsSnapToTickEnabled" Value="True"/>
             <Setter Property="TickFrequency" Value="1"/>
-            <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Slider">
                         <Grid VerticalAlignment="Center">
-                            <Border Height="5" CornerRadius="3" Background="{StaticResource HairlineBrush}"/>
+                            <Border Height="5" CornerRadius="3" Background="{DynamicResource HairlineBrush}"/>
                             <Track x:Name="PART_Track">
                                 <Track.DecreaseRepeatButton>
                                     <RepeatButton Command="Slider.DecreaseLarge" Focusable="False">
                                         <RepeatButton.Template>
                                             <ControlTemplate TargetType="RepeatButton">
-                                                <Border Height="5" CornerRadius="3" Background="{StaticResource AccentBrush}"/>
+                                                <Border Height="5" CornerRadius="3" Background="{DynamicResource AccentBrush}"/>
                                             </ControlTemplate>
                                         </RepeatButton.Template>
                                     </RepeatButton>
@@ -41,7 +41,7 @@
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
                                                 <Ellipse Width="16" Height="16" Fill="White"
-                                                         Stroke="{StaticResource AccentBrush}" StrokeThickness="2.5">
+                                                         Stroke="{DynamicResource AccentBrush}" StrokeThickness="2.5">
                                                     <Ellipse.Effect>
                                                         <DropShadowEffect BlurRadius="5" ShadowDepth="0" Opacity="0.5" Color="Black"/>
                                                     </Ellipse.Effect>
@@ -58,7 +58,7 @@
         </Style>
         <!-- 深色核取方塊 -->
         <Style x:Key="SetCheck" TargetType="CheckBox">
-            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
             <Setter Property="FontSize" Value="13.5"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -67,8 +67,8 @@
                     <ControlTemplate TargetType="CheckBox">
                         <StackPanel Orientation="Horizontal" Background="Transparent">
                             <Border x:Name="box" Width="20" Height="20" CornerRadius="5" VerticalAlignment="Center"
-                                    Background="{StaticResource Surface2Brush}"
-                                    BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1.2">
+                                    Background="{DynamicResource Surface2Brush}"
+                                    BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1.2">
                                 <Path x:Name="check" Width="12" Height="12" Stretch="Uniform"
                                       Data="M2,8 L6,12 L14,3" Stroke="White" StrokeThickness="2"
                                       StrokeStartLineCap="Round" StrokeEndLineCap="Round" Visibility="Collapsed"/>
@@ -77,12 +77,12 @@
                         </StackPanel>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="box" Property="Background" Value="{StaticResource AccentBrush}"/>
-                                <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="box" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                 <Setter TargetName="check" Property="Visibility" Value="Visible"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -93,8 +93,8 @@
         <!-- 深色輸入框 SetTextBox 已移至 Themes/Theme.xaml（關於頁的留言框也要用同一份） -->
         <!-- 遮蔽輸入欄（API 金鑰）：與 SetTextBox 同形，但字元以圓點顯示 -->
         <Style x:Key="SetPasswordBox" TargetType="PasswordBox">
-            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
-            <Setter Property="CaretBrush" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource PrimaryInkBrush}"/>
             <Setter Property="FontSize" Value="13.5"/>
             <Setter Property="Padding" Value="10,7"/>
             <Setter Property="PasswordChar" Value="●"/>
@@ -102,13 +102,13 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="PasswordBox">
-                        <Border x:Name="bd" CornerRadius="7" Background="{StaticResource Surface2Brush}"
-                                BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1.2">
+                        <Border x:Name="bd" CornerRadius="7" Background="{DynamicResource Surface2Brush}"
+                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1.2">
                             <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -155,7 +155,7 @@
                                     <StackPanel Orientation="Horizontal">
                                         <Border Width="16" Height="16" CornerRadius="8" VerticalAlignment="Center"
                                                 Background="{Binding Swatch}"
-                                                BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1"/>
+                                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"/>
                                         <TextBlock Text="{Binding Name}" Margin="8,0,0,0" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
@@ -164,7 +164,7 @@
                     </ItemsControl>
                     <TextBlock x:Name="AccentHint" Style="{StaticResource Subtitle}" Margin="0,2,0,0"/>
 
-                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,18,0,0"/>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,18,0,0"/>
                     <local:SectionHead Text="動態視覺效果" HelpKey="settings/動態視覺效果" Margin="0,16,0,0"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
                                Text="逐核液柱的波紋與氣泡、風扇葉片的旋轉、七段數字的漸亮——這些都對應真實讀值，但每一次重繪都要花 GPU 與封裝功耗。曦覽是量測工具，所以這件事必須關得掉。"/>
@@ -226,7 +226,7 @@
                     <ItemsControl ItemsSource="{Binding EnvCheck.Items}" Margin="0,12,0,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="7" Margin="0,0,0,6" Padding="12,9">
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="7" Margin="0,0,0,6" Padding="12,9">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
@@ -237,13 +237,13 @@
                                                  Fill="{Binding Severity, Converter={StaticResource SeverityToBrush}}"/>
                                         <StackPanel Grid.Column="1">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Name}" Foreground="{StaticResource PrimaryInkBrush}" FontSize="14" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Name}" Foreground="{DynamicResource PrimaryInkBrush}" FontSize="14" FontWeight="SemiBold"/>
                                                 <Border CornerRadius="4" Padding="6,1" Margin="10,0,0,0" VerticalAlignment="Center"
                                                         Background="{Binding Severity, Converter={StaticResource SeverityToBrush}}">
                                                     <TextBlock Text="{Binding StatusText}" Foreground="White" FontSize="11.5"/>
                                                 </Border>
                                             </StackPanel>
-                                            <TextBlock Text="{Binding Detail}" Foreground="{StaticResource SecondaryInkBrush}" FontSize="12.5"
+                                            <TextBlock Text="{Binding Detail}" Foreground="{DynamicResource SecondaryInkBrush}" FontSize="12.5"
                                                        TextWrapping="Wrap" Margin="0,4,0,0"
                                                        Visibility="{Binding HasDetail, Converter={StaticResource BoolToVis}}"/>
                                         </StackPanel>
@@ -373,7 +373,7 @@
                     </StackPanel>
 
                     <!-- 跑分紀錄簿：與感測歷史分開，因為它是「跑分基準」本身，清掉就沒有可比的對象了 -->
-                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,16,0,14"/>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,16,0,14"/>
                     <TextBlock Style="{StaticResource FieldValue}" Text="跑分紀錄簿"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
                                Text="本機歷次跑分成績（含當時的溫度與頻率），存於 %APPDATA%\XinSpect\bench-history.json，最多保留 300 筆。曦覽不內建任何別台機器的參考分數，這份紀錄就是「與上次相比」「重複性」的唯一依據——清空後在累積出新紀錄前，跑分只會有單次數字而無從比較。"/>
@@ -444,10 +444,10 @@
                         </ItemsControl.Template>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="6" Margin="0,0,0,5" Padding="10,6">
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="6" Margin="0,0,0,5" Padding="10,6">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding Time}" Foreground="{StaticResource SecondaryInkBrush}" Width="72"/>
-                                        <TextBlock Text="{Binding Message}" Foreground="{StaticResource PrimaryInkBrush}" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Time}" Foreground="{DynamicResource SecondaryInkBrush}" Width="72"/>
+                                        <TextBlock Text="{Binding Message}" Foreground="{DynamicResource PrimaryInkBrush}" TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>
@@ -543,7 +543,7 @@
                                Text="越低越保守一致（適合客觀評測），越高越發散有創意。"/>
 
                     <!-- 診斷代理 / 串流 / 保留對話 -->
-                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,16,0,14"/>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,16,0,14"/>
                     <CheckBox Style="{StaticResource SetCheck}" Content="診斷代理：允許 AI 主動查詢本機唯讀資料"
                               IsChecked="{Binding Settings.AiAgentMode, Mode=TwoWay}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
@@ -623,7 +623,7 @@
                     </StackPanel>
                     <TextBlock x:Name="ReportHint" Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap"/>
 
-                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,16,0,14"/>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,16,0,14"/>
                     <CheckBox Style="{StaticResource SetCheck}" Content="遮蔽可識別資訊"
                               IsChecked="{Binding Settings.ReportMaskIdentity, Mode=TwoWay}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
@@ -667,22 +667,22 @@
                         </ItemsControl.Template>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="6" Margin="0,0,0,5" Padding="10,6">
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="6" Margin="0,0,0,5" Padding="10,6">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="72"/>
                                             <ColumnDefinition Width="130"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="{Binding TimeText}" Foreground="{StaticResource SecondaryInkBrush}"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Site}" Foreground="{StaticResource PrimaryInkBrush}" TextWrapping="Wrap"/>
+                                        <TextBlock Grid.Column="0" Text="{Binding TimeText}" Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Site}" Foreground="{DynamicResource PrimaryInkBrush}" TextWrapping="Wrap"/>
                                         <StackPanel Grid.Column="2">
-                                            <TextBlock Foreground="{StaticResource PrimaryInkBrush}" TextWrapping="Wrap">
-                                                <Run Text="{Binding Type}" Foreground="{StaticResource SecondaryInkBrush}"/>
+                                            <TextBlock Foreground="{DynamicResource PrimaryInkBrush}" TextWrapping="Wrap">
+                                                <Run Text="{Binding Type}" Foreground="{DynamicResource SecondaryInkBrush}"/>
                                                 <Run Text="{Binding Message}"/>
                                             </TextBlock>
                                             <TextBlock Text="{Binding Consequence, StringFormat=→ {0}}" Margin="0,2,0,0"
-                                                       Foreground="{StaticResource SecondaryInkBrush}" TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource SecondaryInkBrush}" TextWrapping="Wrap"
                                                        Visibility="{Binding Consequence.Length, Converter={StaticResource CountToVis}}"/>
                                         </StackPanel>
                                     </Grid>

@@ -15,7 +15,7 @@ public partial class MemoryView : UserControl
     {
         InitializeComponent();
         _truthTimer.Tick += (_, _) => Vm?.MemoryTruth.Refresh();
-        Loaded += (_, _) => { Vm?.MemoryTruth.Refresh(); _truthTimer.Start(); };
+        Loaded += (_, _) => { Vm?.MemoryTruth.Refresh(); Vm?.LargePage.EnsureChecked(); _truthTimer.Start(); };
         Unloaded += (_, _) => _truthTimer.Stop();
     }
 
@@ -23,6 +23,12 @@ public partial class MemoryView : UserControl
     private MainViewModel? Vm =>
         DataContext as MainViewModel
         ?? Shell.Vm;
+
+    /// <summary>DRAM 流量量測：使用者按下才跑（會編程效能計數器並在結束後還原）。</summary>
+    private void DramTrafficMeasure_Click(object sender, RoutedEventArgs e) => Vm?.DramTraffic.Measure();
+
+    /// <summary>大頁量測：使用者按下才跑（會配置 256 MB 並在結束後釋放）。</summary>
+    private void LargePageMeasure_Click(object sender, RoutedEventArgs e) => Vm?.LargePage.Measure();
 
     private void MemTestStart_Click(object sender, RoutedEventArgs e) => Vm?.MemTest.Start();
     private void MemTestStop_Click(object sender, RoutedEventArgs e) => Vm?.MemTest.Cancel();

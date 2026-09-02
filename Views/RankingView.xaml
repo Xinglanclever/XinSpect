@@ -19,7 +19,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Name}"
                                        TextTrimming="CharacterEllipsis"/>
-                            <Border Background="{StaticResource AccentBrush}" CornerRadius="4" Padding="5,0" Margin="8,0,0,0"
+                            <Border Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="5,0" Margin="8,0,0,0"
                                     VerticalAlignment="Center"
                                     Visibility="{Binding IsLocal, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="本機" FontSize="10.5" FontWeight="SemiBold" Foreground="White"/>
@@ -36,7 +36,7 @@
             </Border>
             <DataTemplate.Triggers>
                 <DataTrigger Binding="{Binding IsLocal}" Value="True">
-                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource Surface2Brush}"/>
+                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Surface2Brush}"/>
                 </DataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
@@ -86,9 +86,9 @@
                     </Grid>
                     <TextBox Grid.Row="1" Margin="0,0,0,8"
                              Text="{Binding CpuFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             Background="{StaticResource Surface2Brush}" Foreground="{StaticResource PrimaryInkBrush}"
-                             BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" Padding="10,7"
-                             CaretBrush="{StaticResource AccentBrush}" VerticalContentAlignment="Center"
+                             Background="{DynamicResource Surface2Brush}" Foreground="{DynamicResource PrimaryInkBrush}"
+                             BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" Padding="10,7"
+                             CaretBrush="{DynamicResource AccentBrush}" VerticalContentAlignment="Center"
                              ToolTip="輸入型號關鍵字搜尋處理器"/>
                     <Grid Grid.Row="2" Margin="10,0,10,4">
                         <Grid.ColumnDefinitions>
@@ -125,9 +125,9 @@
                     </Grid>
                     <TextBox Grid.Row="1" Margin="0,0,0,8"
                              Text="{Binding GpuFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             Background="{StaticResource Surface2Brush}" Foreground="{StaticResource PrimaryInkBrush}"
-                             BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" Padding="10,7"
-                             CaretBrush="{StaticResource AccentBrush}" VerticalContentAlignment="Center"
+                             Background="{DynamicResource Surface2Brush}" Foreground="{DynamicResource PrimaryInkBrush}"
+                             BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" Padding="10,7"
+                             CaretBrush="{DynamicResource AccentBrush}" VerticalContentAlignment="Center"
                              ToolTip="輸入型號關鍵字搜尋顯示卡"/>
                     <Grid Grid.Row="2" Margin="10,0,10,4">
                         <Grid.ColumnDefinitions>

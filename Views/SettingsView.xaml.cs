@@ -17,6 +17,15 @@ public partial class SettingsView : UserControl
         AccentList.ItemsSource = ThemeService.Presets;
         ShowAccentHint();
 
+        // 外觀也可能從別處被改（命令面板 Ctrl+K 的「切換主題」）：本頁的下拉與提示要跟上，
+        // 否則畫面已經是淺色，這裡卻還寫著「目前：深色主題」。
+        this.OnThemeChange(() =>
+        {
+            if (ThemeCombo.SelectedIndex != ThemeService.ThemeIndex)
+                ThemeCombo.SelectedIndex = ThemeService.ThemeIndex;
+            ShowAccentHint();
+        });
+
         // 首次進入設定頁時自動跑一次環境自檢（背景偵測，不阻塞 UI）；之後由使用者按鈕手動重檢。
         Loaded += (_, _) =>
         {

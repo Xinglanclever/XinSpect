@@ -40,7 +40,7 @@
                         <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="能力"/>
                         <TextBlock Grid.Column="5" Style="{StaticResource ColHead}" Text="頻寬佔比"/>
                     </Grid>
-                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,4"/>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,0,0,4"/>
                     <ItemsControl ItemsSource="{Binding PcieLink.Rows}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -62,10 +62,14 @@
                                     </Grid>
                                     <TextBlock Style="{StaticResource FieldLabel}" FontSize="11" TextWrapping="Wrap"
                                                Text="{Binding Verdict}"/>
+                                    <!-- 自開機以來的錯誤旗標：鏈路速度正常但一直在重試時，只有這裡看得出來 -->
+                                    <TextBlock Style="{StaticResource FieldLabel}" FontSize="11" TextWrapping="Wrap"
+                                               Margin="0,2,0,0" Text="{Binding ErrorText}"
+                                               Foreground="{Binding ErrorBadge, Converter={StaticResource SeverityToBrush}}"/>
                                 </StackPanel>
                                 <DataTemplate.Triggers>
                                     <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" Value="True">
-                                        <Setter TargetName="Row" Property="Background" Value="{StaticResource Surface2Brush}"/>
+                                        <Setter TargetName="Row" Property="Background" Value="{DynamicResource Surface2Brush}"/>
                                     </DataTrigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>

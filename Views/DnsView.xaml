@@ -13,16 +13,16 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
                         <Border x:Name="b" CornerRadius="8" Padding="12,9"
-                                Background="{StaticResource Surface2Brush}"
-                                BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1">
+                                Background="{DynamicResource Surface2Brush}"
+                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                             <ContentPresenter/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="b" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="b" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                 <Setter TargetName="b" Property="BorderThickness" Value="2"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -32,10 +32,10 @@
         </Style>
         <!-- 自訂位址輸入框 -->
         <Style x:Key="IpBox" TargetType="TextBox">
-            <Setter Property="Background" Value="{StaticResource Surface2Brush}"/>
-            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
-            <Setter Property="CaretBrush" Value="{StaticResource PrimaryInkBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Surface2Brush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource PrimaryInkBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="10,7"/>
             <Setter Property="FontFamily" Value="Consolas"/>
@@ -77,11 +77,11 @@
                             <DataTemplate>
                                 <StackPanel>
                                     <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
-                                               Foreground="{StaticResource PrimaryInkBrush}"/>
+                                               Foreground="{DynamicResource PrimaryInkBrush}"/>
                                     <TextBlock Text="{Binding Description}" FontSize="11.5" Margin="0,2,0,0"
-                                               Foreground="{StaticResource MutedInkBrush}" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock FontSize="12" Margin="0,3,0,0" Foreground="{StaticResource SecondaryInkBrush}">
-                                        <Run Text="目前 DNS：" Foreground="{StaticResource MutedInkBrush}"/><Run Text="{Binding DnsText, Mode=OneWay}"/>
+                                               Foreground="{DynamicResource MutedInkBrush}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock FontSize="12" Margin="0,3,0,0" Foreground="{DynamicResource SecondaryInkBrush}">
+                                        <Run Text="目前 DNS：" Foreground="{DynamicResource MutedInkBrush}"/><Run Text="{Binding DnsText, Mode=OneWay}"/>
                                     </TextBlock>
                                 </StackPanel>
                             </DataTemplate>
@@ -104,9 +104,9 @@
                                         Margin="0,0,8,8" Padding="14,9" MinWidth="120" HorizontalContentAlignment="Left">
                                     <StackPanel>
                                         <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold"
-                                                   Foreground="{StaticResource PrimaryInkBrush}"/>
+                                                   Foreground="{DynamicResource PrimaryInkBrush}"/>
                                         <TextBlock Text="{Binding Note}" FontSize="11" Margin="0,1,0,0"
-                                                   Foreground="{StaticResource SecondaryInkBrush}"/>
+                                                   Foreground="{DynamicResource SecondaryInkBrush}"/>
                                     </StackPanel>
                                 </Button>
                             </DataTemplate>
@@ -142,7 +142,7 @@
             </StackPanel>
 
             <TextBlock x:Name="StatusText" FontSize="12" Margin="2,0,0,4" TextWrapping="Wrap"
-                       Foreground="{StaticResource MutedInkBrush}"/>
+                       Foreground="{DynamicResource MutedInkBrush}"/>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

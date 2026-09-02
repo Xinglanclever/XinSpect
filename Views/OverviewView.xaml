@@ -64,13 +64,13 @@
                     <local:SectionHead Text="即時走勢（近 90 秒）" HelpKey="overview/即時走勢（近 90 秒）"/>
                     <UniformGrid Rows="1" Columns="4">
                         <local:HistoryGraph Height="104" Margin="0,0,6,0" Caption="CPU 使用率"
-                                            History="{Binding CpuLoadHist}" Stroke="{StaticResource AccentBrush}"/>
+                                            History="{Binding CpuLoadHist}" Stroke="{DynamicResource AccentBrush}"/>
                         <local:HistoryGraph Height="104" Margin="3,0,3,0" Caption="CPU 溫度"
-                                            History="{Binding CpuTempHist}" Stroke="{StaticResource SeriousBrush}"/>
+                                            History="{Binding CpuTempHist}" Stroke="{DynamicResource SeriousBrush}"/>
                         <local:HistoryGraph Height="104" Margin="3,0,3,0" Caption="記憶體"
-                                            History="{Binding MemHist}" Stroke="{StaticResource GoodBrush}"/>
+                                            History="{Binding MemHist}" Stroke="{DynamicResource GoodBrush}"/>
                         <local:HistoryGraph Height="104" Margin="6,0,0,0" Caption="GPU 使用率"
-                                            History="{Binding GpuHist}" Stroke="{StaticResource WarningBrush}"/>
+                                            History="{Binding GpuHist}" Stroke="{DynamicResource WarningBrush}"/>
                     </UniformGrid>
                 </StackPanel>
             </Border>
@@ -83,11 +83,11 @@
                     <local:SectionHead Text="更多走勢（近 90 秒）" HelpKey="overview/更多走勢（近 90 秒）"/>
                     <UniformGrid Rows="1" Columns="3">
                         <local:HistoryGraph Height="104" Margin="0,0,6,0" Caption="CPU 頻率"
-                                            History="{Binding CpuClockHist}" Stroke="{StaticResource GoodBrush}"/>
+                                            History="{Binding CpuClockHist}" Stroke="{DynamicResource GoodBrush}"/>
                         <local:HistoryGraph Height="104" Margin="3,0,3,0" Caption="GPU 溫度"
-                                            History="{Binding GpuTempHist}" Stroke="{StaticResource SeriousBrush}"/>
+                                            History="{Binding GpuTempHist}" Stroke="{DynamicResource SeriousBrush}"/>
                         <local:HistoryGraph Height="104" Margin="6,0,0,0" Caption="顯示記憶體"
-                                            History="{Binding GpuVramHist}" Stroke="{StaticResource AccentBrush}"/>
+                                            History="{Binding GpuVramHist}" Stroke="{DynamicResource AccentBrush}"/>
                     </UniformGrid>
                 </StackPanel>
             </Border>
@@ -188,7 +188,7 @@
         <local:DashboardTileTemplateSelector x:Key="TileTemplate"/>
         <!-- 深色核取方塊（與歷史回放／風扇分頁同一視覺語彙）-->
         <Style x:Key="TileCheck" TargetType="CheckBox">
-            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
             <Setter Property="FontSize" Value="13.5"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -197,8 +197,8 @@
                     <ControlTemplate TargetType="CheckBox">
                         <StackPanel Orientation="Horizontal" Background="Transparent">
                             <Border x:Name="box" Width="17" Height="17" CornerRadius="4" VerticalAlignment="Center"
-                                    Background="{StaticResource Surface2Brush}"
-                                    BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1.2">
+                                    Background="{DynamicResource Surface2Brush}"
+                                    BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1.2">
                                 <Path x:Name="check" Width="11" Height="11" Stretch="Uniform"
                                       Data="M2,8 L6,12 L14,3" Stroke="White" StrokeThickness="2"
                                       StrokeStartLineCap="Round" StrokeEndLineCap="Round" Visibility="Collapsed"/>
@@ -207,12 +207,12 @@
                         </StackPanel>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="box" Property="Background" Value="{StaticResource AccentBrush}"/>
-                                <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="box" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                 <Setter TargetName="check" Property="Visibility" Value="Visible"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

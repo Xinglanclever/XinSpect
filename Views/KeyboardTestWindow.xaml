@@ -36,7 +36,7 @@
                     <TextBlock Grid.Row="2" Text="目前同時按住" Foreground="#9AA0AA" FontSize="12.5"/>
                     <TextBlock x:Name="HeldText" Grid.Row="2" Grid.Column="1" Text="0" Foreground="#E6E9EF" FontSize="12.5"/>
                     <TextBlock Grid.Row="3" Text="最多同時按鍵" Foreground="#9AA0AA" FontSize="12.5"/>
-                    <TextBlock x:Name="MaxHeldText" Grid.Row="3" Grid.Column="1" Text="0" Foreground="{StaticResource AccentBrush}" FontSize="12.5" FontWeight="Bold"/>
+                    <TextBlock x:Name="MaxHeldText" Grid.Row="3" Grid.Column="1" Text="0" Foreground="{DynamicResource AccentBrush}" FontSize="12.5" FontWeight="Bold"/>
                     <TextBlock Grid.Row="4" Text="已測試鍵數" Foreground="#9AA0AA" FontSize="12.5"/>
                     <TextBlock x:Name="TestedText" Grid.Row="4" Grid.Column="1" Text="0" Foreground="#E6E9EF" FontSize="12.5"/>
                 </Grid>

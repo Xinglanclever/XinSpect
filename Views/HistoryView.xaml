@@ -6,7 +6,7 @@
     <UserControl.Resources>
         <!-- 深色核取方塊（與風扇／超頻分頁同一視覺語彙）-->
         <Style x:Key="HistCheck" TargetType="CheckBox">
-            <Setter Property="Foreground" Value="{StaticResource PrimaryInkBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -15,8 +15,8 @@
                     <ControlTemplate TargetType="CheckBox">
                         <StackPanel Orientation="Horizontal" Background="Transparent">
                             <Border x:Name="box" Width="17" Height="17" CornerRadius="4" VerticalAlignment="Center"
-                                    Background="{StaticResource Surface2Brush}"
-                                    BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1.2">
+                                    Background="{DynamicResource Surface2Brush}"
+                                    BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1.2">
                                 <Path x:Name="check" Width="11" Height="11" Stretch="Uniform"
                                       Data="M2,8 L6,12 L14,3" Stroke="White" StrokeThickness="2"
                                       StrokeStartLineCap="Round" StrokeEndLineCap="Round" Visibility="Collapsed"/>
@@ -25,12 +25,12 @@
                         </StackPanel>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="box" Property="Background" Value="{StaticResource AccentBrush}"/>
-                                <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="box" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                 <Setter TargetName="check" Property="Visibility" Value="Visible"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -148,7 +148,7 @@
                 <Run Text="{Binding CountText, Mode=OneWay}"/><Run Text="　・　"/><Run Text="{Binding StoreText, Mode=OneWay}"/>
             </TextBlock>
             <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding StatusText}" TextWrapping="Wrap"
-                       Foreground="{StaticResource AccentBrush}" Margin="0,4,0,0"/>
+                       Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0"/>
         </StackPanel>
     </Grid>
 </UserControl>

@@ -400,6 +400,41 @@ public sealed class StorageSmartService : ObservableObject
 
     private const uint NvmeDataTypeIdentify = 0;     // CNS=Identify
     private const uint NvmeCnsController = 1;       // CNS=1 為 Controller
+    private const uint NvmeDataTypeFeature = 3;     // STORAGE_PROTOCOL_NVME_DATA_TYPE::NVMeDataTypeFeature
+
+    /// <summary>
+    /// 嘗試取 NVMe Get Features 的資料區（例如 FID 0x0C＝APST 的 256 位元組表）。
+    /// </summary>
+    /// <remarks>
+    /// Windows 只對一部分 Feature 開放這條唯讀查詢，多數機器會直接失敗——那是常態，不是缺陷。
+    /// 失敗回 null，由呼叫端如實說明「讀不到」，不要拿規格書的預設值頂替。
+    /// </remarks>
+    public static byte[]? TryReadNvmeFeature(int index, uint featureId, int length)
+    {
+        var handle = OpenDrive(index);
+        if (handle == IntPtr.Zero) return null;
+        try
+        {
+            const int header = 48;
+            var buf = new byte[header + length];
+            BitConverter.GetBytes(PropertyIdProtocolSpecificDevice).CopyTo(buf, 0);
+            BitConverter.GetBytes(0u).CopyTo(buf, 4);
+            BitConverter.GetBytes(ProtocolTypeNvme).CopyTo(buf, 8);
+            BitConverter.GetBytes(NvmeDataTypeFeature).CopyTo(buf, 12);
+            BitConverter.GetBytes(featureId).CopyTo(buf, 16);      // RequestValue = FID
+            BitConverter.GetBytes(0u).CopyTo(buf, 20);
+            BitConverter.GetBytes((uint)header).CopyTo(buf, 24);
+            BitConverter.GetBytes((uint)length).CopyTo(buf, 28);
+
+            if (!DeviceIoControl(handle, IoctlStorageQueryProperty, buf, (uint)buf.Length, buf, (uint)buf.Length, out uint ret, IntPtr.Zero))
+                return null;
+            if (ret < header + length) return null;
+            var data = new byte[length];
+            Array.Copy(buf, header, data, 0, length);
+            return data;
+        }
+        finally { CloseHandle(handle); }
+    }
 
     /// <summary>
     /// 取得 NVMe Identify Controller 資料區（4096B；回傳前 4096 位元組，後段是命名空間列表，現用不到）。

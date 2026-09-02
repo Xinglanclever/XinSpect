@@ -139,6 +139,31 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>USB 鏈路真相：埠能力、裝置能力與目前速度三者對照（實用工具子頁，唯讀集線器查詢）。</summary>
     public UsbLinkService UsbLink { get; } = new();
 
+    /// <summary>NVMe 電源狀態：宣告的省電行為對實測的「閒置後第一筆讀取」。</summary>
+    public NvmePowerService NvmePower { get; } = new();
+
+    /// <summary>顯示鏈路真相：目前模式需要多少頻寬、色彩有沒有被壓。</summary>
+    public DisplayLinkService DisplayLink { get; } = new();
+
+    /// <summary>大頁與位址轉換成本：同一份亂序鏈在 4 KB 頁與大頁上各跑一次。</summary>
+    public LargePageService LargePage { get; } = new();
+
+    /// <summary>L3 未命中與 DRAM 實際流量：架構效能事件＋自我驗證（記憶體分頁卡片）。</summary>
+    public DramTrafficService DramTraffic { get; } = new();
+
+    /// <summary>隱形停頓：SMI 次數與 C-state 駐留（CPU 分頁卡片，全唯讀 MSR）。</summary>
+    public InvisibleStallService InvisibleStall { get; } = new();
+
+    /// <summary>開機耗時分解：是誰比平常慢（健康分頁卡片，唯讀事件記錄）。</summary>
+    public BootBreakdownService BootBreakdown { get; } = new();
+
+    /// <summary>睡眠與喚醒診斷：為什麼自己醒來、為什麼睡不下去（實用工具子頁，powercfg 唯讀查詢）。</summary>
+    public SleepDiagnosticsService Sleep { get; } = new();
+
+    /// <summary>網卡進階屬性與 RSS 接收佇列（實用工具子頁，唯讀 WMI）。</summary>
+    public NetAdapterService NetAdapter { get; } = new();
+
+
     /// <summary>驅動程式稽核：已安裝驅動的簽章狀態與驅動日期（實用工具子頁，唯讀 WMI）。</summary>
     public DriverAuditService DriverAudit { get; } = new();
 

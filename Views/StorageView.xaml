@@ -43,7 +43,7 @@
                     <ItemsControl ItemsSource="{Binding Live.Drives}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,0,10">
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,0,10">
                                     <StackPanel>
                                         <!-- 標題列：品牌徽章＋型號，右側即時溫度/已用 -->
                                         <Grid Margin="0,0,0,10">
@@ -111,7 +111,7 @@
                                         <TextBlock Style="{StaticResource FieldValue}" Text="{Binding ActivityText}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                     <local:HistoryGraph Height="80" History="{Binding ActivityHist}"
-                                                        Stroke="{StaticResource AccentBrush}" Caption="活動時間 (%)" ShowValue="False"/>
+                                                        Stroke="{DynamicResource AccentBrush}" Caption="活動時間 (%)" ShowValue="False"/>
                                 </StackPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

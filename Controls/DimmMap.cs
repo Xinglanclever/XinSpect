@@ -30,6 +30,7 @@ public sealed class DimmMap : FrameworkElement
 
     public DimmMap()
     {
+        this.RepaintOnThemeChange();
         SnapsToDevicePixels = true;
         // 伺服器板一列可能有 12 個插槽；擠不下時寧可裁掉，也不要把字畫到隔壁通道上
         ClipToBounds = true;

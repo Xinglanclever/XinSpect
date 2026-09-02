@@ -35,34 +35,34 @@
             </Border>
 
             <UniformGrid Rows="1" Columns="5" Margin="0,0,0,12">
-                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="12,10" Margin="0,0,4,0">
+                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="12,10" Margin="0,0,4,0">
                     <StackPanel>
                         <TextBlock Text="平均 FPS" Style="{StaticResource FieldLabel}"/>
-                        <TextBlock Text="{Binding FrameTime.Stats.AvgFps}" FontSize="20" Foreground="{StaticResource PrimaryInkBrush}"/>
+                        <TextBlock Text="{Binding FrameTime.Stats.AvgFps}" FontSize="20" Foreground="{DynamicResource PrimaryInkBrush}"/>
                     </StackPanel>
                 </Border>
-                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="12,10" Margin="4,0">
+                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="12,10" Margin="4,0">
                     <StackPanel>
                         <TextBlock Text="1% Low" Style="{StaticResource FieldLabel}"/>
-                        <TextBlock Text="{Binding FrameTime.Stats.Low1}" FontSize="20" Foreground="{StaticResource PrimaryInkBrush}"/>
+                        <TextBlock Text="{Binding FrameTime.Stats.Low1}" FontSize="20" Foreground="{DynamicResource PrimaryInkBrush}"/>
                     </StackPanel>
                 </Border>
-                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="12,10" Margin="4,0">
+                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="12,10" Margin="4,0">
                     <StackPanel>
                         <TextBlock Text="0.1% Low" Style="{StaticResource FieldLabel}"/>
-                        <TextBlock Text="{Binding FrameTime.Stats.Low01}" FontSize="20" Foreground="{StaticResource PrimaryInkBrush}"/>
+                        <TextBlock Text="{Binding FrameTime.Stats.Low01}" FontSize="20" Foreground="{DynamicResource PrimaryInkBrush}"/>
                     </StackPanel>
                 </Border>
-                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="12,10" Margin="4,0">
+                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="12,10" Margin="4,0">
                     <StackPanel>
                         <TextBlock Text="幀時間中位" Style="{StaticResource FieldLabel}"/>
-                        <TextBlock Text="{Binding FrameTime.Stats.MedianMs}" FontSize="20" Foreground="{StaticResource PrimaryInkBrush}"/>
+                        <TextBlock Text="{Binding FrameTime.Stats.MedianMs}" FontSize="20" Foreground="{DynamicResource PrimaryInkBrush}"/>
                     </StackPanel>
                 </Border>
-                <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="12,10" Margin="4,0,0,0">
+                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="12,10" Margin="4,0,0,0">
                     <StackPanel>
                         <TextBlock Text="最大幀時間" Style="{StaticResource FieldLabel}"/>
-                        <TextBlock Text="{Binding FrameTime.Stats.MaxMs}" FontSize="20" Foreground="{StaticResource PrimaryInkBrush}"/>
+                        <TextBlock Text="{Binding FrameTime.Stats.MaxMs}" FontSize="20" Foreground="{DynamicResource PrimaryInkBrush}"/>
                     </StackPanel>
                 </Border>
             </UniformGrid>

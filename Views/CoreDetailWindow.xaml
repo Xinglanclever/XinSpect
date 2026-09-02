@@ -6,7 +6,7 @@
         Width="560" Height="720"
         WindowStartupLocation="CenterOwner"
         FontFamily="{StaticResource AppFont}"
-        Background="{StaticResource PagePlaneBrush}">
+        Background="{DynamicResource PagePlaneBrush}">
     <!-- DataContext = OverclockService（由開啟端設定）。此視窗僅呈現既有的即時資料與設定值，
          不進行任何寫入；每核心「電壓」為 XTU 覆寫設定值（非即時量測），已於標題誠實標注。 -->
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16,16,10,16">
@@ -17,11 +17,11 @@
                 <StackPanel>
                     <local:SectionHead Text="每核心即時溫度" HelpKey="coredetail/每核心即時溫度"/>
                     <TextBlock Text="溫度／頻率／負載皆為感測器實測值；取不到時顯示「—」。" FontSize="12" Margin="0,0,0,8"
-                               Foreground="{StaticResource MutedInkBrush}"/>
+                               Foreground="{DynamicResource MutedInkBrush}"/>
                     <ItemsControl ItemsSource="{Binding Cores}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="8" Padding="12,8" Margin="0,0,0,6">
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="8" Padding="12,8" Margin="0,0,0,6">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -30,11 +30,11 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold"
-                                                   VerticalAlignment="Center" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                                   VerticalAlignment="Center" Foreground="{DynamicResource PrimaryInkBrush}"/>
                                         <TextBlock Grid.Column="1" Text="{Binding ClockText}" FontSize="13" MinWidth="90" TextAlignment="Right"
-                                                   VerticalAlignment="Center" Foreground="{StaticResource SecondaryInkBrush}"/>
+                                                   VerticalAlignment="Center" Foreground="{DynamicResource SecondaryInkBrush}"/>
                                         <TextBlock Grid.Column="2" Text="{Binding LoadText}" FontSize="13" MinWidth="64" TextAlignment="Right"
-                                                   VerticalAlignment="Center" Foreground="{StaticResource MutedInkBrush}"/>
+                                                   VerticalAlignment="Center" Foreground="{DynamicResource MutedInkBrush}"/>
                                         <TextBlock Grid.Column="3" Text="{Binding TempText}" FontSize="14.5" FontWeight="Bold" MinWidth="72" TextAlignment="Right"
                                                    VerticalAlignment="Center"
                                                    Foreground="{Binding TempSeverity, Converter={StaticResource SeverityToBrush}}"/>
@@ -53,12 +53,12 @@
                 <StackPanel>
                     <local:SectionHead Text="每核心電壓（設定值）" HelpKey="coredetail/每核心電壓（設定值）"/>
                     <TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="18" Margin="0,0,0,8"
-                               Foreground="{StaticResource MutedInkBrush}"
+                               Foreground="{DynamicResource MutedInkBrush}"
                                Text="以下為各核心的電壓覆寫「設定值」與偏移量（來自 XTU 可調項），非每核心即時量測——多數平台僅能量測封裝級 Vcore（見下方波形）。整數倍頻上限一併列出。"/>
                     <ItemsControl ItemsSource="{Binding CoreTuneRows}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="8" Padding="12,8" Margin="0,0,0,6">
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="8" Padding="12,8" Margin="0,0,0,6">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
@@ -67,13 +67,13 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="{Binding Title}" FontSize="13.5" FontWeight="SemiBold" MinWidth="78"
-                                                   VerticalAlignment="Center" Foreground="{StaticResource PrimaryInkBrush}"/>
+                                                   VerticalAlignment="Center" Foreground="{DynamicResource PrimaryInkBrush}"/>
                                         <TextBlock Grid.Column="2" MinWidth="96" TextAlignment="Right" VerticalAlignment="Center" FontSize="13"
-                                                   Foreground="{StaticResource SecondaryInkBrush}"
+                                                   Foreground="{DynamicResource SecondaryInkBrush}"
                                                    Visibility="{Binding HasVoltage, Converter={StaticResource BoolToVis}}"
                                                    Text="{Binding Voltage.TargetText}"/>
                                         <TextBlock Grid.Column="3" MinWidth="96" TextAlignment="Right" VerticalAlignment="Center" FontSize="13" Margin="12,0,0,0"
-                                                   Foreground="{StaticResource MutedInkBrush}"
+                                                   Foreground="{DynamicResource MutedInkBrush}"
                                                    Visibility="{Binding HasRatio, Converter={StaticResource BoolToVis}}"
                                                    Text="{Binding Ratio.TargetText}"/>
                                     </Grid>
@@ -91,7 +91,7 @@
                     <Grid Margin="0,4,0,0">
                         <TextBlock Text="目前電壓" Style="{StaticResource FieldLabel}" HorizontalAlignment="Left"/>
                         <TextBlock Text="{Binding VoltageValueText}" HorizontalAlignment="Right" FontSize="15" FontWeight="Bold"
-                                   Foreground="{StaticResource PrimaryInkBrush}"/>
+                                   Foreground="{DynamicResource PrimaryInkBrush}"/>
                     </Grid>
                     <!-- 兩條波形同時在畫面上，通道色是「哪一條線」的識別，故固定不隨強調色走；
                          示波器其餘用色（管面、格線、光暈、讀值）都由這裡的色推導 -->

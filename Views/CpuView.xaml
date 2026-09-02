@@ -133,7 +133,7 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="5"
+                                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="5"
                                                 Padding="10,5" Margin="0,0,6,6">
                                             <TextBlock Style="{StaticResource FieldValue}" Text="{Binding}"/>
                                         </Border>
@@ -208,7 +208,7 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="{StaticResource Surface2Brush}" CornerRadius="5"
+                                    <Border Background="{DynamicResource Surface2Brush}" CornerRadius="5"
                                             Padding="10,5" Margin="0,0,6,6">
                                         <TextBlock Style="{StaticResource FieldValue}" Text="{Binding}"/>
                                     </Border>
@@ -230,11 +230,11 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <local:HistoryGraph Grid.Column="0" Height="112" Margin="0,0,6,0" Caption="使用率 (%)"
-                                            History="{Binding CpuLoadHist}" Stroke="{StaticResource AccentBrush}"/>
+                                            History="{Binding CpuLoadHist}" Stroke="{DynamicResource AccentBrush}"/>
                         <local:HistoryGraph Grid.Column="1" Height="112" Margin="3,0,3,0" Caption="溫度 (°C)"
-                                            History="{Binding CpuTempHist}" Stroke="{StaticResource SeriousBrush}"/>
+                                            History="{Binding CpuTempHist}" Stroke="{DynamicResource SeriousBrush}"/>
                         <local:HistoryGraph Grid.Column="2" Height="112" Margin="6,0,0,0" Caption="時脈 (MHz)"
-                                            History="{Binding CpuClockHist}" Stroke="{StaticResource GoodBrush}"/>
+                                            History="{Binding CpuClockHist}" Stroke="{DynamicResource GoodBrush}"/>
                     </Grid>
                 </StackPanel>
             </Border>
@@ -256,7 +256,7 @@
                                 <local:HistoryGraph Width="140" Height="66" Margin="0,0,6,6"
                                                     Caption="{Binding Label}"
                                                     History="{Binding History}"
-                                                    Stroke="{StaticResource AccentBrush}"/>
+                                                    Stroke="{DynamicResource AccentBrush}"/>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -283,7 +283,7 @@
                         <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="使用率"/>
                         <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="溫度" TextAlignment="Right"/>
                     </Grid>
-                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,4"/>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,0,0,4"/>
                     <ItemsControl ItemsSource="{Binding Live.CpuCores}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -335,7 +335,7 @@
                     <local:CoreLatencyHeatmap x:Name="Heat" Margin="0,10,0,0" MinHeight="300"
                                               Data="{Binding CoreLatency.MatrixNs}" Lps="{Binding CoreLatency.Lps}"/>
                     <TextBlock Margin="0,4,0,0" FontSize="13" TextWrapping="Wrap"
-                               Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding HoverText, ElementName=Heat}"/>
+                               Foreground="{DynamicResource PrimaryInkBrush}" Text="{Binding HoverText, ElementName=Heat}"/>
                 </StackPanel>
             </Border>
 
@@ -356,18 +356,18 @@
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,0,0,10" TextWrapping="Wrap"
                                Text="誠實界線：RMID 全核統一指派，因此得到的是「全系統＋逐核心」視角，做不到逐行程歸屬（那需要核心層的 RMID 排程）。QM_CTR 回報 Error／Unavailable 旗標時顯示「—」，絕不把錯誤碼當讀值。若整片為 0，最可能是本機 BIOS／平台未開放 RDT 監測——那就如實顯示 0。"/>
                     <UniformGrid Rows="1" Columns="2" Margin="0,0,0,6">
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="全系統記憶體頻寬" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding Rdt.TotalBwText}" FontSize="20" Margin="0,2,0,0"
-                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
                             <StackPanel>
                                 <TextBlock Text="狀態" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding Rdt.Status}" Margin="0,2,0,0" TextWrapping="Wrap"
-                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
                     </UniformGrid>
@@ -386,7 +386,7 @@
                         <TextBlock Grid.Column="3" Style="{StaticResource FieldLabel}" Text="總頻寬" TextAlignment="Right"/>
                         <TextBlock Grid.Column="4" Style="{StaticResource FieldLabel}" Text="本機頻寬" TextAlignment="Right"/>
                     </Grid>
-                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,0,0,4"/>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,0,0,4"/>
                     <ItemsControl ItemsSource="{Binding Rdt.Rows}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -424,33 +424,33 @@
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,0,0,10" TextWrapping="Wrap"
                                Text="誠實界線：倍頻表是「目前的設定」而非原廠規格——BIOS 解鎖改過就是改過的值，本工具不還原成規格書數字。有效時脈是取樣窗內的平均，不是瞬時峰值。「黃金核心」需要 HWP 的逐核心 Highest Performance（MSR 0x771）；讀不到就不宣稱任何一顆是黃金核心。"/>
                     <UniformGrid Rows="1" Columns="4" Margin="0,0,0,6">
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="0,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="實際 BCLK" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding FreqTruth.BclkText}" FontSize="20" Margin="0,2,0,0"
-                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="實測 TSC 頻率" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding FreqTruth.TscText}" FontSize="20" Margin="0,2,0,0"
-                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,5,0">
                             <StackPanel>
                                 <TextBlock Text="基頻倍頻" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding FreqTruth.BaseText}" FontSize="17" Margin="0,2,0,0"
-                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
                                 <TextBlock Text="{Binding FreqTruth.MinText}" Style="{StaticResource Subtitle}" Margin="0,2,0,0"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{StaticResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="14,12" Margin="5,0,0,0">
                             <StackPanel>
                                 <TextBlock Text="倍頻鎖定" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Text="{Binding FreqTruth.UnlockText}" Margin="0,2,0,0" TextWrapping="Wrap"
-                                           Foreground="{StaticResource PrimaryInkBrush}"/>
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
                             </StackPanel>
                         </Border>
                     </UniformGrid>
@@ -480,7 +480,7 @@
                     </ItemsControl>
 
                     <TextBlock Text="逐邏輯處理器有效時脈（實測）" Style="{StaticResource FieldLabel}" Margin="0,12,0,0"/>
-                    <Border Height="1" Background="{StaticResource HairlineBrush}" Margin="0,4,0,4"/>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,4,0,4"/>
                     <ItemsControl ItemsSource="{Binding FreqTruth.ClockRows}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -588,9 +588,9 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource Surface2Brush}" CornerRadius="6" Padding="8,3" Margin="0,0,6,6"
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="6" Padding="8,3" Margin="0,0,6,6"
                                         ToolTip="{Binding Source}">
-                                    <TextBlock FontSize="12" Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding Name}"/>
+                                    <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryInkBrush}" Text="{Binding Name}"/>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -670,7 +670,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Name}"/>
                                     <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" TextAlignment="Right"
-                                               Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding StateText}"/>
+                                               Foreground="{DynamicResource PrimaryInkBrush}" Text="{Binding StateText}"/>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -698,7 +698,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Key}"/>
                                     <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" TextAlignment="Right"
-                                               Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding Value}"/>
+                                               Foreground="{DynamicResource PrimaryInkBrush}" Text="{Binding Value}"/>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -746,7 +746,7 @@
                                     <ProgressBar Grid.Column="1" Style="{StaticResource LoadBar}" Margin="0,6,10,6"
                                                  Value="{Binding BusyPercent, Mode=OneWay}"/>
                                     <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" TextAlignment="Right"
-                                               Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding BusyText}"/>
+                                               Foreground="{DynamicResource PrimaryInkBrush}" Text="{Binding BusyText}"/>
                                     <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" TextAlignment="Right" Text="{Binding UserText}"/>
                                     <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" TextAlignment="Right" Text="{Binding KernelText}"/>
                                     <TextBlock Grid.Column="5" Style="{StaticResource FieldValue}" TextAlignment="Right"
@@ -759,12 +759,65 @@
                     </ItemsControl>
 
                     <TextBlock Style="{StaticResource FieldValue}" Margin="0,10,0,0" TextWrapping="Wrap"
-                               Foreground="{StaticResource PrimaryInkBrush}" Text="{Binding CoreTime.Summary}"/>
+                               Foreground="{DynamicResource PrimaryInkBrush}" Text="{Binding CoreTime.Summary}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap" Text="{Binding CoreTime.IdleCycles}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap" Text="{Binding CoreTime.GroupNotice}"
                                Visibility="{Binding CoreTime.HasGroupNotice, Converter={StaticResource BoolToVis}}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap" Text="{Binding CoreTime.ResolutionNotice}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap" Text="{Binding CoreTime.Status}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 隱形停頓：SMI 次數與 C-state 駐留（全唯讀 MSR） -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="隱形停頓（SMI 與 C-state 駐留）" HelpKey="cpu/隱形停頓（SMI 與 C-state 駐留）"/>
+                        <Button Style="{StaticResource PrimaryButton}" Content="量一次"
+                                HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="110"
+                                IsEnabled="{Binding InvisibleStall.CanMeasure}" Click="InvisibleStallMeasure_Click"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,8,0,0"
+                               Text="系統管理中斷（SMI）由韌體處理，發生時核心離開作業系統的視野——工作管理員永遠是 0%，但音訊會爆、幀時間會有尖峰。硬體只留下次數，沒有留下每次待了多久，所以本卡片只給頻率，不換算損失時間。C-state 駐留則說明封裝與核心真的睡了多久：閒著卻沒睡，代表有東西定期把它叫起來。"/>
+
+                    <local:FieldRow Label="SMI 累計（自開機）" Value="{Binding InvisibleStall.SmiTotalText}"/>
+                    <local:FieldRow Label="SMI 頻率" Value="{Binding InvisibleStall.SmiRateText}"/>
+
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,10"
+                            Visibility="{Binding InvisibleStall.Rows.Count, Converter={StaticResource CountToVis}}"/>
+                    <ItemsControl ItemsSource="{Binding InvisibleStall.Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,3,0,5">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="110"/><ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource AccentBrush}"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}"
+                                                   Text="{Binding Text}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="110,1,0,0"
+                                               Text="{Binding Note}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Border Margin="0,12,0,0" Padding="12,10" CornerRadius="6"
+                            Background="{DynamicResource Surface2Brush}">
+                        <StackPanel>
+                            <TextBlock FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"
+                                       Text="{Binding InvisibleStall.Verdict.Headline}"
+                                       Foreground="{Binding InvisibleStall.Verdict.Severity, Converter={StaticResource SeverityToBrush}}"/>
+                            <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                       Foreground="{DynamicResource SecondaryInkBrush}"
+                                       Text="{Binding InvisibleStall.Verdict.Detail}"/>
+                            <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" Margin="0,8,0,0"
+                                       Text="{Binding InvisibleStall.Status}"/>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </Border>
         </StackPanel>
