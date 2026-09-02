@@ -147,6 +147,7 @@ public static class PageRegistry
             Hint = "為什麼跑不到該有的頻率：溫度牆／功耗牆／電流牆／向量降頻",
             Keywords = ["ceiling", "天花板", "上限", "節流", "降頻", "throttle", "溫度牆", "功耗牆",
                         "電流", "prochot", "rapl", "pl1", "pl2", "tcc", "限制原因", "avx", "降頻原因"],
+            Advanced = true,
         },
         new()
         {
@@ -156,6 +157,7 @@ public static class PageRegistry
             Factory = () => new ScenesView(),
             Hint = "一鍵切換靜音／均衡／效能：風扇曲線＋電源計劃＋顯示卡上限",
             Keywords = ["scene", "scenes", "profile", "場景", "設定檔", "靜音", "均衡", "效能", "電源計劃", "powercfg", "一鍵"],
+            Advanced = true,
         },
         new()
         {
@@ -166,6 +168,7 @@ public static class PageRegistry
             Factory = () => new OverclockView(),
             Hint = "透過 Intel XTU 調整倍頻與電壓（測試版）",
             Keywords = ["oc", "overclock", "xtu", "超頻", "倍頻", "電壓"],
+            Advanced = true,
             RequiresRiskConsent = true,
         },
         new()
@@ -176,6 +179,7 @@ public static class PageRegistry
             Factory = () => new GpuOcView(),
             Hint = "NVML 功耗／風扇 + NVAPI 時脈偏移（測試版）",
             Keywords = ["gpu oc", "nvapi", "nvml", "顯卡超頻", "功耗", "時脈"],
+            Advanced = true,
         },
         new()
         {
@@ -187,6 +191,7 @@ public static class PageRegistry
             Factory = () => new FanControlView(),
             Hint = "主機板可控風扇的手動調速與曲線",
             Keywords = ["fan", "風扇", "轉速", "rpm", "曲線", "散熱"],
+            Advanced = true,
             // 風扇即時轉速讀取同樣昂貴，僅在本頁顯示時才每秒讀取
             LiveGate = (live, on) => live.FanControlsVisible = on,
         },
@@ -267,6 +272,7 @@ public static class PageRegistry
                      + "M4,5.5 h1 v0.01 h-1 z M4,10.5 h1 v0.01 h-1 z",
             Factory = () => new PortUsageView(),
             Hint = "查出是哪個行程占用了連接埠", Keywords = ["port", "tcp", "udp", "連接埠", "埠", "占用"],
+            Advanced = true,
         },
         new()
         {
@@ -274,6 +280,7 @@ public static class PageRegistry
             IconData = "M2,2 h12 v3 h-12 z M2,6.5 h12 v3 h-12 z M2,11 h12 v3 h-12 z M4,3 h1 v0.01 h-1 z M4,7.5 h1 v0.01 h-1 z M4,12 h1 v0.01 h-1 z",
             Factory = () => new HostsEditorView(),
             Hint = "編輯系統 hosts 檔", Keywords = ["hosts", "網域", "解析", "編輯"],
+            Advanced = true,
         },
         new()
         {
@@ -281,6 +288,7 @@ public static class PageRegistry
             IconData = "M8,1 L15,14 H1 Z M7.2,6 h1.6 v4 h-1.6 z M7.2,11 h1.6 v1.6 h-1.6 z",
             Factory = () => new BsodView(),
             Hint = "解讀 minidump 與停止碼", Keywords = ["bsod", "藍屏", "minidump", "當機", "停止碼", "dump"],
+            Advanced = true,
         },
         new()
         {
@@ -302,6 +310,7 @@ public static class PageRegistry
             IconData = "M3,1.5 L3,13 L6,10 L8,14.5 L10,13.5 L8,9 L12.5,9 Z",
             Factory = () => new ContextMenuView(),
             Hint = "管理檔案總管右鍵選單項目", Keywords = ["context", "右鍵", "選單", "檔案總管", "shell"],
+            Advanced = true,
         },
         new()
         {
@@ -317,6 +326,7 @@ public static class PageRegistry
                      + "M4,5.5 h1.4 v5 h-1.4 z M6.6,5.5 h1.4 v5 h-1.4 z M9.2,5.5 h1.4 v5 h-1.4 z M11.8,5.5 h1.4 v5 h-1.4 z",
             Factory = () => new MemoryCleanView(),
             Hint = "釋放工作集與待用清單", Keywords = ["memory clean", "記憶體整理", "釋放", "工作集"],
+            Advanced = true,
         },
         new()
         {
@@ -328,6 +338,7 @@ public static class PageRegistry
                      + "v-0.9 a1.6,1.6 0 0 1 1.6,-1.6 z M8,5 a3,3 0 1 0 0.01,0 z",
             Factory = () => new StartupView(),
             Hint = "停用不必要的開機自啟項", Keywords = ["startup", "啟動項", "自啟", "開機", "autorun"],
+            Advanced = true,
         },
         new()
         {
@@ -338,6 +349,7 @@ public static class PageRegistry
             Hint = "已安裝驅動的簽章狀態與驅動日期（唯讀 WMI）",
             Keywords = ["driver", "驅動", "驅動程式", "簽章", "signed", "未簽章", "unsigned", "inf",
                         "版本", "過舊", "裝置管理員", "device manager", "pnp"],
+            Advanced = true,
         },
         new()
         {
@@ -358,6 +370,7 @@ public static class PageRegistry
                      + "M4.5,7.5 h5 v1.2 h-5 z M4.5,9.8 h5 v1.2 h-5 z M4.5,12.1 h3.2 v1.2 h-3.2 z",
             Factory = () => new DiskScanView(),
             Hint = "找出占空間的大檔與資料夾", Keywords = ["disk scan", "大檔", "掃描", "空間", "占用"],
+            Advanced = true,
         },
         new()
         {
@@ -372,6 +385,7 @@ public static class PageRegistry
             IconData = "M1,7.5 h3 v-3 h2 v3 h2 v-5 h2 v7 h2 v-4 h2 v4 h1 v2 h-14 z",
             Factory = () => new FrameTimeView(),
             Hint = "任何程式的真實幀時間與 1% Low（ETW，不注入）", Keywords = ["frame time", "fps", "幀時間", "掉幀", "頓", "遊戲", "1% low"],
+            Advanced = true,
         },
         new()
         {
@@ -379,6 +393,7 @@ public static class PageRegistry
             IconData = "M2,2 h5 v3 h-5 z M9,2 h5 v5 h-5 z M2,7 h5 v7 h-5 z M9,9 h5 v5 h-5 z",
             Factory = () => new DpcLatencyView(),
             Hint = "排出造成音訊爆音／輸入停頓的肇事驅動（ETW）", Keywords = ["dpc", "isr", "延遲", "latency", "爆音", "驅動", "latencymon"],
+            Advanced = true,
         },
         new()
         {
@@ -388,6 +403,16 @@ public static class PageRegistry
             Hint = "目前協商到的速度／寬度對裝置能力（唯讀 PCI 設定空間）",
             Keywords = ["pcie", "pci", "鏈路", "link", "通道", "lane", "x16", "x4", "gen4", "gen5",
                         "顯示卡", "nvme", "m.2", "分流", "bifurcation", "頻寬"],
+            Advanced = true,
+        },
+        new()
+        {
+            Key = "license", Title = "Windows 授權", Group = GTools,
+            IconData = "F1 M8,1 l6,3 v4 a7,7 0 0 1 -6,7 a7,7 0 0 1 -6,-7 v-4 z M7.2,5 h1.6 v4 h-1.6 z M7.2,10 h1.6 v1.6 h-1.6 z",
+            Factory = () => new LicenseView(),
+            Hint = "是不是正版、重裝會不會掉、能不能移到新電腦（唯讀）",
+            Keywords = ["授權", "金鑰", "產品金鑰", "正版", "啟用", "activation", "license", "key",
+                        "oem", "零售", "重裝", "轉移", "序號"],
         },
         new()
         {
@@ -397,6 +422,7 @@ public static class PageRegistry
             Hint = "RSS 接收佇列與驅動開放的每一項設定（唯讀 WMI）",
             Keywords = ["網卡", "網路卡", "nic", "rss", "佇列", "queue", "中斷節流", "卸載", "offload",
                         "緩衝區", "buffer", "進階屬性", "驅動設定", "收包", "丟包"],
+            Advanced = true,
         },
         new()
         {
@@ -416,6 +442,7 @@ public static class PageRegistry
             Keywords = ["顯示", "螢幕", "鏈路", "display", "displayport", "dp", "hdmi", "色度", "4:2:2",
                         "420", "422", "444", "rgb", "ycbcr", "位元深度", "10bit", "hdr", "刷新率",
                         "144hz", "4k", "頻寬", "發糊", "模糊"],
+            Advanced = true,
         },
         new()
         {
@@ -426,6 +453,7 @@ public static class PageRegistry
             Hint = "閒置後第一筆讀取為什麼慢：宣告的離開延遲對實測（唯讀）",
             Keywords = ["nvme", "電源狀態", "省電", "apst", "閒置", "延遲", "尖峰", "卡頓", "喚醒",
                         "離開延遲", "exit latency", "ps0", "睡眠", "ssd", "固態", "p99"],
+            Advanced = true,
         },
         new()
         {
@@ -437,6 +465,7 @@ public static class PageRegistry
             Hint = "裝置能力對目前速度：掉到 480 Mb/s 時分清是埠還是線（唯讀查詢集線器）",
             Keywords = ["usb", "隨身碟", "u盤", "外接", "硬碟", "集線器", "hub", "埠", "port",
                         "3.0", "3.1", "3.2", "5gb", "10gb", "480", "線材", "cable", "掉速", "速度", "供電"],
+            Advanced = true,
         },
         new()
         {

@@ -227,6 +227,11 @@
                 <Button DockPanel.Dock="Right" Style="{StaticResource ToolButton}" VerticalAlignment="Top"
                         Content="自訂磁貼" Click="Customize_Click"
                         ToolTip="選擇要顯示哪些區塊、調整上下順序"/>
+                <!-- 問人的時候要貼的那幾行：整機報告是留存用的完整檔案，這個是貼得進聊天室的摘要 -->
+                <Button x:Name="CopySpecButton" DockPanel.Dock="Right" Style="{StaticResource ToolButton}"
+                        VerticalAlignment="Top" Margin="0,0,8,0"
+                        Content="複製規格摘要" Click="CopySpec_Click"
+                        ToolTip="把八行規格複製到剪貼簿，方便貼到論壇或聊天室問人。不含電腦名稱、使用者名稱與任何序號。"/>
             </DockPanel>
 
             <!-- 自訂面板：只在按下「自訂磁貼」時展開，平時不佔畫面 -->

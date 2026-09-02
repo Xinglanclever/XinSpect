@@ -164,6 +164,14 @@
                     </ItemsControl>
                     <TextBlock x:Name="AccentHint" Style="{StaticResource Subtitle}" Margin="0,2,0,0"/>
 
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,16"/>
+                    <local:SectionHead Text="簡易模式" HelpKey="settings/簡易模式"/>
+                    <CheckBox Style="{StaticResource SetCheck}" Margin="0,8,0,0"
+                              Content="側邊欄只列一般使用者用得到的頁面"
+                              IsChecked="{Binding Settings.SimpleMode, Mode=TwoWay}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,6,0,0"
+                               Text="收起來的是直讀暫存器、編程效能計數器那一類頁面（效能天花板、超頻、PCIe／USB 鏈路、NVMe 電源狀態、DPC 延遲…）。這只是不列在側邊欄——按 Ctrl+K 照樣搜得到每一頁，功能不會消失。"/>
+
                     <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,18,0,0"/>
                     <local:SectionHead Text="動態視覺效果" HelpKey="settings/動態視覺效果" Margin="0,16,0,0"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"

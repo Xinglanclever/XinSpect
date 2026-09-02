@@ -36,7 +36,7 @@
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0"
                                Text="硬體資訊總覽 ・ 即時偵測工具"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,2,0,0"
-                               Text="版本 1.8.2 ・ 便攜單一執行檔"/>
+                               Text="版本 1.9.0 ・ 便攜單一執行檔"/>
 
                     <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,16"/>
 
@@ -188,7 +188,7 @@
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <local:SectionHead Text="功能模組" HelpKey="about/功能模組"/>
-                    <local:FieldRow Label="系統總覽" Value="使用率・溫度・作業系統・主機板摘要"/>
+                    <local:FieldRow Label="系統總覽" Value="使用率・溫度・作業系統・主機板摘要・一鍵複製規格摘要"/>
                     <local:FieldRow Label="處理器" Value="規格・各核心時脈與負載・封裝溫度・CPU-Z 深度規格・隱形停頓（SMI 與 C-state 駐留）"/>
                     <local:FieldRow Label="記憶體" Value="真實時序・使用量・實體模組・SPD／XMP 深度資料・大頁與位址轉換成本・L3 未命中與 DRAM 實際流量"/>
                     <local:FieldRow Label="主機板" Value="晶片組・BIOS／UEFI・PCIe 連結・LPCIO 超級 I/O"/>
@@ -203,7 +203,7 @@
                     <local:FieldRow Label="AI 評價" Value="本機免費 Ollama 或 OpenAI 相容 API・客觀評價・可自訂提示詞"/>
                     <local:FieldRow Label="一鍵裝機" Value="依分類批次安裝常用軟體（Windows 內建 winget）"/>
                     <local:FieldRow Label="工具箱" Value="Windows 系統工具一鍵開啟＋數十款硬體工具官方下載捷徑（不內含任何外部執行檔）"/>
-                    <local:FieldRow Label="實用工具" Value="硬體檢測（螢幕壞點／滑鼠／鍵盤／喇叭／動態）・連接埠占用・Hosts 編輯・藍屏分析・垃圾清理・電池分析・右鍵選單・網速測試・記憶體整理・開機啟動項・DNS 切換・大檔掃描・效能天梯（CPU／顯示卡跑分排行，純本機內建）・驅動稽核・幀時間監測・DPC 延遲與中斷歸屬・PCIe 鏈路・USB 鏈路・NVMe 電源狀態・顯示鏈路真相・睡眠與喚醒・網卡進階屬性"/>
+                    <local:FieldRow Label="實用工具" Value="硬體檢測（螢幕壞點／滑鼠／鍵盤／喇叭／動態）・連接埠占用・Hosts 編輯・藍屏分析・垃圾清理・電池分析・右鍵選單・網速測試・記憶體整理・開機啟動項・DNS 切換・大檔掃描・效能天梯（CPU／顯示卡跑分排行，純本機內建）・驅動稽核・幀時間監測・DPC 延遲與中斷歸屬・PCIe 鏈路・USB 鏈路・NVMe 電源狀態・顯示鏈路真相・睡眠與喚醒・網卡進階屬性・Windows 授權"/>
                 </StackPanel>
             </Border>
 

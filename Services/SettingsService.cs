@@ -54,6 +54,16 @@ public sealed class SettingsService : ObservableObject
     private bool _alertsEnabled = true;
     public bool AlertsEnabled { get => _alertsEnabled; set { if (SetProperty(ref _alertsEnabled, value)) Save(); } }
 
+    private bool _simpleMode;
+    /// <summary>
+    /// 簡易模式：側邊欄只列一般使用者用得到的頁面，直讀暫存器那類進階頁先收起來。
+    /// </summary>
+    /// <remarks>
+    /// 只是不顯示，不是停用——命令面板（Ctrl+K）照樣搜得到每一頁。預設關閉，
+    /// 因為既有使用者升級上來時不該突然少一半頁面。
+    /// </remarks>
+    public bool SimpleMode { get => _simpleMode; set { if (SetProperty(ref _simpleMode, value)) Save(); } }
+
     private double _cpuTempThreshold = 90;
     /// <summary>CPU 溫度警示門檻（°C），50–110。</summary>
     public double CpuTempThreshold { get => _cpuTempThreshold; set { if (SetProperty(ref _cpuTempThreshold, Math.Clamp(value, 50, 110))) Save(); } }

@@ -163,6 +163,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>網卡進階屬性與 RSS 接收佇列（實用工具子頁，唯讀 WMI）。</summary>
     public NetAdapterService NetAdapter { get; } = new();
 
+    /// <summary>Windows 授權狀態：是不是正版、重裝會不會掉、能不能轉移（實用工具子頁，唯讀 WMI）。</summary>
+    public LicenseService License { get; } = new();
+
 
     /// <summary>驅動程式稽核：已安裝驅動的簽章狀態與驅動日期（實用工具子頁，唯讀 WMI）。</summary>
     public DriverAuditService DriverAudit { get; } = new();

@@ -47,6 +47,15 @@ public partial class MainWindow : Window
         // 主題／強調色變更（設定頁）後重新套用標題輝光
         ThemeService.Changed += ApplyAccentGlow;
 
+        // 簡易模式切換後重建側邊欄（設定頁改的是同一份 SettingsService）
+        _vm.Settings.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(SettingsService.SimpleMode)) return;
+            var keep = _currentDef;
+            BuildNav();
+            if (keep is not null) Nav.SelectedItem = keep;   // 別把使用者正在看的頁面切掉
+        };
+
         Loaded += (_, _) =>
         {
             if (_initialized) return;   // 防止重複初始化（重跑計時器與感測器引擎）
@@ -62,7 +71,14 @@ public partial class MainWindow : Window
     // 以註冊表建立側邊欄項目來源，並依 Group 分組（順序即註冊順序）。
     private void BuildNav()
     {
-        var src = new CollectionViewSource { Source = PageRegistry.Pages };
+        // 簡易模式下把進階頁從側邊欄收起來（命令面板照樣搜得到，只是不列在這裡）。
+        // 目前頁若正好被收起來，保留它——把使用者正在看的東西抽掉比多一個項目更糟。
+        bool simple = _vm.Settings.SimpleMode;
+        var pages = PageRegistry.Pages
+            .Where(p => !simple || !p.Advanced || ReferenceEquals(p, _currentDef))
+            .ToList();
+
+        var src = new CollectionViewSource { Source = pages };
         src.GroupDescriptions.Add(new PropertyGroupDescription(nameof(PageDef.Group)));
         Nav.ItemsSource = src.View;
     }
