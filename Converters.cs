@@ -107,6 +107,19 @@ public sealed class BoolToCompactGlyphConverter : IValueConverter
         => Binding.DoNothing;
 }
 
+/// <summary>USB 拓樸深度 → 左邊的縮排（每經過一層外接集線器往右一格）。</summary>
+/// <remarks>USB 規格最多 7 層，深度封在 6 格：資料異常（或負數）時寧可不縮排，也不把裝置名稱推出畫面。</remarks>
+public sealed class DepthToIndentConverter : IValueConverter
+{
+    private const double Step = 14;
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => new Thickness(value is int d ? Math.Clamp(d, 0, 6) * Step : 0, 0, 0, 0);
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => Binding.DoNothing;
+}
+
 /// <summary>總覽磁貼 → 對應的版面樣板（以資源鍵 <c>Tile.{識別碼}</c> 查找）。</summary>
 /// <remarks>
 /// 磁貼順序是資料、外觀是宣告：把七塊卡片各包成一個 <c>DataTemplate</c> 放在

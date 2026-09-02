@@ -26,6 +26,12 @@ public sealed class DiskBenchService : ObservableObject
     private const double RandSeconds = 3.0;      // 隨機讀 / 寫各自的計時預算
     private const FileOptions NoBuffering = (FileOptions)0x20000000; // FILE_FLAG_NO_BUFFERING
 
+    /// <summary>隨機測試的時間預算，換成計時器刻數（迴圈裡直接比刻數，不必每圈算一次 TimeSpan）。</summary>
+    private static readonly long RandTicks = (long)(RandSeconds * Stopwatch.Frequency);
+
+    /// <summary>逐筆延遲的容量：3 秒 ÷ 5 µs。先開好，避免在量測迴圈裡重新配置而自己製造離群值。</summary>
+    private const int LatCapacity = 600_000;
+
     private CancellationTokenSource? _cts;
 
     public ObservableCollection<string> Drives { get; } = new();
@@ -52,6 +58,14 @@ public sealed class DiskBenchService : ObservableObject
     public string SeqReadText { get => _seqRead; private set => SetProperty(ref _seqRead, value); }
     public string RandReadText { get => _randRead; private set => SetProperty(ref _randRead, value); }
     public string RandWriteText { get => _randWrite; private set => SetProperty(ref _randWrite, value); }
+
+    private DiskLatencyStats _readLat = new(), _writeLat = new();
+
+    /// <summary>隨機 4K 讀取的逐筆延遲分佈（QD1，每一筆都量到）。還沒跑過就是「沒有樣本」。</summary>
+    public DiskLatencyStats RandReadLatency { get => _readLat; private set => SetProperty(ref _readLat, value); }
+
+    /// <summary>隨機 4K 寫入的逐筆延遲分佈。</summary>
+    public DiskLatencyStats RandWriteLatency { get => _writeLat; private set => SetProperty(ref _writeLat, value); }
 
     /// <summary>列出可測試的固定磁碟機（就緒且為本機磁碟）。</summary>
     public void PopulateDrives()
@@ -93,6 +107,8 @@ public sealed class DiskBenchService : ObservableObject
         Phase = "測試中";
         ProgressFraction = 0;
         SeqWriteText = SeqReadText = RandReadText = RandWriteText = "測試中…";
+        RandReadLatency = new DiskLatencyStats();
+        RandWriteLatency = new DiskLatencyStats();
         StatusLine = $"正在測試 {root} …";
 
         var prog = new Progress<(double Frac, string Status)>(t => { ProgressFraction = t.Frac; StatusLine = t.Status; });
@@ -105,16 +121,18 @@ public sealed class DiskBenchService : ObservableObject
             if (di.AvailableFreeSpace < TestBytes + 256L * Mib)
                 throw new IOException($"可用空間不足（需約 {(TestBytes + 256L * Mib) / (double)Mib / 1024:0.0} GB）。");
 
-            var (sw, sr, rr, rw) = await Task.Run(() => RunAll(path, ct, report), ct);
+            var r = await Task.Run(() => RunAll(path, ct, report), ct);
 
-            SeqWriteText = $"{sw:0} MB/s";
-            SeqReadText = $"{sr:0} MB/s";
-            RandReadText = $"{rr:#,0} IOPS";
-            RandWriteText = $"{rw:#,0} IOPS";
+            SeqWriteText = $"{r.SeqW:0} MB/s";
+            SeqReadText = $"{r.SeqR:0} MB/s";
+            RandReadText = $"{r.RandR:#,0} IOPS";
+            RandWriteText = $"{r.RandW:#,0} IOPS";
+            RandReadLatency = r.ReadLat;
+            RandWriteLatency = r.WriteLat;
 
             Phase = "完成";
             ProgressFraction = 1;
-            StatusLine = $"完成 ・ 循序寫 {sw:0} / 讀 {sr:0} MB/s ・ 隨機4K 讀 {rr:#,0} / 寫 {rw:#,0} IOPS（未緩衝直接 I/O ・ QD1）";
+            StatusLine = $"完成 ・ 循序寫 {r.SeqW:0} / 讀 {r.SeqR:0} MB/s ・ 隨機4K 讀 {r.RandR:#,0} / 寫 {r.RandW:#,0} IOPS（未緩衝直接 I/O ・ QD1）";
         }
         catch (OperationCanceledException)
         {
@@ -135,11 +153,20 @@ public sealed class DiskBenchService : ObservableObject
         }
     }
 
+    /// <summary>一次完整測試的結果：四項吞吐，加上兩個隨機階段的逐筆延遲分佈。</summary>
+    private sealed record BenchResult(
+        double SeqW, double SeqR, double RandR, double RandW,
+        DiskLatencyStats ReadLat, DiskLatencyStats WriteLat);
+
     /// <summary>
     /// 實際量測。全程使用未緩衝直接 I/O（NO_BUFFERING + WriteThrough）與磁區對齊的原生緩衝區，
     /// 以 <see cref="RandomAccess"/> 對 <see cref="SafeFileHandle"/> 在指定位移讀寫。
+    /// <para>
+    /// 隨機兩段是 QD1 逐次同步 I/O，因此每一筆的耗時都留下來交給 <see cref="DiskLatencyStats"/>——
+    /// 平均成 IOPS 會把停頓抹平，尾端百分位才看得出來。
+    /// </para>
     /// </summary>
-    private static unsafe (double SeqW, double SeqR, double RandR, double RandW) RunAll(
+    private static unsafe BenchResult RunAll(
         string path, CancellationToken ct, IProgress<(double, string)> report)
     {
         // 磁區對齊的原生緩衝區（1 MB）：未緩衝 I/O 要求緩衝區位址、讀寫長度、檔案位移皆為磁區整數倍。
@@ -194,42 +221,48 @@ public sealed class DiskBenchService : ObservableObject
             var rblk = new Span<byte>(p, RandBlock);   // 沿用前段緩衝區前 4 KB
 
             // 3) 隨機 4K 讀取（未緩衝 ・ QD1 ・ 定時預算）
+            //    逐次同步，所以每一筆夾在兩次計時器讀取之間就是它自己的延遲；計時器的成本含在裡面，
+            //    沒有扣掉（扣了就變成估的）。時間預算也用同一組刻數判斷，不必另外讀一次。
             report.Report((0.72, "隨機 4K 讀取…"));
+            var readLat = new List<long>(LatCapacity);
             {
                 using var h = File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.None, NoBuffering);
-                var sw = Stopwatch.StartNew();
-                long ops = 0;
-                while (sw.Elapsed.TotalSeconds < RandSeconds)
+                long t0 = Stopwatch.GetTimestamp(), now = t0, ops = 0;
+                while (now - t0 < RandTicks)
                 {
                     long pos = (long)(rnd.NextDouble() * (blocks - 1)) * RandBlock;   // 4K 對齊
+                    long a = Stopwatch.GetTimestamp();
                     RandomAccess.Read(h, rblk, pos);
-                    ops++;
-                    if ((ops & 255) == 0) ct.ThrowIfCancellationRequested();
+                    now = Stopwatch.GetTimestamp();
+                    readLat.Add(now - a);
+                    if ((++ops & 255) == 0) ct.ThrowIfCancellationRequested();
                 }
-                sw.Stop();
-                randR = ops / sw.Elapsed.TotalSeconds;
+                randR = ops / ((now - t0) / (double)Stopwatch.Frequency);
             }
 
             // 4) 隨機 4K 寫入（未緩衝直寫 ・ QD1 ・ 定時預算）
             report.Report((0.86, "隨機 4K 寫入…"));
+            var writeLat = new List<long>(LatCapacity);
             {
                 using var h = File.OpenHandle(path, FileMode.Open, FileAccess.Write, FileShare.None,
                                               NoBuffering | FileOptions.WriteThrough);
-                var sw = Stopwatch.StartNew();
-                long ops = 0;
-                while (sw.Elapsed.TotalSeconds < RandSeconds)
+                long t0 = Stopwatch.GetTimestamp(), now = t0, ops = 0;
+                while (now - t0 < RandTicks)
                 {
                     long pos = (long)(rnd.NextDouble() * (blocks - 1)) * RandBlock;   // 4K 對齊
+                    long a = Stopwatch.GetTimestamp();
                     RandomAccess.Write(h, rblk, pos);
-                    ops++;
-                    if ((ops & 255) == 0) ct.ThrowIfCancellationRequested();
+                    now = Stopwatch.GetTimestamp();
+                    writeLat.Add(now - a);
+                    if ((++ops & 255) == 0) ct.ThrowIfCancellationRequested();
                 }
-                sw.Stop();
-                randW = ops / sw.Elapsed.TotalSeconds;
+                randW = ops / ((now - t0) / (double)Stopwatch.Frequency);
             }
 
             report.Report((0.99, "整理結果…"));
-            return (seqW, seqR, randR, randW);
+            return new BenchResult(seqW, seqR, randR, randW,
+                                   DiskLatencyStats.FromTicks(readLat, Stopwatch.Frequency),
+                                   DiskLatencyStats.FromTicks(writeLat, Stopwatch.Frequency));
         }
         finally
         {

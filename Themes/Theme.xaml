@@ -46,6 +46,7 @@
     <local:BoolToPromptConverter x:Key="BoolToPrompt"/>
     <local:BoolToPinGlyphConverter x:Key="BoolToPinGlyph"/>
     <local:BoolToCompactGlyphConverter x:Key="BoolToCompactGlyph"/>
+    <local:DepthToIndentConverter x:Key="DepthToIndent"/>
 
     <!-- ===== 文字樣式 ===== -->
     <Style TargetType="TextBlock">

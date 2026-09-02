@@ -391,6 +391,17 @@ public static class PageRegistry
         },
         new()
         {
+            Key = "usb", Title = "USB 鏈路", Group = GTools,
+            IconData = "M6.4,1 h3.2 v3 h-3.2 z M7.4,4 h1.2 v10 h-1.2 z "
+                     + "M3.4,7.4 h4 v1.2 h-4 z M3.4,6.2 h1.2 v2.4 h-1.2 z "
+                     + "M8.6,10 h4 v1.2 h-4 z M11.4,8.8 h1.2 v2.4 h-1.2 z",
+            Factory = () => new UsbLinkView(),
+            Hint = "裝置能力對目前速度：掉到 480 Mb/s 時分清是埠還是線（唯讀查詢集線器）",
+            Keywords = ["usb", "隨身碟", "u盤", "外接", "硬碟", "集線器", "hub", "埠", "port",
+                        "3.0", "3.1", "3.2", "5gb", "10gb", "480", "線材", "cable", "掉速", "速度", "供電"],
+        },
+        new()
+        {
             // 螢幕壞點、滑鼠、鍵盤、喇叭、動態五項全螢幕檢測。1.6.2 前掛在工具箱的「曦覽內建」組裡，
             // 現已全部移到這裡（工具箱不再有任何內建按鈕）。
             Key = "hwtest", Title = "硬體檢測", Group = GTools,

@@ -136,6 +136,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>PCIe 鏈路實況：目前協商的速度／寬度對裝置能力（實用工具子頁，唯讀 PCI 設定空間）。</summary>
     public PcieLinkService PcieLink { get; } = new();
 
+    /// <summary>USB 鏈路真相：埠能力、裝置能力與目前速度三者對照（實用工具子頁，唯讀集線器查詢）。</summary>
+    public UsbLinkService UsbLink { get; } = new();
+
     /// <summary>驅動程式稽核：已安裝驅動的簽章狀態與驅動日期（實用工具子頁，唯讀 WMI）。</summary>
     public DriverAuditService DriverAudit { get; } = new();
 

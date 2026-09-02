@@ -122,6 +122,86 @@ public class UiSmokeTests
     }
 
     /// <summary>
+    /// 有資料才會用到的清單樣板。
+    /// <para>
+    /// 上面那支煙霧測試建構的每一頁都是<b>空的</b>——沒有按過任何「重新掃描」，
+    /// 所以 <c>ItemsControl.ItemTemplate</c> 一次也不會被套用，樣板裡寫錯的繫結路徑與
+    /// 找不到的 <c>StaticResource</c>（例如轉換器沒登記進佈景資源）就這樣躲過整套測試，
+    /// 直到使用者掃出第一個裝置才當場閃退。這裡把 USB 鏈路頁塞兩列真的資料進去，逼樣板套用一次。
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void USB鏈路頁的清單樣板_有資料時也沒有繫結錯誤()
+    {
+        var failures = new List<string>();
+        var thread = new Thread(() => RunUsbTemplate(failures));
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.IsBackground = true;
+        thread.Start();
+
+        if (!thread.Join(TimeSpan.FromMinutes(1)))
+            failures.Add("USB 樣板煙霧測試逾時（1 分鐘未完成）。");
+
+        Assert.True(failures.Count == 0,
+            $"USB 鏈路頁樣板發現 {failures.Count} 項問題：\n" + string.Join("\n", failures));
+    }
+
+    /// <summary>只提供 UsbLink 一個屬性的最小宿主：樣板要驗的是路徑與資源，不必動用整個 MainViewModel。</summary>
+    private sealed class UsbOnly { public UsbLinkService UsbLink { get; } = new(); }
+
+    private static void RunUsbTemplate(List<string> failures)
+    {
+        WpfEnv.Ensure();
+
+        PresentationTraceSources.Refresh();
+        var listener = new CollectingListener();
+        PresentationTraceSources.DataBindingSource.Listeners.Add(listener);
+        PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Warning;
+
+        try
+        {
+            var host = new UsbOnly();
+            // 兩列：一列直接掛在根集線器上，一列掛在外接集線器底下——縮排轉換器只有後者會走到
+            host.UsbLink.Rows.Add(SampleUsbRow(0, "控制器 1／埠 3"));
+            host.UsbLink.Rows.Add(SampleUsbRow(1, "控制器 1／埠 3／埠 2"));
+
+            var view = new UsbLinkView { DataContext = host };
+            view.Measure(new Size(1280, 800));
+            view.Arrange(new Rect(0, 0, 1280, 800));
+            view.UpdateLayout();   // 項目容器是排版時才產生的，逼它把樣板真的套上去
+
+            foreach (var line in listener.Drain().Split('\n'))
+            {
+                var t = line.Trim();
+                if (t.Length == 0) continue;
+                if (t.Contains("BindingExpression path error") ||
+                    t.Contains("Cannot convert") ||
+                    t.Contains("Cannot find governing FrameworkElement"))
+                    failures.Add("繫結錯誤：" + t);
+            }
+        }
+        catch (Exception ex)
+        {
+            failures.Add("套用樣板失敗：" + Describe(ex));
+        }
+        finally
+        {
+            PresentationTraceSources.DataBindingSource.Listeners.Remove(listener);
+        }
+    }
+
+    private static UsbPortRow SampleUsbRow(int depth, string location)
+    {
+        var (verdict, severity) = UsbLinkDecoder.Judge(2, 2, 4, true);
+        return new UsbPortRow(location, depth, "測試裝置", "VID 1234 ・ PID 5678", "USB 3.2", "大量儲存",
+                              UsbLinkDecoder.OperatingText(2, 2, true),
+                              UsbLinkDecoder.CapableText(2, true),
+                              UsbLinkDecoder.PortText(7),
+                              UsbLinkDecoder.PowerText(250, 0x80, false),
+                              verdict, severity);
+    }
+
+    /// <summary>
     /// 把例外連同<b>全部內層例外</b>攤成一行。XamlParseException 的訊息只說「設定屬性時擲回例外狀況」，
     /// 真正的原因永遠在 InnerException 裡——只印外層等於把診斷資訊丟掉。
     /// </summary>

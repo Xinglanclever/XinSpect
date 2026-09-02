@@ -760,9 +760,30 @@
             <!-- ===== 磁碟效能測試 ===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="280">
                 <StackPanel>
+                    <StackPanel.Resources>
+                        <!-- 延遲直方圖的一列：區間 ・ 長條（以最多的那一格為滿格）・ 筆數 ・ 佔比 -->
+                        <DataTemplate x:Key="LatencyBucketRow">
+                            <Grid Margin="0,1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="98"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="86"/>
+                                    <ColumnDefinition Width="54"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}"
+                                           VerticalAlignment="Center" Text="{Binding RangeText}"/>
+                                <ProgressBar Grid.Column="1" Style="{StaticResource LoadBar}" Margin="4,0,10,0"
+                                             VerticalAlignment="Center" Value="{Binding BarPercent, Mode=OneWay}"/>
+                                <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" TextAlignment="Right"
+                                           VerticalAlignment="Center" Text="{Binding Count, StringFormat={}{0:N0} 筆}"/>
+                                <TextBlock Grid.Column="3" Style="{StaticResource FieldLabel}" TextAlignment="Right"
+                                           VerticalAlignment="Center" Text="{Binding ShareText}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </StackPanel.Resources>
                     <local:SectionHead Text="磁碟效能測試" HelpKey="bench/磁碟效能測試"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
-                               Text="於所選磁碟建立約 512 MB 暫存檔，量測循序讀寫（MB/s）與隨機 4K 讀寫（IOPS），完成後自動刪除暫存檔。全程採未緩衝直接 I/O（繞過作業系統讀寫快取，避免讀到快取殘留而失真），隨機 4K 為佇列深度 1（QD1）。"/>
+                               Text="於所選磁碟建立約 512 MB 暫存檔，量測循序讀寫（MB/s）與隨機 4K 讀寫（IOPS），完成後自動刪除暫存檔。全程採未緩衝直接 I/O（繞過作業系統讀寫快取，避免讀到快取殘留而失真），隨機 4K 為佇列深度 1（QD1）——因此每一筆 I/O 的延遲都留得下來，測完會一併給出延遲的百分位與直方圖。"/>
 
                     <DockPanel LastChildFill="False">
                         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
@@ -812,6 +833,32 @@
                             </StackPanel>
                         </Border>
                     </UniformGrid>
+
+                    <!-- 逐筆延遲分佈：QD1 是逐次同步 I/O，每一筆本來就量到了，平均成 IOPS 會把停頓抹平 -->
+                    <Grid Margin="0,16,0,0"
+                          Visibility="{Binding DiskBench.RandReadLatency.HasData, Converter={StaticResource BoolToVis}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,7,0">
+                            <TextBlock Text="隨機 4K 讀取 ・ 延遲分佈" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,2,0,8"
+                                       Text="{Binding DiskBench.RandReadLatency.SummaryText}"/>
+                            <ItemsControl ItemsSource="{Binding DiskBench.RandReadLatency.Buckets}"
+                                          ItemTemplate="{StaticResource LatencyBucketRow}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="7,0,0,0">
+                            <TextBlock Text="隨機 4K 寫入 ・ 延遲分佈" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,2,0,8"
+                                       Text="{Binding DiskBench.RandWriteLatency.SummaryText}"/>
+                            <ItemsControl ItemsSource="{Binding DiskBench.RandWriteLatency.Buckets}"
+                                          ItemTemplate="{StaticResource LatencyBucketRow}"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Visibility="{Binding DiskBench.RandReadLatency.HasData, Converter={StaticResource BoolToVis}}"
+                               Text="百分位取的是排序後真的量到過的那一筆（最近排名，不內插、不抽樣、不套分佈模型）；每一筆都含兩次計時器讀取的成本，沒有扣掉。中間的空區間留著不填——快慢兩群之間的那段空白本身就是要看的東西。"/>
 
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,10,0,0" TextWrapping="Wrap" Text="{Binding DiskBench.StatusLine}"/>
                 </StackPanel>
