@@ -209,6 +209,9 @@ public sealed class LargePageService : ObservableObject
             (order[i], order[j]) = (order[j], order[i]);
         }
 
+        // 指標追逐量的是單筆存取的延遲，旁邊有動畫在重繪就會混進爭用的成本
+        using var quiet = Motion.Suspend();
+
         double? small = null, large = null;
         try
         {

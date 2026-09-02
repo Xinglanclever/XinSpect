@@ -97,6 +97,9 @@ public sealed class DramTrafficService : ObservableObject
 
     private static Result Run()
     {
+        // 動畫重繪會製造額外的記憶體流量與快取壓力，那會動到自我驗證的比值
+        using var quiet = Motion.Suspend();
+
         using var bridge = WinRing0Bridge.Create();
         if (!bridge.Available)
             return Empty("讀不到效能計數器：" + bridge.Error

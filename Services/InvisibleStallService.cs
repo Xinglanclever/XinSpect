@@ -117,6 +117,10 @@ public sealed class InvisibleStallService : ObservableObject
         using var pin = CpuAffinity.Pinned(all[^1]);
         if (!pin.Ok) return Fail("無法釘選核心；逐核駐留必須在同一顆核上讀兩次才有意義，因此不量。");
 
+        // 量的是「機器有多安靜」，那就不能自己一邊量一邊畫動畫——重繪會讓封裝進不了深層省電，
+        // 等於把要量的東西自己破壞掉。跑分那幾支早就這樣做了，這裡沿用同一個機制。
+        using var quiet = Motion.Suspend();
+
         try
         {
             var msrs = PackageMsrs.Concat(CoreMsrs).ToArray();

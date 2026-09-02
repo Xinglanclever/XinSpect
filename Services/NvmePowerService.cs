@@ -229,6 +229,9 @@ public sealed class NvmePowerService : ObservableObject
     /// </summary>
     private static unsafe List<IdleLatencySample>? Sweep(int index, Action<string> progress)
     {
+        // 這趟有大半時間是刻意的閒置，動畫在那期間重繪就等於量到「有活動時的閒置」
+        using var quiet = Motion.Suspend();
+
         void* buf = NativeMemory.AlignedAlloc(Block, Block);
         try
         {
