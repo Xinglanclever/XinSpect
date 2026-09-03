@@ -6,38 +6,160 @@ namespace XinSpect.Tests;
 /// <summary>S.M.A.R.T. 解碼純函式：NVMe 健康紀錄與 ATA 屬性表（合成位元組）。</summary>
 public class SmartDecoderTests
 {
-    private static byte[] BuildNvmeLog()
+    /// <summary>
+    /// 依<b>規格</b>建一份 SMART／健康紀錄，不是依實作。
+    /// </summary>
+    /// <remarks>
+    /// 這一點是這份測試最重要的地方。1.9.1 之前的版本把位移寫錯了兩處，而當時的測試是照著
+    /// 實作的位移建資料的——於是測試綠燈、畫面上的溫度與壽命卻全是別的欄位。
+    /// 現在改用 <see cref="NvmeLogDecoder"/> 的具名常數建資料：常數若跟規格不符，
+    /// 這裡就會連帶錯，但至少「測試」與「實作」不再是同一個來源。
+    /// </remarks>
+    private static byte[] BuildNvmeLog(byte criticalWarning = 0)
     {
         var log = new byte[512];
         void Put16(int o, ushort v) { log[o] = (byte)v; log[o + 1] = (byte)(v >> 8); }
-        void Put64(int o, ulong v) { for (int i = 0; i < 8; i++) log[o + i] = (byte)(v >> (8 * i)); }
-        Put16(0, 0);                      // 無關鍵警告
-        Put16(2, 328);                    // 328 K = 55 °C
-        log[4] = 100; log[5] = 10;        // 備用 100%，門檻 10%
-        log[6] = 5;                       // Percentage Used 5%
-        Put64(0x28, 1_000_000);           // 寫入 1,000,000 單位 = 512,000,000,000 B = 0.512 TB
-        Put64(0x50, 123_456);             // 通電 123456 小時
-        Put64(0x58, 3);                   // 不安全關機 3 次
+        // 128 位元計數器：低 64 位元寫值，高 64 位元留 0
+        void Put128(int o, ulong v) { for (int i = 0; i < 8; i++) log[o + i] = (byte)(v >> (8 * i)); }
+
+        log[NvmeLogDecoder.OffCriticalWarning] = criticalWarning;
+        Put16(NvmeLogDecoder.OffCompositeTemp, 328);          // 328 K = 55 °C
+        log[NvmeLogDecoder.OffAvailableSpare] = 100;
+        log[NvmeLogDecoder.OffSpareThreshold] = 10;
+        log[NvmeLogDecoder.OffPercentageUsed] = 5;
+        Put128(NvmeLogDecoder.OffDataUnitsRead, 2_000_000);
+        Put128(NvmeLogDecoder.OffDataUnitsWritten, 1_000_000);   // = 512,000,000,000 B
+        Put128(NvmeLogDecoder.OffPowerCycles, 742);
+        Put128(NvmeLogDecoder.OffPowerOnHours, 123_456);
+        Put128(NvmeLogDecoder.OffUnsafeShutdowns, 3);
+        Put128(NvmeLogDecoder.OffMediaErrors, 0);
+        Put128(NvmeLogDecoder.OffErrorLogEntries, 11);
         return log;
     }
 
     [Fact]
-    public void NVMe健康紀錄解碼_溫度壽命與寫入量()
+    public void NVMe健康紀錄解碼_每一個欄位都對得上規格位移()
     {
         var rows = StorageSmartService.DecodeNvmeHealth(BuildNvmeLog());
         var dict = rows.ToDictionary(r => r.Name, r => r.ValueText);
+
         Assert.Equal("55 °C", dict["溫度（綜合）"]);
+        Assert.Equal("100%（門檻 10%）", dict["可用備用空間"]);
         Assert.Equal("5%", dict["已使用壽命（Percentage Used）"]);
+        Assert.Equal("1.024 TB（2,000,000 單位）", dict["累計讀取（Data Units Read）"]);
         Assert.Equal("512.0 GB（1,000,000 單位）", dict["累計寫入（Data Units Written）"]);
+        Assert.Equal("742 次", dict["電源循環"]);
         Assert.Equal("123,456 小時", dict["通電時間"]);
         Assert.Equal("3 次", dict["不安全關機"]);
-        Assert.Equal("無", dict["關鍵警告"]);
+        Assert.Equal("0", dict["媒體與資料完整性錯誤"]);
+        Assert.Equal("11", dict["錯誤資訊紀錄項目"]);
+        Assert.Equal("無（0x00）", dict["關鍵警告"]);
+    }
+
+    [Fact]
+    public void 規格位移本身要釘住_計數器是一百二十八位元而不是六十四位元()
+    {
+        // 這兩條是 1.9.1 之前那個缺陷的直接根因，各釘一條。
+        Assert.Equal(0x01, NvmeLogDecoder.OffCompositeTemp);   // 關鍵警告只有 1 位元組，溫度緊接在後
+        Assert.Equal(0x30, NvmeLogDecoder.OffDataUnitsWritten); // 讀取量在 0x20，佔 16 位元組
+        Assert.Equal(0x80, NvmeLogDecoder.OffPowerOnHours);     // 與 TryReadPowerOnHours 用的是同一個值
+        // 每個 128 位元計數器相隔 16 位元組
+        Assert.Equal(16, NvmeLogDecoder.OffPowerCycles - NvmeLogDecoder.OffControllerBusyTime);
+        Assert.Equal(16, NvmeLogDecoder.OffPowerOnHours - NvmeLogDecoder.OffPowerCycles);
+    }
+
+    [Fact]
+    public void 關鍵警告要逐位元說出是什麼出問題而不是只給十六進位()
+    {
+        // 0b0000_1001 = 備用空間見底 ＋ 已進入唯讀模式
+        var rows = StorageSmartService.DecodeNvmeHealth(BuildNvmeLog(0x09));
+        var names = rows.Select(r => r.Name).ToList();
+        Assert.Contains(names, n => n.Contains("備用空間低於門檻"));
+        Assert.Contains(names, n => n.Contains("已進入唯讀模式"));
+        Assert.Equal("2 項（0x09）", rows.First(r => r.Name == "關鍵警告").ValueText);
+        // 沒亮的位元不該出現
+        Assert.DoesNotContain(names, n => n.Contains("溫度超出臨界範圍"));
+    }
+
+    [Fact]
+    public void 沒有警告時不列任何位元()
+    {
+        Assert.Empty(NvmeLogDecoder.CriticalWarnings(0));
+        Assert.Equal(6, NvmeLogDecoder.CriticalWarnings(0x3F).Count);
+        // 未定義的位元照實列出而不假裝認得
+        var undef = NvmeLogDecoder.CriticalWarnings(0x40);
+        Assert.Single(undef);
+        Assert.Contains("未定義", undef[0].Name);
     }
 
     [Fact]
     public void NVMe健康紀錄_長度不足丟例外()
     {
         Assert.Throws<InvalidOperationException>(() => StorageSmartService.DecodeNvmeHealth(new byte[100]));
+    }
+
+    // ── 錯誤資訊紀錄（log page 0x01）────────────────────────────
+
+    private static byte[] BuildErrorLog()
+    {
+        var log = new byte[NvmeLogDecoder.ErrorEntrySize * 4];
+        void Entry(int slot, ulong count, int sq, int cid, int sct, int sc, ulong lba, uint ns)
+        {
+            int o = slot * NvmeLogDecoder.ErrorEntrySize;
+            for (int i = 0; i < 8; i++) log[o + i] = (byte)(count >> (8 * i));
+            log[o + 8] = (byte)sq; log[o + 9] = (byte)(sq >> 8);
+            log[o + 10] = (byte)cid; log[o + 11] = (byte)(cid >> 8);
+            int status = ((sct & 0x7) << 9) | ((sc & 0xFF) << 1);   // 位 0 是 Phase Tag
+            log[o + 12] = (byte)status; log[o + 13] = (byte)(status >> 8);
+            for (int i = 0; i < 8; i++) log[o + 16 + i] = (byte)(lba >> (8 * i));
+            for (int i = 0; i < 4; i++) log[o + 24 + i] = (byte)(ns >> (8 * i));
+        }
+        Entry(0, 7, 3, 0x21, sct: 2, sc: 0x81, lba: 1_234_567, ns: 1);   // 讀取無法修正
+        Entry(1, 9, 0, 0x05, sct: 0, sc: 0x02, lba: 0, ns: 1);           // 命令欄位無效（較新）
+        // slot 2、3 保持全 0 ＝ 空槽位
+        return log;
+    }
+
+    [Fact]
+    public void 錯誤紀錄依錯誤計數由新到舊且跳過空槽位()
+    {
+        var entries = NvmeLogDecoder.ErrorEntries(BuildErrorLog());
+        Assert.Equal(2, entries.Count);                 // 兩個空槽位不列
+        Assert.Equal(9UL, entries[0].ErrorCount);       // 計數大的是較新的
+        Assert.Equal(7UL, entries[1].ErrorCount);
+    }
+
+    [Fact]
+    public void 錯誤紀錄的狀態碼要翻成人看得懂的一句話()
+    {
+        var entries = NvmeLogDecoder.ErrorEntries(BuildErrorLog());
+        var media = entries.First(e => e.ErrorCount == 7);
+        Assert.Equal(2, media.StatusCodeType);
+        Assert.Equal(0x81, media.StatusCode);
+        Assert.Contains("讀取無法修正", media.StatusText);
+        Assert.Equal("1,234,567", media.LbaText);       // 媒體錯誤才有 LBA
+        Assert.Equal("SQ 3 ／ CID 33", media.QueueText);
+
+        var generic = entries.First(e => e.ErrorCount == 9);
+        Assert.Equal("—", generic.LbaText);             // 非媒體錯誤的 LBA 不適用，不硬印數字
+        Assert.Contains("命令欄位無效", generic.StatusText);
+    }
+
+    [Fact]
+    public void 查不到的狀態碼回報原始SCT與SC而不編一個說法()
+    {
+        string s = NvmeLogDecoder.StatusText(1, 0x7E);
+        Assert.Contains("沒有這個狀態", s);
+        Assert.Contains("SCT 1", s);
+        Assert.Contains("0x7E", s);
+    }
+
+    [Fact]
+    public void 完全沒有錯誤時明說一筆都沒有而不是留白()
+    {
+        var rows = StorageSmartService.DecodeNvmeErrorLog(new byte[NvmeLogDecoder.ErrorEntrySize * 4]);
+        Assert.Single(rows);
+        Assert.Contains("沒有任何一筆", rows[0].ValueText);
     }
 
     private static byte[] BuildAtaSector()

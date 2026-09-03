@@ -38,11 +38,16 @@ public class ChangelogTests
     /// 版號一共寫在三個地方（csproj、README 徽章、關於頁），發版時最容易漏掉其中一處；
     /// 既然已經有一份紀錄要對，就順手把三處一起釘住。
     /// </summary>
+    /// <remarks>
+    /// README 那一處要先做 shields.io 的轉義：它拿 <c>-</c> 當欄位分隔符，所以版號裡的連字號
+    /// （預覽版的 <c>1.9.1-B1</c>）必須寫成 <c>--</c>，否則徽章會把「B1」讀成顏色。
+    /// 這個轉義只影響徽章網址，不是版號本身不一致。
+    /// </remarks>
     [Fact]
     public void 三處版號與紀錄一致()
     {
         string v = ChangelogCatalog.Latest;
-        Assert.Contains($"version-{v}-", ReadRepoFile("README.md"));
+        Assert.Contains($"version-{v.Replace("-", "--")}-", ReadRepoFile("README.md"));
         Assert.Contains($"版本 {v} ・", ReadRepoFile(Path.Combine("Views", "AboutView.xaml")));
     }
 

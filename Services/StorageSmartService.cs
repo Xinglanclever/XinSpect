@@ -60,6 +60,7 @@ public sealed class StorageSmartService : ObservableObject
     private const uint ProtocolTypeNvme = 3;
     private const uint NvmeDataTypeLogPage = 2;
     private const uint NvmeLogPageHealth = 0x02;
+    private const uint NvmeLogPageError = 0x01;   // 錯誤資訊紀錄
 
     private bool _busy;
     public bool IsBusy { get => _busy; private set { if (SetProperty(ref _busy, value)) OnPropertyChanged(nameof(CanRead)); } }
@@ -164,6 +165,11 @@ public sealed class StorageSmartService : ObservableObject
                         ? ("NVMe 健康紀錄（log page 0x02，DeviceIoControl 直讀；匯流排 " + busName + "）", DecodeNvmeHealth(nvme)
                            .Concat(new[] { new SmartRow("── 硬體識別 ──", "", "", "") })
                            .Concat(TryReadNvmeIdentify(index) is { } nvi ? DecodeNvmeIdentify(nvi) : new[] { new SmartRow("NVMe Identify Controller", "不支援（儲存堆疊未回應協定查詢）", "", "") })
+                           .Concat(new[] { new SmartRow("── 錯誤紀錄 ──", "", "", "") })
+                           // 「這顆碟開始要壞了」最早的證據在 log page 0x01；讀不到就說讀不到，不猜
+                           .Concat(TryReadNvme(index, NvmeLogPageError) is { } errs
+                               ? DecodeNvmeErrorLog(errs)
+                               : new[] { new SmartRow("錯誤資訊紀錄（log page 0x01）", "讀不到（儲存堆疊未回應這一頁的協定查詢；USB 外接盒多半不轉發 NVMe 命令）", "", "") })
                            .ToList())
                         : throw new InvalidOperationException("NVMe 裝置的健康紀錄讀取失敗（儲存堆疊未回應協定查詢）。"),
                     3 or 10 or 11 => TryReadAtaSmartClassic(index) is { } ata
@@ -243,8 +249,8 @@ public sealed class StorageSmartService : ObservableObject
 
     // ── NVMe ───────────────────────────────────────────────────────────────
 
-    /// <summary>以 StorageDeviceProtocolSpecificProperty 取 NVMe 健康紀錄 512 位元組；失敗回 null。</summary>
-    private static byte[]? TryReadNvme(int index)
+    /// <summary>以 StorageDeviceProtocolSpecificProperty 取指定 NVMe 紀錄頁 512 位元組；失敗回 null。</summary>
+    private static byte[]? TryReadNvme(int index, uint logPage = NvmeLogPageHealth)
     {
         var handle = OpenDrive(index);
         if (handle == IntPtr.Zero) return null;
@@ -256,7 +262,7 @@ public sealed class StorageSmartService : ObservableObject
             BitConverter.GetBytes(0u).CopyTo(buf, 4);                                 // QueryType = PropertyStandardQuery
             BitConverter.GetBytes(ProtocolTypeNvme).CopyTo(buf, 8);                   // ProtocolType
             BitConverter.GetBytes(NvmeDataTypeLogPage).CopyTo(buf, 12);               // DataRequested
-            BitConverter.GetBytes(NvmeLogPageHealth).CopyTo(buf, 16);                 // RequestValue = 0x02
+            BitConverter.GetBytes(logPage).CopyTo(buf, 16);                            // RequestValue（0x02 健康／0x01 錯誤）
             BitConverter.GetBytes(0u).CopyTo(buf, 20);                                // RequestSubValue
             BitConverter.GetBytes((uint)header).CopyTo(buf, 24);                      // ProtocolDataOffset（自緩衝區起算）
             BitConverter.GetBytes(512u).CopyTo(buf, 28);                              // ProtocolDataLength
@@ -276,16 +282,17 @@ public sealed class StorageSmartService : ObservableObject
     public static List<SmartRow> DecodeNvmeHealth(byte[] log)
     {
         if (log.Length < 512) throw new InvalidOperationException("NVMe 健康紀錄長度不足 512 位元組。");
-        ushort Le16(int o) => (ushort)(log[o] | (log[o + 1] << 8));
-        ulong Le64(int o)
-        {
-            ulong v = 0;
-            for (int i = 7; i >= 0; i--) v = (v << 8) | log[o + i];
-            return v;
-        }
+
+        // 位移一律走 NvmeLogDecoder 的常數。1.9.1 之前這裡是寫死的數字，而且錯了兩處：
+        // 關鍵警告被當成 2 位元組（規格是 1），把溫度／備用空間／已使用壽命整批推後一格；
+        // 128 位元計數器被當成 8 位元組，把寫入量之後的每一個計數器都推錯位置。
+        // 同一個檔案裡 TryReadPowerOnHours 用的是規格上正確的 0x80，兩者對不起來才發現。
+        ulong C(int off) => NvmeLogDecoder.Counter128Low(log, off);
+        ushort Le16(int o) => NvmeLogDecoder.Le16(log, o);
+
         string DuText(int o)
         {
-            ulong units = Le64(o);
+            ulong units = C(o);
             if (units == 0) return "0";
             double bytes = units * 512000.0;   // 1 單位 = 1000 × 512 位元組
             return bytes >= 1e12 ? $"{bytes / 1e12:0.000} TB（{units:N0} 單位）"
@@ -293,20 +300,53 @@ public sealed class StorageSmartService : ObservableObject
                  : $"{bytes / 1e6:0} MB（{units:N0} 單位）";
         }
 
+        byte flags = log[NvmeLogDecoder.OffCriticalWarning];
+        var warns = NvmeLogDecoder.CriticalWarnings(flags);
+        ushort kelvin = Le16(NvmeLogDecoder.OffCompositeTemp);
+
         var rows = new List<SmartRow>
         {
-            new("關鍵警告", Le16(0) == 0 ? "無" : $"0x{Le16(0):X4}", "", ""),
-            new("溫度（綜合）", Le16(2) > 0 ? $"{Le16(2) - 273} °C" : "—", "", ""),
-            new("可用備用空間", $"{log[4]}%（門檻 {log[5]}%）", "", ""),
-            new("已使用壽命（Percentage Used）", $"{log[6]}%", "", ""),
-            new("累計讀取（Data Units Read）", DuText(0x20), "", ""),
-            new("累計寫入（Data Units Written）", DuText(0x28), "", ""),
-            new("通電時間", Le64(0x50) == 0 ? "—" : $"{Le64(0x50):N0} 小時", "", ""),
-            new("電源循環", $"{Le64(0x48):N0} 次", "", ""),
-            new("不安全關機", $"{Le64(0x58):N0} 次", "", ""),
-            new("媒體與資料完整性錯誤", $"{Le64(0x60):N0}", "", ""),
-            new("錯誤資訊紀錄項目", $"{Le64(0x68):N0}", "", ""),
+            // 原始位元組照留（0x00 就是「沒有任何警告」），但底下逐條說出到底哪一位元亮了
+            new("關鍵警告", warns.Count == 0 ? $"無（0x{flags:X2}）" : $"{warns.Count} 項（0x{flags:X2}）", "", ""),
         };
+        foreach (var w in warns)
+            rows.Add(new SmartRow($"　└ 位元 {w.Bit}：{w.Name}", w.Meaning, "", ""));
+
+        rows.Add(new("溫度（綜合）", kelvin > 0 ? $"{kelvin - 273} °C" : "—", "", ""));
+        rows.Add(new("可用備用空間",
+            $"{log[NvmeLogDecoder.OffAvailableSpare]}%（門檻 {log[NvmeLogDecoder.OffSpareThreshold]}%）", "", ""));
+        rows.Add(new("已使用壽命（Percentage Used）", $"{log[NvmeLogDecoder.OffPercentageUsed]}%", "", ""));
+        rows.Add(new("累計讀取（Data Units Read）", DuText(NvmeLogDecoder.OffDataUnitsRead), "", ""));
+        rows.Add(new("累計寫入（Data Units Written）", DuText(NvmeLogDecoder.OffDataUnitsWritten), "", ""));
+        rows.Add(new("通電時間", C(NvmeLogDecoder.OffPowerOnHours) == 0
+            ? "—" : $"{C(NvmeLogDecoder.OffPowerOnHours):N0} 小時", "", ""));
+        rows.Add(new("電源循環", $"{C(NvmeLogDecoder.OffPowerCycles):N0} 次", "", ""));
+        rows.Add(new("不安全關機", $"{C(NvmeLogDecoder.OffUnsafeShutdowns):N0} 次", "", ""));
+        rows.Add(new("媒體與資料完整性錯誤", $"{C(NvmeLogDecoder.OffMediaErrors):N0}", "", ""));
+        rows.Add(new("錯誤資訊紀錄項目", $"{C(NvmeLogDecoder.OffErrorLogEntries):N0}", "", ""));
+        return rows;
+    }
+
+    /// <summary>
+    /// 錯誤資訊紀錄（log page 0x01）→ 資料列。空槽位（錯誤計數 0）不列。
+    /// </summary>
+    /// <remarks>
+    /// 這是「這顆碟開始要壞了」最早的證據所在：每一筆記著出錯的命令、狀態碼與 LBA，
+    /// 而 Windows 完全不看它。讀不到就要說讀不到——USB 外接盒多半不轉發 NVMe 命令。
+    /// </remarks>
+    public static List<SmartRow> DecodeNvmeErrorLog(byte[] log)
+    {
+        var entries = NvmeLogDecoder.ErrorEntries(log);
+        if (entries.Count == 0)
+            return [new SmartRow("錯誤資訊紀錄（log page 0x01）", "沒有任何一筆——這顆碟從未回報過命令層級的錯誤。", "", "")];
+
+        var rows = new List<SmartRow>
+        {
+            new("錯誤資訊紀錄（log page 0x01）", $"{entries.Count} 筆（最新的在最前面）", "", ""),
+        };
+        foreach (var e in entries)
+            rows.Add(new SmartRow($"　└ {e.CountText}", $"{e.StatusText}（{e.RawStatusText}）"
+                + $" ・ LBA {e.LbaText} ・ 命名空間 {e.NamespaceText} ・ {e.QueueText}", "", ""));
         return rows;
     }
 
