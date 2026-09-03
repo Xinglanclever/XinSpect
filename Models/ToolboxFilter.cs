@@ -32,13 +32,12 @@ public static class ToolboxFilter
     }
 
     /// <summary>搜尋結果的狀態列文字；筆數為 0 時明說沒有命中而不是留白。</summary>
-    public static string Summarize(string? query, bool onlyBuiltin, int matched, int total)
+    public static string Summarize(string? query, int matched, int total)
     {
-        string scope = onlyBuiltin ? "（僅列曦覽自己做得到的項目）" : "";
-        if (string.IsNullOrWhiteSpace(query) && !onlyBuiltin)
+        if (string.IsNullOrWhiteSpace(query))
             return $"共 {total} 項工具。第三方工具一律導向官方下載，本程式不內含任何外部執行檔。";
         if (matched == 0)
-            return $"沒有符合「{query}」的項目{scope}；共 {total} 項可搜尋。";
-        return $"符合 {matched} / {total} 項{scope}。";
+            return $"沒有符合「{query}」的項目；共 {total} 項可搜尋。";
+        return $"符合 {matched} / {total} 項。";
     }
 }

@@ -1,0 +1,167 @@
+<UserControl x:Class="XinSpect.ThreadMigrationView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <StackPanel Margin="2,0,0,10">
+                <local:SectionHead Text="執行緒遷移與排程落點" HelpKey="migration/執行緒遷移與排程落點"/>
+                <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                           Text="「明明還有很多核閒著卻很卡」有兩個成因。一半是中斷全落在同一顆核上——那在「DPC 延遲與中斷歸屬」看得到；另一半是執行緒一直被搬來搬去，每次搬動都把已經拉進 L1／L2 的資料留在原地，跨 CCX 或跨 NUMA 時連 L3 都得重新拉。後者在工作管理員裡完全看不見：使用率一樣、頻率一樣，就是慢。全程唯讀，只訂閱 ETW 事件。"/>
+            </StackPanel>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="量測" HelpKey="migration/量測"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button Style="{StaticResource PrimaryButton}" Content="開始量測"
+                                    Click="Start_Click" IsEnabled="{Binding Migration.CanStart}"/>
+                            <Button Style="{StaticResource ToolButton}" Content="停止" Margin="10,0,0,0"
+                                    Click="Stop_Click"
+                                    Visibility="{Binding Migration.IsRunning, Converter={StaticResource BoolToVis}}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" MinWidth="120">
+                            <TextBlock Text="{Binding Migration.Headline}" FontSize="42" FontWeight="Bold"
+                                       Foreground="{DynamicResource AccentBrush}"/>
+                            <TextBlock Text="{Binding Migration.HeadlineUnit}" Style="{StaticResource FieldLabel}"
+                                       Margin="0,-4,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                            <local:FieldRow Label="階段" Value="{Binding Migration.Phase}"/>
+                            <local:FieldRow Label="本機拓樸" Value="{Binding Migration.TopologyText}"/>
+                            <TextBlock Text="{Binding Migration.Status}" Style="{StaticResource FieldLabel}"
+                                       TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="19"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <ProgressBar Style="{StaticResource LoadBar}" Margin="0,12,0,0"
+                                 Value="{Binding Migration.ProgressPercent, Mode=OneWay}"
+                                 Visibility="{Binding Migration.IsRunning, Converter={StaticResource BoolToVis}}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ══ 分層：這一跳丟掉了什麼 ═════════════════════════════════════ -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding Migration.Hops.Count, Converter={StaticResource CountToVis}}">
+                <StackPanel>
+                    <local:SectionHead Text="遷移分層" HelpKey="migration/遷移分層"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,8" TextWrapping="Wrap"
+                               Text="一萬次在 SMT 兄弟之間跳，和一萬次跨 NUMA 跳，是完全不同的兩件事。所以這裡不給一個「每秒遷移數」了事，而是照代價分層。"/>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/><ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="90"/><ColumnDefinition Width="110"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource ColHead}" Text="層級"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="次數"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="佔比"/>
+                        <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="速率"/>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Migration.Hops}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="7"
+                                        Padding="11,8" Margin="0,0,0,5">
+                                    <StackPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/><ColumnDefinition Width="110"/>
+                                                <ColumnDefinition Width="90"/><ColumnDefinition Width="110"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding CountText}" Style="{StaticResource FieldValue}"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding ShareText}" Style="{StaticResource FieldValue}"/>
+                                            <TextBlock Grid.Column="3" Text="{Binding RateText}" Style="{StaticResource FieldValue}"/>
+                                        </Grid>
+                                        <TextBlock Text="{Binding Cost}" Style="{StaticResource FieldLabel}"
+                                                   TextWrapping="Wrap" Margin="0,4,0,0" LineHeight="18"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- ══ 行程排名（依遷移率）════════════════════════════════════════ -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding Migration.Processes.Count, Converter={StaticResource CountToVis}}">
+                <StackPanel>
+                    <local:SectionHead Text="哪些行程最會彈跳" HelpKey="migration/哪些行程最會彈跳"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,8" TextWrapping="Wrap"
+                               Text="依「遷移率」排序而不是絕對次數：絕對次數只會把最忙的行程排在前面，那是同義反覆。切入次數少於 200 的行程不列——只切了 3 次而其中 2 次換核，算出來是 67%，但那不代表什麼。"/>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/><ColumnDefinition Width="70"/>
+                            <ColumnDefinition Width="100"/><ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="90"/><ColumnDefinition Width="100"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource ColHead}" Text="行程"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="PID"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="切入次數"/>
+                        <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="遷移次數"/>
+                        <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="遷移率"/>
+                        <TextBlock Grid.Column="5" Style="{StaticResource ColHead}" Text="跨 LLC"/>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Migration.Processes}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="100"/><ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="90"/><ColumnDefinition Width="100"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Name}" Style="{StaticResource FieldValue}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding PidText}" Style="{StaticResource FieldValue}"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding SwitchText}" Style="{StaticResource FieldValue}"/>
+                                    <TextBlock Grid.Column="3" Text="{Binding MigrationText}" Style="{StaticResource FieldValue}"/>
+                                    <TextBlock Grid.Column="4" Text="{Binding RatioText}" Style="{StaticResource FieldValue}"/>
+                                    <TextBlock Grid.Column="5" Text="{Binding CrossLlcText}" Style="{StaticResource FieldValue}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- ══ 逐核切入次數 ═══════════════════════════════════════════════ -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding Migration.ByCpu.Count, Converter={StaticResource CountToVis}}">
+                <StackPanel>
+                    <local:SectionHead Text="切換落在哪幾顆核" HelpKey="migration/切換落在哪幾顆核"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,8" TextWrapping="Wrap"
+                               Text="排程把執行緒切到哪幾顆核上。分佈嚴重不均時，看的是同一件事的另一面：某幾顆核在做全部的工作，其餘的閒著。"/>
+                    <ItemsControl ItemsSource="{Binding Migration.ByCpu}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90"/><ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="80"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding CpuText}" Style="{StaticResource FieldValue}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding SwitchText}" Style="{StaticResource FieldValue}"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding ShareText}" Style="{StaticResource FieldValue}"/>
+                                    <ProgressBar Grid.Column="3" Style="{StaticResource LoadBar}" VerticalAlignment="Center"
+                                                 Maximum="1" Value="{Binding Share, Mode=OneWay}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -15,6 +15,7 @@ namespace XinSpect.Tests;
 /// 不呼叫 Initialize() 表示 SensorService／LibreHardwareMonitor 不會建立，硬核單元也全未量測——
 /// 這正好就是本測試要驗的那個狀態。
 /// </remarks>
+[Collection(WpfCollection.Name)]
 public class AiUpgradeTests
 {
     /// <summary>硬核批次的 11 項工具名稱（AiToolboxBuilder.Hardcore.cs）。</summary>

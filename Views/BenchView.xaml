@@ -591,7 +591,7 @@
                                     <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding DerivedSize}" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" Text="{Binding ClaimedSize}" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding Deviation}" VerticalAlignment="Center"
-                                               TextAlignment="Right" Foreground="{Binding ConfidenceClass, Converter={StaticResource SeverityToBrushConverter}}"/>
+                                               TextAlignment="Right" Foreground="{Binding ConfidenceSeverity, Converter={StaticResource SeverityToBrush}}"/>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

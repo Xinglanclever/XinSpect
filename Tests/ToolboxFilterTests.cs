@@ -61,7 +61,7 @@ public class ToolboxFilterTests
     [Fact]
     public void 未篩選時說明第三方一律導向官方下載()
     {
-        var s = ToolboxFilter.Summarize(null, false, 90, 90);
+        var s = ToolboxFilter.Summarize(null, 90, 90);
         Assert.Contains("共 90 項工具", s);
         Assert.Contains("不內含任何外部執行檔", s);
     }
@@ -69,18 +69,17 @@ public class ToolboxFilterTests
     [Fact]
     public void 零命中要明說沒有符合而不是留白()
     {
-        var s = ToolboxFilter.Summarize("不存在的東西", false, 0, 90);
+        var s = ToolboxFilter.Summarize("不存在的東西", 0, 90);
         Assert.Contains("沒有符合", s);
         Assert.Contains("不存在的東西", s);
         Assert.Contains("90", s);
     }
 
     [Fact]
-    public void 只看內建時要標明範圍已被縮小()
+    public void 有命中時報出命中筆數與總數()
     {
-        var s = ToolboxFilter.Summarize("", true, 30, 90);
-        Assert.Contains("30 / 90", s);
-        Assert.Contains("僅列曦覽自己做得到的項目", s);
+        var s = ToolboxFilter.Summarize("ssd", 7, 90);
+        Assert.Contains("7 / 90", s);
     }
 
     // ── 工具目錄一致性 ──────────────────────────────────────────
@@ -135,22 +134,64 @@ public class ToolboxFilterTests
     }
 
     [Fact]
-    public void 只看內建會濾掉沒有對應功能的第三方項目()
+    public void 清除搜尋會回到完整清單()
     {
-        var svc = new ToolboxService { OnlyBuiltin = true };
-        Assert.All(svc.FilteredGroups.SelectMany(g => g.Items), t => Assert.True(t.HasNative));
-        var kept = svc.FilteredGroups.SelectMany(g => g.Items).Count();
-        Assert.True(kept > 0, "應該還留得下有自家對應頁面的項目，否則這個篩選沒有意義。");
-        Assert.True(kept < svc.Tools.Count, "篩選後應少於全部項目，否則等於篩選沒有作用。");
+        var svc = new ToolboxService { Query = "cpu" };
+        Assert.True(svc.FilteredGroups.Sum(g => g.Items.Count) < svc.Tools.Count);
+        svc.ClearFilter();
+        Assert.Equal("", svc.Query);
+        Assert.Equal(svc.Tools.Count, svc.FilteredGroups.Sum(g => g.Items.Count));
+    }
+
+    // ── 危險等級 ────────────────────────────────────────────────
+    //
+    // 這一組守的是「警告要有資訊量」。一枚寫著「危險」卻不說會發生什麼的徽章，
+    // 和沒有徽章一樣沒用——1.9.0 把「曦覽內建：X」那枚不可點的標籤換掉，
+    // 換上來的東西不能重蹈覆轍。
+
+    [Fact]
+    public void 非一般等級的工具都要寫清楚最壞情況()
+    {
+        foreach (var t in new ToolboxService().Tools.Where(t => t.HasRisk))
+        {
+            Assert.False(string.IsNullOrWhiteSpace(t.RiskNote), $"{t.Name}：標了危險等級卻沒說後果");
+            Assert.DoesNotContain("請小心使用", t.RiskNote!);
+            Assert.DoesNotContain("請謹慎使用", t.RiskNote!);
+            Assert.True(t.RiskNote!.Length >= 20, $"{t.Name}：後果說明太短，等於沒說（{t.RiskNote}）");
+            Assert.Contains(t.RiskLabel, t.RiskTip);
+        }
     }
 
     [Fact]
-    public void 清除篩選會回到完整清單()
+    public void 一般等級的工具不掛徽章也不寫後果()
     {
-        var svc = new ToolboxService { Query = "cpu", OnlyBuiltin = true };
-        svc.ClearFilter();
-        Assert.Equal("", svc.Query);
-        Assert.False(svc.OnlyBuiltin);
-        Assert.Equal(svc.Tools.Count, svc.FilteredGroups.Sum(g => g.Items.Count));
+        foreach (var t in new ToolboxService().Tools.Where(t => t.Risk == ToolRisk.Normal))
+        {
+            Assert.False(t.HasRisk);
+            Assert.Equal("", t.RiskLabel);
+            Assert.Equal("", t.RiskTip);
+        }
+    }
+
+    [Fact]
+    public void 會寫韌體或整碟抹除的那幾支必須是危險等級()
+    {
+        // 這幾支的共同點是「出錯要靠外部工具或送修才救得回來」，不是重開機能解決的。
+        var byName = new ToolboxService().Tools.ToDictionary(t => t.Name, StringComparer.Ordinal);
+        foreach (string name in new[] { "Intel FPT（fptw64）", "HDD Low Level Format Tool",
+                                        "RWEverything", "Thaiphoon Burner" })
+        {
+            Assert.True(byName.ContainsKey(name), $"目錄裡找不到「{name}」");
+            Assert.Equal(ToolRisk.Danger, byName[name].Risk);
+        }
+    }
+
+    [Fact]
+    public void 主按鈕的提示會把危險後果一起帶上()
+    {
+        var fpt = new ToolboxService().Tools.First(t => t.Name.Contains("fptw64"));
+        Assert.Contains(fpt.Description, fpt.Tip);
+        Assert.Contains("危險：", fpt.Tip);
+        Assert.Contains("SPI", fpt.Tip);
     }
 }

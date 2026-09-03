@@ -471,37 +471,6 @@ public static class VoltageBand
 }
 
 /// <summary>
-/// 體質（矽晶品質）估算：以「在目前有效頻率下所需的 Vcore」粗估 VF 曲線位置。
-/// 這是啟發式估算（非 XTU 正式 SP 特徵化流程），UI 會明確標示為「估算」。
-/// </summary>
-public static class SiliconEstimate
-{
-    public readonly record struct Result(int Score, string Verdict, Severity Severity, string Detail);
-
-    /// <param name="vcore">目前核心電壓 (V)</param>
-    /// <param name="clockMHz">目前有效頻率 (MHz)</param>
-    public static Result Compute(double vcore, double clockMHz)
-    {
-        if (vcore <= 0 || clockMHz <= 0)
-            return new(0, "資料不足，無法估算", Severity.Neutral, "需要有效的電壓與頻率讀值。");
-
-        double ghz = clockMHz / 1000.0;
-        // 參考 VF：以常見 Skylake-X 級距 ~ 1.0V @ 4.0GHz、每 +0.3GHz 約 +0.06V 為基準線。
-        double refV = 1.00 + Math.Max(0, ghz - 4.0) * 0.20;
-        // 需求電壓越低於基準 → 體質越好；每低 0.05V 約 +12 分。
-        double score = 60 + (refV - vcore) / 0.05 * 12;
-        int s = (int)Math.Round(Math.Clamp(score, 0, 100));
-
-        if (s >= 82) return new(s, "I will set the sea ablaze！", Severity.Good,
-            $"在 {ghz:0.00} GHz 僅需約 {vcore:0.000} V，體質極佳。");
-        if (s >= 50) return new(s, "可堪一用，中規中矩", Severity.Warning,
-            $"在 {ghz:0.00} GHz 需約 {vcore:0.000} V，屬一般水準。");
-        return new(s, "建議放棄治療？", Severity.Serious,
-            $"在 {ghz:0.00} GHz 需約 {vcore:0.000} V，電壓偏高、體質一般。");
-    }
-}
-
-/// <summary>
 /// 單顆效能核心的合併調節列：把「該核心倍頻上限＋電壓覆寫＋電壓偏移」依核心序號配對成一列，
 /// 讓調整單核心頻率與單核心電壓集中於同一處（依使用者要求合併）。任一項缺席時對應區塊自動隱藏。
 /// </summary>

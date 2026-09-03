@@ -15,14 +15,29 @@ public sealed class LatencyBoundaryRow
 /// <summary>邊界可信度：推導值與 CPUID 宣稱值的偏差評估。</summary>
 public sealed class LatencyDeviationRow
 {
-    public LatencyDeviationRow(string levelName, string derivedSize, string claimedSize, string deviation, string confidence)
+    public LatencyDeviationRow(string levelName, string derivedSize, string claimedSize, string deviation, DeviationConfidence confidence)
     { LevelName = levelName; DerivedSize = derivedSize; ClaimedSize = claimedSize; Deviation = deviation; Confidence = confidence; }
     public string LevelName { get; }
     public string DerivedSize { get; }
     public string ClaimedSize { get; }
     public string Deviation { get; }
-    public string Confidence { get; }
-    public string ConfidenceClass => Confidence.Contains('高') ? "Good" : Confidence.Contains('低') ? "Critical" : "Warning";
+    public DeviationConfidence Confidence { get; }
+
+    /// <summary>可信度文字。</summary>
+    public string ConfidenceText => Confidence switch
+    {
+        DeviationConfidence.High => "高可信",
+        DeviationConfidence.Medium => "中可信",
+        _ => "低可信",
+    };
+
+    /// <summary>偏差欄的文字色：可信度越低越紅。給 <c>SeverityToBrush</c> 用。</summary>
+    public Severity ConfidenceSeverity => Confidence switch
+    {
+        DeviationConfidence.High => Severity.Good,
+        DeviationConfidence.Medium => Severity.Warning,
+        _ => Severity.Critical,
+    };
 }
 
 /// <summary>邊界偏移的可信度等級。</summary>
@@ -178,13 +193,7 @@ public sealed class LatencyCurveService : ObservableObject
             {
                 var d = deviations[i];
                 string name = i < levelNames.Length ? levelNames[i] : $"邊界{i + 1}";
-                string conf = d.Confidence switch
-                {
-                    DeviationConfidence.High => "高可信",
-                    DeviationConfidence.Medium => "中可信",
-                    _ => "低可信",
-                };
-                DeviationRows.Add(new LatencyDeviationRow(name, FormatBytes((long)d.BoundaryBytes), FormatBytes((long)d.ClaimedBytes), $"{d.DeviationPct:+0.0;-0.0}%", conf));
+                DeviationRows.Add(new LatencyDeviationRow(name, FormatBytes((long)d.BoundaryBytes), FormatBytes((long)d.ClaimedBytes), $"{d.DeviationPct:+0.0;-0.0}%", d.Confidence));
             }
 
             Phase = "完成";

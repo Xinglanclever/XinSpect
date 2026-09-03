@@ -77,6 +77,72 @@
                     </ItemsControl>
                 </StackPanel>
             </Border>
+
+            <!-- ══ Resizable BAR ═════════════════════════════════════════════
+                 和上面那張表刻意分開：上面讀的是 PCI 設定空間（速度與寬度），這裡讀的是
+                 Windows 回報的「已指派記憶體資源」。ReBAR 的能力結構在設定空間 0x100 之後，
+                 傳統的 0xCF8／0xCFC 機制到不了那裡，所以兩者走的是不同的路。 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="Resizable BAR" HelpKey="pcie/Resizable BAR"/>
+                        <Button Style="{StaticResource ToolButton}" Content="重新讀取"
+                                HorizontalAlignment="Right" VerticalAlignment="Center"
+                                Click="RefreshBar_Click" IsEnabled="{Binding ResizableBar.CanRefresh}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="ReBAR 要 BIOS 開啟、驅動支援、CSM 關掉、以純 UEFI 開機，四個條件缺一個就不會生效——而 Windows 沒有任何地方告訴你現況，驅動說「支援」也不等於現在真的生效。這裡問的是「這張卡實際被指派了多大的記憶體視窗」：還停在傳統的 256 MB 就是沒生效。不需要驅動也不需要管理員權限。"/>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding ResizableBar.Summary}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="{Binding ResizableBar.Status}"/>
+
+                    <ItemsControl ItemsSource="{Binding ResizableBar.Rows}" Margin="0,10,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="8"
+                                        Padding="13,10" Margin="0,0,0,7">
+                                    <StackPanel>
+                                        <Grid>
+                                            <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold"
+                                                       TextWrapping="Wrap" MaxWidth="520" HorizontalAlignment="Left"
+                                                       Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                            <TextBlock Text="{Binding Verdict}" FontSize="13.5" FontWeight="SemiBold"
+                                                       HorizontalAlignment="Right"
+                                                       Foreground="{Binding Severity, Converter={StaticResource SeverityToBrush}}"/>
+                                        </Grid>
+                                        <local:FieldRow Label="最大記憶體視窗" Value="{Binding LargestText}"/>
+                                        <local:FieldRow Label="顯示記憶體總量" Value="{Binding VramText}"/>
+                                        <local:FieldRow Label="視窗覆蓋率" Value="{Binding CoverageText}"/>
+                                        <local:FieldRow Label="已指派視窗數" Value="{Binding RangeCountText}"/>
+                                        <local:FieldRow Label="位置" Value="{Binding Location}"/>
+                                        <TextBlock Text="{Binding Detail}" Style="{StaticResource FieldLabel}"
+                                                   TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="18"/>
+
+                                        <!-- 判定的依據逐段列出：一句「已撐開」不附證據，和沒說一樣 -->
+                                        <TextBlock Text="已指派的記憶體視窗" Style="{StaticResource ColHead}" Margin="0,10,0,4"/>
+                                        <ItemsControl ItemsSource="{Binding Ranges}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="0,0,0,3">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="110"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding RangeText}" Style="{StaticResource FieldValue}"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding SizeText}"
+                                                                   Style="{StaticResource FieldValue}" TextAlignment="Right"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

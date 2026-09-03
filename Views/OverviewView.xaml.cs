@@ -3,10 +3,13 @@ using System.Windows.Controls;
 
 namespace XinSpect;
 
-/// <summary>總覽分頁：即時儀表、走勢、硬體識別與快速規格；並提供 AI 評價的獨立入口。</summary>
+/// <summary>總覽分頁：即時儀表、走勢、硬體識別與快速規格。</summary>
 /// <remarks>
 /// 各區塊已改為由 <see cref="DashboardLayout"/> 驅動的「磁貼」：顯示哪些、以什麼順序排都由使用者決定，
 /// 外觀仍寫在本頁 XAML 的 <c>Tile.{識別碼}</c> 樣板裡。
+///
+/// 1.9.0 起這裡不再有「AI 評價」磁貼：側邊欄第二項就是完整的 AI 評價頁，在總覽再放一塊只做同一件事的
+/// 磁貼是重複入口，佔掉的又是使用者第一眼會看到的位置。
 /// </remarks>
 public partial class OverviewView : UserControl
 {
@@ -16,17 +19,6 @@ public partial class OverviewView : UserControl
     private MainViewModel? Vm =>
         DataContext as MainViewModel
         ?? Shell.Vm;
-
-    // 就地觸發一鍵評價：先切到 AI 助手分頁看完整對話，再開始評價。
-    private async void AiEvaluate_Click(object sender, RoutedEventArgs e)
-    {
-        Shell.Main?.NavigateToAi();
-        if (Vm?.Ai is { } ai) await ai.EvaluateAsync();
-    }
-
-    // 開啟獨立的 AI 助手分頁。
-    private void OpenAi_Click(object sender, RoutedEventArgs e)
-        => Shell.Main?.NavigateToAi();
 
     // ── 自訂磁貼 ────────────────────────────────────────────
     // 版面狀態都在 DashboardLayout 上（它負責存檔），這裡只把點擊轉過去。

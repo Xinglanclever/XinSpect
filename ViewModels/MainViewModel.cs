@@ -133,8 +133,20 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>DPC／ISR 延遲排行：ETW 核心追蹤（實用工具子頁）。</summary>
     public DpcLatencyService DpcLatency { get; } = new();
 
+    /// <summary>
+    /// 執行緒遷移與排程落點：執行緒在核心之間彈跳得多兇，以及每一跳丟掉哪一層快取（ETW，需管理員）。
+    /// </summary>
+    public ThreadMigrationService Migration { get; } = new();
+
     /// <summary>PCIe 鏈路實況：目前協商的速度／寬度對裝置能力（實用工具子頁，唯讀 PCI 設定空間）。</summary>
     public PcieLinkService PcieLink { get; } = new();
+
+    /// <summary>
+    /// Resizable BAR 實況：顯示卡的記憶體視窗是否已被撐開（與 PcieLink 同頁，但走的是
+    /// Windows 回報的「已指派資源」而不是 PCI 設定空間——ReBAR 的能力結構在 0x100 之後，
+    /// 傳統的 0xCF8／0xCFC 機制到不了那裡）。
+    /// </summary>
+    public ResizableBarService ResizableBar { get; } = new();
 
     /// <summary>USB 鏈路真相：埠能力、裝置能力與目前速度三者對照（實用工具子頁，唯讀集線器查詢）。</summary>
     public UsbLinkService UsbLink { get; } = new();

@@ -60,10 +60,34 @@ public partial class MainWindow : Window
         {
             if (_initialized) return;   // 防止重複初始化（重跑計時器與感測器引擎）
             _initialized = true;
+            // 首次啟動先問一次要「簡略」還是「詳細進階」。刻意放在 Initialize 之前：
+            // 感測引擎不必在對話框後面先跑起來，使用者的第一個決定也不會被載入中的畫面蓋住。
+            AskFirstRunMode();
             _vm.Initialize();
             Nav.SelectedIndex = 0;
             InitTray();
         };
+    }
+
+    /// <summary>
+    /// 首次啟動時問一次版面版本，並立刻套用與存檔。
+    /// </summary>
+    /// <remarks>
+    /// 只在設定檔還沒記錄過（<see cref="SettingsService.FirstRunDone"/> 為 false）時出現。
+    /// 無論選了哪一個、甚至對話框開失敗，都要記下「問過了」——否則每次啟動都問一次，
+    /// 那比不問更煩。<c>SimpleMode</c> 的 setter 自己會存檔並觸發側邊欄重建，這裡不必再動導覽。
+    /// </remarks>
+    private void AskFirstRunMode()
+    {
+        if (_vm.Settings.FirstRunDone) return;
+        try
+        {
+            var dlg = new FirstRunWindow { Owner = this };
+            dlg.ShowDialog();
+            _vm.Settings.SimpleMode = dlg.SimpleMode;
+        }
+        catch (Exception ex) { Diag.Swallow("首次啟動版面選擇", ex, "本次沿用詳細進階版面"); }
+        finally { _vm.Settings.FirstRunDone = true; }
     }
 
     // ===== 導覽 =====

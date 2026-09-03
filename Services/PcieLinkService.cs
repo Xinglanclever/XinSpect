@@ -26,13 +26,31 @@ public sealed class PcieLinkService : ObservableObject
     public bool IsLoading { get => _loading; private set { if (SetProperty(ref _loading, value)) OnPropertyChanged(nameof(CanRefresh)); } }
     public bool CanRefresh => !_loading;
 
-    private string _status = "尚未讀取。按「重新掃描」讀取 PCI 設定空間（唯讀）。";
+    private string _status = "進頁後會自動掃一次 PCI 設定空間（唯讀）；也可按「重新掃描」重讀。";
     public string Status { get => _status; private set => SetProperty(ref _status, value); }
 
     private string _summary = "—";
     public string Summary { get => _summary; private set => SetProperty(ref _summary, value); }
 
     public ObservableCollection<PcieLinkRow> Rows { get; } = [];
+
+    private bool _loadedOnce;
+
+    /// <summary>
+    /// 第一次進頁時自動掃一次。全程唯讀（只讀 PCI 設定空間，一個位元都不寫），
+    /// 可重複呼叫但只有第一次真的做事。
+    /// </summary>
+    /// <remarks>
+    /// 原本要使用者自己按「重新掃描」。問題是這一頁進去只會看到「尚未讀取」一行字，
+    /// 而旁邊那些同樣是唯讀查詢的頁（顯示鏈路、USB 鏈路、開機耗時）都是自動讀的——
+    /// 於是這一頁看起來就像「壞了、什麼都不顯示」。自動讀一次才對得上其他頁的行為。
+    /// </remarks>
+    public void EnsureLoaded()
+    {
+        if (_loadedOnce) return;
+        _loadedOnce = true;
+        Refresh();
+    }
 
     public void Refresh()
     {
@@ -50,11 +68,16 @@ public sealed class PcieLinkService : ObservableObject
         Summary = "—";
         try
         {
-            var (summary, rows) = await Task.Run(ScanAll);
+            var (summary, rows, present) = await Task.Run(ScanAll);
             Summary = summary;
             Rows.Clear();
             foreach (var r in rows) Rows.Add(r);
-            Status = $"完成 ・ 共 {rows.Count} 條鏈路。";
+            // 「0 條鏈路」要說清楚是「掃到裝置但沒有鏈路」還是「什麼都沒掃到」——
+            // 這兩件事的成因完全不同，混成同一句話就無從判斷。
+            Status = rows.Count > 0
+                ? $"完成 ・ 掃到 {present} 個 PCI 功能，其中 {rows.Count} 條有已建立的 PCIe 鏈路。"
+                : $"完成 ・ 掃到 {present} 個 PCI 功能，但沒有任何一個回報已建立的 PCIe 鏈路"
+                  + "（純 PCI 舊裝置、沒有 PCIe 能力結構的功能、以及空插槽都不列）。";
         }
         catch (Exception ex)
         {
@@ -67,7 +90,7 @@ public sealed class PcieLinkService : ObservableObject
         }
     }
 
-    private (string Summary, List<PcieLinkRow> Rows) ScanAll()
+    private (string Summary, List<PcieLinkRow> Rows, int Present) ScanAll()
     {
         using var bridge = WinRing0Bridge.Create();
         if (!bridge.Available)
@@ -75,8 +98,25 @@ public sealed class PcieLinkService : ObservableObject
         if (!bridge.PciAvailable)
             throw new InvalidOperationException("此版本的 Ring0 沒有提供 PCI 設定空間讀取。");
 
+        // 探針：00:00.0 是 x86 上必然存在的主機橋接器。連它都讀不到，代表反射載得起來、
+        // 但設定空間實際讀不通（沒有以系統管理員執行、驅動沒真正載入，或核心隔離／廠商驅動
+        // 封鎖清單把 WinRing0 擋掉了——它就在微軟的易受攻擊驅動封鎖清單上）。
+        //
+        // 不攔的話，整趟掃描會安靜地回 0 條，畫面顯示「共 0 條鏈路」——那句話會被讀成
+        // 「這台機器沒有 PCIe 裝置」，和事實正好相反。讀不到就要說讀不到。
+        uint? probe = bridge.ReadPciConfig(0, 0, 0, 0x00);
+        if (probe is null || probe == 0xFFFFFFFF)
+            throw new InvalidOperationException(
+                "PCI 設定空間讀不通：連 00:00.0（x86 上必然存在的主機橋接器）都讀不到"
+                + (probe is null ? "（讀取呼叫本身失敗）" : "（回傳全 1，等同「此裝置不存在」）")
+                + "。常見原因有三個：本程式沒有以系統管理員身分執行；WinRing0 驅動沒有真正載入；"
+                + "或核心隔離／記憶體完整性（HVCI）與廠商驅動封鎖清單把它擋掉了——"
+                + "WinRing0 就在微軟的易受攻擊驅動封鎖清單上。這一頁非它不可，"
+                + "但不靠 PCI 設定空間的其他頁面不受影響。");
+
         var names = LoadPnpNames();
         var rows = new List<PcieLinkRow>();
+        int present = 0;
 
         for (int bus = 0; bus <= 255; bus++)
         {
@@ -93,6 +133,7 @@ public sealed class PcieLinkService : ObservableObject
                 {
                     uint? id = fn == 0 ? id0 : bridge.ReadPciConfig((byte)bus, (byte)dev, (byte)fn, 0x00);
                     if (!IsPresent(id)) continue;
+                    present++;
                     var row = ReadOne(bridge, (byte)bus, (byte)dev, (byte)fn, id!.Value, names);
                     if (row is not null) rows.Add(row);
                 }
@@ -103,7 +144,7 @@ public sealed class PcieLinkService : ObservableObject
         rows = rows.OrderByDescending(r => r.Severity)
                    .ThenBy(r => r.Location, StringComparer.OrdinalIgnoreCase)
                    .ToList();
-        return (PcieLinkDecoder.Summarize(rows), rows);
+        return (PcieLinkDecoder.Summarize(rows), rows, present);
     }
 
     /// <summary>設定空間讀不到、或全為 1（0xFFFFFFFF）＝該功能不存在。</summary>

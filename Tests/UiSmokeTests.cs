@@ -20,6 +20,7 @@ namespace XinSpect.Tests;
 /// WPF 需要 STA 執行緒與 Application 執行個體（StaticResource 解析用），故全部工作排入一條專屬
 /// STA 執行緒，其餘純函式測試不受影響。視窗類別只建構不 Show()，Loaded 事件在測試中不會觸發。
 /// </remarks>
+[Collection(WpfCollection.Name)]
 public class UiSmokeTests
 {
     /// <summary>把 DataBindingSource 的輸出原樣收集成字串的監聽器。</summary>
@@ -87,6 +88,11 @@ public class UiSmokeTests
             targets.Add(("視窗「KeyboardTestWindow」", () => new KeyboardTestWindow()));
             targets.Add(("視窗「SpeakerTestWindow」", () => new SpeakerTestWindow()));
             targets.Add(("視窗「MotionTestWindow」", () => new MotionTestWindow()));
+            // 這兩個對話框在正常使用中很少被建出來，卻是最不能壞的：首次啟動的版面選擇只有
+            // 「第一次打開程式」那一刻會出現，超頻風險確認則是進超頻頁的唯一入口。
+            // XAML 寫錯的話，兩者都會在最糟的時機才炸出來，所以一併列進煙霧測試。
+            targets.Add(("對話框「FirstRunWindow」", () => new FirstRunWindow()));
+            targets.Add(("對話框「OcRiskWindow」", () => new OcRiskWindow()));
 
             foreach (var (name, make) in targets)
             {
@@ -148,7 +154,6 @@ public class UiSmokeTests
 
     /// <summary>只提供 UsbLink 一個屬性的最小宿主：樣板要驗的是路徑與資源，不必動用整個 MainViewModel。</summary>
     private sealed class UsbOnly { public UsbLinkService UsbLink { get; } = new(); }
-
     private static void RunUsbTemplate(List<string> failures)
     {
         WpfEnv.Ensure();
@@ -294,6 +299,49 @@ public class UiSmokeTests
     }
 
     private sealed class DisplayOnly { public DisplayLinkService DisplayLink { get; } = new(); }
+
+    /// <summary>
+    /// PCIe 鏈路頁的 Resizable BAR 卡片：外層是裝置、內層是每一段已指派的位址範圍，
+    /// <b>兩層都是 ItemsControl</b>，兩層的樣板都只有在有資料時才會套用。
+    /// </summary>
+    [Fact]
+    public void ResizableBAR卡片的兩層樣板_有資料時也沒有繫結錯誤()
+    {
+        var failures = new List<string>();
+        var thread = new Thread(() => RunTemplate(failures, "Resizable BAR", () =>
+        {
+            var host = new PcieOnly();
+            host.ResizableBar.Rows.Add(new BarDeviceRow
+            {
+                Name = "測試顯示卡", Location = "PCI 匯流排 1，裝置 0，函數 0",
+                Ranges = [new BarRange(0x40_0000_0000, 0x41_FFFF_FFFF), new BarRange(0xD000_0000, 0xD1FF_FFFF)],
+                VramBytes = 12UL * 1024 * 1024 * 1024,
+                IsPci = true,
+            });
+            // 第二列刻意是虛擬顯示裝置：判定與顏色走的是另一條分支，欄位也全是「—」
+            host.ResizableBar.Rows.Add(new BarDeviceRow
+            {
+                Name = "虛擬顯示卡", Location = "—", Ranges = [], VramBytes = 0, IsPci = false,
+            });
+            return new PcieLinkView { DataContext = host };
+        }));
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.IsBackground = true;
+        thread.Start();
+
+        if (!thread.Join(TimeSpan.FromMinutes(1)))
+            failures.Add("Resizable BAR 樣板煙霧測試逾時（1 分鐘未完成）。");
+
+        Assert.True(failures.Count == 0,
+            $"Resizable BAR 卡片樣板發現 {failures.Count} 項問題：\n" + string.Join("\n", failures));
+    }
+
+    /// <summary>PCIe 頁需要的兩個服務；不動用整個 MainViewModel。</summary>
+    private sealed class PcieOnly
+    {
+        public PcieLinkService PcieLink { get; } = new();
+        public ResizableBarService ResizableBar { get; } = new();
+    }
 
     /// <summary>共用的樣板套用檢查：建好帶資料的檢視，逼它排版，攔下繫結錯誤。</summary>
     private static void RunTemplate(List<string> failures, string what, Func<FrameworkElement> make)

@@ -170,7 +170,7 @@
                               Content="側邊欄只列一般使用者用得到的頁面"
                               IsChecked="{Binding Settings.SimpleMode, Mode=TwoWay}"/>
                     <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,6,0,0"
-                               Text="收起來的是直讀暫存器、編程效能計數器那一類頁面（效能天花板、超頻、PCIe／USB 鏈路、NVMe 電源狀態、DPC 延遲…）。這只是不列在側邊欄——按 Ctrl+K 照樣搜得到每一頁，功能不會消失。"/>
+                               Text="收起來的是直讀暫存器、編程效能計數器那一類頁面（效能天花板、超頻、PCIe／USB 鏈路、NVMe 電源狀態、DPC 延遲…）。這只是不列在側邊欄——按 Ctrl+K 照樣搜得到每一頁，功能不會消失。首次啟動時問過的「簡略／詳細進階」就是這個開關。"/>
 
                     <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,18,0,0"/>
                     <local:SectionHead Text="動態視覺效果" HelpKey="settings/動態視覺效果" Margin="0,16,0,0"/>
@@ -297,6 +297,14 @@
                         <ComboBox Grid.Column="1" Style="{StaticResource DarkCombo}" HorizontalAlignment="Left" Width="220"
                                   ItemsSource="{Binding EraNames}" SelectedIndex="{Binding EraIndex, Mode=TwoWay}"/>
                     </Grid>
+
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,18"/>
+                    <local:SectionHead Text="同時開多份" HelpKey="settings/同時開多份"/>
+                    <CheckBox Style="{StaticResource SetCheck}" Margin="0,8,0,0"
+                              Content="允許同時執行多份曦覽"
+                              IsChecked="{Binding Settings.AllowMultiInstance, Mode=TwoWay}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,6,0,0"
+                               Text="預設允許。要並排比對兩份報告、或想一邊燒機一邊在另一個視窗翻別的頁面時用得到。但有三件事要知道：設定與歷史是「最後寫入者贏」（寫檔本身是原子的，不會出現寫一半的檔案，但兩份同時改設定，後存的會蓋掉前一份）；WinRing0 驅動是全機共用的服務，其中一份結束時會把它收掉，另一份剩下的暫存器讀取就會開始顯示「—」，重開那一份即可；兩份同時做寫入型量測（超頻套用、體質特徵化、燒機）會互相干擾結果，數字不能當真。關掉此項就回到單一實例：第二份會把既有視窗叫回前景後自行結束。"/>
                 </StackPanel>
             </Border>
             <!-- ═══ 感測器記錄 ═══ -->
@@ -555,7 +563,7 @@
                     <CheckBox Style="{StaticResource SetCheck}" Content="診斷代理：允許 AI 主動查詢本機唯讀資料"
                               IsChecked="{Binding Settings.AiAgentMode, Mode=TwoWay}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
-                               Text="開啟後，AI 可自行呼叫 34 項唯讀查詢工具（完整規格、處理器拓樸、即時讀值、所有溫度、感測器總表、風扇與曲線、磁碟健康、事件時間軸、歷史統計、顯示卡與處理器調校現況、場景、健康總評、環境自檢、效能成績、記憶體時序與 SPD、網路組態與流量、螢幕 EDID 色域、效能天梯名次、升級建議、電池健康、開機啟動項、藍屏傾印，以及 11 項硬核底層事實：Top-down 管線歸因、頻率真相、平台可信度、BIOS 與 ME 微碼、逐核時間歸因、電源政策、記憶體認可帳本、機器檢查與 WHEA、處理器免疫位元、RDT 監測、效能天花板），並在對話中列出每次查詢。全部只讀不寫：不會改設定、不會動硬體、不會啟動任何程式，也不會自己去發動 PMU／MSR 量測——硬核項目你沒按過量測，AI 就只會說「本機尚未量測」。關閉則只送出一次硬體快照。"/>
+                               Text="開啟後，AI 可自行呼叫 34 項唯讀查詢工具（完整規格、處理器拓樸、即時讀值、所有溫度、感測器總表、風扇與曲線、磁碟健康、事件紀錄、歷史統計、顯示卡與處理器調校現況、場景、健康總評、環境自檢、效能成績、記憶體時序與 SPD、網路組態與流量、螢幕 EDID 色域、效能天梯名次、升級建議、電池健康、開機啟動項、藍屏傾印，以及 11 項硬核底層事實：Top-down 管線歸因、頻率真相、平台可信度、BIOS 與 ME 微碼、逐核時間歸因、電源政策、記憶體認可帳本、機器檢查與 WHEA、處理器免疫位元、RDT 監測、效能天花板），並在對話中列出每次查詢。全部只讀不寫：不會改設定、不會動硬體、不會啟動任何程式，也不會自己去發動 PMU／MSR 量測——硬核項目你沒按過量測，AI 就只會說「本機尚未量測」。關閉則只送出一次硬體快照。"/>
 
                     <CheckBox Style="{StaticResource SetCheck}" Margin="0,14,0,0" Content="主動診斷：警示觸發時自動請 AI 分析"
                               IsChecked="{Binding Settings.AiProactive, Mode=TwoWay}"/>
@@ -686,8 +694,11 @@
                                         <TextBlock Grid.Column="1" Text="{Binding Site}" Foreground="{DynamicResource PrimaryInkBrush}" TextWrapping="Wrap"/>
                                         <StackPanel Grid.Column="2">
                                             <TextBlock Foreground="{DynamicResource PrimaryInkBrush}" TextWrapping="Wrap">
-                                                <Run Text="{Binding Type}" Foreground="{DynamicResource SecondaryInkBrush}"/>
-                                                <Run Text="{Binding Message}"/>
+                                                <!-- Run.Text 預設是 TwoWay（WPF 的老陷阱），繫到 DiagEntry 這種
+                                                     唯讀屬性上會在樣板載入時直接丟 XamlParseException，整個設定頁
+                                                     開不起來。必須明寫 Mode=OneWay。 -->
+                                                <Run Text="{Binding Type, Mode=OneWay}" Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                                <Run Text="{Binding Message, Mode=OneWay}"/>
                                             </TextBlock>
                                             <TextBlock Text="{Binding Consequence, StringFormat=→ {0}}" Margin="0,2,0,0"
                                                        Foreground="{DynamicResource SecondaryInkBrush}" TextWrapping="Wrap"

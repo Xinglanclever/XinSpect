@@ -263,12 +263,12 @@ internal static partial class AiToolboxBuilder
         _ => "一般",
     };
 
-    // ── 事件時間軸 ──────────────────────────────────────────────────────────
+    // ── 事件紀錄 ────────────────────────────────────────────────────────────
 
     private static void AddEvents(AiToolbox box, MainViewModel vm)
     {
         box.Add("get_events",
-            "取得事件時間軸上最近的紀錄：溫度／負載警示、處理器降頻、磁碟壽命變化、藍屏、調校動作與啟動關閉。"
+            "取得事件紀錄裡最近的項目：溫度／負載警示、處理器降頻、磁碟壽命變化、藍屏、調校動作與啟動關閉。"
             + "要找出「什麼時候出過問題」時用這個。",
             args =>
             {
@@ -363,7 +363,7 @@ internal static partial class AiToolboxBuilder
 
         box.Add("get_cpu_oc_state",
             "取得處理器超頻模組（Intel XTU 引擎）的現況：引擎是否就緒與可寫入、處理器家族、"
-            + "即時有效頻率／電壓／溫度／功耗限制與供電模組溫度，以及體質評分。",
+            + "即時有效頻率／電壓／溫度／功耗限制與供電模組溫度，以及體質特徵化的結果（族內百分位與信賴度）。",
             _ =>
             {
                 var o = vm.Overclock;
@@ -380,7 +380,11 @@ internal static partial class AiToolboxBuilder
                 Line(sb, "電流", o.CurrentText);
                 Line(sb, "PL1", o.Pl1Text);
                 Line(sb, "PL2", o.Pl2Text);
-                Line(sb, "體質評分", $"{o.SiliconScore}（{o.SiliconVerdict}）");
+                // 體質是「族內百分位」而不是滿分 100 的分數；沒跑過特徵化時 SiliconScore 是 0，
+                // 直接把 0 餵給模型會被讀成「體質 0 分」，所以這裡照實說尚未特徵化。
+                Line(sb, "體質評分", o.SiliconScore > 0
+                    ? $"{o.SiliconVerdict}・族內位置 {o.SiliconPercentileText}・信賴度 {o.SiliconConfidenceText}"
+                    : $"{o.SiliconVerdict}（尚無百分位）");
                 return Done(sb, "（無資料）");
             });
     }

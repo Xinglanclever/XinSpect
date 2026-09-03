@@ -109,4 +109,49 @@ public sealed class DashboardLayoutTests
             Assert.False(string.IsNullOrWhiteSpace(c.Hint));
         }
     }
+
+    /// <summary>
+    /// 目錄裡的每一塊磁貼，總覽頁都要有對應的 <c>Tile.{識別碼}</c> 樣板；反之也不該留下孤兒樣板。
+    /// 少了樣板，那塊磁貼在畫面上就是一片空白；多了樣板則是刪磁貼時忘了收尾（1.9.0 移除
+    /// 「AI 評價」磁貼時，目錄與樣板必須一起拿掉，只動一邊都會壞）。
+    /// </summary>
+    [Fact]
+    public void 每塊磁貼都有對應的版面樣板且沒有孤兒樣板()
+    {
+        string xaml = System.IO.File.ReadAllText(
+            System.IO.Path.Combine(RepoRoot(), "Views", "OverviewView.xaml"));
+        var inXaml = System.Text.RegularExpressions.Regex
+            .Matches(xaml, "x:Key=\"Tile\\.([A-Za-z0-9_]+)\"")
+            .Select(m => m.Groups[1].Value)
+            .ToHashSet(StringComparer.Ordinal);
+        var inCatalog = DashboardLayout.Catalog.Select(c => c.Id).ToHashSet(StringComparer.Ordinal);
+
+        Assert.Empty(inCatalog.Except(inXaml));   // 目錄有、版面沒有 → 空白磁貼
+        Assert.Empty(inXaml.Except(inCatalog));   // 版面有、目錄沒有 → 孤兒樣板
+    }
+
+    /// <summary>
+    /// 舊使用者的設定檔裡還留著已移除的 <c>ai</c>：必須被安靜忽略，其餘順序與顯示狀態照舊。
+    /// 這是「移除磁貼」的升級路徑，錯了會讓老使用者的整份版面讀不進來。
+    /// </summary>
+    [Fact]
+    public void 存檔裡留著已移除的AI磁貼不影響其餘版面()
+    {
+        var plan = DashboardLayout.Plan("gauges,trends,ai,-brands,specs");
+        Assert.DoesNotContain("ai", plan.Select(p => p.Id));
+        Assert.Equal(["gauges", "trends", "brands", "specs"], plan.Take(4).Select(p => p.Id));
+        Assert.False(plan.First(p => p.Id == "brands").Visible);   // 減號前綴仍然有效
+    }
+
+    private static string RepoRoot()
+    {
+        var dir = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null)
+        {
+            if (System.IO.File.Exists(System.IO.Path.Combine(dir.FullName, "Views", "OverviewView.xaml")))
+                return dir.FullName;
+            dir = dir.Parent;
+        }
+        throw new System.IO.DirectoryNotFoundException("找不到原始碼樹");
+    }
 }

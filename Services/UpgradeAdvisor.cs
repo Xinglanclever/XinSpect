@@ -293,7 +293,7 @@ public static class UpgradeAdvisor
             {
                 Part = UpgradePart.Cooling, Title = "先解決熱降頻，再談換硬體", Severity = Severity.Serious, Score = 94,
                 Gain = "拿回被溫度壓掉的效能（通常 10–30 %）", Cost = "低",
-                Evidence = "事件時間軸記錄到熱降頻"
+                Evidence = "事件紀錄裡有熱降頻"
                            + (f.CpuTempMax is double m ? $"，處理器最高溫 {m:0} °C" : ""),
                 Action = f.IsLaptop
                     ? "清理出風口與散熱鰭片、重塗散熱膏，並確認進風口沒有被墊住。"

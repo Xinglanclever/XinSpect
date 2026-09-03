@@ -359,22 +359,28 @@
                                Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,4"/>
                     <TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="19" Margin="0,0,0,12"
                                Foreground="{DynamicResource MutedInkBrush}"
-                               Text="最終頻率 = 全核心倍頻 × 外頻（BCLK）。倍頻為整數倍調整（Intel XTU 僅支援整數倍）；外頻為連續值。調整下方滑桿或用微調鈕，再按「套用目標時脈」一次寫入。"/>
+                               Text="最終頻率 = 全核心倍頻 × 外頻（BCLK）。倍頻為整數倍調整（Intel XTU 僅支援整數倍）；外頻與電壓為連續值。倍頻與外頻按「套用目標時脈」一次寫入；全核心電壓（含電壓錶與微調鈕）併在同一區，但有自己的「套用電壓」按鈕，不會被連帶寫入。"/>
 
                     <!-- 全核心倍頻（整數倍，含微調鈕與說明） -->
                     <ContentControl Content="{Binding Overclock.CoreRatioKnob}" ContentTemplate="{StaticResource KnobRow}"/>
 
-                    <!-- 全核心電壓（連續值）：與全核心倍頻同區，可一併規劃頻率與電壓。
-                         套用走專用 ApplyVcore_Click（含逐核心扇出邏輯），與下方「核心電壓 Vcore」卡共用同一 VcoreKnob，兩處滑桿即時同步。 -->
+                    <!-- ══ 全核心電壓 Vcore（原本自成一卡，已併入本區）════════════════════
+                         頻率與電壓本來就是同一個決定：倍頻拉高多少、電壓要跟著給多少。原「核心電壓
+                         Vcore」卡的三樣東西——類比電壓錶（儀表盤）、微調鈕、危險等級徽章——全部搬進
+                         來，和倍頻滑桿上下相鄰，不必再在兩張卡之間來回對照同一個 VcoreKnob。
+                         套用仍走專用 ApplyVcore_Click（含逐核心扇出邏輯與高電壓二次確認）。 -->
                     <Border Background="{DynamicResource Surface2Brush}" CornerRadius="9" Padding="14,11" Margin="0,0,0,9"
                             Visibility="{Binding Overclock.HasVcore, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
+                            <!-- 標題列。❓ 沿用「核心電壓 Vcore」那條說明：裡頭的高電壓風險警告
+                                 （過壓會永久加速電晶體老化）不能因為併卡而消失。 -->
                             <Grid>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                                     <TextBlock Text="全核心電壓" FontSize="14" FontWeight="SemiBold"
                                                Foreground="{DynamicResource PrimaryInkBrush}" VerticalAlignment="Center"/>
-                                    <TextBlock Text="All-Core Voltage" FontSize="11.5" Margin="8,2,0,0" VerticalAlignment="Center"
-                                               Foreground="{DynamicResource MutedInkBrush}"/>
+                                    <TextBlock Text="All-Core Voltage（Vcore）" FontSize="11.5" Margin="8,2,0,0"
+                                               VerticalAlignment="Center" Foreground="{DynamicResource MutedInkBrush}"/>
+                                    <local:HelpDot HelpKey="oc/核心電壓 Vcore" Margin="8,1,0,0" VerticalAlignment="Center"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                     <TextBlock Text="現值 " FontSize="12.5" Foreground="{DynamicResource MutedInkBrush}"/>
@@ -383,26 +389,93 @@
                                     <TextBlock Text="{Binding Overclock.VcoreKnob.RangeText}" FontSize="12.5" Foreground="{DynamicResource MutedInkBrush}"/>
                                 </StackPanel>
                             </Grid>
-                            <Grid Margin="0,9,0,5">
+
+                            <!-- 聚合說明：此平台僅提供逐核心覆寫時，說明本滑桿會一次套用至全部核心 -->
+                            <TextBlock Text="{Binding Overclock.VcoreScopeText}" TextWrapping="Wrap" FontSize="12"
+                                       LineHeight="18" Margin="0,6,0,0" Foreground="{DynamicResource MutedInkBrush}"/>
+
+                            <Grid Margin="0,10,0,0">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="16"/>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="24"/>
+                                    <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Slider Grid.Column="0" Style="{StaticResource OcSlider}" VerticalAlignment="Center"
-                                        Minimum="{Binding Overclock.VcoreKnob.Min}" Maximum="{Binding Overclock.VcoreKnob.Max}"
-                                        SmallChange="0.005" LargeChange="0.01"
-                                        Value="{Binding Overclock.VcoreKnob.Target, Mode=TwoWay}"
-                                        IsEnabled="{Binding Overclock.VcoreKnob.Writable}"/>
-                                <TextBlock Grid.Column="2" Text="{Binding Overclock.VcoreKnob.TargetText}" FontSize="17" FontWeight="Bold"
-                                           Foreground="{Binding Overclock.VcoreKnob.TargetBandBrush}" VerticalAlignment="Center"
-                                           MinWidth="104" TextAlignment="Right"/>
-                            </Grid>
-                            <Grid>
-                                <TextBlock Text="{Binding Overclock.VcoreKnob.ApplyModeText}" HorizontalAlignment="Left" FontSize="12"
-                                           Foreground="{Binding Overclock.VcoreKnob.ApplyModeSeverity, Converter={StaticResource SeverityToBrush}}"/>
-                                <Button HorizontalAlignment="Right" Style="{StaticResource ToolButton}" Content="套用電壓"
-                                        Click="ApplyVcore_Click" IsEnabled="{Binding Overclock.VcoreKnob.Writable}"/>
+
+                                <!-- 類比電壓錶（儀表盤）：實測值，與下方滑桿的「目標值」分屬兩件事 -->
+                                <local:AnalogVoltMeter Grid.Column="0" VerticalAlignment="Top"
+                                                       Value="{Binding Overclock.VoltmeterValue}"
+                                                       Max="{Binding Overclock.VoltmeterMax}"
+                                                       DangerFrom="1.4" Caption="Vcore（伏特）"/>
+
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                    <!-- 實測讀值 ＋ 危險等級徽章（≥1.5 V 閃爍） -->
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Overclock.VoltageValueText}" FontSize="34" FontWeight="Bold"
+                                                   Foreground="{DynamicResource PrimaryInkBrush}" VerticalAlignment="Center"/>
+                                        <Border CornerRadius="8" Padding="11,5" Margin="14,4,0,0" VerticalAlignment="Center">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="{Binding Overclock.VoltageBadgeBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Overclock.VoltageBadgeFlashing}" Value="True">
+                                                            <DataTrigger.EnterActions>
+                                                                <BeginStoryboard x:Name="Flash">
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                                         From="1" To="0.3" Duration="0:0:0.5"
+                                                                                         AutoReverse="True" RepeatBehavior="Forever"/>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </DataTrigger.EnterActions>
+                                                            <DataTrigger.ExitActions>
+                                                                <StopStoryboard BeginStoryboardName="Flash"/>
+                                                            </DataTrigger.ExitActions>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="{Binding Overclock.VoltageBadgeText}" FontSize="13.5"
+                                                       FontWeight="Bold" Foreground="White"/>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <!-- 目標電壓滑桿（起點＝目前電壓） -->
+                                    <Grid Margin="0,14,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="16"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider Grid.Column="0" Style="{StaticResource OcSlider}" VerticalAlignment="Center"
+                                                Minimum="{Binding Overclock.VcoreKnob.Min}" Maximum="{Binding Overclock.VcoreKnob.Max}"
+                                                SmallChange="0.005" LargeChange="0.01"
+                                                Value="{Binding Overclock.VcoreKnob.Target, Mode=TwoWay}"
+                                                IsEnabled="{Binding Overclock.VcoreKnob.Writable}"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Overclock.VcoreKnob.TargetText}" FontSize="18"
+                                                   FontWeight="Bold" Foreground="{Binding Overclock.VcoreKnob.TargetBandBrush}"
+                                                   MinWidth="104" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    </Grid>
+
+                                    <!-- 微調鈕（±0.01／±0.05／±0.1 V）：DataContext 換成旋鈕本身，
+                                         Nudge_Click 直接從 sender 的 DataContext 取 OcKnob -->
+                                    <WrapPanel Margin="0,10,0,0" DataContext="{Binding Overclock.VcoreKnob}"
+                                               IsEnabled="{Binding Writable}">
+                                        <Button Style="{StaticResource OcNudge}" Tag="-3" Click="Nudge_Click" Content="{Binding NudgeMinus3Text}"/>
+                                        <Button Style="{StaticResource OcNudge}" Tag="-2" Click="Nudge_Click" Content="{Binding NudgeMinus2Text}"/>
+                                        <Button Style="{StaticResource OcNudge}" Tag="-1" Click="Nudge_Click" Content="{Binding NudgeMinus1Text}"/>
+                                        <Border Width="10"/>
+                                        <Button Style="{StaticResource OcNudge}" Tag="1" Click="Nudge_Click" Content="{Binding NudgePlus1Text}"/>
+                                        <Button Style="{StaticResource OcNudge}" Tag="2" Click="Nudge_Click" Content="{Binding NudgePlus2Text}"/>
+                                        <Button Style="{StaticResource OcNudge}" Tag="3" Click="Nudge_Click" Content="{Binding NudgePlus3Text}"/>
+                                    </WrapPanel>
+
+                                    <Grid Margin="0,12,0,0">
+                                        <TextBlock Text="{Binding Overclock.VcoreKnob.ApplyModeText}" HorizontalAlignment="Left" FontSize="12"
+                                                   Foreground="{Binding Overclock.VcoreKnob.ApplyModeSeverity, Converter={StaticResource SeverityToBrush}}"/>
+                                        <Button HorizontalAlignment="Right" Style="{StaticResource ToolButton}" Content="套用電壓"
+                                                Click="ApplyVcore_Click" IsEnabled="{Binding Overclock.VcoreKnob.Writable}"/>
+                                    </Grid>
+                                </StackPanel>
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -435,102 +508,6 @@
                                Foreground="{DynamicResource MutedInkBrush}"
                                Text="快取（環匯流排）倍頻與電壓／電壓偏移集中於此，緊接目標時脈規劃之下。倍頻為整數倍；電壓偏移範圍限 −1 V～+1 V、預設 0 V。細節見各列 ❓ 說明。"/>
                     <ItemsControl ItemsSource="{Binding Overclock.CacheKnobs}" ItemTemplate="{StaticResource KnobRow}" Margin="0,4,0,0"/>
-                </StackPanel>
-            </Border>
-
-            <!-- ══ 核心電壓 Vcore ════════════════════════════════════════════ -->
-            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="60">
-                <StackPanel>
-                    <local:SectionHead Text="核心電壓 Vcore" HelpKey="oc/核心電壓 Vcore"/>
-                    <!-- 聚合說明：此平台僅逐核心覆寫時，說明本卡滑桿會一次套用至全部核心（無此情況時字串為空、不顯示） -->
-                    <TextBlock Text="{Binding Overclock.VcoreScopeText}" TextWrapping="Wrap" FontSize="12" LineHeight="18"
-                               Foreground="{DynamicResource MutedInkBrush}" Margin="0,2,0,0"
-                               Visibility="{Binding Overclock.HasVcore, Converter={StaticResource BoolToVis}}"/>
-                    <Grid Margin="0,4,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="28"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <!-- 類比電壓錶 -->
-                        <local:AnalogVoltMeter Grid.Column="0" VerticalAlignment="Top"
-                                               Value="{Binding Overclock.VoltmeterValue}"
-                                               Max="{Binding Overclock.VoltmeterMax}"
-                                               DangerFrom="1.4" Caption="Vcore（伏特）"/>
-
-                        <!-- 徽章 + 讀值 + 滑桿 -->
-                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding Overclock.VoltageValueText}" FontSize="40" FontWeight="Bold"
-                                           Foreground="{DynamicResource PrimaryInkBrush}" VerticalAlignment="Center"/>
-                                <!-- 危險等級徽章（≥1.5V 閃爍） -->
-                                <Border CornerRadius="8" Padding="12,6" Margin="16,6,0,0" VerticalAlignment="Center">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="Background" Value="{Binding Overclock.VoltageBadgeBrush}"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Overclock.VoltageBadgeFlashing}" Value="True">
-                                                    <DataTrigger.EnterActions>
-                                                        <BeginStoryboard x:Name="Flash">
-                                                            <Storyboard>
-                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                                 From="1" To="0.3" Duration="0:0:0.5"
-                                                                                 AutoReverse="True" RepeatBehavior="Forever"/>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </DataTrigger.EnterActions>
-                                                    <DataTrigger.ExitActions>
-                                                        <StopStoryboard BeginStoryboardName="Flash"/>
-                                                    </DataTrigger.ExitActions>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <TextBlock Text="{Binding Overclock.VoltageBadgeText}" FontSize="14" FontWeight="Bold"
-                                               Foreground="White"/>
-                                </Border>
-                            </StackPanel>
-
-                            <!-- Vcore 目標滑桿（預設置中＝目前電壓） -->
-                            <Grid Margin="0,18,0,0"
-                                  Visibility="{Binding Overclock.HasVcore, Converter={StaticResource BoolToVis}}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="16"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Slider Grid.Column="0" Style="{StaticResource OcSlider}" VerticalAlignment="Center"
-                                        Minimum="{Binding Overclock.VcoreKnob.Min}" Maximum="{Binding Overclock.VcoreKnob.Max}"
-                                        SmallChange="0.005" LargeChange="0.01"
-                                        Value="{Binding Overclock.VcoreKnob.Target, Mode=TwoWay}"
-                                        IsEnabled="{Binding Overclock.VcoreKnob.Writable}"/>
-                                <TextBlock Grid.Column="2" Text="{Binding Overclock.VcoreKnob.TargetText}" FontSize="18"
-                                           FontWeight="Bold" Foreground="{Binding Overclock.VcoreKnob.TargetBandBrush}"
-                                           MinWidth="104" TextAlignment="Right" VerticalAlignment="Center"/>
-                            </Grid>
-                            <!-- Vcore 微調鈕（±0.01／±0.05／±0.1 V） -->
-                            <WrapPanel Margin="0,10,0,0" DataContext="{Binding Overclock.VcoreKnob}"
-                                       IsEnabled="{Binding Writable}"
-                                       Visibility="{Binding DataContext.Overclock.HasVcore, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}">
-                                <Button Style="{StaticResource OcNudge}" Tag="-3" Click="Nudge_Click" Content="{Binding NudgeMinus3Text}"/>
-                                <Button Style="{StaticResource OcNudge}" Tag="-2" Click="Nudge_Click" Content="{Binding NudgeMinus2Text}"/>
-                                <Button Style="{StaticResource OcNudge}" Tag="-1" Click="Nudge_Click" Content="{Binding NudgeMinus1Text}"/>
-                                <Border Width="10"/>
-                                <Button Style="{StaticResource OcNudge}" Tag="1" Click="Nudge_Click" Content="{Binding NudgePlus1Text}"/>
-                                <Button Style="{StaticResource OcNudge}" Tag="2" Click="Nudge_Click" Content="{Binding NudgePlus2Text}"/>
-                                <Button Style="{StaticResource OcNudge}" Tag="3" Click="Nudge_Click" Content="{Binding NudgePlus3Text}"/>
-                            </WrapPanel>
-                            <Grid Margin="0,10,0,0"
-                                  Visibility="{Binding Overclock.HasVcore, Converter={StaticResource BoolToVis}}">
-                                <TextBlock Text="{Binding Overclock.VcoreKnob.ApplyModeText}" HorizontalAlignment="Left" FontSize="12"
-                                           Foreground="{Binding Overclock.VcoreKnob.ApplyModeSeverity, Converter={StaticResource SeverityToBrush}}"/>
-                                <Button HorizontalAlignment="Right" Style="{StaticResource ToolButton}"
-                                        Click="ApplyVcore_Click" Content="套用電壓"
-                                        IsEnabled="{Binding Overclock.VcoreKnob.Writable}"/>
-                            </Grid>
-                        </StackPanel>
-                    </Grid>
                 </StackPanel>
             </Border>
 
@@ -597,30 +574,167 @@
                 </StackPanel>
             </Border>
 
-            <!-- ══ 體質評分（矽晶品質）═══════════════════════════════════════ -->
+            <!-- ══ 體質評分（矽晶品質特徵化）═════════════════════════════════
+                 舊版是「取樣 5 秒、抓峰值頻率與當下電壓、套一條寫死的參考線換成 0–100 分」。
+                 那個分數沒有統計意義，也分不出「體質好」與「使用者自己降過壓」。這一版改成多點
+                 V/F 特徵化：程式自己控制負載階梯讓處理器走過睿頻表，逐段取一個工作點，擬合出
+                 V ＝ a ＋ k·f，再在重心頻率上與世代參考線相減。畫面上四件事分開陳列——
+                 推估（百分位）、實測（ΔV／斜率／C_eff）、條件（信賴度與溫度）、方法與出處。 -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="140">
                 <StackPanel>
                     <local:SectionHead Text="體質評分" HelpKey="oc/體質評分"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                        <TextBlock Text="{Binding Overclock.SiliconScoreText}" FontSize="46" FontWeight="Bold"
-                                   Foreground="{Binding Overclock.SiliconSeverity, Converter={StaticResource SeverityToBrush}}"
-                                   VerticalAlignment="Center"/>
-                        <StackPanel Margin="20,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding Overclock.SiliconVerdict}" FontSize="18" FontWeight="SemiBold"
+
+                    <Grid Margin="0,6,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="22"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- 推估值：百分位而不是「幾分」。單位一定要寫出來，否則 78 會被讀成滿分 100 的 78 分 -->
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" MinWidth="96">
+                            <TextBlock Text="{Binding Overclock.SiliconScoreText}" FontSize="46" FontWeight="Bold"
                                        Foreground="{Binding Overclock.SiliconSeverity, Converter={StaticResource SeverityToBrush}}"/>
-                            <TextBlock Text="{Binding Overclock.SiliconDetail}" FontSize="12.5" Margin="0,4,0,0"
-                                       TextWrapping="Wrap" MaxWidth="620" LineHeight="19"
+                            <TextBlock Text="{Binding Overclock.SiliconScoreUnit}" FontSize="11.5" Margin="0,-4,0,0"
                                        Foreground="{DynamicResource MutedInkBrush}"/>
                         </StackPanel>
-                    </StackPanel>
-                    <!-- 重新測試：取樣約 5 秒峰值後才估算一次；測試中停用避免重入 -->
-                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+
+                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Overclock.SiliconVerdict}" FontSize="18" FontWeight="SemiBold"
+                                       Foreground="{Binding Overclock.SiliconSeverity, Converter={StaticResource SeverityToBrush}}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <TextBlock Text="族內位置 " FontSize="12.5" Foreground="{DynamicResource MutedInkBrush}"/>
+                                <TextBlock Text="{Binding Overclock.SiliconPercentileText}" FontSize="12.5"
+                                           Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                <TextBlock Text="　信賴度 " FontSize="12.5" Foreground="{DynamicResource MutedInkBrush}"/>
+                                <TextBlock Text="{Binding Overclock.SiliconConfidenceText}" FontSize="12.5"
+                                           Foreground="{Binding Overclock.SiliconConfidenceSeverity, Converter={StaticResource SeverityToBrush}}"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding Overclock.SiliconDetail}" FontSize="12.5" Margin="0,8,0,0"
+                                       TextWrapping="Wrap" MaxWidth="640" LineHeight="20"
+                                       Foreground="{DynamicResource MutedInkBrush}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- 開始／停止 ＋ 進度。取樣期間會逐階把處理器推到滿載，必須先說清楚 -->
+                    <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
                         <Button Style="{StaticResource PrimaryButton}" Click="RetestSilicon_Click"
-                                IsEnabled="{Binding Overclock.SiliconCanTest}" Content="重新測試"/>
-                        <TextBlock Text="請於高負載（建議搭配下方燒機）時測，取樣約 5 秒。閒置時頻率與電壓偏低會嚴重失真。"
-                                   FontSize="12" TextWrapping="Wrap" MaxWidth="560" LineHeight="18" Margin="14,0,0,0"
+                                IsEnabled="{Binding Overclock.SiliconCanTest}"
+                                Content="{Binding Overclock.SiliconTestButtonText}"/>
+                        <Button Style="{StaticResource ToolButton}" Margin="10,0,0,0" Content="停止"
+                                Click="CancelSilicon_Click"
+                                Visibility="{Binding Overclock.SiliconTesting, Converter={StaticResource BoolToVis}}"/>
+                        <TextBlock Text="約 20–30 秒。程式會自己控制負載階梯（1／2／4… 顆核心滿載）讓處理器走過睿頻表，全程唯讀，不寫入任何倍頻或電壓。"
+                                   FontSize="12" TextWrapping="Wrap" MaxWidth="520" LineHeight="18" Margin="14,0,0,0"
                                    VerticalAlignment="Center" Foreground="{DynamicResource MutedInkBrush}"/>
                     </StackPanel>
+                    <StackPanel Margin="0,10,0,0"
+                                Visibility="{Binding Overclock.SiliconTesting, Converter={StaticResource BoolToVis}}">
+                        <ProgressBar Style="{StaticResource LoadBar}"
+                                     Value="{Binding Overclock.SiliconProgressPercent, Mode=OneWay}"/>
+                        <TextBlock Text="{Binding Overclock.SiliconPhase}" FontSize="12" Margin="0,6,0,0"
+                                   Foreground="{DynamicResource SecondaryInkBrush}"/>
+                    </StackPanel>
+                    <!-- ── 實測結果表：每一列都附「這個數字怎麼來的／代表什麼」 ─────────── -->
+                    <StackPanel Margin="0,16,0,0"
+                                Visibility="{Binding Overclock.SiliconMetrics.Count, Converter={StaticResource CountToVis}}">
+                        <TextBlock Text="量到什麼" FontSize="13.5" FontWeight="SemiBold" Margin="0,0,0,8"
+                                   Foreground="{DynamicResource PrimaryInkBrush}"/>
+                        <ItemsControl ItemsSource="{Binding Overclock.SiliconMetrics}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource Surface2Brush}" CornerRadius="8"
+                                            Padding="13,10" Margin="0,0,0,7">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="168"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="13" FontWeight="SemiBold"
+                                                       TextWrapping="Wrap" VerticalAlignment="Top"
+                                                       Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="{Binding Value}" FontSize="14.5" FontWeight="Bold"
+                                                           TextWrapping="Wrap" Foreground="{DynamicResource AccentBrush}"/>
+                                                <TextBlock Text="{Binding Note}" FontSize="12" Margin="0,4,0,0"
+                                                           TextWrapping="Wrap" LineHeight="18"
+                                                           Foreground="{DynamicResource MutedInkBrush}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                    <!-- ── 原始素材：實際取到的 V/F 工作點，逐點列出 ──────────────────
+                         這是整份評定的依據，不該藏起來：使用者看到「6 核那一階只有 3 筆取樣」
+                         就知道該對那個點的權重打折，而看不到就只能相信一個數字。 -->
+                    <StackPanel Margin="0,10,0,0"
+                                Visibility="{Binding Overclock.SiliconPoints.Count, Converter={StaticResource CountToVis}}">
+                        <TextBlock Text="取到的 V/F 工作點" FontSize="13.5" FontWeight="SemiBold" Margin="0,0,0,8"
+                                   Foreground="{DynamicResource PrimaryInkBrush}"/>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="72"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="72"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="活躍核心" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Grid.Column="1" Text="有效頻率" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Grid.Column="2" Text="最低電壓" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Grid.Column="3" Text="封裝溫度" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Grid.Column="4" Text="封裝功耗" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Grid.Column="5" Text="取樣數" Style="{StaticResource FieldLabel}"/>
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding Overclock.SiliconPoints}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource Surface2Brush}" CornerRadius="7"
+                                            Padding="0,7" Margin="0,0,0,5">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="72"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="72"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding CoresText}" Style="{StaticResource FieldValue}"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding FreqText}" Style="{StaticResource FieldValue}"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding VoltText}" Style="{StaticResource FieldValue}"/>
+                                            <TextBlock Grid.Column="3" Text="{Binding TempText}" Style="{StaticResource FieldValue}"/>
+                                            <TextBlock Grid.Column="4" Text="{Binding PowerText}" Style="{StaticResource FieldValue}"/>
+                                            <TextBlock Grid.Column="5" Text="{Binding SamplesText}" Style="{StaticResource FieldValue}"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                    <!-- ── 方法與出處：每個數字是從哪個介面讀來的 ────────────────────── -->
+                    <Border Background="{DynamicResource PagePlaneBrush}" CornerRadius="8" Padding="12,9" Margin="0,10,0,0"
+                            Visibility="{Binding Overclock.HasSiliconResult, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding Overclock.SiliconMethodText}" TextWrapping="Wrap"
+                                   FontSize="12.5" LineHeight="20" Foreground="{DynamicResource MutedInkBrush}"/>
+                    </Border>
+
+                    <!-- ── 這個數字不能拿去做什麼：限制與前提，逐條列出 ───────────────── -->
+                    <Border Background="{DynamicResource PagePlaneBrush}" CornerRadius="8" Padding="12,9" Margin="0,8,0,0"
+                            Visibility="{Binding Overclock.HasSiliconCaveats, Converter={StaticResource BoolToVis}}">
+                        <StackPanel Orientation="Horizontal">
+                            <Border Width="5" CornerRadius="3" Background="{DynamicResource WarningBrush}" Margin="0,0,10,0"/>
+                            <StackPanel>
+                                <TextBlock Text="這個數字的前提與限制" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,5"
+                                           Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                <TextBlock Text="{Binding Overclock.SiliconCaveatText}" TextWrapping="Wrap" MaxWidth="700"
+                                           FontSize="12.5" LineHeight="20" Foreground="{DynamicResource MutedInkBrush}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </Border>
 

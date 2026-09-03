@@ -15,6 +15,7 @@ namespace XinSpect.Tests;
 /// 淺色主題與另外七個強調色從加進來的那天起就沒有生效過（深色＋曦藍剛好等於 Theme.xaml 的字面值，
 /// 所以看起來「正常」）。這種失敗不會拋例外、不會有繫結錯誤，只能靠斷言筆刷可改與像素真的變了來守。
 /// </summary>
+[Collection(WpfCollection.Name)]
 public class ThemeSwitchTests
 {
     /// <summary>ThemeService 會就地改寫的所有佈景資源鍵。</summary>

@@ -93,29 +93,6 @@
             </Border>
         </DataTemplate>
 
-        <DataTemplate x:Key="Tile.ai">
-            <Border Style="{StaticResource Card}" Margin="0,0,0,14" DataContext="{Binding Vm}">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                        <local:SectionHead Text="AI 評價" HelpKey="overview/AI 評價" Margin="0,0,0,2"/>
-                        <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" MaxWidth="560" HorizontalAlignment="Left"
-                                   Text="由 AI 依本機真實數據客觀評價效能與配置。可用本機免費 Ollama 或 OpenAI 相容 API，於「設定 › AI 評價」調整。"/>
-                        <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"
-                                   Text="{Binding Ai.StatusText}"/>
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
-                        <Button Style="{StaticResource ToolButton}" Content="一鍵評價本機" Margin="0,0,10,0"
-                                IsEnabled="{Binding Ai.CanSend}" Click="AiEvaluate_Click"/>
-                        <Button Style="{StaticResource PrimaryButton}" Content="開啟 AI 助手　▸" Click="OpenAi_Click"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
-        </DataTemplate>
-
         <DataTemplate x:Key="Tile.brands">
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" DataContext="{Binding Vm}">
                 <StackPanel>

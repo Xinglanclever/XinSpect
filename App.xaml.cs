@@ -27,21 +27,31 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        // 單一執行個體：開兩份會重複開 Ring0 驅動、競寫同一份歷史與設定、系統匣出現兩顆圖示。
-        // 但「不准開第二份」不等於「什麼都不做」——使用者再點一次圖示，要的是視窗回來。
+        // 多開：1.9.0 起<b>預設允許</b>（設定 › 一般可關回單一實例）。
+        //
+        // 原本硬性擋掉第二份，理由是實在的：兩份會各自開 Ring0 驅動、競寫同一份設定與歷史、
+        // 系統匣出現兩顆圖示。改成允許之後那些狀況並沒有消失，只是變成使用者自己判斷——
+        // 設定與歷史是「最後寫入者贏」（寫檔本身原子化，不會寫壞），而 WinRing0 是全機共用的
+        // 驅動服務，其中一份結束時會把它收掉，另一份剩下的 MSR 讀取就開始顯示「—」。
+        // 這些都寫在 SettingsService.AllowMultiInstance 的註解與設定頁的說明字裡。
+        //
+        // 具名信號無論如何都要建：「單一實例」這個選項要能關回去，而且系統匣重複點擊仍要
+        // 能把既有實例的視窗叫回前景。
+        bool allowMulti = SettingsService.PeekAllowMultiInstance();
         _singleInstance = new EventWaitHandle(true, EventResetMode.AutoReset,
             @"Local\XinSpect.SingleInstance", out bool createdNew);
         _activateRequest = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\XinSpect.Activate");
         _activateDone = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\XinSpect.Activated");
 
-        if (!createdNew)
+        if (!createdNew && !allowMulti)
         {
             RequestExistingToShow();
             Shutdown();
             return;
         }
 
-        StartActivationListener();
+        // 只有第一份負責接聽「把視窗叫回來」：這是個 AutoReset 信號，多份一起等會互相搶走。
+        if (createdNew) StartActivationListener();
 
         // UI 執行緒（多半可續跑）
         DispatcherUnhandledException += OnDispatcherException;

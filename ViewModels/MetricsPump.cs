@@ -95,7 +95,7 @@ internal sealed class MetricsPump
                 try { _vm.History.Sample(live); }
                 catch (Exception ex) { Diag.Swallow("歷史倉取樣", ex, "歷史回放少了這一拍"); }
                 try { _vm.Events.Check(live); }
-                catch (Exception ex) { Diag.Swallow("事件偵測", ex, "本拍不會加入事件時間軸"); }
+                catch (Exception ex) { Diag.Swallow("事件偵測", ex, "本拍不會加入事件紀錄"); }
                 try { _vm.FanCurves.Tick(live); }
                 catch (Exception ex) { Diag.Swallow("風扇曲線寫入", ex, "本拍未依曲線調整轉速"); }
             }

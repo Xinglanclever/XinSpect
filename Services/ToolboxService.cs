@@ -14,6 +14,19 @@ public enum ToolKind
     DetectApp,
 }
 
+/// <summary>
+/// 這個工具動起來會不會弄壞東西。決定畫面上要不要掛一枚警告徽章、以及從插槽啟動前要不要先問一次。
+/// </summary>
+public enum ToolRisk
+{
+    /// <summary>唯讀，或改動可逆。工具箱裡絕大多數是這一類。</summary>
+    Normal,
+    /// <summary>會刪資料或改系統設定，但救得回來（低階格式化、抹除、清理）。</summary>
+    Caution,
+    /// <summary>會寫入韌體或開機結構：出錯可能開不了機、需要外部燒錄器，資料也拿不回來。</summary>
+    Danger,
+}
+
 /// <summary>單一工具箱項目。</summary>
 public sealed class ToolItem : ObservableObject
 {
@@ -29,30 +42,59 @@ public sealed class ToolItem : ObservableObject
     /// <summary>搜尋用的額外詞彙（英文名、別名、俗稱）。</summary>
     public string[] Keywords { get; init; } = Array.Empty<string>();
 
+    /// <summary>危險等級。預設 <see cref="ToolRisk.Normal"/>。</summary>
+    public ToolRisk Risk { get; init; } = ToolRisk.Normal;
+
+    /// <summary>
+    /// 危險等級的具體後果。非 <see cref="ToolRisk.Normal"/> 時<b>必填</b>——
+    /// 「請小心使用」這種話沒有資訊量，要寫清楚最壞情況（見 ToolboxFilterTests 的檢查）。
+    /// </summary>
+    public string? RiskNote { get; init; }
+
+    public bool HasRisk => Risk != ToolRisk.Normal;
+
+    /// <summary>徽章上的字。</summary>
+    public string RiskLabel => Risk switch
+    {
+        ToolRisk.Danger => "危險",
+        ToolRisk.Caution => "注意",
+        _ => "",
+    };
+
+    /// <summary>徽章的提示：等級 ＋ 最壞情況。</summary>
+    public string RiskTip => Risk switch
+    {
+        ToolRisk.Danger => "危險：" + (RiskNote ?? ""),
+        ToolRisk.Caution => "注意：" + (RiskNote ?? ""),
+        _ => "",
+    };
+
     /// <summary>曦覽自己已涵蓋同一件事的頁面鍵；null 表示本程式沒有對應功能。</summary>
+    /// <remarks>
+    /// 1.9.0 起這個欄位<b>不再產生畫面上的徽章</b>。原本每個有對應頁面的項目旁邊會掛一枚
+    /// 「曦覽內建：X」的標籤，但那枚標籤自 1.6.2 起就不可點（工具箱不做導覽），
+    /// 剩下的只是在每一列後面重複「我們也有」，佔位置又不能做任何事。
+    /// 這個鍵現在只用來標明 <see cref="NativeNote"/> 講的是哪一頁，並讓那一頁的標題也能被搜到。
+    /// </remarks>
     public string? Native { get; init; }
 
     /// <summary>對照說明：曦覽的那一頁做到什麼、以及與這個第三方工具的差別（誠實寫出不足）。</summary>
     public string? NativeNote { get; init; }
 
-    /// <summary>有標註曦覽的對應頁面（且該頁確實存在於註冊表中）。</summary>
-    public bool HasNative => Native is { Length: > 0 } && PageRegistry.FindAny(Native) is not null;
-
-    /// <summary>對應頁面的顯示標題（供標籤文字與搜尋比對）。</summary>
+    /// <summary>對應頁面的顯示標題（供搜尋比對）。</summary>
     public string NativeTitle => Native is { Length: > 0 } ? PageRegistry.FindAny(Native)?.Title ?? "" : "";
 
-    /// <summary>對應頁面標籤的文字。</summary>
-    public string NativeLabel => $"曦覽內建：{NativeTitle}";
-
-    /// <summary>對應頁面標籤的提示（帶誠實的差異說明）。
-    /// 1.6.2 起這只是一枚說明用的標籤，不再是可點的跳頁按鈕——工具箱不做導覽，
-    /// 導覽一律走左側欄與 Ctrl+K；這裡的價值是告訴你「這個第三方工具其實不必再裝」。</summary>
-    public string NativeTip => string.IsNullOrEmpty(NativeNote)
-        ? $"曦覽的「{NativeTitle}」頁已涵蓋同一件事（可由左側欄或 Ctrl+K 前往）。"
-        : $"曦覽的「{NativeTitle}」頁已涵蓋同一件事（可由左側欄或 Ctrl+K 前往）。\n\n{NativeNote}";
-
-    /// <summary>主按鈕的提示：說明加上（若有）與曦覽自家功能的差異對照。</summary>
-    public string Tip => string.IsNullOrEmpty(NativeNote) ? Description : $"{Description}\n\n{NativeNote}";
+    /// <summary>主按鈕的提示：說明 ＋（若有）危險後果 ＋（若有）與曦覽自家功能的差異對照。</summary>
+    public string Tip
+    {
+        get
+        {
+            var parts = new List<string> { Description };
+            if (HasRisk) parts.Add(RiskTip);
+            if (!string.IsNullOrEmpty(NativeNote)) parts.Add(NativeNote);
+            return string.Join("\n\n", parts);
+        }
+    }
 
     /// <summary>是否可裝入本機執行檔（Windows 內建工具不需要插槽）。</summary>
     public bool CanSlot => Kind is not ToolKind.System;
@@ -101,13 +143,17 @@ public sealed class ToolGroup
 /// <para>
 /// 第三方項目若有曦覽已涵蓋的同一件事，會以 <see cref="ToolItem.Native"/> 指向自家頁面，
 /// 並在 <see cref="ToolItem.NativeNote"/> 誠實寫出兩者差別——包含曦覽做不到的部分。
-/// 這是本工具箱與「整合包」的分別：目的是讓使用者知道哪些工具其實不必再裝，
-/// 而不是把清單堆長。
+/// 這段對照文字出現在該項目的滑鼠提示裡。
 /// </para>
 /// <para>
 /// 1.6.2 起工具箱<b>不再放曦覽自己的功能</b>：那些頁面本來就在左側欄與 Ctrl+K 裡，
-/// 在這裡再擺一排跳頁鈕只是同一件事出現兩次。自家功能只以「曦覽內建：X」標籤出現在
-/// 對應的第三方項目旁邊，當作「這個你不必再裝」的註記，不可點。
+/// 在這裡再擺一排跳頁鈕只是同一件事出現兩次。
+/// </para>
+/// <para>
+/// 1.9.0 起也<b>不再掛「曦覽內建：X」徽章</b>與「只看曦覽做得到的」篩選：那枚徽章自 1.6.2 起
+/// 就不可點（工具箱不做導覽），剩下的只是在每一列後面重複「我們也有」，佔位置又不能做任何事；
+/// 篩選則是建立在那枚徽章之上，徽章不見了就沒有東西可以對照。對照說明改為只留在滑鼠提示裡。
+/// 徽章的位置換給真的需要警告的東西——見 <see cref="ToolRisk"/>。
 /// </para>
 /// </summary>
 public sealed class ToolboxService : ObservableObject
@@ -139,7 +185,10 @@ public sealed class ToolboxService : ObservableObject
         new() { Group = "系統管理", Name = "服務",             Description = "啟動 / 停止 Windows 服務", Kind = ToolKind.System, Target = "services.msc" },
         new() { Group = "系統管理", Name = "電腦管理",         Description = "整合式系統管理主控台", Kind = ToolKind.System, Target = "compmgmt.msc" },
         new() { Group = "系統管理", Name = "程式和功能",       Description = "解除安裝或變更已安裝的程式", Kind = ToolKind.System, Target = "appwiz.cpl" },
-        new() { Group = "系統管理", Name = "登錄編輯程式",     Description = "檢視與編輯系統登錄（請謹慎使用）", Kind = ToolKind.System, Target = "regedit" },
+        new() { Group = "系統管理", Name = "登錄編輯程式",     Description = "檢視與編輯系統登錄", Kind = ToolKind.System, Target = "regedit",
+                Risk = ToolRisk.Caution,
+                RiskNote = "改錯或刪錯機碼可能讓某個程式、驅動甚至 Windows 本身開不起來，而且沒有復原按鈕。"
+                         + "動之前先在該機碼上「匯出」成 .reg 檔，那是唯一的回頭路。" },
 
         // ── 處理器工具（官方來源）─────────────────────────────────
         new() { Group = "處理器工具", Name = "CPU-Z",
@@ -240,7 +289,40 @@ public sealed class ToolboxService : ObservableObject
                 Kind = ToolKind.WebLink, Target = "https://www.hdtune.com/download.html" },
         new() { Group = "硬碟工具", Name = "DiskGenius",
                 Description = "分割區管理與資料救援，Eassos 官方",
-                Kind = ToolKind.WebLink, Target = "https://www.diskgenius.com/" },
+                Kind = ToolKind.WebLink, Target = "https://www.diskgenius.com/",
+                Keywords = ["分割區", "分區", "救援", "資料恢復", "mbr", "gpt", "partition"],
+                Risk = ToolRisk.Caution,
+                RiskNote = "分割區的建立、刪除、調整大小與格式化都是真的寫進碟裡。調整大小中途斷電"
+                         + "會讓那個分割區處於半完成狀態；重要資料先備份再動。" },
+        // ── U 盤／SSD 真偽與表面檢測 ──────────────────────────────
+        // 這三支是曦覽自己做不到的：儲存頁讀的是 SMART 與規格，而「這顆碟的容量是不是假的」、
+        // 「有沒有壞道」都必須對整顆媒體循序讀寫一遍——那是量測，不是查詢。
+        new() { Group = "硬碟工具", Name = "H2testw",
+                Description = "寫入亂數再回讀比對，抓假容量的 U 盤與記憶卡；c't／heise 官方",
+                Kind = ToolKind.WebLink, Target = "https://www.heise.de/download/product/h2testw-50539",
+                Keywords = ["假容量", "真偽", "u盤", "隨身碟", "記憶卡", "sd", "microsd", "黑片",
+                            "fake", "flash", "h2testw"],
+                Risk = ToolRisk.Caution,
+                RiskNote = "它會把整個媒體寫滿測試檔，而且官方要求先格式化成單一分割區：上面原有的資料"
+                         + "會沒了，而且測完等於被整片覆寫過，救不回來。只對空白或可以清空的媒體用它。" },
+        new() { Group = "硬碟工具", Name = "HDDScan",
+                Description = "表面掃描與壞道檢測、SMART 屬性與硬碟自我測試；hddscan.com 官方",
+                Kind = ToolKind.WebLink, Target = "https://hddscan.com/",
+                Keywords = ["壞道", "壞塊", "表面掃描", "smart", "自我測試", "bad sector", "hddscan"],
+                Native = "storage",
+                NativeNote = "曦覽的儲存頁讀 SMART 屬性並做健康判讀，但不做逐磁區的表面掃描"
+                           + "——那要對整顆碟循序讀一遍，是量測而不是查詢。要抓壞道請用它。",
+                Risk = ToolRisk.Caution,
+                RiskNote = "除了唯讀的表面掃描，它也能做線性抹除、以及改寫硬碟本身的 AAM／APM 與停轉計時器。"
+                         + "抹除是不可逆的；設定變更會留在碟上。選錯模式的後果曦覽無法介入。" },
+        new() { Group = "硬碟工具", Name = "HDD Low Level Format Tool",
+                Description = "整碟寫零與全裝置 TRIM，走原始裝置路徑；hddguru 官方",
+                Kind = ToolKind.WebLink, Target = "https://hddguru.com/software/HDD-LLF-Low-Level-Format-Tool/",
+                Keywords = ["低階格式化", "寫零", "抹除", "清除", "trim", "llf", "llftool"],
+                Risk = ToolRisk.Danger,
+                RiskNote = "整顆碟寫零：分割表、隱藏區與所有資料一起沒了。它走的是原始裝置路徑"
+                         + @"（\\.\PhysicalDriveN），不看分割區也不看檔案系統，所以選錯一顆碟就是那顆全毀，"
+                         + "沒有復原步驟。TRIM 模式較快，但官方明說不保證完全銷毀。" },
         new() { Group = "硬碟工具", Name = "WizTree",
                 Description = "極速掃描磁碟空間佔用，Antibody Software 官方",
                 Kind = ToolKind.WebLink, Target = "https://diskanalyzer.com/",
@@ -291,7 +373,12 @@ public sealed class ToolboxService : ObservableObject
                 NativeNote = "曦覽的總覽頁就是這件事，且可直接匯出完整報告。" },
         new() { Group = "綜合檢測", Name = "RWEverything",
                 Description = "讀寫幾乎所有底層硬體暫存器（進階），官方站",
-                Kind = ToolKind.WebLink, Target = "http://rweverything.com/" },
+                Kind = ToolKind.WebLink, Target = "http://rweverything.com/",
+                Keywords = ["暫存器", "msr", "pci", "spi", "底層", "rw"],
+                Risk = ToolRisk.Danger,
+                RiskNote = "名字就是「什麼都能讀寫」：PCI 設定空間、實體記憶體、I/O 埠、SPI 快閃記憶體都能寫。"
+                         + "寫錯的後果從當機到開不了機都有可能，嚴重時要靠外部燒錄器救。"
+                         + "曦覽自己所有底層存取都是唯讀的，正是為了避開這一類風險。" },
 
         // ── 系統維護與工具（官方來源）─────────────────────────────
         new() { Group = "系統維護", Name = "Everything",
@@ -324,10 +411,16 @@ public sealed class ToolboxService : ObservableObject
                            + "RAMMap 能做曦覽做不到的事：逐類別（待命、修改、分頁集區）拆解與清空待命清單。" },
         new() { Group = "系統維護", Name = "Rufus",
                 Description = "製作可開機 USB 隨身碟，Akeo 官方",
-                Kind = ToolKind.WebLink, Target = "https://rufus.ie/" },
+                Kind = ToolKind.WebLink, Target = "https://rufus.ie/",
+                Risk = ToolRisk.Caution,
+                RiskNote = "製作開機碟會把目標 USB 整個重新分割並格式化，上面原有的檔案全部消失。"
+                         + "選錯磁碟就是抹錯一顆——它會列出所有可移除裝置，看清楚容量與代號再按。" },
         new() { Group = "系統維護", Name = "Ventoy",
                 Description = "免格式化多鏡像開機 USB，開源官方",
-                Kind = ToolKind.WebLink, Target = "https://www.ventoy.net/" },
+                Kind = ToolKind.WebLink, Target = "https://www.ventoy.net/",
+                Risk = ToolRisk.Caution,
+                RiskNote = "第一次安裝 Ventoy 到 USB 時會重建它的分割區，那顆隨身碟原有的資料會沒了"
+                         + "（之後放鏡像才是單純複製檔案，不必再格式化）。" },
         new() { Group = "系統維護", Name = "FanControl",
                 Description = "自訂風扇曲線的通用風扇控制，開源官方（GitHub）",
                 Kind = ToolKind.WebLink, Target = "https://github.com/Rem0o/FanControl.Releases/releases",
@@ -390,7 +483,11 @@ public sealed class ToolboxService : ObservableObject
                 Keywords = ["spd", "顆粒", "時序", "海力士", "三星"],
                 Native = "memory",
                 NativeNote = "曦覽記憶體頁的時序是解析 CPU-Z 報告來的，並不是自己走 SMBus 讀 SPD——"
-                           + "所以顆粒編號（如 Hynix CJR / Samsung B-die）曦覽讀不到，那要靠 Thaiphoon Burner。" },
+                           + "所以顆粒編號（如 Hynix CJR / Samsung B-die）曦覽讀不到，那要靠 Thaiphoon Burner。",
+                Risk = ToolRisk.Danger,
+                RiskNote = "讀 SPD 是安全的，但它也能「寫」SPD EEPROM（Burner 這個名字就是這個意思）。"
+                         + "寫壞了那條記憶體的 SPD，主機板會認不出它、開機直接不過，而且沒有軟體層的復原方式。"
+                         + "只用讀取功能就好。" },
         new() { Group = "記憶體工具", Name = "TestMem5 (TM5)",
                 Description = "輕量而嚴苛的記憶體穩定性測試，開源官方（GitHub）",
                 Kind = ToolKind.WebLink, Target = "https://github.com/CoolCmd/TestMem5" },
@@ -469,6 +566,42 @@ public sealed class ToolboxService : ObservableObject
         new() { Group = "系統維護", Name = "DesktopOK",
                 Description = "保存與還原桌面圖示排列，SoftwareOK 官方",
                 Kind = ToolKind.WebLink, Target = "https://www.softwareok.com/?seite=Freeware/DesktopOK" },
+
+        // ── 資料救援與開機修復 ────────────────────────────────────
+        // 曦覽自己完全不做這一塊：救援要對整顆碟做映像、逐磁區掃檔頭，那是另一種程式的職責。
+        // 這裡只收有官方站、來源查得到的；量產工具（USB 主控刷寫）刻意不收，見本檔末的說明。
+        new() { Group = "資料救援與開機修復", Name = "TestDisk & PhotoRec",
+                Description = "修復分割表與開機磁區（TestDisk）＋ 依檔頭救回檔案（PhotoRec）；CGSecurity 官方、開源、免安裝",
+                Kind = ToolKind.WebLink, Target = "https://www.cgsecurity.org/wiki/TestDisk_Download",
+                Keywords = ["資料恢復", "救援", "分割表", "mbr", "gpt", "開機", "引導", "誤刪",
+                            "testdisk", "photorec", "partition", "recovery"],
+                Risk = ToolRisk.Caution,
+                RiskNote = "TestDisk 會改寫分割表與開機磁區。寫下去之前它會要你確認，但寫錯的結果是"
+                         + "「原本還認得出來的碟變成認不出來」。救援的第一步永遠是先對整顆碟做映像、"
+                         + "在映像上動手，不要直接在唯一那顆碟上試。" },
+        new() { Group = "資料救援與開機修復", Name = "Recuva",
+                Description = "從資源回收筒、記憶卡與剛格式化的碟救回誤刪檔案；Piriform 官方（有免費版）",
+                Kind = ToolKind.WebLink, Target = "https://www.ccleaner.com/recuva",
+                Keywords = ["誤刪", "資料恢復", "救回", "回收筒", "recuva", "undelete"],
+                Risk = ToolRisk.Caution,
+                RiskNote = "救出來的檔案不要存回同一顆碟：任何寫入都可能蓋掉還沒救出來的資料。"
+                         + "它另有「安全覆寫」功能，那是不可逆的抹除，別按錯。" },
+
+        // ── 韌體與底層 ────────────────────────────────────────────
+        // 曦覽全站的界線是唯讀，所以這一類自己不做，只在這裡標明「有這種工具、以及它有多危險」。
+        new() { Group = "韌體與底層", Name = "Intel FPT（fptw64）",
+                Description = "Intel Flash Programming Tool：直接讀寫主機板 SPI 快閃記憶體的 BIOS／ME 區域。"
+                            + "Intel 未對一般使用者公開發佈，它隨 CSME System Tools 由 OEM／授權管道散佈；"
+                            + "此連結為 Intel 官方下載中心（部分內容需登入，且限授權對象）",
+                Kind = ToolKind.WebLink, Target = "https://www.intel.com/content/www/us/en/download-center/home.html",
+                Keywords = ["bios", "刷寫", "刷bios", "韌體", "firmware", "spi", "fpt", "fptw64",
+                            "me", "csme", "flash", "主機板"],
+                Risk = ToolRisk.Danger,
+                RiskNote = "這是本目錄裡最危險的一項：它直接寫主機板上的 SPI 快閃記憶體。版本必須與平台的"
+                         + " ME 世代完全相符；寫錯映像或中途斷電會讓機器「開不了機」，而且不是清 CMOS 能救的"
+                         + "——得靠 SPI 燒錄夾（CH341A 之類）把晶片重新燒回去，或整塊板子送修。"
+                         + "Intel 只對授權對象發佈它，正是因為這個。曦覽只負責把它啟動，"
+                         + "寫進去的內容與後果完全在你手上。" },
     };
 
     /// <summary>依 <see cref="ToolItem.Group"/> 分組後的工具清單（保留定義順序）。</summary>
@@ -486,14 +619,6 @@ public sealed class ToolboxService : ObservableObject
         set { if (SetProperty(ref _query, value)) RefreshFilter(); }
     }
 
-    private bool _onlyBuiltin;
-    /// <summary>只列出「曦覽已經做到同一件事」的項目（即有標註自家對應頁面者）。</summary>
-    public bool OnlyBuiltin
-    {
-        get => _onlyBuiltin;
-        set { if (SetProperty(ref _onlyBuiltin, value)) RefreshFilter(); }
-    }
-
     private IReadOnlyList<ToolGroup> _filtered = Array.Empty<ToolGroup>();
     /// <summary>畫面實際呈現的分組（套用搜尋與篩選後；空的分組不會出現）。</summary>
     public IReadOnlyList<ToolGroup> FilteredGroups
@@ -506,33 +631,28 @@ public sealed class ToolboxService : ObservableObject
     /// <summary>搜尋結果摘要（沒有命中時明說，不留白）。</summary>
     public string FilterSummary { get => _summary; private set => SetProperty(ref _summary, value); }
 
-    /// <summary>清除搜尋與篩選。</summary>
+    /// <summary>清除搜尋。</summary>
     public void ClearFilter()
     {
         _query = "";
-        _onlyBuiltin = false;
         OnPropertyChanged(nameof(Query));
-        OnPropertyChanged(nameof(OnlyBuiltin));
         RefreshFilter();
     }
 
     /// <summary>重算 <see cref="FilteredGroups"/>；建構時亦呼叫一次以填入完整清單。</summary>
     public void RefreshFilter()
     {
-        var hit = Tools.Where(t =>
-        {
-            // 工具箱裡已無曦覽自家項目，「只看曦覽做得到的」＝只留有自家對應頁面的第三方／系統工具。
-            if (_onlyBuiltin && !t.HasNative) return false;
-            return ToolboxFilter.Matches(_query, t.Name, t.Description, t.Group, t.NativeTitle,
-                                         t.Keywords.Length == 0 ? null : string.Join(' ', t.Keywords));
-        }).ToList();
+        // 對應頁面的標題也納入搜尋：打「大檔掃描」要找得到 WizTree，那是對照說明在講的那一頁。
+        var hit = Tools.Where(t => ToolboxFilter.Matches(
+            _query, t.Name, t.Description, t.Group, t.NativeTitle,
+            t.Keywords.Length == 0 ? null : string.Join(' ', t.Keywords))).ToList();
 
         FilteredGroups = hit
             .GroupBy(t => t.Group)
             .Select(g => new ToolGroup { Title = g.Key, Items = g.ToList() })
             .ToList();
 
-        FilterSummary = ToolboxFilter.Summarize(_query, _onlyBuiltin, hit.Count, Tools.Count);
+        FilterSummary = ToolboxFilter.Summarize(_query, hit.Count, Tools.Count);
     }
 
     public ToolboxService() => RefreshFilter();

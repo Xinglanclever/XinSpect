@@ -29,10 +29,15 @@ public class MeasurementQuietTests
          "整趟大半時間是刻意的閒置，動畫會把機器叫著，變成量「有活動時的閒置」"),
         ("Services/DramTrafficService.cs", "Run",
          "動畫的重繪本身會製造記憶體流量與快取壓力，會動到自我驗證的比值"),
+        ("Services/ThreadMigrationService.cs", "RunAsync",
+         "量的就是「執行緒被搬了幾次」，而動畫每一幀重繪都會製造上下文切換與遷移"),
+        ("Services/Overclock/SiliconProbeService.cs", "Run",
+         "體質特徵化量的是「這顆在某個頻率上要多少電壓」，而動畫重繪會吃掉封裝功耗預算、"
+         + "回頭壓低頻率並抬高溫度，直接把 V/F 工作點推歪"),
     ];
 
     [Fact]
-    public void 四個新量測都要在量測期間暫停動畫()
+    public void 每一個量測都要在量測期間暫停動畫()
     {
         var missing = new List<string>();
         foreach (var (file, method, why) in Required)

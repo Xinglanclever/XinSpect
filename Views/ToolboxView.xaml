@@ -43,24 +43,18 @@
                 <StackPanel>
                     <local:SectionHead Text="工具目錄" HelpKey="toolbox/工具目錄"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
-                               Text="兩種來源混編：Windows 內建工具一鍵開啟；第三方工具一律導向官方下載頁，本程式不內含任何外部執行檔。若曦覽已經做到同一件事，項目旁會掛一枚「曦覽內建：…」標籤（僅供對照，不可點；該頁請由左側欄或 Ctrl+K 前往），滑過主按鈕的提示會誠實寫出兩者差在哪。"/>
+                               Text="兩種來源混編：Windows 內建工具一鍵開啟；第三方工具一律導向官方下載頁，本程式不內含任何外部執行檔。會寫韌體、抹碟或改開機結構的項目旁邊掛一枚警告徽章，滑過去看得到最壞情況。若曦覽已經做到同一件事，滑過主按鈕的提示會誠實寫出兩者差在哪（含曦覽做不到的部分）。"/>
 
                     <Grid Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <TextBox Grid.Column="0" Style="{StaticResource SearchBox}"
                                  Text="{Binding Toolbox.Query, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  ToolTip="以空白分隔多個詞彙；全部命中才會列出（例如「ssd 健康」）。名稱、說明、分類、英文別名都在搜尋範圍內。"/>
-                        <CheckBox Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="13"
-                                  Foreground="{DynamicResource SecondaryInkBrush}"
-                                  Content="只看曦覽做得到的"
-                                  ToolTip="只留下曦覽已經做到同一件事的項目——用來確認哪些軟體其實不必再裝。"
-                                  IsChecked="{Binding Toolbox.OnlyBuiltin, Mode=TwoWay}"/>
-                        <Button Grid.Column="2" Style="{StaticResource ToolButton}" Margin="12,0,0,0"
-                                Content="清除" Click="ClearFilter_Click" ToolTip="清空搜尋詞與篩選"/>
+                        <Button Grid.Column="1" Style="{StaticResource ToolButton}" Margin="12,0,0,0"
+                                Content="清除" Click="ClearFilter_Click" ToolTip="清空搜尋詞"/>
                     </Grid>
 
                     <ItemsControl ItemsSource="{Binding Toolbox.FilteredGroups}">
@@ -81,15 +75,16 @@
                                                     <Button Style="{StaticResource ToolButton}"
                                                             Content="{Binding Name}" ToolTip="{Binding Tip}"
                                                             Tag="{Binding}" Click="Tool_Click"/>
-                                                    <!-- 「曦覽內建：X」是標籤而非按鈕：工具箱不做導覽（左側欄與 Ctrl+K 才是），
-                                                         它只回答「這個第三方工具我還需不需要裝」。 -->
+                                                    <!-- 危險等級徽章。這個位置原本掛的是「曦覽內建：X」，
+                                                         1.9.0 移除：那枚標籤不可點，只是在每一列後面重複「我們也有」。
+                                                         換成真的需要警告的東西——會寫韌體、抹碟或改開機結構的工具。 -->
                                                     <Border Margin="4,0,0,0" VerticalAlignment="Center" Padding="8,5"
                                                             CornerRadius="6" Background="{DynamicResource Surface2Brush}"
-                                                            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
-                                                            ToolTip="{Binding NativeTip}"
-                                                            Visibility="{Binding HasNative, Converter={StaticResource BoolToVis}}">
-                                                        <TextBlock Text="{Binding NativeLabel}" FontSize="12"
-                                                                   Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                                            BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1.2"
+                                                            ToolTip="{Binding RiskTip}"
+                                                            Visibility="{Binding HasRisk, Converter={StaticResource BoolToVis}}">
+                                                        <TextBlock Text="{Binding RiskLabel}" FontSize="12" FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource WarningBrush}"/>
                                                     </Border>
                                                     <Button Style="{StaticResource ToolButton}" Margin="4,0,0,0"
                                                             Content="{Binding SlotLabel}" ToolTip="{Binding SlotTip}"

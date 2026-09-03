@@ -187,7 +187,7 @@
                         Tag="磁碟健康狀況如何？請查磁碟健康與剩餘壽命，若有風險請說明該做什麼。"
                         IsEnabled="{Binding Ai.CanSend}" Click="Chip_Click"/>
                 <Button Style="{StaticResource ToolButton}" Margin="0,0,7,7" Content="最近有異常嗎"
-                        Tag="最近有沒有藍屏、熱降頻或其他異常？請查事件時間軸與藍屏傾印記錄後回答。"
+                        Tag="最近有沒有藍屏、熱降頻或其他異常？請查事件紀錄與藍屏傾印記錄後回答。"
                         IsEnabled="{Binding Ai.CanSend}" Click="Chip_Click"/>
                 <Button Style="{StaticResource ToolButton}" Margin="0,0,7,7" Content="開機為什麼慢"
                         Tag="開機與登入偏慢的可能原因是什麼？請查開機啟動項與系統碟型別後回答。"

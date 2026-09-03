@@ -288,10 +288,12 @@ public static class BottleneckAnalyzer
         if (f.ThrottleEventSeen)
             Add(t, BottleneckKind.Thermal, "事件紀錄裡有降頻紀錄", Severity.Warning, 52,
                 f.ThrottleEventText.Length > 0
-                    ? $"事件時間軸在最近 {Span(f.HistoryWindowMinutes)} 內記錄到降頻事件（{f.ThrottleEventText}）。"
-                    : $"事件時間軸在最近 {Span(f.HistoryWindowMinutes)} 內記錄到降頻事件。",
-                "到事件時間軸看發生的時間點，對照當時在跑什麼。",
-                "事件時間軸");
+                    ? $"事件紀錄在最近 {Span(f.HistoryWindowMinutes)} 內記錄到降頻事件（{f.ThrottleEventText}）。"
+                    : $"事件紀錄在最近 {Span(f.HistoryWindowMinutes)} 內記錄到降頻事件。",
+                // 1.9.0 移掉了獨立的「事件時間軸」分頁，所以這裡改指向歷史回放——
+                // 同一段時間的溫度與頻率曲線在那裡看得到，指一個不存在的分頁比不指更糟。
+                "到歷史回放拉到那段時間，對照當時的溫度與頻率曲線。",
+                "歷史回放");
 
         // 同一個根因不要重複算：一台過熱的機器可以同時踩到四條散熱規則，全列出來只會稀釋掉重點。
         // 已經有更強的散熱證據時，這些分數 ≤58 的次級跡象就是同一件事的側面，不再單獨占一條。

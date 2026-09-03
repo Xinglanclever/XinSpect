@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media;
 
@@ -26,6 +27,7 @@ public sealed class OverclockService : ObservableObject, IDisposable
     private bool _stressGuardTripped;
     private bool _stressTempMissingWarned;   // 燒機時溫度不可讀的提示僅顯示一次
     private bool _hasLastStable;
+    private SensorService? _live;            // 最近一次遙測來源（體質特徵化的感測器補位用）
 
     public OverclockService()
     {
@@ -147,21 +149,53 @@ public sealed class OverclockService : ObservableObject, IDisposable
     public MetricHistory OscilloVolt { get; }
     public MetricHistory OscilloCurrent { get; }
 
-    // ── 體質估算（矽晶品質；改為「按鈕觸發、取樣峰值」而非每秒亂跳）─────────────
+    // ── 體質（矽晶品質）特徵化 ─────────────────────────────────────────────
+    // 由 SiliconProbeService 用負載階梯取多個 V/F 工作點，SiliconQuality 做擬合與評定。
+    // 這裡只負責把結論攤成畫面要繫結的屬性，以及把「使用者是否已手動改過電壓」傳進去
+    // ——電壓被覆寫過的時候，量到的是設定值而不是矽晶的要求，那就不該給百分位。
+    private SiliconAssessment? _si;
     private int _siScore;
     public int SiliconScore { get => _siScore; private set { if (SetProperty(ref _siScore, value)) OnPropertyChanged(nameof(SiliconScoreText)); } }
-    public string SiliconScoreText => _siScore > 0 ? $"{_siScore} / 100" : "—";
-    private string _siVerdict = "尚未測試";
+    public string SiliconScoreText => _siScore > 0 ? $"{_siScore}" : "—";
+    /// <summary>大數字旁的單位說明：百分位是「同代同頻分布裡的位置」，不是滿分 100 的分數。</summary>
+    public string SiliconScoreUnit => _siScore > 0 ? "百分位（估）" : "尚無結果";
+    private string _siVerdict = "尚未特徵化";
     public string SiliconVerdict { get => _siVerdict; private set => SetProperty(ref _siVerdict, value); }
     private Severity _siSev = Severity.Neutral;
     public Severity SiliconSeverity { get => _siSev; private set => SetProperty(ref _siSev, value); }
-    private string _siDetail = "按「重新測試」開始取樣約 5 秒；請於高負載（或燒機）時測，閒置時頻率與電壓偏低會嚴重失真。";
+    private string _siDetail =
+        "按「開始特徵化」：程式會用 1／2／4… 顆核心的負載階梯讓處理器自己走過睿頻表的各段，"
+        + "逐段記下一個 V/F 工作點，再擬合出這顆的 V/F 曲線位置。全程唯讀，不寫入任何倍頻或電壓。";
     public string SiliconDetail { get => _siDetail; private set => SetProperty(ref _siDetail, value); }
-    // 取樣狀態：測試期間於 Tick 累計「最高頻率及其當下電壓」作為 VF 品質點
+
+    private string _siPercentile = "—";
+    public string SiliconPercentileText { get => _siPercentile; private set => SetProperty(ref _siPercentile, value); }
+    private string _siConfidence = "—";
+    public string SiliconConfidenceText { get => _siConfidence; private set => SetProperty(ref _siConfidence, value); }
+    private Severity _siConfSev = Severity.Neutral;
+    public Severity SiliconConfidenceSeverity { get => _siConfSev; private set => SetProperty(ref _siConfSev, value); }
+    private string _siMethod = "";
+    public string SiliconMethodText { get => _siMethod; private set => SetProperty(ref _siMethod, value); }
+    private string _siCaveats = "";
+    public string SiliconCaveatText { get => _siCaveats; private set => SetProperty(ref _siCaveats, value); }
+    public bool HasSiliconCaveats => _siCaveats.Length > 0;
+
+    /// <summary>結果表：每一列都附「這個數字怎麼來的／代表什麼」。</summary>
+    public ObservableCollection<SiliconMetric> SiliconMetrics { get; } = new();
+    /// <summary>實際取到的 V/F 工作點，逐點列出——這是整個評定的原始素材，不該藏起來。</summary>
+    public ObservableCollection<VfPoint> SiliconPoints { get; } = new();
+    public bool HasSiliconResult => _si is { Ok: true };
+
     private bool _siTesting;
-    public bool SiliconTesting { get => _siTesting; private set { if (SetProperty(ref _siTesting, value)) OnPropertyChanged(nameof(SiliconCanTest)); } }
+    public bool SiliconTesting { get => _siTesting; private set { if (SetProperty(ref _siTesting, value)) { OnPropertyChanged(nameof(SiliconCanTest)); OnPropertyChanged(nameof(SiliconTestButtonText)); } } }
     public bool SiliconCanTest => !_siTesting;
-    private double _siPeakClock, _siPeakVcore;
+    public string SiliconTestButtonText => _siTesting ? "特徵化中…" : "開始特徵化";
+    private double _siProgress;
+    public double SiliconProgress { get => _siProgress; private set { if (SetProperty(ref _siProgress, value)) OnPropertyChanged(nameof(SiliconProgressPercent)); } }
+    public double SiliconProgressPercent => _siProgress * 100;
+    private string _siPhase = "";
+    public string SiliconPhase { get => _siPhase; private set => SetProperty(ref _siPhase, value); }
+    private CancellationTokenSource? _siCts;
 
     // ── PCIe 瓶頸 / 提醒 ───────────────────────────────────────────────────
     public bool PcieWarningVisible => BclkKnob is not null && Math.Abs(BclkKnob.Target - BclkKnob.Default) > 0.5;
@@ -441,6 +475,7 @@ public sealed class OverclockService : ObservableObject, IDisposable
     // 若壓在 UI 執行緒會造成每秒卡頓、並拖累看門狗倒數；故先在背景執行緒預抓，再回 UI 執行緒更新。
     public async Task TickAsync(SensorService? live)
     {
+        _live = live;               // 體質特徵化在 MSR 不可用時要靠感測器補位，留一份最新的引用
         bool needVcore = live?.CpuVoltage is null or <= 0;
         bool needVrm = live?.VrmTempC is null;
         double? engineVcore = null, engineVrm = null;
@@ -535,12 +570,8 @@ public sealed class OverclockService : ObservableObject, IDisposable
         }
         else { VrmTempText = "—"; VrmTempSeverity = Severity.Neutral; }
 
-        // 體質取樣：僅在「重新測試」進行中累計最高頻率及其當下電壓（VF 品質點），不再每秒亂跳
-        if (_siTesting && vcore is double sv && sv > 0 && clock > _siPeakClock)
-        {
-            _siPeakClock = clock;
-            _siPeakVcore = sv;
-        }
+        // 體質特徵化不再從這裡取樣：它自己控制負載階梯、自己以 MSR 高頻取樣（見 SiliconProbeService），
+        // 每秒一筆的遙測撐不起一條 V/F 迴歸線。
 
         // 燒機：即時餵入 + 過熱保護（>100°C 自動暫停並回復）
         if (_stress.IsRunning)
@@ -579,48 +610,131 @@ public sealed class OverclockService : ObservableObject, IDisposable
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // 體質（矽晶品質）重新測試：按鈕觸發、取樣約 5 秒峰值後才估算一次
+    // 體質（矽晶品質）特徵化：自控負載階梯 ＋ 多點 V/F 擬合
     // ═══════════════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// 重新測試體質。取樣期間（約 5 秒）由 <see cref="Tick"/> 累計「達到的最高頻率及其當下電壓」，
-    /// 收樣後才以該 VF 品質點估算一次，避免閒置低頻低壓造成的每秒亂跳與虛高分數。
-    /// 請於高負載（建議搭配燒機）時測，否則取樣到的頻率／電壓偏低會嚴重失真。
+    /// 開始體質特徵化。實際取樣在背景執行緒（<see cref="SiliconProbeService.Run"/>）：它自己起負載
+    /// 階梯、自己以 MSR 高頻取樣，約 20–30 秒後回一份完整結論，期間可按「停止」中止。
+    /// 全程唯讀——不寫入任何倍頻或電壓，只是控制「同時有幾顆核心在忙」讓處理器自己走睿頻表。
     /// </summary>
     public async Task RetestSilicon()
     {
-        if (_siTesting) return;                 // 防止重入：測試進行中忽略再次點擊
+        if (_siTesting) return;                 // 防止重入：取樣進行中忽略再次點擊
         SiliconTesting = true;
-        _siPeakClock = 0;
-        _siPeakVcore = 0;
-        SiliconVerdict = "測試中…";
+        _siCts = new CancellationTokenSource();
+        var ct = _siCts.Token;
+
+        SiliconVerdict = "特徵化中…";
         SiliconSeverity = Severity.Neutral;
         SiliconScore = 0;
-        SiliconDetail = "取樣中（約 5 秒）：正記錄本次達到的最高頻率及其當下電壓，請保持高負載。";
+        SiliconPercentileText = "—";
+        SiliconConfidenceText = "—";
+        SiliconConfidenceSeverity = Severity.Neutral;
+        SiliconCaveatText = "";
+        SiliconMethodText = "";
+        SiliconMetrics.Clear();
+        SiliconPoints.Clear();
+        _si = null;
+        OnPropertyChanged(nameof(HasSiliconResult));
+        OnPropertyChanged(nameof(HasSiliconCaveats));
+        SiliconProgress = 0;
+        SiliconPhase = "準備中";
+        SiliconDetail = "取樣進行中：處理器會被逐階推到滿載，畫面動畫已暫停，"
+                      + "以免重繪本身的功耗與發熱進到量測裡。期間請不要跑其他吃 CPU 的程式。";
+
+        var opt = new SiliconProbeService.Options
+        {
+            Sensors = BuildSensorFallback(),
+            ManualVoltage = HasManualVoltage(out string note),
+            ManualVoltageNote = note,
+        };
+        var progress = new Progress<SiliconProbeProgress>(p =>
+        {
+            SiliconProgress = p.Fraction;
+            SiliconPhase = p.Phase;
+        });
+
         try
         {
-            await Task.Delay(5000);             // 期間 Tick 於 UI 執行緒累計 _siPeakClock／_siPeakVcore
-            if (_siPeakClock > 0 && _siPeakVcore > 0)
-            {
-                var si = SiliconEstimate.Compute(_siPeakVcore, _siPeakClock);
-                SiliconScore = si.Score;
-                SiliconVerdict = si.Verdict;
-                SiliconSeverity = si.Severity;
-                SiliconDetail = si.Detail
-                    + $"（取樣峰值：{_siPeakClock / 1000.0:0.00} GHz / {_siPeakVcore:0.000} V）";
-            }
-            else
-            {
-                SiliconVerdict = "取樣失敗";
-                SiliconSeverity = Severity.Warning;
-                SiliconDetail = "未取得有效的頻率／電壓讀值；請確認正在高負載，並確保能讀到 Vcore 後再試。";
-            }
+            var result = await Task.Run(() => SiliconProbeService.Run(opt, progress, ct), ct);
+            PublishSilicon(result);
+        }
+        catch (OperationCanceledException)
+        {
+            SiliconVerdict = "已中止";
+            SiliconSeverity = Severity.Neutral;
+            SiliconDetail = "特徵化已中止。已取到的工作點不足以擬合一條可信的 V/F 線，因此不出結果。";
+        }
+        catch (Exception ex)
+        {
+            SiliconVerdict = "特徵化失敗";
+            SiliconSeverity = Severity.Warning;
+            SiliconDetail = "特徵化失敗：" + ex.Message;
+            Diag.Swallow("體質特徵化", ex, "本頁如實顯示失敗原因，不給估算值");
         }
         finally
         {
-            SiliconTesting = false;             // 無論成敗都解除測試狀態，重新啟用按鈕
+            SiliconTesting = false;             // 無論成敗都解除，重新啟用按鈕
+            SiliconProgress = 0;
+            SiliconPhase = "";
+            _siCts?.Dispose();
+            _siCts = null;
         }
     }
+
+    /// <summary>中止進行中的特徵化。負載執行緒會在下一次檢查取消時收工。</summary>
+    public void CancelSilicon() => _siCts?.Cancel();
+
+    private void PublishSilicon(SiliconAssessment a)
+    {
+        _si = a;
+        SiliconScore = a.Percentile;
+        SiliconVerdict = a.Grade;
+        SiliconSeverity = a.Severity;
+        SiliconDetail = a.Summary;
+        SiliconPercentileText = a.PercentileText;
+        SiliconConfidenceText = a.ConfidenceText;
+        SiliconConfidenceSeverity = a.ConfidenceSeverity;
+        SiliconMethodText = a.MethodText;
+        SiliconCaveatText = a.CaveatText;
+        SiliconMetrics.Clear();
+        foreach (var m in a.Metrics) SiliconMetrics.Add(m);
+        SiliconPoints.Clear();
+        foreach (var p in a.Points) SiliconPoints.Add(p);
+        OnPropertyChanged(nameof(HasSiliconCaveats));
+        OnPropertyChanged(nameof(HasSiliconResult));
+    }
+
+    /// <summary>
+    /// 這台機器現在有沒有被手動改過核心電壓。有的話，量到的電壓是<b>設定值</b>而不是晶片自己要求的
+    /// 值——這正是舊版最大的漏洞：手動降壓過的機器會拿到一個虛高的體質分數，而畫面上看不出來。
+    /// </summary>
+    private bool HasManualVoltage(out string note)
+    {
+        note = "";
+        var hits = new List<string>();
+        foreach (var k in _engine.Knobs)
+        {
+            if (k.Kind == OcKnobKind.Voltage && k.Active > 0 && Math.Abs(k.Active - k.Default) > 0.005)
+                hits.Add($"{k.Label} 現為 {k.Fmt(k.Active)}（預設 {k.Fmt(k.Default)}）");
+            else if (k.Kind == OcKnobKind.VoltageOffset && Math.Abs(k.Active - k.Default) > 1e-6)
+                hits.Add($"{k.Label} 現為 {k.Fmt(k.Active)}");
+        }
+        if (hits.Count == 0) return false;
+        note = "偵測到手動電壓設定（" + string.Join("、", hits.Take(3)) + (hits.Count > 3 ? " 等" : "")
+             + "）。此時量到的是你設定的電壓，不是這顆晶片自己要求的電壓；拿去跟世代參考線相比，"
+             + "得到的是關於「設定」而不是關於「體質」的數字，因此本次不給百分位。"
+             + "要量體質請先還原預設值（本頁下方「還原預設」）再重測——ΔV 與 V/F 斜率仍是有效的實測量。";
+        return true;
+    }
+
+    /// <summary>MSR 不可用時的補位讀值。包成委派傳進去，取樣服務因此不必認識 SensorService。</summary>
+    private SiliconProbeService.SensorFallback BuildSensorFallback() => new(
+        () => _live?.CpuVoltage,
+        () => _live?.CpuClock ?? 0,
+        () => _live?.CpuTemp,
+        () => _live?.CpuPowerW);
 
     // ═══════════════════════════════════════════════════════════════════════
     // 寫入操作

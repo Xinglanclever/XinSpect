@@ -59,10 +59,37 @@ public sealed class SettingsService : ObservableObject
     /// 簡易模式：側邊欄只列一般使用者用得到的頁面，直讀暫存器那類進階頁先收起來。
     /// </summary>
     /// <remarks>
-    /// 只是不顯示，不是停用——命令面板（Ctrl+K）照樣搜得到每一頁。預設關閉，
-    /// 因為既有使用者升級上來時不該突然少一半頁面。
+    /// 只是不顯示，不是停用——命令面板（Ctrl+K）照樣搜得到每一頁。預設關閉（＝詳細進階），
+    /// 首次啟動時會由 <c>FirstRunWindow</c> 讓使用者自己選一次。
+    ///
+    /// 1.9.0 修正：這個屬性從加進來就沒有寫進設定檔（<see cref="Persist"/> 少了對應欄位），
+    /// 所以使用者勾了「簡易模式」重開程式又變回詳細，而且畫面上沒有任何線索。
     /// </remarks>
     public bool SimpleMode { get => _simpleMode; set { if (SetProperty(ref _simpleMode, value)) Save(); } }
+
+    private bool _firstRunDone;
+    /// <summary>
+    /// 首次啟動的版本選擇對話框是否已經出現過。只用來決定「要不要問」，不影響任何功能。
+    /// </summary>
+    public bool FirstRunDone { get => _firstRunDone; set { if (SetProperty(ref _firstRunDone, value)) Save(); } }
+
+    private bool _allowMultiInstance = true;
+    /// <summary>
+    /// 是否允許同時開多份曦覽。預設允許。
+    /// </summary>
+    /// <remarks>
+    /// 原本是硬性單一實例，理由寫在 <c>App.OnStartup</c>：兩份會各自開 Ring0 驅動、競寫同一份
+    /// 設定與歷史、系統匣出現兩顆圖示。改成允許之後那些狀況仍然存在，只是交給使用者判斷：
+    /// <list type="bullet">
+    /// <item>設定與歷史是<b>最後寫入者贏</b>（寫檔本身走 <see cref="AtomicWrite"/>，不會寫壞檔，
+    /// 但兩份同時改設定時，後存的那份會蓋掉前一份）。</item>
+    /// <item>WinRing0 驅動服務是全機共用的：其中一份結束時會把驅動收掉，另一份剩下的 MSR 讀取
+    /// 會開始失敗（畫面顯示「—」），重開那一份即可。</item>
+    /// <item>兩份都做寫入型量測（超頻套用、體質特徵化、燒機）時會互相干擾量測結果。</item>
+    /// </list>
+    /// 關掉這個選項就回到原本行為：第二份會請既有實例把視窗叫回前景，然後自己結束。
+    /// </remarks>
+    public bool AllowMultiInstance { get => _allowMultiInstance; set { if (SetProperty(ref _allowMultiInstance, value)) Save(); } }
 
     private double _cpuTempThreshold = 90;
     /// <summary>CPU 溫度警示門檻（°C），50–110。</summary>
@@ -222,6 +249,22 @@ public sealed class SettingsService : ObservableObject
     public SettingsService() => Load();
 
     /// <summary>
+    /// 只從設定檔撈出「是否允許多開」這一個旗標。<c>App.OnStartup</c> 必須在建立
+    /// <see cref="MainViewModel"/>（也就是正式那一份設定服務）之前就決定要不要讓這份實例活下去，
+    /// 而那時還沒有可用的實例可問。檔案不存在（首次啟動）或讀取失敗一律回預設的「允許」——
+    /// 讀不到設定就把使用者剛按下的那份程式關掉，是最難理解的失敗模式。
+    /// </summary>
+    public static bool PeekAllowMultiInstance()
+    {
+        try
+        {
+            if (!File.Exists(FilePath)) return true;
+            return JsonSerializer.Deserialize<Persist>(File.ReadAllText(FilePath))?.AllowMultiInstance ?? true;
+        }
+        catch { return true; }
+    }
+
+    /// <summary>
     /// 現行設定檔結構版本。1 ＝ <see cref="EraMode"/> 於 1.5.1 重編號之後的編號體系。
     /// </summary>
     public const int CurrentSchema = 1;
@@ -264,6 +307,9 @@ public sealed class SettingsService : ObservableObject
         public bool MiniCompact { get; set; }
         public bool MiniTopmost { get; set; } = true;
         public bool MotionEnabled { get; set; } = true;
+        public bool SimpleMode { get; set; }
+        public bool FirstRunDone { get; set; }
+        public bool AllowMultiInstance { get; set; } = true;
         public string? DashboardTiles { get; set; }
         public Dictionary<string, string>? ToolSlots { get; set; }
     }
@@ -318,6 +364,9 @@ public sealed class SettingsService : ObservableObject
                     _miniCompact = p.MiniCompact;
                     _miniTopmost = p.MiniTopmost;
                     _motionEnabled = p.MotionEnabled;
+                    _simpleMode = p.SimpleMode;
+                    _firstRunDone = p.FirstRunDone;
+                    _allowMultiInstance = p.AllowMultiInstance;
                     _dashboardTiles = p.DashboardTiles ?? "";
                     if (p.ToolSlots is not null) _toolSlots = new(p.ToolSlots, StringComparer.Ordinal);
                 }
@@ -371,6 +420,9 @@ public sealed class SettingsService : ObservableObject
                 MiniCompact = _miniCompact,
                 MiniTopmost = _miniTopmost,
                 MotionEnabled = _motionEnabled,
+                SimpleMode = _simpleMode,
+                FirstRunDone = _firstRunDone,
+                AllowMultiInstance = _allowMultiInstance,
                 DashboardTiles = _dashboardTiles.Length > 0 ? _dashboardTiles : null,
                 ToolSlots = _toolSlots.Count > 0 ? _toolSlots : null,
             };

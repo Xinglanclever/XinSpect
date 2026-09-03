@@ -82,8 +82,9 @@ public partial class OverclockView : UserControl
         _ = oc.ApplyVcore();
     }
 
-    // ── 體質評分：重新測試（服務端非同步取樣約 5 秒峰值後估算；此處採即發即忘）──
+    // ── 體質評分：特徵化（服務端自控負載階梯、背景取樣約 20–30 秒；此處採即發即忘）──
     private void RetestSilicon_Click(object sender, RoutedEventArgs e) => _ = Oc?.RetestSilicon();
+    private void CancelSilicon_Click(object sender, RoutedEventArgs e) => Oc?.CancelSilicon();
 
     // ── 看門狗：確認目前設定穩定（清除回退點、寫入最後穩定設定）───────────
     private void ConfirmStable_Click(object sender, RoutedEventArgs e) => Oc?.ConfirmStable();

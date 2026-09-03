@@ -24,12 +24,16 @@ public sealed class DashboardLayout : ObservableObject
     /// 內建磁貼目錄。<b>順序即預設版面順序，識別碼一經發佈不得更名</b>（它會寫進設定檔）。
     /// 新增磁貼請往後面加，並在 <c>OverviewView.xaml</c> 補上對應的 <c>Tile.{Id}</c> 樣板。
     /// </summary>
+    /// <remarks>
+    /// 1.9.0 移除了 <c>ai</c>（AI 評價）：側邊欄第二項就是完整的 AI 評價頁，總覽再放一塊做同一件事的
+    /// 磁貼只是重複入口。舊使用者的設定檔裡仍會留著 <c>ai</c> 這個識別碼，<see cref="Plan"/> 會
+    /// 依「未知識別碼直接忽略」的規則跳過它，不會讓整份版面讀不進來。
+    /// </remarks>
     internal static readonly TileDef[] Catalog =
     {
         new("gauges",  "即時儀表",          "CPU 使用率／CPU 溫度／記憶體／GPU 使用率四環儀表", true),
         new("trends",  "即時走勢",          "近 90 秒的 CPU 使用率、CPU 溫度、記憶體與 GPU 使用率", true),
         new("trends2", "更多走勢",          "近 90 秒的 CPU 頻率、GPU 溫度與顯示記憶體用量", false),
-        new("ai",      "AI 評價",           "一鍵請 AI 依本機真實數據評價，或開啟完整 AI 助手", true),
         new("brands",  "硬體識別",          "處理器／顯示卡／主機板／記憶體的廠牌徽章", true),
         new("sysinfo", "作業系統與主機板",  "系統版本、開機時間、機型與 BIOS 兩欄資訊", true),
         new("specs",   "核心規格",          "處理器、核心數、記憶體與顯示卡摘要", true),

@@ -115,14 +115,6 @@ public static class PageRegistry
         },
         new()
         {
-            Key = "events", Title = "事件時間軸", Group = GMonitor,
-            IconData = "M11,2 H13 V22 H11 Z M13.5,4 H21 V8 H13.5 Z M3,10 H10.5 V14 H3 Z M13.5,16 H20 V20 H13.5 Z",
-            Factory = () => new EventsView(),
-            Hint = "警示、降頻、磁碟壽命與藍屏的統一時序",
-            Keywords = ["event", "事件", "時間軸", "警示", "降頻", "藍屏", "紀錄", "timeline"],
-        },
-        new()
-        {
             Key = "health", Title = "健康", Group = GMonitor,
             IconData = "F1 M12,21.35 L10.55,20.03 C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3 9.24,3 10.91,3.81 12,5.09 "
                      + "13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5 22,12.28 18.6,15.36 13.45,20.04 L12,21.35 Z",
@@ -393,6 +385,16 @@ public static class PageRegistry
             IconData = "M2,2 h5 v3 h-5 z M9,2 h5 v5 h-5 z M2,7 h5 v7 h-5 z M9,9 h5 v5 h-5 z",
             Factory = () => new DpcLatencyView(),
             Hint = "排出造成音訊爆音／輸入停頓的肇事驅動（ETW）", Keywords = ["dpc", "isr", "延遲", "latency", "爆音", "驅動", "latencymon"],
+            Advanced = true,
+        },
+        new()
+        {
+            Key = "migration", Title = "執行緒遷移", Group = GTools,
+            IconData = "M2,4 h4 v3 h-4 z M10,4 h4 v3 h-4 z M2,10 h4 v3 h-4 z M10,10 h4 v3 h-4 z M6.6,5.2 h2.8 v0.9 h-2.8 z M6.6,11.2 h2.8 v0.9 h-2.8 z",
+            Factory = () => new ThreadMigrationView(),
+            Hint = "執行緒在核心之間彈跳得多兇，以及每一跳丟掉哪一層快取（ETW）",
+            Keywords = ["migration", "遷移", "排程", "scheduler", "cswitch", "上下文切換", "彈跳",
+                        "快取", "llc", "numa", "smt", "親和性", "affinity"],
             Advanced = true,
         },
         new()
