@@ -33,4 +33,11 @@
     <Using Remove="System.Drawing" />
   </ItemGroup>
 
+  <!-- 解碼器的基準檔：從真實硬體傾印出來的原始位元組（見 Fixtures\README.md）。
+       合成資料只用來造邊界情況——正確位移一律靠真實位元組驗證，
+       否則測試會照著錯誤的實作長出來，把 bug 一起鎖死（1.9.1-B1 的 NVMe 位移就是這樣漏掉的）。 -->
+  <ItemGroup>
+    <Content Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
