@@ -93,11 +93,21 @@ public static class VerifyRules
     public const string PartMemory = "記憶體";
 
     private const string T01 = "各條記憶體模組並非同批";
+    private const string T02 = "記憶體模組序號異常";
+    private const string T03 = "記憶體未跑在標稱速度";
+    private const string T04 = "記憶體陣列宣稱與實際安裝對不上";
 
     public static readonly VerifyRule[] All =
     [
         new("R-MEM-01", PartMemory, T01,
             [FactId.DimmCount, FactId.DimmManufacturers, FactId.DimmPartNumbers], MixedModules),
+        new("R-MEM-02", PartMemory, T02,
+            [FactId.DimmCount, FactId.DimmSerials], BadSerials),
+        new("R-MEM-03", PartMemory, T03,
+            [FactId.DimmSpeedMts, FactId.DimmConfiguredMts], UnderclockedMemory),
+        new("R-MEM-04", PartMemory, T04,
+            [FactId.DimmSizeTotalMiB, FactId.ArrayMaxCapacityMiB, FactId.ArraySlotCount, FactId.DimmCount],
+            ArrayMismatch),
     ];
 
     /// <summary>逐條模組的字串以 <c>|</c> 相連（collector 產出的形式）。</summary>
@@ -122,5 +132,73 @@ public static class VerifyRules
                 evidence)
             : new("R-MEM-01", PartMemory, T01, VerifyVerdict.Match, Severity.Good,
                 "所有模組的製造商與料號一致。", null, evidence);
+    }
+
+    /// <summary>全 0 或全 F 的序號：韌體沒燒序號，或序號被抹掉。</summary>
+    private static bool IsBogusSerial(string s) =>
+        s.Length > 0 && (s.All(c => c == '0') || s.All(c => c is 'F' or 'f'));
+
+    private static VerifyFinding BadSerials(VerifyFacts f)
+    {
+        var ev = new[] { f.Get(FactId.DimmSerials)! };
+        var serials = Split(f.Text(FactId.DimmSerials));
+
+        // 重複序號在物理上不該出現（序號是模組廠逐條燒的），故比全 0／全 F 更嚴重。
+        bool dup = serials.Length > 1 &&
+                   serials.Distinct(StringComparer.OrdinalIgnoreCase).Count() != serials.Length;
+        if (dup)
+            return new("R-MEM-02", PartMemory, T02, VerifyVerdict.Conflict, Severity.Serious,
+                "兩條以上模組回報同一組序號。序號是模組廠逐條燒進 SPD 的，正常不會重複。",
+                "同一顆晶片廠的模組被不同品牌貼牌時偶有序號規則衝突；但完全相同的序號更常見於仿冒模組。",
+                ev);
+
+        if (serials.Any(IsBogusSerial))
+            return new("R-MEM-02", PartMemory, T02, VerifyVerdict.Conflict, Severity.Warning,
+                "有模組的序號是全 0 或全 F——SPD 裡沒有燒序號，或序號被抹掉了。",
+                "少數白牌與工業用模組出廠就不燒序號；但翻新與貼牌模組也是這個樣子。", ev);
+
+        return new("R-MEM-02", PartMemory, T02, VerifyVerdict.Match, Severity.Good,
+            "各條模組序號互異，且不是全 0／全 F。", null, ev);
+    }
+
+    private static VerifyFinding UnderclockedMemory(VerifyFacts f)
+    {
+        double rated = f.Num(FactId.DimmSpeedMts)!.Value;
+        double cur = f.Num(FactId.DimmConfiguredMts)!.Value;
+        var ev = new[] { f.Get(FactId.DimmSpeedMts)!, f.Get(FactId.DimmConfiguredMts)! };
+
+        return cur < rated
+            ? new("R-MEM-03", PartMemory, T03, VerifyVerdict.Conflict, Severity.Warning,
+                $"模組標稱 {rated:0} MT/s，實際只跑 {cur:0} MT/s。",
+                "多數情況是主機板沒有啟用 XMP／EXPO，或處理器的記憶體控制器上限較低——"
+                + "這不是模組本身的問題，進 BIOS 開啟設定檔即可。", ev)
+            : new("R-MEM-03", PartMemory, T03, VerifyVerdict.Match, Severity.Good,
+                "實際運行速度已達標稱值。", null, ev);
+    }
+
+    private static VerifyFinding ArrayMismatch(VerifyFacts f)
+    {
+        double total = f.Num(FactId.DimmSizeTotalMiB)!.Value;
+        double max = f.Num(FactId.ArrayMaxCapacityMiB)!.Value;
+        double slots = f.Num(FactId.ArraySlotCount)!.Value;
+        double dimms = f.Num(FactId.DimmCount)!.Value;
+        var ev = new[]
+        {
+            f.Get(FactId.DimmSizeTotalMiB)!, f.Get(FactId.ArrayMaxCapacityMiB)!,
+            f.Get(FactId.ArraySlotCount)!, f.Get(FactId.DimmCount)!,
+        };
+
+        if (total > max)
+            return new("R-MEM-04", PartMemory, T04, VerifyVerdict.Conflict, Severity.Warning,
+                $"已安裝 {total:0} MiB，但記憶體陣列宣稱上限只有 {max:0} MiB。",
+                "部分主機板的 SMBIOS 把陣列上限寫錯，這種情況機器照樣正常運作。", ev);
+
+        if (dimms > slots)
+            return new("R-MEM-04", PartMemory, T04, VerifyVerdict.Conflict, Severity.Warning,
+                $"回報 {dimms:0} 條模組，但陣列只宣告 {slots:0} 個插槽。",
+                "SMBIOS 表寫錯也會這樣；但也可能是其中一條沒有被正確列舉。", ev);
+
+        return new("R-MEM-04", PartMemory, T04, VerifyVerdict.Match, Severity.Good,
+            "安裝總量與模組數都在陣列宣告的範圍內。", null, ev);
     }
 }

@@ -64,4 +64,54 @@ public class VerifyRulesTests
             Text(FactId.DimmPartNumbers, "MTA8ATF1G64AZ"));
         Assert.Equal(VerifyVerdict.Match, f.Verdict);
     }
+
+    // ── R-MEM-02：序號異常。全 0／全 F 是韌體沒燒序號或序號被抹掉；重複則是不可能的事 ──
+
+    [Theory]
+    [InlineData("0000000000000000|1234ABCD", VerifyVerdict.Conflict)]
+    [InlineData("FFFFFFFF|1234ABCD", VerifyVerdict.Conflict)]
+    [InlineData("1234ABCD|1234ABCD", VerifyVerdict.Conflict)]
+    [InlineData("1234ABCD|5678EF01", VerifyVerdict.Match)]
+    public void R_MEM_02_序號異常(string serials, VerifyVerdict expected)
+        => Assert.Equal(expected, One("R-MEM-02", Num(FactId.DimmCount, 2),
+            Text(FactId.DimmSerials, serials)).Verdict);
+
+    [Fact]
+    public void R_MEM_02_序號重複時判定為較嚴重()
+    {
+        var f = One("R-MEM-02", Num(FactId.DimmCount, 2), Text(FactId.DimmSerials, "1234ABCD|1234ABCD"));
+        Assert.Equal(Severity.Serious, f.Severity);
+        Assert.False(string.IsNullOrWhiteSpace(f.BenignCause));
+    }
+
+    // ── R-MEM-03：實際運行速度低於標稱（多數情況是沒開 XMP，不是模組的問題）──
+
+    [Theory]
+    [InlineData(3200, 3200, VerifyVerdict.Match)]
+    [InlineData(3200, 2133, VerifyVerdict.Conflict)]
+    public void R_MEM_03_實際速度低於標稱(double rated, double configured, VerifyVerdict expected)
+        => Assert.Equal(expected, One("R-MEM-03",
+            Num(FactId.DimmSpeedMts, rated, "MT/s"),
+            Num(FactId.DimmConfiguredMts, configured, "MT/s")).Verdict);
+
+    // ── R-MEM-04：陣列宣稱與實際安裝對不上 ──
+
+    [Theory]
+    [InlineData(32768, 65536, 4, 2, VerifyVerdict.Match)]
+    [InlineData(32768, 16384, 4, 2, VerifyVerdict.Conflict)]   // 安裝量超過陣列宣稱上限
+    [InlineData(32768, 65536, 2, 4, VerifyVerdict.Conflict)]   // 模組數多於插槽數
+    public void R_MEM_04_陣列宣稱與實際對不上(
+        double totalMiB, double maxMiB, double slots, double dimms, VerifyVerdict expected)
+        => Assert.Equal(expected, One("R-MEM-04",
+            Num(FactId.DimmSizeTotalMiB, totalMiB, "MiB"), Num(FactId.ArrayMaxCapacityMiB, maxMiB, "MiB"),
+            Num(FactId.ArraySlotCount, slots), Num(FactId.DimmCount, dimms)).Verdict);
+
+    [Fact]
+    public void 記憶體四條規則_缺任一依賴都由引擎判為無法判定()
+    {
+        var empty = VerifyEngine.Run(new VerifyFacts([]));
+        Assert.All(empty.Where(x => x.Id.StartsWith("R-MEM-")),
+            x => Assert.Equal(VerifyVerdict.Unread, x.Verdict));
+        Assert.Equal(4, empty.Count(x => x.Id.StartsWith("R-MEM-")));
+    }
 }
