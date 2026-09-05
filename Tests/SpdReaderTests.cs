@@ -49,7 +49,7 @@ public class SpdReaderTests
     {
         var image = Ddr4Image();
         var io = new FakeSmbusIo { Modules = { [0x50] = image } };
-        var slots = SpdReader.ReadAll(Bus(io));
+        var slots = SpdReader.ReadAll(Bus(io)).Slots;
 
         var slot = Assert.Single(slots, s => s.Address == 0x50);
         Assert.Equal(SpdKind.Ddr4, slot.Kind);
@@ -60,7 +60,7 @@ public class SpdReaderTests
     public void 讀完要把頁復位回0_否則下一個讀SPD的程式會拿到後半頁()
     {
         var io = new FakeSmbusIo { Modules = { [0x50] = Ddr4Image() } };
-        SpdReader.ReadAll(Bus(io));
+        _ = SpdReader.ReadAll(Bus(io)).Slots;
 
         Assert.Equal(0, io.Page);
     }
@@ -76,7 +76,7 @@ public class SpdReaderTests
                 [0x54] = Ddr4Image(0x30), [0x55] = Ddr4Image(0x40),
             },
         };
-        var slots = SpdReader.ReadAll(Bus(io));
+        var slots = SpdReader.ReadAll(Bus(io)).Slots;
 
         Assert.Equal(4, slots.Count(s => s.Kind == SpdKind.Ddr4));
         Assert.Equal(Ddr4Image(0x30), slots.Single(s => s.Address == 0x54).Raw);
@@ -86,7 +86,7 @@ public class SpdReaderTests
     public void 空插槽不是錯誤_也不該留下警告噪音()
     {
         var io = new FakeSmbusIo { Modules = { [0x50] = Ddr4Image() } };
-        var slots = SpdReader.ReadAll(Bus(io));
+        var slots = SpdReader.ReadAll(Bus(io)).Slots;
 
         Assert.Equal(7, slots.Count(s => s.Kind == SpdKind.Empty));
         Assert.All(slots.Where(s => s.Kind == SpdKind.Empty), s => Assert.Equal("", s.Note));
@@ -101,7 +101,7 @@ public class SpdReaderTests
         image[2] = code;
         var io = new FakeSmbusIo { Modules = { [0x50] = image } };
 
-        var slot = Assert.Single(SpdReader.ReadAll(Bus(io)), s => s.Address == 0x50);
+        var slot = Assert.Single(SpdReader.ReadAll(Bus(io)).Slots, s => s.Address == 0x50);
         Assert.Equal(SpdKind.Unreadable, slot.Kind);
         Assert.Null(slot.Raw);
         Assert.Contains("讀不到", slot.Note);
@@ -114,7 +114,7 @@ public class SpdReaderTests
         image[2] = SpdReader.Ddr5TypeCode;
         var io = new FakeSmbusIo { Modules = { [0x50] = image } };
 
-        var slot = Assert.Single(SpdReader.ReadAll(Bus(io)), s => s.Address == 0x50);
+        var slot = Assert.Single(SpdReader.ReadAll(Bus(io)).Slots, s => s.Address == 0x50);
         Assert.Equal(SpdKind.Ddr5, slot.Kind);
         Assert.Null(slot.Raw);
         Assert.Contains("DDR5", slot.Note);
@@ -127,7 +127,7 @@ public class SpdReaderTests
         image[2] = 0x0B;                     // DDR3
         var io = new FakeSmbusIo { Modules = { [0x50] = image } };
 
-        var slot = Assert.Single(SpdReader.ReadAll(Bus(io)), s => s.Address == 0x50);
+        var slot = Assert.Single(SpdReader.ReadAll(Bus(io)).Slots, s => s.Address == 0x50);
         Assert.Equal(SpdKind.Unknown, slot.Kind);
         Assert.Contains("0x0B", slot.Note);
     }
@@ -147,7 +147,7 @@ public class SpdReaderTests
             },
         };
 
-        var slot = Assert.Single(SpdReader.ReadAll(Bus(io)), s => s.Address == 0x50);
+        var slot = Assert.Single(SpdReader.ReadAll(Bus(io)).Slots, s => s.Address == 0x50);
         Assert.Equal(SpdKind.Unreadable, slot.Kind);
         Assert.Null(slot.Raw);
         Assert.Contains("0x40", slot.Note);
@@ -166,7 +166,7 @@ public class SpdReaderTests
                 _ => null,
             },
         };
-        var slots = SpdReader.ReadAll(Bus(io));
+        var slots = SpdReader.ReadAll(Bus(io)).Slots;
 
         Assert.Equal(SpdKind.Unreadable, slots.Single(s => s.Address == 0x50).Kind);
         Assert.Equal(SpdKind.Ddr4, slots.Single(s => s.Address == 0x51).Kind);
@@ -177,15 +177,42 @@ public class SpdReaderTests
     {
         var io = new FakeSmbusIo { Respond = (slave, _) => slave == 0x50 ? (byte)0xFF : null };
 
-        var slot = Assert.Single(SpdReader.ReadAll(Bus(io)), s => s.Address == 0x50);
+        var slot = Assert.Single(SpdReader.ReadAll(Bus(io)).Slots, s => s.Address == 0x50);
         Assert.Equal(SpdKind.Unreadable, slot.Kind);
+    }
+
+    /// <summary>
+    /// 這一條是實機跑出來的：本機（X299）的 DIMM SPD 不在 PCH 的 SMBus 上，於是八個位址
+    /// 各自回了一句一模一樣的「無法選擇 SPD 頁」，並且都被歸成「有裝置但讀不到」——
+    /// 那是三重錯誤：訊息重複八次、把空匯流排說成故障、還把它算成八筆發現。
+    /// 切頁裝置沒回應是<b>匯流排層級</b>的結論，只該講一次。
+    /// </summary>
+    [Fact]
+    public void 切頁裝置沒回應時是這條匯流排上沒有SPD_不是八筆讀不到()
+    {
+        var io = new FakeSmbusIo { NoPageSelectDevice = true };
+        var scan = SpdReader.ReadAll(Bus(io));
+
+        Assert.All(scan.Slots, s => Assert.Equal(SpdKind.Empty, s.Kind));
+        Assert.All(scan.Slots, s => Assert.Equal("", s.Note));
+        Assert.False(scan.AnyPresent);
+        Assert.Contains("沒有任何 DDR4 SPD", scan.BusNote);
+        Assert.Contains("HEDT", scan.BusNote);
+    }
+
+    [Fact]
+    public void 讀得到的時候不留匯流排層級的雜訊()
+    {
+        var io = new FakeSmbusIo { Modules = { [0x50] = Ddr4Image() } };
+
+        Assert.Equal("", SpdReader.ReadAll(Bus(io)).BusNote);
     }
 
     [Fact]
     public void 掃過的位址就是SPD的那八個()
     {
         var io = new FakeSmbusIo();
-        var slots = SpdReader.ReadAll(Bus(io));
+        var slots = SpdReader.ReadAll(Bus(io)).Slots;
 
         Assert.Equal(8, slots.Count);
         Assert.Equal(Enumerable.Range(0x50, 8).Select(a => (byte)a), slots.Select(s => s.Address));

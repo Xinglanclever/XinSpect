@@ -25,6 +25,9 @@ internal sealed class FakeSmbusIo : ISmbusIo
     public byte ErrorBits;
     public bool BridgeGone;
 
+    /// <summary>切頁裝置（SPA0／SPA1）不回應——真實情形是這條匯流排上根本沒有 DDR4 SPD。</summary>
+    public bool NoPageSelectDevice;
+
     /// <summary>低階回應（slave7、命令位元組）→ 資料；回 null 代表該位址上沒有裝置。</summary>
     public Func<byte, byte, byte?>? Respond;
 
@@ -80,6 +83,7 @@ internal sealed class FakeSmbusIo : ISmbusIo
         switch ((value >> 2) & 0x07)
         {
             case 0x01:                                               // Send Byte：切頁
+                if (NoPageSelectDevice) { _sts |= 0x04; return true; }
                 if (slave7 == 0x36) Page = 0;
                 else if (slave7 == 0x37) Page = 1;
                 else { _sts |= 0x04; return true; }

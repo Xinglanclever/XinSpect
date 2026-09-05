@@ -18,6 +18,17 @@ public enum SpdKind
 /// <param name="Note">給人看的說明。乾淨讀到時是空字串——正常狀況不該產生雜訊。</param>
 public sealed record SpdSlot(byte Address, SpdKind Kind, byte[]? Raw, string Note);
 
+/// <summary>一次掃描的結果。</summary>
+/// <param name="BusNote">
+/// <b>匯流排層級</b>的結論，例如「這條匯流排上根本沒有 SPD」。這一格存在的理由是：
+/// 那種情形下八個位址會各自回一句一模一樣的失敗訊息，而真正該講的是一句總結。
+/// </param>
+public sealed record SpdScan(IReadOnlyList<SpdSlot> Slots, string BusNote)
+{
+    /// <summary>有沒有任何位址上疑似掛著模組（含讀不到的——那也是一筆發現）。</summary>
+    public bool AnyPresent => Slots.Any(s => s.Kind != SpdKind.Empty);
+}
+
 /// <summary>
 /// 從 SMBus 上把每一條記憶體模組的 SPD 原始位元組取回來。
 /// </summary>
@@ -58,11 +69,25 @@ public static class SpdReader
     public const byte PageSelect1 = 0x37;
 
     /// <summary>掃過 0x50–0x57 全部八個位址。呼叫端必須先取得匯流排旗號。</summary>
-    public static List<SpdSlot> ReadAll(SmbusController bus)
+    public static SpdScan ReadAll(SmbusController bus)
     {
+        // 先探切頁裝置。DDR4 的 SPA0（0x36）只有在這條匯流排上真的掛著 DDR4 SPD 時才會回應，
+        // 所以它 NAK 就代表「這條匯流排上沒有 SPD」——那是一句匯流排層級的結論，
+        // 不該變成八個位址各自回一句一模一樣的「讀不到」。
+        if (!bus.SendByte(PageSelect0, 0x00) && bus.LastStatus == SmbusStatus.NoDevice)
+        {
+            var empty = new List<SpdSlot>(AddressCount);
+            for (int i = 0; i < AddressCount; i++)
+                empty.Add(new SpdSlot((byte)(FirstAddress + i), SpdKind.Empty, null, ""));
+            return new SpdScan(empty,
+                "這條 SMBus 上沒有任何 DDR4 SPD——切頁裝置 0x36 沒有回應。"
+                + "HEDT 與伺服器平台（X299、C621、LGA3647、Threadripper）的 DIMM SPD 通常掛在"
+                + "處理器記憶體控制器自己的 SMBus 區段上，不在 PCH 這一條；本讀取器只實作 PCH 那條路徑。");
+        }
+
         var slots = new List<SpdSlot>(AddressCount);
         for (int i = 0; i < AddressCount; i++) slots.Add(ReadOne(bus, (byte)(FirstAddress + i)));
-        return slots;
+        return new SpdScan(slots, "");
     }
 
     private static SpdSlot ReadOne(SmbusController bus, byte address)
