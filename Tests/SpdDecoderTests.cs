@@ -222,4 +222,34 @@ public class SpdDecoderTests
         Assert.Equal(0x31C3, SpdDecoder.Crc16("123456789"u8));
         Assert.Equal(0x0000, SpdDecoder.Crc16([]));
     }
+
+    // ---- 被改過的真實 SPD ----
+
+    /// <summary>
+    /// 這一份不是造出來的：它是本機第四條模組，由曦覽自己走處理器 iMC SMBus 讀回來的。
+    /// 同一條匯流排上同型號的另一條讀到位元組 0 ＝ 0x23，這一條是 0x00，而存起來的 CRC
+    /// 仍然是對應 0x23 的那個值——<b>有人寫過這顆 SPD 而沒有重算校驗</b>。
+    /// <para>
+    /// 位元組 0 是「SPD 用了幾個位元組／裝置多大／CRC 涵蓋範圍」。歸零之後這條模組對外宣稱的
+    /// 容量與 SPD 大小都變成未定義值。這正是 R-MEM-05 要抓的東西，而且它是直接證據不是推斷。
+    /// </para>
+    /// <para>
+    /// 為什麼確定不是讀壞：讀取層每一條都連讀兩次逐位元組比對過（<c>ReadDdr4Confirmed</c>），
+    /// 而同一段匯流排、同一組程式碼把隔壁那條的位元組 0 讀成 0x23。
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void 被改過而沒重算校驗的真實模組()
+    {
+        var raw = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", "spd-ddr4-self-read-tampered.bin"));
+        var s = SpdDecoder.Decode(raw)!;
+
+        Assert.Equal(0x00, raw[0]);
+        Assert.False(s.BaseCrc.Valid);
+        Assert.Equal(0x242D, s.BaseCrc.Stored);          // 存的是對應未被改動內容的那個值
+        Assert.NotEqual(s.BaseCrc.Stored, s.BaseCrc.Computed);
+        Assert.True(s.ModuleCrc.Valid);                  // 另一段沒被動到
+        Assert.Equal("ZJ-4000-C18-8G-RWMC", s.PartNumber);
+        Assert.Null(s.ManufactureYear);                  // 這型號本來就沒燒製造日期
+    }
 }

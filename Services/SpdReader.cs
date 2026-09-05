@@ -69,7 +69,7 @@ public static class SpdReader
     public const byte PageSelect1 = 0x37;
 
     /// <summary>掃過 0x50–0x57 全部八個位址。呼叫端必須先取得匯流排旗號。</summary>
-    public static SpdScan ReadAll(SmbusController bus)
+    public static SpdScan ReadAll(ISpdBus bus)
     {
         // 先探切頁裝置。DDR4 的 SPA0（0x36）只有在這條匯流排上真的掛著 DDR4 SPD 時才會回應，
         // 所以它 NAK 就代表「這條匯流排上沒有 SPD」——那是一句匯流排層級的結論，
@@ -90,7 +90,7 @@ public static class SpdReader
         return new SpdScan(slots, "");
     }
 
-    private static SpdSlot ReadOne(SmbusController bus, byte address)
+    private static SpdSlot ReadOne(ISpdBus bus, byte address)
     {
         if (!SelectPage(bus, 0))
             return new SpdSlot(address, SpdKind.Unreadable, null, "無法選擇 SPD 頁：" + bus.LastError);
@@ -117,14 +117,53 @@ public static class SpdReader
             return new SpdSlot(address, SpdKind.Unknown, null,
                 $"未知的 SPD 型別碼 0x{type:X2}（本讀取器只解 DDR4），不解讀。");
 
-        byte[]? raw = ReadDdr4(bus, address, out string note);
+        byte[]? raw = ReadDdr4Confirmed(bus, address, out string note);
         return raw is null
             ? new SpdSlot(address, SpdKind.Unreadable, null, note)
             : new SpdSlot(address, SpdKind.Ddr4, raw, note);
     }
 
+    /// <summary>
+    /// 把一條 DDR4 模組的 512 位元組讀回來<b>兩次並逐位元組比對</b>；兩次不一樣就判讀不到。
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// 為什麼要讀兩次：實機在 iMC 那條路徑上抓到過一次——同一條模組的基本段 CRC 對不上，
+    /// 但存起來的 CRC 值與同型號的另一條完全相同，也就是<b>讀回來的內容錯了，不是 SPD 被改過</b>。
+    /// 這兩件事在驗機功能裡的意義天差地別：一個是「這條模組被動過」（一筆發現），
+    /// 一個是「我讀壞了」（讀不到）。分不出來就會冤枉賣家。
+    /// </para>
+    /// <para>
+    /// 為什麼不靠 CRC 判斷：DDR4 的兩段 CRC 只涵蓋位元組 0–125 與 128–253。
+    /// <b>製造商、料號、序號、製造週年全都在 320 之後，那一段完全沒有校驗。</b>
+    /// 逐位元組比對兩次讀取不需要知道任何位移，卻涵蓋全部 512 位元組——嚴格地更強。
+    /// </para>
+    /// </remarks>
+    public static byte[]? ReadDdr4Confirmed(ISpdBus bus, byte address, out string note)
+    {
+        byte[]? first = ReadDdr4(bus, address, out note);
+        if (first is null) return null;
+
+        byte[]? second = ReadDdr4(bus, address, out string secondNote);
+        if (second is null)
+        {
+            note = $"位址 0x{address:X2} 的 SPD 第一次讀得到、第二次讀不到，判為讀不到：{secondNote}";
+            return null;
+        }
+
+        for (int i = 0; i < Ddr4Size; i++)
+        {
+            if (first[i] == second[i]) continue;
+            note = $"位址 0x{address:X2} 的 SPD 連讀兩次不一致（偏移 0x{i:X3} 先讀到 0x{first[i]:X2}、"
+                 + $"再讀到 0x{second[i]:X2}），判為讀不到。這是傳輸出錯，不是 SPD 被改過——"
+                 + "兩者在驗機上的意義完全不同，所以不猜。";
+            return null;
+        }
+        return first;
+    }
+
     /// <summary>把一條 DDR4 模組的 512 位元組全部讀回來（含切頁）。任何一個位元組讀不到就整條放棄。</summary>
-    public static byte[]? ReadDdr4(SmbusController bus, byte address, out string note)
+    public static byte[]? ReadDdr4(ISpdBus bus, byte address, out string note)
     {
         note = "";
         var raw = new byte[Ddr4Size];
@@ -166,7 +205,7 @@ public static class SpdReader
     }
 
     /// <summary>選頁：對 SPA0／SPA1 發一個位元組。這是寫入動作，但寫的是切頁裝置，不是 EEPROM 資料區。</summary>
-    private static bool SelectPage(SmbusController bus, int page)
+    private static bool SelectPage(ISpdBus bus, int page)
         => bus.SendByte(page == 0 ? PageSelect0 : PageSelect1, 0x00);
 
     private static bool IsUniform(byte[] raw, out byte fill)

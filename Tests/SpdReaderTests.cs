@@ -208,6 +208,37 @@ public class SpdReaderTests
         Assert.Equal("", SpdReader.ReadAll(Bus(io)).BusNote);
     }
 
+    /// <summary>
+    /// 實機在 iMC 那條路徑上抓到過：同一條模組的基本段 CRC 對不上，但存起來的 CRC 值與同型號的
+    /// 另一條完全相同——也就是讀回來的內容錯了，不是 SPD 被改過。這兩件事在驗機上的意義天差地別，
+    /// 所以每一條都連讀兩次比對。DDR4 位元組 320 之後（製造商、料號、序號、製造週年）根本沒有
+    /// 校驗，光靠 CRC 抓不到那一段的傳輸錯誤。
+    /// </summary>
+    [Fact]
+    public void 連讀兩次不一致就判讀不到_並指出第一個不同的位移()
+    {
+        int pass = 0;
+        var image = Ddr4Image();
+        var io = new FakeSmbusIo
+        {
+            Respond = (slave, cmd) =>
+            {
+                if (slave != 0x50) return null;
+                if (cmd == 2) return SpdReader.Ddr4TypeCode;
+                // 第二輪讀到偏移 0x37 時吐出不一樣的值（模擬傳輸雜訊）
+                if (cmd == 0x37 && ++pass > 1) return (byte)(image[0x37] ^ 0xFF);
+                return image[cmd];
+            },
+        };
+
+        var slot = Assert.Single(SpdReader.ReadAll(Bus(io)).Slots, s => s.Address == 0x50);
+        Assert.Equal(SpdKind.Unreadable, slot.Kind);
+        Assert.Null(slot.Raw);
+        Assert.Contains("兩次不一致", slot.Note);
+        Assert.Contains("0x037", slot.Note);
+        Assert.Contains("傳輸出錯", slot.Note);
+    }
+
     [Fact]
     public void 掃過的位址就是SPD的那八個()
     {

@@ -165,6 +165,7 @@ public enum SmbusStatus
 /// </remarks>
 public sealed class SmbusController(ISmbusIo io, uint ioBase,
                                    int transactionTimeoutMs = SmbusController.DefaultTransactionTimeoutMs)
+    : ISpdBus
 {
     /// <summary>單筆交易的上限。100 kHz 下一個位元組交易約 0.2 ms；到了 10 ms 就已經不對了。</summary>
     public const int DefaultTransactionTimeoutMs = 10;
@@ -190,11 +191,14 @@ public sealed class SmbusController(ISmbusIo io, uint ioBase,
     /// <summary>最後一次交易的結果分類。呼叫端用它分辨「空插槽」與「有裝置但讀不到」。</summary>
     public SmbusStatus LastStatus { get; private set; } = SmbusStatus.Ok;
 
+    /// <inheritdoc/>
+    public string Description => $"PCH SMBus（i801，SMB_BASE＝0x{ioBase:X4}）";
+
     /// <summary>SPD EEPROM 的八個裝置位址——本讀取器唯一允許讀取的範圍。</summary>
-    public static bool IsSpdReadAddress(byte slave7) => slave7 is >= 0x50 and <= 0x57;
+    public static bool IsSpdReadAddress(byte slave7) => SpdBusAddresses.IsSpdRead(slave7);
 
     /// <summary>DDR4 的兩個切頁位址（SPA0／SPA1）——本讀取器唯一允許寫入的範圍。</summary>
-    public static bool IsPageSelectAddress(byte slave7) => slave7 is 0x36 or 0x37;
+    public static bool IsPageSelectAddress(byte slave7) => SpdBusAddresses.IsPageSelect(slave7);
 
     /// <summary>
     /// 取得匯流排的硬體旗號（INUSE_STS）。取不到就放棄——<b>不搶、不等</b>。
@@ -240,10 +244,7 @@ public sealed class SmbusController(ISmbusIo io, uint ioBase,
     /// <exception cref="ArgumentOutOfRangeException">位址不在 SPD EEPROM 白名單內。</exception>
     public byte? ReadByteData(byte slave7, byte command)
     {
-        if (!IsSpdReadAddress(slave7))
-            throw new ArgumentOutOfRangeException(nameof(slave7), slave7,
-                "只允許讀取 SPD EEPROM 的 0x50–0x57；其餘裝置位址不在白名單內。");
-
+        SpdBusAddresses.EnsureSpdRead(slave7);
         return RunTransaction((byte)((slave7 << 1) | 1), command, ProtoByteData, readsData: true);
     }
 
@@ -253,10 +254,7 @@ public sealed class SmbusController(ISmbusIo io, uint ioBase,
     /// <exception cref="ArgumentOutOfRangeException">位址不是 0x36／0x37。</exception>
     public bool SendByte(byte slave7, byte data)
     {
-        if (!IsPageSelectAddress(slave7))
-            throw new ArgumentOutOfRangeException(nameof(slave7), slave7,
-                "只允許對 DDR4 切頁位址 0x36／0x37 寫入。SPD 寫入保護指令與 EEPROM 資料區永不寫入。");
-
+        SpdBusAddresses.EnsurePageSelect(slave7);
         return RunTransaction((byte)(slave7 << 1), data, ProtoByte, readsData: false) is not null;
     }
 

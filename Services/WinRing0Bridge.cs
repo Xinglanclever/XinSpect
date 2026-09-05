@@ -35,7 +35,8 @@ public sealed class WinRing0Bridge : IDisposable
     /// </remarks>
     private sealed record Ring0Methods(MethodInfo Open, MethodInfo Close, MethodInfo ReadMsr, MethodInfo WriteMsr,
                                        MethodInfo? ReadPciConfig, MethodInfo? GetPciAddress,
-                                       MethodInfo? ReadIoPort, MethodInfo? WriteIoPort);
+                                       MethodInfo? ReadIoPort, MethodInfo? WriteIoPort,
+                                       MethodInfo? WritePciConfig);
 
     private static readonly object Gate = new();
     private static Ring0Methods? _cached;
@@ -129,7 +130,10 @@ public sealed class WinRing0Bridge : IDisposable
             var readIo = ty.GetMethod("ReadIoPort", All, new[] { typeof(uint) });
             var writeIo = ty.GetMethod("WriteIoPort", All, new[] { typeof(uint), typeof(byte) });
             if (readIo is not null && readIo.ReturnType != typeof(byte)) readIo = null;
-            return new Ring0Methods(open, close, read, write, readPci, pciAddr, readIo, writeIo);
+            // 選用：寫 PCI 設定空間。HEDT／伺服器平台的 DIMM SPD 掛在處理器記憶體控制器自己的
+            // SMBus 上，而那個控制器的命令暫存器就在 PCI 設定空間裡——發一次讀取也得先寫它。
+            var writePci = ty.GetMethod("WritePciConfig", All, new[] { typeof(uint), typeof(uint), typeof(uint) });
+            return new Ring0Methods(open, close, read, write, readPci, pciAddr, readIo, writeIo, writePci);
         }
         catch (Exception ex)
         {
@@ -224,6 +228,33 @@ public sealed class WinRing0Bridge : IDisposable
     {
         if (_m?.WriteIoPort is null || _disposed) return false;
         try { _m.WriteIoPort.Invoke(null, new object?[] { port, value }); return true; }
+        catch { return false; }
+    }
+
+    /// <summary>本機的 Ring0 是否提供 PCI 設定空間<b>寫入</b>。</summary>
+    public bool PciWriteAvailable
+        => _m?.WritePciConfig is not null && _m.GetPciAddress is not null && !_disposed;
+
+    /// <summary>
+    /// 寫 PCI 設定空間的一個 DWORD。不支援或失敗回 false。
+    /// </summary>
+    /// <remarks>
+    /// <b>這是本橋接最危險的一個方法。</b>PCI 設定空間裡有一大堆一寫就會讓機器當場停住的東西
+    /// （記憶體控制器時序、電源管理、位址解碼）。它存在的唯一理由是處理器 iMC SMBus 的命令
+    /// 暫存器就在設定空間裡，而發起一次 SPD <i>讀取</i>也必須寫那一格。
+    /// <para>
+    /// 防線不在這裡：<c>ImcSmbusController</c> 只寫自己探測到的那三個暫存器位移，
+    /// 而且裝置位址仍受 <see cref="SpdBusAddresses"/> 白名單約束。
+    /// </para>
+    /// </remarks>
+    public bool WritePciConfig(byte bus, byte device, byte function, uint register, uint value)
+    {
+        if (_m?.WritePciConfig is null || _m.GetPciAddress is null || _disposed) return false;
+        try
+        {
+            if (_m.GetPciAddress.Invoke(null, new object?[] { bus, device, function }) is not uint addr) return false;
+            return _m.WritePciConfig.Invoke(null, new object?[] { addr, register, value }) is true;
+        }
         catch { return false; }
     }
 

@@ -33,11 +33,13 @@ public class WinRing0BridgeTests
         Assert.False(bridge.Available);
         Assert.Equal("測試用的失敗橋接", bridge.Error);
         Assert.False(bridge.PciAvailable);
+        Assert.False(bridge.PciWriteAvailable);
         Assert.False(bridge.IoPortAvailable);
 
         Assert.Null(bridge.ReadIoPortByte(0));
         Assert.False(bridge.WriteIoPortByte(0, 0));
         Assert.Null(bridge.ReadPciConfig(0, 0, 0, 0));
+        Assert.False(bridge.WritePciConfig(0, 0, 0, 0, 0));
         Assert.Null(bridge.ReadMsrPair64(0));
     }
 
