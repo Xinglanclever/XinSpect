@@ -292,18 +292,15 @@ public sealed class StorageSmartService : ObservableObject
     /// <summary>NVMe 健康紀錄（512B）→ 資料列。位移依 NVMe 1.3+ 規格的 SMART / Health Information log。</summary>
     public static List<SmartRow> DecodeNvmeHealth(byte[] log)
     {
-        if (log.Length < 512) throw new InvalidOperationException("NVMe 健康紀錄長度不足 512 位元組。");
-
-        // 位移一律走 NvmeLogDecoder 的常數。1.9.1 之前這裡是寫死的數字，而且錯了兩處：
+        // 位移只在 NvmeHealth／NvmeLogDecoder 出現一次。1.9.1 之前這裡自己算位移，而且錯了兩處：
         // 關鍵警告被當成 2 位元組（規格是 1），把溫度／備用空間／已使用壽命整批推後一格；
         // 128 位元計數器被當成 8 位元組，把寫入量之後的每一個計數器都推錯位置。
-        // 同一個檔案裡 TryReadPowerOnHours 用的是規格上正確的 0x80，兩者對不起來才發現。
-        ulong C(int off) => NvmeLogDecoder.Counter128Low(log, off);
-        ushort Le16(int o) => NvmeLogDecoder.Le16(log, o);
+        // 那個 bug 帶了三個發佈版，正因為「顯示」與「取值」各有一套位移，一套對一套錯。
+        var h = NvmeHealth.Decode(log)
+            ?? throw new InvalidOperationException("NVMe 健康紀錄長度不足 512 位元組。");
 
-        string DuText(int o)
+        string DuText(ulong units)
         {
-            ulong units = C(o);
             if (units == 0) return "0";
             double bytes = units * 512000.0;   // 1 單位 = 1000 × 512 位元組
             return bytes >= 1e12 ? $"{bytes / 1e12:0.000} TB（{units:N0} 單位）"
@@ -311,30 +308,28 @@ public sealed class StorageSmartService : ObservableObject
                  : $"{bytes / 1e6:0} MB（{units:N0} 單位）";
         }
 
-        byte flags = log[NvmeLogDecoder.OffCriticalWarning];
-        var warns = NvmeLogDecoder.CriticalWarnings(flags);
-        ushort kelvin = Le16(NvmeLogDecoder.OffCompositeTemp);
+        var warns = NvmeLogDecoder.CriticalWarnings(h.CriticalWarning);
 
         var rows = new List<SmartRow>
         {
             // 原始位元組照留（0x00 就是「沒有任何警告」），但底下逐條說出到底哪一位元亮了
-            new("關鍵警告", warns.Count == 0 ? $"無（0x{flags:X2}）" : $"{warns.Count} 項（0x{flags:X2}）", "", ""),
+            new("關鍵警告", warns.Count == 0 ? $"無（0x{h.CriticalWarning:X2}）"
+                                            : $"{warns.Count} 項（0x{h.CriticalWarning:X2}）", "", ""),
         };
         foreach (var w in warns)
             rows.Add(new SmartRow($"　└ 位元 {w.Bit}：{w.Name}", w.Meaning, "", ""));
 
-        rows.Add(new("溫度（綜合）", kelvin > 0 ? $"{kelvin - 273} °C" : "—", "", ""));
+        rows.Add(new("溫度（綜合）", h.CompositeTempCelsius is { } c ? $"{c} °C" : "—", "", ""));
         rows.Add(new("可用備用空間",
-            $"{log[NvmeLogDecoder.OffAvailableSpare]}%（門檻 {log[NvmeLogDecoder.OffSpareThreshold]}%）", "", ""));
-        rows.Add(new("已使用壽命（Percentage Used）", $"{log[NvmeLogDecoder.OffPercentageUsed]}%", "", ""));
-        rows.Add(new("累計讀取（Data Units Read）", DuText(NvmeLogDecoder.OffDataUnitsRead), "", ""));
-        rows.Add(new("累計寫入（Data Units Written）", DuText(NvmeLogDecoder.OffDataUnitsWritten), "", ""));
-        rows.Add(new("通電時間", C(NvmeLogDecoder.OffPowerOnHours) == 0
-            ? "—" : $"{C(NvmeLogDecoder.OffPowerOnHours):N0} 小時", "", ""));
-        rows.Add(new("電源循環", $"{C(NvmeLogDecoder.OffPowerCycles):N0} 次", "", ""));
-        rows.Add(new("不安全關機", $"{C(NvmeLogDecoder.OffUnsafeShutdowns):N0} 次", "", ""));
-        rows.Add(new("媒體與資料完整性錯誤", $"{C(NvmeLogDecoder.OffMediaErrors):N0}", "", ""));
-        rows.Add(new("錯誤資訊紀錄項目", $"{C(NvmeLogDecoder.OffErrorLogEntries):N0}", "", ""));
+            $"{h.AvailableSparePercent}%（門檻 {h.SpareThresholdPercent}%）", "", ""));
+        rows.Add(new("已使用壽命（Percentage Used）", $"{h.PercentageUsed}%", "", ""));
+        rows.Add(new("累計讀取（Data Units Read）", DuText(h.DataUnitsRead), "", ""));
+        rows.Add(new("累計寫入（Data Units Written）", DuText(h.DataUnitsWritten), "", ""));
+        rows.Add(new("通電時間", h.PowerOnHours == 0 ? "—" : $"{h.PowerOnHours:N0} 小時", "", ""));
+        rows.Add(new("電源循環", $"{h.PowerCycles:N0} 次", "", ""));
+        rows.Add(new("不安全關機", $"{h.UnsafeShutdowns:N0} 次", "", ""));
+        rows.Add(new("媒體與資料完整性錯誤", $"{h.MediaErrors:N0}", "", ""));
+        rows.Add(new("錯誤資訊紀錄項目", $"{h.ErrorLogEntries:N0}", "", ""));
         return rows;
     }
 
