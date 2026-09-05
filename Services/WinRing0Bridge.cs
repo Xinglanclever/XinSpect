@@ -29,11 +29,13 @@ public sealed class WinRing0Bridge : IDisposable
 
     /// <summary>反射快取：載入成功後永久保留，之後每次 <see cref="Create"/> 只做 Open／計數。</summary>
     /// <remarks>
-    /// PCI 設定空間的兩個方法是<b>選用</b>的（宣告為可為 null）：找不到它們只影響「PCIe 鏈路」一頁，
+    /// PCI 設定空間與 I/O 埠的方法都是<b>選用</b>的（宣告為可為 null）：找不到 PCI 那兩個只影響
+    /// 「PCIe 鏈路」一頁，找不到 I/O 埠那兩個只影響 SMBus／SPD 直讀，
     /// 不該讓所有靠 MSR 的頁面一起失效。
     /// </remarks>
     private sealed record Ring0Methods(MethodInfo Open, MethodInfo Close, MethodInfo ReadMsr, MethodInfo WriteMsr,
-                                       MethodInfo? ReadPciConfig, MethodInfo? GetPciAddress);
+                                       MethodInfo? ReadPciConfig, MethodInfo? GetPciAddress,
+                                       MethodInfo? ReadIoPort, MethodInfo? WriteIoPort);
 
     private static readonly object Gate = new();
     private static Ring0Methods? _cached;
@@ -80,7 +82,7 @@ public sealed class WinRing0Bridge : IDisposable
         }
     }
 
-    /// <summary>把 LHM 0.9.4 載入隔離 ALC 並反射出四個方法；失敗回 null 並填入原因。</summary>
+    /// <summary>把 LHM 0.9.4 載入隔離 ALC 並反射出四個必需方法與四個選用方法；失敗回 null 並填入原因。</summary>
     private static Ring0Methods? Load(out string error)
     {
         error = "";
@@ -120,7 +122,14 @@ public sealed class WinRing0Bridge : IDisposable
             // 選用：PCI 設定空間（0xCF8／0xCFC）——「PCIe 鏈路」一頁靠它，缺了不影響 MSR 各頁
             var readPci = ty.GetMethod("ReadPciConfig", All, new[] { typeof(uint), typeof(uint), typeof(uint).MakeByRefType() });
             var pciAddr = ty.GetMethod("GetPciAddress", All, new[] { typeof(byte), typeof(byte), typeof(byte) });
-            return new Ring0Methods(open, close, read, write, readPci, pciAddr);
+            // 選用：I/O 埠 in／out——SMBus 控制器（因而 SPD 直讀）靠它，缺了同樣只影響那一條路徑。
+            // 簽章在 0.9.4 上實測為 Byte ReadIoPort(UInt32) 與 Void WriteIoPort(UInt32, Byte)；
+            // 這裡精確比對參數形狀，比對不上就當作沒有——不用別的多載硬套，
+            // 因為猜錯的代價是把垃圾位元組當成 SPD 內容解讀出去。
+            var readIo = ty.GetMethod("ReadIoPort", All, new[] { typeof(uint) });
+            var writeIo = ty.GetMethod("WriteIoPort", All, new[] { typeof(uint), typeof(byte) });
+            if (readIo is not null && readIo.ReturnType != typeof(byte)) readIo = null;
+            return new Ring0Methods(open, close, read, write, readPci, pciAddr, readIo, writeIo);
         }
         catch (Exception ex)
         {
@@ -185,6 +194,37 @@ public sealed class WinRing0Bridge : IDisposable
             return (uint)args[2]!;
         }
         catch { return null; }
+    }
+
+    /// <summary>本機的 Ring0 是否提供 I/O 埠 in／out（SMBus 控制器與 SPD 直讀的唯一入口）。</summary>
+    /// <remarks>
+    /// 回 false 時呼叫端必須顯示「讀不到（原因）」，<b>不得代之以 0 或 0xFF</b>——
+    /// SPD 全 0 會被解讀成「製造於 2000 年第 0 週」，全 0xFF 會變成一堆看似合理的極大值。
+    /// </remarks>
+    public bool IoPortAvailable => _m?.ReadIoPort is not null && _m.WriteIoPort is not null && !_disposed;
+
+    /// <summary>讀一個 I/O 埠位元組（in）。不支援或失敗回 null。</summary>
+    public byte? ReadIoPortByte(uint port)
+    {
+        if (_m?.ReadIoPort is null || _disposed) return null;
+        try { return _m.ReadIoPort.Invoke(null, new object?[] { port }) as byte?; }
+        catch { return null; }
+    }
+
+    /// <summary>
+    /// 寫一個 I/O 埠位元組（out）。不支援或失敗回 false。
+    /// </summary>
+    /// <remarks>
+    /// <b>這是本橋接唯一會改變機器狀態的 I/O 埠操作，呼叫者受嚴格限制。</b>
+    /// SMBus 交易在協定上必須寫入控制器的命令／位址／控制暫存器才能發起一次「讀取」，
+    /// 所以這個方法不可避免；防線因此不在這裡，而在 <c>SmbusController</c> 的裝置位址白名單
+    /// ——只允許 SPD EEPROM 讀取與 DDR4 切頁，寫入保護指令連程式碼路徑都不存在。
+    /// </remarks>
+    public bool WriteIoPortByte(uint port, byte value)
+    {
+        if (_m?.WriteIoPort is null || _disposed) return false;
+        try { _m.WriteIoPort.Invoke(null, new object?[] { port, value }); return true; }
+        catch { return false; }
     }
 
     /// <summary>交還這一份會話；最後一位使用者離開時才真正 Close 驅動服務。</summary>
