@@ -116,6 +116,29 @@ public static class SmbusDiscovery
 }
 
 /// <summary>
+/// 上一次 SMBus 交易的結果分類。
+/// </summary>
+/// <remarks>
+/// 之所以要分類而不是只留一句錯誤字串：呼叫端必須能分辨「這個位址上沒有裝置」（空插槽，正常）
+/// 與「有裝置但讀不到」（那是驗機時的一筆發現）。用字串比對去分辨這兩件事，
+/// 是那種改一次措辭就悄悄壞掉的程式碼。
+/// </remarks>
+public enum SmbusStatus
+{
+    Ok,
+    /// <summary>DEV_ERR：位址上沒有裝置，或裝置不接受這個命令。</summary>
+    NoDevice,
+    /// <summary>BUS_ERR：匯流排衝突或仲裁失敗——通常代表有別人也在用。</summary>
+    BusError,
+    /// <summary>FAILED：交易被中止。</summary>
+    TransactionFailed,
+    /// <summary>逾時。已送出 KILL 收尾，不重試。</summary>
+    Timeout,
+    /// <summary>I/O 埠存取本身不可用（橋接沒了或沒有權限）。</summary>
+    IoUnavailable,
+}
+
+/// <summary>
 /// Intel PCH SMBus 主機控制器的交易狀態機（只讀 SPD，別的都不做）。
 /// </summary>
 /// <remarks>
@@ -164,6 +187,9 @@ public sealed class SmbusController(ISmbusIo io, uint ioBase,
     /// <summary>最後一次失敗的原因（人看得懂的中文）。成功時為空字串。</summary>
     public string LastError { get; private set; } = "";
 
+    /// <summary>最後一次交易的結果分類。呼叫端用它分辨「空插槽」與「有裝置但讀不到」。</summary>
+    public SmbusStatus LastStatus { get; private set; } = SmbusStatus.Ok;
+
     /// <summary>SPD EEPROM 的八個裝置位址——本讀取器唯一允許讀取的範圍。</summary>
     public static bool IsSpdReadAddress(byte slave7) => slave7 is >= 0x50 and <= 0x57;
 
@@ -185,6 +211,7 @@ public sealed class SmbusController(ISmbusIo io, uint ioBase,
         {
             reason = "讀不到 SMBus 控制器狀態暫存器（I/O 埠存取不可用）。";
             LastError = reason;
+            LastStatus = SmbusStatus.IoUnavailable;
             return false;
         }
         if ((sts.Value & StsInUse) != 0)
@@ -192,10 +219,12 @@ public sealed class SmbusController(ISmbusIo io, uint ioBase,
             reason = "SMBus 正被其他程式或韌體使用（INUSE_STS 已被持有）。"
                    + "請關閉 CPU-Z／AIDA64／HWiNFO 與主機板燈光軟體後重試——本工具不搶匯流排。";
             LastError = reason;
+            LastStatus = SmbusStatus.BusError;
             return false;
         }
         _acquired = true;
         reason = "";
+        LastStatus = SmbusStatus.Ok;
         return true;
     }
 
@@ -237,6 +266,7 @@ public sealed class SmbusController(ISmbusIo io, uint ioBase,
             throw new InvalidOperationException("必須先 TryAcquireBus 取得匯流排旗號才能發起交易。");
 
         LastError = "";
+        LastStatus = SmbusStatus.Ok;
         var sw = Stopwatch.StartNew();
 
         if (!WaitNotBusy(sw, out bool ioFailed))
@@ -246,11 +276,13 @@ public sealed class SmbusController(ISmbusIo io, uint ioBase,
                 // 送 KILL 也要靠同一條 I/O 路徑，路徑壞了就別再打了；而且原因必須說對——
                 // 說成「逾時」會把人引去查匯流排壅塞，真正的原因是驅動不在了。
                 LastError = "讀不到 SMBus 控制器狀態暫存器（I/O 埠存取不可用）。";
+                LastStatus = SmbusStatus.IoUnavailable;
                 return null;
             }
             Kill();
             LastError = $"SMBus 控制器的 HOST_BUSY 在 {transactionTimeoutMs} ms 內沒有放掉（交易逾時），"
                       + "已送出 KILL 收尾；不重試。";
+            LastStatus = SmbusStatus.Timeout;
             return null;
         }
 
@@ -260,6 +292,7 @@ public sealed class SmbusController(ISmbusIo io, uint ioBase,
             || !io.Out(ioBase + HstCnt, (byte)(protocol | CntStart)))
         {
             LastError = "寫入 SMBus 控制器暫存器失敗（I/O 埠存取不可用）。";
+            LastStatus = SmbusStatus.IoUnavailable;
             return null;
         }
 
@@ -269,6 +302,7 @@ public sealed class SmbusController(ISmbusIo io, uint ioBase,
             if (sts is null)
             {
                 LastError = "輪詢期間讀不到 HST_STS（I/O 埠存取不可用）。";
+                LastStatus = SmbusStatus.IoUnavailable;
                 return null;
             }
 
@@ -276,6 +310,9 @@ public sealed class SmbusController(ISmbusIo io, uint ioBase,
             if ((v & StsErrorMask) != 0)
             {
                 LastError = Describe(v);
+                LastStatus = (v & StsBusErr) != 0 ? SmbusStatus.BusError
+                           : (v & StsFailed) != 0 ? SmbusStatus.TransactionFailed
+                           : SmbusStatus.NoDevice;
                 io.Out(ioBase + HstSts, StsClearMask);
                 return null;
             }
@@ -286,6 +323,7 @@ public sealed class SmbusController(ISmbusIo io, uint ioBase,
                 Kill();
                 LastError = $"交易逾時（{transactionTimeoutMs} ms 內沒有收到完成訊號），"
                           + "已送出 KILL 收尾；不重試、不換路徑。";
+                LastStatus = SmbusStatus.Timeout;
                 return null;
             }
             Thread.SpinWait(64);
@@ -293,7 +331,11 @@ public sealed class SmbusController(ISmbusIo io, uint ioBase,
 
         byte? data = readsData ? io.In(ioBase + HstD0) : (byte)0;
         io.Out(ioBase + HstSts, StsClearMask);
-        if (data is null) LastError = "交易完成但讀不到 HST_D0（I/O 埠存取不可用）。";
+        if (data is null)
+        {
+            LastError = "交易完成但讀不到 HST_D0（I/O 埠存取不可用）。";
+            LastStatus = SmbusStatus.IoUnavailable;
+        }
         return data;
     }
 

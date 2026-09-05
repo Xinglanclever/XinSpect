@@ -20,80 +20,16 @@ namespace XinSpect.Tests;
 /// </remarks>
 public class SmbusControllerTests
 {
-    private const uint Base = 0xF040;
+    private const uint Base = FakeSmbusIo.Base;
 
-    /// <summary>假的 I/O 埠：照 Intel PCH 的 HST_STS／HST_CNT 語意行為，包含 INUSE 的讀取即占用。</summary>
-    private sealed class FakeIo : ISmbusIo
-    {
-        private const uint Sts = Base + 0, Cnt = Base + 2, Cmd = Base + 3, Slva = Base + 4, D0 = Base + 5;
-
-        public bool BusyForever;
-        public bool InUseHeldByOther;
-        public bool NeverCompletes;
-        public byte ErrorBits;
-        public bool BridgeGone;
-        public Func<byte, byte, byte?>? Respond;
-
-        public readonly List<(uint Port, byte Value)> Writes = [];
-
-        private byte _sts;
-        private bool _inUse;
-        private byte _slva, _cmd, _d0;
-
-        public byte? In(uint port)
-        {
-            if (BridgeGone) return null;
-            if (port == Sts)
-            {
-                byte v = _sts;
-                if (BusyForever) v |= 0x01;
-                if (_inUse || InUseHeldByOther) v |= 0x40;
-                _inUse = true;                          // read-to-acquire：讀完就占住
-                return v;
-            }
-            if (port == D0) return _d0;
-            if (port == Slva) return _slva;
-            if (port == Cmd) return _cmd;
-            return 0;
-        }
-
-        public bool Out(uint port, byte value)
-        {
-            if (BridgeGone) return false;
-            Writes.Add((port, value));
-            if (port == Sts)
-            {
-                _sts &= (byte)~(value & 0xBE);          // 狀態位寫 1 清除；HOST_BUSY 唯讀
-                if ((value & 0x40) != 0) { _inUse = false; InUseHeldByOther = false; }
-                return true;
-            }
-            if (port == Slva) { _slva = value; return true; }
-            if (port == Cmd) { _cmd = value; return true; }
-            if (port != Cnt) return true;
-
-            if ((value & 0x02) != 0) { _sts |= 0x10; return true; }     // KILL → FAILED
-            if ((value & 0x40) == 0) return true;                        // 沒按 START
-            if (NeverCompletes) return true;
-            if (ErrorBits != 0) { _sts |= ErrorBits; return true; }
-            if (((value >> 2) & 0x07) == 0x02)                           // Byte Data
-            {
-                var got = Respond?.Invoke((byte)(_slva >> 1), _cmd);
-                if (got is null) { _sts |= 0x04; return true; }          // 無裝置 → DEV_ERR
-                _d0 = got.Value;
-            }
-            _sts |= 0x02;                                                // INTR＝完成
-            return true;
-        }
-    }
-
-    private static SmbusController Make(FakeIo io) => new(io, Base, transactionTimeoutMs: 30);
+    private static SmbusController Make(FakeSmbusIo io) => new(io, Base, transactionTimeoutMs: 30);
 
     // ---- 交易狀態機 ----
 
     [Fact]
     public void 正常的ByteData讀取回傳HST_D0()
     {
-        var io = new FakeIo { Respond = (slave, cmd) => slave == 0x50 ? (byte)(cmd ^ 0x5A) : null };
+        var io = new FakeSmbusIo { Respond = (slave, cmd) => slave == 0x50 ? (byte)(cmd ^ 0x5A) : null };
         var bus = Make(io);
 
         Assert.True(bus.TryAcquireBus(out var reason), reason);
@@ -104,7 +40,7 @@ public class SmbusControllerTests
     [Fact]
     public void INUSE已被別人持有時取不到匯流排_而且不得把它清掉()
     {
-        var io = new FakeIo { InUseHeldByOther = true };
+        var io = new FakeSmbusIo { InUseHeldByOther = true };
         var bus = Make(io);
 
         Assert.False(bus.TryAcquireBus(out var reason));
@@ -116,7 +52,7 @@ public class SmbusControllerTests
     [Fact]
     public void HOST_BUSY一直不放就逾時_並且送出KILL收尾()
     {
-        var io = new FakeIo { BusyForever = true, Respond = (_, _) => 0x11 };
+        var io = new FakeSmbusIo { BusyForever = true, Respond = (_, _) => 0x11 };
         var bus = Make(io);
         Assert.True(bus.TryAcquireBus(out _));
 
@@ -129,7 +65,7 @@ public class SmbusControllerTests
     [Fact]
     public void 完成訊號一直不來也算逾時()
     {
-        var io = new FakeIo { NeverCompletes = true };
+        var io = new FakeSmbusIo { NeverCompletes = true };
         var bus = Make(io);
         Assert.True(bus.TryAcquireBus(out _));
 
@@ -137,24 +73,45 @@ public class SmbusControllerTests
         Assert.Contains("逾時", bus.LastError);
     }
 
+    /// <summary>
+    /// 錯誤位不只要回 null，還要分類正確。呼叫端靠 <see cref="SmbusStatus.NoDevice"/> 分辨
+    /// 「空插槽」與「有裝置但讀不到」——後者在驗機時是一筆發現，前者是正常狀況。
+    /// </summary>
     [Theory]
-    [InlineData((byte)0x04, "裝置")]
-    [InlineData((byte)0x08, "匯流排")]
-    [InlineData((byte)0x10, "失敗")]
-    public void 控制器回報錯誤位時回null並說明是哪一種(byte errorBit, string expect)
+    [InlineData((byte)0x04, "裝置", SmbusStatus.NoDevice)]
+    [InlineData((byte)0x08, "匯流排", SmbusStatus.BusError)]
+    [InlineData((byte)0x10, "失敗", SmbusStatus.TransactionFailed)]
+    public void 控制器回報錯誤位時回null並說明是哪一種(byte errorBit, string expect, SmbusStatus status)
     {
-        var io = new FakeIo { ErrorBits = errorBit };
+        var io = new FakeSmbusIo { ErrorBits = errorBit };
         var bus = Make(io);
         Assert.True(bus.TryAcquireBus(out _));
 
         Assert.Null(bus.ReadByteData(0x50, 0x00));
         Assert.Contains(expect, bus.LastError);
+        Assert.Equal(status, bus.LastStatus);
+    }
+
+    [Fact]
+    public void 逾時要分類成逾時_橋接消失要分類成IO不可用()
+    {
+        var slow = Make(new FakeSmbusIo { NeverCompletes = true });
+        Assert.True(slow.TryAcquireBus(out _));
+        Assert.Null(slow.ReadByteData(0x50, 0x00));
+        Assert.Equal(SmbusStatus.Timeout, slow.LastStatus);
+
+        var io = new FakeSmbusIo { Respond = (_, _) => 0x01 };
+        var gone = Make(io);
+        Assert.True(gone.TryAcquireBus(out _));
+        io.BridgeGone = true;
+        Assert.Null(gone.ReadByteData(0x50, 0x00));
+        Assert.Equal(SmbusStatus.IoUnavailable, gone.LastStatus);
     }
 
     [Fact]
     public void 位址上沒有裝置時是讀不到_不是回0()
     {
-        var io = new FakeIo { Respond = (slave, _) => slave == 0x50 ? (byte)0x77 : null };
+        var io = new FakeSmbusIo { Respond = (slave, _) => slave == 0x50 ? (byte)0x77 : null };
         var bus = Make(io);
         Assert.True(bus.TryAcquireBus(out _));
 
@@ -165,7 +122,7 @@ public class SmbusControllerTests
     [Fact]
     public void 橋接不可用時連匯流排都取不到()
     {
-        var bus = Make(new FakeIo { BridgeGone = true });
+        var bus = Make(new FakeSmbusIo { BridgeGone = true });
 
         Assert.False(bus.TryAcquireBus(out var reason));
         Assert.Contains("讀不到", reason);
@@ -178,7 +135,7 @@ public class SmbusControllerTests
     [Fact]
     public void 交易途中橋接消失要說是讀不到而不是逾時()
     {
-        var io = new FakeIo { Respond = (_, _) => 0x01 };
+        var io = new FakeSmbusIo { Respond = (_, _) => 0x01 };
         var bus = Make(io);
         Assert.True(bus.TryAcquireBus(out _));
 
@@ -191,7 +148,7 @@ public class SmbusControllerTests
     [Fact]
     public void 釋放匯流排時把INUSE寫回去()
     {
-        var io = new FakeIo();
+        var io = new FakeSmbusIo();
         var bus = Make(io);
         Assert.True(bus.TryAcquireBus(out _));
         bus.ReleaseBus();
@@ -202,7 +159,7 @@ public class SmbusControllerTests
     [Fact]
     public void 沒取得匯流排就讀取是程式錯誤()
     {
-        var bus = Make(new FakeIo());
+        var bus = Make(new FakeSmbusIo());
         Assert.Throws<InvalidOperationException>(() => bus.ReadByteData(0x50, 0x00));
     }
 
@@ -214,7 +171,7 @@ public class SmbusControllerTests
     [InlineData((byte)0x57)]
     public void SPD的八個EEPROM位址可以讀(byte slave)
     {
-        var io = new FakeIo { Respond = (_, _) => 0x01 };
+        var io = new FakeSmbusIo { Respond = (_, _) => 0x01 };
         var bus = Make(io);
         Assert.True(bus.TryAcquireBus(out _));
         Assert.Equal((byte)0x01, bus.ReadByteData(slave, 0x00));
@@ -227,7 +184,7 @@ public class SmbusControllerTests
     [InlineData((byte)0x30)]
     public void 其餘位址一律不准讀(byte slave)
     {
-        var bus = Make(new FakeIo());
+        var bus = Make(new FakeSmbusIo());
         Assert.True(bus.TryAcquireBus(out _));
         Assert.Throws<ArgumentOutOfRangeException>(() => bus.ReadByteData(slave, 0x00));
     }
@@ -237,7 +194,7 @@ public class SmbusControllerTests
     [InlineData((byte)0x37)]
     public void 只有DDR4的兩個切頁位址可以寫(byte slave)
     {
-        var bus = Make(new FakeIo());
+        var bus = Make(new FakeSmbusIo());
         Assert.True(bus.TryAcquireBus(out _));
         Assert.True(bus.SendByte(slave, 0x00));
     }
@@ -256,7 +213,7 @@ public class SmbusControllerTests
     [InlineData((byte)0x57)]
     public void 寫入保護指令與EEPROM資料區永遠不准寫(byte slave)
     {
-        var io = new FakeIo();
+        var io = new FakeSmbusIo();
         var bus = Make(io);
         Assert.True(bus.TryAcquireBus(out _));
 
