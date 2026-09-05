@@ -39,3 +39,12 @@ Bridge/*.txt
 
 # wrangler 本機狀態（部署快取、暫存設定；不屬於原始碼）
 cloudflare/**/.wrangler/
+
+# ---- UI 驗證截圖（verify*.ps1 以 UI Automation 跑出來的產物）----
+# 這些是開發過程的證據，不是原始碼；留在索引裡會被打進每個 tag 的 Source code (zip)，
+# 而且畫面永遠停在拍攝當天的版本，對下載的人只會造成誤解。要看就在本機重跑 verify*.ps1。
+shots/
+shot1.png
+win.png
+crop_gauges.png
+tab_*.png

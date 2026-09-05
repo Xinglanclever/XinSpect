@@ -69,11 +69,16 @@
                        Foreground="{DynamicResource PrimaryInkBrush}" TextTrimming="CharacterEllipsis"/>
             <TextBlock x:Name="ModelText" FontSize="12" Margin="0,1,0,0"
                        Foreground="{DynamicResource MutedInkBrush}" TextWrapping="Wrap" MaxWidth="360"/>
-            <!-- 特殊版本徽記（至尊版 / 週年限定版…），僅特殊型號顯示 -->
-            <Border x:Name="TierChip" Margin="0,4,0,0" HorizontalAlignment="Left"
-                    CornerRadius="4" Padding="6,1" Visibility="Collapsed">
-                <TextBlock x:Name="TierText" FontSize="10.5" FontWeight="SemiBold"/>
-            </Border>
+            <!-- 特殊版本徽記（至尊版 / 週年限定版…），僅特殊型號顯示。
+                 第二枚膠囊供雙重身分使用（如 X5698 既屬 Everest 系列、本身又是 Xeon）。 -->
+            <StackPanel x:Name="TierRow" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,4,0,0">
+                <Border x:Name="TierChip" CornerRadius="4" Padding="6,1" Visibility="Collapsed">
+                    <TextBlock x:Name="TierText" FontSize="10.5" FontWeight="SemiBold"/>
+                </Border>
+                <Border x:Name="TierChip2" CornerRadius="4" Padding="6,1" Margin="4,0,0,0" Visibility="Collapsed">
+                    <TextBlock x:Name="TierText2" FontSize="10.5" FontWeight="SemiBold"/>
+                </Border>
+            </StackPanel>
         </StackPanel>
     </StackPanel>
 </UserControl>

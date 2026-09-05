@@ -77,7 +77,16 @@
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel(R) Pentium(R) Extreme Edition CPU 965" Model="Pentium EE 965"/></Border>
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel(R) Core(TM) i7-5960X CPU @ 3.00GHz" Model="Core i7-5960X 至尊"/></Border>
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel(R) Core(TM) i7-6950X CPU @ 3.00GHz" Model="Core i7-6950X 至尊"/></Border>
-                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Everest" Model="Everest 訂製版"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel(R) Core(TM) CC150 CPU @ 3.50GHz" Model="Core CC150（8C/16T 定頻）"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel(R) Core(TM) i9-14900KS CPU @ 3.20GHz" Model="Core i9-14900KS 特別版"/></Border>
+                </UniformGrid>
+
+                <TextBlock Style="{StaticResource Sec}" Text="Everest 珠穆朗瑪峰系列（Intel 非路線圖極限 bin：膠囊標系列、中心字標機種）"/>
+                <UniformGrid Columns="3">
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel(R) Xeon(R) CPU X5698 @ 4.40GHz" Model="Xeon X5698（4.4GHz 雙核）"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel JKT EVEREST SS 4.4GHZ INTERNAL USE ONLY" Model="JKT Everest"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel BlackOps 6 Core 4.60GHz Engineering Sample" Model="BlackOps 6C"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel(R) Xeon(R) CPU E5-2602 v4" Model="Xeon E5-2602 v4（傳聞）"/></Border>
                 </UniformGrid>
 
                 <TextBlock Style="{StaticResource Sec}" Text="Intel Xeon（左上 Xeon；Scalable 右上級別斜面 銅/銀/金/白金、W・E 系右上字母）"/>
@@ -90,14 +99,24 @@
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Xeon E-2288G" Model="Xeon E-2288G"/></Border>
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Xeon E3-1230 v6" Model="Xeon E3-1230 v6"/></Border>
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Xeon E5-2680 v4" Model="Xeon E5-2680 v4"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel(R) Xeon(R) CPU E5-1680 v2 @ 3.00GHz" Model="Xeon E5-1680 v2（黑工作站頂規）"/></Border>
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Xeon E7-8890 v4" Model="Xeon E7-8890 v4"/></Border>
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Xeon 5160" Model="Xeon 5160"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel(R) Xeon(R) W-3175X CPU @ 3.10GHz" Model="Xeon W-3175X（限量）"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel(R) Xeon(R) CPU E5-2696 v4 @ 2.20GHz" Model="Xeon E5-2696 v4（OEM 專供）"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel(R) Xeon Phi(TM) CPU 7250 @ 1.40GHz" Model="Xeon Phi 7250（72 核）"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel(R) Itanium(R) Processor 9750 @ 2.53GHz" Model="Itanium 9750（IA-64）"/></Border>
                 </UniformGrid>
 
                 <TextBlock Style="{StaticResource Sec}" Text="AMD ・ Intel Pentium Gold ・ 工程樣品"/>
                 <UniformGrid Columns="3">
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="AMD Ryzen Threadripper 3990X" Model="Ryzen Threadripper 3990X"/></Border>
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="AMD Ryzen 9 5950X" Model="Ryzen 9 5950X"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="AMD Ryzen 7 9800X3D 8-Core Processor" Model="Ryzen 7 9800X3D"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="AMD EPYC 9754 128-Core Processor" Model="EPYC 9754"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="AMD Opteron(tm) Processor 6276" Model="Opteron 6276"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="AMD Athlon(tm) 64 FX-60 Processor" Model="Athlon 64 FX-60"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="AMD FX(tm)-9590 Eight-Core Processor" Model="FX-9590（5GHz）"/></Border>
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel Pentium Gold G7400" Model="Pentium Gold G7400"/></Border>
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Genuine Intel(R) CPU 0000" Model="工程樣品 0000"/></Border>
                 </UniformGrid>
@@ -108,6 +127,28 @@
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Gpu" EmblemSize="54" Model="NVIDIA TITAN V"/></Border>
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Gpu" EmblemSize="54" Model="NVIDIA TITAN V CEO Edition"/></Border>
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Gpu" EmblemSize="54" Model="NVIDIA Tesla V100"/></Border>
+                </UniformGrid>
+
+                <TextBlock Style="{StaticResource Sec}" Text="專業卡與運算卡（Quadro / RTX Pro 黑底 ・ 資料中心綠 ・ Instinct 紅 ・ Radeon Pro 藍）"/>
+                <UniformGrid Columns="3">
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Gpu" EmblemSize="54" Model="NVIDIA Quadro P5000"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Gpu" EmblemSize="54" Model="NVIDIA RTX A6000"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Gpu" EmblemSize="54" Model="NVIDIA RTX 6000 Ada Generation"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Gpu" EmblemSize="54" Model="NVIDIA H100 80GB HBM3"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Gpu" EmblemSize="54" Model="AMD Instinct MI300X"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Gpu" EmblemSize="54" Model="AMD Radeon Pro W7900"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Gpu" EmblemSize="54" Model="NVIDIA GeForce GTX TITAN Z"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Gpu" EmblemSize="54" Model="NVIDIA GeForce RTX 4090 D"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Gpu" EmblemSize="54" Model="NVIDIA CMP 90HX"/></Border>
+                </UniformGrid>
+
+                <TextBlock Style="{StaticResource Sec}" Text="儲存與主機板（Optane 3D XPoint ・ 各家超頻名門板）"/>
+                <UniformGrid Columns="3">
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Disk" EmblemSize="54" Model="INTEL SSDPED1D480GA"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Board" EmblemSize="54" Model="ROG MAXIMUS Z790 APEX"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Board" EmblemSize="54" Model="EVGA Z790 DARK KINGPIN"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Board" EmblemSize="54" Model="MEG Z790 GODLIKE"/></Border>
+                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Board" EmblemSize="54" Model="Z790 AORUS TACHYON"/></Border>
                 </UniformGrid>
             </StackPanel>
         </ScrollViewer>

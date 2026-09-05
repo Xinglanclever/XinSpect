@@ -42,10 +42,14 @@
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.16" />
   </ItemGroup>
 
-  <!-- 特殊 CPU 型號的官方 logo 圖檔（選配）：放入 Assets\cpu\{id}.png 即自動採用。
-       以 WPF Resource 編入組件，單檔發佈亦可；缺檔時徽章自動退回原創向量圖，不影響建置。 -->
+  <!-- 特殊型號的官方 logo 圖檔（選配）：放入 Assets\{cpu|gpu|disk|board}\{id}.png 即自動採用。
+       以 WPF Resource 編入組件，單檔發佈亦可；缺檔時徽章自動退回原創向量圖，不影響建置。
+       四個子資料夾要與 DeviceIcons.AssetFolder 一致（DeviceIconsTableTests 會比對，少一個就紅）。 -->
   <ItemGroup>
     <Resource Include="Assets\cpu\*.png" />
+    <Resource Include="Assets\gpu\*.png" />
+    <Resource Include="Assets\disk\*.png" />
+    <Resource Include="Assets\board\*.png" />
     <!-- 視窗圖示（標題列／工作列）；以 Resource 編入，單檔發佈亦可用 pack URI 讀取 -->
     <Resource Include="Assets\app.ico" />
     <!-- 關於頁「By：Xinglanclever」旁的動畫 GIF；以 Resource 編入，pack URI 讀取後逐格輪播 -->

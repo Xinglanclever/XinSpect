@@ -129,7 +129,7 @@ public partial class BrandBadge : UserControl
                     TextBox.RenderTransform = new TranslateTransform(E * 0.09, E * 0.21);
                 else
                 {
-                    // 長字（Everest）：縮小內距＝放大字，並略向下補償。
+                    // 長字（Everest / BlackOps）：縮小內距＝放大字，並略向下補償。
                     TextBox.Margin = new Thickness(E * 0.13);
                     TextBox.RenderTransform = new TranslateTransform(0, E * 0.03);
                 }
@@ -218,10 +218,24 @@ public partial class BrandBadge : UserControl
             TierText.Foreground = Brushes.White;
             TierChip.Background = BuildBrush(edition.Chip, new Point(0, 0), new Point(0, 1));
             TierChip.Visibility = Visibility.Visible;
+
+            // 第二枚膠囊：雙重身分才畫（如 X5698 掛「Everest 珠穆朗瑪峰系列」＋藍色「Xeon」）。
+            if (!string.IsNullOrEmpty(edition.Tier2) && edition.Chip2 is not null)
+            {
+                TierText2.Text = edition.Tier2;
+                TierText2.Foreground = Brushes.White;
+                TierChip2.Background = BuildBrush(edition.Chip2, new Point(0, 0), new Point(0, 1));
+                TierChip2.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                TierChip2.Visibility = Visibility.Collapsed;
+            }
         }
         else
         {
             TierChip.Visibility = Visibility.Collapsed;
+            TierChip2.Visibility = Visibility.Collapsed;
         }
     }
 
@@ -367,6 +381,8 @@ public partial class BrandBadge : UserControl
     {
         "cpu" => GlyphPath(BadgeKind.Cpu),
         "gpu" => GlyphPath(BadgeKind.Gpu),
+        "disk" => GlyphPath(BadgeKind.Disk),
+        "board" => GlyphPath(BadgeKind.Board),
         _ => SpecialGlyph(key),
     };
 
@@ -380,6 +396,15 @@ public partial class BrandBadge : UserControl
         // 交叉 X：至尊版 Extreme Edition
         "x" =>
             "F1 M34,40 L40,34 L66,60 L60,66 Z M60,34 L66,40 L40,66 L34,60 Z",
+        // 蒸汽閥（Steam 標記）：左下大環 + 連桿 + 右上小環。CC150 專用。
+        //    採 EvenOdd（F0）挖出兩環內孔，故三塊圖形刻意不重疊——連桿兩端只切齊環的外緣
+        //    （端點距圓心恰等於外半徑），一旦壓進環身就會被 XOR 挖掉一塊。
+        "steam" =>
+            "F0 M10,64 A24,24 0 1 1 58,64 A24,24 0 1 1 10,64 Z " +      // 大環外圈（圓心 34,64 半徑 24）
+            "M24,64 A10,10 0 1 1 44,64 A10,10 0 1 1 24,64 Z " +         // 大環內孔（半徑 10）
+            "M59,28 A14,14 0 1 1 87,28 A14,14 0 1 1 59,28 Z " +         // 小環外圈（圓心 73,28 半徑 14）
+            "M67.5,28 A5.5,5.5 0 1 1 78.5,28 A5.5,5.5 0 1 1 67.5,28 Z " + // 小環內孔（半徑 5.5）
+            "M55.3,51.7 L66.4,41.5 L59.0,33.5 L47.9,43.7 Z",            // 連桿（寬 11，貼齊兩環外緣）
         _ => "F1 M30,30 H70 V70 H30 Z",
     };
 

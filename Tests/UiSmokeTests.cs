@@ -88,6 +88,9 @@ public class UiSmokeTests
             targets.Add(("視窗「KeyboardTestWindow」", () => new KeyboardTestWindow()));
             targets.Add(("視窗「SpeakerTestWindow」", () => new SpeakerTestWindow()));
             targets.Add(("視窗「MotionTestWindow」", () => new MotionTestWindow()));
+            // 徽章一覽：陳列了對照表裡每一枚專屬徽章，建構它等於把所有向量字形（Geometry.Parse）
+            // 與疊加層走一遍。新增徽章若把路徑資料寫壞，只有擁有那顆晶片的人看得到——放進煙霧測試才攔得住。
+            targets.Add(("視窗「IconGalleryWindow」", () => new IconGalleryWindow()));
             // 這兩個對話框在正常使用中很少被建出來，卻是最不能壞的：首次啟動的版面選擇只有
             // 「第一次打開程式」那一刻會出現，超頻風險確認則是進超頻頁的唯一入口。
             // XAML 寫錯的話，兩者都會在最糟的時機才炸出來，所以一併列進煙霧測試。
