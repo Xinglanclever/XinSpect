@@ -29,7 +29,10 @@ public sealed record SpdSnapshot(
     string PartNumber,
     byte ModuleRevision,
     byte DramStepping,
-    SpdXmp? Xmp);
+    SpdXmp? Xmp,
+    SpdGeometry Geometry,
+    SpdTimings Timings,
+    IReadOnlyList<SpdXmpProfile> XmpProfiles);
 
 /// <summary>
 /// DDR4 SPD 的純函式解碼器（JEDEC SPD Annex L）。
@@ -83,7 +86,10 @@ public static class SpdDecoder
             PartNumber: DecodePartNumber(raw),
             ModuleRevision: raw[OffModuleRevision],
             DramStepping: raw[OffDramStepping],
-            Xmp: DecodeXmp(raw));
+            Xmp: DecodeXmp(raw),
+            Geometry: SpdDetailDecoder.Geometry(raw),
+            Timings: SpdDetailDecoder.Timings(raw),
+            XmpProfiles: SpdDetailDecoder.XmpProfiles(raw));
     }
 
     /// <summary>
