@@ -164,6 +164,8 @@
                                                 <local:FieldRow Label="模組格式" Value="{Binding ModuleFormat}"/>
                                                 <local:FieldRow Label="容量" Value="{Binding Size}"/>
                                                 <local:FieldRow Label="製造商" Value="{Binding Manufacturer}"/>
+                                                <local:FieldRow Label="顆粒廠" Value="{Binding DramManufacturer}"/>
+                                                <local:FieldRow Label="來源" Value="{Binding Source}"/>
                                             </StackPanel>
                                             <StackPanel Grid.Column="1" Margin="10,0,0,0">
                                                 <local:FieldRow Label="料號" Value="{Binding PartNumber}"/>
@@ -172,6 +174,7 @@
                                                 <local:FieldRow Label="製造日期" Value="{Binding ManufacturingDate}"/>
                                                 <local:FieldRow Label="標稱電壓" Value="{Binding NominalVoltage}"/>
                                                 <local:FieldRow Label="XMP/EXPO" Value="{Binding XmpSummary}"/>
+                                                <local:FieldRow Label="SPD 校驗" Value="{Binding Checksum}"/>
                                             </StackPanel>
                                         </Grid>
 

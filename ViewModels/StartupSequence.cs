@@ -178,6 +178,11 @@ internal static class StartupSequence
     // 深度規格：CPU-Z 子行程報告（時序、SPD、主機板、顯示卡）。以射後不理呼叫，故整段包覆。
     private static async Task LoadDeepSpecsAsync(MainViewModel vm)
     {
+        // SPD 先自己讀。讀得到就用它，因為那是模組上的原始位元組（來源那一列會標明是哪一條匯流排）；
+        // 讀不到就什麼都不做，讓下面的 CPU-Z 報告照原樣填——在讀不到 SPD 的機器上完全沒有回歸。
+        var nativeSpd = await Task.Run(ReadSpdDirect);
+        if (nativeSpd.Count > 0) vm.SpdModules = nativeSpd;
+
         try
         {
             var report = await CpuzReportService.ReadAsync();
@@ -194,13 +199,40 @@ internal static class StartupSequence
 
             vm.CpuDetail = report.Cpu;
             vm.Mainboard = report.Board;
-            vm.SpdModules = report.Spd;
+            if (nativeSpd.Count == 0) vm.SpdModules = report.Spd;
             vm.GpuDetails = report.Gpus;
 
             if (vm.Live is not null)
                 vm.StatusText = ReadyText(vm, report.Ran);
         }
         catch { /* 深度規格為附加，讀取失敗維持 WMI 值 */ }
+    }
+
+    /// <summary>
+    /// 走 SMBus 把每條記憶體模組的 SPD 直接讀回來（背景執行緒）。任何一關過不了就回空清單。
+    /// </summary>
+    /// <remarks>
+    /// 三道讓路：沒有驅動或沒有管理員權限就不讀；具名互斥鎖取不到（CPU-Z／AIDA64／燈光軟體
+    /// 正在用匯流排）就不搶；每一條匯流排的硬體旗號取不到也各自跳過。
+    /// 回空清單不是錯誤，只是這台機器這一刻讀不到——呼叫端會退回 CPU-Z 報告那條路徑。
+    /// </remarks>
+    private static List<SpdModule> ReadSpdDirect()
+    {
+        try
+        {
+            using var bridge = WinRing0Bridge.Create();
+            if (!bridge.Available) return [];
+
+            var notes = new List<string>();
+            var buses = SpdBusFactory.Candidates(bridge, notes);
+            if (buses.Count == 0) return [];
+
+            using var busLock = SmbusBusLock.TryAcquire(SmbusBusLock.WellKnownName, 500, out _);
+            if (busLock is null) return [];
+
+            return SpdDisplay.ToDisplay(SpdSurveyor.Survey(buses).Modules);
+        }
+        catch { return []; }
     }
 
     // 首次啟動的環境自檢：略候片刻讓各引擎與感測器就緒，再於背景跑一次。

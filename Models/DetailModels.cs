@@ -150,6 +150,8 @@ public sealed class SpdModule
     public string MemoryType { get; set; } = "—";
     public string ModuleFormat { get; set; } = "—";
     public string Manufacturer { get; set; } = "—";
+    /// <summary>顆粒廠。只有直讀 SPD 才分得出「誰組的模組」與「誰的顆粒」——CPU-Z 報告那條路徑留「—」。</summary>
+    public string DramManufacturer { get; set; } = "—";
     public string Size { get; set; } = "—";
     public string MaxBandwidth { get; set; } = "—";
     public string MaxJedec { get; set; } = "—";
@@ -157,6 +159,15 @@ public sealed class SpdModule
     public string ManufacturingDate { get; set; } = "—";
     public string NominalVoltage { get; set; } = "—";
     public string Xmp { get; set; } = "—";
+
+    /// <summary>
+    /// 這一筆是怎麼來的。預設是解析 CPU-Z 報告；走 SMBus 直讀 SPD 時會換成那條匯流排的描述。
+    /// </summary>
+    /// <remarks>畫面上要說得出每個數字的血統——同一張卡片可能來自兩種完全不同可信度的來源。</remarks>
+    public string Source { get; set; } = "CPU-Z 報告";
+
+    /// <summary>SPD 的兩段 CRC 校驗結果。只有直讀才驗得到——不符代表這顆 SPD 被改寫過而沒重算。</summary>
+    public string Checksum { get; set; } = "—";
 
     public List<SpdTiming> Jedec { get; } = new();
     public List<XmpProfile> XmpProfiles { get; } = new();
