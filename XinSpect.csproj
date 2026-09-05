@@ -21,9 +21,9 @@
     <Product>曦覽 XinSpect</Product>
     <AssemblyTitle>曦覽 XinSpect 硬體資訊總覽</AssemblyTitle>
     <Company>Xinglanclever</Company>
-    <Version>1.9.1-B1</Version>
+    <Version>1.9.2</Version>
     <!-- FileVersion 只吃數字，表達不了「-B1」；第四段就是拿來標這種同版號的後續建置的 -->
-    <FileVersion>1.9.1.1</FileVersion>
+    <FileVersion>1.9.2.0</FileVersion>
     <!-- 內嵌 PDB：發佈維持單一執行檔，CrashLog 記錄的堆疊仍帶行號（portable PDB 預設會另產生 XinSpect.pdb） -->
     <DebugType>embedded</DebugType>
     <Copyright>By：Xinglanclever ・ Claude Opus 4.8 ・ 2026年8月24日</Copyright>
