@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -59,8 +59,8 @@ public sealed class StorageSmartService : ObservableObject
     private const uint PropertyIdProtocolSpecificDevice = 51;
     private const uint ProtocolTypeNvme = 3;
     private const uint NvmeDataTypeLogPage = 2;
-    private const uint NvmeLogPageHealth = 0x02;
-    private const uint NvmeLogPageError = 0x01;   // 錯誤資訊紀錄
+    public const uint NvmeLogPageHealth = 0x02;
+    public const uint NvmeLogPageError = 0x01;   // 錯誤資訊紀錄
 
     private bool _busy;
     public bool IsBusy { get => _busy; private set { if (SetProperty(ref _busy, value)) OnPropertyChanged(nameof(CanRead)); } }
@@ -161,13 +161,13 @@ public sealed class StorageSmartService : ObservableObject
                 var bus = TryGetBusType(index, out string busName);
                 return bus switch
                 {
-                    16 or 17 => TryReadNvme(index) is { } nvme
+                    16 or 17 => TryReadNvmeLog(index) is { } nvme
                         ? ("NVMe 健康紀錄（log page 0x02，DeviceIoControl 直讀；匯流排 " + busName + "）", DecodeNvmeHealth(nvme)
                            .Concat(new[] { new SmartRow("── 硬體識別 ──", "", "", "") })
                            .Concat(TryReadNvmeIdentify(index) is { } nvi ? DecodeNvmeIdentify(nvi) : new[] { new SmartRow("NVMe Identify Controller", "不支援（儲存堆疊未回應協定查詢）", "", "") })
                            .Concat(new[] { new SmartRow("── 錯誤紀錄 ──", "", "", "") })
                            // 「這顆碟開始要壞了」最早的證據在 log page 0x01；讀不到就說讀不到，不猜
-                           .Concat(TryReadNvme(index, NvmeLogPageError) is { } errs
+                           .Concat(TryReadNvmeLog(index, NvmeLogPageError) is { } errs
                                ? DecodeNvmeErrorLog(errs)
                                : new[] { new SmartRow("錯誤資訊紀錄（log page 0x01）", "讀不到（儲存堆疊未回應這一頁的協定查詢；USB 外接盒多半不轉發 NVMe 命令）", "", "") })
                            .ToList())
@@ -222,11 +222,18 @@ public sealed class StorageSmartService : ObservableObject
     }
 
     /// <summary>StorageDeviceProperty 的 BusType（STORAGE_DEVICE_DESCRIPTOR 的位元組 @28）：3=ATA、10=SATA、16/17=NVMe 類。失敗回 0。</summary>
+    /// <remarks>走 <see cref="DiskIo.GuardedValue"/>：某些碟的 IOCTL 會卡在核心裡不回來，卡住就當讀不到。</remarks>
     public static uint TryGetBusType(int index, out string busName)
     {
-        busName = "未知";
+        var got = DiskIo.GuardedValue(() => ReadBusTypeCore(index));
+        busName = got?.Name ?? "未知";
+        return got?.Bus ?? 0;
+    }
+
+    private static (uint Bus, string Name)? ReadBusTypeCore(int index)
+    {
         var handle = OpenDrive(index);
-        if (handle == IntPtr.Zero) return 0;
+        if (handle == IntPtr.Zero) return null;
         try
         {
             var buf = new byte[512];
@@ -234,23 +241,27 @@ public sealed class StorageSmartService : ObservableObject
             BitConverter.GetBytes(0u).CopyTo(buf, 4);                         // PropertyStandardQuery
             if (!DeviceIoControl(handle, IoctlStorageQueryProperty, buf, (uint)buf.Length, buf, (uint)buf.Length, out uint ret, IntPtr.Zero)
                 || ret < 32)
-                return 0;
+                return null;
             byte bus = buf[28];   // BusType 是一個位元組（offset 24 是 SerialNumberOffset，別讀錯）
-            busName = bus switch
+            string name = bus switch
             {
                 1 => "SCSI", 2 => "ATAPI", 3 => "ATA", 4 => "IEEE1394", 6 => "USB", 7 => "RAID",
                 9 => "SAS", 10 => "SATA", 15 => "Storage Spaces", 16 => "NVMe", 17 => "SCM/NVMe 類",
                 _ => $"BusType {bus}",
             };
-            return bus;
+            return (bus, name);
         }
         finally { CloseHandle(handle); }
     }
 
     // ── NVMe ───────────────────────────────────────────────────────────────
 
-    /// <summary>以 StorageDeviceProtocolSpecificProperty 取指定 NVMe 紀錄頁 512 位元組；失敗回 null。</summary>
-    private static byte[]? TryReadNvme(int index, uint logPage = NvmeLogPageHealth)
+    /// <summary>以 StorageDeviceProtocolSpecificProperty 取指定 NVMe 紀錄頁 512 位元組；失敗或逾時回 null。</summary>
+    /// <remarks>走 <see cref="DiskIo.Guarded"/>：見 <c>Services/DiskIo.cs</c> 的實測記錄。</remarks>
+    public static byte[]? TryReadNvmeLog(int index, uint logPage = NvmeLogPageHealth)
+        => DiskIo.Guarded(() => ReadNvmeLogCore(index, logPage));
+
+    private static byte[]? ReadNvmeLogCore(int index, uint logPage)
     {
         var handle = OpenDrive(index);
         if (handle == IntPtr.Zero) return null;
@@ -353,7 +364,11 @@ public sealed class StorageSmartService : ObservableObject
     // ── SATA／ATA ──────────────────────────────────────────────────────────
 
     /// <summary>以 SMART_RCV_DRIVE_DATA 取 512 位元組屬性表；失敗回 null（不使用會卡死的 ATA_PASS-THROUGH）。</summary>
+    /// <summary>ATA SMART READ DATA（512B）；失敗或逾時回 null。走看門狗，見 Services/DiskIo.cs。</summary>
     private static byte[]? TryReadAtaSmartClassic(int index)
+        => DiskIo.Guarded(() => ReadAtaSmartClassicCore(index));
+
+    private static byte[]? ReadAtaSmartClassicCore(int index)
     {
         var handle = OpenDrive(index);
         if (handle == IntPtr.Zero) return null;
@@ -452,7 +467,7 @@ public sealed class StorageSmartService : ObservableObject
 
         if (bus is 16 or 17)
         {
-            byte[]? log = TryReadNvme(index);
+            byte[]? log = TryReadNvmeLog(index);
             if (log is null || log.Length < 0x88) return 0;
             ulong v = 0;
             for (int i = 7; i >= 0; i--) v = (v << 8) | log[0x80 + i];
@@ -482,6 +497,9 @@ public sealed class StorageSmartService : ObservableObject
     /// 失敗回 null，由呼叫端如實說明「讀不到」，不要拿規格書的預設值頂替。
     /// </remarks>
     public static byte[]? TryReadNvmeFeature(int index, uint featureId, int length)
+        => DiskIo.Guarded(() => ReadNvmeFeatureCore(index, featureId, length));
+
+    private static byte[]? ReadNvmeFeatureCore(int index, uint featureId, int length)
     {
         var handle = OpenDrive(index);
         if (handle == IntPtr.Zero) return null;
@@ -513,6 +531,9 @@ public sealed class StorageSmartService : ObservableObject
     /// 失敗回 null。
     /// </summary>
     public static byte[]? TryReadNvmeIdentify(int index)
+        => DiskIo.Guarded(() => ReadNvmeIdentifyCore(index));
+
+    private static byte[]? ReadNvmeIdentifyCore(int index)
     {
         var handle = OpenDrive(index);
         if (handle == IntPtr.Zero) return null;
@@ -544,6 +565,9 @@ public sealed class StorageSmartService : ObservableObject
     /// 失敗回 null。
     /// </summary>
     public static byte[]? TryReadAtaIdentify(int index)
+        => DiskIo.Guarded(() => ReadAtaIdentifyCore(index));
+
+    private static byte[]? ReadAtaIdentifyCore(int index)
     {
         var handle = OpenDrive(index);
         if (handle == IntPtr.Zero) return null;
