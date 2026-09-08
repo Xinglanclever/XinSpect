@@ -46,6 +46,11 @@ public sealed class PageDef
     public bool Advanced { get; init; }
 
     /// <summary>
+    /// 菜鳥專頁：僅在簡易模式下列在側邊欄，進階模式下不列（命令面板照樣搜得到）。
+    /// </summary>
+    public bool BeginnerOnly { get; init; }
+
+    /// <summary>
     /// 感測閘門：該頁是否顯示，決定感測引擎要不要每秒做某段昂貴工作。
     /// 由外殼在切頁時對所有頁面統一重放（第二參數為「此頁是否為當前頁」），
     /// 故感測引擎晚到時只要再跑一次即可，不需要任何型別判斷。

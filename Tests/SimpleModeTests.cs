@@ -26,6 +26,9 @@ public class SimpleModeTests
         "evidence",
     ];
 
+    /// <summary>只在簡易模式顯示，進階模式不列在側邊欄。</summary>
+    private static readonly string[] BeginnerOnlyPages = ["beginner"];
+
     [Fact]
     public void 一般使用者用得到的頁面不得被標成進階()
     {
@@ -34,6 +37,18 @@ public class SimpleModeTests
             var def = PageRegistry.FindAny(key);
             Assert.NotNull(def);
             Assert.False(def!.Advanced, $"「{def.Title}」是一般使用者的基本頁面，不該被簡易模式收起來");
+        }
+    }
+
+    [Fact]
+    public void 菜鳥專頁只在簡易模式顯示()
+    {
+        foreach (string key in BeginnerOnlyPages)
+        {
+            var def = PageRegistry.FindAny(key);
+            Assert.NotNull(def);
+            Assert.True(def!.BeginnerOnly, $"「{def.Title}」應標為菜鳥專頁（BeginnerOnly）");
+            Assert.False(def.Advanced, $"「{def.Title}」不應同時是進階頁和菜鳥專頁");
         }
     }
 
@@ -52,7 +67,7 @@ public class SimpleModeTests
     public void 簡易模式下側邊欄要少一截但不能空掉()
     {
         int all = PageRegistry.Pages.Count;
-        int simple = PageRegistry.Pages.Count(p => !p.Advanced);
+        int simple = PageRegistry.Pages.Count(p => !p.Advanced && !p.BeginnerOnly);
 
         Assert.True(simple < all, "簡易模式沒有少掉任何頁面，等於這個模式沒有作用");
         Assert.True(simple >= 10, $"簡易模式只剩 {simple} 頁，砍太多了——連基本資訊都看不到就不是簡化");

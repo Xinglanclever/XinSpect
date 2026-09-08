@@ -19,6 +19,17 @@ public static class PageRegistry
     [
         new()
         {
+            Key = "beginner", Title = "我的電腦", Group = GOverview,
+            IconData = "F1 M12,21.35 L10.55,20.03 C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3 9.24,3 10.91,3.81 12,5.09 "
+                     + "13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5 22,12.28 18.6,15.36 13.45,20.04 L12,21.35 Z",
+            Factory = () => new BeginnerDashboardView(),
+            Hint = "健康度、溫度、硬體清單與故障排查——簡易模式首頁",
+            Keywords = ["beginner", "菜鳥", "簡易", "我的電腦", "健康", "排查"],
+            // 簡易模式的首頁；進階模式下不列在側邊欄（但命令面板照樣搜得到）
+            BeginnerOnly = true,
+        },
+        new()
+        {
             Key = "overview", Title = "總覽", Group = GOverview,
             IconData = "M3,3 H10 V11 H3 Z M13,3 H21 V8 H13 Z M13,11 H21 V21 H13 Z M3,14 H10 V21 H3 Z",
             Factory = () => new OverviewView(),
