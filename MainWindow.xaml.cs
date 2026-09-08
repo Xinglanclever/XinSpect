@@ -175,7 +175,13 @@ public partial class MainWindow : Window
     public void NavigateToKey(string key)
     {
         var def = PageRegistry.Find(key);
-        if (def is not null) Nav.SelectedItem = def;
+        if (def is null) return;
+        if (_vm.Settings.SimpleMode && def.Advanced && !Nav.Items.Cast<object>().Any(x => ReferenceEquals(x, def)))
+        {
+            _currentDef = def;
+            BuildNav();
+        }
+        Nav.SelectedItem = def;
     }
 
     /// <summary>切換至 AI 分頁（供設定頁 / 總覽的「開啟 AI 助手」按鈕呼叫）。</summary>

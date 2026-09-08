@@ -72,6 +72,8 @@ public static class ReportService
          : path.EndsWith(".md", StringComparison.OrdinalIgnoreCase) ? ReportFormat.Markdown
          : ReportFormat.Html;
 
+    internal static string BuildMarkdownForTests(MainViewModel vm) => Build(vm, ReportFormat.Markdown);
+
     private static string Build(MainViewModel vm, ReportFormat fmt)
     {
         bool mask = vm.Settings.ReportMaskIdentity;
@@ -123,6 +125,7 @@ public static class ReportService
         Monitors(secs, vm);
         Network(secs, vm, mask);
         Sensors(secs, vm);
+        Evidence(secs, vm, mask);
         Benchmarks(secs, vm);
         Upgrade(secs, vm);
         AiVerdict(secs, vm);
@@ -353,6 +356,38 @@ public static class ReportService
         s.Tbl(null, new[] { "群組", "名稱", "數值", "最小", "最大" }, rows);
         s.Note("最小／最大為本次執行期間的極值，關閉曦覽後重新開啟即重新累計。");
     });
+
+    private static void Evidence(List<Section> secs, MainViewModel vm, bool mask) => Add(secs, "evidence", "硬體證據", s =>
+    {
+        s.Kv(
+            ("時間膠囊", vm.EvidenceLab.Summary),
+            ("最近狀態", vm.EvidenceLab.Status),
+            ("深度審計", vm.HardwareEvidence.Summary),
+            ("審計狀態", vm.HardwareEvidence.Status));
+
+        var changes = vm.EvidenceLab.Changes.Select(x => new[]
+        {
+            x.Kind, x.Category, x.Name, mask ? "（已遮蔽）" : x.Before, mask ? "（已遮蔽）" : x.After, x.Delta,
+        }).ToList();
+        s.Tbl("快照差異", new[] { "類型", "分類", "項目", "原值", "新值", "差額" }, changes);
+
+        var findings = vm.HardwareEvidence.Rows.Select(x => new[]
+        {
+            x.Title, mask ? "（已遮蔽）" : x.Scope, mask ? MaskEvidenceDetail(x.Detail) : x.Detail,
+            mask ? "（已遮蔽）" : x.Evidence, x.Source,
+        }).ToList();
+        s.Tbl("審計發現", new[] { "項目", "範圍", "結論", "證據", "來源" }, findings);
+        s.Note("差異與發現只陳述本機能證明的事實；讀不到的來源不以舊值或典型值補上，亦不推估剩餘壽命。時間膠囊的 SHA-256 是完整性校驗，不是數位簽章。");
+    });
+
+    private static string MaskEvidenceDetail(string detail)
+    {
+        int marker = detail.IndexOf(" ・ ", StringComparison.Ordinal);
+        return marker >= 0 && (detail.Contains("problem code", StringComparison.OrdinalIgnoreCase)
+                              || detail.Contains('\\'))
+            ? detail[..marker] + " ・ （已遮蔽）"
+            : detail;
+    }
 
     private static void Benchmarks(List<Section> secs, MainViewModel vm) => Add(secs, "bench", "跑分紀錄", s =>
     {

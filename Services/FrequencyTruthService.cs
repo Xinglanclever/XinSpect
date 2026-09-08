@@ -108,8 +108,17 @@ public sealed class FrequencyTruthService : ObservableObject
 
     public ObservableCollection<TurboRatioRow> TurboRows { get; } = [];
     public ObservableCollection<EffectiveClockRow> ClockRows { get; } = [];
+    public DateTimeOffset? LastMeasuredAtUtc { get; private set; }
 
-    public void Start() => _ = RunAsync();
+    private Task? _runTask;
+    public Task MeasureAsync() => _runTask ??= RunTrackedAsync();
+    public void Start() => _ = MeasureAsync();
+
+    private async Task RunTrackedAsync()
+    {
+        try { await RunAsync(); }
+        finally { _runTask = null; }
+    }
 
     private async Task RunAsync()
     {
@@ -159,6 +168,7 @@ public sealed class FrequencyTruthService : ObservableObject
                     ? $" 本機有 {CpuAffinity.GroupCount} 個處理器群組，全部群組皆已列入；"
                     + "多群組路徑未在實機驗證過。"
                     : "");
+        LastMeasuredAtUtc = DateTimeOffset.UtcNow;
     }
 
     private sealed record Measurement

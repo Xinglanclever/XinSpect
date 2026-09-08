@@ -13,6 +13,7 @@ namespace XinSpect;
 /// </remarks>
 internal static class StartupSequence
 {
+    private static readonly SemaphoreSlim DeepSpecsGate = new(1, 1);
     /// <summary>開機序列：讀靜態資訊 → 起感測與網路引擎 → 補齊磁碟／色域／CUDA → 起脈動 → 背景深度規格與自檢。</summary>
     public static async Task RunAsync(MainViewModel vm, MetricsPump pump)
     {
@@ -178,10 +179,18 @@ internal static class StartupSequence
     // 深度規格：CPU-Z 子行程報告（時序、SPD、主機板、顯示卡）。以射後不理呼叫，故整段包覆。
     private static async Task LoadDeepSpecsAsync(MainViewModel vm)
     {
+        if (!await DeepSpecsGate.WaitAsync(0)) return;
+        try { await LoadDeepSpecsCore(vm); }
+        finally { DeepSpecsGate.Release(); }
+    }
+
+    private static async Task LoadDeepSpecsCore(MainViewModel vm)
+    {
         // SPD 先自己讀。讀得到就用它，因為那是模組上的原始位元組（來源那一列會標明是哪一條匯流排）；
-        // 讀不到就什麼都不做，讓下面的 CPU-Z 報告照原樣填——在讀不到 SPD 的機器上完全沒有回歸。
+        // 讀不到就保留既有值，讓下面的 CPU-Z 報告照原樣填——在讀不到 SPD 的機器上完全沒有回歸。
         var nativeSpd = await Task.Run(ReadSpdDirect);
-        if (nativeSpd.Count > 0) vm.SpdModules = nativeSpd;
+        vm.DirectSpdReads = nativeSpd;
+        if (nativeSpd.Count > 0) vm.SpdModules = SpdDisplay.ToDisplay(nativeSpd);
 
         try
         {
@@ -199,6 +208,7 @@ internal static class StartupSequence
 
             vm.CpuDetail = report.Cpu;
             vm.Mainboard = report.Board;
+            vm.CpuzSpdModules = report.Spd;
             if (nativeSpd.Count == 0) vm.SpdModules = report.Spd;
             vm.GpuDetails = report.Gpus;
 
@@ -216,7 +226,7 @@ internal static class StartupSequence
     /// 正在用匯流排）就不搶；每一條匯流排的硬體旗號取不到也各自跳過。
     /// 回空清單不是錯誤，只是這台機器這一刻讀不到——呼叫端會退回 CPU-Z 報告那條路徑。
     /// </remarks>
-    private static List<SpdModule> ReadSpdDirect()
+    private static List<SpdDirectRead> ReadSpdDirect()
     {
         try
         {
@@ -230,7 +240,7 @@ internal static class StartupSequence
             using var busLock = SmbusBusLock.TryAcquire(SmbusBusLock.WellKnownName, 500, out _);
             if (busLock is null) return [];
 
-            return SpdDisplay.ToDisplay(SpdSurveyor.Survey(buses).Modules);
+            return SpdSurveyor.Survey(buses).Modules.ToList();
         }
         catch { return []; }
     }

@@ -23,6 +23,7 @@ public class SimpleModeTests
     private static readonly string[] MustBeAdvanced =
     [
         "ceiling", "oc", "gpuoc", "pcie", "usb", "nvmepower", "displaylink", "netadv", "dpc", "frametime",
+        "evidence",
     ];
 
     [Fact]

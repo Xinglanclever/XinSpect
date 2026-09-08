@@ -1,0 +1,139 @@
+<UserControl x:Class="XinSpect.EvidenceLabView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect"
+             FontFamily="{StaticResource AppFont}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <StackPanel Margin="2,0,0,10">
+                <local:SectionHead Text="硬體證據實驗室" HelpKey="evidence/硬體證據實驗室"/>
+                <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                           Text="把每一筆硬體事實的值、來源、可信度和量測時間一起保存；比較兩個時間點時只報實際差異，不把差異自動解讀成故障。"/>
+            </StackPanel>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="時間膠囊" HelpKey="evidence/時間膠囊"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Style="{StaticResource ToolButton}" Content="開啟" Click="OpenSnapshot_Click" Margin="0,0,7,0"
+                                    IsEnabled="{Binding EvidenceLab.CanRun}"/>
+                            <Button Style="{StaticResource ToolButton}" Content="和目前比較" Click="CompareSnapshot_Click" Margin="0,0,7,0"
+                                    IsEnabled="{Binding EvidenceLab.CanRun}"/>
+                            <Button Style="{StaticResource PrimaryButton}" Content="建立時間膠囊" Click="SaveSnapshot_Click"
+                                    IsEnabled="{Binding EvidenceLab.CanRun}"/>
+                        </StackPanel>
+                    </Grid>
+                    <CheckBox x:Name="IncludeSensitive" Margin="0,10,0,0" Foreground="{DynamicResource SecondaryInkBrush}"
+                              Content="明確保留序號、UUID 與 ProcessorId（預設遮蔽；公開分享時不要勾）"/>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding EvidenceLab.Summary}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,5,0,0" TextWrapping="Wrap"
+                               Text="{Binding EvidenceLab.Status}"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="快照差異" HelpKey="evidence/快照差異"/>
+                    <ItemsControl ItemsSource="{Binding EvidenceLab.Changes}" Margin="0,8,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,4,0,7">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="66"/><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="180"/><ColumnDefinition Width="180"/><ColumnDefinition Width="100"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Kind}" FontWeight="SemiBold"
+                                               Foreground="{Binding Severity, Converter={StaticResource SeverityToBrush}}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Category}" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding Name}" Style="{StaticResource FieldValue}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="3" Text="{Binding Before}" Style="{StaticResource FieldLabel}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="4" Text="{Binding After}" Style="{StaticResource FieldValue}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="5" Text="{Binding Delta}" Style="{StaticResource FieldLabel}" TextAlignment="Right"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="尚未比較，或兩份快照沒有差異。" Margin="0,6,0,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource FieldLabel}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers><DataTrigger Binding="{Binding EvidenceLab.Changes.Count}" Value="0"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="事實清單" HelpKey="evidence/事實清單"/>
+                    <Grid Margin="0,8,0,4">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition Width="180"/><ColumnDefinition Width="*"/><ColumnDefinition Width="210"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource ColHead}" Text="分類"/><TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="項目"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="值"/><TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="來源"/>
+                        <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="可信度"/>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding EvidenceLab.Facts}">
+                        <ItemsControl.ItemTemplate><DataTemplate>
+                            <Grid Margin="0,3">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition Width="180"/><ColumnDefinition Width="*"/><ColumnDefinition Width="210"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Category}"/>
+                                <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Name}"/>
+                                <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" FontFamily="Consolas" Text="{Binding ValueText}" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Grid.Column="3" Style="{StaticResource FieldLabel}" Text="{Binding Source}" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Grid.Column="4" Style="{StaticResource FieldLabel}" Text="{Binding Trust}"/>
+                            </Grid>
+                        </DataTemplate></ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="深度審計與時間軸" HelpKey="evidence/深度審計與時間軸"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <ComboBox x:Name="EvidenceSectionCombo" AutomationProperties.AutomationId="EvidenceSectionCombo" Width="150" Style="{StaticResource DarkCombo}" ItemsSource="{Binding HardwareEvidence.Sections}"
+                                      SelectedIndex="{Binding HardwareEvidence.SelectedSection, Mode=TwoWay}" Margin="0,0,8,0"/>
+                            <Button x:Name="RefreshEvidenceButton" AutomationProperties.AutomationId="RefreshEvidenceButton" Style="{StaticResource PrimaryButton}" Content="重新擷取" Click="RefreshEvidence_Click"
+                                    IsEnabled="{Binding HardwareEvidence.CanRun}"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding HardwareEvidence.Summary}" Margin="0,8,0,0"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Text="{Binding HardwareEvidence.Status}" TextWrapping="Wrap" Margin="0,5,0,8"/>
+                    <ItemsControl ItemsSource="{Binding HardwareEvidence.Rows}">
+                        <ItemsControl.ItemTemplate><DataTemplate>
+                            <Border Background="{DynamicResource Surface2Brush}" CornerRadius="7" Padding="11,8" Margin="0,0,0,6">
+                                <StackPanel>
+                                    <Grid><TextBlock Text="{Binding Title}" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                        <TextBlock Text="{Binding Scope}" HorizontalAlignment="Right" Style="{StaticResource FieldLabel}"/></Grid>
+                                    <TextBlock Text="{Binding Detail}" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                    <TextBlock Text="{Binding Evidence}" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                                    <TextBlock Text="{Binding Source}" FontSize="10.5" Foreground="{Binding Severity, Converter={StaticResource SeverityToBrush}}" Margin="0,3,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate></ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Grid Margin="0,8,0,4">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition Width="120"/><ColumnDefinition Width="190"/><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource ColHead}" Text="時間"/><TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="裝置"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="指標"/><TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="值"/>
+                        <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="來源"/>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding HardwareEvidence.TimelineRows}">
+                        <ItemsControl.ItemTemplate><DataTemplate>
+                            <Grid Margin="0,3">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition Width="120"/><ColumnDefinition Width="190"/><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Time}" FontFamily="Consolas"/><TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Device}"/>
+                                <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding Metric}"/><TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding Value}" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="4" Style="{StaticResource FieldLabel}" Text="{Binding Source}"/>
+                            </Grid>
+                        </DataTemplate></ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
