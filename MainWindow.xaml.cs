@@ -289,7 +289,7 @@ public partial class MainWindow : Window
     private void ApplyAccentGlow()
     {
         if (AccentGlow is not null) AccentGlow.Color = ThemeService.Accent.MainColor;
-        ApplyTitleBar(ThemeService.Theme == AppTheme.Dark);
+        ApplyTitleBar(ThemeService.Theme != AppTheme.Light);
     }
 
     protected override void OnSourceInitialized(EventArgs e)
