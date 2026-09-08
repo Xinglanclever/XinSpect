@@ -177,7 +177,10 @@ public sealed class StorageSmartService : ObservableObject
                            .Concat(new[] { new SmartRow("── 硬體識別 ──", "", "", "") })
                            .Concat(TryReadAtaIdentify(index) is { } ati ? DecodeAtaIdentify(ati) : new[] { new SmartRow("ATA IDENTIFY DEVICE", "不支援（驅動拒絕命令）", "", "") })
                            .ToList())
-                        : throw new InvalidOperationException("此磁碟不支援 SMART 讀取（驅動拒絕 SMART_RCV_DRIVE_DATA）。"),
+                        : throw new InvalidOperationException(
+                            "此磁碟不支援直讀（驅動拒絕 SMART_RCV_DRIVE_DATA）——" +
+                            "這是此儲存控制器不開放此命令，不代表磁碟本身有問題。" +
+                            "需要時可用磁碟原廠工具（如 Kingston SSD Manager）查看 SMART。"),
                     _ => throw new InvalidOperationException($"此匯流排（{busName}）不支援 SMART 直讀；不送可能卡住的原始命令。"),
                 };
             }, CancellationToken.None);
