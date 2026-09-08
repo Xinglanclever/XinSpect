@@ -34,7 +34,8 @@
                         <TextBlock Style="{StaticResource Subtitle}" Text="{Binding AppSubtitle}"/>
                     </StackPanel>
                     <!-- 彩蛋副標題：預設模糊，懸停清晰 -->
-                    <TextBlock x:Name="EasterEggTitle" Text="東方之星" FontSize="24" FontWeight="Light"
+                    <TextBlock x:Name="EasterEggTitle" Text="東方之星" FontSize="28" FontWeight="Normal"
+                               FontFamily="SimSun" FontStyle="Italic"
                                Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"
                                Margin="18,0,0,0" Opacity="1">
                         <TextBlock.Effect>

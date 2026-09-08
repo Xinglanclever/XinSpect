@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace XinSpect.Services;
+namespace XinSpect;
 
 /// <summary>
 /// 描述一個疑難排解情境：使用者的症狀、可能原因、檢查項目、建議動作，
@@ -78,8 +78,8 @@ public static class TroubleshootService
             PossibleCauses  = ["啟動項目過多", "系統碟速度不足或空間不夠", "BIOS / UEFI 設定不當", "驅動程式初始化緩慢"],
             CheckItems      = ["開機時間量測數據", "啟動項目清單與影響程度", "系統碟類型（SSD 或 HDD）與可用空間", "BIOS 開機模式（UEFI / CSM）"],
             Suggestions     = ["停用不必要的啟動項目", "確認系統碟為 SSD 且有足夠可用空間", "啟用 UEFI 快速開機", "前往開機時間頁面查看詳細開機階段分析"],
-            RelatedPageKey  = "boot",
-            RelatedPageLabel = "開機時間",
+            RelatedPageKey  = "health",
+            RelatedPageLabel = "前往「健康」頁的開機耗時分解查看詳細分析",
         },
         new TroubleshootScenario
         {

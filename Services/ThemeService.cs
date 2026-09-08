@@ -61,6 +61,7 @@ public static class ThemeService
         new("green",  "翠綠", "#3ba55d", "#22693a", "#4bbb6e"),
         new("amber",  "琥珀", "#e0932a", "#9c6111", "#f0a83f"),
         new("crimson","絳紅", "#d9455a", "#94212f", "#e85e72"),
+        new("rog",    "暗紅", "#8B0000", "#4A0000", "#A52020"),
         new("violet", "紫霞", "#8a63d2", "#563a8c", "#a17ce8"),
         new("magenta","洋紅", "#cf4aa8", "#8c2470", "#e263bd"),
         new("slate",  "石墨", "#7d8996", "#4b5560", "#93a0ad"),
@@ -152,11 +153,11 @@ public static class ThemeService
         "#17171a", "#4a4a45", "#7c7a74",
         "#dedcd6", "#c9c7c0", "#f7f6f3");
 
-    // Extreme Edition「東方之星」：紅黑工業風，高對比度深色
+    // Extreme Edition「東方之星」：ROG/EVGA 風格——純黑底 + 低飽和暗紅點綴
     private static readonly Palette ExtremeEditionPalette = new(
-        "#0D0D0D", "#1A1210", "#2A1A18",
-        "#F0E8E0", "#C8B8B0", "#A08880",
-        "#3A2820", "#4A3830", "#1A0A0A");
+        "#0A0A0A", "#121212", "#1A1A1A",
+        "#E0E0E0", "#A0A0A0", "#686868",
+        "#252525", "#303030", "#0E0E0E");
 
     private static Palette Current => _theme switch
     {
@@ -179,9 +180,9 @@ public static class ThemeService
         var app = Application.Current;
         if (app is null) return;
 
-        // 極限版強制使用絳紅強調色
-        if (_theme == AppTheme.ExtremeEdition && _accent.Key != "crimson")
-            _accent = FindAccent("crimson");
+        // 極限版強制使用暗紅強調色（ROG/EVGA 風格）
+        if (_theme == AppTheme.ExtremeEdition && _accent.Key != "rog")
+            _accent = FindAccent("rog");
 
         var p = Current;
 
@@ -211,7 +212,7 @@ public static class ThemeService
         // 標題列漸層：以強調色調染頁面底色（深色偏暗、淺色偏亮）
         Color plane = Hex(p.PagePlane);
         Color surface = Hex(p.Surface);
-        double tintRatio = _theme == AppTheme.ExtremeEdition ? 0.70
+        double tintRatio = _theme == AppTheme.ExtremeEdition ? 0.88
                          : _theme == AppTheme.Dark ? 0.80 : 0.86;
         Color tint = Blend(Accent.MainColor, plane, tintRatio);
         SetGradientStops("HeaderGradientBrush",

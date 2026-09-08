@@ -454,8 +454,10 @@ public sealed class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(EraIndex));
     }
 
-    public string AppTitle => "曦覽 XinSpect";
-    public string AppSubtitle => "硬體資訊總覽";
+    public string AppTitle => ThemeService.Theme == AppTheme.ExtremeEdition
+        ? "XinSpect v1.9.9 Extreme Edition" : "曦覽 XinSpect";
+    public string AppSubtitle => ThemeService.Theme == AppTheme.ExtremeEdition
+        ? "東方之星" : "硬體資訊總覽";
 
     // ── 音效卡 / 網路卡偵測（WMI，開機背景讀取一次）────────────────────────────
     private IReadOnlyList<string> _soundDevices = new List<string>();

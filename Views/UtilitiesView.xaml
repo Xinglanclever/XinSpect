@@ -48,7 +48,8 @@
                 <ListBox x:Name="SubNav" Background="Transparent" BorderThickness="0"
                          SelectionChanged="SubNav_SelectionChanged"
                          ItemContainerStyle="{StaticResource UtilNavItem}"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto">
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="{x:Type local:PageDef}">
                             <StackPanel Orientation="Horizontal" ToolTip="{Binding Hint}">
