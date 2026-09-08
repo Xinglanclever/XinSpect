@@ -21,12 +21,12 @@
     <Product>曦覽 XinSpect</Product>
     <AssemblyTitle>曦覽 XinSpect 硬體資訊總覽</AssemblyTitle>
     <Company>Xinglanclever</Company>
-    <Version>1.9.2</Version>
+    <Version>1.9.9</Version>
     <!-- FileVersion 只吃數字，表達不了「-B1」；第四段就是拿來標這種同版號的後續建置的 -->
-    <FileVersion>1.9.2.0</FileVersion>
+    <FileVersion>1.9.9.0</FileVersion>
     <!-- 內嵌 PDB：發佈維持單一執行檔，CrashLog 記錄的堆疊仍帶行號（portable PDB 預設會另產生 XinSpect.pdb） -->
     <DebugType>embedded</DebugType>
-    <Copyright>By：Xinglanclever ・ Claude Opus 4.8 ・ 2026年8月24日</Copyright>
+    <Copyright>By：Xinglanclever ・ Claude Opus 5 ・ 2026年9月8日</Copyright>
     <UseAppHost>true</UseAppHost>
     <!-- 發佈輸出只留執行檔：參考組件的 IntelliSense 文件（WebView2 *.xml）不隨 publish 落地 -->
     <AllowedReferenceRelatedFileExtensions>.none</AllowedReferenceRelatedFileExtensions>
