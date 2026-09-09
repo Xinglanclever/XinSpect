@@ -52,7 +52,6 @@
     <Resource Include="Assets\board\*.png" />
     <!-- 視窗圖示（標題列／工作列）；以 Resource 編入，單檔發佈亦可用 pack URI 讀取 -->
     <Resource Include="Assets\app.ico" />
-    <Resource Include="Assets\sirius.jpg" />
     <!-- 關於頁「By：Xinglanclever」旁的動畫 GIF；以 Resource 編入，pack URI 讀取後逐格輪播 -->
     <Resource Include="Assets\hug.gif" />
   </ItemGroup>

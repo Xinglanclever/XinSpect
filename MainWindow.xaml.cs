@@ -291,15 +291,6 @@ public partial class MainWindow : Window
     {
         if (AccentGlow is not null) AccentGlow.Color = ThemeService.Accent.MainColor;
         ApplyTitleBar(ThemeService.Theme != AppTheme.Light);
-        // 天狼星背景圖僅極限版主題可見
-        bool ee = ThemeService.Theme == AppTheme.ExtremeEdition;
-        if (SiriusBg is not null)
-            SiriusBg.Visibility = ee ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
-        if (HeaderOverlay is not null)
-            HeaderOverlay.Background = ee
-                ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0xD0, 0x0A, 0x0A, 0x0A))
-                : (System.Windows.Media.Brush)FindResource("HeaderGradientBrush");
-        // 標題隨主題切換需重新通知
         _vm.NotifyTitleChanged();
     }
 
@@ -307,11 +298,6 @@ public partial class MainWindow : Window
     {
         base.OnSourceInitialized(e);
         ApplyTitleBar(ThemeService.Theme != AppTheme.Light);
-        bool ee = ThemeService.Theme == AppTheme.ExtremeEdition;
-        if (SiriusBg is not null)
-            SiriusBg.Visibility = ee ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
-        if (HeaderOverlay is not null && ee)
-            HeaderOverlay.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0xD0, 0x0A, 0x0A, 0x0A));
     }
 
     protected override void OnClosed(EventArgs e)
