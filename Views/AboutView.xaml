@@ -72,7 +72,7 @@
                     <TextBlock Text="協力模型" FontSize="15" FontWeight="SemiBold"
                                Foreground="{DynamicResource PrimaryInkBrush}"/>
                     <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,4,0,0"
-                               Text="這個程式是五個 Claude 一起寫出來的。照傳統五行圖的排法各就各位：金在正上，順時針依序木、水、火、土。"/>
+                               Text="這個程式由多個 AI 模型協力完成。GLM 5.3 Flash 旁邊的問號是因為它花了 308M Token 什麼也幹不了，純粹湊數。"/>
                     <local:FiveElementsWheel HorizontalAlignment="Center" Margin="0,10,0,4"/>
 
                     <Button Content="查看特殊型號徽章一覽　▸" Style="{StaticResource PrimaryButton}"

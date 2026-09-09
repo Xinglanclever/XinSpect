@@ -291,12 +291,21 @@ public partial class MainWindow : Window
     {
         if (AccentGlow is not null) AccentGlow.Color = ThemeService.Accent.MainColor;
         ApplyTitleBar(ThemeService.Theme != AppTheme.Light);
+        // 東方之星副標題僅極限版主題可見
+        if (EasterEggTitle is not null)
+            EasterEggTitle.Visibility = ThemeService.Theme == AppTheme.ExtremeEdition
+                ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+        // 標題隨主題切換需重新通知
+        _vm.NotifyTitleChanged();
     }
 
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
-        ApplyTitleBar(ThemeService.Theme == AppTheme.Dark);
+        ApplyTitleBar(ThemeService.Theme != AppTheme.Light);
+        if (EasterEggTitle is not null)
+            EasterEggTitle.Visibility = ThemeService.Theme == AppTheme.ExtremeEdition
+                ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
     }
 
     protected override void OnClosed(EventArgs e)

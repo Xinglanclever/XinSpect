@@ -459,6 +459,13 @@ public sealed class MainViewModel : ObservableObject
     public string AppSubtitle => ThemeService.Theme == AppTheme.ExtremeEdition
         ? "東方之星" : "硬體資訊總覽";
 
+    /// <summary>主題切換後由外殼呼叫，重新通知標題繫結更新。</summary>
+    public void NotifyTitleChanged()
+    {
+        OnPropertyChanged(nameof(AppTitle));
+        OnPropertyChanged(nameof(AppSubtitle));
+    }
+
     // ── 音效卡 / 網路卡偵測（WMI，開機背景讀取一次）────────────────────────────
     private IReadOnlyList<string> _soundDevices = new List<string>();
     public IReadOnlyList<string> SoundDevices { get => _soundDevices; internal set { if (SetProperty(ref _soundDevices, value)) OnPropertyChanged(nameof(HasSoundDevices)); } }
