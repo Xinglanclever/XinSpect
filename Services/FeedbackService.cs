@@ -131,7 +131,11 @@ public sealed class FeedbackService : ObservableObject
         }
         catch (Exception ex)
         {
-            Status = "上傳失敗：" + ex.Message;
+            Status = ex is HttpRequestException he
+                && (he.Message.Contains("沒有正確答覆") || he.Message.Contains("連線嘗試失敗")
+                    || he.Message.Contains("No such host") || he.Message.Contains("failed to respond"))
+                ? "上傳失敗：中轉伺服器暫時不可用。你寫的內容還留在框裡，稍後再試，或改到 GitHub 開 Issue。"
+                : "上傳失敗：" + ex.Message;
         }
         finally
         {
