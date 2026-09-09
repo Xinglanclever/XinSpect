@@ -180,9 +180,11 @@ public static class ThemeService
         var app = Application.Current;
         if (app is null) return;
 
-        // 極限版強制使用暗紅強調色（ROG/EVGA 風格）
+        // 極限版強制使用暗紅強調色（ROG/EVGA 風格）；離開極限版時恢復曦藍
         if (_theme == AppTheme.ExtremeEdition && _accent.Key != "rog")
             _accent = FindAccent("rog");
+        else if (_theme != AppTheme.ExtremeEdition && _accent.Key == "rog")
+            _accent = FindAccent("blue");
 
         var p = Current;
 

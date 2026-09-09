@@ -69,10 +69,10 @@
 
                     <!-- 協力模型：五行輪。排法照傳統五行圖（金在正上，順時針木、水、火、土），
                          圖形與幾何在 Controls/FiveElementsWheel.cs，名單在 Models/FiveElements.cs -->
-                    <TextBlock Text="協力模型" FontSize="15" FontWeight="SemiBold"
+                    <TextBlock Text="五族共和・攜手共進" FontSize="15" FontWeight="SemiBold"
                                Foreground="{DynamicResource PrimaryInkBrush}"/>
                     <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,4,0,0"
-                               Text="這個程式由多個 AI 模型協力完成。GLM 5.3 Flash 旁邊的問號是因為它花了 308M Token 什麼也幹不了，純粹湊數。"/>
+                               Text="這個程式由多個 AI 模型協力完成。"/>
                     <local:FiveElementsWheel HorizontalAlignment="Center" Margin="0,10,0,4"/>
 
                     <Button Content="查看特殊型號徽章一覽　▸" Style="{StaticResource PrimaryButton}"

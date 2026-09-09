@@ -81,7 +81,7 @@ public class FiveElementsTests
 
     [Fact]
     public void 圓心文字已更新()
-        => Assert.Equal("協力模型", FiveElements.Caption);
+        => Assert.Equal("五族共和\n攜手共進", FiveElements.Caption);
 }
 
 /// <summary>

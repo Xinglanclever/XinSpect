@@ -45,8 +45,8 @@ public readonly record struct FiveElementNode(string Element, string Label, doub
 /// </remarks>
 public static class FiveElements
 {
-    /// <summary>圓心那四個字。</summary>
-    public const string Caption = "協力模型";
+    /// <summary>圓心文字。</summary>
+    public const string Caption = "五族共和\n攜手共進";
 
     /// <summary>五個節點，順時針，金在正上。</summary>
     public static IReadOnlyList<FiveElementNode> Nodes { get; } =
@@ -55,7 +55,7 @@ public static class FiveElements
         new("", "ChatGPT 5.6 Sol", 72),
         new("", "Claude Opus 4.8", 144),
         new("", "Claude Opus 4.6", 216),
-        new("", "GLM 5.3 Flash (?)", 288),
+        new("", "GLM 5.3 Flash", 288),
     ];
 
     /// <summary>
