@@ -121,8 +121,8 @@ public class DeviceIconsTests
     [InlineData("Intel(R) Xeon(R) CPU E5-2690 v4 @ 2.60GHz", "xeon-e5")]     // 查得到官方規格表的照舊
     [InlineData("Intel(R) Xeon Phi(TM) CPU 7250 @ 1.40GHz", "xeon-phi")]
     [InlineData("Intel(R) Itanium(R) Processor 9750 @ 2.53GHz", "itanium")]
-    [InlineData("AMD Athlon(tm) 64 FX-60 Processor", "athlon-fx")]
-    [InlineData("AMD FX(tm)-9590 Eight-Core Processor", "fx-9590")]
+    [InlineData("AMD Athlon(tm) 64 FX-60 Processor", null)]                   // AMD 至尊已移除
+    [InlineData("AMD FX(tm)-9590 Eight-Core Processor", null)]                // FX-9590 已移除
     [InlineData("AMD FX(tm)-8350 Eight-Core Processor", null)]               // 一般推土機 FX 不算限量
     public void 特注與限量血脈_各自命中自己的徽章(string name, string? expected)
     {

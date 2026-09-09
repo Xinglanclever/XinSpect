@@ -178,21 +178,6 @@ public static class DeviceIcons
             TrBlack, ChipRed,
             Ring: TrRing),
 
-        // ── AMD Athlon 64 FX：AMD 在 K8 時代的至尊，對位 Intel 的 Extreme Edition（FX-51～FX-62）。
-        //    黑底紅膠囊 + 中心「FX」。以「字串同時有 athlon 與 fx」比對，故不會誤收後來的推土機 FX 系列。
-        new("athlon-fx",
-            @"athlon.*\bfx",
-            "Athlon 64 FX（AMD 至尊）", "", "FX", White,
-            TrBlack, ChipRed),
-
-        // ── AMD FX-9590／FX-9370：史上第一顆標稱 5.0GHz 的零售處理器（9590），TDP 220W，
-        //    當年隨機附水冷、限量出貨。中心「FX」+ 紅膠囊標明它的身分。
-        //    韌體字串常寫成 "AMD FX(tm)-9590"，故 fx 與型號之間允許幾個非數字字元。
-        new("fx-9590",
-            @"\bfx[^0-9]{0,6}(?:9590|9370)\b",
-            "FX 5GHz 限量", "", "FX", White,
-            TrBlack, ChipRed),
-
         // ── AMD EPYC：AMD 的伺服器線，與 Intel Xeon 對位——同樣是青藍底 + 處理器字形 + 左上橫書「EPYC」。
         //    一條規則吃整條線（7001～9005 各世代），世代差異留給型號文字本身表達。
         new("epyc",
@@ -216,17 +201,17 @@ public static class DeviceIcons
             Corner: "P", MarkInk: DarkInk),
 
         // ── Core i9「KS」特別版（Special Edition）：整代最好的體質特挑出來、限量出貨的全核衝頻版。
-        //    9900KS（首顆全核 5.0GHz）、13900KS（6.0GHz）、14900KS（6.2GHz）。金底 + 中心「KS」+ 紅膠囊。
+        //    9900KS（首顆全核 5.0GHz）、13900KS（6.0GHz）、14900KS（6.2GHz）。金底 + 中心「KS」+ 金膠囊。
         //    型號結尾是 ks 而非 xe／x，故不會被下方至尊與 Core X 的規則攔走。
         new("i9-ks",
             @"\bi9[- ]?(?:9900|13900|14900)ks\b",
-            "特別版 Special Edition", "", "KS", DarkInk,
-            Gold, ChipRed),
+            "特挑版", "", "KS", DarkInk,
+            Gold, PentGold),
 
         // ── Core i9-9990XE：拍賣限定、OEM 專供的「隱藏款」至尊。金底 + 炫彩邊框 + 中心「XE」。
         new("i9-9990xe",
             @"\bi9[- ]?9990xe\b",
-            "至尊版 · 隱藏款", "", "XE", DarkInk,
+            "至尊 · 限量拍賣版", "", "XE", DarkInk,
             Gold, ChipRed,
             Frame: Rainbow),
 
@@ -500,34 +485,10 @@ public static class DeviceIcons
     };
 
     /// <summary>
-    /// 特殊主機板對照表。比對以主機板型號（已轉小寫）為輸入。
-    /// 收的是各家「超頻名門」系列——這些字本身就是識別，與用料等級直接掛鉤，
-    /// 不是行銷後綴（Gaming／Pro／Plus 之類一概不收，那些只是價位分層）。
+    /// 特殊主機板對照表——已清空（保留 Optane 在儲存對照表中）。
+    /// 原本收的超頻名門系列（APEX/DARK/GODLIKE/TACHYON）移除，因為這些是行銷名稱而非硬體事實。
     /// </summary>
-    private static readonly BadgeIcon[] Board =
-    {
-        // ASUS ROG APEX：兩根記憶體槽換極限記憶體超頻，是 ROG 最上面那一階。
-        new("board-apex",
-            @"\bapex\b",
-            "APEX 超頻板", "board", "", White,
-            Black, ChipRed),
-        // EVGA DARK / DARK KINGPIN：EVGA 的極限超頻板。
-        //    排除 ASUS 的「Crosshair … Dark Hero」——那是別家的板子，只是名字裡也有 dark。
-        new("board-dark",
-            @"\bdark\b(?!\s*hero)",
-            "DARK 超頻板", "board", "", White,
-            Black, ChipSilver),
-        // MSI GODLIKE：MEG／MPG 的頂規。
-        new("board-godlike",
-            @"\bgodlike\b",
-            "GODLIKE 旗艦板", "board", "", White,
-            Black, ChipGold),
-        // GIGABYTE AORUS TACHYON：技嘉的超頻專用板。
-        new("board-tachyon",
-            @"\btachyon\b",
-            "TACHYON 超頻板", "board", "", White,
-            Black, ChipSilver),
-    };
+    private static readonly BadgeIcon[] Board = [];
 
     /// <summary>由型號字串解析出專屬圖示；未命中或無對照表的類別回傳 <c>null</c>（呼叫端退回通用字形）。</summary>
     public static BadgeIcon? Resolve(BadgeKind kind, string? model) => kind switch
