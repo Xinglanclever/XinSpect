@@ -96,10 +96,11 @@ public partial class MainWindow : Window
     private void BuildNav()
     {
         // 簡易模式下把進階頁從側邊欄收起來（命令面板照樣搜得到，只是不列在這裡）。
+        // 菜鳥專頁（BeginnerOnly）反過來：只在簡易模式下顯示。
         // 目前頁若正好被收起來，保留它——把使用者正在看的東西抽掉比多一個項目更糟。
         bool simple = _vm.Settings.SimpleMode;
         var pages = PageRegistry.Pages
-            .Where(p => !simple || !p.Advanced || ReferenceEquals(p, _currentDef))
+            .Where(p => (simple ? !p.Advanced : !p.BeginnerOnly) || ReferenceEquals(p, _currentDef))
             .ToList();
 
         var src = new CollectionViewSource { Source = pages };
@@ -175,7 +176,13 @@ public partial class MainWindow : Window
     public void NavigateToKey(string key)
     {
         var def = PageRegistry.Find(key);
-        if (def is not null) Nav.SelectedItem = def;
+        if (def is null) return;
+        if (_vm.Settings.SimpleMode && def.Advanced && !Nav.Items.Cast<object>().Any(x => ReferenceEquals(x, def)))
+        {
+            _currentDef = def;
+            BuildNav();
+        }
+        Nav.SelectedItem = def;
     }
 
     /// <summary>切換至 AI 分頁（供設定頁 / 總覽的「開啟 AI 助手」按鈕呼叫）。</summary>
@@ -283,13 +290,14 @@ public partial class MainWindow : Window
     private void ApplyAccentGlow()
     {
         if (AccentGlow is not null) AccentGlow.Color = ThemeService.Accent.MainColor;
-        ApplyTitleBar(ThemeService.Theme == AppTheme.Dark);
+        ApplyTitleBar(ThemeService.Theme != AppTheme.Light);
+        _vm.NotifyTitleChanged();
     }
 
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
-        ApplyTitleBar(ThemeService.Theme == AppTheme.Dark);
+        ApplyTitleBar(ThemeService.Theme != AppTheme.Light);
     }
 
     protected override void OnClosed(EventArgs e)

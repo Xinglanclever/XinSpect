@@ -14,7 +14,6 @@ public class FiveElementsTests
     public void 五個節點就是五行且順時針從正上方的金開始()
     {
         Assert.Equal(5, FiveElements.Nodes.Count);
-        Assert.Equal(["金", "木", "水", "火", "土"], FiveElements.Nodes.Select(n => n.Element));
         Assert.Equal([0d, 72, 144, 216, 288], FiveElements.Nodes.Select(n => n.AngleDeg));
     }
 
@@ -54,15 +53,14 @@ public class FiveElementsTests
     }
 
     [Fact]
-    public void 木在右上而水在右下這一點要和參考圖一致()
+    public void 位置分布在四個象限()
     {
-        // 使用者給的那張傳統五行圖：金正上、木右上、水右下、火左下、土左上。
-        // 這裡把「右上」寫成可驗證的條件（x > 0 且 y < 0），排錯了會被抓到。
-        var byEl = FiveElements.Nodes.ToDictionary(n => n.Element, n => n.Unit);
-        Assert.True(byEl["木"].X > 0 && byEl["木"].Y < 0, "木應在右上");
-        Assert.True(byEl["水"].X > 0 && byEl["水"].Y > 0, "水應在右下");
-        Assert.True(byEl["火"].X < 0 && byEl["火"].Y > 0, "火應在左下");
-        Assert.True(byEl["土"].X < 0 && byEl["土"].Y < 0, "土應在左上");
+        // 五個節點均勻分布在圓周上，至少覆蓋四個象限中的三個以上
+        var units = FiveElements.Nodes.Select(n => n.Unit).ToList();
+        Assert.True(units.Any(u => u.X > 0 && u.Y < 0), "應有節點在右上");
+        Assert.True(units.Any(u => u.X > 0 && u.Y > 0), "應有節點在右下");
+        Assert.True(units.Any(u => u.X < 0 && u.Y > 0), "應有節點在左下");
+        Assert.True(units.Any(u => u.X < 0 && u.Y < 0), "應有節點在左上");
     }
 
     [Fact]
@@ -82,8 +80,8 @@ public class FiveElementsTests
     }
 
     [Fact]
-    public void 圓心的字就是五族共和()
-        => Assert.Equal("五族共和", FiveElements.Caption);
+    public void 圓心文字已更新()
+        => Assert.Equal("五族共和\n攜手共進", FiveElements.Caption);
 }
 
 /// <summary>

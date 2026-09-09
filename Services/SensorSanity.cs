@@ -68,9 +68,10 @@ public static class SensorSanity
             case SensorType.Level:
                 return v >= -PercentSlack && v <= 100 + PercentSlack ? Math.Clamp(v, 0, 100) : null;
 
-            // 以下各型別 0 皆可能為真（零轉速模式、閒置功耗、空的顯示記憶體），僅擋負值與離譜值。
+            // 以下各型別 0 皆可能為真（零轉速模式、空的顯示記憶體），僅擋負值與離譜值。
+            // 但功耗例外：運行中的裝置不可能消耗 0 W，LHM 回報 0 代表感測器沒有讀到資料。
             case SensorType.Power:
-                return v >= 0 && v <= MaxPowerW ? v : null;
+                return v > 0 && v <= MaxPowerW ? v : null;
             case SensorType.Fan:
                 return v >= 0 && v <= MaxFanRpm ? v : null;
             case SensorType.Current:

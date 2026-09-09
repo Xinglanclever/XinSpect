@@ -5,7 +5,7 @@ using System.Windows.Media;
 
 namespace XinSpect;
 
-public enum AppTheme { Dark, Light }
+public enum AppTheme { Dark, Light, ExtremeEdition }
 
 /// <summary>
 /// 強調色定義：Main 為主色（漸層頂近似），Dim 為暗端（漸層底），GradTop 為漸層頂亮端。
@@ -61,6 +61,7 @@ public static class ThemeService
         new("green",  "翠綠", "#3ba55d", "#22693a", "#4bbb6e"),
         new("amber",  "琥珀", "#e0932a", "#9c6111", "#f0a83f"),
         new("crimson","絳紅", "#d9455a", "#94212f", "#e85e72"),
+        new("rog",    "暗紅", "#8B0000", "#4A0000", "#A52020"),
         new("violet", "紫霞", "#8a63d2", "#563a8c", "#a17ce8"),
         new("magenta","洋紅", "#cf4aa8", "#8c2470", "#e263bd"),
         new("slate",  "石墨", "#7d8996", "#4b5560", "#93a0ad"),
@@ -117,18 +118,23 @@ public static class ThemeService
         set { if (value >= 0 && value < Presets.Count) Accent = Presets[value]; }
     }
 
-    /// <summary>目前主題的索引（0=深色、1=淺色；供設定頁下拉選單使用）。</summary>
+    /// <summary>目前主題的索引（0=深色、1=淺色、2=極限版；供設定頁下拉選單使用）。</summary>
     public static int ThemeIndex
     {
-        get => _theme == AppTheme.Dark ? 0 : 1;
-        set => Theme = value == 1 ? AppTheme.Light : AppTheme.Dark;
+        get => _theme switch { AppTheme.Light => 1, AppTheme.ExtremeEdition => 2, _ => 0 };
+        set => Theme = value switch { 1 => AppTheme.Light, 2 => AppTheme.ExtremeEdition, _ => AppTheme.Dark };
     }
 
     /// <summary>主題名稱（設定頁下拉選單項目）。</summary>
-    public static IReadOnlyList<string> ThemeNames { get; } = ["深色", "淺色"];
+    public static IReadOnlyList<string> ThemeNames { get; } = ["深色", "淺色", "極限版（東方之星）"];
 
-    /// <summary>在深／淺色間切換（命令面板用）。</summary>
-    public static void ToggleTheme() => Theme = _theme == AppTheme.Dark ? AppTheme.Light : AppTheme.Dark;
+    /// <summary>在深／淺／極限版間切換（命令面板用）。</summary>
+    public static void ToggleTheme() => Theme = _theme switch
+    {
+        AppTheme.Dark => AppTheme.Light,
+        AppTheme.Light => AppTheme.ExtremeEdition,
+        _ => AppTheme.Dark,
+    };
 
     // ---- 面板配色 --------------------------------------------------------
     private sealed record Palette(
@@ -147,7 +153,18 @@ public static class ThemeService
         "#17171a", "#4a4a45", "#7c7a74",
         "#dedcd6", "#c9c7c0", "#f7f6f3");
 
-    private static Palette Current => _theme == AppTheme.Dark ? DarkPalette : LightPalette;
+    // Extreme Edition「東方之星」：ROG/EVGA 風格——純黑底 + 低飽和暗紅點綴
+    private static readonly Palette ExtremeEditionPalette = new(
+        "#0A0A0A", "#121212", "#1A1A1A",
+        "#E0E0E0", "#A0A0A0", "#686868",
+        "#252525", "#303030", "#0E0E0E");
+
+    private static Palette Current => _theme switch
+    {
+        AppTheme.Light => LightPalette,
+        AppTheme.ExtremeEdition => ExtremeEditionPalette,
+        _ => DarkPalette,
+    };
 
     // ---- 初始化 ----------------------------------------------------------
 
@@ -162,6 +179,12 @@ public static class ThemeService
     {
         var app = Application.Current;
         if (app is null) return;
+
+        // 極限版強制使用暗紅強調色（ROG/EVGA 風格）；離開極限版時恢復曦藍
+        if (_theme == AppTheme.ExtremeEdition && _accent.Key != "rog")
+            _accent = FindAccent("rog");
+        else if (_theme != AppTheme.ExtremeEdition && _accent.Key == "rog")
+            _accent = FindAccent("blue");
 
         var p = Current;
 
@@ -191,14 +214,16 @@ public static class ThemeService
         // 標題列漸層：以強調色調染頁面底色（深色偏暗、淺色偏亮）
         Color plane = Hex(p.PagePlane);
         Color surface = Hex(p.Surface);
-        Color tint = Blend(Accent.MainColor, plane, _theme == AppTheme.Dark ? 0.80 : 0.86);
+        double tintRatio = _theme == AppTheme.ExtremeEdition ? 0.88
+                         : _theme == AppTheme.Dark ? 0.80 : 0.86;
+        Color tint = Blend(Accent.MainColor, plane, tintRatio);
         SetGradientStops("HeaderGradientBrush",
             (0.0, tint),
             (0.45, Hex(p.HeaderMid)),
             (1.0, surface));
 
         // 狀態色：淺色主題下原深色版飽和度偏亮，壓暗以維持與紙面的對比
-        if (_theme == AppTheme.Dark)
+        if (_theme != AppTheme.Light)
         {
             Set("GoodBrush", "#0ca30c");
             Set("WarningBrush", "#fab219");
@@ -233,7 +258,12 @@ public static class ThemeService
             if (!File.Exists(PrefPath)) return;
             var p = JsonSerializer.Deserialize<Prefs>(File.ReadAllText(PrefPath));
             if (p is null) return;
-            _theme = string.Equals(p.Theme, "Light", StringComparison.OrdinalIgnoreCase) ? AppTheme.Light : AppTheme.Dark;
+            _theme = p.Theme switch
+            {
+                "Light" => AppTheme.Light,
+                "ExtremeEdition" => AppTheme.ExtremeEdition,
+                _ => AppTheme.Dark,
+            };
             _accent = FindAccent(p.Accent);
         }
         catch { /* 偏好毀損則沿用預設（深色 + 曦藍） */ }

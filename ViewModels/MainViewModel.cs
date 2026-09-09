@@ -225,6 +225,12 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>平台可信度：hypervisor／VBS／HVCI 是否介入，決定所有 MSR 卡片的可信度（健康分頁卡片，零特權）。</summary>
     public PlatformTrustService PlatformTrust { get; } = new();
 
+    /// <summary>硬體時間膠囊：保存來源、可信度與時間，並驗證後逐欄比較。</summary>
+    public EvidenceLabService EvidenceLab { get; } = new();
+
+    /// <summary>PCI／SPD／裝置／電源／儲存的客觀證據審計與長期時間軸。</summary>
+    public HardwareEvidenceViewModel HardwareEvidence { get; }
+
     /// <summary>韌體與開機信任鏈：Secure Boot 四態、Hypervisor、微碼（主機板分頁卡片）。</summary>
     public FirmwareService Firmware { get; } = new();
 
@@ -268,6 +274,14 @@ public sealed class MainViewModel : ObservableObject
     private IReadOnlyList<SpdModule> _spdModules = new List<SpdModule>();
     public IReadOnlyList<SpdModule> SpdModules { get => _spdModules; internal set { if (SetProperty(ref _spdModules, value)) OnPropertyChanged(nameof(HasSpdModules)); } }
     public bool HasSpdModules => _spdModules.Count > 0;
+
+    private IReadOnlyList<SpdDirectRead> _directSpdReads = Array.Empty<SpdDirectRead>();
+    /// <summary>原生 SMBus 讀回的 SPD 位元組與解碼結果；供證據稽核交叉核對，不以 CPU-Z 顯示模型反推。</summary>
+    public IReadOnlyList<SpdDirectRead> DirectSpdReads { get => _directSpdReads; internal set => SetProperty(ref _directSpdReads, value); }
+
+    private IReadOnlyList<SpdModule> _cpuzSpdModules = Array.Empty<SpdModule>();
+    /// <summary>CPU-Z 報告的獨立 SPD 解讀；即使畫面優先採原生 SPD，稽核仍保留它作交叉證據。</summary>
+    public IReadOnlyList<SpdModule> CpuzSpdModules { get => _cpuzSpdModules; internal set => SetProperty(ref _cpuzSpdModules, value); }
 
     private IReadOnlyList<GpuDetail> _gpuDetails = new List<GpuDetail>();
     public IReadOnlyList<GpuDetail> GpuDetails { get => _gpuDetails; internal set { if (SetProperty(ref _gpuDetails, value)) OnPropertyChanged(nameof(HasGpuDetails)); } }
@@ -335,6 +349,7 @@ public sealed class MainViewModel : ObservableObject
         Bench = new BenchService(Benchmarks);
         Chess = new ChessBenchService(Benchmarks);
         SuperPi = new SuperPiService(Benchmarks);
+        HardwareEvidence = new HardwareEvidenceViewModel(this);
 
         Ai = new AiService(Settings) { SnapshotProvider = BuildAiSnapshot };
         // 診斷代理的本機工具箱：全部唯讀，讀的就是畫面上這同一份即時物件。
@@ -439,8 +454,17 @@ public sealed class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(EraIndex));
     }
 
-    public string AppTitle => "曦覽 XinSpect";
-    public string AppSubtitle => "硬體資訊總覽";
+    public string AppTitle => ThemeService.Theme == AppTheme.ExtremeEdition
+        ? "XinSpect v1.9.9 Extreme Edition" : "曦覽 XinSpect";
+    public string AppSubtitle => ThemeService.Theme == AppTheme.ExtremeEdition
+        ? "東方之星" : "硬體資訊總覽";
+
+    /// <summary>主題切換後由外殼呼叫，重新通知標題繫結更新。</summary>
+    public void NotifyTitleChanged()
+    {
+        OnPropertyChanged(nameof(AppTitle));
+        OnPropertyChanged(nameof(AppSubtitle));
+    }
 
     // ── 音效卡 / 網路卡偵測（WMI，開機背景讀取一次）────────────────────────────
     private IReadOnlyList<string> _soundDevices = new List<string>();

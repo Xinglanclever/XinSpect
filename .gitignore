@@ -1,9 +1,11 @@
 # ---- 建置產物 ----
 [Bb]in/
+[Bb]in2/
 [Oo]bj/
 publish/
 publish-*/
 Bridge/[Bb]in/
+Bridge/[Bb]in2/
 Bridge/[Oo]bj/
 
 # ---- Visual Studio / Rider ----

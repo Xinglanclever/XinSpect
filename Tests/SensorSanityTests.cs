@@ -102,15 +102,18 @@ public class SensorSanityTests
     public void ImpossibleVoltage_IsRejected(double v)
         => Assert.Null(SensorSanity.Plausible(SensorType.Voltage, (float)v));
 
-    // ── 功耗 / 風扇轉速：0 可能為真，只擋負值與離譜值 ────────────
+    // ── 功耗：0 W 代表感測器沒讀到，應拒絕；風扇：0 可能為真（零轉速模式）────────────
 
     [Theory]
-    [InlineData(SensorType.Power, 0)]
     [InlineData(SensorType.Power, 65.4)]
     [InlineData(SensorType.Fan, 0)]          // 零轉速模式
     [InlineData(SensorType.Fan, 1180)]
-    public void ZeroIsRealForPowerAndFan(SensorType type, double v)
+    public void ValidPowerAndFan(SensorType type, double v)
         => Assert.Equal(v, SensorSanity.Plausible(type, (float)v)!.Value, 3);
+
+    [Fact]
+    public void ZeroPower_IsRejected_BecauseRunningDeviceCannotConsume0W()
+        => Assert.Null(SensorSanity.Plausible(SensorType.Power, 0f));
 
     [Theory]
     [InlineData(SensorType.Power, -5)]

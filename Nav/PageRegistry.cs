@@ -19,6 +19,17 @@ public static class PageRegistry
     [
         new()
         {
+            Key = "beginner", Title = "我的電腦", Group = GOverview,
+            IconData = "F1 M12,21.35 L10.55,20.03 C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3 9.24,3 10.91,3.81 12,5.09 "
+                     + "13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5 22,12.28 18.6,15.36 13.45,20.04 L12,21.35 Z",
+            Factory = () => new BeginnerDashboardView(),
+            Hint = "健康度、溫度、硬體清單與故障排查——簡易模式首頁",
+            Keywords = ["beginner", "菜鳥", "簡易", "我的電腦", "健康", "排查"],
+            // 簡易模式的首頁；進階模式下不列在側邊欄（但命令面板照樣搜得到）
+            BeginnerOnly = true,
+        },
+        new()
+        {
             Key = "overview", Title = "總覽", Group = GOverview,
             IconData = "M3,3 H10 V11 H3 Z M13,3 H21 V8 H13 Z M13,11 H21 V21 H13 Z M3,14 H10 V21 H3 Z",
             Factory = () => new OverviewView(),
@@ -112,6 +123,15 @@ public static class PageRegistry
             Factory = () => new HistoryView(),
             Hint = "數週的溫度／負載走勢回放與統計",
             Keywords = ["history", "歷史", "回放", "走勢", "統計", "p95", "趨勢", "timeline"],
+        },
+        new()
+        {
+            Key = "evidence", Title = "證據實驗室", Group = GMonitor,
+            IconData = "F0 M4,2 H20 V22 H4 Z M7,6 H17 V8 H7 Z M7,11 H17 V13 H7 Z M7,16 H13 V18 H7 Z M15,15 L19,19 M19,15 L15,19",
+            Factory = () => new EvidenceLabView(),
+            Hint = "版本化硬體時間膠囊、逐欄差異、PCI／SPD／裝置與健康證據時間軸",
+            Keywords = ["evidence", "snapshot", "diff", "audit", "timeline", "證據", "時間膠囊", "快照", "差異", "稽核", "pci", "spd", "driver"],
+            Advanced = true,
         },
         new()
         {
@@ -480,6 +500,14 @@ public static class PageRegistry
             Hint = "螢幕壞點／滑鼠／鍵盤／喇叭／動態五項全螢幕檢測（原生、不連網）",
             Keywords = ["hardware test", "硬體檢測", "螢幕", "熒屏", "壞點", "亮點", "dead pixel", "滑鼠", "mouse",
                         "鍵盤", "keyboard", "防鬼鍵", "nkro", "喇叭", "speaker", "聲道", "動態", "拖影", "testufo"],
+        },
+        new()
+        {
+            Key = "troubleshoot", Title = "故障排查", Group = GTools,
+            IconData = "M8,1 a7,7 0 1 0 0.01,0 z M7.2,4 h1.6 v4.5 h-1.6 z M7.2,10 h1.6 v1.6 h-1.6 z",
+            Factory = () => new TroubleshootView(),
+            Hint = "常見問題的逐步排查嚮導",
+            Keywords = ["troubleshoot", "故障", "排查", "問題", "嚮導", "慢", "卡頓", "藍屏", "風扇"],
         },
     ];
 

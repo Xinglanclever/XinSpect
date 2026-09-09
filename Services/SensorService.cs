@@ -309,10 +309,11 @@ public sealed partial class SensorService : ObservableObject, IDisposable
     public void ApplyDiskInfo(IReadOnlyList<PhysicalDiskInfo> disks)
     {
         var pool = disks.ToList();
+        var unmatchedLhm = new List<StorageRow>();
         foreach (var row in Drives)
         {
             int idx = FindDiskMatch(pool, row.Name);
-            if (idx < 0) continue;
+            if (idx < 0) { unmatchedLhm.Add(row); continue; }
             var d = pool[idx];
             pool.RemoveAt(idx);
 
@@ -325,6 +326,16 @@ public sealed partial class SensorService : ObservableObject, IDisposable
                 row.HealthDetail = d.HealthDetail;
             }
             CopyDeep(d, row);
+        }
+
+        // LHM 列舉到但 WMI 沒有的裝置：如果也沒有任何即時感測值，就移除——
+        // 可能是 SCSI passthrough 的虛擬影子裝置，留著只會出現一整列「—」讓人困惑。
+        foreach (var ghost in unmatchedLhm)
+        {
+            var bind = _diskBinds.FirstOrDefault(b => ReferenceEquals(b.Row, ghost));
+            bool hasAnySensor = bind is not null
+                && (bind.Temp is not null || bind.Life is not null || bind.Used is not null || bind.Activity is not null);
+            if (!hasAnySensor) { Drives.Remove(ghost); if (bind is not null) _diskBinds.Remove(bind); }
         }
 
         // 未與 LHM 感測器配對的實體磁碟（例：LHM 未列舉者）仍以無即時值的列補入，

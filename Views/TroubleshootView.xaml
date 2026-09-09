@@ -1,0 +1,74 @@
+<UserControl x:Class="XinSpect.TroubleshootView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <local:SectionHead Text="故障排查嚮導" HelpKey="troubleshoot/故障排查嚮導"/>
+            <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,14" TextWrapping="Wrap"
+                       Text="選一個最像你碰到的狀況。每個場景會列出可能原因、檢查步驟與建議動作，最後附一個連結帶你到更詳細的分析頁面。"/>
+
+            <ItemsControl x:Name="ScenarioList">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <!-- 標題列 -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <TextBlock Text="{Binding Icon}" FontSize="22" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="{Binding Title}" FontSize="18" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource PrimaryInkBrush}" VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- 可能原因 -->
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="可能原因" Margin="0,0,0,4"/>
+                                <ItemsControl ItemsSource="{Binding PossibleCauses}" Margin="0,0,0,10">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="12,1,0,1">
+                                                <Run Text="• "/><Run Text="{Binding Mode=OneWay}"/>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- 檢查步驟 -->
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="檢查步驟" Margin="0,0,0,4"/>
+                                <ItemsControl ItemsSource="{Binding CheckItems}" Margin="0,0,0,10">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="12,1,0,1">
+                                                <Run Text="✔ "/><Run Text="{Binding Mode=OneWay}"/>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- 建議動作 -->
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="建議動作" Margin="0,0,0,4"/>
+                                <ItemsControl ItemsSource="{Binding Suggestions}" Margin="0,0,0,10">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="12,1,0,1">
+                                                <Run Text="➤ "/><Run Text="{Binding Mode=OneWay}"/>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- 導向進階頁 -->
+                                <Button Style="{StaticResource ToolButton}" HorizontalAlignment="Left"
+                                        Content="{Binding RelatedPageLabel}"
+                                        Tag="{Binding RelatedPageKey}"
+                                        Click="NavigateToPage_Click"/>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Style="{StaticResource FieldLabel}" Margin="4,4,0,0"
+                       Text="以上場景基於常見情況歸納，實際原因可能不同。進階頁面有更精準的量測與分析。"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

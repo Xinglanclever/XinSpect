@@ -28,8 +28,8 @@ namespace XinSpect;
 /// </remarks>
 public sealed class FiveElementsWheel : FrameworkElement
 {
-    private const double RingR = 128;    // 五個節點所在的圓半徑
-    private const double NodeR = 26;     // 節點圓半徑
+    private const double RingR = 148;    // 五個節點所在的圓半徑
+    private const double NodeR = 46;     // 節點圓半徑（需容納模型名稱文字）
     private const double Gap = 12;       // 節點圓與名字之間
     private const double Pad = 4;        // 四周留白
 
@@ -123,17 +123,9 @@ public sealed class FiveElementsWheel : FrameworkElement
             var p = NodeAt(c, n);
             dc.DrawEllipse(VizPalette.Card, new Pen(accent, 1.6), p, NodeR, NodeR);
 
-            var ch = Element(n.Element, ink);
-            dc.DrawText(ch, new Point(p.X - ch.Width / 2, p.Y - ch.Height / 2));
-
+            // 模型名稱畫在圓圈裡面（置中）
             var ft = Label(n.Label, name);
-            dc.DrawText(ft, SideOf(n.AngleDeg) switch
-            {
-                Side.Top => new Point(p.X - ft.Width / 2, p.Y - NodeR - Gap - ft.Height),
-                Side.Bottom => new Point(p.X - ft.Width / 2, p.Y + NodeR + Gap),
-                Side.Right => new Point(p.X + NodeR + Gap, p.Y - ft.Height / 2),
-                _ => new Point(p.X - NodeR - Gap - ft.Width, p.Y - ft.Height / 2),
-            });
+            dc.DrawText(ft, new Point(p.X - ft.Width / 2, p.Y - ft.Height / 2));
         }
 
         // 圓心那四個字。五角星的內五邊形是空的（內切半徑約 39.5），這行字的角落落在半徑 36 以內，

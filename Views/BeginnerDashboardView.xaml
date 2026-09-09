@@ -1,0 +1,129 @@
+<UserControl x:Class="XinSpect.BeginnerDashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel Margin="2,0,0,0">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <local:SectionHead Text="我的電腦" HelpKey="beginner/我的電腦"/>
+            </StackPanel>
+
+            <!-- 健康度圓環 + 一句話總結 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <local:RadialGauge Width="140" Height="140" Margin="12"
+                                       Value="{Binding Health.Score}" Max="100"
+                                       ArcBrush="{Binding Health.ScoreSeverity, Converter={StaticResource SeverityToBrush}}"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="16,0,0,0">
+                        <TextBlock Style="{StaticResource Title}" FontSize="22">
+                            <Run Text="健康評分："/><Run Text="{Binding Health.ScoreText, Mode=OneWay}"/>
+                            <Run Text=" / 100" Foreground="{DynamicResource MutedInkBrush}"/>
+                        </TextBlock>
+                        <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,8,0,0"
+                                   FontSize="14" Text="{Binding Health.Summary}"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                   Text="{Binding Health.Advice}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- 三張卡片橫排：溫度 / 硬體清單 / 一鍵優化 -->
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 溫度監控 -->
+                <Border Grid.Column="0" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <local:SectionHead Text="溫度" HelpKey="beginner/溫度"/>
+                        <local:FieldRow Label="CPU 封裝" Value="{Binding Live.CpuTempText}"/>
+                        <local:FieldRow Label="CPU 使用率" Value="{Binding Live.CpuLoadText}"/>
+                        <local:FieldRow Label="GPU" Value="{Binding Live.GpuTempText}"/>
+                        <local:FieldRow Label="GPU 使用率" Value="{Binding Live.GpuLoadText}"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" TextWrapping="Wrap"
+                                   Text="溫度持續高於 90°C 就要注意散熱。使用率 100% 持續很久可能就是卡頓的原因。"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 硬體清單 -->
+                <Border Grid.Column="2" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <local:SectionHead Text="硬體" HelpKey="beginner/硬體"/>
+                        <local:FieldRow Label="處理器" Value="{Binding Cpu.Name}"/>
+                        <local:FieldRow Label="記憶體" Value="{Binding Timings.MemorySizeText}"/>
+                        <local:FieldRow Label="顯示卡" Value="{Binding System.GpuName}"/>
+                        <local:FieldRow Label="系統碟" Value="{Binding Volumes.SystemDriveText}"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" TextWrapping="Wrap"
+                                   Text="想看更多細節，切換到「進階模式」。"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 一鍵優化 -->
+                <Border Grid.Column="4" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <local:SectionHead Text="快速動作" HelpKey="beginner/快速動作"/>
+                        <Button Style="{StaticResource PrimaryButton}" Content="清理垃圾檔案"
+                                Click="Cleanup_Click" Margin="0,8,0,6" HorizontalAlignment="Stretch"/>
+                        <Button Style="{StaticResource ToolButton}" Content="釋放記憶體"
+                                Click="MemClean_Click" Margin="0,0,0,6" HorizontalAlignment="Stretch"/>
+                        <Button Style="{StaticResource ToolButton}" Content="匯出硬體報告"
+                                Click="Export_Click" Margin="0,0,0,6" HorizontalAlignment="Stretch"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,6,0,0" TextWrapping="Wrap"
+                                   Text="這些操作都是安全的，不會改動重要設定。"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- 故障排查嚮導入口 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="遇到問題？" HelpKey="beginner/故障排查"/>
+                    <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,4,0,8"
+                               Text="選一個最像你現在碰到的情況，我帶你一步一步排查。"/>
+                    <WrapPanel>
+                        <Button Style="{StaticResource ToolButton}" Content="電腦很慢" Tag="slow" Click="Troubleshoot_Click" Margin="0,0,8,8"/>
+                        <Button Style="{StaticResource ToolButton}" Content="遊戲卡頓" Tag="game" Click="Troubleshoot_Click" Margin="0,0,8,8"/>
+                        <Button Style="{StaticResource ToolButton}" Content="藍屏當機" Tag="bsod" Click="Troubleshoot_Click" Margin="0,0,8,8"/>
+                        <Button Style="{StaticResource ToolButton}" Content="風扇太吵" Tag="fan" Click="Troubleshoot_Click" Margin="0,0,8,8"/>
+                        <Button Style="{StaticResource ToolButton}" Content="開機很慢" Tag="boot" Click="Troubleshoot_Click" Margin="0,0,8,8"/>
+                        <Button Style="{StaticResource ToolButton}" Content="網路不穩" Tag="net" Click="Troubleshoot_Click" Margin="0,0,8,8"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 健康明細 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,4">
+                <StackPanel>
+                    <local:SectionHead Text="健康明細" HelpKey="beginner/健康明細"/>
+                    <ItemsControl ItemsSource="{Binding Health.Items}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,4,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Label}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding StatusText}"
+                                               Foreground="{Binding Severity, Converter={StaticResource SeverityToBrush}}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" Text="{Binding Detail}"
+                                               TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

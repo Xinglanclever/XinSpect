@@ -54,7 +54,10 @@ public sealed class AiService : ObservableObject
 
     private static HttpClient CreateHttp()
     {
-        var c = new HttpClient { Timeout = TimeSpan.FromSeconds(180) };
+        // 逾時 45 秒：共用額度的 Worker 通常 5 秒內回應，本機 Ollama 首次載入模型約 20 秒。
+        // 180 秒會讓使用者在端點不通時枯等三分鐘才看到錯誤，體驗極差。
+        // 串流模式下逐 token 回傳會持續延展活動連線，不受此限。
+        var c = new HttpClient { Timeout = TimeSpan.FromSeconds(45) };
         // 不少 OpenAI 相容中轉站置於 Cloudflare 之後，會以 403 擋掉「無瀏覽器 User-Agent」的請求
         // （.NET HttpClient 預設不帶 UA）。帶上通用瀏覽器 UA 即可通過 Cloudflare 的基本人機驗證。
         c.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent",
@@ -796,9 +799,12 @@ public sealed class AiService : ObservableObject
 
     private static string Explain(Exception ex) => ex switch
     {
-        TaskCanceledException => "連線逾時（模型載入或網路過慢）。本機 Ollama 首次載入模型較久，可稍後重試。",
+        TaskCanceledException => "連線逾時（模型載入或網路過慢）。本機 Ollama 首次載入模型較久，可稍後重試；若使用共用額度，可能是中轉伺服器暫時不可用。",
         HttpRequestException he when he.Message.Contains("actively refused") || he.Message.Contains("failed to respond")
-            => "無法連線到端點。若使用本機 Ollama，請確認已安裝並執行（ollama serve）且模型已下載。",
+            || he.Message.Contains("No such host") || he.Message.Contains("沒有正確答覆") || he.Message.Contains("連線嘗試失敗")
+            => "無法連線到端點" + (he.Message.Contains("xinspect") ? "（共用額度的中轉伺服器暫時不可用——" +
+               "可改用本機 Ollama 或自填 OpenAI 相容 API）。" :
+               "。若使用本機 Ollama，請確認已安裝並執行（ollama serve）且模型已下載。"),
         _ => ex.Message,
     };
 }

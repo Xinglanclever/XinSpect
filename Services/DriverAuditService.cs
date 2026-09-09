@@ -23,6 +23,9 @@ public sealed class DriverAuditService : ObservableObject
 {
     private readonly List<DriverRow> _all = [];
 
+    /// <summary>全部驅動列（未經搜尋或篩選），供快照與報告使用。</summary>
+    public IReadOnlyList<DriverRow> AllRows => _all;
+
     /// <summary>目前顯示的列（已套用搜尋與「只顯示需要注意的」）。</summary>
     public ObservableCollection<DriverRow> Rows { get; } = [];
 
