@@ -40,8 +40,8 @@
         <!-- 左：工具子導覽（ItemsSource 來自 PageRegistry.Utilities） -->
         <Border Grid.Column="0" Width="200" Style="{StaticResource Card}" Padding="8" Margin="0,0,14,4"
                 VerticalAlignment="Stretch">
-            <StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="6,4,0,8">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="6,4,0,8">
                     <TextBlock Style="{StaticResource FieldLabel}" Text="實用工具" VerticalAlignment="Center"/>
                     <local:HelpDot HelpKey="utilities/實用工具" Margin="5,0,0,0"/>
                 </StackPanel>
@@ -49,7 +49,7 @@
                          SelectionChanged="SubNav_SelectionChanged"
                          ItemContainerStyle="{StaticResource UtilNavItem}"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         ScrollViewer.VerticalScrollBarVisibility="Auto">
+                         ScrollViewer.VerticalScrollBarVisibility="Visible">
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="{x:Type local:PageDef}">
                             <StackPanel Orientation="Horizontal" ToolTip="{Binding Hint}">
@@ -64,7 +64,7 @@
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
-            </StackPanel>
+            </DockPanel>
         </Border>
 
         <!-- 右：所選工具 -->
