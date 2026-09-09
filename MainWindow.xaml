@@ -19,8 +19,14 @@
         </Grid.RowDefinitions>
 
         <!-- ===== 標題列 ===== -->
-        <Border Grid.Row="0" Background="{DynamicResource HeaderGradientBrush}"
-                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,0,1">
+        <Grid Grid.Row="0">
+            <!-- 極限版背景圖：天狼星深空圖，僅極限版主題可見 -->
+            <Image x:Name="SiriusBg" Source="pack://application:,,,/Assets/sirius.jpg"
+                   Stretch="UniformToFill" Opacity="0.35" Visibility="Collapsed"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Border Background="{DynamicResource HeaderGradientBrush}"
+                    BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,0,1"
+                    x:Name="HeaderOverlay">
             <Grid Margin="24,15">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Border Width="10" Height="30" CornerRadius="4" Background="{DynamicResource AccentGradientBrush}"
@@ -33,36 +39,6 @@
                         <TextBlock Style="{StaticResource Title}" Text="{Binding AppTitle}"/>
                         <TextBlock Style="{StaticResource Subtitle}" Text="{Binding AppSubtitle}"/>
                     </StackPanel>
-                    <!-- 彩蛋副標題：僅極限版主題顯示，預設模糊，懸停清晰 -->
-                    <TextBlock x:Name="EasterEggTitle" Text="東方之星" FontSize="28" FontWeight="Normal"
-                               FontFamily="SimSun" FontStyle="Italic"
-                               Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"
-                               Margin="18,0,0,0" Opacity="1"
-                               Visibility="Collapsed">
-                        <TextBlock.Effect>
-                            <BlurEffect x:Name="EasterEggBlur" Radius="10"/>
-                        </TextBlock.Effect>
-                        <TextBlock.Triggers>
-                            <EventTrigger RoutedEvent="MouseEnter">
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="EasterEggBlur"
-                                                         Storyboard.TargetProperty="Radius"
-                                                         To="0" Duration="0:0:0.3"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                            <EventTrigger RoutedEvent="MouseLeave">
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="EasterEggBlur"
-                                                         Storyboard.TargetProperty="Radius"
-                                                         To="10" Duration="0:0:0.5"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                        </TextBlock.Triggers>
-                    </TextBlock>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <Button x:Name="PaletteButton" Style="{StaticResource ToolButton}" Click="Palette_Click"
@@ -109,6 +85,7 @@
                 </StackPanel>
             </Grid>
         </Border>
+        </Grid>
         <!-- ===== 主體：導覽 + 內容 ===== -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
