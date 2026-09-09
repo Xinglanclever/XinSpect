@@ -12,12 +12,14 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" DataContext="{Binding Vm}">
                 <UniformGrid Rows="1" Columns="4">
                     <local:RadialGauge Caption="CPU 使用率" Unit="%"
-                                       Value="{Binding Live.CpuLoad, FallbackValue=0, TargetNullValue=0}"/>
+                                       Value="{Binding Live.CpuLoad, FallbackValue=0, TargetNullValue=0}"
+                                       ArcBrush="{Binding Live.CpuLoadSeverity, Converter={StaticResource SeverityToBrush}}"/>
                     <local:RadialGauge Caption="CPU 溫度" Unit="°C" Max="100"
                                        Value="{Binding Live.CpuTemp, FallbackValue=0, TargetNullValue=0}"
                                        ArcBrush="{Binding Live.CpuTempSeverity, Converter={StaticResource SeverityToBrush}}"/>
                     <local:RadialGauge Caption="記憶體使用率" Unit="%"
-                                       Value="{Binding Live.MemLoad, FallbackValue=0, TargetNullValue=0}"/>
+                                       Value="{Binding Live.MemLoad, FallbackValue=0, TargetNullValue=0}"
+                                       ArcBrush="{Binding Live.MemLoadSeverity, Converter={StaticResource SeverityToBrush}}"/>
                     <local:RadialGauge Caption="GPU 使用率" Unit="%"
                                        Value="{Binding Live.PrimaryGpu.LoadPercent, FallbackValue=0, TargetNullValue=0}"/>
                 </UniformGrid>
