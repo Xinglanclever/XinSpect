@@ -241,7 +241,7 @@ internal sealed class FakeVrmIo : ISmbusIo
     /// <summary>設為 true 後，WriteLlc 的第三次讀取（讀回驗證）會回覆錯的值。</summary>
     public bool VerifyWillFail;
 
-    public bool BridgeGone;
+    public bool BridgeGone { get; set; }
 
     private byte _sts;
     private bool _inUse;
