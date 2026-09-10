@@ -849,8 +849,8 @@
                     <TextBlock Text="{Binding Overclock.LlcAnnotation}" TextWrapping="Wrap" FontSize="12.5" LineHeight="20"
                                Margin="0,10,0,0" Foreground="{DynamicResource SecondaryInkBrush}"/>
                     <Border Background="{DynamicResource PagePlaneBrush}" CornerRadius="8" Padding="12,9" Margin="0,10,0,0">
-                        <TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="19" Foreground="{DynamicResource MutedInkBrush}"
-                                   Text="誠實提醒：LLC 只能於 BIOS 設定，XTU／軟體層無法寫入。此處為對照說明，協助你在 BIOS 中選擇對應等級，本程式不會宣稱已套用 LLC。"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="19" Foreground="{DynamicResource PrimaryInkBrush}"
+                                   Text="⚠ 偵測到 VRM 控制器時，變更等級會直接透過 SMBus 寫入硬體。設錯可能導致 CPU 供電不穩、當機或損壞硬體。未偵測到控制器時僅作 BIOS 設定參考，不會有任何寫入。"/>
                     </Border>
                 </StackPanel>
             </Border>
