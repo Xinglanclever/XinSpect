@@ -311,4 +311,13 @@ public partial class SettingsView : UserControl
             if (ReinitBtn is not null) ReinitBtn.IsEnabled = true;
         }
     }
+
+    // 繁簡切換：立即轉換目前視覺樹上的文字。
+    private void LangToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm is not { } vm) return;
+        bool simplified = vm.Settings.SimplifiedChinese;
+        if (Shell.Main is { } main)
+            ChineseConvertService.ConvertVisualTree(main, simplified);
+    }
 }

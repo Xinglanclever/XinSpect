@@ -77,6 +77,10 @@ public sealed class SettingsService : ObservableObject
     /// <summary>啟程儀式是否已播放（一次即焚）。</summary>
     public bool CeremonyPlayed { get => _ceremonyPlayed; set { if (SetProperty(ref _ceremonyPlayed, value)) Save(); } }
 
+    private bool _simplifiedChinese;
+    /// <summary>介面文字使用簡體中文（預設繁體）。切換後須重啟或呼叫 ConvertVisualTree。</summary>
+    public bool SimplifiedChinese { get => _simplifiedChinese; set { if (SetProperty(ref _simplifiedChinese, value)) Save(); } }
+
     private bool _allowMultiInstance = true;
     /// <summary>
     /// 是否允許同時開多份曦覽。預設允許。
@@ -310,6 +314,7 @@ public sealed class SettingsService : ObservableObject
         public bool FirstRunDone { get; set; }
         public bool AllowMultiInstance { get; set; } = true;
         public bool CeremonyPlayed { get; set; }
+        public bool SimplifiedChinese { get; set; }
         public string? DashboardTiles { get; set; }
         public Dictionary<string, string>? ToolSlots { get; set; }
     }
@@ -366,6 +371,7 @@ public sealed class SettingsService : ObservableObject
                     _simpleMode = p.SimpleMode;
                     _firstRunDone = p.FirstRunDone;
                     _ceremonyPlayed = p.CeremonyPlayed;
+                    _simplifiedChinese = p.SimplifiedChinese;
                     _allowMultiInstance = p.AllowMultiInstance;
                     _dashboardTiles = p.DashboardTiles ?? "";
                     if (p.ToolSlots is not null) _toolSlots = new(p.ToolSlots, StringComparer.Ordinal);
@@ -422,6 +428,7 @@ public sealed class SettingsService : ObservableObject
                 SimpleMode = _simpleMode,
                 FirstRunDone = _firstRunDone,
                 CeremonyPlayed = _ceremonyPlayed,
+                SimplifiedChinese = _simplifiedChinese,
                 AllowMultiInstance = _allowMultiInstance,
                 DashboardTiles = _dashboardTiles.Length > 0 ? _dashboardTiles : null,
                 ToolSlots = _toolSlots.Count > 0 ? _toolSlots : null,
