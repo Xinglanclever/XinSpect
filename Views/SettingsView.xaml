@@ -436,16 +436,10 @@
                         <TextBlock Grid.Row="1" Grid.Column="2" Style="{StaticResource FieldValue}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,10,0,0"
                                    Text="{Binding Settings.GpuTempThreshold, StringFormat={}{0:0} °C}"/>
 
-                        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource FieldLabel}" Text="CPU 負載上限" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource FieldLabel}" Text="記憶體負載上限" VerticalAlignment="Center" Margin="0,10,0,0"/>
                         <Slider Grid.Row="2" Grid.Column="1" Style="{StaticResource SetSlider}" VerticalAlignment="Center" Margin="0,10,0,0"
-                                Minimum="50" Maximum="100" Value="{Binding Settings.CpuLoadThreshold, Mode=TwoWay}"/>
-                        <TextBlock Grid.Row="2" Grid.Column="2" Style="{StaticResource FieldValue}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,10,0,0"
-                                   Text="{Binding Settings.CpuLoadThreshold, StringFormat={}{0:0} %}"/>
-
-                        <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource FieldLabel}" Text="記憶體負載上限" VerticalAlignment="Center" Margin="0,10,0,0"/>
-                        <Slider Grid.Row="3" Grid.Column="1" Style="{StaticResource SetSlider}" VerticalAlignment="Center" Margin="0,10,0,0"
                                 Minimum="50" Maximum="100" Value="{Binding Settings.MemLoadThreshold, Mode=TwoWay}"/>
-                        <TextBlock Grid.Row="3" Grid.Column="2" Style="{StaticResource FieldValue}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,10,0,0"
+                        <TextBlock Grid.Row="2" Grid.Column="2" Style="{StaticResource FieldValue}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,10,0,0"
                                    Text="{Binding Settings.MemLoadThreshold, StringFormat={}{0:0} %}"/>
                     </Grid>
 

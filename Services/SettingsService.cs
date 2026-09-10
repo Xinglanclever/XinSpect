@@ -95,19 +95,15 @@ public sealed class SettingsService : ObservableObject
     /// </remarks>
     public bool AllowMultiInstance { get => _allowMultiInstance; set { if (SetProperty(ref _allowMultiInstance, value)) Save(); } }
 
-    private double _cpuTempThreshold = 90;
-    /// <summary>CPU 溫度警示門檻（°C），50–110。</summary>
-    public double CpuTempThreshold { get => _cpuTempThreshold; set { if (SetProperty(ref _cpuTempThreshold, Math.Clamp(value, 50, 110))) Save(); } }
+    private double _cpuTempThreshold = 105;
+    /// <summary>CPU 溫度警示門檻（°C），50–120。</summary>
+    public double CpuTempThreshold { get => _cpuTempThreshold; set { if (SetProperty(ref _cpuTempThreshold, Math.Clamp(value, 50, 120))) Save(); } }
 
-    private double _gpuTempThreshold = 85;
+    private double _gpuTempThreshold = 90;
     /// <summary>GPU 溫度警示門檻（°C），40–110。</summary>
     public double GpuTempThreshold { get => _gpuTempThreshold; set { if (SetProperty(ref _gpuTempThreshold, Math.Clamp(value, 40, 110))) Save(); } }
 
-    private double _cpuLoadThreshold = 95;
-    /// <summary>CPU 負載警示門檻（%），10–100。</summary>
-    public double CpuLoadThreshold { get => _cpuLoadThreshold; set { if (SetProperty(ref _cpuLoadThreshold, Math.Clamp(value, 10, 100))) Save(); } }
-
-    private double _memLoadThreshold = 92;
+    private double _memLoadThreshold = 95;
     /// <summary>記憶體負載警示門檻（%），10–100。</summary>
     public double MemLoadThreshold { get => _memLoadThreshold; set { if (SetProperty(ref _memLoadThreshold, Math.Clamp(value, 10, 100))) Save(); } }
 
@@ -288,10 +284,9 @@ public sealed class SettingsService : ObservableObject
         public bool HistoryEnabled { get; set; } = true;
         public int HistoryRetentionDays { get; set; } = 30;
         public bool AlertsEnabled { get; set; } = true;
-        public double CpuTempThreshold { get; set; } = 90;
-        public double GpuTempThreshold { get; set; } = 85;
-        public double CpuLoadThreshold { get; set; } = 95;
-        public double MemLoadThreshold { get; set; } = 92;
+        public double CpuTempThreshold { get; set; } = 105;
+        public double GpuTempThreshold { get; set; } = 90;
+        public double MemLoadThreshold { get; set; } = 95;
         public int AiProvider { get; set; }
         public string? AiBaseUrl { get; set; }
         public string? AiApiKey { get; set; }
@@ -342,9 +337,8 @@ public sealed class SettingsService : ObservableObject
                     _historyEnabled = p.HistoryEnabled;
                     _historyRetentionDays = Math.Clamp(p.HistoryRetentionDays, 1, 120);
                     _alertsEnabled = p.AlertsEnabled;
-                    _cpuTempThreshold = Math.Clamp(p.CpuTempThreshold, 50, 110);
+                    _cpuTempThreshold = Math.Clamp(p.CpuTempThreshold, 50, 120);
                     _gpuTempThreshold = Math.Clamp(p.GpuTempThreshold, 40, 110);
-                    _cpuLoadThreshold = Math.Clamp(p.CpuLoadThreshold, 10, 100);
                     _memLoadThreshold = Math.Clamp(p.MemLoadThreshold, 10, 100);
                     // 供應商代號夾在有效範圍內：設定檔可能是別的版本寫的（或被手改過），
                     // 直接 cast 成列舉會得到一個不存在的供應商，後面每個 switch 都會走到預設分支。
@@ -405,7 +399,6 @@ public sealed class SettingsService : ObservableObject
                 AlertsEnabled = _alertsEnabled,
                 CpuTempThreshold = _cpuTempThreshold,
                 GpuTempThreshold = _gpuTempThreshold,
-                CpuLoadThreshold = _cpuLoadThreshold,
                 MemLoadThreshold = _memLoadThreshold,
                 AiProvider = _aiProvider,
                 AiBaseUrl = _aiBaseUrl,

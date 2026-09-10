@@ -68,7 +68,6 @@ public sealed class AlertService : ObservableObject
         if (g?.TempC is double gt)
             Evaluate(gt, s.GpuTempThreshold, TempMargin, ref _gpuTempActive, "GPU 溫度", $"{gt:0}°C", "°C", active);
 
-        Evaluate(live.CpuLoad, s.CpuLoadThreshold, LoadMargin, ref _cpuLoadActive, "CPU 負載", $"{live.CpuLoad:0}%", "%", active);
         Evaluate(live.MemLoad, s.MemLoadThreshold, LoadMargin, ref _memLoadActive, "記憶體負載", $"{live.MemLoad:0}%", "%", active);
 
         AnyActive = active.Count > 0;
