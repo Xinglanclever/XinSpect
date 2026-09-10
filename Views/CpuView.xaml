@@ -694,10 +694,11 @@
                             <DataTemplate>
                                 <Grid MinHeight="26">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto" MaxWidth="280"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Key}"/>
                                     <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" TextAlignment="Right"
+                                               TextWrapping="Wrap"
                                                Foreground="{DynamicResource PrimaryInkBrush}" Text="{Binding Value}"/>
                                 </Grid>
                             </DataTemplate>

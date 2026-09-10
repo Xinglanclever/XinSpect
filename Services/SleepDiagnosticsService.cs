@@ -122,8 +122,8 @@ public sealed class SleepDiagnosticsService : ObservableObject
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                StandardOutputEncoding = Encoding.UTF8,
-                StandardErrorEncoding = Encoding.UTF8,
+                // 不指定 Encoding——讓 .NET 使用系統預設字碼頁（Big5／GBK），
+                // 與 powercfg.exe 的輸出編碼一致。強制 UTF-8 會在中文 Windows 上全變亂碼。
             };
             foreach (string a in args) psi.ArgumentList.Add(a);
 
