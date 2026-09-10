@@ -33,6 +33,35 @@
                         <TextBlock Style="{StaticResource Title}" Text="{Binding AppTitle}"/>
                         <TextBlock Style="{StaticResource Subtitle}" Text="{Binding AppSubtitle}"/>
                     </StackPanel>
+                    <!-- 東方之星副標題：僅極限版主題可見，預設模糊，懸停清晰 -->
+                    <TextBlock x:Name="EasterEggTitle" Text="東方之星" FontSize="28" FontWeight="Normal"
+                               FontFamily="SimSun" FontStyle="Italic"
+                               Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"
+                               Margin="18,0,0,0" Visibility="Collapsed">
+                        <TextBlock.Effect>
+                            <BlurEffect x:Name="EasterEggBlur" Radius="10"/>
+                        </TextBlock.Effect>
+                        <TextBlock.Triggers>
+                            <EventTrigger RoutedEvent="MouseEnter">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="EasterEggBlur"
+                                                         Storyboard.TargetProperty="Radius"
+                                                         To="0" Duration="0:0:0.3"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="MouseLeave">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="EasterEggBlur"
+                                                         Storyboard.TargetProperty="Radius"
+                                                         To="10" Duration="0:0:0.5"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </TextBlock.Triggers>
+                    </TextBlock>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <Button x:Name="PaletteButton" Style="{StaticResource ToolButton}" Click="Palette_Click"

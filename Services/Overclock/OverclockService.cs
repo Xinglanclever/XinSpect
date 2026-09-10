@@ -206,7 +206,10 @@ public sealed class OverclockService : ObservableObject, IDisposable
     // ── IHS 核心熱區圖 ─────────────────────────────────────────────────────
     public ObservableCollection<CoreRow>? Cores { get; private set; }
 
-    // ── LLC（負載線校準，XTU 無法寫入 → 僅 BIOS 教學）──────────────────────
+    // ── LLC（負載線校準）──────────────────────────────────────────────────
+    // 偵測到 VRM PMBus 控制器時直接讀寫硬體；否則僅作 BIOS 設定教學。
+    public VrmControllerService? Vrm { get; private set; }
+
     public IReadOnlyList<string> LlcLevels { get; } = new[]
     {
         "Level 1（最小補償・壓降最大）", "Level 2", "Level 3",
@@ -214,11 +217,27 @@ public sealed class OverclockService : ObservableObject, IDisposable
         "Level 7（接近零壓降）", "Level 8（最大補償・過衝風險最高）",
     };
     private int _llcIndex = 3;   // 預設 Level 4
-    public int LlcIndex { get => _llcIndex; set { if (SetProperty(ref _llcIndex, value)) OnPropertyChanged(nameof(LlcAnnotation)); } }
+    public int LlcIndex
+    {
+        get => _llcIndex;
+        set
+        {
+            if (!SetProperty(ref _llcIndex, value)) return;
+            OnPropertyChanged(nameof(LlcAnnotation));
+            // 偵測到 VRM 控制器時，選單變更直接寫入硬體
+            if (Vrm?.DetectionResult is { Found: true, Chips: { Count: > 0 } chips })
+                _ = Task.Run(() => Vrm.WriteLlc(chips[0], value));
+        }
+    }
     public string LlcAnnotation
     {
         get
         {
+            // 偵測到 VRM 控制器時，顯示實際硬體讀值
+            if (Vrm?.DetectionResult is { Found: true } && Vrm.CurrentLlc is { } llc)
+                return $"硬體讀值：{llc.ChipName} LLC = {llc.Level}（暫存器 0x{llc.RawByte:X2}）。\n"
+                     + "⚠ 變更此值會直接透過 SMBus 寫入 VRM 控制器。";
+
             string body = (_llcIndex + 1) switch
             {
                 <= 2 => "補償最弱：負載時壓降（Vdroop）最大、過衝最小。最保守，適合追求安全裕度。",
@@ -226,8 +245,35 @@ public sealed class OverclockService : ObservableObject, IDisposable
                 <= 6 => "較強補償：壓降小，但瞬態過衝（overshoot）與漣波（ripple）上升。",
                 _ => "最強補償：幾乎零壓降，但過衝與漣波風險最高，長期高負載需留意 VRM 與矽晶壽命。",
             };
-            return "※ Intel XTU 無法寫入 LLC，此處僅供 BIOS 設定參考。\n" + body;
+            return "※ 未偵測到 VRM PMBus 控制器，此處僅供 BIOS 設定參考。\n" + body;
         }
+    }
+
+    /// <summary>
+    /// 將當前選取的 LLC 等級寫入 VRM 控制器。
+    /// ⚠ 真實寫入——設錯可能導致 CPU 供電不穩、當機、甚至損壞硬體。
+    /// </summary>
+    /// <returns>寫入成功回 <c>true</c>；未偵測到控制器或寫入失敗回 <c>false</c>。</returns>
+    public async Task<bool> ApplyLlc()
+    {
+        if (Vrm?.DetectionResult is not { Found: true, Chips: { Count: > 0 } chips })
+        {
+            SetAction("未偵測到 VRM PMBus 控制器，無法寫入 LLC。", Severity.Warning);
+            return false;
+        }
+        int level = _llcIndex;
+        var chip = chips[0];
+        bool ok = await Task.Run(() => Vrm.WriteLlc(chip, level));
+        if (ok)
+        {
+            OnPropertyChanged(nameof(LlcAnnotation));
+            SetAction($"已寫入 {chip.ChipName} LLC = {level}（寫後讀回驗證通過）。", Severity.Warning);
+        }
+        else
+        {
+            SetAction($"LLC 寫入失敗（{chip.ChipName}），請檢查匯流排狀態。", Severity.Critical);
+        }
+        return ok;
     }
 
     // ── 看門狗（三層誠實方案）──────────────────────────────────────────────
@@ -328,6 +374,19 @@ public sealed class OverclockService : ObservableObject, IDisposable
 
         // 以目前（開機 / 現行）硬體值作為第一份「穩定基準」，供看門狗逾時回復
         _rollback = CaptureCurrent("初始基準");
+
+        // VRM PMBus 自動偵測
+        try
+        {
+            var vrm = await Task.Run(() => VrmControllerService.TryCreate(out _));
+            if (vrm is not null)
+            {
+                Vrm = vrm;
+                await vrm.DetectAsync();
+                OnPropertyChanged(nameof(LlcAnnotation));
+            }
+        }
+        catch { /* VRM 偵測是可選的，不影響其餘功能 */ }
 
         // Speed Optimizer 現況
         try { SpeedOptimizerOn = _engine.SpeedOptimizerState > 0; } catch { }
@@ -1053,5 +1112,6 @@ public sealed class OverclockService : ObservableObject, IDisposable
         if (CoreRatioKnob is not null) CoreRatioKnob.PropertyChanged -= OnPlannerKnobChanged;
         if (BclkKnob is not null) BclkKnob.PropertyChanged -= OnPlannerKnobChanged;
         try { _engine.Dispose(); } catch { }
+        try { Vrm?.Dispose(); } catch { }
     }
 }

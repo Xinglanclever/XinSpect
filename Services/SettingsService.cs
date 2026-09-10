@@ -73,6 +73,10 @@ public sealed class SettingsService : ObservableObject
     /// </summary>
     public bool FirstRunDone { get => _firstRunDone; set { if (SetProperty(ref _firstRunDone, value)) Save(); } }
 
+    private bool _ceremonyPlayed;
+    /// <summary>啟程儀式是否已播放（一次即焚）。</summary>
+    public bool CeremonyPlayed { get => _ceremonyPlayed; set { if (SetProperty(ref _ceremonyPlayed, value)) Save(); } }
+
     private bool _allowMultiInstance = true;
     /// <summary>
     /// 是否允許同時開多份曦覽。預設允許。
@@ -310,6 +314,7 @@ public sealed class SettingsService : ObservableObject
         public bool SimpleMode { get; set; }
         public bool FirstRunDone { get; set; }
         public bool AllowMultiInstance { get; set; } = true;
+        public bool CeremonyPlayed { get; set; }
         public string? DashboardTiles { get; set; }
         public Dictionary<string, string>? ToolSlots { get; set; }
     }
@@ -366,6 +371,7 @@ public sealed class SettingsService : ObservableObject
                     _motionEnabled = p.MotionEnabled;
                     _simpleMode = p.SimpleMode;
                     _firstRunDone = p.FirstRunDone;
+                    _ceremonyPlayed = p.CeremonyPlayed;
                     _allowMultiInstance = p.AllowMultiInstance;
                     _dashboardTiles = p.DashboardTiles ?? "";
                     if (p.ToolSlots is not null) _toolSlots = new(p.ToolSlots, StringComparer.Ordinal);
@@ -422,6 +428,7 @@ public sealed class SettingsService : ObservableObject
                 MotionEnabled = _motionEnabled,
                 SimpleMode = _simpleMode,
                 FirstRunDone = _firstRunDone,
+                CeremonyPlayed = _ceremonyPlayed,
                 AllowMultiInstance = _allowMultiInstance,
                 DashboardTiles = _dashboardTiles.Length > 0 ? _dashboardTiles : null,
                 ToolSlots = _toolSlots.Count > 0 ? _toolSlots : null,

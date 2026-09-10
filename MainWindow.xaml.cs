@@ -85,6 +85,9 @@ public partial class MainWindow : Window
             var dlg = new FirstRunWindow { Owner = this };
             dlg.ShowDialog();
             _vm.Settings.SimpleMode = dlg.SimpleMode;
+            // 選了詳細進階且儀式尚未播放過 → 觸發啟程儀式
+            if (!dlg.SimpleMode && CeremonyService.ShouldRun(_vm.Settings))
+                _ = CeremonyService.RunAsync(_vm.Settings);
         }
         catch (Exception ex) { Diag.Swallow("首次啟動版面選擇", ex, "本次沿用詳細進階版面"); }
         finally { _vm.Settings.FirstRunDone = true; }
@@ -291,6 +294,10 @@ public partial class MainWindow : Window
     {
         if (AccentGlow is not null) AccentGlow.Color = ThemeService.Accent.MainColor;
         ApplyTitleBar(ThemeService.Theme != AppTheme.Light);
+        // 東方之星副標題僅極限版主題可見
+        if (EasterEggTitle is not null)
+            EasterEggTitle.Visibility = ThemeService.Theme == AppTheme.ExtremeEdition
+                ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
         _vm.NotifyTitleChanged();
     }
 

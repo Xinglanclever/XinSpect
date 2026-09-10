@@ -40,6 +40,7 @@
     <PackageReference Include="System.Management" Version="10.0.11" />
     <!-- ETW 消費（幀時間／DPC 延遲）：純 managed，零驅動、零注入 -->
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.16" />
+    <PackageReference Include="NAudio" Version="2.*" />
   </ItemGroup>
 
   <!-- 特殊型號的官方 logo 圖檔（選配）：放入 Assets\{cpu|gpu|disk|board}\{id}.png 即自動採用。
@@ -52,6 +53,8 @@
     <Resource Include="Assets\board\*.png" />
     <!-- 視窗圖示（標題列／工作列）；以 Resource 編入，單檔發佈亦可用 pack URI 讀取 -->
     <Resource Include="Assets\app.ico" />
+    <!-- 啟程儀式音樂：不嵌入 Resource，因為播完要刪除（一次即焚） -->
+    <Content Include="Assets\ceremony.mp3" CopyToOutputDirectory="PreserveNewest" />
     <!-- 關於頁「By：Xinglanclever」旁的動畫 GIF；以 Resource 編入，pack URI 讀取後逐格輪播 -->
     <Resource Include="Assets\hug.gif" />
   </ItemGroup>
