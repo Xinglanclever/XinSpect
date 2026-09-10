@@ -31,6 +31,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         ThemeService.Initialize();     // 解析 XAML 前套用已存主題/強調色，避免首格閃色
+        LanguageService.Initialize(_vm.Settings);  // 語言偏好
         InitializeComponent();
         DataContext = _vm;
         Motion.Attach(_vm.Settings);   // 動態效果總開關跟著設定走（關掉後所有繪圖控制項停下計時器）
@@ -85,6 +86,9 @@ public partial class MainWindow : Window
             var dlg = new FirstRunWindow { Owner = this };
             dlg.ShowDialog();
             _vm.Settings.SimpleMode = dlg.SimpleMode;
+            // 語言選擇
+            if (dlg.SimplifiedChinese)
+                LanguageService.SetLanguage(true, _vm.Settings);
             // 選了詳細進階且儀式尚未播放過 → 觸發啟程儀式
             if (!dlg.SimpleMode && CeremonyService.ShouldRun(_vm.Settings))
                 _ = CeremonyService.RunAsync(_vm.Settings);
@@ -95,9 +99,13 @@ public partial class MainWindow : Window
 
     // ===== 導覽 =====
 
+    /// <summary>語言切換後重建導覽（頁面標題需要轉換）。由 LanguageService 呼叫。</summary>
+    public void RebuildNavIfNeeded() => BuildNav();
+
     // 以註冊表建立側邊欄項目來源，並依 Group 分組（順序即註冊順序）。
     private void BuildNav()
     {
+
         // 簡易模式下把進階頁從側邊欄收起來（命令面板照樣搜得到，只是不列在這裡）。
         // 菜鳥專頁（BeginnerOnly）反過來：只在簡易模式下顯示。
         // 目前頁若正好被收起來，保留它——把使用者正在看的東西抽掉比多一個項目更糟。

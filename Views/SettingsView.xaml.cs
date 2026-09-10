@@ -312,12 +312,10 @@ public partial class SettingsView : UserControl
         }
     }
 
-    // 繁簡切換：立即轉換目前視覺樹上的文字。
+    // 繁簡切換：透過 LanguageService 立即轉換整棵視覺樹。
     private void LangToggle_Click(object sender, RoutedEventArgs e)
     {
         if (Vm is not { } vm) return;
-        bool simplified = vm.Settings.SimplifiedChinese;
-        if (Shell.Main is { } main)
-            ChineseConvertService.ConvertVisualTree(main, simplified);
+        LanguageService.SetLanguage(vm.Settings.SimplifiedChinese, vm.Settings);
     }
 }

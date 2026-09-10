@@ -70,6 +70,20 @@
 
             <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,18,0,12"/>
 
+            <!-- 語言選擇 -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                <TextBlock Text="語言 Language" FontSize="13" FontWeight="SemiBold"
+                           Foreground="{DynamicResource PrimaryInkBrush}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                <Button x:Name="BtnTraditional" Style="{StaticResource ChoiceCard}" Padding="12,6" Margin="0,0,8,0" Click="Traditional_Click">
+                    <TextBlock Text="繁體中文" FontSize="13"/>
+                </Button>
+                <Button x:Name="BtnSimplified" Style="{StaticResource ChoiceCard}" Padding="12,6" Click="Simplified_Click">
+                    <TextBlock Text="简体中文" FontSize="13"/>
+                </Button>
+            </StackPanel>
+
+            <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,0,0,12"/>
+
             <!-- 「之後去哪裡改」寫在下方：這是使用者選錯之後唯一會想找的資訊 -->
             <TextBlock TextWrapping="Wrap" LineHeight="20" FontSize="12"
                        Foreground="{DynamicResource MutedInkBrush}"

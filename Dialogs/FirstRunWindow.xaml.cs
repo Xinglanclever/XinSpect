@@ -22,6 +22,9 @@ public partial class FirstRunWindow : Window
     /// <summary>使用者選了「簡略」（＝開啟簡易模式）。</summary>
     public bool SimpleMode { get; private set; }
 
+    /// <summary>使用者選了簡體中文。</summary>
+    public bool SimplifiedChinese { get; private set; }
+
     public FirstRunWindow() => InitializeComponent();
 
     // 無邊框視窗：允許拖曳移動。
@@ -41,6 +44,22 @@ public partial class FirstRunWindow : Window
     {
         SimpleMode = false;
         Close();
+    }
+
+    private void Traditional_Click(object sender, RoutedEventArgs e)
+    {
+        SimplifiedChinese = false;
+        BtnTraditional.BorderBrush = (System.Windows.Media.Brush)FindResource("AccentBrush");
+        BtnSimplified.BorderBrush = (System.Windows.Media.Brush)FindResource("HairlineBrush");
+    }
+
+    private void Simplified_Click(object sender, RoutedEventArgs e)
+    {
+        SimplifiedChinese = true;
+        BtnSimplified.BorderBrush = (System.Windows.Media.Brush)FindResource("AccentBrush");
+        BtnTraditional.BorderBrush = (System.Windows.Media.Brush)FindResource("HairlineBrush");
+        // 立即轉換本對話框的文字讓使用者預覽
+        LanguageService.ConvertVisualTree(this, true);
     }
 
     /// <summary>
