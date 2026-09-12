@@ -501,14 +501,6 @@ public static class PageRegistry
             Keywords = ["hardware test", "硬體檢測", "螢幕", "熒屏", "壞點", "亮點", "dead pixel", "滑鼠", "mouse",
                         "鍵盤", "keyboard", "防鬼鍵", "nkro", "喇叭", "speaker", "聲道", "動態", "拖影", "testufo"],
         },
-        new()
-        {
-            Key = "troubleshoot", Title = "故障排查", Group = GTools,
-            IconData = "M8,1 a7,7 0 1 0 0.01,0 z M7.2,4 h1.6 v4.5 h-1.6 z M7.2,10 h1.6 v1.6 h-1.6 z",
-            Factory = () => new TroubleshootView(),
-            Hint = "常見問題的逐步排查嚮導",
-            Keywords = ["troubleshoot", "故障", "排查", "問題", "嚮導", "慢", "卡頓", "藍屏", "風扇"],
-        },
     ];
 
     /// <summary>以 <see cref="PageDef.Key"/> 取頁；找不到回傳 null。</summary>
