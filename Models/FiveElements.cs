@@ -31,32 +31,23 @@ public readonly record struct FiveElementNode(string Element, string Label, doub
 /// <summary>
 /// 「五族共和」五行輪的資料與幾何：哪五個名字、擺在哪五個位置、五角星怎麼連。
 /// </summary>
-/// <remarks>
-/// <para>
-/// 排法照使用者給的那張傳統五行圖：<b>金在正上，順時針依序 木、水、火、土</b>。
-/// 這裡刻意<b>不宣稱</b>外圈是相生、內星是相剋——那張圖的排列其實對不上標準的
-/// 木→火→土→金→水 相生順序（標準排法下正上方是金時，右上角應該是水而不是木）。
-/// 坊間的命理插圖多半是這樣的裝飾性排列，本程式只是照著畫，不替它補一套不成立的說法。
-/// </para>
-/// <para>
-/// 幾何抽出來成純函式的理由只有一個：<see cref="StarOrder"/> 跨兩格才是五角星，跨一格會畫成
-/// 五邊形。那是這段程式唯一會安靜畫錯的地方，值得一條測試釘死。
-/// </para>
-/// </remarks>
 public static class FiveElements
 {
     /// <summary>圓心文字。</summary>
     public const string Caption = "五族共和\n攜手共進";
 
-    /// <summary>五個節點，順時針，金在正上。</summary>
+    /// <summary>五個節點，順時針。</summary>
     public static IReadOnlyList<FiveElementNode> Nodes { get; } =
     [
-        new("", "Claude Opus 5", 0),
-        new("", "ChatGPT 5.6 Sol", 72),
-        new("", "Claude Opus 4.8", 144),
-        new("", "Claude Opus 4.6", 216),
-        new("", "GLM 5.3 Flash", 288),
+        new("", "Claude Opus 5\n主力軍", 0),
+        new("", "ChatGPT 5.6 Sol\n遠征軍", 72),
+        new("", "Claude Opus 4.8\n先遣軍", 144),
+        new("", "Claude Opus 4.6\n預備隊", 216),
+        new("", "DeepSeek V4.1 Flash\n來做客的大肥魚", 288),
     ];
+
+    /// <summary>GLM 5.3 Flash 獨立球（拉完了湊數的）。</summary>
+    public static FiveElementNode GlmExtra { get; } = new("", "GLM 5.3 Flash\n拉完了湊數的", 0);
 
     /// <summary>
     /// 五角星的連線順序（節點索引）。每次<b>跨兩格</b>，走五步正好回到起點並且經過每個節點一次

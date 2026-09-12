@@ -55,6 +55,16 @@ public static class SharedAiEndpoint
         ? "免費共用（Cloudflare Workers AI）"
         : "免費共用（作者尚未啟用）";
 
+    /// <summary>
+    /// 中國大陸使用者看到的額外說明：Cloudflare 在中國大陸被 GFW 封鎖，
+    /// 不透過代理無法連線。本程式不內建任何代理功能。
+    /// </summary>
+    public const string GfwNotice =
+        "⚠ 中國大陸使用者注意：共用額度與留言建議的中轉伺服器架設在 Cloudflare 上，"
+        + "而 Cloudflare 的 workers.dev 網域在中國大陸被 GFW（防火長城）封鎖。"
+        + "若你在中國大陸且未使用代理，這兩項功能將無法連線。"
+        + "本程式不內建任何代理功能——請改用本機 Ollama（完全離線）或自填可連線的 OpenAI 相容端點。";
+
     /// <summary>這條額度目前允許哪一種請求。</summary>
     public static bool Allows(AiRequestKind kind) => kind == AiRequestKind.Evaluate;
 

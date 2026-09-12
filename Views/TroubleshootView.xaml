@@ -4,7 +4,7 @@
              xmlns:local="clr-namespace:XinSpect">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
-            <local:SectionHead Text="故障排查嚮導" HelpKey="troubleshoot/故障排查嚮導"/>
+            <local:SectionHead Text="故障排查嚮導" HelpKey="beginner/故障排查嚮導"/>
             <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,14" TextWrapping="Wrap"
                        Text="選一個最像你碰到的狀況。每個場景會列出可能原因、檢查步驟與建議動作，最後附一個連結帶你到更詳細的分析頁面。"/>
 

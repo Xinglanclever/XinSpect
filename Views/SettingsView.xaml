@@ -173,15 +173,6 @@
                                Text="收起來的是直讀暫存器、編程效能計數器那一類頁面（效能天花板、超頻、PCIe／USB 鏈路、NVMe 電源狀態、DPC 延遲…）。這只是不列在側邊欄——按 Ctrl+K 照樣搜得到每一頁，功能不會消失。首次啟動時問過的「簡略／詳細進階」就是這個開關。"/>
 
                     <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,18,0,0"/>
-                    <local:SectionHead Text="語言" Margin="0,16,0,0"/>
-                    <CheckBox Style="{StaticResource SetCheck}" Margin="0,8,0,0"
-                              Content="使用简体中文（切換後需重新啟動）"
-                              IsChecked="{Binding Settings.SimplifiedChinese, Mode=TwoWay}"
-                              Click="LangToggle_Click"/>
-                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,6,0,0"
-                               Text="使用 Windows 內建的繁簡轉換。部分專有名詞可能轉換不完全。"/>
-
-                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,18,0,0"/>
                     <local:SectionHead Text="動態視覺效果" HelpKey="settings/動態視覺效果" Margin="0,16,0,0"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
                                Text="逐核液柱的波紋與氣泡、風扇葉片的旋轉、七段數字的漸亮——這些都對應真實讀值，但每一次重繪都要花 GPU 與封裝功耗。曦覽是量測工具，所以這件事必須關得掉。"/>
@@ -499,6 +490,11 @@
                     </Grid>
                     <TextBlock x:Name="AiSharedNote" Style="{StaticResource Subtitle}" Margin="150,6,0,0" TextWrapping="Wrap"
                                Visibility="Collapsed"/>
+
+                    <!-- GFW 封鎖提示：共用額度與留言建議在中國大陸不通 -->
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" TextWrapping="Wrap" LineHeight="20"
+                               Foreground="{DynamicResource WarningBrush}"
+                               Text="⚠ 中國大陸使用者注意：共用額度與留言建議的中轉伺服器架設在 Cloudflare 上，而 workers.dev 網域在中國大陸被 GFW（防火長城）封鎖。若未使用代理，這兩項功能將無法連線。建議改用本機 Ollama（完全離線）或自填可連線的端點。"/>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Text="API 端點（Base URL）" Margin="0,14,0,4"/>
                     <TextBox Style="{StaticResource SetTextBox}" IsEnabled="{Binding Settings.AiUsesOwnEndpoint}"

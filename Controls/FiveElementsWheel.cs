@@ -128,10 +128,18 @@ public sealed class FiveElementsWheel : FrameworkElement
             dc.DrawText(ft, new Point(p.X - ft.Width / 2, p.Y - ft.Height / 2));
         }
 
-        // 圓心那四個字。五角星的內五邊形是空的（內切半徑約 39.5），這行字的角落落在半徑 36 以內，
-        // 所以不會壓到任何一條線，也就不需要拿底色去遮。
+        // 圓心那四個字
         var cap = Format(FiveElements.Caption, 17, accent, bold: true);
         dc.DrawText(cap, new Point(c.X - cap.Width / 2, c.Y - cap.Height / 2));
+
+        // GLM 5.3 Flash 獨立球（右下角，不在五角星上）
+        var glm = FiveElements.GlmExtra;
+        double glmX = c.X + RingR + NodeR + 30;
+        double glmY = c.Y + RingR - NodeR;
+        var glmPt = new Point(glmX, glmY);
+        dc.DrawEllipse(VizPalette.Card, new Pen(VizPalette.Grid, 1.2), glmPt, NodeR * 0.8, NodeR * 0.8);
+        var glmFt = Label(glm.Label, name);
+        dc.DrawText(glmFt, new Point(glmPt.X - glmFt.Width / 2, glmPt.Y - glmFt.Height / 2));
     }
 
     private static Point NodeAt(Point c, FiveElementNode n)
