@@ -18,7 +18,7 @@ public partial class AboutView : UserControl
     // ── 版本更新紀錄 ────────────────────────────────────────────────────────
 
     /// <summary>預設先只攤開最近這幾版；再往前的收起來，免得整頁被紀錄撐長。</summary>
-    private const int RecentCount = 4;
+    private const int RecentCount = 1;
 
     /// <summary>
     /// 紀錄取自 <see cref="ChangelogCatalog"/> 而不是版面上寫死，因此改版時只要動那一個檔案。
