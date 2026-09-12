@@ -128,8 +128,9 @@ public sealed class AmdSmuService
         if (IsPlausible(tempRaw))
         {
             // bit 31:21 = 溫度（單位 0.125°C），bit 19 = range select (+49°C offset)
-            int rawTemp = (int)(tempRaw.Value >> 21);
-            bool rangeAdj = (tempRaw.Value & (1u << 19)) != 0;
+            uint tv = tempRaw!.Value;
+            int rawTemp = (int)(tv >> 21);
+            bool rangeAdj = (tv & (1u << 19)) != 0;
             double t = rawTemp * 0.125;
             if (rangeAdj) t -= 49.0;
             if (t > 0 && t < 130) tempC = t;

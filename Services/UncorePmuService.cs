@@ -127,8 +127,9 @@ public sealed class UncorePmuService
         var uncoreLimit = _reader.ReadMsr(0x620);
         if (IsPlausible(uncoreLimit))
         {
-            int minRatio = (int)(uncoreLimit.Value & 0x7F);
-            int maxRatio = (int)((uncoreLimit.Value >> 8) & 0x7F);
+            ulong val = uncoreLimit!.Value;
+            int minRatio = (int)(val & 0x7F);
+            int maxRatio = (int)((val >> 8) & 0x7F);
             readings.Add(new UncoreReading
             {
                 Name = "Uncore 頻率範圍",
@@ -143,7 +144,7 @@ public sealed class UncorePmuService
         var uncoreStatus = _reader.ReadMsr(0x621);
         if (IsPlausible(uncoreStatus))
         {
-            int currentRatio = (int)(uncoreStatus.Value & 0x7F);
+            int currentRatio = (int)(uncoreStatus!.Value & 0x7F);
             readings.Add(new UncoreReading
             {
                 Name = "Uncore 目前倍頻",
