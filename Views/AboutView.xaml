@@ -83,6 +83,34 @@
                 </StackPanel>
             </Border>
 
+            <!-- 外部工具能力對照：回答「為什麼不直接接某某工具」 -->
+            <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                <StackPanel>
+                    <local:SectionHead Text="與外部底層工具的對照" HelpKey="about/外部工具對照"/>
+
+                    <TextBlock Text="本程式已經有等價實作的" FontSize="13.5" FontWeight="SemiBold" Margin="0,10,0,4"
+                               Foreground="{DynamicResource PrimaryInkBrush}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" LineHeight="20"
+                               Text="LibreHardwareMonitor（就是現行感測器引擎）、RAMSPDToolkit（自製 SMBus SPD 直讀）、Joular Core（RAPL 功耗直讀）、pciex（PCIe 鏈路與資源）、sc-membench（記憶體頻寬與延遲）、pmu-utils／PCM 的核心 PMU（MSR 直讀與 PMC 編程）。"/>
+
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,14,0,10"/>
+
+                    <TextBlock Text="刻意不整合的" FontSize="13.5" FontWeight="SemiBold" Margin="0,0,0,4"
+                               Foreground="{DynamicResource PrimaryInkBrush}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" LineHeight="20"
+                               Text="Perfetto（C++／Web 大型專案，與單一執行檔的散佈方式衝突）、Heimdall（多機 gRPC 監控，定位不同）、Silicon Monitor（Rust 無法嵌入）、OSACA（Python 組語靜態分析，受眾極窄）。"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" LineHeight="20" Margin="0,8,0,0"
+                               Text="openSeaChest 是唯一有實質衝突的：它自帶核心驅動做原始 ATA passthrough，而本程式在 1.9.2 刻意改成經過磁碟類別驅動代理的路徑並加上逾時看門狗——因為實測原始 passthrough 會卡死驅動、殺掉整個行程。"/>
+
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,14,0,10"/>
+
+                    <TextBlock Text="現階段到不了的量測" FontSize="13.5" FontWeight="SemiBold" Margin="0,0,0,4"
+                               Foreground="{DynamicResource PrimaryInkBrush}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" LineHeight="20"
+                               Text="iMC 逐通道計數器與 CHA／Cbo（mesh／ring）計數器走 MMIO 映射，本程式的唯讀路徑（MSR 與 PCI 設定空間）到不了；PCIe 鏈路訓練歷史、誤碼率與電源狀態轉換次數在標準設定空間裡不存在，那需要 PHY 層的協定分析儀。這些一律明說讀不到，不給猜出來的值。"/>
+                </StackPanel>
+            </Border>
+
             <!-- 版本更新紀錄：資料在 Nav/ChangelogCatalog.cs，ItemsSource 於程式碼後置指定 -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>

@@ -56,6 +56,44 @@
 - **集中設定** — 所有偏好以 JSON 持久化,支援一鍵初始化。
 - **動態視覺效果(可關)** — 逐核液柱的液面／波紋／氣泡、風扇葉片轉速、七段數字面板,每一個「動」都對應一個真實讀值,沒有純裝飾的動畫。因為重繪要花 GPU 與封裝功耗,而那會進到量測結果裡,所以設有全站總開關;跑分與撞牆量測期間程式也會自行暫停動畫,且不會動到你的偏好設定。
 
+## 與外部底層工具的能力對照
+
+常有人問「為什麼不直接接某某工具」。底下把常見的底層／硬體工具分成兩類講清楚：**已經有等價實作的**、以及**刻意不整合的**。
+
+### 一、這些能力本程式已經有了
+
+| 外部工具 | 本程式的對應實作 |
+|----------|------------------|
+| **LibreHardwareMonitor** | 就是現行的感測器引擎（`LibreHardwareMonitorLib`），整個 `SensorService` 建立在其上 |
+| **RAMSPDToolkit** | 自製的 `SpdBus`／`SmbusController`／`ImcSmbusController`／`SpdReader`／`SpdDecoder`／`SpdSurveyor`（1.9.2 起不再依賴 CPU-Z） |
+| **Joular Core** | RAPL 功耗直讀：MSR `0x606`（單位）× `0x611`（封裝能量計），含 `0x619` DRAM 網域，解碼在 `CeilingDecoder` |
+| **pciex** | `PcieLinkService`（掃鏈路速度／寬度／錯誤旗標）＋ `PciResourceAuditService`（裝置拓撲／BAR／IRQ／資源） |
+| **sc-membench** | `MemBandwidthService`（STREAM 四型態）、`LatencyCurveService`、`CacheBenchService`、`LargePageService` |
+| **pmu-utils／PCM（核心 PMU 部分）** | 直讀 40 餘條 MSR；PMC 編程三處：`TopDownService`、`DramTrafficService`、`RdtService`，取樣前後完整還原 |
+| **etwprof（即時部分）** | `DpcLatencyService`／`FrameTimeService`／`ThreadMigrationService` 以 TraceEvent 即時消費 ETW |
+
+### 二、這些刻意不整合，以及原因
+
+| 工具 | 不整合的原因 |
+|------|-------------|
+| **Perfetto** | C++／Web 大型專案，不是 .NET 可嵌入的元件；要嘛做成額外的 sidecar 程序，要嘛重寫，兩者都與「單一執行檔、無外部相依」的散佈方式衝突 |
+| **Heimdall** | gRPC 多機集中監控是全新的 client／server 架構；本程式是單機唯讀工具，定位不同 |
+| **Silicon Monitor** | Rust 撰寫無法嵌入；它讀的 AMD 設定需要 SMU 存取，那條路由本程式自己做（見 AMD SMU） |
+| **openSeaChest** | **與現有設計直接衝突**。它自帶核心驅動做原始 ATA passthrough，而本程式在 1.9.2 刻意改成 `SMART_RCV_DRIVE_DATA` 並加上逾時看門狗——原因是實測原始 passthrough 會卡死驅動、殺掉整個行程（記錄在 `Services/StorageSmartService.cs`）。引進它等於推翻那個用真實故障換來的決定 |
+| **OSACA** | Python 的組語靜態分析，受眾極窄，而且它分析的是原始碼層的迴圈依賴，與本程式「量測本機硬體實際狀態」的定位不同 |
+| **pmu-utils 的 ARM64／RISC-V 支援** | 本程式的底層是 WinRing0 ＋ x86 MSR，移植到其他架構等於重寫，不是加一個後端 |
+
+### 三、現階段到不了的量測（誠實界線）
+
+有些數字在特定平台上是**讀不到就是讀不到**，本程式選擇明說而不是給一個猜出來的值：
+
+| 項目 | 為什麼到不了 |
+|------|-------------|
+| **iMC 逐通道計數器** | 在這些平台上只走 MMIO 映射；本程式的唯讀路徑是 MSR 與 PCI 設定空間，到不了（記載於 `DramTrafficService`） |
+| **CHA／Cbo（mesh／ring）計數器** | 同上，走 MMIO |
+| **PCIe 鏈路訓練歷史、BER、L-state 轉換次數** | 標準 PCI 設定空間沒有這些計數器；那需要 PHY 層的協定分析儀 |
+| **Audio 環路延遲** | 需要實體的 loopback 線材 |
+
 ## 系統需求
 
 - Windows 10 / 11 或 Windows Server(x64)
