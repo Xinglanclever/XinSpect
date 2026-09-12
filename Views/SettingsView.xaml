@@ -491,6 +491,11 @@
                     <TextBlock x:Name="AiSharedNote" Style="{StaticResource Subtitle}" Margin="150,6,0,0" TextWrapping="Wrap"
                                Visibility="Collapsed"/>
 
+                    <!-- GFW 封鎖提示：共用額度與留言建議在中國大陸不通 -->
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" TextWrapping="Wrap" LineHeight="20"
+                               Foreground="{DynamicResource WarningBrush}"
+                               Text="⚠ 中國大陸使用者注意：共用額度與留言建議的中轉伺服器架設在 Cloudflare 上，而 workers.dev 網域在中國大陸被 GFW（防火長城）封鎖。若未使用代理，這兩項功能將無法連線。建議改用本機 Ollama（完全離線）或自填可連線的端點。"/>
+
                     <TextBlock Style="{StaticResource FieldLabel}" Text="API 端點（Base URL）" Margin="0,14,0,4"/>
                     <TextBox Style="{StaticResource SetTextBox}" IsEnabled="{Binding Settings.AiUsesOwnEndpoint}"
                              Text="{Binding Settings.AiBaseUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
