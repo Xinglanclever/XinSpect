@@ -129,7 +129,7 @@ public sealed class PcieAnalysisService : ObservableObject
         catch { /* WMI 不可用時靠空清單 */ }
 
         // 試著從登錄檔讀 PCIe Link 資訊
-        EnrichWithSetupApiData(list);
+        EnrichWithPcieLinkData(list);
         return list;
     }
 
@@ -169,52 +169,35 @@ public sealed class PcieAnalysisService : ObservableObject
     }
 
     /// <summary>
-    /// 嘗試用 SetupAPI / 登錄檔補充 PCIe Capability 資訊。
-    /// 實際可讀取 HKLM\SYSTEM\CurrentControlSet\Enum\PCI\...\Device Parameters
+    /// 用 PcieLinkService 已經打通的那條路——直讀 PCI 設定空間的 Link Capabilities 與 Link Status
+    /// ——補上鏈路資訊。登錄檔 Device Parameters 裡的 LinkSpeed/LinkWidth 在絕大多數機器上不存在。
     /// </summary>
-    private static void EnrichWithSetupApiData(List<PciRawDevice> devices)
+    private static void EnrichWithPcieLinkData(List<PciRawDevice> devices)
     {
-        const string basePath = @"SYSTEM\CurrentControlSet\Enum\PCI";
-        try
+        // PcieLinkService 走 WinRing0Bridge.ReadPciConfig，讀 PCIe Capability 的
+        // Link Capabilities (+0x0C) 與 Link Control/Status (+0x10)，那是正確的來源。
+        // 這裡只取它已經算好的結果，不重複掃 PCI bus。
+        var linkService = new PcieLinkService();
+        linkService.Refresh();
+
+        foreach (var dev in devices)
         {
-            using var baseKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(basePath);
-            if (baseKey is null) return;
-
-            foreach (var dev in devices)
+            if (dev.VendorId == 0) continue;
+            foreach (var row in linkService.Rows)
             {
-                TryReadLinkInfo(baseKey, dev);
-            }
-        }
-        catch { /* 登錄檔存取失敗則略過 */ }
-    }
-
-    private static void TryReadLinkInfo(Microsoft.Win32.RegistryKey baseKey, PciRawDevice dev)
-    {
-        // 遍歷登錄檔尋找對應的裝置
-        foreach (var subName in baseKey.GetSubKeyNames())
-        {
-            if (!subName.Contains($"VEN_{dev.VendorId:X4}", StringComparison.OrdinalIgnoreCase) ||
-                !subName.Contains($"DEV_{dev.DeviceIdHex:X4}", StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            using var devKey = baseKey.OpenSubKey(subName);
-            if (devKey is null) continue;
-
-            foreach (var instName in devKey.GetSubKeyNames())
-            {
-                using var instKey = devKey.OpenSubKey(instName);
-                var paramKey = instKey?.OpenSubKey("Device Parameters");
-                if (paramKey is null) continue;
-
-                // PCIe Link Speed / Width 可能存在這些值中
-                if (paramKey.GetValue("LinkSpeed") is int speed)
-                    dev.NegotiatedSpeedGTs = speed;
-                if (paramKey.GetValue("LinkWidth") is int width)
-                    dev.NegotiatedWidth = width;
-                if (paramKey.GetValue("MaxLinkSpeed") is int maxSpeed)
-                    dev.CapableSpeedGTs = maxSpeed;
-                if (paramKey.GetValue("MaxLinkWidth") is int maxWidth)
-                    dev.CapableWidth = maxWidth;
+                // PcieLinkRow.Location 格式是 "bus:dev.fn"，可解出 B/D/F
+                // 但 PciRawDevice 的 bus/dev/fn 永遠是 0（BUS_/FUNC_ 格式不存在），
+                // 所以改用 VEN+DEV 配對——同一顆晶片的鏈路在 PcieLinkService 裡只出現一次。
+                var venDev = PcieLinkService.ParseVenDev(dev.DeviceId);
+                if (venDev is not null
+                    && row.Name.Contains($"{venDev.Value.Ven:X4}", StringComparison.OrdinalIgnoreCase))
+                {
+                    dev.NegotiatedSpeedGTs = row.CurSpeed;
+                    dev.NegotiatedWidth = row.CurWidth;
+                    dev.CapableSpeedGTs = row.MaxSpeed;
+                    dev.CapableWidth = row.MaxWidth;
+                    break;
+                }
             }
         }
     }

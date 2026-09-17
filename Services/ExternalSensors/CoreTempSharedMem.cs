@@ -17,7 +17,13 @@ public static class CoreTempSharedMem
 {
     // ── 共享記憶體名稱 ──────────────────────────────────────────
     // Core Temp 不使用 Global\ 前綴
-    private const string SharedMemName = "CoreTemp_SharedData";
+    // Core Temp SDK 的官方共享記憶體名稱。
+    // 官方 .NET SDK (GetCoreTempInfoNET.dll) 用 "CoreTempMappingObject"，
+    // 原生 SDK 與 Rainmeter 的讀取器用 "CoreTempMappingObjectEx"。
+    // 先前寫成 "CoreTemp_SharedData" 是編出來的——GitHub 搜尋 0 筆命中，結果是永遠「未執行」。
+    // 先嘗試較新的 Ex 版本，不行再試不帶 Ex 的。
+    private const string SharedMemNameEx = "CoreTempMappingObjectEx";
+    private const string SharedMemName = "CoreTempMappingObject";
 
     // ── Core Temp 共享資料結構 ──────────────────────────────────
     // 對應 Core Temp SDK 的 CORE_TEMP_SHARED_DATA
@@ -75,7 +81,12 @@ public static class CoreTempSharedMem
         MemoryMappedViewAccessor? accessor = null;
         try
         {
-            mmf = MemoryMappedFile.OpenExisting(SharedMemName, MemoryMappedFileRights.Read);
+            // 先嘗試較新的 Ex 版本（原生 SDK），不行再試 .NET SDK 的名稱
+            try { mmf = MemoryMappedFile.OpenExisting(SharedMemNameEx, MemoryMappedFileRights.Read); }
+            catch (System.IO.FileNotFoundException)
+            {
+                mmf = MemoryMappedFile.OpenExisting(SharedMemName, MemoryMappedFileRights.Read);
+            }
             accessor = mmf.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read);
 
             if (accessor.Capacity < MinStructSize)

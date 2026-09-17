@@ -99,10 +99,11 @@ public sealed class ChipsetAnalysisService : ObservableObject
                 }
 
                 // ISA Bridge / LPC Controller / eSPI — 南橋/PCH
+                // SMBus 不在這裡：Synaptics SMBus Driver 之類的第三方驅動會搶在真正的
+                // LPC Controller 前面被選中，導致偵測永遠回「未知」。
                 if (name.Contains("ISA Bridge", StringComparison.OrdinalIgnoreCase) ||
                     name.Contains("LPC Controller", StringComparison.OrdinalIgnoreCase) ||
-                    name.Contains("eSPI Controller", StringComparison.OrdinalIgnoreCase) ||
-                    name.Contains("SMBus", StringComparison.OrdinalIgnoreCase))
+                    name.Contains("eSPI Controller", StringComparison.OrdinalIgnoreCase))
                 {
                     if (pchDevice == "") pchDevice = name;
                 }
@@ -127,8 +128,10 @@ public sealed class ChipsetAnalysisService : ObservableObject
         }
         else
         {
-            ChipsetVendor = hostBridge.Contains("Intel", StringComparison.OrdinalIgnoreCase) ? "Intel" :
-                            hostBridge.Contains("AMD",   StringComparison.OrdinalIgnoreCase) ? "AMD" : "未知";
+            // 廠商判斷：先從 pchDevice 再從 hostBridge，因為真正帶晶片組型號的多數是 LPC/eSPI
+            string vendorSource = pchDevice.Length > 0 ? pchDevice : hostBridge;
+            ChipsetVendor = vendorSource.Contains("Intel", StringComparison.OrdinalIgnoreCase) ? "Intel" :
+                            vendorSource.Contains("AMD",   StringComparison.OrdinalIgnoreCase) ? "AMD" : "未知";
             NorthbridgeInfo = $"記憶體控制器、PCIe Root Complex（已整合至 CPU）\nHost Bridge: {hostBridge}";
             SouthbridgeInfo = $"PCH / 南橋: {(pchDevice.Length > 0 ? pchDevice : "未偵測")}";
             Features = [];

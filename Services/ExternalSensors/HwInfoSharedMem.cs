@@ -18,8 +18,11 @@ public static class HwInfoSharedMem
     // ── 共享記憶體名稱 ──────────────────────────────────────────
     private const string SharedMemName = "Global\\HWiNFO_SENS_SM2";
 
-    // ── 標頭簽章 "HWiS" → 0x48576953（小端序） ──────────────────
-    private const uint ExpectedSignature = 0x48576953;
+    // ── 標頭簽章 ──────────────────────────────────────────────────
+    // SDK 定義 HWiNFO_SENSORS_SIGNATURE = 'SiWH'（以 DWORD 讀入的小端序結果）。
+    // 'H'=0x48, 'W'=0x57, 'i'=0x69, 'S'=0x53；小端序 DWORD = 0x53695748。
+    // 先前寫成 0x48576953 是把位元組順序反了——結果是永遠「簽章不符」，一筆都讀不到。
+    private const uint ExpectedSignature = 0x53695748;
 
     // ── HWiNFO 讀數類型列舉 ─────────────────────────────────────
     private enum HwInfoReadingType : uint
