@@ -15,8 +15,10 @@ namespace XinSpect;
 /// </summary>
 public static class HwInfoSharedMem
 {
-    // ── 共享記憶體名稱 ──────────────────────────────────────────
+    // ── 共享記憶體名稱與互斥鎖 ──────────────────────────────────
     private const string SharedMemName = "Global\\HWiNFO_SENS_SM2";
+    // SDK 要求在存取共享記憶體期間持有這把鎖，否則可能讀到「值來自這一秒、標籤來自下一秒」的撕裂快照。
+    private const string MutexName = "Global\\HWiNFO_SM2_MUTEX";
 
     // ── 標頭簽章 ──────────────────────────────────────────────────
     // SDK 定義 HWiNFO_SENSORS_SIGNATURE = 'SiWH'（以 DWORD 讀入的小端序結果）。
@@ -73,8 +75,18 @@ public static class HwInfoSharedMem
 
         MemoryMappedFile? mmf = null;
         MemoryMappedViewAccessor? accessor = null;
+        Mutex? mutex = null;
+        bool mutexHeld = false;
         try
         {
+            // SDK 要求在存取期間持有互斥鎖，避免讀到輪詢中途的撕裂快照
+            try
+            {
+                mutex = Mutex.OpenExisting(MutexName);
+                mutexHeld = mutex.WaitOne(200);
+            }
+            catch { /* 鎖不存在或逾時就繼續——不值得為它放棄整條來源 */ }
+
             mmf = MemoryMappedFile.OpenExisting(SharedMemName, MemoryMappedFileRights.Read);
             accessor = mmf.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read);
 
@@ -165,6 +177,8 @@ public static class HwInfoSharedMem
         {
             accessor?.Dispose();
             mmf?.Dispose();
+            if (mutexHeld) try { mutex?.ReleaseMutex(); } catch { }
+            mutex?.Dispose();
         }
     }
 
@@ -182,10 +196,14 @@ public static class HwInfoSharedMem
     };
 
     /// <summary>從 null-terminated byte 陣列提取字串。</summary>
+    /// <remarks>
+    /// HWiNFO SDK 的 szLabel/szUnit 是 ANSI（機器的 Active Code Page），不是 UTF-8。
+    /// 本機 ACP=950（Big5），用 UTF-8 解碼會把 °C 變成 U+FFFD。
+    /// </remarks>
     private static string ExtractString(byte[] buffer)
     {
         int len = Array.IndexOf(buffer, (byte)0);
         if (len < 0) len = buffer.Length;
-        return Encoding.UTF8.GetString(buffer, 0, len);
+        return Encoding.Default.GetString(buffer, 0, len);
     }
 }

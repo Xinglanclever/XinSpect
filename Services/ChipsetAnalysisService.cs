@@ -74,7 +74,7 @@ public sealed class ChipsetAnalysisService : ObservableObject
                 break;
             }
         }
-        catch { /* 略過 */ }
+        catch (Exception ex) { Diag.Swallow("ChipsetAnalysis.HostBridge", ex, "主機橋偵測失敗"); }
 
         // 2) 從 PCI 列舉找 Host Bridge (class 0x0600)
         string hostBridge = "";
@@ -109,7 +109,7 @@ public sealed class ChipsetAnalysisService : ObservableObject
                 }
             }
         }
-        catch { /* 略過 */ }
+        catch (Exception ex) { Diag.Swallow("ChipsetAnalysis.PCH", ex, "PCH 偵測失敗"); }
 
         HostBridgeName = hostBridge.Length > 0 ? hostBridge : "未偵測到";
 

@@ -106,14 +106,14 @@ public sealed class PowerDeliveryService : ObservableObject
             using var s = new ManagementObjectSearcher("SELECT Product, Manufacturer FROM Win32_BaseBoard");
             foreach (var o in s.Get()) { MotherboardModel = $"{o["Manufacturer"]} {o["Product"]}".Trim(); break; }
         }
-        catch { MotherboardModel = "未偵測到"; }
+        catch (Exception ex) { Diag.Swallow("PowerDelivery.Board", ex, "主機板型號讀不到"); MotherboardModel = "未偵測到"; }
 
         try
         {
             using var s = new ManagementObjectSearcher("SELECT Name FROM Win32_Processor");
             foreach (var o in s.Get()) { CpuName = o["Name"]?.ToString()?.Trim() ?? ""; break; }
         }
-        catch { CpuName = "未偵測到"; }
+        catch (Exception ex) { Diag.Swallow("PowerDelivery.CPU", ex, "CPU 名稱讀不到"); CpuName = "未偵測到"; }
 
         try
         {
@@ -132,7 +132,7 @@ public sealed class PowerDeliveryService : ObservableObject
                 break;
             }
         }
-        catch { GpuName = "未偵測到"; }
+        catch (Exception ex) { Diag.Swallow("PowerDelivery.GPU", ex, "GPU 名稱讀不到"); GpuName = "未偵測到"; }
 
         CpuTdp = EstimateCpuTdp(CpuName);
     }

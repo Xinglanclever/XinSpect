@@ -126,7 +126,7 @@ public sealed class PcieAnalysisService : ObservableObject
                 list.Add(raw);
             }
         }
-        catch { /* WMI 不可用時靠空清單 */ }
+        catch (Exception ex) { Diag.Swallow("PcieAnalysis.WMI", ex, "PCIe 裝置清單將為空"); }
 
         // 試著從登錄檔讀 PCIe Link 資訊
         EnrichWithPcieLinkData(list);
@@ -164,7 +164,7 @@ public sealed class PcieAnalysisService : ObservableObject
                 }
             }
         }
-        catch { /* 解析失敗則留預設值 */ }
+        catch (Exception ex) { Diag.Swallow("PcieAnalysis.ParseId", ex, "裝置 ID 解析失敗，留預設值"); }
         return raw;
     }
 
@@ -275,7 +275,7 @@ public sealed class PcieAnalysisService : ObservableObject
             using var s = new ManagementObjectSearcher("SELECT Name FROM Win32_Processor");
             foreach (var o in s.Get()) { cpuName = o["Name"]?.ToString() ?? ""; break; }
         }
-        catch { /* 略過 */ }
+        catch (Exception ex) { Diag.Swallow("PcieAnalysis.Enrich", ex, "鏈路資訊補充失敗"); }
 
         (TotalCpuLanes, TotalChipsetLanes) = EstimatePlatformLanes(cpuName);
     }

@@ -168,7 +168,7 @@ public sealed class SataAnalysisService : ObservableObject
                 }
             }
         }
-        catch { /* 讀不到就不靠這條線索 */ }
+        catch (Exception ex) { Diag.Swallow("SataAnalysis.Registry", ex, "SATA 登錄值讀不到"); }
         return names;
     }
 

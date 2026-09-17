@@ -143,7 +143,7 @@ public class GpuAnalysisService : ObservableObject
                     return Convert.ToInt64(qw);
             }
         }
-        catch { }
+        catch (Exception ex) { Diag.Swallow("GpuAnalysis.WMI", ex, "GPU 分析資料讀取失敗"); }
         return null;
     }
 
