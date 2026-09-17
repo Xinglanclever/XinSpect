@@ -88,10 +88,16 @@ NTSTATUS DriverEntry(
     UNREFERENCED_PARAMETER(RegistryPath);
     DriverObject->DriverUnload = DriverUnload;
 
-    /* 1. 建立裝置物件 */
-    status = IoCreateDevice(
+    /* 1. 建立裝置物件（限管理員存取） */
+    /* 用 IoCreateDeviceSecure 而非 IoCreateDevice：沒有 SDDL 的話任何已登入使用者都能開
+       \\.\/BlueSquadron 並操作驅動封鎖清單與行程保護——那是權限提升。
+       D:P(A;;GA;;;BA) = 僅允許 Builtin Administrators 完整存取。 */
+    UNICODE_STRING sddl = RTL_CONSTANT_STRING(L"D:P(A;;GA;;;BA)");
+    UNICODE_STRING classGuid = RTL_CONSTANT_STRING(L"{4d36e97d-e325-11ce-bfc1-08002be10318}");
+    status = IoCreateDeviceSecure(
         DriverObject, 0, &devName,
         FILE_DEVICE_UNKNOWN, FILE_DEVICE_SECURE_OPEN, FALSE,
+        &sddl, &classGuid,
         &g_DeviceObject);
     if (!NT_SUCCESS(status)) return status;
 

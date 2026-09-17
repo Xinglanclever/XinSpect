@@ -8,8 +8,17 @@ namespace XinSpect;
 
 /// <summary>
 /// 系統引導修復服務：執行 SFC、DISM、CHKDSK、BootRec、BCDEdit 等標準修復命令，
-/// 將即時輸出追加至 <see cref="Log"/>。全部唯讀查詢或 Windows 自帶修復機制，不碰韌體。
+/// 將即時輸出追加至 <see cref="Log"/>。
 /// </summary>
+/// <remarks>
+/// <b>其中三個命令會修改系統檔案：</b>
+/// <list type="bullet">
+/// <item><c>sfc /scannow</c>——掃描並<b>替換</b>損壞的系統檔案。</item>
+/// <item><c>DISM /RestoreHealth</c>——連絡 Windows Update 並<b>替換</b>元件庫中損壞的項目。</item>
+/// <item><c>bootrec /rebuildbcd</c>——<b>重建</b>開機設定資料存放區。</item>
+/// </list>
+/// 其餘（<c>chkdsk /scan</c>、<c>bcdedit /enum</c>）是唯讀查詢。全部使用 Windows 自帶修復機制，不碰韌體。
+/// </remarks>
 public sealed class BootRepairService : ObservableObject
 {
     private bool _isRunning;

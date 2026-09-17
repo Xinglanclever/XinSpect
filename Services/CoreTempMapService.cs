@@ -103,18 +103,32 @@ public sealed class CoreTempMapService : ObservableObject
         int coreIdx = 0;
         foreach (var r in readings)
         {
-            if (r.SensorType != "Temperature") continue;   // 「距 TjMax」的差值已另立 TemperatureDelta，不會進來
-            // 用 EndsWith 而非 Contains：「核心 #0 TjMax」才是 TjMax 列；
-            // 任何含這四個字母的標籤（例如舊版的「(ΔTjMax)」後綴）都會被 Contains 誤吃。
-            if (r.Label.EndsWith("TjMax", StringComparison.OrdinalIgnoreCase))
+            // TjMax 列一律是絕對攝氏，不受華氏設定影響（CoreTempSharedMem 已處理）
+            if (r.SensorType == "Temperature" &&
+                r.Label.EndsWith("TjMax", StringComparison.OrdinalIgnoreCase))
             {
                 firstTjMax ??= r.Value;
                 continue;
             }
-            // 逐核溫度：Core Temp 的核心索引即為實體核心
+
+            // 逐核溫度：可能是絕對值（Temperature）或距 TjMax 的差值（TemperatureDelta）
+            if (r.SensorType is not ("Temperature" or "TemperatureDelta")) continue;
+
             if (coreIdx < Cores.Count)
             {
-                Cores[coreIdx].Temperature = r.Value;
+                double temp = r.Value;
+
+                // 華氏模式：Core Temp 回報的絕對溫度是華氏，要轉回攝氏才能顯示
+                if (r.SensorType == "Temperature" && r.Unit == "°F")
+                    temp = (temp - 32) * 5.0 / 9.0;
+
+                // 距 TjMax 模式：用已知的 TjMax 重建絕對溫度
+                if (r.SensorType == "TemperatureDelta" && firstTjMax.HasValue)
+                    temp = firstTjMax.Value - temp;
+                else if (r.SensorType == "TemperatureDelta")
+                    { coreIdx++; continue; }   // 沒有 TjMax 就不猜
+
+                Cores[coreIdx].Temperature = temp;
                 coreIdx++;
             }
         }
