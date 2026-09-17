@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Text;
@@ -307,6 +308,9 @@ public sealed class AiService : ObservableObject
     // 進行中請求的取消來源；沒有請求時為 null。
     private CancellationTokenSource? _cts;
 
+    // 待送附件。
+    private readonly List<PendingAttachment> _pendingAttachments = new();
+
     /// <summary>
     /// 停止目前的請求。已經串流出來的文字會留在畫面上並註明是中途停止的——
     /// 半截的回答就該看得出是半截，不能讓它看起來像完整結論。
@@ -322,11 +326,132 @@ public sealed class AiService : ObservableObject
     private bool _hasMessages;
     public bool HasMessages { get => _hasMessages; private set => SetProperty(ref _hasMessages, value); }
 
+    // ── 附件管理 ──────────────────────────────────────────
+
+    public IReadOnlyList<PendingAttachment> PendingAttachments => _pendingAttachments;
+
+    /// <summary>附加圖片檔（轉 Base64，可選 OCR 先行辨識文字）。</summary>
+    public async Task AttachImageAsync(string filePath, bool runOcr = false)
+    {
+        var bytes = await File.ReadAllBytesAsync(filePath);
+        var ext = Path.GetExtension(filePath).TrimStart('.').ToLowerInvariant();
+        var mime = ext switch
+        {
+            "jpg" or "jpeg" => "image/jpeg",
+            "png" => "image/png",
+            "gif" => "image/gif",
+            "bmp" => "image/bmp",
+            "webp" => "image/webp",
+            _ => "image/png"
+        };
+        var base64 = Convert.ToBase64String(bytes);
+        var dataUrl = $"data:{mime};base64,{base64}";
+
+        string? ocrText = null;
+        if (runOcr) ocrText = await RunOcrAsync(filePath);
+
+        _pendingAttachments.Add(new PendingAttachment
+        {
+            Type = AttachmentType.Image,
+            FileName = Path.GetFileName(filePath),
+            DataUrl = dataUrl,
+            OcrText = ocrText,
+            ImageBytes = bytes
+        });
+    }
+
+    /// <summary>附加剪貼簿圖片（BitmapSource → PNG Base64）。</summary>
+    public void AttachClipboardImage(byte[] pngBytes)
+    {
+        var base64 = Convert.ToBase64String(pngBytes);
+        var dataUrl = $"data:image/png;base64,{base64}";
+        _pendingAttachments.Add(new PendingAttachment
+        {
+            Type = AttachmentType.Image,
+            FileName = "clipboard.png",
+            DataUrl = dataUrl,
+            ImageBytes = pngBytes
+        });
+    }
+
+    /// <summary>附加文字檔（內容直接嵌入訊息）。</summary>
+    public async Task AttachFileAsync(string filePath)
+    {
+        var text = await File.ReadAllTextAsync(filePath);
+        var name = Path.GetFileName(filePath);
+        _pendingAttachments.Add(new PendingAttachment
+        {
+            Type = AttachmentType.TextFile,
+            FileName = name,
+            TextContent = $"[檔案: {name}]\n```\n{text}\n```"
+        });
+    }
+
+    public void RemoveAttachment(PendingAttachment attachment)
+        => _pendingAttachments.Remove(attachment);
+
+    public void ClearAttachments()
+        => _pendingAttachments.Clear();
+
+    /// <summary>消費待送附件，回傳 OpenAI Vision 多部件內容陣列；無附件時回傳 null。</summary>
+    internal List<object>? ConsumePendingAttachments(ref string userText)
+    {
+        if (_pendingAttachments.Count == 0) return null;
+
+        // 文字檔與 OCR 結果併入文字
+        foreach (var att in _pendingAttachments.Where(a => a.Type == AttachmentType.TextFile))
+            userText = att.TextContent + "\n\n" + userText;
+        foreach (var att in _pendingAttachments.Where(a => a.OcrText is not null))
+            userText = $"[OCR 辨識結果 ({att.FileName})]\n{att.OcrText}\n\n" + userText;
+
+        var images = _pendingAttachments.Where(a => a.Type == AttachmentType.Image).ToList();
+        _pendingAttachments.Clear();
+
+        if (images.Count == 0) return null;
+
+        var parts = new List<object> { new { type = "text", text = userText } };
+        foreach (var img in images)
+            parts.Add(new { type = "image_url", image_url = new { url = img.DataUrl } });
+        return parts;
+    }
+
+    /// <summary>呼叫本機 PaddleOCR-VL 辨識圖片文字。</summary>
+    private static async Task<string?> RunOcrAsync(string imagePath)
+    {
+        var ocrDir = @"C:\Users\Administrator\PaddleOCR-VL";
+        var script = Path.Combine(ocrDir, "run_ocr.py");
+        if (!File.Exists(script)) return null;
+
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = Path.Combine(ocrDir, ".venv", "Scripts", "python.exe"),
+                Arguments = $"\"{script}\" \"{imagePath}\"",
+                WorkingDirectory = ocrDir,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                StandardOutputEncoding = System.Text.Encoding.UTF8
+            };
+            using var proc = Process.Start(psi);
+            if (proc is null) return null;
+            var output = await proc.StandardOutput.ReadToEndAsync();
+            await proc.WaitForExitAsync();
+            return proc.ExitCode == 0 && !string.IsNullOrWhiteSpace(output)
+                ? output.Trim()
+                : null;
+        }
+        catch { return null; }
+    }
+
     /// <summary>清空對話（同時刪除本機保存檔）。</summary>
     public void Clear()
     {
         Messages.Clear();
         HasMessages = false;
+        _pendingAttachments.Clear();
         _chat.Delete();
         StatusText = "對話已清除。";
     }
@@ -359,7 +484,11 @@ public sealed class AiService : ObservableObject
     {
         if (IsBusy) return;
         userText = (userText ?? "").Trim();
-        if (userText.Length == 0) return;
+        if (userText.Length == 0 && _pendingAttachments.Count == 0) return;
+        if (userText.Length == 0) userText = "（請看附加的圖片／檔案）";
+
+        // 消費待送附件：將圖片轉為多部件內容，文字檔併入訊息文字。
+        var contentParts = ConsumePendingAttachments(ref userText);
 
         Messages.Add(new AiMessage { IsUser = true, Text = userText });
         var reply = new AiMessage { IsUser = false, Text = Placeholder };
@@ -381,7 +510,7 @@ public sealed class AiService : ObservableObject
         _cts = cts;
         try
         {
-            await RunAsync(reply, cts.Token);
+            await RunAsync(reply, contentParts, cts.Token);
             StatusText = $"完成 ・ {ResolveModel()}（{ProviderLabel(_settings.AiProviderEnum)}）";
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested)
@@ -469,7 +598,7 @@ public sealed class AiService : ObservableObject
         }
     }
 
-    private async Task RunAsync(AiMessage reply, CancellationToken ct)
+    private async Task RunAsync(AiMessage reply, List<object>? contentParts, CancellationToken ct)
     {
         string url = ResolveUrl();
         string model = ResolveModel();
@@ -477,7 +606,7 @@ public sealed class AiService : ObservableObject
         // 一個人就能把大家的額度吃光。想用代理請改本機 Ollama 或自填金鑰。
         bool useTools = _settings.AiAgentMode && Tools is { HasTools: true }
                         && _settings.AiProviderEnum != AiProvider.SharedFree;
-        var msgs = BuildMessages(useTools);
+        var msgs = BuildMessages(useTools, contentParts);
         var sink = new ReplySink(reply);
 
         for (int round = 1; ; round++)
@@ -694,7 +823,8 @@ public sealed class AiService : ObservableObject
     }
 
     // 系統提示 ＋ 硬體快照 ＋ 既有對話（工具紀錄與失敗提示不回送模型）
-    private List<object> BuildMessages(bool useTools)
+    // contentParts 不為 null 時，最後一則使用者訊息改用 OpenAI Vision 多部件格式。
+    private List<object> BuildMessages(bool useTools, List<object>? contentParts = null)
     {
         string sys = string.IsNullOrWhiteSpace(_settings.AiSystemPrompt) ? DefaultSystemPrompt : _settings.AiSystemPrompt;
         string snapshot = "";
@@ -708,8 +838,16 @@ public sealed class AiService : ObservableObject
         if (dropped > 0) sys += $"\n\n（註：為控制長度，本次僅回送最近 {keep.Count} 則對話，較早的 {dropped} 則已省略。）";
 
         var msgs = new List<object> { new { role = "system", content = sys } };
-        foreach (var m in keep)
-            msgs.Add(new { role = m.IsUser ? "user" : "assistant", content = m.Text });
+        for (int i = 0; i < keep.Count; i++)
+        {
+            var m = keep[i];
+            string role = m.IsUser ? "user" : "assistant";
+            // 最後一則使用者訊息且有圖片附件時改用多部件格式
+            if (contentParts is not null && i == keep.Count - 1 && m.IsUser)
+                msgs.Add(new { role, content = (object)contentParts });
+            else
+                msgs.Add(new { role, content = (object)m.Text });
+        }
         return msgs;
     }
 
@@ -807,4 +945,22 @@ public sealed class AiService : ObservableObject
                "。若使用本機 Ollama，請確認已安裝並執行（ollama serve）且模型已下載。"),
         _ => ex.Message,
     };
+}
+
+// ── 附件資料類別 ──────────────────────────────────────────
+
+public enum AttachmentType { Image, TextFile }
+
+public sealed class PendingAttachment
+{
+    public required AttachmentType Type { get; init; }
+    public required string FileName { get; init; }
+    /// <summary>Base64 data URL（僅圖片）。</summary>
+    public string? DataUrl { get; init; }
+    /// <summary>OCR 辨識結果（可選）。</summary>
+    public string? OcrText { get; init; }
+    /// <summary>原始圖片位元組（供預覽縮圖）。</summary>
+    public byte[]? ImageBytes { get; init; }
+    /// <summary>文字檔內容（僅文字檔）。</summary>
+    public string? TextContent { get; init; }
 }

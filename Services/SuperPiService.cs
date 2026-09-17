@@ -58,6 +58,7 @@ public sealed class SuperPiService : ObservableObject
     // 原先此處是「本次工作階段最佳」：關掉程式就沒了，也看不出當時的溫度與頻率。
     // 改為落地的紀錄簿之後，同位數的歷次耗時、離散度與量測條件都留得住。
     private string _delta = "", _repeat = "", _conditionText = "";
+    private string _errorMargin = "", _confidence = "";
 
     /// <summary>耗時與本機上次同位數的比較。</summary>
     public string DeltaText { get => _delta; private set => SetProperty(ref _delta, value); }
@@ -65,6 +66,11 @@ public sealed class SuperPiService : ObservableObject
     public string RepeatText { get => _repeat; private set => SetProperty(ref _repeat, value); }
     /// <summary>本次量測期間的溫度／頻率條件；沒取到感測值時為空字串。</summary>
     public string ConditionText { get => _conditionText; private set => SetProperty(ref _conditionText, value); }
+
+    /// <summary>誤差值（如「±0.15 秒」），依歷次同位數量測的標準差推算。</summary>
+    public string ErrorMarginText { get => _errorMargin; private set => SetProperty(ref _errorMargin, value); }
+    /// <summary>量測可信度（高／中／低），依變異係數判定。</summary>
+    public string ConfidenceText { get => _confidence; private set => SetProperty(ref _confidence, value); }
 
     private string _preview = "—";
     /// <summary>計算結果前數十位（供核對正確性：3.14159265358979…）。</summary>
@@ -95,6 +101,7 @@ public sealed class SuperPiService : ObservableObject
         ElapsedText = "—";
         Preview = "計算中…";
         DeltaText = RepeatText = ConditionText = "";
+        ErrorMarginText = ConfidenceText = "";
         Conditions.Reset();
         StatusLine = $"正在計算圓周率至 {digits:#,0} 位…";
 
@@ -118,6 +125,11 @@ public sealed class SuperPiService : ObservableObject
             Record(config, secs, cond);
             DeltaText = _log.DeltaText(KindPi, config);
             RepeatText = _log.Stats(KindPi, config).Text;
+            var scores = _log.Scores(KindPi, config);
+            string margin = BenchErrorMargin.FormatMargin(scores, "秒", "0.000");
+            ErrorMarginText = margin.Length > 0 ? $"誤差值 {margin}" : "";
+            string conf = BenchErrorMargin.FormatConfidence(scores);
+            ConfidenceText = conf.Length > 0 ? $"量測可信度：{conf}" : "";
 
             Phase = "完成";
             ProgressFraction = 1;

@@ -2,8 +2,12 @@ using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Text;
 using System.Text.Json;
+using System.IO;
 
 namespace XinSpect;
+
+/// <summary>使用者附加的檔案（圖片、文字檔等）。</summary>
+public record FeedbackAttachment(string FileName, string MimeType, byte[] Data);
 
 /// <summary>
 /// 「留言建議」：把使用者寫的建議送到作者的中轉端點（與免費共用額度同一個 Worker，
@@ -11,9 +15,9 @@ namespace XinSpect;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>只送使用者自己打的字。</b>沒有硬體規格、沒有機器識別碼、沒有記錄檔、不夾任何自動收集的內容——
+/// <b>只送使用者自己打的字與自己選擇附加的檔案。</b>沒有硬體規格、沒有機器識別碼、沒有記錄檔、不夾任何自動收集的內容——
 /// 留言框裡看得到什麼就只送出什麼（外加一個選填的聯絡方式與版本號，版本號是為了知道這則建議
-/// 是對哪一版說的）。這一點寫在介面上，也寫在這裡：日後要加東西進去，得先改介面上的說明。
+/// 是對哪一版說的；附件是使用者透過「附加檔案」按鈕自行選取的）。這一點寫在介面上，也寫在這裡：日後要加東西進去，得先改介面上的說明。
 /// </para>
 /// <para>
 /// 沒有網路時整張卡片停用（灰色），不是按了才失敗。判斷用
@@ -30,6 +34,15 @@ public sealed class FeedbackService : ObservableObject
     /// <summary>聯絡方式長度上限（選填）。</summary>
     public const int MaxContactLength = 120;
 
+    /// <summary>附件數量上限。</summary>
+    public const int MaxAttachments = 5;
+
+    /// <summary>單一附件大小上限（2 MB）。</summary>
+    public const long MaxAttachmentBytes = 2 * 1024 * 1024;
+
+    /// <summary>整份 payload 大小上限（10 MB），含 base64 膨脹。</summary>
+    public const long MaxPayloadBytes = 10 * 1024 * 1024;
+
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(30) };
 
     private string _text = "";
@@ -44,6 +57,65 @@ public sealed class FeedbackService : ObservableObject
     /// <summary>選填的聯絡方式（Email／GitHub 帳號等），留空就是匿名。</summary>
     public string Contact { get => _contact; set => SetProperty(ref _contact, value); }
 
+    private readonly List<FeedbackAttachment> _attachments = new();
+    /// <summary>使用者附加的檔案清單（唯讀視圖）。</summary>
+    public IReadOnlyList<FeedbackAttachment> Attachments => _attachments;
+
+    /// <summary>附件計數（供 UI 繫結顯示）。</summary>
+    private int _attachmentCount;
+    public int AttachmentCount { get => _attachmentCount; private set => SetProperty(ref _attachmentCount, value); }
+
+    /// <summary>
+    /// 加入附件。回傳 null 代表成功；回傳字串代表失敗原因（檔案太大、已滿、重複等）。
+    /// </summary>
+    public string? AddAttachment(string filePath)
+    {
+        if (_attachments.Count >= MaxAttachments)
+            return $"最多只能附加 {MaxAttachments} 個檔案。";
+
+        var info = new FileInfo(filePath);
+        if (info.Length > MaxAttachmentBytes)
+            return $"檔案「{info.Name}」超過 {MaxAttachmentBytes / 1024 / 1024} MB 上限，已略過。";
+
+        if (_attachments.Any(a => a.FileName == info.Name))
+            return null; // 重複的靜默略過
+
+        var data = File.ReadAllBytes(filePath);
+        var mime = GuessMimeType(info.Extension);
+        _attachments.Add(new FeedbackAttachment(info.Name, mime, data));
+        AttachmentCount = _attachments.Count;
+        OnPropertyChanged(nameof(Attachments));
+        return null;
+    }
+
+    /// <summary>依檔名移除附件。</summary>
+    public void RemoveAttachment(string fileName)
+    {
+        _attachments.RemoveAll(a => a.FileName == fileName);
+        AttachmentCount = _attachments.Count;
+        OnPropertyChanged(nameof(Attachments));
+    }
+
+    /// <summary>清除所有附件。</summary>
+    public void ClearAttachments()
+    {
+        _attachments.Clear();
+        AttachmentCount = 0;
+        OnPropertyChanged(nameof(Attachments));
+    }
+
+    private static string GuessMimeType(string ext) => ext.ToLowerInvariant() switch
+    {
+        ".png" => "image/png",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".gif" => "image/gif",
+        ".bmp" => "image/bmp",
+        ".txt" => "text/plain",
+        ".log" => "text/plain",
+        ".csv" => "text/csv",
+        _ => "application/octet-stream",
+    };
+
     private bool _isSending;
     public bool IsSending
     {
@@ -53,7 +125,7 @@ public sealed class FeedbackService : ObservableObject
 
     private string _status = "";
     /// <summary>送出結果或錯誤說明（沒有動作時為空字串）。</summary>
-    public string Status { get => _status; private set => SetProperty(ref _status, value); }
+    public string Status { get => _status; internal set => SetProperty(ref _status, value); }
 
     /// <summary>這台機器目前有沒有可用的網路連線。</summary>
     public static bool HasNetwork
@@ -108,9 +180,29 @@ public sealed class FeedbackService : ObservableObject
                     ? (c.Length > MaxContactLength ? c[..MaxContactLength] : c) : null,
                 ["version"] = appVersion,
             };
+
+            // 附件：以 base64 放入 JSON 的 attachments 陣列
+            if (_attachments.Count > 0)
+            {
+                var atts = _attachments.Select(a => new Dictionary<string, string>
+                {
+                    ["name"] = a.FileName,
+                    ["mime"] = a.MimeType,
+                    ["data"] = Convert.ToBase64String(a.Data),
+                }).ToList();
+                payload["attachments"] = atts;
+            }
+
+            string json = JsonSerializer.Serialize(payload);
+            if (json.Length > MaxPayloadBytes)
+            {
+                Status = $"附件加文字合計超過 {MaxPayloadBytes / 1024 / 1024} MB 上限，請減少附件後再試。";
+                return;
+            }
+
             using var req = new HttpRequestMessage(HttpMethod.Post, FeedbackUrl)
             {
-                Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
+                Content = new StringContent(json, Encoding.UTF8, "application/json"),
             };
             using var resp = await Http.SendAsync(req);
             if (!resp.IsSuccessStatusCode)
@@ -123,6 +215,7 @@ public sealed class FeedbackService : ObservableObject
                 return;
             }
             Text = "";
+            ClearAttachments();
             Status = "已送出，謝謝你的建議。";
         }
         catch (TaskCanceledException)

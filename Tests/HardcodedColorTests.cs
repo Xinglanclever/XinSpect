@@ -39,16 +39,27 @@ public class HardcodedColorTests
         "#B3462B",     // 主機板「危險區」框線
         "#E06C4B",     // 主機板「危險區」標題與說明
         "#1b1b1b",     // 超頻頁「測試版」徽章：落在強調色底上的固定深字
+        "#B0000000",   // 命令面板的遮罩：半透明黑壓在任意內容上，與主題無關（淺色主題也要壓暗）
     ];
 
     /// <summary>
-    /// 兩種寫法都要抓：屬性直接寫（<c>Background="#..."</c>）與
-    /// Setter 寫（<c>Property="Background" ... Value="#..."</c>，樣板與觸發程序都是這一種）。
+    /// 三種寫法都要抓：屬性直接寫（<c>Background="#..."</c>）、
+    /// Setter 寫（<c>Property="Background" ... Value="#..."</c>，樣板與觸發程序都是這一種），
+    /// 以及<b>具名色</b>（<c>Foreground="Red"</c>）。
     /// </summary>
+    /// <remarks>
+    /// 具名色這一條是補上一次的洞：原本只認 <c>#RRGGBB</c>，所以
+    /// <c>Foreground="Red"</c>（不隨主題調整、淺色主題下對比崩掉）一路活得好好。
+    /// <c>White</c> 與 <c>Transparent</c> 例外——前者用在「有色徽章上的白字」，
+    /// 徽章底色本身已走佈景資源；後者是透明，與佈景無關。
+    /// </remarks>
     private static readonly Regex[] Patterns =
     [
-        new(@"(Background|Foreground)\s*=\s*""#[0-9a-fA-F]{6,8}"""),
-        new(@"Property\s*=\s*""(?:[\w.]*\.)?(Background|Foreground)""[^>]*?Value\s*=\s*""#[0-9a-fA-F]{6,8}"""),
+        new(@"(?<![A-Za-z])(Background|Foreground|BorderBrush|Fill)\s*=\s*""#[0-9a-fA-F]{6,8}"""),
+        new(@"Property\s*=\s*""(?:[\w.]*\.)?(Background|Foreground|BorderBrush|Fill)""[^>]*?Value\s*=\s*""#[0-9a-fA-F]{6,8}"""),
+        // 具名色。詞邊界不可省：沒有 (?<![A-Za-z]) 的話 LastChildFill="False" 會被當成 Fill="False"。
+        new(@"(?<![A-Za-z])(Background|Foreground|BorderBrush|Fill)\s*=\s*""(?!White""|Transparent""|True""|False"")[A-Z][a-zA-Z]*"""),
+        new(@"Property\s*=\s*""(?:[\w.]*\.)?(Background|Foreground|BorderBrush|Fill)""[^>]*?Value\s*=\s*""(?!White""|Transparent""|True""|False"")[A-Z][a-zA-Z]*"""),
     ];
 
     [Fact]

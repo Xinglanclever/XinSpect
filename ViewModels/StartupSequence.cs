@@ -42,6 +42,11 @@ internal static class StartupSequence
         // 3) 網路監控
         try { vm.Net = await netTask; } catch { /* 網路資訊為附加功能 */ }
 
+        // 3.1) 核心溫度熱力圖（需感測器＋拓樸）
+        if (vm.Live is not null)
+            try { vm.CoreTempMap = new CoreTempMapService(vm.Live, vm.CpuTopology); }
+            catch { /* 熱力圖為附加功能 */ }
+
         // 3.5 / 3.6) 磁碟容量與類型（WMI 較慢：背景查詢後就地套用），並建立可切換的活動走勢檢視
         if (vm.Live is not null)
         {

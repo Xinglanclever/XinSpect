@@ -15,11 +15,31 @@ public sealed class InverseBoolToVisibilityConverter : IValueConverter
         => Binding.DoNothing;
 }
 
+/// <summary>非 null → Visible，null → Collapsed。</summary>
+public sealed class NullToCollapsedConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is not null ? Visibility.Visible : Visibility.Collapsed;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => Binding.DoNothing;
+}
+
 /// <summary>數量 &gt; 0 → Visible，否則 Collapsed（用於清單有內容時才顯示）。</summary>
 public sealed class CountToVisibilityConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         => value is int n && n > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => Binding.DoNothing;
+}
+
+/// <summary>非空字串 → Visible，空字串或 null → Collapsed（用於有文字才顯示的區塊）。</summary>
+public sealed class TextToVisibilityConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is string s && s.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => Binding.DoNothing;
@@ -41,8 +61,18 @@ public sealed class SeverityToBrushConverter : IValueConverter
     /// <summary>非 Severity 或 <see cref="Severity.Neutral"/>：走次要文字色，不強調。</summary>
     public static SolidColorBrush Neutral => VizPalette.Of("SecondaryInkBrush", "#c3c2b7");
 
+    /// <remarks>
+    /// 同時吃兩種列舉：硬體事實用的 <see cref="Severity"/>，以及安全模組的
+    /// <see cref="SecuritySeverity"/>。兩者成員不同（後者有 Advisory、沒有 Serious／Neutral），
+    /// 若只認前者，防護頁那八條色帶會全部落回中性灰——顏色語意整組失效而且不會報錯。
+    /// </remarks>
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is Severity s ? Brush(s) : Neutral;
+        => value switch
+        {
+            Severity s => Brush(s),
+            SecuritySeverity s => FromSecurity(s),
+            _ => Neutral,
+        };
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => Binding.DoNothing;
@@ -53,6 +83,16 @@ public sealed class SeverityToBrushConverter : IValueConverter
         Severity.Warning => Warning,
         Severity.Serious => Serious,
         Severity.Critical => Critical,
+        _ => Neutral,
+    };
+
+    /// <summary>安全模組的嚴重度 → 同一套四階色（綠 → 黃 → 橘 → 紅）。</summary>
+    public static SolidColorBrush FromSecurity(SecuritySeverity s) => s switch
+    {
+        SecuritySeverity.Good => Good,
+        SecuritySeverity.Advisory => Warning,
+        SecuritySeverity.Warning => Serious,
+        SecuritySeverity.Critical => Critical,
         _ => Neutral,
     };
 }

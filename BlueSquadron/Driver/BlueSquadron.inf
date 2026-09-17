@@ -1,0 +1,52 @@
+;
+; BlueSquadron.inf — 藍色中隊核心驅動安裝資訊
+;
+; 安裝方式：
+;   1. 啟用測試簽章：bcdedit /set testsigning on && 重開機
+;   2. 以系統管理員身分：
+;      sc create BlueSquadron type= kernel binPath= "<完整路徑>\BlueSquadron.sys"
+;      sc start BlueSquadron
+;
+; 或使用 INF 安裝：
+;   右鍵 BlueSquadron.inf → 安裝
+;
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = System
+ClassGuid   = {4d36e97d-e325-11ce-bfc1-08002be10318}
+Provider    = %ManufacturerName%
+DriverVer   = 09/14/2026,1.0.0.0
+CatalogFile = BlueSquadron.cat
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[DefaultInstall.NTamd64]
+CopyFiles = BlueSquadron.CopyFiles
+
+[DefaultInstall.NTamd64.Services]
+AddService = BlueSquadron,,BlueSquadron.Service
+
+[BlueSquadron.Service]
+DisplayName    = %ServiceDisplayName%
+Description    = %ServiceDescription%
+ServiceType    = 1   ; SERVICE_KERNEL_DRIVER
+StartType      = 3   ; SERVICE_DEMAND_START
+ErrorControl   = 1   ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %13%\BlueSquadron.sys
+
+[BlueSquadron.CopyFiles]
+BlueSquadron.sys
+
+[SourceDisksNames]
+1 = %DiskName%
+
+[SourceDisksFiles]
+BlueSquadron.sys = 1
+
+[Strings]
+ManufacturerName    = "XinSpect"
+ServiceDisplayName  = "Blue Squadron Kernel Module"
+ServiceDescription  = "藍色中隊核心安全模組——驅動載入攔截、進程保護、MSR 完整性監控"
+DiskName            = "Blue Squadron Driver Disk"

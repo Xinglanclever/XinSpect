@@ -1,0 +1,66 @@
+<UserControl x:Class="XinSpect.CpuPinoutView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="clr-namespace:XinSpect"
+             mc:Ignorable="d"
+             FontFamily="{StaticResource AppFont}"
+             d:DesignHeight="800" d:DesignWidth="900">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  Padding="0,0,8,0">
+        <StackPanel>
+
+            <!-- ============ 偵測到的腳座 ============ -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="偵測到的腳座" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding SocketName}"
+                               FontSize="28" FontWeight="SemiBold"
+                               Foreground="{DynamicResource PrimaryInkBrush}"
+                               Margin="0,4,0,0"/>
+                    <TextBlock Text="{Binding DetectedSocket, StringFormat='WMI 原始值：{0}'}"
+                               FontSize="12"
+                               Foreground="{DynamicResource SecondaryInkBrush}"
+                               Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ============ 基本規格 ============ -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="基本規格"/>
+                    <local:FieldRow Label="總腳位數" Value="{Binding PinCount}"/>
+                    <local:FieldRow Label="封裝方式" Value="{Binding MountType}"/>
+                    <local:FieldRow Label="對應世代" Value="{Binding GenerationNote}"/>
+                    <local:FieldRow Label="說明" Value="{Binding Description}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ============ 關鍵規格與小知識 ============ -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,4"
+                    Visibility="{Binding IsKnownSocket, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <local:SectionHead Text="關鍵規格與小知識"/>
+
+                    <ItemsControl ItemsSource="{Binding KeyFacts}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0,3,0,3">
+                                    <TextBlock Text="&#x2022;" FontSize="14"
+                                               Foreground="{DynamicResource SecondaryInkBrush}"
+                                               Margin="0,0,8,0" VerticalAlignment="Top"/>
+                                    <TextBlock Text="{Binding}" TextWrapping="Wrap"
+                                               Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

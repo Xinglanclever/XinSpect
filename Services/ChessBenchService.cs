@@ -150,6 +150,7 @@ public sealed class ChessBenchService : ObservableObject
 
     // ── 與本機歷次成績的對照（唯一誠實的基準）────────────────────────────────
     private string _singleDelta = "", _multiDelta = "", _repeat = "", _conditionText = "";
+    private string _errorMargin = "", _confidence = "";
 
     /// <summary>單執行緒成績與本機上次同設定的比較。</summary>
     public string SingleDeltaText { get => _singleDelta; private set => SetProperty(ref _singleDelta, value); }
@@ -159,6 +160,11 @@ public sealed class ChessBenchService : ObservableObject
     public string RepeatText { get => _repeat; private set => SetProperty(ref _repeat, value); }
     /// <summary>本次量測期間的溫度／頻率條件；沒取到感測值時為空字串。</summary>
     public string ConditionText { get => _conditionText; private set => SetProperty(ref _conditionText, value); }
+
+    /// <summary>誤差值（如「±2.3%」），依歷次同設定量測的標準差推算。</summary>
+    public string ErrorMarginText { get => _errorMargin; private set => SetProperty(ref _errorMargin, value); }
+    /// <summary>量測可信度（高／中／低），依變異係數判定。</summary>
+    public string ConfidenceText { get => _confidence; private set => SetProperty(ref _confidence, value); }
 
     // ── 運算正確性（取代舊的「原版對照」）──────────────────────────────────
     // perft 節點數是常數，所以跑分本身就是一次算術驗證。這裡把驗證結果與速度並列，
@@ -205,6 +211,7 @@ public sealed class ChessBenchService : ObservableObject
         StatusLine = "跑分進行中，請避免其他高負載程式以取得穩定結果…";
         SingleKNps = MultiKNps = Speedup = null;
         SingleDeltaText = MultiDeltaText = RepeatText = ConditionText = "";
+        ErrorMarginText = ConfidenceText = "";
         VerifyText = IntegrityText = "";
         HasFault = false;
         Conditions.Reset();
@@ -264,10 +271,16 @@ public sealed class ChessBenchService : ObservableObject
                 SingleDeltaText = _log.DeltaText(KindSingle, singleConfig);
                 MultiDeltaText = _log.DeltaText(KindMulti, config);
                 RepeatText = _log.Stats(KindMulti, config).Text;
+                var scores = _log.Scores(KindMulti, config);
+                string margin = BenchErrorMargin.FormatMargin(scores, "kN/s");
+                ErrorMarginText = margin.Length > 0 ? $"誤差值 {margin}" : "";
+                string conf = BenchErrorMargin.FormatConfidence(scores);
+                ConfidenceText = conf.Length > 0 ? $"量測可信度：{conf}" : "";
             }
             else
             {
                 SingleDeltaText = MultiDeltaText = RepeatText = "本次偵測到運算錯誤，這筆不列入紀錄簿。";
+                ErrorMarginText = ConfidenceText = "";
             }
 
             Phase = faults == 0 ? "完成" : "完成（但算錯）";

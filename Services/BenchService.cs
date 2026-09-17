@@ -71,6 +71,7 @@ public sealed class BenchService : ObservableObject
 
     // ── 與本機歷次成績的對照（唯一誠實的基準）────────────────────────────────
     private string _delta = "", _repeat = "", _conditionText = "";
+    private string _errorMargin = "", _confidence = "";
 
     /// <summary>綜合分數與本機上次同設定的比較。</summary>
     public string DeltaText { get => _delta; private set => SetProperty(ref _delta, value); }
@@ -78,6 +79,11 @@ public sealed class BenchService : ObservableObject
     public string RepeatText { get => _repeat; private set => SetProperty(ref _repeat, value); }
     /// <summary>本次量測期間的溫度／頻率條件；沒取到感測值時為空字串。</summary>
     public string ConditionText { get => _conditionText; private set => SetProperty(ref _conditionText, value); }
+
+    /// <summary>誤差值（如「±2.3%」），依歷次同設定量測的標準差推算。</summary>
+    public string ErrorMarginText { get => _errorMargin; private set => SetProperty(ref _errorMargin, value); }
+    /// <summary>量測可信度（高／中／低），依變異係數判定。</summary>
+    public string ConfidenceText { get => _confidence; private set => SetProperty(ref _confidence, value); }
 
     /// <summary>由 UI 執行緒呼叫（Progress&lt;T&gt; 需在此擷取同步內容以回送 UI）。</summary>
     public void Start()
@@ -102,6 +108,7 @@ public sealed class BenchService : ObservableObject
         StatusLine = "測試進行中，請避免其他高負載程式以取得穩定結果…";
         SingleScore = MultiScore = MemBandwidth = Composite = null;
         DeltaText = RepeatText = ConditionText = "";
+        ErrorMarginText = ConfidenceText = "";
         Conditions.Reset();
 
         var prog = new Progress<double>(p => ProgressFraction = Math.Clamp(p, 0, 1));
@@ -141,6 +148,11 @@ public sealed class BenchService : ObservableObject
             Record(config, composite, cond);
             DeltaText = _log.DeltaText(KindComposite, config);
             RepeatText = _log.Stats(KindComposite, config).Text;
+            var scores = _log.Scores(KindComposite, config);
+            string margin = BenchErrorMargin.FormatMargin(scores, "分");
+            ErrorMarginText = margin.Length > 0 ? $"誤差值 {margin}" : "";
+            string conf = BenchErrorMargin.FormatConfidence(scores);
+            ConfidenceText = conf.Length > 0 ? $"量測可信度：{conf}" : "";
 
             Phase = "完成";
             ProgressFraction = 1;

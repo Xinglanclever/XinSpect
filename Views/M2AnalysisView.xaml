@@ -1,0 +1,137 @@
+<UserControl x:Class="XinSpect.M2AnalysisView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="clr-namespace:XinSpect"
+             mc:Ignorable="d"
+             FontFamily="{StaticResource AppFont}"
+             d:DesignHeight="900" d:DesignWidth="900">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  Padding="0,0,8,0">
+        <StackPanel>
+
+            <!-- 偵測到的插槽 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="M.2 / U.2 插槽偵測" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding DetectedSlots}"
+                               FontSize="20" FontWeight="SemiBold"
+                               Foreground="{DynamicResource PrimaryInkBrush}"
+                               Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 已偵測插槽列表 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="SMBIOS 插槽列表"/>
+                    <ItemsControl ItemsSource="{Binding Slots}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="{DynamicResource HairlineBrush}"
+                                        BorderThickness="0,0,0,1" Padding="0,6,0,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" MinWidth="140"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                                   Text="{Binding Designation}"
+                                                   FontWeight="Medium"
+                                                   Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1"
+                                                   Text="{Binding Type}"
+                                                   Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                                   Text="{Binding Width}"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1"
+                                                   Text="{Binding Usage}"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- M.2 尺寸對照 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="M.2 尺寸對照表"/>
+                    <ItemsControl ItemsSource="{Binding FormFactors}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+                                    <TextBlock Text="{Binding Name}" FontWeight="Medium" Width="60"
+                                               Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                    <TextBlock Text="{Binding Dimensions}" Width="110"
+                                               Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                    <TextBlock Text="{Binding Note}" TextWrapping="Wrap"
+                                               Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- Key 定義參考 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,4">
+                <StackPanel>
+                    <local:SectionHead Text="M.2 Key 定義參考"/>
+                    <ItemsControl ItemsSource="{Binding KeySpecs}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="{DynamicResource HairlineBrush}"
+                                        BorderThickness="0,0,0,1" Padding="0,8,0,8">
+                                    <StackPanel>
+                                        <TextBlock FontSize="15" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource PrimaryInkBrush}">
+                                            <Run Text="{Binding KeyName, Mode=OneWay}"/>
+                                            <Run Text=" — " Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                            <Run Text="{Binding Notch, Mode=OneWay}"
+                                                 Foreground="{DynamicResource SecondaryInkBrush}" FontSize="12"/>
+                                        </TextBlock>
+                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                                            <TextBlock Text="通道：" Foreground="{DynamicResource SecondaryInkBrush}" FontSize="12"/>
+                                            <TextBlock Text="{Binding Lanes}" FontSize="12" Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                            <TextBlock Text="常見用途：" Foreground="{DynamicResource SecondaryInkBrush}" FontSize="12"/>
+                                            <TextBlock Text="{Binding Usage}" FontSize="12" Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                        </StackPanel>
+                                        <ItemsControl ItemsSource="{Binding Facts}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                                                        <TextBlock Text="&#x2022;" FontSize="12"
+                                                                   Foreground="{DynamicResource SecondaryInkBrush}"
+                                                                   Margin="0,0,6,0" VerticalAlignment="Top"/>
+                                                        <TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12"
+                                                                   Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

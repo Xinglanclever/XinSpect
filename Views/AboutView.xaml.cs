@@ -1,7 +1,9 @@
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Navigation;
+using Microsoft.Win32;
 
 namespace XinSpect;
 
@@ -58,6 +60,42 @@ public partial class AboutView : UserControl
     private async void SendFeedback_Click(object sender, RoutedEventArgs e)
     {
         if (Vm is { } vm) await vm.Feedback.SendAsync(AppInfo.Version);
+    }
+
+    // ── 附加檔案 ────────────────────────────────────────────────────────────
+
+    private void AddAttachment_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm?.Feedback is not { } fb) return;
+
+        if (fb.Attachments.Count >= FeedbackService.MaxAttachments)
+        {
+            fb.Status = $"最多只能附加 {FeedbackService.MaxAttachments} 個檔案。";
+            return;
+        }
+
+        var dlg = new OpenFileDialog
+        {
+            Title = "選擇要附加的檔案",
+            Filter = "圖片檔|*.png;*.jpg;*.jpeg;*.bmp;*.gif|文字檔|*.txt;*.log;*.csv|所有檔案|*.*",
+            Multiselect = true,
+        };
+        if (dlg.ShowDialog() != true) return;
+
+        string? lastError = null;
+        foreach (var path in dlg.FileNames)
+        {
+            var err = fb.AddAttachment(path);
+            if (err is not null) lastError = err;
+        }
+        if (lastError is not null)
+            fb.Status = lastError;
+    }
+
+    private void RemoveAttachment_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string fileName)
+            Vm?.Feedback.RemoveAttachment(fileName);
     }
 
     // 以系統預設瀏覽器開啟外部連結（YouTube 頻道）

@@ -192,6 +192,15 @@ public sealed class BenchLog : ObservableObject
         OnPropertyChanged(nameof(Count));
     }
 
+    /// <summary>同項目、同設定的歷次成績分數（依紀錄順序），供誤差值計算。</summary>
+    public IReadOnlyList<double> Scores(string kind, string config)
+    {
+        var list = new List<double>();
+        foreach (var r in _runs)
+            if (r.Kind == kind && r.Config == config) list.Add(r.Score);
+        return list;
+    }
+
     /// <summary>同項目、同設定的歷次成績統計。</summary>
     public BenchStats Stats(string kind, string config)
     {

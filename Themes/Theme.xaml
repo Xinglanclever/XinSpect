@@ -41,6 +41,7 @@
     <local:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis"/>
     <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     <local:CountToVisibilityConverter x:Key="CountToVis"/>
+    <local:TextToVisibilityConverter x:Key="TextToVis"/>
     <local:BoolToRunBrushConverter x:Key="BoolToRunBrush"/>
     <local:BoolToRunTextConverter x:Key="BoolToRunText"/>
     <local:BoolToPromptConverter x:Key="BoolToPrompt"/>
@@ -48,6 +49,7 @@
     <local:BoolToCompactGlyphConverter x:Key="BoolToCompactGlyph"/>
     <local:DepthToIndentConverter x:Key="DepthToIndent"/>
     <local:HoursToTextConverter x:Key="HoursToText"/>
+    <local:NullToCollapsedConverter x:Key="NullToCollapsed"/>
 
     <!-- ===== 文字樣式 ===== -->
     <Style TargetType="TextBlock">
@@ -463,6 +465,65 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         DataGrid 深色樣式（隱式，全站套用）
+         預設的 DataGrid 帶著系統淺色外框與白色欄位標頭，在深色主題上會
+         變成一格格刺眼的白框；這裡把標頭、儲存格與列都改成主題色。
+         需要更細緻外觀的頁面仍可像 PortUsageView 一樣自己覆寫。
+         ══════════════════════════════════════════════════════════════════ -->
+    <Style TargetType="DataGrid">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
+        <Setter Property="RowBackground" Value="Transparent"/>
+        <Setter Property="AlternatingRowBackground" Value="{DynamicResource Surface2Brush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+        <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource HairlineBrush}"/>
+        <Setter Property="HeadersVisibility" Value="Column"/>
+        <Setter Property="CanUserAddRows" Value="False"/>
+        <Setter Property="CanUserResizeRows" Value="False"/>
+        <Setter Property="RowHeight" Value="30"/>
+        <Setter Property="ColumnHeaderHeight" Value="34"/>
+        <Setter Property="FontSize" Value="12.5"/>
+        <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+    </Style>
+
+    <Style TargetType="DataGridColumnHeader">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryInkBrush}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Padding" Value="10,0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}"/>
+    </Style>
+
+    <Style TargetType="DataGridCell">
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="10,0"/>
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DataGridCell">
+                    <Border Background="{TemplateBinding Background}"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="DataGridRow">
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
+        <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{DynamicResource AccentDimBrush}"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
 </ResourceDictionary>

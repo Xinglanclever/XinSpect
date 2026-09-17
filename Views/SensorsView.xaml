@@ -71,6 +71,95 @@
                     </ItemsControl>
                 </StackPanel>
             </Border>
+
+            <!-- ===== 外部感測器來源 ===== -->
+            <local:SectionHead Text="外部感測器來源" HelpKey="sensors/外部感測器來源" Margin="0,20,0,0"/>
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,0,0,10" TextWrapping="Wrap"
+                               Text="從 HWiNFO、AIDA64、Core Temp 等第三方工具的共享記憶體讀取感測器數值。這些工具須在背景執行並開啟共享記憶體功能。"/>
+
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="來源：" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <ComboBox Grid.Column="1" x:Name="SourceCombo" Width="200" HorizontalAlignment="Left"
+                                  SelectedIndex="0" SelectionChanged="SourceCombo_Changed">
+                            <ComboBoxItem Content="全部合併"/>
+                            <ComboBoxItem Content="HWiNFO"/>
+                            <ComboBoxItem Content="AIDA64"/>
+                            <ComboBoxItem Content="Core Temp"/>
+                        </ComboBox>
+                        <Button Grid.Column="2" Style="{StaticResource PrimaryButton}" Content="重新偵測外部來源"
+                                Click="RefreshExternal_Click"/>
+                    </Grid>
+
+                    <!-- 來源偵測狀態 -->
+                    <ItemsControl ItemsSource="{Binding ExternalSensors.Sources}" Margin="0,0,0,8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0,2">
+                                    <Border CornerRadius="4" Padding="6,2" Margin="0,0,8,0"
+                                            Background="{DynamicResource Surface2Brush}">
+                                        <TextBlock Text="{Binding Name}" FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource AccentBrush}"/>
+                                    </Border>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Detail}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,8" Text="{Binding ExternalSensors.Status}"/>
+
+                    <!-- 外部讀數表頭 -->
+                    <Grid Margin="0,4,0,4" Visibility="{Binding ExternalSensors.Readings.Count, Converter={StaticResource CountToVis}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="120"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource ColHead}" Text="來源"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="名稱"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="數值" TextAlignment="Right"/>
+                        <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="單位" TextAlignment="Right"/>
+                    </Grid>
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}"
+                            Visibility="{Binding ExternalSensors.Readings.Count, Converter={StaticResource CountToVis}}"/>
+
+                    <!-- 外部讀數列表 -->
+                    <ItemsControl ItemsSource="{Binding ExternalSensors.Readings}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="26">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="120"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" CornerRadius="4" Padding="5,1" Margin="0,1" HorizontalAlignment="Left"
+                                            Background="{DynamicResource Surface2Brush}">
+                                        <TextBlock Text="{Binding Source}" FontSize="10.5" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource AccentBrush}"/>
+                                    </Border>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Label}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding Value}"
+                                               TextAlignment="Right"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldLabel}" Text="{Binding Unit}"
+                                               TextAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

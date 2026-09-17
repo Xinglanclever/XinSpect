@@ -66,6 +66,8 @@ internal sealed class MetricsPump
                 live.Publish();
 
                 _vm.CoreLoads.Refresh();
+                try { _vm.CoreTempMap?.Tick(); }
+                catch (Exception ex) { Diag.Swallow("核心熱力圖", ex, "本拍未更新熱力圖"); }
                 PushHistories(live);
 
                 if (_vm.Stress.IsRunning) _vm.Stress.Sample(live.CpuTemp, live.CpuClock, live.CpuLoad);

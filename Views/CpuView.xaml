@@ -316,6 +316,17 @@
                 </StackPanel>
             </Border>
 
+            <!-- ===== 核心熱力圖 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="190"
+                    Visibility="{Binding CoreTempMap, Converter={StaticResource NullToCollapsed}}">
+                <StackPanel>
+                    <local:SectionHead Text="核心熱力圖" HelpKey="cpu/核心熱力圖"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,0,0,10" TextWrapping="Wrap"
+                               Text="每格代表一顆實體核心，底色由溫度決定（冷藍 → 青綠 → 黃綠 → 琥珀 → 熱紅）。沒有逐核溫度感測器的平台不會有這張圖。"/>
+                    <local:CoreHeatmap Cores="{Binding CoreTempMap.Cores}"/>
+                </StackPanel>
+            </Border>
+
             <!-- ===== 核心到核心延遲 ===== -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>

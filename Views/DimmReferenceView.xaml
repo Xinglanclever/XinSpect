@@ -1,0 +1,100 @@
+<UserControl x:Class="XinSpect.DimmReferenceView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="clr-namespace:XinSpect"
+             mc:Ignorable="d"
+             FontFamily="{StaticResource AppFont}"
+             d:DesignHeight="900" d:DesignWidth="900">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  Padding="0,0,8,0">
+        <StackPanel>
+
+            <!-- 偵測到的記憶體類型 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="偵測到的記憶體類型" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding DetectedType}"
+                               FontSize="28" FontWeight="SemiBold"
+                               Foreground="{DynamicResource PrimaryInkBrush}"
+                               Margin="0,4,0,0"/>
+                    <TextBlock Text="{Binding FormFactor, StringFormat='封裝形式：{0}'}"
+                               FontSize="12"
+                               Foreground="{DynamicResource SecondaryInkBrush}"
+                               Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 目前類型規格 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding IsKnownType, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <local:SectionHead Text="目前類型規格"/>
+                    <local:FieldRow Label="腳位數" Value="{Binding PinCountText}"/>
+                    <local:FieldRow Label="標準電壓" Value="{Binding Voltage}"/>
+                    <local:FieldRow Label="最高標準速率" Value="{Binding MaxFrequency}"/>
+                    <local:FieldRow Label="對應世代" Value="{Binding GenerationNote}"/>
+                    <local:FieldRow Label="說明" Value="{Binding Description}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 關鍵差異 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding IsKnownType, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <local:SectionHead Text="關鍵差異與注意事項"/>
+                    <ItemsControl ItemsSource="{Binding KeyFacts}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0,3,0,3">
+                                    <TextBlock Text="&#x2022;" FontSize="14"
+                                               Foreground="{DynamicResource SecondaryInkBrush}"
+                                               Margin="0,0,8,0" VerticalAlignment="Top"/>
+                                    <TextBlock Text="{Binding}" TextWrapping="Wrap"
+                                               Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- 全世代對照表 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,4">
+                <StackPanel>
+                    <local:SectionHead Text="各世代 DIMM 對照表"/>
+                    <ItemsControl ItemsSource="{Binding AllGenerations}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="{DynamicResource HairlineBrush}"
+                                        BorderThickness="0,0,0,1" Padding="0,8,0,8">
+                                    <StackPanel>
+                                        <TextBlock FontSize="15" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource PrimaryInkBrush}">
+                                            <Run Text="{Binding TypeName, Mode=OneWay}"/>
+                                            <Run Text=" — " Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                            <Run Text="{Binding Era, Mode=OneWay}"
+                                                 Foreground="{DynamicResource SecondaryInkBrush}" FontSize="12"/>
+                                        </TextBlock>
+                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                            <TextBlock Text="{Binding Pins}" FontSize="12" Width="200"
+                                                       Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                            <TextBlock Text="{Binding Voltage}" FontSize="12" Width="100"
+                                                       Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                            <TextBlock Text="{Binding MaxFreq}" FontSize="12"
+                                                       Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -96,6 +96,12 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>快取 / 記憶體延遲測試（指標追逐法，推估 L1/L2/L3/RAM 延遲）。</summary>
     public CacheBenchService Cache { get; } = new();
 
+    /// <summary>每實體核心溫度熱力圖（CPU 分頁卡片，由每秒脈動驅動）。</summary>
+    public CoreTempMapService? CoreTempMap { get; internal set; }
+
+    /// <summary>外部感測器服務：HWiNFO / AIDA64 / Core Temp 共享記憶體讀取。</summary>
+    public ExternalSensorService ExternalSensors { get; } = new();
+
     /// <summary>核心到核心延遲矩陣：原子交換往返延遲的 N×N 熱圖（CPU 分頁卡片，使用者手動觸發）。</summary>
     public CoreLatencyService CoreLatency { get; } = new();
 
@@ -185,6 +191,22 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>驅動程式稽核：已安裝驅動的簽章狀態與驅動日期（實用工具子頁，唯讀 WMI）。</summary>
     public DriverAuditService DriverAudit { get; } = new();
 
+    /// <summary>SATA / eSATA 分析：AHCI 控制器與 SATA 磁碟的世代、速度與 NCQ（實用工具子頁，唯讀 WMI）。</summary>
+    public SataAnalysisService SataAnalysis { get; } = new();
+
+    /// <summary>進階驅動分析：分類彙總、年齡分布、重複偵測與已知問題驅動（實用工具子頁，唯讀）。</summary>
+    public DriverAnalysisService DriverAnalysis { get; } = new();
+
+
+    /// <summary>PCIe 進階分析：頻寬計算、通道分配、拆分偵測（實用工具子頁）。</summary>
+    public PcieAnalysisService PcieAnalysis { get; } = new();
+
+    /// <summary>供電模組分析：VRM 相位、GPU 供電與電源接頭（實用工具子頁）。</summary>
+    public PowerDeliveryService PowerDelivery { get; } = new();
+
+    /// <summary>晶片組分析：型號偵測、北橋南橋功能（實用工具子頁）。</summary>
+    public ChipsetAnalysisService ChipsetAnalysis { get; } = new();
+
     /// <summary>SLC 快取耗盡曲線：持續寫入與斷崖偵測（儲存分頁卡片）。</summary>
     public SlcCacheBenchService SlcCache { get; } = new();
 
@@ -225,6 +247,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>平台可信度：hypervisor／VBS／HVCI 是否介入，決定所有 MSR 卡片的可信度（健康分頁卡片，零特權）。</summary>
     public PlatformTrustService PlatformTrust { get; } = new();
 
+    /// <summary>藍色中隊核心模組：安全態勢評估（Blackops 功能）。</summary>
+    public BlueSquadronModule BlueSquadron { get; } = new();
+
     /// <summary>硬體時間膠囊：保存來源、可信度與時間，並驗證後逐欄比較。</summary>
     public EvidenceLabService EvidenceLab { get; } = new();
 
@@ -254,6 +279,21 @@ public sealed class MainViewModel : ObservableObject
 
     /// <summary>一鍵裝機：依分類批次安裝常用軟體（透過 Windows 內建 winget）。</summary>
     public WingetService Winget { get; } = new();
+
+    /// <summary>NPU 檢測：偵測 Intel／AMD／Qualcomm NPU 並回報驅動與估計算力（實用工具子頁）。</summary>
+    public NpuDetectionService NpuDetection { get; } = new();
+
+    /// <summary>系統引導修復：執行 SFC、DISM、CHKDSK 等標準修復命令並記錄輸出（實用工具子頁）。</summary>
+    public BootRepairService BootRepair { get; } = new();
+
+    /// <summary>CPU 腳座腳位參考：偵測腳座型號並提供腳位分類與關鍵規格（實用工具子頁，唯讀 WMI）。</summary>
+    public CpuPinoutService CpuPinout { get; } = new();
+
+    /// <summary>DIMM 插槽定義：各世代 DIMM 的腳位數、電壓、頻率範圍與關鍵差異（實用工具子頁，唯讀 WMI）。</summary>
+    public DimmReferenceService DimmReference { get; } = new();
+
+    /// <summary>M.2 / U.2 介面分析：Key 定義、尺寸對照與已安裝插槽偵測（實用工具子頁，SMBIOS 唯讀）。</summary>
+    public M2AnalysisService M2Analysis { get; } = new();
 
     // ── 螢幕色域（EDID 解析，開機背景讀取一次）──────────────────────────────
     private IReadOnlyList<MonitorGamutInfo> _monitors = new List<MonitorGamutInfo>();
@@ -340,6 +380,12 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>留言建議：關於頁那張卡片，把使用者自己打的字送到作者的中轉（只送那些字，不夾任何硬體資訊）。</summary>
     public FeedbackService Feedback { get; } = new();
 
+    /// <summary>主板分析：WMI 讀型號 → AI 查詳細規格，附圖片確認流程（沿用共用 AiService）。</summary>
+    public MotherboardAnalysisService MotherboardAnalysis { get; private set; } = null!;
+
+    /// <summary>顯卡分析：與主板分析同模式，對象換成顯示卡。</summary>
+    public GpuAnalysisService GpuAnalysis { get; private set; } = null!;
+
     /// <summary>總覽儀表板版面：使用者自選要顯示哪些磁貼、以什麼順序排（持久化於設定）。</summary>
     public DashboardLayout Dashboard { get; }
 
@@ -354,6 +400,10 @@ public sealed class MainViewModel : ObservableObject
         Ai = new AiService(Settings) { SnapshotProvider = BuildAiSnapshot };
         // 診斷代理的本機工具箱：全部唯讀，讀的就是畫面上這同一份即時物件。
         Ai.Tools = AiToolboxBuilder.Build(this);
+
+        // 主板／顯卡分析共用同一個 AiService（必須在 Ai 建立之後才初始化）
+        MotherboardAnalysis = new MotherboardAnalysisService(Ai);
+        GpuAnalysis = new GpuAnalysisService(Ai);
 
         // 主動診斷：警示觸發時自動請 AI 分析一次。預設關閉，只有使用者在設定頁明示開啟才會送出請求；
         // 同一項目的觸發間隔由 AlertService 自行節流。
@@ -455,9 +505,9 @@ public sealed class MainViewModel : ObservableObject
     }
 
     public string AppTitle => ThemeService.Theme == AppTheme.ExtremeEdition
-        ? "XinSpect v1.9.9 Extreme Edition" : "曦覽 XinSpect";
+        ? "XinSpect v1.9.9 Blackops" : "曦覽 XinSpect";
     public string AppSubtitle => ThemeService.Theme == AppTheme.ExtremeEdition
-        ? "東方之星" : "硬體資訊總覽";
+        ? "東方之星 ─ Blackops" : "硬體資訊總覽";
 
     /// <summary>主題切換後由外殼呼叫，重新通知標題繫結更新。</summary>
     public void NotifyTitleChanged()

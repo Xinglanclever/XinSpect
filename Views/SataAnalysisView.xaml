@@ -1,0 +1,160 @@
+<UserControl x:Class="XinSpect.SataAnalysisView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <Grid Margin="0,0,6,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="2,0,0,10">
+            <local:SectionHead Text="SATA / eSATA 分析" HelpKey="sata/SATA 分析"/>
+            <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                       Text="列舉 SATA (AHCI) 控制器與連接磁碟，分析 SATA 世代、協商速度與 NCQ 支援。全程唯讀。"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- 掃描控制 -->
+                <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                    <StackPanel>
+                        <Grid>
+                            <local:SectionHead Text="掃描"/>
+                            <Button Style="{StaticResource PrimaryButton}" Content="重新掃描"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Click="Refresh_Click" IsEnabled="{Binding SataAnalysis.CanRefresh}"/>
+                        </Grid>
+                        <TextBlock Style="{StaticResource FieldValue}" Margin="0,8,0,0" TextWrapping="Wrap"
+                                   Text="{Binding SataAnalysis.Summary}"/>
+                        <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap"
+                                   Text="{Binding SataAnalysis.Status}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 控制器列表 -->
+                <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                    <StackPanel>
+                        <local:SectionHead Text="控制器"/>
+                        <Grid Margin="0,8,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="70"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource ColHead}" Text="名稱"/>
+                            <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="製造商"/>
+                            <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="類型"/>
+                            <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="AHCI 版本"/>
+                            <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="狀態"/>
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding SataAnalysis.Controllers}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid MinHeight="22" Margin="0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="90"/>
+                                            <ColumnDefinition Width="70"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Manufacturer}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding TypeText}"/>
+                                        <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding AhciVersion}"/>
+                                        <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" Text="{Binding Status}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- 磁碟列表 -->
+                <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                    <StackPanel>
+                        <local:SectionHead Text="SATA 磁碟"/>
+                        <Grid Margin="0,8,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="70"/>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="80"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource ColHead}" Text="型號"/>
+                            <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="容量"/>
+                            <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="SATA 世代"/>
+                            <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="協商速度"/>
+                            <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="NCQ"/>
+                            <TextBlock Grid.Column="5" Style="{StaticResource ColHead}" Text="韌體"/>
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding SataAnalysis.Drives}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid MinHeight="22" Margin="0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="70"/>
+                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="90"/>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="80"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Model}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Model}"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding CapacityText}"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding Generation}"/>
+                                        <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding NegotiatedSpeed}"/>
+                                        <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" Text="{Binding NcqText}"/>
+                                        <TextBlock Grid.Column="5" Style="{StaticResource FieldValue}" Text="{Binding Firmware}" FontFamily="Consolas"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- 速度參考 -->
+                <Border Style="{StaticResource Card}" Margin="0,0,0,4">
+                    <StackPanel>
+                        <local:SectionHead Text="SATA 速度參考"/>
+                        <Grid Margin="0,8,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="120"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource ColHead}" Text="世代"/>
+                            <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="原始頻寬"/>
+                            <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="理論最大值"/>
+                            <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="實際最大值"/>
+                        </Grid>
+                        <ItemsControl ItemsSource="{x:Static local:SataAnalysisService.SpeedReference}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid MinHeight="22" Margin="0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="120"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Generation}" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding RawBandwidth}"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding TheoreticalMax}"/>
+                                        <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding PracticalMax}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

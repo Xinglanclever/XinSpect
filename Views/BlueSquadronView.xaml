@@ -1,0 +1,285 @@
+<UserControl x:Class="XinSpect.BlueSquadronView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+
+            <!-- ══════════════════════════════════════════════════════════════
+                 戰術總部標頭
+                 ══════════════════════════════════════════════════════════════ -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Viewbox Grid.Column="0" Width="48" Height="48" Margin="0,0,16,0">
+                        <Canvas Width="24" Height="24">
+                            <Path Fill="{DynamicResource AccentBrush}"
+                                  Data="F1 M12,1 L3,5 V11 C3,16 7,20 12,23 17,20 21,16 21,11 V5 Z"/>
+                            <Path Fill="{DynamicResource PagePlaneBrush}" Opacity="0.85"
+                                  Data="M12,3.2 L5,6.1 V11.3 C5,15 8.2,18.5 12,21 15.8,18.5 19,15 19,11.3 V6.1 Z"/>
+                            <Path Fill="{DynamicResource CriticalBrush}"
+                                  Data="M11,8 H13 V13 H11 Z M11,14.5 H13 V16.5 H11 Z"/>
+                        </Canvas>
+                    </Viewbox>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="BLUE SQUADRON" FontSize="22" FontWeight="Bold" FontFamily="Consolas"
+                                       Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text=" ─ 防護" FontSize="16" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource PrimaryInkBrush}" VerticalAlignment="Center" Margin="4,2,0,0"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <Ellipse Width="8" Height="8" Margin="0,0,6,0" VerticalAlignment="Center"
+                                     Fill="{Binding BlueSquadron.BridgeAvailable, Converter={StaticResource BoolToRunBrush}}"/>
+                            <TextBlock Text="{Binding BlueSquadron.BridgeStatus}" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text=" ・ " Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding BlueSquadron.Posture.Status}" Style="{StaticResource FieldLabel}"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Button Grid.Column="2" Style="{StaticResource PrimaryButton}" Content="⟳ 全面掃描"
+                            VerticalAlignment="Center" Padding="16,8" Click="Refresh_Click"
+                            IsEnabled="{Binding BlueSquadron.Posture.CanRefresh}"/>
+                </Grid>
+            </Border>
+
+            <!-- ══════════════════════════════════════════════════════════════
+                 威脅評分中央儀表板
+                 ══════════════════════════════════════════════════════════════ -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="60">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- 主評分 -->
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <local:RadialGauge Grid.Column="0" Width="180" Height="180" Margin="8,8,24,8"
+                                           Caption="THREAT POSTURE" Unit="" Max="100"
+                                           Value="{Binding BlueSquadron.Posture.TotalScore, FallbackValue=0, TargetNullValue=0}"
+                                           ArcBrush="{DynamicResource CriticalBrush}"/>
+
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding BlueSquadron.Posture.TotalScore, FallbackValue=0}" FontSize="64" FontWeight="Bold"
+                                           FontFamily="Consolas" Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                <TextBlock Text="/ 100" FontSize="24" FontWeight="Light" VerticalAlignment="Bottom" Margin="4,0,0,14"
+                                           Foreground="{DynamicResource MutedInkBrush}"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding BlueSquadron.Posture.Posture.Verdict, FallbackValue=等待首次掃描…}" TextWrapping="Wrap"
+                                       FontSize="15" Margin="0,2,0,0" Foreground="{DynamicResource SecondaryInkBrush}"/>
+                            <TextBlock FontSize="11" Margin="0,8,0,0" Foreground="{DynamicResource MutedInkBrush}"
+                                       FontFamily="Consolas">
+                                <Run Text="LAST SCAN: "/>
+                                <Run Text="{Binding BlueSquadron.Posture.Posture.AssessedAt, StringFormat=yyyy-MM-dd HH:mm:ss, FallbackValue=N/A, Mode=OneWay}"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- 六防線迷你儀表列 -->
+                    <ItemsControl Grid.Row="1" ItemsSource="{Binding BlueSquadron.DefenseLines}" Margin="0,8,0,4">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="1"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel HorizontalAlignment="Center">
+                                    <local:RadialGauge Width="80" Height="80" Unit="" Max="100"
+                                                       Caption="{Binding Name}"
+                                                       Value="{Binding Score, FallbackValue=0}"
+                                                       ArcBrush="{Binding Severity, Converter={StaticResource SeverityToBrush}}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </Border>
+
+            <!-- ══════════════════════════════════════════════════════════════
+                 防線展開卡片
+                 ══════════════════════════════════════════════════════════════ -->
+            <local:SectionHead Text="防線狀態" HelpKey="bluesquadron/五大防線"/>
+            <ItemsControl ItemsSource="{Binding BlueSquadron.Posture.Posture.Categories}" local:Anim.RevealDelay="120">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,10">
+                            <Expander IsExpanded="False">
+                                <Expander.Header>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="8"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="8" CornerRadius="4"
+                                                Background="{Binding Severity, Converter={StaticResource SeverityToBrush}}"
+                                                Margin="0,0,12,0"/>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                            <TextBlock FontSize="12" Foreground="{DynamicResource MutedInkBrush}" Margin="0,2,0,0">
+                                                <Run Text="{Binding Findings.Count, Mode=OneWay}"/><Run Text=" 項檢查"/>
+                                            </TextBlock>
+                                        </StackPanel>
+                                        <Border Grid.Column="2" CornerRadius="4" Padding="6,2" Margin="0,0,12,0"
+                                                Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                                            <TextBlock FontSize="11" FontFamily="Consolas" Foreground="{DynamicResource MutedInkBrush}">
+                                                <Run Text="×"/><Run Text="{Binding Weight, Mode=OneWay}"/><Run Text="%"/>
+                                            </TextBlock>
+                                        </Border>
+                                        <TextBlock Grid.Column="3" VerticalAlignment="Center" Margin="0,0,4,0"
+                                                   FontSize="28" FontWeight="Bold" FontFamily="Consolas"
+                                                   Foreground="{Binding Severity, Converter={StaticResource SeverityToBrush}}">
+                                            <TextBlock.Text>
+                                                <Binding Path="Score" StringFormat="{}{0}" FallbackValue="—"/>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </Grid>
+                                </Expander.Header>
+                                <ItemsControl ItemsSource="{Binding Findings}" Margin="20,8,0,4">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="0,0,0,4" Padding="8,6" CornerRadius="6"
+                                                    Background="{DynamicResource Surface2Brush}">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="4"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Grid.Column="0" Width="4" CornerRadius="2" Margin="0,0,10,0"
+                                                            Background="{Binding Severity, Converter={StaticResource SeverityToBrush}}"/>
+                                                    <StackPanel Grid.Column="1">
+                                                        <DockPanel>
+                                                            <Border DockPanel.Dock="Left" CornerRadius="3" Padding="5,1" Margin="0,0,8,0"
+                                                                    Background="{Binding Severity, Converter={StaticResource SeverityToBrush}}">
+                                                                <TextBlock Text="{Binding Severity}" Foreground="White" FontSize="10" FontFamily="Consolas"/>
+                                                            </Border>
+                                                            <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
+                                                                       Foreground="{DynamicResource PrimaryInkBrush}" TextWrapping="Wrap"/>
+                                                        </DockPanel>
+                                                        <TextBlock Text="{Binding Detail}" FontSize="12" TextWrapping="Wrap" Margin="0,3,0,0"
+                                                                   Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                                        <TextBlock Text="{Binding Recommendation, StringFormat=▶ {0}}" FontSize="11.5"
+                                                                   TextWrapping="Wrap" Margin="0,3,0,0"
+                                                                   Foreground="{DynamicResource AccentBrush}"
+                                                                   Visibility="{Binding Recommendation, Converter={StaticResource TextToVis}}"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Expander>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- ══════════════════════════════════════════════════════════════
+                 威脅事件時間軸
+                 ══════════════════════════════════════════════════════════════ -->
+            <local:SectionHead Text="威脅事件時間軸" HelpKey="bluesquadron/藍色中隊"/>
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="200">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,8"
+                               Text="即時偵測事件（需啟動 BlueSquadronBridge 守護進程）"
+                               Visibility="{Binding BlueSquadron.HasThreatEvents, Converter={StaticResource InverseBoolToVis}}"/>
+                    <ItemsControl ItemsSource="{Binding BlueSquadron.ThreatTimeline}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="6" Margin="0,0,0,4" Padding="10,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="4"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="4" CornerRadius="2" Margin="0,0,10,0"
+                                                Background="{Binding Severity, Converter={StaticResource SeverityToBrush}}"/>
+                                        <TextBlock Grid.Column="1" FontSize="11" FontFamily="Consolas" VerticalAlignment="Top"
+                                                   Foreground="{DynamicResource MutedInkBrush}" Margin="0,0,12,0"
+                                                   Text="{Binding Timestamp, StringFormat=HH:mm:ss}"/>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                            <TextBlock Text="{Binding Detail}" FontSize="11.5" TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- ══════════════════════════════════════════════════════════════
+                 強化建議
+                 ══════════════════════════════════════════════════════════════ -->
+            <local:SectionHead Text="強化建議" HelpKey="bluesquadron/強化建議"/>
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="260">
+                <ItemsControl ItemsSource="{Binding BlueSquadron.Posture.Posture.Recommendations}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{DynamicResource Surface2Brush}" CornerRadius="9" Margin="0,0,0,8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="6"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" CornerRadius="9,0,0,9"
+                                            Background="{Binding Priority, Converter={StaticResource SeverityToBrush}}"/>
+                                    <StackPanel Grid.Column="1" Margin="16,12,16,13">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Border CornerRadius="4" Padding="7,1" VerticalAlignment="Center"
+                                                    Background="{Binding Priority, Converter={StaticResource SeverityToBrush}}">
+                                                <TextBlock Text="{Binding Priority}" Foreground="White" FontSize="10" FontFamily="Consolas"/>
+                                            </Border>
+                                            <Border CornerRadius="4" Padding="7,1" Margin="6,0,0,0" VerticalAlignment="Center"
+                                                    Background="{DynamicResource SurfaceBrush}">
+                                                <TextBlock Text="{Binding Difficulty}" Foreground="{DynamicResource MutedInkBrush}" FontSize="10" FontFamily="Consolas"/>
+                                            </Border>
+                                            <TextBlock Text="{Binding Title}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                                       FontSize="14" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource PrimaryInkBrush}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                                   FontSize="12.5" Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                        <TextBlock Text="{Binding Impact, StringFormat=⚡ {0}}" TextWrapping="Wrap" Margin="0,4,0,0"
+                                                   FontSize="12" Foreground="{DynamicResource AccentBrush}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Border>
+
+            <!-- 誠實聲明 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="320">
+                <StackPanel>
+                    <TextBlock FontSize="12" FontFamily="Consolas" Foreground="{DynamicResource MutedInkBrush}" Margin="0,0,0,6"
+                               Text="── HONESTY BOUNDARY ──────────────────────────────"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                               Text="本模組偵測已知攻擊痕跡與平台安全設定的事實狀態。不保證偵測所有威脅。讀不到的項目標為「無法評估」而非危險。所有檢查為唯讀——不修改任何系統設定。評分公式公開透明：每一分的扣除都可在防線展開卡片中追溯到具體的檢查項目與原始值。"/>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

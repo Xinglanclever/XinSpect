@@ -1,0 +1,65 @@
+<UserControl x:Class="XinSpect.GpuAnalysisView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect"
+             FontFamily="{StaticResource AppFont}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="0,0,6,0">
+            <StackPanel Margin="2,0,0,10">
+                <local:SectionHead Text="顯示卡分析" HelpKey="gpu/顯示卡分析"/>
+                <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
+                           Text="先讀出顯示卡型號與驅動版本，再用你設定的 AI 查詢詳細規格（GPU 晶片、製程、串流處理器、記憶體規格、功耗與競品對照）。"/>
+            </StackPanel>
+
+            <!-- 顯示卡基本資訊 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}" Content="開始分析"
+                                Click="Analyze_Click" IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolToVis}}"/>
+                        <local:SectionHead Text="基本資訊"/>
+                    </DockPanel>
+                    <local:FieldRow Label="型號" Value="{Binding GpuName}"/>
+                    <local:FieldRow Label="顯示記憶體" Value="{Binding Vram}"/>
+                    <local:FieldRow Label="驅動版本" Value="{Binding DriverVersion}"/>
+                    <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 錯誤 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
+                <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" FontSize="13"
+                           Foreground="{DynamicResource WarningBrush}"/>
+            </Border>
+
+            <!-- 圖片確認 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding ImageSearchUrl, Converter={StaticResource TextToVis}}">
+                <StackPanel>
+                    <local:SectionHead Text="確認型號"/>
+                    <TextBlock TextWrapping="Wrap" FontSize="13" Margin="0,4,0,8"
+                               Foreground="{DynamicResource SecondaryInkBrush}"
+                               Text="已開啟圖片搜尋。請對照實體顯示卡，確認是不是這一張——是的話按「是這張」，AI 才會給出針對這張卡片的詳細介紹。"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Style="{StaticResource PrimaryButton}" Content="是這張" Click="Confirm_Click"/>
+                        <Button Style="{StaticResource ToolButton}" Content="不是，換一張" Margin="8,0,0,0" Click="SearchAgain_Click"/>
+                        <Button Style="{StaticResource ToolButton}" Content="在瀏覽器開啟" Margin="8,0,0,0" Click="OpenImage_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- AI 分析結果 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding AiAnalysis, Converter={StaticResource TextToVis}}">
+                <StackPanel>
+                    <local:SectionHead Text="詳細規格（AI 查詢）"/>
+                    <TextBlock Text="{Binding AiAnalysis}" TextWrapping="Wrap" FontSize="13" LineHeight="21"
+                               Foreground="{DynamicResource SecondaryInkBrush}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,10,0,0"
+                               Text="以上內容由 AI 依型號推斷，非本機實測。若與實物不符，以顯示卡官方規格表為準。"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -128,7 +128,8 @@
                            TextWrapping="Wrap" TextAlignment="Center" MaxWidth="420"
                            Visibility="{Binding Ai.HasMessages, Converter={StaticResource InverseBoolToVis}}"
                            Text="尚無對話。點「一鍵評價本機」讓 AI 依真實數據評價，或於下方輸入問題。&#10;提示：本機 Ollama 免費且離線，資料不會離開這台電腦。"/>
-                <ScrollViewer x:Name="ChatScroll" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer x:Name="ChatScroll" VerticalScrollBarVisibility="Auto"
+                              AllowDrop="True" DragOver="SvChat_DragOver" Drop="SvChat_Drop">
                     <ItemsControl ItemsSource="{Binding Ai.Messages}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -196,14 +197,57 @@
                         Tag="這顆處理器與這張顯示卡在同級中算強嗎？請查天梯名次與相鄰對手後回答，並說明天梯分數僅供參考。"
                         IsEnabled="{Binding Ai.CanSend}" Click="Chip_Click"/>
             </WrapPanel>
+            <!-- 附件預覽 -->
+            <ItemsControl x:Name="icAttachments" Margin="0,0,0,4">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="3" Padding="3" CornerRadius="6"
+                                Background="{DynamicResource Surface2Brush}"
+                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="56"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Image Source="{Binding Thumbnail}" MaxWidth="72" MaxHeight="56" Stretch="Uniform"/>
+                                <TextBlock Grid.Row="1" Text="{Binding FileName}" FontSize="10"
+                                           Foreground="{DynamicResource SecondaryInkBrush}"
+                                           HorizontalAlignment="Center" MaxWidth="72"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <Button Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                        Margin="0,-2,-2,0" Padding="2" Width="16" Height="16"
+                                        FontSize="9" FontFamily="Segoe Fluent Icons" Content="&#xE711;"
+                                        Background="Transparent" BorderThickness="0"
+                                        Click="BtnRemoveAttachment_Click" Tag="{Binding}"
+                                        ToolTip="移除" Cursor="Hand"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBox x:Name="Input" Grid.Column="0" Style="{StaticResource ChatInput}" MinHeight="52" MaxHeight="120"
+                <!-- 附件按鈕 -->
+                <Button x:Name="btnAttach" Grid.Column="0" Width="36" Height="36"
+                        Margin="0,0,6,0" Padding="0" VerticalAlignment="Bottom"
+                        Background="Transparent" BorderThickness="0" Cursor="Hand"
+                        ToolTip="附加圖片或檔案（也可拖放或 Ctrl+V 貼上）"
+                        Click="BtnAttach_Click">
+                    <TextBlock Text="&#xE723;" FontFamily="Segoe Fluent Icons" FontSize="17"
+                               Foreground="{DynamicResource SecondaryInkBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
+                <TextBox x:Name="Input" Grid.Column="1" Style="{StaticResource ChatInput}" MinHeight="52" MaxHeight="120"
                          PreviewKeyDown="Input_PreviewKeyDown"/>
-                <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Content="送出" MinWidth="88" Margin="10,0,0,0"
+                <Button Grid.Column="2" Style="{StaticResource PrimaryButton}" Content="送出" MinWidth="88" Margin="10,0,0,0"
                         VerticalAlignment="Stretch" IsEnabled="{Binding Ai.CanSend}" Click="Send_Click"/>
             </Grid>
         </StackPanel>

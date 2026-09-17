@@ -1,0 +1,103 @@
+<UserControl x:Class="XinSpect.GpuRenderTestView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect"
+             FontFamily="{StaticResource AppFont}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel MaxWidth="820">
+
+            <!-- header -->
+            <local:SectionHead Text="繪圖管線測試"
+                               HelpKey="gpurendertest/繪圖測試"
+                               local:Anim.RevealDelay="0"/>
+
+            <TextBlock Text="依序執行三項 WPF 繪圖管線壓力測試（填充率、3D 幾何、文字渲染），每項 5 秒，測量平均 FPS 並計算綜合分數。注意：這是 WPF 的軟體光柵化路徑，不經 GPU——分數反映 CPU 端繪製速度，換顯示卡不會有明顯差異。測試期間介面將暫停回應。"
+                       Foreground="{DynamicResource SecondaryInkBrush}"
+                       TextWrapping="Wrap" Margin="0,4,0,16"
+                       local:Anim.RevealDelay="50"/>
+
+            <!-- start / cancel -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,16"
+                        local:Anim.RevealDelay="100">
+                <Button Content="開始測試" Style="{StaticResource PrimaryButton}"
+                        Click="OnStart"
+                        Visibility="{Binding CanStart, Converter={StaticResource BoolToVis}}"/>
+                <Button Content="取消" Style="{StaticResource PrimaryButton}"
+                        Click="OnCancel" Margin="8,0,0,0"
+                        Visibility="{Binding IsRunning, Converter={StaticResource BoolToVis}}"/>
+            </StackPanel>
+
+            <!-- progress -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding IsRunning, Converter={StaticResource BoolToVis}}"
+                    local:Anim.RevealDelay="150">
+                <StackPanel Margin="16">
+                    <TextBlock Text="{Binding Phase}"
+                               FontSize="14" FontWeight="SemiBold"
+                               Foreground="{DynamicResource PrimaryInkBrush}"
+                               Margin="0,0,0,6"/>
+                    <ProgressBar Value="{Binding ProgressPercent, Mode=OneWay}"
+                                 Minimum="0" Maximum="100" Height="8"
+                                 Foreground="{DynamicResource AccentBrush}"
+                                 Background="{DynamicResource Surface2Brush}"
+                                 BorderThickness="0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- results list -->
+            <ItemsControl ItemsSource="{Binding Results}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type local:RenderTestResult}">
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,8">
+                            <Grid Margin="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0"
+                                           Text="{Binding Name}"
+                                           Style="{StaticResource FieldLabel}"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding FpsText}"
+                                           Style="{StaticResource FieldValue}"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,20,0"/>
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding ScoreText}"
+                                           Foreground="{DynamicResource AccentBrush}"
+                                           FontWeight="Bold" FontSize="16"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- composite score -->
+            <Border x:Name="CompositeCard" Style="{StaticResource Card}"
+                    Margin="0,8,0,12" Visibility="Collapsed"
+                    local:Anim.RevealDelay="200">
+                <StackPanel Margin="16" HorizontalAlignment="Center">
+                    <TextBlock Text="綜合分數" FontSize="13"
+                               Foreground="{DynamicResource SecondaryInkBrush}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="CompositeText"
+                               FontSize="32" FontWeight="Bold"
+                               Foreground="{DynamicResource AccentBrush}"
+                               HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- status -->
+            <TextBlock Text="{Binding StatusLine}"
+                       Foreground="{DynamicResource SecondaryInkBrush}"
+                       TextWrapping="Wrap" Margin="0,4,0,0"
+                       local:Anim.RevealDelay="250"/>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

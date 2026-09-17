@@ -10,6 +10,7 @@ public static class PageRegistry
     private const string GOverview = "總覽";
     private const string GHardware = "硬體";
     private const string GMonitor = "監控";
+    private const string GSecurity = "安全";
     private const string GTune = "調校";
     private const string GTools = "工具";
     private const string GSystem = "系統";
@@ -144,6 +145,19 @@ public static class PageRegistry
         },
         new()
         {
+            Key = "bluesquadron", Title = "防護", Group = GSecurity,
+            IconData = "F1 M12,1 L3,5 V11 C3,16 7,20 12,23 17,20 21,16 21,11 V5 Z "
+                     + "M12,3.2 L5,6.1 V11.3 C5,15 8.2,18.5 12,21 15.8,18.5 19,15 19,11.3 V6.1 Z "
+                     + "M11,8 H13 V13 H11 Z M11,14.5 H13 V16.5 H11 Z",
+            Factory = () => new BlueSquadronView(),
+            Hint = "核心安全態勢評估：六大防線、即時威脅偵測與強化建議",
+            Keywords = ["blue squadron", "藍色中隊", "安全", "security", "posture", "核心",
+                        "hvci", "secure boot", "驅動簽章", "強化", "hardening", "分數",
+                        "dma", "韌體", "byovd", "漏洞驅動", "defender", "防火牆", "攻擊面"],
+            Advanced = true,
+        },
+        new()
+        {
             Key = "bench", Title = "效能", Group = GMonitor,
             IconData = "F1 M13,2 L4,14 L10,14 L9,22 L20,9 L13,9 Z",
             Factory = () => new BenchView(),
@@ -223,15 +237,6 @@ public static class PageRegistry
             Factory = () => new UtilitiesView(),
             Hint = "連接埠、Hosts、藍屏分析、清理、電池、天梯…",
             Keywords = ["utility", "實用", "hosts", "藍屏", "清理", "電池", "天梯", "連接埠", "啟動項", "dns"],
-        },
-        new()
-        {
-            Key = "setup", Title = "一鍵裝機", Group = GTools,
-            IconData = "F0 M4,3 H20 A1,1 0 0 1 21,4 V17 A1,1 0 0 1 20,18 H13 V20 H16 V22 H8 V20 H11 V18 H4 A1,1 0 0 1 3,17 V4 A1,1 0 0 1 4,3 Z "
-                     + "M11,6 H13 V9 H16 V11 H13 V14 H11 V11 H8 V9 H11 Z",
-            Factory = () => new SetupView(),
-            Hint = "以 winget 批次安裝常用軟體",
-            Keywords = ["setup", "winget", "裝機", "安裝", "軟體"],
         },
         new()
         {
@@ -491,6 +496,63 @@ public static class PageRegistry
         },
         new()
         {
+            Key = "setup", Title = "一鍵裝機", Group = GTools,
+            IconData = "F0 M4,3 H20 A1,1 0 0 1 21,4 V17 A1,1 0 0 1 20,18 H13 V20 H16 V22 H8 V20 H11 V18 H4 A1,1 0 0 1 3,17 V4 A1,1 0 0 1 4,3 Z "
+                     + "M11,6 H13 V9 H16 V11 H13 V14 H11 V11 H8 V9 H11 Z",
+            Factory = () => new SetupView(),
+            Hint = "以 winget 批次安裝常用軟體", Keywords = ["setup", "winget", "裝機", "安裝", "軟體"],
+        },
+        new()
+        {
+            Key = "npu", Title = "NPU 檢測", Group = GTools,
+            IconData = "F0 M2,4 H14 V12 H2 Z M4,5.5 H12 V10.5 H4 Z M6,7 h4 v2 h-4 z M5,13 h6 v1.4 h-6 z",
+            Factory = () => new NpuDetectionView(),
+            Hint = "偵測 Intel／AMD／Qualcomm NPU 並回報驅動與估計算力",
+            Keywords = ["npu", "neural", "vpu", "ai", "xdna", "hexagon", "神經", "加速器"],
+            Advanced = true,
+        },
+        new()
+        {
+            Key = "cpupinout", Title = "腳座腳位參考", Group = GTools,
+            IconData = "F0 M3,3 h10 v10 h-10 z M5,1 h1 v2 h-1 z M8,1 h1 v2 h-1 z M11,1 h1 v2 h-1 z "
+                     + "M5,13 h1 v2 h-1 z M8,13 h1 v2 h-1 z M11,13 h1 v2 h-1 z "
+                     + "M1,5 h2 v1 h-2 z M1,8 h2 v1 h-2 z M1,11 h2 v1 h-2 z "
+                     + "M13,5 h2 v1 h-2 z M13,8 h2 v1 h-2 z M13,11 h2 v1 h-2 z M6,6 h4 v4 h-4 z",
+            Factory = () => new CpuPinoutView(),
+            Hint = "處理器腳座的腳位數量、分類分佈與關鍵規格（自動偵測，唯讀 WMI）",
+            Keywords = ["cpu", "socket", "pinout", "腳座", "腳位", "插槽", "lga", "pga", "am4", "am5", "1700", "1851", "針腳"],
+        },
+        new()
+        {
+            Key = "dimmref", Title = "DIMM 插槽定義", Group = GTools,
+            IconData = "M2,3 h12 a1,1 0 0 1 1,1 v8 a1,1 0 0 1 -1,1 h-12 a1,1 0 0 1 -1,-1 v-8 a1,1 0 0 1 1,-1 z "
+                     + "M3,5 h2 v6 h-2 z M6,5 h2 v6 h-2 z M9,5 h2 v6 h-2 z",
+            Factory = () => new DimmReferenceView(),
+            Hint = "各世代 DIMM 的腳位數、電壓、頻率範圍與關鍵差異（自動偵測，唯讀 WMI）",
+            Keywords = ["dimm", "memory", "slot", "插槽", "記憶體", "ddr4", "ddr5", "ddr3", "腳位", "sodimm"],
+            Advanced = true,
+        },
+        new()
+        {
+            Key = "m2analysis", Title = "M.2 / U.2 介面分析", Group = GTools,
+            IconData = "M1,5 h14 v6 h-14 z M2.4,6.2 h11.2 v3.6 h-11.2 z "
+                     + "M4,7 h1.6 v2 h-1.6 z M6.4,7 h1.6 v2 h-1.6 z M8.8,7 h1.6 v2 h-1.6 z M11.2,7 h1.6 v2 h-1.6 z",
+            Factory = () => new M2AnalysisView(),
+            Hint = "M.2 Key 定義、尺寸對照與已安裝插槽偵測（SMBIOS 唯讀）",
+            Keywords = ["m.2", "u.2", "nvme", "sata", "ssd", "介面", "key", "2280", "2230", "sff-8639", "插槽"],
+            Advanced = true,
+        },
+        new()
+        {
+            Key = "bootrepair", Title = "系統引導修復", Group = GTools,
+            IconData = "F0 M2,2 h12 v3 h-12 z M2,6.5 h12 v3 h-12 z M2,11 h12 v3 h-12 z M11,3 h1.5 v1 h-1.5 z M11,7.5 h1.5 v1 h-1.5 z M11,12 h1.5 v1 h-1.5 z",
+            Factory = () => new BootRepairView(),
+            Hint = "執行 SFC、DISM、CHKDSK 等系統修復命令並記錄輸出",
+            Keywords = ["boot", "repair", "sfc", "dism", "chkdsk", "bootrec", "bcdedit", "引導", "修復", "開機"],
+            Advanced = true,
+        },
+        new()
+        {
             // 螢幕壞點、滑鼠、鍵盤、喇叭、動態五項全螢幕檢測。1.6.2 前掛在工具箱的「曦覽內建」組裡，
             // 現已全部移到這裡（工具箱不再有任何內建按鈕）。
             Key = "hwtest", Title = "硬體檢測", Group = GTools,
@@ -500,6 +562,87 @@ public static class PageRegistry
             Hint = "螢幕壞點／滑鼠／鍵盤／喇叭／動態五項全螢幕檢測（原生、不連網）",
             Keywords = ["hardware test", "硬體檢測", "螢幕", "熒屏", "壞點", "亮點", "dead pixel", "滑鼠", "mouse",
                         "鍵盤", "keyboard", "防鬼鍵", "nkro", "喇叭", "speaker", "聲道", "動態", "拖影", "testufo"],
+        },
+        new()
+        {
+            Key = "pcieanalysis", Title = "PCIe 分析", Group = GTools,
+            IconData = "M1,3 h14 v2 h-14 z M1,7 h14 v2 h-14 z M1,11 h14 v2 h-14 z M3,5 h2 v2 h-2 z M7,5 h2 v2 h-2 z M11,5 h2 v2 h-2 z",
+            Factory = () => new PcieAnalysisView(),
+            Hint = "PCIe 頻寬計算、通道分配與拆分偵測",
+            Keywords = ["pcie", "分析", "頻寬", "通道", "拆分", "split", "bandwidth", "lane"],
+            Advanced = true,
+        },
+        new()
+        {
+            Key = "powerdelivery", Title = "供電模組分析", Group = GTools,
+            IconData = "M6,1 h4 v3 h3 l-5,6 v-3 h-3 z M2,11 h12 v3 h-12 z",
+            Factory = () => new PowerDeliveryView(),
+            Hint = "VRM 相位、GPU 供電與電源接頭參考",
+            Keywords = ["vrm", "供電", "相位", "power", "delivery", "tdp", "瓦", "connector"],
+            Advanced = true,
+        },
+        new()
+        {
+            Key = "sata", Title = "SATA 分析", Group = GTools,
+            IconData = "M2,3 h12 v10 h-12 z M3.4,4.4 h9.2 v2 h-9.2 z M4,8 h2 v3 h-2 z M7,8 h2 v3 h-2 z M10,8 h2 v3 h-2 z",
+            Factory = () => new SataAnalysisView(),
+            Hint = "列舉 SATA 控制器與磁碟，分析 SATA 世代、協商速度與 NCQ（唯讀 WMI）",
+            Keywords = ["sata", "ahci", "esata", "控制器", "世代", "速度", "ncq", "磁碟"],
+            Advanced = true,
+        },
+        new()
+        {
+            Key = "driveranalysis", Title = "進階驅動分析", Group = GTools,
+            IconData = "M2,2 h12 v3 h-12 z M2,6.5 h12 v3 h-12 z M2,11 h8 v3 h-8 z M12,11 l-2,4 h4 z",
+            Factory = () => new DriverAnalysisView(),
+            Hint = "驅動分類彙總、年齡分布、重複偵測與已知問題驅動（基於驅動稽核，唯讀）",
+            Keywords = ["driver", "analysis", "驅動", "分析", "年齡", "重複", "問題", "建議", "更新"],
+            Advanced = true,
+        },
+        new()
+        {
+            Key = "computechart", Title = "算力圖", Group = GTools,
+            IconData = "M3,12 h2 v4 h-2 z M7,8 h2 v8 h-2 z M11,4 h2 v12 h-2 z M15,6 h2 v10 h-2 z",
+            Factory = () => new ComputeChartView(),
+            Hint = "CPU／記憶體／GPU／儲存／NPU 各維度算力視覺化",
+            Keywords = ["compute", "算力", "效能圖", "benchmark", "chart"],
+            Advanced = true,
+        },
+        new()
+        {
+            Key = "gpurendertest", Title = "繪圖管線測試", Group = GTools,
+            IconData = "M2,3 h12 v10 h-12 z M4,5 h8 v6 h-8 z M5,7 l2,-1.5 l1.5,1 l1,-0.8 l1.5,2.3 h-6 z",
+            Factory = () => new GpuRenderTestView(),
+            Hint = "WPF 繪圖管線效能測試（填充率、3D 幾何、文字渲染；走軟體光柵化，不經 GPU）",
+            Keywords = ["gpu", "render", "繪圖", "fps", "渲染", "benchmark"],
+            Advanced = true,
+        },
+        new()
+        {
+            Key = "chipsetanalysis", Title = "晶片組分析", Group = GTools,
+            IconData = "M4,2 h8 v4 h-8 z M2,8 h5 v6 h-5 z M9,8 h5 v6 h-5 z M6.5,6 h3 v2 h-3 z",
+            Factory = () => new ChipsetAnalysisView(),
+            Hint = "晶片組型號偵測、北橋南橋功能與連線參考",
+            Keywords = ["chipset", "晶片組", "北橋", "南橋", "pch", "southbridge", "northbridge"],
+            Advanced = true,
+        },
+        new()
+        {
+            Key = "boardanalysis", Title = "主機板分析", Group = GTools,
+            IconData = "M4,3 h12 v3 h-12 z M4,8 h12 v3 h-12 z M4,13 h7 v3 h-7 z M14,13 h2 v3 h-2 z",
+            Factory = () => new MotherboardAnalysisView(),
+            Hint = "WMI 讀型號 → AI 查詳細規格，附圖片確認流程",
+            Keywords = ["board", "mainboard", "主機板分析", "ai", "規格", "晶片組", "供電"],
+            Advanced = true,
+        },
+        new()
+        {
+            Key = "gpuanalysis", Title = "顯示卡分析", Group = GTools,
+            IconData = "M2,4 h12 v8 h-12 z M4,6 h8 v4 h-8 z M7,8 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0 z",
+            Factory = () => new GpuAnalysisView(),
+            Hint = "讀顯示卡型號 → AI 查詳細規格，附圖片確認流程",
+            Keywords = ["gpu", "顯卡分析", "顯示卡分析", "ai", "規格", "tflops", "功耗"],
+            Advanced = true,
         },
     ];
 

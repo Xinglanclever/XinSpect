@@ -194,6 +194,17 @@ public partial class BrowserView : UserControl
         catch { /* 無可用系統瀏覽器時靜默略過 */ }
     }
 
+    private void Downloads_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var downloads = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+            Process.Start(new ProcessStartInfo(downloads) { UseShellExecute = true });
+        }
+        catch { /* 資料夾不存在或無權限時靜默略過 */ }
+    }
+
     private void Link_RequestNavigate(object sender, RequestNavigateEventArgs e)
     {
         try { Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true }); }

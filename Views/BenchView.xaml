@@ -101,6 +101,10 @@
                     <!-- 本機重複性與量測條件：一個分數不附帶溫度／頻率，就無從判斷它是在冷機還是溫度牆下量到的 -->
                     <TextBlock Style="{StaticResource Subtitle}" Margin="2,10,0,0" TextWrapping="Wrap"
                                Text="{Binding Chess.RepeatText}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="2,2,0,0" TextWrapping="Wrap"
+                               Text="{Binding Chess.ErrorMarginText}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="2,2,0,0" TextWrapping="Wrap"
+                               Text="{Binding Chess.ConfidenceText}"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="2,4,0,0" TextWrapping="Wrap"
                                Text="{Binding Chess.ConditionText}"/>
 
@@ -307,6 +311,10 @@
                     <!-- 本機重複性與量測條件（同上：唯一的基準是這台機器自己的紀錄） -->
                     <TextBlock Style="{StaticResource Subtitle}" Margin="2,12,0,0" TextWrapping="Wrap"
                                Text="{Binding Bench.RepeatText}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="2,2,0,0" TextWrapping="Wrap"
+                               Text="{Binding Bench.ErrorMarginText}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="2,2,0,0" TextWrapping="Wrap"
+                               Text="{Binding Bench.ConfidenceText}"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="2,4,0,0" TextWrapping="Wrap"
                                Text="{Binding Bench.ConditionText}"/>
                 </StackPanel>
@@ -749,6 +757,10 @@
                                        Text="{Binding SuperPi.DeltaText}"/>
                             <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
                                        Text="{Binding SuperPi.RepeatText}"/>
+                            <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                                       Text="{Binding SuperPi.ErrorMarginText}"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" Margin="0,2,0,0" TextWrapping="Wrap"
+                                       Text="{Binding SuperPi.ConfidenceText}"/>
                             <TextBlock Style="{StaticResource FieldLabel}" Margin="0,2,0,0" TextWrapping="Wrap"
                                        Text="{Binding SuperPi.ConditionText}"/>
                         </StackPanel>

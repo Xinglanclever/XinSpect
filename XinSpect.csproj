@@ -88,6 +88,18 @@
     <Resource Remove="Bridge\**" />
   </ItemGroup>
 
+  <!-- ── 藍色中隊守護進程（BlueSquadronBridge）：不納入本體檔案集 ─────────────────
+       BlueSquadron\ 內是獨立的 .NET 10 console app（安全守護進程），使用 WinForms
+       （系統匣 NotifyIcon）等本體不引用的 API，其原始碼若被本體收入會造成命名空間衝突。 -->
+  <ItemGroup>
+    <Compile Remove="BlueSquadron\**\*.cs" />
+    <EmbeddedResource Remove="BlueSquadron\**" />
+    <Content Remove="BlueSquadron\**" />
+    <None Remove="BlueSquadron\**" />
+    <Page Remove="BlueSquadron\**" />
+    <Resource Remove="BlueSquadron\**" />
+  </ItemGroup>
+
   <!-- ── 單元測試專案：不納入本體檔案集 ───────────────────────────────────────
        Tests\ 內是獨立的 xunit 專案（ProjectReference 回指本體）。其 .cs 若被本體的
        預設 glob 收入會造成重複定義與循環相依，故一律自各預設項目類型排除。 -->
