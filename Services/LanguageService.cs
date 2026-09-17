@@ -78,10 +78,13 @@ public static class LanguageService
         return ToSimplified(text);
     }
 
-    /// <summary>繁體→簡體。</summary>
+    /// <summary>繁體→簡體：先查詞組表（「記憶體」→「内存」），再讓 Windows 處理剩下的逐字轉換。</summary>
     public static string ToSimplified(string text)
     {
         if (string.IsNullOrEmpty(text)) return text ?? "";
+        // 先替換技術用語（LCMapStringEx 會把「記憶體」變成「记忆体」而不是「内存」）
+        text = ZhTerms.ApplyToSimp(text);
+        // 再讓 Windows 處理剩下的逐字繁→簡
         int len = LCMapStringEx(LOCALE_NAME_ZH, LCMAP_SIMPLIFIED_CHINESE,
             text, text.Length, null, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
         if (len <= 0) return text;
@@ -91,10 +94,11 @@ public static class LanguageService
         return new string(buf);
     }
 
-    /// <summary>簡體→繁體。</summary>
+    /// <summary>簡體→繁體：先查反向詞組表，再讓 Windows 處理逐字轉換。</summary>
     public static string ToTraditional(string text)
     {
         if (string.IsNullOrEmpty(text)) return text ?? "";
+        text = ZhTerms.ApplyToTrad(text);
         int len = LCMapStringEx(LOCALE_NAME_ZH, LCMAP_TRADITIONAL_CHINESE,
             text, text.Length, null, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
         if (len <= 0) return text;
