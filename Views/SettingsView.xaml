@@ -165,6 +165,13 @@
                     <TextBlock x:Name="AccentHint" Style="{StaticResource Subtitle}" Margin="0,2,0,0"/>
 
                     <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,16"/>
+                    <local:SectionHead Text="語言" HelpKey="settings/語言"/>
+                    <CheckBox Style="{StaticResource SetCheck}" Margin="0,8,0,0"
+                              Content="簡體中文（切換後整個介面立即轉換，無須重啟）"
+                              IsChecked="{Binding Settings.SimplifiedChinese}"
+                              Click="LangToggle_Click"/>
+
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,16"/>
                     <local:SectionHead Text="簡易模式" HelpKey="settings/簡易模式"/>
                     <CheckBox Style="{StaticResource SetCheck}" Margin="0,8,0,0"
                               Content="側邊欄只列一般使用者用得到的頁面"

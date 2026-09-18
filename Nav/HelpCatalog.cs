@@ -1433,6 +1433,14 @@ public static class HelpCatalog
             Risk = HelpRisk.Caution,
             Safety = "只寫本程式自己的設定檔，隨時可改回來；不寫入登錄的系統區域，也不安裝任何服務。",
         },
+        ["settings/語言"] = new()
+        {
+            Title = "語言",
+            What = "繁體↔簡體中文切換。",
+            Does = "勾選後整個介面立即轉換成簡體中文（記憶體→内存、顯示卡→显卡、效能→性能等 108 組技術用語），取消勾選即回繁體。無須重啟。",
+            Risk = HelpRisk.Caution,
+            Safety = "純本程式的顯示設定，不動系統語言。",
+        },
         ["settings/簡易模式"] = new()
         {
             Title = "簡易模式",
