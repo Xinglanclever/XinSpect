@@ -1,8 +1,21 @@
 using System.Diagnostics;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace XinSpect;
+
+/// <summary>烤機模式：決定用什麼指令集加熱。</summary>
+public enum StressMode
+{
+    /// <summary>混合（預設）：浮點乘加 + 週期性超越函數。</summary>
+    Mixed,
+    /// <summary>純 FPU：密集的超越函數（sin/cos/sqrt/log），最大化浮點單元發熱。</summary>
+    FpuOnly,
+    /// <summary>AVX2：256 位元向量浮點乘加，加熱向量執行單元（會降頻的那些）。</summary>
+    Avx2,
+}
 
 /// <summary>
 /// 烤機（穩定度壓力測試）：以全部邏輯執行緒持續進行高強度浮點 / 整數運算，將 CPU 推至滿載，
@@ -24,6 +37,17 @@ public sealed class StressTestService : ObservableObject
     private int _duration = 300;
     public int DurationSeconds { get => _duration; set { if (SetProperty(ref _duration, value)) OnPropertyChanged(nameof(DurationText)); } }
     public string DurationText => _duration <= 0 ? "持續（手動停止）" : $"{_duration} 秒";
+
+    // 烤機模式
+    private StressMode _mode = StressMode.Mixed;
+    public StressMode Mode { get => _mode; set { if (SetProperty(ref _mode, value)) OnPropertyChanged(nameof(ModeText)); } }
+    public string ModeText => _mode switch
+    {
+        StressMode.Mixed => "混合（預設）",
+        StressMode.FpuOnly => "純 FPU（超越函數）",
+        StressMode.Avx2 => "AVX2（向量浮點）",
+        _ => "混合",
+    };
 
     private bool _running;
     public bool IsRunning { get => _running; private set { if (SetProperty(ref _running, value)) OnPropertyChanged(nameof(CanStart)); } }
@@ -116,6 +140,7 @@ public sealed class StressTestService : ObservableObject
         _cts = new CancellationTokenSource();
         var ct = _cts.Token;
         int threads = Threads;
+        var mode = _mode;
 
         IsRunning = true;
         Phase = "烤機中";
@@ -128,12 +153,12 @@ public sealed class StressTestService : ObservableObject
         _thermalTripped = false;
         ElapsedText = "00:00";
         StatusLine = _duration > 0
-            ? $"烤機進行中（{threads} 執行緒滿載，{_duration} 秒）… 請留意溫度曲線。"
-            : $"持續烤機中（{threads} 執行緒滿載）… 完成後請按「停止」。";
+            ? $"烤機進行中（{threads} 執行緒，{ModeText}，{_duration} 秒）… 請留意溫度曲線。"
+            : $"持續烤機中（{threads} 執行緒，{ModeText}）… 完成後請按「停止」。";
 
         try
         {
-            await Task.Run(() => RunLoad(threads, _duration, ct), ct);
+            await Task.Run(() => RunLoad(threads, _duration, mode, ct), ct);
 
             Phase = "完成";
             ProgressFraction = 1;
@@ -163,7 +188,7 @@ public sealed class StressTestService : ObservableObject
     }
 
     /// <summary>以 <paramref name="threads"/> 條執行緒持續滿載運算，直到逾時或取消。</summary>
-    private static void RunLoad(int threads, int durationSeconds, CancellationToken ct)
+    private static void RunLoad(int threads, int durationSeconds, StressMode mode, CancellationToken ct)
     {
         var sw = Stopwatch.StartNew();
         var workers = new Thread[threads];
@@ -176,27 +201,26 @@ public sealed class StressTestService : ObservableObject
                 while (!ct.IsCancellationRequested)
                 {
                     if (durationSeconds > 0 && sw.Elapsed.TotalSeconds >= durationSeconds) break;
-                    sink += HeatKernel(2_000_000);
+                    sink += mode switch
+                    {
+                        StressMode.FpuOnly => FpuKernel(2_000_000),
+                        StressMode.Avx2 => Avx2Kernel(2_000_000),
+                        _ => HeatKernel(2_000_000),
+                    };
                 }
                 Volatile.Write(ref _sink, sink);
             })
             {
                 IsBackground = true,
-                // 一般優先權：長時間烤機仍幾近滿載，但不至於餓死 UI 執行緒
                 Priority = ThreadPriority.Normal,
                 Name = $"XinStress#{t}",
             };
         }
 
         foreach (var w in workers) w.Start();
-
-        // 逾時或取消時通知各執行緒收尾（迴圈內自行檢查），主緒等待其結束
         foreach (var w in workers) w.Join();
 
-        if (ct.IsCancellationRequested && durationSeconds <= 0)
-            ct.ThrowIfCancellationRequested();   // 持續模式下由停止觸發取消
-        else
-            ct.ThrowIfCancellationRequested();   // 定時模式下若中途取消亦視為停止
+        ct.ThrowIfCancellationRequested();
     }
 
     /// <summary>高強度混合運算核心（浮點乘加 + 週期性超越函數以充分加熱 FPU）。</summary>
@@ -210,5 +234,52 @@ public sealed class StressTestService : ObservableObject
             if ((i & 4095) == 0) acc += Math.Sqrt(a) + Math.Sin(a);
         }
         return acc;
+    }
+
+    /// <summary>純 FPU 核心：每一輪都做超越函數（sin/cos/sqrt/log），最大化浮點單元發熱。</summary>
+    private static double FpuKernel(int iters)
+    {
+        double a = 1.0000001, acc = 0;
+        for (int i = 0; i < iters; i++)
+        {
+            acc += Math.Sin(a) + Math.Cos(a) + Math.Sqrt(a) + Math.Log(a + 1.0);
+            a += 1e-7;
+        }
+        return acc;
+    }
+
+    /// <summary>
+    /// AVX2 核心：256 位元向量浮點乘加，加熱向量執行單元。
+    /// 這些指令在 Intel 上會觸發 AVX offset（倍頻下降），因此是觀測「向量降頻」的好工具。
+    /// 不支援 AVX2 時退回混合核心。
+    /// </summary>
+    private static double Avx2Kernel(int iters)
+    {
+        if (!Avx2.IsSupported) return HeatKernel(iters);
+
+        unsafe
+        {
+            var a = Vector256.Create(1.0000001);
+            var step = Vector256.Create(1e-7);
+            var acc = Vector256<double>.Zero;
+            var one = Vector256.Create(1.0);
+
+            for (int i = 0; i < iters; i++)
+            {
+                // FMA: acc = acc + a * a（如果有 FMA 指令就用，沒有就用乘加分離）
+                if (Fma.IsSupported)
+                    acc = Fma.MultiplyAdd(a, a, acc);
+                else
+                    acc = Avx.Add(acc, Avx.Multiply(a, a));
+
+                acc = Avx.Add(acc, Avx.Divide(one, Avx.Add(a, one)));
+                a = Avx.Add(a, step);
+            }
+
+            // 歸約：把 4 個 lane 加起來
+            double* p = stackalloc double[4];
+            Avx.Store(p, acc);
+            return p[0] + p[1] + p[2] + p[3];
+        }
     }
 }
