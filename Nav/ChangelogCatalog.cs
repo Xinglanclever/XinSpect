@@ -48,6 +48,19 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.0.0",
+            Date = "2026-09-19",
+            Title = "Blackops 2.0：13 項修正、簡體中文、頁面重新歸類、FPU/AVX2 烤機",
+            Items =
+            [
+                "修好 13 個缺陷：HWiNFO 簽章位元序、Core Temp 名稱、晶片組被 SMBus 搶候選、PCIe 讀不存在的登錄值、繪圖測試凍結 UI 15 秒、核心驅動無安全描述符、Core Temp 華氏值標成 °C、距 TjMax 模式整頁空白、BootRepair 註解不實、十個裸 catch 改用 Diag.Swallow、HWiNFO 互斥鎖、HWiNFO ANSI 標籤。",
+                "新增 108 組真正的簡體中文技術用語：記憶體→内存、顯示卡→显卡、效能→性能等。在設定頁切換語言即時生效。",
+                "15 個頁面重新歸類：硬體分析頁（晶片組、PCIe、顯卡、SATA、供電、驅動、NPU、腳座、DIMM、M.2）從工具箱移到硬體群組，側邊欄直接看得到。算力圖與繪圖管線測試移到監控，一鍵裝機與系統修復移到系統。",
+                "烤機加入 FPU 純超越函數與 AVX2 向量浮點兩種模式。AVX2 模式在 Intel 上會觸發 AVX offset 降頻，可用效能天花板頁觀測。不支援 AVX2 時自動退回混合模式。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "1.9.9",
             Date = "2026-09-08",
             Title = "1.x 終章——Extreme Edition「東方之星」：硬體證據實驗室、紅黑 EE 主題、菜鳥儀表板",
