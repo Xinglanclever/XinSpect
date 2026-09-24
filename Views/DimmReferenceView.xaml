@@ -62,6 +62,16 @@
                 </StackPanel>
             </Border>
 
+            <!-- 缺口位置示意圖 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="缺口位置示意圖"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,8" TextWrapping="Wrap"
+                               Text="各世代金手指缺口（key）在不同位置——插槽的凸起對不上就插不進去，這是各代不能互插的原因。金色為金手指，示意疏密不代表精確腳位。目前偵測到的世代以強調色標示。"/>
+                    <local:DimmKeyDiagram Detected="{Binding DetectedType}" Height="270" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
             <!-- 全世代對照表 -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,4">
                 <StackPanel>
