@@ -60,7 +60,7 @@ public sealed class M2AnalysisService : ObservableObject
 
     static List<M2KeySpec> BuildKeySpecs() =>
     [
-        new("Key B", "缺口在右側（pin 12–19）",
+        new("Key B", "缺口在 pin 12–19 處（靠第 1 腳端）",
             "PCIe x2 + SATA + USB 3.0",
             "SATA SSD、WWAN 模組",
             [
@@ -68,7 +68,7 @@ public sealed class M2AnalysisService : ObservableObject
                 "同時支援 SATA 與 PCIe 協定",
                 "常見於早期 M.2 SATA SSD",
             ]),
-        new("Key M", "缺口在左側（pin 59–66）",
+        new("Key M", "缺口在 pin 59–66 處（靠末腳端）",
             "PCIe x4 + SATA",
             "NVMe SSD（主流高速）",
             [
@@ -76,7 +76,7 @@ public sealed class M2AnalysisService : ObservableObject
                 "NVMe SSD 幾乎都走這個 Key",
                 "部分 Key M 插槽也接受 Key B+M 的 SATA SSD",
             ]),
-        new("Key B+M", "左右兩側皆有缺口",
+        new("Key B+M", "pin 12–19 與 59–66 兩處皆有缺口",
             "PCIe x2 + SATA",
             "相容性最廣的 SATA / PCIe x2 SSD",
             [
@@ -84,14 +84,14 @@ public sealed class M2AnalysisService : ObservableObject
                 "但只用得到 PCIe x2（即使插在 Key M x4 插槽）",
                 "多數 M.2 SATA SSD 採此設計",
             ]),
-        new("Key A", "缺口在右側（pin 8–15）",
+        new("Key A", "缺口在 pin 8–15 處（靠第 1 腳端）",
             "PCIe x2 + USB 2.0 + I2C / DP",
             "Wi-Fi / 藍牙模組",
             [
                 "Intel AX200/AX210 等無線網卡使用",
                 "不用於儲存裝置",
             ]),
-        new("Key E", "缺口在右側（pin 24–31）",
+        new("Key E", "缺口在 pin 24–31 處（近中央）",
             "PCIe x2 + USB 2.0 + SDIO / UART",
             "Wi-Fi / 藍牙模組、部分 AI 加速卡",
             [

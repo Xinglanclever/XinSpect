@@ -86,6 +86,16 @@
                 </StackPanel>
             </Border>
 
+            <!-- Key 缺口示意圖 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="Key 缺口示意圖"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,8" TextWrapping="Wrap"
+                               Text="缺口位置就是 Key 的定義，也決定哪張卡插得進哪個插槽。Key M（缺口在右）走 NVMe x4，是最常見的 SSD；Key B+M 兩側都有缺口，插得進 B 或 M 插槽但只走 x2。金色為金手指，示意腳位不代表精確編號。"/>
+                    <local:M2KeyDiagram Height="270" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
             <!-- Key 定義參考 -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,4">
                 <StackPanel>
