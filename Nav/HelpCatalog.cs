@@ -1877,6 +1877,16 @@ public static class HelpCatalog
             Does = "資料來自 WMI 的 Win32_IDEController 與 Win32_DiskDrive，SATA 世代以啟發式推斷（SSD 視為 SATA III）。速度參考表列出 SATA I/II/III 的理論與實際最大值。",
         },
 
+        // ── 作業系統分析 ────────────────────────────────────────────────
+        ["osanalysis/作業系統分析"] = new()
+        {
+            Title = "作業系統分析",
+            What = "版本、組建、授權、更新與安全態勢，收攏在一頁。",
+            Does = "把散在各處的 OS 事實整合起來：系統版本與安裝日期（Win32_OperatingSystem＋登錄檔的 DisplayVersion／UBR）、Windows 授權狀態與通道（SoftwareLicensingProduct）、已安裝修補程式與待重開機旗標、以及安全態勢（UAC、VBS、記憶體完整性 HVCI、Credential Guard、Defender 即時保護）。每一項需要留意的都會標色。",
+            Risk = HelpRisk.ReadOnly,
+            Safety = "全程唯讀——WMI 查詢與登錄檔讀取，不改動任何系統設定。",
+        },
+
         // ── 進階驅動分析 ────────────────────────────────────────────────
         ["driveranalysis/進階驅動分析"] = new()
         {

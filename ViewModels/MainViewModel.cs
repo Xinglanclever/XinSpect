@@ -207,6 +207,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>晶片組分析：型號偵測、北橋南橋功能（實用工具子頁）。</summary>
     public ChipsetAnalysisService ChipsetAnalysis { get; } = new();
 
+    /// <summary>作業系統分析：版本、授權、更新與安全態勢，收攏在一頁（唯讀 WMI／登錄檔）。</summary>
+    public OsAnalysisService OsAnalysis { get; } = new();
+
     /// <summary>SLC 快取耗盡曲線：持續寫入與斷崖偵測（儲存分頁卡片）。</summary>
     public SlcCacheBenchService SlcCache { get; } = new();
 

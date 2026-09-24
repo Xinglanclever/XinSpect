@@ -378,6 +378,16 @@ public static class PageRegistry
         },
         new()
         {
+            Key = "osanalysis", Title = "作業系統分析", Group = GSystem,
+            IconData = "F0 M3,4 H21 V16 H3 Z M5,6 H19 V14 H5 Z M8,18 H16 V20 H8 Z M6,19 H18 V21 H6 Z",
+            Factory = () => new OsAnalysisView(),
+            Hint = "版本、授權、更新與安全態勢（Secure Boot／VBS／HVCI／UAC），收攏在一頁（唯讀）",
+            Keywords = ["os", "作業系統", "系統", "版本", "組建", "授權", "啟用", "更新", "uac",
+                        "vbs", "hvci", "credential guard", "安全", "windows", "build", "activation"],
+            Advanced = true,
+        },
+        new()
+        {
             Key = "settings", Title = "設定", Group = GSystem,
             IconData = "F1 M12,8 a4,4 0 1,0 0.01,0 Z M12,10 a2,2 0 1,1 -0.01,0 Z "
                      + "M10.5,1.5 h3 l0.5,2.6 a7.5,7.5 0 0 1 2.1,1.2 l2.5,-1 2,3.4 -2,1.7 a7.5,7.5 0 0 1 0,2.4 l2,1.7 -2,3.4 "
