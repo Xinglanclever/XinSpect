@@ -39,6 +39,18 @@
                 </StackPanel>
             </Border>
 
+            <!-- ============ 腳座示意圖 ============ -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding IsKnownSocket, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <local:SectionHead Text="腳座示意圖"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                               Text="頂視示意：LGA 腳位在腳座上、CPU 是平面接點；PGA 腳位在 CPU 上。金色三角是第 1 腳標記，插反了對不上——照三角對齊角落即可。柵格點只表示腳位密集，密度不代表實際腳位數。"/>
+                    <local:CpuSocketDiagram Socket="{Binding SocketName}" Mount="{Binding MountType}"
+                                            Height="300" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
             <!-- ============ 關鍵規格與小知識 ============ -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,4"
                     Visibility="{Binding IsKnownSocket, Converter={StaticResource BoolToVis}}">
