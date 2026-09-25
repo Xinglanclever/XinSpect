@@ -37,7 +37,7 @@ public sealed class HardwareEvidenceViewModel : ObservableObject
 
     public ObservableCollection<EvidenceAuditRow> Rows { get; } = [];
     public ObservableCollection<EvidenceTimelineRow> TimelineRows { get; } = [];
-    public IReadOnlyList<string> Sections { get; } = ["PCI 資源", "SPD 一致性", "裝置診斷", "電源樣本", "儲存樣本"];
+    public IReadOnlyList<string> Sections { get; } = ["PCI 資源", "SPD 一致性", "裝置診斷", "電源樣本", "儲存樣本", "驗機對帳"];
     public int SelectedSection { get => _selectedSection; set { if (SetProperty(ref _selectedSection, value)) { Rows.Clear(); TimelineRows.Clear(); Summary = "—"; Status = "按「重新擷取」讀取這一類證據。"; } } }
     public bool IsBusy { get => _busy; private set { if (SetProperty(ref _busy, value)) OnPropertyChanged(nameof(CanRun)); } }
     public bool CanRun => !_busy;
@@ -60,6 +60,7 @@ public sealed class HardwareEvidenceViewModel : ObservableObject
                 case 2: await LoadDevicesAsync(); break;
                 case 3: await CapturePowerAsync(); break;
                 case 4: await CaptureStorageAsync(); break;
+                case 5: await LoadVerifyAsync(); break;
             }
         }
         catch (Exception ex)
@@ -190,6 +191,90 @@ public sealed class HardwareEvidenceViewModel : ObservableObject
         Status = samples.Count == 0
             ? "沒有讀到 NVMe 健康紀錄；儲存堆疊或外接盒可能不轉發協定查詢，這不等於磁碟沒有 SMART。"
             : "只顯示原始值與增量，不估算「還能活幾天」。計數器倒退會被標成重設，不算負成長。";
+    }
+
+    /// <summary>
+    /// 驗機對帳:把已讀到的硬體事實互相比對,把矛盾連同證據列出來——不給分數、不下結論。
+    /// 每顆碟各跑一次 Disk 範圍規則,整機事實跑一次 Machine 範圍規則。
+    /// </summary>
+    private async Task LoadVerifyAsync()
+    {
+        var now = DateTime.UtcNow;
+        var findings = await Task.Run(() =>
+        {
+            var results = new List<(EvidenceAuditRow Row, int Order)>();
+
+            // 整機:記憶體(SMBIOS)＋電池。這兩類是整台一份事實。
+            var machineFacts = new List<VerifyFact>(SmbiosFacts.From(_vm.Smbios.Structs, now));
+            try
+            {
+                var bat = new BatteryService().Read();
+                if (bat.Present)
+                    machineFacts.AddRange(VerifyFactsCollector.Battery(bat.DesignCapacity, bat.FullCapacity, now));
+            }
+            catch (Exception ex) { Diag.Swallow("LoadVerify.Battery", ex, "電池讀不到，略過電池規則"); }
+            foreach (var find in VerifyEngine.Run(new VerifyFacts(machineFacts), VerifyScope.Machine))
+                results.Add((ToRow(find, find.Part), OrderOf(find.Verdict)));
+
+            // 每顆碟一次:NVMe 健康紀錄／ATA 識別＋SMART 屬性,加上 Win32 宣稱容量。
+            foreach (var d in _vm.PhysicalDisks.OrderBy(x => x.Index))
+            {
+                var diskFacts = new List<VerifyFact>();
+                if (d.Kind == DiskKind.NvmeSsd)
+                    diskFacts.AddRange(VerifyFactsCollector.Nvme(StorageSmartService.TryReadNvmeHealth(d.Index), now));
+                else
+                {
+                    var info = StorageSmartService.TryReadAtaIdentify(d.Index) is { } raw
+                        ? AtaIdentify.Decode(raw) : null;
+                    double? claimed = d.SizeBytes > 0 ? d.SizeBytes / 1_000_000_000.0 : null;
+                    diskFacts.AddRange(VerifyFactsCollector.Ata(
+                        info, claimed, StorageSmartService.TryReadAtaAttributes(d.Index), now));
+                }
+                if (diskFacts.Count == 0) continue;
+
+                string scope = d.Model is { Length: > 0 } m ? $"{PartStorage(d)} ・ {m}" : PartStorage(d);
+                foreach (var find in VerifyEngine.Run(new VerifyFacts(diskFacts), VerifyScope.Disk))
+                    results.Add((ToRow(find, scope), OrderOf(find.Verdict)));
+            }
+            return results;
+        });
+
+        // 矛盾在最前、讀不到其次、相符最後——但每一列都留著,「讀不到」跟「相符」一樣要看得見。
+        foreach (var (row, _) in findings.OrderBy(x => x.Order))
+            Rows.Add(row);
+
+        int conflict = Rows.Count(x => x.Severity is Severity.Warning or Severity.Serious or Severity.Critical);
+        int unread = findings.Count(x => x.Order == 1);
+        Summary = $"{findings.Count} 條規則 ・ 矛盾 {conflict} ・ 讀不到 {unread} ・ 相符 {findings.Count - conflict - unread}";
+        Status = findings.Count == 0
+            ? "沒有可對帳的事實——記憶體與磁碟資訊都還沒讀到（磁碟讀取需要管理員權限）。"
+            : "只把「對不上」指出來,不給分數也不下「正品／翻新」結論；每條矛盾都附了可能的正當成因。";
+    }
+
+    private static string PartStorage(PhysicalDiskInfo d) => d.Kind switch
+    {
+        DiskKind.NvmeSsd => "NVMe 固態硬碟",
+        DiskKind.SataSsd => "SATA 固態硬碟",
+        DiskKind.Hdd => "機械硬碟",
+        _ => "儲存裝置",
+    };
+
+    /// <summary>矛盾排最前(0)、讀不到次之(1)、相符最後(2)。</summary>
+    private static int OrderOf(VerifyVerdict v) => v switch
+    {
+        VerifyVerdict.Conflict => 0, VerifyVerdict.Unread => 1, _ => 2,
+    };
+
+    private static EvidenceAuditRow ToRow(VerifyFinding f, string scope)
+    {
+        string detail = f.BenignCause is { Length: > 0 } b ? $"{f.Explanation}（可能的正當成因：{b}）" : f.Explanation;
+        string evidence = f.Evidence.Length > 0
+            ? string.Join("；", f.Evidence.Select(e => $"{e.Label}={e.Value}"))
+            : "—";
+        string source = f.Evidence.Length > 0
+            ? string.Join(" / ", f.Evidence.Select(e => e.Method).Distinct())
+            : "引擎判定";
+        return new EvidenceAuditRow($"{f.Id} {f.Title}", scope, detail, evidence, source, f.Severity);
     }
 
     private void ShowTimeline(string category, DateTimeOffset from, DateTimeOffset to)

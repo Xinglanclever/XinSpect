@@ -19,6 +19,7 @@ public enum FactId
     NvmePowerCycles, NvmeUnsafeShutdowns, NvmeCriticalWarning,
     SmartPowerOnHours, SmartHostWritesGiB, SmartPowerCycles,
     AtaRotationRate, AtaTotalLba, AtaAcsVersion, DiskClaimedCapacityGB, DiskModel,
+    SmartSpinUpPresent,
 
     // ── 電池（Win32_Battery／WMI 電池靜態資料）──
     BatteryDesignCapacityMWh, BatteryFullCapacityMWh,
@@ -36,6 +37,17 @@ public enum FactTrust { Native, FirmwareReported, Derived }
 
 /// <summary>一條規則的判定：相符／矛盾／無法判定。</summary>
 public enum VerifyVerdict { Match, Conflict, Unread }
+
+/// <summary>
+/// 規則的作用範圍。
+/// </summary>
+/// <remarks>
+/// 記憶體與電池是整台機器一份事實，儲存裝置則是每顆碟一份。若把碟的索引編進
+/// <see cref="FactId"/>（<c>Disk0PowerOnHours</c>、<c>Disk1PowerOnHours</c>…），列舉會爆掉、
+/// 規則也得為每顆碟複製一遍。所以改成：整機事實跑一次 <see cref="Machine"/> 規則，
+/// 每顆碟各跑一次 <see cref="Disk"/> 規則，由呼叫端把碟的標示併進結果。
+/// </remarks>
+public enum VerifyScope { Machine, Disk }
 
 /// <summary>
 /// 一個帶完整血統的硬體事實。畫面上每一個數字都必須說得出自己是怎麼來的，這是本專案誠實主軸

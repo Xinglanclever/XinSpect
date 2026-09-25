@@ -134,7 +134,7 @@ public sealed class EvidenceLabIntegrationTests
                 view.Measure(new Size(1280, 800));
                 view.Arrange(new Rect(0, 0, 1280, 800));
                 view.RunSmokeAsync().GetAwaiter().GetResult();
-                Assert.Equal(4, vm.HardwareEvidence.SelectedSection);
+                Assert.Equal(5, vm.HardwareEvidence.SelectedSection);
                 Assert.False(vm.HardwareEvidence.IsBusy);
             }
             catch (Exception ex) { failure = ex; }

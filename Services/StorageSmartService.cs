@@ -18,12 +18,19 @@ public sealed class SmartDriveRow
 /// <summary>一列 S.M.A.R.T. 資料：NVMe 時填 Name／ValueText，SATA 時四欄都填。</summary>
 public sealed class SmartRow
 {
-    public SmartRow(string name, string valueText, string worstText, string rawText)
-    { Name = name; ValueText = valueText; WorstText = worstText; RawText = rawText; }
+    public SmartRow(string name, string valueText, string worstText, string rawText,
+                    byte id = 0, ulong? rawValue = null)
+    { Name = name; ValueText = valueText; WorstText = worstText; RawText = rawText; Id = id; RawValue = rawValue; }
     public string Name { get; }
     public string ValueText { get; }
     public string WorstText { get; }
     public string RawText { get; }
+
+    /// <summary>SATA 屬性編號（9＝通電時間、12＝電源循環…）；NVMe 與分隔列為 0。</summary>
+    public byte Id { get; }
+
+    /// <summary>原始值的小端整數；沒有數值意義時為 <c>null</c>——**不要用 0 代替**。</summary>
+    public ulong? RawValue { get; }
 }
 
 /// <summary>
@@ -418,10 +425,25 @@ public sealed class StorageSmartService : ObservableObject
                 $"{id} {AttributeName(id)}",
                 value.ToString(),
                 worst.ToString(),
-                $"{hex}（LE: {le:N0}）"));
+                $"{hex}（LE: {le:N0}）",
+                id, le));           // 編號與數值一併帶出,供驗機規則對帳
         }
         return rows;
     }
+
+    /// <summary>
+    /// SATA SMART 屬性(帶編號與原始值);讀不到或逾時回 <c>null</c>。
+    /// **不回空清單**——空清單會被誤讀成「讀到了,但這顆碟沒有任何屬性」,那是另一回事。
+    /// </summary>
+    public static IReadOnlyList<SmartRow>? TryReadAtaAttributes(int index)
+    {
+        byte[]? sector = TryReadAtaSmartClassic(index);
+        return sector is null || sector.Length < 512 ? null : DecodeAtaAttributes(sector);
+    }
+
+    /// <summary>NVMe 健康紀錄的型別化快照;讀不到、逾時或長度不足回 <c>null</c>。</summary>
+    public static NvmeHealthSnapshot? TryReadNvmeHealth(int index)
+        => TryReadNvmeLog(index) is { } log ? NvmeHealth.Decode(log) : null;
 
     /// <summary>常見屬性 ID 的通稱；不認得的 ID 顯示「廠商自訂」——不猜定義。</summary>
     public static string AttributeName(byte id) => id switch

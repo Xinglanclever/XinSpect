@@ -87,6 +87,9 @@ public sealed class SmbiosService
     public ObservableCollection<SmbiosSlotRow> Slots { get; } = [];
     public ObservableCollection<SmbiosDimmRow> MemoryDevices { get; } = [];
 
+    /// <summary>解析後保留的原始結構，供驗機事實收集(<see cref="SmbiosFacts.From"/>)重用,不必再讀一次表。</summary>
+    public IReadOnlyList<SmbiosStruct> Structs { get; private set; } = [];
+
     public SmbiosService() => Available = Load();
 
     private bool Load()
@@ -104,6 +107,7 @@ public sealed class SmbiosService
             if (tableLen <= 0 || 8 + tableLen > buf.Length) return false;
             var table = buf[8..(8 + tableLen)];
             var structs = SmbiosParser.Parse(table);
+            Structs = structs;
 
             foreach (var s in structs)
             {
