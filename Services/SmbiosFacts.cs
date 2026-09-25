@@ -26,8 +26,13 @@ public static class SmbiosFacts
     private const int DimmConfigured = 0x20;    // word：實際運行速度 MT/s（SMBIOS 2.7+）
 
     // Type 16（Physical Memory Array）欄位位移
+    private const int ArrayErrorCorrection = 0x06;  // byte：3=無 4=同位元 5=單位元ECC 6=多位元ECC 7=CRC
     private const int ArrayMaxCapacity = 0x07;  // dword：KB
     private const int ArrayDeviceCount = 0x0D;  // word：插槽數
+
+    // Type 17（Memory Device）ECC 相關
+    private const int DimmTotalWidth = 0x08;    // word：含 ECC 的總資料寬度(bits)；0xFFFF=未知
+    private const int DimmDataWidth = 0x0A;     // word：不含 ECC 的資料寬度(bits)；0xFFFF=未知
 
     public static List<VerifyFact> From(IEnumerable<SmbiosStruct> structs, DateTime now)
     {
@@ -67,6 +72,23 @@ public static class SmbiosFacts
                 $"SMBIOS Type 16 +0x{ArrayMaxCapacity:X2}（單位 KB）", now));
             list.Add(Number(FactId.ArraySlotCount, array.WordAt(ArrayDeviceCount), "",
                 $"SMBIOS Type 16 +0x{ArrayDeviceCount:X2}", now));
+
+            // ECC 一致性(R-MEM-05)需要兩邊:陣列宣稱的錯誤更正型別,與模組實際有沒有 ECC 位元。
+            if (array.Length > ArrayErrorCorrection)
+                list.Add(Number(FactId.MemEccType, array.ByteAt(ArrayErrorCorrection), "",
+                    $"SMBIOS Type 16 +0x{ArrayErrorCorrection:X2}（錯誤更正型別碼）", now));
+        }
+
+        // 模組是否帶 ECC 位元:任一條的總寬度 > 資料寬度(如 72 vs 64)即有 ECC 位元。
+        // 兩者皆非 0xFFFF(未知)才判得出;全部未知就不產出這個事實,讓規則判「無法判定」。
+        var widthKnown = dimms.Where(d => d.Length > DimmDataWidth + 1
+            && d.WordAt(DimmTotalWidth) is not (0 or 0xFFFF)
+            && d.WordAt(DimmDataWidth) is not (0 or 0xFFFF)).ToList();
+        if (widthKnown.Count > 0)
+        {
+            bool eccBits = widthKnown.Any(d => d.WordAt(DimmTotalWidth) > d.WordAt(DimmDataWidth));
+            list.Add(Number(FactId.MemEccBitsPresent, eccBits ? 1 : 0, "",
+                $"SMBIOS Type 17 +0x{DimmTotalWidth:X2} 總寬度 vs +0x{DimmDataWidth:X2} 資料寬度", now));
         }
         return list;
     }

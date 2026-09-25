@@ -66,12 +66,12 @@ public class SmbiosFactsTests
         => Assert.Empty(SmbiosFacts.From([], DateTime.UnixEpoch));
 
     [Fact]
-    public void 真實表_四條記憶體規則都判得出來_不留無法判定()
+    public void 真實表_五條記憶體規則都判得出來_不留無法判定()
     {
         var findings = VerifyEngine.Run(new VerifyFacts(RealFacts()))
                                    .Where(x => x.Id.StartsWith("R-MEM-")).ToList();
 
-        Assert.Equal(4, findings.Count);
+        Assert.Equal(5, findings.Count);
         Assert.All(findings, x => Assert.NotEqual(VerifyVerdict.Unread, x.Verdict));
         Assert.All(findings.Where(x => x.Verdict == VerifyVerdict.Conflict),
             x => Assert.False(string.IsNullOrWhiteSpace(x.BenignCause)));   // 矛盾必須附得出正當成因
@@ -109,5 +109,58 @@ public class SmbiosFactsTests
         data[0x18] = 2;   // 序號＝字串 2
         data[0x1A] = 3;   // 料號＝字串 3
         return new SmbiosStruct(17, 0x1000, data, ["Micron", "DEADBEEF", "MTA8ATF1G64AZ"]);
+    }
+
+    // ── ECC 一致性(R-MEM-05)的事實抽取：Type16 錯誤更正型別 + Type17 總寬度 vs 資料寬度 ──
+
+    private static SmbiosStruct Array16(byte errorCorrection)
+    {
+        var data = new byte[0x0F];
+        data[0] = 16;
+        data[1] = 0x0F;
+        data[0x06] = errorCorrection;                              // 錯誤更正型別
+        BitConverter.GetBytes(0x400000u).CopyTo(data, 0x07);       // 上限 4 GB(KB)
+        BitConverter.GetBytes((ushort)2).CopyTo(data, 0x0D);       // 2 槽
+        return new SmbiosStruct(16, 0x0E00, data, []);
+    }
+
+    private static SmbiosStruct DimmWidth(ushort totalWidth, ushort dataWidth)
+    {
+        var data = new byte[0x22];
+        data[0] = 17; data[1] = 0x22;
+        BitConverter.GetBytes(totalWidth).CopyTo(data, 0x08);
+        BitConverter.GetBytes(dataWidth).CopyTo(data, 0x0A);
+        BitConverter.GetBytes((ushort)8192).CopyTo(data, 0x0C);   // 8 GB,才算有插模組
+        data[0x17] = 1; data[0x18] = 2; data[0x1A] = 3;
+        return new SmbiosStruct(17, 0x1001, data, ["Micron", "SN", "PN"]);
+    }
+
+    [Theory]
+    [InlineData((byte)3, (ushort)64, (ushort)64, 3.0, 0.0)]   // 無 ECC,寬度相等
+    [InlineData((byte)6, (ushort)72, (ushort)64, 6.0, 1.0)]   // 多位元 ECC,72>64 有 ECC 位元
+    [InlineData((byte)6, (ushort)64, (ushort)64, 6.0, 0.0)]   // 宣稱 ECC 但寬度相等=沒 ECC 位元(假 ECC)
+    public void ECC事實_型別碼與位元寬度都解得出(
+        byte ecc, ushort total, ushort dataW, double expectType, double expectBits)
+    {
+        var facts = new VerifyFacts(SmbiosFacts.From([Array16(ecc), DimmWidth(total, dataW)], DateTime.UnixEpoch));
+        Assert.Equal(expectType, facts.Num(FactId.MemEccType));
+        Assert.Equal(expectBits, facts.Num(FactId.MemEccBitsPresent));
+    }
+
+    [Fact]
+    public void 寬度未知時_不產出ECC位元事實()
+    {
+        var facts = new VerifyFacts(SmbiosFacts.From([Array16(3), DimmWidth(0xFFFF, 0xFFFF)], DateTime.UnixEpoch));
+        Assert.False(facts.Has(FactId.MemEccBitsPresent));   // 未知就不猜,讓規則判無法判定
+    }
+
+    [Fact]
+    public void 真實表_ECC核對規則判得出來_不留無法判定()
+    {
+        var f = VerifyEngine.Run(new VerifyFacts(RealFacts())).SingleOrDefault(x => x.Id == "R-MEM-05");
+        Assert.NotNull(f);
+        // 本機是 X299 HEDT 非 ECC UDIMM:應判「一致:無 ECC」;若韌體沒填寬度則為無法判定。
+        Assert.True(f!.Verdict is VerifyVerdict.Match or VerifyVerdict.Unread,
+            $"實機 ECC 核對不該是矛盾,實得 {f.Verdict}:{f.Explanation}");
     }
 }

@@ -106,13 +106,25 @@ public class VerifyRulesTests
             Num(FactId.DimmSizeTotalMiB, totalMiB, "MiB"), Num(FactId.ArrayMaxCapacityMiB, maxMiB, "MiB"),
             Num(FactId.ArraySlotCount, slots), Num(FactId.DimmCount, dimms)).Verdict);
 
+    // ── R-MEM-05：宣稱 ECC 與模組實際位元寬度對不上（工作站二手機關鍵）──
+
+    [Theory]
+    [InlineData(3, 0, VerifyVerdict.Match)]      // 宣稱無 ECC + 沒有 ECC 位元 → 一致
+    [InlineData(6, 1, VerifyVerdict.Match)]      // 宣稱多位元 ECC + 有 ECC 位元 → 一致
+    [InlineData(6, 0, VerifyVerdict.Conflict)]   // 宣稱 ECC 卻沒有 ECC 位元 → 買到假 ECC
+    [InlineData(3, 1, VerifyVerdict.Match)]      // 有 ECC 位元卻宣稱無:韌體常態,單向規則不判矛盾
+    [InlineData(4, 0, VerifyVerdict.Match)]      // 同位元(4)不算 ECC,無位元 → 一致
+    public void R_MEM_05_ECC宣稱與位元寬度(double eccType, double bits, VerifyVerdict expected)
+        => Assert.Equal(expected, One("R-MEM-05",
+            Num(FactId.MemEccType, eccType), Num(FactId.MemEccBitsPresent, bits)).Verdict);
+
     [Fact]
-    public void 記憶體四條規則_缺任一依賴都由引擎判為無法判定()
+    public void 記憶體五條規則_缺任一依賴都由引擎判為無法判定()
     {
         var empty = VerifyEngine.Run(new VerifyFacts([]));
         Assert.All(empty.Where(x => x.Id.StartsWith("R-MEM-")),
             x => Assert.Equal(VerifyVerdict.Unread, x.Verdict));
-        Assert.Equal(4, empty.Count(x => x.Id.StartsWith("R-MEM-")));
+        Assert.Equal(5, empty.Count(x => x.Id.StartsWith("R-MEM-")));
     }
 
     // ── 儲存裝置：每顆碟各跑一次，故要指定 VerifyScope.Disk ──────────────────

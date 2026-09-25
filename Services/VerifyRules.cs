@@ -32,6 +32,8 @@ public static class FactCatalog
         [FactId.DimmSizeTotalMiB] = ("已安裝記憶體總量", false),
         [FactId.ArrayMaxCapacityMiB] = ("記憶體陣列宣稱上限", false),
         [FactId.ArraySlotCount] = ("記憶體插槽數", false),
+        [FactId.MemEccType] = ("記憶體陣列宣稱的錯誤更正型別", false),
+        [FactId.MemEccBitsPresent] = ("模組是否帶 ECC 位元(總寬度>資料寬度)", false),
         [FactId.NvmePowerOnHours] = ("NVMe 通電小時", true),
         [FactId.NvmeDataUnitsWritten] = ("NVMe 累計寫入量", true),
         [FactId.NvmePercentageUsed] = ("NVMe 已用壽命", true),
@@ -104,6 +106,7 @@ public static class VerifyRules
     private const string T02 = "記憶體模組序號異常";
     private const string T03 = "記憶體未跑在標稱速度";
     private const string T04 = "記憶體陣列宣稱與實際安裝對不上";
+    private const string T05 = "宣稱 ECC 與模組實際位元寬度對不上";
     private const string S01 = "通電小時與累計寫入量對不上";
     private const string S02 = "已用壽命與累計寫入量對不上";
     private const string S03 = "不安全關機次數多於通電次數";
@@ -123,6 +126,8 @@ public static class VerifyRules
         new("R-MEM-04", PartMemory, T04,
             [FactId.DimmSizeTotalMiB, FactId.ArrayMaxCapacityMiB, FactId.ArraySlotCount, FactId.DimmCount],
             ArrayMismatch),
+        new("R-MEM-05", PartMemory, T05,
+            [FactId.MemEccType, FactId.MemEccBitsPresent], EccConsistency),
 
         // ── 儲存裝置：每顆碟各跑一次（VerifyScope.Disk）。翻新碟幾乎都在這幾條對帳上露餡。──
         new("R-SSD-01", PartStorage, S01,
@@ -233,6 +238,31 @@ public static class VerifyRules
 
         return new("R-MEM-04", PartMemory, T04, VerifyVerdict.Match, Severity.Good,
             "安裝總量與模組數都在陣列宣告的範圍內。", null, ev);
+    }
+
+    /// <summary>SMBIOS Type16 錯誤更正碼:3=無、4=同位元、5=單位元 ECC、6=多位元 ECC、7=CRC。5 以上才算真 ECC。</summary>
+    private static bool ClaimsEcc(double eccType) => eccType >= 5;
+
+    private static VerifyFinding EccConsistency(VerifyFacts f)
+    {
+        double eccType = f.Num(FactId.MemEccType)!.Value;
+        bool bits = f.Num(FactId.MemEccBitsPresent)!.Value > 0;
+        var ev = new[] { f.Get(FactId.MemEccType)!, f.Get(FactId.MemEccBitsPresent)! };
+        bool claims = ClaimsEcc(eccType);
+
+        if (claims && !bits)
+            return new("R-MEM-05", PartMemory, T05, VerifyVerdict.Conflict, Severity.Warning,
+                "陣列宣稱支援 ECC,但每條模組的總寬度都等於資料寬度——沒有多出來的 ECC 位元。",
+                "少數主機板的 SMBIOS 把錯誤更正欄位亂填;但買到「ECC 工作站」實際插的是無 ECC 記憶體也是這個樣子。",
+                ev);
+
+        // 反方向(有 ECC 位元卻宣稱無)刻意不判矛盾:本機 X299 實測就是這樣——模組帶 72 位元寬度、
+        // 陣列卻回報「無錯誤更正」,這在消費／HEDT 板極常見(韌體沒填或 ECC 沒啟用),不是賣家造假。
+        // 拿無謂的紅字嚇到買家、害他殺掉正當交易,誤判代價不對稱,故只單向判「宣稱 ECC 卻沒位元」。
+        return new("R-MEM-05", PartMemory, T05, VerifyVerdict.Match, Severity.Good,
+            claims ? "宣稱 ECC,且模組確實帶 ECC 位元,兩邊一致。"
+            : bits ? "模組帶 ECC 位元(陣列雖回報無錯誤更正,多為韌體未填或未啟用,不算造假)。"
+                   : "宣稱無 ECC,且模組也沒有 ECC 位元,兩邊一致。", null, ev);
     }
 
     // ── 儲存裝置六條：翻新碟幾乎都在這幾條對帳上露餡 ────────────────────────

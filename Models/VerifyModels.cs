@@ -13,6 +13,7 @@ public enum FactId
     // ── 記憶體（SMBIOS Type 16／17）──
     DimmCount, DimmManufacturers, DimmPartNumbers, DimmSerials,
     DimmSpeedMts, DimmConfiguredMts, DimmSizeTotalMiB, ArrayMaxCapacityMiB, ArraySlotCount,
+    MemEccType, MemEccBitsPresent,
 
     // ── 儲存（NVMe Log 0x02／ATA SMART／IDENTIFY DEVICE）──
     NvmePowerOnHours, NvmeDataUnitsWritten, NvmePercentageUsed,
