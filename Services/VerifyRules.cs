@@ -9,7 +9,8 @@ public sealed record VerifyRule(
     string Part,
     string Title,
     FactId[] RequiredFacts,
-    Func<VerifyFacts, VerifyFinding> Evaluate);
+    Func<VerifyFacts, VerifyFinding> Evaluate,
+    VerifyScope Scope = VerifyScope.Machine);
 
 /// <summary>
 /// FactId 的顯示名與權限需求。
@@ -45,6 +46,7 @@ public static class FactCatalog
         [FactId.AtaAcsVersion] = ("ACS 版本", true),
         [FactId.DiskClaimedCapacityGB] = ("宣稱容量", false),
         [FactId.DiskModel] = ("磁碟型號", false),
+        [FactId.SmartSpinUpPresent] = ("是否存在機械專屬屬性", true),
         [FactId.BatteryDesignCapacityMWh] = ("電池設計容量", false),
         [FactId.BatteryFullCapacityMWh] = ("電池滿充容量", false),
     };
@@ -62,8 +64,12 @@ public static class FactCatalog
 /// </summary>
 public static class VerifyEngine
 {
-    public static IReadOnlyList<VerifyFinding> Run(VerifyFacts facts)
-        => VerifyRules.All.Select(r => Evaluate(r, facts)).ToList();
+    /// <summary>
+    /// 跑指定範圍的規則。整機事實跑一次 <see cref="VerifyScope.Machine"/>，
+    /// 每顆碟各跑一次 <see cref="VerifyScope.Disk"/>——理由見 <see cref="VerifyScope"/>。
+    /// </summary>
+    public static IReadOnlyList<VerifyFinding> Run(VerifyFacts facts, VerifyScope scope = VerifyScope.Machine)
+        => VerifyRules.All.Where(r => r.Scope == scope).Select(r => Evaluate(r, facts)).ToList();
 
     /// <summary>
     /// 缺依賴就直接判「無法判定」，並列出缺的是哪幾個事實、需不需要管理員權限。
@@ -91,11 +97,20 @@ public static class VerifyEngine
 public static class VerifyRules
 {
     public const string PartMemory = "記憶體";
+    public const string PartStorage = "儲存裝置";
+    public const string PartBattery = "電池";
 
     private const string T01 = "各條記憶體模組並非同批";
     private const string T02 = "記憶體模組序號異常";
     private const string T03 = "記憶體未跑在標稱速度";
     private const string T04 = "記憶體陣列宣稱與實際安裝對不上";
+    private const string S01 = "通電小時與累計寫入量對不上";
+    private const string S02 = "已用壽命與累計寫入量對不上";
+    private const string S03 = "不安全關機次數多於通電次數";
+    private const string S04 = "NVMe 回報關鍵警告";
+    private const string S05 = "宣稱容量與可定址容量對不上";
+    private const string S06 = "宣稱轉速與屬性集矛盾";
+    private const string B01 = "電池滿充容量明顯低於設計容量";
 
     public static readonly VerifyRule[] All =
     [
@@ -108,6 +123,24 @@ public static class VerifyRules
         new("R-MEM-04", PartMemory, T04,
             [FactId.DimmSizeTotalMiB, FactId.ArrayMaxCapacityMiB, FactId.ArraySlotCount, FactId.DimmCount],
             ArrayMismatch),
+
+        // ── 儲存裝置：每顆碟各跑一次（VerifyScope.Disk）。翻新碟幾乎都在這幾條對帳上露餡。──
+        new("R-SSD-01", PartStorage, S01,
+            [FactId.NvmeDataUnitsWritten, FactId.NvmePowerOnHours], WriteRateImplausible, VerifyScope.Disk),
+        new("R-SSD-02", PartStorage, S02,
+            [FactId.NvmePercentageUsed, FactId.NvmeDataUnitsWritten], ZeroWearImplausible, VerifyScope.Disk),
+        new("R-SSD-03", PartStorage, S03,
+            [FactId.NvmeUnsafeShutdowns, FactId.NvmePowerCycles], UnsafeExceedsCycles, VerifyScope.Disk),
+        new("R-SSD-04", PartStorage, S04,
+            [FactId.NvmeCriticalWarning], CriticalWarning, VerifyScope.Disk),
+        new("R-SSD-05", PartStorage, S05,
+            [FactId.DiskClaimedCapacityGB, FactId.AtaTotalLba], CapacityMismatch, VerifyScope.Disk),
+        new("R-SSD-06", PartStorage, S06,
+            [FactId.AtaRotationRate, FactId.SmartSpinUpPresent], RotationMismatch, VerifyScope.Disk),
+
+        // ── 電池：整機一份事實 ──
+        new("R-BAT-01", PartBattery, B01,
+            [FactId.BatteryDesignCapacityMWh, FactId.BatteryFullCapacityMWh], BatteryWorn),
     ];
 
     /// <summary>逐條模組的字串以 <c>|</c> 相連（collector 產出的形式）。</summary>
@@ -200,5 +233,145 @@ public static class VerifyRules
 
         return new("R-MEM-04", PartMemory, T04, VerifyVerdict.Match, Severity.Good,
             "安裝總量與模組數都在陣列宣告的範圍內。", null, ev);
+    }
+
+    // ── 儲存裝置六條：翻新碟幾乎都在這幾條對帳上露餡 ────────────────────────
+
+    private static VerifyFinding Ok(string id, string title, string why, params VerifyFact[] ev)
+        => new(id, PartStorage, title, VerifyVerdict.Match, Severity.Good, why, null, ev);
+
+    private static VerifyFinding Bad(string id, string title, Severity sev, string why, string? benign,
+        params VerifyFact[] ev)
+        => new(id, PartStorage, title, VerifyVerdict.Conflict, sev, why, benign, ev);
+
+    private static VerifyFinding WriteRateImplausible(VerifyFacts f)
+    {
+        double written = f.Num(FactId.NvmeDataUnitsWritten)!.Value;
+        double hours = f.Num(FactId.NvmePowerOnHours)!.Value;
+        var ev = new[] { f.Get(FactId.NvmeDataUnitsWritten)!, f.Get(FactId.NvmePowerOnHours)! };
+
+        // 通電小時是整數：讀到 0 代表「不足 1 小時」，不是「零時間」。這種情況算不出有意義的
+        // 平均速率（新碟複製一份資料就能寫進幾百 GiB），所以不判——不猜也不冤枉。
+        if (hours <= 0)
+            return new("R-SSD-01", PartStorage, S01, VerifyVerdict.Unread, Severity.Neutral,
+                "通電小時為 0（不足一小時），算不出平均寫入速率，因此不判定。", null, ev);
+
+        double rate = written / hours;
+        return rate > VerifyThresholds.MaxPlausibleGiBPerHour
+            ? Bad("R-SSD-01", S01, Severity.Serious,
+                $"通電 {hours:N0} 小時卻累計寫入 {written:N0} GiB，平均 {rate:N0} GiB／小時。",
+                "長期用於影音錄製、虛擬機主機或監控錄影的碟可以有很高的平均寫入速率；"
+                + "但通電小時被歸零的翻新碟也是這個樣子。", ev)
+            : Ok("R-SSD-01", S01, $"平均寫入速率 {rate:N1} GiB／小時，在合理範圍內。", ev);
+    }
+
+    private static VerifyFinding ZeroWearImplausible(VerifyFacts f)
+    {
+        double used = f.Num(FactId.NvmePercentageUsed)!.Value;
+        double written = f.Num(FactId.NvmeDataUnitsWritten)!.Value;
+        var ev = new[] { f.Get(FactId.NvmePercentageUsed)!, f.Get(FactId.NvmeDataUnitsWritten)! };
+
+        return used == 0 && written > VerifyThresholds.ZeroWearImplausibleGiB
+            ? Bad("R-SSD-02", S02, Severity.Serious,
+                $"已累計寫入 {written:N0} GiB，但已用壽命仍顯示 0%。",
+                "少數企業級碟的壽命計數解析度很粗，長時間仍停在 0%；不過壽命計數被重設也是這個樣子。", ev)
+            : Ok("R-SSD-02", S02, $"已用壽命 {used:N0}% 與累計寫入 {written:N0} GiB 對得上。", ev);
+    }
+
+    private static VerifyFinding UnsafeExceedsCycles(VerifyFacts f)
+    {
+        double unsafeCount = f.Num(FactId.NvmeUnsafeShutdowns)!.Value;
+        double cycles = f.Num(FactId.NvmePowerCycles)!.Value;
+        var ev = new[] { f.Get(FactId.NvmeUnsafeShutdowns)!, f.Get(FactId.NvmePowerCycles)! };
+
+        // 不安全關機是通電次數的子集，多於通電次數在物理上不可能——所以沒有正當成因可寫。
+        return unsafeCount > cycles
+            ? Bad("R-SSD-03", S03, Severity.Serious,
+                $"不安全關機 {unsafeCount:N0} 次，卻只通電 {cycles:N0} 次。"
+                + "不安全關機是通電次數的子集，這兩個數字不可能是這個關係。",
+                null, ev)
+            : Ok("R-SSD-03", S03, $"不安全關機 {unsafeCount:N0} 次，未超過通電次數 {cycles:N0} 次。", ev);
+    }
+
+    private static VerifyFinding CriticalWarning(VerifyFacts f)
+    {
+        double flags = f.Num(FactId.NvmeCriticalWarning)!.Value;
+        var ev = new[] { f.Get(FactId.NvmeCriticalWarning)! };
+        if (flags == 0)
+            return Ok("R-SSD-04", S04, "沒有任何關鍵警告位元亮起。", ev);
+
+        var warns = NvmeLogDecoder.CriticalWarnings((byte)flags);
+        string what = string.Join("、", warns.Select(w => $"位元 {w.Bit}：{w.Name}"));
+        return Bad("R-SSD-04", S04, Severity.Critical,
+            $"碟自己回報了關鍵警告（{what}）。",
+            "剛經歷異常斷電或溫度過高的碟會亮起警告，冷卻後未必仍成立；"
+            + "但介質進入唯讀或可靠性降級是不會自己好的。", ev);
+    }
+
+    private static VerifyFinding CapacityMismatch(VerifyFacts f)
+    {
+        double claimed = f.Num(FactId.DiskClaimedCapacityGB)!.Value;
+        double lba = f.Num(FactId.AtaTotalLba)!.Value;
+        var ev = new[] { f.Get(FactId.DiskClaimedCapacityGB)!, f.Get(FactId.AtaTotalLba)! };
+
+        double addressable = lba * 512.0 / 1_000_000_000;
+        double diff = claimed > 0 ? Math.Abs(claimed - addressable) / claimed : 0;
+        return diff > VerifyThresholds.CapacityTolerance
+            ? Bad("R-SSD-05", S05, Severity.Critical,
+                $"宣稱 {claimed:N0} GB，但實際只定址得到 {addressable:N1} GB（差 {diff:P0}）。",
+                "廠商的十進位 GB 與作業系統的 GiB 換算差約 7%，已納入容許值；"
+                + "差距超出容許值的通常是改過容量資訊的碟。", ev)
+            : Ok("R-SSD-05", S05, $"宣稱 {claimed:N0} GB 與可定址 {addressable:N1} GB 相符。", ev);
+    }
+
+    private static VerifyFinding RotationMismatch(VerifyFacts f)
+    {
+        double rate = f.Num(FactId.AtaRotationRate)!.Value;
+        bool spinUp = f.Num(FactId.SmartSpinUpPresent)!.Value > 0;
+        var ev = new[] { f.Get(FactId.AtaRotationRate)!, f.Get(FactId.SmartSpinUpPresent)! };
+
+        bool saysSolid = rate == 1;
+        bool saysMechanical = rate is >= 0x0401 and <= 0xFFFE;
+
+        if (saysSolid && spinUp)
+            return Bad("R-SSD-06", S06, Severity.Warning,
+                "自稱非旋轉裝置（固態），但 SMART 裡有起轉時間這個機械專屬屬性。",
+                "部分 USB 外接盒與 RAID 控制器會轉述錯誤的旋轉速率或補上不存在的屬性。", ev);
+
+        if (saysMechanical && !spinUp)
+            return Bad("R-SSD-06", S06, Severity.Warning,
+                $"自稱 {rate:N0} rpm 的機械碟，但 SMART 裡沒有起轉時間這個機械專屬屬性。",
+                "部分 SSD 韌體會回報假的旋轉速率以相容舊系統；外接盒轉述錯誤也會這樣。", ev);
+
+        return Ok("R-SSD-06", S06,
+            saysSolid ? "自稱固態，且沒有機械專屬屬性，兩邊一致。"
+            : saysMechanical ? "自稱機械碟，且有機械專屬屬性，兩邊一致。"
+            : "這顆碟沒有回報標稱轉速，無從矛盾。", ev);
+    }
+
+    // ── 電池 ────────────────────────────────────────────────────────────────
+
+    private static VerifyFinding BatteryWorn(VerifyFacts f)
+    {
+        double design = f.Num(FactId.BatteryDesignCapacityMWh)!.Value;
+        double full = f.Num(FactId.BatteryFullCapacityMWh)!.Value;
+        var ev = new[] { f.Get(FactId.BatteryDesignCapacityMWh)!, f.Get(FactId.BatteryFullCapacityMWh)! };
+
+        // Windows 讀不到容量時回 0。0 mWh 的電池不存在，所以一律當「讀不到」，
+        // 不要拿它算出 0% 健康度去嚇人。
+        if (design <= 0 || full <= 0)
+            return new("R-BAT-01", PartBattery, B01, VerifyVerdict.Unread, Severity.Neutral,
+                "設計容量或滿充容量回報為 0——那是讀不到，不是真的沒有容量。", null, ev);
+
+        double ratio = full / design;
+        if (ratio >= VerifyThresholds.BatteryWornRatio)
+            return new("R-BAT-01", PartBattery, B01, VerifyVerdict.Match, Severity.Good,
+                $"滿充容量為設計容量的 {ratio:P0}，衰退在正常範圍內。", null, ev);
+
+        return new("R-BAT-01", PartBattery, B01, VerifyVerdict.Conflict,
+            ratio < VerifyThresholds.BatteryBadlyWornRatio ? Severity.Serious : Severity.Warning,
+            $"滿充容量只有設計容量的 {ratio:P0}（{full:N0} / {design:N0} mWh）。",
+            "電池是耗材，長期插電使用的機器衰退得特別快——這是正常老化，"
+            + "與賣家是否隱瞞無關，但會直接影響續航與二手估價。", ev);
     }
 }
