@@ -19,7 +19,11 @@ public class HelpCatalogTests
     private static readonly Regex KeyPattern = new("HelpKey=\"(?!\\{)([^\"]+)\"", RegexOptions.Compiled);
 
     /// <summary>不在 <see cref="PageRegistry"/> 裡的合法前綴：每核心細節是獨立視窗，不是分頁。</summary>
-    private static readonly string[] NonPagePrefixes = ["coredetail"];
+    // coredetail 是卡片；其餘是已併入核心硬體頁分頁的分析頁——不再是側邊欄獨立頁，
+    // 但仍以 UserControl 形式 host 在分頁裡，HelpKey 照舊存在。
+    private static readonly string[] NonPagePrefixes =
+        ["coredetail", "cpupinout", "dimmref", "boardanalysis", "chipsetanalysis",
+         "powerdelivery", "pcieanalysis", "gpuanalysis", "sata", "m2analysis"];
 
     [Fact]
     public void 版面上每一個問號都查得到說明()

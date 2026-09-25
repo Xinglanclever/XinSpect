@@ -3,6 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect"
              Loaded="StorageView_Loaded">
+    <TabControl Style="{StaticResource PageTabs}">
+        <TabItem Style="{StaticResource PageTabItem}" Header="總覽">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
             <local:SectionHead Text="儲存" HelpKey="storage/儲存"/>
@@ -208,4 +210,12 @@
             </Border>
         </StackPanel>
     </ScrollViewer>
+        </TabItem>
+        <TabItem Style="{StaticResource PageTabItem}" Header="SATA 分析">
+            <local:SataAnalysisView/>
+        </TabItem>
+        <TabItem Style="{StaticResource PageTabItem}" Header="M.2 / U.2">
+            <local:M2AnalysisView/>
+        </TabItem>
+    </TabControl>
 </UserControl>

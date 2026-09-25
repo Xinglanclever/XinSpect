@@ -2,6 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect">
+    <TabControl Style="{StaticResource PageTabs}">
+        <TabItem Style="{StaticResource PageTabItem}" Header="總覽">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
             <local:SectionHead Text="顯示卡" HelpKey="gpu/顯示卡"/>
@@ -188,4 +190,9 @@
             </Border>
         </StackPanel>
     </ScrollViewer>
+        </TabItem>
+        <TabItem Style="{StaticResource PageTabItem}" Header="顯示卡分析">
+            <local:GpuAnalysisView/>
+        </TabItem>
+    </TabControl>
 </UserControl>

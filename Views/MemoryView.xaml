@@ -2,6 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect">
+    <TabControl Style="{StaticResource PageTabs}">
+        <TabItem Style="{StaticResource PageTabItem}" Header="總覽">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
             <local:SectionHead Text="記憶體" HelpKey="memory/記憶體"/>
@@ -474,4 +476,9 @@
             </Border>
         </StackPanel>
     </ScrollViewer>
+        </TabItem>
+        <TabItem Style="{StaticResource PageTabItem}" Header="DIMM 定義">
+            <local:DimmReferenceView/>
+        </TabItem>
+    </TabControl>
 </UserControl>

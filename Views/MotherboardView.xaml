@@ -2,6 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect">
+    <TabControl Style="{StaticResource PageTabs}">
+        <TabItem Style="{StaticResource PageTabItem}" Header="總覽">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
             <local:SectionHead Text="主機板" HelpKey="mainboard/主機板"/>
@@ -371,4 +373,18 @@
             </Border>
         </StackPanel>
     </ScrollViewer>
+        </TabItem>
+        <TabItem Style="{StaticResource PageTabItem}" Header="主機板分析">
+            <local:MotherboardAnalysisView/>
+        </TabItem>
+        <TabItem Style="{StaticResource PageTabItem}" Header="晶片組分析">
+            <local:ChipsetAnalysisView/>
+        </TabItem>
+        <TabItem Style="{StaticResource PageTabItem}" Header="供電模組">
+            <local:PowerDeliveryView/>
+        </TabItem>
+        <TabItem Style="{StaticResource PageTabItem}" Header="PCIe 分析">
+            <local:PcieAnalysisView/>
+        </TabItem>
+    </TabControl>
 </UserControl>
