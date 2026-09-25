@@ -98,11 +98,21 @@
 
 ---
 
-## 三、普通新功能(僅列已讀碼確認的處理器/儲存兩域;其餘領域待中轉站恢復後同法核對)
+## 三、普通新功能(讀碼去重後的真缺口)
 
-**處理器**:CPUID 全葉原始傾印、MONITOR/MWAIT 子狀態(0x05)、硬體預取器開關(0x1A4)、AMD 專屬葉位(0x8000001D/1E)、RDRAND/RDSEED 功能自測、微架構代號與製程、TSC Deadline Timer、即時單核有效頻率磚、混合架構 P/E 版面圖、逐核 EPP 目前值、指令延遲微基準、BCLK/TSC 抖動量測、Hypervisor 葉位詳解、快取幾何視覺化、CPU 深度匯出報告、渦輪倍頻階梯圖、Processor Trace(0x14)、AMX tile(0x1D/1E)、SMT 兄弟配對表、逐核溫度折線、NUMA 距離矩陣、功能位元對基準快照差異。
+> **誠實結論**:普通層原本規劃 100 條,但本機逐一核對後,顯示卡/安全/感測/報告四域的「普通」提案**大半已實作**(PDF/時間軸/健康評分/硬體快照變更稽核/防火牆/更新/管理員/風扇零轉/AC 充電…)。硬湊 100 條就得把已存在的塞回來,違背誠實主軸。以下只列**真的還沒有**的。
 
-**儲存/驗機**:磁碟寫入快取狀態、NVMe 韌體插槽(Log 0x03)、SATA IDENTIFY 進階欄位(NCQ 深度/外形/SATA 世代)、UDMA CRC 錯誤(199)標為線材問題、NVMe 平均 I/O 大小、檔案系統 dirty bit、GPT/MBR 分割與磁碟簽章、4Kn/512e 分割對齊、USB 橋接碟明確標示、NVMe Sanitize 支援旗標、SATA 安全清除/凍結狀態、SMART 整體健康回傳(0xDA)、分頁檔配置、DDR4 SPD 512B hex 匯出、DDR5 SPD 原始位元組、SPD rank/電壓/組織、NVMe APST 門檻表、磁碟即時吞吐/IOPS、SD/eMMC CID、記憶體可升級性(空槽/上限)、NVMe 命名空間 EUI64/NGUID。
+**處理器(已讀碼,22 條)**:CPUID 全葉原始傾印、MONITOR/MWAIT 子狀態(0x05)、硬體預取器開關(0x1A4)、AMD 專屬葉位(0x8000001D/1E)、RDRAND/RDSEED 功能自測、微架構代號與製程、TSC Deadline Timer、即時單核有效頻率磚、混合架構 P/E 版面圖、逐核 EPP 目前值、指令延遲微基準、BCLK/TSC 抖動量測、Hypervisor 葉位詳解、快取幾何視覺化、CPU 深度匯出報告、渦輪倍頻階梯圖、Processor Trace(0x14)、AMX tile(0x1D/1E)、SMT 兄弟配對表、逐核溫度折線、NUMA 距離矩陣、功能位元對基準快照差異。
 
-> **未列**:顯示卡/網路/安全/感測/報告 的「普通」提案還沒逐一對照現有碼(中轉站掛了),避免把已存在的當 backlog,先不寫進來。中轉站恢復或切到穩定線路後,用同一套讀碼去重法補齊。
+**儲存/驗機(已讀碼,21 條)**:磁碟寫入快取狀態、NVMe 韌體插槽(Log 0x03)、SATA IDENTIFY 進階欄位(NCQ 深度/外形/SATA 世代)、UDMA CRC 錯誤(199)標為線材問題、NVMe 平均 I/O 大小、檔案系統 dirty bit、GPT/MBR 分割與磁碟簽章、4Kn/512e 分割對齊、USB 橋接碟明確標示、NVMe Sanitize 支援旗標、SATA 安全清除/凍結狀態、SMART 整體健康回傳(0xDA)、分頁檔配置、DDR4 SPD 512B hex 匯出、DDR5 SPD 原始位元組、SPD rank/電壓/組織、NVMe APST 門檻表、磁碟即時吞吐/IOPS、SD/eMMC CID、記憶體可升級性(空槽/上限)、NVMe 命名空間 EUI64/NGUID。
+
+**網路(本機核對:此域最薄,以下為真缺口)**:各介面 DNS 伺服器與 DHCP 租約到期、per-adapter 累計收發位元組(`MIB_IF_ROW2` InOctets)、網卡驅動版本/日期、VPN/虛擬介面卡列舉、藍牙已配對裝置清單。
+
+**顯示卡(真缺口)**:各螢幕目前解析度/刷新率/方向(`EnumDisplaySettingsEx`,零命中)、顯示卡 PCI VID/DID/SVID/SSID 精確辨識 AIB 廠商、GPU 顯存時脈/頻寬使用即時。
+
+**安全(真缺口,防火牆/更新/管理員/自動登入已排除)**:UAC 等級(`ConsentPromptBehavior`,零命中)、密碼與帳戶鎖定原則(`NetUserModalsGet`)、服務清單與異常自啟服務簽章(現有 DriverAudit 只查驅動不查服務)、系統時鐘/NTP 同步偏移(`w32tm`)、PATH 劫持偵測(可寫目錄+順序)。
+
+**報告/UX(真缺口,PDF/時間軸/快照/搜尋已排除)**:硬體規格分享碼/QR、常見問題自動診斷精靈、「讀不到」原因彙整頁(集中列缺權限/不支援/被虛擬化——最貼合誠實主軸)、純文字系統摘要一鍵複製。
+
+> 合計普通層真缺口約 **43+5+3+5+4 = 60 條**(處理器/儲存 43 已讀碼確認、另三域 17 本機核對)。其餘四域若還要更多,只會開始碰到已存在的功能。
 
