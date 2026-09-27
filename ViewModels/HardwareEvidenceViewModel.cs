@@ -195,75 +195,27 @@ public sealed class HardwareEvidenceViewModel : ObservableObject
 
     /// <summary>
     /// 驗機對帳:把已讀到的硬體事實互相比對,把矛盾連同證據列出來——不給分數、不下結論。
-    /// 每顆碟各跑一次 Disk 範圍規則,整機事實跑一次 Machine 範圍規則。
+    /// 收攏交給 <see cref="MachineVerdictService"/>,這裡只負責把結果攤成列並保留 verdict 供匯出。
     /// </summary>
     private async Task LoadVerifyAsync()
     {
-        var now = DateTime.UtcNow;
-        var findings = await Task.Run(() =>
-        {
-            var results = new List<(EvidenceAuditRow Row, int Order)>();
+        var verdict = await Task.Run(() => MachineVerdictService.FromLive(_vm, DateTime.UtcNow));
+        _lastVerdict = verdict;
 
-            // 整機:記憶體(SMBIOS)＋電池。這兩類是整台一份事實。
-            var machineFacts = new List<VerifyFact>(SmbiosFacts.From(_vm.Smbios.Structs, now));
-            try
-            {
-                var bat = new BatteryService().Read();
-                if (bat.Present)
-                    machineFacts.AddRange(VerifyFactsCollector.Battery(bat.DesignCapacity, bat.FullCapacity, now));
-            }
-            catch (Exception ex) { Diag.Swallow("LoadVerify.Battery", ex, "電池讀不到，略過電池規則"); }
-            foreach (var find in VerifyEngine.Run(new VerifyFacts(machineFacts), VerifyScope.Machine))
-                results.Add((ToRow(find, find.Part), OrderOf(find.Verdict)));
+        foreach (var line in verdict.Lines)
+            Rows.Add(ToRow(line.Finding, line.Scope));
 
-            // 每顆碟一次:NVMe 健康紀錄／ATA 識別＋SMART 屬性,加上 Win32 宣稱容量。
-            foreach (var d in _vm.PhysicalDisks.OrderBy(x => x.Index))
-            {
-                var diskFacts = new List<VerifyFact>();
-                if (d.Kind == DiskKind.NvmeSsd)
-                    diskFacts.AddRange(VerifyFactsCollector.Nvme(StorageSmartService.TryReadNvmeHealth(d.Index), now));
-                else
-                {
-                    var info = StorageSmartService.TryReadAtaIdentify(d.Index) is { } raw
-                        ? AtaIdentify.Decode(raw) : null;
-                    double? claimed = d.SizeBytes > 0 ? d.SizeBytes / 1_000_000_000.0 : null;
-                    diskFacts.AddRange(VerifyFactsCollector.Ata(
-                        info, claimed, StorageSmartService.TryReadAtaAttributes(d.Index), now));
-                }
-                if (diskFacts.Count == 0) continue;
-
-                string scope = d.Model is { Length: > 0 } m ? $"{PartStorage(d)} ・ {m}" : PartStorage(d);
-                foreach (var find in VerifyEngine.Run(new VerifyFacts(diskFacts), VerifyScope.Disk))
-                    results.Add((ToRow(find, scope), OrderOf(find.Verdict)));
-            }
-            return results;
-        });
-
-        // 矛盾在最前、讀不到其次、相符最後——但每一列都留著,「讀不到」跟「相符」一樣要看得見。
-        foreach (var (row, _) in findings.OrderBy(x => x.Order))
-            Rows.Add(row);
-
-        int conflict = Rows.Count(x => x.Severity is Severity.Warning or Severity.Serious or Severity.Critical);
-        int unread = findings.Count(x => x.Order == 1);
-        Summary = $"{findings.Count} 條規則 ・ 矛盾 {conflict} ・ 讀不到 {unread} ・ 相符 {findings.Count - conflict - unread}";
-        Status = findings.Count == 0
+        Summary = $"{verdict.Total} 條規則 ・ 矛盾 {verdict.Conflict} ・ 讀不到 {verdict.Unread} ・ 相符 {verdict.Match}";
+        Status = verdict.Total == 0
             ? "沒有可對帳的事實——記憶體與磁碟資訊都還沒讀到（磁碟讀取需要管理員權限）。"
-            : "只把「對不上」指出來,不給分數也不下「正品／翻新」結論；每條矛盾都附了可能的正當成因。";
+            : verdict.Summary;
     }
 
-    private static string PartStorage(PhysicalDiskInfo d) => d.Kind switch
-    {
-        DiskKind.NvmeSsd => "NVMe 固態硬碟",
-        DiskKind.SataSsd => "SATA 固態硬碟",
-        DiskKind.Hdd => "機械硬碟",
-        _ => "儲存裝置",
-    };
+    /// <summary>最近一次驗機的結論,供「匯出驗機報告」使用;沒跑過為 null。</summary>
+    private MachineVerdict? _lastVerdict;
 
-    /// <summary>矛盾排最前(0)、讀不到次之(1)、相符最後(2)。</summary>
-    private static int OrderOf(VerifyVerdict v) => v switch
-    {
-        VerifyVerdict.Conflict => 0, VerifyVerdict.Unread => 1, _ => 2,
-    };
+    /// <summary>把最近一次驗機結論輸出成純文字報告;還沒跑過驗機對帳則回 null。</summary>
+    public string? BuildVerdictReport() => _lastVerdict is { } v ? MachineVerdictBuilder.ToPlainText(v) : null;
 
     private static EvidenceAuditRow ToRow(VerifyFinding f, string scope)
     {
