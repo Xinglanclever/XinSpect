@@ -51,6 +51,7 @@ public static class FactCatalog
         [FactId.SmartSpinUpPresent] = ("是否存在機械專屬屬性", true),
         [FactId.BatteryDesignCapacityMWh] = ("電池設計容量", false),
         [FactId.BatteryFullCapacityMWh] = ("電池滿充容量", false),
+        [FactId.CpuMicrocodePerCore] = ("逐核微碼版本", true),
     };
 
     public static string Name(FactId id) => Map.TryGetValue(id, out var v) ? v.Name : id.ToString();
@@ -101,6 +102,7 @@ public static class VerifyRules
     public const string PartMemory = "記憶體";
     public const string PartStorage = "儲存裝置";
     public const string PartBattery = "電池";
+    public const string PartCpu = "處理器";
 
     private const string T01 = "各條記憶體模組並非同批";
     private const string T02 = "記憶體模組序號異常";
@@ -114,6 +116,7 @@ public static class VerifyRules
     private const string S05 = "宣稱容量與可定址容量對不上";
     private const string S06 = "宣稱轉速與屬性集矛盾";
     private const string B01 = "電池滿充容量明顯低於設計容量";
+    private const string C01 = "各核心微碼版本不一致";
 
     public static readonly VerifyRule[] All =
     [
@@ -146,6 +149,10 @@ public static class VerifyRules
         // ── 電池：整機一份事實 ──
         new("R-BAT-01", PartBattery, B01,
             [FactId.BatteryDesignCapacityMWh, FactId.BatteryFullCapacityMWh], BatteryWorn),
+
+        // ── 處理器：ring0 逐核 MSR 直讀(唯讀)──
+        new("R-CPU-06", PartCpu, C01,
+            [FactId.CpuMicrocodePerCore], MicrocodeConsistency),
     ];
 
     /// <summary>逐條模組的字串以 <c>|</c> 相連（collector 產出的形式）。</summary>
@@ -403,5 +410,23 @@ public static class VerifyRules
             $"滿充容量只有設計容量的 {ratio:P0}（{full:N0} / {design:N0} mWh）。",
             "電池是耗材，長期插電使用的機器衰退得特別快——這是正常老化，"
             + "與賣家是否隱瞞無關，但會直接影響續航與二手估價。", ev);
+    }
+
+    // ── 處理器(ring0 MSR)────────────────────────────────────────────────────
+
+    private static VerifyFinding MicrocodeConsistency(VerifyFacts f)
+    {
+        var ev = new[] { f.Get(FactId.CpuMicrocodePerCore)! };
+        var revs = Split(f.Text(FactId.CpuMicrocodePerCore));
+        // 逐核微碼版本應該全等。不同 = BIOS 只更新了部分核心、載入失敗,或被竄改。
+        bool consistent = revs.Length > 0
+            && revs.Distinct(StringComparer.OrdinalIgnoreCase).Count() == 1;
+        return consistent
+            ? new("R-CPU-06", PartCpu, C01, VerifyVerdict.Match, Severity.Good,
+                $"所有核心的微碼版本一致（{revs[0]}）。", null, ev)
+            : new("R-CPU-06", PartCpu, C01, VerifyVerdict.Conflict, Severity.Serious,
+                "各核心回報的微碼版本不一致:" + string.Join("、", revs.Distinct()) + "。",
+                "極少數情況是 BIOS 只更新了部分核心的微碼,重開機後常會一致;但微碼載入失敗或被竄改也是這個樣子,"
+                + "而不一致的微碼可能造成難以重現的當機。", ev);
     }
 }

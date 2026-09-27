@@ -37,6 +37,10 @@ public static class MachineVerdictService
         }
         catch (Exception ex) { Diag.Swallow("MachineVerdict.Battery", ex, "電池讀不到，略過電池規則"); }
 
+        // ring0 逐核微碼(唯讀 MSR);橋接不可用就略過,規則自然判無法判定。
+        try { machine.AddRange(CpuMsrFacts.Microcode(now)); }
+        catch (Exception ex) { Diag.Swallow("MachineVerdict.Microcode", ex, "MSR 讀不到，略過微碼規則"); }
+
         var disks = new List<(string, VerifyFacts)>();
         foreach (var d in vm.PhysicalDisks.OrderBy(x => x.Index))
         {

@@ -236,4 +236,25 @@ public class VerifyRulesTests
         => Assert.Equal(expected, One("R-BAT-01",
             Num(FactId.BatteryDesignCapacityMWh, 50000, "mWh"),
             Num(FactId.BatteryFullCapacityMWh, full, "mWh")).Severity);
+
+    // ── R-CPU-06:ring0 逐核微碼版本一致性(唯讀 MSR 0x8B)──
+
+    [Theory]
+    [InlineData("0x2F|0x2F|0x2F|0x2F", VerifyVerdict.Match)]      // 全核同版
+    [InlineData("0x2F", VerifyVerdict.Match)]                    // 單核也算一致
+    [InlineData("0x2F|0x2F|0x2E|0x2F", VerifyVerdict.Conflict)]  // 一核落後 = 載入失敗/竄改
+    public void R_CPU_06_逐核微碼一致性(string revs, VerifyVerdict expected)
+        => Assert.Equal(expected, One("R-CPU-06", Text(FactId.CpuMicrocodePerCore, revs)).Verdict);
+
+    [Fact]
+    public void R_CPU_06_不一致時判定為較嚴重且附成因()
+    {
+        var f = One("R-CPU-06", Text(FactId.CpuMicrocodePerCore, "0x2F|0x2E"));
+        Assert.Equal(Severity.Serious, f.Severity);
+        Assert.False(string.IsNullOrWhiteSpace(f.BenignCause));
+    }
+
+    [Fact]
+    public void R_CPU_06_讀不到微碼時由引擎判無法判定()
+        => Assert.Equal(VerifyVerdict.Unread, One("R-CPU-06", Num(FactId.DimmCount, 1)).Verdict);
 }

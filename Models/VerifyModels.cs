@@ -24,6 +24,9 @@ public enum FactId
 
     // ── 電池（Win32_Battery／WMI 電池靜態資料）──
     BatteryDesignCapacityMWh, BatteryFullCapacityMWh,
+
+    // ── 處理器（ring0 MSR 逐核直讀）──
+    CpuMicrocodePerCore,
 }
 
 /// <summary>這個值是從哪裡讀來的。</summary>
