@@ -99,6 +99,8 @@
                                       SelectedIndex="{Binding HardwareEvidence.SelectedSection, Mode=TwoWay}" Margin="0,0,8,0"/>
                             <Button x:Name="RefreshEvidenceButton" AutomationProperties.AutomationId="RefreshEvidenceButton" Style="{StaticResource PrimaryButton}" Content="重新擷取" Click="RefreshEvidence_Click"
                                     IsEnabled="{Binding HardwareEvidence.CanRun}"/>
+                            <Button x:Name="ExportVerdictButton" AutomationProperties.AutomationId="ExportVerdictButton" Style="{StaticResource ToolButton}" Content="匯出驗機報告" Click="ExportVerdict_Click"
+                                    Margin="8,0,0,0"/>
                         </StackPanel>
                     </Grid>
                     <TextBlock Style="{StaticResource FieldValue}" Text="{Binding HardwareEvidence.Summary}" Margin="0,8,0,0"/>

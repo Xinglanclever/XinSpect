@@ -53,6 +53,29 @@ public partial class EvidenceLabView : UserControl
         if (Vm is { } vm) await vm.HardwareEvidence.RefreshAsync();
     }
 
+    // 匯出驗機報告:把最近一次「驗機對帳」的結論輸出成純文字單子,供二手交易存證。
+    // 還沒跑過驗機對帳時 BuildVerdictReport() 回 null——如實提示,不產生一份空報告。
+    private void ExportVerdict_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm is not { } vm) return;
+        var report = vm.HardwareEvidence.BuildVerdictReport();
+        if (report is null)
+        {
+            MessageBox.Show("還沒有驗機結果。請先把上面的下拉切到「驗機對帳」並按「重新擷取」,再匯出報告。",
+                "匯出驗機報告", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        var dlg = new SaveFileDialog
+        {
+            Title = "匯出驗機報告",
+            Filter = "純文字報告 (*.txt)|*.txt",
+            FileName = $"XinSpect_驗機報告_{DateTime.Now:yyyyMMdd_HHmmss}.txt",
+            AddExtension = true,
+        };
+        if (dlg.ShowDialog() != true) return;
+        AtomicWrite.AllText(dlg.FileName, report);
+    }
+
     private static string? PickSnapshot(string title)
     {
         var dlg = new OpenFileDialog
