@@ -128,7 +128,7 @@
                                     <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
                                           Data="{Binding Icon}"/>
                                 </Viewbox>
-                                <TextBlock Text="{Binding Title}" VerticalAlignment="Center"
+                                <TextBlock Text="{Binding Title, Converter={x:Static local:ChineseConverter.Instance}}" VerticalAlignment="Center"
                                            Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                             </StackPanel>
                         </DataTemplate>
@@ -137,7 +137,7 @@
                         <GroupStyle>
                             <GroupStyle.HeaderTemplate>
                                 <DataTemplate>
-                                    <TextBlock Style="{StaticResource NavGroupHeader}" Text="{Binding Name}"/>
+                                    <TextBlock Style="{StaticResource NavGroupHeader}" Text="{Binding Name, Converter={x:Static local:ChineseConverter.Instance}}"/>
                                 </DataTemplate>
                             </GroupStyle.HeaderTemplate>
                         </GroupStyle>

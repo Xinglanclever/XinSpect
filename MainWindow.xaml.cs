@@ -67,6 +67,12 @@ public partial class MainWindow : Window
             _vm.Initialize();
             Nav.SelectedIndex = 0;
             InitTray();
+
+            // 啟動時套用已存的語言偏好——這是簡體從來不生效的主因：過去只讀旗標、之後從沒轉過樹，
+            // 重啟必回繁體。等版面配置跑完（Loaded 優先權）再轉，才走得到已實體化的視覺樹。
+            if (LanguageService.IsSimplified)
+                Dispatcher.InvokeAsync(() => LanguageService.ConvertVisualTree(this, true),
+                    System.Windows.Threading.DispatcherPriority.Loaded);
         };
     }
 
@@ -164,6 +170,12 @@ public partial class MainWindow : Window
             Host.Content = view;
             (view as IPageLifecycle)?.OnActivated();
             PageTransition.PlayEnter(Host);   // 切頁淡入 + 輕微上滑
+
+            // 頁面（新建或快取）顯示時轉為目前語言：從保存的原文出發，故繁體＝還原原文、簡體＝轉換，
+            // 冪等可重入。解決「切簡體後才建立的頁」與「快取頁切回繁體仍殘留簡體」兩個縫。
+            var shown = view;
+            Dispatcher.InvokeAsync(() => LanguageService.ConvertPage(shown),
+                System.Windows.Threading.DispatcherPriority.Loaded);
         }
         else
         {

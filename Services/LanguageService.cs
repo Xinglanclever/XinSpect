@@ -1,8 +1,10 @@
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Documents;
 using System.Windows.Media;
 
 namespace XinSpect;
@@ -89,9 +91,9 @@ public static class LanguageService
             text, text.Length, null, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
         if (len <= 0) return text;
         var buf = new char[len];
-        LCMapStringEx(LOCALE_NAME_ZH, LCMAP_SIMPLIFIED_CHINESE,
+        int written = LCMapStringEx(LOCALE_NAME_ZH, LCMAP_SIMPLIFIED_CHINESE,
             text, text.Length, buf, len, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
-        return new string(buf);
+        return new string(buf, 0, written > 0 ? written : len);   // 用實際寫入長度，絕不夾帶結尾 NUL
     }
 
     /// <summary>簡體→繁體：先查反向詞組表，再讓 Windows 處理逐字轉換。</summary>
@@ -103,48 +105,65 @@ public static class LanguageService
             text, text.Length, null, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
         if (len <= 0) return text;
         var buf = new char[len];
-        LCMapStringEx(LOCALE_NAME_ZH, LCMAP_TRADITIONAL_CHINESE,
+        int written = LCMapStringEx(LOCALE_NAME_ZH, LCMAP_TRADITIONAL_CHINESE,
             text, text.Length, buf, len, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
-        return new string(buf);
+        return new string(buf, 0, written > 0 ? written : len);   // 用實際寫入長度，絕不夾帶結尾 NUL
+    }
+
+    // 原文保存：第一次轉換某屬性時把原文（XAML 裡的繁體）存起來，之後永遠從原文出發轉換——
+    // 繁體＝原文（無損）、簡體＝ToSimplified(原文)，往返可逆且冪等（根治「暫存→缓存→快取」漂移）。
+    private static readonly ConditionalWeakTable<DependencyObject, Dictionary<string, string>> _orig = new();
+
+    private static string FromOriginal(DependencyObject o, string slot, string current, bool simplified)
+    {
+        var map = _orig.GetOrCreateValue(o);
+        if (!map.TryGetValue(slot, out var original)) { original = current; map[slot] = current; }
+        return simplified ? ToSimplified(original) : original;
     }
 
     /// <summary>
-    /// 遍歷 WPF 視覺樹，轉換所有硬編碼文字。
-    /// 有 Binding 的 TextBlock 不動（那些透過 Converter 處理）。
+    /// 遍歷視覺樹把硬編碼文字轉為目前語言。永遠從保存的原文出發，故可逆、冪等——
+    /// 快取頁重新顯示、多次往返都不會累積損失。有 Binding 的走 <see cref="ChineseConverter"/>，此處不動。
+    /// 涵蓋 TextBlock.Text／Run 行內文字／ContentControl.Content／Header／任何 FrameworkElement 的字串 ToolTip。
     /// </summary>
     public static void ConvertVisualTree(DependencyObject root, bool simplified)
     {
         if (root is null) return;
+        ConvertNode(root, simplified);
         int count = VisualTreeHelper.GetChildrenCount(root);
         for (int i = 0; i < count; i++)
+            ConvertVisualTree(VisualTreeHelper.GetChild(root, i), simplified);
+    }
+
+    private static void ConvertNode(DependencyObject d, bool simplified)
+    {
+        if (d is TextBlock tb)
         {
-            var child = VisualTreeHelper.GetChild(root, i);
-            switch (child)
+            if (tb.Inlines.Count > 0)
             {
-                case TextBlock tb when tb.GetBindingExpression(TextBlock.TextProperty) is null
-                                    && !string.IsNullOrEmpty(tb.Text):
-                    tb.Text = simplified ? ToSimplified(tb.Text) : ToTraditional(tb.Text);
-                    break;
-                case ContentControl cc when cc.Content is string s && !string.IsNullOrEmpty(s)
-                                         && cc.GetBindingExpression(ContentControl.ContentProperty) is null:
-                    cc.Content = simplified ? ToSimplified(s) : ToTraditional(s);
-                    break;
-                case HeaderedContentControl hcc when hcc.Header is string h && !string.IsNullOrEmpty(h):
-                    hcc.Header = simplified ? ToSimplified(h) : ToTraditional(h);
-                    break;
+                // 先快照成清單再改：改 Run.Text 會觸發 InlineCollection 變更，邊列舉邊改會丟例外。
+                foreach (var r in tb.Inlines.OfType<Run>().ToList())
+                    if (r.GetBindingExpression(Run.TextProperty) is null && !string.IsNullOrEmpty(r.Text))
+                        r.Text = FromOriginal(r, "Text", r.Text, simplified);
             }
-            ConvertVisualTree(child, simplified);
+            else if (tb.GetBindingExpression(TextBlock.TextProperty) is null && !string.IsNullOrEmpty(tb.Text))
+                tb.Text = FromOriginal(tb, "Text", tb.Text, simplified);
         }
+        else if (d is ContentControl cc)   // 涵蓋 Button 等；HeaderedContentControl 亦是，故 Content 與 Header 都查
+        {
+            if (cc.Content is string s && !string.IsNullOrEmpty(s) && cc.GetBindingExpression(ContentControl.ContentProperty) is null)
+                cc.Content = FromOriginal(cc, "Content", s, simplified);
+            if (cc is HeaderedContentControl hcc && hcc.Header is string h && !string.IsNullOrEmpty(h))
+                hcc.Header = FromOriginal(hcc, "Header", h, simplified);
+        }
+        if (d is FrameworkElement fe && fe.ToolTip is string tip && !string.IsNullOrEmpty(tip))
+            fe.ToolTip = FromOriginal(fe, "ToolTip", tip, simplified);
     }
 
     /// <summary>
-    /// 頁面首次載入時呼叫：轉換該頁的硬編碼文字。
+    /// 頁面顯示時呼叫：把該頁轉為目前語言（含繁體＝還原原文）。冪等，可安全重複呼叫。
     /// </summary>
-    public static void ConvertPage(UserControl page)
-    {
-        if (_simplified)
-            ConvertVisualTree(page, true);
-    }
+    public static void ConvertPage(UserControl page) => ConvertVisualTree(page, _simplified);
 }
 
 /// <summary>
