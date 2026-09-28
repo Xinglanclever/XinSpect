@@ -41,6 +41,10 @@ public static class MachineVerdictService
         try { machine.AddRange(CpuMsrFacts.Microcode(now)); }
         catch (Exception ex) { Diag.Swallow("MachineVerdict.Microcode", ex, "MSR 讀不到，略過微碼規則"); }
 
+        // CPUID／拓撲對帳事實(品牌字串、虛擬層、快取、核心數、混合架構、矽晶推算基礎頻率)。
+        try { machine.AddRange(CpuIdVerifyFacts.Collect(now)); }
+        catch (Exception ex) { Diag.Swallow("MachineVerdict.CpuId", ex, "CPUID 事實讀不到，略過相關處理器規則"); }
+
         var disks = new List<(string, VerifyFacts)>();
         foreach (var d in vm.PhysicalDisks.OrderBy(x => x.Index))
         {

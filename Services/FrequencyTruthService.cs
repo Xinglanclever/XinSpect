@@ -190,6 +190,24 @@ public sealed class FrequencyTruthService : ObservableObject
         public IReadOnlyList<(ProcessorRef Lp, double Mhz, double Ratio)> Clocks { get; init; } = [];
     }
 
+    /// <summary>
+    /// 唯讀量測「矽晶推算基礎頻率」＝最大非睿頻倍頻（MSR 0xCE）× 實測 BCLK，給驗機 R-CPU-05 用。
+    /// 非 x86、橋接不可用、或讀不到 0xCE 時回 <c>null</c>（交由驗機引擎判「無法判定」，不猜）。
+    /// </summary>
+    public static double? MeasureSiliconBaseMhz()
+    {
+        if (!X86Base.IsSupported) return null;
+        using var bridge = WinRing0Bridge.Create();
+        if (!bridge.Available) return null;
+        var lps = CpuAffinity.AllLogicalProcessors();
+        if (lps.Count == 0) return null;
+        if (bridge.ReadMsrPair64(MsrPlatformInfo) is not { } platform) return null;
+        var (maxNonTurbo, _, _, _) = FrequencyTruthMath.DecodePlatformInfo(platform);
+        if (maxNonTurbo <= 0) return null;
+        double bclk = FrequencyTruthMath.BclkMhz(MeasureTscHz(bridge, lps[0]), maxNonTurbo);
+        return bclk > 0 ? maxNonTurbo * bclk : null;
+    }
+
     private Measurement Measure()
     {
         if (!X86Base.IsSupported) return new Measurement { Error = "非 x86 平台，沒有這些 MSR。" };

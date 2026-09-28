@@ -35,4 +35,10 @@ public static class VerifyThresholds
 
     /// <summary>低於此比例則衰退嚴重（判定升級為 <see cref="Severity.Serious"/>）。</summary>
     public const double BatteryBadlyWornRatio = 0.50;
+
+    /// <summary>
+    /// R-CPU-05 的基礎頻率容許誤差。矽晶最大非睿頻倍頻×實測 BCLK 與處理器回報的基礎頻率
+    /// 理應相符；5% 足以吸收 BCLK 量測抖動（實測 BCLK 常在 99.6–100.3 之間），超過即視為對不上。
+    /// </summary>
+    public const double BaseFreqTolerance = 0.05;
 }

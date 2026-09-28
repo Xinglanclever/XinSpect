@@ -52,6 +52,14 @@ public static class FactCatalog
         [FactId.BatteryDesignCapacityMWh] = ("電池設計容量", false),
         [FactId.BatteryFullCapacityMWh] = ("電池滿充容量", false),
         [FactId.CpuMicrocodePerCore] = ("逐核微碼版本", true),
+        [FactId.CpuSiliconBaseMhz] = ("矽晶推算基礎頻率（最大非睿頻倍頻×BCLK）", true),
+        [FactId.CpuBrandClaimedMhz] = ("處理器回報的基礎頻率（CPUID 0x16）", false),
+        [FactId.CpuBrandString] = ("處理器品牌字串", false),
+        [FactId.HypervisorPresent] = ("是否偵測到虛擬層", false),
+        [FactId.CpuL3Bytes] = ("L3 快取容量", false),
+        [FactId.CpuL2TotalBytes] = ("L2 快取總量", false),
+        [FactId.CpuPhysicalCores] = ("實體核心數", false),
+        [FactId.CpuIsHybrid] = ("是否混合架構（大小核）", false),
     };
 
     public static string Name(FactId id) => Map.TryGetValue(id, out var v) ? v.Name : id.ToString();
@@ -117,6 +125,10 @@ public static class VerifyRules
     private const string S06 = "宣稱轉速與屬性集矛盾";
     private const string B01 = "電池滿充容量明顯低於設計容量";
     private const string C01 = "各核心微碼版本不一致";
+    private const string C02 = "品牌字串帶工程樣品標記";
+    private const string C03 = "快取層級異常";
+    private const string C04 = "偵測到虛擬層，讀值可信度下降";
+    private const string C05 = "矽晶基礎頻率與宣稱值對不上";
 
     public static readonly VerifyRule[] All =
     [
@@ -153,6 +165,15 @@ public static class VerifyRules
         // ── 處理器：ring0 逐核 MSR 直讀(唯讀)──
         new("R-CPU-06", PartCpu, C01,
             [FactId.CpuMicrocodePerCore], MicrocodeConsistency),
+
+        // ── 處理器：CPUID／拓撲對帳（改標與拼裝偵測）──
+        new("R-CPU-02", PartCpu, C02, [FactId.CpuBrandString], EngineeringSample),
+        new("R-CPU-03", PartCpu, C03,
+            [FactId.CpuL3Bytes, FactId.CpuL2TotalBytes, FactId.CpuPhysicalCores, FactId.CpuIsHybrid],
+            CacheAnomaly),
+        new("R-CPU-04", PartCpu, C04, [FactId.HypervisorPresent], HypervisorBanner),
+        new("R-CPU-05", PartCpu, C05,
+            [FactId.CpuSiliconBaseMhz, FactId.CpuBrandClaimedMhz], BaseFreqMismatch),
     ];
 
     /// <summary>逐條模組的字串以 <c>|</c> 相連（collector 產出的形式）。</summary>
@@ -428,5 +449,76 @@ public static class VerifyRules
                 "各核心回報的微碼版本不一致:" + string.Join("、", revs.Distinct()) + "。",
                 "極少數情況是 BIOS 只更新了部分核心的微碼,重開機後常會一致;但微碼載入失敗或被竄改也是這個樣子,"
                 + "而不一致的微碼可能造成難以重現的當機。", ev);
+    }
+
+    /// <summary>品牌字串斷詞用的分隔字元；讓 "i9-7980XE" 斷成 "7980XE"（不含 ES）而 "… ES" 斷得出 "ES"。</summary>
+    private static readonly char[] BrandSep = [' ', '(', ')', '@', '-', '.', ',', '/'];
+
+    private static VerifyFinding EngineeringSample(VerifyFacts f)
+    {
+        var ev = new[] { f.Get(FactId.CpuBrandString)! };
+        string brand = f.Text(FactId.CpuBrandString) ?? "";
+        // "0000" 是 Intel 工程樣品品牌字串的招牌；ES/QS = engineering/qualification sample。
+        bool es = brand.Contains("0000")
+                  || brand.Split(BrandSep, StringSplitOptions.RemoveEmptyEntries)
+                          .Any(t => t is "ES" or "QS" or "CONFIDENTIAL");
+        return es
+            ? new("R-CPU-02", PartCpu, C02, VerifyVerdict.Conflict, Severity.Warning,
+                $"品牌字串帶工程／驗證樣品記號：「{brand}」。",
+                "工程樣品(ES/QS)是量產前的驗證晶片，可正常使用，但不保證與零售版相同的頻率與穩定度，通常也不在保固範圍。",
+                ev)
+            : new("R-CPU-02", PartCpu, C02, VerifyVerdict.Match, Severity.Good,
+                "品牌字串沒有工程樣品記號。", null, ev);
+    }
+
+    private static VerifyFinding CacheAnomaly(VerifyFacts f)
+    {
+        long l3 = (long)f.Num(FactId.CpuL3Bytes)!.Value;
+        long l2 = (long)f.Num(FactId.CpuL2TotalBytes)!.Value;
+        long cores = (long)f.Num(FactId.CpuPhysicalCores)!.Value;
+        bool hybrid = f.Num(FactId.CpuIsHybrid)!.Value > 0;
+        var ev = new[] { f.Get(FactId.CpuL3Bytes)!, f.Get(FactId.CpuL2TotalBytes)!,
+                         f.Get(FactId.CpuPhysicalCores)!, f.Get(FactId.CpuIsHybrid)! };
+
+        if (l3 == 0)
+            return new("R-CPU-03", PartCpu, C03, VerifyVerdict.Conflict, Severity.Warning,
+                "回報沒有 L3 快取。桌上型與 HEDT 處理器都該有 L3，讀到 0 多半是快取列舉被截或晶片異常。",
+                "少數低功耗／嵌入式處理器(部分 Atom、賽揚)本來就沒有 L3，那種情況這是正常的。", ev);
+
+        if (!hybrid && cores > 0 && l2 % cores != 0)
+            return new("R-CPU-03", PartCpu, C03, VerifyVerdict.Conflict, Severity.Warning,
+                $"非混合架構卻有 {cores} 個核心、L2 總量 {l2:N0} 位元組不能被核心數整除——每核 L2 理應相同。",
+                "少數平台的快取列舉會把不同型別的快取歸在一起；混合架構(大小核 L2 不同)已另外排除。", ev);
+
+        return new("R-CPU-03", PartCpu, C03, VerifyVerdict.Match, Severity.Good,
+            "L3 存在，且(非混合架構下)L2 總量能被核心數整除。", null, ev);
+    }
+    private static VerifyFinding HypervisorBanner(VerifyFacts f)
+    {
+        var ev = new[] { f.Get(FactId.HypervisorPresent)! };
+        bool present = f.Num(FactId.HypervisorPresent)!.Value > 0;
+        return present
+            ? new("R-CPU-04", PartCpu, C04, VerifyVerdict.Conflict, Severity.Warning,
+                "偵測到虛擬層(hypervisor)。虛擬環境下 CPUID 與 MSR 的讀值可能由 hypervisor 合成，其餘處理器規則的可信度整體下降。",
+                "在虛擬機、WSL2，或啟用了 Hyper-V／VBS／記憶體完整性的實體機上都會偵測到虛擬層，這本身不代表造假。",
+                ev)
+            : new("R-CPU-04", PartCpu, C04, VerifyVerdict.Match, Severity.Good,
+                "未偵測到虛擬層，以下處理器讀值直接來自實體 CPU。", null, ev);
+    }
+
+    private static VerifyFinding BaseFreqMismatch(VerifyFacts f)
+    {
+        double silicon = f.Num(FactId.CpuSiliconBaseMhz)!.Value;
+        double claimed = f.Num(FactId.CpuBrandClaimedMhz)!.Value;
+        var ev = new[] { f.Get(FactId.CpuSiliconBaseMhz)!, f.Get(FactId.CpuBrandClaimedMhz)! };
+
+        double diff = claimed > 0 ? Math.Abs(silicon - claimed) / claimed : 0;
+        return diff > VerifyThresholds.BaseFreqTolerance
+            ? new("R-CPU-05", PartCpu, C05, VerifyVerdict.Conflict, Severity.Serious,
+                $"矽晶最大非睿頻倍頻×實測 BCLK 推得基礎頻率 {silicon:N0} MHz，但處理器回報的基礎頻率是 {claimed:N0} MHz（差 {diff:P0}）。",
+                "改標改得了品牌字串，改不了燒進矽晶的倍頻上限——兩者對不上常見於改標、外頻(BCLK)超頻，或極少數 BCLK 量測誤差偏大的平台。",
+                ev)
+            : new("R-CPU-05", PartCpu, C05, VerifyVerdict.Match, Severity.Good,
+                $"矽晶推算基礎頻率 {silicon:N0} MHz 與回報值 {claimed:N0} MHz 相符。", null, ev);
     }
 }

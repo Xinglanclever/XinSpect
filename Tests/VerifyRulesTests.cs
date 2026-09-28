@@ -257,4 +257,61 @@ public class VerifyRulesTests
     [Fact]
     public void R_CPU_06_讀不到微碼時由引擎判無法判定()
         => Assert.Equal(VerifyVerdict.Unread, One("R-CPU-06", Num(FactId.DimmCount, 1)).Verdict);
+
+    // ── R-CPU-02：工程樣品跡象（品牌字串含 ES／QS，或 "Genuine Intel CPU 0000"）──
+
+    [Theory]
+    [InlineData("Intel(R) Core(TM) i9-7980XE CPU @ 2.60GHz", VerifyVerdict.Match)]  // XE 不是 ES
+    [InlineData("Genuine Intel(R) CPU 0000 @ 2.00GHz", VerifyVerdict.Conflict)]     // 0000 = 工程樣品
+    [InlineData("Intel(R) Xeon(R) CPU E5-2699 ES", VerifyVerdict.Conflict)]         // ES = engineering sample
+    [InlineData("Intel(R) Xeon(R) Gold 6248 QS", VerifyVerdict.Conflict)]           // QS = qualification sample
+    public void R_CPU_02_工程樣品標記(string brand, VerifyVerdict expected)
+        => Assert.Equal(expected, One("R-CPU-02", Text(FactId.CpuBrandString, brand)).Verdict);
+
+    [Fact]
+    public void R_CPU_02_矛盾時附正當成因()
+        => Assert.False(string.IsNullOrWhiteSpace(
+            One("R-CPU-02", Text(FactId.CpuBrandString, "Genuine Intel(R) CPU 0000")).BenignCause));
+
+    // ── R-CPU-03：快取層級異常（L3 為 0；非混合架構時 L2 總量須能被核心數整除）──
+
+    [Theory]
+    [InlineData(25952256, 18874368, 18, 0, VerifyVerdict.Match)]      // 本機：L3 24.75M、L2 18M÷18核=1M
+    [InlineData(0, 18874368, 18, 0, VerifyVerdict.Conflict)]          // L3=0：桌機／HEDT 不該沒有 L3
+    [InlineData(25952256, 10000000, 18, 0, VerifyVerdict.Conflict)]   // 非混合但 L2 不能被核心數整除
+    [InlineData(0, 18874368, 18, 1, VerifyVerdict.Conflict)]          // 混合架構仍查 L3=0
+    [InlineData(25952256, 10000000, 18, 1, VerifyVerdict.Match)]      // 混合架構：P/E 核 L2 不同，不查整除
+    public void R_CPU_03_快取層級異常(double l3, double l2Total, double cores, double hybrid, VerifyVerdict expected)
+        => Assert.Equal(expected, One("R-CPU-03",
+            Num(FactId.CpuL3Bytes, l3), Num(FactId.CpuL2TotalBytes, l2Total),
+            Num(FactId.CpuPhysicalCores, cores), Num(FactId.CpuIsHybrid, hybrid)).Verdict);
+
+    // ── R-CPU-04：虛擬層存在時，以下 MSR／CPUID 讀值不可全信 ──
+
+    [Theory]
+    [InlineData(0, VerifyVerdict.Match)]
+    [InlineData(1, VerifyVerdict.Conflict)]
+    public void R_CPU_04_虛擬層存在(double present, VerifyVerdict expected)
+        => Assert.Equal(expected, One("R-CPU-04", Num(FactId.HypervisorPresent, present)).Verdict);
+
+    // ── R-CPU-05：矽晶倍頻推算的基礎頻率 vs 宣稱基礎頻率（改標剋星）──
+
+    [Theory]
+    [InlineData(2600, 2600, VerifyVerdict.Match)]      // 完全一致
+    [InlineData(2591, 2600, VerifyVerdict.Match)]      // BCLK 量測誤差內（本機實值）
+    [InlineData(2600, 3600, VerifyVerdict.Conflict)]   // 宣稱基頻遠高於矽晶倍頻能支撐的
+    public void R_CPU_05_矽晶基頻與宣稱基頻(double silicon, double claimed, VerifyVerdict expected)
+        => Assert.Equal(expected, One("R-CPU-05",
+            Num(FactId.CpuSiliconBaseMhz, silicon, "MHz"),
+            Num(FactId.CpuBrandClaimedMhz, claimed, "MHz")).Verdict);
+
+    [Fact]
+    public void R_CPU_05_矛盾時附證據與正當成因()
+    {
+        var f = One("R-CPU-05", Num(FactId.CpuSiliconBaseMhz, 2600, "MHz"),
+            Num(FactId.CpuBrandClaimedMhz, 3600, "MHz"));
+        Assert.Equal(VerifyVerdict.Conflict, f.Verdict);
+        Assert.Equal(2, f.Evidence.Length);
+        Assert.False(string.IsNullOrWhiteSpace(f.BenignCause));
+    }
 }

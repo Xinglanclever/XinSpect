@@ -26,7 +26,10 @@ public enum FactId
     BatteryDesignCapacityMWh, BatteryFullCapacityMWh,
 
     // ── 處理器（ring0 MSR 逐核直讀）──
-    CpuMicrocodePerCore,
+    CpuMicrocodePerCore, CpuSiliconBaseMhz, CpuBrandClaimedMhz,
+
+    // ── 處理器（CPUID／拓撲，用於改標與拼裝偵測）──
+    CpuBrandString, HypervisorPresent, CpuL3Bytes, CpuL2TotalBytes, CpuPhysicalCores, CpuIsHybrid,
 }
 
 /// <summary>這個值是從哪裡讀來的。</summary>
