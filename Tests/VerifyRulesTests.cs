@@ -314,4 +314,26 @@ public class VerifyRulesTests
         Assert.Equal(2, f.Evidence.Length);
         Assert.False(string.IsNullOrWhiteSpace(f.BenignCause));
     }
+
+    // ── R-LNK-01：現行 PCIe 鏈路寬度低於裝置能力（寬度不足不會自己好；速度低多為閒置省電，不判矛盾）──
+
+    [Theory]
+    [InlineData(16, 16, 3, 3, VerifyVerdict.Match)]      // 滿寬滿速
+    [InlineData(16, 16, 1, 3, VerifyVerdict.Match)]      // 寬度滿、速度低：閒置降速屬正常，不判矛盾
+    [InlineData(8, 16, 3, 3, VerifyVerdict.Conflict)]    // 寬度只有一半：走線／分流／M.2 佔道
+    [InlineData(4, 16, 1, 3, VerifyVerdict.Conflict)]    // 寬度不足（速度也低，但判定看寬度）
+    public void R_LNK_01_PCIe鏈路寬度(double curW, double maxW, double curS, double maxS, VerifyVerdict expected)
+        => Assert.Equal(expected, One("R-LNK-01",
+            Num(FactId.PcieCurWidth, curW), Num(FactId.PcieMaxWidth, maxW),
+            Num(FactId.PcieCurSpeed, curS), Num(FactId.PcieMaxSpeed, maxS)).Verdict);
+
+    [Fact]
+    public void R_LNK_01_寬度不足時附四項證據與正當成因()
+    {
+        var f = One("R-LNK-01", Num(FactId.PcieCurWidth, 8), Num(FactId.PcieMaxWidth, 16),
+            Num(FactId.PcieCurSpeed, 3), Num(FactId.PcieMaxSpeed, 3));
+        Assert.Equal(VerifyVerdict.Conflict, f.Verdict);
+        Assert.Equal(4, f.Evidence.Length);
+        Assert.False(string.IsNullOrWhiteSpace(f.BenignCause));
+    }
 }

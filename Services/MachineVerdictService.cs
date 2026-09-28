@@ -45,6 +45,10 @@ public static class MachineVerdictService
         try { machine.AddRange(CpuIdVerifyFacts.Collect(now)); }
         catch (Exception ex) { Diag.Swallow("MachineVerdict.CpuId", ex, "CPUID 事實讀不到，略過相關處理器規則"); }
 
+        // PCIe 鏈路對帳(取最劣一條,現行 vs 裝置能力);走 PCI 設定空間,橋接不可用就略過。
+        try { machine.AddRange(PcieVerifyFacts.Collect(now)); }
+        catch (Exception ex) { Diag.Swallow("MachineVerdict.Pcie", ex, "PCIe 設定空間讀不到，略過 R-LNK-01"); }
+
         var disks = new List<(string, VerifyFacts)>();
         foreach (var d in vm.PhysicalDisks.OrderBy(x => x.Index))
         {

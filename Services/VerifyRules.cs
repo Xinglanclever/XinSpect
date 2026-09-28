@@ -60,6 +60,10 @@ public static class FactCatalog
         [FactId.CpuL2TotalBytes] = ("L2 快取總量", false),
         [FactId.CpuPhysicalCores] = ("實體核心數", false),
         [FactId.CpuIsHybrid] = ("是否混合架構（大小核）", false),
+        [FactId.PcieCurWidth] = ("PCIe 現行鏈路寬度", true),
+        [FactId.PcieMaxWidth] = ("PCIe 裝置能力寬度", true),
+        [FactId.PcieCurSpeed] = ("PCIe 現行鏈路速度（Gen）", true),
+        [FactId.PcieMaxSpeed] = ("PCIe 裝置能力速度（Gen）", true),
     };
 
     public static string Name(FactId id) => Map.TryGetValue(id, out var v) ? v.Name : id.ToString();
@@ -111,6 +115,7 @@ public static class VerifyRules
     public const string PartStorage = "儲存裝置";
     public const string PartBattery = "電池";
     public const string PartCpu = "處理器";
+    public const string PartLink = "PCIe 鏈路";
 
     private const string T01 = "各條記憶體模組並非同批";
     private const string T02 = "記憶體模組序號異常";
@@ -129,6 +134,7 @@ public static class VerifyRules
     private const string C03 = "快取層級異常";
     private const string C04 = "偵測到虛擬層，讀值可信度下降";
     private const string C05 = "矽晶基礎頻率與宣稱值對不上";
+    private const string L01 = "PCIe 鏈路寬度低於裝置能力";
 
     public static readonly VerifyRule[] All =
     [
@@ -174,6 +180,11 @@ public static class VerifyRules
         new("R-CPU-04", PartCpu, C04, [FactId.HypervisorPresent], HypervisorBanner),
         new("R-CPU-05", PartCpu, C05,
             [FactId.CpuSiliconBaseMhz, FactId.CpuBrandClaimedMhz], BaseFreqMismatch),
+
+        // ── PCIe 鏈路：現行 vs 裝置能力（整機取最劣一條）──
+        new("R-LNK-01", PartLink, L01,
+            [FactId.PcieCurWidth, FactId.PcieMaxWidth, FactId.PcieCurSpeed, FactId.PcieMaxSpeed],
+            LinkWidthShortfall),
     ];
 
     /// <summary>逐條模組的字串以 <c>|</c> 相連（collector 產出的形式）。</summary>
@@ -520,5 +531,31 @@ public static class VerifyRules
                 ev)
             : new("R-CPU-05", PartCpu, C05, VerifyVerdict.Match, Severity.Good,
                 $"矽晶推算基礎頻率 {silicon:N0} MHz 與回報值 {claimed:N0} MHz 相符。", null, ev);
+    }
+
+    private static VerifyFinding LinkWidthShortfall(VerifyFacts f)
+    {
+        double curW = f.Num(FactId.PcieCurWidth)!.Value;
+        double maxW = f.Num(FactId.PcieMaxWidth)!.Value;
+        double curS = f.Num(FactId.PcieCurSpeed)!.Value;
+        double maxS = f.Num(FactId.PcieMaxSpeed)!.Value;
+        var ev = new[] { f.Get(FactId.PcieCurWidth)!, f.Get(FactId.PcieMaxWidth)!,
+                         f.Get(FactId.PcieCurSpeed)!, f.Get(FactId.PcieMaxSpeed)! };
+
+        // 只用「寬度」下判定：寬度不足不會自己好（走線／分流／M.2 佔道）。速度低多半是閒置省電降速，
+        // 負載中會回升——拿它判矛盾會在每台機器上誤報，故只在文字裡提示、不改判定。
+        if (maxW > 0 && curW > 0 && curW < maxW)
+        {
+            string speed = curS < maxS ? $"（速度目前 Gen{curS:0}／能力 Gen{maxS:0}）" : "";
+            return new("R-LNK-01", PartLink, L01, VerifyVerdict.Conflict, Severity.Warning,
+                $"最劣一條 PCIe 鏈路只跑在 x{curW:0}，裝置能力為 x{maxW:0}{speed}。",
+                "插槽走線本身只到這個寬度、與 M.2／其他插槽共用通道、或 BIOS 通道分流(bifurcation)都會這樣，"
+                + "不會自己好；與造假無關，但會限制該裝置的頻寬。", ev);
+        }
+
+        string note = curS < maxS
+            ? $"寬度已達能力 x{maxW:0}；速度目前 Gen{curS:0}（能力 Gen{maxS:0}），多為閒置省電降速，負載中會回升。"
+            : $"鏈路寬度與速度都已達裝置能力（x{maxW:0} Gen{maxS:0}）。";
+        return new("R-LNK-01", PartLink, L01, VerifyVerdict.Match, Severity.Good, note, null, ev);
     }
 }

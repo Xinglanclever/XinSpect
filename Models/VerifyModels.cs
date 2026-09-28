@@ -30,6 +30,9 @@ public enum FactId
 
     // ── 處理器（CPUID／拓撲，用於改標與拼裝偵測）──
     CpuBrandString, HypervisorPresent, CpuL3Bytes, CpuL2TotalBytes, CpuPhysicalCores, CpuIsHybrid,
+
+    // ── PCIe 鏈路（現行 vs 裝置能力）──
+    PcieCurWidth, PcieMaxWidth, PcieCurSpeed, PcieMaxSpeed,
 }
 
 /// <summary>這個值是從哪裡讀來的。</summary>

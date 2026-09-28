@@ -90,7 +90,8 @@ public sealed class PcieLinkService : ObservableObject
         }
     }
 
-    private (string Summary, List<PcieLinkRow> Rows, int Present) ScanAll()
+    // internal static：驗機事實收集器(PcieVerifyFacts)也要跑同一趟掃描；本方法不碰任何實例狀態。
+    internal static (string Summary, List<PcieLinkRow> Rows, int Present) ScanAll()
     {
         using var bridge = WinRing0Bridge.Create();
         if (!bridge.Available)
