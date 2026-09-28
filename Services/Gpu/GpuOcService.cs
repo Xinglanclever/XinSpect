@@ -150,6 +150,7 @@ public sealed class GpuOcService : ObservableObject, IDisposable
                         TempLimitMax = hi;
                     TempLimitNow = cur;
                     TargetTempLimitC = cur;
+                    _bootTempC = cur;   // 記住開頁時的原始目標溫度，供「還原預設」用（而非還原成最高上限）
                 }
             }
         }
@@ -360,6 +361,7 @@ public sealed class GpuOcService : ObservableObject, IDisposable
     }
 
     private bool _tempSeeded;
+    private uint _bootTempC;   // 開頁時讀到的 ACOUSTIC_CURR＝原始／開機目標溫度，供 RestoreDefaults 還原
 
     /// <summary>回讀寫入類數值（頻率偏移、溫度上限）。每拍呼叫；溫度目標只在首次以真實值種入一次，
     /// 之後不覆寫使用者拖動的滑桿。</summary>
@@ -500,10 +502,13 @@ public sealed class GpuOcService : ObservableObject, IDisposable
             }
             if (TempControlAvailable && _nvmlInited)
             {
-                // 溫度上限還原為驅動的預設目標溫度（ACOUSTIC_MAX 為原廠上限值）
-                if (NvmlInterop.GetTempThreshold(_dev, NvmlInterop.THRESHOLD_ACOUSTIC_MAX, out var def) == 0 && def > 0)
-                    TargetTempLimitC = def;
-                ApplyTempLimit();
+                // 還原為開頁時讀到的原始目標溫度（＝開機預設）。原本還原成 ACOUSTIC_MAX（可設定的最高上限），
+                // 會把溫度牆留在比原始更寬鬆＝更熱的狀態，那不是「還原預設」。讀不到原始值就不動、不亂寫。
+                if (_bootTempC > 0)
+                {
+                    TargetTempLimitC = _bootTempC;
+                    ApplyTempLimit();
+                }
             }
         }
         catch { /* 還原為盡力而為 */ }

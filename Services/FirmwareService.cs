@@ -34,16 +34,21 @@ public sealed class FirmwareService : ObservableObject
     private static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);
 
     [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    private static extern bool LookupPrivilegeValue(string? system, string name, out long luid);
+    private static extern bool LookupPrivilegeValue(string? system, string name, out LUID luid);
 
     [DllImport("advapi32.dll", SetLastError = true)]
     private static extern bool AdjustTokenPrivileges(IntPtr token, bool disableAll, ref TokenPrivileges newState, uint bufferLength, IntPtr previous, IntPtr returnLength);
+
+    // LUID 是 8 bytes（Low+High）；TOKEN_PRIVILEGES ＝ count(4)+LUID(8)+Attributes(4)＝16 bytes、Luid 在 offset 4。
+    // 先前用 `long Luid` 會 8-byte 對齊成 24 bytes、Luid 落到 offset 8 → AdjustTokenPrivileges 拿到錯版面恆敗。
+    [StructLayout(LayoutKind.Sequential)]
+    private struct LUID { public int Low; public int High; }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct TokenPrivileges
     {
         public uint PrivilegeCount;
-        public long Luid;
+        public LUID Luid;
         public uint Attributes;
     }
 
@@ -104,12 +109,15 @@ public sealed class FirmwareService : ObservableObject
         {
             if (!OpenProcessToken(Process.GetCurrentProcess().Handle, TokenAdjustPrivileges | TokenQuery, out var token))
                 return false;
-            if (!LookupPrivilegeValue(null, "SeSystemEnvironmentPrivilege", out long luid))
+            if (!LookupPrivilegeValue(null, "SeSystemEnvironmentPrivilege", out LUID luid))
                 return false;
             var tp = new TokenPrivileges { PrivilegeCount = 1, Luid = luid, Attributes = SePrivilegeEnabled };
-            AdjustTokenPrivileges(token, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero);
+            // AdjustTokenPrivileges 未持有該權限時仍回 true，但 LastError=ERROR_NOT_ALL_ASSIGNED(1300)——
+            // 不查就是假成功，害 Secure Boot 頁把「沒權限讀」誤報成「變數不存在＝可能 Legacy 開機」。
+            bool ok = AdjustTokenPrivileges(token, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero)
+                      && Marshal.GetLastWin32Error() == 0;
             CloseHandle(token);
-            return true;
+            return ok;
         }
         catch { return false; }
     }

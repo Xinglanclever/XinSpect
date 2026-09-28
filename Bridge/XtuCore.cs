@@ -842,7 +842,12 @@ namespace XtuBridge
                     outp.Code = ResultCode(applyRes);
                     try { if (_mRefresh != null) _mRefresh.Invoke(_tuning, new object[] { true }); } catch { }
                 }
-                outp.Ok = true;
+                // 只認 SDK 回報的 GeneralCode：含 SUCCESS／REBOOT 才算成功（重開機項亦屬「已排入」）。
+                // 過去無條件 Ok=true → SDK 以非例外方式拒絕時使用者看到假成功。寧可偶爾誤報「未確認」，
+                // 也絕不謊報「已套用超頻」——那是危險硬體寫入。
+                outp.Ok = outp.Code != null
+                          && (outp.Code.IndexOf("SUCCESS", StringComparison.OrdinalIgnoreCase) >= 0
+                              || outp.Code.IndexOf("REBOOT", StringComparison.OrdinalIgnoreCase) >= 0);
             }
             catch (Exception ex)
             {

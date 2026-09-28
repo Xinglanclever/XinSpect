@@ -34,7 +34,7 @@ public sealed class LargePageService : ObservableObject
     private static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);
 
     [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    private static extern bool LookupPrivilegeValue(string? system, string name, out long luid);
+    private static extern bool LookupPrivilegeValue(string? system, string name, out LUID luid);
 
     [DllImport("advapi32.dll", SetLastError = true)]
     private static extern bool AdjustTokenPrivileges(IntPtr token, bool disableAll,
@@ -45,11 +45,15 @@ public sealed class LargePageService : ObservableObject
 
     [DllImport("kernel32.dll")] private static extern bool CloseHandle(IntPtr h);
 
+    // LUID 為 8 bytes；`long Luid` 會讓 TokenPrivileges 8-byte 對齊、Luid 落到 offset 8（應為 4）→ AdjustTokenPrivileges 恆敗。
     [StructLayout(LayoutKind.Sequential)]
-    private struct TokenPrivileges { public uint Count; public long Luid; public uint Attributes; }
+    private struct LUID { public int Low; public int High; }
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct PrivilegeSet { public uint Count; public uint Control; public long Luid; public uint Attributes; }
+    private struct TokenPrivileges { public uint Count; public LUID Luid; public uint Attributes; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PrivilegeSet { public uint Count; public uint Control; public LUID Luid; public uint Attributes; }
 
     private const uint TokenAdjustPrivileges = 0x0020, TokenQuery = 0x0008;
     private const uint SePrivilegeEnabled = 0x0002;
@@ -169,7 +173,7 @@ public sealed class LargePageService : ObservableObject
         {
             if (!OpenProcessToken(Process.GetCurrentProcess().Handle, TokenAdjustPrivileges | TokenQuery, out token))
                 return false;
-            if (!LookupPrivilegeValue(null, "SeLockMemoryPrivilege", out long luid)) return false;
+            if (!LookupPrivilegeValue(null, "SeLockMemoryPrivilege", out LUID luid)) return false;
 
             var tp = new TokenPrivileges { Count = 1, Luid = luid, Attributes = SePrivilegeEnabled };
             AdjustTokenPrivileges(token, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero);
