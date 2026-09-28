@@ -437,6 +437,18 @@ public static class PageRegistry
         },
         new()
         {
+            Key = "stress", Title = "運算穩定性壓測", Group = GTools,
+            IconData = "M5,1 h1.5 v1.5 h-1.5 z M9.5,1 h1.5 v1.5 h-1.5 z M1,5 h1.5 v1.5 h-1.5 z M1,9.5 h1.5 v1.5 h-1.5 z "
+                     + "M13.5,5 H15 v1.5 h-1.5 z M13.5,9.5 H15 v1.5 h-1.5 z M5,13.5 h1.5 V15 h-1.5 z M9.5,13.5 h1.5 V15 h-1.5 z "
+                     + "M3,3 h10 v10 h-10 z M6,6 h4 v4 h-4 z",
+            Factory = () => new StressBridgeView(),
+            Hint = "以 y-cruncher 驗運算穩定性：抓 CPU／記憶體在壓力下的靜默運算錯誤（偵測已安裝，不內含執行檔）",
+            Keywords = ["stress", "壓測", "穩定性", "y-cruncher", "ycruncher", "運算錯誤", "記憶體",
+                        "cpu", "prime95", "occt", "tm5", "校驗", "burn"],
+            Advanced = true,
+        },
+        new()
+        {
             Key = "ranking", Title = "效能天梯", Group = GTools,
             IconData = "M2,13 h3 v-6 h-3 z M6.5,13 h3 v-11 h-3 z M11,13 h3 v-4 h-3 z",
             Factory = () => new RankingView(),

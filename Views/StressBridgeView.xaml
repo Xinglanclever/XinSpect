@@ -1,0 +1,72 @@
+<UserControl x:Class="XinSpect.StressBridgeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <TextBlock Text="運算穩定性壓測（y-cruncher）" FontSize="22" FontWeight="Bold"
+                       Foreground="{DynamicResource PrimaryInkBrush}" Margin="0,0,0,4"/>
+            <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource SecondaryInkBrush}"
+                       Text="y-cruncher 計算圓周率並持續自我校驗——算錯就代表 CPU／記憶體在壓力下產生了靜默運算錯誤。這是原生壓測（只量溫度／吞吐）到不了的能力。"/>
+
+            <!-- 安全警告 -->
+            <Border Margin="0,12,0,0" Padding="12,10" CornerRadius="6" Background="{DynamicResource Surface2Brush}">
+                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource WarningBrush}"
+                           Text="⚠ 壓測會把 CPU 與記憶體長時間壓到滿載，溫度顯著升高。請先確保散熱良好；筆電與散熱不良的機器尤其留意。本程式不內含 y-cruncher 執行檔，只偵測並啟動你已安裝的版本。"/>
+            </Border>
+
+            <!-- y-cruncher 偵測與路徑 -->
+            <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                <StackPanel>
+                    <TextBlock Text="y-cruncher" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryInkBrush}"/>
+                    <TextBlock Text="{Binding PathText}" TextWrapping="Wrap" Margin="0,6,0,0"
+                               Foreground="{DynamicResource SecondaryInkBrush}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <Button Content="重新偵測" Style="{StaticResource ToolButton}" Click="Redetect_Click"/>
+                        <Button Content="手動指定…" Style="{StaticResource ToolButton}" Margin="8,0,0,0" Click="ManualPath_Click"/>
+                        <Button Content="官方下載頁" Style="{StaticResource ToolButton}" Margin="8,0,0,0" Click="OfficialPage_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 設定與啟動 -->
+            <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                <StackPanel>
+                    <TextBlock Text="壓測時長" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryInkBrush}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="5 分鐘" Style="{StaticResource ToolButton}" Tag="5" Click="Duration_Click"/>
+                        <Button Content="10 分鐘" Style="{StaticResource ToolButton}" Tag="10" Margin="8,0,0,0" Click="Duration_Click"/>
+                        <Button Content="30 分鐘" Style="{StaticResource ToolButton}" Tag="30" Margin="8,0,0,0" Click="Duration_Click"/>
+                        <Button Content="60 分鐘" Style="{StaticResource ToolButton}" Tag="60" Margin="8,0,0,0" Click="Duration_Click"/>
+                        <TextBlock Text="{Binding DurationText}" VerticalAlignment="Center" Margin="14,0,0,0"
+                                   Foreground="{DynamicResource AccentInkBrush}" FontWeight="SemiBold"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                        <Button Content="{Binding StartStopText}" Style="{StaticResource PrimaryButton}"
+                                MinWidth="120" Padding="24,10" IsEnabled="{Binding Available}" Click="StartStop_Click"/>
+                        <TextBlock Text="{Binding ElapsedText}" VerticalAlignment="Center" Margin="14,0,0,0"
+                                   FontFamily="Consolas" FontSize="16" Foreground="{DynamicResource PrimaryInkBrush}"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Margin="0,10,0,0"
+                               Foreground="{DynamicResource SecondaryInkBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 結果 -->
+            <Border Style="{StaticResource Card}" Margin="0,12,0,0"
+                    Visibility="{Binding HasResult, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <TextBlock Text="判定" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryInkBrush}"/>
+                    <TextBlock Text="{Binding ResultSummary}" TextWrapping="Wrap" Margin="0,6,0,0"
+                               Foreground="{DynamicResource PrimaryInkBrush}"/>
+                    <TextBlock Text="y-cruncher 原始輸出（尾段，供人核對）：" Margin="0,10,0,4"
+                               Foreground="{DynamicResource MutedInkBrush}" FontSize="12"/>
+                    <TextBox Text="{Binding ResultLog, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas" FontSize="12"
+                             MaxHeight="220" VerticalScrollBarVisibility="Auto" TextWrapping="NoWrap"
+                             HorizontalScrollBarVisibility="Auto" Background="{DynamicResource Surface2Brush}"
+                             Foreground="{DynamicResource SecondaryInkBrush}" BorderThickness="0" Padding="8"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
