@@ -47,6 +47,9 @@ public sealed class WingetService : ObservableObject
     public bool IsInstalling { get => _installing; private set { if (SetProperty(ref _installing, value)) OnPropertyChanged(nameof(CanInstall)); } }
     public bool CanInstall => _available && !_installing;
 
+    // winget 安裝逾時上限：正常安裝數分鐘內完成，超過視為掛起，強制終止以免狀態永久卡住
+    private const int InstallTimeoutMs = 600_000;
+
     private string _status = "正在偵測 winget…";
     public string StatusText { get => _status; private set => SetProperty(ref _status, value); }
 
@@ -105,7 +108,12 @@ public sealed class WingetService : ObservableObject
             };
             using var p = Process.Start(psi);
             if (p is null) return new(StringComparer.OrdinalIgnoreCase);
-            p.WaitForExit(90_000);
+            if (!p.WaitForExit(90_000))
+            {
+                // 逾時未退出就終止，避免 winget 掛起時殘留行程
+                try { p.Kill(entireProcessTree: true); } catch { /* 已結束或無權限 */ }
+                return new(StringComparer.OrdinalIgnoreCase);
+            }
             // 匯出時若有套件找不到來源，winget 會回非 0 但<b>照樣寫出檔案</b>，
             // 因此以「檔案有沒有生出來」為準，不看結束碼。
             if (!File.Exists(path)) return new(StringComparer.OrdinalIgnoreCase);
@@ -287,7 +295,12 @@ public sealed class WingetService : ObservableObject
                 };
                 using var p = Process.Start(psi);
                 if (p is null) return false;
-                p.WaitForExit(8000);
+                if (!p.WaitForExit(8000))
+                {
+                    // 逾時未退出就終止，避免 winget 掛起時殘留行程
+                    try { p.Kill(entireProcessTree: true); } catch { /* 已結束或無權限 */ }
+                    return false;
+                }
                 return p.HasExited && p.ExitCode == 0;
             }
             catch { return false; }
@@ -352,7 +365,13 @@ public sealed class WingetService : ObservableObject
                 p.ErrorDataReceived += (_, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) Append(e.Data); };
                 p.BeginOutputReadLine();
                 p.BeginErrorReadLine();
-                p.WaitForExit();
+                // 逾時防線：winget 掛起時不得讓 IsInstalling 永久卡 true；逾時即終止並如實回報失敗（-1）。
+                if (!p.WaitForExit(InstallTimeoutMs))
+                {
+                    try { p.Kill(entireProcessTree: true); } catch { /* 已結束或無權限 */ }
+                    Append($"✗ winget 無回應超過 {InstallTimeoutMs / 60000} 分鐘，已強制終止。");
+                    return -1;
+                }
                 return p.ExitCode;
             }
             catch (Exception ex) { Append("錯誤：" + ex.Message); return -1; }

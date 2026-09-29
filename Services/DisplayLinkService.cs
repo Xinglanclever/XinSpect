@@ -134,6 +134,14 @@ public sealed class DisplayLinkService : ObservableObject
         IsBusy = true;
         _ = Task.Run(Collect).ContinueWith(t =>
         {
+            if (t.IsFaulted)
+            {
+                Diag.Swallow("DisplayLink.Refresh", t.Exception!, "背景查詢失敗，維持空白並解除忙碌");
+                Rows.Clear();
+                Status = "讀取顯示設定時發生例外，已記入診斷紀錄；本頁不顯示猜測值。";
+                IsBusy = false;
+                return;
+            }
             Rows.Clear();
             var (rows, status) = t.Result;
             foreach (var r in rows) Rows.Add(r);

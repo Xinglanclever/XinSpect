@@ -81,6 +81,13 @@ public sealed class LicenseService : ObservableObject
         IsRevealed = false;
         _ = Task.Run(Collect).ContinueWith(t =>
         {
+            if (t.IsFaulted)
+            {
+                Diag.Swallow("License.Refresh", t.Exception!, "背景查詢失敗，維持原狀並解除忙碌");
+                Status = "查詢授權狀態時發生例外，已記入診斷紀錄。讀不到就是讀不到，本頁不猜。";
+                IsBusy = false;
+                return;
+            }
             var r = t.Result;
             EditionText = r.Edition;
             PartialKeyText = LicenseDecoder.PartialKeyText(r.Partial);

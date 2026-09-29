@@ -86,6 +86,13 @@ public sealed class InvisibleStallService : ObservableObject
 
         _ = Task.Run(Run).ContinueWith(t =>
         {
+            if (t.IsFaulted)
+            {
+                Diag.Swallow("InvisibleStall.Measure", t.Exception!, "背景量測失敗，維持空白並解除忙碌");
+                Status = "量測中發生例外，已記入診斷紀錄。";
+                IsBusy = false;
+                return;
+            }
             var r = t.Result;
             Rows.Clear();
             foreach (var row in r.Rows) Rows.Add(row);

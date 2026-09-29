@@ -21,6 +21,8 @@ public sealed class GpuStressService : ObservableObject, IDisposable
 {
     public const string WingetId = "Geeks3D.FurMark.2";
     private const string SlotName = "FurMark2";
+    // winget 安裝逾時上限：正常安裝數分鐘內完成，超過視為掛起，強制終止以免狀態永久卡住
+    private const int InstallTimeoutMs = 600_000;
 
     private readonly SettingsService _settings = new();
 
@@ -189,7 +191,12 @@ public sealed class GpuStressService : ObservableObject, IDisposable
             { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
             using var p = Process.Start(psi);
             if (p is null) return false;
-            p.WaitForExit(8000);
+            if (!p.WaitForExit(8000))
+            {
+                // 逾時未退出就終止，避免 winget 掛起時殘留行程
+                try { p.Kill(entireProcessTree: true); } catch { /* 已結束或無權限 */ }
+                return false;
+            }
             return p.HasExited && p.ExitCode == 0;
         }
         catch { return false; }
@@ -213,7 +220,13 @@ public sealed class GpuStressService : ObservableObject, IDisposable
                 // 必須把 stdout/stderr 讀掉再等結束——winget 輸出量大，不讀會塞滿 pipe 緩衝造成雙方死鎖、安裝永久卡住。
                 var outTask = pr.StandardOutput.ReadToEndAsync();
                 var errTask = pr.StandardError.ReadToEndAsync();
-                pr.WaitForExit();
+                // 逾時防線：winget 掛起時不得讓 IsInstalling 永久卡 true；逾時即終止並如實回報失敗（-1）。
+                if (!pr.WaitForExit(InstallTimeoutMs))
+                {
+                    try { pr.Kill(entireProcessTree: true); } catch { /* 已結束或無權限 */ }
+                    try { Task.WaitAll(new Task[] { outTask, errTask }, 3000); } catch { /* 讀取逾時/取消不影響結果 */ }
+                    return -1;
+                }
                 try { Task.WaitAll(new Task[] { outTask, errTask }, 3000); } catch { /* 讀取逾時/取消不影響結束碼 */ }
                 return pr.ExitCode;
             }

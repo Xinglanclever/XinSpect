@@ -215,10 +215,13 @@ public sealed class DnsService : INotifyPropertyChanged
             StandardErrorEncoding = Encoding.UTF8,
         };
         using var p = Process.Start(psi)!;
-        string stdout = await p.StandardOutput.ReadToEndAsync();
-        string stderr = await p.StandardError.ReadToEndAsync();
+        // 兩條 pipe 必須同時非同步讀取：若序列先讀 stdout 再讀 stderr，stderr 塞滿 pipe 緩衝會造成死鎖。
+        // （編碼問題已知，另行處理：此處 UTF8 與 netsh 主控台 codepage（zh-TW 950）不符，輸出可能亂碼。）
+        Task<string> outTask = p.StandardOutput.ReadToEndAsync();
+        Task<string> errTask = p.StandardError.ReadToEndAsync();
+        await Task.WhenAll(outTask, errTask);
         await p.WaitForExitAsync();
-        var err = string.IsNullOrWhiteSpace(stderr) ? stdout.Trim() : stderr.Trim();
+        var err = string.IsNullOrWhiteSpace(errTask.Result) ? outTask.Result.Trim() : errTask.Result.Trim();
         return (p.ExitCode, err);
     }
 }

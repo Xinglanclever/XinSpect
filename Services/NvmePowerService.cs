@@ -138,6 +138,18 @@ public sealed class NvmePowerService : ObservableObject
             return (id, feat);
         }).ContinueWith(t =>
         {
+            if (t.IsFaulted)
+            {
+                Diag.Swallow("NvmePower.Read", t.Exception!, "背景讀取失敗，維持空白並解除忙碌");
+                States.Clear();
+                Apst.Clear();
+                Samples.Clear();
+                ResetVerdict();
+                Status = "讀取 Identify Controller 時發生例外，已記入診斷紀錄。"
+                       + "讀不到就是讀不到，本頁不會拿規格書的數字填空。";
+                IsBusy = false;
+                return;
+            }
             var (id, feat) = t.Result;
             States.Clear();
             Apst.Clear();
@@ -194,6 +206,16 @@ public sealed class NvmePowerService : ObservableObject
         _ = Task.Run(() => Sweep(index, p => Progress = p))
             .ContinueWith(t =>
             {
+                if (t.IsFaulted)
+                {
+                    Diag.Swallow("NvmePower.Measure", t.Exception!, "背景量測失敗，解除忙碌並如實回報");
+                    IsBusy = false;
+                    Progress = "";
+                    Status = $"量測 PhysicalDrive{index} 時發生例外，已記入診斷紀錄。"
+                           + "上方的宣告值仍然有效。";
+                    return;
+                }
+
                 IsBusy = false;
                 Progress = "";
                 if (t.Result is not { } samples)

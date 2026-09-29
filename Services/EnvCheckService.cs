@@ -167,7 +167,12 @@ public sealed class EnvCheckService : ObservableObject
             };
             using var p = Process.Start(psi);
             if (p is null) return false;
-            p.WaitForExit(8000);
+            if (!p.WaitForExit(8000))
+            {
+                // 逾時未退出就終止，避免 winget 掛起時殘留行程
+                try { p.Kill(entireProcessTree: true); } catch { /* 已結束或無權限 */ }
+                return false;
+            }
             return p.HasExited && p.ExitCode == 0;
         }
         catch { return false; }

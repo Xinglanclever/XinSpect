@@ -63,6 +63,9 @@ public sealed class ToolAutoInstaller : ObservableObject
     private string _status = "";
     public string StatusText { get => _status; private set => SetProperty(ref _status, value); }
 
+    // winget 安裝逾時上限：正常安裝數分鐘內完成，超過視為掛起，強制終止以免狀態永久卡住
+    private const int InstallTimeoutMs = 600_000;
+
     private string _log = "";
     public string Log { get => _log; private set => SetProperty(ref _log, value); }
 
@@ -174,7 +177,12 @@ public sealed class ToolAutoInstaller : ObservableObject
             };
             using var p = Process.Start(psi);
             if (p is null) return false;
-            p.WaitForExit(30_000);
+            if (!p.WaitForExit(30_000))
+            {
+                // 逾時未退出就終止，避免 winget 掛起時殘留行程
+                try { p.Kill(entireProcessTree: true); } catch { /* 已結束或無權限 */ }
+                return false;
+            }
             return p.HasExited && p.ExitCode == 0;
         }
         catch { return false; }
@@ -200,7 +208,13 @@ public sealed class ToolAutoInstaller : ObservableObject
             p.ErrorDataReceived += (_, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) Append(e.Data); };
             p.BeginOutputReadLine();
             p.BeginErrorReadLine();
-            p.WaitForExit();
+            // 逾時防線：winget 掛起時不得無限等待；逾時即終止並如實回報失敗（-1）。
+            if (!p.WaitForExit(InstallTimeoutMs))
+            {
+                try { p.Kill(entireProcessTree: true); } catch { /* 已結束或無權限 */ }
+                Append($"✗ winget 無回應超過 {InstallTimeoutMs / 60000} 分鐘，已強制終止。");
+                return -1;
+            }
             return p.ExitCode;
         }
         catch (Exception ex) { Append("錯誤：" + ex.Message); return -1; }
