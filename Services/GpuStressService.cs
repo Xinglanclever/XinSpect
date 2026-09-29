@@ -210,7 +210,11 @@ public sealed class GpuStressService : ObservableObject, IDisposable
                 { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true, StandardOutputEncoding = Encoding.UTF8 };
                 using var pr = Process.Start(psi);
                 if (pr is null) return -1;
+                // 必須把 stdout/stderr 讀掉再等結束——winget 輸出量大，不讀會塞滿 pipe 緩衝造成雙方死鎖、安裝永久卡住。
+                var outTask = pr.StandardOutput.ReadToEndAsync();
+                var errTask = pr.StandardError.ReadToEndAsync();
                 pr.WaitForExit();
+                try { Task.WaitAll(new Task[] { outTask, errTask }, 3000); } catch { /* 讀取逾時/取消不影響結束碼 */ }
                 return pr.ExitCode;
             }
             catch { return -1; }

@@ -61,6 +61,7 @@ public sealed class NetAdapterService : ObservableObject
         Status = "正在查詢…";
         _ = Task.Run(Collect).ContinueWith(t =>
         {
+            if (t.IsFaulted) { Diag.Swallow("NetAdapter.Refresh", t.Exception!, "背景查詢失敗，維持空白並解除忙碌"); IsBusy = false; return; }
             Rows.Clear();
             var (rows, status) = t.Result;
             foreach (var r in rows) Rows.Add(r);

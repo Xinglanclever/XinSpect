@@ -42,7 +42,17 @@ public static class ReportService
         if (dlg.ShowDialog() != true) return null;
 
         string path = dlg.FileName;
-        File.WriteAllText(path, Build(vm, FormatOf(path)), new UTF8Encoding(true));
+        try
+        {
+            File.WriteAllText(path, Build(vm, FormatOf(path)), new UTF8Encoding(true));
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(
+                "匯出失敗：" + ex.Message + "\n（檔案可能正被其他程式開啟，或該位置沒有寫入權限）",
+                "曦覽 XinSpect", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            return null;
+        }
 
         try
         {

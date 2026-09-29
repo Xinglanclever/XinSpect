@@ -77,6 +77,7 @@ public sealed class DramTrafficService : ObservableObject
 
         _ = Task.Run(Run).ContinueWith(t =>
         {
+            if (t.IsFaulted) { Diag.Swallow("DramTraffic.Measure", t.Exception!, "背景量測失敗，維持空白並解除忙碌"); IsBusy = false; return; }
             var r = t.Result;
             Status = r.Status;
             ValidationText = r.Validation;

@@ -63,6 +63,7 @@ public sealed class MachineAgeService : ObservableObject
 
         _ = Task.Run(CollectDisks).ContinueWith(t =>
         {
+            if (t.IsFaulted) { Diag.Swallow("MachineAge.Refresh", t.Exception!, "背景讀取失敗，維持空白並解除忙碌"); IsBusy = false; return; }
             Disks.Clear();
             foreach (var d in t.Result) Disks.Add(d);
             Status = Disks.Count > 0

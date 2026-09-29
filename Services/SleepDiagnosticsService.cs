@@ -63,6 +63,7 @@ public sealed class SleepDiagnosticsService : ObservableObject
         Status = "正在查詢…";
         _ = Task.Run(Collect).ContinueWith(t =>
         {
+            if (t.IsFaulted) { Diag.Swallow("SleepDiagnostics.Refresh", t.Exception!, "背景查詢失敗，維持空白並解除忙碌"); IsBusy = false; return; }
             Sections.Clear();
             foreach (var s in t.Result) Sections.Add(s);
             Status = "查詢完成。以上都是 powercfg 的原樣輸出——本頁不解析它的文字，"

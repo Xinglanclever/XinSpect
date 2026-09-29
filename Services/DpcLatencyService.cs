@@ -265,7 +265,7 @@ public sealed class DpcLatencyService : ObservableObject, IDisposable
 
             Phase = "彙整";
             try { _session.Dispose(); } catch { }
-            try { await pump.WaitAsync(TimeSpan.FromSeconds(2000)); } catch { }
+            try { await pump.WaitAsync(TimeSpan.FromSeconds(2)); } catch { }   // 讓 ETW 泵排空的寬限；原為 2000 秒（33 分）判定為筆誤
 
             var rows = await Task.Run(BuildRows);
             Rows.Clear();

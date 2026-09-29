@@ -80,6 +80,7 @@ public sealed class BootBreakdownService : ObservableObject
         IsBusy = true;
         _ = Task.Run(Collect).ContinueWith(t =>
         {
+            if (t.IsFaulted) { Diag.Swallow("BootBreakdown.Refresh", t.Exception!, "背景收集失敗，維持空白並解除忙碌"); IsBusy = false; return; }
             var r = t.Result;
             Culprits.Clear();
             foreach (var c in r.Culprits) Culprits.Add(c);
