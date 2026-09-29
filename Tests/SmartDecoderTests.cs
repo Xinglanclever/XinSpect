@@ -331,6 +331,10 @@ public class SmartDecoderTests
         SmartRow[] blank = [new("序號（Serial）", "   ", "", "")];
         Assert.Null(StorageSmartService.SerialFromRows(blank));
 
+        // 解碼失敗留下的亂碼（含控制字元／非 ASCII）不得回填去蓋掉 WMI 的真值
+        SmartRow[] garbage = [new("序號（Serial）", "�X", "", "")];
+        Assert.Null(StorageSmartService.SerialFromRows(garbage));
+
         Assert.Null(StorageSmartService.SerialFromRows([]));
     }
 

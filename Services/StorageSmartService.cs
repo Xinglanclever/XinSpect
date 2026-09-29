@@ -468,7 +468,8 @@ public sealed class StorageSmartService : ObservableObject
         {
             if (!r.Name.StartsWith("序號", StringComparison.Ordinal)) continue;
             string v = r.ValueText.Trim();
-            if (v.Length > 0) return v;
+            // 只在字串全為可列印 ASCII（0x20–0x7E）時才回填——解碼失敗留下的亂碼絕不拿去蓋掉 WMI 的真值。
+            if (v.Length > 0 && v.All(c => c is >= ' ' and <= '~')) return v;
         }
         return null;
     }

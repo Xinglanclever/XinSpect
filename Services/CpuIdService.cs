@@ -241,11 +241,15 @@ public sealed class CpuIdService
         {
             bool isExt = leaf < 0;
             uint absLeaf = (uint)Math.Abs(leaf);
-            if (isExt ? absLeaf > maxExt : absLeaf > maxStd) continue;
-            var r = X86Base.CpuId(leaf, sub);
+            // 擴充葉以負值表示（-1＝0x80000001…）：要先還原成真實葉位再比對上限、再讀。
+            // 先前直接把負值丟給 CpuId（-1＝0xFFFFFFFF）會讀到「最高擴充葉」的資料，
+            // 且守門拿小數字 absLeaf 比 maxExt 恆為 false → LZCNT/NX/SYSCALL 等擴充位元永不列出。
+            uint realLeaf = isExt ? (0x80000000u | absLeaf) : absLeaf;
+            if (realLeaf > (isExt ? maxExt : maxStd)) continue;
+            var r = X86Base.CpuId(unchecked((int)realLeaf), sub);
             uint v = reg switch { 0 => (uint)r.Eax, 1 => (uint)r.Ebx, 2 => (uint)r.Ecx, _ => (uint)r.Edx };
             if ((v & (1u << bit)) != 0)
-                Features.Add(new CpuIdFeatureChip(name, $"0x{absLeaf:X}/{sub} {(reg switch { 0 => "EAX", 1 => "EBX", 2 => "ECX", _ => "EDX" })}.{bit}"));
+                Features.Add(new CpuIdFeatureChip(name, $"0x{realLeaf:X}/{sub} {(reg switch { 0 => "EAX", 1 => "EBX", 2 => "ECX", _ => "EDX" })}.{bit}"));
         }
     }
 
