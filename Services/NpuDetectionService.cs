@@ -42,8 +42,8 @@ public sealed class NpuDetectionService : ObservableObject
     private string _estimatedTops = "";
     public string EstimatedTops { get => _estimatedTops; private set => SetProperty(ref _estimatedTops, value); }
 
-    /// <summary>（重新）偵測 NPU。</summary>
-    public void Refresh()
+    /// <summary>（重新）偵測 NPU。WMI 列舉在背景執行緒，避免進頁凍結；呼叫端 await 後再讀結果。</summary>
+    public async Task RefreshAsync()
     {
         IsLoading = true;
         NpuPresent = false;
@@ -55,18 +55,21 @@ public sealed class NpuDetectionService : ObservableObject
 
         try
         {
-            // 策略一：搜尋 PnP 裝置名稱／描述中含 NPU / Neural / VPU / AI Accelerator / AMD IPU / XDNA / Hexagon
-            var found = TryFindByName();
-            if (!found)
+            await Task.Run(() =>
             {
-                // 策略二：以 PCI 類別碼 0x0B40（Processing Accelerators：Neural Network）搜尋
-                found = TryFindByPciClass();
-            }
+                // 策略一：搜尋 PnP 裝置名稱／描述中含 NPU / Neural / VPU / AI Accelerator / AMD IPU / XDNA / Hexagon
+                var found = TryFindByName();
+                if (!found)
+                {
+                    // 策略二：以 PCI 類別碼 0x0B40（Processing Accelerators：Neural Network）搜尋
+                    found = TryFindByPciClass();
+                }
 
-            if (!found)
-            {
-                Status = "未偵測到 NPU。此機器可能不具備 NPU 或驅動未安裝。";
-            }
+                if (!found)
+                {
+                    Status = "未偵測到 NPU。此機器可能不具備 NPU 或驅動未安裝。";
+                }
+            });
         }
         catch (Exception ex)
         {

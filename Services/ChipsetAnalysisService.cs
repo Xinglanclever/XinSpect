@@ -40,27 +40,27 @@ public sealed class ChipsetAnalysisService : ObservableObject
 
     public void Refresh()
     {
+        if (_isLoading) return;             // 防止 Loaded 與「重新分析」重入
         IsLoading = true;
         ErrorMessage = null;
-        try
-        {
-            DetectChipset();
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"分析失敗：{ex.Message}";
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+        // WMI 列舉移到背景執行緒，避免進頁時凍住 UI；設定屬性回到 UI 執行緒。
+        _ = Task.Run(CollectRaw)
+            .ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                    ErrorMessage = $"分析失敗：{t.Exception!.GetBaseException().Message}";
+                else
+                    ApplyDetection(t.Result.Board, t.Result.HostBridge, t.Result.Pch);
+                IsLoading = false;
+            }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
     // ==================================================================
     //  偵測晶片組
     // ==================================================================
 
-    private void DetectChipset()
+    // 背景執行緒只做 WMI 列舉（慢），回傳原始字串；套用（設定屬性）留給 UI 執行緒。
+    private static (string Board, string HostBridge, string Pch) CollectRaw()
     {
         // 1) 從 Win32_BaseBoard 取得主機板型號
         string boardModel = "";
@@ -111,6 +111,12 @@ public sealed class ChipsetAnalysisService : ObservableObject
         }
         catch (Exception ex) { Diag.Swallow("ChipsetAnalysis.PCH", ex, "PCH 偵測失敗"); }
 
+        return (boardModel, hostBridge, pchDevice);
+    }
+
+    // UI 執行緒：型號比對＋查表＋設定屬性（含 ObservableCollection Features）。
+    private void ApplyDetection(string boardModel, string hostBridge, string pchDevice)
+    {
         HostBridgeName = hostBridge.Length > 0 ? hostBridge : "未偵測到";
 
         // 3) 嘗試從主機板型號或 PCI 名稱查表

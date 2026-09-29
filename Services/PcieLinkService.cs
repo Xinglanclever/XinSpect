@@ -187,7 +187,7 @@ public sealed class PcieLinkService : ObservableObject
         string name = names.TryGetValue((ven, did), out var n) ? n : $"PCI 裝置 {ven:X4}:{did:X4}";
         return new PcieLinkRow(name, $"{bus:X2}:{dev:X2}.{fn}", PcieLinkDecoder.PortTypeName(portType),
                                curSpeed, curWidth, maxSpeed, maxWidth, verdict, severity,
-                               errText, errSev);
+                               errText, errSev, ven, did);
     }
 
     /// <summary>

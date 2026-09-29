@@ -108,7 +108,16 @@ public sealed class LargePageService : ObservableObject
     {
         if (_checked) return;
         _checked = true;
-        _ = Task.Run(Probe).ContinueWith(t => Publish(t.Result), TaskScheduler.FromCurrentSynchronizationContext());
+        _ = Task.Run(Probe).ContinueWith(t =>
+        {
+            if (t.IsFaulted)
+            {
+                Diag.Swallow("LargePage.EnsureChecked", t.Exception!, "背景環境檢查失敗，維持未檢查狀態，下次進頁重試");
+                _checked = false;
+                return;
+            }
+            Publish(t.Result);
+        }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
     /// <summary>使用者按下才跑：4 KB 頁與大頁各一次指標追逐。</summary>
@@ -117,8 +126,19 @@ public sealed class LargePageService : ObservableObject
         if (_busy || !_facts.AllocationOk) return;
         IsBusy = true;
         _ = Task.Run(() => Chase(_facts, p => Progress = p))
-            .ContinueWith(t => { Publish(t.Result); Progress = ""; IsBusy = false; },
-                          TaskScheduler.FromCurrentSynchronizationContext());
+            .ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                {
+                    Diag.Swallow("LargePage.Measure", t.Exception!, "背景量測失敗，維持原狀並解除忙碌");
+                    Progress = "";
+                    IsBusy = false;
+                    return;
+                }
+                Publish(t.Result);
+                Progress = "";
+                IsBusy = false;
+            }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
     private void Publish(LargePageFacts f)

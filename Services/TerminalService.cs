@@ -73,6 +73,10 @@ public sealed class TerminalService : ObservableObject, IDisposable
             Append($"── {ShellName} 已啟動（{(IsElevated() ? "系統管理員" : "一般使用者")}權限）──\n");
             if (!_usePowerShell)
                 proc.StandardInput.WriteLine("chcp 65001 >nul");   // 讓 cmd 以 UTF-8 輸出，保留中文
+            else
+                // Windows PowerShell 預設以主控台 OEM 代碼頁（繁中機為 cp950）輸出，與下方指定的
+                // UTF-8 解碼不符會導致中文亂碼；強制其輸出改為 UTF-8（無主控台時 try/catch 靜默略過）。
+                proc.StandardInput.WriteLine("try{[Console]::OutputEncoding=[Text.Encoding]::UTF8}catch{};$OutputEncoding=[Text.Encoding]::UTF8");
         }
         catch (Exception ex)
         {

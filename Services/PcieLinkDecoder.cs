@@ -6,13 +6,19 @@ public sealed class PcieLinkRow
     public PcieLinkRow(string name, string location, string kind,
                        int curSpeed, int curWidth, int maxSpeed, int maxWidth,
                        string verdict, int severity,
-                       string errorText = "未讀取", int errorSeverity = 0)
+                       string errorText = "未讀取", int errorSeverity = 0,
+                       ushort ven = 0, ushort dev = 0)
     {
         Name = name; Location = location; Kind = kind;
         CurSpeed = curSpeed; CurWidth = curWidth; MaxSpeed = maxSpeed; MaxWidth = maxWidth;
         Verdict = verdict; Severity = severity;
         ErrorText = errorText; ErrorSeverity = errorSeverity;
+        Ven = ven; Dev = dev;
     }
+
+    /// <summary>供上層（如 PcieAnalysis）以 (VEN, DEV) 配對回 WMI 裝置清單；未提供時為 0。</summary>
+    public ushort Ven { get; }
+    public ushort Dev { get; }
 
     /// <summary>自開機以來偵測到過的錯誤（黏滯位；不是計數器）。</summary>
     public string ErrorText { get; }

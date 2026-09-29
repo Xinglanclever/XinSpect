@@ -15,19 +15,19 @@ public partial class NpuDetectionView : UserControl
     public NpuDetectionView()
     {
         InitializeComponent();
-        Loaded += (_, _) =>
+        Loaded += async (_, _) =>
         {
             if (_loaded) return;
             if (Vm is not { } vm) return;   // 拿不到主檢視模型時不設旗標，下次再試
             _loaded = true;
-            DoRefresh(vm);
+            await DoRefreshAsync(vm);
         };
     }
 
-    private void DoRefresh(MainViewModel vm)
+    private async Task DoRefreshAsync(MainViewModel vm)
     {
         var svc = vm.NpuDetection;
-        svc.Refresh();
+        await svc.RefreshAsync();
 
         StatusText.Text = svc.Status;
 
@@ -48,9 +48,9 @@ public partial class NpuDetectionView : UserControl
         TopsRow.Value = svc.EstimatedTops.Length > 0 ? svc.EstimatedTops : "—";
     }
 
-    private void Refresh_Click(object sender, RoutedEventArgs e)
+    private async void Refresh_Click(object sender, RoutedEventArgs e)
     {
-        if (Vm is { } vm) DoRefresh(vm);
+        if (Vm is { } vm) await DoRefreshAsync(vm);
     }
 
     private MainViewModel? Vm => DataContext as MainViewModel ?? Shell.Vm;

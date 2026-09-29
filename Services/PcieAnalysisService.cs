@@ -48,60 +48,77 @@ public sealed class PcieAnalysisService : ObservableObject
 
     public void Refresh()
     {
+        if (_isLoading) return;                 // 防止 Loaded 與「重新分析」重入
         IsLoading = true;
         ErrorMessage = null;
+        // WMI 列舉 ＋ 上千次 PCI 設定空間掃描移到背景執行緒，避免進頁凍結；屬性回 UI 執行緒設定。
+        _ = Task.Run(CollectAnalysis)
+            .ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                {
+                    ErrorMessage = $"分析失敗：{t.Exception!.GetBaseException().Message}";
+                }
+                else
+                {
+                    var a = t.Result;
+                    Slots = new ObservableCollection<PcieSlotAnalysis>(a.Slots);
+                    LaneMap = new ObservableCollection<PcieLaneAllocation>(a.Lanes);
+                    UsedCpuLanes = a.CpuLanesUsed;
+                    UsedChipsetLanes = a.ChipsetLanesUsed;
+                    TotalCpuLanes = a.TotalCpu;
+                    TotalChipsetLanes = a.TotalChipset;
+                    int splitCount = a.Slots.Count(s => s.IsSplitDetected);
+                    Summary = $"共 {a.Slots.Count} 個 PCIe 裝置，" +
+                              $"CPU 通道 {UsedCpuLanes}/{TotalCpuLanes}，" +
+                              $"PCH 通道 {UsedChipsetLanes}/{TotalChipsetLanes}" +
+                              (splitCount > 0 ? $"，{splitCount} 個插槽偵測到拆分組態" : "");
+                }
+                IsLoading = false;
+            }, TaskScheduler.FromCurrentSynchronizationContext());
+    }
+    // 背景執行緒：列舉裝置＋補鏈路＋算通道，全部回傳純資料；設定屬性留給 UI 執行緒。
+    private static AnalysisResult CollectAnalysis()
+    {
+        var devices = EnumeratePcieDevices();
+        var slotList = new List<PcieSlotAnalysis>();
+        var lanes = new List<PcieLaneAllocation>();
+        int cpuLanesUsed = 0, chipsetLanesUsed = 0;
+
+        foreach (var dev in devices)
+        {
+            var slot = AnalyseDevice(dev);
+            slotList.Add(slot);
+            var alloc = new PcieLaneAllocation
+            {
+                DeviceName = slot.DeviceName,
+                BusNumber = slot.BusNumber,
+                NegotiatedWidth = slot.NegotiatedWidth,
+                Source = ClassifyLaneSource(slot.BusNumber),
+            };
+            lanes.Add(alloc);
+            if (alloc.Source == LaneSource.CPU) cpuLanesUsed += slot.NegotiatedWidth;
+            else chipsetLanesUsed += slot.NegotiatedWidth;
+        }
+
+        var (totalCpu, totalChipset) = EstimatePlatformLanes(ReadCpuName());
+        return new AnalysisResult(slotList, lanes, cpuLanesUsed, chipsetLanesUsed, totalCpu, totalChipset);
+    }
+
+    private static string ReadCpuName()
+    {
         try
         {
-            var devices = EnumeratePcieDevices();
-            var slotList = new ObservableCollection<PcieSlotAnalysis>();
-            var lanes = new ObservableCollection<PcieLaneAllocation>();
-
-            int cpuLanesUsed = 0;
-            int chipsetLanesUsed = 0;
-
-            foreach (var dev in devices)
-            {
-                var slot = AnalyseDevice(dev);
-                slotList.Add(slot);
-
-                var alloc = new PcieLaneAllocation
-                {
-                    DeviceName = slot.DeviceName,
-                    BusNumber = slot.BusNumber,
-                    NegotiatedWidth = slot.NegotiatedWidth,
-                    Source = ClassifyLaneSource(slot.BusNumber),
-                };
-                lanes.Add(alloc);
-
-                if (alloc.Source == LaneSource.CPU)
-                    cpuLanesUsed += slot.NegotiatedWidth;
-                else
-                    chipsetLanesUsed += slot.NegotiatedWidth;
-            }
-
-            Slots = slotList;
-            LaneMap = lanes;
-            UsedCpuLanes = cpuLanesUsed;
-            UsedChipsetLanes = chipsetLanesUsed;
-
-            // 常見平台總通道數估算
-            EstimateTotalLanes();
-
-            int splitCount = slotList.Count(s => s.IsSplitDetected);
-            Summary = $"共 {slotList.Count} 個 PCIe 裝置，" +
-                      $"CPU 通道 {UsedCpuLanes}/{TotalCpuLanes}，" +
-                      $"PCH 通道 {UsedChipsetLanes}/{TotalChipsetLanes}" +
-                      (splitCount > 0 ? $"，{splitCount} 個插槽偵測到拆分組態" : "");
+            using var s = new ManagementObjectSearcher("SELECT Name FROM Win32_Processor");
+            foreach (var o in s.Get()) return o["Name"]?.ToString() ?? "";
         }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"分析失敗：{ex.Message}";
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+        catch (Exception ex) { Diag.Swallow("PcieAnalysis.CpuName", ex, "CPU 型號讀取失敗，通道估算用預設值"); }
+        return "";
     }
+
+    private readonly record struct AnalysisResult(
+        List<PcieSlotAnalysis> Slots, List<PcieLaneAllocation> Lanes,
+        int CpuLanesUsed, int ChipsetLanesUsed, int TotalCpu, int TotalChipset);
 
     // ==================================================================
     //  內部實作
@@ -174,23 +191,22 @@ public sealed class PcieAnalysisService : ObservableObject
     /// </summary>
     private static void EnrichWithPcieLinkData(List<PciRawDevice> devices)
     {
-        // PcieLinkService 走 WinRing0Bridge.ReadPciConfig，讀 PCIe Capability 的
-        // Link Capabilities (+0x0C) 與 Link Control/Status (+0x10)，那是正確的來源。
-        // 這裡只取它已經算好的結果，不重複掃 PCI bus。
-        var linkService = new PcieLinkService();
-        linkService.Refresh();
+        // 直接呼叫 PcieLinkService 的同步掃描（讀 PCIe Capability 的 Link Cap/Status），
+        // 不再 new 一個服務跑 fire-and-forget Refresh() 再讀空的 Rows——那會讓富集永遠不生效。
+        List<PcieLinkRow> rows;
+        try { rows = PcieLinkService.ScanAll().Rows; }
+        catch (Exception ex) { Diag.Swallow("PcieAnalysis.LinkScan", ex, "PCIe 鏈路掃描失敗，不補鏈路資訊"); return; }
 
         foreach (var dev in devices)
         {
             if (dev.VendorId == 0) continue;
-            foreach (var row in linkService.Rows)
+            foreach (var row in rows)
             {
-                // PcieLinkRow.Location 格式是 "bus:dev.fn"，可解出 B/D/F
-                // 但 PciRawDevice 的 bus/dev/fn 永遠是 0（BUS_/FUNC_ 格式不存在），
-                // 所以改用 VEN+DEV 配對——同一顆晶片的鏈路在 PcieLinkService 裡只出現一次。
-                var venDev = PcieLinkService.ParseVenDev(dev.DeviceId);
-                if (venDev is not null
-                    && row.Name.Contains($"{venDev.Value.Ven:X4}", StringComparison.OrdinalIgnoreCase))
+                // 以 (VEN, DEV) 配對：PciRawDevice 的 BUS/DEV/FUNC 在 WMI DeviceID 裡拿不到（永遠 0），
+                // 無法用位置配對；(VEN,DEV) 是能拿到的最精確鍵。
+                // 已知殘留限制：兩張「完全相同型號」的卡 (VEN,DEV) 也相同，仍無法逐槽區分——
+                // 那需要位置(B/D/F)，本 WMI 路徑取不到，故不宣稱支援同型多卡的逐槽對應。
+                if (dev.VendorId == row.Ven && dev.DeviceIdHex == row.Dev)
                 {
                     dev.NegotiatedSpeedGTs = row.CurSpeed;
                     dev.NegotiatedWidth = row.CurWidth;
@@ -265,20 +281,6 @@ public sealed class PcieAnalysisService : ObservableObject
     /// </summary>
     private static LaneSource ClassifyLaneSource(int bus)
         => bus <= 1 ? LaneSource.CPU : LaneSource.Chipset;
-
-    private void EstimateTotalLanes()
-    {
-        // 依據 CPU 型號與平台常見通道數估算
-        string cpuName = "";
-        try
-        {
-            using var s = new ManagementObjectSearcher("SELECT Name FROM Win32_Processor");
-            foreach (var o in s.Get()) { cpuName = o["Name"]?.ToString() ?? ""; break; }
-        }
-        catch (Exception ex) { Diag.Swallow("PcieAnalysis.Enrich", ex, "鏈路資訊補充失敗"); }
-
-        (TotalCpuLanes, TotalChipsetLanes) = EstimatePlatformLanes(cpuName);
-    }
 
     internal static (int cpu, int chipset) EstimatePlatformLanes(string cpuName)
     {

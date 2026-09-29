@@ -122,7 +122,10 @@ public sealed class CleanupService
         {
             if (!Directory.Exists(path)) return 0;
             long sum = 0;
-            foreach (var f in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            // IgnoreInaccessible：單一 ACL 拒絕的子目錄不再讓整個列舉中途拋例外、令總量歸零，
+            // 改為略過該項、繼續累計其餘（SearchOption 多載遇無權限目錄會拋 UnauthorizedAccess）。
+            var opts = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
+            foreach (var f in Directory.EnumerateFiles(path, "*", opts))
             {
                 try { sum += new FileInfo(f).Length; } catch { /* 略過無權限／使用中 */ }
             }
