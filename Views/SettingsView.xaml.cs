@@ -115,7 +115,7 @@ public partial class SettingsView : UserControl
         var vm = Vm;
         if (vm is null) return;
 
-        var answer = MessageBox.Show(
+        var answer = XMsg.Show(
             $"確定要清空全部歷史資料嗎？目前已保留 {vm.History.MinuteCount} 筆分鐘紀錄（{vm.History.SizeText}）。此動作無法復原。",
             "歷史記錄", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
         if (answer != MessageBoxResult.OK) return;
@@ -129,7 +129,7 @@ public partial class SettingsView : UserControl
         var vm = Vm;
         if (vm is null) return;
 
-        var answer = MessageBox.Show(
+        var answer = XMsg.Show(
             $"確定要清空跑分紀錄簿嗎？目前已保留 {vm.Benchmarks.Count} 筆成績。\n\n"
             + "曦覽不內建其他機器的參考分數，這份紀錄是「與上次相比」「重複性」的唯一依據；清空後在重新累積出紀錄前，跑分只會有單次數字而無從比較。此動作無法復原。",
             "跑分紀錄簿", MessageBoxButton.OKCancel, MessageBoxImage.Warning);

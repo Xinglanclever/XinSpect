@@ -41,7 +41,7 @@ public partial class ContextMenuView : UserControl
             var (ok, msg) = _svc.SetEnabled(entry, !entry.Enabled);
             MsgText.Text = msg;
             if (!ok)
-                MessageBox.Show(msg, "右鍵選單管理", MessageBoxButton.OK, MessageBoxImage.Warning);
+                XMsg.Show(msg, "右鍵選單管理", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -56,7 +56,7 @@ public partial class ContextMenuView : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show("開啟登錄編輯程式失敗：" + ex.Message, "右鍵選單管理",
+            XMsg.Show("開啟登錄編輯程式失敗：" + ex.Message, "右鍵選單管理",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

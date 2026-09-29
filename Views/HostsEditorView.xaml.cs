@@ -68,12 +68,12 @@ public partial class HostsEditorView : UserControl
         }
         catch (UnauthorizedAccessException)
         {
-            MessageBox.Show("無法寫入 hosts 檔：權限不足。\n請以系統管理員身分重新啟動曦覽。",
+            XMsg.Show("無法寫入 hosts 檔：權限不足。\n請以系統管理員身分重新啟動曦覽。",
                 "Hosts 編輯器", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         catch (Exception ex)
         {
-            MessageBox.Show("儲存失敗：" + ex.Message, "Hosts 編輯器",
+            XMsg.Show("儲存失敗：" + ex.Message, "Hosts 編輯器",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -85,7 +85,7 @@ public partial class HostsEditorView : UserControl
             var files = new DirectoryInfo(BackupDir).GetFiles("hosts-*.txt");
             if (files.Length == 0)
             {
-                MessageBox.Show("尚無備份可還原。", "Hosts 編輯器",
+                XMsg.Show("尚無備份可還原。", "Hosts 編輯器",
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }

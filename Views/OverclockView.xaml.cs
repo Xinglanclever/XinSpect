@@ -26,7 +26,7 @@ public partial class OverclockView : UserControl
     {
         double v = oc.HighestPendingVoltage();
         if (v < SafeVcoreCeiling) return true;
-        return MessageBox.Show(
+        return XMsg.Show(
             $"即將套用核心電壓 {v:0.000} V，已超過建議安全上限 {SafeVcoreCeiling:0.00} V。\n\n" +
             "過高的核心電壓可能造成當機、藍屏、過熱，長期更可能永久損壞處理器。\n" +
             "請確認你清楚此風險，且散熱與供電足以負荷。\n\n確定要繼續套用嗎？",

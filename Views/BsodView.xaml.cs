@@ -35,7 +35,7 @@ public partial class BsodView : UserControl
             if (Directory.Exists(dir))
                 Process.Start(new ProcessStartInfo("explorer.exe", $"\"{dir}\"") { UseShellExecute = true });
             else
-                MessageBox.Show("傾印資料夾不存在。", "藍屏分析", MessageBoxButton.OK, MessageBoxImage.Information);
+                XMsg.Show("傾印資料夾不存在。", "藍屏分析", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch { /* 忽略 */ }
     }

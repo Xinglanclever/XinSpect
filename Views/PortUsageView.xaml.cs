@@ -85,18 +85,18 @@ public partial class PortUsageView : UserControl
         if (sender is not FrameworkElement { Tag: PortRow row }) return;
         if (row.Pid <= 0)
         {
-            MessageBox.Show("此連線由系統核心持有，無法結束。", "連接埠占用",
+            XMsg.Show("此連線由系統核心持有，無法結束。", "連接埠占用",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
-        var ok = MessageBox.Show(
+        var ok = XMsg.Show(
             $"確定要結束占用連接埠 {row.LocalPort} 的行程？\n\n行程：{row.ProcessText}（PID {row.Pid}）\n\n" +
             "將一併結束其子行程，未存檔的資料可能遺失。",
             "結束行程", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
         if (ok != MessageBoxResult.OK) return;
 
         var (success, message) = _svc.KillProcess(row.Pid);
-        MessageBox.Show(message, "連接埠占用", MessageBoxButton.OK,
+        XMsg.Show(message, "連接埠占用", MessageBoxButton.OK,
             success ? MessageBoxImage.Information : MessageBoxImage.Error);
         if (success) Reload();
     }

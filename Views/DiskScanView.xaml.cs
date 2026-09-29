@@ -113,7 +113,7 @@ public partial class DiskScanView : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show("定位失敗：" + ex.Message, "大檔／重複檔掃描",
+            XMsg.Show("定位失敗：" + ex.Message, "大檔／重複檔掃描",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

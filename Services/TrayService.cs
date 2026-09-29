@@ -18,22 +18,42 @@ public sealed class TrayService : IDisposable
     public event Action? ToggleMiniRequested;
     public event Action? ExitRequested;
 
+    private const string TipText = "曦覽 XinSpect ・ 硬體資訊總覽";
+    private readonly ToolStripMenuItem _miShow;
+    private readonly ToolStripMenuItem _miMini;
+    private readonly ToolStripMenuItem _miExit;
+
     public TrayService()
     {
         _icon = new NotifyIcon
         {
             Visible = true,
-            Text = "曦覽 XinSpect ・ 硬體資訊總覽",
+            Text = LanguageService.T(TipText),
             Icon = BuildIcon(),
         };
         _icon.DoubleClick += (_, _) => ShowMainRequested?.Invoke();
 
+        // 系統匣選單／提示是 WinForms 字串，不在 WPF 視覺樹上，ConvertVisualTree 掃不到，
+        // 故在此逐一過 T()；並訂閱 Changed 於執行期切換語言時即時更新（每次都從繁體原文重轉，可逆）。
+        _miShow = new ToolStripMenuItem(LanguageService.T("顯示主視窗"), null, (_, _) => ShowMainRequested?.Invoke());
+        _miMini = new ToolStripMenuItem(LanguageService.T("迷你浮動監視器"), null, (_, _) => ToggleMiniRequested?.Invoke());
+        _miExit = new ToolStripMenuItem(LanguageService.T("結束 曦覽"), null, (_, _) => ExitRequested?.Invoke());
         var menu = new ContextMenuStrip { Font = MenuFont() };
-        menu.Items.Add("顯示主視窗", null, (_, _) => ShowMainRequested?.Invoke());
-        menu.Items.Add("迷你浮動監視器", null, (_, _) => ToggleMiniRequested?.Invoke());
+        menu.Items.Add(_miShow);
+        menu.Items.Add(_miMini);
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add("結束 曦覽", null, (_, _) => ExitRequested?.Invoke());
+        menu.Items.Add(_miExit);
         _icon.ContextMenuStrip = menu;
+
+        LanguageService.Changed += ApplyLanguage;
+    }
+
+    private void ApplyLanguage()
+    {
+        _icon.Text = LanguageService.T(TipText);
+        _miShow.Text = LanguageService.T("顯示主視窗");
+        _miMini.Text = LanguageService.T("迷你浮動監視器");
+        _miExit.Text = LanguageService.T("結束 曦覽");
     }
 
     /// <summary>顯示系統匣氣泡通知（供硬體警示使用）。</summary>
@@ -92,6 +112,7 @@ public sealed class TrayService : IDisposable
 
     public void Dispose()
     {
+        LanguageService.Changed -= ApplyLanguage;
         _icon.Visible = false;
         _icon.Dispose();
         if (_hIcon != IntPtr.Zero) { DestroyIcon(_hIcon); _hIcon = IntPtr.Zero; }

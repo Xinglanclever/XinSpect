@@ -49,7 +49,7 @@ public partial class StartupView : UserControl
             bool ok = _svc.SetEnabled(entry, !entry.Enabled);
             MsgText.Text = _svc.Status;
             if (!ok)
-                MessageBox.Show(_svc.Status, "開機啟動項管理", MessageBoxButton.OK, MessageBoxImage.Warning);
+                XMsg.Show(_svc.Status, "開機啟動項管理", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -91,7 +91,7 @@ public partial class StartupView : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show("定位失敗：" + ex.Message, "開機啟動項管理",
+            XMsg.Show("定位失敗：" + ex.Message, "開機啟動項管理",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

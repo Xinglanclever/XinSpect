@@ -155,7 +155,7 @@ public partial class App : Application
         BringExistingToFront();
         if (shown) return;                   // 視窗已回到畫面，再多一個對話框只是噪音
 
-        MessageBox.Show(
+        XMsg.Show(
             "曦覽已在執行中，僅能開啟一份。\n若主視窗不在畫面上，請由系統匣圖示開啟。",
             "曦覽 XinSpect", MessageBoxButton.OK, MessageBoxImage.Information);
     }
@@ -204,7 +204,7 @@ public partial class App : Application
             string tail = saved
                 ? $"詳細紀錄已寫入：\n{CrashLog.FilePath}"
                 : "（這次無法寫入紀錄檔，可能是權限或磁碟空間不足）";
-            MessageBox.Show(
+            XMsg.Show(
                 $"{headline}：\n\n{ex.GetType().Name}：{ex.Message}\n\n"
                 + "程式會繼續執行，但這一項的結果可能不完整。\n" + tail,
                 $"{AppInfo.Name} — 未預期的錯誤",

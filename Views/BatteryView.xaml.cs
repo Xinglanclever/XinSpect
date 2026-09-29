@@ -82,12 +82,12 @@ public partial class BatteryView : UserControl
             if (File.Exists(outPath))
                 Process.Start(new ProcessStartInfo(outPath) { UseShellExecute = true });
             else
-                MessageBox.Show("報告產生失敗：此環境可能沒有電池，或 powercfg 無法產生報告。",
+                XMsg.Show("報告產生失敗：此環境可能沒有電池，或 powercfg 無法產生報告。",
                     "電池分析", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show("產生電池報告失敗：" + ex.Message, "電池分析",
+            XMsg.Show("產生電池報告失敗：" + ex.Message, "電池分析",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

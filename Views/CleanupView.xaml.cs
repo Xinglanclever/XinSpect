@@ -36,10 +36,10 @@ public partial class CleanupView : UserControl
         if (_busy) return;
         if (!_svc.Categories.Any(c => c.Selected))
         {
-            MessageBox.Show("請先勾選要清理的項目。", "垃圾清理", MessageBoxButton.OK, MessageBoxImage.Information);
+            XMsg.Show("請先勾選要清理的項目。", "垃圾清理", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
-        var ok = MessageBox.Show(
+        var ok = XMsg.Show(
             "確定要清理所選項目？被刪除的暫存檔無法還原（資源回收筒的內容將永久清空）。",
             "垃圾清理", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
         if (ok != MessageBoxResult.OK) return;
@@ -51,7 +51,7 @@ public partial class CleanupView : UserControl
         TotalText.Text = $"可清理總計約 {Human(total)}";
         StatusText.Text = report.Replace("\n", " ");
         _busy = false;
-        MessageBox.Show(report, "垃圾清理", MessageBoxButton.OK, MessageBoxImage.Information);
+        XMsg.Show(report, "垃圾清理", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private static string Human(long b) =>

@@ -177,7 +177,7 @@ public partial class BenchView : UserControl
         if (p.Digits >= 50_000_000)
         {
             string tier = p.Digits >= 100_000_000 ? "1 億" : "5000 萬";
-            var r = System.Windows.MessageBox.Show(
+            var r = XMsg.Show(
                 $"即將計算圓周率至 {p.Digits:#,0} 位（{tier}位）。\n\n" +
                 "此檔位極為耗時（視處理器效能，可能需數分鐘至數小時），且運算過程會佔用大量記憶體。\n" +
                 "計算期間可隨時按「停止」中止。確定要開始嗎？",

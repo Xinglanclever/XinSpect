@@ -61,7 +61,7 @@ public partial class EvidenceLabView : UserControl
         var report = vm.HardwareEvidence.BuildVerdictReport();
         if (report is null)
         {
-            MessageBox.Show("還沒有驗機結果。請先把上面的下拉切到「驗機對帳」並按「重新擷取」,再匯出報告。",
+            XMsg.Show("還沒有驗機結果。請先把上面的下拉切到「驗機對帳」並按「重新擷取」,再匯出報告。",
                 "匯出驗機報告", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }

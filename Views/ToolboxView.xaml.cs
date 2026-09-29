@@ -28,7 +28,7 @@ public partial class ToolboxView : UserControl
     }
 
     private static bool ConfirmDanger(ToolItem tool)
-        => MessageBox.Show(
+        => XMsg.Show(
             $"即將啟動「{tool.Name}」。\n\n{tool.RiskNote}\n\n"
             + "曦覽只負責把它啟動起來，之後你在那支程式裡做什麼、造成什麼後果，本程式無法介入也無法還原。\n\n"
             + "確定要啟動嗎？",

@@ -23,7 +23,7 @@ public partial class MotherboardView : UserControl
     private void RebootToFirmware_Click(object sender, RoutedEventArgs e)
     {
         if (Vm is null) return;
-        var answer = MessageBox.Show(
+        var answer = XMsg.Show(
             "即將立刻重新開機並直接進入主機板的 UEFI／BIOS 設定畫面。\n\n"
             + "・所有未存檔的工作都會遺失。\n"
             + "・此動作需要系統管理員權限，會彈出提升視窗。\n"
