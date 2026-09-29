@@ -210,14 +210,14 @@ public static class SiliconProbeService
         using var pin = CpuAffinity.Pinned(c.ProbeLp);
 
         ulong m0 = 0, a0 = 0, e0 = 0;
-        bool counters = false;
+        bool counters = false, e0ok = false;
         if (pin.Ok && c.FreqFromMsr)
         {
             var m = Read(c.Bridge, MsrMperf);
             var a = Read(c.Bridge, MsrAperf);
             if (m is not null && a is not null) { m0 = m.Value; a0 = a.Value; counters = true; }
         }
-        if (c.PowerFromMsr) e0 = Read(c.Bridge, MsrPkgEnergyStatus) ?? 0;
+        if (c.PowerFromMsr) { var e = Read(c.Bridge, MsrPkgEnergyStatus); if (e is not null) { e0 = e.Value; e0ok = true; } }
         long q0 = Stopwatch.GetTimestamp();
 
         double vMin = double.MaxValue, tSum = 0;
@@ -251,11 +251,15 @@ public static class SiliconProbeService
         if (ghz <= 0) ghz = (c.Sensors?.ClockMhz() ?? 0) / 1000.0;
 
         double? watts = null;
-        if (c.PowerFromMsr && secs > 0)
+        if (c.PowerFromMsr && e0ok && secs > 0)
         {
-            // 0x611 是 32 位元計數器、會回繞；取無號差值就自然處理了繞回。
-            uint d = (uint)((Read(c.Bridge, MsrPkgEnergyStatus) ?? 0) - e0);
-            if (d > 0) watts = d * c.Rapl.EnergyJ / secs;
+            // 起始或結束能量讀失敗就不算瓦數——先前 `?? 0` 會讓 0−e0 無號下溢成天文數字，污染矽品質評分。
+            var e1 = Read(c.Bridge, MsrPkgEnergyStatus);
+            if (e1 is not null)
+            {
+                uint d = (uint)(e1.Value - e0);   // 0x611 是 32 位元計數器、會回繞；無號差自然處理繞回
+                if (d > 0) watts = d * c.Rapl.EnergyJ / secs;
+            }
         }
         watts ??= c.Sensors?.PowerW();
 

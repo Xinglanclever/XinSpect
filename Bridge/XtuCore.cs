@@ -883,12 +883,20 @@ namespace XtuBridge
             {
                 lock (_lock)
                 {
-                    foreach (var k in _knobs.Where(k => k.Writable))
+                    try
                     {
-                        _mTune.Invoke(_tuning, new object[] { k.Id, (decimal)k.Default, k.RequiresReboot });
-                        n++;
+                        foreach (var k in _knobs.Where(k => k.Writable))
+                        {
+                            _mTune.Invoke(_tuning, new object[] { k.Id, (decimal)k.Default, k.RequiresReboot });
+                            n++;
+                        }
                     }
-                    _mApply.Invoke(_tuning, new object[] { false });
+                    finally
+                    {
+                        // 即使中途某顆旋鈕 Tune 擲例外，也要把已 staged 的還原一次 Apply 出去——
+                        // 否則殘留的 staged 值會汙染之後每一次 Apply 的寫入範圍。
+                        _mApply.Invoke(_tuning, new object[] { false });
+                    }
                     try { if (_mRefresh != null) _mRefresh.Invoke(_tuning, new object[] { true }); } catch { }
                 }
             }

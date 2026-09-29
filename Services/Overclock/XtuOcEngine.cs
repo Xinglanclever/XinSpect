@@ -225,6 +225,11 @@ public sealed class XtuOcEngine : IOcEngine
         if (knob.RequiresReboot)
             return OcApplyResult.Success($"「{knob.Label}」已排入設定，需重新開機後生效。", after);
 
+        // 回讀不到現值（activeKnown=false）：SDK 已接受寫入、只是無法即時驗證——這是「無法驗證」，
+        // 不是「寫入失敗」。以舊值（before）硬比容差會把它誤報成失敗。
+        if (!activeKnown)
+            return OcApplyResult.Success($"「{knob.Label}」已送出寫入，但無法即時回讀驗證現值。", after);
+
         double tol = Tolerance(knob);
         if (Math.Abs(after - value) <= tol)
             return OcApplyResult.Success($"「{knob.Label}」已寫入硬體：{knob.Fmt(after)}", after);

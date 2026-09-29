@@ -1075,7 +1075,8 @@ public sealed class OverclockService : ObservableObject, IDisposable
     }
 
     private static bool IsRisky(OcKnob k) =>
-        !k.RequiresReboot && k.Kind is OcKnobKind.Voltage or OcKnobKind.MemoryVoltage or OcKnobKind.CoreRatio or OcKnobKind.Bclk;
+        !k.RequiresReboot && k.Kind is OcKnobKind.Voltage or OcKnobKind.VoltageOffset
+            or OcKnobKind.MemoryVoltage or OcKnobKind.CoreRatio or OcKnobKind.Bclk;
 
     private void ArmWatchdogIfNeeded(OcKnob k) { if (_watchdogEnabled && IsRisky(k)) ArmWatchdog(); }
     private void ArmWatchdog() { WatchdogArmed = true; WatchdogSecondsLeft = 30; }
