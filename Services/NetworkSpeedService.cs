@@ -29,7 +29,8 @@ public sealed class SpeedNode
 /// <summary>單次進度快照（供 UI 即時更新，透過 IProgress 於 UI 執行緒回報）。</summary>
 public sealed record SpeedSample(
     string Phase, double PingMs, double JitterMs,
-    double DownMbps, double UpMbps, double LiveMbps, string Status, bool Done);
+    double DownMbps, double UpMbps, double LiveMbps, string Status, bool Done,
+    double LoadedPingMs = 0, string Bufferbloat = "");
 
 /// <summary>
 /// 網速測試：對所選節點量測延遲／抖動、下載與上傳吞吐量。多執行緒串流、時間窗取樣，
@@ -77,7 +78,8 @@ public sealed class NetworkSpeedService
 
     public async Task RunAsync(SpeedNode node, IProgress<SpeedSample> progress, CancellationToken ct)
     {
-        double ping = 0, jitter = 0, down = 0, up = 0;
+        double ping = 0, jitter = 0, down = 0, up = 0, loadedPing = 0;
+        string bloatText = "";
         try
         {
             progress.Report(new("準備", 0, 0, 0, 0, 0, $"連線至 {node.Name} …", false));
@@ -86,15 +88,31 @@ public sealed class NetworkSpeedService
             progress.Report(new("延遲", ping, jitter, 0, 0, 0,
                 $"延遲 {ping:0.0} ms ・ 抖動 {jitter:0.0} ms", false));
 
-            down = await MeasureAsync(node, upload: false,
-                live => progress.Report(new("下載", ping, jitter, live, 0, live, $"下載測試中… {live:0.0} Mbps", false)), ct);
-            progress.Report(new("下載", ping, jitter, down, 0, 0, $"下載 {down:0.0} Mbps", false));
+            // Bufferbloat：下載滿載期間並行量測延遲，比對閒置延遲的膨脹（測速數字漂亮卻卡的元兇）。
+            var loaded = new List<double>();
+            using (var dlPing = CancellationTokenSource.CreateLinkedTokenSource(ct))
+            {
+                var pingLoop = SampleLoadedLatencyAsync(node, loaded, dlPing.Token);
+                down = await MeasureAsync(node, upload: false,
+                    live => progress.Report(new("下載", ping, jitter, live, 0, live, $"下載測試中… {live:0.0} Mbps", false)), ct);
+                dlPing.Cancel();
+                try { await pingLoop; } catch { /* 取消所致，忽略 */ }
+            }
+            loadedPing = Median(loaded);
+            if (loadedPing > 0)
+            {
+                var bloat = Bufferbloat.Grade(ping, loadedPing);
+                bloatText = $"Bufferbloat {bloat.Grade}（滿載延遲 {loadedPing:0} ms，比閒置 +{bloat.InflationMs:0} ms・{bloat.Label}）";
+            }
+            progress.Report(new("下載", ping, jitter, down, 0, 0,
+                $"下載 {down:0.0} Mbps" + (bloatText.Length > 0 ? " ・ " + bloatText : ""), false, loadedPing, bloatText));
 
             up = await MeasureAsync(node, upload: true,
                 live => progress.Report(new("上傳", ping, jitter, down, live, live, $"上傳測試中… {live:0.0} Mbps", false)), ct);
 
             progress.Report(new("完成", ping, jitter, down, up, 0,
-                $"完成 ・ 延遲 {ping:0.0} ms ・ 下載 {down:0.0} Mbps ・ 上傳 {up:0.0} Mbps", true));
+                $"完成 ・ 延遲 {ping:0.0} ms ・ 下載 {down:0.0} Mbps ・ 上傳 {up:0.0} Mbps"
+                + (bloatText.Length > 0 ? " ・ " + bloatText : ""), true, loadedPing, bloatText));
         }
         catch (OperationCanceledException)
         {
@@ -140,6 +158,38 @@ public sealed class NetworkSpeedService
         for (int i = 1; i < samples.Count; i++) jitter += Math.Abs(samples[i] - samples[i - 1]);
         jitter = samples.Count > 1 ? jitter / (samples.Count - 1) : 0;
         return (ping, jitter);
+    }
+
+    // 下載滿載期間持續量測延遲（與 MeasurePingAsync 同法，但迴圈到取消為止），供 Bufferbloat 評級。
+    private async Task SampleLoadedLatencyAsync(SpeedNode node, List<double> samples, CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                string url = node.PingUrl + (node.PingUrl.Contains('?') ? "&" : "?") + "r=" + Guid.NewGuid().ToString("N");
+                var sw = Stopwatch.StartNew();
+                using var resp = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
+                if (resp.IsSuccessStatusCode)
+                {
+                    await resp.Content.CopyToAsync(Stream.Null, ct);
+                    sw.Stop();
+                    lock (samples) samples.Add(sw.Elapsed.TotalMilliseconds);
+                }
+            }
+            catch (OperationCanceledException) { break; }
+            catch { /* 滿載期間偶發失敗略過，不污染樣本 */ }
+            try { await Task.Delay(250, ct); } catch { break; }
+        }
+    }
+
+    private static double Median(List<double> xs)
+    {
+        if (xs.Count == 0) return 0;
+        var s = xs.ToList();
+        s.Sort();
+        int m = s.Count / 2;
+        return s.Count % 2 == 1 ? s[m] : (s[m - 1] + s[m]) / 2;
     }
 
     // 下載／上傳共用：開 StreamCount 條串流於時間窗內持續傳輸，200ms 取樣即時速度，最後取窗內平均。
