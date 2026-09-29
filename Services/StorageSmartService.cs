@@ -621,33 +621,32 @@ public sealed class StorageSmartService : ObservableObject
     {
         if (data.Length < 4096) throw new InvalidOperationException("NVMe Identify Controller 長度不足 4096 位元組。");
 
-        // 字串欄位是 ASCII（大端：字元在低位元組、高位元組為 0）
+        // 字串欄位是「一字元一位元組」的連續 ASCII、空格補位（不是每 2 位元組取 1——那是先前的 bug，
+        // 只讀到半截字串）。空格由 Trim 收尾；少數韌體以 NUL 補位，故遇 0 也停。
         string AsciiString(int offset, int byteLen)
         {
-            var chars = new char[byteLen / 2];
+            var chars = new char[byteLen];
             int w = 0;
-            for (int i = 0; i < chars.Length; i++)
+            for (int i = 0; i < byteLen; i++)
             {
-                byte lo = data[offset + i * 2];
-                if (lo == 0) break;
-                chars[w++] = (char)lo;
+                byte b = data[offset + i];
+                if (b == 0) break;
+                chars[w++] = (char)b;
             }
             return new string(chars, 0, w).Trim();
         }
 
-        static string Status(ushort s) =>
-            (s & 1) != 0 ? "未就緒" : (s & 0) != 0 ? "就緒" : "就緒（RDY=0）";
+        ulong tnvmcap = BitConverter.ToUInt64(data, 280);   // TNVMCAP 低 64 位（單位：位元組）
 
         var rows = new List<SmartRow>
         {
-            new("廠商（Vendor ID）", AsciiString(0, 4), "", ""),
+            new("廠商（Vendor ID）", $"0x{BitConverter.ToUInt16(data, 0):X4}", "", ""),
             new("型號（Model）", AsciiString(24, 40), "", ""),
             new("序號（Serial）", AsciiString(4, 20), "", ""),
             new("韌體版本（Firmware）", AsciiString(64, 8), "", ""),
-            new("總命名空間數（NN）", $"{data[513] + (data[514] << 8)}", "", ""),
-            new("容量（NCAP）", $"{(ulong)BitConverter.ToUInt32(data, 0x38) * 512:N0} 位元組", "", ""),
-            new("最大資料傳輸大小（MDTS）", $"{1UL << ((data[77] >> 0) & 0xF):N0} 頁（4 KiB 倍數）", "", ""),
-            new("Controller 狀態（CC.EN）", Status((ushort)(data[0x4C] | (data[0x4D] << 8))), "", ""),
+            new("總命名空間數（NN）", $"{BitConverter.ToUInt32(data, 516)}", "", ""),
+            new("容量（TNVMCAP）", tnvmcap > 0 ? $"{tnvmcap:N0} 位元組（≈{tnvmcap / 1e9:0.0} GB）" : "—", "", ""),
+            new("最大資料傳輸大小（MDTS）", $"{1UL << (data[77] & 0xF):N0} 頁（4 KiB 倍數）", "", ""),
         };
         return rows;
     }
@@ -659,24 +658,22 @@ public sealed class StorageSmartService : ObservableObject
 
         ushort Le16(int o) => (ushort)(data[o] | (data[o + 1] << 8));
         ulong Le32(int o) => (ulong)(data[o] | (data[o + 1] << 8) | (data[o + 2] << 16) | (data[o + 3] << 24));
+        // 每個 16 位元 word 內為大端——首字元在高位元組。先前只取偶數（低）位元組且方向反了，
+        // 讀出來是半截且錯位的亂碼。正解逐 word 先取高位元組、再取低位元組（同 Linux ata_id_string）。
         static string AsciiString(byte[] d, int offset, int wordCount)
         {
-            int len = wordCount * 2;
-            var chars = new char[len];
+            var chars = new char[wordCount * 2];
             int w = 0;
-            for (int i = 0; i < len; i += 2)
+            for (int i = 0; i < wordCount; i++)
             {
-                byte lo = d[offset + i];
-                byte hi = d[offset + i + 1];
-                if (lo == 0 && hi == 0) break;                  // 全 0 結尾
-                if (lo == 0x20 && hi == 0) continue;            // 跳過 0x20 補位空格
-                chars[w++] = (char)lo;
+                chars[w++] = (char)d[offset + i * 2 + 1];   // 高位元組 = 該 word 的前一字元
+                chars[w++] = (char)d[offset + i * 2];       // 低位元組 = 後一字元
             }
-            return new string(chars, 0, w).Trim();
+            return new string(chars, 0, w).Replace('\0', ' ').Trim();
         }
 
-        // Word 0：General configuration (bit 15 = ATA device)
-        bool isAta = (Le16(0) & 0x8000) != 0;
+        // Word 0：General configuration。bit 15 = 0 才是 ATA 裝置；= 1 是 ATAPI／非 ATA。先前判反了。
+        bool isAta = (Le16(0) & 0x8000) == 0;
         // Word 10-19：Model number (20 words)
         // Word 23-26：Firmware revision (4 words)
         // Word 27-46：User addressable sectors (max LBA for 28-bit) 已被 48-bit LBA 取代

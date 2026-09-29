@@ -211,31 +211,21 @@ public class SmartDecoderTests
     private static byte[] BuildNvmeIdentify()
     {
         var buf = new byte[4096];
-        // AsciiString reads even byte (offset + i*2) as the char
+        // NVMe：字串是「一字元一位元組」的連續 ASCII、空格補位（不是每 2 位元組取 1）。
         static void PutAscii(byte[] b, int offset, int byteLen, string s)
         {
-            for (int i = 0; i < byteLen / 2; i++)
-            {
-                b[offset + i * 2] = (byte)(i < s.Length ? s[i] : 0x00);   // even byte = char
-                b[offset + i * 2 + 1] = 0;                                // odd byte = 0
-            }
+            for (int i = 0; i < byteLen; i++)
+                b[offset + i] = (byte)(i < s.Length ? s[i] : 0x20);
         }
-        // Vendor (offset 0, 2 words = 4 bytes = 2 chars): "NV"
-        PutAscii(buf, 0, 4, "NV");
-        // Model (offset 24, 20 words = 40 bytes)
-        PutAscii(buf, 24, 40, "TestNVMe SSD");
-        // Serial (offset 4, 10 words = 20 bytes)
-        PutAscii(buf, 4, 20, "SER12345");
-        // Firmware (offset 64, 4 words = 8 bytes)
-        PutAscii(buf, 64, 8, "FW12");
-        // NN = 1 (offset 513-514, LE)
-        buf[513] = 1;
-        // NCAP = 1000000 (offset 0x38, LE uint32) → 1000000 * 512 = 512000000
-        buf[0x38] = 0x40; buf[0x39] = 0x42; buf[0x3A] = 0x0F; buf[0x3B] = 0x00;
-        // MDTS: byte 77, low nibble = 7 → 2^7 = 128 pages
-        buf[77] = 0x07;
-        // CC.EN: offset 0x4C-0x4D, bit 0 = 1 → 就緒
-        buf[0x4C] = 0x01;
+        // Vendor ID（bytes 0-1，數值 PCI VID，非 ASCII）：0x144D
+        buf[0] = 0x4D; buf[1] = 0x14;
+        PutAscii(buf, 4, 20, "SER12345");        // Serial（bytes 4-23）
+        PutAscii(buf, 24, 40, "TestNVMe SSD");   // Model（bytes 24-63）
+        PutAscii(buf, 64, 8, "FW12");            // Firmware（bytes 64-71）
+        buf[516] = 1;                            // NN（bytes 516-519，uint32）= 1
+        // TNVMCAP（bytes 280-295，容量單位為位元組）= 512,000,000,000
+        BitConverter.GetBytes(512_000_000_000UL).CopyTo(buf, 280);
+        buf[77] = 0x07;                          // MDTS：低 nibble = 7 → 2^7 = 128 頁
         return buf;
     }
 
@@ -244,12 +234,12 @@ public class SmartDecoderTests
     {
         var rows = StorageSmartService.DecodeNvmeIdentify(BuildNvmeIdentify());
         var dict = rows.ToDictionary(r => r.Name, r => r.ValueText);
-        Assert.Contains("NV", dict["廠商（Vendor ID）"]);
+        Assert.Contains("144D", dict["廠商（Vendor ID）"]);
         Assert.Equal("TestNVMe SSD", dict["型號（Model）"]);
         Assert.Equal("SER12345", dict["序號（Serial）"]);
         Assert.Equal("FW12", dict["韌體版本（Firmware）"]);
         Assert.Equal("1", dict["總命名空間數（NN）"]);
-        Assert.Contains("512,000,000", dict["容量（NCAP）"]);
+        Assert.Contains("512,000,000,000", dict["容量（TNVMCAP）"]);
         Assert.Contains("128 頁", dict["最大資料傳輸大小（MDTS）"]);
     }
 
@@ -264,18 +254,17 @@ public class SmartDecoderTests
     private static byte[] BuildAtaIdentify()
     {
         var buf = new byte[512];
-        // ATA DecodeAtaIdentify.AsciiString reads (hi << 8) | lo with hi at odd offset, lo at even;
-        // for ASCII chars, hi=0, lo=char. So chars live at EVEN bytes.
+        // ATA IDENTIFY 字串：word 內大端，首字元在高位元組（byte-swap）、空格補位。
         static void PutAscii(byte[] b, int offset, int byteLen, string s)
         {
-            for (int i = 0; i < byteLen / 2; i++)
+            for (int i = 0; i < byteLen; i += 2)
             {
-                b[offset + i * 2] = (byte)(i < s.Length ? s[i] : 0x00);   // lo = char
-                b[offset + i * 2 + 1] = 0;                                // hi = 0
+                b[offset + i + 1] = (byte)(i < s.Length ? s[i] : 0x20);       // 高位元組 = 前一字元
+                b[offset + i] = (byte)(i + 1 < s.Length ? s[i + 1] : 0x20);   // 低位元組 = 後一字元
             }
         }
-        // Word 0: bit 15 = 1 → ATA device (byte 1 high bit)
-        buf[1] = 0x80;
+        // Word 0: bit 15 = 0 → ATA device（設個 bit15 清零的值）
+        buf[0] = 0x5A; buf[1] = 0x04;
         // Model (word 27-46, 40 bytes at offset 54)
         PutAscii(buf, 2 * 27, 40, "TestSATA");
         // Serial (word 10-19, 20 bytes at offset 20)
