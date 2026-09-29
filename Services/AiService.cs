@@ -330,8 +330,9 @@ public sealed class AiService : ObservableObject
 
     public IReadOnlyList<PendingAttachment> PendingAttachments => _pendingAttachments;
 
-    /// <summary>附加圖片檔（轉 Base64，可選 OCR 先行辨識文字）。</summary>
-    public async Task AttachImageAsync(string filePath, bool runOcr = false)
+    /// <summary>附加圖片檔（轉 Base64，可選 OCR 先行辨識文字）。回傳剛建立的附件——呼叫端請用回傳值，
+    /// 勿讀 PendingAttachments[^1]（並行附加時會取到別人的那筆）。</summary>
+    public async Task<PendingAttachment> AttachImageAsync(string filePath, bool runOcr = false)
     {
         var bytes = await File.ReadAllBytesAsync(filePath);
         var ext = Path.GetExtension(filePath).TrimStart('.').ToLowerInvariant();
@@ -350,41 +351,47 @@ public sealed class AiService : ObservableObject
         string? ocrText = null;
         if (runOcr) ocrText = await RunOcrAsync(filePath);
 
-        _pendingAttachments.Add(new PendingAttachment
+        var att = new PendingAttachment
         {
             Type = AttachmentType.Image,
             FileName = Path.GetFileName(filePath),
             DataUrl = dataUrl,
             OcrText = ocrText,
             ImageBytes = bytes
-        });
+        };
+        _pendingAttachments.Add(att);
+        return att;
     }
 
-    /// <summary>附加剪貼簿圖片（BitmapSource → PNG Base64）。</summary>
-    public void AttachClipboardImage(byte[] pngBytes)
+    /// <summary>附加剪貼簿圖片（BitmapSource → PNG Base64）。回傳剛建立的附件。</summary>
+    public PendingAttachment AttachClipboardImage(byte[] pngBytes)
     {
         var base64 = Convert.ToBase64String(pngBytes);
         var dataUrl = $"data:image/png;base64,{base64}";
-        _pendingAttachments.Add(new PendingAttachment
+        var att = new PendingAttachment
         {
             Type = AttachmentType.Image,
             FileName = "clipboard.png",
             DataUrl = dataUrl,
             ImageBytes = pngBytes
-        });
+        };
+        _pendingAttachments.Add(att);
+        return att;
     }
 
-    /// <summary>附加文字檔（內容直接嵌入訊息）。</summary>
-    public async Task AttachFileAsync(string filePath)
+    /// <summary>附加文字檔（內容直接嵌入訊息）。回傳剛建立的附件。</summary>
+    public async Task<PendingAttachment> AttachFileAsync(string filePath)
     {
         var text = await File.ReadAllTextAsync(filePath);
         var name = Path.GetFileName(filePath);
-        _pendingAttachments.Add(new PendingAttachment
+        var att = new PendingAttachment
         {
             Type = AttachmentType.TextFile,
             FileName = name,
             TextContent = $"[檔案: {name}]\n```\n{text}\n```"
-        });
+        };
+        _pendingAttachments.Add(att);
+        return att;
     }
 
     public void RemoveAttachment(PendingAttachment attachment)

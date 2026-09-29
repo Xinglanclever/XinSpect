@@ -35,9 +35,17 @@ public partial class BrowserView : UserControl
 
         try
         {
-            var dataFolder = System.IO.Path.Combine(
+            var baseFolder = System.IO.Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "XinSpect", "WebView2");
+            // 多開時第二份實例不能共用同一個 WebView2 使用者資料夾——WebView2 會鎖住它，
+            // 第二份 CreateAsync 直接失敗、瀏覽器頁誤報「未安裝執行階段」。偵測到已有另一份
+            // XinSpect 在跑就改用帶 PID 的獨立資料夾（該實例 Cookie／快取不持久，但至少能用）；
+            // 單一實例時仍用共用資料夾以保留登入狀態。
+            bool another = Process.GetProcessesByName("XinSpect").Any(p => p.Id != Environment.ProcessId);
+            var dataFolder = another
+                ? System.IO.Path.Combine(baseFolder, "inst-" + Environment.ProcessId)
+                : baseFolder;
             System.IO.Directory.CreateDirectory(dataFolder);
 
             var env = await CoreWebView2Environment.CreateAsync(userDataFolder: dataFolder);
@@ -66,7 +74,9 @@ public partial class BrowserView : UserControl
         }
         catch (Exception ex)
         {
-            // 多半是未安裝 WebView2 執行階段（Evergreen Runtime）。誠實提示，附下載連結。
+            // 多半是未安裝 WebView2 執行階段（Evergreen Runtime），也可能是資料夾一時被鎖。
+            // 重設 _initStarted，讓下次重新進頁能再試一次，而不是永久卡在後備提示。
+            _initStarted = false;
             _ready = false;
             Fallback.Visibility = Visibility.Visible;
             FallbackMsg.Text = "找不到可用的 Microsoft Edge WebView2 執行階段，或其初始化失敗。\n"

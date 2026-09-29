@@ -53,7 +53,14 @@ public sealed class CoreColumns : FrameworkElement
         MinHeight = 150;
         ClipToBounds = true;
         IsVisibleChanged += (_, _) => Sync();
-        Loaded += (_, _) => { Motion.Changed += Sync; Sync(); };
+        Loaded += (_, _) =>
+        {
+            // 重入時要重掛資料訂閱：原本只在 OnCoresChanged 掛 Hook，Unloaded 解訂後重載不重掛，
+            // 關掉動態效果時逐核液柱會永久凍結在重載瞬間。-=/+= 保持冪等，不因重入累加。
+            Motion.Changed -= Sync; Motion.Changed += Sync;
+            Unhook(Cores); Hook(Cores);
+            Rebuild();
+        };
         Unloaded += (_, _) => { Motion.Changed -= Sync; Unhook(Cores); _timer?.Stop(); };
     }
 

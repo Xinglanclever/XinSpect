@@ -17,13 +17,29 @@ public partial class AiView : UserControl
     {
         InitializeComponent();
         icAttachments.ItemsSource = _attachments;
-        // 有新訊息時自動捲到底
-        Loaded += (_, _) =>
-        {
-            if (Vm?.Ai is { } ai)
-                ai.Messages.CollectionChanged += (_, _) => Dispatcher.BeginInvoke(() => ChatScroll.ScrollToEnd());
-        };
+        // 有新訊息時自動捲到底。訂閱在 Loaded 掛、Unloaded 退——原本用匿名 lambda 每次 Loaded 掛且
+        // 永不退訂，重入會在 VM 的 Messages 上累加一堆 handler（洩漏＋重複捲動）。
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
     }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (Vm?.Ai is { } ai)
+        {
+            ai.Messages.CollectionChanged -= OnMessagesChanged;   // 冪等，重入不累加
+            ai.Messages.CollectionChanged += OnMessagesChanged;
+        }
+    }
+
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        if (Vm?.Ai is { } ai)
+            ai.Messages.CollectionChanged -= OnMessagesChanged;
+    }
+
+    private void OnMessagesChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        => Dispatcher.BeginInvoke(() => ChatScroll.ScrollToEnd());
 
     private MainViewModel? Vm =>
         DataContext as MainViewModel
@@ -74,12 +90,12 @@ public partial class AiView : UserControl
                     var ai = Vm?.Ai;
                     if (ai is null) return;
                     var pngBytes = BitmapSourceToPng(bmpSrc);
-                    ai.AttachClipboardImage(pngBytes);
+                    var att = ai.AttachClipboardImage(pngBytes);
                     _attachments.Add(new AttachmentViewModel
                     {
                         FileName = "clipboard.png",
                         Thumbnail = bmpSrc,
-                        Source = ai.PendingAttachments[^1]
+                        Source = att
                     });
                     e.Handled = true;
                 }
@@ -155,8 +171,7 @@ public partial class AiView : UserControl
 
         if (_imageExtensions.Contains(ext))
         {
-            await ai.AttachImageAsync(filePath);
-            var att = ai.PendingAttachments[^1];
+            var att = await ai.AttachImageAsync(filePath);
             var thumb = new BitmapImage();
             thumb.BeginInit();
             thumb.CacheOption = BitmapCacheOption.OnLoad;
@@ -173,8 +188,7 @@ public partial class AiView : UserControl
         }
         else if (_textExtensions.Contains(ext))
         {
-            await ai.AttachFileAsync(filePath);
-            var att = ai.PendingAttachments[^1];
+            var att = await ai.AttachFileAsync(filePath);
             _attachments.Add(new AttachmentViewModel
             {
                 FileName = att.FileName,

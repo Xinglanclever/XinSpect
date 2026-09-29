@@ -28,13 +28,17 @@ public partial class PortUsageView : UserControl
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        if (_loaded) return;
-        _loaded = true;
-        _view = CollectionViewSource.GetDefaultView(_svc.Rows);
-        _view.Filter = RowFilter;
-        Grid.ItemsSource = _view;
-        _svc.PropertyChanged += Svc_PropertyChanged;
-        Reload();
+        if (!_loaded)
+        {
+            _loaded = true;
+            _view = CollectionViewSource.GetDefaultView(_svc.Rows);
+            _view.Filter = RowFilter;
+            Grid.ItemsSource = _view;
+            _svc.PropertyChanged += Svc_PropertyChanged;
+            Reload();
+        }
+        // 重入時若「自動更新」仍勾選，重啟被 Unloaded 停掉的計時器——否則 UI 顯示「開」但實際已死。
+        if (AutoRefresh.IsChecked == true) _timer.Start();
     }
 
     private void Svc_PropertyChanged(object? sender, PropertyChangedEventArgs e)

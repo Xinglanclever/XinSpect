@@ -14,7 +14,9 @@ public partial class FrameTimeView : UserControl
         InitializeComponent();
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _timer.Tick += (_, _) => Vm?.FrameTime.Tick();
-        _timer.Start();
+        // 進頁才跑、離頁就停：原本建構即 Start 又無對應停止，切頁後每秒 Tick 永不停。
+        Loaded += (_, _) => _timer.Start();
+        Unloaded += (_, _) => _timer.Stop();
     }
 
     private MainViewModel? Vm =>
