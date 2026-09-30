@@ -57,7 +57,7 @@ public sealed class DriverReadyService : ObservableObject
         {
             // LHM 感測引擎：看主感測服務現在拿不拿得到真實讀值
             var live = vm.Live;
-            bool lhmOk = live.CpuLoad > 0 || live.CpuTemp is > -273 || live.MemLoad > 0;
+            bool lhmOk = live is { } lv && (lv.CpuLoad > 0 || lv.CpuTemp is > -273 || lv.MemLoad > 0);
             LhmSeverity = lhmOk ? Severity.Good : Severity.Warning;
             LhmStatus = lhmOk ? "已就緒" : "未取得讀值";
             LhmDetail = lhmOk
