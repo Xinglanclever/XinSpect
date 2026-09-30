@@ -130,6 +130,19 @@ public class ShrineTests
     }
 
     [Fact]
+    public void 拜神視窗_乖乖本體使用實際包裝資源()
+    {
+        OnSta(() =>
+        {
+            WpfEnv.Ensure();
+            var win = new ShrineWindow(0, 60);
+            var image = win.FindName("GuaiImage") as System.Windows.Controls.Image;
+            Assert.NotNull(image);
+            Assert.NotNull(image.Source);
+        });
+    }
+
+    [Fact]
     public void 拜神視窗_動態效果關閉時按拜只顯示句子不播動畫()
     {
         OnSta(() =>

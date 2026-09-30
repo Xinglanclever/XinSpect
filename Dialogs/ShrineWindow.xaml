@@ -108,32 +108,13 @@
                         <Ellipse Canvas.Left="104" Canvas.Top="195" Width="6" Height="4" Fill="#E0552E"/>
                         <Path Fill="#3A3F45" Data="M72,222 h48 a3,3 0 0 1 3,3 v3 a27,10 0 0 1 -54,0 v-3 a3,3 0 0 1 3,-3 Z"/>
 
-                        <!-- 乖乖本體：綠色包裝（原創畫法） -->
-                        <Path Data="M30,34 h130 a10,10 0 0 1 10,10 v160 a10,10 0 0 1 -10,10 h-130 a10,10 0 0 1 -10,-10 v-160 a10,10 0 0 1 10,-10 Z">
-                            <Path.Fill>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                    <GradientStop Color="#8CC63F" Offset="0"/>
-                                    <GradientStop Color="#6AA32B" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Path.Fill>
-                        </Path>
-                        <!-- 封口壓紋 -->
-                        <Path Fill="#5C9424" Data="M20,38 L30,20 40,38 50,20 60,38 70,20 80,38 90,20 100,38 110,20 120,38 130,20 140,38 150,20 160,38 170,20 170,44 v2 H20 Z"/>
-                        <!-- 反光 -->
-                        <Rectangle Canvas.Left="36" Canvas.Top="52" Width="10" Height="150" RadiusX="5" RadiusY="5">
-                            <Rectangle.Fill>#33FFFFFF</Rectangle.Fill>
-                            <Rectangle.RenderTransform><RotateTransform Angle="8"/></Rectangle.RenderTransform>
-                        </Rectangle>
-                        <!-- 白底字牌：兩個「乖」直排 -->
-                        <Border Canvas.Left="66" Canvas.Top="70" Width="58" Height="118" CornerRadius="12" Background="#F4FBEC"
-                                BorderBrush="#D8ECC4" BorderThickness="1.5">
-                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <TextBlock Text="乖" FontSize="42" FontWeight="Bold" Foreground="#3E7A18" HorizontalAlignment="Center"/>
-                                <TextBlock Text="乖" FontSize="42" FontWeight="Bold" Foreground="#3E7A18" HorizontalAlignment="Center"/>
-                            </StackPanel>
+                        <!-- 乖乖本體：使用者指定的實際包裝照片；香與神桌保留 -->
+                        <Border Canvas.Left="18" Canvas.Top="25" Width="169" Height="178"
+                                CornerRadius="12" Background="White" BorderBrush="#D8ECC4"
+                                BorderThickness="1.5" ClipToBounds="True">
+                            <Image x:Name="GuaiImage" Source="pack://application:,,,/XinSpect;component/Assets/ShrineGuaiGuai.jpg"
+                                   Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <TextBlock Canvas.Left="0" Canvas.Top="196" Width="170" TextAlignment="Center"
-                                   Text="護機版 ・ 請勿食用" FontSize="10.5" Foreground="#EAF5DC"/>
 
                         <!-- 神桌 -->
                         <Rectangle Canvas.Left="8" Canvas.Top="238" Width="184" Height="12" RadiusX="4" RadiusY="4" Fill="#7A5230"/>
