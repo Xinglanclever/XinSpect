@@ -37,12 +37,16 @@ public partial class ComputeChartView : UserControl
             EmptyCard.Visibility = Visibility.Visible;
             ChartCard.Visibility = Visibility.Collapsed;
             LegendCard.Visibility = Visibility.Collapsed;
+            AnalysisCard.Visibility = Visibility.Collapsed;
             return;
         }
 
         EmptyCard.Visibility = Visibility.Collapsed;
         ChartCard.Visibility = Visibility.Visible;
         LegendCard.Visibility = Visibility.Visible;
+        AnalysisCard.Visibility = Visibility.Visible;
+        AnalysisText.Text = _svc.AnalysisText;
+        MissingText.Text = _svc.MissingText;
         ChartItems.ItemsSource = _svc.Metrics;
 
         Dispatcher.BeginInvoke(new Action(ApplyBarColors),

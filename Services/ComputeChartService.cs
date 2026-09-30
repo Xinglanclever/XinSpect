@@ -4,12 +4,14 @@ using System.Text.RegularExpressions;
 
 namespace XinSpect;
 
-/// <summary>一條算力維度的量測結果。</summary>
+/// <summary>一條算力維度的量測結果（含來源與正規化過程，供頁面展示計算 pipeline）。</summary>
 public sealed class ComputeMetric
 {
-    public ComputeMetric(string name, double score, string category, string unit, double rawValue, string rawText)
+    public ComputeMetric(string name, double score, string category, string unit, double rawValue, string rawText,
+                         string source, double refMax, bool isEstimated, string note)
     {
         Name = name; Score = score; Category = category; Unit = unit; RawValue = rawValue; RawText = rawText;
+        Source = source; RefMax = refMax; IsEstimated = isEstimated; Note = note;
     }
     public string Name { get; }
     /// <summary>0–100 正規化後的分數。</summary>
@@ -22,6 +24,29 @@ public sealed class ComputeMetric
     public string RawText { get; }
     /// <summary>0–1 比例，用於長條寬度。</summary>
     public double BarFraction => Score / 100.0;
+
+    /// <summary>數字從哪個頁面／測試來的。</summary>
+    public string Source { get; }
+    /// <summary>滿分參考值（正規化分母）。</summary>
+    public double RefMax { get; }
+    /// <summary>true＝查表／估算值而非本機實測；畫面上必須誠實標出。</summary>
+    public bool IsEstimated { get; }
+    /// <summary>量測性質補充說明（估算邏輯、量測限制）。</summary>
+    public string Note { get; }
+    public bool HasNote => Note.Length > 0;
+
+    /// <summary>正規化過程的展示文字：原始值 ÷ 滿分參考值 × 100 ≈ 分數。</summary>
+    public string FormulaText
+    {
+        get
+        {
+            string raw = RawValue >= 1000 ? RawValue.ToString("#,0") : RawValue.ToString("0.#");
+            string rf = RefMax >= 1000 ? RefMax.ToString("#,0") : RefMax.ToString("0.#");
+            return $"{raw} {Unit} ÷ {rf} {Unit} × 100 ≈ {Score:0} 分";
+        }
+    }
+    /// <summary>來源＋性質的一行展示文字。</summary>
+    public string SourceText => (IsEstimated ? "［估算值・非本機實測］" : "") + "來源：" + Source;
 }
 
 /// <summary>
@@ -60,21 +85,21 @@ public sealed class ComputeChartService : ObservableObject
         // ── CPU 單執行緒 ──
         if (vm.Bench.SingleScore is { } cpuS and > 0)
         {
-            Metrics.Add(Make("處理器單核", cpuS, RefCpuSingle, "CPU", "MOPS"));
+            Metrics.Add(Make("處理器單核", cpuS, RefCpuSingle, "CPU", "MOPS", "「效能 › 綜合跑分」"));
             added++;
         }
 
         // ── CPU 多執行緒 ──
         if (vm.Bench.MultiScore is { } cpuM and > 0)
         {
-            Metrics.Add(Make("處理器多核", cpuM, RefCpuMulti, "CPU", "MOPS"));
+            Metrics.Add(Make("處理器多核", cpuM, RefCpuMulti, "CPU", "MOPS", "「效能 › 綜合跑分」"));
             added++;
         }
 
         // ── 記憶體頻寬（綜合測試的 MemBandwidth） ──
         if (vm.Bench.MemBandwidth is { } memBw and > 0)
         {
-            Metrics.Add(Make("記憶體頻寬", memBw, RefMemBw, "記憶體", "GB/s"));
+            Metrics.Add(Make("記憶體頻寬", memBw, RefMemBw, "記憶體", "GB/s", "「效能 › 綜合跑分」"));
             added++;
         }
 
@@ -86,37 +111,39 @@ public sealed class ComputeChartService : ObservableObject
                 if (row.Gbps > peakGbps) peakGbps = row.Gbps;
             if (peakGbps > 0)
             {
-                Metrics.Add(Make("記憶體實測峰值", peakGbps, RefMemBw, "記憶體", "GB/s"));
+                Metrics.Add(Make("記憶體實測峰值", peakGbps, RefMemBw, "記憶體", "GB/s", "「效能 › 記憶體頻寬」"));
                 added++;
             }
         }
 
-        // ── 顯示卡算力 ──
-        double gpuTflops = EstimateGpuTflops(vm.GpuOc.GpuName);
+        // ── 顯示卡算力：由型號查表估算，必須誠實標示不是實測 ──
+        double gpuTflops = EstimateGpuTflops(vm.GpuOc.GpuName, out string gpuNote);
         if (gpuTflops > 0)
         {
-            Metrics.Add(Make("顯示卡算力", gpuTflops, RefGpuCompute, "顯示卡", "TFLOPS"));
+            Metrics.Add(Make("顯示卡算力", gpuTflops, RefGpuCompute, "顯示卡", "TFLOPS",
+                             "型號規格查表（" + vm.GpuOc.GpuName + "）", isEstimated: true, note: gpuNote));
             added++;
         }
 
         // ── 儲存循序讀取 ──
         if (TryParseMBps(vm.DiskBench.SeqReadText, out double seqR))
         {
-            Metrics.Add(Make("儲存循序讀取", seqR, RefStorageRead, "儲存", "MB/s"));
+            Metrics.Add(Make("儲存循序讀取", seqR, RefStorageRead, "儲存", "MB/s", "「效能 › 磁碟測試」"));
             added++;
         }
 
         // ── 儲存循序寫入 ──
         if (TryParseMBps(vm.DiskBench.SeqWriteText, out double seqW))
         {
-            Metrics.Add(Make("儲存循序寫入", seqW, RefStorageWrite, "儲存", "MB/s"));
+            Metrics.Add(Make("儲存循序寫入", seqW, RefStorageWrite, "儲存", "MB/s", "「效能 › 磁碟測試」"));
             added++;
         }
 
         // ── NPU ──
         if (vm.NpuDetection.NpuPresent && TryParseTops(vm.NpuDetection.EstimatedTops, out double tops))
         {
-            Metrics.Add(Make("NPU", tops, RefNpu, "NPU", "TOPS"));
+            Metrics.Add(Make("NPU", tops, RefNpu, "NPU", "TOPS", "「系統 › NPU 偵測」", isEstimated: true,
+                             note: "TOPS 為依裝置型號的估算值，非本機推論實測。"));
             added++;
         }
 
@@ -124,16 +151,69 @@ public sealed class ComputeChartService : ObservableObject
             ? $"讀到 {added} 個維度。未顯示的維度請先去對應頁面執行測試。"
             : "尚無跑分數據——請先到「綜合跑分」、「磁碟測試」等頁面執行至少一項測試。";
 
+        BuildAnalysis(added);
         IsRunning = false;
     }
 
+    /// <summary>總結分析：最強／最弱維度、均衡判讀、缺哪些資料與去哪補測。</summary>
+    private void BuildAnalysis(int added)
+    {
+        var sb = new System.Text.StringBuilder();
+        var present = Metrics.ToList();
+        if (added == 0 || present.Count == 0)
+        {
+            AnalysisText = "還沒有任何測試結果可分析。先去下面列出的頁面跑任一項測試，再回來按「重新整理」。";
+            MissingText = MissingGuide(present);
+            return;
+        }
+
+        var best = present.OrderByDescending(m => m.Score).First();
+        var worst = present.OrderBy(m => m.Score).First();
+        sb.AppendLine($"最強：{best.Name}（{best.Score:0} 分，{best.RawText}）。");
+        sb.AppendLine($"最弱：{worst.Name}（{worst.Score:0} 分，{worst.RawText}）。");
+        double spread = best.Score - worst.Score;
+        if (present.Count >= 3 && spread <= 15)
+            sb.Append("各維度分數接近，配置相當均衡，沒有明顯短板。");
+        else if (best.Score >= worst.Score * 2.5)
+            sb.Append($"「{best.Name}」明顯強於「{worst.Name}」——若使用情境剛好壓在弱項上，升級時優先補那一塊才划算。");
+        else
+            sb.Append($"強弱差距約 {spread:0} 分，屬常見範圍；瓶頸判讀可再參考「健康 › 瓶頸診斷」的即時負載歸因。");
+        sb.AppendLine();
+        int estimated = present.Count(m => m.IsEstimated);
+        if (estimated > 0)
+            sb.Append($"其中 {estimated} 項為查表／推算值（長條上已標「估算」），要更準請以對應頁面的實測為準。");
+        AnalysisText = sb.ToString();
+        MissingText = MissingGuide(present);
+    }
+
+    private static string MissingGuide(List<ComputeMetric> present)
+    {
+        var missing = new List<string>();
+        bool Has(string cat) => present.Any(m => m.Category == cat);
+        if (!Has("CPU")) missing.Add("處理器單核／多核 → 「效能 › 綜合跑分」");
+        if (!Has("記憶體")) missing.Add("記憶體頻寬 → 「效能 › 綜合跑分」或「記憶體頻寬」");
+        if (!Has("顯示卡")) missing.Add("顯示卡算力為型號查表，只要有偵測到顯示卡就會顯示；未顯示代表沒抓到顯示卡名稱");
+        if (!Has("儲存")) missing.Add("儲存循序讀寫 → 「效能 › 磁碟測試」");
+        if (!Has("NPU")) missing.Add("NPU → 「系統 › NPU 偵測」（沒有 NPU 的機器不會出現此維度）");
+        return missing.Count == 0 ? "各維度資料都齊了。" : string.Join("\n", missing);
+    }
+
+    private string _analysis = "";
+    /// <summary>讀完數字後的總結分析（最強／最弱／均衡判讀）。</summary>
+    public string AnalysisText { get => _analysis; private set => SetProperty(ref _analysis, value); }
+
+    private string _missing = "";
+    /// <summary>缺哪些維度資料、去哪個頁面補測。</summary>
+    public string MissingText { get => _missing; private set => SetProperty(ref _missing, value); }
+
     // ── 內部輔助 ─────────────────────────────────────────────
 
-    private static ComputeMetric Make(string name, double raw, double refMax, string category, string unit)
+    private static ComputeMetric Make(string name, double raw, double refMax, string category, string unit,
+                                      string source, bool isEstimated = false, string note = "")
     {
         double score = Math.Clamp(raw / refMax * 100.0, 0, 100);
         string rawText = raw >= 1000 ? $"{raw:#,0} {unit}" : $"{raw:0.#} {unit}";
-        return new ComputeMetric(name, score, category, unit, raw, rawText);
+        return new ComputeMetric(name, score, category, unit, raw, rawText, source, refMax, isEstimated, note);
     }
 
     /// <summary>
@@ -172,8 +252,9 @@ public sealed class ComputeChartService : ObservableObject
     /// 根據 GPU 名稱粗估 FP32 TFLOPS。僅供相對比較，不是精確值。
     /// 優先查 CUDA 是否可用（代表 NVIDIA），再按名稱匹配。
     /// </summary>
-    private static double EstimateGpuTflops(string? gpuName)
+    private static double EstimateGpuTflops(string? gpuName, out string note)
     {
+        note = "依顯示卡型號對照 FP32 規格表的估算值，非本機實測；同型號因功耗設定與散熱不同會有差距。";
         if (string.IsNullOrWhiteSpace(gpuName) || gpuName == "—") return 0;
 
         bool hasCuda = CudaService.DetectVersion() is not null;

@@ -34,6 +34,7 @@
                     <ItemsControl x:Name="ChartItems" Margin="0,12,0,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
+                                <StackPanel>
                                 <Grid Margin="0,0,0,10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="110"/>
@@ -71,9 +72,32 @@
                                                VerticalAlignment="Center" MinWidth="100"
                                                Foreground="{DynamicResource SecondaryInkBrush}"/>
                                 </Grid>
+                                <!-- 過程展示：數字從哪來、怎麼換算成 0–100（估算值如實標出） -->
+                                <StackPanel Margin="118,0,0,12">
+                                    <TextBlock Text="{Binding SourceText}" FontSize="11.5" TextWrapping="Wrap"
+                                               Foreground="{DynamicResource MutedInkBrush}"/>
+                                    <TextBlock Text="{Binding FormulaText}" FontSize="11.5"
+                                               Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                    <TextBlock Text="{Binding Note}" FontSize="11" TextWrapping="Wrap" Margin="0,1,0,0"
+                                               Foreground="{DynamicResource MutedInkBrush}"
+                                               Visibility="{Binding HasNote, Converter={StaticResource BoolToVis}}"/>
+                                </StackPanel>
+                                </StackPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- 總結分析 -->
+            <Border x:Name="AnalysisCard" Style="{StaticResource Card}" Margin="0,0,0,12" Visibility="Collapsed">
+                <StackPanel>
+                    <local:SectionHead Text="分析" HelpKey="computechart/分析"/>
+                    <TextBlock x:Name="AnalysisText" Margin="0,10,0,0" FontSize="13" LineHeight="21" TextWrapping="Wrap"
+                               Foreground="{DynamicResource PrimaryInkBrush}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" Text="缺哪些資料、去哪補測："/>
+                    <TextBlock x:Name="MissingText" Margin="0,4,0,0" FontSize="12" LineHeight="20" TextWrapping="Wrap"
+                               Foreground="{DynamicResource SecondaryInkBrush}"/>
                 </StackPanel>
             </Border>
 
