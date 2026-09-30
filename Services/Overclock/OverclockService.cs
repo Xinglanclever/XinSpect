@@ -989,6 +989,7 @@ public sealed class OverclockService : ObservableObject, IDisposable
     /// <summary>把目前套用的目標值標記為「穩定」：存為 last-stable、更新看門狗回復基準、並解除看門狗。</summary>
     public void ConfirmStable()
     {
+        if (IsApplying) { SetAction("正在套用中，請等套用完成再標記穩定。", Severity.Warning); return; }
         var p = CaptureCurrent("最後穩定設定");
         _rollback = p;
         OcSettings.SaveLastStable(p);

@@ -118,7 +118,8 @@ public sealed class GpuOcService : ObservableObject, IDisposable
         // NVML：型號 / 遙測 / 功耗上限 / 風扇
         try
         {
-            if (NvmlInterop.Init() == 0 && NvmlInterop.GetHandleByIndex(0, out _dev) == 0)
+            bool inited = NvmlInterop.Init() == 0;
+            if (inited && NvmlInterop.GetHandleByIndex(0, out _dev) == 0)
             {
                 _nvmlInited = true;
                 NvmlAvailable = true;
@@ -153,6 +154,8 @@ public sealed class GpuOcService : ObservableObject, IDisposable
                     _bootTempC = cur;   // 記住開頁時的原始目標溫度，供「還原預設」用（而非還原成最高上限）
                 }
             }
+            // Init 成功但 handle 拿不到（無 GPU 或驅動問題）：仍須在 Dispose 時 Shutdown
+            else if (inited) { _nvmlInited = true; }
         }
         catch { NvmlAvailable = false; }
 

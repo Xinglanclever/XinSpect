@@ -598,7 +598,8 @@ public sealed class SecurityPostureService : ObservableObject
                 var status = vol["ProtectionStatus"];
                 return status is uint s && s == 1;
             }
-            return false;
+            // 查詢回空（沒有 C: 磁碟區、WMI 不支援、非 Windows Pro/Enterprise）＝讀不到，不是「未啟用」。
+            return null;
         }
         catch { return null; }
     }

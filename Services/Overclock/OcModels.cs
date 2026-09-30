@@ -243,7 +243,7 @@ public sealed class OcKnob : ObservableObject
         OcKnobKind.Bclk => $"{v.ToString("0.00", CultureInfo.InvariantCulture)} MHz",
         OcKnobKind.PowerLimit => $"{v.ToString("0", CultureInfo.InvariantCulture)} W",
         OcKnobKind.Current => $"{v.ToString("0", CultureInfo.InvariantCulture)} A",
-        OcKnobKind.Offset => $"−{Math.Abs(v).ToString("0", CultureInfo.InvariantCulture)}×",
+        OcKnobKind.Offset => $"{v.ToString("+0;-0;0", CultureInfo.InvariantCulture)}×",
         _ => string.IsNullOrEmpty(Unit) ? v.ToString("0.###", CultureInfo.InvariantCulture)
                                         : $"{v.ToString("0.###", CultureInfo.InvariantCulture)} {Unit}",
     };
