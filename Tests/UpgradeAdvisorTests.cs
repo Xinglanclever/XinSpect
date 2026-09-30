@@ -75,7 +75,6 @@ public class UpgradeAdvisorTests
         Assert.Contains("未偵測到顯示卡讀值", c);
         Assert.Contains("無法判斷 XMP", c);
         Assert.Contains("磁碟未提供剩餘壽命", c);
-        Assert.Contains("未在天梯榜單命中", c);
         Assert.Contains("非本機實測", c);   // 預期效益的性質必須寫明
     }
 
@@ -106,16 +105,6 @@ public class UpgradeAdvisorTests
         f.GpuLoadP95 = 10;
         Assert.False(f.HasLongTerm);
         Assert.False(Has(UpgradeAdvisor.Analyze(f), "處理器是主要瓶頸"));
-    }
-
-    [Fact]
-    public void RankingRules_SkippedWhenNotMatched()
-    {
-        var f = Healthy();
-        f.CpuRank = 0; f.CpuRankTotal = 0;
-        f.GpuRank = 0; f.GpuRankTotal = 0;
-        var r = UpgradeAdvisor.Analyze(f);
-        Assert.DoesNotContain(r.Items, i => i.Title.Contains("天梯"));
     }
 
     // ── 儲存規則 ──────────────────────────────────────────────────
@@ -376,27 +365,7 @@ public class UpgradeAdvisorTests
         Assert.Contains("無法單獨加裝", s.Action);
     }
 
-    // ── 天梯與系統設定 ────────────────────────────────────────────
-
-    [Fact]
-    public void LowRankedCpu_MentionsRankAndTotal()
-    {
-        var f = Healthy();
-        f.CpuRank = 900; f.CpuRankTotal = 1000;
-        var s = Pick(UpgradeAdvisor.Analyze(f), "處理器在天梯偏後段");
-        Assert.Contains("900", s.Evidence);
-        Assert.Contains("1000", s.Evidence);
-        Assert.Contains("僅供參考", s.Action);
-    }
-
-    [Fact]
-    public void MidRankedHardware_IsNotFlagged()
-    {
-        var f = Healthy();
-        f.CpuRank = 300; f.CpuRankTotal = 1000;
-        f.GpuRank = 250; f.GpuRankTotal = 900;
-        Assert.DoesNotContain(UpgradeAdvisor.Analyze(f).Items, i => i.Title.Contains("天梯"));
-    }
+    // ── 系統設定 ──────────────────────────────────────────────────
 
     [Fact]
     public void PowerSavingPlan_IsFreePerformance()
@@ -469,7 +438,6 @@ public class UpgradeAdvisorTests
         f.MaxDiskTempC = 70;
         f.PowerPlan = "節能";
         f.HasDiscreteGpu = false;
-        f.CpuRank = 990; f.CpuRankTotal = 1000;
 
         var r = UpgradeAdvisor.Analyze(f);
         Assert.True(r.Count >= 8);

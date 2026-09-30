@@ -140,9 +140,6 @@ internal static class StartupSequence
 
             // 主機板分頁先以 WMI 廠商/型號填入，稍後 CPU-Z 報告再補全晶片組/BIOS 等深度欄位
             vm.Mainboard = new MainboardDetail { Vendor = summary.BoardVendor, Model = summary.BoardModel };
-
-            // 天梯榜：以處理器名稱標示本機名次（顯示卡名稱待感測器就緒後由脈動補標）
-            try { vm.Ranking.Highlight(vm.Cpu.Name, vm.Live?.PrimaryGpu?.Name); } catch { /* 天梯高亮為附加功能 */ }
         }
         catch (Exception ex)
         {

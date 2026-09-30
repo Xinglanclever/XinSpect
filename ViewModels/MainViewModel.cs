@@ -277,9 +277,6 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>系統工具箱（內建 Windows 工具啟動 + 第三方工具官方導向）。</summary>
     public ToolboxService Toolbox { get; } = new();
 
-    /// <summary>效能天梯榜：CPU／顯示卡跑分排行（離線內嵌，資料來源 topcpu.net），自動標示本機硬體。</summary>
-    public RankingService Ranking { get; } = new();
-
     /// <summary>一鍵裝機：依分類批次安裝常用軟體（透過 Windows 內建 winget）。</summary>
     public WingetService Winget { get; } = new();
 

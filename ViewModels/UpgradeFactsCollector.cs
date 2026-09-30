@@ -52,11 +52,6 @@ internal static class UpgradeFactsCollector
         f.GpuName = Clean(g?.Name);
         f.GpuVramGb = g is { VramTotalMB: > 0 } ? g.VramTotalMB / 1024.0 : 0;
         f.HasDiscreteGpu = HasDiscrete(vm);
-
-        // 天梯名次只在啟動時的近似比對真的命中時才填（未命中即留 0，引擎不會談名次）
-        var r = vm.Ranking;
-        if (r.LocalCpu is { Rank: > 0 } lc) { f.CpuRank = lc.Rank; f.CpuRankTotal = r.CpuTotal(lc.IsLaptop); }
-        if (r.LocalGpu is { Rank: > 0 } lg) { f.GpuRank = lg.Rank; f.GpuRankTotal = r.GpuTotal(lg.IsLaptop); }
     }
 
     /// <summary>

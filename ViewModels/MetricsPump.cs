@@ -21,7 +21,6 @@ internal sealed class MetricsPump
     private DispatcherTimer? _timer;
     private bool _ticking;          // 重入防護：上一拍未結束則跳過本拍
     private long _tick;             // 拍數（部分較慢的工作每 N 拍才做一次）
-    private bool _rankGpuDone;      // 天梯榜顯示卡高亮只需標一次
     private bool _settingsHooked;   // 設定變更訂閱只掛一次，Stop 不退（PropertyChanged 是弱事件）
 
     public MetricsPump(MainViewModel vm) => _vm = vm;
@@ -82,18 +81,6 @@ internal sealed class MetricsPump
                 if (_vm.Bench.IsRunning) _vm.Bench.Conditions.Sample(live.CpuTemp, live.CpuClock);
                 if (_vm.Chess.IsRunning) _vm.Chess.Conditions.Sample(live.CpuTemp, live.CpuClock);
                 if (_vm.SuperPi.IsRunning) _vm.SuperPi.Conditions.Sample(live.CpuTemp, live.CpuClock);
-
-                // 天梯榜：顯示卡名稱須待感測引擎列出裝置後才有，故於首拍補標一次
-                if (!_rankGpuDone)
-                {
-                    var gpuName = live.PrimaryGpu?.Name;
-                    if (!string.IsNullOrWhiteSpace(gpuName))
-                    {
-                        _rankGpuDone = true;
-                        try { _vm.Ranking.Highlight(null, gpuName); }
-                        catch (Exception ex) { Diag.Swallow("天梯榜高亮", ex, "天梯頁不會標出本機那一列"); }
-                    }
-                }
 
                 try { _vm.SensorLog.Sample(live, _vm.Settings); }
                 catch (Exception ex) { Diag.Swallow("感測記錄取樣", ex, "本拍未寫入 CSV"); }

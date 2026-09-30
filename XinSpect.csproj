@@ -60,16 +60,6 @@
     <Resource Include="Assets\hug.gif" />
   </ItemGroup>
 
-  <!-- 內嵌 CPU / 顯示卡效能天梯榜資料（JSON；資料來源 topcpu.net），供「天梯」分頁離線讀取 -->
-  <ItemGroup>
-    <EmbeddedResource Include="Assets\data\cpu-ranking.json">
-      <LogicalName>XinSpect.data.cpu-ranking.json</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Assets\data\gpu-ranking.json">
-      <LogicalName>XinSpect.data.gpu-ranking.json</LogicalName>
-    </EmbeddedResource>
-  </ItemGroup>
-
   <!-- WinForms 僅供系統匣（TrayService）使用；移除其全域 using 以免與 WPF 的 System.Windows.* 型別衝突 -->
   <ItemGroup>
     <Using Remove="System.Windows.Forms" />

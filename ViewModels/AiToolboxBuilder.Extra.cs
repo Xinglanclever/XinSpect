@@ -3,7 +3,7 @@ using System.Text;
 namespace XinSpect;
 
 /// <summary>
-/// AI 診斷代理的第二批唯讀工具：記憶體時序與 SPD、網路組態與流量、螢幕色域、效能天梯定位、
+/// AI 診斷代理的第二批唯讀工具：記憶體時序與 SPD、網路組態與流量、螢幕色域、
 /// 升級建議、電池健康、開機啟動項、藍屏記錄。與第一批同樣只讀不寫，
 /// 讀不到就如實回報「無資料」，絕不讓模型有機會編造數值。
 /// </summary>
@@ -111,61 +111,6 @@ internal static partial class AiToolboxBuilder
                 sb.AppendLine("（以上為 EDID 自述的色度座標推算值，非校色儀實測。）");
                 return Done(sb, "（無資料）");
             });
-    }
-
-    // ── 效能天梯 ────────────────────────────────────────────────────────────
-
-    private static void AddRanking(AiToolbox box, MainViewModel vm)
-    {
-        box.Add("get_ranking_position",
-            "取得本機處理器／顯示卡在內建效能天梯榜上的名次與同級對手：名次、總筆數、分級、分數，"
-            + "以及名次相鄰的數個型號可作對照。要回答「這顆 CPU 算強嗎」「該換哪張卡」時用這個。"
-            + "榜單為離線快照且以名稱近似比對，未命中時會如實說明。",
-            args =>
-            {
-                int near = AiToolbox.IntArg(args, "neighbors", 5, 0, 20);
-                var r = vm.Ranking;
-                var sb = new StringBuilder();
-                sb.AppendLine(r.CpuSource);
-                Section(sb, "處理器", r.LocalCpu, r.CpuList, near, r.CpuTotal);
-                sb.AppendLine(r.GpuSource);
-                Section(sb, "顯示卡", r.LocalGpu, r.GpuList, near, r.GpuTotal);
-                return Done(sb, "（天梯資料未載入）");
-            },
-            """{"type":"object","properties":{"neighbors":{"type":"integer","description":"要一併列出的相鄰名次數量，0–20，預設 5"}}}""");
-    }
-
-    // 列出某一榜的本機定位與相鄰對手；未命中時只說明未命中，不猜名次
-    private static void Section(StringBuilder sb, string label, RankRow? local,
-                               System.ComponentModel.ICollectionView list, int near, Func<bool, int> total)
-    {
-        if (local is null)
-        {
-            sb.AppendLine($"{label}：未在榜單中命中（名稱近似比對不足，故不談名次）");
-            return;
-        }
-
-        int all = total(local.IsLaptop);
-        string scope = local.IsLaptop ? "筆電" : "桌機";
-        double pct = all > 0 ? 100.0 * local.Rank / all : 0;
-        sb.AppendLine($"{label}「{local.Name}」：{scope}榜第 {local.Rank} 名"
-                      + (all > 0 ? $" / 共 {all} 筆（贏過約 {100 - pct:0} %）" : "")
-                      + $"・分級 {local.Grade}・分數 {local.Score}"
-                      + (local.Detail.Length > 0 ? $"・{local.Detail}" : ""));
-
-        if (near <= 0) return;
-        var rows = list.Cast<RankRow>().Where(x => x.IsLaptop == local.IsLaptop)
-                       .OrderBy(x => x.Rank).ToList();
-        int at = rows.FindIndex(x => ReferenceEquals(x, local));
-        if (at < 0) return;
-        int from = Math.Max(0, at - near), to = Math.Min(rows.Count - 1, at + near);
-        for (int i = from; i <= to; i++)
-        {
-            if (i == at) continue;
-            var x = rows[i];
-            sb.AppendLine($"　對照 第 {x.Rank} 名 {x.Name}（{x.Grade}・分數 {x.Score}"
-                          + (x.Detail.Length > 0 ? $"・{x.Detail}" : "") + "）");
-        }
     }
 
     // ── 升級建議 ────────────────────────────────────────────────────────────

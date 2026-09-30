@@ -72,10 +72,6 @@ public sealed class UpgradeFacts
     public double? CpuTempMax { get; set; }
     /// <summary>近期是否記錄到熱降頻事件。</summary>
     public bool ThrottleSeen { get; set; }
-    /// <summary>天梯名次與該子榜總筆數（0 表示未在榜單命中）。</summary>
-    public int CpuRank { get; set; }
-    public int CpuRankTotal { get; set; }
-
     // ── 顯示卡 ──────────────────────────────────────────────────────────
     public string GpuName { get; set; } = "";
     public bool HasGpu { get; set; }
@@ -83,8 +79,6 @@ public sealed class UpgradeFacts
     public double GpuVramGb { get; set; }
     public double? GpuLoadP95 { get; set; }
     public double? GpuTempP95 { get; set; }
-    public int GpuRank { get; set; }
-    public int GpuRankTotal { get; set; }
 
     // ── 儲存 ────────────────────────────────────────────────────────────
     /// <summary>磁碟 0（一般即系統碟）是否為機械硬碟。</summary>
@@ -372,33 +366,6 @@ public static class UpgradeAdvisor
                 Evidence = $"顯示記憶體 {f.GpuVramGb:0.#} GB，長期負載 95% 已達 {f.GpuLoadP95:0} %",
                 Action = "下一張卡至少選 8 GB 以上顯示記憶體；顯示記憶體無法單獨加裝。",
             });
-
-        // 天梯定位：只有真的在榜單命中才談名次
-        if (f.CpuRank > 0 && f.CpuRankTotal > 0)
-        {
-            double pct = 100.0 * f.CpuRank / f.CpuRankTotal;
-            if (pct > 70)
-                items.Add(new UpgradeSuggestion
-                {
-                    Part = UpgradePart.Cpu, Title = "處理器在天梯偏後段", Severity = Severity.Neutral, Score = 40,
-                    Gain = "換到榜單中段可有明顯世代差", Cost = "高",
-                    Evidence = $"{f.CpuName} 在天梯排第 {f.CpuRank} / {f.CpuRankTotal}（後 {100 - pct:0} %）",
-                    Action = "先確認主機板支援清單，再挑同腳位可換的較高型號；天梯分數僅供參考。",
-                });
-        }
-
-        if (f.GpuRank > 0 && f.GpuRankTotal > 0)
-        {
-            double pct = 100.0 * f.GpuRank / f.GpuRankTotal;
-            if (pct > 70)
-                items.Add(new UpgradeSuggestion
-                {
-                    Part = UpgradePart.Gpu, Title = "顯示卡在天梯偏後段", Severity = Severity.Neutral, Score = 38,
-                    Gain = "換到榜單中段的畫面效能差距最有感", Cost = "高",
-                    Evidence = $"{f.GpuName} 在天梯排第 {f.GpuRank} / {f.GpuRankTotal}（後 {100 - pct:0} %）",
-                    Action = "以電源瓦數與機殼空間為上限選卡；天梯分數僅供參考。",
-                });
-        }
     }
 
     // ── 系統設定規則（免費項目）──────────────────────────────────────────
@@ -478,7 +445,6 @@ public static class UpgradeAdvisor
         if (!f.HasGpu) parts.Add("未偵測到顯示卡讀值");
         if (f.MemRatedMhz <= 0) parts.Add("記憶體未提供標定頻率，無法判斷 XMP");
         if (f.WorstDiskLife is null) parts.Add("磁碟未提供剩餘壽命");
-        if (f.CpuRank <= 0) parts.Add("處理器未在天梯榜單命中，跳過名次比較");
 
         return string.Join("；", parts) + "。預期效益為同類升級的經驗範圍，非本機實測。";
     }

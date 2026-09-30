@@ -262,8 +262,8 @@ public static class PageRegistry
             Key = "utilities", Title = "實用工具", Group = GTools,
             IconData = "M3,3 h7 v7 h-7 z M14,3 h7 v7 h-7 z M3,14 h7 v7 h-7 z M14,14 h7 v7 h-7 z",
             Factory = () => new UtilitiesView(),
-            Hint = "連接埠、Hosts、藍屏分析、清理、電池、天梯…",
-            Keywords = ["utility", "實用", "hosts", "藍屏", "清理", "電池", "天梯", "連接埠", "啟動項", "dns"],
+            Hint = "連接埠、Hosts、藍屏分析、清理、電池、幀時間…",
+            Keywords = ["utility", "實用", "hosts", "藍屏", "清理", "電池", "幀時間", "連接埠", "啟動項", "dns"],
         },
         new()
         {
@@ -446,13 +446,6 @@ public static class PageRegistry
             Keywords = ["stress", "壓測", "穩定性", "y-cruncher", "ycruncher", "運算錯誤", "記憶體",
                         "cpu", "prime95", "occt", "tm5", "校驗", "burn"],
             Advanced = true,
-        },
-        new()
-        {
-            Key = "ranking", Title = "效能天梯", Group = GTools,
-            IconData = "M2,13 h3 v-6 h-3 z M6.5,13 h3 v-11 h-3 z M11,13 h3 v-4 h-3 z",
-            Factory = () => new RankingView(),
-            Hint = "CPU／顯示卡跑分排行與本機定位", Keywords = ["ranking", "天梯", "排行", "跑分", "排名", "ladder"],
         },
         new()
         {

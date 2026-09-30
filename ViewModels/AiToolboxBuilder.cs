@@ -27,7 +27,6 @@ internal static partial class AiToolboxBuilder
         AddMemory(box, vm);
         AddNetwork(box, vm);
         AddDisplay(box, vm);
-        AddRanking(box, vm);
         AddUpgrade(box, vm);
         AddPortable(box);
         AddStartup(box);

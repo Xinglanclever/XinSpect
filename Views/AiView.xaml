@@ -77,7 +77,7 @@
                 <local:HelpDot HelpKey="ai/AI 評價"/>
             </StackPanel>
             <TextBlock Style="{StaticResource Subtitle}" Margin="0,0,0,12" TextWrapping="Wrap"
-                       Text="以你選定的 AI 模型評價本機硬體，或就配置、升級、散熱等問題自由提問。所有硬體數據皆為真實讀值。開啟「診斷代理」後，AI 能自己查溫度、事件、磁碟健康、記憶體時序、天梯名次與升級建議等 34 項本機唯讀資料——其中 11 項是硬核底層事實（Top-down 管線歸因、頻率真相、平台可信度、韌體與微碼、逐核時間歸因、電源政策、記憶體認可帳本、機器檢查與 WHEA、免疫位元、RDT 監測、效能天花板），這些多半要你先在對應頁面按下量測才有值，沒量過 AI 會照實說沒有。它看得到整台機器，但不會動到任何設定。"/>
+                       Text="以你選定的 AI 模型評價本機硬體，或就配置、升級、散熱等問題自由提問。所有硬體數據皆為真實讀值。開啟「診斷代理」後，AI 能自己查溫度、事件、磁碟健康、記憶體時序與升級建議等 33 項本機唯讀資料——其中 11 項是硬核底層事實（Top-down 管線歸因、頻率真相、平台可信度、韌體與微碼、逐核時間歸因、電源政策、記憶體認可帳本、機器檢查與 WHEA、免疫位元、RDT 監測、效能天花板），這些多半要你先在對應頁面按下量測才有值，沒量過 AI 會照實說沒有。它看得到整台機器，但不會動到任何設定。"/>
         </StackPanel>
 
         <!-- 工具列：模型 / 溫度 / 動作 -->
@@ -179,7 +179,7 @@
                         Tag="這台機器的溫度正常嗎？請查所有溫度、風扇現況與歷史統計，判斷有沒有過熱或降頻。"
                         IsEnabled="{Binding Ai.CanSend}" Click="Chip_Click"/>
                 <Button Style="{StaticResource ToolButton}" Margin="0,0,7,7" Content="適合玩遊戲嗎"
-                        Tag="這套配置玩遊戲夠用嗎？請查規格、顯示卡與天梯名次，說明大概能對應什麼畫質設定。"
+                        Tag="這套配置玩遊戲夠用嗎？請查規格與顯示卡讀值，說明大概能對應什麼畫質設定。"
                         IsEnabled="{Binding Ai.CanSend}" Click="Chip_Click"/>
                 <Button Style="{StaticResource ToolButton}" Margin="0,0,7,7" Content="記憶體插對了嗎"
                         Tag="記憶體有插對雙通道、有吃到標定頻率嗎？請查記憶體時序與 SPD 後回答。"
@@ -193,8 +193,8 @@
                 <Button Style="{StaticResource ToolButton}" Margin="0,0,7,7" Content="開機為什麼慢"
                         Tag="開機與登入偏慢的可能原因是什麼？請查開機啟動項與系統碟型別後回答。"
                         IsEnabled="{Binding Ai.CanSend}" Click="Chip_Click"/>
-                <Button Style="{StaticResource ToolButton}" Margin="0,0,7,7" Content="這顆 CPU 算強嗎"
-                        Tag="這顆處理器與這張顯示卡在同級中算強嗎？請查天梯名次與相鄰對手後回答，並說明天梯分數僅供參考。"
+                <Button Style="{StaticResource ToolButton}" Margin="0,0,7,7" Content="該升級哪裡"
+                        Tag="這台機器最值得先升級的是什麼？請查規格與升級建議後回答，並說明預期效益是經驗範圍而非實測。"
                         IsEnabled="{Binding Ai.CanSend}" Click="Chip_Click"/>
             </WrapPanel>
             <!-- 附件預覽 -->
