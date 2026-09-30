@@ -218,6 +218,85 @@ internal static class StartupSequence
                 vm.StatusText = ReadyText(vm, report.Ran);
         }
         catch { /* 深度規格為附加，讀取失敗維持 WMI 值 */ }
+
+        // CPU-Z 沒有（未安裝／不在桌面）不代表時脈就只能空著：
+        // SPD 直讀結果（上面已讀）與 WMI 設定速率都能把「時脈與時序」補起來，
+        // CPU-Z 從「必要依賴」降級為「更完整的選用補充」。
+        if (!vm.Timings.Loaded)
+        {
+            var native = await Task.Run(() => BuildNativeTimings(vm));
+            if (native is not null)
+            {
+                native.RaiseAll();
+                vm.Timings = native;
+            }
+            else
+            {
+                vm.Timings.Status = "未讀到時序——需要 SPD 直讀（管理員＋驅動）或 CPU-Z 報告其中之一。";
+                vm.Timings.SourceText = "無";
+                vm.Timings.RaiseAll();
+            }
+        }
+    }
+
+    /// <summary>
+    /// 不靠 CPU-Z 組出一組記憶體時脈資訊。
+    /// 優先序：SPD 直讀（模組原始位元組，含 JEDEC 時序）→ WMI 設定速率（只有頻率，沒有時序）。
+    /// 讀不到任何東西回 null，呼叫端如實顯示「未讀到」。純函式（輸入皆為已就緒的唯讀資料）供單元測試。
+    /// </summary>
+    internal static MemoryTimings? BuildNativeTimings(MainViewModel vm)
+    {
+        // ── 來源一：SPD 直讀（DDR4；時序以 JEDEC 標準值為準，XMP 開啟時實際值可能更緊）──
+        var spd = vm.DirectSpdReads.FirstOrDefault();
+        if (spd is { } first)
+        {
+            var t = first.Decoded.Timings;
+            if (t.TckMinPs > 0)
+            {
+                int cl = SpdTimings.ClocksAt(t.TaaPs, t.TckMinPs);
+                int dataRate = t.MaxJedecDataRate;
+                return new MemoryTimings
+                {
+                    Loaded = true,
+                    SourceText = "SPD 直讀（" + first.Bus + "）・JEDEC 標準值",
+                    Status = "已由 SPD 直讀填入。注意：這是模組的 JEDEC 標準時序；"
+                           + "若 BIOS 已開 XMP／EXPO，實際時序會比這裡更緊——完整對照仍以 CPU-Z 報告或 BIOS 為準。",
+                    MemoryTypeText = "DDR4",
+                    DataRateText = dataRate > 0 ? $"DDR4-{dataRate}" : "—",
+                    DramFrequencyMHz = dataRate > 0 ? dataRate / 2.0 : 0,
+                    CL = cl > 0 ? cl.ToString() : "—",
+                    TRCD = SpdTimings.ClocksAt(t.TrcdPs, t.TckMinPs).ToString(),
+                    TRP = SpdTimings.ClocksAt(t.TrpPs, t.TckMinPs).ToString(),
+                    TRAS = SpdTimings.ClocksAt(t.TrasPs, t.TckMinPs).ToString(),
+                    TRFC = t.Trfc1Ps > 0 ? SpdTimings.ClocksAt(t.Trfc1Ps, t.TckMinPs).ToString() : "—",
+                    MemorySizeText = vm.DirectSpdReads.Count > 0
+                        ? $"{vm.DirectSpdReads.Sum(r => r.Decoded.Geometry.CapacityMib) / 1024.0:0.#} GB（{vm.DirectSpdReads.Count} 條）"
+                        : "—",
+                };
+            }
+        }
+
+        // ── 來源二：WMI（Win32_PhysicalMemory 的 ConfiguredClockSpeed＝目前設定的資料速率）──
+        var mods = vm.Modules;
+        if (mods is { Count: > 0 } && mods[0].ConfiguredSpeedMHz > 0)
+        {
+            int configured = mods[0].ConfiguredSpeedMHz;
+            double totalGb = mods.Sum(m => m.CapacityGB);
+            string type = mods[0].MemoryType.Length > 0 ? mods[0].MemoryType : "DDR";
+            return new MemoryTimings
+            {
+                Loaded = false,   // 時序欄位沒有來源，不假裝有
+                SourceText = "Windows 設定速率（WMI）",
+                Status = "已由 Windows（WMI）取得目前設定的資料速率；時序（CL／tRCD 等）WMI 不提供，"
+                       + "需 SPD 直讀（以系統管理員執行）或 CPU-Z 報告才讀得到。",
+                MemoryTypeText = type,
+                DataRateText = $"{type}-{configured}（WMI 設定值）",
+                DramFrequencyMHz = configured / 2.0,   // DDR：資料速率 ÷ 2 ＝記憶體時鐘
+                MemorySizeText = totalGb > 0 ? $"{totalGb:0.#} GB（{mods.Count} 條）" : "—",
+            };
+        }
+
+        return null;
     }
 
     /// <summary>

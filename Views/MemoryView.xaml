@@ -25,10 +25,11 @@
                 <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,7,0">
                     <StackPanel>
                         <Grid>
-                            <local:SectionHead Text="時序 (CPU-Z)" HelpKey="memory/時序 (CPU-Z)"/>
+                            <local:SectionHead Text="記憶體時序" HelpKey="memory/記憶體時序"/>
                             <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Timings.Status}"
                                        HorizontalAlignment="Right" VerticalAlignment="Center"/>
                         </Grid>
+                        <local:FieldRow Label="資料來源" Value="{Binding Timings.SourceText}"/>
                         <local:FieldRow Label="記憶體類型" Value="{Binding Timings.MemoryTypeText}"/>
                         <local:FieldRow Label="通道" Value="{Binding Timings.ChannelsText}"/>
                         <local:FieldRow Label="DRAM 頻率" Value="{Binding Timings.FrequencyText}"/>

@@ -120,11 +120,15 @@ public sealed class MemoryModuleInfo
     public Brand Brand => Brands.Resolve(Manufacturer, PartNumber);
 }
 
-/// <summary>由 CPU-Z 報告解析出的即時記憶體時序。</summary>
+/// <summary>記憶體時序（CPU-Z 報告、SPD 直讀或 WMI 原生來源——來源那一列會寫明是哪一個）。</summary>
 public sealed class MemoryTimings : ObservableObject
 {
     private string _status = "尚未讀取";
     public string Status { get => _status; set => SetProperty(ref _status, value); }
+
+    private string _sourceText = "";
+    /// <summary>資料來源（例：「CPU-Z 報告」「SPD 直讀（JEDEC）」「Windows 設定速率（WMI）」）。</summary>
+    public string SourceText { get => _sourceText; set => SetProperty(ref _sourceText, value); }
 
     private bool _loaded;
     public bool Loaded { get => _loaded; set => SetProperty(ref _loaded, value); }
@@ -174,6 +178,7 @@ public sealed class MemoryTimings : ObservableObject
         OnPropertyChanged(nameof(MemorySizeText));
         OnPropertyChanged(nameof(HostBridge));
         OnPropertyChanged(nameof(PrimaryTimingsText));
+        OnPropertyChanged(nameof(SourceText));
     }
 }
 

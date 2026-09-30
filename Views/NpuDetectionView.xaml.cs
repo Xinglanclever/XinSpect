@@ -27,7 +27,7 @@ public partial class NpuDetectionView : UserControl
     private async Task DoRefreshAsync(MainViewModel vm)
     {
         var svc = vm.NpuDetection;
-        await svc.RefreshAsync();
+        await svc.RefreshAsync(vm.Cpu?.Name);
 
         StatusText.Text = svc.Status;
 

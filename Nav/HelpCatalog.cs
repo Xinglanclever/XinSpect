@@ -234,11 +234,11 @@ public static class HelpCatalog
             What = "記憶體的總容量、型別（DDR4／DDR5）與目前運作頻率摘要。",
             Does = "頻率是資料速率的一半（例如 DDR4-3200 顯示 1600 MHz 實際時脈）；插槽與每條模組的細節見下方「實體模組」。",
         },
-        ["memory/時序 (CPU-Z)"] = new()
+        ["memory/記憶體時序"] = new()
         {
             Title = "時序 (CPU-Z)",
             What = "真實生效的主要時序：tCL、tRCD、tRP、tRAS 與命令率等。",
-            Does = "這是背景執行 CPU-Z 取回的實際值，不是 SPD 上的標稱值——手動調過或 XMP 沒吃到，這裡會照實顯示。CPU-Z 還沒跑完時欄位是「—」。",
+            Does = "（2.1.0 起 CPU-Z 只是選用來源之一：SPD 直讀與 WMI 也能填，來源列會標明。）這是背景執行 CPU-Z 取回的實際值，不是 SPD 上的標稱值——手動調過或 XMP 沒吃到，這裡會照實顯示。CPU-Z 還沒跑完時欄位是「—」。",
             Safety = "唯讀。CPU-Z 由 Windows 內建 winget 自官方來源安裝，本程式不內含其執行檔。",
         },
         ["memory/即時使用量"] = new()

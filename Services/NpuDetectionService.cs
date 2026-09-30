@@ -8,17 +8,25 @@ public sealed class NpuDetectionService : ObservableObject
     // ── 已知 NPU 的估計 TOPS 查表（型號子字串 → 整數 TOPS） ──────────────────
     private static readonly (string Pattern, int Tops)[] KnownTops =
     [
-        ("Meteor Lake",       10),
+        // Intel；較特定的 pattern 放前面（泛用的 "Core Ultra 200" 會吃掉 "200V"/"200S"）
+        ("Core Ultra 200V",   48),  // Lunar Lake
+        ("Core Ultra 200S",   13),  // Arrow Lake-S
+        ("Core Ultra 300",    50),  // Panther Lake
+        ("Panther Lake",      50),
         ("Lunar Lake",        48),
         ("Arrow Lake",        13),
-        ("Core Ultra 200V",   48),
-        ("Core Ultra 200S",   13),
+        ("Meteor Lake",       10),
         ("Core Ultra 200",    11),
         ("Core Ultra 100",    10),
-        ("NPU Compute 3700",  45),  // Ryzen AI 300
+        // AMD XDNA（裝置名為 NPU Compute XXXX）
+        ("NPU Compute 3700",  45),  // Ryzen AI 300 / AI 9 HX 370 級
         ("NPU Compute 3600",  50),  // Ryzen AI 9 HX 370
+        ("NPU Compute 3500",  43),  // Ryzen AI 9 365 級
+        ("NPU Compute 3200",  38),  // Ryzen AI 9 300 級（Krackan）
         ("IPU Device 1502",   16),  // Ryzen AI 7000/8000
-        ("Hexagon",           45),  // Qualcomm Snapdragon X Elite
+        // Qualcomm Hexagon
+        ("Hexagon 520",       80),  // Snapdragon X2 Elite
+        ("Hexagon",           45),  // Snapdragon X Elite
     ];
 
     private bool _isLoading;
@@ -42,9 +50,13 @@ public sealed class NpuDetectionService : ObservableObject
     private string _estimatedTops = "";
     public string EstimatedTops { get => _estimatedTops; private set => SetProperty(ref _estimatedTops, value); }
 
+    private string _cpuName = "";
+
     /// <summary>（重新）偵測 NPU。WMI 列舉在背景執行緒，避免進頁凍結；呼叫端 await 後再讀結果。</summary>
-    public async Task RefreshAsync()
+    /// <remarks>NPU 裝置名常不帶平台資訊（如「Intel(R) AI Boost」），傳入 CPU 名稱可讓 TOPS 估計多一路比對。</remarks>
+    public async Task RefreshAsync(string? cpuName = null)
     {
+        _cpuName = cpuName ?? "";
         IsLoading = true;
         NpuPresent = false;
         NpuName = "";
@@ -67,7 +79,8 @@ public sealed class NpuDetectionService : ObservableObject
 
                 if (!found)
                 {
-                    Status = "未偵測到 NPU。此機器可能不具備 NPU 或驅動未安裝。";
+        Status = "未偵測到任何 NPU 裝置——這台機器應該沒有 NPU（或晶片組的 NPU 從未列出）；"
+                + "若您確定硬體有 NPU，多半是驅動未安裝或裝置名稱未被認出，可回報型號以擴充關鍵字。";
                 }
             });
         }
@@ -109,7 +122,7 @@ public sealed class NpuDetectionService : ObservableObject
             NpuPresent = true;
             NpuName = name.Length > 0 ? name : desc;
             FillDriverInfo(dev);
-            EstimatedTops = LookupTops(NpuName);
+            EstimatedTops = LookupTops(NpuName, _cpuName);
             Status = "已偵測到 NPU";
             return true;
         }
@@ -164,7 +177,7 @@ public sealed class NpuDetectionService : ObservableObject
             NpuPresent = true;
             NpuName = name.Length > 0 ? name : desc;
             FillDriverInfo(dev);
-            EstimatedTops = LookupTops(NpuName);
+            EstimatedTops = LookupTops(NpuName, _cpuName);
             Status = "已偵測到 NPU（PCI 類別 0x0B40）";
             return true;
         }
@@ -202,13 +215,49 @@ public sealed class NpuDetectionService : ObservableObject
         }
     }
 
-    private static string LookupTops(string deviceName)
+    /// <summary>
+    /// 型號 → TOPS 估計。internal 供單元測試釘住優先序（特定型號必須排在泛用之前）。
+    /// 兩路比對：①NPU 裝置名（AMD「NPU Compute XXXX」、Qualcomm「Hexagon」直接命中）；
+    /// ②CPU 產品名（Intel NPU 裝置名是「Intel(R) AI Boost」，不含平台資訊，只能靠 CPU 名判讀）。
+    /// </summary>
+    internal static string LookupTops(string deviceName, string? cpuName = null)
     {
         foreach (var (pattern, tops) in KnownTops)
         {
             if (deviceName.Contains(pattern, StringComparison.OrdinalIgnoreCase))
-                return $"~{tops} TOPS（依型號查表估計）";
+                return $"~{tops} TOPS（依型號「{pattern}」查表估計，非本機推論實測）";
         }
-        return "—（型號不在查表中）";
+
+        if (!string.IsNullOrWhiteSpace(cpuName))
+        {
+            // Intel Core Ultra：以型號後綴判平台（V＝Lunar Lake、HX/K/F＝Arrow Lake、H 看世代）
+            var m = System.Text.RegularExpressions.Regex.Match(
+                cpuName, "Core\\s*(?:\\(TM\\))?\\s*Ultra\\s*\\d\\s*(\\d{3})(V|HX|H|K|KF|KS|F|U|E)?\\b",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (m.Success)
+            {
+                string digits = m.Groups[1].Value;
+                string suffix = m.Groups[2].Value.ToUpperInvariant();
+                (int tops, string platform) = (suffix, digits) switch
+                {
+                    ("V", _)  => (48, "Lunar Lake"),
+                    ("HX", _) => (13, "Arrow Lake"),
+                    ("K", _)  => (13, "Arrow Lake"),
+                    ("KF", _) => (13, "Arrow Lake"),
+                    ("KS", _) => (13, "Arrow Lake"),
+                    ("F", _)  => (13, "Arrow Lake"),
+                    ("E", _)  => (13, "Arrow Lake"),
+                    ("H", _)  => digits.StartsWith("1") ? (10, "Meteor Lake") : (13, "Arrow Lake-H"),
+                    ("U", _)  => (10, "Meteor Lake"),
+                    (_, _)    => digits.StartsWith("3") ? (50, "Panther Lake")
+                               : digits.StartsWith("2") ? (11, "Core Ultra 200（桌面）")
+                               : (10, "Meteor Lake"),
+                };
+                return $"~{tops} TOPS（由 CPU 型號判讀為 {platform}，查表估計，非本機推論實測）";
+            }
+        }
+
+        // 裝置存在但查表沒有：如實說明資料缺口，而不是給一個編造的數字
+        return "—（型號不在查表中；NPU 裝置存在，驅動也沒有提供算力資訊）";
     }
 }
