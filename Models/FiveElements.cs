@@ -43,7 +43,7 @@ public static class FiveElements
         new("", "ChatGPT 5.6 Sol\n遠征軍", 72),
         new("", "Claude Opus 4.8\n先遣軍", 144),
         new("", "Claude Opus 4.6\n預備隊", 216),
-        new("", "DeepSeek V4.1 Flash\n來做客的大肥魚", 288),
+        new("", "DeepSeek V4.1 Flash\nGLM 5.3 Flash·GLM 5.3", 288),
     ];
 
     /// <summary>

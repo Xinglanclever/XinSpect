@@ -148,6 +148,6 @@ public sealed class FiveElementsWheel : FrameworkElement
                                 bold ? FontWeights.Bold : FontWeights.Normal, FontStretches.Normal);
         return new FormattedText(text, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight,
                                  face, size, brush, VisualTreeHelper.GetDpi(this).PixelsPerDip)
-        { MaxLineCount = 1 };
+        { MaxLineCount = 3 };
     }
 }

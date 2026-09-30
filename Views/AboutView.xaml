@@ -80,7 +80,7 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0" VerticalAlignment="Top" Margin="0,20,0,0">
                             <local:GifImage GifSource="pack://application:,,,/Assets/bigfish.gif"
-                                            Height="80" Stretch="Uniform"
+                                            Height="120" Stretch="Uniform"
                                             RenderOptions.BitmapScalingMode="HighQuality"/>
                             <TextBlock Text="&#x2192;" FontSize="20" FontWeight="Bold"
                                        Foreground="{DynamicResource MutedInkBrush}"
