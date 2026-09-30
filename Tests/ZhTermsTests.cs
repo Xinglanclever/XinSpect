@@ -61,8 +61,8 @@ public class ZhTermsTests
     [Fact]
     public void 顯示卡規格整句()
     {
-        // 「螢幕」→「萤幕」是 LCMapStringEx 的逐字轉換結果，不在詞組表裡
-        Assert.Equal("显卡规格、显存与萤幕色域",
+        // 「螢幕」→「屏幕」走詞組表（大陆说法）；逐字轉換只會給「萤幕」
+        Assert.Equal("显卡规格、显存与屏幕色域",
             LanguageService.ToSimplified("顯示卡規格、顯示記憶體與螢幕色域"));
     }
 
