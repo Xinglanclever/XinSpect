@@ -114,6 +114,91 @@
 
             <TextBlock Style="{StaticResource FieldLabel}" Margin="4,12,0,4" TextWrapping="Wrap"
                        Text="部分系統工具（如記憶體診斷、磁碟管理）可能要求系統管理員權限；DDU 建議於安全模式下使用。"/>
+
+            <!-- ===== 一鍵裝機（winget 批次安裝；2.1.0 自獨立分頁併入） ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="60">
+                <StackPanel DataContext="{Binding Winget}">
+                    <local:SectionHead Text="一鍵裝機" HelpKey="toolbox/一鍵裝機"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="勾選軟體後一鍵批次安裝，全程由 Windows 內建的 winget 從官方來源下載；本程式不含任何安裝檔。「硬體工具」分類收錄圖吧風格的檢測工具——多數曦覽已有對應頁面，要不要重複裝由你決定。"/>
+
+                    <WrapPanel Margin="0,0,0,10">
+                        <Button Style="{StaticResource ToolButton}" Content="勾選推薦" Margin="0,0,8,6" Click="SelectRec_Click"/>
+                        <Button Style="{StaticResource ToolButton}" Content="全部勾選" Margin="0,0,8,6"
+                                ToolTip="勾選清單裡全部套件（已安裝的不重複裝）——一鍵裝到滿用" Click="SelectAll_Click"/>
+                        <Button Style="{StaticResource ToolButton}" Content="清除勾選" Margin="0,0,8,6" Click="Clear_Click"/>
+                        <!-- Content 的型別是 object，WPF 會忽略其上的 StringFormat，故綁字串屬性 -->
+                        <Button Style="{StaticResource PrimaryButton}" Click="Install_Click"
+                                IsEnabled="{Binding CanInstall}"
+                                FontSize="14.5" FontWeight="SemiBold" Padding="24,10" MinWidth="140"
+                                Content="{Binding InstallButtonText}"/>
+                    </WrapPanel>
+
+                    <!-- winget 未安裝提示 -->
+                    <Border Margin="0,0,0,10" CornerRadius="8" Background="#33E0552E" BorderBrush="#E0552E" BorderThickness="1"
+                            Visibility="{Binding NotAvailable, Converter={StaticResource BoolToVis}}">
+                        <StackPanel Orientation="Horizontal" Margin="14,10">
+                            <TextBlock Text="未偵測到 winget（應用程式安裝程式）。" Foreground="{DynamicResource PrimaryInkBrush}"
+                                       VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <Button Style="{StaticResource ToolButton}" Content="前往 Microsoft Store 取得" Click="GetWinget_Click"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 狀態 -->
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="2,0,0,8"
+                               Text="{Binding StatusText}" TextTrimming="CharacterEllipsis"/>
+
+                    <!-- 分類與套件清單（捲動交由外層頁面 ScrollViewer，不再巢狀內捲） -->
+                    <ItemsControl ItemsSource="{Binding Categories}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="0,0,0,10">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SectionHeader}" Text="{Binding Name}" FontSize="15" Margin="0,0,0,10"/>
+                                        <ItemsControl ItemsSource="{Binding Packages}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,4,18,4"
+                                                              Foreground="{DynamicResource PrimaryInkBrush}"
+                                                              ToolTip="{Binding Id}">
+                                                        <StackPanel>
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding Name}" Foreground="{DynamicResource PrimaryInkBrush}" FontSize="13"/>
+                                                                <!-- 「已安裝」只在 winget 認得它已裝時出現；沒有這個字樣不代表沒裝（msstore／手動安裝的它看不到） -->
+                                                                <Border Margin="6,0,0,0" Padding="5,1" CornerRadius="4" VerticalAlignment="Center"
+                                                                        Background="#333F8F5B" BorderBrush="#3F8F5B" BorderThickness="1"
+                                                                        Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVis}}">
+                                                                    <TextBlock Text="{Binding StateText}" FontSize="10"
+                                                                               Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                                                </Border>
+                                                            </StackPanel>
+                                                            <TextBlock Text="{Binding Desc}" Style="{StaticResource FieldLabel}" FontSize="11"/>
+                                                        </StackPanel>
+                                                    </CheckBox>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- 安裝記錄 -->
+                    <Border Margin="0,4,0,0" CornerRadius="10" Background="{DynamicResource SurfaceBrush}"
+                            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" MaxHeight="150">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="10,8">
+                            <TextBox Text="{Binding Log, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"
+                                     Background="Transparent" BorderThickness="0" Foreground="{DynamicResource SecondaryInkBrush}"
+                                     FontFamily="Consolas" FontSize="12" MinHeight="60"
+                                     VerticalScrollBarVisibility="Disabled"/>
+                        </ScrollViewer>
+                    </Border>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

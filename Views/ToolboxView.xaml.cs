@@ -43,6 +43,32 @@ public partial class ToolboxView : UserControl
     private void ClearFilter_Click(object sender, RoutedEventArgs e) => Vm?.Toolbox.ClearFilter();
 
     // 裝入 / 更換插槽：選擇下載好的本機可執行檔放進插槽。
+    // ── 一鍵裝機（winget）：自 SetupView 併入的事件處理 ──────────────────
+
+    private WingetService? WingetVm => Vm?.Winget;
+
+    private void SelectRec_Click(object sender, RoutedEventArgs e) => WingetVm?.SelectRecommended();
+    private void SelectAll_Click(object sender, RoutedEventArgs e) => WingetVm?.SelectAll();
+    private void Clear_Click(object sender, RoutedEventArgs e) => WingetVm?.ClearSelection();
+
+    private async void Install_Click(object sender, RoutedEventArgs e)
+    {
+        if (WingetVm is { } w && w.CanInstall) await w.InstallSelectedAsync();
+    }
+
+    private void GetWinget_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "ms-windows-store://pdp/?ProductId=9nblggh4nns1",
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex) { Diag.Swallow("開啟 Store", ex, "無法開啟 Microsoft Store 頁面"); }
+    }
+
     private void Slot_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: ToolItem tool } || Vm is not { } vm) return;

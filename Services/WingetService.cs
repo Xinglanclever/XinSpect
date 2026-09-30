@@ -188,6 +188,13 @@ public sealed class WingetService : ObservableObject
         RaiseSelectionChanged();
     }
 
+    /// <summary>勾選清單裡全部套件（未安裝的才勾，已裝的不重複安裝）——「一鍵裝到滿」用。</summary>
+    public void SelectAll()
+    {
+        foreach (var p in Categories.SelectMany(c => c.Packages)) p.IsSelected = !p.IsInstalled;
+        RaiseSelectionChanged();
+    }
+
     /// <summary>清除所有勾選。</summary>
     public void ClearSelection()
     {
@@ -276,6 +283,21 @@ public sealed class WingetService : ObservableObject
         {
             new() { Id = "RustDesk.RustDesk", Name = "RustDesk", Desc = "開源遠端桌面" },
             new() { Id = "Oracle.VirtualBox", Name = "VirtualBox", Desc = "開源虛擬機器" },
+        } },
+        // 2.1.0 併入工具箱：圖吧風格的硬體工具也能 winget 直裝，不必再到官方頁手動下載。
+        // 這些多為曦覽已有對應頁面的檢測工具，故不設推薦——要不要裝由使用者自己決定。
+        new() { Name = "硬體工具", Packages = new List<WingetPackage>
+        {
+            new() { Id = "CPUID.CPU-Z", Name = "CPU-Z", Desc = "處理器／記憶體規格偵測（曦覽記憶體頁可替代部分功能）" },
+            new() { Id = "ALCPU.CoreTemp", Name = "Core Temp", Desc = "處理器溫度監測" },
+            new() { Id = "TechPowerUp.GPU-Z", Name = "GPU-Z", Desc = "顯示卡規格與感測器" },
+            new() { Id = "REALiX.HWiNFO", Name = "HWiNFO", Desc = "深度硬體資訊與感測器總表" },
+        } },
+        new() { Name = "磁碟與烤機", Packages = new List<WingetPackage>
+        {
+            new() { Id = "CrystalDewWorld.CrystalDiskInfo", Name = "CrystalDiskInfo", Desc = "硬碟健康 SMART 監測" },
+            new() { Id = "CrystalDewWorld.CrystalDiskMark", Name = "CrystalDiskMark", Desc = "磁碟讀寫速度測試" },
+            new() { Id = "Geeks3D.FurMark", Name = "FurMark", Desc = "顯示卡烤機壓力測試（高負載，注意散熱）" },
         } },
     };
 

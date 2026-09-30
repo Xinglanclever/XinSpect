@@ -16,7 +16,7 @@ public class SimpleModeTests
     private static readonly string[] MustStayBasic =
     [
         "overview", "cpu", "memory", "mainboard", "gpu", "storage", "network",
-        "health", "sensors", "bench", "toolbox", "utilities", "setup", "settings", "about",
+        "health", "sensors", "bench", "toolbox", "utilities", "settings", "about",
     ];
 
     /// <summary>這些頁面對一般使用者只是雜訊，簡易模式下該收起來。</summary>

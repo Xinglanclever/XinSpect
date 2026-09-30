@@ -18,13 +18,12 @@ public class WingetCatalogTests
     }
 
     [Fact]
-    public void 清單不含曦覽自己就在做的檢測工具()
+    public void 硬體工具分類不設推薦()
     {
-        // 裝 CPU-Z／GPU-Z／CrystalDiskInfo 只是多一份和曦覽處理器／顯示卡／儲存裝置頁重複的答案。
-        var ids = AllPackages().Select(p => p.Id.ToLowerInvariant()).ToList();
-        Assert.DoesNotContain("cpuid.cpu-z", ids);
-        Assert.DoesNotContain("techpowerup.gpu-z", ids);
-        Assert.DoesNotContain("crystaldewworld.crystaldiskinfo", ids);
+        // 2.1.0 併入工具箱後收錄了 CPU-Z／GPU-Z 等硬體檢測工具，但曦覽本來就有對應頁面，
+        // 所以這一類一律不標推薦——「勾選推薦」不會把重複的檢測工具塞給使用者。
+        var hardware = WingetService.Catalog().Single(c => c.Name == "硬體工具");
+        Assert.All(hardware.Packages, p => Assert.False(p.Recommended));
     }
 
     [Fact]

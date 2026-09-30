@@ -254,8 +254,8 @@ public static class PageRegistry
             IconData = "M22.7,19 l-9.1,-9.1 c0.9,-2.3 0.4,-5 -1.5,-6.9 -2,-2 -5,-2.4 -7.4,-1.3 l4.3,4.3 -3,3 -4.3,-4.3 "
                      + "C0.5,9.1 1,12.1 3,14.1 c1.9,1.9 4.6,2.4 6.9,1.5 l9.1,9.1 c0.4,0.4 1,0.4 1.4,0 l2.3,-2.3 c0.5,-0.4 0.5,-1.1 0.1,-1.5 z",
             Factory = () => new ToolboxView(),
-            Hint = "Windows 內建工具與第三方工具導向",
-            Keywords = ["toolbox", "工具箱", "圖吧", "下載"],
+            Hint = "Windows 內建工具、第三方工具導向，併入一鍵裝機（winget）批次安裝",
+            Keywords = ["toolbox", "工具箱", "圖吧", "下載", "setup", "winget", "裝機", "安裝", "軟體"],
         },
         new()
         {
@@ -552,14 +552,6 @@ public static class PageRegistry
             Keywords = ["usb", "隨身碟", "u盤", "外接", "硬碟", "集線器", "hub", "埠", "port",
                         "3.0", "3.1", "3.2", "5gb", "10gb", "480", "線材", "cable", "掉速", "速度", "供電"],
             Advanced = true,
-        },
-        new()
-        {
-            Key = "setup", Title = "一鍵裝機", Group = GSystem,
-            IconData = "F0 M4,3 H20 A1,1 0 0 1 21,4 V17 A1,1 0 0 1 20,18 H13 V20 H16 V22 H8 V20 H11 V18 H4 A1,1 0 0 1 3,17 V4 A1,1 0 0 1 4,3 Z "
-                     + "M11,6 H13 V9 H16 V11 H13 V14 H11 V11 H8 V9 H11 Z",
-            Factory = () => new SetupView(),
-            Hint = "以 winget 批次安裝常用軟體", Keywords = ["setup", "winget", "裝機", "安裝", "軟體"],
         },
         new()
         {
