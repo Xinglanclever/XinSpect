@@ -45,6 +45,7 @@ public static class Diag
     public const long MaxBytes = 256 * 1024;
 
     private static readonly object Gate = new();
+    private static readonly object FileGate = new();   // 檔案寫入專用鎖，與 Gate 分離：避免磁碟延遲卡住記憶體環
     private static readonly List<DiagEntry> Ring = new();
 
     /// <summary>累計筆數（不因環形緩衝丟棄而減少）。</summary>
@@ -98,9 +99,14 @@ public static class Diag
         if (!FileSinkEnabled) return;
         try
         {
-            Directory.CreateDirectory(CrashLog.Folder);
-            Trim();
-            File.AppendAllText(FilePath, Format(entry) + Environment.NewLine, new UTF8Encoding(true));
+            // 檔案寫入自己上鎖：多執行緒同時 Trim/AppendAllText 會撞共享違規，例外雖被吞下、
+            // 該筆日誌就掉了。與 Gate 分開，磁碟延遲不拖累記憶體環的寫入。
+            lock (FileGate)
+            {
+                Directory.CreateDirectory(CrashLog.Folder);
+                Trim();
+                File.AppendAllText(FilePath, Format(entry) + Environment.NewLine, new UTF8Encoding(true));
+            }
         }
         catch { /* 診斷紀錄本身不得成為新的失敗來源；記憶體那一份仍在 */ }
     }

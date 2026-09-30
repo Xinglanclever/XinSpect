@@ -436,7 +436,7 @@ public sealed class SettingsService : ObservableObject
             // 原子寫入：寫一半的 settings.json 會讓下次載入整份回落預設值（見 AtomicWrite）
             AtomicWrite.AllText(FilePath, JsonSerializer.Serialize(p, new JsonSerializerOptions { WriteIndented = true }));
         }
-        catch { /* 存檔失敗（權限/磁碟）不影響執行期設定 */ }
+        catch (Exception ex) { Diag.Swallow("設定存檔", ex, "本次設定未能寫入磁碟，執行期仍生效"); }
     }
 
     // ── 開機自啟 ───────────────────────────────────────────────────────────
