@@ -126,9 +126,17 @@ async function viaWorkersAi(env, model, messages, maxTokens, temperature) {
   if (temperature !== undefined) input.temperature = temperature;
 
   const out = await env.AI.run(model, input);
+  // Workers AI 的回傳格式因模型而異：
+  //   舊式（Llama 等）：{ response: "…" }
+  //   OpenAI 相容（gpt-oss 等）：{ choices: [{ message: { content: "…" } }] }
+  //   純字串：直接就是回覆
   const text = typeof out === "string"
     ? out
-    : (out && (out.response ?? (out.result && out.result.response))) || "";
+    : (out && (
+        out.response
+        ?? (out.choices && out.choices[0] && out.choices[0].message && out.choices[0].message.content)
+        ?? (out.result && out.result.response)
+      )) || "";
   if (!text) return json({ error: { message: "上游沒有回傳內容，請稍後再試。" } }, 502);
 
   return json({

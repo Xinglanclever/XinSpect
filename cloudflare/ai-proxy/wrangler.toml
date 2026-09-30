@@ -13,7 +13,7 @@ binding = "AI"
 
 # 模型與總開關不是秘密，放這裡方便日後改（改完要重新 deploy 才生效）。
 [vars]
-MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+MODEL = "@cf/openai/gpt-oss-120b"
 ENABLED = "1"          # 緊急煞車：改成 "0" 再 deploy，共用額度就整條關閉
 # 想改用外部的 OpenAI 相容端點，就把下面這行取消註解，再 `wrangler secret put UPSTREAM_KEY`。
 # 一旦設了 UPSTREAM_KEY，Worker 就走外部端點，不再用 Workers AI。
