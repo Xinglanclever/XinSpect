@@ -48,6 +48,22 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.0.5",
+            Date = "2026-09-30",
+            Title = "碼審全面肅清——70 條 P0/P1/P2 修復（含六大防線文字修正）",
+            Items =
+            [
+                "七名平行審查代理（資料正確性、執行緒安全、錯誤處理、資源洩漏、UI 繫結、語言一致性、性能熱點）掃過 76,000 行 C#，產出 ~70 條 P0/P1/P2 發現；全部經逐條人工回讀驗證後修正（6 條假警報已排除）。",
+                "P0 修正：ContinueWith 缺 IsFaulted 守衛（LargePageService）、CleanupService 遍歷拒絕存取目錄崩潰、TerminalService PowerShell 中文亂碼、WMI 查詢阻塞 UI 執行緒（CpuPinoutService/ChipsetAnalysisService/NpuDetectionService/PcieAnalysisService）。",
+                "P0 修正：CoreColumns 頁面重入累加 handler、FrameTimeView 計時器洩漏、PortUsageView 重入不重啟、AiView CollectionChanged 累加、BrowserView 多實例 WebView2 資料夾衝突。",
+                "P1 修正：XMsg 翻譯包裝（MessageBox 全站繁簡同步）、TrayService 系統匣選單翻譯、Diag.FileGate 磁碟序列化、SettingsService 空 catch 改 Swallow、TerminalView 歷史導航越界、MainWindow 頁面切換失敗側邊欄回滾、BatteryView/HostsEditorView async 化、AudioSpectrumService WASAPI 洩漏、HardwareEvidence 插入順序。",
+                "P1 修正：HwInfoSharedMem AbandonedMutexException、GpuOcService NVML 初始化旗標、OcModels 負偏移格式、OverclockService 雙重套用守衛、SecurityPostureService BitLocker 空結果處理。",
+                "P2 掃尾：MemBandwidthMath HTML 實體、UpgradeFactsCollector 零分鐘歷史、XtuCore 0 值過濾、SpdConsistencyAudit PC4 頻寬誤判、DriverAnalysisService 無限輪詢、MetricsPump handler 累加、CoreTempMapService 混合架構 TODO。",
+                "HelpCatalog 修正：藍色中隊 Help Key「五大防線」→「六大防線」與 XAML 同步。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.0.4",
             Date = "2026-09-29",
             Title = "簡體中文在地化修好 ＋ 運算穩定性壓測（y-cruncher 橋接）",
