@@ -73,4 +73,43 @@ public partial class OverviewView : UserControl
     }
 
     private void TileReset_Click(object sender, RoutedEventArgs e) => Vm?.Dashboard.Reset();
+
+    // ── 拜神（娛樂）────────────────────────────────────────────
+
+    /// <summary>
+    /// 開拜神視窗。乖度的輸入必須是真的：Minidump 資料夾讀得到才數近 7 天藍屏；
+    /// 資料夾不存在時「從未藍屏」與「未啟用傾印」分不清，就傳 null 讓視窗顯示「—」。
+    /// </summary>
+    private async void Shrine_Click(object sender, RoutedEventArgs e)
+    {
+        ShrineButton.IsEnabled = false;
+        try
+        {
+            int? bsod7d = await Task.Run(CountRecentBsods);
+            if (!IsLoaded) return;
+
+            var owner = Window.GetWindow(this);
+            new ShrineWindow(bsod7d, Environment.TickCount64 / 1000) { Owner = owner }.ShowDialog();
+        }
+        finally
+        {
+            ShrineButton.IsEnabled = true;
+        }
+    }
+
+    /// <summary>數近 7 天的傾印檔。這裡只需要檔案時間戳，不必逐檔解析傾印標頭。</summary>
+    private static int? CountRecentBsods()
+    {
+        try
+        {
+            var dir = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Minidump");
+            if (!System.IO.Directory.Exists(dir)) return null;
+
+            var cutoff = DateTime.Now.AddDays(-7);
+            return System.IO.Directory.EnumerateFiles(dir, "*.dmp")
+                .Count(path => System.IO.File.GetLastWriteTime(path) >= cutoff);
+        }
+        catch { return null; /* 讀不到＝未量到；寧可顯示「—」也不猜 */ }
+    }
 }
