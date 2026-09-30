@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 
 namespace XinSpect;
@@ -19,6 +20,7 @@ public partial class MiniOverlayWindow : Window
     {
         InitializeComponent();
         Loaded += (_, _) => Restore();
+        Activated += (_, _) => ReassertTopmost();
     }
 
     /// <summary>擺到上次的位置；沒有記錄（或記錄已落在畫面外）時貼齊工作區右上角。</summary>
@@ -81,6 +83,44 @@ public partial class MiniOverlayWindow : Window
 
     private void Close_Click(object sender, RoutedEventArgs e) => Hide();
 
+    /// <summary>
+    /// 開齒輪選單。ContextMenu 不在視窗視覺樹內，收不到 DataContext，
+    /// 開啟時手動掛上，選單內的開關綁定才找得到 Settings。
+    /// </summary>
+    private void Gear_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement btn) return;
+        var menu = new System.Windows.Controls.ContextMenu { DataContext = DataContext };
+        System.Windows.Controls.MenuItem AddItem(string label, string path)
+        {
+            var mi = new System.Windows.Controls.MenuItem
+            {
+                Header = label,
+                IsCheckable = true,
+                StaysOpenOnClick = true,
+            };
+            mi.SetBinding(System.Windows.Controls.MenuItem.IsCheckedProperty,
+                new System.Windows.Data.Binding(path) { Mode = System.Windows.Data.BindingMode.TwoWay });
+            menu.Items.Add(mi);
+            return mi;
+        }
+        menu.Items.Add(new System.Windows.Controls.MenuItem
+        {
+            Header = "顯示項目（FPS 三行讀「幀時間監測」頁的即時量測）",
+            IsEnabled = false,
+        });
+        AddItem("CPU", "Settings.MiniShowCpu");
+        AddItem("GPU", "Settings.MiniShowGpu");
+        AddItem("記憶體", "Settings.MiniShowMem");
+        AddItem("頻率", "Settings.MiniShowClock");
+        AddItem("FPS", "Settings.MiniShowFps");
+        AddItem("1% Low", "Settings.MiniShowLow1");
+        AddItem("0.1% Low", "Settings.MiniShowLow01");
+        menu.PlacementTarget = btn;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+        menu.IsOpen = true;
+    }
+
     /// <summary>切換顯示 / 隱藏（顯示時回到上次擺放的位置）。</summary>
     public void Toggle()
     {
@@ -88,5 +128,15 @@ public partial class MiniOverlayWindow : Window
         Show();
         Restore();
         Activate();
+    }
+
+    /// <summary>
+    /// 全螢幕遊戲或系統動畫偶爾會把置頂吃掉；視窗每次被啟動時重申一次置頂意圖。
+    /// 走綁定的 UpdateTarget 而非直接寫 Topmost，避免覆蓋掉 XAML 的 OneWay 綁定。
+    /// </summary>
+    private void ReassertTopmost()
+    {
+        Dispatcher.InvokeAsync(() =>
+            BindingOperations.GetBindingExpression(this, Window.TopmostProperty)?.UpdateTarget());
     }
 }

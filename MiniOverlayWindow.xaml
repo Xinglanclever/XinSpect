@@ -37,6 +37,8 @@
                     <Button DockPanel.Dock="Right" Style="{StaticResource MiniIconButton}" Margin="0,0,2,0"
                             Click="Compact_Click" Content="{Binding Settings.MiniCompact, Converter={StaticResource BoolToCompactGlyph}}"
                             ToolTip="精簡／展開（收起波形）"/>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource MiniIconButton}" Margin="0,0,2,0"
+                            Click="Gear_Click" Content="⚙" ToolTip="顯示項目"/>
                 </DockPanel>
 
                 <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,0,0,9"/>
@@ -52,41 +54,82 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
+                    <!-- 各行可用齒輪選單開關；FPS 三行讀「幀時間監測」的即時量測，沒在量就誠實顯示 — -->
                     <!-- CPU -->
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="CPU" FontSize="12.5" VerticalAlignment="Center"
-                               Foreground="{DynamicResource SecondaryInkBrush}"/>
+                               Foreground="{DynamicResource SecondaryInkBrush}"
+                               Visibility="{Binding Settings.MiniShowCpu, Converter={StaticResource BoolToVis}}"/>
                     <TextBlock Grid.Row="0" Grid.Column="1" FontSize="16" FontWeight="SemiBold" Margin="0,1"
                                Foreground="{DynamicResource PrimaryInkBrush}"
+                               Visibility="{Binding Settings.MiniShowCpu, Converter={StaticResource BoolToVis}}"
                                Text="{Binding Live.CpuLoad, StringFormat={}{0:0} %, FallbackValue=—, TargetNullValue=—}"/>
                     <TextBlock Grid.Row="0" Grid.Column="2" FontSize="13" VerticalAlignment="Center"
                                Foreground="{Binding Live.CpuTempSeverity, Converter={StaticResource SeverityToBrush}}"
+                               Visibility="{Binding Settings.MiniShowCpu, Converter={StaticResource BoolToVis}}"
                                Text="{Binding Live.CpuTemp, StringFormat={}{0:0}°C, FallbackValue=—, TargetNullValue=—}"/>
 
                     <!-- GPU -->
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="GPU" FontSize="12.5" VerticalAlignment="Center"
-                               Foreground="{DynamicResource SecondaryInkBrush}"/>
+                               Foreground="{DynamicResource SecondaryInkBrush}"
+                               Visibility="{Binding Settings.MiniShowGpu, Converter={StaticResource BoolToVis}}"/>
                     <TextBlock Grid.Row="1" Grid.Column="1" FontSize="16" FontWeight="SemiBold" Margin="0,1"
                                Foreground="{DynamicResource PrimaryInkBrush}"
+                               Visibility="{Binding Settings.MiniShowGpu, Converter={StaticResource BoolToVis}}"
                                Text="{Binding Live.PrimaryGpu.LoadPercent, StringFormat={}{0:0} %, FallbackValue=—, TargetNullValue=—}"/>
                     <TextBlock Grid.Row="1" Grid.Column="2" FontSize="13" VerticalAlignment="Center"
                                Foreground="{Binding Live.PrimaryGpu.TempSeverity, Converter={StaticResource SeverityToBrush}}"
+                               Visibility="{Binding Settings.MiniShowGpu, Converter={StaticResource BoolToVis}}"
                                Text="{Binding Live.PrimaryGpu.TempC, StringFormat={}{0:0}°C, FallbackValue=—, TargetNullValue=—}"/>
 
                     <!-- 記憶體 -->
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="記憶體" FontSize="12.5" VerticalAlignment="Center"
-                               Foreground="{DynamicResource SecondaryInkBrush}"/>
+                               Foreground="{DynamicResource SecondaryInkBrush}"
+                               Visibility="{Binding Settings.MiniShowMem, Converter={StaticResource BoolToVis}}"/>
                     <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" FontSize="16" FontWeight="SemiBold" Margin="0,1"
                                Foreground="{DynamicResource PrimaryInkBrush}"
+                               Visibility="{Binding Settings.MiniShowMem, Converter={StaticResource BoolToVis}}"
                                Text="{Binding Live.MemLoad, StringFormat={}{0:0} %, FallbackValue=—, TargetNullValue=—}"/>
 
                     <!-- 頻率 -->
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="頻率" FontSize="12.5" VerticalAlignment="Center"
-                               Foreground="{DynamicResource SecondaryInkBrush}"/>
+                               Foreground="{DynamicResource SecondaryInkBrush}"
+                               Visibility="{Binding Settings.MiniShowClock, Converter={StaticResource BoolToVis}}"/>
                     <TextBlock Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" FontSize="13.5" Margin="0,1"
                                Foreground="{DynamicResource SecondaryInkBrush}"
+                               Visibility="{Binding Settings.MiniShowClock, Converter={StaticResource BoolToVis}}"
                                Text="{Binding Live.CpuClock, StringFormat={}{0:0} MHz, FallbackValue=—, TargetNullValue=—}"/>
+
+                    <!-- FPS -->
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="FPS" FontSize="12.5" VerticalAlignment="Center"
+                               Foreground="{DynamicResource SecondaryInkBrush}"
+                               Visibility="{Binding Settings.MiniShowFps, Converter={StaticResource BoolToVis}}"/>
+                    <TextBlock Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" FontSize="16" FontWeight="SemiBold" Margin="0,1"
+                               Foreground="{DynamicResource PrimaryInkBrush}"
+                               Visibility="{Binding Settings.MiniShowFps, Converter={StaticResource BoolToVis}}"
+                               Text="{Binding FrameTime.Stats.AvgFps, FallbackValue=—}"/>
+
+                    <!-- 1% Low -->
+                    <TextBlock Grid.Row="5" Grid.Column="0" Text="1% Low" FontSize="12.5" VerticalAlignment="Center"
+                               Foreground="{DynamicResource SecondaryInkBrush}"
+                               Visibility="{Binding Settings.MiniShowLow1, Converter={StaticResource BoolToVis}}"/>
+                    <TextBlock Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" FontSize="13.5" Margin="0,1"
+                               Foreground="{DynamicResource SecondaryInkBrush}"
+                               Visibility="{Binding Settings.MiniShowLow1, Converter={StaticResource BoolToVis}}"
+                               Text="{Binding FrameTime.Stats.Low1, FallbackValue=—}"/>
+
+                    <!-- 0.1% Low -->
+                    <TextBlock Grid.Row="6" Grid.Column="0" Text="0.1% Low" FontSize="12.5" VerticalAlignment="Center"
+                               Foreground="{DynamicResource SecondaryInkBrush}"
+                               Visibility="{Binding Settings.MiniShowLow01, Converter={StaticResource BoolToVis}}"/>
+                    <TextBlock Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2" FontSize="13.5" Margin="0,1"
+                               Foreground="{DynamicResource SecondaryInkBrush}"
+                               Visibility="{Binding Settings.MiniShowLow01, Converter={StaticResource BoolToVis}}"
+                               Text="{Binding FrameTime.Stats.Low01, FallbackValue=—}"/>
                 </Grid>
 
                 <!-- 示波線：CPU / GPU 使用率即時波形（精簡模式收起） -->

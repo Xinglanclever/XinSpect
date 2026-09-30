@@ -112,6 +112,9 @@
                             Visibility="{Binding Ai.CanCancel, Converter={StaticResource BoolToVis}}"
                             Click="Stop_Click"/>
                     <Button Style="{StaticResource ToolButton}" Content="清除對話" Click="Clear_Click"/>
+                    <Button Style="{StaticResource ToolButton}" Content="複製整段對話" Margin="10,0,0,0"
+                            ToolTip="把目前對話（含代理查詢紀錄）整段複製到剪貼簿，可直接貼給別人"
+                            Click="CopyAll_Click"/>
                 </StackPanel>
                 <Button Grid.Column="7" Style="{StaticResource PrimaryButton}" Content="一鍵評價本機　▸"
                         IsEnabled="{Binding Ai.CanSend}" Click="Evaluate_Click"/>
@@ -136,8 +139,30 @@
                                 <Border x:Name="bubble" CornerRadius="10" Padding="12,9" Margin="6,5" MaxWidth="640"
                                         Background="{DynamicResource Surface2Brush}" HorizontalAlignment="Left">
                                     <StackPanel>
-                                        <TextBlock x:Name="role" Text="{Binding RoleText}" FontSize="11.5" FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,3"/>
+                                        <Grid Margin="0,0,0,3">
+                                            <TextBlock x:Name="role" Text="{Binding RoleText}" FontSize="11.5" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/>
+                                            <!-- 複製這則：AI 回覆與代理查詢紀錄都可複製，使用者發問的不用 -->
+                                            <Button x:Name="copyBtn" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                    Click="CopyMsg_Click" Cursor="Hand" FontSize="11"
+                                                    Content="⧉ 複製" ToolTip="複製這則訊息"
+                                                    Background="Transparent" BorderThickness="0" Padding="4,0"
+                                                    Foreground="{DynamicResource MutedInkBrush}">
+                                                <Button.Style>
+                                                    <Style TargetType="Button" BasedOn="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Hidden"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsAssistant}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsTool}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+                                        </Grid>
                                         <TextBlock x:Name="body" Text="{Binding Text}" TextWrapping="Wrap"
                                                    Foreground="{DynamicResource PrimaryInkBrush}" FontSize="13.5" LineHeight="20"/>
                                     </StackPanel>
@@ -159,6 +184,7 @@
                                         <Setter TargetName="body" Property="Foreground" Value="{DynamicResource SecondaryInkBrush}"/>
                                         <Setter TargetName="body" Property="FontSize" Value="12"/>
                                         <Setter TargetName="body" Property="LineHeight" Value="17"/>
+                                        <Setter TargetName="body" Property="Margin" Value="0,0,52,0"/>
                                     </DataTrigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>

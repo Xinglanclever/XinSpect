@@ -103,6 +103,47 @@ public partial class AiView : UserControl
         }
     }
 
+    /// <summary>複製單則訊息（AI 回覆與代理查詢紀錄；使用者發問的不用）。</summary>
+    private void CopyMsg_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: AiMessage msg } && msg.Text.Length > 0)
+        {
+            Clipboard.SetText(msg.Text);
+            if (sender is System.Windows.Controls.Button b)
+            {
+                b.Content = "✓ 已複製";
+                var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1.6) };
+                t.Tick += (_, _) => { b.Content = "⧉ 複製"; t.Stop(); };
+                t.Start();
+            }
+        }
+    }
+
+    /// <summary>整段對話（含代理查詢紀錄）複製成純文字，方便貼到別處討論。</summary>
+    private void CopyAll_Click(object sender, RoutedEventArgs e)
+    {
+        var ai = Vm?.Ai;
+        if (ai is null || ai.Messages.Count == 0) return;
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"曦覽 XinSpect AI 對話（{DateTime.Now:yyyy-MM-dd HH:mm}）");
+        sb.AppendLine(new string('─', 32));
+        foreach (var m in ai.Messages)
+        {
+            if (m.Text.Length == 0) continue;
+            sb.AppendLine($"【{m.RoleText}】{m.Text}");
+            sb.AppendLine();
+        }
+        Clipboard.SetText(sb.ToString());
+        if (sender is System.Windows.Controls.Button b)
+        {
+            var prev = b.Content;
+            b.Content = "✓ 已複製";
+            var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1.6) };
+            t.Tick += (_, _) => { b.Content = prev; t.Stop(); };
+            t.Start();
+        }
+    }
+
     private async Task SendAsync()
     {
         var ai = Vm?.Ai;

@@ -4,6 +4,17 @@
              xmlns:local="clr-namespace:XinSpect"
              FontFamily="{StaticResource AppFont}">
     <UserControl.Resources>
+        <!-- ══ 本頁強調色固定為曦藍 ════════════════════════════════════════════ -->
+        <!-- 超頻控制項（滑桿、按鈕、勾選框）全吃 AccentBrush；使用者選紅色系主題時整頁會染成警示紅，
+             讓人以為硬體出錯。超頻屬「調校」不是「警報」，故此頁固定用中性曦藍，數值用一般墨色。 -->
+        <SolidColorBrush x:Key="AccentBrush" Color="#3987e5"/>
+        <SolidColorBrush x:Key="AccentDimBrush" Color="#1c5cab"/>
+        <SolidColorBrush x:Key="AccentInkBrush" Color="#7db4ff"/>
+        <SolidColorBrush x:Key="AccentButtonBrush" Color="#3987e5"/>
+        <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#4c96f0" Offset="0"/>
+            <GradientStop Color="#2f74c8" Offset="1"/>
+        </LinearGradientBrush>
         <!-- ══ 深色滑桿（沿用超頻分頁風格）═══════════════════════════════════════ -->
         <Style x:Key="GpuSlider" TargetType="Slider">
             <Setter Property="Height" Value="24"/>
@@ -37,10 +48,10 @@
                                     <Thumb>
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
-                                                <Ellipse Width="16" Height="16" Fill="White"
+                                                <Ellipse Width="16" Height="16" Fill="{DynamicResource PrimaryInkBrush}"
                                                          Stroke="{DynamicResource AccentBrush}" StrokeThickness="2.5">
                                                     <Ellipse.Effect>
-                                                        <DropShadowEffect BlurRadius="5" ShadowDepth="0" Opacity="0.5" Color="Black"/>
+                                                        <DropShadowEffect BlurRadius="5" ShadowDepth="0" Opacity="0.5" Color="#40000000"/>
                                                     </Ellipse.Effect>
                                                 </Ellipse>
                                             </ControlTemplate>
@@ -72,7 +83,7 @@
                                     Background="{DynamicResource Surface2Brush}"
                                     BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1.2">
                                 <Path x:Name="check" Width="12" Height="12" Stretch="Uniform"
-                                      Data="M2,8 L6,12 L14,3" Stroke="White" StrokeThickness="2"
+                                      Data="M2,8 L6,12 L14,3" Stroke="{DynamicResource PrimaryInkBrush}" StrokeThickness="2"
                                       StrokeStartLineCap="Round" StrokeEndLineCap="Round" Visibility="Collapsed"/>
                             </Border>
                             <ContentPresenter Margin="9,0,0,0" VerticalAlignment="Center"/>
@@ -100,7 +111,7 @@
             <StackPanel Orientation="Horizontal" Margin="2,0,0,4">
                 <TextBlock Style="{StaticResource Title}" Text="顯示卡超頻"/>
                 <Border Background="{DynamicResource WarningBrush}" CornerRadius="5" Padding="7,2" Margin="12,3,0,0" VerticalAlignment="Center">
-                    <TextBlock Text="測試版・真實寫入" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+                    <TextBlock Text="測試版・真實寫入" Foreground="{DynamicResource PagePlaneBrush}" FontSize="11" FontWeight="SemiBold"/>
                 </Border>
             </StackPanel>
             <TextBlock Style="{StaticResource Subtitle}" Margin="2,0,0,14"
@@ -151,7 +162,7 @@
                 <StackPanel>
                     <Grid>
                         <local:SectionHead Text="最大功耗限制" HelpKey="gpuoc/最大功耗限制"/>
-                        <TextBlock HorizontalAlignment="Right" Foreground="{DynamicResource AccentBrush}" FontSize="15" FontWeight="Bold"
+                        <TextBlock HorizontalAlignment="Right" Foreground="{DynamicResource PrimaryInkBrush}" FontSize="15" FontWeight="Bold"
                                    Text="{Binding PowerLimitPercent, StringFormat={}{0:0} %}"/>
                     </Grid>
                     <Slider Style="{StaticResource GpuSlider}" Margin="0,8,0,2"
@@ -176,7 +187,7 @@
                 <StackPanel>
                     <Grid>
                         <local:SectionHead Text="最高溫度限制" HelpKey="gpuoc/最高溫度限制"/>
-                        <TextBlock HorizontalAlignment="Right" Foreground="{DynamicResource AccentBrush}" FontSize="15" FontWeight="Bold"
+                        <TextBlock HorizontalAlignment="Right" Foreground="{DynamicResource PrimaryInkBrush}" FontSize="15" FontWeight="Bold"
                                    Text="{Binding TargetTempLimitC, StringFormat={}{0:0} °C}"/>
                     </Grid>
                     <Slider Style="{StaticResource GpuSlider}" Margin="0,8,0,2"
@@ -197,7 +208,7 @@
                 <StackPanel>
                     <Grid>
                         <local:SectionHead Text="核心頻率偏移" HelpKey="gpuoc/核心頻率偏移"/>
-                        <TextBlock HorizontalAlignment="Right" Foreground="{DynamicResource AccentBrush}" FontSize="15" FontWeight="Bold"
+                        <TextBlock HorizontalAlignment="Right" Foreground="{DynamicResource PrimaryInkBrush}" FontSize="15" FontWeight="Bold"
                                    Text="{Binding TargetCoreOffsetMhz, StringFormat={}{0:+0;-0;0} MHz}"/>
                     </Grid>
                     <Slider Style="{StaticResource GpuSlider}" Margin="0,8,0,2"
@@ -218,7 +229,7 @@
                 <StackPanel>
                     <Grid>
                         <local:SectionHead Text="顯示記憶體頻率偏移" HelpKey="gpuoc/顯示記憶體頻率偏移"/>
-                        <TextBlock HorizontalAlignment="Right" Foreground="{DynamicResource AccentBrush}" FontSize="15" FontWeight="Bold"
+                        <TextBlock HorizontalAlignment="Right" Foreground="{DynamicResource PrimaryInkBrush}" FontSize="15" FontWeight="Bold"
                                    Text="{Binding TargetMemOffsetMhz, StringFormat={}{0:+0;-0;0} MHz}"/>
                     </Grid>
                     <Slider Style="{StaticResource GpuSlider}" Margin="0,8,0,2"
@@ -239,7 +250,7 @@
                 <StackPanel>
                     <Grid>
                         <local:SectionHead Text="風扇轉速控制" HelpKey="gpuoc/風扇轉速控制"/>
-                        <TextBlock HorizontalAlignment="Right" Foreground="{DynamicResource AccentBrush}" FontSize="15" FontWeight="Bold"
+                        <TextBlock HorizontalAlignment="Right" Foreground="{DynamicResource PrimaryInkBrush}" FontSize="15" FontWeight="Bold"
                                    Text="{Binding TargetFanPercent, StringFormat={}{0:0} %}"/>
                     </Grid>
                     <CheckBox Style="{StaticResource GpuCheck}" Margin="0,8,0,0" Content="手動控制風扇轉速（取消勾選＝還原自動）"

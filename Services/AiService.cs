@@ -887,6 +887,7 @@ public sealed class AiService : ObservableObject
     }
 
     // 工具紀錄插在回覆氣泡之前，讓「先查詢、後結論」的順序在畫面上讀得順。
+    // 分行標出「查了什麼／帶什麼參數／查到什麼」，比單行箭頭格式好讀，也更能對照 AI 結論的依據。
     private void InsertToolRow(AiMessage reply, ToolCall call, string result)
     {
         string args = call.Args.Trim();
@@ -895,8 +896,9 @@ public sealed class AiService : ObservableObject
         {
             IsUser = false,
             IsTool = true,
-            Text = call.Name + (args.Length > 0 ? " " + Trim(args, 120) : "")
-                   + " → " + Trim(OneLine(result), 160),
+            Text = "🔍 " + call.Name
+                   + (args.Length > 0 ? "\n    參數：" + Trim(args, 120) : "")
+                   + "\n    結果：" + Trim(result, 240),
         };
         int at = Messages.IndexOf(reply);
         if (at < 0) Messages.Add(row); else Messages.Insert(at, row);

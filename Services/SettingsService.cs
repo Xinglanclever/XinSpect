@@ -217,6 +217,18 @@ public sealed class SettingsService : ObservableObject
     /// <summary>釘選在最上層。取消後會被其他視窗蓋住，但仍留在畫面上。</summary>
     public bool MiniTopmost { get => _miniTopmost; set { if (SetProperty(ref _miniTopmost, value)) Save(); } }
 
+    // 懸浮窗項目開關：使用者自己決定要盯哪幾行，避免全開太亂
+    private bool _miniShowCpu = true, _miniShowGpu = true, _miniShowMem = true,
+                 _miniShowClock = true, _miniShowFps = true, _miniShowLow1 = true, _miniShowLow01;
+    public bool MiniShowCpu   { get => _miniShowCpu;   set { if (SetProperty(ref _miniShowCpu, value)) Save(); } }
+    public bool MiniShowGpu   { get => _miniShowGpu;   set { if (SetProperty(ref _miniShowGpu, value)) Save(); } }
+    public bool MiniShowMem   { get => _miniShowMem;   set { if (SetProperty(ref _miniShowMem, value)) Save(); } }
+    public bool MiniShowClock { get => _miniShowClock; set { if (SetProperty(ref _miniShowClock, value)) Save(); } }
+    /// <summary>FPS／1% Low／0.1% Low 讀的是「幀時間監測」頁的即時量測；沒在量測就顯示 —。</summary>
+    public bool MiniShowFps   { get => _miniShowFps;   set { if (SetProperty(ref _miniShowFps, value)) Save(); } }
+    public bool MiniShowLow1  { get => _miniShowLow1;  set { if (SetProperty(ref _miniShowLow1, value)) Save(); } }
+    public bool MiniShowLow01 { get => _miniShowLow01; set { if (SetProperty(ref _miniShowLow01, value)) Save(); } }
+
     // ── 動態視覺效果 ─────────────────────────────────────
     private bool _motionEnabled = true;
     /// <summary>
@@ -309,6 +321,13 @@ public sealed class SettingsService : ObservableObject
         public double MiniOpacity { get; set; } = 0.9;
         public bool MiniCompact { get; set; }
         public bool MiniTopmost { get; set; } = true;
+        public bool MiniShowCpu { get; set; } = true;
+        public bool MiniShowGpu { get; set; } = true;
+        public bool MiniShowMem { get; set; } = true;
+        public bool MiniShowClock { get; set; } = true;
+        public bool MiniShowFps { get; set; } = true;
+        public bool MiniShowLow1 { get; set; } = true;
+        public bool MiniShowLow01 { get; set; }
         public bool MotionEnabled { get; set; } = true;
         public bool SimpleMode { get; set; }
         public bool FirstRunDone { get; set; }
@@ -367,6 +386,13 @@ public sealed class SettingsService : ObservableObject
                     _miniOpacity = Math.Clamp(p.MiniOpacity, 0.4, 1.0);
                     _miniCompact = p.MiniCompact;
                     _miniTopmost = p.MiniTopmost;
+                    _miniShowCpu = p.MiniShowCpu;
+                    _miniShowGpu = p.MiniShowGpu;
+                    _miniShowMem = p.MiniShowMem;
+                    _miniShowClock = p.MiniShowClock;
+                    _miniShowFps = p.MiniShowFps;
+                    _miniShowLow1 = p.MiniShowLow1;
+                    _miniShowLow01 = p.MiniShowLow01;
                     _motionEnabled = p.MotionEnabled;
                     _simpleMode = p.SimpleMode;
                     _firstRunDone = p.FirstRunDone;
@@ -424,6 +450,13 @@ public sealed class SettingsService : ObservableObject
                 MiniOpacity = _miniOpacity,
                 MiniCompact = _miniCompact,
                 MiniTopmost = _miniTopmost,
+                MiniShowCpu = _miniShowCpu,
+                MiniShowGpu = _miniShowGpu,
+                MiniShowMem = _miniShowMem,
+                MiniShowClock = _miniShowClock,
+                MiniShowFps = _miniShowFps,
+                MiniShowLow1 = _miniShowLow1,
+                MiniShowLow01 = _miniShowLow01,
                 MotionEnabled = _motionEnabled,
                 SimpleMode = _simpleMode,
                 FirstRunDone = _firstRunDone,
