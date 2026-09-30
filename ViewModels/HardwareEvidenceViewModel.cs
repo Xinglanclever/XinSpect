@@ -120,7 +120,7 @@ public sealed class HardwareEvidenceViewModel : ObservableObject
                 $"問題碼 {d.ProblemCodeText}：{d.ProblemExplanation} ・ 父項 {d.ParentInstanceId}",
                 "SetupAPI / WMI", d.IsPresent && d.Findings.Count > 0 ? Severity.Warning : Severity.Neutral));
             foreach (var f in d.Findings)
-                Rows.Insert(0, new EvidenceAuditRow(f.Summary, d.FriendlyName, f.Evidence,
+                Rows.Add(new EvidenceAuditRow(f.Summary, d.FriendlyName, f.Evidence,
                     $"Windows problem code {d.ProblemCodeText} ・ {d.InstanceId}", "Windows PnP", ToSeverity(f.Severity)));
         }
         Summary = $"{report.Devices.Count} 個裝置 ・ 在場 {report.PresentCount} ・ 不在場 {report.GhostCount} ・ 發現 {report.FindingCount}";

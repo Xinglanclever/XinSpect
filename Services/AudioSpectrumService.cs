@@ -81,12 +81,13 @@ public sealed class AudioSpectrumService : IDisposable
         }
     }
 
-    /// <summary>停止擷取。</summary>
+    /// <summary>停止擷取並釋放 WASAPI 資源。下次 <see cref="Start"/> 會重新建立擷取裝置。</summary>
     public void Stop()
     {
         if (!IsCapturing) return;
         IsCapturing = false;
         try { _capture?.StopRecording(); } catch { /* 裝置已拔除 */ }
+        DisposeCapture();
     }
 
     private void OnDataAvailable(object? sender, NAudio.Wave.WaveInEventArgs e)

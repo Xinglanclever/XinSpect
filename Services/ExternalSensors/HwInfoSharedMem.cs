@@ -85,6 +85,12 @@ public static class HwInfoSharedMem
                 mutex = Mutex.OpenExisting(MutexName);
                 mutexHeld = mutex.WaitOne(200);
             }
+            catch (AbandonedMutexException)
+            {
+                // HWiNFO 當掉時鎖被遺棄；WaitOne 拋此例外但**此時我們已取得所有權**，
+                // 必須在 finally 釋放，否則下一個呼叫者永遠拿不到。
+                mutexHeld = true;
+            }
             catch { /* 鎖不存在或逾時就繼續——不值得為它放棄整條來源 */ }
 
             mmf = MemoryMappedFile.OpenExisting(SharedMemName, MemoryMappedFileRights.Read);
