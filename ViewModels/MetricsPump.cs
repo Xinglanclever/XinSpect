@@ -22,6 +22,7 @@ internal sealed class MetricsPump
     private bool _ticking;          // 重入防護：上一拍未結束則跳過本拍
     private long _tick;             // 拍數（部分較慢的工作每 N 拍才做一次）
     private bool _rankGpuDone;      // 天梯榜顯示卡高亮只需標一次
+    private bool _settingsHooked;   // 設定變更訂閱只掛一次，Stop 不退（PropertyChanged 是弱事件）
 
     public MetricsPump(MainViewModel vm) => _vm = vm;
 
@@ -34,12 +35,16 @@ internal sealed class MetricsPump
         _timer.Tick += async (_, _) => await TickAsync();
         _timer.Start();
 
-        // 更新間隔於設定頁變更後立即套用
-        _vm.Settings.PropertyChanged += (_, e) =>
+        // 更新間隔於設定頁變更後立即套用——只掛一次，避免 Start/Stop 循環累加 handler
+        if (!_settingsHooked)
         {
-            if (e.PropertyName == nameof(SettingsService.UpdateIntervalSec) && _timer is not null)
-                _timer.Interval = IntervalFromSettings();
-        };
+            _settingsHooked = true;
+            _vm.Settings.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(SettingsService.UpdateIntervalSec) && _timer is not null)
+                    _timer.Interval = IntervalFromSettings();
+            };
+        }
     }
 
     public void Stop()

@@ -47,6 +47,10 @@ public sealed class CoreTempMapService : ObservableObject
         _sensor = sensor;
         _physicalCores = Math.Max(topo.PhysicalCores, 1);
         _threadsPerCore = topo.Smt ? 2 : 1;
+        // TODO 混合架構（P-core SMT + E-core 無 SMT）時 _threadsPerCore 是固定值，
+        // 會讓 E-core 溫度映射到錯的實體核心。正確做法是取用 per-core 的邏輯執行緒數，
+        // 但 CpuTopology 目前未暴露此資訊。待 CpuTopology 加入 CoreType 後修正。
+        // 本機（X299 i9-7980XE）無混合架構，此問題無法本機驗證。
 
         // 建立每實體核心一列
         for (int i = 0; i < _physicalCores; i++)

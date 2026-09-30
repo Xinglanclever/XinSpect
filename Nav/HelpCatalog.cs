@@ -58,43 +58,7 @@ public static class HelpCatalog
 
     private static readonly Dictionary<string, HelpEntry> Entries = new(StringComparer.Ordinal)
     {
-        // ── 菜鳥儀表板 ────────────────────────────────────────────────
-        ["beginner/我的電腦"] = new()
-        {
-            Title = "我的電腦",
-            What = "把健康度、溫度、硬體清單與常用動作集中在一頁，是簡易模式的首頁。",
-            Does = "圓環是每秒更新的健康評分，下方三張卡片分別是即時溫度、硬體規格摘要與快速動作（垃圾清理、釋放記憶體、匯出報告）。底部的故障排查按鈕會帶你到對應的進階頁。",
-        },
-        ["beginner/溫度"] = new()
-        {
-            Title = "溫度",
-            What = "CPU 與 GPU 的即時溫度和使用率。",
-            Does = "溫度持續高於 90°C 就要注意散熱，使用率 100% 持續很久可能就是卡頓的原因。讀不到的項目顯示「—」。",
-        },
-        ["beginner/硬體"] = new()
-        {
-            Title = "硬體",
-            What = "處理器、記憶體、顯示卡與系統碟的型號摘要。",
-            Does = "這些是開機時讀一次的靜態規格。想看完整細節，切到進階模式。",
-        },
-        ["beginner/快速動作"] = new()
-        {
-            Title = "快速動作",
-            What = "三個一鍵完成的安全操作。",
-            Does = "「清理垃圾檔案」掃描暫存資料夾、「釋放記憶體」清空工作集與待用清單、「匯出報告」產生一份完整的硬體報告。三者都不改動重要設定、不影響穩定性。",
-        },
-        ["beginner/故障排查"] = new()
-        {
-            Title = "故障排查",
-            What = "六個常見問題的快速入口。",
-            Does = "選一個情境後會帶你到對應的進階頁面（瓶頸診斷、藍屏分析等），同時自動切到進階模式讓那些頁面可見。",
-        },
-        ["beginner/健康明細"] = new()
-        {
-            Title = "健康明細",
-            What = "健康評分的逐項拆解：每一盞燈代表哪個項目、判定是什麼、依據的數字從哪來。",
-            Does = "狀態燈的顏色（綠/黃/橙/紅）不單靠顏色傳達——旁邊一律附文字判定，不會有色盲使用者看不出來的問題。",
-        },
+        // ── 菜鳥儀表板（定義在檔案後段，與藍色中隊等同區） ──────────────────
 
         // ── 總覽 ────────────────────────────────────────────────────
         ["overview/系統總覽"] = new()
@@ -1856,7 +1820,7 @@ public static class HelpCatalog
             What = "聚合六大防線（DMA 保護、韌體信任鏈、CPU 緩解、儲存安全、驅動完整性、系統攻擊面）的即時狀態，計算加權安全評分（0-100）並列出可執行的強化建議。",
             Does = "讀取 WMI（Win32_DeviceGuard、Win32_Tpm、Win32_EncryptableVolume）、UEFI 變數（Secure Boot 四態）、CPUID（NX/SMEP/SMAP）、登錄檔安全設定、驅動簽章狀態、Windows 服務狀態與現有安全服務的結果。全程唯讀，不修改任何系統設定。啟動 BlueSquadronBridge 守護進程後可即時偵測驅動載入與可疑進程。",
         },
-        ["bluesquadron/五大防線"] = new()
+        ["bluesquadron/六大防線"] = new()
         {
             Title = "六大防線",
             What = "DMA 與記憶體保護（HVCI、VBS、IOMMU、Credential Guard）、韌體與啟動鏈（Secure Boot、TPM、SPI 寫保護、ME 模式）、CPU 緩解與記憶體防護（Spectre/Meltdown、DEP、ASLR、CET、SMEP/SMAP）、儲存與資料（BitLocker、NVMe 韌體基線）、驅動與對抗（未簽章驅動、BYOVD 漏洞清單、LSASS 保護、WDAC）、系統攻擊面（Defender、防火牆、RDP、SMBv1、PowerShell 原則等）。",

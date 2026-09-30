@@ -753,7 +753,7 @@ namespace XtuBridge
                     {
                         if (kv.Value.IndexOf(want, StringComparison.OrdinalIgnoreCase) < 0) continue;
                         double? v = ReadDictValue(dict, kv.Key);
-                        if (v.HasValue && v.Value != 0) return v;
+                        if (v.HasValue) return v;   // 0 RPM / 0 W 是合法讀值，不能當「不存在」丟棄
                     }
                 }
             }

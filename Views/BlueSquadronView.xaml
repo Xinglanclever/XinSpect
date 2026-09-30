@@ -112,7 +112,7 @@
             <!-- ══════════════════════════════════════════════════════════════
                  防線展開卡片
                  ══════════════════════════════════════════════════════════════ -->
-            <local:SectionHead Text="防線狀態" HelpKey="bluesquadron/五大防線"/>
+            <local:SectionHead Text="防線狀態" HelpKey="bluesquadron/六大防線"/>
             <ItemsControl ItemsSource="{Binding BlueSquadron.Posture.Posture.Categories}" local:Anim.RevealDelay="120">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>

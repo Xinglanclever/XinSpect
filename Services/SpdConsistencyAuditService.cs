@@ -464,7 +464,11 @@ public static class SpdConsistencyAuditService
     {
         value = NonGeneric(value);
         if (value is null) return null;
-        var explicitRate = Regex.Match(value, @"(?:DDR\d?[- ]|\b)(?<n>\d{3,5})\s*(?:MT/s)?", RegexOptions.IgnoreCase);
+        // PC4-25600 等 JEDEC 標記的數字是峰值頻寬（MB/s），不是 MT/s；只取 DDR 後面的才是速率。
+        // 先嘗試明確的 DDR 速率格式，再退回到裸數字（但排除 PC4-/PC5- 前綴的頻寬數字）。
+        var explicitRate = Regex.Match(value, @"(?:DDR\d?[- ])(?<n>\d{3,5})\s*(?:MT/s)?", RegexOptions.IgnoreCase);
+        if (!explicitRate.Success)
+            explicitRate = Regex.Match(value, @"(?<!PC\d[- ])\b(?<n>\d{4,5})\s*MT/s", RegexOptions.IgnoreCase);
         return explicitRate.Success && int.TryParse(explicitRate.Groups["n"].Value, out int rate) && rate > 0
             ? rate : null;
     }

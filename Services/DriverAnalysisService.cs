@@ -81,8 +81,13 @@ public sealed class DriverAnalysisService : ObservableObject
                 auditService.Refresh();
 
             // 等待掃描完成（Refresh 是射後不理的 async，輪詢 IsLoading）
-            while (auditService.IsLoading)
+            // 上限 30 秒——超過就用手上有的資料，不無限等
+            int waited = 0;
+            while (auditService.IsLoading && waited < 150)
+            {
                 await Task.Delay(200);
+                waited++;
+            }
 
             var drivers = auditService.AllRows.ToList();
             await Task.Run(() => Analyze(drivers));

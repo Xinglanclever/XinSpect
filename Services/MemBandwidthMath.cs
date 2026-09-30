@@ -195,7 +195,7 @@ public static class MemBandwidthMath
         // 以「讀取」曲線為代表做判讀（最純真的頻寬量測），四條一起看更全面
         int sat = SaturationThreads(read);
         string text = sat > 0
-            ? $"以讀取頻寬為代表，約在 {sat} 執行緒時達到飽和（再往上增益 &lt; 5%）。記憶體控制器約在此被吃滿。"
+            ? $"以讀取頻寬為代表，約在 {sat} 執行緒時達到飽和（再往上增益 < 5%）。記憶體控制器約在此被吃滿。"
             : "資料不足，無法判定飽和點。";
         // 若四條曲線的最高頻寬接近理論上限而飽和很低，補充說明
         return new ThreadScaleAnalysis(r, c, a, t, text);

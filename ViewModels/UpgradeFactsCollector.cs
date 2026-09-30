@@ -135,8 +135,8 @@ internal static class UpgradeFactsCollector
         var series = vm.History.Query(to.AddHours(-WindowHours), to);
         if (series.Count == 0) return;
 
-        // 分鐘級取樣：一點約一分鐘；秒級：一點約一秒
-        f.HistoryMinutes = series.SecondLevel ? series.Count / 60 : series.Count;
+        // 分鐘級取樣：一點約一分鐘；秒級：一點約一秒（<60 筆秒級＝不滿一分鐘，算 1 而非 0）
+        f.HistoryMinutes = series.SecondLevel ? Math.Max(series.Count / 60, 1) : series.Count;
 
         f.CpuLoadP95 = P95(series, HistoryMetrics.CpuLoad);
         f.CpuTempP95 = P95(series, HistoryMetrics.CpuTemp);
