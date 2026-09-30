@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Threading;
@@ -15,6 +16,7 @@ public sealed class GpuRenderTestService : ObservableObject
     // ── observable state ──────────────────────────────────────
     bool   _isRunning;
     string _phase = "";
+
     double _progressFraction;
     string _statusLine = "";
     double? _compositeScore;
@@ -28,7 +30,38 @@ public sealed class GpuRenderTestService : ObservableObject
     public double? CompositeScore  { get => _compositeScore;   private set { SetProperty(ref _compositeScore, value); OnPropertyChanged(nameof(CompositeText)); } }
     public string CompositeText    => CompositeScore is double s ? $"{s:0}" : "—";
 
+    private string _analysis = "";
+    /// <summary>跑完後的總結分析：各階段量到什麼、數字怎麼解讀、檢核結果。</summary>
+    public string Analysis { get => _analysis; private set => SetProperty(ref _analysis, value); }
+    public bool HasAnalysis => Analysis.Length > 0;
+
     public ObservableCollection<RenderTestResult> Results { get; } = new();
+
+    /// <summary>對最後渲染出的 RTB 抽樣檢核：非空白（alpha>0 且非純黑）像素占比。</summary>
+    internal static double ValidateNonBlank(RenderTargetBitmap rtb)
+    {
+        try
+        {
+            int w = rtb.PixelWidth, h = rtb.PixelHeight;
+            int stride = w * 4;
+            var px = new byte[stride * h];
+            rtb.CopyPixels(px, stride, 0);
+            int total = 0, valid = 0;
+            // 抽樣：每 8×8 區塊取一點，兼顧速度與覆蓋
+            for (int y = 0; y < h; y += 8)
+                for (int x = 0; x < w; x += 8)
+                {
+                    total++;
+                    int o = y * stride + x * 4;
+                    if (px[o + 3] > 0 && (px[o] > 4 || px[o + 1] > 4 || px[o + 2] > 4)) valid++;
+                }
+            return total == 0 ? 0 : valid * 100.0 / total;
+        }
+        catch { return 0; }
+    }
+
+    private static string TraceText(List<double> perSecond)
+        => perSecond.Count == 0 ? "" : "逐秒 FPS：" + string.Join(" / ", perSecond.Select(v => v.ToString("0")));
 
     // ── lifecycle ─────────────────────────────────────────────
     CancellationTokenSource? _cts;
@@ -57,28 +90,61 @@ public sealed class GpuRenderTestService : ObservableObject
         {
             // Phase 1 ── Fill Rate
             Phase = "填充率測試 (1/3)";
-            double fillFps = await RunFillTestAsync(ct, p => ProgressFraction = p * 0.333);
-            Results.Add(new RenderTestResult { Name = "填充率", AverageFps = fillFps, Score = fillFps * 0.4 });
-            StatusLine = $"填充率: {fillFps:0.0} FPS";
+            var (fillFps, fillValid, fillTrace) = await RunFillTestAsync(ct, p => ProgressFraction = p * 0.333);
+            Results.Add(new RenderTestResult
+            {
+                Name = "填充率", AverageFps = fillFps, Score = fillFps * 0.4,
+                ValidPixelPercent = fillValid, FpsTrace = TraceText(fillTrace),
+                Detail = "800×600 離屏畫布，每幀畫 500 個半透明隨機矩形後整幀重繪——壓的是填充率與混合（每幀都有大量疊色）。",
+            });
+            StatusLine = $"填充率: {fillFps:0.0} FPS" + (fillValid < 1 ? "（像素檢核未通過，此項不計分）" : "");
 
             // Phase 2 ── 3D Geometry
             Phase = "3D 幾何測試 (2/3)";
-            double geoFps = await RunGeometryTestAsync(ct, p => ProgressFraction = 0.333 + p * 0.333);
-            Results.Add(new RenderTestResult { Name = "3D 幾何", AverageFps = geoFps, Score = geoFps * 0.35 });
-            StatusLine = $"3D 幾何: {geoFps:0.0} FPS";
+            var (geoFps, geoValid, geoTrace) = await RunGeometryTestAsync(ct, p => ProgressFraction = 0.333 + p * 0.333);
+            Results.Add(new RenderTestResult
+            {
+                Name = "3D 幾何", AverageFps = geoFps, Score = geoFps * 0.35,
+                ValidPixelPercent = geoValid, FpsTrace = TraceText(geoTrace),
+                Detail = "128 面球體（八面體細分 3 次）逐幀旋轉後離屏成像——壓的是 3D 管線的頂點處理與三角化。",
+            });
+            StatusLine = $"3D 幾何: {geoFps:0.0} FPS" + (geoValid < 1 ? "（像素檢核未通過：離屏 3D 輸出空白，此項不計分）" : "");
 
             // Phase 3 ── Text Rendering
             Phase = "文字渲染測試 (3/3)";
-            double txtFps = await RunTextTestAsync(ct, p => ProgressFraction = 0.666 + p * 0.334);
-            Results.Add(new RenderTestResult { Name = "文字渲染", AverageFps = txtFps, Score = txtFps * 0.25 });
-            StatusLine = $"文字渲染: {txtFps:0.0} FPS";
+            var (txtFps, txtValid, txtTrace) = await RunTextTestAsync(ct, p => ProgressFraction = 0.666 + p * 0.334);
+            Results.Add(new RenderTestResult
+            {
+                Name = "文字渲染", AverageFps = txtFps, Score = txtFps * 0.25,
+                ValidPixelPercent = txtValid, FpsTrace = TraceText(txtTrace),
+                Detail = "每幀排版並繪製 200 段 8–36 px 的隨機文字——壓的是字形快取、排版與柵格化。",
+            });
+            StatusLine = $"文字渲染: {txtFps:0.0} FPS" + (txtValid < 1 ? "（像素檢核未通過，此項不計分）" : "");
 
-            // Composite
+            // Composite：像素檢核未過的階段不計分——空白幀跑得再快也不是渲染能力
             double composite = Math.Round(fillFps * 0.4 + geoFps * 0.35 + txtFps * 0.25);
             CompositeScore = composite;
             ProgressFraction = 1.0;
             Phase = "完成";
             StatusLine = $"綜合分數: {composite:0}";
+
+            // ── 總結分析 ──
+            var an = new System.Text.StringBuilder();
+            foreach (var r in Results)
+            {
+                an.Append($"{r.Name}：{r.FpsText}");
+                an.AppendLine(r.IsBlank ? "——末幀像素檢核為空白，分數不計入評價。" : $"。{r.Detail}");
+                if (!r.IsBlank && r.FpsTrace.Length > 0) an.AppendLine("　" + r.FpsTrace);
+            }
+            an.AppendLine();
+            an.Append("判讀：這套測試走 WPF 離屏光柵化路徑，量的是「CPU 端把圖畫出來」的速度，不是遊戲裡那種 GPU 幀率——換顯示卡不會有明顯差異，換處理器才會。");
+            bool allValid = Results.All(r => !r.IsBlank);
+            if (!allValid)
+                an.Append("有階段被像素檢核判定為空白（常見於部分驅動或遠端工作階段的離屏 3D），那些階段已不計分，綜合分數只反映量到的部分。");
+            else if (composite >= 120) an.Append("三項都在高速區，繪圖管線的反應速度足以應付一般桌面與文件場景。");
+            else if (composite >= 60) an.Append("屬常見水準；若介面動畫偶爾卡頓，先看「DPC 延遲」與顯示驅動版本。");
+            else an.Append("明顯偏慢：老舊或省電模式的處理器、遠端工作階段、或被安全軟體干擾都可能造成；建議關閉省電模式後重測一次。");
+            Analysis = an.ToString();
         }
         catch (OperationCanceledException)
         {
@@ -100,7 +166,8 @@ public sealed class GpuRenderTestService : ObservableObject
     // RenderTargetBitmap.Render() 必須在 UI 執行緒上跑，搬到背景執行緒會拋例外。
     // 但不能用一個 5 秒的 while 迴圈把 Dispatcher 整個佔住——取消按鈕按不到、進度條不會動。
     // 所以每隔幾幀就 Yield 一次，讓 Dispatcher 處理輸入與重繪。
-    static async Task<double> RunFillTestAsync(CancellationToken ct, Action<double> report)
+    async Task<(double Fps, double ValidPercent, List<double> PerSecond)> RunFillTestAsync(
+        CancellationToken ct, Action<double> report)
     {
         const int RectCount = 500;
         const double Seconds = 5.0;
@@ -109,6 +176,9 @@ public sealed class GpuRenderTestService : ObservableObject
         var rng = new Random(42);
         var sw  = Stopwatch.StartNew();
         int frames = 0;
+        var perSecond = new List<double>();
+        var secSw = Stopwatch.StartNew();
+        int framesAtSec = 0;
 
         while (sw.Elapsed.TotalSeconds < Seconds)
         {
@@ -131,17 +201,24 @@ public sealed class GpuRenderTestService : ObservableObject
             }
             rtb.Render(dv);
             frames++;
-            if (frames % 5 == 0)
+            if (secSw.Elapsed.TotalSeconds >= 1.0)
             {
+                perSecond.Add((frames - framesAtSec) / secSw.Elapsed.TotalSeconds);
+                framesAtSec = frames;
+                secSw.Restart();
                 report(sw.Elapsed.TotalSeconds / Seconds);
+                // 過程展示：狀態列即時回報目前 fps
+                Phase = $"填充率測試 (1/3)・目前 {perSecond[^1]:0} FPS";
                 await System.Windows.Threading.Dispatcher.Yield(System.Windows.Threading.DispatcherPriority.Background);
             }
         }
-        return Math.Round(frames / Math.Max(0.001, sw.Elapsed.TotalSeconds), 1);
+        double valid = ValidateNonBlank(rtb);
+        return (Math.Round(frames / Math.Max(0.001, sw.Elapsed.TotalSeconds), 1), valid, perSecond);
     }
 
     // ── Test 2: 3D Geometry ───────────────────────────────────
-    static async Task<double> RunGeometryTestAsync(CancellationToken ct, Action<double> report)
+    async Task<(double Fps, double ValidPercent, List<double> PerSecond)> RunGeometryTestAsync(
+        CancellationToken ct, Action<double> report)
     {
         const double Seconds = 5.0;
         int w = 800, h = 600;
@@ -173,6 +250,9 @@ public sealed class GpuRenderTestService : ObservableObject
         var sw = Stopwatch.StartNew();
         int frames = 0;
         double angle = 0;
+        var perSecond = new List<double>();
+        var secSw = Stopwatch.StartNew();
+        int framesAtSec = 0;
 
         while (sw.Elapsed.TotalSeconds < Seconds)
         {
@@ -183,17 +263,23 @@ public sealed class GpuRenderTestService : ObservableObject
             viewport.UpdateLayout();
             rtb.Render(viewport);
             frames++;
-            if (frames % 5 == 0)
+            if (secSw.Elapsed.TotalSeconds >= 1.0)
             {
+                perSecond.Add((frames - framesAtSec) / secSw.Elapsed.TotalSeconds);
+                framesAtSec = frames;
+                secSw.Restart();
                 report(sw.Elapsed.TotalSeconds / Seconds);
+                Phase = $"3D 幾何測試 (2/3)・目前 {perSecond[^1]:0} FPS";
                 await System.Windows.Threading.Dispatcher.Yield(System.Windows.Threading.DispatcherPriority.Background);
             }
         }
-        return Math.Round(frames / Math.Max(0.001, sw.Elapsed.TotalSeconds), 1);
+        double valid = ValidateNonBlank(rtb);
+        return (Math.Round(frames / Math.Max(0.001, sw.Elapsed.TotalSeconds), 1), valid, perSecond);
     }
 
     // ── Test 3: Text Rendering ────────────────────────────────
-    static async Task<double> RunTextTestAsync(CancellationToken ct, Action<double> report)
+    async Task<(double Fps, double ValidPercent, List<double> PerSecond)> RunTextTestAsync(
+        CancellationToken ct, Action<double> report)
     {
         const int TextCount = 200;
         const double Seconds = 5.0;
@@ -206,6 +292,9 @@ public sealed class GpuRenderTestService : ObservableObject
 
         var sw = Stopwatch.StartNew();
         int frames = 0;
+        var perSecond = new List<double>();
+        var secSw = Stopwatch.StartNew();
+        int framesAtSec = 0;
 
         while (sw.Elapsed.TotalSeconds < Seconds)
         {
@@ -226,13 +315,18 @@ public sealed class GpuRenderTestService : ObservableObject
             }
             rtb.Render(dv);
             frames++;
-            if (frames % 5 == 0)
+            if (secSw.Elapsed.TotalSeconds >= 1.0)
             {
+                perSecond.Add((frames - framesAtSec) / secSw.Elapsed.TotalSeconds);
+                framesAtSec = frames;
+                secSw.Restart();
                 report(sw.Elapsed.TotalSeconds / Seconds);
+                Phase = $"文字渲染測試 (3/3)・目前 {perSecond[^1]:0} FPS";
                 await System.Windows.Threading.Dispatcher.Yield(System.Windows.Threading.DispatcherPriority.Background);
             }
         }
-        return Math.Round(frames / Math.Max(0.001, sw.Elapsed.TotalSeconds), 1);
+        double valid = ValidateNonBlank(rtb);
+        return (Math.Round(frames / Math.Max(0.001, sw.Elapsed.TotalSeconds), 1), valid, perSecond);
     }
 
     // ── Sphere mesh builder ───────────────────────────────────

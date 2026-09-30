@@ -50,6 +50,7 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type local:RenderTestResult}">
                         <Border Style="{StaticResource Card}" Margin="0,0,0,8">
+                            <StackPanel>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -72,6 +73,19 @@
                                            FontWeight="Bold" FontSize="16"
                                            VerticalAlignment="Center"/>
                             </Grid>
+                            <!-- 過程展示：怎麼測的、逐秒 FPS、像素檢核結果 -->
+                            <StackPanel Margin="16,0,16,12">
+                                <TextBlock Text="{Binding Detail}" FontSize="12" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                <TextBlock Text="{Binding FpsTrace}" FontSize="11.5" TextWrapping="Wrap" Margin="0,3,0,0"
+                                           Foreground="{DynamicResource MutedInkBrush}"
+                                           Visibility="{Binding HasTrace, Converter={StaticResource BoolToVis}}"/>
+                                <TextBlock FontSize="11.5" Margin="0,3,0,0" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource WarningBrush}"
+                                           Visibility="{Binding IsBlank, Converter={StaticResource BoolToVis}}"
+                                           Text="末幀像素檢核為空白（離屏 3D 在部分驅動／遠端工作階段輸不出內容），此項分數不計入評價。"/>
+                            </StackPanel>
+                            </StackPanel>
                         </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
@@ -89,6 +103,17 @@
                                FontSize="32" FontWeight="Bold"
                                Foreground="{DynamicResource AccentBrush}"
                                HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 總結分析 -->
+            <Border Style="{StaticResource Card}" Margin="0,8,0,12"
+                    Visibility="{Binding HasAnalysis, Converter={StaticResource BoolToVis}}">
+                <StackPanel Margin="16">
+                    <TextBlock Text="分析" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource PrimaryInkBrush}"/>
+                    <TextBlock Text="{Binding Analysis}" FontSize="12.5" LineHeight="20" TextWrapping="Wrap" Margin="0,6,0,0"
+                               Foreground="{DynamicResource SecondaryInkBrush}"/>
                 </StackPanel>
             </Border>
 
