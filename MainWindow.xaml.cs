@@ -156,8 +156,10 @@ public partial class MainWindow : Window
             }
             catch (Exception ex)
             {
-                // 單一頁面建構失敗（缺少執行階段元件等）不得讓整個外殼倒下
+                // 單一頁面建構失敗（缺少執行階段元件等）不得讓整個外殼倒下；
+                // 回退側欄到先前頁面，避免側欄亮著新頁、內容卻留著舊頁的不一致。
                 _vm.StatusText = $"「{def.Title}」頁面載入失敗：{ex.Message}";
+                if (_currentDef is not null) Nav.SelectedItem = _currentDef;
                 return;
             }
         }

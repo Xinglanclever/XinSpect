@@ -63,7 +63,7 @@ public partial class BatteryView : UserControl
 
     private void Read_Click(object sender, RoutedEventArgs e) => Read();
 
-    private void Report_Click(object sender, RoutedEventArgs e)
+    private async void Report_Click(object sender, RoutedEventArgs e)
     {
         try
         {
@@ -77,7 +77,10 @@ public partial class BatteryView : UserControl
                 CreateNoWindow = true, UseShellExecute = false, RedirectStandardOutput = true,
             };
             using var p = Process.Start(psi);
-            p?.WaitForExit(8000);
+            if (p is not null)
+            {
+                await p.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(8));
+            }
 
             if (File.Exists(outPath))
                 Process.Start(new ProcessStartInfo(outPath) { UseShellExecute = true });

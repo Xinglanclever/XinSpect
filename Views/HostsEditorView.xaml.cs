@@ -99,7 +99,7 @@ public partial class HostsEditorView : UserControl
         }
     }
 
-    private void Flush_Click(object sender, RoutedEventArgs e)
+    private async void Flush_Click(object sender, RoutedEventArgs e)
     {
         try
         {
@@ -110,7 +110,8 @@ public partial class HostsEditorView : UserControl
                 RedirectStandardOutput = true,
             };
             using var p = Process.Start(psi);
-            p?.WaitForExit(5000);
+            if (p is not null)
+                await p.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));
             StatusText.Text = $"已清除 DNS 解析快取 ・ {DateTime.Now:HH:mm:ss}";
         }
         catch (Exception ex)
