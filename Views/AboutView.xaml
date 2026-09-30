@@ -285,7 +285,7 @@
                     <local:FieldRow Label="AI 評價" Value="本機免費 Ollama 或 OpenAI 相容 API・客觀評價・可自訂提示詞"/>
                     <local:FieldRow Label="一鍵裝機" Value="依分類批次安裝常用軟體（Windows 內建 winget）"/>
                     <local:FieldRow Label="工具箱" Value="Windows 系統工具一鍵開啟＋八十餘款硬體工具官方下載捷徑（不內含任何外部執行檔）；會寫韌體、整碟抹除或改開機結構的項目掛警告徽章並寫明最壞情況"/>
-                    <local:FieldRow Label="實用工具" Value="硬體檢測（螢幕壞點／滑鼠／鍵盤／喇叭／動態）・連接埠占用・Hosts 編輯・藍屏分析・垃圾清理・電池分析・右鍵選單・網速測試・記憶體整理・開機啟動項・DNS 切換・大檔掃描・驅動稽核・幀時間監測・DPC 延遲與中斷歸屬・PCIe 鏈路・USB 鏈路・NVMe 電源狀態・顯示鏈路真相・睡眠與喚醒・網卡進階屬性・Windows 授權"/>
+                    <local:FieldRow Label="實用工具" Value="硬體檢測（螢幕壞點／滑鼠／鍵盤／喇叭／動態）・螢幕色域（EDID 覆蓋率＋2D 色度圖／3D 色彩立方）・連接埠占用・Hosts 編輯・藍屏分析・垃圾清理・電池分析・右鍵選單・網速測試・記憶體整理・開機啟動項・DNS 切換・大檔掃描・驅動稽核・幀時間監測・DPC 延遲與中斷歸屬・PCIe 鏈路・USB 鏈路・NVMe 電源狀態・顯示鏈路真相・睡眠與喚醒・網卡進階屬性・Windows 授權"/>
                 </StackPanel>
             </Border>
         </StackPanel>

@@ -51,7 +51,7 @@
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          ScrollViewer.VerticalScrollBarVisibility="Visible">
                     <ListBox.ItemTemplate>
-                        <DataTemplate DataType="{x:Type local:PageDef}">
+                        <DataTemplate DataType="{x:Type local:UtilityNavItem}">
                             <StackPanel Orientation="Horizontal" ToolTip="{Binding Hint}">
                                 <Viewbox Width="16" Height="16" VerticalAlignment="Center">
                                     <Canvas Width="16" Height="16">
@@ -60,6 +60,7 @@
                                     </Canvas>
                                 </Viewbox>
                                 <TextBlock Text="{Binding Title}" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="13"/>
+                                <TextBlock Text="{Binding Status}" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="11.5"/>
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

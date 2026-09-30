@@ -369,6 +369,14 @@ public static class PageRegistry
         },
         new()
         {
+            Key = "gamut", Title = "螢幕色域", Group = GTools,
+            IconData = "M2,4 h12 v8 h-12 z M5,2 h6 v2 h-6 z M5,14 h6 v1 h-6 z M6,6 h1 v4 h-1 z",
+            Factory = () => new ScreenGamutView(),
+            Hint = "EDID 色域覆蓋率＋CIE 色度圖（2D）與 RGB 色彩立方（3D）",
+            Keywords = ["gamut", "色域", "色度", "EDID", "sRGB", "DCI-P3", "Adobe RGB", "螢幕", "色彩"],
+        },
+        new()
+        {
             Key = "ctxmenu", Title = "右鍵選單", Group = GTools,
             IconData = "M3,1.5 L3,13 L6,10 L8,14.5 L10,13.5 L8,9 L12.5,9 Z",
             Factory = () => new ContextMenuView(),

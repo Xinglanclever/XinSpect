@@ -35,7 +35,7 @@ public static class ToolboxFilter
     public static string Summarize(string? query, int matched, int total)
     {
         if (string.IsNullOrWhiteSpace(query))
-            return $"共 {total} 項工具。第三方工具一律導向官方下載，本程式不內含任何外部執行檔。";
+            return $"共 {total} 項工具。";   // 導向官方下載的說明只留在下方狀態列，不重複貼兩次
         if (matched == 0)
             return $"沒有符合「{query}」的項目；共 {total} 項可搜尋。";
         return $"符合 {matched} / {total} 項。";

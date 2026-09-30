@@ -542,7 +542,7 @@ public sealed class ToolboxService : ObservableObject
                 Description = "讀取顯示器 EDID / 面板 / 色域資訊，EnTech 官方",
                 Kind = ToolKind.WebLink, Target = "https://www.entechtaiwan.com/util/moninfo.shtm",
                 Keywords = ["edid", "色域", "面板", "顯示器"],
-                NativeNote = "本頁上方的「螢幕色域 EDID」卡片已直接讀出本機各螢幕的 EDID 與色域座標；"
+                NativeNote = "「實用工具 › 螢幕色域」頁已直接讀出本機各螢幕的 EDID 與色域座標（含 2D 色度圖與 3D 色彩立方）；"
                            + "MonInfo 另可解析原始 EDID 位元組與詳細時序描述子。" },
         // 系統維護
         new() { Group = "系統維護", Name = "Geek Uninstaller",

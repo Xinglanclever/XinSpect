@@ -15,6 +15,16 @@ public sealed class MonitorGamutInfo
     public string AreaText { get; init; } = "—";
     public string Assessment { get; init; } = "—";
     public bool Valid { get; init; }
+
+    // ── 原始 CIE 1931 xy 色度座標（2D／3D 視覺化模型繪圖用；Invalid 時為 NaN）──
+    public double Rx { get; init; } = double.NaN;
+    public double Ry { get; init; } = double.NaN;
+    public double Gx { get; init; } = double.NaN;
+    public double Gy { get; init; } = double.NaN;
+    public double Bx { get; init; } = double.NaN;
+    public double By { get; init; } = double.NaN;
+    public double Wx { get; init; } = double.NaN;
+    public double Wy { get; init; } = double.NaN;
 }
 
 /// <summary>
@@ -118,6 +128,7 @@ public static class EdidService
             DciText = $"{covDci:0} %",
             AreaText = $"色域面積約為 sRGB 的 {areaRatio:0} %",
             Assessment = Assess(covSrgb, covDci),
+            Rx = Rx, Ry = Ry, Gx = Gx, Gy = Gy, Bx = Bx, By = By, Wx = Wx, Wy = Wy,
         };
     }
 

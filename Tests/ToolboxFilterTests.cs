@@ -59,11 +59,12 @@ public class ToolboxFilterTests
 
     // ── Summarize ───────────────────────────────────────────────
     [Fact]
-    public void 未篩選時說明第三方一律導向官方下載()
+    public void 未篩選時只報數量不與狀態列重複()
     {
         var s = ToolboxFilter.Summarize(null, 90, 90);
         Assert.Contains("共 90 項工具", s);
-        Assert.Contains("不內含任何外部執行檔", s);
+        // 導向官方下載的說明留在 StatusLine，兩行不要長得一樣
+        Assert.DoesNotContain("外部執行檔", s);
     }
 
     [Fact]
