@@ -24,6 +24,7 @@ public class HardcodedColorTests
         ["MotionTestWindow.xaml"] = "動態檢測：拖影測試需要固定對比的黑白方塊",
         ["IconGalleryWindow.xaml"] = "徽章一覽：展示的就是各廠牌原色",
         ["BrandBadge.xaml"] = "主機板／處理器廠牌徽章：品牌色不隨主題改",
+        ["ShrineWindow.xaml"] = "拜神：綠色乖乖的包裝、神桌與香火是內容本身（民俗規矩：一定要綠色），不隨主題變",
         ["TerminalView.xaml"] = "終端機沿用主控台的黑底淺字，與系統的 cmd.exe 一致",
     };
 
