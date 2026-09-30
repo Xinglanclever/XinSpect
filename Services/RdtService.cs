@@ -317,7 +317,13 @@ public sealed class RdtService : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        // 與 Stop() 同型的收斂順序：先取消、等背景 worker 結束，再釋放橋接。
+        // 否則 worker 可能正在另一執行緒對已釋放的 WinRing0Bridge 做 MSR 讀寫。
+        // Join 有 3 秒上限（同 Stop()），避免 Dispose 卡死在無法收斂的 worker 上。
         _cts?.Cancel();
+        try { _worker?.Join(3000); }
+        catch { /* worker 從未啟動（ThreadStateException）等邊界情況；程式正在收尾，不需處理 */ }
+        _worker = null;
         try { _bridge?.Dispose(); } catch (Exception ex) { Diag.Swallow("RDT 橋接釋放", ex, "無；程式即將結束"); }
     }
 }

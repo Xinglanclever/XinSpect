@@ -136,13 +136,24 @@ public sealed class ComputeChartService : ObservableObject
         return new ComputeMetric(name, score, category, unit, raw, rawText);
     }
 
-    /// <summary>從 "1234 MB/s" 或 "1234.5" 擷取數值。</summary>
+    /// <summary>
+    /// 從 "1234 MB/s" 或 "1234.5" 擷取數值。
+    /// </summary>
+    /// <remarks>
+    /// 已知脆弱：這裡解析的是 <c>DiskBenchService</c> 的「顯示文字」（SeqReadText／SeqWriteText），
+    /// 不是底層數值——該服務沒有公開數值屬性（內部量測值只是 RunAsync 的區域變數）。
+    /// 風險：若顯示格式改變（加千位分隔、改單位、改文化）解析就跟著失效或算錯。
+    /// 特別是 <c>Replace(",", "")</c>：在以「.」作千位分隔、「,」作小數點的文化（de-DE）下，
+    /// "1.234,5 MB/s" 逗號被刪掉後會把 "1.2345" 靜默解析成 1.2345——差了三個數量級。
+    /// 目前 `{value:0}` 格式不產生分隔符所以勉強安全，但這依賴呼叫端的格式寫法，不是保證。
+    /// 根治之道是讓 DiskBenchService 公開原始數值屬性（本次不在可修改檔案清單內，故保留現狀）。
+    /// </remarks>
     private static bool TryParseMBps(string? text, out double value)
     {
         value = 0;
         if (string.IsNullOrWhiteSpace(text) || text == "—" || text == "--" || text.Contains('…'))
             return false;
-        // 取第一段數字
+        // 取第一段數字；解析固定 invariant（見上方 remarks 的文化風險說明）
         var m = Regex.Match(text, @"([\d,.]+)");
         return m.Success && double.TryParse(m.Groups[1].Value.Replace(",", ""), NumberStyles.Float, CultureInfo.InvariantCulture, out value) && value > 0;
     }

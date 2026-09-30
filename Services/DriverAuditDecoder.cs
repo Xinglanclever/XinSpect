@@ -33,7 +33,9 @@ public sealed class DriverRow
 
     public string ClassText => DriverAuditDecoder.ClassLabel(DeviceClass);
     public string VersionText => Version.Length > 0 ? Version : "—";
-    public string DateText => Date is { } d ? d.ToString("yyyy-MM-dd") : "—";
+    // invariant：格式字元本身不受文化影響，但**曆法**會——例如泰文（佛教曆）文化下 yyyy 會是 25xx，
+    // 同一個日期就顯示成不同數字。固定 invariant 才能保證 ISO 風格的 yyyy-MM-dd 永遠如實呈現。
+    public string DateText => Date is { } d ? d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : "—";
     public string ProviderText => Provider.Length > 0 ? Provider : "—";
     /// <summary>簽章欄的短標籤。已簽章但被標為老舊時直接寫出被標記的理由，免得欄位只寫「已簽章」卻是橙色。</summary>
     public string SignText => !Signed ? "未簽章" : Severity == 1 ? "日期偏舊" : "已簽章";

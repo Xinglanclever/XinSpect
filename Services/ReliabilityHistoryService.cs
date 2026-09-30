@@ -1,14 +1,25 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics.Eventing.Reader;
+using System.Globalization;
 
 namespace XinSpect;
 
 /// <summary>一條可靠性事件列。</summary>
 public sealed class ReliabilityRow
 {
-    public ReliabilityRow(string category, string time, string detail)
-    { Category = category; Time = time; Detail = detail; }
+    /// <summary>以原始 DateTime 建構；Time 字串只是顯示格式，排序一律用 <see cref="TimeValue"/>。</summary>
+    public ReliabilityRow(string category, DateTime when, string detail)
+    {
+        Category = category;
+        TimeValue = when;
+        Detail = detail;
+        // invariant：顯示格式跨文化一致（曆法不會被換成佛教曆之類）
+        Time = when.ToString("MM-dd HH:mm", CultureInfo.InvariantCulture);
+    }
     public string Category { get; }
+    /// <summary>事件原始時間（排序欄；跨年也正確）。</summary>
+    public DateTime TimeValue { get; }
+    /// <summary>顯示用時間文字。</summary>
     public string Time { get; }
     public string Detail { get; }
 }
@@ -102,16 +113,16 @@ public sealed class ReliabilityHistoryService : ObservableObject
                 if (rec is null) break;
                 using (rec)
                 {
-                    var time = (rec.TimeCreated ?? DateTime.Now).ToString("MM-dd HH:mm");
+                    var when = rec.TimeCreated ?? DateTime.Now;
                     if (rec.Id is 41 or 6008)
                     {
                         unexpected++;
-                        rows.Add(new ReliabilityRow("非預期關機", time, $"#{rec.Id}（{rec.ProviderName}）"));
+                        rows.Add(new ReliabilityRow("非預期關機", when, $"#{rec.Id}（{rec.ProviderName}）"));
                     }
                     else
                     {
                         bugchecks++;
-                        rows.Add(new ReliabilityRow("藍屏（BugCheck）", time, FirstLine(SafeFormat(rec))));
+                        rows.Add(new ReliabilityRow("藍屏（BugCheck）", when, FirstLine(SafeFormat(rec))));
                     }
                 }
             }
@@ -130,7 +141,7 @@ public sealed class ReliabilityHistoryService : ObservableObject
                 {
                     appCrashes++;
                     rows.Add(new ReliabilityRow(rec.Id == 1000 ? "應用程式當機" : "停止回應",
-                        (rec.TimeCreated ?? DateTime.Now).ToString("MM-dd HH:mm"), FirstLine(SafeFormat(rec))));
+                        rec.TimeCreated ?? DateTime.Now, FirstLine(SafeFormat(rec))));
                 }
             }
         }
@@ -163,7 +174,9 @@ public sealed class ReliabilityHistoryService : ObservableObject
         }
         catch { /* 其他讀取失敗則略過開機趨勢 */ }
 
-        rows.Sort((a, b) => string.CompareOrdinal(b.Time, a.Time));
+        // 以原始 DateTime 排序——字串 "MM-dd HH:mm" 的 CompareOrdinal 排序跨年會錯序
+        //（去年 12-31 會被排到今年 01-01 之後），DateTime 比較則永遠正確。
+        rows.Sort((a, b) => b.TimeValue.CompareTo(a.TimeValue));
         bootTimes.Sort((a, b) => b.Item1.CompareTo(a.Item1));
         return (unexpected, bugchecks, appCrashes, bootTimes, rows, bootChannelMissing);
     }

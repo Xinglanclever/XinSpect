@@ -77,7 +77,8 @@ public sealed class SensorLogService : ObservableObject
         {
             var g = live.PrimaryGpu;
             var sb = new StringBuilder();
-            sb.Append(now.ToString("yyyy-MM-dd HH:mm:ss")).Append(',');
+            // invariant：CSV 會被其他機器／試算表以任意文化讀回，時間與數字欄格式必須固定
+            sb.Append(now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)).Append(',');
             sb.Append(N(live.CpuLoad)).Append(',');
             sb.Append(live.CpuTemp is double ct ? N(ct) : "").Append(',');
             sb.Append(N(live.CpuClock)).Append(',');

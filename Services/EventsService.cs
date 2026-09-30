@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Windows.Data;
@@ -35,10 +36,12 @@ public sealed class TimelineEvent
     public string Detail { get; init; } = "";
     public Severity Severity { get; init; } = Severity.Neutral;
 
+    // invariant：避免非西曆文化（如泰文佛教曆）把 yyyy 顯示成 25xx、時間分隔字元被文化替換。
+    // 這些文字同時用於排序比對與跨機器一致性，格式必須固定。
     public DateTime TimeUtc => Time.ToUniversalTime();
-    public string TimeText => Time.ToString("yyyy-MM-dd HH:mm:ss");
-    public string DayText => Time.ToString("MM-dd");
-    public string ClockText => Time.ToString("HH:mm:ss");
+    public string TimeText => Time.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+    public string DayText => Time.ToString("MM-dd", CultureInfo.InvariantCulture);
+    public string ClockText => Time.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
 
     public string KindText => Kind switch
     {

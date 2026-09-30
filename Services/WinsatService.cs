@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Diagnostics;
 using System.Management;
@@ -204,21 +205,22 @@ public sealed class WinsatService : ObservableObject
 
             var doc = XDocument.Load(newest.FullName);
 
-            // 記憶體頻寬（bytes/sec）→ GB/s
+            // 記憶體頻寬（bytes/sec）→ GB/s；XML 數值一律 invariant 解析，
+            // 否則 de-DE 等文化會把 "12.5"（小數點）當千位分隔靜默讀成 125。
             var memBw = Descendant(doc, "Bandwidth");
-            if (memBw is not null && double.TryParse(memBw, out var bw) && bw > 0)
+            if (memBw is not null && double.TryParse(memBw, NumberStyles.Float, CultureInfo.InvariantCulture, out var bw) && bw > 0)
                 s.MemBandwidth = $"{bw / 1_000_000_000.0:0.0} GB/s";
 
             // 磁碟吞吐（MB/s）——名稱依版本而異，取第一個看似吞吐的節點
             var diskTp = Descendant(doc, "AvgThroughput") ?? Descendant(doc, "Throughput");
-            if (diskTp is not null && double.TryParse(diskTp, out var tp) && tp > 0)
+            if (diskTp is not null && double.TryParse(diskTp, NumberStyles.Float, CultureInfo.InvariantCulture, out var tp) && tp > 0)
                 s.DiskThroughput = tp > 1000 ? $"{tp / 1000.0:0.0} MB/s（原始 {tp:0}）" : $"{tp:0.0} MB/s";
 
             // 若 WMI 未取得基礎分，改用 XML 的 SystemScore
             if (!s.HasData)
             {
                 var sys = Descendant(doc, "SystemScore");
-                if (sys is not null && double.TryParse(sys, out var ss) && ss > 0)
+                if (sys is not null && double.TryParse(sys, NumberStyles.Float, CultureInfo.InvariantCulture, out var ss) && ss > 0)
                 {
                     s.Base = ss;
                     s.Cpu = ParseD(Descendant(doc, "CpuScore"));
@@ -241,5 +243,8 @@ public sealed class WinsatService : ObservableObject
         return null;
     }
 
-    private static double ParseD(string? v) => double.TryParse(v, out var d) ? d : 0;
+    /// <summary>XML 子分數解析。WinSAT XML 的數值一律用小數點，必須 invariant，
+    /// 否則逗號小數文化下 "4.5" 會被靜默讀成 45。</summary>
+    private static double ParseD(string? v)
+        => double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ? d : 0;
 }
