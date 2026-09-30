@@ -12,7 +12,7 @@
                 <local:HelpDot HelpKey="gamut/螢幕色域" Margin="10,4,0,0"/>
             </StackPanel>
             <TextBlock Style="{StaticResource Subtitle}" Margin="2,0,0,14" TextWrapping="Wrap"
-                       Text="自顯示器 EDID 解析 CIE 色度座標，計算色域三角形對 sRGB、Adobe RGB、DCI-P3 三種標準的覆蓋率，並以 2D 色度圖與 3D 色彩立方把色域畫出來。"/>
+                       Text="自顯示器 EDID 解析 CIE 色度座標，計算色域三角形對 sRGB、Adobe RGB、DCI-P3 三種標準的覆蓋率，並以 2D 色度圖把色域畫出來。"/>
 
             <!-- 2D：CIE 1931 xy 色度圖 -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
@@ -22,16 +22,6 @@
                                Text="馬蹄形外框是可見光光譜軌跡；虛線三角形是 sRGB 標準，實心半透明三角形是本機螢幕的色域。三角形越貼近光譜軌跡，能顯示的顏色越飽和。"/>
                     <local:GamutChromaticityDiagram Height="360" Margin="0,4,0,0"
                                                     Monitors="{Binding Monitors}"/>
-                </StackPanel>
-            </Border>
-
-            <!-- 3D：RGB 色彩立方 -->
-            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
-                <StackPanel>
-                    <local:SectionHead Text="RGB 色彩立方（3D）" HelpKey="gamut/色彩立方"/>
-                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,8" TextWrapping="Wrap"
-                               Text="以 R／G／B 三原色為軸的完整色彩空間模型，可按住拖曳旋轉。三原色各自拉到最大值的中間色都在這個立方體裡——色域硬體就是從中挑出一個三角形切片。"/>
-                    <local:RgbCube3D Height="340" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
 
