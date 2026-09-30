@@ -247,6 +247,13 @@ public partial class SettingsView : UserControl
     }
 
     // 環境自檢：偵測各功能所需執行階段／驅動／服務是否就緒。
+    private async void DriverProbe_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm is { } vm) await vm.DriverReady.ProbeAsync(vm);
+    }
+
+    private void DriverElevate_Click(object sender, RoutedEventArgs e) => Vm?.DriverReady.RestartElevated();
+
     private async void EnvCheck_Click(object sender, RoutedEventArgs e)
     {
         if (Vm is { } vm) await vm.EnvCheck.RunAsync(vm);

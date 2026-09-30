@@ -223,6 +223,60 @@
                 </StackPanel>
             </Border>
 
+            <!-- ═══ 驅動就緒 ═══ -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <local:SectionHead Text="驅動就緒" HelpKey="settings/驅動就緒"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="底層驅動的真實狀態與一鍵修復：WinRing0 供 MSR 讀寫與 SPD 直讀（頻率真相、MCA、免疫位元等頁面的基礎）；LHM 感測引擎供溫度／負載／電壓讀值。載入驅動只在你按下按鈕時執行，不會偷偷安裝。"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button Style="{StaticResource PrimaryButton}" MinWidth="120"
+                                Content="檢測驅動" Click="DriverProbe_Click"
+                                IsEnabled="{Binding DriverReady.CanProbe}"/>
+                        <Button Style="{StaticResource ToolButton}" Margin="10,0,0,0"
+                                Content="以系統管理員重新啟動" Click="DriverElevate_Click"
+                                Visibility="{Binding DriverReady.IsNotAdmin, Converter={StaticResource BoolToVis}}"
+                                ToolTip="關閉本程式並以系統管理員權限重新開啟（會跳出 UAC 確認）"/>
+                        <TextBlock Style="{StaticResource FieldValue}" VerticalAlignment="Center" Margin="14,0,0,0"
+                                   TextWrapping="Wrap" Text="{Binding DriverReady.Summary}"/>
+                    </StackPanel>
+
+                    <Border Background="{DynamicResource Surface2Brush}" CornerRadius="7" Margin="0,12,0,6" Padding="12,9">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="11" Height="11" VerticalAlignment="Center" Margin="0,0,12,0"
+                                         Fill="{Binding DriverReady.WinRing0Severity, Converter={StaticResource SeverityToBrush}}"/>
+                                <TextBlock Text="WinRing0（MSR／SMBus 底層存取）" Foreground="{DynamicResource PrimaryInkBrush}" FontSize="14" FontWeight="SemiBold"/>
+                                <Border CornerRadius="4" Padding="6,1" Margin="10,0,0,0" VerticalAlignment="Center"
+                                        Background="{Binding DriverReady.WinRing0Severity, Converter={StaticResource SeverityToBrush}}">
+                                    <TextBlock Text="{Binding DriverReady.WinRing0Status}" Foreground="White" FontSize="11.5"/>
+                                </Border>
+                            </StackPanel>
+                            <TextBlock Text="{Binding DriverReady.WinRing0Detail}" Foreground="{DynamicResource SecondaryInkBrush}" FontSize="12.5"
+                                       TextWrapping="Wrap" Margin="0,4,0,0"
+                                       Visibility="{Binding DriverReady.HasWinRing0Detail, Converter={StaticResource BoolToVis}}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="{DynamicResource Surface2Brush}" CornerRadius="7" Margin="0,0,0,6" Padding="12,9">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="11" Height="11" VerticalAlignment="Center" Margin="0,0,12,0"
+                                         Fill="{Binding DriverReady.LhmSeverity, Converter={StaticResource SeverityToBrush}}"/>
+                                <TextBlock Text="LHM 感測引擎（溫度／負載／電壓）" Foreground="{DynamicResource PrimaryInkBrush}" FontSize="14" FontWeight="SemiBold"/>
+                                <Border CornerRadius="4" Padding="6,1" Margin="10,0,0,0" VerticalAlignment="Center"
+                                        Background="{Binding DriverReady.LhmSeverity, Converter={StaticResource SeverityToBrush}}">
+                                    <TextBlock Text="{Binding DriverReady.LhmStatus}" Foreground="White" FontSize="11.5"/>
+                                </Border>
+                            </StackPanel>
+                            <TextBlock Text="{Binding DriverReady.LhmDetail}" Foreground="{DynamicResource SecondaryInkBrush}" FontSize="12.5"
+                                       TextWrapping="Wrap" Margin="0,4,0,0"
+                                       Visibility="{Binding DriverReady.HasLhmDetail, Converter={StaticResource BoolToVis}}"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+
             <!-- ═══ 環境自檢 ═══ -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
