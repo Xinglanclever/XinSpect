@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="拜神" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="False" ResizeMode="NoResize" SizeToContent="Height"
-        Width="600" WindowStartupLocation="CenterOwner"
+        Width="720" WindowStartupLocation="CenterOwner"
         FontFamily="{StaticResource AppFont}" UseLayoutRounding="True">
     <Window.Resources>
         <!-- 「拜」主鈕：乖乖綠；「收起」次鈕沿用站的次要色 -->
@@ -23,6 +23,9 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="B" Property="Background" Value="#6FAE2E"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="B" Property="Background" Value="#7A7A7A"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -71,11 +74,7 @@
                                    Foreground="{DynamicResource SecondaryInkBrush}"/>
                     </Border>
                 </StackPanel>
-                <Button HorizontalAlignment="Right" VerticalAlignment="Center" Click="Close_Click"
-                        Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="收起">
-                    <Path Data="M0,0 L10,10 M10,0 L0,10" Stroke="{DynamicResource SecondaryInkBrush}"
-                          StrokeThickness="1.6" Width="10" Height="10"/>
-                </Button>
+                <!-- 拖曳整個標題列 -->
             </Grid>
 
             <Grid Margin="0,20,0,0">
@@ -86,30 +85,23 @@
 
                 <!-- ── 左：一包綠色乖乖（原創向量，非任何品牌包裝）＋神桌＋香爐 ── -->
                 <StackPanel Grid.Column="0" HorizontalAlignment="Center">
-                    <Canvas Width="205" Height="268">
+                    <Canvas Width="205" Height="310">
                         <!-- 香的煙：預設隱形，按「拜」才飄起 -->
-                        <Ellipse x:Name="Smoke1" Canvas.Left="86" Canvas.Top="196" Width="9" Height="9"
-                                 Fill="#C8C8C8" Opacity="0">
+                        <Ellipse x:Name="Smoke1" Canvas.Left="86" Canvas.Top="228" Width="11" Height="11"
+                                 Fill="#888888" Opacity="0">
                             <Ellipse.RenderTransform><TranslateTransform X="0" Y="0"/></Ellipse.RenderTransform>
                         </Ellipse>
-                        <Ellipse x:Name="Smoke2" Canvas.Left="99" Canvas.Top="188" Width="7" Height="7"
-                                 Fill="#C8C8C8" Opacity="0">
+                        <Ellipse x:Name="Smoke2" Canvas.Left="99" Canvas.Top="220" Width="9" Height="9"
+                                 Fill="#707070" Opacity="0">
                             <Ellipse.RenderTransform><TranslateTransform X="0" Y="0"/></Ellipse.RenderTransform>
                         </Ellipse>
-                        <Ellipse x:Name="Smoke3" Canvas.Left="77" Canvas.Top="192" Width="6" Height="6"
-                                 Fill="#C8C8C8" Opacity="0">
+                        <Ellipse x:Name="Smoke3" Canvas.Left="77" Canvas.Top="224" Width="8" Height="8"
+                                 Fill="#909090" Opacity="0">
                             <Ellipse.RenderTransform><TranslateTransform X="0" Y="0"/></Ellipse.RenderTransform>
                         </Ellipse>
 
-                        <!-- 香爐與三炷香（在神桌上、乖乖前） -->
-                        <Path Fill="#8B5A2B" Data="M86,222 L87,200 L88.5,200 L89.5,222 Z M95,222 L96,198 L97.5,198 L98.5,222 Z M104,222 L105,200 L106.5,200 L107.5,222 Z"/>
-                        <Ellipse Canvas.Left="82" Canvas.Top="195" Width="6" Height="4" Fill="#E0552E"/>
-                        <Ellipse Canvas.Left="94" Canvas.Top="193" Width="6" Height="4" Fill="#E0552E"/>
-                        <Ellipse Canvas.Left="104" Canvas.Top="195" Width="6" Height="4" Fill="#E0552E"/>
-                        <Path Fill="#3A3F45" Data="M72,222 h48 a3,3 0 0 1 3,3 v3 a27,10 0 0 1 -54,0 v-3 a3,3 0 0 1 3,-3 Z"/>
-
-                        <!-- 乖乖本體：使用者指定的實際包裝照片；香與神桌保留 -->
-                        <Border Canvas.Left="18" Canvas.Top="25" Width="169" Height="178"
+                        <!-- 乖乖本體：使用者指定的實際包裝照片 -->
+                        <Border Canvas.Left="6" Canvas.Top="10" Width="193" Height="200"
                                 CornerRadius="12" Background="White" BorderBrush="#D8ECC4"
                                 BorderThickness="1.5" ClipToBounds="True">
                             <Image x:Name="GuaiImage" Source="pack://application:,,,/XinSpect;component/Assets/ShrineGuaiGuai.jpg"
@@ -117,10 +109,22 @@
                         </Border>
 
                         <!-- 神桌 -->
-                        <Rectangle Canvas.Left="8" Canvas.Top="238" Width="184" Height="12" RadiusX="4" RadiusY="4" Fill="#7A5230"/>
-                        <Rectangle Canvas.Left="8" Canvas.Top="238" Width="184" Height="4" RadiusX="2" RadiusY="2" Fill="#8A5F38"/>
-                        <Rectangle Canvas.Left="22" Canvas.Top="250" Width="12" Height="14" Fill="#6B4A2B"/>
-                        <Rectangle Canvas.Left="166" Canvas.Top="250" Width="12" Height="14" Fill="#6B4A2B"/>
+                        <Rectangle Canvas.Left="8" Canvas.Top="263" Width="184" Height="12" RadiusX="4" RadiusY="4" Fill="#7A5230"/>
+                        <Rectangle Canvas.Left="8" Canvas.Top="263" Width="184" Height="4" RadiusX="2" RadiusY="2" Fill="#8A5F38"/>
+                        <Rectangle Canvas.Left="22" Canvas.Top="275" Width="12" Height="18" Fill="#6B4A2B"/>
+                        <Rectangle Canvas.Left="166" Canvas.Top="275" Width="12" Height="18" Fill="#6B4A2B"/>
+
+                        <!-- 三炷香＋香爐（立在神桌上） -->
+                        <Path Fill="#8B5A2B" Data="M86,257 L87,232 L88.5,232 L89.5,257 Z M95,257 L96,230 L97.5,230 L98.5,257 Z M104,257 L105,232 L106.5,232 L107.5,257 Z"/>
+                        <!-- 香頭火焰 -->
+                        <Path Fill="#FFD700" Data="M86,232 Q88,226 87.5,229 Q89,225 89.5,232 Z"/>
+                        <Ellipse Canvas.Left="82" Canvas.Top="227" Width="8" Height="6" Fill="#E0552E"/>
+                        <Path Fill="#FFD700" Data="M94,230 Q96,224 95.5,227 Q97,223 97.5,230 Z"/>
+                        <Ellipse Canvas.Left="92" Canvas.Top="225" Width="8" Height="6" Fill="#E0552E"/>
+                        <Path Fill="#FFD700" Data="M103,232 Q105,226 104.5,229 Q106,225 106.5,232 Z"/>
+                        <Ellipse Canvas.Left="101" Canvas.Top="227" Width="8" Height="6" Fill="#E0552E"/>
+                        <!-- 香爐（坐在桌面上） -->
+                        <Path Fill="#3A3F45" Data="M72,257 h48 a3,3 0 0 1 3,3 v3 a27,10 0 0 1 -54,0 v-3 a3,3 0 0 1 3,-3 Z"/>
                     </Canvas>
                 </StackPanel>
 
@@ -132,9 +136,6 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="乖度" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"
                                            Foreground="{DynamicResource PrimaryInkBrush}"/>
-                                <Border Background="#335C9424" CornerRadius="5" Padding="7,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock Text="綜合量化指標 ・ 數據皆為實測" FontSize="10.5" Foreground="#3E7A18"/>
-                                </Border>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,8,0,2">
                                 <TextBlock x:Name="ScoreText" FontSize="42" FontWeight="Bold"
@@ -144,10 +145,6 @@
                             </StackPanel>
                             <TextBlock x:Name="DetailText" FontSize="12" TextWrapping="Wrap" LineHeight="19"
                                        Foreground="{DynamicResource SecondaryInkBrush}"/>
-                            <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,10,0,8"/>
-                            <TextBlock Text="演算法基於藍屏事件密度與系統連續運行時長的加權模型。藍屏筆數與開機時長為作業系統實測值，讀不到的項目顯示「—」，不推估。"
-                                       FontSize="11" TextWrapping="Wrap" LineHeight="17"
-                                       Foreground="{DynamicResource MutedInkBrush}"/>
                         </StackPanel>
                     </Border>
 
@@ -167,6 +164,10 @@
                                        TextWrapping="Wrap" Foreground="{DynamicResource SecondaryInkBrush}"/>
                             <TextBlock Text="五、免責聲明——以上論述之學術地位約等同於薛丁格的貓：在您打開機殼觀測之前，乖乖同時有效且無效。本程式不對拜神結果提供任何形式之保固。" FontSize="11.5" LineHeight="20"
                                        TextWrapping="Wrap" Foreground="{DynamicResource SecondaryInkBrush}"/>
+                            <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,10,0,8"/>
+                            <TextBlock FontSize="10" FontStyle="Italic" TextWrapping="Wrap" LineHeight="16"
+                                       Foreground="{DynamicResource MutedInkBrush}"
+                                       Text="🔒 絕密技術（CLASSIFIED）— 經實地場強量測，乖乖神力有效覆蓋範圍為：大中國全境（包含唐努烏梁海及蒙古地區）、日本國（包含其代管地區琉球）、大韓民國（包括北韓地區）、印度支那半島、馬來亞半島與印度尼西亞群島在內之泛中華區。上述區域以外之矽晶體因超出乖乖場等效輻射邊界，諧振安撫效應不具理論保證，擅自跨區部署概不負責。"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -182,13 +183,18 @@
             <Grid Margin="0,16,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <Button x:Name="PrayButton" Grid.Column="0" Style="{StaticResource ShrinePrimary}" HorizontalContentAlignment="Center" Click="Pray_Click">
-                    <TextBlock Text="拜" FontSize="14" FontWeight="Bold"/>
+                    <TextBlock Text="拜" FontSize="18" FontWeight="ExtraBold" Foreground="#1A3A00"/>
                 </Button>
-                <Button x:Name="CloseButton" Grid.Column="2" Style="{StaticResource ShrineSecondary}" HorizontalContentAlignment="Center" Click="Close_Click">
+                <Button x:Name="IncenseButton" Grid.Column="2" Style="{StaticResource ShrinePrimary}" HorizontalContentAlignment="Center" Click="Incense_Click">
+                    <TextBlock Text="燒香" FontSize="16" FontWeight="ExtraBold" Foreground="#1A3A00"/>
+                </Button>
+                <Button x:Name="CloseButton" Grid.Column="4" Style="{StaticResource ShrineSecondary}" HorizontalContentAlignment="Center" Click="Close_Click">
                     <TextBlock Text="收起" FontSize="13"/>
                 </Button>
             </Grid>
