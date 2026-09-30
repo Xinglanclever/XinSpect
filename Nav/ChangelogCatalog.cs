@@ -1,4 +1,4 @@
-namespace XinSpect;
+﻿namespace XinSpect;
 
 /// <summary>一個版本的更新紀錄：版號、日期、一句話總結，以及逐項改動。</summary>
 public sealed class ChangeEntry
@@ -155,7 +155,7 @@ public static class ChangelogCatalog
         {
             Version = "2.0.0",
             Date = "2026-09-19",
-            Title = "Blackops 2.0：13 項修正、簡體中文、頁面重新歸類、FPU/AVX2 烤機",
+            Title = "Everest 2.0：13 項修正、簡體中文、頁面重新歸類、FPU/AVX2 烤機",
             Items =
             [
                 "修好 13 個缺陷：HWiNFO 簽章位元序、Core Temp 名稱、晶片組被 SMBus 搶候選、PCIe 讀不存在的登錄值、繪圖測試凍結 UI 15 秒、核心驅動無安全描述符、Core Temp 華氏值標成 °C、距 TjMax 模式整頁空白、BootRepair 註解不實、十個裸 catch 改用 Diag.Swallow、HWiNFO 互斥鎖、HWiNFO ANSI 標籤。",
@@ -168,7 +168,7 @@ public static class ChangelogCatalog
         {
             Version = "1.9.9",
             Date = "2026-09-08",
-            Title = "1.x 終章——Extreme Edition「東方之星」：硬體證據實驗室、紅黑 EE 主題、菜鳥儀表板",
+            Title = "1.x 終章——Extreme Edition「北極星」：硬體證據實驗室、紅黑 EE 主題、菜鳥儀表板",
             Items =
             [
                 "新增「硬體證據實驗室」：版本化硬體時間膠囊（JSON + SHA-256 完整性 + 敏感遮蔽）、保存與載入快照、兩份快照逐欄差異比較（新增/移除/變更/不變 + 數值 delta）。每個事實附穩定鍵、分類、繁中名稱、值、單位、來源、可信度、敏感旗標與量測時間。",
@@ -178,7 +178,7 @@ public static class ChangelogCatalog
                 "新增「證據時間軸」：append-only 版本化 JSONL 格式，支援 counter reset/wrap/缺口辨識；產生客觀事件（PCIe 降級、NVMe 媒體錯誤淨增加、有效頻率比等）。不估算剩餘壽命。",
                 "新增「菜鳥儀表板」：大型健康度圓環 + 一句話總結 + 溫度監控條 + 硬體清單摘要 + 一鍵優化入口。簡易模式首頁。",
                 "新增「故障排查嚮導」：六個常見場景（電腦很慢、遊戲卡頓、藍屏、風扇太吵、開機很慢、網路不穩）的逐步引導，每步附即時讀值與建議，底部導向相關進階頁。",
-                "新增 Extreme Edition「東方之星」紅黑主題：深黑（#0D0D0D）+ 紅（#CC0000）工業風配色，設定頁可切換。副標題「東方之星」預設模糊，懸停清晰——彩蛋式存在。",
+                "新增 Extreme Edition「北極星」紅黑主題：深黑（#0D0D0D）+ 紅（#CC0000）工業風配色，設定頁可切換。副標題「北極星」預設模糊，懸停清晰——彩蛋式存在。",
                 "感測器閘門修正：Power 0W 改為拒絕。運行中的裝置不可能消耗 0W，LHM 回報 0 代表感測器沒有讀到資料，顯示「—」而非誤導性的 0.0 W。",
                 "AI 連線改善：HttpClient 逾時從 180 秒縮短為 45 秒，避免端點不通時枯等三分鐘。錯誤訊息區分共用額度 Worker 不可用與本機 Ollama 未啟動，附替代方案。",
                 "SMART 讀取失敗訊息優化：SATA 控制器拒絕 SMART_RCV_DRIVE_DATA 時明確說明是控制器不支援此命令，不是磁碟有問題，並建議使用磁碟原廠工具。",

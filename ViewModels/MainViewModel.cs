@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows.Data;
 
@@ -250,7 +250,7 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>平台可信度：hypervisor／VBS／HVCI 是否介入，決定所有 MSR 卡片的可信度（健康分頁卡片，零特權）。</summary>
     public PlatformTrustService PlatformTrust { get; } = new();
 
-    /// <summary>藍色中隊核心模組：安全態勢評估（Blackops 功能）。</summary>
+    /// <summary>藍色中隊核心模組：安全態勢評估（Everest 功能）。</summary>
     public BlueSquadronModule BlueSquadron { get; } = new();
 
     /// <summary>硬體時間膠囊：保存來源、可信度與時間，並驗證後逐欄比較。</summary>
@@ -508,9 +508,9 @@ public sealed class MainViewModel : ObservableObject
     }
 
     public string AppTitle => ThemeService.Theme == AppTheme.ExtremeEdition
-        ? "XinSpect Blackops" : "曦覽 XinSpect";
+        ? "XinSpect Everest" : "曦覽 XinSpect";
     public string AppSubtitle => ThemeService.Theme == AppTheme.ExtremeEdition
-        ? "東方之星 ─ Blackops" : "硬體資訊總覽";
+        ? "北極星 ─ Everest" : "硬體資訊總覽";
 
     /// <summary>主題切換後由外殼呼叫，重新通知標題繫結更新。</summary>
     public void NotifyTitleChanged()
