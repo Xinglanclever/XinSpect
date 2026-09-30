@@ -146,6 +146,11 @@ public partial class BrandBadge : UserControl
                     GlyphBox.Margin = new Thickness(E * 0.18);
                     GlyphBox.RenderTransform = new TranslateTransform(-E * 0.05, -E * 0.05);
                 }
+                else if (edition.Glyph == "x")
+                {
+                    // ✕至尊版：縮小內距＝放大字形，讓交叉 ✕ 更有份量。
+                    GlyphBox.Margin = new Thickness(E * 0.15);
+                }
                 else if (edition.Glyph == "gpu")
                 {
                     // 顯示卡字形：略放大並上移、微左移（字形本身偏右下，於此補償），
@@ -395,7 +400,7 @@ public partial class BrandBadge : UserControl
             "L34.7,71 L40,53.2 L25.3,42 L43.8,41.5 Z",
         // 交叉 X：至尊版 Extreme Edition
         "x" =>
-            "F1 M34,40 L40,34 L66,60 L60,66 Z M60,34 L66,40 L40,66 L34,60 Z",
+            "F1 M25,35 L35,25 L75,65 L65,75 Z M65,25 L75,35 L35,75 L25,65 Z",
         // 蒸汽閥（Steam 標記）：左下大環 + 連桿 + 右上小環。CC150 專用。
         //    採 EvenOdd（F0）挖出兩環內孔，故三塊圖形刻意不重疊——連桿兩端只切齊環的外緣
         //    （端點距圓心恰等於外半徑），一旦壓進環身就會被 XOR 挖掉一塊。
