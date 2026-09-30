@@ -206,7 +206,7 @@ public static class DeviceIcons
         new("i9-ks",
             @"\bi9[- ]?(?:9900|13900|14900)ks\b",
             "特挑版", "", "KS", DarkInk,
-            Gold, PentGold),
+            PentGold, PentGold),
 
         // ── Core i9-9990XE：拍賣限定、OEM 專供的「隱藏款」至尊。金底 + 炫彩邊框 + 中心「XE」。
         new("i9-9990xe",
@@ -399,7 +399,8 @@ public static class DeviceIcons
         new("nv-cmp",
             @"\bcmp\s*\d{2,3}hx\b",
             "CMP 挖礦卡", "gpu", "", White,
-            GpuBlack, ChipSilver),
+            GpuBlack, ChipSilver,
+            Corner: "CMP"),
         // ── Titan V CEO Edition：銀底 + 金邊 + 右下「CEO」（黃金珍藏版，NVIDIA 內部贈禮）。
         new("titan-ceo",
             @"titan.*ceo|ceo\s*edition",
@@ -441,7 +442,7 @@ public static class DeviceIcons
         new("nv-quadro",
             @"\bquadro\b",
             "Quadro 專業卡", "gpu", "", White,
-            GpuBlack, ChipGreen,
+            GpuBlack, ChipSilver,
             Corner: "Pro"),
 
         // ── NVIDIA RTX 專業卡（Quadro 更名後）：RTX A 系列、RTX xxxx Ada、RTX PRO 皆屬此列。
@@ -456,7 +457,8 @@ public static class DeviceIcons
         new("amd-instinct",
             @"\binstinct\b|\bmi\d{2,3}x?\b",
             "Instinct 運算卡", "gpu", "", White,
-            AmdRed, ChipRed),
+            AmdRed, ChipRed,
+            Corner: "MI"),
 
         // ── AMD Radeon Pro／FirePro 專業繪圖卡：沿用這條線的藍色識別，右下「Pro」。
         new("amd-radeon-pro",
