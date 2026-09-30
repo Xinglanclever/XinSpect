@@ -167,6 +167,16 @@ public sealed class ComputeChartService : ObservableObject
             return;
         }
 
+        if (present.Count == 1)
+        {
+            var only = present[0];
+            sb.Append($"目前只有「{only.Name}」一個維度有數據（{only.Score:0} 分，{only.RawText}）——"
+                    + "多跑幾項測試後，強弱對比與均衡判讀才會有意義。");
+            AnalysisText = sb.ToString();
+            MissingText = MissingGuide(present);
+            return;
+        }
+
         var best = present.OrderByDescending(m => m.Score).First();
         var worst = present.OrderBy(m => m.Score).First();
         sb.AppendLine($"最強：{best.Name}（{best.Score:0} 分，{best.RawText}）。");
