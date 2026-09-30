@@ -25,8 +25,17 @@ public partial class UtilitiesView : UserControl, IPageLifecycle
 
         if (!_cache.TryGetValue(def.Key, out var view))
         {
-            view = def.Factory();
-            _cache[def.Key] = view;
+            try
+            {
+                view = def.Factory();
+                _cache[def.Key] = view;
+            }
+            catch (Exception ex)
+            {
+                // 單一子工具建構失敗（缺執行階段元件等）不得讓整個實用工具容器倒下
+                Diag.Swallow("子工具載入", ex, $"「{def.Title}」無法建立，維持目前工具");
+                return;
+            }
         }
         if (ReferenceEquals(_current, view)) return;
 

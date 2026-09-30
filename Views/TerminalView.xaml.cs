@@ -81,7 +81,12 @@ public partial class TerminalView : UserControl
         if (Term is not { } t || t.History.Count == 0) return;
         var h = t.History;
         if (_histIndex == -1) _histIndex = dir < 0 ? h.Count - 1 : -1;
-        else _histIndex = Math.Clamp(_histIndex + dir, 0, h.Count - 1);
+        else
+        {
+            int next = _histIndex + dir;
+            if (next >= h.Count) { InputBox.Clear(); _histIndex = -1; return; }   // 從最新再往下＝回到空白輸入行
+            _histIndex = Math.Clamp(next, 0, h.Count - 1);
+        }
 
         if (_histIndex < 0 || _histIndex >= h.Count) { InputBox.Clear(); _histIndex = -1; return; }
         InputBox.Text = h[_histIndex];
