@@ -1,4 +1,4 @@
-namespace XinSpect;
+﻿namespace XinSpect;
 
 /// <summary>
 /// 五行輪上的一個節點：元素字、掛在它上面的協力模型，以及它在圓周上的角度。
@@ -45,9 +45,6 @@ public static class FiveElements
         new("", "Claude Opus 4.6\n預備隊", 216),
         new("", "DeepSeek V4.1 Flash\n來做客的大肥魚", 288),
     ];
-
-    /// <summary>GLM 5.3 Flash 獨立球（拉完了湊數的）。</summary>
-    public static FiveElementNode GlmExtra { get; } = new("", "GLM 5.3 Flash\n拉完了湊數的", 0);
 
     /// <summary>
     /// 五角星的連線順序（節點索引）。每次<b>跨兩格</b>，走五步正好回到起點並且經過每個節點一次

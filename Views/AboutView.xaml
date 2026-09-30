@@ -1,4 +1,4 @@
-<UserControl x:Class="XinSpect.AboutView"
+﻿<UserControl x:Class="XinSpect.AboutView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect">
@@ -73,7 +73,21 @@
                                Foreground="{DynamicResource PrimaryInkBrush}"/>
                     <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,4,0,0"
                                Text="這個程式由多個 AI 模型協力完成。"/>
-                    <local:FiveElementsWheel HorizontalAlignment="Center" Margin="0,10,0,4"/>
+                    <Grid Margin="0,10,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Top" Margin="0,20,0,0">
+                            <local:GifImage GifSource="pack://application:,,,/Assets/bigfish.gif"
+                                            Height="80" Stretch="Uniform"
+                                            RenderOptions.BitmapScalingMode="HighQuality"/>
+                            <TextBlock Text="&#x2192;" FontSize="20" FontWeight="Bold"
+                                       Foreground="{DynamicResource MutedInkBrush}"
+                                       HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <local:FiveElementsWheel Grid.Column="1" HorizontalAlignment="Center"/>
+                    </Grid>
 
                     <Button Content="查看特殊型號徽章一覽　▸" Style="{StaticResource PrimaryButton}"
                             HorizontalAlignment="Left" Margin="0,16,0,0"

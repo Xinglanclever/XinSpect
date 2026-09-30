@@ -58,6 +58,8 @@
     <Content Include="Assets\ceremony.mp3" CopyToOutputDirectory="PreserveNewest" />
     <!-- 關於頁「By：Xinglanclever」旁的動畫 GIF；以 Resource 編入，pack URI 讀取後逐格輪播 -->
     <Resource Include="Assets\hug.gif" />
+    <!-- 關於頁 DeepSeek 旁的大肥魚動圖 -->
+    <Resource Include="Assets\bigfish.gif" />
   </ItemGroup>
 
   <!-- WinForms 僅供系統匣（TrayService）使用；移除其全域 using 以免與 WPF 的 System.Windows.* 型別衝突 -->

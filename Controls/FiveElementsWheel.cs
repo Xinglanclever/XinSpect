@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
 
@@ -131,15 +131,6 @@ public sealed class FiveElementsWheel : FrameworkElement
         // 圓心那四個字
         var cap = Format(FiveElements.Caption, 17, accent, bold: true);
         dc.DrawText(cap, new Point(c.X - cap.Width / 2, c.Y - cap.Height / 2));
-
-        // GLM 5.3 Flash 獨立球（右下角，不在五角星上）
-        var glm = FiveElements.GlmExtra;
-        double glmX = c.X + RingR + NodeR + 30;
-        double glmY = c.Y + RingR - NodeR;
-        var glmPt = new Point(glmX, glmY);
-        dc.DrawEllipse(VizPalette.Card, new Pen(VizPalette.Grid, 1.2), glmPt, NodeR * 0.8, NodeR * 0.8);
-        var glmFt = Label(glm.Label, name);
-        dc.DrawText(glmFt, new Point(glmPt.X - glmFt.Width / 2, glmPt.Y - glmFt.Height / 2));
     }
 
     private static Point NodeAt(Point c, FiveElementNode n)
