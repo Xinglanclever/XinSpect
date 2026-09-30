@@ -330,6 +330,14 @@ public static class PageRegistry
     [
         new()
         {
+            Key = "gamut", Title = "螢幕色域", Group = GTools,
+            IconData = "M2,4 h12 v8 h-12 z M5,2 h6 v2 h-6 z M5,14 h6 v1 h-6 z M6,6 h1 v4 h-1 z",
+            Factory = () => new ScreenGamutView(),
+            Hint = "EDID 色域覆蓋率＋CIE 色度圖（2D）與 RGB 色彩立方（3D）",
+            Keywords = ["gamut", "色域", "色度", "EDID", "sRGB", "DCI-P3", "Adobe RGB", "螢幕", "色彩"],
+        },
+        new()
+        {
             Key = "port", Title = "連接埠占用", Group = GTools,
             IconData = "M2,3 h12 a1,1 0 0 1 1,1 v3 h-14 v-3 a1,1 0 0 1 1,-1 z M1,9 h14 v3 a1,1 0 0 1 -1,1 h-12 a1,1 0 0 1 -1,-1 z "
                      + "M4,5.5 h1 v0.01 h-1 z M4,10.5 h1 v0.01 h-1 z",
@@ -366,14 +374,6 @@ public static class PageRegistry
             IconData = "M1,4 h12 a1,1 0 0 1 1,1 v6 a1,1 0 0 1 -1,1 h-12 a1,1 0 0 1 -1,-1 v-6 a1,1 0 0 1 1,-1 z M15,6 h1 v4 h-1 z M2,5.5 h6 v5 h-6 z",
             Factory = () => new BatteryView(),
             Hint = "電池健康度與循環次數", Keywords = ["battery", "電池", "續航", "循環", "損耗"],
-        },
-        new()
-        {
-            Key = "gamut", Title = "螢幕色域", Group = GTools,
-            IconData = "M2,4 h12 v8 h-12 z M5,2 h6 v2 h-6 z M5,14 h6 v1 h-6 z M6,6 h1 v4 h-1 z",
-            Factory = () => new ScreenGamutView(),
-            Hint = "EDID 色域覆蓋率＋CIE 色度圖（2D）與 RGB 色彩立方（3D）",
-            Keywords = ["gamut", "色域", "色度", "EDID", "sRGB", "DCI-P3", "Adobe RGB", "螢幕", "色彩"],
         },
         new()
         {

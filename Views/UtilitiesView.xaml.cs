@@ -18,7 +18,7 @@ public class UtilityNavItem
     public string Hint => Def.Hint ?? "";
 
     private string _status = "";
-    /// <summary>空字串＝尚未檢測；「✓」＝建構成功；「⚠」＝建構失敗（詳情看 Diag 紀錄）。</summary>
+    /// <summary>空字串＝正常（含尚未檢測與建構成功，不顯示任何記號）；「⚠」＝建構失敗才標出。</summary>
     public string Status { get => _status; set { _status = value; StatusChanged?.Invoke(); } }
     public event Action? StatusChanged;
 }
@@ -58,7 +58,7 @@ public partial class UtilitiesView : UserControl, IPageLifecycle
                     view = item.Def.Factory();
                     _cache[item.Def.Key] = view;
                 }
-                item.Status = "✓";
+                item.Status = "";   // 正常不標記，維持清單乾淨
             }
             catch (Exception ex)
             {
