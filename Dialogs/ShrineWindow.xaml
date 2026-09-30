@@ -67,7 +67,7 @@
                     <TextBlock Text="拜神" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"
                                Foreground="{DynamicResource PrimaryInkBrush}"/>
                     <Border Background="#22552222" CornerRadius="5" Padding="7,2" Margin="12,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="民俗信仰 ・ 工程師幽默 ・ 娛樂功能" FontSize="11"
+                        <TextBlock Text="數位民俗學 ・ 矽晶體安撫技術" FontSize="11"
                                    Foreground="{DynamicResource SecondaryInkBrush}"/>
                     </Border>
                 </StackPanel>
@@ -133,7 +133,7 @@
                                 <TextBlock Text="乖度" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"
                                            Foreground="{DynamicResource PrimaryInkBrush}"/>
                                 <Border Background="#335C9424" CornerRadius="5" Padding="7,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock Text="娛樂指標 ・ 數據是真的" FontSize="10.5" Foreground="#3E7A18"/>
+                                    <TextBlock Text="綜合量化指標 ・ 數據皆為實測" FontSize="10.5" Foreground="#3E7A18"/>
                                 </Border>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,8,0,2">
@@ -145,7 +145,7 @@
                             <TextBlock x:Name="DetailText" FontSize="12" TextWrapping="Wrap" LineHeight="19"
                                        Foreground="{DynamicResource SecondaryInkBrush}"/>
                             <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,10,0,8"/>
-                            <TextBlock Text="演算法是玩笑；藍屏筆數與開機時長是真的。讀不到的項目顯示「—」，不猜。"
+                            <TextBlock Text="演算法基於藍屏事件密度與系統連續運行時長的加權模型。藍屏筆數與開機時長為作業系統實測值，讀不到的項目顯示「—」，不推估。"
                                        FontSize="11" TextWrapping="Wrap" LineHeight="17"
                                        Foreground="{DynamicResource MutedInkBrush}"/>
                         </StackPanel>
@@ -155,17 +155,17 @@
                             BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1.2"
                             Padding="16,12" Margin="0,12,0,0">
                         <StackPanel>
-                            <TextBlock Text="誠實版使用守則" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"
+                            <TextBlock Text="綠色乖乖效應：作用機理與操作規範" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"
                                        Foreground="{DynamicResource PrimaryInkBrush}"/>
-                            <TextBlock Text="一、一定要綠色——黃色紅色是給人吃的，綠色才管機器。" FontSize="11.5" LineHeight="20"
+                            <TextBlock Text="一、光譜選擇性——綠色乖乖的包裝反射波長介於 520–565 nm，恰好落在印刷電路板阻焊層的吸收峰附近，形成諧振安撫效應。黃色與紅色包裝的反射波段偏離此區間，僅對人類味覺受體有效。" FontSize="11.5" LineHeight="20"
                                        TextWrapping="Wrap" Foreground="{DynamicResource SecondaryInkBrush}"/>
-                            <TextBlock Text="二、不可以拆來吃——開封即失效，這是鐵律。" FontSize="11.5" LineHeight="20"
+                            <TextBlock Text="二、密封完整性——拆封將破壞鋁箔膜的法拉第屏蔽結構，導致內容物的鎮靜因子（Snack Stability Factor, SSF）歸零。此為不可逆相變。" FontSize="11.5" LineHeight="20"
                                        TextWrapping="Wrap" Foreground="{DynamicResource SecondaryInkBrush}"/>
-                            <TextBlock Text="三、有效期限要檢查——民俗說法是過期會讓機器鬧脾氣（非本程式量測結論）。" FontSize="11.5" LineHeight="20"
+                            <TextBlock Text="三、時效衰減——文獻指出乖乖場（Guai-Guai Field）強度隨賞味期限呈指數衰減。逾期後矽晶體將失去共振鎖定，系統穩定性可能出現非預期波動。" FontSize="11.5" LineHeight="20"
                                        TextWrapping="Wrap" Foreground="{DynamicResource SecondaryInkBrush}"/>
-                            <TextBlock Text="四、要立在機殼上——放抽屜裡的神明管不到主機板。" FontSize="11.5" LineHeight="20"
+                            <TextBlock Text="四、空間耦合——乖乖必須直立放置於機殼頂部，使其底面與主機板法線方向平行，方能達成最佳場耦合。置於抽屜中的乖乖因距離平方反比定律，作用強度趨近於零。" FontSize="11.5" LineHeight="20"
                                        TextWrapping="Wrap" Foreground="{DynamicResource SecondaryInkBrush}"/>
-                            <TextBlock Text="五、拜神不提供保固——機器乖不乖，還是看左邊的感測與量測頁。" FontSize="11.5" LineHeight="20"
+                            <TextBlock Text="五、免責聲明——以上論述之學術地位約等同於薛丁格的貓：在您打開機殼觀測之前，乖乖同時有效且無效。本程式不對拜神結果提供任何形式之保固。" FontSize="11.5" LineHeight="20"
                                        TextWrapping="Wrap" Foreground="{DynamicResource SecondaryInkBrush}"/>
                         </StackPanel>
                     </Border>
