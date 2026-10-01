@@ -14,6 +14,7 @@ public class DeepBenchCatalogTests
         "memory.stream-bandwidth",
         "memory.loaded-latency",
         "gpu.fp32-fp64-integer",
+        "gpu.vram-bandwidth",
         "cpu.top-down",
         "storage.qd-ladder",
         "storage.mixed-rw",
@@ -54,6 +55,8 @@ public class DeepBenchCatalogTests
         Assert.Equal(DeepBenchTestStatus.Integrated, byId["memory.stream-bandwidth"].Status);
         Assert.Equal(DeepBenchTestStatus.Integrated, byId["memory.loaded-latency"].Status);
         Assert.Equal(DeepBenchTestStatus.Implemented, byId["gpu.fp32-fp64-integer"].Status);
+        Assert.Equal(DeepBenchTestStatus.Implemented, byId["gpu.vram-bandwidth"].Status);
+        Assert.True(byId["gpu.vram-bandwidth"].Runnable);
         Assert.Equal(DeepBenchTestStatus.Implemented, byId["storage.qd-ladder"].Status);
         Assert.Equal(DeepBenchTestStatus.Implemented, byId["storage.mixed-rw"].Status);
         Assert.Equal(DeepBenchTestStatus.Implemented, byId["storage.write-integrity"].Status);
@@ -86,7 +89,7 @@ public class DeepBenchCatalogTests
     {
         var plan = DeepBenchSuitePlanner.Plan(DeepBenchRunProfile.Full);
         var skipped = plan.Skipped.ToDictionary(item => item.TestId, item => item.Reason);
-        Assert.Equal(23, skipped.Count);
+        Assert.Equal(22, skipped.Count);
         Assert.All(skipped.Values, reason => Assert.Contains("Phase", reason, StringComparison.Ordinal));
         Assert.DoesNotContain(Phase1RunnableIds, id => skipped.ContainsKey(id));
     }

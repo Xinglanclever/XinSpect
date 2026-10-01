@@ -946,7 +946,7 @@ public static class HelpCatalog
         ["deepbench/Run Session"] = new()
         {
             Title = "Run Session",
-            What = "一次連續執行的深測場次；快速檔與完整檔目前執行十五個已接入測項，涵蓋 CPU 微架構、RDRAND/RDSEED、Top-down 歸因、核心與記憶體、GPU、儲存、寫入完整性、逐 MiB FlushToDisk、SLC 持續寫入與本機 TCP loopback 延遲。",
+            What = "一次連續執行的深測場次；快速檔與完整檔目前執行十六個已接入測項，涵蓋 CPU 微架構、RDRAND/RDSEED、Top-down 歸因、核心與記憶體、GPU FP32 與 VRAM 讀寫頻寬、儲存、寫入完整性、逐 MiB FlushToDisk、SLC 持續寫入與本機 TCP loopback 延遲。",
             Does = "啟動前會檢查儲存根與剩餘空間；測試可取消，取消後只保留已完成結果，其餘標示未執行而不補值。儲存項目只寫 XinSpect.deepbench.tmp，刪除失敗或量測失敗都會列出。",
             Risk = HelpRisk.Caution,
             Safety = "期間 CPU、記憶體、GPU 與儲存可能接近滿載，系統會明顯變慢；請先儲存工作，筆電接電源並注意散熱。",

@@ -12,6 +12,7 @@ public static class DeepBenchSuitePlanner
         "memory.stream-bandwidth",
         "memory.loaded-latency",
         "gpu.fp32-fp64-integer",
+        "gpu.vram-bandwidth",
         "cpu.top-down",
         "storage.qd-ladder",
         "storage.mixed-rw",
