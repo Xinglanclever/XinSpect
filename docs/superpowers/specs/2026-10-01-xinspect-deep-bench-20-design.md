@@ -17,6 +17,8 @@ Deep Bench 20 的目標是補齊七個互相支援的量測層：
 
 核心價值是「別人顯示規格，XinSpect 量能力邊界」。每張卡片必須能回答：量什麼、怎麼量、瓶頸在哪、不可信的條件是什麼。
 
+產品形態是「聚眾合一」的 Deep Bench Hub：功能可以堆料，但不能散落成一堆獨立按鈕。每個新測項必須註冊到統一測項目錄、使用共用量測模型、進入同一次 run session、能參與跨域瓶頸歸因，並在總覽、歷史與報告中出現。做不到這五點的功能先不進 Deep Bench 20。
+
 ## 2. 非目標
 
 - 不做偽造或加權玄學總分。
@@ -46,6 +48,7 @@ Deep Bench 20 的目標是補齊七個互相支援的量測層：
 ### 3.2 模組分層
 
 - `Services/DeepBench/`：純量測核心與數學推導，避免 UI 依賴。
+- `Services/DeepBench/Orchestration/`：測項目錄、run session、排程、資源預算與跨域結果聚合。
 - `Services/DeepBench/Interop/`：Windows API、D3D、IOCP、NUMA 等 P/Invoke。
 - `ViewModels/DeepBench/`：狀態機、進度、取消與 UI 聚合。
 - `Views/DeepBenchView.xaml`：分區卡片，不在現有頁面無限堆疊。
@@ -62,6 +65,14 @@ Deep Bench 20 的目標是補齊七個互相支援的量測層：
 5. ViewModel 更新卡片、熱圖或曲線。
 6. `BenchLog` / History 保存可序列化結果。
 7. Report 輸出包含方法論與限制文字。
+
+### 3.4 聚眾合一 Orchestrator
+
+- Test Catalog：每個測項宣告 id、領域、預估時間、資源需求、風險等級、並行安全性與需要的硬體能力。
+- Run Session：一次深測產生唯一 session id，保存機器快照、測項版本、取消點、原始結果與可信度，不讓各卡片自建孤立歷史。
+- Suite Planner：提供「單項、領域套餐、全機深測」三種入口；依資源與安全規則排程，磁碟寫入與高負載測試預設序列化，低風險偵測可並行。
+- Cross-domain Synthesis：只使用同 session 或明確標示相容的歷史結果，推論 CPU↔記憶體、GPU↔PCIe、磁碟↔CPU↔GPU 等瓶頸路徑；不可把缺少的環節補成猜測。
+- Unified Completion：總覽顯示完成度、失敗域、取消原因與尚缺測項；報告與歷史匯出以 session 為單位，而非以零散卡片為單位。
 
 ## 4. 功能設計
 
@@ -127,7 +138,7 @@ Deep Bench 20 的目標是補齊七個互相支援的量測層：
 
 Deep Bench 使用獨立頁面，分為：
 
-1. 總覽：測項狀態、可信度、最近結果。
+1. 總覽：Deep Bench Hub、全機深測入口、run session 進度、跨域瓶頸圖、可信度與最近結果。
 2. CPU/微架構。
 3. 拓撲/併發矩陣。
 4. 記憶體/RAS。
@@ -150,7 +161,7 @@ Deep Bench 使用獨立頁面，分為：
 
 全方面強化必須分期，避免單一提交無法驗證：
 
-- Phase 1：可信度模型、AES/SHA、QD階梯與混合讀寫、D3D11 FP32 compute、核心間延遲矩陣。
+- Phase 1：Test Catalog/run session/可信度模型、AES/SHA、QD階梯與混合讀寫、D3D11 FP32 compute、核心間延遲矩陣，以及第一版跨域結果聚合。
 - Phase 2：TLB/NUMA、false sharing/lock scaling、VRAM/PCIe、IOCP、RAS整合。
 - Phase 3：GPU fillrate、codec 實測、DRAM stride 推論、I/O→GPU pipeline。
 - Phase 4：Gauntlet、可信度嚴謹模式、歷史趨勢與報告整合。
@@ -164,7 +175,8 @@ Deep Bench 使用獨立頁面，分為：
 - 每個純數學層需涵蓋空樣本、單一樣本、離群值、取消與格式化。
 - 每個平台服務需有不支援、API失敗、資源釋放與不丟例外的測試。
 - 磁碟與長跑測試提供小樣本/快速模式，避免 CI 預設毀盤或拖慢。
-- UI 測試覆蓋卡片存在、狀態切換、取消、錯誤訊息與不實承諾掃描。
+- UI 測試覆蓋卡片存在、狀態切換、取消、錯誤訊息、session 完成度與不實承諾掃描。
+- Orchestrator 測試覆蓋測項註冊、並行安全排程、資源預算、取消恢復、部分失敗與跨域結果只引用同 session/相容歷史。
 - 驗收標準：使用者能從任一結果看到原始指標、分佈、條件、限制與瓶頸歸因。
 
 ## 9. 主要風險
@@ -188,5 +200,6 @@ Deep Bench 20 完成時，XinSpect 能對同一台機器回答：
 - 儲存的 QD、混合、持久化、完整性與系統呼叫成本。
 - 系統在長時間壓力下的衰退與失敗域。
 - 每個結果的可信度與不可比較條件。
+- 一次全機深測如何構成完整 run session，而不是一堆互相不知道彼此存在的分數。
 
 最終定位：Windows 上少見的誠實硬體深測平台，而不是另一個彩色跑分工具。
