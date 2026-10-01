@@ -935,6 +935,47 @@ public static class HelpCatalog
             Does = "認不出主機板上的 Super I/O 晶片時這裡就沒有可控項目——那是「讀不到」而不是「壞了」；主機板型號與晶片型號可在「主機板 › LPCIO」確認。",
         },
 
+        ["deepbench/深測中心"] = new()
+        {
+            Title = "深測中心",
+            What = "把同一場 Run Session 的 CPU、拓樸、記憶體、GPU 與儲存深測收在同一頁；原 38 項全量登記，尚未實作項目也會攤開。",
+            Does = "每項保留樣本數、設定、可信度、限制與錯誤；聚合只引用同一場證據，不加權合成總分，也不把延後項目藏起來。",
+            Risk = HelpRisk.Caution,
+            Safety = "高負載會讓 CPU、記憶體、GPU 或儲存接近滿載；儲存測試只建立 XinSpect.deepbench.tmp，結束、例外或取消後都會刪除。",
+        },
+        ["deepbench/Run Session"] = new()
+        {
+            Title = "Run Session",
+            What = "一次連續執行的深測場次；快速檔與完整檔目前只執行八個 Phase 1 測項。",
+            Does = "啟動前會檢查儲存根與剩餘空間；測試可取消，取消後只保留已完成結果，其餘標示未執行而不補值。儲存項目只寫 XinSpect.deepbench.tmp，刪除失敗或量測失敗都會列出。",
+            Risk = HelpRisk.Caution,
+            Safety = "期間 CPU、記憶體、GPU 與儲存可能接近滿載，系統會明顯變慢；請先儲存工作，筆電接電源並注意散熱。",
+        },
+        ["deepbench/38 項全量目錄"] = new()
+        {
+            Title = "38 項全量目錄",
+            What = "深測矩陣的完整清單，包含 Implemented、Integrated、NotSupported 與 Deferred 四種狀態。",
+            Does = "可以看見每一項需要什麼資源、是否可執行、以及尚未納入的原因；不因還沒做過就從畫面上消失。",
+            Risk = HelpRisk.ReadOnly,
+            Safety = "只顯示目錄與狀態；按下目錄本身不會啟動測試。",
+        },
+        ["deepbench/同場結果證據"] = new()
+        {
+            Title = "同場結果證據",
+            What = "同一 Run Session 內每個測項的原始樣本摘要、設定、可信度、限制與錯誤。",
+            Does = "沒有樣本或失敗的測項不會補值；樣本太少會標示可信度不足，跨域文字也不會合成成一個分數。",
+            Risk = HelpRisk.ReadOnly,
+            Safety = "這裡只是回顧已經產生的結果，不會重新啟動負載。",
+        },
+        ["deepbench/本機歷史"] = new()
+        {
+            Title = "本機歷史",
+            What = "最近二十場 Deep Bench Run Session 的本機紀錄。",
+            Does = "歷史只記 Session、狀態、檔案、時間與完成數；要比較請只看同測項、同設定、同樣條件的場次。",
+            Risk = HelpRisk.ReadOnly,
+            Safety = "紀錄存在 %APPDATA%\\XinSpect\\deepbench-history.json，不上傳任何地方；檔案損壞時回報為空，不推算舊結果。",
+        },
+
         // ── GPU 燒機 ────────────────────────────────────────────────
         ["bench/GPU 燒機測試"] = new()
         {

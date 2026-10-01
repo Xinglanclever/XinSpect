@@ -137,6 +137,7 @@ public static class ReportService
         Sensors(secs, vm);
         Evidence(secs, vm, mask);
         Benchmarks(secs, vm);
+        DeepBench(secs, vm);
         Upgrade(secs, vm);
         AiVerdict(secs, vm);
         return secs;
@@ -410,6 +411,94 @@ public static class ReportService
                  + "換一種電源計劃就差一成，內建對照表只是把猜測寫得像量測。同項目、同設定之間才可相比；"
                  + "量測條件是當時的實際溫度與頻率讀值。");
     });
+
+    private static void DeepBench(List<Section> secs, MainViewModel vm) => Add(secs, "deepbench", "Deep Bench 深測", s =>
+    {
+        var bench = vm.DeepBench;
+        DeepBenchRunRecord? record = bench.CurrentRecord;
+        Guid? sessionId = record?.SessionId ?? (bench.History.Count > 0 ? bench.History[0].SessionId : null);
+        string state = record?.State.ToString() ?? bench.LastState?.ToString() ?? "尚未啟動";
+        string profile = (record?.Profile ?? bench.SelectedProfile).ToString();
+        int completed = record?.Results.Count ?? bench.ResultCards.Count;
+        string completion = record is null
+            ? $"{bench.StateText}；目前卡片 {completed} 項。"
+            : $"{DescribeDeepBenchState(record.State)}；已完成 {completed} 項。";
+
+        s.Kv(
+            ("Session ID", sessionId?.ToString() ?? "—"),
+            ("Run state", state),
+            ("Profile", profile),
+            ("Completion", completion),
+            ("本檔選取", string.Join(", ", bench.SelectedIds)));
+
+        if (record is not null)
+        {
+            var metricRows = new List<string[]>();
+            var limitationRows = new List<string[]>();
+            var errorRows = new List<string[]>();
+            foreach (var result in record.Results)
+            {
+                string title = DeepBenchCatalog.All.FirstOrDefault(entry => entry.Id == result.TestId)?.Title ?? result.TestId;
+                foreach (var metric in result.Metrics)
+                {
+                    metricRows.Add(
+                    [
+                        result.TestId,
+                        metric.Title,
+                        $"{metric.Statistics.Mean:0.###} {metric.Unit}（{metric.Samples.Count} samples）",
+                        metric.Configuration,
+                        metric.Statistics.Confidence.ToString(),
+                        result.Error ?? "—",
+                    ]);
+                }
+                if (!string.IsNullOrWhiteSpace(result.Error))
+                    errorRows.Add([title, result.FailureKind.ToString(), result.Error!]);
+                foreach (string limitation in result.Limitations)
+                    limitationRows.Add([title, limitation]);
+            }
+
+            s.Tbl("同場結果證據",
+                ["測項", "指標", "量測", "設定", "Confidence", "Error"],
+                metricRows);
+            s.Tbl("錯誤", ["測項", "Failure", "Error"], errorRows);
+            s.Tbl("限制", ["測項", "Limitation"], limitationRows);
+            if (record.Insights.Count > 0)
+            {
+                s.Tbl("同場聚合", ["Title", "Text", "Evidence"],
+                    [.. record.Insights.Select(insight => new[]
+                    {
+                        insight.Title, insight.Text, string.Join(", ", insight.EvidenceTestIds),
+                    })]);
+            }
+        }
+        else
+        {
+            var rows = new List<string[]>();
+            foreach (var card in bench.ResultCards)
+                foreach (var metric in card.Metrics)
+                    rows.Add([card.TestId, metric.Title, metric.SummaryText, metric.Configuration, metric.Confidence.ToString(), card.Error ?? "—"]);
+            s.Tbl("同場結果證據", ["測項", "指標", "摘要", "設定", "Confidence", "Error"], rows);
+        }
+
+        var historyRows = new List<string[]>();
+        foreach (var row in bench.History)
+            historyRows.Add([row.SessionId.ToString(), row.State, row.ProfileText, row.StartedText, row.EndedText, row.CompletionText]);
+        s.Tbl("本機歷史", ["Session ID", "State", "Profile", "開始", "結束", "說明"], historyRows);
+
+        foreach (string error in bench.Errors)
+            s.Kv(("錯誤", error));
+        s.Note(DeepBenchViewModel.NoScoreNotice);
+        s.Note(DeepBenchViewModel.LocalOnlyNotice);
+    });
+
+    private static string DescribeDeepBenchState(DeepBenchRunState state) => state switch
+    {
+        DeepBenchRunState.Running => "執行中",
+        DeepBenchRunState.Completed => "完成",
+        DeepBenchRunState.CompletedWithFailures => "完成但含失敗",
+        DeepBenchRunState.Cancelled => "已取消",
+        _ => "未知",
+    };
 
     private static void Upgrade(List<Section> secs, MainViewModel vm) => Add(secs, "upgrade", "升級建議", s =>
     {

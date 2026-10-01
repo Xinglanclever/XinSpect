@@ -77,6 +77,7 @@ public sealed class DeepBenchViewModel : ObservableObject
     public int TempBudgetMiB { get => _tempBudgetMiB; set => SetProperty(ref _tempBudgetMiB, Math.Clamp(value, 64, 1_048_576)); }
 
     public DeepBenchRunState? LastState { get; private set; }
+    public DeepBenchRunRecord? CurrentRecord { get; internal set; }
     public bool CanStart => !IsRunning;
     public IReadOnlyList<string> SelectedIds => DeepBenchSuitePlanner.Plan(SelectedProfile, [.. CatalogRows]).SelectedIds;
 
@@ -132,6 +133,7 @@ public sealed class DeepBenchViewModel : ObservableObject
         IsRunning = true;
         OnPropertyChanged(nameof(CanStart));
         LastState = DeepBenchRunState.Running;
+        CurrentRecord = null;
         ResultCards.Clear();
         Insights.Clear();
         ProgressPercent = 0;
@@ -233,6 +235,7 @@ public sealed class DeepBenchViewModel : ObservableObject
 
     private void ReplaceRecord(DeepBenchRunRecord record)
     {
+        CurrentRecord = record;
         LastState = record.State;
         ProgressPercent = record.State == DeepBenchRunState.Cancelled ? ProgressPercent : 100;
         StateText = DescribeState(record);

@@ -5,7 +5,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
             <StackPanel Margin="2,0,0,10">
-                <local:SectionHead Text="深測中心"/>
+                <local:SectionHead Text="深測中心" HelpKey="deepbench/深測中心"/>
                 <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
                            Text="同一場 Run Session 的 CPU、拓樸、記憶體、GPU 與儲存深測。原 38 項全量登記；可執行與延後項目都會攤開，不把未做過的事說成量測。"/>
             </StackPanel>
@@ -31,7 +31,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                 <StackPanel>
                     <Grid Margin="0,0,0,10">
-                        <local:SectionHead Text="Run Session"/>
+                        <local:SectionHead Text="Run Session" HelpKey="deepbench/Run Session"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <Button Style="{StaticResource ToolButton}" Content="Quick" Margin="0,0,6,0"
                                     Click="Quick_Click" IsEnabled="{Binding CanStart}"/>
@@ -82,7 +82,7 @@
 
             <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                 <StackPanel>
-                    <local:SectionHead Text="38 項全量目錄"/>
+                    <local:SectionHead Text="38 項全量目錄" HelpKey="deepbench/38 項全量目錄"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
                                Text="Implemented / Integrated 是本期真的可執行；Deferred 明確保留原因。目錄不因尚未實作而隱藏。"/>
                     <ItemsControl ItemsSource="{Binding CatalogRows}">
@@ -115,7 +115,7 @@
 
             <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                 <StackPanel>
-                    <local:SectionHead Text="同場結果證據"/>
+                    <local:SectionHead Text="同場結果證據" HelpKey="deepbench/同場結果證據"/>
                     <ItemsControl ItemsSource="{Binding ResultCards}" Margin="0,10,0,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -180,7 +180,7 @@
 
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <local:SectionHead Text="本機歷史"/>
+                    <local:SectionHead Text="本機歷史" HelpKey="deepbench/本機歷史"/>
                     <ItemsControl ItemsSource="{Binding History}" Margin="0,10,0,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>

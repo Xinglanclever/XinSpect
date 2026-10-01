@@ -92,7 +92,7 @@ public sealed class MainViewModel : ObservableObject
     public BenchService Bench { get; }
 
     /// <summary>深測中心：同一 Run Session 的多域深測、證據卡與本機歷史。</summary>
-    public DeepBenchViewModel DeepBench { get; }
+    public DeepBenchViewModel DeepBench { get; internal set; }
 
     /// <summary>烤機（穩定度壓力測試）：全執行緒滿載，觀察高負載下的溫度 / 頻率 / 降頻。</summary>
     public StressTestService Stress { get; } = new();
