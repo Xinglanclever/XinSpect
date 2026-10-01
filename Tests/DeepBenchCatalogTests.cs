@@ -16,7 +16,8 @@ public class DeepBenchCatalogTests
         "cpu.top-down",
         "storage.qd-ladder",
         "storage.mixed-rw",
-        "storage.write-integrity"
+        "storage.write-integrity",
+        "storage.flush-durability"
     ];
 
     [Fact]
@@ -52,6 +53,8 @@ public class DeepBenchCatalogTests
         Assert.Equal(DeepBenchTestStatus.Implemented, byId["storage.mixed-rw"].Status);
         Assert.Equal(DeepBenchTestStatus.Implemented, byId["storage.write-integrity"].Status);
         Assert.True(byId["storage.write-integrity"].Runnable);
+        Assert.Equal(DeepBenchTestStatus.Implemented, byId["storage.flush-durability"].Status);
+        Assert.True(byId["storage.flush-durability"].Runnable);
 
         var confidence = byId["confidence.engine"];
         Assert.Equal(34, confidence.MatrixNumber);
@@ -60,7 +63,7 @@ public class DeepBenchCatalogTests
     }
 
     [Fact]
-    public void Quick與Full都只選十一個已接入測項()
+    public void Quick與Full都只選十二個已接入測項()
     {
         foreach (var profile in new[] { DeepBenchRunProfile.Quick, DeepBenchRunProfile.Full })
         {
@@ -74,7 +77,7 @@ public class DeepBenchCatalogTests
     {
         var plan = DeepBenchSuitePlanner.Plan(DeepBenchRunProfile.Full);
         var skipped = plan.Skipped.ToDictionary(item => item.TestId, item => item.Reason);
-        Assert.Equal(27, skipped.Count);
+        Assert.Equal(26, skipped.Count);
         Assert.All(skipped.Values, reason => Assert.Contains("Phase", reason, StringComparison.Ordinal));
         Assert.DoesNotContain(Phase1RunnableIds, id => skipped.ContainsKey(id));
     }

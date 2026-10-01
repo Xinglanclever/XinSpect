@@ -89,7 +89,7 @@ public class DeepBenchIntegrationTests
 
         Assert.Contains("Deep Bench 深測中心", combined, StringComparison.Ordinal);
         Assert.Contains("38", combined, StringComparison.Ordinal);
-        Assert.Contains("十一個已接入測項", combined, StringComparison.Ordinal);
+        Assert.Contains("十二個已接入測項", combined, StringComparison.Ordinal);
         Assert.Contains("Deferred", combined, StringComparison.Ordinal);
     }
 
