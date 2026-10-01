@@ -508,7 +508,7 @@ public sealed class MainViewModel : ObservableObject
     }
 
     public string AppTitle => ThemeService.Theme == AppTheme.ExtremeEdition
-        ? "XinSpect v2.0.5 Everest" : "曦覽 XinSpect";
+        ? "XinSpect v2.1.0 Everest" : "曦覽 XinSpect";
     public string AppSubtitle => ThemeService.Theme == AppTheme.ExtremeEdition
         ? "" : "硬體資訊總覽";
 
