@@ -13,6 +13,7 @@ public static class DeepBenchSuitePlanner
         "memory.loaded-latency",
         "gpu.fp32-fp64-integer",
         "gpu.vram-bandwidth",
+        "gpu.pcie-transfer",
         "cpu.top-down",
         "storage.qd-ladder",
         "storage.mixed-rw",

@@ -40,17 +40,19 @@ public class DeepBenchViewModelTests
         Assert.Equal(Enumerable.Range(1, 38), vm.CatalogRows.Select(row => row.MatrixNumber));
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Deferred && row.Id == "gpu.codec-throughput");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gpu.vram-bandwidth");
+        Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gpu.pcie-transfer");
     }
 
     [Fact]
-    public void 快速與完整檔都只選十六個已接入測項()
+    public void 快速與完整檔都只選十七個已接入測項()
     {
         using var store = new TempHistoryStore();
         var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
         string[] expected =
         [
             "cpu.aes-sha", "cpu.load-use-ilp-branch", "cpu.rdrand-rdseed", "topology.core-latency", "memory.cache-latency",
-            "memory.stream-bandwidth", "memory.loaded-latency", "gpu.fp32-fp64-integer", "gpu.vram-bandwidth", "cpu.top-down",
+            "memory.stream-bandwidth", "memory.loaded-latency", "gpu.fp32-fp64-integer", "gpu.vram-bandwidth",
+            "gpu.pcie-transfer", "cpu.top-down",
             "storage.qd-ladder", "storage.mixed-rw", "storage.write-integrity",
             "storage.flush-durability",
             "storage.slc-sustained-write",
@@ -171,6 +173,7 @@ public class DeepBenchViewModelTests
             new FakeDeepBenchTest("cpu.load-use-ilp-branch", () => SuccessfulResult("cpu.load-use-ilp-branch")),
             new FakeDeepBenchTest("cpu.rdrand-rdseed", () => SuccessfulResult("cpu.rdrand-rdseed")),
             new FakeDeepBenchTest("gpu.vram-bandwidth", () => SuccessfulResult("gpu.vram-bandwidth")),
+            new FakeDeepBenchTest("gpu.pcie-transfer", () => SuccessfulResult("gpu.pcie-transfer")),
             new FakeDeepBenchTest("topology.core-latency", () => SuccessfulResult("topology.core-latency")),
             new FakeDeepBenchTest("memory.cache-latency", async (_, token) =>
             {

@@ -28,6 +28,8 @@ public sealed class GpuDeviceRemovedException(uint hresult) : InvalidOperationEx
 
 public sealed class GpuUnsupportedException(string message) : InvalidOperationException(message);
 
+public sealed class GpuOutOfMemoryException(string message) : InvalidOperationException(message);
+
 /// <summary>D3D11 硬體 GPU FP32 dependent-FMA 實測；不選 WARP、不推算驅動內部時間。</summary>
 public sealed class GpuFp32ComputeService : IDeepBenchTest
 {

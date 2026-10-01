@@ -21,7 +21,9 @@ public static class D3D11Native
     private const uint D3D11UsageDefault = 0;
     private const uint D3D11UsageStaging = 3;
     private const uint D3D11CpuAccessRead = 0x20000;
+    private const uint D3D11CpuAccessWrite = 0x10000;
     private const uint D3D11MapRead = 1;
+    private const uint D3D11MapWrite = 2;
 
     private static readonly Guid IidDxgiFactory1 = new("770aae78-f26f-4dba-a829-253c83d1b387");
 
@@ -517,6 +519,233 @@ public static class D3D11Native
             SafeRelease(device);
             SafeRelease(adapter);
         }
+    }
+
+    public static async Task<GpuPcieTransferRun> MeasurePcieTransferAsync(GpuPcieTransferWorkload workload, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return await Task.Run(() => MeasurePcieTransfer(workload, cancellationToken), cancellationToken).ConfigureAwait(false);
+    }
+
+    private static GpuPcieTransferRun MeasurePcieTransfer(GpuPcieTransferWorkload workload, CancellationToken cancellationToken)
+    {
+        (IntPtr adapter, DXGIAdapterDesc1 description) = SelectHardwareAdapter();
+        IntPtr device = IntPtr.Zero;
+        IntPtr context = IntPtr.Zero;
+        IntPtr defaultBuffer = IntPtr.Zero;
+        IntPtr readStaging = IntPtr.Zero;
+        IntPtr writeStaging = IntPtr.Zero;
+        try
+        {
+            uint[] featureLevels = [0x0B100, 0x0B000];
+            int createHr = D3D11CreateDevice(
+                adapter,
+                0, // D3D_DRIVER_TYPE_UNKNOWN: 已明確傳入硬體 adapter
+                IntPtr.Zero,
+                0,
+                featureLevels,
+                (uint)featureLevels.Length,
+                7,
+                out device,
+                out _,
+                out context);
+            if (createHr != 0)
+                ThrowDeviceFailure(createHr, "D3D11CreateDevice");
+
+            unsafe
+            {
+                void* devicePtr = (void*)device;
+                var createBuffer = (delegate* unmanaged[Stdcall]<void*, D3D11BufferDesc*, D3D11SubresourceData*, void**, int>)GetVTableSlot(device, 3);
+                var getFeatureLevel = (delegate* unmanaged[Stdcall]<void*, uint>)GetVTableSlot(device, 37);
+                var getDeviceRemovedReason = (delegate* unmanaged[Stdcall]<void*, int>)GetVTableSlot(device, 39);
+                uint featureLevel = getFeatureLevel(devicePtr);
+
+                // 降級梯：256 → 64 → 16 MiB；default+讀 staging+寫 staging 三個都要配置成功。
+                long[] ladder = [256L * 1024 * 1024, 64L * 1024 * 1024, 16L * 1024 * 1024];
+                GpuPcieTransferWorkload chosen = workload;
+                foreach (long candidate in ladder)
+                {
+                    if (candidate > workload.BufferBytes) continue;
+                    GpuPcieTransferWorkload candidateWorkload = GpuPcieTransferService.FromBuffer(candidate, workload.Samples);
+                    int byteWidth = checked(candidateWorkload.ElementCount * sizeof(uint));
+                    IntPtr candidateDefault = IntPtr.Zero;
+                    IntPtr candidateRead = IntPtr.Zero;
+                    IntPtr candidateWrite = IntPtr.Zero;
+                    try
+                    {
+                        candidateDefault = CreateStagingBuffer(
+                            createBuffer, devicePtr, getDeviceRemovedReason, byteWidth,
+                            D3D11UsageDefault, 0, withZeros: true);
+                        candidateRead = CreateStagingBuffer(
+                            createBuffer, devicePtr, getDeviceRemovedReason, byteWidth,
+                            D3D11UsageStaging, D3D11CpuAccessRead, withZeros: false);
+                        candidateWrite = CreateStagingBuffer(
+                            createBuffer, devicePtr, getDeviceRemovedReason, byteWidth,
+                            D3D11UsageStaging, D3D11CpuAccessWrite, withZeros: false);
+                        defaultBuffer = candidateDefault;
+                        readStaging = candidateRead;
+                        writeStaging = candidateWrite;
+                        chosen = candidateWorkload;
+                        candidateDefault = candidateRead = candidateWrite = IntPtr.Zero;
+                    }
+                    catch (GpuOutOfMemoryException)
+                    {
+                        SafeRelease(candidateDefault);
+                        SafeRelease(candidateRead);
+                        SafeRelease(candidateWrite);
+                    }
+
+                    if (defaultBuffer != IntPtr.Zero)
+                        break;
+                }
+
+                if (defaultBuffer == IntPtr.Zero)
+                    throw new GpuUnsupportedException("顯示記憶體不足：256／64／16 MiB 工作集都無法配置；本項不輸出結果。");
+
+                var contextPtr = (void*)context;
+                var copyResource = (delegate* unmanaged[Stdcall]<void*, void*, void*, void>)GetVTableSlot(context, 47);
+                var map = (delegate* unmanaged[Stdcall]<void*, void*, uint, uint, uint, D3D11MappedSubresource*, int>)GetVTableSlot(context, 14);
+                var unmap = (delegate* unmanaged[Stdcall]<void*, void*, uint, void>)GetVTableSlot(context, 15);
+                var flush = (delegate* unmanaged[Stdcall]<void*, void>)GetVTableSlot(context, 111);
+
+                int bufferBytes = checked(chosen.ElementCount * sizeof(uint));
+                var uploads = new List<GpuPcieTransferSample>(chosen.Samples);
+                for (int index = 0; index < chosen.Samples; index++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var mapped = new D3D11MappedSubresource();
+                    int mapHr = map(contextPtr, (void*)writeStaging, 0, D3D11MapWrite, 0, &mapped);
+                    if (mapHr != 0)
+                        ThrowDeviceFailure(mapHr, getDeviceRemovedReason(devicePtr), "Map(writeStaging)");
+                    try
+                    {
+                        if (mapped.Data == IntPtr.Zero || mapped.RowPitch < (uint)bufferBytes)
+                            throw new InvalidOperationException("D3D11 寫入 staging 指標或 row pitch 無效。");
+                        var span = new Span<uint>((void*)mapped.Data, chosen.ElementCount);
+                        for (int i = 0; i < span.Length; i++)
+                            span[i] = GpuPcieTransferService.UploadPatternBase ^ (uint)i;
+                    }
+                    finally
+                    {
+                        unmap(contextPtr, (void*)writeStaging, 0);
+                    }
+
+                    long timestamp = Stopwatch.GetTimestamp();
+                    copyResource(contextPtr, (void*)defaultBuffer, (void*)writeStaging);
+                    flush(contextPtr);
+                    double elapsedSeconds = Stopwatch.GetElapsedTime(timestamp).TotalSeconds;
+                    if (elapsedSeconds <= 0)
+                        elapsedSeconds = 1d / Stopwatch.Frequency;
+                    uploads.Add(new GpuPcieTransferSample(
+                        bufferBytes / elapsedSeconds / 1_000_000_000d,
+                        elapsedSeconds * 1000d));
+                }
+
+                var downloads = new List<GpuPcieTransferSample>(chosen.Samples);
+                for (int index = 0; index < chosen.Samples; index++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    long timestamp = Stopwatch.GetTimestamp();
+                    copyResource(contextPtr, (void*)readStaging, (void*)defaultBuffer);
+                    flush(contextPtr);
+                    double elapsedSeconds = Stopwatch.GetElapsedTime(timestamp).TotalSeconds;
+                    if (elapsedSeconds <= 0)
+                        elapsedSeconds = 1d / Stopwatch.Frequency;
+
+                    var mapped = new D3D11MappedSubresource();
+                    int mapHr = map(contextPtr, (void*)readStaging, 0, D3D11MapRead, 0, &mapped);
+                    if (mapHr != 0)
+                        ThrowDeviceFailure(mapHr, getDeviceRemovedReason(devicePtr), "Map(readStaging)");
+                    uint checksum;
+                    uint[] window;
+                    try
+                    {
+                        if (mapped.Data == IntPtr.Zero || mapped.RowPitch < (uint)bufferBytes)
+                            throw new InvalidOperationException("D3D11 讀取 staging 指標或 row pitch 無效。");
+                        var windowSpan = new ReadOnlySpan<uint>((void*)mapped.Data, GpuPcieTransferService.WindowLength);
+                        window = windowSpan.ToArray();
+                        checksum = 2166136261u;
+                        foreach (uint value in windowSpan)
+                        {
+                            checksum ^= value;
+                            checksum *= 16777619u;
+                        }
+                    }
+                    finally
+                    {
+                        unmap(contextPtr, (void*)readStaging, 0);
+                    }
+
+                    downloads.Add(new GpuPcieTransferSample(
+                        bufferBytes / elapsedSeconds / 1_000_000_000d,
+                        elapsedSeconds * 1000d,
+                        checksum,
+                        window));
+                }
+
+                return new GpuPcieTransferRun(
+                    ReadAdapterName(description),
+                    featureLevel,
+                    chosen.BufferBytes,
+                    description.DedicatedVideoMemory,
+                    uploads,
+                    downloads);
+            }
+        }
+        finally
+        {
+            // COM 建立順序：device、default、readStaging、writeStaging、context；反向釋放。
+            SafeRelease(writeStaging);
+            SafeRelease(readStaging);
+            SafeRelease(defaultBuffer);
+            SafeRelease(context);
+            SafeRelease(device);
+            SafeRelease(adapter);
+        }
+    }
+
+    private static unsafe IntPtr CreateStagingBuffer(
+        delegate* unmanaged[Stdcall]<void*, D3D11BufferDesc*, D3D11SubresourceData*, void**, int> createBuffer,
+        void* devicePtr,
+        delegate* unmanaged[Stdcall]<void*, int> getDeviceRemovedReason,
+        int byteWidth,
+        uint usage,
+        uint cpuAccessFlags,
+        bool withZeros)
+    {
+        var desc = new D3D11BufferDesc
+        {
+            ByteWidth = (uint)byteWidth,
+            Usage = usage,
+            BindFlags = 0,
+            CPUAccessFlags = cpuAccessFlags,
+            MiscFlags = 0,
+            StructureByteStride = 0,
+        };
+        void* bufferPtr = null;
+        int hr;
+        if (withZeros)
+        {
+            uint[] zeros = new uint[byteWidth / sizeof(uint)];
+            fixed (uint* zerosPtr = zeros)
+            {
+                var init = new D3D11SubresourceData { SysMem = (IntPtr)zerosPtr };
+                hr = createBuffer(devicePtr, &desc, &init, &bufferPtr);
+            }
+        }
+        else
+        {
+            hr = createBuffer(devicePtr, &desc, null, &bufferPtr);
+        }
+
+        if (hr == 0 && bufferPtr is not null)
+            return (IntPtr)bufferPtr;
+        const int eOutofmemory = unchecked((int)0x8007000E);
+        const int dxgiErrorOutOfMemory = unchecked((int)0x887A0005);
+        if (hr is eOutofmemory or dxgiErrorOutOfMemory)
+            throw new GpuOutOfMemoryException($"緩衝配置 {byteWidth} bytes 記憶體不足，HRESULT=0x{hr:X8}。");
+        ThrowDeviceFailure(hr, getDeviceRemovedReason(devicePtr), "CreateBuffer");
+        return IntPtr.Zero;
     }
 
     private static (IntPtr Adapter, DXGIAdapterDesc1 Description) SelectHardwareAdapter()
