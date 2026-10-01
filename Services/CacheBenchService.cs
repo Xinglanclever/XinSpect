@@ -25,7 +25,7 @@ public sealed class CacheLatencyRow
 /// 工作集落在 L1/L2/L3 快取內時延遲低，超出後跳升，藉此推估各級快取與主記憶體的存取延遲。
 /// 存取以快取行（64 位元組）為粒度並採亂序單一循環，用以擊敗硬體預取器。
 /// </summary>
-public sealed class CacheBenchService : ObservableObject
+public class CacheBenchService : ObservableObject
 {
     private static int _sink;   // 防止 JIT 消除追逐迴圈
 
@@ -76,9 +76,9 @@ public sealed class CacheBenchService : ObservableObject
         _ = RunAsync();
     }
 
-    public void Cancel() => _cts?.Cancel();
+    public virtual void Cancel() => _cts?.Cancel();
 
-    private async Task RunAsync()
+    public virtual async Task RunAsync()
     {
         _cts = new CancellationTokenSource();
         var ct = _cts.Token;

@@ -13,7 +13,7 @@ namespace XinSpect;
 /// 的機器也會全部列入——但多群組路徑<b>未在真實硬體上驗證過</b>，狀態列會如實聲明。
 /// 量測期間參與的兩顆邏輯處理器會滿載（忙等），屬測試本質，狀態列會先告知。
 /// </remarks>
-public sealed class CoreLatencyService : ObservableObject
+public class CoreLatencyService : ObservableObject
 {
     private CancellationTokenSource? _cts;
 
@@ -59,9 +59,9 @@ public sealed class CoreLatencyService : ObservableObject
         _ = RunAsync();
     }
 
-    public void Cancel() => _cts?.Cancel();
+    public virtual void Cancel() => _cts?.Cancel();
 
-    private async Task RunAsync()
+    public virtual async Task RunAsync()
     {
         IsRunning = true;
         _cts = new CancellationTokenSource();

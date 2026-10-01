@@ -20,7 +20,7 @@ namespace XinSpect;
 /// 呈現時寫明是假設；③全程只讀寫本程式自己配置的記憶體，不碰任何硬體暫存器。
 /// </para>
 /// </remarks>
-public sealed class MemBandwidthService : ObservableObject
+public class MemBandwidthService : ObservableObject
 {
     private const long Mib = 1024 * 1024;
     private static double _sink;      // 防止 JIT 消除累加迴圈
@@ -78,9 +78,9 @@ public sealed class MemBandwidthService : ObservableObject
         _ = RunAsync();
     }
 
-    public void Cancel() => _cts?.Cancel();
+    public virtual void Cancel() => _cts?.Cancel();
 
-    private async Task RunAsync()
+    public virtual async Task RunAsync()
     {
         _cts = new CancellationTokenSource();
         var ct = _cts.Token;
