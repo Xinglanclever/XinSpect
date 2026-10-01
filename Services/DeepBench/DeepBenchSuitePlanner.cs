@@ -24,6 +24,7 @@ public static class DeepBenchSuitePlanner
         "gpu.pcie-transfer",
         "gpu.dispatch-jitter",
         "gpu.raster-texture",
+        "gpu.codec-throughput",
         "cpu.top-down",
         "storage.qd-ladder",
         "storage.mixed-rw",

@@ -26,6 +26,7 @@ public class DeepBenchCatalogTests
         "gpu.pcie-transfer",
         "gpu.dispatch-jitter",
         "gpu.raster-texture",
+        "gpu.codec-throughput",
         "cpu.top-down",
         "storage.qd-ladder",
         "storage.mixed-rw",
@@ -96,6 +97,8 @@ public class DeepBenchCatalogTests
         Assert.True(byId["gpu.dispatch-jitter"].Runnable);
         Assert.Equal(DeepBenchTestStatus.Implemented, byId["gpu.raster-texture"].Status);
         Assert.True(byId["gpu.raster-texture"].Runnable);
+        Assert.Equal(DeepBenchTestStatus.Implemented, byId["gpu.codec-throughput"].Status);
+        Assert.True(byId["gpu.codec-throughput"].Runnable);
         Assert.Equal(DeepBenchTestStatus.Implemented, byId["storage.qd-ladder"].Status);
         Assert.Equal(DeepBenchTestStatus.Implemented, byId["storage.mixed-rw"].Status);
         Assert.Equal(DeepBenchTestStatus.Implemented, byId["storage.write-integrity"].Status);
@@ -126,7 +129,7 @@ public class DeepBenchCatalogTests
     }
 
     [Fact]
-    public void Quick與Full都只選三十三個已接入測項()
+    public void Quick與Full都只選三十四個已接入測項()
     {
         foreach (var profile in new[] { DeepBenchRunProfile.Quick, DeepBenchRunProfile.Full })
         {
@@ -140,7 +143,7 @@ public class DeepBenchCatalogTests
     {
         var plan = DeepBenchSuitePlanner.Plan(DeepBenchRunProfile.Full);
         var skipped = plan.Skipped.ToDictionary(item => item.TestId, item => item.Reason);
-        Assert.Equal(5, skipped.Count);
+        Assert.Equal(4, skipped.Count);
         Assert.All(skipped.Values, reason => Assert.Contains("Phase", reason, StringComparison.Ordinal));
         Assert.DoesNotContain(Phase1RunnableIds, id => skipped.ContainsKey(id));
     }
