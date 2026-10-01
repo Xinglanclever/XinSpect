@@ -17,7 +17,7 @@ public sealed class DeepBenchViewModel : ObservableObject
         "深測中心只並列各測項的原始樣本、可信度與限制，不加權合成單一總分；跨域、跨軟體排名不成立。";
 
     public const string ScopeNotice =
-        "目前可執行十二個 Phase 1／已接入測項：CPU AES/SHA、Load-to-use/ILP/branch、Intel PMU Top-down、核心延遲、記憶體三項、D3D11 硬體 GPU FP32、儲存 QD、混合讀寫、三圖樣寫入驗證與逐 MiB Flush 驗證。" +
+        "目前可執行十三個 Phase 1／已接入測項：CPU AES/SHA、Load-to-use/ILP/branch、Intel PMU Top-down、核心延遲、記憶體三項、D3D11 硬體 GPU FP32、儲存 QD、混合讀寫、三圖樣寫入驗證、逐 MiB Flush 驗證與 SLC 持續寫入。" +
         "NPU ONNX 不含；.NET crypto 只實測本機 API，不保證特定硬體指令集；Top-down 不適用 AMD／非 Intel 事件配方。";
 
     public const string LoadWarning =
@@ -184,13 +184,14 @@ public sealed class DeepBenchViewModel : ObservableObject
     {
         string[] storageIds = selected
             .Where(id => id is DiskIoMatrixService.QdTestId or DiskIoMatrixService.MixedTestId
-                or StorageWriteIntegrityService.TestId or StorageFlushDurabilityService.TestId)
+                or StorageWriteIntegrityService.TestId or StorageFlushDurabilityService.TestId
+                or SlcSustainedWriteAdapter.TestId)
             .ToArray();
         if (storageIds.Length == 0) return true;
 
         if (string.IsNullOrWhiteSpace(StorageRoot))
         {
-            AddError("請先選擇儲存根：storage.qd-ladder、storage.mixed-rw、storage.write-integrity 與 storage.flush-durability 都需要可寫的暫存位置。");
+            AddError("請先選擇儲存根：storage.qd-ladder、storage.mixed-rw、storage.write-integrity、storage.flush-durability 與 storage.slc-sustained-write 都需要可寫的暫存位置。");
             return false;
         }
 
@@ -208,10 +209,13 @@ public sealed class DeepBenchViewModel : ObservableObject
 
         long budget = Math.Max(TempBudgetMiB * MiB, MinimumBudgetBytes);
         long remaining = available - budget;
-        if (remaining < ReserveBytes)
+        long slcTarget = selected.Contains(SlcSustainedWriteAdapter.TestId, StringComparer.Ordinal)
+            ? SlcSustainedWriteAdapter.GetTargetBytes(SelectedProfile)
+            : 0;
+        if (remaining - slcTarget < ReserveBytes)
         {
             AddError($"空間守衛未通過：預算 {budget / MiB:0} MiB 後必須仍保留 8 GB；目前可用 {available / (double)MiB:0} MiB。");
-            AddError($"受影響測項：storage.qd-ladder、storage.mixed-rw、storage.write-integrity、storage.flush-durability。請改用更大磁碟或降低暫存預算。");
+            AddError($"受影響測項：storage.qd-ladder、storage.mixed-rw、storage.write-integrity、storage.flush-durability、storage.slc-sustained-write。請改用更大磁碟或降低暫存預算。");
             return false;
         }
 
@@ -238,6 +242,7 @@ public sealed class DeepBenchViewModel : ObservableObject
             new DiskIoMatrixService(DiskIoMatrixKind.MixedReadWrite, root, budget, _fileSystem),
             new StorageWriteIntegrityService(root, budget, _fileSystem),
             new StorageFlushDurabilityService(root, budget, _fileSystem),
+            new SlcSustainedWriteAdapter(root, budget, _fileSystem),
         ];
         return new DeepBenchOrchestrator(tests, _store);
     }

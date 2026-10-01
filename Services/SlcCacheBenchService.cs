@@ -137,7 +137,7 @@ public sealed class SlcCacheBenchService : ObservableObject
     private string _statusLine = "";
     private void StatusLineUpdate(string s) => _statusLine = s;
 
-    private List<SlcSample> WriteSustained(string file, long target, CancellationToken ct, IProgress<(double, string)> report)
+    internal static List<SlcSample> WriteSustained(string file, long target, CancellationToken ct, IProgress<(double, string)> report)
     {
         const int chunk = 4 * 1024 * 1024;
         var payload = new byte[chunk];

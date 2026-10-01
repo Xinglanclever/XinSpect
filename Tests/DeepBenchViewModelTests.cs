@@ -42,7 +42,7 @@ public class DeepBenchViewModelTests
     }
 
     [Fact]
-    public void 快速與完整檔都只選十二個已接入測項()
+    public void 快速與完整檔都只選十三個已接入測項()
     {
         using var store = new TempHistoryStore();
         var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
@@ -51,7 +51,8 @@ public class DeepBenchViewModelTests
             "cpu.aes-sha", "cpu.load-use-ilp-branch", "topology.core-latency", "memory.cache-latency",
             "memory.stream-bandwidth", "memory.loaded-latency", "gpu.fp32-fp64-integer", "cpu.top-down",
             "storage.qd-ladder", "storage.mixed-rw", "storage.write-integrity",
-            "storage.flush-durability"
+            "storage.flush-durability",
+            "storage.slc-sustained-write"
         ];
 
         vm.SelectedProfile = DeepBenchRunProfile.Quick;
@@ -62,7 +63,7 @@ public class DeepBenchViewModelTests
     }
 
     [Fact]
-    public async Task 沒有儲存根時啟動會指向四個儲存測項而不是開始高負載()
+    public async Task 沒有儲存根時啟動會指向五個儲存測項而不是開始高負載()
     {
         using var store = new TempHistoryStore();
         var vm = CreateViewModel(store.Store, new FixedDiskFileSystem(256L * 1024 * 1024 * 1024));
@@ -179,6 +180,7 @@ public class DeepBenchViewModelTests
             new FakeDeepBenchTest("storage.mixed-rw", () => SuccessfulResult("storage.mixed-rw")),
             new FakeDeepBenchTest("storage.write-integrity", () => SuccessfulResult("storage.write-integrity")),
             new FakeDeepBenchTest("storage.flush-durability", () => SuccessfulResult("storage.flush-durability")),
+            new FakeDeepBenchTest("storage.slc-sustained-write", () => SuccessfulResult("storage.slc-sustained-write")),
         ];
     }
 

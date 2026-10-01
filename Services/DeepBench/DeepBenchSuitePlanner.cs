@@ -15,7 +15,8 @@ public static class DeepBenchSuitePlanner
         "storage.qd-ladder",
         "storage.mixed-rw",
         "storage.write-integrity",
-        "storage.flush-durability"
+        "storage.flush-durability",
+        "storage.slc-sustained-write"
     ];
 
     public static DeepBenchPlan Plan(DeepBenchRunProfile profile, IReadOnlyList<DeepBenchCatalogEntry>? catalog = null)
