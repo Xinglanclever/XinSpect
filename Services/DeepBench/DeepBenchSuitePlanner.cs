@@ -30,6 +30,7 @@ public static class DeepBenchSuitePlanner
         "ux.network-stack-latency",
         "ux.audio-buffer-glitch",
         "ux.present-frame-pacing",
+        "gauntlet.boost-recovery",
         "gauntlet.power-state-latency"
     ];
 
