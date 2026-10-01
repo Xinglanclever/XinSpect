@@ -14,6 +14,7 @@ public static class DeepBenchSuitePlanner
         "gpu.fp32-fp64-integer",
         "gpu.vram-bandwidth",
         "gpu.pcie-transfer",
+        "gpu.dispatch-jitter",
         "cpu.top-down",
         "storage.qd-ladder",
         "storage.mixed-rw",

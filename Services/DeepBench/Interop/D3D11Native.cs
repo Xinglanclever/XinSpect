@@ -527,6 +527,190 @@ public static class D3D11Native
         return await Task.Run(() => MeasurePcieTransfer(workload, cancellationToken), cancellationToken).ConfigureAwait(false);
     }
 
+    public static async Task<GpuDispatchJitterRun> MeasureDispatchJitterAsync(GpuDispatchJitterWorkload workload, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return await Task.Run(() => MeasureDispatchJitter(workload, cancellationToken), cancellationToken).ConfigureAwait(false);
+    }
+
+    private static GpuDispatchJitterRun MeasureDispatchJitter(GpuDispatchJitterWorkload workload, CancellationToken cancellationToken)
+    {
+        (IntPtr adapter, DXGIAdapterDesc1 description) = SelectHardwareAdapter();
+        IntPtr device = IntPtr.Zero;
+        IntPtr context = IntPtr.Zero;
+        IntPtr defaultBuffer = IntPtr.Zero;
+        IntPtr readStaging = IntPtr.Zero;
+        IntPtr computeShader = IntPtr.Zero;
+        IntPtr unorderedAccessView = IntPtr.Zero;
+        try
+        {
+            uint[] featureLevels = [0x0B100, 0x0B000];
+            int createHr = D3D11CreateDevice(
+                adapter,
+                0,
+                IntPtr.Zero,
+                0,
+                featureLevels,
+                (uint)featureLevels.Length,
+                7,
+                out device,
+                out _,
+                out context);
+            if (createHr != 0)
+                ThrowDeviceFailure(createHr, "D3D11CreateDevice");
+
+            unsafe
+            {
+                void* devicePtr = (void*)device;
+                var createBuffer = (delegate* unmanaged[Stdcall]<void*, D3D11BufferDesc*, D3D11SubresourceData*, void**, int>)GetVTableSlot(device, 3);
+                var createUav = (delegate* unmanaged[Stdcall]<void*, void*, D3D11UnorderedAccessViewDesc*, void**, int>)GetVTableSlot(device, 8);
+                var createComputeShader = (delegate* unmanaged[Stdcall]<void*, byte*, nuint, void*, void**, int>)GetVTableSlot(device, 18);
+                var getFeatureLevel = (delegate* unmanaged[Stdcall]<void*, uint>)GetVTableSlot(device, 37);
+                var getDeviceRemovedReason = (delegate* unmanaged[Stdcall]<void*, int>)GetVTableSlot(device, 39);
+                uint featureLevel = getFeatureLevel(devicePtr);
+
+                const int sentinelCount = 8;
+                int bufferBytes = sentinelCount * sizeof(uint);
+                var defaultDesc = new D3D11BufferDesc
+                {
+                    ByteWidth = (uint)bufferBytes,
+                    Usage = D3D11UsageDefault,
+                    BindFlags = D3D11BindUnorderedAccess,
+                    CPUAccessFlags = 0,
+                    MiscFlags = D3D11MiscBufferStructured,
+                    StructureByteStride = sizeof(uint),
+                };
+                uint[] zeros = new uint[sentinelCount];
+                fixed (uint* zerosPtr = zeros)
+                {
+                    var init = new D3D11SubresourceData { SysMem = (IntPtr)zerosPtr };
+                    int hr = createBuffer(devicePtr, &defaultDesc, &init, (void**)&defaultBuffer);
+                    if (hr != 0 || defaultBuffer == IntPtr.Zero)
+                        ThrowDeviceFailure(hr, getDeviceRemovedReason(devicePtr), "CreateBuffer");
+                }
+
+                var stagingDesc = new D3D11BufferDesc
+                {
+                    ByteWidth = (uint)bufferBytes,
+                    Usage = D3D11UsageStaging,
+                    BindFlags = 0,
+                    CPUAccessFlags = D3D11CpuAccessRead,
+                    MiscFlags = 0,
+                    StructureByteStride = 0,
+                };
+                int stagingHr = createBuffer(devicePtr, &stagingDesc, null, (void**)&readStaging);
+                if (stagingHr != 0 || readStaging == IntPtr.Zero)
+                    ThrowDeviceFailure(stagingHr, getDeviceRemovedReason(devicePtr), "CreateStagingBuffer");
+
+                var uavDesc = new D3D11UnorderedAccessViewDesc
+                {
+                    Format = 0,
+                    ViewDimension = 1,
+                    FirstElement = 0,
+                    NumElements = (uint)sentinelCount,
+                    Flags = 0,
+                };
+                int uavHr = createUav(devicePtr, (void*)defaultBuffer, &uavDesc, (void**)&unorderedAccessView);
+                if (uavHr != 0 || unorderedAccessView == IntPtr.Zero)
+                    ThrowDeviceFailure(uavHr, getDeviceRemovedReason(devicePtr), "CreateUnorderedAccessView");
+
+                D3D11ShaderCompilation compilation = CompileShader(
+                    GpuDispatchJitterService.HlslSource,
+                    "CSMain",
+                    "cs_5_0");
+                if (!compilation.Succeeded || compilation.Bytecode is null)
+                    throw new InvalidOperationException(compilation.Error);
+
+                fixed (byte* bytecode = compilation.Bytecode)
+                {
+                    int shaderHr = createComputeShader(devicePtr, bytecode, (nuint)compilation.Bytecode.Length, null, (void**)&computeShader);
+                    if (shaderHr != 0 || computeShader == IntPtr.Zero)
+                        ThrowDeviceFailure(shaderHr, getDeviceRemovedReason(devicePtr), "CreateComputeShader");
+                }
+
+                var contextPtr = (void*)context;
+                var setUav = (delegate* unmanaged[Stdcall]<void*, uint, uint, void**, uint*, void>)GetVTableSlot(context, 68);
+                var setShader = (delegate* unmanaged[Stdcall]<void*, void*, void**, uint, void>)GetVTableSlot(context, 69);
+                var dispatch = (delegate* unmanaged[Stdcall]<void*, uint, uint, uint, void>)GetVTableSlot(context, 41);
+                var copyResource = (delegate* unmanaged[Stdcall]<void*, void*, void*, void>)GetVTableSlot(context, 47);
+                var map = (delegate* unmanaged[Stdcall]<void*, void*, uint, uint, uint, D3D11MappedSubresource*, int>)GetVTableSlot(context, 14);
+                var unmap = (delegate* unmanaged[Stdcall]<void*, void*, uint, void>)GetVTableSlot(context, 15);
+                var flush = (delegate* unmanaged[Stdcall]<void*, void>)GetVTableSlot(context, 111);
+
+                void* uavPtr = (void*)unorderedAccessView;
+                void* shaderPtr = (void*)computeShader;
+                setUav(contextPtr, 0, 1, &uavPtr, (uint*)null);
+                setShader(contextPtr, shaderPtr, null, 0);
+                for (int index = 0; index < 8; index++)
+                    dispatch(contextPtr, 1, 1, 1);
+                flush(contextPtr);
+
+                var samples = new List<GpuDispatchJitterSample>(workload.Samples);
+                for (int sampleIndex = 0; sampleIndex < workload.Samples; sampleIndex++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    long timestamp = Stopwatch.GetTimestamp();
+                    for (int dispatchIndex = 0; dispatchIndex < workload.DispatchesPerSample; dispatchIndex++)
+                        dispatch(contextPtr, 1, 1, 1);
+                    flush(contextPtr);
+                    double elapsedSeconds = Stopwatch.GetElapsedTime(timestamp).TotalSeconds;
+                    if (elapsedSeconds <= 0)
+                        elapsedSeconds = 1d / Stopwatch.Frequency;
+
+                    copyResource(contextPtr, (void*)readStaging, (void*)defaultBuffer);
+                    flush(contextPtr);
+                    var mapped = new D3D11MappedSubresource();
+                    int mapHr = map(contextPtr, (void*)readStaging, 0, D3D11MapRead, 0, &mapped);
+                    if (mapHr != 0)
+                        ThrowDeviceFailure(mapHr, getDeviceRemovedReason(devicePtr), "Map");
+
+                    uint checksum;
+                    uint sentinel;
+                    try
+                    {
+                        if (mapped.Data == IntPtr.Zero || mapped.RowPitch < (uint)bufferBytes)
+                            throw new InvalidOperationException("D3D11 dispatch readback 指標或 row pitch 無效。");
+                        var values = new ReadOnlySpan<uint>((void*)mapped.Data, sentinelCount);
+                        sentinel = values[0];
+                        checksum = 2166136261u;
+                        foreach (uint value in values)
+                        {
+                            checksum ^= value;
+                            checksum *= 16777619u;
+                        }
+                    }
+                    finally
+                    {
+                        unmap(contextPtr, (void*)readStaging, 0);
+                    }
+
+                    samples.Add(new GpuDispatchJitterSample(
+                        elapsedSeconds * 1_000_000d / workload.DispatchesPerSample,
+                        checksum,
+                        sentinel));
+                }
+
+                return new GpuDispatchJitterRun(
+                    ReadAdapterName(description),
+                    featureLevel,
+                    workload.DispatchesPerSample,
+                    description.DedicatedVideoMemory,
+                    samples);
+            }
+        }
+        finally
+        {
+            // COM 建立順序：device、default、readStaging、UAV、shader、context；反向釋放。
+            SafeRelease(computeShader);
+            SafeRelease(unorderedAccessView);
+            SafeRelease(readStaging);
+            SafeRelease(defaultBuffer);
+            SafeRelease(context);
+            SafeRelease(device);
+            SafeRelease(adapter);
+        }
+    }
+
     private static GpuPcieTransferRun MeasurePcieTransfer(GpuPcieTransferWorkload workload, CancellationToken cancellationToken)
     {
         (IntPtr adapter, DXGIAdapterDesc1 description) = SelectHardwareAdapter();
