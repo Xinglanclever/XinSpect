@@ -29,6 +29,13 @@ public sealed class DeepBenchViewModel : ObservableObject
     public const string LocalOnlyNotice =
         "深測歷史只保存在本機設定資料夾，不上傳；沒有雲端同步，也沒有外部伺服器備份。";
 
+    // const 無法被 {Binding} 取值（繫結只走執行個體屬性）；這幾個包裝給 XAML 用，文案單一來源仍是 const。
+    public string NoScoreNoticeText => NoScoreNotice;
+    public string ScopeNoticeText => ScopeNotice;
+    public string LoadWarningText => LoadWarning;
+    public string TempFileWarningText => TempFileWarning;
+    public string LocalOnlyNoticeText => LocalOnlyNotice;
+
     private readonly CacheBenchService _cache;
     private readonly MemBandwidthService _memBandwidth;
     private readonly CoreLatencyService _coreLatency;

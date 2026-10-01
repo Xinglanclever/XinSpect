@@ -235,7 +235,8 @@ public static class D3D11Native
                 // ID3D11DeviceContext 繼承 IUnknown + ID3D11DeviceChild：Map=14、Dispatch=41、
                 // CopyResource=47、CSSetUAV=68、CSSetShader=69、Flush=111。
                 var setUav = (delegate* unmanaged[Stdcall]<void*, uint, uint, void**, uint*, void>)GetVTableSlot(context, 68);
-                var setShader = (delegate* unmanaged[Stdcall]<void*, uint, uint, void*, void*, uint, void>)GetVTableSlot(context, 69);
+                // CSSetShader(This, ID3D11ComputeShader*, ID3D11ClassInstance** ppClassInstances, UINT NumClassInstances)
+                var setShader = (delegate* unmanaged[Stdcall]<void*, void*, void**, uint, void>)GetVTableSlot(context, 69);
                 var dispatch = (delegate* unmanaged[Stdcall]<void*, uint, uint, uint, void>)GetVTableSlot(context, 41);
                 var copyResource = (delegate* unmanaged[Stdcall]<void*, void*, void*, void>)GetVTableSlot(context, 47);
                 var map = (delegate* unmanaged[Stdcall]<void*, void*, uint, uint, uint, D3D11MappedSubresource*, int>)GetVTableSlot(context, 14);
@@ -245,7 +246,7 @@ public static class D3D11Native
                 void* uavPtrForSet = (void*)unorderedAccessView;
                 void* shaderPtrForSet = (void*)computeShader;
                 setUav(contextPtr, 0, 1, &uavPtrForSet, (uint*)null);
-                setShader(contextPtr, 0, 1, shaderPtrForSet, null, 0);
+                setShader(contextPtr, shaderPtrForSet, null, 0);
                 flush(contextPtr);
 
                 var samples = new List<GpuFp32Sample>(workload.Samples);
@@ -264,11 +265,14 @@ public static class D3D11Native
                         ThrowDeviceFailure(hr, getDeviceRemovedReason(devicePtr), "Map");
 
                     uint checksum;
+                    float[] copy = [];
                     try
                     {
                         if (mapped.Data == IntPtr.Zero || mapped.RowPitch < (uint)byteWidth)
                             throw new InvalidOperationException("D3D11 staging readback 指標或 row pitch 無效。");
                         var values = new ReadOnlySpan<float>((void*)mapped.Data, elementCount);
+                        // 保留 readback 原始值：全零判定與 CPU 參考比對都靠它，checksum 對全零資料永遠非零
+                        copy = values.ToArray();
                         checksum = 2166136261u;
                         foreach (float value in values)
                         {
@@ -287,7 +291,7 @@ public static class D3D11Native
                     double flops = (double)elementCount * workload.FmaCount * 2d;
                     double throughputGflops = flops / elapsedSeconds / 1_000_000_000d;
                     double latencyMs = elapsedSeconds * 1000d;
-                    samples.Add(new GpuFp32Sample(throughputGflops, latencyMs, checksum));
+                    samples.Add(new GpuFp32Sample(throughputGflops, latencyMs, checksum, copy));
                 }
 
                 return new GpuFp32Run(ReadAdapterName(description), featureLevel, samples);

@@ -7,7 +7,7 @@ public interface IGpuFp32ComputeEngine
     Task<GpuFp32Run> MeasureAsync(GpuFp32Workload workload, CancellationToken cancellationToken);
 }
 
-public readonly record struct GpuFp32Sample(double ThroughputGflops, double DispatchLatencyMs, uint Checksum);
+public readonly record struct GpuFp32Sample(double ThroughputGflops, double DispatchLatencyMs, uint Checksum, float[]? ReadbackValues = null);
 
 public sealed record GpuFp32Run(
     string AdapterName,
@@ -160,11 +160,34 @@ public sealed class GpuFp32ComputeService : IDeepBenchTest
         }
         if (run.Samples.All(sample => sample.Checksum == 0))
             throw new InvalidOperationException("GPU readback 為全零 checksum；判定工作負載沒有有效輸出。");
+        // FNV-1a 對全零資料也永遠非零——全零判定必須看值，不能只看 checksum。
+        if (run.Samples.All(sample => sample.ReadbackValues is { Length: > 0 } values && values.All(value => value == 0f)))
+            throw new InvalidOperationException("GPU readback 值為全零；判定 shader 沒有實際執行，拒收此場。");
+        // shader 是確定性計算：在 CPU 上算出期望值，readback 必須逐項相符（Phase 1 固定 2048 輸出）。
+        if (run.Samples.Any(sample => sample.ReadbackValues is { Length: > 0 } values && !MatchesExpectedOutput(values)))
+            throw new InvalidOperationException("GPU readback 與 CPU 參考計算不符；結果不可信，整場拒收。");
     }
 
     internal static bool IsWarp(string adapterName) =>
         adapterName.Contains("Basic Render Driver", StringComparison.OrdinalIgnoreCase) ||
         adapterName.Contains("WARP", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>與 HLSL CSMain 等價的 CPU 參考計算；shader 是純確定性運算，readback 必須逐項相等。</summary>
+    internal static float ExpectedOutput(uint gid) =>
+        ReferenceIteration(gid * 0.00048828125f + 1.0f);
+
+    internal static float ReferenceIteration(float value)
+    {
+        for (int i = 0; i < FmaCount; i++) value = value * 1.0000001f + 0.0000001f;
+        return value;
+    }
+
+    internal static bool MatchesExpectedOutput(float[] values)
+    {
+        for (uint gid = 0; gid < (uint)values.Length; gid++)
+            if (values[(int)gid] != ExpectedOutput(gid)) return false;
+        return true;
+    }
 
     private static DeepBenchMetric CreateMetric(string id, string title, string unit, bool higherIsBetter, double[] samples) => new(
         id,

@@ -51,6 +51,13 @@ public sealed class DeepBenchOrchestrator
                 {
                     DeepBenchTestResult result = await test.RunAsync(context, cancellationToken).ConfigureAwait(false);
                     results.Add(result.SessionId == session ? result : result with { SessionId = session });
+                    if (result.FailureKind == DeepBenchFailureKind.Cancelled)
+                    {
+                        // 真實測項取消是「回傳 Cancelled 結果」而非丟例外（VM 的 cts 觸發服務內部攔截）；
+                        // 這裡必須停止後續測項並把整場記為 Cancelled，已完成結果照常保留。
+                        cancelled = true;
+                        break;
+                    }
                     if (result.FailureKind != DeepBenchFailureKind.None) failed = true;
                 }
                 catch (OperationCanceledException)

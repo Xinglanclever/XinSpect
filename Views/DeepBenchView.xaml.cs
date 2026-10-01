@@ -9,7 +9,7 @@ public partial class DeepBenchView : UserControl
 
     public DeepBenchView() => InitializeComponent();
 
-    private DeepBenchViewModel? ViewModel => (DataContext as MainViewModel)?.DeepBench;
+    private DeepBenchViewModel? ViewModel => DataContext as DeepBenchViewModel ?? (DataContext as MainViewModel)?.DeepBench;
 
     private void Quick_Click(object sender, RoutedEventArgs e) => ViewModel?.SetProfileQuick();
 

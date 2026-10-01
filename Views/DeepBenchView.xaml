@@ -1,7 +1,8 @@
 <UserControl x:Class="XinSpect.DeepBenchView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:XinSpect">
+             xmlns:local="clr-namespace:XinSpect"
+             DataContext="{Binding DeepBench}">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
             <StackPanel Margin="2,0,0,10">
@@ -14,17 +15,17 @@
                 <StackPanel>
                     <TextBlock Style="{StaticResource FieldValue}" Text="誠實界線" Margin="0,0,0,8"/>
                     <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" Margin="0,0,0,4"
-                               Text="{Binding NoScoreNotice}"/>
+                               Text="{Binding NoScoreNoticeText}"/>
                     <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" Margin="0,0,0,4"
-                               Text="{Binding ScopeNotice}"/>
+                               Text="{Binding ScopeNoticeText}"/>
                     <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" Margin="0,0,0,4"
-                               Text="{Binding LocalOnlyNotice}"/>
+                               Text="{Binding LocalOnlyNoticeText}"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Foreground="{DynamicResource WarningBrush}"
                                TextWrapping="Wrap" Margin="0,4,0,0"
-                               Text="{Binding LoadWarning}"/>
+                               Text="{Binding LoadWarningText}"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Foreground="{DynamicResource WarningBrush}"
                                TextWrapping="Wrap" Margin="0,2,0,0"
-                               Text="{Binding TempFileWarning}"/>
+                               Text="{Binding TempFileWarningText}"/>
                 </StackPanel>
             </Border>
 
