@@ -89,11 +89,12 @@ public class DeepBenchIntegrationTests
 
         Assert.Contains("Deep Bench 深測中心", combined, StringComparison.Ordinal);
         Assert.Contains("38", combined, StringComparison.Ordinal);
-        Assert.Contains("二十五個已接入測項", combined, StringComparison.Ordinal);
+        Assert.Contains("二十六個已接入測項", combined, StringComparison.Ordinal);
         Assert.Contains("SLC 持續寫入", combined, StringComparison.Ordinal);
         Assert.Contains("VRAM", combined, StringComparison.Ordinal);
         Assert.Contains("TCP loopback", combined, StringComparison.Ordinal);
         Assert.Contains("WASAPI", combined, StringComparison.Ordinal);
+        Assert.Contains("Present", combined, StringComparison.Ordinal);
         Assert.Contains("RDRAND / RDSEED", combined, StringComparison.Ordinal);
         Assert.Contains("Deferred", combined, StringComparison.Ordinal);
     }
