@@ -57,7 +57,7 @@ public sealed class BlueSquadronEngine : IDisposable
             _alertThread.Start();
 
             // ping 測試
-            var resp = Send("{\"cmd\":\"ping\"}", 3000);
+            var resp = Send("{\"cmd\":\"ping\"}", 10000);
             if (resp is null)
             {
                 LastError = "Bridge 啟動但無回應";
@@ -104,7 +104,15 @@ public sealed class BlueSquadronEngine : IDisposable
 
         if (!tcs.Task.Wait(timeoutMs))
         {
-            MarkDead();
+            // 逾時不代表進程死了——bridge 可能只是慢（開機高峰期 WMI 競爭，init 枚舉
+            // 數百個驅動可能遠超任何合理逾時）。只放棄這一筆回應、不殺進程：
+            // 回應晚到時佇列已空，AlertPumpLoop 會自然丟棄，後續命令照常配對。
+            // 進程真正的死亡由 stdin 寫入失敗／ReadLine null／例外偵測，走 MarkDead。
+            lock (_responseQueue)
+            {
+                if (_responseQueue.Count > 0 && ReferenceEquals(_responseQueue.Peek(), tcs))
+                    _responseQueue.Dequeue();
+            }
             return null;
         }
 

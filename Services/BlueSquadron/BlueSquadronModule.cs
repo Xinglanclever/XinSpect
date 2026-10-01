@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Threading;
@@ -159,6 +159,11 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
         {
             engine = new BlueSquadronEngine();
         }
+        catch (System.IO.FileNotFoundException)
+        {
+            RunOnUI(() => BridgeStatus = "守護進程未安裝——將 BlueSquadronBridge.exe 與本程式放同一資料夾即會自動啟用");
+            return;
+        }
         catch
         {
             RunOnUI(() => BridgeStatus = "Bridge 引擎建立失敗");
@@ -194,7 +199,9 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
         // 送 init 指令做握手
         try
         {
-            var initResp = engine.SendCmd("init", 8000);
+            // init 要枚舉全部驅動（數百筆 WMI 查詢），主程式啟動高峰期可能超過 8 秒；
+            // 逾時會觸發 MarkDead 直接殺掉進程，故給足 30 秒。
+            var initResp = engine.SendCmd("init", 30000);
             bool driverLoaded = false;
             int baselineChanges = 0;
             if (initResp is { } jr)
