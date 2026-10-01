@@ -1,4 +1,4 @@
-<UserControl x:Class="XinSpect.HealthView"
+﻿<UserControl x:Class="XinSpect.HealthView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect">
@@ -453,6 +453,85 @@
                 </StackPanel>
             </Border>
 
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="TPM / Secure Boot" HelpKey="health/TPM / Secure Boot"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Style="{StaticResource ToolButton}" Content="重新讀取" Click="TrustRefresh_Click"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,6" TextWrapping="Wrap"
+                               Text="TPM 走 Win32_Tpm WMI；Secure Boot 走 registry。兩者是 Windows 11 資格判斷的硬指標。"/>
+                    <ItemsControl x:Name="TrustRows">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <local:FieldRow Label="{Binding Label}" Value="{Binding Value}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+<Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="藍牙外設" HelpKey="health/藍牙外設"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Style="{StaticResource ToolButton}" Content="重新掃描" Click="BluetoothRefresh_Click"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,6" TextWrapping="Wrap"
+                               Text="已配對的藍牙裝置與電量（GATT Battery→WMI 映射）。讀不到電量時以 — 呈現，不猜。"/>
+                    <ItemsControl x:Name="BluetoothRows">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="70"/><ColumnDefinition Width="50"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}" Text="{Binding Status}" HorizontalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding BatteryText}" HorizontalAlignment="Right" FontFamily="Consolas"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock x:Name="BluetoothStatus" Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="磁碟表面掃描" HelpKey="health/磁碟表面掃描"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <ComboBox x:Name="SurfaceDriveCombo" Width="120" Style="{StaticResource DarkCombo}" Margin="0,0,8,0"/>
+                            <Button x:Name="SurfaceScanButton" Style="{StaticResource PrimaryButton}" Content="開始掃描" Click="SurfaceScan_Click"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,6" TextWrapping="Wrap"
+                               Text="循序讀取邏輯卷，逐 1 MB 區塊量延遲，標記慢區（&gt;100 ms）與讀取錯誤。這是實際讀一輪的量測，和 SMART 報告值互補。"/>
+                    <TextBlock x:Name="SurfaceStatus" Style="{StaticResource Subtitle}" Margin="0,0,0,6" TextWrapping="Wrap"/>
+                    <ProgressBar x:Name="SurfaceProgress" Height="6" Minimum="0" Maximum="100" Visibility="Collapsed"/>
+                    <ItemsControl x:Name="SurfaceResults" Margin="0,8,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="50"/><ColumnDefinition Width="80"/><ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="80"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Label}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Ok}" HorizontalAlignment="Right"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding Slow}" HorizontalAlignment="Right"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding Error}" HorizontalAlignment="Right"/>
+                                    <TextBlock Grid.Column="4" Style="{StaticResource FieldLabel}" Text="{Binding Time}" HorizontalAlignment="Right"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
             <TextBlock Style="{StaticResource FieldLabel}" Margin="4,10,0,0"
                        Text="溫度 / 壽命來自感測器與 S.M.A.R.T.；磁碟空間取用量最高的磁碟區。部分裝置或未提供資料。"/>
         </StackPanel>

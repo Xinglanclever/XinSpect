@@ -1,4 +1,4 @@
-<UserControl x:Class="XinSpect.GpuView"
+﻿<UserControl x:Class="XinSpect.GpuView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect">
@@ -186,6 +186,38 @@
                                         History="{Binding GpuTempHist}" Stroke="{DynamicResource SeriousBrush}"/>
                     <local:HistoryGraph Height="110" Caption="顯示記憶體占用 (MB)"
                                         History="{Binding GpuVramHist}" Stroke="{DynamicResource AccentBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- GPU 硬解／編碼能力矩陣 -->
+            <Border Style="{StaticResource Card}" Margin="0,12,0,0"
+                    Visibility="{Binding HasGpuCodecs, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <local:SectionHead Text="硬體解碼／編碼能力" HelpKey="gpu/顯示卡"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="此為 D3D11 VideoDevice 的能力宣告，非實測解碼速度。" Margin="0,0,0,8"/>
+                    <ItemsControl ItemsSource="{Binding GpuCodecs}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,4,0,0">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="0,0,0,2"/>
+                                    <ItemsControl ItemsSource="{Binding DecoderProfiles}" Margin="14,0,0,0">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="{DynamicResource HairlineBrush}" CornerRadius="4" Padding="6,2" Margin="0,0,4,4">
+                                                    <TextBlock Text="{Binding}" FontSize="12"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
             </Border>
         </StackPanel>

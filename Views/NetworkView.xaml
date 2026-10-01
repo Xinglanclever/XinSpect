@@ -1,4 +1,4 @@
-<UserControl x:Class="XinSpect.NetworkView"
+﻿<UserControl x:Class="XinSpect.NetworkView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect">
@@ -148,6 +148,37 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="Wi-Fi 訊號" HelpKey="network/網路"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Style="{StaticResource ToolButton}" Content="重新讀取" Click="WifiRefresh_Click"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,6" TextWrapping="Wrap"
+                               Text="Native WiFi API 直讀 RSSI／速率／認證類型。RSSI 解讀：-30 極佳・-55 良好・-67 可用・-75 偏弱。"/>
+                    <ItemsControl x:Name="WifiRows">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,4,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150"/><ColumnDefinition Width="*"/><ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="80"/><ColumnDefinition Width="80"/><ColumnDefinition Width="70"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding InterfaceName}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Ssid}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding RssiText}" HorizontalAlignment="Right" FontFamily="Consolas"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding LinkSpeed}" HorizontalAlignment="Right"/>
+                                    <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" Text="{Binding Auth}" HorizontalAlignment="Right"/>
+                                    <TextBlock Grid.Column="5" Style="{StaticResource FieldLabel}" Text="{Binding QualityText}" HorizontalAlignment="Right"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock x:Name="WifiStatus" Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
             <TextBlock Style="{StaticResource FieldLabel}" Margin="4,2,0,0"
                        Text="僅列出運作中且非回送 / 通道的介面；流量為每秒累計位元組差值換算。"/>
         </StackPanel>

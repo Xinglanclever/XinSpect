@@ -1,4 +1,4 @@
-<UserControl x:Class="XinSpect.EvidenceLabView"
+﻿<UserControl x:Class="XinSpect.EvidenceLabView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect"
@@ -133,6 +133,38 @@
                                 <TextBlock Grid.Column="4" Style="{StaticResource FieldLabel}" Text="{Binding Source}"/>
                             </Grid>
                         </DataTemplate></ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="外部報告匯入" HelpKey="evidence/硬體證據實驗室"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Style="{StaticResource PrimaryButton}" Content="匯入報告" Click="ImportReport_Click"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,6" TextWrapping="Wrap"
+                               Text="讀入 GPU-Z sensor log（txt）、AIDA64 XML 或 HWiNFO CSV，與時間膠囊交叉比對。不捆綁工具，只讀使用者選的檔案。"/>
+                    <TextBlock x:Name="ExternalReportStatus" Style="{StaticResource Subtitle}" Margin="0,0,0,6" TextWrapping="Wrap"/>
+                    <ItemsControl x:Name="ExternalReportRows" MaxHeight="280" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90"/><ColumnDefinition Width="200"/><ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="60"/><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Tool}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Field}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding Value}" HorizontalAlignment="Right" FontFamily="Consolas"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldLabel}" Text="{Binding Unit}" Margin="6,0,0,0"/>
+                                    <TextBlock Grid.Column="4" Style="{StaticResource FieldLabel}" Text="{Binding MeasuredAtText}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
             </Border>

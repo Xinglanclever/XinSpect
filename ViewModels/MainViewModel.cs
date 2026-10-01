@@ -232,6 +232,32 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>記憶體真實面貌：認可尖峰 vs 實體（記憶體分頁卡片，零特權）。</summary>
     public MemoryTruthService MemoryTruth { get; } = new();
 
+    private MemoryPoolService.PoolSnapshot? _poolSnapshot;
+    /// <summary>核心記憶體池細目（Paged/Nonpaged/Standby 各優先級，RAMMap 式直讀）。</summary>
+    public MemoryPoolService.PoolSnapshot? PoolSnapshot {
+        get => _poolSnapshot;
+        internal set
+        {
+            if (SetProperty(ref _poolSnapshot, value))
+            {
+                OnPropertyChanged(nameof(PoolPagedText));
+                OnPropertyChanged(nameof(PoolNonPagedText));
+                OnPropertyChanged(nameof(PoolCommitText));
+                OnPropertyChanged(nameof(PoolZeroedText));
+                OnPropertyChanged(nameof(PoolFreeText));
+                OnPropertyChanged(nameof(PoolModifiedText));
+                OnPropertyChanged(nameof(PoolStandbyLabels));
+            }
+        }
+    }
+    public string PoolPagedText => _poolSnapshot is null ? "—" : $"{_poolSnapshot.PagedPoolMB:0} MB";
+    public string PoolNonPagedText => _poolSnapshot is null ? "—" : $"{_poolSnapshot.NonPagedPoolMB:0} MB";
+    public string PoolCommitText => _poolSnapshot is null ? "—" : $"{_poolSnapshot.CommitUsedMB:0} / {_poolSnapshot.CommitLimitMB:0} MB";
+    public string PoolZeroedText => _poolSnapshot is null ? "—" : $"{_poolSnapshot.ZeroedMB:0} MB";
+    public string PoolFreeText => _poolSnapshot is null ? "—" : $"{_poolSnapshot.FreeMB:0} MB";
+    public string PoolModifiedText => _poolSnapshot is null ? "—" : $"{_poolSnapshot.ModifiedMB:0} MB";
+    public System.Collections.ObjectModel.ObservableCollection<string> PoolStandbyLabels { get; } = new();
+
     /// <summary>Intel RDT 監測：逐核心 L3 占用與記憶體頻寬（CPU 分頁卡片，需 MSR 寫入）。</summary>
     public RdtService Rdt { get; } = new();
 
@@ -326,6 +352,11 @@ public sealed class MainViewModel : ObservableObject
     private IReadOnlyList<GpuDetail> _gpuDetails = new List<GpuDetail>();
     public IReadOnlyList<GpuDetail> GpuDetails { get => _gpuDetails; internal set { if (SetProperty(ref _gpuDetails, value)) OnPropertyChanged(nameof(HasGpuDetails)); } }
     public bool HasGpuDetails => _gpuDetails.Count > 0;
+
+    private IReadOnlyList<GpuCodecService.GpuCodecInfo> _gpuCodecs = Array.Empty<GpuCodecService.GpuCodecInfo>();
+    /// <summary>GPU 硬解／編碼能力矩陣（D3D11 VideoDevice 列舉 + MFT 硬體編碼器）。</summary>
+    public IReadOnlyList<GpuCodecService.GpuCodecInfo> GpuCodecs { get => _gpuCodecs; internal set { if (SetProperty(ref _gpuCodecs, value)) OnPropertyChanged(nameof(HasGpuCodecs)); } }
+    public bool HasGpuCodecs => _gpuCodecs.Any(a => a.Error is null && a.DecoderProfiles.Count > 0);
 
     /// <summary>原生棋類節點吞吐跑分（中國象棋／西洋棋 perft，無執行緒上限，逐輪核對節點數）。</summary>
     public ChessBenchService Chess { get; }

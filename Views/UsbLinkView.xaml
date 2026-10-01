@@ -1,4 +1,4 @@
-<UserControl x:Class="XinSpect.UsbLinkView"
+﻿<UserControl x:Class="XinSpect.UsbLinkView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect">
@@ -73,6 +73,33 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="Thunderbolt / USB4" HelpKey="usb/Thunderbolt / USB4"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Style="{StaticResource ToolButton}" Content="重新掃描" Click="TbUsb4Refresh_Click"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,6" TextWrapping="Wrap"
+                               Text="WMI 列舉 Thunderbolt Controller 與 USB4 Host Router。埠級速率需系統管理員，此處僅列控制器存在與韌體。"/>
+                    <ItemsControl x:Name="TbUsb4Rows">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90"/><ColumnDefinition Width="*"/><ColumnDefinition Width="130"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Protocol}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding DeviceName}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" Text="{Binding DriverVersion}" HorizontalAlignment="Right"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock x:Name="TbUsb4Status" Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
         </StackPanel>

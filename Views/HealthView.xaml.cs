@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 
 namespace XinSpect;
@@ -10,7 +10,13 @@ namespace XinSpect;
 /// </remarks>
 public partial class HealthView : UserControl, IPageLifecycle
 {
-    public HealthView() => InitializeComponent();
+    public HealthView()
+    {
+        InitializeComponent();
+        SurfaceDriveCombo.ItemsSource = DiskSurfaceScanService.ListVolumes().Select(v => (v.Path, v.Label)).ToList();
+        if (SurfaceDriveCombo.Items.Count > 0) SurfaceDriveCombo.SelectedIndex = 0;
+        TrustRows.ItemsSource = TpmSecureBootService.Read();
+    }
 
     public void OnActivated()
     {
@@ -49,4 +55,42 @@ public partial class HealthView : UserControl, IPageLifecycle
     private MainViewModel? Vm =>
         DataContext as MainViewModel
         ?? Shell.Vm;
+    private void BluetoothRefresh_Click(object sender, RoutedEventArgs e)
+    {
+        var rows = BluetoothBatteryService.Read();
+        BluetoothRows.ItemsSource = rows;
+        BluetoothStatus.Text = rows.Count == 0 ? "未找到藍牙裝置" : $"已列舉 {rows.Count} 個藍牙裝置";
+    }
+
+    private async void SurfaceScan_Click(object sender, RoutedEventArgs e)
+    {
+        if (SurfaceDriveCombo.SelectedItem is not (string path, string label)) return;
+        SurfaceScanButton.IsEnabled = false;
+        SurfaceProgress.Visibility = Visibility.Visible;
+        SurfaceProgress.Value = 0;
+        SurfaceStatus.Text = $"正在掃描 {label}…";
+        SurfaceResults.ItemsSource = null;
+        try
+        {
+            var progress = new Progress<int>(v => SurfaceProgress.Value = v);
+            var result = await Task.Run(() => DiskSurfaceScanService.Scan(path, progress: progress));
+            SurfaceProgress.Visibility = Visibility.Collapsed;
+            if (result is null)
+            {
+                SurfaceStatus.Text = "無法開啟磁碟。邏輯卷需要讀取權限；實體磁碟需系統管理員。";
+                return;
+            }
+            SurfaceStatus.Text = $"{result.DrivePath}・{result.TotalBlocks} 區塊×{result.BlockSize / 1024} KB・"
+                + $"{result.OkCount} OK・{result.SlowCount} 慢・{result.ErrorCount} 錯誤・{result.ElapsedSec:F1} 秒";
+            SurfaceResults.ItemsSource = new[]
+            {
+                new { Label = "結果", Ok = $"{result.OkCount}", Slow = $"{result.SlowCount}", Error = $"{result.ErrorCount}", Time = $"{result.ElapsedSec:F1}s" },
+            };
+        }
+        catch (OperationCanceledException) { SurfaceStatus.Text = "已取消。"; }
+        catch (Exception ex) { SurfaceStatus.Text = $"掃描失敗：{ex.Message}"; }
+        finally { SurfaceScanButton.IsEnabled = true; SurfaceProgress.Visibility = Visibility.Collapsed; }
+    }
+    private void TrustRefresh_Click(object sender, RoutedEventArgs e)
+        => TrustRows.ItemsSource = TpmSecureBootService.Read();
 }

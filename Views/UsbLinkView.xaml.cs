@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 
 namespace XinSpect;
@@ -13,4 +13,10 @@ public partial class UsbLinkView : UserControl
         ?? Shell.Vm;
 
     private void Refresh_Click(object sender, RoutedEventArgs e) => Vm?.UsbLink.Refresh();
+    private void TbUsb4Refresh_Click(object sender, RoutedEventArgs e)
+    {
+        var rows = TbUsb4Service.Read();
+        TbUsb4Rows.ItemsSource = rows;
+        TbUsb4Status.Text = rows.Count == 0 ? "未找到 Thunderbolt 或 USB4 控制器" : $"已列舉 {rows.Count} 個控制器";
+    }
 }

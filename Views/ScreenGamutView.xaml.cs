@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Controls;
@@ -13,6 +13,9 @@ namespace XinSpect;
 public partial class ScreenGamutView : UserControl
 {
     public ScreenGamutView() => InitializeComponent();
+
+    private void HdrRefresh_Click(object sender, RoutedEventArgs e)
+        => HdrRows.ItemsSource = HdrCapabilityService.Read();
 }
 
 /// <summary>

@@ -1,4 +1,4 @@
-<UserControl x:Class="XinSpect.NpuDetectionView"
+﻿<UserControl x:Class="XinSpect.NpuDetectionView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect"
@@ -33,6 +33,22 @@
                     <local:FieldRow x:Name="DriverRow" Label="驅動版本"/>
                     <local:FieldRow x:Name="DriverDateRow" Label="驅動日期"/>
                     <local:FieldRow x:Name="TopsRow" Label="估計算力"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="SIMD 計算基準" HelpKey="memory/記憶體"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button x:Name="BenchButton" Style="{StaticResource PrimaryButton}" Content="執行" Click="Bench_Click"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,6" TextWrapping="Wrap"
+                               Text="用 SIMD FMA 平行浮點運算量 CPU 吞吐量（GFLOPS），與上面 NPU 廠標 TOPS 對照——廠標是 NPU 理論值，這裡是 CPU 實測值。"/>
+                    <local:FieldRow x:Name="BenchGflopsRow" Label="GFLOPS"/>
+                    <local:FieldRow x:Name="BenchThreadsRow" Label="執行緒"/>
+                    <local:FieldRow x:Name="BenchVectorRow" Label="向量寬度"/>
+                    <local:FieldRow x:Name="BenchTimeRow" Label="耗時"/>
                 </StackPanel>
             </Border>
         </StackPanel>

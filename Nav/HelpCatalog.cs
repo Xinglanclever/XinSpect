@@ -1924,5 +1924,37 @@ public static class HelpCatalog
             Risk = HelpRisk.Caution,
             Safety = "唯讀本機資訊，但查詢會把顯示卡型號送到你設定的 AI 端點。同主機板分析，不想外傳請改用本機 Ollama。",
         },
+        // ── 健康與外設擴充卡片 ────────────────────────────────
+        ["health/TPM / Secure Boot"] = new()
+        {
+            Title = "TPM / Secure Boot",
+            What = "平台可信模組的存在與版本，以及開機韌體安全啟動的目前狀態。",
+            Does = "TPM 2.0 與 Secure Boot 是 Windows 11 的基本安全地基，也是 VBS、BitLocker 與某些反作弊系統的前置條件。這裡只讀作業系統與韌體回報的目前狀態，不修改任何設定。",
+        },
+        ["health/藍牙外設"] = new()
+        {
+            Title = "藍牙外設",
+            What = "已連線藍牙裝置的電量、連線狀態與訊號指標。",
+            Does = "無線滑鼠、鍵盤與耳機的電池電量來自裝置自己透過 GATT 回報的 Battery Service；裝置不提供該服務時會誠實留空。訊號與狀態有助判斷掉連線是電量、距離還是裝置本身的問題。",
+        },
+        ["health/磁碟表面掃描"] = new()
+        {
+            Title = "磁碟表面掃描",
+            What = "循序讀取磁碟可讀範圍並記錄每個區塊的耗時與讀取結果。",
+            Does = "SMART 是磁碟自己回報的健康摘要；這裡是實際讀一輪表面，把慢區、讀取錯誤與長尾延遲攤開。只讀資料、不寫入，也不做破壞性修復。大容量硬碟需要長時間，掃描時系統磁碟效能會受影響。",
+            Safety = "掃描期間會大量讀取該磁碟，可能讓同一顆磁碟上的系統和程式變慢；長時間高溫運轉會增加硬碟負擔。中途可停止，但不會寫入或修復資料。",
+        },
+        ["gamut/HDR 顯示能力"] = new()
+        {
+            Title = "HDR 顯示能力",
+            What = "EDID 的 CTA-861 HDR 靜態中繼資料，加上 Windows 目前是否開啟 HDR。",
+            Does = "面板支援旗標、最大／最小亮度與色彩深度來自螢幕 EDID；Windows HDR 開關來自 DisplayConfig。EDID 是螢幕回報值，不是校色儀實測；廠商留空或填錯時會顯示未知。",
+        },
+        ["usb/Thunderbolt / USB4"] = new()
+        {
+            Title = "Thunderbolt / USB4",
+            What = "Thunderbolt 與 USB4 控制器、路由器與裝置的存在和安全連線狀態。",
+            Does = "這類控制器有自己的韌體與安全模型；未授權裝置可能只被列舉到控制器層。這裡只讀系統與裝置回報，不授權、不解鎖、不改變安全設定。",
+        },
     };
 }

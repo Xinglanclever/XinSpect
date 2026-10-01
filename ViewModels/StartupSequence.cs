@@ -222,6 +222,21 @@ internal static class StartupSequence
         }
         catch { /* 深度規格為附加，讀取失敗維持 WMI 值 */ }
 
+        // GPU 硬解／編碼能力矩陣：D3D11 VideoDevice 列舉 + MFT 硬體編碼器（零特權、純 API 直讀）
+        try { vm.GpuCodecs = GpuCodecService.Probe().Adapters; }
+        catch { /* 編解碼偵測為附加功能 */ }
+
+        // 核心記憶體池細目（RAMMap 式）：Paged/Nonpaged/Standby 各優先級，零特權直讀
+        try
+        {
+            var pool = MemoryPoolService.Read();
+            vm.PoolSnapshot = pool;
+            if (pool is not null)
+                for (int p = 0; p < pool.StandbyByPriorityMB.Length; p++)
+                    vm.PoolStandbyLabels.Add(MemoryPoolService.StandbyLabel(p, pool.StandbyByPriorityMB[p]));
+        }
+        catch { /* 池細目為附加功能 */ }
+
         // CPU-Z 沒有（未安裝／不在桌面）不代表時脈就只能空著：
         // SPD 直讀結果（上面已讀）與 WMI 設定速率都能把「時脈與時序」補起來，
         // CPU-Z 從「必要依賴」降級為「更完整的選用補充」。

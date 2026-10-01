@@ -1,4 +1,4 @@
-using Microsoft.Win32;
+﻿using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -85,5 +85,32 @@ public partial class EvidenceLabView : UserControl
             CheckFileExists = true,
         };
         return dlg.ShowDialog() == true ? dlg.FileName : null;
+    }
+
+    // 匯入外部報告：讓使用者選 GPU-Z txt / AIDA64 XML / HWiNFO CSV，
+    // 解析後列出讀值。純讀檔，不啟動任何子行程。
+    private void ImportReport_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new OpenFileDialog
+        {
+            Title = "匯入外部工具的感測器報告",
+            Filter = "外部報告 (*.txt;*.xml;*.csv)|*.txt;*.xml;*.csv|所有檔案 (*.*)|*.*",
+            CheckFileExists = true,
+        };
+        if (dlg.ShowDialog() != true) return;
+        try
+        {
+            var result = ExternalReportService.ParseFile(dlg.FileName);
+            ExternalReportStatus.Text = $"{result.FileName}（{result.Format}）・{result.Status}";
+            ExternalReportRows.ItemsSource = result.Rows.Select(row => new
+            {
+                row.Tool, row.Field, row.Value, row.Unit,
+                MeasuredAtText = row.MeasuredAt?.ToString("MM/dd HH:mm:ss") ?? "",
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            ExternalReportStatus.Text = $"讀取失敗：{ex.Message}";
+        }
     }
 }

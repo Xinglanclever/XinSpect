@@ -1,4 +1,4 @@
-<UserControl x:Class="XinSpect.ScreenGamutView"
+﻿<UserControl x:Class="XinSpect.ScreenGamutView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect"
@@ -81,6 +81,25 @@
                 </StackPanel>
             </Border>
 
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="HDR 顯示能力" HelpKey="gamut/HDR 顯示能力"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Style="{StaticResource ToolButton}" Content="重新讀取" Click="HdrRefresh_Click"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,6" TextWrapping="Wrap"
+                               Text="EDID CTA-861 HDR Static Metadata 解析：支援旗標、最大/最小亮度（nits）、色彩深度。"/>
+                    <ItemsControl x:Name="HdrRows">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <local:FieldRow Label="{Binding Label}" Value="{Binding Value}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
             <TextBlock Style="{StaticResource FieldLabel}" Margin="4,0,0,20" TextWrapping="Wrap"
                        Text="EDID 是螢幕自己回報的規格值，不是校色儀實測；廠商填錯或留空時此頁會顯示「—」。"/>
         </StackPanel>

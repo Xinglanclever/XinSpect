@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 
 namespace XinSpect;
@@ -54,4 +54,18 @@ public partial class NpuDetectionView : UserControl
     }
 
     private MainViewModel? Vm => DataContext as MainViewModel ?? Shell.Vm;
+    private async void Bench_Click(object sender, RoutedEventArgs e)
+    {
+        BenchButton.IsEnabled = false;
+        try
+        {
+            var r = await Task.Run(() => NpuComputeBenchService.Run());
+            BenchGflopsRow.Value = r.Gflops.ToString("F1");
+            BenchThreadsRow.Value = $"{r.Threads}";
+            BenchVectorRow.Value = $"{r.VectorWidth} float";
+            BenchTimeRow.Value = $"{r.ElapsedMs:F0} ms";
+        }
+        catch (Exception ex) { BenchGflopsRow.Value = ex.Message; }
+        finally { BenchButton.IsEnabled = true; }
+    }
 }
