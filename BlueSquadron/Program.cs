@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 
@@ -21,6 +22,50 @@ internal static class Program
     private static readonly object StdoutLock = new();
     private static StreamWriter? _stdout;
 
+    [DllImport("kernel32.dll")]
+    private static extern IntPtr GetConsoleWindow();
+    [DllImport("user32.dll")]
+    private static extern bool IsWindowVisible(IntPtr hWnd);
+
+    /// <summary>
+    /// 使用者直接點開 exe（主控台可見）時給友善提示：這是背景服務、沒有自己的畫面，
+    /// 應與主程式放同一資料夾、由主程式拉起。由 XinSpect 背景啟動時主控台是隱藏的
+    /// （CreateNoWindow），IsWindowVisible 為 false，完全不彈窗、不干擾 IPC。
+    /// </summary>
+    private static void ShowInteractiveBanner()
+    {
+        try
+        {
+            var cw = GetConsoleWindow();
+            if (cw == IntPtr.Zero || !IsWindowVisible(cw)) return;
+
+            try { Console.Title = "XinSpect BlueSquadron 守護進程"; } catch { }
+            Console.OutputEncoding = new UTF8Encoding(false);
+            Console.WriteLine();
+            Console.WriteLine("  XinSpect BlueSquadron 已開啟");
+            Console.WriteLine("  ─────────────────────────────────────────");
+            Console.WriteLine("  這是背景守護進程，本身沒有操作畫面。");
+            Console.WriteLine("  正確用法：把它與主程式 XinSpect.exe 放在同一個");
+            Console.WriteLine("  資料夾，啟動主程式後即自動連線。");
+            Console.WriteLine("  本視窗可以直接關閉，不影響其他功能。");
+            Console.WriteLine();
+            try
+            {
+                System.Windows.Forms.MessageBox.Show(
+                    "XinSpect BlueSquadron 已開啟\n\n" +
+                    "這是背景守護進程，沒有自己的畫面。\n" +
+                    "請將它與主程式 XinSpect.exe 放在同一個資料夾，\n" +
+                    "啟動主程式後即自動連線。\n\n" +
+                    "（這個視窗可以直接關閉）",
+                    "XinSpect BlueSquadron",
+                    System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Information);
+            }
+            catch { /* 彈窗失敗不影響服務 */ }
+        }
+        catch { }
+    }
+
     [STAThread]
     private static int Main(string[] args)
     {
@@ -36,6 +81,8 @@ internal static class Program
     // ── JSON 服務迴圈 ────────────────────────────────────────────────────
     private static int Server()
     {
+        ShowInteractiveBanner();
+
         var enc = new UTF8Encoding(false);
         TextReader stdin = new StreamReader(Console.OpenStandardInput(), enc);
         _stdout = new StreamWriter(Console.OpenStandardOutput(), enc) { AutoFlush = true, NewLine = "\n" };
