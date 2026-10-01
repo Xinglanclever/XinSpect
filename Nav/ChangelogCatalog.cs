@@ -48,6 +48,25 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.2.0",
+            Date = "2026-10-01",
+            Title = "Everest 2.2——十項原生硬體檢測擴充：GPU 編解碼、磁碟表面、藍牙電量、NPU 基準、記憶體池與外部報告解析",
+            Items =
+            [
+                "GPU 編解碼能力矩陣：透過 DirectShow/DXVA 列舉解碼 profile（H.264/HEVC/AV1/VP9），NVAPI 補 NVENC 編碼細節，顯示卡頁新增編解碼卡片。",
+                "磁碟表面掃描：對實體磁碟循序讀取並逐塊計時，產生延遲熱圖與慢區／異常區塊標記，健康頁可直接發起掃描。",
+                "藍牙外設電量與裝置樹：透過 Windows GATT Battery Service 讀取滑鼠／鍵盤等外設電量與裝置資訊，健康頁新增外設健診卡片。",
+                "NPU ONNX 推理基準：以 Windows ML 執行 ONNX 模型量測推理吞吐，NPU 偵測頁新增實跑基準卡片。",
+                "記憶體池細目：透過 NtQuerySystemInformation 取得分頁池／非分頁池／備用清單／修改清單等核心記憶體統計，記憶體頁新增池細目卡片。",
+                "外部報告解析擴充：支援 GPU-Z sensor 報告、AIDA64 XML、HWiNFO CSV 匯入，與 CPU-Z 報告解析整合進證據實驗室時間膠囊做前後對比。",
+                "Wi-Fi 訊號檢測：讀取訊號強度、頻道與鏈路速率，網路頁新增即時訊號卡片。",
+                "TPM 與安全開機檢測：讀取 TPM 規格版本、啟用狀態與 SecureBoot 狀態，健康頁新增卡片。",
+                "Thunderbolt／USB4 檢測：列舉控制器與鏈路資訊，USB 連結頁新增卡片。",
+                "HDR 能力檢測：透過 DisplayConfig 讀取各顯示器 HDR 支援與啟用狀態，螢幕色域頁新增卡片。",
+                "修正：NativeWiFi inline array 相容性問題、DisplayConfig HDR 查詢錯誤處理。",
+            ],
+        },        new ChangeEntry
+        {
             Version = "2.1.0",
             Date = "2026-10-01",
             Title = "Everest 2.1——藍色中隊守護進程上線、風扇頁奔騰金、AI 頁修整與特殊型號徽章",
