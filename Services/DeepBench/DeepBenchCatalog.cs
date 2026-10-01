@@ -61,7 +61,7 @@ public static class DeepBenchCatalog
         new(35, "ux.present-frame-pacing", "Present latency / frame pacing", DeepBenchDomain.UserExperience, 4, DeepBenchTestStatus.Implemented, "Phase 4 已實作：D3D11 swap chain Present 逐幀間距、API 耗時與尖峰", DeepBenchResourceClass.GpuLoad, DeepBenchParallelSafety.Exclusive, true, "D3D11 硬體 GPU；短暫建立小型視窗", "Quick 約 3–10 秒；Full 較久"),
         new(36, "ux.audio-buffer-glitch", "Audio buffer / glitch", DeepBenchDomain.UserExperience, 4, DeepBenchTestStatus.Implemented, "Phase 4 已實作：WASAPI 靜音供樣回呼間距、速率與疑似掉樣", DeepBenchResourceClass.ReadOnly, DeepBenchParallelSafety.ParallelSafe, true, "主動音訊輸出裝置；共用模式", "Quick 約 4–10 秒；Full 較久"),
         new(37, "ux.network-stack-latency", "Network stack latency", DeepBenchDomain.UserExperience, 4, DeepBenchTestStatus.Implemented, "已接入：本機 127.0.0.1 TCP loopback 延遲；不含 LAN／Internet", DeepBenchResourceClass.ReadOnly, DeepBenchParallelSafety.ParallelSafe, true, "本機 127.0.0.1 TCP loopback；不外連", "Quick 256 次；Full 1024 次"),
-        new(38, "ux.synthetic-workloads", "Real-world synthetic workloads", DeepBenchDomain.UserExperience, 5, DeepBenchTestStatus.Deferred, "Phase 5：合成流程尚未實作", DeepBenchResourceClass.DiskWrite, DeepBenchParallelSafety.Exclusive, false, "多域資源；明確同意", "尚未提供")
+        new(38, "ux.synthetic-workloads", "Real-world synthetic workloads", DeepBenchDomain.UserExperience, 5, DeepBenchTestStatus.Implemented, "Phase 5 已實作：SHA-256／資料轉換／合成 JSON 往返三步驟序列流程", DeepBenchResourceClass.CpuLoad, DeepBenchParallelSafety.Exclusive, true, "CPU；managed 合成負載；不宣稱代表實際應用程式", "Quick 約 5–15 秒；Full 較久")
     ];
 }
 

@@ -61,10 +61,11 @@ public class DeepBenchViewModelTests
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gauntlet.boost-recovery");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gauntlet.throughput-degradation");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gauntlet.multi-domain");
+        Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "ux.synthetic-workloads");
     }
 
     [Fact]
-    public void 快速與完整檔都只選三十六個已接入測項()
+    public void 快速與完整檔都只選三十七個已接入測項()
     {
         using var store = new TempHistoryStore();
         var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
@@ -85,7 +86,8 @@ public class DeepBenchViewModelTests
             "gauntlet.boost-recovery",
             "gauntlet.throughput-degradation",
             "gauntlet.power-state-latency",
-            "gauntlet.multi-domain"
+            "gauntlet.multi-domain",
+            "ux.synthetic-workloads"
         ];
 
         vm.SelectedProfile = DeepBenchRunProfile.Quick;
@@ -297,6 +299,7 @@ public class DeepBenchViewModelTests
             new FakeDeepBenchTest("gpu.codec-throughput", () => SuccessfulResult("gpu.codec-throughput")),
             new FakeDeepBenchTest("storage.io-gpu-pipeline", () => SuccessfulResult("storage.io-gpu-pipeline")),
             new FakeDeepBenchTest("gauntlet.multi-domain", () => SuccessfulResult("gauntlet.multi-domain")),
+            new FakeDeepBenchTest("ux.synthetic-workloads", () => SuccessfulResult("ux.synthetic-workloads")),
             new FakeDeepBenchTest("memory.cache-latency", async (_, token) =>
             {
                 await Task.Delay(Timeout.InfiniteTimeSpan, token);

@@ -39,7 +39,8 @@ public static class DeepBenchSuitePlanner
         "gauntlet.boost-recovery",
         "gauntlet.throughput-degradation",
         "gauntlet.power-state-latency",
-        "gauntlet.multi-domain"
+        "gauntlet.multi-domain",
+        "ux.synthetic-workloads"
     ];
 
     public static DeepBenchPlan Plan(DeepBenchRunProfile profile, IReadOnlyList<DeepBenchCatalogEntry>? catalog = null)

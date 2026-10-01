@@ -100,7 +100,7 @@ public class DeepBenchIntegrationTests
 
         Assert.Contains("Deep Bench 深測中心", combined, StringComparison.Ordinal);
         Assert.Contains("38", combined, StringComparison.Ordinal);
-        Assert.Contains("三十六個已接入測項", combined, StringComparison.Ordinal);
+        Assert.Contains("三十七個已接入測項", combined, StringComparison.Ordinal);
         Assert.Contains("混合核心放置", combined, StringComparison.Ordinal);
         Assert.Contains("CPUID 0x1A", combined, StringComparison.Ordinal);
         Assert.Contains("P-core / E-core", combined, StringComparison.Ordinal);
@@ -115,6 +115,7 @@ public class DeepBenchIntegrationTests
         Assert.Contains("GPU codec 吞吐", combined, StringComparison.Ordinal);
         Assert.Contains("I/O→GPU 管線", combined, StringComparison.Ordinal);
         Assert.Contains("多域 Gauntlet", combined, StringComparison.Ordinal);
+        Assert.Contains("真實世界合成負載", combined, StringComparison.Ordinal);
         Assert.Contains("不加權", combined, StringComparison.Ordinal);
         Assert.Contains("Unsupported", combined, StringComparison.Ordinal);
         Assert.Contains("SLC 持續寫入", combined, StringComparison.Ordinal);
