@@ -50,10 +50,11 @@ public class DeepBenchViewModelTests
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "cpu.branch-speculation");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "ux.audio-buffer-glitch");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "ux.present-frame-pacing");
+        Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gauntlet.power-state-latency");
     }
 
     [Fact]
-    public void 快速與完整檔都只選二十六個已接入測項()
+    public void 快速與完整檔都只選二十七個已接入測項()
     {
         using var store = new TempHistoryStore();
         var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
@@ -69,7 +70,8 @@ public class DeepBenchViewModelTests
             "storage.iocp-engine",
             "ux.network-stack-latency",
             "ux.audio-buffer-glitch",
-            "ux.present-frame-pacing"
+            "ux.present-frame-pacing",
+            "gauntlet.power-state-latency"
         ];
 
         vm.SelectedProfile = DeepBenchRunProfile.Quick;
@@ -228,6 +230,7 @@ public class DeepBenchViewModelTests
             new FakeDeepBenchTest("ux.network-stack-latency", () => SuccessfulResult("ux.network-stack-latency")),
             new FakeDeepBenchTest("ux.audio-buffer-glitch", () => SuccessfulResult("ux.audio-buffer-glitch")),
             new FakeDeepBenchTest("ux.present-frame-pacing", () => SuccessfulResult("ux.present-frame-pacing")),
+            new FakeDeepBenchTest("gauntlet.power-state-latency", () => SuccessfulResult("gauntlet.power-state-latency")),
         ];
     }
 
