@@ -932,6 +932,365 @@ public static class D3D11Native
         return IntPtr.Zero;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct D3D11Texture2DDesc
+    {
+        public uint Width;
+        public uint Height;
+        public uint MipLevels;
+        public uint ArraySize;
+        public uint Format;
+        public uint SampleCount;
+        public uint SampleQuality;
+        public uint Usage;
+        public uint BindFlags;
+        public uint CPUAccessFlags;
+        public uint MiscFlags;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct D3D11Viewport
+    {
+        public float TopLeftX;
+        public float TopLeftY;
+        public float Width;
+        public float Height;
+        public float MinDepth;
+        public float MaxDepth;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct D3D11SamplerDesc
+    {
+        public uint Filter;
+        public uint AddressU;
+        public uint AddressV;
+        public uint AddressW;
+        public float MipLODBias;
+        public uint MaxAnisotropy;
+        public uint ComparisonFunc;
+        public float Border0, Border1, Border2, Border3;
+        public float MinLOD;
+        public float MaxLOD;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct D3D11RenderTargetViewDesc
+    {
+        public uint Format;
+        public uint ViewDimension;
+        public uint MipSlice;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct D3D11ShaderResourceViewDesc
+    {
+        public uint Format;
+        public uint ViewDimension;
+        public uint MostDetailedMip;
+        public uint MipLevels;
+    }
+
+    public static async Task<GpuRasterMeasurement> MeasureRasterAsync(
+        GpuRasterContext context,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return await Task.Run(() => MeasureRaster(context), cancellationToken).ConfigureAwait(false);
+    }
+
+    private static GpuRasterMeasurement MeasureRaster(GpuRasterContext context)
+    {
+        GpuRasterWorkload workload = context.Workload;
+        int texBytes = workload.TextureSize * workload.TextureSize * 4;
+        byte[] textureData = new byte[texBytes];
+        uint prng = 0x12345678u;
+        for (int pixel = 0; pixel < texBytes / 4; pixel++)
+        {
+            prng ^= prng << 13; prng ^= prng >> 17; prng ^= prng << 5;
+            bool checker = (pixel / 64) % 2 == 0;
+            textureData[pixel * 4 + 0] = (byte)((prng & 0x3F) + (uint)(checker ? 96 : 32));
+            textureData[pixel * 4 + 1] = (byte)((prng >> 8) & 0x7F);
+            textureData[pixel * 4 + 2] = (byte)((prng >> 16) & 0x7F);
+            textureData[pixel * 4 + 3] = 0xFF;
+        }
+
+        (IntPtr adapter, DXGIAdapterDesc1 description) = SelectHardwareAdapter();
+        IntPtr device = IntPtr.Zero;
+        IntPtr contextPtr = IntPtr.Zero;
+        var created = new List<IntPtr>();
+        try
+        {
+            uint[] featureLevels = [0x0B100, 0x0B000];
+            int hr = D3D11CreateDevice(
+                adapter, 0, IntPtr.Zero, 0, featureLevels, (uint)featureLevels.Length, 7,
+                out device, out uint featureLevel, out contextPtr);
+            if (hr != 0)
+                ThrowDeviceFailure(hr, "D3D11CreateDevice");
+
+            unsafe
+            {
+                void* dev = (void*)device;
+                void* ctx = (void*)contextPtr;
+                var createTexture2D = (delegate* unmanaged[Stdcall]<void*, D3D11Texture2DDesc*, D3D11SubresourceData*, void**, int>)GetVTableSlot(device, 5);
+                var createSrv = (delegate* unmanaged[Stdcall]<void*, void*, D3D11ShaderResourceViewDesc*, void**, int>)GetVTableSlot(device, 7);
+                var createRtv = (delegate* unmanaged[Stdcall]<void*, void*, D3D11RenderTargetViewDesc*, void**, int>)GetVTableSlot(device, 9);
+                var createVs = (delegate* unmanaged[Stdcall]<void*, byte*, nuint, void*, void**, int>)GetVTableSlot(device, 12);
+                var createPs = (delegate* unmanaged[Stdcall]<void*, byte*, nuint, void*, void**, int>)GetVTableSlot(device, 15);
+                var createSampler = (delegate* unmanaged[Stdcall]<void*, D3D11SamplerDesc*, void**, int>)GetVTableSlot(device, 23);
+                var getRemoved = (delegate* unmanaged[Stdcall]<void*, int>)GetVTableSlot(device, 39);
+
+                var rtDesc = new D3D11Texture2DDesc
+                {
+                    Width = (uint)workload.Width, Height = (uint)workload.Height, MipLevels = 1, ArraySize = 1,
+                    Format = 87, SampleCount = 1, SampleQuality = 0, Usage = 0,
+                    BindFlags = 0x20, CPUAccessFlags = 0, MiscFlags = 0,
+                };
+                void* rtPtr = null;
+                hr = createTexture2D(dev, &rtDesc, null, &rtPtr);
+                if (hr != 0) ThrowDeviceFailure(hr, getRemoved(dev), "CreateTexture2D(RT)");
+                IntPtr renderTarget = (IntPtr)rtPtr; created.Add(renderTarget);
+
+                var stagingDesc = rtDesc;
+                stagingDesc.Usage = 3; stagingDesc.BindFlags = 0; stagingDesc.CPUAccessFlags = 0x20000;
+                void* stagingPtr = null;
+                hr = createTexture2D(dev, &stagingDesc, null, &stagingPtr);
+                if (hr != 0) ThrowDeviceFailure(hr, getRemoved(dev), "CreateTexture2D(Staging)");
+                IntPtr staging = (IntPtr)stagingPtr; created.Add(staging);
+
+                var texDesc = new D3D11Texture2DDesc
+                {
+                    Width = (uint)workload.TextureSize, Height = (uint)workload.TextureSize, MipLevels = 1, ArraySize = 1,
+                    Format = 87, SampleCount = 1, SampleQuality = 0, Usage = 0,
+                    BindFlags = 0x8, CPUAccessFlags = 0, MiscFlags = 0,
+                };
+                var texData = new D3D11SubresourceData { SysMem = IntPtr.Zero, SysMemPitch = (uint)(workload.TextureSize * 4), SysMemSlicePitch = 0 };
+                IntPtr texture;
+                void* texPtr = null;
+                fixed (byte* texBytesPtr = textureData)
+                {
+                    texData.SysMem = (IntPtr)texBytesPtr;
+                    hr = createTexture2D(dev, &texDesc, &texData, &texPtr);
+                }
+                if (hr != 0) ThrowDeviceFailure(hr, getRemoved(dev), "CreateTexture2D(Data)");
+                texture = (IntPtr)texPtr; created.Add(texture);
+
+                var rtvDesc = new D3D11RenderTargetViewDesc { Format = 87, ViewDimension = 4, MipSlice = 0 };
+                void* rtvPtr = null;
+                hr = createRtv(dev, rtPtr, &rtvDesc, &rtvPtr);
+                if (hr != 0) ThrowDeviceFailure(hr, getRemoved(dev), "CreateRenderTargetView");
+                IntPtr rtv = (IntPtr)rtvPtr; created.Add(rtv);
+
+                var srvDesc = new D3D11ShaderResourceViewDesc { Format = 87, ViewDimension = 4, MostDetailedMip = 0, MipLevels = 1 };
+                void* srvPtr = null;
+                hr = createSrv(dev, texPtr, &srvDesc, &srvPtr);
+                if (hr != 0) ThrowDeviceFailure(hr, getRemoved(dev), "CreateShaderResourceView");
+                IntPtr srv = (IntPtr)srvPtr; created.Add(srv);
+
+                var samplerDesc = new D3D11SamplerDesc
+                {
+                    Filter = 0x15, AddressU = 3, AddressV = 3, AddressW = 3, MipLODBias = 0,
+                    MaxAnisotropy = 1, ComparisonFunc = 1, Border0 = 0, Border1 = 0, Border2 = 0, Border3 = 0,
+                    MinLOD = 0, MaxLOD = 3.402823466e+38f,
+                };
+                void* samplerPtr = null;
+                hr = createSampler(dev, &samplerDesc, &samplerPtr);
+                if (hr != 0) ThrowDeviceFailure(hr, getRemoved(dev), "CreateSamplerState");
+                IntPtr sampler = (IntPtr)samplerPtr; created.Add(sampler);
+
+                var vsCompilation = CompileShader(GpuRasterTextureService.HlslSource, "VSMain", "vs_5_0");
+                if (!vsCompilation.Succeeded || vsCompilation.Bytecode is null)
+                    throw new InvalidOperationException(vsCompilation.Error);
+                var fillCompilation = CompileShader(GpuRasterTextureService.HlslSource, "PSFill", "ps_5_0");
+                var singleCompilation = CompileShader(GpuRasterTextureService.HlslSource, "PSTextureSingle", "ps_5_0");
+                var multiCompilation = CompileShader(GpuRasterTextureService.HlslSource, "PSTextureMulti", "ps_5_0");
+                if (!fillCompilation.Succeeded || !singleCompilation.Succeeded || !multiCompilation.Succeeded)
+                    throw new InvalidOperationException(
+                        fillCompilation.Error + singleCompilation.Error + multiCompilation.Error);
+
+                void* vsPtr = null;
+                fixed (byte* vsCode = vsCompilation.Bytecode)
+                {
+                    hr = createVs(dev, vsCode, (nuint)vsCompilation.Bytecode.Length, null, &vsPtr);
+                }
+                if (hr != 0) ThrowDeviceFailure(hr, getRemoved(dev), "CreateVertexShader");
+                IntPtr vertexShader = (IntPtr)vsPtr; created.Add(vertexShader);
+
+                IntPtr fillShader = CreateRasterPs(dev, createPs, fillCompilation, created);
+                IntPtr singleShader = CreateRasterPs(dev, createPs, singleCompilation, created);
+                IntPtr multiShader = CreateRasterPs(dev, createPs, multiCompilation, created);
+
+                // ID3D11DeviceContext：PSSetSR=8、PSSetShader=9、PSSetSamplers=10、VSSetShader=11、Draw=13、
+                // Map=14、Unmap=15、IASetPrimitiveTopology=24、OMSetRenderTargets=33、RSSetViewports=44、
+                // CopyResource=47、ClearRenderTargetView=50、Flush=111（以 Windows SDK d3d11.h 逐項核對）。
+                var psSetSrv = (delegate* unmanaged[Stdcall]<void*, uint, uint, void**, void>)GetVTableSlot(contextPtr, 8);
+                var psSetShader = (delegate* unmanaged[Stdcall]<void*, void*, void**, uint, void>)GetVTableSlot(contextPtr, 9);
+                var psSetSampler = (delegate* unmanaged[Stdcall]<void*, uint, uint, void**, void>)GetVTableSlot(contextPtr, 10);
+                var vsSetShader = (delegate* unmanaged[Stdcall]<void*, void*, void**, uint, void>)GetVTableSlot(contextPtr, 11);
+                var draw = (delegate* unmanaged[Stdcall]<void*, uint, uint, void>)GetVTableSlot(contextPtr, 13);
+                var map = (delegate* unmanaged[Stdcall]<void*, void*, uint, uint, uint, D3D11MappedSubresource*, int>)GetVTableSlot(contextPtr, 14);
+                var unmap = (delegate* unmanaged[Stdcall]<void*, void*, uint, void>)GetVTableSlot(contextPtr, 15);
+                var setTopology = (delegate* unmanaged[Stdcall]<void*, uint, void>)GetVTableSlot(contextPtr, 24);
+                var omSetRtv = (delegate* unmanaged[Stdcall]<void*, uint, void**, void*, void>)GetVTableSlot(contextPtr, 33);
+                var rsSetViewport = (delegate* unmanaged[Stdcall]<void*, uint, D3D11Viewport*, void>)GetVTableSlot(contextPtr, 44);
+                var copyResource = (delegate* unmanaged[Stdcall]<void*, void*, void*, void>)GetVTableSlot(contextPtr, 47);
+                var clearRtv = (delegate* unmanaged[Stdcall]<void*, void*, float*, void>)GetVTableSlot(contextPtr, 50);
+                var flush = (delegate* unmanaged[Stdcall]<void*, void>)GetVTableSlot(contextPtr, 111);
+
+                var viewport = new D3D11Viewport { TopLeftX = 0, TopLeftY = 0, Width = workload.Width, Height = workload.Height, MinDepth = 0, MaxDepth = 1 };
+                rsSetViewport(ctx, 1, &viewport);
+                setTopology(ctx, 4); // D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
+                void* rtvForSet = (void*)rtv;
+                omSetRtv(ctx, 1, &rtvForSet, null);
+                void* srvForSet = (void*)srv;
+                psSetSrv(ctx, 0, 1, &srvForSet);
+                void* samplerForSet = (void*)sampler;
+                psSetSampler(ctx, 0, 1, &samplerForSet);
+                void* vsForSet = (void*)vertexShader;
+                vsSetShader(ctx, vsForSet, null, 0);
+                Span<float> clearColorSpan = [0f, 0f, 0f, 1f];
+                fixed (float* clearColor = clearColorSpan)
+                {
+                    clearRtv(ctx, rtvPtr, clearColor);
+                }
+                flush(ctx);
+
+                var results = new List<GpuRasterScenarioResult>();
+                (IntPtr Shader, string Id)[] scenarioShaders =
+                    [(fillShader, "fill"), (singleShader, "texture-single"), (multiShader, "texture-8tap")];
+                int totalSteps = scenarioShaders.Length * (workload.WarmupSamples + workload.MeasureSamples);
+                int completed = 0;
+                foreach ((IntPtr scenarioShader, string scenarioId) in scenarioShaders)
+                {
+                    context.CancellationToken.ThrowIfCancellationRequested();
+                    void* psForSet = (void*)scenarioShader;
+                    psSetShader(ctx, psForSet, null, 0);
+                    flush(ctx);
+
+                    var samples = new List<GpuRasterSample>();
+                    int passes = workload.WarmupSamples + workload.MeasureSamples;
+                    for (int pass = 0; pass < passes; pass++)
+                    {
+                        context.CancellationToken.ThrowIfCancellationRequested();
+                        bool warmup = pass < workload.WarmupSamples;
+                        context.Progress.Report(new DeepBenchProgress(
+                            GpuRasterTextureService.TestId, completed, Math.Max(totalSteps, 1),
+                            0.05 + 0.92 * completed / Math.Max(totalSteps, 1),
+                            warmup ? $"warmup {scenarioId}" : $"量測 {scenarioId}（第 {pass - workload.WarmupSamples + 1}/{workload.MeasureSamples} 樣本）"));
+                        long timestamp = Stopwatch.GetTimestamp();
+                        for (int frame = 0; frame < workload.FramesPerSample; frame++)
+                            draw(ctx, 3, 0);
+                        flush(ctx);
+                        double elapsedSeconds = Stopwatch.GetElapsedTime(timestamp).TotalSeconds;
+                        if (elapsedSeconds <= 0)
+                            elapsedSeconds = 1d / Stopwatch.Frequency;
+                        double gpix = (double)workload.Width * workload.Height * workload.FramesPerSample / elapsedSeconds / 1_000_000_000d;
+                        if (!warmup)
+                            samples.Add(new GpuRasterSample(gpix, elapsedSeconds * 1000d / workload.FramesPerSample));
+                        completed++;
+                    }
+
+                    copyResource(ctx, stagingPtr, rtPtr);
+                    flush(ctx);
+                    uint checksum = VerifyRasterReadback(
+                        map, unmap, ctx, stagingPtr, workload, scenarioId == "fill");
+
+                    results.Add(new GpuRasterScenarioResult(
+                        scenarioId,
+                        new GpuRasterRun(
+                            ReadAdapterName(description), featureLevel, workload.Width, workload.Height,
+                            samples, checksum)));
+                }
+
+                context.Progress.Report(new DeepBenchProgress(
+                    GpuRasterTextureService.TestId, totalSteps, Math.Max(totalSteps, 1), 0.98, "光柵場景完成"));
+                return new GpuRasterMeasurement(results);
+            }
+        }
+        finally
+        {
+            for (int index = created.Count - 1; index >= 0; index--)
+                SafeRelease(created[index]);
+            SafeRelease(contextPtr);
+            SafeRelease(device);
+            SafeRelease(adapter);
+        }
+    }
+
+    private static unsafe IntPtr CreateRasterPs(
+        void* device,
+        delegate* unmanaged[Stdcall]<void*, byte*, nuint, void*, void**, int> createPs,
+        D3D11ShaderCompilation compilation,
+        List<IntPtr> created)
+    {
+        void* shaderPtr = null;
+        fixed (byte* bytecode = compilation.Bytecode)
+        {
+            int hr = createPs(device, bytecode, (nuint)compilation.Bytecode.Length, null, &shaderPtr);
+            if (hr != 0 || shaderPtr is null)
+                ThrowDeviceFailure(hr, "CreatePixelShader");
+        }
+        IntPtr shader = (IntPtr)shaderPtr;
+        created.Add(shader);
+        return shader;
+    }
+
+    /// <summary>readback 驗證：alpha 全 255、checksum 非零；fill 場景另對 CPU 參考色逐位元組驗證。</summary>
+    private static unsafe uint VerifyRasterReadback(
+        delegate* unmanaged[Stdcall]<void*, void*, uint, uint, uint, D3D11MappedSubresource*, int> map,
+        delegate* unmanaged[Stdcall]<void*, void*, uint, void> unmap,
+        void* ctx,
+        void* stagingPtr,
+        GpuRasterWorkload workload,
+        bool verifyUniformFill)
+    {
+        var mapped = new D3D11MappedSubresource();
+        int hr = map(ctx, stagingPtr, 0, D3D11MapRead, 0, &mapped);
+        if (hr != 0)
+            ThrowDeviceFailure(hr, "Map(RasterReadback)");
+        try
+        {
+            if (mapped.Data == IntPtr.Zero)
+                throw new GpuRasterValidationException("光柵 readback 指標無效。");
+            int pixelCount = workload.Width * workload.Height;
+            var pixels = new ReadOnlySpan<byte>((void*)mapped.Data, pixelCount * 4);
+            uint checksum = 2166136261u;
+            int distinctPixels = 0;
+            byte firstB = pixels[0], firstG = pixels[1], firstR = pixels[2];
+            for (int pixel = 0; pixel < pixelCount; pixel++)
+            {
+                byte b = pixels[pixel * 4 + 0];
+                byte g = pixels[pixel * 4 + 1];
+                byte r = pixels[pixel * 4 + 2];
+                byte a = pixels[pixel * 4 + 3];
+                if (a != 0xFF)
+                    throw new GpuRasterValidationException($"光柵 readback alpha={a}（位置 {pixel}）；raster 未按預期輸出，整場拒收。");
+                if (b != firstB || g != firstG || r != firstR)
+                    distinctPixels++;
+                checksum ^= (uint)(b | (g << 8) | (r << 16) | (a << 24));
+                checksum *= 16777619u;
+            }
+
+            if (verifyUniformFill)
+            {
+                // CPU 參考：PSFill 輸出 float4(0.25, 0.5, 0.75, 1.0) → BGRA8 = (191, 128, 64, 255)。
+                if (firstB is < 189 or > 193 || firstG is < 126 or > 130 || firstR is < 62 or > 66 || distinctPixels != 0)
+                    throw new GpuRasterValidationException(
+                        $"填充率 readback 與 CPU 參考色不符（B={firstB}, G={firstG}, R={firstR}, 非一致像素 {distinctPixels}）。");
+            }
+            else if (distinctPixels == 0)
+            {
+                throw new GpuRasterValidationException("紋理場景 readback 全單色；取樣未實際執行，整場拒收。");
+            }
+
+            return checksum;
+        }
+        finally
+        {
+            unmap(ctx, stagingPtr, 0);
+        }
+    }
+
     private static (IntPtr Adapter, DXGIAdapterDesc1 Description) SelectHardwareAdapter()
     {
         Guid factoryIid = IidDxgiFactory1;
