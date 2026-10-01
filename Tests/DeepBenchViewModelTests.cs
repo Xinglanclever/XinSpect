@@ -44,16 +44,17 @@ public class DeepBenchViewModelTests
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gpu.dispatch-jitter");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "storage.iocp-engine");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Integrated && row.Id == "memory.ecc-whea-stress");
+        Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "topology.core-bandwidth");
     }
 
     [Fact]
-    public void 快速與完整檔都只選二十個已接入測項()
+    public void 快速與完整檔都只選二十一個已接入測項()
     {
         using var store = new TempHistoryStore();
         var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
         string[] expected =
         [
-            "cpu.aes-sha", "cpu.load-use-ilp-branch", "cpu.rdrand-rdseed", "topology.core-latency", "memory.cache-latency",
+            "cpu.aes-sha", "cpu.load-use-ilp-branch", "cpu.rdrand-rdseed", "topology.core-latency", "topology.core-bandwidth", "memory.cache-latency",
             "memory.stream-bandwidth", "memory.loaded-latency", "memory.ecc-whea-stress",
             "gpu.fp32-fp64-integer", "gpu.vram-bandwidth",
             "gpu.pcie-transfer", "gpu.dispatch-jitter", "cpu.top-down",
@@ -125,7 +126,7 @@ public class DeepBenchViewModelTests
         Assert.Equal("cpu.load-use-ilp-branch", vm.ResultCards[1].TestId);
         Assert.Equal("cpu.rdrand-rdseed", vm.ResultCards[2].TestId);
         Assert.Equal("topology.core-latency", vm.ResultCards[3].TestId);
-        Assert.Equal("memory.cache-latency", vm.ResultCards[4].TestId);
+        Assert.Equal("topology.core-bandwidth", vm.ResultCards[4].TestId);
         Assert.Equal(DeepBenchFailureKind.None, vm.ResultCards[0].FailureKind);
         Assert.Equal(DeepBenchFailureKind.Cancelled, vm.ResultCards[4].FailureKind);
         Assert.Contains(vm.ResultCards.Select(card => card.StateText), text => text.Contains("取消", StringComparison.Ordinal));
@@ -182,6 +183,11 @@ public class DeepBenchViewModelTests
             new FakeDeepBenchTest("gpu.pcie-transfer", () => SuccessfulResult("gpu.pcie-transfer")),
             new FakeDeepBenchTest("gpu.dispatch-jitter", () => SuccessfulResult("gpu.dispatch-jitter")),
             new FakeDeepBenchTest("topology.core-latency", () => SuccessfulResult("topology.core-latency")),
+            new FakeDeepBenchTest("topology.core-bandwidth", async (_, token) =>
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, token);
+                return null!;
+            }),
             new FakeDeepBenchTest("memory.cache-latency", async (_, token) =>
             {
                 await Task.Delay(Timeout.InfiniteTimeSpan, token);

@@ -10,6 +10,7 @@ public class DeepBenchCatalogTests
         "cpu.load-use-ilp-branch",
         "cpu.rdrand-rdseed",
         "topology.core-latency",
+        "topology.core-bandwidth",
         "memory.cache-latency",
         "memory.stream-bandwidth",
         "memory.loaded-latency",
@@ -55,6 +56,8 @@ public class DeepBenchCatalogTests
         Assert.Equal(DeepBenchTestStatus.Integrated, byId["cpu.top-down"].Status);
         Assert.True(byId["cpu.top-down"].Runnable);
         Assert.Equal(DeepBenchTestStatus.Integrated, byId["topology.core-latency"].Status);
+        Assert.Equal(DeepBenchTestStatus.Implemented, byId["topology.core-bandwidth"].Status);
+        Assert.True(byId["topology.core-bandwidth"].Runnable);
         Assert.Equal(DeepBenchTestStatus.Integrated, byId["memory.cache-latency"].Status);
         Assert.Equal(DeepBenchTestStatus.Integrated, byId["memory.stream-bandwidth"].Status);
         Assert.Equal(DeepBenchTestStatus.Integrated, byId["memory.loaded-latency"].Status);
@@ -101,7 +104,7 @@ public class DeepBenchCatalogTests
     {
         var plan = DeepBenchSuitePlanner.Plan(DeepBenchRunProfile.Full);
         var skipped = plan.Skipped.ToDictionary(item => item.TestId, item => item.Reason);
-        Assert.Equal(18, skipped.Count);
+        Assert.Equal(17, skipped.Count);
         Assert.All(skipped.Values, reason => Assert.Contains("Phase", reason, StringComparison.Ordinal));
         Assert.DoesNotContain(Phase1RunnableIds, id => skipped.ContainsKey(id));
     }

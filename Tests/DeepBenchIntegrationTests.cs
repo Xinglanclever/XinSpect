@@ -89,7 +89,7 @@ public class DeepBenchIntegrationTests
 
         Assert.Contains("Deep Bench 深測中心", combined, StringComparison.Ordinal);
         Assert.Contains("38", combined, StringComparison.Ordinal);
-        Assert.Contains("二十個已接入測項", combined, StringComparison.Ordinal);
+        Assert.Contains("二十一個已接入測項", combined, StringComparison.Ordinal);
         Assert.Contains("SLC 持續寫入", combined, StringComparison.Ordinal);
         Assert.Contains("VRAM", combined, StringComparison.Ordinal);
         Assert.Contains("TCP loopback", combined, StringComparison.Ordinal);

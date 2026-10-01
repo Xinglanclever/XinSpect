@@ -8,6 +8,7 @@ public static class DeepBenchSuitePlanner
         "cpu.load-use-ilp-branch",
         "cpu.rdrand-rdseed",
         "topology.core-latency",
+        "topology.core-bandwidth",
         "memory.cache-latency",
         "memory.stream-bandwidth",
         "memory.loaded-latency",
