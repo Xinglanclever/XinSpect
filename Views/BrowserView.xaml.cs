@@ -79,8 +79,8 @@ public partial class BrowserView : UserControl
             _initStarted = false;
             _ready = false;
             Fallback.Visibility = Visibility.Visible;
-            FallbackMsg.Text = "找不到可用的 Microsoft Edge WebView2 執行階段，或其初始化失敗。\n"
-                             + "安裝執行階段後即可使用內建瀏覽器。\n\n（"
+            FallbackMsg.Text = LanguageService.T("找不到可用的 Microsoft Edge WebView2 執行階段，或其初始化失敗。\n"
+                             + "安裝執行階段後即可使用內建瀏覽器。\n\n（")
                              + ex.GetType().Name + "：" + ex.Message + "）";
         }
     }
@@ -192,7 +192,7 @@ public partial class BrowserView : UserControl
         _isLoading = on;
         LoadBar.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
         ReloadBtn.Content = on ? "✕" : "⟳";
-        ReloadBtn.ToolTip = on ? "停止載入" : "重新整理";
+        ReloadBtn.ToolTip = on ? LanguageService.T("停止載入") : LanguageService.T("重新整理");
     }
 
     private void OpenExternal_Click(object sender, RoutedEventArgs e)

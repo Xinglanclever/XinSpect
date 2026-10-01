@@ -27,7 +27,7 @@ public partial class ContextMenuView : UserControl
 
     private void Scan()
     {
-        MsgText.Text = "掃描中…";
+        MsgText.Text = LanguageService.T("掃描中…");
         _svc.Scan();
         MsgText.Text = "";
     }
@@ -52,11 +52,11 @@ public partial class ContextMenuView : UserControl
         {
             try { Clipboard.SetText(entry.RegistryPath); } catch { /* 剪貼簿偶爾被占用，非致命 */ }
             Process.Start(new ProcessStartInfo("regedit.exe") { UseShellExecute = true });
-            MsgText.Text = "已開啟登錄編輯程式，完整路徑已複製到剪貼簿，貼到位址列即可定位。";
+            MsgText.Text = LanguageService.T("已開啟登錄編輯程式，完整路徑已複製到剪貼簿，貼到位址列即可定位。");
         }
         catch (Exception ex)
         {
-            XMsg.Show("開啟登錄編輯程式失敗：" + ex.Message, "右鍵選單管理",
+            XMsg.Show(LanguageService.T("開啟登錄編輯程式失敗：") + ex.Message, "右鍵選單管理",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

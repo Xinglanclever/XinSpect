@@ -42,11 +42,11 @@ public sealed class ComputeMetric
         {
             string raw = RawValue >= 1000 ? RawValue.ToString("#,0") : RawValue.ToString("0.#");
             string rf = RefMax >= 1000 ? RefMax.ToString("#,0") : RefMax.ToString("0.#");
-            return $"{raw} {Unit} ÷ {rf} {Unit} × 100 ≈ {Score:0} 分";
+            return LanguageService.T($"{raw} {Unit} ÷ {rf} {Unit} × 100 ≈ {Score:0} 分");
         }
     }
     /// <summary>來源＋性質的一行展示文字。</summary>
-    public string SourceText => (IsEstimated ? "［估算值・非本機實測］" : "") + "來源：" + Source;
+    public string SourceText => LanguageService.T((IsEstimated ? "［估算值・非本機實測］" : "") + "來源：" + Source);
 }
 
 /// <summary>
@@ -70,7 +70,7 @@ public sealed class ComputeChartService : ObservableObject
     public bool IsRunning { get => _running; private set => SetProperty(ref _running, value); }
 
     private string _status = "";
-    public string StatusLine { get => _status; private set => SetProperty(ref _status, value); }
+    public string StatusLine { get => LanguageService.T(_status); private set => SetProperty(ref _status, value); }
 
     /// <summary>從 MainViewModel 各服務讀取已有數字，組裝算力維度。</summary>
     public void Refresh(MainViewModel? vm)
@@ -210,11 +210,11 @@ public sealed class ComputeChartService : ObservableObject
 
     private string _analysis = "";
     /// <summary>讀完數字後的總結分析（最強／最弱／均衡判讀）。</summary>
-    public string AnalysisText { get => _analysis; private set => SetProperty(ref _analysis, value); }
+    public string AnalysisText { get => LanguageService.T(_analysis); private set => SetProperty(ref _analysis, value); }
 
     private string _missing = "";
     /// <summary>缺哪些維度資料、去哪個頁面補測。</summary>
-    public string MissingText { get => _missing; private set => SetProperty(ref _missing, value); }
+    public string MissingText { get => LanguageService.T(_missing); private set => SetProperty(ref _missing, value); }
 
     // ── 內部輔助 ─────────────────────────────────────────────
 
@@ -223,7 +223,9 @@ public sealed class ComputeChartService : ObservableObject
     {
         double score = Math.Clamp(raw / refMax * 100.0, 0, 100);
         string rawText = raw >= 1000 ? $"{raw:#,0} {unit}" : $"{raw:0.#} {unit}";
-        return new ComputeMetric(name, score, category, unit, raw, rawText, source, refMax, isEstimated, note);
+        // 維度名／來源／補充說明會直接上版面（繫結顯示，不經視覺樹掃描），在產出點過 T。
+        return new ComputeMetric(LanguageService.T(name), score, category, unit, raw, rawText,
+                                 LanguageService.T(source), refMax, isEstimated, LanguageService.T(note));
     }
 
     /// <summary>

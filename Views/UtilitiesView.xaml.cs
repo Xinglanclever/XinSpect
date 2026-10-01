@@ -13,9 +13,9 @@ public class UtilityNavItem
 {
     public UtilityNavItem(PageDef def) => Def = def;
     public PageDef Def { get; }
-    public string Title => Def.Title;
+    public string Title => LanguageService.T(Def.Title);
     public string Icon => Def.IconData;
-    public string Hint => Def.Hint ?? "";
+    public string Hint => LanguageService.T(Def.Hint ?? "");
 
     private string _status = "";
     /// <summary>空字串＝正常（含尚未檢測與建構成功，不顯示任何記號）；「⚠」＝建構失敗才標出。</summary>
@@ -35,7 +35,18 @@ public partial class UtilitiesView : UserControl, IPageLifecycle
         _items = PageRegistry.Utilities.Select(d => new UtilityNavItem(d)).ToList();
         SubNav.ItemsSource = _items;
         SubNav.SelectedIndex = 0;
+        // 簡體切換時重建子導覽清單（Title/Hint 是 getter，須重查才會套新詞表）。
+        Loaded += (_, _) => LanguageService.Changed += RebuildItems;
+        Unloaded += (_, _) => LanguageService.Changed -= RebuildItems;
         Loaded += (_, _) => ProbeAll();
+    }
+
+    private void RebuildItems()
+    {
+        int sel = SubNav.SelectedIndex;
+        _items = PageRegistry.Utilities.Select(d => new UtilityNavItem(d)).ToList();
+        SubNav.ItemsSource = _items;
+        if (sel >= 0 && sel < _items.Count) SubNav.SelectedIndex = sel;
     }
 
     /// <summary>

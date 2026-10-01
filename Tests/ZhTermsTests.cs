@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 
 namespace XinSpect.Tests;
 
@@ -32,6 +32,14 @@ public class ZhTermsTests
     [InlineData("終端機", "终端")]
     [InlineData("瀏覽器", "浏览器")]
     [InlineData("關於", "关于")]
+    [InlineData("登錄編輯程式", "注册表编辑器")]
+    [InlineData("記憶體控制器", "内存控制器")]
+    [InlineData("額菲爾士峰", "珠穆朗玛峰")]
+    [InlineData("記憶體時脈", "内存频率")]
+    [InlineData("工作排程器", "任务计划程序")]
+    [InlineData("檔案總管", "文件资源管理器")]
+    [InlineData("剪貼簿", "剪贴板")]
+    [InlineData("登錄", "注册表")]
     public void 核心技術詞組繁轉簡(string trad, string simp)
         => Assert.Equal(simp, ZhTerms.ApplyToSimp(trad));
 

@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
@@ -153,7 +153,7 @@ public static class ThemeService
         "#17171a", "#4a4a45", "#7c7a74",
         "#dedcd6", "#c9c7c0", "#f7f6f3");
 
-    // Extreme Edition「東方之星」：ROG/EVGA 風格——純黑底 + 低飽和暗紅點綴
+    // Extreme Edition「天犼星」：ROG/EVGA 風格——純黑底 + 低飽和暗紅點綴
     private static readonly Palette ExtremeEditionPalette = new(
         "#0A0A0A", "#121212", "#1A1A1A",
         "#E0E0E0", "#A0A0A0", "#686868",

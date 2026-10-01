@@ -71,11 +71,11 @@ public sealed class FeedbackService : ObservableObject
     public string? AddAttachment(string filePath)
     {
         if (_attachments.Count >= MaxAttachments)
-            return $"最多只能附加 {MaxAttachments} 個檔案。";
+            return LanguageService.T($"最多只能附加 {MaxAttachments} 個檔案。");
 
         var info = new FileInfo(filePath);
         if (info.Length > MaxAttachmentBytes)
-            return $"檔案「{info.Name}」超過 {MaxAttachmentBytes / 1024 / 1024} MB 上限，已略過。";
+            return LanguageService.T($"檔案「{info.Name}」超過 {MaxAttachmentBytes / 1024 / 1024} MB 上限，已略過。");
 
         if (_attachments.Any(a => a.FileName == info.Name))
             return null; // 重複的靜默略過
@@ -144,8 +144,8 @@ public sealed class FeedbackService : ObservableObject
 
     /// <summary>卡片停用時顯示的原因（可用時為空字串）——按鈕變灰一定要說得出為什麼。</summary>
     public string UnavailableReason =>
-        !IsConfigured ? "這個版本還沒有收件端點，暫時無法直接上傳；請改用「GitHub 開源」那張卡片的連結提交 Issue。"
-        : !HasNetwork ? "目前沒有網路連線，無法上傳。你寫的內容不會消失，接上網路後再按上傳即可。"
+        !IsConfigured ? LanguageService.T("這個版本還沒有收件端點，暫時無法直接上傳；請改用「GitHub 開源」那張卡片的連結提交 Issue。")
+        : !HasNetwork ? LanguageService.T("目前沒有網路連線，無法上傳。你寫的內容不會消失，接上網路後再按上傳即可。")
         : "";
 
     /// <summary>重新評估網路狀態（供介面在載入或使用者按重試時呼叫）。</summary>
@@ -165,12 +165,12 @@ public sealed class FeedbackService : ObservableObject
         string text = Text.Trim();
         if (text.Length > MaxLength)
         {
-            Status = $"內容太長（{text.Length} 字），請精簡到 {MaxLength} 字以內。";
+            Status = LanguageService.T($"內容太長（{text.Length} 字），請精簡到 {MaxLength} 字以內。");
             return;
         }
 
         IsSending = true;
-        Status = "正在上傳…";
+        Status = LanguageService.T("正在上傳…");
         try
         {
             var payload = new Dictionary<string, object?>
@@ -196,7 +196,7 @@ public sealed class FeedbackService : ObservableObject
             string json = JsonSerializer.Serialize(payload);
             if (json.Length > MaxPayloadBytes)
             {
-                Status = $"附件加文字合計超過 {MaxPayloadBytes / 1024 / 1024} MB 上限，請減少附件後再試。";
+                Status = LanguageService.T($"附件加文字合計超過 {MaxPayloadBytes / 1024 / 1024} MB 上限，請減少附件後再試。");
                 return;
             }
 
@@ -216,11 +216,11 @@ public sealed class FeedbackService : ObservableObject
             }
             Text = "";
             ClearAttachments();
-            Status = "已送出，謝謝你的建議。";
+            Status = LanguageService.T("已送出，謝謝你的建議。");
         }
         catch (TaskCanceledException)
         {
-            Status = "上傳逾時，請稍後再試。你寫的內容還留在框裡。";
+            Status = LanguageService.T("上傳逾時，請稍後再試。你寫的內容還留在框裡。");
         }
         catch (Exception ex)
         {

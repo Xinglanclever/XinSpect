@@ -1,4 +1,4 @@
-<UserControl x:Class="XinSpect.AiView"
+﻿<UserControl x:Class="XinSpect.AiView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect"
@@ -93,12 +93,20 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Style="{StaticResource FieldValue}" VerticalAlignment="Center"
-                           Text="{Binding Settings.AiModel, StringFormat=模型：{0}}"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource FieldValue}" VerticalAlignment="Center"
+                               Text="{Binding Settings.AiModel, StringFormat=模型：{0}}"/>
+                    <Button Style="{StaticResource ToolButton}" Content="⚙" FontSize="13" Padding="4,2" Margin="6,0,0,0"
+                            ToolTip="前往設定頁的 AI 區塊"
+                            Click="BtnGoAiSettings_Click" Cursor="Hand"/>
+                </StackPanel>
                 <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="18,0,8,0" Text="溫度"/>
                 <Slider Grid.Column="2" Minimum="0" Maximum="2" TickFrequency="0.1" IsSnapToTickEnabled="True"
                         VerticalAlignment="Center" Value="{Binding Settings.AiTemperature, Mode=TwoWay}"
                         Foreground="{DynamicResource AccentBrush}"/>
+                <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" VerticalAlignment="Center"
+                           Margin="165,0,0,0" HorizontalAlignment="Left" FontSize="12"
+                           Text="{Binding Settings.AiTemperature, StringFormat={}{0:0.0}}"/>
                 <CheckBox Grid.Column="3" Style="{StaticResource AiCheck}" Margin="18,0,0,0" Content="診斷代理"
                           ToolTip="允許 AI 主動呼叫本機唯讀查詢工具（溫度、事件、磁碟健康、歷史統計等）"
                           IsChecked="{Binding Settings.AiAgentMode, Mode=TwoWay}"/>
@@ -142,29 +150,29 @@
                                         <Grid Margin="0,0,0,3">
                                             <TextBlock x:Name="role" Text="{Binding RoleText}" FontSize="11.5" FontWeight="SemiBold"
                                                        Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/>
-                                            <!-- 複製這則：AI 回覆與代理查詢紀錄都可複製，使用者發問的不用 -->
-                                            <Button x:Name="copyBtn" HorizontalAlignment="Right" VerticalAlignment="Top"
-                                                    Click="CopyMsg_Click" Cursor="Hand" FontSize="11"
-                                                    Content="⧉ 複製" ToolTip="複製這則訊息"
-                                                    Background="Transparent" BorderThickness="0" Padding="4,0"
-                                                    Foreground="{DynamicResource MutedInkBrush}">
-                                                <Button.Style>
-                                                    <Style TargetType="Button" BasedOn="{x:Null}">
-                                                        <Setter Property="Visibility" Value="Hidden"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsAssistant}" Value="True">
-                                                                <Setter Property="Visibility" Value="Visible"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding IsTool}" Value="True">
-                                                                <Setter Property="Visibility" Value="Visible"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Button.Style>
-                                            </Button>
                                         </Grid>
                                         <TextBlock x:Name="body" Text="{Binding Text}" TextWrapping="Wrap"
                                                    Foreground="{DynamicResource PrimaryInkBrush}" FontSize="13.5" LineHeight="20"/>
+                                        <!-- 複製這則：放在文字下方，AI 回覆與代理查詢紀錄都可複製 -->
+                                        <Button x:Name="copyBtn" HorizontalAlignment="Right" Margin="0,6,0,0"
+                                                Click="CopyMsg_Click" Cursor="Hand" FontSize="11"
+                                                Content="⧉ 複製" ToolTip="複製這則訊息"
+                                                Background="Transparent" BorderThickness="0" Padding="4,0"
+                                                Foreground="{DynamicResource MutedInkBrush}">
+                                            <Button.Style>
+                                                <Style TargetType="Button" BasedOn="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Hidden"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsAssistant}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsTool}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
                                     </StackPanel>
                                 </Border>
                                 <DataTemplate.Triggers>

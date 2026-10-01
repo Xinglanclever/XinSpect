@@ -210,22 +210,6 @@
                         VerticalAlignment="Top" Margin="0,0,8,0"
                         Content="複製規格摘要" Click="CopySpec_Click"
                         ToolTip="把八行規格複製到剪貼簿，方便貼到論壇或聊天室問人。不含電腦名稱、使用者名稱與任何序號。"/>
-                <!-- 拜神（娛樂）：一包綠色乖乖，保佑機器乖乖 -->
-                <Button x:Name="ShrineButton" DockPanel.Dock="Right" Style="{StaticResource ToolButton}"
-                        VerticalAlignment="Top" Margin="0,0,8,0" Click="Shrine_Click"
-                        ToolTip="拜神（娛樂）：一包綠色乖乖，保佑機器乖乖">
-                    <StackPanel Orientation="Horizontal">
-                        <Viewbox Width="14" Height="14" Margin="0,0,5,0">
-                            <Grid>
-                                <Path Fill="{DynamicResource PrimaryInkBrush}"
-                                      Data="F1 M5,8 H19 V19 A2,2 0 0 1 17,21 H7 A2,2 0 0 1 5,19 Z"/>
-                                <Path Fill="{DynamicResource PrimaryInkBrush}"
-                                      Data="F1 M4.5,8 L6,5 7.5,8 9,5 10.5,8 12,5 13.5,8 15,5 16.5,8 18,5 19.5,8 Z"/>
-                            </Grid>
-                        </Viewbox>
-                        <TextBlock Text="拜神" Foreground="{DynamicResource PrimaryInkBrush}" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
             </DockPanel>
 
             <!-- 自訂面板：只在按下「自訂磁貼」時展開，平時不佔畫面 -->

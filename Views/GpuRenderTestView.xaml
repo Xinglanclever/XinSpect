@@ -33,7 +33,7 @@
                     Visibility="{Binding IsRunning, Converter={StaticResource BoolToVis}}"
                     local:Anim.RevealDelay="150">
                 <StackPanel Margin="16">
-                    <TextBlock Text="{Binding Phase}"
+                    <TextBlock Text="{Binding Phase, Converter={x:Static local:ChineseConverter.Instance}}"
                                FontSize="14" FontWeight="SemiBold"
                                Foreground="{DynamicResource PrimaryInkBrush}"
                                Margin="0,0,0,6"/>
@@ -59,7 +59,7 @@
                                 </Grid.ColumnDefinitions>
 
                                 <TextBlock Grid.Column="0"
-                                           Text="{Binding Name}"
+                                           Text="{Binding Name, Converter={x:Static local:ChineseConverter.Instance}}"
                                            Style="{StaticResource FieldLabel}"
                                            VerticalAlignment="Center"/>
                                 <TextBlock Grid.Column="1"
@@ -75,9 +75,9 @@
                             </Grid>
                             <!-- 過程展示：怎麼測的、逐秒 FPS、像素檢核結果 -->
                             <StackPanel Margin="16,0,16,12">
-                                <TextBlock Text="{Binding Detail}" FontSize="12" TextWrapping="Wrap"
+                                <TextBlock Text="{Binding Detail, Converter={x:Static local:ChineseConverter.Instance}}" FontSize="12" TextWrapping="Wrap"
                                            Foreground="{DynamicResource SecondaryInkBrush}"/>
-                                <TextBlock Text="{Binding FpsTrace}" FontSize="11.5" TextWrapping="Wrap" Margin="0,3,0,0"
+                                <TextBlock Text="{Binding FpsTrace, Converter={x:Static local:ChineseConverter.Instance}}" FontSize="11.5" TextWrapping="Wrap" Margin="0,3,0,0"
                                            Foreground="{DynamicResource MutedInkBrush}"
                                            Visibility="{Binding HasTrace, Converter={StaticResource BoolToVis}}"/>
                                 <TextBlock FontSize="11.5" Margin="0,3,0,0" TextWrapping="Wrap"
@@ -112,13 +112,13 @@
                 <StackPanel Margin="16">
                     <TextBlock Text="分析" FontSize="13" FontWeight="SemiBold"
                                Foreground="{DynamicResource PrimaryInkBrush}"/>
-                    <TextBlock Text="{Binding Analysis}" FontSize="12.5" LineHeight="20" TextWrapping="Wrap" Margin="0,6,0,0"
+                    <TextBlock Text="{Binding Analysis, Converter={x:Static local:ChineseConverter.Instance}}" FontSize="12.5" LineHeight="20" TextWrapping="Wrap" Margin="0,6,0,0"
                                Foreground="{DynamicResource SecondaryInkBrush}"/>
                 </StackPanel>
             </Border>
 
             <!-- status -->
-            <TextBlock Text="{Binding StatusLine}"
+            <TextBlock Text="{Binding StatusLine, Converter={x:Static local:ChineseConverter.Instance}}"
                        Foreground="{DynamicResource SecondaryInkBrush}"
                        TextWrapping="Wrap" Margin="0,4,0,0"
                        local:Anim.RevealDelay="250"/>

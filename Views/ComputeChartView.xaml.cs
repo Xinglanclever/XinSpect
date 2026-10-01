@@ -15,6 +15,7 @@ public partial class ComputeChartView : UserControl
     public ComputeChartView()
     {
         InitializeComponent();
+        Unloaded += (_, _) => LanguageService.Changed -= OnLanguageChanged;
         // 訂一次就好。先前寫在 DoRefresh 裡，每按一次「重新整理」就多掛一個處理常式，
         // 而且舊的 lambda 永遠不會被釋放。
         ChartItems.ItemContainerGenerator.StatusChanged += (_, _) =>
@@ -24,7 +25,19 @@ public partial class ComputeChartView : UserControl
             Dispatcher.BeginInvoke(new Action(ApplyBarColors),
                 System.Windows.Threading.DispatcherPriority.Loaded);
         };
-        Loaded += (_, _) => { if (!_loaded) { _loaded = true; DoRefresh(); } };
+        Loaded += (_, _) =>
+        {
+            // 分析文字在服務產出點轉換；語言切換時重抓一次，讓版面即時跟上。
+            // 先退訂再加：頁面快取會反覆 Loaded，避免重複訂閱。
+            LanguageService.Changed -= OnLanguageChanged;
+            LanguageService.Changed += OnLanguageChanged;
+            if (!_loaded) { _loaded = true; DoRefresh(); }
+        };
+    }
+
+    private void OnLanguageChanged()
+    {
+        if (_loaded) DoRefresh();
     }
 
     private void DoRefresh()

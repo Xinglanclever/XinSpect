@@ -141,7 +141,36 @@ public partial class MainWindow : Window
             _ocRiskCleared = true;
         }
 
+
+        // 拜神：開視窗而不切頁，選取還原到先前分頁。
+        if (def.Key == "shrine")
+        {
+            Nav.SelectedItem = e.RemovedItems.Count > 0 ? e.RemovedItems[0] : PageRegistry.Pages[0];
+            _ = OpenShrineAsync();
+            return;
+        }
+
         ShowPage(def);
+    }
+
+    /// <summary>開拜神視窗。乖度輸入必須是真的：Minidump 資料夾讀得到才數近 7 天藍屏。</summary>
+    private async System.Threading.Tasks.Task OpenShrineAsync()
+    {
+        int? bsod7d = await System.Threading.Tasks.Task.Run(() =>
+        {
+            try
+            {
+                var dir = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "Microsoft", "Windows", "WER", "ReportArchive");
+                if (!System.IO.Directory.Exists(dir)) return (int?)null;
+                var cutoff = DateTime.Now.AddDays(-7);
+                return (int?)System.IO.Directory.EnumerateFiles(dir, "*.dmp", System.IO.SearchOption.AllDirectories)
+                    .Count(p => System.IO.File.GetLastWriteTime(p) >= cutoff);
+            }
+            catch { return null; }
+        });
+        new ShrineWindow(bsod7d, Environment.TickCount64 / 1000) { Owner = this }.ShowDialog();
     }
 
     // 切頁：延遲建立檢視 → 轉交生命週期 → 重放感測閘門 → 播放進場動畫。
@@ -158,7 +187,7 @@ public partial class MainWindow : Window
             {
                 // 單一頁面建構失敗（缺少執行階段元件等）不得讓整個外殼倒下；
                 // 回退側欄到先前頁面，避免側欄亮著新頁、內容卻留著舊頁的不一致。
-                _vm.StatusText = $"「{def.Title}」頁面載入失敗：{ex.Message}";
+                _vm.StatusText = LanguageService.T($"「{def.Title}」頁面載入失敗：{ex.Message}");
                 if (_currentDef is not null) Nav.SelectedItem = _currentDef;
                 return;
             }

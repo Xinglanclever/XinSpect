@@ -22,7 +22,13 @@ public partial class HelpDot : UserControl
     {
         InitializeComponent();
         Apply();
+        // 說明文字在程式碼裡產生（取自 HelpCatalog），視覺樹掃描涵蓋不到 ToolTip 內容，
+        // 因此在產出點過 T，並在語言切換時重套一次。
+        Loaded += (_, _) => LanguageService.Changed += OnLanguageChanged;   // 頁面快取會反覆 Unloaded，回來時要重新接上
+        Unloaded += (_, _) => LanguageService.Changed -= OnLanguageChanged;
     }
+
+    private void OnLanguageChanged() => Apply();
 
     public static readonly DependencyProperty HelpKeyProperty = DependencyProperty.Register(
         nameof(HelpKey), typeof(string), typeof(HelpDot),
@@ -44,10 +50,10 @@ public partial class HelpDot : UserControl
             return;
         }
         Visibility = Visibility.Visible;
-        TipTitle.Text = e.Title;
-        TipWhat.Text = e.What;
-        TipDoes.Text = e.Does;
-        TipRisk.Text = e.RiskLine;
+        TipTitle.Text = LanguageService.T(e.Title);
+        TipWhat.Text = LanguageService.T(e.What);
+        TipDoes.Text = LanguageService.T(e.Does);
+        TipRisk.Text = LanguageService.T(e.RiskLine);
 
         var brush = Brush(e.Risk switch
         {

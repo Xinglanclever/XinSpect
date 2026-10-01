@@ -34,12 +34,12 @@ public partial class HardwareTestView : UserControl
         };
         if (w is null)
         {
-            Status.Text = $"未知的檢測視窗代號 {code}（內部錯誤，請回報）。";
+            Status.Text = LanguageService.T($"未知的檢測視窗代號 {code}（內部錯誤，請回報）。");
             return;
         }
 
         w.Owner = Shell.TopWindow;
         w.Show();
-        Status.Text = "檢測視窗已開啟；按 Esc 即可回到曦覽。";
+        Status.Text = LanguageService.T("檢測視窗已開啟；按 Esc 即可回到曦覽。");
     }
 }

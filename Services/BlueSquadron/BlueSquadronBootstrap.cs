@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Reflection;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
@@ -99,11 +99,19 @@ internal static class BlueSquadronBootstrap
         string bas = AppContext.BaseDirectory;
         yield return Path.Combine(bas, "bluesquadron", ExeName);
         yield return Path.Combine(bas, ExeName);
-        // 開發建置
-        yield return Path.GetFullPath(Path.Combine(bas, "..", "..", "..", "..",
-            "BlueSquadron", "bin", "Debug", "net10.0-windows", "win-x64", ExeName));
-        yield return Path.GetFullPath(Path.Combine(bas, "..", "..", "..", "..",
-            "BlueSquadron", "bin", "Release", "net10.0-windows", "win-x64", ExeName));
+
+        // 開發建置：自執行檔目錄逐層向上找專案根目錄，
+        // 相容標準 bin\\Debug\\... 與自訂 BaseOutputPath（如 obj\\_run\\... ）两種佈局
+        string? dir = Path.GetFullPath(bas);
+        for (int i = 0; i < 8 && dir is not null; i++)
+        {
+            foreach (var cfg in new[] { "Debug", "Release" })
+            {
+                yield return Path.GetFullPath(Path.Combine(dir,
+                    "BlueSquadron", "bin", cfg, "net10.0-windows", "win-x64", ExeName));
+            }
+            dir = Path.GetDirectoryName(dir);
+        }
     }
 
     private static string HashOf(Stream s)

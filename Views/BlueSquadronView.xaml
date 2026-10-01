@@ -1,4 +1,4 @@
-<UserControl x:Class="XinSpect.BlueSquadronView"
+﻿<UserControl x:Class="XinSpect.BlueSquadronView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect">
@@ -117,7 +117,7 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Border Style="{StaticResource Card}" Margin="0,0,0,10">
-                            <Expander IsExpanded="False">
+                            <Expander IsExpanded="False" HorizontalContentAlignment="Stretch">
                                 <Expander.Header>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -197,7 +197,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="200">
                 <StackPanel>
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,8"
-                               Text="即時偵測事件（需啟動 BlueSquadronBridge 守護進程）"
+                               Text="{Binding BlueSquadron.TimelineHint}"
                                Visibility="{Binding BlueSquadron.HasThreatEvents, Converter={StaticResource InverseBoolToVis}}"/>
                     <ItemsControl ItemsSource="{Binding BlueSquadron.ThreatTimeline}">
                         <ItemsControl.ItemTemplate>

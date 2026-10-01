@@ -27,16 +27,16 @@ public partial class NetworkSpeedView : UserControl
         if (node.Protocol == NodeProtocol.WebPage)
         {
             Shell.Main?.NavigateToBrowser(node.WebUrl, "netspeed");
-            LiveText.Text = "已跳轉至內建瀏覽器";
-            StatusText.Text = $"{node.Name} 未提供可供程式直接量測的公開端點，已跳轉至內建瀏覽器開啟其官方測速頁。";
+            LiveText.Text = LanguageService.T("已跳轉至內建瀏覽器");
+            StatusText.Text = LanguageService.T($"{node.Name} 未提供可供程式直接量測的公開端點，已跳轉至內建瀏覽器開啟其官方測速頁。");
             return;
         }
 
         _running = true;
-        StartBtn.Content = "取消";
+        StartBtn.Content = LanguageService.T("取消");
         NodePicker.IsEnabled = false;
         PingText.Text = DownText.Text = UpText.Text = "—";
-        LiveText.Text = "準備中…";
+        LiveText.Text = LanguageService.T("準備中…");
         StatusText.Text = "";
 
         _cts = new CancellationTokenSource();
@@ -48,7 +48,7 @@ public partial class NetworkSpeedView : UserControl
         finally
         {
             _running = false;
-            StartBtn.Content = "開始測速";
+            StartBtn.Content = LanguageService.T("開始測速");
             NodePicker.IsEnabled = true;
             _cts?.Dispose();
             _cts = null;
@@ -63,11 +63,11 @@ public partial class NetworkSpeedView : UserControl
 
         LiveText.Text = s.Phase switch
         {
-            "下載" when !s.Done => $"下載中 ・ 目前 {s.LiveMbps:0.0} Mbps（{s.LiveMbps / 8.0:0.0} MB/s）",
-            "上傳" when !s.Done => $"上傳中 ・ 目前 {s.LiveMbps:0.0} Mbps（{s.LiveMbps / 8.0:0.0} MB/s）",
-            "完成" => "測速完成",
-            "取消" => "已取消",
-            "錯誤" => "測試中止",
+            "下載" when !s.Done => LanguageService.T($"下載中 ・ 目前 {s.LiveMbps:0.0} Mbps（{s.LiveMbps / 8.0:0.0} MB/s）"),
+            "上傳" when !s.Done => LanguageService.T($"上傳中 ・ 目前 {s.LiveMbps:0.0} Mbps（{s.LiveMbps / 8.0:0.0} MB/s）"),
+            "完成" => LanguageService.T("測速完成"),
+            "取消" => LanguageService.T("已取消"),
+            "錯誤" => LanguageService.T("測試中止"),
             _ => s.Status,
         };
         StatusText.Text = s.Status;

@@ -27,7 +27,7 @@ public partial class DiskScanView : UserControl
 
     private void Pick_Click(object sender, RoutedEventArgs e)
     {
-        var dlg = new OpenFolderDialog { Title = "選擇要掃描的資料夾" };
+        var dlg = new OpenFolderDialog { Title = LanguageService.T("選擇要掃描的資料夾") };
         if (!string.IsNullOrEmpty(PathBox.Text) && Directory.Exists(PathBox.Text))
             dlg.InitialDirectory = PathBox.Text;
         if (dlg.ShowDialog() == true)
@@ -46,21 +46,21 @@ public partial class DiskScanView : UserControl
         var root = PathBox.Text.Trim();
         if (string.IsNullOrEmpty(root) || !Directory.Exists(root))
         {
-            StatusText.Text = "請先選擇有效的資料夾。";
+            StatusText.Text = LanguageService.T("請先選擇有效的資料夾。");
             return;
         }
 
         _cts = new CancellationTokenSource();
-        ScanBtn.Content = "取消";
+        ScanBtn.Content = LanguageService.T("取消");
         PickBtn.IsEnabled = false;
         DupCheck.IsEnabled = false;
         LargeList.ItemsSource = null;
         LargeEmpty.Visibility = Visibility.Collapsed;
         DupCard.Visibility = Visibility.Collapsed;
-        ProgressText.Text = "掃描中…";
+        ProgressText.Text = LanguageService.T("掃描中…");
 
         bool findDup = DupCheck.IsChecked == true;
-        var progress = new Progress<int>(n => ProgressText.Text = $"已掃描 {n:N0} 個檔案…");
+        var progress = new Progress<int>(n => ProgressText.Text = LanguageService.T($"已掃描 {n:N0} 個檔案…"));
 
         try
         {
@@ -74,27 +74,27 @@ public partial class DiskScanView : UserControl
                 DupList.ItemsSource = result.Duplicates;
                 DupCard.Visibility = Visibility.Visible;
                 DupHeader.Text = result.Duplicates.Count == 0
-                    ? "重複檔案：未發現內容完全相同的重複檔。"
-                    : $"重複檔案：{result.Duplicates.Count} 組 ・ 合計可回收 {DiskScanService.Human(result.WastedTotal)}";
+                    ? LanguageService.T("重複檔案：未發現內容完全相同的重複檔。")
+                    : LanguageService.T($"重複檔案：{result.Duplicates.Count} 組 ・ 合計可回收 {DiskScanService.Human(result.WastedTotal)}");
             }
 
-            ProgressText.Text = $"完成 ・ 共 {result.TotalCount:N0} 個檔案 ・ 總計 {DiskScanService.Human(result.TotalSize)}"
-                + (findDup ? $" ・ 重複可回收 {DiskScanService.Human(result.WastedTotal)}" : "");
+            ProgressText.Text = LanguageService.T($"完成 ・ 共 {result.TotalCount:N0} 個檔案 ・ 總計 {DiskScanService.Human(result.TotalSize)}"
+                + (findDup ? $" ・ 重複可回收 {DiskScanService.Human(result.WastedTotal)}" : ""));
             _svc.SetStatus(ProgressText.Text);
         }
         catch (OperationCanceledException)
         {
-            ProgressText.Text = "已取消掃描。";
+            ProgressText.Text = LanguageService.T("已取消掃描。");
         }
         catch (Exception ex)
         {
-            ProgressText.Text = "掃描失敗：" + ex.Message;
+            ProgressText.Text = LanguageService.T("掃描失敗：") + ex.Message;
         }
         finally
         {
             _cts.Dispose();
             _cts = null;
-            ScanBtn.Content = "開始掃描";
+            ScanBtn.Content = LanguageService.T("開始掃描");
             PickBtn.IsEnabled = true;
             DupCheck.IsEnabled = true;
         }
@@ -113,7 +113,7 @@ public partial class DiskScanView : UserControl
         }
         catch (Exception ex)
         {
-            XMsg.Show("定位失敗：" + ex.Message, "大檔／重複檔掃描",
+            XMsg.Show(LanguageService.T("定位失敗：") + ex.Message, "大檔／重複檔掃描",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

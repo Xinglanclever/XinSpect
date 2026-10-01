@@ -189,10 +189,18 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <Button x:Name="PrayButton" Grid.Column="0" Style="{StaticResource ShrinePrimary}" HorizontalContentAlignment="Center" Click="Pray_Click">
-                    <TextBlock Text="拜" FontSize="18" FontWeight="ExtraBold" Foreground="#1A3A00"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock Text="拜" FontSize="18" FontWeight="ExtraBold" Foreground="#1A3A00"/>
+                        <TextBlock x:Name="PrayCount" Text="" FontSize="12" Margin="6,0,0,0"
+                                   Foreground="#1A3A00" Opacity="0.6" VerticalAlignment="Bottom"/>
+                    </StackPanel>
                 </Button>
                 <Button x:Name="IncenseButton" Grid.Column="2" Style="{StaticResource ShrinePrimary}" HorizontalContentAlignment="Center" Click="Incense_Click">
-                    <TextBlock Text="燒香" FontSize="16" FontWeight="ExtraBold" Foreground="#1A3A00"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock Text="燒香" FontSize="16" FontWeight="ExtraBold" Foreground="#1A3A00"/>
+                        <TextBlock x:Name="IncenseCount" Text="" FontSize="12" Margin="6,0,0,0"
+                                   Foreground="#1A3A00" Opacity="0.6" VerticalAlignment="Bottom"/>
+                    </StackPanel>
                 </Button>
                 <Button x:Name="CloseButton" Grid.Column="4" Style="{StaticResource ShrineSecondary}" HorizontalContentAlignment="Center" Click="Close_Click">
                     <TextBlock Text="收起" FontSize="13"/>

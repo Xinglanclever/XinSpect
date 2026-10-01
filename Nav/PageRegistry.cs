@@ -204,6 +204,15 @@ public static class PageRegistry
         },
         new()
         {
+            Key = "shrine", Title = "拜神", Group = GSecurity,
+            IconData = "F1 M5,8 H19 V19 A2,2 0 0 1 17,21 H7 A2,2 0 0 1 5,19 Z "
+                     + "M4.5,8 L6,5 7.5,8 9,5 10.5,8 12,5 13.5,8 15,5 16.5,8 18,5 19.5,8 Z",
+            Factory = () => new OverviewView(),   // MainWindow will intercept
+            Hint = "拜神（娛樂）：一包緑色乖乖，保佑機器乖乖",
+            Keywords = ["shrine", "拜神", "乖乖", "上香", "燒香", "祈福", "guai"],
+        },
+        new()
+        {
             Key = "scenes", Title = "場景", Group = GTune,
             IconData = "F1 M12,2 L14.6,8.6 L21.6,9.2 L16.3,13.8 L17.9,20.7 L12,17 L6.1,20.7 L7.7,13.8 "
                      + "L2.4,9.2 L9.4,8.6 Z",

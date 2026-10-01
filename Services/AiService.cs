@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
@@ -685,7 +685,8 @@ public sealed class AiService : ObservableObject
             ["temperature"] = _settings.AiTemperature,
             ["stream"] = stream,
         };
-        if (_settings.AiMaxTokens > 0) payload["max_tokens"] = _settings.AiMaxTokens;
+        // 設 0 時送一個夠高的上限：不送時許多端點會用自己的預設上限（很小），長篇評價容易被截斷。
+        payload["max_tokens"] = _settings.AiMaxTokens > 0 ? _settings.AiMaxTokens : 32768;
         if (allowTools) payload["tools"] = Tools!.ToSchema();
 
         using var req = new HttpRequestMessage(HttpMethod.Post, url)

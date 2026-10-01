@@ -41,11 +41,11 @@ public partial class HostsEditorView : UserControl
         try
         {
             Editor.Text = File.Exists(HostsPath) ? File.ReadAllText(HostsPath) : "";
-            StatusText.Text = $"已載入 {HostsPath} ・ {DateTime.Now:HH:mm:ss}";
+            StatusText.Text = LanguageService.T($"已載入 {HostsPath} ・ {DateTime.Now:HH:mm:ss}");
         }
         catch (Exception ex)
         {
-            StatusText.Text = "載入失敗：" + ex.Message;
+            StatusText.Text = LanguageService.T("載入失敗：") + ex.Message;
         }
     }
 
@@ -64,16 +64,16 @@ public partial class HostsEditorView : UserControl
             // hosts 慣例為無 BOM 之 ASCII/UTF-8；統一寫成 \r\n 換行
             string text = Editor.Text.Replace("\r\n", "\n").Replace("\n", "\r\n");
             File.WriteAllText(HostsPath, text, new System.Text.UTF8Encoding(false));
-            StatusText.Text = $"已儲存並備份 ・ {DateTime.Now:HH:mm:ss}（如需生效可清除 DNS 快取）";
+            StatusText.Text = LanguageService.T($"已儲存並備份 ・ {DateTime.Now:HH:mm:ss}（如需生效可清除 DNS 快取）");
         }
         catch (UnauthorizedAccessException)
         {
-            XMsg.Show("無法寫入 hosts 檔：權限不足。\n請以系統管理員身分重新啟動曦覽。",
+            XMsg.Show(LanguageService.T("無法寫入 hosts 檔：權限不足。\n請以系統管理員身分重新啟動曦覽。"),
                 "Hosts 編輯器", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         catch (Exception ex)
         {
-            XMsg.Show("儲存失敗：" + ex.Message, "Hosts 編輯器",
+            XMsg.Show(LanguageService.T("儲存失敗：") + ex.Message, "Hosts 編輯器",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -85,17 +85,17 @@ public partial class HostsEditorView : UserControl
             var files = new DirectoryInfo(BackupDir).GetFiles("hosts-*.txt");
             if (files.Length == 0)
             {
-                XMsg.Show("尚無備份可還原。", "Hosts 編輯器",
+                XMsg.Show(LanguageService.T("尚無備份可還原。"), "Hosts 編輯器",
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
             var newest = files.OrderByDescending(f => f.LastWriteTime).First();
             Editor.Text = File.ReadAllText(newest.FullName);
-            StatusText.Text = $"已載入備份 {newest.Name}，請檢視後按「儲存」寫回。";
+            StatusText.Text = LanguageService.T($"已載入備份 {newest.Name}，請檢視後按「儲存」寫回。");
         }
         catch (Exception ex)
         {
-            StatusText.Text = "還原失敗：" + ex.Message;
+            StatusText.Text = LanguageService.T("還原失敗：") + ex.Message;
         }
     }
 
@@ -112,11 +112,11 @@ public partial class HostsEditorView : UserControl
             using var p = Process.Start(psi);
             if (p is not null)
                 await p.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));
-            StatusText.Text = $"已清除 DNS 解析快取 ・ {DateTime.Now:HH:mm:ss}";
+            StatusText.Text = LanguageService.T($"已清除 DNS 解析快取 ・ {DateTime.Now:HH:mm:ss}");
         }
         catch (Exception ex)
         {
-            StatusText.Text = "清除 DNS 快取失敗：" + ex.Message;
+            StatusText.Text = LanguageService.T("清除 DNS 快取失敗：") + ex.Message;
         }
     }
 

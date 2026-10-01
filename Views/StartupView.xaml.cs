@@ -29,7 +29,7 @@ public partial class StartupView : UserControl
     /// <summary>排程工作那一段要開幾百個檔案，所以掃描是非同步的——期間畫面仍然可以操作。</summary>
     private async Task ScanAsync()
     {
-        MsgText.Text = "掃描中…";
+        MsgText.Text = LanguageService.T("掃描中…");
         await _svc.ScanAsync();
         MsgText.Text = "";
     }
@@ -49,7 +49,7 @@ public partial class StartupView : UserControl
             bool ok = _svc.SetEnabled(entry, !entry.Enabled);
             MsgText.Text = _svc.Status;
             if (!ok)
-                XMsg.Show(_svc.Status, "開機啟動項管理", MessageBoxButton.OK, MessageBoxImage.Warning);
+                XMsg.Show(_svc.Status, "開機啟動項管理", MessageBoxButton.OK, MessageBoxImage.Warning); // XMsg 已包 T
         }
     }
 
@@ -63,7 +63,7 @@ public partial class StartupView : UserControl
             if (entry.IsTask)
             {
                 Process.Start(new ProcessStartInfo("taskschd.msc") { UseShellExecute = true });
-                MsgText.Text = $"已開啟工作排程器　・　此項位於 {entry.TaskPath}";
+                MsgText.Text = LanguageService.T($"已開啟工作排程器　・　此項位於 {entry.TaskPath}");
                 return;
             }
             // 有可解析的實體路徑（捷徑或可執行檔）→ 於檔案總管中選取
@@ -71,7 +71,7 @@ public partial class StartupView : UserControl
             {
                 Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{entry.ItemPath}\"")
                 { UseShellExecute = true });
-                MsgText.Text = "已於檔案總管中定位該項目。";
+                MsgText.Text = LanguageService.T("已於檔案總管中定位該項目。");
                 return;
             }
             // 資料夾項但檔案已不存在 → 開啟其所在資料夾
@@ -81,17 +81,17 @@ public partial class StartupView : UserControl
                 if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
                 {
                     Process.Start(new ProcessStartInfo(dir) { UseShellExecute = true });
-                    MsgText.Text = "已開啟啟動資料夾。";
+                    MsgText.Text = LanguageService.T("已開啟啟動資料夾。");
                     return;
                 }
             }
             // 登錄項 → 開啟登錄編輯程式
             Process.Start(new ProcessStartInfo("regedit.exe") { UseShellExecute = true });
-            MsgText.Text = "已開啟登錄編輯程式（此項為登錄啟動項）。";
+            MsgText.Text = LanguageService.T("已開啟登錄編輯程式（此項為登錄啟動項）。");
         }
         catch (Exception ex)
         {
-            XMsg.Show("定位失敗：" + ex.Message, "開機啟動項管理",
+            XMsg.Show(LanguageService.T("定位失敗：") + ex.Message, "開機啟動項管理",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

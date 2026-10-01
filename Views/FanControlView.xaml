@@ -1,9 +1,20 @@
-<UserControl x:Class="XinSpect.FanControlView"
+﻿<UserControl x:Class="XinSpect.FanControlView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect"
              FontFamily="{StaticResource AppFont}">
     <UserControl.Resources>
+
+        <!-- 奉騰黃金版強調色：本頁覆蓋主題暗紅，與奔騰黃金版式樣式同源 -->
+        <SolidColorBrush x:Key="AccentBrush" Color="#FFDA5E"/>
+        <SolidColorBrush x:Key="AccentDimBrush" Color="#C6900A"/>
+        <SolidColorBrush x:Key="AccentInkBrush" Color="#4A3200"/>
+        <SolidColorBrush x:Key="AccentButtonBrush" Color="#E8B23A"/>
+        <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#FFDA5E" Offset="0"/>
+            <GradientStop Color="#C6900A" Offset="1"/>
+        </LinearGradientBrush>
+
         <!-- ══ 深色滑桿（沿用超頻分頁風格）═══════════════════════════════════════ -->
         <Style x:Key="GpuSlider" TargetType="Slider">
             <Setter Property="Height" Value="24"/>

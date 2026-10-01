@@ -1,4 +1,4 @@
-using System.Security.Principal;
+﻿using System.Security.Principal;
 using System.Windows;
 
 namespace XinSpect;
@@ -24,20 +24,21 @@ public sealed class DriverReadyService : ObservableObject
     public Severity WinRing0Severity { get => _winring0Severity; private set => SetProperty(ref _winring0Severity, value); }
 
     private string _winRing0Status = "尚未檢測";
-    public string WinRing0Status { get => _winRing0Status; private set => SetProperty(ref _winRing0Status, value); }
+    // 欄位永遠存繁體原文，屬性讀取時即時轉換；語言切換時只需重新通知。
+    public string WinRing0Status { get => LanguageService.T(_winRing0Status); private set { _winRing0Status = value; OnPropertyChanged(); } }
 
     private string _winRing0Detail = "";
-    public string WinRing0Detail { get => _winRing0Detail; private set => SetProperty(ref _winRing0Detail, value); }
+    public string WinRing0Detail { get => LanguageService.T(_winRing0Detail); private set { _winRing0Detail = value; OnPropertyChanged(); } }
     public bool HasWinRing0Detail => _winRing0Detail.Length > 0;
 
     private Severity _lhmSeverity = Severity.Neutral;
     public Severity LhmSeverity { get => _lhmSeverity; private set => SetProperty(ref _lhmSeverity, value); }
 
     private string _lhmStatus = "尚未檢測";
-    public string LhmStatus { get => _lhmStatus; private set => SetProperty(ref _lhmStatus, value); }
+    public string LhmStatus { get => LanguageService.T(_lhmStatus); private set { _lhmStatus = value; OnPropertyChanged(); } }
 
     private string _lhmDetail = "";
-    public string LhmDetail { get => _lhmDetail; private set => SetProperty(ref _lhmDetail, value); }
+    public string LhmDetail { get => LanguageService.T(_lhmDetail); private set { _lhmDetail = value; OnPropertyChanged(); } }
     public bool HasLhmDetail => _lhmDetail.Length > 0;
 
     private bool _probing;
@@ -45,7 +46,22 @@ public sealed class DriverReadyService : ObservableObject
     public bool CanProbe => !_probing;
 
     private string _summary = "按「檢測驅動」以實際載入一次驅動並回報真實狀態。";
-    public string Summary { get => _summary; private set => SetProperty(ref _summary, value); }
+    public string Summary { get => LanguageService.T(_summary); private set { _summary = value; OnPropertyChanged(); } }
+
+    public DriverReadyService()
+    {
+        // 語言切換時重新通知五個顯示字串；屬性 getter 會以新語言即時轉換。
+        LanguageService.Changed += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged()
+    {
+        OnPropertyChanged(nameof(WinRing0Status));
+        OnPropertyChanged(nameof(WinRing0Detail));
+        OnPropertyChanged(nameof(LhmStatus));
+        OnPropertyChanged(nameof(LhmDetail));
+        OnPropertyChanged(nameof(Summary));
+    }
 
     /// <summary>以實際載入一次 WinRing0 的方式偵測（測完即釋放引用；驅動服務本身留到重開機）。</summary>
     public async Task ProbeAsync(MainViewModel vm)
@@ -76,7 +92,11 @@ public sealed class DriverReadyService : ObservableObject
                 WinRing0Status = "已就緒";
                 WinRing0Detail = "驅動已成功載入並完成一次 MSR 讀取驗證。頻率真相、MCA、SPD 直讀等底層功能可用。";
                 if (!IsAdmin)
-                    WinRing0Detail += "（注意：本次以一般權限就載入成功，部分平台仍需管理員權限才能讀到完整 MSR。）";
+                {
+                    _winRing0Detail += "（注意：本次以一般權限就載入成功，部分平台仍需管理員權限才能讀到完整 MSR。）";
+                    OnPropertyChanged(nameof(WinRing0Detail));
+                    OnPropertyChanged(nameof(HasWinRing0Detail));
+                }
             }
             else if (!IsAdmin)
             {

@@ -29,8 +29,8 @@ public partial class MemoryCleanView : UserControl
         StandbyText.Text = $"{_stats.StandbyGB:0.00} GB";
         AvailText.Text = $"{_stats.AvailGB:0.00} GB";
         TotalText.Text = $"{_stats.TotalGB:0.00} GB";
-        LoadText.Text = $"負載 {_stats.LoadPercent}%";
-        CommitText.Text = $"認可 {_stats.CommitUsedGB:0.0} / {_stats.CommitLimitGB:0.0} GB";
+        LoadText.Text = LanguageService.T($"負載 {_stats.LoadPercent}%");
+        CommitText.Text = LanguageService.T($"認可 {_stats.CommitUsedGB:0.0} / {_stats.CommitLimitGB:0.0} GB");
         UpdateBar();
     }
 
@@ -50,7 +50,7 @@ public partial class MemoryCleanView : UserControl
     {
         if (_busy) return;
         _busy = true;
-        ResultText.Text = "整理中…";
+        ResultText.Text = LanguageService.T("整理中…");
         try
         {
             var (_, msg) = await Task.Run(() => _svc.Run(op));

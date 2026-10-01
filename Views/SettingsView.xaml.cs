@@ -81,7 +81,7 @@ public partial class SettingsView : UserControl
     private void ShowAccentHint()
     {
         if (AccentHint is not null)
-            AccentHint.Text = $"目前：{ThemeService.ThemeNames[ThemeService.ThemeIndex]}主題 ・ {ThemeService.Accent.Name}（{ThemeService.Accent.Main}）";
+            AccentHint.Text = LanguageService.T($"目前：{ThemeService.ThemeNames[ThemeService.ThemeIndex]}主題 ・ {ThemeService.Accent.Name}（{ThemeService.Accent.Main}）");
     }
 
     // Host.Content 延遲載入時 DataContext 由父容器繼承；點選當下已就緒。仍以主視窗為後備。
@@ -208,7 +208,7 @@ public partial class SettingsView : UserControl
         var vm = Vm;
         if (vm is null) return;
         vm.Settings.AiSystemPrompt = AiService.DefaultSystemPrompt;
-        if (AiPromptHint is not null) AiPromptHint.Text = "已重置為內建預設提示詞。";
+        if (AiPromptHint is not null) AiPromptHint.Text = LanguageService.T("已重置為內建預設提示詞。");
     }
 
     // 儲存提示詞：設定會在每次輸入時自動存檔，所以這顆按鈕真正做的是「收尾整理」——
@@ -225,8 +225,8 @@ public partial class SettingsView : UserControl
         vm.Settings.AiSystemPrompt = text;
 
         if (AiPromptHint is null) return;
-        AiPromptHint.Text = (reset ? "提示詞原本是空的，已退回內建預設（" : "已整理並儲存（")
-            + $"{text.Length} 字）→ {SettingsService.FilePath}";
+        AiPromptHint.Text = LanguageService.T((reset ? "提示詞原本是空的，已退回內建預設（" : "已整理並儲存（")
+            + $"{text.Length} 字）→ {SettingsService.FilePath}");
     }
 
     // 開啟獨立的 AI 助手分頁。
@@ -278,11 +278,11 @@ public partial class SettingsView : UserControl
         {
             string? path = ReportService.Export(vm);
             if (ReportHint is not null)
-                ReportHint.Text = path is null ? "已取消匯出。" : "已匯出並開啟：" + path;
+                ReportHint.Text = path is null ? LanguageService.T("已取消匯出。") : LanguageService.T("已匯出並開啟：") + path;
         }
         catch (Exception ex)
         {
-            if (ReportHint is not null) ReportHint.Text = "匯出失敗：" + ex.Message;
+            if (ReportHint is not null) ReportHint.Text = LanguageService.T("匯出失敗：") + ex.Message;
         }
     }
 
@@ -294,8 +294,8 @@ public partial class SettingsView : UserControl
         bool ok = ReportService.CopyMarkdown(vm);
         if (ReportHint is not null)
             ReportHint.Text = ok
-                ? "已複製 Markdown 報告到剪貼簿，可直接貼上論壇或議題。"
-                : "剪貼簿目前被其他程式佔用，請稍後再試（或改用「匯出報告…」存成 .md）。";
+                ? LanguageService.T("已複製 Markdown 報告到剪貼簿，可直接貼上論壇或議題。")
+                : LanguageService.T("剪貼簿目前被其他程式佔用，請稍後再試（或改用「匯出報告…」存成 .md）。");
     }
 
     // 所有功能一鍵初始化：重新執行各模組偵測與載入（非破壞性，不重建計時器）。
@@ -303,7 +303,7 @@ public partial class SettingsView : UserControl
         var vm = Vm;
         if (vm is null) return;
         if (ReinitBtn is not null) ReinitBtn.IsEnabled = false;
-        if (ReinitHint is not null) ReinitHint.Text = "正在重新初始化所有功能，請稍候…";
+        if (ReinitHint is not null) ReinitHint.Text = LanguageService.T("正在重新初始化所有功能，請稍候…");
         try
         {
             await vm.ReinitializeAllAsync();
@@ -311,7 +311,7 @@ public partial class SettingsView : UserControl
         }
         catch (Exception ex)
         {
-            if (ReinitHint is not null) ReinitHint.Text = "初始化時發生錯誤：" + ex.Message;
+            if (ReinitHint is not null) ReinitHint.Text = LanguageService.T("初始化時發生錯誤：") + ex.Message;
         }
         finally
         {

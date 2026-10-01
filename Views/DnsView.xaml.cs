@@ -40,7 +40,7 @@ public partial class DnsView : UserControl
     private async void Preset_Click(object sender, RoutedEventArgs e)
     {
         if (_busy) return;
-        if (Selected is not { } adapter) { StatusText.Text = "請先選擇網路介面卡。"; return; }
+        if (Selected is not { } adapter) { StatusText.Text = LanguageService.T("請先選擇網路介面卡。"); return; }
         if (sender is not FrameworkElement fe || fe.DataContext is not DnsPreset preset) return;
         await Guard(() => _svc.ApplyAsync(adapter, preset));
     }
@@ -48,7 +48,7 @@ public partial class DnsView : UserControl
     private async void ApplyCustom_Click(object sender, RoutedEventArgs e)
     {
         if (_busy) return;
-        if (Selected is not { } adapter) { StatusText.Text = "請先選擇網路介面卡。"; return; }
+        if (Selected is not { } adapter) { StatusText.Text = LanguageService.T("請先選擇網路介面卡。"); return; }
         await Guard(() => _svc.ApplyCustomAsync(adapter, PrimaryBox.Text, SecondaryBox.Text));
     }
 

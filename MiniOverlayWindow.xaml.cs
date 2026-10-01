@@ -19,9 +19,20 @@ public partial class MiniOverlayWindow : Window
     public MiniOverlayWindow()
     {
         InitializeComponent();
-        Loaded += (_, _) => Restore();
+        Loaded += OnLoaded;
         Activated += (_, _) => ReassertTopmost();
+        // 獨立視窗不在主視覺樹的「逐頁轉換」範圍：載入時轉一次、語言切換時即時跟進。
+        LanguageService.Changed += OnLanguageChanged;
+        Closed += (_, _) => LanguageService.Changed -= OnLanguageChanged;
     }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        LanguageService.ConvertVisualTree(this, LanguageService.IsSimplified);
+        Restore();
+    }
+
+    private void OnLanguageChanged() => LanguageService.ConvertVisualTree(this, LanguageService.IsSimplified);
 
     /// <summary>擺到上次的位置；沒有記錄（或記錄已落在畫面外）時貼齊工作區右上角。</summary>
     private void Restore()
@@ -106,13 +117,14 @@ public partial class MiniOverlayWindow : Window
         }
         menu.Items.Add(new System.Windows.Controls.MenuItem
         {
-            Header = "顯示項目（FPS 三行讀「幀時間監測」頁的即時量測）",
+            // ContextMenu 不在視覺樹上，標題一律在產出點過 T。
+            Header = LanguageService.T("顯示項目（FPS 三行讀「幀時間監測」頁的即時量測）"),
             IsEnabled = false,
         });
         AddItem("CPU", "Settings.MiniShowCpu");
         AddItem("GPU", "Settings.MiniShowGpu");
-        AddItem("記憶體", "Settings.MiniShowMem");
-        AddItem("頻率", "Settings.MiniShowClock");
+        AddItem(LanguageService.T("記憶體"), "Settings.MiniShowMem");
+        AddItem(LanguageService.T("頻率"), "Settings.MiniShowClock");
         AddItem("FPS", "Settings.MiniShowFps");
         AddItem("1% Low", "Settings.MiniShowLow1");
         AddItem("0.1% Low", "Settings.MiniShowLow01");

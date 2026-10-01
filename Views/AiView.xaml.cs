@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -62,6 +62,10 @@ public partial class AiView : UserControl
     private void Stop_Click(object sender, RoutedEventArgs e) => Vm?.Ai.Cancel();
 
     // 快問按鈕：Tag 帶的是實際送出的完整問題（按鈕上只顯示短標籤）
+        /// <summary>前往設定頁的 AI 區塊。</summary>
+    private void BtnGoAiSettings_Click(object sender, RoutedEventArgs e)
+        => XinSpect.Shell.Main?.NavigateToKey("settings");
+
     private async void Chip_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string prompt } || prompt.Length == 0) return;
@@ -111,9 +115,9 @@ public partial class AiView : UserControl
             Clipboard.SetText(msg.Text);
             if (sender is System.Windows.Controls.Button b)
             {
-                b.Content = "✓ 已複製";
+                b.Content = LanguageService.T("✓ 已複製");
                 var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1.6) };
-                t.Tick += (_, _) => { b.Content = "⧉ 複製"; t.Stop(); };
+                t.Tick += (_, _) => { b.Content = LanguageService.T("⧉ 複製"); t.Stop(); };
                 t.Start();
             }
         }
@@ -137,7 +141,7 @@ public partial class AiView : UserControl
         if (sender is System.Windows.Controls.Button b)
         {
             var prev = b.Content;
-            b.Content = "✓ 已複製";
+            b.Content = LanguageService.T("✓ 已複製");
             var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1.6) };
             t.Tick += (_, _) => { b.Content = prev; t.Stop(); };
             t.Start();

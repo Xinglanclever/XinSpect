@@ -75,8 +75,8 @@ public partial class ToolboxView : UserControl
 
         var dlg = new OpenFileDialog
         {
-            Title = $"為「{tool.Name}」選擇可執行檔",
-            Filter = "可執行檔 (*.exe)|*.exe|所有檔案 (*.*)|*.*",
+            Title = LanguageService.T($"為「{tool.Name}」選擇可執行檔"),
+            Filter = LanguageService.T("可執行檔 (*.exe)|*.exe|所有檔案 (*.*)|*.*"),
             CheckFileExists = true,
         };
         if (tool.SlotPath is { Length: > 0 } cur && File.Exists(cur))

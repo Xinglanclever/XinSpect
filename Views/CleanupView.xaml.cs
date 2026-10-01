@@ -21,11 +21,11 @@ public partial class CleanupView : UserControl
     {
         if (_busy) return;
         _busy = true;
-        StatusText.Text = "掃描中……";
+        StatusText.Text = LanguageService.T("掃描中……");
         await Task.Run(() => _svc.Scan());
         long total = _svc.Categories.Sum(c => c.Size < 0 ? 0 : c.Size);
-        TotalText.Text = $"可清理總計約 {Human(total)}";
-        StatusText.Text = $"掃描完成 ・ {DateTime.Now:HH:mm:ss}";
+        TotalText.Text = LanguageService.T($"可清理總計約 {Human(total)}");
+        StatusText.Text = LanguageService.T($"掃描完成 ・ {DateTime.Now:HH:mm:ss}");
         _busy = false;
     }
 
@@ -36,19 +36,19 @@ public partial class CleanupView : UserControl
         if (_busy) return;
         if (!_svc.Categories.Any(c => c.Selected))
         {
-            XMsg.Show("請先勾選要清理的項目。", "垃圾清理", MessageBoxButton.OK, MessageBoxImage.Information);
+            XMsg.Show(LanguageService.T("請先勾選要清理的項目。"), "垃圾清理", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         var ok = XMsg.Show(
-            "確定要清理所選項目？被刪除的暫存檔無法還原（資源回收筒的內容將永久清空）。",
+            LanguageService.T("確定要清理所選項目？被刪除的暫存檔無法還原（資源回收筒的內容將永久清空）。"),
             "垃圾清理", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
         if (ok != MessageBoxResult.OK) return;
 
         _busy = true;
-        StatusText.Text = "清理中……";
+        StatusText.Text = LanguageService.T("清理中……");
         var (_, report) = await Task.Run(() => _svc.Clean());
         long total = _svc.Categories.Sum(c => c.Size < 0 ? 0 : c.Size);
-        TotalText.Text = $"可清理總計約 {Human(total)}";
+        TotalText.Text = LanguageService.T($"可清理總計約 {Human(total)}");
         StatusText.Text = report.Replace("\n", " ");
         _busy = false;
         XMsg.Show(report, "垃圾清理", MessageBoxButton.OK, MessageBoxImage.Information);

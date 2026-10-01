@@ -1,4 +1,4 @@
-namespace XinSpect;
+﻿namespace XinSpect;
 
 /// <summary>
 /// 開機偵測序列：把「哪些資訊在什麼時候、以什麼順序被讀進來」集中於一處。
@@ -79,6 +79,9 @@ internal static class StartupSequence
 
         // 8) 場景頁的「目前電源計劃」（powercfg 子行程，置於背景）
         _ = vm.Profiles.RefreshPowerPlanAsync();
+
+        // 9) 藍色中隊：唯讀安全評估 + BlueSquadronBridge 守護進程（模組內建一次性保護）
+        try { _ = vm.BlueSquadron.InitializeAsync(vm); } catch { /* 安全防護為附加功能 */ }
     }
 
     // 就緒狀態列。啟動耗時只在真的量到時才附上；深度規格讀到了也一併說明。

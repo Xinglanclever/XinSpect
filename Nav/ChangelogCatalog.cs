@@ -1,4 +1,4 @@
-namespace XinSpect;
+﻿namespace XinSpect;
 
 /// <summary>一個版本的更新紀錄：版號、日期、一句話總結，以及逐項改動。</summary>
 public sealed class ChangeEntry
@@ -48,9 +48,9 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
-            Version = "2.1.0",
+            Version = "2.0.5",
             Date = "2026-10-01",
-            Title = "Polaris 北極星——超頻配色、懸浮窗、AI 複製、色域 2D/3D、工具箱合併與底層誠實化",
+            Title = "Everest 2.0——超頻配色、懸浮窗、AI 複製、色域 2D/3D、工具箱合併與底層誠實化",
             Items =
             [
                 "移除效能天梯榜：分頁、服務、內嵌榜單與 AI 工具一併刪除（AI 工具組 34→33 項）。",
@@ -67,15 +67,6 @@ public static class ChangelogCatalog
                 "記憶體時脈解除 CPU-Z 依賴：SPD 直讀（JEDEC 時序）與 WMI 設定速率補位，來源列如實標示。",
                 "螢幕檢測擴充：純色色卡之外新增灰階階梯／灰階漸層／彩色漸層／棋盤（1px・8px）五種圖形測試畫面，查階調、色帶與像素響應。",
                 "簡中在地化補詞：螢幕→屏幕、軟體→软件、資訊→信息、影像→图像、滑鼠→鼠标。",
-            ],
-        },
-        new ChangeEntry
-        {
-            Version = "2.0.6",
-            Date = "2026-10-01",
-            Title = "拜神改版＋共用 AI 模型升級 gpt-oss-120b",
-            Items =
-            [
                 "拜神按鈕從標題列移到總覽頁標題行（與複製規格摘要、自訂磁貼並排）。",
                 "拜神視窗重新設計：視窗加寬至 720px、乖乖圖片放大、香爐與神桌一體化、三根香點火焰、移除右上角 X 按鈕。",
                 "新增「燒香」按鈕：長煙霧 3.5 秒、深灰色煙霧、5 秒冷卻（按鈕變灰）、提示「已上香，心誠則靈」。",
@@ -83,22 +74,6 @@ public static class ChangelogCatalog
                 "新增泛中華區絕密標注（CLASSIFIED）：大中國（含唐努烏梁海及蒙古）、日本（含琉球）、韓國（含北韓）、印度支那半島、馬來亞半島、印度尼西亞群島。",
                 "祈福語不再連續重複（連按「拜」保證每次不同句）；煙霧動畫修復（ResetSmoke 清除殘留，每次必定冒煙）。",
                 "共用 AI 模型從 Llama 3.3 70B 升級為 gpt-oss-120b（免費額度內最強）；Worker 補 OpenAI 格式回應解析。",
-            ],
-        },
-        new ChangeEntry
-        {
-            Version = "2.0.5",
-            Date = "2026-09-30",
-            Title = "碼審全面肅清——70 條 P0/P1/P2 修復（含六大防線文字修正）",
-            Items =
-            [
-                "七名平行審查代理（資料正確性、執行緒安全、錯誤處理、資源洩漏、UI 繫結、語言一致性、性能熱點）掃過 76,000 行 C#，產出 ~70 條 P0/P1/P2 發現；全部經逐條人工回讀驗證後修正（6 條假警報已排除）。",
-                "P0 修正：ContinueWith 缺 IsFaulted 守衛（LargePageService）、CleanupService 遍歷拒絕存取目錄崩潰、TerminalService PowerShell 中文亂碼、WMI 查詢阻塞 UI 執行緒（CpuPinoutService/ChipsetAnalysisService/NpuDetectionService/PcieAnalysisService）。",
-                "P0 修正：CoreColumns 頁面重入累加 handler、FrameTimeView 計時器洩漏、PortUsageView 重入不重啟、AiView CollectionChanged 累加、BrowserView 多實例 WebView2 資料夾衝突。",
-                "P1 修正：XMsg 翻譯包裝（MessageBox 全站繁簡同步）、TrayService 系統匣選單翻譯、Diag.FileGate 磁碟序列化、SettingsService 空 catch 改 Swallow、TerminalView 歷史導航越界、MainWindow 頁面切換失敗側邊欄回滾、BatteryView/HostsEditorView async 化、AudioSpectrumService WASAPI 洩漏、HardwareEvidence 插入順序。",
-                "P1 修正：HwInfoSharedMem AbandonedMutexException、GpuOcService NVML 初始化旗標、OcModels 負偏移格式、OverclockService 雙重套用守衛、SecurityPostureService BitLocker 空結果處理。",
-                "P2 掃尾：MemBandwidthMath HTML 實體、UpgradeFactsCollector 零分鐘歷史、XtuCore 0 值過濾、SpdConsistencyAudit PC4 頻寬誤判、DriverAnalysisService 無限輪詢、MetricsPump handler 累加、CoreTempMapService 混合架構 TODO。",
-                "HelpCatalog 修正：藍色中隊 Help Key「五大防線」→「六大防線」與 XAML 同步。",
             ],
         },
         new ChangeEntry
@@ -155,7 +130,7 @@ public static class ChangelogCatalog
         {
             Version = "2.0.0",
             Date = "2026-09-19",
-            Title = "Blackops 2.0：13 項修正、簡體中文、頁面重新歸類、FPU/AVX2 烤機",
+            Title = "Everest 2.0：13 項修正、簡體中文、頁面重新歸類、FPU/AVX2 烤機",
             Items =
             [
                 "修好 13 個缺陷：HWiNFO 簽章位元序、Core Temp 名稱、晶片組被 SMBus 搶候選、PCIe 讀不存在的登錄值、繪圖測試凍結 UI 15 秒、核心驅動無安全描述符、Core Temp 華氏值標成 °C、距 TjMax 模式整頁空白、BootRepair 註解不實、十個裸 catch 改用 Diag.Swallow、HWiNFO 互斥鎖、HWiNFO ANSI 標籤。",
@@ -168,7 +143,7 @@ public static class ChangelogCatalog
         {
             Version = "1.9.9",
             Date = "2026-09-08",
-            Title = "1.x 終章——Extreme Edition「東方之星」：硬體證據實驗室、紅黑 EE 主題、菜鳥儀表板",
+            Title = "1.x 終章——Extreme Edition「北極星」：硬體證據實驗室、紅黑 EE 主題、菜鳥儀表板",
             Items =
             [
                 "新增「硬體證據實驗室」：版本化硬體時間膠囊（JSON + SHA-256 完整性 + 敏感遮蔽）、保存與載入快照、兩份快照逐欄差異比較（新增/移除/變更/不變 + 數值 delta）。每個事實附穩定鍵、分類、繁中名稱、值、單位、來源、可信度、敏感旗標與量測時間。",
@@ -178,7 +153,7 @@ public static class ChangelogCatalog
                 "新增「證據時間軸」：append-only 版本化 JSONL 格式，支援 counter reset/wrap/缺口辨識；產生客觀事件（PCIe 降級、NVMe 媒體錯誤淨增加、有效頻率比等）。不估算剩餘壽命。",
                 "新增「菜鳥儀表板」：大型健康度圓環 + 一句話總結 + 溫度監控條 + 硬體清單摘要 + 一鍵優化入口。簡易模式首頁。",
                 "新增「故障排查嚮導」：六個常見場景（電腦很慢、遊戲卡頓、藍屏、風扇太吵、開機很慢、網路不穩）的逐步引導，每步附即時讀值與建議，底部導向相關進階頁。",
-                "新增 Extreme Edition「東方之星」紅黑主題：深黑（#0D0D0D）+ 紅（#CC0000）工業風配色，設定頁可切換。副標題「東方之星」預設模糊，懸停清晰——彩蛋式存在。",
+                "新增 Extreme Edition「北極星」紅黑主題：深黑（#0D0D0D）+ 紅（#CC0000）工業風配色，設定頁可切換。副標題「北極星」預設模糊，懸停清晰——彩蛋式存在。",
                 "感測器閘門修正：Power 0W 改為拒絕。運行中的裝置不可能消耗 0W，LHM 回報 0 代表感測器沒有讀到資料，顯示「—」而非誤導性的 0.0 W。",
                 "AI 連線改善：HttpClient 逾時從 180 秒縮短為 45 秒，避免端點不通時枯等三分鐘。錯誤訊息區分共用額度 Worker 不可用與本機 Ollama 未啟動，附替代方案。",
                 "SMART 讀取失敗訊息優化：SATA 控制器拒絕 SMART_RCV_DRIVE_DATA 時明確說明是控制器不支援此命令，不是磁碟有問題，並建議使用磁碟原廠工具。",

@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 
 namespace XinSpect;
@@ -33,8 +33,8 @@ public partial class StressBridgeView : UserControl
     {
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "指定 y-cruncher.exe",
-            Filter = "y-cruncher (y-cruncher.exe)|y-cruncher.exe|執行檔 (*.exe)|*.exe",
+            Title = LanguageService.T("指定 y-cruncher.exe"),
+            Filter = LanguageService.T("y-cruncher (y-cruncher.exe)|y-cruncher.exe|執行檔 (*.exe)|*.exe"),
             CheckFileExists = true,
         };
         if (dlg.ShowDialog() == true) _svc.SetManualPath(dlg.FileName);

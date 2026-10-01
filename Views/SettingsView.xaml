@@ -1,4 +1,4 @@
-<UserControl x:Class="XinSpect.SettingsView"
+﻿<UserControl x:Class="XinSpect.SettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect"
@@ -649,7 +649,7 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="回覆長度上限" VerticalAlignment="Center"/>
                         <Slider Grid.Column="1" Style="{StaticResource SetSlider}" VerticalAlignment="Center"
-                                Minimum="0" Maximum="8192" TickFrequency="256" IsSnapToTickEnabled="True"
+                                Minimum="0" Maximum="32768" TickFrequency="256" IsSnapToTickEnabled="True"
                                 Value="{Binding Settings.AiMaxTokens, Mode=TwoWay}"/>
                         <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" HorizontalAlignment="Right" VerticalAlignment="Center"
                                    Text="{Binding Settings.AiMaxTokens, StringFormat={}{0:0}}"/>

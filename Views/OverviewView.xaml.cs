@@ -40,13 +40,13 @@ public partial class OverviewView : UserControl
             string text = SpecSummary.Build(SpecFactsCollector.Collect(Vm));
             Clipboard.SetText(text);
             // 按鈕自己回報結果：跳一個對話框只是多一次點擊
-            CopySpecButton.Content = "已複製 ✓";
+            CopySpecButton.Content = LanguageService.T("已複製 ✓");
         }
         catch (Exception ex)
         {
             // 剪貼簿被別的程式鎖住是真的會發生的事，別讓它變成未處理例外
             Diag.Swallow("OverviewView.CopySpec", ex, "規格摘要沒有複製成功，按鈕會顯示失敗。");
-            CopySpecButton.Content = "複製失敗";
+            CopySpecButton.Content = LanguageService.T("複製失敗");
         }
 
         // 兩秒後恢復原本的字，不留一個永遠寫著「已複製」的按鈕
@@ -54,7 +54,7 @@ public partial class OverviewView : UserControl
         timer.Tick += (_, _) =>
         {
             timer.Stop();
-            CopySpecButton.Content = "複製規格摘要";
+            CopySpecButton.Content = LanguageService.T("複製規格摘要");
         };
         timer.Start();
     }
@@ -74,42 +74,4 @@ public partial class OverviewView : UserControl
 
     private void TileReset_Click(object sender, RoutedEventArgs e) => Vm?.Dashboard.Reset();
 
-    // ── 拜神（娛樂）────────────────────────────────────────────
-
-    /// <summary>
-    /// 開拜神視窗。乖度的輸入必須是真的：Minidump 資料夾讀得到才數近 7 天藍屏；
-    /// 資料夾不存在時「從未藍屏」與「未啟用傾印」分不清，就傳 null 讓視窗顯示「—」。
-    /// </summary>
-    private async void Shrine_Click(object sender, RoutedEventArgs e)
-    {
-        ShrineButton.IsEnabled = false;
-        try
-        {
-            int? bsod7d = await Task.Run(CountRecentBsods);
-            if (!IsLoaded) return;
-
-            var owner = Window.GetWindow(this);
-            new ShrineWindow(bsod7d, Environment.TickCount64 / 1000) { Owner = owner }.ShowDialog();
-        }
-        finally
-        {
-            ShrineButton.IsEnabled = true;
-        }
-    }
-
-    /// <summary>數近 7 天的傾印檔。這裡只需要檔案時間戳，不必逐檔解析傾印標頭。</summary>
-    private static int? CountRecentBsods()
-    {
-        try
-        {
-            var dir = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Minidump");
-            if (!System.IO.Directory.Exists(dir)) return null;
-
-            var cutoff = DateTime.Now.AddDays(-7);
-            return System.IO.Directory.EnumerateFiles(dir, "*.dmp")
-                .Count(path => System.IO.File.GetLastWriteTime(path) >= cutoff);
-        }
-        catch { return null; /* 讀不到＝未量到；寧可顯示「—」也不猜 */ }
-    }
 }

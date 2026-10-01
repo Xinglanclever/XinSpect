@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,8 +14,13 @@ public partial class AboutView : UserControl
         InitializeComponent();
         // 進頁面就重新評估一次網路狀態：使用者可能是離線時開的程式、後來才接上網路。
         Loaded += (_, _) => Vm?.Feedback.Refresh();
+        // 更新紀錄由目錄投影而來（繫結顯示，視覺樹掃描涵蓋不到），語言切換時重新投影一次。
+        LanguageService.Changed += OnLanguageChanged;
+        Unloaded += (_, _) => LanguageService.Changed -= OnLanguageChanged;
         FillChangelog();
     }
+
+    private void OnLanguageChanged() => FillChangelog();
 
     // ── 版本更新紀錄 ────────────────────────────────────────────────────────
 
@@ -30,7 +35,11 @@ public partial class AboutView : UserControl
     private void FillChangelog()
     {
         var all = ChangelogCatalog.Entries;
-        ChangelogRecent.ItemsSource = all.Take(RecentCount).ToList();
+        // 投影成匿名列再交給版面：目錄原文一律繁體，顯示時才過 T（冪等，來源不被改寫）。
+        ChangelogRecent.ItemsSource = all.Take(RecentCount)
+            .Select(e => new { e.Version, DateText = LanguageService.T(e.DateText),
+                               Title = LanguageService.T(e.Title), ItemsText = LanguageService.T(e.ItemsText) })
+            .ToList();
 
         var older = all.Skip(RecentCount).ToList();
         if (older.Count == 0)
@@ -38,8 +47,18 @@ public partial class AboutView : UserControl
             ChangelogToggle.Visibility = Visibility.Collapsed;
             return;
         }
-        ChangelogOlder.ItemsSource = older;
-        ChangelogToggle.Content = $"顯示更早的 {older.Count} 個版本　▾";
+        ChangelogOlder.ItemsSource = older
+            .Select(e => new { e.Version, DateText = LanguageService.T(e.DateText),
+                               Title = LanguageService.T(e.Title), ItemsText = LanguageService.T(e.ItemsText) })
+            .ToList();
+        ChangelogToggle.Content = LanguageService.T($"顯示更早的 {older.Count} 個版本　▾");
+    }
+
+    private void JourneyToggle_Click(object sender, RoutedEventArgs e)
+    {
+        bool show = JourneyText.Visibility != Visibility.Visible;
+        JourneyText.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        JourneyToggle.Content = show ? LanguageService.T("收起心路歷程　▴") : LanguageService.T("一段心路歷程　▸");
     }
 
     private void ChangelogToggle_Click(object sender, RoutedEventArgs e)
@@ -47,7 +66,8 @@ public partial class AboutView : UserControl
         bool show = ChangelogOlder.Visibility != Visibility.Visible;
         ChangelogOlder.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
         int n = ChangelogOlder.Items.Count;
-        ChangelogToggle.Content = show ? "收起更早的版本　▴" : $"顯示更早的 {n} 個版本　▾";
+        ChangelogToggle.Content = show ? LanguageService.T("收起更早的版本　▴")
+                                       : LanguageService.T($"顯示更早的 {n} 個版本　▾");
     }
 
     // 頁面內容由父容器延遲載入，DataContext 為繼承而來；仍以主視窗為後備。

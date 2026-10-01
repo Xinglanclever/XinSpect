@@ -137,6 +137,13 @@ public static class LanguageService
 
     private static void ConvertNode(DependencyObject d, bool simplified)
     {
+        if (d is SectionHead sh)
+        {
+            // SectionHead 的標題 TextBlock 是內部繫結，下面的 TextBlock 分支會因「有繫結」而跳過；
+            // 在這裡直接轉外露的 Text 屬性，繫結會把結果帶到內部。
+            if (!string.IsNullOrEmpty(sh.Text))
+                sh.Text = FromOriginal(sh, "Text", sh.Text, simplified);
+        }
         if (d is TextBlock tb)
         {
             if (tb.Inlines.Count > 0)

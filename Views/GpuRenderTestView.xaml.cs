@@ -24,7 +24,7 @@ public partial class GpuRenderTestView : UserControl
         {
             bool hasScore = _svc.CompositeScore.HasValue;
             CompositeCard.Visibility = hasScore ? Visibility.Visible : Visibility.Collapsed;
-            CompositeText.Text = _svc.CompositeText;
+            CompositeText.Text = LanguageService.T(_svc.CompositeText);
         }
     }
 }

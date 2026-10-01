@@ -15,7 +15,7 @@ public partial class BenchView : UserControl
             UpdateChessEngineButtons();
             UpdateStressDurationButtons();
             UpdatePiDigitButtons();
-            if (Chess is not null) ChessTAll.Content = $"全部核心（{Chess.LogicalCores}）";
+            if (Chess is not null) ChessTAll.Content = LanguageService.T($"全部核心（{Chess.LogicalCores}）");
         };
     }
 

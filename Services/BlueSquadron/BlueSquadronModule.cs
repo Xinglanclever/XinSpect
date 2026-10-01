@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Threading;
@@ -19,11 +19,22 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
         // 時間軸有無內容要能反映到畫面（空狀態提示）。
         // 繫結 Collection.Count 配 bool 轉換器是行不通的——Count 是 int，
         // 轉換器只認 bool，會恆回同一個結果且不報錯。
-        ThreatTimeline.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasThreatEvents));
+        ThreatTimeline.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasThreatEvents));
+            OnPropertyChanged(nameof(TimelineHint));
+        };
     }
 
     /// <summary>時間軸是否有事件（空的時候畫面顯示提示）。</summary>
     public bool HasThreatEvents => ThreatTimeline.Count > 0;
+
+    /// <summary>時間軸空狀態提示：已連線時顯示監測中，未連線時顯示啟動中，與連線狀態同步。</summary>
+    public string TimelineHint => HasThreatEvents
+        ? ""
+        : BridgeAvailable
+            ? "即時偵測中…（尚無事件）"
+            : "即時偵測事件（正在連線 BlueSquadronBridge 守護進程…）";
 
     public SecurityPostureService Posture { get; } = new();
 
@@ -43,7 +54,11 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
     public bool BridgeAvailable
     {
         get => _bridgeAvailable;
-        private set => SetProperty(ref _bridgeAvailable, value);
+        private set
+        {
+            if (SetProperty(ref _bridgeAvailable, value))
+                OnPropertyChanged(nameof(TimelineHint));
+        }
     }
 
     private string _bridgeStatus = "尚未連線";
@@ -61,8 +76,13 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
     private bool _disposed;
 
     /// <summary>背景初始化：待其他安全服務就緒後首次評估，然後嘗試啟動 Bridge。</summary>
+    private int _initStarted;
+
     public async Task InitializeAsync(MainViewModel vm)
     {
+        // 一次性保護：StartupSequence 重跑（一鍵初始化）時不可重複啟動 Bridge 進程
+        if (Interlocked.Exchange(ref _initStarted, 1) == 1) return;
+
         _dispatcher = Application.Current?.Dispatcher
                       ?? Dispatcher.CurrentDispatcher;
 

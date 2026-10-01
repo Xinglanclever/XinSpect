@@ -126,7 +126,7 @@ public sealed class GamutChromaticityDiagram : FrameworkElement
             }
         }
 
-        DrawLabel(dc, "波長（nm）沿光譜軌跡：380 → 700", Map(0.10, -0.015),
+        DrawLabel(dc, LanguageService.T("波長（nm）沿光譜軌跡：380 → 700"), Map(0.10, -0.015),
             VizPalette.Of("MutedInkBrush", "#898781"), 10.5);
     }
 

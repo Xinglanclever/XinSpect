@@ -1,4 +1,4 @@
-<Window x:Class="XinSpect.IconGalleryWindow"
+﻿<Window x:Class="XinSpect.IconGalleryWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:XinSpect"
@@ -145,10 +145,6 @@
                 <TextBlock Style="{StaticResource Sec}" Text="儲存與主機板（Optane 3D XPoint ・ 各家超頻名門板）"/>
                 <UniformGrid Columns="3">
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Disk" EmblemSize="54" Model="INTEL SSDPED1D480GA"/></Border>
-                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Board" EmblemSize="54" Model="ROG MAXIMUS Z790 APEX"/></Border>
-                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Board" EmblemSize="54" Model="EVGA Z790 DARK KINGPIN"/></Border>
-                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Board" EmblemSize="54" Model="MEG Z790 GODLIKE"/></Border>
-                    <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Board" EmblemSize="54" Model="Z790 AORUS TACHYON"/></Border>
                 </UniformGrid>
             </StackPanel>
         </ScrollViewer>

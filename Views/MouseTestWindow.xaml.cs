@@ -29,6 +29,9 @@ public partial class MouseTestWindow : Window
     public MouseTestWindow()
     {
         InitializeComponent();
+        // 獨立視窗不在主視覺樹的逐頁轉換範圍：開啟時自己轉換一次（冪等，重複呼叫安全）。
+        if (LanguageService.IsSimplified)
+            LanguageService.ConvertVisualTree(this, true);
         Loaded += (_, _) => { Focus(); Keyboard.Focus(this); };
     }
 
@@ -45,7 +48,7 @@ public partial class MouseTestWindow : Window
             MinIntervalText.Text = $"{_minIntervalMs:0} ms";
             if (dt < ChatterMs)
             {
-                ChatterText.Text = $"偵測到 {dt:0} ms 的極短點擊間隔（{ZhButton(e.ChangedButton)}），可能為微動開關抖動（單擊變雙擊）。";
+                ChatterText.Text = LanguageService.T($"偵測到 {dt:0} ms 的極短點擊間隔（{ZhButton(e.ChangedButton)}），可能為微動開關抖動（單擊變雙擊）。");
                 ChatterBox.Visibility = Visibility.Visible;
             }
         }

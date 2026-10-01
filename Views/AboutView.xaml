@@ -31,12 +31,12 @@
 
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Text="曦覽 XinSpect" FontSize="30" FontWeight="Bold"
+                    <TextBlock Text="XinSpect v2.0.5 Everest" FontSize="30" FontWeight="Bold"
                                Foreground="{DynamicResource PrimaryInkBrush}"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0"
                                Text="硬體資訊總覽 ・ 即時偵測工具"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,2,0,0"
-                               Text="版本 2.1.0 ・ Polaris「北極星」・ 便攜單一執行檔"/>
+                               Text="版本 2.0.5 ・ Qomolangma「額菲爾士峰」・ 便攜單一執行檔"/>
 
                     <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,16"/>
 
@@ -64,6 +64,27 @@
                                         RenderOptions.BitmapScalingMode="HighQuality"
                                         ToolTip="hug"/>
                     </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button x:Name="JourneyToggle" Content="一段心路歷程　▸"
+                                Style="{StaticResource ToolButton}"
+                                Padding="10,4"
+                                Click="JourneyToggle_Click"/>
+                    </StackPanel>
+                    <TextBlock x:Name="JourneyText" Visibility="Collapsed" TextWrapping="Wrap"
+                               Margin="0,8,0,0" LineHeight="22"
+                               Foreground="{DynamicResource SecondaryInkBrush}" FontSize="13.5"><![CDATA[GPT-3 時代，我的程式能力還很青澀，寫出來的程式碼常被人嘲笑。
+那時我暗暗發誓：總有一天，我要成為真正的天才程式設計師。
+時過境遷，我的水準突飛猛進。曾經困擾我好幾天的問題，如今片刻就能解決；從前想都不敢想的對案，現在也能信手拏來。
+偶爾我也會懷疑：今天的成就，是不是借助了太多外力？
+今天，我回顧來時的路：
+從 GPT-3、GPT-4，
+到 GPT-5.3-Codex、Claude Opus 4.6，
+再到 GPT-5.6-Sol、Claude Opus 5，
+直到如今的 GPT-6-Astra、Claude Fable 5.1。
+模型換了一代又一代，Agent 也換了一套又一套，而我的實力始終穩步上升。
+想到這裡，我終於釋然：
+工具一直在換，不變的是我。
+原來，我早就是天才工程師了(壞笑)]]></TextBlock>
 
                     <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,16"/>
 
@@ -78,9 +99,9 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" VerticalAlignment="Top" Margin="0,20,0,0">
+                        <StackPanel Grid.Column="0" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,20,0,0">
                             <local:GifImage GifSource="pack://application:,,,/Assets/bigfish.gif"
-                                            Height="120" Stretch="Uniform"
+                                            Height="160" Stretch="Uniform"
                                             RenderOptions.BitmapScalingMode="HighQuality"/>
                             <TextBlock Text="&#x2192;" FontSize="20" FontWeight="Bold"
                                        Foreground="{DynamicResource MutedInkBrush}"

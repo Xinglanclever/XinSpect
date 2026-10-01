@@ -29,13 +29,13 @@ public partial class NpuDetectionView : UserControl
         var svc = vm.NpuDetection;
         await svc.RefreshAsync(vm.Cpu?.Name);
 
-        StatusText.Text = svc.Status;
+        StatusText.Text = LanguageService.T(svc.Status);
 
         if (!svc.NpuPresent)
         {
             EmptyCard.Visibility = Visibility.Visible;
             InfoCard.Visibility = Visibility.Collapsed;
-            EmptyText.Text = svc.Status;
+            EmptyText.Text = LanguageService.T(svc.Status);
             return;
         }
 

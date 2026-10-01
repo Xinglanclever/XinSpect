@@ -26,7 +26,13 @@ public partial class OcRiskWindow : Window
     // 是否走 C 路徑（今後不再顯示）；於第二階段確認時才落實到 DontShowAgain。
     private bool _choseDontShow;
 
-    public OcRiskWindow() => InitializeComponent();
+    public OcRiskWindow()
+    {
+        InitializeComponent();
+        // 獨立視窗不在主視覺樹的逐頁轉換範圍：開啟時自己轉換一次（冪等，重複呼叫安全）。
+        if (LanguageService.IsSimplified)
+            LanguageService.ConvertVisualTree(this, true);
+    }
 
     // 無邊框視窗：允許拖曳標題區移動。
     private void Header_Drag(object sender, MouseButtonEventArgs e)

@@ -29,6 +29,9 @@ public partial class KeyboardTestWindow : Window
     public KeyboardTestWindow()
     {
         InitializeComponent();
+        // 獨立視窗不在主視覺樹的逐頁轉換範圍：開啟時自己轉換一次（冪等，重複呼叫安全）。
+        if (LanguageService.IsSimplified)
+            LanguageService.ConvertVisualTree(this, true);
         BuildKeyboard();
         Loaded += (_, _) => { Focus(); Keyboard.Focus(this); };
     }

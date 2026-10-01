@@ -39,10 +39,10 @@ public static class FiveElements
     /// <summary>五個節點，順時針。</summary>
     public static IReadOnlyList<FiveElementNode> Nodes { get; } =
     [
-        new("", "Claude Opus 5\n主力軍", 0),
-        new("", "ChatGPT 5.6 Sol\n遠征軍", 72),
-        new("", "Claude Opus 4.8\n先遣軍", 144),
-        new("", "Claude Opus 4.6\n預備隊", 216),
+        new("", "Claude Opus 5", 0),
+        new("", "ChatGPT 5.6 Sol", 72),
+        new("", "Claude Opus 4.8", 144),
+        new("", "Claude Opus 4.6", 216),
         new("", "DeepSeek V4.1 Flash\nGLM 5.3 Flash·GLM 5.3", 288),
     ];
 

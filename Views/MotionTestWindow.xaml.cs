@@ -23,6 +23,9 @@ public partial class MotionTestWindow : Window
     public MotionTestWindow()
     {
         InitializeComponent();
+        // 獨立視窗不在主視覺樹的逐頁轉換範圍：開啟時自己轉換一次（冪等，重複呼叫安全）。
+        if (LanguageService.IsSimplified)
+            LanguageService.ConvertVisualTree(this, true);
         _bars = new FrameworkElement[] { Bar0, Bar1, Bar2 };
     }
 
@@ -166,8 +169,8 @@ public partial class MotionTestWindow : Window
     {
         Root.Background = new SolidColorBrush(Backdrops[_backdrop].Color);
         double s = Steps[_step];
-        SpeedText.Text = $"移動速度　{s:0} / {s * 2:0} / {s * 4:0} px/s　　背景：{Backdrops[_backdrop].Name}"
-                       + (_paused ? "　　（已暫停移動，仍持續計幀）" : "");
+        SpeedText.Text = LanguageService.T($"移動速度　{s:0} / {s * 2:0} / {s * 4:0} px/s　　背景：{Backdrops[_backdrop].Name}"
+                       + (_paused ? "　　（已暫停移動，仍持續計幀）" : ""));
         ResetStats();
     }
 }

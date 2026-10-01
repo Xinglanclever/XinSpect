@@ -508,9 +508,9 @@ public sealed class MainViewModel : ObservableObject
     }
 
     public string AppTitle => ThemeService.Theme == AppTheme.ExtremeEdition
-        ? "XinSpect Everest" : "曦覽 XinSpect";
+        ? "XinSpect v2.0.5 Everest" : "曦覽 XinSpect";
     public string AppSubtitle => ThemeService.Theme == AppTheme.ExtremeEdition
-        ? "北極星 ─ Everest" : "硬體資訊總覽";
+        ? "" : "硬體資訊總覽";
 
     /// <summary>主題切換後由外殼呼叫，重新通知標題繫結更新。</summary>
     public void NotifyTitleChanged()

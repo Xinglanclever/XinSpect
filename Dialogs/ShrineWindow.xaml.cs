@@ -47,6 +47,8 @@ public partial class ShrineWindow : Window
         while (index == _lastBlessingIndex && ShrineMath.Blessings.Length > 1);
         _lastBlessingIndex = index;
 
+        _prayCount++;
+        PrayCount.Text = $"×{_prayCount}";
         BlessingText.Text = LanguageService.T(ShrineMath.Blessings[index]);
         BlessingCard.Visibility = Visibility.Visible;
 
@@ -68,6 +70,8 @@ public partial class ShrineWindow : Window
 
     private bool _incenseCooldown;
     private int _lastBlessingIndex = -1;
+    private int _prayCount;
+    private int _incenseCount;
 
     // 燒香：播較長的煙霧動畫＋提示「已上香」＋按鈕變灰 5 秒。
     private async void Incense_Click(object sender, RoutedEventArgs e)
@@ -76,6 +80,8 @@ public partial class ShrineWindow : Window
         _incenseCooldown = true;
         IncenseButton.IsEnabled = false;
 
+        _incenseCount++;
+        IncenseCount.Text = $"×{_incenseCount}";
         ResetSmoke();
         BlessingText.Text = LanguageService.T("已上香，心誠則靈");
         BlessingCard.Visibility = Visibility.Visible;

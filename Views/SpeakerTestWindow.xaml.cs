@@ -21,6 +21,9 @@ public partial class SpeakerTestWindow : Window
     {
         InitializeComponent();
         Loaded += (_, _) => Focus();     // 全螢幕視窗要自己抓焦點，否則按鍵進不來
+        // 獨立視窗不在主視覺樹的逐頁轉換範圍：開啟時自己轉換一次（冪等，重複呼叫安全）。
+        if (LanguageService.IsSimplified)
+            LanguageService.ConvertVisualTree(this, true);
     }
 
     private const int Rate = 44100;      // CD 取樣率：任何輸出裝置都吃得下，不必猜裝置能力
@@ -70,7 +73,7 @@ public partial class SpeakerTestWindow : Window
         }), loop: true);
 
         Light(left, right);
-        StatusText.Text = caption + "（循環播放，按 S 停止）";
+        StatusText.Text = LanguageService.T(caption) + "（循環播放，按 S 停止）";
     }
 
     /// <summary>左右交替：L→R→L→R 共四聲，用來一次確認聲道有沒有接反。單次播放，約 6 秒。</summary>
@@ -84,7 +87,7 @@ public partial class SpeakerTestWindow : Window
         }), loop: false);
 
         Sequence(8, 0.75, i => Light(i % 4 == 0, i % 4 == 2), "左右交替結束");
-        StatusText.Text = "左右交替　順序為 左→右→左→右；若與畫面指示相反，就是聲道接反了（單次，約 6 秒）";
+        StatusText.Text = LanguageService.T("左右交替　順序為 左→右→左→右；若與畫面指示相反，就是聲道接反了（單次，約 6 秒）");
     }
 
     /// <summary>對數掃頻 20 Hz → 20 kHz：聽破音、共振與整段消失的頻段。單次播放，約 8 秒。</summary>
@@ -102,7 +105,7 @@ public partial class SpeakerTestWindow : Window
         }), loop: false);
 
         Sequence(1, span, _ => Light(true, true), "掃頻結束");
-        StatusText.Text = "掃頻 20 Hz → 20 kHz　由低到高連續掃過；留意破音、雜音與突然安靜的頻段（單次，約 8 秒）";
+        StatusText.Text = LanguageService.T("掃頻 20 Hz → 20 kHz　由低到高連續掃過；留意破音、雜音與突然安靜的頻段（單次，約 8 秒）");
     }
 
     /// <summary>單顆提示音，含 25 ms 淡入淡出——直接切斷會產生喀聲，容易被誤判成喇叭破音。</summary>
@@ -163,7 +166,7 @@ public partial class SpeakerTestWindow : Window
 
         if (caption is null) return;
         Light(false, false);
-        StatusText.Text = caption + "　按 1～5 重新選擇測試音";
+        StatusText.Text = LanguageService.T(caption) + "　按 1～5 重新選擇測試音";
     }
 
     /// <summary>
