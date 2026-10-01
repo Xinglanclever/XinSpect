@@ -46,6 +46,7 @@ public class DeepBenchViewModelTests
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Integrated && row.Id == "memory.ecc-whea-stress");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "topology.core-bandwidth");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "topology.smt-contention");
+        Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "topology.hybrid-placement");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "topology.coherence-lock");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "cpu.branch-speculation");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "ux.audio-buffer-glitch");
@@ -56,13 +57,13 @@ public class DeepBenchViewModelTests
     }
 
     [Fact]
-    public void 快速與完整檔都只選二十九個已接入測項()
+    public void 快速與完整檔都只選三十個已接入測項()
     {
         using var store = new TempHistoryStore();
         var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
         string[] expected =
         [
-            "cpu.aes-sha", "cpu.load-use-ilp-branch", "cpu.branch-speculation", "cpu.rdrand-rdseed", "topology.core-latency", "topology.core-bandwidth", "topology.smt-contention", "topology.coherence-lock", "memory.cache-latency",
+            "cpu.aes-sha", "cpu.load-use-ilp-branch", "cpu.branch-speculation", "cpu.rdrand-rdseed", "topology.core-latency", "topology.core-bandwidth", "topology.smt-contention", "topology.hybrid-placement", "topology.coherence-lock", "memory.cache-latency",
             "memory.stream-bandwidth", "memory.loaded-latency", "memory.ecc-whea-stress",
             "gpu.fp32-fp64-integer", "gpu.vram-bandwidth",
             "gpu.pcie-transfer", "gpu.dispatch-jitter", "cpu.top-down",
@@ -210,6 +211,7 @@ public class DeepBenchViewModelTests
                 await Task.Delay(Timeout.InfiniteTimeSpan, token);
                 return null!;
             }),
+            new FakeDeepBenchTest("topology.hybrid-placement", () => SuccessfulResult("topology.hybrid-placement")),
             new FakeDeepBenchTest("topology.coherence-lock", async (_, token) =>
             {
                 await Task.Delay(Timeout.InfiniteTimeSpan, token);
