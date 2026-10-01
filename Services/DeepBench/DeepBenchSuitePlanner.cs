@@ -17,7 +17,8 @@ public static class DeepBenchSuitePlanner
         "storage.mixed-rw",
         "storage.write-integrity",
         "storage.flush-durability",
-        "storage.slc-sustained-write"
+        "storage.slc-sustained-write",
+        "ux.network-stack-latency"
     ];
 
     public static DeepBenchPlan Plan(DeepBenchRunProfile profile, IReadOnlyList<DeepBenchCatalogEntry>? catalog = null)

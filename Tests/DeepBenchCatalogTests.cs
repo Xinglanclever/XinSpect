@@ -19,7 +19,8 @@ public class DeepBenchCatalogTests
         "storage.mixed-rw",
         "storage.write-integrity",
         "storage.flush-durability",
-        "storage.slc-sustained-write"
+        "storage.slc-sustained-write",
+        "ux.network-stack-latency"
     ];
 
     [Fact]
@@ -61,6 +62,8 @@ public class DeepBenchCatalogTests
         Assert.True(byId["storage.flush-durability"].Runnable);
         Assert.Equal(DeepBenchTestStatus.Implemented, byId["storage.slc-sustained-write"].Status);
         Assert.True(byId["storage.slc-sustained-write"].Runnable);
+        Assert.Equal(DeepBenchTestStatus.Implemented, byId["ux.network-stack-latency"].Status);
+        Assert.True(byId["ux.network-stack-latency"].Runnable);
 
         var confidence = byId["confidence.engine"];
         Assert.Equal(34, confidence.MatrixNumber);
@@ -83,7 +86,7 @@ public class DeepBenchCatalogTests
     {
         var plan = DeepBenchSuitePlanner.Plan(DeepBenchRunProfile.Full);
         var skipped = plan.Skipped.ToDictionary(item => item.TestId, item => item.Reason);
-        Assert.Equal(24, skipped.Count);
+        Assert.Equal(23, skipped.Count);
         Assert.All(skipped.Values, reason => Assert.Contains("Phase", reason, StringComparison.Ordinal));
         Assert.DoesNotContain(Phase1RunnableIds, id => skipped.ContainsKey(id));
     }

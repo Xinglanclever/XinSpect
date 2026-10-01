@@ -17,8 +17,8 @@ public sealed class DeepBenchViewModel : ObservableObject
         "深測中心只並列各測項的原始樣本、可信度與限制，不加權合成單一總分；跨域、跨軟體排名不成立。";
 
     public const string ScopeNotice =
-        "目前可執行十四個 Phase 1／已接入測項：CPU AES/SHA、Load-to-use/ILP/branch、RDRAND/RDSEED、Intel PMU Top-down、核心延遲、記憶體三項、D3D11 硬體 GPU FP32、儲存 QD、混合讀寫、三圖樣寫入驗證、逐 MiB Flush 驗證與 SLC 持續寫入。" +
-        "NPU ONNX 不含；.NET crypto 只實測本機 API，不保證特定硬體指令集；Top-down 不適用 AMD／非 Intel 事件配方。";
+        "目前可執行十五個 Phase 1／已接入測項：CPU AES/SHA、Load-to-use/ILP/branch、RDRAND/RDSEED、Intel PMU Top-down、核心延遲、記憶體三項、D3D11 硬體 GPU FP32、儲存 QD、混合讀寫、三圖樣寫入驗證、逐 MiB Flush 驗證、SLC 持續寫入與本機 TCP loopback 延遲。" +
+        "NPU ONNX 不含；.NET crypto 只實測本機 API，不保證特定硬體指令集；Top-down 不適用 AMD／非 Intel 事件配方；網路測項只量 127.0.0.1 loopback。";
 
     public const string LoadWarning =
         "高負載警告：執行期間 CPU、記憶體、GPU 與儲存可能接近滿載；請先儲存工作，筆電請接電源並注意散熱。";
@@ -244,6 +244,7 @@ public sealed class DeepBenchViewModel : ObservableObject
             new StorageWriteIntegrityService(root, budget, _fileSystem),
             new StorageFlushDurabilityService(root, budget, _fileSystem),
             new SlcSustainedWriteAdapter(root, budget, _fileSystem),
+            new NetworkStackLatencyAdapter(),
         ];
         return new DeepBenchOrchestrator(tests, _store);
     }

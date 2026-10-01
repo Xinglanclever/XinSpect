@@ -60,7 +60,7 @@ public static class DeepBenchCatalog
         new(34, "confidence.engine", "Benchmark confidence engine", DeepBenchDomain.Confidence, 1, DeepBenchTestStatus.Implemented, "Phase 1 已內建於每個結果，不單獨執行", DeepBenchResourceClass.ReadOnly, DeepBenchParallelSafety.ParallelSafe, false, "由每項結果樣本與限制組成", "無單獨執行"),
         new(35, "ux.present-frame-pacing", "Present latency / frame pacing", DeepBenchDomain.UserExperience, 4, DeepBenchTestStatus.Deferred, "Phase 4：FrameTime 尚未接入 Hub", DeepBenchResourceClass.GpuLoad, DeepBenchParallelSafety.Exclusive, false, "可建立視窗/GPU", "尚未提供"),
         new(36, "ux.audio-buffer-glitch", "Audio buffer / glitch", DeepBenchDomain.UserExperience, 4, DeepBenchTestStatus.Deferred, "Phase 4：WASAPI 量測尚未實作", DeepBenchResourceClass.ReadOnly, DeepBenchParallelSafety.ParallelSafe, false, "音訊裝置", "尚未提供"),
-        new(37, "ux.network-stack-latency", "Network stack latency", DeepBenchDomain.UserExperience, 4, DeepBenchTestStatus.Deferred, "Phase 4：本機/LAN socket 尚未實作", DeepBenchResourceClass.ReadOnly, DeepBenchParallelSafety.ParallelSafe, false, "本機或區域網路；不宣稱 Internet", "尚未提供"),
+        new(37, "ux.network-stack-latency", "Network stack latency", DeepBenchDomain.UserExperience, 4, DeepBenchTestStatus.Implemented, "已接入：本機 127.0.0.1 TCP loopback 延遲；不含 LAN／Internet", DeepBenchResourceClass.ReadOnly, DeepBenchParallelSafety.ParallelSafe, true, "本機 127.0.0.1 TCP loopback；不外連", "Quick 256 次；Full 1024 次"),
         new(38, "ux.synthetic-workloads", "Real-world synthetic workloads", DeepBenchDomain.UserExperience, 5, DeepBenchTestStatus.Deferred, "Phase 5：合成流程尚未實作", DeepBenchResourceClass.DiskWrite, DeepBenchParallelSafety.Exclusive, false, "多域資源；明確同意", "尚未提供")
     ];
 }
