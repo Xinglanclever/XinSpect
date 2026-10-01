@@ -938,7 +938,7 @@ public static class HelpCatalog
         ["deepbench/深測中心"] = new()
         {
             Title = "深測中心",
-            What = "把同一場 Run Session 的 CPU、拓樸、記憶體、GPU 與儲存深測收在同一頁；原 38 項全量登記，尚未實作項目也會攤開。CPU 微架構與 Top-down 歸因已接進 Hub；Top-down 只使用 Intel PMU 配方。",
+            What = "把同一場 Run Session 的 CPU、拓樸、記憶體、GPU 與儲存深測收在同一頁；原 38 項全量登記，尚未實作項目也會攤開。CPU 微架構、寫入完整性與 Top-down 歸因已接進 Hub；Top-down 只使用 Intel PMU 配方。",
             Does = "每項保留樣本數、設定、可信度、限制與錯誤；聚合只引用同一場證據，不加權合成總分，也不把延後項目藏起來。",
             Risk = HelpRisk.Caution,
             Safety = "高負載會讓 CPU、記憶體、GPU 或儲存接近滿載；儲存測試只建立 XinSpect.deepbench.tmp，結束、例外或取消後都會刪除。",
@@ -946,7 +946,7 @@ public static class HelpCatalog
         ["deepbench/Run Session"] = new()
         {
             Title = "Run Session",
-            What = "一次連續執行的深測場次；快速檔與完整檔目前執行九個 Phase 1 測項加上已接入的 CPU 微架構與 Top-down 歸因。",
+            What = "一次連續執行的深測場次；快速檔與完整檔目前執行十一個已接入測項，涵蓋 CPU 微架構、Top-down 歸因、核心與記憶體、GPU、儲存與寫入完整性。",
             Does = "啟動前會檢查儲存根與剩餘空間；測試可取消，取消後只保留已完成結果，其餘標示未執行而不補值。儲存項目只寫 XinSpect.deepbench.tmp，刪除失敗或量測失敗都會列出。",
             Risk = HelpRisk.Caution,
             Safety = "期間 CPU、記憶體、GPU 與儲存可能接近滿載，系統會明顯變慢；請先儲存工作，筆電接電源並注意散熱。",

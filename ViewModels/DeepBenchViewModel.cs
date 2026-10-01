@@ -228,6 +228,7 @@ public sealed class DeepBenchViewModel : ObservableObject
             new GpuFp32ComputeService(),
             new DiskIoMatrixService(DiskIoMatrixKind.QdLadder, root, budget, _fileSystem),
             new DiskIoMatrixService(DiskIoMatrixKind.MixedReadWrite, root, budget, _fileSystem),
+            new StorageWriteIntegrityService(root, budget, _fileSystem),
         ];
         return new DeepBenchOrchestrator(tests, _store);
     }

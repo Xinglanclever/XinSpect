@@ -42,7 +42,7 @@ public class DeepBenchViewModelTests
     }
 
     [Fact]
-    public void 快速與完整檔都只選九個已接入測項()
+    public void 快速與完整檔都只選十一個已接入測項()
     {
         using var store = new TempHistoryStore();
         var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
@@ -50,7 +50,7 @@ public class DeepBenchViewModelTests
         [
             "cpu.aes-sha", "cpu.load-use-ilp-branch", "topology.core-latency", "memory.cache-latency",
             "memory.stream-bandwidth", "memory.loaded-latency", "gpu.fp32-fp64-integer", "cpu.top-down",
-            "storage.qd-ladder", "storage.mixed-rw"
+            "storage.qd-ladder", "storage.mixed-rw", "storage.write-integrity"
         ];
 
         vm.SelectedProfile = DeepBenchRunProfile.Quick;
@@ -176,6 +176,7 @@ public class DeepBenchViewModelTests
             new FakeDeepBenchTest("cpu.top-down", () => SuccessfulResult("cpu.top-down")),
             new FakeDeepBenchTest("storage.qd-ladder", () => SuccessfulResult("storage.qd-ladder")),
             new FakeDeepBenchTest("storage.mixed-rw", () => SuccessfulResult("storage.mixed-rw")),
+            new FakeDeepBenchTest("storage.write-integrity", () => SuccessfulResult("storage.write-integrity")),
         ];
     }
 

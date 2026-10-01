@@ -13,7 +13,8 @@ public static class DeepBenchSuitePlanner
         "gpu.fp32-fp64-integer",
         "cpu.top-down",
         "storage.qd-ladder",
-        "storage.mixed-rw"
+        "storage.mixed-rw",
+        "storage.write-integrity"
     ];
 
     public static DeepBenchPlan Plan(DeepBenchRunProfile profile, IReadOnlyList<DeepBenchCatalogEntry>? catalog = null)
