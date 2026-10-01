@@ -46,16 +46,17 @@ public class DeepBenchViewModelTests
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Integrated && row.Id == "memory.ecc-whea-stress");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "topology.core-bandwidth");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "topology.smt-contention");
+        Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "topology.coherence-lock");
     }
 
     [Fact]
-    public void 快速與完整檔都只選二十二個已接入測項()
+    public void 快速與完整檔都只選二十三個已接入測項()
     {
         using var store = new TempHistoryStore();
         var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
         string[] expected =
         [
-            "cpu.aes-sha", "cpu.load-use-ilp-branch", "cpu.rdrand-rdseed", "topology.core-latency", "topology.core-bandwidth", "topology.smt-contention", "memory.cache-latency",
+            "cpu.aes-sha", "cpu.load-use-ilp-branch", "cpu.rdrand-rdseed", "topology.core-latency", "topology.core-bandwidth", "topology.smt-contention", "topology.coherence-lock", "memory.cache-latency",
             "memory.stream-bandwidth", "memory.loaded-latency", "memory.ecc-whea-stress",
             "gpu.fp32-fp64-integer", "gpu.vram-bandwidth",
             "gpu.pcie-transfer", "gpu.dispatch-jitter", "cpu.top-down",
@@ -190,6 +191,11 @@ public class DeepBenchViewModelTests
                 return null!;
             }),
             new FakeDeepBenchTest("topology.smt-contention", async (_, token) =>
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, token);
+                return null!;
+            }),
+            new FakeDeepBenchTest("topology.coherence-lock", async (_, token) =>
             {
                 await Task.Delay(Timeout.InfiniteTimeSpan, token);
                 return null!;

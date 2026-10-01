@@ -10,6 +10,7 @@ public static class DeepBenchSuitePlanner
         "topology.core-latency",
         "topology.core-bandwidth",
         "topology.smt-contention",
+        "topology.coherence-lock",
         "memory.cache-latency",
         "memory.stream-bandwidth",
         "memory.loaded-latency",
