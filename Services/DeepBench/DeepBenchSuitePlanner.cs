@@ -27,7 +27,8 @@ public static class DeepBenchSuitePlanner
         "storage.flush-durability",
         "storage.slc-sustained-write",
         "storage.iocp-engine",
-        "ux.network-stack-latency"
+        "ux.network-stack-latency",
+        "ux.audio-buffer-glitch"
     ];
 
     public static DeepBenchPlan Plan(DeepBenchRunProfile profile, IReadOnlyList<DeepBenchCatalogEntry>? catalog = null)
