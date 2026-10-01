@@ -192,8 +192,23 @@ public static class CpuAffinity
     /// 取不到拓撲時回空清單，呼叫端必須據實說明而不是退回猜一個核心數。
     /// </remarks>
     public static List<(int Core, ProcessorRef First, string LpText)> PhysicalCores(bool multiGroup, ulong group0Mask)
+        => PhysicalCoreProcessorSets(multiGroup, group0Mask)
+            .Select((set, core) => (
+                Core: core,
+                First: set[0],
+                LpText: string.Join("／", set.Select(p => p.Label(multiGroup)))))
+            .ToList();
+
+    /// <summary>
+    /// 以實體核心為單位列舉全部可釘選 <see cref="ProcessorRef"/>；同一集合內就是同一實體核心的 SMT 兄弟。
+    /// </summary>
+    /// <remarks>
+    /// SMT 干擾量測需要「第一、第二條執行緒」這種完整集合，不能從 <see cref="PhysicalCores"/> 的顯示字串反推。
+    /// 與 <see cref="PhysicalCores"/> 共用同一份原生拓樸，取不到時一樣回空清單由呼叫端據實標示。
+    /// </remarks>
+    public static List<IReadOnlyList<ProcessorRef>> PhysicalCoreProcessorSets(bool multiGroup, ulong group0Mask)
     {
-        var list = new List<(int, ProcessorRef, string)>();
+        var list = new List<IReadOnlyList<ProcessorRef>>();
         uint len = 0;
         GetLogicalProcessorInformationEx(RelationProcessorCore, 0, ref len);
         if (len == 0 || Marshal.GetLastWin32Error() != ErrorInsufficientBuffer) return list;
@@ -202,7 +217,7 @@ public static class CpuAffinity
         try
         {
             if (!GetLogicalProcessorInformationEx(RelationProcessorCore, buf, ref len)) return list;
-            int off = 0, core = 0;
+            int off = 0;
             while (off + 8 <= (int)len)
             {
                 nint rec = buf + off;
@@ -215,11 +230,8 @@ public static class CpuAffinity
                 if (!multiGroup && group == 0) mask &= group0Mask;    // 只用行程真的能跑的邏輯處理器
                 if (mask != 0)
                 {
-                    var idx = IndicesFromMask(mask);
-                    list.Add((core, new ProcessorRef(group, idx[0]),
-                              string.Join("／", idx.Select(i => new ProcessorRef(group, i).Label(multiGroup)))));
+                    list.Add([.. IndicesFromMask(mask).Select(index => new ProcessorRef(group, index))]);
                 }
-                core++;
                 off += size;
             }
         }

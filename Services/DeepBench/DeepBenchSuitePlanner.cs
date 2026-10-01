@@ -9,6 +9,7 @@ public static class DeepBenchSuitePlanner
         "cpu.rdrand-rdseed",
         "topology.core-latency",
         "topology.core-bandwidth",
+        "topology.smt-contention",
         "memory.cache-latency",
         "memory.stream-bandwidth",
         "memory.loaded-latency",
