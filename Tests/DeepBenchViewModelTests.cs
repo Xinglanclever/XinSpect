@@ -26,6 +26,7 @@ public class DeepBenchViewModelTests
         Assert.Same(vm.Cache, vm.DeepBench.Cache);
         Assert.Same(vm.MemBandwidth, vm.DeepBench.MemBandwidth);
         Assert.Same(vm.CoreLatency, vm.DeepBench.CoreLatency);
+        Assert.Same(vm.TopDown, vm.DeepBench.TopDown);
     }
 
     [Fact]
@@ -41,14 +42,14 @@ public class DeepBenchViewModelTests
     }
 
     [Fact]
-    public void 快速與完整檔都只選八個第一期可執行測項()
+    public void 快速與完整檔都只選九個已接入測項()
     {
         using var store = new TempHistoryStore();
         var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
         string[] expected =
         [
             "cpu.aes-sha", "topology.core-latency", "memory.cache-latency", "memory.stream-bandwidth",
-            "memory.loaded-latency", "gpu.fp32-fp64-integer", "storage.qd-ladder", "storage.mixed-rw"
+            "memory.loaded-latency", "gpu.fp32-fp64-integer", "cpu.top-down", "storage.qd-ladder", "storage.mixed-rw"
         ];
 
         vm.SelectedProfile = DeepBenchRunProfile.Quick;
@@ -169,6 +170,7 @@ public class DeepBenchViewModelTests
             new FakeDeepBenchTest("memory.stream-bandwidth", () => SuccessfulResult("memory.stream-bandwidth")),
             new FakeDeepBenchTest("memory.loaded-latency", () => SuccessfulResult("memory.loaded-latency")),
             new FakeDeepBenchTest("gpu.fp32-fp64-integer", () => SuccessfulResult("gpu.fp32-fp64-integer")),
+            new FakeDeepBenchTest("cpu.top-down", () => SuccessfulResult("cpu.top-down")),
             new FakeDeepBenchTest("storage.qd-ladder", () => SuccessfulResult("storage.qd-ladder")),
             new FakeDeepBenchTest("storage.mixed-rw", () => SuccessfulResult("storage.mixed-rw")),
         ];

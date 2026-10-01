@@ -127,7 +127,7 @@ public sealed class TopDownCoreRow
 /// </list>
 /// MSR 讀寫經 <see cref="WinRing0Bridge"/>（風險聲明見該類別）。
 /// </remarks>
-public sealed class TopDownService : ObservableObject, IDisposable
+public class TopDownService : ObservableObject, IDisposable
 {
     private const uint MsrPerfEvtSel0 = 0x186;
     private const uint MsrPmc0 = 0xC1;
@@ -198,6 +198,17 @@ public sealed class TopDownService : ObservableObject, IDisposable
         if (IsRunning) return;
         _ = RunAsync();
     }
+
+    /// <summary>給 Hub Adapter 使用的可等待入口；不改變效能頁的 fire-and-forget Start 行為。</summary>
+    public virtual async Task SampleAsync(CancellationToken cancellationToken)
+    {
+        _cts = new CancellationTokenSource();
+        using CancellationTokenRegistration registration = cancellationToken.Register(Cancel);
+        await RunAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>只做支援探測；Adapter 在真正取樣前使用，避免不支援平台進入高負載路徑。</summary>
+    public virtual bool RunSupportedProbe() => DetectSupport();
 
     public void Cancel() => _cts?.Cancel();
 

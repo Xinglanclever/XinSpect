@@ -17,8 +17,8 @@ public sealed class DeepBenchViewModel : ObservableObject
         "深測中心只並列各測項的原始樣本、可信度與限制，不加權合成單一總分；跨域、跨軟體排名不成立。";
 
     public const string ScopeNotice =
-        "目前可執行八個 Phase 1 測項：CPU AES/SHA、核心延遲、記憶體三項、D3D11 硬體 GPU FP32、儲存 QD 與混合讀寫。" +
-        "NPU ONNX 不含；.NET crypto 只實測本機 API，不保證特定硬體指令集。";
+        "目前可執行九個 Phase 1／已接入測項：CPU AES/SHA、Intel PMU Top-down、核心延遲、記憶體三項、D3D11 硬體 GPU FP32、儲存 QD 與混合讀寫。" +
+        "NPU ONNX 不含；.NET crypto 只實測本機 API，不保證特定硬體指令集；Top-down 不適用 AMD／非 Intel 事件配方。";
 
     public const string LoadWarning =
         "高負載警告：執行期間 CPU、記憶體、GPU 與儲存可能接近滿載；請先儲存工作，筆電請接電源並注意散熱。";
@@ -32,6 +32,7 @@ public sealed class DeepBenchViewModel : ObservableObject
     private readonly CacheBenchService _cache;
     private readonly MemBandwidthService _memBandwidth;
     private readonly CoreLatencyService _coreLatency;
+    private readonly TopDownService _topDown;
     private readonly DeepBenchRunStore _store;
     private readonly IDiskIoFileSystem? _fileSystem;
     private readonly DeepBenchOrchestrator? _injectedOrchestrator;
@@ -40,6 +41,7 @@ public sealed class DeepBenchViewModel : ObservableObject
     public CacheBenchService Cache => _cache;
     public MemBandwidthService MemBandwidth => _memBandwidth;
     public CoreLatencyService CoreLatency => _coreLatency;
+    public TopDownService TopDown => _topDown;
 
     public ObservableCollection<DeepBenchCatalogEntry> CatalogRows { get; } = [];
     public ObservableCollection<DeepBenchResultCard> ResultCards { get; } = [];
@@ -87,7 +89,8 @@ public sealed class DeepBenchViewModel : ObservableObject
         CoreLatencyService coreLatency,
         DeepBenchRunStore runStore,
         IDiskIoFileSystem? diskIoFileSystem = null,
-        DeepBenchOrchestrator? orchestrator = null)
+        DeepBenchOrchestrator? orchestrator = null,
+        TopDownService? topDown = null)
     {
         ArgumentNullException.ThrowIfNull(cache);
         ArgumentNullException.ThrowIfNull(memBandwidth);
@@ -96,6 +99,7 @@ public sealed class DeepBenchViewModel : ObservableObject
         _cache = cache;
         _memBandwidth = memBandwidth;
         _coreLatency = coreLatency;
+        _topDown = topDown ?? new TopDownService();
         _store = runStore;
         _fileSystem = diskIoFileSystem;
         _injectedOrchestrator = orchestrator;
@@ -215,6 +219,7 @@ public sealed class DeepBenchViewModel : ObservableObject
         IDeepBenchTest[] tests =
         [
             new CryptoMicrobenchService(),
+            new TopDownAdapter(_topDown),
             new CoreLatencyAdapter(_coreLatency),
             new CacheLatencyAdapter(_cache),
             new StreamBandwidthAdapter(_memBandwidth),

@@ -432,7 +432,7 @@ public sealed class MainViewModel : ObservableObject
         Bench = new BenchService(Benchmarks);
         Chess = new ChessBenchService(Benchmarks);
         SuperPi = new SuperPiService(Benchmarks);
-        DeepBench = new DeepBenchViewModel(Cache, MemBandwidth, CoreLatency, new DeepBenchRunStore());
+        DeepBench = new DeepBenchViewModel(Cache, MemBandwidth, CoreLatency, new DeepBenchRunStore(), topDown: TopDown);
         HardwareEvidence = new HardwareEvidenceViewModel(this);
 
         Ai = new AiService(Settings) { SnapshotProvider = BuildAiSnapshot };

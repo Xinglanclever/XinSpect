@@ -26,6 +26,36 @@ public class DeepBenchLegacyAdapterTests
         public override Task RunAsync() => Task.CompletedTask;
     }
 
+    private class FakeTopDownService : TopDownService
+    {
+        public int SampleCalls;
+        public bool Support;
+
+        public override bool RunSupportedProbe() => Support;
+
+        public override Task SampleAsync(CancellationToken cancellationToken)
+        {
+            SampleCalls++;
+            cancellationToken.ThrowIfCancellationRequested();
+            Buckets.Add(new TopDownBucket("退休 Retiring", "note", 64));
+            Buckets.Add(new TopDownBucket("錯誤推測 Bad Speculation", "note", 8));
+            Buckets.Add(new TopDownBucket("前端受限 Frontend Bound", "note", 6));
+            Buckets.Add(new TopDownBucket("後端受限 Backend Bound", "note", 22));
+            Rows.Add(new TopDownCoreRow(0, "0,4", true, 60, 10, 8, 22, 3));
+            Rows.Add(new TopDownCoreRow(1, "1,5", true, 68, 6, 4, 22, 4));
+            return Task.CompletedTask;
+        }
+    }
+
+    private class EmptyTopDownService : FakeTopDownService
+    {
+        public override Task SampleAsync(CancellationToken cancellationToken)
+        {
+            SampleCalls++;
+            return Task.CompletedTask;
+        }
+    }
+
     private sealed class FakeMemoryService : MemBandwidthService
     {
         public int Runs;
@@ -134,6 +164,55 @@ public class DeepBenchLegacyAdapterTests
         Assert.Equal("7", metric.Points[0].Axes["toLp"]);
         Assert.Equal(131, metric.Points[0].Value);
         Assert.Contains(result.Limitations, limitation => limitation.Contains("使用者模式", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task TopDownAdapter保留逐核心四桶與Intel限制()
+    {
+        var service = new FakeTopDownService { Support = true };
+        var result = await new TopDownAdapter(service).RunAsync(CreateContext(), CancellationToken.None);
+
+        Assert.Equal(1, service.SampleCalls);
+        Assert.Equal("cpu.top-down", result.TestId);
+        Assert.Equal(DeepBenchFailureKind.None, result.FailureKind);
+        Assert.Equal(4, result.Metrics.Count);
+        var retiring = result.Metrics.Single(metric => metric.Id == "cpu.topdown.retiring");
+        Assert.Equal("%", retiring.Unit);
+        Assert.Equal([60, 68], retiring.Samples);
+        Assert.Equal("0", retiring.Points[0].Axes["physicalCore"]);
+        Assert.Equal("1", retiring.Points[1].Axes["physicalCore"]);
+        Assert.Contains("aggregate=64", retiring.Configuration, StringComparison.Ordinal);
+        Assert.Contains(result.Limitations, limitation => limitation.Contains("INT_MISC.RECOVERY_CYCLES", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task TopDownAdapter不支援與空樣本不偽造數值()
+    {
+        var unsupported = new FakeTopDownService();
+        var unsupportedResult = await new TopDownAdapter(unsupported).RunAsync(CreateContext(), CancellationToken.None);
+        Assert.Equal(DeepBenchFailureKind.Unsupported, unsupportedResult.FailureKind);
+        Assert.Equal(0, unsupported.SampleCalls);
+        Assert.Empty(unsupportedResult.Metrics);
+
+        var empty = new EmptyTopDownService { Support = true };
+        var emptyResult = await new TopDownAdapter(empty).RunAsync(CreateContext(), CancellationToken.None);
+        Assert.Equal(DeepBenchFailureKind.NotRun, emptyResult.FailureKind);
+        Assert.Equal(1, empty.SampleCalls);
+        Assert.Empty(emptyResult.Metrics);
+        Assert.Contains("未產生", emptyResult.Error!, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TopDownAdapter取消不產生有效量測()
+    {
+        var service = new FakeTopDownService { Support = true };
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var result = await new TopDownAdapter(service).RunAsync(CreateContext(), cts.Token);
+
+        Assert.Equal(DeepBenchFailureKind.Cancelled, result.FailureKind);
+        Assert.Empty(result.Metrics);
     }
 
     private static DeepBenchRunContext CreateContext() =>
