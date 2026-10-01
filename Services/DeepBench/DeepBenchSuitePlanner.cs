@@ -21,6 +21,7 @@ public static class DeepBenchSuitePlanner
         "storage.write-integrity",
         "storage.flush-durability",
         "storage.slc-sustained-write",
+        "storage.iocp-engine",
         "ux.network-stack-latency"
     ];
 

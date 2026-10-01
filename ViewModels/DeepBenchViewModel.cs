@@ -17,14 +17,14 @@ public sealed class DeepBenchViewModel : ObservableObject
         "深測中心只並列各測項的原始樣本、可信度與限制，不加權合成單一總分；跨域、跨軟體排名不成立。";
 
     public const string ScopeNotice =
-        "目前可執行十八個 Phase 1／已接入測項：CPU AES/SHA、Load-to-use/ILP/branch、RDRAND/RDSEED、Intel PMU Top-down、核心延遲、記憶體三項、D3D11 硬體 GPU FP32、VRAM 讀寫頻寬、PCIe 上傳／下載、dispatch jitter、儲存 QD、混合讀寫、三圖樣寫入驗證、逐 MiB Flush 驗證、SLC 持續寫入與本機 TCP loopback 延遲。" +
+        "目前可執行十九個 Phase 1／已接入測項：CPU AES/SHA、Load-to-use/ILP/branch、RDRAND/RDSEED、Intel PMU Top-down、核心延遲、記憶體三項、D3D11 硬體 GPU FP32、VRAM 讀寫頻寬、PCIe 上傳／下載、dispatch jitter、儲存 QD、混合讀寫、三圖樣寫入驗證、逐 MiB Flush 驗證、SLC 持續寫入、IOCP completion engine 與本機 TCP loopback 延遲。" +
         "NPU ONNX 不含；.NET crypto 只實測本機 API，不保證特定硬體指令集；Top-down 不適用 AMD／非 Intel 事件配方；網路測項只量 127.0.0.1 loopback。";
 
     public const string LoadWarning =
         "高負載警告：執行期間 CPU、記憶體、GPU 與儲存可能接近滿載；請先儲存工作，筆電請接電源並注意散熱。";
 
     public const string TempFileWarning =
-        "儲存測試只建立 XinSpect.deepbench.tmp，不碰既有檔案；結束、例外或取消後都會刪除，啟動前會檢查剩餘空間。";
+        "儲存測試只建立 XinSpect.deepbench.tmp 與 XinSpect.iocp.tmp，不碰既有檔案；結束、例外或取消後都會刪除，啟動前會檢查剩餘空間。";
 
     public const string LocalOnlyNotice =
         "深測歷史只保存在本機設定資料夾，不上傳；沒有雲端同步，也沒有外部伺服器備份。";
@@ -185,13 +185,13 @@ public sealed class DeepBenchViewModel : ObservableObject
         string[] storageIds = selected
             .Where(id => id is DiskIoMatrixService.QdTestId or DiskIoMatrixService.MixedTestId
                 or StorageWriteIntegrityService.TestId or StorageFlushDurabilityService.TestId
-                or SlcSustainedWriteAdapter.TestId)
+                or SlcSustainedWriteAdapter.TestId or StorageIocpEngineService.TestId)
             .ToArray();
         if (storageIds.Length == 0) return true;
 
         if (string.IsNullOrWhiteSpace(StorageRoot))
         {
-            AddError("請先選擇儲存根：storage.qd-ladder、storage.mixed-rw、storage.write-integrity、storage.flush-durability 與 storage.slc-sustained-write 都需要可寫的暫存位置。");
+            AddError("請先選擇儲存根：storage.qd-ladder、storage.mixed-rw、storage.write-integrity、storage.flush-durability、storage.slc-sustained-write 與 storage.iocp-engine 都需要可寫的暫存位置。");
             return false;
         }
 
@@ -215,7 +215,7 @@ public sealed class DeepBenchViewModel : ObservableObject
         if (remaining - slcTarget < ReserveBytes)
         {
             AddError($"空間守衛未通過：預算 {budget / MiB:0} MiB 後必須仍保留 8 GB；目前可用 {available / (double)MiB:0} MiB。");
-            AddError($"受影響測項：storage.qd-ladder、storage.mixed-rw、storage.write-integrity、storage.flush-durability、storage.slc-sustained-write。請改用更大磁碟或降低暫存預算。");
+            AddError($"受影響測項：storage.qd-ladder、storage.mixed-rw、storage.write-integrity、storage.flush-durability、storage.slc-sustained-write、storage.iocp-engine。請改用更大磁碟或降低暫存預算。");
             return false;
         }
 
@@ -247,6 +247,7 @@ public sealed class DeepBenchViewModel : ObservableObject
             new StorageWriteIntegrityService(root, budget, _fileSystem),
             new StorageFlushDurabilityService(root, budget, _fileSystem),
             new SlcSustainedWriteAdapter(root, budget, _fileSystem),
+            new StorageIocpEngineService(root, budget),
             new NetworkStackLatencyAdapter(),
         ];
         return new DeepBenchOrchestrator(tests, _store);

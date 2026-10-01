@@ -23,6 +23,7 @@ public class DeepBenchCatalogTests
         "storage.write-integrity",
         "storage.flush-durability",
         "storage.slc-sustained-write",
+        "storage.iocp-engine",
         "ux.network-stack-latency"
     ];
 
@@ -71,6 +72,8 @@ public class DeepBenchCatalogTests
         Assert.True(byId["storage.flush-durability"].Runnable);
         Assert.Equal(DeepBenchTestStatus.Implemented, byId["storage.slc-sustained-write"].Status);
         Assert.True(byId["storage.slc-sustained-write"].Runnable);
+        Assert.Equal(DeepBenchTestStatus.Implemented, byId["storage.iocp-engine"].Status);
+        Assert.True(byId["storage.iocp-engine"].Runnable);
         Assert.Equal(DeepBenchTestStatus.Implemented, byId["ux.network-stack-latency"].Status);
         Assert.True(byId["ux.network-stack-latency"].Runnable);
 
@@ -95,7 +98,7 @@ public class DeepBenchCatalogTests
     {
         var plan = DeepBenchSuitePlanner.Plan(DeepBenchRunProfile.Full);
         var skipped = plan.Skipped.ToDictionary(item => item.TestId, item => item.Reason);
-        Assert.Equal(20, skipped.Count);
+        Assert.Equal(19, skipped.Count);
         Assert.All(skipped.Values, reason => Assert.Contains("Phase", reason, StringComparison.Ordinal));
         Assert.DoesNotContain(Phase1RunnableIds, id => skipped.ContainsKey(id));
     }

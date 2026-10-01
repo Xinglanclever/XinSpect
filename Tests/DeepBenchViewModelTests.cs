@@ -42,10 +42,11 @@ public class DeepBenchViewModelTests
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gpu.vram-bandwidth");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gpu.pcie-transfer");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gpu.dispatch-jitter");
+        Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "storage.iocp-engine");
     }
 
     [Fact]
-    public void 快速與完整檔都只選十八個已接入測項()
+    public void 快速與完整檔都只選十九個已接入測項()
     {
         using var store = new TempHistoryStore();
         var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
@@ -57,6 +58,7 @@ public class DeepBenchViewModelTests
             "storage.qd-ladder", "storage.mixed-rw", "storage.write-integrity",
             "storage.flush-durability",
             "storage.slc-sustained-write",
+            "storage.iocp-engine",
             "ux.network-stack-latency"
         ];
 
@@ -68,7 +70,7 @@ public class DeepBenchViewModelTests
     }
 
     [Fact]
-    public async Task 沒有儲存根時啟動會指向五個儲存測項而不是開始高負載()
+    public async Task 沒有儲存根時啟動會指向六個儲存測項而不是開始高負載()
     {
         using var store = new TempHistoryStore();
         var vm = CreateViewModel(store.Store, new FixedDiskFileSystem(256L * 1024 * 1024 * 1024));
@@ -81,6 +83,7 @@ public class DeepBenchViewModelTests
         Assert.Contains("選擇儲存根", combined, StringComparison.Ordinal);
         Assert.Contains("storage.qd-ladder", combined, StringComparison.Ordinal);
         Assert.Contains("storage.mixed-rw", combined, StringComparison.Ordinal);
+        Assert.Contains("storage.iocp-engine", combined, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -191,6 +194,7 @@ public class DeepBenchViewModelTests
             new FakeDeepBenchTest("storage.write-integrity", () => SuccessfulResult("storage.write-integrity")),
             new FakeDeepBenchTest("storage.flush-durability", () => SuccessfulResult("storage.flush-durability")),
             new FakeDeepBenchTest("storage.slc-sustained-write", () => SuccessfulResult("storage.slc-sustained-write")),
+            new FakeDeepBenchTest("storage.iocp-engine", () => SuccessfulResult("storage.iocp-engine")),
             new FakeDeepBenchTest("ux.network-stack-latency", () => SuccessfulResult("ux.network-stack-latency")),
         ];
     }
