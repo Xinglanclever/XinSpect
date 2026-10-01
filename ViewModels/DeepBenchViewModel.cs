@@ -219,6 +219,7 @@ public sealed class DeepBenchViewModel : ObservableObject
         IDeepBenchTest[] tests =
         [
             new CryptoMicrobenchService(),
+            new CpuMicroarchBenchService(),
             new TopDownAdapter(_topDown),
             new CoreLatencyAdapter(_coreLatency),
             new CacheLatencyAdapter(_cache),

@@ -25,7 +25,7 @@ public static class DeepBenchCatalog
     public static IReadOnlyList<DeepBenchCatalogEntry> All { get; } =
     [
         new(1, "cpu.aes-sha", "AES-256 / SHA-256 吞吐", DeepBenchDomain.Cpu, 1, DeepBenchTestStatus.Implemented, "Phase 1 已實作：.NET crypto API 實測", DeepBenchResourceClass.CpuLoad, DeepBenchParallelSafety.Exclusive, true, "CPU；無外部工具", "約 10–30 秒"),
-        new(2, "cpu.load-use-ilp-branch", "Load-to-use / ILP / branch", DeepBenchDomain.Cpu, 2, DeepBenchTestStatus.Deferred, "Phase 2：微架構量測尚未實作", DeepBenchResourceClass.CpuLoad, DeepBenchParallelSafety.Exclusive, false, "CPU", "尚未提供"),
+        new(2, "cpu.load-use-ilp-branch", "Load-to-use / ILP / branch", DeepBenchDomain.Cpu, 2, DeepBenchTestStatus.Implemented, "Phase 2 已實作：依賴載入鏈、ILP 1/2/4/8 與分支圖樣", DeepBenchResourceClass.CpuLoad, DeepBenchParallelSafety.Exclusive, true, "CPU", "約 1–5 秒"),
         new(3, "cpu.branch-speculation", "分支預測與推測執行", DeepBenchDomain.Cpu, 2, DeepBenchTestStatus.Deferred, "Phase 2：分支模式矩陣尚未實作", DeepBenchResourceClass.CpuLoad, DeepBenchParallelSafety.Exclusive, false, "CPU", "尚未提供"),
         new(4, "cpu.rdrand-rdseed", "RDRAND / RDSEED", DeepBenchDomain.Cpu, 2, DeepBenchTestStatus.Deferred, "Phase 2：硬體亂數尚未實作", DeepBenchResourceClass.CpuLoad, DeepBenchParallelSafety.Exclusive, false, "支援硬體亂數的 CPU", "尚未提供"),
         new(5, "cpu.top-down", "Top-down 歸因", DeepBenchDomain.Cpu, 2, DeepBenchTestStatus.Integrated, "Phase 2 已接入：既有 Intel PMU Top-down 服務", DeepBenchResourceClass.CpuLoad, DeepBenchParallelSafety.Exclusive, true, "Intel CPU；4 個通用 PMU 計數器；WinRing0 可用", "約 2–10 秒"),

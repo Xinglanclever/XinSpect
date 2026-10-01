@@ -5,6 +5,7 @@ public static class DeepBenchSuitePlanner
     private static readonly string[] Phase1Order =
     [
         "cpu.aes-sha",
+        "cpu.load-use-ilp-branch",
         "topology.core-latency",
         "memory.cache-latency",
         "memory.stream-bandwidth",
