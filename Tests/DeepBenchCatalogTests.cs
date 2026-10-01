@@ -42,7 +42,8 @@ public class DeepBenchCatalogTests
         "gauntlet.throughput-degradation",
         "gauntlet.power-state-latency",
         "gauntlet.multi-domain",
-        "ux.synthetic-workloads"
+        "ux.synthetic-workloads",
+        "confidence.engine"
     ];
 
     [Fact]
@@ -134,11 +135,11 @@ public class DeepBenchCatalogTests
         var confidence = byId["confidence.engine"];
         Assert.Equal(34, confidence.MatrixNumber);
         Assert.Equal(DeepBenchTestStatus.Implemented, confidence.Status);
-        Assert.False(confidence.Runnable);
+        Assert.True(confidence.Runnable);
     }
 
     [Fact]
-    public void Quick與Full都只選三十七個已接入測項()
+    public void Quick與Full都只選三十八個已接入測項()
     {
         foreach (var profile in new[] { DeepBenchRunProfile.Quick, DeepBenchRunProfile.Full })
         {
@@ -152,7 +153,7 @@ public class DeepBenchCatalogTests
     {
         var plan = DeepBenchSuitePlanner.Plan(DeepBenchRunProfile.Full);
         var skipped = plan.Skipped.ToDictionary(item => item.TestId, item => item.Reason);
-        Assert.Equal(1, skipped.Count);
+        Assert.Empty(skipped);
         Assert.All(skipped.Values, reason => Assert.Contains("Phase", reason, StringComparison.Ordinal));
         Assert.DoesNotContain(Phase1RunnableIds, id => skipped.ContainsKey(id));
     }
