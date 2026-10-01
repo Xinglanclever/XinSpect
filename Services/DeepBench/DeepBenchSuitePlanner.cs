@@ -6,6 +6,7 @@ public static class DeepBenchSuitePlanner
     [
         "cpu.aes-sha",
         "cpu.load-use-ilp-branch",
+        "cpu.branch-speculation",
         "cpu.rdrand-rdseed",
         "topology.core-latency",
         "topology.core-bandwidth",
