@@ -991,6 +991,14 @@ public static class D3D11Native
         public uint MipLevels;
     }
 
+    private struct D3D11BufferSrvDesc
+    {
+        public uint Format;
+        public uint ViewDimension;      // D3D_SRV_DIMENSION_BUFFER = 1（d3dcommon.h）
+        public uint FirstElement;
+        public uint NumElements;
+    }
+
     public static async Task<GpuRasterMeasurement> MeasureRasterAsync(
         GpuRasterContext context,
         CancellationToken cancellationToken)
@@ -1290,6 +1298,232 @@ public static class D3D11Native
             unmap(ctx, stagingPtr, 0);
         }
     }
+
+    public static async Task<GpuPipelineGpuResult> MeasureIoGpuPipelineAsync(
+        GpuPipelineContext context,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return await Task.Run(() => MeasureIoGpuPipeline(context), cancellationToken).ConfigureAwait(false);
+    }
+
+    private static GpuPipelineGpuResult MeasureIoGpuPipeline(GpuPipelineContext context)
+    {
+        byte[] data = context.Data;
+        int elementCount = data.Length / 4;
+
+        (IntPtr adapter, DXGIAdapterDesc1 _) = SelectHardwareAdapter();
+        IntPtr device = IntPtr.Zero;
+        IntPtr contextPtr = IntPtr.Zero;
+        IntPtr sourceBuffer = IntPtr.Zero;
+        IntPtr hashedBuffer = IntPtr.Zero;
+        IntPtr stagingBuffer = IntPtr.Zero;
+        IntPtr unorderedAccessView = IntPtr.Zero;
+        IntPtr computeShader = IntPtr.Zero;
+        IntPtr sourceSrv = IntPtr.Zero;
+        try
+        {
+            uint[] featureLevels = [0x0B100, 0x0B000];
+            int hr = D3D11CreateDevice(
+                adapter, 0, IntPtr.Zero, 0, featureLevels, (uint)featureLevels.Length, 7,
+                out device, out _, out contextPtr);
+            if (hr != 0)
+                ThrowDeviceFailure(hr, "D3D11CreateDevice");
+
+            unsafe
+            {
+                void* dev = (void*)device;
+                var flushEarly = (delegate* unmanaged[Stdcall]<void*, void>)GetVTableSlot(contextPtr, 111);
+                var createBuffer = (delegate* unmanaged[Stdcall]<void*, D3D11BufferDesc*, D3D11SubresourceData*, void**, int>)GetVTableSlot(device, 3);
+                var createUav = (delegate* unmanaged[Stdcall]<void*, void*, D3D11UnorderedAccessViewDesc*, void**, int>)GetVTableSlot(device, 8);
+                var createComputeShader = (delegate* unmanaged[Stdcall]<void*, byte*, nuint, void*, void**, int>)GetVTableSlot(device, 18);
+                var createSrvView = (delegate* unmanaged[Stdcall]<void*, void*, void*, void**, int>)GetVTableSlot(device, 7);
+                var getRemoved = (delegate* unmanaged[Stdcall]<void*, int>)GetVTableSlot(device, 39);
+
+                int byteWidth = elementCount * sizeof(uint);
+                var defaultDesc = new D3D11BufferDesc
+                {
+                    ByteWidth = (uint)byteWidth,
+                    Usage = D3D11UsageDefault,
+                    BindFlags = D3D11BindUnorderedAccess | 0x8, // SRV：shader 要從 t0 讀
+                    CPUAccessFlags = 0,
+                    MiscFlags = D3D11MiscBufferStructured,
+                    StructureByteStride = sizeof(uint),
+                };
+                void* sourcePtr = null;
+                D3D11SubresourceData sourceInit = default;
+                long uploadTimestamp = 0;
+                fixed (byte* dataPtr = data)
+                {
+                    sourceInit.SysMem = (IntPtr)dataPtr;
+                    uploadTimestamp = Stopwatch.GetTimestamp();
+                    hr = createBuffer(dev, &defaultDesc, &sourceInit, &sourcePtr);
+                    flushEarly((void*)contextPtr);
+                }
+                if (hr != 0) ThrowDeviceFailure(hr, getRemoved(dev), "CreateBuffer(Source)");
+                sourceBuffer = (IntPtr)sourcePtr;
+                double uploadSeconds = Stopwatch.GetElapsedTime(uploadTimestamp).TotalSeconds;
+
+                var sourceSrvDesc = new D3D11BufferSrvDesc
+                {
+                    Format = 0, ViewDimension = 1, FirstElement = 0, NumElements = (uint)elementCount,
+                }; // D3D_SRV_DIMENSION_BUFFER = 1（d3dcommon.h）
+                void* sourceSrvPtr = null;
+                hr = createSrvView(dev, sourcePtr, &sourceSrvDesc, &sourceSrvPtr);
+                if (hr != 0) ThrowDeviceFailure(hr, getRemoved(dev), "CreateShaderResourceView(Source)");
+                sourceSrv = (IntPtr)sourceSrvPtr;
+
+                var uavDesc = new D3D11UnorderedAccessViewDesc
+                {
+                    Format = 0, ViewDimension = 1, FirstElement = 0,
+                    NumElements = (uint)elementCount, Flags = 0,
+                };
+                void* uavPtr = null;
+                hr = createUav(dev, sourcePtr, &uavDesc, &uavPtr);
+                if (hr != 0) ThrowDeviceFailure(hr, getRemoved(dev), "CreateUnorderedAccessView");
+                unorderedAccessView = (IntPtr)uavPtr;
+
+                // 上傳：UpdateSubresource（context slot 48）。
+
+                // 偵錯：上傳後立即 readback 驗證
+                {
+                    var copyDbg = (delegate* unmanaged[Stdcall]<void*, void*, void*, void>)GetVTableSlot(contextPtr, 47);
+                    var mapDbg = (delegate* unmanaged[Stdcall]<void*, void*, uint, uint, uint, D3D11MappedSubresource*, int>)GetVTableSlot(contextPtr, 14);
+                    var unmapDbg = (delegate* unmanaged[Stdcall]<void*, void*, uint, void>)GetVTableSlot(contextPtr, 15);
+                    void* stagingDbg = null;
+                    var stagingDescDbg = new D3D11BufferDesc
+                    {
+                        ByteWidth = (uint)byteWidth, Usage = D3D11UsageStaging, BindFlags = 0,
+                        CPUAccessFlags = D3D11CpuAccessRead, MiscFlags = 0, StructureByteStride = 0,
+                    };
+                    int hrDbg = createBuffer(dev, &stagingDescDbg, null, &stagingDbg);
+                    if (hrDbg == 0 && stagingDbg is not null)
+                    {
+                        copyDbg((void*)contextPtr, stagingDbg, sourcePtr);
+                        flushEarly((void*)contextPtr);
+                        var mappedDbg = new D3D11MappedSubresource();
+                        if (mapDbg((void*)contextPtr, stagingDbg, 0, D3D11MapRead, 0, &mappedDbg) == 0 && mappedDbg.Data != IntPtr.Zero)
+                        {
+                            var check = new ReadOnlySpan<uint>((void*)mappedDbg.Data, 4);
+                            Console.WriteLine($"DBG upload readback: {check[0]:X8} {check[1]:X8} {check[2]:X8} {check[3]:X8}");
+                            unmapDbg((void*)contextPtr, stagingDbg, 0);
+                        }
+                        SafeRelease((IntPtr)stagingDbg);
+                    }
+                }
+
+                // 輸出 buffer＋UAV。
+                void* hashedPtr = null;
+                hr = createBuffer(dev, &defaultDesc, null, &hashedPtr);
+                if (hr != 0) ThrowDeviceFailure(hr, getRemoved(dev), "CreateBuffer(Hashed)");
+                hashedBuffer = (IntPtr)hashedPtr;
+                void* hashedUavPtr = null;
+                hr = createUav(dev, hashedPtr, &uavDesc, &hashedUavPtr);
+                if (hr != 0) ThrowDeviceFailure(hr, getRemoved(dev), "CreateUnorderedAccessView(Hashed)");
+
+                var stagingDesc = new D3D11BufferDesc
+                {
+                    ByteWidth = (uint)byteWidth,
+                    Usage = D3D11UsageStaging,
+                    BindFlags = 0,
+                    CPUAccessFlags = D3D11CpuAccessRead,
+                    MiscFlags = 0,
+                    StructureByteStride = 0,
+                };
+                void* stagingPtr = null;
+                hr = createBuffer(dev, &stagingDesc, null, &stagingPtr);
+                if (hr != 0) ThrowDeviceFailure(hr, getRemoved(dev), "CreateBuffer(Staging)");
+                stagingBuffer = (IntPtr)stagingPtr;
+
+                D3D11ShaderCompilation compilation = CompileShader(IoGpuPipelineHlsl, "CSMain", "cs_5_0");
+                if (!compilation.Succeeded || compilation.Bytecode is null)
+                    throw new InvalidOperationException(compilation.Error);
+                void* shaderPtr = null;
+                fixed (byte* bytecode = compilation.Bytecode)
+                {
+                    hr = createComputeShader(dev, bytecode, (nuint)compilation.Bytecode.Length, null, &shaderPtr);
+                }
+                if (hr != 0) ThrowDeviceFailure(hr, getRemoved(dev), "CreateComputeShader");
+                computeShader = (IntPtr)shaderPtr;
+
+                // ID3D11DeviceContext 槽位與 FP32 服務同一組：Map=14、Dispatch=41、CopyResource=47、
+                // CSSetUAV=68、CSSetShader=69、Flush=111（以 Windows SDK d3d11.h 逐項核對）。
+                var map = (delegate* unmanaged[Stdcall]<void*, void*, uint, uint, uint, D3D11MappedSubresource*, int>)GetVTableSlot(contextPtr, 14);
+                var unmap = (delegate* unmanaged[Stdcall]<void*, void*, uint, void>)GetVTableSlot(contextPtr, 15);
+                var dispatch = (delegate* unmanaged[Stdcall]<void*, uint, uint, uint, void>)GetVTableSlot(contextPtr, 41);
+                var copyResource = (delegate* unmanaged[Stdcall]<void*, void*, void*, void>)GetVTableSlot(contextPtr, 47);
+                var setUav = (delegate* unmanaged[Stdcall]<void*, uint, uint, void**, uint*, void>)GetVTableSlot(contextPtr, 68);
+                var setShader = (delegate* unmanaged[Stdcall]<void*, void*, void**, uint, void>)GetVTableSlot(contextPtr, 69);
+                var flush = (delegate* unmanaged[Stdcall]<void*, void>)GetVTableSlot(contextPtr, 111);
+
+                void* ctx = (void*)contextPtr;
+                var csSetSrv = (delegate* unmanaged[Stdcall]<void*, uint, uint, void**, void>)GetVTableSlot(contextPtr, 67);
+                void* hashedUav = (void*)hashedUavPtr;
+                void* sourceSrvForSet = (void*)sourceSrv;
+                void* shader = (void*)computeShader;
+                csSetSrv(ctx, 0, 1, &sourceSrvForSet);
+                setUav(ctx, 0, 1, &hashedUav, (uint*)null);
+                setShader(ctx, shader, null, 0);
+                flush(ctx);
+
+                long passTimestamp = Stopwatch.GetTimestamp();
+                dispatch(ctx, (uint)((elementCount + 63) / 64), 1, 1);
+                flush(ctx);
+                double passSeconds = Stopwatch.GetElapsedTime(passTimestamp).TotalSeconds;
+
+                long readbackTimestamp = Stopwatch.GetTimestamp();
+                copyResource(ctx, stagingPtr, hashedPtr);
+                flush(ctx);
+                var mapped = new D3D11MappedSubresource();
+                hr = map(ctx, stagingPtr, 0, D3D11MapRead, 0, &mapped);
+                if (hr != 0)
+                    ThrowDeviceFailure(hr, getRemoved(dev), "Map");
+                uint[] hashed;
+                try
+                {
+                    if (mapped.Data == IntPtr.Zero || mapped.RowPitch < (uint)byteWidth)
+                        throw new InvalidOperationException("I/O→GPU staging readback 指標或 row pitch 無效。");
+                    hashed = new ReadOnlySpan<uint>((void*)mapped.Data, elementCount).ToArray();
+                }
+                finally
+                {
+                    unmap(ctx, stagingPtr, 0);
+                }
+                double readbackSeconds = Stopwatch.GetElapsedTime(readbackTimestamp).TotalSeconds;
+
+                context.Progress.Report(new DeepBenchProgress(
+                    StorageGpuPipelineService.TestId, 3, 3, 0.95, "GPU 往返完成"));
+                return new GpuPipelineGpuResult(uploadSeconds, passSeconds, readbackSeconds, hashed);
+            }
+        }
+        finally
+        {
+            SafeRelease(computeShader);
+            SafeRelease(sourceSrv);
+            SafeRelease(unorderedAccessView);
+            SafeRelease(stagingBuffer);
+            SafeRelease(hashedBuffer);
+            SafeRelease(sourceBuffer);
+            SafeRelease(contextPtr);
+            SafeRelease(device);
+            SafeRelease(adapter);
+        }
+    }
+
+    public const string IoGpuPipelineHlsl = """
+        StructuredBuffer<uint> SourceData : register(t0);
+        RWStructuredBuffer<uint> Hashed : register(u0);
+
+        [numthreads(64, 1, 1)]
+        void CSMain(uint3 id : SV_DispatchThreadID)
+        {
+            uint value = SourceData[id.x];
+            uint hash = 2166136261u;
+            hash ^= value;
+            hash *= 16777619u;
+            Hashed[id.x] = hash;
+        }
+        """;
 
     private static (IntPtr Adapter, DXGIAdapterDesc1 Description) SelectHardwareAdapter()
     {

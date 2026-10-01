@@ -34,6 +34,7 @@ public class DeepBenchCatalogTests
         "storage.flush-durability",
         "storage.slc-sustained-write",
         "storage.iocp-engine",
+        "storage.io-gpu-pipeline",
         "ux.network-stack-latency",
         "ux.audio-buffer-glitch",
         "ux.present-frame-pacing",
@@ -109,6 +110,8 @@ public class DeepBenchCatalogTests
         Assert.True(byId["storage.slc-sustained-write"].Runnable);
         Assert.Equal(DeepBenchTestStatus.Implemented, byId["storage.iocp-engine"].Status);
         Assert.True(byId["storage.iocp-engine"].Runnable);
+        Assert.Equal(DeepBenchTestStatus.Implemented, byId["storage.io-gpu-pipeline"].Status);
+        Assert.True(byId["storage.io-gpu-pipeline"].Runnable);
         Assert.Equal(DeepBenchTestStatus.Implemented, byId["ux.network-stack-latency"].Status);
         Assert.True(byId["ux.network-stack-latency"].Runnable);
         Assert.Equal(DeepBenchTestStatus.Implemented, byId["ux.audio-buffer-glitch"].Status);
@@ -129,7 +132,7 @@ public class DeepBenchCatalogTests
     }
 
     [Fact]
-    public void Quick與Full都只選三十四個已接入測項()
+    public void Quick與Full都只選三十五個已接入測項()
     {
         foreach (var profile in new[] { DeepBenchRunProfile.Quick, DeepBenchRunProfile.Full })
         {
@@ -143,7 +146,7 @@ public class DeepBenchCatalogTests
     {
         var plan = DeepBenchSuitePlanner.Plan(DeepBenchRunProfile.Full);
         var skipped = plan.Skipped.ToDictionary(item => item.TestId, item => item.Reason);
-        Assert.Equal(4, skipped.Count);
+        Assert.Equal(3, skipped.Count);
         Assert.All(skipped.Values, reason => Assert.Contains("Phase", reason, StringComparison.Ordinal));
         Assert.DoesNotContain(Phase1RunnableIds, id => skipped.ContainsKey(id));
     }

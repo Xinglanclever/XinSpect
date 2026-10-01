@@ -32,6 +32,7 @@ public static class DeepBenchSuitePlanner
         "storage.flush-durability",
         "storage.slc-sustained-write",
         "storage.iocp-engine",
+        "storage.io-gpu-pipeline",
         "ux.network-stack-latency",
         "ux.audio-buffer-glitch",
         "ux.present-frame-pacing",

@@ -39,11 +39,13 @@ public class DeepBenchViewModelTests
         Assert.Equal(38, vm.CatalogRows.Select(row => row.Id).Distinct().Count());
         Assert.Equal(Enumerable.Range(1, 38), vm.CatalogRows.Select(row => row.MatrixNumber));
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gpu.codec-throughput");
+        Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "storage.io-gpu-pipeline");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gpu.vram-bandwidth");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gpu.pcie-transfer");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gpu.dispatch-jitter");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gpu.raster-texture");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gpu.codec-throughput");
+        Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "storage.io-gpu-pipeline");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "storage.iocp-engine");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Integrated && row.Id == "memory.ecc-whea-stress");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "topology.core-bandwidth");
@@ -61,7 +63,7 @@ public class DeepBenchViewModelTests
     }
 
     [Fact]
-    public void 快速與完整檔都只選三十四個已接入測項()
+    public void 快速與完整檔都只選三十五個已接入測項()
     {
         using var store = new TempHistoryStore();
         var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
@@ -75,6 +77,7 @@ public class DeepBenchViewModelTests
             "storage.flush-durability",
             "storage.slc-sustained-write",
             "storage.iocp-engine",
+            "storage.io-gpu-pipeline",
             "ux.network-stack-latency",
             "ux.audio-buffer-glitch",
             "ux.present-frame-pacing",
@@ -290,6 +293,7 @@ public class DeepBenchViewModelTests
             new FakeDeepBenchTest("memory.dram-mapping-inference", () => SuccessfulResult("memory.dram-mapping-inference")),
             new FakeDeepBenchTest("gpu.raster-texture", () => SuccessfulResult("gpu.raster-texture")),
             new FakeDeepBenchTest("gpu.codec-throughput", () => SuccessfulResult("gpu.codec-throughput")),
+            new FakeDeepBenchTest("storage.io-gpu-pipeline", () => SuccessfulResult("storage.io-gpu-pipeline")),
             new FakeDeepBenchTest("memory.cache-latency", async (_, token) =>
             {
                 await Task.Delay(Timeout.InfiniteTimeSpan, token);
