@@ -1,16 +1,8 @@
-using System.Text.Json;
-
 namespace XinSpect;
 
 /// <summary>單一 run session 的序列化執行器。Phase 1 保守序列化，不高負載並行。</summary>
 public sealed class DeepBenchOrchestrator
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true
-    };
-
     private readonly IReadOnlyDictionary<string, IDeepBenchTest> _tests;
     private readonly DeepBenchRunStore? _store;
     private readonly Func<DateTime> _utcNow;

@@ -29,9 +29,11 @@ public sealed class CacheLatencyAdapter(CacheBenchService service) : IDeepBenchT
     private static DeepBenchTestResult Map(DeepBenchRunContext context, DateTime started, CacheBenchService service)
     {
         var rows = service.Rows.Where(row => double.IsFinite(row.LatencyNs)).ToArray();
-        if (rows.Length == 0 || service.Phase.Contains("失敗", StringComparison.Ordinal))
+        // 舊服務的失敗狀態字是「錯誤」（見 CacheBenchService.Phase）；「失敗」一併比對以防舊服務改字。
+        bool failed = service.Phase.Contains("錯誤", StringComparison.Ordinal) || service.Phase.Contains("失敗", StringComparison.Ordinal);
+        if (rows.Length == 0 || failed)
         {
-            return Failed(context, started, service.Phase.Contains("失敗", StringComparison.Ordinal) ? service.StatusLine : "舊服務未產生有效快取延遲資料。");
+            return Failed(context, started, failed ? service.StatusLine : "舊服務未產生有效快取延遲資料。");
         }
 
         return new DeepBenchTestResult(
@@ -48,22 +50,24 @@ public sealed class CacheLatencyAdapter(CacheBenchService service) : IDeepBenchT
             DeepBenchFailureKind.None, null);
     }
 
-    internal static int ParseBytes(string text) => text.ToUpperInvariant() switch
+    /// <summary>解析「4 KB」「64 MB」式工作集標示；無法辨識時回 0，由軸值原樣保留文字。</summary>
+    internal static long ParseBytes(string text)
     {
-        "4 KB" => 4 * 1024,
-        "16 KB" => 16 * 1024,
-        "32 KB" => 32 * 1024,
-        "128 KB" => 128 * 1024,
-        "256 KB" => 256 * 1024,
-        "512 KB" => 512 * 1024,
-        "1 MB" => 1024 * 1024,
-        "4 MB" => 4 * 1024 * 1024,
-        "8 MB" => 8 * 1024 * 1024,
-        "16 MB" => 16 * 1024 * 1024,
-        "32 MB" => 32 * 1024 * 1024,
-        "64 MB" => 64 * 1024 * 1024,
-        _ => 0
-    };
+        string[] parts = text.Trim().ToUpperInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2
+            || !double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out double size)
+            || size < 0)
+        {
+            return 0;
+        }
+        return parts[1] switch
+        {
+            "KB" => (long)(size * 1024),
+            "MB" => (long)(size * 1024 * 1024),
+            "GB" => (long)(size * 1024 * 1024 * 1024),
+            _ => 0
+        };
+    }
 
     internal static DeepBenchTestResult Cancelled(DeepBenchRunContext context, DateTime started) =>
         new("memory.cache-latency", context.SessionId, context.Profile, started, DateTime.UtcNow, "已取消", [], [], ["取消前未完成全部工作集。"], DeepBenchFailureKind.Cancelled, "使用者取消；未產生可信量測。");

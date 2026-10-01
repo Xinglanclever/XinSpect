@@ -422,7 +422,9 @@ public static class ReportService
         int completed = record?.Results.Count ?? bench.ResultCards.Count;
         string completion = record is null
             ? $"{bench.StateText}；目前卡片 {completed} 項。"
-            : $"{DescribeDeepBenchState(record.State)}；已完成 {completed} 項。";
+            : record.State == DeepBenchRunState.Cancelled
+                ? $"{DescribeDeepBenchState(record.State)}；取消前產生 {completed} 項結果，其餘未執行。"
+                : $"{DescribeDeepBenchState(record.State)}；已完成 {completed} 項。";
 
         s.Kv(
             ("Session ID", sessionId?.ToString() ?? "—"),
@@ -441,6 +443,23 @@ public static class ReportService
                 string title = DeepBenchCatalog.All.FirstOrDefault(entry => entry.Id == result.TestId)?.Title ?? result.TestId;
                 foreach (var metric in result.Metrics)
                 {
+                    if (DeepBenchMeasurementStatistics.PoolsDistinctConfigurations(metric))
+                    {
+                        // 樣本跨多種量測配置：池化平均對應不到任何真實配置，逐點列出。
+                        foreach (var point in metric.Points)
+                        {
+                            metricRows.Add(
+                            [
+                                result.TestId,
+                                $"{metric.Title}（{DeepBenchMeasurementStatistics.DescribeAxes(point.Axes)}）",
+                                $"{point.Value:0.###} {metric.Unit}（{point.Samples.Count} samples）",
+                                metric.Configuration,
+                                point.Statistics.Confidence.ToString(),
+                                result.Error ?? "—",
+                            ]);
+                        }
+                        continue;
+                    }
                     metricRows.Add(
                     [
                         result.TestId,

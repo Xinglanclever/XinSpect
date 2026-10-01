@@ -966,7 +966,11 @@ public static class D3D11Native
                         getDesc1 = (delegate* unmanaged[Stdcall]<void*, DXGIAdapterDesc1*, int>)GetVTableSlot(adapter, 10);
                         hr = getDesc1(adapterPtr, &desc);
                         if (hr != 0)
+                        {
+                            candidates.Add($"desc fail=0x{(uint)hr:X8}");
+                            SafeRelease(adapter);
                             continue;
+                        }
 
                         string name = ReadAdapterName(desc);
                         bool softwareFlag = (desc.Flags & 0x2) != 0;

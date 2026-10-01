@@ -137,8 +137,18 @@
                                         <ItemsControl ItemsSource="{Binding Metrics}" Margin="8,8,0,0">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding SummaryText}"
-                                                               TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                                    <StackPanel Margin="0,2,0,0">
+                                                        <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding SummaryText}"
+                                                                   TextWrapping="Wrap"/>
+                                                        <ItemsControl ItemsSource="{Binding PointLines}" Margin="10,1,0,0">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding}"
+                                                                               TextWrapping="Wrap" Margin="0,1,0,0"/>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>

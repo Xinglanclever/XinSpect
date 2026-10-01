@@ -55,7 +55,7 @@ public sealed class GpuFp32ComputeService : IDeepBenchTest
 
     public static string[] Limitations { get; } =
     [
-        "計時為 API 觀察的 dispatch 輪加上同步與 readback 成本，不是驅動或晶片內部計時器。".Replace("驅動或晶片內部計時器", "GPU 執行時間分解"),
+        "計時為 API 觀察的 dispatch 輪加上同步與 readback 成本，不是 GPU 執行時間分解。",
         "WARP 已排除；只有硬體配接器結果會被接受，不會把軟體渲染說成 GPU 實測。",
         "單一 D3D11 compute 工作負載結果不可直接外推 FP64、integer、ray tracing 或不同驅動版本。",
     ];

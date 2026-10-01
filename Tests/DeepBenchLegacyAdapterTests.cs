@@ -105,6 +105,83 @@ public class DeepBenchLegacyAdapterTests
         Assert.Equal("ns", loadedResult.Metrics[0].Unit);
         Assert.All(streamResult.Metrics[0].Points, point => Assert.Equal("2", point.Axes["threads"]));
         Assert.Equal("2", loadedResult.Metrics[0].Points[0].Axes["loaders"]);
+        // 同場重用必須標註，且時間窗反映實際量測而非重用當下。
+        Assert.Contains(loadedResult.Limitations, limitation => limitation.Contains("重用同場", StringComparison.Ordinal));
+        Assert.Equal(streamResult.StartedUtc, loadedResult.StartedUtc);
+        Assert.Equal(streamResult.EndedUtc, loadedResult.EndedUtc);
+    }
+
+    [Fact]
+    public async Task 跨場舊快照必須重跑不得重蓋時間戳()
+    {
+        var service = new FakeMemoryService();
+        var first = await new StreamBandwidthAdapter(service).RunAsync(CreateContext(), CancellationToken.None);
+        Guid secondSession = Guid.NewGuid();
+        var secondContext = new DeepBenchRunContext(secondSession, DeepBenchRunProfile.Quick, new Progress<DeepBenchProgress>());
+
+        var second = await new StreamBandwidthAdapter(service).RunAsync(secondContext, CancellationToken.None);
+
+        Assert.Equal(2, service.Runs);
+        Assert.Equal(secondSession, second.SessionId);
+        Assert.True(second.StartedUtc >= first.EndedUtc, "第二場時間窗必須來自重跑，不得沿用第一場快照。");
+        Assert.DoesNotContain(second.Limitations, limitation => limitation.Contains("重用同場", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task 預先存在的舊快照在無戳記時也會重跑()
+    {
+        var service = new FakeMemoryService();
+        service.Rows.Add(new MemBandwidthRow("讀取", 2, 42, 1, "stale"));
+        service.LoadedRows.Add(new LoadedLatencyRow(2, 42, 88, 1));
+        var context = CreateContext();
+
+        var streamResult = await new StreamBandwidthAdapter(service).RunAsync(context, CancellationToken.None);
+        var loadedResult = await new LoadedLatencyAdapter(service).RunAsync(context, CancellationToken.None);
+
+        // 模擬 VM 共用服務在 session 開始前就有的資料：adapter 必須重跑，不重蓋時間戳。
+        Assert.Equal(1, service.Runs);
+        Assert.Equal(streamResult.StartedUtc, loadedResult.StartedUtc);
+        Assert.Contains(loadedResult.Limitations, limitation => limitation.Contains("重用同場", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task 取消的執行不留同場戳記()
+    {
+        var service = new FakeMemoryService();
+        var context = CreateContext();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var cancelled = await new StreamBandwidthAdapter(service).RunAsync(context, cts.Token);
+        var retry = await new StreamBandwidthAdapter(service).RunAsync(context, CancellationToken.None);
+
+        Assert.Equal(DeepBenchFailureKind.Cancelled, cancelled.FailureKind);
+        Assert.Equal(2, service.Runs);
+        Assert.Equal(DeepBenchFailureKind.None, retry.FailureKind);
+    }
+
+    [Fact]
+    public async Task 快取舊服務回報錯誤時不產生量測()
+    {
+        var service = new FakeCacheService();
+        service.Rows.Add(new CacheLatencyRow("4 KB", 1.25, 0.1));
+        typeof(CacheBenchService).GetField("_phase", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(service, "錯誤");
+
+        var result = await new CacheLatencyAdapter(service).RunAsync(CreateContext(), CancellationToken.None);
+
+        Assert.Equal(DeepBenchFailureKind.NotRun, result.FailureKind);
+        Assert.Empty(result.Metrics);
+    }
+
+    [Theory]
+    [InlineData("4 KB", 4096)]
+    [InlineData("64 MB", 67108864)]
+    [InlineData("1.5 MB", 1572864)]
+    [InlineData("garbage", 0)]
+    [InlineData("", 0)]
+    public void 工作集大小解析不靠魔術字串列舉(string text, long expected)
+    {
+        Assert.Equal(expected, CacheLatencyAdapter.ParseBytes(text));
     }
 
     [Fact]

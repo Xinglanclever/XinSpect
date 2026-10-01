@@ -58,7 +58,7 @@ public sealed class CoreLatencyAdapter(CoreLatencyService service) : IDeepBenchT
             TestId, context.SessionId, context.Profile, started, DateTime.UtcNow,
             $"{lps.Length} LP 全矩陣，往返回合取中位數",
             [new DeepBenchMetric("topology.core.latency", "Core-to-core latency", "ns", false, "ping-pong", samples, points)],
-            ["對應邏輯處理器會短暂滿載。"], ["使用者模式親和性與忙碌等待；不含排程器喚醒以外的核心内部路徑。"],
+            ["對應邏輯處理器會短暫滿載。"], ["使用者模式親和性與忙碌等待；不含排程器喚醒以外的核心內部路徑。"],
             DeepBenchFailureKind.None, null);
     }
 

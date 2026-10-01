@@ -55,6 +55,44 @@ public class DeepBenchMeasurementTests
     }
 
     [Fact]
+    public void 跨配置指標判定為混池且索引軸不算配置()
+    {
+        // kernel×threads 每點都是不同量測配置：池化平均無意義。
+        var ladder = new DeepBenchMetric(
+            "memory.stream.bandwidth", "STREAM bandwidth", "GB/s", true, "managed arrays",
+            [30, 210],
+            [
+                new DeepBenchMetricPoint(30, new Dictionary<string, string> { ["kernel"] = "讀取", ["threads"] = "1" }, [30]),
+                new DeepBenchMetricPoint(210, new Dictionary<string, string> { ["kernel"] = "三元運算", ["threads"] = "8" }, [210]),
+            ]);
+        Assert.True(DeepBenchMeasurementStatistics.PoolsDistinctConfigurations(ladder));
+
+        // round 軸只是同配置重複輪的編號：池化統計有效。
+        var rounds = new DeepBenchMetric(
+            "cpu.sha256.throughput", "SHA-256 throughput", "MiB/s", true, "rounds=2",
+            [990, 1010],
+            [
+                new DeepBenchMetricPoint(990, new Dictionary<string, string> { ["round"] = "1" }, [990]),
+                new DeepBenchMetricPoint(1010, new Dictionary<string, string> { ["round"] = "2" }, [1010]),
+            ]);
+        Assert.False(DeepBenchMeasurementStatistics.PoolsDistinctConfigurations(rounds));
+
+        // 單點與無點位都無從判定跨配置，維持池化路徑。
+        var single = rounds with { Points = [rounds.Points[0]] };
+        Assert.False(DeepBenchMeasurementStatistics.PoolsDistinctConfigurations(single));
+        var noPoints = rounds with { Points = [] };
+        Assert.False(DeepBenchMeasurementStatistics.PoolsDistinctConfigurations(noPoints));
+    }
+
+    [Fact]
+    public void 軸描述採穩定排序且空軸有明示()
+    {
+        var axes = new Dictionary<string, string> { ["threads"] = "8", ["kernel"] = "讀取" };
+        Assert.Equal("kernel=讀取 threads=8", DeepBenchMeasurementStatistics.DescribeAxes(axes));
+        Assert.Equal("無軸", DeepBenchMeasurementStatistics.DescribeAxes(new Dictionary<string, string>()));
+    }
+
+    [Fact]
     public void 模型Json往返保留樣本與軸()
     {
         var result = new DeepBenchTestResult(

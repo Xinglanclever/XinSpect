@@ -5,6 +5,35 @@ namespace XinSpect;
 /// </summary>
 public static class DeepBenchMeasurementStatistics
 {
+    // 索引軸只是同配置重複輪的編號，不是量測條件；其餘軸值組合代表不同的量測配置。
+    private static readonly string[] IndexAxisKeys = ["round", "sample"];
+
+    /// <summary>
+    /// 判斷一個指標的池化樣本是否跨多種量測配置。
+    /// 除去索引軸後各點仍有不同軸值組合（例如 kernel×threads、blockBytes×queueDepth），
+    /// 池化平均就對應不到任何真實配置，不得以單一平均呈現。
+    /// </summary>
+    public static bool PoolsDistinctConfigurations(DeepBenchMetric metric)
+    {
+        ArgumentNullException.ThrowIfNull(metric);
+        if (metric.Points.Count <= 1) return false;
+        return metric.Points
+            .Select(point => string.Join("\n", point.Axes
+                .Where(pair => !IndexAxisKeys.Contains(pair.Key, StringComparer.Ordinal))
+                .Select(pair => $"{pair.Key}={pair.Value}")
+                .OrderBy(text => text, StringComparer.Ordinal)))
+            .Distinct(StringComparer.Ordinal)
+            .Count() > 1;
+    }
+
+    /// <summary>把一個量測點的軸值組合寫成穩定排序的可讀文字。</summary>
+    public static string DescribeAxes(IReadOnlyDictionary<string, string> axes) =>
+        axes.Count == 0
+            ? "無軸"
+            : string.Join(" ", axes
+                .OrderBy(pair => pair.Key, StringComparer.Ordinal)
+                .Select(pair => $"{pair.Key}={pair.Value}"));
+
     public static DeepBenchMeasurementSummary FromSamples(IEnumerable<double>? samples)
     {
         double[] finite = (samples ?? []).Where(value => double.IsFinite(value)).OrderBy(value => value).ToArray();
