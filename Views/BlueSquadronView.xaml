@@ -2,6 +2,37 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect">
+    <UserControl.Resources>
+        <!-- 藍色中隊守護進程滑動開關：軌道＋滑塊，開＝主題藍 -->
+        <Style x:Key="SlideSwitch" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid Background="Transparent">
+                            <Border x:Name="track" Width="46" Height="24" CornerRadius="12"
+                                    Background="{DynamicResource Surface2Brush}"
+                                    BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1.2"/>
+                            <Ellipse x:Name="thumb" Width="18" Height="18" Fill="{DynamicResource HairlineBrush}"
+                                     HorizontalAlignment="Left" Margin="4,0,0,0"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="track" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="track" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="thumb" Property="Fill" Value="White"/>
+                                <Setter TargetName="thumb" Property="HorizontalAlignment" Value="Right"/>
+                                <Setter TargetName="thumb" Property="Margin" Value="0,0,4,0"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="track" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
 
@@ -13,6 +44,7 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
@@ -43,7 +75,16 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <Button Grid.Column="2" Style="{StaticResource PrimaryButton}" Content="⟳ 全面掃描"
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,18,0">
+                        <CheckBox Style="{StaticResource SlideSwitch}"
+                                  IsChecked="{Binding BlueSquadron.BridgeEnabled, Mode=TwoWay}"
+                                  VerticalAlignment="Center"
+                                  ToolTip="開啟或關閉 BlueSquadronBridge 守護進程"/>
+                        <TextBlock VerticalAlignment="Center" Margin="8,0,0,0" FontSize="12.5"
+                                   Foreground="{DynamicResource PrimaryInkBrush}" Text="守護進程"/>
+                    </StackPanel>
+
+                    <Button Grid.Column="3" Style="{StaticResource PrimaryButton}" Content="⟳ 全面掃描"
                             VerticalAlignment="Center" Padding="16,8" Click="Refresh_Click"
                             IsEnabled="{Binding BlueSquadron.Posture.CanRefresh}"/>
                 </Grid>

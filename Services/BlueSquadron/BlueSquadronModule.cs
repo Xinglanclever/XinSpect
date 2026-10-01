@@ -68,6 +68,31 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
         private set => SetProperty(ref _bridgeStatus, value);
     }
 
+    private bool _bridgeEnabled = true;
+    /// <summary>安全頁「守護進程」滑動開關：關閉即停止進程與輪詢（唯讀態勢評估照常），選擇記入設定檔。</summary>
+    public bool BridgeEnabled
+    {
+        get => _bridgeEnabled;
+        set
+        {
+            if (_bridgeEnabled == value) return;
+            _bridgeEnabled = value;
+            OnPropertyChanged(nameof(BridgeEnabled));
+            if (_settings is not null && _settings.BlueSquadronEnabled != value)
+                _settings.BlueSquadronEnabled = value;
+            if (value)
+            {
+                if (Engine is null) _ = Task.Run(TryStartBridge);
+            }
+            else
+            {
+                StopBridge();
+            }
+        }
+    }
+
+    private SettingsService? _settings;
+
     // ── Bridge 生命週期 ──────────────────────────────────────────
 
     public BlueSquadronEngine? Engine { get; private set; }
@@ -86,6 +111,14 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
         _dispatcher = Application.Current?.Dispatcher
                       ?? Dispatcher.CurrentDispatcher;
 
+        // 套用已保存的開關狀態：上次關閉守護進程的話，這次開機不再自動拉起
+        _settings = vm.Settings;
+        if (_bridgeEnabled != _settings.BlueSquadronEnabled)
+        {
+            _bridgeEnabled = _settings.BlueSquadronEnabled;
+            OnPropertyChanged(nameof(BridgeEnabled));
+        }
+
         await Task.Delay(3000);  // 讓 PlatformTrust、CpuSecurity、DriverAudit 等先跑完
         try
         {
@@ -97,13 +130,29 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
             BridgeStatus = "初始化失敗——安全評估為附加功能，不影響其他頁面。";
         }
 
-        // Phase 2：啟動 Bridge 進程
+        // Phase 2：啟動 Bridge 進程（開關關閉時只做唯讀態勢評估）
+        if (!_bridgeEnabled)
+        {
+            BridgeStatus = "守護進程已關閉（唯讀態勢評估照常）";
+            return;
+        }
         await Task.Run(() => TryStartBridge()).ConfigureAwait(false);
     }
 
     // ── Bridge 啟動 ─────────────────────────────────────────────
 
+    private int _starting;
+
+    /// <summary>帶重入保護的啟動入口：快速來回切換開關或初始化重跑時不會開出第二個進程。</summary>
     private void TryStartBridge()
+    {
+        if (Engine is not null) return;
+        if (Interlocked.Exchange(ref _starting, 1) == 1) return;
+        try { TryStartBridgeCore(); }
+        finally { Interlocked.Exchange(ref _starting, 0); }
+    }
+
+    private void TryStartBridgeCore()
     {
         BlueSquadronEngine engine;
         try

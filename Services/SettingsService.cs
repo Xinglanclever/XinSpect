@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Text.Json;
 using Microsoft.Win32;
 
@@ -76,6 +76,10 @@ public sealed class SettingsService : ObservableObject
     private bool _ceremonyPlayed;
     /// <summary>啟程儀式是否已播放（一次即焚）。</summary>
     public bool CeremonyPlayed { get => _ceremonyPlayed; set { if (SetProperty(ref _ceremonyPlayed, value)) Save(); } }
+
+    private bool _blueSquadronEnabled = true;
+    /// <summary>藍色中隊守護進程（BlueSquadronBridge）是否隨程式啟動（安全頁滑動開關，預設開）。</summary>
+    public bool BlueSquadronEnabled { get => _blueSquadronEnabled; set { if (SetProperty(ref _blueSquadronEnabled, value)) Save(); } }
 
     private bool _simplifiedChinese;
     /// <summary>介面文字使用簡體中文（預設繁體）。切換後須重啟或呼叫 ConvertVisualTree。</summary>
@@ -333,6 +337,7 @@ public sealed class SettingsService : ObservableObject
         public bool FirstRunDone { get; set; }
         public bool AllowMultiInstance { get; set; } = true;
         public bool CeremonyPlayed { get; set; }
+        public bool BlueSquadronEnabled { get; set; } = true;
         public bool SimplifiedChinese { get; set; }
         public string? DashboardTiles { get; set; }
         public Dictionary<string, string>? ToolSlots { get; set; }
@@ -397,6 +402,7 @@ public sealed class SettingsService : ObservableObject
                     _simpleMode = p.SimpleMode;
                     _firstRunDone = p.FirstRunDone;
                     _ceremonyPlayed = p.CeremonyPlayed;
+                    _blueSquadronEnabled = p.BlueSquadronEnabled;
                     _simplifiedChinese = p.SimplifiedChinese;
                     _allowMultiInstance = p.AllowMultiInstance;
                     _dashboardTiles = p.DashboardTiles ?? "";
@@ -461,6 +467,7 @@ public sealed class SettingsService : ObservableObject
                 SimpleMode = _simpleMode,
                 FirstRunDone = _firstRunDone,
                 CeremonyPlayed = _ceremonyPlayed,
+                BlueSquadronEnabled = _blueSquadronEnabled,
                 SimplifiedChinese = _simplifiedChinese,
                 AllowMultiInstance = _allowMultiInstance,
                 DashboardTiles = _dashboardTiles.Length > 0 ? _dashboardTiles : null,

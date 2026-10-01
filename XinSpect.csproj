@@ -23,7 +23,7 @@
     <Company>Xinglanclever</Company>
     <Version>2.1.0</Version>
     <!-- FileVersion 只吃數字，表達不了「-B1」；第四段就是拿來標這種同版號的後續建置的 -->
-    <FileVersion>2.1.0.0</FileVersion>
+    <FileVersion>2.1.0.1</FileVersion>
     <!-- 內嵌 PDB：發佈維持單一執行檔，CrashLog 記錄的堆疊仍帶行號（portable PDB 預設會另產生 XinSpect.pdb） -->
     <DebugType>embedded</DebugType>
     <Copyright>By：Xinglanclever ・ Claude Opus 5 ・ 2026年9月8日</Copyright>
@@ -128,6 +128,35 @@
       <!-- 一併內嵌其組態檔（指定 .NET 4.8 執行階段），與已驗證可用的執行環境完全一致 -->
       <EmbeddedResource Include="$(XtuBridgeExe).config" Condition="Exists('$(XtuBridgeExe).config')">
         <LogicalName>XinSpect.bridge.XtuBridge.exe.config</LogicalName>
+        <Visible>false</Visible>
+      </EmbeddedResource>
+    </ItemGroup>
+  </Target>
+
+  <!-- ── 建置並內嵌 BlueSquadronBridge.exe（藍色中隊守護進程）─────────────────────
+       與 BuildAndEmbedXtuBridge 同一機制：本體不編譯 BlueSquadron 原始碼；建置時以巢狀
+       MSBuild 把 .NET 10 console 守護進程發佈成「依架構的單一檔」（PublishSingleFile＋
+       SelfContained=false——自行含執行階段會多出上百 MB，且使用者本就需裝 .NET 10 才跑得動
+       本體），再把單檔 BlueSquadronBridge.exe 以邏輯名 XinSpect.bluesquadron.BlueSquadronBridge.exe
+       內嵌為資源。執行時 BlueSquadronBootstrap 依「資源名以 BlueSquadronBridge.exe 結尾」取出、
+       SHA256 驗證後解壓到 %LOCALAPPDATA%\XinSpect\bluesquadron\ 啟動。
+       BaseOutputPath 以絕對路徑覆寫（RemoveProperties 先拔掉外層流入的相對值），讓巢狀輸出
+       恆落在 BlueSquadron\bin\<組態>\net10.0-windows\win-x64\publish\，與開發 DiskCandidates 相容。 -->
+  <Target Name="BuildAndEmbedBlueSquadronBridge" BeforeTargets="PrepareForBuild;BeforeCompile">
+    <PropertyGroup>
+      <BlueSquadronProj>$(MSBuildProjectDirectory)\BlueSquadron\BlueSquadronBridge.csproj</BlueSquadronProj>
+      <BlueSquadronExe>$(MSBuildProjectDirectory)\BlueSquadron\bin\$(Configuration)\net10.0-windows\win-x64\publish\BlueSquadronBridge.exe</BlueSquadronExe>
+    </PropertyGroup>
+    <MSBuild Projects="$(BlueSquadronProj)" Targets="Restore"
+             Properties="Configuration=$(Configuration);BaseOutputPath=$(MSBuildProjectDirectory)\BlueSquadron\bin\"
+             RemoveProperties="BaseOutputPath" />
+    <MSBuild Projects="$(BlueSquadronProj)" Targets="Publish"
+             Properties="Configuration=$(Configuration);BaseOutputPath=$(MSBuildProjectDirectory)\BlueSquadron\bin\;PublishDir=$(MSBuildProjectDirectory)\BlueSquadron\bin\$(Configuration)\net10.0-windows\win-x64\publish\;RuntimeIdentifier=win-x64;SelfContained=false;PublishSingleFile=true;IncludeNativeLibrariesForSelfExtract=true"
+             RemoveProperties="BaseOutputPath;PublishDir" />
+    <Error Condition="!Exists('$(BlueSquadronExe)')" Text="藍色中隊守護進程建置後仍找不到產出：$(BlueSquadronExe)" />
+    <ItemGroup>
+      <EmbeddedResource Include="$(BlueSquadronExe)">
+        <LogicalName>XinSpect.bluesquadron.BlueSquadronBridge.exe</LogicalName>
         <Visible>false</Visible>
       </EmbeddedResource>
     </ItemGroup>
