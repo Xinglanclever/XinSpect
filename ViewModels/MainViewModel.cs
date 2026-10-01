@@ -91,6 +91,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>綜合效能測試（單/多執行緒運算 + 記憶體頻寬）。使用者手動觸發。</summary>
     public BenchService Bench { get; }
 
+    /// <summary>深測中心：同一 Run Session 的多域深測、證據卡與本機歷史。</summary>
+    public DeepBenchViewModel DeepBench { get; }
+
     /// <summary>烤機（穩定度壓力測試）：全執行緒滿載，觀察高負載下的溫度 / 頻率 / 降頻。</summary>
     public StressTestService Stress { get; } = new();
     /// <summary>快取 / 記憶體延遲測試（指標追逐法，推估 L1/L2/L3/RAM 延遲）。</summary>
@@ -429,6 +432,7 @@ public sealed class MainViewModel : ObservableObject
         Bench = new BenchService(Benchmarks);
         Chess = new ChessBenchService(Benchmarks);
         SuperPi = new SuperPiService(Benchmarks);
+        DeepBench = new DeepBenchViewModel(Cache, MemBandwidth, CoreLatency, new DeepBenchRunStore());
         HardwareEvidence = new HardwareEvidenceViewModel(this);
 
         Ai = new AiService(Settings) { SnapshotProvider = BuildAiSnapshot };

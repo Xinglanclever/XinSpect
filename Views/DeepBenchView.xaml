@@ -1,0 +1,204 @@
+<UserControl x:Class="XinSpect.DeepBenchView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <StackPanel Margin="2,0,0,10">
+                <local:SectionHead Text="深測中心"/>
+                <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                           Text="同一場 Run Session 的 CPU、拓樸、記憶體、GPU 與儲存深測。原 38 項全量登記；可執行與延後項目都會攤開，不把未做過的事說成量測。"/>
+            </StackPanel>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource FieldValue}" Text="誠實界線" Margin="0,0,0,8"/>
+                    <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" Margin="0,0,0,4"
+                               Text="{Binding NoScoreNotice}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" Margin="0,0,0,4"
+                               Text="{Binding ScopeNotice}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" Margin="0,0,0,4"
+                               Text="{Binding LocalOnlyNotice}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Foreground="{DynamicResource WarningBrush}"
+                               TextWrapping="Wrap" Margin="0,4,0,0"
+                               Text="{Binding LoadWarning}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Foreground="{DynamicResource WarningBrush}"
+                               TextWrapping="Wrap" Margin="0,2,0,0"
+                               Text="{Binding TempFileWarning}"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid Margin="0,0,0,10">
+                        <local:SectionHead Text="Run Session"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button Style="{StaticResource ToolButton}" Content="Quick" Margin="0,0,6,0"
+                                    Click="Quick_Click" IsEnabled="{Binding CanStart}"/>
+                            <Button Style="{StaticResource ToolButton}" Content="Full" Margin="0,0,14,0"
+                                    Click="Full_Click" IsEnabled="{Binding CanStart}"/>
+                            <Button Style="{StaticResource ToolButton}" Content="取消" Margin="0,0,10,0"
+                                    Click="Cancel_Click" IsEnabled="{Binding IsRunning}"/>
+                            <Button Style="{StaticResource PrimaryButton}" Content="開始深測"
+                                    Click="Start_Click" IsEnabled="{Binding CanStart}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <UniformGrid Columns="3" Margin="0,0,0,10">
+                        <StackPanel Margin="0,0,10,0">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="目前檔案"/>
+                            <TextBlock Style="{StaticResource FieldValue}" Text="{Binding SelectedProfile}"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,10,0">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="儲存根"/>
+                            <TextBox Background="{DynamicResource Surface2Brush}" Foreground="{DynamicResource PrimaryInkBrush}"
+                                     BorderBrush="{DynamicResource HairlineBrush}" Padding="6,4"
+                                     Text="{Binding StorageRoot, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="暫存預算 MiB"/>
+                            <TextBox Background="{DynamicResource Surface2Brush}" Foreground="{DynamicResource PrimaryInkBrush}"
+                                     BorderBrush="{DynamicResource HairlineBrush}" Padding="6,4"
+                                     Text="{Binding TempBudgetMiB, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                    </UniformGrid>
+
+                    <ProgressBar Style="{StaticResource LoadBar}" Value="{Binding ProgressPercent, Mode=OneWay}"/>
+                    <DockPanel Margin="0,8,0,0" LastChildFill="False">
+                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource FieldValue}" Text="{Binding StateText}" TextWrapping="Wrap"/>
+                        <TextBlock DockPanel.Dock="Right" Style="{StaticResource FieldLabel}" Text="{Binding CurrentTestId}"/>
+                    </DockPanel>
+
+                    <ItemsControl ItemsSource="{Binding Errors}" Margin="0,8,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Style="{StaticResource FieldLabel}" Foreground="{DynamicResource CriticalBrush}"
+                                           Text="{Binding}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="38 項全量目錄"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
+                               Text="Implemented / Integrated 是本期真的可執行；Deferred 明確保留原因。目錄不因尚未實作而隱藏。"/>
+                    <ItemsControl ItemsSource="{Binding CatalogRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="8" Padding="10,8" Margin="0,2,0,2">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="34"/><ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="190"/><ColumnDefinition Width="150"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Style="{StaticResource FieldValue}" Text="{Binding MatrixNumber}"/>
+                                        <StackPanel Grid.Column="1" Margin="0,0,10,0">
+                                            <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Title}" TextWrapping="Wrap"/>
+                                            <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Id}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Margin="0,0,10,0">
+                                            <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding StatusText}" TextWrapping="Wrap"/>
+                                            <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Requirement}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="3" Style="{StaticResource FieldLabel}" Text="{Binding QuickEstimateText}"
+                                                   VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="同場結果證據"/>
+                    <ItemsControl ItemsSource="{Binding ResultCards}" Margin="0,10,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="12,10" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <Grid Margin="0,0,0,4">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Title}"/>
+                                                <TextBlock Style="{StaticResource FieldLabel}" Margin="8,0,0,0" Text="{Binding TestId}"/>
+                                            </StackPanel>
+                                            <TextBlock HorizontalAlignment="Right" Style="{StaticResource FieldLabel}" Text="{Binding StateText}"/>
+                                        </Grid>
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding SummaryText}" TextWrapping="Wrap"/>
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding ConfigurationText}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                        <TextBlock Style="{StaticResource FieldLabel}" Foreground="{DynamicResource CriticalBrush}"
+                                                   Text="{Binding Error}" TextWrapping="Wrap" Margin="0,4,0,0"
+                                                   Visibility="{Binding HasErrorText, Converter={StaticResource BoolToVis}}"/>
+                                        <ItemsControl ItemsSource="{Binding Metrics}" Margin="8,8,0,0">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding SummaryText}"
+                                                               TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <ItemsControl ItemsSource="{Binding Limitations}" Margin="8,6,0,0">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding}"
+                                                               TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="同場聚合"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,8" TextWrapping="Wrap"
+                               Text="聚合只引用同一 Run Session 的證據；缺少哪個域就明示缺少，不推算總分。"/>
+                    <ItemsControl ItemsSource="{Binding Insights}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="8" Padding="10,8" Margin="0,2,0,2">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Title}" TextWrapping="Wrap"/>
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Text}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding EvidenceTestIds}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <local:SectionHead Text="本機歷史"/>
+                    <ItemsControl ItemsSource="{Binding History}" Margin="0,10,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource Surface2Brush}" CornerRadius="8" Padding="10,8" Margin="0,2,0,2">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource FieldValue}" Text="{Binding CompletionText}" TextWrapping="Wrap"/>
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding SessionId}" TextWrapping="Wrap"/>
+                                        <TextBlock Style="{StaticResource FieldLabel}"
+                                                   Text="{Binding StartedText, StringFormat=開始 {0}}" TextWrapping="Wrap"/>
+                                        <TextBlock Style="{StaticResource FieldLabel}"
+                                                   Text="{Binding EndedText, StringFormat=結束 {0}}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

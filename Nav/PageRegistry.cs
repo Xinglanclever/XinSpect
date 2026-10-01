@@ -162,6 +162,15 @@ public static class PageRegistry
         },
         new()
         {
+            Key = "deepbench", Title = "深測中心", Group = GMonitor,
+            IconData = "F0 M3,3 H21 V21 H3 Z M6,16 V9 L10,13 L14,6 L18,14 V18 H6 Z",
+            Factory = () => new DeepBenchView(),
+            Hint = "同一場 Run Session 的 CPU／拓撲／記憶體／GPU／儲存深測與 38 項全量追蹤",
+            Keywords = ["deep bench", "deepbench", "深測", "深測中心", "benchmark", "跑分", "壓力", "證據"],
+            Advanced = true,
+        },
+        new()
+        {
             Key = "ceiling", Title = "效能天花板", Group = GMonitor,
             IconData = "F0 M3,3 H21 V5.6 H3 Z M11,7.4 H13 V13 H11 Z M12,21.6 L7.4,15 H16.6 Z "
                      + "M4.6,8.4 H6.4 V12 H4.6 Z M17.6,8.4 H19.4 V12 H17.6 Z",
