@@ -40,7 +40,8 @@ public class DeepBenchCatalogTests
         "ux.present-frame-pacing",
         "gauntlet.boost-recovery",
         "gauntlet.throughput-degradation",
-        "gauntlet.power-state-latency"
+        "gauntlet.power-state-latency",
+        "gauntlet.multi-domain"
     ];
 
     [Fact]
@@ -124,6 +125,8 @@ public class DeepBenchCatalogTests
         Assert.True(byId["gauntlet.boost-recovery"].Runnable);
         Assert.Equal(DeepBenchTestStatus.Implemented, byId["gauntlet.throughput-degradation"].Status);
         Assert.True(byId["gauntlet.throughput-degradation"].Runnable);
+        Assert.Equal(DeepBenchTestStatus.Implemented, byId["gauntlet.multi-domain"].Status);
+        Assert.True(byId["gauntlet.multi-domain"].Runnable);
 
         var confidence = byId["confidence.engine"];
         Assert.Equal(34, confidence.MatrixNumber);
@@ -132,7 +135,7 @@ public class DeepBenchCatalogTests
     }
 
     [Fact]
-    public void Quick與Full都只選三十五個已接入測項()
+    public void Quick與Full都只選三十六個已接入測項()
     {
         foreach (var profile in new[] { DeepBenchRunProfile.Quick, DeepBenchRunProfile.Full })
         {
@@ -146,7 +149,7 @@ public class DeepBenchCatalogTests
     {
         var plan = DeepBenchSuitePlanner.Plan(DeepBenchRunProfile.Full);
         var skipped = plan.Skipped.ToDictionary(item => item.TestId, item => item.Reason);
-        Assert.Equal(3, skipped.Count);
+        Assert.Equal(2, skipped.Count);
         Assert.All(skipped.Values, reason => Assert.Contains("Phase", reason, StringComparison.Ordinal));
         Assert.DoesNotContain(Phase1RunnableIds, id => skipped.ContainsKey(id));
     }
