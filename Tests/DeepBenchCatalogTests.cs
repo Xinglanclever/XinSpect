@@ -8,6 +8,7 @@ public class DeepBenchCatalogTests
     [
         "cpu.aes-sha",
         "cpu.load-use-ilp-branch",
+        "cpu.rdrand-rdseed",
         "topology.core-latency",
         "memory.cache-latency",
         "memory.stream-bandwidth",
@@ -43,6 +44,8 @@ public class DeepBenchCatalogTests
         Assert.Equal(DeepBenchTestStatus.Implemented, byId["cpu.aes-sha"].Status);
         Assert.Equal(DeepBenchTestStatus.Implemented, byId["cpu.load-use-ilp-branch"].Status);
         Assert.True(byId["cpu.load-use-ilp-branch"].Runnable);
+        Assert.Equal(DeepBenchTestStatus.Implemented, byId["cpu.rdrand-rdseed"].Status);
+        Assert.True(byId["cpu.rdrand-rdseed"].Runnable);
         Assert.Equal(DeepBenchTestStatus.Integrated, byId["cpu.top-down"].Status);
         Assert.True(byId["cpu.top-down"].Runnable);
         Assert.Equal(DeepBenchTestStatus.Integrated, byId["topology.core-latency"].Status);
@@ -66,7 +69,7 @@ public class DeepBenchCatalogTests
     }
 
     [Fact]
-    public void Quick與Full都只選十三個已接入測項()
+    public void Quick與Full都只選十四個已接入測項()
     {
         foreach (var profile in new[] { DeepBenchRunProfile.Quick, DeepBenchRunProfile.Full })
         {
@@ -80,7 +83,7 @@ public class DeepBenchCatalogTests
     {
         var plan = DeepBenchSuitePlanner.Plan(DeepBenchRunProfile.Full);
         var skipped = plan.Skipped.ToDictionary(item => item.TestId, item => item.Reason);
-        Assert.Equal(25, skipped.Count);
+        Assert.Equal(24, skipped.Count);
         Assert.All(skipped.Values, reason => Assert.Contains("Phase", reason, StringComparison.Ordinal));
         Assert.DoesNotContain(Phase1RunnableIds, id => skipped.ContainsKey(id));
     }

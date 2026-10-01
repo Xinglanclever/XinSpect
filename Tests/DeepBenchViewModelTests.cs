@@ -42,13 +42,13 @@ public class DeepBenchViewModelTests
     }
 
     [Fact]
-    public void 快速與完整檔都只選十三個已接入測項()
+    public void 快速與完整檔都只選十四個已接入測項()
     {
         using var store = new TempHistoryStore();
         var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
         string[] expected =
         [
-            "cpu.aes-sha", "cpu.load-use-ilp-branch", "topology.core-latency", "memory.cache-latency",
+            "cpu.aes-sha", "cpu.load-use-ilp-branch", "cpu.rdrand-rdseed", "topology.core-latency", "memory.cache-latency",
             "memory.stream-bandwidth", "memory.loaded-latency", "gpu.fp32-fp64-integer", "cpu.top-down",
             "storage.qd-ladder", "storage.mixed-rw", "storage.write-integrity",
             "storage.flush-durability",
@@ -110,13 +110,14 @@ public class DeepBenchViewModelTests
 
         Assert.False(vm.IsRunning);
         Assert.Equal(DeepBenchRunState.Cancelled, vm.LastState);
-        Assert.Equal(4, vm.ResultCards.Count);
+        Assert.Equal(5, vm.ResultCards.Count);
         Assert.Equal("cpu.aes-sha", vm.ResultCards[0].TestId);
         Assert.Equal("cpu.load-use-ilp-branch", vm.ResultCards[1].TestId);
-        Assert.Equal("topology.core-latency", vm.ResultCards[2].TestId);
-        Assert.Equal("memory.cache-latency", vm.ResultCards[3].TestId);
+        Assert.Equal("cpu.rdrand-rdseed", vm.ResultCards[2].TestId);
+        Assert.Equal("topology.core-latency", vm.ResultCards[3].TestId);
+        Assert.Equal("memory.cache-latency", vm.ResultCards[4].TestId);
         Assert.Equal(DeepBenchFailureKind.None, vm.ResultCards[0].FailureKind);
-        Assert.Equal(DeepBenchFailureKind.Cancelled, vm.ResultCards[3].FailureKind);
+        Assert.Equal(DeepBenchFailureKind.Cancelled, vm.ResultCards[4].FailureKind);
         Assert.Contains(vm.ResultCards.Select(card => card.StateText), text => text.Contains("取消", StringComparison.Ordinal));
     }
 
@@ -166,6 +167,7 @@ public class DeepBenchViewModelTests
         [
             new FakeDeepBenchTest("cpu.aes-sha", () => SuccessfulResult("cpu.aes-sha")),
             new FakeDeepBenchTest("cpu.load-use-ilp-branch", () => SuccessfulResult("cpu.load-use-ilp-branch")),
+            new FakeDeepBenchTest("cpu.rdrand-rdseed", () => SuccessfulResult("cpu.rdrand-rdseed")),
             new FakeDeepBenchTest("topology.core-latency", () => SuccessfulResult("topology.core-latency")),
             new FakeDeepBenchTest("memory.cache-latency", async (_, token) =>
             {

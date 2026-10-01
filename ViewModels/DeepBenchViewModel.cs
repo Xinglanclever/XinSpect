@@ -17,7 +17,7 @@ public sealed class DeepBenchViewModel : ObservableObject
         "深測中心只並列各測項的原始樣本、可信度與限制，不加權合成單一總分；跨域、跨軟體排名不成立。";
 
     public const string ScopeNotice =
-        "目前可執行十三個 Phase 1／已接入測項：CPU AES/SHA、Load-to-use/ILP/branch、Intel PMU Top-down、核心延遲、記憶體三項、D3D11 硬體 GPU FP32、儲存 QD、混合讀寫、三圖樣寫入驗證、逐 MiB Flush 驗證與 SLC 持續寫入。" +
+        "目前可執行十四個 Phase 1／已接入測項：CPU AES/SHA、Load-to-use/ILP/branch、RDRAND/RDSEED、Intel PMU Top-down、核心延遲、記憶體三項、D3D11 硬體 GPU FP32、儲存 QD、混合讀寫、三圖樣寫入驗證、逐 MiB Flush 驗證與 SLC 持續寫入。" +
         "NPU ONNX 不含；.NET crypto 只實測本機 API，不保證特定硬體指令集；Top-down 不適用 AMD／非 Intel 事件配方。";
 
     public const string LoadWarning =
@@ -232,6 +232,7 @@ public sealed class DeepBenchViewModel : ObservableObject
         [
             new CryptoMicrobenchService(),
             new CpuMicroarchBenchService(),
+            new HardwareRandomBenchAdapter(),
             new TopDownAdapter(_topDown),
             new CoreLatencyAdapter(_coreLatency),
             new CacheLatencyAdapter(_cache),
