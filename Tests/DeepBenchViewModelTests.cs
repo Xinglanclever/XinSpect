@@ -49,6 +49,7 @@ public class DeepBenchViewModelTests
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "topology.hybrid-placement");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "topology.coherence-lock");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "memory.numa-tlb-largepage");
+        Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "memory.dram-mapping-inference");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "cpu.branch-speculation");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "ux.audio-buffer-glitch");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "ux.present-frame-pacing");
@@ -58,14 +59,14 @@ public class DeepBenchViewModelTests
     }
 
     [Fact]
-    public void 快速與完整檔都只選三十一個已接入測項()
+    public void 快速與完整檔都只選三十二個已接入測項()
     {
         using var store = new TempHistoryStore();
         var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
         string[] expected =
         [
             "cpu.aes-sha", "cpu.load-use-ilp-branch", "cpu.branch-speculation", "cpu.rdrand-rdseed", "topology.core-latency", "topology.core-bandwidth", "topology.smt-contention", "topology.hybrid-placement", "topology.coherence-lock", "memory.numa-tlb-largepage", "memory.cache-latency",
-            "memory.stream-bandwidth", "memory.loaded-latency", "memory.ecc-whea-stress",
+            "memory.stream-bandwidth", "memory.loaded-latency", "memory.dram-mapping-inference", "memory.ecc-whea-stress",
             "gpu.fp32-fp64-integer", "gpu.vram-bandwidth",
             "gpu.pcie-transfer", "gpu.dispatch-jitter", "cpu.top-down",
             "storage.qd-ladder", "storage.mixed-rw", "storage.write-integrity",
@@ -183,6 +184,71 @@ public class DeepBenchViewModelTests
         Assert.Contains("已完成", row.CompletionText, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void 混池指標卡片改列逐點值且不給跨配置平均()
+    {
+        Guid session = Guid.NewGuid();
+        DateTime now = DateTime.UtcNow;
+        var ladder = new DeepBenchMetric(
+            "memory.stream.bandwidth", "STREAM bandwidth", "GB/s", true, "managed arrays",
+            [30, 210],
+            [
+                new DeepBenchMetricPoint(30, new Dictionary<string, string> { ["kernel"] = "讀取", ["threads"] = "1" }, [30]),
+                new DeepBenchMetricPoint(210, new Dictionary<string, string> { ["kernel"] = "三元運算", ["threads"] = "8" }, [210]),
+            ]);
+        var result = new DeepBenchTestResult(
+            "memory.stream-bandwidth", session, DeepBenchRunProfile.Quick, now, now.AddSeconds(1),
+            "test", [ladder], [], [], DeepBenchFailureKind.None, null);
+
+        var card = DeepBenchResultCard.From(result, "記憶體");
+        var display = card.Metrics.Single();
+
+        Assert.Contains("不跨配置平均", display.SummaryText, StringComparison.Ordinal);
+        Assert.Equal(DeepBenchConfidence.Insufficient, display.Confidence);
+        Assert.Equal(2, display.PointLines.Count);
+        Assert.Contains(display.PointLines, line => line.Contains("kernel=讀取 threads=1", StringComparison.Ordinal) && line.Contains("30 GB/s", StringComparison.Ordinal));
+        Assert.Contains(display.PointLines, line => line.Contains("kernel=三元運算 threads=8", StringComparison.Ordinal) && line.Contains("210 GB/s", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void 同配置重複輪指標卡片保留池化平均()
+    {
+        Guid session = Guid.NewGuid();
+        DateTime now = DateTime.UtcNow;
+        var rounds = new DeepBenchMetric(
+            "cpu.sha256.throughput", "SHA-256 throughput", "MiB/s", true, "rounds=2",
+            [990, 1010],
+            [
+                new DeepBenchMetricPoint(990, new Dictionary<string, string> { ["round"] = "1" }, [990]),
+                new DeepBenchMetricPoint(1010, new Dictionary<string, string> { ["round"] = "2" }, [1010]),
+            ]);
+        var result = new DeepBenchTestResult(
+            "cpu.aes-sha", session, DeepBenchRunProfile.Quick, now, now.AddSeconds(1),
+            "test", [rounds], [], [], DeepBenchFailureKind.None, null);
+
+        var card = DeepBenchResultCard.From(result, "CPU");
+        var display = card.Metrics.Single();
+
+        Assert.Contains("平均", display.SummaryText, StringComparison.Ordinal);
+        Assert.NotEqual(DeepBenchConfidence.Insufficient, display.Confidence);
+        Assert.Empty(display.PointLines);
+    }
+
+    [Fact]
+    public void 取消場次歷史列不宣稱已完成()
+    {
+        Guid session = Guid.NewGuid();
+        DateTime now = DateTime.UtcNow;
+        var record = new DeepBenchRunRecord(
+            session, DeepBenchRunProfile.Quick, now, now.AddSeconds(2), DeepBenchRunState.Cancelled, [], []);
+
+        var row = DeepBenchHistoryRow.From(record);
+
+        Assert.Equal("已取消", row.State);
+        Assert.Contains("取消前完成", row.CompletionText, StringComparison.Ordinal);
+        Assert.DoesNotContain("已完成", row.CompletionText, StringComparison.Ordinal);
+    }
+
     private static DeepBenchViewModel CreateViewModel(DeepBenchRunStore store, FixedDiskFileSystem fileSystem) =>
         new(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store, fileSystem);
 
@@ -219,6 +285,7 @@ public class DeepBenchViewModelTests
                 return null!;
             }),
             new FakeDeepBenchTest("memory.numa-tlb-largepage", () => SuccessfulResult("memory.numa-tlb-largepage")),
+            new FakeDeepBenchTest("memory.dram-mapping-inference", () => SuccessfulResult("memory.dram-mapping-inference")),
             new FakeDeepBenchTest("memory.cache-latency", async (_, token) =>
             {
                 await Task.Delay(Timeout.InfiniteTimeSpan, token);

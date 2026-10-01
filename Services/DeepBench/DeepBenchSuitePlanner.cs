@@ -17,6 +17,7 @@ public static class DeepBenchSuitePlanner
         "memory.cache-latency",
         "memory.stream-bandwidth",
         "memory.loaded-latency",
+        "memory.dram-mapping-inference",
         "memory.ecc-whea-stress",
         "gpu.fp32-fp64-integer",
         "gpu.vram-bandwidth",

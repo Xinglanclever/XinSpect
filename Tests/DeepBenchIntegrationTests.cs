@@ -82,6 +82,8 @@ public class DeepBenchIntegrationTests
         Assert.Contains("五種放置", combined, StringComparison.Ordinal);
         Assert.Contains("NUMA／TLB／大分頁", combined, StringComparison.Ordinal);
         Assert.Contains("SeLockMemoryPrivilege", combined, StringComparison.Ordinal);
+        Assert.Contains("DRAM 映射推論", combined, StringComparison.Ordinal);
+        Assert.Contains("僅供推論", combined, StringComparison.Ordinal);
         Assert.Contains("Unsupported", combined, StringComparison.Ordinal);
         Assert.Contains("deepbench-history.json", combined, StringComparison.Ordinal);
         Assert.Contains("不上傳", combined, StringComparison.Ordinal);
@@ -96,7 +98,7 @@ public class DeepBenchIntegrationTests
 
         Assert.Contains("Deep Bench 深測中心", combined, StringComparison.Ordinal);
         Assert.Contains("38", combined, StringComparison.Ordinal);
-        Assert.Contains("三十一個已接入測項", combined, StringComparison.Ordinal);
+        Assert.Contains("三十二個已接入測項", combined, StringComparison.Ordinal);
         Assert.Contains("混合核心放置", combined, StringComparison.Ordinal);
         Assert.Contains("CPUID 0x1A", combined, StringComparison.Ordinal);
         Assert.Contains("P-core / E-core", combined, StringComparison.Ordinal);
@@ -104,6 +106,8 @@ public class DeepBenchIntegrationTests
         Assert.Contains("NUMA／TLB／大分頁", combined, StringComparison.Ordinal);
         Assert.Contains("SeLockMemoryPrivilege", combined, StringComparison.Ordinal);
         Assert.Contains("不宣稱量到 DTLB 規格", combined, StringComparison.Ordinal);
+        Assert.Contains("DRAM 映射推論", combined, StringComparison.Ordinal);
+        Assert.Contains("不宣稱確定 row／bank／rank 映射", combined, StringComparison.Ordinal);
         Assert.Contains("不加權", combined, StringComparison.Ordinal);
         Assert.Contains("Unsupported", combined, StringComparison.Ordinal);
         Assert.Contains("SLC 持續寫入", combined, StringComparison.Ordinal);
@@ -116,6 +120,58 @@ public class DeepBenchIntegrationTests
         Assert.Contains("吞吐衰退", combined, StringComparison.Ordinal);
         Assert.Contains("RDRAND / RDSEED", combined, StringComparison.Ordinal);
         Assert.Contains("Deferred", combined, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void 報告對混池指標逐點列出而不給跨配置平均()
+    {
+        var vm = new MainViewModel
+        {
+            DeepBench = SampleViewModel(),
+        };
+        Guid session = Guid.NewGuid();
+        DateTime now = DateTime.UtcNow;
+        var ladder = new DeepBenchMetric(
+            "memory.stream.bandwidth", "STREAM bandwidth", "GB/s", true, "managed arrays",
+            [30, 210],
+            [
+                new DeepBenchMetricPoint(30, new Dictionary<string, string> { ["kernel"] = "讀取", ["threads"] = "1" }, [30]),
+                new DeepBenchMetricPoint(210, new Dictionary<string, string> { ["kernel"] = "三元運算", ["threads"] = "8" }, [210]),
+            ]);
+        var result = new DeepBenchTestResult(
+            "memory.stream-bandwidth", session, DeepBenchRunProfile.Quick, now, now.AddSeconds(1),
+            "managed arrays", [ladder], [], ["fake limitation"], DeepBenchFailureKind.None, null);
+        vm.DeepBench.CurrentRecord = new DeepBenchRunRecord(
+            session, DeepBenchRunProfile.Quick, now, now.AddSeconds(2), DeepBenchRunState.Completed, [result], []);
+
+        string report = ReportService.BuildMarkdownForTests(vm);
+
+        Assert.Contains("STREAM bandwidth（kernel=讀取 threads=1）", report, StringComparison.Ordinal);
+        Assert.Contains("STREAM bandwidth（kernel=三元運算 threads=8）", report, StringComparison.Ordinal);
+        Assert.Contains("210 GB/s（1 samples）", report, StringComparison.Ordinal);
+        Assert.DoesNotContain("平均 120", report, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void 報告對取消場次不宣稱已完成()
+    {
+        var vm = new MainViewModel
+        {
+            DeepBench = SampleViewModel(),
+        };
+        Guid session = Guid.NewGuid();
+        DateTime now = DateTime.UtcNow;
+        var result = new DeepBenchTestResult(
+            "cpu.aes-sha", session, DeepBenchRunProfile.Quick, now, now.AddSeconds(1), "rounds=2",
+            [new DeepBenchMetric("cpu.aes.cbc.throughput", "AES throughput", "MiB/s", true, "rounds=2", [990, 1000, 1010], [])],
+            ["25 °C"], ["fake limitation"], DeepBenchFailureKind.None, null);
+        vm.DeepBench.CurrentRecord = new DeepBenchRunRecord(
+            session, DeepBenchRunProfile.Quick, now, now.AddSeconds(2), DeepBenchRunState.Cancelled, [result], []);
+
+        string report = ReportService.BuildMarkdownForTests(vm);
+
+        Assert.Contains("取消前產生 1 項結果", report, StringComparison.Ordinal);
+        Assert.DoesNotContain("已完成 1 項", report, StringComparison.Ordinal);
     }
 
     private static DeepBenchViewModel SampleViewModel()
