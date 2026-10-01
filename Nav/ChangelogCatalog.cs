@@ -48,31 +48,21 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
-            Version = "2.2.0",
-            Date = "2026-10-01",
-            Title = "Everest 2.2——十項原生硬體檢測擴充：GPU 編解碼、磁碟表面、藍牙電量、NPU 基準、記憶體池與外部報告解析",
-            Items =
-            [
-                "GPU 編解碼能力矩陣：透過 DirectShow/DXVA 列舉解碼 profile（H.264/HEVC/AV1/VP9），NVAPI 補 NVENC 編碼細節，顯示卡頁新增編解碼卡片。",
-                "磁碟表面掃描：對實體磁碟循序讀取並逐塊計時，產生延遲熱圖與慢區／異常區塊標記，健康頁可直接發起掃描。",
-                "藍牙外設電量與裝置樹：透過 Windows GATT Battery Service 讀取滑鼠／鍵盤等外設電量與裝置資訊，健康頁新增外設健診卡片。",
-                "NPU ONNX 推理基準：以 Windows ML 執行 ONNX 模型量測推理吞吐，NPU 偵測頁新增實跑基準卡片。",
-                "記憶體池細目：透過 NtQuerySystemInformation 取得分頁池／非分頁池／備用清單／修改清單等核心記憶體統計，記憶體頁新增池細目卡片。",
-                "外部報告解析擴充：支援 GPU-Z sensor 報告、AIDA64 XML、HWiNFO CSV 匯入，與 CPU-Z 報告解析整合進證據實驗室時間膠囊做前後對比。",
-                "Wi-Fi 訊號檢測：讀取訊號強度、頻道與鏈路速率，網路頁新增即時訊號卡片。",
-                "TPM 與安全開機檢測：讀取 TPM 規格版本、啟用狀態與 SecureBoot 狀態，健康頁新增卡片。",
-                "Thunderbolt／USB4 檢測：列舉控制器與鏈路資訊，USB 連結頁新增卡片。",
-                "HDR 能力檢測：透過 DisplayConfig 讀取各顯示器 HDR 支援與啟用狀態，螢幕色域頁新增卡片。",
-                "修正：NativeWiFi inline array 相容性問題、DisplayConfig HDR 查詢錯誤處理。",
-            ],
-        },        new ChangeEntry
-        {
             Version = "2.1.0",
             Date = "2026-10-01",
-            Title = "Everest 2.1——藍色中隊守護進程上線、風扇頁奔騰金、AI 頁修整與特殊型號徽章",
+            Title = "Everest 2.1——守護進程上線、十項原生檢測擴充、風扇頁奔騰金與 AI 頁修整",
             Items =
             [
-                "藍色中隊守護進程真正上線：BlueSquadronBridge 過去從未被啟動（狀態永停在「尚未連線」），現改為啟動序列自動拉起；連線狀態與威脅時間軸提示同步（連線前「正在連線…」、連線後「即時偵測中…」）；開發版執行檔搜尋改逐層向上；重複初始化不會開出第二個進程。",
+                "GPU 編解碼能力矩陣：D3D11 影像解碼 profile 列舉（H.264/HEVC/AV1/VP9 等）＋MFTEnumEx 硬體編碼器偵測，顯示卡頁新增編解碼卡片；誠實標示「此為能力宣告，非實測解碼速度」。",
+                "磁碟表面掃描：循序讀取邏輯卷／實體磁碟、逐塊量延遲，慢區與讀取錯誤如實標記，附進度與結果統計；SMART 是韌體說的，這是實際讀一輪的互補量測（健康頁）。",
+                "藍牙外設電量：列舉藍牙裝置並從 WMI BatteryStatus（GATT 電量映射）讀電量，讀不到以 — 呈現不猜值；健康頁新增外設健診卡片。",
+                "NPU／算力基準：SIMD（AVX2 FMA）平行浮點實測 GFLOPS，與 NPU 廠標 TOPS 並列對比「標稱 vs 實測」（NPU 偵測頁）。",
+                "核心記憶體池細目：NtQuerySystemInformation 直讀分頁池／非分頁池／Standby 各優先級／Modified／Free／Zeroed／Bad／Commit，RAMMap 式細項進記憶體頁，數值以 MB 如實呈現。",
+                "外部報告解析：GPU-Z sensor log、AIDA64 XML、HWiNFO CSV 自動辨識匯入，證據實驗室可直接讀入第三方工具的讀值（不捆綁、但能讀別人的證據）。",
+                "Wi-Fi 訊號診斷：Native WiFi API 直讀 RSSI／頻道／鏈路速率／認證，網路頁新增即時訊號卡片；原生結構改位元組平移解析，避免 padding 越界。",
+                "TPM／Secure Boot 狀態：Win32_Tpm 讀規格版本與啟用狀態、登錄檔讀 UEFISecureBootEnabled（鍵不存在時誠實區分非 UEFI 與已關閉），健康頁新增信任鏈卡片。",
+                "Thunderbolt／USB4 控制器：PnP 列舉裝置名稱、協定與驅動版本，USB 連結頁新增卡片；埠級速率需系統管理員，如實標示。",
+                "HDR 能力解析：EDID CTA-861 HDR Static Metadata（亮度與支援旗標）＋DisplayConfig 查 Windows HDR 開關，螢幕色域頁新增 HDR 卡片；讀不到標示未知不猜。",                "藍色中隊守護進程真正上線：BlueSquadronBridge 過去從未被啟動（狀態永停在「尚未連線」），現改為啟動序列自動拉起；連線狀態與威脅時間軸提示同步（連線前「正在連線…」、連線後「即時偵測中…」）；開發版執行檔搜尋改逐層向上；重複初始化不會開出第二個進程。",
                 "發佈改為兩個檔案分開下載：主程式不再內嵌守護進程（瘦身約 6 MB）；需要藍色中隊者另行下載 BlueSquadronBridge.exe 與主程式放同一資料夾即自動啟用，未安裝則安全頁顯示提示、其他功能不受影響。",
                 "守護進程穩定性修復：命令逾時不再直接殺進程——開機高峰期系統查詢雍塞時，bridge 可能只是回應慢而非死掉，過去會被誤殺並顯示「處理程序已結束」；現在逾時僅放棄該筆回應、進程持續存活，握手逾時上限同步放寬到 30 秒、啟動探測 10 秒。",
                 "守護進程直接點開時改為顯示提示（「XinSpect BlueSquadron 已開啟」）：說明它是背景服務、應與主程式放同一資料夾，不再是莫名其妙的空白黑視窗；由主程式背景啟動時完全不彈出，通訊零影響。",
