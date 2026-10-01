@@ -938,7 +938,7 @@ public static class HelpCatalog
         ["deepbench/深測中心"] = new()
         {
             Title = "深測中心",
-            What = "把同一場 Run Session 的 CPU、拓樸、記憶體、GPU、儲存、使用者體驗與 Gauntlet 深測收在同一頁；原 38 項全量登記，尚未實作項目也會攤開。CPU 微架構、RDRAND/RDSEED、寫入完整性、SLC 持續寫入、Top-down 歸因、混合核心放置——CPUID 0x1A 誠實分類 P-core / E-core 並量五種放置、WASAPI 音訊緩衝行為、D3D11 Present 幀節奏、Windows 睿頻爬升恢復、Windows 吞吐衰退與 Windows 電源狀態觀察已接進 Hub；Top-down 只使用 Intel PMU 配方。",
+            What = "把同一場 Run Session 的 CPU、拓樸、記憶體、GPU、儲存、使用者體驗與 Gauntlet 深測收在同一頁；原 38 項全量登記，尚未實作項目也會攤開。CPU 微架構、RDRAND/RDSEED、寫入完整性、SLC 持續寫入、Top-down 歸因、混合核心放置——CPUID 0x1A 誠實分類 P-core / E-core 並量五種放置、NUMA／TLB／大分頁——遞增 working set 逐頁掃描加大分頁與跨 NUMA 對照、WASAPI 音訊緩衝行為、D3D11 Present 幀節奏、Windows 睿頻爬升恢復、Windows 吞吐衰退與 Windows 電源狀態觀察已接進 Hub；Top-down 只使用 Intel PMU 配方。",
             Does = "每項保留樣本數、設定、可信度、限制與錯誤；聚合只引用同一場證據，不加權合成總分，也不把延後項目藏起來。",
             Risk = HelpRisk.Caution,
             Safety = "高負載會讓 CPU、記憶體、GPU 或儲存接近滿載；儲存測試只建立 XinSpect.deepbench.tmp 與 XinSpect.iocp.tmp，結束、例外或取消後都會刪除。",
@@ -946,10 +946,10 @@ public static class HelpCatalog
         ["deepbench/Run Session"] = new()
         {
             Title = "Run Session",
-            What = "一次連續執行的深測場次；快速檔與完整檔目前執行三十個已接入測項，涵蓋 CPU 微架構與分支模式矩陣、RDRAND/RDSEED、Top-down 歸因、核心延遲與核心搬運頻寬、SMT sibling 干擾、混合核心放置——CPUID hybrid + CPUID 0x1A 誠實分類 P-core / E-core、單緒／同類雙核／混合雙核五種放置吞吐、cache coherence／lock scaling、記憶體（含 WHEA 壓力關聯）、GPU FP32、VRAM 讀寫頻寬、PCIe 上傳／下載與 dispatch jitter、儲存、寫入完整性、逐 MiB FlushToDisk、SLC 持續寫入、IOCP completion engine、本機 TCP loopback 延遲、WASAPI 音訊緩衝行為、D3D11 Present 幀節奏、Windows 睿頻爬升恢復、Windows 吞吐衰退與 Windows 電源狀態觀察。",
+            What = "一次連續執行的深測場次；快速檔與完整檔目前執行三十一個已接入測項，涵蓋 CPU 微架構與分支模式矩陣、RDRAND/RDSEED、Top-down 歸因、核心延遲與核心搬運頻寬、SMT sibling 干擾、混合核心放置——CPUID hybrid + CPUID 0x1A 誠實分類 P-core / E-core、單緒／同類雙核／混合雙核五種放置吞吐、cache coherence／lock scaling、NUMA／TLB／大分頁——遞增 working set 逐頁掃描曲線與大分頁、跨 NUMA 節點對照、記憶體（含 WHEA 壓力關聯）、GPU FP32、VRAM 讀寫頻寬、PCIe 上傳／下載與 dispatch jitter、儲存、寫入完整性、逐 MiB FlushToDisk、SLC 持續寫入、IOCP completion engine、本機 TCP loopback 延遲、WASAPI 音訊緩衝行為、D3D11 Present 幀節奏、Windows 睿頻爬升恢復、Windows 吞吐衰退與 Windows 電源狀態觀察。",
             Does = "啟動前會檢查儲存根與剩餘空間；測試可取消，取消後只保留已完成結果，其餘標示未執行而不補值。儲存項目只寫 XinSpect.deepbench.tmp，刪除失敗或量測失敗都會列出。音訊項目只送共用模式靜音供樣，沒有輸出裝置時標 Unsupported。Present 項目會短暫建立小型視窗，量 Clear + Present 的 CPU API 時間；WARP 一律 Unsupported。睿頻項目用全核心 managed pulse 切換 idle/load/recovery 並取樣電源 API 頻率上限；吞吐項目用全核心 managed operations 分窗長跑，取 early/late 保留率與相鄰窗最大下降；電源項目連續唯讀取樣 CallNtPowerInformation，不改電源計劃，量不到韌體轉換時間就明示。",
             Risk = HelpRisk.Caution,
-            Safety = "期間 CPU、記憶體、GPU 與儲存可能接近滿載，系統會明顯變慢；請先儲存工作，筆電接電源並注意散熱。混合核心放置需要 CPUID hybrid 宣告、逐核心 CPUID 0x1A、兩顆可驗證 P-core 與兩顆 E-core；不滿足時回 Unsupported，只用使用者模式親和性，不改排程、電源計劃或優先權，多處理器群組路徑未全面實機驗證。記憶體 WHEA 項只是同窗事件關聯，不是 MemTest86。Present 項目只送本行程產生的小型變色畫面，不開檔、不連網、不改顯示設定。",
+            Safety = "期間 CPU、記憶體、GPU 與儲存可能接近滿載，系統會明顯變慢；請先儲存工作，筆電接電源並注意散熱。混合核心放置需要 CPUID hybrid 宣告、逐核心 CPUID 0x1A、兩顆可驗證 P-core 與兩顆 E-core；不滿足時回 Unsupported，只用使用者模式親和性，不改排程、電源計劃或優先權，多處理器群組路徑未全面實機驗證。NUMA／TLB 掃描只提交本行程記憶體並在結束後釋放；掃描是 TLB、prefetch、快取與 page table walk 的混合效應，不宣稱量到 DTLB 規格；大分頁對照需要 SeLockMemoryPrivilege 且配置成功、跨 NUMA 對照需要至少兩個 NUMA 節點，前提不滿足時該子項如實標未執行，不降級、不補值。記憶體 WHEA 項只是同窗事件關聯，不是 MemTest86。Present 項目只送本行程產生的小型變色畫面，不開檔、不連網、不改顯示設定。",
         },
         ["deepbench/38 項全量目錄"] = new()
         {

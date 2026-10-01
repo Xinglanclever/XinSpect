@@ -80,6 +80,8 @@ public class DeepBenchIntegrationTests
         Assert.Contains("CPUID 0x1A", combined, StringComparison.Ordinal);
         Assert.Contains("P-core / E-core", combined, StringComparison.Ordinal);
         Assert.Contains("五種放置", combined, StringComparison.Ordinal);
+        Assert.Contains("NUMA／TLB／大分頁", combined, StringComparison.Ordinal);
+        Assert.Contains("SeLockMemoryPrivilege", combined, StringComparison.Ordinal);
         Assert.Contains("Unsupported", combined, StringComparison.Ordinal);
         Assert.Contains("deepbench-history.json", combined, StringComparison.Ordinal);
         Assert.Contains("不上傳", combined, StringComparison.Ordinal);
@@ -94,11 +96,14 @@ public class DeepBenchIntegrationTests
 
         Assert.Contains("Deep Bench 深測中心", combined, StringComparison.Ordinal);
         Assert.Contains("38", combined, StringComparison.Ordinal);
-        Assert.Contains("三十個已接入測項", combined, StringComparison.Ordinal);
+        Assert.Contains("三十一個已接入測項", combined, StringComparison.Ordinal);
         Assert.Contains("混合核心放置", combined, StringComparison.Ordinal);
         Assert.Contains("CPUID 0x1A", combined, StringComparison.Ordinal);
         Assert.Contains("P-core / E-core", combined, StringComparison.Ordinal);
         Assert.Contains("五種放置", combined, StringComparison.Ordinal);
+        Assert.Contains("NUMA／TLB／大分頁", combined, StringComparison.Ordinal);
+        Assert.Contains("SeLockMemoryPrivilege", combined, StringComparison.Ordinal);
+        Assert.Contains("不宣稱量到 DTLB 規格", combined, StringComparison.Ordinal);
         Assert.Contains("不加權", combined, StringComparison.Ordinal);
         Assert.Contains("Unsupported", combined, StringComparison.Ordinal);
         Assert.Contains("SLC 持續寫入", combined, StringComparison.Ordinal);

@@ -17,8 +17,8 @@ public sealed class DeepBenchViewModel : ObservableObject
         "深測中心只並列各測項的原始樣本、可信度與限制，不加權合成單一總分；跨域、跨軟體排名不成立。";
 
     public const string ScopeNotice =
-        "目前可執行三十個 Phase 1／已接入測項：CPU AES/SHA、Load-to-use/ILP/branch、分支模式矩陣、RDRAND/RDSEED、Intel PMU Top-down、核心延遲、核心到核心搬運頻寬、SMT sibling 干擾、混合核心放置：CPUID hybrid + CPUID 0x1A 誠實分類 P/E，量單緒、同類雙核與混合雙核吞吐、cache coherence／lock scaling、記憶體四項（含 WHEA 壓力關聯）、D3D11 硬體 GPU FP32、VRAM 讀寫頻寬、PCIe 上傳／下載、dispatch jitter、儲存 QD、混合讀寫、三圖樣寫入驗證、逐 MiB Flush 驗證、SLC 持續寫入、IOCP completion engine、本機 TCP loopback 延遲、WASAPI 音訊緩衝行為、D3D11 Present 幀節奏、Windows 睿頻爬升恢復、Windows 吞吐衰退與 Windows 電源狀態觀察。" +
-        "NPU ONNX 不含；.NET crypto 只實測本機 API，不保證特定硬體指令集；Top-down 不適用 AMD／非 Intel 事件配方；網路測項只量 127.0.0.1 loopback；音訊項目只量 WASAPI render 可觀察行為；Present 項目只量 CPU 端 API 時間，不是驅動內部 GPU timestamp 或 input-to-photon latency；睿頻項目只量 managed pulse 下的電源 API 離散頻率曲線，不宣稱實際有效時脈；吞吐項目只量 managed operations，CurrentMhz 只是 P-state 上限換算值；電源項目只量 CallNtPowerInformation 查詢延遲與離散快照變化，不宣稱韌體內部轉換時間。";
+        "目前可執行三十一個 Phase 1／已接入測項：CPU AES/SHA、Load-to-use/ILP/branch、分支模式矩陣、RDRAND/RDSEED、Intel PMU Top-down、核心延遲、核心到核心搬運頻寬、SMT sibling 干擾、混合核心放置：CPUID hybrid + CPUID 0x1A 誠實分類 P/E，量單緒、同類雙核與混合雙核吞吐、cache coherence／lock scaling、NUMA／TLB／大分頁：遞增 working set 逐頁掃描曲線，大分頁與跨 NUMA 對照各子項獨立判定適用性、記憶體四項（含 WHEA 壓力關聯）、D3D11 硬體 GPU FP32、VRAM 讀寫頻寬、PCIe 上傳／下載、dispatch jitter、儲存 QD、混合讀寫、三圖樣寫入驗證、逐 MiB Flush 驗證、SLC 持續寫入、IOCP completion engine、本機 TCP loopback 延遲、WASAPI 音訊緩衝行為、D3D11 Present 幀節奏、Windows 睿頻爬升恢復、Windows 吞吐衰退與 Windows 電源狀態觀察。" +
+        "NPU ONNX 不含；.NET crypto 只實測本機 API，不保證特定硬體指令集；Top-down 不適用 AMD／非 Intel 事件配方；網路測項只量 127.0.0.1 loopback；音訊項目只量 WASAPI render 可觀察行為；Present 項目只量 CPU 端 API 時間，不是驅動內部 GPU timestamp 或 input-to-photon latency；睿頻項目只量 managed pulse 下的電源 API 離散頻率曲線，不宣稱實際有效時脈；吞吐項目只量 managed operations，CurrentMhz 只是 P-state 上限換算值；電源項目只量 CallNtPowerInformation 查詢延遲與離散快照變化，不宣稱韌體內部轉換時間；NUMA／TLB 掃描是 TLB、prefetch、快取與 page table walk 的混合效應，不宣稱量到 DTLB 規格，大分頁與跨 NUMA 對照不滿足前提時如實標未執行。";
 
     public const string LoadWarning =
         "高負載警告：執行期間 CPU、記憶體、GPU 與儲存可能接近滿載；請先儲存工作，筆電請接電源並注意散熱。";
@@ -240,6 +240,7 @@ public sealed class DeepBenchViewModel : ObservableObject
             new SmtContentionService(),
             new TopologyHybridPlacementService(),
             new CoherenceLockService(),
+            new MemoryNumaTlbLargePageService(),
             new CacheLatencyAdapter(_cache),
             new StreamBandwidthAdapter(_memBandwidth),
             new LoadedLatencyAdapter(_memBandwidth),

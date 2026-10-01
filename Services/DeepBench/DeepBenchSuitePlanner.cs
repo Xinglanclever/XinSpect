@@ -13,6 +13,7 @@ public static class DeepBenchSuitePlanner
         "topology.smt-contention",
         "topology.hybrid-placement",
         "topology.coherence-lock",
+        "memory.numa-tlb-largepage",
         "memory.cache-latency",
         "memory.stream-bandwidth",
         "memory.loaded-latency",
