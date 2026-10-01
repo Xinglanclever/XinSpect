@@ -54,6 +54,8 @@
                                         <local:FieldRow Label="使用率" Value="{Binding LoadText}"/>
                                         <local:FieldRow Label="風扇" Value="{Binding FanText}"/>
                                         <local:FieldRow Label="溫度" Value="{Binding TempText}"/>
+                                        <local:FieldRow Label="熱點溫度" Value="{Binding HotSpotText}"/>
+                                        <local:FieldRow Label="顯存溫度" Value="{Binding VramTempText}"/>
                                     </StackPanel>
                                 </Grid>
 

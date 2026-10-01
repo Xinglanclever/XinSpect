@@ -34,7 +34,7 @@ public sealed partial class SensorService : ObservableObject, IDisposable
     private volatile bool _disposed;
 
     private sealed class CoreBind { public ISensor? Clk, Load, Temp; public CoreRow Row = null!; }
-    private sealed class GpuBind { public ISensor? Temp, Load, CoreClk, MemClk, Fan, FanRpm, Power, VramUsed, VramTotal; public GpuRow Row = null!; }
+    private sealed class GpuBind { public ISensor? Temp, HotSpot, VramTemp, Load, CoreClk, MemClk, Fan, FanRpm, Power, VramUsed, VramTotal; public GpuRow Row = null!; }
     private sealed class StorageBind { public ISensor? Temp, Life, Used, Activity; public bool LifeConsumed; public StorageRow Row = null!; }
 
     private readonly List<CoreBind> _cores = new();
@@ -160,7 +160,9 @@ public sealed partial class SensorService : ObservableObject, IDisposable
         var b = new GpuBind
         {
             Row = new GpuRow(hw.Name) { VendorText = VendorZh(hw.HardwareType) },
-            Temp = First(hw, SensorType.Temperature, "GPU Core", "GPU Hot Spot", "GPU"),
+            Temp = First(hw, SensorType.Temperature, "GPU Core", "GPU"),
+            HotSpot = First(hw, SensorType.Temperature, "GPU Hot Spot", "Hot Spot", "Junction"),
+            VramTemp = First(hw, SensorType.Temperature, "GPU Memory", "Memory Junction", "VRAM"),
             Load = First(hw, SensorType.Load, "GPU Core", "GPU", "D3D 3D"),
             CoreClk = First(hw, SensorType.Clock, "GPU Core"),
             MemClk = First(hw, SensorType.Clock, "GPU Memory"),
@@ -251,6 +253,8 @@ public sealed partial class SensorService : ObservableObject, IDisposable
         foreach (var b in _gpuBinds)
         {
             b.Row.TempC = Val(b.Temp);
+            b.Row.HotSpotC = Val(b.HotSpot);
+            b.Row.VramTempC = Val(b.VramTemp);
             b.Row.LoadPercent = Val(b.Load) ?? 0;
             b.Row.CoreClockMHz = Val(b.CoreClk) ?? 0;
             b.Row.MemClockMHz = Val(b.MemClk) ?? 0;

@@ -214,6 +214,8 @@ public sealed class GpuRow : ObservableObject
     private double _memClock;  public double MemClockMHz  { get => _memClock;  set { if (SetProperty(ref _memClock, value)) OnPropertyChanged(nameof(MemClockText)); } }
     private double _load;      public double LoadPercent  { get => _load;      set { if (SetProperty(ref _load, value)) OnPropertyChanged(nameof(LoadText)); } }
     private double? _temp;     public double? TempC       { get => _temp;      set { if (SetProperty(ref _temp, value)) { OnPropertyChanged(nameof(TempText)); OnPropertyChanged(nameof(TempSeverity)); } } }
+    private double? _hotSpot;  public double? HotSpotC    { get => _hotSpot;   set { if (SetProperty(ref _hotSpot, value)) OnPropertyChanged(nameof(HotSpotText)); } }
+    private double? _vramTemp; public double? VramTempC   { get => _vramTemp;  set { if (SetProperty(ref _vramTemp, value)) OnPropertyChanged(nameof(VramTempText)); } }
     private double _fan;       public double FanPercent   { get => _fan;       set { if (SetProperty(ref _fan, value)) OnPropertyChanged(nameof(FanText)); } }
     private double _vramUsed;  public double VramUsedMB   { get => _vramUsed;  set { if (SetProperty(ref _vramUsed, value)) OnPropertyChanged(nameof(VramText)); } }
     private double _vramTotal; public double VramTotalMB  { get => _vramTotal; set { if (SetProperty(ref _vramTotal, value)) OnPropertyChanged(nameof(VramText)); } }
@@ -223,6 +225,8 @@ public sealed class GpuRow : ObservableObject
     public string MemClockText  => _memClock > 0 ? $"{_memClock:0} MHz" : "—";
     public string LoadText => $"{_load:0} %";
     public string TempText => _temp.HasValue ? $"{_temp:0} °C" : "—";
+    public string HotSpotText => _hotSpot.HasValue ? $"{_hotSpot:0} °C" : "—";
+    public string VramTempText => _vramTemp.HasValue ? $"{_vramTemp:0} °C" : "—";
     public string FanText  => _fan > 0 ? $"{_fan:0} %" : "—";
     public string PowerText => _power > 0 ? $"{_power:0.#} W" : "—";
     public string VramText => _vramTotal > 0 ? $"{_vramUsed:0} / {_vramTotal:0} MB" : (_vramUsed > 0 ? $"{_vramUsed:0} MB" : "—");
