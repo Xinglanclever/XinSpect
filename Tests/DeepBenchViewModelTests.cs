@@ -43,17 +43,19 @@ public class DeepBenchViewModelTests
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gpu.pcie-transfer");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gpu.dispatch-jitter");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "storage.iocp-engine");
+        Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Integrated && row.Id == "memory.ecc-whea-stress");
     }
 
     [Fact]
-    public void 快速與完整檔都只選十九個已接入測項()
+    public void 快速與完整檔都只選二十個已接入測項()
     {
         using var store = new TempHistoryStore();
         var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
         string[] expected =
         [
             "cpu.aes-sha", "cpu.load-use-ilp-branch", "cpu.rdrand-rdseed", "topology.core-latency", "memory.cache-latency",
-            "memory.stream-bandwidth", "memory.loaded-latency", "gpu.fp32-fp64-integer", "gpu.vram-bandwidth",
+            "memory.stream-bandwidth", "memory.loaded-latency", "memory.ecc-whea-stress",
+            "gpu.fp32-fp64-integer", "gpu.vram-bandwidth",
             "gpu.pcie-transfer", "gpu.dispatch-jitter", "cpu.top-down",
             "storage.qd-ladder", "storage.mixed-rw", "storage.write-integrity",
             "storage.flush-durability",
@@ -187,6 +189,7 @@ public class DeepBenchViewModelTests
             }),
             new FakeDeepBenchTest("memory.stream-bandwidth", () => SuccessfulResult("memory.stream-bandwidth")),
             new FakeDeepBenchTest("memory.loaded-latency", () => SuccessfulResult("memory.loaded-latency")),
+            new FakeDeepBenchTest("memory.ecc-whea-stress", () => SuccessfulResult("memory.ecc-whea-stress")),
             new FakeDeepBenchTest("gpu.fp32-fp64-integer", () => SuccessfulResult("gpu.fp32-fp64-integer")),
             new FakeDeepBenchTest("cpu.top-down", () => SuccessfulResult("cpu.top-down")),
             new FakeDeepBenchTest("storage.qd-ladder", () => SuccessfulResult("storage.qd-ladder")),
