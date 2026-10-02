@@ -25,9 +25,22 @@
 | R9 | P4 | 證據實驗室「原始快照」卡片（建立/載入/與目前差分）；收集掛進重載 gate；Help 條目 | 2718 | a6c5e95 |
 | R10 | 制度 | docs/ITERATIONS.md 建立＋DocumentationIntegrityTests（V7 §19 封面數字推導對帳）＋V7 納入版控＋刪除 V2–V6（§0.3） | — | 本輪 |
 
+## ITER22 ・ G2 收尾批次（2026-10-03）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP2-① | TSOD 記憶體溫度感測器（TSE2004 解碼器、SMBus Word Data 交易、白名單唯讀 0x18–0x1F、逐顆事實；iMC 匯流排如實標未掃） | 2731 | fffc9f2 |
+| R2 | WP6-② | UEFI 開機設定事實組（SecureBoot/SetupMode/AuditMode/DeployedMode/BootOrder 直問韌體）＋Secure Boot 雙來源（UEFI 變數 vs 登錄檔）交叉規則 | 2735 | dffd655 |
+| R3 | WP5-③ | 對帳規則 7→12：管線一致性族（BIOS_CNTL↔綜合裁決、FRAP↔暴露面、SPI↔MMIO 後端、MSR↔MSR 後端、HVCI↔環境裁決）＋SMRAMC 鎖定下開放的非法組合；SmramcText 誠實修補（D_LCK=1 且 D_OPEN=1 不再被文字吞掉） | 2737 | dfcdda2 |
+| R4 | WP31-① | Super I/O 探測（0x2E/0x4E 兩種進入序列、晶片 ID／廠商 ID 原始值、**設定模式必以 finally 退出**；名稱對照表刻意未納入待知識庫） | 2744 | 3dda348 |
+| R5 | 制度 | ITERATIONS.md 記錄本批＋記憶庫更新 | — | 本輪 |
+
+**對帳規則實作方法學備忘**：「上游事實缺席正是矛盾條件」的管線規則（scan_vs_ecam、mmio_vs_spi、msr_vs_platform 三條）刻意不把後端事實列輸入鍵——引擎會把非 Present 輸入統一轉 Unverifiable，此類規則須在規則內 TryLookup 自行裁決。
+
 ## 待辦（下一批）
 
-- WP3 MCHBAR 時序解碼（對準 Intel datasheet／CHIPSEC 再出貨）、WP2 SMBus 深化（TSOD/VRM 逐相）、WP7 報告與 WP32 API。
-- 對帳規則 6 → ≥25（V7 目標）。
+- WP3 MCHBAR 時序解碼（對準 Intel datasheet／CHIPSEC 再出貨）、WP2 剩餘（VRM 逐相 PMBus、iMC 匯流排 TSOD）、WP7 報告與 WP32 API（G3）。
+- 對帳規則 12 → ≥25：後續規則依賴新事實來源（SPD↔TSOD、SMART、儲存面），隨 WP 推進補。
 - PawnIO 模組整合（HVCI 環境備援；本機 IntelMsr 模組已知回 0 的問題要先解）。
-- 發佈：等使用者明說。20 輪＋本批內容尚未折疊進 changelog（發佈前必做，FileVersion .5→.6）。
+- Super I/O 晶片名稱對照表（要有出處，進知識庫 WP30/D2）。
+- 發佈：等使用者明說。20 輪＋ITER21＋本批內容尚未折疊進 changelog（發佈前必做，FileVersion .5→.6）。
