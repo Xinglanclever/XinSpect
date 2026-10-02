@@ -23,7 +23,7 @@ public sealed class SpecRefAttribute : Attribute
 /// <summary>SpecRef 覆蓋面的單一齣處：要機器檢查哪些解碼器、讀出引用內容，都走這裡。</summary>
 public static class SpecRefRegistry
 {
-    /// <summary>已納入機器檢查的解碼器（深層暫存器計畫的五個安全相關解碼器）。新解碼器在此註冊後即受覆蓋檢查約束。</summary>
+    /// <summary>已納入機器檢查的解碼器（深層暫存器＋感測器＋環境解碼）。新解碼器在此註冊後即受覆蓋檢查約束。</summary>
     public static readonly Type[] CoveredDecoders =
     [
         typeof(SpiFlash),        // PCH SPI 快閃暫存器
@@ -31,6 +31,10 @@ public static class SpecRefRegistry
         typeof(PlatformSecurity),// FEATURE_CONTROL／DEBUG_INTERFACE MSR
         typeof(PcieAer),         // PCIe AER 擴充能力
         typeof(AcpiTable),       // ACPI 表頭／MCFG／HEST／BERT
+        typeof(Cmos),            // CMOS/RTC（MC146818 佈局）
+        typeof(Tsod),            // TSE2004 記憶體溫度感測器
+        typeof(SuperIo),         // Super I/O 晶片 ID
+        typeof(PlatformTrustDecoder), // VBS/HVCI/CodeIntegrity 狀態解碼
     ];
 
     /// <summary>列舉解碼器上缺 SpecRef 的公開靜態方法（宣告於本型別者）。</summary>

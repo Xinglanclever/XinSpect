@@ -8,6 +8,7 @@ namespace XinSpect;
 public static class SuperIo
 {
     /// <summary>組回 16 位元晶片 ID；兩位元組皆全 F（無裝置）或全 0（未解碼狀態）回 null。</summary>
+    [SpecRef("coreboot util/superiotool：LDN0 暫存器 0x20/0x21 為晶片 ID（Winbond/ITE/Nuvoton/Fintek/SMSC 等多數廠商共通佈局）")]
     public static ushort? DecodeChipId(byte hi, byte lo)
         => (hi, lo) is (0xFF, 0xFF) or (0x00, 0x00) ? null : (ushort)((hi << 8) | lo);
 

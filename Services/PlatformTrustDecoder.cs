@@ -6,6 +6,7 @@ namespace XinSpect;
 public static class PlatformTrustDecoder
 {
     /// <summary>把 CPUID 0x40000000 的 EBX/ECX/EDX 併回 12 位元組 ASCII 簽章。</summary>
+    [SpecRef("Intel SDM Vol.3，CPUID leaf 0x40000000：hypervisor 簽章字串在 EBX:ECX:EDX（僅在 leaf 1 ECX bit31＝1 時可讀）")]
     public static string HypervisorSignature(uint ebx, uint ecx, uint edx)
     {
         var bytes = new byte[12];
@@ -15,6 +16,7 @@ public static class PlatformTrustDecoder
         return Encoding.ASCII.GetString(bytes).TrimEnd('\0', ' ');
     }
 
+    [SpecRef("常見 hypervisor 簽章對照（Intel SDM Vol.3 表 15-1 與各廠商文件）；本表僅收錄廣為記載者，未知簽章原樣回傳")]
     public static string HypervisorVendor(string signature) => signature switch
     {
         "Microsoft Hv" => "Microsoft Hyper-V",
@@ -29,6 +31,7 @@ public static class PlatformTrustDecoder
     };
 
     /// <summary>Win32_DeviceGuard.VirtualizationBasedSecurityStatus：0 未啟用、1 已啟用但未執行、2 已啟用並執行。</summary>
+    [SpecRef("Microsoft 文件 Win32_DeviceGuard：VirtualizationBasedSecurityStatus＝0 未啟用、1 已啟用未執行、2 已啟用並執行")]
     public static string DescribeVbsStatus(uint? status) => status switch
     {
         null => "—（讀不到）",
@@ -39,6 +42,7 @@ public static class PlatformTrustDecoder
     };
 
     /// <summary>Win32_DeviceGuard.SecurityServicesConfigured／Running 的服務代碼。</summary>
+    [SpecRef("Microsoft 文件 Win32_DeviceGuard：SecurityServicesConfigured／Running 的服務代碼（1 Credential Guard、2 HVCI…）")]
     public static string ServiceName(uint code) => code switch
     {
         0 => "無",
@@ -53,6 +57,7 @@ public static class PlatformTrustDecoder
     };
 
     /// <summary>Win32_DeviceGuard.AvailableSecurityProperties 的屬性代碼。</summary>
+    [SpecRef("Microsoft 文件 Win32_DeviceGuard：AvailableSecurityProperties 屬性代碼表")]
     public static string PropertyName(uint code) => code switch
     {
         1 => "Hypervisor 支援",
@@ -66,12 +71,14 @@ public static class PlatformTrustDecoder
         _ => $"未知代碼 {code}",
     };
 
+    [SpecRef("Microsoft 文件 Win32_DeviceGuard：SecurityServicesConfigured／Running 陣列的呈現方式（「已設定」≠「執行中」）")]
     public static string DescribeServices(uint[]? codes)
     {
         var real = (codes ?? []).Where(c => c != 0).ToArray();
         return real.Length == 0 ? "無（空清單或僅含 0）" : string.Join("、", real.Select(ServiceName));
     }
 
+    [SpecRef("Microsoft 文件 Win32_DeviceGuard：AvailableSecurityProperties 陣列的呈現方式")]
     public static string DescribeProperties(uint[]? codes)
         => codes is null || codes.Length == 0 ? "—（讀不到或為空）" : string.Join("、", codes.Select(PropertyName));
 
@@ -96,6 +103,7 @@ public static class PlatformTrustDecoder
         (0x8000, "WHQL 稽核模式"),
     };
 
+    [SpecRef("SYSTEM_CODEINTEGRITY_INFORMATION（NtQuerySystemInformation 103）的 CodeIntegrityOptions 旗標；位元值照 Microsoft 文件與 wdm.h 慣例")]
     public static string DescribeCodeIntegrity(uint options)
     {
         var on = CodeIntegrityFlags.Where(f => (options & f.Flag) != 0).Select(f => f.Name).ToArray();
@@ -106,6 +114,7 @@ public static class PlatformTrustDecoder
     /// 一句話結論：本機的 MSR／TSC／PMU 讀值算不算原生。
     /// 只依據讀到的事實，讀不到就說讀不到——不猜。
     /// </summary>
+    [SpecRef("本專案方法學：只依據輸入事實陳述「讀值可不可信」，不對安全狀態下判決（V7 誠實契約 §12）")]
     public static string Verdict(bool hypervisorPresent, uint? vbsStatus, bool invariantTsc)
     {
         string tsc = invariantTsc

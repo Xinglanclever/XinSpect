@@ -8,14 +8,14 @@ namespace XinSpect;
 /// </summary>
 public static class Cmos
 {
-    /// <summary>0x0D bit7＝VRT（Valid RAM and Time）：1 代表電池供電正常、時間有效；0 代表 RTC 曾掉電。</summary>
+    [SpecRef("Motorola MC146818／Intel PCH RTC 暫存器 0x0D：bit7 VRT（Valid RAM and Time）＝1 代表電池供電正常")]
     public static bool VrtValid(byte reg0D) => (reg0D & 0x80) != 0;
 
-    /// <summary>0x0A bit7＝UIP（更新進行中，此時讀時間不完整）；0x0B bit2＝資料格式（1 二進位／0 BCD）、bit1＝24 小時制。</summary>
+    [SpecRef("Motorola MC146818：0x0A bit7 UIP（更新進行中）；0x0B bit2 DM（1＝二進位、0＝BCD）、bit1 MIL／24/12（1＝24 小時制）")]
     public static (bool UpdateInProgress, bool BinaryMode, bool Hour24) DecodeStatus(byte reg0A, byte reg0B) =>
         ((reg0A & 0x80) != 0, (reg0B & 0x04) != 0, (reg0B & 0x02) != 0);
 
-    /// <summary>把 0x00/0x02/0x04 解成時分秒；BCD 轉十進位、12 小時制轉 24 小時制。格式異常（BCD 位含 A-F）回 null——不解碼垃圾。</summary>
+    [SpecRef("Motorola MC146818：0x00 秒、0x02 分、0x04 時；BCD 為預設格式；12 小時制時 bit7＝PM")]
     public static (int Hour, int Minute, int Second)? DecodeTime(byte sec, byte min, byte hour, bool binary, bool hour24)
     {
         int? s = binary ? sec : FromBcd(sec);
@@ -33,6 +33,7 @@ public static class Cmos
     }
 
     /// <summary>PC-AT 校驗和：0x10–0x2D 逐位元組總和應等於 0x2E（高位）+0x2F（低位）。BIOS 不維護此區的機種會不符——但書由呼叫端帶。</summary>
+    [SpecRef("IBM PC/AT 技術參考：CMOS 0x2E/0x2F 為 0x10–0x2D 逐位元組總和的 16 位元校驗和（高位在前）")]
     public static bool ChecksumMatches(ReadOnlySpan<byte> regs)
     {
         int sum = 0;

@@ -8,6 +8,7 @@ namespace XinSpect;
 public static class Tsod
 {
     /// <summary>解溫度（°C，1/16 解析度）。全 F／全 0 以外的任何 16 位元值都有定義的溫度意義。</summary>
+    [SpecRef("JEDEC TSE2004av（TSOD）溫度暫存器 0x05：bits[15:4] 為 12 位元二補數、LSB＝1/16°C，bits[3:0] 為旗號")]
     public static double? TemperatureC(ushort raw)
     {
         if (raw is 0xFFFF or 0x0000) return null; // 0xFFFF＝讀取失敗的常見殘值；0x0000 無從與未初始化區分
