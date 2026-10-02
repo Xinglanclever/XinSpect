@@ -136,6 +136,7 @@ public static class ReportService
         Network(secs, vm, mask);
         Sensors(secs, vm);
         Evidence(secs, vm, mask);
+        FirmwareSecurity(secs, vm);
         Benchmarks(secs, vm);
         DeepBench(secs, vm);
         Upgrade(secs, vm);
@@ -399,6 +400,22 @@ public static class ReportService
             ? detail[..marker] + " ・ （已遮蔽）"
             : detail;
     }
+
+    /// <summary>韌體安全：晶片組／SPI／Platform／ACPI 三態事實與 PCIe AER 掃描，讀不到的列以 ValueText 誠實呈現原因。</summary>
+    private static void FirmwareSecurity(List<Section> secs, MainViewModel vm) => Add(secs, "firmware", "韌體安全", s =>
+    {
+        var rows = vm.EvidenceLab.FirmwareSecurityRows
+            .Concat(vm.EvidenceLab.PcieAerFacts.Select(EvidenceFactRow.From))
+            .ToList();
+        if (rows.Count == 0)
+        {
+            s.Note("尚未載入任何韌體安全事實（啟動序列未執行或載入失敗）。");
+            return;
+        }
+        var cells = rows.Select(r => new[] { r.Category, r.Name, r.ValueText, r.Source }).ToList();
+        s.Tbl("三態事實（讀不到即帶原因）", new[] { "分類", "項目", "判讀", "來源" }, cells);
+        s.Note("裁決只來自本機量到的暫存器位元；缺 ring0／缺自家驅動／平台未實作一律如實標示，不以典型值或舊值填補。XsRegProbe 驅動源碼在 repo 的 XsRegProbe/，載入與否由使用者刻意決定。");
+    });
 
     private static void Benchmarks(List<Section> secs, MainViewModel vm) => Add(secs, "bench", "跑分紀錄", s =>
     {

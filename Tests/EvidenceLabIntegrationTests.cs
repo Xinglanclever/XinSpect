@@ -190,6 +190,19 @@ public sealed class EvidenceLabIntegrationTests
     }
 
     [Fact]
+    public void 報告含韌體安全區塊且三態原因如實入文()
+    {
+        var vm = SampleVm();
+        vm.EvidenceLab.LoadChipsetSecurity(new FakePci(available: false, reason: "WinRing0 未載入"));
+
+        string report = ReportService.BuildMarkdownForTests(vm);
+
+        Assert.Contains("韌體安全", report);
+        Assert.Contains("BIOS 寫入保護", report);
+        Assert.Contains("讀不到：WinRing0 未載入", report);
+    }
+
+    [Fact]
     public void 遮蔽報告不洩漏裝置實例識別()
     {
         var vm = SampleVm();
