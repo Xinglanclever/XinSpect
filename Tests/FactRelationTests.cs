@@ -323,4 +323,44 @@ public sealed class FactRelationTests
         Assert.Equal(FactRelation.Consistent,
             FactRelationService.Evaluate(FactRelationRules.All, consistent).Single(r => r.RuleId == "spi.hash_vs_mmio_backend").Relation);
     }
+
+    [Fact]
+    public void SPI控制器存在性_盤點與SPI事實說不同的話就是矛盾()
+    {
+        var at = At;
+        static HardwareFact F(string key, string value, FactAvailability availability = FactAvailability.Present, string? reason = null) =>
+            new(key, "測試", key, value, "", "s", FactTrustLevel.Measured, false, At, null, availability, reason);
+
+        // 方向一：SPI 事實存在但盤點無 0:1F.5 → 矛盾
+        var missing = FactRelationService.Evaluate(FactRelationRules.All,
+            [F("spi.hsfsts", "已鎖定（FLOCKDN=1）")])
+            .Single(r => r.RuleId == "pci.spi_facts_without_controller");
+        Assert.Equal(FactRelation.Contradicts, missing.Relation);
+        Assert.Contains("說不同的話", missing.Reason);
+
+        // 方向二：盤點有裝置但 SPI 服務回「無回應」→ 矛盾
+        var noResponse = FactRelationService.Evaluate(FactRelationRules.All,
+            [new HardwareFact("pci.dev.1f.5", "測試", "x", "SPI…Intel", "", "s", FactTrustLevel.Measured, false, at,
+                null, FactAvailability.Present, null),
+             new HardwareFact("spi.hsfsts", "測試", "x", "", "", "s", FactTrustLevel.Unknown, false, at,
+                null, FactAvailability.NotApplicable, "0:1F.5 無回應（找不到 SPI 控制器）")])
+            .Single(r => r.RuleId == "pci.spi_controller_reported_unreachable");
+        Assert.Equal(FactRelation.Contradicts, noResponse.Relation);
+        Assert.Contains("不該有兩種答案", noResponse.Reason);
+
+        // 兩邊都在 → 兩條規則一致
+        var both = new[] { F("pci.dev.1f.5", "未分類…Intel"), F("spi.hsfsts", "已鎖定（FLOCKDN=1）") };
+        Assert.Equal(FactRelation.Consistent,
+            FactRelationService.Evaluate(FactRelationRules.All, both).Single(r => r.RuleId == "pci.spi_facts_without_controller").Relation);
+        Assert.Equal(FactRelation.Consistent,
+            FactRelationService.Evaluate(FactRelationRules.All, both).Single(r => r.RuleId == "pci.spi_controller_reported_unreachable").Relation);
+
+        // SPI 服務有誠實的不採用理由（非 Intel）→ 方向二不誤報
+        var nonIntel = FactRelationService.Evaluate(FactRelationRules.All,
+            [F("pci.dev.1f.5", "未分類…Intel"),
+             new HardwareFact("spi.hsfsts", "測試", "x", "", "", "s", FactTrustLevel.Unknown, false, at,
+                null, FactAvailability.NotApplicable, "0:1F.5 非 Intel 裝置（SPI 控制器不在此處）")])
+            .Single(r => r.RuleId == "pci.spi_controller_reported_unreachable");
+        Assert.Equal(FactRelation.Consistent, nonIntel.Relation);
+    }
 }

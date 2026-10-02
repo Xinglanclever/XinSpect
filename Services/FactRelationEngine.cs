@@ -314,6 +314,39 @@ public static class FactRelationRules
             },
             "BIOS 區雜湊讀的是記憶體映射快閃；backend.mmio 缺席時雜湊不可能是 Present——守的是管線資料流而非硬體"),
 
+        new("pci.spi_facts_without_controller", "SPI 事實存在而盤點看不到 SPI 控制器",
+            [SpiHsfstsKey],
+            f =>
+            {
+                // 盤點事實「缺席」正是矛盾條件之一，刻意不列輸入鍵（引擎守衛會轉 Unverifiable），規則內自查。
+                if (!f.TryGetValue(Bus0InventoryService.SpiControllerKey, out var controller))
+                    return FactRelationOutcome.Contradicts(
+                        "bus 0 盤點看不到 0:1F.5（無此裝置），但 SPI 快閃事實宣稱存在——同一 PCI 後端，兩個服務說不同的話，管線狀態矛盾");
+                return controller.Availability == FactAvailability.Present
+                    ? FactRelationOutcome.Consistent("盤點看到 SPI 控制器且 SPI 事實存在——上下游一致")
+                    : FactRelationOutcome.Unverifiable($"盤點事實讀不到（{controller.UnavailableReason ?? "原因不明"}）——無從交叉，不下判決");
+            },
+            "bus 0 盤點與 SPI 服務讀的是同一個 PCI 後端；SPI 事實存在而盤點否定控制器存在，代表管線錯亂"),
+
+        new("pci.spi_controller_reported_unreachable", "SPI 控制器在而 SPI 服務稱無回應",
+            [Bus0InventoryService.SpiControllerKey],
+            f =>
+            {
+                var spi = f.TryGetValue(SpiHsfstsKey, out var s) ? s : null;
+                if (spi is null)
+                    return FactRelationOutcome.Unverifiable("SPI 服務事實不存在（管線未跑）——無從交叉，不下判決");
+                return spi.Availability switch
+                {
+                    FactAvailability.Present => FactRelationOutcome.Consistent("盤點看到 SPI 控制器且 SPI 事實存在——上下游一致"),
+                    FactAvailability.NotApplicable when (spi.UnavailableReason ?? "").Contains("無回應", StringComparison.Ordinal)
+                        => FactRelationOutcome.Contradicts(
+                            "盤點看到 0:1F.5 有裝置，SPI 服務卻回報「無回應」——同一 PCI 後端不該有兩種答案，管線狀態矛盾"),
+                    _ => FactRelationOutcome.Consistent(
+                        "盤點與 SPI 事實各自成立（SPI 服務有其不採用的理由：非 Intel、未配置 SPIBAR 等）"),
+                };
+            },
+            "bus 0 盤點與 SPI 服務讀的是同一個 PCI 後端；盤點肯定裝置在、SPI 服務卻稱讀不到，代表管線錯亂"),
+
         new("chipset.smramc_open_while_locked", "SMRAM 鎖定下對外開放的非法組合",
             [SmramcKey],
             f =>
