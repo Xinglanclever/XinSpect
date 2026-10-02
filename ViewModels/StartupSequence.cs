@@ -204,20 +204,19 @@ internal static class StartupSequence
         {
             using var pci = new WinRing0PciConfigReader();
             using var msr = new WinRing0KernelMsrReader();
+            using var mmio = new DriverMmioReader(); // 三個載入共用一個驅動控制代碼；事實都在區塊內同步算完
             vm.EvidenceLab.LoadChipsetSecurity(pci);
-            vm.EvidenceLab.LoadSpiFlash(pci, new DriverMmioReader());
+            vm.EvidenceLab.LoadSpiFlash(pci, mmio);
             vm.EvidenceLab.LoadPlatformSecurity(msr);
-            vm.EvidenceLab.LoadMchbar(pci, new DriverMmioReader());
+            vm.EvidenceLab.LoadMchbar(pci, mmio);
+            // PCIe AER（ECAM 基底 usermode 可得；擴充組態空間要 MMIO——驅動未載時三態）。
+            vm.EvidenceLab.LoadPcieAer(mmio, new Win32AcpiTableSource());
         }
         catch { /* 晶片組安全為附加功能，讀不到由三態標示 */ }
 
         // ACPI 表清單（usermode 列舉，不需驅動；BERT/HEST/SRAT/DMAR 的有無即是平台能力的指紋）。
         try { vm.EvidenceLab.LoadAcpi(new Win32AcpiTableSource()); }
         catch { /* ACPI 列舉為附加功能，讀不到由三態標示 */ }
-
-        // PCIe AER（ECAM 基底 usermode 可得；擴充組態空間要 MMIO——驅動未載時三態）。
-        try { vm.EvidenceLab.LoadPcieAer(new DriverMmioReader(), new Win32AcpiTableSource()); }
-        catch { /* PCIe AER 為附加功能，讀不到由三態標示 */ }
 
         try
         {

@@ -168,6 +168,30 @@ public sealed class RawRegisterCollectTests
         public byte[]? ReadBlock(ulong physicalAddress, int length) => block;
     }
 
+    [Fact]
+    public void 同簽章多張表_來源鍵加後綴不重複_差分不炸()
+    {
+        var regions = RawRegisterCollectService.Collect(
+            new FakePci(0x20, 0x10),
+            new FakeAcpi([FakeAcpiTable("SSDT", 64), FakeAcpiTable("SSDT", 80), FakeAcpiTable("DSDT", 100)]),
+            FakeMsr.From(), new NotLoadedMmioReader(), At);
+
+        var sources = regions.Select(r => r.Source).Where(s => s.StartsWith("acpi:")).ToList();
+        Assert.Equal(3, sources.Count);
+        Assert.Equal(sources.Count, sources.Distinct().Count()); // 鍵必須唯一
+        Assert.Contains("acpi:SSDT.1", sources);
+        Assert.Contains("acpi:SSDT.2", sources);
+        Assert.Contains("acpi:DSDT", sources);
+
+        // 差分按來源鍵 ToDictionary 配對：鍵重複會直接丟例外——重跑一次同構快照驗證不炸
+        var again = RawRegisterCollectService.Collect(
+            new FakePci(0x20, 0x10),
+            new FakeAcpi([FakeAcpiTable("SSDT", 64), FakeAcpiTable("SSDT", 80), FakeAcpiTable("DSDT", 100)]),
+            FakeMsr.From(), new NotLoadedMmioReader(), At);
+        var diff = RawRegisterSnapshotService.Diff(regions, again);
+        Assert.Equal(0, diff.Changed);
+    }
+
     private sealed class MutableMmio(byte[] block) : IMmioReader
     {
         public bool Available => true;
