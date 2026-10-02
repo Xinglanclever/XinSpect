@@ -117,4 +117,81 @@ public class SyntheticFixtureTests
         // PRx 金標：WPE=bit15（0x8000）→ 原始 dword 高低都在對的位置
         Assert.Equal(0x8000u, SyntheticFixtures.EncodePrx(0, 0, writeProtect: true, readProtect: false) & 0x8000);
     }
+
+    [Fact]
+    public void TSE2004_溫度編碼與解碼往返_金標()
+    {
+        // 金標：25°C = 400 單位 = 0x1900；-5.5°C = -88 單位 = 0xFA80
+        Assert.Equal(0x1900, SyntheticFixtures.EncodeTsodTemperature(25.0));
+        Assert.Equal(0xFA80, SyntheticFixtures.EncodeTsodTemperature(-5.5));
+        Assert.Equal(0x2385, SyntheticFixtures.EncodeTsodTemperature(35.5, flags: 5)); // 旗號放 bits[3:0]
+
+        // 往返：編碼後由獨立的解碼器讀回（±1/16°C 內）。
+        // 0.0°C 不進往返——它編碼成 0x0000，解碼器刻意拒絕（無從與未初始化暫存器區分）。
+        foreach (var c in new[] { -20.0, -0.5, 40.25, 85.0, 125.0 })
+        {
+            var decoded = Tsod.TemperatureC(SyntheticFixtures.EncodeTsodTemperature(c));
+            Assert.NotNull(decoded);
+            Assert.Equal(c, decoded!.Value, precision: 2);
+        }
+        // 旗號位元不影響溫度
+        Assert.Equal(25.0, Tsod.TemperatureC(SyntheticFixtures.EncodeTsodTemperature(25.0, flags: 0xF)));
+    }
+
+    [Fact]
+    public void 平台安全MSR_獨立編碼與解碼往返_金標()
+    {
+        var fc = PlatformSecurity.DecodeFeatureControl(SyntheticFixtures.EncodeFeatureControl(true, false, true));
+        Assert.True(fc.Lock);
+        Assert.False(fc.VmxInSmx);
+        Assert.True(fc.VmxOutsideSmx);
+        Assert.Equal(0x5uL, SyntheticFixtures.EncodeFeatureControl(true, false, true)); // 金標：bit0|bit2
+
+        var dbg = PlatformSecurity.DecodeDebugInterface(SyntheticFixtures.EncodeDebugInterface(true, true, true));
+        Assert.True(dbg.Enable);
+        Assert.True(dbg.Lock);
+        Assert.True(dbg.DebugOccurred);
+        Assert.Equal(0x4000_0001uL, SyntheticFixtures.EncodeDebugInterface(true, true, false)); // 金標：ENABLE bit0＋LOCK bit30
+    }
+
+    [Fact]
+    public void 晶片組安全暫存器_獨立編碼與解碼往返_金標()
+    {
+        var cntl = ChipsetSecurity.DecodeBiosCntl(SyntheticFixtures.EncodeBiosCntl(false, true, true));
+        Assert.True(cntl.SmmBwp);
+        Assert.True(cntl.Ble);
+        Assert.False(cntl.BiosWe);
+        Assert.Equal(ChipsetSecurityVerdict.SmmProtected, cntl.Verdict);
+        Assert.Equal(0x22u, SyntheticFixtures.EncodeBiosCntl(false, true, true)); // 金標：bit1|bit5
+
+        var locked = ChipsetSecurity.DecodeSmramc(SyntheticFixtures.EncodeSmramc(dLck: true, dCls: false, dOpen: false));
+        Assert.Equal(ChipsetSecurityVerdict.Protected, locked.Verdict);
+        Assert.False(locked.DOpen);
+
+        var openUnlocked = ChipsetSecurity.DecodeSmramc(SyntheticFixtures.EncodeSmramc(dLck: false, dCls: false, dOpen: true));
+        Assert.Equal(ChipsetSecurityVerdict.Unprotected, openUnlocked.Verdict);
+        Assert.True(openUnlocked.DOpen);
+    }
+
+    [Fact]
+    public void ACPI表頭與MCFG_獨立編碼後解碼全欄位往返()
+    {
+        var table = SyntheticFixtures.EncodeAcpiTable("MCFG", 1, "ACME", "BOARD001",
+            SyntheticFixtures.EncodeMcfgPayload((0xE0000000uL, 0, 0, 255)));
+
+        Assert.True(AcpiTable.TryParseHeader(table, out var header));
+        Assert.Equal("MCFG", header.Signature);
+        Assert.Equal((uint)table.Length, header.Length);
+        Assert.Equal((byte)1, header.Revision);
+        Assert.Equal("ACME", header.OemId);
+        Assert.Equal("BOARD001", header.OemTableId);
+        Assert.True(header.ChecksumValid); // 編碼端算好校驗和，解碼端必須判定有效
+
+        var entries = AcpiTable.McfgEntries(table);
+        var e = Assert.Single(entries);
+        Assert.Equal(0xE0000000uL, e.Base);
+        Assert.Equal(0, e.SegmentGroup);
+        Assert.Equal(0, e.StartBus);
+        Assert.Equal(255, e.EndBus);
+    }
 }

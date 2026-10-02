@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace XinSpect.Tests;
 
 /// <summary>
@@ -71,6 +73,90 @@ public static class SyntheticFixtures
         if (writeProtect) raw |= 1u << 15;
         if (readProtect) raw |= 1u << 31;
         return raw;
+    }
+
+    // ── TSE2004（TSOD）──
+
+    /// <summary>溫度 → 暫存器：°C×16 取 12 位元二補數放 bits[15:4]，旗號 bits[3:0] 自訂。</summary>
+    public static ushort EncodeTsodTemperature(double celsius, byte flags = 0)
+        => (ushort)((((int)Math.Round(celsius * 16) & 0xFFF) << 4) | (flags & 0xF));
+
+    // ── 平台安全 MSR（Intel SDM Vol.4）──
+
+    /// <summary>IA32_FEATURE_CONTROL：Lock bit0、VMX-in-SMX bit1、VMX-outside-SMX bit2。</summary>
+    public static ulong EncodeFeatureControl(bool lockBit, bool vmxInSmx, bool vmxOutsideSmx)
+    {
+        ulong raw = 0;
+        if (lockBit) raw |= 1;
+        if (vmxInSmx) raw |= 1 << 1;
+        if (vmxOutsideSmx) raw |= 1 << 2;
+        return raw;
+    }
+
+    /// <summary>IA32_DEBUG_INTERFACE：ENABLE bit0、LOCK bit30、DEBUG_OCCURRED bit31。</summary>
+    public static ulong EncodeDebugInterface(bool enable, bool lockBit, bool debugOccurred)
+    {
+        ulong raw = 0;
+        if (enable) raw |= 1;
+        if (lockBit) raw |= 1UL << 30;
+        if (debugOccurred) raw |= 1UL << 31;
+        return raw;
+    }
+
+    // ── 晶片組安全暫存器 ──
+
+    /// <summary>BIOS_CNTL：BIOSWE bit0、BLE bit1、SMM_BWP bit5。</summary>
+    public static uint EncodeBiosCntl(bool biosWe, bool ble, bool smmBwp)
+    {
+        uint raw = 0;
+        if (biosWe) raw |= 1;
+        if (ble) raw |= 1 << 1;
+        if (smmBwp) raw |= 1 << 5;
+        return raw;
+    }
+
+    /// <summary>SMRAMC：D_LCK bit4、D_CLS bit5、D_OPEN bit6。</summary>
+    public static uint EncodeSmramc(bool dLck, bool dCls, bool dOpen)
+    {
+        uint raw = 0;
+        if (dLck) raw |= 1 << 4;
+        if (dCls) raw |= 1 << 5;
+        if (dOpen) raw |= 1 << 6;
+        return raw;
+    }
+
+    // ── ACPI 表 ──
+
+    /// <summary>照 ACPI Spec 編 36 位元組表頭：Signature@0、Length@4、Revision@8、Checksum@9、OEMID@10、OEM Table ID@16。</summary>
+    public static byte[] EncodeAcpiTable(string signature, byte revision, string oemId, string oemTableId, byte[] payload)
+    {
+        var table = new byte[36 + payload.Length];
+        Encoding.ASCII.GetBytes(signature.PadRight(4, ' ')).CopyTo(table, 0);
+        BitConverter.GetBytes((uint)table.Length).CopyTo(table, 4);
+        table[8] = revision;
+        Encoding.ASCII.GetBytes(oemId.PadRight(6, ' ')).CopyTo(table, 10);
+        Encoding.ASCII.GetBytes(oemTableId.PadRight(8, ' ')).CopyTo(table, 16);
+        payload.CopyTo(table, 36);
+        byte sum = 0;
+        foreach (byte b in table) sum += b;
+        table[9] = (byte)(0 - sum); // 校驗和：全表位元組和 mod 256 = 0
+        return table;
+    }
+
+    /// <summary>照 ACPI Spec 編 MCFG 條目：基底 u64@0、PCI Segment Group u16@8、起始 bus@10、結束 bus@11、保留 4 bytes。</summary>
+    public static byte[] EncodeMcfgPayload(params (ulong Base, ushort Group, byte StartBus, byte EndBus)[] entries)
+    {
+        var payload = new byte[8 + entries.Length * 16]; // 8 bytes 保留區
+        for (int i = 0; i < entries.Length; i++)
+        {
+            int off = 8 + i * 16;
+            var (b, g, s, e) = entries[i];
+            BitConverter.GetBytes(b).CopyTo(payload, off);
+            BitConverter.GetBytes(g).CopyTo(payload, off + 8);
+            payload[off + 10] = s;
+            payload[off + 11] = e;
+        }
+        return payload;
     }
 
     private static void Put(byte[] buffer, int offset, uint value)
