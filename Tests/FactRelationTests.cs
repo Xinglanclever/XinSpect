@@ -45,8 +45,8 @@ public sealed class FactRelationTests
     [Fact]
     public void 微碼一致性_登錄檔與MSR同版為Consistent_不同版為Contradicts()
     {
-        var factsSame = new[] { Fact("reg.microcode", "0x02007006", 0x02007006), Fact("msr.0x8B", "0x02007006", 0x02007006) };
-        var factsDiff = new[] { Fact("reg.microcode", "0x02007006", 0x02007006), Fact("msr.0x8B", "0x01007006", 0x01007006) };
+        var factsSame = new[] { Fact("reg.microcode", "0x02007006", 0x02007006), Fact("msr.0x8b", "0x02007006", 0x02007006) };
+        var factsDiff = new[] { Fact("reg.microcode", "0x02007006", 0x02007006), Fact("msr.0x8b", "0x01007006", 0x01007006) };
         var rules = FactRelationRules.All;
 
         var same = FactRelationService.Evaluate(rules, factsSame).Single(r => r.RuleId == "microcode.consistency");
@@ -63,7 +63,7 @@ public sealed class FactRelationTests
         var facts = new[]
         {
             Fact("reg.microcode", "", availability: FactAvailability.ReadError, reason: "登錄檔無值"),
-            Fact("msr.0x8B", "0x02007006", 0x02007006),
+            Fact("msr.0x8b", "0x02007006", 0x02007006),
         };
 
         var r = FactRelationService.Evaluate(FactRelationRules.All, facts).Single(r => r.RuleId == "microcode.consistency");
@@ -175,5 +175,57 @@ public sealed class FactRelationTests
     {
         var ids = FactRelationRules.All.Select(r => r.Id).ToList();
         Assert.Equal(ids.Count, ids.Distinct().Count());
+    }
+
+    [Fact]
+    public void SecureBoot開與測試簽章開同時成立_矛盾_單方開_一致()
+    {
+        var bothOn = new[]
+        {
+            Fact("platform.secure_boot", "開啟"),
+            Fact("platform.testsigning", "測試簽章模式開啟（允許未經微軟簽署的核心驅動載入）"),
+        };
+        var r = FactRelationService.Evaluate(FactRelationRules.All, bothOn)
+            .Single(r => r.RuleId == "platform.secureboot_vs_testsigning");
+        Assert.Equal(FactRelation.Contradicts, r.Relation);
+        Assert.Contains("至少一個", r.Reason);
+
+        var sbOnly = new[] { Fact("platform.secure_boot", "開啟"), Fact("platform.testsigning", "關閉") };
+        Assert.Equal(FactRelation.Consistent,
+            FactRelationService.Evaluate(FactRelationRules.All, sbOnly).Single(r => r.RuleId == "platform.secureboot_vs_testsigning").Relation);
+
+        var tsOnly = new[] { Fact("platform.secure_boot", "關閉"), Fact("platform.testsigning", "測試簽章模式開啟（x）") };
+        Assert.Equal(FactRelation.Consistent,
+            FactRelationService.Evaluate(FactRelationRules.All, tsOnly).Single(r => r.RuleId == "platform.secureboot_vs_testsigning").Relation);
+    }
+
+    [Fact]
+    public void AER掃描有結果而ECAM基底缺席_矛盾_掃描缺席_Unverifiable()
+    {
+        var impossible = new[]
+        {
+            Fact("pcieaer.ecam", "", availability: FactAvailability.NotSupported, reason: "平台未提供 MCFG 表"),
+            Fact("pcieaer.scan", "bus 0：掃到 12 台裝置"),
+        };
+        var r = FactRelationService.Evaluate(FactRelationRules.All, impossible)
+            .Single(r => r.RuleId == "pcieaer.scan_vs_ecam");
+        Assert.Equal(FactRelation.Contradicts, r.Relation);
+        Assert.Contains("不可能", r.Reason);
+
+        var consistent = new[]
+        {
+            Fact("pcieaer.ecam", "0xE0000000（bus 0-255）"),
+            Fact("pcieaer.scan", "bus 0：掃到 12 台裝置"),
+        };
+        Assert.Equal(FactRelation.Consistent,
+            FactRelationService.Evaluate(FactRelationRules.All, consistent).Single(r => r.RuleId == "pcieaer.scan_vs_ecam").Relation);
+
+        var scanMissing = new[]
+        {
+            Fact("pcieaer.ecam", "0xE0000000（bus 0-255）"),
+            Fact("pcieaer.scan", "", availability: FactAvailability.InsufficientPrivilege, reason: "缺 MMIO"),
+        };
+        Assert.Equal(FactRelation.Unverifiable,
+            FactRelationService.Evaluate(FactRelationRules.All, scanMissing).Single(r => r.RuleId == "pcieaer.scan_vs_ecam").Relation);
     }
 }

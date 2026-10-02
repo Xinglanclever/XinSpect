@@ -105,13 +105,17 @@ public static class FactRelationRules
 {
     /// <summary>微碼一致性：Windows 說的（登錄檔 Update Revision）與 CPU 說的（MSR 0x8B 高 32 位）應指同一份微碼。</summary>
     public const string MicrocodeRegistryKey = "reg.microcode";
-    /// <summary>MSR 0x8B（IA32_BIOS_SIGN_ID）高 32 位＝目前生效微碼修訂版。</summary>
-    public const string MicrocodeMsrKey = "msr.0x8B";
+    /// <summary>MSR 0x8B（IA32_BIOS_SIGN_ID）高 32 位＝目前生效微碼修訂版。鍵名全小寫（事實鍵規則）。</summary>
+    public const string MicrocodeMsrKey = "msr.0x8b";
     public const string MchbarBaseKey = "mchbar.base";
     public const string MchbarRegistersKey = "mchbar.registers";
     public const string TjMaxKey = "cpu.tjmax";
     public const string BiosCntlKey = "chipset.bios_cntl";
     public const string SmramcKey = "chipset.smramc";
+    public const string SecureBootKey = "platform.secure_boot";
+    public const string TestSigningKey = "platform.testsigning";
+    public const string EcamBaseKey = "pcieaer.ecam";
+    public const string AerScanKey = "pcieaer.scan";
 
     public static readonly IReadOnlyList<FactRelationRule> All =
     [
@@ -169,5 +173,36 @@ public static class FactRelationRules
                     smmBwp ? "SMM_BWP=1 且 SMRAM 已鎖——保護語義成立" : "無 SMM_BWP 宣稱，不需 SMRAM 鎖定交叉");
             },
             "SMM_BWP 的「僅 SMM 可寫」只在 SMRAM 鎖定後才有意義（未鎖的 SMRAM 任何 ring0 都能進）；兩個暫存器要一起看"),
+
+        new("platform.secureboot_vs_testsigning", "Secure Boot 與測試簽章互斥",
+            [SecureBootKey, TestSigningKey],
+            f =>
+            {
+                bool sbOn = f[SecureBootKey].Value == "開啟";
+                bool tsOn = f[TestSigningKey].Value.StartsWith("測試簽章模式開啟", StringComparison.Ordinal);
+                if (sbOn && tsOn)
+                    return FactRelationOutcome.Contradicts(
+                        "Secure Boot 開啟與測試簽章模式生效同時成立——測試簽章在 Secure Boot 開啟的系統上無法生效（核心拒絕例外載入），兩個獨立讀值至少一個有誤或環境遭特殊改動，不要採信任一單方結論");
+                return FactRelationOutcome.Consistent(
+                    sbOn ? "Secure Boot 開啟且未見測試簽章——語義相容"
+                    : tsOn ? "測試簽章模式成立而 Secure Boot 未開啟——語義相容（安全態勢另行評估）"
+                    : "兩者皆非「開啟」——無互斥疑慮");
+            },
+            "testsigning（CodeIntegrity 選項 0x2）與 UEFI Secure Boot 在核心層互斥：SB 開啟時 testsigning 旗標無法生效；同時讀到兩者「開」代表至少一個來源讀錯"),
+
+        new("pcieaer.scan_vs_ecam", "AER 掃描與 ECAM 基底資料流一致性",
+            [AerScanKey],
+            f =>
+            {
+                // 這條規則刻意只宣告 scan 為輸入鍵：ecam「缺席」正是矛盾條件之一，
+                // 不能走引擎的「非 Present 一律 Unverifiable」守衛，須在規則內自行裁決。
+                if (!f.TryGetValue(EcamBaseKey, out var ecam))
+                    return FactRelationOutcome.Unverifiable("ECAM 基底事實不存在（收集管線未跑或鍵名錯置）——無從交叉");
+                return ecam.Availability == FactAvailability.Present
+                    ? FactRelationOutcome.Consistent("ECAM 基底存在且 AER 掃描有結果——上下游一致")
+                    : FactRelationOutcome.Contradicts(
+                        $"AER 掃描宣稱有結果但 ECAM 基底讀不到（{ecam.UnavailableReason ?? "原因不明"}）——掃描不可能沒有基底，管線狀態矛盾");
+            },
+            "AER 掃描結果衍生自 ECAM 基底（MCFG）：基底缺席時掃描不可能 Present。這條規則守的是管線自身的資料流一致性——它抓的矛盾來自程式而不是硬體，同樣該被看見"),
     ];
 }

@@ -80,6 +80,12 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>後端與環境三態事實（誰在服務 MSR/MMIO、HVCI/Secure Boot/testsigning、環境矩陣裁決）。usermode 探測＋讀取器來源標示。</summary>
     public IReadOnlyList<HardwareFact> BackendFacts { get; private set; } = [];
 
+    /// <summary>CPU 韌體身分三態事實（微碼修訂版雙來源＋TjMax）。供交叉對帳的輸入。</summary>
+    public IReadOnlyList<HardwareFact> CpuFirmwareFacts { get; private set; } = [];
+
+    /// <summary>交叉對帳結果（WP5 矛盾矩陣）：每條規則一列，一致／矛盾／無法驗證都如實成列。</summary>
+    public IReadOnlyList<HardwareFact> ReconcileFacts { get; private set; } = [];
+
     /// <summary>
     /// 事實重載（深層存取啟用後免重啟翻真值）：五組驅動相依事實整批「替換」——每組各自重新 Collect 後整組指派，
     /// 不附加不累積；ACPI 表清單不在內（usermode 來源、另由 LoadAcpi 管理）。啟用深層存取後以新鮮的驅動後端
@@ -94,12 +100,35 @@ public sealed class EvidenceLabService : ObservableObject
         MchbarFacts = MchbarService.Collect(pci, mmio, at);
         PcieAerFacts = EcamAerService.Collect(mmio, acpi, at);
         BackendFacts = BackendEnvironmentService.Collect(msr, mmio, at);
+        CpuFirmwareFacts = CpuFirmwareFactsService.Collect(msr, at);
+        ReconcileFacts = EvaluateReconciliation(at);
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
-    /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
+    /// <summary>把全部事實組交給對帳引擎逐規則評估；每條規則一列（一致／矛盾／無法驗證都是 Present 的「結論事實」）。</summary>
+    private IReadOnlyList<HardwareFact> EvaluateReconciliation(DateTimeOffset at)
+    {
+        var all = ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(CpuFirmwareFacts)
+            .Concat(BackendFacts).Concat(MchbarFacts).Concat(PcieAerFacts).Concat(AcpiFacts).ToList();
+        return FactRelationService.Evaluate(FactRelationRules.All, all)
+            .Select(r =>
+            {
+                string verdict = r.Relation switch
+                {
+                    FactRelation.Consistent => "一致",
+                    FactRelation.Contradicts => "矛盾",
+                    _ => "無法驗證",
+                };
+                return new HardwareFact($"reconcile.{r.RuleId}", "交叉對帳", r.RuleName, $"{verdict}：{r.Reason}", "",
+                    $"對帳規則 {r.RuleId}", FactTrustLevel.Derived, false, at);
+            })
+            .ToList();
+    }
+
+    /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
-        ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts).Concat(AcpiFacts)
+        ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
+            .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(AcpiFacts)
             .OrderBy(f => f.Category, StringComparer.Ordinal).ThenBy(f => f.Key, StringComparer.Ordinal)
             .Select(EvidenceFactRow.From).ToList();
 
@@ -316,6 +345,9 @@ public sealed class EvidenceLabService : ObservableObject
         f.AddRange(vm.EvidenceLab.PlatformSecurityFacts);
         // 後端與環境三態事實（誰在服務、HVCI/Secure Boot/testsigning、環境矩陣裁決）。
         f.AddRange(vm.EvidenceLab.BackendFacts);
+        // CPU 韌體身分三態事實（微碼雙來源＋TjMax）與交叉對帳結果。
+        f.AddRange(vm.EvidenceLab.CpuFirmwareFacts);
+        f.AddRange(vm.EvidenceLab.ReconcileFacts);
 
         return f;
     }
@@ -345,6 +377,7 @@ public sealed record EvidenceFactRow(string Category, string Name, string Value,
         "BIOS 區域可寫入",  // FRAP bit1=1
         "除錯埠啟用中",     // DEBUG_INTERFACE ENABLE 且未鎖
         "測試簽章模式開啟", // testsigning：允許未經微軟簽署的核心驅動
+        "矛盾：",           // 交叉對帳 Contradicts：兩個來源說不同的話
     ];
 
     /// <summary>把三態可用性轉成誠實的人類文字：讀不到就說讀不到並附原因，不以空白或舊值冒充。</summary>
