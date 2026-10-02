@@ -55,10 +55,13 @@ public sealed class MchbarTests
     [Fact]
     public void 服務_驅動在_暫存器映射如實回報()
     {
-        var facts = MchbarService.Collect(new FakePci(0xFEDC0001u), new FakeMmio(new byte[0x100]), At);
+        var facts = MchbarService.Collect(new FakePci(0xFEDC0001u), new FakeMmio(new byte[0x100]), At,
+            cpuIdProbe: () => 0x050654);
         var regs = facts.Single(x => x.Key == "mchbar.registers");
         Assert.Equal(FactAvailability.Present, regs.Availability);
-        Assert.Contains("刻意未實作", regs.Value);
+        Assert.Contains("Skylake-X / Cascade Lake", regs.Value); // 世代判定已接入
+        Assert.Contains("公開規格未定義", regs.Value);            // 不出值的界線說清楚
+        Assert.Contains("不是待辦遺漏", regs.Value);
     }
 
     [Fact]
