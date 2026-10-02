@@ -19,7 +19,7 @@ public sealed class EvidenceReloadTests
         svc.LoadMchbar(new DeniedPci(), new DeniedMmio());
         svc.LoadPcieAer(new DeniedMmio(), new EmptyAcpi());
 
-        svc.ReloadDriverBackedFacts(new ReadingPci(), new DeniedMsr(), new DeniedMmio(), new EmptyAcpi());
+        svc.ReloadDriverBackedFacts(new ReadingPci(), new DeniedMsr(), new DeniedMmio(), new EmptyAcpi(), new DeniedIoPort());
 
         var names = svc.FirmwareSecurityRows.Select(r => r.Name).ToList();
         Assert.Equal(names.Count, names.Distinct().Count());
@@ -34,9 +34,9 @@ public sealed class EvidenceReloadTests
         var svc = new EvidenceLabService();
         svc.LoadChipsetSecurity(new DeniedPci());
 
-        svc.ReloadDriverBackedFacts(new ReadingPci(), new DeniedMsr(), new DeniedMmio(), new EmptyAcpi());
+        svc.ReloadDriverBackedFacts(new ReadingPci(), new DeniedMsr(), new DeniedMmio(), new EmptyAcpi(), new DeniedIoPort());
         int afterFirst = svc.FirmwareSecurityRows.Count;
-        svc.ReloadDriverBackedFacts(new ReadingPci(), new DeniedMsr(), new DeniedMmio(), new EmptyAcpi());
+        svc.ReloadDriverBackedFacts(new ReadingPci(), new DeniedMsr(), new DeniedMmio(), new EmptyAcpi(), new DeniedIoPort());
 
         Assert.Equal(afterFirst, svc.FirmwareSecurityRows.Count);
     }
@@ -48,7 +48,7 @@ public sealed class EvidenceReloadTests
         svc.LoadAcpi(new EmptyAcpi());
         var acpiBefore = svc.AcpiFacts;
 
-        svc.ReloadDriverBackedFacts(new ReadingPci(), new DeniedMsr(), new DeniedMmio(), new EmptyAcpi());
+        svc.ReloadDriverBackedFacts(new ReadingPci(), new DeniedMsr(), new DeniedMmio(), new EmptyAcpi(), new DeniedIoPort());
 
         Assert.Same(acpiBefore, svc.AcpiFacts);
     }
@@ -81,6 +81,14 @@ public sealed class EvidenceReloadTests
         public bool Available => false;
         public string? UnavailableReason => "列舉失敗（測試假件）";
         public IReadOnlyList<byte[]> ReadAll() => [];
+    }
+
+    private sealed class DeniedIoPort : IIoPortAccess
+    {
+        public bool Available => false;
+        public string? UnavailableReason => "缺 I/O 埠存取（測試假件）";
+        public byte? InByte(uint port) => null;
+        public bool OutByte(uint port, byte value) => false;
     }
 
     /// <summary>可讀 PCI：BIOS_CNTL=SMM_BWP+BLE、SMRAMC=D_LCK、0:16.0 給 Intel HECI vendor。</summary>

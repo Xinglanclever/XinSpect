@@ -86,12 +86,16 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>交叉對帳結果（WP5 矛盾矩陣）：每條規則一列，一致／矛盾／無法驗證都如實成列。</summary>
     public IReadOnlyList<HardwareFact> ReconcileFacts { get; private set; } = [];
 
+    /// <summary>I/O 埠唯讀事實（POST 代碼等，WP1／A38）。由注入的 IIoPortAccess 載入。</summary>
+    public IReadOnlyList<HardwareFact> IoPortFacts { get; private set; } = [];
+
     /// <summary>
     /// 事實重載（深層存取啟用後免重啟翻真值）：五組驅動相依事實整批「替換」——每組各自重新 Collect 後整組指派，
     /// 不附加不累積；ACPI 表清單不在內（usermode 來源、另由 LoadAcpi 管理）。啟用深層存取後以新鮮的驅動後端
     /// 呼叫即可把三態翻成真值；停用後以不可用後端呼叫則如實回到三態，不留舊值冒充。
     /// </summary>
-    public void ReloadDriverBackedFacts(IPciConfigReader pci, IKernelMsrReader msr, IMmioReader mmio, IAcpiTableSource acpi)
+    public void ReloadDriverBackedFacts(IPciConfigReader pci, IKernelMsrReader msr, IMmioReader mmio,
+        IAcpiTableSource acpi, IIoPortAccess io)
     {
         var at = DateTimeOffset.UtcNow;
         ChipsetFacts = ChipsetSecurityService.Collect(pci, at);
@@ -101,6 +105,7 @@ public sealed class EvidenceLabService : ObservableObject
         PcieAerFacts = EcamAerService.Collect(mmio, acpi, at);
         BackendFacts = BackendEnvironmentService.Collect(msr, mmio, at);
         CpuFirmwareFacts = CpuFirmwareFactsService.Collect(msr, at);
+        IoPortFacts = IoPortFactsService.Collect(io, at);
         ReconcileFacts = EvaluateReconciliation(at);
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
@@ -125,10 +130,10 @@ public sealed class EvidenceLabService : ObservableObject
             .ToList();
     }
 
-    /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
+    /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + I/O 埠 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
-            .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(AcpiFacts)
+            .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(AcpiFacts)
             .OrderBy(f => f.Category, StringComparer.Ordinal).ThenBy(f => f.Key, StringComparer.Ordinal)
             .Select(EvidenceFactRow.From).ToList();
 
@@ -348,6 +353,8 @@ public sealed class EvidenceLabService : ObservableObject
         // CPU 韌體身分三態事實（微碼雙來源＋TjMax）與交叉對帳結果。
         f.AddRange(vm.EvidenceLab.CpuFirmwareFacts);
         f.AddRange(vm.EvidenceLab.ReconcileFacts);
+        // I/O 埠唯讀事實（POST 代碼）。
+        f.AddRange(vm.EvidenceLab.IoPortFacts);
 
         return f;
     }

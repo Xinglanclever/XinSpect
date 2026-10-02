@@ -137,10 +137,11 @@ internal static class StartupSequence
         {
             using var pci = new WinRing0PciConfigReader();
             using var msr = new WinRing0KernelMsrReader();
+            using var io = new WinRing0IoPortAccess();
             var mmio = MmioBackendSelector.Select(); // WinRing0 主力 → XsRegProbe 備援 → 帶原因三態
             try
             {
-                vm.EvidenceLab.ReloadDriverBackedFacts(pci, msr, mmio, new Win32AcpiTableSource());
+                vm.EvidenceLab.ReloadDriverBackedFacts(pci, msr, mmio, new Win32AcpiTableSource(), io);
             }
             finally { (mmio as IDisposable)?.Dispose(); }
         }
