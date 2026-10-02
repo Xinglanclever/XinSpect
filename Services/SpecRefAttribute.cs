@@ -35,6 +35,7 @@ public static class SpecRefRegistry
         typeof(Tsod),            // TSE2004 記憶體溫度感測器
         typeof(SuperIo),         // Super I/O 晶片 ID
         typeof(PlatformTrustDecoder), // VBS/HVCI/CodeIntegrity 狀態解碼
+        typeof(PciKnowledge),    // PCI 類別碼／廠商 ID 知識表（PCI-SIG 規格）
     ];
 
     /// <summary>列舉解碼器上缺 SpecRef 的公開靜態方法（宣告於本型別者）。</summary>
