@@ -26,6 +26,11 @@ public class Bus0InventoryTests
         var spi = Assert.Single(facts, f => f.Key == "pci.dev.1f.5"); // SPI 控制器
         Assert.Contains("0x8086:0x06C0", spi.Value);
 
+        // 資源事實：0:1F.5 的 SPIBAR 記憶體 BAR
+        var spiRes = Assert.Single(facts, f => f.Key == "pci.res.1f.5");
+        Assert.Contains("記憶體（32-bit） 0xFED10000", spiRes.Value);
+        Assert.Contains("5 個未配置 BAR", spiRes.Value);
+
         // dev 0x14：單功能（MF 未設）——fn3 的 xHCI 不該被掃出（規格行為）
         Assert.DoesNotContain(facts, f => f.Key == "pci.dev.14.3");
 
@@ -80,6 +85,9 @@ public class Bus0InventoryTests
                 (0x1F, 0, 0x0C) => 0x0080_0000,   // 多功能位元（header type bits[23:16] 的 bit7）
                 (0x1F, 5, 0x00) => 0x06C0_8086,   // SPI 控制器
                 (0x1F, 5, 0x08) => 0xFF000000u,   // 未分類（Intel SPI 控制器常見值）
+                (0x1F, 5, 0x10) => 0xFED10000u,   // SPIBAR：32-bit 記憶體 BAR
+                (0x1F, 5, 0x30) => 0x00000000u,   // Expansion ROM 未配置
+                (_, _, var r) when r is >= 0x10 and <= 0x30 => 0x0000_0000, // 存在裝置的未實作 BAR／ROM 讀 0（規格行為）
                 _ => 0xFFFF_FFFF,
             };
         }

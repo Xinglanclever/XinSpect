@@ -33,6 +33,7 @@ public static class Bus0InventoryService
             devices++;
             functions++;
             facts.Add(DeviceFact(dev, 0, id0.Value, pci, at));
+            facts.Add(ResourceFact(dev, 0, pci, at));
 
             // 多功能位元：header type（0x0C dword bits[23:16]）bit7。未設就不掃 fn 1–7（規格行為）。
             bool multiFunction = pci.ReadDword(0, dev, 0, 0x0C) is { } header && (header & (1u << 23)) != 0;
@@ -45,6 +46,7 @@ public static class Bus0InventoryService
                 if (id.Value == 0xFFFFFFFF) continue;
                 functions++;
                 facts.Add(DeviceFact(dev, fn, id.Value, pci, at));
+                facts.Add(ResourceFact(dev, fn, pci, at));
             }
         }
 
@@ -72,6 +74,23 @@ public static class Bus0InventoryService
             : $"Vendor 0x{ids.VendorId:X4}:0x{ids.DeviceId:X4}（類別碼讀取失敗，只報原始 ID）";
         return new HardwareFact(key, Category, name, value, "", "PCI 設定空間 0x00/0x08",
             FactTrustLevel.Measured, false, at);
+    }
+
+    /// <summary>資源事實：type0 標頭六個 BAR＋Expansion ROM（唯讀界線：只報型別與基底，大小需寫入探測故不出值）。</summary>
+    private static HardwareFact ResourceFact(byte dev, byte fn, IPciConfigReader pci, DateTimeOffset at)
+    {
+        string key = $"pci.res.{dev:x2}.{fn}";
+        string name = $"PCI 0:{dev:X2}.{fn} 資源";
+        const string source = "PCI 設定空間 0x10-0x24/0x30（唯讀）";
+        var bars = Enumerable.Range(0, 6).Select(i => pci.ReadDword(0, dev, fn, (uint)(0x10 + i * 4))).ToList();
+        if (bars.Any(b => b is null))
+            return new HardwareFact(key, Category, name, "", "", source, FactTrustLevel.Unknown, false, at, null,
+                FactAvailability.ReadError, "BAR 讀取失敗");
+        uint? rom = pci.ReadDword(0, dev, fn, 0x30);
+        var (resources, unconfigured) = PciBars.DecodeHeader(
+            bars.Select(b => b!.Value).ToArray(), rom);
+        return new HardwareFact(key, Category, name, PciBars.Describe(resources, unconfigured), "",
+            source, FactTrustLevel.Measured, false, at, NumericValue: resources.Count);
     }
 
     private static HardwareFact Unavailable(string key, string name, string source, DateTimeOffset at,
