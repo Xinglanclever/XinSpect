@@ -192,6 +192,57 @@ public sealed class HardwareSnapshotServiceTests : IDisposable
         Assert.Null(entry.NumericDelta);
     }
 
+    [Fact]
+    public void 讀不到的事實_保存載入保留可用性與原因不丟失()
+    {
+        var snapshot = Snapshot([
+            Fact("cpu.model", "處理器", "型號", "Example CPU"),
+            Unavailable("chipset.bios_cntl", "韌體安全", "BIOS 寫入保護",
+                FactAvailability.InsufficientPrivilege, "缺 ring0：自家驅動未載入"),
+        ]);
+        string path = FilePath("unavailable.json");
+
+        HardwareSnapshotService.Save(path, snapshot);
+        var loaded = HardwareSnapshotService.Load(path);
+
+        var fact = loaded.Facts.Single(x => x.Key == "chipset.bios_cntl");
+        Assert.Equal(FactAvailability.InsufficientPrivilege, fact.Availability);
+        Assert.Equal("缺 ring0：自家驅動未載入", fact.UnavailableReason);
+    }
+
+    [Fact]
+    public void 事實從讀得到變讀不到_差異標為變更而非移除()
+    {
+        var before = Snapshot([Fact("mchbar.tcl", "記憶體", "tCL", "36", 36, "clk")], _measured);
+        var after = Snapshot([Unavailable("mchbar.tcl", "記憶體", "tCL",
+            FactAvailability.InsufficientPrivilege, "缺 ring0")], _measured.AddMinutes(1));
+
+        var change = Assert.Single(HardwareSnapshotService.Diff(before, after).Changes);
+        Assert.Equal(SnapshotChangeKind.Changed, change.Kind);
+        Assert.Equal(FactAvailability.Present, change.Previous!.Availability);
+        Assert.Equal(FactAvailability.InsufficientPrivilege, change.Current!.Availability);
+    }
+
+    [Fact]
+    public void UI相容入口_HardwareFact的可用性與原因不被轉換丟失()
+    {
+        var facts = new[]
+        {
+            new HardwareFact("cpu.name", "處理器", "型號", "Example CPU", "", "測試",
+                FactTrustLevel.Reported, false, _measured),
+            new HardwareFact("spi.hsfsts", "韌體安全", "SPI 區段權限", "", "", "測試",
+                FactTrustLevel.Unknown, false, _measured, null,
+                FactAvailability.NotSupported, "此平台無 SPI BAR"),
+        };
+
+        var snapshot = HardwareSnapshotService.Create("2.0.0-test", facts, includeSensitive: false);
+
+        var fact = snapshot.Facts.Single(x => x.Key == "spi.hsfsts");
+        Assert.Equal(FactAvailability.NotSupported, fact.Availability);
+        Assert.Equal("此平台無 SPI BAR", fact.UnavailableReason);
+        Assert.Null(fact.NumericValue);
+    }
+
     private HardwareSnapshot Snapshot(
         IEnumerable<HardwareSnapshotFact> facts,
         DateTimeOffset? captured = null,
@@ -218,6 +269,25 @@ public sealed class HardwareSnapshotServiceTests : IDisposable
             Source = "單元測試合成來源",
             Trust = FactTrustLevel.Measured,
             Sensitive = sensitive,
+            MeasuredAtUtc = _measured,
+        };
+
+    private HardwareSnapshotFact Unavailable(
+        string key,
+        string category,
+        string name,
+        FactAvailability availability,
+        string reason)
+        => new()
+        {
+            Key = key,
+            Category = category,
+            Name = name,
+            Value = "",
+            Source = "單元測試合成來源",
+            Trust = FactTrustLevel.Unknown,
+            Availability = availability,
+            UnavailableReason = reason,
             MeasuredAtUtc = _measured,
         };
 

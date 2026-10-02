@@ -48,12 +48,14 @@ public static partial class HardwareSnapshotService
             Category = x.Category,
             Name = x.Name,
             Value = x.Value,
-            NumericValue = x.NumericValue ?? TryNumeric(x.Value),
+            NumericValue = x.Availability == FactAvailability.Present ? (x.NumericValue ?? TryNumeric(x.Value)) : null,
             Unit = x.Unit,
             Source = x.Source,
             Trust = x.Trust,
             Sensitive = x.Sensitive,
             MeasuredAtUtc = x.MeasuredAtUtc,
+            Availability = x.Availability,
+            UnavailableReason = x.UnavailableReason,
         });
         return Create(converted, identity, DateTimeOffset.UtcNow, appVersion,
             includeSensitive ? SensitiveValuePolicy.Preserve : SensitiveValuePolicy.Redact);
@@ -355,8 +357,22 @@ public static partial class HardwareSnapshotService
             throw new ArgumentException("事實 key 必須為 1–160 字元的穩定 ASCII 路徑（小寫字母、數字、點、底線、連字號或方括號）。");
         RequireText(fact.Category, nameof(fact.Category), 128);
         RequireText(fact.Name, nameof(fact.Name), 256);
-        RequireText(fact.Value, nameof(fact.Value), 16_384);
         RequireText(fact.Source, nameof(fact.Source), 512);
+        if (!Enum.IsDefined(fact.Availability)) throw new ArgumentException("availability 無效。");
+        if (fact.Availability == FactAvailability.Present)
+        {
+            // 讀得到：值必填，且不得帶「讀不到的原因」。
+            RequireText(fact.Value, nameof(fact.Value), 16_384);
+            if (!string.IsNullOrWhiteSpace(fact.UnavailableReason))
+                throw new ArgumentException("可用的事實不得帶 unavailableReason。");
+        }
+        else
+        {
+            // 讀不到：值可為空，但必須說明原因，且不得帶數值——誠實原則，不以 0 填補。
+            if (fact.Value is null || fact.Value.Length > 16_384) throw new ArgumentException("value 過長或為 null。");
+            RequireText(fact.UnavailableReason, nameof(fact.UnavailableReason), 512);
+            if (fact.NumericValue is not null) throw new ArgumentException("讀不到的事實不得帶 numericValue。");
+        }
         if (fact.Unit is { } unit && unit.Length > 64) throw new ArgumentException("unit 過長。");
         if (fact.NumericValue is { } n && (double.IsNaN(n) || double.IsInfinity(n)))
             throw new ArgumentException("numericValue 必須是有限數值。");
@@ -390,7 +406,8 @@ public static partial class HardwareSnapshotService
 
     private static HardwareFact ToPublicFact(HardwareSnapshotFact fact) => new(
         fact.Key, fact.Category, fact.Name, fact.Value, fact.Unit ?? "", fact.Source,
-        fact.Trust, fact.Sensitive, fact.MeasuredAtUtc, fact.NumericValue);
+        fact.Trust, fact.Sensitive, fact.MeasuredAtUtc, fact.NumericValue,
+        fact.Availability, fact.UnavailableReason);
 
     private static double? TryNumeric(string value)
         => double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
@@ -412,7 +429,9 @@ public static partial class HardwareSnapshotService
         && string.Equals(a.Unit ?? "", b.Unit ?? "", StringComparison.Ordinal)
         && string.Equals(a.Source, b.Source, StringComparison.Ordinal)
         && a.Trust == b.Trust
-        && a.Sensitive == b.Sensitive;
+        && a.Sensitive == b.Sensitive
+        && a.Availability == b.Availability
+        && string.Equals(a.UnavailableReason ?? "", b.UnavailableReason ?? "", StringComparison.Ordinal);
 
     public static bool IsRedacted(string value)
         => value == RedactedValue || value.StartsWith(RedactedPrefix, StringComparison.Ordinal);

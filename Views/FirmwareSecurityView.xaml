@@ -1,0 +1,43 @@
+<UserControl x:Class="XinSpect.FirmwareSecurityView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16">
+        <StackPanel>
+            <TextBlock Text="韌體安全" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,4"/>
+            <TextBlock TextWrapping="Wrap" Opacity="0.7" Margin="0,0,0,12"
+                       Text="晶片組安全暫存器與 ACPI 錯誤表。讀得到給裁決；缺 ring0／不支援／權限不足一律誠實標示，不以舊值或 0 填補。"/>
+
+            <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="110"/>
+                    <ColumnDefinition Width="160"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="180"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="分類" Opacity="0.5" FontSize="11"/>
+                <TextBlock Grid.Column="1" Text="項目" Opacity="0.5" FontSize="11"/>
+                <TextBlock Grid.Column="2" Text="判讀" Opacity="0.5" FontSize="11"/>
+                <TextBlock Grid.Column="3" Text="來源" Opacity="0.5" FontSize="11"/>
+            </Grid>
+
+            <ItemsControl ItemsSource="{Binding EvidenceLab.FirmwareSecurityRows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110"/>
+                                <ColumnDefinition Width="160"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="180"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Category}" Opacity="0.6"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Name}"/>
+                            <TextBlock Grid.Column="2" FontFamily="Consolas" Text="{Binding ValueText}" TextWrapping="Wrap"/>
+                            <TextBlock Grid.Column="3" Text="{Binding Source}" Opacity="0.6" TextTrimming="CharacterEllipsis"/>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

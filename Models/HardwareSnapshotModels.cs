@@ -18,6 +18,17 @@ public enum FactTrustLevel
     Measured,
 }
 
+/// <summary>事實的可用性三態（含讀不到的原因）。誠實原則的型別承載：讀不到就說讀不到，不以 0／0xFF／舊值填補。</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<FactAvailability>))]
+public enum FactAvailability
+{
+    Present,
+    NotSupported,
+    InsufficientPrivilege,
+    ReadError,
+    NotApplicable,
+}
+
 /// <summary>UI 可直接組成的硬體事實；NumericValue 只在可可靠解析時提供。</summary>
 public sealed record HardwareFact(
     string Key,
@@ -29,7 +40,9 @@ public sealed record HardwareFact(
     FactTrustLevel Trust,
     bool Sensitive,
     DateTimeOffset MeasuredAtUtc,
-    double? NumericValue = null);
+    double? NumericValue = null,
+    FactAvailability Availability = FactAvailability.Present,
+    string? UnavailableReason = null);
 
 /// <summary>匯出敏感值時的明確政策。預設一律遮蔽，Preserve 必須由呼叫端主動指定。</summary>
 public enum SensitiveValuePolicy
@@ -51,6 +64,12 @@ public sealed record HardwareSnapshotFact
     [JsonPropertyOrder(7)] public FactTrustLevel Trust { get; init; }
     [JsonPropertyOrder(8)] public bool Sensitive { get; init; }
     [JsonPropertyOrder(9)] public DateTimeOffset MeasuredAtUtc { get; init; }
+    [JsonPropertyOrder(10)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public FactAvailability Availability { get; init; } = FactAvailability.Present;
+    [JsonPropertyOrder(11)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? UnavailableReason { get; init; }
 }
 
 /// <summary>

@@ -12,6 +12,32 @@ public sealed class EvidenceLabService : ObservableObject
     public ObservableCollection<EvidenceFactRow> Facts { get; } = [];
     public ObservableCollection<EvidenceChangeRow> Changes { get; } = [];
 
+    /// <summary>晶片組安全三態事實（BIOS_CNTL/SMRAMC…）。由啟動路徑以 WinRing0 後端載入；測試注入假讀取器。預設空＝尚未讀。</summary>
+    public IReadOnlyList<HardwareFact> ChipsetFacts { get; private set; } = [];
+
+    /// <summary>以注入的 PCI 讀取器載入晶片組安全事實；讀不到由 ChipsetSecurityService 標三態，不在這裡觸發核心驅動安裝（測試用假讀取器）。</summary>
+    public void LoadChipsetSecurity(IPciConfigReader reader)
+    {
+        ChipsetFacts = ChipsetSecurityService.Collect(reader, DateTimeOffset.UtcNow);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
+    /// <summary>ACPI 表三態事實（表清單 + 逐表簽章/版本/校驗和）。由啟動路徑以 Win32 來源載入；測試注入假來源。</summary>
+    public IReadOnlyList<HardwareFact> AcpiFacts { get; private set; } = [];
+
+    /// <summary>以注入的 ACPI 來源載入表清單事實（usermode，不需驅動；讀不到由 AcpiService 標三態）。</summary>
+    public void LoadAcpi(IAcpiTableSource source)
+    {
+        AcpiFacts = AcpiService.Collect(source, DateTimeOffset.UtcNow);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
+    /// <summary>韌體安全頁用：晶片組安全 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
+    public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
+        ChipsetFacts.Concat(AcpiFacts)
+            .OrderBy(f => f.Category, StringComparer.Ordinal).ThenBy(f => f.Key, StringComparer.Ordinal)
+            .Select(EvidenceFactRow.From).ToList();
+
     public bool IsBusy { get => _busy; private set { if (SetProperty(ref _busy, value)) OnPropertyChanged(nameof(CanRun)); } }
     public bool CanRun => !_busy;
     public string Status { get => _status; private set => SetProperty(ref _status, value); }
@@ -211,15 +237,44 @@ public sealed class EvidenceLabService : ObservableObject
             Add(p + ".signed", "驅動", "簽章狀態", driver.SignText, "", "Win32_PnPSignedDriver");
         }
 
+        // 晶片組安全三態事實（啟動路徑以 WinRing0 後端載入；讀不到即帶原因，不被省略）。
+        f.AddRange(vm.EvidenceLab.ChipsetFacts);
+        // ACPI 表清單三態事實（usermode 列舉）。
+        f.AddRange(vm.EvidenceLab.AcpiFacts);
+
         return f;
     }
 }
 
-public sealed record EvidenceFactRow(string Category, string Name, string Value, string Source, string Trust, bool Sensitive)
+public sealed record EvidenceFactRow(string Category, string Name, string Value, string Source, string Trust, bool Sensitive,
+    FactAvailability Availability = FactAvailability.Present, string? UnavailableReason = null)
 {
-    public string ValueText => Sensitive && HardwareSnapshotService.IsRedacted(Value) ? "（已遮蔽）" : Value;
+    public bool IsUnavailable => Availability != FactAvailability.Present;
+    public string ValueText => IsUnavailable
+        ? UnavailableText(Availability, UnavailableReason)
+        : Sensitive && HardwareSnapshotService.IsRedacted(Value) ? "（已遮蔽）" : Value;
+
+    /// <summary>把三態可用性轉成誠實的人類文字：讀不到就說讀不到並附原因，不以空白或舊值冒充。</summary>
+    internal static string UnavailableText(FactAvailability availability, string? reason)
+    {
+        string label = availability switch
+        {
+            FactAvailability.NotSupported => "不支援",
+            FactAvailability.InsufficientPrivilege => "讀不到",
+            FactAvailability.ReadError => "讀取失敗",
+            FactAvailability.NotApplicable => "不適用",
+            _ => "讀不到",
+        };
+        return string.IsNullOrWhiteSpace(reason) ? label : $"{label}：{reason}";
+    }
+
     public static EvidenceFactRow From(HardwareSnapshotFact f) => new(f.Category, f.Name,
-        string.IsNullOrEmpty(f.Unit) ? f.Value : $"{f.Value} {f.Unit}", f.Source, HardwareSnapshotService.TrustText(f.Trust), f.Sensitive);
+        string.IsNullOrEmpty(f.Unit) ? f.Value : $"{f.Value} {f.Unit}", f.Source,
+        HardwareSnapshotService.TrustText(f.Trust), f.Sensitive, f.Availability, f.UnavailableReason);
+
+    public static EvidenceFactRow From(HardwareFact f) => new(f.Category, f.Name,
+        string.IsNullOrEmpty(f.Unit) ? f.Value : $"{f.Value} {f.Unit}", f.Source,
+        HardwareSnapshotService.TrustText(f.Trust), f.Sensitive, f.Availability, f.UnavailableReason);
 }
 
 public sealed record EvidenceChangeRow(string Kind, string Category, string Name, string Before, string After, string Delta, Severity Severity)
@@ -228,7 +283,16 @@ public sealed record EvidenceChangeRow(string Kind, string Category, string Name
         c.Kind switch { SnapshotChangeKind.Added => "新增", SnapshotChangeKind.Removed => "消失", _ => "變更" },
         c.Current?.Category ?? c.Previous?.Category ?? "其他",
         c.Current?.Name ?? c.Previous?.Name ?? c.Key,
-        c.Previous is { Sensitive: true } ? "（已遮蔽）" : c.Previous?.Value ?? "—",
-        c.Current is { Sensitive: true } ? "（已遮蔽）" : c.Current?.Value ?? "—", c.DeltaText ?? "—",
+        SideText(c.Previous),
+        SideText(c.Current), c.DeltaText ?? "—",
         c.Kind == SnapshotChangeKind.Changed ? Severity.Warning : Severity.Neutral);
+
+    /// <summary>差異某一側的顯示文字：讀不到就顯示原因，敏感值遮蔽，不存在則破折號。</summary>
+    private static string SideText(HardwareFact? f)
+    {
+        if (f is null) return "—";
+        if (f.Availability != FactAvailability.Present)
+            return EvidenceFactRow.UnavailableText(f.Availability, f.UnavailableReason);
+        return f.Sensitive ? "（已遮蔽）" : f.Value;
+    }
 }

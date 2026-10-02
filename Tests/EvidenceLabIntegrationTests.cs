@@ -88,6 +88,52 @@ public sealed class EvidenceLabIntegrationTests
     private static void TryDelete(string path) { try { File.Delete(path); } catch { } }
 
     [Fact]
+    public void 擷取含晶片組安全三態事實_讀取器不可用時標缺ring0()
+    {
+        var vm = SampleVm();
+        vm.EvidenceLab.LoadChipsetSecurity(new FakePci(available: false, reason: "WinRing0 未載入"));
+
+        var snapshot = vm.EvidenceLab.Capture(vm, includeSensitive: false);
+
+        var fact = snapshot.Facts.Single(x => x.Key == "chipset.bios_cntl");
+        Assert.Equal(FactAvailability.InsufficientPrivilege, fact.Availability);
+        Assert.Contains("WinRing0", fact.UnavailableReason);
+    }
+
+    private sealed class FakePci(bool available, string? reason) : IPciConfigReader
+    {
+        public bool Available => available;
+        public string? UnavailableReason => reason;
+        public uint? ReadDword(byte bus, byte device, byte function, uint register) => null;
+    }
+
+    [Fact]
+    public void 擷取含ACPI表清單事實()
+    {
+        var vm = SampleVm();
+        vm.EvidenceLab.LoadAcpi(new FakeAcpi());
+
+        var snapshot = vm.EvidenceLab.Capture(vm, includeSensitive: false);
+
+        Assert.Contains(snapshot.Facts, f => f.Key == "acpi.tables");
+    }
+
+    private sealed class FakeAcpi : IAcpiTableSource
+    {
+        public bool Available => true;
+        public string? UnavailableReason => null;
+        public IReadOnlyList<byte[]> ReadAll() => [MinimalAcpi("BERT")];
+
+        private static byte[] MinimalAcpi(string sig)
+        {
+            var t = new byte[48];
+            System.Text.Encoding.ASCII.GetBytes(sig).CopyTo(t, 0);
+            BitConverter.GetBytes(48u).CopyTo(t, 4);
+            return t;
+        }
+    }
+
+    [Fact]
     public async Task 損壞快照由頁面內回報而不拋成全域錯誤()
     {
         var vm = SampleVm();
@@ -118,6 +164,30 @@ public sealed class EvidenceLabIntegrationTests
         string report = ReportService.BuildMarkdownForTests(vm);
         Assert.DoesNotContain("SERIAL-SECRET", report);
         Assert.Contains("problem code 28", report);
+    }
+
+    [Fact]
+    public void 韌體安全頁可建構並量測不崩()
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                WpfEnv.Ensure();
+                var vm = new MainViewModel();
+                vm.EvidenceLab.LoadChipsetSecurity(new FakePci(available: false, reason: "WinRing0 未載入"));
+                var view = new FirmwareSecurityView { DataContext = vm };
+                view.Measure(new Size(1280, 800));
+                view.Arrange(new Rect(0, 0, 1280, 800));
+            }
+            catch (Exception ex) { failure = ex; }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.IsBackground = true;
+        thread.Start();
+        Assert.True(thread.Join(TimeSpan.FromMinutes(1)), "韌體安全頁建構逾時。");
+        Assert.Null(failure);
     }
 
     [Fact]

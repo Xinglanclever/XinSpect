@@ -197,6 +197,18 @@ internal static class StartupSequence
         vm.DirectSpdReads = nativeSpd;
         if (nativeSpd.Count > 0) vm.SpdModules = SpdDisplay.ToDisplay(nativeSpd);
 
+        // 晶片組安全暫存器（BIOS_CNTL/SMRAMC）：走 WinRing0 讀 bus 0；讀不到由三態如實標示（缺 ring0 / 非 Intel）。
+        try
+        {
+            using var pci = new WinRing0PciConfigReader();
+            vm.EvidenceLab.LoadChipsetSecurity(pci);
+        }
+        catch { /* 晶片組安全為附加功能，讀不到由三態標示 */ }
+
+        // ACPI 表清單（usermode 列舉，不需驅動；BERT/HEST/SRAT/DMAR 的有無即是平台能力的指紋）。
+        try { vm.EvidenceLab.LoadAcpi(new Win32AcpiTableSource()); }
+        catch { /* ACPI 列舉為附加功能，讀不到由三態標示 */ }
+
         try
         {
             var report = await CpuzReportService.ReadAsync();

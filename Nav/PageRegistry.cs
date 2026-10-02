@@ -145,6 +145,15 @@ public static class PageRegistry
         },
         new()
         {
+            Key = "firmware-security", Title = "韌體安全", Group = GSecurity,
+            IconData = "F1 M12,2 L20,5 V11 C20,16.2 16.4,20.3 12,22 7.6,20.3 4,16.2 4,11 V5 Z",
+            Factory = () => new FirmwareSecurityView(),
+            Hint = "BIOS 寫入保護、SMRAM 鎖定、ME 狀態與 ACPI 錯誤表——讀得到給裁決，讀不到誠實標示（缺 ring0／不支援）",
+            Keywords = ["firmware", "security", "韌體", "安全", "bios", "bios_cntl", "smram", "smramc", "me", "csme", "hfs", "acpi", "bert", "hest", "寫入保護"],
+            Advanced = true,
+        },
+        new()
+        {
             Key = "health", Title = "健康", Group = GMonitor,
             IconData = "F1 M12,21.35 L10.55,20.03 C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3 9.24,3 10.91,3.81 12,5.09 "
                      + "13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5 22,12.28 18.6,15.36 13.45,20.04 L12,21.35 Z",
