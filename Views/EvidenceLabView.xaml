@@ -136,6 +136,8 @@
                                     IsEnabled="{Binding HardwareEvidence.CanRun}"/>
                             <Button x:Name="ExportVerdictButton" AutomationProperties.AutomationId="ExportVerdictButton" Style="{StaticResource ToolButton}" Content="匯出驗機報告" Click="ExportVerdict_Click"
                                     Margin="8,0,0,0"/>
+                            <Button x:Name="ExportHtmlReportButton" AutomationProperties.AutomationId="ExportHtmlReportButton" Style="{StaticResource ToolButton}" Content="匯出 HTML 報告" Click="ExportHtmlReport_Click"
+                                    Margin="8,0,0,0" ToolTip="把韌體安全全組事實（含交叉對帳）匯出成自足 HTML 單檔；離線可開、可列印，尾端 SHA-256 可重算驗證。"/>
                         </StackPanel>
                     </Grid>
                     <TextBlock Style="{StaticResource FieldValue}" Text="{Binding HardwareEvidence.Summary}" Margin="0,8,0,0"/>

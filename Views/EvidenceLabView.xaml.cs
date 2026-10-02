@@ -92,6 +92,24 @@ public partial class EvidenceLabView : UserControl
         if (Vm is { } vm) await vm.HardwareEvidence.RefreshAsync();
     }
 
+    // 匯出 HTML 報告：韌體安全全組事實（含交叉對帳）渲染成自足單檔。
+    // 建置與寫檔都在呼叫執行緒同步完成——產生是純字串運算，量級在毫秒；瀏覽器開檔時尾端 SHA-256 可重算驗證。
+    private void ExportHtmlReport_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm is not { } vm) return;
+        var html = HtmlReportService.Build(vm.EvidenceLab.FirmwareSecurityRows,
+            "曦覽 XinSpect ・ 韌體安全報告", DateTimeOffset.UtcNow);
+        var dlg = new SaveFileDialog
+        {
+            Title = "匯出 HTML 報告",
+            Filter = "HTML 報告 (*.html)|*.html",
+            FileName = $"XinSpect_韌體安全報告_{DateTime.Now:yyyyMMdd_HHmmss}.html",
+            AddExtension = true,
+        };
+        if (dlg.ShowDialog() != true) return;
+        AtomicWrite.AllText(dlg.FileName, html);
+    }
+
     // 匯出驗機報告:把最近一次「驗機對帳」的結論輸出成純文字單子,供二手交易存證。
     // 還沒跑過驗機對帳時 BuildVerdictReport() 回 null——如實提示,不產生一份空報告。
     private void ExportVerdict_Click(object sender, RoutedEventArgs e)
