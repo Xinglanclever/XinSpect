@@ -37,10 +37,24 @@
 
 **對帳規則實作方法學備忘**：「上游事實缺席正是矛盾條件」的管線規則（scan_vs_ecam、mmio_vs_spi、msr_vs_platform 三條）刻意不把後端事實列輸入鍵——引擎會把非 Present 輸入統一轉 Unverifiable，此類規則須在規則內 TryLookup 自行裁決。
 
+## ITER23 ・ G3 批次：報告與腳本化 API（2026-10-03）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP7-① | HTML 自足報告產生器（無外部資源、五特殊字元轉義其餘原樣可讀、讀不到／警示列樣式、尾端 SHA-256 離線可重算核驗） | 2748 | d94de8f |
+| R2 | WP7-② | 「匯出 HTML 報告」按鈕接進證據實驗室（韌體安全全組＋交叉對帳） | 2748 | 02624c7 |
+| R3 | WP32-① | CLI 模式：`--json evidence [--query 前綴] [--out 檔案]`，退出碼語意 0/2/1；`EvidenceCollection` 收斂啟動序列與 CLI 的單一後端組合點；App.xaml.cs 以 AttachConsole 接回主控台 | 2753 | a668931 |
+| R4 | WP32-② | `XinSpect.psm1` PowerShell 模組（Get-XinSpectEvidence）＋UTF-8 BOM 機器檢查（PS 5.1 無 BOM 讀中文必炸） | 2755 | 9e7155c |
+| R5 | 制度 | ITERATIONS.md 記錄本批＋記憶庫 | — | 本輪 |
+
+**里程碑達成**：G3（WP7 報告＋WP32 API）落地——「交得出可驗證報告（HTML＋SHA-256 離線核驗）、能進 CI（CLI＋退出碼）」。**G1–G3＝世界級的工具。**
+
 ## 待辦（下一批）
 
-- WP3 MCHBAR 時序解碼（對準 Intel datasheet／CHIPSEC 再出貨）、WP2 剩餘（VRM 逐相 PMBus、iMC 匯流排 TSOD）、WP7 報告與 WP32 API（G3）。
+- G4 收尾：WP44 SpecRef 覆蓋推廣（目前五解碼器）、WP45 產生器擴大（更多解碼器）、WP50 Stryker mutation＋differential testing。
+- WP3 MCHBAR 時序解碼（對準 Intel datasheet／CHIPSEC 再出貨）、WP4 SPI 韌體 hash 比對。
+- WP30 CHIPSEC 知識庫移植（含 Super I/O 名稱對照表的出處化）。
 - 對帳規則 12 → ≥25：後續規則依賴新事實來源（SPD↔TSOD、SMART、儲存面），隨 WP 推進補。
+- CLI 擴充候選：全機快照（需 headless 化 WPF 服務層）、批次清單檔。
 - PawnIO 模組整合（HVCI 環境備援；本機 IntelMsr 模組已知回 0 的問題要先解）。
-- Super I/O 晶片名稱對照表（要有出處，進知識庫 WP30/D2）。
-- 發佈：等使用者明說。20 輪＋ITER21＋本批內容尚未折疊進 changelog（發佈前必做，FileVersion .5→.6）。
+- 發佈：等使用者明說。20 輪＋ITER21–23 內容尚未折疊進 changelog（發佈前必做，FileVersion .5→.6）。
