@@ -1779,6 +1779,20 @@ public static class HelpCatalog
             What = "五組可重複量測的底層證據：PCI 資源、SPD 交叉核對、PnP 裝置診斷、逐核有效頻率與 NVMe 健康計數器。",
             Does = "每次擷取都只追加帶時間的樣本；計數器倒退會標示重設而不算負成長。PCI 記憶體資源不是顯示記憶體容量，頻率樣本也不是 P-state 上限。",
         },
+        ["firmware-security/韌體安全"] = new()
+        {
+            Title = "韌體安全",
+            What = "直接讀晶片組與處理器的安全暫存器：BIOS 寫入保護（BIOS_CNTL）、SMRAM 鎖定（SMRAMC）、ME 狀態（HFSTS1）、SPI 快閃鎖定旗號／區域權限／保護範圍、ACPI 錯誤表，以及 IA32_FEATURE_CONTROL 與 IA32_DEBUG_INTERFACE。",
+            Does = "每一列都是從本機量到的位元下出來的裁決，來源欄標明出自哪顆暫存器；讀不到（缺 ring0、平台未實作、自家驅動未載）就標原因，不以典型值或舊值填補。對你不利的裁決（BLE=0、D_LCK=0、除錯埠開放等）以警示色呈現。",
+        },
+        ["firmware-security/深層核心存取"] = new()
+        {
+            Title = "深層核心存取",
+            What = "載入本專案的 XsRegProbe 白名單唯讀核心驅動，讓 SPI 快閃與 PCIe AER 等 MMIO 暫存器讀得到。驅動源碼在 repo 的 XsRegProbe/，.sys 需自行編譯簽章後載入（見 XsRegProbe/BUILD-給使用者.md）。",
+            Does = "開＝產生本專案自簽 CA 裝進信任庫（只放行這一張憑證，不開全機 test-signing）並啟動 XsRegProbe 服務；關＝移除信任並卸載服務，不留痕跡。非提權執行時按鈕不會做任何變更；驅動對允許清單外的位址一律拒絕。",
+            Risk = HelpRisk.Caution,
+            Safety = "會安裝核心驅動服務與本專案簽發的根憑證（皆可完全移除）；驅動唯讀、退出即卸載，但載入任何核心碼前請先看懂建置手冊。",
+        },
         ["terminal/終端機"] = new()
         {
             Title = "終端機",
