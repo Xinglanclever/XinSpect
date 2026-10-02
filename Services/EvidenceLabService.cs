@@ -89,6 +89,9 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>I/O 埠唯讀事實（POST 代碼等，WP1／A38）。由注入的 IIoPortAccess 載入。</summary>
     public IReadOnlyList<HardwareFact> IoPortFacts { get; private set; } = [];
 
+    /// <summary>CMOS/RTC 唯讀三態事實（VRT、RTC 時鐘、PC-AT 校驗和；WP6）。廠商設定區刻意不解碼。</summary>
+    public IReadOnlyList<HardwareFact> CmosFacts { get; private set; } = [];
+
     /// <summary>
     /// 事實重載（深層存取啟用後免重啟翻真值）：五組驅動相依事實整批「替換」——每組各自重新 Collect 後整組指派，
     /// 不附加不累積；ACPI 表清單不在內（usermode 來源、另由 LoadAcpi 管理）。啟用深層存取後以新鮮的驅動後端
@@ -106,6 +109,7 @@ public sealed class EvidenceLabService : ObservableObject
         BackendFacts = BackendEnvironmentService.Collect(msr, mmio, at);
         CpuFirmwareFacts = CpuFirmwareFactsService.Collect(msr, at);
         IoPortFacts = IoPortFactsService.Collect(io, at);
+        CmosFacts = CmosService.Collect(io, at);
         ReconcileFacts = EvaluateReconciliation(at);
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
@@ -130,10 +134,10 @@ public sealed class EvidenceLabService : ObservableObject
             .ToList();
     }
 
-    /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + I/O 埠 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
+    /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + I/O 埠 + CMOS + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
-            .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(AcpiFacts)
+            .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts).Concat(AcpiFacts)
             .OrderBy(f => f.Category, StringComparer.Ordinal).ThenBy(f => f.Key, StringComparer.Ordinal)
             .Select(EvidenceFactRow.From).ToList();
 
@@ -355,6 +359,8 @@ public sealed class EvidenceLabService : ObservableObject
         f.AddRange(vm.EvidenceLab.ReconcileFacts);
         // I/O 埠唯讀事實（POST 代碼）。
         f.AddRange(vm.EvidenceLab.IoPortFacts);
+        // CMOS/RTC 唯讀三態事實。
+        f.AddRange(vm.EvidenceLab.CmosFacts);
 
         return f;
     }
@@ -385,6 +391,7 @@ public sealed record EvidenceFactRow(string Category, string Name, string Value,
         "除錯埠啟用中",     // DEBUG_INTERFACE ENABLE 且未鎖
         "測試簽章模式開啟", // testsigning：允許未經微軟簽署的核心驅動
         "矛盾：",           // 交叉對帳 Contradicts：兩個來源說不同的話
+        "RTC 掉電",         // CMOS VRT=0：電池失效或曾斷電
     ];
 
     /// <summary>把三態可用性轉成誠實的人類文字：讀不到就說讀不到並附原因，不以空白或舊值冒充。</summary>
