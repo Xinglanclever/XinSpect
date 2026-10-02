@@ -38,6 +38,19 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>SPI 快閃地圖與 BIOS 區雜湊三態事實（WP4）。雜湊＝可讀面，RPE 攔截與全 F 頁如實標注。</summary>
     public IReadOnlyList<HardwareFact> SpiHashFacts { get; private set; } = [];
 
+    /// <summary>
+    /// BIOS 區 vs 參考映像的比對結果（使用者觸發的一次性動作，最多保留最近一次）。
+    /// 驅動相依事實重載時清空——資料更新後舊比對失效，不留舊結論冒充現狀。
+    /// </summary>
+    public IReadOnlyList<HardwareFact> SpiCompareFacts { get; private set; } = [];
+
+    /// <summary>收錄一次比對結果（替換上一次）；重載驅動相依事實會清空。</summary>
+    public void AddSpiCompareFact(HardwareFact fact)
+    {
+        SpiCompareFacts = [fact];
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
     /// <summary>以注入的 PCI + MMIO 讀取器載入 SPI 快閃安全事實；測試注入假讀取器，不在這裡觸發核心驅動安裝。</summary>
     public void LoadSpiFlash(IPciConfigReader pci, IMmioReader mmio)
     {
@@ -131,6 +144,7 @@ public sealed class EvidenceLabService : ObservableObject
         PlatformSecurityFacts = PlatformSecurityMsrService.Collect(msr, at);
         SpiFlashFacts = SpiFlashService.Collect(pci, mmio, at);
         SpiHashFacts = SpiFlashHashService.Collect(pci, mmio, at);
+        SpiCompareFacts = []; // 資料更新後舊比對失效，如實清空
         MchbarFacts = MchbarService.Collect(pci, mmio, at);
         PcieAerFacts = EcamAerService.Collect(mmio, acpi, at);
         BackendFacts = BackendEnvironmentService.Collect(msr, mmio, at);
@@ -257,13 +271,13 @@ public sealed class EvidenceLabService : ObservableObject
 
     /// <summary>全部事實組合併成單一清單（CLI 與報告用）。與 FirmwareSecurityRows 同集合、不轉渲染列。</summary>
     public IReadOnlyList<HardwareFact> AllFacts =>
-        ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
+        ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
             .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(PciInventoryFacts).Concat(AcpiFacts).ToList();
 
     /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + I/O 埠 + CMOS + SMBus + PCI 盤點 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
-        ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
+        ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
             .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(PciInventoryFacts).Concat(AcpiFacts)
             .OrderBy(f => f.Category, StringComparer.Ordinal).ThenBy(f => f.Key, StringComparer.Ordinal)
@@ -474,6 +488,8 @@ public sealed class EvidenceLabService : ObservableObject
         f.AddRange(vm.EvidenceLab.SpiFlashFacts);
         // SPI 快閃地圖與 BIOS 區雜湊（WP4）。
         f.AddRange(vm.EvidenceLab.SpiHashFacts);
+        // BIOS 區 vs 參考映像的比對結果（使用者觸發，重載後清空）。
+        f.AddRange(vm.EvidenceLab.SpiCompareFacts);
         // ACPI 表清單三態事實（usermode 列舉）。
         f.AddRange(vm.EvidenceLab.AcpiFacts);
         // PCIe AER 三態事實（ECAM 掃描；歸類「PCIe」）。

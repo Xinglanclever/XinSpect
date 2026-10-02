@@ -18,6 +18,9 @@
                 <Button x:Name="RefreshEvidenceButton" AutomationProperties.AutomationId="RefreshEvidenceButton"
                         Style="{StaticResource ToolButton}" Content="重新擷取" Click="RefreshEvidence_Click"
                         Margin="12,2,0,0" ToolTip="以目前可用的讀取後端重新擷取驅動相依事實；啟用深層存取後不必重啟即可翻成真值。"/>
+                <Button x:Name="CompareFlashButton" AutomationProperties.AutomationId="CompareFlashButton"
+                        Style="{StaticResource ToolButton}" Content="與參考映像比對" Click="CompareFlash_Click"
+                        Margin="8,2,0,0" ToolTip="選一份原廠（或信任來源）的 BIOS 區映像，與快閃可讀面逐 4KB 塊比對；大小不符會誠實拒比。"/>
             </StackPanel>
             <TextBlock TextWrapping="Wrap" Opacity="0.7" Margin="0,0,0,12"
                        Text="晶片組安全暫存器與 ACPI 錯誤表。讀得到給裁決；缺 ring0／不支援／權限不足一律誠實標示，不以舊值或 0 填補。"/>

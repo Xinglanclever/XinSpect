@@ -21,4 +21,16 @@ public static class EvidenceCollection
         }
         finally { (mmio as IDisposable)?.Dispose(); }
     }
+
+    /// <summary>BIOS 區 vs 參考映像的比對（UI 與 CLI 共用入口）：組合後端後跑一次比對，回結果事實。</summary>
+    public static HardwareFact CompareFlashWithReference(byte[] reference)
+    {
+        using var pci = new WinRing0PciConfigReader();
+        var mmio = MmioBackendSelector.Select();
+        try
+        {
+            return SpiFlashCompareService.Compare(pci, mmio, reference, DateTimeOffset.UtcNow);
+        }
+        finally { (mmio as IDisposable)?.Dispose(); }
+    }
 }

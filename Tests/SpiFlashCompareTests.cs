@@ -91,6 +91,39 @@ public class SpiFlashCompareTests
         Assert.Equal(FactAvailability.InsufficientPrivilege, fact.Availability);
     }
 
+    [Fact]
+    public void 比對結果槽_收錄替換_重載清空()
+    {
+        var svc = new EvidenceLabService();
+        svc.AddSpiCompareFact(new HardwareFact("spi.bios_compare", "韌體安全", "BIOS 區比對（vs 參考映像）",
+            "差異 3 個 4KB 塊", "", "s", FactTrustLevel.Measured, false, At, 3));
+        svc.AddSpiCompareFact(new HardwareFact("spi.bios_compare", "韌體安全", "BIOS 區比對（vs 參考映像）",
+            "一致（64 個 4KB 塊全部相同）", "", "s", FactTrustLevel.Measured, false, At, 0));
+
+        var rows = svc.FirmwareSecurityRows.Where(r => r.Name == "BIOS 區比對（vs 參考映像）").ToList();
+        Assert.Single(rows); // 最多保留最近一次
+        Assert.Contains("一致", Assert.Single(rows).ValueText);
+
+        // 重載驅動相依事實（假件）後：舊比對如實清空。
+        svc.ReloadDriverBackedFacts(new FakeSpiPci(), new DeniedMsr(), new NotLoadedMmioReader(),
+            new EmptyAcpiSource(), new UnavailableIoPortAccess("x"));
+        Assert.DoesNotContain(svc.FirmwareSecurityRows, r => r.Name == "BIOS 區比對（vs 參考映像）");
+    }
+
+    private sealed class DeniedMsr : IKernelMsrReader
+    {
+        public bool Available => false;
+        public string? UnavailableReason => "缺 ring0（測試假件）";
+        public ulong? ReadMsr(uint index) => null;
+    }
+
+    private sealed class EmptyAcpiSource : IAcpiTableSource
+    {
+        public bool Available => false;
+        public string? UnavailableReason => "列舉失敗（測試假件）";
+        public IReadOnlyList<byte[]> ReadAll() => [];
+    }
+
     private sealed class FakeSpiPci : IPciConfigReader
     {
         public bool Available => true;
