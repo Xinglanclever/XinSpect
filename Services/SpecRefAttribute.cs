@@ -1,0 +1,65 @@
+namespace XinSpect;
+
+/// <summary>
+/// 規格引用（V7 M1／WP44）：標注某個解碼方法／型別所依據的規格出處——文件、章節、暫存器、位元位置。
+/// 「讓不猜變成可稽核」的型別承載：<b>沒有 SpecRef 的欄位＝未驗證</b>（V7 §12.11），
+/// 覆蓋面由 Tests/SpecRefCoverageTests.cs 以反射機器檢查，解碼器新增方法而未附引用會直接紅燈。
+/// 引用格式建議：「文件名稱, 位置（暫存器／位元／位址）；交叉核對來源」。
+/// </summary>
+[AttributeUsage(AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Class | AttributeTargets.Struct,
+    AllowMultiple = true)]
+public sealed class SpecRefAttribute : Attribute
+{
+    public SpecRefAttribute(string reference)
+    {
+        if (string.IsNullOrWhiteSpace(reference))
+            throw new ArgumentException("規格引用不可空——空的引用等於沒有引用", nameof(reference));
+        Reference = reference;
+    }
+
+    public string Reference { get; }
+}
+
+/// <summary>SpecRef 覆蓋面的單一齣處：要機器檢查哪些解碼器、讀出引用內容，都走這裡。</summary>
+public static class SpecRefRegistry
+{
+    /// <summary>已納入機器檢查的解碼器（深層暫存器計畫的五個安全相關解碼器）。新解碼器在此註冊後即受覆蓋檢查約束。</summary>
+    public static readonly Type[] CoveredDecoders =
+    [
+        typeof(SpiFlash),        // PCH SPI 快閃暫存器
+        typeof(ChipsetSecurity), // BIOS_CNTL／SMRAMC／HFSTS1
+        typeof(PlatformSecurity),// FEATURE_CONTROL／DEBUG_INTERFACE MSR
+        typeof(PcieAer),         // PCIe AER 擴充能力
+        typeof(AcpiTable),       // ACPI 表頭／MCFG／HEST／BERT
+    ];
+
+    /// <summary>列舉解碼器上缺 SpecRef 的公開靜態方法（宣告於本型別者）。</summary>
+    public static IReadOnlyList<string> MethodsMissingRefs()
+    {
+        var missing = new List<string>();
+        foreach (var type in CoveredDecoders)
+        {
+            foreach (var m in type.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.DeclaredOnly))
+            {
+                if (!m.GetCustomAttributes(typeof(SpecRefAttribute), inherit: false).Any())
+                    missing.Add($"{type.Name}.{m.Name}");
+            }
+        }
+        return missing;
+    }
+
+    /// <summary>全部引用條目（方法上的直接引用；允許多條）。用於覆蓋率報告與「引用非空」檢查。</summary>
+    public static IReadOnlyList<(string Member, string Reference)> AllReferences()
+    {
+        var refs = new List<(string, string)>();
+        foreach (var type in CoveredDecoders)
+        {
+            foreach (var m in type.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.DeclaredOnly))
+            {
+                foreach (SpecRefAttribute a in m.GetCustomAttributes(typeof(SpecRefAttribute), inherit: false))
+                    refs.Add(($"{type.Name}.{m.Name}", a.Reference));
+            }
+        }
+        return refs;
+    }
+}

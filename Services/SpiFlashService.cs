@@ -33,6 +33,7 @@ public static class SpiFlash
     private const uint KnownHsfstsBits = 0x0001 | 0x0002 | 0x0004 | 0x0800 | 0x2000 | 0x8000;
     private const uint KnownFrapBits = 0x00FF;
 
+    [SpecRef("Intel PCH EDS, SPIBAR HSFSTS（SPIBAR+0x04）：FDONE bit0、FCERR bit1、AEL bit2、WRSDIS bit11、FDOPSS bit13、FLOCKDN bit15；coreboot intelmetool／CHIPSEC spi_lock 交叉核對")]
     public static SpiHsfstsDecode DecodeHsfsts(uint raw)
     {
         var verdict = (raw & 0x8000) != 0 ? ChipsetSecurityVerdict.Protected : ChipsetSecurityVerdict.Unprotected;
@@ -41,13 +42,15 @@ public static class SpiFlash
             (raw & 0x0800) != 0, (raw & 0x2000) != 0, (raw & 0x8000) != 0,
             raw & ~KnownHsfstsBits, verdict);
     }
-
+    [SpecRef("Intel PCH EDS, SPIBAR FRAP（SPIBAR+0x50）：BRWA bits[3:0]（bit1=BIOS 區 host 寫允准）、BRRA bits[7:4]；CHIPSEC spi_desc 交叉核對")]
     public static SpiFrapDecode DecodeFrap(uint raw)
         => new((byte)(raw & 0xF), (byte)((raw >> 4) & 0xF), raw & ~KnownFrapBits);
 
+    [SpecRef("Intel PCH EDS, SPIBAR FREG0-5（+0x54 起，每筆 4 bytes）：基底 bits[14:0]、上限 bits[30:16]，4KB 單位；0x7FFF 上限編碼見 handoff §9")]
     public static SpiFregDecode DecodeFreg(uint raw)
         => new((ushort)(raw & 0x7FFF), (ushort)((raw >> 16) & 0x7FFF), raw == 0);
 
+    [SpecRef("Intel PCH EDS, SPIBAR PR0-4（+0x74 起，每筆 4 bytes）：WPE bit15、RPE bit31，基底/上限佈局同 FREG；coreboot intelmetool 交叉核對")]
     public static SpiPrxDecode DecodePrx(uint raw)
         => new((ushort)(raw & 0x7FFF), (ushort)((raw >> 16) & 0x7FFF), (raw & 0x8000) != 0, (raw & 0x80000000) != 0);
 
@@ -56,6 +59,7 @@ public static class SpiFlash
     /// FLOCKDN=0 代表 SPI 保護設定本身可被 ring0 改、FRAP bit1 代表描述符准 host 寫 BIOS 區、PR 全停用代表無範圍保護。
     /// 只綜合已量到的事實，不外推。
     /// </summary>
+    [SpecRef("綜合裁決：輸入位元定義分別引 BIOS_CNTL（PCI 0:1F.0+0xDC，見 ChipsetSecurity）與 SPIBAR HSFSTS/FRAP/PR（Intel PCH EDS，見上）；組合邏輯為本專案方法學，只綜合已量到的事實不外推")]
     public static BiosWriteSurface ComposeWriteSurface(
         BiosCntlDecode biosCntl, SpiHsfstsDecode hsfsts, SpiFrapDecode frap, IReadOnlyList<SpiPrxDecode> prs)
     {

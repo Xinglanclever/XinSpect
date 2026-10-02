@@ -28,6 +28,7 @@ public readonly record struct HfsDecode(byte WorkingState, bool FwInitComplete, 
 public static class ChipsetSecurity
 {
     /// <summary>解碼 BIOS_CNTL：BLE=0 代表無鎖、任何 ring0 都能開啟 BIOS 寫入；SMM_BWP 為最強。</summary>
+    [SpecRef("Intel PCH EDS, BIOS_CNTL（PCI 0:1F.0 +0xDC）：BIOSWE bit0、BLE bit1、SMM_BWP bit5；CHIPSEC bmp Controls 交叉核對")]
     public static BiosCntlDecode DecodeBiosCntl(uint raw)
     {
         bool biosWe = (raw & 0x01) != 0;
@@ -40,6 +41,7 @@ public static class ChipsetSecurity
     }
 
     /// <summary>解碼 SMRAMC：D_LCK 鎖住 SMRAM 設定即保護；未鎖（含 D_OPEN 對外開放）皆視為無保護。</summary>
+    [SpecRef("Intel EDS, SMRAMC（PCI 0:0.0 +0x88）：D_LCK bit4、D_CLS bit5、D_OPEN bit6；CHIPSEC smram 交叉核對")]
     public static SmramcDecode DecodeSmramc(uint raw)
     {
         bool dLck = (raw & 0x10) != 0;
@@ -50,6 +52,7 @@ public static class ChipsetSecurity
     }
 
     /// <summary>解碼 HFSTS1（coreboot me_hfs 佈局）。未定義的 operation_mode 標 Other 並保留原始 nibble，不臆測。</summary>
+    [SpecRef("coreboot me_hfs 佈局（HFSTS1，HECI1 0:16.0 +0x40）：working_state bits[3:0]、fw_init_complete bit9、operation_mode bits[19:16]；coreboot util/intelmetool 交叉核對")]
     public static HfsDecode DecodeHfs(uint raw)
     {
         byte workingState = (byte)(raw & 0xF);

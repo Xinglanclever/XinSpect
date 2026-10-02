@@ -14,6 +14,7 @@ public static class AcpiTable
 {
     public const int HeaderLength = 36;
 
+    [SpecRef("ACPI Spec, 表頭通用格式（36 bytes）：Signature@0、Length@4、Revision@8、OEMID@10、OEM Table ID@16、Checksum@9，全表位元組和 mod 256 = 0")]
     public static bool TryParseHeader(ReadOnlySpan<byte> table, out AcpiTableHeader header)
     {
         header = default;
@@ -33,10 +34,12 @@ public static class AcpiTable
     }
 
     /// <summary>HEST 錯誤源數：標頭(36)+ErrorSourceCount(u32@36)。非 HEST 或過短回 null。</summary>
+    [SpecRef("ACPI Spec, HEST 表：Error Source Count u32 @36")]
     public static uint? HestErrorSourceCount(ReadOnlySpan<byte> table)
         => table.Length >= 40 && table[..4].SequenceEqual("HEST"u8) ? BitConverter.ToUInt32(table[36..40]) : null;
 
     /// <summary>BERT 開機錯誤區長度：標頭(36)+BootErrorRegionLength(u32@36)。非 BERT 或過短回 null。實際錯誤記錄在實體位址，需 ring0（Phase 3）。</summary>
+    [SpecRef("ACPI Spec, BERT 表：Boot Error Region Length u32 @36（Boot Error Region 位址在同表 @40 起）")]
     public static uint? BertBootErrorRegionLength(ReadOnlySpan<byte> table)
         => table.Length >= 48 && table[..4].SequenceEqual("BERT"u8) ? BitConverter.ToUInt32(table[36..40]) : null;
 
@@ -46,6 +49,7 @@ public static class AcpiTable
     /// </summary>
     /// <summary>MCFG 的全部條目。條目格式：基底 u64@0、PCI 群組 u16@8、起始 bus@10、結束 bus@11。
     /// 非 MCFG 或無條目回空陣列——ECAM 基底是平台事實，讀不到就說讀不到。</summary>
+    [SpecRef("ACPI Spec, MCFG 表：標頭 36 bytes＋保留 8 bytes 後每條目 16 bytes——基底位址 u64@0、PCI Segment Group u16@8、起始 bus@10、結束 bus@11")]
     public static IReadOnlyList<McfgEntry> McfgEntries(ReadOnlySpan<byte> table)
     {
         if (table.Length < 44 || !table[..4].SequenceEqual("MCFG"u8)) return [];
@@ -62,6 +66,7 @@ public static class AcpiTable
         return entries;
     }
 
+    [SpecRef("ACPI Spec, MCFG 條目佈局同 McfgEntries；segment 0 條目＝平台 ECAM 基底（PCIe Spec §7.2.2 對應）")]
     public static (ulong Base, byte StartBus, byte EndBus)? McfgPrimaryEcam(ReadOnlySpan<byte> table)
     {
         var first = McfgEntries(table).FirstOrDefault();

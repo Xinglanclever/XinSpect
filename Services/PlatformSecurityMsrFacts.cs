@@ -13,6 +13,7 @@ public readonly record struct DebugInterfaceDecode(bool Enable, bool Lock, bool 
 public static class PlatformSecurity
 {
     /// <summary>FEATURE_CONTROL：Lock=0 時 BIOS 的 VMX/SMX 啟用設定可被任何 ring0 改寫；raw=0 時「未實作」與「未啟用」無法區分，由呼叫端註明。</summary>
+    [SpecRef("Intel SDM Vol.4, IA32_FEATURE_CONTROL (MSR 0x3A)：Lock bit0、VMX-in-SMX bit1、VMX-outside-SMX bit2")]
     public static FeatureControlDecode DecodeFeatureControl(ulong raw)
     {
         bool lockBit = (raw & 0x1) != 0;
@@ -20,6 +21,7 @@ public static class PlatformSecurity
     }
 
     /// <summary>DEBUG_INTERFACE：ENABLE 且未 LOCK＝除錯埠對外開放；DEBUG_OCCURRED 代表自上次清除後曾有除錯事件發生（鑑識線索）。</summary>
+    [SpecRef("Intel SDM Vol.4, IA32_DEBUG_INTERFACE (MSR 0xC80)：ENABLE bit0、LOCK bit30、DEBUG_OCCURRED bit31")]
     public static DebugInterfaceDecode DecodeDebugInterface(ulong raw)
     {
         bool enable = (raw & 0x1) != 0;

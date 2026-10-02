@@ -13,6 +13,7 @@ public static class PcieAer
     public const ushort ExtCapIdAer = 0x0001;
 
     /// <summary>走擴充能力鏈結串列（從 0x100 起）找 AER（cap id 0x0001）；找不到或越界回 null。防環、防越界。</summary>
+    [SpecRef("PCI Express Base Spec, 擴充能力鏈（Extended Capability）：表頭 CapID bits[15:0]、Next Cap Offset bits[31:20]，自 ECAM 0x100 起；ECAM 機制見 PCIe Spec §7.2.2 與 ACPI MCFG 表")]
     public static int? FindAerCapOffset(ReadOnlySpan<byte> config4k)
     {
         int offset = ExtConfigStart;
@@ -31,6 +32,7 @@ public static class PcieAer
     }
 
     /// <summary>解 AER：Uncorrectable Error Status 在 +0x04、Correctable Error Status 在 +0x10。越界回 null。</summary>
+    [SpecRef("PCI Express Base Spec, AER Extended Capability 結構：Uncorrectable Error Status @+0x04、Correctable Error Status @+0x10")]
     public static AerStatus? DecodeAer(ReadOnlySpan<byte> config4k, int aerOffset)
     {
         if (aerOffset < ExtConfigStart || aerOffset + 0x14 > config4k.Length) return null;
