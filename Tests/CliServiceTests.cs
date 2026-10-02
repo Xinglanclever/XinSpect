@@ -104,4 +104,47 @@ public class CliServiceTests : IDisposable
         Assert.Equal(CliService.ExitOk, CliService.Run(["--help"], () => [], stdout, stderr));
         Assert.Contains("退出碼", stdout.ToString());
     }
+
+    // ===== --compare-flash（WP4 第二層的 CLI 面） =====
+
+    private static HardwareFact CompareFact(string value, FactAvailability availability, double? numeric, string? reason = null) =>
+        new("spi.bios_compare", "韌體安全", "BIOS 區比對（vs 參考映像）", value, "", "s",
+            FactTrustLevel.Measured, false, At, numeric, availability, reason);
+
+    [Fact]
+    public void 比對模式_一致退0_有差異退2_三態退2()
+    {
+        System.IO.File.WriteAllBytes(_outPath, new byte[16]); // 參考映像（內容不重要，走注入的假比對）
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+
+        Assert.Equal(CliService.ExitOk, CliService.Run(["--compare-flash", _outPath], () => [], stdout, stderr,
+            compare: _ => CompareFact("一致（64 個 4KB 塊全部相同）", FactAvailability.Present, 0)));
+        var doc = System.Text.Json.JsonDocument.Parse(stdout.ToString());
+        Assert.Equal("flashcompare", doc.RootElement.GetProperty("scope").GetString());
+        Assert.Equal("Present", doc.RootElement.GetProperty("fact").GetProperty("availability").GetString());
+        Assert.Equal(0, doc.RootElement.GetProperty("fact").GetProperty("numericValue").GetInt32());
+
+        Assert.Equal(CliService.ExitPartial, CliService.Run(["--compare-flash", _outPath], () => [], stdout, stderr,
+            compare: _ => CompareFact("差異 1 個 4KB 塊：0x20000", FactAvailability.Present, 1)));
+
+        Assert.Equal(CliService.ExitPartial, CliService.Run(["--compare-flash", _outPath], () => [], stdout, stderr,
+            compare: _ => CompareFact("", FactAvailability.NotApplicable, null, "大小不符——誠實拒比")));
+    }
+
+    [Fact]
+    public void 比對模式_缺路徑與讀檔失敗退1()
+    {
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+
+        Assert.Equal(CliService.ExitError, CliService.Run(["--compare-flash"], () => [], stdout, stderr,
+            compare: _ => CompareFact("x", FactAvailability.Present, 0)));
+        Assert.Contains("參考映像路徑", stderr.ToString());
+
+        string missing = Path.Combine(Path.GetTempPath(), $"xincli-missing-{Guid.NewGuid():N}.bin");
+        Assert.Equal(CliService.ExitError, CliService.Run(["--compare-flash", missing], () => [], stdout, stderr,
+            compare: _ => CompareFact("x", FactAvailability.Present, 0))); // 檔不存在
+        Assert.Contains("讀取參考映像失敗", stderr.ToString());
+    }
 }

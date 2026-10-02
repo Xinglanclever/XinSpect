@@ -18,6 +18,7 @@ public static class CliService
     public const string QueryArg = "--query";
     public const string OutArg = "--out";
     public const string HelpArg = "--help";
+    public const string CompareArg = "--compare-flash";
 
     public const int ExitOk = 0;
     public const int ExitPartial = 2;
@@ -30,13 +31,16 @@ public static class CliService
         Converters = { new JsonStringEnumConverter() },
     };
 
-    public static int Run(string[] args, Func<IReadOnlyList<HardwareFact>> collect, TextWriter stdout, TextWriter stderr)
+    public static int Run(string[] args, Func<IReadOnlyList<HardwareFact>> collect, TextWriter stdout, TextWriter stderr,
+        Func<byte[], HardwareFact>? compare = null)
     {
         if (args.Length == 0 || args.Contains(HelpArg))
         {
             PrintHelp(stdout);
             return ExitOk;
         }
+        if (args[0] == CompareArg)
+            return RunCompare(args, compare, stdout, stderr);
         if (args[0] != JsonArg)
         {
             stderr.WriteLine($"未知引數「{args[0]}」。用 --help 看用法。");
@@ -70,12 +74,7 @@ public static class CliService
             scope = EvidenceScope,
             count = facts.Count,
             allPresent = facts.All(f => f.Availability == FactAvailability.Present),
-            facts = facts.Select(f => new
-            {
-                f.Key, f.Category, f.Name, f.Value, f.Unit, f.Source, f.Trust,
-                availability = f.Availability.ToString(),
-                f.UnavailableReason, f.NumericValue, f.MeasuredAtUtc,
-            }),
+            facts = facts.Select(FactJson),
         };
         string json = JsonSerializer.Serialize(payload, JsonOptions);
 
@@ -95,6 +94,72 @@ public static class CliService
         return facts.All(f => f.Availability == FactAvailability.Present) ? ExitOk : ExitPartial;
     }
 
+    /// <summary>
+    /// BIOS 區 vs 參考映像比對模式（WP4 第二層的 CLI 面）。
+    /// 退出碼：0＝一致；2＝有差異或三態（比對沒能完成／大小不符——細節在輸出）；1＝致命（讀檔失敗等）。
+    /// </summary>
+    private static int RunCompare(string[] args, Func<byte[], HardwareFact>? compare, TextWriter stdout, TextWriter stderr)
+    {
+        if (args.Length < 2)
+        {
+            stderr.WriteLine("--compare-flash 之後要接參考映像路徑。");
+            return ExitError;
+        }
+        string? outPath = OptionValue(args, OutArg);
+
+        byte[] reference;
+        try
+        {
+            reference = File.ReadAllBytes(args[1]);
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"讀取參考映像失敗：{ex.Message}");
+            return ExitError;
+        }
+
+        HardwareFact fact;
+        try
+        {
+            fact = (compare ?? EvidenceCollection.CompareFlashWithReference)(reference);
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"比對失敗：{ex.GetType().Name}：{ex.Message}");
+            return ExitError;
+        }
+
+        var payload = new
+        {
+            generatedAtUtc = DateTimeOffset.UtcNow,
+            scope = "flashcompare",
+            reference = new { Path = args[1], Bytes = reference.Length },
+            fact = FactJson(fact),
+        };
+        string json = JsonSerializer.Serialize(payload, JsonOptions);
+        try
+        {
+            if (outPath is not null)
+                File.WriteAllText(outPath, json);
+            else
+                stdout.WriteLine(json);
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"寫出失敗：{ex.Message}");
+            return ExitError;
+        }
+
+        return fact.Availability == FactAvailability.Present && fact.NumericValue == 0 ? ExitOk : ExitPartial;
+    }
+
+    private static object FactJson(HardwareFact f) => new
+    {
+        f.Key, f.Category, f.Name, f.Value, f.Unit, f.Source, f.Trust,
+        availability = f.Availability.ToString(),
+        f.UnavailableReason, f.NumericValue, f.MeasuredAtUtc,
+    };
+
     private static string? OptionValue(string[] args, string name)
     {
         int i = Array.IndexOf(args, name);
@@ -108,19 +173,23 @@ public static class CliService
 
             用法：
               XinSpect --json evidence [--query <key 前綴>] [--out <檔案>]
+              XinSpect --compare-flash <參考映像> [--out <檔案>]
               XinSpect --help
 
             範圍：
-              evidence    驅動相依證據組：晶片組安全、SPI 快閃、平台安全 MSR、MCHBAR、
-                          PCIe AER、後端與環境、CPU 韌體身分、I/O 埠、CMOS、SMBus、
-                          UEFI 開機設定、Super I/O、交叉對帳、ACPI 表清單。
-                          （全機快照的 SMBIOS／磁碟／GPU 面依賴 WPF 服務層，本模式未涵蓋。）
+              evidence        驅動相依證據組：晶片組安全、SPI 快閃、平台安全 MSR、MCHBAR、
+                              PCIe AER、後端與環境、CPU 韌體身分、I/O 埠、CMOS、SMBus、
+                              UEFI 開機設定、Super I/O、PCI 裝置盤點、交叉對帳、ACPI 表清單。
+                              （全機快照的 SMBIOS／磁碟／GPU 面依賴 WPF 服務層，本模式未涵蓋。）
+              compare-flash   BIOS 區 vs 參考映像逐 4KB 塊比對（映像＝原廠或信任來源的 BIOS 區 dump）。
 
             選項：
               --query <前綴>   只輸出 key 以該前綴開頭的事實（例：--query platform.）
               --out <檔案>     寫入檔案而非 stdout
 
-            退出碼：0＝全部 Present；2＝收集完成但部分讀不到（三態細節在輸出裡）；1＝致命錯誤。
+            退出碼：
+              --json evidence   0＝全部 Present；2＝部分讀不到（三態細節在輸出）；1＝致命錯誤。
+              --compare-flash   0＝一致；2＝有差異或無法完成比對（三態細節在輸出）；1＝致命錯誤。
             讀不到的事實如實帶 availability 與原因，絕不以 0／典型值頂替。
             """);
     }
