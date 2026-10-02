@@ -120,6 +120,7 @@ public static class FactRelationRules
     public const string SpiWriteSurfaceKey = "spi.write_surface";
     public const string SpiFrapKey = "spi.frap";
     public const string SpiHsfstsKey = "spi.hsfsts";
+    public const string SpiHashKey = "spi.bios_hash";
     public const string BackendMmioKey = "backend.mmio";
     public const string BackendMsrKey = "backend.msr";
     public const string PlatformFeatureControlKey = "platform.feature_control";
@@ -298,6 +299,20 @@ public static class FactRelationRules
                         "平台安全 MSR 事實宣稱 Present 但沒有任何 MSR 後端在服務——管線狀態矛盾");
             },
             "IA32_FEATURE_CONTROL 只能經核心 MSR 讀取；backend.msr 缺席時該事實不可能是 Present——守的是管線資料流而非硬體"),
+
+        new("spi.hash_vs_mmio_backend", "BIOS 區雜湊與 MMIO 後端資料流一致性",
+            [SpiHashKey],
+            f =>
+            {
+                // 後端事實「缺席」正是矛盾條件之一，刻意不列輸入鍵（引擎守衛會轉 Unverifiable），規則內自查。
+                if (!f.TryGetValue(BackendMmioKey, out var mmio))
+                    return FactRelationOutcome.Unverifiable("MMIO 後端事實不存在（收集管線未跑或鍵名錯置）——無從交叉");
+                return mmio.Availability == FactAvailability.Present
+                    ? FactRelationOutcome.Consistent("MMIO 後端在服務且 BIOS 區雜湊存在——上下游一致")
+                    : FactRelationOutcome.Contradicts(
+                        "BIOS 區雜湊宣稱 Present 但沒有任何 MMIO 後端在服務——快閃內容只能經記憶體映射讀取，管線狀態矛盾");
+            },
+            "BIOS 區雜湊讀的是記憶體映射快閃；backend.mmio 缺席時雜湊不可能是 Present——守的是管線資料流而非硬體"),
 
         new("chipset.smramc_open_while_locked", "SMRAM 鎖定下對外開放的非法組合",
             [SmramcKey],

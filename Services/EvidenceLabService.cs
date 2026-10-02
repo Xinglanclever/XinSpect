@@ -35,6 +35,9 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>SPI 快閃安全三態事實（HSFSTS/FRAP/FREG/PR）。SPIBAR 經 PCI 取得、暫存器要 MMIO——驅動未載時整組三態。</summary>
     public IReadOnlyList<HardwareFact> SpiFlashFacts { get; private set; } = [];
 
+    /// <summary>SPI 快閃地圖與 BIOS 區雜湊三態事實（WP4）。雜湊＝可讀面，RPE 攔截與全 F 頁如實標注。</summary>
+    public IReadOnlyList<HardwareFact> SpiHashFacts { get; private set; } = [];
+
     /// <summary>以注入的 PCI + MMIO 讀取器載入 SPI 快閃安全事實；測試注入假讀取器，不在這裡觸發核心驅動安裝。</summary>
     public void LoadSpiFlash(IPciConfigReader pci, IMmioReader mmio)
     {
@@ -124,6 +127,7 @@ public sealed class EvidenceLabService : ObservableObject
         ChipsetFacts = ChipsetSecurityService.Collect(pci, at);
         PlatformSecurityFacts = PlatformSecurityMsrService.Collect(msr, at);
         SpiFlashFacts = SpiFlashService.Collect(pci, mmio, at);
+        SpiHashFacts = SpiFlashHashService.Collect(pci, mmio, at);
         MchbarFacts = MchbarService.Collect(pci, mmio, at);
         PcieAerFacts = EcamAerService.Collect(mmio, acpi, at);
         BackendFacts = BackendEnvironmentService.Collect(msr, mmio, at);
@@ -255,7 +259,7 @@ public sealed class EvidenceLabService : ObservableObject
 
     /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + I/O 埠 + CMOS + SMBus + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
-        ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
+        ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
             .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(AcpiFacts)
             .OrderBy(f => f.Category, StringComparer.Ordinal).ThenBy(f => f.Key, StringComparer.Ordinal)
@@ -464,6 +468,8 @@ public sealed class EvidenceLabService : ObservableObject
         f.AddRange(vm.EvidenceLab.ChipsetFacts);
         // SPI 快閃安全三態事實（驅動未載時整組標缺自家驅動）。
         f.AddRange(vm.EvidenceLab.SpiFlashFacts);
+        // SPI 快閃地圖與 BIOS 區雜湊（WP4）。
+        f.AddRange(vm.EvidenceLab.SpiHashFacts);
         // ACPI 表清單三態事實（usermode 列舉）。
         f.AddRange(vm.EvidenceLab.AcpiFacts);
         // PCIe AER 三態事實（ECAM 掃描；歸類「PCIe」）。

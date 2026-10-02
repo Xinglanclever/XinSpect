@@ -300,4 +300,27 @@ public sealed class FactRelationTests
             .Single(r => r.RuleId == "chipset.smramc_open_while_locked");
         Assert.Equal(FactRelation.Consistent, normal.Relation);
     }
+
+    [Fact]
+    public void BIOS雜湊在而MMIO後端缺席_矛盾_後端在_一致()
+    {
+        var impossible = new[]
+        {
+            new HardwareFact("backend.mmio", "測試", "x", "", "", "s", FactTrustLevel.Measured, false, At,
+                null, FactAvailability.NotSupported, "無後端"),
+            Fact("spi.bios_hash", "SHA-256=abc…（BIOS 區 256 KiB）"),
+        };
+        var r = FactRelationService.Evaluate(FactRelationRules.All, impossible)
+            .Single(r => r.RuleId == "spi.hash_vs_mmio_backend");
+        Assert.Equal(FactRelation.Contradicts, r.Relation);
+        Assert.Contains("只能經記憶體映射", r.Reason);
+
+        var consistent = new[]
+        {
+            Fact("backend.mmio", "WinRing0 實體記憶體"),
+            Fact("spi.bios_hash", "SHA-256=abc…（BIOS 區 256 KiB）"),
+        };
+        Assert.Equal(FactRelation.Consistent,
+            FactRelationService.Evaluate(FactRelationRules.All, consistent).Single(r => r.RuleId == "spi.hash_vs_mmio_backend").Relation);
+    }
 }
