@@ -15,13 +15,15 @@ public static class CpuFirmwareFactsService
     private const uint MsrTemperatureTarget = 0x1A2;
 
     public static IReadOnlyList<HardwareFact> Collect(IKernelMsrReader msr, DateTimeOffset at,
-        Func<byte[]?>? registryProbe = null)
+        Func<byte[]?>? registryProbe = null, Func<uint?>? cpuIdProbe = null)
     {
         byte[]? reg = (registryProbe ?? ReadUpdateRevision)();
+        uint? signature = (cpuIdProbe ?? CpuGeneration.ReadSignature)();
         if (!msr.Available)
         {
             string reason = msr.UnavailableReason ?? "缺 ring0：特權讀取未就緒";
-            return [MicrocodeMsrFact(at, [], reason), MicrocodeRegistryFact(at, reg), TjMaxFact(at, null, reason)];
+            return [MicrocodeMsrFact(at, [], reason), MicrocodeRegistryFact(at, reg), TjMaxFact(at, null, reason),
+                    GenerationFact(signature, at)];
         }
 
         var revisions = new List<uint?>();
@@ -31,7 +33,26 @@ public static class CpuFirmwareFactsService
             revisions.Add(msr.ReadMsr(MsrBiosSignId) is { } sign ? (uint)(sign >> 32) : null);
         }
         ulong? tempTarget = msr.ReadMsr(MsrTemperatureTarget);
-        return [MicrocodeMsrFact(at, revisions, null), MicrocodeRegistryFact(at, reg), TjMaxFact(at, tempTarget, null)];
+        return [MicrocodeMsrFact(at, revisions, null), MicrocodeRegistryFact(at, reg), TjMaxFact(at, tempTarget, null),
+                GenerationFact(signature, at)];
+    }
+
+    /// <summary>世代判定事實：CPUID family/model → 微架構名。usermode 可讀，不依賴 ring0；未收錄的 model 誠實標「未收錄」。</summary>
+    public static HardwareFact GenerationFact(uint? signature, DateTimeOffset at)
+    {
+        const string key = "cpu.generation", name = "處理器世代判定",
+            source = "CPUID leaf 1 EAX（family／model／stepping）";
+        if (signature is not { } eax)
+            return new HardwareFact(key, Category, name, "", "", source, FactTrustLevel.Unknown, false, at, null,
+                FactAvailability.NotSupported, "CPUID 不可用（非 x86 環境）");
+
+        var (family, model, stepping) = CpuGeneration.DecodeSignature(eax);
+        var gen = CpuGeneration.GenerationName(family, model);
+        string value = gen is not null
+            ? $"{gen}（family {family}、model 0x{model:X2}、stepping {stepping}）"
+            : $"family {family}、model 0x{model:X2}、stepping {stepping}（世代對照表未收錄，不猜）";
+        return new HardwareFact(key, Category, name, value, "", source, FactTrustLevel.Measured, false, at,
+            NumericValue: (model << 8) | family);
     }
 
     /// <summary>由逐核讀值組成微碼事實：全核一致才給值；不一致或全失敗誠實標三態。</summary>

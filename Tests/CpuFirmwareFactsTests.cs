@@ -83,17 +83,41 @@ public class CpuFirmwareFactsTests
     }
 
     [Fact]
+    public void 世代判定_簽章解碼與未收錄誠實標()
+    {
+        // i9-7980XE：EAX=0x050654 → family 6、model 0x55（Skylake-X/Cascade Lake）、stepping 4
+        var (f, m, s) = CpuGeneration.DecodeSignature(0x050654);
+        Assert.Equal((byte)6, f);
+        Assert.Equal((byte)0x55, m);
+        Assert.Equal((byte)4, s);
+        Assert.Contains("Skylake-X", CpuGeneration.GenerationName(f, m));
+
+        var known = CpuFirmwareFactsService.GenerationFact(0x050654, At);
+        Assert.Equal(FactAvailability.Present, known.Availability);
+        Assert.StartsWith("Skylake-X / Cascade Lake", known.Value);
+
+        var unknown = CpuFirmwareFactsService.GenerationFact(0x000F42, At); // family 15 舊架構
+        Assert.Contains("未收錄", unknown.Value);
+
+        var none = CpuFirmwareFactsService.GenerationFact(null, At);
+        Assert.Equal(FactAvailability.NotSupported, none.Availability);
+    }
+
+    [Fact]
     public void 收集端_不可用讀取器整組三態_可用讀取器逐核讀()
     {
-        var denied = CpuFirmwareFactsService.Collect(new FakeMsr(available: false, value: null), At, registryProbe: () => null);
+        var denied = CpuFirmwareFactsService.Collect(new FakeMsr(available: false, value: null), At,
+            registryProbe: () => null, cpuIdProbe: () => null);
         Assert.All(denied, f => Assert.NotEqual(FactAvailability.Present, f.Availability));
 
         var ok = CpuFirmwareFactsService.Collect(new FakeMsr(available: true, value: 0x005A0000), At,
-            registryProbe: () => [0x06, 0x70, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00]);
+            registryProbe: () => [0x06, 0x70, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00],
+            cpuIdProbe: () => 0x050654);
         Assert.Equal(FactAvailability.Present, Assert.Single(ok, f => f.Key == "msr.0x8b").Availability);
         Assert.Equal(FactAvailability.Present, Assert.Single(ok, f => f.Key == "reg.microcode").Availability);
         Assert.Equal(FactAvailability.Present, Assert.Single(ok, f => f.Key == "cpu.tjmax").Availability);
         Assert.Equal(0x02007006u, Assert.Single(ok, f => f.Key == "reg.microcode").NumericValue);
+        Assert.StartsWith("Skylake-X", Assert.Single(ok, f => f.Key == "cpu.generation").Value);
     }
 
     private sealed class FakeMsr(bool available, ulong? value) : IKernelMsrReader
