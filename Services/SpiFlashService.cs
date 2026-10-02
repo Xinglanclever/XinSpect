@@ -84,43 +84,92 @@ public static class SpiFlash
 /// 自家驅動未載時四組全部三態標示，並把已知的 SPIBAR 位址寫進原因，絕不假裝讀過。
 /// 暫存器佈局依 Intel PCH EDS（與 CHIPSEC spi_lock/spi_desc 同源）：HSFSTS@0x04、FRAP@0x50、FREG0-5@0x54-0x68、PR0-4@0x74-0x84。
 /// </summary>
+/// <summary>SPI 控制器存取結果（SPIBAR 位址＋暫存器區塊），供 SPI 事實／快閃地圖／BIOS hash 服務共用。</summary>
+public sealed record SpiControllerAccess(ulong SpiBar, byte[] Block);
+
 public static class SpiFlashService
 {
     private const string Category = "韌體安全";
     public const byte SpiBus = 0, SpiDevice = 0x1F, SpiFunction = 5;
     public const int BlockLength = 0x88; // 蓋得到 PR4 結尾（0x84+4）
 
-    public static IReadOnlyList<HardwareFact> Collect(IPciConfigReader pci, IMmioReader mmio, DateTimeOffset at)
+    /// <summary>
+    /// 共用的 SPI 控制器存取：PCI 找 0:1F.5 → SPIBAR → 讀 <see cref="BlockLength"/> 暫存器區塊。
+    /// 回 null 時 availability/error 帶三態與原因——SPI 事實、快閃地圖、BIOS hash 服務共用這一層，避免各自漂移。
+    /// </summary>
+    public static SpiControllerAccess? ReadController(IPciConfigReader pci, IMmioReader mmio,
+        out FactAvailability availability, out string error)
     {
+        availability = FactAvailability.ReadError;
+        error = "";
         if (!pci.Available)
-            return Unavailable(at, FactAvailability.InsufficientPrivilege, pci.UnavailableReason ?? "缺 ring0：特權讀取未就緒");
+        {
+            availability = FactAvailability.InsufficientPrivilege;
+            error = pci.UnavailableReason ?? "缺 ring0：特權讀取未就緒";
+            return null;
+        }
 
         uint? id = pci.ReadDword(SpiBus, SpiDevice, SpiFunction, 0x00);
         if (id is null)
-            return Unavailable(at, FactAvailability.ReadError, "PCI 設定空間讀取失敗");
+        {
+            error = "PCI 設定空間讀取失敗";
+            return null;
+        }
         if (id.Value == 0xFFFFFFFF)
-            return Unavailable(at, FactAvailability.NotApplicable, "0:1F.5 無回應（找不到 SPI 控制器）");
+        {
+            availability = FactAvailability.NotApplicable;
+            error = "0:1F.5 無回應（找不到 SPI 控制器）";
+            return null;
+        }
         if ((id.Value & 0xFFFF) != 0x8086)
-            return Unavailable(at, FactAvailability.NotApplicable, "0:1F.5 非 Intel 裝置（SPI 控制器不在此處）");
+        {
+            availability = FactAvailability.NotApplicable;
+            error = "0:1F.5 非 Intel 裝置（SPI 控制器不在此處）";
+            return null;
+        }
 
         uint? bar = pci.ReadDword(SpiBus, SpiDevice, SpiFunction, 0x10);
         if (bar is null)
-            return Unavailable(at, FactAvailability.ReadError, "SPI BAR 讀取失敗");
+        {
+            error = "SPI BAR 讀取失敗";
+            return null;
+        }
         if (bar.Value == 0xFFFFFFFF || (bar.Value & ~0xFFFu) == 0)
-            return Unavailable(at, FactAvailability.NotApplicable, "SPI 控制器未配置 SPIBAR");
+        {
+            availability = FactAvailability.NotApplicable;
+            error = "SPI 控制器未配置 SPIBAR";
+            return null;
+        }
         if ((bar.Value & 0x1) != 0)
-            return Unavailable(at, FactAvailability.ReadError, "SPI BAR 為 I/O 型（非預期配置）");
+        {
+            error = "SPI BAR 為 I/O 型（非預期配置）";
+            return null;
+        }
         ulong spiBar = bar.Value & 0xFFFFF000u;
 
         if (!mmio.Available)
-            return Unavailable(at, FactAvailability.InsufficientPrivilege,
-                $"{mmio.UnavailableReason ?? "缺 MMIO 讀取"}；SPIBAR 0x{spiBar:X8} 需 MMIO（擴充暫存器無法經 PCI 設定空間到達）");
+        {
+            availability = FactAvailability.InsufficientPrivilege;
+            error = $"{mmio.UnavailableReason ?? "缺 MMIO 讀取"}；SPIBAR 0x{spiBar:X8} 需 MMIO（擴充暫存器無法經 PCI 設定空間到達）";
+            return null;
+        }
 
         var block = mmio.ReadBlock(spiBar, BlockLength);
         if (block is null || block.Length < BlockLength)
-            return Unavailable(at, FactAvailability.ReadError,
-                $"SPIBAR MMIO 讀取失敗{(mmio.LastFailReason is { } f ? $"：{f}" : "")}");
+        {
+            error = $"SPIBAR MMIO 讀取失敗{(mmio.LastFailReason is { } f ? $"：{f}" : "")}";
+            return null;
+        }
+        return new SpiControllerAccess(spiBar, block);
+    }
 
+    public static IReadOnlyList<HardwareFact> Collect(IPciConfigReader pci, IMmioReader mmio, DateTimeOffset at)
+    {
+        var access = ReadController(pci, mmio, out var availability, out string error);
+        if (access is null)
+            return Unavailable(at, availability, error);
+
+        var block = access.Block;
         return
         [
             HsfstsFact(BitConverter.ToUInt32(block, 0x04), at),
