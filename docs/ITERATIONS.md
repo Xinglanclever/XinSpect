@@ -83,12 +83,25 @@
 
 **誠實界線（記錄在案）**：BIOS 區雜湊的當前用途是**跨時間比對（快照差分）與留存**——「原廠比對」需要原廠映像檔，本版未涵蓋，不假裝能驗正版。RPE 讀保護攔截的範圍會以全 F 呈現且被標注，雜湊不代表被擋內容。
 
+## ITER27 ・ WP30 批次：PCI 知識層與裝置盤點（2026-10-03）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP30-① | **`PciKnowledge` 純解碼器**：PCI-SIG 類別碼（base/subclass/progIF/rev 佈局）→ 角色名、廠商 ID → 名稱（知名子集）；未收錄如實標「未收錄」不猜；全方法 SpecRef（PCI Local Bus Spec 3.0 §6.2.1＋PCI-SIG Code & Vendor ID Spec），註冊進覆蓋檢查（解碼器 9→10） | 2780 | 8bc0843 |
+| R2 | WP30-② | **Bus 0 裝置盤點**（`Bus0InventoryService`）：32 槽走訪＋多功能位元（header type bit7）決定 fn 掃描（規格行為）、逐功能事實＝規格有據角色＋原始 ID 並列、讀取錯誤計數進摘要、全失敗整組三態 | 2783 | 2885a7b |
+| R3 | WP30-③ | 接線（`PciInventoryFacts` 進重載＋韌體安全頁＋快照）；對帳規則 13→**15**——SPI 控制器存在性交叉**拆兩條方向性規則**（「SPI 事實在而盤點無控制器」「控制器在而 SPI 服務稱無回應」），每條宣告保證 Present 的一側繞開引擎守衛；「非 Intel」等誠實不採用理由不誤報 | 2784 | 52e27d9 |
+| R4 | 制度 | ITERATIONS.md 記錄本批＋記憶庫 | — | 本輪 |
+
+**方法學備忘（引擎守衛補遺）**：矛盾條件涉及「A 缺席」且輸入鍵必須 Present 時，若 A/B 兩側都可能缺席，單條規則無法涵蓋兩個方向——拆成兩條方向性規則，各宣告保證 Present 的一側為輸入鍵。
+
+**知識庫誠實界線**：本批只收錄 PCI-SIG 規格定義的類別碼與知名廠商 ID——device 型號對照（每代更新）刻意不做，待有出處化資料再補。
+
 ## 待辦（下一批）
 
-- WP30 CHIPSEC 知識庫移植（含 Super I/O 名稱對照表的出處化）。
+- WP30 知識庫續推：PCI BAR 解碼（type0 header → 資源清單）、Super I/O 名稱對照表出處化、device 型號對照的出處化資料源。
 - WP50 Stryker（解碼器抽成獨立程式庫，或等 Buildalyzer 支援）、differential 擴大（SPD fixture vs WMI）。
-- 對帳規則 13 → ≥25：隨新事實來源（SPD↔TSOD、SMART、儲存面）補。
+- 對帳規則 15 → ≥25：隨新事實來源（SPD↔TSOD、SMART、儲存面）補。
 - CLI 擴充候選：全機快照（需 headless 化 WPF 服務層）、批次清單檔。
 - PawnIO 模組整合（HVCI 環境備援；本機 IntelMsr 模組已知回 0 的問題要先解）。
 - BIOS 雜湊原廠比對（使用者供映像檔 → 逐區比對差異，WP4 的第二層）。
-- 發佈：等使用者明說。20 輪＋ITER21–25 內容尚未折疊進 changelog（發佈前必做，FileVersion .5→.6）。
+- 發佈：等使用者明說。20 輪＋ITER21–27 內容尚未折疊進 changelog（發佈前必做，FileVersion .5→.6）。
