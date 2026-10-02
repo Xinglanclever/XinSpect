@@ -17,7 +17,7 @@ namespace XinSpect.Tests;
 internal sealed class FakeSmbusIo : ISmbusIo
 {
     public const uint Base = 0xF040;
-    private const uint Sts = Base + 0, Cnt = Base + 2, Cmd = Base + 3, Slva = Base + 4, D0 = Base + 5;
+    private const uint Sts = Base + 0, Cnt = Base + 2, Cmd = Base + 3, Slva = Base + 4, D0 = Base + 5, D1 = Base + 6;
 
     public bool BusyForever;
     public bool InUseHeldByOther;
@@ -31,17 +31,20 @@ internal sealed class FakeSmbusIo : ISmbusIo
     /// <summary>低階回應（slave7、命令位元組）→ 資料；回 null 代表該位址上沒有裝置。</summary>
     public Func<byte, byte, byte?>? Respond;
 
-    /// <summary>掛在匯流排上的 SPD：鍵是 slave7（0x50–0x57），值是 512 位元組映像。</summary>
-    public readonly Dictionary<byte, byte[]> Modules = [];
+    /// <summary>word 讀取回應（slave7、命令位元組）→ 16 位元資料；null 代表無裝置。未設時 word 交易一律 DEV_ERR。</summary>
+    public Func<byte, byte, ushort?>? WordRespond;
 
-    public readonly List<(uint Port, byte Value)> Writes = [];
+    /// <summary>掛在匯流排上的 SPD：鍵是 slave7（0x50–0x57），值是 512 位元組映像。</summary>
+    public readonly Dictionary<byte, byte[]> Modules = new();
+
+    public readonly List<(uint Port, byte Value)> Writes = new();
 
     /// <summary>目前選到的 SPD 頁（DDR4 的上半／下半），供測試斷言收尾有沒有復位。</summary>
     public byte Page { get; private set; }
 
     private byte _sts;
     private bool _inUse;
-    private byte _slva, _cmd, _d0;
+    private byte _slva, _cmd, _d0, _d1;
 
     public byte? In(uint port)
     {
@@ -55,6 +58,7 @@ internal sealed class FakeSmbusIo : ISmbusIo
             return v;
         }
         if (port == D0) return _d0;
+        if (port == D1) return _d1;
         if (port == Slva) return _slva;
         if (port == Cmd) return _cmd;
         return 0;
@@ -95,6 +99,13 @@ internal sealed class FakeSmbusIo : ISmbusIo
                           : null;
                 if (got is null) { _sts |= 0x04; return true; }       // 無裝置 → DEV_ERR
                 _d0 = got.Value;
+                break;
+
+            case 0x03:                                               // Word Data 讀取（TSOD）
+                ushort? word = WordRespond?.Invoke(slave7, _cmd);
+                if (word is null) { _sts |= 0x04; return true; }
+                _d0 = (byte)word.Value;
+                _d1 = (byte)(word.Value >> 8);
                 break;
         }
         _sts |= 0x02;                                                // INTR＝完成

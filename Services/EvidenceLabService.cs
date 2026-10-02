@@ -92,6 +92,9 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>CMOS/RTC 唯讀三態事實（VRT、RTC 時鐘、PC-AT 校驗和；WP6）。廠商設定區刻意不解碼。</summary>
     public IReadOnlyList<HardwareFact> CmosFacts { get; private set; } = [];
 
+    /// <summary>SMBus 唯讀事實（TSOD 溫度感測器掃描；WP2）。空位址不列，逐顆三態。</summary>
+    public IReadOnlyList<HardwareFact> SmbusFacts { get; private set; } = [];
+
     /// <summary>原始暫存器區（P4）：重載驅動相依事實時一併收集，讀不到的區三態。存檔是使用者主動行為（raw 不匿名化）。</summary>
     public IReadOnlyList<RawRegisterRegion> RawRegions { get; private set; } = [];
 
@@ -109,7 +112,7 @@ public sealed class EvidenceLabService : ObservableObject
     /// 呼叫即可把三態翻成真值；停用後以不可用後端呼叫則如實回到三態，不留舊值冒充。
     /// </summary>
     public void ReloadDriverBackedFacts(IPciConfigReader pci, IKernelMsrReader msr, IMmioReader mmio,
-        IAcpiTableSource acpi, IIoPortAccess io)
+        IAcpiTableSource acpi, IIoPortAccess io, ISmbusIo? smbusIo = null)
     {
         var at = DateTimeOffset.UtcNow;
         ChipsetFacts = ChipsetSecurityService.Collect(pci, at);
@@ -121,6 +124,7 @@ public sealed class EvidenceLabService : ObservableObject
         CpuFirmwareFacts = CpuFirmwareFactsService.Collect(msr, at);
         IoPortFacts = IoPortFactsService.Collect(io, at);
         CmosFacts = CmosService.Collect(io, at);
+        SmbusFacts = TsodSurveyor.CollectWithLock(smbusIo, pci.ReadDword, at);
         RawRegions = RawRegisterCollectService.Collect(pci, acpi, msr, mmio, at);
         RawSummary = $"{RawRegions.Count} 區原始位元組・" +
                      $"{RawRegions.Count(r => r.Availability == FactAvailability.Present)} 區可讀・" +
@@ -235,10 +239,11 @@ public sealed class EvidenceLabService : ObservableObject
             .ToList();
     }
 
-    /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + I/O 埠 + CMOS + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
+    /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + I/O 埠 + CMOS + SMBus + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
-            .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts).Concat(AcpiFacts)
+            .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
+            .Concat(SmbusFacts).Concat(AcpiFacts)
             .OrderBy(f => f.Category, StringComparer.Ordinal).ThenBy(f => f.Key, StringComparer.Ordinal)
             .Select(EvidenceFactRow.From).ToList();
 
@@ -462,6 +467,8 @@ public sealed class EvidenceLabService : ObservableObject
         f.AddRange(vm.EvidenceLab.IoPortFacts);
         // CMOS/RTC 唯讀三態事實。
         f.AddRange(vm.EvidenceLab.CmosFacts);
+        // SMBus 唯讀事實（TSOD）。
+        f.AddRange(vm.EvidenceLab.SmbusFacts);
 
         return f;
     }

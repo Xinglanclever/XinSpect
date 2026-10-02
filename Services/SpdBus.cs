@@ -56,12 +56,23 @@ public static class SpdBusAddresses
     /// <summary>DDR4 的兩個切頁位址（SPA0＝0x36、SPA1＝0x37）。</summary>
     public static bool IsPageSelect(byte slave7) => slave7 is 0x36 or 0x37;
 
+    /// <summary>TSOD（TSE2004 記憶體溫度感測器）的八個裝置位址：0x18–0x1F。唯讀。</summary>
+    public static bool IsTsodRead(byte slave7) => slave7 is >= 0x18 and <= 0x1F;
+
     /// <exception cref="ArgumentOutOfRangeException">位址不在 SPD EEPROM 白名單內。</exception>
     public static void EnsureSpdRead(byte slave7)
     {
         if (!IsSpdRead(slave7))
             throw new ArgumentOutOfRangeException(nameof(slave7), slave7,
                 "只允許讀取 SPD EEPROM 的 0x50–0x57；其餘裝置位址不在白名單內。");
+    }
+
+    /// <exception cref="ArgumentOutOfRangeException">位址不在 TSOD 唯讀白名單內。</exception>
+    public static void EnsureTsodRead(byte slave7)
+    {
+        if (!IsTsodRead(slave7))
+            throw new ArgumentOutOfRangeException(nameof(slave7), slave7,
+                "只允許讀取 TSOD 溫度感測器的 0x18–0x1F（唯讀）；其餘裝置位址不在白名單內。");
     }
 
     /// <exception cref="ArgumentOutOfRangeException">位址不是 0x36／0x37。</exception>

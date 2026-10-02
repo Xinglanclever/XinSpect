@@ -181,7 +181,7 @@ public sealed class SmbusController(ISmbusIo io, uint ioBase,
 
     // HST_CNT
     private const byte CntKill = 0x02, CntStart = 0x40;
-    private const byte ProtoByte = 0x01 << 2, ProtoByteData = 0x02 << 2;
+    private const byte ProtoByte = 0x01 << 2, ProtoByteData = 0x02 << 2, ProtoWordData = 0x03 << 2;
 
     private bool _acquired;
 
@@ -245,7 +245,21 @@ public sealed class SmbusController(ISmbusIo io, uint ioBase,
     public byte? ReadByteData(byte slave7, byte command)
     {
         SpdBusAddresses.EnsureSpdRead(slave7);
-        return RunTransaction((byte)((slave7 << 1) | 1), command, ProtoByteData, readsData: true);
+        var data = RunTransaction((byte)((slave7 << 1) | 1), command, ProtoByteData, dataBytes: 1);
+        return data is null ? null : data[0];
+    }
+
+    /// <summary>
+    /// 讀 TSOD（TSE2004 記憶體溫度感測器）的 16 位元暫存器（SMBus Word Data 讀取協定）。
+    /// 白名單<b>唯讀</b>：0x18–0x1F；對這些位址的寫入程式碼路徑不存在。
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">位址不在 TSOD 唯讀白名單內。</exception>
+    public ushort? ReadTsodWord(byte slave7, byte command)
+    {
+        SpdBusAddresses.EnsureTsodRead(slave7);
+        var data = RunTransaction((byte)((slave7 << 1) | 1), command, ProtoWordData, dataBytes: 2);
+        if (data is null) return null;
+        return (ushort)(data[0] | (data[1] << 8));
     }
 
     /// <summary>
@@ -255,10 +269,10 @@ public sealed class SmbusController(ISmbusIo io, uint ioBase,
     public bool SendByte(byte slave7, byte data)
     {
         SpdBusAddresses.EnsurePageSelect(slave7);
-        return RunTransaction((byte)(slave7 << 1), data, ProtoByte, readsData: false) is not null;
+        return RunTransaction((byte)(slave7 << 1), data, ProtoByte, dataBytes: 0) is not null;
     }
 
-    private byte? RunTransaction(byte slva, byte cmdByte, byte protocol, bool readsData)
+    private byte[]? RunTransaction(byte slva, byte cmdByte, byte protocol, int dataBytes)
     {
         if (!_acquired)
             throw new InvalidOperationException("必須先 TryAcquireBus 取得匯流排旗號才能發起交易。");
@@ -327,14 +341,20 @@ public sealed class SmbusController(ISmbusIo io, uint ioBase,
             Thread.SpinWait(64);
         }
 
-        byte? data = readsData ? io.In(ioBase + HstD0) : (byte)0;
-        io.Out(ioBase + HstSts, StsClearMask);
-        if (data is null)
+        var result = new byte[dataBytes];
+        for (int i = 0; i < dataBytes; i++)
         {
-            LastError = "交易完成但讀不到 HST_D0（I/O 埠存取不可用）。";
-            LastStatus = SmbusStatus.IoUnavailable;
+            byte? data = io.In(ioBase + HstD0 + (uint)i);
+            if (data is null)
+            {
+                LastError = $"交易完成但讀不到 HST_D{i}（I/O 埠存取不可用）。";
+                LastStatus = SmbusStatus.IoUnavailable;
+                return null;
+            }
+            result[i] = data.Value;
         }
-        return data;
+        io.Out(ioBase + HstSts, StsClearMask);
+        return result;
     }
 
     /// <summary>等 HOST_BUSY 放掉。<paramref name="ioFailed"/> 區分「I/O 讀不到」與「真的等太久」。</summary>
