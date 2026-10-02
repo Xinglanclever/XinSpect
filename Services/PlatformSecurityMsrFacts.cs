@@ -37,6 +37,9 @@ public interface IKernelMsrReader
     string? UnavailableReason { get; }
     /// <summary>讀 MSR；失敗或不支援回 null（上層標 ReadError，不以 0 頂替）。</summary>
     ulong? ReadMsr(uint index);
+
+    /// <summary>最近一次 ReadMsr 失敗的細節（null＝尚無失敗或無細節）；預設無，驅動後端實作以帶出 NTSTATUS 級原因。</summary>
+    string? LastFailReason => null;
 }
 
 /// <summary>以現有已簽章 WinRing0 讀 MSR；失敗回 null 帶原因。驅動就緒後可換自家驅動後端，只換這一層。</summary>
@@ -86,7 +89,7 @@ public static class PlatformSecurityMsrService
         ulong? raw = reader.ReadMsr(msr);
         if (raw is null)
             return Unavailable(key, name, source, at, FactAvailability.ReadError,
-                $"MSR 0x{msr:X} 讀取失敗（此平台可能未實作）");
+                reader.LastFailReason ?? $"MSR 0x{msr:X} 讀取失敗（此平台可能未實作）");
         return new HardwareFact(key, Category, name, decode(raw.Value), "", source, FactTrustLevel.Measured, false, at);
     }
 

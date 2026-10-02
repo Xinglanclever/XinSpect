@@ -127,6 +127,7 @@ internal static class StartupSequence
     /// 驅動相依五組證據（晶片組安全／SPI 快閃／平台安全 MSR／MCHBAR／PCIe AER）的載入：真實後端在此一處組合。
     /// 啟動序列與「啟用深層存取後重載」共用——同一個閘門擋並發（驅動控制代碼不重複開）、整批替換不累積；
     /// 讀不到由各服務標三態，此處只負責後端壽命與異常吞噬。
+    /// 後端裁決（V7 §2.1）：WinRing0 為主力；XsRegProbe 的 DriverMsrReader 已備妥未接線，等 WP29 三後端切換一起收編。
     /// </summary>
     internal static void LoadDriverBackedEvidence(MainViewModel vm)
     {

@@ -109,6 +109,8 @@ static const ULONG g_MsrAllow[] = {
     0xC8D,  /* MSR_QM_EVTSEL */
     0xC8E,  /* MSR_QM_CTR */
     0xC8F,  /* MSR_PQR_ASSOC */
+    0x3A,   /* IA32_FEATURE_CONTROL（PlatformSecurityMsrService） */
+    0xC80,  /* IA32_DEBUG_INTERFACE（PlatformSecurityMsrService） */
     0xE7,   /* IA32_MPERF */
     0xE8,   /* IA32_APERF */
 };
