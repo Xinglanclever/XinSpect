@@ -1,11 +1,22 @@
 namespace XinSpect;
 
-/// <summary>一份原始暫存器快照：逐來源的位元組區集合。與語義快照（HardwareSnapshot）並存，各自有自己的完整性信封。</summary>
+/// <summary>原始暫存器快照的完整性信封（sha256 over canonical JSON，不含本欄位本身）。</summary>
+public sealed record RawSnapshotIntegrity
+{
+    public required string Algorithm { get; init; }
+    public required string Hash { get; init; }
+}
+
+/// <summary>
+/// 一份原始暫存器快照：逐來源的位元組區集合。與語義快照（HardwareSnapshot）並存，各自有自己的完整性信封。
+/// 誠實界線：raw 就是原始位元組，不做匿名化——檔案可能含 OEM 原始材料（如 MSDM），存檔是使用者主動行為。
+/// </summary>
 public sealed record RawRegisterSnapshot
 {
     public required string AppVersion { get; init; }
     public required DateTimeOffset TakenAtUtc { get; init; }
     public required IReadOnlyList<RawRegisterRegion> Regions { get; init; }
+    public RawSnapshotIntegrity? Integrity { get; init; }
 }
 
 /// <summary>
