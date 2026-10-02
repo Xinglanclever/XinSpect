@@ -92,6 +92,17 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>CMOS/RTC 唯讀三態事實（VRT、RTC 時鐘、PC-AT 校驗和；WP6）。廠商設定區刻意不解碼。</summary>
     public IReadOnlyList<HardwareFact> CmosFacts { get; private set; } = [];
 
+    /// <summary>原始暫存器區（P4）：重載驅動相依事實時一併收集，讀不到的區三態。存檔是使用者主動行為（raw 不匿名化）。</summary>
+    public IReadOnlyList<RawRegisterRegion> RawRegions { get; private set; } = [];
+
+    public ObservableCollection<EvidenceRawChangeRow> RawChanges { get; } = [];
+
+    private string _rawStatus = "尚未擷取。原始快照收錄 PCI 安全暫存器、平台安全 MSR、ACPI 表整表、SPIBAR 與 MCHBAR 的原始位元組；隨驅動相依事實一起收集。";
+    public string RawStatus { get => _rawStatus; private set => SetProperty(ref _rawStatus, value); }
+
+    private string _rawSummary = "—";
+    public string RawSummary { get => _rawSummary; private set => SetProperty(ref _rawSummary, value); }
+
     /// <summary>
     /// 事實重載（深層存取啟用後免重啟翻真值）：五組驅動相依事實整批「替換」——每組各自重新 Collect 後整組指派，
     /// 不附加不累積；ACPI 表清單不在內（usermode 來源、另由 LoadAcpi 管理）。啟用深層存取後以新鮮的驅動後端
@@ -110,8 +121,98 @@ public sealed class EvidenceLabService : ObservableObject
         CpuFirmwareFacts = CpuFirmwareFactsService.Collect(msr, at);
         IoPortFacts = IoPortFactsService.Collect(io, at);
         CmosFacts = CmosService.Collect(io, at);
+        RawRegions = RawRegisterCollectService.Collect(pci, acpi, msr, mmio, at);
+        RawSummary = $"{RawRegions.Count} 區原始位元組・" +
+                     $"{RawRegions.Count(r => r.Availability == FactAvailability.Present)} 區可讀・" +
+                     $"{RawRegions.Count(r => r.Availability != FactAvailability.Present)} 區三態";
+        RawStatus = "原始快照已隨本次擷取更新；按「建立原始快照」存檔，或「與目前差分」比對舊檔。";
         ReconcileFacts = EvaluateReconciliation(at);
         OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
+    /// <summary>把目前的原始暫存器區存成帶 SHA-256 完整性信封的檔案。raw 不匿名化，分享前請自行確認。</summary>
+    public async Task SaveRawSnapshotAsync(string path)
+    {
+        if (IsBusy) return;
+        IsBusy = true;
+        try
+        {
+            var snapshot = RawRegisterCollectService.Create(AppInfo.Version, RawRegions, DateTimeOffset.UtcNow);
+            await Task.Run(() => RawRegisterSnapshotStore.Save(path, snapshot));
+            RawSummary = $"{snapshot.Regions.Count} 區原始位元組 ・ SHA-256 完整性信封";
+            RawStatus = "原始快照已儲存。內容為原始位元組，不做匿名化——檔案可能含 OEM 原始材料，公開分享前請自行確認。";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException
+                                   or NotSupportedException or ArgumentException)
+        {
+            RawSummary = "儲存失敗";
+            RawStatus = ex.Message;
+        }
+        finally { IsBusy = false; }
+    }
+
+    /// <summary>載入原始快照檔：驗完整性信封後只陳述內容，不冒充是目前狀態。</summary>
+    public async Task InspectRawSnapshotAsync(string path)
+    {
+        if (IsBusy) return;
+        IsBusy = true;
+        try
+        {
+            var snapshot = await Task.Run(() => RawRegisterSnapshotStore.Load(path));
+            RawChanges.Clear();
+            RawSummary = $"{snapshot.Regions.Count} 區原始位元組 ・ {snapshot.TakenAtUtc.ToLocalTime():yyyy-MM-dd HH:mm:ss}";
+            RawStatus = "完整性驗證通過。這是檔案內保存的舊原始位元組，不是目前硬體狀態。";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException
+                                   or NotSupportedException or ArgumentException
+                                   or System.Text.Json.JsonException)
+        {
+            RawChanges.Clear();
+            RawSummary = "載入失敗";
+            RawStatus = ex.Message;
+        }
+        finally { IsBusy = false; }
+    }
+
+    /// <summary>載入舊原始快照並與目前區做逐位元組差分（套揮發遮罩）；兩台機器／無現有區時如實拒比。</summary>
+    public async Task CompareRawAsync(string path)
+    {
+        if (IsBusy) return;
+        IsBusy = true;
+        try
+        {
+            var old = await Task.Run(() => RawRegisterSnapshotStore.Load(path));
+            RawChanges.Clear();
+            if (RawRegions.Count == 0)
+            {
+                RawSummary = "尚無目前可比的原始區";
+                RawStatus = "還沒收集過原始區（等驅動相依事實擷取完成），無從差分。";
+                return;
+            }
+            var diff = RawRegisterSnapshotService.Diff(old.Regions, RawRegions);
+            int meaningful = 0;
+            foreach (var change in diff.Regions.Where(c => c.Kind != RawRegionChangeKind.Unchanged))
+            {
+                RawChanges.Add(EvidenceRawChangeRow.From(change));
+                meaningful++;
+            }
+            RawSummary = $"變更 {diff.Regions.Count(c => c.Kind == RawRegionChangeKind.Changed)} ・ " +
+                         $"狀態改變 {diff.Regions.Count(c => c.Kind == RawRegionChangeKind.AvailabilityChanged)} ・ " +
+                         $"新增 {diff.Regions.Count(c => c.Kind == RawRegionChangeKind.Added)} ・ " +
+                         $"消失 {diff.Regions.Count(c => c.Kind == RawRegionChangeKind.Removed)}";
+            RawStatus = meaningful == 0
+                ? "沒有發現差異（揮發位元組已依遮罩略過）。"
+                : "發現差異。逐位元組差異本身不等於故障；遮罩位元組（SMI 計數、TSC 等）已略過。";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException
+                                   or NotSupportedException or ArgumentException
+                                   or System.Text.Json.JsonException)
+        {
+            RawChanges.Clear();
+            RawSummary = "差分失敗";
+            RawStatus = ex.Message;
+        }
+        finally { IsBusy = false; }
     }
 
     /// <summary>把全部事實組交給對帳引擎逐規則評估；每條規則一列（一致／矛盾／無法驗證都是 Present 的「結論事實」）。</summary>
@@ -435,4 +536,29 @@ public sealed record EvidenceChangeRow(string Kind, string Category, string Name
             return EvidenceFactRow.UnavailableText(f.Availability, f.UnavailableReason);
         return f.Sensitive ? "（已遮蔽）" : f.Value;
     }
+}
+
+/// <summary>原始快照差異的一列：來源鍵、變動種類、細節（變動位元組數與前幾個位移，或三態原因）。</summary>
+public sealed record EvidenceRawChangeRow(string Kind, string Source, string Detail)
+{
+    public static EvidenceRawChangeRow From(RawRegionChange c) => new(
+        c.Kind switch
+        {
+            RawRegionChangeKind.Added => "新增",
+            RawRegionChangeKind.Removed => "消失",
+            RawRegionChangeKind.AvailabilityChanged => "狀態改變",
+            RawRegionChangeKind.Changed => "變更",
+            _ => "未變",
+        },
+        c.Source,
+        c.Kind switch
+        {
+            RawRegionChangeKind.Changed => $"{c.ChangedOffsets.Count} 位元組變動：前 8 個位移 {string.Join(" ", c.ChangedOffsets.Take(8).Select(i => $"0x{i:X2}"))}" +
+                (c.ChangedOffsets.Count > 8 ? "…" : ""),
+            RawRegionChangeKind.AvailabilityChanged =>
+                $"{EvidenceFactRow.UnavailableText(c.PreviousAvailability, null)} → {EvidenceFactRow.UnavailableText(c.CurrentAvailability, null)}",
+            RawRegionChangeKind.Added => $"新出現的來源（狀態：{c.CurrentAvailability}）",
+            RawRegionChangeKind.Removed => $"來源這次不存在（前次狀態：{c.PreviousAvailability}）",
+            _ => "—",
+        });
 }

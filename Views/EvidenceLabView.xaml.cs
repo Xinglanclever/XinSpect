@@ -48,6 +48,45 @@ public partial class EvidenceLabView : UserControl
         if (path is not null) await vm.EvidenceLab.InspectAsync(path);
     }
 
+    private async void RawSave_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm is not { } vm) return;
+        var dlg = new SaveFileDialog
+        {
+            Title = "建立原始暫存器快照",
+            Filter = "XinSpect 原始快照 (*.xinraw)|*.xinraw",
+            FileName = $"XinSpect_原始快照_{DateTime.Now:yyyyMMdd_HHmmss}.xinraw",
+            AddExtension = true,
+        };
+        if (dlg.ShowDialog() != true) return;
+        await vm.EvidenceLab.SaveRawSnapshotAsync(dlg.FileName);
+    }
+
+    private async void RawCompare_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm is not { } vm) return;
+        var path = PickRaw("選擇要和目前硬體差分的原始快照");
+        if (path is not null) await vm.EvidenceLab.CompareRawAsync(path);
+    }
+
+    private async void RawOpen_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm is not { } vm) return;
+        var path = PickRaw("開啟原始暫存器快照");
+        if (path is not null) await vm.EvidenceLab.InspectRawSnapshotAsync(path);
+    }
+
+    private static string? PickRaw(string title)
+    {
+        var dlg = new OpenFileDialog
+        {
+            Title = title,
+            Filter = "XinSpect 原始快照 (*.xinraw)|*.xinraw|所有檔案 (*.*)|*.*",
+            CheckFileExists = true,
+        };
+        return dlg.ShowDialog() == true ? dlg.FileName : null;
+    }
+
     private async void RefreshEvidence_Click(object sender, RoutedEventArgs e)
     {
         if (Vm is { } vm) await vm.HardwareEvidence.RefreshAsync();

@@ -68,6 +68,41 @@
 
             <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                 <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="原始快照" HelpKey="evidence/原始快照"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Style="{StaticResource ToolButton}" Content="載入" Click="RawOpen_Click" Margin="0,0,7,0"
+                                    IsEnabled="{Binding EvidenceLab.CanRun}"/>
+                            <Button Style="{StaticResource ToolButton}" Content="與目前差分" Click="RawCompare_Click" Margin="0,0,7,0"
+                                    IsEnabled="{Binding EvidenceLab.CanRun}"/>
+                            <Button Style="{StaticResource PrimaryButton}" Content="建立原始快照" Click="RawSave_Click"
+                                    IsEnabled="{Binding EvidenceLab.CanRun}"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding EvidenceLab.RawSummary}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,5,0,0" TextWrapping="Wrap"
+                               Text="{Binding EvidenceLab.RawStatus}"/>
+                    <ItemsControl ItemsSource="{Binding EvidenceLab.RawChanges}" Margin="0,8,0,0" MaxHeight="240"
+                                  ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="80"/><ColumnDefinition Width="260"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Kind}" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" FontFamily="Consolas" Text="{Binding Source}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" Text="{Binding Detail}" TextTrimming="CharacterEllipsis"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
                     <local:SectionHead Text="事實清單" HelpKey="evidence/事實清單"/>
                     <Grid Margin="0,8,0,4">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition Width="180"/><ColumnDefinition Width="*"/><ColumnDefinition Width="210"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
