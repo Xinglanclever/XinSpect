@@ -325,6 +325,49 @@ public sealed class FactRelationTests
     }
 
     [Fact]
+    public void 快閃地圖族_雜湊無地圖與地圖全空都是矛盾()
+    {
+        var at = At;
+        static HardwareFact F(string key, string value, FactAvailability availability = FactAvailability.Present, string? reason = null) =>
+            new(key, "測試", key, value, "", "s", FactTrustLevel.Measured, false, At, null, availability, reason);
+
+        // 雜湊存在但地圖事實缺席 → 矛盾
+        var noMap = FactRelationService.Evaluate(FactRelationRules.All,
+            [F("spi.bios_hash", "SHA-256=…（BIOS 區 256 KiB）")])
+            .Single(r => r.RuleId == "spi.hash_without_map");
+        Assert.Equal(FactRelation.Contradicts, noMap.Relation);
+
+        // 地圖 NotApplicable 但雜湊存在 → 矛盾
+        var mapNA = FactRelationService.Evaluate(FactRelationRules.All,
+            [new HardwareFact("spi.flash_map", "測試", "x", "", "", "s", FactTrustLevel.Unknown, false, at,
+                null, FactAvailability.NotApplicable, "FREG0-5 全空或範圍異常——無從推導"),
+             F("spi.bios_hash", "SHA-256=…")])
+            .Single(r => r.RuleId == "spi.hash_without_map");
+        Assert.Equal(FactRelation.Contradicts, mapNA.Relation);
+
+        // 地圖與雜湊都在 → 一致
+        var ok = FactRelationService.Evaluate(FactRelationRules.All,
+            [F("spi.flash_map", "快閃 16 MiB、映射基底 0xFF000000"),
+             F("spi.bios_hash", "SHA-256=…")])
+            .Single(r => r.RuleId == "spi.hash_without_map");
+        Assert.Equal(FactRelation.Consistent, ok.Relation);
+
+        // 地圖可推導但區域事實說「全為空」→ 矛盾（同一份 FREG 兩種答案）
+        var regionsEmpty = FactRelationService.Evaluate(FactRelationRules.All,
+            [F("spi.flash_map", "快閃 16 MiB"),
+             F("spi.regions", "FREG0-5 全為空（未依描述符配置區域）")])
+            .Single(r => r.RuleId == "spi.map_vs_regions");
+        Assert.Equal(FactRelation.Contradicts, regionsEmpty.Relation);
+
+        // 兩邊一致 → 一致
+        var regionsOk = FactRelationService.Evaluate(FactRelationRules.All,
+            [F("spi.flash_map", "快閃 16 MiB"),
+             F("spi.regions", "描述符 0x0-0xFFF；BIOS 0x1000-0xBFFFFF")])
+            .Single(r => r.RuleId == "spi.map_vs_regions");
+        Assert.Equal(FactRelation.Consistent, regionsOk.Relation);
+    }
+
+    [Fact]
     public void SPI控制器存在性_盤點與SPI事實說不同的話就是矛盾()
     {
         var at = At;

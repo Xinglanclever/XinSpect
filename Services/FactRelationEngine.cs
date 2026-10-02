@@ -121,6 +121,8 @@ public static class FactRelationRules
     public const string SpiFrapKey = "spi.frap";
     public const string SpiHsfstsKey = "spi.hsfsts";
     public const string SpiHashKey = "spi.bios_hash";
+    public const string SpiMapKey = "spi.flash_map";
+    public const string SpiRegionsKey = "spi.regions";
     public const string BackendMmioKey = "backend.mmio";
     public const string BackendMsrKey = "backend.msr";
     public const string PlatformFeatureControlKey = "platform.feature_control";
@@ -346,6 +348,35 @@ public static class FactRelationRules
                 };
             },
             "bus 0 盤點與 SPI 服務讀的是同一個 PCI 後端；盤點肯定裝置在、SPI 服務卻稱讀不到，代表管線錯亂"),
+
+        new("spi.hash_without_map", "BIOS 雜湊存在而快閃地圖缺席",
+            [SpiHashKey],
+            f =>
+            {
+                // 地圖「缺席」正是矛盾條件之一，刻意不列輸入鍵（引擎守衛會轉 Unverifiable），規則內自查。
+                if (!f.TryGetValue(SpiMapKey, out var map))
+                    return FactRelationOutcome.Contradicts(
+                        "BIOS 區雜湊宣稱可讀，但快閃地圖事實不存在——雜湊的定址依賴地圖（FREG→映射基底），管線狀態矛盾");
+                return map.Availability == FactAvailability.Present
+                    ? FactRelationOutcome.Consistent("快閃地圖存在且 BIOS 區雜湊存在——上下游一致")
+                    : FactRelationOutcome.Contradicts(
+                        $"快閃地圖回報「{map.UnavailableReason ?? "不可用"}」，BIOS 區雜湊卻宣稱可讀——雜湊的定址依賴地圖，管線狀態矛盾");
+            },
+            "BIOS 區雜湊的位址來自快閃地圖（FREG 推導映射基底）；地圖缺席時雜湊不可能 Present——守的是管線資料流"),
+
+        new("spi.map_vs_regions", "快閃地圖與區域地圖事實一致性",
+            [SpiMapKey],
+            f =>
+            {
+                var regions = f.TryGetValue(SpiRegionsKey, out var r) ? r : null;
+                if (regions is null)
+                    return FactRelationOutcome.Unverifiable("SPI 區域事實不存在（管線未跑）——無從交叉，不下判決");
+                return regions.Value.Contains("全為空", StringComparison.Ordinal)
+                    ? FactRelationOutcome.Contradicts(
+                        "快閃地圖宣稱可由 FREG 推導，區域地圖事實卻說 FREG0-5 全為空——兩者讀的是同一份 SPIBAR 區塊，管線狀態矛盾")
+                    : FactRelationOutcome.Consistent("快閃地圖與區域地圖事實一致（同一份 FREG 的兩種呈現）");
+            },
+            "spi.flash_map 與 spi.regions 都源自 SPIBAR+0x54 的 FREG0-5；一邊說有區域、一邊說全空，代表管線錯亂"),
 
         new("chipset.smramc_open_while_locked", "SMRAM 鎖定下對外開放的非法組合",
             [SmramcKey],
