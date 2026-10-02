@@ -70,7 +70,7 @@ public sealed class RawDeviceChannel : IRawDeviceChannel
 /// 再以 IOCTL_XRP_READ_MMIO 讀區塊。managed 端先照契約鏡像自查範圍，不在清單就不打擾驅動、原因直接說明。
 /// 驅動未載入＝三態（不謊稱讀過）；這層只讀不寫，位元組如實帶回。
 /// </summary>
-public sealed class DriverMmioReader : IMmioReader
+public sealed class DriverMmioReader : IMmioReader, IDisposable
 {
     private readonly Func<IRawDeviceChannel> _channelFactory;
     private IRawDeviceChannel? _channel;

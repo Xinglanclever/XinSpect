@@ -155,6 +155,40 @@ public sealed class DeepAccessTests
         Assert.Contains(status.Notes, n => n.Contains("CA 未信任"));
     }
 
+    [Fact]
+    public void 啟用後握手通過_如實回報已連線()
+    {
+        string dir = TempDir();
+        DeploySys(dir);
+        var sut = new DeepAccessService(new FakeStore(), new FakeService(), dir, isElevated: true,
+            handshakeProbe: () => "裝置握手通過（能力協商與允許清單對帳成功）");
+        try
+        {
+            var status = sut.Enable();
+            Assert.Contains(status.Notes, n => n.Contains("握手通過"));
+            Assert.True(sut.IsDriverConnected);
+        }
+        finally { try { Directory.Delete(dir, true); } catch { } }
+    }
+
+    [Fact]
+    public void 服務執行中但握手失敗_兩者如實分開回報()
+    {
+        string dir = TempDir();
+        DeploySys(dir);
+        var sut = new DeepAccessService(new FakeStore(), new FakeService(), dir, isElevated: true,
+            handshakeProbe: () => null);
+        try
+        {
+            var status = sut.Enable();
+            // 服務在跑（IsEnabled 真），但裝置握手沒過——不可謊稱可用
+            Assert.Contains(status.Notes, n => n.Contains("握手尚未通過"));
+            Assert.False(sut.IsDriverConnected);
+            Assert.True(sut.IsEnabled);
+        }
+        finally { try { Directory.Delete(dir, true); } catch { } }
+    }
+
     private sealed class FakeStore : ICertTrustStore
     {
         public HashSet<string> Trusted { get; } = new(StringComparer.OrdinalIgnoreCase);

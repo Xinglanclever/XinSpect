@@ -50,16 +50,29 @@ public sealed class DeepAccessService : ObservableObject
     private readonly IDriverServiceControl _service;
     private readonly string _artifactDir;
     private readonly bool _isElevated;
+    private readonly Func<string?> _handshakeProbe;
 
     public DeepAccessService(ICertTrustStore? trustStore = null, IDriverServiceControl? serviceControl = null,
-        string? artifactDir = null, bool? isElevated = null)
+        string? artifactDir = null, bool? isElevated = null, Func<string?>? handshakeProbe = null)
     {
         _trustStore = trustStore ?? new X509TrustStore();
         _service = serviceControl ?? new ScmDriverService();
         _artifactDir = artifactDir ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "XinSpect", "Driver");
         _isElevated = isElevated ?? IsCurrentUserElevated();
+        _handshakeProbe = handshakeProbe ?? DefaultHandshakeProbe;
         RefreshStatus();
+    }
+
+    /// <summary>真實握手探測：開 \\.\XsRegProbe 走 QUERY_INFO 對帳（已測邏輯）；通過回描述文字，不通過回 null。</summary>
+    private static string? DefaultHandshakeProbe()
+    {
+        try
+        {
+            using var reader = new DriverMmioReader();
+            return reader.Available ? "裝置握手通過（能力協商與允許清單對帳成功）" : null;
+        }
+        catch { return null; }
     }
 
     public string SysPath => Path.Combine(_artifactDir, "XsRegProbe.sys");
@@ -70,10 +83,15 @@ public sealed class DeepAccessService : ObservableObject
     private bool _caTrusted;
     private DriverServiceState _driverState = DriverServiceState.Unknown;
     private string _statusText = "狀態未知";
+    private bool _driverConnected;
 
     public bool CaTrusted { get => _caTrusted; private set => SetProperty(ref _caTrusted, value); }
     public DriverServiceState DriverState { get => _driverState; private set => SetProperty(ref _driverState, value); }
     public bool IsEnabled => CaTrusted && DriverState == DriverServiceState.Running;
+
+    /// <summary>驅動裝置握手是否實際通過（QUERY_INFO 對帳成功）——與「服務執行中」是兩件事，如實分開回報。</summary>
+    public bool IsDriverConnected { get => _driverConnected; private set => SetProperty(ref _driverConnected, value); }
+
     public string StatusText { get => _statusText; private set => SetProperty(ref _statusText, value); }
 
     /// <summary>把動作結果的逐條說明附加在狀態文字後（給頁面顯示完整脈絡，不省略任何一步）。</summary>
@@ -131,6 +149,12 @@ public sealed class DeepAccessService : ObservableObject
                 default:
                     notes.Add($"服務 {ServiceName} 狀態查詢異常，未嘗試啟動。");
                     break;
+            }
+            if (_service.QueryState(ServiceName) == DriverServiceState.Running)
+            {
+                notes.Add(_handshakeProbe() is { } handshake
+                    ? $"驅動{handshake}。"
+                    : "服務已啟動，但裝置握手尚未通過（驅動可能載入失敗或簽章未過）——SPI/MMIO 仍三態。");
             }
         }
 
@@ -191,18 +215,28 @@ public sealed class DeepAccessService : ObservableObject
         bool caTrusted = TryLoadCa(out var ca) && ca is { } c && _trustStore.IsTrusted(c.Thumbprint);
         var state = _service.QueryState(ServiceName);
         bool sysPresent = File.Exists(SysPath);
+        bool connected = false;
         var notes = new List<string>();
         if (!caTrusted) notes.Add("CA 未信任");
-        if (state != DriverServiceState.Running) notes.Add($"驅動服務{state switch
+        if (state != DriverServiceState.Running)
         {
-            DriverServiceState.NotFound => "未安裝",
-            DriverServiceState.Stopped => "已停止",
-            _ => "狀態未知",
-        }}");
+            notes.Add($"驅動服務{state switch
+            {
+                DriverServiceState.NotFound => "未安裝",
+                DriverServiceState.Stopped => "已停止",
+                _ => "狀態未知",
+            }}");
+        }
+        else
+        {
+            connected = _handshakeProbe() is { } handshake;
+            notes.Add(connected ? "驅動已連線" : "服務執行中，但裝置握手失敗——MMIO 仍三態");
+        }
         if (!sysPresent) notes.Add(".sys 未部署");
 
         CaTrusted = caTrusted;
         DriverState = state;
+        IsDriverConnected = connected;
         StatusText = StatusFrom(new DeepAccessStatus(caTrusted, state, sysPresent, caTrusted && state == DriverServiceState.Running, notes));
         return new DeepAccessStatus(caTrusted, state, sysPresent, caTrusted && state == DriverServiceState.Running, notes);
     }
