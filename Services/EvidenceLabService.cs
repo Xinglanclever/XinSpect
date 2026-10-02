@@ -295,6 +295,23 @@ public sealed record EvidenceFactRow(string Category, string Name, string Value,
         ? UnavailableText(Availability, UnavailableReason)
         : Sensitive && HardwareSnapshotService.IsRedacted(Value) ? "（已遮蔽）" : Value;
 
+    /// <summary>
+    /// 裁決警示：值以這些前綴開頭＝裁決對使用者不利（未保護／未鎖／開放／可寫入），頁面以警示色呈現。
+    /// 前綴與各服務的裁決文字一一對應（ChipsetSecurityService／SpiFlashService／PlatformSecurityMsrService）；
+    /// 讀不到的列一律不算警示——「讀不到」有自己的誠實呈現，不冒充危險。
+    /// </summary>
+    public bool IsWarning => !IsUnavailable && WarningPrefixes.Any(p => Value.StartsWith(p, StringComparison.Ordinal));
+
+    internal static readonly string[] WarningPrefixes =
+    [
+        "未保護",           // BIOS_CNTL BLE=0
+        "未鎖定",           // HSFSTS FLOCKDN=0、FEATURE_CONTROL Lock=0
+        "未鎖：",           // SMRAMC D_LCK=0
+        "SMRAM 對外開放",   // SMRAMC D_OPEN
+        "BIOS 區域可寫入",  // FRAP bit1=1
+        "除錯埠啟用中",     // DEBUG_INTERFACE ENABLE 且未鎖
+    ];
+
     /// <summary>把三態可用性轉成誠實的人類文字：讀不到就說讀不到並附原因，不以空白或舊值冒充。</summary>
     internal static string UnavailableText(FactAvailability availability, string? reason)
     {

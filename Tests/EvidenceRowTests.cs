@@ -80,6 +80,34 @@ public sealed class EvidenceRowTests
         Assert.Contains(rows, r => r.Name == "BIOS 寫入保護" && r.ValueText.Contains("讀不到"));
     }
 
+    // ===== 裁決警示：不利裁決標警示色（IsWarning），讀不到的列一律不算警示 =====
+
+    [Theory]
+    [InlineData("未保護：BLE=0，任何 ring0 皆可寫 BIOS（BIOSWE=0）", true)]
+    [InlineData("未鎖定（FLOCKDN=0）：保護範圍與寫入停用設定仍可被 ring0 改動", true)]
+    [InlineData("未鎖：D_LCK=0", true)]
+    [InlineData("SMRAM 對外開放：D_OPEN=1 且未鎖", true)]
+    [InlineData("BIOS 區域可寫入：主機軟體獲准（BRWA=0x2 bit1）", true)]
+    [InlineData("除錯埠啟用中且未鎖（ENABLE=1、LOCK=0）：外部除錯連線可行", true)]
+    [InlineData("最強保護：SMM_BWP=1，僅 SMM 可寫 BIOS", false)]
+    [InlineData("已鎖：D_LCK=1，SMRAM 設定鎖定", false)]
+    [InlineData("已鎖定（FLOCKDN=1）：SPI 保護設定不可改直至重置", false)]
+    [InlineData("BIOS 區域不可寫入：主機軟體未獲准（BRWA=0x0 bit1=0）", false)]
+    [InlineData("正常運作（working_state=0，fw_init=完成）", false)]
+    public void 裁決警示_前綴與服務裁決文字一一對應(string value, bool expected)
+    {
+        var row = new EvidenceFactRow("韌體安全", "測試", value, "", "", false);
+        Assert.Equal(expected, row.IsWarning);
+    }
+
+    [Fact]
+    public void 讀不到的列_不冒充危險不標警示()
+    {
+        var row = new EvidenceFactRow("韌體安全", "BIOS 寫入保護", "", "PCI 0:1F.0+0xDC", "", false,
+            FactAvailability.InsufficientPrivilege, "缺 ring0：特權讀取未就緒");
+        Assert.False(row.IsWarning);
+    }
+
     private sealed class FakePci : IPciConfigReader
     {
         public bool Available => false;
