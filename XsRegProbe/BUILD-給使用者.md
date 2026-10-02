@@ -50,6 +50,16 @@ signtool sign /v /fd sha256 /f XinSpectSign.pfx /p "<自訂密碼>" `
 
 ## 4. 載入（開發機或刻意執行；這是生產機，載入未驗證核心碼請自評時機）
 
+**建議：先複製 .sys 到程式認得的部署目錄，再從程式內「韌體安全 → 深層核心存取 → 開啟」啟用**
+（程式只認 `%ProgramData%\XinSpect\Driver\XsRegProbe.sys`；從程式內開啟會一併裝 CA 信任、建服務、回報握手狀態）：
+
+```powershell
+New-Item -ItemType Directory -Force "$env:ProgramData\XinSpect\Driver" | Out-Null
+Copy-Item XsRegProbe\Driver\x64\Release\XsRegProbe.sys "$env:ProgramData\XinSpect\Driver\"
+```
+
+也可手動建服務（注意：此法服務能跑、握手能過，但程式狀態列會顯示「.sys 未部署」，因為它只檢查上面的部署目錄）：
+
 ```cmd
 sc create XsRegProbe type= kernel start= demand binPath= C:\Users\Administrator\XinSpect\XsRegProbe\Driver\x64\Release\XsRegProbe.sys
 sc start XsRegProbe
