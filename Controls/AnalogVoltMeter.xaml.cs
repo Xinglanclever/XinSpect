@@ -109,7 +109,7 @@ public partial class AnalogVoltMeter : UserControl
         var fig = new PathFigure { StartPoint = a, IsClosed = false, IsFilled = false };
         fig.Segments.Add(new ArcSegment(b, new Size(90, 90), 0, (Angle(f1) - Angle(f0)) > 180,
                                         SweepDirection.Clockwise, true));
-        Dial.Children.Add(new Path
+        Dial.Children.Add(new System.Windows.Shapes.Path // 全名限定：System.IO.Path 歧義
         {
             Data = new PathGeometry(new[] { fig }),
             Stroke = brush,

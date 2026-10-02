@@ -63,9 +63,12 @@
   </ItemGroup>
 
   <!-- WinForms 僅供系統匣（TrayService）使用；移除其全域 using 以免與 WPF 的 System.Windows.* 型別衝突 -->
+  <!-- System.IO 同理：新 SDK 的隱含 using 會讓 WPF 的 Shapes.Path 撞上 IO.Path（HistoryGraph 等）；
+       全庫慣例本就是明確寫 using System.IO，這裡移除隱含版以維持原語義 -->
   <ItemGroup>
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
+    <Using Remove="System.IO" />
   </ItemGroup>
 
   <!-- ── 超頻橋接程式（net48）：不納入本體檔案集 ─────────────────────────────────
@@ -91,6 +94,18 @@
     <None Remove="BlueSquadron\**" />
     <Page Remove="BlueSquadron\**" />
     <Resource Remove="BlueSquadron\**" />
+  </ItemGroup>
+
+  <!-- ── XsRegProbe 驅動與驗證器：不納入本體檔案集 ─────────────────────────────
+       XsRegProbe\ 內是核心驅動 C 源碼與引用本體的驗證器 console 專案；其 Program.cs
+       若被本體的預設 glob 收入會造成重複編譯與型別衝突，故一律自各預設項目類型排除。 -->
+  <ItemGroup>
+    <Compile Remove="XsRegProbe\**\*.cs" />
+    <EmbeddedResource Remove="XsRegProbe\**" />
+    <Content Remove="XsRegProbe\**" />
+    <None Remove="XsRegProbe\**" />
+    <Page Remove="XsRegProbe\**" />
+    <Resource Remove="XsRegProbe\**" />
   </ItemGroup>
 
   <!-- ── 單元測試專案：不納入本體檔案集 ───────────────────────────────────────

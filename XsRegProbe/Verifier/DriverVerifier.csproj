@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    XsRegProbe 驗證器：給「編譯簽章載入」那步的誠實心跳檢查。
+    引用主程式專案以沿用已測的 DriverMmioReader（能力協商＋允許清單對帳＋三態），不重複實作契約邏輯。
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <AssemblyName>XsRegProbeVerifier</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\XinSpect.csproj" />
+  </ItemGroup>
+
+</Project>

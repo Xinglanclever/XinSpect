@@ -165,7 +165,7 @@ public partial class FanCurveEditor : UserControl
         var fill = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
         fill.GradientStops.Add(new GradientStop(Color.FromArgb(0x55, ac.R, ac.G, ac.B), 0));
         fill.GradientStops.Add(new GradientStop(Color.FromArgb(0x0C, ac.R, ac.G, ac.B), 1));
-        Plot.Children.Add(new Path { Data = geo, Fill = fill });
+        Plot.Children.Add(new System.Windows.Shapes.Path { Data = geo, Fill = fill }); // 全名限定：System.IO.Path 歧義
 
         Plot.Children.Add(new Polyline
         {

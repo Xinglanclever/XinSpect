@@ -57,16 +57,19 @@ sc start XsRegProbe
 
 ## 5. 驗證（最小心跳檢查：QUERY_INFO + 讀 SPIBAR HSFSTS）
 
-```csharp
-using var dev = File.Open(@"\\.\XsRegProbe", FileMode.Open, FileAccess.Read);
-// IOCTL_XRP_QUERY_INFO   = CTL_CODE(0x8338, 0x800, METHOD_BUFFERED, FILE_READ_DATA) = 0x83386000
-// IOCTL_XRP_READ_MSR_LIST= CTL_CODE(0x8338, 0x801, METHOD_BUFFERED, FILE_READ_DATA) = 0x83386004
-// IOCTL_XRP_READ_MMIO    = CTL_CODE(0x8338, 0x802, METHOD_BUFFERED, FILE_READ_DATA) = 0x83386008
-// QUERY_INFO 回覆應為 Magic='XRP1'、IoctlVersion=1、FeatureMask=3；
-// 再送 IOCTL_XRP_READ_MMIO 讀 0xFED10000+0x04 取 HSFSTS，bit15=1 表示 FLOCKDN（與韌體安全頁對帳）。
+隨 repo 附驗證器（引用主程式專案，沿用已單測的 `DriverMmioReader` 邏輯，不重複實作契約）：
+
+```powershell
+cd C:\Users\Administrator\XinSpect
+dotnet run --project XsRegProbe/Verifier/DriverVerifier.csproj -c Release
 ```
 
-（此段 managed 端 `DriverMmioReader : IMmioReader` 為下一輪工作；先以最小 win32 小程式或即時 C# 腳本驗。）
+三項檢查：
+1. `IOCTL_XRP_QUERY_INFO` 能力協商＋允許清單筆數對帳（35+1 條 MSR、2 條 MMIO）。
+2. 讀 `0xFED10000+0x04`（HSFSTS1）：bit15 FLOCKDN、bit11 WRSDIS。若平台 SPIBAR 非預設位址，以韌體安全頁（經 PCI BAR 對帳）的值為準。
+3. 讀清單外位址 `0xDEADBEE0`——**必須如實被拒**；若竟讀到，代表 .sys 允許清單失效，請勿使用。
+
+全部通過印「驗證通過（3/3 項如實）」；任何一項讀不到都會說原因，不以 0 頂替。
 
 **誠實驗收準則**：
 - `IOCTL_XRP_QUERY_INFO` 的 MsrExactCount/MsrRangeCount/MmioRangeCount 應與 `XrpContract.h` 表筆數一致

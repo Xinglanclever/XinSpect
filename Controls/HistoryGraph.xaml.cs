@@ -19,7 +19,7 @@ public partial class HistoryGraph : UserControl
     private bool _built;
     private readonly Line[] _hGrid = new Line[3];
     private readonly Line[] _vGrid = new Line[5];
-    private Path _area = null!;
+    private System.Windows.Shapes.Path _area = null!; // 全名限定：新 SDK 環境下 System.IO 也會進入此檔的可視範圍，裸 Path 會歧義
     private PathFigure _areaFig = null!;
     private LineSegment _areaStart = null!;   // 底邊 → 首點
     private PolyLineSegment _areaBody = null!; // 沿資料折線
@@ -136,7 +136,7 @@ public partial class HistoryGraph : UserControl
         _areaFill = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
         _areaFill.GradientStops.Add(new GradientStop(Colors.Transparent, 0));
         _areaFill.GradientStops.Add(new GradientStop(Colors.Transparent, 1));
-        _area = new Path { Data = areaGeom, Fill = _areaFill };
+        _area = new System.Windows.Shapes.Path { Data = areaGeom, Fill = _areaFill };
         Plot.Children.Add(_area);
 
         _lineBrush = new SolidColorBrush();
