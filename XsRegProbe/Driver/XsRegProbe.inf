@@ -1,0 +1,40 @@
+;
+; XsRegProbe.inf — XinSpect 白名單受限唯讀暫存器探測驅動
+; 非隨插即用：以服務（SERVICE_KERNEL_DRIVER，手動啟動）載入，managed 端退出即停即刪。
+;
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = System
+ClassGuid   = {4d36e97d-e325-11ce-bfc1-08002be10318}
+Provider    = %ManufacturerName%
+CatalogFile = XsRegProbe.cat
+DriverVer   = 10/02/2026,1.0.0.0
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 12
+
+[DefaultInstall.NTamd64]
+CopyFiles = @XsRegProbe.sys
+
+[DefaultInstall.NTamd64.Services]
+AddService = XsRegProbe,0x800,Xrp_Service
+
+[Xrp_Service]
+DisplayName    = %ServiceName%
+Description    = %ServiceDesc%
+ServiceBinary  = %12%\XsRegProbe.sys
+ServiceType    = 1
+StartType      = 3
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+XsRegProbe.sys = 1
+
+[Strings]
+ManufacturerName = "XinSpect Project"
+ServiceName      = "XinSpect Register Probe"
+ServiceDesc      = "白名單受限唯讀暫存器探測（MSR/MMIO），僅管理員可開啟控制代碼，退出即卸載。"
+DiskName         = "XsRegProbe Installation Disk"
