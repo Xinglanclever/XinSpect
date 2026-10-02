@@ -107,6 +107,15 @@ public sealed class EvidenceLabIntegrationTests
         public uint? ReadDword(byte bus, byte device, byte function, uint register) => null;
     }
 
+    /// <summary>0:1F.5 為 Intel SPI 控制器、BAR=0xFED10000 的最小假讀取器（暫存器本體由 MMIO 側的假件決定）。</summary>
+    private sealed class FakePciBar : IPciConfigReader
+    {
+        public bool Available => true;
+        public string? UnavailableReason => null;
+        public uint? ReadDword(byte bus, byte device, byte function, uint register)
+            => register == 0x00 ? 0x00008086u : register == 0x10 ? 0xFED10000u : null;
+    }
+
     [Fact]
     public void 擷取含ACPI表清單事實()
     {
@@ -131,6 +140,34 @@ public sealed class EvidenceLabIntegrationTests
             BitConverter.GetBytes(48u).CopyTo(t, 4);
             return t;
         }
+    }
+
+    [Fact]
+    public void 擷取含SPI快閃三態事實_驅動未載時標缺自家驅動()
+    {
+        var vm = SampleVm();
+        vm.EvidenceLab.LoadSpiFlash(new FakePciBar(), new NotLoadedMmioReader());
+
+        var snapshot = vm.EvidenceLab.Capture(vm, includeSensitive: false);
+
+        var fact = snapshot.Facts.Single(x => x.Key == "spi.hsfsts");
+        Assert.Equal(FactAvailability.InsufficientPrivilege, fact.Availability);
+        Assert.Contains("缺自家核心驅動", fact.UnavailableReason);
+        // SPI 歸類「韌體安全」，要出現在韌體安全頁的列上。
+        Assert.Contains(vm.EvidenceLab.FirmwareSecurityRows, r => r.Name == "SPI 快閃鎖定狀態");
+    }
+
+    [Fact]
+    public void 擷取含PCIeAER三態事實_歸類PCIe不進韌體安全頁()
+    {
+        var vm = SampleVm();
+        vm.EvidenceLab.LoadPcieAer(new NotLoadedMmioReader(), new FakeAcpi());
+
+        var snapshot = vm.EvidenceLab.Capture(vm, includeSensitive: false);
+
+        var ecam = snapshot.Facts.Single(x => x.Key == "pcieaer.ecam");
+        Assert.Equal(FactAvailability.NotApplicable, ecam.Availability); // 假來源只有 BERT，無 MCFG
+        Assert.DoesNotContain(vm.EvidenceLab.FirmwareSecurityRows, r => r.Category == "PCIe");
     }
 
     [Fact]

@@ -37,6 +37,16 @@ public static class AcpiTable
     public static uint? BertBootErrorRegionLength(ReadOnlySpan<byte> table)
         => table.Length >= 48 && table[..4].SequenceEqual("BERT"u8) ? BitConverter.ToUInt32(table[36..40]) : null;
 
+    /// <summary>
+    /// MCFG 首條目（segment 0）：ECAM 基底與 bus 範圍。標頭(36)+保留(8)後每條目 16 bytes：基底 u64@0、PCI 群組 u16@8、起始 bus@10、結束 bus@11。
+    /// 非 MCFG 或無條目回 null——ECAM 基底是平台事實，讀不到就說讀不到。
+    /// </summary>
+    public static (ulong Base, byte StartBus, byte EndBus)? McfgPrimaryEcam(ReadOnlySpan<byte> table)
+    {
+        if (table.Length < 60 || !table[..4].SequenceEqual("MCFG"u8)) return null;
+        return (BitConverter.ToUInt64(table[44..52]), table[54], table[55]);
+    }
+
     private static byte Checksum(ReadOnlySpan<byte> bytes)
     {
         byte sum = 0;

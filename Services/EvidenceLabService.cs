@@ -32,9 +32,29 @@ public sealed class EvidenceLabService : ObservableObject
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
-    /// <summary>韌體安全頁用：晶片組安全 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
+    /// <summary>SPI 快閃安全三態事實（HSFSTS/FRAP/FREG/PR）。SPIBAR 經 PCI 取得、暫存器要 MMIO——驅動未載時整組三態。</summary>
+    public IReadOnlyList<HardwareFact> SpiFlashFacts { get; private set; } = [];
+
+    /// <summary>以注入的 PCI + MMIO 讀取器載入 SPI 快閃安全事實；測試注入假讀取器，不在這裡觸發核心驅動安裝。</summary>
+    public void LoadSpiFlash(IPciConfigReader pci, IMmioReader mmio)
+    {
+        SpiFlashFacts = SpiFlashService.Collect(pci, mmio, DateTimeOffset.UtcNow);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
+    /// <summary>PCIe AER 三態事實（ECAM 基底 + 逐裝置錯誤狀態）。歸類「PCIe」，進快照但不進韌體安全頁。</summary>
+    public IReadOnlyList<HardwareFact> PcieAerFacts { get; private set; } = [];
+
+    /// <summary>以注入的 MMIO 讀取器與 ACPI 來源載入 PCIe AER 事實；讀不到由 EcamAerService 標三態。</summary>
+    public void LoadPcieAer(IMmioReader mmio, IAcpiTableSource acpi)
+    {
+        PcieAerFacts = EcamAerService.Collect(mmio, acpi, DateTimeOffset.UtcNow);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
+    /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
-        ChipsetFacts.Concat(AcpiFacts)
+        ChipsetFacts.Concat(SpiFlashFacts).Concat(AcpiFacts)
             .OrderBy(f => f.Category, StringComparer.Ordinal).ThenBy(f => f.Key, StringComparer.Ordinal)
             .Select(EvidenceFactRow.From).ToList();
 
@@ -239,8 +259,12 @@ public sealed class EvidenceLabService : ObservableObject
 
         // 晶片組安全三態事實（啟動路徑以 WinRing0 後端載入；讀不到即帶原因，不被省略）。
         f.AddRange(vm.EvidenceLab.ChipsetFacts);
+        // SPI 快閃安全三態事實（驅動未載時整組標缺自家驅動）。
+        f.AddRange(vm.EvidenceLab.SpiFlashFacts);
         // ACPI 表清單三態事實（usermode 列舉）。
         f.AddRange(vm.EvidenceLab.AcpiFacts);
+        // PCIe AER 三態事實（ECAM 掃描；歸類「PCIe」）。
+        f.AddRange(vm.EvidenceLab.PcieAerFacts);
 
         return f;
     }
