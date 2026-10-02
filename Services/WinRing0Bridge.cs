@@ -36,7 +36,8 @@ public sealed class WinRing0Bridge : IDisposable
     private sealed record Ring0Methods(MethodInfo Open, MethodInfo Close, MethodInfo ReadMsr, MethodInfo WriteMsr,
                                        MethodInfo? ReadPciConfig, MethodInfo? GetPciAddress,
                                        MethodInfo? ReadIoPort, MethodInfo? WriteIoPort,
-                                       MethodInfo? WritePciConfig);
+                                       MethodInfo? WritePciConfig,
+                                       MethodInfo? ReadMemoryArray = null);
 
     private static readonly object Gate = new();
     private static Ring0Methods? _cached;
@@ -133,7 +134,18 @@ public sealed class WinRing0Bridge : IDisposable
             // 選用：寫 PCI 設定空間。HEDT／伺服器平台的 DIMM SPD 掛在處理器記憶體控制器自己的
             // SMBus 上，而那個控制器的命令暫存器就在 PCI 設定空間裡——發一次讀取也得先寫它。
             var writePci = ty.GetMethod("WritePciConfig", All, new[] { typeof(uint), typeof(uint), typeof(uint) });
-            return new Ring0Methods(open, close, read, write, readPci, pciAddr, readIo, writeIo, writePci);
+            // 選用：實體記憶體讀取（MMIO 的地基）。0.9.4 的 Ring0 提供兩個泛型多載：
+            // ReadMemory<T>(UInt64, ref T) 與 ReadMemory<T>(UInt64, ref T[])——驅動端以
+            // {位址, UnitSize, Count} 讀回 Count 個元素，位址是 64 位元。這裡精確挑「陣列版」
+            // 泛型定義（第二參數是 ByRef 且元素是陣列型別），比對不上就當作沒有——
+            // 猜錯簽名的代價是把失敗當成功，把垃圾當 MMIO 內容解讀出去。
+            var readMemArray = ty.GetMethods(All).FirstOrDefault(m => m.Name == "ReadMemory"
+                && m.IsGenericMethodDefinition
+                && m.GetParameters().Length == 2
+                && m.GetParameters()[0].ParameterType == typeof(ulong)
+                && m.GetParameters()[1].ParameterType.IsByRef
+                && m.GetParameters()[1].ParameterType.GetElementType() is { IsArray: true });
+            return new Ring0Methods(open, close, read, write, readPci, pciAddr, readIo, writeIo, writePci, readMemArray);
         }
         catch (Exception ex)
         {
@@ -256,6 +268,33 @@ public sealed class WinRing0Bridge : IDisposable
             return _m.WritePciConfig.Invoke(null, new object?[] { addr, register, value }) is true;
         }
         catch { return false; }
+    }
+
+    /// <summary>本機的 Ring0 是否提供實體記憶體讀取（MMIO 的地基；V7 驅動裁決裡 WinRing0 主力路徑的關鍵能力）。</summary>
+    public bool MemoryReadAvailable => _m?.ReadMemoryArray is not null && !_disposed;
+
+    /// <summary>
+    /// 讀實體位址起 <paramref name="length"/> 位元組。失敗或不支援回 null。
+    /// </summary>
+    /// <remarks>
+    /// <para>底層是 Ring0.ReadMemory&lt;byte&gt;(位址, ref byte[length])——驅動端以
+    /// {位址, UnitSize=1, Count=length} 送 IOCTL_OLS_READ_MEMORY，驅動負責映射與複製，
+    /// 位址支援 64 位元。回 false 代表驅動端映射或複製失敗，<b>呼叫方必須標三態</b>，
+    /// 不得以全 0／全 0xFF 頂替。</para>
+    /// <para>⚠ 能力面：這條路徑<b>沒有位址白名單</b>（與 XsRegProbe 的差別就在這）。
+    /// 防線在呼叫方：各服務的位址一律來自 PCI BAR／MCFG／MSR 對帳的真實來源，不自造位址、
+    /// 不做任意掃描。位址正確但該範圍未映射時驅動會回失敗——那也是誠實的讀不到。</para>
+    /// </remarks>
+    public byte[]? ReadMemoryBlock(ulong address, int length)
+    {
+        if (_m?.ReadMemoryArray is null || _disposed || length <= 0) return null;
+        try
+        {
+            var args = new object?[] { address, new byte[length] };
+            if (_m.ReadMemoryArray.MakeGenericMethod(typeof(byte)).Invoke(null, args) is not true) return null;
+            return (byte[])args[1]!;
+        }
+        catch { return null; }
     }
 
     /// <summary>交還這一份會話；最後一位使用者離開時才真正 Close 驅動服務。</summary>

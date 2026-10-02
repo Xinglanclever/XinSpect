@@ -26,3 +26,15 @@ public sealed class NotLoadedMmioReader : IMmioReader
     public string? UnavailableReason => Reason;
     public byte[]? ReadBlock(ulong physicalAddress, int length) => null;
 }
+
+/// <summary>帶自訂原因的固定「讀不到」實作：後端裁決全數落空時，把每個後端為什麼不行串成一句誠實的原因。</summary>
+public sealed class UnavailableMmioReader : IMmioReader
+{
+    public UnavailableMmioReader(string reason) => Reason = reason;
+
+    public string Reason { get; }
+
+    public bool Available => false;
+    public string? UnavailableReason => Reason;
+    public byte[]? ReadBlock(ulong physicalAddress, int length) => null;
+}

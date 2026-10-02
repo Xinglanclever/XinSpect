@@ -127,7 +127,8 @@ internal static class StartupSequence
     /// 驅動相依五組證據（晶片組安全／SPI 快閃／平台安全 MSR／MCHBAR／PCIe AER）的載入：真實後端在此一處組合。
     /// 啟動序列與「啟用深層存取後重載」共用——同一個閘門擋並發（驅動控制代碼不重複開）、整批替換不累積；
     /// 讀不到由各服務標三態，此處只負責後端壽命與異常吞噬。
-    /// 後端裁決（V7 §2.1）：WinRing0 為主力；XsRegProbe 的 DriverMsrReader 已備妥未接線，等 WP29 三後端切換一起收編。
+    /// 後端裁決（V7 §2.1／§2.4）：WinRing0 為主力（MSR／PCI／MMIO 實體記憶體）；XsRegProbe 降為備援
+    /// （驅動已載入且握手成功才接手）；DriverMsrReader 維持備妥未接線，供 HVCI 環境與未來 PEBS/PT。
     /// </summary>
     internal static void LoadDriverBackedEvidence(MainViewModel vm)
     {
@@ -136,8 +137,12 @@ internal static class StartupSequence
         {
             using var pci = new WinRing0PciConfigReader();
             using var msr = new WinRing0KernelMsrReader();
-            using var mmio = new DriverMmioReader(); // 三個載入共用一個驅動控制代碼；事實都在區塊內同步算完
-            vm.EvidenceLab.ReloadDriverBackedFacts(pci, msr, mmio, new Win32AcpiTableSource());
+            var mmio = MmioBackendSelector.Select(); // WinRing0 主力 → XsRegProbe 備援 → 帶原因三態
+            try
+            {
+                vm.EvidenceLab.ReloadDriverBackedFacts(pci, msr, mmio, new Win32AcpiTableSource());
+            }
+            finally { (mmio as IDisposable)?.Dispose(); }
         }
         catch { /* 晶片組安全為附加功能，讀不到由三態標示 */ }
         finally { DriverEvidenceGate.Release(); }
