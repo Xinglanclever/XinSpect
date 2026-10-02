@@ -49,12 +49,22 @@
 
 **里程碑達成**：G3（WP7 報告＋WP32 API）落地——「交得出可驗證報告（HTML＋SHA-256 離線核驗）、能進 CI（CLI＋退出碼）」。**G1–G3＝世界級的工具。**
 
-## 待辦（下一批）
+## ITER24 ・ G4 推進批次：測試方法學（2026-10-03）
 
-- G4 收尾：WP44 SpecRef 覆蓋推廣（目前五解碼器）、WP45 產生器擴大（更多解碼器）、WP50 Stryker mutation＋differential testing。
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP44-① | SpecRef 覆蓋推廣 5→**9 解碼器**（＋Cmos／Tsod／SuperIo／PlatformTrustDecoder，引用 MC146818／JEDEC TSE2004／coreboot superiotool／SDM Vol.3／Win32_DeviceGuard）；引用下限 15→32 | 2755 | 6f65ad1 |
+| R2 | WP45-② | 產生器擴大：TSE2004 溫度、IA32_FEATURE_CONTROL／DEBUG_INTERFACE、BIOS_CNTL／SMRAMC、ACPI 表頭（含校驗和）＋MCFG 條目——獨立編碼＋金標＋往返 | 2759 | 9e38df8 |
+| R3 | WP50-③ | **差分測試**：同一份 SMBIOS 表、兩個獨立實作——本專案解碼器（smbios-real.bin）vs 微軟 WMI 提供者（Win32_PhysicalMemory）。真機實測 3/3 一致（模組數／總容量／標稱＋實際速度） | 2762 | 292c10f |
+| R4 | WP50-② | **Stryker 試跑（time-boxed，誠實結局：未能執行）**：工具 5.0.0 安裝成功，但建置分析器（Buildalyzer）過不了本專案的 WPF＋巢狀 net48 橋接自訂 Target（`BuildAndEmbedXtuBridge`），「simulated build failed」。設定檔 `stryker-config.json` 已備妥（Tsod/Cmos/SuperIo 三檔、PerTest 覆蓋分析、門檻 90/70/70），待解碼器抽成獨立程式庫或工具跟上即可重跑。**副作用教訓**：Stryker 的建置模擬會弄壞 `Bridge\bin\Debug\net48\XtuBridge.exe` 產出狀態，之後測試會報「橋接建置後仍找不到產出」——跑一次正常 `dotnet build XinSpect.csproj -c Debug` 即還原 | — | 本輪 |
+| R5 | 制度 | ITERATIONS.md 記錄本批＋記憶庫 | 2762 | 本輪 |
+
+**誠實聲明**：V7 的 Mutation score 目標（關鍵解碼器 > 90%）本批**未達成**——不是測試不夠，是工具進不來。目前解碼器的突變防護由「獨立產生器往返＋金標向量」承擔（T1＋M2），缺的是系統性突變掃描。
+
+- G4 收尾：WP44 SpecRef 覆蓋推廣（目前九解碼器）、WP50 **Stryker mutation（工具限制待解：解碼器抽成獨立程式庫，或等 Buildalyzer 支援此專案形態）**、differential 擴大（SPD fixture vs WMI？edid？）。
 - WP3 MCHBAR 時序解碼（對準 Intel datasheet／CHIPSEC 再出貨）、WP4 SPI 韌體 hash 比對。
 - WP30 CHIPSEC 知識庫移植（含 Super I/O 名稱對照表的出處化）。
 - 對帳規則 12 → ≥25：後續規則依賴新事實來源（SPD↔TSOD、SMART、儲存面），隨 WP 推進補。
 - CLI 擴充候選：全機快照（需 headless 化 WPF 服務層）、批次清單檔。
 - PawnIO 模組整合（HVCI 環境備援；本機 IntelMsr 模組已知回 0 的問題要先解）。
-- 發佈：等使用者明說。20 輪＋ITER21–23 內容尚未折疊進 changelog（發佈前必做，FileVersion .5→.6）。
+- 發佈：等使用者明說。20 輪＋ITER21–24 內容尚未折疊進 changelog（發佈前必做，FileVersion .5→.6）。

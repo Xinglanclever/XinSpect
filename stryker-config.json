@@ -1,0 +1,16 @@
+{
+  "stryker-config": {
+    "project": "XinSpect.csproj",
+    "test-projects": ["Tests/XinSpect.Tests.csproj"],
+    "target-framework": "net10.0-windows",
+    "coverage-analysis": "PerTest",
+    "mutate": [
+      "**/Services/Tsod.cs",
+      "**/Services/Cmos.cs",
+      "**/Services/SuperIoProbeService.cs"
+    ],
+    "reporters": ["cleartext"],
+    "thresholds": { "high": 90, "low": 70, "break": 70 },
+    "verbosity": "info"
+  }
+}
