@@ -61,10 +61,23 @@
 
 **誠實聲明**：V7 的 Mutation score 目標（關鍵解碼器 > 90%）本批**未達成**——不是測試不夠，是工具進不來。目前解碼器的突變防護由「獨立產生器往返＋金標向量」承擔（T1＋M2），缺的是系統性突變掃描。
 
-- G4 收尾：WP44 SpecRef 覆蓋推廣（目前九解碼器）、WP50 **Stryker mutation（工具限制待解：解碼器抽成獨立程式庫，或等 Buildalyzer 支援此專案形態）**、differential 擴大（SPD fixture vs WMI？edid？）。
-- WP3 MCHBAR 時序解碼（對準 Intel datasheet／CHIPSEC 再出貨）、WP4 SPI 韌體 hash 比對。
+## ITER25 ・ WP3 推進批次：世代基建與掃描擴大（2026-10-03）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP3-① | **CPU 世代判定解碼器**（`CpuGeneration`：CPUID family/model → 微架構名，只收錄有把握的子集、未收錄誠實標；＋`cpu.generation` 事實進收集） | 2763 | 7a15463 |
+| R2 | WP3-② | MCHBAR 事實文字精確化：世代判定接入、不出值界線說明從「待辦」改為「**公開規格未定義（MRC 訓練結果區），維持不解碼——不出值是誠實界線，不是待辦遺漏**」 | 2763 | eab9988 |
+| R3 | WP3-③ | **ECAM AER 掃描擴大**：bus 0 → segment 0 自 StartBus 起最多 32 條 bus（探頭讀取量上限保護）；逐裝置 key 帶 bus 號、上限外如實標「未掃」、掃描中止點（bus/dev.fn）如實記錄且保留已得事實 | 2765 | 6bb3c58 |
+| R4 | 制度 | ITERATIONS.md 記錄本批＋記憶庫 | — | 本輪 |
+
+**MCHBAR 誠實裁決（記錄在案）**：本機為 i9-7980XE（Skylake-X）——MCHBAR 時序暫存器屬 MRC 訓練結果區，Intel 公開 datasheet 未定義其佈局，社群逆向值不合 V7「對準規格」門檻，時序解碼維持不出值。世代判定基建已就位，未來若有出處可信的佈局文件可按世代接入。
+
+## 待辦（下一批）
+
+- WP4 SPI 韌體 hash 比對（BIOS 區 hash → 原廠比對）。
 - WP30 CHIPSEC 知識庫移植（含 Super I/O 名稱對照表的出處化）。
-- 對帳規則 12 → ≥25：後續規則依賴新事實來源（SPD↔TSOD、SMART、儲存面），隨 WP 推進補。
+- WP50 Stryker（解碼器抽成獨立程式庫，或等 Buildalyzer 支援）、differential 擴大（SPD fixture vs WMI）。
+- 對帳規則 12 → ≥25：隨新事實來源（SPD↔TSOD、SMART、儲存面）補。
 - CLI 擴充候選：全機快照（需 headless 化 WPF 服務層）、批次清單檔。
 - PawnIO 模組整合（HVCI 環境備援；本機 IntelMsr 模組已知回 0 的問題要先解）。
-- 發佈：等使用者明說。20 輪＋ITER21–24 內容尚未折疊進 changelog（發佈前必做，FileVersion .5→.6）。
+- 發佈：等使用者明說。20 輪＋ITER21–25 內容尚未折疊進 changelog（發佈前必做，FileVersion .5→.6）。
