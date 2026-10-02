@@ -111,11 +111,11 @@ public sealed class SpiFlashTests
     // ===== 服務層三態：PCI 取 SPIBAR、MMIO 讀暫存器；任何一環讀不到都如實標示 =====
 
     [Fact]
-    public void 服務_PCI不可用_四組事實全標權限不足()
+    public void 服務_PCI不可用_五組事實全標權限不足()
     {
         var facts = SpiFlashService.Collect(new FakePci(available: false, reason: "WinRing0 未載入", vendorDevice: 0, bar: null),
             new FakeMmio(null), At);
-        Assert.Equal(4, facts.Count);
+        Assert.Equal(5, facts.Count);
         Assert.All(facts, f =>
         {
             Assert.Equal(FactAvailability.InsufficientPrivilege, f.Availability);
@@ -198,6 +198,56 @@ public sealed class SpiFlashTests
         Assert.DoesNotContain("全部停用", facts.Single(x => x.Key == "spi.prr").Value);
     }
 
+    // ===== 綜合裁決：BIOS_CNTL + FLOCKDN + FRAP + PR 攤在同一行，輸入全部具名 =====
+
+    [Fact]
+    public void 綜合_SMM保護且無暴露面_給最強裁決()
+    {
+        var surface = SpiFlash.ComposeWriteSurface(
+            ChipsetSecurity.DecodeBiosCntl(0x20),
+            SpiFlash.DecodeHsfsts(0x8000),
+            SpiFlash.DecodeFrap(0x0),
+            [SpiFlash.DecodePrx(0x840F8400)]);
+        Assert.Contains("最強保護", surface.Text);
+        Assert.DoesNotContain("暴露面", surface.Text);
+        Assert.Equal(ChipsetSecurityVerdict.SmmProtected, surface.Verdict);
+    }
+
+    [Fact]
+    public void 綜合_BLE鎖但三面全開_暴露面逐項具名()
+    {
+        var surface = SpiFlash.ComposeWriteSurface(
+            ChipsetSecurity.DecodeBiosCntl(0x2),
+            SpiFlash.DecodeHsfsts(0x0000),
+            SpiFlash.DecodeFrap(0x2),
+            [SpiFlash.DecodePrx(0), SpiFlash.DecodePrx(0), SpiFlash.DecodePrx(0), SpiFlash.DecodePrx(0), SpiFlash.DecodePrx(0)]);
+        Assert.Contains("有鎖保護", surface.Text);
+        Assert.Contains("FLOCKDN=0", surface.Text);
+        Assert.Contains("FRAP bit1=1", surface.Text);
+        Assert.Contains("PR0-4 無啟用範圍保護", surface.Text);
+    }
+
+    [Fact]
+    public void 服務_綜合裁決事實_SMM開時Present且帶主軸文字()
+    {
+        var block = SpiBlock(hsfsts: 0x8000, frap: 0x0);
+        // FakePci 只回 0x00 與 0x10 兩個暫存器；綜合裁決需要 0:1F.0+0xDC 的 BIOS_CNTL——fake 需支援
+        var facts = SpiFlashService.Collect(new FakePciWithBiosCntl(0x20u), new FakeMmio(block), At);
+        var surface = facts.Single(x => x.Key == "spi.write_surface");
+        Assert.Equal(FactAvailability.Present, surface.Availability);
+        Assert.Contains("最強保護", surface.Value);
+    }
+
+    [Fact]
+    public void 服務_BIOS_CNTL讀不到_綜合裁決如實標部分不可得()
+    {
+        var block = SpiBlock(hsfsts: 0x8000, frap: 0x0);
+        var facts = SpiFlashService.Collect(new FakePciWithBiosCntl(null), new FakeMmio(block), At);
+        var surface = facts.Single(x => x.Key == "spi.write_surface");
+        Assert.Equal(FactAvailability.ReadError, surface.Availability);
+        Assert.Contains("無法綜合", surface.UnavailableReason);
+    }
+
     private static byte[] SpiBlock(uint hsfsts, uint frap, uint freg1 = 0, uint pr0 = 0)
     {
         var b = new byte[0x88];
@@ -222,5 +272,17 @@ public sealed class SpiFlashTests
         public string? UnavailableReason => available ? null : NotLoadedMmioReader.Reason;
         public byte[]? ReadBlock(ulong physicalAddress, int length)
             => !available || nullResult ? null : block;
+    }
+
+    /// <summary>0:1F.5 SPI 控制器＋0:1F.0+0xDC BIOS_CNTL 都可讀的假件（供綜合裁決測試）。</summary>
+    private sealed class FakePciWithBiosCntl(uint? biosCntl) : IPciConfigReader
+    {
+        public bool Available => true;
+        public string? UnavailableReason => null;
+        public uint? ReadDword(byte bus, byte device, byte function, uint register)
+            => register == 0x00 ? 0x00008086u
+             : register == 0x10 ? 0xFED10000u
+             : device == 0x1F && function == 0 && register == 0xDC ? biosCntl
+             : null;
     }
 }

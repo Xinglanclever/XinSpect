@@ -24,6 +24,9 @@ public readonly record struct SpiPrxDecode(ushort Base4k, ushort Limit4k, bool W
     public bool Enabled => WriteProtect || ReadProtect;
 }
 
+/// <summary>BIOS 寫入面綜合裁決：把 BIOS_CNTL（BIOSWE/BLE/SMM_BWP）、FLOCKDN、FRAP、PR0-4 的裁決攤在同一行，輸入全部具名。</summary>
+public sealed record BiosWriteSurface(ChipsetSecurityVerdict Verdict, string Text);
+
 /// <summary>PCH SPI 快閃暫存器的純解碼器。不碰硬體；實際讀取由服務層經 PCI（找 SPIBAR）與 MMIO（讀暫存器）取得後餵進來。</summary>
 public static class SpiFlash
 {
@@ -47,6 +50,28 @@ public static class SpiFlash
 
     public static SpiPrxDecode DecodePrx(uint raw)
         => new((ushort)(raw & 0x7FFF), (ushort)((raw >> 16) & 0x7FFF), (raw & 0x8000) != 0, (raw & 0x80000000) != 0);
+
+    /// <summary>
+    /// BIOS 寫入面綜合裁決（純函式）：主軸沿用 BIOS_CNTL 的 SMM_BWP/BLE 階梯，其餘輸入以「暴露面」具名列出——
+    /// FLOCKDN=0 代表 SPI 保護設定本身可被 ring0 改、FRAP bit1 代表描述符准 host 寫 BIOS 區、PR 全停用代表無範圍保護。
+    /// 只綜合已量到的事實，不外推。
+    /// </summary>
+    public static BiosWriteSurface ComposeWriteSurface(
+        BiosCntlDecode biosCntl, SpiHsfstsDecode hsfsts, SpiFrapDecode frap, IReadOnlyList<SpiPrxDecode> prs)
+    {
+        string level = biosCntl.Verdict switch
+        {
+            ChipsetSecurityVerdict.SmmProtected => "最強保護：SMM_BWP=1，僅 SMM 可寫 BIOS",
+            ChipsetSecurityVerdict.Protected => "有鎖保護：BLE=1，開啟寫入會觸發 SMI",
+            _ => "未保護：BLE=0，任何 ring0 皆可寫 BIOS",
+        };
+        var exposures = new List<string>();
+        if (!hsfsts.FlashLockDown) exposures.Add("SPI 旗號未鎖（FLOCKDN=0，保護設定可被改）");
+        if (frap.BiosRegionHostWritable) exposures.Add("描述符准主機軟體寫 BIOS 區（FRAP bit1=1）");
+        if (prs.All(p => !p.Enabled)) exposures.Add("PR0-4 無啟用範圍保護");
+        var text = exposures.Count == 0 ? level : $"{level}；暴露面：{string.Join("、", exposures)}";
+        return new BiosWriteSurface(biosCntl.Verdict, text);
+    }
 }
 
 /// <summary>
@@ -98,15 +123,36 @@ public static class SpiFlashService
             FrapFact(BitConverter.ToUInt32(block, 0x50), at),
             RegionsFact(at, Enumerable.Range(0, 6).Select(i => BitConverter.ToUInt32(block, 0x54 + i * 4)).ToArray()),
             ProtectedRangesFact(at, Enumerable.Range(0, 5).Select(i => BitConverter.ToUInt32(block, 0x74 + i * 4)).ToArray()),
+            WriteSurfaceFact(pci, block, at),
         ];
+    }
+
+    /// <summary>BIOS 寫入面綜合裁決：BIOS_CNTL（PCI 0:1F.0+0xDC）與 SPI 面（FLOCKDN/FRAP/PR）攤在同一行；BIOS_CNTL 讀不到就如實標部分不可得。</summary>
+    private static HardwareFact WriteSurfaceFact(IPciConfigReader pci, byte[] block, DateTimeOffset at)
+    {
+        const string key = "spi.write_surface", name = "BIOS 寫入面綜合裁決";
+        string source = $"PCI 0:{SpiDevice:X2}.0+0xDC ＋ SPIBAR";
+        uint? biosCntlRaw = pci.ReadDword(SpiBus, 0x1F, 0, 0xDC);
+        if (biosCntlRaw is null)
+            return new HardwareFact(key, Category, name, "", "", source, FactTrustLevel.Unknown, false, at, null,
+                FactAvailability.ReadError, "BIOS_CNTL 讀取失敗，無法綜合裁決（SPI 面已解）");
+        if (biosCntlRaw.Value == 0xFFFFFFFF)
+            return new HardwareFact(key, Category, name, "", "", source, FactTrustLevel.Unknown, false, at, null,
+                FactAvailability.NotApplicable, "BIOS_CNTL 無回應，無法綜合裁決（SPI 面已解）");
+
+        var hsf = SpiFlash.DecodeHsfsts(BitConverter.ToUInt32(block, 0x04));
+        var frap = SpiFlash.DecodeFrap(BitConverter.ToUInt32(block, 0x50));
+        var prs = Enumerable.Range(0, 5).Select(i => SpiFlash.DecodePrx(BitConverter.ToUInt32(block, 0x74 + i * 4))).ToArray();
+        var surface = SpiFlash.ComposeWriteSurface(ChipsetSecurity.DecodeBiosCntl(biosCntlRaw.Value), hsf, frap, prs);
+        return new HardwareFact(key, Category, name, surface.Text, "", source, FactTrustLevel.Measured, false, at);
     }
 
     private static string SpiSource => $"PCI 0:{SpiDevice:X2}.{SpiFunction} BAR → SPIBAR";
 
     private static HardwareFact[] Unavailable(DateTimeOffset at, FactAvailability availability, string reason)
     {
-        string[] keys = ["spi.hsfsts", "spi.frap", "spi.regions", "spi.prr"];
-        string[] names = ["SPI 快閃鎖定狀態", "SPI 區域存取權限", "SPI 快閃區域地圖", "SPI 保護範圍"];
+        string[] keys = ["spi.hsfsts", "spi.frap", "spi.regions", "spi.prr", "spi.write_surface"];
+        string[] names = ["SPI 快閃鎖定狀態", "SPI 區域存取權限", "SPI 快閃區域地圖", "SPI 保護範圍", "BIOS 寫入面綜合裁決"];
         return keys.Zip(names).Select(p => new HardwareFact(p.First, Category, p.Second, "", "", SpiSource,
             FactTrustLevel.Unknown, false, at, null, availability, reason)).ToArray();
     }
