@@ -45,6 +45,11 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>PCIe AER 三態事實（ECAM 基底 + 逐裝置錯誤狀態）。歸類「PCIe」，進快照但不進韌體安全頁。</summary>
     public IReadOnlyList<HardwareFact> PcieAerFacts { get; private set; } = [];
 
+    private DeepAccessService? _deepAccess;
+
+    /// <summary>深層核心存取豁免開關（產生 CA、裝/移信任、載/卸 XsRegProbe）。延遲建立：不點不碰真實系統。</summary>
+    public DeepAccessService DeepAccess => _deepAccess ??= new DeepAccessService();
+
     /// <summary>以注入的 MMIO 讀取器與 ACPI 來源載入 PCIe AER 事實；讀不到由 EcamAerService 標三態。</summary>
     public void LoadPcieAer(IMmioReader mmio, IAcpiTableSource acpi)
     {

@@ -7,6 +7,22 @@
             <TextBlock TextWrapping="Wrap" Opacity="0.7" Margin="0,0,0,12"
                        Text="晶片組安全暫存器與 ACPI 錯誤表。讀得到給裁決；缺 ring0／不支援／權限不足一律誠實標示，不以舊值或 0 填補。"/>
 
+            <Border BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="深層核心存取" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="11"
+                               Text="開＝產生本專案自簽 CA 並裝入信任庫、載入 XsRegProbe 白名單唯讀驅動（僅允許清單內的 MSR/MMIO 讀取，退出即卸載）；關＝移除信任並卸載。只信自己這張憑證、不開全機 test-signing；需要管理員權限，未提權時不會做任何變更。"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button x:Name="DeepAccessEnableButton" AutomationProperties.AutomationId="DeepAccessEnableButton"
+                                Style="{StaticResource PrimaryButton}" Content="開啟" Click="DeepAccessEnable_Click"/>
+                        <Button x:Name="DeepAccessDisableButton" AutomationProperties.AutomationId="DeepAccessDisableButton"
+                                Style="{StaticResource ToolButton}" Content="關閉" Click="DeepAccessDisable_Click" Margin="8,0,0,0"/>
+                        <TextBlock Text="{Binding EvidenceLab.DeepAccess.StatusText}" VerticalAlignment="Center"
+                                   Margin="12,0,0,0" TextWrapping="Wrap" MaxWidth="700" Opacity="0.85"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <Grid Margin="0,0,0,4">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="110"/>
