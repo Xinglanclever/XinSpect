@@ -207,6 +207,7 @@ internal static class StartupSequence
             vm.EvidenceLab.LoadChipsetSecurity(pci);
             vm.EvidenceLab.LoadSpiFlash(pci, new DriverMmioReader());
             vm.EvidenceLab.LoadPlatformSecurity(msr);
+            vm.EvidenceLab.LoadMchbar(pci, new DriverMmioReader());
         }
         catch { /* 晶片組安全為附加功能，讀不到由三態標示 */ }
 

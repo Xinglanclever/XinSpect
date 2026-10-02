@@ -27,7 +27,7 @@ public sealed class RawRegisterCollectTests
         Assert.Equal(8, fc.Bytes!.Length);
         Assert.Equal(0x5UL, BitConverter.ToUInt64(fc.Bytes, 0));
 
-        Assert.Equal(7, regions.Count); // 2 PCI + 3 MSR + 1 ACPI + 1 MMIO
+        Assert.Equal(8, regions.Count); // 2 PCI + 3 MSR + 1 ACPI + 1 MMIO + 1 MCHBAR（此假件無 0x48 → 不適用區）
     }
 
     [Fact]

@@ -96,6 +96,39 @@ public static class RawRegisterCollectService
             });
         }
 
+        // MCHBAR（記憶體控制器視窗）：基底可解析時整段 raw 收入；解讀刻意未實作（世代相依，待對準規格）。
+        var mchbar = MchbarService.ResolveBase(pci);
+        if (mchbar is null)
+        {
+            regions.Add(new RawRegisterRegion
+            {
+                Source = "mmio:mchbar",
+                Availability = FactAvailability.NotApplicable,
+                UnavailableReason = "MCHBAR 基底無法解析（缺 ring0／無主機橋／未啟用）",
+            });
+        }
+        else if (!mmio.Available)
+        {
+            regions.Add(new RawRegisterRegion
+            {
+                Source = $"mmio:mchbar:0x{mchbar.Value:X}+100",
+                Availability = FactAvailability.InsufficientPrivilege,
+                UnavailableReason = mmio.UnavailableReason ?? "缺 MMIO 讀取",
+            });
+        }
+        else
+        {
+            var mchbarBlock = mmio.ReadBlock(mchbar.Value, 0x100);
+            regions.Add(mchbarBlock is null
+                ? new RawRegisterRegion
+                {
+                    Source = $"mmio:mchbar:0x{mchbar.Value:X}+100",
+                    Availability = FactAvailability.ReadError,
+                    UnavailableReason = mmio.LastFailReason ?? "MCHBAR MMIO 讀取失敗",
+                }
+                : new RawRegisterRegion { Source = $"mmio:mchbar:0x{mchbar.Value:X}+100", Bytes = mchbarBlock });
+        }
+
         return regions;
     }
 

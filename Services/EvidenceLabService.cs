@@ -57,6 +57,16 @@ public sealed class EvidenceLabService : ObservableObject
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
+    /// <summary>MCHBAR 三態事實（基底＋暫存器可用性）。歸類「記憶體控制器」，進快照不進韌體安全頁。</summary>
+    public IReadOnlyList<HardwareFact> MchbarFacts { get; private set; } = [];
+
+    /// <summary>以注入的 PCI＋MMIO 讀取器載入 MCHBAR 事實；暫存器解讀刻意未實作（誠實界線見 MchbarService）。</summary>
+    public void LoadMchbar(IPciConfigReader pci, IMmioReader mmio)
+    {
+        MchbarFacts = MchbarService.Collect(pci, mmio, DateTimeOffset.UtcNow);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
     /// <summary>Platform 安全 MSR 三態事實（IA32_FEATURE_CONTROL／IA32_DEBUG_INTERFACE）。WinRing0 今天就讀得到。</summary>
     public IReadOnlyList<HardwareFact> PlatformSecurityFacts { get; private set; } = [];
 
@@ -280,6 +290,8 @@ public sealed class EvidenceLabService : ObservableObject
         f.AddRange(vm.EvidenceLab.AcpiFacts);
         // PCIe AER 三態事實（ECAM 掃描；歸類「PCIe」）。
         f.AddRange(vm.EvidenceLab.PcieAerFacts);
+        // MCHBAR 三態事實（歸類「記憶體控制器」）。
+        f.AddRange(vm.EvidenceLab.MchbarFacts);
         // 平台安全 MSR 三態事實（FEATURE_CONTROL／DEBUG_INTERFACE）。
         f.AddRange(vm.EvidenceLab.PlatformSecurityFacts);
 
