@@ -22,6 +22,8 @@ public sealed class WinRing0MmioReader : IMmioReader, IDisposable
 
     public bool Available => _bridge.MemoryReadAvailable;
 
+    public string? BackendName => "WinRing0 實體記憶體";
+
     public string? UnavailableReason =>
         !_bridge.Available ? _bridge.Error
         : !_bridge.MemoryReadAvailable ? "WinRing0 驅動未提供實體記憶體讀取（Ring0.ReadMemory 缺少）"

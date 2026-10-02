@@ -81,6 +81,8 @@ public sealed class DriverMmioReader : IMmioReader, IDisposable
     public DriverMmioReader(Func<IRawDeviceChannel>? channelFactory = null) =>
         _channelFactory = channelFactory ?? (() => new RawDeviceChannel());
 
+    public string? BackendName => "XsRegProbe 白名單 IOCTL";
+
     public string? LastFailReason => _lastFailReason;
 
     private bool EnsureHandshake()

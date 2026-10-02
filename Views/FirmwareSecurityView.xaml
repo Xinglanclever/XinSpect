@@ -29,7 +29,7 @@
                         <local:HelpDot HelpKey="firmware-security/深層核心存取" Margin="8,2,0,0"/>
                     </StackPanel>
                     <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="11"
-                               Text="開＝產生本專案自簽 CA 並裝入信任庫、載入 XsRegProbe 白名單唯讀驅動（僅允許清單內的 MSR/MMIO 讀取，退出即卸載）；關＝移除信任並卸載。只信自己這張憑證、不開全機 test-signing；需要管理員權限，未提權時不會做任何變更。"/>
+                               Text="開＝產生本專案自簽 CA 並裝入信任庫、載入 XsRegProbe 白名單唯讀驅動（僅允許清單內的 MSR/MMIO 讀取，退出即卸載）；關＝移除信任並卸載。只信自己這張憑證、不開全機 test-signing；需要管理員權限，未提權時不會做任何變更。MMIO 事實已由 WinRing0 主力後端讀取，本驅動是允許清單內的備援路徑。"/>
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <Button x:Name="DeepAccessEnableButton" AutomationProperties.AutomationId="DeepAccessEnableButton"
                                 Style="{StaticResource PrimaryButton}" Content="開啟" Click="DeepAccessEnable_Click"/>

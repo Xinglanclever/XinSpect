@@ -35,6 +35,8 @@ public interface IKernelMsrReader
 {
     bool Available { get; }
     string? UnavailableReason { get; }
+    /// <summary>服務本機的後端名（如「WinRing0」）；未標示者回 null。</summary>
+    string? BackendName => null;
     /// <summary>讀 MSR；失敗或不支援回 null（上層標 ReadError，不以 0 頂替）。</summary>
     ulong? ReadMsr(uint index);
 
@@ -47,6 +49,7 @@ public sealed class WinRing0KernelMsrReader : IKernelMsrReader, IDisposable
 {
     private readonly WinRing0Bridge _bridge = WinRing0Bridge.Create();
     public bool Available => _bridge.Available;
+    public string? BackendName => "WinRing0";
     public string? UnavailableReason => Available ? null
         : string.IsNullOrEmpty(_bridge.Error) ? "缺 ring0：WinRing0 未提供 MSR 讀取" : _bridge.Error;
 

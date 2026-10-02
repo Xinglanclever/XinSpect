@@ -35,6 +35,8 @@ public sealed class DriverMsrReader : IKernelMsrReader, IDisposable
     public DriverMsrReader(Func<IRawDeviceChannel>? channelFactory = null) =>
         _channelFactory = channelFactory ?? (() => new RawDeviceChannel());
 
+    public string? BackendName => "XsRegProbe";
+
     public string? LastFailReason => _lastFailReason;
 
     private bool EnsureHandshake()

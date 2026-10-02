@@ -10,6 +10,9 @@ public interface IMmioReader
     bool Available { get; }
     string? UnavailableReason { get; }
 
+    /// <summary>服務本機的後端名（如「WinRing0 實體記憶體」）；未標示者回 null（事實層會誠實標「後端名未標示」）。</summary>
+    string? BackendName => null;
+
     /// <summary>最近一次 ReadBlock 失敗的細節（null＝尚無失敗或無細節）；讀不到時上層併入原因，讓「為什麼讀不到」說得清楚。</summary>
     string? LastFailReason => null;
 

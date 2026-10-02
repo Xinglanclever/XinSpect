@@ -77,6 +77,9 @@ public sealed class EvidenceLabService : ObservableObject
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
+    /// <summary>後端與環境三態事實（誰在服務 MSR/MMIO、HVCI/Secure Boot/testsigning、環境矩陣裁決）。usermode 探測＋讀取器來源標示。</summary>
+    public IReadOnlyList<HardwareFact> BackendFacts { get; private set; } = [];
+
     /// <summary>
     /// 事實重載（深層存取啟用後免重啟翻真值）：五組驅動相依事實整批「替換」——每組各自重新 Collect 後整組指派，
     /// 不附加不累積；ACPI 表清單不在內（usermode 來源、另由 LoadAcpi 管理）。啟用深層存取後以新鮮的驅動後端
@@ -90,12 +93,13 @@ public sealed class EvidenceLabService : ObservableObject
         SpiFlashFacts = SpiFlashService.Collect(pci, mmio, at);
         MchbarFacts = MchbarService.Collect(pci, mmio, at);
         PcieAerFacts = EcamAerService.Collect(mmio, acpi, at);
+        BackendFacts = BackendEnvironmentService.Collect(msr, mmio, at);
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
-    /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
+    /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
-        ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(AcpiFacts)
+        ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts).Concat(AcpiFacts)
             .OrderBy(f => f.Category, StringComparer.Ordinal).ThenBy(f => f.Key, StringComparer.Ordinal)
             .Select(EvidenceFactRow.From).ToList();
 
@@ -310,6 +314,8 @@ public sealed class EvidenceLabService : ObservableObject
         f.AddRange(vm.EvidenceLab.MchbarFacts);
         // 平台安全 MSR 三態事實（FEATURE_CONTROL／DEBUG_INTERFACE）。
         f.AddRange(vm.EvidenceLab.PlatformSecurityFacts);
+        // 後端與環境三態事實（誰在服務、HVCI/Secure Boot/testsigning、環境矩陣裁決）。
+        f.AddRange(vm.EvidenceLab.BackendFacts);
 
         return f;
     }
@@ -338,6 +344,7 @@ public sealed record EvidenceFactRow(string Category, string Name, string Value,
         "SMRAM 對外開放",   // SMRAMC D_OPEN
         "BIOS 區域可寫入",  // FRAP bit1=1
         "除錯埠啟用中",     // DEBUG_INTERFACE ENABLE 且未鎖
+        "測試簽章模式開啟", // testsigning：允許未經微軟簽署的核心驅動
     ];
 
     /// <summary>把三態可用性轉成誠實的人類文字：讀不到就說讀不到並附原因，不以空白或舊值冒充。</summary>

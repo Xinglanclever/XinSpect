@@ -245,7 +245,7 @@ public sealed class DeepAccessService : ObservableObject
     private string CurrentStateText() => $"\n目前：{StatusText}";
 
     private static string StatusFrom(DeepAccessStatus s) => s.IsEnabled
-        ? "已啟用：CA 已信任、驅動執行中。SPI/MMIO 事實將可讀取（僅限允許清單內範圍）。"
+        ? "已啟用：CA 已信任、XsRegProbe 執行中（白名單唯讀備援後端）。MMIO 事實由 WinRing0 主力後端服務；驅動提供允許清單內的備援路徑。"
         : $"未完全啟用（{(s.Notes.Count > 0 ? string.Join("；", s.Notes) : "原因不明，請再查詢")}）。";
 
     /// <summary>CA 不在就產生：自簽根（CA=TRUE、KeyCertSign）存 .cer（公）與 .pfx+密碼檔（私，供之後簽 .sys）。</summary>
