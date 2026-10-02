@@ -78,8 +78,8 @@ public static class SpiFlashHashService
             "", $"記憶體映射快閃 0x{map.MappedBase + biosOffset:X8} 起", FactTrustLevel.Measured, false, at)];
     }
 
-    /// <summary>讀一段實體位址：先試單次大讀（WinRing0 可行），失敗退 4KB 分塊（相容契約上限 4096 的後端）。chunked 標示實際走的路徑。</summary>
-    private static (byte[]? Data, bool Chunked, string? Error) ReadRange(IMmioReader mmio, ulong address, ulong length)
+    /// <summary>讀一段實體位址：先試單次大讀（WinRing0 可行），失敗退 4KB 分塊（相容契約上限 4096 的後端）。chunked 標示實際走的路徑。供 hash／compare 服務共用。</summary>
+    internal static (byte[]? Data, bool Chunked, string? Error) ReadRange(IMmioReader mmio, ulong address, ulong length)
     {
         if (length <= int.MaxValue)
         {
