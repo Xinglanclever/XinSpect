@@ -160,6 +160,44 @@ public sealed class EcamAerTests
         Assert.Contains("另有 1 個 segment 未納入掃描", ecam.Value);
     }
 
+    [Fact]
+    public void 掃描擴大_bus1裝置納入_上限外如實標未掃()
+    {
+        var devices = new Dictionary<ulong, byte[]>
+        {
+            [Dev(0, 0, 0)] = DevicePage(0x1234_8086, 0x100, 0x0000_0040, 0), // bus 0 根埠帶 AER
+            [Dev(1, 0, 0)] = DevicePage(0x15D3_8086, 0x100, 0, 0x0000_0001), // bus 1 裝置帶 AER（可修正錯誤）
+        };
+        var facts = EcamAerService.Collect(new EcamFakeMmio(EcamBase, devices), new ListAcpi([McfgTable(endBus: 255)]), At);
+
+        var bus0 = facts.Single(f => f.Key == "pcieaer.aer.0.0.0");
+        var bus1 = facts.Single(f => f.Key == "pcieaer.aer.1.0.0"); // bus 1 也掃到了
+        Assert.Contains("AER 0:00.0", bus0.Name);
+        Assert.Contains("AER 1:00.0", bus1.Name);
+        var scan = facts.Single(f => f.Key == "pcieaer.scan");
+        Assert.Contains("bus 0-31", scan.Value);
+        Assert.Contains("2 個裝置、2 個帶 AER 能力", scan.Value);
+        Assert.Contains("未掃", scan.Value);                      // bus 32-255 超出上限保護
+    }
+
+    [Fact]
+    public void 掃描中止_失敗點如實記錄且保留已得事實()
+    {
+        var devices = new Dictionary<ulong, byte[]>
+        {
+            [Dev(0, 0, 0)] = DevicePage(0x1234_8086, 0x100, 0, 0),
+            [Dev(1, 0, 0)] = DevicePage(0x15D3_8086, null, 0, 0),
+        };
+        var inner = new EcamFakeMmio(EcamBase, devices);
+        IMmioReader mmio = new NullProbeAt(inner, EcamBase + (2UL << 20)); // bus 2 的第一個探頭失敗
+
+        var facts = EcamAerService.Collect(mmio, new ListAcpi([McfgTable(endBus: 255)]), At);
+        var scan = facts.Single(f => f.Key == "pcieaer.scan");
+        Assert.Equal(FactAvailability.ReadError, scan.Availability);
+        Assert.Contains("中止於 bus 2", scan.UnavailableReason);
+        Assert.Single(facts, f => f.Key == "pcieaer.aer.0.0.0"); // 已得事實保留
+    }
+
     private static ulong Dev(byte bus, byte dev, byte fn) => (ulong)bus << 16 | (ulong)dev << 8 | fn;
 
     private static byte[] McfgTable(ulong ecamBase = EcamBase, byte startBus = 0, byte endBus = 255)
@@ -219,5 +257,15 @@ public sealed class EcamAerTests
             if (inPage + length > page.Length) return null;
             return page[inPage..(inPage + length)];
         }
+    }
+
+    /// <summary>包一層：對特定位址的 0x10 探頭回 null（模擬 ECAM 途中讀取失敗）。</summary>
+    private sealed class NullProbeAt(IMmioReader inner, ulong probeAddress) : IMmioReader
+    {
+        public bool Available => inner.Available;
+        public string? UnavailableReason => inner.UnavailableReason;
+
+        public byte[]? ReadBlock(ulong address, int length)
+            => address == probeAddress && length == 0x10 ? null : inner.ReadBlock(address, length);
     }
 }

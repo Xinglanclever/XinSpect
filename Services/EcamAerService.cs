@@ -2,14 +2,15 @@ namespace XinSpect;
 
 /// <summary>
 /// 走 ACPI MCFG 取 ECAM 基底，逐裝置讀 4KB 擴充組態空間，以 PcieAer 純解碼器讀 AER 錯誤狀態。
-/// 擴充組態空間（&gt;0xFF）只有 ECAM/MMIO 讀得到——自家核心驅動未載時整段三態標示，不假裝掃過；
+/// 擴充組態空間（&gt;0xFF）只有 ECAM/MMIO 讀得到——後端不可用時整段三態標示，不假裝掃過；
 /// 但 MCFG 本身 usermode 讀得到，ECAM 基底照常報 Present。
-/// v1 掃描範圍：segment 0 的 bus 0（根複合體與晶片組裝置）；其他匯流排等驅動端批次列舉就緒後納入，範圍如實標在事實名裡。
+/// 掃描範圍：segment 0 從 StartBus 起最多 32 條 bus（探頭讀取量上限保護），超出範圍如實標「未掃」；
+/// 逐裝置事實的 key 帶 bus 號，掃描中止時中止點如實寫進原因。
 /// </summary>
 public static class EcamAerService
 {
     private const string Category = "PCIe";
-    private const byte ScanBus = 0;
+    private const byte MaxBuses = 32;
 
     public static IReadOnlyList<HardwareFact> Collect(IMmioReader mmio, IAcpiTableSource acpi, DateTimeOffset at)
     {
@@ -40,45 +41,54 @@ public static class EcamAerService
             FactTrustLevel.Measured, false, at);
 
         if (!mmio.Available)
-            return [ecamFact, UnavailableFact("pcieaer.scan", "PCIe AER 掃描（bus 0）", "ECAM 擴充組態空間", at,
+            return [ecamFact, UnavailableFact("pcieaer.scan", "PCIe AER 掃描", "ECAM 擴充組態空間", at,
                 FactAvailability.InsufficientPrivilege,
                 $"{mmio.UnavailableReason ?? "缺 MMIO 讀取"}；擴充組態空間（&gt;0xFF）須經 ECAM/MMIO")];
 
+        byte lastBus = (byte)Math.Min(primary.EndBus, (int)primary.StartBus + MaxBuses - 1);
+        string rangeNote = lastBus < primary.EndBus
+            ? $"；bus {lastBus + 1}-{primary.EndBus} 未掃（探頭讀取量上限 {MaxBuses} 條 bus）"
+            : "";
         var facts = new List<HardwareFact> { ecamFact };
         int devices = 0, withAer = 0;
-        for (byte dev = 0; dev < 32; dev++)
+        for (byte bus = primary.StartBus; bus <= lastBus; bus++)
         {
-            for (byte fn = 0; fn < 8; fn++)
+            for (byte dev = 0; dev < 32; dev++)
             {
-                ulong addr = primary.Base + ((ulong)ScanBus << 20 | (ulong)dev << 15 | (ulong)fn << 12);
-                var head = mmio.ReadBlock(addr, 0x10);
-                if (head is null)
+                for (byte fn = 0; fn < 8; fn++)
                 {
-                    facts.Add(UnavailableFact("pcieaer.scan", "PCIe AER 掃描（bus 0）", "ECAM 擴充組態空間", at,
-                        FactAvailability.ReadError, $"ECAM 讀取失敗（0x{addr:X}）{(mmio.LastFailReason is { } f1 ? $"：{f1}" : "")}"));
-                    return facts;
-                }
-                if (BitConverter.ToUInt32(head, 0) == 0xFFFFFFFF) continue; // 不存在的裝置依 ECAM 慣例回全 F
-                devices++;
+                    ulong addr = primary.Base + ((ulong)bus << 20 | (ulong)dev << 15 | (ulong)fn << 12);
+                    var head = mmio.ReadBlock(addr, 0x10);
+                    if (head is null)
+                    {
+                        facts.Add(UnavailableFact("pcieaer.scan", "PCIe AER 掃描", "ECAM 擴充組態空間", at,
+                            FactAvailability.ReadError,
+                            $"ECAM 讀取失敗（0x{addr:X}）——掃描中止於 bus {bus}{(mmio.LastFailReason is { } f1 ? $"：{f1}" : "")}"));
+                        return facts;
+                    }
+                    if (BitConverter.ToUInt32(head, 0) == 0xFFFFFFFF) continue; // 不存在的裝置依 ECAM 慣例回全 F
+                    devices++;
 
-                var page = mmio.ReadBlock(addr, 4096);
-                if (page is null)
-                {
-                    facts.Add(UnavailableFact("pcieaer.scan", "PCIe AER 掃描（bus 0）", "ECAM 擴充組態空間", at,
-                        FactAvailability.ReadError, $"ECAM 讀取失敗（0x{addr:X}）{(mmio.LastFailReason is { } f2 ? $"：{f2}" : "")}"));
-                    return facts;
+                    var page = mmio.ReadBlock(addr, 4096);
+                    if (page is null)
+                    {
+                        facts.Add(UnavailableFact("pcieaer.scan", "PCIe AER 掃描", "ECAM 擴充組態空間", at,
+                            FactAvailability.ReadError,
+                            $"ECAM 讀取失敗（0x{addr:X}）——掃描中止於 bus {bus} dev {dev:X2}.{fn}{(mmio.LastFailReason is { } f2 ? $"：{f2}" : "")}"));
+                        return facts;
+                    }
+                    if (PcieAer.FindAerCapOffset(page) is not { } aerOffset) continue;
+                    withAer++;
+                    var st = PcieAer.DecodeAer(page, aerOffset)!.Value;
+                    facts.Add(new HardwareFact($"pcieaer.aer.{bus}.{dev}.{fn}", Category, $"AER {bus}:{dev:X2}.{fn}",
+                        AerText(st, aerOffset), "", $"ECAM 0x{addr:X}（AER @0x{aerOffset:X}）",
+                        FactTrustLevel.Measured, false, at));
                 }
-                if (PcieAer.FindAerCapOffset(page) is not { } aerOffset) continue;
-                withAer++;
-                var st = PcieAer.DecodeAer(page, aerOffset)!.Value;
-                facts.Add(new HardwareFact($"pcieaer.aer.{ScanBus}.{dev}.{fn}", Category, $"AER {ScanBus}:{dev:X2}.{fn}",
-                    AerText(st, aerOffset), "", $"ECAM 0x{addr:X}（AER @0x{aerOffset:X}）",
-                    FactTrustLevel.Measured, false, at));
             }
         }
 
-        facts.Add(new HardwareFact("pcieaer.scan", Category, "PCIe AER 掃描（bus 0）",
-            $"掃描 bus 0：{devices} 個裝置、{withAer} 個帶 AER 能力", "", "ECAM",
+        facts.Add(new HardwareFact("pcieaer.scan", Category, "PCIe AER 掃描",
+            $"掃描 bus {primary.StartBus}-{lastBus}：{devices} 個裝置、{withAer} 個帶 AER 能力{rangeNote}", "", "ECAM",
             FactTrustLevel.Measured, false, at));
         return facts;
     }
