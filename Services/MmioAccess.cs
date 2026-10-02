@@ -10,6 +10,9 @@ public interface IMmioReader
     bool Available { get; }
     string? UnavailableReason { get; }
 
+    /// <summary>最近一次 ReadBlock 失敗的細節（null＝尚無失敗或無細節）；讀不到時上層併入原因，讓「為什麼讀不到」說得清楚。</summary>
+    string? LastFailReason => null;
+
     /// <summary>讀實體位址起 length 位元組；讀不到回 null（上層標 ReadError）。</summary>
     byte[]? ReadBlock(ulong physicalAddress, int length);
 }

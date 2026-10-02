@@ -89,7 +89,8 @@ public static class SpiFlashService
 
         var block = mmio.ReadBlock(spiBar, BlockLength);
         if (block is null || block.Length < BlockLength)
-            return Unavailable(at, FactAvailability.ReadError, "SPIBAR MMIO 讀取失敗");
+            return Unavailable(at, FactAvailability.ReadError,
+                $"SPIBAR MMIO 讀取失敗{(mmio.LastFailReason is { } f ? $"：{f}" : "")}");
 
         return
         [

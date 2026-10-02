@@ -44,7 +44,7 @@ public static class EcamAerService
                 if (head is null)
                 {
                     facts.Add(UnavailableFact("pcieaer.scan", "PCIe AER 掃描（bus 0）", "ECAM 擴充組態空間", at,
-                        FactAvailability.ReadError, $"ECAM 讀取失敗（0x{addr:X}）"));
+                        FactAvailability.ReadError, $"ECAM 讀取失敗（0x{addr:X}）{(mmio.LastFailReason is { } f1 ? $"：{f1}" : "")}"));
                     return facts;
                 }
                 if (BitConverter.ToUInt32(head, 0) == 0xFFFFFFFF) continue; // 不存在的裝置依 ECAM 慣例回全 F
@@ -54,7 +54,7 @@ public static class EcamAerService
                 if (page is null)
                 {
                     facts.Add(UnavailableFact("pcieaer.scan", "PCIe AER 掃描（bus 0）", "ECAM 擴充組態空間", at,
-                        FactAvailability.ReadError, $"ECAM 讀取失敗（0x{addr:X}）"));
+                        FactAvailability.ReadError, $"ECAM 讀取失敗（0x{addr:X}）{(mmio.LastFailReason is { } f2 ? $"：{f2}" : "")}"));
                     return facts;
                 }
                 if (PcieAer.FindAerCapOffset(page) is not { } aerOffset) continue;
