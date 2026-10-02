@@ -95,6 +95,9 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>SMBus 唯讀事實（TSOD 溫度感測器掃描；WP2）。空位址不列，逐顆三態。</summary>
     public IReadOnlyList<HardwareFact> SmbusFacts { get; private set; } = [];
 
+    /// <summary>UEFI 開機設定三態事實（SecureBoot/SetupMode/AuditMode/DeployedMode/BootOrder；WP6）。Secure Boot 的第二個獨立來源。</summary>
+    public IReadOnlyList<HardwareFact> UefiFacts { get; private set; } = [];
+
     /// <summary>原始暫存器區（P4）：重載驅動相依事實時一併收集，讀不到的區三態。存檔是使用者主動行為（raw 不匿名化）。</summary>
     public IReadOnlyList<RawRegisterRegion> RawRegions { get; private set; } = [];
 
@@ -125,6 +128,7 @@ public sealed class EvidenceLabService : ObservableObject
         IoPortFacts = IoPortFactsService.Collect(io, at);
         CmosFacts = CmosService.Collect(io, at);
         SmbusFacts = TsodSurveyor.CollectWithLock(smbusIo, pci.ReadDword, at);
+        UefiFacts = UefiBootFactsService.Collect(at);
         RawRegions = RawRegisterCollectService.Collect(pci, acpi, msr, mmio, at);
         RawSummary = $"{RawRegions.Count} 區原始位元組・" +
                      $"{RawRegions.Count(r => r.Availability == FactAvailability.Present)} 區可讀・" +
@@ -243,7 +247,7 @@ public sealed class EvidenceLabService : ObservableObject
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
-            .Concat(SmbusFacts).Concat(AcpiFacts)
+            .Concat(SmbusFacts).Concat(UefiFacts).Concat(AcpiFacts)
             .OrderBy(f => f.Category, StringComparer.Ordinal).ThenBy(f => f.Key, StringComparer.Ordinal)
             .Select(EvidenceFactRow.From).ToList();
 
@@ -469,6 +473,8 @@ public sealed class EvidenceLabService : ObservableObject
         f.AddRange(vm.EvidenceLab.CmosFacts);
         // SMBus 唯讀事實（TSOD）。
         f.AddRange(vm.EvidenceLab.SmbusFacts);
+        // UEFI 開機設定三態事實。
+        f.AddRange(vm.EvidenceLab.UefiFacts);
 
         return f;
     }
@@ -500,6 +506,7 @@ public sealed record EvidenceFactRow(string Category, string Name, string Value,
         "測試簽章模式開啟", // testsigning：允許未經微軟簽署的核心驅動
         "矛盾：",           // 交叉對帳 Contradicts：兩個來源說不同的話
         "RTC 掉電",         // CMOS VRT=0：電池失效或曾斷電
+        "金鑰未部署",       // UEFI SetupMode=1：Secure Boot 金鑰處於安裝模式
     ];
 
     /// <summary>把三態可用性轉成誠實的人類文字：讀不到就說讀不到並附原因，不以空白或舊值冒充。</summary>

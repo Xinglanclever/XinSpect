@@ -114,6 +114,7 @@ public static class FactRelationRules
     public const string SmramcKey = "chipset.smramc";
     public const string SecureBootKey = "platform.secure_boot";
     public const string TestSigningKey = "platform.testsigning";
+    public const string SecureBootUefiKey = "uefi.secure_boot";
     public const string EcamBaseKey = "pcieaer.ecam";
     public const string AerScanKey = "pcieaer.scan";
 
@@ -189,6 +190,19 @@ public static class FactRelationRules
                     : "兩者皆非「開啟」——無互斥疑慮");
             },
             "testsigning（CodeIntegrity 選項 0x2）與 UEFI Secure Boot 在核心層互斥：SB 開啟時 testsigning 旗標無法生效；同時讀到兩者「開」代表至少一個來源讀錯"),
+
+        new("uefi.secureboot_vs_registry", "Secure Boot 雙來源（UEFI 變數 vs 登錄檔）",
+            [SecureBootUefiKey, SecureBootKey],
+            f =>
+            {
+                var uefi = f[SecureBootUefiKey].Value;
+                var registry = f[SecureBootKey].Value;
+                return uefi == registry
+                    ? FactRelationOutcome.Consistent($"兩個獨立來源同指「{uefi}」——韌體變數與作業系統登錄檔一致")
+                    : FactRelationOutcome.Contradicts(
+                        $"Secure Boot 雙來源不一致：UEFI 變數＝「{uefi}」、登錄檔＝「{registry}」——這兩個來源由不同層寫入，不一致代表開機流程中狀態變更未同步或其一讀取有誤，優先信 UEFI 變數（韌體自己說的）");
+            },
+            "Secure Boot 的狀態同時存在於韌體變數與 Windows 登錄檔（兩個獨立寫入者）；比對它們是免費的一致性檢查——寫入不同步或快取過期都會現形"),
 
         new("pcieaer.scan_vs_ecam", "AER 掃描與 ECAM 基底資料流一致性",
             [AerScanKey],
