@@ -98,6 +98,9 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>UEFI 開機設定三態事實（SecureBoot/SetupMode/AuditMode/DeployedMode/BootOrder；WP6）。Secure Boot 的第二個獨立來源。</summary>
     public IReadOnlyList<HardwareFact> UefiFacts { get; private set; } = [];
 
+    /// <summary>Super I/O 探測三態事實（0x2E/0x4E 晶片 ID；WP31）。設定模式必以 finally 退出。</summary>
+    public IReadOnlyList<HardwareFact> SuperIoFacts { get; private set; } = [];
+
     /// <summary>原始暫存器區（P4）：重載驅動相依事實時一併收集，讀不到的區三態。存檔是使用者主動行為（raw 不匿名化）。</summary>
     public IReadOnlyList<RawRegisterRegion> RawRegions { get; private set; } = [];
 
@@ -129,6 +132,7 @@ public sealed class EvidenceLabService : ObservableObject
         CmosFacts = CmosService.Collect(io, at);
         SmbusFacts = TsodSurveyor.CollectWithLock(smbusIo, pci.ReadDword, at);
         UefiFacts = UefiBootFactsService.Collect(at);
+        SuperIoFacts = SuperIoProbeService.Collect(io, at);
         RawRegions = RawRegisterCollectService.Collect(pci, acpi, msr, mmio, at);
         RawSummary = $"{RawRegions.Count} 區原始位元組・" +
                      $"{RawRegions.Count(r => r.Availability == FactAvailability.Present)} 區可讀・" +
@@ -247,7 +251,7 @@ public sealed class EvidenceLabService : ObservableObject
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
-            .Concat(SmbusFacts).Concat(UefiFacts).Concat(AcpiFacts)
+            .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(AcpiFacts)
             .OrderBy(f => f.Category, StringComparer.Ordinal).ThenBy(f => f.Key, StringComparer.Ordinal)
             .Select(EvidenceFactRow.From).ToList();
 
@@ -475,6 +479,8 @@ public sealed class EvidenceLabService : ObservableObject
         f.AddRange(vm.EvidenceLab.SmbusFacts);
         // UEFI 開機設定三態事實。
         f.AddRange(vm.EvidenceLab.UefiFacts);
+        // Super I/O 探測三態事實。
+        f.AddRange(vm.EvidenceLab.SuperIoFacts);
 
         return f;
     }
