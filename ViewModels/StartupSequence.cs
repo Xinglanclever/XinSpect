@@ -121,6 +121,27 @@ internal static class StartupSequence
 
     // ===== 各階段 =====
 
+    private static readonly SemaphoreSlim DriverEvidenceGate = new(1, 1);
+
+    /// <summary>
+    /// 驅動相依五組證據（晶片組安全／SPI 快閃／平台安全 MSR／MCHBAR／PCIe AER）的載入：真實後端在此一處組合。
+    /// 啟動序列與「啟用深層存取後重載」共用——同一個閘門擋並發（驅動控制代碼不重複開）、整批替換不累積；
+    /// 讀不到由各服務標三態，此處只負責後端壽命與異常吞噬。
+    /// </summary>
+    internal static void LoadDriverBackedEvidence(MainViewModel vm)
+    {
+        if (!DriverEvidenceGate.Wait(0)) return; // 已有載入在跑：整批以那次為準，不併發開驅動控制代碼
+        try
+        {
+            using var pci = new WinRing0PciConfigReader();
+            using var msr = new WinRing0KernelMsrReader();
+            using var mmio = new DriverMmioReader(); // 三個載入共用一個驅動控制代碼；事實都在區塊內同步算完
+            vm.EvidenceLab.ReloadDriverBackedFacts(pci, msr, mmio, new Win32AcpiTableSource());
+        }
+        catch { /* 晶片組安全為附加功能，讀不到由三態標示 */ }
+        finally { DriverEvidenceGate.Release(); }
+    }
+
     // WMI 靜態資訊：系統摘要、處理器、記憶體模組、音效卡、網路卡、拓樸，並以主機板值先填主機板頁。
     private static async Task LoadStaticInfoAsync(MainViewModel vm)
     {
@@ -200,19 +221,7 @@ internal static class StartupSequence
         // 晶片組安全暫存器（BIOS_CNTL/SMRAMC）：走 WinRing0 讀 bus 0；讀不到由三態如實標示（缺 ring0 / 非 Intel）。
         // SPI 快閃與 PCIe AER 同場載入：SPIBAR 經 PCI 取得、擴充組態空間要 MMIO——驅動未載時 DriverMmioReader
         // 自動三態（不在生產機自動觸發核心碼，載入後這兩組事實自動翻成真值）。
-        try
-        {
-            using var pci = new WinRing0PciConfigReader();
-            using var msr = new WinRing0KernelMsrReader();
-            using var mmio = new DriverMmioReader(); // 三個載入共用一個驅動控制代碼；事實都在區塊內同步算完
-            vm.EvidenceLab.LoadChipsetSecurity(pci);
-            vm.EvidenceLab.LoadSpiFlash(pci, mmio);
-            vm.EvidenceLab.LoadPlatformSecurity(msr);
-            vm.EvidenceLab.LoadMchbar(pci, mmio);
-            // PCIe AER（ECAM 基底 usermode 可得；擴充組態空間要 MMIO——驅動未載時三態）。
-            vm.EvidenceLab.LoadPcieAer(mmio, new Win32AcpiTableSource());
-        }
-        catch { /* 晶片組安全為附加功能，讀不到由三態標示 */ }
+        LoadDriverBackedEvidence(vm);
 
         // ACPI 表清單（usermode 列舉，不需驅動；BERT/HEST/SRAT/DMAR 的有無即是平台能力的指紋）。
         try { vm.EvidenceLab.LoadAcpi(new Win32AcpiTableSource()); }

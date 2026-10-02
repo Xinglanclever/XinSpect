@@ -12,9 +12,12 @@
     </UserControl.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16">
         <StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                 <TextBlock Text="韌體安全" FontSize="20" FontWeight="SemiBold"/>
                 <local:HelpDot HelpKey="firmware-security/韌體安全" Margin="8,6,0,0"/>
+                <Button x:Name="RefreshEvidenceButton" AutomationProperties.AutomationId="RefreshEvidenceButton"
+                        Style="{StaticResource ToolButton}" Content="重新擷取" Click="RefreshEvidence_Click"
+                        Margin="12,2,0,0" ToolTip="以目前可用的讀取後端重新擷取驅動相依事實；啟用深層存取後不必重啟即可翻成真值。"/>
             </StackPanel>
             <TextBlock TextWrapping="Wrap" Opacity="0.7" Margin="0,0,0,12"
                        Text="晶片組安全暫存器與 ACPI 錯誤表。讀得到給裁決；缺 ring0／不支援／權限不足一律誠實標示，不以舊值或 0 填補。"/>

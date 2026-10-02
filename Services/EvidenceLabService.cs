@@ -77,6 +77,22 @@ public sealed class EvidenceLabService : ObservableObject
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
+    /// <summary>
+    /// 事實重載（深層存取啟用後免重啟翻真值）：五組驅動相依事實整批「替換」——每組各自重新 Collect 後整組指派，
+    /// 不附加不累積；ACPI 表清單不在內（usermode 來源、另由 LoadAcpi 管理）。啟用深層存取後以新鮮的驅動後端
+    /// 呼叫即可把三態翻成真值；停用後以不可用後端呼叫則如實回到三態，不留舊值冒充。
+    /// </summary>
+    public void ReloadDriverBackedFacts(IPciConfigReader pci, IKernelMsrReader msr, IMmioReader mmio, IAcpiTableSource acpi)
+    {
+        var at = DateTimeOffset.UtcNow;
+        ChipsetFacts = ChipsetSecurityService.Collect(pci, at);
+        PlatformSecurityFacts = PlatformSecurityMsrService.Collect(msr, at);
+        SpiFlashFacts = SpiFlashService.Collect(pci, mmio, at);
+        MchbarFacts = MchbarService.Collect(pci, mmio, at);
+        PcieAerFacts = EcamAerService.Collect(mmio, acpi, at);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
     /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(AcpiFacts)
