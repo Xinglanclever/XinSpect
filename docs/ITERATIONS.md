@@ -72,12 +72,23 @@
 
 **MCHBAR 誠實裁決（記錄在案）**：本機為 i9-7980XE（Skylake-X）——MCHBAR 時序暫存器屬 MRC 訓練結果區，Intel 公開 datasheet 未定義其佈局，社群逆向值不合 V7「對準規格」門檻，時序解碼維持不出值。世代判定基建已就位，未來若有出處可信的佈局文件可按世代接入。
 
+## ITER26 ・ WP4 批次：SPI 快閃地圖與 BIOS 區雜湊（2026-10-03）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP4-① | **`SpiFlashMap` 純解碼器**：FREG0-5 → 快閃總大小（最大上限 4KB 單位推導）＋記憶體映射基底（PCH 標準：4GB 頂端）＋BIOS 區（FREG1）位移／長度；全空或異常範圍不猜 | 2763 | 8d9aa43 |
+| R2 | WP4-② | **BIOS 區 SHA-256 雜湊**（`SpiFlashHashService`）：單次大讀優先、失敗退 4KB 分塊（相容 DriverMmioReader 契約上限）、中途失敗帶中斷位移；全 F 頁與 PRx 讀保護（RPE）重疊如實標注——**雜湊＝可讀面**；BIOS 區 >64 MiB 拒讀；`SpiFlashService.ReadController` 抽出共用（SPI 事實／地圖／雜湊三服務單一發現層） | 2774 | b93e3cd |
+| R3 | WP4-③ | 接線：`SpiHashFacts` 進重載＋韌體安全頁＋快照收集；對帳規則 12→**13**（`spi.hash_vs_mmio_backend` 管線資料流規則） | 2775 | 06445ca |
+| R4 | 制度 | ITERATIONS.md 記錄本批＋記憶庫 | — | 本輪 |
+
+**誠實界線（記錄在案）**：BIOS 區雜湊的當前用途是**跨時間比對（快照差分）與留存**——「原廠比對」需要原廠映像檔，本版未涵蓋，不假裝能驗正版。RPE 讀保護攔截的範圍會以全 F 呈現且被標注，雜湊不代表被擋內容。
+
 ## 待辦（下一批）
 
-- WP4 SPI 韌體 hash 比對（BIOS 區 hash → 原廠比對）。
 - WP30 CHIPSEC 知識庫移植（含 Super I/O 名稱對照表的出處化）。
 - WP50 Stryker（解碼器抽成獨立程式庫，或等 Buildalyzer 支援）、differential 擴大（SPD fixture vs WMI）。
-- 對帳規則 12 → ≥25：隨新事實來源（SPD↔TSOD、SMART、儲存面）補。
+- 對帳規則 13 → ≥25：隨新事實來源（SPD↔TSOD、SMART、儲存面）補。
 - CLI 擴充候選：全機快照（需 headless 化 WPF 服務層）、批次清單檔。
 - PawnIO 模組整合（HVCI 環境備援；本機 IntelMsr 模組已知回 0 的問題要先解）。
+- BIOS 雜湊原廠比對（使用者供映像檔 → 逐區比對差異，WP4 的第二層）。
 - 發佈：等使用者明說。20 輪＋ITER21–25 內容尚未折疊進 changelog（發佈前必做，FileVersion .5→.6）。
