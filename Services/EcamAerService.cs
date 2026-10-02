@@ -17,15 +17,26 @@ public static class EcamAerService
             return [UnavailableFact("pcieaer.ecam", "ECAM 基底", "ACPI MCFG", at, FactAvailability.InsufficientPrivilege,
                 acpi.UnavailableReason ?? "無法列舉 ACPI 表")];
 
-        (ulong Base, byte StartBus, byte EndBus)? ecam = null;
+        McfgEntry? primary = null;
+        int otherSegments = 0;
         foreach (var t in acpi.ReadAll())
-            if (AcpiTable.McfgPrimaryEcam(t) is { } e) { ecam = e; break; }
-        if (ecam is null || ecam.Value.Base == 0)
+        {
+            var entries = AcpiTable.McfgEntries(t);
+            foreach (var e in entries)
+            {
+                if (primary is null && e.SegmentGroup == 0 && e.Base != 0) primary = e;
+                else if (e.SegmentGroup != 0) otherSegments++;
+            }
+        }
+        if (primary is null)
             return [UnavailableFact("pcieaer.ecam", "ECAM 基底", "ACPI MCFG", at, FactAvailability.NotApplicable,
-                "平台未提供 MCFG 表（或基底為 0），無 ECAM 可循")];
+                "平台未提供 MCFG 表（或 segment 0 條目基底為 0），無 ECAM 可循")];
 
+        string segmentNote = otherSegments > 0
+            ? $"；另有 {otherSegments} 個 segment 未納入掃描（驅動端批次列舉就緒後再開）"
+            : "";
         var ecamFact = new HardwareFact("pcieaer.ecam", Category, "ECAM 基底",
-            $"0x{ecam.Value.Base:X8}（MCFG segment 0，bus {ecam.Value.StartBus}-{ecam.Value.EndBus}）", "", "ACPI MCFG",
+            $"0x{primary.Base:X8}（MCFG segment 0，bus {primary.StartBus}-{primary.EndBus}）{segmentNote}", "", "ACPI MCFG",
             FactTrustLevel.Measured, false, at);
 
         if (!mmio.Available)
@@ -39,7 +50,7 @@ public static class EcamAerService
         {
             for (byte fn = 0; fn < 8; fn++)
             {
-                ulong addr = ecam.Value.Base + ((ulong)ScanBus << 20 | (ulong)dev << 15 | (ulong)fn << 12);
+                ulong addr = primary.Base + ((ulong)ScanBus << 20 | (ulong)dev << 15 | (ulong)fn << 12);
                 var head = mmio.ReadBlock(addr, 0x10);
                 if (head is null)
                 {

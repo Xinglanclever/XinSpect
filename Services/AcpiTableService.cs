@@ -6,6 +6,9 @@ namespace XinSpect;
 public readonly record struct AcpiTableHeader(
     string Signature, uint Length, byte Revision, string OemId, string OemTableId, bool ChecksumValid);
 
+/// <summary>MCFG 條目：一個 PCI segment group 的 ECAM 基底與 bus 範圍。</summary>
+public sealed record McfgEntry(ulong Base, ushort SegmentGroup, byte StartBus, byte EndBus);
+
 /// <summary>ACPI 表的純解析器。校驗和需要整表位元組（和 mod 256 = 0）；只有頭 36 bytes 時無法驗證即標 false，不假裝有效。</summary>
 public static class AcpiTable
 {
@@ -41,10 +44,28 @@ public static class AcpiTable
     /// MCFG 首條目（segment 0）：ECAM 基底與 bus 範圍。標頭(36)+保留(8)後每條目 16 bytes：基底 u64@0、PCI 群組 u16@8、起始 bus@10、結束 bus@11。
     /// 非 MCFG 或無條目回 null——ECAM 基底是平台事實，讀不到就說讀不到。
     /// </summary>
+    /// <summary>MCFG 的全部條目。條目格式：基底 u64@0、PCI 群組 u16@8、起始 bus@10、結束 bus@11。
+    /// 非 MCFG 或無條目回空陣列——ECAM 基底是平台事實，讀不到就說讀不到。</summary>
+    public static IReadOnlyList<McfgEntry> McfgEntries(ReadOnlySpan<byte> table)
+    {
+        if (table.Length < 44 || !table[..4].SequenceEqual("MCFG"u8)) return [];
+        int count = (table.Length - 44) / 16;
+        var entries = new List<McfgEntry>(count);
+        for (int i = 0; i < count; i++)
+        {
+            int off = 44 + i * 16;
+            entries.Add(new McfgEntry(
+                BitConverter.ToUInt64(table[off..(off + 8)]),
+                BitConverter.ToUInt16(table[(off + 8)..(off + 10)]),
+                table[off + 10], table[off + 11]));
+        }
+        return entries;
+    }
+
     public static (ulong Base, byte StartBus, byte EndBus)? McfgPrimaryEcam(ReadOnlySpan<byte> table)
     {
-        if (table.Length < 60 || !table[..4].SequenceEqual("MCFG"u8)) return null;
-        return (BitConverter.ToUInt64(table[44..52]), table[54], table[55]);
+        var first = McfgEntries(table).FirstOrDefault();
+        return first is { } e ? (e.Base, e.StartBus, e.EndBus) : null;
     }
 
     private static byte Checksum(ReadOnlySpan<byte> bytes)

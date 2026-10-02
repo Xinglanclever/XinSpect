@@ -128,6 +128,38 @@ public sealed class EcamAerTests
         Assert.Contains("ECAM", scan.UnavailableReason);
     }
 
+    [Fact]
+    public void MCFG_多條目_全部解出且segment如實()
+    {
+        var t = McfgTable(); // 條目一：segment 0, bus 0-255
+        Array.Resize(ref t, 76);
+        BitConverter.GetBytes(0xC0000000UL).CopyTo(t, 60); // 條目二：segment 1
+        BitConverter.GetBytes((ushort)1).CopyTo(t, 68);
+        t[70] = 0; t[71] = 127;
+
+        var entries = AcpiTable.McfgEntries(t);
+        Assert.Equal(2, entries.Count);
+        Assert.Equal(0, entries[0].SegmentGroup);
+        Assert.Equal(0xC0000000UL, entries[1].Base);
+        Assert.Equal(1, entries[1].SegmentGroup);
+        Assert.Equal((byte)0, entries[1].StartBus);
+        Assert.Equal((byte)127, entries[1].EndBus);
+    }
+
+    [Fact]
+    public void 服務_多segment平台_ECAM事實明說其餘未掃()
+    {
+        var t = McfgTable();
+        Array.Resize(ref t, 76);
+        BitConverter.GetBytes(0xC0000000UL).CopyTo(t, 60);
+        BitConverter.GetBytes((ushort)1).CopyTo(t, 68);
+        t[70] = 0; t[71] = 127;
+
+        var facts = EcamAerService.Collect(new NotLoadedMmioReader(), new ListAcpi([t]), At);
+        var ecam = facts.Single(x => x.Key == "pcieaer.ecam");
+        Assert.Contains("另有 1 個 segment 未納入掃描", ecam.Value);
+    }
+
     private static ulong Dev(byte bus, byte dev, byte fn) => (ulong)bus << 16 | (ulong)dev << 8 | fn;
 
     private static byte[] McfgTable(ulong ecamBase = EcamBase, byte startBus = 0, byte endBus = 255)
