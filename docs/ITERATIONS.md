@@ -96,12 +96,23 @@
 
 **知識庫誠實界線**：本批只收錄 PCI-SIG 規格定義的類別碼與知名廠商 ID——device 型號對照（每代更新）刻意不做，待有出處化資料再補。
 
+## ITER28 ・ WP30＋WP4 批次：BAR 資源與原廠映像比對（2026-10-03）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP30-② | **`PciBars` 純解碼器**：type0 標頭六 BAR＋Expansion ROM——I/O／32-bit／64-bit（佔兩槽規格配對）／可預取辨識、全 0＝未配置如實計數；**唯讀界線：大小需寫入探測故不出值**；SpecRef（PCI Local Bus Spec 3.0 §6.2.5），解碼器覆蓋 10→**11** | 2788 | 1dc0e20 |
+| R2 | WP30-③ | 盤點擴充：每個存在功能多一筆資源事實（`pci.res.{dev}.{fn}`）——裝置角色＋資源清單一行可稽核 | 2788 | f017c11 |
+| R3 | WP4-② | **`SpiFlashCompareService` 原廠映像比對**：BIOS 區 vs 使用者供映像逐 4KB 塊比對，報差異塊數與前 8 個快閃位移；**大小不符＝誠實拒比**（不猜對齊不補值）；RPE 重疊標注「被擋範圍以全 F 呈現會計為差異」；「差異≠被改壞，判讀權在使用者」入文 | 2793 | dadd453 |
+| R4 | 制度 | ITERATIONS.md 記錄本批＋記憶庫 | — | 本輪 |
+
+**測試假件教訓（記錄在案）**：存在裝置的未實作 BAR 依規格讀 0；假件把「裝置不存在」的 0xFFFFFFFF 混用到 BAR 讀取會解出垃圾 I/O 資源——假件要照規格建模。
+
 ## 待辦（下一批）
 
-- WP30 知識庫續推：PCI BAR 解碼（type0 header → 資源清單）、Super I/O 名稱對照表出處化、device 型號對照的出處化資料源。
-- WP50 Stryker（解碼器抽成獨立程式庫，或等 Buildalyzer 支援）、differential 擴大（SPD fixture vs WMI）。
+- WP4-② 接線：映像比對的 UI 按鈕／CLI flag（服務層已就緒）。
+- WP30 知識庫續推：Super I/O 名稱對照表出處化、device 型號對照的出處化資料源。
+- WP50 Stryker（解碼器抽成獨立程式庫，或等 Buildalyzer 支援）、differential 擴大。
 - 對帳規則 15 → ≥25：隨新事實來源（SPD↔TSOD、SMART、儲存面）補。
 - CLI 擴充候選：全機快照（需 headless 化 WPF 服務層）、批次清單檔。
 - PawnIO 模組整合（HVCI 環境備援；本機 IntelMsr 模組已知回 0 的問題要先解）。
-- BIOS 雜湊原廠比對（使用者供映像檔 → 逐區比對差異，WP4 的第二層）。
-- 發佈：等使用者明說。20 輪＋ITER21–27 內容尚未折疊進 changelog（發佈前必做，FileVersion .5→.6）。
+- 發佈：等使用者明說。20 輪＋ITER21–28 內容尚未折疊進 changelog（發佈前必做，FileVersion .5→.6）。
