@@ -26,9 +26,10 @@ public static class RawRegisterCollectService
         {
             PciRegion(pci, "pcicfg:00:1f.0+dc", 0x1F, 0, 0xDC, at),
             PciRegion(pci, "pcicfg:00:00.0+88", 0x00, 0, 0x88, at),
+            // SMI 計數器（byte0-3）與 DEBUG_OCCURRED（byte7 bit31）會隨時間變動：遮罩，避免每次快照都在變
             MsrRegion(msr, "msr:0x3a", 0x3A, at),
-            MsrRegion(msr, "msr:0xc80", 0xC80, at),
-            MsrRegion(msr, "msr:0x34", 0x34, at),
+            MsrRegion(msr, "msr:0xc80", 0xC80, at, [0, 0, 0, 0, 0, 0, 0, 1]),
+            MsrRegion(msr, "msr:0x34", 0x34, at, [1, 1, 1, 1, 0, 0, 0, 0]),
         };
 
         if (acpi.Available)
@@ -66,7 +67,13 @@ public static class RawRegisterCollectService
                     Availability = FactAvailability.ReadError,
                     UnavailableReason = mmio.LastFailReason ?? "SPIBAR MMIO 讀取失敗",
                 }
-                : new RawRegisterRegion { Source = "mmio:spi:0xfed10000+88", Bytes = block });
+                : new RawRegisterRegion
+                {
+                    Source = "mmio:spi:0xfed10000+88",
+                    Bytes = block,
+                    // HSFSTS 的 FDONE/FCERR/AEL（byte0x04 低位）隨快閃週期變動，遮罩避免淹沒真正的設定變動
+                    VolatilityMask = MakeMask(0x88, 0x04),
+                });
         }
         else
         {
@@ -98,7 +105,7 @@ public static class RawRegisterCollectService
         return new RawRegisterRegion { Source = source, Bytes = BitConverter.GetBytes(raw.Value) };
     }
 
-    private static RawRegisterRegion MsrRegion(IKernelMsrReader msr, string source, uint index, DateTimeOffset at)
+    private static RawRegisterRegion MsrRegion(IKernelMsrReader msr, string source, uint index, DateTimeOffset at, byte[]? volatileMask = null)
     {
         if (!msr.Available)
             return new RawRegisterRegion
@@ -110,6 +117,13 @@ public static class RawRegisterCollectService
         ulong? raw = msr.ReadMsr(index);
         return raw is null
             ? new RawRegisterRegion { Source = source, Availability = FactAvailability.ReadError, UnavailableReason = "MSR 讀取失敗（此平台可能未實作）" }
-            : new RawRegisterRegion { Source = source, Bytes = BitConverter.GetBytes(raw.Value) };
+            : new RawRegisterRegion { Source = source, Bytes = BitConverter.GetBytes(raw.Value), VolatilityMask = volatileMask };
+    }
+
+    private static byte[] MakeMask(int length, params int[] volatileOffsets)
+    {
+        var mask = new byte[length];
+        foreach (int i in volatileOffsets) mask[i] = 1;
+        return mask;
     }
 }

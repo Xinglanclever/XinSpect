@@ -111,10 +111,67 @@ public sealed class RawRegisterCollectTests
             new(values.ToDictionary(v => v.Msr, v => v.Value));
     }
 
+    // ===== 揮發遮罩 × 差分：收集→Diff 全迴路 =====
+
+    [Fact]
+    public void 揮發遮罩_計數器位元組不淹沒差分()
+    {
+        var pci = new FakePci(0x00000022u, 0x10);
+        var acpi = new FakeAcpi([]);
+        var mmio = new FakeMmio(new byte[0x88]);
+        var before = RawRegisterCollectService.Collect(pci, acpi, FakeMsr.From((0x3A, 5), (0xC80, 0), (0x34, 7)), mmio, At);
+        var after = RawRegisterCollectService.Collect(pci, acpi, FakeMsr.From((0x3A, 5), (0xC80, 0), (0x34, 999)), mmio, At);
+
+        var diff = RawRegisterSnapshotService.Diff(before, after);
+        Assert.Equal(0, diff.Changed); // SMI 計數器（遮罩）變了，不算變動
+        Assert.Contains(diff.Regions, r => r.Source == "msr:0x34" && r.Kind == RawRegionChangeKind.Unchanged);
+    }
+
+    [Fact]
+    public void 非遮罩位元組變動_逐位元組定位到偏移()
+    {
+        var acpi = new FakeAcpi([]);
+        var msr = FakeMsr.From((0x3A, 5), (0xC80, 0), (0x34, 7));
+        var mmio = new FakeMmio(new byte[0x88]);
+        var before = RawRegisterCollectService.Collect(new FakePci(0x00000022u, 0x10), acpi, msr, mmio, At);
+        var after = RawRegisterCollectService.Collect(new FakePci(0x00000020u, 0x10), acpi, msr, mmio, At); // BLE 關掉
+
+        var diff = RawRegisterSnapshotService.Diff(before, after);
+        var change = diff.Regions.Single(r => r.Source == "pcicfg:00:1f.0+dc");
+        Assert.Equal(RawRegionChangeKind.Changed, change.Kind);
+        Assert.Equal([0], change.ChangedOffsets); // 0x22 vs 0x20：低位元組 bit1（BLE）
+    }
+
+    [Fact]
+    public void SPI遮罩_HSFSTS狀態位元組變動不算變動_FRAP變動算()
+    {
+        var pci = new FakePci(0x20, 0x10);
+        var acpi = new FakeAcpi([]);
+        var msr = FakeMsr.From();
+        var block = new byte[0x88];
+        var mmio = new MutableMmio(block);
+        var before = RawRegisterCollectService.Collect(pci, acpi, msr, mmio, At);
+        block[0x04] = 0x01; // FDONE 翻起（遮罩內）
+        block[0x50] = 0x02; // FRAP bit1 打開（非遮罩）：BIOS 區變成可寫
+        var after = RawRegisterCollectService.Collect(pci, acpi, msr, mmio, At);
+
+        var diff = RawRegisterSnapshotService.Diff(before, after);
+        var spi = diff.Regions.Single(r => r.Source == "mmio:spi:0xfed10000+88");
+        Assert.Equal(RawRegionChangeKind.Changed, spi.Kind);
+        Assert.Equal([0x50], spi.ChangedOffsets);
+    }
+
     private sealed class FakeMmio(byte[]? block) : IMmioReader
     {
         public bool Available => true;
         public string? UnavailableReason => null;
         public byte[]? ReadBlock(ulong physicalAddress, int length) => block;
+    }
+
+    private sealed class MutableMmio(byte[] block) : IMmioReader
+    {
+        public bool Available => true;
+        public string? UnavailableReason => null;
+        public byte[]? ReadBlock(ulong physicalAddress, int length) => (byte[])block.Clone(); // 每次快照是獨立副本
     }
 }
