@@ -198,12 +198,15 @@ internal static class StartupSequence
         if (nativeSpd.Count > 0) vm.SpdModules = SpdDisplay.ToDisplay(nativeSpd);
 
         // 晶片組安全暫存器（BIOS_CNTL/SMRAMC）：走 WinRing0 讀 bus 0；讀不到由三態如實標示（缺 ring0 / 非 Intel）。
-        // SPI 快閃安全同場載入：SPIBAR 經 PCI 取得，暫存器本體要 MMIO——自家驅動未載時整組三態（不在生產機自動觸發核心碼）。
+        // SPI 快閃與 PCIe AER 同場載入：SPIBAR 經 PCI 取得、擴充組態空間要 MMIO——驅動未載時 DriverMmioReader
+        // 自動三態（不在生產機自動觸發核心碼，載入後這兩組事實自動翻成真值）。
         try
         {
             using var pci = new WinRing0PciConfigReader();
+            using var msr = new WinRing0KernelMsrReader();
             vm.EvidenceLab.LoadChipsetSecurity(pci);
-            vm.EvidenceLab.LoadSpiFlash(pci, new NotLoadedMmioReader());
+            vm.EvidenceLab.LoadSpiFlash(pci, new DriverMmioReader());
+            vm.EvidenceLab.LoadPlatformSecurity(msr);
         }
         catch { /* 晶片組安全為附加功能，讀不到由三態標示 */ }
 
@@ -211,8 +214,8 @@ internal static class StartupSequence
         try { vm.EvidenceLab.LoadAcpi(new Win32AcpiTableSource()); }
         catch { /* ACPI 列舉為附加功能，讀不到由三態標示 */ }
 
-        // PCIe AER（ECAM 基底 usermode 可得；擴充組態空間要 MMIO——自家驅動未載時三態）。
-        try { vm.EvidenceLab.LoadPcieAer(new NotLoadedMmioReader(), new Win32AcpiTableSource()); }
+        // PCIe AER（ECAM 基底 usermode 可得；擴充組態空間要 MMIO——驅動未載時三態）。
+        try { vm.EvidenceLab.LoadPcieAer(new DriverMmioReader(), new Win32AcpiTableSource()); }
         catch { /* PCIe AER 為附加功能，讀不到由三態標示 */ }
 
         try
