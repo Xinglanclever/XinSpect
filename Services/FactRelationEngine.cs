@@ -117,6 +117,14 @@ public static class FactRelationRules
     public const string SecureBootUefiKey = "uefi.secure_boot";
     public const string EcamBaseKey = "pcieaer.ecam";
     public const string AerScanKey = "pcieaer.scan";
+    public const string SpiWriteSurfaceKey = "spi.write_surface";
+    public const string SpiFrapKey = "spi.frap";
+    public const string SpiHsfstsKey = "spi.hsfsts";
+    public const string BackendMmioKey = "backend.mmio";
+    public const string BackendMsrKey = "backend.msr";
+    public const string PlatformFeatureControlKey = "platform.feature_control";
+    public const string HvciKey = "platform.hvci";
+    public const string DecisionKey = "backend.environment_decision";
 
     public static readonly IReadOnlyList<FactRelationRule> All =
     [
@@ -218,5 +226,91 @@ public static class FactRelationRules
                         $"AER 掃描宣稱有結果但 ECAM 基底讀不到（{ecam.UnavailableReason ?? "原因不明"}）——掃描不可能沒有基底，管線狀態矛盾");
             },
             "AER 掃描結果衍生自 ECAM 基底（MCFG）：基底缺席時掃描不可能 Present。這條規則守的是管線自身的資料流一致性——它抓的矛盾來自程式而不是硬體，同樣該被看見"),
+        new("backend.hvci_vs_decision", "環境矩陣裁決與 HVCI 事實資料流一致性",
+            [HvciKey, DecisionKey],
+            f =>
+            {
+                string hvci = f[HvciKey].Value;
+                string decision = f[DecisionKey].Value;
+                bool expectedOff = decision.Contains("HVCI 關閉", StringComparison.Ordinal);
+                bool expectedOn = decision.Contains("HVCI 開啟", StringComparison.Ordinal);
+                if (!expectedOff && !expectedOn)
+                    return FactRelationOutcome.Unverifiable("裁決事實文字沒有可辨識的 HVCI 狀態——管線格式變了，先查程式");
+                return (expectedOn == (hvci == "開啟"))
+                    ? FactRelationOutcome.Consistent("環境矩陣裁決與 HVCI 事實一致")
+                    : FactRelationOutcome.Contradicts(
+                        $"裁決事實由 HVCI 推導，兩者卻不一致（HVCI＝「{hvci}」、裁決＝「{decision[..Math.Min(20, decision.Length)]}…」）——管線狀態矛盾");
+            },
+            "backend.environment_decision 由 platform.hvci 推導而來；上下游不一致代表收集管線自身的狀態錯亂——這條規則守的是程式而非硬體"),
+
+        new("chipset.bioscntl_vs_write_surface", "BIOS_CNTL 原始解碼與綜合裁決一致性",
+            [BiosCntlKey, SpiWriteSurfaceKey],
+            f =>
+            {
+                static string Level(string text) =>
+                    text.StartsWith("最強保護", StringComparison.Ordinal) ? "最強保護"
+                    : text.StartsWith("有鎖保護", StringComparison.Ordinal) ? "有鎖保護" : "未保護";
+                string cntl = Level(f[BiosCntlKey].Value);
+                string surface = Level(f[SpiWriteSurfaceKey].Value);
+                return cntl == surface
+                    ? FactRelationOutcome.Consistent($"兩者同指「{cntl}」——綜合裁決忠實反映原始解碼")
+                    : FactRelationOutcome.Contradicts(
+                        $"綜合裁決宣稱「{surface}」但 BIOS_CNTL 原始解碼是「{cntl}」——綜合裁決的輸入之一就是 BIOS_CNTL，兩者不可能是不同等級，管線狀態矛盾");
+            },
+            "spi.write_surface 的主軸就是 BIOS_CNTL 的裁決階梯；上游與下游給出不同等級代表管線內部錯亂，不是硬體問題"),
+
+        new("spi.frap_vs_write_surface", "FRAP 事實與綜合裁決暴露面一致性",
+            [SpiFrapKey, SpiWriteSurfaceKey],
+            f =>
+            {
+                bool frapWritable = f[SpiFrapKey].Value.Contains("BIOS 區域可寫入", StringComparison.Ordinal);
+                bool surfaceGrant = f[SpiWriteSurfaceKey].Value.Contains("FRAP bit1=1", StringComparison.Ordinal);
+                return frapWritable == surfaceGrant
+                    ? FactRelationOutcome.Consistent("FRAP 事實與綜合裁決的暴露面描述一致")
+                    : FactRelationOutcome.Contradicts(
+                        $"FRAP 事實與綜合裁決不一致（FRAP＝{(frapWritable ? "可寫入" : "不可寫入")}、裁決暴露面{(surfaceGrant ? "有" : "無")}FRAP bit1=1）——管線狀態矛盾");
+            },
+            "綜合裁決把 FRAP bit1 列為暴露面的依據就是 spi.frap 事實本身；兩邊說不同的話代表資料流錯亂"),
+
+        new("backend.mmio_vs_spi_facts", "SPI 事實與 MMIO 後端資料流一致性",
+            [SpiHsfstsKey],
+            f =>
+            {
+                // 後端事實「缺席」正是矛盾條件之一，刻意不列輸入鍵（會被引擎轉 Unverifiable），規則內自查。
+                if (!f.TryGetValue(BackendMmioKey, out var mmio))
+                    return FactRelationOutcome.Unverifiable("MMIO 後端事實不存在（收集管線未跑或鍵名錯置）——無從交叉");
+                return mmio.Availability == FactAvailability.Present
+                    ? FactRelationOutcome.Consistent("MMIO 後端在服務且 SPI 事實存在——上下游一致")
+                    : FactRelationOutcome.Contradicts(
+                        "SPI 事實宣稱 Present 但沒有任何 MMIO 後端在服務——SPI 暫存器只能經 MMIO 讀取，管線狀態矛盾");
+            },
+            "SPI 快閃暫存器只能經 MMIO 取得；backend.mmio 缺席時 SPI 事實不可能是 Present——守的是管線資料流而非硬體"),
+
+        new("backend.msr_vs_platform_security", "平台安全 MSR 與 MSR 後端資料流一致性",
+            [PlatformFeatureControlKey],
+            f =>
+            {
+                if (!f.TryGetValue(BackendMsrKey, out var msr))
+                    return FactRelationOutcome.Unverifiable("MSR 後端事實不存在（收集管線未跑或鍵名錯置）——無從交叉");
+                return msr.Availability == FactAvailability.Present
+                    ? FactRelationOutcome.Consistent("MSR 後端在服務且平台安全事實存在——上下游一致")
+                    : FactRelationOutcome.Contradicts(
+                        "平台安全 MSR 事實宣稱 Present 但沒有任何 MSR 後端在服務——管線狀態矛盾");
+            },
+            "IA32_FEATURE_CONTROL 只能經核心 MSR 讀取；backend.msr 缺席時該事實不可能是 Present——守的是管線資料流而非硬體"),
+
+        new("chipset.smramc_open_while_locked", "SMRAM 鎖定下對外開放的非法組合",
+            [SmramcKey],
+            f =>
+            {
+                string text = f[SmramcKey].Value;
+                bool locked = text.Contains("D_LCK=1", StringComparison.Ordinal);
+                bool open = text.Contains("D_OPEN=1", StringComparison.Ordinal);
+                return locked && open
+                    ? FactRelationOutcome.Contradicts(
+                        "SMRAMC 同時出現 D_LCK=1 與 D_OPEN=1——對 D_LCK 寫 1 會強制清 D_OPEN，兩者同時成立的狀態不該存在：暫存器遭異常改動或解碼有誤")
+                    : FactRelationOutcome.Consistent("SMRAMC 未出現「鎖定下開放」的非法組合");
+            },
+            "Intel 對 SMRAMC 的定義：D_LCK 由 0 寫 1 時硬體強制清 D_OPEN。兩位元同時為 1 在合法流程中不可能出現——出現了就是警訊"),
     ];
 }

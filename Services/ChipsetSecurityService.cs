@@ -152,7 +152,9 @@ public static class ChipsetSecurityService
 
     private static string SmramcText(SmramcDecode d) => d.Verdict switch
     {
-        ChipsetSecurityVerdict.Protected => "已鎖：D_LCK=1，SMRAM 設定鎖定",
+        ChipsetSecurityVerdict.Protected => d.DOpen
+            ? "已鎖：D_LCK=1，但 D_OPEN=1——鎖定下對外開放，此組合硬體不應出現"
+            : "已鎖：D_LCK=1，SMRAM 設定鎖定",
         _ => d.DOpen ? "SMRAM 對外開放：D_OPEN=1 且未鎖" : "未鎖：D_LCK=0",
     };
 
