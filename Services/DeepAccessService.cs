@@ -1,5 +1,6 @@
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
@@ -264,8 +265,30 @@ public sealed class DeepAccessService : ObservableObject
         string password = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
         File.WriteAllBytes(CaPfxPath, ca.Export(X509ContentType.Pkcs12, password));
         File.WriteAllText(CaKeyPath, password);
-        notes.Add($"已產生自簽 CA {CaSubject}（{CaCerPath}；PFX 與密碼檔同目錄，供 signtool 簽 .sys）。");
+        // 私鑰材料（PFX＋密碼檔）限 SYSTEM／Administrators：取消繼承、只留這兩條規則
+        RestrictToAdmins(CaPfxPath);
+        RestrictToAdmins(CaKeyPath);
+        notes.Add($"已產生自簽 CA {CaSubject}（{CaCerPath}；PFX 與密碼檔同目錄且限管理員讀取，供 signtool 簽 .sys）。");
         return ca;
+    }
+
+    /// <summary>把檔案 ACL 收緊為僅 SYSTEM 與 Administrators 可存取（取消繼承、清掉其他規則）。</summary>
+    private static void RestrictToAdmins(string path)
+    {
+        try
+        {
+            var file = new FileInfo(path);
+            FileSecurity security = file.GetAccessControl();
+            security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+            security.AddAccessRule(new FileSystemAccessRule(
+                new NTAccount("NT AUTHORITY", "SYSTEM"), FileSystemRights.FullControl,
+                InheritanceFlags.None, PropagationFlags.None, AccessControlType.Allow));
+            security.AddAccessRule(new FileSystemAccessRule(
+                new NTAccount("BUILTIN", "Administrators"), FileSystemRights.FullControl,
+                InheritanceFlags.None, PropagationFlags.None, AccessControlType.Allow));
+            file.SetAccessControl(security);
+        }
+        catch (PlatformNotSupportedException) { /* 非 Windows：不適用 */ }
     }
 
     private bool TryLoadCa(out X509Certificate2? ca)

@@ -51,6 +51,33 @@ public sealed class DeepAccessTests
     }
 
     [Fact]
+    public void 啟用後PFX與密碼檔限管理員存取()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        string dir = TempDir();
+        DeploySys(dir);
+        var sut = new DeepAccessService(new FakeStore(), new FakeService(), dir, isElevated: true);
+        try
+        {
+            sut.Enable();
+
+            foreach (string name in new[] { "XinSpectCA.pfx", "XinSpectCA.pfxkey" })
+            {
+                string path = Path.Combine(dir, name);
+                Assert.True(File.Exists(path), $"{name} 不存在");
+                var rules = new FileInfo(path).GetAccessControl()
+                    .GetAccessRules(true, false, typeof(System.Security.Principal.NTAccount));
+                Assert.True(rules.Count > 0);
+                Assert.All(rules.Cast<System.Security.AccessControl.FileSystemAccessRule>(), rule =>
+                    Assert.True(rule.IdentityReference.Value.Contains("SYSTEM", StringComparison.OrdinalIgnoreCase)
+                                || rule.IdentityReference.Value.Contains("Administrators", StringComparison.OrdinalIgnoreCase),
+                                $"出現非預期的存取主體：{rule.IdentityReference.Value}"));
+            }
+        }
+        finally { try { Directory.Delete(dir, true); } catch { } }
+    }
+
+    [Fact]
     public void 啟用_sys缺席_CA信任但如實標驅動未載不謊稱全開()
     {
         string dir = TempDir();
