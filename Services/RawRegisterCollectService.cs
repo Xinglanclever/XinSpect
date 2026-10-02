@@ -1,0 +1,115 @@
+namespace XinSpect;
+
+/// <summary>一份原始暫存器快照：逐來源的位元組區集合。與語義快照（HardwareSnapshot）並存，各自有自己的完整性信封。</summary>
+public sealed record RawRegisterSnapshot
+{
+    public required string AppVersion { get; init; }
+    public required DateTimeOffset TakenAtUtc { get; init; }
+    public required IReadOnlyList<RawRegisterRegion> Regions { get; init; }
+}
+
+/// <summary>
+/// 原始暫存器收集器（深層暫存器計畫 P4）。只收「今天真的讀得到」的來源，逐區三態：
+/// PCI 設定空間安全暫存器（BIOS_CNTL/SMRAMC，WinRing0）、ACPI 表整表位元組（usermode）、
+/// 平台安全 MSR（FEATURE_CONTROL/DEBUG_INTERFACE/SMI_COUNT，呼叫執行緒所在邏輯核心）、
+/// SPIBAR MMIO 區塊（自家驅動，未載即三態）。讀不到的區標 Availability+原因，絕不以 0 或空位元組填補。
+/// </summary>
+public static class RawRegisterCollectService
+{
+    public static RawRegisterSnapshot Create(string appVersion, IReadOnlyList<RawRegisterRegion> regions, DateTimeOffset at)
+        => new() { AppVersion = appVersion, TakenAtUtc = at, Regions = regions };
+
+    public static IReadOnlyList<RawRegisterRegion> Collect(
+        IPciConfigReader pci, IAcpiTableSource acpi, IKernelMsrReader msr, IMmioReader mmio, DateTimeOffset at)
+    {
+        var regions = new List<RawRegisterRegion>
+        {
+            PciRegion(pci, "pcicfg:00:1f.0+dc", 0x1F, 0, 0xDC, at),
+            PciRegion(pci, "pcicfg:00:00.0+88", 0x00, 0, 0x88, at),
+            MsrRegion(msr, "msr:0x3a", 0x3A, at),
+            MsrRegion(msr, "msr:0xc80", 0xC80, at),
+            MsrRegion(msr, "msr:0x34", 0x34, at),
+        };
+
+        if (acpi.Available)
+        {
+            foreach (var table in acpi.ReadAll())
+            {
+                if (table.Length < 8) continue;
+                string sig = System.Text.Encoding.ASCII.GetString(table[..4]).TrimEnd('\0', ' ');
+                if (sig.Length == 0) continue;
+                regions.Add(new RawRegisterRegion
+                {
+                    Source = $"acpi:{sig}",
+                    Bytes = table,
+                    Availability = FactAvailability.Present,
+                });
+            }
+        }
+        else
+        {
+            regions.Add(new RawRegisterRegion
+            {
+                Source = "acpi:*",
+                Availability = FactAvailability.InsufficientPrivilege,
+                UnavailableReason = acpi.UnavailableReason ?? "無法列舉 ACPI 表",
+            });
+        }
+
+        if (mmio.Available)
+        {
+            var block = mmio.ReadBlock(0xFED10000, 0x88);
+            regions.Add(block is null
+                ? new RawRegisterRegion
+                {
+                    Source = "mmio:spi:0xfed10000+88",
+                    Availability = FactAvailability.ReadError,
+                    UnavailableReason = mmio.LastFailReason ?? "SPIBAR MMIO 讀取失敗",
+                }
+                : new RawRegisterRegion { Source = "mmio:spi:0xfed10000+88", Bytes = block });
+        }
+        else
+        {
+            regions.Add(new RawRegisterRegion
+            {
+                Source = "mmio:spi:0xfed10000+88",
+                Availability = FactAvailability.InsufficientPrivilege,
+                UnavailableReason = mmio.UnavailableReason ?? "缺 MMIO 讀取",
+            });
+        }
+
+        return regions;
+    }
+
+    private static RawRegisterRegion PciRegion(IPciConfigReader pci, string source, byte dev, byte fn, uint reg, DateTimeOffset at)
+    {
+        if (!pci.Available)
+            return new RawRegisterRegion
+            {
+                Source = source,
+                Availability = FactAvailability.InsufficientPrivilege,
+                UnavailableReason = pci.UnavailableReason ?? "缺 ring0：PCI 設定空間讀取未就緒",
+            };
+        uint? raw = pci.ReadDword(0, dev, fn, reg);
+        if (raw is null)
+            return new RawRegisterRegion { Source = source, Availability = FactAvailability.ReadError, UnavailableReason = "PCI 設定空間讀取失敗" };
+        if (raw.Value == 0xFFFFFFFF)
+            return new RawRegisterRegion { Source = source, Availability = FactAvailability.NotApplicable, UnavailableReason = "裝置無回應" };
+        return new RawRegisterRegion { Source = source, Bytes = BitConverter.GetBytes(raw.Value) };
+    }
+
+    private static RawRegisterRegion MsrRegion(IKernelMsrReader msr, string source, uint index, DateTimeOffset at)
+    {
+        if (!msr.Available)
+            return new RawRegisterRegion
+            {
+                Source = source,
+                Availability = FactAvailability.InsufficientPrivilege,
+                UnavailableReason = msr.UnavailableReason ?? "缺 ring0：MSR 讀取未就緒",
+            };
+        ulong? raw = msr.ReadMsr(index);
+        return raw is null
+            ? new RawRegisterRegion { Source = source, Availability = FactAvailability.ReadError, UnavailableReason = "MSR 讀取失敗（此平台可能未實作）" }
+            : new RawRegisterRegion { Source = source, Bytes = BitConverter.GetBytes(raw.Value) };
+    }
+}
