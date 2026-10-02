@@ -247,6 +247,12 @@ public sealed class EvidenceLabService : ObservableObject
             .ToList();
     }
 
+    /// <summary>全部事實組合併成單一清單（CLI 與報告用）。與 FirmwareSecurityRows 同集合、不轉渲染列。</summary>
+    public IReadOnlyList<HardwareFact> AllFacts =>
+        ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
+            .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
+            .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(AcpiFacts).ToList();
+
     /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + I/O 埠 + CMOS + SMBus + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)

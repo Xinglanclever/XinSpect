@@ -124,28 +124,17 @@ internal static class StartupSequence
     private static readonly SemaphoreSlim DriverEvidenceGate = new(1, 1);
 
     /// <summary>
-    /// 驅動相依五組證據（晶片組安全／SPI 快閃／平台安全 MSR／MCHBAR／PCIe AER）的載入：真實後端在此一處組合。
-    /// 啟動序列與「啟用深層存取後重載」共用——同一個閘門擋並發（驅動控制代碼不重複開）、整批替換不累積；
-    /// 讀不到由各服務標三態，此處只負責後端壽命與異常吞噬。
-    /// 後端裁決（V7 §2.1／§2.4）：WinRing0 為主力（MSR／PCI／MMIO 實體記憶體）；XsRegProbe 降為備援
-    /// （驅動已載入且握手成功才接手）；DriverMsrReader 維持備妥未接線，供 HVCI 環境與未來 PEBS/PT。
+    /// 驅動相依五組證據（晶片組安全／SPI 快閃／平台安全 MSR／MCHBAR／PCIe AER）的載入：真實後端的組合在
+    /// <see cref="EvidenceCollection"/>（與 CLI 模式共用）；這裡只負責閘門擋並發與異常吞噬。
+    /// 讀不到由各服務標三態。後端裁決（V7 §2.1／§2.4）：WinRing0 為主力；XsRegProbe 降為備援；
+    /// DriverMsrReader 維持備妥未接線，供 HVCI 環境與未來 PEBS/PT。
     /// </summary>
     internal static void LoadDriverBackedEvidence(MainViewModel vm)
     {
         if (!DriverEvidenceGate.Wait(0)) return; // 已有載入在跑：整批以那次為準，不併發開驅動控制代碼
         try
         {
-            using var pci = new WinRing0PciConfigReader();
-            using var msr = new WinRing0KernelMsrReader();
-            using var io = new WinRing0IoPortAccess();
-            using var smbusBridge = WinRing0Bridge.Create(); // SMBus 走 I/O 埠；與上面 readers 共用驅動會話（引用計數）
-            ISmbusIo? smbusIo = smbusBridge.IoPortAvailable ? new WinRing0SmbusIo(smbusBridge) : null;
-            var mmio = MmioBackendSelector.Select(); // WinRing0 主力 → XsRegProbe 備援 → 帶原因三態
-            try
-            {
-                vm.EvidenceLab.ReloadDriverBackedFacts(pci, msr, mmio, new Win32AcpiTableSource(), io, smbusIo);
-            }
-            finally { (mmio as IDisposable)?.Dispose(); }
+            EvidenceCollection.ReloadInto(vm.EvidenceLab);
         }
         catch { /* 晶片組安全為附加功能，讀不到由三態標示 */ }
         finally { DriverEvidenceGate.Release(); }

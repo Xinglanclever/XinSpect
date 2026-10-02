@@ -27,6 +27,22 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // CLI 模式（V7 WP32）：帶 --json／--help 等引數時不進 WPF——headless 收集事實、JSON 輸出、
+        // 行程結束碼表達結果。置於單一實例邏輯之前：CLI 跑不該建具名信號、也不該觸發「已在執行」對話框。
+        // 從主控台啟動時 AttachConsole 把 stdout 接回呼叫端；雙擊則沒有主控台可接（用 --out 更實用）。
+        if (e.Args is { Length: > 0 } cliArgs && cliArgs[0].StartsWith("--", StringComparison.Ordinal))
+        {
+            StartupUri = null; // 擋掉 App.xaml 的主視窗自動建立
+            AttachConsole(AttachParentProcess);
+            try
+            {
+                int code = CliService.Run(cliArgs, CollectForCli, Console.Out, Console.Error);
+                Shutdown(code);
+            }
+            finally { FreeConsole(); }
+            return;
+        }
+
         // 多開：1.9.0 起<b>預設允許</b>（設定 › 一般可關回單一實例）。
         //
         // 原本硬性擋掉第二份，理由是實在的：兩份會各自開 Ring0 驅動、競寫同一份設定與歷史、
@@ -65,6 +81,22 @@ public partial class App : Application
 
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool AttachConsole(uint processId);
+
+    private const uint AttachParentProcess = 0xFFFFFFFF;
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool FreeConsole();
+
+    /// <summary>CLI 模式的事實收集：headless 建 EvidenceLabService，與啟動序列共用 <see cref="EvidenceCollection"/> 組合點。</summary>
+    private static IReadOnlyList<HardwareFact> CollectForCli()
+    {
+        var svc = new EvidenceLabService();
+        EvidenceCollection.ReloadInto(svc);
+        return svc.AllFacts;
+    }
 
     [DllImport("user32.dll")]
     private static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
