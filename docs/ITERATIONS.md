@@ -320,9 +320,17 @@
 
 **測試坑**：假 ACPI 表要照規格造完整（Length 欄位＋offset 9 校驗和使全表位元組和 mod 256=0，否則 TryParseHeader 如實拒收——假件也要誠實）。
 
+## ITER50 ・ WP10 周邊匯流排（2026-10-03，核准計畫第四段）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP10 | **USB 拓撲摘要**（UsbTopologyService）：WMI Win32_USBControllerDevice 相依對——控制器數、裝置數、**最忙碌控制器**（供電與頻寬衝突排查指紋）；WMI 相依對只有一層，更深 hub 樹不猜。**螢幕連接介面**（MonitorConnectionDecoder 進 Decoders 庫＋SpecRef＋MonitorConnectionService）：VideoOutputTechnology 剝 0x80000000 旗標位後解碼（DP 外接/內嵌、HDMI、DVI、VGA、Miracast…未收錄如實標）、DisplayPort 連接台數統計。兩組接線 LoadSoftwareFacts | 3018 | 本批 |
+
+**範圍裁定**：HID 輪詢率無公開系統 API（各廠商私有驅動介面），usermode 誠實不做；DP 鏈路速率（link rate）不在 WMI 公開範圍——只出連接介面類型。
+
 ## 待辦（下一批）
 
-- **主線：核准收尾計畫進行中——ITER43–49 完成；下一批 ITER50：WP10 周邊匯流排（USB/xHCI 拓撲、HID 輪詢率、DP 鏈路）。**
+- **主線：核准收尾計畫進行中——ITER43–50 完成；下一批 ITER51：WP17 主機板解碼深化（SuperIO HWM 感測器、風扇曲線表）。**
 - Wi-Fi 連線態欄位（RSSI／頻道/BSSID）實測：本機無線電軟體關閉，待使用者開啟 Wi-Fi 並連線後重開程式補驗。
 - **帳本更正：對帳規則實際為 26 條**（ITER31 記 25 是手寫數錯——機器檢查再次抓到手寫漂移）。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
