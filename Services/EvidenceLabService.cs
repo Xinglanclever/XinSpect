@@ -130,6 +130,9 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>Super I/O 探測三態事實（0x2E/0x4E 晶片 ID；WP31）。設定模式必以 finally 退出。</summary>
     public IReadOnlyList<HardwareFact> SuperIoFacts { get; private set; } = [];
 
+    /// <summary>SuperIO HWM 感測器三態事實（WP17：風扇／溫度／電壓；驅動相依）。</summary>
+    public IReadOnlyList<HardwareFact> HwmFacts { get; private set; } = [];
+
     /// <summary>Bus 0 裝置盤點三態事實（WP30 知識層：PCI-SIG 類別碼→角色）。</summary>
     public IReadOnlyList<HardwareFact> PciInventoryFacts { get; private set; } = [];
 
@@ -206,6 +209,7 @@ public sealed class EvidenceLabService : ObservableObject
         SmbusFacts = TsodSurveyor.CollectWithLock(smbusIo, pci.ReadDword, at);
         UefiFacts = UefiBootFactsService.Collect(at);
         SuperIoFacts = SuperIoProbeService.Collect(io, at);
+        HwmFacts = SuperIoHwmFactsService.Collect(io, at);
         PciInventoryFacts = Bus0InventoryService.Collect(pci, at);
         RawRegions = RawRegisterCollectService.Collect(pci, acpi, msr, mmio, at);
         RawSummary = $"{RawRegions.Count} 區原始位元組・" +
@@ -345,14 +349,14 @@ public sealed class EvidenceLabService : ObservableObject
     public IReadOnlyList<HardwareFact> AllFacts =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
-            .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
+            .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
             .Concat(PlatformFacts).Concat(SoftwareFacts).Concat(AcpiFacts).ToList();
 
     /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + I/O 埠 + CMOS + SMBus + PCI 盤點 + TPM + 平台拓撲 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
-            .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
+            .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
             .Concat(PlatformFacts).Concat(SoftwareFacts).Concat(AcpiFacts)
             .OrderBy(f => f.Category, StringComparer.Ordinal).ThenBy(f => f.Key, StringComparer.Ordinal)
             .Select(EvidenceFactRow.From).ToList();

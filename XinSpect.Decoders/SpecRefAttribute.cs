@@ -40,6 +40,7 @@ public static class SpecRefRegistry
         typeof(SuperIoKnowledge),// Super I/O 晶片名稱對照（coreboot superiotool）
         typeof(WifiBssDecoder),  // WLAN_BSS_ENTRY／頻道換算（wlanapi.h＋IEEE 802.11）
         typeof(MonitorConnectionDecoder), // 螢幕連接介面碼（WMI VideoOutputTechnology）
+        typeof(SuperIoHwmDecoder), // SuperIO HWM 感測器（ITE datasheet 公式）
     ];
 
     /// <summary>列舉解碼器上缺 SpecRef 的公開靜態方法（宣告於本型別者）。</summary>
