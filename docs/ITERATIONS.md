@@ -120,6 +120,16 @@
 
 **驗收記錄（誠實）**：R4 驗收時已知 flaky `Windows電源API取樣保留快照與查詢延遲` 連續兩次全套失敗（單跑穩定過）。查證：測試檔在本批 65 提交中零觸碰（git log 驗證）、歇 30 秒後全套 2797 全綠——判定為機器負載相關的時序型 flaky（1f9b422 已緩解非根除），非回歸。**觀察**：該測試在全天高強度建置後的全套失敗率上升，下批可考慮把取樣逾時再放大或隔離到獨立 collection。
 
+## ITER30 ・ WP5＋WP30 批次：規則 20 與有出處的名字（2026-10-03）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP5 | 對帳規則 17→**20**：`mchbar_registers_without_mmio_backend`、`tjmax_without_msr_backend`、`mchbar_base_without_host_bridge`（管線一致性族，TryLookup 模式） | 2798 | 4f8ee45 |
+| R2 | WP30-① | **Super I/O 晶片名稱對照表**（`SuperIoKnowledge`，40 條）：出處＝coreboot `util/superiotool` ite.c／nuvoton.c（GPL-2.0-or-later，2026-10-03 抓取，事實性資料＋引用標註）；探測服務把「晶片 ID＋名稱＋原始廠商 ID」並列；解碼器覆蓋 11→**12**、引用下限 32→41 | 2805 | 08b33f0 |
+| R3 | 制度 | 帳本記錄＋**PCH 世代判定的誠實暫停記錄** | — | 本輪 |
+
+**PCH 世代判定暫停（誠實記錄）**：已勘察 CHIPSEC（chipsec2 分支）cfg 結構——平台 XML（adl.xml 等）以 HOSTCTL DID 清單＋SKU 名組織、PCH 世代 XML（pch_5xxlp.xml 等）以 PMC/SMBUS DID 清單組織；**LPC DID→行銷名（H510/Z590）的直接對照不在單一檔案**，需逐檔交叉建表。按 V7「未對準出處就不出值」原則，本批不做半成品表；下批專門處理。
+
 ## 待辦（下一批）
 
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
