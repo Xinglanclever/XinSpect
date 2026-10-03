@@ -164,6 +164,8 @@ public sealed class EvidenceLabService : ObservableObject
         PlatformFacts = NumaTopologyService.Collect(at)
             .Append(MemoryAttackSurfaceService.Collect(at))
             .Concat(OobFactsService.Collect(at))
+            .Concat(TimeSyncFactsService.Collect(at, new Win32AcpiTableSource()))
+            .Concat(CxlFactsService.Collect(at, new Win32AcpiTableSource()))
             .ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
