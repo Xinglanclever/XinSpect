@@ -68,6 +68,22 @@ public class CpuFirmwareFactsTests
     }
 
     [Fact]
+    public void 微碼登錄檔_4位元組變體依LEDWORD解碼_與MSR口徑一致()
+    {
+        // 本機實測（2026-10-03）：某些 Windows 版本只寫 4 位元組＝修訂版 LE DWORD，
+        // 與 8 位元組佈局的第一個 DWORD 同位——本機值 06 70 00 02＝0x02007006，恰等於 MSR 0x8B 高 32 位。
+        var v4 = CpuFirmwareFactsService.MicrocodeRegistryFact(At, [0x06, 0x70, 0x00, 0x02]);
+        Assert.Equal(FactAvailability.Present, v4.Availability);
+        Assert.Equal(0x02007006u, v4.NumericValue);
+        Assert.Contains("4 位元組", v4.Value); // 佈局變體要在畫面上說明，不冒充標準 8 位元組
+
+        // 其他長度仍如實標格式不明（不猜）
+        var v5 = CpuFirmwareFactsService.MicrocodeRegistryFact(At, [0x01, 0x02, 0x03, 0x04, 0x05]);
+        Assert.Equal(FactAvailability.ReadError, v5.Availability);
+        Assert.Contains("5 位元組", v5.UnavailableReason);
+    }
+
+    [Fact]
     public void TjMax取bits高段_讀不到三態()
     {
         var ok = CpuFirmwareFactsService.TjMaxFact(At, 0x005A0000, null);

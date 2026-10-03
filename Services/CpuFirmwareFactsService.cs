@@ -74,9 +74,11 @@ public static class CpuFirmwareFactsService
     }
 
     /// <summary>
-    /// 解碼登錄檔「Update Revision」（8 位元組）。文獻對修訂版落在哪個 DWORD 說法不一
-    /// （offset 0 與 offset 4 都有人引用）——這裡不猜：兩個 DWORD 恰一個非零就取那個，
-    /// 皆非零標佈局歧義（原始 hex 一併附上可稽核），皆零視為「可能未載入」。
+    /// 解碼登錄檔「Update Revision」。標準佈局為 8 位元組（兩個 DWORD）——文獻對修訂版落在
+    /// 哪個 DWORD 說法不一（offset 0 與 offset 4 都有人引用）——這裡不猜：兩個 DWORD 恰一個非零
+    /// 就取那個，皆非零標佈局歧義（原始 hex 一併附上可稽核），皆零視為「可能未載入」。
+    /// 實測另有 <b>4 位元組變體</b>（2026-10-03 本機：06 70 00 02＝LE DWORD 0x02007006，
+    /// 恰等於 MSR 0x8B 高 32 位）——同樣以 LE DWORD 解碼並在畫面註明變體，不冒充標準佈局。
     /// </summary>
     public static HardwareFact MicrocodeRegistryFact(DateTimeOffset at, byte[]? raw)
     {
@@ -84,10 +86,16 @@ public static class CpuFirmwareFactsService
             source = "登錄檔 CentralProcessor\\0「Update Revision」";
         if (raw is null)
             return Unavailable(key, name, source, at, FactAvailability.NotSupported, "登錄值不存在");
-        if (raw.Length < 8)
-            return Unavailable(key, name, source, at, FactAvailability.ReadError, $"格式不明（{raw.Length} 位元組，須 8）");
-        uint d0 = BitConverter.ToUInt32(raw, 0), d4 = BitConverter.ToUInt32(raw, 4);
         string hex = Convert.ToHexString(raw);
+        if (raw.Length == 4)
+        {
+            uint rev4 = BitConverter.ToUInt32(raw, 0);
+            return new HardwareFact(key, Category, name, $"0x{rev4:X8}（4 位元組變體，原始 {hex}）", "", source,
+                FactTrustLevel.Reported, false, at, rev4);
+        }
+        if (raw.Length < 8)
+            return Unavailable(key, name, source, at, FactAvailability.ReadError, $"格式不明（{raw.Length} 位元組，須 4 或 8）");
+        uint d0 = BitConverter.ToUInt32(raw, 0), d4 = BitConverter.ToUInt32(raw, 4);
         if (d0 != 0 && d4 != 0)
             return Unavailable(key, name, source, at, FactAvailability.ReadError,
                 $"佈局歧義（兩個 DWORD 皆非零：0x{d0:X8}/0x{d4:X8}）——原始 {hex}，不解碼");
