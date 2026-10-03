@@ -54,6 +54,14 @@ public static class ChangelogCatalog
             Items =
             [
                 "版本更名：系列代號 Everest（額菲爾士峰／珠穆朗玛峰）更名 Olympus（奧林帕斯山／奧林匹斯山），版號 2.1.0 → 2.5.0。",
+                "驗機殺手級：SMART 門檻＋failing-now 判定（現值低於門檻逐項攤開）、NVMe WCTEMP 溫度警告、機箱開啟偵測（SMBIOS Type 3 入侵事件）、HPA 隱藏容量（IDENTIFY 對照 OS 可見）、假容量寫入驗證（同意閘門）、TDR 逾時與 NVML 退休頁。",
+                "安全鑑識：Defender 排除清單稽核、事件記錄清除（1102）偵測、非微軟本機信任根、USBSTOR 使用痕跡、BYOVD 逐驅動比對微軟建議封鎖清單（使用者提供清單檔，零出網）。",
+                "處理器深化：TME／SGX 記憶體加密狀態、Package C-state 駐留、PMU 能力探索與編程驗證（多輪測試・不保證可用）、die 拓撲（CPUID 0x1F）。",
+                "系統與軟體層：Windows Update 歷史、服務盤點、事件記錄摘要、稽核政策、選用功能（Hyper-V/WSL/容器）、核心模組清單與 Authenticode、開機參數、USB 拓撲、螢幕連接介面、網卡錯誤計數與 MAC OUI。",
+                "藍色中隊整合進本體：守護進程內嵌於主程式（SHA256 驗證解壓＋ACL 鎖定），不再需要另行下載；安全頁開關保留（關閉＝只做唯讀態勢評估）。",
+                "突變測試解鎖：純解碼器抽 XinSpect.Decoders 類別庫，Stryker 分數 82%；公開規格 docs/spec/（快照 JSON Schema／查詢語言／方法學／限制／認證骨架）。",
+                "修正：深測中心啟動崩潰（背景執行緒修改 UI 集合）——結果卡／洞察／歷史一律收攏回 UI 執行緒；TPM P/Invoke 簽名修正（ref uint）；深測中心儲存根預設值與瀏覽按鈕。",
+                "社群格式骨架：時間膠囊 corpus 貢獻包 v1（只收遮蔽版、身份鍵排除，上傳通路刻意未實作）＋資產生命週期事件（快照差分自動分類）。",
                 "驅動裁決：WinRing0 回歸主力（MSR／PCI／實體記憶體 MMIO），XsRegProbe 轉白名單備援；PCIe AER 掃描擴大至 32 條匯流排。",
                 "交叉對帳：26 條規則（硬體語義＋管線一致性）外部化至 Rules/builtin.json（可分享格式），判決卡進韌體安全頁頂部，矛盾紅字醒目。",
                 "量測開機鏈：TPM 2.0 PCR 0–7（SHA-256）與 TCG 事件 log（Windows TBS 仲介，唯讀）。",
