@@ -336,9 +336,17 @@
 
 **測試坑**：ITE 風扇無效碼是 16-bit 的 0xFFFF 不是 8-bit 的 255；假 I/O 的 index/data 埠（base+5/+6）要分開接——InByte(0x295) 永遠讀不到（data 在 0x296）。
 
+## ITER52 ・ WP23＋WP24（2026-10-03，核准計畫第四段）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP23+24 | **攝影機/UVC**（CameraFactsService）：WMI Win32_PnPEntity（PNPClass Camera/Image），逐台名稱＋狀態照抄系統口徑、零台是 Present 的沒有。**企業儲存**（EnterpriseStorageFactsService）：三態分離照 OobFactsService 哲學——iSCSI/MPIO 看 SCM 服務（advapi32 P/Invoke 與 BackendEnvironmentService 同口徑）、FC 走 WMI MSFC_FCAdapterHBAAttributes（無＝NotApplicable）、**NVMe-oF 沒有公開偵測 API＝NotSupported 聲明**。接線 LoadPlatformFacts | 3025 | 本批 |
+
+**模型坑**：System.ServiceProcess.ServiceController 是 NuGet 套件型別（SDK 不內建）——沿用專案既有 advapi32 P/Invoke 口徑，不引新相依。
+
 ## 待辦（下一批）
 
-- **主線：核准收尾計畫進行中——ITER43–51 完成；下一批 ITER52：WP23 攝影機/UVC 列舉＋WP24 企業儲存偵測（FC/iSCSI/NVMe-oF/MPIO，本機無則如實標）。**
+- **主線：核准收尾計畫進行中——ITER43–52 完成；下一批 ITER53：WP38 WASAPI loopback 訊號層示波器＋WP33 量測方法學文件化。**
 - Wi-Fi 連線態欄位（RSSI／頻道/BSSID）實測：本機無線電軟體關閉，待使用者開啟 Wi-Fi 並連線後重開程式補驗。
 - **帳本更正：對帳規則實際為 26 條**（ITER31 記 25 是手寫數錯——機器檢查再次抓到手寫漂移）。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
