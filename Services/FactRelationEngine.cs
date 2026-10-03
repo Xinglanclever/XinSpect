@@ -450,6 +450,50 @@ public static class FactRelationRules
             },
             "UEFI 規範：Audit Mode（製造驗證用）與 Deployed Mode（交付狀態）互斥；同時為 1 不該出現在正常流程"),
 
+        new("spi.service_vs_spi_bar_resource", "SPI 服務稱未配置 SPIBAR 而盤點看得到 BAR",
+            [SpiResKey],
+            f =>
+            {
+                // SPI 事實「缺席」正是矛盾條件之一，刻意不列輸入鍵（引擎守衛會轉 Unverifiable），規則內自查。
+                if (!f.TryGetValue(SpiHsfstsKey, out var spi))
+                    return FactRelationOutcome.Unverifiable("SPI 服務事實不存在（管線未跑）——無從交叉，不下判決");
+                if (spi.Availability == FactAvailability.Present)
+                    return FactRelationOutcome.Consistent("SPI 服務在運作且盤點有 0:1F.5 資源——上下游一致");
+                var resText = f[SpiResKey].Value;
+                bool barConfigured = resText.Contains("記憶體", StringComparison.Ordinal) && !resText.Contains("無已配置資源", StringComparison.Ordinal);
+                if (barConfigured && (spi.UnavailableReason ?? "").Contains("未配置 SPIBAR", StringComparison.Ordinal))
+                    return FactRelationOutcome.Contradicts(
+                        "bus 0 盤點看到 0:1F.5 有已配置的記憶體 BAR，SPI 服務卻回報「未配置 SPIBAR」——同一 PCI 後端的兩次讀取不該有兩種答案，管線狀態矛盾");
+                return FactRelationOutcome.Consistent(
+                    "盤點資源與 SPI 服務結論各自成立（SPI 服務另有其不採用的理由）");
+            },
+            "SPIBAR 是 0:1F.5 的 BAR0（盤點的資源事實與 SPI 服務讀的是同一格設定空間）；一邊說已配置、一邊說未配置，代表管線錯亂"),
+
+        new("spi.write_surface_vs_hsfsts_flockdn", "綜合裁決與 SPI 旗號事實的 FLOCKDN 交叉",
+            [SpiHsfstsKey],
+            f =>
+            {
+                if (!f.TryGetValue(SpiWriteSurfaceKey, out var surface))
+                    return FactRelationOutcome.Unverifiable("BIOS 寫入面綜合裁決不存在（管線未跑）——無從交叉，不下判決");
+                if (surface.Availability != FactAvailability.Present)
+                    return FactRelationOutcome.Unverifiable(
+                        $"綜合裁決讀不到（{surface.UnavailableReason ?? "原因不明"}）——無從交叉，不下判決");
+                bool hsfstsLocked = f[SpiHsfstsKey].Value.Contains("已鎖定（FLOCKDN=1）", StringComparison.Ordinal);
+                bool hsfstsUnlocked = f[SpiHsfstsKey].Value.Contains("未鎖定（FLOCKDN=0）", StringComparison.Ordinal);
+                bool surfaceLocked = surface.Value.Contains("SPI 旗號未鎖", StringComparison.Ordinal) == false
+                    && surface.Value.Contains("FLOCKDN=0，保護設定可被改", StringComparison.Ordinal) == false;
+                bool surfaceUnlocked = surface.Value.Contains("SPI 旗號未鎖", StringComparison.Ordinal)
+                    || surface.Value.Contains("FLOCKDN=0，保護設定可被改", StringComparison.Ordinal);
+                if (hsfstsLocked && surfaceUnlocked)
+                    return FactRelationOutcome.Contradicts(
+                        "SPI 旗號事實說 FLOCKDN=1（已鎖），綜合裁決的暴露面卻含「SPI 旗號未鎖」——兩者出自同一次 SPIBAR 讀取，管線狀態矛盾");
+                if (hsfstsUnlocked && surfaceLocked)
+                    return FactRelationOutcome.Contradicts(
+                        "SPI 旗號事實說 FLOCKDN=0（未鎖），綜合裁決卻未把它列為暴露面——同一次讀取的兩種解讀，管線狀態矛盾");
+                return FactRelationOutcome.Consistent("FLOCKDN 在旗號事實與綜合裁決間一致");
+            },
+            "綜合裁決的 FLOCKDN 輸入就是 spi.hsfsts 本身（同一次 SPIBAR 區塊讀取）；兩邊給出不同的鎖定狀態代表管線錯亂"),
+
         new("chipset.smramc_open_while_locked", "SMRAM 鎖定下對外開放的非法組合",
             [SmramcKey],
             f =>

@@ -365,6 +365,50 @@ public sealed class FactRelationTests
     }
 
     [Fact]
+    public void SPI交叉族_資源與服務矛盾_FLOCKDN兩向矛盾()
+    {
+        var at = At;
+        static HardwareFact F(string key, string value, FactAvailability availability = FactAvailability.Present, string? reason = null) =>
+            new(key, "測試", key, value, "", "s", FactTrustLevel.Measured, false, At, null, availability, reason);
+
+        // 盤點有 BAR 但 SPI 服務說「未配置 SPIBAR」→ 矛盾
+        var bad1 = FactRelationService.Evaluate(FactRelationRules.All,
+        [
+            F("pci.res.1f.5", "記憶體（32-bit） 0xFED10000；另有 5 個未配置 BAR"),
+            new HardwareFact("spi.hsfsts", "測試", "x", "", "", "s", FactTrustLevel.Unknown, false, at,
+                null, FactAvailability.NotApplicable, "SPI 控制器未配置 SPIBAR"),
+        ]).Single(r => r.RuleId == "spi.service_vs_spi_bar_resource");
+        Assert.Equal(FactRelation.Contradicts, bad1.Relation);
+        Assert.Contains("兩種答案", bad1.Reason);
+
+        // FLOCKDN 兩向矛盾：旗號說鎖了、裁決暴露面說沒鎖
+        var bad2 = FactRelationService.Evaluate(FactRelationRules.All,
+        [
+            F("spi.hsfsts", "已鎖定（FLOCKDN=1）：SPI 保護設定不可改直至重置"),
+            F("spi.write_surface", "未保護：BLE=0…；暴露面：SPI 旗號未鎖（FLOCKDN=0，保護設定可被改）"),
+        ]).Single(r => r.RuleId == "spi.write_surface_vs_hsfsts_flockdn");
+        Assert.Equal(FactRelation.Contradicts, bad2.Relation);
+
+        // 反向：旗號說沒鎖、裁決沒列暴露面
+        var bad3 = FactRelationService.Evaluate(FactRelationRules.All,
+        [
+            F("spi.hsfsts", "未鎖定（FLOCKDN=0）：保護範圍與寫入停用設定仍可被 ring0 改動"),
+            F("spi.write_surface", "有鎖保護：BLE=1，開啟寫入會觸發 SMI"),
+        ]).Single(r => r.RuleId == "spi.write_surface_vs_hsfsts_flockdn");
+        Assert.Equal(FactRelation.Contradicts, bad3.Relation);
+
+        // 一致的兩種組合
+        var ok = FactRelationService.Evaluate(FactRelationRules.All,
+        [
+            F("pci.res.1f.5", "記憶體（32-bit） 0xFED10000"),
+            F("spi.hsfsts", "已鎖定（FLOCKDN=1）：SPI 保護設定不可改直至重置"),
+            F("spi.write_surface", "最強保護：SMM_BWP=1，僅 SMM 可寫 BIOS"),
+        ]);
+        Assert.Equal(FactRelation.Consistent, ok.Single(r => r.RuleId == "spi.service_vs_spi_bar_resource").Relation);
+        Assert.Equal(FactRelation.Consistent, ok.Single(r => r.RuleId == "spi.write_surface_vs_hsfsts_flockdn").Relation);
+    }
+
+    [Fact]
     public void UEFI語義族_SB與SetupMode互斥_Audit與Deployed互斥()
     {
         var bad1 = FactRelationService.Evaluate(FactRelationRules.All,
