@@ -63,7 +63,7 @@ public partial class FirmwareSecurityView : UserControl
         try
         {
             var status = await Task.Run(() => action(sut));
-            sut.AppendStatusNotes(status.Notes);
+            // 狀態文字已由 Enable/Disable 組裝完成（程序說明＋目前狀態，各一次）——這裡不再附加 notes
             await Task.Run(() => StartupSequence.LoadDriverBackedEvidence(vm));
         }
         finally { SetEvidenceBusy(false); }

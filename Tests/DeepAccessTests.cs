@@ -183,6 +183,32 @@ public sealed class DeepAccessTests
     }
 
     [Fact]
+    public void 狀態文字_同一句說明只出現一次_不重複堆疊()
+    {
+        string dir = TempDir();
+        DeploySys(dir);
+        var sut = new DeepAccessService(new FakeStore(), new FakeService(), dir, isElevated: true,
+            handshakeProbe: () => null); // 無 BMC 情境的握手失敗路徑
+        try
+        {
+            var status = sut.Enable();
+
+            // CA 全新產生並已信任——舊的「CA 未信任」說明不該出現
+            Assert.DoesNotContain(status.Notes, n => n.Contains("CA 未信任"));
+
+            // 修正前：StatusFrom 內嵌 notes＋AppendStatusNotes 又附加一次——同一句出現兩三遍
+            Assert.DoesNotContain("未完全啟用（", sut.StatusText); // StatusFrom 不再內嵌 notes
+            foreach (var n in status.Notes)
+            {
+                if (n.Length == 0) continue;
+                int occurrences = sut.StatusText.Split(n, StringSplitOptions.None).Length - 1;
+                Assert.True(occurrences <= 1, $"狀態文字重複堆疊——說明「{n}」在狀態文字出現 {occurrences} 次");
+            }
+        }
+        finally { try { Directory.Delete(dir, true); } catch { } }
+    }
+
+    [Fact]
     public void 啟用後握手通過_如實回報已連線()
     {
         string dir = TempDir();

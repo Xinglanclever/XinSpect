@@ -71,7 +71,7 @@ public static class DeviceIcons
     private static readonly string[] ChipBlue   = { "#1E6FC0", "#0A3E7A" };              // 藍膠囊：Xeon 系列 / Radeon Pro
     private static readonly string[] ChipTeal   = { "#1E7F8C", "#08313A" };              // 青藍膠囊：EPYC
     private static readonly string[] ChipGreen  = { "#5A9E1E", "#2E5A00" };              // 綠膠囊：Tesla
-    private static readonly string[] ChipBlack  = { "#3A3A42", "#0A0A0C" };              // 黑膠囊：Everest 珠穆朗瑪峰系列
+    private static readonly string[] ChipBlack  = { "#3A3A42", "#0A0A0C" };              // 黑膠囊：Everest 系列
     private static readonly string[] ChipSteam  = { "#2F6E9E", "#161D26" };              // Steam 藍膠囊：CC150
 
     // Xeon Scalable 右上角級別斜面（雙色漸層＝金屬光澤）
@@ -86,7 +86,7 @@ public static class DeviceIcons
     private const string CeoInk   = "#6A4E00";    // CEO 白/金底上的深金角標
 
     // 系列膠囊：Everest 全系列共用一枚（膠囊標系列、中心字標機種），改字只需改這裡。
-    private const string EverestSeries = "Everest 珠穆朗瑪峰系列";
+    private const string EverestSeries = "Everest";
 
     /// <summary>
     /// 特殊處理器對照表。比對以 CPU 名稱（WMI 回報字串，已轉小寫）為輸入，
@@ -101,9 +101,9 @@ public static class DeviceIcons
             Black, ChipGold,
             Frame: Rainbow, LowerLeft: "8086", TopMark: "40^TH", MarkInk: White),
 
-        // ── Everest 珠穆朗瑪峰系列：Intel 的非路線圖（off-roadmap）極限 bin 路線——把某一代能穩定跑到最高頻的
+        // ── Everest 系列：Intel 的非路線圖（off-roadmap）極限 bin 路線——把某一代能穩定跑到最高頻的
         //    die 特挑出來，為特定客戶（低延遲金融交易一類）訂製，以核心數與功耗換單執行緒延遲，
-        //    韌體字串常直接掛專案代號而非型號。整系列共用一套外觀：黑底 + 炫彩邊框 + 黑膠囊「Everest 珠穆朗瑪峰系列」；
+        //    韌體字串常直接掛專案代號而非型號。整系列共用一套外觀：黑底 + 炫彩邊框 + 黑膠囊「Everest」；
         //    膠囊標系列、中心字標各自的機種，故一個機種一條規則——這樣 BlackOps 不會被冒名成「Everest」。
         //    字串自稱 Xeon 的成員（X5698、E5-2602 v4）另並掛一枚藍色「Xeon」膠囊：它們同時是 Xeon，兩個身分都該看得到。
         //    已知成員（依世代）：

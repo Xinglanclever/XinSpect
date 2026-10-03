@@ -187,7 +187,17 @@ public class DeviceIconsTests
         Assert.Null(DeviceIcons.Resolve(BadgeKind.Gpu, model));
     }
 
-    // ── Everest 珠穆朗瑪峰系列（X5698 / JKT Everest / BlackOps / E5-2602 v4）───────
+    // ── 7980XE：至尊版 Extreme Edition（金底 XE）——使用者 2026-10-03 指示：7980XE 不屬 Everest 系列 ───
+    [Fact]
+    public void I9_7980XE_歸類至尊版ExtremeEdition而非Everest()
+    {
+        var badge = DeviceIcons.Resolve(BadgeKind.Cpu, "Intel(R) Core(TM) i9-7980XE CPU @ 2.60GHz");
+        Assert.NotNull(badge);
+        Assert.Equal("至尊版 Extreme Edition", badge.Tier);
+        Assert.Equal("XE", badge.Text);
+    }
+
+    // ── Everest 系列（X5698 / JKT Everest / BlackOps / E5-2602 v4）───────
     //    Intel 非路線圖的極限 bin：韌體字串掛專案代號或非零售編號，故膠囊標系列、中心字標機種。
     //    全系列共用一枚膠囊，但中心字不可互相冒名。這些片子多以工程樣品形式流出、
     //    名稱常帶 "Engineering Sample"，X5698 與 E5-2602 v4 的字串又含 "Xeon"，
@@ -227,7 +237,7 @@ public class DeviceIconsTests
         var bdw      = DeviceIcons.Resolve(BadgeKind.Cpu, "Intel(R) Xeon(R) CPU E5-2602 v4")!;
 
         // 膠囊＝系列名（改名只需改 DeviceIcons.EverestSeries 一處）
-        Assert.Equal("Everest 珠穆朗瑪峰系列", x5698.Tier);
+        Assert.Equal("Everest", x5698.Tier);
         Assert.Equal(x5698.Tier, everest.Tier);
         Assert.Equal(x5698.Tier, blackops.Tier);
         Assert.Equal(x5698.Tier, bdw.Tier);
@@ -267,7 +277,7 @@ public class DeviceIconsTests
         var bdw   = DeviceIcons.Resolve(BadgeKind.Cpu, "Intel(R) Xeon(R) CPU E5-2602 v4")!;
         var xeon  = DeviceIcons.Resolve(BadgeKind.Cpu, "Intel(R) Xeon(R) CPU E5-2680 v3 @ 2.50GHz")!;
 
-        Assert.Equal("Everest 珠穆朗瑪峰系列", x5698.Tier);
+        Assert.Equal("Everest", x5698.Tier);
         Assert.Equal("Xeon", x5698.Tier2);
         Assert.Equal(xeon.Chip, x5698.Chip2);   // 第二枚膠囊＝與一般 Xeon 同一組藍，看得出血脈
         Assert.Equal("Xeon", bdw.Tier2);

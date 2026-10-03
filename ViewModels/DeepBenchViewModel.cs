@@ -113,6 +113,7 @@ public sealed class DeepBenchViewModel : ObservableObject
 
         foreach (DeepBenchCatalogEntry entry in DeepBenchCatalog.All) CatalogRows.Add(entry);
         ReloadHistory();
+
     }
 
     public void SetProfileQuick() => SelectedProfile = DeepBenchRunProfile.Quick;
@@ -227,6 +228,7 @@ public sealed class DeepBenchViewModel : ObservableObject
         if (_injectedOrchestrator is not null) return _injectedOrchestrator;
 
         string root = System.IO.Path.GetFullPath(StorageRoot);
+        System.IO.Directory.CreateDirectory(root); // 預設暫存子目錄首次執行時建立；已存在則無操作
         long budget = Math.Max(TempBudgetMiB * MiB, MinimumBudgetBytes);
         IDeepBenchTest[] tests =
         [

@@ -15,6 +15,21 @@ public partial class DeepBenchView : UserControl
 
     private void Full_Click(object sender, RoutedEventArgs e) => ViewModel?.SetProfileFull();
 
+    // 儲存根瀏覽：選資料夾後寫回 StorageRoot；不強制存在——執行時 VM 會自動建立。
+    private void BrowseStorageRoot_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is null) return;
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "選擇深測暫存根（可寫的資料夾）",
+            InitialDirectory = System.IO.Path.Exists(ViewModel.StorageRoot)
+                ? ViewModel.StorageRoot
+                : System.IO.Path.GetTempPath(),
+        };
+        if (dialog.ShowDialog() == true)
+            ViewModel.StorageRoot = dialog.FolderName;
+    }
+
     private async void Start_Click(object sender, RoutedEventArgs e)
     {
         DeepBenchViewModel? vm = ViewModel;

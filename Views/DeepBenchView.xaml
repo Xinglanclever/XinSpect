@@ -55,6 +55,8 @@
                             <TextBox Background="{DynamicResource Surface2Brush}" Foreground="{DynamicResource PrimaryInkBrush}"
                                      BorderBrush="{DynamicResource HairlineBrush}" Padding="6,4"
                                      Text="{Binding StorageRoot, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button Style="{StaticResource ToolButton}" Content="瀏覽…" Padding="10,3" HorizontalAlignment="Left"
+                                    Margin="0,5,0,0" Click="BrowseStorageRoot_Click"/>
                         </StackPanel>
                         <StackPanel>
                             <TextBlock Style="{StaticResource FieldLabel}" Text="暫存預算 MiB"/>

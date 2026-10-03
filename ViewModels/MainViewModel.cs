@@ -282,6 +282,8 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>藍色中隊核心模組：安全態勢評估（Everest 功能）。</summary>
     public BlueSquadronModule BlueSquadron { get; } = new();
 
+
+
     /// <summary>硬體時間膠囊：保存來源、可信度與時間，並驗證後逐欄比較。</summary>
     public EvidenceLabService EvidenceLab { get; } = new();
 
@@ -433,6 +435,9 @@ public sealed class MainViewModel : ObservableObject
         Chess = new ChessBenchService(Benchmarks);
         SuperPi = new SuperPiService(Benchmarks);
         DeepBench = new DeepBenchViewModel(Cache, MemBandwidth, CoreLatency, new DeepBenchRunStore(), topDown: TopDown);
+        // 深測中心儲存根預設值（2026-10-03）：可寫的暫存子目錄——空白儲存根會讓六個儲存測項全數被擋。
+        // 預設在生產接線給（單元測試直接建 VM 保持空白，避免誤跑真實測試陣列）；使用者仍可改路徑或用瀏覽挑選。
+        DeepBench.StorageRoot = global::System.IO.Path.Combine(global::System.IO.Path.GetTempPath(), "XinSpectDeepBench");
         HardwareEvidence = new HardwareEvidenceViewModel(this);
 
         Ai = new AiService(Settings) { SnapshotProvider = BuildAiSnapshot };
@@ -543,7 +548,7 @@ public sealed class MainViewModel : ObservableObject
     }
 
     public string AppTitle => ThemeService.Theme == AppTheme.ExtremeEdition
-        ? "XinSpect v2.1.0 Everest" : "曦覽 XinSpect";
+        ? AppInfo.HeaderTitle(LanguageService.IsSimplified) : "曦覽 XinSpect";
     public string AppSubtitle => ThemeService.Theme == AppTheme.ExtremeEdition
         ? "" : "硬體資訊總覽";
 

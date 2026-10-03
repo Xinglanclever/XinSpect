@@ -160,10 +160,10 @@ public sealed class DeepAccessService : ObservableObject
         }
 
         var status = RefreshStatus();
-        if (status.Notes.Count > 0) notes.AddRange(status.Notes);
         var result = new DeepAccessStatus(_trustStore.IsTrusted(ca.Thumbprint), _service.QueryState(ServiceName),
             sysPresent, _trustStore.IsTrusted(ca.Thumbprint) && _service.QueryState(ServiceName) == DriverServiceState.Running, notes);
-        StatusText = StatusFrom(result);
+        // 顯示＝啟用過程的逐步說明＋「目前」狀態（RefreshStatus 已更新）；各說明只出現一次
+        StatusText = string.Join("\n", notes) + CurrentStateText();
         return result;
     }
 
@@ -206,8 +206,8 @@ public sealed class DeepAccessService : ObservableObject
         }
 
         var result = RefreshStatus();
-        if (result.Notes.Count > 0) notes.AddRange(result.Notes);
-        StatusText = StatusFrom(result) + "　" + string.Join(" ", notes);
+        notes.AddRange(result.Notes);
+        StatusText = string.Join("\n", notes) + CurrentStateText();
         return result with { Notes = notes };
     }
 
@@ -238,15 +238,17 @@ public sealed class DeepAccessService : ObservableObject
         CaTrusted = caTrusted;
         DriverState = state;
         IsDriverConnected = connected;
-        StatusText = StatusFrom(new DeepAccessStatus(caTrusted, state, sysPresent, caTrusted && state == DriverServiceState.Running, notes));
-        return new DeepAccessStatus(caTrusted, state, sysPresent, caTrusted && state == DriverServiceState.Running, notes);
+        // 狀態文字＝一句話判斷＋逐條原因（各出現一次——2026-10-03 修正重複顯示：StatusFrom 不再內嵌 notes）
+        var status = new DeepAccessStatus(caTrusted, state, sysPresent, caTrusted && state == DriverServiceState.Running, notes);
+        StatusText = StatusFrom(status) + (notes.Count > 0 ? "　" + string.Join("；", notes) : "");
+        return status;
     }
 
     private string CurrentStateText() => $"\n目前：{StatusText}";
 
     private static string StatusFrom(DeepAccessStatus s) => s.IsEnabled
         ? "已啟用：CA 已信任、XsRegProbe 執行中（白名單唯讀備援後端）。MMIO 事實由 WinRing0 主力後端服務；驅動提供允許清單內的備援路徑。"
-        : $"未完全啟用（{(s.Notes.Count > 0 ? string.Join("；", s.Notes) : "原因不明，請再查詢")}）。";
+        : "未完全啟用。";
 
     /// <summary>CA 不在就產生：自簽根（CA=TRUE、KeyCertSign）存 .cer（公）與 .pfx+密碼檔（私，供之後簽 .sys）。</summary>
     private X509Certificate2 EnsureCa(List<string> notes)
