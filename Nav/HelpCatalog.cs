@@ -1805,6 +1805,14 @@ public static class HelpCatalog
             Risk = HelpRisk.Caution,
             Safety = "會安裝核心驅動服務與本專案簽發的根憑證（皆可完全移除）；驅動唯讀、退出即卸載，但載入任何核心碼前請先看懂建置手冊。",
         },
+        ["firmware-security/記憶體壓力探測"] = new()
+        {
+            Title = "記憶體壓力探測（危險・未經校驗）",
+            What = "對自擁有的 256 MiB 連續緩衝區做高頻率反覆讀寫，並以可重現樣本逐位元組驗證——偵測壓力下有沒有位元翻轉。",
+            Does = "必須先勾選同意才會執行（服務層還有第二道閘門，未同意直接拒跑）。結果必定帶「未經過校驗」標註：usermode 無 clflush，本探測非保證觸發 Rowhammer，也沒有對照過任何參考實作——輸出僅供參考，不作為記憶體可靠性的結論。",
+            Risk = HelpRisk.Danger,
+            Safety = "可能損壞資料（含其他處理程序——usermode 無法完全隔離相鄰實體列），建議使用專用測試機；執行期間避免操作其他程式。",
+        },
         ["terminal/終端機"] = new()
         {
             Title = "終端機",

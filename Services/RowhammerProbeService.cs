@@ -71,6 +71,19 @@ public static class RowhammerProbeService
 
     private static int volatile_; // 讀取副作用接收（避免被 JIT 消除）
 
+    /// <summary>把探測結果轉成人可讀文字。<b>必定帶「未經過校驗」標註</b>——結果沒有對照過任何
+    /// 參考實作（usermode 無 clflush、無法與 TestMem5／正規 rowhammer tester 交叉驗證），只能當參考。</summary>
+    public static string FormatResult(RowhammerProbeResult result)
+    {
+        string verdict = result.Flips == 0
+            ? $"壓力下自擁有頁面翻轉 0 位元組"
+            : $"壓力下自擁有頁面翻轉 {result.Flips} 位元組——請立即檢查資料完整性";
+        return $"{verdict}：{result.Iterations} 輪、耗時 {result.ElapsedMs} ms、" +
+               $"緩衝 {result.AllocatedBytes / (1024 * 1024)} MiB。" +
+               "【未經過校驗】本結果沒有對照過任何參考實作，且非保證觸發 Rowhammer（usermode 無 clflush）——僅供參考，不作為記憶體可靠性的結論。" +
+               DangerNotice;
+    }
+
     /// <summary>以種子填入可重現樣本（xorshift 派生，逐位元組）。</summary>
     public static unsafe void FillPattern(Span<byte> region, byte seed)
     {

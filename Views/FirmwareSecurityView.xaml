@@ -44,6 +44,27 @@
                 </StackPanel>
             </Border>
 
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12" BorderBrush="{DynamicResource CriticalBrush}" BorderThickness="1">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="記憶體壓力探測（危險・未經校驗）" HelpKey="firmware-security/記憶體壓力探測"/>
+                    </Grid>
+                    <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource CriticalBrush}" Margin="0,2,0,4"
+                               Text="{Binding EvidenceLab.RowhammerDangerText}"/>
+                    <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="11"
+                               Text="【未經過校驗】本探測的結果沒有對照過任何參考實作（usermode 無 clflush），非保證觸發 Rowhammer；輸出僅代表壓力下自擁有頁面的翻轉觀察，不作為記憶體可靠性的結論。"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <CheckBox x:Name="RowhammerConsentCheckBox" VerticalAlignment="Center"
+                                  Content="我已了解風險（可能損壞資料、建議專用測試機），明確同意執行"/>
+                        <Button x:Name="RowhammerRunButton" AutomationProperties.AutomationId="RowhammerRunButton"
+                                Style="{StaticResource ToolButton}" Content="執行壓力探測（256 MiB）" Click="RowhammerRun_Click"
+                                Margin="12,0,0,0" IsEnabled="False"/>
+                    </StackPanel>
+                    <TextBlock x:Name="RowhammerResultText" Style="{StaticResource Subtitle}" Margin="0,6,0,0"
+                               TextWrapping="Wrap" Text="未執行。勾選同意前按鈕不可用；結果必定帶「未經過校驗」標註。"/>
+                </StackPanel>
+            </Border>
+
             <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                 <StackPanel>
                     <Grid>

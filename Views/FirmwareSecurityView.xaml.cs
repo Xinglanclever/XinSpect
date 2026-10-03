@@ -69,6 +69,37 @@ public partial class FirmwareSecurityView : UserControl
         finally { SetEvidenceBusy(false); }
     }
 
+    /// <summary>
+    /// WP22 記憶體壓力探測（危險項）：同意閘門在 UI 與服務層各設一道——未勾同意按鈕不可用、
+    /// 服務層未同意丟例外。探測在背景跑（可能數十秒）；結果文字由 FormatResult 組裝，
+    /// <b>必定帶「未經過校驗」標註</b>（結果沒有對照過任何參考實作，僅供參考）。
+    /// </summary>
+    private async void RowhammerRun_Click(object sender, RoutedEventArgs e)
+    {
+        if (FindName("RowhammerConsentCheckBox") is not CheckBox consent ||
+            FindName("RowhammerRunButton") is not Button run ||
+            FindName("RowhammerResultText") is not TextBlock resultText) return;
+        if (consent.IsChecked != true) return;
+
+        run.IsEnabled = false;
+        consent.IsEnabled = false;
+        resultText.Text = "探測執行中（高頻讀寫 256 MiB，可能數十秒）……";
+        try
+        {
+            var result = await Task.Run(() => RowhammerProbeService.RunConsentedProbe(userConsent: true));
+            resultText.Text = RowhammerProbeService.FormatResult(result);
+        }
+        catch (Exception ex)
+        {
+            resultText.Text = "探測失敗：" + ex.Message;
+        }
+        finally
+        {
+            run.IsEnabled = true;
+            consent.IsEnabled = true;
+        }
+    }
+
     private void SetEvidenceBusy(bool busy)
     {
         if (FindName("RefreshEvidenceButton") is Button b) b.IsEnabled = !busy;

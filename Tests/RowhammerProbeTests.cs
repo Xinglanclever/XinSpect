@@ -31,6 +31,18 @@ public class RowhammerProbeTests
     }
 
     [Fact]
+    public void 結果格式化_帶未經校驗標註與數據()
+    {
+        string text = XinSpect.RowhammerProbeService.FormatResult(
+            new XinSpect.RowhammerProbeResult(256u * 1024 * 1024, 64, 0, 1234));
+        Assert.Contains("64 輪", text);
+        Assert.Contains("1234 ms", text);
+        Assert.Contains("0", text);
+        Assert.Contains("未經過校驗", text);      // 使用者要求：接線但必須標註未校驗
+        Assert.Contains("非保證觸發 Rowhammer", text);
+    }
+
+    [Fact]
     public void 危險聲明_處處成文()
     {
         string help = XinSpect.RowhammerProbeService.DangerNotice;
