@@ -150,6 +150,9 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(ServiceInventoryService.Collect(at))
             .Concat(EventLogSummaryService.Collect(at))
             .Concat(AuditPolicyService.Collect(at))
+            .Concat(OptionalFeatureService.Collect(at))
+            .Concat(KernelModuleService.Collect(at))
+            .Concat(DebugConfigService.Collect(at))
             .ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
