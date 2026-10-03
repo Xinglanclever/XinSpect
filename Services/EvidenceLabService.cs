@@ -136,6 +136,11 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>PMU 能力與唯讀觀察三態事實（WP27 第一階段：編程路徑未實作）。</summary>
     public IReadOnlyList<HardwareFact> PmuFacts { get; private set; } = [];
 
+    /// <summary>記憶體加密（TME/SGX）與 C-state 駐留三態事實（處理器深化；驅動相依）。</summary>
+    public IReadOnlyList<HardwareFact> MemoryEncryptionFacts { get; private set; } = [];
+
+    public IReadOnlyList<HardwareFact> CStateFacts { get; private set; } = [];
+
     /// <summary>WP22 記憶體壓力探測的危險聲明（UI 紅字呈現；探測本身需明確同意才執行）。</summary>
     public string RowhammerDangerText => RowhammerProbeService.DangerNotice;
 
@@ -164,6 +169,13 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(AuditPolicyService.Collect(at))
             .Concat(OptionalFeatureService.Collect(at))
             .Concat(KernelModuleService.Collect(at))
+            .Concat(ByovdCompareService.Collect(at, null, () => KernelModuleService.FetchLoadedModules() ?? []))
+            .Concat(SecurityAuditFactsService.CollectDefenderExclusions(at))
+            .Concat(SecurityAuditFactsService.CollectLogClearEvents(at))
+            .Concat(SecurityAuditFactsService.CollectForeignRootCerts(at))
+            .Concat(SecurityAuditFactsService.CollectUsbstor(at))
+            .Concat(NicHealthFactsService.Collect(at))
+            .Concat(NicHealthFactsService.CollectMacVendors(at))
             .Concat(DebugConfigService.Collect(at))
             .ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));
@@ -218,6 +230,8 @@ public sealed class EvidenceLabService : ObservableObject
         BackendFacts = BackendEnvironmentService.Collect(msr, mmio, at);
         CpuFirmwareFacts = CpuFirmwareFactsService.Collect(msr, at);
         PmuFacts = PmuCapabilityFactsService.Collect(at, msr: msr);
+        MemoryEncryptionFacts = MemoryEncryptionFactsService.Collect(at, msr: msr);
+        CStateFacts = CStateResidencyFactsService.Collect(at, msr);
         IoPortFacts = IoPortFactsService.Collect(io, at);
         CmosFacts = CmosService.Collect(io, at);
         SmbusFacts = TsodSurveyor.CollectWithLock(smbusIo, pci.ReadDword, at);
@@ -322,7 +336,7 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>把全部事實組交給對帳引擎逐規則評估；每條規則一列（一致／矛盾／無法驗證都是 Present 的「結論事實」）。</summary>
     private IReadOnlyList<HardwareFact> EvaluateReconciliation(DateTimeOffset at)
     {
-        var all = ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(CpuFirmwareFacts).Concat(PmuFacts)
+        var all = ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(CStateFacts)
             .Concat(BackendFacts).Concat(MchbarFacts).Concat(PcieAerFacts).Concat(AcpiFacts).ToList();
         var rows = FactRelationService.Evaluate(FactRelationRules.All, all);
 
@@ -362,14 +376,14 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>全部事實組合併成單一清單（CLI 與報告用）。與 FirmwareSecurityRows 同集合、不轉渲染列。</summary>
     public IReadOnlyList<HardwareFact> AllFacts =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
-            .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
+            .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
             .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
             .Concat(PlatformFacts).Concat(SoftwareFacts).Concat(AcpiFacts).ToList();
 
     /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + I/O 埠 + CMOS + SMBus + PCI 盤點 + TPM + 平台拓撲 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
-            .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
+            .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
             .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
             .Concat(PlatformFacts).Concat(SoftwareFacts).Concat(AcpiFacts)
             .OrderBy(f => f.Category, StringComparer.Ordinal).ThenBy(f => f.Key, StringComparer.Ordinal)
