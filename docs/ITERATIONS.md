@@ -159,9 +159,22 @@
 | R2 | WP22-① | **Rowhammer 未施測誠實聲明**（`mem.rowhammer`）：讓「為什麼工具不測」有明文答案（V7 §14 風險＋ECC 見 R-MEM-05＋TRR usermode 不猜）；接線進 `LoadPlatformFacts`（NUMA＋聲明一批載入） | 2820 | 5a322c0 |
 | R3 | 制度 | 帳本記錄＋記憶庫 | — | 本輪 |
 
+## ITER34 ・ G6：WP13＋WP23 批次（2026-10-03，接 TASK-GAP-6 指令書前收尾）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP13-① | **網路卸載實際啟用狀態**（`NetOffloadFactsService`）：WMI MSFT_NetAdapterChecksumOffload/RSS，防禦式屬性讀取（讀不到標「屬性未提供」不冒充停用）；三態呈現開/停(支援)/未提供 | 2820 | be01f2c |
+| R2 | WP23-① | **音訊端點混合格式**（`AudioEndpointFactsService`＋`AudioFormatDecoder`）：MMDevice COM 列舉渲染＋擷取端點、WAVEFORMATEX/EXTENSIBLE 解碼（垃圾不解碼）；自訂最小 PROPVARIANT（.NET ComTypes 無此型）。**Wi-Fi RSSI 延後至後續批次**（wlanapi P/Invoke 另輪） | 2828 | 30268db |
+| R3 | 制度 | 帳本記錄；**接 TASK-GAP-6-2026-10-03.md 指令書**（A45 規則引擎最優先） | — | 本輪 |
+
+**誠實疏失記錄**：R2 曾把紅測試提交（`dotnet test | grep && git commit` 串接、grep 有輸出即過關——交接文件警告過的老坑復發）→ 立即修測試預期（全零緩衝聲道 0 → 不解碼垃圾）＋amend 救回 `30268db`。**教訓重申：測試與 commit 絕不串一行**。
+
+**命名坑**：新類不可叫 `WaveFormat`——與 DeepBench/NAudio 的 `WaveFormat` 型別衝突（CS0722 靜態類型不可作回傳類型）；改名 `AudioFormatDecoder`。
+
 ## 待辦（下一批）
 
-- G6 序列照 docs/ROADMAP-G6.md 推進（ITER34＝網路卸載狀態＋Wi-Fi RSSI＋WASAPI 音訊格式）。
+- **主線切換：TASK-GAP-6-2026-10-03.md 六項未落地能力**（A45 規則引擎→A47 審計日誌→A44 查詢語言→A54 效能預算→A18/A23 純解碼器）；G6 路線圖順延。
+- Wi-Fi RSSI（wlanapi P/Invoke）併入後續 G6 批次。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
 - 對帳規則已達 25（V7 目標達成）；後續隨新事實來源繼續擴（SPD↔TSOD、SMART、儲存面）。
 - WP50 Stryker（解碼器抽成獨立程式庫，或等 Buildalyzer 支援）、differential 擴大。
