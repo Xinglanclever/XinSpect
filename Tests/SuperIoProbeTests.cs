@@ -38,7 +38,7 @@ public class SuperIoProbeTests
         var sio = Assert.Single(facts, f => f.Key == "sio.0x2e");
         Assert.Equal(FactAvailability.Present, sio.Availability);
         Assert.StartsWith("晶片 ID 0x8786", sio.Value);
-        Assert.Contains("未對照名稱表", sio.Value);
+        Assert.Contains("IT8786E-I", sio.Value); // coreboot superiotool 出處化的名稱
         Assert.Equal(0x8786, sio.NumericValue);
 
         var absent = Assert.Single(facts, f => f.Key == "sio.0x4e");

@@ -37,6 +37,7 @@ public static class SpecRefRegistry
         typeof(PlatformTrustDecoder), // VBS/HVCI/CodeIntegrity 狀態解碼
         typeof(PciKnowledge),    // PCI 類別碼／廠商 ID 知識表（PCI-SIG 規格）
         typeof(PciBars),         // PCI BAR 資源解碼（PCI Local Bus Spec §6.2.5）
+        typeof(SuperIoKnowledge),// Super I/O 晶片名稱對照（coreboot superiotool）
     ];
 
     /// <summary>列舉解碼器上缺 SpecRef 的公開靜態方法（宣告於本型別者）。</summary>

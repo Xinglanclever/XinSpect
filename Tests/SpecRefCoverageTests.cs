@@ -33,8 +33,8 @@ public class SpecRefCoverageTests
     public void 覆蓋面與引用量如實申報()
     {
         // 釘住規模下限：這批解碼器的引用量只許往上走（縮水＝有人拆了引用，先查清楚）。
-        Assert.True(SpecRefRegistry.CoveredDecoders.Length >= 9, "覆蓋解碼器不該縮水");
-        Assert.True(SpecRefRegistry.AllReferences().Count >= 32,
+        Assert.True(SpecRefRegistry.CoveredDecoders.Length >= 12, "覆蓋解碼器不該縮水");
+        Assert.True(SpecRefRegistry.AllReferences().Count >= 41,
             $"引用條目 {SpecRefRegistry.AllReferences().Count} 低於已知基線 32——查清楚是不是被拆了");
     }
 }

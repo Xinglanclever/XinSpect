@@ -71,11 +71,12 @@ public static class SuperIoProbeService
                 byte? vhi = ReadReg(io, indexPort, SuperIo.RegVendorIdHigh);
                 byte? vlo = ReadReg(io, indexPort, SuperIo.RegVendorIdLow);
                 string vendorText = vhi is not null && vlo is not null
-                    ? $"、廠商 ID 0x{(vhi.Value << 8) | vlo.Value:X4}（原始值，未對照名稱表）"
+                    ? $"、廠商 ID 0x{(vhi.Value << 8) | vlo.Value:X4}（原始值）"
                     : "、廠商 ID 暫存器讀取失敗";
+                string nameText = SuperIoKnowledge.ChipName(id.Value) is { } chipName ? $"（{chipName}）" : "（名稱對照未收錄，出處化知識庫待擴充）";
                 Exit(io, indexPort, ref inConfigMode);
                 return new HardwareFact(key, Category, name,
-                    $"晶片 ID 0x{id.Value:X4}{vendorText}", "", source, FactTrustLevel.Measured, false, at, id.Value);
+                    $"晶片 ID 0x{id.Value:X4}{nameText}{vendorText}", "", source, FactTrustLevel.Measured, false, at, id.Value);
             }
             return Unavailable(key, name, source, at, FactAvailability.NotSupported,
                 "無裝置回應（兩種進入序列的 ID 暫存器都是全 F／全 0）——該埠可能沒有 Super I/O 或被其他裝置占用");
