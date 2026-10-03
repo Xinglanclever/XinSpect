@@ -130,10 +130,21 @@
 
 **PCH 世代判定暫停（誠實記錄）**：已勘察 CHIPSEC（chipsec2 分支）cfg 結構——平台 XML（adl.xml 等）以 HOSTCTL DID 清單＋SKU 名組織、PCH 世代 XML（pch_5xxlp.xml 等）以 PMC/SMBUS DID 清單組織；**LPC DID→行銷名（H510/Z590）的直接對照不在單一檔案**，需逐檔交叉建表。按 V7「未對準出處就不出值」原則，本批不做半成品表；下批專門處理。
 
+## ITER31 ・ WP5 批次：對帳規則達標 25（2026-10-03）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP5 | 規則 21–22（UEFI 語義族）：`uefi.secureboot_vs_setupmode`（SB=1 而金鑰未部署＝狀態機警訊）、`uefi.audit_vs_deployed`（互斥狀態同時開啟） | 2806 | 05c71b5 |
+| R2 | WP5 | 規則 23–24（SPI 交叉族）：`spi.service_vs_spi_bar_resource`（盤點有 BAR 而服務稱未配置 SPIBAR）、`spi.write_surface_vs_hsfsts_flockdn`（FLOCKDN 兩向交叉——同一次 SPIBAR 讀取的兩種解讀） | 2807 | 20c0c27 |
+| R3 | WP5 | 規則 **25**（達標 V7 §13）：`uefi.variable_vs_registry_platform`（UEFI 變數存在而登錄檔否定 SecureBoot 狀態＝平台型別矛盾） | 2808 | ed39ae1 |
+| R4 | 制度 | 帳本記錄＋記憶庫 | — | 本輪 |
+
+**V7 §13 成功定義「對帳 ≥25 條」達成**。規則組成：硬體語義族（微碼、TjMax、SMM_BWP×SMRAM、SMRAMC 非法組合、UEFI 狀態機互斥×3）＋管線一致性族（×10＋）＋來源交叉族（Secure Boot 雙來源、平台型別）。下批規則只許往上走。
+
 ## 待辦（下一批）
 
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
-- 對帳規則 17 → ≥25：隨新事實來源（SPD↔TSOD、SMART、儲存面）補。
+- 對帳規則已達 25（V7 目標達成）；後續隨新事實來源繼續擴（SPD↔TSOD、SMART、儲存面）。
 - WP50 Stryker（解碼器抽成獨立程式庫，或等 Buildalyzer 支援）、differential 擴大。
 - 對帳規則 15 → ≥25：隨新事實來源（SPD↔TSOD、SMART、儲存面）補。
 - CLI 擴充候選：全機快照（需 headless 化 WPF 服務層）、批次清單檔。
