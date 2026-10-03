@@ -50,6 +50,7 @@ internal static class NvmlInterop
     [DllImport(Dll, EntryPoint = "nvmlDeviceGetClockInfo")] public static extern int GetClock(IntPtr device, int type, out uint clockMhz);
     [DllImport(Dll, EntryPoint = "nvmlDeviceGetPowerUsage")] public static extern int GetPowerUsage(IntPtr device, out uint milliwatts);
     [DllImport(Dll, EntryPoint = "nvmlDeviceGetFanSpeed")] public static extern int GetFanSpeed(IntPtr device, out uint percent);
+    [DllImport(Dll, EntryPoint = "nvmlDeviceGetRetiredPages_v2")] public static extern int GetRetiredPages(IntPtr device, int source, out uint count);
     [DllImport(Dll, EntryPoint = "nvmlDeviceGetNumFans")] public static extern int GetNumFans(IntPtr device, out uint numFans);
 
     [DllImport(Dll, EntryPoint = "nvmlDeviceGetPowerManagementLimit")] public static extern int GetPowerLimit(IntPtr device, out uint milliwatts);

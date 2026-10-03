@@ -441,6 +441,95 @@ public sealed class StorageSmartService : ObservableObject
         return sector is null || sector.Length < 512 ? null : DecodeAtaAttributes(sector);
     }
 
+    /// <summary>ATA SMART READ THRESHOLDS（0xD1 簽章，512B 門檻表）；失敗回 null。與 READ DATA 同一 ioctl 通路。</summary>
+    public static byte[]? TryReadAtaThresholds(int index)
+        => DiskIo.Guarded(() => ReadAtaThresholdsCore(index));
+
+    private static byte[]? ReadAtaThresholdsCore(int index)
+    {
+        var handle = OpenDrive(index);
+        if (handle == IntPtr.Zero) return null;
+        try
+        {
+            var input = new byte[16 + 512];
+            BitConverter.GetBytes(512u).CopyTo(input, 0);
+            input[4] = 0xD1;    // bFeaturesReg = SMART READ THRESHOLDS
+            input[5] = 0x01;    // bSectorCountReg = 1
+            input[6] = 0x01;    // bSectorNumberReg = 1
+            input[7] = 0x4F;    // bCylLowReg（SMART 簽章）
+            input[8] = 0xC2;    // bCylHighReg
+            input[9] = 0xA0;    // bDriveHeadReg
+            input[10] = 0xB0;   // bCommandReg = SMART
+            input[12] = (byte)index;
+
+            var output = new byte[16 + 512];
+            if (!DeviceIoControl(handle, IoctlSmartRcvDriveData, input, (uint)input.Length, output, (uint)output.Length, out uint ret, IntPtr.Zero))
+                return null;
+            if (output[4] != 0) return null;
+            if (ret < 16 + 512) return null;
+            var sector = new byte[512];
+            Array.Copy(output, 16, sector, 0, 512);
+            return sector;
+        }
+        finally { CloseHandle(handle); }
+    }
+
+    /// <summary>SMART READ THRESHOLDS 表：每筆 12 bytes（ID@0、門檻@1），version 2 bytes 起。回 ID→門檻。</summary>
+    public static Dictionary<byte, byte> DecodeAtaThresholds(byte[] sector)
+    {
+        var map = new Dictionary<byte, byte>();
+        if (sector is null || sector.Length < 512) return map;
+        for (int off = 2; off + 12 <= 512 && off <= 2 + 29 * 12; off += 12)
+        {
+            byte id = sector[off];
+            if (id == 0) continue;
+            map[id] = sector[off + 1];
+        }
+        return map;
+    }
+
+    /// <summary>門檻評比結果：屬性 ID、現值、門檻。<b>現值 ≤ 門檻（門檻非 0）＝現正低於門檻（failing now）</b>。</summary>
+    public sealed record FailingNowRow(byte Id, string Name, long Value, long Threshold);
+
+    /// <summary>
+    /// 現值對門檻評比。門檻 0＝SMART 規範「無門檻」，不參與評比（不猜）；
+    /// 現值以 SmartRow.RawValue 優先、退回解析 ValueText。
+    /// </summary>
+    public static IReadOnlyList<FailingNowRow> EvaluateFailingNow(IEnumerable<SmartRow> attrs,
+        IReadOnlyDictionary<byte, byte> thresholds)
+    {
+        var failing = new List<FailingNowRow>();
+        foreach (var a in attrs)
+        {
+            if (a.Id == 0) continue;
+            if (!thresholds.TryGetValue(a.Id, out byte th) || th == 0) continue;
+            long value;
+            if (a.RawValue is { } raw) value = (long)Math.Min(raw, long.MaxValue);
+            else if (!long.TryParse(a.ValueText, out value)) continue;
+            if (value <= th) failing.Add(new FailingNowRow(a.Id, a.Name, value, th));
+        }
+        return failing;
+    }
+
+    /// <summary>NVMe WCTEMP 評比狀態。</summary>
+    public enum WctempState { Normal, Warning, NotProvided }
+
+    /// <summary>WCTEMP 對照結果。</summary>
+    public sealed record WctempVerdict(WctempState State, int ThresholdC, int CompositeC);
+
+    /// <summary>
+    /// NVMe 溫度門檻對照：WCTEMP 在 Identify Controller 偏移 0x14A（u16 LE，°C；0＝未提供）。
+    /// 合成溫度 ≥ WCTEMP＝警告。
+    /// </summary>
+    public static WctempVerdict EvaluateWctemp(int compositeTempC, byte[] identifyController)
+    {
+        if (identifyController is null || identifyController.Length < 0x14C)
+            return new WctempVerdict(WctempState.NotProvided, 0, compositeTempC);
+        ushort wctemp = BitConverter.ToUInt16(identifyController, 0x14A);
+        if (wctemp == 0) return new WctempVerdict(WctempState.NotProvided, 0, compositeTempC);
+        return new WctempVerdict(compositeTempC >= wctemp ? WctempState.Warning : WctempState.Normal, wctemp, compositeTempC);
+    }
+
     /// <summary>NVMe 健康紀錄的型別化快照;讀不到、逾時或長度不足回 <c>null</c>。</summary>
     public static NvmeHealthSnapshot? TryReadNvmeHealth(int index)
         => TryReadNvmeLog(index) is { } log ? NvmeHealth.Decode(log) : null;

@@ -176,6 +176,10 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(SecurityAuditFactsService.CollectUsbstor(at))
             .Concat(NicHealthFactsService.Collect(at))
             .Concat(NicHealthFactsService.CollectMacVendors(at))
+            .Concat(SmartFailingNowFactsService.Collect(at))
+            .Concat(ChassisFactsService.Collect(at))
+            .Concat(HpaFactsService.Collect(at))
+            .Concat(GpuTdrFactsService.Collect(at))
             .Concat(DebugConfigService.Collect(at))
             .ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));
