@@ -267,9 +267,18 @@
 
 **Stryker 結論**：解鎖方案的關鍵是「純解碼器、零 WPF／零特權相依」——Buildalyzer 掃不到 WPF 專案，抽庫後直接可跑（3 分 10 秒全輪）。剩餘逃逸集中在 SpecRef 反射輔助與 PlatformTrustDecoder／PciBars 的字串分支，後續批次隨手補。主專案側仍無法突變測（預期內）。
 
+## ITER44 ・ 微碼 4 位元組變體＋Wi-Fi 頻道＋EC 風險評估（2026-10-03，核准計畫第二段前哨）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | 微碼 | **登錄檔 Update Revision 4 位元組變體解碼**：本機實測 `06 70 00 02`＝LE DWORD 0x02007006（恰等於 MSR 0x8B 高 32 位）——照 BiosMeDecoder 口徑以 LE DWORD 解碼、畫面註明「4 位元組變體」不冒充標準 8 位元組佈局；其他長度仍如實標格式不明 | 2956 | 本批 |
+| R2 | Wi-Fi | **WLAN_BSS_ENTRY 純解碼器**（WifiBssDecoder 進 Decoders 庫＋SpecRef 註冊）：中心頻率（kHz）→頻道查表公式（2.4/4.9/5/6 GHz 等差＋ch14 特例，換不出回 null 不猜）、佈局依 wlanapi.h 手算（sizeof=360）；WifiSignalService 接 BSS list 取頻道與 BSSID；**未連線介面如實列一列**（此前「沒連線」被混報成「沒介面」）；UI 加頻道欄與三段式狀態文字。本機 Intel AC 9260 無線電軟體關閉——連線態欄位（RSSI／頻道）實測待使用者連線後補驗 | 2973 | 本批 |
+| R3 | WP31 | **EC 唯讀風險評估記錄**（docs/EC-RISK-ASSESSMENT.md）：「唯讀」實含 RD_EC 命令埠寫入、與 acpi.sys 電池/熱輪詢交易交錯＝資料錯位、burst 破壞、症狀延遲顯現——**結案裁定：不實作任何 EC 埠存取**，重開條件（核心合作通路＋測試機＋作者同意）成文；G6 路線圖同步 | 2973 | 本批 |
+
 ## 待辦（下一批）
 
-- **主線：核准收尾計畫進行中——下一批 ITER44：登錄檔微碼 4 位元組變體解碼（本機 `06 70 00 02`＝LE DWORD 0x02007006，與 BiosMeDecoder 口徑一致）＋Wi-Fi RSSI（wlanapi P/Invoke）＋WP31 EC 唯讀風險評估記錄。**
+- **主線：核准收尾計畫進行中——ITER43（Stryker 解鎖 80.50%）＋ITER44（微碼變體＋Wi-Fi 頻道＋EC 風險評估）完成；下一批 ITER45：WP15 系統與軟體層（Windows Update 歷史／服務／排程工作／事件記錄匯出／安全政策，WMI/登錄）。**
+- Wi-Fi 連線態欄位（RSSI／頻道/BSSID）實測：本機無線電軟體關閉，待使用者開啟 Wi-Fi 並連線後重開程式補驗。
 - **帳本更正：對帳規則實際為 26 條**（ITER31 記 25 是手寫數錯——機器檢查再次抓到手寫漂移）。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
 - Stryker 剩餘逃逸（SpecRef 反射輔助／PlatformTrustDecoder／PciBars 字串分支）後續批次隨手補；differential 擴大。
