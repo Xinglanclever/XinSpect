@@ -142,6 +142,25 @@
        以獨立程序啟動之。單檔發佈時資源隨 XinSpect.dll 一同打包，使用者無須另裝任何檔案。
        Restore 與 Build 分兩次呼叫（避免同次呼叫沿用過期評估）；巢狀 MSBuild 僅傳入 Configuration，
        使 Bridge 以自身預設平台（AnyCPU/PlatformTarget=x64）建置，不受本體 win-x64 影響。 -->
+  <!-- 藍色中隊內嵌（正式發佈）：把 BlueSquadronBridge 發佈成單檔並內嵌為資源，
+       BlueSquadronBootstrap 於執行期解壓（SHA256 驗證＋ACL 鎖定）。Debug 測試不內嵌以保建置速度。 -->
+  <Target Name="BuildAndEmbedBlueSquadronBridge" BeforeTargets="PrepareForBuild;BeforeCompile"
+          Condition="'$(Configuration)' == 'Release'">
+    <PropertyGroup>
+      <BsProj>$(MSBuildProjectDirectory)\BlueSquadron\BlueSquadronBridge.csproj</BsProj>
+      <BsPayloadDir>$(MSBuildProjectDirectory)\BlueSquadron\bin\BridgePayload</BsPayloadDir>
+      <BsExe>$(BsPayloadDir)\BlueSquadronBridge.exe</BsExe>
+    </PropertyGroup>
+    <Exec Command="dotnet publish &quot;$(BsProj)&quot; -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o &quot;$(BsPayloadDir)&quot;" />
+    <Error Condition="!Exists('$(BsExe)')" Text="藍色中隊橋接程式發佈後仍找不到產出：$(BsExe)" />
+    <ItemGroup>
+      <EmbeddedResource Include="$(BsExe)">
+        <LogicalName>XinSpect.bridge.BlueSquadronBridge.exe</LogicalName>
+        <Visible>false</Visible>
+      </EmbeddedResource>
+    </ItemGroup>
+  </Target>
+
   <Target Name="BuildAndEmbedXtuBridge" BeforeTargets="PrepareForBuild;BeforeCompile">
     <PropertyGroup>
       <XtuBridgeProj>$(MSBuildProjectDirectory)\Bridge\XtuBridge.csproj</XtuBridgeProj>

@@ -49,8 +49,8 @@ public static class ChangelogCatalog
         new ChangeEntry
         {
             Version = "2.5.0",
-            Date = "2026-10-03",
-            Title = "Olympus 2.5——深度驗機、交叉對帳與可分享規則（系列更名：Everest → Olympus）",
+            Date = "2026-10-04",
+            Title = "Olympus 2.5——深度驗機、交叉對帳、驗機殺手級檢測與安全鑑識（系列更名：Everest → Olympus）",
             Items =
             [
                 "版本更名：系列代號 Everest（額菲爾士峰／珠穆朗玛峰）更名 Olympus（奧林帕斯山／奧林匹斯山），版號 2.1.0 → 2.5.0。",
@@ -63,6 +63,16 @@ public static class ChangelogCatalog
                 "查詢語言（key/category/availability/since 管線）、審計日誌（雜湊鏈＋竄改偵測）、效能預算測試（冷啟動實測 2.7 秒）與自家可觀測性（預設關閉）。",
                 "IPMI／MegaRAID 訊息解碼器（SEL/FRU/SDR/MFI 純解碼器；本機無 BMC／無 RAID——如實標未施測）。",
                 "CLI：--json evidence（退出碼語意）與 --compare-flash；PowerShell 模組 XinSpect.psm1。",
+                "驗機殺手級檢測：SMART 門檻與「現正低於門檻」判定（READ THRESHOLDS 0xD1，與 READ DATA 同一 ioctl 通路）、NVMe WCTEMP 門檻對照實溫、機箱開啟偵測（SMBIOS Type3 Security Status——拆機的韌體級證據）、HPA 隱藏容量（ATA IDENTIFY 最大 LBA vs OS 可見大小，不一致即 HPA 作用中；DCO 屬廠商私有命令誠實不做）、假容量寫入驗證（H2testw 式 xorshift 樣本寫滿回讀逐位元組驗證，同意閘門複用危險卡模式——瀕死媒體會加劇損耗，須明示同意才跑）、GPU TDR 逾時設定（TdrLevel/TdrDelay/TdrDpcDelay，未設定＝預設值並明說）與 NVML 顯存退休頁計數（單雙位元合計；此卡不支援退休頁報告時如實記錄）。",
+                "安全鑑識：BYOVD 逐驅動比對微軟建議封鎖清單（WDAC SiPolicy XML 寬容解析，檔名不分大小寫＋實檔 SHA-256/SHA-1 雙道比對；清單由使用者提供、零出網，命中標「攻擊面事實而非中毒判決」）、Defender 排除清單逐條攤開（MSFT_MpPreference）、Security 記錄 1102 記錄清除偵測（缺權限與查詢失敗分清）、非微軟本機信任根清查（中間人憑證風險面）、USBSTOR 使用痕跡（唯讀）。",
+                "處理器與平台深化：TME/SGX 記憶體加密狀態（CPUID 7＋MSR 0x982 TME_ACTIVATE：啟用位元與演算法欄位）、逐核 C-state 駐留累計（0x60D/0x3FC/0x3F9/0x3FA µs 計數器）、CPUID 0x1F die 拓撲（不退回 0xB 用猜的）、SLIT 距離矩陣（截斷拒解）、時間互校（HPET 表指紋＋FADT PM_TMR_BLK＋QPC vs 牆鐘漂移 ppm）。",
+                "軟體層補全：Windows Update 史（WUA COM）、服務清單（非系統目錄服務引號感知解析）、System 記錄七天摘要、稽核政策（LSA 九類別等級）、可選功能（Hyper-V／VM 平台／WSL／容器）、核心模組清查（非系統目錄模組 wintrust DRIVER_ACTION_VERIFY）、USB 拓撲與螢幕連線解碼、SuperIO 溫度電壓風扇（ITE；電壓未經主機板校準如實標）、攝影機 PnP、企業儲存（iSCSI/MPIO/FC；NVMe-oF 如實標 NotSupported）、回環音訊訊號品質（峰值/RMS/削波，dBFS −120 底線）、開機階段計時（Diagnostics-Performance Event 100）、網卡錯誤丟棄計數與 MAC OUI 廠商知識庫、登錄檔微碼 4 位元組變體解碼、Wi-Fi BSS 清單（頻道/BSSID）。",
+                "多輪測試模式（處處標註「多輪測試・不保證可用」）：WP27 PMU 編程驗證（最小寫入 0x38D 使能位 OR 併入不碰 PMI、每輪還原保證、3 輪聚合）與 WP22 記憶體壓力探測 10 輪聚合，雙卡接線韌體安全頁；WP22 單發模式帶同意勾選閘門，結果必帶【未經過校驗】標註（機器釘死不可移除）。",
+                "資料主權與文件：DataSovereigntyTests 源碼級掃描釘死事實蒐集零網路 API（四個 opt-in 網路檔允許清單）、docs/spec 公開規格五件套（PublicSpecTests 機器對帳）、量測方法學文件（MEASUREMENT-METHODOLOGY.md）、部署文件、corpus 貢獻包骨架（只收遮蔽版、身份鍵排除、上傳通路刻意不實作）、EC 風險評估結案文件（裁定不實作任何 EC 埠存取，重開條件成文）。",
+                "查詢與 API：本地 API 純函數處理（/api/facts、/api/query；nonsense 回 400 不偽裝空結果）、CLI 查詢語言相容（一行一子句、key/category/source/value/availability × =/~/^=，未知輸入丟 ParseException 帶修正指引）、「查不到≠沒有」語意釘死。",
+                "品質工程：XinSpect.Decoders 類別庫獨立（19 檔遷入，Buildalyzer 不再擋）——dotnet-stryker 突變測試上線，分數 80.50%→82.04%（曾抓到 CpuGeneration extended family 進位真 bug）；公開規格對帳抓到查詢語言運算子文件錯誤並修正；資產變更偵測（快照差分→資產事件，非資產誠實標「狀態」）與時間膠囊比較通知、審計日誌整合。",
+                "藍色中隊內嵌回歸（v2.1.0 曾拆開下載）：Release 建置把 BlueSquadronBridge.exe 內嵌為資源，執行期解壓（SHA-256 完整性驗證＋目錄 ACL 鎖定 SYSTEM/Administrators），單一執行檔即含守護進程；Debug 建置不內嵌以保建置速度（開發環境逐層向上找專案輸出）；另仍提供獨立 BlueSquadronBridge.exe 資產（與主程式放同資料夾亦自動啟用，既有滑動開關照常可關）。",
+                "修復：深測中心啟動即崩潰（StartAsync 以 ConfigureAwait(false) 續行後在 thread-pool 修改已被 UI CollectionView 綁定的集合——改收攏回 UI 執行緒執行；錯誤訊息彙整同收斂）。",
             ],
         },
         new ChangeEntry
