@@ -248,9 +248,19 @@
 **範圍裁定**：DeviceIcons／BrandBadge／IconGalleryWindow 的「Everest 系列」徽章是 **Intel CPU 系列名**（7980XE 等真實屬該 bin 系列）——硬體事實名不隨 App 品牌更名，保留。
 **ChangelogTests 版號同步**（csproj＝Latest＝AboutView）自動通過——單一來源設計的紅利。
 
+## ITER42 ・ 使用者回饋修正（2026-10-03，接 ITER41 更名後實機檢視）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | 修正 | **深層核心存取狀態文字重複**：StatusFrom 內嵌 notes＋AppendStatusNotes 再附加一次＋Enable/Disable 又合併——同一句出現兩三遍。重構：StatusFrom 只回一句話；RefreshStatus/Enable/Disable 各自附加一次；UI 移除重複附加 | 2935 | 3e516d4 |
+| R2 | 修正 | **7980XE 歸類釘住**：使用者指示 7980XE 屬至尊版 Extreme Edition（金底 XE）不屬 Everest 系列——現行 i9-extreme 規則本已正確，補釘住測試鎖死；實機截圖驗證（處理器頁金底 XE＋至尊版紅膠囊） | 2935 | 3e516d4 |
+| R3 | 修正 | **深測中心儲存根預設值**：空白儲存根讓六個儲存測項全數被紅字擋下卻無入口——預設給可寫暫存子目錄（%TEMP%\XinSpectDeepBench）、XAML 加「瀏覽…」（OpenFolderDialog）、BuildOrchestrator 自動建立目錄 | 2935 | 3e516d4 |
+
+**除錯教訓（stash 實驗法）**：測試主機 Fatal error 當機（0xC0000005 於 D3D11PresentFramePacingEngine 背景 Task）用 stash 二分定位——**建構子預設 StorageRoot 讓「不設根就 StartAsync」的單元測試誤跑真實測試陣列（含真 D3D11 引擎）**，違反「測試注入假件」鐵律。修正＝預設值移到 MainViewModel 生產接線（注意：MainViewModel 有名為 System 的屬性遮蔽 System 命名空間，需 global:: 限定）。
+
 ## 待辦（下一批）
 
-- **主線：GAP6 六項完成＋系列更名 Olympus 2.5.0**。後續方向：發佈工程（Release 資產重建＋push＋GitHub Release）、登錄檔微碼 4 位元組變體解碼（本機實測發現）、G6 路線圖剩餘、規則市集（另立 WP）。
+- **主線：GAP6 六項＋更名 Olympus 2.5.0＋顯示/修正輪完成**。後續方向：發佈工程（Release 資產重建＋push＋GitHub Release）、登錄檔微碼 4 位元組變體解碼（本機實測發現）、G6 路線圖剩餘、規則市集（另立 WP）。
 - **帳本更正：對帳規則實際為 26 條**（ITER31 記 25 是手寫數錯——機器檢查再次抓到手寫漂移）。
 - Wi-Fi RSSI（wlanapi P/Invoke）併入後續 G6 批次。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
