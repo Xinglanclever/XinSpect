@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinspect.app/spec/snapshot.schema.v1.json",
+  "title": "XinSpect 硬體快照 v1（時間膠囊）",
+  "description": "XinSpect 硬體快照的公開格式。每筆事實帶來源、可信度與可用性三態——讀不到就是讀不到，不以典型值填補。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "appVersion", "anonymousMachineId", "capturedAtUtc", "sensitiveValuesPreserved", "facts", "integrity"],
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "appVersion": { "type": "string", "minLength": 1 },
+    "anonymousMachineId": { "type": "string", "minLength": 1, "description": "匿名機器識別（單向雜湊派生）；用於跨快照判斷是否同一台機器。" },
+    "capturedAtUtc": { "type": "string", "format": "date-time" },
+    "sensitiveValuesPreserved": { "type": "boolean", "description": "true＝敏感識別未遮蔽（需使用者主動指定）；false＝遮蔽。" },
+    "facts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/fact" }
+    },
+    "integrity": { "$ref": "#/$defs/integrity" }
+  },
+  "$defs": {
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "hash"],
+      "properties": {
+        "algorithm": { "type": "string", "const": "sha256" },
+        "hash": { "type": "string", "minLength": 64, "maxLength": 64 }
+      }
+    },
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "numericValue／unit／unavailableReason 可能整鍵省略（序列化對 null／預設值有條件忽略）——缺失與 null 同義。",
+      "required": ["key", "category", "name", "value", "source", "trust", "sensitive", "measuredAtUtc", "availability"],
+      "properties": {
+        "key": { "type": "string", "minLength": 1, "description": "事實的穩定識別鍵（跨快照差分的主鍵）。" },
+        "category": { "type": "string" },
+        "name": { "type": "string" },
+        "value": { "type": "string", "description": "人可讀的值。availability 非 Present 時為空字串。" },
+        "numericValue": { "type": ["number", "null"], "description": "可計算的數值（若值有數字語意）；沒有則 null。" },
+        "unit": { "type": ["string", "null"] },
+        "source": { "type": "string", "description": "資料來源（暫存器／WMI／API 名稱）。非自造驗證來源是本工具的硬性要求。" },
+        "trust": { "enum": ["Unknown", "Reported", "Derived", "Measured"], "description": "來源品質標示：Unknown（不可用）／Reported（系統自己記的）／Derived（由其他事實推導）／Measured（本工具量到）。這是標示不是保證。" },
+        "sensitive": { "type": "boolean" },
+        "measuredAtUtc": { "type": "string", "format": "date-time" },
+        "availability": { "enum": ["Present", "NotSupported", "InsufficientPrivilege", "ReadError", "NotApplicable"], "description": "三態契約的型別承載：Present＝讀到；其餘四種＝讀不到（各自帶原因）。" },
+        "unavailableReason": { "type": ["string", "null"], "description": "availability 非 Present 時的人可讀原因；Present 時為 null。" }
+      }
+    }
+  }
+}
