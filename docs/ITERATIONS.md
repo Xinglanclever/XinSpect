@@ -238,9 +238,19 @@
 
 **啟動耗時 2.7 秒**（狀態列實測）——A54 冷啟動預算 3 秒內。
 
+## ITER41 ・ 系列更名：Everest → Olympus、版號 2.5.0（2026-10-03，使用者指示）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | 品牌 | csproj 2.1.0→**2.5.0**（FileVersion 2.5.0.0）、AppInfo 代號單一來源→**Olympus**、MainWindow 標題／彩蛋（**額菲爾士峰→奧林帕斯山**）、AboutView 版號行、ZhTerms 繁簡對（**珠穆朗玛峰→奧林匹斯山**）、README 徽章、Changelog 新增 2.5.0 Olympus 條目（歷史 2.1.0 Everest 條目原封保留）、DeepBench 釘住測試改釘新慣例、AppInfoTests/ZhTermsTests 期望值 | 2933 | 本批 |
+| R2 | 實機 | 重建＋重啟截圖驗證：標題列「XinSpect v2.5 Olympus」、表頭「v2.5.0 Olympus」 | — | 本批 |
+
+**範圍裁定**：DeviceIcons／BrandBadge／IconGalleryWindow 的「Everest 系列」徽章是 **Intel CPU 系列名**（7980XE 等真實屬該 bin 系列）——硬體事實名不隨 App 品牌更名，保留。
+**ChangelogTests 版號同步**（csproj＝Latest＝AboutView）自動通過——單一來源設計的紅利。
+
 ## 待辦（下一批）
 
-- **主線：TASK-GAP-6 六項全數完成＋顯示層判決卡**。後續方向：發佈工程（changelog 折疊 ITER21–40＋push＋Release）、登錄檔微碼 4 位元組變體解碼（本機實測發現）、G6 路線圖剩餘、規則市集（另立 WP）。
+- **主線：GAP6 六項完成＋系列更名 Olympus 2.5.0**。後續方向：發佈工程（Release 資產重建＋push＋GitHub Release）、登錄檔微碼 4 位元組變體解碼（本機實測發現）、G6 路線圖剩餘、規則市集（另立 WP）。
 - **帳本更正：對帳規則實際為 26 條**（ITER31 記 25 是手寫數錯——機器檢查再次抓到手寫漂移）。
 - Wi-Fi RSSI（wlanapi P/Invoke）併入後續 G6 批次。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
