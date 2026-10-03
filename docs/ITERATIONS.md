@@ -344,9 +344,18 @@
 
 **模型坑**：System.ServiceProcess.ServiceController 是 NuGet 套件型別（SDK 不內建）——沿用專案既有 advapi32 P/Invoke 口徑，不引新相依。
 
+## ITER53 ・ WP38＋WP33（2026-10-03，核准計畫第四段）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP38 | **loopback 訊號層**（LoopbackSignalService，復用 NAudio WasapiLoopbackCapture 通路）：峰值／RMS／削波（連續 ≥3 滿格樣本才判削波）、dBFS 換算（**0 以 −120 dBFS 底線呈現，−∞ 不是可溝通的數字**）；全 0 樣本＝靜音是有效資料不是錯誤。金標向量：±0.5 方波 RMS＝0.5。**示波器圖形屬 UI 層刻意不在本輪**——資料層與統計先就緒 | 3025 | 本批 |
+| R2 | WP33 | **量測方法學文件**（docs/MEASUREMENT-METHODOLOGY.md）：通用規則（量不到是三態不是零、混池禁令、單調鐘 vs 牆鐘分工、臨界值必須成文）＋訊號量測（WP38）＋延遲/頻寬（DeepBench 統計分類、flaky 記錄不靜默重試） | 3028 | 本批 |
+
+**範圍裁定**：WP38 示波器 UI（波形繪製）留待 UI 輪——本輪先把訊號資料層與方法學釘死，符合「資料層先誠實、呈現後上」的一貫順序。
+
 ## 待辦（下一批）
 
-- **主線：核准收尾計畫進行中——ITER43–52 完成；下一批 ITER53：WP38 WASAPI loopback 訊號層示波器＋WP33 量測方法學文件化。**
+- **主線：核准收尾計畫進行中——ITER43–53 完成；下一批 ITER54：WP34 本機 API server＋WP35 查詢語言接線＋WP26 開機計時（事件記錄派生）。**
 - Wi-Fi 連線態欄位（RSSI／頻道/BSSID）實測：本機無線電軟體關閉，待使用者開啟 Wi-Fi 並連線後重開程式補驗。
 - **帳本更正：對帳規則實際為 26 條**（ITER31 記 25 是手寫數錯——機器檢查再次抓到手寫漂移）。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
