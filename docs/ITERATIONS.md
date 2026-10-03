@@ -151,9 +151,17 @@
 | R2 | WP14-② | **`TpmFactsService`**：經 Windows TBS（tbs.dll 仲介，零核心風險）讀 PCR 0–7（SHA-256 bank）＋TCG log 摘要（事件數＋PCR 覆蓋）；TBS 錯誤／TPM_RC／無 TPM 分別如實三態；`tpm.*` 事實進韌體安全頁＋快照＋CLI evidence | 2816 | 8316ef3 |
 | R3 | 制度 | 帳本記錄＋記憶庫 | — | 本輪 |
 
+## ITER33 ・ G6：WP21＋WP22 批次（2026-10-03）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP21 | **NUMA 拓撲事實**（`NumaTopologyService`）：GetNumaHighestNodeNumber＋GetNumaNodeProcessorMaskEx（kernel32 usermode 唯讀）；節點數＋逐節點遮罩/popcount；**刻意不走 GetLogicalProcessorInformationEx 變長結構解析**（欄位偏移隨版本演進，解析錯位＝把遮罩當事實） | 2817 | 5a322c0 |
+| R2 | WP22-① | **Rowhammer 未施測誠實聲明**（`mem.rowhammer`）：讓「為什麼工具不測」有明文答案（V7 §14 風險＋ECC 見 R-MEM-05＋TRR usermode 不猜）；接線進 `LoadPlatformFacts`（NUMA＋聲明一批載入） | 2820 | 5a322c0 |
+| R3 | 制度 | 帳本記錄＋記憶庫 | — | 本輪 |
+
 ## 待辦（下一批）
 
-- G6 序列照 docs/ROADMAP-G6.md 推進（ITER33＝NUMA 拓撲＋記憶體攻擊面誠實面）。
+- G6 序列照 docs/ROADMAP-G6.md 推進（ITER34＝網路卸載狀態＋Wi-Fi RSSI＋WASAPI 音訊格式）。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
 - 對帳規則已達 25（V7 目標達成）；後續隨新事實來源繼續擴（SPD↔TSOD、SMART、儲存面）。
 - WP50 Stryker（解碼器抽成獨立程式庫，或等 Buildalyzer 支援）、differential 擴大。
