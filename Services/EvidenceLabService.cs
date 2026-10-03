@@ -332,6 +332,7 @@ public sealed class EvidenceLabService : ObservableObject
             Changes.Clear();
             Summary = $"{snapshot.Facts.Count} 項事實 ・ {(includeSensitive ? "保留敏感識別" : "敏感值已遮蔽")} ・ SHA-256 完整性封套";
             Status = "時間膠囊已儲存。雜湊只能偵測檔案是否被改動，不是數位簽章。";
+            AppendAudit("建立時間膠囊", "時間膠囊", Summary, snapshot.Integrity.Hash, snapshot.AnonymousMachineId);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException
                                    or NotSupportedException or ArgumentException)
@@ -367,6 +368,7 @@ public sealed class EvidenceLabService : ObservableObject
             Status = Changes.Count == 0
                 ? "沒有發現差異。比較的是已擷取事實；某來源這次讀不到時會明確列為消失，不以舊值填補。"
                 : $"發現 {Changes.Count} 項差異。請依來源與可信度逐項判讀；差異本身不等於故障。";
+            AppendAudit("比較時間膠囊", "時間膠囊", Summary, current.Integrity.Hash, current.AnonymousMachineId);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException
                                    or NotSupportedException or ArgumentException)
@@ -407,6 +409,23 @@ public sealed class EvidenceLabService : ObservableObject
         Facts.Clear();
         foreach (var fact in snapshot.Facts.OrderBy(x => x.Category).ThenBy(x => x.Key))
             Facts.Add(EvidenceFactRow.From(fact));
+    }
+
+    /// <summary>
+    /// 審計日誌追加（V7 WP36／A47）：誰、何時、對哪台（匿名雜湊）、做了什麼、結果雜湊。
+    /// 只記中繼資料不記內容；寫入失敗不影響主流程（審計為附加，不打斷驗機）。
+    /// </summary>
+    private static void AppendAudit(string action, string scope, string summary, string? resultHash, string machineId)
+    {
+        try
+        {
+            var path = AuditLogService.DefaultPath;
+            var log = AuditLogService.Load(path);
+            log.Add(AuditLogService.Append(log, AuditLogService.CurrentOperator(), machineId,
+                action, scope, summary, resultHash, DateTimeOffset.UtcNow));
+            AuditLogService.Save(path, log);
+        }
+        catch { /* 審計為附加功能；本機磁碟不可寫等情況不影響驗機主流程 */ }
     }
 
     private static List<HardwareFact> Collect(MainViewModel vm)
