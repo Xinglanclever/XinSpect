@@ -311,9 +311,18 @@
 
 **模型坑**：HardwareSnapshotIntegrity 的 Algorithm 常數是 `SHA-256`（非小寫）；anonymousMachineId 有格式驗證（`sha256:`+64 hex）——假件要照規格造，繞不過也不能繞。
 
+## ITER49 ・ WP25 時間同步互校＋WP19 CXL（2026-10-03，核准計畫第三段）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP25 | **時間同步互校**（TimeSyncFactsService）：① HPET 存在＝ACPI 表列的 HPET 表指紋；② ACPI PM timer＝FADT PM_TMR_BLK（offset 76 u32 LE，hex＋十進位並列可稽核）；③ **QPC vs 系統時鐘 200 毫秒窗漂移 ppm**——量的是行為不是硬體映射（QPC 用哪個計時器是 OS 決策不猜），NTP 校正造成的跳動屬正常並成文。接線 LoadPlatformFacts | 3005 | 本批 |
+| R2 | WP19 | **CXL CEDT**（CedtDecoder 進 Decoders 庫＋SpecRef＋CxlFactsService）：CFMWS（Type 0）逐欄位——BaseHPA@16、WindowSize@24、InterleaveWays@32、記錄長度走 RecordLength、異常即停；**本機無 CEDT＝NotApplicable（無此硬體不是錯誤）**。接線 LoadPlatformFacts | 3008 | 本批 |
+
+**測試坑**：假 ACPI 表要照規格造完整（Length 欄位＋offset 9 校驗和使全表位元組和 mod 256=0，否則 TryParseHeader 如實拒收——假件也要誠實）。
+
 ## 待辦（下一批）
 
-- **主線：核准收尾計畫進行中——ITER43–48 完成；下一批 ITER49：WP25 時間同步互校（HPET/PM timer/TSC，usermode）＋WP19 CXL（ACPI CEDT 掃描，本機無則如實標）。**
+- **主線：核准收尾計畫進行中——ITER43–49 完成；下一批 ITER50：WP10 周邊匯流排（USB/xHCI 拓撲、HID 輪詢率、DP 鏈路）。**
 - Wi-Fi 連線態欄位（RSSI／頻道/BSSID）實測：本機無線電軟體關閉，待使用者開啟 Wi-Fi 並連線後重開程式補驗。
 - **帳本更正：對帳規則實際為 26 條**（ITER31 記 25 是手寫數錯——機器檢查再次抓到手寫漂移）。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
