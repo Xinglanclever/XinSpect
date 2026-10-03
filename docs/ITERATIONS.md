@@ -328,9 +328,17 @@
 
 **範圍裁定**：HID 輪詢率無公開系統 API（各廠商私有驅動介面），usermode 誠實不做；DP 鏈路速率（link rate）不在 WMI 公開範圍——只出連接介面類型。
 
+## ITER51 ・ WP17 主機板解碼深化：SuperIO HWM（2026-10-03，核准計畫第四段）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP17 | **SuperIO HWM 感測器**（SuperIoHwmDecoder 進 Decoders 庫＋SpecRef＋SuperIoHwmFactsService）：ITE 家族佈局——設定模式進入→LDN 4（環境控制器）啟用→基址 0x60/0x61→退出→HWM 以 base＋5（index）／＋6（data）讀取；風扇 RPM＝1,350,000/(divisor×count)（count 0/0xFFFF 無效回 null 不回 0）、溫度 8-bit 二補數、電壓 LSB 16mV **標「未經主機板校準」**；設定模式必以 finally 退出（含失敗路徑，狀態化假 I/O 釘死）。接線 ReloadDriverBackedFacts（HwmFacts 進韌體安全頁＋快照＋AllFacts） | 3022 | 本批 |
+
+**測試坑**：ITE 風扇無效碼是 16-bit 的 0xFFFF 不是 8-bit 的 255；假 I/O 的 index/data 埠（base+5/+6）要分開接——InByte(0x295) 永遠讀不到（data 在 0x296）。
+
 ## 待辦（下一批）
 
-- **主線：核准收尾計畫進行中——ITER43–50 完成；下一批 ITER51：WP17 主機板解碼深化（SuperIO HWM 感測器、風扇曲線表）。**
+- **主線：核准收尾計畫進行中——ITER43–51 完成；下一批 ITER52：WP23 攝影機/UVC 列舉＋WP24 企業儲存偵測（FC/iSCSI/NVMe-oF/MPIO，本機無則如實標）。**
 - Wi-Fi 連線態欄位（RSSI／頻道/BSSID）實測：本機無線電軟體關閉，待使用者開啟 Wi-Fi 並連線後重開程式補驗。
 - **帳本更正：對帳規則實際為 26 條**（ITER31 記 25 是手寫數錯——機器檢查再次抓到手寫漂移）。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
