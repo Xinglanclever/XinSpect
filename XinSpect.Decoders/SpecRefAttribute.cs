@@ -39,6 +39,7 @@ public static class SpecRefRegistry
         typeof(PciBars),         // PCI BAR 資源解碼（PCI Local Bus Spec §6.2.5）
         typeof(SuperIoKnowledge),// Super I/O 晶片名稱對照（coreboot superiotool）
         typeof(WifiBssDecoder),  // WLAN_BSS_ENTRY／頻道換算（wlanapi.h＋IEEE 802.11）
+        typeof(MonitorConnectionDecoder), // 螢幕連接介面碼（WMI VideoOutputTechnology）
     ];
 
     /// <summary>列舉解碼器上缺 SpecRef 的公開靜態方法（宣告於本型別者）。</summary>
