@@ -123,6 +123,7 @@ public static class FactRelationRules
     public const string SpiHashKey = "spi.bios_hash";
     public const string SpiMapKey = "spi.flash_map";
     public const string SpiRegionsKey = "spi.regions";
+    public const string HostBridgeKey = "pci.dev.00.0";
     public const string BackendMmioKey = "backend.mmio";
     public const string BackendMsrKey = "backend.msr";
     public const string PlatformFeatureControlKey = "platform.feature_control";
@@ -377,6 +378,45 @@ public static class FactRelationRules
                     : FactRelationOutcome.Consistent("快閃地圖與區域地圖事實一致（同一份 FREG 的兩種呈現）");
             },
             "spi.flash_map 與 spi.regions 都源自 SPIBAR+0x54 的 FREG0-5；一邊說有區域、一邊說全空，代表管線錯亂"),
+
+        new("mchbar_registers_without_mmio_backend", "MCHBAR 暫存器可讀而 MMIO 後端缺席",
+            [MchbarRegistersKey],
+            f =>
+            {
+                if (!f.TryGetValue(BackendMmioKey, out var mmio))
+                    return FactRelationOutcome.Unverifiable("MMIO 後端事實不存在（收集管線未跑）——無從交叉，不下判決");
+                return mmio.Availability == FactAvailability.Present
+                    ? FactRelationOutcome.Consistent("MMIO 後端在服務且 MCHBAR 暫存器視窗可讀——上下游一致")
+                    : FactRelationOutcome.Contradicts(
+                        "MCHBAR 暫存器宣稱可讀但沒有任何 MMIO 後端在服務——MCHBAR 本體在實體位址視窗，管線狀態矛盾");
+            },
+            "MCHBAR 暫存器只能經 MMIO 讀取；backend.mmio 缺席時 mchbar.registers 不可能是 Present——守的是管線資料流"),
+
+        new("tjmax_without_msr_backend", "TjMax 存在而 MSR 後端缺席",
+            [TjMaxKey],
+            f =>
+            {
+                if (!f.TryGetValue(BackendMsrKey, out var msr))
+                    return FactRelationOutcome.Unverifiable("MSR 後端事實不存在（收集管線未跑）——無從交叉，不下判決");
+                return msr.Availability == FactAvailability.Present
+                    ? FactRelationOutcome.Consistent("MSR 後端在服務且 TjMax 存在——上下游一致")
+                    : FactRelationOutcome.Contradicts(
+                        "TjMax 宣稱 Present 但沒有任何 MSR 後端在服務——TjMax 只能經 RDMSR 讀取，管線狀態矛盾");
+            },
+            "IA32_TEMPERATURE_TARGET 只能經核心 MSR 讀取；backend.msr 缺席時 cpu.tjmax 不可能是 Present——守的是管線資料流"),
+
+        new("mchbar_base_without_host_bridge", "MCHBAR 基底存在而主機橋缺席",
+            [MchbarBaseKey],
+            f =>
+            {
+                if (!f.TryGetValue(HostBridgeKey, out var bridge))
+                    return FactRelationOutcome.Contradicts(
+                        "bus 0 盤點看不到 0:0.0（無主機橋），但 MCHBAR 基底宣稱存在——MCHBAR BAR 就掛在主機橋設定空間 0x48，管線狀態矛盾");
+                return bridge.Availability == FactAvailability.Present
+                    ? FactRelationOutcome.Consistent("主機橋存在且 MCHBAR 基底已解析——上下游一致")
+                    : FactRelationOutcome.Unverifiable($"主機橋事實讀不到（{bridge.UnavailableReason ?? "原因不明"}）——無從交叉，不下判決");
+            },
+            "MCHBAR 的 64-bit BAR 在主機橋（0:0.0）設定空間 +0x48；盤點否定主機橋存在而基底宣稱存在，代表管線錯亂"),
 
         new("chipset.smramc_open_while_locked", "SMRAM 鎖定下對外開放的非法組合",
             [SmramcKey],

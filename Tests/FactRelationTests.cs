@@ -325,6 +325,46 @@ public sealed class FactRelationTests
     }
 
     [Fact]
+    public void 上游事實與後端存在性_三條管線規則的矛盾與一致()
+    {
+        var at = At;
+        static HardwareFact F(string key, string value, FactAvailability availability = FactAvailability.Present, string? reason = null) =>
+            new(key, "測試", key, value, "", "s", FactTrustLevel.Measured, false, At, null, availability, reason);
+        static HardwareFact NA(string key, string reason) =>
+            new(key, "測試", key, "", "", "s", FactTrustLevel.Unknown, false, At, null, FactAvailability.NotSupported, reason);
+
+        // MCHBAR 暫存器可讀但 MMIO 後端缺席 → 矛盾
+        var mchbarBad = FactRelationService.Evaluate(FactRelationRules.All,
+            [NA("backend.mmio", "無後端"), F("mchbar.registers", "已映射可讀")])
+            .Single(r => r.RuleId == "mchbar_registers_without_mmio_backend");
+        Assert.Equal(FactRelation.Contradicts, mchbarBad.Relation);
+
+        // TjMax 存在但 MSR 後端缺席 → 矛盾
+        var tjmaxBad = FactRelationService.Evaluate(FactRelationRules.All,
+            [NA("backend.msr", "無後端"), F("cpu.tjmax", "90")])
+            .Single(r => r.RuleId == "tjmax_without_msr_backend");
+        Assert.Equal(FactRelation.Contradicts, tjmaxBad.Relation);
+
+        // MCHBAR 基底存在但盤點無主機橋 → 矛盾
+        var bridgeBad = FactRelationService.Evaluate(FactRelationRules.All,
+            [F("mchbar.base", "0xFEDC0000")])
+            .Single(r => r.RuleId == "mchbar_base_without_host_bridge");
+        Assert.Equal(FactRelation.Contradicts, bridgeBad.Relation);
+        Assert.Contains("0x48", bridgeBad.Reason);
+
+        // 後端都在 → 三條一致
+        var ok = FactRelationService.Evaluate(FactRelationRules.All,
+        [
+            F("backend.mmio", "WinRing0 實體記憶體"), F("backend.msr", "WinRing0"),
+            F("pci.dev.00.0", "橋接裝置／Host Bridge ・ Intel"),
+            F("mchbar.registers", "已映射可讀"), F("cpu.tjmax", "90"), F("mchbar.base", "0xFEDC0000"),
+        ]);
+        Assert.Equal(FactRelation.Consistent, ok.Single(r => r.RuleId == "mchbar_registers_without_mmio_backend").Relation);
+        Assert.Equal(FactRelation.Consistent, ok.Single(r => r.RuleId == "tjmax_without_msr_backend").Relation);
+        Assert.Equal(FactRelation.Consistent, ok.Single(r => r.RuleId == "mchbar_base_without_host_bridge").Relation);
+    }
+
+    [Fact]
     public void 快閃地圖族_雜湊無地圖與地圖全空都是矛盾()
     {
         var at = At;
