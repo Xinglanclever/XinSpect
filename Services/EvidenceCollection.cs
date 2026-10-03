@@ -9,17 +9,35 @@ public static class EvidenceCollection
 {
     public static void ReloadInto(EvidenceLabService svc)
     {
-        using var pci = new WinRing0PciConfigReader();
-        using var msr = new WinRing0KernelMsrReader();
-        using var io = new WinRing0IoPortAccess();
-        using var smbusBridge = WinRing0Bridge.Create(); // SMBus 走 I/O 埠；與 readers 共用驅動會話（引用計數）
-        ISmbusIo? smbusIo = smbusBridge.IoPortAvailable ? new WinRing0SmbusIo(smbusBridge) : null;
-        var mmio = MmioBackendSelector.Select(); // WinRing0 主力 → XsRegProbe 備援 → 帶原因三態
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        bool failed = false;
         try
         {
-            svc.ReloadDriverBackedFacts(pci, msr, mmio, new Win32AcpiTableSource(), io, smbusIo);
+            using var pci = new WinRing0PciConfigReader();
+            using var msr = new WinRing0KernelMsrReader();
+            using var io = new WinRing0IoPortAccess();
+            using var smbusBridge = WinRing0Bridge.Create(); // SMBus 走 I/O 埠；與 readers 共用驅動會話（引用計數）
+            ISmbusIo? smbusIo = smbusBridge.IoPortAvailable ? new WinRing0SmbusIo(smbusBridge) : null;
+            var mmio = MmioBackendSelector.Select(); // WinRing0 主力 → XsRegProbe 備援 → 帶原因三態
+            try
+            {
+                svc.ReloadDriverBackedFacts(pci, msr, mmio, new Win32AcpiTableSource(), io, smbusIo);
+            }
+            catch { failed = true; throw; } // 例外上拋給閘門吞噬；遙測記一次
+            finally { (mmio as IDisposable)?.Dispose(); }
         }
-        finally { (mmio as IDisposable)?.Dispose(); }
+        finally
+        {
+            // 自家可觀測性（V7 WP43／A54）：只記耗時與三態/例外計數——預設關閉、匿名、不上傳
+            sw.Stop();
+            try
+            {
+                var all = svc.AllFacts;
+                SelfTelemetry.Session.RecordScan(sw.Elapsed, all.Count,
+                    all.Count(f => f.Availability != FactAvailability.Present), failed ? 1 : 0);
+            }
+            catch { /* 遙測統計失敗不影響主流程 */ }
+        }
     }
 
     /// <summary>BIOS 區 vs 參考映像的比對（UI 與 CLI 共用入口）：組合後端後跑一次比對，回結果事實。</summary>
