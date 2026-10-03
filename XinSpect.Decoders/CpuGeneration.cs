@@ -10,11 +10,16 @@ namespace XinSpect;
 /// </summary>
 public static class CpuGeneration
 {
-    /// <summary>解 CPUID leaf 1 EAX：family（extended 進位）、model（extended×16＋低 4 位）、stepping。</summary>
+    /// <summary>解 CPUID leaf 1 EAX：family（base 為 0xF 時加 extended family）、model（extended×16＋低 4 位）、stepping。</summary>
     public static (byte Family, byte Model, byte Stepping) DecodeSignature(uint eax)
-        => ((byte)((eax >> 8) & 0xF),
+    {
+        byte baseFamily = (byte)((eax >> 8) & 0xF);
+        byte extFamily = (byte)((eax >> 20) & 0xFF);
+        byte family = baseFamily == 0xF ? (byte)(baseFamily + extFamily) : baseFamily;
+        return (family,
             (byte)((((eax >> 16) & 0xF) << 4) | ((eax >> 4) & 0xF)),
             (byte)(eax & 0xF));
+    }
 
     /// <summary>Family 6 model → 微架構／世代名。只收錄有把握的子集；null＝未收錄，不猜。</summary>
     public static string? GenerationName(byte family, byte model) => (family, model) switch

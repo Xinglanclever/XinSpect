@@ -258,15 +258,21 @@
 
 **除錯教訓（stash 實驗法）**：測試主機 Fatal error 當機（0xC0000005 於 D3D11PresentFramePacingEngine 背景 Task）用 stash 二分定位——**建構子預設 StorageRoot 讓「不設根就 StartAsync」的單元測試誤跑真實測試陣列（含真 D3D11 引擎）**，違反「測試注入假件」鐵律。修正＝預設值移到 MainViewModel 生產接線（注意：MainViewModel 有名為 System 的屬性遮蔽 System 命名空間，需 global:: 限定）。
 
+## ITER43 ・ Stryker 解鎖：純解碼器抽 XinSpect.Decoders 程式庫（2026-10-03，核准計畫第一段）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | 抽庫 | **XinSpect.Decoders 類別庫**（net10.0、RootNamespace XinSpect）落成：19 個純解碼器檔遷入（13 檔整搬＋5 檔混合拆分——SpiFlashService／ChipsetSecurityService／PlatformSecurityMsrFacts／AcpiTableService／SuperIoProbeService／AudioEndpointFactsService 的解碼器型別與服務分檔）；主專案六類 Remove 排除＋ProjectReference 接線；單建 0 警告、跨組件全套綠 | 2935 | 本批 |
+| R2 | 突變 | **dotnet-stryker 實驗成功**（Buildalyzer 對純類別庫不再擋）——初始 Mutation score **66.63%**；新增 DecoderHardeningTests（20 測：CpuGeneration 全表／SpecRef 註冊表釘死／MegaRAID 命令碼全表＋Flags＋Redfish 結構面／IPMI 型別全表＋deassertion＋FRU 邊界／TPM 回應邊界＋TCG log 損毀分支／AudioFormat 上界）＋知識表（SuperIoKnowledge／PciKnowledge）資料檔排除 → **80.50%**（過 low 門檻 70）。**突變測試抓到真 bug：CpuGeneration.DecodeSignature 文件聲稱 extended family 進位但實作漏做**（family=0xF 時應 base+ext）——已修並補釘住測。另補提交 ITER40–41 漏入庫的已驗證變更（TBS ref 註記、語言切換標題、更名殘字） | 2955 | 本批 |
+
+**Stryker 結論**：解鎖方案的關鍵是「純解碼器、零 WPF／零特權相依」——Buildalyzer 掃不到 WPF 專案，抽庫後直接可跑（3 分 10 秒全輪）。剩餘逃逸集中在 SpecRef 反射輔助與 PlatformTrustDecoder／PciBars 的字串分支，後續批次隨手補。主專案側仍無法突變測（預期內）。
+
 ## 待辦（下一批）
 
-- **主線：GAP6 六項＋更名 Olympus 2.5.0＋顯示/修正輪完成**。後續方向：發佈工程（Release 資產重建＋push＋GitHub Release）、登錄檔微碼 4 位元組變體解碼（本機實測發現）、G6 路線圖剩餘、規則市集（另立 WP）。
+- **主線：核准收尾計畫進行中——下一批 ITER44：登錄檔微碼 4 位元組變體解碼（本機 `06 70 00 02`＝LE DWORD 0x02007006，與 BiosMeDecoder 口徑一致）＋Wi-Fi RSSI（wlanapi P/Invoke）＋WP31 EC 唯讀風險評估記錄。**
 - **帳本更正：對帳規則實際為 26 條**（ITER31 記 25 是手寫數錯——機器檢查再次抓到手寫漂移）。
-- Wi-Fi RSSI（wlanapi P/Invoke）併入後續 G6 批次。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
-- 對帳規則已達 25（V7 目標達成）；後續隨新事實來源繼續擴（SPD↔TSOD、SMART、儲存面）。
-- WP50 Stryker（解碼器抽成獨立程式庫，或等 Buildalyzer 支援）、differential 擴大。
-- 對帳規則 15 → ≥25：隨新事實來源（SPD↔TSOD、SMART、儲存面）補。
+- Stryker 剩餘逃逸（SpecRef 反射輔助／PlatformTrustDecoder／PciBars 字串分支）後續批次隨手補；differential 擴大。
 - CLI 擴充候選：全機快照（需 headless 化 WPF 服務層）、批次清單檔。
 - PawnIO 模組整合（HVCI 環境備援；本機 IntelMsr 模組已知回 0 的問題要先解）。
 - 發佈：等使用者明說。20 輪＋ITER21–28 內容尚未折疊進 changelog（發佈前必做，FileVersion .5→.6）。

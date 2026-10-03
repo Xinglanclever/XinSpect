@@ -1,13 +1,13 @@
 {
   "stryker-config": {
-    "project": "XinSpect.csproj",
+    "project": "XinSpect.Decoders.csproj",
     "test-projects": ["Tests/XinSpect.Tests.csproj"],
-    "target-framework": "net10.0-windows",
+    "target-framework": "net10.0",
     "coverage-analysis": "PerTest",
     "mutate": [
-      "**/Services/Tsod.cs",
-      "**/Services/Cmos.cs",
-      "**/Services/SuperIoProbeService.cs"
+      "**/*.cs",
+      "!**/SuperIoKnowledge.cs",
+      "!**/PciKnowledge.cs"
     ],
     "reporters": ["cleartext"],
     "thresholds": { "high": 90, "low": 70, "break": 70 },

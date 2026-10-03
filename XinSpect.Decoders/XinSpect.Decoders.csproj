@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ── 純解碼器程式庫（V7 WP44／A54）：無 WPF、無 P/Invoke、無服務依賴。
+       獨立成庫的目的是解鎖 Stryker mutation testing——主專案的巢狀 net48 Bridge
+       自訂 Target 會讓 Buildalyzer 建置分析失敗（2026-10-03 實測）。
+       命名空間維持 XinSpect（與本體同），呼叫端零改動；成員一律 public（跨組件）。 -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>XinSpect</RootNamespace>
+  </PropertyGroup>
+
+</Project>

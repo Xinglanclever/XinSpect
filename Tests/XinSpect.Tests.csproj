@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\XinSpect.csproj" />
+    <ProjectReference Include="..\XinSpect.Decoders\XinSpect.Decoders.csproj" />
   </ItemGroup>
 
   <ItemGroup>
