@@ -412,6 +412,17 @@
 
 **實機備註**：殘留一個無窗 XinSpect 程序（obj\_verify_release 舊實例，19:01 起）——不擋工作、不動它（絕不 taskkill）。
 
+## ITER61 ・ 新功能批次：驗機殺手級＋安全鑑識＋處理器深化＋網路補缺（2026-10-04，使用者貼方向文件開工）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | BYOVD | **逐驅動比對微軟建議封鎖清單**（ByovdBlocklistDecoder＋ByovdCompareService）：WDAC SiPolicy XML 寬容解析（檔名規則＋SHA-256/SHA-1 雜湊規則）；載入中核心模組逐檔雙道比對（檔名不分大小寫＋實檔雜湊）；**清單由使用者提供（零出網）**——缺檔 NotSupported、壓 XML ReadError；命中標「攻擊面事實而非中毒判決」 | 3057 | 本批 |
+| R2 | 安全鑑識 | **SecurityAuditFactsService**：① Defender 排除清單逐條攤開（MSFT_MpPreference）② Security log 1102 記錄清除偵測（缺權限 InsufficientPrivilege 與查詢失敗分清）③ 非微軟本機信任根（X509Store Root，中間人憑證風險面）④ USBSTOR 使用痕跡 | 3062 | 本批 |
+| R3 | 處理器深化 | **TME/SGX 記憶體加密**（MemoryEncryptionDecoder＋FactsService）：CPUID 7 bit25/bit30＋MSR 0x982 TME_ACTIVATE（bits[3:0] 啟用、bits[7:4] 演算法）；**C-state 駐留**（CStateResidencyFactsService：0x60D/0x3FC/0x3F9/0x3FA µs 累計）。接線 ReloadDriverBackedFacts。**逐核微碼比對既有已做**（CpuFirmwareFactsService 逐核清單）不重複 | 3072 | 本批 |
+| R4 | 網路補缺 | **NicHealthFactsService＋OuiKnowledge**：網卡錯誤/丟棄計數（MSFT_NetAdapterStatistics，非零逐條攤開）＋MAC OUI 大廠知識庫查表（SuperIoKnowledge 模式）。**ARP/路由表與 AP 掃描刻意未做**（P/Invoke 通路重、價值低於成本，backlog 留案） | 3081 | 本批 |
+
+**範圍裁定**：SMART 門檻/HPA/DCO/機箱開啟/壞軌掃描/假容量驗證（方向一後半）與 GPU NVML 缺口（方向四後半）留下一批——本批先把唯讀零風險、usermode 即可完成的收完。
+
 ## 待辦（下一批）
 
 - **主線：多輪測試批次完成（ITER60）。後續：PMU 編程驗證累積多輪結果後與 wpr 對照（S5）、Wi-Fi 連線態補驗（等使用者開 Wi-Fi）、發佈工程（永久排除除非改變主意）。**
