@@ -286,9 +286,19 @@
 
 **範圍裁定**：UAC（EnableLUA）與 LsaProtection（RunAsPPL）已由 OsAnalysisService／SecurityPostureService 涵蓋——WP15 不重複收錄；排程工作已有 ScheduledTaskStartup（工作定義 XML 解析）涵蓋登入/開機觸發面。
 
+## ITER46 ・ WP16＋WP14：虛擬化元件＋核心模組＋開機參數（2026-10-03，核准計畫第二段）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP16-① | **Windows 選用功能狀態**（OptionalFeatureService）：WMI Win32_OptionalFeature——Hyper-V Hypervisor／虛擬機器平台／WSL／容器四目標的啟用／停用／不存在（照抄系統 InstallState 口徑）；**WMI 沒回報的功能如實標「未回報」，不當成停用**。hypervisor 存在位與 VBS 已由 PlatformTrustService 涵蓋不重複 | 2988 | 本批 |
+| R2 | WP14-① | **核心模組載入清單**（KernelModuleService）：psapi EnumDeviceDrivers——\Windows\ 下模組只計數（簽章面由 DriverAudit 的 Win32_PnPSignedDriver 涵蓋不重複驗）；**非系統目錄的載入模組逐檔 wintrust Authenticode（DRIVER_ACTION_VERIFY）**——未通過帶原始 NTSTATUS 碼、檔案不存在等無法驗證者如實列名，通過者只計數 | 2994 | 本批 |
+| R3 | WP16-② | **開機參數核心除錯面**（DebugConfigService）：登錄 SystemStartOptions 純解析——核心除錯（DEBUG／DEBUGPORT）、測試簽章（TESTSIGNING）；沒有關鍵字＝「未啟用」是 Present 的沒有、整個讀不到才是 ReadError；原始字串全文附上可稽核。三組全部接線 LoadSoftwareFacts | 2994 | 本批 |
+
+**偶發測試記錄**：WindowsPowerStateLatencyEngineTests.Windows電源API取樣 全套跑時失敗一次（計時敏感），隔離重跑與全套重跑皆綠——依「紅燈必查」原則記錄於案，後續若復發再修。
+
 ## 待辦（下一批）
 
-- **主線：核准收尾計畫進行中——ITER43（Stryker 80.50%）＋ITER44（微碼變體＋Wi-Fi 頻道＋EC 風險評估）＋ITER45（WP15 四組軟體層服務）完成；下一批 ITER46：WP16＋WP14（Hyper-V/WSL/容器偵測、核心模組簽章鏈、未簽章驅動、核心 debug 設定，usermode）。**
+- **主線：核准收尾計畫進行中——ITER43（Stryker 80.50%）＋ITER44＋ITER45（WP15 四組）＋ITER46（WP16＋WP14 三組）完成；下一批 ITER47：WP47 公開規格（JSON Schema 快照＋查詢語言、方法學文件、公開 Limitations、認證計畫骨架，docs/spec/）。**
 - Wi-Fi 連線態欄位（RSSI／頻道/BSSID）實測：本機無線電軟體關閉，待使用者開啟 Wi-Fi 並連線後重開程式補驗。
 - **帳本更正：對帳規則實際為 26 條**（ITER31 記 25 是手寫數錯——機器檢查再次抓到手寫漂移）。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
