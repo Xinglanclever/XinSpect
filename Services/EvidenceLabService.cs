@@ -173,6 +173,8 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(MonitorConnectionService.Collect(at))
             .Concat(CameraFactsService.Collect(at))
             .Concat(EnterpriseStorageFactsService.Collect(at))
+            .Concat(TopologyDeepenFactsService.CollectCpuTopology(at))
+            .Concat(TopologyDeepenFactsService.CollectNumaDistance(at, new Win32AcpiTableSource()))
             .ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
