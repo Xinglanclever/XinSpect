@@ -195,9 +195,19 @@
 
 **界線（照指令書）**：不上傳雲端、不做區塊鏈存證；日誌在本機 `%ProgramData%\XinSpect\Auditudit.json`。
 
+## ITER37 ・ GAP6-A44 查詢語言（2026-10-03）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | A44 | **查詢三件套**：`FactQuery`（模型＋統一查詢形狀 QueryFact＋結果摘要）、`QueryParser`（五頁語法：key/category/source/value/availability/since/until × =/~/^、一行一子句、#註解、值可含空格；未知輸入丟 ParseException 帶修正指引）、`QueryExecutor`（管線逐層篩選＋單集合＋跨機器快照） | 2910 | 6d3c675 |
+| R2 | A44 | **「查不到 ≠ 沒有」語意釘死**：0 筆匹配的摘要明說「可能沒有這個事實或鍵名不同」；存在但讀不到的項目是正常匹配（三態原因隨附、摘要標「不是沒有這個事實」）；時間軸（since/until）＋跨機器（結果帶匿名機器識別） | 2910 | 6d3c675 |
+| R3 | 制度 | 帳本記錄＋記憶庫 | — | 本輪 |
+
+**語法示例**：`category=韌體安全`、`key^=spi.`、`availability=read-error`、`since=2026-10-01`——一行一子句按序成管線。不做 SQL、不做跨機器寫入、不碰 FactAvailability 定義（照指令書）。CLI 接線（--query 升級為本語法）留給後續批次。
+
 ## 待辦（下一批）
 
-- **主線：TASK-GAP-6 六項**——A45 ✅、A47 ✅ → **A44 查詢語言（下一批）** → A54 效能預算 → A18/A23 純解碼器；G6 路線圖順延。
+- **主線：TASK-GAP-6 六項**——A45 ✅、A47 ✅、A44 ✅ → **A54 效能預算（下一批，先量現況）** → A18/A23 純解碼器；G6 路線圖順延。
 - **帳本更正：對帳規則實際為 26 條**（ITER31 記 25 是手寫數錯——機器檢查再次抓到手寫漂移）。
 - Wi-Fi RSSI（wlanapi P/Invoke）併入後續 G6 批次。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
