@@ -225,6 +225,10 @@ internal static class StartupSequence
         try { vm.EvidenceLab.LoadAcpi(new Win32AcpiTableSource()); }
         catch { /* ACPI 列舉為附加功能，讀不到由三態標示 */ }
 
+        // TPM 量測開機鏈（usermode 經 TBS；無 TPM 由服務標三態）。
+        try { vm.EvidenceLab.LoadTpm(); }
+        catch { /* TPM 為附加功能，讀不到由三態標示 */ }
+
         try
         {
             var report = await CpuzReportService.ReadAsync();

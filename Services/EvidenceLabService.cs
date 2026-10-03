@@ -32,6 +32,13 @@ public sealed class EvidenceLabService : ObservableObject
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
+    /// <summary>載入 TPM 量測開機鏈事實（usermode 經 Windows TBS；讀不到由 TpmFactsService 標三態）。</summary>
+    public void LoadTpm()
+    {
+        TpmFacts = TpmFactsService.Collect(DateTimeOffset.UtcNow);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
     /// <summary>SPI 快閃安全三態事實（HSFSTS/FRAP/FREG/PR）。SPIBAR 經 PCI 取得、暫存器要 MMIO——驅動未載時整組三態。</summary>
     public IReadOnlyList<HardwareFact> SpiFlashFacts { get; private set; } = [];
 
@@ -119,6 +126,9 @@ public sealed class EvidenceLabService : ObservableObject
 
     /// <summary>Bus 0 裝置盤點三態事實（WP30 知識層：PCI-SIG 類別碼→角色）。</summary>
     public IReadOnlyList<HardwareFact> PciInventoryFacts { get; private set; } = [];
+
+    /// <summary>TPM 2.0 量測開機鏈三態事實（WP14：PCR 0–7 SHA-256＋TCG log 摘要）。usermode 經 Windows TBS。</summary>
+    public IReadOnlyList<HardwareFact> TpmFacts { get; private set; } = [];
 
     /// <summary>原始暫存器區（P4）：重載驅動相依事實時一併收集，讀不到的區三態。存檔是使用者主動行為（raw 不匿名化）。</summary>
     public IReadOnlyList<RawRegisterRegion> RawRegions { get; private set; } = [];
@@ -273,13 +283,13 @@ public sealed class EvidenceLabService : ObservableObject
     public IReadOnlyList<HardwareFact> AllFacts =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
-            .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(PciInventoryFacts).Concat(AcpiFacts).ToList();
+            .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(AcpiFacts).ToList();
 
-    /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + I/O 埠 + CMOS + SMBus + PCI 盤點 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
+    /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + I/O 埠 + CMOS + SMBus + PCI 盤點 + TPM + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
-            .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(PciInventoryFacts).Concat(AcpiFacts)
+            .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(AcpiFacts)
             .OrderBy(f => f.Category, StringComparer.Ordinal).ThenBy(f => f.Key, StringComparer.Ordinal)
             .Select(EvidenceFactRow.From).ToList();
 
@@ -515,6 +525,8 @@ public sealed class EvidenceLabService : ObservableObject
         f.AddRange(vm.EvidenceLab.SuperIoFacts);
         // Bus 0 裝置盤點（WP30 知識層）。
         f.AddRange(vm.EvidenceLab.PciInventoryFacts);
+        // TPM 量測開機鏈（WP14）。
+        f.AddRange(vm.EvidenceLab.TpmFacts);
 
         return f;
     }
