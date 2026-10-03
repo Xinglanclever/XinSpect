@@ -423,6 +423,18 @@
 
 **範圍裁定**：SMART 門檻/HPA/DCO/機箱開啟/壞軌掃描/假容量驗證（方向一後半）與 GPU NVML 缺口（方向四後半）留下一批——本批先把唯讀零風險、usermode 即可完成的收完。
 
+## ITER62 ・ 驗機殺手級功能批（2026-10-04，使用者指示「先完成功能再去上傳」）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R0 | 修正 | **DeepBench 啟動崩潰修復**（使用者截圖回報 NotSupportedException）：StartAsync 以 ConfigureAwait(false) 續行，ReplaceRecord 在 thread-pool 改 ResultCards／Insights／History（已被 UI CollectionView 綁定）——新增 RunOnUi 收攏回 UI 執行緒；錯誤彈窗「曉覽」為舊 exe 殘影，源碼 AppInfo.Name 本即「曦覽」 | 3081 | 本批 |
+| R1 | SMART | **門檻＋failing-now**：SMART READ THRESHOLDS（0xD1 簽章，與 READ DATA 同一 ioctl 通路）→ ID→門檻表；**現值 ≤ 門檻（門檻非 0）＝現正低於門檻**逐項攤開；NVMe WCTEMP（Identify Controller 0x14A）對照合成溫度，達標即警告。接線 LoadSoftwareFacts | 3085 | 本批 |
+| R2 | 驗機 | **機箱開啟偵測**（SMBIOS Type 3 Security Status——「入侵偵測」＝拆機的韌體級證據，醒目標註）＋**HPA 隱藏容量**（ATA IDENTIFY 最大 LBA vs Win32_DiskDrive.Size，不一致即 HPA 作用中）；**DCO 誠實聲明不做**（廠商私有命令）。接線 LoadSoftwareFacts | 3090 | 本批 |
+| R3 | 驗機 | **假容量寫入驗證**（FakeCapacityTestService，H2testw 式）：xorshift 樣本（chunkIndex 混種子）寫滿上限→FlushToDisk→讀回逐位元組驗證→刪檔；**同意閘門複用 WP22 模式**（未同意丟例外）＋危險聲明（加劇瀕死媒體損耗）；**無自動接線** | 3094 | 本批 |
+| R4 | GPU | **TDR 逾時設定**（TdrLevel/TdrDelay/TdrDpcDelay，未設定＝預設值並明說）＋**NVML 退休頁**（nvmlDeviceGetRetiredPages_v2，single/double-bit 合計；本機實測＝此卡不支援退休頁報告，ReadError 如實記錄）。接線 LoadSoftwareFacts | 3094 | 本批 |
+
+**範圍備註**：全碟唯讀壞軌掃描**早已存在**（DiskSurfaceScanService＋HealthView「開始掃描」）——方向文件盤點時未發現，本批未重複實作。
+
 ## 待辦（下一批）
 
 - **主線：多輪測試批次完成（ITER60）。後續：PMU 編程驗證累積多輪結果後與 wpr 對照（S5）、Wi-Fi 連線態補驗（等使用者開 Wi-Fi）、發佈工程（永久排除除非改變主意）。**
