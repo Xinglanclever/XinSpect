@@ -302,9 +302,18 @@
 |---|---|---|---|---|
 | R1 | WP47 | **docs/spec/ 五件套**——① `snapshot.schema.v1.json`（JSON Schema 2020-12：快照頂層與 fact 定義、三態與可信度列舉、**numericValue/unit 條件忽略成文**）；② `query-language.v1.md`（七欄位三運算子＋availability 別名表＋「查不到≠沒有」語意＋ParseException 拒靜默）；③ `METHODOLOGY.md`（誠實契約五條、量測路徑五層、交叉對帳、突變測試、效能預算）；④ `LIMITATIONS.md`（七項設計裁決＋六項能力邊界＋兩項環境相依，全部指向帳本內既有裁決）；⑤ `CERTIFICATION-PLAN.md`（C1–C4 骨架，**明示未執行不得宣稱認證**）。**機器對帳**：PublicSpecTests——Schema 屬性集 vs 實際序列化逐鍵比對（含枚舉清單）、查詢規格必須涵蓋 QueryParser.ValidFields 全部鍵、方法學/限制/認證必須講誠實契約——**文件漂移即紅燈** | 2997 | 本批 |
 
+## ITER48 ・ WP48 骨架＋WP42 資產生命週期（2026-10-03，核准計畫第三段）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP48 | **corpus 貢獻包 v1 骨架**（CorpusUploadService＋docs/spec/corpus-upload.v1.md）：只收遮蔽版快照（敏感保留版拒收回 null）、身份鍵逐鍵排除（serial/uuid/mac/asset.tag/system.product/user.——比 Sensitive 旗標更嚴的雙保險）、SHA-256 完整性信封；**上傳通路／伺服器／同意流程刻意不實作**（骨架＝格式與淨化規則，重開前四項必備條件成文） | 3000 | 本批 |
+| R2 | WP42 | **資產生命週期事件**（AssetChangeDetector）：快照差分自動分類——資產級 key 前綴（mem./spd.／cpu.／gpu.／disk./nvme./smart.／board.）→ 對應資產類的 Added/Removed/Changed 事件；**其餘變更（韌體安全、暫存器、感測器）照列但誠實標「狀態」不冒充硬體變更**；跨機器差分如實拒做。接線時間膠囊比較流程：差分後摘要「其中資產事件 N 件」併入通知文字（分類失敗不影響主流程） | 3002 | 本批 |
+
+**模型坑**：HardwareSnapshotIntegrity 的 Algorithm 常數是 `SHA-256`（非小寫）；anonymousMachineId 有格式驗證（`sha256:`+64 hex）——假件要照規格造，繞不過也不能繞。
+
 ## 待辦（下一批）
 
-- **主線：核准收尾計畫進行中——ITER43–47 完成（Stryker 80.50%／微碼+Wi-Fi+EC／WP15 四組／WP16+WP14 三組／WP47 公開規格）；下一批 ITER48：WP48 corpus 上傳格式骨架（匿名化＋貢獻流程文件）＋WP42 資產生命週期＋硬體變更通知（快照差分自動化）。**
+- **主線：核准收尾計畫進行中——ITER43–48 完成；下一批 ITER49：WP25 時間同步互校（HPET/PM timer/TSC，usermode）＋WP19 CXL（ACPI CEDT 掃描，本機無則如實標）。**
 - Wi-Fi 連線態欄位（RSSI／頻道/BSSID）實測：本機無線電軟體關閉，待使用者開啟 Wi-Fi 並連線後重開程式補驗。
 - **帳本更正：對帳規則實際為 26 條**（ITER31 記 25 是手寫數錯——機器檢查再次抓到手寫漂移）。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
