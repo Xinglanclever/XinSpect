@@ -122,7 +122,7 @@
 
 ## 待辦（下一批）
 
-- WP30 知識庫續推：Super I/O 名稱對照表出處化、device 型號對照的出處化資料源。
+- WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
 - 對帳規則 17 → ≥25：隨新事實來源（SPD↔TSOD、SMART、儲存面）補。
 - WP50 Stryker（解碼器抽成獨立程式庫，或等 Buildalyzer 支援）、differential 擴大。
 - 對帳規則 15 → ≥25：隨新事實來源（SPD↔TSOD、SMART、儲存面）補。
