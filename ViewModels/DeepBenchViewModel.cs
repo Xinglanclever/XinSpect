@@ -283,19 +283,33 @@ public sealed class DeepBenchViewModel : ObservableObject
 
     private void ReplaceRecord(DeepBenchRunRecord record)
     {
-        CurrentRecord = record;
-        LastState = record.State;
-        ProgressPercent = record.State == DeepBenchRunState.Cancelled ? ProgressPercent : 100;
-        StateText = DescribeState(record);
-        ResultCards.Clear();
-        foreach (DeepBenchTestResult result in record.Results)
-            ResultCards.Add(DeepBenchResultCard.From(result));
-        Insights.Clear();
-        foreach (DeepBenchInsight insight in record.Insights) Insights.Add(insight);
+        // StartAsync 以 ConfigureAwait(false) 續行——本方法會在 thread-pool 執行，
+        // 而這些集合已被 UI 的 CollectionView 綁定（跨執行緒改 SourceCollection 會丟
+        // NotSupportedException）——UI 集合的修改一律收攏回 UI 執行緒。
+        RunOnUi(() =>
+        {
+            CurrentRecord = record;
+            LastState = record.State;
+            ProgressPercent = record.State == DeepBenchRunState.Cancelled ? ProgressPercent : 100;
+            StateText = DescribeState(record);
+            ResultCards.Clear();
+            foreach (DeepBenchTestResult result in record.Results)
+                ResultCards.Add(DeepBenchResultCard.From(result));
+            Insights.Clear();
+            foreach (DeepBenchInsight insight in record.Insights) Insights.Add(insight);
 
-        var row = DeepBenchHistoryRow.From(record);
-        History.Insert(0, row);
-        if (History.Count > 20) History.RemoveAt(History.Count - 1);
+            var row = DeepBenchHistoryRow.From(record);
+            History.Insert(0, row);
+            if (History.Count > 20) History.RemoveAt(History.Count - 1);
+        });
+    }
+
+    /// <summary>無 Dispatcher（單元測試／headless）就原地執行；有就收攏回 UI 執行緒。</summary>
+    private static void RunOnUi(Action action)
+    {
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess()) action();
+        else dispatcher.Invoke(action);
     }
 
     private void ReloadHistory()
@@ -316,7 +330,7 @@ public sealed class DeepBenchViewModel : ObservableObject
 
     private void AddError(string message)
     {
-        if (!string.IsNullOrWhiteSpace(message)) Errors.Add(message);
+        if (!string.IsNullOrWhiteSpace(message)) RunOnUi(() => Errors.Add(message));
     }
 }
 
