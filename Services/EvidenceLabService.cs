@@ -171,6 +171,8 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(CxlFactsService.Collect(at, new Win32AcpiTableSource()))
             .Concat(UsbTopologyService.Collect(at))
             .Concat(MonitorConnectionService.Collect(at))
+            .Concat(CameraFactsService.Collect(at))
+            .Concat(EnterpriseStorageFactsService.Collect(at))
             .ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
