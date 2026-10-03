@@ -38,6 +38,8 @@ public partial class MainWindow : Window
 
         BuildNav();
         ApplyAccentGlow();
+        LanguageService.Changed += ApplyLanguage;
+        Title = AppInfo.WindowTitle(LanguageService.IsSimplified);
 
         // 感測引擎於背景載入完成後，重放當前頁的感測閘門（引擎晚到時閘門才有對象可套用）
         _vm.PropertyChanged += (_, e) =>
@@ -351,6 +353,12 @@ public partial class MainWindow : Window
         _vm.NotifyTitleChanged();
     }
 
+    private void ApplyLanguage()
+    {
+        Title = AppInfo.WindowTitle(LanguageService.IsSimplified);
+        _vm.NotifyTitleChanged();
+    }
+
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
@@ -360,6 +368,7 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         ThemeService.Changed -= ApplyAccentGlow;
+        LanguageService.Changed -= ApplyLanguage;
         _vm.Stop();
         _tray?.Dispose();
         if (_mini is not null) { _mini.Close(); _mini = null; }

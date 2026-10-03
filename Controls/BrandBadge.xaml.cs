@@ -224,7 +224,7 @@ public partial class BrandBadge : UserControl
             TierChip.Background = BuildBrush(edition.Chip, new Point(0, 0), new Point(0, 1));
             TierChip.Visibility = Visibility.Visible;
 
-            // 第二枚膠囊：雙重身分才畫（如 X5698 掛「Everest 珠穆朗瑪峰系列」＋藍色「Xeon」）。
+            // 第二枚膠囊：雙重身分才畫（如 X5698 掛「Everest」＋藍色「Xeon」）。
             if (!string.IsNullOrEmpty(edition.Tier2) && edition.Chip2 is not null)
             {
                 TierText2.Text = edition.Tier2;

@@ -33,7 +33,8 @@ public static class TpmFactsService
         }
         else
         {
-            var rc = Tbsi_Context_Create(TbsContextVersion2, out ctx);
+            var version = TbsContextVersion2;
+            var rc = Tbsi_Context_Create(ref version, out ctx);
             if (rc != TbsSuccess || ctx == nint.Zero)
                 return [Unavailable(presentKey, "TPM 2.0", "Windows TBS（tbs.dll）", at, FactAvailability.NotApplicable,
                     rc == TbsSuccess ? "TBS 建立的內容無效" : $"TBS 無法建立內容（結果 0x{rc:X8}）——TPM 不存在、未啟用，或服務未執行")];
@@ -93,9 +94,12 @@ public static class TpmFactsService
     }
 
     // ── 真實 TBS 通路（薄；測試以注入委派取代）──
+    // ⚠ Tbsi_Context_Create 收的是「指標」（PUINT32／PPVOID）——2026-10-03 實機啟動曾因誤用
+    // by-value uint 造成 AccessViolation（P/Invoke 簽名錯誤的 AV 無法被 managed catch 攔，行程即死）。
+    // 簽名已修正並實機驗證；TBS API 其餘函式收 handle 與 PBYTE/PUINT32，與下列簽名一致。
 
     [DllImport("tbs.dll")]
-    private static extern uint Tbsi_Context_Create(uint version, out nint context);
+    private static extern uint Tbsi_Context_Create(ref uint version, out nint context);
 
     [DllImport("tbs.dll")]
     private static extern uint Tbsip_Submit_Command(nint context, uint locality, uint priority,

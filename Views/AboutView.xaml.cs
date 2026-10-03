@@ -17,10 +17,22 @@ public partial class AboutView : UserControl
         // 更新紀錄由目錄投影而來（繫結顯示，視覺樹掃描涵蓋不到），語言切換時重新投影一次。
         LanguageService.Changed += OnLanguageChanged;
         Unloaded += (_, _) => LanguageService.Changed -= OnLanguageChanged;
+        ApplyVersionCopy();
         FillChangelog();
     }
 
-    private void OnLanguageChanged() => FillChangelog();
+    private void OnLanguageChanged()
+    {
+        ApplyVersionCopy();
+        FillChangelog();
+    }
+
+    private void ApplyVersionCopy()
+    {
+        bool simplified = LanguageService.IsSimplified;
+        VersionTitle.Text = AppInfo.HeaderTitle(simplified);
+        VersionMetadata.Text = AppInfo.VersionMetadata(simplified);
+    }
 
     // ── 版本更新紀錄 ────────────────────────────────────────────────────────
 

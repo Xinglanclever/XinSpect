@@ -81,7 +81,7 @@
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel(R) Core(TM) i9-14900KS CPU @ 3.20GHz" Model="Core i9-14900KS 特別版"/></Border>
                 </UniformGrid>
 
-                <TextBlock Style="{StaticResource Sec}" Text="Everest 珠穆朗瑪峰系列（Intel 非路線圖極限 bin：膠囊標系列、中心字標機種）"/>
+                <TextBlock Style="{StaticResource Sec}" Text="Everest（Intel 非路線圖極限 bin：膠囊標系列、中心字標機種）"/>
                 <UniformGrid Columns="3">
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel(R) Xeon(R) CPU X5698 @ 4.40GHz" Model="Xeon X5698（4.4GHz 雙核）"/></Border>
                     <Border Style="{StaticResource Card}"><local:BrandBadge Kind="Cpu" EmblemSize="54" CpuModel="Intel JKT EVEREST SS 4.4GHZ INTERNAL USE ONLY" Model="JKT Everest"/></Border>
