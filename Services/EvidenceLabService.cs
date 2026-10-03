@@ -391,6 +391,13 @@ public sealed class EvidenceLabService : ObservableObject
         finally { IsBusy = false; }
     }
 
+    private static string KindText(AssetEventKind kind) => kind switch
+    {
+        AssetEventKind.Added => "新增",
+        AssetEventKind.Removed => "移除",
+        _ => "變更",
+    };
+
     public async Task CompareAsync(MainViewModel vm, string path)
     {
         if (IsBusy) return;
@@ -412,9 +419,22 @@ public sealed class EvidenceLabService : ObservableObject
             foreach (var change in diff.Changes.Where(x => x.Kind != SnapshotChangeKind.Unchanged))
                 Changes.Add(EvidenceChangeRow.From(change));
             Summary = $"變更 {diff.Changed} ・ 新增 {diff.Added} ・ 消失 {diff.Removed} ・ 未變 {diff.Unchanged}";
+            string assetNote = "";
+            try
+            {
+                // WP42 資產生命週期：從差分自動分類資產事件（記憶體／處理器／顯示卡／儲存／主機板），
+                // 摘要併入通知文字——分類失敗不影響比較主流程。
+                var events = AssetChangeDetector.Detect(old, current);
+                var assets = events.Where(e => e.AssetClass != "狀態").ToList();
+                if (assets.Count > 0)
+                    assetNote = $"其中資產事件 {assets.Count} 件：" +
+                                string.Join("、", assets.Take(3).Select(e => $"{e.AssetClass}{KindText(e.Kind)}")) +
+                                (assets.Count > 3 ? " 等" : "。");
+            }
+            catch { /* 資產分類為附加功能，失敗由 assetNote 留空呈現 */ }
             Status = Changes.Count == 0
                 ? "沒有發現差異。比較的是已擷取事實；某來源這次讀不到時會明確列為消失，不以舊值填補。"
-                : $"發現 {Changes.Count} 項差異。請依來源與可信度逐項判讀；差異本身不等於故障。";
+                : $"發現 {Changes.Count} 項差異。{assetNote}請依來源與可信度逐項判讀；差異本身不等於故障。";
             AppendAudit("比較時間膠囊", "時間膠囊", Summary, current.Integrity.Hash, current.AnonymousMachineId);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException
