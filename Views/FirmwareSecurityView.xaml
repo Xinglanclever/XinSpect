@@ -47,6 +47,25 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,12" BorderBrush="{DynamicResource CriticalBrush}" BorderThickness="1">
                 <StackPanel>
                     <Grid>
+                        <local:SectionHead Text="PMU 編程驗證（多輪測試・不保證可用）" HelpKey="firmware-security/PMU 編程驗證"/>
+                    </Grid>
+                    <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource CriticalBrush}" Margin="0,2,0,4"
+                               Text="{Binding EvidenceLab.PmuProgrammingNotice}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <CheckBox x:Name="PmuConsentCheckBox" VerticalAlignment="Center"
+                                  Content="我已了解風險（寫入固定計數器使能位、絕不碰 PMI 位元、每輪還原原值），明確同意執行"/>
+                        <Button x:Name="PmuVerifyButton" AutomationProperties.AutomationId="PmuVerifyButton"
+                                Style="{StaticResource ToolButton}" Content="執行編程驗證（3 輪）" Click="PmuVerify_Click"
+                                Margin="12,0,0,0" IsEnabled="False"/>
+                    </StackPanel>
+                    <TextBlock x:Name="PmuResultText" Style="{StaticResource Subtitle}" Margin="0,6,0,0"
+                               TextWrapping="Wrap" Text="未執行。逐輪驗證：啟用讀回一致→計數器活動→還原後讀回原值。"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12" BorderBrush="{DynamicResource CriticalBrush}" BorderThickness="1">
+                <StackPanel>
+                    <Grid>
                         <local:SectionHead Text="記憶體壓力探測（危險・未經校驗）" HelpKey="firmware-security/記憶體壓力探測"/>
                     </Grid>
                     <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource CriticalBrush}" Margin="0,2,0,4"
@@ -59,6 +78,9 @@
                         <Button x:Name="RowhammerRunButton" AutomationProperties.AutomationId="RowhammerRunButton"
                                 Style="{StaticResource ToolButton}" Content="執行壓力探測（256 MiB）" Click="RowhammerRun_Click"
                                 Margin="12,0,0,0" IsEnabled="False"/>
+                        <Button x:Name="RowhammerMultiButton" AutomationProperties.AutomationId="RowhammerMultiButton"
+                                Style="{StaticResource ToolButton}" Content="多輪模式（10 輪・不保證可用）" Click="RowhammerMulti_Click"
+                                Margin="8,0,0,0" IsEnabled="False"/>
                     </StackPanel>
                     <TextBlock x:Name="RowhammerResultText" Style="{StaticResource Subtitle}" Margin="0,6,0,0"
                                TextWrapping="Wrap" Text="未執行。勾選同意前按鈕不可用；結果必定帶「未經過校驗」標註。"/>

@@ -295,6 +295,77 @@ public class DecoderHardeningTests
         Assert.False(w4.Truncated);
     }
 
+    // ===== PlatformTrustDecoder：查表全表逐條釘值（突變逃逸補齊） =====
+
+    [Fact]
+    public void PlatformTrust_服務與屬性代碼全表逐條釘值()
+    {
+        Assert.Equal("無", PlatformTrustDecoder.ServiceName(0));
+        Assert.Equal("Credential Guard", PlatformTrustDecoder.ServiceName(1));
+        Assert.Equal("記憶體完整性（HVCI）", PlatformTrustDecoder.ServiceName(2));
+        Assert.Equal("System Guard 安全啟動", PlatformTrustDecoder.ServiceName(3));
+        Assert.Equal("SMM 韌體量測", PlatformTrustDecoder.ServiceName(4));
+        Assert.Equal("核心模式硬體強制堆疊保護", PlatformTrustDecoder.ServiceName(5));
+        Assert.Equal("Hypervisor 強制分頁轉譯", PlatformTrustDecoder.ServiceName(6));
+        Assert.Equal("核心模式硬體強制堆疊保護（稽核）", PlatformTrustDecoder.ServiceName(7));
+        Assert.Contains("未知代碼 99", PlatformTrustDecoder.ServiceName(99));
+
+        Assert.Equal("Hypervisor 支援", PlatformTrustDecoder.PropertyName(1));
+        Assert.Equal("Secure Boot", PlatformTrustDecoder.PropertyName(2));
+        Assert.Equal("DMA 保護", PlatformTrustDecoder.PropertyName(3));
+        Assert.Equal("安全記憶體覆寫", PlatformTrustDecoder.PropertyName(4));
+        Assert.Equal("UEFI 程式碼唯讀", PlatformTrustDecoder.PropertyName(5));
+        Assert.Equal("SMM 安全緩解 1.0", PlatformTrustDecoder.PropertyName(6));
+        Assert.Equal("模式化執行控制（MBEC）", PlatformTrustDecoder.PropertyName(7));
+        Assert.Equal("APIC 虛擬化", PlatformTrustDecoder.PropertyName(8));
+        Assert.Contains("未知代碼 42", PlatformTrustDecoder.PropertyName(42));
+    }
+
+    [Fact]
+    public void PlatformTrust_hypervisor簽章全表與未知原樣回傳()
+    {
+        Assert.Equal("KVM", PlatformTrustDecoder.HypervisorVendor("KVMKVMKVM"));
+        Assert.Equal("VMware", PlatformTrustDecoder.HypervisorVendor("VMwareVMware"));
+        Assert.Equal("Xen", PlatformTrustDecoder.HypervisorVendor("XenVMMXenVMM"));
+        Assert.Equal("VirtualBox", PlatformTrustDecoder.HypervisorVendor("VBoxVBoxVBox"));
+        Assert.Equal("Parallels", PlatformTrustDecoder.HypervisorVendor("prl hyperv"));
+        Assert.Equal("QEMU（TCG 模擬）", PlatformTrustDecoder.HypervisorVendor("TCGTCGTCGTCG"));
+        Assert.Equal("ACRNACRNACRN", PlatformTrustDecoder.HypervisorVendor("ACRNACRNACRN")); // 未收錄原樣
+    }
+
+    [Fact]
+    public void PlatformTrust_VBS未知代碼與服務清單過濾與Verdict分支()
+    {
+        Assert.Contains("未知代碼 9", PlatformTrustDecoder.DescribeVbsStatus(9));
+        Assert.Equal("無（空清單或僅含 0）", PlatformTrustDecoder.DescribeServices([0, 0]));
+        Assert.Equal("無（空清單或僅含 0）", PlatformTrustDecoder.DescribeServices(null));
+        Assert.Equal("Credential Guard、記憶體完整性（HVCI）", PlatformTrustDecoder.DescribeServices([1, 2]));
+        Assert.Equal("—（讀不到或為空）", PlatformTrustDecoder.DescribeProperties(null));
+        Assert.Equal("—（讀不到或為空）", PlatformTrustDecoder.DescribeProperties([]));
+        Assert.Contains("只是「已設定未執行」", PlatformTrustDecoder.Verdict(true, 1, true));
+        Assert.Contains("VBS 狀態讀不到", PlatformTrustDecoder.Verdict(true, null, true));
+        Assert.Contains("沒有 Invariant TSC", PlatformTrustDecoder.Verdict(true, 2, false));
+    }
+
+    [Fact]
+    public void PlatformTrust_hypervisor簽章組裝與CodeIntegrity旗標逐條()
+    {
+        // "Microsoft Hv"＝EBX 0x7263694D、ECX 0x666F736F、EDX 0x76482076
+        Assert.Equal("Microsoft Hv", PlatformTrustDecoder.HypervisorSignature(0x7263694D, 0x666F736F, 0x76482074));
+        Assert.Contains("UMCI 稽核模式", PlatformTrustDecoder.DescribeCodeIntegrity(0x0008));
+        Assert.Contains("UMCI 排除路徑", PlatformTrustDecoder.DescribeCodeIntegrity(0x0010));
+        Assert.Contains("測試版建置", PlatformTrustDecoder.DescribeCodeIntegrity(0x0020));
+        Assert.Contains("預生產建置", PlatformTrustDecoder.DescribeCodeIntegrity(0x0040));
+        Assert.Contains("Flight 建置", PlatformTrustDecoder.DescribeCodeIntegrity(0x0100));
+        Assert.Contains("Flighting 已啟用", PlatformTrustDecoder.DescribeCodeIntegrity(0x0200));
+        Assert.Contains("HVCI 核心模式稽核", PlatformTrustDecoder.DescribeCodeIntegrity(0x0800));
+        Assert.Contains("HVCI 嚴格模式", PlatformTrustDecoder.DescribeCodeIntegrity(0x1000));
+        Assert.Contains("HVCI IUM", PlatformTrustDecoder.DescribeCodeIntegrity(0x2000));
+        Assert.Contains("WHQL 強制", PlatformTrustDecoder.DescribeCodeIntegrity(0x4000));
+        Assert.Contains("WHQL 稽核模式", PlatformTrustDecoder.DescribeCodeIntegrity(0x8000));
+        Assert.Contains("使用者模式程式碼完整性（UMCI）", PlatformTrustDecoder.DescribeCodeIntegrity(0x0004));
+    }
+
     // ===== AudioFormat：通道／取樣率上界＋EXTENSIBLE 短宣告＋未知 tag =====
 
     [Theory]

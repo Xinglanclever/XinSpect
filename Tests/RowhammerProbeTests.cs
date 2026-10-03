@@ -11,6 +11,29 @@ namespace XinSpect.Tests;
 public class RowhammerProbeTests
 {
     [Fact]
+    public void 多輪模式_聚合輪次與翻轉_標註不保證可用()
+    {
+        var multi = XinSpect.RowhammerProbeService.RunMultiRound(userConsent: true, rounds: 2, targetMegabytes: 2);
+        Assert.Equal(2, multi.Rounds);
+        Assert.Equal(0, multi.TotalFlips);
+        Assert.False(multi.AnyFlip);
+        Assert.True(multi.ElapsedMs >= 0);
+
+        string text = XinSpect.RowhammerProbeService.FormatMultiRound(multi);
+        Assert.Contains("2 輪", text);
+        Assert.Contains("多輪測試", text);
+        Assert.Contains("不保證可用", text);
+        Assert.Contains("未經過校驗", text);
+    }
+
+    [Fact]
+    public void 多輪模式_同意閘門同樣拒跑()
+    {
+        Assert.Throws<InvalidOperationException>(() =>
+            XinSpect.RowhammerProbeService.RunMultiRound(userConsent: false, rounds: 2, targetMegabytes: 2));
+    }
+
+    [Fact]
     public void 同意閘門_無同意拒跑()
     {
         Assert.Throws<InvalidOperationException>(() =>

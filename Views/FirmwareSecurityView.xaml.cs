@@ -100,6 +100,51 @@ public partial class FirmwareSecurityView : UserControl
         }
     }
 
+    /// <summary>WP22 多輪模式：同一道同意閘門，連跑 10 輪並聚合；結果必定帶多輪／不保證可用／未經校驗標註。</summary>
+    private async void RowhammerMulti_Click(object sender, RoutedEventArgs e)
+    {
+        if (FindName("RowhammerConsentCheckBox") is not CheckBox consent ||
+            FindName("RowhammerMultiButton") is not Button multi ||
+            FindName("RowhammerResultText") is not TextBlock resultText) return;
+        if (consent.IsChecked != true) return;
+
+        multi.IsEnabled = false;
+        consent.IsEnabled = false;
+        resultText.Text = "多輪測試執行中（10 輪 × 256 MiB，可能數分鐘）……";
+        try
+        {
+            var result = await Task.Run(() => RowhammerProbeService.RunMultiRound(userConsent: true, rounds: 10));
+            resultText.Text = RowhammerProbeService.FormatMultiRound(result);
+        }
+        catch (Exception ex) { resultText.Text = "多輪測試失敗：" + ex.Message; }
+        finally { multi.IsEnabled = true; consent.IsEnabled = true; }
+    }
+
+    /// <summary>WP27 PMU 編程驗證（多輪測試・不保證可用）：3 輪啟用讀回／計數活動／還原確認，背景執行。</summary>
+    private async void PmuVerify_Click(object sender, RoutedEventArgs e)
+    {
+        if (FindName("PmuConsentCheckBox") is not CheckBox consent ||
+            FindName("PmuVerifyButton") is not Button run ||
+            FindName("PmuResultText") is not TextBlock resultText) return;
+        if (consent.IsChecked != true) return;
+
+        run.IsEnabled = false;
+        consent.IsEnabled = false;
+        resultText.Text = "編程驗證執行中（3 輪：啟用→工作量→還原）……";
+        try
+        {
+            var rounds = await Task.Run(() => PmuProgrammingService.RunConsentedVerification(
+                userConsent: true, msr: new WinRing0PmuMsrAccess(), rounds: 3));
+            int passed = rounds.Count(r => r.EnableReadbackOk && r.CounterActive && r.CleanupOk);
+            resultText.Text = PmuProgrammingService.FormatNotice + Environment.NewLine +
+                $"通過 {passed}/{rounds.Count} 輪：" + string.Join("；", rounds.Select((r, i) =>
+                    $"第 {i + 1} 輪啟用{(r.EnableReadbackOk ? "✓" : "✗")}計數{(r.CounterActive ? "✓" : "✗")}還原{(r.CleanupOk ? "✓" : "✗")}" +
+                    $"（0x309：{r.CounterStart}→{r.CounterEnd}）"));
+        }
+        catch (Exception ex) { resultText.Text = "編程驗證失敗：" + ex.Message; }
+        finally { run.IsEnabled = true; consent.IsEnabled = true; }
+    }
+
     private void SetEvidenceBusy(bool busy)
     {
         if (FindName("RefreshEvidenceButton") is Button b) b.IsEnabled = !busy;

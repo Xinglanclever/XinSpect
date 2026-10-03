@@ -71,6 +71,42 @@ public static class RowhammerProbeService
 
     private static int volatile_; // 讀取副作用接收（避免被 JIT 消除）
 
+    /// <summary>多輪聚合結果：每輪獨立配置與驗證，TotalFlips 為各輪之和。</summary>
+    public sealed record MultiRoundResult(int Rounds, ulong AllocatedBytesPerRound, int TotalFlips, bool AnyFlip, long ElapsedMs);
+
+    /// <summary>
+    /// **多輪模式**（使用者核准的多輪測試）：連跑 N 輪單輪探測並聚合——
+    /// <b>多輪測試進行中、不保證可用</b>：usermode 無 clflush，任何一輪零翻轉都不代表
+    /// 記憶體具備 Rowhammer 抗性；同意閘門與單輪同一道。
+    /// </summary>
+    public static MultiRoundResult RunMultiRound(bool userConsent, int rounds = 10, uint targetMegabytes = 256)
+    {
+        if (!userConsent)
+            throw new InvalidOperationException("多輪記憶體壓力測試需要明確同意才會執行。" + DangerNotice);
+        var sw = Stopwatch.StartNew();
+        int totalFlips = 0;
+        bool anyFlip = false;
+        for (int i = 0; i < rounds; i++)
+        {
+            var r = RunConsentedProbe(true, targetMegabytes);
+            totalFlips += r.Flips;
+            anyFlip |= r.Flips > 0;
+        }
+        sw.Stop();
+        return new MultiRoundResult(rounds, (ulong)targetMegabytes * 1024 * 1024, totalFlips, anyFlip, sw.ElapsedMilliseconds);
+    }
+
+    /// <summary>多輪結果格式化——必定帶「多輪測試」「不保證可用」「未經過校驗」三重標註。</summary>
+    public static string FormatMultiRound(MultiRoundResult result)
+    {
+        string verdict = result.AnyFlip
+            ? $"{result.TotalFlips} 個位元組翻轉（跨 {result.Rounds} 輪）——請立即檢查資料完整性"
+            : $"{result.Rounds} 輪全部翻轉 0 位元組";
+        return $"【多輪測試・不保證可用】{verdict}、每輪 {result.AllocatedBytesPerRound / (1024 * 1024)} MiB、" +
+               $"總耗時 {result.ElapsedMs} ms。多輪零翻轉<b>不代表</b>記憶體具備 Rowhammer 抗性。" +
+               "【未經過校驗】結果未對照任何參考實作。 " + DangerNotice;
+    }
+
     /// <summary>把探測結果轉成人可讀文字。<b>必定帶「未經過校驗」標註</b>——結果沒有對照過任何
     /// 參考實作（usermode 無 clflush、無法與 TestMem5／正規 rowhammer tester 交叉驗證），只能當參考。</summary>
     public static string FormatResult(RowhammerProbeResult result)

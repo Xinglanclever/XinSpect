@@ -1,4 +1,4 @@
-# Automated page-by-page verification script
+﻿# Automated page-by-page verification script
 # Navigates through critical pages, captures screenshots and UI text
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
@@ -24,7 +24,7 @@ public class Cap {
 "@
 if (-not ('Cap' -as [type])) { Add-Type -TypeDefinition $src -ReferencedAssemblies System.Drawing }
 
-$p = Get-Process XinSpect | Select-Object -First 1
+$p = Get-Process XinSpect | Where-Object { $_.MainWindowTitle } | Select-Object -First 1
 $cond = New-Object System.Windows.Automation.PropertyCondition(
     [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $p.Id)
 $win = [System.Windows.Automation.AutomationElement]::RootElement.FindFirst(

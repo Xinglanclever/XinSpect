@@ -139,6 +139,9 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>WP22 記憶體壓力探測的危險聲明（UI 紅字呈現；探測本身需明確同意才執行）。</summary>
     public string RowhammerDangerText => RowhammerProbeService.DangerNotice;
 
+    /// <summary>WP27 PMU 編程驗證的多輪測試聲明（UI 紅字呈現）。</summary>
+    public string PmuProgrammingNotice => PmuProgrammingService.FormatNotice;
+
     /// <summary>Bus 0 裝置盤點三態事實（WP30 知識層：PCI-SIG 類別碼→角色）。</summary>
     public IReadOnlyList<HardwareFact> PciInventoryFacts { get; private set; } = [];
 
