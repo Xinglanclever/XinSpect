@@ -443,6 +443,27 @@ public sealed class FactRelationTests
     }
 
     [Fact]
+    public void UEFI變數與登錄檔平台型別交叉_否定即矛盾()
+    {
+        var at = At;
+        var bad = FactRelationService.Evaluate(FactRelationRules.All,
+        [
+            new HardwareFact("uefi.secure_boot", "測試", "x", "是", "", "s", FactTrustLevel.Reported, false, at),
+            new HardwareFact("platform.secure_boot", "測試", "x", "", "", "s", FactTrustLevel.Reported, false, at,
+                null, FactAvailability.NotSupported, "登錄鍵不存在（可能為 Legacy BIOS 或未提供）"),
+        ]).Single(r => r.RuleId == "uefi.variable_vs_registry_platform");
+        Assert.Equal(FactRelation.Contradicts, bad.Relation);
+        Assert.Contains("平台型別", bad.Reason);
+
+        var ok = FactRelationService.Evaluate(FactRelationRules.All,
+        [
+            new HardwareFact("uefi.secure_boot", "測試", "x", "是", "", "s", FactTrustLevel.Reported, false, at),
+            new HardwareFact("platform.secure_boot", "測試", "x", "關閉", "", "s", FactTrustLevel.Reported, false, at),
+        ]).Single(r => r.RuleId == "uefi.variable_vs_registry_platform");
+        Assert.Equal(FactRelation.Consistent, ok.Relation);
+    }
+
+    [Fact]
     public void 快閃地圖族_雜湊無地圖與地圖全空都是矛盾()
     {
         var at = At;

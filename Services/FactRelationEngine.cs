@@ -494,6 +494,20 @@ public static class FactRelationRules
             },
             "綜合裁決的 FLOCKDN 輸入就是 spi.hsfsts 本身（同一次 SPIBAR 區塊讀取）；兩邊給出不同的鎖定狀態代表管線錯亂"),
 
+        new("uefi.variable_vs_registry_platform", "UEFI 變數存在而登錄檔否定 SecureBoot 狀態",
+            [SecureBootUefiKey],
+            f =>
+            {
+                // 登錄檔事實「NotSupported」正是矛盾條件之一，刻意不列輸入鍵（引擎守衛會轉 Unverifiable），規則內自查。
+                if (!f.TryGetValue(SecureBootKey, out var registry))
+                    return FactRelationOutcome.Unverifiable("登錄檔 Secure Boot 事實不存在（收集管線未跑）——無從交叉，不下判決");
+                return registry.Availability == FactAvailability.Present
+                    ? FactRelationOutcome.Consistent("UEFI 變數與登錄檔都確認平台有 Secure Boot 狀態（值的一致性由另一條規則比對）")
+                    : FactRelationOutcome.Contradicts(
+                        "UEFI SecureBoot 變數存在（平台確為 UEFI 且權限已啟用），登錄檔卻回報 Secure Boot 狀態不存在——兩個獨立的 Windows 級來源對平台型別說不同的話，管線狀態矛盾");
+            },
+            "UEFI 變數可讀（特權已啟用）代表平台是 UEFI；此時登錄檔 SecureBoot\\State 鍵理應存在。變數在而登錄檔否定，代表收集管線錯亂"),
+
         new("chipset.smramc_open_while_locked", "SMRAM 鎖定下對外開放的非法組合",
             [SmramcKey],
             f =>
