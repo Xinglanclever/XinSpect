@@ -81,6 +81,7 @@ public class DecoderHardeningTests
         {
             "SpiFlash", "ChipsetSecurity", "PlatformSecurity", "PcieAer", "AcpiTable", "Cmos",
             "Tsod", "SuperIo", "PlatformTrustDecoder", "PciKnowledge", "PciBars", "SuperIoKnowledge",
+            "WifiBssDecoder",
         };
         Assert.Equal(expected, SpecRefRegistry.CoveredDecoders.Select(t => t.Name).ToArray());
         Assert.All(SpecRefRegistry.CoveredDecoders, t => Assert.True(t.IsSealed || t.IsClass));

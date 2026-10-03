@@ -3,10 +3,10 @@ using System.Text;
 
 namespace XinSpect;
 
-/// <summary>一列 Wi-Fi 訊號資訊：介面名稱、SSID、RSSI、速率、認證。</summary>
+/// <summary>一列 Wi-Fi 訊號資訊：介面名稱、SSID、RSSI、速率、認證。頻道 0＝讀不到不猜。</summary>
 public sealed record WifiSignalRow(
     string InterfaceName, string Ssid, string Bssid,
-    int Rssi, int Channel, string LinkSpeed, string Auth);
+    int Rssi, int Channel, string LinkSpeed, string Auth, bool Connected);
 
 /// <summary>
 /// Wi-Fi 即時訊號診斷：Native WiFi API（wlanapi.dll）直讀目前連線的 RSSI／速率／認證。
@@ -31,6 +31,10 @@ public static class WifiSignalService
     [DllImport("wlanapi.dll", SetLastError = true)]
     private static extern int WlanQueryInterface(IntPtr handle, ref Guid guid, uint queryType, IntPtr reserved,
         out uint dataSize, out IntPtr dataPtr, IntPtr opCode);
+
+    [DllImport("wlanapi.dll", SetLastError = true)]
+    private static extern int WlanGetNetworkBssList(IntPtr handle, ref Guid guid, IntPtr ssid, uint bssType,
+        bool securityEnabled, IntPtr reserved, out IntPtr listPtr);
 
     [DllImport("wlanapi.dll", SetLastError = true)]
     private static extern void WlanFreeMemory(IntPtr p);
@@ -60,6 +64,15 @@ public static class WifiSignalService
                     var info = ReadInterfaceInfo(items + (int)(i * InterfaceInfoSize));
                     var guid = info.Guid;
 
+                    // 未連線的介面也如實列一列（SSID 空、RSSI 0）——「介面存在但沒連線」是有用的資訊，
+                    // 跟「沒有介面」不一樣，不能混在一起報「未找到」。
+                    bool connected = info.State is 1 or 2; // wlan_interface_state：connected / ad_hoc
+                    if (!connected)
+                    {
+                        rows.Add(new WifiSignalRow(info.Description, "", "", 0, 0, "—", "—", Connected: false));
+                        continue;
+                    }
+
                     if (WlanQueryInterface(h, ref guid, WlanQueryConnection, IntPtr.Zero,
                         out uint dataSize, out IntPtr connPtr, IntPtr.Zero) != 0 ||
                         dataSize < ConnectionAttributesSize)
@@ -69,7 +82,7 @@ public static class WifiSignalService
                     }
                     try
                     {
-                        rows.Add(ParseConnection(info.Description, connPtr));
+                        rows.Add(ParseConnection(info.Description, connPtr, h, guid));
                     }
                     finally { WlanFreeMemory(connPtr); }
                 }
@@ -94,7 +107,7 @@ public static class WifiSignalService
         return new(new Guid(guidBytes), description, ReadUInt32(p, 16 + DescriptionChars * 2));
     }
 
-    private static WifiSignalRow ParseConnection(string interfaceName, IntPtr p)
+    private static WifiSignalRow ParseConnection(string interfaceName, IntPtr p, IntPtr handle, Guid guid)
     {
         // WLAN_CONNECTION_ATTRIBUTES 開頭是 ULONG state，後面緊接 WLAN_INTERFACE_INFO。
         int info = 4;
@@ -109,16 +122,51 @@ public static class WifiSignalService
         uint securityEnabled = ReadUInt32(p, security);
         uint authAlgorithm = ReadUInt32(p, security + 4);
 
-        // BSSID 需要另一道 BSS list 查詢；這裡不拿連線名稱冒充。
-        // 頻道需要 BSS list 的中心頻率；讀不到就不猜，回 0 讓 UI 留空。
+        // 頻道與 BSSID 來自 BSS list：頻率是量到的、換算是查表公式（WifiBssDecoder），
+        // 找不到對應項就回 0／空——不拿連線名稱或 RSSI 冒充。
+        string bssid = "";
+        int channel = 0;
+        foreach (var bss in EnumBssList(handle, guid))
+        {
+            if (bss.Ssid == ssid)
+            {
+                bssid = bss.Bssid;
+                channel = bss.Channel;
+                break;
+            }
+        }
+
         return new(
             interfaceName,
             ssid,
-            "",
+            bssid,
             (int)signalQuality - 100,
-            0,
+            channel,
             txRate > 0 ? $"{txRate / 1000.0:F0} Mbps" : "—",
-            securityEnabled != 0 ? AuthText(authAlgorithm) : "Open");
+            securityEnabled != 0 ? AuthText(authAlgorithm) : "Open",
+            Connected: true);
+    }
+
+    /// <summary>列舉 BSS list（現有基地台掃描結果）；無線電關閉或查詢失敗回空——呼叫方以 0／空如實呈現。</summary>
+    private static List<WifiBssEntry> EnumBssList(IntPtr handle, Guid guid)
+    {
+        var entries = new List<WifiBssEntry>();
+        // 參數：pDot11Ssid=null（不過濾）、dot11BssType=infrastructure(1)、bSecurityEnabled=false。
+        if (WlanGetNetworkBssList(handle, ref guid, IntPtr.Zero, 1, false, IntPtr.Zero, out IntPtr listPtr) != 0)
+            return entries;
+        try
+        {
+            uint count = ReadUInt32(listPtr, 0);
+            IntPtr first = listPtr + 8;
+            for (uint i = 0; i < count; i++)
+            {
+                var buf = new byte[WifiBssDecoder.EntrySize];
+                Marshal.Copy(first + (int)(i * WifiBssDecoder.EntrySize), buf, 0, buf.Length);
+                if (WifiBssDecoder.DecodeEntry(buf) is { } e) entries.Add(e);
+            }
+        }
+        finally { WlanFreeMemory(listPtr); }
+        return entries;
     }
 
     private static uint ReadUInt32(IntPtr p, int offset)

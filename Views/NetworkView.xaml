@@ -164,14 +164,15 @@
                                 <Grid Margin="0,4,0,6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="150"/><ColumnDefinition Width="*"/><ColumnDefinition Width="60"/>
-                                        <ColumnDefinition Width="80"/><ColumnDefinition Width="80"/><ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="50"/><ColumnDefinition Width="80"/><ColumnDefinition Width="80"/><ColumnDefinition Width="70"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding InterfaceName}" TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Ssid}"/>
                                     <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding RssiText}" HorizontalAlignment="Right" FontFamily="Consolas"/>
-                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding LinkSpeed}" HorizontalAlignment="Right"/>
-                                    <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" Text="{Binding Auth}" HorizontalAlignment="Right"/>
-                                    <TextBlock Grid.Column="5" Style="{StaticResource FieldLabel}" Text="{Binding QualityText}" HorizontalAlignment="Right"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding ChannelText}" HorizontalAlignment="Right" FontFamily="Consolas"/>
+                                    <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" Text="{Binding LinkSpeed}" HorizontalAlignment="Right"/>
+                                    <TextBlock Grid.Column="5" Style="{StaticResource FieldValue}" Text="{Binding Auth}" HorizontalAlignment="Right"/>
+                                    <TextBlock Grid.Column="6" Style="{StaticResource FieldLabel}" Text="{Binding QualityText}" HorizontalAlignment="Right"/>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
