@@ -296,9 +296,15 @@
 
 **偶發測試記錄**：WindowsPowerStateLatencyEngineTests.Windows電源API取樣 全套跑時失敗一次（計時敏感），隔離重跑與全套重跑皆綠——依「紅燈必查」原則記錄於案，後續若復發再修。
 
+## ITER47 ・ WP47 公開規格（2026-10-03，核准計畫第三段）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP47 | **docs/spec/ 五件套**——① `snapshot.schema.v1.json`（JSON Schema 2020-12：快照頂層與 fact 定義、三態與可信度列舉、**numericValue/unit 條件忽略成文**）；② `query-language.v1.md`（七欄位三運算子＋availability 別名表＋「查不到≠沒有」語意＋ParseException 拒靜默）；③ `METHODOLOGY.md`（誠實契約五條、量測路徑五層、交叉對帳、突變測試、效能預算）；④ `LIMITATIONS.md`（七項設計裁決＋六項能力邊界＋兩項環境相依，全部指向帳本內既有裁決）；⑤ `CERTIFICATION-PLAN.md`（C1–C4 骨架，**明示未執行不得宣稱認證**）。**機器對帳**：PublicSpecTests——Schema 屬性集 vs 實際序列化逐鍵比對（含枚舉清單）、查詢規格必須涵蓋 QueryParser.ValidFields 全部鍵、方法學/限制/認證必須講誠實契約——**文件漂移即紅燈** | 2997 | 本批 |
+
 ## 待辦（下一批）
 
-- **主線：核准收尾計畫進行中——ITER43（Stryker 80.50%）＋ITER44＋ITER45（WP15 四組）＋ITER46（WP16＋WP14 三組）完成；下一批 ITER47：WP47 公開規格（JSON Schema 快照＋查詢語言、方法學文件、公開 Limitations、認證計畫骨架，docs/spec/）。**
+- **主線：核准收尾計畫進行中——ITER43–47 完成（Stryker 80.50%／微碼+Wi-Fi+EC／WP15 四組／WP16+WP14 三組／WP47 公開規格）；下一批 ITER48：WP48 corpus 上傳格式骨架（匿名化＋貢獻流程文件）＋WP42 資產生命週期＋硬體變更通知（快照差分自動化）。**
 - Wi-Fi 連線態欄位（RSSI／頻道/BSSID）實測：本機無線電軟體關閉，待使用者開啟 Wi-Fi 並連線後重開程式補驗。
 - **帳本更正：對帳規則實際為 26 條**（ITER31 記 25 是手寫數錯——機器檢查再次抓到手寫漂移）。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
