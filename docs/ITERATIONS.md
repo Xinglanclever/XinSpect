@@ -141,8 +141,19 @@
 
 **V7 §13 成功定義「對帳 ≥25 條」達成**。規則組成：硬體語義族（微碼、TjMax、SMM_BWP×SMRAM、SMRAMC 非法組合、UEFI 狀態機互斥×3）＋管線一致性族（×10＋）＋來源交叉族（Secure Boot 雙來源、平台型別）。下批規則只許往上走。
 
+## ITER32 ・ G6 開跑：WP14 TPM 量測開機鏈（2026-10-03）
+
+> G6 全線路線圖立檔 `docs/ROADMAP-G6.md`（ITER32–40 序列＋誠實界線：EC 直寫、Rowhammer、網路觸及、PMU 各有閘門）。
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R0+R1 | WP14-① | G6 路線圖入檔＋**`Tpm2` 純解碼器**：TPM2_PCRRead 命令建構（金標位元組）、回應解析（rc@6——回應標頭 tag/paramSize/rc）、TCG 事件 log 走訪（多演算法摘要、損毀即停標 truncated）。**坑：TPM 線上格式全大端序**（與 x86 BitConverter 相反）；AlgId 是 u16 不能用 4-byte 寫入器蓋掉 | 2813 | 4cbf171 |
+| R2 | WP14-② | **`TpmFactsService`**：經 Windows TBS（tbs.dll 仲介，零核心風險）讀 PCR 0–7（SHA-256 bank）＋TCG log 摘要（事件數＋PCR 覆蓋）；TBS 錯誤／TPM_RC／無 TPM 分別如實三態；`tpm.*` 事實進韌體安全頁＋快照＋CLI evidence | 2816 | 8316ef3 |
+| R3 | 制度 | 帳本記錄＋記憶庫 | — | 本輪 |
+
 ## 待辦（下一批）
 
+- G6 序列照 docs/ROADMAP-G6.md 推進（ITER33＝NUMA 拓撲＋記憶體攻擊面誠實面）。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
 - 對帳規則已達 25（V7 目標達成）；後續隨新事實來源繼續擴（SPD↔TSOD、SMART、儲存面）。
 - WP50 Stryker（解碼器抽成獨立程式庫，或等 Buildalyzer 支援）、differential 擴大。
