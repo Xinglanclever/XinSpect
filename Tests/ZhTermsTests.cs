@@ -34,7 +34,7 @@ public class ZhTermsTests
     [InlineData("關於", "关于")]
     [InlineData("登錄編輯程式", "注册表编辑器")]
     [InlineData("記憶體控制器", "内存控制器")]
-    [InlineData("額菲爾士峰", "珠穆朗玛峰")]
+    [InlineData("奧林帕斯山", "奧林匹斯山")]
     [InlineData("記憶體時脈", "内存频率")]
     [InlineData("工作排程器", "任务计划程序")]
     [InlineData("檔案總管", "文件资源管理器")]

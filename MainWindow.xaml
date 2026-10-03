@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:XinSpect"
-        Title="XinSpect v2.1 Everest" Height="820" Width="1220"
+        Title="XinSpect v2.5 Olympus" Height="820" Width="1220"
         Icon="pack://application:,,,/Assets/app.ico"
         MinHeight="600" MinWidth="980"
         WindowStartupLocation="CenterScreen"
@@ -44,7 +44,7 @@
                         </TextBlock>
                     </StackPanel>
                     <!-- 東方之星副標題：僅極限版主題可見，預設模糊，懸停清晰 -->
-                    <TextBlock x:Name="EasterEggTitle" Text="額菲爾士峰" FontSize="28" FontWeight="Normal"
+                    <TextBlock x:Name="EasterEggTitle" Text="奧林帕斯山" FontSize="28" FontWeight="Normal"
                                FontFamily="SimSun" FontStyle="Italic"
                                Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"
                                Margin="18,0,0,0" Visibility="Collapsed">

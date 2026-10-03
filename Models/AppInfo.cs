@@ -24,6 +24,23 @@ public static class AppInfo
     public static string Name => "曦覽 XinSpect";
     public static string VersionText => $"版本 {ShortVersion}";
 
+    /// <summary>
+    /// 版本代號：2.5 起為 Olympus（奧林帕斯山／奧林匹斯山）。
+    /// 舊代號 Everest（額菲爾士峰／珠穆朗玛峰）已於 2026-10-03 更名——繁中彩蛋顯示
+    /// 「奧林帕斯山」、簡中轉換表顯示「奧林匹斯山」（見 MainWindow 與 ZhTerms）。
+    /// </summary>
+    public static string VersionCodename(bool simplified)
+        => "Olympus";
+
+    public static string WindowTitle(bool simplified)
+        => $"XinSpect v{ShortVersion} {VersionCodename(simplified)}";
+
+    public static string HeaderTitle(bool simplified)
+        => $"XinSpect v{Version} {VersionCodename(simplified)}";
+
+    public static string VersionMetadata(bool simplified)
+        => $"版本 {Version} ・ {VersionCodename(simplified)} ・ 便攜單一執行檔";
+
     private static string Read()
     {
         try
