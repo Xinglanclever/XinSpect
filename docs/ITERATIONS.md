@@ -215,9 +215,23 @@
 
 **誠實界線**：冷啟動／常駐記憶體／CPU 閒置三項標 `RuntimeOnly`——單元測試量它們必然不可重複（違反「量測必須可重複」），由 SelfTelemetry 在應用程式內記錄；測試只釘「登記存在＋門檻未放寬」。**測試坑**：C# 識別字不可含連字號（方法名 `no-op` 編譯錯）；`ReloadInto` 接線層照慣例極薄不在單測覆蓋（真後端會碰核心）。
 
+## ITER39 ・ GAP6-A18＋A23 收尾：帶外管理與 RAID 純解碼器（2026-10-03）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | A18 | **`IpmiDecoder` 純解碼器**：SEL 系統事件記錄（16 bytes 金標——**Generator ID 是 u16**，手算向量先錯成 1 byte 被長度檢查抓回）、FRU 板卡區（1996-01-01 起分鐘數＋ASCII TLV＋檢查和）、SDR 標頭；SpecRef 引 IPMI 2.0 §31/§34/§42 | 2929 | 56561e7 |
+| R2 | A23＋A18 | **`MegaRaidDecoder`**：MFI 訊框標頭（cmd/sense_len/status/flags/data_xfer_len——跨 FreeBSD/Linux 一致欄位；**BBU/VD/PD/foreign config 佈局未驗證，刻意不解碼**）＋**`RedfishSchemaDecoder`**（@odata.id/Members/error，只解 JSON 不發請求）；**`OobFactsService`** 三態分離：無 BMC/無 RAID＝NotApplicable（SMBIOS Type 38／PCI 類別碼 0104,0107 探測）、有硬體＝NotSupported（通路未實作不出貨）＋未施測聲明進平台事實組 | 2931 | 56561e7 |
+| R3 | 制度 | 帳本記錄＋記憶庫 | 2931 | 本輪 |
+
+**GAP6 六項全數完成**：A45 ✅ A47 ✅ A44 ✅ A54 ✅ A18 ✅ A23 ✅。
+
+**誠實界線（記錄在案）**：本工具只宣稱「支援 IPMI／MegaRAID **訊息解碼**」（SEL/FRU/SDR/MFI 純解碼器，合成向量依 spec 手算），**不宣稱支援 IPMI/MegaRAID 本身**——KCS/SSIF/NCSI/SMBus 通路無法在無 BMC、無 MegaRAID 的本機驗證，不出貨；BBU/VD/PD 佈局文獻分歧，未驗證前不解碼。
+
+**測試坑**：git add 一個不存在的檔案會靜默失敗導致空提交（`2>/dev/null` 蓋掉錯誤）——add 後必須確認 staged 才 commit。
+
 ## 待辦（下一批）
 
-- **主線：TASK-GAP-6 六項**——A45 ✅、A47 ✅、A44 ✅、A54 ✅ → **A18 帶外管理＋A23 RAID OOB（最後兩項：純解碼器＋未施測聲明，無硬體）**；G6 路線圖順延。
+- **主線：TASK-GAP-6 六項全數完成（A45/A47/A44/A54/A18/A23）**。後續方向：發佈工程（changelog 折疊 ITER21–39＋push＋Release）、G6 路線圖剩餘（網路 Wi-Fi、CXL、SuperIO HWM、查詢語言 CLI 接線）、規則市集（需簽章與信任模型，另立 WP）。
 - **帳本更正：對帳規則實際為 26 條**（ITER31 記 25 是手寫數錯——機器檢查再次抓到手寫漂移）。
 - Wi-Fi RSSI（wlanapi P/Invoke）併入後續 G6 批次。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
