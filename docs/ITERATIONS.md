@@ -362,9 +362,18 @@
 
 **範圍裁定**：WP34 的 HTTP 監聽殼（HttpListener 綁 127.0.0.1）刻意極薄且未自動啟動——API 面以 handler 契約先行，啟動方式隨 CLI 整合輪再定。
 
+## ITER55 ・ 第五段：WP20＋WP21（2026-10-03）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP20 | **CPUID 0x1F die 拓撲**（CpuTopologyDecoder 進 Decoders 庫＋SpecRef）：逐子葉列舉層級（SMT/Core/Module/Tile/Die/Package），die 數＝package/die 層邏輯處理器數；**leaf 0x1F 不支援＝NotSupported、不退回 leaf 0xB 猜 die**（0xB 沒有 die 層級，猜出來的「單 die」是編的）；0x1F 沒有 die 層級也如實標「不算 1 個 die 冒充」 | 3035 | 本批 |
+| R2 | WP21 | **NUMA 節點距離**（SlitDecoder＋接線）：ACPI SLIT N×N 距離矩陣（對角線 10 不列、上三角逐對成事實）；**宣告節點數與資料不符（截斷）如實拒解**；無表＝NotApplicable（單節點平台常見不是錯誤）。兩組接線 LoadPlatformFacts | 3037 | 本批 |
+
+**使用者裁決更新**：WP22 Rowhammer 由「永久放棄」改為「**納入但標註危險**」（預設不執行、UI／文件處處紅字、需明確同意）——排入 ITER58；WP27 PMU 併入本段（ITER57，沙箱驗證方案先行）。
+
 ## 待辦（下一批）
 
-- **主線：核准收尾計畫 ITER43–54 全數完成（第一～四段）——第五段（ITER55 WP20+WP21 Chiplet/NUMA 深化、ITER56 WP37+WP39 部署/資料主權）與暫緩項（WP27 PMU、WP22 Rowhammer、WP31 EC 已結案）依計畫「屆時另詢」。**
+- **主線：第五段進行中——ITER55 完成；下一批 ITER56：WP37 部署＋WP39 資料主權。之後 ITER57（WP27 PMU，沙箱驗證方案先行）、ITER58（WP22 Rowhammer，危險標註＋預設不執行＋明確同意閘門）。**
 - Wi-Fi 連線態欄位（RSSI／頻道/BSSID）實測：本機無線電軟體關閉，待使用者開啟 Wi-Fi 並連線後重開程式補驗。
 - **帳本更正：對帳規則實際為 26 條**（ITER31 記 25 是手寫數錯——機器檢查再次抓到手寫漂移）。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
