@@ -1,0 +1,361 @@
+{
+  "rules": [
+    {
+      "id": "microcode.consistency",
+      "name": "微碼一致性（登錄檔 vs MSR 0x8B）",
+      "inputs": ["reg.microcode", "msr.0x8b"],
+      "specRefs": ["Intel SDM Vol.3 Ch.9 微碼更新機制（mcupdate 載入路徑）；IA32_BIOS_SIGN_ID bits[63:32] 見 Intel SDM Vol.4"],
+      "falseReports": ["登錄檔 Update Revision 佈局歧義時 reg 側會以 ReadError 呈現（不會進到本規則）；剛裝完 OS 尚未套微碼更新時兩側可能短暫不同"],
+      "explanation": "Windows 登錄檔與 CPU 的 IA32_BIOS_SIGN_ID 是同一份微碼的兩個獨立視角；不一致代表覆蓋機制（mcupdate）狀態混亂或登錄檔過期",
+      "branches": [
+        { "when": [{ "kind": "not", "child": { "kind": "numericPresent", "key": "reg.microcode" } }], "then": "Unverifiable", "reason": "登錄檔側無法解析為數值——無法比對" },
+        { "when": [{ "kind": "not", "child": { "kind": "numericPresent", "key": "msr.0x8b" } }], "then": "Unverifiable", "reason": "MSR 側無法解析為數值——無法比對" },
+        { "when": [{ "kind": "numericEqualsKey", "key": "reg.microcode", "otherKey": "msr.0x8b" }], "then": "Consistent", "reason": "登錄檔與 MSR 0x8B 同指 {msr.0x8b:hex}——兩個獨立來源一致" },
+        { "when": [], "then": "Contradicts", "reason": "微碼不一致：登錄檔 {reg.microcode:hex} vs CPU 實際 {msr.0x8b:hex}——Windows 認知與硬體不同版，優先信 MSR（CPU 自己說的）" }
+      ]
+    },
+    {
+      "id": "mchbar.readability",
+      "name": "MCHBAR 映射與可用性",
+      "inputs": ["mchbar.base", "mchbar.registers"],
+      "specRefs": ["Intel EDS：MCHBAR 為主機橋 0:0.0 +0x48 的 64-bit BAR 映射視窗；基底（PCI）與暫存器（MMIO）屬不同特權層"],
+      "falseReports": ["MMIO 後端短暫不可用時會標為能力缺口（Unverifiable）而非矛盾——這是刻意設計不是誤報"],
+      "explanation": "基底（PCI BAR）與暫存器（MMIO）來自不同特權層；基底在而暫存器讀不到只說明 MMIO 能力缺，誠實標示而非誤判",
+      "branches": [
+        { "when": [{ "kind": "keyAvailable", "key": "mchbar.registers" }], "then": "Consistent", "reason": "MCHBAR 基底已解析且暫存器視窗可讀" },
+        { "when": [], "then": "Unverifiable", "reason": "MCHBAR 基底已知（{mchbar.base}）但暫存器讀不到（{mchbar.registers:reason}）——能力缺口，不是矛盾" }
+      ]
+    },
+    {
+      "id": "cpu.tjmax.sanity",
+      "name": "TjMax 合理範圍",
+      "inputs": ["cpu.tjmax"],
+      "specRefs": ["Intel SDM Vol.4，IA32_TEMPERATURE_TARGET (MSR 0x1A2) bits[23:16]；x86 桌面／伺服器 TjMax 歷史範圍 50–150°C"],
+      "falseReports": ["少數老型號（NetBurst 前）TjMax 編碼不同——本工具已標 TjMax 為 Intel 平台限定；AMD 平台讀不到不進本規則"],
+      "explanation": "MSR_TEMPERATURE_TARGET 解碼若拿到離譜值（如 0 或 255），用它計算的溫度餘量會全部失真——先擋住明顯不可能的值",
+      "branches": [
+        { "when": [{ "kind": "not", "child": { "kind": "numericPresent", "key": "cpu.tjmax" } }], "then": "Unverifiable", "reason": "TjMax 無法解析為數值——無法檢查範圍" },
+        { "when": [{ "kind": "numericBetween", "key": "cpu.tjmax", "min": 50, "max": 150 }], "then": "Consistent", "reason": "TjMax={cpu.tjmax}°C 在合理範圍" },
+        { "when": [], "then": "Contradicts", "reason": "TjMax={cpu.tjmax}°C 超出 x86 處理器合理範圍（50–150°C）——讀值或解碼可疑，不要用它算溫度餘量" }
+      ]
+    },
+    {
+      "id": "chipset.smm_bwp_vs_smram_lock",
+      "name": "SMM_BWP 與 SMRAM 鎖定交叉",
+      "inputs": ["chipset.bios_cntl", "chipset.smramc"],
+      "specRefs": ["Intel EDS：BIOS_CNTL SMM_BWP bit5（PCI 0:1F.0+0xDC）、SMRAMC D_LCK bit4（0:0.0+0x88）；CHIPSEC smram 模組同源"],
+      "falseReports": ["某些老平台 BIOS 先鎖 SMRAM 再設 SMM_BWP 的順序差異——本規則只檢查最終狀態組合，不檢查流程"],
+      "explanation": "SMM_BWP 的「僅 SMM 可寫」只在 SMRAM 鎖定後才有意義（未鎖的 SMRAM 任何 ring0 都能進）；兩個暫存器要一起看",
+      "branches": [
+        { "when": [{ "kind": "textContains", "key": "chipset.bios_cntl", "text": "SMM_BWP=1" }, { "kind": "not", "child": { "kind": "textContains", "key": "chipset.smramc", "text": "D_LCK=1" } }], "then": "Contradicts", "reason": "BIOS_CNTL 宣稱 SMM_BWP=1（僅 SMM 可寫 BIOS）但 SMRAMC 未鎖（D_LCK=0）——SMM_BWP 的保護語義依賴 SMRAM 鎖定，此組合不可信，視同未保護" },
+        { "when": [{ "kind": "textContains", "key": "chipset.bios_cntl", "text": "SMM_BWP=1" }], "then": "Consistent", "reason": "SMM_BWP=1 且 SMRAM 已鎖——保護語義成立" },
+        { "when": [], "then": "Consistent", "reason": "無 SMM_BWP 宣稱，不需 SMRAM 鎖定交叉" }
+      ]
+    },
+    {
+      "id": "platform.secureboot_vs_testsigning",
+      "name": "Secure Boot 與測試簽章互斥",
+      "inputs": ["platform.secure_boot", "platform.testsigning"],
+      "specRefs": ["Microsoft 文件：CodeIntegrity 選項 0x2（testsigning）在 Secure Boot 開啟的系統上無法生效（核心拒絕例外載入）"],
+      "falseReports": ["Secure Boot 開啟後未重啟前 testsigning 旗標可能殘留（重啟後才生效的過渡狀態）"],
+      "explanation": "testsigning（CodeIntegrity 選項 0x2）與 UEFI Secure Boot 在核心層互斥：SB 開啟時 testsigning 旗標無法生效；同時讀到兩者「開」代表至少一個來源讀錯",
+      "branches": [
+        { "when": [{ "kind": "valueEquals", "key": "platform.secure_boot", "text": "開啟" }, { "kind": "valueStartsWith", "key": "platform.testsigning", "text": "測試簽章模式開啟" }], "then": "Contradicts", "reason": "Secure Boot 開啟與測試簽章模式生效同時成立——測試簽章在 Secure Boot 開啟的系統上無法生效（核心拒絕例外載入），兩個獨立讀值至少一個有誤或環境遭特殊改動，不要採信任一單方結論" },
+        { "when": [{ "kind": "valueEquals", "key": "platform.secure_boot", "text": "開啟" }], "then": "Consistent", "reason": "Secure Boot 開啟且未見測試簽章——語義相容" },
+        { "when": [{ "kind": "valueStartsWith", "key": "platform.testsigning", "text": "測試簽章模式開啟" }], "then": "Consistent", "reason": "測試簽章模式成立而 Secure Boot 未開啟——語義相容（安全態勢另行評估）" },
+        { "when": [], "then": "Consistent", "reason": "兩者皆非「開啟」——無互斥疑慮" }
+      ]
+    },
+    {
+      "id": "uefi.secureboot_vs_registry",
+      "name": "Secure Boot 雙來源（UEFI 變數 vs 登錄檔）",
+      "inputs": ["uefi.secure_boot", "platform.secure_boot"],
+      "specRefs": ["Microsoft 文件：SecureBoot\\State\\UEFISecureBootEnabled 登錄檔與 UEFI Setup 變數由不同層寫入（開機管理程式 vs 韌體）"],
+      "falseReports": ["開機流程中狀態剛變更（如剛在韌體設定切換 Secure Boot 未重啟）時兩側可能不同步"],
+      "explanation": "Secure Boot 的狀態同時存在於韌體變數與 Windows 登錄檔（兩個獨立寫入者）；比對它們是免費的一致性檢查——寫入不同步或快取過期都會現形",
+      "branches": [
+        { "when": [{ "kind": "valueEqualsKey", "key": "uefi.secure_boot", "otherKey": "platform.secure_boot" }], "then": "Consistent", "reason": "兩個獨立來源同指「{uefi.secure_boot}」——韌體變數與作業系統登錄檔一致" },
+        { "when": [], "then": "Contradicts", "reason": "Secure Boot 雙來源不一致：UEFI 變數＝「{uefi.secure_boot}」、登錄檔＝「{platform.secure_boot}」——這兩個來源由不同層寫入，不一致代表開機流程中狀態變更未同步或其一讀取有誤，優先信 UEFI 變數（韌體自己說的）" }
+      ]
+    },
+    {
+      "id": "pcieaer.scan_vs_ecam",
+      "name": "AER 掃描與 ECAM 基底資料流一致性",
+      "inputs": ["pcieaer.scan"],
+      "tryLookup": ["pcieaer.ecam"],
+      "specRefs": ["PCIe Base Spec §7.2.2（ECAM 機制）；本專案管線：EcamAerService 的掃描結果衍生自 MCFG 基底"],
+      "falseReports": ["收集管線只跑了一半（例如手動注入單一來源）時本規則會報矛盾——那是管線錯亂，正是本規則要抓的"],
+      "explanation": "AER 掃描結果衍生自 ECAM 基底（MCFG）：基底缺席時掃描不可能 Present。這條規則守的是管線自身的資料流一致性——它抓的矛盾來自程式而不是硬體，同樣該被看見",
+      "branches": [
+        { "when": [{ "kind": "keyMissing", "key": "pcieaer.ecam" }], "then": "Unverifiable", "reason": "ECAM 基底事實不存在（收集管線未跑或鍵名錯置）——無從交叉" },
+        { "when": [{ "kind": "keyAvailable", "key": "pcieaer.ecam" }], "then": "Consistent", "reason": "ECAM 基底存在且 AER 掃描有結果——上下游一致" },
+        { "when": [], "then": "Contradicts", "reason": "AER 掃描宣稱有結果但 ECAM 基底讀不到（{pcieaer.ecam:reason}）——掃描不可能沒有基底，管線狀態矛盾" }
+      ]
+    },
+    {
+      "id": "backend.hvci_vs_decision",
+      "name": "環境矩陣裁決與 HVCI 事實資料流一致性",
+      "inputs": ["platform.hvci", "backend.environment_decision"],
+      "specRefs": ["本專案管線：backend.environment_decision 由 platform.hvci 推導（V7 §2.4 環境矩陣）"],
+      "falseReports": ["裁決事實文字格式變更（不含「HVCI 開啟／關閉」字樣）會走 Unverifiable 分支——那是格式漂移不是矛盾"],
+      "explanation": "backend.environment_decision 由 platform.hvci 推導而來；上下游不一致代表收集管線自身的狀態錯亂——這條規則守的是程式而非硬體",
+      "branches": [
+        { "when": [{ "kind": "textContains", "key": "backend.environment_decision", "text": "HVCI 關閉" }, { "kind": "valueEquals", "key": "platform.hvci", "text": "關閉" }], "then": "Consistent", "reason": "環境矩陣裁決與 HVCI 事實一致" },
+        { "when": [{ "kind": "textContains", "key": "backend.environment_decision", "text": "HVCI 開啟" }, { "kind": "valueEquals", "key": "platform.hvci", "text": "開啟" }], "then": "Consistent", "reason": "環境矩陣裁決與 HVCI 事實一致" },
+        { "when": [{ "kind": "textContains", "key": "backend.environment_decision", "text": "HVCI 關閉" }], "then": "Contradicts", "reason": "裁決事實由 HVCI 推導，兩者卻不一致（HVCI＝「開啟」、裁決＝「HVCI 關閉」）——管線狀態矛盾" },
+        { "when": [{ "kind": "textContains", "key": "backend.environment_decision", "text": "HVCI 開啟" }], "then": "Contradicts", "reason": "裁決事實由 HVCI 推導，兩者卻不一致（HVCI＝「關閉」、裁決＝「HVCI 開啟」）——管線狀態矛盾" },
+        { "when": [], "then": "Unverifiable", "reason": "裁決事實文字沒有可辨識的 HVCI 狀態——管線格式變了，先查程式" }
+      ]
+    },
+    {
+      "id": "chipset.bioscntl_vs_write_surface",
+      "name": "BIOS_CNTL 原始解碼與綜合裁決一致性",
+      "inputs": ["chipset.bios_cntl", "spi.write_surface"],
+      "specRefs": ["本專案管線：SpiFlash.ComposeWriteSurface 的主軸就是 BIOS_CNTL 的裁決階梯（ChipsetSecurity.DecodeBiosCntl）"],
+      "falseReports": ["無——兩個事實來自同一批讀取，等級錯位只能是管線 bug"],
+      "explanation": "spi.write_surface 的主軸就是 BIOS_CNTL 的裁決階梯；上游與下游給出不同等級代表管線內部錯亂，不是硬體問題",
+      "branches": [
+        { "when": [{ "kind": "valueStartsWith", "key": "chipset.bios_cntl", "text": "最強保護" }, { "kind": "valueStartsWith", "key": "spi.write_surface", "text": "最強保護" }], "then": "Consistent", "reason": "兩者同指「最強保護」——綜合裁決忠實反映原始解碼" },
+        { "when": [{ "kind": "valueStartsWith", "key": "chipset.bios_cntl", "text": "有鎖保護" }, { "kind": "valueStartsWith", "key": "spi.write_surface", "text": "有鎖保護" }], "then": "Consistent", "reason": "兩者同指「有鎖保護」——綜合裁決忠實反映原始解碼" },
+        { "when": [{ "kind": "valueStartsWith", "key": "chipset.bios_cntl", "text": "未保護" }, { "kind": "valueStartsWith", "key": "spi.write_surface", "text": "未保護" }], "then": "Consistent", "reason": "兩者同指「未保護」——綜合裁決忠實反映原始解碼" },
+        { "when": [], "then": "Contradicts", "reason": "綜合裁決宣稱的等級與 BIOS_CNTL 原始解碼不同——綜合裁決的輸入之一就是 BIOS_CNTL，兩者不可能是不同等級，管線狀態矛盾" }
+      ]
+    },
+    {
+      "id": "spi.frap_vs_write_surface",
+      "name": "FRAP 事實與綜合裁決暴露面一致性",
+      "inputs": ["spi.frap", "spi.write_surface"],
+      "specRefs": ["本專案管線：ComposeWriteSurface 把 FRAP bit1（BRWA）列為暴露面的依據就是 spi.frap 事實"],
+      "falseReports": ["無——兩個事實來自同一批讀取"],
+      "explanation": "綜合裁決把 FRAP bit1 列為暴露面的依據就是 spi.frap 事實本身；兩邊說不同的話代表資料流錯亂",
+      "branches": [
+        { "when": [{ "kind": "textContains", "key": "spi.frap", "text": "BIOS 區域可寫入" }, { "kind": "textContains", "key": "spi.write_surface", "text": "FRAP bit1=1" }], "then": "Consistent", "reason": "FRAP 事實與綜合裁決的暴露面描述一致" },
+        { "when": [{ "kind": "not", "child": { "kind": "textContains", "key": "spi.frap", "text": "BIOS 區域可寫入" } }, { "kind": "not", "child": { "kind": "textContains", "key": "spi.write_surface", "text": "FRAP bit1=1" } }], "then": "Consistent", "reason": "FRAP 事實與綜合裁決的暴露面描述一致" },
+        { "when": [], "then": "Contradicts", "reason": "FRAP 事實與綜合裁決不一致——同一個 BRWA 位元的兩種解讀，管線狀態矛盾" }
+      ]
+    },
+    {
+      "id": "backend.mmio_vs_spi_facts",
+      "name": "SPI 事實與 MMIO 後端資料流一致性",
+      "inputs": ["spi.hsfsts"],
+      "tryLookup": ["backend.mmio"],
+      "specRefs": ["Intel EDS：SPI 快閃暫存器位於 SPIBAR MMIO 視窗，無法經 PCI 設定空間直接讀取"],
+      "falseReports": ["收集管線未跑（backend.mmio 事實根本沒產生）會走 Unverifiable——那是管線未啟動不是矛盾"],
+      "explanation": "SPI 快閃暫存器只能經 MMIO 取得；backend.mmio 缺席時 SPI 事實不可能是 Present——守的是管線資料流而非硬體",
+      "branches": [
+        { "when": [{ "kind": "keyMissing", "key": "backend.mmio" }], "then": "Unverifiable", "reason": "MMIO 後端事實不存在（收集管線未跑或鍵名錯置）——無從交叉" },
+        { "when": [{ "kind": "keyAvailable", "key": "backend.mmio" }], "then": "Consistent", "reason": "MMIO 後端在服務且 SPI 事實存在——上下游一致" },
+        { "when": [], "then": "Contradicts", "reason": "SPI 事實宣稱 Present 但沒有任何 MMIO 後端在服務——SPI 暫存器只能經 MMIO 讀取，管線狀態矛盾" }
+      ]
+    },
+    {
+      "id": "backend.msr_vs_platform_security",
+      "name": "平台安全 MSR 與 MSR 後端資料流一致性",
+      "inputs": ["platform.feature_control"],
+      "tryLookup": ["backend.msr"],
+      "specRefs": ["Intel SDM Vol.4：IA32_FEATURE_CONTROL 是 MSR，只能經 RDMSR 讀取"],
+      "falseReports": ["收集管線未跑會走 Unverifiable——那是管線未啟動不是矛盾"],
+      "explanation": "IA32_FEATURE_CONTROL 只能經核心 MSR 讀取；backend.msr 缺席時該事實不可能是 Present——守的是管線資料流而非硬體",
+      "branches": [
+        { "when": [{ "kind": "keyMissing", "key": "backend.msr" }], "then": "Unverifiable", "reason": "MSR 後端事實不存在（收集管線未跑或鍵名錯置）——無從交叉" },
+        { "when": [{ "kind": "keyAvailable", "key": "backend.msr" }], "then": "Consistent", "reason": "MSR 後端在服務且平台安全事實存在——上下游一致" },
+        { "when": [], "then": "Contradicts", "reason": "平台安全 MSR 事實宣稱 Present 但沒有任何 MSR 後端在服務——管線狀態矛盾" }
+      ]
+    },
+    {
+      "id": "spi.hash_vs_mmio_backend",
+      "name": "BIOS 區雜湊與 MMIO 後端資料流一致性",
+      "inputs": ["spi.bios_hash"],
+      "tryLookup": ["backend.mmio"],
+      "specRefs": ["Intel PCH 標準：快閃內容映射至實體位址 4GB 頂端（記憶體映射），讀取即 MMIO"],
+      "falseReports": ["收集管線未跑會走 Unverifiable——那是管線未啟動不是矛盾"],
+      "explanation": "BIOS 區雜湊讀的是記憶體映射快閃；backend.mmio 缺席時雜湊不可能是 Present——守的是管線資料流",
+      "branches": [
+        { "when": [{ "kind": "keyMissing", "key": "backend.mmio" }], "then": "Unverifiable", "reason": "MMIO 後端事實不存在（收集管線未跑或鍵名錯置）——無從交叉" },
+        { "when": [{ "kind": "keyAvailable", "key": "backend.mmio" }], "then": "Consistent", "reason": "MMIO 後端在服務且 BIOS 區雜湊存在——上下游一致" },
+        { "when": [], "then": "Contradicts", "reason": "BIOS 區雜湊宣稱 Present 但沒有任何 MMIO 後端在服務——快閃內容只能經記憶體映射讀取，管線狀態矛盾" }
+      ]
+    },
+    {
+      "id": "spi.hash_without_map",
+      "name": "BIOS 雜湊存在而快閃地圖缺席",
+      "inputs": ["spi.bios_hash"],
+      "tryLookup": ["spi.flash_map"],
+      "specRefs": ["本專案管線：SpiFlashHashService 的定址來源是 SpiFlashMap（FREG 推導映射基底）"],
+      "falseReports": ["收集管線未跑會走 Unverifiable——那是管線未啟動不是矛盾"],
+      "explanation": "BIOS 區雜湊的位址來自快閃地圖（FREG 推導映射基底）；地圖缺席時雜湊不可能 Present——守的是管線資料流",
+      "branches": [
+        { "when": [{ "kind": "keyMissing", "key": "spi.flash_map" }], "then": "Contradicts", "reason": "BIOS 區雜湊宣稱可讀，但快閃地圖事實不存在——雜湊的定址依賴地圖（FREG→映射基底），管線狀態矛盾" },
+        { "when": [{ "kind": "keyAvailable", "key": "spi.flash_map" }], "then": "Consistent", "reason": "快閃地圖存在且 BIOS 區雜湊存在——上下游一致" },
+        { "when": [], "then": "Contradicts", "reason": "快閃地圖回報「{spi.flash_map:reason}」，BIOS 區雜湊卻宣稱可讀——雜湊的定址依賴地圖，管線狀態矛盾" }
+      ]
+    },
+    {
+      "id": "spi.map_vs_regions",
+      "name": "快閃地圖與區域地圖事實一致性",
+      "inputs": ["spi.flash_map"],
+      "tryLookup": ["spi.regions"],
+      "specRefs": ["Intel PCH EDS：spi.flash_map 與 spi.regions 都源自 SPIBAR+0x54 的 FREG0-5"],
+      "falseReports": ["收集管線未跑會走 Unverifiable——那是管線未啟動不是矛盾"],
+      "explanation": "spi.flash_map 與 spi.regions 都源自 SPIBAR+0x54 的 FREG0-5；一邊說有區域、一邊說全空，代表管線錯亂",
+      "branches": [
+        { "when": [{ "kind": "keyMissing", "key": "spi.regions" }], "then": "Unverifiable", "reason": "SPI 區域事實不存在（管線未跑）——無從交叉，不下判決" },
+        { "when": [{ "kind": "textContains", "key": "spi.regions", "text": "全為空" }], "then": "Contradicts", "reason": "快閃地圖宣稱可由 FREG 推導，區域地圖事實卻說 FREG0-5 全為空——兩者讀的是同一份 SPIBAR 區塊，管線狀態矛盾" },
+        { "when": [], "then": "Consistent", "reason": "快閃地圖與區域地圖事實一致（同一份 FREG 的兩種呈現）" }
+      ]
+    },
+    {
+      "id": "pci.spi_facts_without_controller",
+      "name": "SPI 事實存在而盤點看不到 SPI 控制器",
+      "inputs": ["spi.hsfsts"],
+      "tryLookup": ["pci.dev.1f.5"],
+      "specRefs": ["bus 0 盤點（Bus0InventoryService）與 SPI 服務（SpiFlashService）讀的是同一個 PCI 後端（0:1F.5）"],
+      "falseReports": ["收集管線未跑會走 Unverifiable——那是管線未啟動不是矛盾"],
+      "explanation": "bus 0 盤點與 SPI 服務讀的是同一個 PCI 後端；SPI 事實存在而盤點否定控制器存在，代表管線錯亂",
+      "branches": [
+        { "when": [{ "kind": "keyMissing", "key": "pci.dev.1f.5" }], "then": "Contradicts", "reason": "bus 0 盤點看不到 0:1F.5（無此裝置），但 SPI 快閃事實宣稱存在——同一 PCI 後端，兩個服務說不同的話，管線狀態矛盾" },
+        { "when": [{ "kind": "keyAvailable", "key": "pci.dev.1f.5" }], "then": "Consistent", "reason": "盤點看到 SPI 控制器且 SPI 事實存在——上下游一致" },
+        { "when": [], "then": "Unverifiable", "reason": "盤點事實讀不到（{pci.dev.1f.5:reason}）——無從交叉，不下判決" }
+      ]
+    },
+    {
+      "id": "pci.spi_controller_reported_unreachable",
+      "name": "SPI 控制器在而 SPI 服務稱無回應",
+      "inputs": ["pci.dev.1f.5"],
+      "tryLookup": ["spi.hsfsts"],
+      "specRefs": ["bus 0 盤點與 SPI 服務讀的是同一個 PCI 後端（0:1F.5）；非 Intel 裝置時 SPI 服務的「不採用」是誠實理由"],
+      "falseReports": ["SPI 服務因「非 Intel 裝置」「未配置 SPIBAR」等誠實理由不採用時會走 Consistent——不是所有不一致都是矛盾"],
+      "explanation": "bus 0 盤點與 SPI 服務讀的是同一個 PCI 後端；盤點肯定裝置在、SPI 服務卻稱讀不到，代表管線錯亂",
+      "branches": [
+        { "when": [{ "kind": "keyMissing", "key": "spi.hsfsts" }], "then": "Unverifiable", "reason": "SPI 服務事實不存在（管線未跑）——無從交叉，不下判決" },
+        { "when": [{ "kind": "keyUnavailable", "key": "spi.hsfsts" }, { "kind": "reasonContains", "key": "spi.hsfsts", "text": "無回應" }], "then": "Contradicts", "reason": "盤點看到 0:1F.5 有裝置，SPI 服務卻回報「無回應」——同一 PCI 後端不該有兩種答案，管線狀態矛盾" },
+        { "when": [{ "kind": "keyAvailable", "key": "spi.hsfsts" }], "then": "Consistent", "reason": "盤點看到 SPI 控制器且 SPI 事實存在——上下游一致" },
+        { "when": [], "then": "Consistent", "reason": "盤點與 SPI 事實各自成立（SPI 服務有其不採用的理由：非 Intel、未配置 SPIBAR 等）" }
+      ]
+    },
+    {
+      "id": "uefi.secureboot_vs_setupmode",
+      "name": "Secure Boot 開啟而 Setup Mode 未部署金鑰",
+      "inputs": ["uefi.secure_boot", "uefi.setup_mode"],
+      "specRefs": ["UEFI Spec §32.4.1（Secure Boot variables）：SecureBoot=1 的前提是 PK 已部署（SetupMode=0）"],
+      "falseReports": ["部分韌體在恢復出廠金鑰流程中可能短暫出現此組合——持續出現才是警訊"],
+      "explanation": "UEFI 規範：SecureBoot 變數為 1 的前提是 PK 金鑰已部署（SetupMode=0）；兩個變數同時讀到「開啟」與「未部署」是狀態機級警訊",
+      "branches": [
+        { "when": [{ "kind": "valueEquals", "key": "uefi.secure_boot", "text": "是" }, { "kind": "valueStartsWith", "key": "uefi.setup_mode", "text": "金鑰未部署" }], "then": "Contradicts", "reason": "Secure Boot 變數為「是」且 SetupMode=1（金鑰未部署）——依 UEFI 規範 SB=1 的前提是 PK 已部署（Deployed Mode），此組合指向韌體狀態機異常或變數讀取有誤" },
+        { "when": [{ "kind": "valueEquals", "key": "uefi.secure_boot", "text": "是" }], "then": "Consistent", "reason": "Secure Boot 開啟且金鑰已部署——語義相容" },
+        { "when": [], "then": "Consistent", "reason": "Secure Boot 未開啟，Setup Mode 狀態無互斥疑慮" }
+      ]
+    },
+    {
+      "id": "uefi.audit_vs_deployed",
+      "name": "Audit Mode 與 Deployed Mode 同時開啟",
+      "inputs": ["uefi.audit_mode", "uefi.deployed_mode"],
+      "specRefs": ["UEFI Spec §32.4.1：AuditMode 與 DeployedMode 是部署流程的互斥狀態"],
+      "falseReports": ["兩變數皆缺席時不進本規則（整組三態）——本規則只對都讀到的情況判決"],
+      "explanation": "UEFI 規範：Audit Mode（製造驗證用）與 Deployed Mode（交付狀態）互斥；同時為 1 不該出現在正常流程",
+      "branches": [
+        { "when": [{ "kind": "valueEquals", "key": "uefi.audit_mode", "text": "是" }, { "kind": "valueEquals", "key": "uefi.deployed_mode", "text": "是" }], "then": "Contradicts", "reason": "AuditMode=1 且 DeployedMode=1——兩者是 UEFI 的互斥狀態（部署流程的兩端），同時成立指向韌體狀態機異常或變數讀取有誤" },
+        { "when": [], "then": "Consistent", "reason": "Audit／Deployed Mode 無互斥衝突" }
+      ]
+    },
+    {
+      "id": "uefi.variable_vs_registry_platform",
+      "name": "UEFI 變數存在而登錄檔否定 SecureBoot 狀態",
+      "inputs": ["uefi.secure_boot"],
+      "tryLookup": ["platform.secure_boot"],
+      "specRefs": ["Microsoft 文件：SecureBoot\\State 登錄鍵在 UEFI 系統上由開機管理程式建立"],
+      "falseReports": ["收集管線未跑會走 Unverifiable——那是管線未啟動不是矛盾"],
+      "explanation": "UEFI 變數可讀（特權已啟用）代表平台是 UEFI；此時登錄檔 SecureBoot\\State 鍵理應存在。變數在而登錄檔否定，代表收集管線錯亂",
+      "branches": [
+        { "when": [{ "kind": "keyMissing", "key": "platform.secure_boot" }], "then": "Unverifiable", "reason": "登錄檔 Secure Boot 事實不存在（收集管線未跑）——無從交叉，不下判決" },
+        { "when": [{ "kind": "keyAvailable", "key": "platform.secure_boot" }], "then": "Consistent", "reason": "UEFI 變數與登錄檔都確認平台有 Secure Boot 狀態（值的一致性由另一條規則比對）" },
+        { "when": [], "then": "Contradicts", "reason": "UEFI SecureBoot 變數存在（平台確為 UEFI 且權限已啟用），登錄檔卻回報 Secure Boot 狀態不存在——兩個獨立的 Windows 級來源對平台型別說不同的話，管線狀態矛盾" }
+      ]
+    },
+    {
+      "id": "spi.service_vs_spi_bar_resource",
+      "name": "SPI 服務稱未配置 SPIBAR 而盤點看得到 BAR",
+      "inputs": ["pci.res.1f.5"],
+      "tryLookup": ["spi.hsfsts"],
+      "specRefs": ["Intel EDS：SPIBAR 即 0:1F.5 的 BAR0——盤點資源事實與 SPI 服務讀的是同一格設定空間"],
+      "falseReports": ["SPI 服務因「非 Intel 裝置」等誠實理由不採用時會走 Consistent"],
+      "explanation": "SPIBAR 是 0:1F.5 的 BAR0（盤點的資源事實與 SPI 服務讀的是同一格設定空間）；一邊說已配置、一邊說未配置，代表管線錯亂",
+      "branches": [
+        { "when": [{ "kind": "keyMissing", "key": "spi.hsfsts" }], "then": "Unverifiable", "reason": "SPI 服務事實不存在（管線未跑）——無從交叉，不下判決" },
+        { "when": [{ "kind": "keyAvailable", "key": "spi.hsfsts" }], "then": "Consistent", "reason": "SPI 服務在運作且盤點有 0:1F.5 資源——上下游一致" },
+        { "when": [{ "kind": "textContains", "key": "pci.res.1f.5", "text": "記憶體" }, { "kind": "not", "child": { "kind": "textContains", "key": "pci.res.1f.5", "text": "無已配置資源" } }, { "kind": "reasonContains", "key": "spi.hsfsts", "text": "未配置 SPIBAR" }], "then": "Contradicts", "reason": "bus 0 盤點看到 0:1F.5 有已配置的記憶體 BAR，SPI 服務卻回報「未配置 SPIBAR」——同一 PCI 後端的兩次讀取不該有兩種答案，管線狀態矛盾" },
+        { "when": [], "then": "Consistent", "reason": "盤點資源與 SPI 服務結論各自成立（SPI 服務另有其不採用的理由）" }
+      ]
+    },
+    {
+      "id": "spi.write_surface_vs_hsfsts_flockdn",
+      "name": "綜合裁決與 SPI 旗號事實的 FLOCKDN 交叉",
+      "inputs": ["spi.hsfsts"],
+      "tryLookup": ["spi.write_surface"],
+      "specRefs": ["Intel PCH EDS：FLOCKDN 位元（HSFSTS bit15）的解讀在旗號事實與綜合裁決中同源（同一次 SPIBAR 區塊讀取）"],
+      "falseReports": ["綜合裁決讀不到（BIOS_CNTL 缺席）會走 Unverifiable——那是部分不可得不是矛盾"],
+      "explanation": "綜合裁決的 FLOCKDN 輸入就是 spi.hsfsts 本身（同一次 SPIBAR 區塊讀取）；兩邊給出不同的鎖定狀態代表管線錯亂",
+      "branches": [
+        { "when": [{ "kind": "keyMissing", "key": "spi.write_surface" }], "then": "Unverifiable", "reason": "BIOS 寫入面綜合裁決不存在（管線未跑）——無從交叉，不下判決" },
+        { "when": [{ "kind": "keyUnavailable", "key": "spi.write_surface" }], "then": "Unverifiable", "reason": "綜合裁決讀不到（{spi.write_surface:reason}）——無從交叉，不下判決" },
+        { "when": [{ "kind": "textContains", "key": "spi.hsfsts", "text": "已鎖定（FLOCKDN=1）" }, { "kind": "textContains", "key": "spi.write_surface", "text": "SPI 旗號未鎖" }], "then": "Contradicts", "reason": "SPI 旗號事實說 FLOCKDN=1（已鎖），綜合裁決的暴露面卻含「SPI 旗號未鎖」——兩者出自同一次 SPIBAR 讀取，管線狀態矛盾" },
+        { "when": [{ "kind": "textContains", "key": "spi.hsfsts", "text": "未鎖定（FLOCKDN=0）" }, { "kind": "not", "child": { "kind": "textContains", "key": "spi.write_surface", "text": "SPI 旗號未鎖" } }, { "kind": "not", "child": { "kind": "textContains", "key": "spi.write_surface", "text": "FLOCKDN=0，保護設定可被改" } }], "then": "Contradicts", "reason": "SPI 旗號事實說 FLOCKDN=0（未鎖），綜合裁決卻未把它列為暴露面——同一次讀取的兩種解讀，管線狀態矛盾" },
+        { "when": [], "then": "Consistent", "reason": "FLOCKDN 在旗號事實與綜合裁決間一致" }
+      ]
+    },
+    {
+      "id": "chipset.smramc_open_while_locked",
+      "name": "SMRAM 鎖定下對外開放的非法組合",
+      "inputs": ["chipset.smramc"],
+      "specRefs": ["Intel SDM Vol.3C §34.6／Intel EDS：對 D_LCK 寫 1 時硬體強制清 D_OPEN（SMRAMC 位元 4／6）"],
+      "falseReports": ["無——這是單一事實的位元組合檢查，不涉及跨來源"],
+      "explanation": "Intel 對 SMRAMC 的定義：D_LCK 由 0 寫 1 時硬體強制清 D_OPEN。兩位元同時為 1 在合法流程中不可能出現——出現了就是警訊",
+      "branches": [
+        { "when": [{ "kind": "textContains", "key": "chipset.smramc", "text": "D_LCK=1" }, { "kind": "textContains", "key": "chipset.smramc", "text": "D_OPEN=1" }], "then": "Contradicts", "reason": "SMRAMC 同時出現 D_LCK=1 與 D_OPEN=1——對 D_LCK 寫 1 會強制清 D_OPEN，兩者同時成立的狀態不該存在：暫存器遭異常改動或解碼有誤" },
+        { "when": [], "then": "Consistent", "reason": "SMRAMC 未出現「鎖定下開放」的非法組合" }
+      ]
+    },
+    {
+      "id": "mchbar_registers_without_mmio_backend",
+      "name": "MCHBAR 暫存器可讀而 MMIO 後端缺席",
+      "inputs": ["mchbar.registers"],
+      "tryLookup": ["backend.mmio"],
+      "specRefs": ["Intel EDS：MCHBAR 本體在實體位址視窗，只能經 MMIO 讀取"],
+      "falseReports": ["收集管線未跑會走 Unverifiable——那是管線未啟動不是矛盾"],
+      "explanation": "MCHBAR 暫存器只能經 MMIO 讀取；backend.mmio 缺席時 mchbar.registers 不可能是 Present——守的是管線資料流",
+      "branches": [
+        { "when": [{ "kind": "keyMissing", "key": "backend.mmio" }], "then": "Unverifiable", "reason": "MMIO 後端事實不存在（收集管線未跑）——無從交叉，不下判決" },
+        { "when": [{ "kind": "keyAvailable", "key": "backend.mmio" }], "then": "Consistent", "reason": "MMIO 後端在服務且 MCHBAR 暫存器視窗可讀——上下游一致" },
+        { "when": [], "then": "Contradicts", "reason": "MCHBAR 暫存器宣稱可讀但沒有任何 MMIO 後端在服務——MCHBAR 本體在實體位址視窗，管線狀態矛盾" }
+      ]
+    },
+    {
+      "id": "tjmax_without_msr_backend",
+      "name": "TjMax 存在而 MSR 後端缺席",
+      "inputs": ["cpu.tjmax"],
+      "tryLookup": ["backend.msr"],
+      "specRefs": ["Intel SDM Vol.4：IA32_TEMPERATURE_TARGET 是 MSR，只能經 RDMSR 讀取"],
+      "falseReports": ["收集管線未跑會走 Unverifiable——那是管線未啟動不是矛盾"],
+      "explanation": "IA32_TEMPERATURE_TARGET 只能經核心 MSR 讀取；backend.msr 缺席時 cpu.tjmax 不可能是 Present——守的是管線資料流",
+      "branches": [
+        { "when": [{ "kind": "keyMissing", "key": "backend.msr" }], "then": "Unverifiable", "reason": "MSR 後端事實不存在（收集管線未跑）——無從交叉，不下判決" },
+        { "when": [{ "kind": "keyAvailable", "key": "backend.msr" }], "then": "Consistent", "reason": "MSR 後端在服務且 TjMax 存在——上下游一致" },
+        { "when": [], "then": "Contradicts", "reason": "TjMax 宣稱 Present 但沒有任何 MSR 後端在服務——TjMax 只能經 RDMSR 讀取，管線狀態矛盾" }
+      ]
+    },
+    {
+      "id": "mchbar_base_without_host_bridge",
+      "name": "MCHBAR 基底存在而主機橋缺席",
+      "inputs": ["mchbar.base"],
+      "tryLookup": ["pci.dev.00.0"],
+      "specRefs": ["Intel EDS：MCHBAR 的 64-bit BAR 在主機橋（0:0.0）設定空間 +0x48"],
+      "falseReports": ["收集管線未跑會走 Unverifiable——那是管線未啟動不是矛盾"],
+      "explanation": "MCHBAR 的 64-bit BAR 在主機橋（0:0.0）設定空間 +0x48；盤點否定主機橋存在而基底宣稱存在，代表管線錯亂",
+      "branches": [
+        { "when": [{ "kind": "keyMissing", "key": "pci.dev.00.0" }], "then": "Contradicts", "reason": "bus 0 盤點看不到 0:0.0（無主機橋），但 MCHBAR 基底宣稱存在——MCHBAR BAR 就掛在主機橋設定空間 0x48，管線狀態矛盾" },
+        { "when": [{ "kind": "keyAvailable", "key": "pci.dev.00.0" }], "then": "Consistent", "reason": "主機橋存在且 MCHBAR 基底已解析——上下游一致" },
+        { "when": [], "then": "Unverifiable", "reason": "主機橋事實讀不到（{pci.dev.00.0:reason}）——無從交叉，不下判決" }
+      ]
+    }
+  ]
+}
