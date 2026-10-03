@@ -44,6 +44,36 @@
                 </StackPanel>
             </Border>
 
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <local:SectionHead Text="交叉對帳判決" HelpKey="firmware-security/交叉對帳"/>
+                        <TextBlock Text="{Binding EvidenceLab.ReconcileSummary}" HorizontalAlignment="Right"
+                                   Style="{StaticResource FieldLabel}" VerticalAlignment="Top"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                               Text="26 條規則對同一批事實做語義與管線一致性交叉——矛盾整列紅字：兩個來源對同一件事說了不同的話。"/>
+                    <ItemsControl ItemsSource="{Binding EvidenceLab.ReconcileVerdicts}" Margin="0,8,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="230"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding RelationText}" FontWeight="SemiBold"
+                                               Foreground="{Binding Severity, Converter={StaticResource SeverityToBrush}}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding RuleName}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" Text="{Binding Reason}" TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding Reason}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <Grid Margin="0,0,0,4">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="110"/>

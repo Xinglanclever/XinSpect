@@ -109,6 +109,12 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>交叉對帳結果（WP5 矛盾矩陣）：每條規則一列，一致／矛盾／無法驗證都如實成列。</summary>
     public IReadOnlyList<HardwareFact> ReconcileFacts { get; private set; } = [];
 
+    /// <summary>交叉對帳判決卡（韌體安全頁頂部）：每條規則的判定徽章＋原因——判決要看得見，不埋在清單裡。</summary>
+    public IReadOnlyList<ReconcileVerdictRow> ReconcileVerdicts { get; private set; } = [];
+
+    /// <summary>判決摘要：一致／矛盾／無法驗證的計數。</summary>
+    public string ReconcileSummary { get; private set; } = "尚未擷取。";
+
     /// <summary>I/O 埠唯讀事實（POST 代碼等，WP1／A38）。由注入的 IIoPortAccess 載入。</summary>
     public IReadOnlyList<HardwareFact> IoPortFacts { get; private set; } = [];
 
@@ -278,7 +284,27 @@ public sealed class EvidenceLabService : ObservableObject
     {
         var all = ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(CpuFirmwareFacts)
             .Concat(BackendFacts).Concat(MchbarFacts).Concat(PcieAerFacts).Concat(AcpiFacts).ToList();
-        return FactRelationService.Evaluate(FactRelationRules.All, all)
+        var rows = FactRelationService.Evaluate(FactRelationRules.All, all);
+
+        // 判決卡資料（A45/A47 之後最重要的使用者面價值：說得出的判決要看得見，不埋在清單裡）
+        ReconcileVerdicts = rows.Select(r => new ReconcileVerdictRow(
+            r.RuleName, r.Relation,
+            r.Relation switch { FactRelation.Consistent => "一致", FactRelation.Contradicts => "矛盾", _ => "無法驗證" },
+            r.Reason,
+            r.Relation switch
+            {
+                FactRelation.Consistent => Severity.Good,
+                FactRelation.Contradicts => Severity.Critical,
+                _ => Severity.Neutral,
+            })).ToList();
+        OnPropertyChanged(nameof(ReconcileVerdicts));
+
+        int consistent = rows.Count(r => r.Relation == FactRelation.Consistent);
+        int contradicts = rows.Count(r => r.Relation == FactRelation.Contradicts);
+        ReconcileSummary = $"一致 {consistent} ・ 矛盾 {contradicts} ・ 無法驗證 {rows.Count - consistent - contradicts}（共 {rows.Count} 條）";
+        OnPropertyChanged(nameof(ReconcileSummary));
+
+        return rows
             .Select(r =>
             {
                 string verdict = r.Relation switch
@@ -640,6 +666,9 @@ public sealed record EvidenceChangeRow(string Kind, string Category, string Name
         return f.Sensitive ? "（已遮蔽）" : f.Value;
     }
 }
+
+/// <summary>交叉對帳判決卡的一列：規則名＋判定（徽章色由 Severity 經 SeverityToBrush 轉換）＋原因。</summary>
+public sealed record ReconcileVerdictRow(string RuleName, FactRelation Relation, string RelationText, string Reason, Severity Severity);
 
 /// <summary>原始快照差異的一列：來源鍵、變動種類、細節（變動位元組數與前幾個位移，或三態原因）。</summary>
 public sealed record EvidenceRawChangeRow(string Kind, string Source, string Detail)
