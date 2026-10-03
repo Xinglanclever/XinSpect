@@ -79,8 +79,8 @@ public class PublicSpecTests
     {
         string spec = Spec("query-language.v1.md");
         Assert.All(QueryParser.ValidFields, field => Assert.Contains($"`{field}`", spec));
-        Assert.Contains("`~`", spec);
-        Assert.Contains("`^`", spec);
+        Assert.Contains("`~=`", spec);
+        Assert.Contains("`^=`", spec);
         Assert.Contains("no-permission", spec);   // availability 別名要寫進規格
         Assert.Contains("查不到≠沒有", spec);      // 核心語意必須成文
     }
