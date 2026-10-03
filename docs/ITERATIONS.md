@@ -353,9 +353,18 @@
 
 **範圍裁定**：WP38 示波器 UI（波形繪製）留待 UI 輪——本輪先把訊號資料層與方法學釘死，符合「資料層先誠實、呈現後上」的一貫順序。
 
+## ITER54 ・ WP34＋WP35＋WP26（2026-10-03，核准計畫第四段）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP26 | **開機計時**（BootTimingFactsService）：耗時取 Diagnostics-Performance Event 100 的 BootTime（ms，Windows 自己量的、只解讀不評級）；最近開機＝Win32_OperatingSystem.LastBootUpTime。**事件缺席＝NotSupported、查詢失敗＝ReadError——兩種「沒有」分得清楚** | 3030 | 本批 |
+| R2 | WP34+35 | **本機 API 請求處理**（LocalApiHandler，純函式）：GET /api/facts（canonical JSON 與時間膠囊同形狀）、POST /api/query（**查詢語言全文**；單一含點 token 相容舊前綴語意）；loopback 唯讀匿名；**「nonsense」無運算子輸入回 400 帶修正指引——查錯不能偽裝成空結果**；HTTP 殼層極薄不在單測範圍。**順手修正查詢語言規格文件：運算子實為 =/~=/^=（文件原本寫 ^/~=，機器對帳只查了子串沒抓到語意錯——補強 PublicSpecTests 斷言）** | 3032 | 本批 |
+
+**範圍裁定**：WP34 的 HTTP 監聽殼（HttpListener 綁 127.0.0.1）刻意極薄且未自動啟動——API 面以 handler 契約先行，啟動方式隨 CLI 整合輪再定。
+
 ## 待辦（下一批）
 
-- **主線：核准收尾計畫進行中——ITER43–53 完成；下一批 ITER54：WP34 本機 API server＋WP35 查詢語言接線＋WP26 開機計時（事件記錄派生）。**
+- **主線：核准收尾計畫 ITER43–54 全數完成（第一～四段）——第五段（ITER55 WP20+WP21 Chiplet/NUMA 深化、ITER56 WP37+WP39 部署/資料主權）與暫緩項（WP27 PMU、WP22 Rowhammer、WP31 EC 已結案）依計畫「屆時另詢」。**
 - Wi-Fi 連線態欄位（RSSI／頻道/BSSID）實測：本機無線電軟體關閉，待使用者開啟 Wi-Fi 並連線後重開程式補驗。
 - **帳本更正：對帳規則實際為 26 條**（ITER31 記 25 是手寫數錯——機器檢查再次抓到手寫漂移）。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
