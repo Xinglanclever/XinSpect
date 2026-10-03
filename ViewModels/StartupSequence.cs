@@ -233,6 +233,10 @@ internal static class StartupSequence
         try { vm.EvidenceLab.LoadPlatformFacts(); }
         catch { /* 平台拓撲為附加功能，讀不到由三態標示 */ }
 
+        // 系統與軟體層（WP15：Windows Update 歷史等，usermode；WUA COM 查詢可能數秒，放背景）。
+        try { await Task.Run(() => vm.EvidenceLab.LoadSoftwareFacts()); }
+        catch { /* 軟體層為附加功能，讀不到由三態標示 */ }
+
         try
         {
             var report = await CpuzReportService.ReadAsync();

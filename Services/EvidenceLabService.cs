@@ -139,6 +139,20 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>平台拓撲與攻擊面聲明（NUMA 拓撲＋Rowhammer 未施測聲明；usermode）。</summary>
     public IReadOnlyList<HardwareFact> PlatformFacts { get; private set; } = [];
 
+    /// <summary>系統與軟體層三態事實（WP15：Windows Update 歷史／服務／排程工作／事件記錄／安全政策；usermode）。</summary>
+    public IReadOnlyList<HardwareFact> SoftwareFacts { get; private set; } = [];
+
+    /// <summary>載入系統與軟體層事實（usermode；讀不到由各服務標三態）。COM/WMI 查詢可能數秒，呼叫端自行放背景。</summary>
+    public void LoadSoftwareFacts()
+    {
+        var at = DateTimeOffset.UtcNow;
+        SoftwareFacts = WindowsUpdateHistoryService.Collect(at)
+            .Concat(ServiceInventoryService.Collect(at))
+            .Concat(EventLogSummaryService.Collect(at))
+            .ToList();
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
     /// <summary>載入平台拓撲與攻擊面事實（usermode；讀不到由各服務標三態）。</summary>
     public void LoadPlatformFacts()
     {
@@ -324,14 +338,14 @@ public sealed class EvidenceLabService : ObservableObject
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
             .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
-            .Concat(PlatformFacts).Concat(AcpiFacts).ToList();
+            .Concat(PlatformFacts).Concat(SoftwareFacts).Concat(AcpiFacts).ToList();
 
     /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + I/O 埠 + CMOS + SMBus + PCI 盤點 + TPM + 平台拓撲 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
             .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
-            .Concat(PlatformFacts).Concat(AcpiFacts)
+            .Concat(PlatformFacts).Concat(SoftwareFacts).Concat(AcpiFacts)
             .OrderBy(f => f.Category, StringComparer.Ordinal).ThenBy(f => f.Key, StringComparer.Ordinal)
             .Select(EvidenceFactRow.From).ToList();
 
