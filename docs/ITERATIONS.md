@@ -171,9 +171,24 @@
 
 **命名坑**：新類不可叫 `WaveFormat`——與 DeepBench/NAudio 的 `WaveFormat` 型別衝突（CS0722 靜態類型不可作回傳類型）；改名 `AudioFormatDecoder`。
 
+## ITER35 ・ GAP6-A45 規則引擎（2026-10-03）
+
+> 接 TASK-GAP-6-2026-10-03.md 指令書，A45 最優先落地。
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | A45-① | **`RuleDefinition` 模型＋`RuleInterpreter` 條件直譯器**：12 種述詞（keyMissing/Available/Unavailable、valueEquals/EqualsKey/StartsWith、textContains、reasonContains、numericPresent/EqualsKey/Between）＋not/anyOf 組合＋樣板插值（{key}/{key:hex}/{key:reason}）；`ExternalRuleEngine` 守衛語意與內建引擎對齊 | — | 9338d7f |
+| R2 | A45-② | **`RuleLoader`**（JSON，System.Text.Json 零依賴；指令書允許 YAML/JSON，選 JSON 免新套件）＋**`RuleValidator`**（強制 SpecRef＋誤報條件＋鍵名登記檢查＋預設分支位置）＋**`RuleExplainer`**（為什麼觸發＋規格＋誤報） | — | 9338d7f |
+| R3 | A45-③ | **`Rules/builtin.json` 26 條全數外部化**（指令書說 25——實際盤點是 **26 條**，帳本 ITER31 記 25 是數錯，本批更正）；每條附 SpecRef（出處化引用）與誤報條件 | — | 9338d7f |
+| R4 | A45-④ | **行為等價測試**：68 個情境（每條規則每個分支）——同一情境下內建 C# 規則與外部 JSON 規則的 **FactRelation 逐條一致**；id 集合一條不漏。**等價定義（已向使用者宣告）：Relation 層一致；Reason 允許語義等價不逐字相同** | 2896 | 9338d7f |
+| R5 | 制度 | 帳本記錄＋記憶庫 | — | 本輪 |
+
+**界線聲明（照指令書）**：不做規則市集、不下載遠端規則、不改內建 25＋1 條判決邏輯、不碰 FactRelationEngine 公開介面。本批產出是「載入與驗證層」——內建規則仍是判決的引擎，JSON 是可分享的外部形式。
+
 ## 待辦（下一批）
 
-- **主線切換：TASK-GAP-6-2026-10-03.md 六項未落地能力**（A45 規則引擎→A47 審計日誌→A44 查詢語言→A54 效能預算→A18/A23 純解碼器）；G6 路線圖順延。
+- **主線：TASK-GAP-6 六項**——A45 ✅（本批）→ **A47 審計日誌（下一批）** → A44 查詢語言 → A54 效能預算 → A18/A23 純解碼器；G6 路線圖順延。
+- **帳本更正：對帳規則實際為 26 條**（ITER31 記 25 是手寫數錯——機器檢查再次抓到手寫漂移）。
 - Wi-Fi RSSI（wlanapi P/Invoke）併入後續 G6 批次。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
 - 對帳規則已達 25（V7 目標達成）；後續隨新事實來源繼續擴（SPD↔TSOD、SMART、儲存面）。
