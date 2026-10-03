@@ -137,7 +137,10 @@ public sealed class EvidenceLabService : ObservableObject
     public void LoadPlatformFacts()
     {
         var at = DateTimeOffset.UtcNow;
-        PlatformFacts = NumaTopologyService.Collect(at).Append(MemoryAttackSurfaceService.Collect(at)).ToList();
+        PlatformFacts = NumaTopologyService.Collect(at)
+            .Append(MemoryAttackSurfaceService.Collect(at))
+            .Concat(OobFactsService.Collect(at))
+            .ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
