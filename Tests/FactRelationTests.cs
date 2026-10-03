@@ -365,6 +365,40 @@ public sealed class FactRelationTests
     }
 
     [Fact]
+    public void UEFI語義族_SB與SetupMode互斥_Audit與Deployed互斥()
+    {
+        var bad1 = FactRelationService.Evaluate(FactRelationRules.All,
+        [
+            Fact("uefi.secure_boot", "是"),
+            Fact("uefi.setup_mode", "金鑰未部署（Setup Mode 開啟）"),
+        ]).Single(r => r.RuleId == "uefi.secureboot_vs_setupmode");
+        Assert.Equal(FactRelation.Contradicts, bad1.Relation);
+        Assert.Contains("狀態機", bad1.Reason);
+
+        var ok1 = FactRelationService.Evaluate(FactRelationRules.All,
+        [
+            Fact("uefi.secure_boot", "是"),
+            Fact("uefi.setup_mode", "金鑰已部署（Setup Mode 關閉）"),
+        ]).Single(r => r.RuleId == "uefi.secureboot_vs_setupmode");
+        Assert.Equal(FactRelation.Consistent, ok1.Relation);
+
+        var bad2 = FactRelationService.Evaluate(FactRelationRules.All,
+        [
+            Fact("uefi.audit_mode", "是"),
+            Fact("uefi.deployed_mode", "是"),
+        ]).Single(r => r.RuleId == "uefi.audit_vs_deployed");
+        Assert.Equal(FactRelation.Contradicts, bad2.Relation);
+        Assert.Contains("互斥", bad2.Reason);
+
+        var ok2 = FactRelationService.Evaluate(FactRelationRules.All,
+        [
+            Fact("uefi.audit_mode", "否"),
+            Fact("uefi.deployed_mode", "是"),
+        ]).Single(r => r.RuleId == "uefi.audit_vs_deployed");
+        Assert.Equal(FactRelation.Consistent, ok2.Relation);
+    }
+
+    [Fact]
     public void 快閃地圖族_雜湊無地圖與地圖全空都是矛盾()
     {
         var at = At;

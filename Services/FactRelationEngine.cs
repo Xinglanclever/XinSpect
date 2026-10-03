@@ -115,6 +115,9 @@ public static class FactRelationRules
     public const string SecureBootKey = "platform.secure_boot";
     public const string TestSigningKey = "platform.testsigning";
     public const string SecureBootUefiKey = "uefi.secure_boot";
+    public const string UefiSetupModeKey = "uefi.setup_mode";
+    public const string UefiAuditModeKey = "uefi.audit_mode";
+    public const string UefiDeployedModeKey = "uefi.deployed_mode";
     public const string EcamBaseKey = "pcieaer.ecam";
     public const string AerScanKey = "pcieaer.scan";
     public const string SpiWriteSurfaceKey = "spi.write_surface";
@@ -124,6 +127,7 @@ public static class FactRelationRules
     public const string SpiMapKey = "spi.flash_map";
     public const string SpiRegionsKey = "spi.regions";
     public const string HostBridgeKey = "pci.dev.00.0";
+    public const string SpiResKey = "pci.res.1f.5";
     public const string BackendMmioKey = "backend.mmio";
     public const string BackendMsrKey = "backend.msr";
     public const string PlatformFeatureControlKey = "platform.feature_control";
@@ -417,6 +421,34 @@ public static class FactRelationRules
                     : FactRelationOutcome.Unverifiable($"主機橋事實讀不到（{bridge.UnavailableReason ?? "原因不明"}）——無從交叉，不下判決");
             },
             "MCHBAR 的 64-bit BAR 在主機橋（0:0.0）設定空間 +0x48；盤點否定主機橋存在而基底宣稱存在，代表管線錯亂"),
+
+        new("uefi.secureboot_vs_setupmode", "Secure Boot 開啟而 Setup Mode 未部署金鑰",
+            [SecureBootUefiKey, UefiSetupModeKey],
+            f =>
+            {
+                bool sbOn = f[SecureBootUefiKey].Value == "是";
+                bool setupMode = f[UefiSetupModeKey].Value.StartsWith("金鑰未部署", StringComparison.Ordinal);
+                if (sbOn && setupMode)
+                    return FactRelationOutcome.Contradicts(
+                        "Secure Boot 變數為「是」且 SetupMode=1（金鑰未部署）——依 UEFI 規範 SB=1 的前提是 PK 已部署（Deployed Mode），此組合指向韌體狀態機異常或變數讀取有誤");
+                return FactRelationOutcome.Consistent(
+                    sbOn ? "Secure Boot 開啟且金鑰已部署——語義相容"
+                    : "Secure Boot 未開啟，Setup Mode 狀態無互斥疑慮");
+            },
+            "UEFI 規範：SecureBoot 變數為 1 的前提是 PK 金鑰已部署（SetupMode=0）；兩個變數同時讀到「開啟」與「未部署」是狀態機級警訊"),
+
+        new("uefi.audit_vs_deployed", "Audit Mode 與 Deployed Mode 同時開啟",
+            [UefiAuditModeKey, UefiDeployedModeKey],
+            f =>
+            {
+                bool audit = f[UefiAuditModeKey].Value == "是";
+                bool deployed = f[UefiDeployedModeKey].Value == "是";
+                if (audit && deployed)
+                    return FactRelationOutcome.Contradicts(
+                        "AuditMode=1 且 DeployedMode=1——兩者是 UEFI 的互斥狀態（部署流程的兩端），同時成立指向韌體狀態機異常或變數讀取有誤");
+                return FactRelationOutcome.Consistent("Audit／Deployed Mode 無互斥衝突");
+            },
+            "UEFI 規範：Audit Mode（製造驗證用）與 Deployed Mode（交付狀態）互斥；同時為 1 不該出現在正常流程"),
 
         new("chipset.smramc_open_while_locked", "SMRAM 鎖定下對外開放的非法組合",
             [SmramcKey],
