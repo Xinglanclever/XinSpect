@@ -130,6 +130,17 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>TPM 2.0 量測開機鏈三態事實（WP14：PCR 0–7 SHA-256＋TCG log 摘要）。usermode 經 Windows TBS。</summary>
     public IReadOnlyList<HardwareFact> TpmFacts { get; private set; } = [];
 
+    /// <summary>平台拓撲與攻擊面聲明（NUMA 拓撲＋Rowhammer 未施測聲明；usermode）。</summary>
+    public IReadOnlyList<HardwareFact> PlatformFacts { get; private set; } = [];
+
+    /// <summary>載入平台拓撲與攻擊面事實（usermode；讀不到由各服務標三態）。</summary>
+    public void LoadPlatformFacts()
+    {
+        var at = DateTimeOffset.UtcNow;
+        PlatformFacts = NumaTopologyService.Collect(at).Append(MemoryAttackSurfaceService.Collect(at)).ToList();
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
     /// <summary>原始暫存器區（P4）：重載驅動相依事實時一併收集，讀不到的區三態。存檔是使用者主動行為（raw 不匿名化）。</summary>
     public IReadOnlyList<RawRegisterRegion> RawRegions { get; private set; } = [];
 
@@ -283,13 +294,15 @@ public sealed class EvidenceLabService : ObservableObject
     public IReadOnlyList<HardwareFact> AllFacts =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
-            .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(AcpiFacts).ToList();
+            .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
+            .Concat(PlatformFacts).Concat(AcpiFacts).ToList();
 
-    /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + I/O 埠 + CMOS + SMBus + PCI 盤點 + TPM + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
+    /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + I/O 埠 + CMOS + SMBus + PCI 盤點 + TPM + 平台拓撲 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
-            .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(AcpiFacts)
+            .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
+            .Concat(PlatformFacts).Concat(AcpiFacts)
             .OrderBy(f => f.Category, StringComparer.Ordinal).ThenBy(f => f.Key, StringComparer.Ordinal)
             .Select(EvidenceFactRow.From).ToList();
 
@@ -527,6 +540,8 @@ public sealed class EvidenceLabService : ObservableObject
         f.AddRange(vm.EvidenceLab.PciInventoryFacts);
         // TPM 量測開機鏈（WP14）。
         f.AddRange(vm.EvidenceLab.TpmFacts);
+        // 平台拓撲與攻擊面聲明（NUMA＋Rowhammer 界線）。
+        f.AddRange(vm.EvidenceLab.PlatformFacts);
 
         return f;
     }

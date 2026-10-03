@@ -229,6 +229,10 @@ internal static class StartupSequence
         try { vm.EvidenceLab.LoadTpm(); }
         catch { /* TPM 為附加功能，讀不到由三態標示 */ }
 
+        // NUMA 拓撲與記憶體攻擊面聲明（usermode）。
+        try { vm.EvidenceLab.LoadPlatformFacts(); }
+        catch { /* 平台拓撲為附加功能，讀不到由三態標示 */ }
+
         try
         {
             var report = await CpuzReportService.ReadAsync();
