@@ -149,6 +149,7 @@ public sealed class EvidenceLabService : ObservableObject
         SoftwareFacts = WindowsUpdateHistoryService.Collect(at)
             .Concat(ServiceInventoryService.Collect(at))
             .Concat(EventLogSummaryService.Collect(at))
+            .Concat(AuditPolicyService.Collect(at))
             .ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }

@@ -273,11 +273,22 @@
 |---|---|---|---|---|
 | R1 | 微碼 | **登錄檔 Update Revision 4 位元組變體解碼**：本機實測 `06 70 00 02`＝LE DWORD 0x02007006（恰等於 MSR 0x8B 高 32 位）——照 BiosMeDecoder 口徑以 LE DWORD 解碼、畫面註明「4 位元組變體」不冒充標準 8 位元組佈局；其他長度仍如實標格式不明 | 2956 | 本批 |
 | R2 | Wi-Fi | **WLAN_BSS_ENTRY 純解碼器**（WifiBssDecoder 進 Decoders 庫＋SpecRef 註冊）：中心頻率（kHz）→頻道查表公式（2.4/4.9/5/6 GHz 等差＋ch14 特例，換不出回 null 不猜）、佈局依 wlanapi.h 手算（sizeof=360）；WifiSignalService 接 BSS list 取頻道與 BSSID；**未連線介面如實列一列**（此前「沒連線」被混報成「沒介面」）；UI 加頻道欄與三段式狀態文字。本機 Intel AC 9260 無線電軟體關閉——連線態欄位（RSSI／頻道）實測待使用者連線後補驗 | 2973 | 本批 |
-| R3 | WP31 | **EC 唯讀風險評估記錄**（docs/EC-RISK-ASSESSMENT.md）：「唯讀」實含 RD_EC 命令埠寫入、與 acpi.sys 電池/熱輪詢交易交錯＝資料錯位、burst 破壞、症狀延遲顯現——**結案裁定：不實作任何 EC 埠存取**，重開條件（核心合作通路＋測試機＋作者同意）成文；G6 路線圖同步 | 2973 | 本批 |
+| R3 | WP15 | **EC 唯讀風險評估記錄**（docs/EC-RISK-ASSESSMENT.md）：「唯讀」實含 RD_EC 命令埠寫入、與 acpi.sys 電池/熱輪詢交易交錯＝資料錯位、burst 破壞、症狀延遲顯現——**結案裁定：不實作任何 EC 埠存取**，重開條件（核心合作通路＋測試機＋作者同意）成文；G6 路線圖同步 | 2973 | 8ecdde9 |
+
+## ITER45 ・ WP15 系統與軟體層（2026-10-03，核准計畫第二段）
+
+| 輪 | 工作包 | 內容 | 測試數 | commit |
+|---|---|---|---|---|
+| R1 | WP15-① | **Windows Update 歷史**（WindowsUpdateHistoryService）：WUA COM「Microsoft.Update.Session」（dynamic、零相依、零特權）——最新一筆（標題＋安裝日期）、總筆數、近 30 天安裝數、失敗／中止計數含最近一次標題；無日期不猜、空歷史是「0 筆」不是讀不到、COM 不可用三態。**實機 COM 通路驗證通**（單測過程即讀到真機歷史） | 2979 | 本批 |
+| R2 | WP15-② | **服務盤點**（ServiceInventoryService）：WMI Win32_Service——總數／執行中／自動／停用／**非系統目錄服務**（PathName 引號感知解析＋不在 \Windows\ 下，例舉前三名，不下安全結論）；空清單與讀不到分得清楚 | 2982 | 本批 |
+| R3 | WP15-③ | **事件記錄摘要**（EventLogSummaryService）：System log 反向走訪 7 天內嚴重＋錯誤、最常見「來源 事件ID×次數」前 3；ExportJson（canonical camelCase、只含探測給的欄位）。讀到 7 天外即停不整表掃 | 2982 | 本批 |
+| R4 | WP15-④ | **稽核政策＋機器原則**（AuditPolicyService）：LSA LsaQueryInformationPolicy（PolicyAuditEventsInformation，唯讀）——九類別等級逐類繁中描述（0 未設定不列、規範外等級如實標）；x64 struct 手算偏移（指標欄對齊 8）；機器原則以 Registry.pol 存在＋寫入時間為指紋（**不解析二進位**、無檔＝NotSupported 非錯誤）；四組全部接線 LoadSoftwareFacts（StartupSequence 放 Task.Run，COM/WMI 數秒不卡啟動） | 2986 | 本批 |
+
+**範圍裁定**：UAC（EnableLUA）與 LsaProtection（RunAsPPL）已由 OsAnalysisService／SecurityPostureService 涵蓋——WP15 不重複收錄；排程工作已有 ScheduledTaskStartup（工作定義 XML 解析）涵蓋登入/開機觸發面。
 
 ## 待辦（下一批）
 
-- **主線：核准收尾計畫進行中——ITER43（Stryker 解鎖 80.50%）＋ITER44（微碼變體＋Wi-Fi 頻道＋EC 風險評估）完成；下一批 ITER45：WP15 系統與軟體層（Windows Update 歷史／服務／排程工作／事件記錄匯出／安全政策，WMI/登錄）。**
+- **主線：核准收尾計畫進行中——ITER43（Stryker 80.50%）＋ITER44（微碼變體＋Wi-Fi 頻道＋EC 風險評估）＋ITER45（WP15 四組軟體層服務）完成；下一批 ITER46：WP16＋WP14（Hyper-V/WSL/容器偵測、核心模組簽章鏈、未簽章驅動、核心 debug 設定，usermode）。**
 - Wi-Fi 連線態欄位（RSSI／頻道/BSSID）實測：本機無線電軟體關閉，待使用者開啟 Wi-Fi 並連線後重開程式補驗。
 - **帳本更正：對帳規則實際為 26 條**（ITER31 記 25 是手寫數錯——機器檢查再次抓到手寫漂移）。
 - WP30 知識庫續推：PCH 世代判定（CHIPSEC cfg 逐檔交叉建 LPC DID→世代名對照；勘察記錄見 ITER30）、device 型號對照的出處化資料源。
