@@ -11,8 +11,6 @@
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-MIT-green)
 
-![总览](gallery2.png)
-
 ## 一、项目定位
 
 曦览（XinSpect）以 WPF（.NET 10）编写、MVVM 架构，整合 LibreHardwareMonitor 传感引擎、Intel XTU 超频桥接、NVIDIA NVML／NVAPI 显卡控制、WebView2 内置浏览器，以及本专案自写的 WinRing0 事实读取层与 XsRegProbe 白名单只读驱动。名称中的「Spect」取自拉丁语的检视者：本工具不对用户的硬件下结论，而是把三个来源的陈述并列摊开——
