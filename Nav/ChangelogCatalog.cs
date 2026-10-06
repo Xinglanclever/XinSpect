@@ -48,6 +48,21 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.3.0",
+            Date = "2026-10-07",
+            Title = "硬體缺口清空：SuperIO 多家族、DDR5 SPD 直讀、AMD 安全事實與 Radeon 遙測、Intel GPU Level Zero、PMBus 電源軌與 UPS",
+            Items =
+            [
+                "Super I/O：Fintek／Nuvoton NCT67xx 晶片名錄與各家族環境控制器公式（金標出處 coreboot superiotool＋lm-sensors 驅動），0x2E／0x4E 雙埠逐一探測、讀晶片 ID 定家族後才解溫度／風扇／電壓；名稱有收錄但佈局無出處的家族（NCT668x／NCT6106／NPCD378）如實不解。",
+                "DDR5 記憶體：SPD 直讀走 SPD5118 hub 通路（MR11 切頁、8 頁 × 128 位元組、連讀兩次逐位元組比對、讀完復位回第 0 頁），解碼器依 JESD400-5（容量推算、皮秒時序、tRFC、CAS 遮罩、製造區、CRC-16/XMODEM）；記憶體頁與原生時序接線。全部標「未在本機驗證」。",
+                "AMD 平台安全：SME／SEV／SEV-ES／SNP 支援位（CPUID 0x8000001F）與啟用位（MSR C001_0131）、PSP 安全處理器偵測（PCI 類別碼 0x10800）；非 AMD 平台整組標「不適用」。位元定義以 Linux 核心交叉核對。",
+                "GPU 非 NVIDIA：Intel 顯示卡經 Level Zero（ze_loader.dll）唯讀列舉型號／顯存／驅動版本；AMD Radeon 經 ADL（atiadlxx.dll）唯讀溫度／風扇轉速／功耗（PMLog 優先、Overdrive5/6/N 後備）。沒有對應硬體時整組標「不適用」。",
+                "電源：PMBus 電源軌唯讀掃描（READ_VIN／READ_VOUT／READ_POUT／READ_TEMPERATURE_1，LINEAR11／LINEAR16 解碼，僅讀不寫）與 UPS 備援（Win32_Battery 電量／狀態／預估續航）。",
+                "UEFI 簽章資料庫：db／dbx／KEK／PK 的簽章清單解碼與條目計數、Boot#### 開機條目名稱，接上韌體安全列（需提權）。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.2.0",
             Date = "2026-10-04",
             Title = "Olympus 2.5——深度驗機、交叉對帳、驗機殺手級檢測與安全鑑識（系列更名：Everest → Olympus）",
