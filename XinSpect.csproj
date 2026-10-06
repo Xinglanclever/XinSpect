@@ -89,6 +89,7 @@
        （系統匣 NotifyIcon）等本體不引用的 API，其原始碼若被本體收入會造成命名空間衝突。 -->
   <ItemGroup>
     <Compile Remove="BlueSquadron\**\*.cs" />
+    <Compile Remove="Installer\**\*.cs" />
     <EmbeddedResource Remove="BlueSquadron\**" />
     <Content Remove="BlueSquadron\**" />
     <None Remove="BlueSquadron\**" />

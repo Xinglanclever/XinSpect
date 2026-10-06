@@ -18,8 +18,22 @@ public enum EraMode
 /// <summary>依所選紀年將時間格式化為時鐘顯示字串。</summary>
 public static class EraCalendar
 {
-    /// <summary>下拉選單顯示名稱（順序須與 <see cref="EraMode"/> 對應）。</summary>
-    public static readonly string[] Names = { "西元紀年", "民國紀年", "中華黃帝紀元", "宣統紀年〔大清〕", "哆啦A夢紀元〔惡搞〕" };
+    /// <summary>下拉選單顯示名稱（依語言回傳；簡體模式隱藏民國紀年、西元→公元）。</summary>
+    public static string[] GetNames(bool simplified)
+    {
+        if (simplified)
+            return new[] { "公元纪年", "中华黄帝纪元", "宣统纪年〔大清〕", "哆啦A梦纪元〔恶搞〕" };
+        return new[] { "西元紀年", "民國紀年", "中華黃帝紀元", "宣統紀年〔大清〕", "哆啦A夢紀元〔惡搞〕" };
+    }
+
+    /// <summary>簡體模式下的可用模式（隱藏民國）。順序須與 <see cref="GetNames(bool)"/> 對應。</summary>
+    public static EraMode[] GetAvailableModes(bool simplified)
+        => simplified
+            ? new[] { EraMode.Gregorian, EraMode.Huangdi, EraMode.Xuantong, EraMode.Doraemon }
+            : new[] { EraMode.Gregorian, EraMode.Minguo, EraMode.Huangdi, EraMode.Xuantong, EraMode.Doraemon };
+
+    /// <summary>相容舊呼叫端：繁體模式的完整名稱陣列。</summary>
+    public static readonly string[] Names = GetNames(false);
 
     /// <summary>
     /// 1.5.1 以前的舊編號 → 現行 <see cref="EraMode"/> 的遷移。
@@ -60,6 +74,8 @@ public static class EraCalendar
                                 ? (t.Year == 2112 ? "哆啦A夢元年" : $"哆啦A夢 {t.Year - 2111} 年")
                                 : $"哆啦A夢前 {2112 - t.Year} 年")
                             + $" {t.Month} 月 {t.Day} 日  {t:HH:mm:ss}",
-        _                => $"西元 {t.Year} 年 {t.Month} 月 {t.Day} 日  {t:HH:mm:ss}",
+        _                => (LanguageService.IsSimplified
+                                ? $"公元 {t.Year} 年 {t.Month} 月 {t.Day} 日  {t:HH:mm:ss}"
+                                : $"西元 {t.Year} 年 {t.Month} 月 {t.Day} 日  {t:HH:mm:ss}"),
     };
 }
