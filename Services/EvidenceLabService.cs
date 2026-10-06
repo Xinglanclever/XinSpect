@@ -190,6 +190,7 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(HpaFactsService.Collect(at))
             .Concat(GpuTdrFactsService.Collect(at))
             .Concat(LevelZeroFactsService.Collect(at))
+            .Concat(AmdAdlFactsService.Collect(at))
             .Concat(UpsFactsService.Collect(at))
             .Concat(DebugConfigService.Collect(at))
             .ToList();
