@@ -38,9 +38,17 @@ public static class LanguageService
     private const string LOCALE_NAME_ZH = "zh";
 
     private static bool _simplified;
+    private static bool _isEnglish;
 
     /// <summary>目前是否為簡體模式。</summary>
     public static bool IsSimplified => _simplified;
+
+    /// <summary>目前是否為英語模式。</summary>
+    public static bool IsEnglish => _isEnglish;
+
+    /// <summary>目前語言。</summary>
+    public static AppLanguage Language => _isEnglish ? AppLanguage.English
+        : _simplified ? AppLanguage.Simplified : AppLanguage.Traditional;
 
     /// <summary>語言切換時觸發。訂閱者應重新產生動態文字。</summary>
     public static event Action? Changed;
@@ -50,6 +58,20 @@ public static class LanguageService
     /// </summary>
     public static void Initialize(SettingsService settings)
         => _simplified = settings.SimplifiedChinese;
+
+    /// <summary>切換語言（三語版）。英文字串未收錄者回退繁中原文。</summary>
+    public static void SetLanguage(AppLanguage lang, SettingsService settings)
+    {
+        _isEnglish = lang == AppLanguage.English;
+        _simplified = lang == AppLanguage.Simplified && !_isEnglish;
+        settings.SimplifiedChinese = _simplified;
+        if (Shell.Main is { } main)
+        {
+            ConvertVisualTree(main, _simplified);
+            main.RebuildNavIfNeeded();
+        }
+        Changed?.Invoke();
+    }
 
     /// <summary>
     /// 切換語言並立即套用到整棵視覺樹。
@@ -76,7 +98,9 @@ public static class LanguageService
     /// </summary>
     public static string T(string? text)
     {
-        if (string.IsNullOrEmpty(text) || !_simplified) return text ?? "";
+        if (string.IsNullOrEmpty(text)) return text ?? "";
+        if (_isEnglish) return EnglishStrings.Lookup(text) ?? text;
+        if (!_simplified) return text;
         return ToSimplified(text);
     }
 
