@@ -4,7 +4,7 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一执行文件发布，免安装；对硬件与系统的读取以只读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-2.5.0-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.2.0-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![测试](https://img.shields.io/badge/tests-3094%20passed-3FB950)
@@ -79,8 +79,8 @@
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.5.0/XinSpect.exe) | 29,716,269 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.5.0/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.2.0/XinSpect.exe) | 29,716,269 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.2.0/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 
 系统需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含发布则免装）。显卡深测需要 D3D11 兼容设备；MSR 读取、SMART ioctl、Security 事件日志需以系统管理员执行——没有权限时相关项目标示「权限不足」，程序不会假装成功，也不会静默降级。
 
@@ -420,7 +420,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
-- **v2.5.0 Olympus**（2026-10-04，FileVersion 2.5.0.1）：系列更名 Everest→Olympus；WinRing0 回归主力、XsRegProbe 转白名单备援；交叉对账 26 条外部化＋判决卡；验机杀手级（SMART failing-now、机箱开启、HPA、假容量验证、WCTEMP、TDR、退休页、NPU）；安全鉴识（BYOVD、Defender 排除、1102、信任根、USBSTOR）；处理器深化（TME/SGX、C-state、PMU 能力＋编程验证、die 拓扑、SLIT）；系统软件层（Update 历史、服务盘点、事件记录摘要、稽核政策、选用功能、核心模块 Authenticode、开机参数、开机计时、USB 拓扑、摄影机、企业存储、网卡健康＋OUI、Wi-Fi 频道）；蓝色中队内置本体（可开关）；深测中心 38 项；公开规格与文档十份；审计日志、时间胶囊生命周期事件、corpus 骨架、本机 API、查询语言；DeepBench 启动崩溃修复；突变测试解锁 82%；3094 测试。
+- **v2.2.0 Olympus**（2026-10-04，FileVersion 2.2.0.1）：系列更名 Everest→Olympus；WinRing0 回归主力、XsRegProbe 转白名单备援；交叉对账 26 条外部化＋判决卡；验机杀手级（SMART failing-now、机箱开启、HPA、假容量验证、WCTEMP、TDR、退休页、NPU）；安全鉴识（BYOVD、Defender 排除、1102、信任根、USBSTOR）；处理器深化（TME/SGX、C-state、PMU 能力＋编程验证、die 拓扑、SLIT）；系统软件层（Update 历史、服务盘点、事件记录摘要、稽核政策、选用功能、核心模块 Authenticode、开机参数、开机计时、USB 拓扑、摄影机、企业存储、网卡健康＋OUI、Wi-Fi 频道）；蓝色中队内置本体（可开关）；深测中心 38 项；公开规格与文档十份；审计日志、时间胶囊生命周期事件、corpus 骨架、本机 API、查询语言；DeepBench 启动崩溃修复；突变测试解锁 82%；3094 测试。
 - **v2.1.0 Everest**（2026-10-02）：固件安全页、深层寄存器三态、XsRegProbe 驱动源码、深层存取豁免开关、Deep Bench 20（10→20 项）、守护进程三版、蓝色中队态势评估、一键装机、硬件检测、工具箱。
 
 ## 十八、常见问题

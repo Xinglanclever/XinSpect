@@ -20,7 +20,7 @@ public class CorpusUploadTests
         return new HardwareSnapshot
         {
             SchemaVersion = 1,
-            AppVersion = "2.5.0",
+            AppVersion = "2.2.0",
             AnonymousMachineId = "machinehash",
             CapturedAtUtc = at,
             SensitiveValuesPreserved = preserved,

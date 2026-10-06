@@ -48,12 +48,12 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
-            Version = "2.5.0",
+            Version = "2.2.0",
             Date = "2026-10-04",
             Title = "Olympus 2.5——深度驗機、交叉對帳、驗機殺手級檢測與安全鑑識（系列更名：Everest → Olympus）",
             Items =
             [
-                "版本更名：系列代號 Everest（額菲爾士峰／珠穆朗玛峰）更名 Olympus（奧林帕斯山／奧林匹斯山），版號 2.1.0 → 2.5.0。",
+                "版本更名：系列代號 Everest（額菲爾士峰／珠穆朗玛峰）更名 Olympus（奧林帕斯山／奧林匹斯山），版號 2.1.0 → 2.2.0。",
                 "驗機殺手級：SMART 門檻＋failing-now 判定（現值低於門檻逐項攤開）、NVMe WCTEMP 溫度警告、機箱開啟偵測（SMBIOS Type 3 入侵事件）、HPA 隱藏容量（IDENTIFY 對照 OS 可見）、假容量寫入驗證（同意閘門）、TDR 逾時與 NVML 退休頁。",
                 "安全鑑識：Defender 排除清單稽核、事件記錄清除（1102）偵測、非微軟本機信任根、USBSTOR 使用痕跡、BYOVD 逐驅動比對微軟建議封鎖清單（使用者提供清單檔，零出網）。",
                 "處理器深化：TME／SGX 記憶體加密狀態、Package C-state 駐留、PMU 能力探索與編程驗證（多輪測試・不保證可用）、die 拓撲（CPUID 0x1F）。",
