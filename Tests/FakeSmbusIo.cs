@@ -37,6 +37,16 @@ internal sealed class FakeSmbusIo : ISmbusIo
     /// <summary>掛在匯流排上的 SPD：鍵是 slave7（0x50–0x57），值是 512 位元組映像。</summary>
     public readonly Dictionary<byte, byte[]> Modules = new();
 
+    /// <summary>掛在匯流排上的 DDR5 模組（SPD5118 hub）：值是 1024 位元組映像。</summary>
+    public readonly Dictionary<byte, byte[]> Ddr5Modules = new();
+
+    /// <summary>目前選到的 DDR5 頁（MR11 bits[2:0]），供測試斷言收尾有沒有復位。</summary>
+    public byte Ddr5Page { get; private set; }
+
+    /// <summary>讓某個 EEPROM 暫存器在「每隔一次讀取」時回翻轉值——模擬傳輸不穩（連讀兩次比對用）。</summary>
+    public (byte Cmd, byte Value)? Ddr5Flip;
+    private int _ddr5FlipReads;
+
     public readonly List<(uint Port, byte Value)> Writes = new();
 
     /// <summary>目前選到的 SPD 頁（DDR4 的上半／下半），供測試斷言收尾有沒有復位。</summary>
@@ -76,6 +86,7 @@ internal sealed class FakeSmbusIo : ISmbusIo
         }
         if (port == Slva) { _slva = value; return true; }
         if (port == Cmd) { _cmd = value; return true; }
+        if (port == D0) { _d0 = value; return true; }   // 寫入交易的資料位元組（MR11 切頁值）
         if (port != Cnt) return true;
 
         if ((value & 0x02) != 0) { _sts |= 0x10; return true; }     // KILL → FAILED
@@ -93,9 +104,16 @@ internal sealed class FakeSmbusIo : ISmbusIo
                 else { _sts |= 0x04; return true; }
                 break;
 
-            case 0x02:                                               // Byte Data 讀取
+            case 0x02:                                               // Byte Data 讀取／寫入
+                if ((_slva & 1) == 0)
+                {
+                    // 寫入：唯一允許的是 DDR5 hub 的 MR11（0x0B）切頁
+                    if (Ddr5Modules.ContainsKey(slave7) && _cmd == 0x0B) { Ddr5Page = (byte)(_d0 & 0x07); break; }
+                    _sts |= 0x04; return true;
+                }
                 byte? got = Respond is not null ? Respond(slave7, _cmd)
                           : Modules.TryGetValue(slave7, out var image) ? image[Page * 256 + _cmd]
+                          : Ddr5Modules.TryGetValue(slave7, out var img5) ? ReadDdr5Register(img5, _cmd)
                           : null;
                 if (got is null) { _sts |= 0x04; return true; }       // 無裝置 → DEV_ERR
                 _d0 = got.Value;
@@ -111,4 +129,16 @@ internal sealed class FakeSmbusIo : ISmbusIo
         _sts |= 0x02;                                                // INTR＝完成
         return true;
     }
+
+    /// <summary>SPD5118 hub 的暫存器空間：MR0/MR1＝0x51/0x18（識別）、MR11＝頁暫存器、0x80 起＝當頁 EEPROM。</summary>
+    private byte ReadDdr5Register(byte[] image, byte cmd) => cmd switch
+    {
+        0x00 => 0x51,
+        0x01 => 0x18,
+        0x0B => (byte)(0x08 | Ddr5Page),  // bit3＝legacy mode（與頁位元一起存）
+        _ when cmd >= 0x80 && cmd <= 0xFF => Ddr5Flip is { } f && f.Cmd == cmd && _ddr5FlipReads++ >= 8
+                ? f.Value   // 該暫存器每遍被讀 8 次（8 頁）；第 9 次起＝第二遍，回翻轉值製造不一致
+                : image[Ddr5Page * 128 + (cmd - 0x80)],
+        _ => throw new System.Diagnostics.UnreachableException($"未模擬的 hub 暫存器 0x{cmd:X2}"),
+    };
 }

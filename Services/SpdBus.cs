@@ -23,6 +23,12 @@ public interface ISpdBus
     /// <summary>對切頁裝置發一個位元組（DDR4 的 SPA0／SPA1）。</summary>
     bool SendByte(byte slave7, byte data);
 
+    /// <summary>
+    /// 對 SPD 裝置寫一個暫存器（Byte Data 寫入協定）。唯一用途：DDR5 SPD5118 hub 的
+    /// MR11（0x0B）切頁。寫入位址受 <see cref="SpdBusAddresses.EnsureDdr5PageSelect"/> 白名單約束。
+    /// </summary>
+    bool WriteByteData(byte slave7, byte command, byte value);
+
     /// <summary>最後一次失敗的原因（人看得懂的中文）。</summary>
     string LastError { get; }
 
@@ -56,6 +62,16 @@ public static class SpdBusAddresses
     /// <summary>DDR4 的兩個切頁位址（SPA0＝0x36、SPA1＝0x37）。</summary>
     public static bool IsPageSelect(byte slave7) => slave7 is 0x36 or 0x37;
 
+    /// <summary>DDR5 SPD5118 hub 的頁選擇暫存器（MR11）。寫它＝選 EEPROM 的 128-byte 頁。</summary>
+    public const byte Ddr5PageSelectRegister = 0x0B;
+
+    /// <summary>
+    /// DDR5 切頁寫入：唯一允許的 Byte-Data 寫入是「對 0x50–0x57 寫 MR11（0x0B）」。
+    /// 其餘命令碼一律不允許寫——SPD EEPROM 資料區與 SWP/CWP 寫保護指令永不寫入。
+    /// </summary>
+    public static bool IsDdr5PageSelect(byte slave7, byte command) =>
+        IsSpdRead(slave7) && command == Ddr5PageSelectRegister;
+
     /// <summary>TSOD（TSE2004 記憶體溫度感測器）的八個裝置位址：0x18–0x1F。唯讀。</summary>
     public static bool IsTsodRead(byte slave7) => slave7 is >= 0x18 and <= 0x1F;
 
@@ -82,5 +98,14 @@ public static class SpdBusAddresses
             throw new ArgumentOutOfRangeException(nameof(slave7), slave7,
                 "只允許對 DDR4 切頁位址 0x36／0x37 寫入。"
                 + "SPD 的寫入保護指令（SWP0–2＝0x31／0x34／0x35、CWP＝0x33）與 EEPROM 資料區永不寫入。");
+    }
+
+    /// <exception cref="ArgumentOutOfRangeException">不是「對 0x50–0x57 寫 MR11（0x0B）」。</exception>
+    public static void EnsureDdr5PageSelect(byte slave7, byte command)
+    {
+        if (!IsDdr5PageSelect(slave7, command))
+            throw new ArgumentOutOfRangeException(nameof(command), command,
+                "DDR5 只允許對 SPD5118 hub 的 MR11（0x0B）寫入切頁；"
+                + "SPD EEPROM 資料區與寫入保護指令（SWP0–2＝0x31／0x34／0x35、CWP＝0x33）永不寫入。");
     }
 }

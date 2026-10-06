@@ -142,6 +142,19 @@ public sealed class ImcSmbusController(IPciConfig pci, ImcSmbusLocation location
         return Run(cmd, StsWriteDone, readsData: false) is not null;
     }
 
+    /// <summary>
+    /// <b>誠實的不支援</b>：iMC SMBus 的 Byte-Data 寫入編碼（指標＋資料兩段式）沒有公開文件可核，
+    /// 而猜錯編碼的後果是把位元組寫進不該寫的地方。DDR5 切頁因此不在 iMC 路徑上提供——
+    /// 寧可如實報 NotSupported，不拿猜測去碰記憶體模組。
+    /// </summary>
+    public bool WriteByteData(byte slave7, byte command, byte value)
+    {
+        LastError = "iMC SMBus 的 Byte-Data 寫入編碼沒有公開文件可核對——DDR5 切頁不在這條路徑上提供。"
+                  + "（DDR5 模組的 SPD hub 在 PCH 的 SMBus 上仍可讀。）";
+        LastStatus = SmbusStatus.NotSupported;
+        return false;
+    }
+
     private byte? Run(uint command, uint expectedDone, bool readsData)
     {
         if (!_acquired)

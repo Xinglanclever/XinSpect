@@ -350,6 +350,10 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>原生 SMBus 讀回的 SPD 位元組與解碼結果；供證據稽核交叉核對，不以 CPU-Z 顯示模型反推。</summary>
     public IReadOnlyList<SpdDirectRead> DirectSpdReads { get => _directSpdReads; internal set => SetProperty(ref _directSpdReads, value); }
 
+    private IReadOnlyList<SpdDirectRead5> _directSpdReads5 = Array.Empty<SpdDirectRead5>();
+    /// <summary>DDR5 模組的直讀結果（SPD5118 hub 通路）。與 DDR4 分列——解碼器標「未在本機驗證」。</summary>
+    public IReadOnlyList<SpdDirectRead5> DirectSpdReads5 { get => _directSpdReads5; internal set => SetProperty(ref _directSpdReads5, value); }
+
     private IReadOnlyList<SpdModule> _cpuzSpdModules = Array.Empty<SpdModule>();
     /// <summary>CPU-Z 報告的獨立 SPD 解讀；即使畫面優先採原生 SPD，稽核仍保留它作交叉證據。</summary>
     public IReadOnlyList<SpdModule> CpuzSpdModules { get => _cpuzSpdModules; internal set => SetProperty(ref _cpuzSpdModules, value); }

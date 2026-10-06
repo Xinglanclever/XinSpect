@@ -6,7 +6,7 @@ public enum SpdKind
     /// <summary>位址上沒有裝置——插槽是空的。正常狀況，不是錯誤。</summary>
     Empty,
     Ddr4,
-    /// <summary>是 DDR5，但本讀取器不解 SPD5 hub 協定。</summary>
+    /// <summary>DDR5 模組（SPD5118 hub，1024 位元組、MR11 切頁）。解讀交給 <see cref="SpdDecoder5"/>。</summary>
     Ddr5,
     /// <summary>型別碼認得出格式但不在支援範圍（DDR3 之類）。</summary>
     Unknown,
@@ -64,6 +64,15 @@ public static class SpdReader
     public const int PageSize = 256;
     public const int Ddr4Size = 512;
 
+    /// <summary>DDR5 SPD：1024 位元組＝8 頁 × 128 位元組（SPD5118 hub，Linux 核心 spd5118.c 同值交叉）。</summary>
+    public const int Ddr5Size = 1024;
+    public const int Ddr5PageSize = 128;
+    public const int Ddr5PageCount = 8;
+    /// <summary>DDR5 的 EEPROM 資料在 hub 暫存器空間 0x80 起（每頁 128 bytes）。</summary>
+    public const byte Ddr5EepromBase = 0x80;
+    /// <summary>SPD5118 hub 的識別魔術值：MR0＝0x51、MR1＝0x18（核心 spd5118_detect 同值交叉）。</summary>
+    public const byte Ddr5HubIdHigh = 0x51, Ddr5HubIdLow = 0x18;
+
     /// <summary>DDR4 的切頁裝置位址（SPA0／SPA1）。寫入這兩個位址是選頁，不是寫 EEPROM 資料區。</summary>
     public const byte PageSelect0 = 0x36;
     public const byte PageSelect1 = 0x37;
@@ -74,13 +83,14 @@ public static class SpdReader
         // 先探切頁裝置。DDR4 的 SPA0（0x36）只有在這條匯流排上真的掛著 DDR4 SPD 時才會回應，
         // 所以它 NAK 就代表「這條匯流排上沒有 SPD」——那是一句匯流排層級的結論，
         // 不該變成八個位址各自回一句一模一樣的「讀不到」。
-        if (!bus.SendByte(PageSelect0, 0x00) && bus.LastStatus == SmbusStatus.NoDevice)
+        if (!bus.SendByte(PageSelect0, 0x00) && bus.LastStatus == SmbusStatus.NoDevice
+            && !ProbeDdr5(bus, FirstAddress))
         {
             var empty = new List<SpdSlot>(AddressCount);
             for (int i = 0; i < AddressCount; i++)
                 empty.Add(new SpdSlot((byte)(FirstAddress + i), SpdKind.Empty, null, ""));
             return new SpdScan(empty,
-                "這條 SMBus 上沒有任何 DDR4 SPD——切頁裝置 0x36 沒有回應。"
+                "這條 SMBus 上沒有任何 DDR4／DDR5 SPD——DDR4 切頁裝置 0x36 與 DDR5 hub 暫存器都沒有回應。"
                 + "HEDT 與伺服器平台（X299、C621、LGA3647、Threadripper）的 DIMM SPD 通常掛在"
                 + "處理器記憶體控制器自己的 SMBus 區段上，不在 PCH 這一條；本讀取器只實作 PCH 那條路徑。");
         }
@@ -95,6 +105,21 @@ public static class SpdReader
         if (!SelectPage(bus, 0))
             return new SpdSlot(address, SpdKind.Unreadable, null, "無法選擇 SPD 頁：" + bus.LastError);
 
+        // DDR5：SPD5118 hub 的 MR0/MR1 恆為 0x51/0x18（暫存器空間，不經切頁）。先探它，
+        // 再落回 DDR4 的型別碼讀法——DDR4 EEPROM 的 byte 0/1 是別的內容，不會誤判。
+        byte? hubIdHigh = bus.ReadByteData(address, 0x00);
+        if (hubIdHigh == Ddr5HubIdHigh)
+        {
+            byte? hubIdLow = bus.ReadByteData(address, 0x01);
+            if (hubIdLow == Ddr5HubIdLow)
+            {
+                byte[]? raw5 = ReadDdr5Confirmed(bus, address, out string note5);
+                return raw5 is null
+                    ? new SpdSlot(address, SpdKind.Unreadable, null, note5)
+                    : new SpdSlot(address, SpdKind.Ddr5, raw5, note5);
+            }
+        }
+
         byte? type = bus.ReadByteData(address, TypeCodeOffset);
         if (type is null)
             return bus.LastStatus == SmbusStatus.NoDevice
@@ -107,11 +132,6 @@ public static class SpdReader
                 $"位址 0x{address:X2} 的型別碼回了 0x{type:X2}（全 0／全 F），判為讀不到。"
                 + "不轉送 SMBus 指令的外接盒與多工匯流排會帶 ACK 回一整片 0 或 F；"
                 + "把它當有效值會解出「製造於 2000 年第 0 週」這種假結論。");
-
-        if (type == Ddr5TypeCode)
-            return new SpdSlot(address, SpdKind.Ddr5, null,
-                "這條是 DDR5。SPD5 hub 的存取協定與 DDR4 不同，且本機沒有 DDR5 硬體可以拿真實"
-                + "位元組驗證，因此不實作——沒有基準檔就寫解碼器，等於把猜測當成事實。");
 
         if (type != Ddr4TypeCode)
             return new SpdSlot(address, SpdKind.Unknown, null,
@@ -207,6 +227,96 @@ public static class SpdReader
     /// <summary>選頁：對 SPA0／SPA1 發一個位元組。這是寫入動作，但寫的是切頁裝置，不是 EEPROM 資料區。</summary>
     private static bool SelectPage(ISpdBus bus, int page)
         => bus.SendByte(page == 0 ? PageSelect0 : PageSelect1, 0x00);
+
+    /// <summary>探 0x50 有沒有 SPD5118 hub（MR0/MR1＝0x51/0x18）。用於匯流排層級的「整條都空」判斷。</summary>
+    private static bool ProbeDdr5(ISpdBus bus, byte address)
+    {
+        byte? hi = bus.ReadByteData(address, 0x00);
+        return hi == Ddr5HubIdHigh && bus.ReadByteData(address, 0x01) == Ddr5HubIdLow;
+    }
+
+    /// <summary>
+    /// 把一條 DDR5 模組的 1024 位元組讀回來<b>兩次並逐位元組比對</b>；兩次不一樣就判讀不到。
+    /// 與 DDR4 同一條規則的理由也相同：逐位元組比對涵蓋整個 EEPROM，不需要知道任何位移。
+    /// </summary>
+    public static byte[]? ReadDdr5Confirmed(ISpdBus bus, byte address, out string note)
+    {
+        byte[]? first = ReadDdr5(bus, address, out note);
+        if (first is null) return null;
+
+        byte[]? second = ReadDdr5(bus, address, out string secondNote);
+        if (second is null)
+        {
+            note = $"位址 0x{address:X2} 的 SPD 第一次讀得到、第二次讀不到，判為讀不到：{secondNote}";
+            return null;
+        }
+
+        for (int i = 0; i < Ddr5Size; i++)
+        {
+            if (first[i] == second[i]) continue;
+            note = $"位址 0x{address:X2} 的 SPD 連讀兩次不一致（偏移 0x{i:X3} 先讀到 0x{first[i]:X2}、"
+                 + $"再讀到 0x{second[i]:X2}），判為讀不到。這是傳輸出錯，不是 SPD 被改過——"
+                 + "兩者在驗機上的意義完全不同，所以不猜。";
+            return null;
+        }
+        return first;
+    }
+
+    /// <summary>
+    /// 把一條 DDR5 模組的 1024 位元組全部讀回來（含 MR11 切頁）。任何一個位元組讀不到就整條放棄。
+    /// SPD5118 hub 的讀取協定（Linux 核心 spd5118.c 交叉核對）：MR11（0x0B）bits[2:0] 選頁，
+    /// 每頁 128 位元組，資料在暫存器 0x80 起。寫 MR11 採 read-modify-write（保留其餘位元），
+    /// 讀完復位回第 0 頁——頁是匯流排上的狀態，與 DDR4 切頁同一條紀律。
+    /// <b>未在本機驗證</b>：本機沒有 DDR5 硬體；此路徑的行為以合成測試釘住協定形狀。
+    /// </summary>
+    public static byte[]? ReadDdr5(ISpdBus bus, byte address, out string note)
+    {
+        note = "";
+        byte mr11PageRegister = SpdBusAddresses.Ddr5PageSelectRegister;
+        // MR11 read-modify-write：只動 bits[2:0]（頁選擇），其餘位元保持原值。
+        byte? mr11 = bus.ReadByteData(address, mr11PageRegister);
+        if (mr11 is null)
+        {
+            note = $"位址 0x{address:X2} 讀不到 SPD5118 hub 的 MR11：{bus.LastError}";
+            return null;
+        }
+        byte mr11Base = (byte)(mr11.Value & 0xF8);
+
+        var raw = new byte[Ddr5Size];
+        try
+        {
+            for (int page = 0; page < Ddr5PageCount; page++)
+            {
+                if (!bus.WriteByteData(address, mr11PageRegister, (byte)(mr11Base | page)))
+                {
+                    note = $"無法切到 DDR5 SPD 第 {page} 頁：{bus.LastError}";
+                    return null;
+                }
+                for (int i = 0; i < Ddr5PageSize; i++)
+                {
+                    byte? b = bus.ReadByteData(address, (byte)(Ddr5EepromBase + i));
+                    if (b is null)
+                    {
+                        note = $"位址 0x{address:X2} 的 SPD 在偏移 0x{page * Ddr5PageSize + i:X2} 讀不到：{bus.LastError}";
+                        return null;
+                    }
+                    raw[page * Ddr5PageSize + i] = b.Value;
+                }
+            }
+        }
+        finally
+        {
+            bus.WriteByteData(address, mr11PageRegister, mr11Base); // 復位回第 0 頁
+        }
+
+        if (IsUniform(raw, out byte fill))
+        {
+            note = $"位址 0x{address:X2} 的 SPD 前 128 位元組全是 0x{fill:X2}，判為讀不到"
+                 + "（真實的 SPD 不可能長這樣）。";
+            return null;
+        }
+        return raw;
+    }
 
     private static bool IsUniform(byte[] raw, out byte fill)
     {

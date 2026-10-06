@@ -136,6 +136,8 @@ public enum SmbusStatus
     Timeout,
     /// <summary>I/O 埠存取本身不可用（橋接沒了或沒有權限）。</summary>
     IoUnavailable,
+    /// <summary>此控制器不支援該交易（如 iMC 路徑的 Byte-Data 寫入編碼無公開文件）。</summary>
+    NotSupported,
 }
 
 /// <summary>
@@ -272,7 +274,17 @@ public sealed class SmbusController(ISmbusIo io, uint ioBase,
         return RunTransaction((byte)(slave7 << 1), data, ProtoByte, dataBytes: 0) is not null;
     }
 
-    private byte[]? RunTransaction(byte slva, byte cmdByte, byte protocol, int dataBytes)
+    /// <summary>
+    /// DDR5 SPD5118 hub 的暫存器寫入（SMBus Write Byte Data 協定）——唯一用途是寫 MR11（0x0B）切頁。
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">不是「對 0x50–0x57 寫 0x0B」。</exception>
+    public bool WriteByteData(byte slave7, byte command, byte value)
+    {
+        SpdBusAddresses.EnsureDdr5PageSelect(slave7, command);
+        return RunTransaction((byte)(slave7 << 1), command, ProtoByteData, dataBytes: 0, writeData: value) is not null;
+    }
+
+    private byte[]? RunTransaction(byte slva, byte cmdByte, byte protocol, int dataBytes, byte writeData = 0)
     {
         if (!_acquired)
             throw new InvalidOperationException("必須先 TryAcquireBus 取得匯流排旗號才能發起交易。");
@@ -301,6 +313,7 @@ public sealed class SmbusController(ISmbusIo io, uint ioBase,
         io.Out(ioBase + HstSts, StsClearMask);
         if (!io.Out(ioBase + XmitSlva, slva)
             || !io.Out(ioBase + HstCmd, cmdByte)
+            || !io.Out(ioBase + HstD0, writeData)
             || !io.Out(ioBase + HstCnt, (byte)(protocol | CntStart)))
         {
             LastError = "寫入 SMBus 控制器暫存器失敗（I/O 埠存取不可用）。";

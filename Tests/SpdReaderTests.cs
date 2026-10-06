@@ -15,9 +15,10 @@ namespace XinSpect.Tests;
 /// USB 外接盒與某些多工匯流排會回一整片 0 或 F，而且是帶 ACK 回的。
 /// </para>
 /// <para>
-/// ② <b>DDR5 明說不支援。</b>SPD5 hub 的協定與 DDR4 不同，而本機沒有 DDR5 硬體可以拿真實
-/// 位元組驗證。照專案規矩（1.9.1-B1 的 NVMe 位移錯誤就是合成資料把 bug 鎖死），沒有真實
-/// 位元組就不寫解碼器。
+/// ② <b>DDR5 走 SPD5118 hub 通路。</b>MR11 切頁、每頁 128 位元組、共 1024 位元組；解讀交給
+/// 純解碼器 <see cref="SpdDecoder5"/>。本機沒有 DDR5 硬體，讀取協定的形狀以合成測試釘住，
+/// 解碼器的欄位以 spdr（JESD400-5 開源解碼器）與 Linux 核心 spd5118.c 交叉核對——
+/// <b>整條 DDR5 路徑標「未在本機驗證」</b>，第一條實機模組到手時要用真實 dump 重建基準檔。
 /// </para>
 /// <para>
 /// ③ <b>讀完必須把頁復位回 0。</b>DDR4 的 SPD 超過 256 位元組要切頁，而切頁是<i>模組上的
@@ -108,16 +109,43 @@ public class SpdReaderTests
     }
 
     [Fact]
-    public void DDR5要明說不支援而不是硬解()
+    public void DDR5走hub路徑讀回1024位元組_讀完頁復位()
     {
-        var image = Ddr4Image();
-        image[2] = SpdReader.Ddr5TypeCode;
-        var io = new FakeSmbusIo { Modules = { [0x50] = image } };
+        var image = Ddr5Image();
+        var io = new FakeSmbusIo();
+        io.Ddr5Modules[0x50] = image;
 
         var slot = Assert.Single(SpdReader.ReadAll(Bus(io)).Slots, s => s.Address == 0x50);
-        Assert.Equal(SpdKind.Ddr5, slot.Kind);
+        Assert.True(slot.Kind == SpdKind.Ddr5, slot.Note);
+        Assert.NotNull(slot.Raw);
+        Assert.Equal(image, slot.Raw);
+        Assert.Equal(0, io.Ddr5Page);           // 讀完必須復位回第 0 頁
+    }
+
+    [Fact]
+    public void DDR5連讀兩次不一致時判讀不到()
+    {
+        var image = Ddr5Image();
+        var io = new FakeSmbusIo();
+        io.Ddr5Modules[0x50] = image;
+        // 在 byte 700（第 5 頁 88 號）埋一個會在第二次讀取時變動的值
+        io.Ddr5Flip = (0x80 + 60, (byte)(image[700] ^ 0xFF));  // 偏移 700＝第 5 頁第 60 byte → 暫存器 0x80+60
+
+        var slot = Assert.Single(SpdReader.ReadAll(Bus(io)).Slots, s => s.Address == 0x50);
+        Assert.Equal(SpdKind.Unreadable, slot.Kind);
         Assert.Null(slot.Raw);
-        Assert.Contains("DDR5", slot.Note);
+        Assert.Contains("連讀兩次不一致", slot.Note);
+    }
+
+    /// <summary>合成 DDR5 映像：每頁可辨識、byte 2＝0x12（key type）。</summary>
+    private static byte[] Ddr5Image()
+    {
+        var img = new byte[SpdReader.Ddr5Size];
+        for (int page = 0; page < SpdReader.Ddr5PageCount; page++)
+            for (int i = 0; i < SpdReader.Ddr5PageSize; i++)
+                img[page * SpdReader.Ddr5PageSize + i] = (byte)((page << 5) ^ i);
+        img[2] = SpdReader.Ddr5TypeCode;
+        return img;
     }
 
     [Fact]
@@ -196,7 +224,7 @@ public class SpdReaderTests
         Assert.All(scan.Slots, s => Assert.Equal(SpdKind.Empty, s.Kind));
         Assert.All(scan.Slots, s => Assert.Equal("", s.Note));
         Assert.False(scan.AnyPresent);
-        Assert.Contains("沒有任何 DDR4 SPD", scan.BusNote);
+        Assert.Contains("沒有任何 DDR4／DDR5 SPD", scan.BusNote);
         Assert.Contains("HEDT", scan.BusNote);
     }
 

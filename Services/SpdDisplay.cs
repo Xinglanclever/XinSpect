@@ -27,6 +27,52 @@ public static class SpdDisplay
     public static List<SpdModule> ToDisplay(IEnumerable<SpdDirectRead> reads)
         => reads.Select((r, i) => One(r, i + 1)).ToList();
 
+    /// <summary>DDR5（SPD5118 hub 直讀）的顯示映射。時序以奈秒原始值呈現——與 DDR4 同一條「只給事實」的原則。</summary>
+    public static List<SpdModule> ToDisplay5(IEnumerable<SpdDirectRead5> reads)
+        => reads.Select((r, i) => One5(r, i + 1)).ToList();
+
+    private static SpdModule One5(SpdDirectRead5 r, int number)
+    {
+        var s = r.Decoded5;
+        var m = new SpdModule
+        {
+            Slot = $"DIMM #{number}（0x{r.Address:X2}）",
+            Source = "直讀 SPD ・ " + r.Bus,
+            MemoryType = "DDR5（未在本機驗證：本機無 DDR5 硬體）",
+            ModuleFormat = s.ModuleType,
+            Size = s.CapacityMib > 0 ? $"{s.CapacityMib} MBytes" : "—",
+            Manufacturer = s.ModuleManufacturer.Name,
+            DramManufacturer = s.DramManufacturer.Name,
+            PartNumber = s.PartNumber.Length > 0 ? s.PartNumber : "—",
+            MaxBandwidth = s.BaseDataRateMtS > 0 ? $"DDR5-{s.BaseDataRateMtS} ({s.BaseDataRateMtS / 2} MHz)" : "—",
+            MaxJedec = s.BaseDataRateMtS > 0 ? $"DDR5-{s.BaseDataRateMtS} ({s.BaseDataRateMtS / 2} MHz)" : "—",
+            ManufacturingDate = s.ManufactureYear is null
+                ? "—（SPD 裡沒有燒製造日期）"
+                : $"Week {s.ManufactureWeek}/Year {s.ManufactureYear % 100:00}",
+            NominalVoltage = "—",
+            Xmp = s.Hybrid ? "hybrid（含 EPM/OC 區）" : "no",
+            Checksum = s.BaseCrc.Valid
+                ? "基本段 OK"
+                : $"基本段不符（存 0x{s.BaseCrc.Stored:X4}／算 0x{s.BaseCrc.Computed:X4}）",
+        };
+
+        void Row(string label, string values) => m.Jedec.Add(new SpdTiming { Label = label, Values = values });
+        if (s.TckAvgMinPs > 0 && s.CasLatencies.Count > 0)
+            Row($"CL-tRCD-tRP-tRAS-tRC @ DDR5-{s.BaseDataRateMtS}",
+                Clocks(s.TckAvgMinPs, s.TaaPs, s.TrcdPs, s.TrpPs, s.TrasPs, s.TrcPs));
+        Row("最小週期 tCK", Ns(s.TckAvgMinPs, 3));
+        Row($"tAA（CL {string.Join("/", s.CasLatencies)}）", Ns(s.TaaPs));
+        Row("tRCD", Ns(s.TrcdPs));
+        Row("tRP", Ns(s.TrpPs));
+        Row("tRAS", Ns(s.TrasPs));
+        Row("tRC", Ns(s.TrcPs));
+        Row("tWR", Ns(s.TwrPs));
+        Row("tRFC1 ／ tRFC2 ／ tRFCsb（ns）", s.Trfc1Ns + " ／ " + s.Trfc2Ns + " ／ " + s.TrfcSbNs);
+        Row("tRRD_L（ps／nCK）", s.TRrdL.TimePs + " ／ " + s.TRrdL.ClocksNck);
+        Row("tCCD_L（ps／nCK）", s.TCcdL.TimePs + " ／ " + s.TCcdL.ClocksNck);
+        return m;
+    }
+
     private static SpdModule One(SpdDirectRead r, int number)
     {
         var s = r.Decoded;

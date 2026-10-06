@@ -212,9 +212,15 @@ internal static class StartupSequence
     {
         // SPD 先自己讀。讀得到就用它，因為那是模組上的原始位元組（來源那一列會標明是哪一條匯流排）；
         // 讀不到就保留既有值，讓下面的 CPU-Z 報告照原樣填——在讀不到 SPD 的機器上完全沒有回歸。
-        var nativeSpd = await Task.Run(ReadSpdDirect);
-        vm.DirectSpdReads = nativeSpd;
-        if (nativeSpd.Count > 0) vm.SpdModules = SpdDisplay.ToDisplay(nativeSpd);
+        var survey = await Task.Run(ReadSpdDirect);
+        if (survey is not null)
+        {
+            vm.DirectSpdReads = survey.Modules;
+            vm.DirectSpdReads5 = survey.Ddr5Modules ?? [];
+        }
+        var display4 = SpdDisplay.ToDisplay(vm.DirectSpdReads);
+        var display5 = SpdDisplay.ToDisplay5(vm.DirectSpdReads5);
+        if (display4.Count + display5.Count > 0) vm.SpdModules = display4.Concat(display5).ToList();
 
         // 晶片組安全暫存器（BIOS_CNTL/SMRAMC）：走 WinRing0 讀 bus 0；讀不到由三態如實標示（缺 ring0 / 非 Intel）。
         // SPI 快閃與 PCIe AER 同場載入：SPIBAR 經 PCI 取得、擴充組態空間要 MMIO——驅動未載時 DriverMmioReader
@@ -254,7 +260,7 @@ internal static class StartupSequence
             vm.CpuDetail = report.Cpu;
             vm.Mainboard = report.Board;
             vm.CpuzSpdModules = report.Spd;
-            if (nativeSpd.Count == 0) vm.SpdModules = report.Spd;
+            if (vm.SpdModules.Count == 0) vm.SpdModules = report.Spd;   // 原生直讀沒填（DDR4+DDR5 都空）才退回 CPU-Z 報告
             vm.GpuDetails = report.Gpus;
 
             if (vm.Live is not null)
@@ -334,6 +340,30 @@ internal static class StartupSequence
             }
         }
 
+        // ── 來源一之二：DDR5 SPD 直讀（同樣是模組原始位元組；解碼器未在本機驗證，標示如實）──
+        var spd5 = vm.DirectSpdReads5.FirstOrDefault();
+        if (spd5 is { } first5 && first5.Decoded5.TckAvgMinPs > 0)
+        {
+            var d5 = first5.Decoded5;
+            int cl5 = SpdTimings.ClocksAt(d5.TaaPs, d5.TckAvgMinPs);
+            return new MemoryTimings
+            {
+                Loaded = true,
+                SourceText = "SPD 直讀（" + first5.Bus + "）・DDR5 基準時序（未在本機驗證）",
+                Status = "已由 DDR5 SPD 直讀填入基準（JEDEC）時序。解碼器尚未在實機 DDR5 上驗證；"
+                       + "若 BIOS 已開 XMP／EXPO，實際時序會比這裡更緊。",
+                MemoryTypeText = "DDR5",
+                DataRateText = d5.BaseDataRateMtS > 0 ? $"DDR5-{d5.BaseDataRateMtS}" : "—",
+                DramFrequencyMHz = d5.BaseDataRateMtS > 0 ? d5.BaseDataRateMtS / 2.0 : 0,
+                CL = cl5 > 0 ? cl5.ToString() : "—",
+                TRCD = SpdTimings.ClocksAt(d5.TrcdPs, d5.TckAvgMinPs).ToString(),
+                TRP = SpdTimings.ClocksAt(d5.TrpPs, d5.TckAvgMinPs).ToString(),
+                TRAS = SpdTimings.ClocksAt(d5.TrasPs, d5.TckAvgMinPs).ToString(),
+                TRFC = d5.Trfc1Ns > 0 ? SpdTimings.ClocksAt(d5.Trfc1Ns * 1000, d5.TckAvgMinPs).ToString() : "—",
+                MemorySizeText = $"{vm.DirectSpdReads5.Sum(r => r.Decoded5.CapacityMib) / 1024.0:0.#} GB（{vm.DirectSpdReads5.Count} 條）",
+            };
+        }
+
         // ── 來源二：WMI（Win32_PhysicalMemory 的 ConfiguredClockSpeed＝目前設定的資料速率）──
         var mods = vm.Modules;
         if (mods is { Count: > 0 } && mods[0].ConfiguredSpeedMHz > 0)
@@ -365,23 +395,23 @@ internal static class StartupSequence
     /// 正在用匯流排）就不搶；每一條匯流排的硬體旗號取不到也各自跳過。
     /// 回空清單不是錯誤，只是這台機器這一刻讀不到——呼叫端會退回 CPU-Z 報告那條路徑。
     /// </remarks>
-    private static List<SpdDirectRead> ReadSpdDirect()
+    private static SpdSurvey? ReadSpdDirect()
     {
         try
         {
             using var bridge = WinRing0Bridge.Create();
-            if (!bridge.Available) return [];
+            if (!bridge.Available) return null;
 
             var notes = new List<string>();
             var buses = SpdBusFactory.Candidates(bridge, notes);
-            if (buses.Count == 0) return [];
+            if (buses.Count == 0) return null;
 
             using var busLock = SmbusBusLock.TryAcquire(SmbusBusLock.WellKnownName, 500, out _);
-            if (busLock is null) return [];
+            if (busLock is null) return null;
 
-            return SpdSurveyor.Survey(buses).Modules.ToList();
+            return SpdSurveyor.Survey(buses);
         }
-        catch { return []; }
+        catch { return null; }
     }
 
     // 首次啟動的環境自檢：略候片刻讓各引擎與感測器就緒，再於背景跑一次。

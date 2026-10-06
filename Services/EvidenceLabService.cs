@@ -139,6 +139,15 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>記憶體加密（TME/SGX）與 C-state 駐留三態事實（處理器深化；驅動相依）。</summary>
     public IReadOnlyList<HardwareFact> MemoryEncryptionFacts { get; private set; } = [];
 
+    /// <summary>AMD 安全事實（SME/SEV/SNP/PSP）；非 AMD 平台整組 NotApplicable（R5）。</summary>
+    public IReadOnlyList<HardwareFact> AmdSecurityFacts { get; private set; } = [];
+
+    /// <summary>PMBus 電源軌（R7）；無 PMBus 裝置時整組 NotApplicable。</summary>
+    public IReadOnlyList<HardwareFact> PsuPmbusFacts { get; private set; } = [];
+
+    /// <summary>UEFI 安全開機簽章資料庫（db/dbx/KEK/PK）與 Boot 條目（R2；需提權）。</summary>
+    public IReadOnlyList<HardwareFact> UefiSignatureFacts { get; private set; } = [];
+
     public IReadOnlyList<HardwareFact> CStateFacts { get; private set; } = [];
 
     /// <summary>WP22 記憶體壓力探測的危險聲明（UI 紅字呈現；探測本身需明確同意才執行）。</summary>
@@ -180,6 +189,8 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(ChassisFactsService.Collect(at))
             .Concat(HpaFactsService.Collect(at))
             .Concat(GpuTdrFactsService.Collect(at))
+            .Concat(LevelZeroFactsService.Collect(at))
+            .Concat(UpsFactsService.Collect(at))
             .Concat(DebugConfigService.Collect(at))
             .ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));
@@ -235,11 +246,14 @@ public sealed class EvidenceLabService : ObservableObject
         CpuFirmwareFacts = CpuFirmwareFactsService.Collect(msr, at);
         PmuFacts = PmuCapabilityFactsService.Collect(at, msr: msr);
         MemoryEncryptionFacts = MemoryEncryptionFactsService.Collect(at, msr: msr);
+        AmdSecurityFacts = AmdSecurityFactsService.Collect(at, msr: msr, pci: pci);
+        PsuPmbusFacts = PsuPmbusFactsService.CollectWithLock(smbusIo, pci.ReadDword, at);
         CStateFacts = CStateResidencyFactsService.Collect(at, msr);
         IoPortFacts = IoPortFactsService.Collect(io, at);
         CmosFacts = CmosService.Collect(io, at);
         SmbusFacts = TsodSurveyor.CollectWithLock(smbusIo, pci.ReadDword, at);
         UefiFacts = UefiBootFactsService.Collect(at);
+        UefiSignatureFacts = UefiSignatureFactsService.Collect(at);
         SuperIoFacts = SuperIoProbeService.Collect(io, at);
         HwmFacts = SuperIoHwmFactsService.Collect(io, at);
         PciInventoryFacts = Bus0InventoryService.Collect(pci, at);
@@ -340,7 +354,7 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>把全部事實組交給對帳引擎逐規則評估；每條規則一列（一致／矛盾／無法驗證都是 Present 的「結論事實」）。</summary>
     private IReadOnlyList<HardwareFact> EvaluateReconciliation(DateTimeOffset at)
     {
-        var all = ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(CStateFacts)
+        var all = ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(CStateFacts)
             .Concat(BackendFacts).Concat(MchbarFacts).Concat(PcieAerFacts).Concat(AcpiFacts).ToList();
         var rows = FactRelationService.Evaluate(FactRelationRules.All, all);
 
@@ -380,15 +394,15 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>全部事實組合併成單一清單（CLI 與報告用）。與 FirmwareSecurityRows 同集合、不轉渲染列。</summary>
     public IReadOnlyList<HardwareFact> AllFacts =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
-            .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
-            .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
+            .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
+            .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
             .Concat(PlatformFacts).Concat(SoftwareFacts).Concat(AcpiFacts).ToList();
 
     /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + I/O 埠 + CMOS + SMBus + PCI 盤點 + TPM + 平台拓撲 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
-            .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
-            .Concat(SmbusFacts).Concat(UefiFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
+            .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
+            .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
             .Concat(PlatformFacts).Concat(SoftwareFacts).Concat(AcpiFacts)
             .OrderBy(f => f.Category, StringComparer.Ordinal).ThenBy(f => f.Key, StringComparer.Ordinal)
             .Select(EvidenceFactRow.From).ToList();
@@ -660,6 +674,8 @@ public sealed class EvidenceLabService : ObservableObject
         f.AddRange(vm.EvidenceLab.SmbusFacts);
         // UEFI 開機設定三態事實。
         f.AddRange(vm.EvidenceLab.UefiFacts);
+        // UEFI 簽章資料庫（db/dbx/KEK/PK）與 Boot 條目（需提權；讀不到三態）。
+        f.AddRange(vm.EvidenceLab.UefiSignatureFacts);
         // Super I/O 探測三態事實。
         f.AddRange(vm.EvidenceLab.SuperIoFacts);
         // Bus 0 裝置盤點（WP30 知識層）。

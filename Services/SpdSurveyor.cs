@@ -4,12 +4,16 @@ namespace XinSpect;
 /// <param name="Bus">讀它的是哪一條匯流排——這是事實的血統，畫面上要說得出來。</param>
 public sealed record SpdDirectRead(string Bus, byte Address, byte[] Raw, SpdSnapshot Decoded);
 
+/// <summary>一條讀到並解出來的 DDR5 模組（SPD5118 hub 直讀）。</summary>
+public sealed record SpdDirectRead5(string Bus, byte Address, byte[] Raw, Ddr5SpdSnapshot Decoded5);
+
 /// <summary>一次全機 SPD 巡檢的結果。</summary>
 /// <param name="Problems">有裝置卻讀不到、或型別不支援的位址。<b>這些是發現，不是空插槽。</b></param>
 /// <param name="Notes">匯流排層級的說明，每一條都指名是哪一條匯流排。</param>
 public sealed record SpdSurvey(IReadOnlyList<SpdDirectRead> Modules,
                               IReadOnlyList<SpdSlot> Problems,
-                              IReadOnlyList<string> Notes);
+                              IReadOnlyList<string> Notes,
+                              IReadOnlyList<SpdDirectRead5>? Ddr5Modules = null);
 
 /// <summary>
 /// 把候選的每一條匯流排走一遍，收集所有讀得到的 SPD。
@@ -31,6 +35,7 @@ public static class SpdSurveyor
     public static SpdSurvey Survey(IEnumerable<ISpdBus> buses)
     {
         var modules = new List<SpdDirectRead>();
+        var ddr5Modules = new List<SpdDirectRead5>();
         var problems = new List<SpdSlot>();
         var notes = new List<string>();
 
@@ -57,6 +62,12 @@ public static class SpdSurveyor
                         modules.Add(new SpdDirectRead(bus.Description, slot.Address, slot.Raw, decoded));
                         continue;
                     }
+                    if (slot.Kind == SpdKind.Ddr5 && slot.Raw is not null
+                        && SpdDecoder5.Decode(slot.Raw) is { } decoded5)
+                    {
+                        ddr5Modules.Add(new SpdDirectRead5(bus.Description, slot.Address, slot.Raw, decoded5));
+                        continue;
+                    }
                     problems.Add(slot);
                 }
             }
@@ -66,7 +77,7 @@ public static class SpdSurveyor
             }
         }
 
-        return new SpdSurvey(modules, problems, notes);
+        return new SpdSurvey(modules, problems, notes, ddr5Modules);
     }
 }
 

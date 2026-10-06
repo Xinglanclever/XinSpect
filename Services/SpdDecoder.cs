@@ -124,6 +124,10 @@ public static class SpdDecoder
         [(1, 0x0B)] = "Nanya",
     };
 
+    /// <summary>已驗證的 JEP106 廠商代碼查表；DDR5 解碼器共用同一份（未收錄回 null）。</summary>
+    public static string? KnownManufacturer(int bank, byte code) =>
+        Names.TryGetValue((bank, code), out var name) ? name : null;
+
     private static SpdManufacturer DecodeManufacturer(byte[] raw, int offset)
     {
         byte hi = raw[offset], lo = raw[offset + 1];
