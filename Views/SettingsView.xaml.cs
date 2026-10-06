@@ -323,6 +323,15 @@ public partial class SettingsView : UserControl
     private void LangToggle_Click(object sender, RoutedEventArgs e)
     {
         if (Vm is not { } vm) return;
-        LanguageService.SetLanguage(vm.Settings.SimplifiedChinese, vm.Settings);
+        // 切到簡體時取消英語；切到繁體時也取消英語
+        if (vm.Settings.SimplifiedChinese) { vm.Settings.IsEnglish = false; LanguageService.SetLanguage(AppLanguage.Simplified, vm.Settings); }
+        else { vm.Settings.IsEnglish = false; LanguageService.SetLanguage(AppLanguage.Traditional, vm.Settings); }
+    }
+
+    private void EnglishToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm is not { } vm) return;
+        if (EnglishCheck is { IsChecked: true }) { vm.Settings.IsEnglish = true; LanguageService.SetLanguage(AppLanguage.English, vm.Settings); }
+        else { vm.Settings.IsEnglish = false; LanguageService.SetLanguage(AppLanguage.Traditional, vm.Settings); }
     }
 }

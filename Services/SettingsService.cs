@@ -85,6 +85,10 @@ public sealed class SettingsService : ObservableObject
     /// <summary>介面文字使用簡體中文（預設繁體）。切換後須重啟或呼叫 ConvertVisualTree。</summary>
     public bool SimplifiedChinese { get => _simplifiedChinese; set { if (SetProperty(ref _simplifiedChinese, value)) Save(); } }
 
+    private bool _isEnglish;
+    /// <summary>英語模式。</summary>
+    public bool IsEnglish { get => _isEnglish; set { if (SetProperty(ref _isEnglish, value)) Save(); } }
+
     private bool _allowMultiInstance = true;
     /// <summary>
     /// 是否允許同時開多份曦覽。預設允許。
@@ -339,6 +343,7 @@ public sealed class SettingsService : ObservableObject
         public bool CeremonyPlayed { get; set; }
         public bool BlueSquadronEnabled { get; set; } = true;
         public bool SimplifiedChinese { get; set; }
+        public bool IsEnglish { get; set; }
         public string? DashboardTiles { get; set; }
         public Dictionary<string, string>? ToolSlots { get; set; }
     }
@@ -404,6 +409,7 @@ public sealed class SettingsService : ObservableObject
                     _ceremonyPlayed = p.CeremonyPlayed;
                     _blueSquadronEnabled = p.BlueSquadronEnabled;
                     _simplifiedChinese = p.SimplifiedChinese;
+                    _isEnglish = p.IsEnglish;
                     _allowMultiInstance = p.AllowMultiInstance;
                     _dashboardTiles = p.DashboardTiles ?? "";
                     if (p.ToolSlots is not null) _toolSlots = new(p.ToolSlots, StringComparer.Ordinal);
@@ -469,6 +475,7 @@ public sealed class SettingsService : ObservableObject
                 CeremonyPlayed = _ceremonyPlayed,
                 BlueSquadronEnabled = _blueSquadronEnabled,
                 SimplifiedChinese = _simplifiedChinese,
+                IsEnglish = _isEnglish,
                 AllowMultiInstance = _allowMultiInstance,
                 DashboardTiles = _dashboardTiles.Length > 0 ? _dashboardTiles : null,
                 ToolSlots = _toolSlots.Count > 0 ? _toolSlots : null,

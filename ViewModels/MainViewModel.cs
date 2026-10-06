@@ -521,13 +521,28 @@ public sealed class MainViewModel : ObservableObject
     private EraMode _era = EraMode.Gregorian;
     /// <summary>目前紀年（供 <see cref="MetricsPump"/> 每拍格式化時鐘）。</summary>
     internal EraMode Era => _era;
-    public IReadOnlyList<string> EraNames => EraCalendar.Names;
+    public IReadOnlyList<string> EraNames
+    {
+        get
+        {
+            if (LanguageService.IsSimplified)
+            {
+                var all = EraCalendar.GetNames(true);
+                var modes = EraCalendar.GetAvailableModes(true);
+                // 簡體模式：民國被排除，名稱陣列已不含民國
+                return all;
+            }
+            return EraCalendar.GetNames(false);
+        }
+    }
     public int EraIndex
     {
         get => (int)_era;
         set
         {
             var mode = (EraMode)value;
+            // 簡體模式禁用民國
+            if (LanguageService.IsSimplified && mode == EraMode.Minguo) mode = EraMode.Gregorian;
             if (_era == mode) return;
             _era = mode;
             OnPropertyChanged();
@@ -542,8 +557,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>套用已存設定中的預設紀年（開機序列最前呼叫）。</summary>
     internal void ApplySavedEra()
     {
-        if (Settings.DefaultEra < 0 || Settings.DefaultEra >= EraCalendar.Names.Length) return;
-        _era = (EraMode)Settings.DefaultEra;
+        var available = EraCalendar.GetAvailableModes(LanguageService.IsSimplified);
+        var saved = (EraMode)Settings.DefaultEra;
+        _era = available.Contains(saved) ? saved : EraMode.Gregorian;
         OnPropertyChanged(nameof(EraIndex));
     }
 

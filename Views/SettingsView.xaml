@@ -167,9 +167,13 @@
                     <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,16"/>
                     <local:SectionHead Text="語言" HelpKey="settings/語言"/>
                     <CheckBox Style="{StaticResource SetCheck}" Margin="0,8,0,0"
-                              Content="簡體中文（切換後整個介面立即轉換，無須重啟）"
+                              Content="简体中文（切换后整个介面立即转换，无须重启）"
                               IsChecked="{Binding Settings.SimplifiedChinese}"
                               Click="LangToggle_Click"/>
+                    <CheckBox Style="{StaticResource SetCheck}" Margin="0,4,0,0"
+                              Content="English (switch entire UI immediately, no restart)"
+                              x:Name="EnglishCheck"
+                              Click="EnglishToggle_Click"/>
 
                     <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,16"/>
                     <local:SectionHead Text="簡易模式" HelpKey="settings/簡易模式"/>
