@@ -48,7 +48,7 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
-            Version = "2.3.0",
+            Version = "2.25",
             Date = "2026-10-07",
             Title = "硬體缺口清空：SuperIO 多家族、DDR5 SPD 直讀、AMD 安全事實與 Radeon 遙測、Intel GPU Level Zero、PMBus 電源軌與 UPS",
             Items =
