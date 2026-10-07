@@ -29,9 +29,9 @@ internal static class Install
         {
             Directory.CreateDirectory(dir);
 
-            // 1) XinSect.exe (includes LibreHardwareMonitor + WinRing0 + BlueSquadron embedded)
-            Console.WriteLine("  [1/4] Downloading XinSect.exe (includes LHM + WinRing0 driver + BlueSquadron)...");
-            DownloadFile(base_url + "XinSect.exe", Path.Combine(dir, "XinSect.exe"), 1, 4);
+            // 1) XinSpect.exe (includes LibreHardwareMonitor + WinRing0 + BlueSquadron embedded)
+            Console.WriteLine("  [1/4] Downloading XinSpect.exe (includes LHM + WinRing0 driver + BlueSquadron)...");
+            DownloadFile(base_url + "XinSpect.exe", Path.Combine(dir, "XinSpect.exe"), 1, 4);
 
             // 2) BlueSquadronBridge.exe (standalone guard process)
             Console.WriteLine("  [2/4] Downloading BlueSquadronBridge.exe...");
@@ -41,13 +41,13 @@ internal static class Install
             Console.WriteLine("  [3/4] Deployed to Desktop\\XinSpect folder.");
 
             // 4) Launch
-            Console.WriteLine("  [4/4] Launching XinSect...");
+            Console.WriteLine("  [4/4] Launching XinSpect...");
             Console.WriteLine();
-            Process.Start(new ProcessStartInfo(Path.Combine(dir, "XinSect.exe")) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(Path.Combine(dir, "XinSpect.exe")) { UseShellExecute = true });
 
             Console.WriteLine("  ==========================================");
             Console.WriteLine("  Deploy complete.");
-            Console.WriteLine("  - XinSect.exe (includes WinRing0 + LHM + BlueSquadron)");
+            Console.WriteLine("  - XinSpect.exe (includes WinRing0 + LHM + BlueSquadron)");
             Console.WriteLine("  - BlueSquadronBridge.exe (standalone guard)");
             Console.WriteLine("  Location: Desktop\\XinSpect\\");
             Console.WriteLine("  ==========================================");
