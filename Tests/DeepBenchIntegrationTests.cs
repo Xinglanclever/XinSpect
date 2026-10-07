@@ -92,12 +92,12 @@ public class DeepBenchIntegrationTests
     }
 
     [Fact]
-    public void Changelog_Olympus2點5為Latest且歷史Everest條目保留()
+    public void Changelog_最新版為Latest且歷史Everest條目保留()
     {
         // 2026-10-03 系列更名：Everest → Olympus，版號 2.1.0 → 2.2.0（使用者指示）。
         // 歷史 2.1.0 條目原封不動；新內容折疊進 2.2.0 Olympus 條目。
         ChangeEntry entry = Assert.Single(ChangelogCatalog.Entries, item => item.Version == "2.1.0");
-        Assert.Equal("2.25", ChangelogCatalog.Latest);
+        Assert.Equal("2.26", ChangelogCatalog.Latest);
         string combined = string.Join('\n', entry.Items);
 
         Assert.Contains("Deep Bench 深測中心", combined, StringComparison.Ordinal);

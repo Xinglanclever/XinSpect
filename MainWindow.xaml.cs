@@ -39,7 +39,7 @@ public partial class MainWindow : Window
         BuildNav();
         ApplyAccentGlow();
         LanguageService.Changed += ApplyLanguage;
-        Title = AppInfo.WindowTitle(LanguageService.IsSimplified);
+        Title = AppInfo.WindowTitle(LanguageService.IsEnglish || LanguageService.IsSimplified);
 
         // 感測引擎於背景載入完成後，重放當前頁的感測閘門（引擎晚到時閘門才有對象可套用）
         _vm.PropertyChanged += (_, e) =>
@@ -70,10 +70,12 @@ public partial class MainWindow : Window
             Nav.SelectedIndex = 0;
             InitTray();
 
-            // 啟動時套用已存的語言偏好——這是簡體從來不生效的主因：過去只讀旗標、之後從沒轉過樹，
-            // 重啟必回繁體。等版面配置跑完（Loaded 優先權）再轉，才走得到已實體化的視覺樹。
-            if (LanguageService.IsSimplified)
-                Dispatcher.InvokeAsync(() => LanguageService.ConvertVisualTree(this, true),
+            // 啟動時套用已存的語言偏好。兩個模式都要走這一步：轉換函式內部再分派
+            // （簡體走 LCMapStringEx、英語查翻譯表），這裡只負責「把樹跑一遍」。
+            // 過去只認 IsSimplified——所以英語偏好重啟後主視窗的靜態文字（搜尋／迷你／匯出報告、
+            // 紀年名稱）全部停在繁中，只有導覽列因為重建時逐項查表才是英文。2026-10-07 修。
+            if (LanguageService.IsSimplified || LanguageService.IsEnglish)
+                Dispatcher.InvokeAsync(() => LanguageService.ConvertVisualTree(this, LanguageService.IsSimplified),
                     System.Windows.Threading.DispatcherPriority.Loaded);
         };
     }

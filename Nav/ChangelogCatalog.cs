@@ -48,6 +48,20 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.26",
+            Date = "2026-10-08",
+            Title = "語言模式修復與部署器檔名修正——英語模式真的可用、StringFormat 綁定字串補完",
+            Items =
+            [
+                "語言模式修復：設定頁的 English 勾選正式接線，英語模式真的能用；簡體模式與語言切換卡住的問題一併修掉（EraCalendar 簡體下民國紀年回退公元）。",
+                "綁定字串跟著換語言：StringFormat 缺口補完（48 處）——切換語言後繫結文字的格式也一起改，不再只換標題。",
+                "部署器檔名修正：一鍵部署器下載檔名錯字修正（XinSect.exe → XinSpect.exe），才能抓到正確的主程式。",
+                "README 修正：下載連結改指實際 Latest 版本、版本沿革補上 2.25——先前落在 v2.2.0，使用者點下載會拿到舊版。",
+                "新增文件：功能擴展藍圖落差分析與擴展總藍圖（docs/）。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.25",
             Date = "2026-10-07",
             Title = "硬體缺口清空：SuperIO 多家族、DDR5 SPD 直讀、AMD 安全事實與 Radeon 遙測、Intel GPU Level Zero、PMBus 電源軌與 UPS",

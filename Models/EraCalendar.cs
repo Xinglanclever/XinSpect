@@ -82,7 +82,28 @@ public static class EraCalendar
         => value >= 0 && value < Names.Length ? (EraMode)value : EraMode.Gregorian;
 
     /// <summary>格式化時間；全部紀年統一以「◯年◯月◯日 時:分:秒」自然排列呈現。</summary>
-    public static string Format(DateTime t, EraMode mode) => mode switch
+    public static string Format(DateTime t, EraMode mode) => LanguageService.IsEnglish
+        ? FormatEnglish(t, mode)
+        : FormatChinese(t, mode);
+
+    /// <summary>英語模式的紀年字串。日期照 en-US 習慣（月名＋序數日），紀年名稱用同一套翻譯。</summary>
+    private static string FormatEnglish(DateTime t, EraMode mode)
+    {
+        string date = t.ToString("MMMM d, yyyy  HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+        return mode switch
+        {
+            EraMode.Minguo => $"Minguo {t.Year - 1911} · {date}",
+            EraMode.Huangdi => $"Yellow Emperor {t.Year + 2698} · {date}",
+            EraMode.Xuantong => $"Xuantong {t.Year - 1908} · {date}",
+            EraMode.Doraemon => (t.Year >= 2112
+                                    ? (t.Year == 2112 ? "Doraemon year 1" : $"Doraemon {t.Year - 2111}")
+                                    : $"Doraemon minus {2112 - t.Year}")
+                                + $" · {date}",
+            _ => date,
+        };
+    }
+
+    private static string FormatChinese(DateTime t, EraMode mode) => mode switch
     {
         EraMode.Minguo   => $"民國 {t.Year - 1911} 年 {t.Month} 月 {t.Day} 日  {t:HH:mm:ss}",
         EraMode.Huangdi  => $"中華黃帝紀元 {t.Year + 2698} 年 {t.Month} 月 {t.Day} 日  {t:HH:mm:ss}",
