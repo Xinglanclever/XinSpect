@@ -126,10 +126,10 @@
                                                            FontSize="15" FontWeight="SemiBold"
                                                            Foreground="{DynamicResource PrimaryInkBrush}" TextWrapping="Wrap"/>
                                             </StackPanel>
-                                            <TextBlock Text="{Binding Evidence, StringFormat=依據：{0}}" TextWrapping="Wrap"
+                                            <TextBlock Text="{Binding Evidence, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='依據：{0}'}" TextWrapping="Wrap"
                                                        Margin="0,8,0,0" FontSize="13"
                                                        Foreground="{DynamicResource SecondaryInkBrush}"/>
-                                            <TextBlock Text="{Binding Action, StringFormat=做法：{0}}" TextWrapping="Wrap"
+                                            <TextBlock Text="{Binding Action, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='做法：{0}'}" TextWrapping="Wrap"
                                                        Margin="0,4,0,0" FontSize="13"
                                                        Foreground="{DynamicResource SecondaryInkBrush}"/>
                                             <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
@@ -445,7 +445,7 @@
                                     <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding TotalText}"
                                                VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" VerticalAlignment="Center"
-                                               Text="{Binding DegradationText, StringFormat=多花 {0}}"/>
+                                               Text="{Binding DegradationText, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='多花 {0}'}"/>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

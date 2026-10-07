@@ -121,6 +121,39 @@ public class EnglishTreeTests
         Assert.Equal(EraMode.Minguo, EraCalendar.FromIndex(simplified: false, names.Length - 4));
     }
 
+    [Fact]
+    public void 格式字串轉換器_英語查表_繁簡照轉_未收錄回原文()
+    {
+        // 模板以 ConverterParameter 傳入，轉換器先翻譯模板再套 string.Format。
+        // 這是 StringFormat 在轉換器之後才執行所造成的缺口（Binding 產生的字串以前都不轉）。
+        var conv = LangFormatConverter.Instance;
+
+        LanguageService.SetEnglishForTests(true);
+        try
+        {
+            Assert.Equal("8 cores", conv.Convert(8, typeof(string), "{0} 核", System.Globalization.CultureInfo.InvariantCulture));
+            Assert.Equal("12 s", conv.Convert(12, typeof(string), "{0} 秒", System.Globalization.CultureInfo.InvariantCulture));
+            Assert.Equal("Source: 42", conv.Convert(42, typeof(string), "來源：{0}", System.Globalization.CultureInfo.InvariantCulture));
+            // 未收錄模板＝原文模板，仍要把值填進去（不是留空、不是丟掉值）
+            Assert.Equal("未收錄X：7", conv.Convert(7, typeof(string), "未收錄X：{0}", System.Globalization.CultureInfo.InvariantCulture));
+            // 數字格式規格要原樣生效
+            Assert.Equal("1,234 items", conv.Convert(1234, typeof(string), "{0:N0} 筆", System.Globalization.CultureInfo.InvariantCulture));
+        }
+        finally { LanguageService.SetEnglishForTests(false); }
+
+        // 繁體：模板原樣，值照填
+        Assert.Equal("8 核", conv.Convert(8, typeof(string), "{0} 核", System.Globalization.CultureInfo.InvariantCulture));
+        // 簡體：模板轉簡體（「秒」繁簡同形，用「執行緒」驗真的轉了）
+        LanguageService.SetSimplifiedForTests(true);
+        try
+        {
+            Assert.Equal("8 线程", conv.Convert(8, typeof(string), "{0} 執行緒", System.Globalization.CultureInfo.InvariantCulture));
+        }
+        finally { LanguageService.SetSimplifiedForTests(false); }
+        // null 值＝空字串，不是 "0"
+        Assert.Equal("", conv.Convert(null, typeof(string), "{0} 核", System.Globalization.CultureInfo.InvariantCulture));
+    }
+
     private static void RunSta(Action action)
     {
         Exception? error = null;

@@ -73,7 +73,7 @@
                     <local:FrameTimeChart x:Name="Chart" Height="200" Margin="0,8,0,0"
                                           Intervals="{Binding FrameTime.Intervals}"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,8,0,0" TextWrapping="Wrap"
-                               Text="{Binding FrameTime.Stats.Frames, StringFormat=已觀測 {0} 幀。幀時間變異（長條忽高忽低）是頓感的真正來源，平均 FPS 看不出來。}"/>
+                               Text="{Binding FrameTime.Stats.Frames, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='已觀測 {0} 幀。幀時間變異（長條忽高忽低）是頓感的真正來源，平均 FPS 看不出來。'}"/>
                 </StackPanel>
             </Border>
         </StackPanel>

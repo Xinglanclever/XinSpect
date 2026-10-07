@@ -27,9 +27,9 @@
                         <local:FieldRow Label="型號" Value="{Binding Cpu.Name}"/>
                         <local:FieldRow Label="製造商" Value="{Binding Cpu.Manufacturer}"/>
                         <local:FieldRow Label="插槽" Value="{Binding Cpu.Socket}"/>
-                        <local:FieldRow Label="實體核心" Value="{Binding Cpu.Cores, StringFormat={}{0} 核}"/>
+                        <local:FieldRow Label="實體核心" Value="{Binding Cpu.Cores, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='{}{0} 核'}"/>
                         <local:FieldRow Label="已啟用核心" Value="{Binding Cpu.EnabledCoresText}"/>
-                        <local:FieldRow Label="邏輯處理器" Value="{Binding Cpu.Threads, StringFormat={}{0} 執行緒}"/>
+                        <local:FieldRow Label="邏輯處理器" Value="{Binding Cpu.Threads, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='{}{0} 執行緒'}"/>
                         <local:FieldRow Label="額定頻率" Value="{Binding Cpu.MaxClockMHz, StringFormat={}{0:0} MHz}"/>
                         <local:FieldRow Label="外頻 / 基準匯流排" Value="{Binding Cpu.ExtClockText}"/>
                     </StackPanel>
@@ -246,7 +246,7 @@
                 <StackPanel>
                     <local:SectionHead Text="各邏輯處理器使用率（仿工作管理員）" HelpKey="cpu/各邏輯處理器使用率（仿工作管理員）"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,0,0,10"
-                               Text="{Binding CoreLoads.Count, StringFormat=每格為一顆邏輯處理器（共 {0} 顆）・ 0–100% ・ 近 90 秒}"/>
+                               Text="{Binding CoreLoads.Count, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='每格為一顆邏輯處理器（共 {0} 顆）・ 0–100% ・ 近 90 秒'}"/>
                     <ItemsControl ItemsSource="{Binding CoreLoads.Cells}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -575,7 +575,7 @@
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,6,0,0" TextWrapping="Wrap"
                                Text="「共用上界」是 CPUID 給的可定址邏輯處理器數（EAX 25:14＋1），硬體會向上取到 2 的冪次，只能當上界看：18 核 36 執行緒的 L3 會回「最多 64 執行緒」，那不代表有 64 個核心。「含括下層」讀 EDX 位 1；L1 之下沒有更低階快取，這一欄對它沒有意義，故留「—」。"/>
 
-                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,12,0,4" Text="{Binding CpuId.FrequencyText, StringFormat=標稱頻率：{0}}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,12,0,4" Text="{Binding CpuId.FrequencyText, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='標稱頻率：{0}'}"/>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Text="拓樸層級（0x1F／0x0B）"/>
                     <ItemsControl ItemsSource="{Binding CpuId.Topology}" Margin="0,4,0,0">
@@ -594,7 +594,7 @@
                                Text="每一列的數字是「該層在上一層範圍內的邏輯處理器數」（EBX 15:0），不是那一層有幾個實例：SMT 層是每個核心的執行緒數，核心層是每個封裝的邏輯處理器數（18 核 36 執行緒會回 36）。"/>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,12,0,4"
-                               Text="{Binding CpuId.Features.Count, Mode=OneWay, StringFormat=指令集與功能位元（{0} 項支援）}"/>
+                               Text="{Binding CpuId.Features.Count, Mode=OneWay, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='指令集與功能位元（{0} 項支援）'}"/>
                     <ItemsControl ItemsSource="{Binding CpuId.Features}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>

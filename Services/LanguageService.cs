@@ -73,6 +73,13 @@ public static class LanguageService
     /// <summary>測試用：直接切英語旗標（InternalsVisibleTo；不走 SetLanguage 的 Shell／設定路徑）。</summary>
     internal static void SetEnglishForTests(bool english) => _isEnglish = english;
 
+    /// <summary>測試用：直接切簡體旗標（同上；英語優先，故同時把英語關掉）。</summary>
+    internal static void SetSimplifiedForTests(bool simplified)
+    {
+        _simplified = simplified;
+        if (simplified) _isEnglish = false;
+    }
+
     public static void Initialize(SettingsService settings)
     {
         _simplified = settings.SimplifiedChinese;

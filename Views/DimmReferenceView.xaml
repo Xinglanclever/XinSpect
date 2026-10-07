@@ -21,7 +21,7 @@
                                FontSize="28" FontWeight="SemiBold"
                                Foreground="{DynamicResource PrimaryInkBrush}"
                                Margin="0,4,0,0"/>
-                    <TextBlock Text="{Binding FormFactor, StringFormat='封裝形式：{0}'}"
+                    <TextBlock Text="{Binding FormFactor, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='封裝形式：{0}'}"
                                FontSize="12"
                                Foreground="{DynamicResource SecondaryInkBrush}"
                                Margin="0,4,0,0"/>

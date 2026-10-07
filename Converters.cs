@@ -183,3 +183,35 @@ public sealed class HoursToTextConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => Binding.DoNothing;
 }
+
+/// <summary>
+/// 把 <c>{Binding …, StringFormat=中文模板}</c> 換成可翻譯的版本：模板以 <c>ConverterParameter</c> 傳入，
+/// 轉換時先翻譯模板（英語查表／簡體轉字），再套 <see cref="string.Format(string,object)"/>。
+/// </summary>
+/// <remarks>
+/// <para>
+/// 為什麼需要這個：WPF 的 <c>StringFormat</c> 在 <see cref="IValueConverter"/> <b>之後</b>才執行，
+/// 所以 <see cref="ChineseConverter"/> 與視覺樹轉換都看不到最終字串——綁定產生的中文以前在
+/// 簡體與英語模式下<b>都不會轉</b>（2026-10-07 修的缺口）。把模板搬到 ConverterParameter 之後，
+/// 轉換器就拿得到它了。
+/// </para>
+/// <para>
+/// 模板未收錄時如實回退原文模板，不猜、不留空。
+/// </para>
+/// </remarks>
+public sealed class LangFormatConverter : IValueConverter
+{
+    public static readonly LangFormatConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        string template = parameter as string ?? "{0}";
+        string localized = LanguageService.T(template);
+        if (value is null) return "";
+        try { return string.Format(culture, localized, value); }
+        catch (FormatException) { return localized; }   // 模板壞掉時給模板本身，不吞成空白
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}

@@ -12,7 +12,7 @@
                     <Grid>
                         <local:SectionHead Text="棋類跑分（原生節點吞吐・自我驗證）" HelpKey="bench/棋類跑分（原生節點吞吐・自我驗證）"/>
                         <TextBlock Style="{StaticResource FieldLabel}" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                   Text="{Binding Chess.LogicalCores, StringFormat=本機 {0} 邏輯核心}"/>
+                                   Text="{Binding Chess.LogicalCores, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='本機 {0} 邏輯核心'}"/>
                     </Grid>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
                                Text="以 perft（合法走法產生 + 走子/還原）為確定性整數負載，量測節點速率（kN/s）。每執行緒各持獨立引擎、無鎖競爭，可超額訂閱實體核心。固定局面固定深度的節點數是數學常數，因此每一輪都順便核對：算出別的數字代表這台機器算錯了，而不是它比較慢。"/>
@@ -140,7 +140,7 @@
                     <Grid>
                         <local:SectionHead Text="烤機（穩定度壓力測試）" HelpKey="bench/烤機（穩定度壓力測試）"/>
                         <TextBlock Style="{StaticResource FieldLabel}" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                   Text="{Binding Stress.Threads, StringFormat=全部 {0} 執行緒滿載}"/>
+                                   Text="{Binding Stress.Threads, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='全部 {0} 執行緒滿載'}"/>
                     </Grid>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
                                Text="以全部邏輯執行緒持續高強度運算，將 CPU 推至滿載，觀察長時間高負載下的溫度、頻率與是否降頻。請搭配下方「即時走勢」的溫度 / 頻率曲線一同判讀。"/>
@@ -294,7 +294,7 @@
                                     <TextBlock Text="{Binding Bench.MultiText}" FontSize="28" Margin="0,2,0,0"
                                                Foreground="{DynamicResource PrimaryInkBrush}"/>
                                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,2,0,0"
-                                               Text="{Binding Bench.Threads, StringFormat=MOPS ・ {0} 執行緒}"/>
+                                               Text="{Binding Bench.Threads, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='MOPS ・ {0} 執行緒'}"/>
                                 </StackPanel>
                             </Border>
                             <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="16,14" Margin="5,4,0,4">
@@ -388,7 +388,7 @@
                     <!-- 分母（插槽總數＝配發寬度 × 未停頓周期）必須攤在畫面上：寬度逐代不同（Skylake 4、
                          Sunny Cove 5、Golden Cove 6、Lion Cove 8），寫錯的話四桶會整組偏掉，而且偏得像真的。 -->
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,4" TextWrapping="Wrap"
-                               Text="{Binding TopDown.MicroarchText, StringFormat=分母來源：{0}}"/>
+                               Text="{Binding TopDown.MicroarchText, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='分母來源：{0}'}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,0,0,10" TextWrapping="Wrap"
                                Text="誠實界線：① 錯誤推測一桶不含 INT_MISC.RECOVERY_CYCLES 項（硬體只有 4 個通用計數器，五個事件放不下），故該桶略微低估、後端受限略微高估。② 逐實體核心序列取樣，各核心的取樣時間點不同，非同一瞬間的快照。③ 以 AnyThread 量整顆實體核心（SMT 兩執行緒合計），因為前端事件本質是核心層事件。④ 取樣前後完整存讀並還原 PERFEVTSEL0–3 與 GLOBAL_CTRL，不變動作業系統正在使用的固定計數器；若同時有 VTune／PCM 在用計數器，兩者會互相覆蓋。"/>
 
@@ -787,7 +787,7 @@
                                 <ProgressBar Grid.Column="1" Style="{StaticResource LoadBar}" Margin="4,0,10,0"
                                              VerticalAlignment="Center" Value="{Binding BarPercent, Mode=OneWay}"/>
                                 <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" TextAlignment="Right"
-                                           VerticalAlignment="Center" Text="{Binding Count, StringFormat={}{0:N0} 筆}"/>
+                                           VerticalAlignment="Center" Text="{Binding Count, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='{}{0:N0} 筆'}"/>
                                 <TextBlock Grid.Column="3" Style="{StaticResource FieldLabel}" TextAlignment="Right"
                                            VerticalAlignment="Center" Text="{Binding ShareText}"/>
                             </Grid>

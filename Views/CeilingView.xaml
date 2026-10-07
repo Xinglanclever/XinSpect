@@ -28,7 +28,7 @@
                         <TextBlock Text="{Binding Note}" TextWrapping="Wrap" Margin="0,5,0,0" FontSize="13"
                                    Foreground="{DynamicResource SecondaryInkBrush}"
                                    Visibility="{Binding HasNote, Converter={StaticResource BoolToVis}}"/>
-                        <TextBlock Text="{Binding Evidence, StringFormat=出處：{0}}" TextWrapping="Wrap"
+                        <TextBlock Text="{Binding Evidence, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='出處：{0}'}" TextWrapping="Wrap"
                                    Margin="0,4,0,0" FontSize="11.5" FontFamily="Consolas"
                                    Foreground="{DynamicResource MutedInkBrush}"
                                    Visibility="{Binding HasEvidence, Converter={StaticResource BoolToVis}}"/>

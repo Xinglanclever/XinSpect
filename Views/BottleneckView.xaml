@@ -28,13 +28,13 @@
                                        FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"
                                        Foreground="{DynamicResource PrimaryInkBrush}"/>
                         </StackPanel>
-                        <TextBlock Text="{Binding Evidence, StringFormat=依據：{0}}" TextWrapping="Wrap"
+                        <TextBlock Text="{Binding Evidence, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='依據：{0}'}" TextWrapping="Wrap"
                                    Margin="0,8,0,0" FontSize="13"
                                    Foreground="{DynamicResource SecondaryInkBrush}"/>
-                        <TextBlock Text="{Binding Advice, StringFormat=做法：{0}}" TextWrapping="Wrap"
+                        <TextBlock Text="{Binding Advice, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='做法：{0}'}" TextWrapping="Wrap"
                                    Margin="0,4,0,0" FontSize="13"
                                    Foreground="{DynamicResource SecondaryInkBrush}"/>
-                        <TextBlock Text="{Binding Where, StringFormat=量得更清楚：{0}}" TextWrapping="Wrap"
+                        <TextBlock Text="{Binding Where, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='量得更清楚：{0}'}" TextWrapping="Wrap"
                                    Margin="0,6,0,0" Style="{StaticResource FieldLabel}"
                                    Visibility="{Binding HasWhere, Converter={StaticResource BoolToVis}}"/>
                     </StackPanel>

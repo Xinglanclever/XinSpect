@@ -115,7 +115,7 @@
                 </Border>
             </StackPanel>
             <TextBlock Style="{StaticResource Subtitle}" Margin="2,0,0,14"
-                       Text="{Binding GpuName, StringFormat=裝置：{0}}"/>
+                       Text="{Binding GpuName, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='裝置：{0}'}"/>
 
             <!-- 可用性 / 權限 -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
@@ -170,9 +170,9 @@
                             Value="{Binding PowerLimitPercent, Mode=TwoWay}"/>
                     <Grid Margin="0,4,0,0">
                         <TextBlock Foreground="{DynamicResource MutedInkBrush}" FontSize="11.5"
-                                   Text="{Binding PowerDefaultW, StringFormat=預設功耗 {0:0} W ・ 100% 為原廠上限}"/>
+                                   Text="{Binding PowerDefaultW, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='預設功耗 {0:0} W ・ 100% 為原廠上限'}"/>
                         <TextBlock HorizontalAlignment="Right" Foreground="{DynamicResource MutedInkBrush}" FontSize="11.5"
-                                   Text="{Binding PowerLimitW, StringFormat=目前 {0:0} W}"/>
+                                   Text="{Binding PowerLimitW, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='目前 {0:0} W'}"/>
                     </Grid>
                     <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                         <Button Style="{StaticResource PrimaryButton}" Content="套用功耗上限" Click="Power_Click"/>
@@ -194,7 +194,7 @@
                             Minimum="{Binding TempLimitMin}" Maximum="{Binding TempLimitMax}"
                             Value="{Binding TargetTempLimitC, Mode=TwoWay}"/>
                     <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource MutedInkBrush}" FontSize="11.5"
-                               Text="{Binding TempLimitNow, StringFormat=目前上限 {0:0} °C ・ 達到此溫度將自動降頻保護}"/>
+                               Text="{Binding TempLimitNow, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='目前上限 {0:0} °C ・ 達到此溫度將自動降頻保護'}"/>
                     <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                         <Button Style="{StaticResource PrimaryButton}" Content="套用溫度上限" Click="Temp_Click"/>
                         <TextBlock VerticalAlignment="Center" Margin="12,0,0,0" TextWrapping="Wrap"
@@ -215,7 +215,7 @@
                             Minimum="{Binding CoreOffMin}" Maximum="{Binding CoreOffMax}"
                             Value="{Binding TargetCoreOffsetMhz, Mode=TwoWay}"/>
                     <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource MutedInkBrush}" FontSize="11.5"
-                               Text="{Binding CoreOffsetNow, StringFormat=目前偏移 {0:+0;-0;0} MHz ・ 相對原廠曲線的核心頻率位移}"/>
+                               Text="{Binding CoreOffsetNow, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='目前偏移 {0:+0;-0;0} MHz ・ 相對原廠曲線的核心頻率位移'}"/>
                     <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                         <Button Style="{StaticResource PrimaryButton}" Content="套用核心偏移" Click="Core_Click"/>
                         <TextBlock VerticalAlignment="Center" Margin="12,0,0,0" TextWrapping="Wrap"
@@ -236,7 +236,7 @@
                             Minimum="{Binding MemOffMin}" Maximum="{Binding MemOffMax}"
                             Value="{Binding TargetMemOffsetMhz, Mode=TwoWay}"/>
                     <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource MutedInkBrush}" FontSize="11.5"
-                               Text="{Binding MemOffsetNow, StringFormat=目前偏移 {0:+0;-0;0} MHz ・ GDDR 具錯誤更正，過高會降速反而變慢}"/>
+                               Text="{Binding MemOffsetNow, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='目前偏移 {0:+0;-0;0} MHz ・ GDDR 具錯誤更正，過高會降速反而變慢'}"/>
                     <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                         <Button Style="{StaticResource PrimaryButton}" Content="套用顯示記憶體偏移" Click="Mem_Click"/>
                         <TextBlock VerticalAlignment="Center" Margin="12,0,0,0" TextWrapping="Wrap"

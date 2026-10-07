@@ -347,7 +347,7 @@
                         <Slider Grid.Column="1" Style="{StaticResource SetSlider}" VerticalAlignment="Center"
                                 Minimum="1" Maximum="10" Value="{Binding Settings.UpdateIntervalSec, Mode=TwoWay}"/>
                         <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                   Text="{Binding Settings.UpdateIntervalSec, StringFormat={}{0} 秒}"/>
+                                   Text="{Binding Settings.UpdateIntervalSec, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='{}{0} 秒'}"/>
                     </Grid>
 
                     <CheckBox Style="{StaticResource SetCheck}" Margin="0,14,0,0"
@@ -390,7 +390,7 @@
                         <Slider Grid.Column="1" Style="{StaticResource SetSlider}" VerticalAlignment="Center"
                                 Minimum="1" Maximum="60" Value="{Binding Settings.LogIntervalSec, Mode=TwoWay}"/>
                         <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                   Text="{Binding Settings.LogIntervalSec, StringFormat={}{0} 秒}"/>
+                                   Text="{Binding Settings.LogIntervalSec, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='{}{0} 秒'}"/>
                     </Grid>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Text="輸出資料夾" Margin="0,14,0,4"/>
@@ -442,7 +442,7 @@
                         <Slider Grid.Column="1" Style="{StaticResource SetSlider}" VerticalAlignment="Center"
                                 Minimum="1" Maximum="120" Value="{Binding Settings.HistoryRetentionDays, Mode=TwoWay}"/>
                         <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                   Text="{Binding Settings.HistoryRetentionDays, StringFormat={}{0} 天}"/>
+                                   Text="{Binding Settings.HistoryRetentionDays, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='{}{0} 天'}"/>
                     </Grid>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,12,0,0" TextWrapping="Wrap"
@@ -461,7 +461,7 @@
                                Text="本機歷次跑分成績（含當時的溫度與頻率），存於 %APPDATA%\XinSpect\bench-history.json，最多保留 300 筆。曦覽不內建任何別台機器的參考分數，這份紀錄就是「與上次相比」「重複性」的唯一依據——清空後在累積出新紀錄前，跑分只會有單次數字而無從比較。"/>
                     <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
                         <TextBlock Style="{StaticResource FieldLabel}" VerticalAlignment="Center"
-                                   Text="{Binding Benchmarks.Count, StringFormat=目前 {0} 筆}"/>
+                                   Text="{Binding Benchmarks.Count, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='目前 {0} 筆'}"/>
                         <Button Style="{StaticResource ToolButton}" Content="清空跑分紀錄" Margin="12,0,0,0"
                                 Click="ClearBenchLog_Click"/>
                     </StackPanel>
@@ -734,7 +734,7 @@
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap"
                                Text="{Binding Diagnostics.HintText}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
-                               Text="{Binding Diagnostics.FilePath, StringFormat=紀錄檔：{0}}"/>
+                               Text="{Binding Diagnostics.FilePath, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='紀錄檔：{0}'}"/>
 
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,12,0,0" TextWrapping="Wrap"
                                Text="目前沒有降級紀錄可列。"

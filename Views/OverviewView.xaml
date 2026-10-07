@@ -156,8 +156,8 @@
                 <StackPanel>
                     <local:SectionHead Text="核心規格" HelpKey="overview/核心規格"/>
                     <local:FieldRow Label="處理器" Value="{Binding Cpu.Name}"/>
-                    <local:FieldRow Label="實體核心" Value="{Binding Cpu.Cores, StringFormat={}{0} 核}"/>
-                    <local:FieldRow Label="邏輯處理器" Value="{Binding Cpu.Threads, StringFormat={}{0} 執行緒}"/>
+                    <local:FieldRow Label="實體核心" Value="{Binding Cpu.Cores, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='{}{0} 核'}"/>
+                    <local:FieldRow Label="邏輯處理器" Value="{Binding Cpu.Threads, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='{}{0} 執行緒'}"/>
                     <local:FieldRow Label="記憶體" Value="{Binding Live.MemUsageText}"/>
                     <local:FieldRow Label="顯示卡" Value="{Binding Live.PrimaryGpu.Name}"/>
                 </StackPanel>

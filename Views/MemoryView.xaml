@@ -200,7 +200,7 @@
                                                 <DataTemplate>
                                                     <StackPanel Margin="0,6,0,0">
                                                         <TextBlock Style="{StaticResource FieldLabel}"
-                                                                   Text="{Binding Name, StringFormat=效能設定檔：{0}}"/>
+                                                                   Text="{Binding Name, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='效能設定檔：{0}'}"/>
                                                         <local:FieldRow Label="規格" Value="{Binding Specification}"/>
                                                         <local:FieldRow Label="電壓" Value="{Binding Voltage}"/>
                                                         <local:FieldRow Label="最高 CL" Value="{Binding MaxCL}"/>
@@ -357,7 +357,7 @@
                     <local:SectionHead Text="SMBIOS 記憶體裝置" HelpKey="memory/SMBIOS 記憶體裝置"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
                                Text="直讀韌體 Type 17 結構：每條記憶體的插槽位置、標稱／設定速度、序號、型號與 Rank——這些是韌體回報的資料（位移核對 dmidecode 3.x），未填的欄位顯示「—」。"/>
-                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Smbios.MemoryArray.Count, Mode=OneWay, StringFormat=記憶體陣列資訊（{0} 組）}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Smbios.MemoryArray.Count, Mode=OneWay, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='記憶體陣列資訊（{0} 組）'}"/>
                     <ItemsControl ItemsSource="{Binding Smbios.MemoryArray}" Margin="0,2,0,8">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -393,11 +393,11 @@
                                             <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding Bank}"/>
                                         </Grid>
                                         <TextBlock Style="{StaticResource FieldValue}" Margin="0,3,0,0" TextWrapping="Wrap"
-                                                   Text="{Binding Manufacturer, StringFormat=製造商：{0}}"/>
+                                                   Text="{Binding Manufacturer, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='製造商：{0}'}"/>
                                         <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"
-                                                   Text="{Binding Part, StringFormat=型號：{0}}"/>
+                                                   Text="{Binding Part, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='型號：{0}'}"/>
                                         <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"
-                                                   Text="{Binding Serial, StringFormat=序號：{0}}"/>
+                                                   Text="{Binding Serial, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='序號：{0}'}"/>
                                         <TextBlock Style="{StaticResource FieldValue}"
                                                    Text="{Binding Rank, StringFormat=Rank：{0}}"/>
                                     </StackPanel>

@@ -141,7 +141,7 @@
                         <ComboBox Style="{StaticResource DarkCombo}" x:Name="SmartDrives"
                                   ItemsSource="{Binding DiskSmart.Drives}" DisplayMemberPath="Label" SelectedIndex="0"/>
                         <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}" Margin="12,0,0,0" VerticalAlignment="Center"
-                                   Text="{Binding DiskSmart.KindText, StringFormat=來源：{0}}"/>
+                                   Text="{Binding DiskSmart.KindText, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='來源：{0}'}"/>
                     </Grid>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,0,0,6" TextWrapping="Wrap" Text="{Binding DiskSmart.Status}"/>
                     <Grid Margin="0,0,0,2">
@@ -197,7 +197,7 @@
                         <ComboBox Grid.Column="1" Style="{StaticResource DarkCombo}" Margin="8,0,0,0" x:Name="SlcTarget"
                                   ItemsSource="{Binding SlcCache.TargetTexts}" SelectedIndex="{Binding SlcCache.TargetIndex, Mode=TwoWay}"/>
                         <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" Margin="12,0,0,0" VerticalAlignment="Center"
-                                   Text="{Binding SlcCache.PeakText, StringFormat=尖峰：{0}}"/>
+                                   Text="{Binding SlcCache.PeakText, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='尖峰：{0}'}"/>
                     </Grid>
                     <ProgressBar Style="{StaticResource LoadBar}" Value="{Binding SlcCache.ProgressPercent, Mode=OneWay}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding SlcCache.Status}"/>

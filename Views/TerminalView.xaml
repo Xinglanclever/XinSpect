@@ -21,7 +21,7 @@
         </StackPanel>
         <TextBlock Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Center"
                    Foreground="{DynamicResource SecondaryInkBrush}" FontSize="12"
-                   Text="{Binding ShellName, StringFormat=目前：{0}}"/>
+                   Text="{Binding ShellName, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='目前：{0}'}"/>
 
         <!-- 工具列 -->
         <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,6,0,10" Padding="14,10">

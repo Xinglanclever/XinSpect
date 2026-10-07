@@ -202,9 +202,9 @@
                                         <TextBlock Style="{StaticResource FieldValue}" Text="{Binding CompletionText}" TextWrapping="Wrap"/>
                                         <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding SessionId}" TextWrapping="Wrap"/>
                                         <TextBlock Style="{StaticResource FieldLabel}"
-                                                   Text="{Binding StartedText, StringFormat=開始 {0}}" TextWrapping="Wrap"/>
+                                                   Text="{Binding StartedText, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='開始 {0}'}" TextWrapping="Wrap"/>
                                         <TextBlock Style="{StaticResource FieldLabel}"
-                                                   Text="{Binding EndedText, StringFormat=結束 {0}}" TextWrapping="Wrap"/>
+                                                   Text="{Binding EndedText, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='結束 {0}'}" TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>

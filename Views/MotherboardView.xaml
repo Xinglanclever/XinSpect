@@ -139,7 +139,7 @@
                     <local:SectionHead Text="SMBIOS 原始表" HelpKey="mainboard/SMBIOS 原始表"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
                                Text="直接解析韌體的 SMBIOS 表（位移核對 dmidecode 3.x）。沒填的欄位顯示「—」；不認得的列舉值顯示原始位元組，不硬掰。"/>
-                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Smbios.VersionText, StringFormat=表版本：{0}}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Smbios.VersionText, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='表版本：{0}'}"/>
                     <ItemsControl ItemsSource="{Binding Smbios.Bios}" Margin="0,6,0,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -194,7 +194,7 @@
                     </ItemsControl>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,12,0,4"
-                               Text="{Binding Smbios.Slots.Count, Mode=OneWay, StringFormat=系統插槽（{0} 個）}"/>
+                               Text="{Binding Smbios.Slots.Count, Mode=OneWay, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='系統插槽（{0} 個）'}"/>
                     <Grid Margin="0,0,0,2">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="150"/><ColumnDefinition Width="*"/>

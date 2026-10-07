@@ -125,7 +125,7 @@
                         <TextBlock Grid.Row="1" Text="TDP" FontSize="13" Foreground="{DynamicResource SecondaryInkBrush}"/>
                         <TextBlock Grid.Row="1" Grid.Column="1" FontSize="13"
                                    Foreground="{DynamicResource PrimaryInkBrush}"
-                                   Text="{Binding PowerDelivery.GpuPowerLimit, StringFormat={}{0:F0}W (估算值)}"/>
+                                   Text="{Binding PowerDelivery.GpuPowerLimit, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='{}{0:F0}W (估算值)'}"/>
 
                         <TextBlock Grid.Row="2" Text="供電狀態" FontSize="13" Foreground="{DynamicResource SecondaryInkBrush}"/>
                         <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding PowerDelivery.GpuPowerSummary}" FontSize="13"

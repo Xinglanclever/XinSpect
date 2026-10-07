@@ -237,7 +237,7 @@
                                         Click="AddAttachment_Click"
                                         ToolTip="附加圖片或檔案（每個檔案上限 2 MB，最多 5 個）"/>
                                 <TextBlock Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"
-                                           Text="{Binding Feedback.AttachmentCount, StringFormat='已附加 {0} 個檔案'}"
+                                           Text="{Binding Feedback.AttachmentCount, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='已附加 {0} 個檔案'}"
                                            Visibility="{Binding Feedback.AttachmentCount, Converter={StaticResource CountToVis}}"/>
                             </StackPanel>
                             <ItemsControl x:Name="AttachmentList" Margin="0,6,0,0"
