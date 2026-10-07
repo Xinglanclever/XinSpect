@@ -95,7 +95,9 @@ public partial class MainWindow : Window
             dlg.ShowDialog();
             _vm.Settings.SimpleMode = dlg.SimpleMode;
             // 語言選擇
-            if (dlg.SimplifiedChinese)
+            if (_vm.Settings.IsEnglish)
+                LanguageService.SetLanguage(AppLanguage.English, _vm.Settings);
+            else if (dlg.SimplifiedChinese)
                 LanguageService.SetLanguage(true, _vm.Settings);
             // 選了詳細進階且儀式尚未播放過 → 觸發啟程儀式
             if (!dlg.SimpleMode && CeremonyService.ShouldRun(_vm.Settings))
@@ -355,7 +357,7 @@ public partial class MainWindow : Window
 
     private void ApplyLanguage()
     {
-        Title = AppInfo.WindowTitle(LanguageService.IsSimplified);
+        Title = AppInfo.WindowTitle(LanguageService.IsEnglish || LanguageService.IsSimplified);
         _vm.NotifyTitleChanged();
     }
 

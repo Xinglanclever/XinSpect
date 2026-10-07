@@ -444,6 +444,14 @@ public sealed class MainViewModel : ObservableObject
         DeepBench.StorageRoot = global::System.IO.Path.Combine(global::System.IO.Path.GetTempPath(), "XinSpectDeepBench");
         HardwareEvidence = new HardwareEvidenceViewModel(this);
 
+        // 切語言時紀年名稱清單要跟著換（簡體少民國、英語走翻譯表）；掛一次，之後每次切換自動生效。
+        LanguageService.NotifyLanguageDependentLists = () =>
+        {
+            OnPropertyChanged(nameof(EraNames));
+            OnPropertyChanged(nameof(EraIndex));
+            ApplySavedEra();
+        };
+
         Ai = new AiService(Settings) { SnapshotProvider = BuildAiSnapshot };
         // 診斷代理的本機工具箱：全部唯讀，讀的就是畫面上這同一份即時物件。
         Ai.Tools = AiToolboxBuilder.Build(this);
@@ -529,28 +537,23 @@ public sealed class MainViewModel : ObservableObject
     {
         get
         {
-            if (LanguageService.IsSimplified)
-            {
-                var all = EraCalendar.GetNames(true);
-                var modes = EraCalendar.GetAvailableModes(true);
-                // 簡體模式：民國被排除，名稱陣列已不含民國
-                return all;
-            }
+            if (LanguageService.IsEnglish) return EraCalendar.GetNamesEnglish();
+            if (LanguageService.IsSimplified) return EraCalendar.GetNames(true);  // 民國被排除
             return EraCalendar.GetNames(false);
         }
     }
     public int EraIndex
     {
-        get => (int)_era;
+        // 簡體模式的名單少了民國——索引與列舉值不對應，必須經過顯示清單映射，
+        // 否則「選宣統套到黃帝」的錯位會讓切換看起來像卡住（2026-10-07 修正）。
+        get => EraCalendar.IndexOf(LanguageService.IsSimplified, _era);
         set
         {
-            var mode = (EraMode)value;
-            // 簡體模式禁用民國
-            if (LanguageService.IsSimplified && mode == EraMode.Minguo) mode = EraMode.Gregorian;
+            var mode = EraCalendar.FromIndex(LanguageService.IsSimplified, value);
             if (_era == mode) return;
             _era = mode;
             OnPropertyChanged();
-            Settings.DefaultEra = value;   // 保存為下次啟動的預設紀年
+            Settings.DefaultEra = (int)mode;   // 保存為下次啟動的預設紀年（存列舉值，不是顯示索引）
             UpdateClock();
         }
     }

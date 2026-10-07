@@ -155,6 +155,11 @@ public partial class SettingsView : UserControl
         var vm = Vm;
         if (vm is null || !IsLoaded) return;   // 初次繫結載入時不覆寫已存設定
 
+        // SelectionChanged 觸發時 TwoWay 綁定可能還沒把新值推回源——直接讀 ComboBox 本身，
+        // 否則這個處理器（與它更新的提示文字）會看到舊供應商，切換看起來像卡住（2026-10-07 修正）。
+        if (sender is ComboBox cb && cb.SelectedIndex is { } idx && idx >= 0)
+            vm.Settings.AiProvider = idx;
+
         const string ollamaUrl = "http://localhost:11434/v1";
         const string openAiUrl = "https://api.openai.com/v1";
         string url = (vm.Settings.AiBaseUrl ?? "").Trim();
@@ -319,19 +324,44 @@ public partial class SettingsView : UserControl
         }
     }
 
-    // 繁簡切換：透過 LanguageService 立即轉換整棵視覺樹。
+    // 語言切換：三個模式互斥。一律以「控制項的當下狀態」推導目標語言，再交給 LanguageService.Apply——
+    // 直接讀 sender（不是讀 vm.Settings 的舊值、也不是讀另一個控制項），事件順序怎麼變都不會切到舊的。
     private void LangToggle_Click(object sender, RoutedEventArgs e)
     {
-        if (Vm is not { } vm) return;
-        // 切到簡體時取消英語；切到繁體時也取消英語
-        if (vm.Settings.SimplifiedChinese) { vm.Settings.IsEnglish = false; LanguageService.SetLanguage(AppLanguage.Simplified, vm.Settings); }
-        else { vm.Settings.IsEnglish = false; LanguageService.SetLanguage(AppLanguage.Traditional, vm.Settings); }
+        if (Vm is not { } vm || sender is not CheckBox box) return;
+        if (box.IsChecked == true)
+        {
+            if (EnglishCheck is not null) EnglishCheck.IsChecked = false;
+            LanguageService.Apply(AppLanguage.Simplified, vm.Settings);
+        }
+        else
+        {
+            LanguageService.Apply(AppLanguage.Traditional, vm.Settings);
+        }
+        RefreshLanguageHint();
     }
 
     private void EnglishToggle_Click(object sender, RoutedEventArgs e)
     {
-        if (Vm is not { } vm) return;
-        if (EnglishCheck is { IsChecked: true }) { vm.Settings.IsEnglish = true; LanguageService.SetLanguage(AppLanguage.English, vm.Settings); }
-        else { vm.Settings.IsEnglish = false; LanguageService.SetLanguage(AppLanguage.Traditional, vm.Settings); }
+        if (Vm is not { } vm || sender is not CheckBox box) return;
+        if (box.IsChecked == true)
+        {
+            if (SimplifiedCheck is not null) SimplifiedCheck.IsChecked = false;
+            LanguageService.Apply(AppLanguage.English, vm.Settings);
+        }
+        else
+        {
+            LanguageService.Apply(AppLanguage.Traditional, vm.Settings);
+        }
+        RefreshLanguageHint();
+    }
+
+    /// <summary>把兩個勾選框同步成目前語言（英語模式下簡體框必須是未勾的）。</summary>
+    private void RefreshLanguageHint()
+    {
+        bool english = LanguageService.IsEnglish;
+        bool simplified = LanguageService.IsSimplified;
+        if (EnglishCheck is not null) EnglishCheck.IsChecked = english;
+        if (SimplifiedCheck is not null) SimplifiedCheck.IsChecked = simplified;
     }
 }

@@ -56,8 +56,28 @@ public static class LanguageService
     /// <summary>
     /// 初始化：從 SettingsService 讀取已存偏好。在 MainWindow 建構前呼叫。
     /// </summary>
+    /// <summary>
+    /// 設定頁的唯一切換入口：三個互斥模式（繁中／簡中／英語）。<b>一律以引數決定狀態，不讀控制項</b>——
+    /// 舊版從 CheckBox.IsChecked 讀，事件順序一變就切到舊值（使用者回報的「卡住原來的」）。
+    /// 收尾時把「語言相依的動態清單」（紀年名稱等）一起通知，否則下拉選單會停在舊語言。
+    /// </summary>
+    public static void Apply(AppLanguage lang, SettingsService settings)
+    {
+        SetLanguage(lang, settings);
+        NotifyLanguageDependentLists?.Invoke();
+    }
+
+    /// <summary>語言相依的動態清單重算（紀年名稱…）。由 MainViewModel 在開機時掛上。</summary>
+    public static Action? NotifyLanguageDependentLists;
+
+    /// <summary>測試用：直接切英語旗標（InternalsVisibleTo；不走 SetLanguage 的 Shell／設定路徑）。</summary>
+    internal static void SetEnglishForTests(bool english) => _isEnglish = english;
+
     public static void Initialize(SettingsService settings)
-        => _simplified = settings.SimplifiedChinese;
+    {
+        _simplified = settings.SimplifiedChinese;
+        _isEnglish = settings.IsEnglish;
+    }
 
     /// <summary>切換語言（三語版）。英文字串未收錄者回退繁中原文。</summary>
     public static void SetLanguage(AppLanguage lang, SettingsService settings)
@@ -65,8 +85,10 @@ public static class LanguageService
         _isEnglish = lang == AppLanguage.English;
         _simplified = lang == AppLanguage.Simplified && !_isEnglish;
         settings.SimplifiedChinese = _simplified;
+        settings.IsEnglish = _isEnglish;
         if (Shell.Main is { } main)
         {
+            // 兩種模式都走同一棵樹：簡體由 LCMapStringEx 轉，英語由 FromOriginal 的翻譯表分支轉。
             ConvertVisualTree(main, _simplified);
             main.RebuildNavIfNeeded();
         }
@@ -142,6 +164,8 @@ public static class LanguageService
     {
         var map = _orig.GetOrCreateValue(o);
         if (!map.TryGetValue(slot, out var original)) { original = current; map[slot] = current; }
+        // 英語模式優先：未收錄回繁中原文。永遠從原文出發，繁／簡／英三方往返可逆、冪等。
+        if (_isEnglish) return EnglishStrings.Lookup(original) ?? original;
         return simplified ? ToSimplified(original) : original;
     }
 
@@ -161,6 +185,10 @@ public static class LanguageService
 
     private static void ConvertNode(DependencyObject d, bool simplified)
     {
+        // Popup（ComboBox 下拉、ContextMenu、ToolTip 的宿主）不是視覺子節點，內容要自己走一遍。
+        if (d is System.Windows.Controls.Primitives.Popup { Child: { } popupChild })
+            ConvertVisualTree(popupChild, simplified);
+
         if (d is SectionHead sh)
         {
             // SectionHead 的標題 TextBlock 是內部繫結，下面的 TextBlock 分支會因「有繫結」而跳過；
@@ -189,6 +217,20 @@ public static class LanguageService
         }
         if (d is FrameworkElement fe && fe.ToolTip is string tip && !string.IsNullOrEmpty(tip))
             fe.ToolTip = FromOriginal(fe, "ToolTip", tip, simplified);
+
+        // 下拉選單／右鍵選單的項目活在 Popup 裡，不是主視窗的視覺子節點——不特別處理就會永遠停在原文。
+        // ComboBoxItem 本身就是 ContentControl，直接轉它的 Content 即可（不必展開下拉）。
+        if (d is ItemsControl items && items.Items.Count > 0)
+        {
+            foreach (var item in items.Items)
+                if (item is DependencyObject child) ConvertNode(child, simplified);
+        }
+        if (d is ContextMenu menu)
+            foreach (var item in menu.Items)
+                if (item is DependencyObject child) ConvertNode(child, simplified);
+        // ToolTip 物件形式（非字串）同樣在 Popup 裡
+        if (d is FrameworkElement fe2 && fe2.ToolTip is DependencyObject tipObj)
+            ConvertNode(tipObj, simplified);
     }
 
     /// <summary>

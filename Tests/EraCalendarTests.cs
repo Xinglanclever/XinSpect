@@ -141,3 +141,35 @@ public class EraCalendarTests
     public void SettingsSchema_IsStampedAtTheVersionThatRenumberedEras()
         => Assert.Equal(1, SettingsService.CurrentSchema);
 }
+
+/// <summary>
+/// 2026-10-07 修正的卡住 bug：簡體模式清單少了民國，索引↔列舉必須經顯示清單映射，
+/// 否則「選宣統（顯示索引 2）會套到黃帝（列舉 2）」——切換看起來像卡住。
+/// </summary>
+public class EraCalendarMappingTests
+{
+    [Fact]
+    public void 簡體模式索引映射_選宣統要真的套到宣統()
+    {
+        Assert.Equal(EraMode.Gregorian, EraCalendar.FromIndex(simplified: true, 0));
+        Assert.Equal(EraMode.Huangdi, EraCalendar.FromIndex(simplified: true, 1));
+        Assert.Equal(EraMode.Xuantong, EraCalendar.FromIndex(simplified: true, 2));
+        Assert.Equal(EraMode.Doraemon, EraCalendar.FromIndex(simplified: true, 3));
+        Assert.Equal(EraMode.Gregorian, EraCalendar.FromIndex(simplified: true, 4));  // 越界回退西元
+        Assert.Equal(EraMode.Gregorian, EraCalendar.FromIndex(simplified: true, -1));
+    }
+
+    [Fact]
+    public void 繁體索引與列舉一致_簡體反向映射_往返不變()
+    {
+        Assert.Equal(EraMode.Minguo, EraCalendar.FromIndex(simplified: false, 1));
+        Assert.Equal(1, EraCalendar.IndexOf(simplified: false, EraMode.Minguo));
+        Assert.Equal(1, EraCalendar.IndexOf(simplified: true, EraMode.Huangdi));   // 不是列舉值 2
+        Assert.Equal(0, EraCalendar.IndexOf(simplified: true, EraMode.Minguo));    // 被排除回西元
+        foreach (var m in new[] { EraMode.Gregorian, EraMode.Huangdi, EraMode.Xuantong, EraMode.Doraemon })
+        {
+            Assert.Equal(m, EraCalendar.FromIndex(true, EraCalendar.IndexOf(true, m)));
+            Assert.Equal(m, EraCalendar.FromIndex(false, EraCalendar.IndexOf(false, m)));
+        }
+    }
+}

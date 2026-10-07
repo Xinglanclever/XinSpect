@@ -32,6 +32,24 @@ public static class EraCalendar
             ? new[] { EraMode.Gregorian, EraMode.Huangdi, EraMode.Xuantong, EraMode.Doraemon }
             : new[] { EraMode.Gregorian, EraMode.Minguo, EraMode.Huangdi, EraMode.Xuantong, EraMode.Doraemon };
 
+    /// <summary>英語模式的紀年名稱（與繁體清單同序同長度，索引映射沿用非簡體那組）。</summary>
+    public static string[] GetNamesEnglish() =>
+        new[] { "Gregorian", "Minguo (ROC)", "Yellow Emperor Era", "Xuantong Era (Qing)", "Doraemon Era (Fun)" };
+
+    /// <summary>顯示索引 → 模式（簡體清單不含民國，索引與列舉值在簡體下不對應——2026-10-07 修的卡住 bug）。</summary>
+    public static EraMode FromIndex(bool simplified, int index)
+    {
+        var modes = GetAvailableModes(simplified);
+        return index >= 0 && index < modes.Length ? modes[index] : EraMode.Gregorian;
+    }
+
+    /// <summary>模式 → 顯示索引（找不到回 0＝西元）。</summary>
+    public static int IndexOf(bool simplified, EraMode mode)
+    {
+        int i = Array.IndexOf(GetAvailableModes(simplified), mode);
+        return i >= 0 ? i : 0;
+    }
+
     /// <summary>相容舊呼叫端：繁體模式的完整名稱陣列。</summary>
     public static readonly string[] Names = GetNames(false);
 
