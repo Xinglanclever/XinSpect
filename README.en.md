@@ -13,7 +13,7 @@ A free, open-source hardware verification, monitoring, and security auditing too
 
 XinSpect is built with WPF (.NET 10) using MVVM architecture. It integrates LibreHardwareMonitor for sensing, Intel XTU bridging for overclocking, NVIDIA NVML/NVAPI for GPU control, WebView2 for the embedded browser, and a custom WinRing0-based fact-reading layer with an XsRegProbe whitelist read-only driver. The "Spect" in the name means observer: it doesn't draw conclusions about your hardware — it presents what the hardware says, what the firmware says, and what the OS says side by side, marking anything it can't read, letting the verifier draw their own conclusions.
 
-**[Download v2.26 Olympus](https://github.com/Xinglanclever/XinSpect/releases/tag/v2.26)** — single portable executable with BlueSquadron guard built in. (v2.27 changes are confined to the language-mode display layer; the downloadable binaries are still the v2.26 build.)
+**[Download v2.31 Olympus](https://github.com/Xinglanclever/XinSpect/releases/tag/v2.31)** — single portable executable with BlueSquadron guard built in. 
 
 ## Design Principles
 
@@ -29,9 +29,9 @@ These principles are enforced by unit tests and machine checks, not just documen
 
 | File | Size | Purpose |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.26/XinSpect.exe) | 30.1 MB | Main program (includes BlueSquadron guard) |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.26/BlueSquadronBridge.exe) | 6.5 MB | Standalone guard process |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.26/XinSpectDeploy.exe) | 7 KB | One-click installer (downloads and deploys automatically) |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.31/XinSpect.exe) | 30.1 MB | Main program (includes BlueSquadron guard) |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.31/BlueSquadronBridge.exe) | 6.5 MB | Standalone guard process |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.31/XinSpectDeploy.exe) | 7 KB | One-click installer (downloads and deploys automatically) |
 
 ## Key Features
 
