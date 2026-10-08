@@ -179,6 +179,52 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    <!-- 機箱（SMBIOS Type 3）：型號以外，機箱類型是判斷「這是伺服器還是工作站」
+                         最直接的證據——韌體自己宣告的，不需要從外觀猜。 -->
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,12,0,0" Text="機箱（SMBIOS Type 3）"
+                               Visibility="{Binding Smbios.Chassis.Count, Converter={StaticResource CountToVis}}"/>
+                    <ItemsControl ItemsSource="{Binding Smbios.Chassis}" Margin="0,6,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Key}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Value}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Visibility="{Binding Smbios.TemperatureProbes.Count, Converter={StaticResource CountToVis}}"
+                               Text="韌體回報的溫度探針（SMBIOS Type 28）與冷卻裝置（Type 29）——與作業系統／驅動的感測器是兩套口徑，同一台機器上兩邊常常對不起來，這裡只陳列韌體那一套。"/>
+                    <ItemsControl ItemsSource="{Binding Smbios.TemperatureProbes}" Margin="0,4,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Key}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Value}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ItemsControl ItemsSource="{Binding Smbios.CoolingDevices}" Margin="0,2,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Key}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding Value}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                     <ItemsControl ItemsSource="{Binding Smbios.Processor}" Margin="0,6,0,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>

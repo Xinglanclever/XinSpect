@@ -48,6 +48,10 @@ public static class SpecRefRegistry
         typeof(EntropyMap),      // 位元組序列的 Shannon 熵分析（內容類型判別，非判決）
         typeof(PcieLink),        // PCIe 鏈路速度／寬度／埠類別代碼（PCIe Base Spec）
         typeof(PcieNegotiationGap), // PCIe 鏈路落差判讀（能力 vs 現況，唯讀不寫暫存器）
+        typeof(VirtualizationJudge), // 虛擬化平台三態判讀（元件／服務／虛擬層分離）
+        typeof(NicLinkGap),      // 網卡落差（PCIe 供給 vs 線路速率）
+        typeof(DisplayAdapterJudge), // 顯示轉接器真偽（實體 vs 軟體 vs 基本顯示驅動）
+        typeof(DimmEccJudge),    // 記憶體 ECC／Registered／平台更正能力（三層分離）
     ];
 
     /// <summary>列舉解碼器上缺 SpecRef 的公開靜態方法（宣告於本型別者）。</summary>

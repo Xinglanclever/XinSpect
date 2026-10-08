@@ -204,6 +204,32 @@ public sealed class EvidenceLabService : ObservableObject
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
+    /// <summary>
+    /// 虛擬化平台三態事實：把「元件裝了」「服務在跑」「虛擬層載入了」分開陳列。
+    /// 一般工具把這三件事壓成一句「Hyper-V：已啟用／停用」，於是「裝了但沒開」
+    /// （不會有 VM 能跑，但服務與攻擊面開著）永遠被講錯。
+    /// </summary>
+    public IReadOnlyList<HardwareFact> VirtualizationFacts { get; private set; } = [];
+
+    /// <summary>以注入的探測載入虛擬化事實；測試注入假狀態。</summary>
+    public void LoadVirtualization(Func<VirtualizationState>? probe = null, DateTimeOffset? at = null)
+    {
+        VirtualizationFacts = VirtualizationFactsService.Collect(at ?? DateTimeOffset.UtcNow, probe);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+        OnPropertyChanged(nameof(VirtualizationHeadline));
+        OnPropertyChanged(nameof(VirtualizationEvidence));
+    }
+
+    /// <summary>虛擬化卡片的一行結論；尚未載入時如實說尚未讀取。</summary>
+    public string VirtualizationHeadline =>
+        VirtualizationFacts.FirstOrDefault(f => f.Key == "virt.judge")?.Value ?? "尚未讀取。";
+
+    /// <summary>虛擬化卡片的依據列：哪些欄位讀到什麼值。</summary>
+    public string VirtualizationEvidence =>
+        VirtualizationFacts.FirstOrDefault(f => f.Key == "virt.msr") is { } msr
+            ? $"MSR／TSC 讀值：{msr.Value}。來源：CPUID leaf 1 ECX bit 31、選用功能與服務狀態，全部唯讀。"
+            : "";
+
     /// <summary>載入平台拓撲與攻擊面事實（usermode；讀不到由各服務標三態）。</summary>
     public void LoadPlatformFacts()
     {
@@ -211,6 +237,9 @@ public sealed class EvidenceLabService : ObservableObject
         PlatformFacts = NumaTopologyService.Collect(at)
             .Append(MemoryAttackSurfaceService.Collect(at))
             .Concat(OobFactsService.Collect(at))
+            .Concat(VirtualizationFactsService.Collect(at))
+            .Concat(NicLinkFactsService.Collect(at))
+            .Concat(DisplayAdapterFactsService.Collect(at))
             .Concat(TimeSyncFactsService.Collect(at, new Win32AcpiTableSource()))
             .Concat(CxlFactsService.Collect(at, new Win32AcpiTableSource()))
             .Concat(UsbTopologyService.Collect(at))
@@ -436,14 +465,14 @@ public sealed class EvidenceLabService : ObservableObject
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
             .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
-            .Concat(PlatformFacts).Concat(SoftwareFacts).Concat(AcpiFacts).ToList();
+            .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).ToList();
 
     /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + I/O 埠 + CMOS + SMBus + PCI 盤點 + TPM + 平台拓撲 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
             .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
-            .Concat(PlatformFacts).Concat(SoftwareFacts).Concat(AcpiFacts)
+            .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts)
             .OrderBy(f => f.Category, StringComparer.Ordinal).ThenBy(f => f.Key, StringComparer.Ordinal)
             .Select(EvidenceFactRow.From).ToList();
 
@@ -726,6 +755,8 @@ public sealed class EvidenceLabService : ObservableObject
         f.AddRange(vm.EvidenceLab.TpmFacts);
         // 平台拓撲與攻擊面聲明（NUMA＋Rowhammer 界線）。
         f.AddRange(vm.EvidenceLab.PlatformFacts);
+        // 虛擬化平台三態（元件／服務／虛擬層分離）——獨立於 PlatformFacts，故另加。
+        f.AddRange(vm.EvidenceLab.VirtualizationFacts);
 
         return f;
     }

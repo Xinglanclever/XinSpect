@@ -125,7 +125,9 @@ public sealed class MainViewModel : ObservableObject
     /// 記憶體插槽配置圖：從 SMBIOS Type 17 的 Locator 命名推斷通道分組。
     /// SMBIOS 在建構時一次讀完就不會再變（插拔記憶體要關機），所以算一次快取起來。
     /// </summary>
-    public DimmLayoutView Dimms => _dimms ??= DimmLayout.Build(Smbios.MemoryDevices);
+    /// <summary>插槽配置圖。平台層錯誤更正類型一併帶入——它與模組自己的 ECC 位元是兩個獨立欄位，
+    /// 判讀時要分開陳述（見 DimmEccJudge）。</summary>
+    public DimmLayoutView Dimms => _dimms ??= DimmLayout.Build(Smbios.MemoryDevices, Smbios.EcType);
 
     /// <summary>WHEA 硬體錯誤紀錄：事件檢視器 Microsoft-Windows-WHEA-Logger 的近 30 天彙整（零特權）。</summary>
     public WheaErrorService Whea { get; } = new();

@@ -87,6 +87,21 @@
                 </StackPanel>
             </Border>
 
+            <!-- ══ 虛擬化平台三態 ═══════════════════════════════════════════
+                 「元件裝了」「服務在跑」「虛擬層載入了」是三件獨立的事，而一般工具把它們
+                 壓成一句「Hyper-V：已啟用／停用」——於是「裝了但沒開」永遠被講錯。 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="虛擬化平台（元件／服務／虛擬層）" HelpKey="firmware-security/虛擬化平台"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                               Text="Windows 從不把「Hyper-V 到底在不在跑」放在一個地方：CPUID 說的是有沒有虛擬層、選用功能說的是元件裝了沒、服務狀態說的是管理服務起了沒。這三件事可以任意組合，所以這一張卡片分開陳列——特別是「裝了但開機未載入」這種狀態，不會有 VM 能跑、也不佔資源，但服務與攻擊面是開著的。"/>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding VirtualizationHeadline}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="{Binding VirtualizationEvidence}"/>
+                </StackPanel>
+            </Border>
+
             <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                 <StackPanel>
                     <Grid>

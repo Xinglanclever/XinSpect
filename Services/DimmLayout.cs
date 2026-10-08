@@ -26,6 +26,11 @@ public sealed class DimmSlotView
     public string PartText { get; init; } = "";
     public string SpeedText { get; init; } = "";
     public string VendorText { get; init; } = "";
+    /// <summary>匯流排寬度（資料／總寬，位元）。0 表示讀不到——不當成 64。</summary>
+    public int DataWidth { get; init; }
+    public int TotalWidth { get; init; }
+    /// <summary>模組型態（已註冊／未緩衝）；見 <see cref="DimmEccJudge.FormOf"/>。</summary>
+    public DimmEccJudge.ModuleForm Form { get; init; } = DimmEccJudge.ModuleForm.Unknown;
 
     /// <summary>插槽下方的第二行說明。</summary>
     public string Detail => Occupied
@@ -109,7 +114,8 @@ public static class DimmLayout
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <summary>從一列 SMBIOS 記憶體裝置建出配置圖。傳空清單就得到 <see cref="DimmLayoutView.HasData"/> 為 false 的結果。</summary>
-    public static DimmLayoutView Build(IReadOnlyList<SmbiosDimmRow> rows)
+    /// <param name="platformEcType">平台層錯誤更正類型（Type 16 位移 0x06）；0＝未讀到。</param>
+    public static DimmLayoutView Build(IReadOnlyList<SmbiosDimmRow> rows, byte platformEcType = 0)
     {
         var slots = new List<DimmSlotView>();
         foreach (var r in rows)
@@ -132,6 +138,9 @@ public static class DimmLayout
                 PartText = occupied ? Clean(r.Part) : "",
                 SpeedText = occupied ? Clean(r.Speed) : "",
                 VendorText = occupied ? Clean(r.Manufacturer) : "",
+                DataWidth = occupied ? r.DataWidth : 0,
+                TotalWidth = occupied ? r.TotalWidth : 0,
+                Form = occupied ? DimmEccJudge.FormOf(r.Registered) : DimmEccJudge.ModuleForm.Unknown,
             });
         }
 
@@ -149,6 +158,7 @@ public static class DimmLayout
 
         var ordered = channels.SelectMany(c => c.Slots).ToList();
         var notes = Notes(ordered, known);
+        Ecc(ordered, platformEcType, notes);
 
         return new DimmLayoutView
         {
@@ -276,6 +286,29 @@ public static class DimmLayout
                  + "通道數只代表插對位置；實際頻寬還要看時序與 XMP／EXPO 有沒有啟用。";
 
         return "依 Locator 命名推斷的通道分組；插槽位置只說明實體排列，不代表記憶體控制器怎麼交錯。";
+    }
+
+    /// <summary>
+    /// 錯誤更正的三層陳述：模組匯流排寬度（有沒有 ECC 位元）、模組型態（Registered／Unbuffered）、
+    /// 平台層更正能力（Type 16）。<b>三者獨立，不互相推論</b>——「有 ECC 所以是伺服器記憶體」
+    /// 是錯的：ECC UDIMM 的工作站與 RDIMM 的伺服器在寬度那一欄看得到差別，在型態那一欄才分得開。
+    /// </summary>
+    private static void Ecc(List<DimmSlotView> slots, byte platformEcType, List<string> notes)
+    {
+        var used = slots.Where(s => s.Occupied).ToList();
+        if (used.Count == 0) return;
+
+        string? platform = platformEcType == 0 ? null : DimmEccJudge.PlatformEccName(platformEcType);
+
+        // 逐種組態分開講，不把所有模組混成一句
+        var groups = used.GroupBy(s => (s.DataWidth, s.TotalWidth, s.Form)).ToList();
+        foreach (var g in groups)
+        {
+            var (dw, tw, form) = g.Key;
+            bool? hasEcc = DimmEccJudge.HasEcc(new DimmBusWidth(dw, tw));
+            string where = groups.Count == 1 ? "" : $"（{g.Count()} 支）";
+            notes.Add($"錯誤更正{where}：" + DimmEccJudge.Describe(hasEcc, form, platform));
+        }
     }
 
     private static List<string> Notes(List<DimmSlotView> slots, bool known)

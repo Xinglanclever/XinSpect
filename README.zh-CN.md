@@ -4,7 +4,7 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一执行文件发布，免安装；对硬件与系统的读取以只读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-2.31-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.32-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![测试](https://img.shields.io/badge/tests-3195%20passed-3FB950)
@@ -79,8 +79,8 @@
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.31/XinSpect.exe) | 30,178,091 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.31/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.32/XinSpect.exe) | 30,178,091 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.32/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 
 > **本表的字节数为本版（v2.31）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
@@ -422,6 +422,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.32 Olympus**（2026-10-08）：服务器与工作站视角——虚拟化平台三态（组件／服务／虚拟层分离，「装了但开机未载入」不再被讲成「已启用」）、网卡两条链路落差（PCIe 供给 vs 线路速率，供给不足时明说「跑不满」）、显示适配器真伪（真实 vs 软件 vs 基本显示驱动）、SMBIOS 补完（Type 1 UUID 小端序、Type 3 机箱类型、Type 28／29 传感器的「值未知」位元）、内存错误更正三层分离（ECC／Registered／平台能力不互相推论）。新增纯解码器四个，测试 +105，全套 3337 绿。
 - **v2.31 Olympus**（2026-10-08）：PCIe 落差判读——PCIe 链路页新增「落差」栏，把「装置宣告的能力」与「实际跑到的链路」之间的差距依成因分成相符／宽度受限／速度待确认／省电设计／上游上限／未判定，并附上实际字段值当依据。会往上游端口读它的链路能力，上限在上游就明说「这张卡不是瓶颈」；读 Link Control 2 的 Target Link Speed，被 BIOS 或驱动压低的协商上限直接指出来；上游读不到一律标未判定，不当成「上游没有限制」。**纯只读，不写任何寄存器**——PCIe 主动重协商会动到运作中的链路，本项目不跨这条线。测试 3218 绿。
 - **v2.30 Olympus**（2026-10-08）：SPI 快闪熵图——只读读回整颗快闪、逐 4 KiB 块算 Shannon 熵、依 FREG 区域切分，看出内容组成（高熵＝压缩／加密、低熵＝空白或规律、全 F＝抹除）；只描述分布不判断好坏或是否原厂，PRx 读保护拦截范围会被算成抹除区且报告会标明。测试 3195 绿。
 - **v2.29 Olympus**（2026-10-08）：历史仓扩充——长期追踪指标由 7 项增至 13 项（新增处理器功耗／电压、VRM 温度、显卡功耗、内存用量、存储温度）；磁盘格式升为 v2 并改为硬性版本检查（字段数不同时整份忽略而非错位读成假读值）；既有字段顺序未动并加测试钉住。测试 3174 绿。

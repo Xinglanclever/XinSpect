@@ -10,8 +10,10 @@ namespace XinSpect.Tests;
 public class DimmLayoutTests
 {
     private static SmbiosDimmRow Row(string locator, string bank = "", string size = "未安裝",
-                                     string part = "", string speed = "", string vendor = "")
-        => new(locator, bank, size, "DDR5", speed, "", vendor, "", part, "");
+                                     string part = "", string speed = "", string vendor = "",
+                                     int dataWidth = 0, int totalWidth = 0, byte registered = 0)
+        => new(locator, bank, size, "DDR5", speed, "", vendor, "", part, "",
+               dataWidth, totalWidth, registered);
 
     [Theory]
     [InlineData("DIMM_A1", "", "A", 1)]
@@ -206,5 +208,53 @@ public class DimmLayoutTests
     {
         var v = DimmLayout.Build([Row("")]);
         Assert.Equal("（未命名插槽）", v.Slots[0].Label);
+    }
+
+    // ── 錯誤更正三層（模組寬度／模組型態／平台能力） ────────────────────────
+
+    [Fact]
+    public void ECC三層_平台為無且模組寬度72_要指出不一致()
+    {
+        // 本機實況的形狀：TotalWidth 72（帶 ECC 位元）而平台回報「無」
+        var v = DimmLayout.Build(
+            [Row("DIMM_A1", size: "8 GB", dataWidth: 64, totalWidth: 72),
+             Row("DIMM_B1", size: "8 GB", dataWidth: 64, totalWidth: 72)],
+            platformEcType: 0x03);
+
+        string all = string.Join(Environment.NewLine, v.Notes);
+        Assert.Contains("錯誤更正", all);
+        Assert.Contains("不一致", all);
+    }
+
+    [Fact]
+    public void ECC三層_平台為單位元ECC且模組帶ECC_不得出現不一致提醒()
+    {
+        var v = DimmLayout.Build(
+            [Row("DIMM_A1", size: "8 GB", dataWidth: 64, totalWidth: 72, registered: 0x03)],
+            platformEcType: 0x05);
+
+        string all = string.Join(Environment.NewLine, v.Notes);
+        Assert.Contains("錯誤更正", all);
+        Assert.DoesNotContain("不一致", all);
+    }
+
+    [Fact]
+    public void ECC三層_讀不到寬度時如實標無法判斷而不是沒有ECC()
+    {
+        // Row 預設不帶寬度（0／0）＝讀不到
+        var v = DimmLayout.Build([Row("DIMM_A1", size: "8 GB")], platformEcType: 0x03);
+
+        string all = string.Join(Environment.NewLine, v.Notes);
+        Assert.Contains("無法判斷", all);
+        Assert.DoesNotContain("模組無 ECC 位元", all);
+    }
+
+    [Fact]
+    public void ECC三層_平台讀不到時仍要陳述模組那一層()
+    {
+        var v = DimmLayout.Build([Row("DIMM_A1", size: "8 GB")]);
+
+        string all = string.Join(Environment.NewLine, v.Notes);
+        Assert.Contains("平台層的錯誤更正類型讀不到", all);
     }
 }

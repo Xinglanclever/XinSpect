@@ -83,7 +83,8 @@ public class DecoderHardeningTests
             "Tsod", "SuperIo", "PlatformTrustDecoder", "PciKnowledge", "PciBars", "SuperIoKnowledge",
             "WifiBssDecoder", "MonitorConnectionDecoder", "SuperIoHwmDecoder",
             "CpuTopologyDecoder", "SlitDecoder", "PmuDecoder", "TrendSentinel", "EntropyMap",
-            "PcieLink", "PcieNegotiationGap",
+            "PcieLink", "PcieNegotiationGap", "VirtualizationJudge", "NicLinkGap",
+            "DisplayAdapterJudge", "DimmEccJudge",
         };
         Assert.Equal(expected, SpecRefRegistry.CoveredDecoders.Select(t => t.Name).ToArray());
         Assert.All(SpecRefRegistry.CoveredDecoders, t => Assert.True(t.IsSealed || t.IsClass));
