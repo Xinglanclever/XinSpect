@@ -301,7 +301,12 @@ public class UiSmokeTests
             $"顯示鏈路頁樣板發現 {failures.Count} 項問題：\n" + string.Join("\n", failures));
     }
 
-    private sealed class DisplayOnly { public DisplayLinkService DisplayLink { get; } = new(); }
+    /// <summary>顯示鏈路頁的假 VM。螢幕組成一區綁 EvidenceLab.MonitorFacts，所以也要有它。</summary>
+    private sealed class DisplayOnly
+    {
+        public DisplayLinkService DisplayLink { get; } = new();
+        public EvidenceLabService EvidenceLab { get; } = new();
+    }
 
     /// <summary>
     /// PCIe 鏈路頁的 Resizable BAR 卡片：外層是裝置、內層是每一段已指派的位址範圍，

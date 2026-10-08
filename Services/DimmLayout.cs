@@ -62,6 +62,18 @@ public sealed class DimmChannelView
 public sealed class DimmLayoutView
 {
     public List<DimmChannelView> Channels { get; init; } = [];
+
+    /// <summary>同一通道內最多幾支模組（＝每通道模組數；推不出通道時為 0）。</summary>
+    public int SlotsPerChannel { get; init; }
+
+    /// <summary>通道配置判讀的一行結論。</summary>
+    public string ChannelHeadline { get; init; } = "—";
+
+    /// <summary>通道配置判讀的依據。</summary>
+    public string ChannelEvidence { get; init; } = "";
+
+    /// <summary>「每支各佔一個通道」這個假設在本機站不站得住（供理論上限的呈現說明）。</summary>
+    public string PeakAssumptionNote { get; init; } = "";
     /// <summary>攤平後的插槽清單，順序與圖上一致。</summary>
     public List<DimmSlotView> Slots { get; init; } = [];
     /// <summary>是否真的從 Locator／Bank 推出通道編號。false 時 <see cref="Channels"/> 只有一組。</summary>
@@ -160,6 +172,14 @@ public static class DimmLayout
         var notes = Notes(ordered, known);
         Ecc(ordered, platformEcType, notes);
 
+        int perChannel = known ? channels.Where(c => c.Occupied > 0).Select(c => c.Occupied).DefaultIfEmpty(0).Max() : 0;
+        var evidence = new MemoryChannelEvidence(
+            ordered.Where(s => s.Occupied).Select(s => s.Locator).ToList(),
+            known ? channels.Count(c => c.Occupied > 0) : 0,
+            known,
+            ordered.Count(s => s.Occupied));
+        var channel = MemoryChannelJudge.Judge(evidence, perChannel, known ? channels.Count : ordered.Count);
+
         return new DimmLayoutView
         {
             Channels = channels,
@@ -168,6 +188,10 @@ public static class DimmLayout
             Headline = Headline(ordered, channels, known),
             Detail = Detail(ordered, channels, known),
             Notes = notes,
+            SlotsPerChannel = perChannel,
+            ChannelHeadline = channel.Headline,
+            ChannelEvidence = channel.Evidence,
+            PeakAssumptionNote = MemoryChannelJudge.PeakAssumptionNote(evidence, perChannel),
         };
     }
 

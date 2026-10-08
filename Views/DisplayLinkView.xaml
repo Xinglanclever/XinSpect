@@ -25,6 +25,34 @@
                 </StackPanel>
             </Border>
 
+            <!-- 螢幕組成：先講「接了什麼」再講「鏈路怎麼樣」。
+                 Windows 的顯示器清單混了真實螢幕、軟體虛擬螢幕與作業系統的預設物件，
+                 只看解析度會把三者當成同一件事。 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="螢幕組成" HelpKey="displaylink/螢幕組成"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                               Text="接了線的真實螢幕（有 EDID：製造商、型號、製造年週）、軟體虛擬螢幕（驅動合成的最小 EDID）與作業系統的預設監視器物件（後面沒有實體裝置）在 Windows 裡長得很像，設定畫面都顯示成一台螢幕。這一區用 EDID 支撐與實體 PNP 路徑把三者分開。"/>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding EvidenceLab.MonitorSummary}"/>
+                    <ItemsControl ItemsSource="{Binding EvidenceLab.MonitorFacts}" Margin="0,8,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="240"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Text="{Binding Value}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}"
+                                               TextTrimming="CharacterEllipsis" Text="{Binding Source}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <ItemsControl ItemsSource="{Binding DisplayLink.Rows}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>

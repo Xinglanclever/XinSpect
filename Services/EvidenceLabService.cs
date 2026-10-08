@@ -211,6 +211,24 @@ public sealed class EvidenceLabService : ObservableObject
     /// </summary>
     public IReadOnlyList<HardwareFact> VirtualizationFacts { get; private set; } = [];
 
+    /// <summary>
+    /// 顯示器組成事實（真實螢幕 vs 軟體虛擬螢幕 vs 作業系統預設物件）。
+    /// 與 <see cref="DisplayAdapterFactsService"/>（轉接器）分開：這裡看的是「接了什麼螢幕」。
+    /// </summary>
+    public IReadOnlyList<HardwareFact> MonitorFacts { get; private set; } = [];
+
+    /// <summary>以注入的樣本載入顯示器事實；測試注入假清單。</summary>
+    public void LoadMonitors(Func<IReadOnlyList<MonitorSample>>? probe = null, DateTimeOffset? at = null)
+    {
+        MonitorFacts = MonitorFactsService.Collect(at ?? DateTimeOffset.UtcNow, probe);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+        OnPropertyChanged(nameof(MonitorSummary));
+    }
+
+    /// <summary>顯示器組成的一行摘要。</summary>
+    public string MonitorSummary =>
+        MonitorFacts.FirstOrDefault(f => f.Key == "monitor.summary")?.Value ?? "尚未讀取。";
+
     /// <summary>以注入的探測載入虛擬化事實；測試注入假狀態。</summary>
     public void LoadVirtualization(Func<VirtualizationState>? probe = null, DateTimeOffset? at = null)
     {
@@ -234,12 +252,14 @@ public sealed class EvidenceLabService : ObservableObject
     public void LoadPlatformFacts()
     {
         var at = DateTimeOffset.UtcNow;
+        MonitorFacts = MonitorFactsService.Collect(at);
         PlatformFacts = NumaTopologyService.Collect(at)
             .Append(MemoryAttackSurfaceService.Collect(at))
             .Concat(OobFactsService.Collect(at))
             .Concat(VirtualizationFactsService.Collect(at))
             .Concat(NicLinkFactsService.Collect(at))
             .Concat(DisplayAdapterFactsService.Collect(at))
+            .Concat(MonitorFacts)
             .Concat(TimeSyncFactsService.Collect(at, new Win32AcpiTableSource()))
             .Concat(CxlFactsService.Collect(at, new Win32AcpiTableSource()))
             .Concat(UsbTopologyService.Collect(at))

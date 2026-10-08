@@ -4,7 +4,7 @@
 
 一款免費開源、運行於 Windows 的原生硬體驗機、監控與安全稽核工具。以單一執行檔發佈，免安裝；對硬體與系統的讀取以唯讀為原則，少數涉及寫入的功能均設有同意閘門並明確標註風險。本程式不收集、不上傳任何使用者資料。
 
-![版本](https://img.shields.io/badge/version-2.32-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.33-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![測試](https://img.shields.io/badge/tests-3195%20passed-3FB950)
@@ -79,8 +79,8 @@
 
 | 檔案 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.32/XinSpect.exe) | 30,254,379 bytes | 主程式。藍色中隊守護進程已內建 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.32/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.33/XinSpect.exe) | 30,254,379 bytes | 主程式。藍色中隊守護進程已內建 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.33/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
 
 > **上表的位元組數為本版（v2.31）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
@@ -425,6 +425,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.33 Olympus**（2026-10-08）：記憶體通道配置（插槽命名推斷的通道數 vs 每通道模組數，並明說理論上限的「每支各佔一通道」假設站不站得住）、螢幕組成（真實螢幕／軟體虛擬螢幕／作業系統預設物件三分）。新增純解碼器兩個，測試 +26，全套 3363 綠。
 - **v2.32 Olympus**（2026-10-08）：伺服器與工作站視角——虛擬化平台三態（元件／服務／虛擬層分離，「裝了但開機未載入」不再被講成「已啟用」）、網卡兩條鏈路落差（PCIe 供給 vs 線路速率，供給不足時明說「跑不滿」）、顯示轉接器真偽（真實 vs 軟體 vs 基本顯示驅動）、SMBIOS 補完（Type 1 UUID 小端序、Type 3 機箱類型、Type 28／29 感測器的「值未知」位元）、記憶體錯誤更正三層分離（ECC／Registered／平台能力不互相推論）。新增純解碼器四個，測試 +105，全套 3337 綠。
 - **v2.31 Olympus**（2026-10-08）：PCIe 落差判讀——PCIe 鏈路頁新增「落差」欄，把「裝置宣告的能力」與「實際跑到的鏈路」之間的差距依成因分成相符／寬度受限／速度待確認／省電設計／上游上限／未判定，並附上實際欄位值當依據。會往上游埠讀它的鏈路能力，上限在上游就明說「這張卡不是瓶頸」；讀 Link Control 2 的 Target Link Speed，被 BIOS 或驅動壓低的協商上限直接指出來；上游讀不到一律標未判定，不當成「上游沒有限制」。**純唯讀，不寫任何暫存器**——PCIe 主動重協商會動到運作中的鏈路，本專案不跨這條線。測試 3218 綠。
 - **v2.30 Olympus**（2026-10-08）：SPI 快閃熵圖——唯讀讀回整顆快閃、逐 4 KiB 塊算 Shannon 熵、依 FREG 區域切分，看出內容組成（高熵＝壓縮／加密、低熵＝空白或規律、全 F＝抹除）；只描述分布不判斷好壞或是否原廠，PRx 讀保護攔截範圍會被算成抹除區且報告會標明。驗證套件 3195 綠。

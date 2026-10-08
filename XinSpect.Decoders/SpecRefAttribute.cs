@@ -52,6 +52,8 @@ public static class SpecRefRegistry
         typeof(NicLinkGap),      // 網卡落差（PCIe 供給 vs 線路速率）
         typeof(DisplayAdapterJudge), // 顯示轉接器真偽（實體 vs 軟體 vs 基本顯示驅動）
         typeof(DimmEccJudge),    // 記憶體 ECC／Registered／平台更正能力（三層分離）
+        typeof(MemoryChannelJudge), // 記憶體通道配置（插槽命名推斷 vs 每通道模組數）
+        typeof(MonitorJudge),    // 顯示器真偽（EDID 支撐 vs 軟體合成 vs 預設物件）
     ];
 
     /// <summary>列舉解碼器上缺 SpecRef 的公開靜態方法（宣告於本型別者）。</summary>

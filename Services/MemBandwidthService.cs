@@ -102,7 +102,8 @@ public class MemBandwidthService : ObservableObject
             double peak = MemBandwidthMath.AssumedPeakGbps(mtps, modules);
             PeakNote = peak > 0
                 ? $"SMBIOS：{modules} 支模組、實際運行 {mtps} MT/s ・ 每支上限 {MemBandwidthMath.FormatGbps(perModule)}"
-                  + $" → 整機上限 {MemBandwidthMath.FormatGbps(peak)}（假設每支各佔一個通道；WMI 說不出實際通道數）"
+                  + $" → 整機上限 {MemBandwidthMath.FormatGbps(peak)}（假設每支各佔一個通道；"
+                  + "本機插槽配置是否支持這個假設，見記憶體頁的「通道配置」判讀）"
                 : "SMBIOS 沒回報記憶體實際運行速度，這一輪只給實測值，不做達成率對照。";
 
             var progress = new Progress<(double Frac, string Text)>(t =>

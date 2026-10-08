@@ -84,7 +84,8 @@ public class DecoderHardeningTests
             "WifiBssDecoder", "MonitorConnectionDecoder", "SuperIoHwmDecoder",
             "CpuTopologyDecoder", "SlitDecoder", "PmuDecoder", "TrendSentinel", "EntropyMap",
             "PcieLink", "PcieNegotiationGap", "VirtualizationJudge", "NicLinkGap",
-            "DisplayAdapterJudge", "DimmEccJudge",
+            "DisplayAdapterJudge", "DimmEccJudge", "MemoryChannelJudge",
+            "MonitorJudge",
         };
         Assert.Equal(expected, SpecRefRegistry.CoveredDecoders.Select(t => t.Name).ToArray());
         Assert.All(SpecRefRegistry.CoveredDecoders, t => Assert.True(t.IsSealed || t.IsClass));

@@ -78,6 +78,17 @@
                     <local:DimmMap Layout="{Binding Dimms}" Margin="0,12,0,0"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,12,0,0" TextWrapping="Wrap"
                                Text="{Binding Dimms.Detail}"/>
+                    <!-- 通道配置：把「插槽命名推斷的通道數」與「每通道幾支」講開——
+                         理論上限的計算前提正是「每支各佔一個通道」，前提不成立時要說出來。 -->
+                    <Grid Margin="0,12,0,0">
+                        <local:SectionHead Text="通道配置" HelpKey="memory/通道配置"/>
+                        <TextBlock Text="{Binding Dimms.ChannelHeadline}" HorizontalAlignment="Right"
+                                   Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap"
+                               Text="{Binding Dimms.ChannelEvidence}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,6,0,0" TextWrapping="Wrap"
+                               Text="{Binding Dimms.PeakAssumptionNote}"/>
                     <ItemsControl ItemsSource="{Binding Dimms.Notes}" Margin="0,8,0,0"
                                   Visibility="{Binding Dimms.HasNotes, Converter={StaticResource BoolToVis}}">
                         <ItemsControl.ItemTemplate>
