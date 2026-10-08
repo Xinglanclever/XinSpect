@@ -400,6 +400,107 @@ public class UiSmokeTests
     }
 
     /// <summary>
+    /// 證據頁（韌體安全）在<b>真的有資料</b>時的渲染檢查。
+    /// </summary>
+    /// <remarks>
+    /// 上面那支大煙霧測試建構每一頁時 MainViewModel 是<b>空的</b>——<c>ItemsControl.ItemTemplate</c>
+    /// 一次也沒被套用。而事實列的樣板（<c>Name</c>／<c>ValueText</c>／<c>Trust</c>／分組）
+    /// 只有在有資料時才會求值，所以「證據頁畫不畫得出儲存可靠性事實」完全沒有人驗過。
+    /// <para>
+    /// 這一條把<b>共用組裝點</b>（<c>EvidenceCollection.LoadUsermodeFacts</c>）灌進真的 MainViewModel，
+    /// 再建構真的 <see cref="FirmwareSecurityView"/>、逼它排版，然後檢查兩件事：
+    /// 一是 <c>FirmwareRowsSource</c> 這個 CollectionViewSource 真的生出視圖（代表資料到位、
+    /// 分組描述能吃這種類別），二是樣板套用過程沒有繫結錯誤。
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void 證據頁有事實時樣板套用沒有繫結錯誤且真的長出列()
+    {
+        var failures = new List<string>();
+        var thread = new Thread(() => RunFirmwareRows(failures));
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.IsBackground = true;
+        thread.Start();
+
+        if (!thread.Join(TimeSpan.FromMinutes(1)))
+            failures.Add("證據頁事實列煙霧測試逾時（1 分鐘未完成）。");
+
+        Assert.True(failures.Count == 0,
+            $"證據頁事實列發現 {failures.Count} 項問題：" + Environment.NewLine
+            + string.Join(Environment.NewLine, failures));
+    }
+
+    /// <summary>注入用的可靠性計數器來源：兩顆碟，其中一顆只回兩個欄位——用來逼出「不適用」那一列。</summary>
+    private sealed class TwoDiskStorageSource : IStorageReliabilitySource
+    {
+        public bool Available => true;
+        public string? UnavailableReason => null;
+        public IReadOnlyList<StorageReliabilityRaw> Read() =>
+        [
+            new StorageReliabilityRaw(0, 12, 29, 40, 1424, 5, 100, 7, 200, 0, 0, 0, 0, 0, 0, 3, 4, 0, "2023-08"),
+            new StorageReliabilityRaw(1, 33, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),
+        ];
+    }
+
+    private static void RunFirmwareRows(List<string> failures)
+    {
+        WpfEnv.Ensure();
+
+        PresentationTraceSources.Refresh();
+        var listener = new CollectingListener();
+        PresentationTraceSources.DataBindingSource.Listeners.Add(listener);
+        PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Warning;
+
+        try
+        {
+            var vm = new MainViewModel();   // 與煙霧測試同一個慣例：絕不呼叫 Initialize()
+
+            // 這一筆是本條測試的重點：走的是 UI 與 CLI 共用的那一條組裝點，
+            // 所以它同時驗證了「接線真的接上了」。
+            EvidenceCollection.LoadUsermodeFacts(vm.EvidenceLab, new TwoDiskStorageSource());
+
+            if (!vm.EvidenceLab.FirmwareSecurityRows.Any(r => r.Name.Contains("磨損程度")))
+                failures.Add("資料沒到達頁面：FirmwareSecurityRows 找不到儲存可靠性的列——接線斷了。");
+
+            var view = new FirmwareSecurityView { DataContext = vm };
+            view.Measure(new Size(1280, 800));
+            view.Arrange(new Rect(0, 0, 1280, 800));
+            view.UpdateLayout();
+
+            if (view.Resources["FirmwareRowsSource"] is not System.Windows.Data.CollectionViewSource cv
+                || cv.View is null || !cv.View.Cast<object>().Any())
+            {
+                failures.Add("FirmwareRowsSource 沒有生出視圖：CollectionViewSource 沒綁到事實列，畫面上會是空的。");
+            }
+            else if (!cv.View.Cast<object>().OfType<EvidenceFactRow>()
+                         .Any(r => r.Category == "儲存裝置"))
+            {
+                failures.Add("FirmwareRowsSource 生出視圖了，但裡面沒有「儲存裝置」的列——資料被濾掉或分組吃掉了。");
+            }
+
+            using var sr = new System.IO.StringReader(listener.Drain());
+            string? line;
+            while ((line = sr.ReadLine()) is not null)
+            {
+                var t = line.Trim();
+                if (t.Length == 0) continue;
+                if (t.Contains("BindingExpression path error") ||
+                    t.Contains("Cannot convert") ||
+                    t.Contains("Cannot find governing FrameworkElement"))
+                    failures.Add("繫結錯誤：" + t);
+            }
+        }
+        catch (Exception ex)
+        {
+            failures.Add("證據頁事實列套用失敗：" + Describe(ex));
+        }
+        finally
+        {
+            PresentationTraceSources.DataBindingSource.Listeners.Remove(listener);
+        }
+    }
+
+    /// <summary>
     /// 把例外連同<b>全部內層例外</b>攤成一行。XamlParseException 的訊息只說「設定屬性時擲回例外狀況」，
     /// 真正的原因永遠在 InnerException 裡——只印外層等於把診斷資訊丟掉。
     /// </summary>

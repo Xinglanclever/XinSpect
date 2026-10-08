@@ -32,7 +32,14 @@ public partial class App : Application
         // 從主控台啟動時 AttachConsole 把 stdout 接回呼叫端；雙擊則沒有主控台可接（用 --out 更實用）。
         if (e.Args is { Length: > 0 } cliArgs && cliArgs[0].StartsWith("--", StringComparison.Ordinal))
         {
-            StartupUri = null; // 擋掉 App.xaml 的主視窗自動建立
+            // 不建主視窗：App.xaml 的 StartupUri 指向 MainWindow.xaml，WPF 會在 OnStartup 之後
+            // 才去建立它——而下方的 Shutdown(code) 會在 Dispatcher 處理到那一步之前就結束應用程式，
+            // 這與「第二份實例」那條路徑（同樣在 OnStartup 內 Shutdown 後 return）是同一個機制。
+            //
+            // 這裡原本寫的是 `StartupUri = null;`。那在 .NET 10 的 WPF 會直接擲
+            // ArgumentNullException（setter 改成 ThrowIfNull）——於是 CLI 模式在
+            // OnStartup 第一行就崩潰，任何 --json 都跑不起來，而 CliServiceTests 是直接呼叫
+            // CliService.Run 的單元測試，測不到「進入點本身炸掉」。
             AttachConsole(AttachParentProcess);
             try
             {
@@ -95,6 +102,7 @@ public partial class App : Application
     {
         var svc = new EvidenceLabService();
         EvidenceCollection.ReloadInto(svc);
+        EvidenceCollection.LoadUsermodeFacts(svc);   // 儲存可靠性計數器（WMI，免管理員）
         return svc.AllFacts;
     }
 

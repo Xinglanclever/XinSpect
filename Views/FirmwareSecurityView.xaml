@@ -96,9 +96,9 @@
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
                                Text="Windows 從不把「Hyper-V 到底在不在跑」放在一個地方：CPUID 說的是有沒有虛擬層、選用功能說的是元件裝了沒、服務狀態說的是管理服務起了沒。這三件事可以任意組合，所以這一張卡片分開陳列——特別是「裝了但開機未載入」這種狀態，不會有 VM 能跑、也不佔資源，但服務與攻擊面是開著的。"/>
                     <TextBlock Style="{StaticResource FieldValue}" Margin="0,8,0,0" TextWrapping="Wrap"
-                               Text="{Binding VirtualizationHeadline}"/>
+                               Text="{Binding EvidenceLab.VirtualizationHeadline}"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
-                               Text="{Binding VirtualizationEvidence}"/>
+                               Text="{Binding EvidenceLab.VirtualizationEvidence}"/>
                 </StackPanel>
             </Border>
 

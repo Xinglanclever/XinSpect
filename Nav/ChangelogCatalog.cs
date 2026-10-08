@@ -48,6 +48,24 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.38",
+            Date = "2026-10-09",
+            Title = "OS 內建查詢接縫化、儲存可靠性計數器、CLI 進入點修復",
+            Items =
+            [
+                "新增 INativeToolSource 接縫（Services/NativeToolSource.cs）：Windows 內建命令（如 powercfg）的原樣輸出帶進畫面——不重寫一份、也不盲派，留下接口把命令與原樣輸出呈現給使用者。宣告（Describe）與執行（Run）分離，可用性與不可用原因如實兩態（查檔案在不在，不猜）；SleepDiagnosticsService 為第一個實作者，測試不開任何行程。",
+                "新增 Services/StorageReliabilityFactsService.cs：對應 PowerShell Get-StorageReliabilityCounter 的能力，但不經 PowerShell、直接走 WMI 關聯取 MSFT_StorageReliabilityCounter 的 19 個欄位，逐碟逐欄位變成事實（storage.reliability.*）。值為 0 就是 0（磨損 0%、延遲 0 ms 都是合法值）；提供者沒給的欄位數出來並具名列出（coverage 列）——空值與 0 是兩件不同的事。",
+                "修掉「整合沒接線」缺陷：事實鍵接進了 AllFacts 卻沒有任何地方呼叫載入——真實程式與 CLI 裡永遠是空清單，而單元測試一路綠燈。新增具名入口 EvidenceCollection.LoadUsermodeFacts（UI 啟動與 CLI 共用同一個），並加原始碼層守門測試檢查兩處接線還在不在——單元測試測得到服務、測不到「有沒有人接線」。",
+                "修掉三態被寫錯的缺陷：一次讀取失敗會被講成「不是錯誤」（先看 Available 再 Read 的順序問題——真實 WMI 來源在查詢之前無從得知會不會失敗）。改為先 Read 再判可用性，來源例外一律變成一筆 ReadError 並附原因；新增 3 條迴歸測試，實測把舊順序改回去會紅 4 條。",
+                "修掉 CLI 模式進入點崩潰：.NET 10 的 WPF 把 Application.StartupUri 的 setter 改成 ThrowIfNull，CLI 分支寫 StartupUri = null 在第一行就死、任何 --json 都跑不起來。改用 Shutdown(code) 先於 StartupUri 建立就被處理的機制（與「第二份實例」路徑同一個），並加進入點守門測試。修復後真實二進位端到端實測：--json evidence --query storage.reliability. 回 5 顆碟 46 筆事實。",
+                "修掉韌體安全頁虛擬化卡片的兩個繫結路徑錯誤（漏 EvidenceLab. 前綴）——畫面上標題列與依據列一直是空的，而舊煙霧測試建構的每一頁都是空的所以從來沒人發現。新增「證據頁有資料時」的樣板渲染檢查，實測把 XAML 改回缺陷版會紅、修復後該檔全綠。",
+                "README 測試徽章的數字改由 Tests/TestSuiteBaseline.cs 單一來源保管：沿革記的是「那一版發佈時」的數字（歷史），徽章講的是「現在」的數字（現在式）——兩者綁在一起時，兩次發版之間加測試就會讓徽章自動落後。分開後加測試只改一處，守門測試把三份 README 釘住；不含未追蹤的本機探針。",
+                "新增文件：工具目錄校準版（docs/TOOL-CATALOG-2026-10-09.md，12 能力域重寫去重）與其增量判定（docs/CAPABILITY-ADDITIONS-2026-10-09.md）——五個真缺口（UEFI FV/FFS、驅動 IOCTL 靜態分析、setupapi.dev.log 時間線、.etl 讀回、ESP 檔案層掃描）與十條選型路徑的校準。後續梯次按該清單推進。",
+                "測試 3527 → 3548 綠（+21；全套 3549，差的 1 條是本機未追蹤探針）。事實鍵 134 → 136。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.37",
             Date = "2026-10-08",
             Title = "修 v2.36 的覆蓋申報缺陷：掃不到不得冒充「全部都覆蓋了」",
@@ -59,7 +77,7 @@ public static class ChangelogCatalog
                 "一致性由測試守住：FactKeyCatalogTests 重新掃描 Services/ 原始碼並與目錄逐鍵比對——新增事實而忘了更新目錄會紅燈，並列出兩邊的差集。",
                 "新增三條迴歸測試釘住這個缺陷：①沒有事實鍵時申報必須說「無法申報」而不是「全部都覆蓋了」；②沒有規則時同理；③掃不到的目錄回空集合而不是丟例外。畫面上的文字也刻意不重述那句假結論，免得使用者掃過去只看到肯定的字樣。",
                 "順帶修正一個同源的落差：說明文件寫「規則可分享：Rules/builtin.json 為可編輯的外部形式」，但那個檔沒有隨程式出貨（csproj 完全沒提到 Rules/），生產路徑跑的是內建規則。Help 與覆蓋申報現在都如實說明：內建 26 條在跑、外部形式只在原始碼倉庫裡。",
-                "測試 +11（3525 綠）。",
+                "測試 +11：專案測試 3524 綠。全套是 3525，差的那 1 條是本機未追蹤的探針檔（SDK 預設 glob 會把它一起編進測試組件），依本專案慣例不計入專案測試。（這是發佈當下的數字；README 徽章的「現在式」數字由 Tests/TestSuiteBaseline.cs 保管，兩者是不同的兩件事。）",
             ],
         },
         new ChangeEntry

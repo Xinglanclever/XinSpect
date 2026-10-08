@@ -25,6 +25,16 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>ACPI 表三態事實（表清單 + 逐表簽章/版本/校驗和）。由啟動路徑以 Win32 來源載入；測試注入假來源。</summary>
     public IReadOnlyList<HardwareFact> AcpiFacts { get; private set; } = [];
 
+    /// <summary>儲存可靠性計數器事實（WMI <c>MSFT_StorageReliabilityCounter</c>）。由啟動路徑載入；測試注入假來源。</summary>
+    public IReadOnlyList<HardwareFact> StorageReliabilityFacts { get; private set; } = [];
+
+    /// <summary>以注入的來源載入可靠性計數器（usermode、免管理員；讀不到由服務如實標三態）。</summary>
+    public void LoadStorageReliability(IStorageReliabilitySource source)
+    {
+        StorageReliabilityFacts = StorageReliabilityFactsService.Collect(DateTimeOffset.UtcNow, source);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
     /// <summary>以注入的 ACPI 來源載入表清單事實（usermode，不需驅動；讀不到由 AcpiService 標三態）。</summary>
     public void LoadAcpi(IAcpiTableSource source)
     {
@@ -516,7 +526,7 @@ public sealed class EvidenceLabService : ObservableObject
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
             .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
-            .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).ToList();
+            .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).ToList();
 
     /// <summary>
     /// 韌體安全頁用：把 <see cref="AllFacts"/> 依分類與鍵排序後轉成誠實渲染的列。
@@ -784,6 +794,8 @@ public sealed class EvidenceLabService : ObservableObject
         f.AddRange(vm.EvidenceLab.SpiCompareFacts);
         // ACPI 表清單三態事實（usermode 列舉）。
         f.AddRange(vm.EvidenceLab.AcpiFacts);
+        // 儲存可靠性計數器（WMI；逐欄位三態，未提供的欄位不會變成 0）。
+        f.AddRange(vm.EvidenceLab.StorageReliabilityFacts);
         // PCIe AER 三態事實（ECAM 掃描；歸類「PCIe」）。
         f.AddRange(vm.EvidenceLab.PcieAerFacts);
         // MCHBAR 三態事實（歸類「記憶體控制器」）。

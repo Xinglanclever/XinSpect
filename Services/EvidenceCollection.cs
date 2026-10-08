@@ -40,6 +40,27 @@ public static class EvidenceCollection
         }
     }
 
+    /// <summary>
+    /// usermode（不需驅動）事實的<b>單一組合點</b>：目前是儲存可靠性計數器（WMI）。
+    /// </summary>
+    /// <remarks>
+    /// <b>為什麼要另外開一個入口，而不是塞進 <see cref="ReloadInto"/>：</b>
+    /// <see cref="ReloadInto"/> 是驅動後端的組合點，而它在啟動路徑上被
+    /// <c>DriverEvidenceGate</c> 擋著（已有載入在跑就整批跳過）。把一條**不需要驅動**
+    /// 的來源掛進去，等於讓它的有無取決於一個跟它無關的閘門。
+    /// <para>
+    /// <b>為什麼要有這個入口：</b>這一組事實原本接進了 <c>AllFacts</c> 與報告匯出，
+    /// 卻<b>沒有任何地方呼叫載入</b>——所以在真實的 App 與 CLI 裡它永遠是空的，
+    /// 而服務層的單元測試（注入假來源）全綠。單元測試測得到服務，測不到「有沒有人接線」；
+    /// 把接線本身做成一個有名字的入口，就是為了讓兩條入口（UI／CLI）共用它、不再各自漂移。
+    /// </para>
+    /// </remarks>
+    public static void LoadUsermodeFacts(EvidenceLabService svc, IStorageReliabilitySource? storageReliability = null)
+    {
+        try { svc.LoadStorageReliability(storageReliability ?? new StorageReliabilityWmiSource()); }
+        catch { /* 附加功能：讀不到由 StorageReliabilityFactsService 標三態，不在這裡中斷啟動 */ }
+    }
+
     /// <summary>BIOS 區 vs 參考映像的比對（UI 與 CLI 共用入口）：組合後端後跑一次比對，回結果事實。</summary>
     public static HardwareFact CompareFlashWithReference(byte[] reference)
     {

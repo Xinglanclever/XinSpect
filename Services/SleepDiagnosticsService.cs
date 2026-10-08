@@ -1,20 +1,9 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 
 namespace XinSpect;
-
-/// <summary>睡眠診斷的一段：一條 powercfg 查詢的原樣輸出，加上「這是什麼、看到什麼該怎麼辦」。</summary>
-public sealed class SleepSection
-{
-    public required string Title { get; init; }
-    /// <summary>實際執行的命令（照抄給使用者，他可以自己再跑一次驗證）。</summary>
-    public required string Command { get; init; }
-    /// <summary>這一段在講什麼、怎麼用。</summary>
-    public required string What { get; init; }
-    /// <summary>命令的原樣輸出。</summary>
-    public required string Output { get; init; }
-}
 
 /// <summary>
 /// 睡眠與喚醒診斷：為什麼自己醒來、為什麼睡不下去。
@@ -28,12 +17,40 @@ public sealed class SleepSection
 /// 所以這裡原樣呈現，只加上每一段的意義說明；要判斷的是使用者，不是一段猜出來的字串比對。
 /// </para>
 /// </remarks>
-public sealed class SleepDiagnosticsService : ObservableObject
+public sealed class SleepDiagnosticsService : ObservableObject, INativeToolSource
 {
     /// <summary>單一查詢的逾時（毫秒）。powercfg 偶爾會等 WMI，不能讓畫面無限轉。</summary>
     private const int TimeoutMs = 8000;
 
-    public ObservableCollection<SleepSection> Sections { get; } = [];
+    public ObservableCollection<NativeToolSection> Sections { get; } = [];
+
+    /// <summary>接縫的可用性：這一頁的每一段查詢都靠 powercfg，找不到它就沒有資料可談。</summary>
+    /// <remarks>
+    /// 刻意<b>不是</b>「查了之後有沒有輸出」——那會把「指令不存在」與「指令跑了、
+    /// 而確實沒有東西阻止睡眠」混成同一種長相，而後者是一個結論、前者不是。
+    /// </remarks>
+    public bool Available => PowercfgPath is not null;
+
+    /// <summary>不能用的原因（能用時必須是 null）。</summary>
+    public string? UnavailableReason => Available
+        ? null
+        : "找不到 powercfg.exe——本頁每一段都靠它。此時畫面上的「（沒有輸出）」不代表沒有東西阻止睡眠。";
+
+    /// <summary>powercfg.exe 的完整路徑；找不到回 null（不用猜，就是查檔案在不在）。</summary>
+    internal static string? PowercfgPath
+    {
+        get
+        {
+            string p = Path.Combine(Environment.SystemDirectory, "powercfg.exe");
+            return File.Exists(p) ? p : null;
+        }
+    }
+
+    /// <summary>
+    /// 接縫入口。與 <see cref="Refresh"/> 同一個查詢集合，差別是這裡<b>同步</b>回傳——
+    /// 畫面用的是非同步的 <see cref="Refresh"/>，不必走這條。
+    /// </summary>
+    public IReadOnlyList<NativeToolSection> Run() => Collect();
 
     private bool _busy;
     public bool IsBusy
@@ -95,17 +112,34 @@ public sealed class SleepDiagnosticsService : ObservableObject
          "這些裝置有權把電腦叫起來。滑鼠輕碰一下就醒、或網路卡收到封包就醒，來源就在這份清單裡。"),
     ];
 
-    private static List<SleepSection> Collect()
+    /// <summary>把一則查詢宣告成一個區段（不含輸出）。</summary>
+    internal static NativeToolSection Describe(string title, string[] args, string what) => new()
     {
-        var list = new List<SleepSection>();
+        Title = title,
+        Command = "powercfg " + string.Join(" ", args),
+        What = what,
+        Output = "",
+    };
+
+    /// <summary>
+    /// 這一頁要查哪幾件事（<b>宣告</b>）。刻意與執行分開：測試才能驗
+    /// 「查了哪幾件事、命令怎麼寫、說明有沒有寫」，而不必在測試裡真的開五個 powercfg 行程。
+    /// </summary>
+    internal static IReadOnlyList<NativeToolSection> Describe()
+    {
+        var list = new List<NativeToolSection>();
+        foreach (var (title, args, what) in Queries) list.Add(Describe(title, args, what));
+        return list;
+    }
+
+    private static List<NativeToolSection> Collect()
+    {
+        var list = new List<NativeToolSection>();
         foreach (var (title, args, what) in Queries)
         {
             string output = Run(args);
-            list.Add(new SleepSection
+            list.Add(Describe(title, args, what) with
             {
-                Title = title,
-                Command = "powercfg " + string.Join(" ", args),
-                What = what,
                 Output = string.IsNullOrWhiteSpace(output) ? "（沒有輸出）" : output.Trim(),
             });
         }

@@ -8,8 +8,9 @@ namespace XinSpect;
 /// CLI 模式（V7 WP32／A42）：帶引數啟動時不走 WPF，headless 收集事實後以 JSON 輸出。
 /// <b>退出碼語意</b>：0＝全部 Present；2＝收集完成但部分事實讀不到（三態如實反映在輸出裡）；
 /// 1＝致命錯誤（參數錯、收集拋例外）。自動化管線靠退出碼分岔，不必解析人話。
-/// 誠實界線：本模式只輸出驅動相依證據組（韌體安全稽核範圍）；全機快照（SMBIOS／磁碟／GPU）
-/// 依賴 WPF 服務層，未納入——幫助文字如實標明，不假裝全機都掃了。
+/// 誠實界線：本模式輸出驅動相依證據組（韌體安全稽核範圍）＋免管理員的 usermode 組
+/// （儲存可靠性計數器）；其餘全機快照（SMBIOS／GPU／Windows Update 歷史等）依賴 WPF 服務層，
+/// 未納入——幫助文字如實標明，不假裝全機都掃了。
 /// </summary>
 public static class CliService
 {
@@ -179,8 +180,10 @@ public static class CliService
             範圍：
               evidence        驅動相依證據組：晶片組安全、SPI 快閃、平台安全 MSR、MCHBAR、
                               PCIe AER、後端與環境、CPU 韌體身分、I/O 埠、CMOS、SMBus、
-                              UEFI 開機設定、Super I/O、PCI 裝置盤點、交叉對帳、ACPI 表清單。
-                              （全機快照的 SMBIOS／磁碟／GPU 面依賴 WPF 服務層，本模式未涵蓋。）
+                              UEFI 開機設定、Super I/O、PCI 裝置盤點、交叉對帳、ACPI 表清單；
+                              外加免管理員的 usermode 組：儲存可靠性計數器（WMI）。
+                              （其餘全機快照——SMBIOS／GPU／Windows Update 歷史——依賴 WPF
+                              服務層，本模式未涵蓋；磁碟面只涵蓋可靠性計數器，不含 SMART。）
               compare-flash   BIOS 區 vs 參考映像逐 4KB 塊比對（映像＝原廠或信任來源的 BIOS 區 dump）。
 
             選項：
@@ -188,7 +191,8 @@ public static class CliService
               --out <檔案>     寫入檔案而非 stdout
 
             退出碼：
-              --json evidence   0＝全部 Present；2＝部分讀不到（三態細節在輸出）；1＝致命錯誤。
+              --json evidence   0＝全部 Present；2＝有非 Present 的事實（讀不到，或提供者沒提供
+                                該欄位——兩者都不算「有值」，三態細節在輸出）；1＝致命錯誤。
               --compare-flash   0＝一致；2＝有差異或無法完成比對（三態細節在輸出）；1＝致命錯誤。
             讀不到的事實如實帶 availability 與原因，絕不以 0／典型值頂替。
             """);

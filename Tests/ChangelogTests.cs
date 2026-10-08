@@ -147,6 +147,67 @@ public class ChangelogTests
         foreach (string s in Stages) Assert.Contains(s, have);
     }
 
+    /// <summary>
+    /// README 的測試徽章是一句「現在式」的宣稱，但先前沒有任何守門——版號被釘住了，測試數沒有，
+    /// 於是徽章停在 3195，而同一份文件的版本沿革已經寫到 3524。一張紙上兩個數字，讀者無從判斷。
+    /// 徽章現在钉在 <see cref="TestSuiteBaseline.ProjectTests"/> 上，只有一個來源。
+    /// </summary>
+    [Fact]
+    public void 三份README的測試徽章等於專案測試基線()
+    {
+        string n = TestSuiteBaseline.ProjectTests.ToString();
+        foreach (string file in new[] { "README.md", "README.zh-CN.md", "README.en.md" })
+        {
+            var badge = Regex.Match(ReadRepoFile(file), @"badge/tests-(\d+)%20passed");
+            Assert.True(badge.Success, $"{file}：找不到測試徽章");
+            Assert.True(badge.Groups[1].Value == n,
+                $"{file}：測試徽章寫 {badge.Groups[1].Value}，但專案測試基線是 {n}");
+        }
+    }
+
+    /// <summary>
+    /// 基線是手寫的，所以它自己也可能過期——上一版的缺陷就是「一個沒人守著的數字」。
+    /// 這裡不（也不可能）數出「執行後共有幾條測試」，但可以數出測試組件裡有幾個[Fact]/[Theory]
+    /// 方法：執行數一定不少於方法數，所以基線低於方法數就一定是忘了改。
+    /// 它抓得住「加了一整批測試卻沒動基線」，抓不住差一兩條的疏忽——那個要靠人。
+    /// </summary>
+    [Fact]
+    public void 專案測試基線不得低於測試組件裡的測試方法數()
+    {
+        int methods = typeof(ChangelogTests).Assembly.GetTypes()
+            .SelectMany(t => t.GetMethods())
+            .Count(m => m.GetCustomAttributes(inherit: false)
+                .Any(a => a is FactAttribute || a is TheoryAttribute));
+
+        Assert.True(methods > 0, "一個測試方法都沒數到——反射邏輯壤了");
+        Assert.True(TestSuiteBaseline.ProjectTests >= methods,
+            $"基線寫 {TestSuiteBaseline.ProjectTests}，但測試組件裡有 {methods} 個測試方法——" +
+            "加了測試卻忘了改 TestSuiteBaseline.ProjectTests");
+    }
+
+    /// <summary>
+    /// 下載表的註腳是一句現在式的說明（「本表的位元組數為本版（vX）實際發佈的檔案大小」），
+    /// 它曾經停在 v2.31，而同一張表的連結已經指到 v2.37：連結被規矩釘住了，這句沒有。
+    /// 連「說明這張表」的文字都落後，讀者就有理由懷疑整張表。
+    /// </summary>
+    [Fact]
+    public void 下載表註腳的版號不得落後於當前版本()
+    {
+        string v = ChangelogCatalog.Latest;
+        foreach (string file in new[] { "README.md", "README.zh-CN.md" })
+        {
+            var lines = ReadRepoFile(file)
+                .Split('\n')
+                .Where(l => l.Contains("實際發佈的檔案大小") || l.Contains("实际发布的文件大小"))
+                .ToList();
+            Assert.True(lines.Count == 1, $"{file}：下載表註腳應該只有一句，實際找到 {lines.Count} 句");
+
+            var m = Regex.Match(lines[0], @"v\d+\.\d+");
+            Assert.True(m.Success, $"{file}：下載表註腳裡沒有版號");
+            Assert.True(m.Value == "v" + v, $"{file}：下載表註腳寫 {m.Value}，但當前版本是 v{v}");
+        }
+    }
+
     // ── 讀原始碼樹 ────────────────────────────────────────────────────────
 
     /// <summary>

@@ -247,6 +247,12 @@ internal static class StartupSequence
         try { await Task.Run(() => vm.EvidenceLab.LoadSoftwareFacts()); }
         catch { /* 軟體層為附加功能，讀不到由三態標示 */ }
 
+        // 儲存可靠性計數器（WMI MSFT_StorageReliabilityCounter，usermode、免管理員；WMI 查詢可能數秒，放背景）。
+        // 與 CLI 共用 EvidenceCollection.LoadUsermodeFacts 這一個入口——先前這一組事實接進了 AllFacts
+        // 與報告匯出，卻沒有任何地方呼叫載入，等於在真實 App 裡永遠看不到它。
+        try { await Task.Run(() => EvidenceCollection.LoadUsermodeFacts(vm.EvidenceLab)); }
+        catch { /* 儲存可靠性為附加功能，讀不到由三態標示 */ }
+
         try
         {
             var report = await CpuzReportService.ReadAsync();

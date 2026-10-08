@@ -23,6 +23,34 @@ public class CliServiceTests : IDisposable
         new(key, "測試", key, value, "", "測試來源", FactTrustLevel.Measured, false, At, null, availability, reason);
 
     [Fact]
+    public void 進入點仍要走在CLI分支且不得再對StartupUri賦值()
+    {
+        // 這一條不是行為測試，是進入點的守門，理由是一個真實的災難：
+        // App.OnStartup 的 CLI 分支原本寫 `StartupUri = null;` 想擋掉主視窗自動建立，
+        // 但 .NET 10 的 WPF 把該 setter 改成 ThrowIfNull——於是 CLI 模式在 OnStartup 第一行就
+        // 擲 ArgumentNullException，任何 --json 都跑不起來。而本檔其他測試是直接呼叫
+        // CliService.Run，測得到服務、測不到「進入點本身炸掉」。
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (root is not null && !File.Exists(Path.Combine(root.FullName, "XinSpect.csproj")))
+            root = root.Parent;
+        Assert.NotNull(root);
+
+        string app = File.ReadAllText(Path.Combine(root!.FullName, "App.xaml.cs"));
+
+        // 判斷的是「有沒有一行真的在對它賦值」——註解裡提到那個寫法（說明它為什麼被拿掉）
+        // 不算，否則這條守門會逼人刪掉解釋，那正是最不該發生的事。
+        var assignments = app.Split('\n')
+            .Select(l => l.TrimStart())
+            .Where(l => !l.StartsWith("//", StringComparison.Ordinal))
+            .Where(l => l.StartsWith("StartupUri =", StringComparison.Ordinal))
+            .ToList();
+        Assert.True(assignments.Count == 0, "App.OnStartup 又對 StartupUri 賦值了：" + string.Join("／", assignments));
+
+        Assert.Contains("CliService.Run(cliArgs", app);
+        Assert.Contains("Shutdown(code)", app);
+    }
+
+    [Fact]
     public void 全部Present時退出0_JSON可解析且帶誠實欄位()
     {
         using var stdout = new StringWriter();
