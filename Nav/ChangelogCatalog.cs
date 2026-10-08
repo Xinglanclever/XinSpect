@@ -48,6 +48,23 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.39",
+            Date = "2026-10-09",
+            Title = "UEFI 韌體磁碟區結構解析（FV/FFS）——工具缺口清單 #1",
+            Items =
+            [
+                "新增 XinSpect.Decoders/UefiFv.cs（純解碼器）：依 UEFI PI 規格解析 FV 標頭（'_FVH' 簽章、Attributes、HeaderLength、block map、延伸標頭、FV 表頭校驗和＝標頭所有 u16 總和為 0）、FFS 檔案（FFS3 大檔的 ExtendedSize、資料有效位元、pad 檔不計、抹除極性的狀態位元反相）與區段樹（USER_INTERFACE 的 UTF-16LE 名在補零處停止；GUID_DEFINED 只列出引擎名與資料位移、不解壓；COMPRESSION 聲明解壓後大小、不解壓）。",
+                "未收錄的檔案／區段型別代碼一律顯示原始 16 進位（「未收錄 (0xXX)」），不猜名稱——與 PciKnowledge 同一條規矩。解不開的結構如實停在當前位置並計入略過數，不繼續漫遊產生垃圾。",
+                "註冊進 SpecRefRegistry（受機器檢查的解碼器 35 → 36 個），每個公開方法附規格引用；hardening 測試的期望清單同步。",
+                "新增 Services/UefiFvFactsService.cs：唯讀讀回 SPI 快閃的 BIOS 區（FREG1），產出 ufv.bios.count（總數）與 ufv.fv.{i}.summary（動態鍵，與 storage.reliability 逐碟鍵同一處理）。找不到 _FVH 時如實回 0 並說明可能是整顆壓縮映像；讀取失敗／超上限／無 BIOS 區一律三態。",
+                "接線：韌體安全頁新增「UEFI 韌體磁碟區」卡片＋Help 條目；事實組進 AllFacts（交叉對帳、匯出、CLI 同步）；事實鍵目錄 136 → 137。",
+                "金標向量按規格逐欄編碼（含正確的 FV 表頭校驗和）。測試 +15：解碼器 11、服務 4。測試過程中當場抓掉三個自己的錯：FV 標頭長度誤用 0x40（block map 終止項在 0x40–0x47，應為 0x48）、Array.Copy 三參數形式把第二個 FV 蓋到開頭、FVH 簽章常數心算錯（SIGNATURE_32('_','F','V','H')＝0x4856465F，不是 0x5652455F——記憶體位元組序 5F 46 56 48 對照 EDK II 核對）。",
+                "本機的 MMIO 後端不可用（驅動未載入、服務註冊路徑已清理）——ufv.bios.count 如實三態顯示「PCI 設定空間讀取失敗」，這是設計行為；驅動載入後真值翻轉。讀取通路（SpiFlashService＋ReadRange）與 v2.30 的熵圖同一條已驗路徑，本版新增的是解析層。",
+                "測試 3548 → 3563 綠（+15；全套 3564，差的 1 條是本機未追蹤探針）。事實鍵 136 → 137。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.38",
             Date = "2026-10-09",
             Title = "OS 內建查詢接縫化、儲存可靠性計數器、CLI 進入點修復",

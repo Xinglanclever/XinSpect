@@ -4,10 +4,10 @@
 
 一款免費開源、運行於 Windows 的原生硬體驗機、監控與安全稽核工具。以單一執行檔發佈，免安裝；對硬體與系統的讀取以唯讀為原則，少數涉及寫入的功能均設有同意閘門並明確標註風險。本程式不收集、不上傳任何使用者資料。
 
-![版本](https://img.shields.io/badge/version-2.38-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.39-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-3548%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-3563%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-MIT-green)
 
@@ -79,10 +79,10 @@
 
 | 檔案 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.38/XinSpect.exe) | 30,405,931 bytes | 主程式。藍色中隊守護進程已內建 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.38/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.39/XinSpect.exe) | 30,405,931 bytes | 主程式。藍色中隊守護進程已內建 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.39/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
 
-> **上表的位元組數為本版（v2.38）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v2.39）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
 系統需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含發佈則免裝）。顯示卡深測需要 D3D11 相容裝置；MSR 讀取、SMART ioctl、Security 事件記錄需以系統管理員執行——沒有權限時相關項目標示「權限不足」，程式不會假裝成功，也不會靜默降級。
 
@@ -425,6 +425,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.39 Olympus**（2026-10-09）：UEFI 韌體磁碟區結構解析——唯讀讀回 BIOS 區、依 UEFI PI 規格解出 FV → FFS 檔案 → 區段頂層樹（GUID／型別／大小／使用者介面名），壓縮區段只列出不解壓、表頭校驗和不符合的檔案如實計數、找不到 _FVH 如實回 0。新純解碼器納入 SpecRef 覆蓋檢查；韌體安全頁新增卡片。金標向量按規格逐欄編碼，測試 +15（全套 3564 綠）；MMIO 後端不可用時三態如實顯示原因，驅動載入後真值翻轉。
 - **v2.38 Olympus**（2026-10-09）：OS 內建查詢接縫化（INativeToolSource 接縫，powercfg 原樣輸出誠實帶進畫面，宣告與執行分離）＋儲存可靠性計數器 19 欄（storage.reliability.*，值為 0 就是 0、提供者沒給的欄位數出並具名列出）＋三個真缺陷修復：整合沒接線（LoadUsermodeFacts 具名入口＋守門測試）、三態被寫錯（先 Read 再判可用性，例外一律 ReadError）、CLI 進入點在 .NET 10 上 StartupUri 崩潰（改 Shutdown 機制，端到端實測通過）＋虛擬化卡片繫結路徑修正與「有資料時」樣板渲染檢查。README 測試徽章改由 TestSuiteBaseline 單一來源保管。測試 3548 綠。
 - **v2.37 Olympus**（2026-10-08）：修 v2.36 的覆蓋申報缺陷——發佈版掃不到原始碼時會把「0 個事實鍵」讀成「全部都覆蓋了」。事實鍵目錄改為編譯期固定（134 鍵）＋規則改用執行期那一份（26 條），並加三條迴歸測試。另修正說明文件對 Rules/builtin.json 的承諾（該檔沒有隨程式出貨）。測試 +11：專案測試 3524 綠（全套是 3525，差的那 1 條是本機未追蹤的探針）。
 - **v2.36 Olympus**（2026-10-08）：地基——可用性由五態擴為六態（新增 Unknown＝有值但未確認）並定義偏序格與合取傳播；覆蓋申報（設定頁）申報事實鍵的對帳覆蓋與知識表收錄率；版號守門擴大到三份 README 的下載連結與版本沿革。測試 +59，全套 3514 綠。

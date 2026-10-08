@@ -136,6 +136,37 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                 <StackPanel>
                     <Grid>
+                        <local:SectionHead Text="UEFI 韌體磁碟區（FV/FFS 結構）" HelpKey="firmware-security/UEFI 韌體磁碟區"/>
+                        <TextBlock Text="{Binding EvidenceLab.UefiFvSummary}" HorizontalAlignment="Right"
+                                   Style="{StaticResource FieldLabel}" VerticalAlignment="Top"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                               Text="唯讀讀回 BIOS 區、依 UEFI PI 規格解析 FV → FFS 檔案 → 區段的頂層樹（GUID／型別／大小）。結構存在與否不構成對韌體真偽的判決；壓縮區段只列出不解壓，表頭校驗和不符合規格的檔案如實計數，不拒收也不掩蓋。"/>
+                    <ItemsControl ItemsSource="{Binding EvidenceLab.UefiFvRegions}" Margin="0,8,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldValue}"
+                                               Text="{Binding FvName, Converter={x:Static local:ChineseConverter.Instance}}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}" Margin="12,0,0,0" TextWrapping="Wrap"
+                                               Text="{Binding Detail, Converter={x:Static local:ChineseConverter.Instance}}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" Margin="12,0,0,0" TextWrapping="Wrap"
+                                               Text="{Binding Files, Converter={x:Static local:ChineseConverter.Instance}}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
                         <local:SectionHead Text="交叉對帳判決" HelpKey="firmware-security/交叉對帳"/>
                         <TextBlock Text="{Binding EvidenceLab.ReconcileSummary}" HorizontalAlignment="Right"
                                    Style="{StaticResource FieldLabel}" VerticalAlignment="Top"/>

@@ -87,7 +87,7 @@ public class DecoderHardeningTests
             "DisplayAdapterJudge", "DimmEccJudge", "MemoryChannelJudge",
             "MonitorJudge", "StorageQdJudge",
             "AudioLatencyJudge", "AssetJudge", "RoleSurfaceJudge",
-            "IpmiDecoder", "MegaRaidDecoder", "RedfishSchemaDecoder",
+            "IpmiDecoder", "MegaRaidDecoder", "RedfishSchemaDecoder", "UefiFv",
         };
         Assert.Equal(expected, SpecRefRegistry.CoveredDecoders.Select(t => t.Name).ToArray());
         Assert.All(SpecRefRegistry.CoveredDecoders, t => Assert.True(t.IsSealed || t.IsClass));

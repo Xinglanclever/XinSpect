@@ -339,6 +339,8 @@ public sealed class EvidenceLabService : ObservableObject
         SpiHashFacts = SpiFlashHashService.Collect(pci, mmio, at);
         SpiEntropyFacts = SpiEntropyService.Collect(pci, mmio, at);
         SpiEntropyRegionsCache = SpiEntropyService.DescribeRegions(pci, mmio);
+        UefiFvFacts = UefiFvFactsService.Collect(pci, mmio, at);
+        UefiFvRegionsCache = UefiFvFactsService.DescribeRows(pci, mmio);
         SpiCompareFacts = []; // 資料更新後舊比對失效，如實清空
         MchbarFacts = MchbarService.Collect(pci, mmio, at);
         PcieAerFacts = EcamAerService.Collect(mmio, acpi, at);
@@ -521,12 +523,45 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>最近一次熵分析的分區明細（服務層分析後填入；無資料時為空清單）。</summary>
     public IReadOnlyList<EntropyRegionRow> SpiEntropyRegionsCache { get; private set; } = [];
 
+    /// <summary>UEFI FV 結構的事實（總數＋逐 FV 摘要）；驅動後端可用時填入。</summary>
+    public IReadOnlyList<HardwareFact> UefiFvFacts { get; private set; } = [];
+
+    /// <summary>UEFI FV 卡片的摘要列（右側小字）：FV 總數；讀不到時如實顯示原因。</summary>
+    public string UefiFvSummary
+    {
+        get
+        {
+            var f = UefiFvFacts.FirstOrDefault(x => x.Key == UefiFvFactsService.CountKey);
+            if (f is null) return "—";
+            if (f.Availability != FactAvailability.Present) return "不可得";
+            return f.NumericValue is double v ? $"{(int)v} 個 FV" : "—";
+        }
+    }
+
+    /// <summary>UEFI FV 卡片的逐 FV 列；無資料時回單列說明原因，不給空清單假裝成功。</summary>
+    public IReadOnlyList<UefiFvRow> UefiFvRegions
+    {
+        get
+        {
+            var f = UefiFvFacts.FirstOrDefault(x => x.Key == UefiFvFactsService.CountKey);
+            if (f is null)
+                return [new UefiFvRow("—", "尚未擷取", "")];
+            if (f.Availability != FactAvailability.Present)
+                return [new UefiFvRow("—", f.UnavailableReason ?? "讀不到，原因未提供", "")];
+            if (UefiFvRegionsCache.Count > 0) return UefiFvRegionsCache;
+            return [new UefiFvRow("—", f.Value, "")];
+        }
+    }
+
+    /// <summary>最近一次 FV 解析的逐 FV 明細（服務層分析後填入；無資料時為空清單）。</summary>
+    public IReadOnlyList<UefiFvRow> UefiFvRegionsCache { get; private set; } = [];
+
     /// <summary>全部事實組合併成單一清單（CLI 與報告用）。與 FirmwareSecurityRows 同集合、不轉渲染列。</summary>
     public IReadOnlyList<HardwareFact> AllFacts =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
             .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
-            .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).ToList();
+            .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).ToList();
 
     /// <summary>
     /// 韌體安全頁用：把 <see cref="AllFacts"/> 依分類與鍵排序後轉成誠實渲染的列。
