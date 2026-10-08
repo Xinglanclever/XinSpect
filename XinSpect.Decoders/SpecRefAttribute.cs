@@ -45,6 +45,7 @@ public static class SpecRefRegistry
         typeof(SlitDecoder),     // ACPI SLIT 節點距離矩陣
         typeof(PmuDecoder),      // PMU 能力探索（CPUID 0xA，唯讀）
         typeof(TrendSentinel),   // 事實時序的趨勢／變化點／相關性（Theil–Sen、CUSUM、Pearson）
+        typeof(EntropyMap),      // 位元組序列的 Shannon 熵分析（內容類型判別，非判決）
     ];
 
     /// <summary>列舉解碼器上缺 SpecRef 的公開靜態方法（宣告於本型別者）。</summary>

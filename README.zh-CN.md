@@ -4,10 +4,10 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一执行文件发布，免安装；对硬件与系统的读取以只读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-2.29-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.30-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-3174%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-3195%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-MIT-green)
 
@@ -422,6 +422,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.30 Olympus**（2026-10-08）：SPI 快闪熵图——只读读回整颗快闪、逐 4 KiB 块算 Shannon 熵、依 FREG 区域切分，看出内容组成（高熵＝压缩／加密、低熵＝空白或规律、全 F＝抹除）；只描述分布不判断好坏或是否原厂，PRx 读保护拦截范围会被算成抹除区且报告会标明。测试 3195 绿。
 - **v2.29 Olympus**（2026-10-08）：历史仓扩充——长期追踪指标由 7 项增至 13 项（新增处理器功耗／电压、VRM 温度、显卡功耗、内存用量、存储温度）；磁盘格式升为 v2 并改为硬性版本检查（字段数不同时整份忽略而非错位读成假读值）；既有字段顺序未动并加测试钉住。测试 3174 绿。
 - **v2.28 Olympus**（2026-10-08）：统计哨兵——历史回放页新增时序统计判读：Theil–Sen 稳健斜率（趋势，附 95% 置信区间）、CUSUM 累积和（变化点）、Pearson 前后半相关性（关系变化）；只陈述数列本身的变化，不对硬件健康下因果结论；数据不足／无传感器一律如实回报；斜率置信区间改用中位绝对差（MAD）常态近似（Sen 无母数区间在配对数量大时会宽到失去判别力）；新增纯统计核心 TrendSentinel 与服务层，测试 +30。测试 3170 绿。
 - **v2.27 Olympus**（2026-10-08）：语言模式收尾——自绘控件（FieldRow／RadialGauge／HistoryGraph／Oscilloscope／AnalogVoltMeter／DonutChart／SectionHead）的文字是自定义依赖属性、不在视觉树上，过去三种语言模式都碰不到，现在逐一转换；状态栏与时钟的复合字符串改为逐段翻译；修正有绑定的 TextBlock 被当行内文字写入（1015 处绑定的内容从此不再被写死，时钟与实时读值恢复跟着来源更新）；修正简体模式夹英文（英语模式产生的字符串存槽前先反查回繁中）；翻译表补 308 条；已知未收录：安装精灵与彩蛋页的长篇文案。测试 3140 绿。

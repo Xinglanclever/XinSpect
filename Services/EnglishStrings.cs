@@ -263,6 +263,8 @@ public static class EnglishStrings
         ["VBS／HVCI 開啟時 Windows 本身是 Hyper-V 上的一個分割區，MSR 可能被攔截或回傳虛擬值、PMU 計數可能不被轉送、TSC 可能被偏移。本程式所有 MSR 類卡片（Top-down、頻率真相、RDT、MCA、安全位元）的可信度都取決於這張卡片，所以先把資格條件講清楚。全部唯讀。"] = "With VBS/HVCI on, Windows itself is a partition on Hyper-V: MSRs may be intercepted or virtualized, PMU counters may not be forwarded, TSC may be offset. Every MSR-backed card in this program (Top-down, frequency truth, RDT, MCA, immunity bits) depends on this card, so eligibility comes first. All read-only.",
         ["VRM 供電模組"] = "VRM power stages",
         ["VRM 溫度"] = "VRM temperature",
+        ["SPI 快閃熵圖（內容組成）"] = "SPI flash entropy map (content composition)",
+        ["唯讀讀回整顆快閃、逐 4 KiB 塊算 Shannon 熵，依 FREG 區域切分。高熵＝像壓縮或加密的資料、低熵＝空白或高度規律、全 F＝抹除區。只描述分布，不判斷好壞或是否原廠；PRx 讀保護攔截的範圍會被算成抹除區，報告會標明。"] = "Reads the whole flash back read-only, computes Shannon entropy per 4 KiB block and splits it by FREG region. High entropy = looks compressed or encrypted, low = blank or highly regular, all-FF = erased. Describes distribution only — never whether content is good or original; PRx read-protected ranges read back as all-FF and are counted as erased, which the report states.", 
         ["處理器功耗"] = "CPU power",
         ["處理器電壓"] = "CPU voltage",
         ["顯示卡功耗"] = "GPU power",
@@ -1680,7 +1682,7 @@ public static class EnglishStrings
         ["測速完成"] = "Speed test complete",
         ["準備中…"] = "Preparing…",
         ["無法寫入 hosts 檔：權限不足。 請以系統管理員身分重新啟動曦覽。"] = "Cannot write the hosts file: access denied. Restart XinSpect as administrator.",
-        ["版本 2.29 ・ Olympus ・ 便攜單一執行檔"] = "Version 2.29 · Olympus · portable single executable",
+        ["版本 2.30 ・ Olympus ・ 便攜單一執行檔"] = "Version 2.30 · Olympus · portable single executable",
         ["目前沒有網路連線，無法上傳。你寫的內容不會消失，接上網路後再按上傳即可。"] = "No network connection, cannot upload. Your text is not lost — press Upload again once you are back online.",
         // ── 統計哨兵：靜態文案（動態結論字串由 TComposite 逐段翻） ──
         ["方法：Theil–Sen 穩健斜率（趨勢）、CUSUM 累積和（變化點）、Pearson 相關性（關係）。只陳述數列本身的變化，不對硬體健康下結論；判讀留給使用者。"] = "Methods: Theil–Sen robust slope (trend), CUSUM cumulative sum (change points), Pearson correlation (relationship). States only how the series itself changed — never a conclusion about hardware health; interpretation is yours.",

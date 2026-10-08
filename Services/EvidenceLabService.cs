@@ -46,6 +46,13 @@ public sealed class EvidenceLabService : ObservableObject
     public IReadOnlyList<HardwareFact> SpiHashFacts { get; private set; } = [];
 
     /// <summary>
+    /// SPI 快閃熵圖三態事實：逐 4 KiB 塊的 Shannon 熵、依 FREG 區域切分的內容組成。
+    /// 只描述位元組分布（哪裡像壓縮／加密、哪裡是空白），<b>不判斷好壞或是否原廠</b>；
+    /// PRx 讀保護攔截的範圍會被算成抹除區，事實文字如實標注「那是讀不到而非沒內容」。
+    /// </summary>
+    public IReadOnlyList<HardwareFact> SpiEntropyFacts { get; private set; } = [];
+
+    /// <summary>
     /// BIOS 區 vs 參考映像的比對結果（使用者觸發的一次性動作，最多保留最近一次）。
     /// 驅動相依事實重載時清空——資料更新後舊比對失效，不留舊結論冒充現狀。
     /// </summary>
@@ -240,6 +247,8 @@ public sealed class EvidenceLabService : ObservableObject
         PlatformSecurityFacts = PlatformSecurityMsrService.Collect(msr, at);
         SpiFlashFacts = SpiFlashService.Collect(pci, mmio, at);
         SpiHashFacts = SpiFlashHashService.Collect(pci, mmio, at);
+        SpiEntropyFacts = SpiEntropyService.Collect(pci, mmio, at);
+        SpiEntropyRegionsCache = SpiEntropyService.DescribeRegions(pci, mmio);
         SpiCompareFacts = []; // 資料更新後舊比對失效，如實清空
         MchbarFacts = MchbarService.Collect(pci, mmio, at);
         PcieAerFacts = EcamAerService.Collect(mmio, acpi, at);
@@ -392,16 +401,46 @@ public sealed class EvidenceLabService : ObservableObject
             .ToList();
     }
 
+    /// <summary>熵圖卡片的摘要列（右側小字）：全區平均熵與各類區塊數；讀不到時如實顯示原因。</summary>
+    public string SpiEntropySummary
+    {
+        get
+        {
+            var f = SpiEntropyFacts.FirstOrDefault(x => x.Key == SpiEntropyService.FactKey);
+            if (f is null) return "—";
+            if (f.Availability != FactAvailability.Present) return "不可得";
+            return f.NumericValue is double v ? $"平均 {v:0.00} bits/byte" : "—";
+        }
+    }
+
+    /// <summary>熵圖卡片的區域列（逐一列出有配置的 FREG 區域）；無資料時回單列說明原因，不給空清單假裝成功。</summary>
+    public IReadOnlyList<EntropyRegionRow> SpiEntropyRegions
+    {
+        get
+        {
+            var f = SpiEntropyFacts.FirstOrDefault(x => x.Key == SpiEntropyService.FactKey);
+            if (f is null)
+                return [new EntropyRegionRow("—", "尚未擷取", "")];
+            if (f.Availability != FactAvailability.Present)
+                return [new EntropyRegionRow("—", f.UnavailableReason ?? "讀不到，原因未提供", "")];
+            if (SpiEntropyRegionsCache.Count > 0) return SpiEntropyRegionsCache;
+            return [new EntropyRegionRow("—", f.Value, "")];
+        }
+    }
+
+    /// <summary>最近一次熵分析的分區明細（服務層分析後填入；無資料時為空清單）。</summary>
+    public IReadOnlyList<EntropyRegionRow> SpiEntropyRegionsCache { get; private set; } = [];
+
     /// <summary>全部事實組合併成單一清單（CLI 與報告用）。與 FirmwareSecurityRows 同集合、不轉渲染列。</summary>
     public IReadOnlyList<HardwareFact> AllFacts =>
-        ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
+        ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
             .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
             .Concat(PlatformFacts).Concat(SoftwareFacts).Concat(AcpiFacts).ToList();
 
     /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + I/O 埠 + CMOS + SMBus + PCI 盤點 + TPM + 平台拓撲 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
-        ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
+        ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
             .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
             .Concat(PlatformFacts).Concat(SoftwareFacts).Concat(AcpiFacts)
@@ -652,6 +691,8 @@ public sealed class EvidenceLabService : ObservableObject
         f.AddRange(vm.EvidenceLab.SpiFlashFacts);
         // SPI 快閃地圖與 BIOS 區雜湊（WP4）。
         f.AddRange(vm.EvidenceLab.SpiHashFacts);
+        // SPI 快閃熵圖：內容組成（只描述分布，不判斷好壞）。
+        f.AddRange(vm.EvidenceLab.SpiEntropyFacts);
         // BIOS 區 vs 參考映像的比對結果（使用者觸發，重載後清空）。
         f.AddRange(vm.EvidenceLab.SpiCompareFacts);
         // ACPI 表清單三態事實（usermode 列舉）。

@@ -90,6 +90,37 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                 <StackPanel>
                     <Grid>
+                        <local:SectionHead Text="SPI 快閃熵圖（內容組成）" HelpKey="firmware-security/SPI 快閃熵圖"/>
+                        <TextBlock Text="{Binding EvidenceLab.SpiEntropySummary}" HorizontalAlignment="Right"
+                                   Style="{StaticResource FieldLabel}" VerticalAlignment="Top"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                               Text="唯讀讀回整顆快閃、逐 4 KiB 塊算 Shannon 熵，依 FREG 區域切分。高熵＝像壓縮或加密的資料、低熵＝空白或高度規律、全 F＝抹除區。只描述分布，不判斷好壞或是否原廠；PRx 讀保護攔截的範圍會被算成抹除區，報告會標明。"/>
+                    <ItemsControl ItemsSource="{Binding EvidenceLab.SpiEntropyRegions}" Margin="0,8,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="220"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldValue}"
+                                               Text="{Binding RegionName, Converter={x:Static local:ChineseConverter.Instance}}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                                               Text="{Binding Detail, Converter={x:Static local:ChineseConverter.Instance}}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" TextAlignment="Right"
+                                               Text="{Binding Composition, Converter={x:Static local:ChineseConverter.Instance}}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
                         <local:SectionHead Text="交叉對帳判決" HelpKey="firmware-security/交叉對帳"/>
                         <TextBlock Text="{Binding EvidenceLab.ReconcileSummary}" HorizontalAlignment="Right"
                                    Style="{StaticResource FieldLabel}" VerticalAlignment="Top"/>
