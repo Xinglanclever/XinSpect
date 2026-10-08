@@ -86,6 +86,8 @@ public class DecoderHardeningTests
             "PcieLink", "PcieNegotiationGap", "VirtualizationJudge", "NicLinkGap",
             "DisplayAdapterJudge", "DimmEccJudge", "MemoryChannelJudge",
             "MonitorJudge", "StorageQdJudge",
+            "AudioLatencyJudge", "AssetJudge", "RoleSurfaceJudge",
+            "IpmiDecoder", "MegaRaidDecoder", "RedfishSchemaDecoder",
         };
         Assert.Equal(expected, SpecRefRegistry.CoveredDecoders.Select(t => t.Name).ToArray());
         Assert.All(SpecRefRegistry.CoveredDecoders, t => Assert.True(t.IsSealed || t.IsClass));

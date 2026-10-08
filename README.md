@@ -4,7 +4,7 @@
 
 一款免費開源、運行於 Windows 的原生硬體驗機、監控與安全稽核工具。以單一執行檔發佈，免安裝；對硬體與系統的讀取以唯讀為原則，少數涉及寫入的功能均設有同意閘門並明確標註風險。本程式不收集、不上傳任何使用者資料。
 
-![版本](https://img.shields.io/badge/version-2.34-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.35-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![測試](https://img.shields.io/badge/tests-3195%20passed-3FB950)
@@ -79,8 +79,8 @@
 
 | 檔案 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.34/XinSpect.exe) | 30,295,851 bytes | 主程式。藍色中隊守護進程已內建 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.34/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.35/XinSpect.exe) | 30,295,851 bytes | 主程式。藍色中隊守護進程已內建 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.35/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
 
 > **上表的位元組數為本版（v2.31）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
@@ -425,6 +425,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.35 Olympus**（2026-10-08）：第四梯收官——音訊端點緩衝區（獨占模式延遲下限，四級用途判讀）、識別與資產（SMBIOS 識別欄位與韌體未填標注、機箱類型）、已安裝角色與功能的攻擊面（裝了但沒在用，服務沒在跑不等於不會跑）；IPMI／MegaRAID／Redfish 三個既有解碼器納入 SpecRef 覆蓋檢查。測試 +76，全套 3455 綠。
 - **v2.34 Olympus**（2026-10-08）：IOCP 佇列深度曲線判讀（還有餘裕／已飽和／加深反而下降三種形狀，並說明延遲隨 QD 上升是排隊的必然結果而非故障）、NUMA 跨節點標為「不適用」並明說未驗證不代表可用。新增純解碼器 StorageQdJudge，測試 +16，全套 3379 綠。
 - **v2.33 Olympus**（2026-10-08）：記憶體通道配置（插槽命名推斷的通道數 vs 每通道模組數，並明說理論上限的「每支各佔一通道」假設站不站得住）、螢幕組成（真實螢幕／軟體虛擬螢幕／作業系統預設物件三分）。新增純解碼器兩個，測試 +26，全套 3363 綠。
 - **v2.32 Olympus**（2026-10-08）：伺服器與工作站視角——虛擬化平台三態（元件／服務／虛擬層分離，「裝了但開機未載入」不再被講成「已啟用」）、網卡兩條鏈路落差（PCIe 供給 vs 線路速率，供給不足時明說「跑不滿」）、顯示轉接器真偽（真實 vs 軟體 vs 基本顯示驅動）、SMBIOS 補完（Type 1 UUID 小端序、Type 3 機箱類型、Type 28／29 感測器的「值未知」位元）、記憶體錯誤更正三層分離（ECC／Registered／平台能力不互相推論）。新增純解碼器四個，測試 +105，全套 3337 綠。

@@ -55,6 +55,12 @@ public static class SpecRefRegistry
         typeof(MemoryChannelJudge), // 記憶體通道配置（插槽命名推斷 vs 每通道模組數）
         typeof(MonitorJudge),    // 顯示器真偽（EDID 支撐 vs 軟體合成 vs 預設物件）
         typeof(StorageQdJudge),  // 儲存佇列深度掃描（IOPS／延遲隨 QD 曲線）
+        typeof(AudioLatencyJudge), // 音訊端點緩衝區（獨占模式延遲下限）
+        typeof(AssetJudge),      // 機器識別與資產（SMBIOS 識別欄位＋韌體未填標注）
+        typeof(RoleSurfaceJudge), // 已安裝角色與功能的攻擊面（裝了但沒在用）
+        typeof(IpmiDecoder),     // IPMI SEL／FRU／SDR 解碼（純解碼器；本機無 BMC，通路未實作）
+        typeof(MegaRaidDecoder), // MegaRAID MFI 訊框解碼（純解碼器；本機無 RAID 控制器）
+        typeof(RedfishSchemaDecoder), // Redfish 信封解碼（純解碼器；本機無 BMC）
     ];
 
     /// <summary>列舉解碼器上缺 SpecRef 的公開靜態方法（宣告於本型別者）。</summary>

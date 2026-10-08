@@ -359,6 +359,34 @@
                 </StackPanel>
             </Border>
 
+            <!-- 識別與資產：組裝機的 SMBIOS 識別欄位常填預設字串（「Default string」），
+                 看起來像有值其實沒有。把它們當序號登錄，資產清單上就會出現一堆一樣的值。 -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                <StackPanel>
+                    <local:SectionHead Text="識別與資產" HelpKey="health/識別與資產"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                               Text="SMBIOS 的識別欄位（系統序號、機箱序號、資產標籤…）在組裝機與部分主機板上填的是韌體預設字串，看起來像有值其實沒有。這一區如實標出哪些欄位可以當識別用、哪些不可以，並說明機箱類型（判斷這是不是伺服器最直接的證據）。"/>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding EvidenceLab.AssetHeadline}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="{Binding EvidenceLab.AssetEvidence}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 已安裝角色：裝了的角色佔磁碟、拉長維護、增加可被利用的程式碼面積。
+                 「服務沒在跑」不等於「不會跑」——判讀會明說。 -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                <StackPanel>
+                    <local:SectionHead Text="已安裝角色與功能" HelpKey="health/已安裝角色與功能"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                               Text="伺服器角色與選用功能只要安裝了就佔三樣成本：磁碟空間、開機與維護時間，以及可被利用的程式碼面積。沒在用的角色不會因為「沒開」就沒有風險——檔案在、服務定義在、更新要跟著裝。本區只陳述裝了什麼與服務狀態，不建議移除任何項目。"/>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding EvidenceLab.RoleHeadline}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="{Binding EvidenceLab.RoleEvidence}"/>
+                </StackPanel>
+            </Border>
+
             <!-- 這台機器多老了：三個各有偏誤的線索，不假裝知道出廠日 -->
             <Border Style="{StaticResource Card}" Margin="0,14,0,0">
                 <StackPanel>

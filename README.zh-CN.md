@@ -4,7 +4,7 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一执行文件发布，免安装；对硬件与系统的读取以只读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-2.34-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.35-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![测试](https://img.shields.io/badge/tests-3195%20passed-3FB950)
@@ -79,8 +79,8 @@
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.34/XinSpect.exe) | 30,295,851 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.34/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.35/XinSpect.exe) | 30,295,851 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.35/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 
 > **本表的字节数为本版（v2.31）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
@@ -422,6 +422,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.35 Olympus**（2026-10-08）：第四梯收官——音频端点缓冲区（独占模式延迟下限，四级用途判读）、识别与资产（SMBIOS 识别字段与固件未填标注、机箱类型）、已安装角色与功能的攻击面（装了但没在用，服务没在跑不等于不会跑）；IPMI／MegaRAID／Redfish 三个既有解码器纳入 SpecRef 覆盖检查。测试 +76，全套 3455 绿。
 - **v2.34 Olympus**（2026-10-08）：IOCP 队列深度曲线判读（还有余裕／已饱和／加深反而下降三种形状，并说明延迟随 QD 上升是排队的必然结果而非故障）、NUMA 跨节点标为「不适用」并明说未验证不代表可用。新增纯解码器 StorageQdJudge，测试 +16，全套 3379 绿。
 - **v2.33 Olympus**（2026-10-08）：内存通道配置（插槽命名推断的通道数 vs 每通道模组数，并明说理论上限的「每支各占一通道」假设站不站得住）、屏幕组成（真实屏幕／软件虚拟屏幕／操作系统默认对象三分）。新增纯解码器两个，测试 +26，全套 3363 绿。
 - **v2.32 Olympus**（2026-10-08）：服务器与工作站视角——虚拟化平台三态（组件／服务／虚拟层分离，「装了但开机未载入」不再被讲成「已启用」）、网卡两条链路落差（PCIe 供给 vs 线路速率，供给不足时明说「跑不满」）、显示适配器真伪（真实 vs 软件 vs 基本显示驱动）、SMBIOS 补完（Type 1 UUID 小端序、Type 3 机箱类型、Type 28／29 传感器的「值未知」位元）、内存错误更正三层分离（ECC／Registered／平台能力不互相推论）。新增纯解码器四个，测试 +105，全套 3337 绿。

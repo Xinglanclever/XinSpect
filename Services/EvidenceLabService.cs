@@ -223,7 +223,33 @@ public sealed class EvidenceLabService : ObservableObject
         MonitorFacts = MonitorFactsService.Collect(at ?? DateTimeOffset.UtcNow, probe);
         OnPropertyChanged(nameof(FirmwareSecurityRows));
         OnPropertyChanged(nameof(MonitorSummary));
+        OnPropertyChanged(nameof(AssetHeadline));
+        OnPropertyChanged(nameof(AssetEvidence));
+        OnPropertyChanged(nameof(RoleHeadline));
+        OnPropertyChanged(nameof(RoleEvidence));
     }
+
+    /// <summary>識別與資產事實（SMBIOS 識別欄位＋韌體未填標注）。</summary>
+    public IReadOnlyList<HardwareFact> AssetFacts { get; private set; } = [];
+
+    /// <summary>已安裝角色與功能事實。</summary>
+    public IReadOnlyList<HardwareFact> RoleFacts { get; private set; } = [];
+
+    /// <summary>識別與資產卡片的一行結論。</summary>
+    public string AssetHeadline =>
+        AssetFacts.FirstOrDefault(f => f.Key == "asset.identify")?.Value ?? "尚未讀取。";
+
+    /// <summary>識別與資產卡片的依據列。</summary>
+    public string AssetEvidence =>
+        AssetFacts.FirstOrDefault(f => f.Key == "asset.identify.evidence")?.Value ?? "";
+
+    /// <summary>已安裝角色卡片的一行結論。</summary>
+    public string RoleHeadline =>
+        RoleFacts.FirstOrDefault(f => f.Key == "role.surface")?.Value ?? "尚未讀取。";
+
+    /// <summary>已安裝角色卡片的依據列。</summary>
+    public string RoleEvidence =>
+        RoleFacts.FirstOrDefault(f => f.Key == "role.surface.evidence")?.Value ?? "";
 
     /// <summary>顯示器組成的一行摘要。</summary>
     public string MonitorSummary =>
@@ -253,6 +279,8 @@ public sealed class EvidenceLabService : ObservableObject
     {
         var at = DateTimeOffset.UtcNow;
         MonitorFacts = MonitorFactsService.Collect(at);
+        AssetFacts = AssetFactsService.Collect(at);
+        RoleFacts = RoleSurfaceFactsService.Collect(at);
         PlatformFacts = NumaTopologyService.Collect(at)
             .Append(MemoryAttackSurfaceService.Collect(at))
             .Concat(OobFactsService.Collect(at))
@@ -260,6 +288,9 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(NicLinkFactsService.Collect(at))
             .Concat(DisplayAdapterFactsService.Collect(at))
             .Concat(MonitorFacts)
+            .Concat(AudioLatencyFactsService.Collect(at))
+            .Concat(AssetFacts)
+            .Concat(RoleFacts)
             .Concat(TimeSyncFactsService.Collect(at, new Win32AcpiTableSource()))
             .Concat(CxlFactsService.Collect(at, new Win32AcpiTableSource()))
             .Concat(UsbTopologyService.Collect(at))
