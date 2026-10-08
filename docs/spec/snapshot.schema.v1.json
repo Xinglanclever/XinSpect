@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://xinspect.app/spec/snapshot.schema.v1.json",
   "title": "XinSpect 硬體快照 v1（時間膠囊）",
-  "description": "XinSpect 硬體快照的公開格式。每筆事實帶來源、可信度與可用性三態——讀不到就是讀不到，不以典型值填補。",
+  "description": "XinSpect 硬體快照的公開格式。每筆事實帶來源、可信度與可用性六態——讀不到就是讀不到，不以典型值填補；有值但未確認的一律標 Unknown，不冒充已確認。",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "appVersion", "anonymousMachineId", "capturedAtUtc", "sensitiveValuesPreserved", "facts", "integrity"],
@@ -44,7 +44,7 @@
         "trust": { "enum": ["Unknown", "Reported", "Derived", "Measured"], "description": "來源品質標示：Unknown（不可用）／Reported（系統自己記的）／Derived（由其他事實推導）／Measured（本工具量到）。這是標示不是保證。" },
         "sensitive": { "type": "boolean" },
         "measuredAtUtc": { "type": "string", "format": "date-time" },
-        "availability": { "enum": ["Present", "NotSupported", "InsufficientPrivilege", "ReadError", "NotApplicable"], "description": "三態契約的型別承載：Present＝讀到；其餘四種＝讀不到（各自帶原因）。" },
+        "availability": { "enum": ["Present", "NotSupported", "InsufficientPrivilege", "ReadError", "NotApplicable", "Unknown"], "description": "可用性契約的型別承載。Present＝讀到且確認（唯一可拿去下結論的狀態）；Unknown＝有值但未確認（快取殘留、來源可疑、多來源尚未仲裁）；NotApplicable／NotSupported＝本機環境事實（不是故障）；InsufficientPrivilege／ReadError＝試過但沒拿到。**2.36 起新增 Unknown**：這是 v1 之內的加法擴充——舊快照（不含 Unknown）仍可讀；但以本 schema 驗證的舊版讀者會拒收含 Unknown 的新快照，因此跨版本交換前請先確認對方支援。格上的強弱序與傳播規則見 docs/spec/METHODOLOGY.md。" },
         "unavailableReason": { "type": ["string", "null"], "description": "availability 非 Present 時的人可讀原因；Present 時為 null。" }
       }
     }

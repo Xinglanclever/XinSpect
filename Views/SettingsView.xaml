@@ -332,6 +332,34 @@
                 </StackPanel>
             </Border>
 
+            <!-- ═══ 覆蓋申報 ═══
+                 兩份「我們知道自己不知道什麼」的申報：事實鍵的對帳覆蓋、知識表的收錄率。
+                 都不是錯誤——但都應該看得見，因為「事實進了快照卻沒有規則看它」
+                 與「查不到名字其實是表沒收錄」是兩種不會產生任何錯誤訊息的落差。 -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <local:SectionHead Text="覆蓋申報" HelpKey="settings/覆蓋申報"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="這裡申報兩件「我們知道自己不知道什麼」的事：事實鍵有多少條被對帳規則考慮、以及手工知識表各收錄了幾條。兩者都不是錯誤，但都應該看得見——事實進了快照卻沒有規則看它，那個數字就永遠不會被交叉檢查；而查不到名字時顯示原始代碼，代表知識表沒收錄，不是裝置有問題。"/>
+
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,12,0,0" TextWrapping="Wrap"
+                               Text="{Binding Coverage.RuleCoverageHeadline}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="{Binding Coverage.RuleCoverageDetail}"/>
+
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,12,0,0" TextWrapping="Wrap"
+                               Text="{Binding Coverage.KnowledgeSummary}"/>
+                    <ItemsControl ItemsSource="{Binding Coverage.KnowledgeTables}" Margin="0,6,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                                           Margin="0,2,0,0" Text="{Binding StringFormat=・{0}}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <!-- ═══ 一般 ═══ -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>

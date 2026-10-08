@@ -416,6 +416,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>環境自檢：偵測各功能所需執行階段／驅動／服務是否就緒，缺少者附官方取得連結。</summary>
     public EnvCheckService EnvCheck { get; } = new();
 
+    /// <summary>覆蓋申報：事實鍵的對帳覆蓋與知識表收錄率（純讀檔，不碰硬體）。</summary>
+    public CoverageService Coverage { get; } = new();
+
     /// <summary>驅動就緒器：WinRing0／LHM 驅動狀態偵測與一鍵修復（設定頁）。</summary>
     public DriverReadyService DriverReady { get; } = new();
 

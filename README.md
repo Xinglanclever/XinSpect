@@ -4,7 +4,7 @@
 
 一款免費開源、運行於 Windows 的原生硬體驗機、監控與安全稽核工具。以單一執行檔發佈，免安裝；對硬體與系統的讀取以唯讀為原則，少數涉及寫入的功能均設有同意閘門並明確標註風險。本程式不收集、不上傳任何使用者資料。
 
-![版本](https://img.shields.io/badge/version-2.35-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.36-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![測試](https://img.shields.io/badge/tests-3195%20passed-3FB950)
@@ -79,8 +79,8 @@
 
 | 檔案 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.35/XinSpect.exe) | 30,348,587 bytes | 主程式。藍色中隊守護進程已內建 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.35/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.36/XinSpect.exe) | 30,348,587 bytes | 主程式。藍色中隊守護進程已內建 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.36/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
 
 > **上表的位元組數為本版（v2.31）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
@@ -425,6 +425,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.36 Olympus**（2026-10-08）：地基——可用性由五態擴為六態（新增 Unknown＝有值但未確認）並定義偏序格與合取傳播；覆蓋申報（設定頁）申報事實鍵的對帳覆蓋與知識表收錄率；版號守門擴大到三份 README 的下載連結與版本沿革。測試 +59，全套 3514 綠。
 - **v2.35 Olympus**（2026-10-08）：第四梯收官——音訊端點緩衝區（獨占模式延遲下限，四級用途判讀）、識別與資產（SMBIOS 識別欄位與韌體未填標注、機箱類型）、已安裝角色與功能的攻擊面（裝了但沒在用，服務沒在跑不等於不會跑）；IPMI／MegaRAID／Redfish 三個既有解碼器納入 SpecRef 覆蓋檢查。測試 +76，全套 3455 綠。
 - **v2.34 Olympus**（2026-10-08）：IOCP 佇列深度曲線判讀（還有餘裕／已飽和／加深反而下降三種形狀，並說明延遲隨 QD 上升是排隊的必然結果而非故障）、NUMA 跨節點標為「不適用」並明說未驗證不代表可用。新增純解碼器 StorageQdJudge，測試 +16，全套 3379 綠。
 - **v2.33 Olympus**（2026-10-08）：記憶體通道配置（插槽命名推斷的通道數 vs 每通道模組數，並明說理論上限的「每支各佔一通道」假設站不站得住）、螢幕組成（真實螢幕／軟體虛擬螢幕／作業系統預設物件三分）。新增純解碼器兩個，測試 +26，全套 3363 綠。

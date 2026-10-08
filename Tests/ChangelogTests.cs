@@ -51,6 +51,48 @@ public class ChangelogTests
         Assert.Contains($"版本 {v} ・", ReadRepoFile(Path.Combine("Views", "AboutView.xaml")));
     }
 
+    /// <summary>
+    /// 版號還寫在幾處<b>不受守門保護</b>的地方：三份 README 的下載連結與版本沿革。
+    /// 這些地方先前真的落後過（v2.26 時期 README 還指著 v2.2.0），而守門測試只看徽章，
+    /// 所以點下載的人會拿到舊版。這裡把守門範圍擴大到每一個指得出舊版號的地方。
+    /// </summary>
+    [Fact]
+    public void 三份README的下載連結與版本沿革都指向當前版本()
+    {
+        string v = ChangelogCatalog.Latest;
+        foreach (string file in new[] { "README.md", "README.zh-CN.md", "README.en.md" })
+        {
+            string text = ReadRepoFile(file);
+
+            // 下載連結（Release 頁與三個資產）不得指向別的版號
+            foreach (Match m in Regex.Matches(text, @"/releases/(?:tag|download)/(v\d+\.\d+)").Cast<Match>())
+                Assert.True(m.Groups[1].Value == "v" + v,
+                    $"{file}：下載連結指向 {m.Groups[1].Value}，但當前版本是 v{v}");
+
+            // 徽章已由上一條測試釘住；版本沿革則要求當前版號出現
+            Assert.Contains(v, text);
+        }
+    }
+
+    /// <summary>
+    /// 版本沿革裡的最新一筆必須與 <see cref="ChangelogCatalog"/> 的最新一筆對得上——
+    /// 三份 README 各寫各的沿革時，最容易只更新其中一份。
+    /// </summary>
+    [Fact]
+    public void 三份README的版本沿革最新一筆都對得上紀錄()
+    {
+        string v = ChangelogCatalog.Latest;
+        string title = ChangelogCatalog.Entries[0].Title;
+        foreach (string file in new[] { "README.md", "README.zh-CN.md" })
+        {
+            string text = ReadRepoFile(file);
+            var first = Regex.Match(text, @"^- \*\*v(\d+\.\d+)[^*]*\*\*", RegexOptions.Multiline);
+            Assert.True(first.Success, $"{file}：找不到版本沿革的最新一筆");
+            Assert.True(first.Groups[1].Value == v,
+                $"{file}：版本沿革最新一筆是 v{first.Groups[1].Value}，但當前版本是 v{v}（紀錄標題：{title}）");
+        }
+    }
+
     // ── 內容本身要站得住 ──────────────────────────────────────────────────
 
     [Fact]

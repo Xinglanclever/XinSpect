@@ -34,6 +34,7 @@ public partial class SettingsView : UserControl
             Vm?.Diagnostics.Refresh();   // 進頁面就是最新的一份，不必等下一拍心跳
             if (Vm is { } vm && !vm.EnvCheck.HasRun && !vm.EnvCheck.IsRunning)
                 _ = vm.EnvCheck.RunAsync(vm);
+            Vm?.Coverage.EnsureLoaded();   // 覆蓋申報：純讀檔與字串掃描，可同步算完
         };
     }
 

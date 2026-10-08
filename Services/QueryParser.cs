@@ -84,7 +84,8 @@ public static class QueryParser
             throw new QueryParseException($"第 {lineNo + 1} 行：availability 只支援 =。");
         if (ParseAvailability(value) is null)
             throw new QueryParseException($"第 {lineNo + 1} 行：availability 值「{value}」不合法。" +
-                "可用：present（可讀）、read-error、not-supported、insufficient-privilege、not-applicable。");
+                "可用：present（可讀）、unconfirmed（有值但未確認）、read-error、"
+                + "not-supported、insufficient-privilege、not-applicable。");
     }
 
     /// <summary>可用性值：列舉名不分大小寫＋常用別名。null＝不合法。</summary>
@@ -98,6 +99,9 @@ public static class QueryParser
             "not-supported" => FactAvailability.NotSupported,
             "insufficient-privilege" or "no-permission" => FactAvailability.InsufficientPrivilege,
             "not-applicable" => FactAvailability.NotApplicable,
+            // 2.36 起：有值但未確認。別名刻意取 unconfirmed 而不是 "unknown"——
+            // unknown 太容易與「不知道」混用，而這一態的語意是「拿到了東西但不敢背書」。
+            "unconfirmed" => FactAvailability.Unknown,
             _ => Enum.TryParse<FactAvailability>(value, ignoreCase: true, out var parsed) ? parsed : null,
         };
     }

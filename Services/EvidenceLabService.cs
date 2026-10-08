@@ -847,10 +847,12 @@ public sealed record EvidenceFactRow(string Category, string Name, string Value,
     {
         string label = availability switch
         {
+            FactAvailability.Present => "可用",
             FactAvailability.NotSupported => "不支援",
             FactAvailability.InsufficientPrivilege => "讀不到",
             FactAvailability.ReadError => "讀取失敗",
             FactAvailability.NotApplicable => "不適用",
+            FactAvailability.Unknown => "未確認",
             _ => "讀不到",
         };
         return string.IsNullOrWhiteSpace(reason) ? label : $"{label}：{reason}";

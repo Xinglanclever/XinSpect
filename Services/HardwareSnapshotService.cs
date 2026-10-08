@@ -48,6 +48,8 @@ public static partial class HardwareSnapshotService
             Category = x.Category,
             Name = x.Name,
             Value = x.Value,
+            // 只有 Present 才帶可計算的數值。Unknown 就算字串裡有數字也不轉——
+            // 「未確認」與「可計算」是兩件事，允許它算等於讓未確認的值混進結果。
             NumericValue = x.Availability == FactAvailability.Present ? (x.NumericValue ?? TryNumeric(x.Value)) : null,
             Unit = x.Unit,
             Source = x.Source,
@@ -361,10 +363,20 @@ public static partial class HardwareSnapshotService
         if (!Enum.IsDefined(fact.Availability)) throw new ArgumentException("availability 無效。");
         if (fact.Availability == FactAvailability.Present)
         {
-            // 讀得到：值必填，且不得帶「讀不到的原因」。
+            // 讀到且確認：值必填，且不得帶「讀不到的原因」。
             RequireText(fact.Value, nameof(fact.Value), 16_384);
             if (!string.IsNullOrWhiteSpace(fact.UnavailableReason))
                 throw new ArgumentException("可用的事實不得帶 unavailableReason。");
+        }
+        else if (fact.Availability == FactAvailability.Unknown)
+        {
+            // 有值但未確認：值必填（它的重點就是「拿到了東西」），必須說明為何不敢背書，
+            // 且**不得帶 numericValue**——numericValue 是可計算欄位，允許它等於邀請呼叫端
+            // 拿未確認的值去算。字串值留給人看，數值要等到確認後才有。
+            RequireText(fact.Value, nameof(fact.Value), 16_384);
+            RequireText(fact.UnavailableReason, nameof(fact.UnavailableReason), 512);
+            if (fact.NumericValue is not null)
+                throw new ArgumentException("未確認的事實不得帶 numericValue——要計算請先確認來源。");
         }
         else
         {

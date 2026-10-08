@@ -276,6 +276,7 @@ public static class EnglishStrings
         ["尚未讀取。"] = "Not read yet.",
         ["識別與資產"] = "Identity and asset",
         ["已安裝角色與功能"] = "Installed roles and features",
+        ["覆蓋申報"] = "Coverage disclosure",
         ["落差"] = "Gap",
         ["相符"] = "Matched",
         ["寬度受限"] = "Width limited",

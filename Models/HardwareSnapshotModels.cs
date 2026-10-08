@@ -18,15 +18,41 @@ public enum FactTrustLevel
     Measured,
 }
 
-/// <summary>事實的可用性三態（含讀不到的原因）。誠實原則的型別承載：讀不到就說讀不到，不以 0／0xFF／舊值填補。</summary>
+/// <summary>
+/// 事實的可用性六態。誠實原則的型別承載：讀不到就說讀不到，不以 0／0xFF／舊值填補。
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>為什麼是六態而不是五態：</b>原本的 <c>Present</c>／<c>NotSupported</c>／
+/// <c>InsufficientPrivilege</c>／<c>ReadError</c>／<c>NotApplicable</c> 有一個缺口——
+/// <b>「有值但我們不確定它算不算數」無處可放</b>。實務上會遇到三種情形需要它：
+/// ①值來自快取或上一次開機的殘留；②值通過了讀取但來源本身可疑（例如驅動回了預設值而非真實值）；
+/// ③兩條路徑給了不同答案、尚在等第三條仲裁。這三種情形若硬塞進 <c>Present</c>，
+/// 就會被當成已確認的事實——那正是本專案最不該犯的錯。
+/// </para>
+/// <para>
+/// <b>六態之間有偏序關係</b>（見 <see cref="FactStateLattice"/>）：
+/// 衍生事實的可用性必須由來源事實依這個格傳播，<b>永不靜默塌成單一值</b>。
+/// </para>
+/// </remarks>
 [JsonConverter(typeof(JsonStringEnumConverter<FactAvailability>))]
 public enum FactAvailability
 {
+    /// <summary>讀到了，且來源與路徑都確認。</summary>
     Present,
+    /// <summary>硬體或平台不支援這項查詢（環境事實，不是錯誤）。</summary>
     NotSupported,
+    /// <summary>有這條路徑但權限不足（提權後可得）。</summary>
     InsufficientPrivilege,
+    /// <summary>嘗試過但讀取失敗（呼叫錯誤、逾時、裝置無回應）。</summary>
     ReadError,
+    /// <summary>本機不適用這項查詢（例如沒有 BMC 就沒有 IPMI 通路）。</summary>
     NotApplicable,
+    /// <summary>
+    /// 有值但未確認：快取殘留、來源可疑、或多來源尚未仲裁。
+    /// <b>不得當成 <see cref="Present"/> 使用</b>——它的存在就是為了不讓未確認的值冒充已確認。
+    /// </summary>
+    Unknown,
 }
 
 /// <summary>UI 可直接組成的硬體事實；NumericValue 只在可可靠解析時提供。</summary>

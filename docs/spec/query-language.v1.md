@@ -36,6 +36,7 @@
 | `InsufficientPrivilege` | `no-permission` |
 | `NotSupported` | （無別名） |
 | `NotApplicable` | （無別名） |
+| `Unknown` | `unconfirmed`（2.36 起；有值但未確認，不得當成已確認使用） |
 
 ## 3. 執行語意
 
