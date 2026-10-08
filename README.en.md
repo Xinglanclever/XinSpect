@@ -4,7 +4,7 @@
 
 A free, open-source hardware verification, monitoring, and security auditing tool for Windows. Ships as a single portable executable. Read-only by default; write operations are gated behind explicit user consent. Does not collect or transmit any user data.
 
-![Version](https://img.shields.io/badge/version-2.30-4C8DFF)
+![Version](https://img.shields.io/badge/version-2.31-4C8DFF)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![Tests](https://img.shields.io/badge/tests-3195%20passed-3FB950)
