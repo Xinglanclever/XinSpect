@@ -85,7 +85,7 @@ public class DecoderHardeningTests
             "CpuTopologyDecoder", "SlitDecoder", "PmuDecoder", "TrendSentinel", "EntropyMap",
             "PcieLink", "PcieNegotiationGap", "VirtualizationJudge", "NicLinkGap",
             "DisplayAdapterJudge", "DimmEccJudge", "MemoryChannelJudge",
-            "MonitorJudge",
+            "MonitorJudge", "StorageQdJudge",
         };
         Assert.Equal(expected, SpecRefRegistry.CoveredDecoders.Select(t => t.Name).ToArray());
         Assert.All(SpecRefRegistry.CoveredDecoders, t => Assert.True(t.IsSealed || t.IsClass));

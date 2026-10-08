@@ -54,6 +54,7 @@ public static class SpecRefRegistry
         typeof(DimmEccJudge),    // 記憶體 ECC／Registered／平台更正能力（三層分離）
         typeof(MemoryChannelJudge), // 記憶體通道配置（插槽命名推斷 vs 每通道模組數）
         typeof(MonitorJudge),    // 顯示器真偽（EDID 支撐 vs 軟體合成 vs 預設物件）
+        typeof(StorageQdJudge),  // 儲存佇列深度掃描（IOPS／延遲隨 QD 曲線）
     ];
 
     /// <summary>列舉解碼器上缺 SpecRef 的公開靜態方法（宣告於本型別者）。</summary>

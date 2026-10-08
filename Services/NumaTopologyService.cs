@@ -23,13 +23,27 @@ public static class NumaTopologyService
             return [Unavailable(key, name, source, at, FactAvailability.NotSupported, "NUMA API 不可用（非 Windows 或呼叫失敗）")];
 
         uint nodes = highest.Value + 1;
+        // 單節點時的重點不是「只有 1 個」，而是「跨節點的行為在本機根本無從驗證」。
+        // 誠實契約：未驗證 ≠ 可用。本機看不到跨節點延遲，不代表這台機器有那個能力，
+        // 也不代表沒有——就是沒量到。
+        string headline = nodes == 1
+            ? "單 NUMA 節點——跨節點延遲與頻寬在本機無從驗證（未驗證不代表可用）"
+            : $"{nodes} 個 NUMA 節點——多節點平台的記憶體親和性會影響延遲類量測的解讀";
         var facts = new List<HardwareFact>
         {
-            new(key, Category, name,
+            new(key, Category, name, headline, "", source, FactTrustLevel.Measured, false, at, nodes),
+            new(key + ".xnode", Category, "跨節點延遲／頻寬",
                 nodes == 1
-                    ? "單 NUMA 節點（桌面平台常態）；節點遮罩見 numa.node.0"
-                    : $"{nodes} 個 NUMA 節點——多節點平台的記憶體親和性會影響延遲類量測的解讀",
-                "", source, FactTrustLevel.Measured, false, at, nodes),
+                    ? "無從量測：本機只有一個節點，沒有第二個節點可比較"
+                    : $"可量測：{nodes} 個節點，跨節點路徑存在",
+                "", "由 NUMA 節點數推得（見 numa.topology）",
+                nodes == 1 ? FactTrustLevel.Unknown : FactTrustLevel.Derived, false, at, null,
+                nodes == 1 ? FactAvailability.NotApplicable : FactAvailability.Present,
+                nodes == 1
+                    ? "本機為單節點：跨節點延遲／頻寬從未在本機量過——未驗證不代表可用。"
+                      + "這一項標為「不適用」而不是「正常」——沒量到不等於沒有問題。"
+                      + "要驗證跨節點行為需要雙插槽（或多節點）平台。"
+                    : null),
         };
 
         var maskProbe = nodeMaskProbe ?? NativeNodeMask;

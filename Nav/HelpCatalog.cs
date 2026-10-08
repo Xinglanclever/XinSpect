@@ -955,7 +955,7 @@ public static class HelpCatalog
         {
             Title = "深測中心",
             What = "把同一場 Run Session 的 CPU、拓樸、記憶體、GPU、儲存、使用者體驗與 Gauntlet 深測收在同一頁；原 38 項全量登記，尚未實作項目也會攤開。CPU 微架構、RDRAND/RDSEED、寫入完整性、SLC 持續寫入、Top-down 歸因、混合核心放置——CPUID 0x1A 誠實分類 P-core / E-core 並量五種放置、NUMA／TLB／大分頁——遞增 working set 逐頁掃描加大分頁與跨 NUMA 對照、DRAM 映射推論——stride 掃描曲線僅供推論、WASAPI 音訊緩衝行為、D3D11 Present 幀節奏、GPU 光柵／紋理——全螢幕三角形填充率與紋理取樣吞吐、GPU codec 吞吐——合成幀經 Sink Writer 編碼、Windows 睿頻爬升恢復、Windows 吞吐衰退、Windows 電源狀態觀察、多域 Gauntlet——CPU／記憶體／儲存三域並行、真實世界合成負載——三步驟序列流程與可信度引擎自我稽核——已知答案樣本集驗證分類行為（不量硬體）已接進 Hub；Top-down 只使用 Intel PMU 配方。38 項自此全部可執行。",
-            Does = "每項保留樣本數、設定、可信度、限制與錯誤；聚合只引用同一場證據，不加權合成總分，也不把延後項目藏起來。",
+            Does = "每項保留樣本數、設定、可信度、限制與錯誤；聚合只引用同一場證據，不加權合成總分，也不把延後項目藏起來。儲存 IOCP 測項的結果會附上佇列深度（QD）曲線的判讀：同一顆 SSD 在 QD1 與 QD32 的 IOPS 可以差一個數量級，只報一個數字等於沒說；判讀會指出「還有餘裕」「某級之後已飽和（該點就是本次條件下的實用上限）」或「加深反而下降」三種形狀，並說明延遲隨 QD 上升是排隊的必然結果（QD ＝ IOPS × 延遲）而不是故障。QD1 的數字比較接近日常體感，高 QD 的數字只在使用者真的同時壓上大量 I/O 時才感受得到。",
             Risk = HelpRisk.Caution,
             Safety = "高負載會讓 CPU、記憶體、GPU 或儲存接近滿載；儲存測試只建立 XinSpect.deepbench.tmp 與 XinSpect.iocp.tmp，結束、例外或取消後都會刪除。",
         },

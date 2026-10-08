@@ -132,7 +132,7 @@ public sealed class StorageIocpEngineService : IDeepBenchTest
                         $"保留 {measurement.Points.Count} 個 block×QD 點位，寫入與讀回原始樣本分開保留。",
                         "每點位皆先以 IOCP 寫入並 FlushFileBuffers，再以 IOCP 讀回 sentinel。",
                     ],
-                    Limitations,
+                    [.. Limitations, .. StorageQdNotes.Build(measurement)],
                     DeepBenchFailureKind.None,
                     null);
             }
@@ -271,6 +271,35 @@ public sealed record StorageIocpPlan(
     long FreeSpaceAfterBudgetBytes);
 
 public sealed class StorageIocpValidationException(string message) : InvalidOperationException(message);
+
+/// <summary>
+/// 把量測點轉成 <see cref="StorageQdJudge"/> 的判讀文字，附在結果的判讀欄。
+/// 原始點位本來就有（<c>DeepBenchMetricPoint.Tags</c> 帶 blockBytes 與 queueDepth），
+/// 缺的是「這條曲線代表什麼」——補上這一段，使用者才不必自己看數字推。
+/// </summary>
+public static class StorageQdNotes
+{
+    public static IReadOnlyList<string> Build(StorageIocpMeasurement m)
+    {
+        var notes = new List<string>();
+        foreach (var group in m.Points.GroupBy(p => p.BlockBytes).OrderBy(g => g.Key))
+        {
+            var shaped = group.Select(p => new StorageQdPoint(
+                p.BlockBytes, p.QueueDepth,
+                p.ReadIopsSamples.Count > 0 ? p.ReadIopsSamples.Average() : 0,
+                p.WriteIopsSamples.Count > 0 ? p.WriteIopsSamples.Average() : 0,
+                p.ReadLatencySamplesUs.Count > 0 ? p.ReadLatencySamplesUs.Average() : 0,
+                p.WriteLatencySamplesUs.Count > 0 ? p.WriteLatencySamplesUs.Average() : 0))
+                .OrderBy(p => p.QueueDepth).ToList();
+
+            var v = StorageQdJudge.Judge(new StorageQdScan(shaped));
+            notes.Add(v.Headline);
+            notes.Add(v.Evidence);
+            notes.Add(StorageQdJudge.SingleThreadGap(shaped));
+        }
+        return notes;
+    }
+}
 
 /// <summary>把 DiskIoMatrixService 的 Windows 檔案系統實作共用給 IOCP 控制面。</summary>
 public sealed class WindowsDiskIoFileSystemAdapter : IDiskIoFileSystem
