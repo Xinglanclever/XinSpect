@@ -347,6 +347,9 @@
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
                                Text="{Binding Coverage.RuleCoverageDetail}"/>
 
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Text="{Binding Coverage.RuleSourceNote}"/>
+
                     <TextBlock Style="{StaticResource FieldValue}" Margin="0,12,0,0" TextWrapping="Wrap"
                                Text="{Binding Coverage.KnowledgeSummary}"/>
                     <ItemsControl ItemsSource="{Binding Coverage.KnowledgeTables}" Margin="0,6,0,0">
