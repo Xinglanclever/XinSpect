@@ -518,14 +518,21 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
             .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).ToList();
 
-    /// <summary>韌體安全頁用：晶片組安全 + SPI 快閃 + Platform 安全 + 後端與環境 + CPU 韌體身分 + 交叉對帳 + I/O 埠 + CMOS + SMBus + PCI 盤點 + TPM + 平台拓撲 + ACPI 三態事實，轉成誠實渲染（讀不到顯示原因）的列。</summary>
+    /// <summary>
+    /// 韌體安全頁用：把 <see cref="AllFacts"/> 依分類與鍵排序後轉成誠實渲染的列。
+    /// </summary>
+    /// <remarks>
+    /// <b>刻意由 <see cref="AllFacts"/> 派生，而不是自己再串一次。</b>
+    /// 這兩個屬性原本各寫了一份一模一樣的 27 個 <c>Concat</c>——只差最後有沒有
+    /// <c>Select(EvidenceFactRow.From)</c>。那種重複不會報錯，只會在某天有人把新的
+    /// 事實組加進其中一個而忘了另一個時，讓「頁面上看得到的」與「匯出／CLI 拿到的」
+    /// 變成兩份不同的集合，而畫面上一切正常。
+    /// 現在事實組的清單只有一份（<see cref="AllFacts"/>），要加新的組只改那一處。
+    /// </remarks>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
-        ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
-            .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
-            .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
-            .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts)
-            .OrderBy(f => f.Category, StringComparer.Ordinal).ThenBy(f => f.Key, StringComparer.Ordinal)
-            .Select(EvidenceFactRow.From).ToList();
+        AllFacts.OrderBy(f => f.Category, StringComparer.Ordinal)
+                .ThenBy(f => f.Key, StringComparer.Ordinal)
+                .Select(EvidenceFactRow.From).ToList();
 
     public bool IsBusy { get => _busy; private set { if (SetProperty(ref _busy, value)) OnPropertyChanged(nameof(CanRun)); } }
     public bool CanRun => !_busy;
