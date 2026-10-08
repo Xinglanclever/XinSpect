@@ -526,6 +526,18 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>UEFI FV 結構的事實（總數＋逐 FV 摘要）；驅動後端可用時填入。</summary>
     public IReadOnlyList<HardwareFact> UefiFvFacts { get; private set; } = [];
 
+    /// <summary>驅動檔靜態檢視的事實（LoadUsermodeFacts 接線；不載入驅動、不呼叫 IOCTL）。</summary>
+    public IReadOnlyList<HardwareFact> DriverInspectionFacts { get; private set; } = [];
+
+    /// <summary>LoadUsermodeFacts 的驅動檢視段：列舉非系統目錄驅動、逐顆讀檔做靜態解析。</summary>
+    public void LoadDriverInspection()
+    {
+        DriverInspectionFacts = DriverInspectionFactsService.Collect(
+            DateTimeOffset.UtcNow,
+            KernelModuleService.FetchLoadedModules(),
+            path => { try { return File.ReadAllBytes(path); } catch { return null; } });
+    }
+
     /// <summary>UEFI FV 卡片的摘要列（右側小字）：FV 總數；讀不到時如實顯示原因。</summary>
     public string UefiFvSummary
     {
@@ -561,7 +573,7 @@ public sealed class EvidenceLabService : ObservableObject
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
             .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
-            .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).ToList();
+            .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).ToList();
 
     /// <summary>
     /// 韌體安全頁用：把 <see cref="AllFacts"/> 依分類與鍵排序後轉成誠實渲染的列。

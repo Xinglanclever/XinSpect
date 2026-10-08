@@ -59,6 +59,8 @@ public static class EvidenceCollection
     {
         try { svc.LoadStorageReliability(storageReliability ?? new StorageReliabilityWmiSource()); }
         catch { /* 附加功能：讀不到由 StorageReliabilityFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadDriverInspection(); }
+        catch { /* 附加功能：讀不到由 DriverInspectionFactsService 標三態，不在這裡中斷啟動 */ }
     }
 
     /// <summary>BIOS 區 vs 參考映像的比對（UI 與 CLI 共用入口）：組合後端後跑一次比對，回結果事實。</summary>

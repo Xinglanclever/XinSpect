@@ -48,6 +48,23 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.40",
+            Date = "2026-10-09",
+            Title = "驅動檔靜態檢視（IOCTL 候選／裝置字串／BYOVD 交叉）——工具缺口清單 #2",
+            Items =
+            [
+                "新增 XinSpect.Decoders/PeInspect.cs（純解碼器）：不載入驅動、不呼叫 IOCTL，只解析檔案的 PE 結構——DOS 頭／PE 簽章／選擇性標頭（PE32 與 PE32+）／區段表／匯入表（全零項終止、上限 64 條如實截斷），掃內嵌裝置與符號連結字串（\\Device\\、\\DosDevices\\、\\??\\，UTF-16LE 與 ASCII 雙編碼），並在 .text 內掃 CTL_CODE 編碼形狀的候選值。",
+                "IOCTL 候選的誠實界線：Function 欄落在 0x800–0xFFF（微軟保留 0–0x7FF，自訂碼自 0x800 起）且 DeviceType 在公開的 FILE_DEVICE_* 範圍內才收；即使如此仍會有誤報（程式碼位元組可能湊成同形值），所以欄位命名是「候選」、畫面文字明說「候選不是確認」——要確認得反組譯分派表，那不是這裡的事。METHOD_BUFFERED／IN_DIRECT／OUT_DIRECT／NEITHER 與 FILE_* 存取欄逐欄解出。",
+                "解析失敗如實回原因（不是 MZ、e_lfanew 越界、PE 簽章不符、魔術值未收錄），不猜其餘結構。註冊進 SpecRefRegistry（36 → 37 個受檢解碼器）。",
+                "新增 Services/DriverInspectionFactsService.cs：對非系統目錄的載入模組（上限 8 顆，超過如實標截斷）逐顆讀檔檢視，與既有 BYOVD 封鎖清單雙道交叉引用（SHA-256 主、檔名輔——命中是攻擊面事實不是中毒判決，與 ByovdCompareService 同一條界線）；封鎖清單不存在時如實標注「沒有可比對的清單」，不假裝比對過。",
+                "接線：走 LoadUsermodeFacts 共用入口（UI 啟動與 CLI 同源，v2.38 立的那個名字）——上一版把整組軟體事實留在 LoadSoftwareFacts（UI 專屬路徑）的接線會讓 CLI 拿不到，這次直接放進共用入口。事實鍵目錄 137 → 139（drvinsp.drivers.count、drvinsp.truncated）。",
+                "裝置空間路徑正規化：核心模組列舉回來的是 \\Device\\HarddiskVolumeN\\、\\SystemRoot\\、\\??\\ 形狀的路徑，File API 讀不了——以 QueryDosDevice 對映磁碟代號後再讀；對不出來就原樣回傳讓讀取如實失敗，不猜。",
+                "真機實測（真實二進位、真實 EnumDeviceDrivers）：非系統目錄模組 235 顆，逐顆解出 PE 結構、匯入表（ntoskrnl.exe 等）與裝置字串；路徑正規化讓「檔案讀不到」從必然變成例外。",
+                "測試 +14：解碼器 6（金標 PE 逐欄、CTL 手算答案、篩選守門、雙編碼字串、解析失敗、非 NATIVE）＋服務 5（模組選取、清單讀不到、全在 Windows 目錄、檔案讀不到、BYOVD 雙道與清單不存在）＋路徑正規化 1＋既有接線守門。測試 3563 → 3576 綠（全套 3577）。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.39",
             Date = "2026-10-09",
             Title = "UEFI 韌體磁碟區結構解析（FV/FFS）——工具缺口清單 #1",

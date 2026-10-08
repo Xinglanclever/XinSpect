@@ -62,6 +62,7 @@ public static class SpecRefRegistry
         typeof(MegaRaidDecoder), // MegaRAID MFI 訊框解碼（純解碼器；本機無 RAID 控制器）
         typeof(RedfishSchemaDecoder), // Redfish 信封解碼（純解碼器；本機無 BMC）
         typeof(UefiFv),          // UEFI FV／FFS 映像結構（UEFI PI Spec Vol. 3）
+        typeof(PeInspect),       // PE 靜態檢視（PE/COFF Spec；驅動檔不載入、不呼叫 IOCTL）
     ];
 
     /// <summary>列舉解碼器上缺 SpecRef 的公開靜態方法（宣告於本型別者）。</summary>
