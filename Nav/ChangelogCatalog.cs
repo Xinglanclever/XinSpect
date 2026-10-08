@@ -48,6 +48,21 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.42",
+            Date = "2026-10-09",
+            Title = ".etl 內容讀回——工具缺口清單 #4（寫得出、認得出、讀得回來）",
+            Items =
+            [
+                "新增 Services/EtlReadbackService.cs：本專案寫得出 .etl（EtwTraceService 檔案模式）、認得出（IsValidEtl 檔頭驗證），這一版起也讀得回來——用 TraceEvent 的檔案模式把落地產物解析回事件統計：逐提供者事件數（多者在前）、事件總數、未解事件數、時間範圍。讀回用同一個引擎（TraceEvent 已在相依裡），schema 對得上；自己重寫解析器反而會造出第二份需要維護的真相。",
+                "接線：LoadUsermodeFacts 共用入口（UI 與 CLI 同源）；軌跡資料夾裡還沒有 .etl 時如實標「還沒產生過軌跡，不是錯誤」；事實鍵目錄 141 → 143（etl.traces.count、etl.readback）。",
+                "誠實界線：未解事件＝TraceEvent 沒有對應 schema 的事件，如實計數、不以 0 補、不丟棄假裝沒看見；全部讀回失敗時的事實帶 ReadError 與逐檔原因，不冒充已量到。",
+                "測試過程中抓到並修掉一個會炸行程的真缺陷：把非 .etl 的垃圾位元組餵給 ETWTraceEventSource 會踩到 TraceEvent 的 finalizer 缺陷——半建構的來源物件被 GC 收走時在 Dispose(Boolean) 擲 NullReferenceException、炸掉整個測試主機（實測回合中止在 1288 筆）。修法：建構前先用 EtwTraceService.IsValidEtl 驗檔頭，垃圾永遠不進 TraceEvent。",
+                "真機實測（真實 .etl、真實二進位）：系統現成 ReFSLog.etl 讀回 2 事件（Windows Kernel 提供者）、1 個未解事件如實計數、時間範圍正確——缺口閉環。",
+                "測試 +5（空資料夾、垃圾檔讀回失敗如實、檔名列出、不存在檔回原因、無 ETW 工作階段的純契約）。測試 3585 → 3590 綠（全套 3591）。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.41",
             Date = "2026-10-09",
             Title = "裝置安裝時間線（setupapi.dev.log）——工具缺口清單 #3",

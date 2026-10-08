@@ -532,6 +532,9 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>裝置安裝記錄時間線的事實（LoadUsermodeFacts 接線；唯讀解析 setupapi.dev.log）。</summary>
     public IReadOnlyList<HardwareFact> SetupTimelineFacts { get; private set; } = [];
 
+    /// <summary>.etl 內容讀回的事實（LoadUsermodeFacts 接線；TraceEvent 檔案模式唯讀）。</summary>
+    public IReadOnlyList<HardwareFact> EtlReadbackFacts { get; private set; } = [];
+
     /// <summary>LoadUsermodeFacts 的驅動檢視段：列舉非系統目錄驅動、逐顆讀檔做靜態解析。</summary>
     public void LoadDriverInspection()
     {
@@ -545,6 +548,12 @@ public sealed class EvidenceLabService : ObservableObject
     public void LoadSetupTimeline()
     {
         SetupTimelineFacts = SetupApiTimelineService.Collect(DateTimeOffset.UtcNow);
+    }
+
+    /// <summary>LoadUsermodeFacts 的 .etl 讀回段：把本專案落地的軌跡讀回內容統計。</summary>
+    public void LoadEtlReadback()
+    {
+        EtlReadbackFacts = EtlReadbackService.Collect(DateTimeOffset.UtcNow);
     }
 
     /// <summary>UEFI FV 卡片的摘要列（右側小字）：FV 總數；讀不到時如實顯示原因。</summary>
@@ -582,7 +591,7 @@ public sealed class EvidenceLabService : ObservableObject
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
             .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
-            .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).ToList();
+            .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).ToList();
 
     /// <summary>
     /// 韌體安全頁用：把 <see cref="AllFacts"/> 依分類與鍵排序後轉成誠實渲染的列。
