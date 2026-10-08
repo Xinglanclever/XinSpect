@@ -48,6 +48,22 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.41",
+            Date = "2026-10-09",
+            Title = "裝置安裝時間線（setupapi.dev.log）——工具缺口清單 #3",
+            Items =
+            [
+                "新增 XinSpect.Decoders/SetupApiLog.cs（純解析器）：解析 Windows 裝置安裝記錄的區段標記（>>>／<<<）、裝置實例 ID（PCI\\、USB\\、ACPI\\、SWD\\ 等匯流排語彙）、起訖時間戳（yyyy/MM/dd 與 yyyy-MM-dd 兩種分隔都認）、結束狀態、!!! 錯誤行與 [Boot Session] 開機段歸屬。",
+                "在地化防禦是這一版的設計核心：記錄的標籤文字（「Section start」等）隨系統語言變，字串比對會在別的語言上靜默失效——解析只認三樣語言中立的東西（標記符號、裝置 ID 語彙、時間戳格式），測試把標籤換成繁中在地化形狀也照樣解出時間與狀態。標頭原文照抄供人判讀，不解析。",
+                "解析不出如實為 null（時間、狀態都是三值）；完全不是記錄形狀時如實回空。開發過程中測試抓到一個真 bug：record 的 with 表達式建立副本，「current = current with …」把更新留在副本上、清單裡仍是舊值——改為索引式清單替換。",
+                "新增 Services/SetupApiTimelineService.cs：唯讀讀回 %WINDIR%\\inf\\setupapi.dev.log，產出 setuptl.sections.count（區段總數＋錯誤行數）與 setuptl.recent（最近 10 個區段的時間、裝置、狀態）。檔案不存在、無權讀取、讀取失敗一律三態；走 LoadUsermodeFacts 共用入口（UI 與 CLI 同源）。事實鍵目錄 139 → 141。",
+                "誠實界線：這是「安裝歷史」不是「線上狀態」——曾經裝過不代表現在還在；記錄會被系統輪替清舊，看到的只是現存檔案的內容。",
+                "真機實測（真實二進位、真實記錄）：解析出 376 個安裝區段、36 個錯誤標記行，最近區段的裝置與時間線如實呈現。",
+                "測試 +9：解析器 5（真實形狀逐欄、在地化標籤混入、無時間戳、破折號日期、非記錄形狀）＋服務 4（事實形狀、無區段冒充、檔案不存在、來源 null）。測試 3576 → 3585 綠（全套 3586）。SpecRef 註冊 37 → 38 個受檢解碼器。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.40",
             Date = "2026-10-09",
             Title = "驅動檔靜態檢視（IOCTL 候選／裝置字串／BYOVD 交叉）——工具缺口清單 #2",
