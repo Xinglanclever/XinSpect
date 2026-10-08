@@ -4,10 +4,10 @@
 
 一款免費開源、運行於 Windows 的原生硬體驗機、監控與安全稽核工具。以單一執行檔發佈，免安裝；對硬體與系統的讀取以唯讀為原則，少數涉及寫入的功能均設有同意閘門並明確標註風險。本程式不收集、不上傳任何使用者資料。
 
-![版本](https://img.shields.io/badge/version-2.28-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.29-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-3170%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-3174%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-MIT-green)
 
@@ -426,6 +426,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.29 Olympus**（2026-10-08）：歷史倉擴充——長期追蹤指標由 7 項增至 13 項（新增處理器功耗／電壓、VRM 溫度、顯示卡功耗、記憶體用量、儲存溫度）；磁碟格式升為 v2 並改為硬性版本檢查（欄位數不同時整份忽略而非錯位讀成假讀值）；既有欄位順序未動並加測試釘住。驗證套件 3174 綠。
 - **v2.28 Olympus**（2026-10-08）：統計哨兵——歷史回放頁新增時序統計判讀：Theil–Sen 穩健斜率（趨勢，附 95% 信賴區間）、CUSUM 累積和（變化點）、Pearson 前後半相關性（關係變化）；只陳述數列本身的變化，不對硬體健康下因果結論；資料不足／無感測器一律如實回報；斜率信賴區間改用中位絕對差（MAD）常態近似（Sen 無母數區間在配對數大時會寬到失去判別力）；新增純統計核心 TrendSentinel 與服務層，測試 +30。驗證套件 3170 綠。
 - **v2.27 Olympus**（2026-10-08）：語言模式收尾——自繪控制項（FieldRow／RadialGauge／HistoryGraph／Oscilloscope／AnalogVoltMeter／DonutChart／SectionHead）的文字是自訂相依屬性、不在視覺樹上，過去三種語言模式都碰不到，現在逐一轉換；狀態列與時鐘的複合字串改為逐段翻譯；修正有繫結的 TextBlock 被當行內文字寫入（1015 處繫結的內容從此不再被寫死，時鐘與即時讀值恢復跟著來源更新）；修正簡體模式夾英文（英語模式產生的字串存槽前先反查回繁中）；翻譯表補 308 條；已知未收錄：安裝精靈與彩蛋頁的長篇文案。驗證套件 3140 綠。
 - **v2.26 Olympus**（2026-10-08）：語言模式修復——設定頁 English 正式接線、英語模式真的能用，簡體模式與語言切換卡住的問題一併修掉；繫結字串 StringFormat 缺口補完（48 處，切換語言後格式也一起改）；一鍵部署器下載檔名錯字修正（XinSect.exe → XinSpect.exe）；README 下載連結與版本沿革修正（先前落在 v2.2.0）；新增落差分析與擴展總藍圖文件；驗證套件 3134 綠。

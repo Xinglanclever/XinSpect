@@ -146,7 +146,7 @@ public class HistorySeriesTests
     }
 }
 
-/// <summary>七項指標的中介資料必須等長，否則圖例與匯出表頭會錯位。</summary>
+/// <summary>各項指標的中介資料必須等長，否則圖例與匯出表頭會錯位。</summary>
 public class HistoryMetricsTests
 {
     [Fact]
@@ -168,6 +168,48 @@ public class HistoryMetricsTests
         Assert.Null(HistoryMetrics.FixedMax[HistoryMetrics.CpuTemp]);
         Assert.Null(HistoryMetrics.FixedMax[HistoryMetrics.CpuClock]);
         Assert.Null(HistoryMetrics.FixedMax[HistoryMetrics.GpuVram]);
+    }
+
+    [Fact]
+    public void 既有索引與磁碟欄位順序不得調換()
+    {
+        // 這七個索引是格式 v1 已落地的欄位順序；一旦調換，舊檔會被錯位讀成假讀值。
+        // 新增指標只能附加在尾端（見 HistoryMetrics 的型別註解）。
+        Assert.Equal(0, HistoryMetrics.CpuLoad);
+        Assert.Equal(1, HistoryMetrics.CpuTemp);
+        Assert.Equal(2, HistoryMetrics.CpuClock);
+        Assert.Equal(3, HistoryMetrics.MemLoad);
+        Assert.Equal(4, HistoryMetrics.GpuLoad);
+        Assert.Equal(5, HistoryMetrics.GpuTemp);
+        Assert.Equal(6, HistoryMetrics.GpuVram);
+        // v2 新增的六項一律在尾端、且索引連續
+        Assert.Equal(7, HistoryMetrics.CpuPower);
+        Assert.Equal(8, HistoryMetrics.CpuVolt);
+        Assert.Equal(9, HistoryMetrics.VrmTemp);
+        Assert.Equal(10, HistoryMetrics.GpuPower);
+        Assert.Equal(11, HistoryMetrics.MemUsedGB);
+        Assert.Equal(12, HistoryMetrics.DriveTemp);
+        Assert.Equal(13, HistoryMetrics.Count);
+    }
+
+    [Fact]
+    public void 新增指標的中介資料如實填妥()
+    {
+        // 單位與標題不可留白——留白會讓圖例與匯出表頭出現空欄
+        foreach (int m in new[]
+                 {
+                     HistoryMetrics.CpuPower, HistoryMetrics.CpuVolt, HistoryMetrics.VrmTemp,
+                     HistoryMetrics.GpuPower, HistoryMetrics.MemUsedGB, HistoryMetrics.DriveTemp,
+                 })
+        {
+            Assert.False(string.IsNullOrWhiteSpace(HistoryMetrics.Titles[m]), $"指標 {m} 缺標題");
+            Assert.False(string.IsNullOrWhiteSpace(HistoryMetrics.Units[m]), $"指標 {m} 缺單位");
+            Assert.False(string.IsNullOrWhiteSpace(HistoryMetrics.Colors[m]), $"指標 {m} 缺顏色");
+        }
+        // 功耗／電壓／容量類不是百分比，須依區間自動縮放
+        Assert.Null(HistoryMetrics.FixedMax[HistoryMetrics.CpuPower]);
+        Assert.Null(HistoryMetrics.FixedMax[HistoryMetrics.CpuVolt]);
+        Assert.Null(HistoryMetrics.FixedMax[HistoryMetrics.MemUsedGB]);
     }
 }
 
@@ -297,6 +339,66 @@ public class HistoryStoreTests : IDisposable
         var store = new HistoryStore(_dir);
         Assert.Equal(0, store.MinuteCount);
         Assert.Null(store.OldestUtc);
+    }
+
+    [Fact]
+    public void OldFormatVersion_IsIgnoredEntirely_NotMisread()
+    {
+        // 格式 v1 是 7 指標 × 12 位元組 = 92 位元組紀錄；v2 是 13 指標 = 164 位元組。
+        // 若照著讀，欄位會整體錯位成「看起來很正常」的假讀值——因此版本不符必須整份忽略。
+        // 這裡手寫一個結構正確但版本號為 1 的檔案，驗證它被拒收而不是被誤讀。
+        Directory.CreateDirectory(_dir);
+        string path = Path.Combine(_dir, "history.bin");
+        const int v1Magic = 0x53485358;     // "XSHS"
+        const int v1Version = 1;
+        const int v1Record = 8 + 7 * 3 * 4; // 92
+        using (var fs = new FileStream(path, FileMode.Create, FileAccess.Write))
+        using (var w = new BinaryWriter(fs))
+        {
+            w.Write(v1Magic);
+            w.Write(v1Version);
+            w.Write(1);            // count
+            w.Write(0);            // reserved
+            w.Write(Origin.Ticks);
+            for (int i = 0; i < 7 * 3; i++) w.Write(42f);   // 七指標的 min/avg/max
+        }
+        Assert.Equal(16 + v1Record, new FileInfo(path).Length);
+
+        var store = new HistoryStore(_dir);
+
+        // 整份忽略：不是「讀到幾個欄位」，而是一筆都沒有
+        Assert.Equal(0, store.MinuteCount);
+        Assert.Null(store.OldestUtc);
+    }
+
+    [Fact]
+    public void 新增指標也走磁碟往返_位元組數隨格式成長()
+    {
+        // 格式 v2 的紀錄長度＝8 + Count×12；這條釘住「新增指標確實進到磁碟格式」。
+        var t0 = Origin;
+        var values = new float[HistoryMetrics.Count];
+        values[HistoryMetrics.CpuTemp] = 61;
+        values[HistoryMetrics.CpuPower] = 88;
+        values[HistoryMetrics.VrmTemp] = 55;
+        values[HistoryMetrics.DriveTemp] = 47;
+
+        using (var store = new HistoryStore(_dir))
+        {
+            store.Sample(values, t0);
+            store.Sample(values, t0.AddMinutes(1));
+            store.Flush();
+            Assert.Equal(2, store.MinuteCount);
+        }
+
+        var again = new HistoryStore(_dir);
+        Assert.Equal(2, again.MinuteCount);
+        var s = again.Query(t0.AddMinutes(-5), t0.AddMinutes(5));
+        Assert.Equal(61, s.A(0, HistoryMetrics.CpuTemp), 3);
+        Assert.Equal(88, s.A(0, HistoryMetrics.CpuPower), 3);
+        Assert.Equal(55, s.A(0, HistoryMetrics.VrmTemp), 3);
+        Assert.Equal(47, s.A(0, HistoryMetrics.DriveTemp), 3);
+        // 既有欄位不受新增指標影響
+        Assert.Equal(0, s.A(0, HistoryMetrics.CpuLoad), 3);
     }
 
     [Fact]

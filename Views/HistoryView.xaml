@@ -139,7 +139,10 @@
                     <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="P95" TextAlignment="Right"/>
                     <TextBlock Grid.Column="5" Style="{StaticResource ColHead}" Text="滿刻度" TextAlignment="Right"/>
                 </Grid>
-                <ItemsControl ItemsSource="{Binding Metrics}" ItemTemplate="{StaticResource MetricRow}"/>
+                <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl ItemsSource="{Binding Metrics}" ItemTemplate="{StaticResource MetricRow}"/>
+                </ScrollViewer>
             </StackPanel>
         </Border>
 

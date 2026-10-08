@@ -155,7 +155,9 @@ public class TrendSentinelServiceTests : IDisposable
     [Fact]
     public void 覆蓋範圍如實申報有讀值與無感測器的項數()
     {
-        // 只有處理器溫度有值：1 項有讀值、6 項本機無感測器
+        // 只有處理器溫度有值：1 項有讀值、其餘（Count−1）項本機無感測器。
+        // 這裡以 HistoryMetrics.Count 相對表達，新增指標時不必改測試——但斷言的
+        // 語意不變：有幾項讀值、有幾項沒感測器，一律如實申報。
         var temps = new double[60];
         for (int i = 0; i < temps.Length; i++) temps[i] = 50;
         var store = Fill(m => m == HistoryMetrics.CpuTemp ? temps : new double[60]);
@@ -164,7 +166,7 @@ public class TrendSentinelServiceTests : IDisposable
         svc.Analyze(store, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(1));
 
         Assert.Contains("1 項指標有讀值", svc.CoverageText);
-        Assert.Contains("6 項本機無此感測器", svc.CoverageText);
+        Assert.Contains($"{HistoryMetrics.Count - 1} 項本機無此感測器", svc.CoverageText);
     }
 
     [Fact]

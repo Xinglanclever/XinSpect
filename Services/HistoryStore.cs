@@ -3,27 +3,54 @@ using System.IO;
 namespace XinSpect;
 
 /// <summary>
-/// 長期追蹤的七項指標：索引常數與顯示中介資料。
-/// 順序即磁碟紀錄的欄位順序，一經發佈不得調換（否則舊檔會被錯讀）。
+/// 長期追蹤的指標：索引常數與顯示中介資料。
+/// <para>
+/// <b>順序即磁碟紀錄的欄位順序，既有索引一經發佈不得調換</b>（否則舊檔會被錯讀）。
+/// 新增指標一律<b>附加在尾端</b>，並遞增 <see cref="HistoryStore.FormatVersion"/>——
+/// 舊版程式讀到新版檔案會因版本不符而忽略它（重新開始累積），不會把欄位錯位讀成假讀值。
+/// </para>
 /// </summary>
 public static class HistoryMetrics
 {
-    public const int Count = 7;
+    public const int Count = 13;
     public const int CpuLoad = 0, CpuTemp = 1, CpuClock = 2, MemLoad = 3, GpuLoad = 4, GpuTemp = 5, GpuVram = 6;
 
-    public static readonly string[] Titles =
-        ["處理器負載", "處理器溫度", "處理器頻率", "記憶體使用", "顯示卡負載", "顯示卡溫度", "顯示記憶體"];
+    // ── 格式 v2 新增（一律附加在尾端，既有索引與磁碟欄位順序不動）──
+    public const int CpuPower = 7;     // 處理器封裝功耗（W）
+    public const int CpuVolt = 8;      // 處理器核心電壓（V）
+    public const int VrmTemp = 9;      // 主機板 VRM／MOS 溫度（°C）
+    public const int GpuPower = 10;    // 顯示卡功耗（W）
+    public const int MemUsedGB = 11;   // 已用實體記憶體（GB）
+    public const int DriveTemp = 12;   // 最熱的內部儲存裝置溫度（°C）
 
-    public static readonly string[] Units = ["%", "°C", "MHz", "%", "%", "°C", "MB"];
+    public static readonly string[] Titles =
+    [
+        "處理器負載", "處理器溫度", "處理器頻率", "記憶體使用", "顯示卡負載", "顯示卡溫度", "顯示記憶體",
+        "處理器功耗", "處理器電壓", "VRM 溫度", "顯示卡功耗", "記憶體用量", "儲存溫度",
+    ];
+
+    public static readonly string[] Units =
+        ["%", "°C", "MHz", "%", "%", "°C", "MB", "W", "V", "°C", "W", "GB", "°C"];
 
     /// <summary>各指標的曲線顏色（與感測頁、走勢圖同一套色系）。</summary>
     public static readonly string[] Colors =
-        ["#3987e5", "#ec835a", "#7db4ff", "#0ca30c", "#fab219", "#d03b3b", "#9d7bd8"];
+    [
+        "#3987e5", "#ec835a", "#7db4ff", "#0ca30c", "#fab219", "#d03b3b", "#9d7bd8",
+        "#e5484d", "#8e8e93", "#f76b15", "#b7791f", "#30a46c", "#00a2c7",
+    ];
 
-    /// <summary>百分比類指標固定 0–100；頻率／容量類為 null（依區間自動縮放）。</summary>
-    public static readonly double?[] FixedMax = [100, null, null, 100, 100, null, null];
+    /// <summary>百分比類指標固定 0–100；其餘為 null（依區間自動縮放）。</summary>
+    public static readonly double?[] FixedMax =
+        [100, null, null, 100, 100, null, null, null, null, null, null, null, null];
 
-    /// <summary>自感測引擎讀出一組即時值，順序與上列一致。</summary>
+    /// <summary>
+    /// 自感測引擎讀出一組即時值，順序與上列一致。
+    /// </summary>
+    /// <remarks>
+    /// <b>讀不到一律寫 0，這是本格式對「沒讀到」的既有表示法</b>——<see cref="HistorySeries.HasData"/>
+    /// 據此把整段皆 0 的指標判為「本機無此感測器」而不當成量測結果。因此新增的每一項都必須
+    /// 在呼叫端已確認可為 null 時才傳 0（見下方各自取用方式），不可用 0 冒充真實讀值。
+    /// </remarks>
     public static void Read(SensorService live, float[] dst)
     {
         var g = live.PrimaryGpu;
@@ -34,10 +61,31 @@ public static class HistoryMetrics
         dst[GpuLoad] = (float)(g?.LoadPercent ?? 0);
         dst[GpuTemp] = (float)(g?.TempC ?? 0);
         dst[GpuVram] = (float)(g?.VramUsedMB ?? 0);
+
+        dst[CpuPower] = (float)(live.CpuPowerW ?? 0);
+        dst[CpuVolt] = (float)(live.CpuVoltage ?? 0);
+        dst[VrmTemp] = (float)(live.VrmTempC ?? 0);
+        dst[GpuPower] = (float)(g?.PowerW ?? 0);
+        dst[MemUsedGB] = (float)live.MemUsedGB;
+        // 儲存溫度取「最熱的那一顆」：單碟機就看它，多碟機看最吃緊的那顆，
+        // 不平均（平均會把一顆過熱的碟稀釋掉，正是要抓的情況）。
+        dst[DriveTemp] = (float)HottestDriveTemp(live);
+    }
+
+    /// <summary>內部儲存裝置中最高的溫度；沒有任何一顆回報溫度時為 0（＝沒讀到）。</summary>
+    public static double HottestDriveTemp(SensorService live)
+    {
+        double hottest = 0;
+        for (int i = 0; i < live.Drives.Count; i++)
+        {
+            if (live.Drives[i].TempC is double t && t > hottest) hottest = t;
+        }
+        return hottest;
     }
 }
 /// <summary>
-/// 一次歷史查詢的結果：時間點陣列 + 每點每指標的最小／平均／最大（三份平坦陣列，索引為 <c>i * 7 + m</c>）。
+/// 一次歷史查詢的結果：時間點陣列 + 每點每指標的最小／平均／最大
+/// （三份平坦陣列，索引為 <c>i * HistoryMetrics.Count + m</c>）。
 /// 秒級查詢時三者相同（原始取樣沒有區間可言）；分鐘級查詢時 min/max 為該分鐘的極值。
 /// </summary>
 public sealed class HistorySeries
@@ -173,9 +221,14 @@ public sealed class HistorySeries
 public sealed class HistoryStore : IDisposable
 {
     private const int Magic = 0x53485358;                 // "XSHS"
-    private const int Version = 1;
+    /// <summary>
+    /// 磁碟格式版本。<b>欄位配置一有變動就必須遞增</b>：讀檔時版本不符一律整份忽略
+    /// （重新開始累積），而不是硬讀——欄位數不同的檔案只要錯位就會產生看似正常的假讀值。
+    /// v1＝7 指標；v2＝13 指標（附加功耗／電壓／VRM／儲存溫度等，既有欄位順序未動）。
+    /// </summary>
+    private const int FormatVersion = 2;
     private const int HeaderBytes = 16;                   // magic + version + count + reserved
-    private const int RecordBytes = 8 + HistoryMetrics.Count * 3 * 4;   // 時間 + 每指標 min/avg/max = 92
+    private static readonly int RecordBytes = 8 + HistoryMetrics.Count * 3 * 4;   // 時間 + 每指標 min/avg/max
     private const int SecondCapacity = 3600;              // 秒級近況（1 秒間隔約一小時）
     private const int HardRecordCap = 200_000;            // 約 139 天，防呆上限
 
@@ -184,7 +237,7 @@ public sealed class HistoryStore : IDisposable
     private readonly float[] _secVals = new float[SecondCapacity * HistoryMetrics.Count];
     private int _secCount, _secHead;
 
-    // 分鐘級彙整的記憶體鏡射（時間遞增；每筆 7 個浮點）
+    // 分鐘級彙整的記憶體鏡射（時間遞增；每筆 HistoryMetrics.Count 個浮點）
     private readonly List<long> _minTicks = new();
     private readonly List<float> _minMin = new(), _minAvg = new(), _minMax = new();
 
@@ -460,7 +513,7 @@ public sealed class HistoryStore : IDisposable
         if (!File.Exists(FilePath)) return;
         var raw = File.ReadAllBytes(FilePath);
         if (raw.Length < HeaderBytes) return;
-        if (BitConverter.ToInt32(raw, 0) != Magic || BitConverter.ToInt32(raw, 4) != Version) return;
+        if (BitConverter.ToInt32(raw, 0) != Magic || BitConverter.ToInt32(raw, 4) != FormatVersion) return;
 
         const int M = HistoryMetrics.Count;
         int n = (raw.Length - HeaderBytes) / RecordBytes;
@@ -540,7 +593,7 @@ public sealed class HistoryStore : IDisposable
         using (var w = new BinaryWriter(fs))
         {
             w.Write(Magic);
-            w.Write(Version);
+            w.Write(FormatVersion);
             w.Write(_minTicks.Count);
             w.Write(0);
             for (int i = 0; i < _minTicks.Count; i++)
