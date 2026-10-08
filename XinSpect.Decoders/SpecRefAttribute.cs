@@ -46,6 +46,8 @@ public static class SpecRefRegistry
         typeof(PmuDecoder),      // PMU 能力探索（CPUID 0xA，唯讀）
         typeof(TrendSentinel),   // 事實時序的趨勢／變化點／相關性（Theil–Sen、CUSUM、Pearson）
         typeof(EntropyMap),      // 位元組序列的 Shannon 熵分析（內容類型判別，非判決）
+        typeof(PcieLink),        // PCIe 鏈路速度／寬度／埠類別代碼（PCIe Base Spec）
+        typeof(PcieNegotiationGap), // PCIe 鏈路落差判讀（能力 vs 現況，唯讀不寫暫存器）
     ];
 
     /// <summary>列舉解碼器上缺 SpecRef 的公開靜態方法（宣告於本型別者）。</summary>

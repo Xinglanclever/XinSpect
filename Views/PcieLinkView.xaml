@@ -32,6 +32,7 @@
                             <ColumnDefinition Width="*"/><ColumnDefinition Width="78"/>
                             <ColumnDefinition Width="110"/><ColumnDefinition Width="100"/>
                             <ColumnDefinition Width="100"/><ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="88"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Style="{StaticResource ColHead}" Text="裝置"/>
                         <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="位置"/>
@@ -39,6 +40,10 @@
                         <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="目前"/>
                         <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="能力"/>
                         <TextBlock Grid.Column="5" Style="{StaticResource ColHead}" Text="頻寬佔比"/>
+                        <!-- 落差欄的問號掛在欄標題上：這一欄的分類邏輯需要解釋，
+                             掛在某一列會讓人以為只適用那一列 -->
+                        <local:SectionHead Grid.Column="6" Text="落差" HelpKey="pcie/落差判讀"
+                                           FontSize="11" Margin="0" VerticalAlignment="Center"/>
                     </Grid>
                     <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,0,0,4"/>
                     <ItemsControl ItemsSource="{Binding PcieLink.Rows}">
@@ -50,6 +55,7 @@
                                             <ColumnDefinition Width="*"/><ColumnDefinition Width="78"/>
                                             <ColumnDefinition Width="110"/><ColumnDefinition Width="100"/>
                                             <ColumnDefinition Width="100"/><ColumnDefinition Width="110"/>
+                                            <ColumnDefinition Width="88"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Name}"
                                                    TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
@@ -59,9 +65,17 @@
                                         <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" Text="{Binding CapableText}" VerticalAlignment="Center"/>
                                         <ProgressBar Grid.Column="5" Style="{StaticResource LoadBar}" Maximum="1" VerticalAlignment="Center"
                                                      Value="{Binding BarFraction, Mode=OneWay}"/>
+                                        <TextBlock Grid.Column="6" Style="{StaticResource FieldValue}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" ToolTip="{Binding GapEvidence}"
+                                                   Text="{Binding GapKindText}"
+                                                   Foreground="{Binding GapBadge, Converter={StaticResource SeverityToBrush}}"/>
                                     </Grid>
                                     <TextBlock Style="{StaticResource FieldLabel}" FontSize="11" TextWrapping="Wrap"
                                                Text="{Binding Verdict}"/>
+                                    <!-- 落差成因：寬度掉在插槽／上游、或協商上限被壓低。這一行存在的目的
+                                         就是不讓「Gen4 的卡跑 Gen1」被一律讀成故障——閒置降速是正常的。 -->
+                                    <TextBlock Style="{StaticResource FieldLabel}" FontSize="11" TextWrapping="Wrap"
+                                               Margin="0,2,0,0" Text="{Binding GapEvidence}"/>
                                     <!-- 自開機以來的錯誤旗標：鏈路速度正常但一直在重試時，只有這裡看得出來 -->
                                     <TextBlock Style="{StaticResource FieldLabel}" FontSize="11" TextWrapping="Wrap"
                                                Margin="0,2,0,0" Text="{Binding ErrorText}"

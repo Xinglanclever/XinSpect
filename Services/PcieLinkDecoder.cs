@@ -7,14 +7,54 @@ public sealed class PcieLinkRow
                        int curSpeed, int curWidth, int maxSpeed, int maxWidth,
                        string verdict, int severity,
                        string errorText = "未讀取", int errorSeverity = 0,
-                       ushort ven = 0, ushort dev = 0)
+                       ushort ven = 0, ushort dev = 0,
+                       PcieNegotiationGap.Verdict? gap = null)
     {
         Name = name; Location = location; Kind = kind;
         CurSpeed = curSpeed; CurWidth = curWidth; MaxSpeed = maxSpeed; MaxWidth = maxWidth;
         Verdict = verdict; Severity = severity;
         ErrorText = errorText; ErrorSeverity = errorSeverity;
         Ven = ven; Dev = dev;
+        if (gap is { } g)
+        {
+            _gapKind = g.Kind; _gapHeadline = g.Headline; _gapEvidence = g.Evidence;
+            GapBadge = MapSeverity(g.Severity);
+        }
     }
+
+    private readonly PcieNegotiationGap.GapKind? _gapKind;
+    private readonly string _gapHeadline = "";
+    private readonly string _gapEvidence = "";
+
+    /// <summary>
+    /// 落差成因（純解碼器的判讀結果）。為什麼不是直接沿用 <see cref="Severity"/>：
+    /// 那一欄是「這條鏈路的現況有多值得注意」，而落差判讀問的是「這個落差是誰造成的」——
+    /// 同一條 Gen4 x16 的卡跑在 Gen3 x8，Severity 只講得出「寬度不足」，
+    /// 判讀卻能指出瓶頸在上游埠、這張卡本身沒問題。兩者用途不同，故並存。
+    /// </summary>
+    public string GapKindText => _gapKind is null ? "—" : _gapKind.Value switch
+    {
+        PcieNegotiationGap.GapKind.None => "相符",
+        PcieNegotiationGap.GapKind.WidthLimited => "寬度受限",
+        PcieNegotiationGap.GapKind.SpeedMaybeIdle => "速度待確認",
+        PcieNegotiationGap.GapKind.SpeedByDesign => "省電設計",
+        PcieNegotiationGap.GapKind.UpstreamLimit => "上游上限",
+        _ => "未判定",
+    };
+
+    /// <summary>落差判讀的顏色語意（供 SeverityToBrush 使用；與 <see cref="GapKindText"/> 同一組結果）。</summary>
+    public global::XinSpect.Severity GapBadge { get; } = global::XinSpect.Severity.Neutral;
+
+    /// <summary>落差判讀的一行結論（無判讀結果時如實留白，不編一句）。</summary>
+    public string GapHeadline => _gapHeadline;
+
+    /// <summary>落差判讀的依據：實際欄位值與推論步驟，供使用者自行核對。</summary>
+    public string GapEvidence => _gapEvidence;
+
+    private static global::XinSpect.Severity MapSeverity(PcieNegotiationGap.GapSeverity s)
+        => s == PcieNegotiationGap.GapSeverity.WorthChecking
+            ? global::XinSpect.Severity.Warning
+            : global::XinSpect.Severity.Neutral;
 
     /// <summary>供上層（如 PcieAnalysis）以 (VEN, DEV) 配對回 WMI 裝置清單；未提供時為 0。</summary>
     public ushort Ven { get; }
@@ -63,28 +103,16 @@ public sealed class PcieLinkRow
 public static class PcieLinkDecoder
 {
     /// <summary>PCIe 能力結構的能力 ID。</summary>
-    public const byte PcieCapId = 0x10;
+    public const byte PcieCapId = PcieLink.PcieCapId;
 
-    /// <summary>Link Capabilities（+0x0C）→（最大速度代碼，最大寬度）。</summary>
-    public static (int Speed, int Width) DecodeLinkCap(uint linkCap)
-        => ((int)(linkCap & 0xF), (int)((linkCap >> 4) & 0x3F));
+    /// <summary>Link Capabilities（+0x0C）→（最大速度代碼，最大寬度）。轉呼叫純解碼器。</summary>
+    public static (int Speed, int Width) DecodeLinkCap(uint linkCap) => PcieLink.DecodeLinkCap(linkCap);
 
-    /// <summary>Link Status（+0x12 的 16 位）→（目前速度代碼，協商寬度）。</summary>
-    public static (int Speed, int Width) DecodeLinkStatus(ushort linkStatus)
-        => (linkStatus & 0xF, (linkStatus >> 4) & 0x3F);
+    /// <summary>Link Status（+0x12 的 16 位）→（目前速度代碼，協商寬度）。轉呼叫純解碼器。</summary>
+    public static (int Speed, int Width) DecodeLinkStatus(ushort linkStatus) => PcieLink.DecodeLinkStatus(linkStatus);
 
-    /// <summary>速度代碼 → 世代名稱。1＝2.5、2＝5、3＝8、4＝16、5＝32、6＝64 GT/s。</summary>
-    public static string SpeedName(int code) => code switch
-    {
-        0 => "—",
-        1 => "Gen1",
-        2 => "Gen2",
-        3 => "Gen3",
-        4 => "Gen4",
-        5 => "Gen5",
-        6 => "Gen6",
-        _ => $"代碼 {code}",
-    };
+    /// <summary>速度代碼 → 世代名稱。轉呼叫純解碼器（單一實作來源）。</summary>
+    public static string SpeedName(int code) => PcieLink.SpeedName(code);
 
     /// <summary>速度代碼 → 每條通道的 GT/s（不認得的代碼回 0，不硬掰）。</summary>
     public static double GtPerSecond(int code) => code switch
@@ -159,11 +187,15 @@ public static class PcieLinkDecoder
 
         int narrow = rows.Count(r => r.Severity == 2);
         int slow = rows.Count(r => r.Severity == 1);
+        // 落差判讀能分辨「瓶頸在上游埠」與「這張卡自己降速」——這兩者的處置完全不同，
+        // 所以在標題句就把上游那幾條挑出來講，不讓使用者一律去怪裝置。
+        int upstream = rows.Count(r => r.GapKindText == "上游上限");
+        string up = upstream > 0 ? $"，其中 {upstream} 條的上限在上游連接埠（不是這張卡的問題）" : "";
         if (narrow > 0)
-            return $"共 {rows.Count} 條鏈路：{narrow} 條的寬度低於裝置能力（值得查），{slow} 條速度較低（多半是閒置降速）。";
+            return $"共 {rows.Count} 條鏈路：{narrow} 條的寬度低於裝置能力（值得查）{up}，{slow} 條速度較低（多半是閒置降速）。";
         if (slow > 0)
-            return $"共 {rows.Count} 條鏈路，寬度全部與能力相符；{slow} 條目前速度較低——閒置降速是正常行為，在負載中重量一次就會升回去。";
-        return $"共 {rows.Count} 條鏈路，速度與寬度全部與裝置能力相符。";
+            return $"共 {rows.Count} 條鏈路，寬度全部與能力相符；{slow} 條目前速度較低——閒置降速是正常行為，在負載中重量一次就會升回去{up}。";
+        return $"共 {rows.Count} 條鏈路，速度與寬度全部與裝置能力相符{up}。";
     }
 
     // ── 錯誤旗標（自開機以來的黏滯位）──────────────────────────────────────

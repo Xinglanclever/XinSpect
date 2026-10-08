@@ -172,11 +172,33 @@ public sealed class PcieLinkService : ObservableObject
         var (maxSpeed, maxWidth) = PcieLinkDecoder.DecodeLinkCap(linkCap);
         var (curSpeed, curWidth) = PcieLinkDecoder.DecodeLinkStatus((ushort)(linkCtlSta >> 16));
 
+        // Link Control 2（+0x30）只在 PCIe 能力版本 ≥ 2 時存在。讀它是為了取「協商上限」
+        // （Target Link Speed）——上限被 BIOS／驅動壓低時，鏈路再怎麼操都上不去，
+        // 這一點從 Link Status 本身看不出來。版本不足時如實標「不適用」，不去讀不存在的位址。
+        bool hasControl2 = PcieNegotiationGap.HasLinkControl2(capReg);
+        int targetSpeed = hasControl2
+            ? PcieNegotiationGap.DecodeTargetLinkSpeed(bridge.ReadPciConfig(bus, dev, fn, capOffset + 0x30) ?? 0)
+            : 0;
+
+        // 上游連接埠的鏈路能力：往同一個 device 的其他 function、以及上游橋接的鏈路能力找。
+        // 這裡只做「同 bus 上編號更小的上游埠」這個常見情形（根埠／下游埠的鏈路能力），
+        // 找不到就留 0——找不到不代表沒有，只是本版不追整棵拓撲，事實文字如實區分。
+        var (upSpeed, upWidth) = ReadUpstreamLink(bridge, bus, dev, fn);
+
+        var gap = PcieNegotiationGap.Judge(new PcieLinkGap(
+            maxSpeed, maxWidth, curSpeed, curWidth, upSpeed, upWidth, targetSpeed, hasControl2));
+        // 判讀用純解碼器的落差分析；速率較低時的省電宣告由 Link Capabilities 補進依據欄
+        bool declaresPowerSaving = PcieNegotiationGap.DeclaresPowerSaving(linkCap);
+
         // 鏈路沒建起來（空插槽／裝置關電）就不列——一排「—」對使用者沒有意義
         if (curSpeed == 0 && curWidth == 0) return null;
         if (maxSpeed == 0 && maxWidth == 0) return null;
 
         var (verdict, severity) = PcieLinkDecoder.Judge(curSpeed, curWidth, maxSpeed, maxWidth);
+        if (severity == 1)
+            verdict += declaresPowerSaving
+                ? "（本裝置在 Link Capabilities 中宣告了省電能力，降速是設計行為）"
+                : "（本裝置未宣告省電能力——降速的原因需要進一步確認）";
 
         // 錯誤旗標：裝置狀態（PCIe 能力 +0x08 的高半字）與傳統 PCI 狀態（位移 0x04 的高半字）。
         // 兩者都在傳統設定空間內，讀得到；AER 在延伸空間 0x100 起，CF8/CFC 到不了，故不讀。
@@ -187,7 +209,55 @@ public sealed class PcieLinkService : ObservableObject
         string name = names.TryGetValue((ven, did), out var n) ? n : $"PCI 裝置 {ven:X4}:{did:X4}";
         return new PcieLinkRow(name, $"{bus:X2}:{dev:X2}.{fn}", PcieLinkDecoder.PortTypeName(portType),
                                curSpeed, curWidth, maxSpeed, maxWidth, verdict, severity,
-                               errText, errSev, ven, did);
+                               errText, errSev, ven, did, gap);
+    }
+
+    /// <summary>
+    /// 找這條鏈路「上游埠」的鏈路能力。做法是掃同一個裝置的其他 function
+    /// （多 function 的根埠／橋接常把鏈路能力放在 function 0），若都沒有，
+    /// 再往同 bus 上編號更小的裝置找一個帶 PCIe 能力的埠。
+    /// <para>
+    /// 這是刻意的近似：本版不建整棵 PCIe 拓撲，所以「找不到」只回 (0,0)，
+    /// 由判讀層把它當成「未知」而<b>非</b>「無限制」——如實區分查不到與真的沒限制。
+    /// </para>
+    /// </summary>
+    internal static (int Speed, int Width) ReadUpstreamLink(WinRing0Bridge bridge, byte bus, byte dev, byte fn)
+    {
+        // 同一個裝置的其他 function（含自身所在的那顆）
+        for (byte f = 0; f < 8; f++)
+        {
+            if (f == fn) continue;
+            if (!IsPresent(bridge.ReadPciConfig(bus, dev, f, 0x00))) continue;
+            uint cap = FindPcieCap(bridge, bus, dev, f);
+            if (cap == 0) continue;
+            var r = DecodeUpstreamAt(bridge, bus, dev, f, cap);
+            if (r.Speed > 0) return r;
+        }
+
+        // 同 bus 上編號更小的裝置（上游埠通常在裝置編號上更靠近根複合體）
+        for (int d = dev - 1; d >= 0; d--)
+        {
+            uint id = bridge.ReadPciConfig(bus, (byte)d, 0, 0x00) ?? 0;
+            if (!IsPresent(id)) continue;
+            uint cap = FindPcieCap(bridge, bus, (byte)d, 0);
+            if (cap == 0) continue;
+            var r = DecodeUpstreamAt(bridge, bus, (byte)d, 0, cap);
+            if (r.Speed > 0) return r;
+        }
+
+        return (0, 0);
+    }
+
+    /// <summary>讀某個 function 的 Link Capabilities 並解出（最大速度, 最大寬度）。</summary>
+    private static (int Speed, int Width) DecodeUpstreamAt(WinRing0Bridge bridge, byte bus, byte dev, byte fn, uint capOffset)
+    {
+        uint capReg = bridge.ReadPciConfig(bus, dev, fn, capOffset) ?? 0;
+        int portType = (int)((capReg >> 16 >> 4) & 0xF);
+        // 只認埠類（4＝根埠、5＝上游埠、6＝下游埠、9＝根複合體事件收集器以外的埠）。
+        // 端點（0）的鏈路能力講的是它自己，不是它的上游，拿來當上游依據會誤導。
+        if (portType is not (4 or 5 or 6)) return (0, 0);
+        uint linkCap = bridge.ReadPciConfig(bus, dev, fn, capOffset + 0x0C) ?? 0;
+        return PcieLinkDecoder.DecodeLinkCap(linkCap);
     }
 
     /// <summary>

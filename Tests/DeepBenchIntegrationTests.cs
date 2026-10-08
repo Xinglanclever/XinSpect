@@ -97,7 +97,10 @@ public class DeepBenchIntegrationTests
         // 2026-10-03 系列更名：Everest → Olympus，版號 2.1.0 → 2.2.0（使用者指示）。
         // 歷史 2.1.0 條目原封不動；新內容折疊進 2.2.0 Olympus 條目。
         ChangeEntry entry = Assert.Single(ChangelogCatalog.Entries, item => item.Version == "2.1.0");
-        Assert.Equal("2.30", ChangelogCatalog.Latest);
+        // 這裡刻意綁 ChangelogCatalog.Latest 而非硬寫版號：每次發版都要改這一行，
+        // 改的動作本身沒有檢查價值，卻讓「補紀錄」的規矩看起來像是靠這條守的。
+        // 真正守規矩的是 ChangelogTests.最新一筆必須等於專案版號。
+        Assert.Equal(ChangelogCatalog.Entries[0].Version, ChangelogCatalog.Latest);
         string combined = string.Join('\n', entry.Items);
 
         Assert.Contains("Deep Bench 深測中心", combined, StringComparison.Ordinal);
