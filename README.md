@@ -4,10 +4,10 @@
 
 一款免費開源、運行於 Windows 的原生硬體驗機、監控與安全稽核工具。以單一執行檔發佈，免安裝；對硬體與系統的讀取以唯讀為原則，少數涉及寫入的功能均設有同意閘門並明確標註風險。本程式不收集、不上傳任何使用者資料。
 
-![版本](https://img.shields.io/badge/version-2.26-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.27-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-3094%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-3140%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-MIT-green)
 
@@ -81,6 +81,9 @@
 |---|---|---|
 | [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.26/XinSpect.exe) | 30,073,131 bytes | 主程式。藍色中隊守護進程已內建 |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.26/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
+
+> **v2.27 的大檔案將在下一次發佈時一併更新。** 上表的位元組數與連結指向已發佈的 v2.26；
+> v2.27 的變更集中在語言模式的顯示層，程式功能與 v2.26 相同。
 
 系統需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含發佈則免裝）。顯示卡深測需要 D3D11 相容裝置；MSR 讀取、SMART ioctl、Security 事件記錄需以系統管理員執行——沒有權限時相關項目標示「權限不足」，程式不會假裝成功，也不會靜默降級。
 
@@ -423,6 +426,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.27 Olympus**（2026-10-08）：語言模式收尾——自繪控制項（FieldRow／RadialGauge／HistoryGraph／Oscilloscope／AnalogVoltMeter／DonutChart／SectionHead）的文字是自訂相依屬性、不在視覺樹上，過去三種語言模式都碰不到，現在逐一轉換；狀態列與時鐘的複合字串改為逐段翻譯；修正有繫結的 TextBlock 被當行內文字寫入（1015 處繫結的內容從此不再被寫死，時鐘與即時讀值恢復跟著來源更新）；修正簡體模式夾英文（英語模式產生的字串存槽前先反查回繁中）；翻譯表補 308 條；已知未收錄：安裝精靈與彩蛋頁的長篇文案。驗證套件 3140 綠。
 - **v2.26 Olympus**（2026-10-08）：語言模式修復——設定頁 English 正式接線、英語模式真的能用，簡體模式與語言切換卡住的問題一併修掉；繫結字串 StringFormat 缺口補完（48 處，切換語言後格式也一起改）；一鍵部署器下載檔名錯字修正（XinSect.exe → XinSpect.exe）；README 下載連結與版本沿革修正（先前落在 v2.2.0）；新增落差分析與擴展總藍圖文件；驗證套件 3134 綠。
 - **v2.25 Olympus**（2026-10-06）：硬體深化缺口清空版——Super I/O 多晶片家族（ITE／Nuvoton NCT67xx／Fintek）與 0x2E／0x4E 雙埠探測（名稱有收錄但佈局無出處者如實不解）、DDR5 記憶體 SPD 直讀（SPD5118 hub、MR11 切頁、8 頁×128 位元組、JESD400-5 解碼、CRC-16）、AMD 平台安全（SME／SEV／SEV-ES／SNP 支援與啟用位＋PSP 偵測）與 Radeon ADL 唯讀遙測、Intel 顯示卡 Level Zero 事實、PMBus 電源軌與 UPS 監控、UEFI db／dbx／KEK／PK 簽章庫接上韌體安全列；非本機硬體路徑全數如實標「未在本機驗證」、無硬體時整組「不適用」；驗證套件 3126 綠。
 - **v2.2.0 Olympus**（2026-10-04，FileVersion 2.2.0.1）：系列更名 Everest→Olympus；WinRing0 回歸主力、XsRegProbe 轉白名單備援；交叉對帳 26 條外部化＋判決卡；驗機殺手級（SMART failing-now、機箱開啟、HPA、假容量驗證、WCTEMP、TDR、退休頁、NPU）；安全鑑識（BYOVD、Defender 排除、1102、信任根、USBSTOR）；處理器深化（TME/SGX、C-state、PMU 能力＋編程驗證、die 拓撲、SLIT）；系統軟體層（Update 歷史、服務盤點、事件記錄摘要、稽核政策、選用功能、核心模組 Authenticode、開機參數、開機計時、USB 拓撲、攝影機、企業儲存、網卡健康＋OUI、Wi-Fi 頻道）；藍色中隊內嵌本體（可開關）；深測中心 38 項；公開規格與文件十份；審計日誌、時間膠囊生命週期事件、corpus 骨架、本機 API、查詢語言；DeepBench 啟動崩潰修復；突變測試解鎖 82%；FeDevOps：3094 測試。

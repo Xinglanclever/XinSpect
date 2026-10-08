@@ -78,7 +78,8 @@ public class EnglishTreeTests
     {
         // 從 XAML 收割的高頻字串抽樣：都必須查得到英文
         foreach (var zh in new[] { "⟳ 全面掃描", "開始跑分", "溫度上限", "記憶體頻寬", "取消", "套用",
-                                   "執行緒", "原始值", "還原自動", "韌體安全" })
+                                   "執行緒", "原始值", "還原自動", "韌體安全",
+                                   "掃描中……", "做法：{0}", "結束 曦覽", "歡迎使用曦覽", "剩餘" })
             Assert.True(EnglishStrings.Lookup(zh) is not null, $"缺翻譯：{zh}");
         // 未收錄回 null（呼叫方回退原文）
         Assert.Null(EnglishStrings.Lookup(" definitely-not-in-table "));

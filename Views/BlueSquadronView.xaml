@@ -119,7 +119,7 @@
                                 <TextBlock Text="/ 100" FontSize="24" FontWeight="Light" VerticalAlignment="Bottom" Margin="4,0,0,14"
                                            Foreground="{DynamicResource MutedInkBrush}"/>
                             </StackPanel>
-                            <TextBlock Text="{Binding BlueSquadron.Posture.Posture.Verdict, FallbackValue=等待首次掃描…}" TextWrapping="Wrap"
+                            <TextBlock Text="{Binding BlueSquadron.Posture.Posture.Verdict, Converter={x:Static local:ChineseConverter.Instance}, FallbackValue=等待首次掃描…}" TextWrapping="Wrap"
                                        FontSize="15" Margin="0,2,0,0" Foreground="{DynamicResource SecondaryInkBrush}"/>
                             <TextBlock FontSize="11" Margin="0,8,0,0" Foreground="{DynamicResource MutedInkBrush}"
                                        FontFamily="Consolas">

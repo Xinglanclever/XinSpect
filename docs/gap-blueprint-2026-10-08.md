@@ -108,7 +108,8 @@
 | 子項 | 狀態 | 證據 / 備註 |
 |---|---|---|
 | SMBIOS Type 3（機箱）/ Type 17（記憶體） | ✅ | `Services/ChassisAndHpaFactsService.cs`、`Services/SmbiosFacts.cs` |
-| SMBIOS Type 8（Port Connector）/ Type 9（System Slot） | ⬜ | 查無 |
+| SMBIOS Type 9（System Slot） | ✅ | `Services/SmbiosService.cs:269`（Type 9 → 插槽列）、`Services/M2AnalysisService.cs:7`（自插槽資訊判 M.2/U.2，並標「未列出不代表沒有」） |
+| SMBIOS Type 8（Port Connector） | ⬜ | 全域查無 Port Connector 解析 |
 | RGB 控制器（OpenRGB 式唯讀） | ⬜ | 查無 |
 | 機箱入侵更多來源（Super I/O、GPIO） | 🟡 | 目前僅 SMBIOS Type 3（`ChassisFactsService`）；Super I/O/GPIO 未見 |
 
@@ -275,7 +276,7 @@
 **真缺口（程式碼查無、不違反五原則、工程可行）**——建議優先：
 1. Setup log 完整化（System 摘要、Security 1102、Application 已有，缺 Setup）
 2. 更多雜湊（SHA-3／BLAKE3 進入報告信封）
-3. TRIM 實際下發／驗證、藍牙版本/編解碼器、AIO 水泵、SMBIOS Type 8/9、BootNext、TPM NV、驅動 Verifier/WHQL
+3. TRIM 實際下發／驗證、藍牙版本/編解碼器、AIO 水泵、SMBIOS Type 8（Port Connector）、BootNext、TPM NV、驅動 Verifier/WHQL
 4. 網卡 EEE/Flow Control/鏈路協商、Wi-Fi 世代/MLO/320MHz
 5. NTP 同步偏移（白名單網路功能）、電池放電曲線、儲存耐久度（寫入放大）
 6. 事實時序層的趨勢/異常偵測/預測；知識圖譜的視覺化互動

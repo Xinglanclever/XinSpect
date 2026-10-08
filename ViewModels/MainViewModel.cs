@@ -445,11 +445,14 @@ public sealed class MainViewModel : ObservableObject
         HardwareEvidence = new HardwareEvidenceViewModel(this);
 
         // 切語言時紀年名稱清單要跟著換（簡體少民國、英語走翻譯表）；掛一次，之後每次切換自動生效。
+        // 狀態列與時鐘也一起重算：兩者都是程式產生的字串、不在視覺樹上，不通知就停在舊語言。
         LanguageService.NotifyLanguageDependentLists = () =>
         {
             OnPropertyChanged(nameof(EraNames));
             OnPropertyChanged(nameof(EraIndex));
             ApplySavedEra();
+            OnPropertyChanged(nameof(StatusText));
+            UpdateClock();
         };
 
         Ai = new AiService(Settings) { SnapshotProvider = BuildAiSnapshot };
@@ -510,8 +513,17 @@ public sealed class MainViewModel : ObservableObject
     public CpuCoreUsageService CoreLoads { get; } = new(90);
 
     private string _statusText = "初始化中…";
-    /// <summary>底部狀態列文字。外殼（頁面載入失敗等）與開機序列亦會寫入，故 setter 為公開。</summary>
-    public string StatusText { get => _statusText; set => SetProperty(ref _statusText, value); }
+    /// <summary>
+    /// 底部狀態列文字。外殼（頁面載入失敗等）與開機序列亦會寫入，故 setter 為公開。
+    /// 一律以繁中原文存入、讀出時才過 <see cref="LanguageService.TComposite"/>——
+    /// 狀態列是程式拼出來的（不在視覺樹上），以前繁簡英三種模式都停在繁中；
+    /// 這樣改只要切語言時通知一次，不必回頭追每一處寫入點。2026-10-08 修。
+    /// </summary>
+    public string StatusText
+    {
+        get => LanguageService.TComposite(_statusText);
+        set => SetProperty(ref _statusText, value);
+    }
 
     private double _startupSeconds;
     /// <summary>

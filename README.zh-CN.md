@@ -4,10 +4,10 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一执行文件发布，免安装；对硬件与系统的读取以只读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-2.25-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.27-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-3094%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-3140%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-MIT-green)
 
@@ -79,8 +79,10 @@
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.25/XinSpect.exe) | 29,716,269 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.25/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.26/XinSpect.exe) | 30,073,131 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.26/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+
+> **本表的字节数与链接指向已发布的 v2.26**；v2.27 的变更集中在语言模式的显示层，程序功能与 v2.26 相同。
 
 系统需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含发布则免装）。显卡深测需要 D3D11 兼容设备；MSR 读取、SMART ioctl、Security 事件日志需以系统管理员执行——没有权限时相关项目标示「权限不足」，程序不会假装成功，也不会静默降级。
 
@@ -420,6 +422,8 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.27 Olympus**（2026-10-08）：语言模式收尾——自绘控件（FieldRow／RadialGauge／HistoryGraph／Oscilloscope／AnalogVoltMeter／DonutChart／SectionHead）的文字是自定义依赖属性、不在视觉树上，过去三种语言模式都碰不到，现在逐一转换；状态栏与时钟的复合字符串改为逐段翻译；修正有绑定的 TextBlock 被当行内文字写入（1015 处绑定的内容从此不再被写死，时钟与实时读值恢复跟着来源更新）；修正简体模式夹英文（英语模式产生的字符串存槽前先反查回繁中）；翻译表补 308 条；已知未收录：安装精灵与彩蛋页的长篇文案。测试 3140 绿。
+- **v2.26 Olympus**（2026-10-08）：语言模式修复——设置页 English 正式接线、英语模式真的可用，简体模式与语言切换卡住的问题一并修掉；绑定字符串 StringFormat 缺口补完（48 处）；一键部署器下载文件名错字修正（XinSect.exe → XinSpect.exe）；README 下载链接与版本沿革修正；新增落差分析与扩展总蓝图文档；测试 3134 绿。
 - **v2.2.0 Olympus**（2026-10-04，FileVersion 2.2.0.1）：系列更名 Everest→Olympus；WinRing0 回归主力、XsRegProbe 转白名单备援；交叉对账 26 条外部化＋判决卡；验机杀手级（SMART failing-now、机箱开启、HPA、假容量验证、WCTEMP、TDR、退休页、NPU）；安全鉴识（BYOVD、Defender 排除、1102、信任根、USBSTOR）；处理器深化（TME/SGX、C-state、PMU 能力＋编程验证、die 拓扑、SLIT）；系统软件层（Update 历史、服务盘点、事件记录摘要、稽核政策、选用功能、核心模块 Authenticode、开机参数、开机计时、USB 拓扑、摄影机、企业存储、网卡健康＋OUI、Wi-Fi 频道）；蓝色中队内置本体（可开关）；深测中心 38 项；公开规格与文档十份；审计日志、时间胶囊生命周期事件、corpus 骨架、本机 API、查询语言；DeepBench 启动崩溃修复；突变测试解锁 82%；3094 测试。
 - **v2.1.0 Everest**（2026-10-02）：固件安全页、深层寄存器三态、XsRegProbe 驱动源码、深层存取豁免开关、Deep Bench 20（10→20 项）、守护进程三版、蓝色中队态势评估、一键装机、硬件检测、工具箱。
 

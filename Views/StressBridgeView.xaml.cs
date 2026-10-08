@@ -34,7 +34,9 @@ public partial class StressBridgeView : UserControl
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
             Title = LanguageService.T("指定 y-cruncher.exe"),
-            Filter = LanguageService.T("y-cruncher (y-cruncher.exe)|y-cruncher.exe|執行檔 (*.exe)|*.exe"),
+            // Filter 是「顯示名|模式」成對字串，整串過 T() 會因查無此鍵原樣回退。
+            // 改為逐段翻譯顯示名，模式（*.exe）保持原樣。
+            Filter = "y-cruncher (y-cruncher.exe)|y-cruncher.exe|" + LanguageService.T("執行檔 (*.exe)") + "|*.exe",
             CheckFileExists = true,
         };
         if (dlg.ShowDialog() == true) _svc.SetManualPath(dlg.FileName);

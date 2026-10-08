@@ -130,7 +130,43 @@ public static class LanguageService
         if (string.IsNullOrEmpty(text)) return text ?? "";
         if (_isEnglish) return EnglishStrings.Lookup(text) ?? text;
         if (!_simplified) return text;
+        // 這裡吃到的 text 若是英語模式的產物（T() 寫進控制項又被讀回來的），先反查回繁中再轉簡體。
+        // 沒有這步，切到簡體後這批字串原樣卡英文。
+        if (EnglishStrings.Reverse(text) is { } zhOriginal) text = zhOriginal;
         return ToSimplified(text);
+    }
+
+    /// <summary>
+    /// 複合字串的翻譯：狀態列是「就緒 ・ 每秒更新中 ・ 深度規格已讀取 ・ 啟動耗時 2.6 秒」
+    /// 這樣拼出來的，整串查表一定查不到。這裡按「 ・ 」切開逐段查，段尾帶數字時
+    /// （「啟動耗時 2.6 秒」）取最長前綴查表、數字與單位原樣接回。
+    /// 簡體模式不需要這套——LCMapStringEx 逐字轉換本來就吃得下整串。
+    /// </summary>
+    public static string TComposite(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return text ?? "";
+        if (!_isEnglish) return T(text);
+        if (EnglishStrings.Lookup(text) is { } whole) return whole;
+
+        var parts = text.Split(" ・ ");
+        for (int i = 0; i < parts.Length; i++)
+        {
+            if (EnglishStrings.Lookup(parts[i]) is { } exact) { parts[i] = exact; continue; }
+            // 「啟動耗時 2.6 秒」→ 前綴「啟動耗時」＋尾碼「2.6 秒」；尾碼逐詞查（「秒」→「s」）
+            int cut = parts[i].IndexOf(' ');
+            while (cut > 0)
+            {
+                if (EnglishStrings.Lookup(parts[i][..cut]) is { } head)
+                {
+                    var tail = parts[i][(cut + 1)..].Split(' ')
+                        .Select(w => EnglishStrings.Lookup(w) ?? w);
+                    parts[i] = head + " " + string.Join(" ", tail);
+                    break;
+                }
+                cut = parts[i].LastIndexOf(' ', cut - 1);
+            }
+        }
+        return string.Join(" ・ ", parts);
     }
 
     /// <summary>繁體→簡體：先查詞組表（「記憶體」→「内存」），再讓 Windows 處理剩下的逐字轉換。</summary>
@@ -169,11 +205,31 @@ public static class LanguageService
 
     private static string FromOriginal(DependencyObject o, string slot, string current, bool simplified)
     {
+        // 存槽正規化（無條件）：若 current 是英語模式的產物（翻譯表的值），先反查回繁中鍵再存。
+        // 場景：英語模式下 T() 寫進控制項的英文字串 → 之後切簡體才對這棵樹跑轉換——
+        // 此時 _isEnglish 已是 false，若只在英語分支做正規化就漏掉這條路，
+        // 英文字串被當「原文」釘在槽裡，簡體轉換原樣放行——使用者看到的「簡體模式夾英文」。
+        // 正規化必須在讀槽「之前」對 current 做：鍵值零碰撞（有測試釘住）故不會誤傷繁中鍵。
+        if (EnglishStrings.Reverse(current) is { } zhKey) current = zhKey;
         var map = _orig.GetOrCreateValue(o);
         if (!map.TryGetValue(slot, out var original)) { original = current; map[slot] = current; }
         // 英語模式優先：未收錄回繁中原文。永遠從原文出發，繁／簡／英三方往返可逆、冪等。
         if (_isEnglish) return EnglishStrings.Lookup(original) ?? original;
         return simplified ? ToSimplified(original) : original;
+    }
+
+    /// <summary>
+    /// 轉換自繪控制項的字串相依屬性（FieldRow.Label、RadialGauge.Caption…）。
+    /// 這類屬性不在 <see cref="TextBlock"/> 上，視覺樹遍歷碰不到；
+    /// 但它們通常以 RelativeSource 繫結到控制項自己的內部 TextBlock，所以改 DP 畫面就會跟著變。
+    /// <b>DP 本身是繫結來的就跳過</b>——直接寫入會把繫結覆蓋掉，來源之後再變也不會更新。
+    /// </summary>
+    private static void TranslateStringDp(DependencyObject d, DependencyProperty prop, string slot, bool simplified)
+    {
+        if (d.GetValue(prop) is not string s || s.Length == 0) return;
+        if (BindingOperations.IsDataBound(d, prop)) return;
+        string converted = FromOriginal(d, slot, s, simplified);
+        if (!ReferenceEquals(converted, s) && converted != s) d.SetValue(prop, converted);
     }
 
     /// <summary>
@@ -196,24 +252,69 @@ public static class LanguageService
         if (d is System.Windows.Controls.Primitives.Popup { Child: { } popupChild })
             ConvertVisualTree(popupChild, simplified);
 
+        // 自繪控制項的文字是「自訂相依屬性」，不是 TextBlock.Text——遍歷看不到，翻譯表也永遠碰不到。
+        // 這些屬性大多以 RelativeSource 繫結到自己的內部 TextBlock，所以改 DP 就等於改畫面。
+        // 兩件事必須顧到：
+        // ① 一定要先確認控制項型別。相依屬性的預設值是「整型別共用」的——對任何物件呼叫
+        //    GetValue(AnalogVoltMeter.CaptionProperty) 都會拿到預設字串「電壓錶」，
+        //    不擋型別就會把譯文寫到無關的節點上。
+        // ② DP 本身是繫結來的就跳過（例如 Label="{Binding Label}"），寫入會覆蓋繫結。
+        // 只收「版面標籤」性質的字串：FieldRow.Value 這類承載資料的屬性刻意不碰。
+        switch (d)
+        {
+            case FieldRow:
+                TranslateStringDp(d, FieldRow.LabelProperty, "Label", simplified);
+                break;
+            case RadialGauge:
+                TranslateStringDp(d, RadialGauge.CaptionProperty, "Caption", simplified);
+                TranslateStringDp(d, RadialGauge.UnitProperty, "Unit", simplified);
+                break;
+            case HistoryGraph:
+                TranslateStringDp(d, HistoryGraph.CaptionProperty, "Caption", simplified);
+                break;
+            case Oscilloscope:
+                TranslateStringDp(d, Oscilloscope.CaptionProperty, "Caption", simplified);
+                break;
+            case AnalogVoltMeter:
+                TranslateStringDp(d, AnalogVoltMeter.CaptionProperty, "Caption", simplified);
+                break;
+            case DonutChart:
+                TranslateStringDp(d, DonutChart.CaptionProperty, "Caption", simplified);
+                TranslateStringDp(d, DonutChart.Caption2Property, "Caption2", simplified);
+                TranslateStringDp(d, DonutChart.SubTextProperty, "SubText", simplified);
+                break;
+        }
+
         if (d is SectionHead sh)
         {
             // SectionHead 的標題 TextBlock 是內部繫結，下面的 TextBlock 分支會因「有繫結」而跳過；
             // 在這裡直接轉外露的 Text 屬性，繫結會把結果帶到內部。
-            if (!string.IsNullOrEmpty(sh.Text))
-                sh.Text = FromOriginal(sh, "Text", sh.Text, simplified);
+            TranslateStringDp(sh, SectionHead.TextProperty, "Text", simplified);
         }
+
         if (d is TextBlock tb)
         {
-            if (tb.Inlines.Count > 0)
+            // 有繫結的 TextBlock 一律不碰。兩個理由：
+            // ① 它的文字來自 ViewModel，該由 ChineseConverter／LangFormatConverter 翻譯；
+            // ② 更關鍵的是——WPF 會把「繫結來的文字」表示成一個隱式 Run，所以 Inlines.Count > 0
+            //    對有繫結的 TextBlock 也成立。舊碼因此走進 Inlines 分支、直接寫 r.Text，
+            //    這會把繫結覆蓋掉：文字定在翻譯當下的那一版，之後來源再變（時鐘每一拍、
+            //    狀態列、即時讀值）都不會更新。1015 處 Text="{Binding …}" 全中，且繁簡英三模式
+            //    都發生（繁是「原文＝譯文」看不出來，簡英最明顯）。2026-10-08 修。
+            if (tb.GetBindingExpression(TextBlock.TextProperty) is null)
             {
-                // 先快照成清單再改：改 Run.Text 會觸發 InlineCollection 變更，邊列舉邊改會丟例外。
-                foreach (var r in tb.Inlines.OfType<Run>().ToList())
-                    if (r.GetBindingExpression(Run.TextProperty) is null && !string.IsNullOrEmpty(r.Text))
-                        r.Text = FromOriginal(r, "Text", r.Text, simplified);
+                if (tb.Inlines.Count > 0)
+                {
+                    // 先快照成清單再改：改 Run.Text 會觸發 InlineCollection 變更，邊列舉邊改會丟例外。
+                    foreach (var r in tb.Inlines.OfType<Run>().ToList())
+                        if (r.GetBindingExpression(Run.TextProperty) is null && !string.IsNullOrEmpty(r.Text))
+                            r.Text = FromOriginal(r, "Text", r.Text, simplified);
+                }
+                else if (!string.IsNullOrEmpty(tb.Text))
+                {
+                    tb.Text = FromOriginal(tb, "Text", tb.Text, simplified);
+                }
             }
-            else if (tb.GetBindingExpression(TextBlock.TextProperty) is null && !string.IsNullOrEmpty(tb.Text))
-                tb.Text = FromOriginal(tb, "Text", tb.Text, simplified);
         }
         else if (d is ContentControl cc)   // 涵蓋 Button 等；HeaderedContentControl 亦是，故 Content 與 Header 都查
         {
