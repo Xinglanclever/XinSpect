@@ -4,10 +4,10 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一执行文件发布，免安装；对硬件与系统的读取以只读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-2.27-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.28-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-3140%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-3170%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-MIT-green)
 
@@ -422,6 +422,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.28 Olympus**（2026-10-08）：统计哨兵——历史回放页新增时序统计判读：Theil–Sen 稳健斜率（趋势，附 95% 置信区间）、CUSUM 累积和（变化点）、Pearson 前后半相关性（关系变化）；只陈述数列本身的变化，不对硬件健康下因果结论；数据不足／无传感器一律如实回报；斜率置信区间改用中位绝对差（MAD）常态近似（Sen 无母数区间在配对数量大时会宽到失去判别力）；新增纯统计核心 TrendSentinel 与服务层，测试 +30。测试 3170 绿。
 - **v2.27 Olympus**（2026-10-08）：语言模式收尾——自绘控件（FieldRow／RadialGauge／HistoryGraph／Oscilloscope／AnalogVoltMeter／DonutChart／SectionHead）的文字是自定义依赖属性、不在视觉树上，过去三种语言模式都碰不到，现在逐一转换；状态栏与时钟的复合字符串改为逐段翻译；修正有绑定的 TextBlock 被当行内文字写入（1015 处绑定的内容从此不再被写死，时钟与实时读值恢复跟着来源更新）；修正简体模式夹英文（英语模式产生的字符串存槽前先反查回繁中）；翻译表补 308 条；已知未收录：安装精灵与彩蛋页的长篇文案。测试 3140 绿。
 - **v2.26 Olympus**（2026-10-08）：语言模式修复——设置页 English 正式接线、英语模式真的可用，简体模式与语言切换卡住的问题一并修掉；绑定字符串 StringFormat 缺口补完（48 处）；一键部署器下载文件名错字修正（XinSect.exe → XinSpect.exe）；README 下载链接与版本沿革修正；新增落差分析与扩展总蓝图文档；测试 3134 绿。
 - **v2.2.0 Olympus**（2026-10-04，FileVersion 2.2.0.1）：系列更名 Everest→Olympus；WinRing0 回归主力、XsRegProbe 转白名单备援；交叉对账 26 条外部化＋判决卡；验机杀手级（SMART failing-now、机箱开启、HPA、假容量验证、WCTEMP、TDR、退休页、NPU）；安全鉴识（BYOVD、Defender 排除、1102、信任根、USBSTOR）；处理器深化（TME/SGX、C-state、PMU 能力＋编程验证、die 拓扑、SLIT）；系统软件层（Update 历史、服务盘点、事件记录摘要、稽核政策、选用功能、核心模块 Authenticode、开机参数、开机计时、USB 拓扑、摄影机、企业存储、网卡健康＋OUI、Wi-Fi 频道）；蓝色中队内置本体（可开关）；深测中心 38 项；公开规格与文档十份；审计日志、时间胶囊生命周期事件、corpus 骨架、本机 API、查询语言；DeepBench 启动崩溃修复；突变测试解锁 82%；3094 测试。

@@ -68,6 +68,12 @@ public sealed class HistoryViewModel : ObservableObject
     private readonly EventsService _events;
     private readonly SettingsService _settings;
 
+    /// <summary>
+    /// 事實時序的統計哨兵。由歷史頁在每次重查後驅動；結論以卡片呈現，
+    /// 只做統計推論（何時變了、斜率多少、關係有沒有變），不對硬體下因果結論。
+    /// </summary>
+    public TrendSentinelService Sentinel { get; } = new();
+
     private DateTime _from, _to;      // 皆為 UTC
 
     /// <summary>時間窗或資料變動，檢視據此重畫圖。</summary>
@@ -185,6 +191,11 @@ public sealed class HistoryViewModel : ObservableObject
         OnPropertyChanged(nameof(TierText));
         OnPropertyChanged(nameof(CountText));
         OnPropertyChanged(nameof(StoreText));
+
+        // 統計哨兵跟著同一段區間重算。它只讀同一份 Series 的快照、不做 I/O，
+        // 失敗也在服務內部吞掉（哨兵是附加功能，不得影響歷史頁本身）。
+        Sentinel.Analyze(_store, _from, _to);
+
         Changed?.Invoke();
     }
 

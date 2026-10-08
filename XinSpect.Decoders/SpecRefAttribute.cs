@@ -44,6 +44,7 @@ public static class SpecRefRegistry
         typeof(CpuTopologyDecoder), // CPUID 0x1F die 拓撲（Intel SDM）
         typeof(SlitDecoder),     // ACPI SLIT 節點距離矩陣
         typeof(PmuDecoder),      // PMU 能力探索（CPUID 0xA，唯讀）
+        typeof(TrendSentinel),   // 事實時序的趨勢／變化點／相關性（Theil–Sen、CUSUM、Pearson）
     ];
 
     /// <summary>列舉解碼器上缺 SpecRef 的公開靜態方法（宣告於本型別者）。</summary>
