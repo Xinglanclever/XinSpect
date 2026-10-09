@@ -1,4 +1,4 @@
-[简体中文](README.zh-CN.md) · 繁體中文
+﻿[简体中文](README.zh-CN.md) · 繁體中文
 
 # 曦覽 XinSpect
 
@@ -79,7 +79,7 @@
 
 | 檔案 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.53/XinSpect.exe) | 31,270,187 bytes | 主程式。藍色中隊守護進程已內建 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.53/XinSpect.exe) | 31,274,283 bytes | 主程式。藍色中隊守護進程已內建 |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.53/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
 
 > **上表的位元組數為本版（v2.53）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
