@@ -128,7 +128,7 @@ public static class UefiBootFactsService
     }
 
     /// <summary>啟用 SeSystemEnvironmentPrivilege。未持有該權限時 AdjustTokenPrivileges 仍回 true 但 LastError=1300——必須查，否則假成功。</summary>
-    private static bool EnableFirmwarePrivilege()
+    internal static bool EnableFirmwarePrivilege()
     {
         try
         {

@@ -4,10 +4,10 @@
 
 一款免費開源、運行於 Windows 的原生硬體驗機、監控與安全稽核工具。以單一執行檔發佈，免安裝；對硬體與系統的讀取以唯讀為原則，少數涉及寫入的功能均設有同意閘門並明確標註風險。本程式不收集、不上傳任何使用者資料。
 
-![版本](https://img.shields.io/badge/version-2.42-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.43-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-3590%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-3630%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-MIT-green)
 
@@ -79,10 +79,10 @@
 
 | 檔案 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.42/XinSpect.exe) | 30,483,243 bytes | 主程式。藍色中隊守護進程已內建 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.42/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.43/XinSpect.exe) | 30,483,243 bytes | 主程式。藍色中隊守護進程已內建 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.43/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
 
-> **上表的位元組數為本版（v2.42）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v2.43）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
 系統需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含發佈則免裝）。顯示卡深測需要 D3D11 相容裝置；MSR 讀取、SMART ioctl、Security 事件記錄需以系統管理員執行——沒有權限時相關項目標示「權限不足」，程式不會假裝成功，也不會靜默降級。
 
@@ -425,6 +425,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.43 Olympus**（2026-10-10）：核心熱區圖重做——格數改由拓撲的實體核心數決定（新增 PhysicalCores），感測器少報幾顆時缺的位置照樣佔一格並如實留白（灰色格與「—」代表拿不到讀值，不是 0 °C、也不是涼）；兩種逐核來源（感測器列／逐實體核心摘要）收斂到同一份格子契約與同一支控制項，色階收斂成單一來源 HeatScale（核心熱區圖、逐核液柱與圖例同一個溫度就是同一個顏色，不隨主題變），圖例與統計列（最熱／最冷／平均／覆蓋率）由錨點與資料推導；修掉逐實體核心編號從 0 起算、與全站 1 起算差一號的缺陷。另新增 ESP 檔案層掃描（列舉 .efi 檔 SHA-256 並與 dbx 交叉引用，命中是攻擊面事實不是中毒判決）與 WinRing0 來源內嵌（先前單檔發佈在使用者端找不到驅動，MSR／PCI／I/O／MMIO 全數讀不到；現在 0.9.4 跟著執行檔走）。測試 +40（全套 3630 綠）。接線守門：三支事實服務（音訊端點／開機計時／網路卸載）接進共用入口，並加「事實服務必須被生產碼引用」的守門測試。
 - **v2.42 Olympus**（2026-10-09）：.etl 內容讀回——本專案寫得出（EtwTraceService）、認得出（IsValidEtl）、這一版起讀得回來：TraceEvent 檔案模式把落地軌跡解析回逐提供者事件數、未解事件數（如實計數不以 0 補）與時間範圍。測試過程抓到會炸行程的真缺陷：垃圾位元組餵給 ETWTraceEventSource 會踩 TraceEvent finalizer 缺陷炸掉測試主機——修法是建構前先驗檔頭。接進 LoadUsermodeFacts 共用入口。真機以系統 .etl 實測閉環。測試 +5（全套 3591 綠）。
 - **v2.41 Olympus**（2026-10-09）：裝置安裝時間線——唯讀解析 setupapi.dev.log（peripheral-forensic 能力的唯讀版）：區段標記、裝置實例 ID、起訖時間戳、結束狀態、錯誤行、開機段歸屬。解析只取語言中立欄位（標記符號／裝置 ID 語彙／時間戳格式），在地化標籤混入照樣解出（測試釘住）；接進 LoadUsermodeFacts 共用入口。真機實測 376 區段、36 錯誤行。測試 +9（全套 3586 綠）。
 - **v2.40 Olympus**（2026-10-09）：驅動檔靜態檢視（DrvEye／DriverSight 能力的唯讀版）——對非系統目錄的載入模組逐顆讀回 .sys、解析 PE 結構（機器／子系統／區段／匯入表）、掃內嵌裝置字串與 CTL_CODE 編碼候選（Function 落自訂範圍才收，並明說「候選不是確認」），與既有 BYOVD 封鎖清單雙道交叉（SHA-256 主、檔名輔）。全程不載入驅動、不呼叫 IOCTL。接進 LoadUsermodeFacts 共用入口（UI 與 CLI 同源）。真機實測：235 顆非系統模組、逐顆解出匯入與裝置字串。測試 +14（全套 3577 綠）。

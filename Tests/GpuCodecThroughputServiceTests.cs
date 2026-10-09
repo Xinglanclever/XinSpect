@@ -118,9 +118,12 @@ public class GpuCodecThroughputServiceTests
         {
             measurement = await new MediaFoundationCodecEngine().MeasureAsync(context, CancellationToken.None);
         }
-        catch (GpuUnsupportedException)
+        catch (GpuUnsupportedException ex)
         {
-            return; // 機器沒有硬體 H.264 編碼器時如實跳過，不以軟體編碼充數。
+            // 機器沒有硬體 H.264 編碼器時必須拒絕並給原因——不能靜默略過拒絕本身，
+            // 也不能拿未量到的資料硬斷言：驗證拒絕訊息後才結束這一條。
+            Assert.False(string.IsNullOrWhiteSpace(ex.Message));
+            return;
         }
 
         Assert.Equal(8, measurement.Run.Frames);

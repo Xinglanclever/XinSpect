@@ -142,12 +142,20 @@ public class StorageGpuPipelineServiceTests
         byte[] data = StorageGpuPipelineService.CreateSyntheticData(256 * 1024);
         var engine = new D3D11PipelineEngine();
 
-        GpuPipelineGpuResult gpuResult = await engine.ProcessAsync(
-            new GpuPipelineContext(data, new Progress<DeepBenchProgress>(), CancellationToken.None));
+        try
+        {
+            GpuPipelineGpuResult gpuResult = await engine.ProcessAsync(
+                new GpuPipelineContext(data, new Progress<DeepBenchProgress>(), CancellationToken.None));
 
-        Assert.Equal(data.Length / 4, gpuResult.HashedElements.Length);
-        for (int index = 0; index < gpuResult.HashedElements.Length; index++)
-            Assert.Equal(StorageGpuPipelineService.HashElement(data, index), gpuResult.HashedElements[index]);
+            Assert.Equal(data.Length / 4, gpuResult.HashedElements.Length);
+            for (int index = 0; index < gpuResult.HashedElements.Length; index++)
+                Assert.Equal(StorageGpuPipelineService.HashElement(data, index), gpuResult.HashedElements[index]);
+        }
+        catch (GpuUnsupportedException ex)
+        {
+            // 環境沒有 D3D11 硬體配接器時，引擎必須拒絕出數字並給原因（不冒充量過、不假綠）。
+            Assert.False(string.IsNullOrWhiteSpace(ex.Message));
+        }
     }
 
     private static async Task<DeepBenchTestResult> RunAsync(StorageGpuPipelineService service, DeepBenchRunProfile profile)

@@ -182,8 +182,8 @@ public sealed class MemoryTimings : ObservableObject
     }
 }
 
-/// <summary>單一 CPU 核心的即時數值列。</summary>
-public sealed class CoreRow : ObservableObject
+/// <summary>單一 CPU 核心的即時數值列。同時是核心熱區圖的一格（<see cref="ICoreHeatCell"/>）。</summary>
+public sealed class CoreRow : ObservableObject, ICoreHeatCell
 {
     public CoreRow(string name) => Name = name;
     public string Name { get; }
@@ -201,6 +201,8 @@ public sealed class CoreRow : ObservableObject
     public string LoadText => $"{_load:0} %";
     public string TempText => _temp.HasValue ? $"{_temp:0} °C" : "—";
     public Severity TempSeverity => Health.Cpu(_temp);
+    // 注意：Name／TempC／LoadPercent 同時是 ICoreHeatCell 的契約（核心熱區圖的格子）與這張列的顯示來源。
+    // 要改名就一次改兩個地方，契約測試會擋（Tests/CoreHeatmapTests）。
 }
 
 /// <summary>顯示卡即時列。</summary>

@@ -105,7 +105,7 @@ public static class UefiSignatureFactsService
     }
 
     /// <summary>讀韌體環境變數（薄通路）。回 null 表示讀取失敗或變數不存在。</summary>
-    private static byte[]? ReadFirmwareVar(string name)
+    internal static byte[]? ReadFirmwareVar(string name)
     {
         try
         {

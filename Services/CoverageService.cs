@@ -131,6 +131,12 @@ public sealed class CoverageService : ObservableObject
             new Regex(@"new\(\s*\$?""([a-z][a-z0-9_.\[\]-]*)""\s*,\s*(?:Category|\$?_?cat)"),
             new Regex(@"(?:const|static readonly)\s+string\s+\w*[Kk]ey\w*\s*=\s*""([a-z][a-z0-9_.\[\]-]*)"""),
             new Regex(@"FactKey\s*=\s*""([a-z][a-z0-9_.\[\]-]*)"""),
+            // 服務層的不可得 helper 常把鍵以字面值當參數傳入（第一個參數，或第二個——at 在前）。
+            // 這兩個形狀原本掃不到，於是「已生產但目錄沒登記」的鍵會靜默漏掉
+            // （實測：net.offload 與 amd.sev_es／sev_snp／mem_enc 三個）。
+            // 只認「至少含一個點」的字面值，避免把一般字串也當成事實鍵。
+            new Regex(@"Unavailable\(\s*(?:at\s*,\s*)?""([a-z][a-z0-9_]*(\.[a-z0-9_]+)+)"""),
+            new Regex(@"Unavailable\([^,)]*,\s*""([a-z][a-z0-9_]*(\.[a-z0-9_]+)+)""\s*,"),
         };
         var keys = new HashSet<string>(StringComparer.Ordinal);
         if (!Directory.Exists(servicesDirectory)) return keys;

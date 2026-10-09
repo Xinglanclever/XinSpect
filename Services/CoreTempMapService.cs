@@ -3,20 +3,34 @@ using System.Collections.ObjectModel;
 namespace XinSpect;
 
 /// <summary>
-/// 每實體核心的溫度摘要（供熱力圖卡片繫結）。
+/// 每實體核心的溫度摘要（供熱力圖卡片繫結）。同時是核心熱區圖的一格（<see cref="ICoreHeatCell"/>）。
 /// </summary>
-public sealed class CoreTempEntry : ObservableObject
+/// <remarks>
+/// <see cref="Name"/>／<see cref="TempC"/>／<see cref="LoadPercent"/> 是熱區圖共用的契約名，
+/// 這裡以欄位別名接上本類別慣用的 <see cref="Label"/>／<see cref="Temperature"/>／<see cref="Load"/>：
+/// 同一張圖只有一套畫格子的方式，不會因為來源不同而各自漂移。
+/// </remarks>
+public sealed class CoreTempEntry : ObservableObject, ICoreHeatCell
 {
     public CoreTempEntry(int physicalId, string label) { PhysicalCoreId = physicalId; Label = label; }
 
     public int PhysicalCoreId { get; }
     public string Label { get; }
 
+    /// <summary>熱區圖契約名（＝ <see cref="Label"/>）。</summary>
+    public string Name => Label;
+
     private double? _temp;
-    public double? Temperature { get => _temp; set { if (SetProperty(ref _temp, value)) OnPropertyChanged(nameof(TempText)); } }
+    public double? Temperature { get => _temp; set { if (SetProperty(ref _temp, value)) { OnPropertyChanged(nameof(TempText)); OnPropertyChanged(nameof(TempC)); } } }
+
+    /// <summary>熱區圖契約名（＝ <see cref="Temperature"/>）。</summary>
+    public double? TempC => _temp;
 
     private double _load;
-    public double Load { get => _load; set => SetProperty(ref _load, value); }
+    public double Load { get => _load; set { if (SetProperty(ref _load, value)) OnPropertyChanged(nameof(LoadPercent)); } }
+
+    /// <summary>熱區圖契約名（＝ <see cref="Load"/>）。</summary>
+    public double LoadPercent => _load;
 
     private bool _isPerformance = true;
     /// <summary>混合架構下是否為 P-core（無法區分時預設 true）。</summary>
@@ -54,7 +68,8 @@ public sealed class CoreTempMapService : ObservableObject
 
         // 建立每實體核心一列
         for (int i = 0; i < _physicalCores; i++)
-            Cores.Add(new CoreTempEntry(i, $"核心 #{i}"));
+            // 標籤 1 起算：這是給人看的編號，而全站其他地方的核心編號（感測器列、每核心明細）都是 1 起算。
+            Cores.Add(new CoreTempEntry(i, $"核心 #{i + 1}"));
     }
 
     /// <summary>

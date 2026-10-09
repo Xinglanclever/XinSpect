@@ -10,7 +10,7 @@ namespace XinSpect;
 
 /// <summary>
 /// 逐核液柱：一核一管，液面高度＝該核當下使用率，液體顏色＝該核溫度（沿用
-/// <see cref="HeatConverter"/> 的同一套色階，所以和熱區圖對得上）。管壁上另有一條會慢慢沉下來的
+/// <see cref="HeatScale"/> 的同一套色階，所以和熱區圖對得上）。管壁上另有一條會慢慢沉下來的
 /// 尖峰線，記住最近幾秒衝到過的高點——瞬間的滿載不會在每秒取樣裡留下痕跡，這條線會。
 /// </summary>
 /// <remarks>
@@ -202,7 +202,7 @@ public sealed class CoreColumns : FrameworkElement
 
             double pct = Math.Clamp(_shown[i], 0, 100);
             double fillH = h * pct / 100.0;
-            Color? heat = HeatConverter.ColorFor(_rows[i].TempC);
+            Color? heat = HeatScale.ColorFor(_rows[i].TempC);
 
             if (fillH >= 1)
             {

@@ -3,31 +3,163 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect"
              x:Name="HeatRoot">
+    <!-- 一格畫什麼寫在這裡；總共要畫幾格、排成幾欄，寫在程式碼裡（CoreHeatmap.xaml.cs）。
+         分界線是「資料形狀 → XAML、數量與版面 → 程式碼」：樣板只認得 CoreHeatCell 這個契約，
+         認不出「這台機器有幾顆實體核心」。 -->
     <UserControl.Resources>
-        <local:HeatConverter x:Key="Heat"/>
+        <!-- 格內負載條：只有 3 px、顏色跟著該格墨色走（黃綠底上白條會消失），所以不沿用主題的 LoadBar -->
+        <Style x:Key="TileLoad" TargetType="ProgressBar">
+            <Setter Property="Minimum" Value="0"/>
+            <Setter Property="Maximum" Value="100"/>
+            <Setter Property="Height" Value="3"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Grid>
+                            <Border x:Name="PART_Track" Background="{TemplateBinding Background}" CornerRadius="1.5"/>
+                            <Border x:Name="PART_Indicator" HorizontalAlignment="Left"
+                                    Background="{TemplateBinding Foreground}" CornerRadius="1.5"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
-    <ItemsControl ItemsSource="{Binding Cores, ElementName=HeatRoot}">
-        <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-                <WrapPanel/>
-            </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-            <DataTemplate>
-                <Border Width="62" Height="52" Margin="4" CornerRadius="7"
-                        Background="{Binding TempC, Converter={StaticResource Heat}}">
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Name}" FontSize="10.5" FontWeight="SemiBold"
-                                   Foreground="White" HorizontalAlignment="Center" Opacity="0.92"/>
-                        <TextBlock Text="{Binding TempText}" FontSize="13" FontWeight="Bold"
-                                   Foreground="White" HorizontalAlignment="Center">
-                            <TextBlock.Effect>
-                                <DropShadowEffect BlurRadius="3" ShadowDepth="0.6" Opacity="0.6" Color="Black"/>
-                            </TextBlock.Effect>
-                        </TextBlock>
-                    </StackPanel>
-                </Border>
-            </DataTemplate>
-        </ItemsControl.ItemTemplate>
-    </ItemsControl>
+
+    <StackPanel>
+        <!-- ══ 基板：核心裝在一塊板上（板比卡片窄、置中，像實體封裝而不是一整片填滿）══ -->
+        <Border Background="{DynamicResource Surface2Brush}"
+                BorderBrush="{DynamicResource BaselineBrush}"
+                BorderThickness="2" CornerRadius="14" Padding="10"
+                HorizontalAlignment="Center" SnapsToDevicePixels="True">
+            <Grid>
+                <ItemsControl x:Name="Board"
+                              ItemsSource="{Binding Cells, ElementName=HeatRoot}"
+                              Width="{Binding BoardWidth, ElementName=HeatRoot}"
+                              Height="{Binding BoardHeight, ElementName=HeatRoot}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Columns="{Binding Columns, RelativeSource={RelativeSource AncestorType={x:Type local:CoreHeatmap}}}"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border BorderThickness="2" CornerRadius="8" Margin="3" MinHeight="38" Padding="5,4"
+                                    ToolTip="{Binding Tooltip}" ToolTipService.InitialShowDelay="250">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{Binding Fill}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource PagePlaneBrush}"/>
+                                        <Style.Triggers>
+                                            <!-- 沒有讀值：中性底色，絕不挑一個「看起來像資料」的顏色 -->
+                                            <DataTrigger Binding="{Binding HasReading}" Value="False">
+                                                <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                                                <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- 角落的短編號：#13；格子太小就整條收掉，不留半截字 -->
+                                    <TextBlock Grid.Row="0" Text="{Binding ShortName}" FontSize="9.5" FontWeight="SemiBold"
+                                               HorizontalAlignment="Left" VerticalAlignment="Top">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{Binding Ink}"/>
+                                                <Setter Property="Opacity" Value="0.85"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasReading}" Value="False">
+                                                        <Setter Property="Foreground" Value="{DynamicResource MutedInkBrush}"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Compact, RelativeSource={RelativeSource AncestorType={x:Type local:CoreHeatmap}}}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+
+                                    <!-- 主角：溫度 -->
+                                    <TextBlock Grid.Row="1" Text="{Binding TempText}" FontWeight="Bold"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="FontSize" Value="14.5"/>
+                                                <Setter Property="Foreground" Value="{Binding Ink}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasReading}" Value="False">
+                                                        <Setter Property="Foreground" Value="{DynamicResource MutedInkBrush}"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Compact, RelativeSource={RelativeSource AncestorType={x:Type local:CoreHeatmap}}}" Value="True">
+                                                        <Setter Property="FontSize" Value="12"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+
+                                    <!-- 使用率：壓在底部一條，不搶溫度的位置。沒有來源列就不畫（沒東西可量） -->
+                                    <ProgressBar Grid.Row="2" Style="{StaticResource TileLoad}"
+                                                 Value="{Binding LoadPercent, Mode=OneWay}"
+                                                 Background="{Binding LoadTrack}" Foreground="{Binding Ink}"
+                                                 Visibility="{Binding HasSource, Converter={StaticResource BoolToVis}}"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Text="沒有可畫的核心：這個平台沒有逐核溫度感測器，或感測器還沒回報第一筆讀值。"
+                           FontSize="12" TextWrapping="Wrap" MaxWidth="420" Margin="12"
+                           Foreground="{DynamicResource MutedInkBrush}"
+                           Visibility="{Binding HasCells, ElementName=HeatRoot, Converter={StaticResource InverseBoolToVis}}"/>
+            </Grid>
+        </Border>
+
+        <!-- ══ 統計列：這張圖到底畫了幾顆、涵蓋率多少 ══ -->
+        <TextBlock Text="{Binding SummaryText, ElementName=HeatRoot}" FontSize="12" Margin="2,8,2,0"
+                   TextAlignment="Center" TextWrapping="Wrap"
+                   Foreground="{DynamicResource MutedInkBrush}"/>
+
+        <!-- ══ 色階圖例：顏色是資料，就得有對照表 ══ -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
+            <TextBlock Text="冷端" FontSize="10.5" VerticalAlignment="Top" Margin="0,0,6,0"
+                       Foreground="{DynamicResource MutedInkBrush}"/>
+            <ItemsControl ItemsSource="{x:Static local:HeatScale.Legend}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="1,0">
+                            <Border Width="34" Height="9" CornerRadius="2" SnapsToDevicePixels="True"
+                                    Background="{Binding Fill}"/>
+                            <TextBlock Text="{Binding Text}" FontSize="9" HorizontalAlignment="Center" Margin="0,2,0,0"
+                                       Foreground="{DynamicResource MutedInkBrush}"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="熱端" FontSize="10.5" VerticalAlignment="Top" Margin="6,0,0,0"
+                       Foreground="{DynamicResource MutedInkBrush}"/>
+
+            <!-- 沒有讀值長什麼樣，也要出現在圖例裡，否則灰色格子沒人認得 -->
+            <StackPanel Margin="14,0,0,0">
+                <Border Width="34" Height="9" CornerRadius="2" SnapsToDevicePixels="True"
+                        Background="{DynamicResource SurfaceBrush}"
+                        BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"/>
+                <TextBlock Text="無讀值" FontSize="9" HorizontalAlignment="Center" Margin="0,2,0,0"
+                           Foreground="{DynamicResource MutedInkBrush}"/>
+            </StackPanel>
+        </StackPanel>
+    </StackPanel>
 </UserControl>

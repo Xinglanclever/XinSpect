@@ -57,7 +57,7 @@ public partial class OverclockView : UserControl
     {
         var oc = Oc;
         if (oc is null) return;
-        new CoreDetailWindow(oc) { Owner = Window.GetWindow(this) }.Show();
+        new CoreDetailWindow(oc, Vm?.CpuTopology.PhysicalCores ?? 0) { Owner = Window.GetWindow(this) }.Show();
     }
 
     // ── 超連結：以系統預設瀏覽器開啟（XTU 下載頁）──────────────────────────

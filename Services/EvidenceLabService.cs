@@ -535,6 +535,18 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>.etl 內容讀回的事實（LoadUsermodeFacts 接線；TraceEvent 檔案模式唯讀）。</summary>
     public IReadOnlyList<HardwareFact> EtlReadbackFacts { get; private set; } = [];
 
+    /// <summary>ESP 檔案層掃描的事實（LoadUsermodeFacts 接線；唯讀＋dbx 交叉引用）。</summary>
+    public IReadOnlyList<HardwareFact> EspScanFacts { get; private set; } = [];
+
+    /// <summary>音訊端點混合格式的事實（LoadUsermodeFacts 接線；MMDevice API 唯讀）。</summary>
+    public IReadOnlyList<HardwareFact> AudioEndpointFacts { get; private set; } = [];
+
+    /// <summary>開機計時的事實（LoadUsermodeFacts 接線；事件記錄＋WMI 唯讀，不評級）。</summary>
+    public IReadOnlyList<HardwareFact> BootTimingFacts { get; private set; } = [];
+
+    /// <summary>網路卸載狀態的事實（LoadUsermodeFacts 接線；WMI root\StandardCimv2 唯讀）。</summary>
+    public IReadOnlyList<HardwareFact> NetOffloadFacts { get; private set; } = [];
+
     /// <summary>LoadUsermodeFacts 的驅動檢視段：列舉非系統目錄驅動、逐顆讀檔做靜態解析。</summary>
     public void LoadDriverInspection()
     {
@@ -554,6 +566,30 @@ public sealed class EvidenceLabService : ObservableObject
     public void LoadEtlReadback()
     {
         EtlReadbackFacts = EtlReadbackService.Collect(DateTimeOffset.UtcNow);
+    }
+
+    /// <summary>LoadUsermodeFacts 的 ESP 掃描段：列舉 .efi 檔並與 dbx 交叉引用。</summary>
+    public void LoadEspScan()
+    {
+        EspScanFacts = EspScanService.Collect(DateTimeOffset.UtcNow);
+    }
+
+    /// <summary>LoadUsermodeFacts 的音訊端點段：列舉作用中端點並報引擎混合格式。</summary>
+    public void LoadAudioEndpoints()
+    {
+        AudioEndpointFacts = AudioEndpointFactsService.Collect(DateTimeOffset.UtcNow);
+    }
+
+    /// <summary>LoadUsermodeFacts 的開機計時段：讀事件記錄的開機耗時與最近開機時間。</summary>
+    public void LoadBootTiming()
+    {
+        BootTimingFacts = BootTimingFactsService.Collect(DateTimeOffset.UtcNow);
+    }
+
+    /// <summary>LoadUsermodeFacts 的網路卸載段：讀 Windows 實際啟用的卸載狀態。</summary>
+    public void LoadNetOffload()
+    {
+        NetOffloadFacts = NetOffloadFactsService.Collect(DateTimeOffset.UtcNow);
     }
 
     /// <summary>UEFI FV 卡片的摘要列（右側小字）：FV 總數；讀不到時如實顯示原因。</summary>
@@ -591,7 +627,7 @@ public sealed class EvidenceLabService : ObservableObject
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
             .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
             .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
-            .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).ToList();
+            .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).ToList();
 
     /// <summary>
     /// 韌體安全頁用：把 <see cref="AllFacts"/> 依分類與鍵排序後轉成誠實渲染的列。

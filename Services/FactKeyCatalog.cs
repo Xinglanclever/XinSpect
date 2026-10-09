@@ -25,14 +25,17 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 143 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 150 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "acpi.bert.record",
         "acpi.bert.region_length",
         "acpi.hest.sources",
         "acpi.tables",
+        "amd.mem_enc.enabled",
         "amd.psp.present",
+        "amd.sev_es.enabled",
+        "amd.sev_snp.enabled",
         "asset.chassis",
         "asset.identify",
         "asset.identify.evidence",
@@ -75,6 +78,9 @@ public static class FactKeyCatalog
         "ent.iscsi",
         "ent.mpio",
         "ent.nvmeof",
+        "esp.dbx",
+        "esp.files",
+        "esp.partitions.count",
         "etl.readback",
         "etl.traces.count",
         "evt.system.7d",
@@ -100,6 +106,7 @@ public static class FactKeyCatalog
         "mon.dp",
         "monitor.summary",
         "msr.0x8b",
+        "net.offload",
         "nic.count",
         "nic.dirty_count",
         "nic.gap",

@@ -84,32 +84,107 @@ public sealed class WinRing0Bridge : IDisposable
         }
     }
 
+    /// <summary>內嵌資源的邏輯名（XinSpect.csproj 的 EmbedLhm094 目標）。單檔發佈的使用者端沒有 NuGet 快取，這是唯一保證存在的來源。</summary>
+    private const string Embedded094 = "XinSpect.embedded.LibreHardwareMonitorLib-0.9.4.dll";
+
+    /// <summary>
+    /// 取得 LHM 0.9.4 組件：<b>先內嵌資源，再退回開發機的 NuGet 快取</b>。
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// 內嵌是必要條件：發佈出去的是單一執行檔，使用者端不會有 NuGet 全域快取裡的 0.9.4。
+    /// 先前只讀快取——而且其中一條候選路徑寫死了特定使用者名稱——等於「只有那台開發機能載入驅動」：
+    /// 其他機器上 MSR／PCI 設定空間／I/O 埠／MMIO 全數變成讀不到，而 <see cref="DriverReadyService"/>
+    /// 卻宣稱來源是「內嵌的 0.9.4」。快取那條保留給開發機（內嵌一時失效時還跑得起來），
+    /// 但路徑一律由環境推導，不再假設使用者名稱。
+    /// </para>
+    /// </remarks>
+    private static Assembly? Load094Assembly(out string error)
+    {
+        error = "";
+
+        // 1) 內嵌資源（正式路徑）
+        var stream = typeof(WinRing0Bridge).Assembly.GetManifestResourceStream(Embedded094);
+        if (stream is not null)
+        {
+            try
+            {
+                // 先讀進記憶體再載入。記憶體資料流刻意不釋放：組件映像留著比省這 0.7 MB 重要，
+                // 而載入失敗時它會被 GC 收走，沒有洩漏問題。
+                var ms = new MemoryStream();
+                stream.CopyTo(ms);
+                ms.Position = 0;
+                var alc = new AssemblyLoadContext("XinSpect-LHM094", isCollectible: false);
+                alc.Resolving += (c, name) => ResolveDependency(c, name, []);
+                return alc.LoadFromStream(ms);
+            }
+            catch (Exception ex)
+            {
+                error = "內嵌 LHM 0.9.4 載入失敗：" + ex.Message;
+            }
+        }
+        else
+        {
+            error = "組件內沒有內嵌 LHM 0.9.4（資源名 " + Embedded094 + "）。";
+        }
+
+        // 2) 開發機的 NuGet 全域快取（路徑由環境推導）
+        var dll = NuGetCacheCandidates().FirstOrDefault(File.Exists);
+        if (dll is null) return null;      // error 已帶內嵌那條的原因
+        try
+        {
+            var dir = Path.GetDirectoryName(dll)!;
+            var alc = new AssemblyLoadContext("XinSpect-LHM094-disk", isCollectible: false);
+            alc.Resolving += (c, name) => ResolveDependency(c, name, [dir]);
+            error = "";
+            return alc.LoadFromAssemblyPath(dll);
+        }
+        catch (Exception ex)
+        {
+            error = error + " 磁碟快取裡的 LHM 0.9.4 也載入失敗：" + ex.Message;
+            return null;
+        }
+    }
+
+    /// <summary>NuGet 全域快取裡的 0.9.4 組件候選路徑（由環境推導，不寫死使用者名稱）。</summary>
+    private static IEnumerable<string> NuGetCacheCandidates()
+    {
+        var rel = Path.Combine("librehardwaremonitorlib", "0.9.4", "lib", "netstandard2.0", "LibreHardwareMonitorLib.dll");
+        foreach (var root in new[]
+                 {
+                     Environment.GetEnvironmentVariable("NUGET_PACKAGES"),
+                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages"),
+                 })
+        {
+            if (!string.IsNullOrWhiteSpace(root)) yield return Path.Combine(root!, rel);
+        }
+    }
+
+    /// <summary>
+    /// 隔離 ALC 的相依解析：先看指定目錄（磁碟載入時的同層），再交給預設 ALC
+    /// （0.9.6 的相依已在行程裡：HidSharp、System.Management 等）。
+    /// </summary>
+    private static Assembly? ResolveDependency(AssemblyLoadContext context, AssemblyName name, string[] probeDirs)
+    {
+        foreach (var dir in probeDirs)
+        {
+            var candidate = Path.Combine(dir, name.Name + ".dll");
+            if (File.Exists(candidate)) return context.LoadFromAssemblyPath(candidate);
+        }
+        try { return AssemblyLoadContext.Default.LoadFromAssemblyName(name); }
+        catch { return null; }
+    }
+
+
     /// <summary>把 LHM 0.9.4 載入隔離 ALC 並反射出四個必需方法與四個選用方法；失敗回 null 並填入原因。</summary>
     private static Ring0Methods? Load(out string error)
     {
-        error = "";
-        var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var candidates = new[]
-        {
-            Path.Combine(userProfile, ".nuget", "packages", "librehardwaremonitorlib", "0.9.4", "lib", "netstandard2.0", "LibreHardwareMonitorLib.dll"),
-            Path.Combine(@"C:\Users\Administrator\.nuget\packages\librehardwaremonitorlib\0.9.4\lib\netstandard2.0", "LibreHardwareMonitorLib.dll"),
-        };
-        var dll = candidates.FirstOrDefault(File.Exists);
-        if (dll is null)
-        {
-            error = "找不到 LHM 0.9.4 套件（WinRing0 來源）。";
-            return null;
-        }
-
-        var context = new AssemblyLoadContext("XinSpect-LHM094", isCollectible: false);
-        context.Resolving += (alc, name) =>
-        {
-            var p = Path.Combine(Path.GetDirectoryName(dll)!, name.Name + ".dll");
-            return File.Exists(p) ? alc.LoadFromAssemblyPath(p) : null;
-        };
+        // 取得 0.9.4 組件：先內嵌資源（正式路徑）、再退回開發機的 NuGet 快取。
+        // 0.9.4 的 Ring0 以內嵌資源帶著 gzip 過的 WinRing0x64.sys，所以「拿得到組件」＝「拿得到驅動」。
+        var asm = Load094Assembly(out error);
+        if (asm is null) return null;
         try
         {
-            var asm = context.LoadFromAssemblyPath(dll);
             var ty = asm.GetType("LibreHardwareMonitor.Hardware.Ring0")
                 ?? throw new InvalidOperationException("找不到 Hardware.Ring0 類別");
             var open = ty.GetMethod("Open", All, Type.EmptyTypes);

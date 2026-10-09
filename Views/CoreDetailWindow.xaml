@@ -43,7 +43,8 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <local:CoreHeatmap Cores="{Binding Cores}" Margin="0,8,0,0"/>
+                    <!-- 實體核心數由開啟端帶進來（此視窗的 DataContext 是 OverclockService，取不到拓撲） -->
+                    <local:CoreHeatmap x:Name="HeatMap" Cores="{Binding Cores}" Margin="0,8,0,0"/>
                 </StackPanel>
             </Border>
 

@@ -21,7 +21,7 @@
     <Product>曦覽 XinSpect</Product>
     <AssemblyTitle>曦覽 XinSpect 硬體資訊總覽</AssemblyTitle>
     <Company>Xinglanclever</Company>
-    <Version>2.42</Version>
+    <Version>2.43</Version>
     <!-- FileVersion 只吃數字，表達不了「-B1」；第四段就是拿來標這種同版號的後續建置的 -->
     <FileVersion>2.30.0.0</FileVersion>
     <!-- 內嵌 PDB：發佈維持單一執行檔，CrashLog 記錄的堆疊仍帶行號（portable PDB 預設會另產生 XinSpect.pdb） -->
@@ -41,6 +41,10 @@
     <!-- ETW 消費（幀時間／DPC 延遲）：純 managed，零驅動、零注入 -->
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.16" />
     <PackageReference Include="NAudio" Version="2.*" />
+    <!-- WinRing0 的來源：LHM 0.9.6 起已移除 Ring0／WinRing0（0.9.4 的 Ring0 內嵌了 gzip 過的 WinRing0x64）。
+         單檔發佈的使用者端沒有 NuGet 快取，所以 0.9.4 必須跟著執行檔走（見檔尾的 EmbedLhm094）。
+         PackageDownload 只下載、不加入編譯參考，因此不會與上面 0.9.6 的參考版本衝突。 -->
+    <PackageDownload Include="LibreHardwareMonitorLib" Version="[0.9.4]" />
   </ItemGroup>
 
   <!-- 特殊型號的官方 logo 圖檔（選配）：放入 Assets\{cpu|gpu|disk|board}\{id}.png 即自動採用。
@@ -183,5 +187,22 @@
     </ItemGroup>
   </Target>
 
+
+  <!-- WinRing0 來源內嵌：LHM 0.9.4 的 Ring0 以內嵌資源帶著 gzip 過的 WinRing0x64.sys，所以把整個
+       0.9.4 組件帶上就等於把驅動帶上。先前執行期只讀 NuGet 快取（其中一條路徑還寫死成某個使用者
+       名稱），單檔發佈版在使用者端等於找不到驅動——MSR／PCI 設定空間／I/O 埠／MMIO 全數變成讀不到，
+       而驅動就緒卡卻宣稱來源是「內嵌的 0.9.4」。內嵌進來源跟著執行檔走；磁碟快取只留作開發機退路。 -->
+  <Target Name="EmbedLhm094" BeforeTargets="PrepareForBuild;BeforeCompile">
+    <PropertyGroup>
+      <Lhm094Dll>$(NuGetPackageRoot)librehardwaremonitorlib/0.9.4/lib/netstandard2.0/LibreHardwareMonitorLib.dll</Lhm094Dll>
+    </PropertyGroup>
+    <Error Condition="!Exists(&apos;$(Lhm094Dll)&apos;)" Text="找不到 LibreHardwareMonitorLib 0.9.4（WinRing0 來源）：$(Lhm094Dll)" />
+    <ItemGroup>
+      <EmbeddedResource Include="$(Lhm094Dll)">
+        <LogicalName>XinSpect.embedded.LibreHardwareMonitorLib-0.9.4.dll</LogicalName>
+        <Visible>false</Visible>
+      </EmbeddedResource>
+    </ItemGroup>
+  </Target>
 
 </Project>

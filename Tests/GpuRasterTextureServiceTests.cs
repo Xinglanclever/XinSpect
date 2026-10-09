@@ -133,14 +133,23 @@ public class GpuRasterTextureServiceTests
         var workload = new GpuRasterWorkload(320, 240, 256, 3, 0, 1);
         var context = new GpuRasterContext(workload, DeepBenchRunProfile.Quick, new Progress<DeepBenchProgress>(), CancellationToken.None);
 
-        GpuRasterMeasurement measurement = await new D3D11RasterEngine().MeasureAsync(context, CancellationToken.None);
-
-        Assert.Equal(3, measurement.Scenarios.Count);
-        Assert.All(measurement.Scenarios, scenario =>
+        try
         {
-            Assert.NotEqual(0u, scenario.Run.ReadbackChecksum);
-            Assert.All(scenario.Run.Samples, sample => Assert.True(double.IsFinite(sample.GigapixelsPerSecond) && sample.GigapixelsPerSecond > 0));
-        });
+            GpuRasterMeasurement measurement = await new D3D11RasterEngine().MeasureAsync(context, CancellationToken.None);
+
+            Assert.Equal(3, measurement.Scenarios.Count);
+            Assert.All(measurement.Scenarios, scenario =>
+            {
+                Assert.NotEqual(0u, scenario.Run.ReadbackChecksum);
+                Assert.All(scenario.Run.Samples, sample => Assert.True(double.IsFinite(sample.GigapixelsPerSecond) && sample.GigapixelsPerSecond > 0));
+            });
+        }
+        catch (GpuUnsupportedException ex)
+        {
+            // 環境沒有 D3D11 硬體配接器（只剩虛擬顯示轉接器）時，引擎必須拒絕出數字——
+            // 拒絕本身是被測行為的另一半：不冒充量過，也不当成程式缺陷。拒絕一定要有原因。
+            Assert.False(string.IsNullOrWhiteSpace(ex.Message));
+        }
     }
 
     private static GpuRasterTextureService CreateService(GpuRasterMeasurement measurement) =>

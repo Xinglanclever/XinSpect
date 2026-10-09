@@ -568,9 +568,11 @@
                                 Click="OpenCoreDetail_Click" Content="每核心明細 ↗"
                                 ToolTip="開啟獨立視窗：每核心即時溫度、每核心電壓設定值與封裝 Vcore／電流波形"/>
                     </Grid>
-                    <TextBlock Text="每格對應一個實體核心，紅＝熱、藍＝冷。" FontSize="12" Margin="0,0,0,8"
+                    <TextBlock Text="每格對應一個實體核心，紅＝熱、藍＝冷；缺讀值的那幾格不會被拿掉，會如實留白。" FontSize="12" Margin="0,0,0,8"
                                Foreground="{DynamicResource MutedInkBrush}"/>
-                    <local:CoreHeatmap Cores="{Binding Overclock.Cores}"/>
+                    <!-- PhysicalCores＝拓撲實體核心數：格數由它決定，感測器少回幾顆時才補得出來 -->
+                    <local:CoreHeatmap Cores="{Binding Overclock.Cores}"
+                                       PhysicalCores="{Binding CpuTopology.PhysicalCores}"/>
                 </StackPanel>
             </Border>
 

@@ -40,8 +40,12 @@ public class TrendSentinelServiceTests : IDisposable
     private HistoryStore Fill(Func<int, double[]> metricAt)
     {
         var store = new HistoryStore(_dir);
-        var t0 = new DateTime(2026, 10, 8, 0, 0, 0, DateTimeKind.Utc);
         int count = metricAt(-1).Length;
+        // 資料基準必須落在下方各測試用的查詢窗 [UtcNow−1 天, UtcNow+1 天] 之內。
+        // 這裡原本寫死 new DateTime(2026, 10, 8, 0, 0, 0, Utc)：寫測試當天樣本確實在窗內，
+        // 隔天 UTC 05:00 起窗的起點就越過樣本尾端——Query 回空、8 條斷言同時紅。
+        // 服務本身沒有壞，是測試自己的定時炸彈；任何寫死的資料基準配上相對查詢窗都會這樣爛掉。
+        var t0 = DateTime.UtcNow.AddMinutes(-(count + 1));
         for (int i = 0; i < count; i++)
         {
             var values = new double[HistoryMetrics.Count];

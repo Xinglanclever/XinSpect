@@ -41,7 +41,8 @@ public static class EvidenceCollection
     }
 
     /// <summary>
-    /// usermode（不需驅動）事實的<b>單一組合點</b>：目前是儲存可靠性計數器（WMI）。
+    /// usermode（不需驅動）事實的<b>單一組合點</b>：儲存可靠性計數器、驅動靜態檢視、裝置安裝時間線、
+    /// .etl 讀回、ESP 檔案層掃描、音訊端點、開機計時、網路卸載（皆為唯讀來源）。
     /// </summary>
     /// <remarks>
     /// <b>為什麼要另外開一個入口，而不是塞進 <see cref="ReloadInto"/>：</b>
@@ -65,6 +66,14 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 SetupApiTimelineService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadEtlReadback(); }
         catch { /* 附加功能：讀不到由 EtlReadbackService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadEspScan(); }
+        catch { /* 附加功能：讀不到由 EspScanService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadAudioEndpoints(); }
+        catch { /* 附加功能：讀不到由 AudioEndpointFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadBootTiming(); }
+        catch { /* 附加功能：讀不到由 BootTimingFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadNetOffload(); }
+        catch { /* 附加功能：讀不到由 NetOffloadFactsService 標三態，不在這裡中斷啟動 */ }
     }
 
     /// <summary>BIOS 區 vs 參考映像的比對（UI 與 CLI 共用入口）：組合後端後跑一次比對，回結果事實。</summary>

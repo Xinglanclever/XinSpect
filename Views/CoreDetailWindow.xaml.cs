@@ -8,10 +8,13 @@ namespace XinSpect;
 /// </summary>
 public partial class CoreDetailWindow : Window
 {
-    public CoreDetailWindow(OverclockService overclock)
+    /// <param name="overclock">每核心資料來源（此視窗的 DataContext）。</param>
+    /// <param name="physicalCores">拓撲回報的實體核心數（0＝未知）：熱區圖靠它補出缺讀值的格子。</param>
+    public CoreDetailWindow(OverclockService overclock, int physicalCores = 0)
     {
         InitializeComponent();
         DataContext = overclock;
+        HeatMap.PhysicalCores = physicalCores;
         // 獨立視窗不在主視覺樹的逐頁轉換範圍：開啟時自己轉換一次（冪等，重複呼叫安全）。
         if (LanguageService.IsSimplified)
             LanguageService.ConvertVisualTree(this, true);
