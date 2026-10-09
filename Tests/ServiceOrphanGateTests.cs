@@ -118,15 +118,23 @@ public class ServiceOrphanGateTests
     {
         string root = RepoRoot();
         var declared = DeclaredServices(root).Select(d => d.Name).ToHashSet(StringComparer.Ordinal);
+        // 登记表也收「真實存在但不以 Service 結尾」的能力類別（如 LocalApiHandler）——
+        // 對它們的核對是「類別还在不在」，而不是「是不是 Service 命名的孤兒」。
+        var allClasses = Directory.EnumerateFiles(Path.Combine(root, "Services"), "*.cs", SearchOption.AllDirectories)
+            .SelectMany(f => Regex.Matches(File.ReadAllText(f), @"public\s+(?:static\s+|sealed\s+|abstract\s+|partial\s+)*class\s+(\w+)").Select(m => m.Groups[1].Value))
+            .ToHashSet(StringComparer.Ordinal);
         var production = ProductionFiles(root).Select(p => (Path: Path.GetFullPath(p), Text: File.ReadAllText(p))).ToList();
 
         foreach (var name in WiringDecisions.Deferred.Keys)
         {
-            Assert.True(declared.Contains(name),
+            Assert.True(allClasses.Contains(name),
                 $"{name} 在登记表，但 Services/ 裡已沒有這個公開類別——判定要跟著刪掉或改名");
-            bool referenced = production.Any(x => ReferencedOutsideItsOwnDeclaration(x.Text, name));
-            Assert.False(referenced,
-                $"{name} 已被生產碼引用了——還留在登记表就是過時判定，把這筆刪掉（登记表只收『刻意不接』的決定）");
+            if (declared.Contains(name))
+            {
+                bool referenced = production.Any(x => ReferencedOutsideItsOwnDeclaration(x.Text, name));
+                Assert.False(referenced,
+                    $"{name} 已被生產碼引用了——還留在登记表就是過時判定，把這筆刪掉（登记表只收『刻意不接』的決定）");
+            }
         }
     }
 

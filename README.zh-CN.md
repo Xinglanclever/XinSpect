@@ -4,10 +4,10 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一执行文件发布，免安装；对硬件与系统的读取以只读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-2.47-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.48-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-3648%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-3652%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-MIT-green)
 
@@ -79,10 +79,10 @@
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.47/XinSpect.exe) | 31,245,611 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.47/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.48/XinSpect.exe) | 31,245,611 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.48/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 
-> **本表的字节数为本版（v2.47）实际发布的文件大小**；请以 Release 页面列出的文件为准。
+> **本表的字节数为本版（v2.48）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
 系统需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含发布则免装）。显卡深测需要 D3D11 兼容设备；MSR 读取、SMART ioctl、Security 事件日志需以系统管理员执行——没有权限时相关项目标示「权限不足」，程序不会假装成功，也不会静默降级。
 
@@ -337,6 +337,8 @@
 
 ```
 XinSpect.exe --json evidence [--query <查询>] [--out <文件>]
+XinSpect.exe --compare-flash <参考镜像> [--out <文件>]
+XinSpect.exe --verify-audit [日志路径] [--out <文件>]
 ```
 
 退出码：0＝全部事实 Present；2＝部分事实为三态；1＝致命错误。CLI 在单一实例逻辑之前分支——不建具名信号、不触发多开对话框，适合脚本与排程。
@@ -353,7 +355,7 @@ value ~ FLOCKDN
 
 PowerShell 模块 `XinSpect.psm1`：`Get-XinSpectEvidence` 封装 CLI 呼叫（文件必须 UTF-8 BOM，机器检查守住）。
 
-本机 API handler：`GET /api/facts` 返回全部事实（canonical JSON，与时间胶囊同一形状）；`POST /api/query` 接受查询语言全文（单一含点 token 兼容旧前缀语意；无运算子的 nonsense 输入回 400 带修正指引）。设计为 loopback 只读、匿名机器识别；HTTP 监听壳未自动启动，启动方式随 CLI 整合轮再定。
+本机 API handler：`GET /api/facts` 返回全部事实（canonical JSON，与时间胶囊同一形状）；`POST /api/query` 接受查询语言全文（单一含点 token 兼容旧前缀语意；无运算子的 nonsense 输入回 400 带修正指引）。设计为 loopback 只读、匿名机器识别；HTTP 监听壳刻意不启动（判定登记表有决定与条件：开监听＝新增本机攻击面，属用户决定）——headless 的出口由 CLI 承担（--json evidence），审计日志的 App 外验证走 --verify-audit。
 
 ## 十二、公开规格与文档
 
@@ -422,6 +424,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.48 Olympus**（2026-10-10）：审计链的 App 外验证入口——CLI 新增 --verify-audit：逐笔重算审计日志杂湊链、输出 fileExists／chainValid／checkedEntries 与断点原因，退出码 0＝链完整（日志不存在如实标「还没有审计事件」，不假称通过）、2＝链断或损毁、1＝致命。能产日志却不能在 App 外证明日志没被改，『可证明』的主张就打折扣——本机现况实测 687 笔链完整。LocalApiHandler 写入判定登记表（HTTP 壳刻意不启动是决定不是遗漏：开监听＝本机攻击面；headless 出口由 CLI 承担），登记表验证同步支持非 Service 结尾的能力类别。测试 +4（3652 绿）。
 - **v2.47 Olympus**（2026-10-10）：Uncore 事实接线＋孤儿服务完整性网——UncorePmuService 接进证据实验室（pmu.uncore.platform／ratio_limit／perf_status 三键，目录 150 → 153；平台白名单判定先行，未收录平台一个 MSR 都不碰，三态各附原因）；新增 WiringDecisions 判定登记表（刻意不接线要写名字与理由：SMN 写入面、WASAPI 主动捕获、上传通路刻意不实作、假容量写操作）与 ServiceOrphanGateTests：每个公开服务要么被生产引用、要么在登记表有判定，登记表过时也红灯。扫描踩坑：同档宣告＋同档真实引用（ScmDriverService）不能整档排除，改行级判断。测试 +10（3648 绿）。
 - **v2.46 Olympus**（2026-10-10）：发布治理——新增 Tools/verify-release.ps1 发布后验证脚本（README 下载链接逐一查 Release 存在、资产大小与表列字节数对账、版号六处一致；匿名 API 限流自动改向 Git Credential Manager 取 token；任一失败非零退出）与 ReleaseIntegrityTests 三条（「字节数为本版实际发布」宣称与下载链接同版本——防「文字跟着跳、数字没跳」再现；宣称版本等于项目版本号；验证脚本存在且带 UTF-8 BOM——PS 5.1 读无 BOM 的 UTF-8 会把中文当 ANSI 炸）。本版不加功能：先把发布管线修好再走。测试 +3（3638 绿）。
 - **v2.45 Olympus**（2026-10-10）：环境假设守门——清掉生产代码两处写死开发机路径（PaddleOCR-VL 目录、CPU-Z 搜索变体），改环境推导、找不到如实回 null；新增守门测试扫「驱动器:\Users\<用户名>」与「:\Desktop\」字面值，角色与 ACL 名（WindowsBuiltInRole.Administrator、BUILTIN\Administrators）不误报、SpecialFolder 推导写法不误报，白名单每笔要理由、上限 5（目前为空）。与 v2.43 的 WinRing0 同族缺陷：用户端的静默失灵长得像「没有这个功能」，不像「路径假设错了」。测试 +3（3635 绿）。

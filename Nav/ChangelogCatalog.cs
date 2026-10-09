@@ -48,6 +48,19 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.48",
+            Date = "2026-10-10",
+            Title = "審計鏈的 App 外驗證入口（CLI --verify-audit）＋本機 API 的顯式決定",
+            Items =
+            [
+                "CLI 新增 --verify-audit [日誌路徑]：逐筆重算審計日誌的雜湊鏈（序號連續＋PreviousHash 串接＋內容重算），輸出 fileExists／chainValid／checkedEntries／failureReason。退出碼 0＝鏈完整、2＝鏈斷或檔案損毀、1＝致命。審計日誌從「能產生」補上「能在 App 外被第三方驗證」——能產日誌卻不能證明日誌沒被改，可證明性主張就打了折。本機現況實測：687 筆、鏈完整、退出碼 0。",
+                "誠實界線釘進測試：日誌檔案不存在時輸出 fileExists:false＋說明「還沒有任何審計事件」，不是空陣列假稱「驗證通過」；篡改中間一筆，輸出指出斷在第幾筆（改該筆雜湊也逃不過下一筆的 PreviousHash 斷裂）；損毀檔案標為無效而非 0 筆的「完整」。",
+                "LocalApiHandler 寫入 WiringDecisions 判定登记表：HTTP 監聽殼刻意不啟動是決定不是遺漏——開監聽等於新增本機攻擊面與外洩路徑，屬需要使用者點頭的產品決定；事實的 headless 出口由 CLI 承擔，README 本機 API 節改寫為這個明確說法（原文「啟動方式隨 CLI 整合輪再定」已由這一輪的 --verify-audit 收掉）。登记表驗證同步支援非 Service 結尾的能力類別。",
+                "測試 +4（3648 → 3652）。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.47",
             Date = "2026-10-10",
             Title = "Uncore 事實接線＋孤兒服務完整性網（判定登记表：沉默不是選項）",

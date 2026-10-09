@@ -4,10 +4,10 @@
 
 一款免費開源、運行於 Windows 的原生硬體驗機、監控與安全稽核工具。以單一執行檔發佈，免安裝；對硬體與系統的讀取以唯讀為原則，少數涉及寫入的功能均設有同意閘門並明確標註風險。本程式不收集、不上傳任何使用者資料。
 
-![版本](https://img.shields.io/badge/version-2.47-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.48-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-3648%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-3652%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-MIT-green)
 
@@ -79,10 +79,10 @@
 
 | 檔案 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.47/XinSpect.exe) | 31,245,611 bytes | 主程式。藍色中隊守護進程已內建 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.47/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.48/XinSpect.exe) | 31,245,611 bytes | 主程式。藍色中隊守護進程已內建 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.48/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
 
-> **上表的位元組數為本版（v2.47）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v2.48）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
 系統需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含發佈則免裝）。顯示卡深測需要 D3D11 相容裝置；MSR 讀取、SMART ioctl、Security 事件記錄需以系統管理員執行——沒有權限時相關項目標示「權限不足」，程式不會假裝成功，也不會靜默降級。
 
@@ -340,9 +340,11 @@
 
 ```
 XinSpect.exe --json evidence [--query <查詢>] [--out <檔案>]
+XinSpect.exe --compare-flash <參考映像> [--out <檔案>]
+XinSpect.exe --verify-audit [日誌路徑] [--out <檔案>]
 ```
 
-退出碼：0＝全部事實 Present；2＝部分事實為三態；1＝致命錯誤。CLI 在單一實例邏輯之前分支——不建具名信號、不觸發多開對話框，適合腳本與排程。
+退出碼：0＝全部事實 Present（或審計鏈完整）；2＝部分事實為三態／審計鏈斷；1＝致命錯誤。CLI 在單一實例邏輯之前分支——不建具名信號、不觸發多開對話框，適合腳本與排程。`--verify-audit` 逐筆重算審計日誌的雜湊鏈並輸出 `fileExists／chainValid／checkedEntries` 與斷點原因（日誌不存在如實標注，不假稱「驗證通過」）。
 
 查詢語言：一行一子句；`#` 開頭為註解；值含空格吃到行尾。欄位七種（key／category／source／value／availability／since／until），運算子三種（`=` 精確、`~=` 子字串包含不分大小寫、`^=` 前綴）；availability 支援別名（ok／error／no-permission）。子句之間為 AND。語法錯誤丟 ParseException 帶修正指引。範例：
 
@@ -356,7 +358,7 @@ value ~ FLOCKDN
 
 PowerShell 模組 `XinSpect.psm1`：`Get-XinSpectEvidence` 封裝 CLI 呼叫（檔案必須 UTF-8 BOM，機器檢查守住）。
 
-本機 API handler：`GET /api/facts` 返回全部事實（canonical JSON，與時間膠囊同一形狀）；`POST /api/query` 接受查詢語言全文（單一含點 token 相容舊前綴語意；無運算子的 nonsense 輸入回 400 帶修正指引）。設計為 loopback 唯讀、匿名機器識別；HTTP 監聽殼未自動啟動，啟動方式隨 CLI 整合輪再定。
+本機 API handler：`GET /api/facts` 返回全部事實（canonical JSON，與時間膠囊同一形狀）；`POST /api/query` 接受查詢語言全文（單一含點 token 相容舊前綴語意；無運算子的 nonsense 輸入回 400 帶修正指引）。設計為 loopback 唯讀、匿名機器識別；HTTP 監聽殼刻意不啟動（判定登记表有決定與條件：開監聽＝新增本機攻擊面，屬使用者決定）——headless 的出口由 CLI 承擔（`--json evidence`），審計日誌的 App 外驗證走 `--verify-audit`。
 
 ## 十二、公開規格與文件
 
@@ -425,6 +427,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.48 Olympus**（2026-10-10）：審計鏈的 App 外驗證入口——CLI 新增 --verify-audit：逐筆重算審計日誌雜湊鏈、輸出 fileExists／chainValid／checkedEntries 與斷點原因，退出碼 0＝鏈完整（日誌不存在如實標「還沒有審計事件」，不假稱通過）、2＝鏈斷或損毀、1＝致命。能產日誌卻不能在 App 外證明日誌沒被改，『可證明』的主張就打了折——本機現況實測 687 筆鏈完整。LocalApiHandler 寫入判定登记表（HTTP 殼刻意不啟動是決定不是遺漏：開監聽＝本機攻擊面；headless 出口由 CLI 承擔），登记表驗證同步支援非 Service 結尾的能力類別。測試 +4（3652 綠）。
 - **v2.47 Olympus**（2026-10-10）：Uncore 事實接線＋孤兒服務完整性網——UncorePmuService 接進證據實驗室（pmu.uncore.platform／ratio_limit／perf_status 三鍵，目錄 150 → 153；平台白名單判定先行，未收錄平台一個 MSR 都不碰，三態各附原因）；新增 WiringDecisions 判定登记表（刻意不接線要寫名字與理由：SMN 寫入面、WASAPI 主動捕獲、上傳通路刻意不實作、假容量寫操作）與 ServiceOrphanGateTests：每個公開服務要嘛被生產引用、要嘛在登记表有判定，登记表過時也紅燈。掃描踩坑：同檔宣告＋同檔真實引用（ScmDriverService）不能整檔排除，改行級判斷。測試 +10（3648 綠）。
 - **v2.46 Olympus**（2026-10-10）：發佈治理——新增 Tools/verify-release.ps1 發佈後驗證腳本（README 下載連結逐一查 Release 存在、資產大小與表列位元組數對帳、版號六處一致；匿名 API 限流自動改向 Git Credential Manager 取 token；任一失敗非零退出）與 ReleaseIntegrityTests 三條（「位元組數為本版實際發佈」宣稱與下載連結同版本——防「文字跟著跳、數字沒跳」再現；宣稱版本等於專案版號；驗證腳本存在且帶 UTF-8 BOM——PS 5.1 讀無 BOM 的 UTF-8 會把中文當 ANSI 炸）。本版不加功能：先把發佈管線修好再走。測試 +3（3638 綠）。
 - **v2.45 Olympus**（2026-10-10）：環境假設守門——清掉生產碼兩處寫死開發機路徑（PaddleOCR-VL 目錄、CPU-Z 搜尋變體），改環境推導、找不到如實回 null；新增守門測試掃「磁碟機:\Users\<使用者名>」與「:\Desktop\」字面值，角色與 ACL 名（WindowsBuiltInRole.Administrator、BUILTIN\Administrators）不誤報、SpecialFolder 推導寫法不誤報，白名單每筆要理由、上限 5（目前為空）。與 v2.43 的 WinRing0 同族缺陷：使用者端的靜默失靈長得像「沒有這個功能」，不像「路徑假設錯了」。測試 +3（3635 綠）。

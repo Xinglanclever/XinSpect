@@ -34,6 +34,11 @@ public static class WiringDecisions
             ["FakeCapacityTestService"] =
                 "假容量驗證是寫入操作（寫滿→讀回→刪檔），必須留在有同意閘門的互動路徑裡；" +
                 "自動接進事實收集等於未經同意就往磁碟寫資料，違反本專案的同意閘門慣例（WP22/WP27 同款處理）。",
+            ["LocalApiHandler"] =
+                "本機 API 的請求處理是純函式且有完整單元測試；刻意不啟動的只有 HTTP 監聽殼——" +
+                "開監聽＝新增一個本機攻擊面與資料外洩路徑，屬需要使用者點頭的產品決定，不是漏接線。" +
+                "README 功能節已如實標「HTTP 監聽殼未自動啟動」；事實的頭less 出口由 CLI（--json）承擔，" +
+                "重新啟動的條件＝使用者明確要 API 入口並同意 loopback 綁定與 token 政策。",
             // 註：Services/ExternalAcquisitionService.cs 是接縫檔（interface IExternalAcquisition＋
             // NullAcquisition），檔內沒有 *Service 類別，不在本表掃描範圍——它属于「實作未存在」
             // 的預留接縫，主綱 §5.11 能力矩陣那一輪再處置。

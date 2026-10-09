@@ -20,6 +20,7 @@ public static class CliService
     public const string OutArg = "--out";
     public const string HelpArg = "--help";
     public const string CompareArg = "--compare-flash";
+    public const string VerifyAuditArg = "--verify-audit";
 
     public const int ExitOk = 0;
     public const int ExitPartial = 2;
@@ -42,6 +43,8 @@ public static class CliService
         }
         if (args[0] == CompareArg)
             return RunCompare(args, compare, stdout, stderr);
+        if (args[0] == VerifyAuditArg)
+            return RunVerifyAudit(args, stdout, stderr);
         if (args[0] != JsonArg)
         {
             stderr.WriteLine($"未知引數「{args[0]}」。用 --help 看用法。");
@@ -154,6 +157,55 @@ public static class CliService
         return fact.Availability == FactAvailability.Present && fact.NumericValue == 0 ? ExitOk : ExitPartial;
     }
 
+    /// <summary>
+    /// 審計日誌驗證模式：能產生審計日誌，也要能在 App 外驗證它沒被改——
+    /// 雜湊鏈的價值只在「可被第三方驗證」時才成立。
+    /// 退出碼：0＝鏈完整（含「檔案不存在＝還沒有審計事件」，輸出如實標 fileExists）；
+    /// 2＝鏈斷／損毀（第幾筆、什麼樣的斷法都在輸出裡）；1＝致命（路徑是目錄等）。
+    /// </summary>
+    private static int RunVerifyAudit(string[] args, TextWriter stdout, TextWriter stderr)
+    {
+        string path = args.Length >= 2 && !args[1].StartsWith("--", StringComparison.Ordinal)
+            ? args[1]
+            : AuditLogService.DefaultPath;
+        string? outPath = OptionValue(args, OutArg);
+
+        bool fileExists;
+        try { fileExists = File.Exists(path); }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"無法檢查日誌路徑：{ex.Message}");
+            return ExitError;
+        }
+
+        var verdict = AuditVerifier.VerifyFile(path);
+        var payload = new
+        {
+            generatedAtUtc = DateTimeOffset.UtcNow,
+            scope = "verify-audit",
+            path,
+            fileExists,
+            chainValid = verdict.Valid,
+            checkedEntries = verdict.CheckedCount,
+            failureReason = verdict.FailureReason,
+            note = fileExists
+                ? "逐筆重算雜湊＋前綴串接檢查；改中間一筆必然讓該筆或後續 PreviousHash 不符。"
+                : "檔案不存在＝還沒有任何審計事件（時間膠囊建立／比較時才會追加），不是「驗證通過」也不是錯誤。",
+        };
+        string json = JsonSerializer.Serialize(payload, JsonOptions);
+        try
+        {
+            if (outPath is not null) File.WriteAllText(outPath, json);
+            else stdout.WriteLine(json);
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"寫出失敗：{ex.Message}");
+            return ExitError;
+        }
+        return verdict.Valid ? ExitOk : ExitPartial;
+    }
+
     private static object FactJson(HardwareFact f) => new
     {
         f.Key, f.Category, f.Name, f.Value, f.Unit, f.Source, f.Trust,
@@ -175,6 +227,7 @@ public static class CliService
             用法：
               XinSpect --json evidence [--query <key 前綴>] [--out <檔案>]
               XinSpect --compare-flash <參考映像> [--out <檔案>]
+              XinSpect --verify-audit [日誌路徑] [--out <檔案>]
               XinSpect --help
 
             範圍：
@@ -185,6 +238,8 @@ public static class CliService
                               （其餘全機快照——SMBIOS／GPU／Windows Update 歷史——依賴 WPF
                               服務層，本模式未涵蓋；磁碟面只涵蓋可靠性計數器，不含 SMART。）
               compare-flash   BIOS 區 vs 參考映像逐 4KB 塊比對（映像＝原廠或信任來源的 BIOS 區 dump）。
+              verify-audit    審計日誌雜湊鏈驗證（預設 %ProgramData%\XinSpect\Audit\audit.json；
+                              可帶路徑）。輸出 fileExists／chainValid／checkedEntries 與斷點原因。
 
             選項：
               --query <前綴>   只輸出 key 以該前綴開頭的事實（例：--query platform.）
@@ -194,6 +249,8 @@ public static class CliService
               --json evidence   0＝全部 Present；2＝有非 Present 的事實（讀不到，或提供者沒提供
                                 該欄位——兩者都不算「有值」，三態細節在輸出）；1＝致命錯誤。
               --compare-flash   0＝一致；2＝有差異或無法完成比對（三態細節在輸出）；1＝致命錯誤。
+              --verify-audit    0＝鏈完整（或尚無日誌檔，輸出如實標 fileExists＝false）；
+                                2＝鏈斷或檔案損毀（斷點在第幾筆、什麼型別，都在輸出）；1＝致命。
             讀不到的事實如實帶 availability 與原因，絕不以 0／典型值頂替。
             """);
     }
