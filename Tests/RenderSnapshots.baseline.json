@@ -1,0 +1,9 @@
+{
+  "note": "HeatScale \u7CFB\u7B97\u7E6A\u5FEB\u7167\u57FA\u7DDA\uFF1B\u66F4\u65B0\u6A5F\u5236\u898B HeatScaleRenderSnapshotTests\u3002",
+  "updatedUtc": "2026-10-09T22:37:26.2046224\u002B00:00",
+  "cases": {
+    "core-heatmap": "90f643fb88485aacdb4f906f116c712766ff27d95c748922ddcef6b0b21c3b0a",
+    "core-empty": "f56f4908f2dcadb96b11861f6355712bfe3f04f9ee075bfe563c20a7f08d8b94",
+    "core-columns": "73a91846f6e31af71d26b702d9511670d4004846a7a44cbca30ac64a92c8cc41"
+  }
+}

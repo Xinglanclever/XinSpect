@@ -48,6 +48,19 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.53",
+            Date = "2026-10-10",
+            Title = "算繪快照守門：HeatScale 系像素基線進倉庫",
+            Items =
+            [
+                "新增 Tests/HeatScaleRenderSnapshotTests.cs（主綱 §5.7）：熱區圖、逐核液柱、空板誠實路徑三個場景算繪成固定尺寸點陣圖（RenderTargetBitmap 走 MILSW 軟體光柵化，不經 D3D），PNG 位元組取 SHA-256 與倉庫內 Tests/RenderSnapshots.baseline.json 逐案比對。既有測試驗資料契約與繫結不炸；『顏色悄悄換了』『圖例長歪了』這類像素級回歸只有真的畫出來比對才抓得到。",
+                "輸入全凍結：固定假核心資料（含一格無讀值走『—』誠實空格、物理 8 核補兩格）、深色佈景＋藍色強調（不隨其他 WPF 測試殘留）、Motion.Suspend 停動畫、固定版面尺寸。實測連跑多次 hash 相同；負對照測試過——把基線改成錯 hash 即紅、還原即綠。",
+                "更新機制是故意設計的一等公民：XINSPECT_RENDER_SNAPSHOT_UPDATE=1 時重生成並寫回基線檔。快照基線與繪製機器的字型／WPF 光柵器版本綁定，換機紅燈時的正確動作為重生成後親眼看過新畫面再 commit 基線——這是『故意更新』，不是放寬守門；缺基線檔時測試直接紅並給出指令，絕不靜默綠。",
+                "測試 +4（3671 綠）。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.52",
             Date = "2026-10-10",
             Title = "能力矩陣 cap.*：一眼分清「環境不支援」與「通路未就緒」",
