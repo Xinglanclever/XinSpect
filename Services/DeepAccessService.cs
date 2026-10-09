@@ -299,14 +299,14 @@ public sealed class DeepAccessService : ObservableObject
         try
         {
             if (!File.Exists(CaCerPath)) return false;
-            ca = new X509Certificate2(CaCerPath);
+            ca = X509CertificateLoader.LoadCertificateFromFile(CaCerPath);
             return string.Equals(ca.Subject, CaSubject, StringComparison.Ordinal);
         }
         catch { return false; }
     }
 
     private static X509Certificate2 PublicOnly(X509Certificate2 cert)
-        => new(cert.Export(X509ContentType.Cert)); // 裝進信任庫一律用無私鑰的公憑證
+        => X509CertificateLoader.LoadCertificate(cert.Export(X509ContentType.Cert)); // 裝進信任庫一律用無私鑰的公憑證
 
     private static bool IsCurrentUserElevated()
     {

@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
 
 namespace XinSpect;
@@ -203,7 +203,7 @@ public sealed class GpuCodecService
         {
             // QI 到 ID3D11VideoDevice
             var iid = typeof(ID3D11VideoDeviceCom).GUID;
-            hr = Marshal.QueryInterface(device, ref iid, out var videoDevice);
+            hr = Marshal.QueryInterface(device, in iid, out var videoDevice);   // QI 不修改 IID；in 才是正確語意（CS9191）
             if (hr != 0)
                 throw new InvalidOperationException($"QueryInterface(ID3D11VideoDevice) 失敗 HRESULT=0x{hr:X8}");
             try

@@ -785,7 +785,7 @@ public sealed class EvidenceLabService : ObservableObject
             var path = AuditLogService.DefaultPath;
             var log = AuditLogService.Load(path);
             log.Add(AuditLogService.Append(log, AuditLogService.CurrentOperator(), machineId,
-                action, scope, summary, resultHash, DateTimeOffset.UtcNow));
+                action, scope, summary, resultHash ?? "", DateTimeOffset.UtcNow));   // 無結果雜湊＝空字串，Append 的表欄位不存 null
             AuditLogService.Save(path, log);
         }
         catch { /* 審計為附加功能；本機磁碟不可寫等情況不影響驗機主流程 */ }

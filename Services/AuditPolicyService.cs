@@ -59,7 +59,7 @@ public static class AuditPolicyService
     /// <summary>稽核描述的純函式：總開關＋九類別等級 → 繁中摘要。等級 0 不列（未設定不是值）。</summary>
     public static string Describe(bool auditingMode, IReadOnlyList<int> options)
     {
-        var parts = new List<string>();
+        var parts = new List<string?>();   // 0＝未設定 的分支本來就是 null；下方 Where 過濾
         for (int i = 0; i < CategoryNames.Length && i < options.Count; i++)
         {
             parts.Add(options[i] switch

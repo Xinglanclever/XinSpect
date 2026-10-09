@@ -48,6 +48,19 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.50",
+            Date = "2026-10-10",
+            Title = "建置警告清零＋警告基線守門（沒有東西在數＝沒有守門）",
+            Items =
+            [
+                "主專案 13 條編譯警告全數修掉並重建實測歸零：CS8604／CS8629（可空直接 dereference，各自補明確的 null 分支或模式匹配）、CS0219（未使用變數：UefiSignatureFactsService 的 attrib、MemoryPoolService 的 perf 結構——後者連帶删掉整條誤導注釋）、SYSLIB0057（X509Certificate2 檔案／位元組構造函數在 .NET 10 已過時，改 X509CertificateLoader.LoadCertificateFromFile／LoadCertificate——DeepAccess 自簽 CA 的裝庫路徑行為等價）、CS9191（QueryInterface 的 IID 參數 ref→in，QI 不寫回 IID）、CS8600／CS8602（可空推導與shader 位碼 null 收口）。",
+                "順手收掉兩顆會真炸的隱患：SmartFailingNowFactsService 的 probe() 傳入者回 null 時原本直接 .Value 崩（現改為明確的 ReadError 三態條目）；thresholds（0xD1 門檻表）讀不到時原本被當非空傳進評比值——現在門檻缺失如實標「不比對門檻，只列屬性現值」，不是靜默比對出錯誤結論。",
+                "新增 WarningBaselineTests：對主專案跑一次真的小組建（獨立輸出目錄 obj/_warncheck/，不碰開發中的建置產物），以「檔案(行,欄): warning 代碼」去重計數（MSBuild 會依 pass／_wpftmp 重複輸出同一條 4 次，去重才是真數——實測 52→13）；基線設 0：任何新增警告讓全套紅，明細直接列在紅燈訊息裡。與測試數基線同款成功模式：先有數字，才守得住。",
+                "測試 +1（3656 → 3657）。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.49",
             Date = "2026-10-10",
             Title = "三方對帳收口：執行期真正產生的鍵 vs 申報的鍵，逐鍵比對",

@@ -111,7 +111,6 @@ public static class UefiSignatureFactsService
         {
             // 先以 0 長度查大小
             uint size = 0;
-            uint attrib = 0;
             var guidStr = name.StartsWith("db") || name == "PK" || name == "KEK"
                 ? name.StartsWith("db") ? FormatGuidString(GuidImageSecurity) : FormatGuidString(GuidGlobalVar)
                 : FormatGuidString(GuidGlobalVar);

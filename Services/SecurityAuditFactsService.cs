@@ -98,7 +98,7 @@ public static class SecurityAuditFactsService
             while (reader.ReadEvent() is { } evt)
             {
                 using (evt)
-                    times.Add(new DateTimeOffset(evt.TimeCreated.Value, TimeSpan.Zero));
+                    if (evt.TimeCreated is { } tc) times.Add(new DateTimeOffset(tc, TimeSpan.Zero));
                 if (times.Count >= 20) break; // 上限 20 筆
             }
             return times;

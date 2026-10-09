@@ -19,8 +19,11 @@ public static class SmartFailingNowFactsService
         string disk = diskLabel ?? "PhysicalDrive";
         if (probe is not null)
         {
-            var single = probe();
-            var (attrs, thresholds, wctemp) = single.Value;
+            if (probe() is not { } single)
+                return [new HardwareFact("smart.failing_now.count", Category, "SMART failing-now", "", "",
+                    "SMART READ DATA＋READ THRESHOLDS", FactTrustLevel.Unknown, false, at, null,
+                    FactAvailability.ReadError, "來源未提供 SMART 資料——沒有可比對的屬性，不以 0 冒充")];
+            var (attrs, thresholds, wctemp) = single;
             return CollectOne(at, disk, attrs, thresholds, wctemp);
         }
         var facts = new List<HardwareFact>();
@@ -68,15 +71,17 @@ public static class SmartFailingNowFactsService
     }
 
     private static IReadOnlyList<HardwareFact> CollectOne(DateTimeOffset at, string disk,
-        IReadOnlyList<SmartRow> attrs, IReadOnlyDictionary<byte, byte> thresholds,
+        IReadOnlyList<SmartRow> attrs, IReadOnlyDictionary<byte, byte>? thresholds,
         (StorageSmartService.WctempState State, int ThresholdC, int CompositeC) wctemp,
         string keySuffix = "")
     {
-        var failing = StorageSmartService.EvaluateFailingNow(attrs, thresholds);
+        var failing = thresholds is null ? new List<StorageSmartService.FailingNowRow>()
+            : StorageSmartService.EvaluateFailingNow(attrs, thresholds);
         var facts = new List<HardwareFact>
         {
             new($"smart.failing_now{keySuffix}", Category, $"SMART failing-now（{disk}）",
-                failing.Count == 0
+                thresholds is null ? "門檻表（0xD1）讀不到——不比對門檻，只列屬性現值"
+                    : failing.Count == 0
                     ? $"沒有現正低於門檻的屬性（評比 {thresholds.Count(kvp => kvp.Value > 0)} 項有門檻者）"
                     : $"{failing.Count} 項現正低於門檻", "項",
                 "SMART READ DATA＋READ THRESHOLDS（0xD1）", FactTrustLevel.Derived, false, at, failing.Count),

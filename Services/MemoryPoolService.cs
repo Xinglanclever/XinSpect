@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 
 namespace XinSpect;
 
@@ -37,7 +37,6 @@ public static class MemoryPoolService
         try
         {
             // 池大小（SystemPerformanceInformation）
-            var perf = new SYSTEM_PERFORMANCE_INFORMATION();
             // NtQuerySystemInformation 需要「夠大」的緩衝區；實際 SYSTEM_PERFORMANCE_INFORMATION 有數百位元組，
             // 我們只需要前幾個欄位，但緩衝區必須開到實際大小否則回 STATUS_INFO_LENGTH_MISMATCH。
             int perfSize = 4096;

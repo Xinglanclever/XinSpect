@@ -68,9 +68,9 @@ public static class EventLogSummaryService
                 {
                     if (evt.TimeCreated < cutoff) break; // 反向讀到 7 天外即止
                     int level = evt.Level ?? 0;
-                    if (level is 1 or 2)
+                    if (level is 1 or 2 && evt.TimeCreated is { } tc)
                         entries.Add(new EvtEntry(level, evt.ProviderName ?? "", (ushort)(evt.Id & 0xFFFF),
-                            new DateTimeOffset(evt.TimeCreated.Value, TimeSpan.Zero)));
+                            new DateTimeOffset(tc, TimeSpan.Zero)));
                 }
             }
             return entries;

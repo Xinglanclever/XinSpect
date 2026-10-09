@@ -1232,9 +1232,11 @@ public static class D3D11Native
         List<IntPtr> created)
     {
         void* shaderPtr = null;
-        fixed (byte* bytecode = compilation.Bytecode)
+        // 呼叫端先查 Succeeded；這裡把「編譯失敗卻流進來」收口成明確例外，而不是讓 null Bytecode 過關
+        byte[] code = compilation.Bytecode ?? throw new InvalidOperationException("編譯沒有產生位碼");
+        fixed (byte* bytecode = code)
         {
-            int hr = createPs(device, bytecode, (nuint)compilation.Bytecode.Length, null, &shaderPtr);
+            int hr = createPs(device, bytecode, (nuint)code.Length, null, &shaderPtr);
             if (hr != 0 || shaderPtr is null)
                 ThrowDeviceFailure(hr, "CreatePixelShader");
         }

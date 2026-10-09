@@ -4,16 +4,16 @@
 
 A free, open-source hardware verification, monitoring, and security auditing tool for Windows. Ships as a single portable executable. Read-only by default; write operations are gated behind explicit user consent. Does not collect or transmit any user data.
 
-![Version](https://img.shields.io/badge/version-2.49-4C8DFF)
+![Version](https://img.shields.io/badge/version-2.50-4C8DFF)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![Tests](https://img.shields.io/badge/tests-3656%20passed-3FB950)
+![Tests](https://img.shields.io/badge/tests-3657%20passed-3FB950)
 ![Mutation Score](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 XinSpect is built with WPF (.NET 10) using MVVM architecture. It integrates LibreHardwareMonitor for sensing, Intel XTU bridging for overclocking, NVIDIA NVML/NVAPI for GPU control, WebView2 for the embedded browser, and a custom WinRing0-based fact-reading layer with an XsRegProbe whitelist read-only driver. The "Spect" in the name means observer: it doesn't draw conclusions about your hardware — it presents what the hardware says, what the firmware says, and what the OS says side by side, marking anything it can't read, letting the verifier draw their own conclusions.
 
-**[Download v2.49 Olympus](https://github.com/Xinglanclever/XinSpect/releases/tag/v2.49)** — single portable executable with BlueSquadron guard built in. 
+**[Download v2.50 Olympus](https://github.com/Xinglanclever/XinSpect/releases/tag/v2.50)** — single portable executable with BlueSquadron guard built in. 
 
 ## Design Principles
 
@@ -29,9 +29,9 @@ These principles are enforced by unit tests and machine checks, not just documen
 
 | File | Size | Purpose |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.49/XinSpect.exe) | 30.4 MB | Main program (includes BlueSquadron guard) |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.49/BlueSquadronBridge.exe) | 6.5 MB | Standalone guard process |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.49/XinSpectDeploy.exe) | 7 KB | One-click installer (downloads and deploys automatically) |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.50/XinSpect.exe) | 30.4 MB | Main program (includes BlueSquadron guard) |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.50/BlueSquadronBridge.exe) | 6.5 MB | Standalone guard process |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.50/XinSpectDeploy.exe) | 7 KB | One-click installer (downloads and deploys automatically) |
 
 ## Key Features
 

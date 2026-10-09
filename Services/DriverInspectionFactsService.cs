@@ -135,7 +135,7 @@ public static class DriverInspectionFactsService
     private static IReadOnlyList<ByovdBlockRule> LoadBlocklist(string? path, out string? note)
     {
         note = null;
-        string p = path ?? ByovdCompareService.DefaultBlocklistPath();
+        string? p = path ?? ByovdCompareService.DefaultBlocklistPath();   // 推導不出路徑時如實 null，下一行已擋
         if (p is null || !File.Exists(p))
         {
             note = "封鎖清單不存在——沒有可比對的清單（如實標注，不假裝比對過）";
