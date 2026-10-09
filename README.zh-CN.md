@@ -4,10 +4,10 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一执行文件发布，免安装；对硬件与系统的读取以只读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-2.50-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.51-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-3657%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-3661%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-MIT-green)
 
@@ -79,10 +79,10 @@
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.50/XinSpect.exe) | 31,261,995 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.50/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.51/XinSpect.exe) | 31,261,995 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.51/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 
-> **本表的字节数为本版（v2.50）实际发布的文件大小**；请以 Release 页面列出的文件为准。
+> **本表的字节数为本版（v2.51）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
 系统需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含发布则免装）。显卡深测需要 D3D11 兼容设备；MSR 读取、SMART ioctl、Security 事件日志需以系统管理员执行——没有权限时相关项目标示「权限不足」，程序不会假装成功，也不会静默降级。
 
@@ -424,6 +424,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.51 Olympus**（2026-10-10）：写入闸门最小版——全库 17 个硬件写入呼叫点（PMU 编程、RDT、DRAM 流量、TopDown、SMN、SMBus、CMOS 端口…）全部经过 WinRing0Bridge 三个写入 API，闸门因此在底层：每次 MSR／PCI 配置空间／I/O 端口写入自动记账（时间、目标、呼叫者、写入值、成败）。同意闸门（用户点头才跑）不变，这里补的是「点头之后到底写了什么」可回答——CLI --json evidence 输出新增 writeAudit 段。守门：源码断言桥接三个写入方法各自记账＋Services/ 内不得有第二组 Ring0 原生写入入口。测试 +4（3661 绿）。
 - **v2.50 Olympus**（2026-10-10）：建置警告清零＋基线守门——主专案 13 条警告全数修掉（CS8604/CS8629 可空dereference、CS0219 未用变量、SYSLIB0057 X509Certificate2 过时构造改 X509CertificateLoader、CS9191 ref→in、CS8600/CS8602）；SmartFailingNow 的 probe() 空值原本是会真炸的缺陷（.Value 直解）顺手收口成三态。新增 WarningBaselineTests：真重建主专案、去重数警告、基线 0——任何人新增一条警告，全套就红。警告没有基线就和没有守门一样：这 13 条存在了数十个版本而没人看见，因为没有东西在数。测试 +1（3657 绿）。
 - **v2.49 Olympus**（2026-10-10）：三方对账收口——新增执行期对账：用 App 启动与 CLI 同一条唯读路径跑完三个入口（驱动组／usermode 组／平台组），把「真正产生的键集合」与「申报的键集合」逐键比对。第一次上线就抓出两批共 214 把「天天在生产、覆盖申报完全看不见」的键：pci.dev.／reconcile.／sio.hwm. 等 137 把（驱动组）＋ asset.field.／role.installed.／monitor. 等 77 把（平台组）。其中 106 把其实静态可枚举——补进全键目录（153 → 170，扫描器加六个定向样式追上 helper 传键的写法）；13 个真动态家族（成员由机器决定）进新设的 FactKeyDynamicCatalog 登记——每个前缀要有「为什么动态＋成员由什么决定」的理由，且前缀本身必须在源码扫得到（僵尸前缀红灯）。对账类跑真 WMI／MMDevice／驱动会话，归入禁并行集合。测试 +4（3656 绿）。
 - **v2.48 Olympus**（2026-10-10）：审计链的 App 外验证入口——CLI 新增 --verify-audit：逐笔重算审计日志杂湊链、输出 fileExists／chainValid／checkedEntries 与断点原因，退出码 0＝链完整（日志不存在如实标「还没有审计事件」，不假称通过）、2＝链断或损毁、1＝致命。能产日志却不能在 App 外证明日志没被改，『可证明』的主张就打折扣——本机现况实测 687 笔链完整。LocalApiHandler 写入判定登记表（HTTP 壳刻意不启动是决定不是遗漏：开监听＝本机攻击面；headless 出口由 CLI 承担），登记表验证同步支持非 Service 结尾的能力类别。测试 +4（3652 绿）。

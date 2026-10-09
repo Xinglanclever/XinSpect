@@ -10,6 +10,7 @@ public static class EvidenceCollection
     public static void ReloadInto(EvidenceLabService svc)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
+        WriteGate.Reset();   // 新收集輪開新帳：上一輪的寫入不冒充這一輪（v2.51 §5.3）
         bool failed = false;
         try
         {

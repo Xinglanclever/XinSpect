@@ -258,13 +258,28 @@ public sealed class WinRing0Bridge : IDisposable
         catch { return null; }
     }
 
-    /// <summary>寫 MSR（eax＝低 32 位、edx＝高 32 位）。失敗回 false。</summary>
+    /// <summary>寫入稽核的呼叫者名：沿堆疊往上找第一個不是橋接／WriteGate 的型別。寫入罕見，開銷可接受。</summary>
+    private static string CallerOfWrite()
+    {
+        foreach (var sf in new System.Diagnostics.StackTrace(true).GetFrames())
+        {
+            var name = sf.GetMethod()?.DeclaringType?.Name;
+            if (name is not null && name != nameof(WinRing0Bridge) && name != nameof(WriteGate))
+                return name;
+        }
+        return "（呼叫者未知）";
+    }
+
+    /// <summary>寫 MSR（eax＝低 32 位、edx＝高 32 位）。失敗回 false。每次呼叫都進 WriteGate 帳本（§5.3 寫入稽核）。</summary>
     public bool WriteMsrPair(uint index, uint eax, uint edx)
     {
         var args = new object?[] { index, eax, edx };
         if (_m is null || _disposed) return false;
-        try { return _m.WriteMsr.Invoke(null, args) is true; }
-        catch { return false; }
+        bool ok;
+        try { ok = _m.WriteMsr.Invoke(null, args) is true; }
+        catch { ok = false; }
+        WriteGate.Record($"MSR 0x{index:X}", CallerOfWrite(), $"EAX=0x{eax:X8} EDX=0x{edx:X8}", ok);
+        return ok;
     }
 
     /// <summary>本機的 Ring0 是否提供 PCI 設定空間讀取（LHM 0.9.4 有；缺了就只是這一頁不能用）。</summary>
@@ -314,8 +329,11 @@ public sealed class WinRing0Bridge : IDisposable
     public bool WriteIoPortByte(uint port, byte value)
     {
         if (_m?.WriteIoPort is null || _disposed) return false;
-        try { _m.WriteIoPort.Invoke(null, new object?[] { port, value }); return true; }
-        catch { return false; }
+        bool ok;
+        try { _m.WriteIoPort.Invoke(null, new object?[] { port, value }); ok = true; }
+        catch { ok = false; }
+        WriteGate.Record($"I/O 0x{port:X}", CallerOfWrite(), $"out byte 0x{value:X2}", ok);
+        return ok;
     }
 
     /// <summary>本機的 Ring0 是否提供 PCI 設定空間<b>寫入</b>。</summary>
@@ -337,12 +355,16 @@ public sealed class WinRing0Bridge : IDisposable
     public bool WritePciConfig(byte bus, byte device, byte function, uint register, uint value)
     {
         if (_m?.WritePciConfig is null || _m.GetPciAddress is null || _disposed) return false;
+        bool ok = false;
         try
         {
-            if (_m.GetPciAddress.Invoke(null, new object?[] { bus, device, function }) is not uint addr) return false;
-            return _m.WritePciConfig.Invoke(null, new object?[] { addr, register, value }) is true;
+            if (_m.GetPciAddress.Invoke(null, new object?[] { bus, device, function }) is uint addr)
+                ok = _m.WritePciConfig.Invoke(null, new object?[] { addr, register, value }) is true;
         }
-        catch { return false; }
+        catch { ok = false; }
+        WriteGate.Record($"PCI {bus}:{device:X2}.{function}+0x{register:X}", CallerOfWrite(),
+            $"dword 0x{value:X8}", ok);
+        return ok;
     }
 
     /// <summary>本機的 Ring0 是否提供實體記憶體讀取（MMIO 的地基；V7 驅動裁決裡 WinRing0 主力路徑的關鍵能力）。</summary>

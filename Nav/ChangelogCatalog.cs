@@ -48,6 +48,20 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.51",
+            Date = "2026-10-10",
+            Title = "寫入閘門最小版：每次硬體寫入自動記帳，CLI 可申報",
+            Items =
+            [
+                "新增 Services/WriteGate.cs（主綱 §5.3 最小落地）：MSR／PCI 設定空間／I/O 埠的每一次寫入都進帳本——時間、目標、呼叫者類別、寫入值、成功或失敗。閘門做在 WinRing0Bridge 底層而不是各服務：實測全庫 17 個寫入呼叫點（PMU 編程 8、RDT 5、SMN／iMC／SMBus／CMOS／TopDown／DRAM 各 1）全部經過橋接的三個寫入 API，在底層收口意味著新服務不可能「忘記接閘門」——漏接線是這個專案最貴的缺陷類別，閘門的設計把它變成結構上不可能。",
+                "界線說清楚：同意閘門（危險操作要使用者點頭才跑）在服務層，沒有被這一版取代或繞過；WriteGate 只回答「點頭之後到底寫了什麼」。帳本在記憶體、每輪收集重置（ReloadInto 開新帳——上一輪的寫入不冒充這一輪）、上限 512 筆且截斷時在描述裡明說。",
+                "申報面：CLI --json evidence 輸出新增 writeAudit 欄（本次執行的寫入稽核摘要）；跑前先重置保證「本次執行」四個字是真的。UI 頁面的寫入清單留給後續輪（這一版先把資料結構與守門立住）。",
+                "守門 WriteGateTests 4 條：①源碼級正對照——橋接的 WriteMsrPair／WritePciConfig／WriteIoPortByte 三個方法體各自必須含 WriteGate.Record（刪掉 Record 行就紅）；②Services/ 內除橋接與閘門外不得出現 Ring0 原生寫入委派（WriteMsr.Invoke 等六個名字）——第二組直接寫入口無處藏；③帳本記錄成敗且描述如實；④上限截斷如實說明。",
+                "測試 +4（3657 → 3661）。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.50",
             Date = "2026-10-10",
             Title = "建置警告清零＋警告基線守門（沒有東西在數＝沒有守門）",

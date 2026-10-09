@@ -58,6 +58,7 @@ public static class CliService
         string? query = OptionValue(args, QueryArg);
         string? outPath = OptionValue(args, OutArg);
 
+        WriteGate.Reset();
         IReadOnlyList<HardwareFact> facts;
         try
         {
@@ -78,6 +79,7 @@ public static class CliService
             scope = EvidenceScope,
             count = facts.Count,
             allPresent = facts.All(f => f.Availability == FactAvailability.Present),
+            writeAudit = WriteGate.DescribeSession(),   // 本次執行寫了哪些暫存器／埠——可回答，不是黑箱
             facts = facts.Select(FactJson),
         };
         string json = JsonSerializer.Serialize(payload, JsonOptions);
