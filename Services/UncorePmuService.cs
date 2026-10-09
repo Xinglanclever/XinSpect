@@ -174,4 +174,102 @@ public sealed class UncorePmuService
     /// </summary>
     internal static bool IsPlausible(ulong? value)
         => value is { } v && v != 0 && v != ulong.MaxValue;
+
+    // ---- 事實層接線（UI／CLI／快照共用同一組合點） ----------------------------
+
+    /// <summary>本服務事實的類別名（覆蓋申報與畫面分組都用它）。</summary>
+    public const string FactCategory = "Uncore";
+
+    /// <summary>
+    /// 為證據實驗室收集 Uncore 頻率事實：<b>平台白名單判定先行</b>——未收錄的平台不去讀
+    /// 0x620／0x621（套用別平台的位址只會讀出垃圾值），如實 NotApplicable；
+    /// 驅動未就緒回 InsufficientPrivilege（可恢復，不是環境事實）；讀回全 0／全 1 標
+    /// NotSupported（此 MSR 未實作），讀不到標 ReadError 帶後端原因——一律不以 0 頂替。
+    /// 鍵與效能天花板頁顯示的是同一對 MSR；這裡讓它們進快照、CLI 與覆蓋申報。
+    /// </summary>
+    public static IReadOnlyList<HardwareFact> Collect(IKernelMsrReader? msr, DateTimeOffset at,
+        Func<(int Family, int Model, int Stepping)>? cpuIdProbe = null)
+    {
+        var (family, model, _) = cpuIdProbe?.Invoke() ?? new WinRing0MsrReader().CpuId();
+        bool known = family == 6 && model == 0x55;
+        string platform = known ? "Skylake-X / Skylake-SP（model 0x55）" : $"family {family}，model 0x{model:X2}";
+
+        // 鍵必須以字面值出現在建構呼叫上——覆蓋申報的掃描器認這個形狀，
+        // 變數傳入的鍵會「登記在目錄、掃不到生產」，那是另一種說謊。
+        var facts = new List<HardwareFact>
+        {
+            known
+                ? new HardwareFact("pmu.uncore.platform", FactCategory, "Uncore PMU 平台", platform, "",
+                    "CPUID leaf 1", FactTrustLevel.Measured, false, at)
+                : new HardwareFact("pmu.uncore.platform", FactCategory, "Uncore PMU 平台", platform, "",
+                    "CPUID leaf 1", FactTrustLevel.Measured, false, at, null, FactAvailability.NotApplicable,
+                    "此平台未收錄。不會套用別平台的 Uncore MSR 位址——套錯會讀出垃圾值"),
+        };
+
+        if (!known)
+        {
+            facts.Add(new HardwareFact("pmu.uncore.ratio_limit", FactCategory, "Uncore 頻率上限（0x620）",
+                "", "", "MSR 0x620／0x621", FactTrustLevel.Unknown, false, at, null,
+                FactAvailability.NotApplicable, "平台未收錄，不讀"));
+            facts.Add(new HardwareFact("pmu.uncore.perf_status", FactCategory, "Uncore 目前倍頻（0x621）",
+                "", "", "MSR 0x620／0x621", FactTrustLevel.Unknown, false, at, null,
+                FactAvailability.NotApplicable, "平台未收錄，不讀"));
+            return facts;
+        }
+
+        if (msr is not { Available: true })
+        {
+            string why = msr?.UnavailableReason ?? "驅動未載入：MSR 讀取通路未就緒";
+            facts.Add(new HardwareFact("pmu.uncore.ratio_limit", FactCategory, "Uncore 頻率上限（0x620）",
+                "", "", "MSR 0x620／0x621", FactTrustLevel.Unknown, false, at, null,
+                FactAvailability.InsufficientPrivilege, why));
+            facts.Add(new HardwareFact("pmu.uncore.perf_status", FactCategory, "Uncore 目前倍頻（0x621）",
+                "", "", "MSR 0x620／0x621", FactTrustLevel.Unknown, false, at, null,
+                FactAvailability.InsufficientPrivilege, why));
+            return facts;
+        }
+
+        ulong? limit = msr.ReadMsr(0x620);
+        if (limit is { } lv && IsPlausible(lv))
+        {
+            int minRatio = (int)(lv & 0x7F);
+            int maxRatio = (int)((lv >> 8) & 0x7F);
+            facts.Add(new HardwareFact("pmu.uncore.ratio_limit", FactCategory, "Uncore 頻率上限（0x620）",
+                $"{minRatio}x – {maxRatio}x（× 100 MHz）", "", "MSR 0x620", FactTrustLevel.Measured, false, at, (double)lv));
+        }
+        else if (limit is null)
+        {
+            facts.Add(new HardwareFact("pmu.uncore.ratio_limit", FactCategory, "Uncore 頻率上限（0x620）",
+                "", "", "MSR 0x620／0x621", FactTrustLevel.Unknown, false, at, null,
+                FactAvailability.ReadError, msr.LastFailReason ?? "MSR 讀取失敗（無更多細節）"));
+        }
+        else
+        {
+            facts.Add(new HardwareFact("pmu.uncore.ratio_limit", FactCategory, "Uncore 頻率上限（0x620）",
+                "", "", "MSR 0x620／0x621", FactTrustLevel.Unknown, false, at, null,
+                FactAvailability.NotSupported, "讀回全 0／全 1：此 MSR 在本平台未實作，不當成真實值"));
+        }
+
+        ulong? status = msr.ReadMsr(0x621);
+        if (status is { } sv && IsPlausible(sv))
+        {
+            int currentRatio = (int)(sv & 0x7F);
+            facts.Add(new HardwareFact("pmu.uncore.perf_status", FactCategory, "Uncore 目前倍頻（0x621）",
+                $"{currentRatio}x（≈ {currentRatio * 100} MHz）", "", "MSR 0x621", FactTrustLevel.Measured, false, at, (double)sv));
+        }
+        else if (status is null)
+        {
+            facts.Add(new HardwareFact("pmu.uncore.perf_status", FactCategory, "Uncore 目前倍頻（0x621）",
+                "", "", "MSR 0x620／0x621", FactTrustLevel.Unknown, false, at, null,
+                FactAvailability.ReadError, msr.LastFailReason ?? "MSR 讀取失敗（無更多細節）"));
+        }
+        else
+        {
+            facts.Add(new HardwareFact("pmu.uncore.perf_status", FactCategory, "Uncore 目前倍頻（0x621）",
+                "", "", "MSR 0x620／0x621", FactTrustLevel.Unknown, false, at, null,
+                FactAvailability.NotSupported, "讀回全 0／全 1：此 MSR 在本平台未實作，不當成真實值"));
+        }
+
+        return facts;
+    }
 }

@@ -48,6 +48,21 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.47",
+            Date = "2026-10-10",
+            Title = "Uncore 事實接線＋孤兒服務完整性網（判定登记表：沉默不是選項）",
+            Items =
+            [
+                "UncorePmuService 接進證據實驗室：新增 pmu.uncore.platform／pmu.uncore.ratio_limit／pmu.uncore.perf_status 三把事實鍵（目錄 150 → 153），與效能天花板頁顯示的是同一對 MSR，但這裡讓它們進快照、CLI 與覆蓋申報。平台白名單判定先行——未收錄的平台整組 NotApplicable、一個 MSR 位址都不碰（套用別平台的位址只會讀出垃圾值）；驅動未就緒回 InsufficientPrivilege（可恢復的狀態）；讀回全 0／全 1 標 NotSupported 不當成真實值；個別讀取失敗標 ReadError 帶後端細節。",
+                "接線當場被自家掃描器糾正：第一版把鍵經局部函數傳入，事實鍵目錄逐鍵相等測試紅——「登記在目錄、掃不到生產」是 2.43 覆蓋申報缺陷的同款變形。鍵一律改寫成建構呼叫上的字面值，讓覆蓋申報的掃描器認得。",
+                "新增 Services/WiringDecisions.cs 判定登记表：把「做了但刻意不接線」從沉默變成寫下來的決定。登記四筆並寫明重新接線的條件——AmdSmuService（SMN 信箱的讀取協定本身就是 PCI 寫入，統一寫入閘門落地前不進自動管線）、LoopbackSignalService（WASAPI loopback 是主動捕獲系統音訊，該走使用者觸發的量測入口，不是啟動即跑）、CorpusUploadService（上傳通路依資料主權原則刻意不實作，接線等於把半成品的外傳擺上畫面）、FakeCapacityTestService（寫入操作必須留在有同意閘門的互動路徑）。",
+                "新增 Tests/ServiceOrphanGateTests.cs（4 條完整性網）：Services/ 每個公開 *Service 類別要嘛被生產碼引用、要嘛在登记表有判定——三選一，沉默不是選項；登记表每筆要對應真實類別且仍未被接線（真的接上了還留著也紅燈，防登记表腐化）；理由少於 20 字或含「待補」紅燈。掃描器第三次踩到「檔案級不夠準」：DeepAccessService.cs 尾端宣告 ScmDriverService、同一檔第 60 行 new ScmDriverService() 是真實生產通路，整檔排除會誤報孤兒、整檔放行會放過註解散文——改為行級判斷（跳過註解、類別宣告與同名建構子簽名）。正對照釘住：掃不到任何服務時測試自己紅，不會靜默假綠。",
+                "UncorePmuFactsTests 6 條：未收錄平台一個 MSR 都不讀（用呼叫清單做正面證明）、驅動未就緒自帶原因、讀到的值文字與數值如實、全 0 標未實作、個別失敗不污染另一條、本機真實 CPUID 冒煙。",
+                "測試 +10（3638 → 3648）。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.46",
             Date = "2026-10-10",
             Title = "發佈後驗證腳本與發佈一致性守門（先把發佈管線修好再走）",

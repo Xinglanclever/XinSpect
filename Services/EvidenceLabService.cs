@@ -153,6 +153,9 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>PMU 能力與唯讀觀察三態事實（WP27 第一階段：編程路徑未實作）。</summary>
     public IReadOnlyList<HardwareFact> PmuFacts { get; private set; } = [];
 
+    /// <summary>Uncore 頻率 MSR 事實（平台白名單制；與效能天花板頁同一對 MSR，這裡進快照／CLI／覆蓋申報）。</summary>
+    public IReadOnlyList<HardwareFact> UncorePmuFacts { get; private set; } = [];
+
     /// <summary>記憶體加密（TME/SGX）與 C-state 駐留三態事實（處理器深化；驅動相依）。</summary>
     public IReadOnlyList<HardwareFact> MemoryEncryptionFacts { get; private set; } = [];
 
@@ -347,6 +350,7 @@ public sealed class EvidenceLabService : ObservableObject
         BackendFacts = BackendEnvironmentService.Collect(msr, mmio, at);
         CpuFirmwareFacts = CpuFirmwareFactsService.Collect(msr, at);
         PmuFacts = PmuCapabilityFactsService.Collect(at, msr: msr);
+        UncorePmuFacts = UncorePmuService.Collect(msr, at);
         MemoryEncryptionFacts = MemoryEncryptionFactsService.Collect(at, msr: msr);
         AmdSecurityFacts = AmdSecurityFactsService.Collect(at, msr: msr, pci: pci);
         PsuPmbusFacts = PsuPmbusFactsService.CollectWithLock(smbusIo, pci.ReadDword, at);
@@ -456,7 +460,7 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>把全部事實組交給對帳引擎逐規則評估；每條規則一列（一致／矛盾／無法驗證都是 Present 的「結論事實」）。</summary>
     private IReadOnlyList<HardwareFact> EvaluateReconciliation(DateTimeOffset at)
     {
-        var all = ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(CStateFacts)
+        var all = ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(CStateFacts)
             .Concat(BackendFacts).Concat(MchbarFacts).Concat(PcieAerFacts).Concat(AcpiFacts).ToList();
         var rows = FactRelationService.Evaluate(FactRelationRules.All, all);
 
@@ -625,7 +629,7 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>全部事實組合併成單一清單（CLI 與報告用）。與 FirmwareSecurityRows 同集合、不轉渲染列。</summary>
     public IReadOnlyList<HardwareFact> AllFacts =>
         ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
-            .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
+            .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
             .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
             .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).ToList();
 
