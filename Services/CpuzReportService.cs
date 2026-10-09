@@ -389,7 +389,8 @@ public static class CpuzReportService
         string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
 
         candidates.Add(Path.Combine(desktop, "图吧工具箱", "处理器工具", "CPUZ", "cpuz_x64.exe"));
-        candidates.Add(@"C:\Users\Administrator\Desktop\图吧工具箱\处理器工具\CPUZ\cpuz_x64.exe");
+        // 不再硬編碼 C:\Users\Administrator\Desktop：上一條已由 SpecialFolder 推導桌面路徑，
+        // 寫死使用者名稱的變體在別台機器上永遠指到不存在的位置（且失敗長得像「沒裝 CPU-Z」）。
 
         foreach (var c in candidates)
             if (File.Exists(c)) return c;

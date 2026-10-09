@@ -422,10 +422,15 @@ public sealed class AiService : ObservableObject
         return parts;
     }
 
-    /// <summary>呼叫本機 PaddleOCR-VL 辨識圖片文字。</summary>
+    /// <summary>呼叫本機 PaddleOCR-VL 辨識圖片文字。目錄由環境推導（環境變數覆寫→使用者家目錄），找不到腳本回 null——不假裝能辨識。</summary>
     private static async Task<string?> RunOcrAsync(string imagePath)
     {
-        var ocrDir = @"C:\Users\Administrator\PaddleOCR-VL";
+        // 原先寫死開發機的使用者名稱：發佈出去的執行檔在別台機器上永遠找不到 OCR，
+        // 而且失敗長得像「沒有 OCR 功能」而不是「路徑假設錯了」。
+        var fromEnv = Environment.GetEnvironmentVariable("XINSPECT_PADDLEOCR_DIR");
+        var ocrDir = string.IsNullOrWhiteSpace(fromEnv)
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "PaddleOCR-VL")
+            : fromEnv;
         var script = Path.Combine(ocrDir, "run_ocr.py");
         if (!File.Exists(script)) return null;
 

@@ -4,10 +4,10 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一执行文件发布，免安装；对硬件与系统的读取以只读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-2.44-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.45-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-3632%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-3635%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-MIT-green)
 
@@ -79,10 +79,10 @@
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.44/XinSpect.exe) | 31,237,419 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.44/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.45/XinSpect.exe) | 31,237,419 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.45/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 
-> **本表的字节数为本版（v2.44）实际发布的文件大小**；请以 Release 页面列出的文件为准。
+> **本表的字节数为本版（v2.45）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
 系统需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含发布则免装）。显卡深测需要 D3D11 兼容设备；MSR 读取、SMART ioctl、Security 事件日志需以系统管理员执行——没有权限时相关项目标示「权限不足」，程序不会假装成功，也不会静默降级。
 
@@ -422,6 +422,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.45 Olympus**（2026-10-10）：环境假设守门——清掉生产代码两处写死开发机路径（PaddleOCR-VL 目录、CPU-Z 搜索变体），改环境推导、找不到如实回 null；新增守门测试扫「驱动器:\Users\<用户名>」与「:\Desktop\」字面值，角色与 ACL 名（WindowsBuiltInRole.Administrator、BUILTIN\Administrators）不误报、SpecialFolder 推导写法不误报，白名单每笔要理由、上限 5（目前为空）。与 v2.43 的 WinRing0 同族缺陷：用户端的静默失灵长得像「没有这个功能」，不像「路径假设错了」。测试 +3（3635 绿）。
 - **v2.44 Olympus**（2026-10-10）：时间炸弹守门——测试方法不得在同一个方法体里同时写绝对日期与 UtcNow 查询窗（已炸过一次：TrendSentinel 的数据基准写死 2026-10-08 配相对窗，隔天 8 条断言同时红，2.43 已修）。守门做在方法级而不是文件级：文件级扫描的「高危」三档，方法级逐一核对后两条是误报（写入读回的往返与合成序列不与查询窗相遇），正对照测试钉住扫描器真抓得到炸弹。测试 +2（3632 绿）。
 - **v2.43 Olympus**（2026-10-10）：核心热区图重做——格数改由拓扑的实体核心数决定（新增 PhysicalCores），传感器少报几颗时缺的位置照样占一格并如实留白（灰色格与「—」代表拿不到读值，不是 0 °C、也不是凉）；两种逐核来源（传感器列／逐实体核心摘要）收敛到同一份格子契约与同一支控件，色阶收敛成单一来源 HeatScale（核心热区图、逐核液柱与图例同一个温度就是同一个颜色，不随主题变），图例与统计列（最热／最冷／平均／覆盖率）由锚点与数据推导；修掉逐实体核心编号从 0 起算、与全站 1 起算差一号的缺陷。另新增 ESP 文件层扫描（枚举 .efi 文件 SHA-256 并与 dbx 交叉引用，命中是攻击面事实不是中毒判决）与 WinRing0 来源内嵌（先前单文件发布在用户端找不到驱动，MSR／PCI／I/O／MMIO 全数读不到；现在 0.9.4 跟着可执行文件走）。测试 +40（全套 3630 绿）。接线守门：三支事实服务（音频端点／开机计时／网络卸载）接进共用入口，并加「事实服务必须被生产代码引用」的守门测试。
 - **v2.42 Olympus**（2026-10-09）：.etl 內容讀回——本專案寫得出（EtwTraceService）、認得出（IsValidEtl）、這一版起讀得回來：TraceEvent 檔案模式把落地軌跡解析回逐提供者事件數、未解事件數（如實計數不以 0 補）與時間範圍。測試過程抓到會炸行程的真缺陷：垃圾位元組餵給 ETWTraceEventSource 會踩 TraceEvent finalizer 缺陷炸掉測試主機——修法是建構前先驗檔頭。接進 LoadUsermodeFacts 共用入口。真機以系統 .etl 實測閉環。測試 +5（全套 3591 綠）。

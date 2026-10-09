@@ -48,6 +48,19 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.45",
+            Date = "2026-10-10",
+            Title = "環境假設守門（生產碼不得寫死開發機路徑）",
+            Items =
+            [
+                "清掉兩處寫死使用者名稱的路徑：PaddleOCR-VL 的目錄由 「Environment.SpecialFolder.UserProfile」 推導、可用環境變數 「XINSPECT_PADDLEOCR_DIR」 覆寫，找不到 「run_ocr.py」 回 null（如實「辨識不了」，不假裝能用）；CPU-Z 候選清單刪掉硬編碼變體——上一條已由 SpecialFolder 推導桌面，同機重複、異機永遠指到不存在的位置。這與 v2.43 修掉的 WinRing0 快取路徑是同族缺陷：功能在開發機好好的，到使用者手上靜默失靈，失敗長得像「沒有這個功能」而不是「路徑假設錯了」。",
+                "新增 Tests/EnvironmentGuardTests.cs：掃生產碼目錄（Services／Views／Controls／ViewModels／Models／Nav／Decoders／Bridge／BlueSquadron／Installer）的 .cs 與 .xaml，命中「磁碟機:\\Users\\<名字>」或「:\\Desktop\\<名字>」字面值即紅燈並列檔案:行號。合法形態不誤報：「%USERPROFILE%」 等環境變數佔位（負向預看 「%」）、「WindowsBuiltInRole.Administrator」 與 「BUILTIN\\Administrators」（角色與 ACL 名是合法詞彙，不是環境假設）、「Environment.GetFolderPath(…)」 推導寫法、註解行（文件描述這條規則的文字不該打紅守門自己）。",
+                "白名單每筆必須附「為什麼不算環境假設」的理由且有上限（5，目前為空）；正對照（合成源碼必須被抓到、乾淨寫法必須不誤報）釘住守門有牙。",
+                "測試 +3（3632 → 3635）。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.44",
             Date = "2026-10-10",
             Title = "時間炸彈守門（測試方法不得同場相遇絕對日期與 UtcNow）",
