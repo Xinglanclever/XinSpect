@@ -48,6 +48,20 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.49",
+            Date = "2026-10-10",
+            Title = "三方對帳收口：執行期真正產生的鍵 vs 申報的鍵，逐鍵比對",
+            Items =
+            [
+                "新增 FactKeyRuntimeReconcileTests：把 v2.36 的「目錄≡掃描」與 v2.47 的「執行期接線」拼成完整三方——用 App 啟動與 CLI --json evidence 同一條唯讀路徑跑完三個入口（驅動後端組 ReloadInto、usermode 組 LoadUsermodeFacts、平台組 LoadPlatformFacts），把執行期真正產生的鍵集合與目錄＋動態家族＋條件白名單宣稱的集合逐鍵比對，雙向都要零差集。第一次上線就抓出兩批「天天在生產、覆蓋申報完全看不見」的執行期鍵：驅動組 137 把（pci.dev.／reconcile.／sio.hwm.／audio.endpoint.／drvinsp.／storage.reliability. 等）、平台組 77 把（asset.field.／role.installed.／monitor.／numa.node.／display.adapter.／mon. 等）——共 214 把無主鍵。",
+                "214 把拆成兩類收口。可靜態枚舉的 106 把補進全鍵目錄（153 → 170），掃描器（CoverageService.ScanFactKeysFromSource）加六個定向樣式追上「鍵以字面值傳給 helper」的生產寫法（SupportedBit／BuildFact／CollectSigList／MSR 元組表／Bool／ServiceFact），NumaTopologyService 把 key + \".xnode\" 串接改成字面鍵讓掃描器認得。真動態的 13 個家族（成員由機器／匯流排／安裝清單決定，編譯期數不出來）進新設的 FactKeyDynamicCatalog 登記——每個前綴要寫「為什麼動態＋成員由什麼決定」的理由，前綴本身必須在 Services/ 原始碼掃得到（殭屍前綴紅燈，登记表自己也被守），上限 16。",
+                "接線入口補齊與漂移修掉：測試用的掃描器副本（FactCoverageReportTests）原本自己維護一套樣式、和生產掃描器已經漂移（2.45 加樣式時只加了一邊）——改為直接呼叫 CoverageService.ScanFactKeysFromSource，單一來源不可能再各掃各的。已接線入口的核心鍵另設反向抽查（wired 清單）：usermode 六支服務承諾「讀不到標三態不是不產」，鍵消失＝接線掉了，紅燈指名。",
+                "對帳類跑真 WMI／MMDevice／驅動會話，與並行批次會互相干擾（本輪實測：第一次並行跑抓到假缺口、單跑全綠）——整組歸入禁並行集合（CollectionDefinition DisableParallelization），代價是多幾秒但不再假紅。",
+                "測試 +4（3652 → 3656）。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.48",
             Date = "2026-10-10",
             Title = "審計鏈的 App 外驗證入口（CLI --verify-audit）＋本機 API 的顯式決定",

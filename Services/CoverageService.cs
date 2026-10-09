@@ -137,6 +137,17 @@ public sealed class CoverageService : ObservableObject
             // 只認「至少含一個點」的字面值，避免把一般字串也當成事實鍵。
             new Regex(@"Unavailable\(\s*(?:at\s*,\s*)?""([a-z][a-z0-9_]*(\.[a-z0-9_]+)+)"""),
             new Regex(@"Unavailable\([^,)]*,\s*""([a-z][a-z0-9_]*(\.[a-z0-9_]+)+)""\s*,"),
+            // 2026-10-10 執行期對帳（FactKeyRuntimeReconcileTests）抓出的下一批生產形狀：
+            // 鍵以字面值傳給 helper 再建事实——SupportedBit（AMD 能力位）、BuildFact（MSR 事实）、
+            // CollectSigList（簽章資料庫）、MSR 元組表（0x60D, "cpu.pkg_c2_us", …）。
+            // 掃描器追寫法有上限；真正的收口是執行期對帳，這裡補樣式讓「目錄≡掃描」繼續成立。
+            // 只認「含點的全小寫字面值」，且限呼叫位址——不抓 `string key = $"…{動態}"` 那類前綴。
+            new Regex(@"SupportedBit\(\s*""([a-z][a-z0-9_]*(\.[a-z0-9_]+)+)"""),
+            new Regex(@"BuildFact\([^""]*?""([a-z][a-z0-9_]*(\.[a-z0-9_]+)+)"""),
+            new Regex(@"CollectSigList\(\s*\w+\s*,\s*""([a-z][a-z0-9_]*(\.[a-z0-9_]+)+)"""),
+            new Regex(@"\(\s*0x[0-9A-Fa-f]{2,}\s*,\s*""([a-z][a-z0-9_]*(\.[a-z0-9_]+)+)"""),
+            new Regex(@"Bool\(\s*""([a-z][a-z0-9_]*(\.[a-z0-9_]+)+)"""),
+            new Regex(@"ServiceFact\(\s*""([a-z][a-z0-9_]*(\.[a-z0-9_]+)+)"""),
         };
         var keys = new HashSet<string>(StringComparer.Ordinal);
         if (!Directory.Exists(servicesDirectory)) return keys;

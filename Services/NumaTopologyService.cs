@@ -32,7 +32,7 @@ public static class NumaTopologyService
         var facts = new List<HardwareFact>
         {
             new(key, Category, name, headline, "", source, FactTrustLevel.Measured, false, at, nodes),
-            new(key + ".xnode", Category, "跨節點延遲／頻寬",
+            new("numa.topology.xnode", Category, "跨節點延遲／頻寬",
                 nodes == 1
                     ? "無從量測：本機只有一個節點，沒有第二個節點可比較"
                     : $"可量測：{nodes} 個節點，跨節點路徑存在",

@@ -64,6 +64,40 @@ public class FactKeyCatalogTests
         }
     }
 
+    /// <summary>
+    /// 動態鍵家族目錄的殭屍前綴守門：每個登記的前綴，其字面值必須在 Services/ 原始碼掃得到——
+    /// 「登記了家族但沒人生產那個前綴」跟「目錄有鍵但沒人生產」是同一种謊，只是粒度粗一點。
+    /// 上限守門同時在這一條裡（超過就逼著重新數動態面）。
+    /// </summary>
+    [Fact]
+    public void 動態鍵家族的每個前綴都要真的有人在原始碼裡生產()
+    {
+        string services = Path.Combine(RepoRoot(), "Services");
+        var text = new System.Text.StringBuilder();
+        foreach (string file in Directory.EnumerateFiles(services, "*.cs", SearchOption.AllDirectories))
+        {
+            if (file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
+             || Path.GetFileName(file) == "FactKeyDynamicCatalog.cs") continue;   // 登记表自己不當證據
+            try { text.Append(File.ReadAllText(file)); } catch (IOException) { }
+        }
+        string corpus = text.ToString();
+
+        Assert.True(FactKeyDynamicCatalog.Families.Count <= 16,
+            $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
+
+        var zombies = FactKeyDynamicCatalog.Families
+            .Where(kv => !corpus.Contains($"\"{kv.Key}", StringComparison.Ordinal)
+                      && !corpus.Contains($"$\"{kv.Key}", StringComparison.Ordinal))
+            .Select(kv => kv.Key)
+            .ToList();
+        Assert.True(zombies.Count == 0,
+            "以下動態前綴在 Services/ 原始碼掃不到任何字面——要嘛是殭屍登記（刪掉），要嘛寫法改了要更新登記：" +
+            string.Join("、", zombies));
+
+        foreach (var (prefix, reason) in FactKeyDynamicCatalog.Families)
+            Assert.True(reason.Trim().Length >= 20, $"{prefix}：家族理由不夠清楚（為什麼动态＋成員由什麼決定）");
+    }
+
     // ── 缺陷的迴歸測試：掃不到不得變成「沒有問題」 ────────────────────────
 
     [Fact]

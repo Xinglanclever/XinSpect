@@ -25,32 +25,14 @@ public class FactCoverageReportTests
         return dir!.FullName;
     }
 
-    /// <summary>從程式碼掃出事實鍵（只抓「事實鍵的位置」，不是所有看起來像路徑的字串）。</summary>
+    /// <summary>
+    /// 從程式碼掃出事實鍵——直接重用 CoverageService 的掃描器（单一来源）。
+    /// 這裡原本有一份獨立樣式清單的四條副本，2.45 給生產掃描器補到六條時沒有同步，
+    /// 「畫面數字與測試數字會漂移」正是它自己註解警告過的坑；2.49 起改呼叫同一支，
+    /// 兩邊不可能再各掃各的。
+    /// </summary>
     private static HashSet<string> ScanFactKeys()
-    {
-        var patterns = new[]
-        {
-            new Regex(@"new HardwareFact\(\s*\$?""([a-z][a-z0-9_.\[\]-]*)"""),
-            new Regex(@"new\(\s*\$?""([a-z][a-z0-9_.\[\]-]*)""\s*,\s*(?:Category|\$?_?cat)"),
-            new Regex(@"(?:const|static readonly)\s+string\s+\w*[Kk]ey\w*\s*=\s*""([a-z][a-z0-9_.\[\]-]*)"""),
-            new Regex(@"FactKey\s*=\s*""([a-z][a-z0-9_.\[\]-]*)"""),
-        };
-        var keys = new HashSet<string>(StringComparer.Ordinal);
-        string services = Path.Combine(RepoRoot(), "Services");
-        foreach (string file in Directory.EnumerateFiles(services, "*.cs", SearchOption.AllDirectories))
-        {
-            if (file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")) continue;
-            string text = File.ReadAllText(file);
-            foreach (var p in patterns)
-                foreach (Match m in p.Matches(text))
-                {
-                    string key = m.Groups[1].Value;
-                    // 以 . 結尾的是插值鍵的前綴（例如 "asset.field."）——保留，它代表一整族
-                    keys.Add(key.TrimEnd('.'));
-                }
-        }
-        return keys;
-    }
+        => CoverageService.ScanFactKeysFromSource(Path.Combine(RepoRoot(), "Services"));
 
     private static List<(string Id, IReadOnlyList<string> Inputs)> LoadRules()
     {
