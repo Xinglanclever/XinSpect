@@ -48,6 +48,20 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.52",
+            Date = "2026-10-10",
+            Title = "能力矩陣 cap.*：一眼分清「環境不支援」與「通路未就緒」",
+            Items =
+            [
+                "新增 Services/CapabilityMatrixService.cs（主綱 §5.11）：九條 cap.* 事實把散在各頁的「後端可用性」彙總成一片可查詢的矩陣——MSR／MMIO／PCI 設定空間／I/O 埠／SMBus／TPM／UEFI 變數／WMI／PMU。使用者看到「不適用」時能立刻分清是環境沒有這個東西（沒有 TPM 晶片）、通路沒就緒（驅動沒載）、還是收集沒跑到（來源鍵缺席）。",
+                "這一版不新增任何探測：每條 cap.* 都是既有來源鍵的彙總，來源翻成三態 cap 跟著翻，來源量到 cap 才可用——彙總層不重新解釋環境，就不會和來源事實打架。來源鍵缺席時如實 Unknown＋「無法判定」：缺席不讀成不支援，也不讀成可用，與 v2.36 六態守恆同一條線。",
+                "接線：AllFacts 併入矩陣（輸入為來源群、不含 cap 行，杜絕迴圈），韌體安全頁經 FirmwareSecurityRows 自動多出「能力矩陣」分類，不動 XAML。鍵以 MatrixRow 字面值呼叫並補掃描樣式——覆蓋申報（目錄≡掃描）繼續罩住彙總鍵，「申報看不見的生產」這條專案最貴的缺陷線不因彙總層而破口。",
+                "守門 CapabilityMatrixTests 6 條：九列鍵名固定、Present→可用並繼承數值、來源三態原樣搬運（不準變可用）、缺席→Unknown＋無法判定、九鍵已登記目錄、AllFacts 接線與免迴圈源碼斷言。",
+                "測試 +6（3661 → 3667）。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.51",
             Date = "2026-10-10",
             Title = "寫入閘門最小版：每次硬體寫入自動記帳，CLI 可申報",
