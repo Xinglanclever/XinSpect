@@ -4,10 +4,10 @@
 
 一款免費開源、運行於 Windows 的原生硬體驗機、監控與安全稽核工具。以單一執行檔發佈，免安裝；對硬體與系統的讀取以唯讀為原則，少數涉及寫入的功能均設有同意閘門並明確標註風險。本程式不收集、不上傳任何使用者資料。
 
-![版本](https://img.shields.io/badge/version-2.45-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.46-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-3635%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-3638%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-MIT-green)
 
@@ -79,10 +79,10 @@
 
 | 檔案 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.45/XinSpect.exe) | 31,241,515 bytes | 主程式。藍色中隊守護進程已內建 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.45/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.46/XinSpect.exe) | 31,241,515 bytes | 主程式。藍色中隊守護進程已內建 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.46/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
 
-> **上表的位元組數為本版（v2.45）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v2.46）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
 系統需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含發佈則免裝）。顯示卡深測需要 D3D11 相容裝置；MSR 讀取、SMART ioctl、Security 事件記錄需以系統管理員執行——沒有權限時相關項目標示「權限不足」，程式不會假裝成功，也不會靜默降級。
 
@@ -425,6 +425,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.46 Olympus**（2026-10-10）：發佈治理——新增 Tools/verify-release.ps1 發佈後驗證腳本（README 下載連結逐一查 Release 存在、資產大小與表列位元組數對帳、版號六處一致；匿名 API 限流自動改向 Git Credential Manager 取 token；任一失敗非零退出）與 ReleaseIntegrityTests 三條（「位元組數為本版實際發佈」宣稱與下載連結同版本——防「文字跟著跳、數字沒跳」再現；宣稱版本等於專案版號；驗證腳本存在且帶 UTF-8 BOM——PS 5.1 讀無 BOM 的 UTF-8 會把中文當 ANSI 炸）。本版不加功能：先把發佈管線修好再走。測試 +3（3638 綠）。
 - **v2.45 Olympus**（2026-10-10）：環境假設守門——清掉生產碼兩處寫死開發機路徑（PaddleOCR-VL 目錄、CPU-Z 搜尋變體），改環境推導、找不到如實回 null；新增守門測試掃「磁碟機:\Users\<使用者名>」與「:\Desktop\」字面值，角色與 ACL 名（WindowsBuiltInRole.Administrator、BUILTIN\Administrators）不誤報、SpecialFolder 推導寫法不誤報，白名單每筆要理由、上限 5（目前為空）。與 v2.43 的 WinRing0 同族缺陷：使用者端的靜默失靈長得像「沒有這個功能」，不像「路徑假設錯了」。測試 +3（3635 綠）。
 - **v2.44 Olympus**（2026-10-10）：時間炸彈守門——測試方法不得在同一個方法體裡同時寫絕對日期與 UtcNow 查詢窗（已炸過一次：TrendSentinel 的資料基準寫死 2026-10-08 配相對窗，隔天 8 條斷言同時紅，2.43 已修）。守門做在方法級而不是檔案級：檔案級掃描的「高危」三檔，方法級逐一核對後兩條是誤報（寫入讀回的往返與合成序列不與查詢窗相遇），正對照測試釘住掃描器真抓得到炸彈。測試 +2（3632 綠）。
 - **v2.43 Olympus**（2026-10-10）：核心熱區圖重做——格數改由拓撲的實體核心數決定（新增 PhysicalCores），感測器少報幾顆時缺的位置照樣佔一格並如實留白（灰色格與「—」代表拿不到讀值，不是 0 °C、也不是涼）；兩種逐核來源（感測器列／逐實體核心摘要）收斂到同一份格子契約與同一支控制項，色階收斂成單一來源 HeatScale（核心熱區圖、逐核液柱與圖例同一個溫度就是同一個顏色，不隨主題變），圖例與統計列（最熱／最冷／平均／覆蓋率）由錨點與資料推導；修掉逐實體核心編號從 0 起算、與全站 1 起算差一號的缺陷。另新增 ESP 檔案層掃描（列舉 .efi 檔 SHA-256 並與 dbx 交叉引用，命中是攻擊面事實不是中毒判決）與 WinRing0 來源內嵌（先前單檔發佈在使用者端找不到驅動，MSR／PCI／I/O／MMIO 全數讀不到；現在 0.9.4 跟著執行檔走）。測試 +40（全套 3630 綠）。接線守門：三支事實服務（音訊端點／開機計時／網路卸載）接進共用入口，並加「事實服務必須被生產碼引用」的守門測試。

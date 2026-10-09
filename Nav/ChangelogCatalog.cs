@@ -48,6 +48,19 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.46",
+            Date = "2026-10-10",
+            Title = "發佈後驗證腳本與發佈一致性守門（先把發佈管線修好再走）",
+            Items =
+            [
+                "新增 Tools/verify-release.ps1（主綱 §5.9）：對最新 tag 的 GitHub Release 逐一驗證——README 裡每個下載連結真的存在、Release 資產大小與 README 表列的位元組數相符、版號六處（csproj／AboutView／三份 README 徽章）一致；匿名 API 在本機被限流回 403 時自動改向 Git Credential Manager 取 token。任一失敗非零退出。這一版對 v2.45 現況實跑綠燈，即本腳本自己的驗收。",
+                "新增 Tests/ReleaseIntegrityTests.cs 三條：①README「位元組數為本版（vX）實際發佈」的宣稱版本必須與同檔下載連結的版本一致——先前出過的事故是升版號時「文字跟著跳、數字沒跳」，表裡放著上一版的大小；②宣稱版本必須等於專案版號（「本版」二字不能指著過去的建置）；③驗證腳本必須還在倉庫、沒被掏空，且帶 UTF-8 BOM——Windows PowerShell 5.1 讀無 BOM 的 UTF-8 會把中文當 ANSI 直接炸掉，這是本專案踩過多次的坑，把它釘成測試。",
+                "本版刻意不加任何功能：主綱 T1-5 的立場——發佈流程不可靠時，後面每一版都在補洞。",
+                "測試 +3（3635 → 3638）。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.45",
             Date = "2026-10-10",
             Title = "環境假設守門（生產碼不得寫死開發機路徑）",

@@ -16,6 +16,14 @@ $ErrorActionPreference = "Stop"
 $failures = New-Object System.Collections.Generic.List[string]
 $root = Split-Path -Parent $PSScriptRoot
 
+# 匿名 API 在本機 IP 會 403（限流）——比照發佈腳本向 Git Credential Manager 取 token，取不到就退回匿名。
+$headers = @{ "User-Agent" = "xinspect-release-check" }
+try {
+    $cred = ("protocol=https`nhost=github.com`n`n" | git credential fill) -split "`n"
+    $line = $cred | Where-Object { $_ -like "password=*" } | Select-Object -First 1
+    if ($line) { $headers["Authorization"] = "Bearer " + $line.Substring(9) }
+} catch { }
+
 # 1) 版號單一來源：csproj <Version>
 $csprojText = Get-Content (Join-Path $root "XinSpect.csproj") -Raw -Encoding UTF8
 if ($csprojText -notmatch '<Version>([0-9.]+)</Version>') { throw "csproj 裡找不到 <Version>" }
@@ -43,7 +51,7 @@ foreach ($readme in @("README.md", "README.zh-CN.md", "README.en.md")) {
         }
         $api = "https://api.github.com/repos/$Repo/releases/tags/$Tag"
         try {
-            $release = Invoke-RestMethod -Uri $api -Headers @{ "User-Agent" = "xinspect-release-check" } -TimeoutSec 30
+            $release = Invoke-RestMethod -Uri $api -Headers $headers -TimeoutSec 30
             $apiAsset = $release.assets | Where-Object { $_.name -eq $asset }
             if (-not $apiAsset) {
                 $failures.Add("$readme 引用的 $asset 不存在於 Release $Tag")
