@@ -74,6 +74,16 @@ public sealed class HistoryViewModel : ObservableObject
     /// </summary>
     public TrendSentinelService Sentinel { get; } = new();
 
+    /// <summary>
+    /// 事件標註（BL-007 的 UI 面，v2.60）：把 WHEA／TDR／非預期關機／藍屏映到歷史頁的時間軸上。
+    /// <b>界線</b>：標註只說「那個時間點發生了這種事件」，不建立因果（非預期關機也可能是停電）；
+    /// 事件記錄讀不到時如實標示（<see cref="EventAnnotationCoverage"/>），不畫成 0 筆。
+    /// </summary>
+    public IReadOnlyList<EventAnnotation> EventAnnotations { get; private set; } = [];
+
+    /// <summary>事件標註的覆蓋說明：筆數或讀不到的原因。</summary>
+    public string EventAnnotationCoverage { get; private set; } = "尚未重查";
+
     private DateTime _from, _to;      // 皆為 UTC
 
     /// <summary>時間窗或資料變動，檢視據此重畫圖。</summary>
@@ -195,6 +205,23 @@ public sealed class HistoryViewModel : ObservableObject
         // 統計哨兵跟著同一段區間重算。它只讀同一份 Series 的快照、不做 I/O，
         // 失敗也在服務內部吞掉（哨兵是附加功能，不得影響歷史頁本身）。
         Sentinel.Analyze(_store, _from, _to);
+
+        // 事件標註（v2.60 BL-007 的 UI 面）：與圖表同區間；附加功能，失敗如實標示、不得影響歷史頁本身。
+        var annotations = BaselineLearningService.QueryAnnotations(_to - _from);
+        if (annotations is null)
+        {
+            EventAnnotations = [];
+            EventAnnotationCoverage = "事件記錄讀不到（頻道或權限）——如實標示，不畫成 0 筆";
+        }
+        else
+        {
+            EventAnnotations = annotations.OrderByDescending(a => a.At).Take(30).ToList();
+            EventAnnotationCoverage = annotations.Count == 0
+                ? "視窗內沒有這四類事件（記錄可能被清理）"
+                : $"{annotations.Count} 筆（顯示最新 {EventAnnotations.Count}）";
+        }
+        OnPropertyChanged(nameof(EventAnnotations));
+        OnPropertyChanged(nameof(EventAnnotationCoverage));
 
         Changed?.Invoke();
     }

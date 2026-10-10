@@ -69,6 +69,18 @@ public static class DiskFullFactsService
     public static ScanRequest DefaultRequest(int maxDepth = 2, int topCount = 8) =>
         new(DefaultRoots(), maxDepth, topCount);
 
+    /// <summary>
+    /// 明示觸發的深掃請求（v2.60，CLI --disk-usage --deep）：自動收集根<b>加上使用者設定檔</b>、深度 6。
+    /// 設定檔整份遞迴要數十秒——這正是它不進啟動路徑的原因；入口與代價都明示（值裡寫「本次掃了哪些根」）。
+    /// </summary>
+    public static ScanRequest DeepRequest(int topCount = 10)
+    {
+        var roots = DefaultRoots().ToList();
+        string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (profile.Length > 0 && !roots.Contains(profile, StringComparer.OrdinalIgnoreCase)) roots.Add(profile);
+        return new ScanRequest(roots, 6, topCount);
+    }
+
     /// <summary>一次掃描結果。</summary>
     public sealed record ScanResult(
         IReadOnlyList<DiskUsageEntry> Top, long TotalBytes, long FileCount, int SkippedDirectories, int RootsScanned);

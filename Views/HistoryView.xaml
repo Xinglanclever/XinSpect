@@ -78,6 +78,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- 標題與時間窗控制 -->
@@ -181,8 +182,44 @@
             </StackPanel>
         </Border>
 
+        <!-- 事件標註（BL-007 的 UI 面，v2.60）：四類事件映到歷史頁的時間軸；只標註不建立因果 -->
+        <Border Grid.Row="4" Style="{StaticResource Card}" Margin="0,12,0,0">
+            <StackPanel>
+                <Grid Margin="0,0,0,6">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Subtitle}" Text="事件標註"/>
+                        <local:HelpDot HelpKey="history/事件標註"/>
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource FieldLabel}" HorizontalAlignment="Right"
+                               VerticalAlignment="Center" Text="{Binding EventAnnotationCoverage, Converter={x:Static local:ChineseConverter.Instance}}"/>
+                </Grid>
+
+                <ItemsControl ItemsSource="{Binding EventAnnotations}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,0,0,9">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource FieldValue}"
+                                               Text="{Binding At, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='{}{0:yyyy-MM-dd HH:mm} UTC'}"/>
+                                    <TextBlock Style="{StaticResource FieldValue}" Margin="8,0,0,0"
+                                               Text="{Binding Kind, Converter={x:Static local:ChineseConverter.Instance}}"/>
+                                </StackPanel>
+                                <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" FontSize="11"
+                                           Margin="0,1,0,0"
+                                           Text="{Binding Label, Converter={x:Static local:ChineseConverter.Instance}}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" FontSize="11" Margin="0,4,0,0"
+                           Foreground="{DynamicResource MutedInkBrush}"
+                           Text="標註只說「那個時間點發生了這種事件」（WHEA、TDR、非預期關機、藍屏四類），不建立因果——非預期關機也可能是停電、電源或驅動；事件讀不到會如實標示，不畫成 0 筆。"/>
+            </StackPanel>
+        </Border>
+
         <!-- 頁尾：資料點數、倉儲狀態與匯出訊息 -->
-        <StackPanel Grid.Row="4" Margin="4,10,0,0">
+        <StackPanel Grid.Row="5" Margin="4,10,0,0">
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap">
                 <Run Text="{Binding CountText, Mode=OneWay}"/><Run Text="　・　"/><Run Text="{Binding StoreText, Mode=OneWay}"/>
             </TextBlock>

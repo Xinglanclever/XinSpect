@@ -212,6 +212,18 @@ public static class BaselineLearningService
             "筆", Source, FactTrustLevel.Reported, false, at, annotations.Count);
     }
 
+    /// <summary>
+    /// 事件標註的公開出口（v2.60 BL-007 的 UI 面）：回視窗內的標註（呼叫端自行排序）。
+    /// 事件讀不到回 null——呼叫端要如實標「讀不到」，不是 0 筆。
+    /// <b>界線同 bl.events</b>：標註只說「那個時間點發生了這種事件」，不建立因果。
+    /// </summary>
+    public static IReadOnlyList<EventAnnotation>? QueryAnnotations(TimeSpan window,
+        Func<IReadOnlyList<AnnotatedEvent>>? eventsProbe = null)
+    {
+        try { return EventAnnotationLayer.FromEvents((eventsProbe ?? RealEvents(window))()); }
+        catch { return null; }
+    }
+
     /// <summary>真實通路：System（41／6008／1001／4101）＋ WHEA-Logger 全數，取視窗內事件。</summary>
     public static Func<IReadOnlyList<AnnotatedEvent>> RealEvents(TimeSpan span)
     {

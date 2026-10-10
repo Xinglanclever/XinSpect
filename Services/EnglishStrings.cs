@@ -26,6 +26,7 @@ public static class EnglishStrings
         ["感測器"] = "Sensors",
         ["歷史回放"] = "History Replay",
         ["統計哨兵"] = "Statistical Sentinel",
+        ["事件標註"] = "Event Annotations",
         ["證據實驗室"] = "Evidence Lab",
         ["韌體安全"] = "Firmware Security",
         ["健康"] = "Health",

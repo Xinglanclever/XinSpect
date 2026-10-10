@@ -23,6 +23,8 @@ public static class CliService
     public const string VerifyAuditArg = "--verify-audit";
     public const string IntegrityBaselineArg = "--integrity-baseline";
     public const string SbomArg = "--sbom";
+    public const string DiskUsageArg = "--disk-usage";
+    public const string DeepArg = "--deep";
 
     public const int ExitOk = 0;
     public const int ExitPartial = 2;
@@ -51,6 +53,8 @@ public static class CliService
             return RunIntegrityBaseline(args, stdout, stderr);
         if (args[0] == SbomArg)
             return RunSbom(args, stdout, stderr);
+        if (args[0] == DiskUsageArg)
+            return RunDiskUsage(args, stdout, stderr);
         if (args[0] != JsonArg)
         {
             stderr.WriteLine($"未知引數「{args[0]}」。用 --help 看用法。");
@@ -256,6 +260,45 @@ public static class CliService
     }
 
     /// <summary>
+    /// 磁碟用量模式（SG-002 深掃入口，v2.60）：<c>--disk-usage</c> 掃預設根（暫存與傾印）；
+    /// <c>--disk-usage --deep</c> 加上使用者設定檔、深度 6。只讀不刪——本命令沒有任何刪除路徑。
+    /// 退出碼：0＝全 Present；2＝部分三態（根讀不到會如實列出）；1＝致命（寫出失敗）。
+    /// </summary>
+    private static int RunDiskUsage(string[] args, TextWriter stdout, TextWriter stderr)
+    {
+        bool deep = args.Contains(DeepArg, StringComparer.OrdinalIgnoreCase);
+        var request = deep ? DiskFullFactsService.DeepRequest() : DiskFullFactsService.DefaultRequest(2, 10);
+        var facts = DiskFullFactsService.Collect(DateTimeOffset.UtcNow, request);
+
+        var payload = new
+        {
+            generatedAtUtc = DateTimeOffset.UtcNow,
+            scope = "disk-usage",
+            deep,
+            roots = request.Roots,
+            maxDepth = request.MaxDepth,
+            topCount = request.TopCount,
+            allPresent = facts.All(f => f.Availability == FactAvailability.Present),
+            facts,
+            note = "只讀排行，不刪任何東西" + (deep ? "（含使用者設定檔，深度 6；整份遞迴要數十秒——"
+                + "這就是它不進啟動路徑的原因）" : "（預設根不含使用者設定檔；--deep 明示加入）"),
+        };
+        string json = JsonSerializer.Serialize(payload, JsonOptions);
+        try
+        {
+            string? outPath = OptionValue(args, OutArg);
+            if (outPath is not null) File.WriteAllText(outPath, json);
+            else stdout.WriteLine(json);
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"寫出失敗：{ex.Message}");
+            return ExitError;
+        }
+        return facts.All(f => f.Availability == FactAvailability.Present) ? ExitOk : ExitPartial;
+    }
+
+    /// <summary>
     /// SBOM 模式（RS-002）：輸出 CycloneDX 1.5 的 JSON。
     /// 退出碼：0＝元件完整（作業系統＋驅動＋本程式）；2＝部分元件讀不到（如驅動清單 WMI 失敗，
     /// 原因在 stderr，文件裡就只有讀得到的那些）；1＝致命（寫出失敗）。
@@ -304,6 +347,7 @@ public static class CliService
               XinSpect --verify-audit [日誌路徑] [--out <檔案>]
               XinSpect --integrity-baseline [日誌路徑] [--out <檔案>]
               XinSpect --sbom [--out <檔案>]
+              XinSpect --disk-usage [--deep] [--out <檔案>]
               XinSpect --help
 
             範圍：
@@ -319,6 +363,9 @@ public static class CliService
               integrity-baseline
                               把自身二進位與設定檔的 SHA-256 記進審計日誌（自我完整性的基線；
                               這是本工具唯一寫入自身基線的動作，故做成明示命令）。
+              disk-usage      磁碟「為什麼滿」的唯讀排行（預設只掃暫存與傾印根）；
+                              加 --deep 明示含使用者設定檔（深度 6，整份遞迴要數十秒）。
+                              只讀不刪——本命令沒有任何刪除路徑。
               sbom            產生 CycloneDX 1.5 的 SBOM（元件＝作業系統＋驅動＋本程式；
                               不含已安裝應用程式套件與授權）。
 
@@ -332,6 +379,7 @@ public static class CliService
               --compare-flash   0＝一致；2＝有差異或無法完成比對（三態細節在輸出）；1＝致命錯誤。
               --verify-audit    0＝鏈完整（或尚無日誌檔，輸出如實標 fileExists＝false）；
                                 2＝鏈斷或檔案損毀（斷點在第幾筆、什麼型別，都在輸出）；1＝致命。
+              --deep           --disk-usage 的明示深掃（含使用者設定檔）。
               --integrity-baseline
                                 0＝已記錄（雜湊鏈可驗）；2＝未記錄（讀不到或寫不進去）；1＝致命。
               --sbom            0＝元件完整；2＝部分元件讀不到（原因在 stderr）；1＝致命。
