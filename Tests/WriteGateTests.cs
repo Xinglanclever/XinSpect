@@ -80,6 +80,43 @@ public class WriteGateTests
         WriteGate.Reset();
     }
 
+    /// <summary>UI 投影（v2.55）：帳本逐筆攤在畫面上，成敗符號分明，唯讀時空清單＋如實摘要。</summary>
+    [Fact]
+    public void 畫面投影逐筆成敗分明且唯讀時空清單()
+    {
+        WriteGate.Reset();
+        var lab = new EvidenceLabService();
+        Assert.Empty(lab.WriteAuditRows);                       // 唯讀＝空清單，不造假列
+        Assert.Contains("沒有", lab.WriteAuditHeadline, StringComparison.Ordinal);
+
+        WriteGate.Record("MSR 0x309", "PmuService", "EAX=0x1", true);
+        WriteGate.Record("PCI 0:1F.5+0x04", "SpiService", "dword", false);
+        var rows = lab.WriteAuditRows;
+        Assert.Equal(2, rows.Count);
+        Assert.Equal("✓", rows[0].ResultText);
+        Assert.Equal("✗", rows[1].ResultText);
+        Assert.Equal("MSR 0x309", rows[0].Target);
+        Assert.Contains(":", rows[0].TimeText, StringComparison.Ordinal);   // 時間有被格式化
+        Assert.Equal("PmuService", rows[0].Caller);
+        WriteGate.Reset();
+    }
+
+    /// <summary>守門（v2.55）：卡片、投影屬性與 ReloadInto 的翻頁通知都必須接著——拆掉任一環，帳本就只剩 CLI 看得到。</summary>
+    [Fact]
+    public void 寫入稽核卡片與通知接線不得拆除()
+    {
+        string xaml = System.IO.File.ReadAllText(RepoFile("Views", "FirmwareSecurityView.xaml"));
+        Assert.Contains("firmware-security/寫入稽核", xaml, StringComparison.Ordinal);
+        Assert.Contains("EvidenceLab.WriteAuditRows", xaml, StringComparison.Ordinal);
+        Assert.Contains("EvidenceLab.WriteAuditHeadline", xaml, StringComparison.Ordinal);
+
+        string lab = System.IO.File.ReadAllText(RepoFile("Services", "EvidenceLabService.cs"));
+        Assert.Contains("public void RaiseWriteAuditChanged()", lab, StringComparison.Ordinal);
+
+        string col = System.IO.File.ReadAllText(RepoFile("Services", "EvidenceCollection.cs"));
+        Assert.Contains("svc.RaiseWriteAuditChanged()", col, StringComparison.Ordinal);
+    }
+
     private static string RepoRoot()
     {
         var dir = new System.IO.DirectoryInfo(AppContext.BaseDirectory);

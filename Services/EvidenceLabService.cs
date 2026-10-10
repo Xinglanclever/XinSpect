@@ -15,6 +15,35 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>晶片組安全三態事實（BIOS_CNTL/SMRAMC…）。由啟動路徑以 WinRing0 後端載入；測試注入假讀取器。預設空＝尚未讀。</summary>
     public IReadOnlyList<HardwareFact> ChipsetFacts { get; private set; } = [];
 
+    // ── 寫入稽核（v2.55，WriteGate 帳本的 UI 投影）────────────────────────────
+    // 同意閘門回答「該不該做」，寫入帳本回答「點頭之後到底寫了什麼」。這兩個屬性是
+    // 即時計算（帳本在 WriteGate 靜態類），通知由 EvidenceCollection.ReloadInto 的
+    // finally 統一發——帳本每輪收集重置，畫面跟著翻頁，不顯示上一輪的殘影。
+
+    /// <summary>寫入稽核一句話摘要：唯讀收集時如實說「沒有寫入」，截斷時說截斷。</summary>
+    public string WriteAuditHeadline => WriteGate.DescribeSession();
+
+    /// <summary>本次執行的逐筆寫入記錄（時間／目標／呼叫者／內容／成敗）。唯讀投影，不複製帳本所有權。</summary>
+    public IReadOnlyList<WriteAuditRow> WriteAuditRows
+        => [.. WriteGate.Session.Select(e => new WriteAuditRow(
+            e.AtUtc.ToLocalTime().ToString("HH:mm:ss.fff"),
+            e.Target, e.Caller, e.Detail,
+            e.Succeeded ? "✓" : "✗"))];
+
+    /// <summary>收集輪結束時由 EvidenceCollection 呼叫，讓畫面上的帳本與本輪一致。</summary>
+    public void RaiseWriteAuditChanged()
+    {
+        OnPropertyChanged(nameof(WriteAuditHeadline));
+        OnPropertyChanged(nameof(WriteAuditRows));
+    }
+
+    /// <summary>
+    /// 本機能力矩陣的畫面投影（v2.56）：從韌體安全列裡挑出九條 cap.* 彙總。
+    /// 來源缺席顯示「無法判定」——缺席不讀成不支援，也不讀成可用（v2.52 同一條線）。
+    /// </summary>
+    public IReadOnlyList<EvidenceFactRow> CapabilityMatrixRows
+        => [.. FirmwareSecurityRows.Where(r => r.Category == CapabilityMatrixService.Category)];
+
     /// <summary>以注入的 PCI 讀取器載入晶片組安全事實；讀不到由 ChipsetSecurityService 標三態，不在這裡觸發核心驅動安裝（測試用假讀取器）。</summary>
     public void LoadChipsetSecurity(IPciConfigReader reader)
     {
@@ -596,6 +625,24 @@ public sealed class EvidenceLabService : ObservableObject
         NetOffloadFacts = NetOffloadFactsService.Collect(DateTimeOffset.UtcNow);
     }
 
+    /// <summary>本地安全審計事實（v2.56，SA 組：IFEO／Winlogon／AppInit／輔助功能／代理）。唯讀登錄檔。</summary>
+    public IReadOnlyList<HardwareFact> LocalSecurityAuditFacts { get; private set; } = [];
+
+    /// <summary>LoadUsermodeFacts 的本地安全審計段：五個收集器串接；命中＝風險面非判決。</summary>
+    public void LoadLocalSecurityAudit()
+    {
+        var at = DateTimeOffset.UtcNow;
+        LocalSecurityAuditFacts =
+        [
+            .. LocalSecurityAuditService.CollectIfeo(at),
+            .. LocalSecurityAuditService.CollectWinlogon(at),
+            .. LocalSecurityAuditService.CollectAppInit(at),
+            .. LocalSecurityAuditService.CollectAccessibility(at),
+            .. LocalSecurityAuditService.CollectProxy(at),
+        ];
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
     /// <summary>UEFI FV 卡片的摘要列（右側小字）：FV 總數；讀不到時如實顯示原因。</summary>
     public string UefiFvSummary
     {
@@ -637,7 +684,7 @@ public sealed class EvidenceLabService : ObservableObject
             var baseFacts = ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
                 .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
                 .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
-                .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts)
+                .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(LocalSecurityAuditFacts)
                 .ToList();
             baseFacts.AddRange(CapabilityMatrixService.Collect(baseFacts, DateTimeOffset.UtcNow));
             return baseFacts;
@@ -947,6 +994,9 @@ public sealed class EvidenceLabService : ObservableObject
         return f;
     }
 }
+
+/// <summary>寫入稽核畫面的一列（v2.55）：時間／目標／呼叫者／內容／成敗符號。資料投影，不是事實鍵。</summary>
+public sealed record WriteAuditRow(string TimeText, string Target, string Caller, string Detail, string ResultText);
 
 public sealed record EvidenceFactRow(string Category, string Name, string Value, string Source, string Trust, bool Sensitive,
     FactAvailability Availability = FactAvailability.Present, string? UnavailableReason = null)

@@ -90,4 +90,30 @@ public class CapabilityMatrixTests
         // 輸入是 baseFacts（來源群），不是 AllFacts 本身——cap 行不會餵回來源對照
         Assert.DoesNotContain("CapabilityMatrixService.Collect(AllFacts", lab, StringComparison.Ordinal);
     }
+
+    /// <summary>畫面投影（v2.56）：尚未載入任何來源時，九行全在且一律「無法判定」——缺席不冒充不支援。</summary>
+    [Fact]
+    public void 畫面投影九行全在且未載來源時一律無法判定()
+    {
+        var lab = new EvidenceLabService();
+        var rows = lab.CapabilityMatrixRows;
+        Assert.Equal(9, rows.Count);
+        Assert.All(rows, r =>
+        {
+            Assert.True(r.IsUnavailable);
+            Assert.Contains("無法判定", r.ValueText, StringComparison.Ordinal);
+        });
+    }
+
+    /// <summary>守門（v2.56）：卡片與投影屬性不得拆除——拆掉後九條彙總又沈回長清單裡沒人看得見。</summary>
+    [Fact]
+    public void 能力矩陣卡片與投影接線不得拆除()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(dir.FullName + "/XinSpect.csproj"))
+            dir = dir.Parent;
+        string xaml = File.ReadAllText(Path.Combine(dir!.FullName, "Views", "FirmwareSecurityView.xaml"));
+        Assert.Contains("firmware-security/能力矩陣", xaml, StringComparison.Ordinal);
+        Assert.Contains("EvidenceLab.CapabilityMatrixRows", xaml, StringComparison.Ordinal);
+    }
 }

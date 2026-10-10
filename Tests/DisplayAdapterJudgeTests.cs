@@ -152,6 +152,41 @@ public class DisplayAdapterJudgeTests
         Assert.Equal(FactAvailability.ReadError, f.Availability);
     }
 
+    // ── 硬體 GPU 在場狀態（v2.57）────────────────────────────────────────
+
+    [Fact]
+    public void 硬體gpu在場_有真卡時present且帶名稱與計數()
+    {
+        var facts = DisplayAdapterFactsService.Collect(At,
+            () => [Pci("NVIDIA TITAN Xp"), Root("MuMu Virtual Display Adapter", "MuMu")]);
+        var f = Assert.Single(facts, x => x.Key == "display.hw.gpu");
+        Assert.Equal(FactAvailability.Present, f.Availability);
+        Assert.Equal("NVIDIA TITAN Xp", f.Value);   // 虛擬轉接器不進這條
+        Assert.Equal(1, f.NumericValue);
+    }
+
+    [Fact]
+    public void 硬體gpu缺席_只有虛擬顯示時如實說沒有且計數為零()
+    {
+        // 「沒有硬體 GPU」是觀察到的 Present 事實——缺席的是卡，不是讀取；
+        // 不得以三態冒充（那會把「這台沒卡」跟「沒去讀」混成一件事）。
+        var facts = DisplayAdapterFactsService.Collect(At,
+            () => [Root("MuMu Virtual Display Adapter", "MuMu")]);
+        var f = Assert.Single(facts, x => x.Key == "display.hw.gpu");
+        Assert.Equal(FactAvailability.Present, f.Availability);
+        Assert.Contains("沒有可辨識的硬體顯示卡", f.Value, StringComparison.Ordinal);
+        Assert.Equal(0, f.NumericValue);
+    }
+
+    [Fact]
+    public void 硬體gpu缺席_基本顯示轉接器不算硬體gpu()
+    {
+        var facts = DisplayAdapterFactsService.Collect(At,
+            () => [Pci("Microsoft Basic Display Adapter", compat: "Microsoft Corporation")]);
+        var f = Assert.Single(facts, x => x.Key == "display.hw.gpu");
+        Assert.Equal(0, f.NumericValue);
+    }
+
     [Fact]
     public void 事實收集_擲回例外以ReadError回報()
     {

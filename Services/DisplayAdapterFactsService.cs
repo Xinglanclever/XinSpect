@@ -48,6 +48,17 @@ public static class DisplayAdapterFactsService
                 FactTrustLevel.Derived, false, at, null, FactAvailability.Present),
         };
 
+        // 硬體 GPU 在場狀態（v2.57）：「沒有硬體顯示卡」是觀察到的 Present 事實，
+        // 不是三態——我們真的讀到了組成，缺席的是卡、不是讀取。GPU 實測類功能
+        // 依這條判斷「本機能不能量」，而不是靠例外路徑回頭猜。
+        var hw = adapters.Where(a => a.HasPciAddress && !a.IsMicrosoftBasicDisplay).ToList();
+        list.Add(new HardwareFact("display.hw.gpu", Category, "硬體 GPU 在場狀態",
+            hw.Count > 0
+                ? string.Join("、", hw.Select(a => a.Name).OrderBy(n => n, StringComparer.Ordinal))
+                : "沒有可辨識的硬體顯示卡（僅虛擬／基本顯示轉接器）",
+            "", "WMI Win32_VideoController（PCI 列舉且非基本顯示）",
+            FactTrustLevel.Derived, false, at, (double)hw.Count, FactAvailability.Present));
+
         foreach (var a in adapters)
         {
             var v = DisplayAdapterJudge.Judge(a);

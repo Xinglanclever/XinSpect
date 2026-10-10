@@ -38,6 +38,9 @@ public static class EvidenceCollection
                     all.Count(f => f.Availability != FactAvailability.Present), failed ? 1 : 0);
             }
             catch { /* 遙測統計失敗不影響主流程 */ }
+            // 寫入稽核跟著本輪翻頁（v2.55）：帳本在 ReloadInto 開頭 Reset，畫面同步成「本次執行」
+            try { svc.RaiseWriteAuditChanged(); }
+            catch { /* 通知失敗不影響主流程 */ }
         }
     }
 
@@ -75,6 +78,8 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 BootTimingFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadNetOffload(); }
         catch { /* 附加功能：讀不到由 NetOffloadFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadLocalSecurityAudit(); }
+        catch { /* 附加功能：讀不到由 LocalSecurityAuditService 標三態，不在這裡中斷啟動 */ }
     }
 
     /// <summary>BIOS 區 vs 參考映像的比對（UI 與 CLI 共用入口）：組合後端後跑一次比對，回結果事實。</summary>

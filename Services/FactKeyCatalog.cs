@@ -1,4 +1,4 @@
-// 事實鍵目錄：由 Services/ 原始碼掃描產生，並由 FactKeyCatalogTests 驗證與原始碼一致。
+﻿// 事實鍵目錄：由 Services/ 原始碼掃描產生，並由 FactKeyCatalogTests 驗證與原始碼一致。
 // 為什麼要這份目錄而不是執行期掃原始碼：發佈版只有單一 exe，沒有 Services/ 目錄——
 // 掃不到時會回報「0 個鍵」，而覆蓋申報會把 0 讀成「全部都覆蓋了」。
 // 那是「掃不到」冒充「沒有問題」，所以改成編譯期固定的目錄＋測試守門。
@@ -88,6 +88,7 @@ public static class FactKeyCatalog
         "dbg.start_options",
         "dbg.testsigning",
         "defender.exclusions.count",
+        "display.hw.gpu",
         "display.summary",
         "drvinsp.drivers.count",
         "drvinsp.truncated",
@@ -159,6 +160,26 @@ public static class FactKeyCatalog
         "reg.microcode",
         "role.surface",
         "role.surface.evidence",
+        "sa.a11y.displayswitch.exe",
+        "sa.a11y.magnify.exe",
+        "sa.a11y.narrator.exe",
+        "sa.a11y.osk.exe",
+        "sa.a11y.read",
+        "sa.a11y.sethc.exe",
+        "sa.a11y.utilman.exe",
+        "sa.appinit.load",
+        "sa.appinit.read",
+        "sa.appinit.value",
+        "sa.ifeo.scan",
+        "sa.proxy.read",
+        "sa.proxy.winhttp.server",
+        "sa.proxy.wininet.enable",
+        "sa.proxy.wininet.override",
+        "sa.proxy.wininet.server",
+        "sa.winlogon.notify.count",
+        "sa.winlogon.read",
+        "sa.winlogon.shell",
+        "sa.winlogon.userinit",
         "setuptl.recent",
         "setuptl.sections.count",
         "smart.failing_now.count",

@@ -27,5 +27,5 @@ internal static class TestSuiteBaseline
     /// <summary>
     /// 專案測試數。加測試就改這裡，<c>ChangelogTests</c> 會守著三份 README 的徽章。
     /// </summary>
-    public const int ProjectTests = 3679;
+    public const int ProjectTests = 3699;
 }

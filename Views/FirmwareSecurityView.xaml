@@ -87,6 +87,68 @@
                 </StackPanel>
             </Border>
 
+            <!-- ══ 本機能力矩陣（v2.56）═════════════════════════════════════
+                 九條 cap.* 彙總：分清「環境不支援」「通路未就緒」「收集沒跑到」。 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="本機能力矩陣" HelpKey="firmware-security/能力矩陣"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                               Text="九條彙總事實回答「這台機器上，哪條讀取通路真的在 work」：顯示「可用」才是真的量到過；顯示三態是環境沒有這個東西或通路未就緒；顯示「無法判定」是來源鍵缺席——缺席不讀成不支援，也不讀成可用。"/>
+                    <ItemsControl ItemsSource="{Binding EvidenceLab.CapabilityMatrixRows}" Margin="0,8,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="230"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldValue}"
+                                               Text="{Binding Name, Converter={x:Static local:ChineseConverter.Instance}}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                                               Text="{Binding ValueText, Converter={x:Static local:ChineseConverter.Instance}}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- ══ 寫入稽核（v2.55）═════════════════════════════════════════
+                 同意閘門管「該不該」，帳本管「寫了什麼」。唯讀時如實顯示沒有寫入。 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="寫入稽核（本次執行）" HelpKey="firmware-security/寫入稽核"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                               Text="同意閘門回答「該不該做」，這張卡回答「點頭之後到底寫了什麼」：每一次 MSR／PCI 設定空間／I/O 埠寫入的時間、目標、呼叫者與成敗，由底層橋接自動記帳、帳本每輪收集重置。唯讀收集時如實顯示沒有寫入——「沒有」和「沒去查」不是同一句話。"/>
+                    <TextBlock Style="{StaticResource FieldValue}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="{Binding EvidenceLab.WriteAuditHeadline}"/>
+                    <ItemsControl ItemsSource="{Binding EvidenceLab.WriteAuditRows}" Margin="0,6,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="170"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="26"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="{Binding TimeText}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" TextWrapping="Wrap"
+                                               Text="{Binding Target, Converter={x:Static local:ChineseConverter.Instance}}"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                                               Text="{Binding Detail, Converter={x:Static local:ChineseConverter.Instance}}"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                                               Text="{Binding Caller, Converter={x:Static local:ChineseConverter.Instance}}"/>
+                                    <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" TextAlignment="Center"
+                                               Text="{Binding ResultText}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <!-- ══ 虛擬化平台三態 ═══════════════════════════════════════════
                  「元件裝了」「服務在跑」「虛擬層載入了」是三件獨立的事，而一般工具把它們
                  壓成一句「Hyper-V：已啟用／停用」——於是「裝了但沒開」永遠被講錯。 -->
