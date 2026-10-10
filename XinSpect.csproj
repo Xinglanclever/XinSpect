@@ -21,7 +21,7 @@
     <Product>曦覽 XinSpect</Product>
     <AssemblyTitle>曦覽 XinSpect 硬體資訊總覽</AssemblyTitle>
     <Company>Xinglanclever</Company>
-    <Version>2.53</Version>
+    <Version>2.54</Version>
     <!-- FileVersion 只吃數字，表達不了「-B1」；第四段就是拿來標這種同版號的後續建置的 -->
     <FileVersion>2.30.0.0</FileVersion>
     <!-- 內嵌 PDB：發佈維持單一執行檔，CrashLog 記錄的堆疊仍帶行號（portable PDB 預設會另產生 XinSpect.pdb） -->
@@ -86,6 +86,8 @@
     <None Remove="Bridge\**" />
     <Page Remove="Bridge\**" />
     <Resource Remove="Bridge\**" />
+    <!-- docs/ 歸檔裡可能有歷史 .cs（orphaned-tests 等）：它們不是本體的編譯單位 -->
+    <Compile Remove="docs\**\*.cs" />
   </ItemGroup>
 
   <!-- ── 藍色中隊守護進程（BlueSquadronBridge）：不納入本體檔案集 ─────────────────

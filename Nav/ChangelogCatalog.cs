@@ -48,6 +48,22 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.54",
+            Date = "2026-10-10",
+            Title = "發版流水線一支腳本：預檢→全綠→tag→發佈→上傳→驗證",
+            Items =
+            [
+                "新增 Tools/release.ps1：把发版的手動十二步收成一支命令——預檢（版號六處＋三份 README 徽章/連結/註腳/沿革＋基線常數逐項比對）→ 全量測試以 trx 計數器為準（failed/error/notExecuted 任一非零即中止）→ commit→ tag→ push（lightweight tag 顯式推＋ls-remote 核對，今晚 v2.53 真的漏推過一次）→ dotnet publish 單檔→ README 位元組數自動同步＋docs commit→ publish_release.py 三資產上傳（逐資產大小對帳）→ verify-release.ps1 收尾。任一步紅立即中止，不带病发下一版。",
+                "Tools/publish_release.py 從工作區腳本升級入庫：token 一律 git credential fill、永不回顯；Release 已存在則 PATCH 並刪同名資產重傳；上傳後 size 與本地檔逐一核對（曾有靜默漏傳的教訓）。",
+                "本版即由腳本自身發佈（吃自己的狗糧）；-DryRun 只跑預檢＋全套、-SkipTests 僅供 DryRun 後立即接真發。",
+                "關於頁新增「檢查更新」按鈕（使用者指定；因同檔改動提前併入本版）：點擊才向 GitHub Releases API 發一次 GET 查最新版本號——不上傳本機任何資料（資料主權聲明同步成文，UpdateCheckService 登記進 opt-in 允許清單）。判定三態誠實：有新版／已是最新／查不到（網路不通、限流或解析失敗——如實顯示，不假裝已是最新）；版本比較逐段數字（2.10 > 2.9，字串比較會判反）；有新版時給「開啟下載頁」連結。守門 UpdateCheckServiceTests 5 條全走純函數不碰網路。",
+                "守門 ReleasePipelineTests 3 條：腳本存在＋UTF-8 BOM＋每道歷史出過事的閘門標記都在（trx 計數／ls-remote／顯式推 tag／單檔 publish／REST 上傳／發佈後驗證／docs commit／RELEASE-FAIL 中止）；上傳腳本 token 走管道不回顯且逐資產驗大小；三份 README 主程式列的形狀必須仍是腳本正則能命中的靶子（形狀一变腳本會靜默漏改，由測試釘住）。",
+                "工作樹歸檔：根目錄散落的多份 HANDOFF／PROGRAM／CODE-REVIEW／TASK-GAP 歷史文件移入 docs/archive-2026-10/（內容原樣保留、不刪除），隔離的 .orphaned-tests 一併歸檔，4 個建置暫存 _verify_probe/ 刪除（約 190MB）；csproj 補 docs 目錄排除——歸檔裡的歷史 .cs不是本體編譯單位，預設 glob 吞進去會直接破壞建置。",
+                "測試 +8（3679 綠）。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.53",
             Date = "2026-10-10",
             Title = "算繪快照守門：HeatScale 系像素基線進倉庫",

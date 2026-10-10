@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using Xunit;
 
 namespace XinSpect.Tests;
@@ -20,7 +20,7 @@ public class DataSovereigntyTests
     private static readonly string[] OptInNetworkFiles =
     [
         "AiService.cs", "FeedbackService.cs", "NetworkSpeedService.cs",
-        "NetworkStackLatencyAdapter.cs",
+        "NetworkStackLatencyAdapter.cs", "UpdateCheckService.cs",
     ];
 
     [Fact]

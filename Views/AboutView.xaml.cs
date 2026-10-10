@@ -82,6 +82,37 @@ public partial class AboutView : UserControl
                                        : LanguageService.T($"顯示更早的 {n} 個版本　▾");
     }
 
+    // ── 檢查更新（opt-in 網路：只查版本號，不上傳資料）──────────────────────
+
+    private bool _checkingUpdate;
+
+    private async void CheckUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        if (_checkingUpdate) return;
+        _checkingUpdate = true;
+        CheckUpdateBtn.IsEnabled = false;
+        UpdateResultText.Visibility = Visibility.Visible;
+        UpdateDownloadRow.Visibility = Visibility.Collapsed;
+        UpdateResultText.Text = LanguageService.T("檢查中…");
+        try
+        {
+            var v = await UpdateCheckService.CheckAsync(AppInfo.Version);
+            UpdateResultText.Text = LanguageService.TComposite(v.Detail);
+            UpdateDownloadRow.Visibility = v.UpdateAvailable ? Visibility.Visible : Visibility.Collapsed;
+        }
+        finally
+        {
+            CheckUpdateBtn.IsEnabled = true;
+            _checkingUpdate = false;
+        }
+    }
+
+    private void OpenReleases_Click(object sender, RoutedEventArgs e)
+    {
+        try { Process.Start(new ProcessStartInfo(UpdateCheckService.ReleasesPageUrl) { UseShellExecute = true }); }
+        catch { /* 無可用瀏覽器時靜默略過（與下方連結同一處理） */ }
+    }
+
     // 頁面內容由父容器延遲載入，DataContext 為繼承而來；仍以主視窗為後備。
     private MainViewModel? Vm => DataContext as MainViewModel ?? Shell.Vm;
 

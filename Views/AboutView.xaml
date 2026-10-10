@@ -36,7 +36,7 @@
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0"
                                Text="硬體資訊總覽 ・ 即時偵測工具"/>
                     <TextBlock x:Name="VersionMetadata" Style="{StaticResource FieldLabel}" Margin="0,2,0,0"
-                               Text="版本 2.53 ・ Olympus ・ 便攜單一執行檔"/>
+                               Text="版本 2.54 ・ Olympus ・ 便攜單一執行檔"/>
 
                     <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,16"/>
 
@@ -69,7 +69,18 @@
                                 Style="{StaticResource ToolButton}"
                                 Padding="10,4"
                                 Click="JourneyToggle_Click"/>
+                        <Button x:Name="CheckUpdateBtn" Content="檢查更新"
+                                Style="{StaticResource ToolButton}"
+                                Padding="10,4" Margin="8,0,0,0"
+                                Click="CheckUpdate_Click"
+                                ToolTip="僅向 GitHub 查詢最新版本號，不上傳本機任何資料"/>
                     </StackPanel>
+                    <TextBlock x:Name="UpdateResultText" Visibility="Collapsed" TextWrapping="Wrap" Margin="0,6,0,0"
+                               Style="{StaticResource FieldLabel}"/>
+                    <TextBlock x:Name="UpdateDownloadRow" Visibility="Collapsed" Margin="0,4,0,0"
+                               Style="{StaticResource FieldValue}">
+                        <Hyperlink Click="OpenReleases_Click">開啟下載頁（GitHub Releases）</Hyperlink>
+                    </TextBlock>
                     <TextBlock x:Name="JourneyText" Visibility="Collapsed" TextWrapping="Wrap"
                                Margin="0,8,0,0" LineHeight="22"
                                Foreground="{DynamicResource SecondaryInkBrush}" FontSize="13.5"><![CDATA[GPT-3 時代，我的程式能力還很青澀，寫出來的程式碼常被人嘲笑。

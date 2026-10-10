@@ -1,4 +1,4 @@
-# WP39 資料主權聲明
+﻿# WP39 資料主權聲明
 
 - **原則**：資料在哪、誰能拿走、怎麼刪——每一項都說得出來。這份聲明有機器檢查
   （`Tests/DataSovereigntyTests.cs` 掃描原始碼），程式與文件漂移會紅燈。
@@ -20,7 +20,9 @@
   1. `FeedbackService`——使用者主動送出回饋；
   2. `AiService`——使用者主動使用 AI 說明；
   3. `NetworkSpeedService`——使用者主動跑測速（量測對象就是網路本身）；
-  4. `NetworkStackLatencyAdapter`（DeepBench）——使用者指定的目標位址量延遲。
+  4. `NetworkStackLatencyAdapter`（DeepBench）——使用者指定的目標位址量延遲；
+  5. `UpdateCheckService`——使用者主動點「檢查更新」，只向 GitHub Releases API **查詢**
+     最新版本號，不上傳本機任何資料；查不到時如實顯示，不假裝已是最新。
 - Wi-Fi 訊號讀取（wlanapi）查詢的是本機無線電的狀態，**不連線、不上傳**。
 - 自我遙測（SelfTelemetry）**預設關閉**、本機存取、匿名只記數字與時間。
 
