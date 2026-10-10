@@ -1,6 +1,7 @@
-# Vol2 批次 B 第一波（FS 檔案鑑識主線）— 2026-10-11 v2.57
+# Vol2 批次 B（FS 檔案鑑識主線）第一＋二波 — 2026-10-11 v2.57／v2.58
 
 > **圈選範圍**：`docs/INDUSTRIAL-CATALOG-VOL2-2026-10-11.md` 建議批次 **B（檔案鑑識主線）** 的第一波：**FS-001（Shimcache）＋FS-009（MountedDevices）＋FS-013（隱私禁項機制化）**。
+> **第二波（v2.58）**：**FS-003（Prefetch 檔名層）**——MAM 壓縮容器不解壓，檔名＋寫入時間誠實上線。
 > **一句話**：執行痕跡與掛載歷史以金標解碼上線，禁項（Jump lists／MRU／縮圖）以機器釘死「不讀」。
 > **本輪沒有紅燈**；實機（Server 2025）交叉兩個新來源全部通過。
 
@@ -13,6 +14,7 @@
 | FS-001 | Shimcache（AppCompatCache）登錄值解碼：Win7 x64／Win10 家族兩版面，金標 fixtures 逐欄比對 | `fs.shim.count`、`fs.shim.latest`、`fs.shim.sample` |
 | FS-009 | MountedDevices 掛載對照：碟號指派（簽章＋分割區位移）與磁碟區 GUID 路徑 | `fs.mount.count`、`fs.mount.letters`、`fs.mount.volumes` |
 | FS-013 | 隱私禁項機制化：禁項表＋掃描器（正對照咬人）＋正式碼全庫零命中（負對照） | 守門測試，無事實鍵 |
+| FS-003 | Prefetch 檔名層：目錄列舉＋80 位元組檔頭判格式（MAM 不解壓／SCCA 五版本） | `fs.pf.count`、`fs.pf.formats`、`fs.pf.latest`、`fs.pf.sample` |
 
 ## 2. 版面出處（這是本輪最重要的部分）
 
@@ -51,6 +53,5 @@ dotnet test Tests/XinSpect.Tests.csproj --filter "FullyQualifiedName~AppCompatCa
 ## 6. 界線（本輪沒有做的事）
 
 1. **FS-002 Amcache**：需要 NT registry hive 離線解析器（檔案被系統鎖定、RegLoadKey 屬載入動作不做）——延後到獨立版本。
-2. **FS-003 Prefetch**：MAM04 壓縮內容需 LZXPRESS Huffman 解壓；本輪未做，檔名層（執行歷史）留待下一波。
 3. **FS-012 鑑識匯總時間線**：等 FS 來源 ≥3 個再合併（本輪只有 2 個）。
 4. **韌體安全頁的新分類「檔案鑑識」沒有目視核對**（與 v2.56 同一條界線）：分組排序由既有 CollectionViewSource 機制處理，但人眼確認仍欠。

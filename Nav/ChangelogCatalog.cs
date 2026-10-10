@@ -48,6 +48,20 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.58",
+            Date = "2026-10-11",
+            Title = "Vol2 批次 B 第二波：Prefetch 檔名層（MAM 容器不解壓，如實）",
+            Items =
+            [
+                "Prefetch 檔名層（FS-003）：列舉 C:\\Windows\\Prefetch\\*.pf，每檔只讀前 80 位元組交金標檔頭解碼器；Win10/11 的 MAM 壓縮容器辨識得出但刻意不解壓（沒有引用檔案清單與卷冊——LZXpress 解壓屬明示觸發範圍），未壓縮 SCCA 頭解出執行檔名與路徑雜湊（v17/23/26/30/31 五版本，對準 Zimmerman Prefetch 庫逐欄）。fs.pf.count／formats／latest／sample 四把固定鍵，零動態家族。",
+                "界線寫進值裡：檔名存在＝曾被預取，不等於執行成功；時間是檔案寫入時間（系統於關機/定期寫入，近似不是精確時刻）；空目錄＝沒有預取資料，不是「沒有執行過程式」（Server 2025 的 SysMain 常停用——本機實測即空目錄，服務如實標 NotApplicable）；檔頭讀不到的檔案計入略過數如實列。",
+                "接線：Prefetch 走 LoadFsForensics 共用入口（UI 與 CLI 同源）與 AllFacts；Amcache（NT hive 解析器）與 Prefetch 壓縮內含解壓仍屬明示觸發。",
+                "測試 +15（3825 綠）；事實鍵目錄 227 → 231。",
+            ],
+        },
+
+        new ChangeEntry
+        {
             Version = "2.57",
             Date = "2026-10-11",
             Title = "Vol2 批次 B 第一波：檔案鑑識主線（Shimcache／MountedDevices）＋隱私禁項機制化",

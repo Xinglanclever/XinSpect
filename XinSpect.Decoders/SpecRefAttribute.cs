@@ -65,6 +65,7 @@ public static class SpecRefRegistry
         typeof(PeInspect),       // PE 靜態檢視（PE/COFF Spec；驅動檔不載入、不呼叫 IOCTL）
         typeof(SetupApiLog),     // setupapi.dev.log 裝置安裝記錄解析（標記符號／裝置 ID／時間戳為語言中立）
         typeof(AppCompatCacheDecoder), // AppCompatCache／Shimcache 條目版面（AppCompatCacheParser 出處逐欄）
+        typeof(PrefetchHeaderDecoder), // Prefetch .pf 檔頭（MAM 容器／SCCA 各版本；Zimmerman Prefetch 庫出處）
     ];
 
     /// <summary>列舉解碼器上缺 SpecRef 的公開靜態方法（宣告於本型別者）。</summary>

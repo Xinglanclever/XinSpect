@@ -680,7 +680,8 @@ public sealed class EvidenceLabService : ObservableObject
     public void LoadFsForensics()
     {
         FsForensicFacts = ShimcacheFactsService.CollectForThisMachine(DateTimeOffset.UtcNow)
-            .Concat(MountedDevicesFactsService.CollectForThisMachine(DateTimeOffset.UtcNow)).ToList();
+            .Concat(MountedDevicesFactsService.CollectForThisMachine(DateTimeOffset.UtcNow))
+            .Concat(PrefetchFactsService.CollectForThisMachine(DateTimeOffset.UtcNow)).ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
