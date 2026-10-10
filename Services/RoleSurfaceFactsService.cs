@@ -23,6 +23,9 @@ public static class RoleSurfaceFactsService
 {
     private const string Category = "系統與軟體";
 
+    /// <summary>角色盤點摘要鍵（供其他層聚合時引用，不再各寫一次字面值）。</summary>
+    public const string SurfaceKey = "role.surface";
+
     /// <summary>收集角色事實。測試以注入清單取代。</summary>
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at,
         Func<IReadOnlyList<FeatureEntry>>? probe = null)
@@ -32,8 +35,7 @@ public static class RoleSurfaceFactsService
         catch (Exception ex)
         {
             return
-            [
-                new HardwareFact("role.surface", Category, "已安裝角色", "", "",
+            [                    new HardwareFact(SurfaceKey, Category, "已安裝角色", "", "",
                     "WMI Win32_OptionalFeature", FactTrustLevel.Unknown, false, at, null,
                     FactAvailability.ReadError, "讀取失敗：" + ex.Message),
             ];
@@ -42,7 +44,7 @@ public static class RoleSurfaceFactsService
         var v = RoleSurfaceJudge.Judge(features);
         var list = new List<HardwareFact>
         {
-            new("role.surface", Category, "已安裝角色", v.Headline, "",
+            new(SurfaceKey, Category, "已安裝角色", v.Headline, "",
                 "WMI Win32_OptionalFeature ＋ Win32_Service", FactTrustLevel.Reported, false, at,
                 v.InstalledRoles.Count, FactAvailability.Present),
             new("role.surface.evidence", Category, "已安裝角色依據", v.Evidence, "",

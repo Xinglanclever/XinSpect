@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.IO;
 
 namespace XinSpect;
@@ -639,7 +639,78 @@ public sealed class EvidenceLabService : ObservableObject
             .. LocalSecurityAuditService.CollectAppInit(at),
             .. LocalSecurityAuditService.CollectAccessibility(at),
             .. LocalSecurityAuditService.CollectProxy(at),
+            .. LocalSecurityAuditService.CollectExposure(at),
+            .. LocalSecurityAuditService.CollectWinsockLsp(at),
         ];
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
+    // ── Vol 2 批次（2026-10-11）：自我完整性／基線學習／CVE 對照／伺服器摘要／情境診斷／SBOM ──
+
+    /// <summary>自我完整性事實（IN-001/002/004/007/010）：四項唯讀；基線記錄需使用者明示（CLI --integrity-baseline）。</summary>
+    public IReadOnlyList<HardwareFact> SelfIntegrityFacts { get; private set; } = [];
+
+    public void LoadSelfIntegrity()
+    {
+        SelfIntegrityFacts = SelfIntegrityFactsService.Collect(DateTimeOffset.UtcNow);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
+    /// <summary>基線學習事實（BL-001/004/007）：吃歷史倉的序列；沒有歷史就由服務標「還沒有資料」，不給空集合。</summary>
+    public IReadOnlyList<HardwareFact> BaselineFacts { get; private set; } = [];
+
+    public void LoadBaselineLearning(HistorySeries? series = null)
+    {
+        BaselineFacts = BaselineLearningService.Collect(DateTimeOffset.UtcNow, series ?? HistorySeries.Empty);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
+    /// <summary>作業系統 CVE 離線對照（SE-002）：本版沒出貨條目，如實說「還沒有資料」。</summary>
+    public IReadOnlyList<HardwareFact> CveFacts { get; private set; } = [];
+
+    public void LoadCveOffline()
+    {
+        CveFacts = CveOfflineFactsService.CollectForThisMachine(DateTimeOffset.UtcNow);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
+    /// <summary>伺服器合規摘要（SV-014）：由既有角色事實聚合——裝了不等於配置好，只陳述計數。</summary>
+    public IReadOnlyList<HardwareFact> ServerComplianceFacts { get; private set; } = [];
+
+    public void LoadServerCompliance()
+    {
+        ServerComplianceFacts =
+        [
+            ServerComplianceFactsService.Collect(DateTimeOffset.UtcNow, RoleFacts, Environment.OSVersion.VersionString),
+        ];
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
+    /// <summary>磁碟為什麼滿（SG-002）：唯讀排行、不刪任何東西；預設只掃暫存與傾印根。</summary>
+    public IReadOnlyList<HardwareFact> DiskFullFacts { get; private set; } = [];
+
+    public void LoadDiskFull(DiskFullFactsService.ScanRequest? request = null)
+    {
+        DiskFullFacts = DiskFullFactsService.Collect(DateTimeOffset.UtcNow,
+            request ?? DiskFullFactsService.DefaultRequest());
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
+    /// <summary>電腦為什麼當（SG-011）：四類事件的事實面；觀察不是診斷。</summary>
+    public IReadOnlyList<HardwareFact> FreezeFacts { get; private set; } = [];
+
+    public void LoadFreezeDiagnosis()
+    {
+        FreezeFacts = FreezeDiagnosisFactsService.Collect(DateTimeOffset.UtcNow);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
+    /// <summary>軟體物料清單（RS-002）：元件限本機可列舉的驅動＋作業系統＋本程式；只產生內容不寫檔。</summary>
+    public IReadOnlyList<HardwareFact> SbomFacts { get; private set; } = [];
+
+    public void LoadSbom()
+    {
+        SbomFacts = SbomService.Collect(DateTimeOffset.UtcNow, AppInfo.Name, AppInfo.Version);
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
@@ -675,7 +746,8 @@ public sealed class EvidenceLabService : ObservableObject
 
     /// <summary>
     /// 全部事實組合併成單一清單（CLI 與報告用）。與 FirmwareSecurityRows 同集合、不轉渲染列。
-    /// 尾端追加能力矩陣彙總（cap.*）：彙總輸入是前面各組的聯集、不含 cap 自己——無遞迴。
+    /// 尾端追加能力矩陣彙總（cap.*）與鍵範圍檢查（qs.range）：彙總輸入是前面各組的聯集、
+    /// 不含彙總自己——無遞迴。
     /// </summary>
     public IReadOnlyList<HardwareFact> AllFacts
     {
@@ -685,8 +757,11 @@ public sealed class EvidenceLabService : ObservableObject
                 .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
                 .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
                 .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(LocalSecurityAuditFacts)
+                .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(ServerComplianceFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(SbomFacts)
                 .ToList();
             baseFacts.AddRange(CapabilityMatrixService.Collect(baseFacts, DateTimeOffset.UtcNow));
+            // 鍵範圍檢查（QS-001）與 cap.* 同款：輸入是前面各組的聯集、不含自己——無遞迴
+            baseFacts.Add(KeyRangeGuardService.Collect(DateTimeOffset.UtcNow, baseFacts));
             return baseFacts;
         }
     }

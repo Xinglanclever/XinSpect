@@ -255,6 +255,104 @@ public static class LocalSecurityAuditService
         catch { return null; }
     }
 
+    // ── SA-009：暴露面總覽（RDP／WinRM／遠端登錄／管理共用）──────────────────
+    // 界線：這裡報的是「設定狀態」——服務啟動類型與開關，不等於「網路上真的可達」
+    //（防火牆、NAT、VPN 都會改變實際暴露面）。狀態≠可達，如實分開講。
+
+    public sealed record ExposureSnapshot(int? RdpDeny, int? WinRmStart, int? RemoteRegistryStart, int? AutoShareWks);
+
+    public static IReadOnlyList<HardwareFact> CollectExposure(DateTimeOffset at,
+        Func<ExposureSnapshot?>? probe = null)
+    {
+        var s = (probe ?? FetchExposure)();
+        if (s is null)
+            return [new HardwareFact("sa.exposure.read", Category, "暴露面總覽", "", "", Source,
+                FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError,
+                "暴露面相關機碼無法讀取——讀不到就是不猜")];
+
+        string Start(int? v) => v switch
+        {
+            2 => "2（自動啟動）", 3 => "3（手動）", 4 => "4（停用）",
+            null => "（未安裝／鍵不存在）", _ => $"{v}（其他啟動類型）",
+        };
+        return
+        [
+            new HardwareFact("sa.exposure.rdp", Category, "遠端桌面（RDP）",
+                s.RdpDeny == null ? "（鍵不存在）" : s.RdpDeny == 0 ? "已允許連入（fDenyTSConnections=0）" : "已停用（fDenyTSConnections=1）", "",
+                $"{Source}｜狀態≠可達：防火牆與網路位置另算", FactTrustLevel.Reported, false, at, s.RdpDeny, FactAvailability.Present),
+            new HardwareFact("sa.exposure.winrm", Category, "WinRM 服務啟動類型",
+                Start(s.WinRmStart), "", $"{Source}｜狀態≠可達", FactTrustLevel.Reported, false, at, s.WinRmStart, FactAvailability.Present),
+            new HardwareFact("sa.exposure.remote_registry", Category, "遠端登錄服務啟動類型",
+                Start(s.RemoteRegistryStart), "", $"{Source}｜狀態≠可達", FactTrustLevel.Reported, false, at, s.RemoteRegistryStart, FactAvailability.Present),
+            new HardwareFact("sa.exposure.admin_shares", Category, "管理共用（自動共用）",
+                s.AutoShareWks == 0 ? "已停用（AutoShareWks=0）" : "預設（C$／ADMIN$ 等存在）", "",
+                $"{Source}｜狀態≠可達", FactTrustLevel.Reported, false, at, s.AutoShareWks, FactAvailability.Present),
+        ];
+    }
+
+    private static ExposureSnapshot? FetchExposure()
+    {
+        try
+        {
+            using var baseKey = Microsoft.Win32.RegistryKey.OpenBaseKey(
+                Microsoft.Win32.RegistryHive.LocalMachine, Microsoft.Win32.RegistryView.Registry64);
+            using var ts = baseKey.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Terminal Server");
+            using var winrm = baseKey.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\WinRM");
+            using var rr = baseKey.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\RemoteRegistry");
+            using var lan = baseKey.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters");
+            return new ExposureSnapshot(
+                ts?.GetValue("fDenyTSConnections") as int?,
+                winrm?.GetValue("Start") as int?,
+                rr?.GetValue("Start") as int?,
+                lan?.GetValue("AutoShareWks") as int? ?? lan?.GetValue("AutoShareServer") as int?);
+        }
+        catch { return null; }
+    }
+
+    // ── SA-006：Winsock LSP（分層服務提供者）────────────────────────────────
+    // 合法 LSP 存在聲明：防毒／家長監護常駐於此；列出來是事實，不是警報。
+
+    public static IReadOnlyList<HardwareFact> CollectWinsockLsp(DateTimeOffset at,
+        Func<IReadOnlyList<string>?>? probe = null)
+    {
+        var names = (probe ?? FetchWinsockLsp)();
+        if (names is null)
+            return [new HardwareFact("sa.lsp.read", Category, "Winsock LSP", "", "", Source,
+                FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError,
+                "Winsock 目錄無法列舉——讀不到就是不猜")];
+
+        var facts = new List<HardwareFact>
+        {
+            new("sa.lsp.count", Category, "Winsock 分層服務提供者",
+                names.Count == 0 ? "0 個（純 Windows 內建鏈）" : $"{names.Count} 個（逐條列於下；防毒等合法軟體常駐於此）",
+                "", $"{Source}｜合法 LSP 存在聲明", FactTrustLevel.Reported, false, at, names.Count, FactAvailability.Present),
+        };
+        for (int i = 0; i < names.Count; i++)
+            facts.Add(new HardwareFact($"sa.lsp.{i}", Category, $"LSP {i}",
+                names[i], "", Source, FactTrustLevel.Reported, false, at, null, FactAvailability.Present));
+        return facts;
+    }
+
+    private static IReadOnlyList<string>? FetchWinsockLsp()
+    {
+        try
+        {
+            using var baseKey = Microsoft.Win32.RegistryKey.OpenBaseKey(
+                Microsoft.Win32.RegistryHive.LocalMachine, Microsoft.Win32.RegistryView.Registry64);
+            using var entries = baseKey.OpenSubKey(
+                @"SYSTEM\CurrentControlSet\Services\WinSock2\Parameters\Protocol_Catalog9\Catalog_Entries");
+            if (entries is null) return [];
+            var result = new List<string>();
+            foreach (string k in entries.GetSubKeyNames())
+                using (var item = entries.OpenSubKey(k))
+                    if (item?.GetValue("ProtocolName") is string n && n.Trim().Length > 0)
+                        result.Add(n.Trim());
+            result.Sort(StringComparer.Ordinal);
+            return result;
+        }
+        catch { return null; }
+    }
+
     // ── 共用 ────────────────────────────────────────────────────────────────
 
     private static string? Blank(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();

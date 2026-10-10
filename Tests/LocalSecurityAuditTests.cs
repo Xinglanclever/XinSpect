@@ -126,3 +126,67 @@ public class LocalSecurityAuditTests
         Assert.Contains("如實", wh.Value, StringComparison.Ordinal);
     }
 }
+
+// ── SA-009 暴露面 ＋ SA-006 LSP（v2.56）────────────────────────────────────
+
+public class LocalSecurityExposureTests
+{
+    private static readonly DateTimeOffset At = new(2026, 10, 10, 0, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public void 暴露面_四欄分列且標注狀態不等於可達()
+    {
+        var facts = LocalSecurityAuditService.CollectExposure(At, () => new(0, 3, 4, 1));
+        Assert.Equal(4, facts.Count);
+        var rdp = Assert.Single(facts, f => f.Key == "sa.exposure.rdp");
+        Assert.Contains("已允許", rdp.Value, StringComparison.Ordinal);
+        Assert.Equal(0, rdp.NumericValue);
+        Assert.Contains("狀態≠可達", rdp.Source, StringComparison.Ordinal);
+        Assert.Contains("手動", Assert.Single(facts, f => f.Key == "sa.exposure.winrm").Value, StringComparison.Ordinal);
+        Assert.Contains("停用", Assert.Single(facts, f => f.Key == "sa.exposure.remote_registry").Value, StringComparison.Ordinal);
+        Assert.Contains("預設", Assert.Single(facts, f => f.Key == "sa.exposure.admin_shares").Value, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void 暴露面_鍵不存在如實顯示未安裝()
+    {
+        var facts = LocalSecurityAuditService.CollectExposure(At, () => new(null, null, null, null));
+        Assert.Contains("鍵不存在", Assert.Single(facts, f => f.Key == "sa.exposure.rdp").Value, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void 暴露面_讀不到走ReadError不猜()
+    {
+        var f = Assert.Single(LocalSecurityAuditService.CollectExposure(At, () => null));
+        Assert.Equal(FactAvailability.ReadError, f.Availability);
+    }
+
+    [Fact]
+    public void lsp_逐條列出且標注合法存在聲明()
+    {
+        var facts = LocalSecurityAuditService.CollectWinsockLsp(At,
+            () => ["MSAFD Tcpip [TCP/IP]", "RDPCDD Driver"]);
+        Assert.Equal(3, facts.Count);
+        var c = Assert.Single(facts, f => f.Key == "sa.lsp.count");
+        Assert.Equal(2, c.NumericValue);
+        Assert.Contains("合法", c.Source, StringComparison.Ordinal);
+        Assert.Contains("MSAFD", Assert.Single(facts, f => f.Key == "sa.lsp.0").Value, StringComparison.Ordinal);
+        Assert.Contains("RDPCDD", Assert.Single(facts, f => f.Key == "sa.lsp.1").Value, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void lsp_空目錄如實說零個()
+    {
+        var facts = LocalSecurityAuditService.CollectWinsockLsp(At, () => []);
+        var c = Assert.Single(facts, f => f.Key == "sa.lsp.count");
+        Assert.Contains("0 個", c.Value, StringComparison.Ordinal);
+        Assert.Equal(FactAvailability.Present, c.Availability);
+    }
+
+    [Fact]
+    public void lsp_讀不到走ReadError不猜()
+    {
+        var f = Assert.Single(LocalSecurityAuditService.CollectWinsockLsp(At, () => null));
+        Assert.Equal(FactAvailability.ReadError, f.Availability);
+    }
+}

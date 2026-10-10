@@ -95,8 +95,19 @@ public static class KernelModuleService
         return GetDeviceDriverFileName(driver, sb, sb.Capacity) > 0 ? sb.ToString() : "";
     }
 
+    /// <summary>
+    /// 一般檔案（使用者模式 DLL／EXE）的 Authenticode 驗證：WINTRUST_ACTION_GENERIC_VERIFY_V2。
+    /// 供自我完整性組的依賴稽核（IN-007）重用——同一支 wintrust 呼叫，換一個動作 GUID，
+    /// 不為了「驗 DLL」再寫第二份 P/Invoke。回（是否通過，原始說明）。
+    /// </summary>
+    public static (bool? Ok, string Note) VerifyGenericAuthenticode(string filePath)
+        => VerifyAuthenticodeWith(GenericVerifyV2, filePath);
+
     /// <summary>Authenticode 驗證（wintrust，DRIVER_ACTION_VERIFY）。回（是否通過，原始說明）。</summary>
     private static (bool? Ok, string Note) VerifyAuthenticode(string filePath)
+        => VerifyAuthenticodeWith(DriverActionVerify, filePath);
+
+    private static (bool? Ok, string Note) VerifyAuthenticodeWith(Guid action, string filePath)
     {
         if (!File.Exists(filePath)) return (null, "檔案不存在——無法驗證");
         var fileInfo = new WintrustFileInfo { CbStruct = (uint)Marshal.SizeOf<WintrustFileInfo>(), PcwszFilePath = filePath };
@@ -110,7 +121,7 @@ public static class KernelModuleService
         try
         {
             Marshal.StructureToPtr(fileInfo, data.PFile, false);
-            Guid actionId = DriverActionVerifyGuid;
+            Guid actionId = action;
             int rc = WinVerifyTrust(IntPtr.Zero, ref actionId, ref data);
             if (rc == 0) return (true, "");
             return (false, $"0x{rc:X8}");
@@ -126,7 +137,8 @@ public static class KernelModuleService
     }
 
     private static readonly Guid DriverActionVerify = new("F750E6C3-38EE-11D1-85E5-00C04FC295EE");
-    private static Guid DriverActionVerifyGuid => DriverActionVerify;
+    /// <summary>WINTRUST_ACTION_GENERIC_VERIFY_V2——一般檔案（非驅動）的驗證動作。</summary>
+    private static readonly Guid GenericVerifyV2 = new("00AAC56B-CD44-11D0-8CC2-00C04FC295EE");
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct WintrustFileInfo

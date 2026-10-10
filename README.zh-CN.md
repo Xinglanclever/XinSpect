@@ -4,10 +4,10 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一执行文件发布，免安装；对硬件与系统的读取以只读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-2.55-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.56-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-3699%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-3781%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-MIT-green)
 
@@ -79,10 +79,10 @@
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.55/XinSpect.exe) | 31,315,243 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.55/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.56/XinSpect.exe) | 31,315,243 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.56/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 
-> **本表的字节数为本版（v2.55）实际发布的文件大小**；请以 Release 页面列出的文件为准。
+> **本表的字节数为本版（v2.56）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
 系统需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含发布则免装）。显卡深测需要 D3D11 兼容设备；MSR 读取、SMART ioctl、Security 事件日志需以系统管理员执行——没有权限时相关项目标示「权限不足」，程序不会假装成功，也不会静默降级。
 
@@ -424,6 +424,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.56 Olympus**（2026-10-11）：Vol2 三批次一次做完——自我完整性组（自身二进制／配置文件哈希对账（基线进既有审计日志，CLI --integrity-baseline 是唯一写入路径）＋token 特权＋已加载模块签名与侧载候选）＋判断层（自基线分位数模型、异常评分、事件标注、事实键物理合理域）＋CVE 离线对照框架（只交付格式／加载／比对，不塞未经查证的条目——出货运表是空的并如实这么说）＋服务器合规摘要、磁盘为什么满（唯读排行）、为什么当（四类事件的观察）、SBOM（CycloneDX 1.5，CLI --sbom）。新增 13 把固定键（目录 208 → 221），本轮不新增动态家族；测试 +82（3781 绿）。
 - **v2.55 Olympus**（2026-10-11）：写入稽核卡（账本逐笔上画面，唯读如实）＋本机能力矩阵卡（九条 cap.* 独立呈现）＋硬件 GPU 在场事实（display.hw.gpu，缺席是观察到的 Present）＋本地安全审计组（IFEO／Winlogon／AppInit／辅助功能／代理——命中＝攻击面非判决，读不到三态）。测试 +17（3699 绿）。
 - **v2.54 Olympus**（2026-10-10）：发版流水线 Tools/release.ps1——预检（版本号六处＋三份 README 逐项）→ 全绿（trx 计数器把关）→ tag 显式推＋ls-remote 核对 → publish 单档 → README 字节自动同步 → REST 三资产上传逐档验大小 → verify-release 收尾；任一步红即中止。本版即由脚本自身发布；并并入关于页「检查更新」按钮（opt-in 仅查版本号、查不到不假装最新）。测试 +8（3679 绿）。
 - **v2.53 Olympus**（2026-10-10）：算绘快照守门——热区图／逐核液柱／空板诚实路径三场景算绘成固定点阵图（MILSW 不经 D3D）取 SHA-256 比对仓库基线，输入全冻结（假资料、深色布景、停动画），负对照验证会抓漂移；XINSPECT_RENDER_SNAPSHOT_UPDATE=1 为故意更新机制。测试 +4（3671 绿）。

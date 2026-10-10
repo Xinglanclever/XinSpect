@@ -35,6 +35,8 @@ public static class FactKeyDynamicCatalog
                 "固定功能計數器逐個一筆（pmu.fixed.0…），數量由 CPUID 0xA 的報告決定（2／3／4 個的架構都存在），不寫死成員",
             ["reconcile."] =
                 "交叉對帳的結論鍵，每條規則一筆（鍵由規則 id 決定）——結論不是被對帳的事實，刻意不進覆蓋申報的分母，但它是真實的執行期輸出，在這裡如實登記",
+            ["audio.latency."] =
+                "音訊端點逐端點一筆（端點名來自 MMDevice 枚舉）——這台機器裝了什麼音訊裝置由使用者環境決定",
             ["audio.endpoint."] =
                 "音訊端點逐一個一筆（MMDevice 列舉的索引）——端點數量由機器的音訊裝置決定，编译期数不出來",
             ["drvinsp."] =
@@ -45,6 +47,8 @@ public static class FactKeyDynamicCatalog
                 "SMBIOS 資產欄位逐一筆（欄名來自表定義：系統製造商／主機板序號…）——欄位集是規範的性質不是常數，且缺失欄也要有地方標缺",
             ["sa.ifeo."] =
                 "IFEO 逐映像一筆（映像名來自登錄檔枚舉，任意字串）——哪些映像掛了 Debugger 由機器的事實決定；成員是『掛了東西』的映像，沒掛的不產鍵",
+            ["sa.lsp."] =
+                "Winsock LSP 逐條一筆（條目號）——裝了哪些分層服務提供者是機器的安裝事實；sa.lsp.count 是固定全鍵，在目錄",
             ["display.adapter."] =
                 "顯示轉接器逐張一筆（名稱來自 WMI）——有幾張卡、叫什麼名是機器的事實",
             ["mon."] =

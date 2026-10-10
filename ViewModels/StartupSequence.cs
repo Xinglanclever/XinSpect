@@ -253,6 +253,16 @@ internal static class StartupSequence
         try { await Task.Run(() => EvidenceCollection.LoadUsermodeFacts(vm.EvidenceLab)); }
         catch { /* 儲存可靠性為附加功能，讀不到由三態標示 */ }
 
+        // 基線學習（Vol 2 批次 C／BL-001/004/007）：吃歷史倉的分鐘級序列算本機自己的分位數模型。
+        // 這一支不能放進 LoadUsermodeFacts——那個入口是「不需驅動的來源」的組合點，而歷史倉住在
+        // MainViewModel 上（有狀態、由心跳取樣）；把它從外面當參數拿進來，才不必讓組合點去碰 UI 的狀態。
+        try
+        {
+            var to = DateTime.UtcNow;
+            await Task.Run(() => vm.EvidenceLab.LoadBaselineLearning(vm.History.Query(to.AddDays(-30), to)));
+        }
+        catch { /* 沒有歷史＝空序列，由 BaselineLearningService 如實標「還沒有資料」 */ }
+
         try
         {
             var report = await CpuzReportService.ReadAsync();

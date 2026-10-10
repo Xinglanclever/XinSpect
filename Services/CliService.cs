@@ -21,6 +21,8 @@ public static class CliService
     public const string HelpArg = "--help";
     public const string CompareArg = "--compare-flash";
     public const string VerifyAuditArg = "--verify-audit";
+    public const string IntegrityBaselineArg = "--integrity-baseline";
+    public const string SbomArg = "--sbom";
 
     public const int ExitOk = 0;
     public const int ExitPartial = 2;
@@ -45,6 +47,10 @@ public static class CliService
             return RunCompare(args, compare, stdout, stderr);
         if (args[0] == VerifyAuditArg)
             return RunVerifyAudit(args, stdout, stderr);
+        if (args[0] == IntegrityBaselineArg)
+            return RunIntegrityBaseline(args, stdout, stderr);
+        if (args[0] == SbomArg)
+            return RunSbom(args, stdout, stderr);
         if (args[0] != JsonArg)
         {
             stderr.WriteLine($"未知引數「{args[0]}」。用 --help 看用法。");
@@ -208,6 +214,72 @@ public static class CliService
         return verdict.Valid ? ExitOk : ExitPartial;
     }
 
+    /// <summary>
+    /// 自我完整性基線模式（IN-001／IN-002 的唯一寫入路徑）：把自身二進位與設定檔的雜湊
+    /// 記進審計日誌。刻意做成明示命令——工具可以證明自己沒被動過，但那個動作不該偷偷做。
+    /// 退出碼：0＝已記錄（雜湊鏈可驗）；2＝未記錄（讀不到或寫不進去，原因在輸出）；1＝致命。
+    /// </summary>
+    private static int RunIntegrityBaseline(string[] args, TextWriter stdout, TextWriter stderr)
+    {
+        string path = args.Length >= 2 && !args[1].StartsWith("--", StringComparison.Ordinal)
+            ? args[1]
+            : AuditLogService.DefaultPath;
+        string? outPath = OptionValue(args, OutArg);
+
+        var (written, summary, failure) = SelfIntegrityFactsService.RecordBaseline(
+            SelfIntegrityInputs.Real(auditPath: path), path);
+
+        var payload = new
+        {
+            generatedAtUtc = DateTimeOffset.UtcNow,
+            scope = "integrity-baseline",
+            path,
+            written,
+            summary,
+            failureReason = failure,
+            note = "基線存進既有審計日誌（append-only、雜湊鏈可驗）——不新增第二套基線儲存。" +
+                   "雜湊證明的是「這份檔案現在是什麼」，不是防篡改保證。",
+        };
+        string json = JsonSerializer.Serialize(payload, JsonOptions);
+        try
+        {
+            if (outPath is not null) File.WriteAllText(outPath, json);
+            else stdout.WriteLine(json);
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"寫出失敗：{ex.Message}");
+            return ExitError;
+        }
+        if (!written && failure is not null) stderr.WriteLine(failure);
+        return written ? ExitOk : ExitPartial;
+    }
+
+    /// <summary>
+    /// SBOM 模式（RS-002）：輸出 CycloneDX 1.5 的 JSON。
+    /// 退出碼：0＝元件完整（作業系統＋驅動＋本程式）；2＝部分元件讀不到（如驅動清單 WMI 失敗，
+    /// 原因在 stderr，文件裡就只有讀得到的那些）；1＝致命（寫出失敗）。
+    /// </summary>
+    private static int RunSbom(string[] args, TextWriter stdout, TextWriter stderr)
+    {
+        string? outPath = OptionValue(args, OutArg);
+        var (components, note) = SbomService.RealComponents();
+        var doc = SbomService.Build(components, AppInfo.Name, AppInfo.Version, DateTimeOffset.UtcNow);
+        string json = SbomService.ToJson(doc);
+        try
+        {
+            if (outPath is not null) File.WriteAllText(outPath, json);
+            else stdout.WriteLine(json);
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"寫出失敗：{ex.Message}");
+            return ExitError;
+        }
+        if (note is not null) stderr.WriteLine(note);
+        return note is null ? ExitOk : ExitPartial;
+    }
+
     private static object FactJson(HardwareFact f) => new
     {
         f.Key, f.Category, f.Name, f.Value, f.Unit, f.Source, f.Trust,
@@ -230,6 +302,8 @@ public static class CliService
               XinSpect --json evidence [--query <key 前綴>] [--out <檔案>]
               XinSpect --compare-flash <參考映像> [--out <檔案>]
               XinSpect --verify-audit [日誌路徑] [--out <檔案>]
+              XinSpect --integrity-baseline [日誌路徑] [--out <檔案>]
+              XinSpect --sbom [--out <檔案>]
               XinSpect --help
 
             範圍：
@@ -242,6 +316,11 @@ public static class CliService
               compare-flash   BIOS 區 vs 參考映像逐 4KB 塊比對（映像＝原廠或信任來源的 BIOS 區 dump）。
               verify-audit    審計日誌雜湊鏈驗證（預設 %ProgramData%\XinSpect\Audit\audit.json；
                               可帶路徑）。輸出 fileExists／chainValid／checkedEntries 與斷點原因。
+              integrity-baseline
+                              把自身二進位與設定檔的 SHA-256 記進審計日誌（自我完整性的基線；
+                              這是本工具唯一寫入自身基線的動作，故做成明示命令）。
+              sbom            產生 CycloneDX 1.5 的 SBOM（元件＝作業系統＋驅動＋本程式；
+                              不含已安裝應用程式套件與授權）。
 
             選項：
               --query <前綴>   只輸出 key 以該前綴開頭的事實（例：--query platform.）
@@ -253,6 +332,9 @@ public static class CliService
               --compare-flash   0＝一致；2＝有差異或無法完成比對（三態細節在輸出）；1＝致命錯誤。
               --verify-audit    0＝鏈完整（或尚無日誌檔，輸出如實標 fileExists＝false）；
                                 2＝鏈斷或檔案損毀（斷點在第幾筆、什麼型別，都在輸出）；1＝致命。
+              --integrity-baseline
+                                0＝已記錄（雜湊鏈可驗）；2＝未記錄（讀不到或寫不進去）；1＝致命。
+              --sbom            0＝元件完整；2＝部分元件讀不到（原因在 stderr）；1＝致命。
             讀不到的事實如實帶 availability 與原因，絕不以 0／典型值頂替。
             """);
     }

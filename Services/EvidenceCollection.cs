@@ -46,7 +46,8 @@ public static class EvidenceCollection
 
     /// <summary>
     /// usermode（不需驅動）事實的<b>單一組合點</b>：儲存可靠性計數器、驅動靜態檢視、裝置安裝時間線、
-    /// .etl 讀回、ESP 檔案層掃描、音訊端點、開機計時、網路卸載（皆為唯讀來源）。
+    /// .etl 讀回、ESP 檔案層掃描、音訊端點、開機計時、網路卸載、本地安全審計、
+    /// 自我完整性、CVE 離線對照、伺服器摘要、磁碟用量排行、當機事件面、SBOM（皆為唯讀來源）。
     /// </summary>
     /// <remarks>
     /// <b>為什麼要另外開一個入口，而不是塞進 <see cref="ReloadInto"/>：</b>
@@ -80,6 +81,21 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 NetOffloadFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadLocalSecurityAudit(); }
         catch { /* 附加功能：讀不到由 LocalSecurityAuditService 標三態，不在這裡中斷啟動 */ }
+        // Vol 2 批次（2026-10-11）：自我完整性／CVE 離線對照／伺服器摘要／情境診斷／SBOM——皆唯讀、
+        // 且都便宜（各毫秒至百毫秒級）；「磁碟為什麼滿」（SG-002）預設只掃暫存與傾印根，
+        // 不含使用者設定檔（整份遞迴要數十秒，屬明示觸發）——理由寫在 DiskFullFactsService.DefaultRoots。
+        try { svc.LoadSelfIntegrity(); }
+        catch { /* 附加功能：讀不到由 SelfIntegrityFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadCveOffline(); }
+        catch { /* 附加功能：讀不到由 CveOfflineFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadServerCompliance(); }
+        catch { /* 附加功能：沒有角色事實時由服務標「尚未讀取」，不在這裡中斷啟動 */ }
+        try { svc.LoadDiskFull(); }
+        catch { /* 附加功能：讀不到由 DiskFullFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadFreezeDiagnosis(); }
+        catch { /* 附加功能：讀不到由 FreezeDiagnosisFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadSbom(); }
+        catch { /* 附加功能：讀不到由 SbomService 標三態，不在這裡中斷啟動 */ }
     }
 
     /// <summary>BIOS 區 vs 參考映像的比對（UI 與 CLI 共用入口）：組合後端後跑一次比對，回結果事實。</summary>
