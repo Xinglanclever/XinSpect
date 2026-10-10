@@ -235,6 +235,10 @@ internal static class StartupSequence
         try { vm.EvidenceLab.LoadTpm(); }
         catch { /* TPM 為附加功能，讀不到由三態標示 */ }
 
+        // TPM log 重放比對（P0-01：log × PCR 實讀的第三者驗證；usermode 經 TBS，同上）。
+        try { vm.EvidenceLab.LoadTpmReplay(); }
+        catch { /* 重放為附加功能，讀不到由三態標示 */ }
+
         // NUMA 拓撲與記憶體攻擊面聲明（usermode）。
         try { vm.EvidenceLab.LoadPlatformFacts(); }
         catch { /* 平台拓撲為附加功能，讀不到由三態標示 */ }

@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 236 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 237 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "acpi.bert.record",
@@ -235,6 +235,7 @@ public static class FactKeyCatalog
         "time.hpet",
         "time.pm_timer",
         "tpm.present",
+        "tpm.replay.summary",
         "tpm.tcg_log",
         "uefi.audit_mode",
         "uefi.boot_entries.count",

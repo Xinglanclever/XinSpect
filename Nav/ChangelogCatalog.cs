@@ -48,6 +48,21 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.62",
+            Date = "2026-10-11",
+            Title = "P0-01 TPM 事件日誌重放比對（第三者驗證）",
+            Items =
+            [
+                "重放器（FW-002／P0-01）：TCG log（既有 Tbsi_Get_TCG_Log 通路）逐事件模擬 extend——PCR_new＝Hash(PCR_old∥digest)；模型假設寫進 SpecRef 與值裡：PC Client 起始值（PCR0＝0xFF…FF、其餘 0x00…00）、EV_NO_ACTION（type 0x03，含 Spec ID Event03）不延伸、log 沒有該 bank digest 的事件跳過。解碼器層純計算（合成事件鏈金標：單鏈已知答案、起始值、NO_ACTION、越界 PCR）。",
+                "比對：SHA-256 bank 逐顆（0–23）重放值 × TPM 實讀值——一致／不一致／log 未覆蓋／實讀失敗四態如實分列；tpm.replay.summary 摘要＋逐顆 tpm.replay.pcr.sha256.{i}（照 tpm.pcr.* 先例：索引插值鍵不入靜態目錄）。接線在啟動序列 TPM 之後（同 TBS 通路共用 internal 存取器，不寫第二份 P/Invoke）。",
+                "界線：不一致＝事實，不是「被入侵」判決——重放模型（起始值／跳過規則）影響結果，log 不完整或平台未延伸某些事件都會造成不一致；一致是強訊號（log 與 TPM 實讀互相印證）；log 缺＝無法重放，不是「量測鏈完整」。",
+                "實機交叉：RealHardware 特徵測試跑真 TBS——只驗良構（摘要＋24 顆、log 至少覆蓋一顆 PCR；TBS 不可用時如實單筆）；真實 log 的逐顆比對結果屬機器狀態，在 App 內可見。",
+                "測試 +11（3871 綠）。",
+            ],
+        },
+
+        new ChangeEntry
+        {
             Version = "2.61",
             Date = "2026-10-11",
             Title = "P0-04 藍屏考古：Minidump 讀取＋bugcheck 解碼",

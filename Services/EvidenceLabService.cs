@@ -71,6 +71,15 @@ public sealed class EvidenceLabService : ObservableObject
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
+    /// <summary>TPM log 重放比對（P0-01／FW-002）：TCG log 逐事件模擬 extend × PCR 實讀逐顆比對。</summary>
+    public IReadOnlyList<HardwareFact> TpmReplayFacts { get; private set; } = [];
+
+    public void LoadTpmReplay()
+    {
+        TpmReplayFacts = TpmReplayFactsService.Collect(DateTimeOffset.UtcNow);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
     /// <summary>載入 TPM 量測開機鏈事實（usermode 經 Windows TBS；讀不到由 TpmFactsService 標三態）。</summary>
     public void LoadTpm()
     {
@@ -768,7 +777,7 @@ public sealed class EvidenceLabService : ObservableObject
         {
             var baseFacts = ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
                 .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
-                .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
+                .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(TpmReplayFacts)
                 .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(LocalSecurityAuditFacts)
                 .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(ServerComplianceFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(SbomFacts)
                 .ToList();

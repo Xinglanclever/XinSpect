@@ -92,6 +92,7 @@ public class DecoderHardeningTests
             "PrefetchHeaderDecoder",
             "NtfsVolumeDecoder",
             "KernelDumpDecoder",
+            "TpmReplay",
         };
         Assert.Equal(expected, SpecRefRegistry.CoveredDecoders.Select(t => t.Name).ToArray());
         Assert.All(SpecRefRegistry.CoveredDecoders, t => Assert.True(t.IsSealed || t.IsClass));

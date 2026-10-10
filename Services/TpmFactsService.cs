@@ -143,4 +143,15 @@ public static class TpmFactsService
     private static HardwareFact Unavailable(string key, string name, string source, DateTimeOffset at,
         FactAvailability availability, string reason) =>
         new(key, Category, name, "", "", source, FactTrustLevel.Unknown, false, at, null, availability, reason);
+
+    // ── 重放服務（TpmReplayFactsService）共用的 internal 存取器：同一份 TBS P/Invoke，不寫第二份 ──
+    internal static byte[]? RealReadLogForReplay(nint ctx) => RealReadLog(ctx);
+    internal static (uint Result, byte[] Output, uint OutputLen) RealSubmitForReplay(nint ctx, byte[] command) => RealSubmit(ctx, command);
+    internal static void CloseContextForReplay(nint ctx) => Tbsip_Context_Close(ctx);
+    internal static bool TryCreateContextForReplay(out nint ctx)
+    {
+        var version = TbsContextVersion2;
+        var rc = Tbsi_Context_Create(ref version, out ctx);
+        return rc == TbsSuccess && ctx != nint.Zero;
+    }
 }
