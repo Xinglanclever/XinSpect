@@ -55,6 +55,8 @@ public static class FactKeyDynamicCatalog
                 "顯示器連線逐台一筆（索引）——接了幾台螢幕由環境決定",
             ["monitor."] =
                 "顯示器實體逐台一筆（實例名 DesktopMonitorN…）——名稱與數量由 WMI 枚舉決定；monitor.summary 是固定全鍵，在目錄",
+            ["net.listen."] =
+                "監聽埠逐埠一筆（協定＋埠號）——這台機器在等誰連入是機器狀態，埠集由連線表決定，编译期列不完",
             ["numa.node."] =
                 "NUMA 節點逐個一筆（節點號）——節點數由 GetNumaHighestNodeNumber 回報，單節點到 8 節點的平台都存在",
             ["role.installed."] =

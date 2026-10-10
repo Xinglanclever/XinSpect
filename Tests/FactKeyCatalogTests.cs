@@ -86,7 +86,9 @@ public class FactKeyCatalogTests
         // 真的無法靜態枚舉。16 → 18（2026-10-11）：audio.latency.（逐端點延遲樣本，端點數由
         // MMDevice 列舉決定）與 sa.lsp.（Winsock 分層服務提供者逐條，由機器安裝事實決定）。
         // 同日再加的 bl.baseline.／se.cve.hit.／sg.* 逐項明細全部收斂回彙總值裡，沒有動到上限。
-        const int FamilyCap = 18;
+        // 18 → 19（2026-10-11）：net.listen.（監聽埠逐埠一筆）——埠集由連線表決定，
+        // 是機器狀態不是編譯期常量；net.listen.count/entries/unverified 三把彙總鍵仍在靜態目錄。
+        const int FamilyCap = 19;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 

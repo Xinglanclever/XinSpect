@@ -4,10 +4,10 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一执行文件发布，免安装；对硬件与系统的读取以只读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-2.62-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.63-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-3871%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-3877%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-MIT-green)
 
@@ -79,10 +79,10 @@
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.62/XinSpect.exe) | 31,421,739 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.62/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.63/XinSpect.exe) | 31,421,739 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.63/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 
-> **本表的字节数为本版（v2.62）实际发布的文件大小**；请以 Release 页面列出的文件为准。
+> **本表的字节数为本版（v2.63）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
 系统需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含发布则免装）。显卡深测需要 D3D11 兼容设备；MSR 读取、SMART ioctl、Security 事件日志需以系统管理员执行——没有权限时相关项目标示「权限不足」，程序不会假装成功，也不会静默降级。
 
@@ -424,6 +424,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.63 Olympus**（2026-10-11）：P0-03 監聽埠三方對照（SA-008）——socket（IP Helper 連線表）× 行程（PID→映像）× 簽章（WinVerifyTrust）；前兩條腿重用既有 PortUsageService 不寫第二份 P/Invoke（SV-001 教訓），第三條腿走 v2.56 抽出的共用簽章核心；net.listen.count/entries/unverified 三把彙總鍵＋逐埠 net.listen.{proto}.{port} 家族（18→19，埠集是機器狀態）；PID 競態與高完整性映像記 Unknown、未通過＝待查證不是已中招、取樣瞬間必標、只列舉不阻擋不主動連線；本機實測 TCP 76＋UDP 31；測試 +6（3877 綠）。
 - **v2.62 Olympus**（2026-10-11）：P0-01 TPM 事件日誌重放比對（FW-002）——把兩個既有來源變第三者驗證：TCG log（Tbsi_Get_TCG_Log）逐事件模擬 extend（PCR_new＝Hash(PCR_old∥digest)；PC Client 起始值 PCR0＝0xFF…FF 其餘 0；EV_NO_ACTION 不延伸）× TPM 實讀 PCR（SHA-256 bank）逐顆比對；tpm.replay.summary＋逐顆 tpm.replay.pcr.sha256.{i}（照 tpm.pcr.* 先例由索引插值、不入靜態目錄）；不一致＝事實不是入侵判決、log 缺＝無法重放不是量測鏈完整；測試 +11（3871 綠）。
 - **v2.61 Olympus**（2026-10-11）：P0-04 藍屏考古——Minidump 讀取＋bugcheck 解碼（RC-001）：PAGEDU64 檔頭位移以本機五個真實傾印逐欄驗證（代碼@0x38、參數@0x40..0x58），bugcheck 代碼→符號名知識表對準 Microsoft Learn 逐條（60＋條；未收錄＝如實標原碼不猜名稱）；解碼不是診斷——只回答藍過幾次、代碼是什麼，不宣稱根因；目錄缺席＝好消息如實列；參數標敏感；本機實測 5 份全解出（0xCE×2／0x124／0xA×2）；測試 +14（3860 綠）、目錄 233 → 236。
 - **v2.60 Olympus**（2026-10-11）：收 v2.56 交接的兩件遺留——事件標註上畫面（BL-007 的 UI 面）：WHEA／TDR／非預期關機／藍屏四類事件與溫度／負載曲線同一時間軸列在歷史頁（最多 30 筆、帶時間與一句話、標註不建立因果、讀不到如實標示不畫成 0 筆）＋磁碟深掃明示入口：CLI --disk-usage [--deep]（--deep 明示含使用者設定檔、深度 6；只讀不刪，命令沒有任何刪除路徑）；測試 +9（3846 綠）。

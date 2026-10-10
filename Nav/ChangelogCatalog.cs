@@ -48,6 +48,21 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.63",
+            Date = "2026-10-11",
+            Title = "P0-03 監聽埠三方對照：socket × 行程 × 簽章",
+            Items =
+            [
+                "監聽埠三方對照（SA-008／P0-03）：回答「這台機器在等誰連入」——TCP 只取監聽中（連線表狀態字串是本機化文字，PortUsageService.TcpStates 對齊）、UDP 整表皆監聽語意；socket×行程×簽章三條腿：前兩條重用既有 PortUsageService（IP Helper＋PID→名稱，不寫第二份 P/Invoke——SV-001 教訓），第三條走 v2.56 抽出的 KernelModuleService.VerifyGenericAuthenticode 共用核心。",
+                "鍵面：net.listen.count／entries／unverified 三把彙總固定鍵＋逐埠 net.listen.{proto}.{port} 動態家族（18→19：埠集由機器狀態決定，編譯期列不完——家族理由寫進 FactKeyCatalogTests 註解）。明細列最新 15 條並標敏感（含映像路徑）。",
+                "界線寫進值裡：取樣瞬間必標（不是持續監控）；只列舉不阻擋、不主動連線；PID 競態或高完整性行程讀不到映像記 Unknown——「映像讀不到」不是「未簽章」；簽章未通過＝攻擊面事實不是中毒判決；被 hook 的表 API 偵測不做（超界聲明）。",
+                "本機實測（Server 2025）：TCP 76＋UDP 31＝107 條監聽；含 Clash 核心（簽章未通過→待查證）、svchost（通過）、PID 4 核心持有（映像不適用）。",
+                "測試 +6（3877 綠）；固定鍵目錄 240 把。",
+            ],
+        },
+
+        new ChangeEntry
+        {
             Version = "2.62",
             Date = "2026-10-11",
             Title = "P0-01 TPM 事件日誌重放比對（第三者驗證）",

@@ -79,6 +79,8 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 BootTimingFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadNetOffload(); }
         catch { /* 附加功能：讀不到由 NetOffloadFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadListenPorts(); }
+        catch { /* 附加功能：讀不到由 ListenPortFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadLocalSecurityAudit(); }
         catch { /* 附加功能：讀不到由 LocalSecurityAuditService 標三態，不在這裡中斷啟動 */ }
         // Vol 2 批次（2026-10-11）：自我完整性／CVE 離線對照／伺服器摘要／情境診斷／SBOM——皆唯讀、
