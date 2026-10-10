@@ -48,6 +48,21 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.57",
+            Date = "2026-10-11",
+            Title = "Vol2 批次 B 第一波：檔案鑑識主線（Shimcache／MountedDevices）＋隱私禁項機制化",
+            Items =
+            [
+                "Shimcache 解碼（FS-001）：AppCompatCache 登錄值唯讀讀回＋金標解碼器（版面對準 Zimmerman AppCompatCacheParser 逐欄——Win7 x64 路徑在值內絕對位移、Win10 家族執行旗標在資料 blob 尾端 4 位元組）；fs.shim.count／latest／sample 三把固定鍵，條目明細串在值裡（本輪零動態家族）。界線寫進值裡：執行痕跡≠執行成功（快取可能殘留，不是中毒判決）、時間是檔案修改時間不是執行時間、只讀 CurrentControlSet。Win8/8.1 條目版面未對準出處前不出值（如實標不猜）。本機實測：Server 2025 解析 1024 條（表頭申報 1734，落差如實並列——值被系統截斷或尾段未寫）。",
+                "MountedDevices 掛載對照（FS-009）：HKLM\\SYSTEM\\MountedDevices 全值列舉——碟號指派（4 位元組磁碟簽章＋8 位元組分割區起始位移）與磁碟區 GUID 路徑（UTF-16 原樣解碼，跳脫名不代譯）；fs.mount.count／letters／volumes。界線：這是安裝以來掛載過的歷史對照，拔掉的裝置條目會留下，不是現在在線清單。本機實測：7 碟號＋3 磁碟區（含 USBSTOR 裝置路徑）。",
+                "隱私禁項機制化（FS-013）：跳轉清單、最近文件與執行習慣追蹤面、縮圖快取這群來源的明文內容本工具不讀，禁令機器釘死：掃描器對假內容咬人（正對照）＋正式碼全庫零命中（負對照），禁項表只許增不許減。",
+                "接線：兩組事實走 LoadUsermodeFacts 共用入口（UI 與 CLI 同源）與 AllFacts；Prefetch／Amcache 等要讀檔的 L2 來源屬明示觸發，不在啟動路徑上。樣本條目標敏感（路徑可能含使用者名，匯出預設遮蔽）。",
+                "測試 +29（3810 綠）；事實鍵目錄 221 → 227。",
+            ],
+        },
+
+        new ChangeEntry
+        {
             Version = "2.56",
             Date = "2026-10-11",
             Title = "Vol2 三批次：自我完整性／判斷層（自基線與範圍）／伺服器與情境＋SBOM",

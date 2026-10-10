@@ -96,6 +96,10 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 FreezeDiagnosisFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadSbom(); }
         catch { /* 附加功能：讀不到由 SbomService 標三態，不在這裡中斷啟動 */ }
+        // Vol 2 批次 B（2026-10-11）：檔案鑑識主線——Shimcache（登錄值，毫秒級）＋MountedDevices（登錄列舉，
+        // 毫秒級）；Prefetch／Amcache 等要讀檔的 L2 來源屬明示觸發，不在啟動路徑上。
+        try { svc.LoadFsForensics(); }
+        catch { /* 附加功能：讀不到由 ShimcacheFactsService／MountedDevicesFactsService 標三態，不在這裡中斷啟動 */ }
     }
 
     /// <summary>BIOS 區 vs 參考映像的比對（UI 與 CLI 共用入口）：組合後端後跑一次比對，回結果事實。</summary>

@@ -674,6 +674,16 @@ public sealed class EvidenceLabService : ObservableObject
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
+    /// <summary>檔案鑑識主線（Vol 2 批次 B）：Shimcache（FS-001）＋MountedDevices（FS-009）——執行痕跡與掛載歷史，唯讀。</summary>
+    public IReadOnlyList<HardwareFact> FsForensicFacts { get; private set; } = [];
+
+    public void LoadFsForensics()
+    {
+        FsForensicFacts = ShimcacheFactsService.CollectForThisMachine(DateTimeOffset.UtcNow)
+            .Concat(MountedDevicesFactsService.CollectForThisMachine(DateTimeOffset.UtcNow)).ToList();
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
     /// <summary>伺服器合規摘要（SV-014）：由既有角色事實聚合——裝了不等於配置好，只陳述計數。</summary>
     public IReadOnlyList<HardwareFact> ServerComplianceFacts { get; private set; } = [];
 
@@ -757,7 +767,7 @@ public sealed class EvidenceLabService : ObservableObject
                 .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
                 .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts)
                 .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(LocalSecurityAuditFacts)
-                .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(ServerComplianceFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(SbomFacts)
+                .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(ServerComplianceFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(SbomFacts)
                 .ToList();
             baseFacts.AddRange(CapabilityMatrixService.Collect(baseFacts, DateTimeOffset.UtcNow));
             // 鍵範圍檢查（QS-001）與 cap.* 同款：輸入是前面各組的聯集、不含自己——無遞迴
