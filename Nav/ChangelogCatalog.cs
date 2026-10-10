@@ -48,6 +48,21 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.59",
+            Date = "2026-10-11",
+            Title = "Vol2 批次 B 第三波：卷冊層（MFT 統計＋USN 日誌狀態）",
+            Items =
+            [
+                "卷冊層上線（FS-006＋FS-014）：對系統碟發兩個唯讀 FSCTL（常數與結構對準 winioctl.h——GET_NTFS_VOLUME_DATA＝CTL_CODE(9,25,BUFFERED,ANY)＝0x90064、QUERY_USN_JOURNAL＝CTL_CODE(9,61,BUFFERED,ANY)＝0x900F4；NTFS_VOLUME_DATA_BUFFER 96 位元組、USN_JOURNAL_DATA V0 48／V1 56／V2 80 位元組字首一致）。MFT 卷冊統計：有效長度、記錄大小、記錄數估算（長÷大小，未逐條解析）、叢總數與自由數；USN：日誌啟用與否、跨度、上限、配置增量。fs.mft.stat／fs.usn.state 兩把固定鍵，零動態家族。",
+                "界線寫進值裡：記錄數是估算不是解析（MFT 逐條解析屬明示觸發，本版未做）；USN 是日誌的存在性與規模不是內容（內容讀回屬 FS-005，本版未做）；只掃系統碟（多卷冊屬明示觸發）；卷序號是機器識別資訊，刻意不列；日誌未啟用（1179）如實標 NotApplicable——不是「沒有檔案變更」；刪除進行中（1178）標過渡狀態。",
+                "接線：NtfsVolumeFactsService 走 LoadFsForensics 共用入口（UI 與 CLI 同源）與 AllFacts；開檔用 GENERIC_READ＋共用讀寫、用完即關。",
+                "本機實測（Server 2025）：MFT 2,041.8 MiB・記錄 2,090,752 估算・叢已用 52.8%；USN V2 啟用、跨度 34.5 MiB——V2 輸出 80 位元組以 V1 字首解析（winioctl.h 原文欄序核對）。",
+                "測試 +12（3837 綠）；事實鍵目錄 231 → 233。",
+            ],
+        },
+
+        new ChangeEntry
+        {
             Version = "2.58",
             Date = "2026-10-11",
             Title = "Vol2 批次 B 第二波：Prefetch 檔名層（MAM 容器不解壓，如實）",

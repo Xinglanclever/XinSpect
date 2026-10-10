@@ -4,10 +4,10 @@
 
 一款免費開源、運行於 Windows 的原生硬體驗機、監控與安全稽核工具。以單一執行檔發佈，免安裝；對硬體與系統的讀取以唯讀為原則，少數涉及寫入的功能均設有同意閘門並明確標註風險。本程式不收集、不上傳任何使用者資料。
 
-![版本](https://img.shields.io/badge/version-2.58-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.59-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-3825%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-3837%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-MIT-green)
 
@@ -79,10 +79,10 @@
 
 | 檔案 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.58/XinSpect.exe) | 31,421,739 bytes | 主程式。藍色中隊守護進程已內建 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.58/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.59/XinSpect.exe) | 31,421,739 bytes | 主程式。藍色中隊守護進程已內建 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.59/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
 
-> **上表的位元組數為本版（v2.58）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v2.59）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
 系統需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含發佈則免裝）。顯示卡深測需要 D3D11 相容裝置；MSR 讀取、SMART ioctl、Security 事件記錄需以系統管理員執行——沒有權限時相關項目標示「權限不足」，程式不會假裝成功，也不會靜默降級。
 
@@ -427,6 +427,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.59 Olympus**（2026-10-11）：Vol2 批次 B 第三波——卷冊層上線（FS-006／FS-014）：對系統碟發兩個唯讀 FSCTL（winioctl.h 出處已核：GET_NTFS_VOLUME_DATA 0x90064／QUERY_USN_JOURNAL 0x900F4）——MFT 卷冊統計（記錄數＝長÷記錄大小的估算，未逐條解析）＋USN 日誌存在性與規模（V0/V1/V2 版型分流，內容讀回屬 FS-005 未做）；fs.mft.stat／fs.usn.state 兩把固定鍵（目錄 231 → 233）；卷序號是機器識別資訊刻意不列；未啟用（1179）如實標不適用不是沒有檔案變更；本機實測 2,041.8 MiB／記錄 209 萬／USN V2 啟用；測試 +12（3837 綠）。
 - **v2.58 Olympus**（2026-10-11）：Vol2 批次 B 第二波——Prefetch 檔名層（FS-003）：目錄列舉＋每檔前 80 位元組金標判格式（MAM 壓縮容器不解壓＝沒有引用清單，如實標；SCCA v17/23/26/30/31 五版本對照出處逐欄）；fs.pf.count／formats／latest／sample 四把固定鍵（目錄 227 → 231）；界線：檔名存在＝曾被預取不等於執行成功、時間是檔案寫入時間近似、空目錄＝沒有預取資料不是沒執行過程式；測試 +15（3825 綠）。
 - **v2.57 Olympus**（2026-10-11）：Vol2 批次 B 第一波——檔案鑑識主線上線：Shimcache（AppCompatCache）金標解碼（版面逐欄對準 Zimmerman AppCompatCacheParser；Win8/8.1 未對準出處不出值）＋MountedDevices 掛載歷史對照＋隱私禁項機制化（Jump lists／MRU／UserAssist／縮圖的明文內容掃描守門釘死「不讀」）。三＋三把固定鍵（目錄 221 → 227），樣本條目標敏感；測試 +29（3810 綠）。
 - **v2.56 Olympus**（2026-10-11）：Vol2 三批次一次做完——自我完整性組（自身二進位／設定檔雜湊對帳（基線進既有審計日誌，CLI --integrity-baseline 是唯一寫入路徑）＋token 特權＋載入模組簽章與側載候選）＋判斷層（自基線分位數模型、異常評分、事件標註、事實鍵物理合理域）＋CVE 離線對照框架（只交付格式／載入／比對，不塞未經查證的條目——出貨表是空的並如實這麼說）＋伺服器合規摘要、磁碟為什麼滿（唯讀排行）、為什麼當（四類事件的觀察）、SBOM（CycloneDX 1.5，CLI --sbom）。新增 13 把固定鍵（目錄 208 → 221），本輪不動態家族；測試 +82（3781 綠）。
