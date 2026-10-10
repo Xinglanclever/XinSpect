@@ -48,6 +48,21 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.61",
+            Date = "2026-10-11",
+            Title = "P0-04 藍屏考古：Minidump 讀取＋bugcheck 解碼",
+            Items =
+            [
+                "Minidump 讀取（RC-001／P0-04）：C:/Windows/Minidump 唯讀列舉＋PAGEDU64 檔頭解碼——bugcheck 代碼 u32@0x38、四參數 u64@0x40/0x48/0x50/0x58；位移不是背來的：以本機五個真實傾印（0x124 WHEA／0xA IRQL／0xCE 驅動卸載）逐欄驗證。x86 的 PAGEDUMP 版面未對照——如實不解碼。",
+                "bugcheck 代碼→符號名知識表 60＋條，逐條出自 Microsoft Learn「Bug Check Code Reference」（2026-10-11 抓取）；未收錄的代碼回「未收錄（不猜名稱）」＋原碼十六進位。",
+                "界線：解碼不是診斷——只回答「這台機器藍過幾次、錯誤代碼是什麼」，不宣稱根因；日期取自檔名慣例（MMDDYY）與檔案寫入時間並列；目錄不存在＝好消息如實列（沒有核心傾印紀錄或被清過，兩者分不清、不猜）；參數可能是核心位址——樣本標敏感、匯出預設遮蔽。",
+                "本機實測：5 份傾印全解出（09-03 兩份 0xCE、08-23 一份 0x124、06-17／08-22 各一份 0xA），Win 15.26100。",
+                "測試 +14（3860 綠）；事實鍵目錄 233 → 236。",
+            ],
+        },
+
+        new ChangeEntry
+        {
             Version = "2.60",
             Date = "2026-10-11",
             Title = "收 v2.56 交接的兩件遺留：事件標註上畫面＋磁碟深掃明示入口",

@@ -67,6 +67,7 @@ public static class SpecRefRegistry
         typeof(AppCompatCacheDecoder), // AppCompatCache／Shimcache 條目版面（AppCompatCacheParser 出處逐欄）
         typeof(PrefetchHeaderDecoder), // Prefetch .pf 檔頭（MAM 容器／SCCA 各版本；Zimmerman Prefetch 庫出處）
         typeof(NtfsVolumeDecoder), // NTFS 卷冊 FSCTL 輸出（winioctl.h NTFS_VOLUME_DATA_BUFFER／USN_JOURNAL_DATA）
+        typeof(KernelDumpDecoder), // 核心傾印 PAGEDU64 檔頭＋bugcheck 知識表（真檔驗證＋Microsoft Learn）
     ];
 
     /// <summary>列舉解碼器上缺 SpecRef 的公開靜態方法（宣告於本型別者）。</summary>

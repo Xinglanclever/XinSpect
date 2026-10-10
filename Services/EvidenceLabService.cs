@@ -682,7 +682,8 @@ public sealed class EvidenceLabService : ObservableObject
         FsForensicFacts = ShimcacheFactsService.CollectForThisMachine(DateTimeOffset.UtcNow)
             .Concat(MountedDevicesFactsService.CollectForThisMachine(DateTimeOffset.UtcNow))
             .Concat(PrefetchFactsService.CollectForThisMachine(DateTimeOffset.UtcNow))
-            .Concat(NtfsVolumeFactsService.CollectForThisMachine(DateTimeOffset.UtcNow)).ToList();
+            .Concat(NtfsVolumeFactsService.CollectForThisMachine(DateTimeOffset.UtcNow))
+            .Concat(MinidumpFactsService.CollectForThisMachine(DateTimeOffset.UtcNow)).ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 

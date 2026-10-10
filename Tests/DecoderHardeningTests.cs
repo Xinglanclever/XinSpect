@@ -91,6 +91,7 @@ public class DecoderHardeningTests
             "AppCompatCacheDecoder",
             "PrefetchHeaderDecoder",
             "NtfsVolumeDecoder",
+            "KernelDumpDecoder",
         };
         Assert.Equal(expected, SpecRefRegistry.CoveredDecoders.Select(t => t.Name).ToArray());
         Assert.All(SpecRefRegistry.CoveredDecoders, t => Assert.True(t.IsSealed || t.IsClass));
