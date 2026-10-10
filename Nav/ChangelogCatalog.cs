@@ -48,6 +48,19 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.64",
+            Date = "2026-10-11",
+            Title = "P0-10 第三方授權成文＋P0-07 錯誤聚合（CLI 面）",
+            Items =
+            [
+                "第三方授權清單（EG-018／P0-10）：THIRD-PARTY-NOTICES.md 成文——執行期 7 元件（LHM 0.9.6/0.9.4、WebView2、System.Management、TraceEvent、NAudio、ServiceController）與建置/測試期 4 元件，授權（MPL-2.0／LGPL-WinRing0 兩層來源／MIT）與義務逐欄；對帳測試把 csproj 的每個 PackageReference/PackageDownload 釘進清單——加套件沒寫進來＝紅燈（法務界線硬性）；清單明示「是事實摘要，不構成法律意見」。",
+                "錯誤聚合（UX-010／P0-07 的 CLI 面）：CLI --errors——跑一次完整收集，把非 Present 的三態（讀取失敗／權限不足／不支援／未知）集中成清單、逐項帶原因；零錯誤＝空清單如實顯示（不是隱藏頁面）；退出碼 0＝全 Present／2＝有三態事實／1＝致命。聚合本身零 I/O；重試（唯讀重掃）屬 UI 面，本版未做——界線如實記在 ROUND 文件。",
+                "測試 +8（3885 綠）。",
+            ],
+        },
+
+        new ChangeEntry
+        {
             Version = "2.63",
             Date = "2026-10-11",
             Title = "P0-03 監聽埠三方對照：socket × 行程 × 簽章",

@@ -24,6 +24,7 @@ public static class CliService
     public const string IntegrityBaselineArg = "--integrity-baseline";
     public const string SbomArg = "--sbom";
     public const string DiskUsageArg = "--disk-usage";
+    public const string ErrorsArg = "--errors";
     public const string DeepArg = "--deep";
 
     public const int ExitOk = 0;
@@ -55,6 +56,8 @@ public static class CliService
             return RunSbom(args, stdout, stderr);
         if (args[0] == DiskUsageArg)
             return RunDiskUsage(args, stdout, stderr);
+        if (args[0] == ErrorsArg)
+            return RunErrors(args, collect, stdout, stderr);
         if (args[0] != JsonArg)
         {
             stderr.WriteLine($"未知引數「{args[0]}」。用 --help 看用法。");
@@ -260,6 +263,29 @@ public static class CliService
     }
 
     /// <summary>
+    /// 錯誤聚合模式（P0-07／UX-010 的 CLI 面，v2.64）：跑一次完整收集，把非 Present 的三態集中成清單。
+    /// 退出碼：0＝全部 Present（空清單如實顯示）；2＝有三態事實（逐項帶原因）；1＝致命（收集或寫出失敗）。
+    /// </summary>
+    private static int RunErrors(string[] args, Func<IReadOnlyList<HardwareFact>> collect, TextWriter stdout, TextWriter stderr)
+    {
+        try
+        {
+            var facts = collect();
+            var agg = ErrorAggregationService.Aggregate(facts);
+            string json = JsonSerializer.Serialize(ErrorAggregationService.ToPayload(agg, DateTimeOffset.UtcNow), JsonOptions);
+            string? outPath = OptionValue(args, OutArg);
+            if (outPath is not null) File.WriteAllText(outPath, json);
+            else stdout.WriteLine(json);
+            return agg.Total == 0 ? ExitOk : ExitPartial;
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"收集失敗：{ex.Message}");
+            return ExitError;
+        }
+    }
+
+    /// <summary>
     /// 磁碟用量模式（SG-002 深掃入口，v2.60）：<c>--disk-usage</c> 掃預設根（暫存與傾印）；
     /// <c>--disk-usage --deep</c> 加上使用者設定檔、深度 6。只讀不刪——本命令沒有任何刪除路徑。
     /// 退出碼：0＝全 Present；2＝部分三態（根讀不到會如實列出）；1＝致命（寫出失敗）。
@@ -348,6 +374,7 @@ public static class CliService
               XinSpect --integrity-baseline [日誌路徑] [--out <檔案>]
               XinSpect --sbom [--out <檔案>]
               XinSpect --disk-usage [--deep] [--out <檔案>]
+              XinSpect --errors [--out <檔案>]
               XinSpect --help
 
             範圍：
@@ -366,6 +393,8 @@ public static class CliService
               disk-usage      磁碟「為什麼滿」的唯讀排行（預設只掃暫存與傾印根）；
                               加 --deep 明示含使用者設定檔（深度 6，整份遞迴要數十秒）。
                               只讀不刪——本命令沒有任何刪除路徑。
+              errors          錯誤聚合：把全部事實裡非 Present 的三態（讀取失敗／權限不足／
+                              不支援／未知）集中成清單，逐項帶原因；零錯誤＝空清單如實顯示。
               sbom            產生 CycloneDX 1.5 的 SBOM（元件＝作業系統＋驅動＋本程式；
                               不含已安裝應用程式套件與授權）。
 
