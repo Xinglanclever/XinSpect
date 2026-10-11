@@ -4,7 +4,7 @@
 
 一款免費開源、運行於 Windows 的原生硬體驗機、監控與安全稽核工具。以單一執行檔發佈，免安裝；對硬體與系統的讀取以唯讀為原則，少數涉及寫入的功能均設有同意閘門並明確標註風險。本程式不收集、不上傳任何使用者資料。
 
-![版本](https://img.shields.io/badge/version-2.67-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.68-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![測試](https://img.shields.io/badge/tests-4055%20passed-3FB950)
@@ -79,10 +79,10 @@
 
 | 檔案 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.67/XinSpect.exe) | 31,681,323 bytes | 主程式。藍色中隊守護進程已內建 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.67/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.68/XinSpect.exe) | 31,681,323 bytes | 主程式。藍色中隊守護進程已內建 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.68/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
 
-> **上表的位元組數為本版（v2.67）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v2.68）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
 系統需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含發佈則免裝）。顯示卡深測需要 D3D11 相容裝置；MSR 讀取、SMART ioctl、Security 事件記錄需以系統管理員執行——沒有權限時相關項目標示「權限不足」，程式不會假裝成功，也不會靜默降級。
 
@@ -427,6 +427,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.68 Olympus**（2026-10-12）：Vol2 第 31–56 項——維護／執行環境／收尾三批次：設定自我修復（先備份留證）、進度記憶、報告整合、導覽歷史（不落盤）、診斷樹導航、未知裝置與錯誤碼、BITS 佇列、安裝痕跡（產品名遮蔽）、更新來源／通道／服務堆疊／儀表、提權最小化審計、自我更新完整性（沒有通道如實）、環境自我聲明（不是反 VM）、符號路徑、線程池、GC 模式、模組衝突（同名不等於惡意）、來源信任分布（不給分數）、WPBT 存在性（不解析內容）；隱私禁項成鍵＋覆蓋申報補 25 條豁免；測試 +61（4055 綠）、目錄 306→338。
 - **v2.67 Olympus**（2026-10-12）：Vol2 第 21–30 項——PCIe 能力鏈深化（SB-007..014：ECAM legacy＋extended 鏈、SR-IOV／ACS／L1SS／DPC／VC／AER 全欄位、revision 框架）＋PPTT 拓撲（AC-017）＋Server 角色深化（SV-002/004/006/007/009/011/012/013：IIS 應用池／DNS 區域／Hyper-V 交換器／檔案列印共用／Server Core／角色服務；授權不讀金鑰、共用不披露路徑）；ACPI 表列舉移進 LoadUsermodeFacts（GUI／CLI 同源）＋acpi.table 動態家族；UEFI Boot#### 掃描 0x20 上限修效能預算（20 輪 89s→1s 量級）；測試 +60（3994 綠）、目錄 288→306；IN-009 除錯偵測聲明跟進（in.debug，＋3 測試、目錄 307）。
 - **v2.66 Olympus**（2026-10-11）：P0-09 知識表離線更新包（EG-002）——knowledge-pack.json（serialNumber 由內容雜湊推導，同輸入同輸出）；缺 snapshotDate 整包拒收、serial 不符拒收並帶兩個值、缺檔＝內建表如實聲明；零網路不破——包由使用者手動換檔，換包動作進審計鏈且鏈可驗；knowledge.pack.status／tables 兩把固定鍵；測試 +7（3896 綠）、目錄 243 → 245。
 - **v2.65 Olympus**（2026-10-11）：P0-02 FIT 表與 Boot Guard——快閃尾端 0x400 向下找「_FIT_」簽名（16 位元組對齊）＋FWI 版面逐欄（標頭 0x20／條目 Type u16+Size u16）解析微碼／ACM／Startup 條目；只呈現目錄上有什麼，不判「是否被繞過」、不驗 ACM 簽章；Boot Guard profile 需要 FLMAP／FMLF descriptor——未對準出處前不出值（如實 NotSupported）；驅動未載＝通路三態如實；測試 +4（3889 綠）、目錄 240 → 243。
