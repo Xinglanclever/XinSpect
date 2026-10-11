@@ -78,6 +78,7 @@ public static class SelfIntegrityFactsService
     public const string ConfigKey = "in.cfg.integrity";
     public const string PrivsKey = "in.privs";
     public const string DepsKey = "in.deps";
+    public const string DebugKey = "in.debug";
     public const string ReportKey = "in.report";
 
     /// <summary>清單類值裡最多列幾項（其餘以「等 N 項」收束）。</summary>
@@ -119,6 +120,9 @@ public static class SelfIntegrityFactsService
 
         // ── IN-007 依賴完整性（DLL 側載偵測）──
         facts.AddRange(DependencyFacts(at, i));
+
+        // ── IN-009 除錯偵測聲明（被除錯＝事實；本服務不反除錯）──
+        facts.Add(DebugFact(at, Debugger.IsAttached, IsRemoteDebuggerPresent()));
 
         // ── IN-010 自我完整性報告頁 ──
         facts.Add(ReportFact(at, facts, auditReadable));
@@ -273,6 +277,30 @@ public static class SelfIntegrityFactsService
             unique.Count);
     }
 
+    private static HardwareFact DebugFact(DateTimeOffset at, bool attached, bool? remote)
+    {
+        if (!attached && remote is null)
+            return Unavailable(at, DebugKey, "除錯狀態", FactAvailability.ReadError,
+                "CheckRemoteDebuggerPresent 呼叫失敗——本機除錯器未附加（Debugger.IsAttached=false），遠端狀態讀不到就是不猜");
+
+        string state = attached ? "本機除錯器已附加" : "本機除錯器未附加";
+        if (remote is { } r) state += r ? "；遠端除錯器存在" : "；遠端除錯器不存在";
+        return new HardwareFact(DebugKey, Category, "除錯狀態",
+            state + "。被除錯是事實不是入侵：本服務如實記錄，不做反除錯（反逆向屬敵意行為，本工具不做）。",
+            "", "Debugger.IsAttached ＋ CheckRemoteDebuggerPresent", FactTrustLevel.Reported, false, at);
+    }
+
+    /// <summary>遠端除錯器查詢；呼叫失敗回 null（與「不存在」分開，三態不混淆）。</summary>
+    internal static bool? IsRemoteDebuggerPresent()
+    {
+        try
+        {
+            if (!CheckRemoteDebuggerPresent(GetCurrentProcess(), out bool present)) return null;
+            return present;
+        }
+        catch { return null; }
+    }
+
     private static HardwareFact ReportFact(DateTimeOffset at, IReadOnlyList<HardwareFact> facts, bool auditReadable)
     {
         int counted = 0, present = 0, unverified = 0;
@@ -361,6 +389,12 @@ public static class SelfIntegrityFactsService
     private static HardwareFact Unavailable(DateTimeOffset at, string key, string name,
         FactAvailability availability, string reason) =>
         new(key, Category, name, "", "", Source, FactTrustLevel.Unknown, false, at, null, availability, reason);
+
+    [DllImport("kernel32.dll")]
+    private static extern IntPtr GetCurrentProcess();
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool CheckRemoteDebuggerPresent(IntPtr process, out bool debuggerPresent);
 }
 
 /// <summary>
@@ -478,4 +512,5 @@ public static class TokenPrivilegeReader
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool CloseHandle(IntPtr handle);
+
 }

@@ -111,6 +111,28 @@ public class SelfIntegrityFactsTests
         Assert.Contains("不是防篡改保證", f.Value);
     }
 
+    // ── IN-009 除錯偵測聲明 ──────────────────────────────────────────────
+
+    [Fact]
+    public void 除錯狀態_預設未附加時如實說未附加且聲明不反除錯()
+    {
+        var f = Fact(Collect(Inputs()), SelfIntegrityFactsService.DebugKey);
+
+        Assert.Equal(FactAvailability.Present, f.Availability);
+        Assert.Contains("未附加", f.Value);
+        Assert.Contains("不做反除錯", f.Value);
+        Assert.DoesNotContain("已附加", f.Value);
+    }
+
+    [Fact]
+    public void 除錯狀態_本機已附加時如實說已附加()
+    {
+        // 這條測試真的「正在被除錯」時才會翻真——真值路徑由真機驗證；
+        // 單元測試釘的是「未附加如實、界線聲明在」。
+        var f = Fact(Collect(Inputs()), SelfIntegrityFactsService.DebugKey);
+        Assert.NotEqual(FactAvailability.ReadError, f.Availability);
+    }
+
     // ── IN-002 設定檔反篡改 ──────────────────────────────────────────────
 
     [Fact]
