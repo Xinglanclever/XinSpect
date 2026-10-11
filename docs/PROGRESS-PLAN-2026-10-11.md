@@ -84,8 +84,11 @@ FS-005（USN 讀回）、FS-007（回收桶審計）、FS-008（BITS 佇列）�
 | 56 | **v2.68（已發佈 2026-10-12）** | SE-010 WPBT 表存在性（發版點：本版自 v2.67 起累計 25 項） | 4055 綠 |
 | — | 說明 | FS-013 隱私禁項**早已完成**（Vol2 批次 B 的 ForensicBanGateTests 就是它的守門）；本輪只把禁令清單攤成 fact 鍵 fs.privacy.boundary，**不另計一項** | — |
 
-### 下一批（31→55，先簡後難）
-- IN 殘項（S／L0，接縫現成）：IN-005 提權最小化審計、IN-006 自我更新完整性、IN-008 設定損毀自我修復（先備份，往返測試）
-- NG 殘項（S）：NG-003 檢查進度記憶、NG-004 診斷報告整合、NG-005 導覽歷史（L1）
-- FS 殘項（S／L1）：FS-008 BITS 佇列、FS-011 安裝痕跡時間線（MSI 事件）
-- 之後才排：需要新解析器的 FS-002 Amcache／FS-004 SRUM／FS-015 VSS、要 UI 算繪的 AC-016 SLIT 熱圖、要 AML 的 AC-001..005、要角色的 SV-003／005／008／010、要硬體工具的 GX／UV 多數項。
+### 下一批（第 57–66 項：依然先簡後難）
+- QS 查詢智慧層：QS-004 單位轉換層（qs.unit）、QS-005 擸浮說明（qs.help，HelpCatalog 覆蓋）、QS-006 查詢索引（qs.index，域前綴索引）、QS-009 鍵集 diff（qs.keydiff）
+- SE 進階安全：SE-004 Named pipe 列舉（se.pipe.*，欄位名 L1 敏感）、SE-014 安全摘要分級（se.grade，分級≠背書）
+- RS 報告輸出：RS-010 電子簽章報告（rs.sig，審計鏈頭，雜湊鏈≠數位簽章）
+- UF 更新深化：UF-002 失敗重試鏈（uf.retry.*，WindowsUpdateClient 事件 19/20）
+- ZR 零信任：ZR-005 Passkey 支援（zr.passkey，webauthn.dll＋建置號；支援≠已設定）
+- DL 開發者診斷：DL-002 行程傾摘（dl.dump，同意闘門；未同意則永不執行）
+- 之後：HM-006 驅動版本變更史、HM-005 感測器漂移、MU 影音編解碼、EL 壽命庫、SG 情境第二波
