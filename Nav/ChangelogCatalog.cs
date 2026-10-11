@@ -48,6 +48,19 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.65",
+            Date = "2026-10-11",
+            Title = "P0-02 FIT 表（開機信任根目錄）＋Boot Guard 界線",
+            Items =
+            [
+                "FIT 解碼（FW-001／P0-02）：快閃尾端 0x400 內向下找 _FIT_ 簽名（16 位元組對齊，經既有 SPIBAR MMIO 後端——WinRing0 內嵌 v2.43 的通路），FWI 版面逐欄：標頭 0x20（BaseAddress u64／Size u32／Signature／Flags）、條目 Type u16／Size u16；型別名收錄微碼／Co-Security ACM／Platform Boot Policy／BIOS Startup／RAM Init／Text Mode／Version／TPM 設定，未收錄如實標。",
+                "界線：只呈現「目錄上有什麼」，不判「是否被繞過」、不驗 ACM 簽章；Boot Guard profile 需要 flash descriptor（FLMAP／FMLF）佈局——未對準出處前不出值（如實 NotSupported；有 FIT 目錄不代表 Boot Guard 啟用，兩件事）；驅動未載＝通路三態（本機 CLI 上下文即如此如實標 ReadError，真值等驅動就緒）。",
+                "測試 +4（3889 綠）；固定鍵目錄 240 → 243。",
+            ],
+        },
+
+        new ChangeEntry
+        {
             Version = "2.64",
             Date = "2026-10-11",
             Title = "P0-10 第三方授權成文＋P0-07 錯誤聚合（CLI 面）",

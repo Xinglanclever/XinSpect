@@ -4,10 +4,10 @@
 
 一款免費開源、運行於 Windows 的原生硬體驗機、監控與安全稽核工具。以單一執行檔發佈，免安裝；對硬體與系統的讀取以唯讀為原則，少數涉及寫入的功能均設有同意閘門並明確標註風險。本程式不收集、不上傳任何使用者資料。
 
-![版本](https://img.shields.io/badge/version-2.64-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.65-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-3885%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-3889%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-MIT-green)
 
@@ -79,10 +79,10 @@
 
 | 檔案 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.64/XinSpect.exe) | 31,421,739 bytes | 主程式。藍色中隊守護進程已內建 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.64/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.65/XinSpect.exe) | 31,421,739 bytes | 主程式。藍色中隊守護進程已內建 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.65/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
 
-> **上表的位元組數為本版（v2.64）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v2.65）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
 系統需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含發佈則免裝）。顯示卡深測需要 D3D11 相容裝置；MSR 讀取、SMART ioctl、Security 事件記錄需以系統管理員執行——沒有權限時相關項目標示「權限不足」，程式不會假裝成功，也不會靜默降級。
 
@@ -427,6 +427,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.65 Olympus**（2026-10-11）：P0-02 FIT 表與 Boot Guard——快閃尾端 0x400 向下找「_FIT_」簽名（16 位元組對齊）＋FWI 版面逐欄（標頭 0x20／條目 Type u16+Size u16）解析微碼／ACM／Startup 條目；只呈現目錄上有什麼，不判「是否被繞過」、不驗 ACM 簽章；Boot Guard profile 需要 FLMAP／FMLF descriptor——未對準出處前不出值（如實 NotSupported）；驅動未載＝通路三態如實；測試 +4（3889 綠）、目錄 240 → 243。
 - **v2.64 Olympus**（2026-10-11）：P0-10 第三方授權清單成文（THIRD-PARTY-NOTICES.md：執行期 7 元件＋建置/測試期 4 元件，授權與義務逐欄、對帳測試釘 csproj↔清單逐項、未列入＝紅燈；WinRing0 兩層來源如實）＋P0-07 錯誤聚合 CLI 面（--errors：全部事實的非 Present 三態集中成清單、逐項帶原因、零錯誤＝空清單如實顯示；退出碼 0/2/1）；測試 +8（3885 綠）。
 - **v2.63 Olympus**（2026-10-11）：P0-03 監聽埠三方對照（SA-008）——socket（IP Helper 連線表）× 行程（PID→映像）× 簽章（WinVerifyTrust）；前兩條腿重用既有 PortUsageService 不寫第二份 P/Invoke（SV-001 教訓），第三條腿走 v2.56 抽出的共用簽章核心；net.listen.count/entries/unverified 三把彙總鍵＋逐埠 net.listen.{proto}.{port} 家族（18→19，埠集是機器狀態）；PID 競態與高完整性映像記 Unknown、未通過＝待查證不是已中招、取樣瞬間必標、只列舉不阻擋不主動連線；本機實測 TCP 76＋UDP 31；測試 +6（3877 綠）。
 - **v2.62 Olympus**（2026-10-11）：P0-01 TPM 事件日誌重放比對（FW-002）——把兩個既有來源變第三者驗證：TCG log（Tbsi_Get_TCG_Log）逐事件模擬 extend（PCR_new＝Hash(PCR_old∥digest)；PC Client 起始值 PCR0＝0xFF…FF 其餘 0；EV_NO_ACTION 不延伸）× TPM 實讀 PCR（SHA-256 bank）逐顆比對；tpm.replay.summary＋逐顆 tpm.replay.pcr.sha256.{i}（照 tpm.pcr.* 先例由索引插值、不入靜態目錄）；不一致＝事實不是入侵判決、log 缺＝無法重放不是量測鏈完整；測試 +11（3871 綠）。

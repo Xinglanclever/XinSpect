@@ -71,6 +71,15 @@ public sealed class EvidenceLabService : ObservableObject
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
+    /// <summary>FIT 表與 Boot Guard（P0-02／FW-001）：快閃尾端唯讀；驅動通路未就緒＝三態。</summary>
+    public IReadOnlyList<HardwareFact> FitFacts { get; private set; } = [];
+
+    public void LoadFit(IPciConfigReader pci, IMmioReader mmio)
+    {
+        FitFacts = SpiFitFactsService.Collect(pci, mmio, DateTimeOffset.UtcNow);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
     /// <summary>監聽埠三方對照（P0-03／SA-008）：socket × 行程 × 簽章；前兩條腿重用 PortUsageService。</summary>
     public IReadOnlyList<HardwareFact> ListenPortFacts { get; private set; } = [];
 
@@ -389,6 +398,7 @@ public sealed class EvidenceLabService : ObservableObject
         SpiHashFacts = SpiFlashHashService.Collect(pci, mmio, at);
         SpiEntropyFacts = SpiEntropyService.Collect(pci, mmio, at);
         SpiEntropyRegionsCache = SpiEntropyService.DescribeRegions(pci, mmio);
+        FitFacts = SpiFitFactsService.Collect(pci, mmio, at);
         UefiFvFacts = UefiFvFactsService.Collect(pci, mmio, at);
         UefiFvRegionsCache = UefiFvFactsService.DescribeRows(pci, mmio);
         SpiCompareFacts = []; // 資料更新後舊比對失效，如實清空
@@ -784,7 +794,7 @@ public sealed class EvidenceLabService : ObservableObject
     {
         get
         {
-            var baseFacts = ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
+            var baseFacts = ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(FitFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
                 .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
                 .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(TpmReplayFacts)
                 .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(ListenPortFacts).Concat(LocalSecurityAuditFacts)
