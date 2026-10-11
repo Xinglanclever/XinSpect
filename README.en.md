@@ -9,7 +9,7 @@ A free, open-source hardware verification, monitoring, and security auditing too
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![Tests](https://img.shields.io/badge/tests-4088%20passed-3FB950)
 ![Mutation Score](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
-![授權](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
+![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
 XinSpect is built with WPF (.NET 10) using MVVM architecture. It integrates LibreHardwareMonitor for sensing, Intel XTU bridging for overclocking, NVIDIA NVML/NVAPI for GPU control, WebView2 for the embedded browser, and a custom WinRing0-based fact-reading layer with an XsRegProbe whitelist read-only driver. The "Spect" in the name means observer: it doesn't draw conclusions about your hardware — it presents what the hardware says, what the firmware says, and what the OS says side by side, marking anything it can't read, letting the verifier draw their own conclusions.
 
@@ -29,7 +29,7 @@ These principles are enforced by unit tests and machine checks, not just documen
 
 | File | Size | Purpose |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.69/XinSpect.exe) | 31.7 MB | Main program (includes BlueSquadron guard) |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.69/XinSpect.exe) | 31.8 MB | Main program (includes BlueSquadron guard) |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.69/BlueSquadronBridge.exe) | 6.5 MB | Standalone guard process |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.69/XinSpectDeploy.exe) | 7 KB | One-click installer (downloads and deploys automatically) |
 
