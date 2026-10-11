@@ -50,7 +50,7 @@ public static class ChangelogCatalog
         {
             Version = "2.68",
             Date = "2026-10-12",
-            Title = "Vol2 第 31–56 項：維護／執行環境／收尾三批次＋WPBT",
+            Title = "Vol2 第 31–55 項：維護／執行環境／收尾三批次＋WPBT",
             Items =
             [
                 "IN-009／008／005／006／003：除錯聲明（不反除錯）、設定自我修復（先備份留證再重建）、提權最小化審計（缺權限鍵逐名列出）、自我更新完整性（沒有通道就說沒有）、環境自我聲明（Hypervisor 未回報不猜，不是反 VM）。",
