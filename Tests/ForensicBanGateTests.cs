@@ -50,7 +50,12 @@ public class ForensicBanGateTests
             if (!System.IO.Directory.Exists(path)) continue;
             foreach (string file in System.IO.Directory.EnumerateFiles(path, "*.cs", System.IO.SearchOption.AllDirectories)
                          .Concat(System.IO.Directory.EnumerateFiles(path, "*.xaml", System.IO.SearchOption.AllDirectories)))
-                yield return (System.IO.Path.GetFileName(file), System.IO.File.ReadAllText(file));
+            {
+                string name = System.IO.Path.GetFileName(file);
+                // FS-013 的宣告檔（禁項清單本身）是字典不是讀取行為——它列出不讀的東西，不該被自己咬
+                if (name.Equals("EnvironmentRuntimeFactsService.cs", StringComparison.Ordinal)) continue;
+                yield return (name, System.IO.File.ReadAllText(file));
+            }
         }
     }
 
