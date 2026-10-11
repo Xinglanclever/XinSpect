@@ -1,4 +1,4 @@
-﻿namespace XinSpect.Tests;
+namespace XinSpect.Tests;
 
 /// <summary>
 /// 目前這一棵樹的專案測試數——README 測試徽章的單一來源。
@@ -27,5 +27,5 @@ internal static class TestSuiteBaseline
     /// <summary>
     /// 專案測試數。加測試就改這裡，<c>ChangelogTests</c> 會守著三份 README 的徽章。
     /// </summary>
-    public const int ProjectTests = 3934;
+    public const int ProjectTests = 3994;
 }

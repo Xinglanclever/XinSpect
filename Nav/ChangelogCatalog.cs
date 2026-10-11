@@ -48,6 +48,22 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.67",
+            Date = "2026-10-12",
+            Title = "Vol2 第 21–30 項：PCIe 能力鏈＋PPTT／Server 角色深化",
+            Items =
+            [
+                "SB-007..014：ECAM 組態空間 legacy＋extended 能力鏈，SR-IOV／ACS／L1SS／DPC／VC／AER 全欄位與 revision 框架；能力存在與啟用分開陳述，無 ECAM 一律三態。",
+                "AC-017：PPTT 拓撲解碼（處理器／快取節點）與 OS 邏輯處理器數並列；不一致不挑邊，兩個來源都如實列出。",
+                "SV-002／004／009／012／013：IIS 應用池、DNS 區域、Hyper-V 交換器、角色服務與授權狀態；角色缺席＝不適用，授權不讀產品金鑰。",
+                "SV-006／007／011：檔案／列印共用、Server Core 判定；共用只列名稱不披露本機路徑。",
+                "ACPI 表列舉移進 LoadUsermodeFacts（GUI／CLI 同源）＋acpi.table 動態家族；UEFI Boot#### 掃描加 0x20 上限，修 20 輪掃描編排效能預算（89s→1s 量級）。",
+                "測試 +60（3934→3994 綠）；固定鍵目錄 288→306。",
+            ],
+        },
+
+        new ChangeEntry
+        {
             Version = "2.66",
             Date = "2026-10-11",
             Title = "P0-09 知識表離線更新包（零網路不破）",
