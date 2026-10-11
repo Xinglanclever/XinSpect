@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 320 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 332 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "ac.aml.str.count",
@@ -114,6 +114,11 @@ public static class FactKeyCatalog
         "defender.exclusions.count",
         "display.hw.gpu",
         "display.summary",
+        "dl.gc.mode",
+        "dl.gc.summary",
+        "dl.sympath",
+        "dl.threadpool.count",
+        "dl.threadpool.summary",
         "drvinsp.drivers.count",
         "drvinsp.truncated",
         "ent.fc",
@@ -141,6 +146,7 @@ public static class FactKeyCatalog
         "fs.pf.formats",
         "fs.pf.latest",
         "fs.pf.sample",
+        "fs.privacy.boundary",
         "fs.shim.count",
         "fs.shim.latest",
         "fs.shim.sample",
@@ -167,14 +173,17 @@ public static class FactKeyCatalog
         "hm.tree",
         "hm.unknown.count",
         "hm.unknown.list",
+        "hm.wake.summary",
         "hpa.dco",
         "in.cfg.integrity",
         "in.cfg.repair",
         "in.debug",
         "in.deps",
+        "in.elevation.summary",
         "in.privs",
         "in.report",
         "in.self",
+        "in.update.sig",
         "knowledge.pack.status",
         "knowledge.pack.tables",
         "mchbar.base",
@@ -195,6 +204,7 @@ public static class FactKeyCatalog
         "ng.coverage.headline",
         "ng.coverage.keys",
         "ng.coverage.uncovered",
+        "ng.history",
         "ng.progress",
         "ng.report",
         "nic.count",
@@ -328,6 +338,8 @@ public static class FactKeyCatalog
         "uefi.pk",
         "uefi.secure_boot",
         "uefi.setup_mode",
+        "uf.channel",
+        "uf.dash",
         "uf.servicing",
         "uf.source",
         "ufv.bios.count",

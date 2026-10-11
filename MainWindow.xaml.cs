@@ -205,6 +205,7 @@ public partial class MainWindow : Window
             _current = view;
             _currentDef = def;
             Host.Content = view;
+            EnvironmentRuntimeFactsService.NotePageVisited(def.Key, def.Title);   // NG-005 導覽歷史：只進記憶體，不落盤
             (view as IPageLifecycle)?.OnActivated();
             PageTransition.PlayEnter(Host);   // 切頁淡入 + 輕微上滑
 

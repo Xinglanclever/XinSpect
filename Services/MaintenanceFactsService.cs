@@ -202,7 +202,7 @@ public static class MaintenanceFactsService
 
     /// <summary>
     /// 報告整合：把「前面各組事實的可用性分布」攤成一欄。輸入刻意不含自己（與 cap.*／ng.coverage／qs.range 同款），
-    /// 否則报告会把自己的存在算進分母。
+    /// 否則报告會把自己的存在算進分母。
     /// </summary>
     public static HardwareFact ReportFact(DateTimeOffset at, IReadOnlyList<HardwareFact> facts)
     {
