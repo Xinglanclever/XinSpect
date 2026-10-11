@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 338 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 349 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "ac.aml.str.count",
@@ -114,6 +114,7 @@ public static class FactKeyCatalog
         "defender.exclusions.count",
         "display.hw.gpu",
         "display.summary",
+        "dl.dump",
         "dl.gc.mode",
         "dl.gc.summary",
         "dl.modconflict.count",
@@ -171,6 +172,7 @@ public static class FactKeyCatalog
         "gpu.tdr.delay",
         "gpu.tdr.dpc",
         "gpu.tdr.level",
+        "hm.hwdiff",
         "hm.prob.summary",
         "hm.tree",
         "hm.unknown.count",
@@ -242,8 +244,12 @@ public static class FactKeyCatalog
         "psu.pmbus.temp1",
         "psu.pmbus.vin",
         "psu.pmbus.vout",
+        "qs.help",
+        "qs.index",
+        "qs.keydiff",
         "qs.range",
         "qs.trust",
+        "qs.unit",
         "raid.oob",
         "rc.dump.count",
         "rc.dump.latest",
@@ -252,6 +258,7 @@ public static class FactKeyCatalog
         "role.surface",
         "role.surface.evidence",
         "rs.sbom",
+        "rs.sig",
         "sa.a11y.displayswitch.exe",
         "sa.a11y.magnify.exe",
         "sa.a11y.narrator.exe",
@@ -302,6 +309,9 @@ public static class FactKeyCatalog
         "sb.type03",
         "sb.type03.count",
         "se.cve",
+        "se.grade",
+        "se.pipe.count",
+        "se.pipe.summary",
         "se.wpbt",
         "setuptl.recent",
         "setuptl.sections.count",
@@ -366,6 +376,7 @@ public static class FactKeyCatalog
         "virt.vmcount",
         "virt.vmms",
         "virt.vswitch",
+        "zr.passkey",
     ];
 
     /// <summary>鍵的數量（供申報與測試比對）。</summary>

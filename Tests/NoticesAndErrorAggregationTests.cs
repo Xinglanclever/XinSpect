@@ -46,7 +46,7 @@ public class ThirdPartyNoticesTests
         string notices = File.ReadAllText(RepoFile("THIRD-PARTY-NOTICES.md"));
         Assert.Contains("MPL-2.0", notices);
         Assert.Contains("LGPL", notices, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("MIT", notices);
+        Assert.Contains("MIT", notices);   // 第三人元件的授權（WebView2／TraceEvent／NAudio 等）——保留，這是他人條款不是本專案的授權
         Assert.Contains("不構成法律意見", notices);
         Assert.Contains("WinRing0", notices, StringComparison.OrdinalIgnoreCase);
     }

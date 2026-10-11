@@ -4,12 +4,12 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一执行文件发布，免安装；对硬件与系统的读取以只读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-2.68-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.69-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-4055%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-4088%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
-![授权](https://img.shields.io/badge/license-MIT-green)
+![授權](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
 ## 一、项目定位
 
@@ -79,10 +79,10 @@
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.68/XinSpect.exe) | 31,742,763 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.68/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.69/XinSpect.exe) | 31,742,763 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.69/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 
-> **本表的字节数为本版（v2.68）实际发布的文件大小**；请以 Release 页面列出的文件为准。
+> **本表的字节数为本版（v2.69）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
 系统需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含发布则免装）。显卡深测需要 D3D11 兼容设备；MSR 读取、SMART ioctl、Security 事件日志需以系统管理员执行——没有权限时相关项目标示「权限不足」，程序不会假装成功，也不会静默降级。
 
@@ -424,6 +424,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.69 Olympus**（2026-10-12）：授權改採 **AGPL-3.0-or-later**（LICENSE 全文更換、徽章與授權段同步、csproj 加 PackageLicenseExpression）；第三人元件（Intel XTU SDK／LibreHardwareMonitor／TraceEvent／NAudio／WebView2 等）維持各自授權並保留於 THIRD-PARTY-NOTICES.md；v2.69 之前已發佈的版本仍在其當時的 MIT 條款下（不可撤回）。
 - **v2.68 Olympus**（2026-10-12）：Vol2 第 31–55 項——維護／執行環境／收尾三批次：設定自我修復（先備份留證）、進度記憶、報告整合、導覽歷史（不落盤）、診斷樹導航、未知裝置與錯誤碼、BITS 佇列、安裝痕跡（產品名遮蔽）、更新來源／通道／服務堆疊／儀表、提權最小化審計、自我更新完整性（沒有通道如實）、環境自我聲明（不是反 VM）、符號路徑、線程池、GC 模式、模組衝突（同名不等於惡意）、來源信任分布（不給分數）、WPBT 存在性（不解析內容）；隱私禁項成鍵＋覆蓋申報補 25 條豁免；測試 +61（4055 綠）、目錄 306→338。
 - **v2.67 Olympus**（2026-10-12）：Vol2 第 21–30 項——PCIe 能力鏈深化（SB-007..014：ECAM legacy＋extended 鏈、SR-IOV／ACS／L1SS／DPC／VC／AER 全欄位、revision 框架）＋PPTT 拓撲（AC-017）＋Server 角色深化（SV-002/004/006/007/009/011/012/013：IIS 應用池／DNS 區域／Hyper-V 交換器／檔案列印共用／Server Core／角色服務；授權不讀金鑰、共用不披露路徑）；ACPI 表列舉移進 LoadUsermodeFacts（GUI／CLI 同源）＋acpi.table 動態家族；UEFI Boot#### 掃描 0x20 上限修效能預算（20 輪 89s→1s 量級）；測試 +60（3994 綠）、目錄 288→306；IN-009 除錯偵測聲明跟進（in.debug，＋3 測試、目錄 307）。
 - **v2.66 Olympus**（2026-10-11）：P0-09 知識表離線更新包（EG-002）——knowledge-pack.json（serialNumber 由內容雜湊推導，同輸入同輸出）；缺 snapshotDate 整包拒收、serial 不符拒收並帶兩個值、缺檔＝內建表如實聲明；零網路不破——包由使用者手動換檔，換包動作進審計鏈且鏈可驗；knowledge.pack.status／tables 兩把固定鍵；測試 +7（3896 綠）、目錄 243 → 245。
@@ -488,7 +489,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十九、授权
 
-本专案以 [MIT License](LICENSE) 释出。内置第三方组件（Intel XTU SDK、LibreHardwareMonitor、TraceEvent、NAudio 等）受其各自授权条款约束，不在本专案 MIT 授权范围内。WinRing0 为双用途驱动，本程序的 MSR 读取亦依赖它；使用者应仅在自有或获授权的机器上使用本工具。
+本专案自 **v2.69** 起以 [GNU Affero General Public License v3.0 or later](LICENSE)（AGPL-3.0-or-later）释出：你可以自由使用、研究、修改与散布，但**散布修改版或提供网络服务时，必须以相同授权释出源代码**（AGPL 第 13 条）。内置第三方组件（Intel XTU SDK、LibreHardwareMonitor、TraceEvent、NAudio、WebView2 等）受其各自授权条款约束，**不在本专案 AGPL 授权范围内**，其授权与出处见 `THIRD-PARTY-NOTICES.md`。v2.69 之前已发布的版本，是在当时的 MIT 条款下散布的（授权不可撤回）；本仓库与后续版本以 AGPL-3.0-or-later 为准。WinRing0 为双用途驱动，本程序的 MSR 读取依赖它；使用者应仅在自有或获授权的机器上使用本工具。
 
 ## 二十、作者
 

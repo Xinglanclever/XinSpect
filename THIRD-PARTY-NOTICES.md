@@ -1,3 +1,6 @@
+> **專案授權**：曦覽 XinSpect 自 v2.69 起以 **AGPL-3.0-or-later** 釋出（見 `LICENSE`）。
+> 下表列出的第三方元件**不是**在本專案 AGPL 之下——它們各自維持原本的授權（含 MIT／MPL-2.0／LGPL 等），這些授權條款要求保留姓名標示與授權聲明，因此本檔中的第三方 MIT 段落**必須保留**，不屬「專案自己的 MIT 痕跡」。
+
 # 第三方元件清單（THIRD-PARTY NOTICES）— v2.64
 
 > 本清單由發佈一致性測試（`Tests/ThirdPartyNoticesTests`）與 `XinSpect.csproj`／`Bridge/*.csproj`／

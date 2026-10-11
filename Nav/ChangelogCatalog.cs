@@ -48,6 +48,19 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.69",
+            Date = "2026-10-12",
+            Title = "授權改採 AGPL-3.0-or-later",
+            Items =
+            [
+                "LICENSE 全文更換為 GNU Affero General Public License v3.0 or later；三份 README 徽章、下載連結、版本沿革與授權段同步；csproj 加 PackageLicenseExpression=AGPL-3.0-or-later。",
+                "第三人元件（Intel XTU SDK／LibreHardwareMonitor／TraceEvent／NAudio／WebView2 等）維持各自授權；THIRD-PARTY-NOTICES.md 保留其原本的 MIT／MPL-2.0／LGPL 條款與來源（那是他人授權，不是本專案的 MIT 痕跡）。",
+                "v2.69 之前已發佈的版本仍在其當時的 MIT 條款下散布（授權不可撤回）；本儲存庫與後續版本一律 AGPL-3.0-or-later。",
+            ],
+        },
+
+        new ChangeEntry
+        {
             Version = "2.68",
             Date = "2026-10-12",
             Title = "Vol2 第 31–55 項：維護／執行環境／收尾三批次＋WPBT",

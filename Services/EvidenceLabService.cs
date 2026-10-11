@@ -803,6 +803,25 @@ public sealed class EvidenceLabService : ObservableObject
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
+    /// <summary>查詢與智慧層事實（Vol2 第 57、58、60 項）：說明覆蓋與鍵集 diff（需要事實集的部分在尾端補）。</summary>
+    public IReadOnlyList<HardwareFact> QueryInsightFacts { get; private set; } = [];
+
+    public void LoadQueryInsight(IReadOnlyCollection<string>? previousKeys = null,
+        IReadOnlyCollection<string>? currentKeys = null)
+    {
+        QueryInsightFacts = QueryInsightFactsService.Collect(DateTimeOffset.UtcNow, previousKeys, currentKeys);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
+    /// <summary>信任與運作事實（Vol2 第 61、63、64、65、66 項）：pipe 列舉、審計鏈頭、硬體變更、Passkey、傾摘閘門。</summary>
+    public IReadOnlyList<HardwareFact> TrustOpsFacts { get; private set; } = [];
+
+    public void LoadTrustOps(HardwareSnapshotDiff? snapshotDiff = null)
+    {
+        TrustOpsFacts = TrustOpsFactsService.Collect(DateTimeOffset.UtcNow, snapshotDiff: snapshotDiff);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
     /// <summary>磁碟為什麼滿（SG-002）：唯讀排行、不刪任何東西；預設只掃暫存與傾印根。</summary>
     public IReadOnlyList<HardwareFact> DiskFullFacts { get; private set; } = [];
 
@@ -874,7 +893,7 @@ public sealed class EvidenceLabService : ObservableObject
                 .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
                 .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(TpmReplayFacts)
                 .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(ListenPortFacts).Concat(LocalSecurityAuditFacts)
-                .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ServerComplianceFacts).Concat(ServerRoleDeepFacts).Concat(ServerRoleConditionalFacts).Concat(MaintenanceFacts).Concat(EnvironmentRuntimeFacts).Concat(ClosingFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(SbomFacts)
+                .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ServerComplianceFacts).Concat(ServerRoleDeepFacts).Concat(ServerRoleConditionalFacts).Concat(MaintenanceFacts).Concat(EnvironmentRuntimeFacts).Concat(ClosingFacts).Concat(QueryInsightFacts).Concat(TrustOpsFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(SbomFacts)
                 .ToList();
             baseFacts.AddRange(CapabilityMatrixService.Collect(baseFacts, DateTimeOffset.UtcNow));
             // 覆蓋統計（NG-006）：與 cap.*／qs.range 同款，輸入是前面各組的聯集、不含自己——無自我指涉
@@ -889,6 +908,8 @@ public sealed class EvidenceLabService : ObservableObject
             baseFacts.Add(ClosingFactsService.TrustFact(DateTimeOffset.UtcNow, baseFacts));
             // WPBT 存在性（SE-010）：由 acpi.tables 推導，只宣告存在性
             baseFacts.Add(ClosingFactsService.WpbtFact(DateTimeOffset.UtcNow, baseFacts));
+            // 查詢品質（QS-004 單位、QS-006 索引）與安全摘要分級（SE-014）：分母不含自己
+            baseFacts.AddRange(QueryInsightFactsService.CollectDerived(DateTimeOffset.UtcNow, baseFacts));
             return baseFacts;
         }
     }
