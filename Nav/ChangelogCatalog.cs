@@ -59,6 +59,7 @@ public static class ChangelogCatalog
                 "SV-006／007／011：檔案／列印共用、Server Core 判定；共用只列名稱不披露本機路徑。",
                 "ACPI 表列舉移進 LoadUsermodeFacts（GUI／CLI 同源）＋acpi.table 動態家族；UEFI Boot#### 掃描加 0x20 上限，修 20 輪掃描編排效能預算（89s→1s 量級）。",
                 "測試 +60（3934→3994 綠）；固定鍵目錄 288→306。",
+                "IN-009 跟進：除錯偵測聲明（in.debug）——被除錯是事實不是入侵，不做反除錯；＋1 把鍵（306→307）＋3 條測試。",
             ],
         },
 
