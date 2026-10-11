@@ -105,6 +105,11 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 KnowledgePackService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadFsForensics(); }
         catch { /* 附加功能：讀不到由 ShimcacheFactsService／MountedDevicesFactsService／PrefetchFactsService 標三態，不在這裡中斷啟動 */ }
+        // 平台拓撲與資產（SMBIOS 表層深化 sb.*／asset.*／role.*／monitor.*／numa.*…）：
+        // 這一組原本只有 GUI 啟動序列在載入，CLI 拿不到——同一份程式的兩條入口事實集合不同，
+        // 匯出與報告就會少一截，而畫面上一切正常。改成兩條入口共用這一個組合點。
+        try { svc.LoadPlatformFacts(); }
+        catch { /* 附加功能：讀不到由各服務標三態，不在這裡中斷啟動 */ }
     }
 
     /// <summary>BIOS 區 vs 參考映像的比對（UI 與 CLI 共用入口）：組合後端後跑一次比對，回結果事實。</summary>

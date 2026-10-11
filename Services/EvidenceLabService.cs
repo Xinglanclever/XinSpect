@@ -358,6 +358,7 @@ public sealed class EvidenceLabService : ObservableObject
         var at = DateTimeOffset.UtcNow;
         MonitorFacts = MonitorFactsService.Collect(at);
         AssetFacts = AssetFactsService.Collect(at);
+        SmbiosDeepFacts = SmbiosDeepFactsService.Collect(at);
         RoleFacts = RoleSurfaceFactsService.Collect(at);
         PlatformFacts = NumaTopologyService.Collect(at)
             .Append(MemoryAttackSurfaceService.Collect(at))
@@ -368,6 +369,7 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(MonitorFacts)
             .Concat(AudioLatencyFactsService.Collect(at))
             .Concat(AssetFacts)
+            .Concat(SmbiosDeepFacts)
             .Concat(RoleFacts)
             .Concat(TimeSyncFactsService.Collect(at, new Win32AcpiTableSource()))
             .Concat(CxlFactsService.Collect(at, new Win32AcpiTableSource()))
@@ -711,6 +713,9 @@ public sealed class EvidenceLabService : ObservableObject
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
+    /// <summary>SMBIOS 表層深化事實（Vol2 SB 域）：Type 0–3／9／17／42／11／39 與 M.2 槽位。</summary>
+    public IReadOnlyList<HardwareFact> SmbiosDeepFacts { get; private set; } = [];
+
     /// <summary>檔案鑑識主線（Vol 2 批次 B）：Shimcache（FS-001）＋MountedDevices（FS-009）——執行痕跡與掛載歷史，唯讀。</summary>
     public IReadOnlyList<HardwareFact> FsForensicFacts { get; private set; } = [];
 
@@ -720,6 +725,8 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(MountedDevicesFactsService.CollectForThisMachine(DateTimeOffset.UtcNow))
             .Concat(PrefetchFactsService.CollectForThisMachine(DateTimeOffset.UtcNow))
             .Concat(NtfsVolumeFactsService.CollectForThisMachine(DateTimeOffset.UtcNow))
+            .Concat(RecycleBinFactsService.Collect(DateTimeOffset.UtcNow))
+            .Concat(TaskHistoryFactsService.Collect(DateTimeOffset.UtcNow))
             .Concat(MinidumpFactsService.CollectForThisMachine(DateTimeOffset.UtcNow)).ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
@@ -810,6 +817,9 @@ public sealed class EvidenceLabService : ObservableObject
                 .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ServerComplianceFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(SbomFacts)
                 .ToList();
             baseFacts.AddRange(CapabilityMatrixService.Collect(baseFacts, DateTimeOffset.UtcNow));
+            // 覆蓋統計（NG-006）：與 cap.*／qs.range 同款，輸入是前面各組的聯集、不含自己——無自我指涉
+            baseFacts.AddRange(CoverageFactsService.Collect(DateTimeOffset.UtcNow,
+                baseFacts.Select(f => f.Key).Distinct(StringComparer.Ordinal).ToList(), CoverageService.RuntimeRules()));
             // 鍵範圍檢查（QS-001）與 cap.* 同款：輸入是前面各組的聯集、不含自己——無遞迴
             baseFacts.Add(KeyRangeGuardService.Collect(DateTimeOffset.UtcNow, baseFacts));
             return baseFacts;

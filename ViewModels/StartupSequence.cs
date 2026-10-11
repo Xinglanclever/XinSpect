@@ -239,9 +239,8 @@ internal static class StartupSequence
         try { vm.EvidenceLab.LoadTpmReplay(); }
         catch { /* 重放為附加功能，讀不到由三態標示 */ }
 
-        // NUMA 拓撲與記憶體攻擊面聲明（usermode）。
-        try { vm.EvidenceLab.LoadPlatformFacts(); }
-        catch { /* 平台拓撲為附加功能，讀不到由三態標示 */ }
+        // NUMA 拓撲與記憶體攻擊面聲明（usermode）——已移進 EvidenceCollection.LoadUsermodeFacts：
+        // 同一個組合點，GUI 與 CLI 才會拿到同一組平台事實（先前只有 GUI 載入，CLI 的匯出少一截）。
 
         // 虛擬化平台三態（CPUID ＋ 選用功能 ＋ 服務狀態；usermode 唯讀）。
         try { vm.EvidenceLab.LoadVirtualization(); }

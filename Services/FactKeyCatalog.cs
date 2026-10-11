@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 264 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 288 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "ac.aml.str.count",
@@ -124,6 +124,9 @@ public static class FactKeyCatalog
         "etl.readback",
         "etl.traces.count",
         "evt.system.7d",
+        "fs.bin.count",
+        "fs.bin.roots",
+        "fs.bin.size_mb",
         "fs.mft.stat",
         "fs.mount.count",
         "fs.mount.letters",
@@ -135,6 +138,9 @@ public static class FactKeyCatalog
         "fs.shim.count",
         "fs.shim.latest",
         "fs.shim.sample",
+        "fs.taskhist.count",
+        "fs.taskhist.last",
+        "fs.taskhist.summary",
         "fs.usn.state",
         "fw.bg.profile",
         "fw.fit.count",
@@ -172,6 +178,11 @@ public static class FactKeyCatalog
         "net.listen.entries",
         "net.listen.unverified",
         "net.offload",
+        "ng.coverage.covered",
+        "ng.coverage.exempt",
+        "ng.coverage.headline",
+        "ng.coverage.keys",
+        "ng.coverage.uncovered",
         "nic.count",
         "nic.dirty_count",
         "nic.gap",
@@ -239,6 +250,19 @@ public static class FactKeyCatalog
         "sa.winlogon.read",
         "sa.winlogon.shell",
         "sa.winlogon.userinit",
+        "sb.dim.count",
+        "sb.dim.serial.count",
+        "sb.dim.summary",
+        "sb.m2slot.count",
+        "sb.m2slot.summary",
+        "sb.mctl",
+        "sb.oem.count",
+        "sb.oem.list",
+        "sb.psu",
+        "sb.slot.count",
+        "sb.slot.summary",
+        "sb.type03",
+        "sb.type03.count",
         "se.cve",
         "setuptl.recent",
         "setuptl.sections.count",
