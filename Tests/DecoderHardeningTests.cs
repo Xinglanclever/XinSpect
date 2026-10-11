@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 
 namespace XinSpect.Tests;
 
@@ -93,6 +93,7 @@ public class DecoderHardeningTests
             "NtfsVolumeDecoder",
             "KernelDumpDecoder",
             "TpmReplay",
+            "AcpiDeep",
         };
         Assert.Equal(expected, SpecRefRegistry.CoveredDecoders.Select(t => t.Name).ToArray());
         Assert.All(SpecRefRegistry.CoveredDecoders, t => Assert.True(t.IsSealed || t.IsClass));

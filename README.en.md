@@ -1,4 +1,4 @@
-[繁體中文](README.md) · [简体中文](README.zh-CN.md) · English
+﻿[繁體中文](README.md) · [简体中文](README.zh-CN.md) · English
 
 # XinSpect
 
@@ -7,7 +7,7 @@ A free, open-source hardware verification, monitoring, and security auditing too
 ![Version](https://img.shields.io/badge/version-2.66-4C8DFF)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![Tests](https://img.shields.io/badge/tests-3896%20passed-3FB950)
+![Tests](https://img.shields.io/badge/tests-3913%20passed-3FB950)
 ![Mutation Score](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
