@@ -48,6 +48,19 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.66",
+            Date = "2026-10-11",
+            Title = "P0-09 知識表離線更新包（零網路不破）",
+            Items =
+            [
+                "知識包載入層（EG-002／P0-09）：knowledge-pack.json（與執行檔同目錄）——格式＝包版本＋生成時間＋表集合＋serialNumber；完整性＝serialNumber 由「不含 serialNumber 的 canonical JSON」以 SHA-256 推導，同一組輸入得同一份文件；缺 snapshotDate 整包拒收（讀者無從判斷它多舛）、serial 不符拒收並並列兩個值、缺檔＝內建表繼續服役並如實声明（內建快照於 v2.66）。",
+                "零網路原則不破：沒有更新通道——包由使用者手動換檔；換包動作走既有 AuditLogService.Append 進審計鏈（append-only、雜湊鏈可驗、--verify-audit 可在 App 外驗）；壞包不記錄（鏈保持原狀）。knowledge.pack.status／tables 兩把固定鍵，零動態家族。",
+                "測試 +7（3896 綠）；固定鍵目錄 243 → 245。",
+            ],
+        },
+
+        new ChangeEntry
+        {
             Version = "2.65",
             Date = "2026-10-11",
             Title = "P0-02 FIT 表（開機信任根目錄）＋Boot Guard 界線",
