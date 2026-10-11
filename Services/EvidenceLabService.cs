@@ -887,6 +887,8 @@ public sealed class EvidenceLabService : ObservableObject
             baseFacts.AddRange(EnvironmentRuntimeFactsService.CollectDerived(DateTimeOffset.UtcNow, baseFacts));
             // 來源信任分布（QS-002）：同上，分母不含自己
             baseFacts.Add(ClosingFactsService.TrustFact(DateTimeOffset.UtcNow, baseFacts));
+            // WPBT 存在性（SE-010）：由 acpi.tables 推導，只宣告存在性
+            baseFacts.Add(ClosingFactsService.WpbtFact(DateTimeOffset.UtcNow, baseFacts));
             return baseFacts;
         }
     }

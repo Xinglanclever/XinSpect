@@ -112,6 +112,7 @@ public static class FactCoverageReport
         ["dl.modconflict."] = "模組衝突（DL-010）：Process.Modules 單來源；同名不等於惡意，判定不機器化。",
         ["hm.wake."] = "裝置喚醒（HM-004）：powercfg 原樣輸出、不解析在地化文字——無法機器交叉。",
         ["fs.privacy.boundary"] = "隱私禁項邊界（FS-013）：禁令清單本身，由 ForensicBanGateTests 機器釘住。",
+        ["se.wpbt"] = "WPBT 表存在性（SE-010）：由 acpi.tables 推導的存在性聲明，只宣告存在、不解析內容，無第二來源。", 
         ["in.cfg.repair"] = "設定自我修復（IN-008）：狀態只有 settings.json 一個來源；修復動作另有往返測試。",
         };
 

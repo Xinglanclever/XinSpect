@@ -17,12 +17,14 @@ public static class ClosingFactsService
     private const string CatSelf = "自我完整性";
     private const string CatNav = "診斷導航";
     private const string CatDl = "開發者診斷";
+    private const string CatSe = "進階安全";
 
     public const string EnvKey = "in.env";
     public const string TrustKey = "qs.trust";
     public const string ConflictCountKey = "dl.modconflict.count";
     public const string ConflictSummaryKey = "dl.modconflict.summary";
     public const string TreeKey = "ng.tree";
+    public const string WpbtKey = "se.wpbt";
 
     /// <summary>機器環境（真實走 WMI Win32_ComputerSystem；測試注入）。</summary>
     public sealed record MachineEnvironment(string Manufacturer, string Model, bool? HypervisorPresent, string SystemType)
@@ -46,6 +48,27 @@ public static class ClosingFactsService
         };
         facts.AddRange(ConflictFacts(at, (modules ?? SelfIntegrityInputs.ProcessModulePaths)()));
         return facts;
+    }
+
+    /// <summary>
+    /// SE-010 WPBT 表存在性：平台自訂二進位表（Windows Platform Binary Table）在不在，
+    /// 由 ACPI 表清單（acpi.tables）的事實推導——<b>只宣告存在性，不載入、不執行、不解析內容</b>。
+    /// </summary>
+    public static HardwareFact WpbtFact(DateTimeOffset at, IReadOnlyList<HardwareFact> facts)
+    {
+        var tableList = facts.FirstOrDefault(f => f.Key == "acpi.tables");
+        if (tableList is null || tableList.Availability != FactAvailability.Present)
+            return new HardwareFact(WpbtKey, CatSe, "WPBT 表存在性",
+                "", "", "ACPI 表清單（acpi.tables）", FactTrustLevel.Unknown, false, at, null,
+                FactAvailability.Unknown,
+                "ACPI 表清單不在場或不可用——無法判斷 WPBT 在不在（不推測）");
+
+        bool present = tableList.Value.Contains("WPBT", StringComparison.Ordinal);
+        return new HardwareFact(WpbtKey, CatSe, "WPBT 表存在性",
+            present
+                ? "存在（平台自訂二進位表）——這是存在性聲明：本工具不載入、不執行、不解析 WPBT 內容。"
+                : "本機 ACPI 表清單未列舉到 WPBT（不存在也是事實）。",
+            "", "ACPI 表清單（acpi.tables）", FactTrustLevel.Derived, false, at, present ? 1 : 0);
     }
 
     /// <summary>QS-002 來源信任分布：吃前面各組事實（尾端呼叫，輸入不含自己）。</summary>
