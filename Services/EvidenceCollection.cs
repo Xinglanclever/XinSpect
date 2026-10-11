@@ -1,4 +1,4 @@
-namespace XinSpect;
+﻿namespace XinSpect;
 
 /// <summary>
 /// 驅動相依全組事實的<b>單一組合點</b>（V7 WP32）：啟動序列與 CLI 模式共用同一套後端組合——
@@ -92,6 +92,10 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 CveOfflineFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadServerCompliance(); }
         catch { /* 附加功能：沒有角色事實時由服務標「尚未讀取」，不在這裡中斷啟動 */ }
+        try { svc.LoadServerRoleDeep(); }
+        catch { /* 附加功能：讀不到由 ServerRoleDeepFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadServerRoleConditional(); }
+        catch { /* 附加功能：讀不到由 ServerRoleConditionalFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadDiskFull(); }
         catch { /* 附加功能：讀不到由 DiskFullFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadFreezeDiagnosis(); }
@@ -110,6 +114,10 @@ public static class EvidenceCollection
         // 匯出與報告就會少一截，而畫面上一切正常。改成兩條入口共用這一個組合點。
         try { svc.LoadPlatformFacts(); }
         catch { /* 附加功能：讀不到由各服務標三態，不在這裡中斷啟動 */ }
+        // ACPI 表清單與表層深化（ac.*／acpi.*，usermode 以 GetSystemFirmwareTable 列舉，免驅動）：
+        // 同樣原本只有 GUI 在載入——CLI 的匯出與 ng.coverage 因此在數另一份事實集合。
+        try { svc.LoadAcpi(new Win32AcpiTableSource()); }
+        catch { /* 附加功能：讀不到由 AcpiService 標三態，不在這裡中斷啟動 */ }
     }
 
     /// <summary>BIOS 區 vs 參考映像的比對（UI 與 CLI 共用入口）：組合後端後跑一次比對，回結果事實。</summary>

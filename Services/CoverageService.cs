@@ -149,6 +149,7 @@ public sealed class CoverageService : ObservableObject
             new Regex(@"Bool\(\s*""([a-z][a-z0-9_]*(\.[a-z0-9_]+)+)"""),
             new Regex(@"ServiceFact\(\s*""([a-z][a-z0-9_]*(\.[a-z0-9_]+)+)"""),
             new Regex(@"MatrixRow\(\s*""([a-z][a-z0-9_]*(\.[a-z0-9_]+)+)"""),
+            new Regex(@"Summarize\(\s*""([a-z][a-z0-9_]*(\.[a-z0-9_]+)+)"""),
         };
         var keys = new HashSet<string>(StringComparer.Ordinal);
         if (!Directory.Exists(servicesDirectory)) return keys;

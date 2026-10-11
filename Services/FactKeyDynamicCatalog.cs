@@ -59,6 +59,7 @@ public static class FactKeyDynamicCatalog
                 "監聽埠逐埠一筆（協定＋埠號）——這台機器在等誰連入是機器狀態，埠集由連線表決定，编译期列不完",
             ["numa.node."] =
                 "NUMA 節點逐個一筆（節點號）——節點數由 GetNumaHighestNodeNumber 回報，單節點到 8 節點的平台都存在",
+            ["acpi.table."] = "ACPI 表逐表一筆（簽章＋同簽章序號）——這台機器的韌體提供了哪些表是機器的事實，簽章與數量編譯期列不完；acpi.tables 彙總鍵仍在靜態目錄。",
             ["role.installed."] =
                 "Windows 伺服器角色／功能逐一筆（角色名）——裝了哪些是这台機器的安裝事實，一台 Core 機能有幾十個角色；name 含大寫與連字號，本就不符合全鍵目錄的格式規定，必須走家族",
         };

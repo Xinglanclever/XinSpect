@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 288 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 306 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "ac.aml.str.count",
@@ -43,6 +43,8 @@ public static class FactKeyCatalog
         "ac.nfit.devices",
         "ac.nfit.spa.count",
         "ac.nfit.summary",
+        "ac.pptt.count",
+        "ac.pptt.summary",
         "ac.spcr",
         "ac.ssdt.third.count",
         "ac.ssdt.third.list",
@@ -258,6 +260,15 @@ public static class FactKeyCatalog
         "sb.mctl",
         "sb.oem.count",
         "sb.oem.list",
+        "sb.pci.acs.summary",
+        "sb.pci.cap.count",
+        "sb.pci.cap.summary",
+        "sb.pci.dpc.summary",
+        "sb.pci.l1sub.summary",
+        "sb.pci.rev.known",
+        "sb.pci.vc.summary",
+        "sb.pci.vf.summary",
+        "sb.pcieaer.full.summary",
         "sb.psu",
         "sb.slot.count",
         "sb.slot.summary",
@@ -281,6 +292,13 @@ public static class FactKeyCatalog
         "spi.write_surface",
         "storage.reliability.available",
         "storage.reliability.count",
+        "sv.core",
+        "sv.dns.zones",
+        "sv.hyperv.switches",
+        "sv.iis.apppools",
+        "sv.licensing",
+        "sv.roles.services",
+        "sv.shares",
         "sv.summary",
         "time.drift.ppm",
         "time.hpet",

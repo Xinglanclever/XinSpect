@@ -227,9 +227,8 @@ internal static class StartupSequence
         // 自動三態（不在生產機自動觸發核心碼，載入後這兩組事實自動翻成真值）。
         LoadDriverBackedEvidence(vm);
 
-        // ACPI 表清單（usermode 列舉，不需驅動；BERT/HEST/SRAT/DMAR 的有無即是平台能力的指紋）。
-        try { vm.EvidenceLab.LoadAcpi(new Win32AcpiTableSource()); }
-        catch { /* ACPI 列舉為附加功能，讀不到由三態標示 */ }
+        // ACPI 表清單（usermode 列舉，不需驅動；BERT/HEST/SRAT/DMAR 的有無即是平台能力的指紋）——
+        // 已移進 EvidenceCollection.LoadUsermodeFacts（GUI 與 CLI 同一個組合點）。
 
         // TPM 量測開機鏈（usermode 經 TBS；無 TPM 由服務標三態）。
         try { vm.EvidenceLab.LoadTpm(); }

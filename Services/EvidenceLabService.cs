@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.IO;
 
 namespace XinSpect;
@@ -150,6 +150,9 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>PCIe AER 三態事實（ECAM 基底 + 逐裝置錯誤狀態）。歸類「PCIe」，進快照但不進韌體安全頁。</summary>
     public IReadOnlyList<HardwareFact> PcieAerFacts { get; private set; } = [];
 
+    /// <summary>PCIe 能力鏈深化事實（Vol2 SB-007..014）：legacy／擴充能力、SR-IOV、ACS、L1SS、DPC、VC、AER 完整欄位。</summary>
+    public IReadOnlyList<HardwareFact> PciCapabilityFacts { get; private set; } = [];
+
     private DeepAccessService? _deepAccess;
 
     /// <summary>深層核心存取豁免開關（產生 CA、裝/移信任、載/卸 XsRegProbe）。延遲建立：不點不碰真實系統。</summary>
@@ -159,6 +162,7 @@ public sealed class EvidenceLabService : ObservableObject
     public void LoadPcieAer(IMmioReader mmio, IAcpiTableSource acpi)
     {
         PcieAerFacts = EcamAerService.Collect(mmio, acpi, DateTimeOffset.UtcNow);
+        PciCapabilityFacts = PciCapabilityFactsService.Collect(mmio, acpi, DateTimeOffset.UtcNow);
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
@@ -359,6 +363,8 @@ public sealed class EvidenceLabService : ObservableObject
         MonitorFacts = MonitorFactsService.Collect(at);
         AssetFacts = AssetFactsService.Collect(at);
         SmbiosDeepFacts = SmbiosDeepFactsService.Collect(at);
+        PpttFacts = PpttFactsService.Collect(new Win32AcpiTableSource(), at, Environment.ProcessorCount);
+        ServerModeFacts = ServerModeFactsService.Collect(at);
         RoleFacts = RoleSurfaceFactsService.Collect(at);
         PlatformFacts = NumaTopologyService.Collect(at)
             .Append(MemoryAttackSurfaceService.Collect(at))
@@ -370,6 +376,8 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(AudioLatencyFactsService.Collect(at))
             .Concat(AssetFacts)
             .Concat(SmbiosDeepFacts)
+            .Concat(PpttFacts)
+            .Concat(ServerModeFacts)
             .Concat(RoleFacts)
             .Concat(TimeSyncFactsService.Collect(at, new Win32AcpiTableSource()))
             .Concat(CxlFactsService.Collect(at, new Win32AcpiTableSource()))
@@ -415,6 +423,7 @@ public sealed class EvidenceLabService : ObservableObject
         SpiCompareFacts = []; // 資料更新後舊比對失效，如實清空
         MchbarFacts = MchbarService.Collect(pci, mmio, at);
         PcieAerFacts = EcamAerService.Collect(mmio, acpi, at);
+        PciCapabilityFacts = PciCapabilityFactsService.Collect(mmio, acpi, at);
         BackendFacts = BackendEnvironmentService.Collect(msr, mmio, at);
         CpuFirmwareFacts = CpuFirmwareFactsService.Collect(msr, at);
         PmuFacts = PmuCapabilityFactsService.Collect(at, msr: msr);
@@ -716,6 +725,12 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>SMBIOS 表層深化事實（Vol2 SB 域）：Type 0–3／9／17／42／11／39 與 M.2 槽位。</summary>
     public IReadOnlyList<HardwareFact> SmbiosDeepFacts { get; private set; } = [];
 
+    /// <summary>PPTT 拓撲事實（Vol2 AC-017）：韌體自述的處理器／快取節點，與 OS 邏輯處理器數並列。</summary>
+    public IReadOnlyList<HardwareFact> PpttFacts { get; private set; } = [];
+
+    /// <summary>Server Core 判定（Vol2 SV-011）：由 InstallationType 登錄值分辨安裝型別。</summary>
+    public IReadOnlyList<HardwareFact> ServerModeFacts { get; private set; } = [];
+
     /// <summary>檔案鑑識主線（Vol 2 批次 B）：Shimcache（FS-001）＋MountedDevices（FS-009）——執行痕跡與掛載歷史，唯讀。</summary>
     public IReadOnlyList<HardwareFact> FsForensicFacts { get; private set; } = [];
 
@@ -740,6 +755,24 @@ public sealed class EvidenceLabService : ObservableObject
         [
             ServerComplianceFactsService.Collect(DateTimeOffset.UtcNow, RoleFacts, Environment.OSVersion.VersionString),
         ];
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
+    /// <summary>伺服器角色深層事實（Vol2 G4 第一波）：角色服務（SV-013）＋授權啟用（SV-012）＋檔案／列印共用（SV-006／SV-007），皆唯讀 WMI、零特權。</summary>
+    public IReadOnlyList<HardwareFact> ServerRoleDeepFacts { get; private set; } = [];
+
+    public void LoadServerRoleDeep()
+    {
+        ServerRoleDeepFacts = ServerRoleDeepFactsService.Collect(DateTimeOffset.UtcNow);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
+    /// <summary>伺服器角色條件式事實（Vol2 G4 第二波）：Hyper-V 交換器（SV-009）＋IIS 應用池（SV-002）＋DNS 區域（SV-004）；角色缺席即不適用。</summary>
+    public IReadOnlyList<HardwareFact> ServerRoleConditionalFacts { get; private set; } = [];
+
+    public void LoadServerRoleConditional()
+    {
+        ServerRoleConditionalFacts = ServerRoleConditionalFactsService.Collect(DateTimeOffset.UtcNow);
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
@@ -810,11 +843,11 @@ public sealed class EvidenceLabService : ObservableObject
     {
         get
         {
-            var baseFacts = ChipsetFacts.Concat(SpiFlashFacts).Concat(SpiHashFacts).Concat(FitFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
+            var baseFacts = ChipsetFacts.Concat(SpiFlashFacts).Concat(PcieAerFacts).Concat(PciCapabilityFacts).Concat(SpiHashFacts).Concat(FitFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
                 .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
                 .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(TpmReplayFacts)
                 .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(ListenPortFacts).Concat(LocalSecurityAuditFacts)
-                .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ServerComplianceFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(SbomFacts)
+                .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ServerComplianceFacts).Concat(ServerRoleDeepFacts).Concat(ServerRoleConditionalFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(SbomFacts)
                 .ToList();
             baseFacts.AddRange(CapabilityMatrixService.Collect(baseFacts, DateTimeOffset.UtcNow));
             // 覆蓋統計（NG-006）：與 cap.*／qs.range 同款，輸入是前面各組的聯集、不含自己——無自我指涉
@@ -836,9 +869,15 @@ public sealed class EvidenceLabService : ObservableObject
     /// 事實組加進其中一個而忘了另一個時，讓「頁面上看得到的」與「匯出／CLI 拿到的」
     /// 變成兩份不同的集合，而畫面上一切正常。
     /// 現在事實組的清單只有一份（<see cref="AllFacts"/>），要加新的組只改那一處。
+    /// <para>
+    /// <b>唯一的例外：分類「PCIe」不進這一頁。</b>PCIe AER／ECAM 是匯流排錯誤診斷，有自己的 PCIe 頁，
+    /// 它們要進快照與 CLI（時間膠囊比對、報告都看得到），但不該在「韌體安全」表裡重複列一欄——
+    /// 這條界線由 EvidenceLabIntegrationTests.擷取含PCIeAER三態事實_歸類PCIe不進韌體安全頁 釘住。
+    /// </para>
     /// </remarks>
     public IReadOnlyList<EvidenceFactRow> FirmwareSecurityRows =>
-        AllFacts.OrderBy(f => f.Category, StringComparer.Ordinal)
+        AllFacts.Where(f => f.Category != "PCIe")
+                .OrderBy(f => f.Category, StringComparer.Ordinal)
                 .ThenBy(f => f.Key, StringComparer.Ordinal)
                 .Select(EvidenceFactRow.From).ToList();
 

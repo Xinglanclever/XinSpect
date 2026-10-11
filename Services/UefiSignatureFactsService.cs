@@ -73,7 +73,7 @@ public static class UefiSignatureFactsService
     private static void CollectBootEntries(List<HardwareFact> facts, Func<string, byte[]?> reader, DateTimeOffset at)
     {
         var bootEntries = new List<(ushort Index, string Description)>();
-        for (ushort idx = 0; idx < 0xFFFF; idx++)
+        for (ushort idx = 0; idx < 0x20; idx++)
         {
             string varName = $"Boot{idx:X4}";
             byte[]? data = reader(varName);

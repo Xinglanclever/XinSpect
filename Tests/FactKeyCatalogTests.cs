@@ -88,7 +88,10 @@ public class FactKeyCatalogTests
         // 同日再加的 bl.baseline.／se.cve.hit.／sg.* 逐項明細全部收斂回彙總值裡，沒有動到上限。
         // 18 → 19（2026-10-11）：net.listen.（監聽埠逐埠一筆）——埠集由連線表決定，
         // 是機器狀態不是編譯期常量；net.listen.count/entries/unverified 三把彙總鍵仍在靜態目錄。
-        const int FamilyCap = 19;
+        // 19 → 20（2026-10-12）：acpi.table.（韌體提供的 ACPI 表逐張一筆，鍵＝簽章／同簽章補序號）——
+        // 有幾張、哪些簽章是機器韌體的事實，編譯期列不完；彙總鍵 acpi.tables／ac.tables.summary 仍在靜態目錄。
+        // 這批無主鍵是 v2.67 把 ACPI 列舉移進 LoadUsermodeFacts（GUI 與 CLI 同源）後，執行期對帳立刻照出來的。
+        const int FamilyCap = 20;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 
