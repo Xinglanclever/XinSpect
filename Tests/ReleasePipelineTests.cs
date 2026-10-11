@@ -79,6 +79,7 @@ public class ReleasePipelineTests
             Assert.Matches(@"XinSpect\.exe\)\s*\|\s*\d{1,3}(?:,\d{3})+\s+bytes\s*\|", row);
         }
         string en = ReadAll(RepoFile("README.en.md"));
-        Assert.Contains("/XinSpect.exe) | 30", en, StringComparison.Ordinal);   // 概數列仍在
+        // 概數列仍在（形狀守門，不是數字守門：數字會隨版本長大，寫死十位數就會自己過期）
+        Assert.Matches(@"XinSpect\.exe\)\s*\|\s*\d{1,3}(\.\d+)? MB", en);
     }
 }
