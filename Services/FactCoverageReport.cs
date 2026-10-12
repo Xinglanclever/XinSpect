@@ -195,6 +195,16 @@ public static class FactCoverageReport
         ["sg.mem.summary"] = "記憶體佔用摘要（SG-003）：Process.WorkingSet64 單來源快照；不以此判洩漏。",
         ["mu.hwdec.summary"] = "HEVC／AV1 硬解（MU-002）：D3D11/MFT 的能力宣告，單一來源；不跑影片所以不實測速度。",
         ["xt.sysmon.map"] = "Sysmon 格式對照（XT-007）：外部事件格式對照表，不是本機量測，無第二來源可交叉。",
+        ["rc.hiber.summary"] = "休眠檔審計（RC-013）：系統根目錄檔案 metadata＋HiberbootEnabled，單一來源。",
+        ["rc.fastboot.summary"] = "快速啟動（RC-014）：HiberbootEnabled 單一登錄值；未設定不代填 Windows 預設。",
+        ["pw.usbsel"] = "USB 選擇性暫停（PW-002）：作用中電源計畫的 AC／DC 設定索引，單一來源。",
+        ["pw.shutdown.summary"] = "停機時長（PW-007）：System 6006／6005 事件配對；事件是痕跡不是精確關機耗時。",
+        ["ie.grafana"] = "Grafana 匯出（IE-002）：面板骨架產生器，輸出由鍵清單決定，非機器量測。",
+        ["ie.ps.template"] = "PowerShell 範本（IE-005）：本機 CLI 呼叫範例；零網路，範例不執行。",
+        ["ie.deeplink"] = "deep-link（IE-006）：URI 格式產生器；不註冊 scheme、不啟動外部程式。",
+        ["ie.completion"] = "參數補完（IE-007）：CLI 契約產生的 PowerShell 補完腳本，單一來源。",
+        ["dk.alias.summary"] = "鍵別名（DK-003）：固定別名到正式鍵的映射；別名不是第二個事實來源。",
+        ["dk.snapshot.age"] = "快照期限（DK-008）：擷取時間與現在時間的生命週期標籤；保存政策提示，不是硬體狀態。",
         ["in.cfg.repair"] = "設定自我修復（IN-008）：狀態只有 settings.json 一個來源；修復動作另有往返測試。",
         };
 
