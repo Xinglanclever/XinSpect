@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 349 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 359 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "ac.aml.str.count",
@@ -114,6 +114,8 @@ public static class FactKeyCatalog
         "defender.exclusions.count",
         "display.hw.gpu",
         "display.summary",
+        "dl.cmdline.count",
+        "dl.cmdline.summary",
         "dl.dump",
         "dl.gc.mode",
         "dl.gc.summary",
@@ -124,6 +126,8 @@ public static class FactKeyCatalog
         "dl.threadpool.summary",
         "drvinsp.drivers.count",
         "drvinsp.truncated",
+        "ds.cert.count",
+        "ds.cert.summary",
         "ent.fc",
         "ent.iscsi",
         "ent.mpio",
@@ -174,6 +178,7 @@ public static class FactKeyCatalog
         "gpu.tdr.level",
         "hm.hwdiff",
         "hm.prob.summary",
+        "hm.sensdrift",
         "hm.tree",
         "hm.unknown.count",
         "hm.unknown.list",
@@ -200,6 +205,7 @@ public static class FactKeyCatalog
         "mon.dp",
         "monitor.summary",
         "msr.0x8b",
+        "mu.hdr",
         "net.listen.count",
         "net.listen.entries",
         "net.listen.unverified",
@@ -308,6 +314,7 @@ public static class FactKeyCatalog
         "sb.slot.summary",
         "sb.type03",
         "sb.type03.count",
+        "se.audit2.summary",
         "se.cve",
         "se.grade",
         "se.pipe.count",
@@ -376,7 +383,10 @@ public static class FactKeyCatalog
         "virt.vmcount",
         "virt.vmms",
         "virt.vswitch",
+        "zr.aadj",
+        "zr.mdm",
         "zr.passkey",
+        "zr.wipe",
     ];
 
     /// <summary>鍵的數量（供申報與測試比對）。</summary>

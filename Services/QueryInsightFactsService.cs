@@ -48,11 +48,76 @@ public static class QueryInsightFactsService
     public static IReadOnlyList<HardwareFact> CollectDerived(DateTimeOffset at, IReadOnlyList<HardwareFact> facts)
         => [UnitFact(at, facts), IndexFact(at, facts), GradeFact(at, facts)];
 
+// ── QS-004 單位換算層（補完）────────────────────────────────────────────
+
+/// <summary>
+/// 單位換算層：把常見單位正規化到一組基準（bytes／Hz／s／°C／W／V／A），
+/// <b>只做有明確定義的換算</b>——未知單位一律回 false，不猜、不近似。
+/// </summary>
+public static class UnitConverter
+{
+    /// <summary>單位 → （基準單位, 相對基準的倍率）。</summary>
+    private static readonly IReadOnlyDictionary<string, (string Canonical, double Factor)> Map =
+        new Dictionary<string, (string, double)>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["B"] = ("B", 1), ["byte"] = ("B", 1),
+            ["KiB"] = ("B", 1024), ["MiB"] = ("B", 1024d * 1024), ["GiB"] = ("B", 1024d * 1024 * 1024),
+            ["TiB"] = ("B", 1024d * 1024 * 1024 * 1024),
+            ["KB"] = ("B", 1000), ["MB"] = ("B", 1000000), ["GB"] = ("B", 1000000000),
+            ["Hz"] = ("Hz", 1), ["kHz"] = ("Hz", 1000), ["MHz"] = ("Hz", 1000000), ["GHz"] = ("Hz", 1000000000),
+            ["ms"] = ("s", 0.001), ["us"] = ("s", 0.000001), ["ns"] = ("s", 0.000000001), ["s"] = ("s", 1),
+            ["°C"] = ("°C", 1), ["C"] = ("°C", 1),
+            ["W"] = ("W", 1), ["mW"] = ("W", 0.001),
+            ["V"] = ("V", 1), ["mV"] = ("V", 0.001),
+            ["A"] = ("A", 1), ["mA"] = ("A", 0.001),
+        };
+
+    /// <summary>能不能換算這個單位（空字串／未知單位都回 false）。</summary>
+    public static bool IsKnown(string? unit) => unit is not null && Map.ContainsKey(unit.Trim());
+
+    /// <summary>單位對應的基準單位；未知回 null。</summary>
+    public static string? CanonicalUnit(string? unit) =>
+        unit is not null && Map.TryGetValue(unit.Trim(), out var m) ? m.Canonical : null;
+
+    /// <summary>同基準的單位互換（例如 MiB→GiB）；不同基準或未知單位回 false。</summary>
+    public static bool TryConvert(double value, string? from, string? to, out double result)
+    {
+        result = double.NaN;
+        if (from is null || to is null) return false;
+        if (!Map.TryGetValue(from.Trim(), out var f) || !Map.TryGetValue(to.Trim(), out var t)) return false;
+        if (!string.Equals(f.Canonical, t.Canonical, StringComparison.Ordinal)) return false;
+        result = value * f.Factor / t.Factor;
+        return true;
+    }
+
+    /// <summary>正規化到基準單位（回 null＝這個單位沒定義，不猜）。</summary>
+    public static (double Value, string Unit)? Normalize(double value, string? unit)
+    {
+        if (unit is null || !Map.TryGetValue(unit.Trim(), out var m)) return null;
+        return (value * m.Factor, m.Canonical);
+    }
+
+    /// <summary>攝氏／華氏互換（溫度不走倍率表，是仿射換算；支援 C／F 兩種）。</summary>
+    public static bool TryConvertTemperature(double value, char from, char to, out double result)
+    {
+        result = double.NaN;
+        char f = char.ToUpperInvariant(from), t = char.ToUpperInvariant(to);
+        if ((f != 'C' && f != 'F') || (t != 'C' && t != 'F')) return false;
+        result = (f, t) switch
+        {
+            ('C', 'C') or ('F', 'F') => value,
+            ('C', 'F') => value * 9 / 5 + 32,
+            _ => (value - 32) * 5 / 9,
+        };
+        return true;
+    }
+}
+
     /// <summary>QS-004：有數值的事實有沒有標單位；標了哪些單位。</summary>
     public static HardwareFact UnitFact(DateTimeOffset at, IReadOnlyList<HardwareFact> facts)
     {
         if (facts.Count == 0)
-            return new HardwareFact(UnitKey, CatQs, "單位轉換層",
+        return new HardwareFact(UnitKey, CatQs, "單位轉換層",
                 "", "", "事實集的 Unit 欄位", FactTrustLevel.Unknown, false, at, null,
                 FactAvailability.Unknown, "事實集是空的——沒有東西可以檢查單位（不是「全部都有標」）");
 
@@ -63,19 +128,47 @@ public static class QueryInsightFactsService
             .GroupBy(f => f.Unit, StringComparer.Ordinal)
             .OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal)
             .Select(g => $"{g.Key}×{g.Count()}").ToList();
+        var unknownUnits = units.Where(u => !UnitConverter.IsKnown(u.Split('×')[0])).Select(u => u.Split('×')[0]).ToList();
+        int knownCount = units.Count - unknownUnits.Count;
 
         return new HardwareFact(UnitKey, CatQs, "單位轉換層",
             $"有數值 {numeric.Count} 項、其中未標單位 {missing.Count} 項" +
             (missing.Count > 0 ? $"（前幾個：{string.Join("、", missing.Take(8))}）" : "") +
             $"；已標單位：{string.Join("、", units.Take(10))}" +
             (units.Count > 10 ? $"…等 {units.Count} 種" : "") +
-            "。界線：本項只檢「有沒有標」，不做跨單位換算（換算要有明確的來源與精度，不能靠猜）。",
+            $"；可換算單位 {knownCount} 種" + (unknownUnits.Count > 0 ? $"、未定義換算 {string.Join("、", unknownUnits.Take(6))}" : "") +
+            "。界線：換算只做有明確定義的單位（倍率或仿射），未知單位回「不支援」而不是猜一個數字；" +
+            "數值少了單位就無法安全比較——這正是本項要抓的。",
             "項", "事實集的 Unit 欄位", FactTrustLevel.Derived, false, at, missing.Count,
             missing.Count > 0 ? FactAvailability.Unknown : FactAvailability.Present,
             missing.Count > 0 ? $"{missing.Count} 個數值事實沒有標單位——查詢端無法安全比較，這裡如實列出" : null);
     }
 
-    /// <summary>QS-006：以域前綴建立查詢索引的統計（鍵的第一段）。</summary>
+    /// <summary>
+    /// QS-006 的查詢索引：鍵 → 域前綴（第一段）分桶，供查詢端先用域縮小候選集。
+    /// 純記憶體、可重建；回傳的字典是不可變視圖（呼叫端不該改它）。
+    /// </summary>
+    public static IReadOnlyDictionary<string, IReadOnlyList<string>> BuildPrefixIndex(IEnumerable<string> keys)
+    {
+        var index = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        foreach (string key in keys ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(key)) continue;
+            int dot = key.IndexOf('.');
+            string domain = dot > 0 ? key[..dot] : key;
+            if (!index.TryGetValue(domain, out var bucket)) index[domain] = bucket = [];
+            bucket.Add(key);
+        }
+        return index.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<string>)kv.Value, StringComparer.Ordinal);
+    }
+
+    /// <summary>用索引查一個域（回傳依 Ordinal 排序，查不到回空清單——不是 null）。</summary>
+    public static IReadOnlyList<string> LookupDomain(IReadOnlyDictionary<string, IReadOnlyList<string>> index, string domain)
+        => index.TryGetValue(domain, out var list)
+            ? list.OrderBy(k => k, StringComparer.Ordinal).ToList()
+            : [];
+
+    /// <summary>QS-006：以域前綴建立查詢索引的統計（含建索引耗時——量的是索引本身，不含硬體讀取）。</summary>
     public static HardwareFact IndexFact(DateTimeOffset at, IReadOnlyList<HardwareFact> facts)
     {
         if (facts.Count == 0)
@@ -83,15 +176,15 @@ public static class QueryInsightFactsService
                 "", "", "事實鍵的域前綴", FactTrustLevel.Unknown, false, at, null,
                 FactAvailability.Unknown, "事實集是空的——索引沒有東西可建");
 
-        var domains = facts.Select(f => f.Key.Split('.')[0])
-            .GroupBy(d => d, StringComparer.Ordinal)
-            .OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal)
-            .ToList();
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var index = BuildPrefixIndex(facts.Select(f => f.Key));
+        sw.Stop();
+        var domains = index.OrderByDescending(kv => kv.Value.Count).ThenBy(kv => kv.Key, StringComparer.Ordinal).ToList();
         return new HardwareFact(IndexKey, CatQs, "查詢索引",
-            $"{facts.Count} 把鍵、{domains.Count} 個域前綴；最大域：" +
-            string.Join("、", domains.Take(8).Select(g => $"{g.Key}×{g.Count()}")) +
-            "。界線：索引是查詢加速用（依鍵的第一段分域），不是新的資料來源。",
-            "域", "事實鍵的域前綴（建索引，不查硬體）", FactTrustLevel.Derived, false, at, domains.Count);
+            $"{facts.Count} 把鍵、{index.Count} 個域前綴・建索引 {sw.Elapsed.TotalMilliseconds:F3} ms；最大域：" +
+            string.Join("、", domains.Take(8).Select(kv => $"{kv.Key}×{kv.Value.Count}")) +
+            "。界線：索引是查詢加速用（鍵的第一段分域），不是新的資料來源；沒有基準測試就沒有「快」的宣稱。",
+            "域", "事實鍵的域前綴（建索引，不查硬體）", FactTrustLevel.Derived, false, at, index.Count);
     }
 
     /// <summary>SE-014：把矛盾／待確認／未知的數量攤成三色計數——分級不是安全背書。</summary>

@@ -40,13 +40,15 @@ public class QueryAndTrustFactsTests
         var f = QueryInsightFactsService.UnitFact(At, [
             Fact("cpu.temp", "65", numeric: 65),
             Fact("mem.size", "32", numeric: 32, unit: "GiB"),
+            Fact("odd.unit", "7", numeric: 7, unit: "knob"),
         ]);
 
         Assert.Equal(FactAvailability.Unknown, f.Availability);
         Assert.Equal(1, f.NumericValue);
         Assert.Contains("cpu.temp", f.Value);
         Assert.Contains("GiB×1", f.Value);
-        Assert.Contains("不做跨單位換算", f.Value);
+        Assert.Contains("可換算單位 1 種", f.Value);
+        Assert.Contains("未定義換算 knob", f.Value);   // 換算層只做有定義的單位，未知的不猜
     }
 
     [Fact]
