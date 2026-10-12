@@ -153,6 +153,8 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>PCIe 能力鏈深化事實（Vol2 SB-007..014）：legacy／擴充能力、SR-IOV、ACS、L1SS、DPC、VC、AER 完整欄位。</summary>
     public IReadOnlyList<HardwareFact> PciCapabilityFacts { get; private set; } = [];
 
+    private QueryResultCache? _queryCache;
+
     private DeepAccessService? _deepAccess;
 
     /// <summary>深層核心存取豁免開關（產生 CA、裝/移信任、載/卸 XsRegProbe）。延遲建立：不點不碰真實系統。</summary>
@@ -852,6 +854,34 @@ public sealed class EvidenceLabService : ObservableObject
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
+    /// <summary>情境引導事實（Vol2 第 94–98 項）：藍牙／Wi-Fi／印表機／游標卡／白屏——只導航不下判決。</summary>
+    public IReadOnlyList<HardwareFact> ScenarioFacts { get; private set; } = [];
+
+    public void LoadScenarios()
+    {
+        ScenarioFacts = ScenarioGuidanceFactsService.Collect(DateTimeOffset.UtcNow);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
+    /// <summary>多媒體事實（Vol2 第 99–101 項）：編解碼器清單、擷取端點數（不錄音）、Media Foundation。</summary>
+    public IReadOnlyList<HardwareFact> MultimediaFacts { get; private set; } = [];
+
+    public void LoadMultimedia()
+    {
+        MultimediaFacts = MultimediaFactsService.Collect(DateTimeOffset.UtcNow);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
+    /// <summary>匯出與查詢快取（Vol2 第 102–103 項）：JSONL 串流描述、查詢結果快取（指紋失效）。</summary>
+    public IReadOnlyList<HardwareFact> ExportCacheFacts { get; private set; } = [];
+
+    public void LoadExportCache()
+    {
+        _queryCache ??= new QueryResultCache();
+        ExportCacheFacts = [JsonlExportService.Describe(DateTimeOffset.UtcNow), _queryCache.ToFact(DateTimeOffset.UtcNow)];
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
     /// <summary>磁碟為什麼滿（SG-002）：唯讀排行、不刪任何東西；預設只掃暫存與傾印根。</summary>
     public IReadOnlyList<HardwareFact> DiskFullFacts { get; private set; } = [];
 
@@ -923,7 +953,7 @@ public sealed class EvidenceLabService : ObservableObject
                 .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
                 .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(TpmReplayFacts)
                 .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(ListenPortFacts).Concat(LocalSecurityAuditFacts)
-                .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ServerComplianceFacts).Concat(ServerRoleDeepFacts).Concat(ServerRoleConditionalFacts).Concat(MaintenanceFacts).Concat(EnvironmentRuntimeFacts).Concat(ClosingFacts).Concat(QueryInsightFacts).Concat(TrustOpsFacts).Concat(ZeroTrustFacts).Concat(DataSecurityFacts).Concat(EndpointPolicyFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(SbomFacts)
+                .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ServerComplianceFacts).Concat(ServerRoleDeepFacts).Concat(ServerRoleConditionalFacts).Concat(MaintenanceFacts).Concat(EnvironmentRuntimeFacts).Concat(ClosingFacts).Concat(QueryInsightFacts).Concat(TrustOpsFacts).Concat(ZeroTrustFacts).Concat(DataSecurityFacts).Concat(EndpointPolicyFacts).Concat(ScenarioFacts).Concat(MultimediaFacts).Concat(ExportCacheFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(SbomFacts)
                 .ToList();
             baseFacts.AddRange(CapabilityMatrixService.Collect(baseFacts, DateTimeOffset.UtcNow));
             // 覆蓋統計（NG-006）：與 cap.*／qs.range 同款，輸入是前面各組的聯集、不含自己——無自我指涉

@@ -116,6 +116,12 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 DataSecurityFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadEndpointPolicy(); }
         catch { /* 附加功能：讀不到由 EndpointPolicyFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadScenarios(); }
+        catch { /* 附加功能：讀不到由 ScenarioGuidanceFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadMultimedia(); }
+        catch { /* 附加功能：讀不到由 MultimediaFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadExportCache(); }
+        catch { /* 附加功能：讀不到由 JsonlExportService／QueryResultCache 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadSbom(); }
         catch { /* 附加功能：讀不到由 SbomService 標三態，不在這裡中斷啟動 */ }
         // Vol 2 批次 B（2026-10-11）：檔案鑑識主線——Shimcache（登錄值，毫秒級）＋MountedDevices（登錄列舉，
