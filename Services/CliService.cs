@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Encodings.Web;
 using System.Text.Json.Serialization;
 
 namespace XinSpect;
@@ -26,6 +27,7 @@ public static class CliService
     public const string DiskUsageArg = "--disk-usage";
     public const string ErrorsArg = "--errors";
     public const string DeepArg = "--deep";
+    public const string StdinBatchArg = "--stdin-batch";
 
     public const int ExitOk = 0;
     public const int ExitPartial = 2;
@@ -35,11 +37,14 @@ public static class CliService
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         Converters = { new JsonStringEnumConverter() },
     };
 
+    private static readonly JsonSerializerOptions StdinJsonOptions = new(JsonOptions) { WriteIndented = false };
+
     public static int Run(string[] args, Func<IReadOnlyList<HardwareFact>> collect, TextWriter stdout, TextWriter stderr,
-        Func<byte[], HardwareFact>? compare = null)
+        Func<byte[], HardwareFact>? compare = null, TextReader? stdin = null)
     {
         if (args.Length == 0 || args.Contains(HelpArg))
         {
@@ -58,6 +63,8 @@ public static class CliService
             return RunDiskUsage(args, stdout, stderr);
         if (args[0] == ErrorsArg)
             return RunErrors(args, collect, stdout, stderr);
+        if (args[0] == StdinBatchArg)
+            return RunStdinBatch(collect, stdin, stdout, stderr);
         if (args[0] != JsonArg)
         {
             stderr.WriteLine($"未知引數「{args[0]}」。用 --help 看用法。");
@@ -117,6 +124,74 @@ public static class CliService
     /// BIOS 區 vs 參考映像比對模式（WP4 第二層的 CLI 面）。
     /// 退出碼：0＝一致；2＝有差異或三態（比對沒能完成／大小不符——細節在輸出）；1＝致命（讀檔失敗等）。
     /// </summary>
+    /// <summary>AG-001：headless 模式目錄；由常數組成，讓說明與實作不漂移。</summary>
+    public static string GenerateHeadlessModesJson()
+    {
+        var payload = new[]
+        {
+            new { mode = JsonArg, scope = EvidenceScope, output = "JSON", description = "headless 事實收集；支援 --query 前綴與 --out 檔案，零網路。" },
+            new { mode = CompareArg, scope = "", output = "JSON", description = "BIOS 區與參考映像逐塊比對；只讀本機映像。" },
+            new { mode = VerifyAuditArg, scope = "", output = "JSON", description = "驗證本機審計日誌雜湊鏈。" },
+            new { mode = IntegrityBaselineArg, scope = "", output = "JSON", description = "明示寫入自身完整性基線；需要本機寫入權限。" },
+            new { mode = SbomArg, scope = "", output = "JSON", description = "產生離線 CycloneDX SBOM。" },
+            new { mode = DiskUsageArg, scope = "", output = "JSON", description = "磁碟滿的唯讀排行；--deep 是明示深掃。" },
+            new { mode = ErrorsArg, scope = "", output = "JSON", description = "聚合非 Present 三態與原因。" },
+            new { mode = StdinBatchArg, scope = "", output = "JSONL", description = "stdin 每行一個 key 前綴；每行輸出一個查詢結果物件。" },
+        };
+        return JsonSerializer.Serialize(payload, JsonOptions);
+    }
+
+    /// <summary>
+    /// AG-004 stdin 批次模式：每行一個 key 前綴；每行輸出一個查詢結果。
+    /// 誠實界線：只過濾一次 collect() 的既有事實，不對每個前綴重新開驅動或重跑掃描。
+    /// </summary>
+    public static int RunStdinBatch(Func<IReadOnlyList<HardwareFact>> collect, TextReader? stdin,
+        TextWriter stdout, TextWriter stderr)
+    {
+        ArgumentNullException.ThrowIfNull(collect);
+        ArgumentNullException.ThrowIfNull(stdout);
+        ArgumentNullException.ThrowIfNull(stderr);
+        if (stdin is null)
+        {
+            stderr.WriteLine("stdin 不可用；本模式必須從管線或重導輸入查詢。");
+            return ExitError;
+        }
+        WriteGate.Reset();
+        IReadOnlyList<HardwareFact> facts;
+        try { facts = collect(); }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"收集失敗：{ex.GetType().Name}：{ex.Message}");
+            return ExitError;
+        }
+        bool any = false;
+        bool allHits = true;
+        try
+        {
+            while (stdin.ReadLine() is { } raw)
+            {
+                string query = raw.Trim();
+                if (query.Length == 0) continue;
+                var hit = facts.Where(f => f.Key.StartsWith(query, StringComparison.Ordinal)).ToList();
+                stdout.WriteLine(JsonSerializer.Serialize(new
+                {
+                    query,
+                    count = hit.Count,
+                    allPresent = hit.Count > 0 && hit.All(f => f.Availability == FactAvailability.Present),
+                    facts = hit.Select(FactJson),
+                }, StdinJsonOptions));
+                any = true;
+                allHits &= hit.Count > 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"stdin 讀取失敗：{ex.Message}");
+            return ExitError;
+        }
+        return any && allHits ? ExitOk : ExitPartial;
+    }
+
     private static int RunCompare(string[] args, Func<byte[], HardwareFact>? compare, TextWriter stdout, TextWriter stderr)
     {
         if (args.Length < 2)
@@ -375,6 +450,7 @@ public static class CliService
               XinSpect --sbom [--out <檔案>]
               XinSpect --disk-usage [--deep] [--out <檔案>]
               XinSpect --errors [--out <檔案>]
+              XinSpect --stdin-batch
               XinSpect --help
 
             範圍：
@@ -408,10 +484,12 @@ public static class CliService
               --compare-flash   0＝一致；2＝有差異或無法完成比對（三態細節在輸出）；1＝致命錯誤。
               --verify-audit    0＝鏈完整（或尚無日誌檔，輸出如實標 fileExists＝false）；
                                 2＝鏈斷或檔案損毀（斷點在第幾筆、什麼型別，都在輸出）；1＝致命。
+              --stdin-batch     每行讀取一個 key 前綴；空 stdin 回退出碼 2。零網路。
               --deep           --disk-usage 的明示深掃（含使用者設定檔）。
               --integrity-baseline
                                 0＝已記錄（雜湊鏈可驗）；2＝未記錄（讀不到或寫不進去）；1＝致命。
               --sbom            0＝元件完整；2＝部分元件讀不到（原因在 stderr）；1＝致命。
+              --stdin-batch     0＝至少一個非空查詢；2＝空 stdin 或未命中；1＝讀取／收集失敗。
             讀不到的事實如實帶 availability 與原因，絕不以 0／典型值頂替。
             """);
     }

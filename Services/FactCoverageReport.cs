@@ -185,6 +185,16 @@ public static class FactCoverageReport
         ["rs.xlsx"] = "xlsx 匯出（RS-004）：事實集的 OOXML 表示法；格式由 zip／worksheet 測試釘住。",
         ["rs.print"] = "列印版面（RS-005）：既有 HtmlReportService 的列印入口，內容仍由同一份事實集決定。",
         ["rs.manual"] = "離線手冊（RS-012）：HelpCatalog 的 HTML 再呈現，不是新的說明內容來源。",
+        ["ag.headless"] = "CLI headless 模式目錄（AG-001）：本程式命令面的自我描述，沒有第二個硬體來源可交叉。",
+        ["ag.compose"] = "YAML 檢查組合（AG-002）：輸入是呼叫端給定的清單文件，結果由組合規則決定，不是機器量測值。",
+        ["ag.exitcode"] = "退出碼對照（AG-003）：本程式自己的 CLI 契約，由測試釘住；不適用硬體對帳。",
+        ["ag.stdin"] = "stdin 批次模式（AG-004）：只包裝既有事實集合，查詢結果仍由原事實來源負責。",
+        ["ag.rotate"] = "排程輸出輪轉（AG-006）：呼叫端指定檔案的搬移規則，不是本機硬體事實。",
+        ["ag.remote"] = "遠端查詢（AG-007）：明文不做；這是零網路政策聲明，沒有值可交叉。",
+        ["sg.boot.summary"] = "開機引導摘要（SG-001）：聚合開機事件與啟動登錄計數；服務明細屬導航不是診斷。",
+        ["sg.mem.summary"] = "記憶體佔用摘要（SG-003）：Process.WorkingSet64 單來源快照；不以此判洩漏。",
+        ["mu.hwdec.summary"] = "HEVC／AV1 硬解（MU-002）：D3D11/MFT 的能力宣告，單一來源；不跑影片所以不實測速度。",
+        ["xt.sysmon.map"] = "Sysmon 格式對照（XT-007）：外部事件格式對照表，不是本機量測，無第二來源可交叉。",
         ["in.cfg.repair"] = "設定自我修復（IN-008）：狀態只有 settings.json 一個來源；修復動作另有往返測試。",
         };
 

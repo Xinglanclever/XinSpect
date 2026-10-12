@@ -43,7 +43,7 @@ public partial class App : Application
             AttachConsole(AttachParentProcess);
             try
             {
-                int code = CliService.Run(cliArgs, CollectForCli, Console.Out, Console.Error);
+                int code = CliService.Run(cliArgs, CollectForCli, Console.Out, Console.Error, stdin: Console.In);
                 Shutdown(code);
             }
             finally { FreeConsole(); }
