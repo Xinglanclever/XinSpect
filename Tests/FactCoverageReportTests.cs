@@ -111,8 +111,9 @@ public class FactCoverageReportTests
     {
         // 沒用到的豁免會讓申報看起來比實際乾淨——那是另一種形式的說謊
         var keys = ScanFactKeys();
-        foreach (string prefix in FactCoverageReport.Exemptions.Keys)
-            Assert.Contains(keys, k => k.StartsWith(prefix, StringComparison.Ordinal));
+        var unused = FactCoverageReport.Exemptions.Keys
+            .Where(prefix => !keys.Any(k => k.StartsWith(prefix, StringComparison.Ordinal))).ToList();
+        Assert.True(unused.Count == 0, "以下豁免前綴沒有對應的事實鍵——登記了卻沒人用是另一種謊：" + string.Join("、", unused));
     }
 
     // ── 未覆蓋的數字必須被看見 ────────────────────────────────────────────

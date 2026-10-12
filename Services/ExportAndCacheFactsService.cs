@@ -66,6 +66,10 @@ public sealed class QueryResultCache
     public int Misses { get; private set; }
     public int Invalidations { get; private set; }
     public int Entries => _entries.Count;
+    private readonly List<string> _history = new();
+
+    /// <summary>本次執行查過的字串（只記查詢、不記結果；上限 50，永不落盤）。</summary>
+    public IReadOnlyList<string> History => _history;
 
     /// <summary>取快取或建新結果；回傳的第二項＝是否來自快取。</summary>
     public (IReadOnlyList<HardwareFact> Result, bool FromCache) GetOrBuild(
@@ -75,9 +79,13 @@ public sealed class QueryResultCache
         if (_entries.TryGetValue(query, out var hit) && string.Equals(hit.Fingerprint, fingerprint, StringComparison.Ordinal))
         {
             Hits++;
+            _history.Add(query);
+            if (_history.Count > 50) _history.RemoveAt(0);
             return (hit.Result, true);
         }
         Misses++;
+        _history.Add(query);
+        if (_history.Count > 50) _history.RemoveAt(0);
         var result = build();
         _entries[query] = (fingerprint, result);
         return (result, false);
