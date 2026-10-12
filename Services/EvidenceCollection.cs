@@ -130,6 +130,10 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 QueryGovernanceFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadSbom(); }
         catch { /* 附加功能：讀不到由 SbomService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadLifecycleReports(); }
+        catch { /* 附加功能：讀不到由 LifecycleAndReportsFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadGovernanceExtra(); }
+        catch { /* 附加功能：讀不到由 GovernanceExtraFactsService 標三態，不在這裡中斷啟動 */ }
         // Vol 2 批次 B（2026-10-11）：檔案鑑識主線——Shimcache（登錄值，毫秒級）＋MountedDevices（登錄列舉，
         // 毫秒級）＋Prefetch 檔名層（每檔只讀前 80 位元組，目錄級毫秒）；Amcache（NT hive 解析）與
         // Prefetch 壓縮內含解壓屬明示觸發範圍，不在啟動路徑上。

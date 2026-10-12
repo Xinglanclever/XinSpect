@@ -166,6 +166,15 @@ public static class FactCoverageReport
         ["rs.jsonl"] = "JSONL 串流（RS-006）：匯出能力的描述；格式由序列化測試釘住。",
         ["qs.cache"] = "查詢結果快取（QS-007）：本行程記憶體狀態；指紋失效由專門測試守。",
         ["se.wpbt"] = "WPBT 表存在性（SE-010）：由 acpi.tables 推導的存在性聲明，只宣告存在、不解析內容，無第二來源。", 
+        ["dm.maint.summary"] = "自動維護狀態史（DM-001）：TaskScheduler 操作記錄單來源；事件是痕跡，不是維護現況。",
+        ["ds.dha"] = "DHA 未施測聲明（DS-002）：本機沒有可驗證的 attest 通路，這是誠實聲明，不是量測值。",
+        ["el.browser.versions"] = "瀏覽器版本（EL-003）：Edge／Chrome／Firefox 更新登錄單來源；只讀版本，不讀瀏覽記錄。",
+        ["el.office.version"] = "Office 版本（EL-002）：ClickToRun 登錄單來源；不做 EOL 判定。",
+        ["pl.portable"] = "綠色零寫入邊界（PL-005）：宣告加原始碼掃描守門，沒有第二個執行期來源。",
+        ["pl.releasenote"] = "版本公告草稿（PL-010）：由 ChangelogCatalog 產生，草稿不代表已發佈，無第二來源可交叉。",
+        ["rs.diff.json"] = "機器可讀 diff JSON（RS-009）：序列化表示法，格式由測試釘住，沒有第二條事實來源。",
+        ["rs.fleet"] = "機隊 CSV（RS-008）：序列化表示法，格式與敏感值政策由測試釘住，沒有第二條事實來源。",
+        ["rs.rdiff"] = "報告版本比較（RS-011）：兩份鍵集的集合運算，結果由 QueryInsightFactsService.DiffKeySets 決定。",
         ["in.cfg.repair"] = "設定自我修復（IN-008）：狀態只有 settings.json 一個來源；修復動作另有往返測試。",
         };
 

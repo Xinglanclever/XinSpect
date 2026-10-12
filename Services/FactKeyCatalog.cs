@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 400 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 410 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "ac.aml.str.count",
@@ -127,6 +127,7 @@ public static class FactKeyCatalog
         "dm.clean",
         "dm.conflict",
         "dm.dash",
+        "dm.maint.summary",
         "dm.sense",
         "dm.timeline.summary",
         "drvinsp.drivers.count",
@@ -136,6 +137,7 @@ public static class FactKeyCatalog
         "ds.cert.count",
         "ds.cert.summary",
         "ds.devpol.summary",
+        "ds.dha",
         "ds.drm",
         "ds.efs.count",
         "ds.hello.count",
@@ -143,6 +145,8 @@ public static class FactKeyCatalog
         "ds.selfsigned.count",
         "ds.summary",
         "ds.tls.summary",
+        "el.browser.versions",
+        "el.office.version",
         "ent.fc",
         "ent.iscsi",
         "ent.mpio",
@@ -193,6 +197,7 @@ public static class FactKeyCatalog
         "gpu.tdr.level",
         "hm.conflict.summary",
         "hm.hwdiff",
+        "hm.prob.delta",
         "hm.prob.summary",
         "hm.sensdrift",
         "hm.tree",
@@ -256,6 +261,8 @@ public static class FactKeyCatalog
         "pcieaer.ecam",
         "pcieaer.scan",
         "pl.forward",
+        "pl.portable",
+        "pl.releasenote",
         "platform.debug_interface",
         "platform.feature_control",
         "platform.hvci",
@@ -289,7 +296,10 @@ public static class FactKeyCatalog
         "reg.microcode",
         "role.surface",
         "role.surface.evidence",
+        "rs.diff.json",
+        "rs.fleet",
         "rs.jsonl",
+        "rs.rdiff",
         "rs.sbom",
         "rs.sig",
         "sa.a11y.displayswitch.exe",

@@ -914,6 +914,24 @@ public sealed class EvidenceLabService : ObservableObject
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
+    /// <summary>生命週期與報告事實（Vol2 第 113–118 項）：Office／瀏覽器版本、機隊 CSV、diff JSON、報告比較、公告草稿。</summary>
+    public IReadOnlyList<HardwareFact> LifecycleReportsFacts { get; private set; } = [];
+
+    public void LoadLifecycleReports()
+    {
+        LifecycleReportsFacts = LifecycleAndReportsFactsService.Collect(DateTimeOffset.UtcNow);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
+    /// <summary>治理補充事實（Vol2 第 119–122 項）：DHA 未施測聲明、維護狀態史、零寫入邊界、裝置錯誤碼變更。</summary>
+    public IReadOnlyList<HardwareFact> GovernanceExtraFacts { get; private set; } = [];
+
+    public void LoadGovernanceExtra()
+    {
+        GovernanceExtraFacts = GovernanceExtraFactsService.Collect(DateTimeOffset.UtcNow);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
     /// <summary>磁碟為什麼滿（SG-002）：唯讀排行、不刪任何東西；預設只掃暫存與傾印根。</summary>
     public IReadOnlyList<HardwareFact> DiskFullFacts { get; private set; } = [];
 
@@ -985,7 +1003,7 @@ public sealed class EvidenceLabService : ObservableObject
                 .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
                 .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(TpmReplayFacts)
                 .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(ListenPortFacts).Concat(LocalSecurityAuditFacts)
-                .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ServerComplianceFacts).Concat(ServerRoleDeepFacts).Concat(ServerRoleConditionalFacts).Concat(MaintenanceFacts).Concat(EnvironmentRuntimeFacts).Concat(ClosingFacts).Concat(QueryInsightFacts).Concat(TrustOpsFacts).Concat(ZeroTrustFacts).Concat(DataSecurityFacts).Concat(EndpointPolicyFacts).Concat(ScenarioFacts).Concat(MultimediaFacts).Concat(ExportCacheFacts).Concat(MaintenanceDashboardFacts).Concat(VolumeEncryptionFacts).Concat(QueryGovernanceFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(SbomFacts)
+                .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ServerComplianceFacts).Concat(ServerRoleDeepFacts).Concat(ServerRoleConditionalFacts).Concat(MaintenanceFacts).Concat(EnvironmentRuntimeFacts).Concat(ClosingFacts).Concat(QueryInsightFacts).Concat(TrustOpsFacts).Concat(ZeroTrustFacts).Concat(DataSecurityFacts).Concat(EndpointPolicyFacts).Concat(ScenarioFacts).Concat(MultimediaFacts).Concat(ExportCacheFacts).Concat(MaintenanceDashboardFacts).Concat(VolumeEncryptionFacts).Concat(QueryGovernanceFacts).Concat(LifecycleReportsFacts).Concat(GovernanceExtraFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(SbomFacts)
                 .ToList();
             baseFacts.AddRange(CapabilityMatrixService.Collect(baseFacts, DateTimeOffset.UtcNow));
             // 覆蓋統計（NG-006）：與 cap.*／qs.range 同款，輸入是前面各組的聯集、不含自己——無自我指涉
