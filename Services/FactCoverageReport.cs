@@ -205,6 +205,16 @@ public static class FactCoverageReport
         ["ie.completion"] = "參數補完（IE-007）：CLI 契約產生的 PowerShell 補完腳本，單一來源。",
         ["dk.alias.summary"] = "鍵別名（DK-003）：固定別名到正式鍵的映射；別名不是第二個事實來源。",
         ["dk.snapshot.age"] = "快照期限（DK-008）：擷取時間與現在時間的生命週期標籤；保存政策提示，不是硬體狀態。",
+        ["pw.sleep.cap"] = "睡眠能力矩陣（PW-003）：CallNtPowerInformation 平台宣告單一來源；目前計畫是否可用另判。",
+        ["dv.wsl.summary"] = "WSL 發行版盤點（DV-001）：使用者登錄單一來源；不列發行版名稱或路徑。",
+        ["dv.env.path"] = "PATH 重複審計（DV-004）：Machine／User PATH 聯集計數；不列本機路徑。",
+        ["dv.container.summary"] = "容器 runtime（DV-007）：Docker／containerd／Podman 服務單一來源；不等於映像或容器可用。",
+        ["dv.toolchain.summary"] = "工具鏈版本（DV-008）：PATH 上找到的工具與 FileVersionInfo；不代表專案使用的版本。",
+        ["gd.shcache.summary"] = "著色器快取（GD-005）：LOCALAPPDATA 常見快取目錄 metadata，單一來源。",
+        ["gd.hdr.summary"] = "HDR 能力鏈（GD-006）：EDID 宣告與 DisplayConfig 開關合併；不做畫質判定。",
+        ["gd.tablet.count"] = "繪圖板／數位筆（GD-008）：PnP 名稱比對計數；不開啟裝置。",
+        ["sc.uptime.summary"] = "重啟摘要（SC-007）：Environment.TickCount64 是系統 uptime；不等於更新已套用。",
+        ["sc.netdrop.summary"] = "網路中斷事件（SC-009）：NetworkProfile 事件痕跡；不是根因判決。",
         ["in.cfg.repair"] = "設定自我修復（IN-008）：狀態只有 settings.json 一個來源；修復動作另有往返測試。",
         };
 

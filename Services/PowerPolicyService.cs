@@ -170,6 +170,9 @@ public sealed class PowerPolicyService : ObservableObject
     /// 這個結構前 24 個位元組全是 1 位元組欄位，用位移比宣告整個結構安全——
     /// 後半段有 BATTERY_REPORTING_SCALE 陣列與列舉，宣告錯一個欄位就會讀到垃圾。
     /// </summary>
+    /// <summary>給事實服務注入／單元測試用的公開接縫：讀取平台宣告的睡眠能力列。</summary>
+    public static List<PowerPolicyRow> ReadSleepStateRowsForFacts() => ReadSleepStates();
+
     private static List<PowerPolicyRow> ReadSleepStates()
     {
         const int bufSize = 256;
