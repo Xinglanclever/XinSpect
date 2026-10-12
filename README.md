@@ -427,7 +427,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
-- **v2.72 Olympus**（2026-10-13）：生命週期／治理、外部介面／報告輸出與自動化情境三批（第 113–142 項）——Office／瀏覽器版本、機隊 CSV、diff JSON、報告比較、公告草稿、DHA 未施測聲明、維護史、零寫入邊界、錯誤碼變更；C# 常數、Python reader、file trigger、快照整合、schema registry、匿名求助範本、SVG／xlsx／列印／離線手冊；headless 模式目錄、YAML checks、退出碼、stdin 批次、輸出輪轉、遠端查詢明文不做、開機／記憶體引導、HEVC/AV1 硬解、Sysmon 對照。Authenticode 指紋快取讓真實更新路徑中位約 12.8s→7.7s；v2.71 漏掛主程式已補齊並驗證下載。測試 4279 綠、目錄 430。
+- **v2.72 Olympus**（2026-10-13）：生命週期／治理、外部介面／報告輸出與自動化情境三批（第 113–142 項）——Office／瀏覽器版本、機隊 CSV、diff JSON、報告比較、公告草稿、DHA 未施測聲明、維護史、零寫入邊界、錯誤碼變更；C# 常數、Python reader、file trigger、快照整合、schema registry、匿名求助範本、SVG／xlsx／列印／離線手冊；headless 模式目錄、YAML checks、退出碼、stdin 批次、輸出輪轉、遠端查詢明文不做、開機／記憶體引導、HEVC/AV1 硬解、Sysmon 對照。Authenticode 指紋快取讓真實更新路徑中位約 12.8s→7.7s；v2.71 漏掛主程式已補齊並驗證下載。測試 4282 綠、目錄 430。
 - **v2.71 Olympus**（2026-10-12）：情境／多媒體／維護三批（第 94–112 項）——情境引導（藍牙／Wi-Fi／印表機／游標卡／白屏，0 是沒比對到不是沒有）、編解碼器清單（Drivers32）、擷取端點數（不錄音）、Media Foundation、JSONL 串流（敏感值預設遮蔽）、查詢結果快取（指紋失效）、Storage Sense、維護視窗、清理處理器、任務運行時間線（200/201）、維護摘要、BitLocker 卷級（WMI，不讀復原金鑰）、查詢歷史（記憶體、L1）、文法版本、更新時間軸（收口 wu.history.*）、CLI 轉發單一實例；測試 4204 綠、目錄 400。
 - **v2.70 Olympus**（2026-10-12）：零信任與資料安全兩批次（第 67–83 項）——MDM 註冊（UPN 不進值）、Entra／WorkplaceJoin 加入狀態、遠端抹除通道聲明（本工具永不觸發）、憑證店時間線（只取 store×時間窗）、進階稽核政策（auditpol 原樣輸出、不解析在地化）、行程命令列（L2 明示同意才讀、標敏感）、感測器交叉（跨幅不是判準）、HDR 影片設定；EFS 憑證數、Windows Hello 註冊數（生物特徵永不讀）、憑證自動註冊、自簽憑證、PlayReady、TLS 明文停用、Smart App Control、裝置安裝政策、資料安全摘要；QS-004 單位換算層與 QS-006 域前綴索引補完；測試 4137 綠、目錄 368。
 - **v2.69 Olympus**（2026-10-12）：授權改採 **AGPL-3.0-or-later**（LICENSE 全文更換、徽章與授權段同步、csproj 加 PackageLicenseExpression）；第三人元件（Intel XTU SDK／LibreHardwareMonitor／TraceEvent／NAudio／WebView2 等）維持各自授權並保留於 THIRD-PARTY-NOTICES.md；v2.69 之前已發佈的版本仍在其當時的 MIT 條款下（不可撤回）。
