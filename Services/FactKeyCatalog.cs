@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 410 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 420 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "ac.aml.str.count",
@@ -298,10 +298,15 @@ public static class FactKeyCatalog
         "role.surface.evidence",
         "rs.diff.json",
         "rs.fleet",
+        "rs.helpfmt",
         "rs.jsonl",
+        "rs.manual",
+        "rs.print",
         "rs.rdiff",
         "rs.sbom",
         "rs.sig",
+        "rs.svg",
+        "rs.xlsx",
         "sa.a11y.displayswitch.exe",
         "sa.a11y.magnify.exe",
         "sa.a11y.narrator.exe",
@@ -431,6 +436,11 @@ public static class FactKeyCatalog
         "virt.vmcount",
         "virt.vmms",
         "virt.vswitch",
+        "xt.csharp",
+        "xt.py",
+        "xt.registry",
+        "xt.snapshot.fs",
+        "xt.trigger",
         "zr.aadj",
         "zr.cba",
         "zr.dynlock",

@@ -175,6 +175,16 @@ public static class FactCoverageReport
         ["rs.diff.json"] = "機器可讀 diff JSON（RS-009）：序列化表示法，格式由測試釘住，沒有第二條事實來源。",
         ["rs.fleet"] = "機隊 CSV（RS-008）：序列化表示法，格式與敏感值政策由測試釘住，沒有第二條事實來源。",
         ["rs.rdiff"] = "報告版本比較（RS-011）：兩份鍵集的集合運算，結果由 QueryInsightFactsService.DiffKeySets 決定。",
+        ["xt.csharp"] = "C# 常數產生器（XT-001）：鍵集的程式碼表示法，格式由產生器測試釘住，沒有第二條事實來源。",
+        ["xt.py"] = "Python 離線讀取範例（XT-002）：格式範例不是機器事實；零網路由範例測試釘住。",
+        ["xt.trigger"] = "本機檔案觸發（XT-004）：觸發檔是呼叫端指定的訊號，單一來源；不揭露 token 或路徑。",
+        ["xt.snapshot.fs"] = "快照檔案整合（XT-005）：包裝既有 HardwareSnapshotService，完整性由該服務與專屬測試負責。",
+        ["xt.registry"] = "schema registry（XT-006）：由 FactKeyCatalog／FactKeyDynamicCatalog 匯出，兩者已是同一份程式目錄。",
+        ["rs.helpfmt"] = "匿名求助範本（RS-001）：事實集的 Markdown 表示法；遮蔽由專屬測試釘住，無第二來源可交叉。",
+        ["rs.svg"] = "SVG 圖表（RS-003）：事實集的視覺表示法；不是新的量測來源。",
+        ["rs.xlsx"] = "xlsx 匯出（RS-004）：事實集的 OOXML 表示法；格式由 zip／worksheet 測試釘住。",
+        ["rs.print"] = "列印版面（RS-005）：既有 HtmlReportService 的列印入口，內容仍由同一份事實集決定。",
+        ["rs.manual"] = "離線手冊（RS-012）：HelpCatalog 的 HTML 再呈現，不是新的說明內容來源。",
         ["in.cfg.repair"] = "設定自我修復（IN-008）：狀態只有 settings.json 一個來源；修復動作另有往返測試。",
         };
 
