@@ -4,7 +4,7 @@
 
 一款免費開源、運行於 Windows 的原生硬體驗機、監控與安全稽核工具。以單一執行檔發佈，免安裝；對硬體與系統的讀取以唯讀為原則，少數涉及寫入的功能均設有同意閘門並明確標註風險。本程式不收集、不上傳任何使用者資料。
 
-![版本](https://img.shields.io/badge/version-2.69-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.70-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![測試](https://img.shields.io/badge/tests-4137%20passed-3FB950)
@@ -79,10 +79,10 @@
 
 | 檔案 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.69/XinSpect.exe) | 31,767,339 bytes | 主程式。藍色中隊守護進程已內建 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.69/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.70/XinSpect.exe) | 31,767,339 bytes | 主程式。藍色中隊守護進程已內建 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.70/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
 
-> **上表的位元組數為本版（v2.69）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v2.70）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
 系統需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含發佈則免裝）。顯示卡深測需要 D3D11 相容裝置；MSR 讀取、SMART ioctl、Security 事件記錄需以系統管理員執行——沒有權限時相關項目標示「權限不足」，程式不會假裝成功，也不會靜默降級。
 
@@ -427,6 +427,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.70 Olympus**（2026-10-12）：零信任與資料安全兩批次（第 67–83 項）——MDM 註冊（UPN 不進值）、Entra／WorkplaceJoin 加入狀態、遠端抹除通道聲明（本工具永不觸發）、憑證店時間線（只取 store×時間窗）、進階稽核政策（auditpol 原樣輸出、不解析在地化）、行程命令列（L2 明示同意才讀、標敏感）、感測器交叉（跨幅不是判準）、HDR 影片設定；EFS 憑證數、Windows Hello 註冊數（生物特徵永不讀）、憑證自動註冊、自簽憑證、PlayReady、TLS 明文停用、Smart App Control、裝置安裝政策、資料安全摘要；QS-004 單位換算層與 QS-006 域前綴索引補完；測試 4137 綠、目錄 368。
 - **v2.69 Olympus**（2026-10-12）：授權改採 **AGPL-3.0-or-later**（LICENSE 全文更換、徽章與授權段同步、csproj 加 PackageLicenseExpression）；第三人元件（Intel XTU SDK／LibreHardwareMonitor／TraceEvent／NAudio／WebView2 等）維持各自授權並保留於 THIRD-PARTY-NOTICES.md；v2.69 之前已發佈的版本仍在其當時的 MIT 條款下（不可撤回）。
 - **v2.68 Olympus**（2026-10-12）：Vol2 第 31–55 項——維護／執行環境／收尾三批次：設定自我修復（先備份留證）、進度記憶、報告整合、導覽歷史（不落盤）、診斷樹導航、未知裝置與錯誤碼、BITS 佇列、安裝痕跡（產品名遮蔽）、更新來源／通道／服務堆疊／儀表、提權最小化審計、自我更新完整性（沒有通道如實）、環境自我聲明（不是反 VM）、符號路徑、線程池、GC 模式、模組衝突（同名不等於惡意）、來源信任分布（不給分數）、WPBT 存在性（不解析內容）；隱私禁項成鍵＋覆蓋申報補 25 條豁免；測試 +61（4055 綠）、目錄 306→338。
 - **v2.67 Olympus**（2026-10-12）：Vol2 第 21–30 項——PCIe 能力鏈深化（SB-007..014：ECAM legacy＋extended 鏈、SR-IOV／ACS／L1SS／DPC／VC／AER 全欄位、revision 框架）＋PPTT 拓撲（AC-017）＋Server 角色深化（SV-002/004/006/007/009/011/012/013：IIS 應用池／DNS 區域／Hyper-V 交換器／檔案列印共用／Server Core／角色服務；授權不讀金鑰、共用不披露路徑）；ACPI 表列舉移進 LoadUsermodeFacts（GUI／CLI 同源）＋acpi.table 動態家族；UEFI Boot#### 掃描 0x20 上限修效能預算（20 輪 89s→1s 量級）；測試 +60（3994 綠）、目錄 288→306；IN-009 除錯偵測聲明跟進（in.debug，＋3 測試、目錄 307）。

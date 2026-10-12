@@ -48,6 +48,21 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.70",
+            Date = "2026-10-12",
+            Title = "零信任與資料安全（第 67–83 項）",
+            Items =
+            [
+                "零信任（ZR-001/002/007）：MDM 註冊狀態（Enrollments 登錄，UPN 不進值）、Entra／WorkplaceJoin 加入狀態（識別資訊刻意不讀）、遠端抹除通道聲明（本工具永不觸發抹除）。",
+                "資料安全（DS-003/005/006/007/008/009/010/011/012）：EFS 憑證數、Windows Hello 註冊數（生物特徵永不讀）、憑證店時間線（store×時間窗，不列主體）、憑證自動註冊、自簽憑證數（不是危險判決）、PlayReady、TLS 明文停用、Smart App Control 三態、裝置安裝政策、資料安全摘要（分母不含自己）。",
+                "查詢層補完（QS-004/006）：UnitConverter 單位換算層（倍率表＋溫度仿射，未知單位不猜）與 BuildPrefixIndex 域前綴索引（含建索引耗時）。",
+                "誠實剔除：UF-002 失敗重試鏈與 HM-004 喚醒記錄為既有能力重複，不重做；DS-001 BitLocker 與 DS-002 DHA 需磁碟加密 WMI／TPM attest 通路，本機未驗證、列入後續不假裝做完。",
+                "測試 +66（4022→4137 綠——含第 57–66 項的 QS／SE／RS／ZR／DL 十項）；固定鍵目錄 349→368。",
+            ],
+        },
+
+        new ChangeEntry
+        {
             Version = "2.69",
             Date = "2026-10-12",
             Title = "授權改採 AGPL-3.0-or-later",
