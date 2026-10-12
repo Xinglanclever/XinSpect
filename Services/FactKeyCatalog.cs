@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 368 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 378 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "ac.aml.str.count",
@@ -185,6 +185,7 @@ public static class FactKeyCatalog
         "gpu.tdr.delay",
         "gpu.tdr.dpc",
         "gpu.tdr.level",
+        "hm.conflict.summary",
         "hm.hwdiff",
         "hm.prob.summary",
         "hm.sensdrift",
@@ -214,6 +215,7 @@ public static class FactKeyCatalog
         "mon.dp",
         "monitor.summary",
         "msr.0x8b",
+        "mu.cam.count",
         "mu.hdr",
         "net.listen.count",
         "net.listen.entries",
@@ -326,8 +328,12 @@ public static class FactKeyCatalog
         "se.audit2.summary",
         "se.cve",
         "se.grade",
+        "se.kerb.summary",
+        "se.ntlm",
         "se.pipe.count",
         "se.pipe.summary",
+        "se.rdp.cert",
+        "se.winre.summary",
         "se.wpbt",
         "setuptl.recent",
         "setuptl.sections.count",
@@ -372,6 +378,7 @@ public static class FactKeyCatalog
         "uefi.setup_mode",
         "uf.channel",
         "uf.dash",
+        "uf.ready",
         "uf.servicing",
         "uf.source",
         "ufv.bios.count",
@@ -393,8 +400,11 @@ public static class FactKeyCatalog
         "virt.vmms",
         "virt.vswitch",
         "zr.aadj",
+        "zr.cba",
+        "zr.dynlock",
         "zr.mdm",
         "zr.passkey",
+        "zr.report",
         "zr.wipe",
     ];
 
