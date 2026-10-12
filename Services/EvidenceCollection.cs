@@ -112,6 +112,8 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 TrustOpsFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadZeroTrust(); }
         catch { /* 附加功能：讀不到由 ZeroTrustFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadDataSecurity(); }
+        catch { /* 附加功能：讀不到由 DataSecurityFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadSbom(); }
         catch { /* 附加功能：讀不到由 SbomService 標三態，不在這裡中斷啟動 */ }
         // Vol 2 批次 B（2026-10-11）：檔案鑑識主線——Shimcache（登錄值，毫秒級）＋MountedDevices（登錄列舉，

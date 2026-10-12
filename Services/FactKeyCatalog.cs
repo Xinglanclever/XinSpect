@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 359 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 368 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "ac.aml.str.count",
@@ -126,8 +126,17 @@ public static class FactKeyCatalog
         "dl.threadpool.summary",
         "drvinsp.drivers.count",
         "drvinsp.truncated",
+        "ds.cert.auto",
         "ds.cert.count",
         "ds.cert.summary",
+        "ds.devpol.summary",
+        "ds.drm",
+        "ds.efs.count",
+        "ds.hello.count",
+        "ds.sac",
+        "ds.selfsigned.count",
+        "ds.summary",
+        "ds.tls.summary",
         "ent.fc",
         "ent.iscsi",
         "ent.mpio",
