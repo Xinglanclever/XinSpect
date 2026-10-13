@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 634 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 644 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
 
@@ -267,6 +267,7 @@ public static class FactKeyCatalog
         "hist.pktloss",
         "hist.rules.summary",
         "hist.uncore.summary",
+        "hist.usb.speed",
         "hm.conflict.summary",
         "hm.drivhist.summary",
         "hm.hwdiff",
@@ -627,6 +628,15 @@ public static class FactKeyCatalog
         "usb.controllers",
         "usb.devices",
         "usbstor.count",
+        "uv.cxl.summary",
+        "uv.ext",
+        "uv.hub",
+        "uv.tb.route",
+        "uv.tb.sec",
+        "uv.usb.desc",
+        "uv.usb.err",
+        "uv.usb.pwr",
+        "uv.usb4",
         "virt.hns",
         "virt.hypervisor",
         "virt.judge",
