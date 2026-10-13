@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 470 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 480 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "ac.aml.str.count",
@@ -282,7 +282,11 @@ public static class FactKeyCatalog
         "numa.topology",
         "numa.topology.xnode",
         "nw.legacy.summary",
+        "nw.print.summary",
+        "nw.route.summary",
+        "nw.sensor.summary",
         "nw.vnic.summary",
+        "nw.wol.summary",
         "oob.ipmi",
         "pci.bus0.inventory",
         "pci.dev.00.0",
@@ -310,7 +314,9 @@ public static class FactKeyCatalog
         "psu.pmbus.temp1",
         "psu.pmbus.vin",
         "psu.pmbus.vout",
+        "pv.adid.summary",
         "pv.ddv",
+        "pv.speech.summary",
         "pv.telemetry",
         "pw.shutdown.summary",
         "pw.sleep.cap",
@@ -431,6 +437,8 @@ public static class FactKeyCatalog
         "spi.write_surface",
         "st.legacy.summary",
         "st.ntfs.summary",
+        "st.pstrans.summary",
+        "st.ss.summary",
         "st.xcheck.summary",
         "storage.reliability.available",
         "storage.reliability.count",
@@ -445,6 +453,7 @@ public static class FactKeyCatalog
         "time.drift.ppm",
         "time.hpet",
         "time.pm_timer",
+        "tm.ntp.summary",
         "tm.tzdb",
         "tpm.present",
         "tpm.replay.summary",
@@ -483,6 +492,7 @@ public static class FactKeyCatalog
         "virt.vmcount",
         "virt.vmms",
         "virt.vswitch",
+        "ws.channel.summary",
         "ws.dumpcfg.summary",
         "ws.svc.graph",
         "xt.csharp",
