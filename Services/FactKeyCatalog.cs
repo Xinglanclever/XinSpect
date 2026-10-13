@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 666 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 673 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
 
@@ -389,8 +389,12 @@ public static class FactKeyCatalog
         "pcieaer.ecam",
         "pcieaer.scan",
         "pl.forward",
+        "pl.package",
+        "pl.pagebudget",
         "pl.portable",
         "pl.releasenote",
+        "pl.shotbaseline",
+        "pl.uiquality",
         "platform.debug_interface",
         "platform.feature_control",
         "platform.hvci",
@@ -410,10 +414,13 @@ public static class FactKeyCatalog
         "po.handles",
         "po.pgflt",
         "po.pool",
+        "po.proctree",
         "po.rboost",
         "po.svccrash",
+        "po.syscall.lat",
         "po.timerres",
         "po.trans",
+        "po.ws",
         "psu.pmbus.pout",
         "psu.pmbus.temp1",
         "psu.pmbus.vin",

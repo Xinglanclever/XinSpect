@@ -182,6 +182,8 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 VisualizationFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadOfflineAnalysis(); }
         catch { /* 附加功能：讀不到由 OfflineAnalysisFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadProductPlatform(); }
+        catch { /* 附加功能：讀不到由 ProductAndPlatformFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadSbom(); }
         catch { /* 附加功能：讀不到由 SbomService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadLifecycleReports(); }
