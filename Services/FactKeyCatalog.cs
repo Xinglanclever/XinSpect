@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 611 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 621 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
 
@@ -382,6 +382,16 @@ public static class FactKeyCatalog
         "pmu.uncore.platform",
         "pmu.uncore.ratio_limit",
         "pmu.version",
+        "po.compression",
+        "po.freqvar",
+        "po.gdi",
+        "po.handles",
+        "po.pgflt",
+        "po.pool",
+        "po.rboost",
+        "po.svccrash",
+        "po.timerres",
+        "po.trans",
         "psu.pmbus.pout",
         "psu.pmbus.temp1",
         "psu.pmbus.vin",
