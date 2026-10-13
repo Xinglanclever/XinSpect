@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 727 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 741 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
 
@@ -289,6 +289,19 @@ public static class FactKeyCatalog
         "gpu.tdr.delay",
         "gpu.tdr.dpc",
         "gpu.tdr.level",
+        "gx.amd",
+        "gx.cap.rt",
+        "gx.depth",
+        "gx.drvchain",
+        "gx.intel",
+        "gx.multi",
+        "gx.nv.ecc",
+        "gx.nv.fan",
+        "gx.nv.pl",
+        "gx.nv.state",
+        "gx.vbios",
+        "gx.vdisp",
+        "hist.gpudriver",
         "hist.memtrain.summary",
         "hist.mon.summary",
         "hist.nicerr.summary",
@@ -296,6 +309,7 @@ public static class FactKeyCatalog
         "hist.rules.summary",
         "hist.uncore.summary",
         "hist.usb.speed",
+        "hist.vram",
         "hm.conflict.summary",
         "hm.drivhist.summary",
         "hm.hwdiff",

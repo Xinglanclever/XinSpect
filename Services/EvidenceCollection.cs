@@ -196,6 +196,8 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 ExportUxFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadUserExperience2(); }
         catch { /* 附加功能：讀不到由 UserExperience2FactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadGpuDeep(); }
+        catch { /* 附加功能：讀不到由 GpuDeepFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadSbom(); }
         catch { /* 附加功能：讀不到由 SbomService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadLifecycleReports(); }
