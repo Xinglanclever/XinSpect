@@ -4,7 +4,7 @@
 
 一款免費開源、運行於 Windows 的原生硬體驗機、監控與安全稽核工具。以單一執行檔發佈，免安裝；對硬體與系統的讀取以唯讀為原則，少數涉及寫入的功能均設有同意閘門並明確標註風險。本程式不收集、不上傳任何使用者資料。
 
-![版本](https://img.shields.io/badge/version-2.75-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.76-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![測試](https://img.shields.io/badge/tests-4557%20passed-3FB950)
@@ -79,10 +79,10 @@
 
 | 檔案 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.75/XinSpect.exe) | 32,262,955 bytes | 主程式。藍色中隊守護進程已內建 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.75/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.76/XinSpect.exe) | 32,262,955 bytes | 主程式。藍色中隊守護進程已內建 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.76/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
 
-> **上表的位元組數為本版（v2.75）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v2.76）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
 系統需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含發佈則免裝）。顯示卡深測需要 D3D11 相容裝置；MSR 讀取、SMART ioctl、Security 事件記錄需以系統管理員執行——沒有權限時相關項目標示「權限不足」，程式不會假裝成功，也不會靜默降級。
 
@@ -426,6 +426,8 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 - 專案結構：`XinSpect/`（主程式）、`XinSpect.Decoders/`（純解碼器類別庫，突變測試對象）、`Tests/`（單元測試）、`BlueSquadron/`（守護進程）、`Bridge/`（XTU 橋接）、`XsRegProbe/`（驅動源碼）、`docs/`（規格與帳本）、`Rules/`（外部化對帳規則）。
 
 ## 十七、版本沿革
+
+- **v2.76 Olympus**（2026-10-13）：恢復深化與安全審計補充（第 223–252 項）——LiveKernel／WER／懸掛／PendingFileRename／WinSxS／還原點／備份／資源耗盡／逐行程 I/O／連結審計；ACL／VSS／MSI 孤兒／喚醒來源／SleepStudy／電源計畫漂移／Modern Standby／TDR／DirectX／熱插拔；COM 劫持／檔案關聯／ADS／簽章／帳戶／自動登入存在性／登入歷史／服務 ACL／PATH 可寫性／WMI 永久訂閱。全程唯讀；測試 4557 綠、目錄 540。
 
 - **v2.75 Olympus**（2026-10-13）：網路安全與最終盤點（第 203–222 項）——DNS／hosts、SMB、防火牆、憑證、Wi-Fi、卸載、藍牙／印表機韌體、時鐘漂移、供電事件；藍牙配對、USB 描述符、EDID、WOL 計數、LSA／CredGuard、AppX、虛擬化矛盾、排程任務、時鐘源、RTC 漂移。全批唯讀；測試 4494 綠、目錄 510。
 
