@@ -4,7 +4,7 @@
 
 一款免費開源、運行於 Windows 的原生硬體驗機、監控與安全稽核工具。以單一執行檔發佈，免安裝；對硬體與系統的讀取以唯讀為原則，少數涉及寫入的功能均設有同意閘門並明確標註風險。本程式不收集、不上傳任何使用者資料。
 
-![版本](https://img.shields.io/badge/version-2.74-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.75-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![測試](https://img.shields.io/badge/tests-4494%20passed-3FB950)
@@ -79,10 +79,10 @@
 
 | 檔案 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.74/XinSpect.exe) | 32,189,227 bytes | 主程式。藍色中隊守護進程已內建 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.74/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.75/XinSpect.exe) | 32,189,227 bytes | 主程式。藍色中隊守護進程已內建 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.75/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
 
-> **上表的位元組數為本版（v2.74）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v2.75）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
 系統需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含發佈則免裝）。顯示卡深測需要 D3D11 相容裝置；MSR 讀取、SMART ioctl、Security 事件記錄需以系統管理員執行——沒有權限時相關項目標示「權限不足」，程式不會假裝成功，也不會靜默降級。
 
@@ -426,6 +426,8 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 - 專案結構：`XinSpect/`（主程式）、`XinSpect.Decoders/`（純解碼器類別庫，突變測試對象）、`Tests/`（單元測試）、`BlueSquadron/`（守護進程）、`Bridge/`（XTU 橋接）、`XsRegProbe/`（驅動源碼）、`docs/`（規格與帳本）、`Rules/`（外部化對帳規則）。
 
 ## 十七、版本沿革
+
+- **v2.75 Olympus**（2026-10-13）：網路安全與最終盤點（第 203–222 項）——DNS／hosts、SMB、防火牆、憑證、Wi-Fi、卸載、藍牙／印表機韌體、時鐘漂移、供電事件；藍牙配對、USB 描述符、EDID、WOL 計數、LSA／CredGuard、AppX、虛擬化矛盾、排程任務、時鐘源、RTC 漂移。全批唯讀；測試 4494 綠、目錄 510。
 
 - **v2.74 Olympus**（2026-10-13）：盤點、治理與系統清冊（第 173–202 項）——作業／資產盤點、網路／系統盤點與盤點治理三批；虛擬網卡、LPT／COM、服務依賴、傾印、NTFS、磁碟交叉、列印佇列、WOL、路由、感應器、事件通道、Storage Spaces、廣告／語音／NTP、APO／隱私／ICC／無線電量／USB 埠／自啟動／Minifilter／開機驅動／匿名化／哈希鏈。效能收口 StorageProbeBreaker 與 OptionalFeature 合併查詢（暖機第二輪約 13.1s→1.1s）；測試 4451 綠、目錄 490。
 
