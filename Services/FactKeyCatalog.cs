@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 673 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 683 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
 
@@ -319,9 +319,19 @@ public static class FactKeyCatalog
         "monitor.summary",
         "ms.bench.chain",
         "ms.boot.summary",
+        "ms.corelat",
         "ms.coresym.summary",
+        "ms.ctxsw",
+        "ms.dpc",
+        "ms.fancurve",
+        "ms.irqaff",
+        "ms.lo.throughput",
         "ms.memlat.summary",
+        "ms.psu.eff",
+        "ms.sleep",
+        "ms.tau",
         "ms.tlb.summary",
+        "ms.xnuma",
         "msr.0x8b",
         "mu.cam.count",
         "mu.codec.count",
