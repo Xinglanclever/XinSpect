@@ -4,7 +4,7 @@
 
 一款免費開源、運行於 Windows 的原生硬體驗機、監控與安全稽核工具。以單一執行檔發佈，免安裝；對硬體與系統的讀取以唯讀為原則，少數涉及寫入的功能均設有同意閘門並明確標註風險。本程式不收集、不上傳任何使用者資料。
 
-![版本](https://img.shields.io/badge/version-2.76-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.77-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![測試](https://img.shields.io/badge/tests-4586%20passed-3FB950)
@@ -79,10 +79,10 @@
 
 | 檔案 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.76/XinSpect.exe) | 32,373,547 bytes | 主程式。藍色中隊守護進程已內建 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.76/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.77/XinSpect.exe) | 32,373,547 bytes | 主程式。藍色中隊守護進程已內建 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.77/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
 
-> **上表的位元組數為本版（v2.76）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v2.77）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
 系統需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含發佈則免裝）。顯示卡深測需要 D3D11 相容裝置；MSR 讀取、SMART ioctl、Security 事件記錄需以系統管理員執行——沒有權限時相關項目標示「權限不足」，程式不會假裝成功，也不會靜默降級。
 
@@ -426,6 +426,8 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 - 專案結構：`XinSpect/`（主程式）、`XinSpect.Decoders/`（純解碼器類別庫，突變測試對象）、`Tests/`（單元測試）、`BlueSquadron/`（守護進程）、`Bridge/`（XTU 橋接）、`XsRegProbe/`（驅動源碼）、`docs/`（規格與帳本）、`Rules/`（外部化對帳規則）。
 
 ## 十七、版本沿革
+
+- **v2.77 Olympus**（2026-10-13）：韌體與開機審計（第 253–272 項）——OS／驅動／BIOS／公告 EOL、EOL 儀表、依賴完整性、安裝時長、驅動更新、更新大小、任務結果碼、隱藏任務；BitLocker 保護器、UEFI Capsule、SPI 權限、SMM、dbx 世代、GPT、BCD、ELAM、WDAC、開機鏈聚合。另將 xUnit 測試集合序列化，修復 36 執行緒高負載下 testhost 崩潰；測試 4586 綠、目錄 561。
 
 - **v2.76 Olympus**（2026-10-13）：恢復深化與安全審計補充（第 223–252 項）——LiveKernel／WER／懸掛／PendingFileRename／WinSxS／還原點／備份／資源耗盡／逐行程 I/O／連結審計；ACL／VSS／MSI 孤兒／喚醒來源／SleepStudy／電源計畫漂移／Modern Standby／TDR／DirectX／熱插拔；COM 劫持／檔案關聯／ADS／簽章／帳戶／自動登入存在性／登入歷史／服務 ACL／PATH 可寫性／WMI 永久訂閱。全程唯讀；測試 4557 綠、目錄 540。
 

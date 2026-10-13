@@ -48,6 +48,21 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.77",
+            Date = "2026-10-13",
+            Title = "韌體與開機審計（第 253–272 項）",
+            Items =
+            [
+                "生命週期與維護：OS／驅動／BIOS EOL、韌體公告、EOL 儀表、依賴完整性、安裝時長、驅動更新分類、更新大小、任務結果碼、隱藏任務。",
+                "韌體與開機審計：BitLocker 保護器、UEFI Capsule／FMP、SPI Descriptor 權限、SMM 防護、dbx 世代、GPT、BCD、ELAM、WDAC 來源、開機鏈證據聚合。",
+                "誠實邊界：EOL／公告為離線表且快照日期必印；BitLocker 金鑰永不輸出；Capsule 只在本機解析使用者供檔；SMM／SPI／GPT／BCD 只讀不寫不修復；ELAM 裝了≠在跑。",
+                "測試基礎設施：把 xUnit 測試集合改為序列化，修復 36 執行緒高負載下 testhost 崩潰；測試仍只增不減。",
+                "測試 15 條（4571→4586）；固定鍵目錄 551→561。有效累計 271/600（v2.77 發版點：269 已過）。",
+            ],
+        },
+
+        new ChangeEntry
+        {
             Version = "2.76",
             Date = "2026-10-13",
             Title = "恢復深化與安全審計補充（第 223–252 項）",
