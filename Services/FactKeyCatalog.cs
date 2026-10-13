@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 540 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 551 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "ac.aml.str.count",
@@ -141,8 +141,10 @@ public static class FactKeyCatalog
         "dm.clean",
         "dm.conflict",
         "dm.dash",
+        "dm.hidden.summary",
         "dm.maint.summary",
         "dm.sense",
+        "dm.taskres.summary",
         "dm.timeline.summary",
         "drvinsp.drivers.count",
         "drvinsp.truncated",
@@ -165,8 +167,13 @@ public static class FactKeyCatalog
         "dv.runtime.summary",
         "dv.toolchain.summary",
         "dv.wsl.summary",
+        "el.advisory.summary",
+        "el.bios",
         "el.browser.versions",
+        "el.dash",
+        "el.driver.summary",
         "el.office.version",
+        "el.os",
         "ent.fc",
         "ent.iscsi",
         "ent.mpio",
@@ -241,6 +248,7 @@ public static class FactKeyCatalog
         "in.cfg.repair",
         "in.debug",
         "in.deps",
+        "in.deps.integrity",
         "in.elevation.summary",
         "in.env",
         "in.privs",
@@ -522,8 +530,11 @@ public static class FactKeyCatalog
         "uefi.setup_mode",
         "uf.channel",
         "uf.dash",
+        "uf.driver.summary",
+        "uf.duration.summary",
         "uf.ready",
         "uf.servicing",
+        "uf.size.summary",
         "uf.source",
         "uf.timeline",
         "ufv.bios.count",
