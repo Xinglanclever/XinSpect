@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 741 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 757 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
 
@@ -255,18 +255,34 @@ public static class FactKeyCatalog
         "fs.taskhist.last",
         "fs.taskhist.summary",
         "fs.usn.state",
+        "fw.acpi.missing",
         "fw.bcd.summary",
+        "fw.bg.acm",
         "fw.bg.profile",
         "fw.bitlocker.summary",
         "fw.bootchain.summary",
         "fw.capsule.summary",
         "fw.dbx.generation",
+        "fw.dbx.sbat",
         "fw.elam.summary",
         "fw.fit.count",
         "fw.fit.summary",
+        "fw.fpdt",
+        "fw.fv",
         "fw.gpt.summary",
+        "fw.me",
+        "fw.me.manifest",
+        "fw.psp",
+        "fw.psp.dir",
+        "fw.rt",
         "fw.smm.summary",
         "fw.spiperm.summary",
+        "fw.tcgl.phase",
+        "fw.ucode.cve",
+        "fw.ucode.winner",
+        "fw.var.attr",
+        "fw.varstore",
+        "fw.wdac.layer",
         "fw.wdac.source",
         "gd.dx.summary",
         "gd.hdr.summary",

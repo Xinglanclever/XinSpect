@@ -531,6 +531,17 @@ GX-013 RT/AI 能力旗標、GX-014 GPU 驅動版本史。
 紅線：唯讀（不設時脈/風扇/功率/ECC）；無卡一律 N/A 非錯誤；虛擬顯示器判定≠惡意（環境事實非安全判決）；
 VBIOS 途徑不足如實標；驅動鏈只列版本不列路徑。
 
+### 推進紀錄：第 454–469 項（2026-10-14，韌體深化批次）
+
+16 項全計（逐項查重後皆為新增，無重複）：FW-008 微碼 CVE 對照、FW-009 CSME/PSP 足跡、
+FW-015 CSME FTPR manifest、FW-016 AMD PSP Directory、FW-017 UEFI 變數空間健全性、FW-018 Runtime Services、
+FW-019 TCG log 分階段、FW-020 FV 空間統計、FW-021 微碼載入鏈、FW-022 Boot Guard ACM、FW-023 ACPI 表對照、
+FW-024 FPDT、FW-025 UEFI 變數屬性、FW-007 dbx SBAT 補充、FW-013 WDAC 來源層級補充（＋1 收口）。
+
+鍵 741→757、測試 +23（4896→4919 綠，exit 0）。**有效累計 468／600。**
+紅線：CSME/PSP/Boot Guard 未取得 flash 傾印一律未施測聲明（不猜位元組）；離線表快照日期必印；
+「應有」需 SpecRef 級源；不刪不改 UEFI 變數；只呈現設定不判繞過。
+
 
 ### 剩餘主要工作面（供後續圈選）
 
