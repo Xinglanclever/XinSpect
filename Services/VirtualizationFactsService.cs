@@ -150,9 +150,11 @@ public static class VirtualizationFactsService
         }
         catch (Exception ex) { Diag.Swallow("CPUID 虛擬層偵測", ex, "視為無虛擬層"); }
 
-        bool platform = OptionalFeatureState("Microsoft-Hyper-V") == 1;
-        bool containers = OptionalFeatureState("Containers") == 1;
-        bool wsl = OptionalFeatureState("Microsoft-Windows-Subsystem-Linux") == 1;
+        var optional = OptionalFeatureStates(
+            "Microsoft-Hyper-V", "Containers", "Microsoft-Windows-Subsystem-Linux");
+        bool platform = optional["Microsoft-Hyper-V"] == 1;
+        bool containers = optional["Containers"] == 1;
+        bool wsl = optional["Microsoft-Windows-Subsystem-Linux"] == 1;
 
         return new VirtualizationState(
             hyper, vendor, platform,
@@ -162,22 +164,43 @@ public static class VirtualizationFactsService
             VbsStatus(), -1, -1);
     }
 
-    /// <summary>選用功能狀態：1＝啟用、2＝停用、3＝不存在、-1＝查不到。</summary>
-    internal static int OptionalFeatureState(string feature)
+    /// <summary>
+    /// 一次問多個選用功能的狀態：1＝啟用、2＝停用、3＝不存在、-1＝查不到。
+    /// 回傳的字典一定含有傳入的每一個名稱（查不到就是 -1，不缺席）。
+    /// </summary>
+    /// <remarks>
+    /// <b>為什麼要合併成一張查詢</b>：<c>Win32_OptionalFeature</c> 是本機最慢的 WMI 類別之一——
+    /// 每次查詢都要走元件存放區，實測一輪 <see cref="Collect"/> 約 1,262 ms（佔
+    /// <c>LoadPlatformFacts</c> 整包 2,393 ms 的一半）。原本 Hyper-V／Containers／WSL
+    /// 三個功能<b>各發一次查詢</b>，等於同一張慢表走三趟；三個名稱用 OR 併成一趟，
+    /// 判定逐字不變：查不到的功能一樣回 -1，值也一樣取 <c>InstallState</c>。
+    /// <para>
+    /// <b>界線</b>：合併之後查詢要嘛整體成功、要嘛整體失敗（原本是同類別分三次擲骰）。
+    /// 失敗來源是 WMI／元件存放區這一層，不是個別功能的名字，所以分開問不會多救回什麼；
+    /// 真的讀不到時三態仍然是 -1（「查不到」），不是被寫成「沒裝」。
+    /// </para>
+    /// </remarks>
+    internal static IReadOnlyDictionary<string, int> OptionalFeatureStates(params string[] features)
     {
+        var states = features.ToDictionary(f => f, _ => -1, StringComparer.OrdinalIgnoreCase);
+        if (features.Length == 0) return states;
         try
         {
+            string where = string.Join(" OR ", features.Select(f => $"Name='{f.Replace("'", "''")}'"));
             using var s = new ManagementObjectSearcher("root\\CIMV2",
-                $"SELECT InstallState FROM Win32_OptionalFeature WHERE Name='{feature}'");
+                $"SELECT Name, InstallState FROM Win32_OptionalFeature WHERE {where}");
             foreach (ManagementObject o in s.Get())
-                using (o) return o["InstallState"] is { } v ? Convert.ToInt32(v) : -1;
-            return -1;
+                using (o)
+                {
+                    if (o["Name"] is not string name || !states.ContainsKey(name)) continue;
+                    states[name] = o["InstallState"] is { } v ? Convert.ToInt32(v) : -1;
+                }
         }
         catch (Exception ex)
         {
-            Diag.Swallow("選用功能查詢", ex, "該功能狀態視為未知");
-            return -1;
+            Diag.Swallow("選用功能查詢", ex, "這些功能的狀態一律視為未知");
         }
+        return states;
     }
 
     /// <summary>VBS 狀態：0＝關、1＝啟用未執行、2＝執行中、-1＝查不到。</summary>

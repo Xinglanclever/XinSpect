@@ -35,42 +35,59 @@ public static class DiskIo
     /// 一律回 <c>null</c>（＝讀不到）。呼叫端保證在 <paramref name="timeoutMs"/> 之內拿回控制權。
     /// </summary>
     public static T? Guarded<T>(Func<T?> read, int timeoutMs = DefaultTimeoutMs) where T : class
-    {
-        var task = Task.Run(read);
-        try
-        {
-            if (task.Wait(timeoutMs)) return task.Result;
-        }
-        catch
-        {
-            return null;                       // 讀取自己拋了例外
-        }
-
-        // 逾時。把遲到的例外吃掉，否則它會在 GC 時變成未觀察例外，把整個行程帶走——
-        // 那等於用一種更糟的方式重現我們正要防的問題。
-        _ = task.ContinueWith(static t => _ = t.Exception,
-            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
-        return null;
-    }
+        => GuardedProbe(read, timeoutMs).Value;
 
     /// <summary>
     /// <see cref="Guarded{T}"/> 的實值型別版本（<c>uint</c>、<c>long</c>、tuple…）。
     /// 語意完全相同：逾時或失敗回 <c>null</c>，呼叫端自行決定「讀不到」要顯示成什麼。
     /// </summary>
     public static T? GuardedValue<T>(Func<T?> read, int timeoutMs = DefaultTimeoutMs) where T : struct
+        => GuardedProbeValue(read, timeoutMs).Value;
+
+    /// <summary>
+    /// 逾時感知版：除了 <see cref="Guarded{T}"/> 的結果，另外<b>說出這次是逾時，還是快速失敗</b>。
+    /// </summary>
+    /// <remarks>
+    /// 需要這個區別的只有一種用途：把「這顆裝置的這條協定查詢不會回來」記下來，下一輪不要再付一次。
+    /// <b>快速失敗不能記</b>——裝置回一句「不支援」是合法的毫秒級結果，把它也當成卡住，
+    /// 會讓「讀不到」擴散到本來讀得到的地方。
+    /// </remarks>
+    public static (T? Value, bool TimedOut) GuardedProbe<T>(Func<T?> read, int timeoutMs = DefaultTimeoutMs)
+        where T : class
     {
         var task = Task.Run(read);
         try
         {
-            if (task.Wait(timeoutMs)) return task.Result;
+            if (task.Wait(timeoutMs)) return (task.Result, false);
         }
         catch
         {
-            return null;
+            return (null, false);              // 讀取自己拋了例外——那不是逾時
+        }
+
+        // 逾時。把遲到的例外吃掉，否則它會在 GC 時變成未觀察例外，把整個行程帶走——
+        // 那等於用一種更糟的方式重現我們正要防的問題。
+        _ = task.ContinueWith(static t => _ = t.Exception,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
+        return (null, true);
+    }
+
+    /// <summary><see cref="GuardedProbe{T}"/> 的實值型別版本；語意相同。</summary>
+    public static (T? Value, bool TimedOut) GuardedProbeValue<T>(Func<T?> read, int timeoutMs = DefaultTimeoutMs)
+        where T : struct
+    {
+        var task = Task.Run(read);
+        try
+        {
+            if (task.Wait(timeoutMs)) return (task.Result, false);
+        }
+        catch
+        {
+            return (null, false);
         }
 
         _ = task.ContinueWith(static t => _ = t.Exception,
             TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
-        return null;
+        return (null, true);
     }
 }

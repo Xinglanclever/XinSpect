@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Text.RegularExpressions;
 using Xunit;
 using XinSpect;
 
@@ -231,4 +233,45 @@ public class VirtualizationJudgeTests
     [InlineData("HOSTING-lite")]           // 只沾到字根、不是那一筆
     public void 真正的虛擬機器_不得被當成主機自己(string caption)
         => Assert.False(VirtualizationFactsService.IsHostingComputerSystem(caption));
+
+    // ── 慢表只准走一趟（2026-10-13 效能修復的守門） ─────────────────────────
+
+    /// <summary>
+    /// <c>Win32_OptionalFeature</c> 只准發<b>一張</b>查詢。
+    /// </summary>
+    /// <remarks>
+    /// 這條守門的理由是實測數字：這張表每次查詢都要走元件存放區，一問約 420–520 ms，
+    /// 而 Hyper-V／Containers／WSL 三個功能原本<b>各發一次</b>——同一張慢表走三趟，
+    /// 實測 1,537／1,259／1,254 ms。併成一張 OR 查詢後 523／525／517 ms，
+    /// 三個狀態值逐一字相同（1／1／2），<see cref="VirtualizationFactsService.Collect"/> 整包
+    /// 由 1,262 ms 降到 530 ms。
+    /// <para>
+    /// 這件事在功能面<b>完全看不出來</b>：慢的是同一組事實，讀者只覺得頁面卡一下。
+    /// 靜態掃描是唯一能在不碰真機 WMI 的前提下守住的辦法。
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void 選用功能這張慢表只准發一張查詢()
+    {
+        string source = ReadRepoFile(Path.Combine("Services", "VirtualizationFactsService.cs"));
+
+        int queries = Regex.Matches(source, "SELECT[^\"]*FROM Win32_OptionalFeature").Count;
+        Assert.True(queries == 1,
+            $"Win32_OptionalFeature 查到 {queries} 處查詢建構——請維持一張查詢問多個名稱"
+            + "（OptionalFeatureStates），否則每個新功能都會讓這一頁再慢半秒");
+        Assert.Contains("OptionalFeatureStates", source, StringComparison.Ordinal);
+    }
+
+    /// <summary>讀原始碼樹裡的檔案（路徑相對於倉庫根目錄）。從測試輸出目錄往上找 csproj。</summary>
+    private static string ReadRepoFile(string relativePath)
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, "XinSpect.csproj")))
+                return File.ReadAllText(Path.Combine(dir.FullName, relativePath));
+            dir = dir.Parent;
+        }
+        throw new DirectoryNotFoundException("找不到原始碼樹（往上找不到 XinSpect.csproj）");
+    }
 }

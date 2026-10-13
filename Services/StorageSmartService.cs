@@ -231,11 +231,40 @@ public sealed class StorageSmartService : ObservableObject
         return h == new IntPtr(-1) ? IntPtr.Zero : h;
     }
 
+    // ── 共用：受看門狗保護的協定查詢（外加斷路器） ────────────────────────
+
+    /// <summary>
+    /// 受看門狗保護的協定查詢，外加「問過不回來就別再問」的斷路器。
+    /// </summary>
+    /// <remarks>
+    /// 回傳值與直接 <see cref="DiskIo.Guarded{T}"/> 完全相同——跳過時回 <c>null</c>，而逾時本來也是回
+    /// <c>null</c>，呼叫端拿到的判定逐字不變。省下的是<b>重複等待</b>與<b>每輪都要再洩一條卡死執行緒</b>。
+    /// <paramref name="op"/> 是鍵的一半，必須分辨「哪一條查詢」：同一顆碟的匯流排型別讀得到
+    /// （毫秒級）而 NVMe 健康紀錄逾時，是兩件不同的事，混用同一個鍵會把好的那條也一起放棄。
+    /// 背景與取捨寫在 <see cref="StorageProbeBreaker"/>。
+    /// </remarks>
+    private static T? GuardedRead<T>(int index, string op, Func<T?> read) where T : class
+    {
+        if (StorageProbeBreaker.ShouldSkip(index, op)) { StorageProbeBreaker.CountSkip(); return null; }
+        var (value, timedOut) = DiskIo.GuardedProbe(read);
+        if (timedOut) StorageProbeBreaker.Trip(index, op);
+        return value;
+    }
+
+    /// <summary><see cref="GuardedRead{T}"/> 的實值型別版本；語意相同。</summary>
+    private static T? GuardedReadValue<T>(int index, string op, Func<T?> read) where T : struct
+    {
+        if (StorageProbeBreaker.ShouldSkip(index, op)) { StorageProbeBreaker.CountSkip(); return null; }
+        var (value, timedOut) = DiskIo.GuardedProbeValue(read);
+        if (timedOut) StorageProbeBreaker.Trip(index, op);
+        return value;
+    }
+
     /// <summary>StorageDeviceProperty 的 BusType（STORAGE_DEVICE_DESCRIPTOR 的位元組 @28）：3=ATA、10=SATA、16/17=NVMe 類。失敗回 0。</summary>
     /// <remarks>走 <see cref="DiskIo.GuardedValue"/>：某些碟的 IOCTL 會卡在核心裡不回來，卡住就當讀不到。</remarks>
     public static uint TryGetBusType(int index, out string busName)
     {
-        var got = DiskIo.GuardedValue(() => ReadBusTypeCore(index));
+        var got = GuardedReadValue(index, nameof(TryGetBusType), () => ReadBusTypeCore(index));
         busName = got?.Name ?? "未知";
         return got?.Bus ?? 0;
     }
@@ -269,7 +298,7 @@ public sealed class StorageSmartService : ObservableObject
     /// <summary>以 StorageDeviceProtocolSpecificProperty 取指定 NVMe 紀錄頁 512 位元組；失敗或逾時回 null。</summary>
     /// <remarks>走 <see cref="DiskIo.Guarded"/>：見 <c>Services/DiskIo.cs</c> 的實測記錄。</remarks>
     public static byte[]? TryReadNvmeLog(int index, uint logPage = NvmeLogPageHealth)
-        => DiskIo.Guarded(() => ReadNvmeLogCore(index, logPage));
+        => GuardedRead(index, $"{nameof(TryReadNvmeLog)}.{logPage}", () => ReadNvmeLogCore(index, logPage));
 
     private static byte[]? ReadNvmeLogCore(int index, uint logPage)
     {
@@ -371,7 +400,7 @@ public sealed class StorageSmartService : ObservableObject
     /// <summary>以 SMART_RCV_DRIVE_DATA 取 512 位元組屬性表；失敗回 null（不使用會卡死的 ATA_PASS-THROUGH）。</summary>
     /// <summary>ATA SMART READ DATA（512B）；失敗或逾時回 null。走看門狗，見 Services/DiskIo.cs。</summary>
     private static byte[]? TryReadAtaSmartClassic(int index)
-        => DiskIo.Guarded(() => ReadAtaSmartClassicCore(index));
+        => GuardedRead(index, nameof(TryReadAtaSmartClassic), () => ReadAtaSmartClassicCore(index));
 
     private static byte[]? ReadAtaSmartClassicCore(int index)
     {
@@ -443,7 +472,7 @@ public sealed class StorageSmartService : ObservableObject
 
     /// <summary>ATA SMART READ THRESHOLDS（0xD1 簽章，512B 門檻表）；失敗回 null。與 READ DATA 同一 ioctl 通路。</summary>
     public static byte[]? TryReadAtaThresholds(int index)
-        => DiskIo.Guarded(() => ReadAtaThresholdsCore(index));
+        => GuardedRead(index, nameof(TryReadAtaThresholds), () => ReadAtaThresholdsCore(index));
 
     private static byte[]? ReadAtaThresholdsCore(int index)
     {
@@ -607,7 +636,7 @@ public sealed class StorageSmartService : ObservableObject
     /// 失敗回 null，由呼叫端如實說明「讀不到」，不要拿規格書的預設值頂替。
     /// </remarks>
     public static byte[]? TryReadNvmeFeature(int index, uint featureId, int length)
-        => DiskIo.Guarded(() => ReadNvmeFeatureCore(index, featureId, length));
+        => GuardedRead(index, $"{nameof(TryReadNvmeFeature)}.{featureId}.{length}", () => ReadNvmeFeatureCore(index, featureId, length));
 
     private static byte[]? ReadNvmeFeatureCore(int index, uint featureId, int length)
     {
@@ -641,7 +670,7 @@ public sealed class StorageSmartService : ObservableObject
     /// 失敗回 null。
     /// </summary>
     public static byte[]? TryReadNvmeIdentify(int index)
-        => DiskIo.Guarded(() => ReadNvmeIdentifyCore(index));
+        => GuardedRead(index, nameof(TryReadNvmeIdentify), () => ReadNvmeIdentifyCore(index));
 
     private static byte[]? ReadNvmeIdentifyCore(int index)
     {
@@ -675,7 +704,7 @@ public sealed class StorageSmartService : ObservableObject
     /// 失敗回 null。
     /// </summary>
     public static byte[]? TryReadAtaIdentify(int index)
-        => DiskIo.Guarded(() => ReadAtaIdentifyCore(index));
+        => GuardedRead(index, nameof(TryReadAtaIdentify), () => ReadAtaIdentifyCore(index));
 
     private static byte[]? ReadAtaIdentifyCore(int index)
     {

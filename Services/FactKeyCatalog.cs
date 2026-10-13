@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 460 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 470 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "ac.aml.str.count",
@@ -281,6 +281,8 @@ public static class FactKeyCatalog
         "numa.slit.nodes",
         "numa.topology",
         "numa.topology.xnode",
+        "nw.legacy.summary",
+        "nw.vnic.summary",
         "oob.ipmi",
         "pci.bus0.inventory",
         "pci.dev.00.0",
@@ -308,6 +310,8 @@ public static class FactKeyCatalog
         "psu.pmbus.temp1",
         "psu.pmbus.vin",
         "psu.pmbus.vout",
+        "pv.ddv",
+        "pv.telemetry",
         "pw.shutdown.summary",
         "pw.sleep.cap",
         "pw.usbsel",
@@ -425,6 +429,9 @@ public static class FactKeyCatalog
         "spi.prr",
         "spi.regions",
         "spi.write_surface",
+        "st.legacy.summary",
+        "st.ntfs.summary",
+        "st.xcheck.summary",
         "storage.reliability.available",
         "storage.reliability.count",
         "sv.core",
@@ -438,6 +445,7 @@ public static class FactKeyCatalog
         "time.drift.ppm",
         "time.hpet",
         "time.pm_timer",
+        "tm.tzdb",
         "tpm.present",
         "tpm.replay.summary",
         "tpm.tcg_log",
@@ -475,6 +483,8 @@ public static class FactKeyCatalog
         "virt.vmcount",
         "virt.vmms",
         "virt.vswitch",
+        "ws.dumpcfg.summary",
+        "ws.svc.graph",
         "xt.csharp",
         "xt.py",
         "xt.registry",
