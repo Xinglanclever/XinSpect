@@ -144,6 +144,8 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 NetworkSystemInventoryFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadInventoryGovernance(); }
         catch { /* 附加功能：讀不到由 InventoryGovernanceFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadNetworkSecurityInventory(); }
+        catch { /* 附加功能：讀不到由 NetworkSecurityInventoryFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadSbom(); }
         catch { /* 附加功能：讀不到由 SbomService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadLifecycleReports(); }

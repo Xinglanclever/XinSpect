@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 490 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 500 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "ac.aml.str.count",
@@ -72,6 +72,7 @@ public static class FactKeyCatalog
         "asset.identify.evidence",
         "asset.uuid",
         "au.apo.summary",
+        "au.drift",
         "au.privacy.summary",
         "audio.endpoints",
         "audio.latency",
@@ -285,14 +286,22 @@ public static class FactKeyCatalog
         "numa.slit.nodes",
         "numa.topology",
         "numa.topology.xnode",
+        "nw.bt.fw",
+        "nw.cert.summary",
+        "nw.dns.summary",
+        "nw.fw.summary",
         "nw.hidbat.summary",
         "nw.icc.summary",
         "nw.legacy.summary",
+        "nw.offload2.summary",
         "nw.print.summary",
+        "nw.printer.summary",
         "nw.route.summary",
         "nw.sensor.summary",
+        "nw.smb.summary",
         "nw.usb.port.summary",
         "nw.vnic.summary",
+        "nw.wifi.summary",
         "nw.wol.summary",
         "oob.ipmi",
         "pci.bus0.inventory",
@@ -504,6 +513,7 @@ public static class FactKeyCatalog
         "ws.channel.summary",
         "ws.dumpcfg.summary",
         "ws.minifilter.summary",
+        "ws.power.events",
         "ws.svc.graph",
         "xt.csharp",
         "xt.py",
