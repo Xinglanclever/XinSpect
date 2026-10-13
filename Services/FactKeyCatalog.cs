@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 450 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 460 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "ac.aml.str.count",
@@ -102,6 +102,7 @@ public static class FactKeyCatalog
         "chipset.bios_cntl",
         "chipset.me_hfs",
         "chipset.smramc",
+        "cm.cache.share.summary",
         "cmos.checksum",
         "cmos.rtc_time",
         "cmos.rtc_valid",
@@ -121,6 +122,8 @@ public static class FactKeyCatalog
         "display.hw.gpu",
         "display.summary",
         "dk.alias.summary",
+        "dk.anon.stability",
+        "dk.roundtrip",
         "dk.snapshot.age",
         "dl.cmdline.count",
         "dl.cmdline.summary",
@@ -155,6 +158,8 @@ public static class FactKeyCatalog
         "ds.tls.summary",
         "dv.container.summary",
         "dv.env.path",
+        "dv.nested",
+        "dv.runtime.summary",
         "dv.toolchain.summary",
         "dv.wsl.summary",
         "el.browser.versions",
@@ -210,6 +215,7 @@ public static class FactKeyCatalog
         "gpu.tdr.delay",
         "gpu.tdr.dpc",
         "gpu.tdr.level",
+        "hist.mon.summary",
         "hm.conflict.summary",
         "hm.hwdiff",
         "hm.prob.delta",
@@ -248,11 +254,13 @@ public static class FactKeyCatalog
         "mu.cam.count",
         "mu.codec.count",
         "mu.codec.summary",
+        "mu.drm.summary",
         "mu.hdr",
         "mu.hwdec.summary",
         "mu.mf.summary",
         "mu.mic.count",
         "mu.mic.summary",
+        "mu.spatial.summary",
         "net.listen.count",
         "net.listen.entries",
         "net.listen.unverified",
@@ -303,6 +311,7 @@ public static class FactKeyCatalog
         "pw.shutdown.summary",
         "pw.sleep.cap",
         "pw.usbsel",
+        "pw.waketask.summary",
         "qs.cache",
         "qs.grammar",
         "qs.help",
@@ -381,6 +390,7 @@ public static class FactKeyCatalog
         "sb.slot.summary",
         "sb.type03",
         "sb.type03.count",
+        "sc.io.summary",
         "sc.netdrop.summary",
         "sc.uptime.summary",
         "se.audit2.summary",

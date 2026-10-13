@@ -216,6 +216,16 @@ public static class FactCoverageReport
         ["sc.uptime.summary"] = "重啟摘要（SC-007）：Environment.TickCount64 是系統 uptime；不等於更新已套用。",
         ["sc.netdrop.summary"] = "網路中斷事件（SC-009）：NetworkProfile 事件痕跡；不是根因判決。",
         ["in.cfg.repair"] = "設定自我修復（IN-008）：狀態只有 settings.json 一個來源；修復動作另有往返測試。",
+        ["cm.cache.share.summary"] = "快取共享拓撲（CM-005）：CPUID leaf 0x04 共享遮罩單一來源；上界由硬體回報，無第二通路可交叉。",
+        ["dv.nested"] = "巢狀虛擬化能力（DV-002）：Hypervisor／韌體／VBS／選用功能合併陳述；能力存在不等於來賓必定可巢狀，不判決。",
+        ["dv.runtime.summary"] = ".NET／VC++ 執行階段（DV-003）：登錄與目前 CLR 版本單一來源；不做 EOL 判決，不代表專案使用版本。",
+        ["pw.waketask.summary"] = "排程喚醒對照（PW-008）：schtasks XML 唯讀解析；不列任務名稱或命令，也不判是否一定喚醒。",
+        ["hist.mon.summary"] = "多螢幕拓撲快照（GD-004）：EnumDisplayMonitors 排列與 DPI 單一來源；不記序號或 EDID。",
+        ["dk.anon.stability"] = "匿名 ID 穩定性（DK-005）：正規化硬體描述的 SHA-256；不讀序號或 UUID，不保跨機唯一性。",
+        ["dk.roundtrip"] = "匯出／匯入往返（DK-009）：記憶體 JSON 往返測試；驗序列化一致性，不驗外部媒體。",
+        ["sc.io.summary"] = "I/O 來源聚合（SC-004）：PerformanceData 程序計數器 since-boot 聚合；不是即時佔用也不判根因。",
+        ["mu.drm.summary"] = "DRM 就緒（MU-003）：PlayReady 登錄存在性；不測播放、不讀授權或金鑰。",
+        ["mu.spatial.summary"] = "空間音訊（MU-006）：MMDevices 端點登錄宣告；不開裝置、不測空間效果。",
         };
 
     /// <summary>一個鍵的覆蓋狀態。</summary>
