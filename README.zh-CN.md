@@ -4,7 +4,7 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一执行文件发布，免安装；对硬件与系统的读取以只读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-2.73-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.74-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![测试](https://img.shields.io/badge/tests-4451%20passed-3FB950)
@@ -79,10 +79,10 @@
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.73/XinSpect.exe) | 32,066,347 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.73/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.74/XinSpect.exe) | 32,066,347 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.74/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 
-> **本表的字节数为本版（v2.73）实际发布的文件大小**；请以 Release 页面列出的文件为准。
+> **本表的字节数为本版（v2.74）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
 系统需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含发布则免装）。显卡深测需要 D3D11 兼容设备；MSR 读取、SMART ioctl、Security 事件日志需以系统管理员执行——没有权限时相关项目标示「权限不足」，程序不会假装成功，也不会静默降级。
 
@@ -423,6 +423,8 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 - 项目结构：`XinSpect/`（主程序）、`XinSpect.Decoders/`（纯解码器类库，突变测试对象）、`Tests/`（单元测试）、`BlueSquadron/`（守护进程）、`Bridge/`（XTU 桥接）、`XsRegProbe/`（驱动源码）、`docs/`（规格与账本）、`Rules/`（外部化对账规则）。
 
 ## 十七、版本沿革
+
+- **v2.74 Olympus**（2026-10-13）：盤點、治理與系統清冊（第 173–202 項）——作業／資產盤點、網路／系統盤點與盤點治理三批；虛擬網卡、LPT／COM、服務依賴、傾印、NTFS、磁碟交叉、列印佇列、WOL、路由、感應器、事件通道、Storage Spaces、廣告／語音／NTP、APO／隱私／ICC／無線電量／USB 埠／自啟動／Minifilter／開機驅動／匿名化／哈希鏈。效能收口 StorageProbeBreaker 與 OptionalFeature 合併查詢（暖機第二輪約 13.1s→1.1s）；測試 4451 綠、目錄 490。
 
 - **v2.73 Olympus**（2026-10-13）：先進補充批次（第 163–172 項）——CPUID 快取共享拓撲、巢狀虛擬化能力、.NET／VC++ 執行階段、排程喚醒對照、多螢幕拓撲快照、匿名 ID 穩定性、匯出／匯入往返、程序 I/O 來源聚合、PlayReady DRM 就緒、空間音訊端點宣告；全程唯讀，快取共享只報上界、匿名 ID 不讀序號／UUID、DRM 不讀授權或金鑰。測試 4364 綠、目錄 460。
 
