@@ -176,6 +176,8 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 GovernanceKnowledgeFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadBusDeepDive(); }
         catch { /* 附加功能：讀不到由 BusDeepDiveFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadEngineeringGovernance(); }
+        catch { /* 附加功能：讀不到由 EngineeringGovernanceFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadSbom(); }
         catch { /* 附加功能：讀不到由 SbomService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadLifecycleReports(); }
