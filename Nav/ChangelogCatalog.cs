@@ -48,6 +48,21 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.73",
+            Date = "2026-10-13",
+            Title = "先進補充：快取、虛擬化、執行階段、拓撲與治理（第 163–172 項）",
+            Items =
+            [
+                "平台與虛擬化：CM-005 CPUID leaf 0x04 快取共享拓撲（SharedLogical 只當上界）與 DV-002 巢狀虛擬化能力（Hypervisor／韌體／VBS／選用功能分開陳述）。",
+                "執行階段與喚醒：DV-003 .NET／VC++ 執行階段版本不做 EOL 判決；PW-008 以 schtasks XML 唯讀計數 WakeToRun 工作，不列出名稱或命令。",
+                "顯示與治理：GD-004 多螢幕排列／DPI 拓撲快照不記序號；DK-005 以正規化硬體描述產生匿名 ID；DK-009 記憶體 JSON 匯出／匯入往返測試。",
+                "儲存與多媒體：SC-004 程序 I/O 計數器聚合不判根因；MU-003 PlayReady 登錄就緒不讀授權或內容金鑰；MU-006 空間音訊只讀端點宣告，不開裝置。",
+                "測試 +30（4334→4364 綠）；固定鍵目錄 450→460。跨越 v2.73 發版點（164）並維持 AGPL-3.0-or-later。",
+            ],
+        },
+
+        new ChangeEntry
+        {
             Version = "2.72",
             Date = "2026-10-13",
             Title = "生命週期、外部介面與自動化（第 113–142 項）",

@@ -4,7 +4,7 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一执行文件发布，免安装；对硬件与系统的读取以只读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-2.72-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.73-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![测试](https://img.shields.io/badge/tests-4364%20passed-3FB950)
@@ -79,10 +79,10 @@
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.72/XinSpect.exe) | 31,976,235 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.72/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.73/XinSpect.exe) | 31,976,235 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.73/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 
-> **本表的字节数为本版（v2.72）实际发布的文件大小**；请以 Release 页面列出的文件为准。
+> **本表的字节数为本版（v2.73）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
 系统需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含发布则免装）。显卡深测需要 D3D11 兼容设备；MSR 读取、SMART ioctl、Security 事件日志需以系统管理员执行——没有权限时相关项目标示「权限不足」，程序不会假装成功，也不会静默降级。
 
@@ -423,6 +423,8 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 - 项目结构：`XinSpect/`（主程序）、`XinSpect.Decoders/`（纯解码器类库，突变测试对象）、`Tests/`（单元测试）、`BlueSquadron/`（守护进程）、`Bridge/`（XTU 桥接）、`XsRegProbe/`（驱动源码）、`docs/`（规格与账本）、`Rules/`（外部化对账规则）。
 
 ## 十七、版本沿革
+
+- **v2.73 Olympus**（2026-10-13）：先進補充批次（第 163–172 項）——CPUID 快取共享拓撲、巢狀虛擬化能力、.NET／VC++ 執行階段、排程喚醒對照、多螢幕拓撲快照、匿名 ID 穩定性、匯出／匯入往返、程序 I/O 來源聚合、PlayReady DRM 就緒、空間音訊端點宣告；全程唯讀，快取共享只報上界、匿名 ID 不讀序號／UUID、DRM 不讀授權或金鑰。測試 4364 綠、目錄 460。
 
 - **v2.72 Olympus**（2026-10-13）：生命週期／治理、外部介面／報告輸出與自動化情境三批（第 113–142 項）——Office／瀏覽器版本、機隊 CSV、diff JSON、報告比較、公告草稿、DHA 未施測聲明、維護史、零寫入邊界、錯誤碼變更；C# 常數、Python reader、file trigger、快照整合、schema registry、匿名求助範本、SVG／xlsx／列印／離線手冊；headless 模式目錄、YAML checks、退出碼、stdin 批次、輸出輪轉、遠端查詢明文不做、開機／記憶體引導、HEVC/AV1 硬解、Sysmon 對照。Authenticode 指紋快取讓真實更新路徑中位約 12.8s→7.7s；v2.71 漏掛主程式已補齊並驗證下載。測試 4282 綠、目錄 430。
 - **v2.71 Olympus**（2026-10-12）：情境／多媒體／維護三批（第 94–112 項）——情境引導（藍牙／Wi-Fi／印表機／游標卡／白屏，0 是沒比對到不是沒有）、編解碼器清單（Drivers32）、擷取端點數（不錄音）、Media Foundation、JSONL 串流（敏感值預設遮蔽）、查詢結果快取（指紋失效）、Storage Sense、維護視窗、清理處理器、任務運行時間線（200/201）、維護摘要、BitLocker 卷級（WMI，不讀復原金鑰）、查詢歷史（記憶體、L1）、文法版本、更新時間軸（收口 wu.history.*）、CLI 轉發單一實例；測試 4204 綠、目錄 400。
