@@ -40,6 +40,9 @@
        否則測試會照著錯誤的實作長出來，把 bug 一起鎖死（1.9.1-B1 的 NVMe 位移就是這樣漏掉的）。 -->
   <ItemGroup>
     <Content Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- 全套在 36 邏輯處理器、既有 DeepBench 高負載同時執行時曾出現 testhost 崩潰；
+         改為序列化測試集合，代價是時間，換到可重現的綠燈。 -->
+    <None Include="..\xunit.runner.json" Link="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
