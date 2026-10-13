@@ -29,7 +29,7 @@ These principles are enforced by unit tests and machine checks, not just documen
 
 | File | Size | Purpose |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.73/XinSpect.exe) | 31.98 MB | Main program (includes BlueSquadron guard) |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.73/XinSpect.exe) | 32.07 MB | Main program (includes BlueSquadron guard) |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.73/BlueSquadronBridge.exe) | 6.5 MB | Standalone guard process |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.73/XinSpectDeploy.exe) | 7 KB | One-click installer (downloads and deploys automatically) |
 
