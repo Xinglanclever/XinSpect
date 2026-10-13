@@ -4,7 +4,7 @@
 
 一款免費開源、運行於 Windows 的原生硬體驗機、監控與安全稽核工具。以單一執行檔發佈，免安裝；對硬體與系統的讀取以唯讀為原則，少數涉及寫入的功能均設有同意閘門並明確標註風險。本程式不收集、不上傳任何使用者資料。
 
-![版本](https://img.shields.io/badge/version-2.79-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.80-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![測試](https://img.shields.io/badge/tests-4726%20passed-3FB950)
@@ -79,10 +79,10 @@
 
 | 檔案 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.79/XinSpect.exe) | 32,602,923 bytes | 主程式。藍色中隊守護進程已內建 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.79/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.80/XinSpect.exe) | 32,602,923 bytes | 主程式。藍色中隊守護進程已內建 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.80/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
 
-> **上表的位元組數為本版（v2.79）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v2.80）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
 系統需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含發佈則免裝）。顯示卡深測需要 D3D11 相容裝置；MSR 讀取、SMART ioctl、Security 事件記錄需以系統管理員執行——沒有權限時相關項目標示「權限不足」，程式不會假裝成功，也不會靜默降級。
 
@@ -427,6 +427,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.80 Olympus**（2026-10-14）：效能觀測、深測第二波與治理收口（第 323–345 項）——分頁池／壓縮／頁面錯誤／handle／GDI／頻率波動／計時器；溫度響應／功率-頻率／Vdroop／記憶體保持／電池／UPS／封包損失／原始包／多機矩陣；規則候選／保留政策／文件對帳。全程唯讀、同意閘門未同意永不執行；測試 4726 綠、目錄 634。
 - **v2.79 Olympus**（2026-10-14）：平台收口（第 303–322 項）——Turbo／能效曲線／MRC／記憶體延遲／TLB／逐核對稱／電壓／步進表／親和性／NUMA，加上儲存磨損／TBW、SMART 掉電、NVMe sanitize 能力、風扇軸承、溫度基線、開機階段、換零件對照與壽命估計。全程唯讀、查無不代填；測試 4678 綠、目錄 611。
 - **v2.78 Olympus**（2026-10-13）：平台擴充（第 293–302 項）——驅動版本變更史、EOL 包版本化、AML 位元組統計、SMI/C-state 觀測、RAPL 功率牆、記憶體訓練、CPU 熱／NIC 慢／更新卡住引導與崩潰堆疊同意閘門。全程唯讀；測試 4639 綠、目錄 591。
 
