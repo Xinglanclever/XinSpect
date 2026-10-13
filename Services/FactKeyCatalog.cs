@@ -25,9 +25,10 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 601 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 611 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
-    [
+    [
+
         "ac.aml.stat",
         "ac.aml.str.count",
         "ac.aml.str.sample",
@@ -85,6 +86,7 @@ public static class FactKeyCatalog
         "backend.msr",
         "bl.baseline",
         "bl.events",
+        "bl.life",
         "bl.score",
         "boot.duration_ms",
         "boot.last_time",
@@ -301,6 +303,7 @@ public static class FactKeyCatalog
         "mon.dp",
         "monitor.summary",
         "ms.bench.chain",
+        "ms.boot.summary",
         "ms.coresym.summary",
         "ms.memlat.summary",
         "ms.tlb.summary",
@@ -499,8 +502,11 @@ public static class FactKeyCatalog
         "sb.slot.summary",
         "sb.type03",
         "sb.type03.count",
+        "sc.fanbearing",
         "sc.io.summary",
         "sc.netdrop.summary",
+        "sc.swap",
+        "sc.tbaseline",
         "sc.uptime.summary",
         "se.audit2.summary",
         "se.cve",
@@ -542,8 +548,13 @@ public static class FactKeyCatalog
         "st.fw.known",
         "st.legacy.summary",
         "st.ntfs.summary",
+        "st.nvme.err",
+        "st.nvme.extra",
+        "st.powerloss",
         "st.pstrans.summary",
+        "st.sanitize.cap",
         "st.ss.summary",
+        "st.wear.summary",
         "st.xcheck.summary",
         "storage.reliability.available",
         "storage.reliability.count",

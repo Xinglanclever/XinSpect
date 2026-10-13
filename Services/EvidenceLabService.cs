@@ -1120,6 +1120,15 @@ public sealed class EvidenceLabService : ObservableObject
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
+    /// <summary>儲存與情境收口（Vol2 第 313–322 項）：磨損／TBW、掉電、sanitize 能力、NVMe 錯誤、風扇軸承、溫度基線、開機階段、換零件、壽命估計。</summary>
+    public IReadOnlyList<HardwareFact> StorageScenarioReconciliationFacts { get; private set; } = [];
+
+    public void LoadStorageScenarioReconciliation()
+    {
+        StorageScenarioReconciliationFacts = StorageAndScenarioReconciliationFactsService.Collect(DateTimeOffset.UtcNow);
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
     /// <summary>軟體物料清單（RS-002）：元件限本機可列舉的驅動＋作業系統＋本程式；只產生內容不寫檔。</summary>
     public IReadOnlyList<HardwareFact> SbomFacts { get; private set; } = [];
 
@@ -1172,7 +1181,7 @@ public sealed class EvidenceLabService : ObservableObject
                 .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
                 .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(TpmReplayFacts)
                 .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(ListenPortFacts).Concat(LocalSecurityAuditFacts)
-                .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ServerComplianceFacts).Concat(ServerRoleDeepFacts).Concat(ServerRoleConditionalFacts).Concat(MaintenanceFacts).Concat(EnvironmentRuntimeFacts).Concat(ClosingFacts).Concat(QueryInsightFacts).Concat(TrustOpsFacts).Concat(ZeroTrustFacts).Concat(DataSecurityFacts).Concat(EndpointPolicyFacts).Concat(ScenarioFacts).Concat(MultimediaFacts).Concat(ExportCacheFacts).Concat(MaintenanceDashboardFacts).Concat(VolumeEncryptionFacts).Concat(QueryGovernanceFacts).Concat(LifecycleReportsFacts).Concat(GovernanceExtraFacts).Concat(InterchangeReportFacts).Concat(AutomationGuidanceFacts).Concat(RecoveryPowerInteropFacts).Concat(EnvironmentDiagnosticsFacts).Concat(AdvancedSupplementFacts).Concat(OperationsInventoryFacts).Concat(NetworkSystemInventoryFacts).Concat(InventoryGovernanceFacts).Concat(NetworkSecurityInventoryFacts).Concat(FinalInventoryFacts).Concat(RecoveryInventoryFacts).Concat(RecoveryDisplayFacts).Concat(SecurityAuditSupplementFacts).Concat(LifecycleMaintenanceFacts).Concat(FirmwareAuditFacts).Concat(PlatformGovernanceFacts).Concat(PlatformDeepDiveFacts).Concat(PlatformExpansionFacts).Concat(PlatformReconciliationFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(SbomFacts)
+                .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ServerComplianceFacts).Concat(ServerRoleDeepFacts).Concat(ServerRoleConditionalFacts).Concat(MaintenanceFacts).Concat(EnvironmentRuntimeFacts).Concat(ClosingFacts).Concat(QueryInsightFacts).Concat(TrustOpsFacts).Concat(ZeroTrustFacts).Concat(DataSecurityFacts).Concat(EndpointPolicyFacts).Concat(ScenarioFacts).Concat(MultimediaFacts).Concat(ExportCacheFacts).Concat(MaintenanceDashboardFacts).Concat(VolumeEncryptionFacts).Concat(QueryGovernanceFacts).Concat(LifecycleReportsFacts).Concat(GovernanceExtraFacts).Concat(InterchangeReportFacts).Concat(AutomationGuidanceFacts).Concat(RecoveryPowerInteropFacts).Concat(EnvironmentDiagnosticsFacts).Concat(AdvancedSupplementFacts).Concat(OperationsInventoryFacts).Concat(NetworkSystemInventoryFacts).Concat(InventoryGovernanceFacts).Concat(NetworkSecurityInventoryFacts).Concat(FinalInventoryFacts).Concat(RecoveryInventoryFacts).Concat(RecoveryDisplayFacts).Concat(SecurityAuditSupplementFacts).Concat(LifecycleMaintenanceFacts).Concat(FirmwareAuditFacts).Concat(PlatformGovernanceFacts).Concat(PlatformDeepDiveFacts).Concat(PlatformExpansionFacts).Concat(PlatformReconciliationFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(StorageScenarioReconciliationFacts).Concat(SbomFacts)
                 .ToList();
             baseFacts.AddRange(CapabilityMatrixService.Collect(baseFacts, DateTimeOffset.UtcNow));
             // 覆蓋統計（NG-006）：與 cap.*／qs.range 同款，輸入是前面各組的聯集、不含自己——無自我指涉
