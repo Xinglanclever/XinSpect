@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 520 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 530 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "ac.aml.str.count",
@@ -204,9 +204,12 @@ public static class FactKeyCatalog
         "fw.bg.profile",
         "fw.fit.count",
         "fw.fit.summary",
+        "gd.dx.summary",
         "gd.hdr.summary",
+        "gd.plug.summary",
         "gd.shcache.summary",
         "gd.tablet.count",
+        "gd.tdr.summary",
         "gp.registrypol",
         "gpu.lz.driver_version",
         "gpu.lz.memory",
@@ -338,9 +341,13 @@ public static class FactKeyCatalog
         "pv.ddv",
         "pv.speech.summary",
         "pv.telemetry",
+        "pw.ms.compat",
+        "pw.plan.drift",
         "pw.shutdown.summary",
         "pw.sleep.cap",
+        "pw.sleepstudy.summary",
         "pw.usbsel",
+        "pw.wake.summary",
         "pw.waketask.summary",
         "qs.cache",
         "qs.grammar",
@@ -352,6 +359,7 @@ public static class FactKeyCatalog
         "qs.trust",
         "qs.unit",
         "raid.oob",
+        "rc.acl.summary",
         "rc.backup.summary",
         "rc.dump.count",
         "rc.dump.latest",
@@ -363,8 +371,10 @@ public static class FactKeyCatalog
         "rc.io.summary",
         "rc.link.summary",
         "rc.lkr.summary",
+        "rc.msi.orphan.summary",
         "rc.pending",
         "rc.rp.summary",
+        "rc.vss.summary",
         "rc.wer.summary",
         "rc.winsxs.summary",
         "reg.microcode",
