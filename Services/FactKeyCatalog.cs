@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 500 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 510 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "ac.aml.str.count",
@@ -287,8 +287,10 @@ public static class FactKeyCatalog
         "numa.topology",
         "numa.topology.xnode",
         "nw.bt.fw",
+        "nw.bt.pairing",
         "nw.cert.summary",
         "nw.dns.summary",
+        "nw.edid.summary",
         "nw.fw.summary",
         "nw.hidbat.summary",
         "nw.icc.summary",
@@ -299,9 +301,11 @@ public static class FactKeyCatalog
         "nw.route.summary",
         "nw.sensor.summary",
         "nw.smb.summary",
+        "nw.usb.desc.summary",
         "nw.usb.port.summary",
         "nw.vnic.summary",
         "nw.wifi.summary",
+        "nw.wol.packets",
         "nw.wol.summary",
         "oob.ipmi",
         "pci.bus0.inventory",
@@ -470,6 +474,8 @@ public static class FactKeyCatalog
         "time.hpet",
         "time.pm_timer",
         "tm.ntp.summary",
+        "tm.rtc.drift",
+        "tm.source",
         "tm.tzdb",
         "tpm.present",
         "tpm.replay.summary",
@@ -508,13 +514,17 @@ public static class FactKeyCatalog
         "virt.vmcount",
         "virt.vmms",
         "virt.vswitch",
+        "ws.appx.summary",
         "ws.autostart.summary",
         "ws.bootdrv.summary",
         "ws.channel.summary",
         "ws.dumpcfg.summary",
+        "ws.lsa.summary",
         "ws.minifilter.summary",
         "ws.power.events",
         "ws.svc.graph",
+        "ws.task.summary",
+        "ws.virt.contra",
         "xt.csharp",
         "xt.py",
         "xt.registry",
