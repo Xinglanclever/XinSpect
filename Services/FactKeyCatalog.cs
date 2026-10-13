@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 659 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 666 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
 
@@ -374,6 +374,13 @@ public static class FactKeyCatalog
         "nw.wifi.summary",
         "nw.wol.packets",
         "nw.wol.summary",
+        "of.bcd",
+        "of.diff",
+        "of.dump",
+        "of.evtx",
+        "of.hive",
+        "of.raw",
+        "of.writeblock",
         "oob.ipmi",
         "pci.bus0.inventory",
         "pci.dev.00.0",
