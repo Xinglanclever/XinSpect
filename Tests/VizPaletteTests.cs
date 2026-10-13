@@ -16,7 +16,8 @@ public sealed class VizPaletteTests
     [Fact]
     public void 沒有Application時取色回傳後備色而不丟例外()
     {
-        var b = VizPalette.Of("BaselineBrush", "#383835");
+        // 用不存在的鍵，避免同一測試行程中 ThemeService 已由其他測試初始化而改走 live brush。
+        var b = VizPalette.Of("NoSuchVizPaletteKey", "#383835");
         Assert.NotNull(b);
         Assert.Equal(Color.FromRgb(0x38, 0x38, 0x35), b.Color);
     }

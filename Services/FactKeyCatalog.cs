@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 571 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 581 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "ac.aml.str.count",
@@ -106,6 +106,7 @@ public static class FactKeyCatalog
         "chipset.me_hfs",
         "chipset.smramc",
         "cm.cache.share.summary",
+        "cm.whea.timeline",
         "cmos.checksum",
         "cmos.rtc_time",
         "cmos.rtc_valid",
@@ -115,6 +116,7 @@ public static class FactKeyCatalog
         "cpu.pkg_c3_us",
         "cpu.pkg_c6_us",
         "cpu.pkg_c7_us",
+        "cpu.thermal.events",
         "cpu.tjmax",
         "cpu.topology.smt",
         "cxl.cfmws.count",
@@ -229,6 +231,8 @@ public static class FactKeyCatalog
         "gd.tablet.count",
         "gd.tdr.summary",
         "gd.vrr.summary",
+        "gp.dvr.summary",
+        "gp.hags",
         "gp.registrypol",
         "gpu.lz.driver_version",
         "gpu.lz.memory",
@@ -244,6 +248,7 @@ public static class FactKeyCatalog
         "hist.mon.summary",
         "hist.nicerr.summary",
         "hist.rules.summary",
+        "hist.uncore.summary",
         "hm.conflict.summary",
         "hm.hwdiff",
         "hm.prob.delta",
@@ -512,6 +517,9 @@ public static class FactKeyCatalog
         "spi.prr",
         "spi.regions",
         "spi.write_surface",
+        "st.align.summary",
+        "st.dwpd",
+        "st.fw.known",
         "st.legacy.summary",
         "st.ntfs.summary",
         "st.pstrans.summary",
@@ -531,6 +539,7 @@ public static class FactKeyCatalog
         "time.hpet",
         "time.pm_timer",
         "tm.ntp.summary",
+        "tm.qpc.cost",
         "tm.rtc.drift",
         "tm.source",
         "tm.tzdb",
@@ -580,6 +589,7 @@ public static class FactKeyCatalog
         "ws.channel.summary",
         "ws.driver.summary",
         "ws.dumpcfg.summary",
+        "ws.kb.known",
         "ws.lsa.summary",
         "ws.minifilter.summary",
         "ws.power.events",
