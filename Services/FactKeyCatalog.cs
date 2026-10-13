@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 480 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 490 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "ac.aml.str.count",
@@ -71,6 +71,8 @@ public static class FactKeyCatalog
         "asset.identify",
         "asset.identify.evidence",
         "asset.uuid",
+        "au.apo.summary",
+        "au.privacy.summary",
         "audio.endpoints",
         "audio.latency",
         "audit.logclear.count",
@@ -173,6 +175,7 @@ public static class FactKeyCatalog
         "esp.partitions.count",
         "etl.readback",
         "etl.traces.count",
+        "ev.anon",
         "evt.system.7d",
         "fs.bin.count",
         "fs.bin.roots",
@@ -250,6 +253,7 @@ public static class FactKeyCatalog
         "mon.count",
         "mon.dp",
         "monitor.summary",
+        "ms.bench.chain",
         "msr.0x8b",
         "mu.cam.count",
         "mu.codec.count",
@@ -281,10 +285,13 @@ public static class FactKeyCatalog
         "numa.slit.nodes",
         "numa.topology",
         "numa.topology.xnode",
+        "nw.hidbat.summary",
+        "nw.icc.summary",
         "nw.legacy.summary",
         "nw.print.summary",
         "nw.route.summary",
         "nw.sensor.summary",
+        "nw.usb.port.summary",
         "nw.vnic.summary",
         "nw.wol.summary",
         "oob.ipmi",
@@ -492,8 +499,11 @@ public static class FactKeyCatalog
         "virt.vmcount",
         "virt.vmms",
         "virt.vswitch",
+        "ws.autostart.summary",
+        "ws.bootdrv.summary",
         "ws.channel.summary",
         "ws.dumpcfg.summary",
+        "ws.minifilter.summary",
         "ws.svc.graph",
         "xt.csharp",
         "xt.py",
