@@ -162,6 +162,8 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 PlatformGovernanceFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadPlatformDeepDive(); }
         catch { /* 附加功能：讀不到由 PlatformDeepDiveFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadPlatformExpansion(); }
+        catch { /* 附加功能：讀不到由 PlatformExpansionFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadSbom(); }
         catch { /* 附加功能：讀不到由 SbomService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadLifecycleReports(); }

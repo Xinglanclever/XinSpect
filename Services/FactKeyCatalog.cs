@@ -25,9 +25,10 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 581 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 591 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
+        "ac.aml.stat",
         "ac.aml.str.count",
         "ac.aml.str.sample",
         "ac.bgrt",
@@ -116,6 +117,8 @@ public static class FactKeyCatalog
         "cpu.pkg_c3_us",
         "cpu.pkg_c6_us",
         "cpu.pkg_c7_us",
+        "cpu.pl.summary",
+        "cpu.smi.cstate.summary",
         "cpu.thermal.events",
         "cpu.tjmax",
         "cpu.topology.smt",
@@ -137,6 +140,7 @@ public static class FactKeyCatalog
         "dl.gc.summary",
         "dl.modconflict.count",
         "dl.modconflict.summary",
+        "dl.stack",
         "dl.sympath",
         "dl.threadpool.count",
         "dl.threadpool.summary",
@@ -177,6 +181,7 @@ public static class FactKeyCatalog
         "el.driver.summary",
         "el.office.version",
         "el.os",
+        "el.pack.summary",
         "ent.fc",
         "ent.iscsi",
         "ent.mpio",
@@ -245,11 +250,13 @@ public static class FactKeyCatalog
         "gpu.tdr.delay",
         "gpu.tdr.dpc",
         "gpu.tdr.level",
+        "hist.memtrain.summary",
         "hist.mon.summary",
         "hist.nicerr.summary",
         "hist.rules.summary",
         "hist.uncore.summary",
         "hm.conflict.summary",
+        "hm.drivhist.summary",
         "hm.hwdiff",
         "hm.prob.delta",
         "hm.prob.summary",
@@ -502,9 +509,12 @@ public static class FactKeyCatalog
         "sg.diskfull",
         "sg.display",
         "sg.freeze",
+        "sg.hot",
         "sg.input",
         "sg.mem.summary",
+        "sg.nicslow",
         "sg.print",
+        "sg.updcap",
         "sg.wifi",
         "smart.failing_now.count",
         "smbus.tsod",

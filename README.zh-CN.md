@@ -4,10 +4,10 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一执行文件发布，免安装；对硬件与系统的读取以只读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-2.77-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.78-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-4625%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-4639%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
@@ -79,10 +79,10 @@
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.77/XinSpect.exe) | 32,439,083 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.77/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.78/XinSpect.exe) | 32,439,083 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.78/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 
-> **本表的字节数为本版（v2.77）实际发布的文件大小**；请以 Release 页面列出的文件为准。
+> **本表的字节数为本版（v2.78）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
 系统需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含发布则免装）。显卡深测需要 D3D11 兼容设备；MSR 读取、SMART ioctl、Security 事件日志需以系统管理员执行——没有权限时相关项目标示「权限不足」，程序不会假装成功，也不会静默降级。
 
@@ -423,6 +423,8 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 - 项目结构：`XinSpect/`（主程序）、`XinSpect.Decoders/`（纯解码器类库，突变测试对象）、`Tests/`（单元测试）、`BlueSquadron/`（守护进程）、`Bridge/`（XTU 桥接）、`XsRegProbe/`（驱动源码）、`docs/`（规格与账本）、`Rules/`（外部化对账规则）。
 
 ## 十七、版本沿革
+
+- **v2.78 Olympus**（2026-10-13）：平台擴充（第 293–302 項）——驅動版本變更史、EOL 包版本化、AML 位元組統計、SMI/C-state 觀測、RAPL 功率牆、記憶體訓練、CPU 熱／NIC 慢／更新卡住引導與崩潰堆疊同意閘門。全程唯讀；測試 4639 綠、目錄 591。
 
 - **v2.77 Olympus**（2026-10-13）：韌體與開機審計（第 253–272 項）——OS／驅動／BIOS／公告 EOL、EOL 儀表、依賴完整性、安裝時長、驅動更新、更新大小、任務結果碼、隱藏任務；BitLocker 保護器、UEFI Capsule、SPI 權限、SMM、dbx 世代、GPT、BCD、ELAM、WDAC、開機鏈聚合。另將 xUnit 測試集合序列化，修復 36 執行緒高負載下 testhost 崩潰；測試 4586 綠、目錄 561。
 

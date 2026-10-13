@@ -48,6 +48,18 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.78",
+            Date = "2026-10-13",
+            Title = "平台擴充（第 293–302 項）",
+            Items =
+            [
+                "平台擴充：驅動版本變更史、EOL 包版本化、AML 位元組統計、SMI/C-state 觀測、RAPL 功率牆、記憶體訓練、CPU 熱/NIC 慢/更新卡住引導與崩潰堆疊同意閘門。",
+                "誠實邊界：RAPL／SMI／C-state 讀不到不代填；AML 只掃位元組統計不解碼本體；更新與堆疊項只讀不修復、未同意永不執行。",
+                "測試 14 條（4625→4639）；固定鍵目錄 581→591。有效累計 301/600。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.77",
             Date = "2026-10-13",
             Title = "韌體與開機審計（第 253–272 項）",
