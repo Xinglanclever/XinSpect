@@ -25,9 +25,9 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 591 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 601 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
-    [
+    [
         "ac.aml.stat",
         "ac.aml.str.count",
         "ac.aml.str.sample",
@@ -106,12 +106,15 @@ public static class FactKeyCatalog
         "chipset.bios_cntl",
         "chipset.me_hfs",
         "chipset.smramc",
+        "cm.affinity.summary",
         "cm.cache.share.summary",
+        "cm.numa.proc.summary",
         "cm.whea.timeline",
         "cmos.checksum",
         "cmos.rtc_time",
         "cmos.rtc_valid",
         "cpu.die.count",
+        "cpu.eff.curve",
         "cpu.generation",
         "cpu.pkg_c2_us",
         "cpu.pkg_c3_us",
@@ -119,9 +122,12 @@ public static class FactKeyCatalog
         "cpu.pkg_c7_us",
         "cpu.pl.summary",
         "cpu.smi.cstate.summary",
+        "cpu.stepping.known",
         "cpu.thermal.events",
         "cpu.tjmax",
         "cpu.topology.smt",
+        "cpu.turbo.summary",
+        "cpu.volt.summary",
         "cxl.cfmws.count",
         "dbg.kernel",
         "dbg.start_options",
@@ -288,12 +294,16 @@ public static class FactKeyCatalog
         "mem.encryption.sgx",
         "mem.encryption.tme",
         "mem.mixmatch.summary",
+        "mem.mrc.summary",
         "mem.ras.summary",
         "mem.rowhammer",
         "mon.count",
         "mon.dp",
         "monitor.summary",
         "ms.bench.chain",
+        "ms.coresym.summary",
+        "ms.memlat.summary",
+        "ms.tlb.summary",
         "msr.0x8b",
         "mu.cam.count",
         "mu.codec.count",
