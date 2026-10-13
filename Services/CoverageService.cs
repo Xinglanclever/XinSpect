@@ -137,6 +137,7 @@ public sealed class CoverageService : ObservableObject
             // 只認「至少含一個點」的字面值，避免把一般字串也當成事實鍵。
             new Regex(@"Unavailable\(\s*(?:at\s*,\s*)?""([a-z][a-z0-9_]*(\.[a-z0-9_]+)+)"""),
             new Regex(@"Unavailable\([^,)]*,\s*""([a-z][a-z0-9_]*(\.[a-z0-9_]+)+)""\s*,"),
+            new Regex(@"Unavailable\([^,)]*,\s*""([a-z][a-z0-9_]*(\.[a-z0-9_]+)+)""\s*,\s*[^,]+,\s*[^,]+,\s*[^,]+,"),
             // 2026-10-10 執行期對帳（FactKeyRuntimeReconcileTests）抓出的下一批生產形狀：
             // 鍵以字面值傳給 helper 再建事实——SupportedBit（AMD 能力位）、BuildFact（MSR 事实）、
             // CollectSigList（簽章資料庫）、MSR 元組表（0x60D, "cpu.pkg_c2_us", …）。

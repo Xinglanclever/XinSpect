@@ -4,7 +4,7 @@
 
 一款免費開源、運行於 Windows 的原生硬體驗機、監控與安全稽核工具。以單一執行檔發佈，免安裝；對硬體與系統的讀取以唯讀為原則，少數涉及寫入的功能均設有同意閘門並明確標註風險。本程式不收集、不上傳任何使用者資料。
 
-![版本](https://img.shields.io/badge/version-2.81-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.82-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![測試](https://img.shields.io/badge/tests-4822%20passed-3FB950)
@@ -79,10 +79,10 @@
 
 | 檔案 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.81/XinSpect.exe) | 32,688,939 bytes | 主程式。藍色中隊守護進程已內建 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.81/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.82/XinSpect.exe) | 32,688,939 bytes | 主程式。藍色中隊守護進程已內建 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.82/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
 
-> **上表的位元組數為本版（v2.81）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v2.82）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
 系統需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含發佈則免裝）。顯示卡深測需要 D3D11 相容裝置；MSR 讀取、SMART ioctl、Security 事件記錄需以系統管理員執行——沒有權限時相關項目標示「權限不足」，程式不會假裝成功，也不會靜默降級。
 
@@ -427,6 +427,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.82 Olympus**（2026-10-14）：離線分析、產品平台與深測方法學（第 371–399 項）——離線 hive/evtx/minidump/BCD/裸碟/快照差異/寫入封鎖；行程樹/工作集/系統呼叫/UI 品質/截圖基線/首載預算/雙包裝/升級/遷移/多語安裝器；DPC/NUMA/熱 tau/風扇曲線/核心間延遲/內容切換/中斷親和/睡眠/環回/PSU 效率；憑證漫遊/ESP 基線。全程唯讀、L2 opt-in；測試 4822 綠、目錄 688。
 - **v2.81 Olympus**（2026-10-14）：匯流排深化、工程治理與視覺化（第 346–370 項）——TB/USB4/CXL、USB 描述元與電源角色、Hub；p95／版號語意／已知不可為／鍵 semver／混合架構／未施測／知識包／倉庫衛生／文件來源／corpus；甘特／雷達／縮放／多軸／主題。全程唯讀、無硬體一律 N/A；測試 4770 綠、目錄 659。
 - **v2.80 Olympus**（2026-10-14）：效能觀測、深測第二波與治理收口（第 323–345 項）——分頁池／壓縮／頁面錯誤／handle／GDI／頻率波動／計時器；溫度響應／功率-頻率／Vdroop／記憶體保持／電池／UPS／封包損失／原始包／多機矩陣；規則候選／保留政策／文件對帳。全程唯讀、同意閘門未同意永不執行；測試 4726 綠、目錄 634。
 - **v2.79 Olympus**（2026-10-14）：平台收口（第 303–322 項）——Turbo／能效曲線／MRC／記憶體延遲／TLB／逐核對稱／電壓／步進表／親和性／NUMA，加上儲存磨損／TBW、SMART 掉電、NVMe sanitize 能力、風扇軸承、溫度基線、開機階段、換零件對照與壽命估計。全程唯讀、查無不代填；測試 4678 綠、目錄 611。
