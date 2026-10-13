@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 561 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 571 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
         "ac.aml.str.count",
@@ -165,6 +165,7 @@ public static class FactKeyCatalog
         "dv.env.path",
         "dv.nested",
         "dv.runtime.summary",
+        "dv.sdk.summary",
         "dv.toolchain.summary",
         "dv.wsl.summary",
         "el.advisory.summary",
@@ -227,6 +228,7 @@ public static class FactKeyCatalog
         "gd.shcache.summary",
         "gd.tablet.count",
         "gd.tdr.summary",
+        "gd.vrr.summary",
         "gp.registrypol",
         "gpu.lz.driver_version",
         "gpu.lz.memory",
@@ -240,6 +242,8 @@ public static class FactKeyCatalog
         "gpu.tdr.dpc",
         "gpu.tdr.level",
         "hist.mon.summary",
+        "hist.nicerr.summary",
+        "hist.rules.summary",
         "hm.conflict.summary",
         "hm.hwdiff",
         "hm.prob.delta",
@@ -271,6 +275,8 @@ public static class FactKeyCatalog
         "mchbar.registers",
         "mem.encryption.sgx",
         "mem.encryption.tme",
+        "mem.mixmatch.summary",
+        "mem.ras.summary",
         "mem.rowhammer",
         "mon.count",
         "mon.dp",
@@ -359,6 +365,8 @@ public static class FactKeyCatalog
         "pv.ddv",
         "pv.speech.summary",
         "pv.telemetry",
+        "pv.uwp.summary",
+        "pw.battery.summary",
         "pw.ms.compat",
         "pw.plan.drift",
         "pw.shutdown.summary",
@@ -439,6 +447,7 @@ public static class FactKeyCatalog
         "sa.proxy.wininet.enable",
         "sa.proxy.wininet.override",
         "sa.proxy.wininet.server",
+        "sa.sddl.summary",
         "sa.svcbin.summary",
         "sa.uninst.summary",
         "sa.winlogon.notify.count",
@@ -569,6 +578,7 @@ public static class FactKeyCatalog
         "ws.autostart.summary",
         "ws.bootdrv.summary",
         "ws.channel.summary",
+        "ws.driver.summary",
         "ws.dumpcfg.summary",
         "ws.lsa.summary",
         "ws.minifilter.summary",

@@ -341,6 +341,18 @@ FS-002 Amcache、FS-004 SRUM、FS-015 VSS（皆需新解析器，排後）、SV-
 鍵 551→561、測試 +15（4571→4586 綠）。**有效累計 271／600；v2.77 發版點 269 已過，應發 v2.77。**
 紅線：保護器／金鑰永不輸出；Capsule 只接受使用者供檔且不上傳；SMM／SPI／GPT／BCD 只讀不寫不修復；ELAM 裝了≠在跑；WDAC 判讀不執行。
 
+### 阻塞紀錄：第 273–282 項（2026-10-13，全套 runner 崩潰）
+
+完整序列化後仍於 DeepBench 區段崩潰，dump 證實根因是 DeepBenchViewModel.RunOnUi 在 xUnit SynchronizationContext 下同步 Dispatcher.Invoke，造成 testhost 死鎖。修法：非 WPF Dispatcher 上下文原地執行，真正 UI 執行緒才排入 Dispatcher；全套 4604 綠。
+
+### 推進紀錄：第 273–282 項（2026-10-13，平台治理補充批次）
+
+10 項全計（逐項查重後皆為新增，無重複）：SA-020 服務 SDDL、CM-007 混插一致性、CM-009 SMBIOS RAS、WS-003 驅動清單、EV-019 規則命中歷史、PV-004 UWP 權限、DV-005 SDK 盤點、GD-007 VRR 交叉、AU-004 電池健康、NW-001 NIC 錯誤趨勢。
+
+鍵 561→571、測試 +18（4586→4604 綠）。**有效累計 281／600；下一個發版點 294（v2.78）。**
+紅線：SDDL／混插／RAS／驅動／WMI 等只列計數與三態；不一致或可寫是風險面不是判決；不列服務名稱、序號、套件名稱、MAC 或路徑。
+
+
 
 ### 剩餘主要工作面（供後續圈選）
 

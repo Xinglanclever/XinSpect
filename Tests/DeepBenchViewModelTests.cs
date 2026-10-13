@@ -272,7 +272,7 @@ public class DeepBenchViewModelTests
             new FakeDeepBenchTest("cpu.branch-speculation", async (_, token) =>
             {
                 await Task.Delay(Timeout.InfiniteTimeSpan, token);
-                return null!;
+                return SuccessfulResult("cancelled");
             }),
             new FakeDeepBenchTest("cpu.rdrand-rdseed", () => SuccessfulResult("cpu.rdrand-rdseed")),
             new FakeDeepBenchTest("gpu.vram-bandwidth", () => SuccessfulResult("gpu.vram-bandwidth")),
@@ -282,18 +282,18 @@ public class DeepBenchViewModelTests
             new FakeDeepBenchTest("topology.core-bandwidth", async (_, token) =>
             {
                 await Task.Delay(Timeout.InfiniteTimeSpan, token);
-                return null!;
+                return SuccessfulResult("cancelled");
             }),
             new FakeDeepBenchTest("topology.smt-contention", async (_, token) =>
             {
                 await Task.Delay(Timeout.InfiniteTimeSpan, token);
-                return null!;
+                return SuccessfulResult("cancelled");
             }),
             new FakeDeepBenchTest("topology.hybrid-placement", () => SuccessfulResult("topology.hybrid-placement")),
             new FakeDeepBenchTest("topology.coherence-lock", async (_, token) =>
             {
                 await Task.Delay(Timeout.InfiniteTimeSpan, token);
-                return null!;
+                return SuccessfulResult("cancelled");
             }),
             new FakeDeepBenchTest("memory.numa-tlb-largepage", () => SuccessfulResult("memory.numa-tlb-largepage")),
             new FakeDeepBenchTest("memory.dram-mapping-inference", () => SuccessfulResult("memory.dram-mapping-inference")),
@@ -306,7 +306,7 @@ public class DeepBenchViewModelTests
             new FakeDeepBenchTest("memory.cache-latency", async (_, token) =>
             {
                 await Task.Delay(Timeout.InfiniteTimeSpan, token);
-                return null!;
+                return SuccessfulResult("cancelled");
             }),
             new FakeDeepBenchTest("memory.stream-bandwidth", () => SuccessfulResult("memory.stream-bandwidth")),
             new FakeDeepBenchTest("memory.loaded-latency", () => SuccessfulResult("memory.loaded-latency")),

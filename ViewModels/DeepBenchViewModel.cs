@@ -308,8 +308,19 @@ public sealed class DeepBenchViewModel : ObservableObject
     private static void RunOnUi(Action action)
     {
         var dispatcher = System.Windows.Application.Current?.Dispatcher;
-        if (dispatcher is null || dispatcher.CheckAccess()) action();
-        else dispatcher.Invoke(action);
+        if (dispatcher is null || dispatcher.CheckAccess())
+        {
+            action();
+            return;
+        }
+        // xUnit／headless：SynchronizationContext 不是 WPF Dispatcher，直接原地執行；
+        // 只有真正的 WPF UI 執行緒才排入 Dispatcher，避免測試在非同步更新前斷言。
+        if (System.Threading.SynchronizationContext.Current is not System.Windows.Threading.DispatcherSynchronizationContext)
+        {
+            action();
+            return;
+        }
+        dispatcher.Invoke(action, System.Windows.Threading.DispatcherPriority.Send);
     }
 
     private void ReloadHistory()
