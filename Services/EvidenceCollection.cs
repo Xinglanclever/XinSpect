@@ -190,6 +190,8 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 LifecycleSecurityFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadDeepBenchMethodology2(); }
         catch { /* 附加功能：讀不到由 DeepBenchMethodology2FactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadEvidenceExport(); }
+        catch { /* 附加功能：讀不到由 EvidenceExportFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadSbom(); }
         catch { /* 附加功能：讀不到由 SbomService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadLifecycleReports(); }
