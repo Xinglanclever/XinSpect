@@ -3,6 +3,10 @@ namespace XinSpect;
 /// <summary>
 /// 視覺化事實（Vol2 第 366–370 項）：VR-004 開機甘特圖（<c>vr.gantt</c>）、VR-005 能力雷達圖（<c>vr.radar</c>）、
 /// VR-006 歷史圖縮放（<c>vr.zoom</c>）、VR-007 多軸對照圖（<c>vr.multiaxis</c>）、VR-008 圖表主題匯出（<c>vr.theme</c>）。
+/// <para>
+/// 第二批（2026-10-14）：VR-001 桑基資料流圖（<c>vr.sankey</c>）、VR-002 時間×感測器熱力圖（<c>vr.heatmap2d</c>）、
+/// VR-003 拓撲樹狀圖（<c>vr.tree</c>，<b>只做 2D 縮放樹，3D 明文不做</b>）。
+/// </para>
 /// </summary>
 /// <remarks>
 /// <para>
@@ -24,6 +28,9 @@ public static class VisualizationFactsService
     public const string ZoomKey = "vr.zoom";
     public const string MultiAxisKey = "vr.multiaxis";
     public const string ThemeKey = "vr.theme";
+    public const string SankeyKey = "vr.sankey";
+    public const string HeatmapKey = "vr.heatmap2d";
+    public const string TreeKey = "vr.tree";
 
     // ──────────────────────────── 探針接縫 ────────────────────────────
 
@@ -37,13 +44,22 @@ public static class VisualizationFactsService
     public delegate (int Axes, int Series)? MultiAxisProbe();
     /// <summary>（主題名, 是否深色）。</summary>
     public delegate (string Name, bool Dark)? ThemeProbe();
+    /// <summary>（節點數, 邊數, 流量總和）——桑基資料流圖。</summary>
+    public delegate (int Nodes, int Edges, double Total)? SankeyProbe();
+    /// <summary>（感測器數, 時間格數, 有值的格數）——時間×感測器熱力圖。</summary>
+    public delegate (int Sensors, int Buckets, int Filled)? HeatmapProbe();
+    /// <summary>（節點數, 最大深度, 可折疊節點數）——拓撲樹狀圖。</summary>
+    public delegate (int Nodes, int MaxDepth, int Collapsible)? TreeProbe();
 
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at,
         GanttProbe? gantt = null,
         RadarProbe? radar = null,
         ZoomProbe? zoom = null,
         MultiAxisProbe? multiAxis = null,
-        ThemeProbe? theme = null)
+        ThemeProbe? theme = null,
+        SankeyProbe? sankey = null,
+        HeatmapProbe? heatmap = null,
+        TreeProbe? tree = null)
         =>
         [
             GanttFact(at, gantt),
@@ -51,6 +67,9 @@ public static class VisualizationFactsService
             ZoomFact(at, zoom),
             MultiAxisFact(at, multiAxis),
             ThemeFact(at, theme),
+            SankeyFact(at, sankey),
+            HeatmapFact(at, heatmap),
+            TreeFact(at, tree),
         ];
 
     // ── VR-004 開機甘特圖 ──────────────────────────────────────────────
@@ -158,6 +177,115 @@ public static class VisualizationFactsService
             $"目前主題「{name}」（{(dark ? "深色" : "淺色")}）。" +
             "主題匯出只產生<b>描述字串</b>，不落檔、不上傳；主題不影響資料——換主題不會改變任何事實值。",
             "", "主題設定（呈現層）", FactTrustLevel.Reported, false, at, dark ? 1 : 0);
+    }
+
+    // ── VR-001 桑基資料流圖 ────────────────────────────────────────────
+
+    /// <summary>
+    /// 資料在節點之間流動的量（例如「容量→分割區→已用／未用」）。
+    /// </summary>
+    /// <remarks>
+    /// <b>桑基圖的誠實界線：條寬只代表流量比例，不代表好壞。</b>
+    /// 一張「已用 90%」的桑基圖看起來很嚇人，但它只是在陳述容量分配——
+    /// 是不是問題取決於那台機器的用途，本項不給判讀。
+    /// </remarks>
+    public static HardwareFact SankeyFact(DateTimeOffset at, SankeyProbe? probe = null)
+    {
+        (int Nodes, int Edges, double Total)? s;
+        try { s = (probe ?? (() => null))(); }
+        catch { s = null; }
+
+        if (s is null)
+            return new HardwareFact(SankeyKey, Cat, "桑基資料流圖", "", "", "事實並排（呈現層）",
+                FactTrustLevel.Unknown, false, at, null, FactAvailability.NotApplicable,
+                "沒有可畫成流的資料——不畫空桑基圖冒充有內容");
+
+        var (nodes, edges, total) = s.Value;
+        if (nodes == 0 || edges == 0)
+            return new HardwareFact(SankeyKey, Cat, "桑基資料流圖", "", "", "事實並排（呈現層）",
+                FactTrustLevel.Unknown, false, at, null, FactAvailability.NotApplicable,
+                "節點或邊為 0——沒有流動關係就沒有圖，不硬畫");
+
+        return new HardwareFact(SankeyKey, Cat, "桑基資料流圖",
+            $"節點 {nodes} 個、邊 {edges} 條、流量合計 {total:0.#}。" +
+            "<b>條寬只是比例</b>：桑基圖把「量怎麼分配」畫出來，不判斷分配得好不好——" +
+            "同一張圖在閒置機器與滿載機器上可以有截然不同的意義，那要配合情境看。" +
+            "節點與邊的明細來自既有事實，本項只陳述圖形狀。",
+            "條", "事實並排（呈現層）", FactTrustLevel.Derived, false, at, edges);
+    }
+
+    // ── VR-002 時間×感測器熱力圖 ──────────────────────────────────────
+
+    /// <summary>
+    /// 熱力圖的誠實界線：<b>缺格要看得出來</b>。
+    /// </summary>
+    /// <remarks>
+    /// 熱力圖最容易騙人的地方是「沒有資料」與「值是 0」長得一樣——一片深藍可能是真的涼，
+    /// 也可能是那段時間根本沒取樣。本項把有值格數與總格數並列，缺口在圖上要是缺口。
+    /// </remarks>
+    public static HardwareFact HeatmapFact(DateTimeOffset at, HeatmapProbe? probe = null)
+    {
+        (int Sensors, int Buckets, int Filled)? s;
+        try { s = (probe ?? (() => null))(); }
+        catch { s = null; }
+
+        if (s is null)
+            return new HardwareFact(HeatmapKey, Cat, "時間×感測器熱力圖", "", "", "歷史倉（呈現層）",
+                FactTrustLevel.Unknown, false, at, null, FactAvailability.NotApplicable,
+                "沒有歷史樣本——不畫空熱力圖（空白不是低溫）");
+
+        var (sensors, buckets, filled) = s.Value;
+        if (sensors == 0 || buckets == 0)
+            return new HardwareFact(HeatmapKey, Cat, "時間×感測器熱力圖", "", "", "歷史倉（呈現層）",
+                FactTrustLevel.Unknown, false, at, null, FactAvailability.NotApplicable,
+                "感測器或時間格為 0——沒有可畫的格");
+
+        double coverage = 100.0 * filled / (sensors * buckets);
+        string gap = coverage >= 99.5
+            ? "全部格子都有值"
+            : $"<b>{(sensors * buckets) - filled} 格沒有值</b>（覆蓋 {coverage:0.#}%）——" +
+              "缺格在圖上必須是缺口，不能畫成最低色，否則讀者會把「沒量到」看成「很低」";
+
+        return new HardwareFact(HeatmapKey, Cat, "時間×感測器熱力圖",
+            $"感測器 {sensors} 條・時間格 {buckets} 格・有值 {filled} 格。{gap}。" +
+            "熱力圖的用途是<b>看型態</b>（哪個時段整體偏高、哪條感測器與眾不同），" +
+            "不是看絕對值——顏色深淺經過映射，讀單格顏色不如去讀那一格的事實。",
+            "格", "歷史倉（呈現層）", FactTrustLevel.Derived, false, at, filled);
+    }
+
+    // ── VR-003 拓撲樹狀圖 ─────────────────────────────────────────────
+
+    /// <summary>
+    /// 拓撲樹的誠實界線：<b>只做 2D 可折疊樹，3D 明文不做</b>。
+    /// </summary>
+    /// <remarks>
+    /// 產品方向已定（見本類別紅線）：3D 樹狀圖在可讀性上沒有換到任何東西，
+    /// 卻讓「哪個節點連到哪個」變得要靠旋轉才看得懂。這一項回答的是
+    /// 「樹有多深、有多少節點可折疊」，不宣稱任何 3D 呈現。
+    /// </remarks>
+    public static HardwareFact TreeFact(DateTimeOffset at, TreeProbe? probe = null)
+    {
+        (int Nodes, int MaxDepth, int Collapsible)? s;
+        try { s = (probe ?? (() => null))(); }
+        catch { s = null; }
+
+        if (s is null)
+            return new HardwareFact(TreeKey, Cat, "拓撲樹狀圖", "", "", "事實並排（呈現層）",
+                FactTrustLevel.Unknown, false, at, null, FactAvailability.NotApplicable,
+                "沒有可排成樹的階層資料——不畫空樹");
+
+        var (nodes, maxDepth, collapsible) = s.Value;
+        if (nodes == 0)
+            return new HardwareFact(TreeKey, Cat, "拓撲樹狀圖", "", "", "事實並排（呈現層）",
+                FactTrustLevel.Unknown, false, at, null, FactAvailability.NotApplicable,
+                "節點為 0——沒有階層就沒有樹");
+
+        return new HardwareFact(TreeKey, Cat, "拓撲樹狀圖",
+            $"節點 {nodes} 個・最大深度 {maxDepth} 層・可折疊 {collapsible} 個。" +
+            "<b>只有 2D 可折疊樹，3D 明文不做</b>：3D 版本要靠旋轉才看得懂父子關係，" +
+            "在可讀性上沒有換到任何東西；本項只陳述樹的形狀，不宣稱任何 3D 呈現。" +
+            "樹的資料來自既有事實（PCIe／裝置樹），本項不新增層級判斷。",
+            "個", "事實並排（呈現層）", FactTrustLevel.Derived, false, at, nodes);
     }
 
     // ──────────────────────────── helper ────────────────────────────

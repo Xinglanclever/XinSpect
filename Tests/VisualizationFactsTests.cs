@@ -78,17 +78,19 @@ public class VisualizationFactsTests
     }
 
     [Fact]
-    public void 本批五把鍵齊()
+    public void 本批八把鍵齊()
     {
+        // 2026-10-14：VR-001/002/003（桑基／熱力圖／拓撲樹）併入同一支服務，故 5 → 8。
         var facts = VisualizationFactsService.Collect(At);
         string[] keys =
         [
             VisualizationFactsService.GanttKey, VisualizationFactsService.RadarKey,
             VisualizationFactsService.ZoomKey, VisualizationFactsService.MultiAxisKey,
-            VisualizationFactsService.ThemeKey,
+            VisualizationFactsService.ThemeKey, VisualizationFactsService.SankeyKey,
+            VisualizationFactsService.HeatmapKey, VisualizationFactsService.TreeKey,
         ];
         foreach (string k in keys) Assert.Contains(facts, f => f.Key == k);
-        Assert.Equal(5, facts.Count);
-        Assert.Equal(5, facts.Select(f => f.Key).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(8, facts.Count);
+        Assert.Equal(8, facts.Select(f => f.Key).Distinct(StringComparer.Ordinal).Count());
     }
 }
