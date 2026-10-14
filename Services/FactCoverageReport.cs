@@ -593,6 +593,10 @@ public static class FactCoverageReport
         ["st.fs.refs"] = "ReFS 完整性串流（ST-006）：組態計數單一來源；沒有 ReFS 卷是不適用不是 0，NTFS 沒有 Integrity Streams 這個機制。",
         ["st.fs.vss"] = "VSS 儲存空間（ST-006）：Win32_ShadowStorage 單一來源；只列空間與關聯數，不列陰影建立時間與來源機器名。",
         ["sa.bl.recovery"] = "BitLocker 復原金鑰輪廓（SA-016）：保護器型別計數單一來源；**金鑰值永不讀取、輸出、落地**（查詢欄位不含 NumericalPassword）。",
+        ["st.iscsi.sessions"] = "iSCSI 工作階段（ST-020）：MSFT_iSCSISession 單一來源；未連線是 0 條不是不適用，**不列目標位址與 IQN**。",
+        ["st.iscsi.paths"] = "iSCSI 多路徑（ST-020）：MSFT_Disk BusType=10 的路徑計數；單路徑不是缺點，不判斷哪條路徑好。",
+        ["dv.vm.count"] = "虛擬機數量（DV-006）：Msvm_ComputerSystem 單一來源；零台是誠實空清單，**不列 VM 名稱**（名稱常含專案或客戶代號）。",
+        ["dv.vm.inventory"] = "虛擬機資源配置（DV-006）：配置值不是使用量；超額配置是刻意的管理決策，本項不判斷合理性。",
         };
 
     /// <summary>一個鍵的覆蓋狀態。</summary>

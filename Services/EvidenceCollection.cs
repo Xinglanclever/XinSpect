@@ -206,6 +206,10 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 StorageDeepFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadFileSystemVolume(); }
         catch { /* 附加功能：讀不到由 FileSystemVolumeFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadIscsiSession(); }
+        catch { /* 附加功能：讀不到由 IscsiSessionFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadHyperVInventory(); }
+        catch { /* 附加功能：Hyper-V 不在時由 HyperVInventoryFactsService 標不適用，不在這裡中斷啟動 */ }
         try { svc.LoadBaselineForecast(); }
         catch { /* 附加功能：讀不到由 BaselineForecastFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadDevDiagCorrelation(); }
