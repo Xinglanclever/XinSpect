@@ -96,6 +96,8 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 ServerRoleDeepFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadServerRoleConditional(); }
         catch { /* 附加功能：讀不到由 ServerRoleConditionalFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadServerRoleFilePrint(); }
+        catch { /* 附加功能：讀不到由 ServerRoleFilePrintFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadDiskFull(); }
         catch { /* 附加功能：讀不到由 DiskFullFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadFreezeDiagnosis(); }
