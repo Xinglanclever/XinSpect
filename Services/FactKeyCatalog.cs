@@ -852,6 +852,7 @@ public static class FactKeyCatalog
         "xt.csharp",
         "xt.py",
         "xt.registry",
+        "xt.rest",
         "xt.snapshot.fs",
         "xt.sysmon.map",
         "xt.trigger",

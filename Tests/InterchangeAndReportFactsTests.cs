@@ -373,17 +373,20 @@ public class InterchangeAndReportFactsTests
     // ── 整組契約 ────────────────────────────────────────────────────────────
 
     [Fact]
-    public void 本批十把鍵齊()
+    public void 本批十一把鍵齊()
     {
+        // 10 → 11：第 541 項補上 XT-003（xt.rest，明文不做）。
+        // 它與其餘十把不同類——其餘是「產生某種輸出」的描述，它是「刻意不提供」的聲明；
+        // 但同樣是這批要對外講清楚的事，所以一起計數。
         var facts = InterchangeAndReportFactsService.Collect(At);
         string[] expected =
         [
-            "xt.csharp", "xt.py", "xt.trigger", "xt.snapshot.fs", "xt.registry",
+            "xt.csharp", "xt.py", "xt.trigger", "xt.snapshot.fs", "xt.registry", "xt.rest",
             "rs.helpfmt", "rs.svg", "rs.xlsx", "rs.print", "rs.manual",
         ];
         foreach (string key in expected)
             Assert.Contains(facts, f => f.Key == key);
-        Assert.Equal(10, facts.Count);
+        Assert.Equal(11, facts.Count);
     }
 
     [Fact]
@@ -392,6 +395,18 @@ public class InterchangeAndReportFactsTests
         var all = InterchangeAndReportFactsService.Collect(At).ToList();
         foreach (var f in all)
         {
+            // xt.rest 是例外且<b>必須</b>是例外：它「明文不做」，值是空的、信任度是 Unknown。
+            // 這裡刻意不把它排除在掃描外，而是明確斷言它的例外形狀——
+            // 若哪天有人把它改成 Derived 並填了值，代表紅線被移動了，這條會紅。
+            // 其餘所有描述鍵都應該誠實描述自己並聲明零網路。
+            if (f.Key == "xt.rest")
+            {
+                Assert.Equal(FactTrustLevel.Unknown, f.Trust);
+                Assert.Equal(FactAvailability.NotSupported, f.Availability);
+                Assert.Equal("", f.Value);
+                continue;
+            }
+
             Assert.Equal(FactTrustLevel.Derived, f.Trust);
             Assert.Contains("零網路", f.Value);
         }

@@ -10,6 +10,7 @@ namespace XinSpect;
 
 /// <summary>
 /// 外部介面與報告輸出（Vol2 推進第 123–132 項）：XT-001 C# 常數、XT-002 Python 離線讀取範例、
+/// XT-003 REST／HTTP 範例集（<b>明文不做</b>，見 <see cref="RestFact"/>）、
 /// XT-004 本機檔案觸發、XT-005 快照檔案整合、XT-006 schema registry、RS-001 匿名求助範本、
 /// RS-003 SVG 圖表、RS-004 xlsx、RS-005 列印版面、RS-012 離線手冊。
 /// </summary>
@@ -27,6 +28,8 @@ public static class InterchangeAndReportFactsService
     public const string TriggerKey = "xt.trigger";
     public const string SnapshotKey = "xt.snapshot.fs";
     public const string RegistryKey = "xt.registry";
+    /// <summary>XT-003：REST／HTTP 範例集——<b>明文不做</b>，這把鍵是那句聲明本身。</summary>
+    public const string RestKey = "xt.rest";
     public const string HelpTemplateKey = "rs.helpfmt";
     public const string SvgKey = "rs.svg";
     public const string XlsxKey = "rs.xlsx";
@@ -49,6 +52,7 @@ public static class InterchangeAndReportFactsService
         Feature(at, SnapshotKey, CatXt, "時間膠囊檔案整合",
             "可讀取既有快照 JSON，經 SHA-256 完整性驗證後回傳摘要（版本、筆數、遮蔽狀態、擷取時間）；零網路。界線：本服務不另寫第二份解析器，也不把快照原始敏感值帶進事實值。",
             "InterchangeAndReportFactsService.ReadSnapshotSummary"),
+        RestFact(at),
         Feature(at, RegistryKey, CatXt, "事實鍵 schema registry",
             $"可匯出目前 {FactKeyCatalog.Count} 把靜態鍵與 {FactKeyDynamicCatalog.Families.Count} 個動態家族的 JSON 目錄。界線：這是格式匯出，不是雲端註冊表；零網路，沒有本機網路服務。",
             "InterchangeAndReportFactsService.GenerateSchemaRegistryJson"),
@@ -498,6 +502,33 @@ public static class InterchangeAndReportFactsService
     }
 
     // ── helpers ────────────────────────────────────────────────────────────
+
+    // ── XT-003 REST／HTTP 範例集：明文不做 ──────────────────────────────
+
+    /// <summary>
+    /// XT-003：REST／HTTP 範例集<b>明文不做</b>。
+    /// <para>
+    /// 目錄列這一項，但本專案的<b>零網路紅線</b>（事實蒐集不連網、不上報、不監聽）
+    /// 讓它與 <c>ag.remote</c> 是同一類東西：能做但刻意不做。
+    /// 差別在於這一項連「範例」都不該出——一份可用的 REST 範例集會被拿去貼進別的專案，
+    /// 而那些程式碼一旦存在，就有人會拿它去連本工具<b>沒有承諾要開的</b>端點。
+    /// </para>
+    /// <para>
+    /// 所以這把鍵不出範例，只出<b>聲明</b>：不出範例的理由、替代路徑（本機 CLI 與檔案交換）、
+    /// 以及「什麼情況下這個決定才該重新討論」。<b>「不做」本身是可稽核的事實</b>，
+    /// 比留一個空白的待辦項目誠實。
+    /// </para>
+    /// </summary>
+    public static HardwareFact RestFact(DateTimeOffset at)
+        => new(RestKey, CatXt, "REST／HTTP 範例集（明文不做）", "", "", "零網路政策",
+            FactTrustLevel.Unknown, false, at, null, FactAvailability.NotSupported,
+            "本專案的事實蒐集與交換都走本機路徑：CLI 的 --json 輸出與快照／報告檔案，" +
+            "兩者都不需要任何端點。出 REST 範例集等於提供一份可以拿去連本工具" +
+            "沒有承諾要開的端點的程式碼——範例一旦存在就會被複製到別的專案，" +
+            "而它在那裡違反的是同一個紅線。替代路徑（都已存在）：" +
+            "① CLI --json 取單次快照；② 快照／報告檔案由呼叫端自己搬。" +
+            "重新討論的條件＝使用者明確要求 API 入口並同意 loopback 綁定與 token 政策" +
+            "（與 LocalApiHandler 的判定一致，見 WiringDecisions.Deferred）。");
 
     private static HardwareFact Feature(DateTimeOffset at, string key, string category, string name, string value, string source)
         => new(key, category, name, value, "", source, FactTrustLevel.Derived, false, at);
