@@ -856,6 +856,8 @@ public static class FactKeyCatalog
         "xt.trigger",
         "zr.aadj",
         "zr.cba",
+        "zr.compliance.baseline",
+        "zr.compliance.table",
         "zr.dynlock",
         "zr.mdm",
         "zr.passkey",
