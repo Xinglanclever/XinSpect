@@ -264,6 +264,9 @@ public sealed class EvidenceLabService : ObservableObject
     {
         var at = DateTimeOffset.UtcNow;
         SoftwareFacts = WindowsUpdateHistoryService.Collect(at)
+            // UF-002 重試鏈：與 wu.history.* 共用同一份歷史，但換一個聚合視角——
+            // 「同一個 KB 失敗七次」與「七個 KB 各失敗一次」在 wu.history.failed 上長得一樣。
+            .Concat(UpdateRetryFactsService.Collect(at, WindowsUpdateHistoryService.FetchCom()))
             .Concat(ServiceInventoryService.Collect(at))
             .Concat(EventLogSummaryService.Collect(at))
             .Concat(AuditPolicyService.Collect(at))

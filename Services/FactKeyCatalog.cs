@@ -772,6 +772,8 @@ public static class FactKeyCatalog
         "uf.driver.summary",
         "uf.duration.summary",
         "uf.ready",
+        "uf.retry.count",
+        "uf.retry.summary",
         "uf.servicing",
         "uf.size.summary",
         "uf.source",

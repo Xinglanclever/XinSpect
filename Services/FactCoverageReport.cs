@@ -599,6 +599,7 @@ public static class FactCoverageReport
         ["dv.vm.inventory"] = "虛擬機資源配置（DV-006）：配置值不是使用量；超額配置是刻意的管理決策，本項不判斷合理性。",
         ["ac.cpc.summary"] = "CPPC 能力輪廓（AC-002）：CPUID／事件／登錄三個 OS 層來源；**刻意不解碼 AML 的 _CPC 物件**——解不出來卻有值比誠實說沒有更糟。",
         ["gp.pollrate"] = "滑鼠輪詢率（GP-004）：Raw Input 取樣量測；取樣窗內無輸入是不適用不是 0 Hz，且取樣期間必須標註。",
+        ["uf.retry."] = "更新失敗重試鏈（UF-002）：wu.history 的聚合視角；重試不等於失敗，門檻看失敗次數不是嘗試次數。",
         };
 
     /// <summary>一個鍵的覆蓋狀態。</summary>
