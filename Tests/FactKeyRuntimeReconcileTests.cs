@@ -47,10 +47,25 @@ public class FactKeyRuntimeReconcileTests
     private static EvidenceLabService LoadBothEntries()
     {
         var svc = new EvidenceLabService();
+        // 儲存收口的 NVMe 探針在這裡走注入：本條驗的是「執行期產出的鍵都在目錄裡」，
+        // 不是磁碟回應速度。真碟的紀錄頁查詢會卡在驅動裡好幾秒（離線的介面卡尤其），
+        // 那會讓這條對帳測試卡到連結果都印不出來。鍵與三態照樣由服務產生，對帳不受影響。
+        using var readers = StorageAndScenarioReconciliationFactsService.UseReaders(new SyntheticStorageReaders());
         EvidenceCollection.ReloadInto(svc);          // 驅動後端組
         EvidenceCollection.LoadUsermodeFacts(svc);   // usermode 組
         svc.LoadPlatformFacts();                     // 平台全組（App 啟動序列的第三條入口）
         return svc;
+    }
+
+    /// <summary>對帳用的合成儲存讀取器：值固定，鍵與三態照規格產生。</summary>
+    private sealed class SyntheticStorageReaders : StorageAndScenarioReconciliationFactsService.IReaders
+    {
+        public IReadOnlyList<StorageAndScenarioReconciliationFactsService.WearSample>? Wear() =>
+            [new(7, 512.5, 1424, 100)];
+
+        public (ulong UnsafeShutdowns, ulong PowerCycles)? PowerLoss() => (5, 200);
+
+        public bool? Sanitize() => null;
     }
 
     [Fact]

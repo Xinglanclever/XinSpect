@@ -442,6 +442,30 @@ public class UiSmokeTests
         ];
     }
 
+    /// <summary>
+    /// 煙霧測試用的儲存讀取器：把 NVMe 探針換成固定的合成值。
+    /// </summary>
+    /// <remarks>
+    /// <b>為什麼需要</b>：<c>EvidenceCollection.LoadUsermodeFacts</c> 會一併跑儲存收口那一支，
+    /// 那裡對<b>真實磁碟</b>下 NVMe 紀錄頁查詢——本機的兩顆碟那個查詢會卡在驅動裡好幾秒，
+    /// 於是這條「驗接線」的測試變成在驗磁碟，還會拖住整個行程。
+    /// 合成值只餵三態與組裝路徑，磁碟本身的行為由儲存類別自己的測試負責。
+    /// </remarks>
+    private sealed class FakeNvmeReaders : StorageAndScenarioReconciliationFactsService.IReaders
+    {
+        public IReadOnlyList<StorageAndScenarioReconciliationFactsService.WearSample>? Wear() =>
+        [
+            new(7, 512.5, 1424, 100),
+        ];
+
+        public (ulong UnsafeShutdowns, ulong PowerCycles)? PowerLoss() => (5, 200);
+
+        public bool? Sanitize() => null;
+    }
+
+    private static IDisposable FakeNvme() =>
+        StorageAndScenarioReconciliationFactsService.UseReaders(new FakeNvmeReaders());
+
     private static void RunFirmwareRows(List<string> failures)
     {
         WpfEnv.Ensure();
@@ -456,8 +480,10 @@ public class UiSmokeTests
             var vm = new MainViewModel();   // 與煙霧測試同一個慣例：絕不呼叫 Initialize()
 
             // 這一筆是本條測試的重點：走的是 UI 與 CLI 共用的那一條組裝點，
-            // 所以它同時驗證了「接線真的接上了」。
-            EvidenceCollection.LoadUsermodeFacts(vm.EvidenceLab, new TwoDiskStorageSource());
+            // 所以它同時驗證了「接線真的接上了」。儲存收口的 NVMe 探針在這裡改走注入
+            // （見 FakeNvme）：真實裝置上那是幾秒級的驅動查詢，而本條要驗的是接線。
+            using (FakeNvme())
+                EvidenceCollection.LoadUsermodeFacts(vm.EvidenceLab, new TwoDiskStorageSource());
 
             if (!vm.EvidenceLab.FirmwareSecurityRows.Any(r => r.Name.Contains("磨損程度")))
                 failures.Add("資料沒到達頁面：FirmwareSecurityRows 找不到儲存可靠性的列——接線斷了。");

@@ -21,6 +21,14 @@ namespace XinSpect;
 /// <b>逾時後不重試、不換路徑</b>：卡住的那條 I/O 還在核心裡排隊，再發一次只是多卡一條，
 /// 而且會讓「哪一顆碟有問題」變得更難查。
 /// </para>
+/// <para>
+/// <b>這不是萬靈丹（2026-10-14 補記）</b>：「不等它」只保證<b>呼叫端</b>能繼續，卡住的執行緒
+/// <b>永遠不會回來、也永遠不釋放</b>。同一條查詢若被反覆呼叫（NVMe 紀錄頁就是），執行緒集區
+/// 會被一條條吃光，最後整個行程連測試結果都印不出來。可取消的路走<b>可取消的 overlapped I/O</b>
+/// （<see cref="StorageSmartService.TryReadNvmeLog"/> 即此：FILE_FLAG_OVERLAPPED ＋
+/// <c>WaitForSingleObject</c> 逾時後 <c>CancelIoEx</c>）。規則：<b>能取消的 I/O 用 overlapped 取消；
+/// 只有取消不了的同步 IOCTL 才用這裡的洩執行緒法。</b>
+/// </para>
 /// </remarks>
 public static class DiskIo
 {

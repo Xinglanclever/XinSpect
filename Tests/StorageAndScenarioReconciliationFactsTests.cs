@@ -193,7 +193,12 @@ public class StorageAndScenarioReconciliationFactsTests
     [Fact]
     public void 本批十把鍵齊()
     {
-        var facts = StorageAndScenarioReconciliationFactsService.Collect(At);
+        // 走注入的讀取器：這條驗的是「十把鍵都在、不重複」，不是磁碟行為。
+        // 真實探針會對實機下 NVMe 查詢（本機那兩顆會卡在驅動裡），那是另一組測試的責任。
+        var facts = StorageAndScenarioReconciliationFactsService.Collect(At,
+            wear: () => [Wear(7, 512.5, 1424, 100)],
+            powerLoss: () => (5UL, 200UL),
+            sanitize: () => null);
         string[] keys =
         [
             StorageAndScenarioReconciliationFactsService.WearKey,

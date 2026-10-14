@@ -138,10 +138,19 @@ public class StorageProbeBreakerTests
             + "請改走 GuardedRead／GuardedReadValue，否則這條查詢每輪都會重付逾時");
 
         // 定義是泛型方法（GuardedRead&lt;T&gt;），不會被這個樣式算進去；數到的是呼叫端。
+        // NVMe 紀錄頁（TryReadNvmeLog）已改走可取消的 overlapped I/O，不經看門狗，所以是 6 條。
         int wired = Regex.Matches(source, @"GuardedRead(Value)?\s*\(").Count;
-        Assert.True(wired >= 7,
-            $"只掃到 {wired} 處 GuardedRead／GuardedReadValue 呼叫（預期至少 7 條受保護的協定查詢）；"
+        Assert.True(wired >= 6,
+            $"只掃到 {wired} 處 GuardedRead／GuardedReadValue 呼叫（預期至少 6 條受保護的協定查詢）；"
             + "新增受保護查詢時請一起接上斷路器");
+
+        // NVMe 紀錄頁不適合看門狗，改走可取消的 overlapped I/O：它自己接斷路器
+        // （ShouldSkip ＋ Report），否則既不經 GuardedRead、又沒進斷路器就是個漏洞。
+        int nvmeAt = source.IndexOf("public static byte[]? TryReadNvmeLog", StringComparison.Ordinal);
+        Assert.True(nvmeAt > 0, "找不到 TryReadNvmeLog");
+        string nvme = source.Substring(nvmeAt, 1200);
+        Assert.Contains("StorageProbeBreaker.ShouldSkip", nvme);
+        Assert.Contains("StorageProbeBreaker.Report", nvme);
     }
 
     /// <summary>讀原始碼樹裡的檔案（路徑相對於倉庫根目錄）。從測試輸出目錄往上找 csproj。</summary>

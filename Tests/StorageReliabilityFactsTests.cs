@@ -179,6 +179,8 @@ public class StorageReliabilityFactsTests
         var svc = new EvidenceLabService();
         var source = new FakeSource { Rows = [Blank with { DeviceId = 0, Wear = 12 }] };
 
+        // 儲存收口的 NVMe 探針走注入：本條釘的是「來源有接進事實清單」，不是磁碟回應。
+        using var readers = StorageAndScenarioReconciliationFactsService.UseReaders(new SyntheticStorageReaders());
         EvidenceCollection.LoadUsermodeFacts(svc, source);
 
         Assert.NotEmpty(svc.StorageReliabilityFacts);
@@ -195,6 +197,9 @@ public class StorageReliabilityFactsTests
         // 附加功能：來源爆炸（注入一個會丟的假來源）不能讓啟動或 CLI 整批失敗。
         var svc = new EvidenceLabService();
 
+        // 儲存收口的 NVMe 探針走注入：本條只管「來源爆炸不外洩」，不該順便去問實機磁碟
+        // （本機的紀錄頁查詢會卡在驅動裡，會讓這條測試卡住而不是失敗）。
+        using var readers = StorageAndScenarioReconciliationFactsService.UseReaders(new SyntheticStorageReaders());
         EvidenceCollection.LoadUsermodeFacts(svc, new ThrowingSource());
 
         // 三態要留下痕跡，不是靜默什麼都沒有——空集合讀起來像「沒問題」。
@@ -208,6 +213,17 @@ public class StorageReliabilityFactsTests
         public bool Available => true;
         public string? UnavailableReason => null;
         public IReadOnlyList<StorageReliabilityRaw> Read() => throw new InvalidOperationException("WMI 整個炸掉");
+    }
+
+    /// <summary>合成儲存讀取器：鍵與三態照規格產生，值固定，不碰實機。</summary>
+    private sealed class SyntheticStorageReaders : StorageAndScenarioReconciliationFactsService.IReaders
+    {
+        public IReadOnlyList<StorageAndScenarioReconciliationFactsService.WearSample>? Wear() =>
+            [new(7, 512.5, 1424, 100)];
+
+        public (ulong UnsafeShutdowns, ulong PowerCycles)? PowerLoss() => (5, 200);
+
+        public bool? Sanitize() => null;
     }
 
     [Fact]

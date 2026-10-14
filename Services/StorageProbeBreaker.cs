@@ -78,6 +78,23 @@ public static class StorageProbeBreaker
     /// <summary>把「跳過」計一次——只給診斷用量，不影響行為。</summary>
     public static void CountSkip() => Interlocked.Increment(ref _skipped);
 
+    /// <summary>
+    /// 直接回報這個（磁碟, 查詢）的結果，不走 <see cref="DiskIo"/> 看門狗。
+    /// </summary>
+    /// <returns><c>true</c>＝讀到了，順便把記錄清掉；<c>false</c>＝沒讀到，記下失敗。</returns>
+    /// <remarks>
+    /// <b>為什麼需要（2026-10-14）</b>：NVMe 紀錄頁改走可取消的 overlapped I/O 之後，
+    /// 那條路<b>自己就知道</b>逾時（<c>CancelIoEx</c> 分支），不必再從看門狗繞一圈——
+    /// 繞一圈會讓同一次查詢被兩種逾時機制各記一次帳，還會多留一條執行緒。
+    /// 記帳語意與 <see cref="Trip"/> 相同：沒讀到就記，冷卻期間 <see cref="ShouldSkip"/> 直接跳過。
+    /// </remarks>
+    public static bool Report(int index, string op, bool read, long? nowMs = null)
+    {
+        if (read) { Tripped.TryRemove((index, op), out _); return true; }
+        Trip(index, op, nowMs);
+        return false;
+    }
+
     /// <summary>清空所有記錄與計數（測試用）。</summary>
     public static void Reset()
     {

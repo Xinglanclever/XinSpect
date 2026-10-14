@@ -70,6 +70,43 @@ public static class StorageAndScenarioReconciliationFactsService
     /// <summary>兩份快照的相異鍵數（換零件對照：由時間膠囊差異推導）。</summary>
     public delegate (int Changed, int Added, int Removed)? SwapProbe();
 
+    /// <summary>
+    /// 讀取器接縫：預設就是真實的唯讀探針。存在的理由是讓<b>不碰硬體</b>的呼叫端
+    /// （UI 煙霧測試走的就是 <c>EvidenceCollection.LoadUsermodeFacts</c> 那條組裝點）
+    /// 可以不對著實機下驅動查詢——本機的 NVMe 紀錄頁查詢會卡在驅動裡好幾秒，
+    /// 那是歸屬不明的回歸：測試綠不綠不該取決於哪顆碟插著。
+    /// </summary>
+    public interface IReaders
+    {
+        IReadOnlyList<WearSample>? Wear();
+        (ulong UnsafeShutdowns, ulong PowerCycles)? PowerLoss();
+        bool? Sanitize();
+    }
+
+    private sealed class LiveReaders : IReaders
+    {
+        public IReadOnlyList<WearSample>? Wear() => ReadWear();
+        public (ulong, ulong)? PowerLoss() => ReadPowerLoss();
+        public bool? Sanitize() => ReadSanitize();
+    }
+
+    private static IReaders _readers = new LiveReaders();
+
+    /// <summary>暫時換掉讀取器，<c>Dispose</c> 時還原；巢狀呼叫會疊回前一層。</summary>
+    /// <remarks>給不碰硬體的呼叫端用（見 <see cref="IReaders"/>）；正式路徑不換。</remarks>
+    public static IDisposable UseReaders(IReaders readers)
+    {
+        ArgumentNullException.ThrowIfNull(readers);
+        var previous = _readers;
+        _readers = readers;
+        return new Restore(previous);
+    }
+
+    private sealed class Restore(IReaders previous) : IDisposable
+    {
+        public void Dispose() => _readers = previous;
+    }
+
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at,
         WearProbe? wear = null,
         PowerLossProbe? powerLoss = null,
@@ -100,7 +137,7 @@ public static class StorageAndScenarioReconciliationFactsService
     public static HardwareFact WearFact(DateTimeOffset at, WearProbe? probe = null)
     {
         IReadOnlyList<WearSample>? rows;
-        try { rows = (probe ?? ReadWear)(); }
+        try { rows = (probe ?? (() => _readers.Wear()))(); }
         catch { rows = null; }
 
         if (rows is null)
@@ -145,7 +182,7 @@ public static class StorageAndScenarioReconciliationFactsService
     public static HardwareFact PowerLossFact(DateTimeOffset at, PowerLossProbe? probe = null)
     {
         (ulong UnsafeShutdowns, ulong PowerCycles)? s;
-        try { s = (probe ?? ReadPowerLoss)(); }
+        try { s = (probe ?? (() => _readers.PowerLoss()))(); }
         catch { s = null; }
 
         if (s is null)
@@ -182,7 +219,7 @@ public static class StorageAndScenarioReconciliationFactsService
     public static HardwareFact SanitizeFact(DateTimeOffset at, SanitizeProbe? probe = null)
     {
         bool? capable;
-        try { capable = (probe ?? ReadSanitize)(); }
+        try { capable = (probe ?? (() => _readers.Sanitize()))(); }
         catch { capable = null; }
 
         if (capable is null)
@@ -209,7 +246,7 @@ public static class StorageAndScenarioReconciliationFactsService
     public static HardwareFact NvmeErrorFact(DateTimeOffset at, WearProbe? probe = null)
     {
         IReadOnlyList<WearSample>? rows;
-        try { rows = (probe ?? ReadWear)(); }
+        try { rows = (probe ?? (() => _readers.Wear()))(); }
         catch { rows = null; }
 
         if (rows is null)
@@ -230,7 +267,7 @@ public static class StorageAndScenarioReconciliationFactsService
     public static HardwareFact NvmeExtraFact(DateTimeOffset at, WearProbe? probe = null)
     {
         IReadOnlyList<WearSample>? rows;
-        try { rows = (probe ?? ReadWear)(); }
+        try { rows = (probe ?? (() => _readers.Wear()))(); }
         catch { rows = null; }
 
         if (rows is null)

@@ -524,6 +524,20 @@ public static class FactCoverageReport
         ["bl.life"] = "壽命預估（BL-003）：磨損事實線性外推；0% 不是無限，估計不是預言。",
         ["mu.drm.summary"] = "DRM 就緒（MU-003）：PlayReady 登錄存在性；不測播放、不讀授權或金鑰。",
         ["mu.spatial.summary"] = "空間音訊（MU-006）：MMDevices 端點登錄宣告；不開裝置、不測空間效果。",
+        ["eg.ci"] = "CI 守門（EG-011）：工作流存在性與硬體測試排除宣告；不執行 CI，runner 差異另述。",
+        ["eg.prtemplate"] = "PR/issue 模板（EG-012）：模板存在性；只陳述有無，不評內容品質。",
+        ["eg.perfregress"] = "效能回歸守門（EG-014）：啟動基線與容差；容差為區分環境噪音，非放寬標準。",
+        ["eg.docslinks"] = "docs 連結驗證（EG-017）：相對連結掃描計數；0 斷裂是值，不判文件正確性。",
+        ["eg.security"] = "SECURITY.md（EG-019）：披露流程存在性；管道存在不等於已處理任何通報。",
+        ["eg.pagenav"] = "逐頁導覽文件（EG-020）：頁面與截圖計數；截圖需與當前版同步，不在本項驗證。",
+        ["eg.arm64"] = "ARM64 路徑（EG-021）：平台路徑存在性與施測宣告；有代碼不等於已驗證。",
+        ["eg.winbranch"] = "Win10/11 分支守門（EG-022）：版本相依 API 計數與降級測試宣告；不逐 API 判定。",
+        ["eg.fuzz"] = "結構化 fuzz（EG-023）：harness 與格式計數；有 harness 不等於無缺陷。",
+        ["eg.realcorpus"] = "真實樣本語料（EG-024）：解碼器與 fixture 計數；敏感資料必遮蔽，不列內容。",
+        ["eg.coverage"] = "覆蓋率自動化（EG-025）：行覆蓋率數字與基線宣告；低覆蓋率不如實判品質。",
+        ["eg.keydocs"] = "鍵 API 文件產生（EG-027）：鍵數與產生來源；與 FactKeyCatalog 同源避免漂移。",
+        ["eg.snapshot.matrix"] = "新舊快照互讀矩陣（EG-028）：版本與組合計數；少於兩版不假裝有矩陣。",
+        ["eg.selftel"] = "SelfTelemetry 可視化（EG-030）：遙測啟用與本機限定宣告；預設關閉、不上傳。",
         };
 
     /// <summary>一個鍵的覆蓋狀態。</summary>

@@ -543,6 +543,46 @@ FW-024 FPDT、FW-025 UEFI 變數屬性、FW-007 dbx SBAT 補充、FW-013 WDAC �
 「應有」需 SpecRef 級源；不刪不改 UEFI 變數；只呈現設定不判繞過。
 
 
+### 推進紀錄：第 470–483 項（2026-10-14，工程治理二批次）
+
+14 項全計（逐項查重後皆為新增，無重複）：EG-011 GitHub Actions CI、EG-012 PR/issue 模板、
+EG-014 效能回歸守門、EG-017 docs 連結驗證、EG-019 SECURITY.md 披露流程、EG-020 逐頁導覽文件、
+EG-021 ARM64 路徑、EG-022 Win10/11 分支守門、EG-023 結構化 fuzz、EG-024 真實樣本語料、
+EG-025 覆蓋率自動化、EG-027 鍵 API 文件產生、EG-028 新舊快照互讀矩陣、EG-030 SelfTelemetry 可視化。
+
+鍵 757→771、測試 +26（4919→4945 綠，exit 0）。**有效累計 482／600。**
+紅線：守門類只陳述狀態不執行；ARM64／Win 分支未施測一律標明；fuzz／語料敏感資料必遮蔽；
+覆蓋率低不代表品質差要如實；未提供／未建立一律三態（fuzz 無 harness、快照單版都標 NotApplicable）。
+
+### 缺陷修復：NVMe 紀錄頁卡死（2026-10-14，同批）
+
+**症狀**：全套測試跑到一半整個行程凍住，連測試結果都印不出來；`taskkill /F` 也殺不掉。
+
+**根因**（`work/hangdiag*.ps1`、`work/p*.dmp` 的 `dotnet-dump` 傾印）：數十條執行緒全停在
+`StorageSmartService.ReadNvmeLogCore` 的 `DeviceIoControl`。本機那顆狀態為<b>裝置故障</b>的
+NVMe 對日誌頁查詢卡在驅動的逾時佇列（`SRB_STATUS_SELECTION_TIMEOUT`），兩種逾時機制都攔不住：
+
+1. `DiskIo` 的「逾時就不等它」只讓<b>呼叫端</b>繼續，卡住的執行緒<b>永遠不回來也不釋放</b>——
+   每讀一次洩一條，把執行緒集區吃光。
+2. `TryReadNvmeLog` 又套了 `GuardedRead` ＋ 外層 `Task.Wait(6s)`，同一次查詢被兩種逾時各記一次帳。
+
+**修復**：NVMe 紀錄頁改走<b>可取消的 overlapped I/O</b>（`FILE_FLAG_OVERLAPPED` ＋
+`WaitForSingleObject(3s)` ＋ 逾時 `CancelIoEx`），結果直接回報 `StorageProbeBreaker.Report`
+（新增）；`DiskIo` 的文件補上「這不是萬靈丹」與「能取消的用 overlapped，只有取消不了的
+同步 IOCTL 才用洩執行緒法」的規則。斷路器成為「不再製造新的卡死執行緒」的唯一防線。
+
+**測試汙染一併修**：`FactKeyRuntimeReconcileTests`、`StorageReliabilityFactsTests`、
+`UiSmokeTests` 走共用組裝點時會碰真碟。新增 `StorageAndScenarioReconciliationFactsService.IReaders`
+接縫（`UseReaders`，可疊回），讓只驗接線與鍵對帳的測試改走合成讀取器——
+<b>測試綠不綠不該取決於哪顆碟插著。</b>真碟行為仍由儲存類別自己的測試負責。
+
+**新增守門**：`Tests/NvmeOverlappedIoTests.cs`（不存在裝置快速回 null、冷卻期間直接跳過、
+靜態掃描確認沒人把 NVMe 查詢接回洩執行緒的看門狗）。
+
+### 推進紀錄：待續（第 484 項起）
+
+剩餘較大的域：ST（11）、SA（9）、BL（9）、UX 尾（8）、AC（5）、IN（5）、DL（5）。
+
 ### 剩餘主要工作面（供後續圈選）
 
 - 需要新解析器／通路的：FS-002 Amcache、FS-004 SRUM、FS-015 VSS、DS-002 DHA（TPM attest 未施測聲明可先做）、UF-008 更新大小史。

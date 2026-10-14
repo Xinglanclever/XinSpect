@@ -54,12 +54,33 @@ public sealed class StorageSmartService : ObservableObject
     private static extern bool DeviceIoControl(IntPtr device, uint ioControlCode, byte[]? inBuffer, uint inSize,
         byte[] outBuffer, uint outSize, out uint returned, IntPtr overlapped);
 
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool CancelIoEx(IntPtr device, IntPtr overlapped);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr CreateEvent(IntPtr attributes, bool manualReset, bool initialState, string? name);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GetOverlappedResult(IntPtr device, IntPtr overlapped, out uint transferred, bool wait);
+
+    [DllImport("kernel32.dll", EntryPoint = "RtlZeroMemory")]
+    private static extern void ZeroMemory(IntPtr destination, UIntPtr length);
+
     [DllImport("kernel32.dll")]
     private static extern bool CloseHandle(IntPtr handle);
 
     private const uint GenericRead = 0x80000000;
     private const uint OpenExisting = 3;
     private const uint ShareReadWrite = 0x1 | 0x2;
+    private const uint FileFlagOverlapped = 0x40000000;
+    private const uint ErrorIOPending = 997;
+    private const uint Infinite = 0xFFFFFFFF;
+
+    /// <summary>OVERLAPPED 結構在 64 位元的大小；拿來配置與歸零，不靠 <c>Marshal.SizeOf</c> 猜。</summary>
+    private const int OverlappedSize = 32;
+
+    /// <summary>NVMe 紀錄頁查詢的等待上限；逾時就真的取消 I/O。</summary>
+    private const uint NvmeLogTimeoutMs = 3000;
     private const uint IoctlStorageQueryProperty = 0x2D1400;
     private const uint IoctlSmartRcvDriveData = 0x7C82C;   // CTL_CODE(IOCTL_DISK_BASE, 0x220B, METHOD_BUFFERED, FILE_READ_ACCESS)
     private const uint PropertyIdDeviceProperty = 0;
@@ -293,19 +314,80 @@ public sealed class StorageSmartService : ObservableObject
         finally { CloseHandle(handle); }
     }
 
+    /// <summary>
+    /// 以 <b>overlapped</b> 模式開啟 <c>\\.\PHYSICALDRIVE{index}</c>：這是磁碟 I/O 唯一能真的取消的路。
+    /// </summary>
+    /// <remarks>
+    /// 原本用 <c>OpenExisting</c> 同步開啟，配合 <see cref="DiskIo.Guarded{T}"/> 的「逾時就不等它」策略。
+    /// 2026-10-14 傾印（<c>work/hangdiag.ps1</c>）顯示那個策略有洞：<c>Task.Wait(timeout)</c> 逾時後，
+    /// 執行緒其實卡在 <c>DeviceIoControl</c> 的核心不可中斷等待，<b>永遠不釋放</b>——每讀一顆逾時的碟就洩一條，
+    /// 一路把執行緒集區吃光，最後整個行程沒有一條執行緒能繼續，全套測試連結果都印不出來。
+    /// 逾時放棄只是「呼叫端不等」，不是「I/O 結束」。
+    /// </remarks>
+    private static IntPtr OpenDriveOverlapped(int index)
+    {
+        var h = CreateFile($@"\\.\PHYSICALDRIVE{index}", GenericRead, ShareReadWrite, IntPtr.Zero,
+            OpenExisting, FileFlagOverlapped, IntPtr.Zero);
+        return h == new IntPtr(-1) ? IntPtr.Zero : h;
+    }
+
+    /// <summary>同步的 <c>DeviceIoControl</c>；呼叫端負責確保 <paramref name="overlapped"/> 不為 0。</summary>
+    [DllImport("kernel32.dll", EntryPoint = nameof(DeviceIoControl), SetLastError = true)]
+    private static extern bool DeviceIoControlSync(IntPtr device, uint ioControlCode, byte[]? inBuffer, uint inSize,
+        byte[] outBuffer, uint outSize, out uint returned, IntPtr overlapped);
+
     // ── NVMe ───────────────────────────────────────────────────────────────
 
-    /// <summary>以 StorageDeviceProtocolSpecificProperty 取指定 NVMe 紀錄頁 512 位元組；失敗或逾時回 null。</summary>
-    /// <remarks>走 <see cref="DiskIo.Guarded"/>：見 <c>Services/DiskIo.cs</c> 的實測記錄。</remarks>
+    /// <summary>
+    /// 以 StorageDeviceProtocolSpecificProperty 取指定 NVMe 紀錄頁 512 位元組；失敗或逾時回 null。
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>這一條不走 <see cref="DiskIo"/> 看門狗</b>（2026-10-14 改）：<see cref="ReadNvmeLogCore"/> 用
+    /// overlapped I/O 開檔，逾時由它自己的 <c>WaitForSingleObject</c> 判定並呼叫 <c>CancelIoEx</c>
+    /// 真的取消；沒讀到再由 <see cref="StorageProbeBreaker.Report"/> 記帳。
+    /// </para>
+    /// <para>
+    /// <b>為什麼不能走看門狗</b>：看門狗「逾時就不等它」會把整條查詢丟在一條永遠不回來的執行緒上，
+    /// 而且外層也知道不了那次逾時。本機那顆介面卡把日誌頁的等待卡死時（<c>SRB_STATUS_SELECTION_TIMEOUT</c>），
+    /// 看門狗三秒就放棄、卻對底層驅動下不了取消——於是每一輪都多洩一條執行緒，一路把整份執行緒集區
+    /// 吃光，整套測試跑到連結果都印不出來（<c>work/hangdiag*.ps1</c>、<c>work/stack*.txt</c> 的傾印）。
+    /// </para>
+    /// <para>
+    /// <b>取消是「請求」不是「保證」</b>：<c>CancelIoEx</c> 會立即讓呼叫端拿回控制權，但底層 IRP
+    /// 仍可能被卡在驅動的取消常式裡。因此這裡<b>不套用外層 timeout</b>——套了也只會多留一條執行緒，
+    /// 換不到更短的等待；真正的防護是斷路器：一次不回應之後，冷卻期間直接跳過，不再製造新的卡死執行緒，
+    /// 也不再讓每一輪等它三秒。
+    /// </para>
+    /// </remarks>
     public static byte[]? TryReadNvmeLog(int index, uint logPage = NvmeLogPageHealth)
-        => GuardedRead(index, $"{nameof(TryReadNvmeLog)}.{logPage}", () => ReadNvmeLogCore(index, logPage));
-
-    private static byte[]? ReadNvmeLogCore(int index, uint logPage)
     {
-        var handle = OpenDrive(index);
-        if (handle == IntPtr.Zero) return null;
+        string op = $"{nameof(TryReadNvmeLog)}.{logPage}";
+        if (StorageProbeBreaker.ShouldSkip(index, op)) { StorageProbeBreaker.CountSkip(); return null; }
+
+        var (log, timedOut) = ReadNvmeLogCore(index, logPage);
+        StorageProbeBreaker.Report(index, op, log is not null && !timedOut);
+        return log;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern uint WaitForSingleObject(IntPtr handle, uint milliseconds);
+
+    private static (byte[]? Log, bool TimedOut) ReadNvmeLogCore(int index, uint logPage)
+    {
+        var handle = OpenDriveOverlapped(index);
+        if (handle == IntPtr.Zero) return (null, false);
+
+        // 事件與重疊結構手動配置：這條路徑沒有 SafeHandle，出事時靠 finally 逐一釋放。
+        IntPtr evt = IntPtr.Zero, ov = IntPtr.Zero;
         try
         {
+            evt = CreateEvent(IntPtr.Zero, true, false, null);
+            if (evt == IntPtr.Zero) return (null, false);
+            ov = Marshal.AllocHGlobal(OverlappedSize);
+            ZeroMemory(ov, OverlappedSize);
+            Marshal.WriteIntPtr(ov, IntPtr.Size, evt);   // OVERLAPPED.hEvent 在 64 位元是 offset 8
+
             const int header = 48;   // STORAGE_PROPERTY_QUERY(8) + STORAGE_PROTOCOL_SPECIFIC_DATA(40)
             var buf = new byte[header + 512];
             BitConverter.GetBytes(PropertyIdProtocolSpecificDevice).CopyTo(buf, 0);   // PropertyId
@@ -318,14 +400,37 @@ public sealed class StorageSmartService : ObservableObject
             BitConverter.GetBytes(512u).CopyTo(buf, 28);                              // ProtocolDataLength
 
             // METHOD_BUFFERED：輸入與輸出共用同一緩衝區，命令頭必須以輸入傳入才會到達驅動
-            if (!DeviceIoControl(handle, IoctlStorageQueryProperty, buf, (uint)buf.Length, buf, (uint)buf.Length, out uint ret, IntPtr.Zero))
-                return null;
-            if (ret < header + 512) return null;
+            bool ok = DeviceIoControlSync(handle, IoctlStorageQueryProperty, buf, (uint)buf.Length, buf, (uint)buf.Length, out uint ret, ov);
+            if (!ok)
+            {
+                uint err = (uint)Marshal.GetLastWin32Error();
+                if (err != ErrorIOPending) return (null, false);
+
+                // 還在跑：等它，最多 NvmeLogTimeoutMs。逾時就 CancelIoEx 請求取消，並在
+                // 取消請求送達後再等一下，讓驅動有機會回應——本機實測：取消請求本身可能被卡在
+                // 裝置的逾時佇列裡（SRB_STATUS_SELECTION_TIMEOUT），所以底層 I/O 有可能仍繼續；
+                // 這裡只確保「送出取消」並回報逾時，剩下交給斷路器不再重問。
+                uint wait = WaitForSingleObject(evt, NvmeLogTimeoutMs);
+                if (wait != 0 /* WAIT_OBJECT_0 */)
+                {
+                    CancelIoEx(handle, ov);
+                    WaitForSingleObject(evt, 2500);   // 給驅動一點時間回應取消，順便確保緩衝區不再被寫
+                    return (null, true);
+                }
+                if (!GetOverlappedResult(handle, ov, out ret, false)) return (null, false);
+            }
+
+            if (ret < header + 512) return (null, false);
             var log = new byte[512];
             Array.Copy(buf, header, log, 0, 512);
-            return log;
+            return (log, false);
         }
-        finally { CloseHandle(handle); }
+        finally
+        {
+            if (ov != IntPtr.Zero) Marshal.FreeHGlobal(ov);
+            if (evt != IntPtr.Zero) CloseHandle(evt);
+            CloseHandle(handle);
+        }
     }
 
     /// <summary>NVMe 健康紀錄（512B）→ 資料列。位移依 NVMe 1.3+ 規格的 SMART / Health Information log。</summary>
