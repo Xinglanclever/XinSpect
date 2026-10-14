@@ -113,6 +113,8 @@ public static class FactCoverageReport
         ["dl.gc."] = "GC 模式與計數（DL-009）：本行程執行期狀態，無第二來源。",
         ["dl.modconflict."] = "模組衝突（DL-010）：Process.Modules 單來源；同名不等於惡意，判定不機器化。",
         ["hm.wake."] = "裝置喚醒（HM-004）：powercfg 原樣輸出、不解析在地化文字——無法機器交叉。",
+        ["fs.srum.count"] = "SRUM 資料庫骨架（FS-004）：**只讀結構不讀內容**——不列行程、不列帳號、不列資料量；沒有資料庫是「沒有這份資料」不是 0 筆。",
+        ["fs.srum.range"] = "SRUM 涵蓋範圍（FS-004）：日期只到「日」不到「時」；保留期到了不代表機器沒在用。",
         ["fs.privacy.boundary"] = "隱私禁項邊界（FS-013）：禁令清單本身，由 ForensicBanGateTests 機器釘住。",
         ["qs.unit"] = "單位標示檢查（QS-004）：讀的是事實集自己的 Unit 欄，沒有第二來源可交叉。",
         ["qs.index"] = "查詢索引統計（QS-006）：域前綴計數，純鍵集運算。",

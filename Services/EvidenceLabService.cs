@@ -693,6 +693,15 @@ public sealed class EvidenceLabService : ObservableObject
         PresentObservationFacts = PresentObservationFactsService.Collect(DateTimeOffset.UtcNow);
     }
 
+    /// <summary>SRUM 讀回（FS-004）：系統資源使用量資料庫的結構與覆蓋範圍。
+    /// <b>只讀骨架不讀內容</b>——不列行程、不列帳號、不列資料量；未注入探針＝不適用。</summary>
+    public IReadOnlyList<HardwareFact> SrumReadbackFacts { get; private set; } = [];
+
+    public void LoadSrumReadback()
+    {
+        SrumReadbackFacts = SrumReadbackService.Collect(DateTimeOffset.UtcNow);
+    }
+
     /// <summary>LoadUsermodeFacts 的 ESP 掃描段：列舉 .efi 檔並與 dbx 交叉引用。</summary>
     public void LoadEspScan()
     {
@@ -1533,7 +1542,7 @@ public sealed class EvidenceLabService : ObservableObject
             var baseFacts = ChipsetFacts.Concat(SpiFlashFacts).Concat(PcieAerFacts).Concat(PciCapabilityFacts).Concat(SpiHashFacts).Concat(FitFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
                 .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
                 .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(TpmReplayFacts)
-                .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EtwFilterViewFacts).Concat(FsMetadataLatencyFacts).Concat(PresentObservationFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(ListenPortFacts).Concat(LocalSecurityAuditFacts)
+                .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EtwFilterViewFacts).Concat(FsMetadataLatencyFacts).Concat(PresentObservationFacts).Concat(SrumReadbackFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(ListenPortFacts).Concat(LocalSecurityAuditFacts)
                 .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ComplianceFacts).Concat(ServerComplianceFacts).Concat(ServerRoleDeepFacts).Concat(ServerRoleConditionalFacts).Concat(ServerRoleFilePrintFacts).Concat(MaintenanceFacts).Concat(EnvironmentRuntimeFacts).Concat(ClosingFacts).Concat(QueryInsightFacts).Concat(ChecklistFacts).Concat(TrustOpsFacts).Concat(ZeroTrustFacts).Concat(DataSecurityFacts).Concat(EndpointPolicyFacts).Concat(ScenarioFacts).Concat(ScenarioSecondWaveFacts).Concat(MultimediaFacts).Concat(MediaProtectionFacts).Concat(ExportCacheFacts).Concat(MaintenanceDashboardFacts).Concat(VolumeEncryptionFacts).Concat(QueryGovernanceFacts).Concat(LifecycleReportsFacts).Concat(GovernanceExtraFacts).Concat(InterchangeReportFacts).Concat(AutomationGuidanceFacts).Concat(ServiceModeFacts).Concat(RecoveryPowerInteropFacts).Concat(EnvironmentDiagnosticsFacts).Concat(AdvancedSupplementFacts).Concat(OperationsInventoryFacts).Concat(NetworkSystemInventoryFacts).Concat(InventoryGovernanceFacts).Concat(NetworkSecurityInventoryFacts).Concat(FinalInventoryFacts).Concat(RecoveryInventoryFacts).Concat(RecoveryDisplayFacts).Concat(SecurityAuditSupplementFacts).Concat(LifecycleMaintenanceFacts).Concat(FirmwareAuditFacts).Concat(PlatformGovernanceFacts).Concat(PlatformDeepDiveFacts).Concat(PlatformExpansionFacts).Concat(PlatformReconciliationFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(StorageScenarioReconciliationFacts).Concat(PerformanceObservationFacts).Concat(ServiceBootFacts).Concat(DeepBenchSecondWaveFacts).Concat(GovernanceKnowledgeFacts).Concat(BusDeepDiveFacts).Concat(BusCapabilityFacts).Concat(EngineeringGovernanceFacts).Concat(VisualizationFacts).Concat(OfflineAnalysisFacts).Concat(ProductPlatformFacts).Concat(MeasurementMethodologyFacts).Concat(LifecycleSecurityFacts).Concat(DeepBenchMethodology2Facts).Concat(EvidenceExportFacts).Concat(ExportUxFacts).Concat(UserExperience2Facts).Concat(GpuDeepFacts).Concat(FirmwareDeepFacts).Concat(EngineeringGovernance2Facts).Concat(StorageDeepFacts).Concat(FileSystemVolumeFacts).Concat(IscsiSessionFacts).Concat(HyperVInventoryFacts).Concat(BaselineForecastFacts).Concat(DevDiagCorrelationFacts).Concat(SecurityAuditDeepFacts).Concat(BitLockerRecoveryFacts).Concat(AcpiDeepFacts).Concat(CppcCapabilityFacts).Concat(MousePollRateFacts).Concat(DataSecurityDeepFacts).Concat(ScenarioThirdWaveFacts).Concat(SbomFacts)
                 .ToList();
             baseFacts.AddRange(CapabilityMatrixService.Collect(baseFacts, DateTimeOffset.UtcNow));
