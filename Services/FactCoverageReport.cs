@@ -553,6 +553,12 @@ public static class FactCoverageReport
         ["bl.pattern"] = "負載模式分類（BL-009）：穩健分群結果；推測級聲明，不對每一群貼用途標籤。",
         ["dl.dll.summary"] = "逐行程 DLL（DL-006）：L2 聚合視角，未同意則 NotApplicable；只列計數與判定，不列路徑。",
         ["dl.leak.summary"] = "句柄哨兵（DL-007）：本行程 handle 斜率加區間；訊號不是判決，單調上升可能只是載入快取。",
+        ["sa.ads.deep"] = "替代資料流掃描（SA-011）：只掃系統目錄可執行檔；未檢查不等於乾淨。",
+        ["sa.uninst.deep"] = "已安裝程式簽章（SA-012）：解除安裝清單的簽章計數；未通過不是惡意判決。",
+        ["sa.logon.deep"] = "登入歷史聚合（SA-015）：只到聚合層級；不列使用者名稱、來源位址或時間點。",
+        ["sa.svcbin.deep"] = "服務二進位 ACL（SA-017）：可寫＝劫持面非已劫持；不列服務名稱或路徑。",
+        ["sa.path.deep"] = "PATH 可寫性（SA-018）：防禦視角唯讀；可寫目錄也可能是刻意設計。",
+        ["sa.sddl.deep"] = "服務 SDDL 權限（SA-020）：權限事實非漏洞判決；兩組計數並列，判斷留給使用者。",
         };
 
     /// <summary>一個鍵的覆蓋狀態。</summary>

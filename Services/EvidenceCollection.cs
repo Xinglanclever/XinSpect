@@ -208,6 +208,8 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 BaselineForecastFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadDevDiagCorrelation(); }
         catch { /* 附加功能：讀不到由 DevDiagAndCorrelationFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadSecurityAuditDeep(); }
+        catch { /* 附加功能：讀不到由 SecurityAuditDeepFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadSbom(); }
         catch { /* 附加功能：讀不到由 SbomService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadLifecycleReports(); }

@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 782 個。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 788 個。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
 
@@ -579,6 +579,7 @@ public static class FactKeyCatalog
         "sa.a11y.sethc.exe",
         "sa.a11y.utilman.exe",
         "sa.acct.summary",
+        "sa.ads.deep",
         "sa.ads.summary",
         "sa.appinit.load",
         "sa.appinit.read",
@@ -592,17 +593,22 @@ public static class FactKeyCatalog
         "sa.exposure.remote_registry",
         "sa.exposure.winrm",
         "sa.ifeo.scan",
+        "sa.logon.deep",
         "sa.logon.summary",
         "sa.lsp.count",
         "sa.lsp.read",
+        "sa.path.deep",
         "sa.path.summary",
         "sa.proxy.read",
         "sa.proxy.winhttp.server",
         "sa.proxy.wininet.enable",
         "sa.proxy.wininet.override",
         "sa.proxy.wininet.server",
+        "sa.sddl.deep",
         "sa.sddl.summary",
+        "sa.svcbin.deep",
         "sa.svcbin.summary",
+        "sa.uninst.deep",
         "sa.uninst.summary",
         "sa.winlogon.notify.count",
         "sa.winlogon.read",
