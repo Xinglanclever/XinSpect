@@ -94,7 +94,9 @@ public class FactKeyCatalogTests
         // 20 → 21（2026-10-14）：in.deps.（已載入模組逐條一筆，檔名任意、只有被判「值得看」的才產鍵）——
         // 把逐條模組從彙總值字串裡拉出來成獨立鍵，是為了讓「哪幾個模組沒簽章」能被單獨選取與匯出；
         // 成員集由這個行程當下載入了什麼決定，編譯期列不完。
-        const int FamilyCap = 21;
+        // 21 → 22（2026-10-14）：dl.dll.（逐行程模組明細，行程名任意、僅 L2 同意時產鍵）——
+        // 與 in.deps. 同一個理由：明細要能被單獨選取／匯出，而成員集由機器當下的行程決定。
+        const int FamilyCap = 22;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 

@@ -549,6 +549,10 @@ public static class FactCoverageReport
         ["bl.boot.summary"] = "開機基線（BL-008）：本機多次開機的自基線；不是廠商標稱值，單次快慢都可能是更新。",
         ["bl.ci.summary"] = "預測不確定性（BL-011）：本批衍生值與區間覆蓋計數；不確定性與數字一起交付。",
         ["bl.quality"] = "資料品質聲明（BL-012）：具名列出樣本缺口；不給分數，讓人自己判斷哪條預測能用。",
+        ["bl.corr.summary"] = "相關性探索（BL-006）：平滑後相關強度為判準；觀察不是因果，兩條單調序列相關係數趨近 ±1。",
+        ["bl.pattern"] = "負載模式分類（BL-009）：穩健分群結果；推測級聲明，不對每一群貼用途標籤。",
+        ["dl.dll.summary"] = "逐行程 DLL（DL-006）：L2 聚合視角，未同意則 NotApplicable；只列計數與判定，不列路徑。",
+        ["dl.leak.summary"] = "句柄哨兵（DL-007）：本行程 handle 斜率加區間；訊號不是判決，單調上升可能只是載入快取。",
         };
 
     /// <summary>一個鍵的覆蓋狀態。</summary>
