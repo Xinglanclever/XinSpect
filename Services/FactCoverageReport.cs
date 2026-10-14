@@ -603,6 +603,8 @@ public static class FactCoverageReport
         ["dv.vm.count"] = "虛擬機數量（DV-006）：Msvm_ComputerSystem 單一來源；零台是誠實空清單，**不列 VM 名稱**（名稱常含專案或客戶代號）。",
         ["dv.vm.inventory"] = "虛擬機資源配置（DV-006）：配置值不是使用量；超額配置是刻意的管理決策，本項不判斷合理性。",
         ["ac.cpc.summary"] = "CPPC 能力輪廓（AC-002）：CPUID／事件／登錄三個 OS 層來源；**刻意不解碼 AML 的 _CPC 物件**——解不出來卻有值比誠實說沒有更糟。",
+        ["gp.present.summary"] = "幀呈現觀測（GP-003）：呈現鏈路 liveness 三態單一來源；**「沒看到」不等於「沒有畫面」**，呈現模式不解析就不顯示。",
+        ["gp.present.count"] = "逐行程呈現計數（GP-003）：以 pid 與匿名序號表示，**不列行程名稱**；事件數不是幀數保證，不當 FPS 用。",
         ["gp.pollrate"] = "滑鼠輪詢率（GP-004）：Raw Input 取樣量測；取樣窗內無輸入是不適用不是 0 Hz，且取樣期間必須標註。",
         ["uf.retry."] = "更新失敗重試鏈（UF-002）：wu.history 的聚合視角；重試不等於失敗，門檻看失敗次數不是嘗試次數。",
         ["mu.drm.components"] = "DRM 元件盤點（MU-003）：固定候選機碼清單的存在性與版本；元件存在不等於可播，不讀授權、金鑰或內容識別碼。",
