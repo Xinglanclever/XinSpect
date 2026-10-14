@@ -538,6 +538,12 @@ public static class FactCoverageReport
         ["eg.keydocs"] = "鍵 API 文件產生（EG-027）：鍵數與產生來源；與 FactKeyCatalog 同源避免漂移。",
         ["eg.snapshot.matrix"] = "新舊快照互讀矩陣（EG-028）：版本與組合計數；少於兩版不假裝有矩陣。",
         ["eg.selftel"] = "SelfTelemetry 可視化（EG-030）：遙測啟用與本機限定宣告；預設關閉、不上傳。",
+        ["st.ctrl.tree"] = "控制器拓撲（ST-007）：控制器歸屬與模式列舉；模式有韌體差異，讀不到即三態不猜。",
+        ["st.bridge.summary"] = "外接盒橋接（ST-009）：VID/PID 對離線知識表；未收錄一律標明，不用相近型號猜。",
+        ["st.ss.summary"] = "儲存池拓撲（ST-013）：池／實體／虛擬碟計數；無池為 NotApplicable 非錯誤。",
+        ["st.fw.known"] = "韌體問題表（ST-014）：離線表快照日期必印；無表如實說沒有可比對的東西。",
+        ["st.xcheck.summary"] = "WMI 交叉核對（ST-016）：兩個來源的列舉差異；不一致是矛盾不是錯誤。",
+        ["st.dwpd"] = "DWPD 估計（ST-018）：裝置自報累計寫入攤到通電時間；明標估計非預測。",
         };
 
     /// <summary>一個鍵的覆蓋狀態。</summary>
