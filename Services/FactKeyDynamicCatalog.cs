@@ -68,6 +68,9 @@ public static class FactKeyDynamicCatalog
                 "只有明示同意（L2）時才產鍵，dl.dll.summary 彙總鍵仍在靜態目錄。",
             ["role.installed."] =
                 "Windows 伺服器角色／功能逐一筆（角色名）——裝了哪些是这台機器的安裝事實，一台 Core 機能有幾十個角色；name 含大寫與連字號，本就不符合全鍵目錄的格式規定，必須走家族",
+            ["tpm.replay.pcr."] =
+                "TPM 開機鏈重放逐 PCR 一筆（PCR 索引），本機只算 SHA-256——" +
+                "該跑哪些 PCR、機器上實作了哪幾條，由 TCG log 與 TPM 自己決定；tpm.replay.summary 彙總鍵仍在靜態目錄。",
         };
 
     /// <summary>執行期鍵是否命中某個已登記的動態家族。</summary>

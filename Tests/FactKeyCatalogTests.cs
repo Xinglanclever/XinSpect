@@ -96,7 +96,10 @@ public class FactKeyCatalogTests
         // 成員集由這個行程當下載入了什麼決定，編譯期列不完。
         // 21 → 22（2026-10-14）：dl.dll.（逐行程模組明細，行程名任意、僅 L2 同意時產鍵）——
         // 與 in.deps. 同一個理由：明細要能被單獨選取／匯出，而成員集由機器當下的行程決定。
-        const int FamilyCap = 22;
+        // 22 → 23（2026-10-14）：tpm.replay.pcr.（開機鏈重放逐 PCR 一筆）——tpm.replay.pcr.sha256.{index}
+        // 早就以執行期鍵的形式在產，卻一直沒有家族登記，目錄覆蓋掃描把它照成「FW-002 未實作」的假缺口；
+        // 補登記之後 FW-002 的 `tpm.replay.*` 才對得上。該跑哪幾條 PCR 由 TCG log 與 TPM 決定。
+        const int FamilyCap = 23;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 
