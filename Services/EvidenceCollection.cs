@@ -71,6 +71,8 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 SetupApiTimelineService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadEtlReadback(); }
         catch { /* 附加功能：讀不到由 EtlReadbackService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadEtwFilterView(); }
+        catch { /* 附加功能：讀不到由 EtwFilterViewService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadEspScan(); }
         catch { /* 附加功能：讀不到由 EspScanService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadAudioEndpoints(); }

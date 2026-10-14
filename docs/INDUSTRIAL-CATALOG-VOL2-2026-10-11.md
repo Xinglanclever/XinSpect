@@ -141,7 +141,7 @@
 |---|---|---|---|---|---|---|
 | FS-001 | Shimcache 解碼 | AppCompatCache→`fs.shim.*` | 執行痕跡≠執行成功 | 金標＋真 fixture | M | L2 |
 | FS-002 | Amcache 解碼 | 已裝/執行痕跡→`fs.amcache.*` | 同上 | 金標 | M | L2 |
-| FS-003 | Prefetch 解碼 | 執行歷史→`fs.prefetch.*` | 同上 | 金標 | M | L2 |
+| FS-003 | Prefetch 解碼 | 執行歷史→`fs.pf.*`（出貨名） | 同上 | 金標 | M | L2 |
 | FS-004 | SRUM 讀回 | 資源/網路使用史→`fs.srum.*` | 隱私聚合聲明；opt-in | 解析測試 | L | L2 |
 | FS-005 | USN Journal 讀回 | 檔案變更時間線→`fs.usn.*` | 大量資料分頁化 | 解析測試 | M | L2 |
 | FS-006 | $MFT 基本統計 | 記錄數/大小→`fs.mft.stat` | 不解全文 | 統計測試 | S | L1 |

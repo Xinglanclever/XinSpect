@@ -107,6 +107,8 @@ public static class FactCoverageReport
         ["in.elevation."] = "提權最小化審計（IN-005）：輸入是本輪事實的可用性，自己對自己交叉無意義。",
         ["ng.history"] = "導覽歷史（NG-005）：只在記憶體的使用者行為軌跡（L1），刻意不落盤不交叉。",
         ["dl.sympath"] = "符號路徑（DL-003）：環境變數單來源。",
+        ["dl.etw.summary"] = "ETW 篩選視圖（DL-001）：既有 .etl 的事後過濾單一來源；**留下與丟掉都要報**，空子集不是「沒發生過」。",
+        ["dl.etw.filter"] = "ETW 逐提供者篩選結果（DL-001）：同一次讀回的提供者分布；不建立新工作階段、不啟用任何提供者。",
         ["dl.threadpool."] = "線程池（DL-008）：本行程執行期狀態，無第二來源。",
         ["dl.gc."] = "GC 模式與計數（DL-009）：本行程執行期狀態，無第二來源。",
         ["dl.modconflict."] = "模組衝突（DL-010）：Process.Modules 單來源；同名不等於惡意，判定不機器化。",
