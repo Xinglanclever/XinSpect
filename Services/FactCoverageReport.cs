@@ -609,6 +609,7 @@ public static class FactCoverageReport
         ["sg.usbslow"] = "USB 為什麼慢（SG-008）：複用 UsbLinkDecoder.Judge 的判讀；分清楚是線材還是埠（處置不同），空清單不講成正常。",
         ["sg.audio"] = "聲音為什麼斷（SG-010）：只並列 APO／端點／預設三個面向，不斷言元凶——排除法的起點。",
         ["fw.fpdt.post"] = "FPDT 開機階段（FW-024）：版面出處 ACPI 5.2.24＋Linux fpdt.h；表缺席是不適用不是 0 秒，時間軸回捲不回 0。",
+        ["ng.checklist"] = "自訂檢查清單（NG-002）：使用者資產，逐行驗證並帶行號；不做靜默部分成功，認不得的鍵名不算錯，只驗證不執行。",
         };
 
     /// <summary>一個鍵的覆蓋狀態。</summary>

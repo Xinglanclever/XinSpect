@@ -442,6 +442,7 @@ public static class FactKeyCatalog
         "net.listen.entries",
         "net.listen.unverified",
         "net.offload",
+        "ng.checklist",
         "ng.coverage.covered",
         "ng.coverage.exempt",
         "ng.coverage.headline",

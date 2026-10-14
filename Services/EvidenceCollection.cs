@@ -110,6 +110,8 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 ClosingFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadQueryInsight(); }
         catch { /* 附加功能：讀不到由 QueryInsightFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadChecklist(); }
+        catch { /* 附加功能：沒有清單檔時由 ChecklistFactsService 標不適用，不在這裡中斷啟動 */ }
         try { svc.LoadTrustOps(); }
         catch { /* 附加功能：讀不到由 TrustOpsFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadZeroTrust(); }
