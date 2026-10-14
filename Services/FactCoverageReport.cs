@@ -559,6 +559,12 @@ public static class FactCoverageReport
         ["sa.svcbin.deep"] = "服務二進位 ACL（SA-017）：可寫＝劫持面非已劫持；不列服務名稱或路徑。",
         ["sa.path.deep"] = "PATH 可寫性（SA-018）：防禦視角唯讀；可寫目錄也可能是刻意設計。",
         ["sa.sddl.deep"] = "服務 SDDL 權限（SA-020）：權限事實非漏洞判決；兩組計數並列，判斷留給使用者。",
+        ["ac.pwres.summary"] = "電源資源 _PRx（AC-004）：只到存在性與計數；內容在 AML 位元碼裡，無評估層即不宣稱。",
+        ["ac.dsm.summary"] = "_DSM GUID（AC-005）：只列 GUID 與計數；GUID 語意須對規格書，本項不代查不猜用途。",
+        ["ac.bgrt.deep"] = "BGRT 開機 logo（AC-011）：表本身的存在與欄位；有表不等於開機畫面會顯示。",
+        ["ac.spcr.deep"] = "SPCR 序列主控台（AC-012）：配置事實；不開啟任何序列埠、不送字元。",
+        ["ac.dbg2.deep"] = "DBG2 除錯埠（AC-013）：埠存在性；不開啟、不寫入、不探測除錯埠。",
+        ["ac.tables.deep"] = "ACPI 表匯總（AC-018）：版本與校驗和分布；逐表列舉在既有那條路上，不重複列。",
         };
 
     /// <summary>一個鍵的覆蓋狀態。</summary>
