@@ -422,8 +422,11 @@ public class UiSmokeTests
         thread.IsBackground = true;
         thread.Start();
 
-        if (!thread.Join(TimeSpan.FromMinutes(1)))
-            failures.Add("證據頁事實列煙霧測試逾時（1 分鐘未完成）。");
+        // 60 秒是**全套同時跑**時實測值的三倍以上（單獨跑約 25 秒）：全套裡它要和
+        // 服務孤兒掃描（讀完整棵原始碼樹）之類的重工作爭 I/O。過短的橋接只會製造
+        // 「這條測試偶爾紅」的假訊號，而那種紅燈最後會訓練大家忽略紅燈。
+        if (!thread.Join(TimeSpan.FromMinutes(3)))
+            failures.Add("證據頁事實列煙霧測試逾時（3 分鐘未完成）。");
 
         Assert.True(failures.Count == 0,
             $"證據頁事實列發現 {failures.Count} 項問題：" + Environment.NewLine

@@ -48,6 +48,19 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.83",
+            Date = "2026-10-14",
+            Title = "工程治理二（第 470–483 項）＋ NVMe 紀錄頁卡死修復",
+            Items =
+            [
+                "工程治理二：CI 守門、PR/issue 模板、效能回歸容差、docs 連結驗證、SECURITY.md 披露流程、逐頁導覽、ARM64 路徑、Win10/11 分支守門、結構化 fuzz、真實樣本語料、覆蓋率、鍵 API 文件、快照互讀矩陣、SelfTelemetry 可視化。",
+                "守門類只陳述狀態不執行；未施測（ARM64／Win 分支）一律標明；fuzz 與語料敏感資料必遮蔽；覆蓋率低不代表品質差要如實；未建立／未提供一律三態。",
+                "修復（NVMe 紀錄頁卡死）：改走可取消的 overlapped I/O（FILE_FLAG_OVERLAPPED ＋ WaitForSingleObject ＋ CancelIoEx），結果回報儲存斷路器。原本看門狗「逾時就不等它」會讓卡在核心等待的執行緒永遠不釋放，每讀一次洩一條、把執行緒集區吃光——本機故障碟的 SRB_STATUS_SELECTION_TIMEOUT 就是這樣讓整套測試卡到連結果都印不出來。",
+                "測試汙染：新增儲存讀取器接縫，讓只驗接線與鍵對帳的測試改走合成讀取器，不再對實機下驅動查詢。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.82",
             Date = "2026-10-14",
             Title = "離線分析、產品平台與深測方法學（第 371–399 項）",
