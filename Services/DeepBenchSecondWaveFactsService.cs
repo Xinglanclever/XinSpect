@@ -37,6 +37,8 @@ public static class DeepBenchSecondWaveFactsService
     public const string RawPackKey = "tu.rawpack";
     public const string MatrixKey = "tu.matrix";
     public const string NightlyKey = "tu.nightly";
+    /// <summary>TU-008：本機抖動量測（opt-in，白名單目標）——與 ms.ping 同一套白名單政策。</summary>
+    public const string JitterKey = "tu.jitter";
 
     // ──────────────────────────── 探針接縫 ────────────────────────────
 
@@ -50,6 +52,8 @@ public static class DeepBenchSecondWaveFactsService
     public delegate (int FactCount, int SensitiveCount)? RawPackProbe();
     public delegate (int Machines, int Metrics)? MatrixProbe();
     public delegate bool? NightlyProbe();
+    /// <summary>（目標, 樣本數, p50 ms, p95 ms, 抖動 ms, 損失率）——<b>目標由使用者指定，未指定＝不出網</b>。</summary>
+    public delegate (string Target, int Samples, double P50Ms, double P95Ms, double JitterMs, double LossRate)? JitterProbe();
 
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at,
         ThermRespProbe? thermResp = null,
@@ -61,7 +65,8 @@ public static class DeepBenchSecondWaveFactsService
         PktLossProbe? pktLoss = null,
         RawPackProbe? rawPack = null,
         MatrixProbe? matrix = null,
-        NightlyProbe? nightly = null)
+        NightlyProbe? nightly = null,
+        JitterProbe? jitter = null)
         =>
         [
             ThermRespFact(at, thermResp),
@@ -74,6 +79,7 @@ public static class DeepBenchSecondWaveFactsService
             RawPackFact(at, rawPack),
             MatrixFact(at, matrix),
             NightlyFact(at, nightly),
+            JitterFact(at, jitter),
         ];
 
     // ── TU-002 溫度響應矩陣 ────────────────────────────────────────────
@@ -213,6 +219,58 @@ public static class DeepBenchSecondWaveFactsService
             "這是使用者明確觸發的結果；轉換次數多不代表 UPS 有問題，要看是否與實際停電對應。",
             "次", "UPS 量測（同意閘門）", FactTrustLevel.Measured, false, at, transfers);
     }
+
+    // ── TU-008 本機抖動量測（opt-in 白名單）─────────────────────────────
+
+    /// <summary>
+    /// 抖動量測：對<b>使用者指定</b>的目標量測延遲分布。
+    /// <para>
+    /// 與 <c>ms.ping</c>（MS-007）<b>同一套白名單政策</b>：目標由使用者輸入，
+    /// 不自動掃描、不預設目標；未注入探針＝<b>絕不出網</b>。
+    /// 差別在量的東西：<c>ms.ping</c> 報中位與抖動，本項另外報 <b>p95 與損失率</b>——
+    /// 因為「網路能不能用」的感受取決於尾端與掉包，不是平均值。
+    /// </para>
+    /// <para>
+    /// <b>紅線：</b>① 未指定目標＝NotApplicable（不是「抖動 0 ms」）；
+    /// ② <b>抖動不是本機效能</b>——它同時反映路徑、對端與無線環境，
+    /// 所以值裡不寫「網路品質良好」這類結論；③ <b>樣本數要報</b>：
+    /// 五個樣本算出來的 p95 幾乎沒有意義，數字要與樣本量一起看；
+    /// ④ 抖動定義寫明（相鄰樣本差的平均絕對值），免得與對端工具比數字時定義不同。
+    /// </para>
+    /// </summary>
+    public static HardwareFact JitterFact(DateTimeOffset at, JitterProbe? probe = null)
+    {
+        (string Target, int Samples, double P50Ms, double P95Ms, double JitterMs, double LossRate)? s;
+        try { s = (probe ?? (() => null))(); }
+        catch { s = null; }
+
+        if (s is null)
+            return new HardwareFact(JitterKey, CatNet, "本機抖動量測", "", "", "—",
+                FactTrustLevel.Unknown, false, at, null, FactAvailability.NotApplicable,
+                "opt-in 白名單模式：需使用者明確指定目標才出網——未指定＝絕不出網。" +
+                "未指定時不報「抖動 0 ms」：0 代表量到很穩，與「沒量」是完全不同的兩件事");
+
+        var (target, samples, p50, p95, jitter, loss) = s.Value;
+        // 樣本太少時 p95 幾乎沒有統計意義，這件事要在值裡看得見。
+        string sampleNote = samples < MinJitterSamples
+            ? $"<b>樣本僅 {samples} 個（低於 {MinJitterSamples}）——p95 與抖動的統計意義有限</b>，只作方向參考"
+            : $"樣本 {samples} 個";
+
+        return new HardwareFact(JitterKey, CatNet, "本機抖動量測",
+            $"目標「{target}」・{sampleNote}・p50 {p50:0.#} ms・p95 {p95:0.#} ms・" +
+            $"抖動 {jitter:0.#} ms（相鄰樣本差的平均絕對值）・損失 {loss:P1}。" +
+            "<b>使用者指定才出網</b>：與 ms.ping 同一套白名單政策，目標由使用者輸入，" +
+            "不自動掃描、不預設目標。" +
+            "<b>抖動不是本機效能</b>——它同時反映路徑、對端與無線環境，" +
+            "所以本項不寫「網路品質良好」這類結論，只出數字。" +
+            "<b>為什麼看 p95 與損失率不只平均</b>：能不能用取決於尾端與掉包——" +
+            "平均 20 ms 但 p95 200 ms 的線路，視訊會議會斷，而平均值看起來很漂亮。" +
+            "抖動的定義這裡寫明了，因為不同工具定義不同，跨工具比數字會得出錯的結論。",
+            "ms", "使用者指定的目標（opt-in 出網，白名單）", FactTrustLevel.Measured, false, at, jitter);
+    }
+
+    /// <summary>低於這個樣本數時 p95 幾乎沒有統計意義（值裡會標明）。</summary>
+    public const int MinJitterSamples = 20;
 
     // ── TU-009 封包損失趨勢 ────────────────────────────────────────────
 

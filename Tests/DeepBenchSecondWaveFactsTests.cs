@@ -179,8 +179,9 @@ public class DeepBenchSecondWaveFactsTests
 
     // 整批鍵齊
     [Fact]
-    public void 本批十把鍵齊()
+    public void 本批十一把鍵齊()
     {
+        // 10 → 11：第 543 項補上 TU-008（tu.jitter，本機抖動量測）。
         var facts = DeepBenchSecondWaveFactsService.Collect(At);
         string[] keys =
         [
@@ -194,10 +195,11 @@ public class DeepBenchSecondWaveFactsTests
             DeepBenchSecondWaveFactsService.RawPackKey,
             DeepBenchSecondWaveFactsService.MatrixKey,
             DeepBenchSecondWaveFactsService.NightlyKey,
+            DeepBenchSecondWaveFactsService.JitterKey,
         ];
         foreach (string k in keys)
             Assert.Contains(facts, f => f.Key == k);
-        Assert.Equal(10, facts.Count);
-        Assert.Equal(10, facts.Select(f => f.Key).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(11, facts.Count);
+        Assert.Equal(11, facts.Select(f => f.Key).Distinct(StringComparer.Ordinal).Count());
     }
 }

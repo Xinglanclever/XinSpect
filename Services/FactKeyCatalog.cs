@@ -760,6 +760,7 @@ public static class FactKeyCatalog
         "tpm.replay.summary",
         "tpm.tcg_log",
         "tu.battery",
+        "tu.jitter",
         "tu.matrix",
         "tu.memhold",
         "tu.nightly",
