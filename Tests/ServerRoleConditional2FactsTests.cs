@@ -224,13 +224,80 @@ public class ServerRoleConditional2FactsTests
     // ── 共同契約 ─────────────────────────────────────────────────────────
 
     [Fact]
-    public void 三項共用收集點回三把鍵()
+    public void 收集點回七把鍵()
     {
+        // 6 → 7（2026-10-14）：SV-010 容錯移轉叢集。同一個「角色條件式」收集點，
+        // 契約相同（null＝角色不在、擲例外＝讀取失敗），所以併進這裡而不是另開服務——
+        // 先前另開一個同型服務被 ServiceOrphanGateTests 判為重複，那次教訓記在 ledger。
         var facts = ServerRoleConditionalFactsService.Collect(At);
-        Assert.Equal(6, facts.Count);          // 既有三項＋本批三項
+        Assert.Equal(7, facts.Count);
         Assert.Contains(facts, f => f.Key == "sv.adds");
         Assert.Contains(facts, f => f.Key == "sv.dhcp");
         Assert.Contains(facts, f => f.Key == "sv.rds");
+        Assert.Contains(facts, f => f.Key == "sv.cluster.state");
+    }
+
+    // ── SV-010：容錯移轉叢集 ──────────────────────────────────────────────
+
+    [Fact]
+    public void 叢集角色不在是不適用不是零節點()
+    {
+        var f = Fact(ServerRoleConditionalFactsService.Collect(At, clusterProbe: () => null),
+            "sv.cluster.state");
+
+        Assert.Equal(FactAvailability.NotApplicable, f.Availability);
+        Assert.Null(f.NumericValue);
+        Assert.Contains("不適用", f.UnavailableReason);
+        // 「沒裝角色」與「裝了但 0 個節點」必須是兩件不同的事
+        Assert.DoesNotContain("0 個節點", f.Value);
+    }
+
+    [Fact]
+    public void 叢集節點數讀不到是留白不是填零()
+    {
+        var f = Fact(ServerRoleConditionalFactsService.Collect(At,
+            clusterProbe: () => new ServerRoleConditionalFactsService.ClusterState(true, true, null)),
+            "sv.cluster.state");
+
+        Assert.Equal(FactAvailability.Present, f.Availability);
+        Assert.Null(f.NumericValue);
+        Assert.Contains("留白", f.Value);
+        Assert.Contains("不填 0", f.Value);
+    }
+
+    [Fact]
+    public void 叢集節點數讀得到才給數值()
+    {
+        var f = Fact(ServerRoleConditionalFactsService.Collect(At,
+            clusterProbe: () => new ServerRoleConditionalFactsService.ClusterState(true, false, 3)),
+            "sv.cluster.state");
+
+        Assert.Equal(3, f.NumericValue);
+        Assert.Contains("3 個節點", f.Value);
+        Assert.Contains("未設為自動啟動", f.Value);
+    }
+
+    [Fact]
+    public void 叢集不列識別資訊()
+    {
+        var f = Fact(ServerRoleConditionalFactsService.Collect(At,
+            clusterProbe: () => new ServerRoleConditionalFactsService.ClusterState(true, true, 2)),
+            "sv.cluster.state");
+
+        // 名稱、節點清單、仲裁設定都是環境識別資訊，值裡必須明說不列
+        Assert.Contains("不列叢集名稱", f.Value);
+        Assert.Contains("不列節點清單", f.Value);
+    }
+
+    [Fact]
+    public void 叢集查詢失敗是ReadError()
+    {
+        var f = Fact(ServerRoleConditionalFactsService.Collect(At,
+            clusterProbe: () => throw new InvalidOperationException("cluster-fail")),
+            "sv.cluster.state");
+
+        Assert.Equal(FactAvailability.ReadError, f.Availability);
+        Assert.Contains("cluster-fail", f.UnavailableReason);
     }
 
     [Fact]
@@ -242,7 +309,8 @@ public class ServerRoleConditional2FactsTests
             dnsZonesProbe: () => null,
             addsProbe: () => throw new InvalidOperationException("x"),
             dhcpProbe: () => null,
-            rdsProbe: () => new ServerRoleConditionalFactsService.RdsState(true, false, 1));
+            rdsProbe: () => new ServerRoleConditionalFactsService.RdsState(true, false, 1),
+            clusterProbe: () => new ServerRoleConditionalFactsService.ClusterState(true, true, 1));
 
         Assert.Equal(FactAvailability.ReadError, Fact(facts, "sv.adds").Availability);
         Assert.Equal(FactAvailability.NotApplicable, Fact(facts, "sv.dhcp").Availability);

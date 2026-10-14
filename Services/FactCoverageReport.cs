@@ -577,6 +577,7 @@ public static class FactCoverageReport
         ["sc.verdict.summary"] = "該不該修摘要（SC-002）：聚合既有 Warning／Critical；不給分數、不下正品翻新結論。",
         ["sc.slow.summary"] = "效能為什麼慢（SC-003）：各環節量測值並列；排除法不是因果鏈，不宣稱元凶。",
         ["sc.pcurve.summary"] = "供電穩嗎（SC-010）：電壓波動與斜率；觀察不是預測，5% 已近量測精度邊緣。",
+        ["sv.cluster.state"] = "容錯移轉叢集（SV-010）：登錄 Services\\ClusSvc 單一來源；只陳述節點身分與起動型態，**不列叢集名稱、節點清單或仲裁設定**。",
         ["sv.core"] = "Server Core 判定（SV-011）：InstallationType 登錄值單一來源；OS SKU 就是它自己。",
         ["sv.summary"] = "伺服器合規摘要（SV-014）：本組角色事實的可用性聚合；分母不含自己，不再疊規則。",
         ["sv.roles.services"] = "角色服務實際狀態（SV-013）：固定角色清單比對 SCM 狀態；清單是政策不是第二個來源。",

@@ -11,7 +11,8 @@ namespace XinSpect;
 /// <summary>
 /// 伺服器角色<b>條件式</b>深層事實（Vol2 G4 第二波）：只在這台機器真的裝了該角色時才有意義的讀取——
 /// Hyper-V 虛擬交換器（SV-009）、IIS 應用程式池（SV-002）、DNS 區域（SV-004）、
-/// AD DS 網域控制站狀態（SV-003）、DHCP 伺服器（SV-005）、遠端桌面服務（SV-008）。
+/// AD DS 網域控制站狀態（SV-003）、DHCP 伺服器（SV-005）、遠端桌面服務（SV-008）、
+/// 容錯移轉叢集（SV-010）。
 /// </summary>
 /// <remarks>
 /// <para>
@@ -20,13 +21,14 @@ namespace XinSpect;
 /// 「沒裝這個角色」是環境事實，不是缺陷（見 CAPABILITY-DOMAINS §來源不可用的三態）。
 /// </para>
 /// <para>
-/// <b>界線：</b>①六個來源各自可注入探針、互不影響；<b>探針回 <c>null</c> 代表「角色不在」→
+/// <b>界線：</b>①七個來源各自可注入探針、互不影響；<b>探針回 <c>null</c> 代表「角色不在」→
 /// <see cref="FactAvailability.NotApplicable"/>，擲例外才代表讀取失敗 → <see cref="FactAvailability.ReadError"/></b>，
 /// 兩者不得混為一談；②IIS 事實讀設定檔（<c>applicationHost.config</c>），只報<b>已定義的池名與管線模式</b>，
 /// 不報執行期狀態（設定檔不記載執行期）；③DNS 區域只讀<b>區域名稱</b>，不讀區域資料、不讀 AD 內容；
 /// ④AD DS 只陳述<b>是不是網域控制站與網域功能層級</b>，<b>不列網域帳號、不列站台或複寫夥伴</b>；
 /// ⑤DHCP 只讀<b>授權範圍數與繫結介面數</b>，<b>不列配發紀錄、不列用戶端 MAC 或主機名</b>；
-/// ⑥RDS 的<b>授權子角色只陳述存在</b>——授權金鑰與授權數屬 L3 禁項，永不讀取。<b>工作階段只報數量、不列使用者。</b>
+/// ⑥RDS 的<b>授權子角色只陳述存在</b>——授權金鑰與授權數屬 L3 禁項，永不讀取。<b>工作階段只報數量、不列使用者。</b>；
+/// ⑦叢集只陳述<b>是不是叢集節點、叢集服務在不在跑</b>，<b>不列叢集名稱、不列節點清單、不列仲裁設定</b>。
 /// </para>
 /// </remarks>
 public static class ServerRoleConditionalFactsService
@@ -41,6 +43,8 @@ public static class ServerRoleConditionalFactsService
     public const string DhcpKey = "sv.dhcp";
     /// <summary>SV-008：遠端桌面服務。</summary>
     public const string RdsKey = "sv.rds";
+    /// <summary>SV-010：容錯移轉叢集。</summary>
+    public const string ClusterKey = "sv.cluster.state";
 
     /// <summary>
     /// Hyper-V 交換器的 WQL。<b>必須用 <c>SELECT *</c></b>——Hyper-V 的 WMI 提供者不支援投影式查詢
@@ -68,6 +72,12 @@ public static class ServerRoleConditionalFactsService
     public sealed record RdsState(bool SessionHost, bool Licensing, int Sessions);
 
     /// <summary>
+    /// 容錯移轉叢集：（本機是否為叢集節點, 叢集服務是否在跑, 登錄記載的節點數）。
+    /// <see cref="NodeCount"/> 讀不到時是 <c>null</c>——<b>不以 0 冒充「沒有節點」</b>。
+    /// </summary>
+    public sealed record ClusterState(bool IsNode, bool ServiceRunning, int? NodeCount);
+
+    /// <summary>
     /// 收集條件式角色事實。探針回 <c>null</c>＝該角色不在（不適用）；擲例外＝讀取失敗。
     /// </summary>
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at,
@@ -76,7 +86,8 @@ public static class ServerRoleConditionalFactsService
         Func<IReadOnlyList<string>?>? dnsZonesProbe = null,
         Func<AddsState?>? addsProbe = null,
         Func<DhcpState?>? dhcpProbe = null,
-        Func<RdsState?>? rdsProbe = null)
+        Func<RdsState?>? rdsProbe = null,
+        Func<ClusterState?>? clusterProbe = null)
     {
         return
         [
@@ -86,6 +97,7 @@ public static class ServerRoleConditionalFactsService
             AddsFact(at, addsProbe ?? ReadAdds),
             DhcpFact(at, dhcpProbe ?? ReadDhcp),
             RdsFact(at, rdsProbe ?? ReadRds),
+            ClusterFact(at, clusterProbe ?? ReadCluster),
         ];
     }
 
@@ -432,6 +444,60 @@ public static class ServerRoleConditionalFactsService
 
     [System.Runtime.InteropServices.DllImport("wtsapi32.dll")]
     private static extern void WTSFreeMemory(IntPtr memory);
+
+    // ── SV-010：容錯移轉叢集 ──────────────────────────────────────────────
+
+    /// <summary>叢集服務的登錄路徑。這個機碼存在與否就是「這台機器有沒有這個角色」。</summary>
+    internal const string ClusterServiceRegistryPath = @"SYSTEM\CurrentControlSet\Services\ClusSvc";
+
+    /// <summary>叢集節點清單的登錄路徑；只讀子機碼<b>數量</b>，不讀名稱。</summary>
+    internal const string ClusterNodesRegistryPath = @"Cluster\Nodes";
+
+    /// <summary>
+    /// 登錄通路：容錯移轉叢集。<c>Services\ClusSvc</c> 不存在＝沒有角色 → 回 <c>null</c>。
+    /// 節點數走 <c>Cluster\Nodes</c> 的子機碼數——<b>只數數量，不列節點名稱</b>；
+    /// 讀不到子機碼時 <see cref="ClusterState.NodeCount"/> 是 <c>null</c>，如實留白而不是填 0。
+    /// </summary>
+    internal static ClusterState? ReadCluster()
+    {
+        using var svc = Registry.LocalMachine.OpenSubKey(ClusterServiceRegistryPath);
+        if (svc is null) return null;
+
+        int? nodes = null;
+        try
+        {
+            using var nodeKey = Registry.LocalMachine.OpenSubKey(ClusterNodesRegistryPath);
+            if (nodeKey is not null) nodes = nodeKey.SubKeyCount;
+        }
+        catch { /* 讀不到就留白；這個數字只作規模參考，不用於判決 */ }
+
+        return new ClusterState(IsNode: true, ServiceRunning: ServiceStateIsRunning("ClusSvc"), NodeCount: nodes);
+    }
+
+    private static HardwareFact ClusterFact(DateTimeOffset at, Func<ClusterState?> read)
+    {
+        const string name = "容錯移轉叢集節點狀態";
+        ClusterState? state;
+        try { state = read(); }
+        catch (Exception ex)
+        {
+            return Unavailable(at, ClusterKey, name, FactAvailability.ReadError,
+                "叢集狀態讀取失敗：" + ex.Message);
+        }
+        if (state is null)
+            return Unavailable(at, ClusterKey, name, FactAvailability.NotApplicable,
+                @"容錯移轉叢集角色未安裝（Services\ClusSvc 不存在）——不適用，不是讀取失敗");
+
+        string nodes = state.NodeCount is { } n
+            ? $"{n} 個節點"
+            : @"節點數讀不到（Cluster\Nodes 子機碼不可讀）——如實留白，不填 0";
+        return new HardwareFact(ClusterKey, Category, name,
+            $"本機是叢集節點；叢集服務{(state.ServiceRunning ? "已設為自動啟動" : "未設為自動啟動")}；{nodes}。" +
+            "只陳述節點身分與服務起動型態，<b>不列叢集名稱、不列節點清單、不列仲裁設定</b>——" +
+            "那些是環境識別資訊且屬他人治理範圍；節點數只作規模參考，不用於任何判決。",
+            "個", @"HKLM\SYSTEM\CurrentControlSet\Services\ClusSvc＋HKLM\Cluster\Nodes",
+            FactTrustLevel.Reported, false, at, state.NodeCount);
+    }
 
     private static HardwareFact Unavailable(DateTimeOffset at, string key, string name,
         FactAvailability availability, string reason)

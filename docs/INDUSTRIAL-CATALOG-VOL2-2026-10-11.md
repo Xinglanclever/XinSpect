@@ -128,11 +128,11 @@
 | SV-006 | 檔案伺服器角色 | 共用視角→`sv.file.*` | 與第一組 SA-009 交叉 | — | S | L2 |
 | SV-007 | 印表伺服器 | →`sv.print` | — | — | S | L0 |
 | SV-008 | RDS 角色 | →`sv.rds` | — | — | S | L0 |
-| SV-009 | Hyper-V 交換器清單 | 虛擬交換器/埠→`sv.vswitch.*` | 零 VM 如實空清單 | 枚舉測試 | S | L0 |
-| SV-010 | Failover Cluster | →`sv.cluster` | N/A | — | S | L0 |
+| SV-009 | Hyper-V 交換器清單 | 虛擬交換器/埠→`sv.hyperv.switches` | 零 VM 如實空清單 | 枚舉測試 | S | L0 |
+| SV-010 | Failover Cluster | →`sv.cluster.state`（Failover Cluster 角色缺席＝不適用） | N/A | — | S | L0 |
 | SV-011 | Server Core 判定 | →`sv.core` | — | — | S | L0 |
-| SV-012 | 授權/啟用狀態 | 版本/通道（不含金鑰）→`sv.license` | **金鑰 L3 禁** | L3 禁令 | S | L2 |
-| SV-013 | Server 特有服務 | SMSvcHost/W32Time 等→`sv.svc.*` | — | 枚舉測試 | S | L0 |
+| SV-012 | 授權/啟用狀態 | 版本/通道（不含金鑰）→`sv.licensing` | **金鑰 L3 禁** | L3 禁令 | S | L2 |
+| SV-013 | Server 特有服務 | SMSvcHost/W32Time 等→`sv.roles.services` | — | 枚舉測試 | S | L0 |
 | SV-014 | 伺服器合規摘要 | 角色紅黃聚合→`sv.summary` | — | 聚合測試 | S | L0 |
 
 ### FS 檔案鑑識（16）——L2 鑑識域，預設 opt-in
