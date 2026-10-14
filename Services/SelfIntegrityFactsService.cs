@@ -78,6 +78,14 @@ public static class SelfIntegrityFactsService
     public const string ConfigKey = "in.cfg.integrity";
     public const string PrivsKey = "in.privs";
     public const string DepsKey = "in.deps";
+    /// <summary>IN-007 逐條模組的鍵前綴（<c>in.deps.{模組名}</c>）。</summary>
+    /// <remarks>
+    /// <b>這一版改成動態家族</b>（2026-10-14）：先前只在 <see cref="DepsKey"/> 的值字串裡
+    /// 收束成「值得看：N 項」，逐條模組沒有自己的鍵——於是「哪幾個模組沒簽章、為什麼被列名」
+    /// 在畫面上無法被單獨選取、複製或匯出。做法與 <c>net.listen.</c>、<c>acpi.table.</c> 相同：
+    /// 成員集由機器狀態決定，編譯期列不完，故登記為動態家族。
+    /// </remarks>
+    public const string DepsEntryPrefix = "in.deps.";
     public const string DebugKey = "in.debug";
     public const string ReportKey = "in.report";
 
@@ -247,6 +255,7 @@ public static class SelfIntegrityFactsService
         var nonSystem = unique.Where(p => !KernelModuleService.IsWindowsDirectory(p)).ToList();
         int unsigned = 0, sideloadCount = 0;
         var flagged = new List<string>();
+        var entries = new List<HardwareFact>();
         foreach (string path in nonSystem)
         {
             var (ok, note) = Verify(i.VerifySignature, path);
@@ -258,13 +267,23 @@ public static class SelfIntegrityFactsService
             if (ok == true && !isSideload) continue;
 
             var reasons = new List<string>(3);
-            if (ok == false) reasons.Add($"未通過簽章 {note}");
-            else if (ok is null) reasons.Add($"簽章無法驗證（{note}）");
-            if (isSideload) reasons.Add("側載候選");
+            string verdict;
+            if (ok == false) { reasons.Add($"未通過簽章 {note}"); verdict = "未通過簽章"; }
+            else if (ok is null) { reasons.Add($"簽章無法驗證（{note}）"); verdict = "簽章無法驗證"; }
+            else verdict = "簽章通過";
+            if (isSideload) { reasons.Add("側載候選"); verdict += "・側載候選"; }
             flagged.Add($"{BaseName(path)}（{string.Join("、", reasons)}）");
+
+            // 逐條一把鍵（動態家族 in.deps.{模組名}）：被列名的模組要能被單獨選取與匯出。
+            string baseName = BaseName(path);
+            entries.Add(new HardwareFact(DepsEntryPrefix + baseName, Category,
+                $"載入模組・{baseName}",
+                $"{verdict}・{path}。" +
+                "被列名代表它<b>值得看一眼</b>，不是判決：未簽章與側載候選在外掛、第三方函式庫、" +
+                "驅動工具上都是常態——本項只把判定與原因攤開，不下結論。",
+                "", "Process.Modules ＋ Authenticode ＋ 載入路徑", FactTrustLevel.Reported, false, at));
         }
 
-        // 逐項明細串在同一個值裡（不另立鍵）：這一版刻意不新增動態家族。
         string detail = flagged.Count == 0
             ? "沒有值得列名的模組"
             : "值得看：" + string.Join("；", flagged.Take(ListedMax)) +
@@ -272,9 +291,12 @@ public static class SelfIntegrityFactsService
 
         yield return new HardwareFact(DepsKey, Category, "已載入模組",
             $"模組 {unique.Count} 個・非系統目錄 {nonSystem.Count} 個・未通過簽章 {unsigned} 個・側載候選 {sideloadCount} 個・{detail}。" +
+            (flagged.Count == 0 ? "" : $"逐條明細見 {DepsEntryPrefix}<模組名>（{entries.Count} 把）。") +
             "側載候選不是惡意判決，未通過簽章也不是（外掛與第三方函式庫常態就在使用者目錄下）——只陳述事實。",
             "個", "Process.Modules ＋ Authenticode ＋ 載入路徑", FactTrustLevel.Reported, false, at,
             unique.Count);
+
+        foreach (var e in entries) yield return e;
     }
 
     private static HardwareFact DebugFact(DateTimeOffset at, bool attached, bool? remote)

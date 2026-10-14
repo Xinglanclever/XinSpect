@@ -91,7 +91,10 @@ public class FactKeyCatalogTests
         // 19 → 20（2026-10-12）：acpi.table.（韌體提供的 ACPI 表逐張一筆，鍵＝簽章／同簽章補序號）——
         // 有幾張、哪些簽章是機器韌體的事實，編譯期列不完；彙總鍵 acpi.tables／ac.tables.summary 仍在靜態目錄。
         // 這批無主鍵是 v2.67 把 ACPI 列舉移進 LoadUsermodeFacts（GUI 與 CLI 同源）後，執行期對帳立刻照出來的。
-        const int FamilyCap = 20;
+        // 20 → 21（2026-10-14）：in.deps.（已載入模組逐條一筆，檔名任意、只有被判「值得看」的才產鍵）——
+        // 把逐條模組從彙總值字串裡拉出來成獨立鍵，是為了讓「哪幾個模組沒簽章」能被單獨選取與匯出；
+        // 成員集由這個行程當下載入了什麼決定，編譯期列不完。
+        const int FamilyCap = 21;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 

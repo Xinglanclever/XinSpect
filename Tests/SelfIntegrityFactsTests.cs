@@ -217,8 +217,15 @@ public class SelfIntegrityFactsTests
         Assert.Contains("hooked.dll", summary.Value);
         Assert.DoesNotContain("clean.dll", summary.Value);
 
-        // 逐項明細在值裡（不另立鍵）：這一組只產一個鍵
-        Assert.DoesNotContain(facts, f => f.Key.StartsWith("in.deps.", StringComparison.Ordinal));
+        // 逐條模組各一把鍵（動態家族 in.deps.{模組名}，2026-10-14 改）：值字串是彙總，
+        // 逐條鍵才是能單獨選取／匯出的那一份。只有被列名的模組產鍵。
+        var entries = facts.Where(f => f.Key.StartsWith(SelfIntegrityFactsService.DepsEntryPrefix, StringComparison.Ordinal)).ToList();
+        Assert.Equal(2, entries.Count);
+        Assert.Contains(entries, f => f.Key == "in.deps.unsigned.dll");
+        Assert.Contains(entries, f => f.Key == "in.deps.hooked.dll");
+        Assert.DoesNotContain(entries, f => f.Key == "in.deps.clean.dll");
+        Assert.Contains(entries, f => f.Key == "in.deps.unsigned.dll" && f.Value.Contains("未通過簽章"));
+        Assert.Contains(entries, f => f.Key == "in.deps.hooked.dll" && f.Value.Contains("側載候選"));
     }
 
     [Fact]
