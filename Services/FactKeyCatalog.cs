@@ -527,6 +527,8 @@ public static class FactKeyCatalog
         "po.pool",
         "po.proctree",
         "po.rboost",
+        "po.svcboot.summary",
+        "po.svcboot.trigger",
         "po.svccrash",
         "po.syscall.lat",
         "po.timerres",
