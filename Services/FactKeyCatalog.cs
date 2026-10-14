@@ -67,6 +67,7 @@ public static class FactKeyCatalog
         "ag.headless",
         "ag.remote",
         "ag.rotate",
+        "ag.service",
         "ag.stdin",
         "amd.mem_enc.enabled",
         "amd.psp.present",
