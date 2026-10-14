@@ -220,6 +220,10 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 BitLockerRecoveryFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadAcpiDeep(); }
         catch { /* 附加功能：讀不到由 AcpiDeepFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadCppcCapability(); }
+        catch { /* 附加功能：讀不到由 CppcCapabilityFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadMousePollRate(); }
+        catch { /* 附加功能：未取樣時由 MousePollRateFactsService 標不適用，不在這裡中斷啟動 */ }
         try { svc.LoadDataSecurityDeep(); }
         catch { /* 附加功能：讀不到由 DataSecurityDeepFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadScenarioThirdWave(); }
