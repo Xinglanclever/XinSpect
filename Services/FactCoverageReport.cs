@@ -577,6 +577,18 @@ public static class FactCoverageReport
         ["sc.verdict.summary"] = "該不該修摘要（SC-002）：聚合既有 Warning／Critical；不給分數、不下正品翻新結論。",
         ["sc.slow.summary"] = "效能為什麼慢（SC-003）：各環節量測值並列；排除法不是因果鏈，不宣稱元凶。",
         ["sc.pcurve.summary"] = "供電穩嗎（SC-010）：電壓波動與斜率；觀察不是預測，5% 已近量測精度邊緣。",
+        ["sv.core"] = "Server Core 判定（SV-011）：InstallationType 登錄值單一來源；OS SKU 就是它自己。",
+        ["sv.summary"] = "伺服器合規摘要（SV-014）：本組角色事實的可用性聚合；分母不含自己，不再疊規則。",
+        ["sv.roles.services"] = "角色服務實際狀態（SV-013）：固定角色清單比對 SCM 狀態；清單是政策不是第二個來源。",
+        ["sv.licensing"] = "授權與啟用（SV-012）：SoftwareLicensingProduct 單一來源；<b>刻意不讀產品金鑰</b>（L3 禁項）。",
+        ["sv.shares"] = "檔案／列印共用（SV-006／SV-007）：Win32_Share 單一來源；只列共用名稱、不披露本機路徑。",
+        ["sv.hyperv.switches"] = "Hyper-V 虛擬交換器（SV-009）：Msvm_VirtualEthernetSwitch 單一來源；零個是值、角色不在是不適用。",
+        ["sv.dns.zones"] = "DNS 區域（SV-004）：DNS Server 登錄單一來源；只讀區域名稱，不讀區域資料或 AD 內容。",
+        ["sv.iis.apppools"] = "IIS 應用程式池（SV-002）：applicationHost.config 定義值單一來源；設定檔不記載執行期狀態。",
+        ["sv.adds"] = "AD DS 狀態（SV-003）：NTDS\\Parameters 單一來源；只陳述是不是 DC 與功能層級，不列帳號、站台或複寫夥伴。",
+        ["sv.dhcp"] = "DHCP 伺服器（SV-005）：DHCPServer\\Configuration 單一來源；只讀授權範圍數與繫結介面數，不列配發紀錄。",
+        ["sv.rds"] = "遠端桌面服務（SV-008）：RDMS／TermService 登錄單一來源；授權子角色只陳述存在（金鑰屬 L3 禁項），工作階段只報數量。",
+        ["nw.eee.caps"] = "EEE 節能乙太網路（NW-014）：網卡驅動的 EEE／節能登錄值單一來源；驅動沒開欄位是不適用，不是 0 筆。",
         };
 
     /// <summary>一個鍵的覆蓋狀態。</summary>

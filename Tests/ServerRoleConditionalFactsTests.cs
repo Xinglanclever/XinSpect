@@ -165,10 +165,13 @@ public class ServerRoleConditionalFactsTests
     }
 
     [Fact]
-    public void 契約_三個鍵齊全且排序無關()
+    public void 契約_六個鍵齊全且排序無關()
     {
+        // 原本是三個鍵（Hyper-V／IIS／DNS）；第 524–525 項在同一收集點補上 AD DS／DHCP／RDS，
+        // 所以這裡的期望值由 3 → 6——刻意改成逐一比對鍵集，之後再加項時紅燈會直接指出缺哪一把。
         var facts = ServerRoleConditionalFactsService.Collect(At);
-        Assert.Equal(new[] { "sv.dns.zones", "sv.hyperv.switches", "sv.iis.apppools" },
+        Assert.Equal(
+            new[] { "sv.adds", "sv.dhcp", "sv.dns.zones", "sv.hyperv.switches", "sv.iis.apppools", "sv.rds" },
             facts.Select(f => f.Key).OrderBy(k => k, StringComparer.Ordinal));
     }
 
@@ -178,7 +181,10 @@ public class ServerRoleConditionalFactsTests
         var facts = ServerRoleConditionalFactsService.Collect(At,
             switchesProbe: () => null,
             appPoolsProbe: () => null,
-            dnsZonesProbe: () => null);
+            dnsZonesProbe: () => null,
+            addsProbe: () => null,
+            dhcpProbe: () => null,
+            rdsProbe: () => null);
 
         foreach (var f in facts)
         {

@@ -769,7 +769,7 @@ public sealed class EvidenceLabService : ObservableObject
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
-    /// <summary>伺服器角色條件式事實（Vol2 G4 第二波）：Hyper-V 交換器（SV-009）＋IIS 應用池（SV-002）＋DNS 區域（SV-004）；角色缺席即不適用。</summary>
+    /// <summary>伺服器角色條件式事實（Vol2 G4 第二波）：Hyper-V 交換器（SV-009）＋IIS 應用池（SV-002）＋DNS 區域（SV-004）＋AD DS 狀態（SV-003）＋DHCP 伺服器（SV-005）＋遠端桌面服務（SV-008）；角色缺席即不適用。</summary>
     public IReadOnlyList<HardwareFact> ServerRoleConditionalFacts { get; private set; } = [];
 
     public void LoadServerRoleConditional()

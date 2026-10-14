@@ -25,6 +25,8 @@ public static class NetworkSystemInventoryFactsService
 
     public const string PrintKey = "nw.print.summary";
     public const string WolKey = "nw.wol.summary";
+    /// <summary>NW-014：EEE（節能乙太網路）能力——單獨一把鍵，因為「省電」與「能不能被喚醒」常常互相拉扯。</summary>
+    public const string EeeKey = "nw.eee.caps";
     public const string RouteKey = "nw.route.summary";
     public const string SensorKey = "nw.sensor.summary";
     public const string EventChannelKey = "ws.channel.summary";
@@ -36,6 +38,8 @@ public static class NetworkSystemInventoryFactsService
 
     public sealed record PrintQueueState(int QueueCount, int ErrorQueues, int OfflineQueues, int SharedQueues);
     public sealed record WakeOnLanState(int CapabilityRows, int EnabledRows);
+    /// <summary>EEE 相關登錄值：（EEE 列數, 其中啟用數, 進階節能列數, 綠色乙太網路列數）。</summary>
+    public sealed record EeeState(int EeeRows, int EnabledRows, int AdvancedRows, int GreenRows);
     public sealed record RouteState(int TotalRoutes, int DefaultRoutes, int PersistentRoutes, int LowestMetric);
     public sealed record SensorState(int SensorCount, int AmbientLightSensors, int Accelerometers);
     public sealed record EventChannelState(int TotalChannels, int EnabledChannels, int DisabledChannels);
@@ -47,6 +51,7 @@ public static class NetworkSystemInventoryFactsService
 
     public delegate PrintQueueState? PrintProbe();
     public delegate WakeOnLanState? WolProbe();
+    public delegate EeeState? EeeProbe();
     public delegate RouteState? RouteProbe();
     public delegate SensorState? SensorProbe();
     public delegate EventChannelState? EventChannelProbe();
@@ -58,7 +63,7 @@ public static class NetworkSystemInventoryFactsService
 
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at) =>
     [
-        PrintFact(at), WolFact(at), RouteFact(at), SensorFact(at), EventChannelFact(at),
+        PrintFact(at), WolFact(at), EeeFact(at), RouteFact(at), SensorFact(at), EventChannelFact(at),
         StorageSpacesFact(at), PhysicalDiskPowerFact(at), AdvertisingFact(at),
         SpeechInputFact(at), NtpFact(at),
     ];
@@ -116,6 +121,61 @@ public static class NetworkSystemInventoryFactsService
             $"電源管理列 {state.CapabilityRows} 筆，其中 WakeOnMagicPacket／WakeOnPattern 啟用 {state.EnabledRows} 筆。" +
             "設定關不等於硬體不支援；這是登錄宣告，不代表封包一定能喚醒；EEE 能力另由 NIC 驅動／PCIe 能力面陳述。",
             "筆", @"HKLM\SYSTEM\CurrentControlSet\Control\Class（電源管理值，唯讀）", FactTrustLevel.Reported, false, at, state.CapabilityRows);
+    }
+
+    // ── NW-014 EEE 能力（與 WOL 同一個驅動欄位面）─────────────────────────
+
+    public static HardwareFact EeeFact(DateTimeOffset at, EeeProbe? probe = null)
+    {
+        const string name = "EEE 節能乙太網路";
+        EeeState? state;
+        try { state = (probe ?? new EeeProbe(ReadEee))(); }
+        catch { state = null; }
+        if (state is null)
+            return Unavailable(at, EeeKey, CatNetwork, name, FactAvailability.ReadError,
+                "網卡 EEE 相關登錄值讀取失敗——不猜 EEE 能力");
+
+        if (state.EeeRows == 0 && state.AdvancedRows == 0 && state.GreenRows == 0)
+            return Unavailable(at, EeeKey, CatNetwork, name, FactAvailability.NotApplicable,
+                "網卡驅動沒有回報任何 EEE／進階節能／綠色乙太網路登錄值——" +
+                "不適用（沒有這個欄位不代表硬體不支援，只代表這個驅動介面沒有把它開出來）");
+
+        var v = state;
+        return new HardwareFact(EeeKey, CatNetwork, name,
+            $"EEE 相關列 {v.EeeRows} 筆（啟用 {v.EnabledRows} 筆）・進階節能 {v.AdvancedRows} 筆・" +
+            $"綠色乙太網路 {v.GreenRows} 筆。" +
+            "<b>設定關不等於硬體不支援</b>；反過來說，<b>EEE 啟用會讓部分網卡在低負載時掉到 10M／100M</b>——" +
+            "這是協商結果不是故障，所以本項只陳述設定值，不判斷「該不該開」。" +
+            "驅動沒有這幾個值時是「不適用」不是「0 筆」——沒開出來的欄位與開了但等於 0 是兩件事。",
+            "筆", @"HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e972…}（EEE／節能值，唯讀）",
+            FactTrustLevel.Reported, false, at, v.EeeRows);
+    }
+
+    private static EeeState ReadEee()
+    {
+        int eee = 0, enabled = 0, advanced = 0, green = 0;
+        using var root = Registry.LocalMachine.OpenSubKey(
+            @"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}");
+        if (root is null) return new EeeState(0, 0, 0, 0);
+        foreach (string sub in root.GetSubKeyNames())
+        {
+            using var key = root.OpenSubKey(sub);
+            if (key is null) continue;
+            foreach (string value in key.GetValueNames())
+            {
+                bool isEee = value.Contains("EEE", StringComparison.OrdinalIgnoreCase)
+                          || value.Contains("EnergyEfficient", StringComparison.OrdinalIgnoreCase);
+                bool isAdvanced = value.Contains("AdvancedEee", StringComparison.OrdinalIgnoreCase)
+                          || value.Contains("UltraLowPower", StringComparison.OrdinalIgnoreCase);
+                bool isGreen = value.Contains("GreenEthernet", StringComparison.OrdinalIgnoreCase);
+                if (isAdvanced) advanced++;
+                if (isGreen) green++;
+                if (!isEee && !isAdvanced && !isGreen) continue;
+                eee++;
+                if (ToInt(key.GetValue(value)) is int v2 && v2 != 0) enabled++;
+            }
+        }
+        return new EeeState(eee - advanced - green, enabled, advanced, green);
     }
 
     private static WakeOnLanState ReadWakeOnLan()

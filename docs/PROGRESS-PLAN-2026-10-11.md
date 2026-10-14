@@ -703,6 +703,73 @@ SC-003 效能為什麼慢、SC-010 供電穩嗎。
 
 剩餘較大的域：ST（11）、SA（9）、BL（9）、UX 尾（8）、AC（5）、IN（5）、DL（5）。
 
+### 推進紀錄：第 470–483 項（2026-10-14，工程治理二批次）
+
+14 項全計（逐項查重後皆為新增，無重複）：EG-011 GitHub Actions CI、EG-012 PR/issue 模板、
+EG-014 效能回歸守門、EG-017 docs 連結驗證、EG-019 SECURITY.md 披露流程、EG-020 逐頁導覽文件、
+EG-021 ARM64 路徑、EG-022 Win10/11 分支守門、EG-023 結構化 fuzz、EG-024 真實樣本語料、
+EG-025 覆蓋率自動化、EG-027 鍵 API 文件產生、EG-028 新舊快照互讀矩陣、EG-030 SelfTelemetry 可視化。
+
+鍵 757→771、測試 +26（4919→4945 綠，exit 0）。**有效累計 482／600。**
+紅線：守門類只陳述狀態不執行；ARM64／Win 分支未施測一律標明；fuzz／語料敏感資料必遮蔽；
+覆蓋率低不代表品質差要如實；未提供／未建立一律三態（fuzz 無 harness、快照單版都標 NotApplicable）。
+
+### 缺陷修復：NVMe 紀錄頁卡死（2026-10-14，同批）
+
+**症狀**：全套測試跑到一半整個行程凍住，連測試結果都印不出來；`taskkill /F` 也殺不掉。
+
+**根因**（`work/hangdiag*.ps1`、`work/p*.dmp` 的 `dotnet-dump` 傾印）：數十條執行緒全停在
+`StorageSmartService.ReadNvmeLogCore` 的 `DeviceIoControl`。本機那顆狀態為<b>裝置故障</b>的
+NVMe 對日誌頁查詢卡在驅動的逾時佇列（`SRB_STATUS_SELECTION_TIMEOUT`），兩種逾時機制都攔不住：
+
+1. `DiskIo` 的「逾時就不等它」只讓<b>呼叫端</b>繼續，卡住的執行緒<b>永遠不回來也不釋放</b>——
+   每讀一次洩一條，把執行緒集區吃光。
+2. `TryReadNvmeLog` 又套了 `GuardedRead` ＋ 外層 `Task.Wait(6s)`，同一次查詢被兩種逾時各記一次帳。
+
+**修復**：NVMe 紀錄頁改走<b>可取消的 overlapped I/O</b>（`FILE_FLAG_OVERLAPPED` ＋
+`WaitForSingleObject(3s)` ＋ 逾時 `CancelIoEx`），結果直接回報 `StorageProbeBreaker.Report`
+（新增）；`DiskIo` 的文件補上「這不是萬靈丹」與「能取消的用 overlapped，只有取消不了的
+同步 IOCTL 才用洩執行緒法」的規則。斷路器成為「不再製造新的卡死執行緒」的唯一防線。
+
+**測試汙染一併修**：`FactKeyRuntimeReconcileTests`、`StorageReliabilityFactsTests`、
+`UiSmokeTests` 走共用組裝點時會碰真碟。新增 `StorageAndScenarioReconciliationFactsService.IReaders`
+接縫（`UseReaders`，可疊回），讓只驗接線與鍵對帳的測試改走合成讀取器——
+<b>測試綠不綠不該取決於哪顆碟插著。</b>真碟行為仍由儲存類別自己的測試負責。
+
+**新增守門**：`Tests/NvmeOverlappedIoTests.cs`（不存在裝置快速回 null、冷卻期間直接跳過、
+靜態掃描確認沒人把 NVMe 查詢接回洩執行緒的看門狗）。
+
+### 推進紀錄：待續（第 484 項起）
+
+剩餘較大的域：ST（11）、SA（9）、BL（9）、UX 尾（8）、AC（5）、IN（5）、DL（5）。
+
+### 推進紀錄：第 524–525 項（2026-10-14，伺服器角色條件式補齊）
+
+2 項全計（先做目錄覆蓋掃描、再逐項查重後確認是缺口）：**SV-003 AD DS 狀態**（`sv.adds`）、
+**SV-005 DHCP 伺服器**（`sv.dhcp`）、**SV-008 RDS 角色**（`sv.rds`），另收 NW-014 的
+**EEE 能力面**（`nw.eee.caps`）——原本 NW-014 只在 `nw.wol.summary` 裡「順帶」聲明 EEE 另述，
+現在把那個「另述」補成一把真的鍵。
+
+鍵 606→610（含 nw.eee.caps）、測試 +26（5072→5097 綠，exit 0）。**有效累計 525／600。**
+紅線：<b>探針回 null＝角色不在（NotApplicable）、擲例外＝讀取失敗（ReadError）</b>，兩者永不互相冒充；
+AD DS 只陳述是不是 DC 與功能層級，<b>不列網域帳號、站台、複寫夥伴</b>（帳號清單外流等於說出誰在什麼組織裡）；
+DHCP 只讀授權範圍數與繫結介面數，<b>不列配發紀錄、不列用戶端 MAC 或主機名</b>；
+RDS 的授權子角色<b>只陳述存在</b>（金鑰與授權數屬 L3 禁項），工作階段只報數量不列使用者；
+EEE 的「驅動沒開欄位」是<b>不適用不是 0 筆</b>，且值裡要寫明 EEE 啟用會讓部分網卡低負載掉到 10M／100M——
+那是協商結果不是故障。AD 功能層級讀不到時<b>留白</b>，不用「未知」兩個字冒充一個聽起來像答案的層級名。
+
+**過程修正（兩個）**：①原本另開了一個 `ServerRoleSecondWaveFactsService`，與既有的
+`ServerRoleConditionalFactsService` 職責完全重疊——`ServiceOrphanGateTests`／`WiringGuardTests` 直接
+把它揪出來（「既沒有生產碼引用、也沒有在登記表寫下為什麼」），已刪除並改為擴充既有服務。
+這條守門規則的價值就在這裡：<b>重複的服務不會靜靜躺著</b>。
+②既有 `契約_三個鍵齊全且排序無關` 以 3 為定值而紅燈，已改為六鍵並在測試裡寫明 3 → 6 的原因。
+
+**覆蓋掃描校正**：`work/coverage.py` 比對的是「目錄宣告的鍵字串 vs 實際生產者」，
+所以**命名不同就報成缺口**。本輪逐一核對後確認：AC-006／AC-008／AC-014／AC-015 用的是無 `.count`
+後綴的名字（`ac.aml.str.*` 已存在）、MU-003／MU-006／CM-001／CM-006／CM-011／CM-016／CM-017／
+NW-001／GD-004／GX-008／EV-019 用的是 `mu.drm.*`／`mu.spatial.*`／`cpu.turbo.*`／`hist.*` 等已落地名稱——
+這些是**假缺口**，不是待辦。掃描結果要逐項核對後才當清單用。
+
 ### 剩餘主要工作面（供後續圈選）
 
 - 需要新解析器／通路的：FS-002 Amcache、FS-004 SRUM、FS-015 VSS、DS-002 DHA（TPM attest 未施測聲明可先做）、UF-008 更新大小史。
