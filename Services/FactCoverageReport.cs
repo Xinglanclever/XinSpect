@@ -606,6 +606,8 @@ public static class FactCoverageReport
         ["uv.usb.trim"] = "USB 隨身碟 TRIM（UV-009）：裝置宣告不等於執行；沒插隨身碟是不適用不是 0。",
         ["sv.file.shares"] = "檔案共用視角（SV-006）：路徑只歸類不揭露、ACL 只報廣度不列帳號；共用存在不等於網路可及。",
         ["sv.print.queues"] = "列印服務視角（SV-007）：實體與虛擬印表機分開計數——佇列存在不等於有裝置。",
+        ["sg.usbslow"] = "USB 為什麼慢（SG-008）：複用 UsbLinkDecoder.Judge 的判讀；分清楚是線材還是埠（處置不同），空清單不講成正常。",
+        ["sg.audio"] = "聲音為什麼斷（SG-010）：只並列 APO／端點／預設三個面向，不斷言元凶——排除法的起點。",
         };
 
     /// <summary>一個鍵的覆蓋狀態。</summary>

@@ -119,7 +119,7 @@ public static class EvidenceCollection
         try { svc.LoadEndpointPolicy(); }
         catch { /* 附加功能：讀不到由 EndpointPolicyFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadScenarios(); }
-        catch { /* 附加功能：讀不到由 ScenarioGuidanceFactsService 標三態，不在這裡中斷啟動 */ }
+        catch { /* 附加功能：讀不到由 ScenarioGuidanceFactsService／ScenarioSecondWaveFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadMultimedia(); }
         catch { /* 附加功能：讀不到由 MultimediaFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadMultimedia(); }
