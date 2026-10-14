@@ -965,6 +965,34 @@ OS 載入映像、ExitBootServices。時間欄位都是「自開機起的絕對�
 但實作算的是 OsLoaderLoadImageStart→ExitBootServicesExit（EFI 載入的完整時長）。
 是我的預期抄錯了順序，不是實作錯——測試的數字改成對照實際語意並在註解寫明每個差是哪兩個欄位。
 
+### 守門補強：探針接線死路（2026-10-14，非計項）
+
+**起因**：FW-024 抓到的形狀——事實服務寫好了、值裡描述得煞有介事、
+但探針預設是常數 lambda 且生產入口從不傳探針，於是它在<b>每一台機器上</b>
+永遠回同一個「不適用」。比缺鍵更糟：<b>看起來有實作，覆蓋掃描也算它已覆蓋。</b>
+
+**機械掃描**（`work/deadprobe.py`）：掃 Services/*.cs 找 `XxxProbe? p = null` → 看預設是否
+常數 lambda → 再看生產入口有沒有傳。結果 4 個嫌疑，逐項核對後：
+
+| 服務 | 探針 | 核對結果 |
+|---|---|---|
+| EnvironmentDiagnosticsFactsService | `env` | **假警報**：預設是 `name => Environment.GetEnvironmentVariable(...)`，真讀取器；掃描器只認 `(0`／`null` 開頭的常數形式 |
+| PlatformExpansionFactsService | `powerProbe`／`stallProbe` | **假警報**：`HotGuidanceFact` 的參數，預設 `new ...Probe(ReadSmiCstate)` 是真讀取器；生產走 `Collect` 內建的 `PowerWallFact(at)` 也已帶真讀取器 |
+| PlatformExpansionFactsService | `consent` | **真死路，但是刻意的**：`dl.stack` 的閘門型事實，本版無堆疊擷取實作，常數 false 就是它的語意 |
+
+結論：FW-024 那個形狀<b>沒有第二個實例</b>。掃描器本身有 75% 誤報率
+（3 假 1 真），所以它的價值在於「逼我逐項打開看」，不在於它的輸出。
+
+**留下的資產**：`Tests/ProbeWiringGuardTests.cs`——把「閘門型豁免」寫成資料
+（鍵＋理由，理由少於 30 字元就紅燈），並釘住兩件事：豁免的鍵仍然存在且仍是閘門型
+（哪天 dl.stack 長出真擷取器，這條會提醒把豁免拿掉）；MSR 型事實讀不到時標
+`InsufficientPrivilege` 附原因而不是 0 或「一切正常」。
+
+**測試踩到的兩個坑**：① `PowerWallFact` 的理由是「不宣稱沒有牆」不是「不猜」——
+我先把兩把鍵的措辭當成一樣，但<b>它們本來就該不一樣</b>，各自講自己那個值的限制；
+② `PathFact` 對 machine 與 user 各呼叫探針一次，所以固定回傳的探針會被算兩次
+（2 段×2＝4），測試改用「依名稱給不同值」的探針才對。
+
 ### 剩餘主要工作面（供後續圈選）
 
 - 需要新解析器／通路的：FS-002 Amcache、FS-004 SRUM、FS-015 VSS、DS-002 DHA（TPM attest 未施測聲明可先做）、UF-008 更新大小史。
