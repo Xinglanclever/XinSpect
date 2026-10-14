@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 638 個（＝本清單的成員數；另有 23 個動態家族見
+    /// <summary>本版建置時掃到的事實鍵，共 640 個（＝本清單的成員數；另有 23 個動態家族見
     /// <see cref="FactKeyDynamicCatalog"/>，那些的成員由機器事實決定，不列在這裡）。</summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
@@ -418,6 +418,8 @@ public static class FactKeyCatalog
         "ms.dpc",
         "ms.fancurve",
         "ms.fanzones",
+        "ms.fslat.detail",
+        "ms.fslat.summary",
         "ms.gpu.fp16",
         "ms.irqaff",
         "ms.lo.throughput",

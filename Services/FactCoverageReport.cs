@@ -297,6 +297,8 @@ public static class FactCoverageReport
         ["se.share"] = "SMB 共用（SE-003）：Everyone 寫入是風險面非判決；不列共用名稱。",
         ["se.baseline"] = "安全基線報告（SE-012）：快照日期必印；對照≠符合標準。",
         ["se.grade"] = "安全分級（SE-014）：灰是未施測不是通過；分級非安全背書。",
+        ["ms.fslat.summary"] = "檔案系統 metadata 微延遲（ST-010）：opt-in 微測單一來源；**未量是 NotApplicable 不是 0 µs**，冷熱混合不宣稱是哪一種。",
+        ["ms.fslat.detail"] = "metadata 微延遲逐操作（ST-010）：create／stat／delete 三項 p50／p99；樣本不足時明說 p99 只是雜訊；不報路徑。",
         ["ms.dpc"] = "DPC/ISR 延遲（MS-001）：ETW session 開銷標註；p99 非平均。",
         ["ms.xnuma"] = "跨 NUMA 頻寬（MS-002）：單節點 N/A；三角量測非規格。",
         ["ms.tau"] = "熱時間常數（MS-004）：擬合＝模型非事實；單 τ 是等效近似。",
