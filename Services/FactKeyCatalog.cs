@@ -305,6 +305,7 @@ public static class FactKeyCatalog
         "fw.fit.count",
         "fw.fit.summary",
         "fw.fpdt",
+        "fw.fpdt.post",
         "fw.fv",
         "fw.gpt.summary",
         "fw.me",

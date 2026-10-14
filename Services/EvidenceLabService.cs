@@ -67,7 +67,9 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>以注入的 ACPI 來源載入表清單事實（usermode，不需驅動；讀不到由 AcpiService 標三態）。</summary>
     public void LoadAcpi(IAcpiTableSource source)
     {
-        AcpiFacts = AcpiService.Collect(source, DateTimeOffset.UtcNow);
+        AcpiFacts = AcpiService.Collect(source, DateTimeOffset.UtcNow)
+            // FW-024 FPDT：同一份表來源，另外解 POST 階段時長（見 AcpiFpdtFactsService 的版面出處）。
+            .Concat([AcpiFpdtFactsService.Collect(source, DateTimeOffset.UtcNow)]).ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 

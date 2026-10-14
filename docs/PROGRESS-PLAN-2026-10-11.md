@@ -930,6 +930,41 @@ Spooler／LanmanServer <b>服務在不在跑</b>。本項不重做那三層，�
 但<b>判讀邏輯（<code>SummarizeUsb</code>）完整實作並被測試釘住</b>，
 包含「線材 vs 埠」的分類，所以接上取樣器後不需要再想一次。
 
+### 推進紀錄：第 538 項（2026-10-14，FPDT 開機階段解碼）
+
+1 項：**FW-024 FPDT 解碼**（`fw.fpdt.post`）。這一項不是補鍵——是<b>真的補上解碼器</b>。
+
+鍵 630→631、測試 +14（5291→5305 綠，exit 0）。**有效累計 538／600。**
+
+**做了什麼**：FPDT 表（ACPI 5.2.24）由一批「開機效能紀錄表」組成；
+本項解出 `FBPT` 裡的 `Basic Boot` 紀錄（`0x00000001`），
+換算三個階段：韌體基礎開機（ResetEnd→OsLoaderLoadImageStart）、
+OS 載入映像、ExitBootServices。時間欄位都是「自開機起的絕對時間」，
+100 ns 單位，所以時長是相減。版面出處：ACPI 規格 5.2.24 ＋ Linux `include/linux/fpdt.h`
+的 `fbpt_entry` 定義（2026-10 抓取核對）。
+
+**發現既有實作是死路**：`FirmwareDeepFactsService.FpdtFact` 早就有 `fw.fpdt` 這把鍵，
+但 `<c>FpdtProbe</c>` 預設是 `() => (0, false)`，而 `LoadFirmwareDeep()` 從不傳探針——
+也就是說它<b>永遠回「本平台無 FPDT 表」</b>。值裡寫著「FPDT 提供韌體自報的 POST 時長」，
+但沒有任何人餵它資料。這是比缺鍵更糟的狀態：<b>看起來有實作、實際上永遠不出值</b>。
+本項改成從既有的 `IAcpiTableSource`（`LoadAcpi` 已經注入了 `Win32AcpiTableSource`）真讀表，
+與 `AcpiFacts` 共用同一次列舉。舊的 `FpdtFact` 保留不動（它有自己的鍵 `fw.fpdt`），
+新舊並存的理由寫在服務註解裡。
+
+紅線：
+① <b>表缺席＝不適用，不是 0 秒</b>——「沒有這張表」與「POST 花了 0 秒」天差地別；
+② <b>時間軸回捲不回 0 而是略過</b>——負值代表紀錄沒填完或位移解錯，
+出 0 秒會被讀成「很快」；
+③ 全零欄位＝未填＝不出值，不是零秒；
+④ <b>不定義「幾秒才算慢」</b>——同樣 12 秒在老伺服器正常、在新筆電異常，
+要比就得拿這台機器自己的歷史比；
+⑤ 韌體自報與 OS 觀察<b>是不同的量測點</b>，不一致是常態不是矛盾；
+信任度標 `Reported` 不是 `Measured`。
+
+**測試記取**：第一次寫測試時把「第三個階段的時長」寫成 ExitBootEntry→ExitBootExit 的差，
+但實作算的是 OsLoaderLoadImageStart→ExitBootServicesExit（EFI 載入的完整時長）。
+是我的預期抄錯了順序，不是實作錯——測試的數字改成對照實際語意並在註解寫明每個差是哪兩個欄位。
+
 ### 剩餘主要工作面（供後續圈選）
 
 - 需要新解析器／通路的：FS-002 Amcache、FS-004 SRUM、FS-015 VSS、DS-002 DHA（TPM attest 未施測聲明可先做）、UF-008 更新大小史。

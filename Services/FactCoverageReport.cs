@@ -608,6 +608,7 @@ public static class FactCoverageReport
         ["sv.print.queues"] = "列印服務視角（SV-007）：實體與虛擬印表機分開計數——佇列存在不等於有裝置。",
         ["sg.usbslow"] = "USB 為什麼慢（SG-008）：複用 UsbLinkDecoder.Judge 的判讀；分清楚是線材還是埠（處置不同），空清單不講成正常。",
         ["sg.audio"] = "聲音為什麼斷（SG-010）：只並列 APO／端點／預設三個面向，不斷言元凶——排除法的起點。",
+        ["fw.fpdt.post"] = "FPDT 開機階段（FW-024）：版面出處 ACPI 5.2.24＋Linux fpdt.h；表缺席是不適用不是 0 秒，時間軸回捲不回 0。",
         };
 
     /// <summary>一個鍵的覆蓋狀態。</summary>
