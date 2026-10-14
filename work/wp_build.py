@@ -13,7 +13,7 @@ WP = os.path.join(ROOT, 'work', 'wp')
 
 import opencc
 s2t = opencc.OpenCC('s2t')
-t2s = opencc.OpenCC('t2s')
+t2sp = opencc.OpenCC('tw2sp')   # Taiwan Traditional -> mainland Simplified, with phrase conversion
 
 APPENDIX_HEADINGS = {
     'a_keys.md': '# 附錄 A、事實鍵全目錄',
@@ -64,7 +64,7 @@ doc = re.sub(r'\n{4,}', '\n\n\n', doc)
 with io.open(os.path.join(ROOT, 'WHITEPAPER.md'), 'w', encoding='utf-8', newline='\n') as f:
     f.write(doc)
 
-cn = t2s.convert(doc)
+cn = t2sp.convert(doc)
 with io.open(os.path.join(ROOT, 'WHITEPAPER.zh-CN.md'), 'w', encoding='utf-8', newline='\n') as f:
     f.write(cn)
 
