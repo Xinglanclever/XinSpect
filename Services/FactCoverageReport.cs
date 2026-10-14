@@ -573,6 +573,10 @@ public static class FactCoverageReport
         ["ds.sac.deep"] = "Smart App Control（DS-010）：關閉／強制／評估中三態分明；評估中不是已啟用。",
         ["ds.devpol.deep"] = "裝置安裝限制政策（DS-011）：只陳述政策設定；政策存在不等於安全或不安全。",
         ["ds.dashboard"] = "資料安全摘要（DS-012）：聚合訊號不是分數；故意不產出分數，只指路。",
+        ["sc.verifycheck.summary"] = "二手驗機精靈（SC-001）：聚合既有規則；不修復不優化，缺來源顯示為灰不是綠。",
+        ["sc.verdict.summary"] = "該不該修摘要（SC-002）：聚合既有 Warning／Critical；不給分數、不下正品翻新結論。",
+        ["sc.slow.summary"] = "效能為什麼慢（SC-003）：各環節量測值並列；排除法不是因果鏈，不宣稱元凶。",
+        ["sc.pcurve.summary"] = "供電穩嗎（SC-010）：電壓波動與斜率；觀察不是預測，5% 已近量測精度邊緣。",
         };
 
     /// <summary>一個鍵的覆蓋狀態。</summary>
