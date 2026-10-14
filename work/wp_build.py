@@ -65,6 +65,9 @@ with io.open(os.path.join(ROOT, 'WHITEPAPER.md'), 'w', encoding='utf-8', newline
     f.write(doc)
 
 cn = t2sp.convert(doc)
+# Mainland convention writes 於 as 于; the phrase tables leave a couple of
+# occurrences behind (不屬於 -> 不属於), so finish the job character-wise.
+cn = cn.replace('於', '于')
 with io.open(os.path.join(ROOT, 'WHITEPAPER.zh-CN.md'), 'w', encoding='utf-8', newline='\n') as f:
     f.write(cn)
 
@@ -77,8 +80,18 @@ def stats(text):
 print('WHITEPAPER.md        ', stats(doc))
 print('WHITEPAPER.zh-CN.md  ', stats(cn))
 
-# A Traditional-only sample: these characters do not exist in the Simplified standard,
-# so their presence in the zh-CN edition means the conversion missed something.
-probe = '們個為與這來對時會實體機器鍵點數據處標記證據對帳覆蓋薄'
-leaks = [c for c in probe if c in cn]
-print('zh-CN traditional leaks:', leaks if leaks else 'none')
+# Character-level purity check. The Traditional-only set is derived rather than hand-listed:
+# a hand-written probe is unreliable because 器, 覆 and 薄 look Traditional but are identical
+# in both standards, which made the old probe report false leaks.
+tw_only = set(c for c in set(doc) if '一' <= c <= '鿿' and t2sp.convert(c) != c)
+# A character counts as a leak only if the converter would still change it in context: 著 is
+# Traditional-only in isolation but correct in 顯著/著重, which the phrase tables already keep.
+# Convert the window back to Traditional before asking, otherwise the phrase tables misfire on
+# Simplified input: 显著 (correct mainland) would be reported as 著的残留.
+leaks = set()
+for i, ch in enumerate(cn):
+    if ch in tw_only:
+        window = s2t.convert(cn[max(0, i - 2):i + 3])
+        if ch not in t2sp.convert(window):
+            leaks.add(ch)
+print('zh-CN traditional-only leaks:', ''.join(sorted(leaks)) if leaks else 'none')

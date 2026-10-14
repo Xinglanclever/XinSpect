@@ -13,7 +13,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WP = os.path.join(ROOT, 'work', 'wp')
 EN = os.path.join(WP, 'en')
 
-BODY = ['00_front.md', '10.md', '20.md', '30.md', '40.md', '50.md', '90_intro.md']
+BODY = ['00_front.md', '10.md', '20.md', '30.md', '40.md', '50.md', '60_gov.md', '90_intro.md']
 
 # Appendix order: heading, and either a generated fragment under work/wp/ or an authored
 # English fragment under work/wp/en/.

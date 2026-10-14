@@ -43,7 +43,7 @@ All figures below are produced by scanning this build's sources with `work/wp_ge
 | Service modules | 416 | Implementation units under `Services/`; see Appendix E |
 | Test files | 433 | 4,568 `[Fact]`/`[Theory]` markers in total; see Appendix F |
 | Documents | 51 | Specs, methodology and research notes under `docs/`; see Appendix G |
-| Chapters | 58 | Parts I–VII plus Appendices A–H |
+| Chapters | 65 | Parts I–VIII plus Appendices A–H |
 | Keys with no producer | 0 | Every catalogue key is produced somewhere in the source; an orphan key fails a test |
 
 Runtime fact sources not counted above — WMI, the registry, event logs, performance counters, ETW and the X509 certificate store — vary with the machine and so are not fixed keys.
@@ -69,6 +69,7 @@ The appendices therefore cannot drift from the code. If someone adds a fact and 
 - For engineering constraints, performance budgets and limitations, read Part V (chapters 22–28).
 - For a field-by-field account of every fact domain, read Part VI (chapters 29–40).
 - For implementation conventions, measurement methodology and the design-decision record, read Part VII (chapters 41–58).
+- For the governance mechanisms — the specification catalogue, the domain verdicts, the wiring guard and the counting discipline — read Part VIII (chapters 59–65).
 - For the full sets, use Appendices A–H.
 
 ## Licence
