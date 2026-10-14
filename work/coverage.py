@@ -51,7 +51,14 @@ def covered(keytext):
             return False
         if k.rstrip('.') in impl or k in impl:
             continue
-        if any(f.startswith(k.rstrip('.')) or k.rstrip('.').startswith(f) for f in fams):
+        # A declared key with no '*' may still be a family root: the catalog writes
+        # `mu.drm` while the implementation is mu.drm.summary. Treat "some implemented key
+        # extends this one at a dot boundary" as covered -- otherwise every renamed-with-suffix
+        # key reads as a gap (that is how MU-003/006 and the AC rows were being reported).
+        base = k.rstrip('.')
+        if any(x.startswith(base + '.') for x in impl):
+            continue
+        if any(f.startswith(base) or base.startswith(f) for f in fams):
             continue
         return False
     return True

@@ -600,6 +600,10 @@ public static class FactCoverageReport
         ["ac.cpc.summary"] = "CPPC 能力輪廓（AC-002）：CPUID／事件／登錄三個 OS 層來源；**刻意不解碼 AML 的 _CPC 物件**——解不出來卻有值比誠實說沒有更糟。",
         ["gp.pollrate"] = "滑鼠輪詢率（GP-004）：Raw Input 取樣量測；取樣窗內無輸入是不適用不是 0 Hz，且取樣期間必須標註。",
         ["uf.retry."] = "更新失敗重試鏈（UF-002）：wu.history 的聚合視角；重試不等於失敗，門檻看失敗次數不是嘗試次數。",
+        ["mu.drm.components"] = "DRM 元件盤點（MU-003）：固定候選機碼清單的存在性與版本；元件存在不等於可播，不讀授權、金鑰或內容識別碼。",
+        ["mu.spatial.formats"] = "空間音訊格式（MU-006）：格式註冊名稱清單；支援格式與目前使用中是兩件事，格式名不在地化。",
+        ["uv.cdat"] = "CDAT 結構表（UV-005）：只到版本與條目數，**不逐條解讀**——規範版本與條目語意是外部規格，沒對準出處就不出值。",
+        ["uv.usb.trim"] = "USB 隨身碟 TRIM（UV-009）：裝置宣告不等於執行；沒插隨身碟是不適用不是 0。",
         };
 
     /// <summary>一個鍵的覆蓋狀態。</summary>

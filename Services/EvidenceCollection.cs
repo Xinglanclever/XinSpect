@@ -120,6 +120,8 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 ScenarioGuidanceFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadMultimedia(); }
         catch { /* 附加功能：讀不到由 MultimediaFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadMultimedia(); }
+        catch { /* 附加功能：讀不到由 MultimediaFactsService／MediaProtectionFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadExportCache(); }
         catch { /* 附加功能：讀不到由 JsonlExportService／QueryResultCache 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadMaintenanceDashboard(); }
@@ -176,6 +178,8 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 GovernanceKnowledgeFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadBusDeepDive(); }
         catch { /* 附加功能：讀不到由 BusDeepDiveFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadBusCapability(); }
+        catch { /* 附加功能：讀不到由 BusCapabilityFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadEngineeringGovernance(); }
         catch { /* 附加功能：讀不到由 EngineeringGovernanceFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadVisualization(); }
