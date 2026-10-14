@@ -589,6 +589,10 @@ public static class FactCoverageReport
         ["sv.dhcp"] = "DHCP 伺服器（SV-005）：DHCPServer\\Configuration 單一來源；只讀授權範圍數與繫結介面數，不列配發紀錄。",
         ["sv.rds"] = "遠端桌面服務（SV-008）：RDMS／TermService 登錄單一來源；授權子角色只陳述存在（金鑰屬 L3 禁項），工作階段只報數量。",
         ["nw.eee.caps"] = "EEE 節能乙太網路（NW-014）：網卡驅動的 EEE／節能登錄值單一來源；驅動沒開欄位是不適用，不是 0 筆。",
+        ["st.fs.volumes"] = "檔案系統卷冊盤點（ST-006）：Win32_Volume 單一來源；只報各檔案系統的容量分布，不列磁碟機代號與卷標。",
+        ["st.fs.refs"] = "ReFS 完整性串流（ST-006）：組態計數單一來源；沒有 ReFS 卷是不適用不是 0，NTFS 沒有 Integrity Streams 這個機制。",
+        ["st.fs.vss"] = "VSS 儲存空間（ST-006）：Win32_ShadowStorage 單一來源；只列空間與關聯數，不列陰影建立時間與來源機器名。",
+        ["sa.bl.recovery"] = "BitLocker 復原金鑰輪廓（SA-016）：保護器型別計數單一來源；**金鑰值永不讀取、輸出、落地**（查詢欄位不含 NumericalPassword）。",
         };
 
     /// <summary>一個鍵的覆蓋狀態。</summary>

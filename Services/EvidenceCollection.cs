@@ -204,12 +204,16 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 EngineeringGovernance2FactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadStorageDeep(); }
         catch { /* 附加功能：讀不到由 StorageDeepFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadFileSystemVolume(); }
+        catch { /* 附加功能：讀不到由 FileSystemVolumeFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadBaselineForecast(); }
         catch { /* 附加功能：讀不到由 BaselineForecastFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadDevDiagCorrelation(); }
         catch { /* 附加功能：讀不到由 DevDiagAndCorrelationFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadSecurityAuditDeep(); }
         catch { /* 附加功能：讀不到由 SecurityAuditDeepFactsService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadBitLockerRecovery(); }
+        catch { /* 附加功能：讀不到由 BitLockerRecoveryFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadAcpiDeep(); }
         catch { /* 附加功能：讀不到由 AcpiDeepFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadDataSecurityDeep(); }
