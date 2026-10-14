@@ -4,7 +4,7 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一执行文件发布，免安装；对硬件与系统的读取以只读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-2.83-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.84-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![测试](https://img.shields.io/badge/tests-5072%20passed-3FB950)
@@ -79,10 +79,10 @@
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.83/XinSpect.exe) | 32,852,779 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.83/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.84/XinSpect.exe) | 32,852,779 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.84/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 
-> **本表的字节数为本版（v2.83）实际发布的文件大小**；请以 Release 页面列出的文件为准。
+> **本表的字节数为本版（v2.84）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
 系统需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含发布则免装）。显卡深测需要 D3D11 兼容设备；MSR 读取、SMART ioctl、Security 事件日志需以系统管理员执行——没有权限时相关项目标示「权限不足」，程序不会假装成功，也不会静默降级。
 
@@ -424,6 +424,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.84 Olympus**（2026-10-15）：儲存／安全／ACPI／視覺化／情境五域深化（第 484–523 項）——控制器拓撲／外接盒橋接／Storage Spaces／韌體問題表／WMI 交叉／DWPD；ADS／程式簽章／登入聚合／服務二進位 ACL／PATH 可寫／服務 SDDL；_PRx／_DSM／BGRT／SPCR／DBG2／表匯總；桑基／熱力圖／拓撲樹；憑證自動更新／自簽清單／Smart App Control／裝置政策／摘要卡；驗機精靈／該不該修／效能慢證據鏈／供電曲線。可寫是劫持面不是已劫持、未檢查不等於安全、缺格必須是缺口、聚合訊號不是分數。全程唯讀；測試 5072 綠、目錄 806。
 - **v2.83 Olympus**（2026-10-14）：工程治理二（第 470–483 項）＋ NVMe 紀錄頁卡死修復——CI／PR 模板／效能回歸容差／docs 連結／SECURITY.md／逐頁導覽／ARM64／Win 分支／fuzz／真語料／覆蓋率／鍵文件／快照矩陣／SelfTelemetry；並修復 NVMe 紀錄頁查詢改走可取消的 overlapped I/O。守門類只陳述不執行、未施測一律標明。全程唯讀；測試 4945 綠、目錄 771。
 - **v2.82 Olympus**（2026-10-14）：離線分析、產品平台與深測方法學（第 371–399 項）——離線 hive/evtx/minidump/BCD/裸碟/快照差異/寫入封鎖；行程樹/工作集/系統呼叫/UI 品質/截圖基線/首載預算/雙包裝/升級/遷移/多語安裝器；DPC/NUMA/熱 tau/風扇曲線/核心間延遲/內容切換/中斷親和/睡眠/環回/PSU 效率；憑證漫遊/ESP 基線。全程唯讀、L2 opt-in；測試 4822 綠、目錄 688。
 - **v2.81 Olympus**（2026-10-14）：匯流排深化、工程治理與視覺化（第 346–370 項）——TB/USB4/CXL、USB 描述元與電源角色、Hub；p95／版號語意／已知不可為／鍵 semver／混合架構／未施測／知識包／倉庫衛生／文件來源／corpus；甘特／雷達／縮放／多軸／主題。全程唯讀、無硬體一律 N/A；測試 4770 綠、目錄 659。
