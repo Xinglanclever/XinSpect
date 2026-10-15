@@ -48,6 +48,27 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "2.85",
+            Date = "2026-10-16",
+            Title = "ULTIMATE-1000 階段一：契約、骨架、出處鏈與守門方法論（105 項）",
+            Items =
+            [
+                "掃描骨架契約：IReadOnlyScanner 介面、逾時必須先宣告、還原契約、中斷保留——骨架只負責順序與還原，不判斷事實意義、不寫入。",
+                "來源接縫：來源狀態與事實狀態分開、名稱重複拒絕後來的、主力→備援→三態全鏈留痕、離線掛載狀態與可用性分離、宣告與實際生產雙向對帳。",
+                "六態收斂與申報：FactAvailability 六態為全專案唯一定義，格的傳播（取最弱者）成文，逐態計數（六態全在、未出現記 0）、失敗原因彙總、不可用查詢。",
+                "出處鏈：spec.ref 家族八把鍵（條數／解析度／覆蓋／版本／係數／衝突／匯出出處）——SpecRefRegistry 早有 46 個解碼器註冊，缺的是把覆蓋面變成事實輸出。",
+                "知識包與知識表：kp.* 六把鍵（版次／完整雜湊不截斷／快照／更新通道／換包審計／未收錄）、OUI 與 PCI 查詢三態（命中／未收錄→Unknown／無法解析→ReadError）。",
+                "敏感度分級：L0–L3 逐欄標註、匯出預設遮蔽、L2 逐類解除且須留紀錄、L3 禁項掃描守門（含正對照）。L3 與其他三級的差別不是程度而是種類。",
+                "寫入閘門與審計鏈：write.allowlist（未登記的動詞直接拒收）、write.count（被拒不是壞事但要看）、write.ledger（四欄缺一不可）、write.rollback、audit.head／verify／state_change／export、ev.manifest／chain.verify 互驗。",
+                "出網政策：egress.allowlist 四種觸發只有使用者主動允許、egress.trigger 把「沒有通路」與「沒有觸發」分開、data.egress.report、report.class 由內容推導。",
+                "韌性與降級：key.evolution（更名會讓歷史無法比較）、coverage.gap、diag.count（未接住的例外是本程式的缺陷不是機器的問題）、src.circuit、degrade.mode、fact.error.reason、src.retry、scan.failures。",
+                "守門方法論：GuardPolicy（五模式、等級宣告含「守不住什麼」、白名單上限、誤報治理——放寬門檻一律不接受）、GuardRegistry 八條守門清冊、GuardBudget 時間預算。",
+                "發佈與對外：build.singlefile／reproducible、release.verify、tests.baseline、license.notices、cert.plan、limits.public、contrib.guide、doc.reconcile。",
+                "測試 5512→5848 綠；事實鍵目錄 856→930 把（＋23 個動態家族）；ULTIMATE-1000 階段一 105 項完成。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "2.84",
             Date = "2026-10-15",
             Title = "儲存／安全／ACPI／視覺化／情境五域深化（第 484–523 項）",
