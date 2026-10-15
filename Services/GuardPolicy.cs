@@ -62,8 +62,14 @@ public static class GuardPolicy
     /// <param name="RealRisk">它防範的<b>真實</b>風險——不是「可能會錯」這種空話。</param>
     /// <param name="Level">等級宣告。</param>
     /// <param name="HasPositiveControl">是否附了「該紅會紅」的正對照。</param>
+    /// <param name="PositiveControlExemption">
+    /// 沒有正對照時的理由。<b>這是唯一的合法免除途徑</b>——
+    /// 「沒有正對照」與「不需要正對照」是兩件事，後者必須說得出為什麼，
+    /// 否則免除會變成預設值，而預設免除等於預設鬆散。
+    /// </param>
     public sealed record Guard(
-        string Name, GuardMode Mode, string RealRisk, GuardLevel Level, bool HasPositiveControl);
+        string Name, GuardMode Mode, string RealRisk, GuardLevel Level, bool HasPositiveControl,
+        string? PositiveControlExemption = null);
 
     /// <summary>
     /// 檢查一條守門的宣告是否完備。
@@ -79,11 +85,26 @@ public static class GuardPolicy
         if (!guard.Level.IsDeclared)
             problems.Add($"{guard.Name}：等級宣告不完整——「守得住什麼」與「守不住什麼」都要寫");
         // 原始碼掃描與政策釘死這兩類，沒有正對照就可能是永遠綠的。
+        // 但「沒有」與「不需要」要分開：後者必須附理由，而且理由不得是空話。
         if (guard.Mode is GuardMode.SourceScan or GuardMode.PolicyPin && !guard.HasPositiveControl)
-            problems.Add($"{guard.Name}：{Describe(guard.Mode)}沒有附正對照——"
-                       + "沒有「該紅會紅」的證明，它可能因為樣式失效而永遠是綠的");
+        {
+            if (string.IsNullOrWhiteSpace(guard.PositiveControlExemption))
+                problems.Add($"{guard.Name}：{Describe(guard.Mode)}沒有附正對照，也沒有寫出為什麼不需要——"
+                           + "沒有「該紅會紅」的證明，它可能因為樣式失效而永遠是綠的");
+            else if (guard.PositiveControlExemption.Trim().Length < 30)
+                problems.Add($"{guard.Name}：免除正對照的理由太短"
+                           + $"（{guard.PositiveControlExemption.Trim().Length} 字，至少要 30 字）——"
+                           + "空話式的免除與沒有理由無異");
+        }
         return problems;
     }
+
+    /// <summary>沒有正對照、也沒有寫出為什麼不需要的守門——這些最可能是「永遠是綠的」。</summary>
+    public static IReadOnlyList<string> UnexcusedGuards(IEnumerable<Guard> guards) =>
+        guards.Where(g => g.Mode is GuardMode.SourceScan or GuardMode.PolicyPin
+                       && !g.HasPositiveControl
+                       && string.IsNullOrWhiteSpace(g.PositiveControlExemption))
+              .Select(g => g.Name).ToList();
 
     /// <summary>
     /// 例外清單的上限檢查（P1-061）。
