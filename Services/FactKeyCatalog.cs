@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 913 個（＝本清單的成員數；另有 23 個動態家族見
+    /// <summary>本版建置時掃到的事實鍵，共 921 個（＝本清單的成員數；另有 23 個動態家族見
     /// <see cref="FactKeyDynamicCatalog"/>，那些的成員由機器事實決定，不列在這裡）。
     /// <b>本清單一律以全字串字典序排列</b>——<c>FactKeyCatalogTests.目錄不得有重複鍵且要排序</c> 釘住這件事；
     /// 插鍵時整塊重排，不要手找位置（找前綴會把 <c>gp.*</c> 插到 <c>gpu.*</c> 後面）。
@@ -146,6 +146,7 @@ public static class FactKeyCatalog
         "cmos.rtc_valid",
         "coverage.denominator",
         "coverage.exempt",
+        "coverage.gap",
         "coverage.threeway.diff",
         "cpu.die.count",
         "cpu.eff.curve",
@@ -168,6 +169,8 @@ public static class FactKeyCatalog
         "dbg.start_options",
         "dbg.testsigning",
         "defender.exclusions.count",
+        "degrade.mode",
+        "diag.count",
         "display.hw.gpu",
         "display.summary",
         "dk.alias.summary",
@@ -298,6 +301,7 @@ public static class FactKeyCatalog
         "export.mask",
         "export.provenance",
         "export.release",
+        "fact.error.reason",
         "fact.provenance",
         "fact.readerror.reason",
         "fact.sensitivity",
@@ -434,6 +438,7 @@ public static class FactKeyCatalog
         "in.self",
         "in.update.sig",
         "key.count",
+        "key.evolution",
         "knowledge.pack.status",
         "knowledge.pack.tables",
         "kp.digest",
@@ -727,6 +732,7 @@ public static class FactKeyCatalog
         "sc.uptime.summary",
         "sc.verdict.summary",
         "sc.verifycheck.summary",
+        "scan.failures",
         "scan.partial.count",
         "scan.restore.ok",
         "scan.skeleton.adoption",
@@ -783,7 +789,9 @@ public static class FactKeyCatalog
         "src.available",
         "src.capability",
         "src.chain",
+        "src.circuit",
         "src.registry.count",
+        "src.retry",
         "st.align.summary",
         "st.bridge.summary",
         "st.ctrl.tree",
