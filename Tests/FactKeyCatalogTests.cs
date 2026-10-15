@@ -54,6 +54,26 @@ public class FactKeyCatalogTests
         Assert.Equal(FactKeyCatalog.Keys.Count, FactKeyCatalog.Count);
     }
 
+    /// <summary>
+    /// 排序壞掉時要<b>指名</b>是哪幾把鍵、錯在第幾位——排序斷言原本只回一句「集合不相等」，
+    /// 於是 2026-10-15 那次錯位只留下「目錄紅燈、重排後綠」的記憶，<b>連錯了幾把都說不出來</b>，
+    /// 事後註解裡的數字無從對帳。守門的訊息本身就是證據，不要讓它只說「紅了」。
+    /// </summary>
+    [Fact]
+    public void 目錄排序壞掉時要指名錯位的鍵與位置()
+    {
+        var offenders = FactKeyCatalog.Keys
+            .Select((k, i) => (Key: k, Index: i))
+            .Where(x => x.Index > 0
+                     && string.CompareOrdinal(FactKeyCatalog.Keys[x.Index - 1], x.Key) > 0)
+            .ToList();
+
+        Assert.True(offenders.Count == 0,
+            $"事實鍵目錄有 {offenders.Count} 處逆序（相鄰兩鍵前者大於後者）："
+            + string.Join("、", offenders.Take(10).Select(o =>
+                $"[{o.Index - 1}] {FactKeyCatalog.Keys[o.Index - 1]} > [{o.Index}] {o.Key}")));
+    }
+
     [Fact]
     public void 目錄鍵要符合事實鍵格式()
     {

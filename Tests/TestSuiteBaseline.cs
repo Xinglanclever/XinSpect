@@ -26,6 +26,11 @@ internal static class TestSuiteBaseline
 {
     /// <summary>
     /// 專案測試數。加測試就改這裡，<c>ChangelogTests</c> 會守著三份 README 的徽章。
+    /// <para>
+    /// ⚠ 這個數字的來源只有一個：<c>dotnet test</c> 跑完全套後印出的「測試數總計」。
+    /// <b>不要從紀錄裡的「+N」推算</b>——2026-10-15 的帳本就這樣寫出「測試 +31」，
+    /// 而 5476→5505 實際只加了 29 條（見 docs/PROGRESS-PLAN-2026-10-11.md 第 550 項的更正註記）。
+    /// </para>
     /// </summary>
-    public const int ProjectTests = 5476;
+    public const int ProjectTests = 5512;
 }

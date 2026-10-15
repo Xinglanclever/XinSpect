@@ -25,20 +25,29 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 644 個（＝本清單的成員數；另有 23 個動態家族見
-    /// <see cref="FactKeyDynamicCatalog"/>，那些的成員由機器事實決定，不列在這裡）。</summary>
+    /// <summary>本版建置時掃到的事實鍵，共 647 個（＝本清單的成員數；另有 23 個動態家族見
+    /// <see cref="FactKeyDynamicCatalog"/>，那些的成員由機器事實決定，不列在這裡）。
+    /// <b>本清單一律以全字串字典序排列</b>——<c>FactKeyCatalogTests.目錄不得有重複鍵且要排序</c> 釘住這件事；
+    /// 插鍵時整塊重排，不要手找位置（找前綴會把 <c>gp.*</c> 插到 <c>gpu.*</c> 後面）。
+    /// 這個教訓來自一次真實的錯位，但「錯了幾段／幾鍵」<b>沒有留下可對帳的紀錄</b>：
+    /// <c>git log -S</c> 追不到，首次出現這段話的 commit 也還沒進 repo（2026-10-16 查證）。
+    /// 能確認的是往後不會再無從舉證——<c>FactKeyCatalogTests.目錄排序壞掉時要指名錯位的鍵與位置</c>
+    /// 會在紅燈訊息裡直接指出第幾位、哪兩把鍵。
+    /// <b>不要在這裡補一個沒人能驗證的數字。</b></summary>
     public static IReadOnlyList<string> Keys { get; } =
     [
-
+        "ac.aml.boundary",
         "ac.aml.stat",
         "ac.aml.str.count",
         "ac.aml.str.sample",
         "ac.bgrt",
         "ac.bgrt.deep",
+        "ac.checksum.bad",
         "ac.cpc.summary",
         "ac.dbg2",
         "ac.dbg2.deep",
         "ac.dbg2.devices",
+        "ac.decode.unrecorded",
         "ac.dsm.summary",
         "ac.hpet.full.base",
         "ac.hpet.full.id",
@@ -273,6 +282,9 @@ public static class FactKeyCatalog
         "ev.watermark",
         "ev.xinsig",
         "evt.system.7d",
+        "fs.amcache.count",
+        "fs.amcache.publishers",
+        "fs.amcache.versions",
         "fs.bin.count",
         "fs.bin.roots",
         "fs.bin.size_mb",
@@ -766,9 +778,11 @@ public static class FactKeyCatalog
         "tm.rtc.drift",
         "tm.source",
         "tm.tzdb",
+        "tpm.pcr.banks",
         "tpm.present",
         "tpm.replay.summary",
         "tpm.tcg_log",
+        "tpm.version",
         "tu.battery",
         "tu.jitter",
         "tu.matrix",

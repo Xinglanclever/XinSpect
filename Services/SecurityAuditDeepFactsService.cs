@@ -1,4 +1,8 @@
 using System.IO;
+using System.Management;
+using System.Security.AccessControl;
+using System.Security.Principal;
+using Microsoft.Win32;
 
 namespace XinSpect;
 
@@ -156,7 +160,7 @@ public static class SecurityAuditDeepFactsService
     public static HardwareFact UninstFact(DateTimeOffset at, UninstProbe? probe = null)
     {
         UninstState? s;
-        try { s = (probe ?? (() => null))(); }
+        try { s = (probe ?? new UninstProbe(ReadUninst))(); }
         catch { s = null; }
 
         if (s is null)
@@ -185,7 +189,7 @@ public static class SecurityAuditDeepFactsService
     public static HardwareFact LogonFact(DateTimeOffset at, LogonProbe? probe = null)
     {
         LogonState? s;
-        try { s = (probe ?? (() => null))(); }
+        try { s = (probe ?? new LogonProbe(ReadLogon))(); }
         catch { s = null; }
 
         if (s is null)
@@ -215,7 +219,7 @@ public static class SecurityAuditDeepFactsService
     public static HardwareFact SvcBinFact(DateTimeOffset at, SvcBinProbe? probe = null)
     {
         SvcBinState? s;
-        try { s = (probe ?? (() => null))(); }
+        try { s = (probe ?? new SvcBinProbe(ReadSvcBin))(); }
         catch { s = null; }
 
         if (s is null)
@@ -238,7 +242,7 @@ public static class SecurityAuditDeepFactsService
     public static HardwareFact PathFact(DateTimeOffset at, PathProbe? probe = null)
     {
         PathState? s;
-        try { s = (probe ?? (() => null))(); }
+        try { s = (probe ?? new PathProbe(ReadPath))(); }
         catch { s = null; }
 
         if (s is null)
@@ -268,7 +272,7 @@ public static class SecurityAuditDeepFactsService
     public static HardwareFact SddlFact(DateTimeOffset at, SddlProbe? probe = null)
     {
         SddlState? s;
-        try { s = (probe ?? (() => null))(); }
+        try { s = (probe ?? new SddlProbe(ReadSddl))(); }
         catch { s = null; }
 
         if (s is null)
@@ -290,6 +294,166 @@ public static class SecurityAuditDeepFactsService
     }
 
     // ── helper ────────────────────────────────────────────────────────────
+
+    /// <summary>已安裝程式簽章審計：走解除安裝登錄（三處 hive），檔案路徑存在性抽查。
+    /// 簽章實檢成本高，本項只到「條目／路徑存在」層級——<b>不冒充已驗簽章</b>，
+    /// 未驗的以 NotChecked 計並在值裡說出來（與 SecurityAuditSupplement 的 .summary 同來源）。</summary>
+    private static UninstState? ReadUninst()
+    {
+        int entries = 0, missing = 0;
+        try
+        {
+            foreach (var (hive, path) in new[]
+            {
+                (Registry.LocalMachine, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"),
+                (Registry.LocalMachine, @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"),
+                (Registry.CurrentUser, @"Software\Microsoft\Windows\CurrentVersion\Uninstall"),
+            })
+            {
+                using var root = hive.OpenSubKey(path);
+                if (root is null) continue;
+                foreach (string name in root.GetSubKeyNames())
+                {
+                    using var k = root.OpenSubKey(name);
+                    if (k is null || k.GetValue("DisplayName") is not string) continue;
+                    entries++;
+                    string? loc = k.GetValue("InstallLocation") as string;
+                    if (string.IsNullOrWhiteSpace(loc) || !Directory.Exists(loc)) missing++;
+                }
+            }
+        }
+        catch { return null; }
+        return new(entries, 0, 0, missing, entries);
+    }
+
+    /// <summary>登入歷史聚合：Security 記錄檔 4624／4625／4740，取最近 1000 筆。
+    /// 需要 Security 記錄檔讀取權（未提權多半失敗——屆時回 null 走 ReadError，不猜「沒有登入」）。</summary>
+    private static LogonState? ReadLogon()
+    {
+        int ok = 0, fail = 0, lockout = 0;
+        try
+        {
+            var q = new System.Diagnostics.Eventing.Reader.EventLogQuery("Security",
+                System.Diagnostics.Eventing.Reader.PathType.LogName,
+                "*[System[(EventID=4624 or EventID=4625 or EventID=4740)]]") { ReverseDirection = true };
+            using var r = new System.Diagnostics.Eventing.Reader.EventLogReader(q);
+            for (int i = 0; i < 1000; i++)
+            {
+                using var e = r.ReadEvent(); if (e is null) break;
+                if (e.Id == 4624) ok++; else if (e.Id == 4625) fail++; else if (e.Id == 4740) lockout++;
+            }
+        }
+        catch { return null; }
+        return new(ok, fail, lockout, 30, 0);
+    }
+
+    /// <summary>服務二進位 ACL：逐服務執行檔查 ACL，找 World 可寫者。
+    /// 讀不到 ACL 的記 AclDenied——<b>未檢查不等於安全</b>（值裡會具名說出這個數）。</summary>
+    private static SvcBinState? ReadSvcBin()
+    {
+        int checkedCount = 0, writable = 0, missing = 0, denied = 0;
+        try
+        {
+            using var s = new ManagementObjectSearcher("SELECT PathName FROM Win32_Service WHERE PathName IS NOT NULL");
+            foreach (ManagementObject o in s.Get()) using (o)
+            {
+                checkedCount++;
+                string path = (o["PathName"]?.ToString() ?? "").Trim('"');
+                int space = path.IndexOf(".exe ", StringComparison.OrdinalIgnoreCase);
+                if (space > 0) path = path[..(space + 4)];
+                if (!File.Exists(path)) { missing++; continue; }
+                try
+                {
+                    var sec = new FileInfo(path).GetAccessControl();
+                    foreach (FileSystemAccessRule r in sec.GetAccessRules(true, true, typeof(SecurityIdentifier)))
+                        if (r.AccessControlType == AccessControlType.Allow
+                         && (r.FileSystemRights & FileSystemRights.WriteData) != 0
+                         && r.IdentityReference is SecurityIdentifier sid && sid.IsWellKnown(WellKnownSidType.WorldSid)) { writable++; break; }
+                }
+                catch { denied++; }
+            }
+        }
+        catch { return null; }
+        return new(checkedCount, writable, missing, denied);
+    }
+
+    /// <summary>PATH 可寫性：逐 PATH 目錄查 ACL，World 可寫者計數。ACL 讀不到的另計。</summary>
+    private static PathState? ReadPath()
+    {
+        int dirs = 0, writable = 0, userWritable = 0, denied = 0;
+        try
+        {
+            string path = Environment.GetEnvironmentVariable("PATH") ?? "";
+            foreach (string p in path.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (!Directory.Exists(p)) continue;
+                dirs++;
+                try
+                {
+                    var sec = new DirectoryInfo(p).GetAccessControl();
+                    foreach (FileSystemAccessRule r in sec.GetAccessRules(true, true, typeof(SecurityIdentifier)))
+                        if (r.AccessControlType == AccessControlType.Allow
+                         && (r.FileSystemRights & FileSystemRights.WriteData) != 0
+                         && r.IdentityReference is SecurityIdentifier sid)
+                        {
+                            if (sid.IsWellKnown(WellKnownSidType.WorldSid)) { writable++; break; }
+                            if (sid.IsWellKnown(WellKnownSidType.BuiltinUsersSid)) userWritable++;
+                        }
+                }
+                catch { denied++; }
+            }
+        }
+        catch { return null; }
+        return new(dirs, writable, userWritable, denied);
+    }
+
+    /// <summary>服務 SDDL 權限：逐服務讀安全描述元（與 <c>sa.sddl.summary</c> 同一條唯讀通路），
+    /// 找非管理員可重配置／可啟停者。
+    /// <para>
+    /// 這一項曾經是<b>死探針</b>——五個 <c>Read*</c> 都寫成 <c>() =&gt; null</c>，於是在每一台機器上
+    /// 永遠回 ReadError。接線後仍保留一層「未檢查」語義：<b>讀不到的安全描述元計入
+    /// <c>Denied</c> 並在值裡說出來</b>，不讓 0 冒充「沒有發現」（未檢查不等於安全）。</para>
+    /// </summary>
+    private static SddlState? ReadSddl()
+    {
+        try
+        {
+            int services = 0, reconfigurable = 0, startable = 0, denied = 0;
+            foreach (string name in PlatformGovernanceFactsService.ServiceNames())
+            {
+                services++;
+                IntPtr svc = PlatformGovernanceFactsService.OpenServiceW(
+                    PlatformGovernanceFactsService.Scm, name,
+                    PlatformGovernanceFactsService.ServiceQueryConfig | PlatformGovernanceFactsService.ReadControl);
+                if (svc == IntPtr.Zero) { denied++; continue; }
+                try
+                {
+                    var sd = PlatformGovernanceFactsService.QuerySecurityDescriptor(svc);
+                    if (sd is null) { denied++; continue; }
+                    var (reconf, _) = PlatformGovernanceFactsService.CountWritableAces(sd);
+                    if (reconf) reconfigurable++;
+                    if (HasStartAce(sd)) startable++;
+                }
+                finally { PlatformGovernanceFactsService.CloseServiceHandle(svc); }
+            }
+            if (services == 0) return null;
+            return new(services, reconfigurable, startable, denied);
+        }
+        catch { return null; }
+    }
+
+    /// <summary>這個服務有沒有「非管理員可啟停」的允許項（<c>SERVICE_START</c> 給非 admin 主體）。</summary>
+    internal static bool HasStartAce(RawSecurityDescriptor sd)
+    {
+        if (sd.DiscretionaryAcl is null) return false;
+        foreach (GenericAce ace in sd.DiscretionaryAcl)
+        {
+            if (ace is not CommonAce ca || ca.AceQualifier != AceQualifier.AccessAllowed) continue;
+            if ((ca.AccessMask & PlatformGovernanceFactsService.ServiceStart) == 0) continue;
+            if (PlatformGovernanceFactsService.IsNonAdminPrincipal(ca.SecurityIdentifier)) return true;
+        }
+        return false;
+    }
 
     private static HardwareFact Unavailable(DateTimeOffset at, string key, string name,
         FactAvailability availability, string reason)

@@ -102,6 +102,147 @@ public static class Tpm2
 
     // TPM2 所有線上格式多欄位都是<b>大端序</b>（TPM 2.0 Part 1 §5）——與 x86 的 BitConverter 相反。
     private static void PutU16(byte[] b, int off, ushort v) { b[off] = (byte)(v >> 8); b[off + 1] = (byte)v; }
+
+    // ── GetCapability：演算法銀行與版本（P2-063／P2-068）────────────────────
+
+    public const uint CcGetCapability = 0x0000017A;
+    public const uint CapAlgorithms = 0x00000000;
+    public const uint CapTpmProperties = 0x00000006;
+    public const uint PtFamilyIndicator = 0x00000100;
+    public const uint PtRevision = 0x00000101;
+    public const uint PtVendor1 = 0x00000104, PtVendor2 = 0x00000105,
+                      PtVendor3 = 0x00000106, PtVendor4 = 0x00000107;
+
+    /// <summary>
+    /// 建 TPM2_GetCapability 命令（TPM_ST_NO_SESSIONS）：查演算法或屬性。
+    /// </summary>
+    [SpecRef("TPM 2.0 Part 3 Commands：TPM_CC_GetCapability＝0x0000017A；命令格式 { capability u32, property u32, propertyCount u32 }")]
+    public static byte[] BuildGetCapabilityCommand(uint capability, uint property, uint propertyCount)
+    {
+        var cmd = new byte[22];
+        PutU16(cmd, 0, TagNoSessions);
+        PutU32(cmd, 2, 22);
+        PutU32(cmd, 6, CcGetCapability);
+        PutU32(cmd, 10, capability);
+        PutU32(cmd, 14, property);
+        PutU32(cmd, 18, propertyCount);
+        return cmd;
+    }
+
+    /// <summary>capabilityData 的原始位元組（未解讀）。回應格式對不上就回 null，呼叫方如實三態。</summary>
+    [SpecRef("TPM 2.0 Part 3：GetCapability 回應標頭（tag／paramSize／rc）＋moreData u8＋capability u32＋"
+           + "TPML_ALG_PROPERTY 或 TPML_TAGGED_TPM_PROPERTY（count u32＋條目）")]
+    public static byte[]? GetCapabilityData(byte[] response, out uint returnCode, out uint capability, out uint count)
+    {
+        returnCode = 0; capability = 0; count = 0;
+        if (response.Length < 17) return null;
+        uint rc = GetU32(response, 6);
+        returnCode = rc;
+        if (rc != 0) return null;
+        uint declared = GetU32(response, 2); // paramSize
+        if (declared < 17 || declared > response.Length) return null;
+        capability = GetU32(response, 11); // moreData u8@10、capability u32@11
+        count = GetU32(response, 15);
+        if (count > 4096) return null; // 合理上限外＝格式不符，不硬讀
+        return response[19..(int)declared];
+    }
+
+    /// <summary>一個演算法屬性條目（TPMT_ALG_PROPERTY）：演算法 ID 與其旗標。</summary>
+    public readonly record struct AlgProperty(ushort Alg, uint Flags);
+
+    /// <summary>
+    /// 解 TPML_ALG_PROPERTY：count u32@0，其後每條目 6 位元組（alg u16、algProperties u32）。
+    /// 越界即停並回已解出的部分——格式不符時寧可少也不猜（呼叫方據此標示）。
+    /// </summary>
+    [SpecRef("TPM 2.0 Part 2 Structures：TPMT_ALG_PROPERTY { TPMI_ALG_HASH alg; TPMA_ALGORITHM algProperties }；"
+           + "TPMA_ALGORITHM bit0 asymmetric、bit1 symmetric、bit2 hash、bit3 object、bit8 signing、bit9 encrypting、bit10 method")]
+    public static IReadOnlyList<AlgProperty> DecodeAlgProperties(byte[] capabilityData)
+    {
+        var list = new List<AlgProperty>();
+        if (capabilityData.Length < 4) return list;
+        uint count = GetU32(capabilityData, 0);
+        if (count > 4096) return list;
+        int off = 4;
+        for (uint i = 0; i < count; i++)
+        {
+            if (off + 6 > capabilityData.Length) break;
+            list.Add(new AlgProperty(GetU16(capabilityData, off), GetU32(capabilityData, off + 2)));
+            off += 6;
+        }
+        return list;
+    }
+
+    /// <summary>TPMA_ALGORITHM 的旗標判讀（未設位元一律為否，不推測）。</summary>
+    public static bool IsHash(uint flags) => (flags & 0x04) != 0;
+    public static bool IsAsymmetric(uint flags) => (flags & 0x01) != 0;
+    public static bool IsSymmetric(uint flags) => (flags & 0x02) != 0;
+
+    /// <summary>演算法 ID → 顯示名。未收錄回 null（呼叫方顯示原始 ID，不猜名）。</summary>
+    [SpecRef("TPM 2.0 Part 2：TPM_ALG_ID 值表（本表只收錄常用者，未收錄一律顯示原始 ID）")]
+    public static string? AlgName(ushort alg) => alg switch
+    {
+        AlgSha1 => "SHA-1",
+        AlgSha256 => "SHA-256",
+        AlgSha384 => "SHA-384",
+        AlgSha512 => "SHA-512",
+        AlgSm3 => "SM3-256",
+        0x0006 => "SHA256-192",
+        0x0023 => "SHA3-256",
+        0x0024 => "SHA3-384",
+        0x0025 => "SHA3-512",
+        0x0001 => "RSA",
+        _ => null,
+    };
+
+    /// <summary>一個 TPM 屬性條目（TPMT_TAGGED_TPM_PROPERTY）：屬性 ID 與其值。</summary>
+    public readonly record struct TpmProperty(uint Property, uint Value);
+
+    /// <summary>解 TPML_TAGGED_TPM_PROPERTY：count u32@0，其後每條目 8 位元組（property u32、value u32）。越界即停。</summary>
+    [SpecRef("TPM 2.0 Part 2 Structures：TPMT_TAGGED_TPM_PROPERTY { TPM_PT property; UINT32 value }；"
+           + "TPM_PT_FAMILY_INDICATOR＝0x100、TPM_PT_REVISION＝0x101、TPM_PT_VENDOR_STRING_1..4＝0x104..0x107")]
+    public static IReadOnlyList<TpmProperty> DecodeTpmProperties(byte[] capabilityData)
+    {
+        var list = new List<TpmProperty>();
+        if (capabilityData.Length < 4) return list;
+        uint count = GetU32(capabilityData, 0);
+        if (count > 4096) return list;
+        int off = 4;
+        for (uint i = 0; i < count; i++)
+        {
+            if (off + 8 > capabilityData.Length) break;
+            list.Add(new TpmProperty(GetU32(capabilityData, off), GetU32(capabilityData, off + 4)));
+            off += 8;
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// TPM_PT_FAMILY_INDICATOR 的四位元組（'2.0\0' 的 ASCII 打包）。
+    /// 值為 0 或全空白時回 null——「沒回報」不是「版本是 0」。
+    /// </summary>
+    [SpecRef("TPM 2.0 Part 2：TPM_PT_FAMILY_INDICATOR 為 4 位元組 ASCII（'2.0' 加終止字元），非數值")]
+    public static string? FamilyIndicator(uint raw)
+    {
+        if (raw == 0) return null;
+        var bytes = new[] { (byte)(raw >> 24), (byte)(raw >> 16), (byte)(raw >> 8), (byte)raw };
+        var text = System.Text.Encoding.ASCII.GetString(bytes).TrimEnd('\0', ' ');
+        return text.Length == 0 ? null : text;
+    }
+
+    /// <summary>
+    /// TPM_PT_REVISION：主版號在 bits 31:24、次版號在 bits 15:8（bits 23:16 為保留），
+    /// 例如 1.0 → 0x01000000、1.16 → 0x01001000、1.59 → 0x01003B00。
+    /// 值為 0 時回 null——「沒回報」不是「版本是 0」。
+    /// <b>這是本專案的解讀慣例</b>；TPM 2.0 Part 2 在 2023 年的修訂把次版號定義成 bits 23:16，
+    /// 兩者對「次版號」的取法不同——本方法的引用只主張自己的取法，不宣稱與該修訂一致。
+    /// </summary>
+    [SpecRef("TPM 2.0 Part 2：TPM_PT_REVISION 為 UINT32；本專案取 bits 31:24 為主版號、bits 15:8 為次版號、中 16 位保留")]
+    public static (int Major, int Minor)? Revision(uint raw)
+    {
+        if (raw == 0) return null;
+        return ((int)((raw >> 24) & 0xFF), (int)((raw >> 8) & 0xFF));
+    }
+
     private static void PutU32(byte[] b, int off, uint v)
     {
         b[off] = (byte)(v >> 24); b[off + 1] = (byte)(v >> 16); b[off + 2] = (byte)(v >> 8); b[off + 3] = (byte)v;

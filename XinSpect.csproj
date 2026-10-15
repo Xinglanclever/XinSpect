@@ -91,6 +91,17 @@
     <Compile Remove="docs\**\*.cs" />
   </ItemGroup>
 
+  <!-- ── obj/ 與 bin/ 的產生物不進編譯 ─────────────────────────────────────────
+       <b>這一段沒有作用，留著只為說明歷史</b>：SDK 的預設 Compile glob 在本檔讀完之後才展開，
+       此時這個 Remove 清單還是空的，因此擋不住任何東西。真正治本的是根目錄的
+       Directory.Build.props 以 DefaultItemExcludes 把 obj/**、bin/**、work/** 從 glob 排除。
+       保留的價值是提醒：想在 .csproj 裡用 Compile Remove 修 glob 相關的 CS0579 是走不通的路
+       （2026-10-15 實測九次失敗後才確認）。要嘛刪掉這段，要嘛改 props——不要以為它在生效。 -->
+  <ItemGroup>
+    <Compile Remove="obj\**\*.cs" />
+    <Compile Remove="bin\**\*.cs" />
+  </ItemGroup>
+
   <!-- ── 藍色中隊守護進程（BlueSquadronBridge）：不納入本體檔案集 ─────────────────
        BlueSquadron\ 內是獨立的 .NET 10 console app（安全守護進程），使用 WinForms
        （系統匣 NotifyIcon）等本體不引用的 API，其原始碼若被本體收入會造成命名空間衝突。 -->

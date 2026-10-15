@@ -1,0 +1,40 @@
+<Project>
+
+  <!--
+    為什麼需要這個檔案：
+
+    主專案的預設 Compile glob 會把「整個 repo 樹」的 .cs 收進來，其中有兩類不該進來的來源：
+
+      ─ obj/、bin/：本次建置的產生物。XinSpect.AssemblyInfo.cs 與
+        .NETCoreApp,Version=v*.AssemblyAttributes.cs 會與 SDK 當場生成的那份同名同內容，
+        同一組 [assembly: ...] 在一次編譯裡出現兩次 → CS0579「屬性重複」。
+
+      ─ work/：腳本與實驗的工作區，裡面另有獨立的 .NET 專案（例如 work/probe/）。
+        它們的 obj/Debug/*/probe.AssemblyInfo.cs 與 *.AssemblyAttributes.cs 一樣會被吃進來，
+        同樣造成屬性重複，而且錯誤訊息裡的檔名完全看不出跟主專案的關係。
+
+    這個死結難纏的地方：
+      ① 增量建置走快取時不會暴露；obj 一被清空、第一次全量建置就會炸（實測 16 個錯誤）。
+      ② 錯誤訊息指到的檔名每次都不一樣（WPF 暫存專案的隨機名、work 底下各專案），追不到根。
+      ③ 寫在 .csproj 裡的 <Compile Remove> 沒用——SDK 的預設 glob 在 .csproj 讀完之後才展開，
+         Remove 清單當下還是空的。只有 Directory.Build.props（更早讀入）能改到 glob 的行為。
+      ④ obj 裡的 App.g.cs／MainWindow.g.cs 等 XAML 產生物是「必須」被編譯的，
+         不能把整個 obj 從 Compile 一刀切掉，所以用 DefaultItemExcludes 只擋產物目錄。
+
+    DefaultItemExcludes 是 SDK 官方支援的機制，在 glob 展開的當下生效。
+    AssemblyInfo.cs 由 SDK 明確加入、XAML 產生物由 WPF target 明確加入，都不靠 glob，
+    因此功能不受影響——組件屬性由 GenerateAssemblyInfo 照常產生，
+    XinSpect.AssemblyInfo.cs 也照常被編譯。
+
+    ⚠ 這裡刻意「不」去動 WPF 暫存專案（XinSpect_<隨機>_wpftmp.csproj）的任何屬性。
+    曾經試過對它設 GenerateAssemblyInfo=false / GenerateTargetFrameworkAttribute=false，
+    結果暫存專案失去 SupportedOSPlatformAttribute，它編譯主專案程式碼時整套 CA1416
+    （「只有 windows 支援 ManagementObjectSearcher」）全部冒出來——實測 1665 條，
+    WarningBaselineTests 的 0 條基線當場紅燈。
+    光靠 DefaultItemExcludes 排除 obj/** 就已經足夠，不需要再動暫存專案。
+  -->
+  <PropertyGroup>
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj/**;bin/**;work/**</DefaultItemExcludes>
+  </PropertyGroup>
+
+</Project>

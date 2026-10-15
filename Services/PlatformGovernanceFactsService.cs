@@ -1,5 +1,6 @@
 using System.IO;
 using System.Management;
+using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using Microsoft.Win32;
@@ -63,20 +64,155 @@ public static class PlatformGovernanceFactsService
     {
         SddlState? s; try { s = (probe ?? new SddlProbe(ReadSddl))(); } catch { s = null; }
         if (s is null) return Unavailable(at, SddlKey, CatSecurity, "服務 SDDL 權限審計", FactAvailability.ReadError, "服務安全描述元讀取失敗——不猜權限");
-        return new HardwareFact(SddlKey, CatSecurity, "服務 SDDL 權限審計", $"服務 {s.Services}、非 admin 可重配置 {s.NonAdminReconfigurable}、World 可寫 {s.WorldWritable}。權限事實非漏洞判決；不列服務名稱。", "個", "服務 SDDL（唯讀）", FactTrustLevel.Reported, false, at, s.Services);
+        return new HardwareFact(SddlKey, CatSecurity, "服務 SDDL 權限審計", $"服務 {s.Services}、非 admin 可重配置 {s.NonAdminReconfigurable}、World 可寫 {s.WorldWritable}。權限事實非漏洞判決；不列服務名稱。", "個", "服務 SDDL（QueryServiceObjectSecurity，唯讀）", FactTrustLevel.Reported, false, at, s.Services);
     }
 
-    private static SddlState ReadSddl()
+    /// <summary>
+    /// 服務 SDDL：逐服務讀其安全性描述元（<c>QueryServiceObjectSecurity</c>），數出
+    /// 「非 admin 可重配置」與「World 可寫」。
+    /// <para>
+    /// 先前這裡只數 Win32_Service 的服務數、另兩欄固定 0 並標 Present——等於在每台機器上斷言
+    /// 一次沒發生過的權限讀取，而「World 可寫 0」會被讀成「沒有服務是 World 可寫」。那不是缺一欄
+    /// 的問題，是把「沒讀」講成「沒有」（與 FirmwareAudit 的 SPI 權限回報同一種病）。
+    /// </para>
+    /// <para>
+    /// <b>讀不到就回 null 走 ReadError</b>，不由這裡自行降級成 0：這個方法的呼叫端
+    ///（<see cref="SddlFact"/>）已經有 Unavailable 分支，讓它去說「讀不到」比在這裡編一個值誠實。
+    /// </para>
+    /// </summary>
+    private static SddlState? ReadSddl()
     {
-        int services = 0, nonAdmin = 0, world = 0;
         try
         {
-            using var s = new ManagementObjectSearcher("SELECT Name FROM Win32_Service");
-            foreach (ManagementObject o in s.Get()) using (o) { services++; }
+            int services = 0, reconfigurable = 0, world = 0, denied = 0, skipped = 0;
+            foreach (string name in ServiceNames())
+            {
+                services++;
+                IntPtr svc = OpenServiceW(Scm, name, ServiceQueryConfig | ReadControl);
+                if (svc == IntPtr.Zero) { denied++; continue; }
+                try
+                {
+                    var sd = QuerySecurityDescriptor(svc);
+                    if (sd is null) { skipped++; continue; }
+                    var (reconf, worldWritable) = CountWritableAces(sd);
+                    if (reconf) reconfigurable++;
+                    if (worldWritable) world++;
+                }
+                finally { CloseServiceHandle(svc); }
+            }
+            // 一個都沒讀到＝這一輪沒有發生任何權限讀取：不拿 services 冒充成果，讓呼叫端標 ReadError。
+            if (services > 0 && denied + skipped == services) return null;
+            return new(services, reconfigurable, world);
         }
-        catch { }
-        return new(services, nonAdmin, world);
+        catch { return null; }
     }
+
+    /// <summary>
+    /// 非 admin 可重配置／World 可寫的判定。回傳（此服務是否非 admin 可重配置, 是否 World 可寫）。
+    /// <para>
+    /// 「可重配置」＝具備 <c>WRITE_DAC</c>（改權限）、<c>WRITE_OWNER</c> 或
+    /// <c>SERVICE_CHANGE_CONFIG</c>（改啟動設定）任一；只算 <b>AccessAllowed</b> 的 ACE，
+    /// 拒絕項不是權限。判「非 admin」靠 SID 而非名稱——名稱會被在地化，SID 不會。
+    /// </para>
+    /// </summary>
+    internal static (bool Reconfigurable, bool WorldWritable) CountWritableAces(RawSecurityDescriptor sd)
+    {
+        bool reconf = false, world = false;
+        if (sd.DiscretionaryAcl is null) return (false, false);
+        foreach (GenericAce ace in sd.DiscretionaryAcl)
+        {
+            if (ace is not CommonAce ca || ca.AceQualifier != AceQualifier.AccessAllowed) continue;
+            if ((ca.AccessMask & WriteDac) == 0 && (ca.AccessMask & WriteOwner) == 0
+                && (ca.AccessMask & ServiceChangeConfig) == 0) continue;
+            SecurityIdentifier sid = ca.SecurityIdentifier;
+            if (sid.IsWellKnown(WellKnownSidType.WorldSid)) world = true;
+            if (IsNonAdminPrincipal(sid)) reconf = true;
+        }
+        return (reconf, world);
+    }
+
+    /// <summary>
+    /// 非管理員身分：一般使用者、已驗證使用者、Power Users、World，以及<b>本機 Users／Power Users 群組</b>。
+    /// <para>
+    /// World（Everyone）要算進來：它當然不是管理員，而且是最寬的那一種。漏掉它會讓
+    /// 「非 admin 可重配置」少報——一檯機器上真的踩過這個（服務 SDDL 的 WRITE_DAC 給 World）。
+    /// </para>
+    /// <para>
+    /// 本機 Users／Power Users 要按 SID 比對（<c>S-1-5-32-545</c>／<c>S-1-5-32-547</c>）：
+    /// 服務 SDDL 常以相對識別碼寫成這兩個群組，而 <see cref="SecurityIdentifier.IsWellKnown"/>
+    /// 對它們回 false，只看 WellKnown 會漏掉大多數「非 admin 可重配置」的服務。
+    /// </para>
+    /// </summary>
+    internal static bool IsNonAdminPrincipal(SecurityIdentifier sid) =>
+        sid.IsWellKnown(WellKnownSidType.WorldSid)
+        || sid.IsWellKnown(WellKnownSidType.BuiltinUsersSid)
+        || sid.IsWellKnown(WellKnownSidType.BuiltinPowerUsersSid)
+        || sid.IsWellKnown(WellKnownSidType.AuthenticatedUserSid)
+        || sid.Value is "S-1-5-32-545" or "S-1-5-32-547";
+
+    /// <summary>登錄中的服務名稱清單（<c>HKLM\SYSTEM\CurrentControlSet\Services</c> 的子鍵）。</summary>
+    internal static IReadOnlyList<string> ServiceNames()
+    {
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services");
+            return key?.GetSubKeyNames() ?? [];
+        }
+        catch { return []; }
+    }
+
+    /// <summary>讀一個服務的安全性描述元原始位元組；長度查詢失敗或緩衝不足就回 null。</summary>
+    internal static RawSecurityDescriptor? QuerySecurityDescriptor(IntPtr service)
+    {
+        uint needed = 0;
+        QueryServiceObjectSecurity(service, DaclSecurityInformation, null, 0, ref needed);
+        if (needed == 0) return null;
+        var buffer = new byte[needed];
+        uint got = needed;
+        if (!QueryServiceObjectSecurity(service, DaclSecurityInformation, buffer, needed, ref got)) return null;
+        try { return new RawSecurityDescriptor(buffer, 0); }
+        catch { return null; }   // 描述元格式不認識＝沒讀到，不猜
+    }
+
+    private static IntPtr _scm;
+
+    /// <summary>
+    /// 服務控制管理員句柄（<c>SC_MANAGER_CONNECT</c>）。<b>刻意不關</b>：它是唯讀查詢用的
+    /// 共用句柄，只在第一次使用時開啟；行程結束由作業系統回收。
+    /// </summary>
+    internal static IntPtr Scm
+    {
+        get
+        {
+            if (_scm == IntPtr.Zero) _scm = OpenSCManagerW(null, null, ScManagerConnect);
+            return _scm;
+        }
+    }
+
+    internal const uint ScManagerConnect = 0x0001;
+    internal const uint ServiceQueryConfig = 0x0001;
+    /// <summary>READ_CONTROL：沒有它，QueryServiceObjectSecurity 一律回「存取被拒」。</summary>
+    internal const uint ReadControl = 0x00020000;
+    internal const uint DaclSecurityInformation = 0x00000004;
+    internal const uint WriteDac = 0x00020000;
+    internal const uint WriteOwner = 0x00040000;
+    internal const uint ServiceChangeConfig = 0x00000002;
+    internal const uint ServiceStart = 0x00000010;
+
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    internal static extern IntPtr OpenSCManagerW(string? machine, string? database, uint access);
+
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    internal static extern IntPtr OpenServiceW(IntPtr scManager, string serviceName, uint access);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool QueryServiceObjectSecurity(IntPtr service, uint securityInformation,
+        byte[]? securityDescriptor, uint bufferSize, ref uint bytesNeeded);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool CloseServiceHandle(IntPtr handle);
 
     public static HardwareFact MixMatchFact(DateTimeOffset at, MixMatchProbe? probe = null)
     {

@@ -179,6 +179,32 @@ public class SecurityAuditDeepFactsTests
         Assert.Equal(FactAvailability.NotApplicable, f.Availability);
     }
 
+    /// <summary>
+    /// 生產路徑（<c>Collect</c> 不注入任何探針）的守門。這一條對應的是一個<b>真實發生過的缺陷</b>：
+    /// 五個 <c>Read*</c> 全寫成 <c>() =&gt; null</c>，於是每一台機器上這幾把鍵永遠回 ReadError，
+    /// 而測試全綠——因為測試全部注入合成探針，從來沒驗過生產路徑。
+    /// </summary>
+    [Fact]
+    public void 生產路徑_六把鍵都要有真實的結果不是全員ReadError()
+    {
+        var facts = SecurityAuditDeepFactsService.Collect(At);
+        Assert.Equal(6, facts.Count);
+
+        foreach (var f in facts)
+        {
+            Assert.False(string.IsNullOrWhiteSpace(f.Value) && f.Availability == FactAvailability.Present,
+                $"{f.Key} 標 Present 卻沒有值");
+            Assert.True(f.Availability != FactAvailability.ReadError || f.UnavailableReason.Length > 0,
+                $"{f.Key} 回 ReadError 卻沒說原因");
+        }
+
+        // 這一組裡有幾項不需要提權（PATH、已安裝程式、服務二進位 ACL）——它們若也讀不到，
+        // 就是探針又斷了，不是「這台機器讀不到」。要求至少三筆真的讀到值。
+        Assert.True(facts.Count(f => f.Availability == FactAvailability.Present) >= 3,
+            "生產路徑上少於三筆讀到值：探針可能又變成死路了（"
+            + string.Join("、", facts.Select(f => $"{f.Key}={f.Availability}")) + "）");
+    }
+
     // ── 整批 ──────────────────────────────────────────────────────
 
     [Fact]
