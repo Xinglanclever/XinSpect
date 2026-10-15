@@ -1,0 +1,40 @@
+  階段  1 P1-054    `report.class`  ← 含「class」  項目：敏感度與報告分級連動
+  階段  1 P1-090    `degrade.mode`  ← 含「grade」  項目：降級路徑宣告
+  階段  2 P2-097    `pdev.fw.delta`  ← 含「delta」  項目：周邊韌體與原廠對照
+  階段  2 P2-099    `fwrisk.parts`  ← 含「risk」  項目：韌體風險分數構成
+  階段  2 P2-100    `fwrisk.level`  ← 含「risk」  項目：韌體風險等級陳述
+  階段  2 P2-101    `fwrisk.gap`  ← 含「risk」  項目：韌體風險缺口申報
+  階段  2 P2-102    `fwrisk.baseline`  ← 含「risk」  項目：韌體基線可匯出
+  階段  2 P2-103    `fwrisk.delta`  ← 含「risk」  項目：韌體變更報告
+  階段  2 P2-104    `fwrisk.report`  ← 含「risk」  項目：韌體稽核報告輸出
+  階段  3 P3-027    `mc.delta`  ← 含「delta」  項目：微碼版本落差報告
+  階段  3 P3-054    `mem.speed.delta`  ← 含「delta」  項目：記憶體速度降頻陳述
+  階段  3 P3-071    `topo.delta`  ← 含「delta」  項目：拓撲變更時間線
+  階段  3 P3-083    `ras.risk.facts`  ← 含「risk」  項目：RAS 風險事實陳述
+  階段  4 P4-063    `integrity.delta`  ← 含「delta」  項目：完整性雜湊與基線比對
+  階段  4 P4-088    `hpa.capacity.delta`  ← 含「delta」  項目：隱藏區與容量落差
+  階段  4 P4-097    `life.risk.level`  ← 含「risk」  項目：風險分級（陳述）
+  階段  4 P4-103    `st.report.delta`  ← 含「delta」  項目：儲存差異報告
+  階段  5 P5-010    `net.link.delta`  ← 含「delta」  項目：供給速率對線路速率
+  階段  5 P5-033    `usb.speed.delta`  ← 含「delta」  項目：USB 鏈路速度落差
+  階段  5 P5-041    `usb.class.count`  ← 含「class」  項目：裝置類別統計
+  階段  5 P5-090    `net.risk.facts`  ← 含「risk」  項目：網路供應鏈風險事實
+  階段  5 P5-104    `listen.delta`  ← 含「delta」  項目：監聽差異報告
+  階段  6 P6-029    `drv.risk.facts`  ← 含「risk」  項目：驅動風險事實
+  階段  6 P6-050    `wu.driver.class`  ← 含「class」  項目：驅動更新分類
+  階段  6 P6-053    `wu.risk.facts`  ← 含「risk」  項目：更新與驅動相容風險
+  階段  6 P6-082    `app.version.delta`  ← 含「delta」  項目：應用版本與更新
+  階段  6 P6-102    `perf.delta`  ← 含「delta」  項目：效能差異報告
+  階段  7 P7-015    `sec.delta`  ← 含「delta」  項目：安全基線差異
+  階段  7 P7-037    `dma.risk.facts`  ← 含「risk」  項目：DMA 風險事實
+  階段  7 P7-103    `ev.delta`  ← 含「delta」  項目：證據包差異
+  階段  8 P8-012    `meas.delta`  ← 含「delta」  項目：量測差異報告
+  階段  8 P8-038    `bench.mem.delta`  ← 含「delta」  項目：記憶體基準差異
+  階段  8 P8-062    `bench.st.delta`  ← 含「delta」  項目：儲存深測差異
+  階段  8 P8-073    `lat.delta`  ← 含「delta」  項目：延遲差異報告
+  階段  8 P8-085    `bench.net.delta`  ← 含「delta」  項目：網路基準差異
+  階段  9 P9-022    `report.class`  ← 含「class」  項目：報告等級與敏感度
+  階段  9 P9-024    `report.delta`  ← 含「delta」  項目：報告差異
+  階段 10 P10-030   `kb.delta`  ← 含「delta」  項目：知識包差異比對
+  階段 10 P10-053   `res.ruling`  ← 含「ruling」  項目：平台裁定記錄
+  ---- 判決語彙候選 39 條（需人工判定：改鍵名或改寫說明）

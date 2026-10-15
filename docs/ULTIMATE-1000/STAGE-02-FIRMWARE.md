@@ -35,13 +35,13 @@
 |---|---|---:|---|---|
 | AC | ACPI 與 AML 深化 | 18 | `ac.` | L1 |
 | SB | SMBIOS 與 PCIe 表深化 | 15 | `sb.`／`smbios.` | L1 |
-| FW | UEFI 映像與開機 | 18 | `uefi.`／`bios.` | L1 |
-| BT | Boot Guard 與信任根 | 12 | `bt.`／`fit.` | L0 |
+| FW | UEFI 映像與開機 | 18 | `uefi.`／`bios.`／`fw.`／`boot.`／`spi.`／`mc.` | L1 |
+| BT | Boot Guard 與信任根 | 12 | `bt.`／`fit.`／`tpm.` | L0 |
 | TPM | TPM 與量測開機 | 14 | `tpm.` | L1 |
-| EV | EFI 變數、SPI 與快閃 | 14 | `ev.`／`spi.` | L1 |
-| EC | EC 與周邊韌體風險 | 7 | `ec.` | L1 |
-| FR | 韌體風險評分與報告 | 7 | `fwrisk.` | L1 |
-| **合計** | | **105** | | |
+| EV | EFI 變數、SPI 與快閃 | 14 | `ev.`／`spi.`／`fw.` | L1 |
+| EC | EC 與周邊韌體風險 | 7 | `ec.`／`pdev.` | L1 |
+| FR | 韌體風險評分與報告 | 7 | `fwrisk.`／`fw.` | L1 |
+| **合計** |  | **105** |  |  |
 
 ---
 
@@ -154,7 +154,7 @@
 | P2-059 | 韌體寫入保護狀態 | BIOS 寫入保護旗標 | `bt.wp` | L0 | S | — |
 | P2-060 | 開機鏈落差報告 | 宣告與實測的量測落差 | `bt.chain.gap` | L1 | M | P2-057 |
 | P2-061 | 韌體復原路徑陳述 | 復原區與膠囊支援 | `bt.recovery` | L0 | S | — |
-| P2-062 | 信任根與 VBS 對照 | 硬體信任根對虛擬化安全 | `bt.cross.vbs` | L0 | S | P7-001 |
+| P2-062 | 信任根與 VBS 對照 | 硬體信任根對虛擬化安全 | `bt.cross.vbs` | L0 | S | P2-061；參照：P7-001 |
 | P2-063 | PCR 讀取與銀行清單 | 各 PCR 的演算法銀行 | `tpm.pcr.banks` | L0 | M | — |
 | ★P2-064 | TPM 開機鏈重放 | 逐筆重放並與 PCR 對帳 | `tpm.replay.summary` | L1 | L | P2-063 |
 | P2-065 | PCR 逐索引陳述 | 逐 PCR 的重放結果 | `tpm.replay.pcr.{n}` | L1 | S | P2-064 |
@@ -162,7 +162,7 @@
 | P2-067 | 未支援演算法與事件清單 | 不以 0 補，逐項列出 | `tpm.replay.unsupported.count` | L0 | S | P2-064 |
 | P2-068 | TPM 存在性與規格版本 | 2.0／1.2 與實作版本 | `tpm.version` | L0 | S | — |
 | P2-069 | 擁有者與啟用狀態 | 是否已取得擁有權 | `tpm.owned` | L1 | S | — |
-| P2-070 | 簽署金鑰存在性 | EK／AK 存在性（不含金鑰值） | `tpm.key.present` | L1 | S | L3 禁項 |
+| P2-070 | 簽署金鑰存在性 | EK／AK 存在性（不含金鑰值） | `tpm.key.present` | L1 | S | P1-048（L3 禁項掃描守門） |
 | P2-071 | 量測開機日誌摘要 | 日誌筆數與事件型別分布 | `tpm.log.summary` | L1 | S | P2-064 |
 | P2-072 | 開機事件型別直方圖 | 各型別事件計數 | `tpm.log.histogram` | L1 | S | P2-064 |
 | P2-073 | TPM 與 Secure Boot 對照 | 兩者的狀態一致性 | `tpm.cross.sb` | L0 | S | P2-078 |
@@ -191,17 +191,22 @@
 | P2-096 | 周邊韌體版本盤點 | 硬碟／SSD／網卡韌體版本 | `pdev.fw.version` | L0 | M | — |
 | P2-097 | 周邊韌體與原廠對照 | 版本落後與建議（陳述非判決） | `pdev.fw.delta` | L0 | M | P1-043 |
 | P2-098 | 韌體更新能力宣告 | 各元件是否可更新（唯讀宣告） | `pdev.fw.updatable` | L0 | S | — |
-| P2-099 | 韌體風險分數構成 | 各項風險事實與其來源 | `fwrisk.parts` | L0 | M | — |
-| P2-100 | 韌體風險等級陳述 | 分級但不下「不安全」判決 | `fwrisk.level` | L0 | S | P2-099 |
-| P2-101 | 韌體風險缺口申報 | 未取得項對風險分的影響 | `fwrisk.gap` | L0 | S | P2-099 |
-| P2-102 | 韌體基線可匯出 | 匯出可離線比對的基線 | `fwrisk.baseline` | L1 | S | P2-099 |
-| P2-103 | 韌體變更報告 | 兩次掃描間的韌體差異 | `fwrisk.delta` | L1 | M | P2-102 |
-| P2-104 | 韌體稽核報告輸出 | 交第三方複核的報告 | `fwrisk.report` | L1 | M | P1-072 |
+| P2-099 | 韌體風險分數構成 | 各項風險事實與其來源 | `fw.risk.facts.parts` | L0 | M | — |
+| P2-100 | 韌體風險等級陳述 | 分級但不下「不安全」判決 | `fw.risk.facts.level` | L0 | S | P2-099 |
+| P2-101 | 韌體風險缺口申報 | 未取得項對風險分的影響 | `fw.risk.facts.gap` | L0 | S | P2-099 |
+| P2-102 | 韌體基線可匯出 | 匯出可離線比對的基線 | `fw.risk.facts.baseline` | L1 | S | P2-099 |
+| P2-103 | 韌體變更報告 | 兩次掃描間的韌體差異 | `fw.risk.facts.delta` | L1 | M | P2-102 |
+| P2-104 | 韌體稽核報告輸出 | 交第三方複核的報告 | `fw.risk.facts.report` | L1 | M | P1-072 |
 | P2-105 | 韌體章節的文件對帳 | 本階段規格與實作逐項對帳 | `fw.doc.reconcile` | L0 | S | P1-105 |
 
 ---
 
 ## 六、誠實界線與明文不做
+
+> **命名註記（2026-10-16）**：本域的風險輸出鍵統一為 `fw.risk.facts.*`。
+> 「風險」一詞只出現在「風險**事實**」這個用法上——列的是可複核的事實，不是判決。
+> 同一原則見 P2-100 刻意使用 `level` 而非 `verdict`。
+
 
 **不做**：
 

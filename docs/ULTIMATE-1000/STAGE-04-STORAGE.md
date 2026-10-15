@@ -37,16 +37,16 @@
 
 | 域碼 | 域 | 項數 | 主要輸出前綴 | 敏感度上限 |
 |---|---|---:|---|---|
-| ST | 儲存裝置與健康 | 22 | `st.`／`storage.reliability.` | L1 |
+| ST | 儲存裝置與健康 | 22 | `st.`／`storage.reliability.`／`smart.`／`raid.` | L1 |
 | NV | NVMe 深度 | 12 | `nvme.` | L1 |
 | FS | 檔案鑑識 | 16 | `fs.` | L2 |
 | DB | 分割與檔案系統結構 | 12 | `vol.`／`part.` | L1 |
 | INT | 完整性與雜湊 | 12 | `hash.`／`integrity.` | L1 |
 | CAP | 容量真偽與表面 | 8 | `cap.` | L1 |
-| SEC | 安全擦除與 HPA／DCO | 8 | `erase.`／`hpa.` | L1 |
+| SEC | 安全擦除與 HPA／DCO | 8 | `erase.`／`hpa.`／`dco.` | L1 |
 | LIFE | 壽命與退化模型 | 8 | `life.` | L0 |
 | RPT | 儲存呈現與報告 | 7 | `st.report.` | L1 |
-| **合計** | | **105** | | |
+| **合計** |  | **105** |  |  |
 
 ---
 
@@ -113,8 +113,8 @@
 | P4-013 | 碟序列號與資產 | 序號（值為 L1） | `st.{id}.serial` | L1 | S | — |
 | P4-014 | 碟健康覆蓋率彙總 | 逐碟覆蓋率與缺欄位 | `st.coverage.summary` | L0 | S | P4-001 |
 | P4-015 | 儲存錯誤事件史 | 逐碟錯誤事件時間線 | `st.{id}.error.timeline` | L1 | M | P3-076 |
-| P4-016 | 碟效能計數 | 佇列長度、延遲、IOPS 來源 | `st.{id}.perf` | L0 | M | P8-060 |
-| P4-017 | 碟與匯流排對照 | 碟對控制器與 PCIe 路徑 | `st.{id}.path` | L0 | M | P5-060 |
+| P4-016 | 碟效能計數 | 佇列長度、延遲、IOPS 來源 | `st.{id}.perf` | L0 | M | P4-015；參照：P8-060 |
+| P4-017 | 碟與匯流排對照 | 碟對控制器與 PCIe 路徑 | `st.{id}.path` | L0 | M | P4-016；參照：P5-060 |
 | P4-018 | 儲存控制器盤點 | RAID／SATA／NVMe 控制器 | `st.controller.list` | L1 | M | — |
 | P4-019 | RAID 純解碼器 | 由控制器資料解 RAID 佈局 | `raid.layout` | L1 | M | P4-018 |
 | P4-020 | RAID 層級與成員 | 層級、成員、狀態陳述 | `raid.state` | L1 | S | P4-019 |
@@ -126,7 +126,7 @@
 | P4-026 | NVMe 佇列深度 | 支援與已建佇列深度 | `nvme.{id}.queues` | L0 | S | P4-023 |
 | P4-027 | NVMe 錯誤日誌條目 | 逐筆錯誤（遮蔽位址） | `nvme.{id}.errlog` | L1 | M | P4-023 |
 | P4-028 | NVMe 韌體槽位 | 韌體槽與作用中槽位 | `nvme.{id}.fw_slots` | L0 | S | P4-023 |
-| P4-029 | NVMe 連結速度與寬度 | PCIe 世代與寬度實測 | `nvme.{id}.link` | L0 | S | P5-058 |
+| P4-029 | NVMe 連結速度與寬度 | PCIe 世代與寬度實測 | `nvme.{id}.link` | L0 | S | P4-028；參照：P5-058 |
 | P4-030 | NVMe 功耗狀態 | 各電源狀態支援與進入計數 | `nvme.{id}.ps` | L0 | M | P4-023 |
 | P4-031 | NVMe 命名空間反仿冒 | 由控制器與 NS 特徵陳述 | `nvme.{id}.ns.anomaly` | L0 | M | P4-024 |
 | P4-032 | NVMe 指令逾時統計 | 逾時與重試計數 | `nvme.{id}.timeouts` | L0 | S | P4-023 |
@@ -154,20 +154,20 @@
 | P4-054 | 磁碟區檔案系統 | 檔案系統型別與叢集 | `vol.fs` | L1 | S | P4-051 |
 | P4-055 | 未配置空間盤點 | 未分配與保留區段 | `vol.unallocated` | L0 | S | P4-051 |
 | P4-056 | 動態與儲存空間 | 動態磁碟與儲存池陳述 | `vol.dynamic` | L1 | M | P4-019 |
-| P4-057 | BitLocker 狀態 | 保護狀態與加密方法 | `vol.bitlocker` | L1 | M | P6-070 |
+| P4-057 | BitLocker 狀態 | 保護狀態與加密方法 | `vol.bitlocker` | L1 | M | P4-056；參照：P6-070 |
 | P4-058 | 磁碟區壓縮與重複資料 | 設定陳述（唯讀） | `vol.compression` | L1 | S | — |
 | P4-059 | 磁碟區快照與陰影 | 陰影複製存在性 | `vol.shadow` | L1 | M | — |
 | P4-060 | 掛載點與交界點 | 掛載樹與交界點 | `vol.mounts` | L1 | S | P4-044 |
 | P4-061 | 分割與開機設定對照 | ESP／MSR 區與開機項 | `part.boot.cross` | L1 | M | P2-082 |
 | P4-062 | 分割域文件對帳 | 本域規格與實作逐項對帳 | `part.doc.reconcile` | L0 | S | P1-105 |
 | ★P4-063 | 完整性雜湊與基線比對 | 逐檔／逐區雜湊與差異 | `integrity.hash`／`integrity.delta` | L1 | L | P1-028 |
-| P4-064 | 系統檔簽章驗證 | Authenticode 狀態（快取） | `integrity.sig` | L0 | M | P7-020 |
+| P4-064 | 系統檔簽章驗證 | Authenticode 狀態（快取） | `integrity.sig` | L0 | M | P4-063；參照：P7-020 |
 | P4-065 | 雜湊演算法選擇 | 演算法與版本可宣告 | `integrity.algo` | L0 | S | — |
 | P4-066 | 大檔雜湊串流 | 不載入整檔的串流雜湊 | `integrity.stream.ok` | L0 | M | P1-097 |
 | P4-067 | 完整性基線儲存格式 | 可離線比對的基線 | `integrity.baseline` | L1 | M | P4-063 |
 | P4-068 | 變更偵測（新增／刪除／改） | 三類變更逐項列出 | `integrity.change` | L1 | M | P4-063 |
 | P4-069 | 檔案屬性變更偵測 | 屬性與權限的變更 | `integrity.meta.change` | L1 | M | P4-043 |
-| P4-070 | 完整性與時間線關聯 | 變更對硬體事件時間線 | `integrity.timeline` | L1 | M | P9-030 |
+| P4-070 | 完整性與時間線關聯 | 變更對硬體事件時間線 | `integrity.timeline` | L1 | M | P4-069；參照：P9-030 |
 | P4-071 | 雜湊清單匯出格式 | 標準格式與出處 | `integrity.export` | L1 | S | P1-076 |
 | P4-072 | 完整性抽樣策略 | 全量與抽樣的取捨宣告 | `integrity.sampling` | L0 | S | P4-063 |
 | P4-073 | 完整性報告 | 差異報告與判讀指引 | `integrity.report` | L1 | M | P1-072 |
@@ -178,7 +178,7 @@
 | P4-078 | 回繞寫入偵測 | 偵測覆寫起點的假容量 | `cap.wrap.detected` | L0 | M | P4-075 |
 | P4-079 | 寫入量成本預估 | 執行前告知寫入成本 | `cap.write.cost` | L0 | S | P4-075 |
 | P4-080 | 系統碟保護 | 拒絕對系統碟執行 | `cap.systemdisk.refused` | L0 | S | P4-075 |
-| P4-081 | 容量結果可信度 | 條件與限制的完整記錄 | `cap.conditions` | L0 | S | P8-001 |
+| P4-081 | 容量結果可信度 | 條件與限制的完整記錄 | `cap.conditions` | L0 | S | P4-080；參照：P8-001 |
 | P4-082 | 容量域文件對帳 | 本域規格與實作逐項對帳 | `cap.doc.reconcile` | L0 | S | P1-105 |
 | P4-083 | 安全擦除唯讀陳述 | 只陳述支援與狀態 | `erase.support` | L0 | S | — |
 | P4-084 | ATA 安全指令狀態 | 支援與鎖定狀態 | `erase.ata.state` | L1 | S | P4-083 |
@@ -196,8 +196,8 @@
 | P4-096 | 壽命與保固對照 | 通電時數對保固條款 | `life.warranty.cross` | L0 | S | P1-043 |
 | P4-097 | 風險分級（陳述） | 由事實推得的等級 | `life.risk.level` | L0 | S | P4-091 |
 | P4-098 | 壽命域文件對帳 | 本域規格與實作逐項對帳 | `life.doc.reconcile` | L0 | S | P1-105 |
-| P4-099 | 儲存深測條件格式 | 與階段八方法論同格式 | `st.measure.conditions` | L0 | S | P8-001 |
-| P4-100 | 儲存呈現分組 | 逐碟分組與排序 | `st.report.group` | L0 | S | P9-001 |
+| P4-099 | 儲存深測條件格式 | 與階段八方法論同格式 | `st.measure.conditions` | L0 | S | P4-098；參照：P8-001 |
+| P4-100 | 儲存呈現分組 | 逐碟分組與排序 | `st.report.group` | L0 | S | P4-099；參照：P9-001 |
 | P4-101 | 儲存逐值溯源 | 每個值可追到來源 | `st.report.provenance` | L0 | S | P1-027 |
 | P4-102 | 儲存報告匯出 | 逐碟明細與彙總 | `st.report.export` | L1 | M | P1-076 |
 | P4-103 | 儲存差異報告 | 兩次掃描間的變化 | `st.report.delta` | L1 | M | P4-067 |

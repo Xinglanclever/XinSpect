@@ -39,12 +39,12 @@
 | NW | 網卡與鏈路 | 18 | `net.` | L1 |
 | LW | 無線（Wi-Fi／藍牙） | 12 | `wlan.`／`bt.` | L2 |
 | US | USB 與 Thunderbolt | 14 | `usb.`／`tb.` | L1 |
-| AU | 音訊與多媒體 | 12 | `audio.` | L1 |
+| AU | 音訊與多媒體 | 12 | `audio.`／`display.`／`media.` | L1 |
 | BX | 匯流排（PCIe／CXL／PCI） | 16 | `pci.`／`cxl.` | L1 |
 | HP | 熱插拔與外設時間線 | 10 | `setup.` | L1 |
-| NS | 網路安全面 | 11 | `fw.`／`listen.` | L2 |
-| MO | 監聽與連線 | 12 | `listen.`／`conn.` | L2 |
-| **合計** | | **105** | | |
+| NS | 網路安全面 | 11 | `fw.`／`listen.`／`conn.`／`share.`／`smb.`／`net.` | L2 |
+| MO | 監聽與連線 | 12 | `listen.`／`conn.`／`display.` | L2 |
+| **合計** |  | **105** |  |  |
 
 ---
 
@@ -98,8 +98,8 @@
 |---|---|---|---|---|---|---|
 | P5-001 | 網卡盤點 | 逐張網卡型號與媒體類型 | `net.adapter.{n}` | L1 | S | — |
 | P5-002 | 鏈路速度與雙工 | 實測鏈路速度與雙工 | `net.link.speed` | L0 | S | — |
-| P5-003 | 錯誤與丟棄統計 | 逐介面錯誤與丟棄 | `net.err.*` | L0 | M | P6-010 |
-| P5-004 | 網卡驅動與版本 | 驅動版本與日期 | `net.driver` | L0 | S | P6-012 |
+| P5-003 | 錯誤與丟棄統計 | 逐介面錯誤與丟棄 | `net.err.*` | L0 | M | P5-002；參照：P6-010 |
+| P5-004 | 網卡驅動與版本 | 驅動版本與日期 | `net.driver` | L0 | S | P5-003；參照：P6-012 |
 | P5-005 | MAC 與識別（遮蔽） | MAC 在匯出時遮蔽 | `net.mac.masked` | L1 | S | P1-046 |
 | P5-006 | 網卡型號知識包對照 | 由 OUI 推廠商 | `net.oui` | L0 | S | P1-039 |
 | P5-007 | 介面組態與 MTU | MTU、狀態、速率設定 | `net.mtu` | L0 | S | — |
@@ -111,7 +111,7 @@
 | P5-013 | 虛擬介面盤點 | 虛擬交換器與介面 | `net.virtual.list` | L1 | M | — |
 | P5-014 | 介面計數器 | 逐介面流量計數 | `net.stats.*` | L0 | S | — |
 | P5-015 | 網卡佇列與中斷 | 佇列數與中斷親和 | `net.queues` | L0 | M | P3-069 |
-| P5-016 | 鏈路事件時間線 | 鏈路上下線事件 | `net.link.timeline` | L1 | M | P9-030 |
+| P5-016 | 鏈路事件時間線 | 鏈路上下線事件 | `net.link.timeline` | L1 | M | P5-015；參照：P9-030 |
 | P5-017 | 網卡韌體版本 | 韌體版本與更新能力宣告 | `net.fw` | L0 | S | P2-096 |
 | P5-018 | 網卡域文件對帳 | 本域規格與實作逐項對帳 | `net.doc.reconcile` | L0 | S | P1-105 |
 | P5-019 | 無線介面盤點 | 無線介面與驅動 | `wlan.adapter` | L1 | S | — |
@@ -134,10 +134,10 @@
 | P5-036 | USB 裝置歷史時間線 | 裝置首末次見時間 | `usb.history` | L1 | M | P5-073 |
 | P5-037 | USB 描述符異常 | 描述符不一致或缺失 | `usb.desc.anomaly` | L1 | M | — |
 | P5-038 | Thunderbolt 拓撲 | TB 裝置與鏈路速率 | `tb.topology` | L1 | M | — |
-| P5-039 | TB PCIe 通道安全 | 通道授權與安全層級 | `tb.security` | L1 | S | P7-030 |
+| P5-039 | TB PCIe 通道安全 | 通道授權與安全層級 | `tb.security` | L1 | S | P5-038；參照：P7-030 |
 | P5-040 | 外接顯示鏈路 | 顯示輸出埠與協定 | `usb.display.link` | L0 | M | P5-101 |
 | P5-041 | 裝置類別統計 | 逐類別裝置計數 | `usb.class.count` | L0 | S | — |
-| P5-042 | 未知裝置盤點 | 未安裝驅動的裝置 | `usb.unknown` | L1 | S | P6-014 |
+| P5-042 | 未知裝置盤點 | 未安裝驅動的裝置 | `usb.unknown` | L1 | S | P5-041；參照：P6-014 |
 | P5-043 | USB 頻寬使用 | 埠頻寬與使用率 | `usb.bandwidth` | L0 | M | — |
 | P5-044 | USB 域文件對帳 | 本域規格與實作逐項對帳 | `usb.doc.reconcile` | L0 | S | P1-105 |
 | P5-045 | 顯示轉接器三態 | 實體／軟體／基本驅動分離 | `display.adapter.kind` | L0 | M | P5-101 |
@@ -164,7 +164,7 @@
 | P5-066 | 匯流排錯誤計數 | 逐根埠錯誤計數 | `pci.err.count` | L0 | M | P5-059 |
 | P5-067 | 熱插拔能力 | 插槽熱插拔支援 | `pci.hotplug.cap` | L0 | S | — |
 | P5-068 | SR-IOV 能力 | 虛擬功能數量與狀態 | `pci.sriov` | L0 | M | — |
-| P5-069 | ACS 與隔離 | 存取控制服務狀態 | `pci.acs` | L0 | M | P7-030 |
+| P5-069 | ACS 與隔離 | 存取控制服務狀態 | `pci.acs` | L0 | M | P5-068；參照：P7-030 |
 | P5-070 | 匯流排能耗狀態 | 連結電源狀態與進入計數 | `pci.power` | L0 | M | — |
 | P5-071 | 匯流排時序與重訓 | 連結重訓計數與時序 | `pci.retrain` | L0 | M | — |
 | P5-072 | 匯流排域文件對帳 | 本域規格與實作逐項對帳 | `pci.doc.reconcile` | L0 | S | P1-105 |
@@ -175,27 +175,27 @@
 | P5-077 | 裝置移除痕跡 | 已移除裝置的殘留記錄 | `setup.removed.count` | L1 | M | P5-073 |
 | P5-078 | 列舉序號對照 | 裝置實例對實體位置 | `setup.instance.map` | L1 | M | P5-073 |
 | P5-079 | 匯流排與裝置對應 | 裝置對匯流排與埠 | `setup.bus.map` | L1 | S | P5-073 |
-| P5-080 | 裝置狀態碼歷史 | 裝置問題碼的變更史 | `setup.problem.history` | L1 | M | P6-014 |
+| P5-080 | 裝置狀態碼歷史 | 裝置問題碼的變更史 | `setup.problem.history` | L1 | M | P5-079；參照：P6-014 |
 | P5-081 | 不解析在地化欄位守門 | 三語系日誌得同一結果 | （測試） | L0 | M | P5-073 |
 | P5-082 | 外設域文件對帳 | 本域規格與實作逐項對帳 | `setup.doc.reconcile` | L0 | S | P1-105 |
 | P5-083 | 監聽埠盤點 | 逐埠協定與程序 | `listen.{proto}.{port}` | L1 | M | — |
-| ★P5-084 | 監聽埠三方對照 | 埠／程序服務／防火牆並列 | `listen.cross.diff` | L2 | L | P6-030 |
+| ★P5-084 | 監聽埠三方對照 | 埠／程序服務／防火牆並列 | `listen.cross.diff` | L2 | L | P5-083；參照：P6-030 |
 | P5-085 | 連線狀態統計 | 各狀態連線計數 | `conn.count` | L1 | S | — |
 | P5-086 | 防火牆規則計數 | 逐設定檔規則數 | `fw.rules.count` | L1 | S | — |
 | P5-087 | 防火牆設定檔狀態 | 三設定檔啟用狀態 | `fw.profiles` | L1 | S | — |
 | P5-088 | 共用資源盤點 | 網路共用存在性（不列名稱） | `share.count` | L2 | M | — |
 | P5-089 | SMB／NFS 用戶端連線 | 進出連線摘要（遮蔽） | `smb.conn` | L2 | M | — |
-| P5-090 | 網路供應鏈風險事實 | 由既有事實並列風險項 | `net.risk.facts` | L1 | M | P7-002 |
+| P5-090 | 網路供應鏈風險事實 | 由既有事實並列風險項 | `net.risk.facts` | L1 | M | P5-089；參照：P7-002 |
 | P5-091 | 代理設定 | 系統與使用者代理設定 | `net.proxy` | L1 | S | — |
 | P5-092 | 網路協定安全旗標 | SMB 簽章／NTLM 等級 | `net.protocol.sec` | L1 | M | — |
 | P5-093 | 網路安全域文件對帳 | 本域規格與實作逐項對帳 | `fw.doc.reconcile` | L0 | S | P1-105 |
 | P5-094 | 埠與程序對應 | 埠對 PID 與路徑 | `listen.pid.map` | L1 | S | P5-083 |
-| P5-095 | 埠變更時間線 | 監聽面隨時間變化 | `listen.timeline` | L1 | M | P9-030 |
-| P5-096 | 監聽與服務對照 | 監聽埠對服務與角色 | `listen.service.cross` | L1 | M | P6-030 |
+| P5-095 | 埠變更時間線 | 監聽面隨時間變化 | `listen.timeline` | L1 | M | P5-094；參照：P9-030 |
+| P5-096 | 監聽與服務對照 | 監聽埠對服務與角色 | `listen.service.cross` | L1 | M | P5-095；參照：P6-030 |
 | P5-097 | 監聽變更告警 | 新增監聽的健康檢查項 | `listen.added` | L1 | S | P5-103 |
-| P5-098 | 連線趨勢 | 連線數隨時間趨勢 | `conn.trend` | L1 | M | P9-030 |
+| P5-098 | 連線趨勢 | 連線數隨時間趨勢 | `conn.trend` | L1 | M | P5-097；參照：P9-030 |
 | P5-099 | 遠端位址統計（遮蔽） | 遠端位址聚合與遮蔽 | `conn.remote.masked` | L2 | M | P1-046 |
-| P5-100 | 埠與角色對照 | 埠對伺服器角色 | `listen.role.cross` | L1 | M | P6-030 |
+| P5-100 | 埠與角色對照 | 埠對伺服器角色 | `listen.role.cross` | L1 | M | P5-099；參照：P6-030 |
 | P5-101 | 顯示與輸出鏈 | 顯示輸出埠與鏈路 | `display.link` | L0 | M | — |
 | P5-102 | 監聽報告輸出 | 交第三方複核的報告 | `listen.report` | L2 | M | P1-072 |
 | P5-103 | 監聽基線 | 可離線比對的監聽基線 | `listen.baseline` | L1 | S | P5-083 |
