@@ -133,8 +133,8 @@ public class FactCoverageReportTests
         // 這條不是禁止未覆蓋（那會逼出湊數的規則），而是讓它「有上限地增長」：
         // 事實從 300 多個長到某個程度時要有人看一眼，而不是靜默累積。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 220,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（基線 220）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 235,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（基線 235）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }

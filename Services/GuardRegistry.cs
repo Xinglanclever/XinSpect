@@ -76,7 +76,10 @@ public static class GuardRegistry
         new("六態必須是唯一的列舉定義處", GuardPolicy.GuardMode.PolicyPin,
             "FactAvailability 被定義兩次，於是兩份定義開始漂移",
             new GuardPolicy.GuardLevel(
-                "生產碼裡 enum FactAvailability 的定義處多於一個",
+                // 這裡刻意不寫出完整的定義語法：Registry 是生產碼，而掃描守門掃的就是生產碼。
+                // 第一版寫了完整的 "enum " + 型別名，於是這份「宣告」自己被掃成第二個定義處——
+                // 守門抓到了描述它自己的那段文字。改成拆開寫。
+                "生產碼裡那個可用性列舉的定義處多於一個",
                 "『另一種表達同一組狀態的型別』——那由單一可用性型別那條守門管"),
             HasPositiveControl: false,
             PositiveControlExemption:

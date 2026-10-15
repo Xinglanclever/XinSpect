@@ -115,13 +115,22 @@ public class AvailabilityConvergenceTests
     public void 單一可用性型別_六態必須是唯一的列舉定義處()
     {
         // FactAvailability 這個列舉只能定義一次。定義兩次＝有兩套定義在漂。
+        //
+        // 這一條抓到的第一個真實案例是它自己的鄰居：GuardRegistry 為了描述這一條守門，
+        // 在「守得住什麼」欄位裡寫了完整的定義語法，於是那份**宣告**被掃成第二個定義處。
+        // 守門抓到了描述它自己的那段文字——這正是它存在的理由，
+        // 但描述用的字串必須避開被掃的樣式（見 GuardRegistry 該處的註解）。
         int definitions = 0;
+        var where = new List<string>();
         foreach (string file in ProductionFiles(RepoRoot()))
         {
             string text = File.ReadAllText(file);
-            definitions += Regex.Matches(text, @"enum\s+FactAvailability\b").Count;
+            int hits = Regex.Matches(text, @"enum\s+FactAvailability\b").Count;
+            if (hits > 0) where.Add($"{Path.GetFileName(file)} × {hits}");
+            definitions += hits;
         }
-        Assert.Equal(1, definitions);
+        Assert.True(definitions == 1,
+            $"FactAvailability 的定義處應該是 1 個，實際 {definitions} 個：{string.Join("、", where)}");
     }
 
     // ── P1-022 六態巡迴 ─────────────────────────────────────────────────
