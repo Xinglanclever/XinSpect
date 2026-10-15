@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 897 個（＝本清單的成員數；另有 23 個動態家族見
+    /// <summary>本版建置時掃到的事實鍵，共 906 個（＝本清單的成員數；另有 23 個動態家族見
     /// <see cref="FactKeyDynamicCatalog"/>，那些的成員由機器事實決定，不列在這裡）。
     /// <b>本清單一律以全字串字典序排列</b>——<c>FactKeyCatalogTests.目錄不得有重複鍵且要排序</c> 釘住這件事；
     /// 插鍵時整塊重排，不要手找位置（找前綴會把 <c>gp.*</c> 插到 <c>gpu.*</c> 後面）。
@@ -96,9 +96,11 @@ public static class FactKeyCatalog
         "au.privacy.summary",
         "audio.endpoints",
         "audio.latency",
+        "audit.head",
         "audit.logclear.count",
         "audit.logclear.last",
         "audit.mode",
+        "audit.verify",
         "backend.environment_decision",
         "backend.mmio",
         "backend.msr",
@@ -267,12 +269,14 @@ public static class FactKeyCatalog
         "etl.traces.count",
         "ev.anon",
         "ev.audit.timeline",
+        "ev.chain.verify",
         "ev.csv",
         "ev.dash",
         "ev.diff",
         "ev.fleet",
         "ev.i18n",
         "ev.import",
+        "ev.manifest",
         "ev.migrate",
         "ev.namedquery",
         "ev.pack",
@@ -375,6 +379,7 @@ public static class FactKeyCatalog
         "gpu.tdr.delay",
         "gpu.tdr.dpc",
         "gpu.tdr.level",
+        "guard.inventory",
         "gx.amd",
         "gx.cap.rt",
         "gx.depth",
@@ -904,6 +909,10 @@ public static class FactKeyCatalog
         "vr.theme",
         "vr.tree",
         "vr.zoom",
+        "write.allowlist",
+        "write.count",
+        "write.ledger",
+        "write.rollback",
         "ws.appx.summary",
         "ws.autostart.summary",
         "ws.bootdrv.summary",
