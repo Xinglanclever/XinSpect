@@ -45,13 +45,13 @@ public class UltimateKeyReconciliationTests
     /// </summary>
     private static readonly List<(string Range, string Reason)> NotYetImplementedRanges =
     [
-        ("P1-096", "發佈與建置——階段一收尾，尚未開工"),
+        ("P2-001", "階段二起——尚未開工"),
     ];
 
     /// <summary>已開工的項目（其宣告的鍵必須有生產者）。範圍含頭含尾，以項目編號認定。</summary>
     private static readonly List<(string From, string To)> InProgressRanges =
     [
-        ("P1-001", "P1-095"),
+        ("P1-001", "P1-105"),
     ];
 
     /// <summary>

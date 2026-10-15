@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 921 個（＝本清單的成員數；另有 23 個動態家族見
+    /// <summary>本版建置時掃到的事實鍵，共 930 個（＝本清單的成員數；另有 23 個動態家族見
     /// <see cref="FactKeyDynamicCatalog"/>，那些的成員由機器事實決定，不列在這裡）。
     /// <b>本清單一律以全字串字典序排列</b>——<c>FactKeyCatalogTests.目錄不得有重複鍵且要排序</c> 釘住這件事；
     /// 插鍵時整塊重排，不要手找位置（找前綴會把 <c>gp.*</c> 插到 <c>gpu.*</c> 後面）。
@@ -120,6 +120,8 @@ public static class FactKeyCatalog
         "boot.duration_ms",
         "boot.last_time",
         "boot.post_code",
+        "build.reproducible",
+        "build.singlefile",
         "byovd.hits",
         "byovd.rules",
         "cam.count",
@@ -133,6 +135,7 @@ public static class FactKeyCatalog
         "cap.uefi.variables",
         "cap.wmi",
         "cert.foreign_roots",
+        "cert.plan",
         "chassis.security_status",
         "chipset.bios_cntl",
         "chipset.me_hfs",
@@ -144,6 +147,7 @@ public static class FactKeyCatalog
         "cmos.checksum",
         "cmos.rtc_time",
         "cmos.rtc_valid",
+        "contrib.guide",
         "coverage.denominator",
         "coverage.exempt",
         "coverage.gap",
@@ -203,6 +207,7 @@ public static class FactKeyCatalog
         "dm.sense",
         "dm.taskres.summary",
         "dm.timeline.summary",
+        "doc.reconcile",
         "drvinsp.drivers.count",
         "drvinsp.truncated",
         "ds.bl.summary",
@@ -447,6 +452,8 @@ public static class FactKeyCatalog
         "kp.swap.audit",
         "kp.update_channel",
         "kp.version",
+        "license.notices",
+        "limits.public",
         "mc.cve",
         "mchbar.base",
         "mchbar.registers",
@@ -641,6 +648,7 @@ public static class FactKeyCatalog
         "rc.wer.summary",
         "rc.winsxs.summary",
         "reg.microcode",
+        "release.verify",
         "report.class",
         "role.surface",
         "role.surface.evidence",
@@ -831,6 +839,7 @@ public static class FactKeyCatalog
         "sv.shares",
         "sv.summary",
         "test.duration",
+        "tests.baseline",
         "time.drift.ppm",
         "time.hpet",
         "time.pm_timer",
