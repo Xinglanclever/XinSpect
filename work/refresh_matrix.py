@@ -26,6 +26,11 @@ ALIASES = {
     'sb.mc.*': ('sb.mctl', 'Services/SmbiosDeepFactsService.cs', 79),
     'sb.m2.map': ('sb.m2slot.*', 'Services/SmbiosDeepFactsService.cs', 109),
     'sb.m2slot.*': ('sb.m2slot.*', 'Services/SmbiosDeepFactsService.cs', 109),
+    # P2-052 的 FIT 表：SpiFitFactsService 早就有 FitDecoder（走 SPI 快閃尾端 ＋ MMIO），
+    # 而我第一版沒查就自己寫了一個平行的解碼器，然後因為「我不確定佈局」把它撤回。
+    # **撤回是對的，但理由不完整**——真正的理由是「已經有實作了，我應該先查」。
+    # 這與 MemoryTypeName 那個教訓同型：**在已有答案的地方重新發明。**
+    'fit.present': ('fw.fit.summary', 'Services/SpiFitFactsService.cs', 17),
 }
 
 cat = io.open('Services/FactKeyCatalog.cs', encoding='utf-8').read()
