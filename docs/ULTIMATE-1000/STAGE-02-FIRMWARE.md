@@ -154,7 +154,7 @@
 | P2-059 | 韌體寫入保護狀態 | BIOS 寫入保護旗標 | `bt.wp` | L0 | S | — |alias:fw.spiperm.summary@Services/FirmwareAuditFactsService.cs:18 
 | P2-060 | 開機鏈落差報告 | 宣告與實測的量測落差 | `bt.chain.gap` | L1 | M | P2-057 |todo: 
 | P2-061 | 韌體復原路徑陳述 | 復原區與膠囊支援 | `bt.recovery` | L0 | S | — |ok:bt.recovery 
-| P2-062 | 信任根與 VBS 對照 | 硬體信任根對虛擬化安全 | `bt.cross.vbs` | L0 | S | P2-061；參照：P7-001 |todo: 
+| P2-062 | 信任根與 VBS 對照 | 硬體信任根對虛擬化安全 | `bt.cross.vbs` | L0 | S | P2-061；參照：P7-001 |ok:bt.cross.vbs 
 | P2-063 | PCR 讀取與銀行清單 | 各 PCR 的演算法銀行 | `tpm.pcr.banks` | L0 | M | — |ok:tpm.pcr.banks 
 | ★P2-064 | TPM 開機鏈重放 | 逐筆重放並與 PCR 對帳 | `tpm.replay.summary` | L1 | L | P2-063 |ok:tpm.replay.summary 
 | P2-065 | PCR 逐索引陳述 | 逐 PCR 的重放結果 | `tpm.replay.pcr.{n}` | L1 | S | P2-064 |ok:tpm.replay.pcr.{n} 

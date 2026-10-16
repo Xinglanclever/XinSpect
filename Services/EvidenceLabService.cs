@@ -186,8 +186,18 @@ public sealed class EvidenceLabService : ObservableObject
         TpmSecureBootCrossFacts = TpmSecureBootCrossFactsService.Collect(DateTimeOffset.UtcNow,
             TpmSecureBootCrossFactsService.FromFacts(
                 [.. TpmFacts, .. BackendFacts, .. UefiFacts]));
+        // P2-062 信任根與 VBS 對照：**純交叉，零新讀取。**
+        // 兩邊是既有的 bt.root.types（信任根型別）與 virt.vbs（VBS 四態）。
+        // **VBS 需要在記憶體裡的既有事實**（由 LoadVirtualization 產出）；
+        // 若還沒跑，FromFacts 回 Unknown 而本服務如實標「無從對照」——**不猜**。
+        TrustRootVbsCrossFacts = TrustRootVbsCrossFactsService.Collect(DateTimeOffset.UtcNow,
+            TrustRootVbsCrossFactsService.FromFacts(
+                [.. TrustRootFacts, .. VirtualizationFacts]));
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
+
+    /// <summary>信任根與 VBS 的對照（ULTIMATE-1000 階段二 P2-062）。</summary>
+    public IReadOnlyList<HardwareFact> TrustRootVbsCrossFacts { get; private set; } = [];
 
     /// <summary>TPM 與 Secure Boot 的狀態對照（ULTIMATE-1000 階段二 P2-073）。</summary>
     public IReadOnlyList<HardwareFact> TpmSecureBootCrossFacts { get; private set; } = [];
