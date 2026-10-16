@@ -404,6 +404,10 @@ public sealed class EvidenceLabService : ObservableObject
         // P2-026／P2-027：Type 39 電源供應器與 Type 41 內建裝置。
         SmbiosStructureFacts = SmbiosStructureFactsService.Collect(at);
         SmbiosPowerFacts = SmbiosPowerFactsService.Collect(at);
+        // ULTIMATE-1000 階段二 P2-033：SMBIOS 陳述對作業系統視圖的逐欄位對照。
+        // 這是前面每一項「多來源並列」的收束點——**一致／不一致／無從對照**三分，
+        // 而第三種不算進第二種（把「一邊沒有值」算成不一致會製造假的落差）。
+        SmbiosCrossFacts = SmbiosCrossFactsService.Collect(at, SmbiosCrossFactsService.ReadOsView());
         PpttFacts = PpttFactsService.Collect(new Win32AcpiTableSource(), at, Environment.ProcessorCount);
         ServerModeFacts = ServerModeFactsService.Collect(at);
         RoleFacts = RoleSurfaceFactsService.Collect(at);
@@ -422,6 +426,7 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(SmbiosTpmFacts)
             .Concat(SmbiosStructureFacts)
             .Concat(SmbiosPowerFacts)
+            .Concat(SmbiosCrossFacts)
             .Concat(PpttFacts)
             .Concat(ServerModeFacts)
             .Concat(RoleFacts)
@@ -845,6 +850,12 @@ public sealed class EvidenceLabService : ObservableObject
     /// 電源供應器與內建裝置。功率只報額定，不換算成可用功率。
     /// </summary>
     public IReadOnlyList<HardwareFact> SmbiosPowerFacts { get; private set; } = [];
+
+    /// <summary>
+    /// SMBIOS 與 OS 的對照事實（ULTIMATE-1000 階段二 P2-033）。
+    /// <b>只陳述兩邊各說了什麼——不判斷哪一邊對，也不給一致率。</b>
+    /// </summary>
+    public IReadOnlyList<HardwareFact> SmbiosCrossFacts { get; private set; } = [];
 
     /// <summary>PPTT 拓撲事實（Vol2 AC-017）：韌體自述的處理器／快取節點，與 OS 邏輯處理器數並列。</summary>
     public IReadOnlyList<HardwareFact> PpttFacts { get; private set; } = [];
