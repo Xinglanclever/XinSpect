@@ -124,12 +124,15 @@ isRetryable: false
 
 | 項目 | 出處 |
 |---|---|
-| `PlatformGovernanceFactsService.ReadSddl` 的 C 型半實作（`nonAdmin`／`world` 恆 0） | `FIX-REPORT-2026-10-16.md` §4.1 |
+| `PlatformGovernanceFactsService.ReadSddl` 的 C 型半實作——**已修**（第七節查核時確認：它現在逐服務讀安全描述元、讀不到回 `ReadError`），`FIX-REPORT` §4.1 的記載已過期 | `FIX-REPORT-2026-10-16.md` §4.1 |
 | 帳本「測試 +31」對不上帳（實為 +29／18 條） | 同上 §4.2（已在該處加更正註記） |
 | `FactKeyCatalog.cs` 那個無法對帳的「183 鍵」數字 | 同上 §4.3（註解已改成「不補沒人能驗證的數字」） |
 | `work/probe/` 那個獨立 .NET 專案仍在（`Directory.Build.props` 已排除，但專案本身沒搬） | 同上 §5.2 |
-| ULTIMATE-1000 階段二的 33 列 `todo`、全計畫 1,050 項中約 890 項未開工 | `STAGE-02-FIRMWARE.md` |
-| v2.85 尚未發佈（README 下載連結已指 2.85） | `Nav/ChangelogCatalog.cs`、`git tag` |
+| ULTIMATE-1000 階段二的 31 列 `todo`、全計畫 1,050 項中約 890 項未開工 | `STAGE-02-FIRMWARE.md` |
+| **v2.85 的 changelog 條目仍只寫「階段一 105 項」**——階段二的成果（P2-0xx，含第七節的 TPM 修正）還沒進條目；**發版前要補**（三份 README 的版本沿革同步） | `Nav/ChangelogCatalog.cs` 的 2.85 條目 |
+| v2.85 尚未發佈（README 下載連結已指 2.85）；`FileVersion` 仍 2.84.0.0 | `Nav/ChangelogCatalog.cs`、`git tag`、`XinSpect.csproj` |
+| 一個卡住的 `XinSpect.exe`（PID 14928，見第七節）還鎖著 `Tests/bin`，**重開機才會清掉**（即本輪所有建置都要 `-p:BaseOutputPath=obj/_probe/`） | 本輪環境 |
+| TPM 的 `PT_PERMANENT`／`PT_STARTUP_CLEAR` **真機實測未取得**（TBS 回 `TBS_E_TPM_NOT_FOUND`）；重開機後應重跑一次真機驗證 | 第七節 |
 
 ---
 
