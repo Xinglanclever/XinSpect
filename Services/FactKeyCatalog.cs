@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 985 個（＝本清單的成員數；另有 23 個動態家族見
+    /// <summary>本版建置時掃到的事實鍵，共 987 個（＝本清單的成員數；另有 23 個動態家族見
     /// <see cref="FactKeyDynamicCatalog"/>，那些的成員由機器事實決定，不列在這裡）。
     /// <b>本清單一律以全字串字典序排列</b>——<c>FactKeyCatalogTests.目錄不得有重複鍵且要排序</c> 釘住這件事；
     /// 插鍵時整塊重排，不要手找位置（找前綴會把 <c>gp.*</c> 插到 <c>gpu.*</c> 後面）。
@@ -386,6 +386,8 @@ public static class FactKeyCatalog
         "fw.psp",
         "fw.psp.dir",
         "fw.rt",
+        "fw.settings.blocked",
+        "fw.settings.readable",
         "fw.smm.summary",
         "fw.spiperm.summary",
         "fw.tcgl.phase",

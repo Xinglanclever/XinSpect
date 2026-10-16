@@ -418,6 +418,10 @@ public sealed class EvidenceLabService : ObservableObject
         // 規格把它歸類為「影響量測可信度的狀態」——**不是一般設定**：
         // 有快速開機時，「冷啟動」量測量到的不是它說的那件事。
         BootFastStartupFacts = BootFastStartupFactsService.Collect(at, BootFastStartupFactsService.Read());
+        // ULTIMATE-1000 階段二 P2-046：韌體設定可讀項盤點。
+        // **「讀不到」與「沒有這個值」在使用者眼裡長得一樣——都是空的**；
+        // 這一項把「這條路現在通不通」變成可以查的事實。
+        FirmwareSettingsReachFacts = FirmwareSettingsReachFactsService.Collect(at);
         PpttFacts = PpttFactsService.Collect(new Win32AcpiTableSource(), at, Environment.ProcessorCount);
         ServerModeFacts = ServerModeFactsService.Collect(at);
         RoleFacts = RoleSurfaceFactsService.Collect(at);
@@ -440,6 +444,7 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(FirmwareModeFacts)
             .Concat(UefiBootOrderFacts)
             .Concat(BootFastStartupFacts)
+            .Concat(FirmwareSettingsReachFacts)
             .Concat(PpttFacts)
             .Concat(ServerModeFacts)
             .Concat(RoleFacts)
@@ -887,6 +892,12 @@ public sealed class EvidenceLabService : ObservableObject
     /// <b>這是「影響量測可信度的狀態」，不是一般設定。</b>
     /// </summary>
     public IReadOnlyList<HardwareFact> BootFastStartupFacts { get; private set; } = [];
+
+    /// <summary>
+    /// 韌體設定可讀項盤點（ULTIMATE-1000 階段二 P2-046）。
+    /// <b>回答「這條路現在通不通」，不是「值對不對」。</b>
+    /// </summary>
+    public IReadOnlyList<HardwareFact> FirmwareSettingsReachFacts { get; private set; } = [];
 
     /// <summary>PPTT 拓撲事實（Vol2 AC-017）：韌體自述的處理器／快取節點，與 OS 邏輯處理器數並列。</summary>
     public IReadOnlyList<HardwareFact> PpttFacts { get; private set; } = [];
