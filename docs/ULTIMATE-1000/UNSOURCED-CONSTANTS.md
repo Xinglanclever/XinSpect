@@ -20,12 +20,31 @@
 | ① | P2-055 | `bt.km` | **FIT 的 Key Manifest 型別編號** | `todo`（永遠回「未對準出處前不出值」） |
 | ② | P2-072 | `tpm.log.histogram` | **TCG 的 `EV_*` 型別名** | **`ok`**——編號有值、**名字沒有** |
 | ③ | P2-083 | `ev.var.attrs` | **`EFI_VARIABLE_*` 的位元名** | **`partial`**——原始值有、唯讀判斷沒有 |
-| ④ | P2-069 | `tpm.owned` | **`TPM_PT_PERMANENT` 的屬性編號** | `todo` |
-| ⑤ | P2-075 | `tpm.attest.capable` | **`TPM_PT_*` 的證明能力編號** | `todo` |
+| ④ | P2-069 | `tpm.owned` | **`TPM_PT_PERMANENT` 的屬性編號** | **`ok`（2026-10-17）**——`tpm.owned` 已出值 |
+| ⑤ | P2-075 | `tpm.attest.capable` | **`TPM_PT_*` 的證明能力編號** | **`ok`（2026-10-17）**——`tpm.attest.capable` 已出值 |
 
 **注意 ② 與 ③ 的形狀不同**：它們不是「什麼都沒做」，而是
 **「有出處的那一半做了，沒出處的那一半明說不做」。**
 那是這一條規則的另一種結局——**它不一定產生 a todo，也可以是 a partial。**
+
+## ⚠ 2026-10-17：④⑤ 做完的同時，查出一件更該記的事
+
+**這份文件自己抄錯了編號。** 下面那一節原本寫著「`Tpm2.cs` 已經為四個編號寫過 `[SpecRef]`：
+`TPM_PT_REVISION＝0x101`、`TPM_PT_VENDOR_STRING_1..4＝0x104..0x107`」——**那組數字是錯的**，
+而它是**從實作抄過來當佐證**的：
+
+- 規格（TPM 2.0 Part 2 Structures）：`TPM_PT_FIXED＝0x100`，所以 `REVISION＝FIXED+2＝0x102`、
+  `MANUFACTURER＝FIXED+5＝0x105`、`VENDOR_STRING_1..4＝FIXED+6..9＝0x106..0x109`；
+  而 **`0x101` 是 `LEVEL`、`0x104` 是 `YEAR`**。
+- `Revision()` 依「主版號在 bits 31:24、次版號在 bits 15:8」拆位也是錯的——規格對這一項寫的是
+  **「the specification Revision times 100」**（Revision 01.01 → 101）。本機 `Win32_Tpm.SpecVersion`
+  是「2.0, 0, 1.16」，所以真值是 **116（＝1.16）**；舊寫法會讀成「0.116」，
+  而且因為它讀的是 LEVEL（真值 0）而顯示「未回報」，再把 YEAR 與 MANUFACTURER 當成廠商字串的前兩段。
+
+**所以這一節原本的論證形式也是壞的**：它拿「實作裡有 `[SpecRef]`」當成「這張表已經對準了」的證據，
+而實作正是錯的那一方。**出處要對規格，不能對實作**——實作錯了，引用它就等於替錯誤背書。
+修法與細節見 `Tpm2.cs` 的常數收錄政策一節、`Tpm2Tests` 的編號 golden、
+以及 `docs/ULTIMATE-1000/GATE-LOG-257.md` 第七節。
 
 ## 而五筆的共同解法是同一件事
 
@@ -40,16 +59,22 @@
 | `TPM_PT_*` 表 | ④ ⑤ | TPM 2.0 Part 2 Structures |
 | FIT 的 Key Manifest 型別 | ① | Intel Platform Firmware Initialization（**`FitDecoder` 已引用它**） |
 
-## 而 ④ 與 ⑤ 可以一起做
+## 而 ④ 與 ⑤ 可以一起做（**2026-10-17 已完成**）
 
-**它們是同一張表（`TPM_PT_*`），而 `Tpm2.cs` 已經為四個編號寫過 `[SpecRef]`**：
+**它們是同一張表（`TPM_PT_*`），而 `Tpm2.cs` 已經寫過幾個編號。**
+（原文在這裡抄了一份編號清單，那份清單本身是錯的——見上一節。以下是對準規格後的樣子。）
 
 ```
-TPM_PT_FAMILY_INDICATOR＝0x100、TPM_PT_REVISION＝0x101、TPM_PT_VENDOR_STRING_1..4＝0x104..0x107
+TPM_PT_FIXED＝0x100：FAMILY_INDICATOR＝0x100、LEVEL＝0x101、REVISION＝0x102、
+                     DAY_OF_YEAR＝0x103、YEAR＝0x104、MANUFACTURER＝0x105、
+                     VENDOR_STRING_1..4＝0x106..0x109、…、FIRMWARE_VERSION_2＝0x10C
+TPM_PT_VAR＝0x200：  PERMANENT＝0x200、STARTUP_CLEAR＝0x201
 ```
 
-**所以那張 `[SpecRef]` 已經存在，只是涵蓋範圍不夠。**
-擴充它、再補上 ④ ⑤ 需要的那些編號——**那是一個有界的、可查證的工作。**
+擴充那張表、再補上 ④ ⑤ 需要的編號——**那是一個有界的、可查證的工作**，
+而它在 2026-10-17 做完了：`tpm.owned`（讀 `TPMA_PERMANENT` 與 `TPMA_STARTUP_CLEAR` 的位元）與
+`tpm.attest.capable`（以 family 與背書階層陳述能力，並明說不上網、不驗憑證鏈）都已出值，
+而副產品是**查出 P2-068 的編號與解碼本來就是錯的**（見上）。
 
 ## 而與這五筆不同的另一類：**「已撤回」**
 

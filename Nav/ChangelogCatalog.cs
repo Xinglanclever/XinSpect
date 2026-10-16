@@ -64,7 +64,7 @@ public static class ChangelogCatalog
                 "韌性與降級：key.evolution（更名會讓歷史無法比較）、coverage.gap、diag.count（未接住的例外是本程式的缺陷不是機器的問題）、src.circuit、degrade.mode、fact.error.reason、src.retry、scan.failures。",
                 "守門方法論：GuardPolicy（五模式、等級宣告含「守不住什麼」、白名單上限、誤報治理——放寬門檻一律不接受）、GuardRegistry 八條守門清冊、GuardBudget 時間預算。",
                 "發佈與對外：build.singlefile／reproducible、release.verify、tests.baseline、license.notices、cert.plan、limits.public、contrib.guide、doc.reconcile。",
-                "測試 5512→6371 綠；事實鍵目錄 856→1024 把（＋23 個動態家族）；ULTIMATE-1000 階段一 105 項完成。",
+                "測試 5512→6381 綠；事實鍵目錄 856→1026 把（＋23 個動態家族）；ULTIMATE-1000 階段一 105 項完成。",
             ],
         },
         new ChangeEntry

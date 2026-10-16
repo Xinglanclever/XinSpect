@@ -161,13 +161,13 @@
 | P2-066 | 重放首個不一致點 | 具名指出第一筆不符事件 | `tpm.replay.first_mismatch` | L1 | S | P2-064 |todo: 
 | P2-067 | 未支援演算法與事件清單 | 不以 0 補，逐項列出 | `tpm.replay.unsupported.count` | L0 | S | P2-064 |todo: 
 | P2-068 | TPM 存在性與規格版本 | 2.0／1.2 與實作版本 | `tpm.version` | L0 | S | — |ok:tpm.version 
-| P2-069 | 擁有者與啟用狀態 | 是否已取得擁有權 | `tpm.owned` | L1 | S | — |todo: 
+| P2-069 | 擁有者與啟用狀態 | 是否已取得擁有權 | `tpm.owned` | L1 | S | — |ok:tpm.owned 
 | P2-070 | 簽署金鑰存在性 | EK／AK 存在性（不含金鑰值） | `tpm.key.present` | L1 | S | P1-048（L3 禁項掃描守門） |todo: 
 | P2-071 | 量測開機日誌摘要 | 日誌筆數與事件型別分布 | `tpm.log.summary` | L1 | S | P2-064 |ok:tpm.log.summary 
 | P2-072 | 開機事件型別直方圖 | 各型別事件計數 | `tpm.log.histogram` | L1 | S | P2-064 |ok:tpm.log.histogram 
 | P2-073 | TPM 與 Secure Boot 對照 | 兩者的狀態一致性 | `tpm.cross.sb` | L0 | S | P2-078 |ok:tpm.cross.sb 
 | P2-074 | TPM 韌體版本與弱點知識包 | 對照已知弱點 | `tpm.cve` | L0 | M | P1-041 |todo: 
-| P2-075 | 遠端證明能力陳述 | 是否具備證明能力（不上網） | `tpm.attest.capable` | L1 | S | — |todo: 
+| P2-075 | 遠端證明能力陳述 | 是否具備證明能力（不上網） | `tpm.attest.capable` | L1 | S | — |ok:tpm.attest.capable 
 | P2-076 | 清除與重設風險說明 | 明示本專案不做清除 | `tpm.clear.boundary` | L0 | S | — |ok:tpm.clear.boundary 
 | P2-077 | 量測鏈與硬體事件關聯 | 開機事件對硬體變更時間線 | `tpm.cross.hwchange` | L1 | M | P2-064 |todo: 
 | P2-078 | Secure Boot 四態陳述 | 存在／啟用／已設定／雜湊世代 | `ev.secureboot.*` | L0 | M | — |alias:uefi.secure_boot@Services/UefiBootFactsService.cs:30 
@@ -206,6 +206,14 @@
 > **命名註記（2026-10-16）**：本域的風險輸出鍵統一為 `fw.risk.facts.*`。
 > 「風險」一詞只出現在「風險**事實**」這個用法上——列的是可複核的事實，不是判決。
 > 同一原則見 P2-100 刻意使用 `level` 而非 `verdict`。
+
+> **修正註記（2026-10-17）**：P2-068 的屬性編號與 revision 解碼**本來是錯的**——
+> `TPM_PT_REVISION` 是「規格版號×100」（本機 `Win32_Tpm.SpecVersion`＝「2.0, 0, 1.16」，真值 116），
+> 舊碼卻把它放在 `0x101`（那是 `LEVEL`）並用位元欄位拆版號，於是真機上顯示「revision 未回報」；
+> 廠商字串在 `0x106..0x109`，舊碼讀 `0x104..0x107`（那是 `YEAR` 與 `MANUFACTURER`）。
+> 同一次補上 P2-069（`tpm.owned`，TPMA_PERMANENT／STARTUP_CLEAR 逐位）與
+> P2-075（`tpm.attest.capable`，陳述、不上網）。**為什麼測試一直綠**（假資料照著錯的假設造）
+> 與修正的依據見 `docs/ULTIMATE-1000/GATE-LOG-257.md` 第七節。
 
 
 **不做**：

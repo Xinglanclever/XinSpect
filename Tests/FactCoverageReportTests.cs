@@ -143,9 +143,13 @@ public class FactCoverageReportTests
         //   以及六個原本就列為「有硬體時應補規則」的：gpu.／mem.／psu.pmbus.／smart.／tpm.／cmos.
         // 其餘各族的來源，與為什麼沒有交叉對象，逐族寫在
         // docs/ULTIMATE-1000/GATE-LOG-257.md 的第三節。
+        //
+        // 2026-10-17 同日的第二批：+2 條（`tpm.owned`＝P2-069、`tpm.attest.capable`＝P2-075），
+        // 兩個都在**刻意不豁免的 tpm. 那一族**裡（可以對：Windows 的 Win32_Tpm 視圖、
+        // 量測開機日誌），所以照上面的規矩留未覆蓋，上限跟著移。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 307,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 307）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 309,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 309）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }

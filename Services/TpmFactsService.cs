@@ -63,7 +63,17 @@ public static class TpmFactsService
                     facts.Add(PcrFact(ctx, i, alg, bankName, keyPrefix, at, submitFn));
             facts.Add(TcgLogFact(ctx, at, readLog ?? RealReadLog));
             facts.AddRange(BankInventoryFacts(ctx, at, submitFn));
-            facts.AddRange(VersionFacts(ctx, at, submitFn));
+            // ═══ 屬性只讀兩組、各讀一次，三個事實共用同一份結果 ═══
+            // TPM_PT_FIXED 那一組（family／level／revision／manufacturer／廠商字串）與
+            // TPM_PT_VAR 那一組（PT_PERMANENT／PT_STARTUP_CLEAR）。
+            // **刻意不是「每個事實各自讀一次」**：同一份屬性多讀一次就多一次
+            // 「兩次讀到的不一樣」——那正是本專案在 MeasuredBootFactsService 與
+            // UefiVersionCrossFactsService 裡各自警告過的事。
+            var fixedProps = ReadProperties(ctx, Tpm2.PtFamilyIndicator, Tpm2.FixedPropertyCount, submitFn);
+            var varProps = ReadProperties(ctx, Tpm2.PtPermanent, 2, submitFn);
+            facts.AddRange(VersionFacts(fixedProps, at));
+            facts.AddRange(OwnedFacts(varProps, at));               // P2-069
+            facts.Add(AttestFact(fixedProps, varProps, at));        // P2-075
             // P2-076：清除與重設的界線宣告。
             // **它不需要任何能力查詢，也不新增任何編號**——它只說出「本專案不做清除」。
             facts.Add(TpmClearBoundaryFact(at));
@@ -219,52 +229,152 @@ public static class TpmFactsService
         ];
     }
 
-    // ── P2-068 TPM 規格版本：由 TPM 自己回報的 family／revision，不是從 TBS 或驅動推測 ──
+    // ── P2-068／P2-069／P2-075：屬性一次讀兩組，三個事實共用同一份結果 ──────────
 
-    private static IReadOnlyList<HardwareFact> VersionFacts(nint ctx, DateTimeOffset at,
+    /// <summary>
+    /// 一組 TPM 屬性的讀取結果。<see cref="Values"/> 非 null 時可用；否則 <see cref="Failure"/>
+    /// 說明原因，<see cref="TbsFailed"/> 決定態別（TBS 自己失敗＝ReadError，其餘＝NotSupported）。
+    /// </summary>
+    private readonly record struct PropertyRead(IReadOnlyDictionary<uint, uint>? Values, bool TbsFailed, string Failure);
+
+    /// <summary>
+    /// 讀 TPM_PT 屬性：<paramref name="first"/> 起共 <paramref name="count"/> 項。
+    /// 回應格式不符、capability 不符、TPM 拒絕——一律回 null 並說出原因，**不解碼垃圾**。
+    /// </summary>
+    private static PropertyRead ReadProperties(nint ctx, uint first, uint count,
         Func<nint, byte[], (uint Result, byte[] Output, uint OutputLen)> submit)
     {
-        const string key = "tpm.version", name = "TPM 規格版本",
-            source = "TPM2_GetCapability(TPM_CAP_TPM_PROPERTIES)，經 Windows TBS";
-        var (result, output, outputLen) = submit(ctx, Tpm2.BuildGetCapabilityCommand(Tpm2.CapTpmProperties, Tpm2.PtFamilyIndicator, 8));
+        var (result, output, outputLen) = submit(ctx,
+            Tpm2.BuildGetCapabilityCommand(Tpm2.CapTpmProperties, first, count));
         if (result != TbsSuccess)
-            return [Unavailable(key, name, source, at, FactAvailability.ReadError, $"TBS 錯誤 0x{result:X8}")];
-        var trimmed = outputLen is > 0 and <= int.MaxValue and var n ? output[..(int)Math.Min(n, output.Length)] : [];
+            return new(null, true, $"TBS 錯誤 0x{result:X8}");
+        var trimmed = outputLen is > 0 and <= int.MaxValue and var n
+            ? output[..(int)Math.Min(n, output.Length)] : [];
         var data = Tpm2.GetCapabilityData(trimmed, out uint rc, out uint cap, out _);
         if (data is null)
-            return [Unavailable(key, name, source, at, FactAvailability.NotSupported,
-                rc == 0 ? "GetCapability 回應格式不符——不解碼垃圾" : $"TPM 拒絕（TPM_RC 0x{rc:X8}）")];
+            return new(null, false, rc == 0
+                ? "GetCapability 回應格式不符——不解碼垃圾"
+                : $"TPM 拒絕（TPM_RC 0x{rc:X8}）");
         if (cap != Tpm2.CapTpmProperties)
-            return [Unavailable(key, name, source, at, FactAvailability.NotSupported,
-                $"回應的 capability 是 0x{cap:X8}，不是查詢的 TPM_CAP_TPM_PROPERTIES")];
+            return new(null, false, $"回應的 capability 是 0x{cap:X8}，不是查詢的 TPM_CAP_TPM_PROPERTIES");
+        var dict = new Dictionary<uint, uint>();
+        foreach (var prop in Tpm2.DecodeTpmProperties(data)) dict[prop.Property] = prop.Value;
+        return new(dict, false, "");
+    }
 
-        var props = Tpm2.DecodeTpmProperties(data);
-        uint? Find(uint id) => props.Where(p => p.Property == id).Select(p => (uint?)p.Value).FirstOrDefault();
-        string? family = Tpm2.FamilyIndicator(Find(Tpm2.PtFamilyIndicator) ?? 0);
-        var revision = Tpm2.Revision(Find(Tpm2.PtRevision) ?? 0);
+    private static HardwareFact ReadFailure(string key, string name, string source, DateTimeOffset at, PropertyRead read)
+        => Unavailable(key, name, source, at,
+            read.TbsFailed ? FactAvailability.ReadError : FactAvailability.NotSupported, read.Failure);
+
+    private static string Yn(bool v) => v ? "是" : "否";
+
+    /// <summary>
+    /// P2-068 TPM 規格版本：family／level／revision／廠商代號與廠商字串，全部由 TPM 自己回報。
+    /// <b>revision 是「規格版號 ×100」</b>（TPM 2.0 Part 2），不是韌體版號——本機
+    /// <c>Win32_Tpm.SpecVersion</c> 的「2.0, 0, 1.16」正是 family／level／revision 三欄。
+    /// </summary>
+    private static IReadOnlyList<HardwareFact> VersionFacts(PropertyRead read, DateTimeOffset at)
+    {
+        const string key = "tpm.version", name = "TPM 規格版本",
+            source = "TPM2_GetCapability(TPM_CAP_TPM_PROPERTIES, TPM_PT_FIXED)，經 Windows TBS";
+        if (read.Values is not { } p) return [ReadFailure(key, name, source, at, read)];
+
+        string? family = Tpm2.FamilyIndicator(p.GetValueOrDefault(Tpm2.PtFamilyIndicator));
+        var revision = Tpm2.Revision(p.GetValueOrDefault(Tpm2.PtRevision));
+        string? level = p.TryGetValue(Tpm2.PtLevel, out var lv) ? lv.ToString() : null;
+        string manufacturer = Tpm2.Ascii4(p.GetValueOrDefault(Tpm2.PtManufacturer)).TrimEnd('\0', ' ');
+        string vendor = string.Concat(
+            new[] { Tpm2.PtVendor1, Tpm2.PtVendor2, Tpm2.PtVendor3, Tpm2.PtVendor4 }
+                .Select(id => p.TryGetValue(id, out var v) ? Tpm2.Ascii4(v) : ""))
+            .TrimEnd('\0', ' ');
 
         if (family is null && revision is null)
             return [Unavailable(key, name, source, at, FactAvailability.NotSupported,
                 "TPM 未回報 family indicator 與 revision——沒有值就是沒有值，不以 2.0 代填")];
 
-        string vendor = string.Concat(
-            new[] { Tpm2.PtVendor1, Tpm2.PtVendor2, Tpm2.PtVendor3, Tpm2.PtVendor4 }
-                .Select(id => Find(id) is { } v and not 0 ? VtpmVendorChunk(v) : ""))
-            .TrimEnd('\0', ' ');
-
-        string value = $"family {family ?? "未回報"}、revision {(revision is { } r ? $"{r.Major}.{r.Minor}" : "未回報")}"
-            + (vendor.Length > 0 ? $"、廠商字串 {vendor}" : "、廠商字串未回報");
+        string value = $"family {family ?? "未回報"}、level {level ?? "未回報"}"
+            + $"、revision {(revision is { } r ? $"{r.Major}.{r.Minor}" : "未回報")}"
+            + $"，廠商代號 {(manufacturer.Length > 0 ? manufacturer : "未回報")}"
+            + $"，廠商字串 {(vendor.Length > 0 ? vendor : "未回報")}。"
+            + "界線：revision 是規格本身的版號×100（TPM 2.0 Part 2 的定義），不是 TPM 的韌體版號——"
+            + "韌體版號在 PT_FIRMWARE_VERSION_1／2，本事實不讀那份，也不與此混用。";
         return
         [
             new HardwareFact(key, Category, name, value, "", source, FactTrustLevel.Measured, false, at),
         ];
     }
 
-    /// <summary>TPM_PT_VENDOR_STRING_x 的四位元組 ASCII（大端打包，與 TPM 線上格式一致）。</summary>
-    private static string VtpmVendorChunk(uint raw)
+    /// <summary>
+    /// P2-069 擁有者與啟用狀態：TPMA_PERMANENT 與 TPMA_STARTUP_CLEAR 兩個位元欄位，由 TPM 自己回報。
+    /// <c>ownerAuthSet</c> 就是一般所稱的「已取得擁有權」；三個 Enable 位是各階層是否可用。
+    /// </summary>
+    private static IReadOnlyList<HardwareFact> OwnedFacts(PropertyRead read, DateTimeOffset at)
     {
-        var bytes = new[] { (byte)(raw >> 24), (byte)(raw >> 16), (byte)(raw >> 8), (byte)raw };
-        return System.Text.Encoding.ASCII.GetString(bytes);
+        const string key = "tpm.owned", name = "TPM 擁有權與階層狀態",
+            source = "TPM2_GetCapability(TPM_CAP_TPM_PROPERTIES, TPM_PT_PERMANENT／TPM_PT_STARTUP_CLEAR)，經 Windows TBS";
+        if (read.Values is not { } p) return [ReadFailure(key, name, source, at, read)];
+
+        bool hasPerm = p.TryGetValue(Tpm2.PtPermanent, out uint permRaw);
+        bool hasStart = p.TryGetValue(Tpm2.PtStartupClear, out uint startRaw);
+        if (!hasPerm && !hasStart)
+            return [Unavailable(key, name, source, at, FactAvailability.NotSupported,
+                "TPM 未回報 PT_PERMANENT 與 PT_STARTUP_CLEAR——沒有值就是沒有值，不從其他欄位推斷擁有權")];
+
+        var parts = new List<string>();
+        if (hasPerm)
+        {
+            var f = Tpm2.DecodePermanent(permRaw);
+            parts.Add($"永久標記（TPMA_PERMANENT 0x{permRaw:X8}）：ownerAuthSet（已取得擁有權）＝{Yn(f.OwnerAuthSet)}"
+                + $"，endorsementAuthSet＝{Yn(f.EndorsementAuthSet)}，lockoutAuthSet＝{Yn(f.LockoutAuthSet)}"
+                + $"，disableClear（TPM2_Clear 被停用）＝{Yn(f.DisableClear)}，inLockout＝{Yn(f.InLockout)}"
+                + $"，tpmGeneratedEPS＝{Yn(f.TpmGeneratedEps)}");
+        }
+        else parts.Add("永久標記（TPMA_PERMANENT）：未回報");
+        if (hasStart)
+        {
+            var s = Tpm2.DecodeStartupClear(startRaw);
+            parts.Add($"本次開機狀態（TPMA_STARTUP_CLEAR 0x{startRaw:X8}）：phEnable＝{Yn(s.PhEnable)}"
+                + $"，shEnable＝{Yn(s.ShEnable)}，ehEnable＝{Yn(s.EhEnable)}"
+                + $"，phEnableNV＝{Yn(s.PhEnableNv)}，orderly（上次是正常關機）＝{Yn(s.Orderly)}");
+        }
+        else parts.Add("本次開機狀態（TPMA_STARTUP_CLEAR）：未回報");
+
+        string value = string.Join("；", parts) + "。"
+            + "界線：這些是「自上次 TPM2_Clear 以來」的標記——講的是狀態，不是誰是擁有者；"
+            + "某個階層的 Enable 為否時，該階層的物件與其 NV 索引都用不到。"
+            + "本專案不施測清除與重設（見 tpm.clear.boundary）。";
+        return [new HardwareFact(key, Category, name, value, "", source, FactTrustLevel.Measured, false, at)];
+    }
+
+    /// <summary>
+    /// P2-075 遠端證明能力（陳述，不上網）：由 family 與背書階層的事實組成。
+    /// <b>它陳述的是「具備前提」，不是「已經被證明」</b>——本專案不連網、不送 challenge、
+    /// 不驗 EK 憑證鏈，所以這一項不構成「能被遠端證明」的結論。
+    /// </summary>
+    private static HardwareFact AttestFact(PropertyRead fixedRead, PropertyRead varRead, DateTimeOffset at)
+    {
+        const string key = "tpm.attest.capable", name = "TPM 遠端證明能力（本機陳述）",
+            source = "TPM2_GetCapability(TPM_CAP_TPM_PROPERTIES：PT_FIXED／PT_STARTUP_CLEAR／PT_PERMANENT)，經 Windows TBS";
+        if (fixedRead.Values is not { } fp) return ReadFailure(key, name, source, at, fixedRead);
+        if (varRead.Values is not { } vp) return ReadFailure(key, name, source, at, varRead);
+
+        string? family = Tpm2.FamilyIndicator(fp.GetValueOrDefault(Tpm2.PtFamilyIndicator));
+        bool hasEh = vp.TryGetValue(Tpm2.PtStartupClear, out uint sc);
+        bool hasPerm = vp.TryGetValue(Tpm2.PtPermanent, out uint perm);
+        if (family is null || (!hasEh && !hasPerm))
+            return Unavailable(key, name, source, at, FactAvailability.NotSupported,
+                "缺 family 或背書階層狀態——沒有值就是沒有值，不以「支援」代填");
+
+        bool? eh = hasEh ? Tpm2.DecodeStartupClear(sc).EhEnable : null;
+        bool? endAuth = hasPerm ? Tpm2.DecodePermanent(perm).EndorsementAuthSet : null;
+
+        string value = $"family {family}；背書階層啟用（ehEnable）＝{(eh is { } e ? Yn(e) : "未回報")}"
+            + $"，背書階層授權值已設定（endorsementAuthSet）＝{(endAuth is { } a ? Yn(a) : "未回報")}。"
+            + "遠端證明的前提是「背書階層可用、且能建立並使用證明身分（EK／AK）」，以上即該前提的本機事實。"
+            + (family == "2.0" ? "" : $"（family 不是 2.0：這兩個前提是依 TPM 2.0 的階層模型陳述的，置換成 {family} 的模型並不成立）")
+            + "**界線：本事實不連網、不送 challenge、不驗證 EK 憑證鏈**——"
+            + "所以它不等於「這台機器在遠端證明中會被接受」；EK 是否存在另屬一項，不在本事實內。";
+        return new HardwareFact(key, Category, name, value, "", source, FactTrustLevel.Derived, false, at);
     }
 
     // ── 真實 TBS 通路（薄；測試以注入委派取代）──

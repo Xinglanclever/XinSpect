@@ -145,3 +145,55 @@ isRetryable: false
 4. **滿的表格不是靠刪別人的條目騰空間。** 既有 600 條裡混著不同類別的正當性，
    為了塞進家族級豁免而刪掉它們，會把「刻意不取得來源」記成「單一來源」——
    申報比實際乾淨，正是本計畫最忌的那件事。
+
+---
+
+# 七、接手後的下一輪（同日）：`TPM_PT` 編號與 revision 語意整組讀錯——實質缺陷；順手解鎖 P2-069／P2-075
+
+**起點**是第 256 輪自己寫下的 `UNSOURCED-CONSTANTS.md` ④⑤（「`TPM_PT_*` 那張表涵蓋範圍不夠，
+補上即可解鎖 P2-069／P2-075」）。查證時發現更糟的事：
+
+1. **編號錯**：`PtRevision` 寫 `0x101`（規格裡那是 `LEVEL`；`REVISION＝FIXED+2＝0x102`）、
+   廠商字串寫 `0x104..0x107`（規格裡那是 `YEAR`／`MANUFACTURER`／`VENDOR_STRING_1..2`；
+   正確是 `0x106..0x109`）。
+2. **解碼錯**：`Revision()` 把 bits 31:24／15:8 當主、次版號；規格寫的是
+   **「the specification Revision times 100」**（Revision 01.01 → 101）。
+   本機 `Win32_Tpm.SpecVersion` 是「2.0, 0, 1.16」⇒ 真值 116；舊寫法會讀成「0.116」，
+   而且因為它讀的是 `LEVEL`（真值 0）而顯示「revision 未回報」，
+   再把 `YEAR`／`MANUFACTURER` 當成廠商字串的前兩段。
+3. **文件與測試跟著一起錯**：`UNSOURCED-CONSTANTS.md` 拿實作的編號當佐證；
+   測試的假資料（`0x01000300`）照著錯的假設造——所以一路綠。
+   **假資料與實作自我一致時，綠燈什麼都沒證明。**
+
+## 修了什麼
+
+| 檔 | 內容 |
+|---|---|
+| `XinSpect.Decoders/Tpm2.cs` | 常數表依規格重對（FIXED 0x100–0x10C、VAR 0x200–0x201，含 `PtLevel`／`PtYear`／`PtManufacturer`）；`Revision()` 改為「版號×100」並對形狀不符的值回 null；`Ascii4()` 抽出共用；新增 `TPMA_PERMANENT`／`TPMA_STARTUP_CLEAR` 位元解碼器 |
+| `Services/TpmFactsService.cs` | 屬性**一次讀兩組、各讀一次**（PT_FIXED 十項、PT_VAR 兩項），三個事實共用同一份結果（不重複讀）；`tpm.version` 修正並補 level／廠商代號；**新增 `tpm.owned`（P2-069）與 `tpm.attest.capable`（P2-075）**，後者明說不連網、不送 challenge、不驗 EK 憑證鏈 |
+| `Tests/Tpm2Tests.cs` | 編號 golden（「哪個編號是哪一項」被钉住）＋固定屬性項數（要涵蓋到 0x109）＋revision 語意＋TPMA 位元 |
+| `Tests/TpmFactsTests.cs` | fixture 修正（revision 在 `0x102`、值 116）；假通道改依 capability**與 property** 兩個面向分派；新增擁有權（逐位陳述＋未回報不推斷）與證明能力（陳述前提＋不上網界線＋缺 family 不以支援代填）四條 |
+| `Services/FactKeyCatalog.cs` | ＋`tpm.owned`、`tpm.attest.capable`（1,024 → 1,026） |
+
+## 環境插曲（要記錄的坑，兩件事）
+
+- **別從腳本跑 `XinSpect.exe --json evidence`**：它卡死（單一執行緒、`Stop-Process -Force`
+  無效），並鎖住 `Tests/bin` 的 DLL。之後所有建置／測試要加
+  `-p:BaseOutputPath=obj/_probe/` 繞開（那個程序留著，等重開機清掉）。
+- **本機 TBS 此刻回 `TBS_E_TPM_NOT_FOUND`**（PTT 被卡住的命令卡住；`Win32_Tpm` 仍回報
+  TPM 存在且已擁有）。所以 **PT_PERMANENT／PT_STARTUP_CLEAR 的實測值本輪沒有取得**——
+  它們的測試資料在註解與 fixture 都明寫「這是形狀不是 golden」。
+  family／level／revision／manufacturer 的真值取自 Windows 的 `Win32_Tpm`
+  （SpecVersion「2.0, 0, 1.16」、ManufacturerIdTxt「INTC」）。
+  **重開機後應重跑一次真機驗證。**
+
+## 這一輪的教訓
+
+1. **出處要對規格，不能對實作。** `UNSOURCED-CONSTANTS.md` 用「實作裡有 `[SpecRef]`」
+   當「表已對準」的證據——實作正是錯的那一方時，這等於替錯誤背書。
+2. **「看似來自規格的註記」也要驗。** 舊註解寫「2023 年的修訂把次版號定義成 bits 23:16」，
+   而 2022（tss2 v4.0.1）與現行版本的規格註解都是 ×100——那句話對不上任何版本。
+3. **假資料要對規格造，不是對實作造。** fixture 照著錯的假設造，就會和實作一起綠。
+   修正後 fixture 的註解把「為什麼是 116」寫在旁邊，讓下一個人對得出來。
+4. 第 256 輪說「④⑤ 是有界、可查證的工作」——**查證的過程比擴充那張表更有價值**：
+   擴充只解鎖兩列，查證揪出三個事實的值本來就是錯的。

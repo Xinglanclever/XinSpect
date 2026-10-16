@@ -8,6 +8,106 @@ namespace XinSpect.Tests;
 /// </summary>
 public class Tpm2Tests
 {
+    // ── 屬性編號的 golden（2026-10-17 修正後钉住）──────────────────────────
+    //
+    // 這一組值曾經錯過一次，而錯法是本專案最忌的那一種：**讀得到、看起來合理、
+    // 但不是它標的那一項**（PtRevision 被寫成 LEVEL、廠商字串被寫成 YEAR／MANUFACTURER）。
+    // 所以把「編號＝哪一項」寫成常數 golden——改動它就會紅，而紅的時候要重新對出處。
+    // 出處：TPM 2.0 Part 2 Structures「TPM_PT Constants」（TPM_PT_FIXED＝0x100、TPM_PT_VAR＝0x200，
+    // 組內第 n 項＝基數＋n）。
+
+    [Fact]
+    public void 屬性編號_FIXED那一組的相對位置()
+    {
+        Assert.Equal(0x00000100u, Tpm2.PtFamilyIndicator);
+        Assert.Equal(0x00000101u, Tpm2.PtLevel);
+        Assert.Equal(0x00000102u, Tpm2.PtRevision);          // 舊版誤寫 0x101（那是 LEVEL）
+        Assert.Equal(0x00000103u, Tpm2.PtDayOfYear);
+        Assert.Equal(0x00000104u, Tpm2.PtYear);
+        Assert.Equal(0x00000105u, Tpm2.PtManufacturer);      // 「the vendor ID unique to each TPM manufacturer」
+        Assert.Equal(0x00000106u, Tpm2.PtVendor1);           // 舊版誤把廠商字串放在 0x104..0x107
+        Assert.Equal(0x00000107u, Tpm2.PtVendor2);
+        Assert.Equal(0x00000108u, Tpm2.PtVendor3);
+        Assert.Equal(0x00000109u, Tpm2.PtVendor4);
+        Assert.Equal(0x0000010Au, Tpm2.PtVendorTpmType);
+        Assert.Equal(0x0000010Bu, Tpm2.PtFirmwareVersion1);
+        Assert.Equal(0x0000010Cu, Tpm2.PtFirmwareVersion2);
+        Assert.Equal(0x00000200u, Tpm2.PtPermanent);
+        Assert.Equal(0x00000201u, Tpm2.PtStartupClear);
+    }
+
+    /// <summary>固定屬性一次要讀滿十項：0x100 起算到 VENDOR_STRING_4（0x109）。
+    /// 少一項就會少讀後面的廠商字串，而「少讀」不會有任何錯誤訊息。</summary>
+    [Fact]
+    public void 固定屬性項數_要涵蓋到廠商字串四()
+    {
+        Assert.Equal(10u, Tpm2.FixedPropertyCount);
+        Assert.Equal(Tpm2.PtVendor4, Tpm2.PtFamilyIndicator + Tpm2.FixedPropertyCount - 1);
+    }
+
+    /// <summary>revision 的語意：規格寫的是「版號×100」（Revision 01.01 → 101）。
+    /// 116 要讀成 1.16（本機 Win32_Tpm 的 SpecVersion 第 3 欄就是 1.16），不是 0.116。
+    /// 形狀不符的值（例如位元欄位式的 0x01000300）回 null——不硬拆。</summary>
+    [Fact]
+    public void 規格版號_是版號乘一百()
+    {
+        Assert.Equal((1, 16), Tpm2.Revision(116));
+        Assert.Equal((1, 1), Tpm2.Revision(101));
+        Assert.Equal((1, 83), Tpm2.Revision(183));
+        Assert.Null(Tpm2.Revision(0));            // 沒回報不是版本 0
+        Assert.Null(Tpm2.Revision(0x01000300));   // 形狀不符：這一項不是位元欄位
+    }
+
+    [Fact]
+    public void 四位元組字串_大端打包()
+    {
+        Assert.Equal("INTC", Tpm2.Ascii4(0x494E5443));
+        Assert.Equal("2.0\0", Tpm2.Ascii4(0x322E3000));
+        Assert.Null(Tpm2.FamilyIndicator(0));
+        Assert.Equal("INTC", Tpm2.FamilyIndicator(0x494E5443));
+    }
+
+    // ── TPMA 位元欄位 ────────────────────────────────────────────────────
+
+    [Fact]
+    public void 永久標記_位元位置()
+    {
+        var f = Tpm2.DecodePermanent(0x00000003);
+        Assert.True(f.OwnerAuthSet);            // bit0
+        Assert.True(f.EndorsementAuthSet);      // bit1
+        Assert.False(f.LockoutAuthSet);         // bit2
+        Assert.False(f.DisableClear);           // bit8
+        Assert.False(f.InLockout);              // bit9
+
+        var g = Tpm2.DecodePermanent(0x00000704);   // lockoutAuthSet｜disableClear｜inLockout｜tpmGeneratedEPS
+        Assert.False(g.OwnerAuthSet);
+        Assert.True(g.LockoutAuthSet);
+        Assert.True(g.DisableClear);
+        Assert.True(g.InLockout);
+        Assert.True(g.TpmGeneratedEps);         // bit10
+
+        // 保留位（3–7、11–31）不得影響任何一項
+        var h = Tpm2.DecodePermanent(0xFFFFF8F8);
+        Assert.False(h.OwnerAuthSet && h.EndorsementAuthSet && h.LockoutAuthSet
+                 && h.DisableClear && h.InLockout && h.TpmGeneratedEps);
+    }
+
+    [Fact]
+    public void 開機狀態_位元位置()
+    {
+        var s = Tpm2.DecodeStartupClear(0x00000007);
+        Assert.True(s.PhEnable);                // bit0
+        Assert.True(s.ShEnable);                // bit1
+        Assert.True(s.EhEnable);                // bit2
+        Assert.False(s.PhEnableNv);             // bit3
+        Assert.False(s.Orderly);                // bit31
+
+        var t = Tpm2.DecodeStartupClear(0x80000008);
+        Assert.False(t.PhEnable);
+        Assert.True(t.PhEnableNv);
+        Assert.True(t.Orderly);
+    }
+
     [Fact]
     public void PCRRead命令_金標位元組釘死()
     {

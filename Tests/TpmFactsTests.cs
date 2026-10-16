@@ -52,11 +52,15 @@ public class TpmFactsTests
             ? (0u, PcrResponse(0, pcrDigest), pcrLen)
             : (0u, GetCapabilityResponse(cmd), (uint)GetCapabilityResponse(cmd).Length);
 
-    /// <summary>依命令裡的 capability 欄位（位移 10）回對應的 capabilityData。</summary>
+    /// <summary>依命令裡的 capability（位移 10）與 property（位移 14）回對應的 capabilityData。
+    /// <b>兩個面向都要看</b>：TPM_PT_FIXED（0x100 起）與 TPM_PT_VAR（0x200 起）是不同的兩組，
+    /// 只依 capability 分派會讓第二組拿到第一組的內容——服務會照著解，而測試不會發現。</summary>
     private static byte[] GetCapabilityResponse(byte[] cmd)
     {
         uint capability = ((uint)cmd[10] << 24) | ((uint)cmd[11] << 16) | ((uint)cmd[12] << 8) | cmd[13];
-        var data = capability == Tpm2.CapAlgorithms ? AlgPropertyData() : TpmPropertyData();
+        uint property = ((uint)cmd[14] << 24) | ((uint)cmd[15] << 16) | ((uint)cmd[16] << 8) | cmd[17];
+        var data = capability == Tpm2.CapAlgorithms ? AlgPropertyData()
+            : property >= Tpm2.PtPermanent ? VarPropertyData() : FixedPropertyData();
         int paramSize = 19 + data.Length;
         var r = new byte[paramSize];
         r[0] = 0x80; r[1] = 0x01;
@@ -74,15 +78,31 @@ public class TpmFactsTests
         0x00, 0x0B, 0x00, 0x00, 0x00, 0x04,
         0x00, 0x0C, 0x00, 0x00, 0x00, 0x04];
 
-    /// <summary>TPML_TAGGED_TPM_PROPERTY：family indicator '2.0\0' 與 revision 1.3。
-    /// revision 依本專案在 <c>Tpm2.Revision</c> 的取法：主版號在 bits 31:24、次版號在 bits 15:8
-    /// （bits 23:16 保留），所以 1.3 是 <c>0x01000300</c>。
-    /// 對照：1.0 是 <c>0x01000000</c>、1.16 是 <c>0x01001000</c>——
-    /// <b>不是</b>把 major/minor 直接拼成 0x01 03 00 00（那是 1.0）。
-    /// 這條與 Tpm2.Revision 的取法（及其規格出處註記）是同一份定義，fixture 寫錯會讓正確的實作看起來是錯的。</summary>
-    private static byte[] TpmPropertyData() => [0, 0, 0, 2,
-        0x00, 0x00, 0x01, 0x00, (byte)'2', (byte)'.', (byte)'0', 0x00,
-        0x00, 0x00, 0x01, 0x01, 0x01, 0x00, 0x03, 0x00];
+    /// <summary>TPML_TAGGED_TPM_PROPERTY：TPM_PT_FIXED 那一組（0x100 起）。
+    /// 值取本機 <c>Win32_Tpm</c> 回報的形狀：<c>SpecVersion＝"2.0, 0, 1.16"</c>、
+    /// <c>ManufacturerIdTxt＝INTC</c>——也就是 family 2.0、level 0、<b>revision 1.16</b>。
+    /// <para>
+    /// <b>revision 依規格是「版號×100」</b>（Part 2：Revision 01.01 → 101），所以 1.16 是 <c>116＝0x74</c>，
+    /// 放在 <b>0x102</b>。舊版 fixture 把它編成 <c>0x01000300</c> 放在 0x101，是照著
+    /// 「主版號在 bits 31:24、次版號在 bits 15:8」那個錯的取法造的——
+    /// <b>假資料照著錯的假設造，就會一路綠，什麼都證明不了。</b>
+    /// </para></summary>
+    private static byte[] FixedPropertyData() => [0, 0, 0, 6,
+        0x00, 0x00, 0x01, 0x00, (byte)'2', (byte)'.', (byte)'0', 0x00,          // 0x100 family '2.0\0'
+        0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00,                        // 0x101 level 0
+        0x00, 0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x74,                        // 0x102 revision 116＝1.16
+        0x00, 0x00, 0x01, 0x04, 0x00, 0x00, 0x07, 0xE6,                        // 0x104 規格年份 2022
+        0x00, 0x00, 0x01, 0x05, (byte)'I', (byte)'N', (byte)'T', (byte)'C',     // 0x105 廠商代號
+        0x00, 0x00, 0x01, 0x06, (byte)'I', (byte)'n', (byte)'t', (byte)'e'];    // 0x106 廠商字串 1
+
+    /// <summary>TPML_TAGGED_TPM_PROPERTY：TPM_PT_VAR 那一組（PT_PERMANENT／PT_STARTUP_CLEAR）。
+    /// 取一個常見形狀：已取得擁有權（ownerAuthSet）、背書授權已設定、三個階層都啟用、上次正常關機；
+    /// <c>inLockout</c> 與 <c>disableClear</c> 為假。
+    /// <b>這是形狀不是 golden</b>——本機 TPM 的這一組值當天讀不到（TBS 被一個卡住的程序阻塞，
+    /// 回 TBS_E_TPM_NOT_FOUND），所以不宣稱它是實測值。</summary>
+    private static byte[] VarPropertyData() => [0, 0, 0, 2,
+        0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x03,   // 0x200 PERMANENT：ownerAuthSet｜endorsementAuthSet
+        0x00, 0x00, 0x02, 0x01, 0x80, 0x00, 0x00, 0x07];  // 0x201 STARTUP_CLEAR：orderly｜ph｜sh｜eh
 
     /// <summary>TPML_TAGGED_TPM_PROPERTY：兩個屬性都缺席（空屬性集）。
     /// 用來驗「TPM 沒回報 family 與 revision 時不以 2.0 代填」——count 為 0，
@@ -189,7 +209,7 @@ public class TpmFactsTests
     [Fact]
     public void 銀行清單_capability不符要如實標不支援()
     {
-        var r = CapabilityWith(TpmPropertyData(), capability: Tpm2.CapTpmProperties);
+        var r = CapabilityWith(FixedPropertyData(), capability: Tpm2.CapTpmProperties);
         var facts = TpmFactsService.Collect(At,
             createContext: () => (nint)0x1234,
             submit: (_, cmd) => cmd.Length == 20
@@ -203,7 +223,8 @@ public class TpmFactsTests
     }
 
     /// <summary>
-    /// 版本由 family indicator 與 revision 兩個屬性組成，値都要出現；
+    /// 版本由 TPM 自己回報的 family／level／revision／廠商代號與廠商字串組成，各欄都要出現。
+    /// revision 依規格是「版號×100」，所以 fixture 的 116 要讀成 1.16。
     /// 兩者都沒回報時標 NotSupported，<b>不以 2.0 代填</b>——那是本專案最忌的典型值補位。
     /// </summary>
     [Fact]
@@ -217,7 +238,11 @@ public class TpmFactsTests
         var f = Assert.Single(facts, x => x.Key == "tpm.version");
         Assert.Equal(FactAvailability.Present, f.Availability);
         Assert.Contains("family 2.0", f.Value);
-        Assert.Contains("revision 1.3", f.Value);
+        Assert.Contains("level 0", f.Value);
+        Assert.Contains("revision 1.16", f.Value);      // 116＝1.16，不是 0.116
+        Assert.Contains("廠商代號 INTC", f.Value);
+        Assert.Contains("廠商字串 Inte", f.Value);
+        Assert.Contains("不是 TPM 的韌體版號", f.Value);   // 界線要說出來
     }
 
     [Fact]
@@ -234,6 +259,82 @@ public class TpmFactsTests
         Assert.Equal(FactAvailability.NotSupported, f.Availability);
         Assert.Contains("不以 2.0 代填", f.UnavailableReason);
         Assert.Equal("", f.Value);
+    }
+
+    // ── 極致計畫階段二 P2-069／P2-075：擁有權狀態與遠端證明能力 ──
+
+    /// <summary>P2-069：擁有權與階層狀態由 PT_PERMANENT／PT_STARTUP_CLEAR 兩個位元欄位陳述，
+    /// 兩組的值都要逐位出現，且 Present 的事實不得帶理由欄。</summary>
+    [Fact]
+    public void 擁有權_由永久標記與開機狀態逐位陳述()
+    {
+        var facts = TpmFactsService.Collect(At,
+            createContext: () => (nint)0x1234,
+            submit: (_, cmd) => ChannelResponse(cmd, new byte[32], 12 + 2 + 32),
+            readLog: _ => null);
+
+        var f = Assert.Single(facts, x => x.Key == "tpm.owned");
+        Assert.Equal(FactAvailability.Present, f.Availability);
+        Assert.Contains("ownerAuthSet（已取得擁有權）＝是", f.Value);
+        Assert.Contains("endorsementAuthSet＝是", f.Value);
+        Assert.Contains("disableClear（TPM2_Clear 被停用）＝否", f.Value);
+        Assert.Contains("inLockout＝否", f.Value);
+        Assert.Contains("ehEnable＝是", f.Value);
+        Assert.Contains("orderly（上次是正常關機）＝是", f.Value);
+        Assert.Contains("不是誰是擁有者", f.Value);      // 界線
+        Assert.Null(f.UnavailableReason);               // 不變式：Present 不得帶理由
+    }
+
+    /// <summary>兩個屬性都沒回報時，不從其他欄位推斷擁有權——標 NotSupported 並說出原因。</summary>
+    [Fact]
+    public void 擁有權_兩個屬性都沒回報時不推斷()
+    {
+        var facts = TpmFactsService.Collect(At,
+            createContext: () => (nint)0x1234,
+            submit: (_, cmd) => cmd.Length == 20
+                ? (0u, PcrResponse(0, new byte[32]), 12 + 2 + 32)
+                : (0u, CapabilityWith(EmptyPropertyData(), Tpm2.CapTpmProperties), 23u),
+            readLog: _ => null);
+
+        var f = Assert.Single(facts, x => x.Key == "tpm.owned");
+        Assert.Equal(FactAvailability.NotSupported, f.Availability);
+        Assert.Contains("不從其他欄位推斷擁有權", f.UnavailableReason);
+    }
+
+    /// <summary>P2-075：遠端證明能力是陳述——要有 family 與背書階層，且明說不上網、不驗憑證鏈。
+    /// 它不得被讀成「這台機器能被遠端證明」。</summary>
+    [Fact]
+    public void 遠端證明能力_陳述前提且明說不上網()
+    {
+        var facts = TpmFactsService.Collect(At,
+            createContext: () => (nint)0x1234,
+            submit: (_, cmd) => ChannelResponse(cmd, new byte[32], 12 + 2 + 32),
+            readLog: _ => null);
+
+        var f = Assert.Single(facts, x => x.Key == "tpm.attest.capable");
+        Assert.Equal(FactAvailability.Present, f.Availability);
+        Assert.Equal(FactTrustLevel.Derived, f.Trust);
+        Assert.Contains("family 2.0", f.Value);
+        Assert.Contains("ehEnable）＝是", f.Value);
+        Assert.Contains("不連網", f.Value);
+        Assert.Contains("不等於「這台機器在遠端證明中會被接受」", f.Value);
+        Assert.Null(f.UnavailableReason);
+    }
+
+    /// <summary>缺 family（證明模型無從陳述）時不以「支援」代填。</summary>
+    [Fact]
+    public void 遠端證明能力_缺family時不以支援代填()
+    {
+        var facts = TpmFactsService.Collect(At,
+            createContext: () => (nint)0x1234,
+            submit: (_, cmd) => cmd.Length == 20
+                ? (0u, PcrResponse(0, new byte[32]), 12 + 2 + 32)
+                : (0u, CapabilityWith(EmptyPropertyData(), Tpm2.CapTpmProperties), 23u),
+            readLog: _ => null);
+
+        var f = Assert.Single(facts, x => x.Key == "tpm.attest.capable");
+        Assert.Equal(FactAvailability.NotSupported, f.Availability);
+        Assert.Contains("不以「支援」代填", f.UnavailableReason);
     }
 
     /// <summary>組一份 GetCapability 回應，capability 欄可自訂（測不符的情境）。</summary>
