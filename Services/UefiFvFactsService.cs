@@ -79,6 +79,9 @@ public static class UefiFvFactsService
         // 這一項把它接出來——**「走到自由空間」不是缺口（那是 FV 的正常結尾），
         // 而 SkippedCount 只記截斷與損壞那兩種**，所以它是有意義的訊號。
         facts.AddRange(UefiParseGapsFactsService.Collect(at, fvs));
+        // P2-035 PE32 模組清單：**不新增 PE 解碼器**——把區段交給既有的 PeInspect。
+        // 那需要區段資料的位移，所以 UefiFvSection 加了 DataOffset（只加欄位、不改行為）。
+        facts.AddRange(UefiPeModuleFactsService.Collect(at, fvs, biosBytes));
         return facts;
     }
 

@@ -5,7 +5,13 @@ using System.Text;
 namespace XinSpect;
 
 /// <summary>FFS 檔案裡一個區段（section）的解碼結果。<see cref="Extra"/> 是補充說明（例如 GUID_DEFINED 的引擎名與資料位移）。</summary>
-public sealed record UefiFvSection(string TypeName, ulong Size, string? Extra);
+/// <summary>
+/// 一個區段的解碼結果。<see cref="DataOffset"/> 是<b>區段資料在整份輸入裡的位元組位移</b>
+/// （略過區段表頭之後的起點）。它存在的理由是：有些區段的內容需要交給別的解碼器
+/// ——例如 PE32 區段要交給 <see cref="PeInspect"/>——而那些解碼器要的是位元組，
+/// 不是給人看的字串。
+/// </summary>
+public sealed record UefiFvSection(string TypeName, ulong Size, string? Extra, ulong DataOffset);
 
 /// <summary>FV 頂層的一個 FFS 檔案。<see cref="UiName"/> 來自 USER_INTERFACE 區段（UTF-16LE），沒有就為 null。</summary>
 public sealed record UefiFvFile(
@@ -276,7 +282,8 @@ public static class UefiFv
                 extra = "巢狀 FV（只列出，不遞迴）";
             }
 
-            sections.Add(new UefiFvSection(SectionTypeName(type), size, extra));
+            sections.Add(new UefiFvSection(SectionTypeName(type), size, extra,
+                (ulong)(p + headerSize)));
             p = (p + (int)size + 3) & ~3; // 區段以 4 位元組對齊
         }
         return sections.ToArray();
