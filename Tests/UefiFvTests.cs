@@ -12,106 +12,22 @@ public class UefiFvTests
 {
     private static readonly DateTimeOffset At = new(2026, 10, 9, 0, 0, 0, TimeSpan.Zero);
 
+    private static byte[] UiSection(string n) => UefiFvTestData.UiSection(n);
+    private static byte[] Section(byte t, byte[] p) => UefiFvTestData.Section(t, p);
+    private static byte[] FfsFile(string g, byte t, byte[][] s, byte? state = null, byte? attributes = null)
+        => UefiFvTestData.FfsFile(g, t, s, state, attributes);
+    private static byte[] BuildFv(System.Collections.Generic.IReadOnlyList<byte[]> files,
+        int revision = 2, uint extraAttributes = 0, bool padFile = false)
+        => UefiFvTestData.BuildFv(files, revision, extraAttributes, padFile);
+
     private const string Fs2Guid = "8C8CE578-8A3D-4F1C-9935-896185C32DD3"; // EFI_FIRMWARE_FILE_SYSTEM2_GUID
 
     // ── 金標建構器：按 UEFI PI Spec 逐欄編碼 ────────────────────────────────
 
-    /// <summary>造一個 USER_INTERFACE 區段（4 位元組頭 + UTF-16LE 名，含補零終止）。</summary>
-    private static byte[] UiSection(string name)
-    {
-        var payload = Encoding.Unicode.GetBytes(name + "\0");
-        return Section(0x15, payload);
-    }
-
-    private static byte[] Section(byte type, byte[] payload)
-    {
-        int size = 4 + payload.Length;
-        var s = new byte[size];
-        s[0] = (byte)size; s[1] = (byte)(size >> 8); s[2] = (byte)(size >> 16);
-        s[3] = type;
-        Array.Copy(payload, 0, s, 4, payload.Length);
-        return s;
-    }
-
-    /// <summary>造一個 FFS 檔（FFS2，0x18 表頭 + 區段列，區段間按規格 4 位元組對齊）。state 預設 0x07（三個有效位元）。</summary>
-    private static byte[] FfsFile(string guid, byte type, byte[][] sections, byte? state = null, byte? attributes = null)
-    {
-        int payloadLen = sections.Sum(s => (s.Length + 3) & ~3); // 區段起始 4 位元組對齊，尾段補齊也計入檔案大小
-        int size = 0x18 + payloadLen;
-        var f = new byte[size];
-        new Guid(guid).ToByteArray().CopyTo(f, 0);
-        f[0x12] = type;
-        f[0x13] = attributes ?? 0;
-        f[0x14] = (byte)size; f[0x15] = (byte)(size >> 8); f[0x16] = (byte)(size >> 16);
-        f[0x17] = state ?? 0x07;
-        // 表頭校驗和：File(0x11) 與 State(0x17) 視為 0 後總和為 0
-        f[0x10] = ComputeFileHeaderChecksum(f);
-        f[0x11] = 0xAA; // FFS_FIXED_CHECKSUM（未設 FFS_ATTRIB_CHECKSUM 時）
-        int p = 0x18;
-        foreach (var s in sections)
-        {
-            Array.Copy(s, 0, f, p, s.Length);
-            p = (p + s.Length + 3) & ~3; // 區段之間 4 位元組對齊（PI Spec）
-        }
-        return f;
-    }
-
-    private static byte ComputeFileHeaderChecksum(byte[] header)
-    {
-        int sum = 0;
-        for (int i = 0; i < header.Length; i++)
-        {
-            if (i == 0x10 || i == 0x11 || i == 0x17) continue;
-            sum += header[i];
-        }
-        return (byte)(-(byte)sum & 0xFF);
-    }
-
-    /// <summary>把若干 FFS 檔包進一個 FV（FFS2 檔案系統 GUID、修訂 2、無抹除極性、含正確的 FV 表頭校驗和）。</summary>
-    private static byte[] BuildFv(IReadOnlyList<byte[]> files, int revision = 2, uint extraAttributes = 0, bool padFile = false)
-    {
-        var body = new List<byte[]>();
-        if (padFile)
-        {
-            // FFS_PAD：State 用 0x07（同有效位元）、型別 0xF0、無區段
-            var pad = new byte[0x18];
-            new Guid("00000000-0000-0000-0000-000000000000").ToByteArray().CopyTo(pad, 0);
-            pad[0x12] = 0xF0;
-            pad[0x14] = 0x18;
-            pad[0x17] = 0x07;
-            body.Add(pad);
-        }
-        foreach (var f in files) body.Add(f);
-        int bodyLen = body.Sum(b => (b.Length + 7) & ~7);
-        ulong fvLength = 0x48 + (ulong)bodyLen;
-
-        var fv = new byte[fvLength];
-        // ZeroVector 16 bytes = 0（保留預設）
-        new Guid(Fs2Guid).ToByteArray().CopyTo(fv, 0x10);
-        BitConverter.GetBytes(fvLength).CopyTo(fv, 0x20);
-        BitConverter.GetBytes(UefiFv.FvhSignature).CopyTo(fv, 0x28);
-        BitConverter.GetBytes(0x0004_0400u | extraAttributes).CopyTo(fv, 0x2C);
-        // HeaderLength = 0x48：0x38 起一組 block map 項目（0x38–0x3F）＋終止項 (0,0)（0x40–0x47）
-        BitConverter.GetBytes((ushort)0x48).CopyTo(fv, 0x30);
-        BitConverter.GetBytes((ushort)0x100).CopyTo(fv, 0x38); // block map：0x100 塊 × 0x1000
-        BitConverter.GetBytes(0x1000u).CopyTo(fv, 0x3C);
-        fv[0x36] = 0;           // Reserved
-        fv[0x37] = (byte)revision;
-        // 0x40–0x47 已是預設的 0＝block map 終止項 (0,0)
-
-        // FV 表頭校驗和：0x00–HeaderLength 內所有 u16 總和為 0
-        ushort sum = 0;
-        for (int i = 0; i < 0x48; i += 2) sum += BitConverter.ToUInt16(fv, i);
-        BitConverter.GetBytes((ushort)(0 - sum)).CopyTo(fv, 0x32);
-
-        int p = 0x48;
-        foreach (var b in body)
-        {
-            Array.Copy(b, 0, fv, p, b.Length);
-            p = (p + b.Length + 7) & ~7;
-        }
-        return fv;
-    }
+    // 建構器已抽到 UefiFvTestData（單一來源）：
+    //   UiSection／Section／FfsFile／ComputeFileHeaderChecksum／BuildFv
+    // 抽出來的理由是 UefiParseGapsTests 也需要造合法 FV，
+    // 而兩份 FV 合成器就是兩處漂移的來源。
 
     // ── 解碼器契約 ──────────────────────────────────────────────────────────
 

@@ -75,6 +75,10 @@ public static class UefiFvFactsService
             facts.Add(new HardwareFact(
                 $"ufv.fv.{fv.Index}.summary", Category, $"UEFI FV #{fv.Index}", SummaryText(fv), "",
                 Source, FactTrustLevel.Measured, false, at));
+        // P2-037 走訪缺口：SkippedCount 本來就在解碼器的輸出裡，但沒有任何地方用它。
+        // 這一項把它接出來——**「走到自由空間」不是缺口（那是 FV 的正常結尾），
+        // 而 SkippedCount 只記截斷與損壞那兩種**，所以它是有意義的訊號。
+        facts.AddRange(UefiParseGapsFactsService.Collect(at, fvs));
         return facts;
     }
 
