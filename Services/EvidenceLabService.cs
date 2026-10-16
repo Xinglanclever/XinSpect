@@ -400,6 +400,10 @@ public sealed class EvidenceLabService : ObservableObject
         // 是兩個獨立來源**，所以授權頁與安全頁的 TPM 陳述有兩個端點可以對帳。
         SmbiosIdentityFacts = SmbiosIdentityFactsService.Collect(at);
         SmbiosTpmFacts = SmbiosTpmFactsService.Collect(at);
+        // ULTIMATE-1000 階段二 P2-030／P2-031：結構長度政策與邊界檢查（橫向走訪整張表）。
+        // P2-026／P2-027：Type 39 電源供應器與 Type 41 內建裝置。
+        SmbiosStructureFacts = SmbiosStructureFactsService.Collect(at);
+        SmbiosPowerFacts = SmbiosPowerFactsService.Collect(at);
         PpttFacts = PpttFactsService.Collect(new Win32AcpiTableSource(), at, Environment.ProcessorCount);
         ServerModeFacts = ServerModeFactsService.Collect(at);
         RoleFacts = RoleSurfaceFactsService.Collect(at);
@@ -416,6 +420,8 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(SmbiosProcessorFacts)
             .Concat(SmbiosIdentityFacts)
             .Concat(SmbiosTpmFacts)
+            .Concat(SmbiosStructureFacts)
+            .Concat(SmbiosPowerFacts)
             .Concat(PpttFacts)
             .Concat(ServerModeFacts)
             .Concat(RoleFacts)
@@ -827,6 +833,18 @@ public sealed class EvidenceLabService : ObservableObject
     /// <b>這是「問韌體」，與 <c>tpm.*</c> 的「問 TPM 本身」是兩個獨立來源。</b>
     /// </summary>
     public IReadOnlyList<HardwareFact> SmbiosTpmFacts { get; private set; } = [];
+
+    /// <summary>
+    /// SMBIOS 結構政策事實（ULTIMATE-1000 階段二 P2-030／P2-031）：
+    /// 結構長度與邊界。**這是表的自我一致性檢查，不是「表有沒有說謊」。**
+    /// </summary>
+    public IReadOnlyList<HardwareFact> SmbiosStructureFacts { get; private set; } = [];
+
+    /// <summary>
+    /// SMBIOS Type 39／41 事實（ULTIMATE-1000 階段二 P2-026／P2-027）：
+    /// 電源供應器與內建裝置。功率只報額定，不換算成可用功率。
+    /// </summary>
+    public IReadOnlyList<HardwareFact> SmbiosPowerFacts { get; private set; } = [];
 
     /// <summary>PPTT 拓撲事實（Vol2 AC-017）：韌體自述的處理器／快取節點，與 OS 邏輯處理器數並列。</summary>
     public IReadOnlyList<HardwareFact> PpttFacts { get; private set; } = [];

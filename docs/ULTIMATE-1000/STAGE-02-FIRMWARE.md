@@ -119,7 +119,7 @@
 | P2-024 | SMBIOS Type 19 記憶體映射 | 實體位址映射 | `sb.memmap.*` | L0 | M | — |todo: 
 | P2-025 | SMBIOS Type 32 開機資訊 | 開機狀態與 POST 結果 | `sb.boot.*` | L0 | S | — |ok:sb.boot.* 
 | P2-026 | SMBIOS Type 39 PSU | 電源供應器與容量 | `sb.psu.*` | L0 | S | P1-043 |alias:sb.psu@Services/SmbiosDeepFactsService.cs:99 
-| P2-027 | SMBIOS Type 41 內建裝置 | 內建裝置與狀態 | `sb.onboard.*` | L0 | S | — |todo: 
+| P2-027 | SMBIOS Type 41 內建裝置 | 內建裝置與狀態 | `sb.onboard.*` | L0 | S | — |ok:sb.onboard.* 
 | P2-028 | SMBIOS Type 42 管理控制器 | BMC／管理引擎存在性 | `sb.mc.*` | L1 | S | — |alias:sb.mctl@Services/SmbiosDeepFactsService.cs:79 
 | P2-029 | SMBIOS Type 43／44 TPM 與處理器附加 | TPM 裝置與處理器特性 | `sb.tpmdev`／`sb.proc_add` | L1 | S | — |ok:sb.tpmdev／todo: 
 | P2-030 | SMBIOS 結構長度政策 | 多於規範長度的尾巴欄位 | `sb.trailing.count` | L0 | S | — |ok:sb.trailing.count 
