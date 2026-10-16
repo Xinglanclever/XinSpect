@@ -99,7 +99,7 @@
 | P2-004 | 第三方 SSDT 對照 | 標出非原廠簽章的 SSDT | `ac.ssdt.third.list` | L0 | M | P2-003 |ok:ac.ssdt.third.list 
 | P2-005 | 位元碼評估界線聲明 | 明示不評估 AML 位元碼 | `ac.aml.boundary` | L0 | S | — |ok:ac.aml.boundary 
 | P2-006 | MADT 全欄位 | 中斷控制器與處理器清單 | `ac.madt.*` | L0 | M | — |ok:ac.madt.* 
-| P2-007 | SRAT／SLIT 拓撲 | NUMA 親和與距離矩陣 | `ac.srat.*`／`ac.slit.*` | L0 | M | — |todo:／todo: 
+| P2-007 | SRAT／SLIT 拓撲 | NUMA 親和與距離矩陣 | `ac.srat.*`／`ac.slit.*` | L0 | M | — |ok:ac.srat.*／alias:numa.slit.nodes@Services/TopologyDeepenFactsService.cs:75 
 | P2-008 | HMAT 記憶體效能表 | 頻寬／延遲階層 | `ac.hmat.*` | L0 | M | P2-007 |todo: 
 | P2-009 | PPTT 處理器拓撲 | 核心／快取階層拓撲 | `ac.pptt.*` | L0 | M | — |ok:ac.pptt.* 
 | P2-010 | DMAR／IVRS IOMMU 表 | 以 ACPI 表陳述 IOMMU 範圍 | `ac.dmar.*` | L0 | M | — |ok:ac.dmar.* 

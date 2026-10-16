@@ -67,9 +67,20 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>以注入的 ACPI 來源載入表清單事實（usermode，不需驅動；讀不到由 AcpiService 標三態）。</summary>
     public void LoadAcpi(IAcpiTableSource source)
     {
-        AcpiFacts = AcpiService.Collect(source, DateTimeOffset.UtcNow)
+        var acpiAt = DateTimeOffset.UtcNow;
+        AcpiFacts = AcpiService.Collect(source, acpiAt)
             // FW-024 FPDT：同一份表來源，另外解 POST 階段時長（見 AcpiFpdtFactsService 的版面出處）。
-            .Concat([AcpiFpdtFactsService.Collect(source, DateTimeOffset.UtcNow)]).ToList();
+            .Concat([AcpiFpdtFactsService.Collect(source, acpiAt)])
+            // ULTIMATE-1000 階段二：這三張表共用同一個來源，所以接在同一次讀取上，
+            // 不另外再讀一遍表列——每多讀一次就多一次「兩次讀到的表不一樣」的可能。
+            //
+            //   P2-006 MADT：中斷控制器與處理器清單
+            //   P2-010 DMAR：IOMMU 範圍與例外（保留記憶體區域）
+            //   P2-007 SRAT：處理器與記憶體的節點歸屬（補上 SLIT 缺的那一半）
+            .Concat(AcpiMadtFactsService.Collect(source, acpiAt))
+            .Concat(AcpiDmarFactsService.Collect(source, acpiAt))
+            .Concat(AcpiSratFactsService.Collect(source, acpiAt))
+            .ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
