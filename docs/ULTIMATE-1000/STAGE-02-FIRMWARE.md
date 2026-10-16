@@ -137,7 +137,7 @@
 | P2-042 | 開機順序與選項 | 開機裝置順序（唯讀） | `fw.bootorder` | L1 | S | — |ok:fw.bootorder 
 | P2-043 | 開機時間分解 | 韌體／開機載入器／核心階段 | `boot.duration_ms` | L0 | M | — |ok:boot.duration_ms 
 | P2-044 | 開機自我測試結果 | POST 結果與最後開機時間 | `boot.last_time` | L0 | S | P2-025 |ok:boot.last_time 
-| P2-045 | 快速開機與休眠狀態 | 影響量測可信度的狀態 | `boot.fastboot` | L0 | S | — |todo: 
+| P2-045 | 快速開機與休眠狀態 | 影響量測可信度的狀態 | `boot.fastboot` | L0 | S | — |ok:boot.fastboot 
 | P2-046 | 韌體設定可讀項盤點 | 可讀設定與不可讀設定分列 | `fw.settings.readable` | L1 | M | — |todo: 
 | P2-047 | SPI 快閃地圖 | SPI 區域劃分與用途 | `spi.map.*` | L0 | M | — |todo: 
 | P2-048 | BIOS 區雜湊與原廠比對 | 逐區段比對原廠映像 | `bios.hash`／`bios.diff` | L0 | L | P2-039 |todo:／todo: 

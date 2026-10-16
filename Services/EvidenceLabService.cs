@@ -414,6 +414,10 @@ public sealed class EvidenceLabService : ObservableObject
         // ULTIMATE-1000 階段二 P2-042：開機順序（UEFI 變數）。
         // **變數裡的順序不等於實際的開機結果**——本服務只陳述變數寫了什麼。
         UefiBootOrderFacts = UefiBootOrderFactsService.Collect(at);
+        // ULTIMATE-1000 階段二 P2-045：快速開機與休眠狀態。
+        // 規格把它歸類為「影響量測可信度的狀態」——**不是一般設定**：
+        // 有快速開機時，「冷啟動」量測量到的不是它說的那件事。
+        BootFastStartupFacts = BootFastStartupFactsService.Collect(at, BootFastStartupFactsService.Read());
         PpttFacts = PpttFactsService.Collect(new Win32AcpiTableSource(), at, Environment.ProcessorCount);
         ServerModeFacts = ServerModeFactsService.Collect(at);
         RoleFacts = RoleSurfaceFactsService.Collect(at);
@@ -435,6 +439,7 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(SmbiosCrossFacts)
             .Concat(FirmwareModeFacts)
             .Concat(UefiBootOrderFacts)
+            .Concat(BootFastStartupFacts)
             .Concat(PpttFacts)
             .Concat(ServerModeFacts)
             .Concat(RoleFacts)
@@ -876,6 +881,12 @@ public sealed class EvidenceLabService : ObservableObject
     /// <b>陳述 UEFI 變數裡寫的順序，不是實際的開機結果。</b>
     /// </summary>
     public IReadOnlyList<HardwareFact> UefiBootOrderFacts { get; private set; } = [];
+
+    /// <summary>
+    /// 快速開機與休眠狀態（ULTIMATE-1000 階段二 P2-045）。
+    /// <b>這是「影響量測可信度的狀態」，不是一般設定。</b>
+    /// </summary>
+    public IReadOnlyList<HardwareFact> BootFastStartupFacts { get; private set; } = [];
 
     /// <summary>PPTT 拓撲事實（Vol2 AC-017）：韌體自述的處理器／快取節點，與 OS 邏輯處理器數並列。</summary>
     public IReadOnlyList<HardwareFact> PpttFacts { get; private set; } = [];
