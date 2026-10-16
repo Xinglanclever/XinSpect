@@ -62,9 +62,43 @@ public class HardwareFactInvariantTests
     [Fact]
     public void Present的事實不得被加上收斂痕跡()
     {
+        // **這一條原本斷言 `Assert.Equal("理由", f.UnavailableReason)`——
+        // 而那假設了「Present 時理由原封不動留在理由欄」。**
+        //
+        // 加上第二條不變式之後（Present ⇒ 理由併進 Value、理由欄留空），
+        // 那個假設不成立了。**而原本的意圖仍然成立**：
+        // 「Present 的事實不該出現『已如實收斂為空』那句痕跡」——
+        // 因為痕跡是給非 Present 的數字矛盾用的。
+        //
+        // 所以斷言改成「那段話還在（在 Value 裡）、而痕跡不在（兩邊都不在）」。
         var f = Make(3, FactAvailability.Present, "理由");
-        Assert.Equal("理由", f.UnavailableReason);
-        Assert.DoesNotContain("收斂", f.UnavailableReason);
+
+        Assert.Null(f.UnavailableReason);
+        Assert.Contains("理由", f.Value);
+        Assert.DoesNotContain("收斂", f.Value);
+        Assert.DoesNotContain("非 Present 的事實不得帶數字", f.Value);
+    }
+
+    /// <summary>
+    /// <b>第二條不變式：Present 時，寫在理由欄的說明併進 Value。</b>
+    /// 那些話不是垃圾——它們是「這個值是什麼意思」，而那正是 Value 該說的事。
+    /// </summary>
+    [Fact]
+    public void Present時寫在理由欄的說明要併進值裡()
+    {
+        var f = Make(3, FactAvailability.Present, "這個數字是這樣算的");
+
+        Assert.Equal("v。這個數字是這樣算的", f.Value);
+        Assert.Null(f.UnavailableReason);
+    }
+
+    [Fact]
+    public void Present而沒有理由時值不得被加上多餘的標點()
+    {
+        var f = Make(3, FactAvailability.Present, null);
+
+        Assert.Equal("v", f.Value);
+        Assert.Null(f.UnavailableReason);
     }
 
     [Fact]

@@ -146,14 +146,20 @@ public class SpecTablePolicyTests
     public void 常數表政策_正對照()
     {
         string temp = Path.Combine(Path.GetTempPath(), $"stp_{Guid.NewGuid():N}.cs");
-        File.WriteAllText(temp, """
-            public static class Probe
-            {
-                public const uint PtAlpha = 0x00000100;
-                public const uint PtBeta = 0x00000101;
-                public const uint PtGamma = 0x00000102;
-            }
-            """);
+        // **raw string literal 的收尾 """ 縮排會決定內容的實際縮排**——
+        // 我第一版把 """ 與內容同縮排，所以內容被裁到最左，
+        // `public const` 開頭的宣告因此對不上正規表示式。
+        //
+        // 而那個失敗的形式是「collection was empty」——**看起來像「沒有違規」**，
+        // 那正是這一輪我在守門本身上抓到的同一個假零。
+        // 所以這裡改用普通字串串接，讓縮排不可能出錯。
+        File.WriteAllText(temp,
+            "public static class Probe\n" +
+            "{\n" +
+            "    public const uint PtAlpha = 0x00000100;\n" +
+            "    public const uint PtBeta = 0x00000101;\n" +
+            "    public const uint PtGamma = 0x00000102;\n" +
+            "}\n");
 
         try
         {
@@ -173,15 +179,15 @@ public class SpecTablePolicyTests
     public void 常數表政策_負對照_有宣告就放行()
     {
         string temp = Path.Combine(Path.GetTempPath(), $"stp_{Guid.NewGuid():N}.cs");
-        File.WriteAllText(temp, """
-            public static class Probe
-            {
-                // spec-ref-policy：只寫對準過出處的編號。
-                public const uint PtAlpha = 0x00000100;
-                public const uint PtBeta = 0x00000101;
-                public const uint PtGamma = 0x00000102;
-            }
-            """);
+        // 同正對照：用普通字串串接，避開 raw string literal 的縮排陷阱。
+        File.WriteAllText(temp,
+            "public static class Probe\n" +
+            "{\n" +
+            "    // spec-ref-policy：只寫對準過出處的編號。\n" +
+            "    public const uint PtAlpha = 0x00000100;\n" +
+            "    public const uint PtBeta = 0x00000101;\n" +
+            "    public const uint PtGamma = 0x00000102;\n" +
+            "}\n");
 
         try
         {
@@ -202,13 +208,14 @@ public class SpecTablePolicyTests
     public void 零散常數不該被當成一組()
     {
         string temp = Path.Combine(Path.GetTempPath(), $"stp_{Guid.NewGuid():N}.cs");
-        File.WriteAllText(temp, """
-            public static class Probe
-            {
-                public const uint HeaderOffset = 0x00000010;
-                public const uint TailOffset = 0x00000020;
-            }
-            """);
+        // HeaderOffset 與 TailOffset 的尾端都不是數字（去掉尾數後前綴不同），
+        // 所以它們各自只有一個成員——**而這一條要驗的正是「那不構成一組」**。
+        File.WriteAllText(temp,
+            "public static class Probe\n" +
+            "{\n" +
+            "    public const uint HeaderOffset = 0x00000010;\n" +
+            "    public const uint TailOffset = 0x00000020;\n" +
+            "}\n");
 
         try
         {
