@@ -143,8 +143,22 @@ public sealed class EvidenceLabService : ObservableObject
     public void LoadTpm()
     {
         TpmFacts = TpmFactsService.Collect(DateTimeOffset.UtcNow);
+        // ULTIMATE-1000 階段二 P2-056：量測開機支援旗標。
+        // **接在同一次 TPM 讀取上**——不另外再讀一遍 PCR，
+        // 因為每多讀一次就多一次「兩次讀到的 PCR 不一樣」的可能。
+        //
+        // 而它回答的不是「有沒有 TPM」，而是「韌體有沒有真的做量測」：
+        // 關鍵 PCR 全零代表量測鏈根本沒開始，而 TPM 仍然存在。
+        MeasuredBootFacts = MeasuredBootFactsService.Collect(
+            DateTimeOffset.UtcNow, MeasuredBootFactsService.FromFacts(TpmFacts));
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
+
+    /// <summary>
+    /// 量測開機支援旗標（ULTIMATE-1000 階段二 P2-056）。
+    /// <b>有 TPM 不等於有量測開機</b>——判準是關鍵 PCR 的內容。
+    /// </summary>
+    public IReadOnlyList<HardwareFact> MeasuredBootFacts { get; private set; } = [];
 
     /// <summary>SPI 快閃安全三態事實（HSFSTS/FRAP/FREG/PR）。SPIBAR 經 PCI 取得、暫存器要 MMIO——驅動未載時整組三態。</summary>
     public IReadOnlyList<HardwareFact> SpiFlashFacts { get; private set; } = [];
