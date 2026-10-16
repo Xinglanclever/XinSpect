@@ -103,28 +103,28 @@
 | P2-008 | HMAT 記憶體效能表 | 頻寬／延遲階層 | `ac.hmat.*` | L0 | M | P2-007 |todo: 
 | P2-009 | PPTT 處理器拓撲 | 核心／快取階層拓撲 | `ac.pptt.*` | L0 | M | — |ok:ac.pptt.* 
 | P2-010 | DMAR／IVRS IOMMU 表 | 以 ACPI 表陳述 IOMMU 範圍 | `ac.dmar.*` | L0 | M | — |ok:ac.dmar.* 
-| P2-011 | CEDT／CXL 表 | CXL 元件與記憶體範圍 | `ac.cedt.*` | L0 | M | — |todo: 
+| P2-011 | CEDT／CXL 表 | CXL 元件與記憶體範圍 | `ac.cedt.*` | L0 | M | — |alias:cxl.cfmws.count@Services/CxlFactsService.cs:34 
 | P2-012 | NFIT 永久記憶體表 | NVDIMM 區域與裝置 | `ac.nfit.*` | L0 | M | — |ok:ac.nfit.* 
 | P2-013 | BGRT 開機圖形表 | 開機標誌位置與狀態 | `ac.bgrt` | L0 | S | — |ok:ac.bgrt 
 | P2-014 | SPCR／DBG2 除錯埠 | 序列與除錯埠宣告 | `ac.spcr`／`ac.dbg2.*` | L0 | S | — |ok:ac.spcr／ok:ac.dbg2.* 
 | P2-015 | HPET 與計時器表 | 高精度計時器全欄位 | `ac.hpet.*` | L0 | S | — |ok:ac.hpet.* 
 | P2-016 | MCFG 與 PCIe 段 | ECAM 基底與段號 | `ac.mcfg.*` | L0 | S | — |ok:ac.mcfg.* 
-| P2-017 | TPM2 與 WPBT 表 | TPM 位置與 WPBT 存在性陳述 | `ac.tpm2`／`ac.table.wpbt` | L0 | S | — |todo:／alias:se.wpbt 
-| P2-018 | PDTT／LPIT 等其餘表 | 逐簽章解碼並標未支援 | `ac.table.{sig}` | L0 | M | P2-002 |alias:acpi.table.{sig} 
+| P2-017 | TPM2 與 WPBT 表 | TPM 位置與 WPBT 存在性陳述 | `ac.tpm2`／`ac.table.wpbt` | L0 | S | — |todo:／alias:se.wpbt@Services/ClosingFactsService.cs:27 
+| P2-018 | PDTT／LPIT 等其餘表 | 逐簽章解碼並標未支援 | `ac.table.{sig}` | L0 | M | P2-002 |alias:acpi.table.{sig}@Services/AcpiTableService.cs:42 
 | P2-019 | SMBIOS Type 0–3 | BIOS／系統／底板／機箱全欄位 | `sb.type0.*`–`sb.type3.*` | L1 | M | — |todo: 
 | P2-020 | SMBIOS Type 4／7 | 處理器與快取 | `sb.type4.*` | L0 | M | — |todo: 
 | P2-021 | SMBIOS Type 9 插槽 | 系統插槽與已用狀態 | `sb.slot.*` | L0 | M | — |ok:sb.slot.* 
-| P2-022 | SMBIOS Type 11 OEM 字串 | 廠商字串列 | `sb.oem.strings` | L1 | S | — |alias:sb.oem.list 
-| P2-023 | SMBIOS Type 16／17 記憶體 | 陣列與裝置全欄位（序號遮蔽） | `sb.mem.*` | L1 | M | — |alias:sb.dim.* 
+| P2-022 | SMBIOS Type 11 OEM 字串 | 廠商字串列 | `sb.oem.strings` | L1 | S | — |alias:sb.oem.list@Services/SmbiosDeepFactsService.cs:92 
+| P2-023 | SMBIOS Type 16／17 記憶體 | 陣列與裝置全欄位（序號遮蔽） | `sb.mem.*` | L1 | M | — |alias:sb.dim.*@Services/SmbiosDeepFactsService.cs:65 
 | P2-024 | SMBIOS Type 19 記憶體映射 | 實體位址映射 | `sb.memmap.*` | L0 | M | — |todo: 
 | P2-025 | SMBIOS Type 32 開機資訊 | 開機狀態與 POST 結果 | `sb.boot.*` | L0 | S | — |todo: 
-| P2-026 | SMBIOS Type 39 PSU | 電源供應器與容量 | `sb.psu.*` | L0 | S | P1-043 |alias:sb.psu 
+| P2-026 | SMBIOS Type 39 PSU | 電源供應器與容量 | `sb.psu.*` | L0 | S | P1-043 |alias:sb.psu@Services/SmbiosDeepFactsService.cs:99 
 | P2-027 | SMBIOS Type 41 內建裝置 | 內建裝置與狀態 | `sb.onboard.*` | L0 | S | — |todo: 
-| P2-028 | SMBIOS Type 42 管理控制器 | BMC／管理引擎存在性 | `sb.mc.*` | L1 | S | — |alias:sb.mctl 
+| P2-028 | SMBIOS Type 42 管理控制器 | BMC／管理引擎存在性 | `sb.mc.*` | L1 | S | — |alias:sb.mctl@Services/SmbiosDeepFactsService.cs:79 
 | P2-029 | SMBIOS Type 43／44 TPM 與處理器附加 | TPM 裝置與處理器特性 | `sb.tpmdev`／`sb.proc_add` | L1 | S | — |todo:／todo: 
 | P2-030 | SMBIOS 結構長度政策 | 多於規範長度的尾巴欄位 | `sb.trailing.count` | L0 | S | — |todo: 
 | P2-031 | SMBIOS 校驗與範圍檢查 | 表長度與結構邊界一致 | `sb.bounds.ok` | L0 | S | — |todo: 
-| P2-032 | M.2／PCIe 槽位對照 | 槽位對 PCIe 埠的對應 | `sb.m2.map` | L0 | M | P2-021 |alias:sb.m2slot.* 
+| P2-032 | M.2／PCIe 槽位對照 | 槽位對 PCIe 埠的對應 | `sb.m2.map` | L0 | M | P2-021 |alias:sb.m2slot.*@Services/SmbiosDeepFactsService.cs:109 
 | P2-033 | SMBIOS 與 WMI 對照 | SMBIOS 陳述對作業系統視圖 | `sb.cross.*` | L0 | M | P2-019 |todo: 
 | ★P2-034 | UEFI 映像 FV／FFS／區段樹 | 攤開映像結構為可導覽樹 | `uefi.section.tree` | L1 | L | P1-009 |todo: 
 | P2-035 | 映像 PE32 模組清單 | 列出映像內驅動與應用模組 | `uefi.pe.count` | L1 | M | P2-034 |todo: 

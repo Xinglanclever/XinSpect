@@ -123,6 +123,37 @@ public class SpecImplementationReconciliationTests
 
     // ── 主守門 ──────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// 「實作鍵」欄的一格——<b>唯一的解讀處</b>。
+    ///
+    /// <para>
+    /// 這一欄的語法是 <c>ok:&lt;鍵&gt;</c>／<c>alias:&lt;鍵&gt;@&lt;出處&gt;</c>／<c>todo:</c>。
+    /// 原本每一條測試各自 <c>Split</c> 這一格，於是當 alias 加上出處之後，
+    /// <b>只有一半的消費者跟著改</b>——另一條測試把
+    /// <c>cxl.cfmws.count@Services/CxlFactsService.cs:34</c> 當成鍵名去查目錄。
+    /// </para>
+    ///
+    /// <para>
+    /// 那正是「規格與實作漂移」同一種病，只是發生在程式碼內部：
+    /// <b>兩處各自解讀同一份資料，就是兩個可以漂移的地方。</b>
+    /// 所以拆解只留這一個地方。
+    /// </para>
+    /// </summary>
+    private static (string Kind, string Key, string? Provenance) ParseEntry(string entry)
+    {
+        string e = entry.Trim();
+        if (e.StartsWith("todo:", StringComparison.Ordinal)) return ("todo", "", null);
+
+        (string kind, string rest) = e.StartsWith("ok:", StringComparison.Ordinal) ? ("ok", e[3..])
+            : e.StartsWith("alias:", StringComparison.Ordinal) ? ("alias", e[6..])
+            : ("unknown", e);
+
+        int at = rest.IndexOf('@');
+        return at < 0
+            ? (kind, rest.Trim(), null)
+            : (kind, rest[..at].Trim(), rest[(at + 1)..].Trim());
+    }
+
     [Fact]
     public void 矩陣每一列的實作鍵都要在目錄裡找得到()
     {
@@ -134,11 +165,8 @@ public class SpecImplementationReconciliationTests
         {
             foreach (string entry in impl.Split('／', StringSplitOptions.RemoveEmptyEntries))
             {
-                string e = entry.Trim();
-                if (e.StartsWith("todo:", StringComparison.Ordinal)) continue;
-                string key = e.StartsWith("ok:", StringComparison.Ordinal) ? e[3..]
-                           : e.StartsWith("alias:", StringComparison.Ordinal) ? e[6..]
-                           : e;
+                var (kind, key, _) = ParseEntry(entry);
+                if (kind == "todo") continue;
                 if (!Exists(key, catalog, dynamic))
                     missing.Add($"{id}：矩陣說實作鍵是 {key}，但目錄與動態家族裡都找不到");
             }
@@ -213,9 +241,8 @@ public class SpecImplementationReconciliationTests
         {
             foreach (string entry in impl.Split('／', StringSplitOptions.RemoveEmptyEntries))
             {
-                string e = entry.Trim();
-                if (!e.StartsWith("alias:", StringComparison.Ordinal)) continue;
-                string implKey = e[6..];
+                var (kind, implKey, _) = ParseEntry(entry);
+                if (kind != "alias") continue;
                 foreach (string d in declared.Split('／', StringSplitOptions.RemoveEmptyEntries))
                 {
                     if (d.Trim().Trim('`') == implKey)
@@ -225,6 +252,74 @@ public class SpecImplementationReconciliationTests
         }
 
         Assert.True(bad.Count == 0, string.Join("\n", bad.Select(b => "  • " + b)));
+    }
+
+    /// <summary>
+    /// <b>每一個 <c>alias:</c> 都必須附出處，而且那個出處必須真的存在。</b>
+    ///
+    /// <para>
+    /// 這一組的分工是「<b>機器查證 todo、人工判斷 alias</b>」。機器那一半由其他測試釘住；
+    /// 人工那一半——「這兩個鍵語意相同」——<b>不是機器能猜的判斷</b>，
+    /// 所以它的唯一依據就是出處。出處若可以隨手寫，那個判斷就變成「我說了算」。
+    /// </para>
+    ///
+    /// <para>
+    /// 出處的格式是 <c>alias:&lt;實作鍵&gt;@&lt;相對路徑&gt;:&lt;行號&gt;</c>；
+    /// 這裡驗三件事：格式對、檔案存在、行號在該檔案的範圍內。
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void 每一個alias都要附出處_而且出處必須真的存在()
+    {
+        string root = RepoRoot();
+        var bad = new List<string>();
+        int aliases = 0;
+
+        foreach (var (id, declared, impl) in Rows("STAGE-02-FIRMWARE.md"))
+        {
+            foreach (string entry in impl.Split('／', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var (kind, key, provenance) = ParseEntry(entry);
+                if (kind != "alias") continue;
+                aliases++;
+
+                if (provenance is null || provenance.Length == 0)
+                {
+                    bad.Add($"{id}：alias 沒有附出處（格式 alias:<鍵>@<路徑>:<行號>）");
+                    continue;
+                }
+
+                int colon = provenance.LastIndexOf(':');
+                if (colon < 0)
+                {
+                    bad.Add($"{id}：出處 '{provenance}' 缺少行號");
+                    continue;
+                }
+
+                string rel = provenance[..colon];
+                if (!int.TryParse(provenance[(colon + 1)..], out int lineNo) || lineNo <= 0)
+                {
+                    bad.Add($"{id}：出處的行號 '{provenance[(colon + 1)..]}' 不是正整數");
+                    continue;
+                }
+
+                string full = Path.Combine(root, rel.Replace('/', Path.DirectorySeparatorChar));
+                if (!File.Exists(full))
+                {
+                    bad.Add($"{id}：出處檔案不存在——{rel}");
+                    continue;
+                }
+
+                int total = File.ReadAllLines(full).Length;
+                if (lineNo > total)
+                    bad.Add($"{id}：出處 {rel}:{lineNo} 超出檔案行數（該檔只有 {total} 行）");
+            }
+        }
+
+        Assert.True(aliases > 0, "一個 alias 都沒有——這條測試失去意義，請確認矩陣是否還在用 alias");
+        Assert.True(bad.Count == 0,
+            "alias 的出處不成立——「語意相同」是人工判斷，而出處是它唯一的依據：\n"
+            + string.Join("\n", bad.Select(b => "  • " + b)));
     }
 
     [Fact]
