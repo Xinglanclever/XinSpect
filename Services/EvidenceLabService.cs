@@ -425,6 +425,10 @@ public sealed class EvidenceLabService : ObservableObject
         // ULTIMATE-1000 階段二 P2-049：微碼版本雙來源對帳。
         // MSR 是「現在生效的」、登錄檔是「OS 載入時拿到的」——**兩者不同不必然是錯的**。
         MicrocodeVersionFacts = MicrocodeVersionFactsService.Collect(at, MicrocodeVersionFactsService.Read());
+        // ULTIMATE-1000 階段二 P2-051：選項 ROM 盤點。
+        // **使用者模式看不到選項 ROM 的內容**，所以這裡只列「哪些裝置自述有 ROM BAR」
+        // ——真實列舉如實回空，不假裝列舉過。
+        OptionRomFacts = OptionRomFactsService.Collect(at);
         PpttFacts = PpttFactsService.Collect(new Win32AcpiTableSource(), at, Environment.ProcessorCount);
         ServerModeFacts = ServerModeFactsService.Collect(at);
         RoleFacts = RoleSurfaceFactsService.Collect(at);
@@ -449,6 +453,7 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(BootFastStartupFacts)
             .Concat(FirmwareSettingsReachFacts)
             .Concat(MicrocodeVersionFacts)
+            .Concat(OptionRomFacts)
             .Concat(PpttFacts)
             .Concat(ServerModeFacts)
             .Concat(RoleFacts)
@@ -909,6 +914,12 @@ public sealed class EvidenceLabService : ObservableObject
     /// <b>兩者不同不必然是錯的，本服務只列差異不判斷誰對。</b>
     /// </summary>
     public IReadOnlyList<HardwareFact> MicrocodeVersionFacts { get; private set; } = [];
+
+    /// <summary>
+    /// 選項 ROM 盤點（ULTIMATE-1000 階段二 P2-051）。
+    /// <b>只列「哪些裝置自述有 ROM BAR」，不讀內容——那需要核心層權限。</b>
+    /// </summary>
+    public IReadOnlyList<HardwareFact> OptionRomFacts { get; private set; } = [];
 
     /// <summary>PPTT 拓撲事實（Vol2 AC-017）：韌體自述的處理器／快取節點，與 OS 邏輯處理器數並列。</summary>
     public IReadOnlyList<HardwareFact> PpttFacts { get; private set; } = [];
