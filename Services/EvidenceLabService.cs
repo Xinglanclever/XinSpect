@@ -151,6 +151,10 @@ public sealed class EvidenceLabService : ObservableObject
         // 關鍵 PCR 全零代表量測鏈根本沒開始，而 TPM 仍然存在。
         MeasuredBootFacts = MeasuredBootFactsService.Collect(
             DateTimeOffset.UtcNow, MeasuredBootFactsService.FromFacts(TpmFacts));
+        // P2-058 信任根來源陳述：**三種根不互斥**，而本服務不宣告「根是 X」——
+        // 「看得到證據」與「根已生效」之間有距離。它讀既有的三組事實。
+        TrustRootFacts = TrustRootFactsService.Collect(DateTimeOffset.UtcNow,
+            TrustRootFactsService.FromFacts([.. TpmFacts, .. MeasuredBootFacts]));
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
@@ -159,6 +163,12 @@ public sealed class EvidenceLabService : ObservableObject
     /// <b>有 TPM 不等於有量測開機</b>——判準是關鍵 PCR 的內容。
     /// </summary>
     public IReadOnlyList<HardwareFact> MeasuredBootFacts { get; private set; } = [];
+
+    /// <summary>
+    /// 信任根來源陳述（ULTIMATE-1000 階段二 P2-058）。
+    /// <b>三種根不互斥</b>；本服務只陳述哪幾種的證據存在，不宣告根是哪一種。
+    /// </summary>
+    public IReadOnlyList<HardwareFact> TrustRootFacts { get; private set; } = [];
 
     /// <summary>SPI 快閃安全三態事實（HSFSTS/FRAP/FREG/PR）。SPIBAR 經 PCI 取得、暫存器要 MMIO——驅動未載時整組三態。</summary>
     public IReadOnlyList<HardwareFact> SpiFlashFacts { get; private set; } = [];

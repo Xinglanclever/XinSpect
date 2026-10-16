@@ -150,7 +150,7 @@
 | P2-055 | 金鑰模組判定 | KM 存在性與類型 | `bt.km` | L0 | M | P2-053 |todo: 
 | P2-056 | 量測開機支援旗標 | 平台是否支援量測開機 | `bt.measured_boot` | L0 | S | P2-053 |ok:bt.measured_boot 
 | P2-057 | 開機鏈元件清單 | 逐層開機元件與其量測狀態 | `bt.chain.list` | L1 | M | P2-064 |alias:fw.bootchain.summary@Services/FirmwareAuditFactsService.cs:25 
-| P2-058 | 信任根來源陳述 | 硬體信任根類型 | `bt.root` | L0 | S | — |todo: 
+| P2-058 | 信任根來源陳述 | 硬體信任根類型 | `bt.root` | L0 | S | — |ok:bt.root 
 | P2-059 | 韌體寫入保護狀態 | BIOS 寫入保護旗標 | `bt.wp` | L0 | S | — |alias:fw.spiperm.summary@Services/FirmwareAuditFactsService.cs:18 
 | P2-060 | 開機鏈落差報告 | 宣告與實測的量測落差 | `bt.chain.gap` | L1 | M | P2-057 |todo: 
 | P2-061 | 韌體復原路徑陳述 | 復原區與膠囊支援 | `bt.recovery` | L0 | S | — |todo: 
