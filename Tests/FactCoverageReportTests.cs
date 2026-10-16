@@ -132,9 +132,20 @@ public class FactCoverageReportTests
     {
         // 這條不是禁止未覆蓋（那會逼出湊數的規則），而是讓它「有上限地增長」：
         // 事實從 300 多個長到某個程度時要有人看一眼，而不是靜默累積。
+        //
+        // 2026-10-17 檢視過一次（未覆蓋 307，逐族核完）：**沒有動豁免表**，原因是
+        // FactCoverageReport.Exemptions 已經是 600 條、正好在 KeyCatalogPolicyTests 的 cap
+        // 上（超過會判 Unknown）——再進一條就得先刪既有條目，而那些條目裡有的是「刻意不取得
+        // 來源」（例如 SRUM 不列行程與帳號），用「單一來源」的家族級豁免去覆蓋會把類別標錯。
+        // 所以上限改成「已檢視的那個數字」，而不是把 307 條擠成豁免。
+        // **可以交叉、只是還沒寫規則**的家族（補規則時把它們往下帶）：
+        //   sb.、fw.、uefi.、bt.、mc.、spi.、cpu.、bl.、ev.、ec.、rs.，
+        //   以及六個原本就列為「有硬體時應補規則」的：gpu.／mem.／psu.pmbus.／smart.／tpm.／cmos.
+        // 其餘各族的來源，與為什麼沒有交叉對象，逐族寫在
+        // docs/ULTIMATE-1000/GATE-LOG-257.md 的第三節。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 235,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（基線 235）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 307,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 307）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }
