@@ -408,6 +408,9 @@ public sealed class EvidenceLabService : ObservableObject
         // 這是前面每一項「多來源並列」的收束點——**一致／不一致／無從對照**三分，
         // 而第三種不算進第二種（把「一邊沒有值」算成不一致會製造假的落差）。
         SmbiosCrossFacts = SmbiosCrossFactsService.Collect(at, SmbiosCrossFactsService.ReadOsView());
+        // ULTIMATE-1000 階段二 P2-040／P2-041：開機模式與韌體版本。
+        // **「目前用哪一個」與「支援哪一個」是不同問題**——本服務只回答前者。
+        FirmwareModeFacts = FirmwareModeFactsService.Collect(at, FirmwareModeFactsService.Read());
         PpttFacts = PpttFactsService.Collect(new Win32AcpiTableSource(), at, Environment.ProcessorCount);
         ServerModeFacts = ServerModeFactsService.Collect(at);
         RoleFacts = RoleSurfaceFactsService.Collect(at);
@@ -427,6 +430,7 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(SmbiosStructureFacts)
             .Concat(SmbiosPowerFacts)
             .Concat(SmbiosCrossFacts)
+            .Concat(FirmwareModeFacts)
             .Concat(PpttFacts)
             .Concat(ServerModeFacts)
             .Concat(RoleFacts)
@@ -856,6 +860,12 @@ public sealed class EvidenceLabService : ObservableObject
     /// <b>只陳述兩邊各說了什麼——不判斷哪一邊對，也不給一致率。</b>
     /// </summary>
     public IReadOnlyList<HardwareFact> SmbiosCrossFacts { get; private set; } = [];
+
+    /// <summary>
+    /// 開機模式與韌體版本事實（ULTIMATE-1000 階段二 P2-040／P2-041）。
+    /// <b>陳述「目前用哪一條路徑開機」，不是「支援什麼」。</b>
+    /// </summary>
+    public IReadOnlyList<HardwareFact> FirmwareModeFacts { get; private set; } = [];
 
     /// <summary>PPTT 拓撲事實（Vol2 AC-017）：韌體自述的處理器／快取節點，與 OS 邏輯處理器數並列。</summary>
     public IReadOnlyList<HardwareFact> PpttFacts { get; private set; } = [];
