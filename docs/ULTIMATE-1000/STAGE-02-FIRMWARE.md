@@ -141,7 +141,7 @@
 | P2-046 | 韌體設定可讀項盤點 | 可讀設定與不可讀設定分列 | `fw.settings.readable` | L1 | M | — |ok:fw.settings.readable 
 | P2-047 | SPI 快閃地圖 | SPI 區域劃分與用途 | `spi.map.*` | L0 | M | — |todo: 
 | P2-048 | BIOS 區雜湊與原廠比對 | 逐區段比對原廠映像 | `bios.hash`／`bios.diff` | L0 | L | P2-039 |todo:／todo: 
-| P2-049 | 微碼版本雙來源對帳 | MSR 與登錄檔版本互校 | `mc.version` | L0 | M | — |todo: 
+| P2-049 | 微碼版本雙來源對帳 | MSR 與登錄檔版本互校 | `mc.version` | L0 | M | — |ok:mc.version 
 | P2-050 | 映像與韌體版本一致性 | 映像內版本對韌體宣告版本 | `uefi.version.cross` | L0 | M | P2-041 |todo: 
 | P2-051 | 選項 ROM 盤點 | PCI 裝置選項 ROM 存在與簽章 | `fw.rom.list` | L1 | M | — |todo: 
 | P2-052 | FIT 表存在性與解析 | 韌體介面表的可讀欄位 | `fit.present` | L0 | M | — |todo: 

@@ -422,6 +422,9 @@ public sealed class EvidenceLabService : ObservableObject
         // **「讀不到」與「沒有這個值」在使用者眼裡長得一樣——都是空的**；
         // 這一項把「這條路現在通不通」變成可以查的事實。
         FirmwareSettingsReachFacts = FirmwareSettingsReachFactsService.Collect(at);
+        // ULTIMATE-1000 階段二 P2-049：微碼版本雙來源對帳。
+        // MSR 是「現在生效的」、登錄檔是「OS 載入時拿到的」——**兩者不同不必然是錯的**。
+        MicrocodeVersionFacts = MicrocodeVersionFactsService.Collect(at, MicrocodeVersionFactsService.Read());
         PpttFacts = PpttFactsService.Collect(new Win32AcpiTableSource(), at, Environment.ProcessorCount);
         ServerModeFacts = ServerModeFactsService.Collect(at);
         RoleFacts = RoleSurfaceFactsService.Collect(at);
@@ -445,6 +448,7 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(UefiBootOrderFacts)
             .Concat(BootFastStartupFacts)
             .Concat(FirmwareSettingsReachFacts)
+            .Concat(MicrocodeVersionFacts)
             .Concat(PpttFacts)
             .Concat(ServerModeFacts)
             .Concat(RoleFacts)
@@ -898,6 +902,13 @@ public sealed class EvidenceLabService : ObservableObject
     /// <b>回答「這條路現在通不通」，不是「值對不對」。</b>
     /// </summary>
     public IReadOnlyList<HardwareFact> FirmwareSettingsReachFacts { get; private set; } = [];
+
+    /// <summary>
+    /// 微碼版本雙來源對帳（ULTIMATE-1000 階段二 P2-049）。
+    /// MSR 是「現在生效的」、登錄檔是「OS 載入時拿到的」——
+    /// <b>兩者不同不必然是錯的，本服務只列差異不判斷誰對。</b>
+    /// </summary>
+    public IReadOnlyList<HardwareFact> MicrocodeVersionFacts { get; private set; } = [];
 
     /// <summary>PPTT 拓撲事實（Vol2 AC-017）：韌體自述的處理器／快取節點，與 OS 邏輯處理器數並列。</summary>
     public IReadOnlyList<HardwareFact> PpttFacts { get; private set; } = [];
