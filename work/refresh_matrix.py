@@ -48,6 +48,7 @@ lines = io.open(p, encoding='utf-8').read().split('\n')
 
 stats = {'ok': 0, 'alias': 0, 'todo': 0}
 done = []
+per_row = []
 for i, line in enumerate(lines):
     if not ROW.match(line):
         continue
@@ -61,6 +62,7 @@ for i, line in enumerate(lines):
     if not keys:
         cells[8] = 'todo: '
         stats['todo'] += 1
+        per_row.append((cells[1].strip(), 'todo', ['todo']))
         lines[i] = '|'.join(cells)
         continue
 
@@ -85,6 +87,7 @@ for i, line in enumerate(lines):
     lines[i] = '|'.join(cells)
     top = 'todo' if 'todo' in kinds else ('alias' if 'alias' in kinds else 'ok')
     stats[top] += 1
+    per_row.append((cells[1].strip(), top, kinds))
     if top != 'todo':
         done.append((cells[1].strip(), top))
 
@@ -95,5 +98,21 @@ print(f'  ok    ：{stats["ok"]} 列')
 print(f'  alias ：{stats["alias"]} 列')
 print(f'  todo  ：{stats["todo"]} 列')
 print(f'  合計  ：{sum(stats.values())} 列\n')
+
+# 統計以「列」為單位——全鍵完成才算完成。
+# 有些列的規格鍵不只一把（例如 P2-029 是 sb.tpmdev／sb.proc_add），
+# 那種列只要有一把沒做，整列就歸 todo。
+# **這是保守的算法：寧可少報完成度，不要多報。**
+# 但保守的算法必須說出自己是保守的，否則「已完成 30 列」會被讀成
+# 「30 列的全部鍵都完成了」——而那對部分完成的列來說是錯的。
+partial = [pid for pid, kind, kinds in per_row
+           if kind == 'todo' and ('ok' in kinds or 'alias' in kinds)]
+if partial:
+    print(f'=== 部分完成的列（{len(partial)} 列）===')
+    print('  這些列的規格鍵有一部分已實作、一部分未做；')
+    print('  因為統計以「列」為單位（全鍵完成才算），它們被歸在 todo 裡。')
+    for pid in partial:
+        print(f'    {pid}')
+    print()
 print(f'=== 已完成（{len(done)} 列）===')
 print('  ' + '、'.join(f'{p}({k})' for p, k in done))

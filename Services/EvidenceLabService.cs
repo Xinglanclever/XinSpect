@@ -395,6 +395,11 @@ public sealed class EvidenceLabService : ObservableObject
         // 與上面那份同一次讀取——Type 4 的「核心數／執行緒數」是要跟 CPUID 與 OS
         // 三方並列的事實，而三個來源各自重讀一次表只會多出「讀到的不一樣」的可能。
         SmbiosProcessorFacts = SmbiosProcessorFactsService.Collect(at);
+        // ULTIMATE-1000 階段二 P2-019／P2-025：Type 0–3 辨識資訊與 Type 32 開機資訊。
+        // P2-029：Type 43 TPM 裝置——**這是「問韌體」，與 tpm.* 的「問 TPM 本身」
+        // 是兩個獨立來源**，所以授權頁與安全頁的 TPM 陳述有兩個端點可以對帳。
+        SmbiosIdentityFacts = SmbiosIdentityFactsService.Collect(at);
+        SmbiosTpmFacts = SmbiosTpmFactsService.Collect(at);
         PpttFacts = PpttFactsService.Collect(new Win32AcpiTableSource(), at, Environment.ProcessorCount);
         ServerModeFacts = ServerModeFactsService.Collect(at);
         RoleFacts = RoleSurfaceFactsService.Collect(at);
@@ -409,6 +414,8 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(AssetFacts)
             .Concat(SmbiosDeepFacts)
             .Concat(SmbiosProcessorFacts)
+            .Concat(SmbiosIdentityFacts)
+            .Concat(SmbiosTpmFacts)
             .Concat(PpttFacts)
             .Concat(ServerModeFacts)
             .Concat(RoleFacts)
@@ -808,6 +815,18 @@ public sealed class EvidenceLabService : ObservableObject
     /// 與 <see cref="SmbiosDeepFacts"/> 同一次讀取；與 CPUID／OS 的差異是三方並列的事實。
     /// </summary>
     public IReadOnlyList<HardwareFact> SmbiosProcessorFacts { get; private set; } = [];
+
+    /// <summary>
+    /// SMBIOS Type 0–3／32 事實（ULTIMATE-1000 階段二 P2-019／P2-025）：
+    /// BIOS／系統／主機板／機箱與上次開機狀態。與 WMI 並列時不同是事實不是錯誤。
+    /// </summary>
+    public IReadOnlyList<HardwareFact> SmbiosIdentityFacts { get; private set; } = [];
+
+    /// <summary>
+    /// SMBIOS Type 43 TPM 裝置事實（ULTIMATE-1000 階段二 P2-029）。
+    /// <b>這是「問韌體」，與 <c>tpm.*</c> 的「問 TPM 本身」是兩個獨立來源。</b>
+    /// </summary>
+    public IReadOnlyList<HardwareFact> SmbiosTpmFacts { get; private set; } = [];
 
     /// <summary>PPTT 拓撲事實（Vol2 AC-017）：韌體自述的處理器／快取節點，與 OS 邏輯處理器數並列。</summary>
     public IReadOnlyList<HardwareFact> PpttFacts { get; private set; } = [];

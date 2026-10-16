@@ -1,0 +1,65 @@
+ULTIMATE-1000 階段二 P2-019／P2-025／P2-029：SMBIOS 辨識、開機資訊與 TPM 裝置
+
+═══ 新增兩支服務 ═══
+
+SmbiosIdentityFactsService（P2-019／P2-025）：七把鍵
+  sb.type0        BIOS（廠商、版本、發行日、ROM 大小、特性旗標）
+  sb.type1        系統（廠商、產品名、版本、序號）
+  sb.type1.uuid   系統 UUID（前三欄位各自 little-endian）
+  sb.type2        主機板
+  sb.type3        機箱（型別 ＋ 鎖的位元；bit7 要去掉才不會變成型別 131）
+  sb.boot         Type 32 開機資訊
+  sb.boot.status  上次開機狀態
+
+SmbiosTpmFactsService（P2-029，Type 43）：四把鍵
+  sb.tpmdev／.vendor／.spec／.state
+
+═══ Type 43 的設計核心：兩個獨立來源 ═══
+
+既有的 TPM 事實走 TBS API（Tbsi_Context_Create）——那是**跟 TPM 講話**。
+Type 43 是**問韌體**：表就在那裡，不需要裝置回應。
+
+  韌體說有而 TBS 讀不到 → 被停用或有驅動問題
+  TBS 讀得到而表裡沒列 → **虛擬機常見**
+  都說有但版本不同     → 具體的對帳落差，不是「哪一個錯了」
+
+**這一項只陳述韌體在表裡寫了什麼**，不判斷 TPM 是否可用——那是 tpm.* 的事。
+
+═══ P2-024（Type 19 記憶體映射）撤回 ═══
+
+欄位佈局沒有可靠依據：size 是 u32@0x0C 還是 end address u32@0x08？
+型別是 u8@0x0C 還是 u8@0x0E？專案裡 SmbiosService 沒有解 Type 19。
+**一個位址位移不確定的解碼器會給出看起來合理的錯誤位址——那比沒有更糟。**
+
+═══ 本輪抓到的四個缺陷，全部同一類 ═══
+
+① UUID 三個欄位整體反轉（該各自反轉）。錯誤結果仍格式正確
+   ——**它看起來完全正常，只是指認到別的機器**。
+② 邊界用「起點 < 長度」而非「起點＋寬度 ≤ 長度」。Type0 的 > 0x14 去讀
+   DwordAt(0x14)（需 0x18）；Boot 的 > 0x0A 去讀到 0x0D（需 0x0E）。
+   **我在 MADT／DMAR／SRAT 都寫對了（off + len > table.Length），在這裡寫錯。**
+③ Boot 與 BootStatus 各有一份狀態碼表 → 同一欄位一處給「硬體失敗」、
+   另一處只給「代碼 5」。已抽成單一的 BootStatusName。
+④ 我自寫十進位 MemoryTypeName，而 SmbiosService.MemoryTypeName（十六進位）
+   已存在且 SmbiosDeepFactsService 已在用。**在已有答案的地方重新發明。**
+
+═══ 一個 catch 把程式缺陷偽裝成環境問題 ═══
+
+測試 helper 陣列長度不足時，Collect 的 catch (Exception) 把它接住並報成
+「SMBIOS 表讀取失敗」——它分不出「表壞了」與「我的程式有 bug」。
+真正的線索是例外訊息裡的 Destination array was not lo...，不是那個包裝。
+
+═══ 而這些能被抓到，是因為我沒有把程式的輸出抄成期望值 ═══
+
+五條紅燈全部來自「我心裡想的值」與「程式算出的值」不符。若圖省事直接抄輸出
+當期望值，一條都不會亮，而那個 UUID 會永遠錯下去——因為它看起來就是一個 UUID。
+
+═══ 統計口徑的更正 ═══
+
+P2-029 的規格鍵是 sb.tpmdev／sb.proc_add 兩把（前者本輪完成、後者未做），
+而「取最弱者」把整列歸 todo。**這是保守的算法——寧可少報完成度，不要多報。**
+但保守的算法必須說出自己是保守的，所以 refresh_matrix.py 現在會列出
+「部分完成的列」：本輪 2 列（P2-017、P2-029）。
+
+階段二目前：ok 22 列、alias 8 列、todo 75 列（含 2 列部分完成），
+已完成 30 列。目錄 961 → 965 鍵。28/28 綠。

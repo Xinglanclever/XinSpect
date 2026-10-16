@@ -121,7 +121,7 @@
 | P2-026 | SMBIOS Type 39 PSU | 電源供應器與容量 | `sb.psu.*` | L0 | S | P1-043 |alias:sb.psu@Services/SmbiosDeepFactsService.cs:99 
 | P2-027 | SMBIOS Type 41 內建裝置 | 內建裝置與狀態 | `sb.onboard.*` | L0 | S | — |todo: 
 | P2-028 | SMBIOS Type 42 管理控制器 | BMC／管理引擎存在性 | `sb.mc.*` | L1 | S | — |alias:sb.mctl@Services/SmbiosDeepFactsService.cs:79 
-| P2-029 | SMBIOS Type 43／44 TPM 與處理器附加 | TPM 裝置與處理器特性 | `sb.tpmdev`／`sb.proc_add` | L1 | S | — |todo:／todo: 
+| P2-029 | SMBIOS Type 43／44 TPM 與處理器附加 | TPM 裝置與處理器特性 | `sb.tpmdev`／`sb.proc_add` | L1 | S | — |ok:sb.tpmdev／todo: 
 | P2-030 | SMBIOS 結構長度政策 | 多於規範長度的尾巴欄位 | `sb.trailing.count` | L0 | S | — |todo: 
 | P2-031 | SMBIOS 校驗與範圍檢查 | 表長度與結構邊界一致 | `sb.bounds.ok` | L0 | S | — |todo: 
 | P2-032 | M.2／PCIe 槽位對照 | 槽位對 PCIe 埠的對應 | `sb.m2.map` | L0 | M | P2-021 |alias:sb.m2slot.*@Services/SmbiosDeepFactsService.cs:109 
