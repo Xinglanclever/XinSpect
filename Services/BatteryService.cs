@@ -86,7 +86,17 @@ public sealed class BatteryService
     private static int ToInt(object? o) { try { return o is null ? 0 : Convert.ToInt32(o); } catch { return 0; } }
     private static long ToLong(object? o) { try { return o is null ? 0 : Convert.ToInt64(o); } catch { return 0; } }
 
-    private static string StatusText(int s) => s switch
+    /// <summary>
+    /// WMI <c>Win32_Battery.BatteryStatus</c> → 文字。
+    ///
+    /// <para>
+    /// <b>改成 internal 是為了讓事實層引用它，而不是複製一份。</b>
+    /// 兩個狀態表就是兩個漂移點——本專案已經為此合併過
+    /// <c>BootStatusName</c> 與 <c>UefiCompressionFactsService</c> 的 GUID 表，
+    /// 這裡是第三次。
+    /// </para>
+    /// </summary>
+    internal static string StatusText(int s) => s switch
     {
         1 => "放電中", 2 => "接上電源", 3 => "已充飽", 4 => "低電量", 5 => "危急",
         6 => "充電中", 7 => "充電中（高）", 8 => "充電中（低）", 9 => "充電中（危急）",

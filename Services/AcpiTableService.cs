@@ -59,8 +59,21 @@ public static class AcpiService
             FactTrustLevel.Measured, false, at, checksumBad.Count));
 
         // ── P2-018 逐簽章解碼覆蓋申報：有解碼器／未收錄，不以 0 補 ────────────
-        var unrecorded = decodeGaps.Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToList();
-        facts.Add(new HardwareFact("ac.decode.unrecorded", "ACPI", "本版未逐欄解碼的表簽章",
+        // ── 簽章清單：**從上面那一次列舉推得，不另外再讀一次** ──────────────
+        //
+        // 這一列存在的理由是「讓消費者不必再列舉一次」。既有的 acpi.table.*
+        // 是動態家族（成員編譯期數不出來），所以需要「有沒有某張表」的消費者
+        // （例如 EC 存在性看 ECDT、P2-093）只能自己想辦法拿清單——
+        // 而在這把鍵之前，唯一的辦法是再呼叫一次 Collect，
+        // 那會是**同一次掃描裡的第二次列舉**，兩次可能拿到不同的結果。
+        var signaturesPresent = parsed.Select(p => p.Header.Signature)
+            .Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToList();
+        facts.Add(new HardwareFact("ac.tables.signatures", "ACPI", "ACPI 表簽章清單",
+            signaturesPresent.Count == 0 ? "（沒有表）" : string.Join("、", signaturesPresent),
+            "種", "ACPI 表列舉（與 acpi.table.* 同一次）", FactTrustLevel.Measured, false, at,
+            signaturesPresent.Count));
+
+        var unrecorded = decodeGaps.Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToList();        facts.Add(new HardwareFact("ac.decode.unrecorded", "ACPI", "本版未逐欄解碼的表簽章",
             unrecorded.Count > 0
                 ? $"{unrecorded.Count} 種簽章未收錄逐欄解碼（只出表頭事實）：{string.Join("、", unrecorded)}"
                 : "（本機列舉到的表簽章皆有專用解碼器）",

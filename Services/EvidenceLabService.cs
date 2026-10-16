@@ -96,22 +96,19 @@ public sealed class EvidenceLabService : ObservableObject
             // **「沒有 ECDT」與「沒有 EC」是不同的斷言**：ECDT 是可選的表，
             // ACPI 規格允許以 DSDT 裡的 PNP0C09 描述 EC 而不提供 ECDT。
             //
-            // ═══ 這裡有一個我知道的缺陷，與 TpmFactsService 那處同型 ═══
+            // ═══ 這裡原本是「讀兩次」，而它已經被修掉了 ═══
             //
-            // 上面 AcpiService.Collect 已經跑過一次（結果在 AcpiFacts 裡），
-            // 而我看不到它走完之後的鍵清單——所以下面**又呼叫了一次**。
+            // 第一版我在這裡**又呼叫了一次 AcpiService.Collect** 來拿簽章清單——
+            // 那與 TpmFactsService 那處同型，而兩處我都如實標記過。
             //
-            // 那不理想：**「讀兩次」正是我在 MeasuredBootFactsService、
-            // UefiVersionCrossFactsService 與 TpmFactsService 都警告過的事。**
-            // 正確的修法是讓 AcpiService 回傳（或額外提供）鍵清單，
-            // 由呼叫端分派——那要改既有方法的簽章，所以這一版如實標記。
-            //
-            // **留著不說比讀兩次更糟**：下一個人會看到兩次呼叫，而不知道我知不知道。
+            // **而這一次我沒有只標記，而是把它修掉**：簽章清單現在由
+            // AcpiTableService 自己產出（ac.tables.signatures），
+            // 與 acpi.table.* **來自同一次 source.ReadAll()**——
+            // 所以下面讀的是已經在那份結果裡的事實，不是第二次列舉。
             .Concat(EmbeddedControllerFactsService.Collect(acpiAt,
                 AcpiService.Collect(source, acpiAt)
-                    .Select(f => f.Key)
-                    .Where(k => k.StartsWith("acpi.table.", StringComparison.Ordinal))
-                    .Select(k => k["acpi.table.".Length..].Split('.')[0].ToUpperInvariant())
+                    .Where(f => f.Key == "ac.tables.signatures")
+                    .SelectMany(f => f.Value.Split('、', StringSplitOptions.RemoveEmptyEntries))
                     .ToList()))
             .ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));

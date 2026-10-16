@@ -187,7 +187,7 @@
 | P2-092 | EC 唯讀風險評估 | 陳述 EC 埠不讀寫的界線 | `ec.boundary` | L0 | S | — |ok:ec.boundary 
 | P2-093 | EC 存在性與型號 | 由既有表間接陳述 | `ec.present` | L0 | S | P2-028 |ok:ec.present 
 | P2-094 | 熱管理與風扇曲線可讀項 | 由 EC 或 WMI 可讀者 | `ec.thermal.readable` | L0 | M | — |todo: 
-| P2-095 | 電池與 EC 充放狀態 | 唯讀充放事實 | `ec.battery.state` | L0 | S | — |todo: 
+| P2-095 | 電池與 EC 充放狀態 | 唯讀充放事實 | `ec.battery.state` | L0 | S | — |ok:ec.battery.state 
 | P2-096 | 周邊韌體版本盤點 | 硬碟／SSD／網卡韌體版本 | `pdev.fw.version` | L0 | M | — |todo: 
 | P2-097 | 周邊韌體與原廠對照 | 版本落後與建議（陳述非判決） | `pdev.fw.delta` | L0 | M | P1-043 |todo: 
 | P2-098 | 韌體更新能力宣告 | 各元件是否可更新（唯讀宣告） | `pdev.fw.updatable` | L0 | S | — |todo: 
