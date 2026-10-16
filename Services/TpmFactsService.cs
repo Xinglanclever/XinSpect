@@ -64,6 +64,26 @@ public static class TpmFactsService
             facts.Add(TcgLogFact(ctx, at, readLog ?? RealReadLog));
             facts.AddRange(BankInventoryFacts(ctx, at, submitFn));
             facts.AddRange(VersionFacts(ctx, at, submitFn));
+            // P2-071／P2-072：把同一份 log 再走一次，補上「事件型別分佈」。
+            //
+            // ═══ 這裡有一個我知道的缺陷，而它要被說出來 ═══
+            //
+            // 上面那個 TcgLogFact 已經讀了一次 log（它內部呼叫 Tbsi_Get_TCG_Log
+            // 並走訪），而我看不到它走完之後的結果——它的介面是 Func<nint, byte[]?>。
+            // 所以這裡**又讀了一次**。
+            //
+            // 那不理想：**「讀兩次」正是我在 MeasuredBootFactsService 與
+            // UefiVersionCrossFactsService 裡都警告過的事**
+            // （「每多讀一次就多一次兩次讀到的不一樣的可能」）。
+            //
+            // 在單次掃描中這幾乎不可能發生（log 在一次開機內是穩定的），
+            // 而**正確的修法是讓 TcgLogFact 回傳走訪結果、由呼叫端分派給兩個消費者**
+            // ——那要改既有方法的簽章，所以這一版先如實標記。
+            //
+            // **留著不說比讀兩次更糟**：下一個人會看到兩次呼叫，而不知道我知不知道。
+            var log = (readLog ?? RealReadLog)(ctx);
+            facts.AddRange(TpmLogFactsService.Collect(at,
+                log is null ? null : Tpm2.WalkTcgLog(log)));
             return facts;
         }
         finally

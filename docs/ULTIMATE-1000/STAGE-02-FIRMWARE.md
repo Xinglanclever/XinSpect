@@ -163,8 +163,8 @@
 | P2-068 | TPM 存在性與規格版本 | 2.0／1.2 與實作版本 | `tpm.version` | L0 | S | — |ok:tpm.version 
 | P2-069 | 擁有者與啟用狀態 | 是否已取得擁有權 | `tpm.owned` | L1 | S | — |todo: 
 | P2-070 | 簽署金鑰存在性 | EK／AK 存在性（不含金鑰值） | `tpm.key.present` | L1 | S | P1-048（L3 禁項掃描守門） |todo: 
-| P2-071 | 量測開機日誌摘要 | 日誌筆數與事件型別分布 | `tpm.log.summary` | L1 | S | P2-064 |todo: 
-| P2-072 | 開機事件型別直方圖 | 各型別事件計數 | `tpm.log.histogram` | L1 | S | P2-064 |todo: 
+| P2-071 | 量測開機日誌摘要 | 日誌筆數與事件型別分布 | `tpm.log.summary` | L1 | S | P2-064 |ok:tpm.log.summary 
+| P2-072 | 開機事件型別直方圖 | 各型別事件計數 | `tpm.log.histogram` | L1 | S | P2-064 |ok:tpm.log.histogram 
 | P2-073 | TPM 與 Secure Boot 對照 | 兩者的狀態一致性 | `tpm.cross.sb` | L0 | S | P2-078 |todo: 
 | P2-074 | TPM 韌體版本與弱點知識包 | 對照已知弱點 | `tpm.cve` | L0 | M | P1-041 |todo: 
 | P2-075 | 遠端證明能力陳述 | 是否具備證明能力（不上網） | `tpm.attest.capable` | L1 | S | — |todo: 
