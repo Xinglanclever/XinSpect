@@ -41,7 +41,37 @@ ALIASES = {
     #
     # 而另外四列（bt.ibb／bt.km／bt.measured_boot／bt.root）**是真的缺**——
     # 既有實作裡沒有對應的東西，所以它們留在 todo。
-    'bt.state': ('fw.bg.profile', 'Services/SpiFitFactsService.cs', 19),
+    #
+    # ═══ 而 alias 有三種品質，不只一種 ═══
+    #
+    # 我第一版把 bt.state／bt.chain.list／bt.wp 三列都標成 alias，
+    # 然後發現它們的真相**完全不同**：
+    #
+    #   bt.chain.list → fw.bootchain.summary  **有值**（Derived 聚合卡，五環）
+    #                   但規格要「逐層開機元件與其量測狀態」，而既有只給彙總
+    #                   → alias 成立，「逐層明細」是落差
+    #
+    #   bt.wp         → fw.spiperm.summary    **永遠 ReadError**：ReadSpiPerm() 直接回 null
+    #                   而它的註解說「接線時只要換成 SpiFlashService 的實際讀取」
+    #                   → 出處存在（spi.frap／spi.prr／spi.hsfsts）、只是那條線沒接
+    #                   → alias 成立，「未接線」是待辦（而那與這一項有沒有實作無關）
+    #
+    #   bt.state      → fw.bg.profile         **永遠 NotSupported**
+    #                   而它的理由是「需要 flash descriptor 佈局——未對準出處前不出值」
+    #                   → **沒有出處可接**，那不是「未接線」而是「未開工」
+    #                   → **所以它不是 alias，是 todo**
+    #
+    # ═══ 由此得到一條規則（alias 的第三個條件）═══
+    #
+    #   grep 到既有鍵**不足以**判定 alias。還要看那把鍵的 Availability 路徑：
+    #     有值                                         → alias
+    #     永遠 ReadError，但出處存在                    → alias（附「未接線」）
+    #     **永遠 NotSupported，理由是「未對準出處」**    → **todo**（那是未開工）
+    #
+    # **「鍵存在」與「那一項做完了」是不同的斷言。**
+    # 一個「如實說讀不到」的佔位鍵，在鍵的層面與實作完成的鍵長得一樣。
+    #
+    # （bt.state 因此從 alias 退回 todo：那一輪的 +3 實際上是 +2。）
     'bt.chain.list': ('fw.bootchain.summary', 'Services/FirmwareAuditFactsService.cs', 25),
     'bt.wp': ('fw.spiperm.summary', 'Services/FirmwareAuditFactsService.cs', 18),
 }
