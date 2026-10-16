@@ -1,0 +1,68 @@
+ULTIMATE-1000 階段二 P2-079／P2-080／P2-083：EFI 變數的簽章清單與屬性
+
+═══ 兩把鍵 ═══
+
+  ev.pk.count     四個簽章清單變數的存在性、條數與簽章筆數
+  ev.var.attrs    每個變數的原始屬性值與長度
+
+一把鍵涵蓋四個變數（PK／KEK／db／dbx），因為它們**是同一種東西**：
+四個都是 EFI_SIGNATURE_LIST 的串接，只是用途不同。
+**把它們拆成四把鍵只會讓「這四個是同一種結構」這件事消失。**
+
+═══ 第七次「不新增解碼器」═══
+
+  讀 EFI 變數的路 → FirmwareService／UefiBootFactsService（既有）
+  解簽章清單 → EfiSigListDecoder（既有，含 SpecRef 出處）
+  **本次只是把它們接起來。**
+
+═══ 第三次「沒有出處就不給名字」═══
+
+  ① FIT 的 Key Manifest 編號   **我第一版填了 0x0B，後來撤回**
+  ② TPM 的 EV_* 型別名         **一開始就沒填**
+  ③ **EFI 變數的屬性位元**      **一開始就沒填**
+
+「UEFI 的變數屬性是 EFI_VARIABLE_* 常數……而**本專案沒有任何地方收錄那張表**。
+ 我知道其中幾個位元，但**「我記得」不是出處**……
+ **填錯的位元會讓一個不存在的屬性看起來存在。**」
+
+而這次的結果是一個 partial 而不是 todo——**因為前半真的做完了**：
+
+  partial:ev.var.attrs（原始屬性值有；位元名無出處，故不做唯讀判斷）
+
+═══ 而那個犯了五次的錯誤，這一輪被型別化 ═══
+
+「非 Present 的事實不得帶數字」在本專案發生過**五次**：
+MeasuredBootFacts（讀不到 PCR 與全零）、TrustRootFacts、
+UefiSectionTreeFacts 的兩個鍵、EfiVariableFacts（四個變數都讀不到）。
+
+**五次都是把兩個不同的「沒有」壓成一個，而那個 0 會讓「讀不到」看起來像「量到 0」。**
+
+我先寫了一個**文字掃描版**的守門——**結果 121 個誤報。**
+**121 個誤報與 0 個誤報一樣無用，因為沒有人會去看。**
+
+所以改成 **HardwareFact 的型別不變式**：
+
+    public double? NumericValue { get; init; } =
+        Availability == FactAvailability.Present ? NumericValue : null;
+
+**而處置是不 throw，而是「抹平 ＋ 留下痕跡」**：
+
+    「**（本筆原本帶了數字 0 而狀態是 NotApplicable——
+       非 Present 的事實不得帶數字，已如實收斂為空）**」
+
+throw 會讓一個服務的疏忽變成整個掃描崩潰——**那比一個數字錯誤更糟**。
+而「留下痕跡」確保它不是靜默修正——**因為靜默修正會讓那個疏忽永遠不被發現。**
+
+而有一條測試把那五個歷史錯誤的實際形狀全部擋住。
+
+═══ 而這一輪有一條紅燈是「機制在正確運作」═══
+
+把 ev.pk.count／ev.var.attrs 加進目錄後，
+SpecImplementationReconciliationTests 的
+`標為todo的鍵必須真的不存在` 立刻紅燈——
+**因為我做了卻還沒改矩陣。**
+
+**那條守門說的是「你做的東西還沒被承認」**，而它抓到的正是我的下一步。
+
+階段二目前：ok 46 列、alias 17 列、todo 42 列、partial 2 列。
+目錄 1015 → 1017 鍵。

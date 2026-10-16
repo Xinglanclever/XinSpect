@@ -56,6 +56,28 @@ public enum FactAvailability
 }
 
 /// <summary>UI 可直接組成的硬體事實；NumericValue 只在可可靠解析時提供。</summary>
+/// <remarks>
+/// <para>
+/// <b>這裡有一個不變式：<c>Availability</c> 不是 <c>Present</c> 時，<c>NumericValue</c> 必須是 <c>null</c>。</b>
+/// </para>
+///
+/// <para>
+/// <b>為什麼要寫成程式碼而不是靠注意力：</b>同一個錯誤在本專案發生過<b>五次</b>——
+/// <c>MeasuredBootFacts</c>（讀不到 PCR 與 PCR 全零）、
+/// <c>TrustRootFacts</c>（讀不到信任根與沒有信任根）、
+/// <c>UefiSectionTreeFacts</c> 的兩個鍵（沒有 FV／沒有樹可以數）、
+/// <c>EfiVariableFacts</c>（四個變數都讀不到）。
+/// <b>五次都是把兩個不同的「沒有」壓成一個</b>，而那個 <c>0</c> 會讓
+/// 「讀不到」看起來像「量到 0」。
+/// </para>
+///
+/// <para>
+/// <b>處置是不 throw，而是把矛盾抹平並記錄下來。</b>
+/// throw 會讓一個服務的疏忽變成整個掃描崩潰——<b>那比一個數字錯誤更糟</b>。
+/// 所以非 <c>Present</c> 時 <c>NumericValue</c> 一律收斂成 <c>null</c>，
+/// 並在 <c>UnavailableReason</c> 留下痕跡（<b>不是靜默修正</b>）。
+/// </para>
+/// </remarks>
 public sealed record HardwareFact(
     string Key,
     string Category,
@@ -68,7 +90,25 @@ public sealed record HardwareFact(
     DateTimeOffset MeasuredAtUtc,
     double? NumericValue = null,
     FactAvailability Availability = FactAvailability.Present,
-    string? UnavailableReason = null);
+    string? UnavailableReason = null)
+{
+    /// <summary>
+    /// 收斂後的數字：只有 <see cref="FactAvailability.Present"/> 才帶值。
+    /// 非 <c>Present</c> 時一律 <c>null</c>——**「沒有」與「有 0 個」是不同的斷言**。
+    /// </summary>
+    public double? NumericValue { get; init; } =
+        Availability == FactAvailability.Present ? NumericValue : null;
+
+    /// <summary>
+    /// 說明文字：呼叫端給的，加上（若發生過）那個被抹平的數字矛盾。
+    /// </summary>
+    public string? UnavailableReason { get; init; } =
+        Availability == FactAvailability.Present || NumericValue is null
+            ? UnavailableReason
+            : (UnavailableReason is null ? "" : UnavailableReason + "；")
+              + $"**（本筆原本帶了數字 {NumericValue} 而狀態是 {Availability}——"
+              + "非 Present 的事實不得帶數字，已如實收斂為空）**";
+}
 
 /// <summary>匯出敏感值時的明確政策。預設一律遮蔽，Preserve 必須由呼叫端主動指定。</summary>
 public enum SensitiveValuePolicy
