@@ -76,13 +76,19 @@ public static class EmbeddedControllerFactsService
                 // 而這裡直接寫對，因為那個收斂是安全網、不是設計。
                 hits.Count == 0 ? null : hits.Count,
                 hits.Count == 0 ? FactAvailability.NotApplicable : FactAvailability.Present,
-                (hits.Count == 0
+                // **Present 的事實不得帶 unavailableReason**（HardwareSnapshotService 的不變式）。
+                // 我第一版在兩邊都寫了說明，而整合測試把它抓出來：
+                // 「可用的事實不得帶 unavailableReason」。
+                //
+                // 那些話沒有消失——它們在**這把鍵不 Present 時的理由**裡
+                // （「沒有 ECDT」與「沒有 EC」之別），以及上面的 XML 文件註解裡
+                // （「不讀 ECDT 的內容」那一句）。**`UnavailableReason` 是
+                // 「為什麼讀不到」的欄位，而 Present 的事實沒有「讀不到」可言。**
+                hits.Count == 0
                     ? "**「沒有 ECDT」與「沒有 EC」是不同的斷言。**"
                       + "ECDT 是可選的表——ACPI 規格允許以 DSDT 裡的 PNP0C09 裝置描述 EC "
                       + "而不提供 ECDT。**所以這裡只說「沒有從 ACPI 表看到它」。**"
-                    : "**ECDT 存在代表平台有 EC 的開機資源描述。**"
-                      + "本服務**不讀 ECDT 的內容**——那需要解析它的欄位，"
-                      + "而存在性這個問題用簽章就回答了")),
+                    : null),
             Boundary(at),
         ];
     }

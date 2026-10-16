@@ -35,11 +35,28 @@ namespace XinSpect;
 /// </para>
 ///
 /// <para>
+/// <b>位元不命名，只列原始值。</b><c>EFI_OS_INDICATIONS_*</c> 是一組常數
+/// （我知道其中幾個），而<b>本專案沒有任何地方收錄那張表</b>——
+/// 與 FIT 的 Key Manifest 編號、TPM 的 EV_* 型別名、EFI 變數的屬性位元、
+/// TPM_PT_PERMANENT 的編號是同一個判斷：
+/// <b>填錯的位元會讓一個不存在的支援看起來存在。</b>
+/// 要補上位元名，需要先對準 UEFI Spec 的 <c>EFI_OS_INDICATIONS_*</c> 表出處。
+/// </para>
+///
+/// <para>
 /// <b>所以本服務不辨識復原區，而它把那件事說出來。</b>
 /// 這與 <c>ec.boundary</c>、<c>tpm.clear.boundary</c> 是同一個形狀：
 /// <b>一個沒說出口的界線，會被讀成「還沒做」而不是「沒有依據可做」。</b>
 /// 而這裡的措辭特別重要——<b>它要說「缺的是一張表」，不是「缺的是實作」</b>，
 /// 否則下一個人會以為只要寫程式就好。
+/// </para>
+///
+/// <para>
+/// <b>而上面那兩段是「這一項的範圍宣告」，所以它們在這裡而不是在
+/// <c>UnavailableReason</c> 裡。</b>那個欄位是「為什麼讀不到」——
+/// <c>HardwareSnapshotService</c> 有一條不變式擋著「可用的事實不得帶
+/// unavailableReason」，而<b>我第一版正是把這兩段話放進了那裡，
+/// 是整合測試把它抓出來的。</b>
 /// </para>
 /// </summary>
 public static class FirmwareRecoveryFactsService
@@ -80,25 +97,18 @@ public static class FirmwareRecoveryFactsService
                 input.OsIndicationsSupported is { } n ? n : null,
                 input.OsIndicationsSupported is null
                     ? FactAvailability.NotSupported : FactAvailability.Present,
-                (input.OsIndicationsSupported is null
+                // **Present 的事實不得帶 unavailableReason**（HardwareSnapshotService 的不變式）。
+                // 我第一版把「位元不命名」與「復原區不做」兩段說明都放在這裡，
+                // 而整合測試把它抓出來（「可用的事實不得帶 unavailableReason」）。
+                //
+                // **那兩段話沒有消失——它們在類別層的 XML 文件註解裡**（本服務開頭）。
+                // 而「復原區那一半為什麼不做」更適合放在那裡：
+                // **它是這一項的範圍宣告，不是某一次讀取失敗的原因。**
+                input.OsIndicationsSupported is null
                     ? "**變數讀不到（可能是 Legacy 開機、未提權，或平台未提供）。**"
                       + "**「讀不到」與「值為 0」是不同的斷言**——"
-                      + "後者代表平台明確回報「不支援任何 OS 指示」。"
-                    : "**位元不命名，只列原始值。**"
-                      + "EFI_OS_INDICATIONS_* 是一組常數（我知道其中幾個），"
-                      + "而**本專案沒有任何地方收錄那張表**——"
-                      + "與 FIT 的 Key Manifest 編號、TPM 的 EV_* 型別名、"
-                      + "EFI 變數的屬性位元、TPM_PT_PERMANENT 的編號是同一個判斷："
-                      + "**填錯的位元會讓一個不存在的支援看起來存在。**"
-                      + "要補上位元名，需要先對準 UEFI Spec 的 EFI_OS_INDICATIONS_* 表出處"
-                      + "（見 docs/ULTIMATE-1000/UNSOURCED-CONSTANTS.md）")
-                + "。**而復原區那一半本專案不做，理由不是「還沒寫」而是「沒有依據」**："
-                + "UEFI PI 規格裡**「復原區」不是一個有固定 GUID 的東西**——"
-                + "它是**平台慣例**（有些平台的復原 FV 是一個特定的 GUID，而各家不同；"
-                + "有些靠 FVB 的特定位置）。既有的 UefiFv 解的是**通用 FV**，"
-                + "**它不知道哪一個是復原區**，而本專案沒有一張「平台慣例表」可以依據。"
-                + "**所以這裡說的是「缺的是一張表」，不是「缺的是實作」**——"
-                + "否則下一個人會以為只要寫程式就好"),
+                      + "後者代表平台明確回報「不支援任何 OS 指示」"
+                    : null),
         ];
     }
 }

@@ -129,6 +129,17 @@ public static class TrustRootVbsCrossFactsService
                   + "**而那不代表設定錯誤**：VBS 可以在 Secure Boot 關閉時執行，"
                   + "只是少了一層保護。";
         }
+        else if (vbsOn || input.Vbs == VbsState.Off)
+        {
+            // VBS 關著時沒有實質依賴可講，但仍要說出 Secure Boot 那一邊的狀態，
+            // 否則那一段會整個消失、看起來像漏了。
+            secureBootPart = input.SecureBoot switch
+            {
+                true => "**Secure Boot 開著。**",
+                false => "**Secure Boot 關著。**",
+                _ => "**Secure Boot 那一邊讀不到。**",
+            };
+        }
 
         // ── 其餘兩條：明說沒有直接關係 ────────────────────────────────────
         const string others =
@@ -141,11 +152,18 @@ public static class TrustRootVbsCrossFactsService
 
         return
         [
-            new HardwareFact(CrossKey, Category, "信任根與 VBS 對照", vbsText, "", Source,
+            new HardwareFact(CrossKey, Category, "信任根與 VBS 對照",
+                vbsText + "。" + secureBootPart + others, "", Source,
                 FactTrustLevel.Derived, false, at, (int)input.Vbs, FactAvailability.Present,
-                secureBootPart + others
-                + "**而本服務不做判決**——「VBS 執行中而 Secure Boot 關閉」值得注意，"
-                + "但那不代表設定錯誤"),
+                // **Present 的事實不得帶 unavailableReason**（HardwareSnapshotService 的不變式）。
+                // 我第一版把 secureBootPart、others 與「不做判決」都放在那裡，
+                // 而整合測試把它抓出來（「可用的事實不得帶 unavailableReason」）。
+                //
+                // **那些話沒有消失——它們移進了 Value**：這個鍵的整個內容
+                // 就是「這個組合是什麼意思」，而那正是 Value 該說的事。
+                // **`UnavailableReason` 是「為什麼讀不到」的欄位，
+                // 而 Present 的事實沒有「讀不到」可言。**
+                null),
         ];
     }
 }

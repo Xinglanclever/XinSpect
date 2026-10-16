@@ -71,7 +71,15 @@ public static class AcpiService
         facts.Add(new HardwareFact("ac.tables.signatures", "ACPI", "ACPI 表簽章清單",
             signaturesPresent.Count == 0 ? "（沒有表）" : string.Join("、", signaturesPresent),
             "種", "ACPI 表列舉（與 acpi.table.* 同一次）", FactTrustLevel.Measured, false, at,
-            signaturesPresent.Count));
+            signaturesPresent.Count,
+            // **Present 的事實不得帶 unavailableReason**（HardwareSnapshotService 的不變式）。
+            // 我第一版在這裡寫了理由，而**單元測試抓不到——是整合測試抓到的**：
+            // 「可用的事實不得帶 unavailableReason」。
+            //
+            // 那個理由的內容沒有消失，它移到**這把鍵存在的理由**該在的地方：
+            // 呼叫端（EmbeddedControllerFactsService）的註解裡，
+            // 以及下面 ac.decode.unrecorded 那一列的鄰近說明。
+            FactAvailability.Present, null));
 
         var unrecorded = decodeGaps.Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToList();        facts.Add(new HardwareFact("ac.decode.unrecorded", "ACPI", "本版未逐欄解碼的表簽章",
             unrecorded.Count > 0

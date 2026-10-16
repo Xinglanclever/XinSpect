@@ -101,13 +101,46 @@ public sealed record HardwareFact(
 
     /// <summary>
     /// 說明文字：呼叫端給的，加上（若發生過）那個被抹平的數字矛盾。
-    /// </summary>
+    ///
+    /// <para>
+    /// <b>而這裡有第二條不變式：<c>Availability</c> 是 <c>Present</c> 時，
+    /// 呼叫端給的說明會被併進 <see cref="Value"/>，<c>UnavailableReason</c> 留空。</b>
+    /// </para>
+    ///
+    /// <para>
+    /// <b>為什麼：</b><c>UnavailableReason</c> 是「<b>為什麼讀不到</b>」的欄位——
+    /// 而 <c>Present</c> 的事實沒有「讀不到」可言。
+    /// <c>HardwareSnapshotService.ValidateFact</c> 早就有一條檢查會 throw，
+    /// 但<b>它只在匯出快照那條路徑上跑</b>（整合測試），
+    /// 所以<b>同一個錯誤在本專案發生過第二次</b>：我在 P2-061～P2-095 那批服務裡
+    /// 把「這把鍵與那把的區隔」、「本服務不判決」寫進了 <c>Present</c> 的理由欄，
+    /// 五處一起，而<b>單元測試全綠、只有整合測試紅燈</b>。
+    /// </para>
+    ///
+    /// <para>
+    /// <b>處置與 <c>NumericValue</c> 那條一致：不 throw，而是把放錯位置的東西
+    /// 搬到對的位置並留下痕跡。</b>那些話不是垃圾——它們是「這個值是什麼意思」，
+    /// 而<b>那正是 <c>Value</c> 該說的事</b>。搬到別處丟掉會失去資訊，
+    /// 留在原地會讓整個掃描在匯出時崩潰。
+    /// </para>
+    /// </remarks>
     public string? UnavailableReason { get; init; } =
-        Availability == FactAvailability.Present || NumericValue is null
-            ? UnavailableReason
-            : (UnavailableReason is null ? "" : UnavailableReason + "；")
-              + $"**（本筆原本帶了數字 {NumericValue} 而狀態是 {Availability}——"
-              + "非 Present 的事實不得帶數字，已如實收斂為空）**";
+        Availability == FactAvailability.Present
+            ? null
+            : Availability != FactAvailability.Present && NumericValue is not null
+                ? (UnavailableReason is null ? "" : UnavailableReason + "；")
+                  + $"**（本筆原本帶了數字 {NumericValue} 而狀態是 {Availability}——"
+                  + "非 Present 的事實不得帶數字，已如實收斂為空）**"
+                : UnavailableReason;
+
+    /// <summary>
+    /// 收斂後的說明：<c>Present</c> 時，呼叫端寫在理由欄的說明併進值裡。
+    /// </summary>
+    public string Value { get; init; } =
+        Availability == FactAvailability.Present
+        && !string.IsNullOrWhiteSpace(UnavailableReason)
+            ? Value + "。" + UnavailableReason
+            : Value;
 }
 
 /// <summary>匯出敏感值時的明確政策。預設一律遮蔽，Preserve 必須由呼叫端主動指定。</summary>

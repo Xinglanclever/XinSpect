@@ -135,18 +135,27 @@ public static class TpmSecureBootCrossFactsService
                 + "值得注意的是那個組合在**量測面**的後果："
                 + "沒有 TPM 就沒有 PCR，所以 Secure Boot 的驗證結果不會被量測進信任鏈",
             (true, true) =>
-                "兩者都到位——**而這不代表量測開機已經在運作**："
+                "**而這不代表量測開機已經在運作**："
                 + "那要看 PCR 的內容（見 bt.measured_boot），不是看 TPM 存不存在",
-            _ => "兩者都沒有——**這在 CSM／Legacy 開機的機器上是正常的樣貌**",
+            _ => "**這在 CSM／Legacy 開機的機器上是正常的樣貌**",
         };
 
         return
         [
-            new HardwareFact(CrossKey, Category, "TPM 與 Secure Boot 對照", combination, "", Source,
+            new HardwareFact(CrossKey, Category, "TPM 與 Secure Boot 對照",
+                combination + "。" + note
+                // **而值一定說得出來源**：Secure Boot 那一邊有兩個端點
+                // （uefi.secure_boot 較接近韌體、platform.secure_boot 是登錄檔層），
+                // 而它們可以一個有值、一個讀不到。
+                // **不知道用了哪一個就無法回推那一段的可靠度。**
+                + $"（Secure Boot 的值來自 {input.SecureBootEndpoint}）",
+                "", Source,
                 FactTrustLevel.Derived, false, at, tpm && sb ? 1 : 0, FactAvailability.Present,
-                note + "。**本服務只說「這個組合是什麼」，不說「設定有問題」**——"
-                + "它不宣告這台機器的安全設定正確或不正確。"
-                + $"Secure Boot 的值來自 {input.SecureBootEndpoint}"),
+                // **Present 的事實不得帶 unavailableReason**（HardwareSnapshotService 的不變式），
+                // 而 HardwareFact 的第二條不變式會把這裡寫的東西併進 Value。
+                // 所以 note 的開頭**不能重複 combination 已經說過的話**——
+                // 兩段話本來是給兩個欄位的，接起來就必須像一段話。
+                null),
         ];
     }
 

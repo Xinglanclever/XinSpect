@@ -31,6 +31,13 @@ namespace XinSpect;
 /// <para>
 /// <b>界線：這裡不預測續航、不判斷健康。</b>那些是 <c>pw.battery.summary</c> 的領域。
 /// </para>
+///
+/// <para>
+/// <b>而上面那一段區隔在這裡，不在 <c>UnavailableReason</c> 裡。</b>
+/// 那個欄位是「為什麼讀不到」——<c>HardwareSnapshotService</c> 有一條不變式
+/// 擋著「可用的事實不得帶 unavailableReason」，
+/// 而<b>我第一版正是把那一段話放進了那裡，是整合測試把它抓出來的。</b>
+/// </para>
 /// </summary>
 public static class BatteryStateFactsService
 {
@@ -77,11 +84,12 @@ public static class BatteryStateFactsService
                 + (string.IsNullOrWhiteSpace(battery.Name) ? "" : $"（{battery.Name}{chemistry}）"),
                 "%", Source, FactTrustLevel.Measured, false, at, battery.ChargePercent,
                 FactAvailability.Present,
-                "**這個鍵回答「現在是什麼狀況」，而既有的 pw.battery.summary 回答"
-                + "「這顆電池老了沒有」**（設計容量／滿充容量／循環次數／健康度）。"
-                + "兩者都可以由同一顆電池讀出，但問題不同——"
-                + "**把它們混成一把鍵，就會讓「健康但沒接電」與「接電但快掛了」看起來一樣。**"
-                + "而**這裡不預測續航、不判斷健康**——那些是 pw.battery.summary 的領域"),
+                // **Present 的事實不得帶 unavailableReason**（HardwareSnapshotService 的不變式）。
+                // 我第一版把「與 pw.battery.summary 的區隔」寫在這裡，而整合測試把它抓出來。
+                // **那段話沒有消失——它在類別層的 XML 文件註解裡**（本服務開頭那一段
+                // 「這個鍵與既有的 pw.battery.summary 是不同的東西」）。
+                // **`UnavailableReason` 是「為什麼讀不到」的欄位。**
+                null),
         ];
     }
 }
