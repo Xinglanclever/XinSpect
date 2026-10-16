@@ -89,6 +89,30 @@ public sealed class EvidenceLabService : ObservableObject
             // **「認得」不等於「能解壓」**——所以語意拆成 supported（認得）
             // 與 decompressed（本次遇到什麼）兩把鍵。
             .Concat(UefiCompressionFactsService.Collect(acpiAt))
+            // P2-092／P2-093：EC 的界線與存在性。
+            // **不新增讀取**——存在性由既有的逐表列舉（acpi.table.*）間接得知，
+            // 而界線鍵什麼都不測，它只說出「本專案不碰 EC 埠」。
+            //
+            // **「沒有 ECDT」與「沒有 EC」是不同的斷言**：ECDT 是可選的表，
+            // ACPI 規格允許以 DSDT 裡的 PNP0C09 描述 EC 而不提供 ECDT。
+            //
+            // ═══ 這裡有一個我知道的缺陷，與 TpmFactsService 那處同型 ═══
+            //
+            // 上面 AcpiService.Collect 已經跑過一次（結果在 AcpiFacts 裡），
+            // 而我看不到它走完之後的鍵清單——所以下面**又呼叫了一次**。
+            //
+            // 那不理想：**「讀兩次」正是我在 MeasuredBootFactsService、
+            // UefiVersionCrossFactsService 與 TpmFactsService 都警告過的事。**
+            // 正確的修法是讓 AcpiService 回傳（或額外提供）鍵清單，
+            // 由呼叫端分派——那要改既有方法的簽章，所以這一版如實標記。
+            //
+            // **留著不說比讀兩次更糟**：下一個人會看到兩次呼叫，而不知道我知不知道。
+            .Concat(EmbeddedControllerFactsService.Collect(acpiAt,
+                AcpiService.Collect(source, acpiAt)
+                    .Select(f => f.Key)
+                    .Where(k => k.StartsWith("acpi.table.", StringComparison.Ordinal))
+                    .Select(k => k["acpi.table.".Length..].Split('.')[0].ToUpperInvariant())
+                    .ToList()))
             .ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }

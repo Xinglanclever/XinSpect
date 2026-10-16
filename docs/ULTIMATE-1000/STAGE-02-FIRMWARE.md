@@ -184,8 +184,8 @@
 | P2-089 | 韌體膠囊與更新痕跡 | 已套用的膠囊與版本跳躍 | `fw.capsule.history` | L0 | M | P2-082 |todo: 
 | P2-090 | 變數儲存用量 | NVRAM 使用量與上限 | `ev.nvram.usage` | L0 | S | P2-082 |todo: 
 | P2-091 | 韌體熵分布圖 | 逐區塊熵值（抗混淆指標） | `spi.entropy.*` | L0 | M | P2-086 |todo: 
-| P2-092 | EC 唯讀風險評估 | 陳述 EC 埠不讀寫的界線 | `ec.boundary` | L0 | S | — |todo: 
-| P2-093 | EC 存在性與型號 | 由既有表間接陳述 | `ec.present` | L0 | S | P2-028 |todo: 
+| P2-092 | EC 唯讀風險評估 | 陳述 EC 埠不讀寫的界線 | `ec.boundary` | L0 | S | — |ok:ec.boundary 
+| P2-093 | EC 存在性與型號 | 由既有表間接陳述 | `ec.present` | L0 | S | P2-028 |ok:ec.present 
 | P2-094 | 熱管理與風扇曲線可讀項 | 由 EC 或 WMI 可讀者 | `ec.thermal.readable` | L0 | M | — |todo: 
 | P2-095 | 電池與 EC 充放狀態 | 唯讀充放事實 | `ec.battery.state` | L0 | S | — |todo: 
 | P2-096 | 周邊韌體版本盤點 | 硬碟／SSD／網卡韌體版本 | `pdev.fw.version` | L0 | M | — |todo: 
