@@ -1,0 +1,59 @@
+ULTIMATE-1000 階段二 P2-019／P2-025：SMBIOS Type 0–3 與 Type 32；P2-024 撤回
+
+═══ 新增 ═══
+
+SmbiosIdentityFactsService：七把鍵
+  sb.type0        BIOS（廠商、版本、發行日、ROM 大小、特性旗標）
+  sb.type1        系統（廠商、產品名、版本、序號）
+  sb.type1.uuid   系統 UUID（前三欄位各自 little-endian）
+  sb.type2        主機板
+  sb.type3        機箱（型別 ＋ 鎖的位元）
+  sb.boot         Type 32 開機資訊
+  sb.boot.status  上次開機狀態
+
+═══ 撤回：P2-024（Type 19 記憶體映射）═══
+
+欄位佈局我沒有可靠依據：size 是 u32@0x0C 還是 end address u32@0x08？
+型別是 u8@0x0C 還是 u8@0x0E？專案裡 SmbiosService 沒有解 Type 19，
+所以沒有可對照的權威。
+
+**一個位址位移不確定的解碼器會給出看起來合理的錯誤位址——那比沒有更糟。**
+理由與 P2-008 HMAT 的撤回相同。sb.memmap 兩把鍵已從目錄移除。
+
+═══ 本輪抓到的四個缺陷，全部是「同一份資料兩個解讀處」或邊界算錯 ═══
+
+① **UUID 的欄位反轉寫錯**。正確是三個欄位各自反轉（Data1 4 bytes、
+   Data2 2 bytes、Data3 2 bytes），我寫成 @0x08–@0x0F 整段 8 bytes 反轉。
+   錯誤結果仍然是一個格式正確的 UUID——**它看起來完全正常，只是指認到別的機器**。
+
+② **邊界檢查用「起點 < 長度」而不是「起點 ＋ 寬度 ≤ 長度」**。
+   Type0 的 `Length > 0x14` 去讀 DwordAt(0x14)（需 0x18）；
+   Boot 的 `> 0x0A` 去讀到 0x0D（需 0x0E）。
+   **我在 MADT／DMAR／SRAT 都寫對了（off + len > table.Length），在這裡寫錯了。**
+
+③ **Boot 與 BootStatus 各自有一份狀態碼對照表**：前者有完整 11 項名稱，
+   後者只比 code == 0 就輸出代碼。於是同一張表的同一個欄位，
+   一處給「硬體失敗」、另一處只給「代碼 5」——**使用者會看到兩種不同的說法**。
+   已抽成單一的 BootStatusName。
+
+④ **我自己寫了一份十進位的 MemoryTypeName，而 SmbiosService.MemoryTypeName
+   （十六進位代碼）已經存在**，且 SmbiosDeepFactsService 已經在用它。
+   同一個專案裡有兩份記憶體型別對照表，而我製造了第二份。已刪。
+
+═══ 一個 catch 把程式缺陷偽裝成環境問題 ═══
+
+測試 helper 的陣列長度不足時，`Collect` 的 `catch (Exception ex)` 把它
+接住並報成「SMBIOS 表讀取失敗」——於是四條斷言全部落空，而診斷方向
+被引導到「表壞了」。**它分不出「表壞了」與「我的程式有 bug」。**
+
+那一輪真正的線索是例外訊息裡的 `Destination array was not lo...`，
+而不是「SMBIOS 讀取失敗」這個包裝。
+
+═══ 而這些能被抓到，是因為我沒有把程式的輸出抄成期望值 ═══
+
+五條紅燈全部來自「我心裡想的那個值」與「程式實際算出的值」不符。
+如果當初圖省事直接抄輸出當期望值，**一條都不會亮**，而那個 UUID
+會永遠錯下去——因為它看起來就是一個 UUID。
+
+階段二目前：ok 22 列、alias 8 列、todo 75 列，已完成 30 項。
+目錄 961 鍵。26/26 綠。
