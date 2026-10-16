@@ -126,7 +126,7 @@
 | P2-031 | SMBIOS 校驗與範圍檢查 | 表長度與結構邊界一致 | `sb.bounds.ok` | L0 | S | — |ok:sb.bounds.ok 
 | P2-032 | M.2／PCIe 槽位對照 | 槽位對 PCIe 埠的對應 | `sb.m2.map` | L0 | M | P2-021 |alias:sb.m2slot.*@Services/SmbiosDeepFactsService.cs:109 
 | P2-033 | SMBIOS 與 WMI 對照 | SMBIOS 陳述對作業系統視圖 | `sb.cross.*` | L0 | M | P2-019 |ok:sb.cross.* 
-| ★P2-034 | UEFI 映像 FV／FFS／區段樹 | 攤開映像結構為可導覽樹 | `uefi.section.tree` | L1 | L | P1-009 |todo: 
+| ★P2-034 | UEFI 映像 FV／FFS／區段樹 | 攤開映像結構為可導覽樹 | `uefi.section.tree` | L1 | L | P1-009 |ok:uefi.section.tree 
 | P2-035 | 映像 PE32 模組清單 | 列出映像內驅動與應用模組 | `uefi.pe.count` | L1 | M | P2-034 |ok:uefi.pe.count 
 | ★P2-036 | 映像 golden 值以真實傾印為準 | 解碼正確性以真機樣本證明 | （測試） | L0 | M | P2-034 |todo: 
 | P2-037 | 映像截斷與突變耐受 | 異常輸入不崩潰且標缺口 | `uefi.parse.gaps` | L0 | M | P2-034 |ok:uefi.parse.gaps 

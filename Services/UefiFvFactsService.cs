@@ -82,6 +82,9 @@ public static class UefiFvFactsService
         // P2-035 PE32 模組清單：**不新增 PE 解碼器**——把區段交給既有的 PeInspect。
         // 那需要區段資料的位移，所以 UefiFvSection 加了 DataOffset（只加欄位、不改行為）。
         facts.AddRange(UefiPeModuleFactsService.Collect(at, fvs, biosBytes));
+        // P2-034 映像結構樹：把既有的三層結構彙總成一把可讀的鍵。
+        // **用一把固定鍵而不是第 24 個動態家族**——FamilyCap 就是 23。
+        facts.AddRange(UefiSectionTreeFactsService.Collect(at, fvs));
         return facts;
     }
 
