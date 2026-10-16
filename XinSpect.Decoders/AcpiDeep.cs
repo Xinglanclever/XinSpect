@@ -41,6 +41,8 @@ public static class AcpiDeep
     public static readonly IReadOnlyList<string> DecodedSignatures =
     [
         "BGRT", "SPCR", "DBG2", "HPET", "NFIT", "MPAM", "PPTT", "SLIT", "CEDT", "MCFG", "HEST", "BERT",
+        // ULTIMATE-1000 階段二 P2-006：中斷控制器與處理器清單（AcpiMadt）。
+        "MADT",
     ];
 
     /// <summary>該簽章在本版是否有專用逐欄解碼器。比對忽略大小寫與尾端空白（與表頭解析的 TrimEnd 一致）。</summary>
