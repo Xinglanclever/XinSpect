@@ -80,6 +80,10 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(AcpiMadtFactsService.Collect(source, acpiAt))
             .Concat(AcpiDmarFactsService.Collect(source, acpiAt))
             .Concat(AcpiSratFactsService.Collect(source, acpiAt))
+            // P2-017 TPM2／WPBT：TPM2 是 TPM 的**第三個獨立端點**（另外兩個是 tpm.*
+            // 問 TPM 本身、sb.tpmdev 問韌體在 SMBIOS 裡寫了什麼）；
+            // WPBT 是「韌體要求 OS 在開機時執行一段它提供的程式」那條路徑的存在性。
+            .Concat(AcpiTpm2WpbtFactsService.Collect(acpiAt, AcpiTpm2WpbtFactsService.ReadTables(source)))
             .ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }

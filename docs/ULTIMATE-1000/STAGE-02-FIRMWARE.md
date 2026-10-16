@@ -109,7 +109,7 @@
 | P2-014 | SPCR／DBG2 除錯埠 | 序列與除錯埠宣告 | `ac.spcr`／`ac.dbg2.*` | L0 | S | — |ok:ac.spcr／ok:ac.dbg2.* 
 | P2-015 | HPET 與計時器表 | 高精度計時器全欄位 | `ac.hpet.*` | L0 | S | — |ok:ac.hpet.* 
 | P2-016 | MCFG 與 PCIe 段 | ECAM 基底與段號 | `ac.mcfg.*` | L0 | S | — |ok:ac.mcfg.* 
-| P2-017 | TPM2 與 WPBT 表 | TPM 位置與 WPBT 存在性陳述 | `ac.tpm2`／`ac.table.wpbt` | L0 | S | — |todo:／alias:se.wpbt@Services/ClosingFactsService.cs:27 
+| P2-017 | TPM2 與 WPBT 表 | TPM 位置與 WPBT 存在性陳述 | `ac.tpm2`／`ac.table.wpbt` | L0 | S | — |ok:ac.tpm2／alias:se.wpbt@Services/ClosingFactsService.cs:27 
 | P2-018 | PDTT／LPIT 等其餘表 | 逐簽章解碼並標未支援 | `ac.table.{sig}` | L0 | M | P2-002 |alias:acpi.table.{sig}@Services/AcpiTableService.cs:42 
 | P2-019 | SMBIOS Type 0–3 | BIOS／系統／底板／機箱全欄位 | `sb.type0.*`–`sb.type3.*` | L1 | M | — |todo: 
 | P2-020 | SMBIOS Type 4／7 | 處理器與快取 | `sb.type4.*` | L0 | M | — |ok:sb.type4.* 
