@@ -91,113 +91,113 @@
 
 ## 五、矩陣（105 項）
 
-| ID | 名稱 | 目標（一句） | 輸出鍵 | 敏感度 | 成本 | 依賴 |
-|---|---|---|---|---|---|---|
-| P2-001 | ACPI 表頭校驗和全查 | 逐表驗證表頭 checksum 並標不符 | `ac.checksum.bad` | L0 | S | P2-002 |
-| P2-002 | ACPI 表盤點與彙總 | 列出全部表、簽章、長度、序號 | `ac.tables.summary` | L0 | S | — |
-| P2-003 | DSDT／SSDT 字串掃描 | 掃出 AML 內可見字串與計數 | `ac.aml.str.count` | L1 | S | — |
-| P2-004 | 第三方 SSDT 對照 | 標出非原廠簽章的 SSDT | `ac.ssdt.third.list` | L0 | M | P2-003 |
-| P2-005 | 位元碼評估界線聲明 | 明示不評估 AML 位元碼 | `ac.aml.boundary` | L0 | S | — |
-| P2-006 | MADT 全欄位 | 中斷控制器與處理器清單 | `ac.madt.*` | L0 | M | — |
-| P2-007 | SRAT／SLIT 拓撲 | NUMA 親和與距離矩陣 | `ac.srat.*`／`ac.slit.*` | L0 | M | — |
-| P2-008 | HMAT 記憶體效能表 | 頻寬／延遲階層 | `ac.hmat.*` | L0 | M | P2-007 |
-| P2-009 | PPTT 處理器拓撲 | 核心／快取階層拓撲 | `ac.pptt.*` | L0 | M | — |
-| P2-010 | DMAR／IVRS IOMMU 表 | 以 ACPI 表陳述 IOMMU 範圍 | `ac.dmar.*` | L0 | M | — |
-| P2-011 | CEDT／CXL 表 | CXL 元件與記憶體範圍 | `ac.cedt.*` | L0 | M | — |
-| P2-012 | NFIT 永久記憶體表 | NVDIMM 區域與裝置 | `ac.nfit.*` | L0 | M | — |
-| P2-013 | BGRT 開機圖形表 | 開機標誌位置與狀態 | `ac.bgrt` | L0 | S | — |
-| P2-014 | SPCR／DBG2 除錯埠 | 序列與除錯埠宣告 | `ac.spcr`／`ac.dbg2.*` | L0 | S | — |
-| P2-015 | HPET 與計時器表 | 高精度計時器全欄位 | `ac.hpet.*` | L0 | S | — |
-| P2-016 | MCFG 與 PCIe 段 | ECAM 基底與段號 | `ac.mcfg.*` | L0 | S | — |
-| P2-017 | TPM2 與 WPBT 表 | TPM 位置與 WPBT 存在性陳述 | `ac.tpm2`／`ac.table.wpbt` | L0 | S | — |
-| P2-018 | PDTT／LPIT 等其餘表 | 逐簽章解碼並標未支援 | `ac.table.{sig}` | L0 | M | P2-002 |
-| P2-019 | SMBIOS Type 0–3 | BIOS／系統／底板／機箱全欄位 | `sb.type0.*`–`sb.type3.*` | L1 | M | — |
-| P2-020 | SMBIOS Type 4／7 | 處理器與快取 | `sb.type4.*` | L0 | M | — |
-| P2-021 | SMBIOS Type 9 插槽 | 系統插槽與已用狀態 | `sb.slot.*` | L0 | M | — |
-| P2-022 | SMBIOS Type 11 OEM 字串 | 廠商字串列 | `sb.oem.strings` | L1 | S | — |
-| P2-023 | SMBIOS Type 16／17 記憶體 | 陣列與裝置全欄位（序號遮蔽） | `sb.mem.*` | L1 | M | — |
-| P2-024 | SMBIOS Type 19 記憶體映射 | 實體位址映射 | `sb.memmap.*` | L0 | M | — |
-| P2-025 | SMBIOS Type 32 開機資訊 | 開機狀態與 POST 結果 | `sb.boot.*` | L0 | S | — |
-| P2-026 | SMBIOS Type 39 PSU | 電源供應器與容量 | `sb.psu.*` | L0 | S | P1-043 |
-| P2-027 | SMBIOS Type 41 內建裝置 | 內建裝置與狀態 | `sb.onboard.*` | L0 | S | — |
-| P2-028 | SMBIOS Type 42 管理控制器 | BMC／管理引擎存在性 | `sb.mc.*` | L1 | S | — |
-| P2-029 | SMBIOS Type 43／44 TPM 與處理器附加 | TPM 裝置與處理器特性 | `sb.tpmdev`／`sb.proc_add` | L1 | S | — |
-| P2-030 | SMBIOS 結構長度政策 | 多於規範長度的尾巴欄位 | `sb.trailing.count` | L0 | S | — |
-| P2-031 | SMBIOS 校驗與範圍檢查 | 表長度與結構邊界一致 | `sb.bounds.ok` | L0 | S | — |
-| P2-032 | M.2／PCIe 槽位對照 | 槽位對 PCIe 埠的對應 | `sb.m2.map` | L0 | M | P2-021 |
-| P2-033 | SMBIOS 與 WMI 對照 | SMBIOS 陳述對作業系統視圖 | `sb.cross.*` | L0 | M | P2-019 |
-| ★P2-034 | UEFI 映像 FV／FFS／區段樹 | 攤開映像結構為可導覽樹 | `uefi.section.tree` | L1 | L | P1-009 |
-| P2-035 | 映像 PE32 模組清單 | 列出映像內驅動與應用模組 | `uefi.pe.count` | L1 | M | P2-034 |
-| ★P2-036 | 映像 golden 值以真實傾印為準 | 解碼正確性以真機樣本證明 | （測試） | L0 | M | P2-034 |
-| P2-037 | 映像截斷與突變耐受 | 異常輸入不崩潰且標缺口 | `uefi.parse.gaps` | L0 | M | P2-034 |
-| P2-038 | 映像壓縮型別支援清單 | 已支援／未支援壓縮宣告 | `uefi.comp.supported` | L0 | S | P2-034 |
-| P2-039 | BIOS 區唯讀取得 | 以既有介面取得 BIOS 區 | `bios.region.size` | L1 | M | P2-047 |
-| P2-040 | 開機模式與韌體介面 | UEFI／Legacy 與韌體供應商 | `fw.mode`／`fw.vendor` | L0 | S | — |
-| P2-041 | 韌體版本與日期 | 系統與選項 ROM 版本 | `fw.version`／`fw.date` | L0 | S | — |
-| P2-042 | 開機順序與選項 | 開機裝置順序（唯讀） | `fw.bootorder` | L1 | S | — |
-| P2-043 | 開機時間分解 | 韌體／開機載入器／核心階段 | `boot.duration_ms` | L0 | M | — |
-| P2-044 | 開機自我測試結果 | POST 結果與最後開機時間 | `boot.last_time` | L0 | S | P2-025 |
-| P2-045 | 快速開機與休眠狀態 | 影響量測可信度的狀態 | `boot.fastboot` | L0 | S | — |
-| P2-046 | 韌體設定可讀項盤點 | 可讀設定與不可讀設定分列 | `fw.settings.readable` | L1 | M | — |
-| P2-047 | SPI 快閃地圖 | SPI 區域劃分與用途 | `spi.map.*` | L0 | M | — |
-| P2-048 | BIOS 區雜湊與原廠比對 | 逐區段比對原廠映像 | `bios.hash`／`bios.diff` | L0 | L | P2-039 |
-| P2-049 | 微碼版本雙來源對帳 | MSR 與登錄檔版本互校 | `mc.version` | L0 | M | — |
-| P2-050 | 映像與韌體版本一致性 | 映像內版本對韌體宣告版本 | `uefi.version.cross` | L0 | M | P2-041 |
-| P2-051 | 選項 ROM 盤點 | PCI 裝置選項 ROM 存在與簽章 | `fw.rom.list` | L1 | M | — |
-| P2-052 | FIT 表存在性與解析 | 韌體介面表的可讀欄位 | `fit.present` | L0 | M | — |
-| P2-053 | Boot Guard 狀態陳述 | 依 FIT 與 MSR 陳述 | `bt.state` | L0 | M | P2-052 |
-| P2-054 | 初始開機塊判定 | IBB 範圍與雜湊宣告 | `bt.ibb` | L0 | L | P2-053 |
-| P2-055 | 金鑰模組判定 | KM 存在性與類型 | `bt.km` | L0 | M | P2-053 |
-| P2-056 | 量測開機支援旗標 | 平台是否支援量測開機 | `bt.measured_boot` | L0 | S | P2-053 |
-| P2-057 | 開機鏈元件清單 | 逐層開機元件與其量測狀態 | `bt.chain.list` | L1 | M | P2-064 |
-| P2-058 | 信任根來源陳述 | 硬體信任根類型 | `bt.root` | L0 | S | — |
-| P2-059 | 韌體寫入保護狀態 | BIOS 寫入保護旗標 | `bt.wp` | L0 | S | — |
-| P2-060 | 開機鏈落差報告 | 宣告與實測的量測落差 | `bt.chain.gap` | L1 | M | P2-057 |
-| P2-061 | 韌體復原路徑陳述 | 復原區與膠囊支援 | `bt.recovery` | L0 | S | — |
-| P2-062 | 信任根與 VBS 對照 | 硬體信任根對虛擬化安全 | `bt.cross.vbs` | L0 | S | P2-061；參照：P7-001 |
-| P2-063 | PCR 讀取與銀行清單 | 各 PCR 的演算法銀行 | `tpm.pcr.banks` | L0 | M | — |
-| ★P2-064 | TPM 開機鏈重放 | 逐筆重放並與 PCR 對帳 | `tpm.replay.summary` | L1 | L | P2-063 |
-| P2-065 | PCR 逐索引陳述 | 逐 PCR 的重放結果 | `tpm.replay.pcr.{n}` | L1 | S | P2-064 |
-| P2-066 | 重放首個不一致點 | 具名指出第一筆不符事件 | `tpm.replay.first_mismatch` | L1 | S | P2-064 |
-| P2-067 | 未支援演算法與事件清單 | 不以 0 補，逐項列出 | `tpm.replay.unsupported.count` | L0 | S | P2-064 |
-| P2-068 | TPM 存在性與規格版本 | 2.0／1.2 與實作版本 | `tpm.version` | L0 | S | — |
-| P2-069 | 擁有者與啟用狀態 | 是否已取得擁有權 | `tpm.owned` | L1 | S | — |
-| P2-070 | 簽署金鑰存在性 | EK／AK 存在性（不含金鑰值） | `tpm.key.present` | L1 | S | P1-048（L3 禁項掃描守門） |
-| P2-071 | 量測開機日誌摘要 | 日誌筆數與事件型別分布 | `tpm.log.summary` | L1 | S | P2-064 |
-| P2-072 | 開機事件型別直方圖 | 各型別事件計數 | `tpm.log.histogram` | L1 | S | P2-064 |
-| P2-073 | TPM 與 Secure Boot 對照 | 兩者的狀態一致性 | `tpm.cross.sb` | L0 | S | P2-078 |
-| P2-074 | TPM 韌體版本與弱點知識包 | 對照已知弱點 | `tpm.cve` | L0 | M | P1-041 |
-| P2-075 | 遠端證明能力陳述 | 是否具備證明能力（不上網） | `tpm.attest.capable` | L1 | S | — |
-| P2-076 | 清除與重設風險說明 | 明示本專案不做清除 | `tpm.clear.boundary` | L0 | S | — |
-| P2-077 | 量測鏈與硬體事件關聯 | 開機事件對硬體變更時間線 | `tpm.cross.hwchange` | L1 | M | P2-064 |
-| P2-078 | Secure Boot 四態陳述 | 存在／啟用／已設定／雜湊世代 | `ev.secureboot.*` | L0 | M | — |
-| P2-079 | 平台金鑰與 KEK 計數 | PK／KEK 存在性與計數 | `ev.pk.count` | L1 | S | P2-078 |
-| P2-080 | db／dbx 條目計數 | 允許與撤銷清單規模 | `ev.db.count`／`ev.dbx.count` | L0 | S | P2-078 |
-| P2-081 | dbx 版本與知識包對照 | 撤銷清單是否落後 | `ev.dbx.stale` | L0 | M | P1-042 |
-| P2-082 | EFI 變數盤點 | 變數名稱、大小、屬性 | `ev.var.count` | L1 | M | — |
-| P2-083 | 變數屬性與寫入保護 | 唯讀／執行期可寫 | `ev.var.attrs` | L1 | S | P2-082 |
-| P2-084 | 開機選項變數 | 開機序號變數內容 | `ev.bootorder.var` | L1 | S | P2-082 |
-| P2-085 | 不安全開機旗標 | testsigning 等狀態陳述 | `ev.testsigning` | L0 | S | — |
-| P2-086 | SPI 區域逐段雜湊 | 逐區域雜湊與大小 | `spi.hash.*` | L0 | M | P2-047 |
-| P2-087 | SPI 區域變更時間線 | 與前次快照比對的變更段 | `spi.changed` | L0 | M | P2-086 |
-| P2-088 | 快閃描述符解析 | 唯讀解析描述符欄位 | `spi.desc.*` | L0 | M | P2-047 |
-| P2-089 | 韌體膠囊與更新痕跡 | 已套用的膠囊與版本跳躍 | `fw.capsule.history` | L0 | M | P2-082 |
-| P2-090 | 變數儲存用量 | NVRAM 使用量與上限 | `ev.nvram.usage` | L0 | S | P2-082 |
-| P2-091 | 韌體熵分布圖 | 逐區塊熵值（抗混淆指標） | `spi.entropy.*` | L0 | M | P2-086 |
-| P2-092 | EC 唯讀風險評估 | 陳述 EC 埠不讀寫的界線 | `ec.boundary` | L0 | S | — |
-| P2-093 | EC 存在性與型號 | 由既有表間接陳述 | `ec.present` | L0 | S | P2-028 |
-| P2-094 | 熱管理與風扇曲線可讀項 | 由 EC 或 WMI 可讀者 | `ec.thermal.readable` | L0 | M | — |
-| P2-095 | 電池與 EC 充放狀態 | 唯讀充放事實 | `ec.battery.state` | L0 | S | — |
-| P2-096 | 周邊韌體版本盤點 | 硬碟／SSD／網卡韌體版本 | `pdev.fw.version` | L0 | M | — |
-| P2-097 | 周邊韌體與原廠對照 | 版本落後與建議（陳述非判決） | `pdev.fw.delta` | L0 | M | P1-043 |
-| P2-098 | 韌體更新能力宣告 | 各元件是否可更新（唯讀宣告） | `pdev.fw.updatable` | L0 | S | — |
-| P2-099 | 韌體風險分數構成 | 各項風險事實與其來源 | `fw.risk.facts.parts` | L0 | M | — |
-| P2-100 | 韌體風險等級陳述 | 分級但不下「不安全」判決 | `fw.risk.facts.level` | L0 | S | P2-099 |
-| P2-101 | 韌體風險缺口申報 | 未取得項對風險分的影響 | `fw.risk.facts.gap` | L0 | S | P2-099 |
-| P2-102 | 韌體基線可匯出 | 匯出可離線比對的基線 | `fw.risk.facts.baseline` | L1 | S | P2-099 |
-| P2-103 | 韌體變更報告 | 兩次掃描間的韌體差異 | `fw.risk.facts.delta` | L1 | M | P2-102 |
-| P2-104 | 韌體稽核報告輸出 | 交第三方複核的報告 | `fw.risk.facts.report` | L1 | M | P1-072 |
-| P2-105 | 韌體章節的文件對帳 | 本階段規格與實作逐項對帳 | `fw.doc.reconcile` | L0 | S | P1-105 |
+| ID | 名稱 | 目標（一句） | 輸出鍵 | 敏感度 | 成本 | 依賴 | 實作鍵 |
+|---|---|---|---|---|---|---|---|
+| P2-001 | ACPI 表頭校驗和全查 | 逐表驗證表頭 checksum 並標不符 | `ac.checksum.bad` | L0 | S | P2-002 |ok:ac.checksum.bad 
+| P2-002 | ACPI 表盤點與彙總 | 列出全部表、簽章、長度、序號 | `ac.tables.summary` | L0 | S | — |ok:ac.tables.summary 
+| P2-003 | DSDT／SSDT 字串掃描 | 掃出 AML 內可見字串與計數 | `ac.aml.str.count` | L1 | S | — |ok:ac.aml.str.count 
+| P2-004 | 第三方 SSDT 對照 | 標出非原廠簽章的 SSDT | `ac.ssdt.third.list` | L0 | M | P2-003 |ok:ac.ssdt.third.list 
+| P2-005 | 位元碼評估界線聲明 | 明示不評估 AML 位元碼 | `ac.aml.boundary` | L0 | S | — |ok:ac.aml.boundary 
+| P2-006 | MADT 全欄位 | 中斷控制器與處理器清單 | `ac.madt.*` | L0 | M | — |ok:ac.madt.* 
+| P2-007 | SRAT／SLIT 拓撲 | NUMA 親和與距離矩陣 | `ac.srat.*`／`ac.slit.*` | L0 | M | — |todo:／todo: 
+| P2-008 | HMAT 記憶體效能表 | 頻寬／延遲階層 | `ac.hmat.*` | L0 | M | P2-007 |todo: 
+| P2-009 | PPTT 處理器拓撲 | 核心／快取階層拓撲 | `ac.pptt.*` | L0 | M | — |ok:ac.pptt.* 
+| P2-010 | DMAR／IVRS IOMMU 表 | 以 ACPI 表陳述 IOMMU 範圍 | `ac.dmar.*` | L0 | M | — |ok:ac.dmar.* 
+| P2-011 | CEDT／CXL 表 | CXL 元件與記憶體範圍 | `ac.cedt.*` | L0 | M | — |todo: 
+| P2-012 | NFIT 永久記憶體表 | NVDIMM 區域與裝置 | `ac.nfit.*` | L0 | M | — |ok:ac.nfit.* 
+| P2-013 | BGRT 開機圖形表 | 開機標誌位置與狀態 | `ac.bgrt` | L0 | S | — |ok:ac.bgrt 
+| P2-014 | SPCR／DBG2 除錯埠 | 序列與除錯埠宣告 | `ac.spcr`／`ac.dbg2.*` | L0 | S | — |ok:ac.spcr／ok:ac.dbg2.* 
+| P2-015 | HPET 與計時器表 | 高精度計時器全欄位 | `ac.hpet.*` | L0 | S | — |ok:ac.hpet.* 
+| P2-016 | MCFG 與 PCIe 段 | ECAM 基底與段號 | `ac.mcfg.*` | L0 | S | — |ok:ac.mcfg.* 
+| P2-017 | TPM2 與 WPBT 表 | TPM 位置與 WPBT 存在性陳述 | `ac.tpm2`／`ac.table.wpbt` | L0 | S | — |todo:／alias:se.wpbt 
+| P2-018 | PDTT／LPIT 等其餘表 | 逐簽章解碼並標未支援 | `ac.table.{sig}` | L0 | M | P2-002 |alias:acpi.table.{sig} 
+| P2-019 | SMBIOS Type 0–3 | BIOS／系統／底板／機箱全欄位 | `sb.type0.*`–`sb.type3.*` | L1 | M | — |todo: 
+| P2-020 | SMBIOS Type 4／7 | 處理器與快取 | `sb.type4.*` | L0 | M | — |todo: 
+| P2-021 | SMBIOS Type 9 插槽 | 系統插槽與已用狀態 | `sb.slot.*` | L0 | M | — |ok:sb.slot.* 
+| P2-022 | SMBIOS Type 11 OEM 字串 | 廠商字串列 | `sb.oem.strings` | L1 | S | — |alias:sb.oem.list 
+| P2-023 | SMBIOS Type 16／17 記憶體 | 陣列與裝置全欄位（序號遮蔽） | `sb.mem.*` | L1 | M | — |alias:sb.dim.* 
+| P2-024 | SMBIOS Type 19 記憶體映射 | 實體位址映射 | `sb.memmap.*` | L0 | M | — |todo: 
+| P2-025 | SMBIOS Type 32 開機資訊 | 開機狀態與 POST 結果 | `sb.boot.*` | L0 | S | — |todo: 
+| P2-026 | SMBIOS Type 39 PSU | 電源供應器與容量 | `sb.psu.*` | L0 | S | P1-043 |alias:sb.psu 
+| P2-027 | SMBIOS Type 41 內建裝置 | 內建裝置與狀態 | `sb.onboard.*` | L0 | S | — |todo: 
+| P2-028 | SMBIOS Type 42 管理控制器 | BMC／管理引擎存在性 | `sb.mc.*` | L1 | S | — |alias:sb.mctl 
+| P2-029 | SMBIOS Type 43／44 TPM 與處理器附加 | TPM 裝置與處理器特性 | `sb.tpmdev`／`sb.proc_add` | L1 | S | — |todo:／todo: 
+| P2-030 | SMBIOS 結構長度政策 | 多於規範長度的尾巴欄位 | `sb.trailing.count` | L0 | S | — |todo: 
+| P2-031 | SMBIOS 校驗與範圍檢查 | 表長度與結構邊界一致 | `sb.bounds.ok` | L0 | S | — |todo: 
+| P2-032 | M.2／PCIe 槽位對照 | 槽位對 PCIe 埠的對應 | `sb.m2.map` | L0 | M | P2-021 |alias:sb.m2slot.* 
+| P2-033 | SMBIOS 與 WMI 對照 | SMBIOS 陳述對作業系統視圖 | `sb.cross.*` | L0 | M | P2-019 |todo: 
+| ★P2-034 | UEFI 映像 FV／FFS／區段樹 | 攤開映像結構為可導覽樹 | `uefi.section.tree` | L1 | L | P1-009 |todo: 
+| P2-035 | 映像 PE32 模組清單 | 列出映像內驅動與應用模組 | `uefi.pe.count` | L1 | M | P2-034 |todo: 
+| ★P2-036 | 映像 golden 值以真實傾印為準 | 解碼正確性以真機樣本證明 | （測試） | L0 | M | P2-034 |todo: 
+| P2-037 | 映像截斷與突變耐受 | 異常輸入不崩潰且標缺口 | `uefi.parse.gaps` | L0 | M | P2-034 |todo: 
+| P2-038 | 映像壓縮型別支援清單 | 已支援／未支援壓縮宣告 | `uefi.comp.supported` | L0 | S | P2-034 |todo: 
+| P2-039 | BIOS 區唯讀取得 | 以既有介面取得 BIOS 區 | `bios.region.size` | L1 | M | P2-047 |todo: 
+| P2-040 | 開機模式與韌體介面 | UEFI／Legacy 與韌體供應商 | `fw.mode`／`fw.vendor` | L0 | S | — |todo:／todo: 
+| P2-041 | 韌體版本與日期 | 系統與選項 ROM 版本 | `fw.version`／`fw.date` | L0 | S | — |todo:／todo: 
+| P2-042 | 開機順序與選項 | 開機裝置順序（唯讀） | `fw.bootorder` | L1 | S | — |todo: 
+| P2-043 | 開機時間分解 | 韌體／開機載入器／核心階段 | `boot.duration_ms` | L0 | M | — |ok:boot.duration_ms 
+| P2-044 | 開機自我測試結果 | POST 結果與最後開機時間 | `boot.last_time` | L0 | S | P2-025 |ok:boot.last_time 
+| P2-045 | 快速開機與休眠狀態 | 影響量測可信度的狀態 | `boot.fastboot` | L0 | S | — |todo: 
+| P2-046 | 韌體設定可讀項盤點 | 可讀設定與不可讀設定分列 | `fw.settings.readable` | L1 | M | — |todo: 
+| P2-047 | SPI 快閃地圖 | SPI 區域劃分與用途 | `spi.map.*` | L0 | M | — |todo: 
+| P2-048 | BIOS 區雜湊與原廠比對 | 逐區段比對原廠映像 | `bios.hash`／`bios.diff` | L0 | L | P2-039 |todo:／todo: 
+| P2-049 | 微碼版本雙來源對帳 | MSR 與登錄檔版本互校 | `mc.version` | L0 | M | — |todo: 
+| P2-050 | 映像與韌體版本一致性 | 映像內版本對韌體宣告版本 | `uefi.version.cross` | L0 | M | P2-041 |todo: 
+| P2-051 | 選項 ROM 盤點 | PCI 裝置選項 ROM 存在與簽章 | `fw.rom.list` | L1 | M | — |todo: 
+| P2-052 | FIT 表存在性與解析 | 韌體介面表的可讀欄位 | `fit.present` | L0 | M | — |todo: 
+| P2-053 | Boot Guard 狀態陳述 | 依 FIT 與 MSR 陳述 | `bt.state` | L0 | M | P2-052 |todo: 
+| P2-054 | 初始開機塊判定 | IBB 範圍與雜湊宣告 | `bt.ibb` | L0 | L | P2-053 |todo: 
+| P2-055 | 金鑰模組判定 | KM 存在性與類型 | `bt.km` | L0 | M | P2-053 |todo: 
+| P2-056 | 量測開機支援旗標 | 平台是否支援量測開機 | `bt.measured_boot` | L0 | S | P2-053 |todo: 
+| P2-057 | 開機鏈元件清單 | 逐層開機元件與其量測狀態 | `bt.chain.list` | L1 | M | P2-064 |todo: 
+| P2-058 | 信任根來源陳述 | 硬體信任根類型 | `bt.root` | L0 | S | — |todo: 
+| P2-059 | 韌體寫入保護狀態 | BIOS 寫入保護旗標 | `bt.wp` | L0 | S | — |todo: 
+| P2-060 | 開機鏈落差報告 | 宣告與實測的量測落差 | `bt.chain.gap` | L1 | M | P2-057 |todo: 
+| P2-061 | 韌體復原路徑陳述 | 復原區與膠囊支援 | `bt.recovery` | L0 | S | — |todo: 
+| P2-062 | 信任根與 VBS 對照 | 硬體信任根對虛擬化安全 | `bt.cross.vbs` | L0 | S | P2-061；參照：P7-001 |todo: 
+| P2-063 | PCR 讀取與銀行清單 | 各 PCR 的演算法銀行 | `tpm.pcr.banks` | L0 | M | — |ok:tpm.pcr.banks 
+| ★P2-064 | TPM 開機鏈重放 | 逐筆重放並與 PCR 對帳 | `tpm.replay.summary` | L1 | L | P2-063 |ok:tpm.replay.summary 
+| P2-065 | PCR 逐索引陳述 | 逐 PCR 的重放結果 | `tpm.replay.pcr.{n}` | L1 | S | P2-064 |ok:tpm.replay.pcr.{n} 
+| P2-066 | 重放首個不一致點 | 具名指出第一筆不符事件 | `tpm.replay.first_mismatch` | L1 | S | P2-064 |todo: 
+| P2-067 | 未支援演算法與事件清單 | 不以 0 補，逐項列出 | `tpm.replay.unsupported.count` | L0 | S | P2-064 |todo: 
+| P2-068 | TPM 存在性與規格版本 | 2.0／1.2 與實作版本 | `tpm.version` | L0 | S | — |ok:tpm.version 
+| P2-069 | 擁有者與啟用狀態 | 是否已取得擁有權 | `tpm.owned` | L1 | S | — |todo: 
+| P2-070 | 簽署金鑰存在性 | EK／AK 存在性（不含金鑰值） | `tpm.key.present` | L1 | S | P1-048（L3 禁項掃描守門） |todo: 
+| P2-071 | 量測開機日誌摘要 | 日誌筆數與事件型別分布 | `tpm.log.summary` | L1 | S | P2-064 |todo: 
+| P2-072 | 開機事件型別直方圖 | 各型別事件計數 | `tpm.log.histogram` | L1 | S | P2-064 |todo: 
+| P2-073 | TPM 與 Secure Boot 對照 | 兩者的狀態一致性 | `tpm.cross.sb` | L0 | S | P2-078 |todo: 
+| P2-074 | TPM 韌體版本與弱點知識包 | 對照已知弱點 | `tpm.cve` | L0 | M | P1-041 |todo: 
+| P2-075 | 遠端證明能力陳述 | 是否具備證明能力（不上網） | `tpm.attest.capable` | L1 | S | — |todo: 
+| P2-076 | 清除與重設風險說明 | 明示本專案不做清除 | `tpm.clear.boundary` | L0 | S | — |todo: 
+| P2-077 | 量測鏈與硬體事件關聯 | 開機事件對硬體變更時間線 | `tpm.cross.hwchange` | L1 | M | P2-064 |todo: 
+| P2-078 | Secure Boot 四態陳述 | 存在／啟用／已設定／雜湊世代 | `ev.secureboot.*` | L0 | M | — |todo: 
+| P2-079 | 平台金鑰與 KEK 計數 | PK／KEK 存在性與計數 | `ev.pk.count` | L1 | S | P2-078 |todo: 
+| P2-080 | db／dbx 條目計數 | 允許與撤銷清單規模 | `ev.db.count`／`ev.dbx.count` | L0 | S | P2-078 |todo:／todo: 
+| P2-081 | dbx 版本與知識包對照 | 撤銷清單是否落後 | `ev.dbx.stale` | L0 | M | P1-042 |todo: 
+| P2-082 | EFI 變數盤點 | 變數名稱、大小、屬性 | `ev.var.count` | L1 | M | — |todo: 
+| P2-083 | 變數屬性與寫入保護 | 唯讀／執行期可寫 | `ev.var.attrs` | L1 | S | P2-082 |todo: 
+| P2-084 | 開機選項變數 | 開機序號變數內容 | `ev.bootorder.var` | L1 | S | P2-082 |todo: 
+| P2-085 | 不安全開機旗標 | testsigning 等狀態陳述 | `ev.testsigning` | L0 | S | — |todo: 
+| P2-086 | SPI 區域逐段雜湊 | 逐區域雜湊與大小 | `spi.hash.*` | L0 | M | P2-047 |todo: 
+| P2-087 | SPI 區域變更時間線 | 與前次快照比對的變更段 | `spi.changed` | L0 | M | P2-086 |todo: 
+| P2-088 | 快閃描述符解析 | 唯讀解析描述符欄位 | `spi.desc.*` | L0 | M | P2-047 |todo: 
+| P2-089 | 韌體膠囊與更新痕跡 | 已套用的膠囊與版本跳躍 | `fw.capsule.history` | L0 | M | P2-082 |todo: 
+| P2-090 | 變數儲存用量 | NVRAM 使用量與上限 | `ev.nvram.usage` | L0 | S | P2-082 |todo: 
+| P2-091 | 韌體熵分布圖 | 逐區塊熵值（抗混淆指標） | `spi.entropy.*` | L0 | M | P2-086 |todo: 
+| P2-092 | EC 唯讀風險評估 | 陳述 EC 埠不讀寫的界線 | `ec.boundary` | L0 | S | — |todo: 
+| P2-093 | EC 存在性與型號 | 由既有表間接陳述 | `ec.present` | L0 | S | P2-028 |todo: 
+| P2-094 | 熱管理與風扇曲線可讀項 | 由 EC 或 WMI 可讀者 | `ec.thermal.readable` | L0 | M | — |todo: 
+| P2-095 | 電池與 EC 充放狀態 | 唯讀充放事實 | `ec.battery.state` | L0 | S | — |todo: 
+| P2-096 | 周邊韌體版本盤點 | 硬碟／SSD／網卡韌體版本 | `pdev.fw.version` | L0 | M | — |todo: 
+| P2-097 | 周邊韌體與原廠對照 | 版本落後與建議（陳述非判決） | `pdev.fw.delta` | L0 | M | P1-043 |todo: 
+| P2-098 | 韌體更新能力宣告 | 各元件是否可更新（唯讀宣告） | `pdev.fw.updatable` | L0 | S | — |todo: 
+| P2-099 | 韌體風險分數構成 | 各項風險事實與其來源 | `fw.risk.facts.parts` | L0 | M | — |todo: 
+| P2-100 | 韌體風險等級陳述 | 分級但不下「不安全」判決 | `fw.risk.facts.level` | L0 | S | P2-099 |todo: 
+| P2-101 | 韌體風險缺口申報 | 未取得項對風險分的影響 | `fw.risk.facts.gap` | L0 | S | P2-099 |todo: 
+| P2-102 | 韌體基線可匯出 | 匯出可離線比對的基線 | `fw.risk.facts.baseline` | L1 | S | P2-099 |todo: 
+| P2-103 | 韌體變更報告 | 兩次掃描間的韌體差異 | `fw.risk.facts.delta` | L1 | M | P2-102 |todo: 
+| P2-104 | 韌體稽核報告輸出 | 交第三方複核的報告 | `fw.risk.facts.report` | L1 | M | P1-072 |todo: 
+| P2-105 | 韌體章節的文件對帳 | 本階段規格與實作逐項對帳 | `fw.doc.reconcile` | L0 | S | P1-105 |todo: 
 
 ---
 
