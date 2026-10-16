@@ -1,0 +1,8 @@
+解碼器讀到 initiators=1 targets=1（預期 1 與 1）
+off=40 len=56
+tailStart = 32 + 1*4 + 1*4 = 40
+檢查：tailStart+12 = 52 vs len 56
+檢查：off+tailStart+12 = 92 vs table 96
+解碼器會用的位移 t = 84
+t..t+8 的值 = 120, 140, 0, 0
+Latencies：hierarchy=3 read=0 write=0
