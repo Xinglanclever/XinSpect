@@ -192,6 +192,35 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>TPM 與 Secure Boot 的狀態對照（ULTIMATE-1000 階段二 P2-073）。</summary>
     public IReadOnlyList<HardwareFact> TpmSecureBootCrossFacts { get; private set; } = [];
 
+    /// <summary>韌體復原路徑（ULTIMATE-1000 階段二 P2-061）。</summary>
+    public IReadOnlyList<HardwareFact> FirmwareRecoveryFacts { get; private set; } = [];
+
+    /// <summary>
+    /// 讀 <c>OsIndicationsSupported</c>（UEFI 變數，8 位元組小端）。
+    /// 讀不到或長度不符回 <c>null</c>——**「讀不到」與「值為 0」是不同的斷言**。
+    /// </summary>
+    private static uint? ReadOsIndications()
+    {
+        var raw = UefiSignatureFactsService.ReadFirmwareVar("OsIndicationsSupported");
+        if (raw is not { Length: >= 8 }) return null;
+        // UEFI 變數內是 little-endian 的 UINT64；本專案只取低 32 位（上 32 位目前全保留）。
+        return BitConverter.ToUInt32(raw, 0);
+    }
+
+    /// <summary>
+    /// 映像內既有的 FV GUID 清單——**只給數量，不拿來辨識復原區**
+    /// （那需要一張平台慣例表，而本專案沒有）。
+    /// </summary>
+    private IReadOnlyList<string> FirmwareFvGuids()
+    {
+        // 從既有的 FV 事實取值；**不另外讀一次映像**。
+        return UefiFvFacts is null
+            ? []
+            : UefiFvFacts.Where(f => f.Key.StartsWith("ufv.fv.", StringComparison.Ordinal)
+                                     && f.Key.EndsWith(".summary", StringComparison.Ordinal))
+                .Select(f => f.Value).ToList();
+    }
+
     /// <summary>
     /// 量測開機支援旗標（ULTIMATE-1000 階段二 P2-056）。
     /// <b>有 TPM 不等於有量測開機</b>——判準是關鍵 PCR 的內容。
@@ -582,6 +611,15 @@ public sealed class EvidenceLabService : ObservableObject
         SmbusFacts = TsodSurveyor.CollectWithLock(smbusIo, pci.ReadDword, at);
         UefiFacts = UefiBootFactsService.Collect(at);
         UefiSignatureFacts = UefiSignatureFactsService.Collect(at);
+        // P2-061 韌體復原路徑：讀既有的 OsIndicationsSupported 變數（走同一條
+        // GetFirmwareEnvironmentVariableEx 通路——UefiSignatureFactsService.ReadFirmwareVar），
+        // 加上映像內既有的 FV 清單。
+        //
+        // **復原區那一半不辨識**，理由寫在服務裡（缺的是一張平台慣例表，不是實作）。
+        FirmwareRecoveryFacts = FirmwareRecoveryFactsService.Collect(at,
+            new FirmwareRecoveryFactsService.RecoveryInput(
+                ReadOsIndications(),
+                FirmwareFvGuids()));
         SuperIoFacts = SuperIoProbeService.Collect(io, at);
         HwmFacts = SuperIoHwmFactsService.Collect(io, at);
         PciInventoryFacts = Bus0InventoryService.Collect(pci, at);
