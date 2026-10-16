@@ -39,6 +39,18 @@ public static class WiringDecisions
                 "開監聽＝新增一個本機攻擊面與資料外洩路徑，屬需要使用者點頭的產品決定，不是漏接線。" +
                 "README 功能節已如實標「HTTP 監聽殼未自動啟動」；事實的頭less 出口由 CLI（--json）承擔，" +
                 "重新啟動的條件＝使用者明確要 API 入口並同意 loopback 綁定與 token 政策。",
+            ["EfiVariableFactsService"] =
+                "ULTIMATE-1000 階段二 P2-083（ev.var.attrs）：本服務的 Collect 需要呼叫端提供含 pdwAttrib 的" +
+                "變數讀取結果，而既有的變數通路（UefiSignatureFactsService.ReadFirmwareVar）把" +
+                "GetFirmwareEnvironmentVariableEx 的 pdwAttrib 位置當成緩衝大小的進出用，**屬性的原始值在那一層就沒有被保留**" +
+                "（服務檔的類別註解就是寫這件事）。所以現在接線會生出一個誤導的屬性事實——不是忘記接，是輸入還不存在。" +
+                "接線條件＝那條通路回報屬性；屆時接在既有的 uefi.* 讀取上，不新增第二次讀取。",
+            ["UefiVersionCrossFactsService"] =
+                "ULTIMATE-1000 階段二 P2-050（uefi.version.cross／embedded）：本服務要的輸入是一份 SPI 映像與它" +
+                "解碼出來的 FV 清單（ReadEmbedded(fvs, image)），而那組輸入只在驅動後端的讀取裡存在" +
+                "（UefiFvFactsService.Collect(pci, mmio, at) 內部用完就丟）——usermode 的事實管線拿不到映像。" +
+                "刻意不為它多讀一次 SPI：讀 SPI 是貴且帶寫入風險的操作，而這一項的價值比那個代價低。" +
+                "接線條件＝那條驅動路徑把解碼結果（fvs＋映像）暴露給呼叫端，屆時接在同一次讀取上完成對照。",
             // 註：Services/ExternalAcquisitionService.cs 是接縫檔（interface IExternalAcquisition＋
             // NullAcquisition），檔內沒有 *Service 類別，不在本表掃描範圍——它属于「實作未存在」
             // 的預留接縫，主綱 §5.11 能力矩陣那一輪再處置。

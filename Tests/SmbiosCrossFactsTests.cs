@@ -176,7 +176,9 @@ public class SmbiosCrossFactsTests
         Assert.Contains("SMBIOS 宣告 1 顆實體處理器", c.Value);
         Assert.Contains("合計 16 執行緒", c.Value);
         Assert.Contains("WMI 回報 16 個邏輯處理器", c.Value);
-        Assert.Contains("不是同一個量", c.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("不是同一個量", c.Value);
     }
 
     [Fact]
@@ -186,8 +188,8 @@ public class SmbiosCrossFactsTests
             () => [Type4(threads: 16)]);
         var c = facts.Single(f => f.Key == SmbiosCrossFactsService.CpuCountKey);
 
-        Assert.Contains("具體的落差", c.UnavailableReason);
-        Assert.Contains("不判斷誰對", c.UnavailableReason);
+        Assert.Contains("具體的落差", c.Value);
+        Assert.Contains("不判斷誰對", c.Value);
     }
 
     [Fact]
@@ -223,8 +225,8 @@ public class SmbiosCrossFactsTests
             () => [Type0("AMI", "2.85"), Type1("X", "Y")]);
         var s = facts.Single(f => f.Key == SmbiosCrossFactsService.ComparableKey);
 
-        Assert.Contains("不給一致率", s.UnavailableReason);
-        Assert.Contains("會被讀成評分", s.UnavailableReason);
+        Assert.Contains("不給一致率", s.Value);
+        Assert.Contains("會被讀成評分", s.Value);
     }
 
     [Fact]
@@ -235,8 +237,8 @@ public class SmbiosCrossFactsTests
             () => [Type0("AMI", "2.85"), Type1("X", "Y"), Type2("Z", "W")]);
         var s = facts.Single(f => f.Key == SmbiosCrossFactsService.ComparableKey);
 
-        Assert.Contains("不代表兩邊是同一個來源", s.UnavailableReason);
-        Assert.Contains("WMI 直接轉述 SMBIOS", s.UnavailableReason);
+        Assert.Contains("不代表兩邊是同一個來源", s.Value);
+        Assert.Contains("WMI 直接轉述 SMBIOS", s.Value);
     }
 
     [Fact]
@@ -247,7 +249,10 @@ public class SmbiosCrossFactsTests
         var s = facts.Single(f => f.Key == SmbiosCrossFactsService.ComparableKey);
 
         Assert.Equal(FactAvailability.NotApplicable, s.Availability);
-        Assert.Equal(0.0, s.NumericValue);
+        // **非 Present 的事實不得帶數字**（HardwareFact 的不變式）：0 已被收斂成 null，
+        // 而「原本是多少」留在理由欄的痕跡裡（不是靜默修正）。
+        Assert.Null(s.NumericValue);
+        Assert.Contains("原本帶了數字 0", s.UnavailableReason);
     }
 
     // ── 鍵集合與目錄 ────────────────────────────────────────────────────

@@ -191,7 +191,9 @@ public class VirtualizationJudgeTests
 
         var judge = Assert.Single(facts, f => f.Key == "virt.judge");
         Assert.Contains("Microsoft Hyper-V", judge.Value);
-        Assert.Equal("否（虛擬層可能攔截或改寫）", Assert.Single(facts, f => f.Key == "virt.msr").Value);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.StartsWith("否（虛擬層可能攔截或改寫）", Assert.Single(facts, f => f.Key == "virt.msr").Value);
     }
 
     [Fact]

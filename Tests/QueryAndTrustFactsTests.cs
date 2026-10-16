@@ -44,7 +44,10 @@ public class QueryAndTrustFactsTests
         ]);
 
         Assert.Equal(FactAvailability.Unknown, f.Availability);
-        Assert.Equal(1, f.NumericValue);
+        // **非 Present 的事實不得帶數字**（HardwareFact 的不變式）：1 已被收斂成 null，
+        // 而「原本是多少」留在理由欄的痕跡裡（不是靜默修正）。
+        Assert.Null(f.NumericValue);
+        Assert.Contains("原本帶了數字 1", f.UnavailableReason);
         Assert.Contains("cpu.temp", f.Value);
         Assert.Contains("GiB×1", f.Value);
         Assert.Contains("可換算單位 1 種", f.Value);
@@ -102,7 +105,10 @@ public class QueryAndTrustFactsTests
             Fact("e.f", "", availability: FactAvailability.NotSupported),
         ]);
 
-        Assert.Equal(1, f.NumericValue);
+        // **非 Present 的事實不得帶數字**（HardwareFact 的不變式）：1 已被收斂成 null，
+        // 而「原本是多少」留在理由欄的痕跡裡（不是靜默修正）。
+        Assert.Null(f.NumericValue);
+        Assert.Contains("原本帶了數字 1", f.UnavailableReason);
         Assert.Contains("紅（對帳矛盾）1 條", f.Value);
         Assert.Contains("黃（不支援／缺權限／不適用）1 條", f.Value);
         Assert.Contains("灰（未知／讀取失敗）1 條", f.Value);

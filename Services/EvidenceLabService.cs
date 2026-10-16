@@ -535,6 +535,11 @@ public sealed class EvidenceLabService : ObservableObject
         // **使用者模式看不到選項 ROM 的內容**，所以這裡只列「哪些裝置自述有 ROM BAR」
         // ——真實列舉如實回空，不假裝列舉過。
         OptionRomFacts = OptionRomFactsService.Collect(at);
+        // ULTIMATE-1000 階段二 P2-095：電池與 EC 充放狀態。
+        // **它不新增讀取路徑**——用既有的 <see cref="BatteryService"/>（WMI Win32_Battery）結果，
+        // 而「讀取本身失敗」與「這台機器沒有電池」在事實層是兩個不同的斷言。
+        // （它與 pw.battery.summary 的區隔寫在服務檔的類別註解，不在理由欄——見 HardwareFact 的不變式。）
+        BatteryStateFacts = BatteryStateFactsService.Collect(at, new BatteryService().Read());
         PpttFacts = PpttFactsService.Collect(new Win32AcpiTableSource(), at, Environment.ProcessorCount);
         ServerModeFacts = ServerModeFactsService.Collect(at);
         RoleFacts = RoleSurfaceFactsService.Collect(at);
@@ -560,6 +565,7 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(FirmwareSettingsReachFacts)
             .Concat(MicrocodeVersionFacts)
             .Concat(OptionRomFacts)
+            .Concat(BatteryStateFacts)
             .Concat(PpttFacts)
             .Concat(ServerModeFacts)
             .Concat(RoleFacts)
@@ -1010,6 +1016,12 @@ public sealed class EvidenceLabService : ObservableObject
     /// <b>陳述 UEFI 變數裡寫的順序，不是實際的開機結果。</b>
     /// </summary>
     public IReadOnlyList<HardwareFact> UefiBootOrderFacts { get; private set; } = [];
+
+    /// <summary>
+    /// 電池充放狀態事實（ULTIMATE-1000 階段二 P2-095）。
+    /// <b>陳述「現在是什麼狀況」，不是「這顆電池老了沒有」</b>——後者是 pw.battery.summary。
+    /// </summary>
+    public IReadOnlyList<HardwareFact> BatteryStateFacts { get; private set; } = [];
 
     /// <summary>
     /// 快速開機與休眠狀態（ULTIMATE-1000 階段二 P2-045）。

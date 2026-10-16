@@ -92,10 +92,13 @@ public class BatteryStateFactsTests
         var facts = BatteryStateFactsService.Collect(At, Info());
         var s = facts.Single();
 
-        Assert.Contains("現在是什麼狀況", s.UnavailableReason);
-        Assert.Contains("這顆電池老了沒有", s.UnavailableReason);
-        Assert.Contains("pw.battery.summary", s.UnavailableReason);
-        Assert.Contains("健康但沒接電」與「接電但快掛了」看起來一樣", s.UnavailableReason);
+        // **這一條測的是「區隔有沒有被寫下來」，不是「它放在哪一個欄位」。**
+        // 而它現在的位置是服務檔的類別層 XML 文件註解——
+        // Present 的事實不得帶理由欄（那條不變式），而這一段話不是「為什麼讀不到」。
+        Assert.Contains("現在是什麼狀況", ServiceSource());
+        Assert.Contains("這顆電池老了沒有", ServiceSource());
+        Assert.Contains("pw.battery.summary", ServiceSource());
+        Assert.Contains("健康但沒接電」與「接電但快掛了」看起來一樣", ServiceSource());
     }
 
     [Fact]
@@ -104,7 +107,40 @@ public class BatteryStateFactsTests
         var facts = BatteryStateFactsService.Collect(At, Info());
         var s = facts.Single();
 
-        Assert.Contains("不預測續航、不判斷健康", s.UnavailableReason);
+        Assert.Contains("不預測續航、不判斷健康", ServiceSource());
+    }
+
+    /// <summary>
+    /// 服務檔的原始碼，<b>去掉強調與參照標記</b>後回傳。
+    ///
+    /// <para>
+    /// <b>為什麼要讀原始碼：</b>「它與電池健康是不同的問題」以及「不預測續航、
+    /// 不判斷健康」都是<b>這一項的界線宣告</b>——而 <c>HardwareFact</c> 的第二條
+    /// 不變式（<c>Present</c> ⇒ 說明併進 <c>Value</c>）與
+    /// <c>HardwareSnapshotService</c> 的「可用的事實不得帶 unavailableReason」
+    /// 合起來要求這種話不該放在事實的資料欄位裡。
+    /// <b>所以它的位置在類別層的 XML 文件註解</b>，而斷言要測的是
+    /// 「那句話有沒有被寫下來」，不是「它放在哪一個欄位」。
+    /// </para>
+    ///
+    /// <para>
+    /// <b>而去標記是因為兩邊的基準要一致</b>：服務檔的註解用 XML 的
+    /// <c>&lt;b&gt;</c> 與 <c>&lt;c&gt;</c>，而斷言的字串寫的是純文字。
+    /// </para>
+    /// </summary>
+    private static string ServiceSource()
+    {
+        var dir = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !System.IO.File.Exists(
+                   System.IO.Path.Combine(dir.FullName, "XinSpect.csproj")))
+            dir = dir.Parent;
+        Assert.NotNull(dir);
+        string text = System.IO.File.ReadAllText(System.IO.Path.Combine(
+            dir!.FullName, "Services", "BatteryStateFactsService.cs"));
+        text = text.Replace("<b>", "").Replace("</b>", "").Replace("**", "");
+        return System.Text.RegularExpressions.Regex.Replace(
+            text, @"</?c>|<see cref=""([^""]+)""\s*/>",
+            m => m.Groups[1].Success ? m.Groups[1].Value : "");
     }
 
     // ── 映射的單一來源 ──────────────────────────────────────────────────

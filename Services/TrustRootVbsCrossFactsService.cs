@@ -129,10 +129,16 @@ public static class TrustRootVbsCrossFactsService
                   + "**而那不代表設定錯誤**：VBS 可以在 Secure Boot 關閉時執行，"
                   + "只是少了一層保護。";
         }
-        else if (vbsOn || input.Vbs == VbsState.Off)
+        else if (input.Vbs == VbsState.Off)
         {
             // VBS 關著時沒有實質依賴可講，但仍要說出 Secure Boot 那一邊的狀態，
             // 否則那一段會整個消失、看起來像漏了。
+            //
+            // **而這裡不能寫成 `vbsOn || …`**：VBS 開著而 Secure Boot 也開著時，
+            // 上面那一個 switch 已經給出了「VBS 的安全啟動保護有依據」——
+            // 而那正是本項唯一有實質依賴的那一條。寫成 `vbsOn || …` 會把那一句
+            // 蓋成只說「Secure Boot 開著」，讓那把鍵看不出它與 VBS 的關係。
+            // （那是死碼：`true =>` 那個分支永遠不會被讀到。）
             secureBootPart = input.SecureBoot switch
             {
                 true => "**Secure Boot 開著。**",

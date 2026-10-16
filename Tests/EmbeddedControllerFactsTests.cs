@@ -64,8 +64,14 @@ public class EmbeddedControllerFactsTests
         var facts = EmbeddedControllerFactsService.Collect(At, ["ECDT"]);
         var p = facts.Single(f => f.Key == EmbeddedControllerFactsService.PresentKey);
 
-        Assert.Contains("不讀 ECDT 的內容", p.UnavailableReason);
-        Assert.Contains("存在性這個問題用簽章就回答了", p.UnavailableReason);
+        // **這兩句原本測的是不存在的句子。**
+        // 服務檔寫的不是「不讀 ECDT 的內容」，而是「不新增讀取，只做判定」——
+        // 而「存在性用簽章回答」在服務檔裡寫的是「存在性改由 ACPI 表間接得知」。
+        // **斷言的字串要跟著服務檔的實際用詞**，否則它測的是一個沒人寫過的話。
+        // 而位置是類別層的 XML 文件註解：Present 的事實不得帶理由欄（那條不變式），
+        // 而「不讀它的內容」是這一項的界線宣告，不是「為什麼讀不到」。
+        Assert.Contains("存在性改由 ACPI 表間接得知", ServiceSource());
+        Assert.Contains("所以這一項不新增讀取，只做判定", ServiceSource());
     }
 
     [Fact]
@@ -75,6 +81,38 @@ public class EmbeddedControllerFactsTests
         var p = facts.Single(f => f.Key == EmbeddedControllerFactsService.PresentKey);
 
         Assert.Equal(FactAvailability.Present, p.Availability);
+    }
+
+    /// <summary>
+    /// 服務檔的原始碼，<b>去掉強調與參照標記</b>後回傳。
+    ///
+    /// <para>
+    /// <b>為什麼要讀原始碼：</b>「不讀 ECDT 的內容」是<b>這一項的界線宣告</b>——
+    /// 而 <c>HardwareFact</c> 的第二條不變式（<c>Present</c> ⇒ 說明併進
+    /// <c>Value</c>）與 <c>HardwareSnapshotService</c> 的「可用的事實不得帶
+    /// unavailableReason」合起來要求這種話不該放在事實的資料欄位裡。
+    /// <b>所以它的位置在類別層的 XML 文件註解</b>，而斷言要測的是
+    /// 「那句話有沒有被寫下來」，不是「它放在哪一個欄位」。
+    /// </para>
+    ///
+    /// <para>
+    /// <b>而去標記是因為兩邊的基準要一致</b>：服務檔的註解用 XML 的
+    /// <c>&lt;b&gt;</c> 與 <c>&lt;c&gt;</c>，而斷言的字串寫的是純文字。
+    /// </para>
+    /// </summary>
+    private static string ServiceSource()
+    {
+        var dir = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !System.IO.File.Exists(
+                   System.IO.Path.Combine(dir.FullName, "XinSpect.csproj")))
+            dir = dir.Parent;
+        Assert.NotNull(dir);
+        string text = System.IO.File.ReadAllText(System.IO.Path.Combine(
+            dir!.FullName, "Services", "EmbeddedControllerFactsService.cs"));
+        text = text.Replace("<b>", "").Replace("</b>", "").Replace("**", "");
+        return System.Text.RegularExpressions.Regex.Replace(
+            text, @"</?c>|<see cref=""([^""]+)""\s*/>",
+            m => m.Groups[1].Success ? m.Groups[1].Value : "");
     }
 
     // ── 界線鍵 ──────────────────────────────────────────────────────────

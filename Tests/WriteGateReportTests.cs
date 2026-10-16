@@ -51,7 +51,9 @@ public class WriteGateReportTests
         Assert.Equal(FactAvailability.Present, fact.Availability);
         Assert.Contains("不可撤銷", fact.Value);
         Assert.Contains("審計日誌追加", fact.Value);
-        Assert.Contains("必須被逐一列出來讓人看見", fact.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("必須被逐一列出來讓人看見", fact.Value);
     }
 
     // ── P1-067 寫入計數 ────────────────────────────────────────────────
@@ -149,7 +151,7 @@ public class WriteGateReportTests
 
         Assert.Equal(FactAvailability.Present, fact.Availability);
         Assert.Contains(entries[0].EntryHash, fact.Value);
-        Assert.Contains("任何後續改動都會讓它對不上", fact.UnavailableReason);
+        Assert.Contains("任何後續改動都會讓它對不上", fact.Value);
     }
 
     [Fact]
@@ -236,6 +238,6 @@ public class WriteGateReportTests
         var fact = WriteGateReport.ToInventoryFact(At);
         Assert.Equal(FactAvailability.Present, fact.Availability);
         Assert.Contains("條登記", fact.Value);
-        Assert.Contains("附正對照", fact.UnavailableReason);
+        Assert.Contains("附正對照", fact.Value);
     }
 }

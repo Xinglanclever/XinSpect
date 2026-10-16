@@ -34,7 +34,8 @@ public class DomainKnowledgeAndEgressTests
             DomainKnowledgeReport.Coverage.Covered, []);
 
         Assert.Equal(FactAvailability.Present, fact.Availability);
-        Assert.Contains("不是「這個修訂版永遠安全」", fact.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value。
+        Assert.Contains("不是「這個修訂版永遠安全」", fact.Value);
     }
 
     [Fact]
@@ -105,7 +106,8 @@ public class DomainKnowledgeAndEgressTests
     {
         var fact = DomainKnowledgeReport.ToPsuFact(At, "ACME-850", knownWattage: 850);
         Assert.Equal(850.0, fact.NumericValue);
-        Assert.Contains("不是這顆電源當下的輸出能力", fact.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value。
+        Assert.Contains("不是這顆電源當下的輸出能力", fact.Value);
     }
 
     [Fact]
@@ -123,7 +125,8 @@ public class DomainKnowledgeAndEgressTests
         var fact = EgressPolicy.ToAllowlistFact(At, []);
         Assert.Equal(FactAvailability.Present, fact.Availability);
         Assert.Contains("沒有任何出網通路", fact.Value);
-        Assert.Contains("空清單是常態也是目標", fact.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value。
+        Assert.Contains("空清單是常態也是目標", fact.Value);
     }
 
     [Fact]
@@ -171,7 +174,8 @@ public class DomainKnowledgeAndEgressTests
 
         Assert.Contains("沒有任何出網通路", noChannels.Value);
         Assert.Contains("都未被使用", noTrigger.Value);
-        Assert.Contains("不等於沒有通路", noTrigger.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value。
+        Assert.Contains("不等於沒有通路", noTrigger.Value);
     }
 
     [Fact]

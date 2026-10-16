@@ -32,7 +32,10 @@ public class SourceSeamTests
             new FakeSource("SPD 通道 0", () => SourceAvailability.NotSupported("本機沒有 SPD Hub")));
 
         Assert.Equal(FactAvailability.NotSupported, fact.Availability);
-        Assert.Equal("本機沒有 SPD Hub", fact.UnavailableReason);
+        // 這一項不是 Present，所以理由照舊住在理由欄；**而服務在這一條上還帶了一個
+        // 對非 Present 事實沒有意義的 0，不變式會把它收斂成 null 並在理由後面留下痕跡**——
+        // 所以比前綴。（痕跡本身由 HardwareFactInvariantTests 守。）
+        Assert.StartsWith("本機沒有 SPD Hub", fact.UnavailableReason);
         Assert.Contains("不可用", fact.Value);
     }
 

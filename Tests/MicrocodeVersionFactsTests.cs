@@ -52,9 +52,9 @@ public class MicrocodeVersionFactsTests
         var f = MicrocodeVersionFactsService.Collect(At, In(msr: 0x2A))
             .Single(x => x.Key == MicrocodeVersionFactsService.MsrKey);
 
-        Assert.Equal("0x2A", f.Value);
-        Assert.Contains("現在實際生效的", f.UnavailableReason);
-        Assert.Contains("不是任何軟體宣告的", f.UnavailableReason);
+        Assert.StartsWith("0x2A", f.Value);
+        Assert.Contains("現在實際生效的", f.Value);
+        Assert.Contains("不是任何軟體宣告的", f.Value);
     }
 
     // ── 登錄檔 ──────────────────────────────────────────────────────────
@@ -76,8 +76,10 @@ public class MicrocodeVersionFactsTests
         var f = MicrocodeVersionFactsService.Collect(At, In(reg: 0x100))
             .Single(x => x.Key == MicrocodeVersionFactsService.RegistryKey);
 
-        Assert.Contains("OS 載入時拿到的", f.UnavailableReason);
-        Assert.Contains("不是即時讀值", f.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("OS 載入時拿到的", f.Value);
+        Assert.Contains("不是即時讀值", f.Value);
     }
 
     // ── 對帳 ────────────────────────────────────────────────────────────
@@ -91,7 +93,7 @@ public class MicrocodeVersionFactsTests
         Assert.Equal(FactAvailability.Present, f.Availability);
         Assert.Equal(1.0, f.NumericValue);
         Assert.Contains("兩邊一致：0x2A", f.Value);
-        Assert.Contains("不代表微碼來自 BIOS", f.UnavailableReason);
+        Assert.Contains("不代表微碼來自 BIOS", f.Value);
     }
 
     [Fact]

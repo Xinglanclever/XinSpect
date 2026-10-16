@@ -76,8 +76,10 @@ public class TpmLogFactsTests
         var facts = TpmLogFactsService.Collect(At, W(false, E(0, 0x01)));
         var s = facts.Single(f => f.Key == TpmLogFactsService.SummaryKey);
 
-        Assert.Contains("事件數多不代表量測完整、少不代表有問題", s.UnavailableReason);
-        Assert.Contains("不同平台的 log 粒度本來就不同", s.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("事件數多不代表量測完整、少不代表有問題", s.Value);
+        Assert.Contains("不同平台的 log 粒度本來就不同", s.Value);
     }
 
     [Fact]
@@ -86,8 +88,8 @@ public class TpmLogFactsTests
         var facts = TpmLogFactsService.Collect(At, W(false, E(0, 0x01)));
         var s = facts.Single(f => f.Key == TpmLogFactsService.SummaryKey);
 
-        Assert.Contains("既有的 tpm.tcg_log 說的是「N 個事件」與 PCR 覆蓋", s.UnavailableReason);
-        Assert.Contains("把「型別種類數」補上", s.UnavailableReason);
+        Assert.Contains("既有的 tpm.tcg_log 說的是「N 個事件」與 PCR 覆蓋", s.Value);
+        Assert.Contains("把「型別種類數」補上", s.Value);
     }
 
     // ── 直方圖 ──────────────────────────────────────────────────────────
@@ -116,11 +118,14 @@ public class TpmLogFactsTests
             E(0, 0x00), E(0, 0x01), E(0, 0x04), E(7, 0x0D)));
         var h = facts.Single(f => f.Key == TpmLogFactsService.HistogramKey);
 
-        Assert.DoesNotContain("SEPARATOR", h.Value);
-        Assert.DoesNotContain("POST_CODE", h.Value);
-        Assert.DoesNotContain("PREBOOT", h.Value);
-        Assert.DoesNotContain("EFI_VARIABLE", h.Value);
-        Assert.DoesNotContain("EV_", h.Value);
+        // **說明被不變式併進了 Value，而那段說明本來就會提到 EV_ 這個前綴**
+        // （它講的正是「不命名」）——所以要驗的是直方圖本身：第一個「。」之前的那一段。
+        string raw = h.Value.Split('。')[0];
+        Assert.DoesNotContain("SEPARATOR", raw);
+        Assert.DoesNotContain("POST_CODE", raw);
+        Assert.DoesNotContain("PREBOOT", raw);
+        Assert.DoesNotContain("EFI_VARIABLE", raw);
+        Assert.DoesNotContain("EV_", raw);
     }
 
     [Fact]
@@ -129,10 +134,10 @@ public class TpmLogFactsTests
         var facts = TpmLogFactsService.Collect(At, W(false, E(0, 0x01)));
         var h = facts.Single(f => f.Key == TpmLogFactsService.HistogramKey);
 
-        Assert.Contains("只列型別編號與事件數，不命名", h.UnavailableReason);
-        Assert.Contains("本專案沒有任何地方收錄那張表", h.UnavailableReason);
-        Assert.Contains("「我記得」不是出處", h.UnavailableReason);
-        Assert.Contains("填錯的編號會讓一個不存在的東西看起來存在", h.UnavailableReason);
+        Assert.Contains("只列型別編號與事件數，不命名", h.Value);
+        Assert.Contains("本專案沒有任何地方收錄那張表", h.Value);
+        Assert.Contains("「我記得」不是出處", h.Value);
+        Assert.Contains("填錯的編號會讓一個不存在的東西看起來存在", h.Value);
     }
 
     [Fact]
@@ -141,8 +146,8 @@ public class TpmLogFactsTests
         var facts = TpmLogFactsService.Collect(At, W(false, E(0, 0x01)));
         var h = facts.Single(f => f.Key == TpmLogFactsService.HistogramKey);
 
-        Assert.Contains("TCG PC Client 規格的 EV_* 表出處", h.UnavailableReason);
-        Assert.Contains("一處改、多處受益", h.UnavailableReason);
+        Assert.Contains("TCG PC Client 規格的 EV_* 表出處", h.Value);
+        Assert.Contains("一處改、多處受益", h.Value);
     }
 
     [Fact]
@@ -165,11 +170,11 @@ public class TpmLogFactsTests
         var s = facts.Single(f => f.Key == TpmLogFactsService.SummaryKey);
         var h = facts.Single(f => f.Key == TpmLogFactsService.HistogramKey);
 
-        Assert.Contains("走訪提前結束", s.UnavailableReason);
-        Assert.Contains("走到哪算到哪", s.UnavailableReason);
-        Assert.Contains("與「log 裡只有這些事件」是**不同的斷言**", s.UnavailableReason);
+        Assert.Contains("走訪提前結束", s.Value);
+        Assert.Contains("走到哪算到哪", s.Value);
+        Assert.Contains("與「log 裡只有這些事件」是**不同的斷言**", s.Value);
 
-        Assert.Contains("走訪提前結束", h.UnavailableReason);
+        Assert.Contains("走訪提前結束", h.Value);
     }
 
     [Fact]

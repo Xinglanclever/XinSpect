@@ -33,7 +33,9 @@ public class ResilienceReportTests
     {
         var fact = ResilienceReport.ToEvolutionFact(At, "v2.70", 5, 2, []);
         Assert.Equal(FactAvailability.Present, fact.Availability);
-        Assert.Contains("鍵是公開契約", fact.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("鍵是公開契約", fact.Value);
     }
 
     // ── P1-086 覆蓋缺口 ────────────────────────────────────────────────
@@ -179,7 +181,7 @@ public class ResilienceReportTests
         var fact = ResilienceReport.ToFailuresFact(At, steps: 10, failed: 0, []);
         Assert.Equal(FactAvailability.Present, fact.Availability);
         Assert.Contains("沒有任何失敗", fact.Value);
-        Assert.Contains("不是「沒有這張表」", fact.UnavailableReason);
+        Assert.Contains("不是「沒有這張表」", fact.Value);
     }
 
     [Fact]

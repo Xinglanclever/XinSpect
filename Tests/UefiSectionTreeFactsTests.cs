@@ -90,8 +90,10 @@ public class UefiSectionTreeFactsTests
         ]);
         var t = facts.Single(f => f.Key == UefiSectionTreeFactsService.TreeKey);
 
-        Assert.Contains("有 3 個區段本身就是巢狀容器", t.UnavailableReason);
-        Assert.Contains("它們的內容沒有被攤開", t.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("有 3 個區段本身就是巢狀容器", t.Value);
+        Assert.Contains("它們的內容沒有被攤開", t.Value);
     }
 
     [Fact]
@@ -100,9 +102,9 @@ public class UefiSectionTreeFactsTests
         var facts = UefiSectionTreeFactsService.Collect(At, [Fv(0, File("PEIM", S("PE32")))]);
         var t = facts.Single(f => f.Key == UefiSectionTreeFactsService.TreeKey);
 
-        Assert.Contains("計數不等於完整", t.UnavailableReason);
-        Assert.Contains("看得見的三層有多大", t.UnavailableReason);
-        Assert.Contains("不是「這顆韌體有幾個區段」", t.UnavailableReason);
+        Assert.Contains("計數不等於完整", t.Value);
+        Assert.Contains("看得見的三層有多大", t.Value);
+        Assert.Contains("不是「這顆韌體有幾個區段」", t.Value);
     }
 
     [Fact]
@@ -140,8 +142,8 @@ public class UefiSectionTreeFactsTests
         var facts = UefiSectionTreeFactsService.Collect(At, [Fv(0, File("PEIM", S("PE32")))]);
         var d = facts.Single(f => f.Key == UefiSectionTreeFactsService.DepthKey);
 
-        Assert.Contains("平均值低不代表健康、高不代表有問題", d.UnavailableReason);
-        Assert.Contains("扁的還是深的", d.UnavailableReason);
+        Assert.Contains("平均值低不代表健康、高不代表有問題", d.Value);
+        Assert.Contains("扁的還是深的", d.Value);
     }
 
     [Fact]
@@ -150,7 +152,7 @@ public class UefiSectionTreeFactsTests
         var facts = UefiSectionTreeFactsService.Collect(At, []);
         var d = facts.Single(f => f.Key == UefiSectionTreeFactsService.DepthKey);
 
-        Assert.Equal("（空）", d.Value);
+        Assert.StartsWith("（空）", d.Value);
         Assert.Null(d.NumericValue);
     }
 

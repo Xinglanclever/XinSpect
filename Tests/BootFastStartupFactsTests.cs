@@ -42,9 +42,9 @@ public class BootFastStartupFactsTests
         var f = BootFastStartupFactsService.Collect(At, In(hiberboot: 0))
             .Single(x => x.Key == BootFastStartupFactsService.FastBootKey);
 
-        Assert.Equal("已停用", f.Value);
+        Assert.StartsWith("已停用", f.Value);
         Assert.Equal(FactAvailability.Present, f.Availability);
-        Assert.Contains("走完整的初始化路徑", f.UnavailableReason);
+        Assert.Contains("走完整的初始化路徑", f.Value);
     }
 
     [Fact]
@@ -85,8 +85,10 @@ public class BootFastStartupFactsTests
         var f = BootFastStartupFactsService.Collect(At, In(hibernate: 0, hiberboot: 1))
             .Single(x => x.Key == BootFastStartupFactsService.HibernateKey);
 
-        Assert.Contains("不代表快速開機也停用", f.UnavailableReason);
-        Assert.Contains("反過來則不一定", f.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("不代表快速開機也停用", f.Value);
+        Assert.Contains("反過來則不一定", f.Value);
     }
 
     [Fact]
@@ -95,7 +97,7 @@ public class BootFastStartupFactsTests
         var f = BootFastStartupFactsService.Collect(At, In(hibernate: 1, percent: 50))
             .Single(x => x.Key == BootFastStartupFactsService.HibernateKey);
 
-        Assert.Contains("同一個機制的兩種用法", f.UnavailableReason);
+        Assert.Contains("同一個機制的兩種用法", f.Value);
     }
 
     [Fact]

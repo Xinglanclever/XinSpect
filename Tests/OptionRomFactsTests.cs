@@ -64,8 +64,10 @@ public class OptionRomFactsTests
         var c = facts.Single(f => f.Key == OptionRomFactsService.CountKey);
 
         Assert.Contains("列舉到 2 個裝置", c.Value);
-        Assert.Contains("「沒有自述有 ROM BAR」與「沒有選項 ROM」是不同的斷言", c.UnavailableReason);
-        Assert.Contains("停用了 ROM BAR", c.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("「沒有自述有 ROM BAR」與「沒有選項 ROM」是不同的斷言", c.Value);
+        Assert.Contains("停用了 ROM BAR", c.Value);
     }
 
     [Fact]
@@ -74,8 +76,8 @@ public class OptionRomFactsTests
         var facts = OptionRomFactsService.Collect(At, [D("A", true, 65536)]);
         var c = facts.Single(f => f.Key == OptionRomFactsService.CountKey);
 
-        Assert.Contains("不代表我讀到了它的內容", c.UnavailableReason);
-        Assert.Contains("讀取需要核心層權限，本服務不讀", c.UnavailableReason);
+        Assert.Contains("不代表我讀到了它的內容", c.Value);
+        Assert.Contains("讀取需要核心層權限，本服務不讀", c.Value);
     }
 
     [Fact]
@@ -84,9 +86,9 @@ public class OptionRomFactsTests
         var facts = OptionRomFactsService.Collect(At, [D("A", true, 65536)]);
         var l = facts.Single(f => f.Key == OptionRomFactsService.ListKey);
 
-        Assert.Contains("跟主機板韌體是兩套獨立的程式碼", l.UnavailableReason);
-        Assert.Contains("更新主機板 BIOS 不會更新它們", l.UnavailableReason);
-        Assert.Contains("要刷顯示卡", l.UnavailableReason);
+        Assert.Contains("跟主機板韌體是兩套獨立的程式碼", l.Value);
+        Assert.Contains("更新主機板 BIOS 不會更新它們", l.Value);
+        Assert.Contains("要刷顯示卡", l.Value);
     }
 
     [Fact]
@@ -95,7 +97,7 @@ public class OptionRomFactsTests
         var facts = OptionRomFactsService.Collect(At, [D("A", true, 65536)]);
         var l = facts.Single(f => f.Key == OptionRomFactsService.ListKey);
 
-        Assert.Contains("列的是「哪些裝置自述有」，不是「它們是什麼版本」", l.UnavailableReason);
+        Assert.Contains("列的是「哪些裝置自述有」，不是「它們是什麼版本」", l.Value);
     }
 
     [Fact]

@@ -68,8 +68,10 @@ public class MeasuredBootFactsTests
         var facts = MeasuredBootFactsService.Collect(At, R(p0: new string('a', 64)));
         var m = facts.Single(f => f.Key == MeasuredBootFactsService.MeasuredKey);
 
-        Assert.Contains("有 TPM 不等於有量測開機", m.UnavailableReason);
-        Assert.Contains("這裡看到的是後者", m.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("有 TPM 不等於有量測開機", m.Value);
+        Assert.Contains("這裡看到的是後者", m.Value);
     }
 
     [Fact]
@@ -80,8 +82,8 @@ public class MeasuredBootFactsTests
         var m = facts.Single(f => f.Key == MeasuredBootFactsService.MeasuredKey);
 
         Assert.Contains("1 個仍為零", m.Value);
-        Assert.Contains("不代表那些層級沒有執行", m.UnavailableReason);
-        Assert.Contains("PCR 7 只在 Secure Boot 啟用時才延伸", m.UnavailableReason);
+        Assert.Contains("不代表那些層級沒有執行", m.Value);
+        Assert.Contains("PCR 7 只在 Secure Boot 啟用時才延伸", m.Value);
     }
 
     [Fact]
@@ -91,7 +93,7 @@ public class MeasuredBootFactsTests
             R(new string('a', 64), new string('b', 64), new string('c', 64), new string('d', 64)));
         var m = facts.Single(f => f.Key == MeasuredBootFactsService.MeasuredKey);
 
-        Assert.Contains("四個關鍵 PCR 都已延伸", m.UnavailableReason);
+        Assert.Contains("四個關鍵 PCR 都已延伸", m.Value);
     }
 
     [Fact]
@@ -101,7 +103,10 @@ public class MeasuredBootFactsTests
         var m = facts.Single(f => f.Key == MeasuredBootFactsService.MeasuredKey);
 
         Assert.Equal(FactAvailability.NotApplicable, m.Availability);
-        Assert.Equal(0.0, m.NumericValue);
+        // **非 Present 的事實不得帶數字**（HardwareFact 的不變式）：0 已被收斂成 null，
+        // 而「原本是多少」留在理由欄的痕跡裡（不是靜默修正）。
+        Assert.Null(m.NumericValue);
+        Assert.Contains("原本帶了數字 0", m.UnavailableReason);
     }
 
     // ── 沒有量測 ────────────────────────────────────────────────────────
@@ -113,7 +118,10 @@ public class MeasuredBootFactsTests
         var m = facts.Single(f => f.Key == MeasuredBootFactsService.MeasuredKey);
 
         Assert.Equal(FactAvailability.NotApplicable, m.Availability);
-        Assert.Equal(0.0, m.NumericValue);
+        // **非 Present 的事實不得帶數字**（HardwareFact 的不變式）：0 已被收斂成 null，
+        // 而「原本是多少」留在理由欄的痕跡裡（不是靜默修正，見 HardwareFactInvariantTests）。
+        Assert.Null(m.NumericValue);
+        Assert.Contains("原本帶了數字 0", m.UnavailableReason);
         Assert.Contains("沒有量測證據", m.Value);
         Assert.Contains("4 個關鍵 PCR 都可讀，但全為零", m.Value);
         Assert.Contains("量測鏈根本沒開始", m.UnavailableReason);
@@ -149,9 +157,9 @@ public class MeasuredBootFactsTests
         var facts = MeasuredBootFactsService.Collect(At, R(p0: new string('a', 64)));
         var e = facts.Single(f => f.Key == MeasuredBootFactsService.EvidenceKey);
 
-        Assert.Contains("判準是 PCR 的內容，不是 TPM 的存在", e.UnavailableReason);
-        Assert.Contains("不重讀全部 24 個", e.UnavailableReason);
-        Assert.Contains("tpm.pcr.*", e.UnavailableReason);
+        Assert.Contains("判準是 PCR 的內容，不是 TPM 的存在", e.Value);
+        Assert.Contains("不重讀全部 24 個", e.Value);
+        Assert.Contains("tpm.pcr.*", e.Value);
     }
 
     [Fact]

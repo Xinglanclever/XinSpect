@@ -73,7 +73,8 @@ public class UefiBootOrderFactsTests
             readOrder: () => Order(0x0001, 0x0003, 0x0000), privilegeOk: true);
         var o = facts.Single(f => f.Key == UefiBootOrderFactsService.OrderKey);
 
-        Assert.Equal("Boot0001 → Boot0003 → Boot0000", o.Value);
+        // 說明被不變式併進了 Value（Present 的事實不得帶理由欄），所以比前綴。
+        Assert.StartsWith("Boot0001 → Boot0003 → Boot0000", o.Value);
         Assert.Equal(3.0, o.NumericValue);
         Assert.Equal(FactAvailability.Present, o.Availability);
     }
@@ -85,9 +86,11 @@ public class UefiBootOrderFactsTests
             readOrder: () => Order(0x0001, 0x0002), privilegeOk: true);
         var o = facts.Single(f => f.Key == UefiBootOrderFactsService.OrderKey);
 
-        Assert.Contains("不是實際的開機結果", o.UnavailableReason);
-        Assert.Contains("跳過前幾項", o.UnavailableReason);
-        Assert.Contains("開機事件記錄那個獨立來源", o.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("不是實際的開機結果", o.Value);
+        Assert.Contains("跳過前幾項", o.Value);
+        Assert.Contains("開機事件記錄那個獨立來源", o.Value);
     }
 
     [Fact]
@@ -130,8 +133,8 @@ public class UefiBootOrderFactsTests
             privilegeOk: true);
         var l = facts.Single(f => f.Key == UefiBootOrderFactsService.LoadOptionsKey);
 
-        Assert.Contains("可能已被刪除", l.UnavailableReason);
-        Assert.Contains("這兩者在這裡分不出來", l.UnavailableReason);
+        Assert.Contains("可能已被刪除", l.Value);
+        Assert.Contains("這兩者在這裡分不出來", l.Value);
     }
 
     [Fact]
@@ -154,8 +157,8 @@ public class UefiBootOrderFactsTests
             readLoadOptionLength: _ => 100, privilegeOk: true);
         var l = facts.Single(f => f.Key == UefiBootOrderFactsService.LoadOptionsKey);
 
-        Assert.Contains("不解析內容", l.UnavailableReason);
-        Assert.Contains("裝置路徑", l.UnavailableReason);
+        Assert.Contains("不解析內容", l.Value);
+        Assert.Contains("裝置路徑", l.Value);
     }
 
     [Fact]

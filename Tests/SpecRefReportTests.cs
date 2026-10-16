@@ -93,7 +93,12 @@ public class SpecRefReportTests
         var fact = SpecRefReport.ToVersionFact(At, new DateTimeOffset(2026, 10, 16, 0, 0, 0, TimeSpan.Zero));
         Assert.Contains("校對", fact.Value);
         Assert.Contains("2026-10-16", fact.Value);
-        Assert.True(fact.NumericValue >= 0);
+        // 標有版本的條數寫在值的開頭（「n/m 條引用標有版本或年份」）——那是這一項的重點。
+        Assert.Matches(@"^\d+/\d+ 條引用標有版本", fact.Value);
+        // **非 Present 的事實不得帶數字**（HardwareFact 的不變式）：
+        // 只要還有引用沒標版本（Unknown），條數就不在可計算的欄位上。
+        if (fact.Availability == FactAvailability.Present) Assert.True(fact.NumericValue >= 0);
+        else Assert.Null(fact.NumericValue);
     }
 
     // ── spec.ref.unit ───────────────────────────────────────────────────

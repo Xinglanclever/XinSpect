@@ -34,7 +34,9 @@ public class DataSovereigntyReportTests
         var fact = DataSovereigntyReport.ToEgressReportFact(At, 100, 100, 0, []);
         Assert.Equal(FactAvailability.Present, fact.Availability);
         Assert.Contains("全部留在本機", fact.Value);
-        Assert.Contains("不是承諾", fact.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("不是承諾", fact.Value);
     }
 
     [Fact]
@@ -50,7 +52,10 @@ public class DataSovereigntyReportTests
     {
         var fact = DataSovereigntyReport.ToEgressReportFact(At, 100, 98, 2, ["例外的更新檢查"]);
         Assert.Equal(FactAvailability.Unknown, fact.Availability);
-        Assert.Equal(2.0, fact.NumericValue);
+        // **非 Present 的事實不得帶數字**（HardwareFact 的不變式）：2 已被收斂成 null，
+        // 而「原本是多少」留在理由欄的痕跡裡（不是靜默修正）。
+        Assert.Null(fact.NumericValue);
+        Assert.Contains("原本帶了數字 2", fact.UnavailableReason);
         Assert.Contains("例外的更新檢查", fact.Value);
     }
 

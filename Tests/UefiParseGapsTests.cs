@@ -54,8 +54,10 @@ public class UefiParseGapsTests
 
         Assert.Equal(0.0, g.NumericValue);
         Assert.Contains("2 個 FV 的走訪都自然結束", g.Value);
-        Assert.Contains("「走到自由空間」不是缺口", g.UnavailableReason);
-        Assert.Contains("0 這個數字是有意義的", g.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("「走到自由空間」不是缺口", g.Value);
+        Assert.Contains("0 這個數字是有意義的", g.Value);
     }
 
     [Fact]
@@ -78,9 +80,9 @@ public class UefiParseGapsTests
         var facts = UefiParseGapsFactsService.Collect(At, [Fv(0, 1)]);
         var g = facts.Single(f => f.Key == UefiParseGapsFactsService.GapsKey);
 
-        Assert.Contains("缺口不是「這顆韌體壞了」", g.UnavailableReason);
-        Assert.Contains("高度壓縮的映像", g.UnavailableReason);
-        Assert.Contains("不判斷那是不是問題", g.UnavailableReason);
+        Assert.Contains("缺口不是「這顆韌體壞了」", g.Value);
+        Assert.Contains("高度壓縮的映像", g.Value);
+        Assert.Contains("不判斷那是不是問題", g.Value);
     }
 
     // ── 突變耐受 ────────────────────────────────────────────────────────
@@ -92,9 +94,9 @@ public class UefiParseGapsTests
         var t = facts.Single(f => f.Key == UefiParseGapsFactsService.TolerantKey);
 
         Assert.Equal(FactAvailability.Present, t.Availability);
-        Assert.Contains("只證明「這幾種輸入不丟例外」", t.UnavailableReason);
-        Assert.Contains("不證明「所有異常輸入都安全」", t.UnavailableReason);
-        Assert.Contains("測試通過的範圍就是它證明的範圍", t.UnavailableReason);
+        Assert.Contains("只證明「這幾種輸入不丟例外」", t.Value);
+        Assert.Contains("不證明「所有異常輸入都安全」", t.Value);
+        Assert.Contains("測試通過的範圍就是它證明的範圍", t.Value);
     }
 
     /// <summary>

@@ -76,7 +76,10 @@ public class SmbiosStructureFactsTests
         var t = facts.Single(f => f.Key == SmbiosStructureFactsService.TrailingKey);
 
         Assert.Equal(FactAvailability.Unknown, t.Availability);
-        Assert.Equal(1.0, t.NumericValue);
+        // **非 Present 的事實不得帶數字**（HardwareFact 的不變式）：1 已被收斂成 null，
+        // 而「原本是多少」留在理由欄的痕跡裡（不是靜默修正）。
+        Assert.Null(t.NumericValue);
+        Assert.Contains("原本帶了數字 1", t.UnavailableReason);
         Assert.Contains("Type 1", t.Value);
         Assert.Contains("沒讀到」會被誤當成「沒有那個欄位", t.UnavailableReason);
     }

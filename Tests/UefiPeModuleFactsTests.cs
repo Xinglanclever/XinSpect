@@ -127,9 +127,11 @@ public class UefiPeModuleFactsTests
         var facts = UefiPeModuleFactsService.Collect(At, fvs, image);
         var c = facts.Single(f => f.Key == UefiPeModuleFactsService.CountKey);
 
-        Assert.Contains("PE 的子系統只分 NATIVE／GUI／CUI", c.UnavailableReason);
-        Assert.Contains("是慣例不是定義", c.UnavailableReason);
-        Assert.Contains("不直接把 NATIVE 標成「驅動」", c.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("PE 的子系統只分 NATIVE／GUI／CUI", c.Value);
+        Assert.Contains("是慣例不是定義", c.Value);
+        Assert.Contains("不直接把 NATIVE 標成「驅動」", c.Value);
     }
 
     [Fact]
@@ -139,9 +141,9 @@ public class UefiPeModuleFactsTests
         var facts = UefiPeModuleFactsService.Collect(At, fvs, image);
         var l = facts.Single(f => f.Key == UefiPeModuleFactsService.ListKey);
 
-        Assert.Contains("只走頂層", l.UnavailableReason);
-        Assert.Contains("壓縮區段裡的 FV", l.UnavailableReason);
-        Assert.Contains("看得見的那一層", l.UnavailableReason);
+        Assert.Contains("只走頂層", l.Value);
+        Assert.Contains("壓縮區段裡的 FV", l.Value);
+        Assert.Contains("看得見的那一層", l.Value);
     }
 
     // ── 解析失敗 ────────────────────────────────────────────────────────
@@ -189,7 +191,7 @@ public class UefiPeModuleFactsTests
 
         Assert.Equal(25.0, c.NumericValue);
         Assert.Contains("清單上限 20", l.Value);
-        Assert.Contains("只計數不列出", l.UnavailableReason);
+        Assert.Contains("只計數不列出", l.Value);
     }
 
     // ── 鍵集合與目錄 ────────────────────────────────────────────────────

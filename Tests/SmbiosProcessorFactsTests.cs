@@ -114,8 +114,10 @@ public class SmbiosProcessorFactsTests
             () => [Processor("CPU0", "Vendor", 0xB3, 3000, 4, 8)]);
         var p = facts.Single(f => f.Key == SmbiosProcessorFactsService.ProcKey);
 
-        Assert.Contains("不是 CPUID 讀到的規格", p.UnavailableReason);
-        Assert.Contains("不是哪一個錯了", p.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("不是 CPUID 讀到的規格", p.Value);
+        Assert.Contains("不是哪一個錯了", p.Value);
     }
 
     [Fact]
@@ -220,7 +222,7 @@ public class SmbiosProcessorFactsTests
             () => [Cache("L1", 1, 0x0040, 0x07, 64)]);
         var c = facts.Single(f => f.Key == SmbiosProcessorFactsService.CacheKey);
 
-        Assert.Contains("本服務自己算的，不是原始值", c.UnavailableReason);
+        Assert.Contains("本服務自己算的，不是原始值", c.Value);
     }
 
     // ── 目錄 ────────────────────────────────────────────────────────────

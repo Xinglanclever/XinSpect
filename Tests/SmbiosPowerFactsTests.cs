@@ -126,7 +126,9 @@ public class SmbiosPowerFactsTests
         var facts = SmbiosPowerFactsService.Collect(At, () => [Type39(1000, 0x0002)]);
         var d = facts.Single(f => f.Key == SmbiosPowerFactsService.PsuDetailKey);
 
-        Assert.Contains("額定瓦數不等於現在輸出", d.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("額定瓦數不等於現在輸出", d.Value);
     }
 
     // ── 功率：未回報 vs 0 瓦 ────────────────────────────────────────────
@@ -152,7 +154,7 @@ public class SmbiosPowerFactsTests
         var p = facts.Single(f => f.Key == SmbiosPowerFactsService.PsuPowerKey);
 
         Assert.Equal(1000.0, p.NumericValue);
-        Assert.Contains("未回報的不以 0 計入", p.UnavailableReason);
+        Assert.Contains("未回報的不以 0 計入", p.Value);
     }
 
     [Fact]
@@ -164,8 +166,8 @@ public class SmbiosPowerFactsTests
 
         Assert.Equal(1500.0, p.NumericValue);
         Assert.Contains("1000 W＋500 W", p.Value);
-        Assert.Contains("不是可用功率", p.UnavailableReason);
-        Assert.Contains("轉換效率", p.UnavailableReason);
+        Assert.Contains("不是可用功率", p.Value);
+        Assert.Contains("轉換效率", p.Value);
     }
 
     [Fact]
@@ -221,7 +223,7 @@ public class SmbiosPowerFactsTests
             () => [Type41(0x0F, 0x81, 0, refCount: 3)]);
         var o = facts.Single(f => f.Key == SmbiosPowerFactsService.OnboardKey);
 
-        Assert.Contains("只計數，不追進去看", o.UnavailableReason);
+        Assert.Contains("只計數，不追進去看", o.Value);
         Assert.Contains("3 筆參考指定", o.Value);
     }
 

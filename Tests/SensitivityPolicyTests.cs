@@ -89,7 +89,11 @@ public class SensitivityPolicyTests
         var facts = new[] { Fact("system.name"), Fact("tpm.ek", sensitive: true) };
         var fact = SensitivityPolicy.ToMaskFact(At, facts, SensitiveValuePolicy.Preserve);
 
-        Assert.Equal(1.0, fact.NumericValue);                 // 只剩 L1
+        // **非 Present 的事實不得帶數字**（HardwareFact 的不變式）：1 已被收斂成 null，
+        // 而「原本是多少」留在理由欄的痕跡裡（不是靜默修正）。
+        Assert.Null(fact.NumericValue);
+        Assert.Contains("原本帶了數字 1", fact.UnavailableReason);
+        // 只剩 L1
         Assert.NotEqual(FactAvailability.Present, fact.Availability);
         Assert.Contains("使用者主動選擇", fact.UnavailableReason);
     }
@@ -175,6 +179,8 @@ public class SensitivityPolicyTests
     {
         var fact = SensitivityPolicy.ToLevelFact(At, [Fact("secret.token")]);
         Assert.Contains("L3 1", fact.Value);
-        Assert.Contains("不得出現在任何輸出中", fact.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("不得出現在任何輸出中", fact.Value);
     }
 }

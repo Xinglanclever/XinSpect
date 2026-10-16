@@ -80,9 +80,11 @@ public class BootGuardFactsTests
         var facts = BootGuardFactsService.Collect(At, Fit((0x07, 0x1000, 0x8000)));
         var i = facts.Single(f => f.Key == BootGuardFactsService.IbbKey);
 
-        Assert.Contains("目錄條目給的是「宣告的位置與長度」，不是「IBB 的範圍」", i.UnavailableReason);
-        Assert.Contains("真正的 IBB 範圍由 Boot Policy Manifest 決定", i.UnavailableReason);
-        Assert.Contains("本版只到目錄層", i.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("目錄條目給的是「宣告的位置與長度」，不是「IBB 的範圍」", i.Value);
+        Assert.Contains("真正的 IBB 範圍由 Boot Policy Manifest 決定", i.Value);
+        Assert.Contains("本版只到目錄層", i.Value);
     }
 
     [Fact]
@@ -91,8 +93,8 @@ public class BootGuardFactsTests
         var facts = BootGuardFactsService.Collect(At, Fit((0x07, 0x1000, 0x8000)));
         var i = facts.Single(f => f.Key == BootGuardFactsService.IbbKey);
 
-        Assert.Contains("不代表 Boot Guard 已啟用", i.UnavailableReason);
-        Assert.Contains("目錄是索引，不是結論", i.UnavailableReason);
+        Assert.Contains("不代表 Boot Guard 已啟用", i.Value);
+        Assert.Contains("目錄是索引，不是結論", i.Value);
     }
 
     // ── KM：永遠 NotSupported ───────────────────────────────────────────
@@ -183,9 +185,9 @@ public class BootGuardFactsTests
         var facts = BootGuardFactsService.Collect(At, Fit((0x07, 0x1000, 0x8000)));
         var m = facts.Single(f => f.Key == BootGuardFactsService.ManifestsKey);
 
-        Assert.Contains("目錄是索引，不是結論", m.UnavailableReason);
-        Assert.Contains("「有這些條目」與「Boot Guard 已啟用」是兩件事", m.UnavailableReason);
-        Assert.Contains("FLMAP／FMLF", m.UnavailableReason);
+        Assert.Contains("目錄是索引，不是結論", m.Value);
+        Assert.Contains("「有這些條目」與「Boot Guard 已啟用」是兩件事", m.Value);
+        Assert.Contains("FLMAP／FMLF", m.Value);
     }
 
     [Fact]

@@ -68,7 +68,10 @@ public class ScanSkeletonReportTests
 
         Assert.Equal(FactAvailability.ReadError, fact.Availability);
         Assert.Contains("SPD 讀取", fact.Value);
-        Assert.Equal(1.0, fact.NumericValue);
+        // **非 Present 的事實不得帶數字**（HardwareFact 的不變式）：1 已被收斂成 null，
+        // 而「原本是多少」留在理由欄的痕跡裡（不是靜默修正）。
+        Assert.Null(fact.NumericValue);
+        Assert.Contains("原本帶了數字 1", fact.UnavailableReason);
     }
 
     [Fact]
@@ -112,7 +115,10 @@ public class ScanSkeletonReportTests
         var fact = ScanSkeletonReport.ToPartialFact(At, outcome);
 
         Assert.Equal(FactAvailability.Unknown, fact.Availability);
-        Assert.Equal(1.0, fact.NumericValue);
+        // **非 Present 的事實不得帶數字**（HardwareFact 的不變式）：1 已被收斂成 null，
+        // 而「原本是多少」留在理由欄的痕跡裡（不是靜默修正）。
+        Assert.Null(fact.NumericValue);
+        Assert.Contains("原本帶了數字 1", fact.UnavailableReason);
         Assert.Contains("保留", fact.Value);
     }
 

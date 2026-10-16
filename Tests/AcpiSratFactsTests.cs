@@ -123,8 +123,8 @@ public class AcpiSratFactsTests
         var s = AcpiSratFactsService.Collect(new FakeSource(true, t), At)
             .Single(f => f.Key == AcpiSratFactsService.SummaryKey);
 
-        Assert.Contains("值得指認", s.UnavailableReason);
-        Assert.Contains("那與「沒有 NUMA」不同", s.UnavailableReason);
+        Assert.Contains("值得指認", s.Value);
+        Assert.Contains("那與「沒有 NUMA」不同", s.Value);
     }
 
     // ── 處理器歸屬 ──────────────────────────────────────────────────────
@@ -200,8 +200,8 @@ public class AcpiSratFactsTests
             .Single(f => f.Key == AcpiSratFactsService.DomainKey);
 
         Assert.Equal(1.0, d.NumericValue);
-        Assert.Contains("無從驗證", d.UnavailableReason);
-        Assert.Contains("未驗證不代表可用", d.UnavailableReason);
+        Assert.Contains("無從驗證", d.Value);
+        Assert.Contains("未驗證不代表可用", d.Value);
     }
 
     [Fact]
@@ -227,7 +227,9 @@ public class AcpiSratFactsTests
         var g = facts.Single(f => f.Key == AcpiSratFactsService.GenericKey);
 
         Assert.Contains("控制代碼 65536", g.Value);
-        Assert.Contains("超出處理器與記憶體", g.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("超出處理器與記憶體", g.Value);
 
         // 沒有一般啟動器時，那把鍵不該出現——它是條件產出，不是固定欄位。
         var without = Build(ProcAffinity(0, 0));

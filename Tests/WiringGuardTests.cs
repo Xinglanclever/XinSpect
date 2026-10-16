@@ -40,6 +40,14 @@ public class WiringGuardTests
     /// </summary>
     private static readonly Dictionary<string, string> NotWired = new(StringComparer.Ordinal)
     {
+        // 這兩筆不是「忘記接」，而是**輸入還不存在**——完整判定與接線條件寫在
+        // WiringDecisions.Deferred（由 ServiceOrphanGateTests 逐條核對），這裡只留指標。
+        ["EfiVariableFactsService"] =
+            "判定在 WiringDecisions.Deferred（P2-083）：既有的變數讀取通路把 pdwAttrib 的位置"
+            + "當成大小進出用，屬性的原始值在那一層沒有被保留；現在接線只會生出一個誤導的屬性事實。",
+        ["UefiVersionCrossFactsService"] =
+            "判定在 WiringDecisions.Deferred（P2-050）：它要的是一份 SPI 映像與它解碼出來的 FV 清單，"
+            + "而那組輸入只在驅動後端的讀取裡存在（usermode 拿不到映像，也不該為它多讀一次 SPI）。",
     };
 
     /// <summary>白名單上限：超過就得先重新想一遍，而不是一直往上加。</summary>

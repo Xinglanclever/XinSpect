@@ -153,12 +153,18 @@ public class SpecTablePolicyTests
         // 而那個失敗的形式是「collection was empty」——**看起來像「沒有違規」**，
         // 那正是這一輪我在守門本身上抓到的同一個假零。
         // 所以這裡改用普通字串串接，讓縮排不可能出錯。
+        //
+        // **而常數名也必須構成一組**：前綴的定義是「名字去掉尾端數字」，
+        // 所以 Pt100／Pt101／Pt102 去完尾數才是同一個前綴 `Pt`。
+        // 第一版寫的是 PtAlpha／PtBeta／PtGamma——那去完尾數是三個不同的前綴，
+        // 每個只有一個成員，**於是這個正對照與它的負對照都會變成假綠**：
+        // 掃描回空集合，正對照是「沒抓到」（紅），負對照是「沒抓到所以沒問題」（綠）。
         File.WriteAllText(temp,
             "public static class Probe\n" +
             "{\n" +
-            "    public const uint PtAlpha = 0x00000100;\n" +
-            "    public const uint PtBeta = 0x00000101;\n" +
-            "    public const uint PtGamma = 0x00000102;\n" +
+            "    public const uint Pt100 = 0x00000100;\n" +
+            "    public const uint Pt101 = 0x00000101;\n" +
+            "    public const uint Pt102 = 0x00000102;\n" +
             "}\n");
 
         try
@@ -184,9 +190,9 @@ public class SpecTablePolicyTests
             "public static class Probe\n" +
             "{\n" +
             "    // spec-ref-policy：只寫對準過出處的編號。\n" +
-            "    public const uint PtAlpha = 0x00000100;\n" +
-            "    public const uint PtBeta = 0x00000101;\n" +
-            "    public const uint PtGamma = 0x00000102;\n" +
+            "    public const uint Pt100 = 0x00000100;\n" +
+            "    public const uint Pt101 = 0x00000101;\n" +
+            "    public const uint Pt102 = 0x00000102;\n" +
             "}\n");
 
         try

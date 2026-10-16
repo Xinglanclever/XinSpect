@@ -108,10 +108,12 @@ public class AcpiTpm2WpbtFactsTests
             Tables(Tpm2(0, 0xFED40000, 0x5000, 4)));
         var t = facts.Single(f => f.Key == AcpiTpm2WpbtFactsService.Tpm2Key);
 
-        Assert.Contains("只描述「TPM 在哪、怎麼跟它講話」", t.UnavailableReason);
-        Assert.Contains("tpm.*", t.UnavailableReason);
-        Assert.Contains("sb.tpmdev", t.UnavailableReason);
-        Assert.Contains("三個獨立來源並列的事實", t.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("只描述「TPM 在哪、怎麼跟它講話」", t.Value);
+        Assert.Contains("tpm.*", t.Value);
+        Assert.Contains("sb.tpmdev", t.Value);
+        Assert.Contains("三個獨立來源並列的事實", t.Value);
     }
 
     [Fact]
@@ -121,7 +123,7 @@ public class AcpiTpm2WpbtFactsTests
             Tables(Tpm2(0, 0xFED40000, 0x5000, 4)));
         var m = facts.Single(f => f.Key == AcpiTpm2WpbtFactsService.Tpm2MethodKey);
 
-        Assert.Equal("CRB（命令回應緩衝區）", m.Value);
+        Assert.StartsWith("CRB（命令回應緩衝區）", m.Value);
         Assert.Equal(4.0, m.NumericValue);
     }
 
@@ -132,8 +134,8 @@ public class AcpiTpm2WpbtFactsTests
             Tables(Tpm2(0, 0xFED40000, 0x5000, 4)));
         var m = facts.Single(f => f.Key == AcpiTpm2WpbtFactsService.Tpm2MethodKey);
 
-        Assert.Contains("實際可用是兩件事", m.UnavailableReason);
-        Assert.Contains("TBS 的回應", m.UnavailableReason);
+        Assert.Contains("實際可用是兩件事", m.Value);
+        Assert.Contains("TBS 的回應", m.Value);
     }
 
     [Fact]
@@ -187,9 +189,9 @@ public class AcpiTpm2WpbtFactsTests
         var facts = AcpiTpm2WpbtFactsService.Collect(At, Tables(Wpbt(0x2000, 0x100000)));
         var w = facts.Single(f => f.Key == AcpiTpm2WpbtFactsService.WpbtKey);
 
-        Assert.Contains("本身不是弱點", w.UnavailableReason);
-        Assert.Contains("由韌體發起、在使用者登入前執行", w.UnavailableReason);
-        Assert.Contains("不解析那段映像的內容", w.UnavailableReason);
+        Assert.Contains("本身不是弱點", w.Value);
+        Assert.Contains("由韌體發起、在使用者登入前執行", w.Value);
+        Assert.Contains("不解析那段映像的內容", w.Value);
     }
 
     [Fact]

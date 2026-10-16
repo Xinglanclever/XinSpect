@@ -130,7 +130,9 @@ public class AcpiDmarFactsTests
         var facts = AcpiDmarFactsService.Collect(new FakeSource(true, t), At);
         var s = facts.Single(f => f.Key == AcpiDmarFactsService.SummaryKey);
 
-        Assert.Contains("不在這份表的轉譯範圍內", s.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("不在這份表的轉譯範圍內", s.Value);
     }
 
     [Fact]
@@ -140,7 +142,7 @@ public class AcpiDmarFactsTests
         var facts = AcpiDmarFactsService.Collect(new FakeSource(true, t), At);
 
         var s = facts.Single(f => f.Key == AcpiDmarFactsService.SummaryKey);
-        Assert.Contains("沒有宣告轉譯範圍", s.UnavailableReason);
+        Assert.Contains("沒有宣告轉譯範圍", s.Value);
 
         var d = facts.Single(f => f.Key == AcpiDmarFactsService.DrhdKey);
         Assert.Equal(FactAvailability.Unknown, d.Availability);
@@ -157,7 +159,7 @@ public class AcpiDmarFactsTests
         var r = facts.Single(f => f.Key == AcpiDmarFactsService.RmrrKey);
 
         Assert.Equal(0.0, r.NumericValue);
-        Assert.Contains("不代表沒有其他路徑繞過轉譯", r.UnavailableReason);
+        Assert.Contains("不代表沒有其他路徑繞過轉譯", r.Value);
     }
 
     [Fact]

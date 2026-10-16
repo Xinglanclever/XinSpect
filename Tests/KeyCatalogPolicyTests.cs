@@ -150,7 +150,8 @@ public class KeyCatalogPolicyTests
         Assert.Equal(FactAvailability.Present, fact.Availability);
         Assert.Contains("900 個靜態鍵", fact.Value);
         Assert.Contains("不進分母", fact.Value);
-        Assert.Contains("隨機器而變", fact.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：理由被併進了 Value。
+        Assert.Contains("隨機器而變", fact.Value);
     }
 
     // ── P1-082 豁免理由門檻 ────────────────────────────────────────────

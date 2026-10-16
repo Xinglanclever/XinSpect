@@ -120,7 +120,9 @@ public class AcpiMadtFactsTests
         var s = facts.Single(f => f.Key == AcpiMadtFactsService.SummaryKey);
 
         Assert.Equal(0.0, s.NumericValue);
-        Assert.Contains("兩者並列陳述不代為裁決", s.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("兩者並列陳述不代為裁決", s.Value);
     }
 
     // ── 各清單的三態 ────────────────────────────────────────────────────
@@ -192,7 +194,7 @@ public class AcpiMadtFactsTests
         var f = facts.Single(x => x.Key == AcpiMadtFactsService.OverrideKey);
 
         Assert.Contains("來源2→GSI9", f.Value);
-        Assert.Contains("中斷延遲類量測的解讀", f.UnavailableReason);
+        Assert.Contains("中斷延遲類量測的解讀", f.Value);
     }
 
     // ── 未收錄型別 ──────────────────────────────────────────────────────

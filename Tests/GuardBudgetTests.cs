@@ -96,6 +96,9 @@ public class GuardBudgetTests
         Assert.Equal(FactAvailability.Unknown, fact.Availability);
         Assert.Contains("爆掉", fact.Value);
         Assert.Contains("會被跳過", fact.UnavailableReason);
-        Assert.Equal(1.0, fact.NumericValue);
+        // **非 Present 的事實不得帶數字**（HardwareFact 的不變式）：1 已被收斂成 null，
+        // 而「原本是多少」留在理由欄的痕跡裡（不是靜默修正）。
+        Assert.Null(fact.NumericValue);
+        Assert.Contains("原本帶了數字 1", fact.UnavailableReason);
     }
 }

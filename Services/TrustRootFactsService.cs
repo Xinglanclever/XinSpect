@@ -129,17 +129,9 @@ public static class TrustRootFactsService
     {
         if (facts.Count == 0) return null;
 
-        bool? Value(string key)
-        {
-            var f = facts.FirstOrDefault(x => x.Key == key);
-            if (f is null) return null;
-            return f.Availability switch
-            {
-                FactAvailability.Present => true,
-                FactAvailability.NotApplicable => false,
-                _ => null,   // 讀不到不是「沒有」
-            };
-        }
+        // 註：這裡原本有一個 `bool? Value(string key)` 的區域函式，而它**沒有被用**——
+        // 每一組證據後來都改成直白的分支（見下面 secure boot 那段的三個判斷）。
+        // 留著它會產生 CS8321，而建置警告的基線是 0（WarningBaselineTests）。
 
         // Boot Guard：FIT 條目裡有沒有 ACM／啟動模組。
         // fw.fit.summary 的字串裡有「ACM·Startup N」——**去讀它的字串是脆弱的**，

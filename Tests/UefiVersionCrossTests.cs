@@ -135,9 +135,11 @@ public class UefiVersionCrossTests
         var facts = UefiVersionCrossFactsService.Collect(At, "1.2.3", [V("1.2.3")]);
         var c = facts.Single(f => f.Key == UefiVersionCrossFactsService.CrossKey);
 
-        Assert.Contains("不代表它是「正確版本」", c.UnavailableReason);
-        Assert.Contains("只代表它們沒有互相矛盾", c.UnavailableReason);
-        Assert.Contains("要判斷正確性需要原廠映像", c.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("不代表它是「正確版本」", c.Value);
+        Assert.Contains("只代表它們沒有互相矛盾", c.Value);
+        Assert.Contains("要判斷正確性需要原廠映像", c.Value);
     }
 
     [Fact]
@@ -158,7 +160,10 @@ public class UefiVersionCrossTests
         var c = facts.Single(f => f.Key == UefiVersionCrossFactsService.CrossKey);
 
         Assert.Equal(FactAvailability.NotApplicable, c.Availability);
-        Assert.Equal(0.0, c.NumericValue);
+        // **非 Present 的事實不得帶數字**（HardwareFact 的不變式）：0 已被收斂成 null，
+        // 而「原本是多少」留在理由欄的痕跡裡（不是靜默修正）。
+        Assert.Null(c.NumericValue);
+        Assert.Contains("原本帶了數字 0", c.UnavailableReason);
         Assert.Contains("不一致", c.Value);
         Assert.Contains("2.0.0", c.Value);
         Assert.Contains("1.2.3", c.Value);
@@ -195,8 +200,15 @@ public class UefiVersionCrossTests
         foreach (var facts in cases)
         {
             var c = facts.Single(f => f.Key == UefiVersionCrossFactsService.CrossKey);
-            Assert.Contains("本服務不給一致率", c.UnavailableReason);
-            Assert.Contains("把「無從對照」偷渡成「不一致」", c.UnavailableReason);
+
+            // 說明住在哪裡要看可用性：**一致時是 Present，不變式把說明併進了 Value；
+            // 不一致與無從對照時不是 Present，說明留在理由欄**——兩個分支都要守到。
+            string explanation = c.Availability == FactAvailability.Present
+                ? c.Value
+                : c.UnavailableReason ?? "";
+
+            Assert.Contains("本服務不給一致率", explanation);
+            Assert.Contains("把「無從對照」偷渡成「不一致」", explanation);
         }
     }
 
@@ -219,8 +231,8 @@ public class UefiVersionCrossTests
         var facts = UefiVersionCrossFactsService.Collect(At, "1.0", [V("1.0")]);
         var e = facts.Single(f => f.Key == UefiVersionCrossFactsService.EmbeddedKey);
 
-        Assert.Contains("與韌體在 SMBIOS 裡宣告的是兩個獨立來源", e.UnavailableReason);
-        Assert.Contains("只代表這兩個來源沒有互相矛盾", e.UnavailableReason);
+        Assert.Contains("與韌體在 SMBIOS 裡宣告的是兩個獨立來源", e.Value);
+        Assert.Contains("只代表這兩個來源沒有互相矛盾", e.Value);
     }
 
     [Fact]

@@ -33,7 +33,9 @@ public class ReleaseReportTests
         var fact = ReleaseReport.ToSingleFileFact(At, true, 80L * 1024 * 1024, 15);
         Assert.Equal(FactAvailability.Present, fact.Availability);
         Assert.Contains("80.0 MB", fact.Value);
-        Assert.Contains("仍需要對應的 .NET 執行階段", fact.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("仍需要對應的 .NET 執行階段", fact.Value);
     }
 
     // ── P1-097 建置可重現 ──────────────────────────────────────────────
@@ -43,7 +45,7 @@ public class ReleaseReportTests
     {
         var fact = ReleaseReport.ToReproducibleFact(At, "sha256:aaa", "sha256:aaa");
         Assert.Equal(FactAvailability.Present, fact.Availability);
-        Assert.Contains("可回答的問題", fact.UnavailableReason);
+        Assert.Contains("可回答的問題", fact.Value);
     }
 
     [Fact]
@@ -187,7 +189,7 @@ public class ReleaseReportTests
         var fact = ReleaseReport.ToLimitsFact(At,
             ["需要管理員權限才能讀 MSR", "不支援 ARM64 的深度探測"], true);
         Assert.Equal(FactAvailability.Present, fact.Availability);
-        Assert.Contains("『可能不準』不是一條限制", fact.UnavailableReason);
+        Assert.Contains("『可能不準』不是一條限制", fact.Value);
     }
 
     // ── P1-104 貢獻者指南 ──────────────────────────────────────────────

@@ -154,8 +154,10 @@ public class SmbiosTpmFactsTests
             () => [Tpm43("INTC", 2, 0, 0, true, owned: false, tpm2: true)]);
         var s = facts.Single(f => f.Key == SmbiosTpmFactsService.StateKey);
 
-        Assert.Contains("不代表不能用", s.UnavailableReason);
-        Assert.Contains("還沒有擁有者", s.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("不代表不能用", s.Value);
+        Assert.Contains("還沒有擁有者", s.Value);
     }
 
     [Fact]
@@ -178,8 +180,8 @@ public class SmbiosTpmFactsTests
             () => [Tpm43("INTC", 2, 0, 0x0007_0000, true, false, true)]);
         var s = facts.Single(f => f.Key == SmbiosTpmFactsService.SummaryKey);
 
-        Assert.Contains("是韌體宣告，不是 TPM 的回應", s.UnavailableReason);
-        Assert.Contains("不是哪一個錯了", s.UnavailableReason);
+        Assert.Contains("是韌體宣告，不是 TPM 的回應", s.Value);
+        Assert.Contains("不是哪一個錯了", s.Value);
     }
 
     [Fact]

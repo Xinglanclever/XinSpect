@@ -35,9 +35,11 @@ public class UefiCompressionFactsTests
         var f = UefiCompressionFactsService.Collect(At)
             .Single(x => x.Key == UefiCompressionFactsService.RecognizedKey);
 
-        Assert.Contains("「認得」不等於「能解壓」", f.UnavailableReason);
-        Assert.Contains("不解壓", f.UnavailableReason);
-        Assert.Contains("不是「本版能還原內容的引擎」", f.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("「認得」不等於「能解壓」", f.Value);
+        Assert.Contains("不解壓", f.Value);
+        Assert.Contains("不是「本版能還原內容的引擎」", f.Value);
     }
 
     [Fact]
@@ -94,7 +96,7 @@ public class UefiCompressionFactsTests
             .Single(x => x.Key == UefiCompressionFactsService.DecompressedKey);
 
         Assert.Equal(FactAvailability.Present, f.Availability);
-        Assert.Contains("仍然不代表能解壓", f.UnavailableReason);
+        Assert.Contains("仍然不代表能解壓", f.Value);
     }
 
     [Fact]
@@ -118,7 +120,10 @@ public class UefiCompressionFactsTests
         var f = UefiCompressionFactsService.Collect(At, [known, "DEADBEEF-0000-0000-0000-000000000000"])
             .Single(x => x.Key == UefiCompressionFactsService.DecompressedKey);
 
-        Assert.Equal(2.0, f.NumericValue);
+        // **非 Present 的事實不得帶數字**（HardwareFact 的不變式）：2 已被收斂成 null，
+        // 而「原本是多少」留在理由欄的痕跡裡（不是靜默修正）。
+        Assert.Null(f.NumericValue);
+        Assert.Contains("原本帶了數字 2", f.UnavailableReason);
         Assert.Contains("其中 1 個未收錄", f.Value);
     }
 

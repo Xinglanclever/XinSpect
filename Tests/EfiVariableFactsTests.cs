@@ -95,12 +95,15 @@ public class EfiVariableFactsTests
         var facts = EfiVariableFactsService.Collect(At, [V("PK", new byte[76], attrs: 0x27)]);
         var a = facts.Single();
 
-        Assert.DoesNotContain("NON_VOLATILE", a.Value);
-        Assert.DoesNotContain("RUNTIME_ACCESS", a.Value);
-        Assert.DoesNotContain("BOOTSERVICE", a.Value);
-        Assert.DoesNotContain("EFI_VARIABLE", a.Value);
-        Assert.DoesNotContain("唯讀", a.Value);
-        Assert.DoesNotContain("執行期可寫", a.Value);
+        // **說明被不變式併進了 Value，而那段說明本來就會提到那幾個常數名**
+        // （它講的正是「不命名」）——所以要驗的是值本身：第一個「。」之前的那一段。
+        string raw = a.Value.Split('。')[0];
+        Assert.DoesNotContain("NON_VOLATILE", raw);
+        Assert.DoesNotContain("RUNTIME_ACCESS", raw);
+        Assert.DoesNotContain("BOOTSERVICE", raw);
+        Assert.DoesNotContain("EFI_VARIABLE", raw);
+        Assert.DoesNotContain("唯讀", raw);
+        Assert.DoesNotContain("執行期可寫", raw);
     }
 
     [Fact]
@@ -109,10 +112,12 @@ public class EfiVariableFactsTests
         var facts = EfiVariableFactsService.Collect(At, [V("PK", new byte[76])]);
         var a = facts.Single();
 
-        Assert.Contains("只列原始值", a.UnavailableReason);
-        Assert.Contains("本專案沒有任何地方收錄那張表", a.UnavailableReason);
-        Assert.Contains("「我記得」不是出處", a.UnavailableReason);
-        Assert.Contains("填錯的位元會讓一個不存在的屬性看起來存在", a.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("只列原始值", a.Value);
+        Assert.Contains("本專案沒有任何地方收錄那張表", a.Value);
+        Assert.Contains("「我記得」不是出處", a.Value);
+        Assert.Contains("填錯的位元會讓一個不存在的屬性看起來存在", a.Value);
     }
 
     [Fact]
@@ -121,9 +126,9 @@ public class EfiVariableFactsTests
         var facts = EfiVariableFactsService.Collect(At, [V("PK", new byte[76])]);
         var a = facts.Single();
 
-        Assert.Contains("UEFI Spec §8.2", a.UnavailableReason);
-        Assert.Contains("「唯讀／執行期可寫」這個判斷需要位元名才做得出來", a.UnavailableReason);
-        Assert.Contains("規格 P2-083 的後半在對準出處之前不算完成", a.UnavailableReason);
+        Assert.Contains("UEFI Spec §8.2", a.Value);
+        Assert.Contains("「唯讀／執行期可寫」這個判斷需要位元名才做得出來", a.Value);
+        Assert.Contains("規格 P2-083 的後半在對準出處之前不算完成", a.Value);
     }
 
     /// <summary>
@@ -137,10 +142,10 @@ public class EfiVariableFactsTests
         var facts = EfiVariableFactsService.Collect(At, [V("PK", new byte[76])]);
         var a = facts.Single();
 
-        Assert.Contains("簽章清單那一半已經撤回了", a.UnavailableReason);
-        Assert.Contains("UefiSignatureFactsService", a.UnavailableReason);
-        Assert.Contains("uefi.pk", a.UnavailableReason);
-        Assert.Contains("做得更完整", a.UnavailableReason);
+        Assert.Contains("簽章清單那一半已經撤回了", a.Value);
+        Assert.Contains("UefiSignatureFactsService", a.Value);
+        Assert.Contains("uefi.pk", a.Value);
+        Assert.Contains("做得更完整", a.Value);
     }
 
     /// <summary>

@@ -23,6 +23,37 @@ public class TpmSecureBootCrossFactsTests
 
     // ── 三態 ────────────────────────────────────────────────────────────
 
+
+    /// <summary>
+    /// 服務檔的原始碼，<b>去掉強調與參照標記</b>後回傳。
+    ///
+    /// <para>
+    /// <b>為什麼：</b>「本服務不做判決」是<b>這一項的界線宣告</b>，
+    /// 而 <c>HardwareFact</c> 的第二條不變式（<c>Present</c> ⇒ 說明併進
+    /// <c>Value</c>）與 <c>HardwareSnapshotService</c> 的「可用的事實不得帶
+    /// unavailableReason」合起來要求這種話不該放在事實的資料欄位裡。
+    /// </para>
+    ///
+    /// <para>
+    /// 而去標記是因為<b>兩邊的基準要一致</b>：服務檔的註解用 XML 的
+    /// <c>&lt;b&gt;</c>，而斷言的字串多是 markdown 的 <c>**…**</c>。
+    /// </para>
+    /// </summary>
+    private static string ServiceSource()
+    {
+        var dir = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !System.IO.File.Exists(
+                   System.IO.Path.Combine(dir.FullName, "XinSpect.csproj")))
+            dir = dir.Parent;
+        Assert.NotNull(dir);
+        string text = System.IO.File.ReadAllText(System.IO.Path.Combine(
+            dir!.FullName, "Services", "TpmSecureBootCrossFactsService.cs"));
+        text = text.Replace("<b>", "").Replace("</b>", "").Replace("**", "");
+        return System.Text.RegularExpressions.Regex.Replace(
+            text, @"</?c>|<see cref=""([^""]+)""\s*/>",
+            m => m.Groups[1].Success ? m.Groups[1].Value : "");
+    }
+
     [Fact]
     public void 沒有輸入時要標不支援並說出不自己讀()
     {
@@ -62,10 +93,10 @@ public class TpmSecureBootCrossFactsTests
     {
         var f = TpmSecureBootCrossFactsService.Collect(At, In(true, true)).Single();
 
-        Assert.Equal("兩者都到位", f.Value);
+        Assert.StartsWith("兩者都到位", f.Value);
         Assert.Equal(1.0, f.NumericValue);
-        Assert.Contains("不代表量測開機已經在運作", f.UnavailableReason);
-        Assert.Contains("見 bt.measured_boot", f.UnavailableReason);
+        Assert.Contains("不代表量測開機已經在運作", f.Value);
+        Assert.Contains("見 bt.measured_boot", f.Value);
     }
 
     /// <summary>這一條守著「TPM 在而 SB 關」不是矛盾。</summary>
@@ -74,10 +105,10 @@ public class TpmSecureBootCrossFactsTests
     {
         var f = TpmSecureBootCrossFactsService.Collect(At, In(true, false)).Single();
 
-        Assert.Equal("有 TPM 而 Secure Boot 關閉", f.Value);
+        Assert.StartsWith("有 TPM 而 Secure Boot 關閉", f.Value);
         Assert.Equal(0.0, f.NumericValue);
-        Assert.Contains("那不是矛盾", f.UnavailableReason);
-        Assert.Contains("TPM 與 Secure Boot 不是互相依賴的", f.UnavailableReason);
+        Assert.Contains("那不是矛盾", f.Value);
+        Assert.Contains("TPM 與 Secure Boot 不是互相依賴的", f.Value);
     }
 
     /// <summary>
@@ -90,9 +121,9 @@ public class TpmSecureBootCrossFactsTests
         var f = TpmSecureBootCrossFactsService.Collect(At, In(false, true)).Single();
 
         Assert.Contains("沒有 TPM 而 Secure Boot 開啟", f.Value);
-        Assert.Contains("這個組合值得注意，但不是錯誤", f.UnavailableReason);
-        Assert.Contains("存在 UEFI 變數裡，那不需要 TPM", f.UnavailableReason);
-        Assert.Contains("可以正常開啟 Secure Boot", f.UnavailableReason);
+        Assert.Contains("這個組合值得注意，但不是錯誤", f.Value);
+        Assert.Contains("存在 UEFI 變數裡，那不需要 TPM", f.Value);
+        Assert.Contains("可以正常開啟 Secure Boot", f.Value);
     }
 
     [Fact]
@@ -100,8 +131,8 @@ public class TpmSecureBootCrossFactsTests
     {
         var f = TpmSecureBootCrossFactsService.Collect(At, In(false, true)).Single();
 
-        Assert.Contains("沒有 TPM 就沒有 PCR", f.UnavailableReason);
-        Assert.Contains("不會被量測進信任鏈", f.UnavailableReason);
+        Assert.Contains("沒有 TPM 就沒有 PCR", f.Value);
+        Assert.Contains("不會被量測進信任鏈", f.Value);
     }
 
     [Fact]
@@ -109,8 +140,8 @@ public class TpmSecureBootCrossFactsTests
     {
         var f = TpmSecureBootCrossFactsService.Collect(At, In(false, false)).Single();
 
-        Assert.Equal("兩者都沒有", f.Value);
-        Assert.Contains("CSM／Legacy 開機的機器上是正常的樣貌", f.UnavailableReason);
+        Assert.StartsWith("兩者都沒有", f.Value);
+        Assert.Contains("CSM／Legacy 開機的機器上是正常的樣貌", f.Value);
     }
 
     // ── 界線 ────────────────────────────────────────────────────────────
@@ -121,8 +152,11 @@ public class TpmSecureBootCrossFactsTests
     {
         var f = TpmSecureBootCrossFactsService.Collect(At, In(true, true)).Single();
 
-        Assert.Contains("只說「這個組合是什麼」，不說「設定有問題」", f.UnavailableReason);
-        Assert.Contains("不宣告這台機器的安全設定正確或不正確", f.UnavailableReason);
+        // 服務檔的原文是「只說『這個組合值得注意』，不說『設定有問題』」——
+        // **而斷言原本寫的是「這個組合是什麼」**，那是我改文案時的另一種說法。
+        // **斷言的字串要跟著服務檔的實際用詞**，否則它測的是一個不存在的句子。
+        Assert.Contains("只說「這個組合值得注意」，不說「設定有問題」", ServiceSource());
+        Assert.Contains("不宣告「這台機器的安全設定正確或不正確」", ServiceSource());
     }
 
     // ── FromFacts ───────────────────────────────────────────────────────
@@ -193,7 +227,7 @@ public class TpmSecureBootCrossFactsTests
     {
         var f = TpmSecureBootCrossFactsService.Collect(At, In(true, true, "platform.secure_boot")).Single();
 
-        Assert.Contains("Secure Boot 的值來自 platform.secure_boot", f.UnavailableReason);
+        Assert.Contains("Secure Boot 的值來自 platform.secure_boot", f.Value);
     }
 
     [Fact]

@@ -178,7 +178,8 @@ public class SmbiosIdentityFactsTests
         var facts = SmbiosIdentityFactsService.Collect(At, () => [Type1("V", "P", "S", stored)]);
         var u = facts.Single(f => f.Key == SmbiosIdentityFactsService.UuidKey);
 
-        Assert.Equal("00112233-4455-6677-8899-AABBCCDDEEFF", u.Value);
+        // 說明被不變式併進了 Value（Present 的事實不得帶理由欄），所以比前綴（UUID 本身）。
+        Assert.StartsWith("00112233-4455-6677-8899-AABBCCDDEEFF", u.Value);
     }
 
     [Fact]
@@ -212,7 +213,9 @@ public class SmbiosIdentityFactsTests
         var u = facts.Single(f => f.Key == SmbiosIdentityFactsService.UuidKey);
 
         Assert.True(u.Sensitive);
-        Assert.Contains("能唯一指認一台機器", u.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("能唯一指認一台機器", u.Value);
     }
 
     // ── Type 2 與 3 ─────────────────────────────────────────────────────
@@ -237,7 +240,7 @@ public class SmbiosIdentityFactsTests
 
         Assert.Contains("機箱鎖存在", c.Value);
         Assert.DoesNotContain("131", c.Value);
-        Assert.Contains("不是「現在鎖著」", c.UnavailableReason);
+        Assert.Contains("不是「現在鎖著」", c.Value);
     }
 
     // ── Type 19：未開工（P2-024 退回）────────────────────────────────────
@@ -254,8 +257,8 @@ public class SmbiosIdentityFactsTests
         var b = facts.Single(f => f.Key == SmbiosIdentityFactsService.BootStatusKey);
 
         Assert.Equal(FactAvailability.Present, b.Availability);
-        Assert.Equal("正常", b.Value);
-        Assert.Contains("不是現在的健康狀態", b.UnavailableReason);
+        Assert.StartsWith("正常", b.Value);
+        Assert.Contains("不是現在的健康狀態", b.Value);
     }
 
     [Fact]

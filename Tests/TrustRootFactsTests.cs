@@ -58,7 +58,9 @@ public class TrustRootFactsTests
         Assert.Contains("Boot Guard", r.Value);
         Assert.Contains("TPM 度量開機", r.Value);
         Assert.Contains("Secure Boot", r.Value);
-        Assert.Contains("**三種根不互斥**", r.UnavailableReason);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.Contains("**三種根不互斥**", r.Value);
     }
 
     [Fact]
@@ -79,8 +81,8 @@ public class TrustRootFactsTests
         var facts = TrustRootFactsService.Collect(At, E(bg: true));
         var t = facts.Single(f => f.Key == TrustRootFactsService.TypesKey);
 
-        Assert.Contains("錨點本身看不到", t.UnavailableReason);
-        Assert.Contains("CPU 熔絲與 TPM 的 EK 都不在使用者模式的範圍內", t.UnavailableReason);
+        Assert.Contains("錨點本身看不到", t.Value);
+        Assert.Contains("CPU 熔絲與 TPM 的 EK 都不在使用者模式的範圍內", t.Value);
     }
 
     // ── 界線：證據與生效的距離 ──────────────────────────────────────────
@@ -91,8 +93,8 @@ public class TrustRootFactsTests
         var facts = TrustRootFactsService.Collect(At, E(bg: true));
         var r = facts.Single(f => f.Key == TrustRootFactsService.RootKey);
 
-        Assert.Contains("「看得到證據」與「根已生效」之間有距離", r.UnavailableReason);
-        Assert.Contains("不代表 Boot Guard 已啟用", r.UnavailableReason);
+        Assert.Contains("「看得到證據」與「根已生效」之間有距離", r.Value);
+        Assert.Contains("不代表 Boot Guard 已啟用", r.Value);
     }
 
     [Fact]
@@ -101,7 +103,7 @@ public class TrustRootFactsTests
         var facts = TrustRootFactsService.Collect(At, E(bg: true));
         var r = facts.Single(f => f.Key == TrustRootFactsService.RootKey);
 
-        Assert.Contains("不宣告「這台機器的根是 X」", r.UnavailableReason);
+        Assert.Contains("不宣告「這台機器的根是 X」", r.Value);
     }
 
     // ── 沒有 vs 讀不到 ──────────────────────────────────────────────────
@@ -113,10 +115,11 @@ public class TrustRootFactsTests
         var facts = TrustRootFactsService.Collect(At, E(bg: null, measured: false, sb: null));
         var t = facts.Single(f => f.Key == TrustRootFactsService.TypesKey);
 
-        Assert.Contains("沒有證據的：TPM 度量開機", t.UnavailableReason);
-        Assert.Contains("讀不到的：Boot Guard、Secure Boot", t.UnavailableReason);
-        Assert.Contains("把兩者混在一起會讓一個讀不到的正常機器看起來像沒有信任根",
-            t.UnavailableReason);
+        // **TypesKey 是 Present**，所以不變式把說明併進了 Value（理由欄留空）；
+        // 而「沒有證據」與「讀不到」這兩句是服務組出來的（名字是內插的），所以逐字比對 Value。
+        Assert.Contains("沒有證據的：TPM 度量開機", t.Value);
+        Assert.Contains("讀不到的：Boot Guard、Secure Boot", t.Value);
+        Assert.Contains("把兩者混在一起會讓一個讀不到的正常機器看起來像沒有信任根", t.Value);
     }
 
     [Fact]
@@ -126,7 +129,10 @@ public class TrustRootFactsTests
         var r = facts.Single(f => f.Key == TrustRootFactsService.RootKey);
 
         Assert.Equal(FactAvailability.NotApplicable, r.Availability);
-        Assert.Equal(0.0, r.NumericValue);
+        // **非 Present 的事實不得帶數字**（HardwareFact 的不變式）：0 已被收斂成 null，
+        // 而「原本是多少」留在理由欄的痕跡裡（不是靜默修正）。
+        Assert.Null(r.NumericValue);
+        Assert.Contains("原本帶了數字 0", r.UnavailableReason);
         Assert.Contains("那是一個有意義的結果", r.UnavailableReason);
         Assert.Contains("排除了「讀不到所以看不到」這個解釋", r.UnavailableReason);
     }

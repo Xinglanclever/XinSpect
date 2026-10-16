@@ -28,7 +28,9 @@ public class FirmwareSettingsReachFactsTests
             [P("UEFI 變數", true), P("ACPI 表", true)]);
         var r = facts.Single(f => f.Key == FirmwareSettingsReachFactsService.ReadableKey);
 
-        Assert.Equal("UEFI 變數、ACPI 表", r.Value);
+        // **Present 的事實不得帶理由欄**（HardwareFact 的不變式）：說明被併進了 Value，
+        // 所以這一節的斷言讀 f.Value，不是 f.UnavailableReason。
+        Assert.StartsWith("UEFI 變數、ACPI 表", r.Value);
         Assert.Equal(2.0, r.NumericValue);
         Assert.Equal(FactAvailability.Present, r.Availability);
     }
@@ -39,8 +41,8 @@ public class FirmwareSettingsReachFactsTests
         var facts = FirmwareSettingsReachFactsService.Collect(At, [P("A", true)]);
         var r = facts.Single(f => f.Key == FirmwareSettingsReachFactsService.ReadableKey);
 
-        Assert.Contains("讀得到不代表值對", r.UnavailableReason);
-        Assert.Contains("這條路現在通不通", r.UnavailableReason);
+        Assert.Contains("讀得到不代表值對", r.Value);
+        Assert.Contains("這條路現在通不通", r.Value);
     }
 
     [Fact]
@@ -52,7 +54,10 @@ public class FirmwareSettingsReachFactsTests
 
         Assert.Contains("UEFI 變數（權限不足）", b.Value);
         Assert.Contains("SPI 快閃（登錄機碼不存在）", b.Value);
-        Assert.Equal(2.0, b.NumericValue);
+        // **非 Present 的事實不得帶數字**（HardwareFact 的不變式）：2 已被收斂成 null，
+        // 而「原本是多少」留在理由欄的痕跡裡（不是靜默修正）。
+        Assert.Null(b.NumericValue);
+        Assert.Contains("原本帶了數字 2", b.UnavailableReason);
     }
 
     [Fact]
@@ -83,9 +88,9 @@ public class FirmwareSettingsReachFactsTests
         var facts = FirmwareSettingsReachFactsService.Collect(At, [P("A", true), P("B", true)]);
         var b = facts.Single(f => f.Key == FirmwareSettingsReachFactsService.BlockedKey);
 
-        Assert.Equal("所有來源都讀得到", b.Value);
+        Assert.StartsWith("所有來源都讀得到", b.Value);
         Assert.Equal(0.0, b.NumericValue);
-        Assert.Contains("排除了「看不到是因為權限」這個常見解釋", b.UnavailableReason);
+        Assert.Contains("排除了「看不到是因為權限」這個常見解釋", b.Value);
     }
 
     [Fact]
@@ -102,10 +107,21 @@ public class FirmwareSettingsReachFactsTests
     {
         var probes = new[] { P("A", true), P("B", false, "x"), P("C", true) };
         var facts = FirmwareSettingsReachFactsService.Collect(At, probes);
-        double readable = facts.Single(f => f.Key == FirmwareSettingsReachFactsService.ReadableKey).NumericValue!.Value;
-        double blocked = facts.Single(f => f.Key == FirmwareSettingsReachFactsService.BlockedKey).NumericValue!.Value;
+        var readableFact = facts.Single(f => f.Key == FirmwareSettingsReachFactsService.ReadableKey);
+        var blockedFact = facts.Single(f => f.Key == FirmwareSettingsReachFactsService.BlockedKey);
+
+        // 可讀那一把是 Present，數字還在；**不可讀那一把是 Unknown，
+        // 不變式把它的數字收斂成 null 並在理由欄留下痕跡**——
+        // 所以筆數要從痕跡裡讀（不是靜默修正，見 HardwareFactInvariantTests）。
+        double readable = readableFact.NumericValue!.Value;
+        double blocked = 痕跡裡的數字(blockedFact);
 
         Assert.Equal(probes.Length, readable + blocked);
+
+        static double 痕跡裡的數字(HardwareFact f) => double.Parse(
+            System.Text.RegularExpressions.Regex
+                .Match(f.UnavailableReason ?? "", @"原本帶了數字 (\d+(?:\.\d+)?)").Groups[1].Value,
+            System.Globalization.CultureInfo.InvariantCulture);
     }
 
     [Fact]

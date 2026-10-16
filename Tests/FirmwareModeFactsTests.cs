@@ -32,10 +32,12 @@ public class FirmwareModeFactsTests
         var f = FirmwareModeFactsService.Collect(At, In(fwType: 2))
             .Single(x => x.Key == FirmwareModeFactsService.ModeKey);
 
-        Assert.Equal("UEFI", f.Value);
+        // 值一定是「<值>。<說明>」——說明是這一項的實質內容，所以比對前綴而非全等；
+        // 而說明住在 Value 裡（不變式：Present 的事實不得帶理由欄）。
+        Assert.StartsWith("UEFI", f.Value);
         Assert.Equal(FactAvailability.Present, f.Availability);
-        Assert.Contains("這一次開機走的路徑", f.UnavailableReason);
-        Assert.Contains("不是「這台機器支援什麼」", f.UnavailableReason);
+        Assert.Contains("這一次開機走的路徑", f.Value);
+        Assert.Contains("不是「這台機器支援什麼」", f.Value);
     }
 
     [Fact]
@@ -45,9 +47,9 @@ public class FirmwareModeFactsTests
             .Single(x => x.Key == FirmwareModeFactsService.ModeKey);
 
         Assert.Contains("Legacy BIOS", f.Value);
-        Assert.Contains("Secure Boot", f.UnavailableReason);
-        Assert.Contains("2 TiB", f.UnavailableReason);
-        Assert.Contains("不代表沒有 UEFI 支援", f.UnavailableReason);
+        Assert.Contains("Secure Boot", f.Value);
+        Assert.Contains("2 TiB", f.Value);
+        Assert.Contains("不代表沒有 UEFI 支援", f.Value);
     }
 
     [Fact]
@@ -82,8 +84,8 @@ public class FirmwareModeFactsTests
 
         Assert.Contains("BIOS 廠 American Megatrends Inc.", f.Value);
         Assert.Contains("系統廠 Dell Inc.", f.Value);
-        Assert.Contains("是不同的兩件事", f.UnavailableReason);
-        Assert.Contains("誰做的韌體", f.UnavailableReason);
+        Assert.Contains("是不同的兩件事", f.Value);
+        Assert.Contains("誰做的韌體", f.Value);
     }
 
     [Fact]
@@ -93,7 +95,11 @@ public class FirmwareModeFactsTests
             .Single(x => x.Key == FirmwareModeFactsService.VendorKey);
 
         Assert.Contains("BIOS 廠 AMI", f.Value);
-        Assert.DoesNotContain("系統廠", f.Value);
+        // **不能直接比對「系統廠」那三個字**：不變式把說明併進了 Value，
+        // 而那段說明本身就在講「BIOS 廠與系統廠是不同的兩件事」。
+        // 要驗的是「有沒有多出一個系統廠欄位」——而欄位的形式是「系統廠 <名字>」
+        // （兩個廠商並列時用「；」分隔）。
+        Assert.DoesNotContain("系統廠 ", f.Value);
     }
 
     [Fact]
@@ -114,10 +120,10 @@ public class FirmwareModeFactsTests
         var f = FirmwareModeFactsService.Collect(At, In(biosVersion: "2.85"))
             .Single(x => x.Key == FirmwareModeFactsService.VersionKey);
 
-        Assert.Equal("2.85", f.Value);
-        Assert.Contains("兩個獨立來源", f.UnavailableReason);
-        Assert.Contains("常被 OEM 覆寫成自己的版號", f.UnavailableReason);
-        Assert.Contains("不是錯誤", f.UnavailableReason);
+        Assert.StartsWith("2.85", f.Value);
+        Assert.Contains("兩個獨立來源", f.Value);
+        Assert.Contains("常被 OEM 覆寫成自己的版號", f.Value);
+        Assert.Contains("不是錯誤", f.Value);
     }
 
     [Fact]
@@ -146,7 +152,7 @@ public class FirmwareModeFactsTests
         var f = FirmwareModeFactsService.Collect(At, In(biosDate: "20240315000000.000000+000"))
             .Single(x => x.Key == FirmwareModeFactsService.DateKey);
 
-        Assert.Contains("不是「這台機器上一次更新韌體的時間」", f.UnavailableReason);
+        Assert.Contains("不是「這台機器上一次更新韌體的時間」", f.Value);
     }
 
     [Fact]
@@ -155,7 +161,9 @@ public class FirmwareModeFactsTests
         var f = FirmwareModeFactsService.Collect(At, In(biosDate: "unknown"))
             .Single(x => x.Key == FirmwareModeFactsService.DateKey);
 
-        Assert.Equal("unknown", f.Value);
+        Assert.StartsWith("unknown", f.Value);
+        // 「原樣呈現」的保證由「沒有（原始 …）後綴」把守
+        // （解析過的版本是「2024-03-15（原始 …）」）；說明被併進 Value 不影響這件事。
         Assert.DoesNotContain("（原始", f.Value);
     }
 

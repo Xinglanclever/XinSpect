@@ -53,8 +53,9 @@ public class TrustRootVbsCrossFactsTests
         var f = TrustRootVbsCrossFactsService.Collect(At,
             In(TrustRootVbsCrossFactsService.VbsState.Running, sb: false)).Single();
 
-        Assert.Contains("本服務唯一有實質依賴的那一條", f.UnavailableReason);
-        Assert.Contains("VBS 的「安全啟動」保護在 Secure Boot 關閉時不能生效", f.UnavailableReason);
+        // 這三條都是 Present 事實的說明——而不變式把說明併進了 Value。
+        Assert.Contains("本服務唯一有實質依賴的那一條", f.Value);
+        Assert.Contains("VBS 的「安全啟動」保護在 Secure Boot 關閉時不能生效", f.Value);
     }
 
     [Fact]
@@ -63,10 +64,13 @@ public class TrustRootVbsCrossFactsTests
         var f = TrustRootVbsCrossFactsService.Collect(At,
             In(TrustRootVbsCrossFactsService.VbsState.Running, sb: false)).Single();
 
-        Assert.Contains("不代表設定錯誤", f.UnavailableReason);
-        Assert.Contains("VBS 可以在 Secure Boot 關閉時執行", f.UnavailableReason);
-        Assert.Contains("只是少了一層保護", f.UnavailableReason);
-        Assert.Contains("本服務不做判決", f.UnavailableReason);
+        Assert.Contains("不代表設定錯誤", f.Value);
+        Assert.Contains("VBS 可以在 Secure Boot 關閉時執行", f.Value);
+        Assert.Contains("只是少了一層保護", f.Value);
+        // 「不做判決」是**這一項的界線宣告**，不是這把鍵的值——
+        // 而不變式要求 Present 的事實不得帶理由欄，所以它住在類別層的 XML 文件註解。
+        // 斷言的字串要跟著服務檔的實際用詞：那裡寫的是「界線：這不是判決」。
+        Assert.Contains("界線：這不是判決", ServiceSource());
     }
 
     [Fact]
@@ -75,8 +79,8 @@ public class TrustRootVbsCrossFactsTests
         var f = TrustRootVbsCrossFactsService.Collect(At,
             In(TrustRootVbsCrossFactsService.VbsState.Running, sb: null)).Single();
 
-        Assert.Contains("Secure Boot 那一邊讀不到", f.UnavailableReason);
-        Assert.Contains("無從判斷 VBS 的安全啟動保護有沒有依據", f.UnavailableReason);
+        Assert.Contains("Secure Boot 那一邊讀不到", f.Value);
+        Assert.Contains("無從判斷 VBS 的安全啟動保護有沒有依據", f.Value);
     }
 
     [Fact]
@@ -85,8 +89,8 @@ public class TrustRootVbsCrossFactsTests
         var f = TrustRootVbsCrossFactsService.Collect(At,
             In(TrustRootVbsCrossFactsService.VbsState.Running, sb: true)).Single();
 
-        Assert.Contains("Secure Boot 開著", f.UnavailableReason);
-        Assert.Contains("VBS 的安全啟動保護有依據", f.UnavailableReason);
+        Assert.Contains("Secure Boot 開著", f.Value);
+        Assert.Contains("VBS 的安全啟動保護有依據", f.Value);
     }
 
     /// <summary>
@@ -99,12 +103,12 @@ public class TrustRootVbsCrossFactsTests
         var f = TrustRootVbsCrossFactsService.Collect(At,
             In(TrustRootVbsCrossFactsService.VbsState.Running, sb: true)).Single();
 
-        Assert.Contains("其餘兩種信任根與 VBS 沒有直接關係，而那也要說出來", f.UnavailableReason);
-        Assert.Contains("否則讀者會以為沒說的那兩條有問題", f.UnavailableReason);
-        Assert.Contains("Boot Guard", f.UnavailableReason);
-        Assert.Contains("時間軸上不重疊", f.UnavailableReason);
-        Assert.Contains("TPM 量測開機", f.UnavailableReason);
-        Assert.Contains("是共同的**前提**，不是依賴關係", f.UnavailableReason);
+        Assert.Contains("其餘兩種信任根與 VBS 沒有直接關係，而那也要說出來", f.Value);
+        Assert.Contains("否則讀者會以為沒說的那兩條有問題", f.Value);
+        Assert.Contains("Boot Guard", f.Value);
+        Assert.Contains("時間軸上不重疊", f.Value);
+        Assert.Contains("TPM 量測開機", f.Value);
+        Assert.Contains("是共同的**前提**，不是依賴關係", f.Value);
     }
 
     [Fact]
@@ -113,9 +117,11 @@ public class TrustRootVbsCrossFactsTests
         var f = TrustRootVbsCrossFactsService.Collect(At,
             In(TrustRootVbsCrossFactsService.VbsState.Off, sb: true)).Single();
 
-        Assert.Equal("VBS 關閉", f.Value);
+        // **值一定是「<狀態>。<說明>」**——說明是這一項的實質內容，不是附加物，
+        // 所以比對前綴而不是全等。
+        Assert.StartsWith("VBS 關閉", f.Value);
         Assert.Equal(0.0, f.NumericValue);
-        Assert.Contains("沒有直接關係", f.UnavailableReason);
+        Assert.Contains("沒有直接關係", f.Value);
     }
 
     [Fact]
@@ -124,9 +130,41 @@ public class TrustRootVbsCrossFactsTests
         var f = TrustRootVbsCrossFactsService.Collect(At,
             In(TrustRootVbsCrossFactsService.VbsState.EnabledNotRunning, sb: false)).Single();
 
-        Assert.Equal("VBS 已啟用但未執行", f.Value);
+        Assert.StartsWith("VBS 已啟用但未執行", f.Value);
         Assert.Equal(1.0, f.NumericValue);
-        Assert.Contains("唯一有實質依賴的那一條", f.UnavailableReason);
+        Assert.Contains("唯一有實質依賴的那一條", f.Value);
+    }
+
+    /// <summary>
+    /// 服務檔的原始碼，<b>去掉強調與參照標記</b>後回傳。
+    ///
+    /// <para>
+    /// <b>為什麼要讀原始碼：</b>「這不是判決」是<b>這一項的界線宣告</b>——
+    /// 而 <c>HardwareFact</c> 的第二條不變式（<c>Present</c> ⇒ 說明併進
+    /// <c>Value</c>）與 <c>HardwareSnapshotService</c> 的「可用的事實不得帶
+    /// unavailableReason」合起來要求這種話不該放在事實的資料欄位裡。
+    /// <b>所以它的位置在類別層的 XML 文件註解</b>，而斷言要測的是
+    /// 「那句話有沒有被寫下來」，不是「它放在哪一個欄位」。
+    /// </para>
+    ///
+    /// <para>
+    /// <b>而去標記是因為兩邊的基準要一致</b>：服務檔的註解用 XML 的
+    /// <c>&lt;b&gt;</c>，而斷言的字串寫的是純文字。
+    /// </para>
+    /// </summary>
+    private static string ServiceSource()
+    {
+        var dir = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !System.IO.File.Exists(
+                   System.IO.Path.Combine(dir.FullName, "XinSpect.csproj")))
+            dir = dir.Parent;
+        Assert.NotNull(dir);
+        string text = System.IO.File.ReadAllText(System.IO.Path.Combine(
+            dir!.FullName, "Services", "TrustRootVbsCrossFactsService.cs"));
+        text = text.Replace("<b>", "").Replace("</b>", "").Replace("**", "");
+        return System.Text.RegularExpressions.Regex.Replace(
+            text, @"</?c>|<see cref=""([^""]+)""\s*/>",
+            m => m.Groups[1].Success ? m.Groups[1].Value : "");
     }
 
     // ── FromFacts ───────────────────────────────────────────────────────

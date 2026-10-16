@@ -52,10 +52,11 @@ public class KnowledgePackReportTests
         var load = new KnowledgePackLoad(pack, null, pack.SerialNumber);
         var fact = KnowledgePackReport.ToDigestFact(At, load);
 
-        Assert.Equal(pack.SerialNumber, fact.Value);             // 完整雜湊，一字不截
+        // 說明被不變式併進了 Value（Present 的事實不得帶理由欄），所以比前綴。
+        Assert.StartsWith(pack.SerialNumber, fact.Value);         // 完整雜湊，一字不截
         Assert.True(pack.SerialNumber.Length > 18, "序列號本身要夠長，才測得出有沒有被截斷");
         Assert.Equal(FactAvailability.Present, fact.Availability);
-        Assert.Contains("不是簽章", fact.UnavailableReason);      // 界線說明，不是缺陷
+        Assert.Contains("不是簽章", fact.Value);                  // 界線說明，不是缺陷
     }
 
     [Fact]
