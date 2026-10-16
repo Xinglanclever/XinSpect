@@ -112,7 +112,7 @@
 | P2-017 | TPM2 與 WPBT 表 | TPM 位置與 WPBT 存在性陳述 | `ac.tpm2`／`ac.table.wpbt` | L0 | S | — |todo:／alias:se.wpbt@Services/ClosingFactsService.cs:27 
 | P2-018 | PDTT／LPIT 等其餘表 | 逐簽章解碼並標未支援 | `ac.table.{sig}` | L0 | M | P2-002 |alias:acpi.table.{sig}@Services/AcpiTableService.cs:42 
 | P2-019 | SMBIOS Type 0–3 | BIOS／系統／底板／機箱全欄位 | `sb.type0.*`–`sb.type3.*` | L1 | M | — |todo: 
-| P2-020 | SMBIOS Type 4／7 | 處理器與快取 | `sb.type4.*` | L0 | M | — |todo: 
+| P2-020 | SMBIOS Type 4／7 | 處理器與快取 | `sb.type4.*` | L0 | M | — |ok:sb.type4.* 
 | P2-021 | SMBIOS Type 9 插槽 | 系統插槽與已用狀態 | `sb.slot.*` | L0 | M | — |ok:sb.slot.* 
 | P2-022 | SMBIOS Type 11 OEM 字串 | 廠商字串列 | `sb.oem.strings` | L1 | S | — |alias:sb.oem.list@Services/SmbiosDeepFactsService.cs:92 
 | P2-023 | SMBIOS Type 16／17 記憶體 | 陣列與裝置全欄位（序號遮蔽） | `sb.mem.*` | L1 | M | — |alias:sb.dim.*@Services/SmbiosDeepFactsService.cs:65 

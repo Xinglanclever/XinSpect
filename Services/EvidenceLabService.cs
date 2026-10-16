@@ -391,6 +391,10 @@ public sealed class EvidenceLabService : ObservableObject
         MonitorFacts = MonitorFactsService.Collect(at);
         AssetFacts = AssetFactsService.Collect(at);
         SmbiosDeepFacts = SmbiosDeepFactsService.Collect(at);
+        // ULTIMATE-1000 階段二 P2-020：SMBIOS Type 4（處理器）與 Type 7（快取）。
+        // 與上面那份同一次讀取——Type 4 的「核心數／執行緒數」是要跟 CPUID 與 OS
+        // 三方並列的事實，而三個來源各自重讀一次表只會多出「讀到的不一樣」的可能。
+        SmbiosProcessorFacts = SmbiosProcessorFactsService.Collect(at);
         PpttFacts = PpttFactsService.Collect(new Win32AcpiTableSource(), at, Environment.ProcessorCount);
         ServerModeFacts = ServerModeFactsService.Collect(at);
         RoleFacts = RoleSurfaceFactsService.Collect(at);
@@ -404,6 +408,7 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(AudioLatencyFactsService.Collect(at))
             .Concat(AssetFacts)
             .Concat(SmbiosDeepFacts)
+            .Concat(SmbiosProcessorFacts)
             .Concat(PpttFacts)
             .Concat(ServerModeFacts)
             .Concat(RoleFacts)
@@ -797,6 +802,12 @@ public sealed class EvidenceLabService : ObservableObject
 
     /// <summary>SMBIOS 表層深化事實（Vol2 SB 域）：Type 0–3／9／17／42／11／39 與 M.2 槽位。</summary>
     public IReadOnlyList<HardwareFact> SmbiosDeepFacts { get; private set; } = [];
+
+    /// <summary>
+    /// SMBIOS Type 4／7 事實（ULTIMATE-1000 階段二 P2-020）：處理器與快取。
+    /// 與 <see cref="SmbiosDeepFacts"/> 同一次讀取；與 CPUID／OS 的差異是三方並列的事實。
+    /// </summary>
+    public IReadOnlyList<HardwareFact> SmbiosProcessorFacts { get; private set; } = [];
 
     /// <summary>PPTT 拓撲事實（Vol2 AC-017）：韌體自述的處理器／快取節點，與 OS 邏輯處理器數並列。</summary>
     public IReadOnlyList<HardwareFact> PpttFacts { get; private set; } = [];
