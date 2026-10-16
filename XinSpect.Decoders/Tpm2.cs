@@ -105,6 +105,23 @@ public static class Tpm2
 
     // ── GetCapability：演算法銀行與版本（P2-063／P2-068）────────────────────
 
+    // ═══ 本區的常數收錄政策：**只寫對準過出處的編號** ═══
+    //
+    // TPM_PT_* 是一個大表，而**本專案只收錄了下面這幾個**——
+    // 它們各自有 [SpecRef] 指得出從哪來。
+    //
+    // **其餘的 TPM_PT_* 一律不寫**，即使那些值「看起來很熟悉」：
+    // 憑記憶補上的編號會讓一個不存在的屬性看起來存在，
+    // 而那比「未收錄」更糟——**未收錄看得出來，填錯看不出來。**
+    //
+    // 尚未對準的（見 docs/ULTIMATE-1000/UNSOURCED-CONSTANTS.md）：
+    //   TPM_PT_PERMANENT 那一族        → 解鎖 P2-069（tpm.owned）
+    //   證明能力相關的 TPM_PT_*        → 解鎖 P2-075（tpm.attest.capable）
+    //
+    // **要加新編號時：先去找 TPM 2.0 Part 2 的常數表、確認值、再寫進來**
+    // （TPM 2.0 Part 2 Structures 的 "TPM_PT Constants" 一節）。
+    // 不要從別的程式碼庫抄——那些庫可能有自己的理由，而這裡需要的是規格本身。
+
     public const uint CcGetCapability = 0x0000017A;
     public const uint CapAlgorithms = 0x00000000;
     public const uint CapTpmProperties = 0x00000006;
@@ -198,8 +215,11 @@ public static class Tpm2
     public readonly record struct TpmProperty(uint Property, uint Value);
 
     /// <summary>解 TPML_TAGGED_TPM_PROPERTY：count u32@0，其後每條目 8 位元組（property u32、value u32）。越界即停。</summary>
-    [SpecRef("TPM 2.0 Part 2 Structures：TPMT_TAGGED_TPM_PROPERTY { TPM_PT property; UINT32 value }；"
-           + "TPM_PT_FAMILY_INDICATOR＝0x100、TPM_PT_REVISION＝0x101、TPM_PT_VENDOR_STRING_1..4＝0x104..0x107")]
+    [SpecRef("TPM 2.0 Part 2 Structures：TPMT_TAGGED_TPM_PROPERTY { TPM_PT property; UINT32 value }。"
+           + "**本專案已對準出處的屬性編號只有這四個**："
+           + "TPM_PT_FAMILY_INDICATOR＝0x100、TPM_PT_REVISION＝0x101、TPM_PT_VENDOR_STRING_1..4＝0x104..0x107。"
+           + "**其餘 TPM_PT_*（含 TPM_PT_PERMANENT 與證明能力那一族）尚未對準——"
+           + "見 docs/ULTIMATE-1000/UNSOURCED-CONSTANTS.md，不在此處憑記憶補上。**")]
     public static IReadOnlyList<TpmProperty> DecodeTpmProperties(byte[] capabilityData)
     {
         var list = new List<TpmProperty>();
