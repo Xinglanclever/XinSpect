@@ -702,6 +702,15 @@ public sealed class EvidenceLabService : ObservableObject
         SrumReadbackFacts = SrumReadbackService.Collect(DateTimeOffset.UtcNow);
     }
 
+    /// <summary>Amcache 解碼（FS-002）：軟體安裝紀錄的條目數、版本與發行者分布。
+    /// <b>答「裝了什麼」不是「跑了什麼」；不列完整路徑</b>；未注入探針＝不適用。</summary>
+    public IReadOnlyList<HardwareFact> AmcacheFacts { get; private set; } = [];
+
+    public void LoadAmcache()
+    {
+        AmcacheFacts = AmcacheFactsService.Collect(DateTimeOffset.UtcNow);
+    }
+
     /// <summary>LoadUsermodeFacts 的 ESP 掃描段：列舉 .efi 檔並與 dbx 交叉引用。</summary>
     public void LoadEspScan()
     {
@@ -1542,7 +1551,7 @@ public sealed class EvidenceLabService : ObservableObject
             var baseFacts = ChipsetFacts.Concat(SpiFlashFacts).Concat(PcieAerFacts).Concat(PciCapabilityFacts).Concat(SpiHashFacts).Concat(FitFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
                 .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
                 .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(TpmReplayFacts)
-                .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EtwFilterViewFacts).Concat(FsMetadataLatencyFacts).Concat(PresentObservationFacts).Concat(SrumReadbackFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(ListenPortFacts).Concat(LocalSecurityAuditFacts)
+                .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EtwFilterViewFacts).Concat(FsMetadataLatencyFacts).Concat(PresentObservationFacts).Concat(SrumReadbackFacts).Concat(AmcacheFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(ListenPortFacts).Concat(LocalSecurityAuditFacts)
                 .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ComplianceFacts).Concat(ServerComplianceFacts).Concat(ServerRoleDeepFacts).Concat(ServerRoleConditionalFacts).Concat(ServerRoleFilePrintFacts).Concat(MaintenanceFacts).Concat(EnvironmentRuntimeFacts).Concat(ClosingFacts).Concat(QueryInsightFacts).Concat(ChecklistFacts).Concat(TrustOpsFacts).Concat(ZeroTrustFacts).Concat(DataSecurityFacts).Concat(EndpointPolicyFacts).Concat(ScenarioFacts).Concat(ScenarioSecondWaveFacts).Concat(MultimediaFacts).Concat(MediaProtectionFacts).Concat(ExportCacheFacts).Concat(MaintenanceDashboardFacts).Concat(VolumeEncryptionFacts).Concat(QueryGovernanceFacts).Concat(LifecycleReportsFacts).Concat(GovernanceExtraFacts).Concat(InterchangeReportFacts).Concat(AutomationGuidanceFacts).Concat(ServiceModeFacts).Concat(RecoveryPowerInteropFacts).Concat(EnvironmentDiagnosticsFacts).Concat(AdvancedSupplementFacts).Concat(OperationsInventoryFacts).Concat(NetworkSystemInventoryFacts).Concat(InventoryGovernanceFacts).Concat(NetworkSecurityInventoryFacts).Concat(FinalInventoryFacts).Concat(RecoveryInventoryFacts).Concat(RecoveryDisplayFacts).Concat(SecurityAuditSupplementFacts).Concat(LifecycleMaintenanceFacts).Concat(FirmwareAuditFacts).Concat(PlatformGovernanceFacts).Concat(PlatformDeepDiveFacts).Concat(PlatformExpansionFacts).Concat(PlatformReconciliationFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(StorageScenarioReconciliationFacts).Concat(PerformanceObservationFacts).Concat(ServiceBootFacts).Concat(DeepBenchSecondWaveFacts).Concat(GovernanceKnowledgeFacts).Concat(BusDeepDiveFacts).Concat(BusCapabilityFacts).Concat(EngineeringGovernanceFacts).Concat(VisualizationFacts).Concat(OfflineAnalysisFacts).Concat(ProductPlatformFacts).Concat(MeasurementMethodologyFacts).Concat(LifecycleSecurityFacts).Concat(DeepBenchMethodology2Facts).Concat(EvidenceExportFacts).Concat(ExportUxFacts).Concat(UserExperience2Facts).Concat(GpuDeepFacts).Concat(FirmwareDeepFacts).Concat(EngineeringGovernance2Facts).Concat(StorageDeepFacts).Concat(FileSystemVolumeFacts).Concat(IscsiSessionFacts).Concat(HyperVInventoryFacts).Concat(BaselineForecastFacts).Concat(DevDiagCorrelationFacts).Concat(SecurityAuditDeepFacts).Concat(BitLockerRecoveryFacts).Concat(AcpiDeepFacts).Concat(CppcCapabilityFacts).Concat(MousePollRateFacts).Concat(DataSecurityDeepFacts).Concat(ScenarioThirdWaveFacts).Concat(SbomFacts)
                 .ToList();
             baseFacts.AddRange(CapabilityMatrixService.Collect(baseFacts, DateTimeOffset.UtcNow));
@@ -1562,6 +1571,26 @@ public sealed class EvidenceLabService : ObservableObject
             baseFacts.AddRange(QueryInsightFactsService.CollectDerived(DateTimeOffset.UtcNow, baseFacts));
             // 更新時間軸（UF-005）：由既有 wu.history.* 收口成摘要
             baseFacts.Add(QueryGovernanceFactsService.TimelineFact(DateTimeOffset.UtcNow, baseFacts));
+            // 工具自身的掃描狀態（ULTIMATE-1000 階段一 P1-001–P1-105）：
+            // 骨架採用、逾時、供檔零出網、六態分布與格的成文、出處鏈覆蓋、敏感度分級、守門清冊。
+            //
+            // 這一組的輸入是 baseFacts 的當下內容——也就是「這份報告自己」。
+            // 沒有它，前面那一大串卡片只能被接受、不能被質疑；有了它，
+            // 報告自己會說出「哪些讀不到、為什麼讀不到、這份報告含多少敏感欄位」。
+            //
+            // 接在這裡的理由與其他「分母不含自己」的派生事實相同：它統計的是前面各組，
+            // 不含自己——避免自我指涉。
+            baseFacts.AddRange(ScanStateFactsService.Collect(
+                DateTimeOffset.UtcNow,
+                skeletonAdopted: ScanStateFactsService.Generators
+                    .Select(g => g.Generator).Distinct(StringComparer.Ordinal).Count(),
+                skeletonTotal: ScanStateFactsService.Generators
+                    .Select(g => g.Generator).Distinct(StringComparer.Ordinal).Count(),
+                steps: [],
+                outcome: null,
+                facts: baseFacts,
+                fileInputs: baseFacts.Count(f => f.Key.StartsWith("off.mount.", StringComparison.Ordinal)),
+                egressAttempts: 0));
             return baseFacts;
         }
     }
