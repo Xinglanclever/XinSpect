@@ -170,14 +170,14 @@
 | P2-075 | 遠端證明能力陳述 | 是否具備證明能力（不上網） | `tpm.attest.capable` | L1 | S | — |todo: 
 | P2-076 | 清除與重設風險說明 | 明示本專案不做清除 | `tpm.clear.boundary` | L0 | S | — |todo: 
 | P2-077 | 量測鏈與硬體事件關聯 | 開機事件對硬體變更時間線 | `tpm.cross.hwchange` | L1 | M | P2-064 |todo: 
-| P2-078 | Secure Boot 四態陳述 | 存在／啟用／已設定／雜湊世代 | `ev.secureboot.*` | L0 | M | — |todo: 
+| P2-078 | Secure Boot 四態陳述 | 存在／啟用／已設定／雜湊世代 | `ev.secureboot.*` | L0 | M | — |alias:uefi.secure_boot@Services/UefiBootFactsService.cs:30 
 | P2-079 | 平台金鑰與 KEK 計數 | PK／KEK 存在性與計數 | `ev.pk.count` | L1 | S | P2-078 |todo: 
 | P2-080 | db／dbx 條目計數 | 允許與撤銷清單規模 | `ev.db.count`／`ev.dbx.count` | L0 | S | P2-078 |todo:／todo: 
 | P2-081 | dbx 版本與知識包對照 | 撤銷清單是否落後 | `ev.dbx.stale` | L0 | M | P1-042 |todo: 
 | P2-082 | EFI 變數盤點 | 變數名稱、大小、屬性 | `ev.var.count` | L1 | M | — |todo: 
 | P2-083 | 變數屬性與寫入保護 | 唯讀／執行期可寫 | `ev.var.attrs` | L1 | S | P2-082 |todo: 
-| P2-084 | 開機選項變數 | 開機序號變數內容 | `ev.bootorder.var` | L1 | S | P2-082 |todo: 
-| P2-085 | 不安全開機旗標 | testsigning 等狀態陳述 | `ev.testsigning` | L0 | S | — |todo: 
+| P2-084 | 開機選項變數 | 開機序號變數內容 | `ev.bootorder.var` | L1 | S | P2-082 |alias:uefi.boot_order_count@Services/UefiBootFactsService.cs:38 
+| P2-085 | 不安全開機旗標 | testsigning 等狀態陳述 | `ev.testsigning` | L0 | S | — |alias:platform.testsigning@Services/BackendEnvironmentService.cs:80 
 | P2-086 | SPI 區域逐段雜湊 | 逐區域雜湊與大小 | `spi.hash.*` | L0 | M | P2-047 |todo: 
 | P2-087 | SPI 區域變更時間線 | 與前次快照比對的變更段 | `spi.changed` | L0 | M | P2-086 |todo: 
 | P2-088 | 快閃描述符解析 | 唯讀解析描述符欄位 | `spi.desc.*` | L0 | M | P2-047 |todo: 

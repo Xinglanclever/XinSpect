@@ -87,6 +87,35 @@ ALIASES = {
     # 實作叫 spi.regions（不同前綴）。這與 ac.slit.* → numa.slit.nodes 同形。
     'bios.region.size': ('spi.flash_map', 'Services/SpiFlashHashService.cs', 21),
     'spi.map.*': ('spi.regions', 'Services/SpiFlashService.cs', 184),
+    # P2-085：規格的 ev.testsigning 對到既有的 platform.testsigning。
+    #
+    # 而它不只給值，還說明了「開著意味著什麼」：
+    #   「測試簽章模式開啟（**允許未經微軟簽署的核心驅動載入**）」
+    # ——那比規格要的更多，而規格 P2-085 的標題正是「不安全開機旗標」。
+    #
+    # 通過 alias 的三個條件：鍵存在、會給值（1／0，Measured）、
+    # 有出處（NtQuerySystemInformation(103) CodeIntegrityOptions）。
+    'ev.testsigning': ('platform.testsigning', 'Services/BackendEnvironmentService.cs', 80),
+    # P2-078／P2-084：ev.* 那一族的另一半——而它們在 uefi.* 底下。
+    #
+    #   ev.secureboot.*   ← uefi.secure_boot ＋ **uefi.setup_mode**
+    #
+    #       規格要四態（存在／啟用／已設定／雜湊世代），而：
+    #         存在／啟用 → uefi.secure_boot（三態：讀不到／變數不存在／0 或 1）
+    #         **已設定** → **uefi.setup_mode**（金鑰未部署／已部署）
+    #
+    #       **而 setup_mode 比直接讀 PK 更好**——Setup Mode 是韌體自己報的狀態，
+    #       比「PK 變數存不存在」更直接。
+    #       （「雜湊世代」那一半由既有的 secure.dbx 負責。）
+    #
+    #   ev.bootorder.var  ← uefi.boot_order_count（＋ uefi.boot_entries.count）
+    #
+    # 兩把都通過 alias 的三個條件：鍵存在、會給值、有出處
+    # （UEFI 變數，經 GetFirmwareEnvironmentVariableEx）。
+    # 而它們的權限三態也如實：拿不到 SeSystemEnvironmentPrivilege 就整組
+    # InsufficientPrivilege，不推測。
+    'ev.secureboot.*': ('uefi.secure_boot', 'Services/UefiBootFactsService.cs', 30),
+    'ev.bootorder.var': ('uefi.boot_order_count', 'Services/UefiBootFactsService.cs', 38),
 }
 
 cat = io.open('Services/FactKeyCatalog.cs', encoding='utf-8').read()
