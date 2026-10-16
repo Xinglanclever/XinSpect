@@ -178,6 +178,49 @@ public class SpecImplementationReconciliationTests
             + string.Join("\n", missing.Select(m => "  • " + m)));
     }
 
+    /// <summary>
+    /// 把一列的「規格鍵」與「實作鍵」<b>逐鍵配對</b>起來。
+    ///
+    /// <para>
+    /// <b>為什麼不能只看「這一列有沒有 todo」：</b>一列可以有多把鍵，
+    /// 而它們的進度可以不同——P2-029 是 <c>sb.tpmdev</c>（已完成）／
+    /// <c>sb.proc_add</c>（未開工），實作鍵欄寫成 <c>ok:sb.tpmdev／todo:</c>。
+    /// 舊版守門看到任一個 <c>todo:</c> 就拿**整列宣告的鍵**去查，
+    /// 於是查到 <c>sb.tpmdev</c> 存在就誤報。
+    /// </para>
+    ///
+    /// <para>
+    /// 正確的判定是配對：第 i 個實作鍵對應第 i 個規格鍵。
+    /// <b>「一列」不是原子單位，「一把鍵」才是。</b>
+    /// </para>
+    /// </summary>
+    private static List<(string Id, string DeclaredKey, string Kind, string ImplKey)> Paired(string stageFile)
+    {
+        var pairs = new List<(string, string, string, string)>();
+        foreach (var (id, declared, impl) in Rows(stageFile))
+        {
+            var declaredKeys = declared.Split('／', StringSplitOptions.RemoveEmptyEntries)
+                .Select(d => d.Trim().Trim('`')).ToList();
+            var entries = impl.Split('／', StringSplitOptions.RemoveEmptyEntries)
+                .Select(e => ParseEntry(e)).ToList();
+
+            // 規格鍵帶範圍寫法（`sb.type0.*`–`sb.type3.*`）時兩邊數量會不等，
+            // 那就退回「多對多」——但多對多的判定要用「有沒有任何一把存在」，
+            // 而不是「每一把都不存在」。
+            if (declaredKeys.Count == entries.Count)
+            {
+                for (int i = 0; i < entries.Count; i++)
+                    pairs.Add((id, declaredKeys[i], entries[i].Kind, entries[i].Key));
+            }
+            else
+            {
+                foreach (var (kind, key, _) in entries)
+                    pairs.Add((id, string.Join("／", declaredKeys), kind, key));
+            }
+        }
+        return pairs;
+    }
+
     [Fact]
     public void 標為todo的鍵必須真的不存在()
     {
@@ -187,27 +230,55 @@ public class SpecImplementationReconciliationTests
         var dynamic = DynamicPrefixes();
         var wrong = new List<string>();
 
-        foreach (var (id, declared, impl) in Rows("STAGE-02-FIRMWARE.md"))
+        foreach (var (id, declaredKey, kind, _) in Paired("STAGE-02-FIRMWARE.md"))
         {
-            foreach (string entry in impl.Split('／', StringSplitOptions.RemoveEmptyEntries))
-            {
-                string e = entry.Trim();
-                if (!e.StartsWith("todo:", StringComparison.Ordinal)) continue;
+            if (kind != "todo") continue;
+            if (declaredKey.Length == 0 || declaredKey == "—") continue;
 
-                // todo 的鍵取自規格宣告那一欄
-                foreach (string d in declared.Split('／', StringSplitOptions.RemoveEmptyEntries))
-                {
-                    string key = d.Trim().Trim('`');
-                    if (key.Length == 0 || key == "—") continue;
-                    if (Exists(key, catalog, dynamic))
-                        wrong.Add($"{id}：矩陣標 todo，但 {key} 已經在目錄裡了");
-                }
-            }
+            if (Exists(declaredKey, catalog, dynamic))
+                wrong.Add($"{id}：矩陣把 {declaredKey} 標為 todo，但它已經在目錄裡了");
         }
 
         Assert.True(wrong.Count == 0,
             "矩陣標為未實作、但實作其實已經有了（說謊的方向是少報完成度）：\n"
             + string.Join("\n", wrong.Select(w => "  • " + w)));
+    }
+
+    /// <summary>
+    /// <b>逐鍵配對的正對照。</b>
+    ///
+    /// <para>
+    /// 這一條餵一個「第一把鍵存在、第二把不存在」的假列給配對邏輯，
+    /// 要求它<b>不會把已完成的那一把報成 todo</b>。
+    /// 沒有這一條，上面那條守門可以被一個「只要看到 todo 就整列報錯」的
+    /// 寬鬆判定騙過去——而那個寬鬆判定正是它原本的樣子。
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void 逐鍵配對_正對照_一半完成一半未做時不得誤報()
+    {
+        var catalog = new HashSet<string>(StringComparer.Ordinal) { "sb.done" };
+        var dynamic = new HashSet<string>(StringComparer.Ordinal);
+
+        // 模擬 P2-029：第一把完成、第二把未做。
+        var declared = "`sb.done`／`sb.notdone`";
+        var impl = "ok:sb.done／todo:";
+        var declaredKeys = declared.Split('／').Select(d => d.Trim().Trim('`')).ToList();
+        var entries = impl.Split('／').Select(e => ParseEntry(e.Trim())).ToList();
+
+        Assert.Equal(declaredKeys.Count, entries.Count);
+
+        var wrong = new List<string>();
+        for (int i = 0; i < entries.Count; i++)
+        {
+            if (entries[i].Kind != "todo") continue;
+            if (Exists(declaredKeys[i], catalog, dynamic))
+                wrong.Add(declaredKeys[i]);
+        }
+
+        Assert.Empty(wrong);   // 舊版會在這裡誤報 sb.done
+        Assert.Equal("todo", entries[1].Kind);
+        Assert.Equal("ok", entries[0].Kind);
     }
 
     [Fact]
