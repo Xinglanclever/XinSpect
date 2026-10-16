@@ -411,6 +411,9 @@ public sealed class EvidenceLabService : ObservableObject
         // ULTIMATE-1000 階段二 P2-040／P2-041：開機模式與韌體版本。
         // **「目前用哪一個」與「支援哪一個」是不同問題**——本服務只回答前者。
         FirmwareModeFacts = FirmwareModeFactsService.Collect(at, FirmwareModeFactsService.Read());
+        // ULTIMATE-1000 階段二 P2-042：開機順序（UEFI 變數）。
+        // **變數裡的順序不等於實際的開機結果**——本服務只陳述變數寫了什麼。
+        UefiBootOrderFacts = UefiBootOrderFactsService.Collect(at);
         PpttFacts = PpttFactsService.Collect(new Win32AcpiTableSource(), at, Environment.ProcessorCount);
         ServerModeFacts = ServerModeFactsService.Collect(at);
         RoleFacts = RoleSurfaceFactsService.Collect(at);
@@ -431,6 +434,7 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(SmbiosPowerFacts)
             .Concat(SmbiosCrossFacts)
             .Concat(FirmwareModeFacts)
+            .Concat(UefiBootOrderFacts)
             .Concat(PpttFacts)
             .Concat(ServerModeFacts)
             .Concat(RoleFacts)
@@ -866,6 +870,12 @@ public sealed class EvidenceLabService : ObservableObject
     /// <b>陳述「目前用哪一條路徑開機」，不是「支援什麼」。</b>
     /// </summary>
     public IReadOnlyList<HardwareFact> FirmwareModeFacts { get; private set; } = [];
+
+    /// <summary>
+    /// 開機順序事實（ULTIMATE-1000 階段二 P2-042）。
+    /// <b>陳述 UEFI 變數裡寫的順序，不是實際的開機結果。</b>
+    /// </summary>
+    public IReadOnlyList<HardwareFact> UefiBootOrderFacts { get; private set; } = [];
 
     /// <summary>PPTT 拓撲事實（Vol2 AC-017）：韌體自述的處理器／快取節點，與 OS 邏輯處理器數並列。</summary>
     public IReadOnlyList<HardwareFact> PpttFacts { get; private set; } = [];
