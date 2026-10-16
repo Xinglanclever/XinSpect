@@ -116,6 +116,22 @@ ALIASES = {
     # InsufficientPrivilege，不推測。
     'ev.secureboot.*': ('uefi.secure_boot', 'Services/UefiBootFactsService.cs', 30),
     'ev.bootorder.var': ('uefi.boot_order_count', 'Services/UefiBootFactsService.cs', 38),
+    # P2-079／P2-080：**我做了 ev.pk.count，然後撤回。**
+    #
+    # 我做那一半之前查了「規格鍵名」（ev.pk.count 不存在）與「領域詞」（EFI 變數），
+    # **但沒有查「既有的簽章清單實作」**——而它就在 UefiSignatureFactsService，
+    # 鍵名是 uefi.* 而不是規格的 ev.*。
+    #
+    # **「規格鍵名不存在」不等於「這件事沒人做」。**
+    #
+    # 而既有的做得更完整：四把獨立鍵、逐清單明細（uefi.db.list.0…）、
+    # 兩段式大小查詢、Boot#### 條目。
+    #
+    # 這一輪唯一留下的是屬性那一半（ev.var.attrs）——因為既有的讀取
+    # 把 GetFirmwareEnvironmentVariableEx 的 pdwAttrib 丟掉了。
+    'ev.pk.count': ('uefi.pk', 'Services/UefiSignatureFactsService.cs', 37),
+    'ev.db.count': ('uefi.db.count', 'Services/UefiSignatureFactsService.cs', 61),
+    'ev.dbx.count': ('uefi.dbx.count', 'Services/UefiSignatureFactsService.cs', 61),
 }
 
 cat = io.open('Services/FactKeyCatalog.cs', encoding='utf-8').read()
