@@ -30,6 +30,10 @@ public static class AcpiService
 
         var sigCount = parsed.GroupBy(p => Slug(p.Header.Signature)).ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
         var occ = new Dictionary<string, int>(StringComparer.Ordinal);
+        var checksumBad = new List<string>();
+        // 逐簽章的表事實（P2-018 其餘表逐簽章解碼並標未支援）：鍵名依簽章小寫、
+        // 同簽章多張時加序號。這是動態家族（acpi.table. 前綴已登記），不是固定全鍵。
+        var decodeGaps = new List<string>();
         foreach (var (bytes, h) in parsed)
         {
             string slug = Slug(h.Signature);
@@ -39,13 +43,48 @@ public static class AcpiService
             facts.Add(new HardwareFact(key, "ACPI", h.Signature,
                 $"rev {h.Revision}，OEM {h.OemId}，校驗和 {(h.ChecksumValid ? "正確" : "錯誤")}", "",
                 "GetSystemFirmwareTable", FactTrustLevel.Measured, false, at));
+            if (!h.ChecksumValid) checksumBad.Add(sigCount[slug] > 1 ? $"{h.Signature}#{n}" : h.Signature);
 
-            // 單一實例表的安全加值（只解已明確定義的單一欄位，不碰可變長度 body）。
-            if (slug == "hest" && n == 1 && AcpiTable.HestErrorSourceCount(bytes) is { } sources)
+            // 逐表記錄「本解碼器有沒有對準這張表的欄位」——有專用解碼器的走專用路，其餘如實標未支援。
+            // 未支援不等於失敗，也不等於表有問題：它是「本版規格沒有這張表的欄位出處」。
+            if (!AcpiDeep.HasDedicatedDecoder(h.Signature)) decodeGaps.Add(h.Signature);
+        }
+
+        // ── P2-001 逐表表頭校驗和（0x00 總和）：具名校單，不只給張數 ──────────
+        facts.Add(new HardwareFact("ac.checksum.bad", "ACPI", "表頭校驗和不符的表",
+            checksumBad.Count > 0
+                ? $"{checksumBad.Count} 張：{string.Join("、", checksumBad)}"
+                : "0 張（本機列舉到的表頭 0x00 總和全為 0）",
+            "張", "GetSystemFirmwareTable＋表頭 0x00 總和（ACPI Spec 表頭 Checksum@9）",
+            FactTrustLevel.Measured, false, at, checksumBad.Count));
+
+        // ── P2-018 逐簽章解碼覆蓋申報：有解碼器／未收錄，不以 0 補 ────────────
+        var unrecorded = decodeGaps.Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToList();
+        facts.Add(new HardwareFact("ac.decode.unrecorded", "ACPI", "本版未逐欄解碼的表簽章",
+            unrecorded.Count > 0
+                ? $"{unrecorded.Count} 種簽章未收錄逐欄解碼（只出表頭事實）：{string.Join("、", unrecorded)}"
+                : "（本機列舉到的表簽章皆有專用解碼器）",
+            "種", "ACPI 表列×解碼器覆蓋申報", FactTrustLevel.Derived, false, at, unrecorded.Count));
+
+        // ── P2-005 位元碼評估界線聲明：明示不評估 AML 位元碼 ──────────────────
+        int dsdtSsdt = parsed.Count(p => p.Header.Signature is "DSDT" or "SSDT");
+        facts.Add(new HardwareFact("ac.aml.boundary", "ACPI", "AML 位元碼評估界線",
+            $"本專案不評估 AML 位元碼：_PSS／_CPC／_DSM 等 AML 物件不在任何輸出中。"
+            + $"本機列舉到 {dsdtSsdt} 張 DSDT/SSDT，只做詞法字串掃描（ac.aml.str.*）與表頭 OEM 對照（ac.ssdt.third.*）；"
+            + "反編譯為 ASL 亦不在範圍（那是原始碼不是事實，見階段二明文不做）",
+            "", "專案界線宣告（無外部來源）", FactTrustLevel.Measured, false, at, dsdtSsdt));
+
+        foreach (var (bytes, h) in parsed)
+        {
+            string slug = Slug(h.Signature);
+            // 單一實例表才解的安全加值（只解已明確定義的單一欄位，不碰可變長度 body）。
+            // n 由簽章出現次數判定：同簽章多張時語意未定（哪一張是「那張 HEST」？），故只解單一實例。
+            bool single = occ.TryGetValue(slug, out int seen) && seen == 1;
+            if (slug == "hest" && single && AcpiTable.HestErrorSourceCount(bytes) is { } sources)
                 facts.Add(new HardwareFact("acpi.hest.sources", "ACPI", "硬體錯誤來源數",
                     sources.ToString(System.Globalization.CultureInfo.InvariantCulture), "", "ACPI HEST",
                     FactTrustLevel.Measured, false, at, sources));
-            if (slug == "bert" && n == 1 && AcpiTable.BertBootErrorRegionLength(bytes) is { } regionLen)
+            if (slug == "bert" && single && AcpiTable.BertBootErrorRegionLength(bytes) is { } regionLen)
             {
                 facts.Add(new HardwareFact("acpi.bert.region_length", "ACPI", "開機錯誤區長度",
                     regionLen.ToString(System.Globalization.CultureInfo.InvariantCulture), "bytes", "ACPI BERT",
@@ -66,9 +105,9 @@ public static class AcpiService
         byte[]? Find(string sig) => parsed.FirstOrDefault(p => p.Header.Signature == sig).Bytes;
 
         // AC-018 ACPI 表匯總：張數／簽章種類／校驗和錯誤數，逐表 sig@rev。
-        int checksumBad = parsed.Count(p => !p.Header.ChecksumValid);
+        // 校驗和錯誤數在 P2-001 的 ac.checksum.bad 已具名列出，這裡只給計數，兩者不衝突也不重複定義。
         facts.Add(new HardwareFact("ac.tables.summary", "ACPI", "ACPI 表匯總",
-            $"{parsed.Count} 張表、{parsed.Select(p => p.Header.Signature).Distinct(StringComparer.Ordinal).Count()} 種簽章、校驗和錯誤 {checksumBad} 張："
+            $"{parsed.Count} 張表、{parsed.Select(p => p.Header.Signature).Distinct(StringComparer.Ordinal).Count()} 種簽章、校驗和錯誤 {checksumBad.Count} 張："
             + string.Join(" ", parsed.Select(p => $"{p.Header.Signature}@rev{p.Header.Revision}").OrderBy(x => x, StringComparer.Ordinal)),
             "", "EnumSystemFirmwareTables", FactTrustLevel.Measured, false, at, parsed.Count));
 

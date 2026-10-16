@@ -62,6 +62,8 @@ public static class TpmFactsService
                 foreach (var (alg, bankName, keyPrefix) in Banks)
                     facts.Add(PcrFact(ctx, i, alg, bankName, keyPrefix, at, submitFn));
             facts.Add(TcgLogFact(ctx, at, readLog ?? RealReadLog));
+            facts.AddRange(BankInventoryFacts(ctx, at, submitFn));
+            facts.AddRange(VersionFacts(ctx, at, submitFn));
             return facts;
         }
         finally
@@ -101,6 +103,100 @@ public static class TpmFactsService
         return new HardwareFact(key, Category, name,
             $"{walk.Events.Count} 個事件（{coverage}）{(walk.Truncated ? "；log 走訪提前結束——內容損毀或截斷，如實標示" : "")}",
             "", source, FactTrustLevel.Measured, false, at, walk.Events.Count);
+    }
+
+    // ── P2-063 演算法銀行清單：問 TPM 自己實作了哪些雜湊，不是從 PCR 有沒有值回推 ──
+    //
+    // 為什麼要問：PCR 讀得到不等於這個 bank 在量測鏈裡被用過，PCR 讀不到也不等於沒實作
+    // （可能只是 raw PCR 不可讀）。GetCapability(TPM_CAP_ALGORITHMS) 是 TPM 自己的申報，
+    // 與「本服務讀哪三個 bank」是兩件事——這裡只報 TPM 申報了什麼。
+
+    private static IReadOnlyList<HardwareFact> BankInventoryFacts(nint ctx, DateTimeOffset at,
+        Func<nint, byte[], (uint Result, byte[] Output, uint OutputLen)> submit)
+    {
+        const string key = "tpm.pcr.banks", name = "TPM 雜湊演算法銀行",
+            source = "TPM2_GetCapability(TPM_CAP_ALGORITHMS)，經 Windows TBS";
+        var (result, output, outputLen) = submit(ctx, Tpm2.BuildGetCapabilityCommand(Tpm2.CapAlgorithms, 0, 64));
+        if (result != TbsSuccess)
+            return [Unavailable(key, name, source, at, FactAvailability.ReadError, $"TBS 錯誤 0x{result:X8}")];
+        var trimmed = outputLen is > 0 and <= int.MaxValue and var n ? output[..(int)Math.Min(n, output.Length)] : [];
+        var data = Tpm2.GetCapabilityData(trimmed, out uint rc, out uint cap, out _);
+        if (data is null)
+            return [Unavailable(key, name, source, at, FactAvailability.NotSupported,
+                rc == 0 ? "GetCapability 回應格式不符——不解碼垃圾" : $"TPM 拒絕（TPM_RC 0x{rc:X8}）")];
+        if (cap != Tpm2.CapAlgorithms)
+            return [Unavailable(key, name, source, at, FactAvailability.NotSupported,
+                $"回應的 capability 是 0x{cap:X8}，不是查詢的 TPM_CAP_ALGORITHMS——不如實標示會把別人的答案當成這個問題的答案")];
+
+        var algs = Tpm2.DecodeAlgProperties(data);
+        var hashes = algs.Where(a => Tpm2.IsHash(a.Flags)).Select(a => a.Alg).OrderBy(x => x).ToList();
+        string hashText = hashes.Count > 0
+            ? string.Join("、", hashes.Select(a => Tpm2.AlgName(a) ?? $"未收錄 0x{a:X4}"))
+            : "（TPM 未申報任何雜湊演算法）";
+
+        // 本服務實際嘗試讀取的 bank 與 TPM 申報的比對：只陳述差異，不下判決。
+        var probed = Banks.Select(b => b.AlgId).ToList();
+        var probedMissing = probed.Where(p => !hashes.Contains(p)).ToList();
+        string delta = probedMissing.Count == 0
+            ? "本服務嘗試讀取的 bank（SHA-256／SHA-1／SHA-384）都在 TPM 申報清單內"
+            : $"本服務嘗試讀取的 {string.Join("、", probedMissing.Select(a => Tpm2.AlgName(a) ?? $"0x{a:X4}"))} 不在 TPM 申報清單內"
+              + "——該 bank 的 PCR 讀不到是這個原因，不是讀取錯誤";
+
+        return
+        [
+            new HardwareFact(key, Category, name,
+                $"TPM 申報 {algs.Count} 種演算法，其中雜湊 {hashes.Count} 種：{hashText}。{delta}。"
+                + "界線：這是 TPM 自己的申報，不代表任一 bank 已被量測鏈使用（那要看 TCG log 的事件）",
+                "種", source, FactTrustLevel.Measured, false, at, hashes.Count),
+        ];
+    }
+
+    // ── P2-068 TPM 規格版本：由 TPM 自己回報的 family／revision，不是從 TBS 或驅動推測 ──
+
+    private static IReadOnlyList<HardwareFact> VersionFacts(nint ctx, DateTimeOffset at,
+        Func<nint, byte[], (uint Result, byte[] Output, uint OutputLen)> submit)
+    {
+        const string key = "tpm.version", name = "TPM 規格版本",
+            source = "TPM2_GetCapability(TPM_CAP_TPM_PROPERTIES)，經 Windows TBS";
+        var (result, output, outputLen) = submit(ctx, Tpm2.BuildGetCapabilityCommand(Tpm2.CapTpmProperties, Tpm2.PtFamilyIndicator, 8));
+        if (result != TbsSuccess)
+            return [Unavailable(key, name, source, at, FactAvailability.ReadError, $"TBS 錯誤 0x{result:X8}")];
+        var trimmed = outputLen is > 0 and <= int.MaxValue and var n ? output[..(int)Math.Min(n, output.Length)] : [];
+        var data = Tpm2.GetCapabilityData(trimmed, out uint rc, out uint cap, out _);
+        if (data is null)
+            return [Unavailable(key, name, source, at, FactAvailability.NotSupported,
+                rc == 0 ? "GetCapability 回應格式不符——不解碼垃圾" : $"TPM 拒絕（TPM_RC 0x{rc:X8}）")];
+        if (cap != Tpm2.CapTpmProperties)
+            return [Unavailable(key, name, source, at, FactAvailability.NotSupported,
+                $"回應的 capability 是 0x{cap:X8}，不是查詢的 TPM_CAP_TPM_PROPERTIES")];
+
+        var props = Tpm2.DecodeTpmProperties(data);
+        uint? Find(uint id) => props.Where(p => p.Property == id).Select(p => (uint?)p.Value).FirstOrDefault();
+        string? family = Tpm2.FamilyIndicator(Find(Tpm2.PtFamilyIndicator) ?? 0);
+        var revision = Tpm2.Revision(Find(Tpm2.PtRevision) ?? 0);
+
+        if (family is null && revision is null)
+            return [Unavailable(key, name, source, at, FactAvailability.NotSupported,
+                "TPM 未回報 family indicator 與 revision——沒有值就是沒有值，不以 2.0 代填")];
+
+        string vendor = string.Concat(
+            new[] { Tpm2.PtVendor1, Tpm2.PtVendor2, Tpm2.PtVendor3, Tpm2.PtVendor4 }
+                .Select(id => Find(id) is { } v and not 0 ? VtpmVendorChunk(v) : ""))
+            .TrimEnd('\0', ' ');
+
+        string value = $"family {family ?? "未回報"}、revision {(revision is { } r ? $"{r.Major}.{r.Minor}" : "未回報")}"
+            + (vendor.Length > 0 ? $"、廠商字串 {vendor}" : "、廠商字串未回報");
+        return
+        [
+            new HardwareFact(key, Category, name, value, "", source, FactTrustLevel.Measured, false, at),
+        ];
+    }
+
+    /// <summary>TPM_PT_VENDOR_STRING_x 的四位元組 ASCII（大端打包，與 TPM 線上格式一致）。</summary>
+    private static string VtpmVendorChunk(uint raw)
+    {
+        var bytes = new[] { (byte)(raw >> 24), (byte)(raw >> 16), (byte)(raw >> 8), (byte)raw };
+        return System.Text.Encoding.ASCII.GetString(bytes);
     }
 
     // ── 真實 TBS 通路（薄；測試以注入委派取代）──

@@ -33,6 +33,22 @@ public sealed record SsdtSourceReport(string PlatformOemId, IReadOnlyList<string
 public static class AcpiDeep
 {
     /// <summary>
+    /// 本版有專用逐欄解碼器的 ACPI 表簽章。用途是<b>覆蓋申報</b>（P2-018）：沒有解碼器的表只出表頭事實，
+    /// 呼叫端要能把這件事說出來——未收錄 ≠ 表有問題 ≠ 讀不到。
+    /// <b>維護規矩</b>：新增一個表解碼器時把簽章加進來，申報會自己變對；這一組由測試釘住，
+    /// 所以簽章留在清單裡而解碼器被移除時會紅燈，不會變成一句沒人守的謊。
+    /// </summary>
+    public static readonly IReadOnlyList<string> DecodedSignatures =
+    [
+        "BGRT", "SPCR", "DBG2", "HPET", "NFIT", "MPAM", "PPTT", "SLIT", "CEDT", "MCFG", "HEST", "BERT",
+    ];
+
+    /// <summary>該簽章在本版是否有專用逐欄解碼器。比對忽略大小寫與尾端空白（與表頭解析的 TrimEnd 一致）。</summary>
+    [SpecRef("本專案解碼器覆蓋申報（非規格欄位）：對應 AcpiTableService 的逐表解碼分支與 AcpiDeep／AcpiTable／AcpiPptt／AcpiSlit／CxlCedt 的公開解碼方法")]
+    public static bool HasDedicatedDecoder(string signature) =>
+        DecodedSignatures.Contains(signature.Trim(), StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// 在 DSDT/SSDT 位元碼中掃出可列印 ASCII 字串（長度 >= minLength）。
     /// 這是<b>詞法掃描不是反編譯</b>：只找連續可列印位元組，不解譯 opcode、不重建 AML 樹——
     /// 所以「掃到什麼字串」是事實，「這些字串代表什麼」不是本方法能回答的。

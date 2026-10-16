@@ -68,9 +68,19 @@ public class CoreLatencyService : ObservableObject
         var ct = _cts.Token;
         try
         {
+            // 這幾行在 UI 執行緒上（await 之前），直接賦值沒問題。
             Phase = "量測中";
             StatusLine = "量測中…（期間對應核心滿載）";
-            var (matrix, lps) = await Task.Run(() => MeasureAll(ct));
+            // 進度回報走 Progress<T>：它的回呼會被 marshal 回「建立它的那條執行緒」（＝UI 執行緒），
+            // 所以 MeasureAll 在背景寫進度不會直接碰到 ObservableObject 的繫結屬性。
+            // 先前是從 Task.Run 裡直接賦值 ProgressFraction／StatusLine——WPF 的繫結不是執行緒安全的，
+            // 在核心被忙等執行緒拉滿時，那條路徑會讓 UI 停止回應（實機上表現為視窗標題的「未響應」）。
+            var progress = new Progress<(double fraction, string status)>(p =>
+            {
+                ProgressFraction = p.fraction;
+                StatusLine = p.status;
+            });
+            var (matrix, lps) = await Task.Run(() => MeasureAll(ct, progress)).ConfigureAwait(true);
             Lps = lps;          // 先給行列標籤，再給矩陣：Data 的變更會立刻觸發一次繪製
             MatrixNs = matrix;
             var (min, med, max) = Stats(matrix);
@@ -100,7 +110,7 @@ public class CoreLatencyService : ObservableObject
         }
     }
 
-    private (double[,] Matrix, int[] Lps) MeasureAll(CancellationToken ct)
+    private (double[,] Matrix, int[] Lps) MeasureAll(CancellationToken ct, IProgress<(double fraction, string status)> progress)
     {
         var refs = CpuAffinity.AllLogicalProcessors();
         if (refs.Count < 2)
@@ -126,6 +136,9 @@ public class CoreLatencyService : ObservableObject
         int n = usable.Count;
         var m = new double[n, n];
         int total = n * (n - 1), done = 0;
+        // 進度回報節流：Stats 是 O(n²) 掃描，每組都算會在 64 邏輯處理器的機器上
+        // 產生約 5×10^5 次迭代與等量的小配置。改成每 256 組或每 150 ms 才回報一次。
+        var lastReport = System.Diagnostics.Stopwatch.StartNew();
         for (int i = 0; i < n; i++)
         {
             for (int j = 0; j < n; j++)
@@ -134,11 +147,16 @@ public class CoreLatencyService : ObservableObject
                 ct.ThrowIfCancellationRequested();
                 m[i, j] = MeasurePair(usable[i], usable[j], ct);
                 done++;
-                ProgressFraction = done / (double)total;
-                if (done % 32 == 0)
-                    StatusLine = $"量測中… {done} / {total} 組（目前最小 {Stats(m).min:0} ns）";
+                if (done % 256 == 0 || lastReport.ElapsedMilliseconds >= 150)
+                {
+                    // 只回報便宜的計數；不在這裡算 Stats（那是 O(n²) 的全矩陣掃描，
+                    // 每組都算會在 64 邏輯處理器的機器上累積約 5×10^5 次迭代與等量配置）。
+                    progress.Report((done / (double)total, $"量測中… {done} / {total} 組"));
+                    lastReport.Restart();
+                }
             }
         }
+        progress.Report((1.0, $"量測完成，共 {total} 組。"));
         return (m, labels);
     }
 

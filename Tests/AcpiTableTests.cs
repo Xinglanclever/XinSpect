@@ -110,6 +110,112 @@ public sealed class AcpiTableTests
         Assert.Equal(FactAvailability.InsufficientPrivilege, record.Availability);
     }
 
+    // ── 極致計畫階段二 P2-001／P2-005／P2-018：校驗和具名、位元碼界線、解碼覆蓋申報 ──
+
+    /// <summary>
+    /// 校驗和不符要<b>具名</b>，不能只給張數——「有 3 張不對」跟「DSDT、SSDT、FACP 不對」的處置完全不同。
+    /// 同簽章多張時用 #序號區分，序號與 acpi.table.* 的鍵序號同一套。
+    /// </summary>
+    [Fact]
+    public void 校驗和_不符的表要逐張具名且同簽章加序號()
+    {
+        var good = BuildTable("BERT", 1, "OEMAAA", "XINSPECT", 48);
+        var bad1 = BuildTable("SSDT", 1, "OEMAAA", "SSDT0001", 48);
+        bad1[40] ^= 0xFF;
+        var bad2 = BuildTable("SSDT", 1, "OEMAAA", "SSDT0002", 48);
+        bad2[41] ^= 0xFF;
+
+        var f = AcpiService.Collect(new FakeSource(true, null, [good, bad1, bad2]), At)
+            .Single(x => x.Key == "ac.checksum.bad");
+
+        Assert.Equal(FactAvailability.Present, f.Availability);
+        Assert.Equal(2, f.NumericValue);
+        Assert.Contains("SSDT#1", f.Value);
+        Assert.Contains("SSDT#2", f.Value);
+        Assert.DoesNotContain("BERT", f.Value); // 過的表不列入
+    }
+
+    /// <summary>全部表頭都對時，「0 張」是一個值（量出來的），不是讀不到——三態必須是 Present。</summary>
+    [Fact]
+    public void 校驗和_零張不符是量出來的零不是讀不到()
+    {
+        var facts = AcpiService.Collect(new FakeSource(true, null,
+            [BuildTable("DSDT", 2, "OEMAAA", "XINSPECT", 48)]), At);
+        var f = facts.Single(x => x.Key == "ac.checksum.bad");
+        Assert.Equal(FactAvailability.Present, f.Availability);
+        Assert.Equal(0, f.NumericValue);
+        Assert.Contains("0 張", f.Value);
+    }
+
+    /// <summary>
+    /// 位元碼界線是<b>聲明</b>：它必須說出「不評估 AML」與「不反編譯 ASL」兩件事，
+    /// 並帶著本機實際看到幾張 DSDT/SSDT——空泛的「本專案不評估 AML」誰都會寫，帶數字的才有對帳價值。
+    /// </summary>
+    [Fact]
+    public void 位元碼界線_聲明明示不評估AML且帶本機表數()
+    {
+        var facts = AcpiService.Collect(new FakeSource(true, null,
+        [
+            BuildTable("DSDT", 2, "OEMAAA", "XINSPECT", 48),
+            BuildTable("SSDT", 1, "OEMAAA", "SSDT0001", 48),
+        ]), At);
+
+        var f = facts.Single(x => x.Key == "ac.aml.boundary");
+        Assert.Equal(FactAvailability.Present, f.Availability);
+        Assert.Contains("_PSS", f.Value);
+        Assert.Contains("_DSM", f.Value);
+        Assert.Contains("不評估 AML", f.Value);
+        Assert.Contains("反編譯", f.Value);
+        Assert.Equal(2, f.NumericValue);
+    }
+
+    /// <summary>沒有 DSDT/SSDT 的機器，界線聲明仍在（它是聲明不是量測），只是數字為 0。</summary>
+    [Fact]
+    public void 位元碼界線_無DSDT時聲明仍在且數字為零()
+    {
+        var f = AcpiService.Collect(new FakeSource(true, null,
+            [BuildTable("FACP", 1, "OEMAAA", "XINSPECT", 48)]), At)
+            .Single(x => x.Key == "ac.aml.boundary");
+        Assert.Equal(0, f.NumericValue);
+    }
+
+    /// <summary>
+    /// 解碼覆蓋申報：沒有專用解碼器的表要<b>逐簽章列出</b>，有解碼器的不列入。
+    /// 這條的重點是「未收錄」講得出來——把沒解的表混進已解的數量裡，就是拿覆蓋率騙人。
+    /// </summary>
+    [Fact]
+    public void 解碼覆蓋_未收錄的表逐簽章列出而已解的不列入()
+    {
+        var facts = AcpiService.Collect(new FakeSource(true, null,
+        [
+            BuildTable("BGRT", 1, "OEMAAA", "XINSPECT", 48),   // 有解碼器
+            BuildTable("WSMT", 1, "OEMAAA", "XINSPECT", 48),   // 無解碼器
+            BuildTable("LPIT", 1, "OEMAAA", "XINSPECT", 48),   // 無解碼器
+        ]), At);
+
+        var f = facts.Single(x => x.Key == "ac.decode.unrecorded");
+        Assert.Contains("WSMT", f.Value);
+        Assert.Contains("LPIT", f.Value);
+        Assert.DoesNotContain("BGRT", f.Value);
+        Assert.Equal(2, f.NumericValue);
+    }
+
+    /// <summary>
+    /// 每個簽章在本版有沒有解碼器，是<b>清單</b>說了算——所以清單與實際解碼分支必須對得上。
+    /// 這條釘住兩邊：清單裡的簽章，服務層要真的解；清單外的，服務層不得偷偷解。
+    /// </summary>
+    [Fact]
+    public void 解碼器清單_與服務層實際解碼分支一致()
+    {
+        Assert.True(AcpiDeep.HasDedicatedDecoder("BGRT"));
+        Assert.True(AcpiDeep.HasDedicatedDecoder("bgrt"));      // 大小寫不敏感
+        Assert.True(AcpiDeep.HasDedicatedDecoder(" NFIT "));    // 尾端空白（表頭解析會 TrimEnd）
+        Assert.False(AcpiDeep.HasDedicatedDecoder("WSMT"));
+        Assert.False(AcpiDeep.HasDedicatedDecoder(""));
+        Assert.Equal(AcpiDeep.DecodedSignatures.Count,
+            AcpiDeep.DecodedSignatures.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+    }
+
     private sealed class FakeSource(bool available, string? reason, byte[][] tables) : IAcpiTableSource
     {
         public bool Available => available;

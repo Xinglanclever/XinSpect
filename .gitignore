@@ -51,3 +51,14 @@ win.png
 crop_gauges.png
 tab_*.png
 uitext.txt
+
+# ---- 測試產物與本機截圖工作目錄 ----
+# Tests/TestResults 是 dotnet test 的輸出（本機一份 9.8 GB，含 .trx 與附件），
+# 它不是原始碼、不該進版控，也不該被推上遠端。
+Tests/TestResults/
+# lang-*.ps1 與 *-shots/ 是本機跑語言切換驗證留下的腳本與截圖目錄；
+# 截圖同 shots/ 的理由（畫面會過期），腳本則是一次性探針。
+lang-*.ps1
+*-shots/
+verify-shots-*/
+

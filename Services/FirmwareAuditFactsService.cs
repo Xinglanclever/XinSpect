@@ -106,10 +106,13 @@ public static class FirmwareAuditFactsService
         return new HardwareFact(SpiPermKey, CatFirmware, "SPI Descriptor 權限矩陣", $"master {s.Masters}、唯讀 region {s.ReadOnlyRegions}、寫保護 {s.WriteProtectedRegions}。只讀描述符權限矩陣，不寫 flash。", "項", "PCH SPI Descriptor（唯讀）", FactTrustLevel.Reported, false, at, s.Masters);
     }
 
-    private static SpiPermState ReadSpiPerm()
+    private static SpiPermState? ReadSpiPerm()
     {
-        // 本專案已有 SpiFlash 解碼；此處僅宣告計數接口，不重讀硬體。
-        return new(0, 0, 0);
+        // 本服務尚未接上 SpiFlashService 的解碼器（DecodePrx／DecodeFrap／DecodeHsfsts 讀的是
+        // 同一組暫存器）。在接線之前一律回 null 走 ReadError——「回 0 且標 Present」等於在每台機器上
+        // 斷言一次沒發生過的硬體讀取，且「寫保護 0」會被讀成「沒有保護」，比誠實說讀不到更危險。
+        // 接線時只要把下面換成 SpiFlashService 的實際讀取，不需要再想一次三態。
+        return null;
     }
 
     public static HardwareFact SmmFact(DateTimeOffset at, SmmProbe? probe = null)

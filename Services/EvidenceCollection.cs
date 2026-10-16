@@ -79,6 +79,8 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 PresentObservationFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadSrumReadback(); }
         catch { /* 附加功能：讀不到由 SrumReadbackService 標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadAmcache(); }
+        catch { /* 附加功能：讀不到由 AmcacheFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadEspScan(); }
         catch { /* 附加功能：讀不到由 EspScanService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadAudioEndpoints(); }
