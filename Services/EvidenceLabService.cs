@@ -1591,6 +1591,32 @@ public sealed class EvidenceLabService : ObservableObject
                 facts: baseFacts,
                 fileInputs: baseFacts.Count(f => f.Key.StartsWith("off.mount.", StringComparison.Ordinal)),
                 egressAttempts: 0));
+
+            // 知識表查詢統計（P1-039／P1-040）：從既有事實集**回收**，
+            // 不重新查表——重新查一次假的值會得到一把看起來正常、實際上毫無意義的統計，
+            // 那比不接線更糟。
+            var pciLookups = KnowledgeLookupCollector.CollectPci(baseFacts);
+            var ouiLookups = KnowledgeLookupCollector.CollectOui(baseFacts);
+            baseFacts.Add(KnowledgeLookupReport.ToPciFact(DateTimeOffset.UtcNow, pciLookups));
+            baseFacts.Add(KnowledgeLookupReport.ToOuiFact(DateTimeOffset.UtcNow, ouiLookups));
+
+            // 知識包宣告（P1-033–P1-038）：與既有 LoadKnowledgePack 同一次載入的結果。
+            baseFacts.AddRange(KnowledgePackReportCollector.Collect(
+                DateTimeOffset.UtcNow, KnowledgePackService.Load(KnowledgePackService.DefaultPath),
+                swaps: 0, recordedSwaps: 0,
+                lookups: pciLookups.Total + ouiLookups.Total,
+                misses: pciLookups.NotListed + pciLookups.Unparsable
+                      + ouiLookups.NotListed + ouiLookups.Unparsable));
+
+            // 域知識包（P1-041–P1-043）：每一把都讀本機側的真實值；讀不到就三把都標讀不到。
+            baseFacts.AddRange(DomainKnowledgeCollector.Collect(DateTimeOffset.UtcNow, baseFacts));
+
+            // 出網政策與資料主權（P1-049／P1-050／P1-051／P1-054）：
+            // 本輪沒有任何資料離開本機——但「沒有觸發」與「沒有通路」是分開的兩件事。
+            baseFacts.AddRange(EgressReportCollector.Collect(
+                DateTimeOffset.UtcNow, baseFacts, leftMachine: 0, destinations: [],
+                declaredClass: SensitivityPolicy.Level.L0));
+
             return baseFacts;
         }
     }
