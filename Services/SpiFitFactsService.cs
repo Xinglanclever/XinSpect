@@ -83,6 +83,9 @@ public static class SpiFitFactsService
                 FactTrustLevel.Unknown, false, at, null, FactAvailability.NotSupported,
                 "Boot Guard profile 需要 flash descriptor（FLMAP／FMLF）佈局——未對準出處前不出值；"
                 + "有 FIT 目錄不代表 Boot Guard 啟用，兩件事"),
+            // ULTIMATE-1000 階段二 P2-054／P2-055：把同一張 FIT 表按信任鏈分類。
+            // **不另外再讀一次快閃**——同一份表來源，與 MADT／DMAR／SRAT 接在同一次讀取上同理。
+            .. BootGuardFactsService.Collect(at, table),
         ];
     }
 

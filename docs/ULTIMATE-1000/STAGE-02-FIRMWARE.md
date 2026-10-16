@@ -146,8 +146,8 @@
 | P2-051 | 選項 ROM 盤點 | PCI 裝置選項 ROM 存在與簽章 | `fw.rom.list` | L1 | M | — |ok:fw.rom.list 
 | P2-052 | FIT 表存在性與解析 | 韌體介面表的可讀欄位 | `fit.present` | L0 | M | — |alias:fw.fit.summary@Services/SpiFitFactsService.cs:17 
 | P2-053 | Boot Guard 狀態陳述 | 依 FIT 與 MSR 陳述 | `bt.state` | L0 | M | P2-052 |todo: 
-| P2-054 | 初始開機塊判定 | IBB 範圍與雜湊宣告 | `bt.ibb` | L0 | L | P2-053 |todo: 
-| P2-055 | 金鑰模組判定 | KM 存在性與類型 | `bt.km` | L0 | M | P2-053 |todo: 
+| P2-054 | 初始開機塊判定 | IBB 範圍與雜湊宣告 | `bt.ibb` | L0 | L | P2-053 |ok:bt.ibb 
+| P2-055 | 金鑰模組判定 | KM 存在性與類型 | `bt.km` | L0 | M | P2-053 |ok:bt.km 
 | P2-056 | 量測開機支援旗標 | 平台是否支援量測開機 | `bt.measured_boot` | L0 | S | P2-053 |ok:bt.measured_boot 
 | P2-057 | 開機鏈元件清單 | 逐層開機元件與其量測狀態 | `bt.chain.list` | L1 | M | P2-064 |alias:fw.bootchain.summary@Services/FirmwareAuditFactsService.cs:25 
 | P2-058 | 信任根來源陳述 | 硬體信任根類型 | `bt.root` | L0 | S | — |ok:bt.root 
