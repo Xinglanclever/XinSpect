@@ -74,6 +74,19 @@ ALIASES = {
     # （bt.state 因此從 alias 退回 todo：那一輪的 +3 實際上是 +2。）
     'bt.chain.list': ('fw.bootchain.summary', 'Services/FirmwareAuditFactsService.cs', 25),
     'bt.wp': ('fw.spiperm.summary', 'Services/FirmwareAuditFactsService.cs', 18),
+    # P2-039／P2-047：SPI 快閃地圖的兩半，而它們**都有值**（通過 alias 的第三個條件）。
+    #
+    #   bios.region.size ← spi.flash_map（SpiFlashHashService:21）
+    #       它的值含「BIOS 區快閃位移 0x…-0x…（大小）」——那正是「BIOS 區有多大」。
+    #
+    #   spi.map.*        ← spi.regions（SpiFlashService:184）
+    #       把六個 FREG 區域逐項攤開（描述符／BIOS／Intel ME／GbE／平台資料／EC），
+    #       而那正是「SPI 區域劃分與用途」。
+    #
+    # 注意 spi.map.* 的家族前綴「spi.map.」在目錄裡**不存在**——
+    # 實作叫 spi.regions（不同前綴）。這與 ac.slit.* → numa.slit.nodes 同形。
+    'bios.region.size': ('spi.flash_map', 'Services/SpiFlashHashService.cs', 21),
+    'spi.map.*': ('spi.regions', 'Services/SpiFlashService.cs', 184),
 }
 
 cat = io.open('Services/FactKeyCatalog.cs', encoding='utf-8').read()

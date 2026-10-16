@@ -131,7 +131,7 @@
 | ★P2-036 | 映像 golden 值以真實傾印為準 | 解碼正確性以真機樣本證明 | （測試） | L0 | M | P2-034 |todo: 
 | P2-037 | 映像截斷與突變耐受 | 異常輸入不崩潰且標缺口 | `uefi.parse.gaps` | L0 | M | P2-034 |ok:uefi.parse.gaps 
 | P2-038 | 映像壓縮型別支援清單 | 已支援／未支援壓縮宣告 | `uefi.comp.supported` | L0 | S | P2-034 |ok:uefi.comp.supported 
-| P2-039 | BIOS 區唯讀取得 | 以既有介面取得 BIOS 區 | `bios.region.size` | L1 | M | P2-047 |todo: 
+| P2-039 | BIOS 區唯讀取得 | 以既有介面取得 BIOS 區 | `bios.region.size` | L1 | M | P2-047 |alias:spi.flash_map@Services/SpiFlashHashService.cs:21 
 | P2-040 | 開機模式與韌體介面 | UEFI／Legacy 與韌體供應商 | `fw.mode`／`fw.vendor` | L0 | S | — |ok:fw.mode／ok:fw.vendor 
 | P2-041 | 韌體版本與日期 | 系統與選項 ROM 版本 | `fw.version`／`fw.date` | L0 | S | — |ok:fw.version／ok:fw.date 
 | P2-042 | 開機順序與選項 | 開機裝置順序（唯讀） | `fw.bootorder` | L1 | S | — |ok:fw.bootorder 
@@ -139,7 +139,7 @@
 | P2-044 | 開機自我測試結果 | POST 結果與最後開機時間 | `boot.last_time` | L0 | S | P2-025 |ok:boot.last_time 
 | P2-045 | 快速開機與休眠狀態 | 影響量測可信度的狀態 | `boot.fastboot` | L0 | S | — |ok:boot.fastboot 
 | P2-046 | 韌體設定可讀項盤點 | 可讀設定與不可讀設定分列 | `fw.settings.readable` | L1 | M | — |ok:fw.settings.readable 
-| P2-047 | SPI 快閃地圖 | SPI 區域劃分與用途 | `spi.map.*` | L0 | M | — |todo: 
+| P2-047 | SPI 快閃地圖 | SPI 區域劃分與用途 | `spi.map.*` | L0 | M | — |alias:spi.regions@Services/SpiFlashService.cs:184 
 | P2-048 | BIOS 區雜湊與原廠比對 | 逐區段比對原廠映像 | `bios.hash`／`bios.diff` | L0 | L | P2-039 |todo:／todo: 
 | P2-049 | 微碼版本雙來源對帳 | MSR 與登錄檔版本互校 | `mc.version` | L0 | M | — |ok:mc.version 
 | P2-050 | 映像與韌體版本一致性 | 映像內版本對韌體宣告版本 | `uefi.version.cross` | L0 | M | P2-041 |todo: 
