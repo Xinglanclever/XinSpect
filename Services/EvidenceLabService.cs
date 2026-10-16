@@ -84,6 +84,11 @@ public sealed class EvidenceLabService : ObservableObject
             // 問 TPM 本身、sb.tpmdev 問韌體在 SMBIOS 裡寫了什麼）；
             // WPBT 是「韌體要求 OS 在開機時執行一段它提供的程式」那條路徑的存在性。
             .Concat(AcpiTpm2WpbtFactsService.Collect(acpiAt, AcpiTpm2WpbtFactsService.ReadTables(source)))
+            // P2-038 映像壓縮型別支援清單：**不新增解碼器**，把 UefiFv 既有的
+            // 引擎辨識判斷鏈攤開成可查詢的清單（GUID 直接引用 UefiFv 的常數）。
+            // **「認得」不等於「能解壓」**——所以語意拆成 supported（認得）
+            // 與 decompressed（本次遇到什麼）兩把鍵。
+            .Concat(UefiCompressionFactsService.Collect(acpiAt))
             .ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }

@@ -130,7 +130,7 @@
 | P2-035 | 映像 PE32 模組清單 | 列出映像內驅動與應用模組 | `uefi.pe.count` | L1 | M | P2-034 |todo: 
 | ★P2-036 | 映像 golden 值以真實傾印為準 | 解碼正確性以真機樣本證明 | （測試） | L0 | M | P2-034 |todo: 
 | P2-037 | 映像截斷與突變耐受 | 異常輸入不崩潰且標缺口 | `uefi.parse.gaps` | L0 | M | P2-034 |todo: 
-| P2-038 | 映像壓縮型別支援清單 | 已支援／未支援壓縮宣告 | `uefi.comp.supported` | L0 | S | P2-034 |todo: 
+| P2-038 | 映像壓縮型別支援清單 | 已支援／未支援壓縮宣告 | `uefi.comp.supported` | L0 | S | P2-034 |ok:uefi.comp.supported 
 | P2-039 | BIOS 區唯讀取得 | 以既有介面取得 BIOS 區 | `bios.region.size` | L1 | M | P2-047 |todo: 
 | P2-040 | 開機模式與韌體介面 | UEFI／Legacy 與韌體供應商 | `fw.mode`／`fw.vendor` | L0 | S | — |ok:fw.mode／ok:fw.vendor 
 | P2-041 | 韌體版本與日期 | 系統與選項 ROM 版本 | `fw.version`／`fw.date` | L0 | S | — |ok:fw.version／ok:fw.date 
