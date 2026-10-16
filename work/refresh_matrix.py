@@ -31,6 +31,19 @@ ALIASES = {
     # **撤回是對的，但理由不完整**——真正的理由是「已經有實作了，我應該先查」。
     # 這與 MemoryTypeName 那個教訓同型：**在已有答案的地方重新發明。**
     'fit.present': ('fw.fit.summary', 'Services/SpiFitFactsService.cs', 17),
+    # P2-053／P2-057／P2-059：規格的 bt.* 那一族（Boot Guard／信任鏈主題）
+    # 對到既有的 fw.*／spi.* 實作。**這是「先 grep 再動手」的直接產出**——
+    # 七列裡有三列早就做完了，而它們在矩陣上顯示為 todo。
+    #
+    #   bt.state        ← fw.bg.profile（SpiFitFactsService，Boot Guard 設定檔）
+    #   bt.chain.list   ← fw.bootchain.summary（FirmwareAuditFactsService，開機鏈五環聚合）
+    #   bt.wp           ← fw.spiperm.summary（FirmwareAuditFactsService，主控／唯讀／寫保護區域）
+    #
+    # 而另外四列（bt.ibb／bt.km／bt.measured_boot／bt.root）**是真的缺**——
+    # 既有實作裡沒有對應的東西，所以它們留在 todo。
+    'bt.state': ('fw.bg.profile', 'Services/SpiFitFactsService.cs', 19),
+    'bt.chain.list': ('fw.bootchain.summary', 'Services/FirmwareAuditFactsService.cs', 25),
+    'bt.wp': ('fw.spiperm.summary', 'Services/FirmwareAuditFactsService.cs', 18),
 }
 
 cat = io.open('Services/FactKeyCatalog.cs', encoding='utf-8').read()
