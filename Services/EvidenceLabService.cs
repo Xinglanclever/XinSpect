@@ -176,8 +176,21 @@ public sealed class EvidenceLabService : ObservableObject
         // 「看得到證據」與「根已生效」之間有距離。它讀既有的三組事實。
         TrustRootFacts = TrustRootFactsService.Collect(DateTimeOffset.UtcNow,
             TrustRootFactsService.FromFacts([.. TpmFacts, .. MeasuredBootFacts]));
+        // P2-073 TPM 與 Secure Boot 對照：**純交叉，零新讀取、零新編號。**
+        // 兩邊的輸入都是既有事實——而 Secure Boot 那一邊有兩個端點
+        // （uefi.secure_boot 較接近韌體、platform.secure_boot 是登錄檔層）。
+        //
+        // **它需要那兩邊的事實已經在記憶體裡**（BackendFacts 與 UefiFacts
+        // 由 LoadFirmwareSecurity 產出，而那個方法在 UI 流程裡先跑）。
+        // 若還沒跑，FromFacts 會回 null，而本服務如實標「無從對照」——**不猜**。
+        TpmSecureBootCrossFacts = TpmSecureBootCrossFactsService.Collect(DateTimeOffset.UtcNow,
+            TpmSecureBootCrossFactsService.FromFacts(
+                [.. TpmFacts, .. BackendFacts, .. UefiFacts]));
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
+
+    /// <summary>TPM 與 Secure Boot 的狀態對照（ULTIMATE-1000 階段二 P2-073）。</summary>
+    public IReadOnlyList<HardwareFact> TpmSecureBootCrossFacts { get; private set; } = [];
 
     /// <summary>
     /// 量測開機支援旗標（ULTIMATE-1000 階段二 P2-056）。
