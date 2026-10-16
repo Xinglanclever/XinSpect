@@ -168,7 +168,7 @@
 | P2-073 | TPM 與 Secure Boot 對照 | 兩者的狀態一致性 | `tpm.cross.sb` | L0 | S | P2-078 |todo: 
 | P2-074 | TPM 韌體版本與弱點知識包 | 對照已知弱點 | `tpm.cve` | L0 | M | P1-041 |todo: 
 | P2-075 | 遠端證明能力陳述 | 是否具備證明能力（不上網） | `tpm.attest.capable` | L1 | S | — |todo: 
-| P2-076 | 清除與重設風險說明 | 明示本專案不做清除 | `tpm.clear.boundary` | L0 | S | — |todo: 
+| P2-076 | 清除與重設風險說明 | 明示本專案不做清除 | `tpm.clear.boundary` | L0 | S | — |ok:tpm.clear.boundary 
 | P2-077 | 量測鏈與硬體事件關聯 | 開機事件對硬體變更時間線 | `tpm.cross.hwchange` | L1 | M | P2-064 |todo: 
 | P2-078 | Secure Boot 四態陳述 | 存在／啟用／已設定／雜湊世代 | `ev.secureboot.*` | L0 | M | — |alias:uefi.secure_boot@Services/UefiBootFactsService.cs:30 
 | P2-079 | 平台金鑰與 KEK 計數 | PK／KEK 存在性與計數 | `ev.pk.count` | L1 | S | P2-078 |ok:ev.pk.count 

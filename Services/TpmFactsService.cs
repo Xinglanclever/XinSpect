@@ -64,6 +64,9 @@ public static class TpmFactsService
             facts.Add(TcgLogFact(ctx, at, readLog ?? RealReadLog));
             facts.AddRange(BankInventoryFacts(ctx, at, submitFn));
             facts.AddRange(VersionFacts(ctx, at, submitFn));
+            // P2-076：清除與重設的界線宣告。
+            // **它不需要任何能力查詢，也不新增任何編號**——它只說出「本專案不做清除」。
+            facts.Add(TpmClearBoundaryFact(at));
             // P2-071／P2-072：把同一份 log 再走一次，補上「事件型別分佈」。
             //
             // ═══ 這裡有一個我知道的缺陷，而它要被說出來 ═══
@@ -110,6 +113,51 @@ public static class TpmFactsService
         return new HardwareFact(key, Category, name, Convert.ToHexStringLower(digest), "", source,
             FactTrustLevel.Measured, false, at);
     }
+
+    // ── P2-076 清除與重設的界線 ───────────────────────────────────────────
+
+    /// <summary>
+    /// TPM 清除與重設的<b>界線宣告</b>（P2-076）。
+    ///
+    /// <para>
+    /// <b>這把鍵什麼都不測，而它存在的理由就是說出那件事。</b>
+    /// 它與 <c>ec.boundary</c>（不讀寫 EC 埠）完全同型：
+    /// <b>一個沒說出口的界線，會被讀成「還沒做」而不是「刻意不做」。</b>
+    /// </para>
+    ///
+    /// <para>
+    /// <b>為什麼不做清除：</b><c>TPM2_Clear</c> 會讓擁有者授權與所有以該授權
+    /// 封存的資料永久失效——<b>那是一台機器上最不可逆的操作之一</b>。
+    /// 而本專案讀取硬體事實的目的不需要它：<b>要判斷「有沒有擁有者」，
+    /// 讀 TPM_PT_PERMANENT 的位元就夠了，不需要先清除再重來。</b>
+    /// </para>
+    ///
+    /// <para>
+    /// <b>而這一項同時標出一個尚未對準出處的部分</b>：判斷「是否已取得擁有權」
+    /// （P2-069 <c>tpm.owned</c>）需要 <c>TPM_PT_PERMANENT</c> 的屬性編號，
+    /// 而<b>本專案的 <c>Tpm2</c> 只收了有出處的四個編號</b>
+    /// （FAMILY_INDICATOR 0x100、REVISION 0x101、VENDOR_STRING_1..4 0x104..0x107）。
+    /// <b>所以 P2-069 在對準出處之前不做</b>——與 FIT 的 Key Manifest 編號、
+    /// TPM 的 EV_* 型別名、EFI 變數的屬性位元是同一個判斷：
+    /// <b>填錯的編號會讓一個不存在的東西看起來存在。</b>
+    /// </para>
+    /// </summary>
+    internal static HardwareFact TpmClearBoundaryFact(DateTimeOffset at)
+        => new("tpm.clear.boundary", Category, "TPM 清除與重設界線",
+            "本專案不做 TPM 清除或重設", "", "專案界線宣告（無外部來源）",
+            FactTrustLevel.Unknown, false, at, null, FactAvailability.NotApplicable,
+            "**TPM2_Clear 會讓擁有者授權與所有以該授權封存的資料永久失效**——"
+            + "那是一台機器上最不可逆的操作之一。"
+            + "而本專案讀取硬體事實的目的不需要它："
+            + "**要判斷「有沒有擁有者」，讀 TPM_PT_PERMANENT 的位元就夠了，"
+            + "不需要先清除再重來。**"
+            + "**而這把鍵存在的理由就是說出那件事**——"
+            + "一個沒說出口的界線，會被讀成「還沒做」而不是「刻意不做」"
+            + "（與 ec.boundary 同型的處置）。"
+            + "**同時如實標出一個尚未對準的部分**：規格的 P2-069（tpm.owned）"
+            + "需要 TPM_PT_PERMANENT 的屬性編號，"
+            + "而本專案的 Tpm2 只收了有出處的四個（0x100、0x101、0x104..0x107）"
+            + "——**所以那一項在對準出處之前不做**");
 
     private static HardwareFact TcgLogFact(nint ctx, DateTimeOffset at, Func<nint, byte[]?> readLog)
     {
