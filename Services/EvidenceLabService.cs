@@ -510,6 +510,12 @@ public sealed class EvidenceLabService : ObservableObject
         // P2-026／P2-027：Type 39 電源供應器與 Type 41 內建裝置。
         SmbiosStructureFacts = SmbiosStructureFactsService.Collect(at);
         SmbiosPowerFacts = SmbiosPowerFactsService.Collect(at);
+        // ULTIMATE-1000 階段二 P2-024：SMBIOS Type 19 記憶體映射逐段。
+        // **它不重新發明讀表**——走同一條 SmbiosService 通路（韌體宣告優先，與 mem.* 的 OS 視圖分開陳述）。
+        SmbiosMemoryMapFacts = SmbiosMemoryMapFactsService.Collect(at);
+        // ULTIMATE-1000 階段二 P2-094：熱管理可讀項盤點（韌體自述／OS 熱區／EC 三條口徑分開講）。
+        // **它回答「哪些讀得到」，不是「溫度幾度」**；EC 那一條如實寫「本專案沒有那條路」。
+        ThermalReachFacts = ThermalReachFactsService.Collect(at);
         // ULTIMATE-1000 階段二 P2-033：SMBIOS 陳述對作業系統視圖的逐欄位對照。
         // 這是前面每一項「多來源並列」的收束點——**一致／不一致／無從對照**三分，
         // 而第三種不算進第二種（把「一邊沒有值」算成不一致會製造假的落差）。
@@ -562,6 +568,8 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(SmbiosTpmFacts)
             .Concat(SmbiosStructureFacts)
             .Concat(SmbiosPowerFacts)
+            .Concat(SmbiosMemoryMapFacts)
+            .Concat(ThermalReachFacts)
             .Concat(SmbiosCrossFacts)
             .Concat(FirmwareModeFacts)
             .Concat(UefiBootOrderFacts)
@@ -1003,6 +1011,18 @@ public sealed class EvidenceLabService : ObservableObject
     /// 電源供應器與內建裝置。功率只報額定，不換算成可用功率。
     /// </summary>
     public IReadOnlyList<HardwareFact> SmbiosPowerFacts { get; private set; } = [];
+
+    /// <summary>
+    /// SMBIOS Type 19 記憶體映射逐段（ULTIMATE-1000 階段二 P2-024）。
+    /// <b>韌體宣告的位址映射，不是可用的記憶體</b>——後者是 Type 16／17 與 OS 那一組。
+    /// </summary>
+    public IReadOnlyList<HardwareFact> SmbiosMemoryMapFacts { get; private set; } = [];
+
+    /// <summary>
+    /// 熱管理可讀項盤點（ULTIMATE-1000 階段二 P2-094）。
+    /// <b>盤點「哪些口徑讀得到」，不是溫度本身</b>；EC 那一條如實寫「本專案沒有那條路」。
+    /// </summary>
+    public IReadOnlyList<HardwareFact> ThermalReachFacts { get; private set; } = [];
 
     /// <summary>
     /// SMBIOS 與 OS 的對照事實（ULTIMATE-1000 階段二 P2-033）。

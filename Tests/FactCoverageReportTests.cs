@@ -153,9 +153,14 @@ public class FactCoverageReportTests
         // 所以照上面的規矩留未覆蓋，上限跟著移。同批的三把 uefi.*.count 不在此列——
         // 它們是掃描器原本看不到的字面（見 UefiSignatureFactsService 的常數註解），
         // 登記進目錄後才進入掃描面，因此這一條的基線變化要分開記。
+        //
+        // 2026-10-18 第四批：+3 條（`sb.memmap.count`／`sb.memmap.total`＝P2-024 Type 19 逐段映射、
+        // `ec.thermal.readable`＝P2-094 熱管理可讀項）。三把都在**刻意不豁免的家族**裡
+        //（前者可以對 Type 16／17 與 OS 看到的記憶體，後者可以對 SMBIOS 探針與 WMI 熱區），
+        // 所以照規矩留未覆蓋，上限跟著移到 316。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 313,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 313）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 316,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 316）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }

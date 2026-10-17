@@ -125,7 +125,10 @@ public class FactKeyCatalogTests
         //（`keyPrefix + ".list.{i}"`，掃描器只認字面所以一直沒被照到），
         // 由 EfiVariableFactsTests.執行期產生的鍵都要被目錄或動態家族收錄 照出來的。
         // 同一批的「條數」鍵（uefi.db.count／dbx／kek）成員固定，走靜態目錄而不是家族。
-        const int FamilyCap = 26;
+        // 26 → 27（2026-10-18）：sb.memmap.（SMBIOS Type 19 逐段映射，P2-024）——
+        // 有幾段是韌體的事實（消費級平台常常一段都不列），編譯期列不完；
+        // 彙總鍵 sb.memmap.count／sb.memmap.total 成員固定，走靜態目錄。
+        const int FamilyCap = 27;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 

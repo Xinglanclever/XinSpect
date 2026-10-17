@@ -81,6 +81,8 @@ public static class FactKeyDynamicCatalog
                 "只有明示同意（L2）時才產鍵，dl.dll.summary 彙總鍵仍在靜態目錄。",
             ["role.installed."] =
                 "Windows 伺服器角色／功能逐一筆（角色名）——裝了哪些是这台機器的安裝事實，一台 Core 機能有幾十個角色；name 含大寫與連字號，本就不符合全鍵目錄的格式規定，必須走家族",
+            ["sb.memmap."] =
+                "SMBIOS Type 19 宣告的記憶體映射逐段一筆（sb.memmap.0…）——有幾段是韌體的事實，編譯期列不完；每段要能被單獨選取與匯出（彙總鍵 sb.memmap.count／total 仍在靜態目錄）",
             ["tpm.replay.pcr."] =
                 "TPM 開機鏈重放逐 PCR 一筆（PCR 索引），本機只算 SHA-256——" +
                 "該跑哪些 PCR、機器上實作了哪幾條，由 TCG log 與 TPM 自己決定；tpm.replay.summary 彙總鍵仍在靜態目錄。",

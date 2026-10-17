@@ -116,7 +116,7 @@
 | P2-021 | SMBIOS Type 9 插槽 | 系統插槽與已用狀態 | `sb.slot.*` | L0 | M | — |ok:sb.slot.* 
 | P2-022 | SMBIOS Type 11 OEM 字串 | 廠商字串列 | `sb.oem.strings` | L1 | S | — |alias:sb.oem.list@Services/SmbiosDeepFactsService.cs:92 
 | P2-023 | SMBIOS Type 16／17 記憶體 | 陣列與裝置全欄位（序號遮蔽） | `sb.mem.*` | L1 | M | — |alias:sb.dim.*@Services/SmbiosDeepFactsService.cs:65 
-| P2-024 | SMBIOS Type 19 記憶體映射 | 實體位址映射 | `sb.memmap.*` | L0 | M | — |todo: 
+| P2-024 | SMBIOS Type 19 記憶體映射 | 實體位址映射 | `sb.memmap.*` | L0 | M | — |ok:sb.memmap.count／ok:sb.memmap.total 
 | P2-025 | SMBIOS Type 32 開機資訊 | 開機狀態與 POST 結果 | `sb.boot.*` | L0 | S | — |ok:sb.boot.* 
 | P2-026 | SMBIOS Type 39 PSU | 電源供應器與容量 | `sb.psu.*` | L0 | S | P1-043 |alias:sb.psu@Services/SmbiosDeepFactsService.cs:99 
 | P2-027 | SMBIOS Type 41 內建裝置 | 內建裝置與狀態 | `sb.onboard.*` | L0 | S | — |ok:sb.onboard.* 
@@ -186,7 +186,7 @@
 | P2-091 | 韌體熵分布圖 | 逐區塊熵值（抗混淆指標） | `spi.entropy.*` | L0 | M | P2-086 |alias:spi.entropy_map@Services/SpiEntropyService.cs:47 
 | P2-092 | EC 唯讀風險評估 | 陳述 EC 埠不讀寫的界線 | `ec.boundary` | L0 | S | — |ok:ec.boundary 
 | P2-093 | EC 存在性與型號 | 由既有表間接陳述 | `ec.present` | L0 | S | P2-028 |ok:ec.present 
-| P2-094 | 熱管理與風扇曲線可讀項 | 由 EC 或 WMI 可讀者 | `ec.thermal.readable` | L0 | M | — |todo: 
+| P2-094 | 熱管理與風扇曲線可讀項 | 由 EC 或 WMI 可讀者 | `ec.thermal.readable` | L0 | M | — |ok:ec.thermal.readable 
 | P2-095 | 電池與 EC 充放狀態 | 唯讀充放事實 | `ec.battery.state` | L0 | S | — |ok:ec.battery.state 
 | P2-096 | 周邊韌體版本盤點 | 硬碟／SSD／網卡韌體版本 | `pdev.fw.version` | L0 | M | — |ok:pdev.fw.version 
 | P2-097 | 周邊韌體與原廠對照 | 版本落後與建議（陳述非判決） | `pdev.fw.delta` | L0 | M | P1-043 |todo: 
