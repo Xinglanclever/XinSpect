@@ -131,8 +131,8 @@ isRetryable: false
 | ULTIMATE-1000 階段二的 31 列 `todo`、全計畫 1,050 項中約 890 項未開工 | `STAGE-02-FIRMWARE.md` |
 | **v2.85 的 changelog 條目仍只寫「階段一 105 項」**——階段二的成果（P2-0xx，含第七節的 TPM 修正）還沒進條目；**發版前要補**（三份 README 的版本沿革同步） | `Nav/ChangelogCatalog.cs` 的 2.85 條目 |
 | v2.85 尚未發佈（README 下載連結已指 2.85）；`FileVersion` 仍 2.84.0.0 | `Nav/ChangelogCatalog.cs`、`git tag`、`XinSpect.csproj` |
-| 一個卡住的 `XinSpect.exe`（PID 14928，見第七節）還鎖著 `Tests/bin`，**重開機才會清掉**（即本輪所有建置都要 `-p:BaseOutputPath=obj/_probe/`） | 本輪環境 |
-| TPM 的 `PT_PERMANENT`／`PT_STARTUP_CLEAR` **真機實測未取得**（TBS 回 `TBS_E_TPM_NOT_FOUND`）；重開機後應重跑一次真機驗證 | 第七節 |
+| 卡住的 `XinSpect.exe`（PID 14928）**已於 2026-10-17 22:56 重開機後消失**；一般建置路徑恢復（不必再用 `-p:BaseOutputPath=obj/_probe/`） | 第七節 |
+| **TPM 的實機通路在这台機器上不存在**：TPM 裝置與驅動正常、`Win32_Tpm` 可用，但 **`TBS` 服務未安裝** ⇒ `tpm.*` 全部落 NotApplicable。**要不要加一條 WMI 通路（`Win32_Tpm`）作為備援，是產品決定**（唯讀、零網路；但會多一條「同一件事兩個來源」的對照義務） | 第七節 |
 
 ---
 
@@ -182,13 +182,30 @@ isRetryable: false
 
 - **別從腳本跑 `XinSpect.exe --json evidence`**：它卡死（單一執行緒、`Stop-Process -Force`
   無效），並鎖住 `Tests/bin` 的 DLL。之後所有建置／測試要加
-  `-p:BaseOutputPath=obj/_probe/` 繞開（那個程序留著，等重開機清掉）。
-- **本機 TBS 此刻回 `TBS_E_TPM_NOT_FOUND`**（PTT 被卡住的命令卡住；`Win32_Tpm` 仍回報
-  TPM 存在且已擁有）。所以 **PT_PERMANENT／PT_STARTUP_CLEAR 的實測值本輪沒有取得**——
-  它們的測試資料在註解與 fixture 都明寫「這是形狀不是 golden」。
+  `-p:BaseOutputPath=obj/_probe/` 繞開。（**2026-10-17 22:56 重開機後該程序已消失**，
+  一般建置路徑恢復。）
+- **本機 TBS 回 `TBS_E_TPM_NOT_FOUND`——原因已查明，而且不是我原本猜的那個**
+  （原文寫「PTT 被卡住的命令卡住，重開機後應重跑」，**那句是錯的，重開機後一樣失敗**）：
+
+  | 查了什麼 | 結果 |
+  |---|---|
+  | PnP 安全裝置 | `信賴平台模組 2.0`（`ACPI\MSFT0101\1`）狀態 **OK** |
+  | `TPM` 核心驅動 | **Running**、Status OK |
+  | `Win32_Tpm`（走 WMI provider） | TpmPresent／TpmReady／TpmEnabled／TpmOwned **全部 True**、SpecVersion「2.0, 0, 1.16」 |
+  | `tbs.dll` | 存在（10.0.26100.32684） |
+  | **`TBS` 服務** | **不存在**——`HKLM\SYSTEM\CurrentControlSet\Services\TBS` 無此機碼、`sc query TBS` 回 **1060（服務未安裝）** |
+  | 提權 | 是（`IsInRole(Administrator)`＝True） |
+
+  **結論：這台機器有 TPM，但 Windows 的 TBS 介面不存在**，而 `TpmFactsService` 正是走 TBS——
+  所以 `Tbsi_Context_Create` 永遠回 `0x8028400F`，**全部 `tpm.*` 事實在這台機器上只能落到
+  NotApplicable**（那是誠實的三態，不是缺陷）。**因此 `PT_PERMANENT`／`PT_STARTUP_CLEAR`
+  的真機實測在這台機器上做不到**，除非改走 WMI 通路（`Win32_Tpm` 在此可用，這是一條候選：
+  見下面「還沒處理的」）。
   family／level／revision／manufacturer 的真值取自 Windows 的 `Win32_Tpm`
   （SpecVersion「2.0, 0, 1.16」、ManufacturerIdTxt「INTC」）。
-  **重開機後應重跑一次真機驗證。**
+  **教訓：我上一次把「TBS 失敗」寫成「被卡住的命令卡住」——那是一個沒有驗證的因果推測，
+  而它讓下一個人以為重開機就好。** 通路的失敗要查通路本身（服務在不在），
+  不是猜它為什麼失敗。
 
 ## 這一輪的教訓
 
