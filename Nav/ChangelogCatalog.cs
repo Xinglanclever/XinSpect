@@ -64,7 +64,10 @@ public static class ChangelogCatalog
                 "韌性與降級：key.evolution（更名會讓歷史無法比較）、coverage.gap、diag.count（未接住的例外是本程式的缺陷不是機器的問題）、src.circuit、degrade.mode、fact.error.reason、src.retry、scan.failures。",
                 "守門方法論：GuardPolicy（五模式、等級宣告含「守不住什麼」、白名單上限、誤報治理——放寬門檻一律不接受）、GuardRegistry 八條守門清冊、GuardBudget 時間預算。",
                 "發佈與對外：build.singlefile／reproducible、release.verify、tests.baseline、license.notices、cert.plan、limits.public、contrib.guide、doc.reconcile。",
-                "測試 5512→6381 綠；事實鍵目錄 856→1026 把（＋23 個動態家族）；ULTIMATE-1000 階段一 105 項完成。",
+                "ULTIMATE-1000 階段二（韌體・開機鏈與信任根）開工：ACPI 表逐張解析與校驗、SMBIOS 結構與 WMI 對照、UEFI 映像 FV／FFS 分解、SPI 地圖與 BIOS 區雜湊、FIT／Boot Guard、微碼雙來源對帳、TPM 2.0 屬性與開機鏈重放、電池與 EC 狀態、周邊韌體版本盤點。105 列的實作鍵：61 把到位、24 把以既有鍵別名收錄、28 把待辦。",
+                "TPM 讀值修正與備援通路：TPM_PT 屬性編號與 revision 語意整組照 TPM 2.0 Part 2 重對來源（原先實作／註解／fixture／文件四處一致地錯）；TBS 服務不存在時改走 Windows WMI（Win32_Tpm）備援，PCR 與事件日誌那一批標 NotSupported，不因為「有 TPM」就代填成支援。",
+                "目錄與執行期對帳補洞：uefi.{db,dbx,kek}.count 與逐條清單先前只有執行期在產、目錄與動態家族都沒登記（掃描器只認字面）；補上字面宣告與家族登記，並加一條守門釘住「執行期產生的鍵都要被目錄或動態家族收錄」。",
+                "測試 5512→6393 綠；事實鍵目錄 856→1030 把（＋26 個動態家族）；ULTIMATE-1000 階段一 105 項完成、階段二 105 列進行中。",
             ],
         },
         new ChangeEntry
