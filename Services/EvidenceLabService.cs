@@ -540,6 +540,10 @@ public sealed class EvidenceLabService : ObservableObject
         // 而「讀取本身失敗」與「這台機器沒有電池」在事實層是兩個不同的斷言。
         // （它與 pw.battery.summary 的區隔寫在服務檔的類別註解，不在理由欄——見 HardwareFact 的不變式。）
         BatteryStateFacts = BatteryStateFactsService.Collect(at, new BatteryService().Read());
+        // ULTIMATE-1000 階段二 P2-096：周邊韌體版本盤點。
+        // **它不是「版本是否最新」的判斷**——那是 P2-097、需要知識包比對；
+        // 這裡只陳述裝置自述的版本，並把網卡那半邊的缺源寫進同一條事實。
+        PeripheralFirmwareFacts = PeripheralFirmwareFactsService.Collect(at);
         PpttFacts = PpttFactsService.Collect(new Win32AcpiTableSource(), at, Environment.ProcessorCount);
         ServerModeFacts = ServerModeFactsService.Collect(at);
         RoleFacts = RoleSurfaceFactsService.Collect(at);
@@ -566,6 +570,7 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(MicrocodeVersionFacts)
             .Concat(OptionRomFacts)
             .Concat(BatteryStateFacts)
+            .Concat(PeripheralFirmwareFacts)
             .Concat(PpttFacts)
             .Concat(ServerModeFacts)
             .Concat(RoleFacts)
@@ -1022,6 +1027,12 @@ public sealed class EvidenceLabService : ObservableObject
     /// <b>陳述「現在是什麼狀況」，不是「這顆電池老了沒有」</b>——後者是 pw.battery.summary。
     /// </summary>
     public IReadOnlyList<HardwareFact> BatteryStateFacts { get; private set; } = [];
+
+    /// <summary>
+    /// 周邊韌體版本盤點（ULTIMATE-1000 階段二 P2-096）。
+    /// <b>裝置自述的韌體版本，不是「是否最新」的判斷</b>——後者是 P2-097、需要知識包。
+    /// </summary>
+    public IReadOnlyList<HardwareFact> PeripheralFirmwareFacts { get; private set; } = [];
 
     /// <summary>
     /// 快速開機與休眠狀態（ULTIMATE-1000 階段二 P2-045）。

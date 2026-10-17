@@ -58,6 +58,69 @@ public class EfiVariableFactsTests
         Assert.Contains("AdjustTokenPrivileges 未持有權限時仍回 true", a.UnavailableReason);
     }
 
+    // ── 執行期產生的鍵都要有登記（2026-10-17 補的守門）──────────────────────
+
+    /// <summary>最小可用的 EFI_SIGNATURE_LIST（SHA-256 型，n 筆簽章）。</summary>
+    private static byte[] SigList(int n)
+    {
+        int entry = 16 + 32, listSize = 28 + n * entry;
+        var data = new byte[listSize];
+        new Guid(EfiSigListDecoder.Sha256TypeGuid).ToByteArray().CopyTo(data, 0);
+        BitConverter.GetBytes((uint)listSize).CopyTo(data, 16);
+        BitConverter.GetBytes(0u).CopyTo(data, 20);
+        BitConverter.GetBytes((uint)entry).CopyTo(data, 24);
+        for (int i = 0; i < n; i++)
+        {
+            int p = 28 + i * entry;
+            new Guid("11111111-2222-3333-4444-555555555555").ToByteArray().CopyTo(data, p);
+            data[p + 16] = (byte)(i + 1);
+        }
+        return data;
+    }
+
+    /// <summary>
+    /// <b>執行期產生的鍵一定要在目錄或動態家族裡。</b>
+    ///
+    /// <para>
+    /// 這一條補的是一個真實的洞：`uefi.db.count`／`uefi.dbx.count`／`uefi.kek.count` 與
+    /// `uefi.{db,dbx,kek}.list.0..4` 都是本服務的執行期輸出，而目錄與動態家族都沒有它們——
+    /// **本機讀不到 EFI 變數（未進 Setup Mode）所以它們從未出現**，
+    /// 換一台讀得到的機器就會讓執行期對帳亮紅燈（鍵不在目錄也不在家族）。
+    /// </para>
+    ///
+    /// <para>
+    /// 為什麼一般掃描抓不到：原始碼裡是 `keyPrefix + ".count"` 這種<b>計算鍵</b>，
+    /// 而掃描器只認字面值。所以這裡用「跑一次服務、逐鍵核對」把它钉住——
+    /// 這一條同時是正對照：它必須真的產生 list 鍵，否則會空過。
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void 執行期產生的鍵都要被目錄或動態家族收錄()
+    {
+        var facts = UefiSignatureFactsService.Collect(At, name => name switch
+        {
+            "db" => SigList(1),
+            "dbx" => SigList(2),
+            "KEK" => SigList(1),
+            _ => null,
+        });
+
+        // 正對照：這幾把就是先前的漏網之魚，沒有它們的話這條測試是空過的
+        Assert.Contains(facts, f => f.Key == "uefi.db.count");
+        Assert.Contains(facts, f => f.Key == "uefi.db.list.0");
+        Assert.Contains(facts, f => f.Key == "uefi.kek.list.0");
+
+        var catalog = FactKeyCatalog.Keys.ToHashSet(StringComparer.Ordinal);
+        var families = FactKeyDynamicCatalog.Families.Keys.ToList();
+        var unknown = facts.Select(f => f.Key)
+            .Where(k => !catalog.Contains(k) && !families.Any(p => k.StartsWith(p, StringComparison.Ordinal)))
+            .Distinct().ToList();
+
+        Assert.True(unknown.Count == 0,
+            "以下鍵由服務在執行期產生，但目錄與動態家族都沒有登記（申報會少算它們）："
+            + string.Join("、", unknown));
+    }
+
     [Fact]
     public void 空的讀取清單要標不適用()
     {

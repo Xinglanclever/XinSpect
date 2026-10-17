@@ -147,9 +147,15 @@ public class FactCoverageReportTests
         // 2026-10-17 同日的第二批：+2 條（`tpm.owned`＝P2-069、`tpm.attest.capable`＝P2-075），
         // 兩個都在**刻意不豁免的 tpm. 那一族**裡（可以對：Windows 的 Win32_Tpm 視圖、
         // 量測開機日誌），所以照上面的規矩留未覆蓋，上限跟著移。
+        // 2026-10-17 第三批：+1 條（`pdev.fw.version`＝P2-096 周邊韌體版本盤點）。
+        // 它落在**刻意不豁免的 pdev. 那一族**裡——可以對的對象寫在服務檔的類別註解
+        //（硬碟自述的韌體版本 vs 原廠清單／網卡在 Windows 沒有韌體欄位），
+        // 所以照上面的規矩留未覆蓋，上限跟著移。同批的三把 uefi.*.count 不在此列——
+        // 它們是掃描器原本看不到的字面（見 UefiSignatureFactsService 的常數註解），
+        // 登記進目錄後才進入掃描面，因此這一條的基線變化要分開記。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 309,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 309）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 313,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 313）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }

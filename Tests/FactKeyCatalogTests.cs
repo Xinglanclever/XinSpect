@@ -119,7 +119,13 @@ public class FactKeyCatalogTests
         // 22 → 23（2026-10-14）：tpm.replay.pcr.（開機鏈重放逐 PCR 一筆）——tpm.replay.pcr.sha256.{index}
         // 早就以執行期鍵的形式在產，卻一直沒有家族登記，目錄覆蓋掃描把它照成「FW-002 未實作」的假缺口；
         // 補登記之後 FW-002 的 `tpm.replay.*` 才對得上。該跑哪幾條 PCR 由 TCG log 與 TPM 決定。
-        const int FamilyCap = 23;
+        // 23 → 26（2026-10-17）：uefi.db.list.／uefi.dbx.list.／uefi.kek.list.（UEFI 簽章資料庫的
+        // 逐條清單，最多列 5 條）——有幾條清單是那個變數的內容決定的，編譯期列不完；
+        // 這次不是「新功能順手加登記」，而是這三組鍵**早就以執行期鍵的形式在產**卻沒有登記
+        //（`keyPrefix + ".list.{i}"`，掃描器只認字面所以一直沒被照到），
+        // 由 EfiVariableFactsTests.執行期產生的鍵都要被目錄或動態家族收錄 照出來的。
+        // 同一批的「條數」鍵（uefi.db.count／dbx／kek）成員固定，走靜態目錄而不是家族。
+        const int FamilyCap = 26;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 

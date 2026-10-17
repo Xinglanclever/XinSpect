@@ -11,6 +11,35 @@ public static class UefiSignatureFactsService
 {
     private const string Category = "信賴根";
 
+    /// <summary>
+    /// db／dbx／KEK 的「條數」鍵與「逐條清單」家族前綴，<b>以字面宣告在這裡</b>。
+    ///
+    /// <para>
+    /// <b>為什麼不直接在 <see cref="CollectSigList"/> 裡用 <c>keyPrefix + ".count"</c> 組出來就好：</b>
+    /// 那些鍵的成員是<b>固定的</b>（db／dbx／KEK 各一組），所以它們該進靜態目錄；
+    /// 而靜態目錄是掃原始碼長出來的，<b>掃描器只認字面</b>——
+    /// 組出來的鍵它看不到，於是「目錄沒有這把鍵」與「執行期真的在產這把鍵」同時成立。
+    /// 2026-10-17 由 <c>EfiVariableFactsTests.執行期產生的鍵都要被目錄或動態家族收錄</c> 照出來；
+    /// 同一件事在 <c>FactKeyCatalogTests.目錄與原始碼掃描逐鍵相等</c> 那一邊會變成
+    /// 「目錄有而原始碼沒有」的紅燈。<b>兩邊都要收，就得讓它成為字面。</b>
+    /// </para>
+    ///
+    /// <para>
+    /// <b>命名有個講究：</b><c>*CountKey</c> 的名字裡有 <c>Key</c>，因為它是<b>一把鍵</b>，
+    /// 要讓掃描器收錄；<c>*ListPrefix</c> 的名字刻意<b>不含</b> <c>Key</c>，因為它是
+    /// <b>動態家族的前綴、不是一把鍵</b>——掃描器的字面規則把 <c>const string ...Key... = "..."</c>
+    /// 當成鍵，前綴進鍵集會憑空多出一把不存在的鍵。前綴仍能被
+    /// <c>FactKeyCatalogTests.動態鍵家族的每個前綴都要真的有人在原始碼裡生產</c>
+    /// 查證（它查的是原始碼裡有沒有那個字面）。
+    /// </para>
+    /// </summary>
+    public const string DbCountKey = "uefi.db.count";
+    public const string DbListPrefix = "uefi.db.list.";
+    public const string DbxCountKey = "uefi.dbx.count";
+    public const string DbxListPrefix = "uefi.dbx.list.";
+    public const string KekCountKey = "uefi.kek.count";
+    public const string KekListPrefix = "uefi.kek.list.";
+
     // UEFI 變數命名空間 GUID
     private static readonly byte[] GuidImageSecurity = Guid.Parse("a7719a85-d6cd-4be1-a1bd-4b0e8bee64c5").ToByteArray();
     private static readonly byte[] GuidGlobalVar = Guid.Parse("8be4df61-93ca-11d2-aa0d-00e098032b8c").ToByteArray();
@@ -26,11 +55,11 @@ public static class UefiSignatureFactsService
         var facts = new List<HardwareFact>();
 
         // ── db（允許的簽章資料庫）──
-        CollectSigList(facts, "uefi.db", "db（允許簽章資料庫）", "db", GuidImageSecurity, reader, at);
+        CollectSigList(facts, "uefi.db", DbCountKey, DbListPrefix, "db（允許簽章資料庫）", "db", GuidImageSecurity, reader, at);
         // ── dbx（撤銷簽章資料庫）──
-        CollectSigList(facts, "uefi.dbx", "dbx（撤銷簽章資料庫）", "dbx", GuidImageSecurity, reader, at);
+        CollectSigList(facts, "uefi.dbx", DbxCountKey, DbxListPrefix, "dbx（撤銷簽章資料庫）", "dbx", GuidImageSecurity, reader, at);
         // ── KEK（金鑰交換金鑰）──
-        CollectSigList(facts, "uefi.kek", "KEK（金鑰交換金鑰）", "KEK", GuidGlobalVar, reader, at);
+        CollectSigList(facts, "uefi.kek", KekCountKey, KekListPrefix, "KEK（金鑰交換金鑰）", "KEK", GuidGlobalVar, reader, at);
         // ── PK（平台金鑰）──
         var pk = reader("PK");
         facts.Add(pk is { Length: > 16 }
@@ -45,8 +74,8 @@ public static class UefiSignatureFactsService
         return facts;
     }
 
-    private static void CollectSigList(List<HardwareFact> facts, string keyPrefix, string name,
-        string varName, byte[] guid, Func<string, byte[]?> reader, DateTimeOffset at)
+    private static void CollectSigList(List<HardwareFact> facts, string keyPrefix, string countKey,
+        string listPrefix, string name, string varName, byte[] guid, Func<string, byte[]?> reader, DateTimeOffset at)
     {
         byte[]? data = reader(varName);
         if (data is null || data.Length < 28)
@@ -58,13 +87,13 @@ public static class UefiSignatureFactsService
         }
         var lists = EfiSigListDecoder.Decode(data);
         int totalSigs = lists.Sum(l => l.SignatureCount);
-        facts.Add(new HardwareFact(keyPrefix + ".count", Category, name,
+        facts.Add(new HardwareFact(countKey, Category, name,
             $"{totalSigs} 條簽章（{lists.Count} 條清單）", "條",
             $"GetFirmwareEnvironmentVariableEx + EfiSigListDecoder", FactTrustLevel.Derived, false, at, totalSigs));
         for (int i = 0; i < lists.Count && i < 5; i++)
         {
             var l = lists[i];
-            facts.Add(new HardwareFact($"{keyPrefix}.list.{i}", Category, $"{name} 清單 {i}",
+            facts.Add(new HardwareFact($"{listPrefix}{i}", Category, $"{name} 清單 {i}",
                 $"類型 {l.TypeGuid}・{l.SignatureCount} 條簽章・{l.TotalBytes} bytes", "",
                 "EfiSigListDecoder（UEFI Spec §32.4.1）", FactTrustLevel.Measured, false, at, l.SignatureCount));
         }

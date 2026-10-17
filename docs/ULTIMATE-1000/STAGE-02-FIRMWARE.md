@@ -111,7 +111,7 @@
 | P2-016 | MCFG 與 PCIe 段 | ECAM 基底與段號 | `ac.mcfg.*` | L0 | S | — |ok:ac.mcfg.* 
 | P2-017 | TPM2 與 WPBT 表 | TPM 位置與 WPBT 存在性陳述 | `ac.tpm2`／`ac.table.wpbt` | L0 | S | — |ok:ac.tpm2／alias:se.wpbt@Services/ClosingFactsService.cs:27 
 | P2-018 | PDTT／LPIT 等其餘表 | 逐簽章解碼並標未支援 | `ac.table.{sig}` | L0 | M | P2-002 |alias:acpi.table.{sig}@Services/AcpiTableService.cs:42 
-| P2-019 | SMBIOS Type 0–3 | BIOS／系統／底板／機箱全欄位 | `sb.type0.*`–`sb.type3.*` | L1 | M | — |todo: 
+| P2-019 | SMBIOS Type 0–3 | BIOS／系統／底板／機箱全欄位 | `sb.type0.*`–`sb.type3.*` | L1 | M | — |alias:sb.type0@Services/SmbiosIdentityFactsService.cs:32 
 | P2-020 | SMBIOS Type 4／7 | 處理器與快取 | `sb.type4.*` | L0 | M | — |ok:sb.type4.* 
 | P2-021 | SMBIOS Type 9 插槽 | 系統插槽與已用狀態 | `sb.slot.*` | L0 | M | — |ok:sb.slot.* 
 | P2-022 | SMBIOS Type 11 OEM 字串 | 廠商字串列 | `sb.oem.strings` | L1 | S | — |alias:sb.oem.list@Services/SmbiosDeepFactsService.cs:92 
@@ -140,7 +140,7 @@
 | P2-045 | 快速開機與休眠狀態 | 影響量測可信度的狀態 | `boot.fastboot` | L0 | S | — |ok:boot.fastboot 
 | P2-046 | 韌體設定可讀項盤點 | 可讀設定與不可讀設定分列 | `fw.settings.readable` | L1 | M | — |ok:fw.settings.readable 
 | P2-047 | SPI 快閃地圖 | SPI 區域劃分與用途 | `spi.map.*` | L0 | M | — |alias:spi.regions@Services/SpiFlashService.cs:184 
-| P2-048 | BIOS 區雜湊與原廠比對 | 逐區段比對原廠映像 | `bios.hash`／`bios.diff` | L0 | L | P2-039 |todo:／todo: 
+| P2-048 | BIOS 區雜湊與原廠比對 | 逐區段比對原廠映像 | `bios.hash`／`bios.diff` | L0 | L | P2-039 |alias:spi.bios_hash@Services/SpiFlashHashService.cs:22／alias:spi.bios_compare@Services/SpiFlashCompareService.cs:13 
 | P2-049 | 微碼版本雙來源對帳 | MSR 與登錄檔版本互校 | `mc.version` | L0 | M | — |ok:mc.version 
 | P2-050 | 映像與韌體版本一致性 | 映像內版本對韌體宣告版本 | `uefi.version.cross` | L0 | M | P2-041 |ok:uefi.version.cross 
 | P2-051 | 選項 ROM 盤點 | PCI 裝置選項 ROM 存在與簽章 | `fw.rom.list` | L1 | M | — |ok:fw.rom.list 
@@ -172,7 +172,7 @@
 | P2-077 | 量測鏈與硬體事件關聯 | 開機事件對硬體變更時間線 | `tpm.cross.hwchange` | L1 | M | P2-064 |todo: 
 | P2-078 | Secure Boot 四態陳述 | 存在／啟用／已設定／雜湊世代 | `ev.secureboot.*` | L0 | M | — |alias:uefi.secure_boot@Services/UefiBootFactsService.cs:30 
 | P2-079 | 平台金鑰與 KEK 計數 | PK／KEK 存在性與計數 | `ev.pk.count` | L1 | S | P2-078 |alias:uefi.pk@Services/UefiSignatureFactsService.cs:37 
-| P2-080 | db／dbx 條目計數 | 允許與撤銷清單規模 | `ev.db.count`／`ev.dbx.count` | L0 | S | P2-078 |todo:／todo: 
+| P2-080 | db／dbx 條目計數 | 允許與撤銷清單規模 | `ev.db.count`／`ev.dbx.count` | L0 | S | P2-078 |alias:uefi.db.count@Services/UefiSignatureFactsService.cs:61／alias:uefi.dbx.count@Services/UefiSignatureFactsService.cs:61 
 | P2-081 | dbx 版本與知識包對照 | 撤銷清單是否落後 | `ev.dbx.stale` | L0 | M | P1-042 |todo: 
 | P2-082 | EFI 變數盤點 | 變數名稱、大小、屬性 | `ev.var.count` | L1 | M | — |todo: 
 | P2-083 | 變數屬性與寫入保護 | 唯讀／執行期可寫 | `ev.var.attrs` | L1 | S | P2-082 |ok:ev.var.attrs 
@@ -183,12 +183,12 @@
 | P2-088 | 快閃描述符解析 | 唯讀解析描述符欄位 | `spi.desc.*` | L0 | M | P2-047 |todo: 
 | P2-089 | 韌體膠囊與更新痕跡 | 已套用的膠囊與版本跳躍 | `fw.capsule.history` | L0 | M | P2-082 |todo: 
 | P2-090 | 變數儲存用量 | NVRAM 使用量與上限 | `ev.nvram.usage` | L0 | S | P2-082 |todo: 
-| P2-091 | 韌體熵分布圖 | 逐區塊熵值（抗混淆指標） | `spi.entropy.*` | L0 | M | P2-086 |todo: 
+| P2-091 | 韌體熵分布圖 | 逐區塊熵值（抗混淆指標） | `spi.entropy.*` | L0 | M | P2-086 |alias:spi.entropy_map@Services/SpiEntropyService.cs:47 
 | P2-092 | EC 唯讀風險評估 | 陳述 EC 埠不讀寫的界線 | `ec.boundary` | L0 | S | — |ok:ec.boundary 
 | P2-093 | EC 存在性與型號 | 由既有表間接陳述 | `ec.present` | L0 | S | P2-028 |ok:ec.present 
 | P2-094 | 熱管理與風扇曲線可讀項 | 由 EC 或 WMI 可讀者 | `ec.thermal.readable` | L0 | M | — |todo: 
 | P2-095 | 電池與 EC 充放狀態 | 唯讀充放事實 | `ec.battery.state` | L0 | S | — |ok:ec.battery.state 
-| P2-096 | 周邊韌體版本盤點 | 硬碟／SSD／網卡韌體版本 | `pdev.fw.version` | L0 | M | — |todo: 
+| P2-096 | 周邊韌體版本盤點 | 硬碟／SSD／網卡韌體版本 | `pdev.fw.version` | L0 | M | — |ok:pdev.fw.version 
 | P2-097 | 周邊韌體與原廠對照 | 版本落後與建議（陳述非判決） | `pdev.fw.delta` | L0 | M | P1-043 |todo: 
 | P2-098 | 韌體更新能力宣告 | 各元件是否可更新（唯讀宣告） | `pdev.fw.updatable` | L0 | S | — |todo: 
 | P2-099 | 韌體風險分數構成 | 各項風險事實與其來源 | `fw.risk.facts.parts` | L0 | M | — |todo: 
