@@ -25,19 +25,156 @@ public static class TpmFactsService
         (Tpm2.AlgSha384, "SHA-384", "sha384"),
     ];
 
+    /// <summary>
+    /// Windows 自己對 TPM 的視圖（WMI <c>Win32_Tpm</c>，命名空間 <c>root\cimv2\security\microsofttpm</c>）。
+    /// <b>這不是 TPM 的直接回應</b>：三個狀態欄位的名字都帶 <c>_InitialValue</c>（本次開機時的值），
+    /// 而 <c>SpecVersion</c> 是 Windows 對規格版本的三段式描述（本機是「2.0, 0, 1.16」）。
+    /// </summary>
+    public sealed record TpmWindowsView(
+        string? SpecVersion, string? ManufacturerIdTxt, string? ManufacturerVersion,
+        bool? Enabled, bool? Activated, bool? Owned);
+
+    /// <summary>
+    /// 讀 Windows 的 TPM 視圖。**只在 TBS 不可用時當備援**——TBS 可用時本專案走 TPM 的直接回應，
+    /// 那才是它自己的值。這裡每一列都會在來源與值裡說清楚它來自 WMI。
+    /// </summary>
+    private static TpmWindowsView? ReadWindowsView()
+    {
+        try
+        {
+            using var searcher = new System.Management.ManagementObjectSearcher(
+                @"root\cimv2\security\microsofttpm", "SELECT * FROM Win32_Tpm");
+            foreach (System.Management.ManagementObject o in searcher.Get())
+            {
+                using (o)
+                {
+                    return new TpmWindowsView(
+                        SpecVersion: o["SpecVersion"] as string,
+                        ManufacturerIdTxt: (o["ManufacturerIdTxt"] as string)?.Trim(),
+                        ManufacturerVersion: o["ManufacturerVersion"] as string,
+                        Enabled: o["IsEnabled_InitialValue"] as bool?,
+                        Activated: o["IsActivated_InitialValue"] as bool?,
+                        Owned: o["IsOwned_InitialValue"] as bool?);
+                }
+            }
+        }
+        catch { }
+        return null;
+    }
+
+    /// <summary>
+    /// TBS 不可用時的備援事實：把 Windows 的視圖攤開，並**明確說出「這一列不是 TPM 的直接回應、
+    /// 而且 TBS 那一批讀不到」**。<paramref name="view"/> 為 null（WMI 也讀不到）時，
+    /// 只回一列如實的三態，不推測。
+    /// </summary>
+    private static IReadOnlyList<HardwareFact> WindowsViewFacts(DateTimeOffset at, string tbsFailure,
+        TpmWindowsView? view)
+    {
+        const string wmiSource = "Windows WMI（Win32_Tpm；TBS 不可用時的備援）";
+        if (view is null)
+            return [Unavailable("tpm.present", "TPM 2.0", "Windows TBS 與 WMI 皆不可用", at,
+                FactAvailability.NotApplicable,
+                tbsFailure + "；Windows 的 Win32_Tpm 也讀不到——兩條路都不通，如實標，不推測量測鏈")];
+
+        string Yn3(bool? v) => v is { } b ? (b ? "是" : "否") : "未回報";
+        string tbsNote = "界線：本機的 **TBS 介面不可用**（" + tbsFailure + "），"
+            + "所以 PCR 讀值、TPM 事件日誌與直接指令那一批讀不到——這一列講的是「Windows 看得到 TPM」，"
+            + "不是「本專案的 TPM 通路可用」。TBS 可用時本列走 TPM 的直接回應，值與來源都不同。";
+
+        var facts = new List<HardwareFact>
+        {
+            new("tpm.present", Category, "TPM 2.0",
+                $"Windows 看得到 TPM 2.0：已啟用＝{Yn3(view.Enabled)}、已啟用金鑰（activated）＝{Yn3(view.Activated)}"
+                + $"、已擁有＝{Yn3(view.Owned)}"
+                + (string.IsNullOrWhiteSpace(view.ManufacturerIdTxt) ? "" : $"、廠商代號 {view.ManufacturerIdTxt}")
+                + (string.IsNullOrWhiteSpace(view.ManufacturerVersion) ? "" : $"、廠商版號 {view.ManufacturerVersion}")
+                + $"。{tbsNote}",
+                "", wmiSource, FactTrustLevel.Reported, false, at),
+        };
+
+        // SpecVersion 是「family, level, revision」三段（本機「2.0, 0, 1.16」）。
+        var parts = (view.SpecVersion ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 3)
+        {
+            facts.Add(new HardwareFact("tpm.version", Category, "TPM 規格版本",
+                $"family {parts[0]}、level {parts[1]}、revision {parts[2]}"
+                + $"（來源：Windows WMI 的 SpecVersion 欄「{view.SpecVersion}」）。"
+                + "界線：這是 Windows 的描述，不是 TPM 直接回應的 PT_FIXED 屬性；"
+                + "兩者是同一件事的兩種表現（revision 1.16 對應 TBS 讀到的 PT_REVISION＝116＝1.16×100）。",
+                "", wmiSource, FactTrustLevel.Reported, false, at));
+        }
+        else
+        {
+            facts.Add(Unavailable("tpm.version", "TPM 規格版本", wmiSource, at, FactAvailability.NotSupported,
+                "Win32_Tpm 沒有回報可解析的 SpecVersion——沒有值就是沒有值"));
+        }
+
+        if (view.Owned is not null || view.Enabled is not null || view.Activated is not null)
+        {
+            facts.Add(new HardwareFact("tpm.owned", Category, "TPM 擁有權與階層狀態",
+                $"Windows 報告（三個欄位的名字都帶 _InitialValue，也就是**本次開機時**的值）："
+                + $"已擁有（IsOwned）＝{Yn3(view.Owned)}、已啟用（IsEnabled）＝{Yn3(view.Enabled)}"
+                + $"、已啟用金鑰（IsActivated）＝{Yn3(view.Activated)}。"
+                + "界線：**這不是 TPM 自己的 TPMA_PERMANENT 位元**（ownerAuthSet／inLockout／disableClear…）——"
+                + "WMI 這三個欄位講的是 Windows 的佈建狀態，兩者不是同一個問題，不得互相代言。",
+                "", wmiSource, FactTrustLevel.Reported, false, at));
+        }
+        else
+        {
+            facts.Add(Unavailable("tpm.owned", "TPM 擁有權與階層狀態", wmiSource, at, FactAvailability.NotSupported,
+                "Win32_Tpm 三個狀態欄位都沒回報——沒有值就是沒有值，不推斷擁有權"));
+        }
+
+        // TBS 那一批：如實說「讀不到」，而不是讓那些鍵整個消失（消失看不出是「沒有」還是「沒讀」）。
+        facts.Add(Unavailable("tpm.pcr.banks", "PCR 演算法銀行", "Windows TBS（tbs.dll）", at,
+            FactAvailability.NotSupported, tbsFailure + "——銀行清單要靠 TPM 的直接回應，WMI 沒有對應欄位"));
+        facts.Add(Unavailable("tpm.tcg_log", "TCG 事件日誌", "Windows TBS（tbs.dll）", at,
+            FactAvailability.NotSupported, tbsFailure + "——事件日誌要靠 TBS 取回，WMI 沒有對應欄位"));
+        facts.Add(Unavailable("tpm.attest.capable", "TPM 遠端證明能力（本機陳述）", "Windows TBS（tbs.dll）", at,
+            FactAvailability.NotSupported, tbsFailure + "——證明能力要讀背書階層的屬性；"
+            + "**不因為「有 TPM」就代填成支援**"));
+
+        // 日誌衍生的事實（筆數／型別分布）走既有的 null 路徑，讓那些鍵也有如實的狀態。
+        facts.AddRange(TpmLogFactsService.Collect(at, null));
+        return facts;
+    }
+
+    /// <summary>
+    /// 呼叫備援探針；<b>沒有這條路（探針是 null）或探針自己丟例外時都視為「讀不到」（回 null）</b>，
+    /// 不讓它炸掉整條收集。
+    ///
+    /// <para>
+    /// 探針可為 null 的情況是真實的：注入通路（測試）沒給備援時，
+    /// <c>viewProbe</c> 就是 null——那時「沒有 WMI 這條路」是事實，不是錯誤。
+    /// 寫成非 nullable 會讓編譯器在真機那條路徑上報 CS8604，
+    /// 而那個警告會被 <c>WarningBaselineTests</c> 照成新的紅燈（本專案對警告的紀律是零新增）。
+    /// </para>
+    /// </summary>
+    private static TpmWindowsView? SafeView(Func<TpmWindowsView?>? probe)
+    {
+        if (probe is null) return null;
+        try { return probe(); } catch { return null; }
+    }
+
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at,
         Func<nint?>? createContext = null,
         Func<nint, byte[], (uint Result, byte[] Output, uint OutputLen)>? submit = null,
-        Func<nint, byte[]?>? readLog = null)
+        Func<nint, byte[]?>? readLog = null,
+        Func<TpmWindowsView?>? windowsView = null)
     {
         const string presentKey = "tpm.present";
         bool injected = createContext is not null;
+        // 備援的注入規則：**明確給了就用它**；沒給而這不是注入通路（真機）才去讀 WMI。
+        // 注入通路沒給備援＝維持原行為（單一列三態）——測試用的假通路不該意外去打真 WMI。
+        Func<TpmWindowsView?>? viewProbe = windowsView ?? (injected ? null : ReadWindowsView);
         nint ctx;
         if (injected)
         {
             var h = createContext!();
             if (h is null || h.Value == nint.Zero)
-                return [Unavailable(presentKey, "TPM 2.0", "Windows TBS（tbs.dll）", at, FactAvailability.NotApplicable, "TBS 無法建立內容——TPM 不存在或未啟用（如實標，不推測量測鏈）")];
+                return viewProbe is null
+                    ? [Unavailable(presentKey, "TPM 2.0", "Windows TBS（tbs.dll）", at, FactAvailability.NotApplicable, "TBS 無法建立內容——TPM 不存在或未啟用（如實標，不推測量測鏈）")]
+                    : WindowsViewFacts(at, "TBS 無法建立內容", SafeView(viewProbe));
             ctx = h.Value;
         }
         else
@@ -45,8 +182,11 @@ public static class TpmFactsService
             var version = TbsContextVersion2;
             var rc = Tbsi_Context_Create(ref version, out ctx);
             if (rc != TbsSuccess || ctx == nint.Zero)
-                return [Unavailable(presentKey, "TPM 2.0", "Windows TBS（tbs.dll）", at, FactAvailability.NotApplicable,
-                    rc == TbsSuccess ? "TBS 建立的內容無效" : $"TBS 無法建立內容（結果 0x{rc:X8}）——TPM 不存在、未啟用，或服務未執行")];
+            {
+                string why = rc == TbsSuccess ? "TBS 建立的內容無效"
+                    : $"TBS 無法建立內容（結果 0x{rc:X8}）";
+                return WindowsViewFacts(at, why, SafeView(viewProbe));
+            }
         }
 
         try

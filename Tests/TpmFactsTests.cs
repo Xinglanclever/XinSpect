@@ -141,6 +141,76 @@ public class TpmFactsTests
         Assert.Contains("TPM 不存在", f.UnavailableReason);
     }
 
+    // ── TBS 不可用時的備援：Windows 自己的視圖（WMI Win32_Tpm）────────────────
+    //
+    // 為什麼要有這一條：這台機器**有 TPM 但沒安裝 TBS 服務**（`sc query TBS` 回 1060），
+    // 而 TpmFactsService 走的是 TBS——所以沒有備援時，`tpm.*` 只能整批落 NotApplicable，
+    // 「Windows 看得到 TPM、BitLocker 也在用」這件事在畫面上完全看不出來。
+    // 備援的紀律與正規通路同一條：**來源要說清楚，而且不得互相代言。**
+
+    private static TpmFactsService.TpmWindowsView FakeWindowsView() =>
+        new(SpecVersion: "2.0, 0, 1.16", ManufacturerIdTxt: "INTC", ManufacturerVersion: "303.12.0.0",
+            Enabled: true, Activated: true, Owned: true);
+
+    [Fact]
+    public void TBS不可用時_用WMI視圖陳述且標明來源()
+    {
+        var facts = TpmFactsService.Collect(At,
+            createContext: () => null, windowsView: FakeWindowsView);
+
+        var present = Assert.Single(facts, x => x.Key == "tpm.present");
+        Assert.Equal(FactAvailability.Present, present.Availability);
+        Assert.Equal(FactTrustLevel.Reported, present.Trust);       // Windows 的視圖＝回報，不是量測
+        Assert.Contains("WMI", present.Source);
+        Assert.Contains("已擁有＝是", present.Value);
+        Assert.Contains("TBS 介面不可用", present.Value);            // 界線要說出來
+        Assert.Contains("不是「本專案的 TPM 通路可用」", present.Value);
+
+        var version = Assert.Single(facts, x => x.Key == "tpm.version");
+        Assert.Contains("family 2.0", version.Value);
+        Assert.Contains("revision 1.16", version.Value);
+        Assert.Contains("116", version.Value);                       // 與 TBS 的 PT_REVISION 對得上
+        Assert.Contains("不是 TPM 直接回應的 PT_FIXED", version.Value);
+
+        var owned = Assert.Single(facts, x => x.Key == "tpm.owned");
+        Assert.Contains("已擁有（IsOwned）＝是", owned.Value);
+        Assert.Contains("_InitialValue", owned.Value);
+        Assert.Contains("不是 TPM 自己的 TPMA_PERMANENT 位元", owned.Value);
+        Assert.Contains("不得互相代言", owned.Value);
+
+        // TBS 那一批：要出現「讀不到」，不是整個消失（消失看不出是沒有還是沒讀）
+        Assert.Equal(FactAvailability.NotSupported, Assert.Single(facts, x => x.Key == "tpm.pcr.banks").Availability);
+        Assert.Contains("WMI 沒有對應欄位",
+            Assert.Single(facts, x => x.Key == "tpm.tcg_log").UnavailableReason);
+        Assert.Contains("不因為「有 TPM」就代填",
+            Assert.Single(facts, x => x.Key == "tpm.attest.capable").UnavailableReason);
+    }
+
+    [Fact]
+    public void TBS不可用且WMI也讀不到_單列如實三態()
+    {
+        var facts = TpmFactsService.Collect(At,
+            createContext: () => null, windowsView: () => null);
+
+        var f = Assert.Single(facts);
+        Assert.Equal(FactAvailability.NotApplicable, f.Availability);
+        Assert.Contains("兩條路都不通", f.UnavailableReason);
+    }
+
+    /// <summary>WMI 那三個欄位沒回報時，不以「未回報」代填成「否」——沒有值就是沒有值。</summary>
+    [Fact]
+    public void WMI狀態欄位缺席時_不代填成否()
+    {
+        var facts = TpmFactsService.Collect(At, createContext: () => null,
+            windowsView: () => new TpmFactsService.TpmWindowsView("2.0, 0, 1.16", "INTC", null, null, null, null));
+
+        var owned = Assert.Single(facts, x => x.Key == "tpm.owned");
+        Assert.Equal(FactAvailability.NotSupported, owned.Availability);
+        Assert.Contains("沒有值就是沒有值", owned.UnavailableReason);
+        // SpecVersion 有值 → 版本那一列仍要出
+        Assert.Equal(FactAvailability.Present, Assert.Single(facts, x => x.Key == "tpm.version").Availability);
+    }
+
     [Fact]
     public void TPM拒絕與TBS錯誤_分別帶TPM_RC與TBS碼()
     {
