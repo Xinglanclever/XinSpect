@@ -550,6 +550,10 @@ public sealed class EvidenceLabService : ObservableObject
         // **它不是「版本是否最新」的判斷**——那是 P2-097、需要知識包比對；
         // 這裡只陳述裝置自述的版本，並把網卡那半邊的缺源寫進同一條事實。
         PeripheralFirmwareFacts = PeripheralFirmwareFactsService.Collect(at);
+        // ULTIMATE-1000 階段二 P2-105：階段二規格矩陣對實作的對帳申報。
+        // **數字是建置時常數，不是執行期讀文件**——發佈版身邊沒有 docs/，
+        // 讀不到回 0 會被讀成「全部完成」，那比不報更糟。由 FirmwareDocReconcileTests 守住。
+        FirmwareDocReconcileFacts = FirmwareDocReconcileFactsService.Collect(at);
         PpttFacts = PpttFactsService.Collect(new Win32AcpiTableSource(), at, Environment.ProcessorCount);
         ServerModeFacts = ServerModeFactsService.Collect(at);
         RoleFacts = RoleSurfaceFactsService.Collect(at);
@@ -579,6 +583,7 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(OptionRomFacts)
             .Concat(BatteryStateFacts)
             .Concat(PeripheralFirmwareFacts)
+            .Concat(FirmwareDocReconcileFacts)
             .Concat(PpttFacts)
             .Concat(ServerModeFacts)
             .Concat(RoleFacts)
@@ -1053,6 +1058,12 @@ public sealed class EvidenceLabService : ObservableObject
     /// <b>裝置自述的韌體版本，不是「是否最新」的判斷</b>——後者是 P2-097、需要知識包。
     /// </summary>
     public IReadOnlyList<HardwareFact> PeripheralFirmwareFacts { get; private set; } = [];
+
+    /// <summary>
+    /// 階段二規格矩陣對實作的對帳（ULTIMATE-1000 階段二 P2-105）。
+    /// <b>陳述本版建置對到哪裡，不是「階段完成度百分比」</b>——別名與新實作分開計數。
+    /// </summary>
+    public IReadOnlyList<HardwareFact> FirmwareDocReconcileFacts { get; private set; } = [];
 
     /// <summary>
     /// 快速開機與休眠狀態（ULTIMATE-1000 階段二 P2-045）。

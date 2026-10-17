@@ -197,7 +197,7 @@
 | P2-102 | 韌體基線可匯出 | 匯出可離線比對的基線 | `fw.risk.facts.baseline` | L1 | S | P2-099 |todo: 
 | P2-103 | 韌體變更報告 | 兩次掃描間的韌體差異 | `fw.risk.facts.delta` | L1 | M | P2-102 |todo: 
 | P2-104 | 韌體稽核報告輸出 | 交第三方複核的報告 | `fw.risk.facts.report` | L1 | M | P1-072 |todo: 
-| P2-105 | 韌體章節的文件對帳 | 本階段規格與實作逐項對帳 | `fw.doc.reconcile` | L0 | S | P1-105 |todo: 
+| P2-105 | 韌體章節的文件對帳 | 本階段規格與實作逐項對帳 | `fw.doc.reconcile` | L0 | S | P1-105 |ok:fw.doc.reconcile 
 
 ---
 

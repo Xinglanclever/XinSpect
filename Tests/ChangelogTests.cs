@@ -52,6 +52,34 @@ public class ChangelogTests
     }
 
     /// <summary>
+    /// <b>&lt;FileVersion&gt; 是版號的第四處，而它真的落後過。</b>
+    ///
+    /// <para>
+    /// v2.85 出貨的 exe，檔案內容裡顯示的「檔案版本」是 <c>2.84.0.0</c>——
+    /// 因為當時只改了 <c>&lt;Version&gt;</c>，忘了改它。
+    /// <c>FileVersion</c> 只吃數字，所以寫法固定是三段版號加第四段建置號；
+    /// 前三段必須與 <c>&lt;Version&gt;</c> 相同。
+    /// </para>
+    ///
+    /// <para>
+    /// <b>為什麼這值得一條測試：</b>它不會讓程式壞掉、也不會讓測試紅，
+    /// 只會讓使用者在檔案內容裡看到一個少一版的號碼，而<b>那個號碼是他唯一看得到的地方</b>。
+    /// 先前的 <c>ChangelogTests</c> 只看紀錄、徽章與關於頁三者，正好從它旁邊走過去。
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void FileVersion的前三段要與Version相同()
+    {
+        string csproj = ReadRepoFile("XinSpect.csproj");
+        string version = Regex.Match(csproj, @"<Version>([^<]+)</Version>").Groups[1].Value;
+        string fileVersion = Regex.Match(csproj, @"<FileVersion>([^<]+)</FileVersion>").Groups[1].Value;
+
+        Assert.False(string.IsNullOrEmpty(version), "XinSpect.csproj 裡找不到 <Version>");
+        Assert.False(string.IsNullOrEmpty(fileVersion), "XinSpect.csproj 裡找不到 <FileVersion>");
+        Assert.StartsWith(version + ".", fileVersion);
+    }
+
+    /// <summary>
     /// 版號還寫在幾處<b>不受守門保護</b>的地方：三份 README 的下載連結與版本沿革。
     /// 這些地方先前真的落後過（v2.26 時期 README 還指著 v2.2.0），而守門測試只看徽章，
     /// 所以點下載的人會拿到舊版。這裡把守門範圍擴大到每一個指得出舊版號的地方。
