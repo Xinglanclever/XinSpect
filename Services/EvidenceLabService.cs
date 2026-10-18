@@ -326,6 +326,15 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>交叉對帳結果（WP5 矛盾矩陣）：每條規則一列，一致／矛盾／無法驗證都如實成列。</summary>
     public IReadOnlyList<HardwareFact> ReconcileFacts { get; private set; } = [];
 
+    /// <summary>
+    /// 韌體風險陳述（ULTIMATE-1000 階段二 P2-099～P2-102、P2-104）：構成、等級、缺口、基線、報告。
+    /// <b>輸入是同一輪的對帳結果與事實</b>——本服務不新增任何讀取路徑。
+    /// </summary>
+    public IReadOnlyList<HardwareFact> FirmwareRiskFacts { get; private set; } = [];
+
+    /// <summary>韌體變更報告（P2-103）：由「時間膠囊比較」產生，所以平時是空的（不是「沒有差異」）。</summary>
+    public IReadOnlyList<HardwareFact> FirmwareRiskDeltaFacts { get; private set; } = [];
+
     /// <summary>交叉對帳判決卡（韌體安全頁頂部）：每條規則的判定徽章＋原因——判決要看得見，不埋在清單裡。</summary>
     public IReadOnlyList<ReconcileVerdictRow> ReconcileVerdicts { get; private set; } = [];
 
@@ -635,6 +644,7 @@ public sealed class EvidenceLabService : ObservableObject
         UefiFvFacts = UefiFvFactsService.Collect(pci, mmio, at);
         UefiFvRegionsCache = UefiFvFactsService.DescribeRows(pci, mmio);
         SpiCompareFacts = []; // 資料更新後舊比對失效，如實清空
+        FirmwareRiskDeltaFacts = []; // 同上：韌體變更報告也是「相對於某一次比較」的東西，資料更新後不該留著
         MchbarFacts = MchbarService.Collect(pci, mmio, at);
         PcieAerFacts = EcamAerService.Collect(mmio, acpi, at);
         PciCapabilityFacts = PciCapabilityFactsService.Collect(mmio, acpi, at);
@@ -673,7 +683,12 @@ public sealed class EvidenceLabService : ObservableObject
                      $"{RawRegions.Count(r => r.Availability == FactAvailability.Present)} 區可讀・" +
                      $"{RawRegions.Count(r => r.Availability != FactAvailability.Present)} 區三態";
         RawStatus = "原始快照已隨本次擷取更新；按「建立原始快照」存檔，或「與目前差分」比對舊檔。";
-        ReconcileFacts = EvaluateReconciliation(at);
+        // 對帳規則只評估一次、兩處共用：判決卡（reconcile.*）與韌體風險陳述（P2-099～P2-104）。
+        // 兩邊各自評估會是同一份規則、同一份輸入跑兩次——現在只是浪費，將來是漂移。
+        var ruleInputs = ReconciliationInputs();
+        var ruleRows = FactRelationService.Evaluate(FactRelationRules.All, ruleInputs);
+        ReconcileFacts = EvaluateReconciliation(at, ruleRows);
+        FirmwareRiskFacts = FirmwareRiskFactsService.Collect(at, ruleRows, ruleInputs);
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
@@ -762,13 +777,21 @@ public sealed class EvidenceLabService : ObservableObject
         finally { IsBusy = false; }
     }
 
-    /// <summary>把全部事實組交給對帳引擎逐規則評估；每條規則一列（一致／矛盾／無法驗證都是 Present 的「結論事實」）。</summary>
-    private IReadOnlyList<HardwareFact> EvaluateReconciliation(DateTimeOffset at)
-    {
-        var all = ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(CStateFacts)
+    /// <summary>
+    /// 對帳規則的輸入事實組：**同一輪已經收集好的事實**，不新增任何讀取路徑
+    /// （判決卡與韌體風險陳述共用同一份；見 <see cref="FirmwareRiskFactsService"/> 的類別註解）。
+    /// </summary>
+    private IReadOnlyList<HardwareFact> ReconciliationInputs()
+        => ChipsetFacts.Concat(SpiFlashFacts).Concat(PlatformSecurityFacts).Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(CStateFacts)
             .Concat(BackendFacts).Concat(MchbarFacts).Concat(PcieAerFacts).Concat(AcpiFacts).ToList();
-        var rows = FactRelationService.Evaluate(FactRelationRules.All, all);
 
+    /// <summary>把全部事實組交給對帳引擎逐規則評估；每條規則一列（一致／矛盾／無法驗證都是 Present 的「結論事實」）。</summary>
+    /// <remarks>
+    /// 規則集與輸入事實由呼叫端算一次傳進來（<c>ruleRows</c>）：韌體風險陳述用的是同一份結果，
+    /// 兩處各自評估會是同一件事跑兩次，而且遲早不一致。
+    /// </remarks>
+    private IReadOnlyList<HardwareFact> EvaluateReconciliation(DateTimeOffset at, IReadOnlyList<FactRelationRow> rows)
+    {
         // 判決卡資料（A45/A47 之後最重要的使用者面價值：說得出的判決要看得見，不埋在清單裡）
         ReconcileVerdicts = rows.Select(r => new ReconcileVerdictRow(
             r.RuleName, r.Relation,
@@ -1876,7 +1899,7 @@ public sealed class EvidenceLabService : ObservableObject
         get
         {
             var baseFacts = ChipsetFacts.Concat(SpiFlashFacts).Concat(PcieAerFacts).Concat(PciCapabilityFacts).Concat(SpiHashFacts).Concat(FitFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
-                .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
+                .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(FirmwareRiskFacts).Concat(FirmwareRiskDeltaFacts).Concat(IoPortFacts).Concat(CmosFacts)
                 .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(EfiVariableFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(TpmReplayFacts)
                 .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EtwFilterViewFacts).Concat(FsMetadataLatencyFacts).Concat(PresentObservationFacts).Concat(SrumReadbackFacts).Concat(AmcacheFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(ListenPortFacts).Concat(LocalSecurityAuditFacts)
                 .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ComplianceFacts).Concat(ServerComplianceFacts).Concat(ServerRoleDeepFacts).Concat(ServerRoleConditionalFacts).Concat(ServerRoleFilePrintFacts).Concat(MaintenanceFacts).Concat(EnvironmentRuntimeFacts).Concat(ClosingFacts).Concat(QueryInsightFacts).Concat(ChecklistFacts).Concat(TrustOpsFacts).Concat(ZeroTrustFacts).Concat(DataSecurityFacts).Concat(EndpointPolicyFacts).Concat(ScenarioFacts).Concat(ScenarioSecondWaveFacts).Concat(MultimediaFacts).Concat(MediaProtectionFacts).Concat(ExportCacheFacts).Concat(MaintenanceDashboardFacts).Concat(VolumeEncryptionFacts).Concat(QueryGovernanceFacts).Concat(LifecycleReportsFacts).Concat(GovernanceExtraFacts).Concat(InterchangeReportFacts).Concat(AutomationGuidanceFacts).Concat(ServiceModeFacts).Concat(RecoveryPowerInteropFacts).Concat(EnvironmentDiagnosticsFacts).Concat(AdvancedSupplementFacts).Concat(OperationsInventoryFacts).Concat(NetworkSystemInventoryFacts).Concat(InventoryGovernanceFacts).Concat(NetworkSecurityInventoryFacts).Concat(FinalInventoryFacts).Concat(RecoveryInventoryFacts).Concat(RecoveryDisplayFacts).Concat(SecurityAuditSupplementFacts).Concat(LifecycleMaintenanceFacts).Concat(FirmwareAuditFacts).Concat(PlatformGovernanceFacts).Concat(PlatformDeepDiveFacts).Concat(PlatformExpansionFacts).Concat(PlatformReconciliationFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(StorageScenarioReconciliationFacts).Concat(PerformanceObservationFacts).Concat(ServiceBootFacts).Concat(DeepBenchSecondWaveFacts).Concat(GovernanceKnowledgeFacts).Concat(BusDeepDiveFacts).Concat(BusCapabilityFacts).Concat(EngineeringGovernanceFacts).Concat(VisualizationFacts).Concat(OfflineAnalysisFacts).Concat(ProductPlatformFacts).Concat(MeasurementMethodologyFacts).Concat(LifecycleSecurityFacts).Concat(DeepBenchMethodology2Facts).Concat(EvidenceExportFacts).Concat(ExportUxFacts).Concat(UserExperience2Facts).Concat(GpuDeepFacts).Concat(FirmwareDeepFacts).Concat(EngineeringGovernance2Facts).Concat(StorageDeepFacts).Concat(FileSystemVolumeFacts).Concat(IscsiSessionFacts).Concat(HyperVInventoryFacts).Concat(BaselineForecastFacts).Concat(DevDiagCorrelationFacts).Concat(SecurityAuditDeepFacts).Concat(BitLockerRecoveryFacts).Concat(AcpiDeepFacts).Concat(CppcCapabilityFacts).Concat(MousePollRateFacts).Concat(DataSecurityDeepFacts).Concat(ScenarioThirdWaveFacts).Concat(SbomFacts)
@@ -2025,6 +2048,11 @@ public sealed class EvidenceLabService : ObservableObject
             var old = await HardwareSnapshotService.LoadAsync(path);
             var current = Capture(vm, old.SensitiveValuesPreserved);
             var diff = HardwareSnapshotService.Diff(old, current);
+            // 韌體變更報告（P2-103）：跨機器時這一把會如實回 NotApplicable（見 FirmwareRiskFactsService.Delta），
+            // 而不是產出一份把兩台電腦混在一起的差異清單。
+            FirmwareRiskDeltaFacts = [FirmwareRiskFactsService.Delta(old, current, DateTimeOffset.UtcNow)];
+            OnPropertyChanged(nameof(FirmwareRiskDeltaFacts));
+            OnPropertyChanged(nameof(AllFacts));
             ShowFacts(current);
             Changes.Clear();
             if (!diff.IsSameMachine)

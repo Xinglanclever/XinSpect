@@ -169,9 +169,15 @@ public class FactCoverageReportTests
         // ＝P2-082／089／090 EFI 變數面三把）。三把的共同結論是「Windows 沒有列舉 EFI 變數的
         // 公開 API」，所以**它們連「拿兩個來源對一次」的前提都沒有**——沒有列舉就沒有第二個
         // 視圖可比。上限跟著移到 320；同一批的論述在 GATE-LOG-261 第三節。
+        // 2026-10-18 第七批：+6 條（`fw.risk.facts.*`＝P2-099～P2-104 韌體風險陳述）。
+        // 這六把的**輸入**是既有事實聯集，但「等級／缺口／基線／差異」本身是對那批事實的**彙總陳述**：
+        // 要拿它們去交叉，就得先有第二套獨立的彙總——**第二套彙總不是第二個來源，只是第二份實作**
+        // （兩份都會漂）。所以照規矩留在未覆蓋，上限跟著移到 326。
+        // 它們的內部一致性由 Tests/FirmwareRiskFactsTests 守著（等級只由有沒有決定、缺口不當 0、
+        // 基線不含時間、差異只比參與鍵）。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 320,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 320）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 326,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 326）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }
