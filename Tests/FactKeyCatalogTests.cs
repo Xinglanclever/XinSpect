@@ -128,7 +128,12 @@ public class FactKeyCatalogTests
         // 26 → 27（2026-10-18）：sb.memmap.（SMBIOS Type 19 逐段映射，P2-024）——
         // 有幾段是韌體的事實（消費級平台常常一段都不列），編譯期列不完；
         // 彙總鍵 sb.memmap.count／sb.memmap.total 成員固定，走靜態目錄。
-        const int FamilyCap = 27;
+        // 27 → 28（2026-10-18）：uefi.boot.（UEFI 開機條目逐條一筆）。
+        // 它不是新功能帶來的，而是**既有執行期鍵第一次真的被產生出來**：先前權限沒啟用、
+        // db／dbx 的 GUID 也錯，這一批從來沒有鍵可對帳；修好之後真機讀到 9 個條目，
+        // 執行期對帳就照出了 uefi.boot.0…9 這批無主鍵（見 GATE-LOG-261 第六節）。
+        // 同批的彙總鍵 uefi.boot_entries.count 成員固定，走靜態目錄。
+        const int FamilyCap = 28;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 

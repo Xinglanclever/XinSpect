@@ -86,6 +86,15 @@ public static class GuardRegistry
                 "這是計數斷言（定義處必須恰好一個），沒有樣式失效的空間："
                 + "把要抓的字串複製進任何檔案都會讓計數變成 2，也就是它必然會紅。"),
 
+        new("檢視入口守門", GuardPolicy.GuardMode.SourceScan,
+            "整頁畫面寫完（XAML、後置程式碼、服務、單元測試都在），卻沒有任何人指得到它——"
+            + "它會編譯，煙霧測試也不會紅（沒人建構它就不會壞），而使用者的世界裡它不存在；"
+            + "2026-10-18 的 TroubleshootView 就是這個形狀：故障排查嚮導做完，卻不在註冊表裡",
+            new GuardPolicy.GuardLevel(
+                "Views/ 裡的檢視沒有任何其他檔案引用它",
+                "『有引用、但引用路徑本身也到不了使用者面前』——那要與命令面板／註冊表三方對帳"),
+            HasPositiveControl: true),
+
         new("L3 禁項不得出現在輸出中", GuardPolicy.GuardMode.PolicyPin,
             "機密類欄位從顯示或匯出的某一條路徑漏出去——這一類缺陷不會產生錯誤訊息，"
             + "只會在下游被發現",

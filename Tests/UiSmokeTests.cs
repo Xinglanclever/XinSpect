@@ -199,6 +199,86 @@ public class UiSmokeTests
     }
 
     /// <summary>
+    /// 事實總表頁的樣板：域摘要、逐鍵明細與動態家族三張清單都只有在<b>有資料</b>時
+    /// 才會被套用。這一頁的資料不需要硬體——服務本身就有一千多列目錄鍵，
+    /// 所以這裡連「這次什麼都沒收集到」的狀態也要走一遍（那是它最常出現的狀態）。
+    /// </summary>
+    [Fact]
+    public void 事實總表頁的樣板_有資料與空資料都沒有繫結錯誤()
+    {
+        var failures = new List<string>();
+        var thread = new Thread(() => RunFactAtlasTemplate(failures));
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.IsBackground = true;
+        thread.Start();
+
+        if (!thread.Join(TimeSpan.FromMinutes(1)))
+            failures.Add("事實總表樣板煙霧測試逾時（1 分鐘未完成）。");
+
+        Assert.True(failures.Count == 0,
+            $"事實總表頁樣板發現 {failures.Count} 項問題：\n" + string.Join("\n", failures));
+    }
+
+    /// <summary>只提供 FactAtlas 一個屬性的最小宿主。</summary>
+    private sealed class AtlasOnly { public FactAtlasService FactAtlas { get; } = new(); }
+
+    private static void RunFactAtlasTemplate(List<string> failures)
+    {
+        WpfEnv.Ensure();
+
+        PresentationTraceSources.Refresh();
+        var listener = new CollectingListener();
+        PresentationTraceSources.DataBindingSource.Listeners.Add(listener);
+        PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Warning;
+
+        try
+        {
+            var at = new DateTimeOffset(2026, 10, 18, 12, 0, 0, TimeSpan.Zero);
+
+            // ① 空資料：每一把鍵都應該是「本次未收集」——這是啟動後立刻進這一頁時的樣子
+            var empty = new FactAtlasView { DataContext = new AtlasOnly() };
+            empty.Measure(new Size(1280, 900));
+            empty.Arrange(new Rect(0, 0, 1280, 900));
+            empty.UpdateLayout();
+
+            // ② 有資料：兩列（一列讀到值、一列讀不到），逼三個樣板都真的套上去
+            var host = new AtlasOnly();
+            host.FactAtlas.Load(
+            [
+                new HardwareFact("tpm.present", "韌體", "TPM 存在", "有", "", "單元測試",
+                    FactTrustLevel.Derived, false, at, 1),
+                new HardwareFact("sb.memmap.count", "韌體", "記憶體映射區段", "", "", "單元測試",
+                    FactTrustLevel.Unknown, false, at, null, FactAvailability.NotSupported,
+                    "這台平台沒有 SMBIOS Type 19"),
+            ]);
+            Assert.Equal(2, host.FactAtlas.Keys.Count(r => r.Collected));
+
+            var view = new FactAtlasView { DataContext = host };
+            view.Measure(new Size(1280, 900));
+            view.Arrange(new Rect(0, 0, 1280, 900));
+            view.UpdateLayout();
+
+            foreach (var line in listener.Drain().Split('\n'))
+            {
+                var t = line.Trim();
+                if (t.Length == 0) continue;
+                if (t.Contains("BindingExpression path error") ||
+                    t.Contains("Cannot convert") ||
+                    t.Contains("Cannot find governing FrameworkElement"))
+                    failures.Add("繫結錯誤：" + t);
+            }
+        }
+        catch (Exception ex)
+        {
+            failures.Add("套用樣板失敗：" + Describe(ex));
+        }
+        finally
+        {
+            PresentationTraceSources.DataBindingSource.Listeners.Remove(listener);
+        }
+    }
+
+    /// <summary>
     /// 同一個道理，NVMe 電源狀態頁有三張清單（電源狀態表、APST 表、實測樣本），
     /// 三個樣板都只有在有資料時才會被套用。
     /// </summary>

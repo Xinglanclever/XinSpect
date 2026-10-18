@@ -39,16 +39,13 @@ public static class WiringDecisions
                 "開監聽＝新增一個本機攻擊面與資料外洩路徑，屬需要使用者點頭的產品決定，不是漏接線。" +
                 "README 功能節已如實標「HTTP 監聽殼未自動啟動」；事實的頭less 出口由 CLI（--json）承擔，" +
                 "重新啟動的條件＝使用者明確要 API 入口並同意 loopback 綁定與 token 政策。",
-            ["EfiVariableFactsService"] =
-                "ULTIMATE-1000 階段二 P2-083（ev.var.attrs）：**2026-10-18 更新——原本的阻礙已經不存在了。**" +
-                "當初不接線的理由是「既有的變數通路把 GetFirmwareEnvironmentVariableEx 的 pdwAttrib 位置" +
-                "當成緩衝大小的進出用，屬性原始值在那一層沒有被保留」；查證後確認那不只是『沒保留』，" +
-                "而是把那一格當大小用會讓 size 永遠是 0、**整條通路每個變數都讀不到**，" +
-                "而同一次查證還發現 db／dbx 的 GUID 是錯的（見 GATE-LOG-261）。" +
-                "修好之後（FirmwareVariableAccess：啟用權限＋正確的緩衝區重試＋回傳 bytes／Win32 錯誤碼／屬性原始值），" +
-                "**輸入已經存在**：真機實測 uefi.pk 886 bytes、kek 3955、db 8188、dbx 3724。" +
-                "接線條件＝把它接在既有的 uefi.* 讀取上（同一輪只讀一次，用同一份富結果），" +
-                "不要為它新增第二次讀取；而『唯讀／執行期可寫』那一半仍要等 EFI_VARIABLE_* 位元名的出處。",
+            // 2026-10-18：EfiVariableFactsService（P2-083 ev.var.attrs）**已接線，這筆判定刪除**。
+            // 它原本登記在這裡的理由是「既有的變數通路把 pdwAttrib 當成大小用，屬性原始值沒有被保留」；
+            // 查證後發現那不只是沒保留——那個寫法讓每個變數都讀不到（見 GATE-LOG-262），
+            // 修好之後輸入就存在了（真機 uefi.pk 886 bytes、kek 3955、db 8188、dbx 3724）。
+            // 接線方式照它自己寫的條件：接在既有的 uefi.* 讀取上，同一輪只讀一次、用同一份富結果
+            //（UefiSignatureFactsService.CollectWithReads → EfiVariableFactsService.Collect）。
+            // **留在這張表上會是另一種謊**：登記表只收「刻意不接」的決定。
             ["UefiVersionCrossFactsService"] =
                 "ULTIMATE-1000 階段二 P2-050（uefi.version.cross／embedded）：本服務要的輸入是一份 SPI 映像與它" +
                 "解碼出來的 FV 清單（ReadEmbedded(fvs, image)），而那組輸入只在驅動後端的讀取裡存在" +

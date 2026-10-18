@@ -289,6 +289,16 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>硬體時間膠囊：保存來源、可信度與時間，並驗證後逐欄比較。</summary>
     public EvidenceLabService EvidenceLab { get; } = new();
 
+    /// <summary>
+    /// 事實總表：把本版實作的每一把事實鍵攤成可搜尋的表（含「本輪未收集」的那一群）。
+    /// <para>
+    /// 它掛在這裡而不是由檢視自己 new 一個：全站檢視都以 <c>MainViewModel</c> 當 DataContext，
+    /// 而且 UI 煙霧測試會把所有頁的 DataContext 統一換成它——把服務藏進檢視自己的欄位，
+    /// 繫結路徑就會在煙霧測試裡全部失效（那一套測試正是用來抓這種事的）。
+    /// </para>
+    /// </summary>
+    public FactAtlasService FactAtlas { get; } = new();
+
     /// <summary>PCI／SPD／裝置／電源／儲存的客觀證據審計與長期時間軸。</summary>
     public HardwareEvidenceViewModel HardwareEvidence { get; }
 

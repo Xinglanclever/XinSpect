@@ -48,6 +48,16 @@ public static class FactKeyDynamicCatalog
                 "dbx（撤銷簽章資料庫）的簽章清單逐條一筆——同 uefi.db.list.，成員由變數內容決定，最多 5 條",
             ["uefi.kek.list."] =
                 "KEK 的簽章清單逐條一筆——同 uefi.db.list.，成員由變數內容決定，最多 5 條",
+            // ── 開機條目的逐條鍵（2026-10-18 補登記）────────────────────────
+            // **又是同一種形狀：鍵早就以執行期鍵的形式在產，而目錄與家族都沒有它。**
+            // `UefiSignatureFactsService.CollectBootEntries` 把讀得到的 Boot#### 寫成 uefi.boot.{索引}，
+            // 而「有幾個開機條目、編號是多少」是這台機器的 NVRAM 事實（本機 9 個：0–6、8、9——
+            // 7 不存在，所以成員連密集都算不上）。本機先前讀不到 EFI 變數，這一批從未出現，
+            // 所以守門一直是綠的；把 1314 修掉、真機第一次讀到值之後，執行期對帳立刻照出來。
+            // 彙總鍵 uefi.boot_entries.count 成員固定，仍在靜態目錄。
+            ["uefi.boot."] =
+                "UEFI 開機條目逐條一筆（uefi.boot.{Boot#### 編號}）——有幾個條目、編號是哪些，"
+                + "都是這台機器 NVRAM 的事實（本機 0–6、8、9，中間跳號），編譯期列不完也不該列",
             ["audio.latency."] =
                 "音訊端點逐端點一筆（端點名來自 MMDevice 枚舉）——這台機器裝了什麼音訊裝置由使用者環境決定",
             ["audio.endpoint."] =

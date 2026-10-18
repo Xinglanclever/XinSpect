@@ -522,7 +522,12 @@ public sealed class EvidenceLabService : ObservableObject
         SmbiosCrossFacts = SmbiosCrossFactsService.Collect(at, SmbiosCrossFactsService.ReadOsView());
         // ULTIMATE-1000 階段二 P2-040／P2-041：開機模式與韌體版本。
         // **「目前用哪一個」與「支援哪一個」是不同問題**——本服務只回答前者。
-        FirmwareModeFacts = FirmwareModeFactsService.Collect(at, FirmwareModeFactsService.Read());
+        var fwModeInputs = FirmwareModeFactsService.Read();
+        FirmwareModeFacts = FirmwareModeFactsService.Collect(at, fwModeInputs);
+        // ULTIMATE-1000 階段二 P2-082／P2-089／P2-090：EFI 變數面三把鍵。
+        // **結論是「平台不提供」**（Windows 沒有列舉 EFI 變數的公開 API）——
+        // 韌體型別沿用上面那次讀取的結果，不為了這三把再讀一次 WMI。
+        FirmwareVariableSurfaceFacts = FirmwareVariableSurfaceFactsService.Collect(at, fwModeInputs.FirmwareType);
         // ULTIMATE-1000 階段二 P2-042：開機順序（UEFI 變數）。
         // **變數裡的順序不等於實際的開機結果**——本服務只陳述變數寫了什麼。
         UefiBootOrderFacts = UefiBootOrderFactsService.Collect(at);
@@ -576,6 +581,7 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(ThermalReachFacts)
             .Concat(SmbiosCrossFacts)
             .Concat(FirmwareModeFacts)
+            .Concat(FirmwareVariableSurfaceFacts)
             .Concat(UefiBootOrderFacts)
             .Concat(BootFastStartupFacts)
             .Concat(FirmwareSettingsReachFacts)
@@ -644,7 +650,12 @@ public sealed class EvidenceLabService : ObservableObject
         CmosFacts = CmosService.Collect(io, at);
         SmbusFacts = TsodSurveyor.CollectWithLock(smbusIo, pci.ReadDword, at);
         UefiFacts = UefiBootFactsService.Collect(at);
-        UefiSignatureFacts = UefiSignatureFactsService.Collect(at);
+        // UEFI 簽章資料庫（db/dbx/KEK/PK）與 Boot 條目（需提權；讀不到三態）。
+        // **同一趟把富讀取交出來**，讓 ev.var.attrs（P2-083）用的就是這一批讀取——
+        // 同一輪的兩份事實若各自讀一次同樣的變數，就有兩個答案的可能，而那種不一致
+        // 在畫面上看起來像硬體在變。
+        UefiSignatureFacts = UefiSignatureFactsService.CollectWithReads(at, out var efiVariableReads);
+        EfiVariableFacts = EfiVariableFactsService.Collect(at, efiVariableReads);
         // P2-061 韌體復原路徑：讀既有的 OsIndicationsSupported 變數（走同一條
         // GetFirmwareEnvironmentVariableEx 通路——UefiSignatureFactsService.ReadFirmwareVar），
         // 加上映像內既有的 FV 清單。
@@ -1040,6 +1051,19 @@ public sealed class EvidenceLabService : ObservableObject
     /// <b>陳述「目前用哪一條路徑開機」，不是「支援什麼」。</b>
     /// </summary>
     public IReadOnlyList<HardwareFact> FirmwareModeFacts { get; private set; } = [];
+
+    /// <summary>
+    /// EFI 變數面事實（ULTIMATE-1000 階段二 P2-082／P2-089／P2-090）。
+    /// <b>三把都是「平台不提供」的陳述</b>（Legacy BIOS 開機時則是「本機不適用」）。
+    /// </summary>
+    public IReadOnlyList<HardwareFact> FirmwareVariableSurfaceFacts { get; private set; } = [];
+
+    /// <summary>
+    /// EFI 變數的屬性與長度（ULTIMATE-1000 階段二 P2-083，鍵 <c>ev.var.attrs</c>）。
+    /// <b>與 <see cref="UefiSignatureFacts"/> 同一趟讀取</b>（見 <c>ReloadDriverBackedFacts</c>）——
+    /// 這一支不自己去問韌體，只把同一批讀取的屬性與長度寫成事實。
+    /// </summary>
+    public IReadOnlyList<HardwareFact> EfiVariableFacts { get; private set; } = [];
 
     /// <summary>
     /// 開機順序事實（ULTIMATE-1000 階段二 P2-042）。
@@ -1853,7 +1877,7 @@ public sealed class EvidenceLabService : ObservableObject
         {
             var baseFacts = ChipsetFacts.Concat(SpiFlashFacts).Concat(PcieAerFacts).Concat(PciCapabilityFacts).Concat(SpiHashFacts).Concat(FitFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
                 .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(IoPortFacts).Concat(CmosFacts)
-                .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(TpmReplayFacts)
+                .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(EfiVariableFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(TpmReplayFacts)
                 .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EtwFilterViewFacts).Concat(FsMetadataLatencyFacts).Concat(PresentObservationFacts).Concat(SrumReadbackFacts).Concat(AmcacheFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(ListenPortFacts).Concat(LocalSecurityAuditFacts)
                 .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ComplianceFacts).Concat(ServerComplianceFacts).Concat(ServerRoleDeepFacts).Concat(ServerRoleConditionalFacts).Concat(ServerRoleFilePrintFacts).Concat(MaintenanceFacts).Concat(EnvironmentRuntimeFacts).Concat(ClosingFacts).Concat(QueryInsightFacts).Concat(ChecklistFacts).Concat(TrustOpsFacts).Concat(ZeroTrustFacts).Concat(DataSecurityFacts).Concat(EndpointPolicyFacts).Concat(ScenarioFacts).Concat(ScenarioSecondWaveFacts).Concat(MultimediaFacts).Concat(MediaProtectionFacts).Concat(ExportCacheFacts).Concat(MaintenanceDashboardFacts).Concat(VolumeEncryptionFacts).Concat(QueryGovernanceFacts).Concat(LifecycleReportsFacts).Concat(GovernanceExtraFacts).Concat(InterchangeReportFacts).Concat(AutomationGuidanceFacts).Concat(ServiceModeFacts).Concat(RecoveryPowerInteropFacts).Concat(EnvironmentDiagnosticsFacts).Concat(AdvancedSupplementFacts).Concat(OperationsInventoryFacts).Concat(NetworkSystemInventoryFacts).Concat(InventoryGovernanceFacts).Concat(NetworkSecurityInventoryFacts).Concat(FinalInventoryFacts).Concat(RecoveryInventoryFacts).Concat(RecoveryDisplayFacts).Concat(SecurityAuditSupplementFacts).Concat(LifecycleMaintenanceFacts).Concat(FirmwareAuditFacts).Concat(PlatformGovernanceFacts).Concat(PlatformDeepDiveFacts).Concat(PlatformExpansionFacts).Concat(PlatformReconciliationFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(StorageScenarioReconciliationFacts).Concat(PerformanceObservationFacts).Concat(ServiceBootFacts).Concat(DeepBenchSecondWaveFacts).Concat(GovernanceKnowledgeFacts).Concat(BusDeepDiveFacts).Concat(BusCapabilityFacts).Concat(EngineeringGovernanceFacts).Concat(VisualizationFacts).Concat(OfflineAnalysisFacts).Concat(ProductPlatformFacts).Concat(MeasurementMethodologyFacts).Concat(LifecycleSecurityFacts).Concat(DeepBenchMethodology2Facts).Concat(EvidenceExportFacts).Concat(ExportUxFacts).Concat(UserExperience2Facts).Concat(GpuDeepFacts).Concat(FirmwareDeepFacts).Concat(EngineeringGovernance2Facts).Concat(StorageDeepFacts).Concat(FileSystemVolumeFacts).Concat(IscsiSessionFacts).Concat(HyperVInventoryFacts).Concat(BaselineForecastFacts).Concat(DevDiagCorrelationFacts).Concat(SecurityAuditDeepFacts).Concat(BitLockerRecoveryFacts).Concat(AcpiDeepFacts).Concat(CppcCapabilityFacts).Concat(MousePollRateFacts).Concat(DataSecurityDeepFacts).Concat(ScenarioThirdWaveFacts).Concat(SbomFacts)
                 .ToList();
@@ -2219,6 +2243,8 @@ public sealed class EvidenceLabService : ObservableObject
         f.AddRange(vm.EvidenceLab.UefiFacts);
         // UEFI 簽章資料庫（db/dbx/KEK/PK）與 Boot 條目（需提權；讀不到三態）。
         f.AddRange(vm.EvidenceLab.UefiSignatureFacts);
+        // EFI 變數屬性與長度（P2-083）——與上面那批讀取同一趟，不是另一次讀。
+        f.AddRange(vm.EvidenceLab.EfiVariableFacts);
         // Super I/O 探測三態事實。
         f.AddRange(vm.EvidenceLab.SuperIoFacts);
         // Bus 0 裝置盤點（WP30 知識層）。

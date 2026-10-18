@@ -56,18 +56,53 @@ public static class UefiSignatureFactsService
 
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at,
         Func<string, byte[]?>? readVariable = null)
+        => CollectCore(at, RichReader(readVariable), null);
+
+    /// <summary>
+    /// 與 <see cref="Collect"/> 同一趟，但把四個簽章清單變數（PK／KEK／db／dbx）的
+    /// <b>富讀取結果</b>一併交出來，讓同一輪的 <c>ev.var.attrs</c>（P2-083，見
+    /// <see cref="EfiVariableFactsService"/>）不必為了屬性再讀一次同樣的變數——
+    /// <b>同一輪的兩份事實必須來自同一次讀取</b>，否則同一顆硬碟上會出現兩個答案。
+    /// <para>
+    /// 它<b>不是</b>第二條讀取通路：權限仍在 <see cref="RichReader"/> 裡只啟用一次，
+    /// 這裡只是把那次讀取的結果留一份給下游。
+    /// </para>
+    /// </summary>
+    public static IReadOnlyList<HardwareFact> CollectWithReads(DateTimeOffset at,
+        out IReadOnlyList<EfiVariableFactsService.VariableRead> reads,
+        Func<string, byte[]?>? readVariable = null)
     {
-        var reader = RichReader(readVariable);
+        var captured = new List<EfiVariableFactsService.VariableRead>();
+        var facts = CollectCore(at, RichReader(readVariable), captured);
+        reads = captured;
+        return facts;
+    }
+
+    private static IReadOnlyList<HardwareFact> CollectCore(DateTimeOffset at,
+        Func<string, FirmwareVariableAccess.VariableReadResult> reader,
+        List<EfiVariableFactsService.VariableRead>? captured)
+    {
+        // 只有四個簽章清單變數會被留給下游（Boot#### 不在 EfiVariableFactsService 的範圍裡，
+        // 它自己的逐條明細已經在 uefi.boot.* 上）。
+        var signatureReader = captured is null
+            ? reader
+            : name =>
+            {
+                var result = reader(name);
+                captured.Add(new EfiVariableFactsService.VariableRead(name,
+                    result.Data, result.Attributes, result.PrivilegeEnabled));
+                return result;
+            };
         var facts = new List<HardwareFact>();
 
         // ── db（允許的簽章資料庫）──
-        CollectSigList(facts, "uefi.db", DbCountKey, DbListPrefix, "db（允許簽章資料庫）", "db", FirmwareVariableAccess.ImageSecurityGuid, reader, at);
+        CollectSigList(facts, "uefi.db", DbCountKey, DbListPrefix, "db（允許簽章資料庫）", "db", FirmwareVariableAccess.ImageSecurityGuid, signatureReader, at);
         // ── dbx（撤銷簽章資料庫）──
-        CollectSigList(facts, "uefi.dbx", DbxCountKey, DbxListPrefix, "dbx（撤銷簽章資料庫）", "dbx", FirmwareVariableAccess.ImageSecurityGuid, reader, at);
+        CollectSigList(facts, "uefi.dbx", DbxCountKey, DbxListPrefix, "dbx（撤銷簽章資料庫）", "dbx", FirmwareVariableAccess.ImageSecurityGuid, signatureReader, at);
         // ── KEK（金鑰交換金鑰）──
-        CollectSigList(facts, "uefi.kek", KekCountKey, KekListPrefix, "KEK（金鑰交換金鑰）", "KEK", FirmwareVariableAccess.GlobalVariableGuid, reader, at);
+        CollectSigList(facts, "uefi.kek", KekCountKey, KekListPrefix, "KEK（金鑰交換金鑰）", "KEK", FirmwareVariableAccess.GlobalVariableGuid, signatureReader, at);
         // ── PK（平台金鑰）──
-        var pk = reader("PK");
+        var pk = signatureReader("PK");
         facts.Add(pk.Data is { Length: > 16 }
             ? new HardwareFact("uefi.pk", Category, "PK（平台金鑰）",
                 $"存在（{pk.Data.Length} bytes）、{FirmwareVariableAccess.DescribeAttributes(pk.Attributes)}", "",

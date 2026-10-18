@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -69,6 +70,22 @@ public class ServiceOrphanGateTests
     }
 
     /// <summary>
+    /// 每一支服務名的兩個比對樣式，<b>整個回合只建一次</b>。
+    ///
+    /// <para>
+    /// 這裡原本每次呼叫都 <c>new Regex(..., Compiled)</c>——而呼叫點在「每個服務 × 每個生產檔」的雙層迴圈裡，
+    /// 一支真的沒人引用的服務會走完所有檔案，等於為它現編上百個動態組件。
+    /// 孤兒一多，測試主機就直接當掉（不是紅燈，是<b>沒有結果</b>）。
+    /// 守門自己當掉比守門紅燈更糟：它會看起來像環境問題。
+    /// </para>
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, (Regex Name, Regex Ctor)> PatternCache = new(StringComparer.Ordinal);
+
+    private static (Regex Name, Regex Ctor) PatternsFor(string name) => PatternCache.GetOrAdd(name, static n =>
+        (new Regex($@"\b{Regex.Escape(n)}\b"),
+         new Regex($@"^(?:public|private|internal|protected)[+\s].*\b{Regex.Escape(n)}\s*\(")));
+
+    /// <summary>
     /// 行級引用判斷：跳過註解行、類別宣告行、以及同名建構子簽名行。
     /// 同檔不同類別的真實引用要算數（<c>DeepAccessService.cs</c> 尾端宣告 ScmDriverService、
     /// 同一檔第 60 行 <c>new ScmDriverService()</c>——整檔排除會把它誤報成孤兒），
@@ -76,8 +93,7 @@ public class ServiceOrphanGateTests
     /// </summary>
     internal static bool ReferencedOutsideItsOwnDeclaration(string text, string name)
     {
-        var pattern = new Regex($@"\b{Regex.Escape(name)}\b", RegexOptions.Compiled);
-        var ctorSignature = new Regex($@"^(?:public|private|internal|protected)[+\s].*\b{Regex.Escape(name)}\s*\(", RegexOptions.Compiled);
+        var (pattern, ctorSignature) = PatternsFor(name);
         foreach (string raw in text.Split('\n'))
         {
             string line = raw.Trim();

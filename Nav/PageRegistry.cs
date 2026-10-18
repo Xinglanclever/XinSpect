@@ -57,6 +57,20 @@ public static class PageRegistry
         },
         new()
         {
+            // 這頁原本是一個孤兒：整頁嚮導（六個症狀、可能原因、檢查步驟、建議動作）寫完、
+            // 服務與測試都在，但不在註冊表裡——沒有任何路徑到得了。
+            // 修法不是「在菜鳥儀表板旁邊再放一個入口」（那會有兩個入口講同一件事），
+            // 而是把「症狀→方向」這件事交給這一頁，儀表板那六顆鈕只是把它打開並指定症狀。
+            // 不標 Advanced：收進簡易模式看不見的地方，等於把剛接上的路又切斷一次。
+            Key = "troubleshoot", Title = "故障排查", Group = GOverview,
+            IconData = "F0 M12,3 A9,9 0 1,0 12,21 A9,9 0 1,0 12,3 Z M11,7 H13 V13 H11 Z M11,15 H13 V17 H11 Z",
+            Factory = () => new TroubleshootView(),
+            Hint = "用症狀找方向：電腦很慢、遊戲卡頓、藍屏、風扇太吵、開機很慢、網路不穩——每個場景列可能原因、檢查步驟與建議動作",
+            Keywords = ["troubleshoot", "wizard", "故障", "排查", "疑難", "排解", "很慢", "卡頓", "藍屏", "當機",
+                        "風扇吵", "開機慢", "網路不穩", "症狀", "怎麼辦", "問題"],
+        },
+        new()
+        {
             Key = "cpu", Title = "處理器", Group = GHardware,
             IconData = "F0 M8,2 H10 V5 H8 Z M14,2 H16 V5 H14 Z M2,8 H5 V10 H2 Z M2,14 H5 V16 H2 Z M19,8 H22 V10 H19 Z "
                      + "M19,14 H22 V16 H19 Z M8,19 H10 V22 H8 Z M14,19 H16 V22 H14 Z M5,5 H19 V19 H5 Z M9,9 H15 V15 H9 Z",
@@ -283,6 +297,18 @@ public static class PageRegistry
             Factory = () => new ToolboxView(),
             Hint = "Windows 內建工具、第三方工具導向，併入一鍵裝機（winget）批次安裝",
             Keywords = ["toolbox", "工具箱", "圖吧", "下載", "setup", "winget", "裝機", "安裝", "軟體"],
+        },
+        new()
+        {
+            // 為什麼這一頁放在「工具」而且不標 Advanced：它存在的理由就是「做了但畫面上看不到」——
+            // 收進簡易模式看不見的地方，等於把這一頁自己也藏起來（那正是它要修的問題）。
+            Key = "atlas", Title = "事實總表", Group = GTools,
+            IconData = "F0 M3,2 H21 V22 H3 Z M6,6 H18 V8 H6 Z M6,10 H18 V12 H6 Z M6,14 H18 V16 H6 Z "
+                     + "M6,18 H14 V20 H6 Z",
+            Factory = () => new FactAtlasView(),
+            Hint = "本版實作的每一把事實鍵（1037 把）攤成一張可搜尋的表：誰讀到了值、誰讀不到、誰這一輪沒跑到",
+            Keywords = ["atlas", "fact", "capacity", "index", "事實總表", "能力", "索引", "所有功能", "全部功能",
+                        "功能清單", "看不到", "藏在哪", "有哪些功能", "事實鍵", "key"],
         },
         new()
         {

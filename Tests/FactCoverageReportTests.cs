@@ -164,9 +164,14 @@ public class FactCoverageReportTests
         // ——但豁免表已經在上限（KeyCatalogPolicyTests 的 600 條，再加一條就會紅），
         // 而那個上限的意思是「該檢視豁免了，不是再提高上限」。所以照規矩留在未覆蓋，
         // 上限跟著移到 317；守門在 FirmwareDocReconcileTests（逐列重算矩陣）。
+        //
+        // 2026-10-18 第六批：+3 條（`ev.var.count`／`fw.capsule.history`／`ev.nvram.usage`
+        // ＝P2-082／089／090 EFI 變數面三把）。三把的共同結論是「Windows 沒有列舉 EFI 變數的
+        // 公開 API」，所以**它們連「拿兩個來源對一次」的前提都沒有**——沒有列舉就沒有第二個
+        // 視圖可比。上限跟著移到 320；同一批的論述在 GATE-LOG-261 第三節。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 317,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 317）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 320,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 320）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }

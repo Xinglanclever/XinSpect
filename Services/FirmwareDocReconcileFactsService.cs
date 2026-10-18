@@ -31,7 +31,9 @@ namespace XinSpect;
 /// </para>
 ///
 /// <para>
-/// <b>它不評分、不給進度百分比。</b>105 項裡有 20 把鍵是「規格換了名字、實作早就在」的別名，
+/// <b>它不評分、不給進度百分比。</b>105 項裡有 24 把鍵是「規格換了名字、實作早就在」的別名
+/// （<b>這個數字必須等於 <see cref="AliasKeys"/>——它先前寫成 20，而當時常數已經是 24：
+/// 一句話裡兩個數字，守門驗得到常數、驗不到註解</b>），
 /// 把它們與新寫的實作混成一個百分比，會讓「改名」看起來像「完工」；
 /// 三種計數分開列，讀的人自己判斷那個數字對他意味著什麼。
 /// </para>
@@ -48,13 +50,28 @@ public static class FirmwareDocReconcileFactsService
     public const int Items = 105;
 
     /// <summary>「實作鍵」欄裡 <c>ok:</c> 的鍵數——規格鍵與實作鍵同名。</summary>
-    public const int ImplementedKeys = 65;
+    /// <remarks>
+    /// 65 → 68（2026-10-18）：P2-082／P2-089／P2-090 三把鍵從 <c>todo</c> 收口成 <c>ok</c>。
+    /// 收口不是「做得出來」——那三把的結論是「平台不提供（沒有列舉 API）」，
+    /// 而 <b>說清楚一條路不存在，也是做完這一項該有的結果</b>；
+    /// 留著 todo 只會讓帳本繼續宣稱它們在排隊等實作。
+    /// </remarks>
+    public const int ImplementedKeys = 68;
 
-    /// <summary>以既有鍵別名收錄的鍵數（語意相同、名字不同）。</summary>
+    /// <summary>
+    /// 以既有鍵別名收錄的鍵數（語意相同、名字不同）。
+    /// <para>
+    /// <b>註解的數字與這裡必須一致：</b>類別註解一度寫著 20 而這裡是 24，
+    /// 而 <c>FirmwareDocReconcileTests</c> 逐列重算的是<b>矩陣</b>——它守得住常數，
+    /// 守不住散文裡的數字。<b>會被人讀到的數字跟常數一樣要對。</b>
+    /// </para>
+    /// </summary>
     public const int AliasKeys = 24;
 
     /// <summary>尚未實作的鍵數。</summary>
-    public const int TodoKeys = 25;
+    /// <remarks>25 → 22（2026-10-18，同上一行那三把）。剩下的 22 把各自卡在什麼，見
+    /// <c>docs/ULTIMATE-1000/STAGE-02-REMAINING-KEYS.md</c>。</remarks>
+    public const int TodoKeys = 22;
 
     /// <summary>宣告鍵總數。<b>不是</b>項數——一列可以宣告多把鍵（例如 P2-014、P2-017）。</summary>
     public const int DeclaredKeys = ImplementedKeys + AliasKeys + TodoKeys;

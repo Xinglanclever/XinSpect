@@ -174,15 +174,15 @@
 | P2-079 | 平台金鑰與 KEK 計數 | PK／KEK 存在性與計數 | `ev.pk.count` | L1 | S | P2-078 |alias:uefi.pk@Services/UefiSignatureFactsService.cs:37 
 | P2-080 | db／dbx 條目計數 | 允許與撤銷清單規模 | `ev.db.count`／`ev.dbx.count` | L0 | S | P2-078 |alias:uefi.db.count@Services/UefiSignatureFactsService.cs:61／alias:uefi.dbx.count@Services/UefiSignatureFactsService.cs:61 
 | P2-081 | dbx 版本與知識包對照 | 撤銷清單是否落後 | `ev.dbx.stale` | L0 | M | P1-042 |todo: 
-| P2-082 | EFI 變數盤點 | 變數名稱、大小、屬性 | `ev.var.count` | L1 | M | — |todo: 
+| P2-082 | EFI 變數盤點 | 變數名稱、大小、屬性 | `ev.var.count` | L1 | M | — |ok:ev.var.count 
 | P2-083 | 變數屬性與寫入保護 | 唯讀／執行期可寫 | `ev.var.attrs` | L1 | S | P2-082 |ok:ev.var.attrs 
 | P2-084 | 開機選項變數 | 開機序號變數內容 | `ev.bootorder.var` | L1 | S | P2-082 |alias:uefi.boot_order_count@Services/UefiBootFactsService.cs:38 
 | P2-085 | 不安全開機旗標 | testsigning 等狀態陳述 | `ev.testsigning` | L0 | S | — |alias:platform.testsigning@Services/BackendEnvironmentService.cs:80 
 | P2-086 | SPI 區域逐段雜湊 | 逐區域雜湊與大小 | `spi.hash.*` | L0 | M | P2-047 |todo: 
 | P2-087 | SPI 區域變更時間線 | 與前次快照比對的變更段 | `spi.changed` | L0 | M | P2-086 |todo: 
 | P2-088 | 快閃描述符解析 | 唯讀解析描述符欄位 | `spi.desc.*` | L0 | M | P2-047 |todo: 
-| P2-089 | 韌體膠囊與更新痕跡 | 已套用的膠囊與版本跳躍 | `fw.capsule.history` | L0 | M | P2-082 |todo: 
-| P2-090 | 變數儲存用量 | NVRAM 使用量與上限 | `ev.nvram.usage` | L0 | S | P2-082 |todo: 
+| P2-089 | 韌體膠囊與更新痕跡 | 已套用的膠囊與版本跳躍 | `fw.capsule.history` | L0 | M | P2-082 |ok:fw.capsule.history 
+| P2-090 | 變數儲存用量 | NVRAM 使用量與上限 | `ev.nvram.usage` | L0 | S | P2-082 |ok:ev.nvram.usage 
 | P2-091 | 韌體熵分布圖 | 逐區塊熵值（抗混淆指標） | `spi.entropy.*` | L0 | M | P2-086 |alias:spi.entropy_map@Services/SpiEntropyService.cs:47 
 | P2-092 | EC 唯讀風險評估 | 陳述 EC 埠不讀寫的界線 | `ec.boundary` | L0 | S | — |ok:ec.boundary 
 | P2-093 | EC 存在性與型號 | 由既有表間接陳述 | `ec.present` | L0 | S | P2-028 |ok:ec.present 
