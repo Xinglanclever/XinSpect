@@ -81,6 +81,13 @@ public sealed class StorageSmartService : ObservableObject
 
     /// <summary>NVMe 紀錄頁查詢的等待上限；逾時就真的取消 I/O。</summary>
     private const uint NvmeLogTimeoutMs = 3000;
+
+    /// <summary>
+    /// NVMe 紀錄頁查詢<b>外層</b>上限：內層 <see cref="NvmeLogTimeoutMs"/> 只有在呼叫真的走到那次等待時
+    /// 才擋得住；實測（2026-10-18）本機 <c>PhysicalDrive 2／4</c> 卡在<b>開檔或 IOCTL 本身</b>，
+    /// 呼叫執行緒永遠拿不回控制權。預算＝內層等待 3.0 秒＋取消後 2.5 秒＋餘裕。
+    /// </summary>
+    private const int NvmeOuterBudgetMs = 6000;
     private const uint IoctlStorageQueryProperty = 0x2D1400;
     private const uint IoctlSmartRcvDriveData = 0x7C82C;   // CTL_CODE(IOCTL_DISK_BASE, 0x220B, METHOD_BUFFERED, FILE_READ_ACCESS)
     private const uint PropertyIdDeviceProperty = 0;
@@ -343,21 +350,30 @@ public sealed class StorageSmartService : ObservableObject
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>這一條不走 <see cref="DiskIo"/> 看門狗</b>（2026-10-14 改）：<see cref="ReadNvmeLogCore"/> 用
-    /// overlapped I/O 開檔，逾時由它自己的 <c>WaitForSingleObject</c> 判定並呼叫 <c>CancelIoEx</c>
-    /// 真的取消；沒讀到再由 <see cref="StorageProbeBreaker.Report"/> 記帳。
+    /// <b>兩層防護，缺一不可</b>：內層是 <see cref="ReadNvmeLogCore"/> 的 overlapped I/O——
+    /// <c>WaitForSingleObject</c> 逾時後真的 <c>CancelIoEx</c>；沒讀到再由
+    /// <see cref="StorageProbeBreaker.Report"/> 記帳。
     /// </para>
     /// <para>
-    /// <b>為什麼不能走看門狗</b>：看門狗「逾時就不等它」會把整條查詢丟在一條永遠不回來的執行緒上，
-    /// 而且外層也知道不了那次逾時。本機那顆介面卡把日誌頁的等待卡死時（<c>SRB_STATUS_SELECTION_TIMEOUT</c>），
-    /// 看門狗三秒就放棄、卻對底層驅動下不了取消——於是每一輪都多洩一條執行緒，一路把整份執行緒集區
-    /// 吃光，整套測試跑到連結果都印不出來（<c>work/hangdiag*.ps1</c>、<c>work/stack*.txt</c> 的傾印）。
+    /// <b>外層上限是 2026-10-18 補上的，因為內層的前提被實測推翻。</b>內層能取消的前提是
+    /// 「呼叫會走到那次等待」；本機實測（逐顆磁碟計時，見 <c>Tests/NvmeOverlappedIoTests</c>）
+    /// <c>PhysicalDrive 2／4</c> 的呼叫做不到那一步——它卡在<b>開檔或 IOCTL 本身</b>，
+    /// 於是 <c>CancelIoEx</c> 根本沒機會送出，呼叫執行緒永遠不回來。後果不是「這一項讀不到」，
+    /// 而是整條收集鏈卡死：headless <c>--json</c> 跑 35 分鐘沒有輸出、行程連
+    /// <c>taskkill /F</c> 都殺不掉（停留在核心不可中斷等待）。
+    /// </para>
+    /// <para>
+    /// <b>為什麼可以直接洩執行緒（2026-10-14 的禁令在這裡有條件解禁）</b>：那條禁令的成因是
+    /// 「同一條查詢被反覆呼叫，每輪多洩一條，把執行緒集區吃光」。現在兩個條件都不成立——
+    /// ① 逾時會 <see cref="StorageProbeBreaker.Trip"/>，冷卻期間整條查詢直接跳過，
+    /// 一顆碟一條查詢一個冷卻期內最多洩一條；② 這裡用<b>專屬執行緒</b>而不是執行緒集區，
+    /// 就算真的洩掉，也不會餓死集區（那正是 2026-10-14 傾印裡整份行程連結果都印不出來的原因）。
+    /// 交換的是「一條背景執行緒永遠不回來」換「呼叫端一定拿得回控制權」——後者才是
+    /// 「讀不到」能被誠實回報的前提。
     /// </para>
     /// <para>
     /// <b>取消是「請求」不是「保證」</b>：<c>CancelIoEx</c> 會立即讓呼叫端拿回控制權，但底層 IRP
-    /// 仍可能被卡在驅動的取消常式裡。因此這裡<b>不套用外層 timeout</b>——套了也只會多留一條執行緒，
-    /// 換不到更短的等待；真正的防護是斷路器：一次不回應之後，冷卻期間直接跳過，不再製造新的卡死執行緒，
-    /// 也不再讓每一輪等它三秒。
+    /// 仍可能被卡在驅動的取消常式裡。
     /// </para>
     /// </remarks>
     public static byte[]? TryReadNvmeLog(int index, uint logPage = NvmeLogPageHealth)
@@ -365,9 +381,35 @@ public sealed class StorageSmartService : ObservableObject
         string op = $"{nameof(TryReadNvmeLog)}.{logPage}";
         if (StorageProbeBreaker.ShouldSkip(index, op)) { StorageProbeBreaker.CountSkip(); return null; }
 
-        var (log, timedOut) = ReadNvmeLogCore(index, logPage);
+        var probe = BoundedProbeValue(() => ReadNvmeLogCore(index, logPage), NvmeOuterBudgetMs);
+        byte[]? log = null;
+        bool timedOut = true;   // 外層逾時時 probe.Value 為 null，這裡的初值就是那個情況的答案
+        if (probe.Value is { } inner) { log = inner.Log; timedOut = inner.TimedOut || probe.TimedOut; }
         StorageProbeBreaker.Report(index, op, log is not null && !timedOut);
         return log;
+    }
+
+    /// <summary>
+    /// 在<b>專屬</b>執行緒上跑 <paramref name="read"/>，最多等 <paramref name="budgetMs"/>；
+    /// 逾時就把那條執行緒留在原地（中止不了，理由見 <see cref="NvmeOuterBudgetMs"/>）。
+    /// </summary>
+    /// <remarks>
+    /// 刻意不用 <c>Task.Run</c>／<see cref="DiskIo.GuardedProbe{T}"/>：那裡借的是執行緒集區，
+    /// 而集區被卡死的查詢吃光時，整個行程連一行輸出都印不出來（2026-10-14 傾印）。
+    /// 逾時回 <c>TimedOut=true</c>；讀取自己拋例外回讀不到但不標逾時——
+    /// 「裝置回一句不支援」與「裝置不回來」是兩件事，把它們混在一起會讓斷路器放棄本來讀得到的地方。
+    /// </remarks>
+    private static (T? Value, bool TimedOut) BoundedProbeValue<T>(Func<T> read, int budgetMs) where T : struct
+    {
+        T result = default;
+        var t = new System.Threading.Thread(() =>
+        {
+            try { result = read(); }
+            catch { /* 讀取自己拋例外：不是逾時，由呼叫端記成讀不到 */ }
+        })
+        { IsBackground = true, Name = "XinSpect-nvme-probe" };
+        t.Start();
+        return t.Join(budgetMs) ? (result, false) : (null, true);
     }
 
     [DllImport("kernel32.dll", SetLastError = true)]

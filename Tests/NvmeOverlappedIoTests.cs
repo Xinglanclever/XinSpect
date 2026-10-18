@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Xunit;
 using XinSpect;
 
@@ -15,8 +16,15 @@ namespace XinSpect.Tests;
 /// <c>ReadNvmeLogCore @ 321</c>，整份執行緒集區被吃光，行程連測試結果都印不出來。
 /// </para>
 /// <para>
-/// 這一組是<b>靜態＋行為</b>的雙軌守門：行為面驗「不可讀的碟快速回 null 且不卡」，
-/// 靜態面驗「沒有人再把 NVMe 查詢接回洩執行緒的看門狗」。
+/// 這一組是<b>靜態＋行為</b>的雙軌守門：行為面驗「不可讀的碟快速回 null 且不卡」、
+/// 「真的卡住的碟也要在外層預算內交還控制權」，靜態面驗「可取消的內層還在、
+/// 而外層上限用的是專屬執行緒而不是執行緒集區」。
+/// </para>
+/// <para>
+/// <b>2026-10-18 修正（原本只有內層，禁外層）</b>：禁令的前提是「呼叫一定會走到那次等待」，
+/// 而實測顯示本機 <c>PhysicalDrive 2／4</c> 卡在開檔或 IOCTL 本身，<c>CancelIoEx</c> 沒有機會送出。
+/// 所以現在是「內層可取消 ＋ 外層有預算」，兩個一起才是完整防護；細節寫在
+/// <see cref="StorageSmartService"/> 的 <c>TryReadNvmeLog</c> 備註。
 /// </para>
 /// </remarks>
 public class NvmeOverlappedIoTests
@@ -60,7 +68,7 @@ public class NvmeOverlappedIoTests
     }
 
     [Fact]
-    public void NVMe查詢不再呼叫洩執行緒的看門狗()
+    public void NVMe查詢保留可取消的內層_而且外層上限是專屬執行緒不是集區()
     {
         string source = ReadRepoFile(System.IO.Path.Combine("Services", "StorageSmartService.cs"));
 
@@ -74,13 +82,63 @@ public class NvmeOverlappedIoTests
         string core = source.Substring(coreStart, Math.Min(3000, source.Length - coreStart));
         Assert.DoesNotContain("OpenDrive(index)", core);
         Assert.Contains("OpenDriveOverlapped(index)", core);
-
-        // 也不得再套 DiskIo.Guarded／外層 Task.Wait 計時器——那兩條都會多留一條不回來的執行緒。
-        int entryStart = source.IndexOf("public static byte[]? TryReadNvmeLog", StringComparison.Ordinal);
-        Assert.True(entryStart > 0, "找不到 TryReadNvmeLog");
-        string entry = source.Substring(entryStart, 1200);
-        Assert.DoesNotContain("Task.Wait", entry);
         Assert.Contains("CancelIoEx", core);
+
+        // 掃描對象是「程式碼」，不是散文：註解裡正好寫著「刻意不用 Task.Run」——
+        // 拿全文去比會把說明當成實作，這條守門就會因為自己寫對了而變紅。
+        string code = string.Join('\n', source.Split('\n')
+            .Where(line => !line.TrimStart().StartsWith("//", StringComparison.Ordinal)));
+
+        // 外層上限必須存在（2026-10-18：內層的前提「呼叫會走到那次等待」在實機上不成立）。
+        int entryStart = code.IndexOf("public static byte[]? TryReadNvmeLog", StringComparison.Ordinal);
+        Assert.True(entryStart > 0, "找不到 TryReadNvmeLog");
+        string entry = code.Substring(entryStart, 1200);
+        Assert.Contains("BoundedProbeValue(", entry);
+        Assert.Contains("NvmeOuterBudgetMs", entry);
+
+        // 但不得借執行緒集區：集區被卡死的查詢吃光時，整個行程連輸出都印不出來（2026-10-14 傾印）。
+        Assert.DoesNotContain("Task.Run", entry);
+        Assert.DoesNotContain("DiskIo.Guarded", entry);
+
+        int probeStart = code.IndexOf("private static (T? Value, bool TimedOut) BoundedProbeValue<T>", StringComparison.Ordinal);
+        Assert.True(probeStart > 0, "找不到 BoundedProbeValue");
+        string probe = code.Substring(probeStart, 900);
+        Assert.Contains("new System.Threading.Thread", probe);
+        Assert.Contains("IsBackground = true", probe);
+        Assert.Contains("t.Join(budgetMs)", probe);
+    }
+
+    /// <summary>
+    /// 這一條是 2026-10-18 那個缺陷的<b>行為面</b>守門：
+    /// 本機 <c>PhysicalDrive 2／4</c> 的 NVMe 查詢會卡在核心不可中斷等待裡（headless <c>--json</c>
+    /// 因此跑了 35 分鐘沒有輸出、行程還殺不掉）。修好之後，任何一顆碟都必須在
+    /// 外層預算內<b>交還控制權</b>——不是「讀到」，而是「讀不到也回得來」。
+    /// </summary>
+    /// <remarks>
+    /// 用 <c>Task.Wait</c> 包一層而不是直接呼叫：沒有外層上限的實作會讓這條測試自己卡死，
+    /// 那樣失敗訊息就只是「測試沒結束」；包起來才會變成一條會說話的紅燈。
+    /// 存在且健康的機器上（磁碟不存在、毫秒級回 null）照樣綠——它守的是上限，不是速度。
+    /// </remarks>
+    [Fact]
+    public void 真的卡住的碟也要在外層預算內交還控制權()
+    {
+        StorageProbeBreaker.Reset();
+        try
+        {
+            for (int index = 0; index <= 7; index++)
+            {
+                int i = index;
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                bool finished = System.Threading.Tasks.Task.Run(() => StorageSmartService.TryReadNvmeHealth(i))
+                    .Wait(TimeSpan.FromMilliseconds(6000 + 3000));
+                sw.Stop();
+                Assert.True(finished,
+                    $"PhysicalDrive {i} 的 NVMe 健康紀錄查詢超過外層預算仍未交還控制權" +
+                    "——那就不是「這顆碟讀不到」，而是整條收集鏈會被它卡死");
+                Assert.True(sw.ElapsedMilliseconds < 9000, $"PhysicalDrive {i} 花了 {sw.ElapsedMilliseconds} ms");
+            }
+        }
+        finally { StorageProbeBreaker.Reset(); }
     }
 
     [Fact]
