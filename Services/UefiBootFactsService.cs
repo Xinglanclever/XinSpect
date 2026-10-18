@@ -103,48 +103,14 @@ public static class UefiBootFactsService
         catch { return null; }
     }
 
-    [DllImport("advapi32.dll", SetLastError = true)]
-    private static extern bool OpenProcessToken(nint process, uint desiredAccess, out nint token);
-
-    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern bool LookupPrivilegeValue(string? system, string name, out Luid luid);
-
-    [DllImport("advapi32.dll", SetLastError = true)]
-    private static extern bool AdjustTokenPrivileges(nint token, bool disableAll, ref TokenPrivileges newState,
-        uint bufferLength, nint previousState, nint returnLength);
-
-    [DllImport("kernel32.dll")]
-    private static extern bool CloseHandle(nint handle);
-
-    private const uint TokenAdjustPrivileges = 0x0020, TokenQuery = 0x0008, SePrivilegeEnabled = 0x0002;
-
-    private struct Luid { public uint LowPart; public int HighPart; }
-
-    private struct TokenPrivileges
-    {
-        public uint PrivilegeCount;
-        public Luid Luid;
-        public uint Attributes;
-    }
-
-    /// <summary>啟用 SeSystemEnvironmentPrivilege。未持有該權限時 AdjustTokenPrivileges 仍回 true 但 LastError=1300——必須查，否則假成功。</summary>
-    internal static bool EnableFirmwarePrivilege()
-    {
-        try
-        {
-            if (!OpenProcessToken(System.Diagnostics.Process.GetCurrentProcess().Handle,
-                TokenAdjustPrivileges | TokenQuery, out nint token))
-                return false;
-            try
-            {
-                if (!LookupPrivilegeValue(null, "SeSystemEnvironmentPrivilege", out Luid luid))
-                    return false;
-                var tp = new TokenPrivileges { PrivilegeCount = 1, Luid = luid, Attributes = SePrivilegeEnabled };
-                return AdjustTokenPrivileges(token, false, ref tp, 0, nint.Zero, nint.Zero)
-                       && Marshal.GetLastWin32Error() == 0;
-            }
-            finally { CloseHandle(token); }
-        }
-        catch { return false; }
-    }
+    // 權限相關的 P/Invoke 與 TOKEN_PRIVILEGES 版面**已移除**（2026-10-18 收斂）：
+    // 那些宣告只服務「啟用 SeSystemEnvironmentPrivilege」，而那個實作現在只有一處
+    // （<see cref="FirmwareVariableAccess.EnablePrivilege"/>）。
+    // 本檔仍自己讀 <c>BootOrder</c>／<c>SetupMode</c>（那是讀取，不是權限）。
+    /// <summary>
+    /// 啟用 <c>SeSystemEnvironmentPrivilege</c>。<b>實作只有一處</b>
+    /// （<see cref="FirmwareVariableAccess.EnablePrivilege"/>）——這裡留一個薄殼是因為
+    /// <see cref="EspScanService"/> 直接叫這個名字。<b>不要在這一支再寫第二份。</b>
+    /// </summary>
+    internal static bool EnableFirmwarePrivilege() => FirmwareVariableAccess.EnablePrivilege();
 }

@@ -27,35 +27,12 @@ public sealed class FirmwareService : ObservableObject
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     private static extern uint GetFirmwareEnvironmentVariableEx(string name, string guid, byte[]? buffer, uint size, ref uint attributes);
 
-    [DllImport("kernel32.dll")]
-    private static extern bool CloseHandle(IntPtr handle);
-
-    [DllImport("advapi32.dll", SetLastError = true)]
-    private static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);
-
-    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    private static extern bool LookupPrivilegeValue(string? system, string name, out LUID luid);
-
-    [DllImport("advapi32.dll", SetLastError = true)]
-    private static extern bool AdjustTokenPrivileges(IntPtr token, bool disableAll, ref TokenPrivileges newState, uint bufferLength, IntPtr previous, IntPtr returnLength);
-
-    // LUID 是 8 bytes（Low+High）；TOKEN_PRIVILEGES ＝ count(4)+LUID(8)+Attributes(4)＝16 bytes、Luid 在 offset 4。
-    // 先前用 `long Luid` 會 8-byte 對齊成 24 bytes、Luid 落到 offset 8 → AdjustTokenPrivileges 拿到錯版面恆敗。
-    [StructLayout(LayoutKind.Sequential)]
-    private struct LUID { public int Low; public int High; }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct TokenPrivileges
-    {
-        public uint PrivilegeCount;
-        public LUID Luid;
-        public uint Attributes;
-    }
-
+    // 權限相關的 P/Invoke（OpenProcessToken／LookupPrivilegeValue／AdjustTokenPrivileges／
+    // TOKEN_PRIVILEGES 的版面）**2026-10-18 已隨實作收斂一併移除**——
+    // 那些宣告現在只存在於 <see cref="FirmwareVariableAccess"/>。
+    // 這裡留著 <c>GetFirmwareEnvironmentVariableEx</c> 是因為本服務自己讀單一位元組變數
+    // （Secure Boot 那一頁的 <c>SetupMode</c> 等），而**讀取用的 GUID 常數仍在下面**。
     private const string EfiGlobal = "{8BE4DF61-93CA-11D2-AA0D-00E098032B8C}";
-    private const uint TokenAdjustPrivileges = 0x20;
-    private const uint TokenQuery = 0x8;
-    private const uint SePrivilegeEnabled = 0x2;
 
     private bool _loading;
     public bool IsLoading { get => _loading; private set { if (SetProperty(ref _loading, value)) OnPropertyChanged(nameof(CanRefresh)); } }
@@ -102,25 +79,23 @@ public sealed class FirmwareService : ObservableObject
         }
     }
 
-    /// <summary>啟用 SeSystemEnvironmentPrivilege（讀 UEFI 變數需要）。</summary>
-    private static bool EnableFirmwarePrivilege()
-    {
-        try
-        {
-            if (!OpenProcessToken(Process.GetCurrentProcess().Handle, TokenAdjustPrivileges | TokenQuery, out var token))
-                return false;
-            if (!LookupPrivilegeValue(null, "SeSystemEnvironmentPrivilege", out LUID luid))
-                return false;
-            var tp = new TokenPrivileges { PrivilegeCount = 1, Luid = luid, Attributes = SePrivilegeEnabled };
-            // AdjustTokenPrivileges 未持有該權限時仍回 true，但 LastError=ERROR_NOT_ALL_ASSIGNED(1300)——
-            // 不查就是假成功，害 Secure Boot 頁把「沒權限讀」誤報成「變數不存在＝可能 Legacy 開機」。
-            bool ok = AdjustTokenPrivileges(token, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero)
-                      && Marshal.GetLastWin32Error() == 0;
-            CloseHandle(token);
-            return ok;
-        }
-        catch { return false; }
-    }
+    /// <summary>
+    /// 啟用 <c>SeSystemEnvironmentPrivilege</c>（讀 UEFI 變數需要）。
+    ///
+    /// <para>
+    /// <b>這一支原本是本專案的第一份實作，也是唯一正確的一份</b>
+    /// （它查了 <c>LastError</c>：<c>AdjustTokenPrivileges</c> 未持有權限時仍回 true 但
+    /// <c>LastError＝ERROR_NOT_ALL_ASSIGNED(1300)</c>，不查就是假成功，
+    /// 害 Secure Boot 頁把「沒權限讀」誤報成「變數不存在＝可能 Legacy 開機」）。
+    /// </para>
+    /// <para>
+    /// 2026-10-18：<b>實作收斂到 <see cref="FirmwareVariableAccess.EnablePrivilege"/></b>，
+    /// 這裡留薄殼。收斂的理由是查證時發現四份實作裡有兩份壞掉
+    /// （一份少查 <c>LastError</c>、一份根本沒啟用）——
+    /// <b>同一個判斷寫四次，就會有兩個地方各自漂移。</b>
+    /// </para>
+    /// </summary>
+    private static bool EnableFirmwarePrivilege() => FirmwareVariableAccess.EnablePrivilege();
 
     /// <summary>讀單一位元組 UEFI 變數；不存在或失敗回 null。</summary>
     private static byte? ReadUefiByte(string name)

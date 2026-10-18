@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace XinSpect;
@@ -40,34 +39,45 @@ public static class UefiSignatureFactsService
     public const string KekCountKey = "uefi.kek.count";
     public const string KekListPrefix = "uefi.kek.list.";
 
-    // UEFI 變數命名空間 GUID
-    private static readonly byte[] GuidImageSecurity = Guid.Parse("a7719a85-d6cd-4be1-a1bd-4b0e8bee64c5").ToByteArray();
-    private static readonly byte[] GuidGlobalVar = Guid.Parse("8be4df61-93ca-11d2-aa0d-00e098032b8c").ToByteArray();
-
-    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern uint GetFirmwareEnvironmentVariableExW(
-        string lpName, string lpGuid, byte[]? pBuffer, uint dwSize, ref uint pdwAttrib);
+    // ═══ 這一支不再自己宣告 P/Invoke，也不再自己啟用權限 ═══
+    //
+    // 2026-10-18 修掉一個實質缺陷：**這一支原本根本沒有啟用 SeSystemEnvironmentPrivilege**，
+    // 而該權限在預設權杖裡是「持有但未啟用」——所以 `uefi.db`／`dbx`／`kek`／`pk`／
+    // `uefi.boot_entries.count` 在真機上全部讀不到，**而理由欄寫的是「可能未進入 Setup Mode」：
+    // 一個沒有查證的因果推測**。實測該機器的真實錯誤是 1314 ERROR_PRIVILEGE_NOT_HELD，
+    // 手動啟用權限後同一個變數立刻讀得到（BootOrder 18 bytes、PK 886 bytes）。
+    //
+    // 而舊版的「兩段式查大小」也是錯的：`GetFirmwareEnvironmentVariableEx` 的第五個參數是
+    // `pdwAttributes`（in/out），**不是大小**；以 dwSize＝0 呼叫不會回報所需大小，
+    // 所以 `size` 永远是 0、每次都回 null。
+    //
+    // 現在：啟用權限與讀取都在 <see cref="FirmwareVariableAccess"/>，
+    // **一趟只啟用一次**，失敗原因由 Win32 錯誤碼決定（見 DescribeFailure）。
 
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at,
         Func<string, byte[]?>? readVariable = null)
     {
-        var reader = readVariable ?? ReadFirmwareVar;
+        var reader = RichReader(readVariable);
         var facts = new List<HardwareFact>();
 
         // ── db（允許的簽章資料庫）──
-        CollectSigList(facts, "uefi.db", DbCountKey, DbListPrefix, "db（允許簽章資料庫）", "db", GuidImageSecurity, reader, at);
+        CollectSigList(facts, "uefi.db", DbCountKey, DbListPrefix, "db（允許簽章資料庫）", "db", FirmwareVariableAccess.ImageSecurityGuid, reader, at);
         // ── dbx（撤銷簽章資料庫）──
-        CollectSigList(facts, "uefi.dbx", DbxCountKey, DbxListPrefix, "dbx（撤銷簽章資料庫）", "dbx", GuidImageSecurity, reader, at);
+        CollectSigList(facts, "uefi.dbx", DbxCountKey, DbxListPrefix, "dbx（撤銷簽章資料庫）", "dbx", FirmwareVariableAccess.ImageSecurityGuid, reader, at);
         // ── KEK（金鑰交換金鑰）──
-        CollectSigList(facts, "uefi.kek", KekCountKey, KekListPrefix, "KEK（金鑰交換金鑰）", "KEK", GuidGlobalVar, reader, at);
+        CollectSigList(facts, "uefi.kek", KekCountKey, KekListPrefix, "KEK（金鑰交換金鑰）", "KEK", FirmwareVariableAccess.GlobalVariableGuid, reader, at);
         // ── PK（平台金鑰）──
         var pk = reader("PK");
-        facts.Add(pk is { Length: > 16 }
-            ? new HardwareFact("uefi.pk", Category, "PK（平台金鑰）", $"存在（{pk.Length} bytes）", "",
-                "GetFirmwareEnvironmentVariableEx（EFI Global Variable）", FactTrustLevel.Reported, false, at, pk.Length)
+        facts.Add(pk.Data is { Length: > 16 }
+            ? new HardwareFact("uefi.pk", Category, "PK（平台金鑰）",
+                $"存在（{pk.Data.Length} bytes）、{FirmwareVariableAccess.DescribeAttributes(pk.Attributes)}", "",
+                FirmwareVariableAccess.Source, FactTrustLevel.Reported, false, at, pk.Data.Length)
             : new HardwareFact("uefi.pk", Category, "PK（平台金鑰）", "", "",
-                "GetFirmwareEnvironmentVariableEx（EFI Global Variable）", FactTrustLevel.Unknown, false, at, null,
-                FactAvailability.NotSupported, pk is null ? "PK 讀取失敗（可能未進入 Setup Mode）" : "PK 為空"));
+                FirmwareVariableAccess.Source, FactTrustLevel.Unknown, false, at, null,
+                FactAvailability.NotSupported,
+                pk.Data is null
+                    ? FirmwareVariableAccess.DescribeFailure("PK", pk)
+                    : "PK 存在但長度 ≤16 bytes——**不當成一把有效的平台金鑰**（PK 是 EFI_SIGNATURE_LIST）"));
 
         // ── Boot#### 條目 ──
         CollectBootEntries(facts, reader, at);
@@ -75,21 +85,29 @@ public static class UefiSignatureFactsService
     }
 
     private static void CollectSigList(List<HardwareFact> facts, string keyPrefix, string countKey,
-        string listPrefix, string name, string varName, byte[] guid, Func<string, byte[]?> reader, DateTimeOffset at)
+        string listPrefix, string name, string varName, string guid,
+        Func<string, FirmwareVariableAccess.VariableReadResult> reader, DateTimeOffset at)
     {
-        byte[]? data = reader(varName);
+        var read = reader(varName);
+        byte[]? data = read.Data;
         if (data is null || data.Length < 28)
         {
+            // 理由由 Win32 錯誤碼決定：權限不足／變數不存在／其他——**不是「可能未進入 Setup Mode」這種推測**
+            // （PK 在 Setup Mode 會不存在，但那是 PK 那一格的事，而且它也只在自己真的回 2 時才這樣說）。
+            string reason = data is null
+                ? FirmwareVariableAccess.DescribeFailure(varName, read)
+                : $"{varName} 存在但只有 {data.Length} bytes（< 28：連一個 EFI_SIGNATURE_LIST 標頭都放不下）";
             facts.Add(new HardwareFact(keyPrefix, Category, name, "", "",
-                "GetFirmwareEnvironmentVariableEx", FactTrustLevel.Unknown, false, at, null,
-                FactAvailability.NotSupported, $"{varName} 讀取失敗或為空（可能未進入 Setup Mode 或不支援）"));
+                FirmwareVariableAccess.Source, FactTrustLevel.Unknown, false, at, null,
+                FactAvailability.NotSupported, reason));
             return;
         }
         var lists = EfiSigListDecoder.Decode(data);
         int totalSigs = lists.Sum(l => l.SignatureCount);
         facts.Add(new HardwareFact(countKey, Category, name,
-            $"{totalSigs} 條簽章（{lists.Count} 條清單）", "條",
-            $"GetFirmwareEnvironmentVariableEx + EfiSigListDecoder", FactTrustLevel.Derived, false, at, totalSigs));
+            $"{totalSigs} 條簽章（{lists.Count} 條清單）、{data.Length} bytes、"
+            + FirmwareVariableAccess.DescribeAttributes(read.Attributes), "條",
+            $"{FirmwareVariableAccess.Source} + EfiSigListDecoder", FactTrustLevel.Derived, false, at, totalSigs));
         for (int i = 0; i < lists.Count && i < 5; i++)
         {
             var l = lists[i];
@@ -99,14 +117,18 @@ public static class UefiSignatureFactsService
         }
     }
 
-    private static void CollectBootEntries(List<HardwareFact> facts, Func<string, byte[]?> reader, DateTimeOffset at)
+    private static void CollectBootEntries(List<HardwareFact> facts,
+        Func<string, FirmwareVariableAccess.VariableReadResult> reader, DateTimeOffset at)
     {
         var bootEntries = new List<(ushort Index, string Description)>();
+        var failures = new List<uint>();
         for (ushort idx = 0; idx < 0x20; idx++)
         {
             string varName = $"Boot{idx:X4}";
-            byte[]? data = reader(varName);
-            if (data is null || data.Length < 6) continue;
+            var read = reader(varName);
+            byte[]? data = read.Data;
+            if (data is null) { failures.Add(read.Win32Error); continue; }
+            if (data.Length < 6) continue;
             // EFI_LOAD_OPTION：Attributes u32 + FilePathListLength u16 + Description（UTF-16LE null-terminated）
             int descOff = 6;
             var sb = new StringBuilder();
@@ -121,9 +143,21 @@ public static class UefiSignatureFactsService
             if (bootEntries.Count >= 20) break;
         }
 
+        // **「一個都沒有」與「全都讀不到」是不同的斷言**：前者是查證後的答案，
+        // 後者是通路失敗——而失敗的原因由錯誤碼決定（權限／不存在／其他），不猜。
+        bool blocked = bootEntries.Count == 0 && failures.Count > 0
+            && failures.All(e => e != FirmwareVariableAccess.ErrorFileNotFound);
+        string bootReason = blocked
+            ? $"Boot0000–Boot001F 全部讀不到（Win32 {(failures.Count > 0 ? failures[0] : 0u)}）——"
+              + (failures.Contains(FirmwareVariableAccess.ErrorPrivilegeNotHeld)
+                  ? "**行程權杖沒有 SeSystemEnvironmentPrivilege**，這不是「沒有開機條目」"
+                  : "**通路失敗，不能讀成「沒有開機條目」**")
+            : "";
         facts.Add(new HardwareFact("uefi.boot_entries.count", Category, "UEFI 開機條目",
-            bootEntries.Count == 0 ? "沒有 Boot#### 條目（可能未提權）" : $"{bootEntries.Count} 個開機條目", "個",
-            "GetFirmwareEnvironmentVariableEx（Boot####）", FactTrustLevel.Reported, false, at, bootEntries.Count));
+            bootEntries.Count == 0 ? "0 個開機條目（查證後沒有）" : $"{bootEntries.Count} 個開機條目", "個",
+            FirmwareVariableAccess.Source + "（Boot####）", FactTrustLevel.Reported, false, at,
+            bootEntries.Count, blocked ? FactAvailability.NotSupported : FactAvailability.Present,
+            blocked ? bootReason : null));
         for (int i = 0; i < bootEntries.Count && i < 10; i++)
         {
             var (idx, desc) = bootEntries[i];
@@ -133,31 +167,37 @@ public static class UefiSignatureFactsService
         }
     }
 
-    /// <summary>讀韌體環境變數（薄通路）。回 null 表示讀取失敗或變數不存在。</summary>
+    /// <summary>
+    /// 讀韌體環境變數（薄通路）。回 <c>null</c> 表示讀不到——
+    /// <b>而「讀不到」的原因要看 <see cref="FirmwareVariableAccess.Read"/> 的富結果</b>，
+    /// 這一支只給需要 <c>byte[]?</c> 的既有呼叫端（<c>EspScanService</c>、<c>EvidenceLabService</c>）。
+    /// </summary>
     internal static byte[]? ReadFirmwareVar(string name)
-    {
-        try
-        {
-            // 先以 0 長度查大小
-            uint size = 0;
-            var guidStr = name.StartsWith("db") || name == "PK" || name == "KEK"
-                ? name.StartsWith("db") ? FormatGuidString(GuidImageSecurity) : FormatGuidString(GuidGlobalVar)
-                : FormatGuidString(GuidGlobalVar);
-            GetFirmwareEnvironmentVariableExW(name, guidStr, null, 0, ref size);
-            if (size == 0 || size > 1024 * 1024) return null; // 上限 1 MB
-            var buf = new byte[size];
-            uint actual = (uint)buf.Length;
-            uint rc = GetFirmwareEnvironmentVariableExW(name, guidStr, buf, actual, ref actual);
-            if (rc == 0) return null;
-            return buf;
-        }
-        catch { return null; }
-    }
+        => FirmwareVariableAccess.Read(name, GuidFor(name)).Data;
 
-    private static string FormatGuidString(byte[] guidBytes)
+    /// <summary>變數名 → 它所屬的 UEFI 命名空間（<c>db*</c> 在 Image Security，其餘在 Global）。</summary>
+    internal static string GuidFor(string name)
+        => name.StartsWith("db", StringComparison.Ordinal)
+            ? FirmwareVariableAccess.ImageSecurityGuid
+            : FirmwareVariableAccess.GlobalVariableGuid;
+
+    /// <summary>
+    /// 建立本輪的讀取器：注入路徑（測試）把 <c>byte[]?</c> 包成富結果
+    /// （<c>null</c> 一律讀作「變數不存在」＝Win32 2，且不宣稱權限有問題）；
+    /// 真機路徑則<b>先啟用一次權限</b>再逐變數讀——同一輪不重複動權杖。
+    /// </summary>
+    private static Func<string, FirmwareVariableAccess.VariableReadResult> RichReader(
+        Func<string, byte[]?>? injected)
     {
-        // UEFI GUID 在 Windows API 需要字串格式 "{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}"
-        var g = new Guid(guidBytes);
-        return g.ToString("B").ToUpperInvariant();
+        if (injected is not null)
+            return name =>
+            {
+                byte[]? data = injected(name);
+                return new FirmwareVariableAccess.VariableReadResult(data,
+                    data is null ? FirmwareVariableAccess.ErrorFileNotFound : 0u, 0u, true);
+            };
+
+        bool privileged = FirmwareVariableAccess.EnablePrivilege();
+        return name => FirmwareVariableAccess.Read(name, GuidFor(name), privileged);
     }
 }

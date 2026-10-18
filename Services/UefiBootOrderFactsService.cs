@@ -37,22 +37,9 @@ public static class UefiBootOrderFactsService
     private static extern uint GetFirmwareEnvironmentVariableEx(string name, string guid,
         byte[]? buffer, uint size, ref uint attributes);
 
-    [DllImport("advapi32.dll", SetLastError = true)]
-    private static extern bool OpenProcessToken(nint process, uint desiredAccess, out nint token);
-
-    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern bool LookupPrivilegeValue(string? system, string name, out Luid luid);
-
-    [DllImport("advapi32.dll", SetLastError = true)]
-    private static extern bool AdjustTokenPrivileges(nint token, bool disableAll,
-        ref TokenPrivileges newState, uint bufferLength, nint previousState, nint returnLength);
-
-    [DllImport("kernel32.dll")]
-    private static extern bool CloseHandle(nint handle);
-
-    private const uint TokenAdjustPrivileges = 0x0020, TokenQuery = 0x0008, SePrivilegeEnabled = 0x0002;
-    private struct Luid { public uint LowPart; public int HighPart; }
-    private struct TokenPrivileges { public uint Count; public Luid Luid; public uint Attributes; }
+    // 權限相關的 P/Invoke 與 TOKEN_PRIVILEGES 版面**已移除**（2026-10-18 收斂）：
+    // 原本這裡是第二份「啟用權限」實作，而且**少查 LastError**——同一件事的四個實作裡有兩個是壞的。
+    // 現在只有一處：<see cref="FirmwareVariableAccess.EnablePrivilege"/>。
 
     /// <summary>
     /// 收集開機順序事實。<paramref name="readOrder"/> 注入＝測試路徑；
@@ -187,20 +174,16 @@ public static class UefiBootOrderFactsService
         catch { return null; }
     }
 
-    private static bool EnableFirmwarePrivilege()
-    {
-        try
-        {
-            if (!OpenProcessToken(-1, TokenAdjustPrivileges | TokenQuery, out nint token)) return false;
-            try
-            {
-                if (!LookupPrivilegeValue(null, "SeSystemEnvironmentPrivilege", out Luid luid))
-                    return false;
-                var tp = new TokenPrivileges { Count = 1, Luid = luid, Attributes = SePrivilegeEnabled };
-                return AdjustTokenPrivileges(token, false, ref tp, 0, 0, 0);
-            }
-            finally { CloseHandle(token); }
-        }
-        catch { return false; }
-    }
+    /// <summary>
+    /// 啟用讀 UEFI 變數所需的權限。<b>委派給唯一實作</b>
+    /// （<see cref="FirmwareVariableAccess.EnablePrivilege"/>）。
+    ///
+    /// <para>
+    /// <b>這裡原本是第二份實作，而它少查了 <c>LastError</c>：</b>
+    /// <c>AdjustTokenPrivileges</c> 在權杖未持有該權限時<b>仍回 true</b>（LastError＝1300），
+    /// 只收傳回值就會得到假成功——那正是 <see cref="FirmwareService"/> 修過一次的坑。
+    /// 2026-10-18 收斂：同一個錯不該有第二個實例。
+    /// </para>
+    /// </summary>
+    private static bool EnableFirmwarePrivilege() => FirmwareVariableAccess.EnablePrivilege();
 }

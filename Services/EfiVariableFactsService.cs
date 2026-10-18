@@ -12,8 +12,19 @@ namespace XinSpect;
 /// 原本它還產出 <c>ev.pk.count</c>（PK／KEK／db／dbx 的簽章計數），
 /// 而<b>那已經有實作了</b>——<see cref="UefiSignatureFactsService"/>
 /// 產出 <c>uefi.pk</c>／<c>uefi.kek</c>／<c>uefi.db</c>／<c>uefi.dbx</c>，
-/// 而且做得更完整（逐清單明細、兩段式大小查詢、Boot#### 條目）。
+/// 而且做得更完整（逐清單明細、Boot#### 條目）。
 /// <b>所以那一半被撤回了</b>，P2-079／P2-080 改列 alias。
+///
+/// <para>
+/// <b>⚠ 2026-10-18 更正：這裡原本把「兩段式大小查詢」列為它的優點，而那是錯的。</b>
+/// 查證後確認那個寫法把 <c>GetFirmwareEnvironmentVariableEx</c> 的第五個參數
+/// （<c>pdwAttributes</c>，in/out）當成「所需大小」在用——<b>以 dwSize＝0 呼叫不會回報大小</b>，
+/// 所以 <c>size</c> 永远是 0、<b>整條通路每個變數都讀不到</b>，
+/// 而同一次查證還發現 <c>db</c>／<c>dbx</c> 的 GUID 也是錯的。
+/// 兩者都已修掉，實作收斂到 <see cref="FirmwareVariableAccess"/>；
+/// 真機實測（同一台機器）<c>PK</c> 886 bytes、<c>KEK</c> 3955、<c>db</c> 8188、<c>dbx</c> 3724。
+/// 詳見 <c>GATE-LOG-261.md</c>。
+/// </para>
 /// </para>
 ///
 /// <para>
@@ -110,7 +121,8 @@ public static class EfiVariableFactsService
                 + "所以規格 P2-083 的後半在對準出處之前不算完成。"
                 + "**而簽章清單那一半已經撤回了**：它已經有實作"
                 + "（UefiSignatureFactsService 的 uefi.pk／uefi.kek／uefi.db／uefi.dbx），"
-                + "而且做得更完整（逐清單明細、兩段式大小查詢、Boot#### 條目）"),
+                + "而且做得更完整（逐清單明細、Boot#### 條目）——**而它的讀取通路在 2026-10-18 修掉兩個"
+                + "讓它讀不到東西的缺陷（權限沒啟用、pdwAttrib 當大小用、db/dbx 的 GUID 錯）**"),
         ];
     }
 }

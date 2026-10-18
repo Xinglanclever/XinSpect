@@ -84,7 +84,9 @@ public class EfiVariableFactsTests
     /// <para>
     /// 這一條補的是一個真實的洞：`uefi.db.count`／`uefi.dbx.count`／`uefi.kek.count` 與
     /// `uefi.{db,dbx,kek}.list.0..4` 都是本服務的執行期輸出，而目錄與動態家族都沒有它們——
-    /// **本機讀不到 EFI 變數（未進 Setup Mode）所以它們從未出現**，
+    /// **本機曾經讀不到 EFI 變數——但原因是「權杖沒啟用 SeSystemEnvironmentPrivilege」與
+    /// 「db／dbx 的 GUID 是錯的」，不是 Setup Mode**（2026-10-18 實測；見 GATE-LOG-261）。
+    /// 那兩個缺陷修掉之後這條守門才第一次照到真正的執行期鍵集，
     /// 換一台讀得到的機器就會讓執行期對帳亮紅燈（鍵不在目錄也不在家族）。
     /// </para>
     ///
