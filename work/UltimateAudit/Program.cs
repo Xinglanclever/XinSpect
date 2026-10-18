@@ -53,7 +53,9 @@ internal static class Program
         var stages = new List<Stage>();
         for (int i = 1; i <= 10; i++)
         {
-            string path = Directory.GetFiles(dir, $"STAGE-{i:00}-*.md").Single();
+            string path = Directory.GetFiles(dir, $"STAGE-{i:00}-*.md")
+                .Single(f => !f.Contains("REMAINING"));   // 第 261 輪長出 STAGE-02-REMAINING-KEYS.md 之後，這條 glob 會命中兩份
+
             stages.Add(Parse(i, path));
         }
 
@@ -198,7 +200,7 @@ internal static class Program
             ("字面比對：\"F10\" 不判為項目 ID", IsItemId("F10"), false),
             ("欄位切分：管線列切出 5 欄", Cells("| F10 | 建置 | 10 | `build.` | L0 |").Count == 5, true),
             ("鍵萃取：抓出反引號內的點分鍵", Keys("`build.reproducible`").SequenceEqual(["build.reproducible"]), true),
-            ($"輸入可達：{dir} 底下有 10 份階段檔", Directory.GetFiles(dir, "STAGE-*.md").Length == 10, true),
+            ($"輸入可達：{dir} 底下有 10 份階段檔", Directory.GetFiles(dir, "STAGE-*.md").Count(f => !f.Contains("REMAINING")) == 10, true),
         ];
         bool ok = true;
         foreach (var (label, got, want) in checks)
@@ -262,8 +264,9 @@ internal static class Program
     /// <summary>P{d}-{nnn} 的字面判斷：不靠正則，逐字元看。</summary>
     private static bool IsItemId(string s)
     {
-        if (s.Length != 6 || s[0] != 'P' || s[2] != '-') return false;
-        return char.IsAsciiDigit(s[1]) && s[3..].All(char.IsAsciiDigit);
+        int dash = s.IndexOf('-');
+        if (s.Length < 6 || s[0] != 'P' || dash < 2 || dash > 3) return false;
+        return s[1..dash].All(char.IsAsciiDigit) && s[(dash + 1)..].Length == 3 && s[(dash + 1)..].All(char.IsAsciiDigit);
     }
 
     /// <summary>把反引號裡的點分小寫鍵抓出來（鍵的形狀固定，逐字元掃描即可）。</summary>
