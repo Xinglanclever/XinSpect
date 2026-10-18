@@ -39,6 +39,9 @@ public partial class MainWindow : Window
         BuildNav();
         ApplyAccentGlow();
         LanguageService.Changed += ApplyLanguage;
+        // 標題列是版號的唯一出口（單一來源＝AppInfo／csproj）。XAML 那邊刻意不寫版號：
+        // 寫死的字面值（原本是「XinSpect v2.5 Olympus」）會被這一行覆寫，所以畫面上看不出它舊了
+        // ——一路落後三十幾個版本而沒有人發現。ChangelogTests.檢視的XAML不得留下舊版號 守著這件事。
         Title = AppInfo.WindowTitle(LanguageService.IsEnglish || LanguageService.IsSimplified);
 
         // 感測引擎於背景載入完成後，重放當前頁的感測閘門（引擎晚到時閘門才有對象可套用）

@@ -115,12 +115,14 @@ public class NvmeOverlappedIoTests
     /// 外層預算內<b>交還控制權</b>——不是「讀到」，而是「讀不到也回得來」。
     /// </summary>
     /// <remarks>
-    /// 用 <c>Task.Wait</c> 包一層而不是直接呼叫：沒有外層上限的實作會讓這條測試自己卡死，
+    /// 用 <c>Task.Run ＋ WaitAsync</c> 包一層而不是直接呼叫：沒有外層上限的實作會讓這條測試自己卡死，
     /// 那樣失敗訊息就只是「測試沒結束」；包起來才會變成一條會說話的紅燈。
+    /// 用 <c>WaitAsync</c> 而不是阻塞的 <c>Wait</c>：後者會被 xUnit1031 擋（分析器說得對——
+    /// 阻塞等待在測試執行緒上等一個不回來的呼叫，正是這一組要防的形狀）。
     /// 存在且健康的機器上（磁碟不存在、毫秒級回 null）照樣綠——它守的是上限，不是速度。
     /// </remarks>
     [Fact]
-    public void 真的卡住的碟也要在外層預算內交還控制權()
+    public async System.Threading.Tasks.Task 真的卡住的碟也要在外層預算內交還控制權()
     {
         StorageProbeBreaker.Reset();
         try
@@ -129,8 +131,16 @@ public class NvmeOverlappedIoTests
             {
                 int i = index;
                 var sw = System.Diagnostics.Stopwatch.StartNew();
-                bool finished = System.Threading.Tasks.Task.Run(() => StorageSmartService.TryReadNvmeHealth(i))
-                    .Wait(TimeSpan.FromMilliseconds(6000 + 3000));
+                bool finished = true;
+                try
+                {
+                    await System.Threading.Tasks.Task.Run(() => StorageSmartService.TryReadNvmeHealth(i))
+                        .WaitAsync(TimeSpan.FromMilliseconds(6000 + 3000));
+                }
+                catch (TimeoutException)
+                {
+                    finished = false;
+                }
                 sw.Stop();
                 Assert.True(finished,
                     $"PhysicalDrive {i} 的 NVMe 健康紀錄查詢超過外層預算仍未交還控制權" +

@@ -239,6 +239,48 @@ public class ChangelogTests
     // ── 讀原始碼樹 ────────────────────────────────────────────────────────
 
     /// <summary>
+    /// 檢視的 XAML 屬性不得留下舊版號。
+    ///
+    /// <para>
+    /// <c>MainWindow.xaml</c> 與 <c>AboutView.xaml</c> 各寫死過一次
+    /// <c>"XinSpect v2.5 Olympus"</c>，而程式在執行期會用 <see cref="AppInfo"/> 覆寫它們——
+    /// 所以使用者看不到舊字串，<b>也就沒有人會發現它舊了</b>：兩個字面值一路落後了三十幾個版本。
+    /// 這是「現在式的宣稱」家族裡最安靜的一種（畫面上被蓋掉、編譯器不管、守門也沒數它）。
+    /// </para>
+    /// <para>
+    /// 現在的規矩是「XAML 不寫版號」（版號只有一個來源），而這條守門允許一種例外：
+    /// 寫了就必須等於當前版號——這樣「補一個展示用的字面值」不會被禁，但寫舊的一定紅。
+    /// 只掃屬性值（<c>Title="…"</c>／<c>Text="…"</c>），不掃註解——註解裡的 <c>v2.60</c>
+    /// 是「這個功能是哪一版做的」，那是歷史，不是現在式。
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void 檢視的XAML不得留下舊版號()
+    {
+        string version = CsprojVersion();
+        string[] files = ["MainWindow.xaml", "Views/AboutView.xaml"];
+        var bad = new List<string>();
+        foreach (string file in files)
+        {
+            string text = ReadRepoFile(file);
+            // 逐行掃描：只取引號裡的屬性值，跳過註解行
+            foreach (string line in text.Split('\n'))
+            {
+                string trimmed = line.TrimStart();
+                if (trimmed.StartsWith("<!--", StringComparison.Ordinal)) continue;
+                foreach (Match m in Regex.Matches(line, "=\"([^\"]*)\""))
+                {
+                    var v = Regex.Match(m.Groups[1].Value, @"v(\d+\.\d+)");
+                    if (v.Success && v.Groups[1].Value != version)
+                        bad.Add($"{file}：屬性值「{m.Groups[1].Value}」帶著 v{v.Groups[1].Value}，但當前版號是 {version}");
+                }
+            }
+        }
+        Assert.True(bad.Count == 0,
+            "XAML 的版號字面值落後了（程式會覆寫它，所以畫面上看不出來）：\n" + string.Join("\n", bad));
+    }
+
+    /// <summary>
     /// 從 <c>XinSpect.csproj</c> 讀出 <c>&lt;Version&gt;</c>。刻意不讀組件版本：要驗的正是
     /// 「專案檔的版號改了，紀錄有沒有跟上」，讀組件版本就變成拿同一個來源自己對自己。
     /// </summary>

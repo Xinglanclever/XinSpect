@@ -31,7 +31,9 @@
 
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock x:Name="VersionTitle" Text="XinSpect v2.5 Olympus" FontSize="30" FontWeight="Bold"
+                    <!-- 版號由 AboutView.ApplyVersionCopy 從 AppInfo 寫入；XAML 不寫死，
+                         否則每次發版都會留一個舊字串在這裡（原本寫死「XinSpect v2.5 Olympus」）。 -->
+                    <TextBlock x:Name="VersionTitle" Text="曦覽 XinSpect" FontSize="30" FontWeight="Bold"
                                Foreground="{DynamicResource PrimaryInkBrush}"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0"
                                Text="硬體資訊總覽 ・ 即時偵測工具"/>
