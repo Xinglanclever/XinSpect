@@ -4,7 +4,7 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一执行文件发布，免安装；对硬件与系统的读取以只读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-2.86-4C8DFF)
+![版本](https://img.shields.io/badge/version-2.87-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![测试](https://img.shields.io/badge/tests-6580%20passed-3FB950)
@@ -79,10 +79,10 @@
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.86/XinSpect.exe) | 33,745,707 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.86/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.87/XinSpect.exe) | 33,745,707 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.87/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 
-> **本表的字节数为本版（v2.86）实际发布的文件大小**；请以 Release 页面列出的文件为准。
+> **本表的字节数为本版（v2.87）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
 系统需求：Windows 10 1903 或更新、Windows 11 x64；.NET 10 Desktop Runtime（自包含发布则免装）。显卡深测需要 D3D11 兼容设备；MSR 读取、SMART ioctl、Security 事件日志需以系统管理员执行——没有权限时相关项目标示「权限不足」，程序不会假装成功，也不会静默降级。
 
@@ -424,6 +424,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 ## 十七、版本沿革
 
+- **v2.87 Ultima III**（2026-10-19）：證明而不只是陳述（第 264–266 輪）——階段二的韌體風險陳述六把（fw.risk.facts.*）把「風險分數」換成不需要產品決定的形狀：構成直接用既有的 29 條對帳規則（每條規則自帶出處理由與參與鍵），等級只用「有沒有」判定，於是不需要任何權重與門檻；代價明寫進事實——等級說的是「證據能陳述到什麼程度」，不是風險高低。基線是 canonical JSON 加內容雜湊、不含時間與機器識別（可離線比對），差異只比參與鍵且跨機器標不適用，報告沿用離線自足 HTML 並附可重算的雜湊。**周邊韌體可更新性宣告**（pdev.fw.updatable）：NVMe 讀韌體槽紀錄頁（log page 0x03）與 Identify Controller 的 OACS bit 2，ATA／SAS／SATA 讀 IDENTIFY DEVICE 的 word 83 bit 0 與 word 69 bit 8，三者都是裝置自述——「支援下載命令」不等於「原廠還提供更新」，也不等於「需要更新」；整片 0 的紀錄判成讀不到而不是七個空槽。**順手修掉一個安靜的缺陷**：匯流排名稱表在專案裡有兩份、兩份都從列舉中段位移一格且彼此不一致（SAS 被講成 SATA、NVMe 被寫成「SCM/NVMe 類」），以 Windows SDK 的 STORAGE_BUS_TYPE 逐項核對並用本機 CIM 原始值實測（NVMe＝17、SATA＝11）後收斂成唯一一份，SMART 直讀的分流與磁碟資訊頁都改呼叫它，並加守門「別處不得再寫第二張表」——錯的標籤不會讓程式壞掉，它只會安靜地把 SAS 講成 SATA。計畫庫的稽核搬進會自動跑的地方（十階段 105 列、1,050 個 ID 連續、逐域前綴對位、懸空依賴與語法全機器檢查），並補上稽核工具自己的自我檢查——那支工具有入版控卻沒有任何東西會跑它。更正兩個被寫進紀錄的誤診（「本機正則引擎壞了」是誤診，壞的是樣式與預期；「+31 對 18」是拿執行數比方法數），並修掉畫面上一行落後三十幾個版本、因為執行期被覆寫所以沒人發現它舊了的版號字面值（新守門「檢視的 XAML 不得留下舊版號」）。如實申報：審計鏈互驗的輸入 ev.chain.verify 目前只有測試在產生，報告只能寫「未取得」而不是「沒有問題」。測試 6,454→6,580 綠、事實鍵目錄 1,037→1,044 把、階段二 105 列：75 把到位、24 把以既有鍵別名收錄、15 把待辦。
 - **v2.86 Ultima II**（2026-10-18）：看得見的完成與看不見的缺陷（第 259–263 輪）——新增「事實總表」頁：把編譯期目錄的 1,037 把事實鍵攤成一張可搜尋的表，分母是目錄而不是「這一輪掃到什麼」，逐域把「收到」與「量到」分開，缺席一律標「本次未收集」而不是 0（它與「沒有實作」不同，而這一頁不猜成因）；故障排查嚮導整頁先前寫完卻不在導覽註冊表、沒有任何路徑到得了，接入導覽並新增守門「每個檢視要嘛在導覽、要嘛明文登記為獨立視窗或卡片」。**UEFI 變數通路三個實質缺陷**（真機實測）：啟用 SeSystemEnvironmentPrivilege 的實作有四份而兩份是壞的、「先查大小再讀」把 GetFirmwareEnvironmentVariableEx 的屬性參數當成大小用（於是每個變數都回 null）、db／dbx 用了錯的 GUID——修好之後 db 8,188 bytes、dbx 3,724 bytes 是這兩個變數發佈以來第一次真的被讀到；收斂成單一來源 FirmwareVariableAccess，四份實作變一份，並加守門釘住「這個權限呼叫只能有一處」。**NVMe 健康紀錄探針的外層預算**：內層 CancelIoEx 能取消的前提是「呼叫會走到那次等待」，實測本機 PhysicalDrive 2／4 卡在開檔或 IOCTL 本身，取消送不出去、行程連 taskkill /F 都殺不掉，後果是整條收集鏈卡死而不是「這一項讀不到」——外層改用專屬執行緒加 6 秒預算，配合斷路器冷卻，一颗碟一個冷卻期最多洩一條執行緒且不吃執行緒集區。另新增 SMBIOS Type 19 記憶體映射（sb.memmap.*：32 位元欄位單位 KiB、擴充欄位 bytes，弄錯差 1,024 倍且不會有任何錯誤訊息）、熱管理可讀項盤點（ec.thermal.readable：問「有哪些路」不問「幾度」，四種「沒讀到」分開陳述）、EFI 變數面三把鍵收口（Windows 沒有列舉 EFI 變數的公開 API；「不適用」與「不支援」分開）與 uefi.boot. 動態家族補登記，並把階段二規格矩陣與實作逐列對帳成一把事實（P2-105）。測試 6,393→6,454 綠、事實鍵目錄 1,030→1,037 把（＋27 個動態家族）、階段二 105 列現況：68 把到位、24 把以既有鍵別名收錄、22 把待辦。
 - **v2.85 Ultima I**（2026-10-16）：ULTIMATE-1000 階段一：契約、骨架、出處鏈與守門方法論（105 項）——掃描骨架契約（逾時必先宣告、還原契約、中斷保留）／來源接縫（狀態分離、全鏈留痕、雙向對帳）／六態收斂與格的成文／出處鏈八把鍵／知識包與知識表三態查詢／敏感度 L0–L3 分級與 L3 禁項掃描／寫入閘門與審計鏈互驗／出網四種觸發只有主動允許／韌性與降級申報／守門方法論（五模式、等級宣告含守不住什麼、誤報要修守門不是放寬）／發佈與對外文件。**階段二（韌體・開機鏈與信任根）同日開工**：ACPI 表逐張解析與校驗、SMBIOS 結構與 WMI 對照、UEFI 映像 FV／FFS 分解、SPI 地圖與 BIOS 區雜湊、FIT／Boot Guard、微碼雙來源對帳、TPM 2.0 屬性與開機鏈重放、電池與 EC 狀態、周邊韌體版本盤點——105 列的實作鍵：61 把到位、24 把以既有鍵別名收錄、28 把待辦。TPM 讀值另修一組實質缺陷（TPM_PT 屬性編號與 revision 語意整組照 TPM 2.0 Part 2 重對來源，原先實作／註解／fixture／文件四處一致地錯），並補上 TBS 服務不存在時的 Windows WMI（Win32_Tpm）備援通路——來源與界線如實標示，PCR 與事件日誌那一批在沒有 TBS 時標 NotSupported，不因為「有 TPM」就代填成支援。目錄與執行期對帳補洞：uefi.{db,dbx,kek}.count 與逐條清單先前只有執行期在產、目錄與動態家族都沒登記（掃描器只認字面），補上字面宣告與家族登記，並用守門釘住「執行期產生的鍵都要被目錄或動態家族收錄」。測試 6381→6393 綠、事實鍵目錄 1026→1030 把（＋26 個動態家族）。
 - **v2.84 Olympus**（2026-10-15）：儲存／安全／ACPI／視覺化／情境五域深化（第 484–523 項）——控制器拓撲／外接盒橋接／Storage Spaces／韌體問題表／WMI 交叉／DWPD；ADS／程式簽章／登入聚合／服務二進位 ACL／PATH 可寫／服務 SDDL；_PRx／_DSM／BGRT／SPCR／DBG2／表匯總；桑基／熱力圖／拓撲樹；憑證自動更新／自簽清單／Smart App Control／裝置政策／摘要卡；驗機精靈／該不該修／效能慢證據鏈／供電曲線。可寫是劫持面不是已劫持、未檢查不等於安全、缺格必須是缺口、聚合訊號不是分數。全程唯讀；測試 5072 綠、事實鍵目錄 602 把（＋22 個動態家族）。
