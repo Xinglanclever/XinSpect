@@ -148,3 +148,28 @@ dotnet test Tests/XinSpect.Tests.csproj -c Debug -p:BaseOutputPath=obj/_rel_266d
 後來發現**交班中的第 266 輪已經有** `Tests/NvmeFwSlotTests.cs`（解碼契約）與
 `AtaIdentifyTests` 的擴充（ATA 三態），於是把自己那份**刪掉**，只留事實層——
 **同一份契約不在兩處各抄一遍**（數字上也看得出來：刪掉 16 條之後 6,596 → 6,580）。
+
+---
+
+## 七、發佈紀錄（v2.87 Ultima III，2026-10-19）
+
+這一輪與第 264／265 輪累積成 **v2.87**，走 `Tools/release.ps1` 的完整管線：
+
+| 步驟 | 結果 |
+|---|---|
+| preflight（六處版號） | `2.87 everywhere, baseline 6580` |
+| 全套測試 | **6,580 綠、0 紅、0 略過**（`obj/_rel_287gate/`，4 m 53 s） |
+| 提交與標籤 | `522680b`（「曦覽 XinSpect 2.87 Ultima III ＋ 版號 2.87」）＋輕量標籤 `v2.87` |
+| 單一執行檔 | `publish-2.87/XinSpect.exe`＝**33,786,667 bytes** |
+| 位元組數 docs commit | `5a93543`（README 繁簡兩份同步） |
+| Release | id **416954131**，三資產逐一比對大小：XinSpect.exe 33,786,667／BlueSquadronBridge.exe 6,502,948／XinSpectDeploy.exe 7,680 |
+| 發佈後驗證 | `verify-release.ps1`：**OK**（六處版號一致、Release 資產與 README 宣稱一致） |
+
+**兩個過程中的小插曲（都不是產品缺陷）：**
+
+1. 第一次 dry run 紅在 `PlainTextCatalogTests.更新紀錄的文字不含標記語法`——我把 Markdown 的粗體寫進
+   `ChangelogCatalog` 的逐項文字裡，而那一頁是**純文字 TextBlock**，`**` 會照字面顯示。
+   同型的錯在第 263 輪踩過一次（當時是 `<FileVersion>`），**守門照設計發揮作用**：改的是文字，不是放寬守門。
+2. 第二次 dry run 因為第一次留下的 testhost 鎖住 `obj/_rel_2.87`（`MSB3027`）而失敗——
+   管線把輸出路徑寫死成 `obj/_rel_$Version/`，所以改用**同一條閘門命令換一個 `BaseOutputPath`**
+   （`obj/_rel_287gate/`）跑完全套綠，再用 `-SkipTests` 正式發佈（該開關的註記正是「僅在本版已 dry run 之後可用」）。
