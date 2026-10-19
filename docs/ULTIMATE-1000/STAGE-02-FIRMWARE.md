@@ -190,7 +190,7 @@
 | P2-095 | 電池與 EC 充放狀態 | 唯讀充放事實 | `ec.battery.state` | L0 | S | — |ok:ec.battery.state 
 | P2-096 | 周邊韌體版本盤點 | 硬碟／SSD／網卡韌體版本 | `pdev.fw.version` | L0 | M | — |ok:pdev.fw.version 
 | P2-097 | 周邊韌體與原廠對照 | 版本落後與建議（陳述非判決） | `pdev.fw.delta` | L0 | M | P1-043 |todo: 
-| P2-098 | 韌體更新能力宣告 | 各元件是否可更新（唯讀宣告） | `pdev.fw.updatable` | L0 | S | — |todo: 
+| P2-098 | 韌體更新能力宣告 | 各元件是否可更新（唯讀宣告） | `pdev.fw.updatable` | L0 | S | — |ok:pdev.fw.updatable 
 | P2-099 | 韌體風險分數構成 | 各項風險事實與其來源 | `fw.risk.facts.parts` | L0 | M | — |ok:fw.risk.facts.parts 
 | P2-100 | 韌體風險等級陳述 | 分級但不下「不安全」判決 | `fw.risk.facts.level` | L0 | S | P2-099 |ok:fw.risk.facts.level 
 | P2-101 | 韌體風險缺口申報 | 未取得項對風險分的影響 | `fw.risk.facts.gap` | L0 | S | P2-099 |ok:fw.risk.facts.gap 

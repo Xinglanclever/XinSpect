@@ -39,8 +39,12 @@ public static class PeripheralFirmwareFactsService
 
     public const string VersionKey = "pdev.fw.version";
 
-    /// <summary>一顆周邊裝置的自述：種類、型號、韌體版本（<paramref name="Firmware"/> 可為空＝裝置沒回報）。</summary>
-    public sealed record DeviceFirmware(string Kind, string Model, string Firmware);
+    /// <summary>
+    /// 一顆周邊裝置的自述：種類、型號、韌體版本（<paramref name="Firmware"/> 可為空＝裝置沒回報）。
+    /// <paramref name="Index"/> 是 <c>Win32_DiskDrive.Index</c>（<c>-1</c>＝來源沒給），
+    /// 讓需要**按碟讀紀錄頁**的服務（P2-098）不必再查一次 WMI——列舉一次、兩個事實共用。
+    /// </summary>
+    public sealed record DeviceFirmware(string Kind, string Model, string Firmware, int Index = -1);
 
     /// <summary>
     /// <paramref name="Disks"/> 是列舉到的實體硬碟；
@@ -106,11 +110,11 @@ public static class PeripheralFirmwareFactsService
     /// 真實列舉：硬碟走 <c>Win32_DiskDrive</c>；網卡只數張數（<c>PhysicalAdapter=True</c>，
     /// 排除虛擬／隧道介面），<b>因為它沒有可讀的韌體欄位</b>。
     /// </summary>
-    private static PeripheralInventory ReadInventory()
+    internal static PeripheralInventory ReadInventory()
     {
         var disks = new List<DeviceFirmware>();
         using (var searcher = new ManagementObjectSearcher(
-            "SELECT Model, FirmwareRevision, MediaType FROM Win32_DiskDrive"))
+            "SELECT Model, FirmwareRevision, MediaType, Index FROM Win32_DiskDrive"))
         using (var rows = searcher.Get())
         {
             foreach (ManagementObject o in rows)
@@ -121,8 +125,9 @@ public static class PeripheralFirmwareFactsService
                     string firmware = (o["FirmwareRevision"] as string)?.Trim() ?? "";
                     string media = (o["MediaType"] as string)?.Trim() ?? "";
                     string kind = media.Contains("SSD", StringComparison.OrdinalIgnoreCase) ? "SSD" : "硬碟";
+                    int index = o["Index"] is { } raw && int.TryParse(raw.ToString(), out int parsed) ? parsed : -1;
                     disks.Add(new DeviceFirmware(kind,
-                        model.Length > 0 ? model : "（裝置未自述型號）", firmware));
+                        model.Length > 0 ? model : "（裝置未自述型號）", firmware, index));
                 }
             }
         }

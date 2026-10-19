@@ -175,9 +175,13 @@ public class FactCoverageReportTests
         // （兩份都會漂）。所以照規矩留在未覆蓋，上限跟著移到 326。
         // 它們的內部一致性由 Tests/FirmwareRiskFactsTests 守著（等級只由有沒有決定、缺口不當 0、
         // 基線不含時間、差異只比參與鍵）。
+        // 2026-10-18 第八批：+1 條（`pdev.fw.updatable`＝P2-098 周邊韌體可更新性宣告）。
+        // 它讀的是**裝置自述的韌體槽結構**（NVMe 紀錄頁 0x03），而「可更新」這個判斷**不是讀出來的**
+        // ——本專案沒有第二條路可以獨立問同一台裝置「你覺得自己能不能更新」，所以無從交叉。
+        // 上限跟著移到 327；ATA 半邊如實標缺源，守門在 Tests/FirmwareUpdatableFactsTests。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 326,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 326）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 327,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 327）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }

@@ -26,7 +26,8 @@ public class AtaIdentifyTests
 
     private static byte[] Synthetic(
         string model = "INTEL SSDPELKX010T8", string serial = "PHLJ000000AA", string firmware = "VCV10370",
-        ulong lba48 = 1_953_525_168, uint lba28 = 268_435_455, ushort rotation = 1, ushort word80 = 0x07F0)
+        ulong lba48 = 1_953_525_168, uint lba28 = 268_435_455, ushort rotation = 1, ushort word80 = 0x07F0,
+        ushort word69 = 0, ushort word83 = 0x4000, ushort word53 = 0x0002)
     {
         var d = new byte[512];
         PutAtaString(d, 27, model, 20);
@@ -36,6 +37,9 @@ public class AtaIdentifyTests
         BitConverter.GetBytes(lba48).CopyTo(d, 100 * 2);
         BitConverter.GetBytes(rotation).CopyTo(d, 217 * 2);
         BitConverter.GetBytes(word80).CopyTo(d, 80 * 2);
+        BitConverter.GetBytes(word69).CopyTo(d, 69 * 2);
+        BitConverter.GetBytes(word83).CopyTo(d, 83 * 2);
+        BitConverter.GetBytes(word53).CopyTo(d, 53 * 2);
         return d;
     }
 
@@ -89,6 +93,38 @@ public class AtaIdentifyTests
     [Fact]
     public void 容量以每磁區512位元組換算成廠商標示的GB()
         => Assert.Equal(1000.2, AtaIdentify.Decode(Synthetic())!.CapacityGB, 1);
+
+    [Theory]
+    [InlineData((ushort)0x0000, (ushort)0x0001, true, false)] // word83 bit0
+    [InlineData((ushort)0x0100, (ushort)0x0000, false, true)] // word69 bit8
+    [InlineData((ushort)0x0100, (ushort)0x0001, true, true)]  // 兩種下載路徑都宣告
+    [InlineData((ushort)0x0000, (ushort)0x0000, false, false)]
+    public void 韌體下載能力只認對準規格的位元(ushort word69, ushort word83, bool expectedMicrocode, bool expectedDma)
+    {
+        var info = AtaIdentify.Decode(Synthetic(word69: word69, word83: word83))!;
+        Assert.Equal(expectedMicrocode, info.DownloadMicrocodeSupported);
+        Assert.Equal(expectedDma, info.DownloadMicrocodeDmaSupported);
+    }
+
+    [Fact]
+    public void 韌體更新能力_未回報時是null_雙欄位有效且皆假才是明確不支援()
+    {
+        // word 83 bits 15:14＝01b、word 53 bit1＝1：兩個來源都有效，且兩個命令位皆為假。
+        Assert.False(AtaIdentify.Decode(Synthetic(word69: 0, word83: 0x4000, word53: 0x0002))!
+            .FirmwareUpdateCapability);
+
+        // 任一命令位為真即支援，不要求另一個欄位也有效。
+        Assert.True(AtaIdentify.Decode(Synthetic(word69: 0, word83: 0x4001, word53: 0))!
+            .FirmwareUpdateCapability);
+        Assert.True(AtaIdentify.Decode(Synthetic(word69: 0x0100, word83: 0, word53: 0))!
+            .FirmwareUpdateCapability);
+
+        // 缺少 word 83 的 valid 標記或 word 53 的 words 70:64 valid：不得把 0 當成「不支援」。
+        Assert.Null(AtaIdentify.Decode(Synthetic(word69: 0, word83: 0, word53: 0x0002))!
+            .FirmwareUpdateCapability);
+        Assert.Null(AtaIdentify.Decode(Synthetic(word69: 0, word83: 0x4000, word53: 0))!
+            .FirmwareUpdateCapability);
+    }
 
     [Theory]
     [InlineData((ushort)0x07F0, 10)]      // 最高設定位元＝10 → ACS-3

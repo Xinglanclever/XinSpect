@@ -11,7 +11,11 @@ public sealed record AtaIdentifyInfo(
     string Serial,
     ulong TotalLba,
     ushort RotationRate,
-    int AcsMajorVersion)
+    int AcsMajorVersion,
+    bool DownloadMicrocodeSupported = false,
+    bool DownloadMicrocodeDmaSupported = false,
+    bool CommandSetSupportValid = false,
+    bool AdditionalSupportValid = false)
 {
     /// <summary>規格明訂 <c>0x0001</c> 代表非旋轉裝置（固態）。</summary>
     public bool IsSolidState => RotationRate == 1;
@@ -21,6 +25,17 @@ public sealed record AtaIdentifyInfo(
 
     /// <summary>廠商標示的容量（十進位 GB，每磁區 512 位元組）。</summary>
     public double CapacityGB => TotalLba * 512.0 / 1_000_000_000;
+
+    /// <summary>
+    /// 韌體更新命令能力：任一支援位為真即為真；兩個來源欄位都有效且皆為假才是明確的假；
+    /// 其餘情況是「未回報」，回 <c>null</c>——不得把未回報冒充成「不支援」。
+    /// </summary>
+    public bool? FirmwareUpdateCapability =>
+        DownloadMicrocodeSupported || DownloadMicrocodeDmaSupported
+            ? true
+            : CommandSetSupportValid && AdditionalSupportValid
+                ? false
+                : null;
 }
 
 /// <summary>
@@ -44,10 +59,14 @@ public static class AtaIdentify
     private const int WordFirmware = 23;    // 4 words＝8 字元
     private const int WordModel = 27;       // 20 words＝40 字元
     private const int WordLba28 = 60;       // dword：28 位元可定址磁區數（舊上限）
+    private const int WordCommandSetSupport = 83; // bit0＝DOWNLOAD MICROCODE 支援
+    private const int WordAdditionalSupport = 69; // bit8＝DOWNLOAD MICROCODE DMA 支援
+    private const int WordTranslationFieldsValid = 53; // bit1＝words 70:64 有效（含 word 69）
     private const int WordVersion = 80;     // 主要版本位元圖
     private const int WordLba48 = 100;      // 4 words：48 位元可定址磁區數
     private const int WordRotation = 217;   // 標稱轉速
 
+    [SpecRef("ATA/ATAPI Command Set（ACS）IDENTIFY DEVICE：word 53 bit1＝words 70:64 valid、word 69 bit8＝Download Microcode DMA supported、word 83 bit0＝Download Microcode supported、word 217＝nominal media rotation rate；Windows SDK 10.0.28000.0 km/ata.h")]
     public static AtaIdentifyInfo? Decode(byte[] d)
     {
         if (d is null || d.Length < DataSize) return null;
@@ -59,13 +78,21 @@ public static class AtaIdentify
         ulong lba48 = BitConverter.ToUInt64(d, WordLba48 * 2) & 0x0000_FFFF_FFFF_FFFFul;
         uint lba28 = BitConverter.ToUInt32(d, WordLba28 * 2);
 
+        ushort word53 = BitConverter.ToUInt16(d, WordTranslationFieldsValid * 2);
+        ushort word69 = BitConverter.ToUInt16(d, WordAdditionalSupport * 2);
+        ushort word83 = BitConverter.ToUInt16(d, WordCommandSetSupport * 2);
+
         return new AtaIdentifyInfo(
             model,
             AtaString(d, WordFirmware, 4),
             AtaString(d, WordSerial, 10),
             lba48 > 0 ? lba48 : lba28,
             BitConverter.ToUInt16(d, WordRotation * 2),
-            HighestVersionBit(BitConverter.ToUInt16(d, WordVersion * 2)));
+            HighestVersionBit(BitConverter.ToUInt16(d, WordVersion * 2)),
+            (word83 & 0x0001) != 0,
+            (word69 & 0x0100) != 0,
+            ((word83 >> 14) & 0x0003) == 0x0001,
+            (word53 & 0x0002) != 0);
     }
 
     /// <summary>ATA 的字串欄位以 word 為單位交換位元組（規格如此，不是誰寫錯了）。</summary>

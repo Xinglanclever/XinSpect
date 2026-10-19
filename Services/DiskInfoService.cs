@@ -207,10 +207,10 @@ public static class DiskInfoService
         return v.Length == 0 || v == "0" ? "—" : v;
     }
 
-    private static string BusZh(int bus) => bus switch
-    {
-        1 => "SCSI", 2 => "ATAPI", 3 => "ATA", 4 => "IEEE 1394", 6 => "SSA", 7 => "Fibre Channel",
-        8 => "USB", 9 => "RAID", 10 => "iSCSI", 11 => "SATA", 12 => "SAS", 13 => "SD", 14 => "MMC",
-        17 => "NVMe", _ => bus > 0 ? $"匯流排 {bus}" : "—"
-    };
+    /// <summary>
+    /// 匯流排名稱。<b>對照表不在這裡</b>——它與 <see cref="StorageSmartService.BusTypeName"/> 是同一件事，
+    /// 原本兩份各寫一份、兩份都從列舉中段位移一格（同一顆碟在兩個畫面標成不同匯流排），
+    /// 2026-10-19 收斂成一份（論述見 <c>GATE-LOG-266</c>）。這裡只保留 0 的顯示習慣「—」。
+    /// </summary>
+    private static string BusZh(int bus) => bus <= 0 ? "—" : StorageSmartService.BusTypeName((uint)bus);
 }

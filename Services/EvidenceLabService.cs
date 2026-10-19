@@ -564,6 +564,13 @@ public sealed class EvidenceLabService : ObservableObject
         // **它不是「版本是否最新」的判斷**——那是 P2-097、需要知識包比對；
         // 這裡只陳述裝置自述的版本，並把網卡那半邊的缺源寫進同一條事實。
         PeripheralFirmwareFacts = PeripheralFirmwareFactsService.Collect(at);
+        // ULTIMATE-1000 階段二 P2-098：周邊韌體「可更新性」宣告。
+        // **它沿用 P2-096 的同一次列舉**（不重查 Win32_DiskDrive），
+        // 再依匯流排通道各讀一件事：NVMe 讀韌體槽紀錄頁 ＋ Identify Controller、ATA 家族讀 IDENTIFY DEVICE。
+        // 交接文件把來源寫成「NVMe Firmware Slot Information、ATA IDENTIFY word 69」——
+        // NVMe 那半正確，ATA 那半也正確（word 69 bit8 與 word 83 bit0 就是 DOWNLOAD MICROCODE 支援）；
+        // 我一度依 Linux ata.h 的使用情形判成「缺源」，那是錯的，更正與教訓寫在 GATE-LOG-266。
+        FirmwareUpdatableFacts = FirmwareUpdatableFactsService.Collect(at);
         // ULTIMATE-1000 階段二 P2-105：階段二規格矩陣對實作的對帳申報。
         // **數字是建置時常數，不是執行期讀文件**——發佈版身邊沒有 docs/，
         // 讀不到回 0 會被讀成「全部完成」，那比不報更糟。由 FirmwareDocReconcileTests 守住。
@@ -599,6 +606,7 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(BatteryStateFacts)
             .Concat(PeripheralFirmwareFacts)
             .Concat(FirmwareDocReconcileFacts)
+            .Concat(FirmwareUpdatableFacts)
             .Concat(PpttFacts)
             .Concat(ServerModeFacts)
             .Concat(RoleFacts)
@@ -1111,6 +1119,9 @@ public sealed class EvidenceLabService : ObservableObject
     /// <b>陳述本版建置對到哪裡，不是「階段完成度百分比」</b>——別名與新實作分開計數。
     /// </summary>
     public IReadOnlyList<HardwareFact> FirmwareDocReconcileFacts { get; private set; } = [];
+
+    /// <summary>周邊韌體可更新性宣告（P2-098）：裝置自述的 NVMe 韌體槽結構；ATA 半邊如實標缺源。</summary>
+    public IReadOnlyList<HardwareFact> FirmwareUpdatableFacts { get; private set; } = [];
 
     /// <summary>
     /// 快速開機與休眠狀態（ULTIMATE-1000 階段二 P2-045）。

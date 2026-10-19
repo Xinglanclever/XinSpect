@@ -57,7 +57,7 @@ public static class FirmwareDocReconcileFactsService
     /// 而 <b>說清楚一條路不存在，也是做完這一項該有的結果</b>；
     /// 留著 todo 只會讓帳本繼續宣稱它們在排隊等實作。
     /// </remarks>
-    public const int ImplementedKeys = 74;
+    public const int ImplementedKeys = 75;
 
     /// <summary>
     /// 以既有鍵別名收錄的鍵數（語意相同、名字不同）。
@@ -72,7 +72,7 @@ public static class FirmwareDocReconcileFactsService
     /// <summary>尚未實作的鍵數。</summary>
     /// <remarks>25 → 22 → 16（2026-10-18；後者＝第 265 輪的六把風險陳述）。剩下的 16 把各自卡在什麼，見
     /// <c>docs/ULTIMATE-1000/STAGE-02-REMAINING-KEYS.md</c>。</remarks>
-    public const int TodoKeys = 16;
+    public const int TodoKeys = 15;
 
     /// <summary>宣告鍵總數。<b>不是</b>項數——一列可以宣告多把鍵（例如 P2-014、P2-017）。</summary>
     public const int DeclaredKeys = ImplementedKeys + AliasKeys + TodoKeys;

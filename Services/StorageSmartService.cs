@@ -96,6 +96,14 @@ public sealed class StorageSmartService : ObservableObject
     private const uint NvmeDataTypeLogPage = 2;
     public const uint NvmeLogPageHealth = 0x02;
     public const uint NvmeLogPageError = 0x01;   // 錯誤資訊紀錄
+    /// <summary>
+    /// 韌體槽資訊紀錄（Firmware Slot Information）。出處：Linux <c>include/linux/nvme.h</c> 的
+    /// <c>NVME_LOG_FW_SLOT = 0x03</c> 與 <c>struct nvme_fw_slot_info_log</c>（<c>afi</c> ＋ <c>rsvd1[7]</c>
+    /// ＋ <c>frs[7]</c>）；libnvme <c>src/nvme/types.h</c> 的 <c>struct nvme_firmware_slot</c> 寫成
+    /// <c>char frs[7][8]</c>，兩份都指向 512 位元組、七個槽、每槽八個 ASCII 字元。
+    /// <b>唯一使用它的地方是 P2-098 <c>pdev.fw.updatable</c></b>（見 <see cref="NvmeFwSlot"/>）。
+    /// </summary>
+    public const uint NvmeLogPageFirmwareSlot = 0x03;
 
     private bool _busy;
     public bool IsBusy { get => _busy; private set { if (SetProperty(ref _busy, value)) OnPropertyChanged(nameof(CanRead)); } }
@@ -194,9 +202,10 @@ public sealed class StorageSmartService : ObservableObject
             var task = Task.Run(() =>
             {
                 var bus = TryGetBusType(index, out string busName);
-                return bus switch
+                // 通道判定問 ChannelOf（唯一一份）；分群與原本寫死的 16/17、3/10/11 逐字相同
+                return ChannelOf(bus) switch
                 {
-                    16 or 17 => TryReadNvmeLog(index) is { } nvme
+                    StorageBusChannel.Nvme => TryReadNvmeLog(index) is { } nvme
                         ? ("NVMe 健康紀錄（log page 0x02，DeviceIoControl 直讀；匯流排 " + busName + "）", DecodeNvmeHealth(nvme)
                            .Concat(new[] { new SmartRow("── 硬體識別 ──", "", "", "") })
                            .Concat(TryReadNvmeIdentify(index) is { } nvi ? DecodeNvmeIdentify(nvi) : new[] { new SmartRow("NVMe Identify Controller", "不支援（儲存堆疊未回應協定查詢）", "", "") })
@@ -207,7 +216,7 @@ public sealed class StorageSmartService : ObservableObject
                                : new[] { new SmartRow("錯誤資訊紀錄（log page 0x01）", "讀不到（儲存堆疊未回應這一頁的協定查詢；USB 外接盒多半不轉發 NVMe 命令）", "", "") })
                            .ToList())
                         : throw new InvalidOperationException("NVMe 裝置的健康紀錄讀取失敗（儲存堆疊未回應協定查詢）。"),
-                    3 or 10 or 11 => TryReadAtaSmartClassic(index) is { } ata
+                    StorageBusChannel.Ata => TryReadAtaSmartClassic(index) is { } ata
                         ? ("ATA S.M.A.R.T. 屬性（SMART_RCV_DRIVE_DATA，原始欄位照列；匯流排 " + busName + "）", DecodeAtaAttributes(ata)
                            .Concat(new[] { new SmartRow("── 硬體識別 ──", "", "", "") })
                            .Concat(TryReadAtaIdentify(index) is { } ati ? DecodeAtaIdentify(ati) : new[] { new SmartRow("ATA IDENTIFY DEVICE", "不支援（驅動拒絕命令）", "", "") })
@@ -288,7 +297,68 @@ public sealed class StorageSmartService : ObservableObject
         return value;
     }
 
-    /// <summary>StorageDeviceProperty 的 BusType（STORAGE_DEVICE_DESCRIPTOR 的位元組 @28）：3=ATA、10=SATA、16/17=NVMe 類。失敗回 0。</summary>
+    /// <summary>
+    /// 匯流排分出來的<b>通道</b>：決定「用哪一套命令集問這顆裝置」。
+    /// 本專案只有兩條可引用的直讀路徑（NVMe 協定查詢、ATA 命令集），其餘一律 <see cref="None"/>。
+    /// </summary>
+    public enum StorageBusChannel
+    {
+        /// <summary>沒有對應的唯讀查詢路徑（USB 外接盒、RAID 虛擬碟、虛擬磁碟、未知）。</summary>
+        None,
+        /// <summary>NVMe 協定查詢（IOCTL_STORAGE_QUERY_PROPERTY 加上 ProtocolType = 3）。</summary>
+        Nvme,
+        /// <summary>ATA 命令集（SMART_RCV_DRIVE_DATA／IDENTIFY DEVICE）；SAS／SATA 也走這條。</summary>
+        Ata,
+    }
+
+    /// <summary>
+    /// STORAGE_BUS_TYPE 的數值→通道，<b>全專案唯一一份</b>（SMART 直讀與 P2-098 可更新性都問這裡）。
+    ///
+    /// <para>
+    /// 分群沿用本專案一向的 16／17→NVMe、3／10／11→ATA，理由逐項寫清楚：
+    /// 17＝BusTypeNvme 走 NVMe 協定；16＝BusTypeSpaces（Storage Spaces 的虛擬層）在 Windows 的
+    /// 實作上後端仍是 NVMe，所以照原本一樣先試協定查詢——試不到就是讀不到，不會憑空生成結論。
+    /// 3＝BusTypeAta、10＝BusTypeSas、11＝BusTypeSata 三者都用 ATA 命令集（SAS 只是把 ATA 封裝進去），
+    /// 走同一條直讀。
+    /// </para>
+    ///
+    /// <para>
+    /// <b>出處：</b>本機 Windows SDK 的 <c>um/winioctl.h</c>（10.0.28000.0）
+    /// 的 <c>typedef enum _STORAGE_BUS_TYPE</c>，值由 0 起逐項加一。
+    /// 2026-10-19 以本機實測對照過：CIM 的 <c>MSFT_PhysicalDisk.BusType</c> 對同一批碟給出
+    /// NVMe＝17、SATA＝11，與該列舉一致（見 <c>GATE-LOG-266</c>）。
+    /// </para>
+    /// </summary>
+    public static StorageBusChannel ChannelOf(uint bus) => bus switch
+    {
+        16 or 17 => StorageBusChannel.Nvme,
+        3 or 10 or 11 => StorageBusChannel.Ata,
+        _ => StorageBusChannel.None,
+    };
+
+    /// <summary>
+    /// STORAGE_BUS_TYPE 的數值→名稱，<b>全專案唯一一份</b>。
+    ///
+    /// <para>
+    /// <b>這一輪修掉的缺陷（2026-10-19）：</b>原本專案裡有<b>兩份</b>這種對照表
+    /// （這裡的 ReadBusTypeCore 與 <see cref="DiskInfoService"/> 的 BusZh），
+    /// 兩份都從列舉中段開始<b>位移一格</b>，而且彼此不一致：同一顆碟在兩個畫面可以標成不同匯流排
+    /// （例：17 在這裡被寫成「SCM/NVMe 類」；DiskInfoService 把 12 寫成 SAS、13 寫成 SD）。
+    /// 逐項核對 SDK 列舉後更正，並讓 <see cref="DiskInfoService"/> 改呼叫這裡——
+    /// <b>兩份表遲早會再漂開一次，收斂成一份才是修法</b>（論述見 <c>GATE-LOG-266</c>）。
+    /// </para>
+    /// </summary>
+    public static string BusTypeName(uint bus) => bus switch
+    {
+        1 => "SCSI", 2 => "ATAPI", 3 => "ATA", 4 => "IEEE 1394", 5 => "SSA", 6 => "Fibre Channel",
+        7 => "USB", 8 => "RAID", 9 => "iSCSI", 10 => "SAS", 11 => "SATA", 12 => "SD", 13 => "MMC",
+        14 => "Virtual（虛擬磁碟）", 15 => "FileBackedVirtual（檔案後端虛擬磁碟）",
+        16 => "Storage Spaces", 17 => "NVMe", 18 => "SCM", 19 => "UFS", 20 => "NVMe over Fabrics",
+        _ => bus > 0 ? $"BusType {bus}（不在已知列舉內）" : "未知",
+    };
+
+    /// <summary>StorageDeviceProperty 的 BusType（STORAGE_DEVICE_DESCRIPTOR 的位元組 @28）：
+    /// 通道判定見 <see cref="ChannelOf"/>、名稱見 <see cref="BusTypeName"/>，兩者都不在這裡寫第二份。失敗回 0。</summary>
     /// <remarks>走 <see cref="DiskIo.GuardedValue"/>：某些碟的 IOCTL 會卡在核心裡不回來，卡住就當讀不到。</remarks>
     public static uint TryGetBusType(int index, out string busName)
     {
@@ -310,13 +380,8 @@ public sealed class StorageSmartService : ObservableObject
                 || ret < 32)
                 return null;
             byte bus = buf[28];   // BusType 是一個位元組（offset 24 是 SerialNumberOffset，別讀錯）
-            string name = bus switch
-            {
-                1 => "SCSI", 2 => "ATAPI", 3 => "ATA", 4 => "IEEE1394", 6 => "USB", 7 => "RAID",
-                9 => "SAS", 10 => "SATA", 15 => "Storage Spaces", 16 => "NVMe", 17 => "SCM/NVMe 類",
-                _ => $"BusType {bus}",
-            };
-            return (bus, name);
+            // 名稱一律問 BusTypeName（唯一一份，逐項對準 SDK 的 STORAGE_BUS_TYPE）
+            return (bus, BusTypeName(bus));
         }
         finally { CloseHandle(handle); }
     }
