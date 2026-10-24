@@ -463,7 +463,7 @@ README 這種文件最容易腐壞的地方是「規模描述」——寫「數�
 
 | 檔案 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.88/XinSpect.exe) | 33,786,667 bytes | 主程式。藍色中隊守護進程已內建 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.88/XinSpect.exe) | 33,790,763 bytes | 主程式。藍色中隊守護進程已內建 |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.88/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。僅在需要脫離主程式單獨運行防護時使用 |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.88/XinSpectDeploy.exe) | 7 KB | 一鍵安裝器（自動下載並部署主程式） |
 
