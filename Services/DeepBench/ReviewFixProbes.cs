@@ -24,6 +24,23 @@ public static class DeepBenchViewProbe
     }
 }
 
+public static class PresentFramePacingNativeProbe
+{
+    /// <summary>
+    /// Present pacing engine 用裸 vtable 呼叫 ID3D11DeviceContext：ClearRenderTargetView 是第 49 格。
+    /// 寫成 50 會呼叫到 ClearUnorderedAccessViewUint（下一個同形狀的方法），實機是 0xC0000005 直接結束行程——
+    /// 行為測試看不到這件事，只能釘住原始碼裡的格號。
+    /// </summary>
+    public static bool UsesClearRenderTargetViewSlot()
+    {
+        string source = File.ReadAllText(Path.Combine(DeepBenchViewProbe.RepoRoot(), "Services", "DeepBench", "Interop", "D3D11PresentFramePacingEngine.cs"));
+        return source.Contains("ContextSlotClearRenderTargetView = 49", StringComparison.Ordinal)
+            && source.Contains("ContextSlotOMSetRenderTargets = 33", StringComparison.Ordinal)
+            && source.Contains("VTable(context, ContextSlotClearRenderTargetView)", StringComparison.Ordinal)
+            && !source.Contains("VTable(context, 50)", StringComparison.Ordinal);
+    }
+}
+
 public static class D3D11NativeProbe
 {
     /// <summary>ID3D11DeviceContext::CSSetShader（vtable slot 69）實際上是 4 參數；簽名寫成 6 參數會把 shader 指標傳進 NumClassInstances 造成 native crash。</summary>

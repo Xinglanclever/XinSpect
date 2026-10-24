@@ -90,6 +90,16 @@ public class DeepBenchReviewFixTests
             "D3D11Native 的 CSSetShader 委派簽名錯誤（多傳了 2 個參數），會把 shader 指標傳進 NumClassInstances 造成 native crash。");
     }
 
+    // ── C2b：Present pacing 的 ClearRenderTargetView 必須是 slot 49，不是 50（50 是 ClearUnorderedAccessViewUint）──
+
+    [Fact]
+    public void PresentPacing的ClearRenderTargetView用正確的vtable格號()
+    {
+        Assert.True(XinSpect.PresentFramePacingNativeProbe.UsesClearRenderTargetViewSlot(),
+            "D3D11PresentFramePacingEngine 的 ClearRenderTargetView 格號錯誤：50 會呼叫到 ClearUnorderedAccessViewUint，"
+            + "把 RTV 當 UAV 解參考，實機直接 0xC0000005 結束行程（深測整場陪葬）。");
+    }
+
     // ── C3：全零輸出必須以「值」判斷，FNV-1a checksum 對全零資料永遠非零 ──
 
     [Fact]

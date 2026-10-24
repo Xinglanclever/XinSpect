@@ -13,6 +13,11 @@ public sealed class D3D11PresentFramePacingEngine : IPresentFramePacingEngine
     private const uint DxgiFormatB8G8R8A8Unorm = 87;
     private const int HdFeatureLevel = 0x0B000;
     private const int FeatureLevel11_1 = 0x0B100;
+
+    // ID3D11DeviceContext vtable 格號：50 是 ClearUnorderedAccessViewUint，與 ClearRenderTargetView 同形狀，
+    // 寫錯會把 RTV 當 UAV 解參考，實機 0xC0000005 直接結束行程。
+    private const int ContextSlotOMSetRenderTargets = 33;
+    private const int ContextSlotClearRenderTargetView = 49;
     private static readonly Guid IidIdxgiDevice = new("54ec77fa-1377-44e6-8c32-88fd5f44c84c");
     private static readonly Guid IidId3D11Texture2D = new("6f15aaf2-d208-4e89-9ab4-489535d34f9c");
 
@@ -95,8 +100,8 @@ public sealed class D3D11PresentFramePacingEngine : IPresentFramePacingEngine
                 throw new PresentFramePacingValidationException($"ID3D11Device::CreateRenderTargetView 失敗，HRESULT=0x{(uint)hr:X8}。");
             renderTargetView = (IntPtr)renderTargetPtr;
 
-            var setRenderTargets = (delegate* unmanaged[Stdcall]<void*, uint, void**, void*, void>)VTable(context, 33);
-            var clearRenderTarget = (delegate* unmanaged[Stdcall]<void*, void*, float*, void>)VTable(context, 50);
+            var setRenderTargets = (delegate* unmanaged[Stdcall]<void*, uint, void**, void*, void>)VTable(context, ContextSlotOMSetRenderTargets);
+            var clearRenderTarget = (delegate* unmanaged[Stdcall]<void*, void*, float*, void>)VTable(context, ContextSlotClearRenderTargetView);
             var present = (delegate* unmanaged[Stdcall]<void*, uint, uint, int>)VTable(swapChain, 8);
 
             void* renderTargetForSet = renderTargetPtr;
