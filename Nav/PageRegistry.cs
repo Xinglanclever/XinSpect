@@ -141,6 +141,16 @@ public static class PageRegistry
         },
         new()
         {
+            // 感測器儀表板（U10-VZ-0057）：既有感測事實的即時監看頁。
+            // 資料全部回收既有服務（核心溫度地圖、感測總表、歷史倉、事件收集），本頁不新增讀取。
+            Key = "sensordash", Title = "感測器儀表板", Group = GMonitor,
+            IconData = "F0 M3,13 H6 V21 H3 Z M8,8 H11 V21 H8 Z M13,4 H16 V21 H13 Z M18,10 H21 V21 H18 Z",
+            Factory = () => new SensorDashboardView(),
+            Hint = "既有感測事實的監看版：核×時間熱圖、電壓對 ATX 規格帶、統計控制圖與異常日曆",
+            Keywords = ["sensor dashboard", "感測器儀表板", "監看", "監控", "熱圖", "電壓", "ATX", "控制圖", "SPC", "日曆", "異常"],
+        },
+        new()
+        {
             Key = "history", Title = "歷史回放", Group = GMonitor,
             IconData = "F1 M12,3 a9,9 0 1,1 -8.6,11.6 L5.3,14 A7,7 0 1,0 12,5 V2 L7.5,5.5 L12,9 Z "
                      + "M11,7.5 H12.6 V12.3 L16.6,14.7 L15.8,16 L11,13.2 Z",

@@ -24,6 +24,7 @@ public static class EnglishStrings
         ["儲存裝置"] = "Storage",
         ["網路"] = "Network",
         ["感測器"] = "Sensors",
+        ["感測器儀表板"] = "Sensor Dashboard",
         ["歷史回放"] = "History Replay",
         ["統計哨兵"] = "Statistical Sentinel",
         ["事件標註"] = "Event Annotations",
@@ -86,6 +87,12 @@ public static class EnglishStrings
         ["授權"] = "License",
         ["狀態"] = "Status",
         ["健康度"] = "Health",
+
+        // ── 感測器儀表板（U10-VZ-0057）的區塊標題 ──
+        ["核×時間熱圖"] = "Core × Time Heatmap",
+        ["電壓 vs ATX 規格帶"] = "Voltage vs ATX Spec Bands",
+        ["溫度控制圖"] = "Temperature Control Chart",
+        ["異常日曆"] = "Anomaly Calendar",
         ["重新擷取"] = "Refresh",
         ["匯出報告"] = "Export Report",
         ["迷你"] = "Mini",
@@ -1790,6 +1797,23 @@ public static class EnglishStrings
         ["{0} 條"] = "{0} facts",
         ["{0} 條——缺源是環境事實，不扣分也不點燈"] = "{0} facts — a missing source is an environment fact: no penalty, no traffic light",
         ["已對帳 {0} 條"] = "{0} rules reconciled",
+
+        // ── 事實總表・就地排序（U10-UI-0003／ui.table.controls）──
+        ["目錄順序"] = "Catalog order",
+        ["依狀態（讀不到在前）"] = "By state (unreadable first)",
+        ["依值（有值在前）"] = "By value (values first)",
+        ["排序只重排目前已篩選的列，不改變任何一列的內容"] = "Sorting only reorders the filtered rows; it never changes any row's content",
+
+        // ── 關於頁・全域鍵盤快捷鍵表（U10-UI-0001／ui.keys.map）──
+        ["鍵盤快捷鍵"] = "Keyboard shortcuts",
+        ["目前的全域快捷鍵就這幾個——如實列出，不硬湊。"] = "These are all the global shortcuts there are — listed as-is, nothing padded.",
+        ["開啟命令面板：搜尋任何頁面、工具與動作並直接執行"] = "Open the command palette: search any page, tool or action and run it",
+        ["同樣開啟命令面板（沿用編輯器慣例）"] = "Also opens the command palette (editor convention)",
+        ["關閉命令面板"] = "Close the command palette",
+        ["在面板結果間移動選取"] = "Move the selection among palette results",
+        ["執行面板目前選取的項目"] = "Run the currently selected palette item",
+        ["全域"] = "Global",
+        ["命令面板開啟時"] = "Command palette open",
     };
 
     private static Dictionary<string, string>? _reverse;

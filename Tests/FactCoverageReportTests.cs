@@ -203,9 +203,14 @@ public class FactCoverageReportTests
         // 2026-10-25 第 272 輪：+4 條（`ts.tsc.skew.max`＝TSC 跨核偏移、`ui.home.healthcards`＝
         // 首頁健康摘要卡、`rep.diff.mode`＝報告 diff、＋第二圈其餘新鍵）。自負載檢測的逐項鍵走
         // 動態家族（ts.vector.flops. 等），彙總與對照鍵留未覆蓋，上限跟著移到 368。
+        // 2026-10-25 第 273 輪：+11 條（`exp.json.schema`／`exp.partial`＝匯出 schema 版本化與
+        // 選擇性匯出、`rep.sec.cover`／`rep.sec.summary`＝報告封面與摘要節、`ui.keys.map`＝
+        // 快捷鍵表、`ui.table.controls`＝表格排序、`ui.dashboard.sensors`＝感測器儀表板頁、
+        // `viz.heatmap.coretime`／`viz.bullet`／`viz.calendar.heatmap`／`viz.controlchart`＝
+        // 四個自繪控制項的追蹤鍵）。呈現層與匯出層的追蹤鍵，照規矩留未覆蓋，上限跟著移到 379。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 368,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 368）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 379,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 379）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }

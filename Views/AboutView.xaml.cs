@@ -20,6 +20,7 @@ public partial class AboutView : UserControl
         ApplyVersionCopy();
         FillChangelog();
         FillLicenses();
+        FillShortcuts();
     }
 
     private void OnLanguageChanged()
@@ -27,6 +28,23 @@ public partial class AboutView : UserControl
         ApplyVersionCopy();
         FillChangelog();
         FillLicenses();
+        FillShortcuts();
+    }
+
+    // ── 全域鍵盤快捷鍵（U10-UI-0001／ui.keys.map）──────────────────────────
+
+    /// <summary>
+    /// 快捷鍵清單與誠實聲明都取自 <see cref="KeyboardShortcutCatalog"/>（單一來源），
+    /// 不寫死在版面上；綁定改了表才不會說謊。ItemsSource 在此指定而非 XAML 繫結，
+    /// 理由同 changelog：這一頁的 DataContext 是 <see cref="MainViewModel"/>，
+    /// 借道靜態清單只會多繞一層。
+    /// </summary>
+    private void FillShortcuts()
+    {
+        ShortcutsIntro.Text = LanguageService.T(KeyboardShortcutCatalog.HonestyNote);
+        ShortcutList.ItemsSource = KeyboardShortcutCatalog.Global
+            .Select(r => new { r.Keys, Description = LanguageService.T(r.Description), Scope = LanguageService.T(r.Scope) })
+            .ToList();
     }
 
     private void ApplyVersionCopy()

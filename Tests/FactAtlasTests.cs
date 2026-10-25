@@ -110,7 +110,7 @@ public class FactAtlasTests
 
         svc.Filter = "tpm.present";
         Assert.All(svc.Keys, r => Assert.Contains("tpm.present", r.Key));
-        Assert.Contains("篩選後", svc.FilterNote);
+        Assert.Contains("篩選中", svc.FilterNote);   // 過濾條件要可見（U10-UI-0003 措辭）
     }
 
     [Fact]

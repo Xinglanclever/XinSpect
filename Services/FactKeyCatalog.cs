@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 1087 個（＝本清單的成員數；另有 47 個動態家族見
+    /// <summary>本版建置時掃到的事實鍵，共 1098 個（＝本清單的成員數；另有 47 個動態家族見
     /// <see cref="FactKeyDynamicCatalog"/>，那些的成員由機器事實決定，不列在這裡）。
     /// <b>本清單一律以全字串字典序排列</b>——<c>FactKeyCatalogTests.目錄不得有重複鍵且要排序</c> 釘住這件事；
     /// 插鍵時整塊重排，不要手找位置（找前綴會把 <c>gp.*</c> 插到 <c>gpu.*</c> 後面）。
@@ -349,6 +349,8 @@ public static class FactKeyCatalog
         "ev.xinsig",
         "evt.system.7d",
         "exp.hash.chain",
+        "exp.json.schema",
+        "exp.partial",
         "export.mask",
         "export.provenance",
         "export.release",
@@ -733,6 +735,8 @@ public static class FactKeyCatalog
         "reg.microcode",
         "release.verify",
         "rep.diff.mode",
+        "rep.sec.cover",
+        "rep.sec.summary",
         "report.class",
         "role.surface",
         "role.surface.evidence",
@@ -1040,8 +1044,11 @@ public static class FactKeyCatalog
         "uf.source",
         "uf.timeline",
         "ufv.bios.count",
+        "ui.dashboard.sensors",
         "ui.factatlas.spark",
         "ui.home.healthcards",
+        "ui.keys.map",
+        "ui.table.controls",
         "ups.battery.percent",
         "ups.runtime_minutes",
         "ups.status",
@@ -1082,6 +1089,10 @@ public static class FactKeyCatalog
         "virt.vmcount",
         "virt.vmms",
         "virt.vswitch",
+        "viz.bullet",
+        "viz.calendar.heatmap",
+        "viz.controlchart",
+        "viz.heatmap.coretime",
         "vr.gantt",
         "vr.heatmap2d",
         "vr.multiaxis",

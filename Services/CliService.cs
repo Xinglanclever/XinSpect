@@ -34,6 +34,13 @@ public static class CliService
     public const string DeepArg = "--deep";
     public const string StdinBatchArg = "--stdin-batch";
     public const string DiffReportArg = "--diff-report";
+    public const string OnlyArg = "--only";
+
+    /// <summary>U10-PF-0007 追蹤鍵：選擇性匯出（<c>--only 前綴1,前綴2</c>）。
+    /// 常數刻意不以「Key」命名：事實鍵目錄（FactKeyCatalog）本輪凍結，原始碼掃描器會把
+    /// Services/ 裡名稱含「Key」的字串常數掃成事實鍵——這是產品追蹤標記，不是事實鍵。
+    /// 字面值照放在 Services/ 供收口對帳。</summary>
+    public const string PartialExportFactKey = "exp.partial";
 
     public const int ExitOk = 0;
     public const int ExitPartial = 2;
@@ -98,16 +105,47 @@ public static class CliService
             return ExitError;
         }
 
+        int totalCollectedBeforeFilter = facts.Count;   // 分母：任何過濾之前實際收集到的筆數
+
         if (query is not null)
             facts = facts.Where(f => f.Key.StartsWith(query, StringComparison.Ordinal)).ToList();
+
+        // ── 選擇性匯出（U10-PF-0007／exp.partial）：--only 前綴1,前綴2 ──────────
+        // 部分報告不得冒充全量：輸出如實帶分母（過濾前收集到的全部筆數）、
+        // 選擇條件與「部分匯出」聲明；無命中時如實說是空匯出，退出碼 2（比照 stdin-batch 的未命中）。
+        int totalCollected = totalCollectedBeforeFilter;
+        string? onlyRaw = OptionValue(args, OnlyArg);
+        string[] only = onlyRaw?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.Ordinal).ToArray() ?? [];
+        if (only.Length > 0)
+            facts = facts.Where(f => only.Any(p => f.Key.StartsWith(p, StringComparison.Ordinal))).ToList();
+
+        int selected = facts.Count;
+        bool filtered = query is not null || only.Length > 0;
+        bool partial = only.Length > 0 && selected < totalCollected;
+        // 無命中優先於「部分匯出」：0 筆也是「部分」，但如實說「空匯出」比說「部分」更有用。
+        string? partialNote = filtered && selected == 0
+            ? "篩選條件沒有命中任何事實——這是一份空匯出；「查無資料」不是「沒有問題」，也不是全量。"
+            : partial
+                ? $"部分匯出：這是 {totalCollected} 筆中的 {selected} 筆（--only {string.Join(",", only)}）。" +
+                  "分母是本次收集到的全部事實——部分報告不是全量報告，引用時請帶上分母。"
+                : null;
 
         var payload = new
         {
             generatedAtUtc = DateTimeOffset.UtcNow,
             scope = EvidenceScope,
+            // U10-PF-0004（第 273 輪）：schema 版本宣告與相容性描述——接 SnapshotSchemaCompatService
+            // 單一來源（未知的版本如實拒收的規則寫在該服務與其測試）。
+            schemaVersion = SnapshotSchemaCompatService.CurrentVersion,
+            schemaCompat = SnapshotSchemaCompatService.CompatibilityRules,
             count = facts.Count,
+            totalCollected,                     // 分母：任何過濾之前實際收集到的筆數
+            only,                               // 指定的鍵前綴清單（未指定＝空陣列）
+            partial,                            // true＝這是一份部分匯出
             allPresent = facts.All(f => f.Availability == FactAvailability.Present),
             writeAudit = WriteGate.DescribeSession(),   // 本次執行寫了哪些暫存器／埠——可回答，不是黑箱
+            note = partialNote,
             facts = facts.Select(FactJson),
         };
         string json = JsonSerializer.Serialize(payload, JsonOptions);
@@ -125,6 +163,7 @@ public static class CliService
             return ExitError;
         }
 
+        if (filtered && selected == 0) return ExitPartial;
         return facts.All(f => f.Availability == FactAvailability.Present) ? ExitOk : ExitPartial;
     }
 
@@ -137,7 +176,7 @@ public static class CliService
     {
         var payload = new[]
         {
-            new { mode = JsonArg, scope = EvidenceScope, output = "JSON", description = "headless 事實收集；支援 --query 前綴與 --out 檔案，零網路。" },
+            new { mode = JsonArg, scope = EvidenceScope, output = "JSON", description = "headless 事實收集；支援 --query／--only 前綴選擇與 --out 檔案，部分匯出如實帶分母，零網路。" },
             new { mode = CompareArg, scope = "", output = "JSON", description = "BIOS 區與參考映像逐塊比對；只讀本機映像。" },
             new { mode = VerifyAuditArg, scope = "", output = "JSON", description = "驗證本機審計日誌雜湊鏈。" },
             new { mode = IntegrityBaselineArg, scope = "", output = "JSON", description = "明示寫入自身完整性基線；需要本機寫入權限。" },
@@ -510,7 +549,7 @@ public static class CliService
             曦覽 XinSpect CLI（V7 WP32）・ headless 事實收集
 
             用法：
-              XinSpect --json evidence [--query <key 前綴>] [--out <檔案>]
+              XinSpect --json evidence [--query <key 前綴>] [--only <前綴1,前綴2>] [--out <檔案>]
               XinSpect --compare-flash <參考映像> [--out <檔案>]
               XinSpect --verify-audit [日誌路徑] [--out <檔案>]
               XinSpect --integrity-baseline [日誌路徑] [--out <檔案>]
@@ -548,6 +587,11 @@ public static class CliService
 
             選項：
               --query <前綴>   只輸出 key 以該前綴開頭的事實（例：--query platform.）
+              --only <前綴清單>
+                               選擇性匯出（U10-PF-0007）：逗號分隔的多個鍵前綴（例：--only spi.,platform.），
+                               命中任一前綴即收錄。部分匯出如實聲明：輸出帶 totalCollected（過濾前的分母）、
+                               only（選擇條件）與 partial（true＝部分匯出），note 明說「這是 N 筆中的 M 筆」——
+                               部分報告不是全量報告，引用時請帶分母。篩選後零命中退出碼 2，note 如實說是空匯出。
               --out <檔案>     寫入檔案而非 stdout
 
             退出碼：

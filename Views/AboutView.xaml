@@ -201,6 +201,34 @@
                 </StackPanel>
             </Border>
 
+            <!-- 全域鍵盤快捷鍵（U10-UI-0001／ui.keys.map）：清單由 Services/KeyboardShortcutCatalog
+                 提供（單一來源），不寫死在 XAML——綁定改了表才不會說謊；
+                 Tests/KeyboardShortcutCatalogTests 把表與原始碼的實際綁定釘在一起。
+                 盤點結果如實：目前的全域快捷鍵就命令面板這一組，不硬湊。 -->
+            <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                <StackPanel>
+                    <local:SectionHead Text="鍵盤快捷鍵" HelpKey="about/鍵盤快捷鍵"/>
+                    <TextBlock x:Name="ShortcutsIntro" Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                               Margin="0,0,0,12"/>
+                    <ItemsControl x:Name="ShortcutList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3,0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="110"/><ColumnDefinition Width="*"/><ColumnDefinition Width="160"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Keys}" Style="{StaticResource FieldValue}" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Description}" Style="{StaticResource FieldLabel}"
+                                               TextWrapping="Wrap" Margin="8,0,8,0"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding Scope}" Style="{StaticResource FieldLabel}"
+                                               TextAlignment="Right"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <!-- 意見反饋 -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>

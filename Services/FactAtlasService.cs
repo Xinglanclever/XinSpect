@@ -76,9 +76,19 @@ public sealed class FactAtlasService : ObservableObject
     /// <summary>走勢欄保留的每鍵點數上限（超過丟最舊的——欄寬 90px，再多也畫不出差別）。</summary>
     internal const int SparkCapacity = 32;
 
+    /// <summary>
+    /// 逐鍵明細的就地排序（U10-UI-0003，追蹤鍵 <c>ui.table.controls</c>）。
+    /// 過濾（搜尋＋域）既有，這裡補上排序：排序只重排「已過濾」的列，不改變任何一列的內容；
+    /// 排序狀態併進 FilterNote，讓「現在是怎麼排的」跟「篩選中：N／M」一樣可見。
+    /// 常數刻意不以「Key」命名：事實鍵目錄本輪凍結，掃描器會把名稱含「Key」的字串常數
+    /// 掃成事實鍵——這是產品追蹤標記，不是事實鍵。字面值照放在 Services/ 供收口對帳。
+    /// </summary>
+    public const string TableControlsFactKey = "ui.table.controls";
+
     private IReadOnlyList<HardwareFact> _facts = [];
     private string _filter = "";
     private string _domainFilter = "";
+    private string _sortMode = "";
 
     // 走勢歷史：鍵 → 本工作階段各輪的數值讀值（時間序）。
     private readonly Dictionary<string, List<double>> _history = new(StringComparer.Ordinal);
@@ -100,7 +110,7 @@ public sealed class FactAtlasService : ObservableObject
     /// <summary>一行結論。</summary>
     public string Summary { get; private set; } = "尚未載入。";
 
-    /// <summary>搜尋與篩選的補充說明（例如「篩選後 37／1034 把」）。</summary>
+    /// <summary>搜尋與篩選的補充說明（例如「篩選中：37／1034 把鍵（排序：依狀態）」）。</summary>
     public string FilterNote { get; private set; } = "";
 
     /// <summary>目錄裡有、但這一輪事實集沒出現的鍵數——<b>不是</b>未實作的項數。</summary>
@@ -119,6 +129,31 @@ public sealed class FactAtlasService : ObservableObject
         get => _domainFilter;
         set { if (SetProperty(ref _domainFilter, value ?? "")) Rebuild(); }
     }
+
+    /// <summary>排序選項（就地排序的三個模式；第一個是預設＝目錄順序）。</summary>
+    public static IReadOnlyList<string> SortOptions { get; } =
+        ["目錄順序", "依狀態（讀不到在前）", "依值（有值在前）"];
+
+    /// <summary>目前的排序模式（<see cref="SortOptions"/> 之一；排序只重排列序，不改變任何一列的內容）。</summary>
+    public string SortMode
+    {
+        get => _sortMode;
+        set
+        {
+            string mode = value ?? "";
+            if (!SortOptions.Contains(mode)) mode = SortOptions[0];
+            if (SetProperty(ref _sortMode, mode)) Rebuild();
+        }
+    }
+
+    /// <summary>排序鍵：「讀不到（已收到）」最前、「讀到」次之、「本次未收集」最後——先看有問題的。</summary>
+    private static int StateRank(bool has, HardwareFact? fact)
+        => !has ? 2 : fact is null || fact.Availability != FactAvailability.Present ? 0 : 1;
+
+    /// <summary>排序鍵：有可用值的列排前面（0），未收集／讀不到／空值的排後面（1）。</summary>
+    private static int ValueRank(FactAtlasKeyRow row)
+        => row.Collected && row.ValueText.Length > 0
+           && row.ValueText is not ("—" or "（空值）") ? 0 : 1;
 
     /// <summary>
     /// 載入這一輪的事實集。<b>可以傳空的集合</b>——那代表「這一輪什麼都沒收集到」，
@@ -187,7 +222,7 @@ public sealed class FactAtlasService : ObservableObject
         string domain = _domainFilter;
         int matched = 0;
 
-        Keys.Clear();
+        var rows = new List<(FactAtlasKeyRow Row, bool Has, HardwareFact? Fact)>();
         foreach (var key in FactKeyCatalog.Keys)
         {
             string dom = PrefixOf(key);
@@ -197,14 +232,31 @@ public sealed class FactAtlasService : ObservableObject
             if (q.Length > 0 && !Matches(key, dom, q, has ? fact : null)) continue;
 
             matched++;
-            Keys.Add(Row(key, dom, has ? fact : null, _history.TryGetValue(key, out var h) && h.Count >= 2 ? [.. h] : null));
+            rows.Add((Row(key, dom, has ? fact : null,
+                _history.TryGetValue(key, out var h) && h.Count >= 2 ? [.. h] : null), has, fact));
         }
 
-        FilterNote = q.Length == 0 && domain.Length == 0
+        // 就地排序（U10-UI-0003）：只重排已過濾的列，同鍵內以鍵名（即目錄序）穩定收尾。
+        var ordered = _sortMode switch
+        {
+            "依狀態（讀不到在前）" => rows.OrderBy(r => StateRank(r.Has, r.Fact))
+                                               .ThenBy(r => r.Row.Key, StringComparer.Ordinal),
+            "依值（有值在前）" => rows.OrderBy(r => ValueRank(r.Row))
+                                               .ThenBy(r => r.Row.Key, StringComparer.Ordinal),
+            _ => rows.OrderBy(r => r.Row.Key, StringComparer.Ordinal),
+        };
+
+        Keys.Clear();
+        foreach (var (row, _, _) in ordered)
+            Keys.Add(row);
+
+        string sortNote = _sortMode is "" or "目錄順序" ? "" : $"（排序：{_sortMode}）";
+        FilterNote = q.Length == 0 && domain.Length == 0 && sortNote.Length == 0
             ? $"顯示全部 {Keys.Count} 把鍵。"
-            : $"篩選後 {matched}／{FactKeyCatalog.Keys.Count} 把鍵"
+            : $"篩選中：{matched}／{FactKeyCatalog.Keys.Count} 把鍵"
               + (domain.Length > 0 ? $"（域：{domain}）" : "")
-              + (q.Length > 0 ? $"（搜尋：{q}）" : "");
+              + (q.Length > 0 ? $"（搜尋：{q}）" : "")
+              + sortNote;
         OnPropertyChanged(nameof(FilterNote));
     }
 

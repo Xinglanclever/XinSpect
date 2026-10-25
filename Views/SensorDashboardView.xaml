@@ -1,0 +1,73 @@
+<UserControl x:Class="XinSpect.SensorDashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <UserControl.Resources>
+        <!-- 一軌電壓的子彈圖列：規格帶與標稱值由呼叫端（本頁的彙整服務）給，控制項不內建規格。 -->
+        <DataTemplate x:Key="RailRowTemplate">
+            <local:BulletChart Height="40" Margin="0,2"
+                               Title="{Binding Name}"
+                               Value="{Binding Volts}"
+                               Target="{Binding Nominal}"
+                               Bands="{Binding Bands}"
+                               Unit="V"/>
+        </DataTemplate>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <StackPanel Margin="2,0,0,10">
+                <local:SectionHead Text="感測器儀表板" HelpKey="sensordash/感測器儀表板"/>
+                <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                           Text="把既有感測服務與歷史倉已經量到的數字攤成一頁監看版：逐核溫度隨時間的熱區、電壓軌對 ATX 規格帶、溫度的統計控制圖、異常事件的逐日日曆。本頁不做任何新的讀取——它看的全部是其他頁面已經在收集的資料，收起來時不占任何取樣成本。"/>
+                <TextBlock x:Name="StatusLine" Style="{StaticResource FieldLabel}" Margin="0,6,0,0"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <!-- ===== 核×時間熱圖 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="核×時間熱圖" HelpKey="sensordash/核×時間熱圖"/>
+                    <local:CoreTimeHeatmapChart x:Name="CoreHeat" Height="180" Margin="0,6,0,4"
+                                                Columns="{x:Static local:SensorDashboardView.CoreColumns}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== 電壓 vs ATX 規格帶 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="電壓 vs ATX 規格帶" HelpKey="sensordash/電壓規格帶"/>
+                    <ItemsControl x:Name="Rails" ItemTemplate="{StaticResource RailRowTemplate}"/>
+                    <TextBlock x:Name="RailsEmpty" Text="沒有可辨識的 ATX 電壓軌（+12V／+5V／+3.3V）——主機板沒有以軌名回報電壓，本頁不猜測哪個感測器是哪一軌。"
+                               Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,4,0,2"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== 溫度控制圖（SPC） ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="溫度控制圖" HelpKey="sensordash/溫度控制圖"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,6">
+                        <ComboBox x:Name="MetricCombo" Width="170" SelectionChanged="MetricCombo_Changed">
+                            <ComboBoxItem Content="處理器溫度" Tag="1" IsSelected="True"/>
+                            <ComboBoxItem Content="處理器負載" Tag="0"/>
+                            <ComboBoxItem Content="顯示卡溫度" Tag="5"/>
+                            <ComboBoxItem Content="記憶體使用率" Tag="11"/>
+                        </ComboBox>
+                        <TextBlock Text="歷史倉最近 6 小時（分鐘級）" Style="{StaticResource FieldLabel}"
+                                   VerticalAlignment="Center" Margin="10,0,0,0"/>
+                    </StackPanel>
+                    <local:ControlChart x:Name="Spc" Height="200" Margin="0,0,0,4"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== 異常日曆 ===== -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="異常日曆" HelpKey="sensordash/異常日曆"/>
+                    <local:CalendarHeatmapChart x:Name="Calendar" Height="180" Margin="0,6,0,4"
+                                                KindLabel="異常事件"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

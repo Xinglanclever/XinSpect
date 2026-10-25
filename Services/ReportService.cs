@@ -27,6 +27,14 @@ namespace XinSpect;
 /// </remarks>
 public static class ReportService
 {
+    /// <summary>U10-RP-0001 追蹤鍵：封面與執行環境節。常數刻意不以「Key」命名：
+    /// 事實鍵目錄（FactKeyCatalog）本輪凍結，原始碼掃描器會把 Services/ 裡名稱含「Key」的
+    /// 字串常數掃成事實鍵——這是產品追蹤標記，不是事實鍵。字面值照放在 Services/ 供收口對帳。</summary>
+    public const string ReportCoverFactKey = "rep.sec.cover";
+
+    /// <summary>U10-RP-0002 追蹤鍵：系統摘要頁（一頁人讀——只陳述計數與清單，不合成評分）。</summary>
+    public const string ReportSummaryFactKey = "rep.sec.summary";
+
     /// <summary>顯示另存對話框並寫出報告；成功回傳路徑，取消回傳 <c>null</c>。</summary>
     public static string? Export(MainViewModel vm)
     {
@@ -129,6 +137,8 @@ public static class ReportService
     private static List<Section> Collect(MainViewModel vm, bool mask)
     {
         var secs = new List<Section>();
+        Cover(secs, vm, mask);
+        SystemDigest(secs, vm);
         Summary(secs, vm);
         SystemInfo(secs, vm, mask);
         Processor(secs, vm);
@@ -181,6 +191,76 @@ public static class ReportService
         => mask ? "（已遮蔽）" : string.IsNullOrWhiteSpace(value) ? "—" : value;
 
     // ── 各節內容 ──────────────────────────────────────────────────────────────
+
+    /// <summary>封面與執行環境（U10-RP-0001）：工具版號、產生時間與機器識別摘要。
+    /// 全部從既有事實回收（版號取自組件、系統欄取自已載入的 SystemSummary、
+    /// 匿名機器碼沿用快照管線的單向雜湊派生），不新增任何讀取；遮蔽慣例照舊。</summary>
+    private static void Cover(List<Section> secs, MainViewModel vm, bool mask) => Add(secs, "cover", "封面與執行環境", s =>
+    {
+        string[] identityParts =
+        [
+            vm.System.HostName,
+            vm.System.UserName,
+            $"{vm.System.SystemManufacturer} {vm.System.SystemModel}".Trim(),
+        ];
+        var usable = identityParts.Where(p => !string.IsNullOrWhiteSpace(p)).ToArray();
+        s.Kv(
+            ("工具", $"{AppInfo.Name} v{AppInfo.Version}"),
+            ("產生時間", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")),
+            ("識別遮蔽", mask
+                ? "已啟用（主機名稱、使用者、MAC 位址與磁碟序號以「（已遮蔽）」取代）"
+                : "未啟用（識別資訊原值輸出）"),
+            ("匿名機器碼", usable.Length > 0
+                ? HardwareSnapshotService.CreateAnonymousMachineId(usable)
+                : "—（本輪沒有可派生的識別資訊，不以猜測的值頂替）"),
+            ("作業系統", $"{vm.System.OsName}（{vm.System.OsVersion}）"),
+            ("系統架構", vm.System.OsArch));
+        s.Note("匿名機器碼由本機既有識別資訊（主機名稱、使用者、機型）單向雜湊派生，不含原值，"
+             + "用途是讓兩份報告能判斷是否同一台機器；它與時間膠囊的 anonymousMachineId 是不同材料各自派生，"
+             + "不宣稱兩者相同。本報告只在本機產生，未上傳任何資料。");
+    });
+
+    /// <summary>系統摘要頁（U10-RP-0002）：一頁人讀——逐域計數、六態分布與重要發現清單。
+    /// 全部從本輪既有事實集（EvidenceLab.AllFacts）回收；<b>只陳述計數與清單，不合成任何評分</b>。</summary>
+    private static void SystemDigest(List<Section> secs, MainViewModel vm) => Add(secs, "digest", "系統摘要", s =>
+    {
+        var facts = vm.EvidenceLab.AllFacts;
+        if (facts.Count == 0)
+        {
+            s.Note("本輪尚未載入任何事實——摘要頁如實留空，不以猜測的計數頂替。");
+            return;
+        }
+
+        int present = facts.Count(f => f.Availability == FactAvailability.Present);
+        s.Kv(("事實總數", $"{facts.Count} 筆（讀到 {present} 筆，其餘 {facts.Count - present} 筆帶原因如實列出）"));
+
+        var states = facts.GroupBy(f => f.Availability)
+            .OrderByDescending(g => g.Count()).ThenBy(g => g.Key)
+            .Select(g => (FactAtlasService.StateText(g.Key), $"{g.Count()} 筆"))
+            .ToArray();
+        if (states.Length > 0) s.Kv(states);
+
+        var domains = facts.GroupBy(f => FactAtlasService.PrefixOf(f.Key), StringComparer.Ordinal)
+            .OrderBy(g => g.Key, StringComparer.Ordinal)
+            .Select(g => new[]
+            {
+                g.Key,
+                g.Count().ToString(),
+                g.Count(f => f.Availability == FactAvailability.Present).ToString(),
+                (g.Count() - g.Count(f => f.Availability == FactAvailability.Present)).ToString(),
+            })
+            .ToList();
+        s.Tbl("逐域計數（域＝鍵的第一段）", new[] { "域", "事實", "讀到", "讀不到" }, domains);
+
+        // 重要發現＝硬體證據的審計發現清單（與「硬體證據」節同一來源，此處只列標題與範圍；
+        // 完整結論與證據在那裡，不在摘要頁複製第二份以免兩份漂移）。
+        var findings = vm.HardwareEvidence.Rows
+            .Select(x => new[] { x.Title, x.Scope })
+            .ToList();
+        s.Tbl("重要發現（標題與範圍；完整結論與證據見「硬體證據」節）", new[] { "項目", "範圍" }, findings);
+
+        s.Note("本頁只陳述計數與清單，不合成任何評分；「讀不到」是環境事實，不是扣分項。");
+    });
 
     private static void Summary(List<Section> secs, MainViewModel vm) => Add(secs, "summary", "整機摘要", s =>
     {

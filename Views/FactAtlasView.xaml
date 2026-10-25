@@ -70,7 +70,7 @@
                     <local:SectionHead Text="逐鍵明細" HelpKey="atlas/逐鍵明細"/>
                     <Grid Margin="0,8,0,6">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/><ColumnDefinition Width="180"/>
+                            <ColumnDefinition Width="*"/><ColumnDefinition Width="170"/><ColumnDefinition Width="180"/>
                         </Grid.ColumnDefinitions>
                         <TextBox Style="{StaticResource SetTextBox}" AutomationProperties.AutomationId="AtlasSearchBox"
                                  Text="{Binding FactAtlas.Filter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -79,6 +79,12 @@
                                   AutomationProperties.AutomationId="AtlasDomainCombo"
                                   ItemsSource="{Binding FactAtlas.DomainOptions}"
                                   SelectedItem="{Binding FactAtlas.DomainFilter, Mode=TwoWay}"/>
+                        <!-- 就地排序（U10-UI-0003／ui.table.controls）：排序只重排列序，狀態併進下方篩選聲明 -->
+                        <ComboBox Grid.Column="2" Margin="8,0,0,0" Style="{StaticResource DarkCombo}"
+                                  AutomationProperties.AutomationId="AtlasSortCombo"
+                                  ItemsSource="{Binding FactAtlas.SortOptions}"
+                                  SelectedItem="{Binding FactAtlas.SortMode, Mode=TwoWay}"
+                                  ToolTip="排序只重排目前已篩選的列，不改變任何一列的內容"/>
                     </Grid>
                     <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Text="{Binding FactAtlas.FilterNote}"/>
                     <Grid Margin="0,8,0,2">
