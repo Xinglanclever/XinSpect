@@ -249,7 +249,7 @@ hardware / firmware / OS ──► fact collection (*FactsService)
 
 | File | Size | Purpose |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.90/XinSpect.exe) | 32.47 MB | Main program (Blue Squadron guard included) |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.90/XinSpect.exe) | 32.64 MB | Main program (Blue Squadron guard included) |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.90/BlueSquadronBridge.exe) | 6.5 MB | Standalone guard process |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.90/XinSpectDeploy.exe) | 7 KB | One-click installer (downloads and deploys automatically) |
 
