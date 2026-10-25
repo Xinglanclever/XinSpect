@@ -20,6 +20,7 @@ public sealed record FactAtlasDomainRow(
     string Example);
 
 /// <summary>事實總表的一列：一把鍵在這一輪的實際狀態。</summary>
+/// <remarks><paramref name="Spark"/> 是本工作階段內各輪讀值的小走勢；沒有歷史（少於兩個數值點）為 null，欄位留空。</remarks>
 public sealed record FactAtlasKeyRow(
     string Key,
     string Domain,
@@ -27,7 +28,12 @@ public sealed record FactAtlasKeyRow(
     string ValueText,
     string StateText,
     string Source,
-    bool Collected);
+    bool Collected,
+    double[]? Spark = null)
+{
+    /// <summary>給 XAML 繫結用的走勢包裝（樣板區段的陣列型屬性標記編譯不受支援，照 MetricHistory 慣例包一層）。</summary>
+    public Sparkline.SparkSeries? SparkSeries => Spark is { Length: >= 2 } ? new Sparkline.SparkSeries(Spark) : null;
+}
 
 /// <summary>動態鍵家族：成員由機器決定、編譯期數不出來的那一群。</summary>
 public sealed record FactAtlasFamilyRow(string Prefix, string Reason);
@@ -61,9 +67,23 @@ public sealed class FactAtlasService : ObservableObject
     /// <summary>本服務事實的分類名稱（快照與報告用）。</summary>
     public const string Category = "事實總表";
 
+    /// <summary>
+    /// 逐鍵明細的走勢欄（U10-VZ-0064）。資料來源＝本工作階段內各輪載入的實際讀值
+    /// （<see cref="RecordHistory"/>），不是任何事後推估；沒有歷史的鍵該欄如實留空。
+    /// </summary>
+    public const string SparkKey = "ui.factatlas.spark";
+
+    /// <summary>走勢欄保留的每鍵點數上限（超過丟最舊的——欄寬 90px，再多也畫不出差別）。</summary>
+    internal const int SparkCapacity = 32;
+
     private IReadOnlyList<HardwareFact> _facts = [];
     private string _filter = "";
     private string _domainFilter = "";
+
+    // 走勢歷史：鍵 → 本工作階段各輪的數值讀值（時間序）。
+    private readonly Dictionary<string, List<double>> _history = new(StringComparer.Ordinal);
+    // 上一輪的數值快照（判斷「換了一輪」用；同一輪反覆按重新載入不重複記點）。
+    private Dictionary<string, double>? _lastRound;
 
     /// <summary>逐域摘要（依鍵數由多到少）。</summary>
     public ObservableCollection<FactAtlasDomainRow> Domains { get; } = [];
@@ -107,6 +127,7 @@ public sealed class FactAtlasService : ObservableObject
     public void Load(IReadOnlyList<HardwareFact>? facts)
     {
         _facts = facts ?? [];
+        RecordHistory(_facts);
 
         var byKey = new Dictionary<string, HardwareFact>(StringComparer.Ordinal);
         foreach (var f in _facts)
@@ -176,7 +197,7 @@ public sealed class FactAtlasService : ObservableObject
             if (q.Length > 0 && !Matches(key, dom, q, has ? fact : null)) continue;
 
             matched++;
-            Keys.Add(Row(key, dom, has ? fact : null));
+            Keys.Add(Row(key, dom, has ? fact : null, _history.TryGetValue(key, out var h) && h.Count >= 2 ? [.. h] : null));
         }
 
         FilterNote = q.Length == 0 && domain.Length == 0
@@ -209,10 +230,10 @@ public sealed class FactAtlasService : ObservableObject
                 || fact.Value.Contains(q, StringComparison.OrdinalIgnoreCase)
                 || fact.Source.Contains(q, StringComparison.OrdinalIgnoreCase)));
 
-    private static FactAtlasKeyRow Row(string key, string domain, HardwareFact? fact)
+    private static FactAtlasKeyRow Row(string key, string domain, HardwareFact? fact, double[]? spark)
     {
         if (fact is null)
-            return new FactAtlasKeyRow(key, domain, "", "—", "本次未收集", "", false);
+            return new FactAtlasKeyRow(key, domain, "", "—", "本次未收集", "", false, spark);
 
         string state = StateText(fact.Availability);
         string value = fact.Availability == FactAvailability.Present
@@ -222,7 +243,52 @@ public sealed class FactAtlasService : ObservableObject
         if (fact.Availability != FactAvailability.Present && !string.IsNullOrWhiteSpace(fact.UnavailableReason))
             name = $"{name}　—　{fact.UnavailableReason}";
 
-        return new FactAtlasKeyRow(key, domain, name, value, state, fact.Source, true);
+        return new FactAtlasKeyRow(key, domain, name, value, state, fact.Source, true, spark);
+    }
+
+    /// <summary>
+    /// 記錄本輪的數值讀值（走勢欄的資料來源）。
+    ///
+    /// <para>
+    /// <b>只記真的讀到、且是數字的鍵</b>：優先用管線已認定的 <see cref="HardwareFact.NumericValue"/>，
+    /// 沒有才對值文字做不變文化嚴格解析——值帶單位或文字的不硬拆，讀不到的不補上一輪舊值。
+    /// 每一輪記一點；與上一輪完全相同的快照（同一輪反覆按「重新載入本輪事實」）不重複記，
+    /// 否則按十次按鈕會把一輪畫成十點的假走勢。點數達上限丟最舊的。
+    /// </para>
+    /// </summary>
+    private void RecordHistory(IReadOnlyList<HardwareFact> facts)
+    {
+        var round = new Dictionary<string, double>(facts.Count, StringComparer.Ordinal);
+        foreach (var f in facts)
+        {
+            if (f.Availability != FactAvailability.Present) continue;
+            double? v = f.NumericValue;
+            if (v is null && !string.IsNullOrWhiteSpace(f.Value)
+                && double.TryParse(f.Value.Trim(), System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out double parsed))
+                v = parsed;
+            if (v is null || double.IsNaN(v.Value) || double.IsInfinity(v.Value)) continue;
+            round[f.Key] = v.Value;   // 同鍵多筆取最後（與 Load 的 byKey 同一口徑）
+        }
+
+        if (_lastRound is not null && round.Count == _lastRound.Count)
+        {
+            bool same = true;
+            foreach (var (k, v) in round)
+            {
+                if (!_lastRound.TryGetValue(k, out double p) || p != v) { same = false; break; }
+            }
+            if (same) return;   // 同一輪，不重複記點
+        }
+        _lastRound = round;
+
+        foreach (var (key, v) in round)
+        {
+            if (!_history.TryGetValue(key, out var list))
+                _history[key] = list = new List<double>(SparkCapacity);
+            list.Add(v);
+            if (list.Count > SparkCapacity) list.RemoveRange(0, list.Count - SparkCapacity);
+        }
     }
 
     /// <summary>三態的中文說法。刻意與畫面上其他地方一致，不在這裡另立一套詞。</summary>

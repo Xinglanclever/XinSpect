@@ -98,6 +98,13 @@ public sealed class HardwareEvidenceViewModel : ObservableObject
     {
         var reports = SpdConsistencyAuditService.Audit(_vm.DirectSpdReads, _vm.CpuzSpdModules,
             _vm.Smbios.MemoryDevices, _vm.Timings);
+        // U10-OS-0030（第 271 輪）：Win32_PhysicalMemory 作 SPD 審計的第四源——
+        // 與上面同一組輸入正規化（FromNative／FromSmbios），矛盾只數「兩面都在且不同」。
+        var wmiCross = MemWmiCrossFactsService.Collect(DateTimeOffset.UtcNow,
+            _vm.DirectSpdReads.Select(r => SpdConsistencyAuditService.FromNative(r)).ToList(),
+            _vm.Smbios.MemoryDevices.Select(d => SpdConsistencyAuditService.FromSmbios(d)).ToList());
+        Rows.Add(new EvidenceAuditRow(wmiCross.Name, "WMI 第四源", wmiCross.Value,
+            wmiCross.UnavailableReason ?? "", wmiCross.Source, Severity.Neutral));
         foreach (var slot in reports)
             foreach (var f in slot.Findings)
                 Rows.Add(new EvidenceAuditRow(FieldName(f.Field), slot.Slot, f.Summary,

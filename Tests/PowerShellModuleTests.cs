@@ -37,6 +37,40 @@ public class PowerShellModuleTests
     {
         var bytes = File.ReadAllBytes(ModulePath());
         Assert.True(bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF,
-            "XinSpect.psm1 缺 UTF-8 BOM——PowerShell 5.1 會把無 BOM 的 UTF-8 當 ANSI 讀，中文註解全炸");
+            "XinSpect.psm1 缺 UTF-8 BOM——PowerShell 5.1 對無 BOM 的 UTF-8 會當 ANSI 讀，中文全炸");
+    }
+
+    // ── 逐域 cmdlet（U10-PF-0017／ps.modules.gap）────────────────────────
+
+    [Fact]
+    public void 逐域cmdlet_全數定義且匯出_每個都包CLI_headless呼叫()
+    {
+        string text = ModuleText();
+        string[] cmdlets =
+        [
+            "Get-XinSpectCpu", "Get-XinSpectMemory", "Get-XinSpectMotherboard",
+            "Get-XinSpectFirmware", "Get-XinSpectStorage", "Get-XinSpectGpu",
+            "Get-XinSpectNetwork", "Get-XinSpectPower", "Get-XinSpectOs",
+            "Get-XinSpectSecurity", "Get-XinSpectTests",
+        ];
+        foreach (string cmdlet in cmdlets)
+        {
+            Assert.Contains($"function {cmdlet}", text, StringComparison.Ordinal);
+            Assert.Contains($"'{cmdlet}'", text, StringComparison.Ordinal);   // 有進 Export-ModuleMember
+        }
+        // 逐域 cmdlet 的實作路徑只有一條：Get-XinSpectEvidence → XinSpect.exe --json evidence。
+        Assert.Contains("InvokeDomain", text, StringComparison.Ordinal);
+        int coreUses = System.Text.RegularExpressions.Regex.Matches(text, @"& \$ExePath @cliArgs").Count;
+        Assert.Equal(1, coreUses);   // 唯一一次直接呼叫 CLI 在 Get-XinSpectEvidence 裡——域 cmdlet 不準繞過包裝
+    }
+
+    [Fact]
+    public void 逐域前綴_只列程式碼裡真有鍵的前綴()
+    {
+        // 查無鍵的前綴不得寫進說明——把不存在的東西說成會輸出，就是誤導。
+        string text = ModuleText();
+        foreach (string dead in new[] { "'wifi.'", "'typec.'", "'nfc.'", "'thermal.'" })
+            Assert.DoesNotContain(dead, text, StringComparison.Ordinal);
+        Assert.Contains("ps.modules.gap", text, StringComparison.Ordinal);   // 追蹤鍵留在原始碼裡供掃描
     }
 }

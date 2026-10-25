@@ -141,7 +141,8 @@ public class FactKeyCatalogTests
         // 有幾個 EPC 區由 CPUID leaf 0x12 列舉決定；彙總值寫在 mem.encryption.sgx。
         // 37 → 41（2026-10-25 第 270 輪）：mem.mmio.hole.／sb.type45.item.／tpm.ev.type.／pdev.fw.inv.——
         // 成員＝映射洞序號／Type 45 組件序號／log 實際出現的事件類型／碟序，都是機器事實。
-        const int FamilyCap = 41;
+        // 41 → 42（2026-10-25 第 271 輪）：os.wmi.fields.（WMI 未用欄位盤點逐類，成員固定、彙總在靜態目錄）。
+        const int FamilyCap = 42;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 

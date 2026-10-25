@@ -136,6 +136,8 @@ public static class FactKeyDynamicCatalog
                 "TCG log 逐事件類型一筆（tpm.ev.type.{十進位碼}）——log 裡實際出現哪些類型是這次開機的事實；沿用『不命名 EV_*』紀律（本專案無對照表出處）",
             ["pdev.fw.inv."] =
                 "周邊韌體盤點逐碟一筆（pdev.fw.inv.{i}）——有幾顆碟由 Win32_DiskDrive 列舉決定；不自述韌體版本的也在清單裡",
+            ["os.wmi.fields."] =
+                "WMI 未用欄位盤點逐類一筆（os.wmi.fields.{類別名}）——成員＝已納入盤點的 WMI 類別（processor/diskdrive/videocontroller），成員固定但走家族與逐類明細並列（彙總鍵 os.wmi.fields 在靜態目錄）",
         };
 
     /// <summary>執行期鍵是否命中某個已登記的動態家族。</summary>

@@ -469,6 +469,14 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(SecurityAuditFactsService.CollectUsbstor(at))
             .Concat(NicHealthFactsService.Collect(at))
             .Concat(NicHealthFactsService.CollectMacVendors(at))
+            // U10-OS-0040（第 271 輪）：Win32_NetworkAdapterConfiguration 上既有服務沒拿的欄位
+            //（MAC/IP/閘道/DNS 查重不取，守門釘住查詢字面）。
+            .Concat(NetWmiGapFactsService.Collect(at))
+            // U10-SE-0061（第 271 輪）：登入×裝置插入時間窗交集——只出次數與存在性，
+            // 不輸出帳號名/SID/時間點原值（敏感度界線寫在服務與測試）。
+            .Concat([LogonHardwareCorrelationFactsService.Collect(at)])
+            // U10-OS-0025/0033/0038 合併（第 271 輪）：已查詢 WMI 類別的未用欄位盤點（純 Derived）。
+            .Concat(WmiFieldInventoryService.Collect(at))
             .Concat(SmartFailingNowFactsService.Collect(at))
             .Concat(ChassisFactsService.Collect(at))
             .Concat(HpaFactsService.Collect(at))
@@ -2038,6 +2046,12 @@ public sealed class EvidenceLabService : ObservableObject
             var ouiLookups = KnowledgeLookupCollector.CollectOui(baseFacts);
             baseFacts.Add(KnowledgeLookupReport.ToPciFact(DateTimeOffset.UtcNow, pciLookups));
             baseFacts.Add(KnowledgeLookupReport.ToOuiFact(DateTimeOffset.UtcNow, ouiLookups));
+            // SMART 廠商屬性對照（第 271 輪接線）：知識表查詢統計的通路與 PCI/OUI 同形。
+            // **本輪以空列集申報「未被查詢」**——StorageSmartService.Rows 是 UI 實例狀態、
+            // 且同步直讀有卡死史（斷路器在 UI 層），真正的逐列統計等顯示層接線完成後接入；
+            // 先讓鍵存在且如實說「未被查詢」，不造假查詢次數。
+            baseFacts.Add(KnowledgeLookupCollector.ToSmartFact(DateTimeOffset.UtcNow,
+                KnowledgeLookupCollector.CollectSmart([])));
 
             // 知識包宣告（P1-033–P1-038）：與既有 LoadKnowledgePack 同一次載入的結果。
             baseFacts.AddRange(KnowledgePackReportCollector.Collect(

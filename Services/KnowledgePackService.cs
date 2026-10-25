@@ -13,11 +13,17 @@ public sealed record KnowledgeTable(
     [property: JsonPropertyName("entries")] IReadOnlyDictionary<string, string> Entries);
 
 /// <summary>知識包＝版號＋快照＋表集合；serialNumber 由內容雜湊推導（同一組輸入得同一份文件）。</summary>
+/// <remarks>
+/// <paramref name="PreviousSerial"/> 是版本演進指標（<c>kp.evolution.proc</c>）：新版包覆蓋舊版時
+/// 帶上前版的 serialNumber，讓「第 N 版是從哪一份演進來的」機器可查。舊格式包沒有這個欄位＝null，
+/// 序列號計算與既有形狀完全一致（向後相容）。
+/// </remarks>
 public sealed record KnowledgePack(
     [property: JsonPropertyName("packVersion")] int PackVersion,
     [property: JsonPropertyName("generatedAt")] string GeneratedAt,
     [property: JsonPropertyName("tables")] IReadOnlyList<KnowledgeTable> Tables,
-    [property: JsonPropertyName("serialNumber")] string SerialNumber);
+    [property: JsonPropertyName("serialNumber")] string SerialNumber,
+    [property: JsonPropertyName("previousSerial")] string? PreviousSerial = null);
 
 /// <summary>載入結果：包本体、完整性宣告、拒收原因。</summary>
 public sealed record KnowledgePackLoad(KnowledgePack? Pack, string? Reason, string? DeclaredSerial);
@@ -33,6 +39,10 @@ public sealed record KnowledgePackLoad(KnowledgePack? Pack, string? Reason, stri
 /// </summary>
 public static class KnowledgePackService
 {
+    /// <summary>U10-EN-0012 追蹤鍵：知識包版本演進與撤回流程（成文與守門見
+    /// docs/ULTIMATE-10000/KNOWLEDGE-PACK-PROCEDURE-2026-10-25.md 與 KnowledgePackEvolutionTests）。</summary>
+    public const string EvolutionProcKey = "kp.evolution.proc";
+
     public const string Category = "知識與更新";
     public const string StatusKey = "knowledge.pack.status";
     public const string TablesKey = "knowledge.pack.tables";
@@ -48,21 +58,25 @@ public static class KnowledgePackService
     private const string Source = "內建表／knowledge-pack.json（離線）";
 
     /// <summary>產生 canonical 序列號：不含 serialNumber 欄位的 JSON 以 UTF-8 SHA-256。</summary>
-    public static string ComputeSerial(int packVersion, string generatedAt, IReadOnlyList<KnowledgeTable> tables)
+    /// <remarks>
+    /// <paramref name="previousSerial"/> 非空時納入雜湊（演進指標被篡改＝整包拒收）；
+    /// 為空時<b>不</b>出現在 payload 裡——既有包的序列號一個位元都不變（向後相容）。
+    /// </remarks>
+    public static string ComputeSerial(int packVersion, string generatedAt, IReadOnlyList<KnowledgeTable> tables,
+        string? previousSerial = null)
     {
-        var payload = new
-        {
-            packVersion,
-            generatedAt,
-            tables = tables.OrderBy(t => t.Table, StringComparer.Ordinal)
-                .Select(t => new
-                {
-                    table = t.Table,
-                    snapshotDate = t.SnapshotDate,
-                    entries = new Dictionary<string, string>(
-                        t.Entries.OrderBy(e => e.Key, StringComparer.Ordinal), StringComparer.Ordinal),
-                }),
-        };
+        var orderedTables = tables.OrderBy(t => t.Table, StringComparer.Ordinal)
+            .Select(t => new
+            {
+                table = t.Table,
+                snapshotDate = t.SnapshotDate,
+                entries = new Dictionary<string, string>(
+                    t.Entries.OrderBy(e => e.Key, StringComparer.Ordinal), StringComparer.Ordinal),
+            })
+            .ToArray();
+        object payload = previousSerial is null
+            ? new { packVersion, generatedAt, tables = orderedTables }
+            : new { packVersion, generatedAt, previousSerial, tables = orderedTables };
         byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(payload, new JsonSerializerOptions
         {
             PropertyNamingPolicy = null,
@@ -71,9 +85,19 @@ public static class KnowledgePackService
         return "sha256:" + Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
     }
 
-    /// <summary>建一份包（含序列號）。</summary>
-    public static KnowledgePack Build(int packVersion, string generatedAt, IReadOnlyList<KnowledgeTable> tables) =>
-        new(packVersion, generatedAt, tables, ComputeSerial(packVersion, generatedAt, tables));
+    /// <summary>建一份包（含序列號）；<paramref name="previousSerial"/> 是前版序列號（版本演進，可空）。</summary>
+    public static KnowledgePack Build(int packVersion, string generatedAt, IReadOnlyList<KnowledgeTable> tables,
+        string? previousSerial = null) =>
+        new(packVersion, generatedAt, tables, ComputeSerial(packVersion, generatedAt, tables, previousSerial),
+            previousSerial);
+
+    /// <summary>
+    /// 版本演進（<c>kp.evolution.proc</c>）：以新內容建新版包，並<b>帶上前版的 serialNumber</b>——
+    /// 新版覆蓋舊版時，舊版去了哪裡、新版從誰演進而來，機器查得到、驗得過（前版指標納入序列號雜湊）。
+    /// </summary>
+    public static KnowledgePack Evolve(KnowledgePack prior, int newPackVersion, string generatedAt,
+        IReadOnlyList<KnowledgeTable> tables) =>
+        Build(newPackVersion, generatedAt, tables, prior.SerialNumber);
 
     /// <summary>讀外掛包；缺檔回 (null, 沒有包), 格式／日期／序列號不合格回拒收原因。</summary>
     public static KnowledgePackLoad Load(string path)
@@ -92,7 +116,7 @@ public static class KnowledgePackService
                 if (string.IsNullOrWhiteSpace(t.SnapshotDate))
                     return new KnowledgePackLoad(null,
                         $"表「{t.Table}」缺少 snapshotDate——沒有快照日期的知識表不能載入（讀者無從判斷它多舊）", declared);
-            string expected = ComputeSerial(pack.PackVersion, pack.GeneratedAt, pack.Tables);
+            string expected = ComputeSerial(pack.PackVersion, pack.GeneratedAt, pack.Tables, pack.PreviousSerial);
             if (!string.Equals(expected, declared, StringComparison.OrdinalIgnoreCase))
                 return new KnowledgePackLoad(null,
                     $"serialNumber 不符（宣告 {declared}／重算 {expected}）——檔案可能被改動或截斷，整包拒收", declared);
@@ -155,6 +179,41 @@ public static class KnowledgePackService
         catch (Exception ex)
         {
             reason = "審計寫入失敗：" + ex.Message;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 撤回聲明（<c>kp.evolution.proc</c>）：知識包撤回進審計鏈。
+    ///
+    /// <para>
+    /// <b>撤回聲明的機器形狀</b>＝一筆 <see cref="AuditEntry"/>：<c>Action</c> 為
+    /// <c>knowledge-pack-withdraw</c>、<c>Scope</c> 為被撤回包的完整 serialNumber、
+    /// <c>ResultSummary</c> 為撤回理由（人讀欄目比照 work/WITHDRAWN-P2-052-FIT.md 的
+    /// 徵狀／處置／理由）。<b>撤回後載入行為</b>：包檔移除之後，<see cref="Load"/>
+    /// 如實回「沒有外掛知識包——內建表繼續服役」，不假裝還有舊版可用。
+    /// </para>
+    /// </summary>
+    public static bool RecordWithdrawal(string serialNumber, string reason, string auditPath, out string withdrawal)
+    {
+        if (string.IsNullOrWhiteSpace(serialNumber) || string.IsNullOrWhiteSpace(reason))
+        {
+            withdrawal = "撤回聲明缺 serialNumber 或理由——兩者缺一不成聲明，不記錄";
+            return false;
+        }
+        try
+        {
+            var entries = AuditLogService.Load(auditPath);
+            entries.Add(AuditLogService.Append(entries, AuditLogService.CurrentOperator(), "",
+                "knowledge-pack-withdraw", serialNumber, reason, "", DateTimeOffset.UtcNow));
+            AuditLogService.Save(auditPath, entries);
+            withdrawal = "撤回聲明已記進審計鏈（append-only；--verify-audit 可驗）。撤回後移除包檔，"
+                       + "載入層即如實回「沒有外掛知識包——內建表繼續服役」。";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            withdrawal = "審計寫入失敗：" + ex.Message;
             return false;
         }
     }

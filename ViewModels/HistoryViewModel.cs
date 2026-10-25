@@ -339,7 +339,9 @@ public sealed class HistoryViewModel : ObservableObject
             }
 
             // UTF-8 BOM：Excel 才能正確辨識中文表頭
-            File.WriteAllText(path, sb.ToString(), new UTF8Encoding(true));
+            // 檔尾內嵌雜湊鏈（exp.hash.chain）：簽章行不含逗號，會成為尾端一列單欄——肉眼可見、可手驗。
+            File.WriteAllText(path, ReportExportChainService.SignAndRecord(path, sb.ToString()),
+                new UTF8Encoding(true));
             StatusText = $"已匯出 {Series.Count} 列：{path}";
             try { System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{path}\""); } catch { }
         }

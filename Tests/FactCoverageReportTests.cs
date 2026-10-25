@@ -195,9 +195,14 @@ public class FactCoverageReportTests
         // `pdev.fw.inventory`＝全裝置韌體版本盤點、`sec.vbs.state`／`sec.vbs.required`＝VBS 狀態與
         // 原因面）。同為單一來源陳述（彙整鍵的數字對回盤點本身），照規矩留未覆蓋，上限跟著移到 353
         //（+8 中 1 把落在既有家族豁免內，實測 346+7）。
+        // 2026-10-25 第 271 輪：+11 條（`mem.wmi.cross`＝SPD 審計 WMI 第四源、`net.wmi.gap`＋
+        // 四個固定子鍵＝Configuration 面未取欄位、`sec.logon.hw.correlate`＝登入×裝置交集
+        // （只出次數，帳號面遮蔽）、`os.wmi.fields`＋逐類家族＝WMI 未用欄位盤點、
+        // `ata.smart.attr.lookup`＝SMART 知識表查詢統計（本輪如實申報「未被查詢」））。
+        // 同為單一來源／治理成文陳述，照規矩留未覆蓋，上限跟著移到 365（+11 中 1 把被既有規則覆蓋，實測 353+12）。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 353,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 353）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 365,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 364）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }

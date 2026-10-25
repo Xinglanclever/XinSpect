@@ -15,6 +15,11 @@ namespace XinSpect;
 /// </summary>
 public static class CliService
 {
+    /// <summary>U10-PF-0017 追蹤鍵：PowerShell 模組逐域 cmdlet 的缺口申報——
+    /// XinSpect.psm1 的 11 個逐域 cmdlet 都包裝本類的 headless 呼叫；追蹤鍵留在此處
+    /// 讓鍵目錄掃描器看得到（模組本身的守門在 Tests/PowerShellModuleTests）。</summary>
+    public const string PsModulesGapKey = "ps.modules.gap";
+
     public const string JsonArg = "--json";
     public const string EvidenceScope = "evidence";
     public const string QueryArg = "--query";

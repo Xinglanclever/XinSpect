@@ -133,9 +133,10 @@ public sealed class StorageSmartService : ObservableObject
     {
         try
         {
-            var list = await Task.Run(() =>
+            var (list, models) = await Task.Run(() =>
             {
                 var result = new List<SmartDriveRow>();
+                var driveModels = new Dictionary<int, string>();
                 using var searcher = new System.Management.ManagementObjectSearcher(
                     "SELECT Index, Model, Size FROM Win32_DiskDrive");
                 foreach (var d in searcher.Get())
@@ -144,9 +145,11 @@ public sealed class StorageSmartService : ObservableObject
                     var model = d["Model"]?.ToString() ?? "—";
                     var size = d["Size"] is null ? 0 : Convert.ToInt64(d["Size"]);
                     result.Add(new SmartDriveRow(idx, $"磁碟 {idx}：{model}（{size / 1024.0 / 1024 / 1024:0.#} GB）"));
+                    driveModels[idx] = model;
                 }
-                return result.OrderBy(r => r.Index).ToList();
+                return (result.OrderBy(r => r.Index).ToList(), (IReadOnlyDictionary<int, string>)driveModels);
             });
+            _driveModels = models;
             Drives.Clear();
             foreach (var r in list) Drives.Add(r);
         }
@@ -155,6 +158,9 @@ public sealed class StorageSmartService : ObservableObject
             Status = "無法列舉實體磁碟：" + ex.Message;
         }
     }
+
+    /// <summary>磁碟編號→型號（Win32_DiskDrive.Model，列舉時一併記下；只讀快照，列舉後整體換替）。</summary>
+    private IReadOnlyDictionary<int, string> _driveModels = new Dictionary<int, string>();
 
     /// <summary>查詢未回應（逾時未完成）的磁碟：本次執行不再嘗試，避免每次都留下一個卡死的執行緒。</summary>
     private readonly HashSet<int> _noResponse = new();
@@ -217,7 +223,8 @@ public sealed class StorageSmartService : ObservableObject
                            .ToList())
                         : throw new InvalidOperationException("NVMe 裝置的健康紀錄讀取失敗（儲存堆疊未回應協定查詢）。"),
                     StorageBusChannel.Ata => TryReadAtaSmartClassic(index) is { } ata
-                        ? ("ATA S.M.A.R.T. 屬性（SMART_RCV_DRIVE_DATA，原始欄位照列；匯流排 " + busName + "）", DecodeAtaAttributes(ata)
+                        ? ("ATA S.M.A.R.T. 屬性（SMART_RCV_DRIVE_DATA，原始欄位照列；匯流排 " + busName + "）",
+                           DecodeAtaAttributes(ata, _driveModels.TryGetValue(index, out var driveModel) ? driveModel : null)
                            .Concat(new[] { new SmartRow("── 硬體識別 ──", "", "", "") })
                            .Concat(TryReadAtaIdentify(index) is { } ati ? DecodeAtaIdentify(ati) : new[] { new SmartRow("ATA IDENTIFY DEVICE", "不支援（驅動拒絕命令）", "", "") })
                            .ToList())
@@ -646,7 +653,11 @@ public sealed class StorageSmartService : ObservableObject
     }
 
     /// <summary>SATA SMART READ DATA（512B）→ 30 筆屬性：ID、現值、最差、原始六位元組（十六進位原樣＋小端整數）。</summary>
-    public static List<SmartRow> DecodeAtaAttributes(byte[] sector)
+    /// <remarks>
+    /// <paramref name="driveModel"/> 是 Win32_DiskDrive 的 Model（呼叫端從列舉快照帶入）；
+    /// 只影響「廠商自訂」那條路徑——既有對照表認得的 ID，名稱與 raw 欄位逐字不變。
+    /// </remarks>
+    public static List<SmartRow> DecodeAtaAttributes(byte[] sector, string? driveModel = null)
     {
         if (sector.Length < 512) throw new InvalidOperationException("SMART 屬性表長度不足 512 位元組。");
         var rows = new List<SmartRow>();
@@ -662,11 +673,19 @@ public sealed class StorageSmartService : ObservableObject
             ulong le = 0;
             for (int k = 5; k >= 0; k--) le = (le << 8) | raw[k];
             string hex = Convert.ToHexString(raw);
+            string attrName = AttributeName(id, driveModel);
+            string rawText = $"{hex}（LE: {le:N0}）";
+            // 知識表補強路徑（只有既有表回「廠商自訂」、而型號認得出廠商且知識表收錄時才走到）：
+            // raw 六位元組若有語意就按語意附註；原樣十六進位照列，不受附註影響。
+            if (attrName != AttributeName(id)
+                && TryVendorFromModel(driveModel, out SmartVendor vendor)
+                && SmartAttributeKnowledge.Lookup(vendor, id) is { } info)
+                rawText += $"；raw：{info.RawSemantics}";
             rows.Add(new SmartRow(
-                $"{id} {AttributeName(id)}",
+                $"{id} {attrName}",
                 value.ToString(),
                 worst.ToString(),
-                $"{hex}（LE: {le:N0}）",
+                rawText,
                 id, le));           // 編號與數值一併帶出,供驗機規則對帳
         }
         return rows;
@@ -785,6 +804,40 @@ public sealed class StorageSmartService : ObservableObject
         241 => "累計寫入 LBA", 242 => "累計讀取 LBA",
         _ => "廠商自訂",
     };
+
+    /// <summary>
+    /// 帶裝置型號的屬性名（第 270 輪 SMART 知識包的顯示接線）。
+    /// 既有對照表先查——認得的 ID <b>行為逐字不變</b>；只有既有表回「廠商自訂」時，
+    /// 才以型號映射廠商、問 <see cref="SmartAttributeKnowledge"/> 補名稱；
+    /// 廠商或 ID 未收錄就維持「廠商自訂」原樣——未知就是未知，不猜。
+    /// </summary>
+    public static string AttributeName(byte id, string? driveModel)
+    {
+        string known = AttributeName(id);
+        if (known != "廠商自訂") return known;
+        if (TryVendorFromModel(driveModel, out SmartVendor vendor)
+            && SmartAttributeKnowledge.Lookup(vendor, id) is { } info)
+            return $"廠商自訂（{info.Name}）";
+        return known;
+    }
+
+    /// <summary>裝置型號 → SMART 知識表的六家廠商。認不得的回 false（未知廠商不是錯誤）。</summary>
+    public static bool TryVendorFromModel(string? model, out SmartVendor vendor)
+    {
+        string m = (model ?? "").Trim();
+        if (m.Length == 0) { vendor = default; return false; }
+        if (m.Contains("Samsung", StringComparison.OrdinalIgnoreCase)) { vendor = SmartVendor.Samsung; return true; }
+        if (m.Contains("Seagate", StringComparison.OrdinalIgnoreCase)) { vendor = SmartVendor.Seagate; return true; }
+        if (m.Contains("SanDisk", StringComparison.OrdinalIgnoreCase)) { vendor = SmartVendor.SanDisk; return true; }
+        if (m.Contains("Kingston", StringComparison.OrdinalIgnoreCase)) { vendor = SmartVendor.Kingston; return true; }
+        if (m.Contains("Crucial", StringComparison.OrdinalIgnoreCase)
+            || m.Contains("Micron", StringComparison.OrdinalIgnoreCase)) { vendor = SmartVendor.Micron; return true; }
+        if (m.Contains("Western Digital", StringComparison.OrdinalIgnoreCase)
+            || m.Contains("WDC", StringComparison.OrdinalIgnoreCase)
+            || m.StartsWith("WD", StringComparison.OrdinalIgnoreCase)) { vendor = SmartVendor.WesternDigital; return true; }
+        vendor = default;
+        return false;
+    }
 
     // ── 硬體識別：NVMe Identify Controller + SATA IDENTIFY DEVICE ─────────
 

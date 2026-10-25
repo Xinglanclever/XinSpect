@@ -81,6 +81,21 @@
                                   SelectedItem="{Binding FactAtlas.DomainFilter, Mode=TwoWay}"/>
                     </Grid>
                     <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Text="{Binding FactAtlas.FilterNote}"/>
+                    <Grid Margin="0,8,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="230"/><ColumnDefinition Width="104"/>
+                            <ColumnDefinition Width="*"/><ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource ColHead}" Text="鍵"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="狀態"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="值"/>
+                        <StackPanel Grid.Column="3" Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource ColHead}" Text="走勢"/>
+                            <local:HelpDot HelpKey="atlas/走勢欄" Margin="4,0,0,0"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="來源"/>
+                    </Grid>
                     <ListBox ItemsSource="{Binding FactAtlas.Keys}" MaxHeight="520" Margin="0,6,0,0"
                              Background="Transparent" BorderThickness="0"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -92,7 +107,8 @@
                                 <Grid Margin="0,3,0,3">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="230"/><ColumnDefinition Width="104"/>
-                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="150"/>
+                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="150"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="{Binding Key}" Style="{StaticResource FieldValue}"
                                                FontFamily="Consolas" TextTrimming="CharacterEllipsis"
@@ -100,7 +116,9 @@
                                     <TextBlock Grid.Column="1" Text="{Binding StateText}" Style="{StaticResource FieldLabel}"/>
                                     <TextBlock Grid.Column="2" Text="{Binding ValueText}" Style="{StaticResource FieldValue}"
                                                TextWrapping="Wrap" MaxHeight="52" Margin="6,0,6,0"/>
-                                    <TextBlock Grid.Column="3" Text="{Binding Source}" Style="{StaticResource FieldLabel}"
+                                    <local:Sparkline Grid.Column="3" Height="18" VerticalAlignment="Center"
+                                                     Values="{Binding SparkSeries}"/>
+                                    <TextBlock Grid.Column="4" Text="{Binding Source}" Style="{StaticResource FieldLabel}"
                                                TextTrimming="CharacterEllipsis" ToolTip="{Binding Source}"/>
                                 </Grid>
                             </DataTemplate>

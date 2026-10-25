@@ -44,7 +44,10 @@ public static class ReportService
         string path = dlg.FileName;
         try
         {
-            File.WriteAllText(path, Build(vm, FormatOf(path)), new UTF8Encoding(true));
+            // 檔尾內嵌雜湊鏈（exp.hash.chain）：內容雜湊＋前份雜湊（帳本上最後一筆匯出，沒有則鏈首）。
+            // 帳本失敗會降級成鏈首簽章、不阻擋匯出本身（見 ReportExportChainService）。
+            File.WriteAllText(path, ReportExportChainService.SignAndRecord(path, Build(vm, FormatOf(path))),
+                new UTF8Encoding(true));
         }
         catch (Exception ex)
         {

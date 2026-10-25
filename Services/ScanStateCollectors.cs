@@ -59,6 +59,51 @@ public static class KnowledgeLookupCollector
         }
         return KnowledgeLookupReport.Summarize(lookups);
     }
+
+    /// <summary>知識表鍵字面（供掃描器看見；註冊由主協調者做）：SMART 廠商屬性對照。</summary>
+    public const string SmartAttrLookupKey = "ata.smart.attr.lookup";
+
+    /// <summary>
+    /// 從 SMART 屬性列回收知識表查詢的統計（第 270 輪 SMART 知識包的消費端接線）。
+    /// 只有名字含「廠商自訂」的列才走過知識表：名字是「廠商自訂（…）」＝命中；
+    /// 原樣「廠商自訂」＝未收錄（廠商未收錄與 ID 未收錄對知識表而言同為缺口）。
+    /// 既有對照表命中的 ID 不經知識表，<b>不計入</b>——這裡統計的是知識表那一條路徑，不是全部屬性。
+    /// </summary>
+    public static KnowledgeLookupReport.LookupStats CollectSmart(IEnumerable<SmartRow> rows)
+    {
+        var lookups = new List<(KnowledgeLookupReport.LookupOutcome, string)>();
+        foreach (var r in rows)
+        {
+            if (!r.Name.Contains("廠商自訂", StringComparison.Ordinal)) continue;
+            bool hit = r.Name.Contains("廠商自訂（", StringComparison.Ordinal);
+            lookups.Add((hit ? KnowledgeLookupReport.LookupOutcome.Hit
+                             : KnowledgeLookupReport.LookupOutcome.NotListed, r.Name));
+        }
+        return KnowledgeLookupReport.Summarize(lookups);
+    }
+
+    /// <summary>產生 <c>ata.smart.attr.lookup</c>。形狀比照 PCI／OUI 的覆蓋申報：命中→Present、有未收錄→Unknown（不是錯誤）、無查詢→NotApplicable。</summary>
+    public static HardwareFact ToSmartFact(DateTimeOffset at, KnowledgeLookupReport.LookupStats stats)
+    {
+        const string name = "SMART 廠商屬性對照";
+        const string source = "SMART 屬性知識表（離線，六家）";
+        if (stats.Total == 0)
+            return new HardwareFact(SmartAttrLookupKey, "知識與更新", name,
+                "本輪沒有「廠商自訂」屬性需要對照", "次", source, FactTrustLevel.Derived, false, at,
+                0, FactAvailability.NotApplicable, "沒有廠商自訂屬性，知識表未被查詢");
+
+        string detail = stats.NotListed == 0 && stats.Unparsable == 0
+            ? $"{stats.Total} 次查詢全部命中"
+            : $"{stats.Total} 次查詢：命中 {stats.Hits}、未收錄 {stats.NotListed}"
+              + (stats.MissedKeys.Count > 0
+                  ? "；未收錄：" + string.Join("、", stats.MissedKeys.Take(10))
+                  : "");
+        var availability = stats.Total == stats.Hits ? FactAvailability.Present : FactAvailability.Unknown;
+        string? reason = availability == FactAvailability.Present ? null
+            : $"{stats.NotListed} 筆未收錄——如實顯示「廠商自訂」而不猜名稱；要補的是知識表";
+        return new HardwareFact(SmartAttrLookupKey, "知識與更新", name, detail, "次", source,
+            FactTrustLevel.Derived, false, at, stats.Hits, availability, reason);
+    }
 }
 
 /// <summary>

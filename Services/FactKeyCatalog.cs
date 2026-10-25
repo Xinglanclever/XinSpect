@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 1071 個（＝本清單的成員數；另有 40 個動態家族見
+    /// <summary>本版建置時掃到的事實鍵，共 1084 個（＝本清單的成員數；另有 42 個動態家族見
     /// <see cref="FactKeyDynamicCatalog"/>，那些的成員由機器事實決定，不列在這裡）。
     /// <b>本清單一律以全字串字典序排列</b>——<c>FactKeyCatalogTests.目錄不得有重複鍵且要排序</c> 釘住這件事；
     /// 插鍵時整塊重排，不要手找位置（找前綴會把 <c>gp.*</c> 插到 <c>gpu.*</c> 後面）。
@@ -117,6 +117,7 @@ public static class FactKeyCatalog
         "asset.identify",
         "asset.identify.evidence",
         "asset.uuid",
+        "ata.smart.attr.lookup",
         "au.apo.summary",
         "au.drift",
         "au.privacy.summary",
@@ -347,6 +348,7 @@ public static class FactKeyCatalog
         "ev.watermark",
         "ev.xinsig",
         "evt.system.7d",
+        "exp.hash.chain",
         "export.mask",
         "export.provenance",
         "export.release",
@@ -509,6 +511,7 @@ public static class FactKeyCatalog
         "knowledge.pack.status",
         "knowledge.pack.tables",
         "kp.digest",
+        "kp.evolution.proc",
         "kp.miss",
         "kp.snapshot_date",
         "kp.swap.audit",
@@ -530,6 +533,7 @@ public static class FactKeyCatalog
         "mem.mrc.summary",
         "mem.ras.summary",
         "mem.rowhammer",
+        "mem.wmi.cross",
         "mon.count",
         "mon.dp",
         "monitor.summary",
@@ -574,6 +578,11 @@ public static class FactKeyCatalog
         "net.listen.unverified",
         "net.offload",
         "net.oui",
+        "net.wmi.gap",
+        "net.wmi.gap.ipenabled",
+        "net.wmi.gap.lease",
+        "net.wmi.gap.netbios",
+        "net.wmi.gap.wins",
         "ng.checklist",
         "ng.coverage.covered",
         "ng.coverage.exempt",
@@ -623,6 +632,7 @@ public static class FactKeyCatalog
         "off.mount.kind",
         "oob.ipmi",
         "os.memdiag.results.cross",
+        "os.wmi.fields",
         "pci.bus0.inventory",
         "pci.dev.00.0",
         "pci.dev.1f.5",
@@ -672,6 +682,7 @@ public static class FactKeyCatalog
         "po.timerres",
         "po.trans",
         "po.ws",
+        "ps.modules.gap",
         "psu.model",
         "psu.pmbus.pout",
         "psu.pmbus.temp1",
@@ -863,6 +874,7 @@ public static class FactKeyCatalog
         "se.surface",
         "se.winre.summary",
         "se.wpbt",
+        "sec.logon.hw.correlate",
         "sec.vbs.required",
         "sec.vbs.state",
         "secure.dbx",
@@ -1026,6 +1038,7 @@ public static class FactKeyCatalog
         "uf.source",
         "uf.timeline",
         "ufv.bios.count",
+        "ui.factatlas.spark",
         "ups.battery.percent",
         "ups.runtime_minutes",
         "ups.status",
@@ -1107,7 +1120,7 @@ public static class FactKeyCatalog
         "zr.passkey",
         "zr.report",
         "zr.wipe",
-    ];
+];
 
     /// <summary>鍵的數量（供申報與測試比對）。</summary>
     public static int Count => Keys.Count;
