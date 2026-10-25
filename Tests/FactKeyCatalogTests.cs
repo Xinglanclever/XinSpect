@@ -133,7 +133,11 @@ public class FactKeyCatalogTests
         // db／dbx 的 GUID 也錯，這一批從來沒有鍵可對帳；修好之後真機讀到 9 個條目，
         // 執行期對帳就照出了 uefi.boot.0…9 這批無主鍵（見 GATE-LOG-261 第六節）。
         // 同批的彙總鍵 uefi.boot_entries.count 成員固定，走靜態目錄。
-        const int FamilyCap = 28;
+        // 28 → 34（2026-10-25）：U10 檢測域（U10-TS）第一批唯讀檢測六個家族
+        //（ts.disp.refresh.verify.／ts.disp.modes.cycle.／ts.aud.formats.／ts.aud.jackdetect.／
+        // ts.aud.endpoint.state.／ts.pen.pressure.）——成員＝端點／顯示裝置／筆裝置索引，
+        // 有幾個是機器環境的事實（與 audio.endpoint.／mon. 同形）；各基底鍵成員固定、仍在靜態目錄。
+        const int FamilyCap = 34;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 

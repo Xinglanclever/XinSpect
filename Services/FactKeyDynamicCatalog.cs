@@ -96,6 +96,22 @@ public static class FactKeyDynamicCatalog
             ["tpm.replay.pcr."] =
                 "TPM 開機鏈重放逐 PCR 一筆（PCR 索引），本機只算 SHA-256——" +
                 "該跑哪些 PCR、機器上實作了哪幾條，由 TCG log 與 TPM 自己決定；tpm.replay.summary 彙總鍵仍在靜態目錄。",
+            // ── U10 檢測域（U10-TS）第一批唯讀檢測（2026-10-25）────────────────
+            // **為什麼是家族**：成員＝端點／裝置索引，有幾個端點、幾台螢幕、幾支筆是機器環境的事實，
+            // 編譯期列不完（與 audio.endpoint.／mon. 同形）。各服務的 *Prefix 常數是字面來源，
+            // 基底鍵（如 ts.aud.formats）成員固定、仍在靜態目錄——「列不出成員」與「基底」是兩件事。
+            ["ts.disp.refresh.verify."] =
+                "刷新率核對逐顯示裝置一筆（ts.disp.refresh.verify.{i}）——接了幾台螢幕由 EnumDisplaySettingsEx 列舉決定；單一裝置時直接用基底鍵",
+            ["ts.disp.modes.cycle."] =
+                "顯示模式清單逐裝置一筆（ts.disp.modes.cycle.{i}）——模式集合與裝置數由顯示驅動回報，編譯期列不完",
+            ["ts.aud.formats."] =
+                "音訊格式支援枚舉逐端點一筆（ts.aud.formats.{i}）——端點數由 MMDevice 列舉決定（與 audio.endpoint. 同一個分母來源）",
+            ["ts.aud.jackdetect."] =
+                "音訊插孔描述逐端點一筆（ts.aud.jackdetect.{i}）——端點數由 MMDevice 列舉決定，哪些端點提供 KS 插孔屬性由驅動決定",
+            ["ts.aud.endpoint.state."] =
+                "端點音量/靜音核對逐端點一筆（ts.aud.endpoint.state.{i}）——端點數由 MMDevice 列舉決定",
+            ["ts.pen.pressure."] =
+                "觸控筆壓力能力逐筆裝置一筆（ts.pen.pressure.{i}）——有幾支筆由 GetPointerDevices 列舉決定，沒有筆的機器一個都不產",
         };
 
     /// <summary>執行期鍵是否命中某個已登記的動態家族。</summary>

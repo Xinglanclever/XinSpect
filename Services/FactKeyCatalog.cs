@@ -25,7 +25,7 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 1044 個（＝本清單的成員數；另有 27 個動態家族見
+    /// <summary>本版建置時掃到的事實鍵，共 1056 個（＝本清單的成員數；另有 34 個動態家族見
     /// <see cref="FactKeyDynamicCatalog"/>，那些的成員由機器事實決定，不列在這裡）。
     /// <b>本清單一律以全字串字典序排列</b>——<c>FactKeyCatalogTests.目錄不得有重複鍵且要排序</c> 釘住這件事；
     /// 插鍵時整塊重排，不要手找位置（找前綴會把 <c>gp.*</c> 插到 <c>gpu.*</c> 後面）。
@@ -618,6 +618,7 @@ public static class FactKeyCatalog
         "of.writeblock",
         "off.mount.kind",
         "oob.ipmi",
+        "os.memdiag.results.cross",
         "pci.bus0.inventory",
         "pci.dev.00.0",
         "pci.dev.1f.5",
@@ -953,6 +954,17 @@ public static class FactKeyCatalog
         "tpm.replay.summary",
         "tpm.tcg_log",
         "tpm.version",
+        "ts.aud.endpoint.state",
+        "ts.aud.formats",
+        "ts.aud.jackdetect",
+        "ts.clock.session.drift",
+        "ts.disp.modes.cycle",
+        "ts.disp.refresh.verify",
+        "ts.kbd.repeat",
+        "ts.pen.pressure",
+        "ts.reg.enum.latency",
+        "ts.svc.depend.depth",
+        "ts.touch.maxpoints",
         "tu.battery",
         "tu.jitter",
         "tu.matrix",

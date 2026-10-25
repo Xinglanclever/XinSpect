@@ -179,9 +179,15 @@ public class FactCoverageReportTests
         // 它讀的是**裝置自述的韌體槽結構**（NVMe 紀錄頁 0x03），而「可更新」這個判斷**不是讀出來的**
         // ——本專案沒有第二條路可以獨立問同一台裝置「你覺得自己能不能更新」，所以無從交叉。
         // 上限跟著移到 327；ATA 半邊如實標缺源，守門在 Tests/FirmwareUpdatableFactsTests。
+        // 2026-10-25 第九批：+12 條（U10 檢測域第一批唯讀檢測，`os.memdiag.results.cross` 與
+        // `ts.disp/touch/kbd/clock/reg/svc/aud.pen` 十一把基底鍵）。這些是**單一來源的檢測量測**：
+        // 問的是「這台機器的檢測結果」，沒有第二條獨立通路可以再問一次同一個問題
+        //（格式支援枚舉、插孔描述、時鐘漂移、登錄檔列舉延遲……各自的來源寫在服務檔頭註解）；
+        // 豁免表已在上限（KeyCatalogPolicyTests 的 600 條），照規矩留未覆蓋，上限跟著移到 339。
+        // 逐項來源與界線：Services/DeepTest/ 各服務的類別註解。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 327,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 327）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 339,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 339）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }
