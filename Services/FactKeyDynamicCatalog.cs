@@ -138,6 +138,19 @@ public static class FactKeyDynamicCatalog
                 "周邊韌體盤點逐碟一筆（pdev.fw.inv.{i}）——有幾顆碟由 Win32_DiskDrive 列舉決定；不自述韌體版本的也在清單裡",
             ["os.wmi.fields."] =
                 "WMI 未用欄位盤點逐類一筆（os.wmi.fields.{類別名}）——成員＝已納入盤點的 WMI 類別（processor/diskdrive/videocontroller），成員固定但走家族與逐類明細並列（彙總鍵 os.wmi.fields 在靜態目錄）",
+            // ── 第 272 輪（U10 第二圈：TS 自負載檢測）──────────────────────
+            // 成員＝寬度×相位／快取層級／核心×實作／核序號——皆由機器枚舉或檢測矩陣決定；
+            // 量測觸發與界線（使用者觸發才跑、啟發式門檻不判決）寫在各服務檔。
+            ["ts.vector.flops."] =
+                "向量寬度吞吐逐寬度逐相位一筆（ts.vector.flops.{scalar|128|256|512}.{st|mt}）——AVX-512 不支援時該寬度如實 NotSupported 不降級",
+            ["ts.cache.bw."] =
+                "快取帶寬階梯逐層級一筆（ts.cache.bw.{l1|l2|l3}）——層級由工作集掃描推估；DRAM 層由 memory.stream-bandwidth 收口不重測",
+            ["ts.copy.kernel."] =
+                "拷貝核心帶寬逐核心逐實作一筆（ts.copy.kernel.{memcpy|memset}.{crt|simd|byte}）——CRT 路徑照實量 managed 呼叫到的實作，不自判 FSRM 選路",
+            ["ts.tsc.skew.core."] =
+                "TSC 跨核偏移逐核一筆（ts.tsc.skew.core.{i}）——核集由拓撲決定；通路是既有 WinRing0 MSR 橋唯讀，不可用時整組 NotSupported",
+            ["ts.core.uniformity."] =
+                "逐核一致性逐核一筆（ts.core.uniformity.core.{i}）與 spread 總覽——核集由拓撲決定；偏差門檻是啟發式（±15%），值裡標「疑似」不判決",
         };
 
     /// <summary>執行期鍵是否命中某個已登記的動態家族。</summary>

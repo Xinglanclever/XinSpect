@@ -34,7 +34,8 @@ public class AutomationAndGuidanceFactsTests
         string json = AutomationAndGuidanceFactsService.GenerateHeadlessModesJson();
         var doc = JsonDocument.Parse(json);
 
-        Assert.Equal(8, doc.RootElement.GetArrayLength());
+        // 8 → 9（2026-10-25 第 272 輪）：--diff-report（U10-PF-0002 報告鍵級對照）進 headless 目錄。
+        Assert.Equal(9, doc.RootElement.GetArrayLength());
         Assert.Contains("--json", json, StringComparison.Ordinal);
         Assert.Contains(CliService.StdinBatchArg, json, StringComparison.Ordinal);
         Assert.Contains("零網路", json, StringComparison.Ordinal);

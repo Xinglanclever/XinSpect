@@ -200,9 +200,12 @@ public class FactCoverageReportTests
         // （只出次數，帳號面遮蔽）、`os.wmi.fields`＋逐類家族＝WMI 未用欄位盤點、
         // `ata.smart.attr.lookup`＝SMART 知識表查詢統計（本輪如實申報「未被查詢」））。
         // 同為單一來源／治理成文陳述，照規矩留未覆蓋，上限跟著移到 365（+11 中 1 把被既有規則覆蓋，實測 353+12）。
+        // 2026-10-25 第 272 輪：+4 條（`ts.tsc.skew.max`＝TSC 跨核偏移、`ui.home.healthcards`＝
+        // 首頁健康摘要卡、`rep.diff.mode`＝報告 diff、＋第二圈其餘新鍵）。自負載檢測的逐項鍵走
+        // 動態家族（ts.vector.flops. 等），彙總與對照鍵留未覆蓋，上限跟著移到 368。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 365,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 364）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 368,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 368）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }

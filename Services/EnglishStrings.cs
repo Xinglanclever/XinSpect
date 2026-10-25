@@ -1766,6 +1766,30 @@ public static class EnglishStrings
         ["授權清單檔讀不到"] = "License list file could not be read",
         ["授權清單讀到了，但抽不出元件表——檔案格式可能變了"] = "The license list was read, but no component table could be parsed — the file format may have changed",
         ["隨程式分發的第三方元件與其授權；本清單是事實摘要，不構成法律意見，授權全文以上游連結為準。"] = "Third-party components shipped with the program and their licenses; this is a factual summary, not legal advice. Full license texts live at the upstream links.",
+
+        // ── 總覽健康摘要卡（U10-UI-0048／ui.home.healthcards）：磁貼標題、欄位標籤、
+        //    ConverterParameter 模板與指路按鈕 ──
+        ["健康摘要"] = "Health Summary",
+        ["事實總數、六態分布、缺源與交叉對帳矛盾的計數（不含評分）"] = "Counts of existing facts: six-state distribution, unreadable sources, and reconciliation contradictions (no score)",
+        ["事實總數"] = "Total facts",
+        ["讀到了"] = "Read OK",
+        ["讀不到（缺源）"] = "Unreadable (missing source)",
+        ["不支援"] = "Not supported",
+        ["權限不足"] = "Insufficient privilege",
+        ["讀取失敗"] = "Read error",
+        ["本機不適用"] = "Not applicable",
+        ["有值未確認"] = "Unverified value",
+        ["確認讀到"] = "Confirmed present",
+        ["交叉對帳"] = "Cross reconciliation",
+        ["矛盾"] = "Contradictions",
+        ["尚未擷取——開機序列載入事實後，這裡會出現六態分布與對帳矛盾的計數。"] = "Not captured yet — the six-state distribution and contradiction counts appear here once the boot sequence loads facts.",
+        ["看對帳判決（韌體安全）"] = "Reconciliation verdicts (Firmware Security)",
+        ["看事實清單（證據實驗室）"] = "Fact list (Evidence Lab)",
+        ["交叉對帳的逐條判決與理由在韌體安全頁"] = "Per-rule reconciliation verdicts and reasons live on the Firmware Security page",
+        ["每一把事實鍵與它的六態在證據實驗室"] = "Every fact key with its availability state lives in the Evidence Lab",
+        ["{0} 條"] = "{0} facts",
+        ["{0} 條——缺源是環境事實，不扣分也不點燈"] = "{0} facts — a missing source is an environment fact: no penalty, no traffic light",
+        ["已對帳 {0} 條"] = "{0} rules reconciled",
     };
 
     private static Dictionary<string, string>? _reverse;

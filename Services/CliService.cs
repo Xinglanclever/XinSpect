@@ -33,6 +33,7 @@ public static class CliService
     public const string ErrorsArg = "--errors";
     public const string DeepArg = "--deep";
     public const string StdinBatchArg = "--stdin-batch";
+    public const string DiffReportArg = "--diff-report";
 
     public const int ExitOk = 0;
     public const int ExitPartial = 2;
@@ -70,6 +71,8 @@ public static class CliService
             return RunErrors(args, collect, stdout, stderr);
         if (args[0] == StdinBatchArg)
             return RunStdinBatch(collect, stdin, stdout, stderr);
+        if (args[0] == DiffReportArg)
+            return RunDiffReport(args, stdout, stderr);
         if (args[0] != JsonArg)
         {
             stderr.WriteLine($"未知引數「{args[0]}」。用 --help 看用法。");
@@ -142,6 +145,7 @@ public static class CliService
             new { mode = DiskUsageArg, scope = "", output = "JSON", description = "磁碟滿的唯讀排行；--deep 是明示深掃。" },
             new { mode = ErrorsArg, scope = "", output = "JSON", description = "聚合非 Present 三態與原因。" },
             new { mode = StdinBatchArg, scope = "", output = "JSONL", description = "stdin 每行一個 key 前綴；每行輸出一個查詢結果物件。" },
+            new { mode = DiffReportArg, scope = "", output = "JSON", description = "兩份匯出報告（HTML／MD／TXT）鍵級互比；輸出只含鍵名與計數，不含值。" },
         };
         return JsonSerializer.Serialize(payload, JsonOptions);
     }
@@ -429,6 +433,64 @@ public static class CliService
         return note is null ? ExitOk : ExitPartial;
     }
 
+    /// <summary>
+    /// 報告互比模式（U10-PF-0002，追蹤鍵 <c>rep.diff.mode</c>）：兩份匯出報告（HTML／Markdown／純文字）
+    /// 逐鍵對照新增／消失／值變化。<b>輸出只含鍵名與計數，不含任何值</b>——diff 的輸出經常被貼到
+    /// 公開場合，值進了輸出就等於把遮蔽功能整個繞過。
+    /// 退出碼：0＝鍵級全同；2＝有差異（細節在輸出）；1＝致命（引數錯、讀檔失敗、格式不認得）。
+    /// </summary>
+    private static int RunDiffReport(string[] args, TextWriter stdout, TextWriter stderr)
+    {
+        if (args.Length < 3 || args[1].StartsWith("--", StringComparison.Ordinal)
+            || args[2].StartsWith("--", StringComparison.Ordinal))
+        {
+            stderr.WriteLine($"{DiffReportArg} 之後要接兩份報告檔的路徑：{DiffReportArg} <舊報告> <新報告>。");
+            return ExitError;
+        }
+        string? outPath = OptionValue(args, OutArg);
+
+        string textBefore, textAfter;
+        try { textBefore = File.ReadAllText(args[1]); }
+        catch (Exception ex) { stderr.WriteLine($"讀取舊報告失敗：{ex.Message}"); return ExitError; }
+        try { textAfter = File.ReadAllText(args[2]); }
+        catch (Exception ex) { stderr.WriteLine($"讀取新報告失敗：{ex.Message}"); return ExitError; }
+
+        var diff = ReportDiffService.Compare(textBefore, textAfter);
+        if (diff.FormatBefore == "unknown" || diff.FormatAfter == "unknown")
+        {
+            stderr.WriteLine("檔案格式不認得（不是 HTML／Markdown／純文字報告的形狀）——不硬解析出半份假結果。");
+            return ExitError;
+        }
+
+        var payload = new
+        {
+            generatedAtUtc = DateTimeOffset.UtcNow,
+            scope = "diff-report",
+            before = new { Path = args[1], Format = diff.FormatBefore, Keys = diff.KeyCountBefore },
+            after = new { Path = args[2], Format = diff.FormatAfter, Keys = diff.KeyCountAfter },
+            diff.Added,
+            diff.Removed,
+            diff.Changed,
+            addedCount = diff.Added.Count,
+            removedCount = diff.Removed.Count,
+            changedCount = diff.Changed.Count,
+            note = "值變化只列鍵名與「有變」，新舊值一律不進輸出——報告內含序號、MAC 等識別資訊，"
+                 + "diff 的結果貼到公開場合也不會把遮蔽功能繞過。",
+        };
+        string json = JsonSerializer.Serialize(payload, JsonOptions);
+        try
+        {
+            if (outPath is not null) File.WriteAllText(outPath, json);
+            else stdout.WriteLine(json);
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"寫出失敗：{ex.Message}");
+            return ExitError;
+        }
+        return diff.Identical ? ExitOk : ExitPartial;
+    }
+
     private static object FactJson(HardwareFact f) => new
     {
         f.Key, f.Category, f.Name, f.Value, f.Unit, f.Source, f.Trust,
@@ -456,6 +518,7 @@ public static class CliService
               XinSpect --disk-usage [--deep] [--out <檔案>]
               XinSpect --errors [--out <檔案>]
               XinSpect --stdin-batch
+              XinSpect --diff-report <舊報告> <新報告> [--out <檔案>]
               XinSpect --help
 
             範圍：
@@ -478,6 +541,10 @@ public static class CliService
                               不支援／未知）集中成清單，逐項帶原因；零錯誤＝空清單如實顯示。
               sbom            產生 CycloneDX 1.5 的 SBOM（元件＝作業系統＋驅動＋本程式；
                               不含已安裝應用程式套件與授權）。
+              diff-report     兩份匯出報告（HTML／Markdown／純文字）的鍵級互比：
+                              新增鍵／消失鍵／值變化。<b>輸出只含鍵名與計數，不含任何值</b>——
+                              值變化只說「有變」，序號與 MAC 這類識別資訊不會經由 diff 洩漏。
+                              格式不認得的檔案如實拒比，不硬解析。
 
             選項：
               --query <前綴>   只輸出 key 以該前綴開頭的事實（例：--query platform.）
@@ -494,6 +561,8 @@ public static class CliService
               --integrity-baseline
                                 0＝已記錄（雜湊鏈可驗）；2＝未記錄（讀不到或寫不進去）；1＝致命。
               --sbom            0＝元件完整；2＝部分元件讀不到（原因在 stderr）；1＝致命。
+              --diff-report     0＝鍵級全同；2＝有差異（新增／消失／變化的鍵在輸出）；
+                                1＝致命（引數錯、讀檔失敗、格式不認得）。
               --stdin-batch     0＝至少一個非空查詢；2＝空 stdin 或未命中；1＝讀取／收集失敗。
             讀不到的事實如實帶 availability 與原因，絕不以 0／典型值頂替。
             """);

@@ -41,7 +41,12 @@ public static class DeepBenchSuitePlanner
         "gauntlet.power-state-latency",
         "gauntlet.multi-domain",
         "ux.synthetic-workloads",
-        "confidence.engine"
+        "confidence.engine",
+        "cpu.vector-width-throughput",
+        "memory.cache-bandwidth-ladder",
+        "memory.copy-kernel-bandwidth",
+        "topology.tsc-cross-core-sync",
+        "topology.core-uniformity"
     ];
 
     public static DeepBenchPlan Plan(DeepBenchRunProfile profile, IReadOnlyList<DeepBenchCatalogEntry>? catalog = null)

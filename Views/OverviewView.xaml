@@ -164,6 +164,77 @@
             </Border>
         </DataTemplate>
 
+        <!-- 健康摘要卡（U10-UI-0048／ui.home.healthcards）：彙整既有事實的計數——
+             六態分布、缺源（非 Present）筆數與交叉對帳的矛盾。
+             刻意不合成評分、不給紅綠燈：判決在各自的老家（健康頁／韌體安全頁），這裡陳述計數與指路。 -->
+        <DataTemplate x:Key="Tile.health">
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" DataContext="{Binding Vm}">
+                <StackPanel>
+                    <local:SectionHead Text="健康摘要" HelpKey="overview/健康摘要"/>
+
+                    <!-- 事實還沒載入就直說，不畫一張全零的卡 -->
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="尚未擷取——開機序列載入事實後，這裡會出現六態分布與對帳矛盾的計數。"
+                               Visibility="{Binding HomeSummary.HasFacts, Converter={StaticResource InverseBoolToVis}}"/>
+
+                    <StackPanel Visibility="{Binding HomeSummary.HasFacts, Converter={StaticResource BoolToVis}}">
+                        <local:FieldRow Label="事實總數" Value="{Binding HomeSummary.Total,
+                            Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='{}{0} 條'}"/>
+                        <local:FieldRow Label="讀到了" Value="{Binding HomeSummary.Present,
+                            Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='{}{0} 條'}"/>
+                        <local:FieldRow Label="讀不到（缺源）" Value="{Binding HomeSummary.Unreadable,
+                            Converter={x:Static local:LangFormatConverter.Instance},
+                            ConverterParameter='{}{0} 條——缺源是環境事實，不扣分也不點燈'}"/>
+
+                        <!-- 六態分布：六個小計並排（2×3），數字是純數值不需翻譯 -->
+                        <UniformGrid Rows="2" Columns="3" Margin="0,10,0,0">
+                            <StackPanel Margin="0,0,8,6">
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="不支援"/>
+                                <TextBlock Style="{StaticResource Subtitle}" Text="{Binding HomeSummary.NotSupported}"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,8,6">
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="權限不足"/>
+                                <TextBlock Style="{StaticResource Subtitle}" Text="{Binding HomeSummary.InsufficientPrivilege}"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,8,6">
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="讀取失敗"/>
+                                <TextBlock Style="{StaticResource Subtitle}" Text="{Binding HomeSummary.ReadError}"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,8,0">
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="本機不適用"/>
+                                <TextBlock Style="{StaticResource Subtitle}" Text="{Binding HomeSummary.NotApplicable}"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,8,0">
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="有值未確認"/>
+                                <TextBlock Style="{StaticResource Subtitle}" Text="{Binding HomeSummary.Unknown}"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,8,0">
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="確認讀到"/>
+                                <TextBlock Style="{StaticResource Subtitle}" Text="{Binding HomeSummary.Present}"/>
+                            </StackPanel>
+                        </UniformGrid>
+
+                        <local:FieldRow Label="交叉對帳" Margin="0,10,0,0" Value="{Binding HomeSummary.ReconcileCount,
+                            Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='{}已對帳 {0} 條'}"/>
+                        <local:FieldRow Label="矛盾" Value="{Binding HomeSummary.ContradictionRules.Count,
+                            Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='{}{0} 條'}"/>
+                        <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                   Text="{Binding HomeSummary.ContradictionText}"
+                                   Visibility="{Binding HomeSummary.ContradictionText, Converter={StaticResource TextToVis}}"/>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <Button Style="{StaticResource ToolButton}" Content="看對帳判決（韌體安全）"
+                                    Click="NavFirmware_Click"
+                                    ToolTip="交叉對帳的逐條判決與理由在韌體安全頁"/>
+                            <Button Style="{StaticResource ToolButton}" Margin="8,0,0,0" Content="看事實清單（證據實驗室）"
+                                    Click="NavEvidence_Click"
+                                    ToolTip="每一把事實鍵與它的六態在證據實驗室"/>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
         <local:DashboardTileTemplateSelector x:Key="TileTemplate"/>
         <!-- 深色核取方塊（與歷史回放／風扇分頁同一視覺語彙）-->
         <Style x:Key="TileCheck" TargetType="CheckBox">

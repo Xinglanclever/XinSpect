@@ -289,6 +289,24 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>硬體時間膠囊：保存來源、可信度與時間，並驗證後逐欄比較。</summary>
     public EvidenceLabService EvidenceLab { get; } = new();
 
+    private HomeHealthSummary? _homeSummary;
+
+    /// <summary>
+    /// 首頁健康摘要卡（U10-UI-0048／<c>ui.home.healthcards</c>）：六態分布、缺源（非 Present）筆數
+    /// 與交叉對帳的矛盾清單。<b>只陳述既有事實、不合成評分、不給紅綠燈</b>——
+    /// 輸入就是 <see cref="EvidenceLabService.AllFacts"/>（同一份，不新增讀取），
+    /// 事實尚未載入時如實顯示「尚未擷取」。快取到事實集變動為止：
+    /// AllFacts 的取得成本不小，不能跟著每秒心跳重算。
+    /// </summary>
+    public HomeHealthSummary HomeSummary
+        => _homeSummary ??= HomeHealthSummaryService.Aggregate(EvidenceLab.AllFacts);
+
+    private void InvalidateHomeSummary()
+    {
+        _homeSummary = null;
+        OnPropertyChanged(nameof(HomeSummary));
+    }
+
     /// <summary>
     /// 事實總表：把本版實作的每一把事實鍵攤成可搜尋的表（含「本輪未收集」的那一群）。
     /// <para>
@@ -498,6 +516,14 @@ public sealed class MainViewModel : ObservableObject
 
         // 總覽磁貼版面：樣板要靠磁貼身上的 Vm 才接得回既有繫結，故必須在建構式（而非初始式）建立
         Dashboard = new DashboardLayout(this, Settings);
+
+        // 健康摘要卡（U10-UI-0048）跟著事實集走：證據實驗室每載入／比較一輪，AllFacts 就變一次，
+        // 快照即失效，下次繫結讀取時用新事實重算（不在這裡急著重算——AllFacts 取得不便宜）。
+        EvidenceLab.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(EvidenceLabService.AllFacts) or nameof(EvidenceLabService.ReconcileSummary))
+                InvalidateHomeSummary();
+        };
 
         // 場景設定檔要真正動到硬體，把三個執行者交給它（缺少者由它自行如實略過）
         Profiles.Events = Events;

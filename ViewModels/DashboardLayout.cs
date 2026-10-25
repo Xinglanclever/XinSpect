@@ -38,6 +38,9 @@ public sealed class DashboardLayout : ObservableObject
         new("sysinfo", "作業系統與主機板",  "系統版本、開機時間、機型與 BIOS 兩欄資訊", true),
         new("specs",   "核心規格",          "處理器、核心數、記憶體與顯示卡摘要", true),
         new("digits",  "數字面板",          "七段數字顯示：CPU 使用率、封裝溫度、封裝功耗與記憶體使用率", true),
+        // 健康摘要（U10-UI-0048／ui.home.healthcards）：只陳述既有事實的計數（六態分布、缺源、對帳矛盾），
+        // 不合成評分、不給紅綠燈——判決在各自的老家（健康頁／韌體安全頁），這裡當指路牌。
+        new("health",  "健康摘要",          "事實總數、六態分布、缺源與交叉對帳矛盾的計數（不含評分）", true),
     };
 
     /// <summary>

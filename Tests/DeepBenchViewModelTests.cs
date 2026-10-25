@@ -30,14 +30,14 @@ public class DeepBenchViewModelTests
     }
 
     [Fact]
-    public void 目錄顯示三十八項且延後項目不得被隱藏()
+    public void 目錄顯示四十三項且延後項目不得被隱藏()
     {
         using var store = new TempHistoryStore();
         var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
 
-        Assert.Equal(38, vm.CatalogRows.Count);
-        Assert.Equal(38, vm.CatalogRows.Select(row => row.Id).Distinct().Count());
-        Assert.Equal(Enumerable.Range(1, 38), vm.CatalogRows.Select(row => row.MatrixNumber));
+        Assert.Equal(43, vm.CatalogRows.Count);
+        Assert.Equal(43, vm.CatalogRows.Select(row => row.Id).Distinct().Count());
+        Assert.Equal(Enumerable.Range(1, 43), vm.CatalogRows.Select(row => row.MatrixNumber));
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gpu.codec-throughput");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "storage.io-gpu-pipeline");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gpu.vram-bandwidth");
@@ -66,7 +66,7 @@ public class DeepBenchViewModelTests
     }
 
     [Fact]
-    public void 快速與完整檔都只選三十八個已接入測項()
+    public void 快速與完整檔都只選四十三個已接入測項()
     {
         using var store = new TempHistoryStore();
         var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
@@ -89,7 +89,12 @@ public class DeepBenchViewModelTests
             "gauntlet.power-state-latency",
             "gauntlet.multi-domain",
             "ux.synthetic-workloads",
-            "confidence.engine"
+            "confidence.engine",
+            "cpu.vector-width-throughput",
+            "memory.cache-bandwidth-ladder",
+            "memory.copy-kernel-bandwidth",
+            "topology.tsc-cross-core-sync",
+            "topology.core-uniformity"
         ];
 
         vm.SelectedProfile = DeepBenchRunProfile.Quick;
@@ -325,6 +330,11 @@ public class DeepBenchViewModelTests
             new FakeDeepBenchTest("gauntlet.power-state-latency", () => SuccessfulResult("gauntlet.power-state-latency")),
             new FakeDeepBenchTest("gauntlet.boost-recovery", () => SuccessfulResult("gauntlet.boost-recovery")),
             new FakeDeepBenchTest("gauntlet.throughput-degradation", () => SuccessfulResult("gauntlet.throughput-degradation")),
+            new FakeDeepBenchTest("cpu.vector-width-throughput", () => SuccessfulResult("cpu.vector-width-throughput")),
+            new FakeDeepBenchTest("memory.cache-bandwidth-ladder", () => SuccessfulResult("memory.cache-bandwidth-ladder")),
+            new FakeDeepBenchTest("memory.copy-kernel-bandwidth", () => SuccessfulResult("memory.copy-kernel-bandwidth")),
+            new FakeDeepBenchTest("topology.tsc-cross-core-sync", () => SuccessfulResult("topology.tsc-cross-core-sync")),
+            new FakeDeepBenchTest("topology.core-uniformity", () => SuccessfulResult("topology.core-uniformity")),
         ];
     }
 

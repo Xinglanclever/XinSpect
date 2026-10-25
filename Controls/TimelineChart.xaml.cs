@@ -20,6 +20,10 @@ namespace XinSpect;
 /// </remarks>
 public partial class TimelineChart : UserControl
 {
+    /// <summary>追蹤鍵（U10-VZ-0001 多序列折線圖）：本控制項的多指標疊圖就是這一項的實作，
+    /// 收口不另起新圖。const 字面寫在原始碼裡，鍵掃描才找得到（XML 註解掃不到——第 271 輪教訓）。</summary>
+    public const string MultiSeriesKey = "viz.line.multi";
+
     private const double PadLeft = 52, PadTop = 12, PadBottom = 24, PadRight = 10;
 
     // 版面用色一律取主題資源的「同一顆」筆刷：ThemeService 換色是就地改 .Color，

@@ -43,15 +43,20 @@ public class DeepBenchCatalogTests
         "gauntlet.power-state-latency",
         "gauntlet.multi-domain",
         "ux.synthetic-workloads",
-        "confidence.engine"
+        "confidence.engine",
+        "cpu.vector-width-throughput",
+        "memory.cache-bandwidth-ladder",
+        "memory.copy-kernel-bandwidth",
+        "topology.tsc-cross-core-sync",
+        "topology.core-uniformity"
     ];
 
     [Fact]
-    public void 三十八項全量登記且編號連續()
+    public void 四十三項全量登記且編號連續()
     {
-        Assert.Equal(38, DeepBenchCatalog.All.Count);
-        Assert.Equal(Enumerable.Range(1, 38), DeepBenchCatalog.All.Select(entry => entry.MatrixNumber));
-        Assert.Equal(38, DeepBenchCatalog.All.Select(entry => entry.Id).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(43, DeepBenchCatalog.All.Count);
+        Assert.Equal(Enumerable.Range(1, 43), DeepBenchCatalog.All.Select(entry => entry.MatrixNumber));
+        Assert.Equal(43, DeepBenchCatalog.All.Select(entry => entry.Id).Distinct(StringComparer.Ordinal).Count());
         Assert.All(DeepBenchCatalog.All, entry =>
         {
             Assert.False(string.IsNullOrWhiteSpace(entry.Title));
@@ -139,7 +144,7 @@ public class DeepBenchCatalogTests
     }
 
     [Fact]
-    public void Quick與Full都只選三十八個已接入測項()
+    public void Quick與Full都只選四十三個已接入測項()
     {
         foreach (var profile in new[] { DeepBenchRunProfile.Quick, DeepBenchRunProfile.Full })
         {

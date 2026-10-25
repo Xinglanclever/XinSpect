@@ -142,7 +142,9 @@ public class FactKeyCatalogTests
         // 37 → 41（2026-10-25 第 270 輪）：mem.mmio.hole.／sb.type45.item.／tpm.ev.type.／pdev.fw.inv.——
         // 成員＝映射洞序號／Type 45 組件序號／log 實際出現的事件類型／碟序，都是機器事實。
         // 41 → 42（2026-10-25 第 271 輪）：os.wmi.fields.（WMI 未用欄位盤點逐類，成員固定、彙總在靜態目錄）。
-        const int FamilyCap = 42;
+        // 42 → 47（2026-10-25 第 272 輪）：ts.vector.flops.／ts.cache.bw.／ts.copy.kernel.／ts.tsc.skew.core.／
+        // ts.core.uniformity.core.——成員由檢測矩陣與拓撲決定。
+        const int FamilyCap = 47;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 

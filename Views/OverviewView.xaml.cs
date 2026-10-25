@@ -74,4 +74,14 @@ public partial class OverviewView : UserControl
 
     private void TileReset_Click(object sender, RoutedEventArgs e) => Vm?.Dashboard.Reset();
 
+    // ── 健康摘要卡（U10-UI-0048／ui.home.healthcards）的指路按鈕 ─────────────
+    // 卡上只陳述計數；逐條判決與逐把事實在各自的老家，點了就過去——
+    // 導覽走 MainWindow.NavigateToKey（與命令面板同一個入口），不在卡裡複製一份判決。
+
+    private void NavFirmware_Click(object sender, RoutedEventArgs e)
+        => Shell.Main?.NavigateToKey("firmware-security");
+
+    private void NavEvidence_Click(object sender, RoutedEventArgs e)
+        => Shell.Main?.NavigateToKey("evidence");
+
 }
