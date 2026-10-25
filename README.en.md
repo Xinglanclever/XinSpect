@@ -4,7 +4,7 @@
 
 A free, open-source hardware verification, monitoring, and security auditing tool for Windows. Ships as a single portable executable. Read-only by default; the few operations that write are gated behind explicit consent and labelled with their risks. It collects and transmits no user data.
 
-![Version](https://img.shields.io/badge/version-2.89-4C8DFF)
+![Version](https://img.shields.io/badge/version-2.90-4C8DFF)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![Tests](https://img.shields.io/badge/tests-6969%20passed-3FB950)
@@ -15,7 +15,7 @@ The name means "morning light, seen at a glance"; "Spect" comes from the Latin *
 
 This is the extended documentation. Every feature lists its data source (which register, which WMI class, which API), its decoding basis, what it displays, and **what it deliberately does not do**. Jargon is explained in parentheses on first use. The document itself is guarded by machine checks (chapter 13): the version, test count, download links, byte sizes, and the first changelog entry all fail the build if they fall behind.
 
-> **Document scope (v2.89).** The Traditional Chinese edition ([README.md](README.md)) is the reference text and was expanded in this release to roughly 80,000 characters. The sections added in that pass (3.7–3.12, 6.11–6.18, 7.4–7.9, 8.1–8.5, 9.1–9.4, 10.1–10.4, 11.4–11.7, 12.1–12.3, 13.3–13.7, 14.1–14.4, 15.1–15.3, 16.2–16.7, 17.12–17.18, 18.6–18.8, 19.6–19.9, 20.6–20.10, 21.8–21.13) and appendices F–T exist only in Chinese for now. This English edition remains a complete translation of the 25 chapters and appendices A–E, with a condensed changelog; where the two disagree, the Chinese text is correct.
+> **Document scope (v2.90).** The Traditional Chinese edition ([README.md](README.md)) is the reference text and was expanded in this release to roughly 80,000 characters. The sections added in that pass (3.7–3.12, 6.11–6.18, 7.4–7.9, 8.1–8.5, 9.1–9.4, 10.1–10.4, 11.4–11.7, 12.1–12.3, 13.3–13.7, 14.1–14.4, 15.1–15.3, 16.2–16.7, 17.12–17.18, 18.6–18.8, 19.6–19.9, 20.6–20.10, 21.8–21.13) and appendices F–T exist only in Chinese for now. This English edition remains a complete translation of the 25 chapters and appendices A–E, with a condensed changelog; where the two disagree, the Chinese text is correct.
 
 ---
 
@@ -249,9 +249,9 @@ hardware / firmware / OS ──► fact collection (*FactsService)
 
 | File | Size | Purpose |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.89/XinSpect.exe) | 32.47 MB | Main program (Blue Squadron guard included) |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.89/BlueSquadronBridge.exe) | 6.5 MB | Standalone guard process |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.89/XinSpectDeploy.exe) | 7 KB | One-click installer (downloads and deploys automatically) |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.90/XinSpect.exe) | 32.47 MB | Main program (Blue Squadron guard included) |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.90/BlueSquadronBridge.exe) | 6.5 MB | Standalone guard process |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.90/XinSpectDeploy.exe) | 7 KB | One-click installer (downloads and deploys automatically) |
 
 The exact byte count of the main executable is published in the Traditional Chinese README and verified after each release; the MB figure here is rounded.
 
@@ -1086,8 +1086,9 @@ Everything below comes from `Nav/ChangelogCatalog.cs` (the same record shown on 
 | v2.87 | 6,580 | +126 |
 | v2.88 | 6,581 | +1 |
 | v2.89 | 6,801 | +220 |
+| v2.90 | 6,969 | +168 |
 
-Across 60 versions from v2.30 to v2.89, tests grew by 3,606 (+105.9%), about +58 per release. **Test count is not a linear quality metric**: v2.85 added 881 tests within a single release (the ledger records 5,512 → 6,393), mostly from item-by-item tests for 105 contracts and skeletons, which does not mean fewer defects; conversely v2.87 added only 126 tests while fixing two defects that could freeze the entire collection chain.
+Across 61 versions from v2.30 to v2.90, tests grew by 3,774 (+105.9%), about +58 per release. **Test count is not a linear quality metric**: v2.85 added 881 tests within a single release (the ledger records 5,512 → 6,393), mostly from item-by-item tests for 105 contracts and skeletons, which does not mean fewer defects; conversely v2.87 added only 126 tests while fixing two defects that could freeze the entire collection chain.
 
 ### 21.4 Catalogue growth
 
@@ -1103,8 +1104,9 @@ Across 60 versions from v2.30 to v2.89, tests grew by 3,606 (+105.9%), about +58
 | v2.87 | 1,044 | Phase two: 75 landed, 24 aliased, 15 pending |
 | v2.88 | 1,044 | No new fact keys this release: a documentation round (hardcore guides and dictionary) plus the Present pacing vtable-slot fix |
 | v2.89 | 1,084 | ULTIMATE-10000 lands and round one closes: 40 keys and 14 dynamic families across four rounds (268–271) |
+| v2.90 | 1,098 | Round two: self-load check and visualization tracking keys (rounds 272–273) |
 
-From 136 to 1,084 is 8.0×. **The number is not "bigger is better"**: the catalogue is a declaration, and every extra key raises the cost of coverage reporting and runtime reconciliation. Removing duplicate and wrong keys is usually worth more than adding another one; v2.87's key-by-key reconciliation of the catalogue and dynamic families was exactly that kind of clean-up.
+From 136 to 1,098 is 8.1×. **The number is not "bigger is better"**: the catalogue is a declaration, and every extra key raises the cost of coverage reporting and runtime reconciliation. Removing duplicate and wrong keys is usually worth more than adding another one; v2.87's key-by-key reconciliation of the catalogue and dynamic families was exactly that kind of clean-up.
 
 ### 21.5 Features versus defects
 
@@ -1133,10 +1135,11 @@ Three recurring patterns:
 
 ## 22. Version history
 
-The ledger contains 102 entries (98 dated releases plus four pre-repository stages) from 2026-08-27 to 2026-10-25. The complete itemised ledger lives in the Traditional Chinese [README.md](README.md#二十二版本沿革) and in the About page; the table below lists every release from 2.60 onward with its one-line summary, followed by the earlier milestones grouped by era.
+The ledger contains 103 entries (99 dated releases plus four pre-repository stages) from 2026-08-27 to 2026-10-25. The complete itemised ledger lives in the Traditional Chinese [README.md](README.md#二十二版本沿革) and in the About page; the table below lists every release from 2.60 onward with its one-line summary, followed by the earlier milestones grouped by era.
 
 | Version | Date | Summary |
 |---|---|---|
+| 2.90 | 2026-10-25 | Round two: self-load checks join the deep-bench suite, four visualization controls and a sensor dashboard page, export and report extensions (rounds 272–273) |
 | 2.89 | 2026-10-25 | The 10,000-item catalogue lands and round one closes: quadruple dedup, 30 new items in three batches, SMART vendor knowledge pack, and two honest corrections to the verdicts themselves (rounds 268–271) |
 | 2.88 | 2026-10-25 | Documentation is an interface too: trilingual hardcore guides, the fact-and-data dictionary, and a vtable slot no behavioural test could see (round 267) |
 | 2.87 | 2026-10-19 | Proving rather than asserting: six firmware-risk facts, peripheral updatability declarations, and two silently wrong bus tables (rounds 264–266) |
@@ -1307,4 +1310,4 @@ Time-capsule creation and comparison are written to `%ProgramData%\XinSpect\Audi
 
 ---
 
-**About this document**: it corresponds to XinSpect v2.89 (2026-10-25). The Traditional Chinese version is the master, the Simplified Chinese version is generated from it with OpenCC (tw2sp), and this English version is a full translation sharing the same facts and guards. If a term in the Simplified version reads oddly, that is the converter's choice, not the original meaning; the Traditional Chinese master is authoritative.
+**About this document**: it corresponds to XinSpect v2.90 (2026-10-25). The Traditional Chinese version is the master, the Simplified Chinese version is generated from it with OpenCC (tw2sp), and this English version is a full translation sharing the same facts and guards. If a term in the Simplified version reads oddly, that is the converter's choice, not the original meaning; the Traditional Chinese master is authoritative.
