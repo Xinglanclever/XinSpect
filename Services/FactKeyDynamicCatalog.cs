@@ -121,6 +121,21 @@ public static class FactKeyDynamicCatalog
                 "有幾條清單由該變數的內容決定，本服務最多列 5 條",
             ["uefi.dbr.list."] =
                 "dbr（授權復原簽章資料庫）逐條一筆（uefi.dbr.list.0…）——同 uefi.dbt.list.，成員由變數內容決定",
+            // ── U10-CP-0148：SGX EPC 逐區（leaf 0x12 sub≥2）──────────────────
+            // 有幾個 EPC 區由 CPUID 列舉決定（Valid＝false 即止，最多列 32 區）；
+            // 計數寫在彙總鍵 mem.encryption.sgx 的值與 NumericValue，成員固定走靜態目錄。
+            ["mem.encryption.sgx.epc."] =
+                "SGX EPC 逐區一筆（mem.encryption.sgx.epc.0…，CPUID leaf 0x12 sub≥2 列舉）——" +
+                "有幾區由這台機器的 CPUID 決定，编译期列不完",
+            // ── 第 270 輪（U10 新列第一批之二）────────────────────────────
+            ["mem.mmio.hole."] =
+                "MMIO 洞逐段一筆（mem.mmio.hole.{i}）——RESOURCEMAP 開機記憶體映射裡有幾個洞是平台事實，編譯期列不完",
+            ["sb.type45.item."] =
+                "SMBIOS Type 45 韌體清單逐組件一筆（sb.type45.item.{i}）——韌體宣告了幾個組件是機器的事實；SMBIOS <3.5 時整個家族一筆都不產",
+            ["tpm.ev.type."] =
+                "TCG log 逐事件類型一筆（tpm.ev.type.{十進位碼}）——log 裡實際出現哪些類型是這次開機的事實；沿用『不命名 EV_*』紀律（本專案無對照表出處）",
+            ["pdev.fw.inv."] =
+                "周邊韌體盤點逐碟一筆（pdev.fw.inv.{i}）——有幾顆碟由 Win32_DiskDrive 列舉決定；不自述韌體版本的也在清單裡",
         };
 
     /// <summary>執行期鍵是否命中某個已登記的動態家族。</summary>

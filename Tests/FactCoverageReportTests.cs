@@ -190,9 +190,14 @@ public class FactCoverageReportTests
         // `ac.tcpa.cross`＝TCPA 表與 TPM2 並存、`pdev.fw.surface`＝周邊韌體盤點彙整）。
         // 全部是「單一來源的陳述」——對照鍵的兩側都來自同一輪讀取（不是兩個獨立來源），
         // 彙整鍵的數字對回盤點本身；沒有可交叉的第二通路，照規矩留未覆蓋，上限跟著移到 346。
+        // 2026-10-25 第 270 輪：+8 條（`mem.mmio.total`＝MMIO 洞盤點、`sb.type45`／`sb.type45.cross`
+        // ＝SMBIOS Type 45、`fw.fv.cross`＝FV 分解現況、`tpm.ev.types`＝TCG log 事件類型統計、
+        // `pdev.fw.inventory`＝全裝置韌體版本盤點、`sec.vbs.state`／`sec.vbs.required`＝VBS 狀態與
+        // 原因面）。同為單一來源陳述（彙整鍵的數字對回盤點本身），照規矩留未覆蓋，上限跟著移到 353
+        //（+8 中 1 把落在既有家族豁免內，實測 346+7）。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 346,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 346）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 353,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 353）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }

@@ -235,8 +235,11 @@ public static class TpmFactsService
             //
             // **留著不說比讀兩次更糟**：下一個人會看到兩次呼叫，而不知道我知不知道。
             var log = (readLog ?? RealReadLog)(ctx);
-            facts.AddRange(TpmLogFactsService.Collect(at,
-                log is null ? null : Tpm2.WalkTcgLog(log)));
+            var walk = log is null ? null : Tpm2.WalkTcgLog(log);
+            facts.AddRange(TpmLogFactsService.Collect(at, walk));
+            // U10-FW-0075（第 270 輪）：逐事件類型統計——同一份 walk 的第二個消費者
+            //（正是上面註解在等的「分派給兩個消費者」形狀；不重讀 log、不重走 walk）。
+            facts.AddRange(TpmEventTypesFactsService.Collect(at, walk));
             return facts;
         }
         finally

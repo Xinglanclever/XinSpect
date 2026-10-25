@@ -95,6 +95,8 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 LocalSecurityAuditService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadDeepTest(); }
         catch { /* 附加功能：讀不到由 DeepTest 各服務標三態，不在這裡中斷啟動 */ }
+        try { svc.LoadVbsState(); }
+        catch { /* 附加功能：讀不到由 VbsStateFactsService 標三態，不在這裡中斷啟動 */ }
         // Vol 2 批次（2026-10-11）：自我完整性／CVE 離線對照／伺服器摘要／情境診斷／SBOM——皆唯讀、
         // 且都便宜（各毫秒至百毫秒級）；「磁碟為什麼滿」（SG-002）預設只掃暫存與傾印根，
         // 不含使用者設定檔（整份遞迴要數十秒，屬明示觸發）——理由寫在 DiskFullFactsService.DefaultRoots。

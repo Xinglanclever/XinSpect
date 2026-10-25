@@ -175,8 +175,7 @@ public sealed class EvidenceLabService : ObservableObject
     private ClockSessionDriftService.ClockSample? _deepTestSessionStart;
 
     public void LoadDeepTest()
-    {
-        _deepTestSessionStart ??= ClockSessionDriftService.Capture();
+    {        _deepTestSessionStart ??= ClockSessionDriftService.Capture();
         var at = DateTimeOffset.UtcNow;
         DeepTestFacts =
             MemoryDiagResultsFactsService.Collect(at)
@@ -192,6 +191,14 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(RegistryEnumLatencyService.Collect(at))
             .Concat(ServiceDependencyDepthService.Collect(at))
             .ToList();
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
+    /// <summary>載入 VBS/HVCI 狀態與未啟用原因面（U10-SE-0003，第 270 輪）。
+    /// **獨立的載入法**——不掛進 LoadVirtualization，避免測試注入虛擬化狀態時吃到真 WMI。</summary>
+    public void LoadVbsState()
+    {
+        VbsStateFacts = VbsStateFactsService.Collect(DateTimeOffset.UtcNow);
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
@@ -481,6 +488,9 @@ public sealed class EvidenceLabService : ObservableObject
     /// </summary>
     public IReadOnlyList<HardwareFact> VirtualizationFacts { get; private set; } = [];
 
+    /// <summary>U10-SE-0003（第 270 輪）：VBS/HVCI 狀態與未啟用原因面（Win32_DeviceGuard）。</summary>
+    public IReadOnlyList<HardwareFact> VbsStateFacts { get; private set; } = [];
+
     /// <summary>
     /// 顯示器組成事實（真實螢幕 vs 軟體虛擬螢幕 vs 作業系統預設物件）。
     /// 與 <see cref="DisplayAdapterFactsService"/>（轉接器）分開：這裡看的是「接了什麼螢幕」。
@@ -567,6 +577,11 @@ public sealed class EvidenceLabService : ObservableObject
         // ULTIMATE-1000 階段二 P2-024：SMBIOS Type 19 記憶體映射逐段。
         // **它不重新發明讀表**——走同一條 SmbiosService 通路（韌體宣告優先，與 mem.* 的 OS 視圖分開陳述）。
         SmbiosMemoryMapFacts = SmbiosMemoryMapFactsService.Collect(at);
+        // U10-MM-0052（第 270 輪）：MMIO 洞盤點——來源是 RESOURCEMAP 開機記憶體映射
+        //（E820 的 Windows 對應物），與 sb.memmap.*（Type 19 韌體自述）並列不互判。
+        MemMmioFacts = MemMmioFactsService.Collect(at);
+        // U10-SB-0161（第 270 輪）：SMBIOS Type 45（韌體清單，3.5+）解碼與 pdev 對照。
+        SmbiosType45Facts = SmbiosType45FactsService.Collect(at);
         // ULTIMATE-1000 階段二 P2-094：熱管理可讀項盤點（韌體自述／OS 熱區／EC 三條口徑分開講）。
         // **它回答「哪些讀得到」，不是「溫度幾度」**；EC 那一條如實寫「本專案沒有那條路」。
         ThermalReachFacts = ThermalReachFactsService.Collect(at);
@@ -616,6 +631,9 @@ public sealed class EvidenceLabService : ObservableObject
         // NVMe 那半正確，ATA 那半也正確（word 69 bit8 與 word 83 bit0 就是 DOWNLOAD MICROCODE 支援）；
         // 我一度依 Linux ata.h 的使用情形判成「缺源」，那是錯的，更正與教訓寫在 GATE-LOG-266。
         FirmwareUpdatableFacts = FirmwareUpdatableFactsService.Collect(at);
+        // U10-FW-0104（第 270 輪）：全裝置韌體版本盤點（存在面；與 version 的版本字串面、
+        // surface 的可更新性彙整三分）——沿用同一份 ReadInventory，不重查 Win32_DiskDrive。
+        PeripheralFirmwareInventoryFacts = PeripheralFirmwareInventoryFactsService.Collect(at);
         // ULTIMATE-1000 階段二 P2-105：階段二規格矩陣對實作的對帳申報。
         // **數字是建置時常數，不是執行期讀文件**——發佈版身邊沒有 docs/，
         // 讀不到回 0 會被讀成「全部完成」，那比不報更糟。由 FirmwareDocReconcileTests 守住。
@@ -639,6 +657,8 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(SmbiosStructureFacts)
             .Concat(SmbiosPowerFacts)
             .Concat(SmbiosMemoryMapFacts)
+            .Concat(MemMmioFacts)
+            .Concat(SmbiosType45Facts)
             .Concat(ThermalReachFacts)
             .Concat(SmbiosCrossFacts)
             .Concat(FirmwareModeFacts)
@@ -652,6 +672,7 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(PeripheralFirmwareFacts)
             .Concat(FirmwareDocReconcileFacts)
             .Concat(FirmwareUpdatableFacts)
+            .Concat(PeripheralFirmwareInventoryFacts)
             .Concat(PpttFacts)
             .Concat(ServerModeFacts)
             .Concat(RoleFacts)
@@ -1113,6 +1134,12 @@ public sealed class EvidenceLabService : ObservableObject
     /// </summary>
     public IReadOnlyList<HardwareFact> SmbiosMemoryMapFacts { get; private set; } = [];
 
+    /// <summary>U10-MM-0052（第 270 輪）：MMIO 洞盤點（RESOURCEMAP 開機記憶體映射）。</summary>
+    public IReadOnlyList<HardwareFact> MemMmioFacts { get; private set; } = [];
+
+    /// <summary>U10-SB-0161（第 270 輪）：SMBIOS Type 45 韌體清單解碼與 pdev 對照。</summary>
+    public IReadOnlyList<HardwareFact> SmbiosType45Facts { get; private set; } = [];
+
     /// <summary>
     /// 熱管理可讀項盤點（ULTIMATE-1000 階段二 P2-094）。
     /// <b>盤點「哪些口徑讀得到」，不是溫度本身</b>；EC 那一條如實寫「本專案沒有那條路」。
@@ -1170,6 +1197,9 @@ public sealed class EvidenceLabService : ObservableObject
 
     /// <summary>周邊韌體可更新性宣告（P2-098）：裝置自述的 NVMe 韌體槽結構；ATA 半邊如實標缺源。</summary>
     public IReadOnlyList<HardwareFact> FirmwareUpdatableFacts { get; private set; } = [];
+
+    /// <summary>U10-FW-0104（第 270 輪）：全裝置韌體版本盤點（存在面）。</summary>
+    public IReadOnlyList<HardwareFact> PeripheralFirmwareInventoryFacts { get; private set; } = [];
 
     /// <summary>
     /// 快速開機與休眠狀態（ULTIMATE-1000 階段二 P2-045）。
@@ -1960,7 +1990,7 @@ public sealed class EvidenceLabService : ObservableObject
             var baseFacts = ChipsetFacts.Concat(SpiFlashFacts).Concat(PcieAerFacts).Concat(PciCapabilityFacts).Concat(SpiHashFacts).Concat(FitFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
                 .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(FirmwareRiskFacts).Concat(FirmwareRiskDeltaFacts).Concat(IoPortFacts).Concat(CmosFacts)
                 .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(UefiDbtDbrFacts).Concat(EfiVariableFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(TpmViewCrossFacts).Concat(TpmReplayFacts)
-                .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EtwFilterViewFacts).Concat(FsMetadataLatencyFacts).Concat(PresentObservationFacts).Concat(SrumReadbackFacts).Concat(AmcacheFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(ListenPortFacts).Concat(LocalSecurityAuditFacts)
+                .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(VbsStateFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EtwFilterViewFacts).Concat(FsMetadataLatencyFacts).Concat(PresentObservationFacts).Concat(SrumReadbackFacts).Concat(AmcacheFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(ListenPortFacts).Concat(LocalSecurityAuditFacts)
                 .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ComplianceFacts).Concat(ServerComplianceFacts).Concat(ServerRoleDeepFacts).Concat(ServerRoleConditionalFacts).Concat(ServerRoleFilePrintFacts).Concat(MaintenanceFacts).Concat(EnvironmentRuntimeFacts).Concat(ClosingFacts).Concat(QueryInsightFacts).Concat(ChecklistFacts).Concat(TrustOpsFacts).Concat(ZeroTrustFacts).Concat(DataSecurityFacts).Concat(EndpointPolicyFacts).Concat(ScenarioFacts).Concat(ScenarioSecondWaveFacts).Concat(MultimediaFacts).Concat(MediaProtectionFacts).Concat(ExportCacheFacts).Concat(MaintenanceDashboardFacts).Concat(VolumeEncryptionFacts).Concat(QueryGovernanceFacts).Concat(LifecycleReportsFacts).Concat(GovernanceExtraFacts).Concat(InterchangeReportFacts).Concat(AutomationGuidanceFacts).Concat(ServiceModeFacts).Concat(RecoveryPowerInteropFacts).Concat(EnvironmentDiagnosticsFacts).Concat(AdvancedSupplementFacts).Concat(OperationsInventoryFacts).Concat(NetworkSystemInventoryFacts).Concat(InventoryGovernanceFacts).Concat(NetworkSecurityInventoryFacts).Concat(FinalInventoryFacts).Concat(RecoveryInventoryFacts).Concat(RecoveryDisplayFacts).Concat(SecurityAuditSupplementFacts).Concat(LifecycleMaintenanceFacts).Concat(FirmwareAuditFacts).Concat(PlatformGovernanceFacts).Concat(PlatformDeepDiveFacts).Concat(PlatformExpansionFacts).Concat(PlatformReconciliationFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(StorageScenarioReconciliationFacts).Concat(PerformanceObservationFacts).Concat(ServiceBootFacts).Concat(DeepBenchSecondWaveFacts).Concat(GovernanceKnowledgeFacts).Concat(BusDeepDiveFacts).Concat(BusCapabilityFacts).Concat(EngineeringGovernanceFacts).Concat(VisualizationFacts).Concat(OfflineAnalysisFacts).Concat(ProductPlatformFacts).Concat(MeasurementMethodologyFacts).Concat(LifecycleSecurityFacts).Concat(DeepBenchMethodology2Facts).Concat(EvidenceExportFacts).Concat(ExportUxFacts).Concat(UserExperience2Facts).Concat(GpuDeepFacts).Concat(FirmwareDeepFacts).Concat(EngineeringGovernance2Facts).Concat(StorageDeepFacts).Concat(FileSystemVolumeFacts).Concat(IscsiSessionFacts).Concat(HyperVInventoryFacts).Concat(BaselineForecastFacts).Concat(DevDiagCorrelationFacts).Concat(SecurityAuditDeepFacts).Concat(BitLockerRecoveryFacts).Concat(AcpiDeepFacts).Concat(CppcCapabilityFacts).Concat(MousePollRateFacts).Concat(DeepTestFacts).Concat(DataSecurityDeepFacts).Concat(ScenarioThirdWaveFacts).Concat(SbomFacts)
                 .ToList();
             baseFacts.AddRange(CapabilityMatrixService.Collect(baseFacts, DateTimeOffset.UtcNow));

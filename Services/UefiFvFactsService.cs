@@ -85,6 +85,9 @@ public static class UefiFvFactsService
         // P2-034 映像結構樹：把既有的三層結構彙總成一把可讀的鍵。
         // **用一把固定鍵而不是第 24 個動態家族**——FamilyCap 就是 23。
         facts.AddRange(UefiSectionTreeFactsService.Collect(at, fvs));
+        // U10-FW-0050（第 270 輪）：FV/FFS 分解現況對照——同一份 fvs 的第三個消費者，
+        // 不重讀 SPI；「分解過」與「只列不解」的界線寫在服務裡。
+        facts.Add(FirmwareFvCrossFactsService.Collect(at, fvs));
         return facts;
     }
 

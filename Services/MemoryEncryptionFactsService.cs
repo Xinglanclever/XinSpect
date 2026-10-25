@@ -13,7 +13,8 @@ public static class MemoryEncryptionFactsService
     private const uint MsrTmeActivate = 0x982;
 
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at,
-        Func<(uint Eax, uint Ebx, uint Ecx, uint Edx)>? cpuidProbe = null, IKernelMsrReader? msr = null)
+        Func<(uint Eax, uint Ebx, uint Ecx, uint Edx)>? cpuidProbe = null, IKernelMsrReader? msr = null,
+        Func<uint, (uint Eax, uint Ebx, uint Ecx, uint Edx)>? cpuid12Probe = null)
     {
         var c7 = (cpuidProbe ?? ReadCpId7)();
         bool tmeSupport = (c7.Ecx & (1u << 25)) != 0;
@@ -40,16 +41,44 @@ public static class MemoryEncryptionFactsService
                 : Unavailable("mem.encryption.tme", "TME 記憶體加密", "MSR 0x982 讀取失敗"));
         }
 
-        // SGX
+        // SGX＋EPC 逐區列舉（U10-CP-0148：cpuid.12.epc{n}，鍵隨服務命名空間落為 mem.encryption.sgx.epc.{i}）
         if (!sgxSupport)
         {
             facts.Add(Unsupported("mem.encryption.sgx", "SGX 安全飛地", "CPUID leaf 7 ECX bit30＝0：此處理器不支援（或已停用）SGX"));
         }
         else
         {
-            facts.Add(new HardwareFact("mem.encryption.sgx", Category, "SGX 安全飛地",
-                "支援（EPC 區域列舉未實作——CPUID 0x12 逐子葉通路待驗證）", "",
-                "CPUID leaf 7 ECX bit30", FactTrustLevel.Measured, false, at, null));
+            var probe12 = cpuid12Probe ?? ReadCpuid12Subleaf;
+            var regions = new List<SgxEpcRegion>();
+            const uint FirstEpcSubleaf = 2;   // sub 0/1 是能力與屬性葉；EPC 區自 sub 2 起（SDM Table 41-3）
+            for (uint sub = FirstEpcSubleaf; sub < FirstEpcSubleaf + 32; sub++)
+            {
+                var (e, b, c, d) = probe12(sub);
+                var r = MemoryEncryptionDecoder.DecodeEpcRegion(e, b, c, d);
+                if (!r.Valid) break;
+                regions.Add(r);
+            }
+
+            facts.Add(regions.Count == 0
+                ? new HardwareFact("mem.encryption.sgx", Category, "SGX 安全飛地",
+                    "支援（EPC 列舉得 0 區——BIOS 未配置 EPC 或本葉讀值全部無效，兩種可能分不開，不猜）", "",
+                    "CPUID leaf 7 ECX bit30＋leaf 0x12 sub≥2", FactTrustLevel.Measured, false, at, 0,
+                    FactAvailability.Present)
+                : new HardwareFact("mem.encryption.sgx", Category, "SGX 安全飛地",
+                    $"支援（EPC {regions.Count} 區，逐區見 mem.encryption.sgx.epc.*）", "",
+                    "CPUID leaf 7 ECX bit30＋leaf 0x12 sub≥2", FactTrustLevel.Measured, false, at, regions.Count));
+
+            for (int i = 0; i < regions.Count; i++)
+            {
+                var r = regions[i];
+                string size = r.Size >= 1 << 20
+                    ? $"{r.Size / (double)(1 << 20):F1} MiB（{r.Size} bytes）"
+                    : $"{r.Size} bytes";
+                facts.Add(new HardwareFact($"mem.encryption.sgx.epc.{i}", Category, $"SGX EPC 區 {i}",
+                    $"Base 0x{r.Base:X}・Size {size}", "",
+                    "CPUID leaf 0x12 sub≥2（Intel SDM Table 41-3；解碼 MemoryEncryptionDecoder.DecodeEpcRegion）",
+                    FactTrustLevel.Measured, false, at, r.Size));
+            }
         }
         return facts;
     }
@@ -71,6 +100,18 @@ public static class MemoryEncryptionFactsService
     {
         if (!X86Base.IsSupported) return (0, 0, 0, 0);
         var r = X86Base.CpuId(unchecked((int)7), 0);
+        return (unchecked((uint)r.Eax), unchecked((uint)r.Ebx), unchecked((uint)r.Ecx), unchecked((uint)r.Edx));
+    }
+
+    /// <summary>
+    /// leaf 0x12 逐子葉的預設讀取：葉 0 的最大標準葉不到 0x12 時回全 0
+    /// （解碼後 Valid＝false，列舉即止）——「沒有這個葉」與「EPC 為空」在事實層同樣如實呈現。
+    /// </summary>
+    private static (uint, uint, uint, uint) ReadCpuid12Subleaf(uint sub)
+    {
+        if (!X86Base.IsSupported) return (0, 0, 0, 0);
+        if ((uint)X86Base.CpuId(0, 0).Eax < 0x12) return (0, 0, 0, 0);
+        var r = X86Base.CpuId(unchecked((int)0x12), (int)sub);
         return (unchecked((uint)r.Eax), unchecked((uint)r.Ebx), unchecked((uint)r.Ecx), unchecked((uint)r.Edx));
     }
 }
