@@ -173,6 +173,34 @@
                 </StackPanel>
             </Border>
 
+            <!-- 第三方授權（U10-UI-0034）：清單由 ThirdPartyNoticesCatalog 從 THIRD-PARTY-NOTICES.md
+                 解析（資源優先、檔案其次），不把內容寫死在 XAML——清單改了版面才不會說謊；
+                 讀不到時顯示「讀不到」的原因，不用空清單冒充。ItemsSource 於程式碼後置指定。 -->
+            <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                <StackPanel>
+                    <local:SectionHead Text="第三方授權" HelpKey="about/第三方授權"/>
+                    <TextBlock x:Name="LicensesIntro" Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                               Margin="0,0,0,12"/>
+                    <TextBlock x:Name="LicensesStatus" Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                               Visibility="Collapsed"/>
+                    <ItemsControl x:Name="LicenseList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Margin="0,0,0,6" Padding="10,6" CornerRadius="4"
+                                        Background="{DynamicResource Surface2Brush}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Component}" FontSize="13" FontWeight="SemiBold"
+                                                   TextWrapping="Wrap" Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                        <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,2,0,0"
+                                                   Text="{Binding LicenseAndVersion}"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <!-- 意見反饋 -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>

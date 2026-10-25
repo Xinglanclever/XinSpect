@@ -1531,6 +1531,12 @@ public static class HelpCatalog
             What = "使用條件與責任範圍，以及第三方資料與工具的出處。",
             Does = "本軟體為免費開源軟體，可自由下載、使用與散布，並嚴禁用於任何商業用途。軟體按「現狀」提供，所偵測之數值僅供參考，作者不對其準確性作任何明示或默示之擔保，一切使用風險由使用者自負。參考來源包含圖吧工具箱 WinUI3 與 Windows Package Manager（winget）等。",
         },
+        ["about/第三方授權"] = new()
+        {
+            Title = "第三方授權",
+            What = "隨程式分發的第三方元件（LibreHardwareMonitor、WebView2、NAudio、TraceEvent 等）與各自適用的授權（MPL-2.0／MIT／LGPL 等）。",
+            Does = "清單由 THIRD-PARTY-NOTICES.md 即時解析，不是寫死在版面上；讀不到時會明說讀不到，不拿空清單充數。這裡是事實摘要，不構成法律意見；各授權全文以上游連結為準。",
+        },
         ["about/意見反饋 ・ 聯絡我們"] = new()
         {
             Title = "意見反饋 ・ 聯絡我們",

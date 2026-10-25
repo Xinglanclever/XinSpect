@@ -84,6 +84,9 @@ public sealed class EvidenceLabService : ObservableObject
             // 問 TPM 本身、sb.tpmdev 問韌體在 SMBIOS 裡寫了什麼）；
             // WPBT 是「韌體要求 OS 在開機時執行一段它提供的程式」那條路徑的存在性。
             .Concat(AcpiTpm2WpbtFactsService.Collect(acpiAt, AcpiTpm2WpbtFactsService.ReadTables(source)))
+            // U10-AC-0042：TCPA 表（TPM 1.2 時代的信任線索表）與 ac.tpm2 的並存陳述；
+            // 與上面同一次表讀取的形狀，server 佈局其餘欄位未成文不展開（界線在服務檔）。
+            .Concat(AcpiTcpaFactsService.Collect(acpiAt, AcpiTcpaFactsService.ReadTables(source)))
             // P2-038 映像壓縮型別支援清單：**不新增解碼器**，把 UefiFv 既有的
             // 引擎辨識判斷鏈攤開成可查詢的清單（GUID 直接引用 UefiFv 的常數）。
             // **「認得」不等於「能解壓」**——所以語意拆成 supported（認得）
@@ -196,6 +199,10 @@ public sealed class EvidenceLabService : ObservableObject
     public void LoadTpm()
     {
         TpmFacts = TpmFactsService.Collect(DateTimeOffset.UtcNow);
+        // U10-OS-0061／FW-0051（第 269 輪）：TBS 視圖 × Win32_Tpm WMI 視圖對照。
+        // 兩條通路在 TpmFactsService 內都已存在，這裡把「同一顆 TPM 的兩個 Windows 視圖
+        // 說的是不是同一件事」攤出來；矛盾時具名列雙方、不仲裁（形狀在 TpmViewCrossFactsService）。
+        TpmViewCrossFacts = TpmViewCrossFactsService.Collect(DateTimeOffset.UtcNow);
         // ULTIMATE-1000 階段二 P2-056：量測開機支援旗標。
         // **接在同一次 TPM 讀取上**——不另外再讀一遍 PCR，
         // 因為每多讀一次就多一次「兩次讀到的 PCR 不一樣」的可能。
@@ -409,6 +416,9 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>UEFI 安全開機簽章資料庫（db/dbx/KEK/PK）與 Boot 條目（R2；需提權）。</summary>
     public IReadOnlyList<HardwareFact> UefiSignatureFacts { get; private set; } = [];
 
+    /// <summary>U10-FW-0005（第 269 輪）：dbt／dbr 兩個同命名空間簽章資料庫的計數與逐條清單。</summary>
+    public IReadOnlyList<HardwareFact> UefiDbtDbrFacts { get; private set; } = [];
+
     public IReadOnlyList<HardwareFact> CStateFacts { get; private set; } = [];
 
     /// <summary>WP22 記憶體壓力探測的危險聲明（UI 紅字呈現；探測本身需明確同意才執行）。</summary>
@@ -422,6 +432,9 @@ public sealed class EvidenceLabService : ObservableObject
 
     /// <summary>TPM 2.0 量測開機鏈三態事實（WP14：PCR 0–7 SHA-256＋TCG log 摘要）。usermode 經 Windows TBS。</summary>
     public IReadOnlyList<HardwareFact> TpmFacts { get; private set; } = [];
+
+    /// <summary>U10-OS-0061（第 269 輪）：TBS 視圖 × Win32_Tpm WMI 視圖的對照陳述。</summary>
+    public IReadOnlyList<HardwareFact> TpmViewCrossFacts { get; private set; } = [];
 
     /// <summary>平台拓撲與攻擊面聲明（NUMA 拓撲＋Rowhammer 未施測聲明；usermode）。</summary>
     public IReadOnlyList<HardwareFact> PlatformFacts { get; private set; } = [];
@@ -706,6 +719,9 @@ public sealed class EvidenceLabService : ObservableObject
         // 在畫面上看起來像硬體在變。
         UefiSignatureFacts = UefiSignatureFactsService.CollectWithReads(at, out var efiVariableReads);
         EfiVariableFacts = EfiVariableFactsService.Collect(at, efiVariableReads);
+        // U10-FW-0005（第 269 輪）：dbt／dbr 走同一條 FirmwareVariableAccess 通路——
+        // 變數不存在（Win32 2）＝NotApplicable（韌體未佈建），與「讀不到」分開陳述。
+        UefiDbtDbrFacts = UefiDbtDbrFactsService.Collect(at);
         // P2-061 韌體復原路徑：讀既有的 OsIndicationsSupported 變數（走同一條
         // GetFirmwareEnvironmentVariableEx 通路——UefiSignatureFactsService.ReadFirmwareVar），
         // 加上映像內既有的 FV 清單。
@@ -1943,7 +1959,7 @@ public sealed class EvidenceLabService : ObservableObject
         {
             var baseFacts = ChipsetFacts.Concat(SpiFlashFacts).Concat(PcieAerFacts).Concat(PciCapabilityFacts).Concat(SpiHashFacts).Concat(FitFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
                 .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(FirmwareRiskFacts).Concat(FirmwareRiskDeltaFacts).Concat(IoPortFacts).Concat(CmosFacts)
-                .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(EfiVariableFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(TpmReplayFacts)
+                .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(UefiDbtDbrFacts).Concat(EfiVariableFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(TpmViewCrossFacts).Concat(TpmReplayFacts)
                 .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EtwFilterViewFacts).Concat(FsMetadataLatencyFacts).Concat(PresentObservationFacts).Concat(SrumReadbackFacts).Concat(AmcacheFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(ListenPortFacts).Concat(LocalSecurityAuditFacts)
                 .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ComplianceFacts).Concat(ServerComplianceFacts).Concat(ServerRoleDeepFacts).Concat(ServerRoleConditionalFacts).Concat(ServerRoleFilePrintFacts).Concat(MaintenanceFacts).Concat(EnvironmentRuntimeFacts).Concat(ClosingFacts).Concat(QueryInsightFacts).Concat(ChecklistFacts).Concat(TrustOpsFacts).Concat(ZeroTrustFacts).Concat(DataSecurityFacts).Concat(EndpointPolicyFacts).Concat(ScenarioFacts).Concat(ScenarioSecondWaveFacts).Concat(MultimediaFacts).Concat(MediaProtectionFacts).Concat(ExportCacheFacts).Concat(MaintenanceDashboardFacts).Concat(VolumeEncryptionFacts).Concat(QueryGovernanceFacts).Concat(LifecycleReportsFacts).Concat(GovernanceExtraFacts).Concat(InterchangeReportFacts).Concat(AutomationGuidanceFacts).Concat(ServiceModeFacts).Concat(RecoveryPowerInteropFacts).Concat(EnvironmentDiagnosticsFacts).Concat(AdvancedSupplementFacts).Concat(OperationsInventoryFacts).Concat(NetworkSystemInventoryFacts).Concat(InventoryGovernanceFacts).Concat(NetworkSecurityInventoryFacts).Concat(FinalInventoryFacts).Concat(RecoveryInventoryFacts).Concat(RecoveryDisplayFacts).Concat(SecurityAuditSupplementFacts).Concat(LifecycleMaintenanceFacts).Concat(FirmwareAuditFacts).Concat(PlatformGovernanceFacts).Concat(PlatformDeepDiveFacts).Concat(PlatformExpansionFacts).Concat(PlatformReconciliationFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(StorageScenarioReconciliationFacts).Concat(PerformanceObservationFacts).Concat(ServiceBootFacts).Concat(DeepBenchSecondWaveFacts).Concat(GovernanceKnowledgeFacts).Concat(BusDeepDiveFacts).Concat(BusCapabilityFacts).Concat(EngineeringGovernanceFacts).Concat(VisualizationFacts).Concat(OfflineAnalysisFacts).Concat(ProductPlatformFacts).Concat(MeasurementMethodologyFacts).Concat(LifecycleSecurityFacts).Concat(DeepBenchMethodology2Facts).Concat(EvidenceExportFacts).Concat(ExportUxFacts).Concat(UserExperience2Facts).Concat(GpuDeepFacts).Concat(FirmwareDeepFacts).Concat(EngineeringGovernance2Facts).Concat(StorageDeepFacts).Concat(FileSystemVolumeFacts).Concat(IscsiSessionFacts).Concat(HyperVInventoryFacts).Concat(BaselineForecastFacts).Concat(DevDiagCorrelationFacts).Concat(SecurityAuditDeepFacts).Concat(BitLockerRecoveryFacts).Concat(AcpiDeepFacts).Concat(CppcCapabilityFacts).Concat(MousePollRateFacts).Concat(DeepTestFacts).Concat(DataSecurityDeepFacts).Concat(ScenarioThirdWaveFacts).Concat(SbomFacts)
                 .ToList();

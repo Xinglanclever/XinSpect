@@ -65,6 +65,10 @@
     <Resource Include="Assets\hug.gif" />
     <!-- 關於頁 DeepSeek 旁的大肥魚動圖 -->
     <Resource Include="Assets\bigfish.gif" />
+    <!-- 關於頁「第三方授權」卡的清單來源（U10-UI-0034）：單檔發佈時根目錄實檔不隨 exe 走，
+         內嵌為資源（邏輯名對應 Services/ThirdPartyNoticesCatalog.ResourceName）才讀得到；
+         讀取順序「資源優先、磁碟檔其次、皆無＝如實標缺」，磁碟檔只是開發機退路。 -->
+    <EmbeddedResource Include="THIRD-PARTY-NOTICES.md" LogicalName="XinSpect.THIRD-PARTY-NOTICES.md" />
   </ItemGroup>
 
   <!-- WinForms 僅供系統匣（TrayService）使用；移除其全域 using 以免與 WPF 的 System.Windows.* 型別衝突 -->

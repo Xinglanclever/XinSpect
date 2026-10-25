@@ -239,4 +239,48 @@ public class EfiVariableFactsTests
             "EFI 變數屬性事實產出了目錄裡沒有的鍵：\n"
             + string.Join("\n", unknown.Select(u => "  • " + u)));
     }
+
+    // ── Boot 條目跳號（U10-FW-0021，uefi.boot.gaps）─────────────────────
+
+    /// <summary>造一份 EFI_LOAD_OPTION：Attributes u32＋FilePathListLength u16＋UTF-16 描述＋結尾 null。</summary>
+    private static byte[] LoadOption(string desc)
+        => [0x01, 0, 0, 0, 0x08, 0, .. System.Text.Encoding.Unicode.GetBytes(desc), 0, 0];
+
+    private static HardwareFact GapsFact(string[] present)
+    {
+        var facts = UefiSignatureFactsService.Collect(At, name =>
+            name.StartsWith("Boot", StringComparison.Ordinal) &&
+            ushort.TryParse(name.AsSpan(4), System.Globalization.NumberStyles.HexNumber, null, out var n)
+                ? (Array.IndexOf(present, name) >= 0 ? LoadOption("碟機 " + n) : null)
+                : null);
+        return facts.Single(f => f.Key == "uefi.boot.gaps");
+    }
+
+    [Fact]
+    public void 跳號要逐號列名而不是只給計數()
+    {
+        var g = GapsFact(["Boot0000", "Boot0001", "Boot0003", "Boot0005"]);
+        Assert.Equal(FactAvailability.Present, g.Availability);
+        // 值尾端附掃描範圍界線（Boot0000–Boot001F、最多列 20 條）——範圍外的編號不在陳述裡。
+        Assert.StartsWith("Boot0002、Boot0004。", g.Value);
+        Assert.Equal(2, g.NumericValue);
+    }
+
+    [Fact]
+    public void 連續編號要說連續而不是回零()
+    {
+        var g = GapsFact(["Boot0003", "Boot0004"]);
+        Assert.Equal(FactAvailability.Present, g.Availability);
+        Assert.Equal(0, g.NumericValue);
+        Assert.Contains("連續", g.Value);
+    }
+
+    [Fact]
+    public void 沒有條目就沒有跳號可言()
+    {
+        var facts = UefiSignatureFactsService.Collect(At, _ => null);
+        var g = facts.Single(f => f.Key == "uefi.boot.gaps");
+        Assert.Equal(FactAvailability.NotApplicable, g.Availability);
+        Assert.Contains("無從計算", g.Value);
+    }
 }

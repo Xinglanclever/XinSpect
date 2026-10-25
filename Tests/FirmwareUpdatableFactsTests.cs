@@ -269,4 +269,33 @@ public class FirmwareUpdatableFactsTests
         Assert.Contains("StorageSmartService.BusTypeName",
             File.ReadAllText(Path.Combine(services, "DiskInfoService.cs")));
     }
+
+    // ── 攻擊面彙整（U10-SE-0036，pdev.fw.surface）──────────────────────
+
+    [Fact]
+    public void 攻擊面彙整要把有無證據分兩邊且不得下判決()
+    {
+        var facts = FirmwareUpdatableFactsService.Collect(DateTimeOffset.UtcNow,
+            () => [Nvme("X", SyntheticLog(0x01, "ECV1")), Ata("Y", null)]);
+        var s = facts.Single(f => f.Key == "pdev.fw.surface");
+        var u = facts.Single(f => f.Key == "pdev.fw.updatable");
+
+        Assert.Equal(FactAvailability.Present, s.Availability);
+        Assert.Equal(1, s.NumericValue);
+        Assert.Contains("NVMe 1", s.Value);
+        Assert.Contains("ATA 1", s.Value);
+        Assert.Contains("無證據 1", s.Value);
+        Assert.Contains("不是「已遭入侵」", s.Value);
+        // 同一次列舉只探一次：兩把鍵的分母必須一致
+        Assert.Equal(u.Source, s.Source);
+    }
+
+    [Fact]
+    public void 攻擊面彙整列舉失敗要跟主事實同態()
+    {
+        var facts = FirmwareUpdatableFactsService.Collect(DateTimeOffset.UtcNow, () => null);
+        var s = facts.Single(f => f.Key == "pdev.fw.surface");
+        Assert.Equal(FactAvailability.ReadError, s.Availability);
+        Assert.Contains("同一次列舉", s.UnavailableReason);
+    }
 }

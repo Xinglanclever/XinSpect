@@ -175,3 +175,20 @@
 - 收口判定以「標題能力的核心已有可指認的實作」為準；括號內的小增量（如 SHA-512 bank、問題碼過濾、分域逾時參數）在證據欄如實標注，未因此改判新列——若圈選時想要連增量一起成項，可自行升格。
 - OS-0057（PnPEntity）、SE-0058（SDDL 控制器類）、SE-0059/0060 的「收口」含篩選檢視性質的差異，已逐欄註明。
 - 本判定未修改任何既有檔案；`work/u10_dedup/report.md`／`report.json` 保持原樣。
+
+---
+
+## 更正（2026-10-25，第 269 輪）
+
+- **GV-0012／GV-0040 的證據引用了過期註解**。兩列的證據欄引 `Tests/PlanLibraryTests.cs:14`（類別註解寫「稽核工具（work/UltimateAudit/）住在未入版控的暫存區」），並據此判「入版控且會被跑」兩個條件皆未滿足。**現狀與此不符**：
+  - `work/UltimateAudit/` 自 2026-10-18 起（commit `78ba8a0`「計畫庫稽核：修好那支『有入版控但沒有人在跑』的工具，並留下兩份證據」）已整目錄入版控——`git ls-files work/UltimateAudit` 可證 9 個檔案（Program.cs、UltimateAudit.csproj 等）都在追蹤清單裡。
+  - 「會被跑」的常設化也已存在：`Tests/PlanLibraryTests.cs` 本身就是常設閘；本輪再於 `Tests/Ultimate10000CatalogTests.cs` 追加「收口判定統計必須自洽」「收口證據必須可回訪」兩條常設測試（文件統計自洽＋證據可回訪），把文件對帳也納入常設執行。
+  - 上面那張表與「新列列」清單**保持原樣不改**——判定結論（該二列當時的能力缺口）不因證據過期而翻盤，只更正證據陳述。PlanLibraryTests 類別註解裡的那句過期話以本節為準。
+
+## 更正之二（2026-10-25，第 269 輪）：U10-OS-0061（wmi.tpm.cross）判定有誤
+
+- 判定欄寫「`Win32_TPM` 全庫 0 命中」——**這是誤判**：查證用的是**大小寫敏感**的 grep（`Win32_TPM`），而原始碼寫的是 **`Win32_Tpm`**。實情是 WMI 備援通路**早已存在**，全庫有兩處：
+  - `Services/TpmFactsService.cs:46`——`root\cimv2\security\microsofttpm` 命名空間的 `Win32_Tpm`（`ReadWindowsView`，TBS 不可用時的備援視圖，讀 SpecVersion／ManufacturerIdTxt／三個 `_InitialValue` 狀態欄）；
+  - `Services/TpmSecureBootService.cs:23-24`——同一命名空間同一類別（零特權讀 SpecVersion／Enabled／Activated）。
+- 因此該列應改標：**「收口（通路）＋新列（對照鍵）」**——WMI 備援通路早已存在＝收口；尚未存在的是「TBS 視圖 × WMI 視圖」的對照**事實鍵**（`tpm.view.cross`，第 269 輪以新服務 `Services/TpmViewCrossFactsService.cs` 補上）。此修正同樣適用 FW-0051 判定裡「WMI Win32_TPM 備援路徑未實作」那句——那半句只對「對照鍵」成立，不對「通路」成立。
+- 判定欄其餘部分（既有 TPM 來源是 TBS／SMBIOS／ACPI）不受此更正影響——WMI 備援與它們並存，是並列的第四個來源。上方既有表格與前一節更正**保持原樣不改**。

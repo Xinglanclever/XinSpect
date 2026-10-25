@@ -1760,6 +1760,12 @@ public static class EnglishStrings
         ["，尚未開發完全，仍在持續完善中。"] = ", still under development and being improved.",
         ["📎 附加檔案…"] = "📎 Attach files…",
         ["等待首次掃描…"] = "Waiting for first scan…",
+
+        // ── 關於頁・第三方授權（U10-UI-0034）──
+        ["第三方授權"] = "Third-party licenses",
+        ["授權清單檔讀不到"] = "License list file could not be read",
+        ["授權清單讀到了，但抽不出元件表——檔案格式可能變了"] = "The license list was read, but no component table could be parsed — the file format may have changed",
+        ["隨程式分發的第三方元件與其授權；本清單是事實摘要，不構成法律意見，授權全文以上游連結為準。"] = "Third-party components shipped with the program and their licenses; this is a factual summary, not legal advice. Full license texts live at the upstream links.",
     };
 
     private static Dictionary<string, string>? _reverse;

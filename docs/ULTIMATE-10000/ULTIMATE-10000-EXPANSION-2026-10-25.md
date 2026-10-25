@@ -254,7 +254,7 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-CP-0145 | 7.1 其他位與保留位如實讀值 | `cpuid.7.1.eax.reserved` |
 | U10-CP-0146 | 7.2 子葉存在性與內容（如存在） | `cpuid.7.2.*` |
 | U10-CP-0147 | leaf 0xD XSAVE 子葉逐狀態（x87/SSE/AVX/AVX512/PT/CET_U/CET_S 之 size/offset） | `cpuid.d.sub{n}` |
-| U10-CP-0148 | leaf 0x12 SGX 子葉展開（EPC 逐銀行大小；查重：階二已做者收口） | `cpuid.12.epc{n}` |
+| U10-CP-0148 | leaf 0x12 SGX 子葉展開（EPC 逐銀行大小；查重：階二已做者收口）〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `cpuid.12.epc{n}` |
 | U10-CP-0149 | leaf 0x14 PT 能力逐位（cr3Filter/_cycleAccurate/mtc…） | `cpuid.14.*` |
 | U10-CP-0150 | leaf 0x19 KEYLOCKER 參數（如存在） | `cpuid.19.keylocker` |
 
@@ -333,13 +333,13 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-CP-0214 | Hypervisor 葉族 0x400000xx 簽章（Hyper-V/KVM/VMware/Xen） | `cpuid.hv.sig` |
 | U10-CP-0215 | Hyper-V 界面葉（0x40000003+ 功能與建議層級，如適用） | `cpuid.hv.features` |
 | U10-CP-0216 | KVM／VMware 特徵葉（如適用；僅讀自述） | `cpuid.hv.vendor.*` |
-| U10-CP-0217 | 微碼修訂雙源對帳（登錄檔 vs MSR 0x8B；衝突陳述）〔查重：mc.* 收口〕〔對映：倉庫既有鍵 mc.version.cross——能力已有、命名空間不同；圈選時對齊〕 | `mc.rev.crosscheck` |
+| U10-CP-0217 | 微碼修訂雙源對帳（登錄檔 vs MSR 0x8B；衝突陳述）〔查重：mc.* 收口〕〔對映：倉庫既有鍵 mc.version.cross——能力已有、命名空間不同；圈選時對齊〕〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `mc.rev.crosscheck` |
 | U10-CP-0218 | 微碼修訂對已知微碼表（知識包：同型號已知修訂清單；三態） | `mc.rev.known` |
 | U10-CP-0219 | APIC ID 全集 vs OS 可見核（被隱藏核差異） | `cpu.apic.visible` |
 | U10-CP-0220 | SMT 對（每實體核執行緒數）與 OS 親和遮罩對照 | `cpu.smt.pairs` |
 | U10-CP-0221 | hybrid 類型統計（P/E/LPE 分列，禁止加總成單值） | `cpu.hybrid.counts` |
 | U10-CP-0222 | hybrid 逐核類型（E-core 有無 AVX512 之類的類型級差異照實列） | `cpu.hybrid.core{n}` |
-| U10-CP-0223 | NUMA 節點清單與距離矩陣（SLIT；查重 SRAT 已有者收口）〔對映：倉庫既有鍵 numa.slit.nodes——能力已有、命名空間不同；圈選時對齊〕 | `numa.slit.grid` |
+| U10-CP-0223 | NUMA 節點清單與距離矩陣（SLIT；查重 SRAT 已有者收口）〔對映：倉庫既有鍵 numa.slit.nodes——能力已有、命名空間不同；圈選時對齊〕〔判定 2026-10-25：收口——已由 numa.slit.nodes＋numa.distance.{a}.{b} 實作（DEDUP-VERDICTS）〕| `numa.slit.grid` |
 | U10-CP-0224 | Cache 共享域圖（哪幾核共享 L2／L3；拓撲推導＋如實標來源）〔別名收錄：本體 U10-MM-0037；CP 域保留供拓撲交叉〕 | `alias.cache.sharemap` |
 | U10-CP-0225 | 快取階層逐級容量／行大小／組數（leaf 4 彙總）〔別名收錄：本體 U10-MM-0036；CP 域保留供拓撲交叉〕 | `alias.cache.l{n}.size` |
 | U10-CP-0226 | CLFLUSH 行大小換算（leaf 1 EBX[15:8]×8） | `cache.cacheline` |
@@ -415,7 +415,7 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-MS-0050 | STAR／LSTAR／CSTAR／SFMASK（0xC0000081–0xC0000084）現值 | `msr.syscall.*` |
 | U10-MS-0051 | FS_BASE／GS_BASE／KERNEL_GS_BASE（0xC0000100–0xC0000102） | `msr.seg.base.*` |
 | U10-MS-0052 | IA32_TSC_AUX（0xC0000103）逐核讀值（與拓撲交叉） | `msr.0xc0000103.tsc_aux` |
-| U10-MS-0053 | IA32_BIOS_SIGN_ID（0x8B）微碼修訂（雙源對帳另一源）〔查重：mc.*〕〔對映：倉庫既有鍵 mc.version.msr——能力已有、命名空間不同；圈選時對齊〕 | `mc.rev.msr` |
+| U10-MS-0053 | IA32_BIOS_SIGN_ID（0x8B）微碼修訂（雙源對帳另一源）〔查重：mc.*〕〔對映：倉庫既有鍵 mc.version.msr——能力已有、命名空間不同；圈選時對齊〕〔判定 2026-10-25：收口——已由 mc.version.msr 實作（DEDUP-VERDICTS）〕| `mc.rev.msr` |
 | U10-MS-0054 | AMD HWCR（0xC0010015）逐位（如 RDMSR 允許唯讀轉述） | `msr.amd.hwcr` |
 | U10-MS-0055 | AMD P-state 上限／控制／狀態（0xC0010061–0xC0010063） | `amd.pstate.ctl_status` |
 | U10-MS-0056 | AMD P-state 暫存器族（0xC0010064+）逐態 COF/VID 解碼 | `amd.pstate.state{n}` |
@@ -472,7 +472,7 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-MM-0037 | 快取共享域圖（逐核隸屬；非對稱拓撲如實） | `cache.sharemap` |
 | U10-MM-0038 | L3 跨 CCX/CCD 分塊（AMD 拓撲；分塊禁止加總陳述） | `cache.l3.slices` |
 | U10-MM-0039 | 快取策略（inclusive/exclusive/非包含）來源宣告 | `cache.policy` |
-| U10-MM-0040 | 延遲曲線（stride 掃描；拐點即快取邊界）〔查重：roadmap 舊項〕 | `mem.latency.curve` |
+| U10-MM-0040 | 延遲曲線（stride 掃描；拐點即快取邊界）〔查重：roadmap 舊項〕〔判定 2026-10-25：收口——已由 LatencyCurveService 實作（DEDUP-VERDICTS）〕| `mem.latency.curve` |
 | U10-MM-0041 | 快取邊界自動推導之方法與置信度（拐點判定規則成文） | `mt.cachebound.conf` |
 | U10-MM-0042 | 核到核延遲矩陣（同核/同 CCX/跨 CCX/跨節點分塊） | `mem.latency.cc` |
 | U10-MM-0043 | NUMA 本地/遠端帶寬與延遲對照（僅多節點時適用） | `mem.numa.remote.penalty` |
@@ -484,14 +484,14 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-MM-0049 | 實體記憶體總量/可用量/保留量（OS 原始值；保留區解釋成文） | `mem.os.total` |
 | U10-MM-0050 | OS 認得的 DIMM vs SMBIOS/SPD 差集（三方對帳表） | `mem.presence.cross` |
 | U10-MM-0051 | 非揮發性記憶體（NVDIMM-N）存在性（NFIT 交叉；無則 NotApplicable） | `mem.nvdimm.present` |
-| U10-MM-0052 | 記憶體映射裝置佔用（MMIO 總量；Type 19/ACPI 交叉）〔查重：sb.memmap 收口〕 | `mem.mmio.total` |
+| U10-MM-0052 | 記憶體映射裝置佔用（MMIO 總量；Type 19/ACPI 交叉）〔查重：sb.memmap 收口〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `mem.mmio.total` |
 | U10-MM-0053 | 記憶體訓練結果宣告（韌體有暴露才讀；無路徑=NotSupported 如實） | `mem.training.state` |
 | U10-MM-0054 | Post-Package Repair／行重映射支援位（裝置自述；無=不猜） | `mem.ppr.cap` |
 | U10-MM-0055 | 記憶體溫度感測器（hub/LHM 路徑；讀到才列） | `mem.temp.sensor{n}` |
 | U10-MM-0056 | 虛擬化二階轉譯（EPT/NPT）能力與啟用分列 | `mem.virt.ept` |
 | U10-MM-0057 | TME／記憶體加密能力與啟用（能力位≠BIOS 啟用） | `mem.tme.state` |
 | U10-MM-0058 | AMD SME/SEV 現況（CPUID 位 vs OS 啟用） | `mem.sev.state` |
-| U10-MM-0059 | 記憶體錯誤記錄（WHEA 記憶體節區；僅轉述不歸因）〔查重 OS 域交叉〕 | `mem.whea.errors` |
+| U10-MM-0059 | 記憶體錯誤記錄（WHEA 記憶體節區；僅轉述不歸因）〔查重 OS 域交叉〕〔判定 2026-10-25：收口——已由 cm.whea.timeline 實作（DEDUP-VERDICTS）〕| `mem.whea.errors` |
 | U10-MM-0060 | 帶寬/延遲量測的自我干擾申報（測試自身佔用，儀器效應成文） | `mt.self.memtest` |
 # U10-SB ・ SMBIOS 逐型別逐欄位（SMBIOS 3.4；已做者標收口）
 
@@ -640,7 +640,7 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-SB-0094 | Type 16 最大容量（32 位元）與延伸最大容量（兩欄並列＋陷阱註記） | `sb.type16.maxcap` |
 | U10-SB-0095 | Type 16 分壓容器數（記憶體裝置數）與實際 Type 17 數對帳 | `sb.type16.numdevices` |
 | U10-SB-0096 | Type 17 與 Type 16 之 handle 鏈結完整性驗證 | `sb.mem.linkcheck` |
-| U10-SB-0097 | Type 19 記憶體映射〔查重：sb.memmap 已做——此為對帳收口〕 | `sb.type19.cross` |
+| U10-SB-0097 | Type 19 記憶體映射〔查重：sb.memmap 已做——此為對帳收口〕〔判定 2026-10-25：收口——已由 sb.memmap.{n} 動態家族＋sb.memmap.count／sb.memmap.total 實作（DEDUP-VERDICTS）〕| `sb.type19.cross` |
 | U10-SB-0098 | Type 20 記憶體裝置映射位址（起訖/交錯位置/交錯深度） | `sb.type20.*` |
 
 ## Type 17 Memory Device（18 項）
@@ -724,7 +724,7 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-SB-0158 | Type 45 韌體庫存：元件名/製造商/發佈日期 | `sb.type45.ident` |
 | U10-SB-0159 | Type 45 版本/最低支援版本/特性/狀態 | `sb.type45.version` |
 | U10-SB-0160 | Type 45 韌體 ID 與關聯裝置 handle | `sb.type45.fwid` |
-| U10-SB-0161 | Type 45 項目與 pdev.fw.updatable 盤點對帳〔查重收口〕 | `sb.type45.pdev.cross` |
+| U10-SB-0161 | Type 45 項目與 pdev.fw.updatable 盤點對帳〔查重收口〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `sb.type45.pdev.cross` |
 | U10-SB-0162 | Type 46 字串屬性（屬性名/值/父 handle——動態家族） | `sb.type46.prop{n}` |
 | U10-SB-0163 | 結尾錨（Type 127）存在與位置合理性 | `sb.endanchor` |
 | U10-SB-0164 | Inactive（Type 126）結構存在與內容 | `sb.inactive` |
@@ -775,13 +775,13 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-AC-0039 | FPDT：韌體開機記錄（firmware basic boot — 開機耗時證據） | `acpi.fpdt.boot` |
 | U10-AC-0040 | FPDT：S3 恢復記錄（睡眠喚醒耗時證據） | `acpi.fpdt.s3` |
 | U10-AC-0041 | FPDT 記錄與事件日誌開機時間對帳（兩源並列） | `acpi.fpdt.evtx.cross` |
-| U10-AC-0042 | TCPA／TPM2 表〔查重：階二已做——收口對帳〕〔對映：倉庫既有鍵 ac.tpm2／ac.tpm2.method——能力已有、命名空間不同；圈選時對齊〕 | `acpi.tcpa.cross` |
-| U10-AC-0043 | DBG2／SPCR／BGRT〔查重：2.84 已做——收口對帳〕〔對映：倉庫既有鍵 ac.dbg2／ac.spcr／ac.bgrt——能力已有、命名空間不同；圈選時對齊〕 | `acpi.dbg2spcr.cross` |
+| U10-AC-0042 | TCPA／TPM2 表〔查重：階二已做——收口對帳〕〔對映：倉庫既有鍵 ac.tpm2／ac.tpm2.method——能力已有、命名空間不同；圈選時對齊〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `acpi.tcpa.cross` |
+| U10-AC-0043 | DBG2／SPCR／BGRT〔查重：2.84 已做——收口對帳〕〔對映：倉庫既有鍵 ac.dbg2／ac.spcr／ac.bgrt——能力已有、命名空間不同；圈選時對齊〕〔判定 2026-10-25：收口——已由 ac.bgrt.deep／ac.spcr.deep／ac.dbg2.deep 實作（DEDUP-VERDICTS）〕| `acpi.dbg2spcr.cross` |
 | U10-AC-0044 | LPIT：低功率閒置狀態逐條（現代待機證據） | `acpi.lpit.state{n}` |
 | U10-AC-0045 | PCCT：子空間型別清單（門鈴/共享記憶體） | `acpi.pcct.sub{n}` |
 | U10-AC-0046 | RASF：平臺容量/資訊通道能力 | `acpi.rasf.*` |
-| U10-AC-0047 | SRAT〔查重：已有 Service——收口〕＋親近性網域清單〔對映：倉庫既有鍵 ac.srat.*——能力已有、命名空間不同；圈選時對齊〕 | `acpi.srat.cross` |
-| U10-AC-0048 | SLIT 距離矩陣（與 NUMA 節點交叉）〔查重〕〔對映：倉庫既有鍵 numa.slit.nodes——能力已有、命名空間不同；圈選時對齊〕 | `acpi.slit.grid` |
+| U10-AC-0047 | SRAT〔查重：已有 Service——收口〕＋親近性網域清單〔對映：倉庫既有鍵 ac.srat.*——能力已有、命名空間不同；圈選時對齊〕〔判定 2026-10-25：收口——已由 AcpiSratFactsService 實作（DEDUP-VERDICTS）〕| `acpi.srat.cross` |
+| U10-AC-0048 | SLIT 距離矩陣（與 NUMA 節點交叉）〔查重〕〔對映：倉庫既有鍵 numa.slit.nodes——能力已有、命名空間不同；圈選時對齊〕〔判定 2026-10-25：收口——已由 numa.slit.nodes＋numa.distance.{a}.{b} 實作（DEDUP-VERDICTS）〕| `acpi.slit.grid` |
 | U10-AC-0049 | PPTT：節點樹（處理器/快取/ID 節點逐個） | `acpi.pptt.node{n}` |
 | U10-AC-0050 | PPTT：快取節點細節（大小/行/關聯/層級/類型） | `acpi.pptt.cache{n}` |
 | U10-AC-0051 | PPTT 宣告 vs CPUID 快取對帳（衝突並列） | `acpi.pptt.cpuid.cross` |
@@ -873,7 +873,7 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-FW-0002 | SetupMode 現值（1=還在設定模式＝PK 未建立） | `uefi.setupmode` |
 | U10-FW-0003 | PK 存在性與大小（內容為簽章結構，僅列計數與大小） | `uefi.pk.size` |
 | U10-FW-0004 | KEK 清單計數與大小  〔對帳 2026-10-25：與倉庫既有鍵同名——既有實作；本列保留為規格對照〕| `uefi.kek.count` |
-| U10-FW-0005 | db／dbx／dbt／dbr 存在性與計數〔查重：uefi.db.* 已做——收口〕 | `uefi.dbx.count.cross` |
+| U10-FW-0005 | db／dbx／dbt／dbr 存在性與計數〔查重：uefi.db.* 已做——收口〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `uefi.dbx.count.cross` |
 | U10-FW-0006 | VendorKeys 旗標（微軟鑰匙存在性之韌體自述） | `uefi.vendorkeys` |
 | U10-FW-0007 | db 逐張憑證鏈展開（不列主體名稱——沿 L3 規則；列類型/效期/指紋） | `uefi.db.chain` |
 | U10-FW-0008 | dbx 撤銷媒介統計（憑證/雜湊/時間） | `uefi.dbx.kinds` |
@@ -889,7 +889,7 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-FW-0018 | Boot#### 逐條：屬性（Active/Hidden/Category） | `uefi.boot.{id}.attr` |
 | U10-FW-0019 | Boot#### 逐條：裝置路徑解碼（PCI/USB/HD/NVMe/File/FwVol→人類可讀） | `uefi.boot.{id}.devpath` |
 | U10-FW-0020 | Boot#### 逐條：選配資料（可執行參數原始） | `uefi.boot.{id}.optdata` |
-| U10-FW-0021 | 條目跳號偵測（如 0–6、8、9——與執行期家族對帳規則沿用）〔查重〕 | `uefi.boot.gaps` |
+| U10-FW-0021 | 條目跳號偵測（如 0–6、8、9——與執行期家族對帳規則沿用）〔查重〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `uefi.boot.gaps` |
 | U10-FW-0022 | DriverOrder／SysPrepOrder 存在性（伺服器板常見） | `uefi.driver.order` |
 | U10-FW-0023 | PlatformLang／Lang 現值 | `uefi.platformlang` |
 | U10-FW-0024 | ConIn／ConOut／ErrOut 裝置路徑解碼（主控台指向） | `uefi.console.*` |
@@ -910,7 +910,7 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-FW-0034 | GetSystemFirmwareTable 支援之表類型探測（RSMB/FIRM/ESRT/…） | `fw.table.classes` |
 | U10-FW-0035 | 韌體廠商／版本字串（SMBIOS vs 登錄檔 vs WMI 三源對帳） | `fw.bios.version.cross` |
 | U10-FW-0036 | 主機板 UEFI 開機 vs CSM legacy 判讀（多源證據並列不裁決） | `fw.boot.type` |
-| U10-FW-0037 | SPI BIOS 區塊雜湊〔查重：階二 SPI 地圖——收口〕 | `fw.spi.hash.cross` |
+| U10-FW-0037 | SPI BIOS 區塊雜湊〔查重：階二 SPI 地圖——收口〕〔判定 2026-10-25：收口——已由 spi.flash_map＋spi.bios_hash（SHA-256） 實作（DEDUP-VERDICTS）〕| `fw.spi.hash.cross` |
 | U10-FW-0038 | EFI 系統分割區存在性與大小（GPT 掃描；跨儲存域引用） | `fw.esp.present` |
 | U10-FW-0039 | EFI 系統分割區內容清單（\EFI\* 目錄樹；唯讀） | `fw.esp.tree` |
 | U10-FW-0040 | 開機管理器鏈陳述（韌體→Windows boot mgr→BCD；逐環來源標明） | `fw.bootchain.stages` |
@@ -919,17 +919,17 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-FW-0043 | TCG log 長度與事件數（規模自述） | `fw.tcglog.stats` |
 | U10-FW-0044 | 開機方法判讀（冷開/熱開/休眠恢復——事件日誌證據） | `fw.boot.kind` |
 | U10-FW-0045 | 韌體更新歷史重構（事件日誌韌體安裝事件逐條） | `fw.update.history` |
-| U10-FW-0046 | 韌體防護：Boot Guard 生產模式狀態鏈〔查重：階二 FIT/Boot Guard——收口〕 | `fw.bootguard.cross` |
+| U10-FW-0046 | 韌體防護：Boot Guard 生產模式狀態鏈〔查重：階二 FIT/Boot Guard——收口〕〔判定 2026-10-25：收口——已由 bt.ibb／bt.km／bt.manifests 實作（DEDUP-VERDICTS）〕| `fw.bootguard.cross` |
 | U10-FW-0047 | 韌體保護 BIT/BIOGUARD 等 OEM 自述旗標（讀得到才列；知識包） | `fw.oem.protect.flags` |
 | U10-FW-0048 | FmpNotifications（韌體更新成果事件統計；事件日誌源） | `fw.fmp.events` |
 | U10-FW-0049 | NVRAM 使用量：量測路徑證明（無公開列舉則明文不做——調度准入三條件） | `uefi.nvram.usage` |
-| U10-FW-0050 | 映像 FV/FFS 分解〔查重：階二已做——收口對帳行〕 | `fw.fv.cross` |
+| U10-FW-0050 | 映像 FV/FFS 分解〔查重：階二已做——收口對帳行〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `fw.fv.cross` |
 
 ## TPM 2.0（68 項）
 
 | ID | 項目 | 候選鍵 |
 |---|---|---|
-| U10-FW-0051 | TPM 存在性與來源（TBS／WMI 雙路徑；查重：已有——收口） | `tpm.present.cross` |
+| U10-FW-0051 | TPM 存在性與來源（TBS／WMI 雙路徑；查重：已有——收口）〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `tpm.present.cross` |
 | U10-FW-0052 | TPM_PT_FAMILY_INDICATOR（'2.0' 之 UINT32 原值與解讀） | `tpm.pt.family` |
 | U10-FW-0053 | TPM_PT_SPEC_LEVEL／REVISION／DAY_OF_YEAR／YEAR（規格四件） | `tpm.pt.spec` |
 | U10-FW-0054 | TPM_PT_FIRMWARE_VERSION（8 位元組版本） | `tpm.pt.fwver` |
@@ -939,7 +939,7 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-FW-0058 | RSA 支援細節（位元長度清單 1024/2048/3072） | `tpm.algs.rsa` |
 | U10-FW-0059 | 支援 ECC 曲線清單（TPM_CAP_ECC_CURVES 逐條：NIST P-256/384/521…） | `tpm.ecc.curves` |
 | U10-FW-0060 | PCR bank 清單與各 bank 已分配索引遮罩  〔對帳 2026-10-25：與倉庫既有鍵同名——既有實作；本列保留為規格對照〕| `tpm.pcr.banks` |
-| U10-FW-0061 | PCR 逐 bank 現值（SHA-1/256/384/512；查重：已有——收口擴 bank） | `tpm.pcr.{bank}` |
+| U10-FW-0061 | PCR 逐 bank 現值（SHA-1/256/384/512；查重：已有——收口擴 bank）〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `tpm.pcr.{bank}` |
 | U10-FW-0062 | PCR 現值 vs TCG log 重放重算（只算不寫；不一致＝陳述不修） | `tpm.pcr.replay` |
 | U10-FW-0063 | 記憶體固定屬性（TPM_PT_MEMORY：共享/堆疊/堆大小類型） | `tpm.pt.memory` |
 | U10-FW-0064 | TPM_PT_FIXED 屬性總數與可變屬性數（清單規模） | `tpm.pt.propcount` |
@@ -953,7 +953,7 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-FW-0072 | 輸入/輸出緩衝上限（TPM_PT_INPUT_BUFFER） | `tpm.pt.iobuf` |
 | U10-FW-0073 | 持久/揮發屬性狀態組（TPM_PT_PERSISTENT／VOLATILE 位域） | `tpm.pt.persist` |
 | U10-FW-0074 | GetCapability 不可得屬性之逐項原因（六態落實到子命令粒度） | `tpm.cap.failures` |
-| U10-FW-0075 | TCG log 逐事件類型統計〔查重：tpm.ev.* ——收口為全型別表〕 | `tpm.ev.types.cross` |
+| U10-FW-0075 | TCG log 逐事件類型統計〔查重：tpm.ev.* ——收口為全型別表〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `tpm.ev.types.cross` |
 | U10-FW-0076 | EV_POST_CODE／EV_S_CRTM_*（開機前塊事件計數） | `tpm.ev.postcode` |
 | U10-FW-0077 | EV_EFI_VARIABLE_DRIVER_CERT 事件計數（db 變更計量） | `tpm.ev.varcert` |
 | U10-FW-0078 | EV_EFI_VARIABLE_BOOT 事件計數（Boot#### 變更計量——變更次數即資訊） | `tpm.ev.varboot` |
@@ -987,7 +987,7 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-FW-0101 | 微碼撤回歷史（OS 是否回退過微碼；事件源） | `mc.rollback.history` |
 | U10-FW-0102 | BIOS 設定變更偵測（Setup 變數雜湊跨掃描差異——非內容比對，僅變更事實） | `fw.setup.change` |
 | U10-FW-0103 | 韌體 Type 45 與 ESRT 對帳（兩套韌體盤點來源差集） | `fw.inventory.cross` |
-| U10-FW-0104 | 周邊韌體盤點全表〔查重：pdev.fw.updatable——擴充為全裝置〕〔對映：倉庫既有鍵 pdev.fw.updatable／pdev.fw.version——能力已有、命名空間不同；圈選時對齊〕 | `pdev.fw.inventory` |
+| U10-FW-0104 | 周邊韌體盤點全表〔查重：pdev.fw.updatable——擴充為全裝置〕〔對映：倉庫既有鍵 pdev.fw.updatable／pdev.fw.version——能力已有、命名空間不同；圈選時對齊〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `pdev.fw.inventory` |
 | U10-FW-0105 | 嵌入式控制器（EC）韌體版本（如廠商暴露；多數沒有——如實） | `ec.fw.version` |
 | U10-FW-0106 | EC 存在性判讀（ACPI PNP ID 如 ITE/ENE 之跡證；僅存在性）  〔對帳 2026-10-25：與倉庫既有鍵同名——既有實作；本列保留為規格對照〕| `ec.present` |
 | U10-FW-0107 | EC 讀寫界線成文（廠商未公開 map 不逆向——沿 NX 規則） | `ec.stance` |
@@ -996,7 +996,7 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-FW-0110 | UEFI 驅動存在性（FV 內 DXE 模組清單——階二已有分解，收口統計） | `fw.dxe.count` |
 | U10-FW-0111 | OPROM（VGABIOS/網卡 boot ROM）存在性與大小（FV＋卡上 ROM BAR） | `fw.oprom.list` |
 | U10-FW-0112 | 韌體字串池掃描（可列印字串中之版本樣式；輔助證據，不當唯一來源） | `fw.strings.scan` |
-| U10-FW-0113 | 韌體風險陳述六把〔查重：fw.risk.facts.*——收口引用〕〔對映：倉庫既有鍵 fw.risk.facts.*——能力已有、命名空間不同；圈選時對齊〕 | `fw.risk.cross` |
+| U10-FW-0113 | 韌體風險陳述六把〔查重：fw.risk.facts.*——收口引用〕〔對映：倉庫既有鍵 fw.risk.facts.*——能力已有、命名空間不同；圈選時對齊〕〔判定 2026-10-25：收口——已由 fw.risk.facts.{parts,level,gap,baseline,delta,…} 六把 實作（DEDUP-VERDICTS）〕| `fw.risk.cross` |
 | U10-FW-0114 | SMM 存在性與大小宣告（TSEG；SMBIOS/MSR 通告源） | `fw.smm.tseg` |
 | U10-FW-0115 | 韌體修補平臺宣告（microcode 修補 vs OS 通告之版本對帳收口） | `fw.patch.cross` |
 | U10-FW-0116 | 雙 BIOS/BIOS 回復支援宣告（OEM 自述來源；讀不到＝缺源非不存在） | `fw.dualbios.claim` |
@@ -1090,7 +1090,7 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-NV-0065 | 0x00 支援日誌頁位圖逐位（哪些頁存在——能力≠已讀） | `nvme.log.supported` |
 | U10-NV-0066 | 0x01 錯誤資訊日誌逐條全欄（命令 ID/狀態/命令 Dword/LBA/NSID） | `nvme.log.err{i}` |
 | U10-NV-0067 | 錯誤日誌之命令線索關聯（同一命令 ID 多錯之聚合陳述） | `nvme.log.err.cluster` |
-| U10-NV-0068 | 0x03 韌體槽〔查重：已做——收口〕 | `nvme.fw.slots.cross` |
+| U10-NV-0068 | 0x03 韌體槽〔查重：已做——收口〕〔判定 2026-10-25：收口——已由 NvmeFwSlot 解碼器（log page 0x03、七槽＋AFI） 實作（DEDUP-VERDICTS）〕| `nvme.fw.slots.cross` |
 | U10-NV-0069 | 0x04 變更命名空間清單（動態家族；讀取即清除之副作用成文） | `nvme.log.nschanged` |
 | U10-NV-0070 | 0x05 命令支援與效應表（逐命令：CSUP/UDM/LBCC/NCC/NIC/PAC/PDA 位） | `nvme.log.effects{cmd}` |
 | U10-NV-0071 | 0x06 裝置自測日誌逐條（操作/結果碼/電源時數——唯讀列結果） | `nvme.log.selftest{i}` |
@@ -1687,22 +1687,22 @@ GV（治理/守門/自校）、NX（明文不做）。
 
 | ID | 項目 | 候選鍵 |
 |---|---|---|
-| U10-OS-0025 | Win32_Processor〔查重：核心已用——收口未用欄位清單〕 | `wmi.cpu.gap` |
+| U10-OS-0025 | Win32_Processor〔查重：核心已用——收口未用欄位清單〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `wmi.cpu.gap` |
 | U10-OS-0026 | Win32_ComputerSystem（製造/型號/實體記憶體/開機狀態） | `wmi.computersystem` |
 | U10-OS-0027 | Win32_OperatingSystem（組建/安裝日/時區/上次開機） | `wmi.os.info` |
-| U10-OS-0028 | Win32_BIOS〔查重：與 SMBIOS 對帳收口〕 | `wmi.bios.cross` |
-| U10-OS-0029 | Win32_BaseBoard／Win32_SystemEnclosure〔查重收口〕 | `wmi.board.cross` |
-| U10-OS-0030 | Win32_PhysicalMemory〔查重：作 SPD 對帳第三源〕 | `wmi.mem.cross` |
+| U10-OS-0028 | Win32_BIOS〔查重：與 SMBIOS 對帳收口〕〔判定 2026-10-25：收口——已由 sb.cross.bios 實作（DEDUP-VERDICTS）〕| `wmi.bios.cross` |
+| U10-OS-0029 | Win32_BaseBoard／Win32_SystemEnclosure〔查重收口〕〔判定 2026-10-25：收口——已由 sb.cross.board／sb.cross.system 實作（DEDUP-VERDICTS）〕| `wmi.board.cross` |
+| U10-OS-0030 | Win32_PhysicalMemory〔查重：作 SPD 對帳第三源〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `wmi.mem.cross` |
 | U10-OS-0031 | Win32_MemoryArray／Win32_MemoryDevice（關聯類） | `wmi.memassoc` |
 | U10-OS-0032 | Win32_CacheMemory（韌體快取自述——與 leaf 4 三源對照） | `wmi.cache` |
-| U10-OS-0033 | Win32_DiskDrive〔查重：擴充未用欄位（分區/匯流排類型碼）〕 | `wmi.disk.gap` |
+| U10-OS-0033 | Win32_DiskDrive〔查重：擴充未用欄位（分區/匯流排類型碼）〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `wmi.disk.gap` |
 | U10-OS-0034 | Win32_PhysicalMedia（碟片序號/廠商——ATA 直讀對照） | `wmi.physmedia` |
 | U10-OS-0035 | Win32_DiskPartition／Win32_LogicalDiskToPartition（關聯） | `wmi.partition.map` |
 | U10-OS-0036 | Win32_LogicalDisk／Win32_Volume（檔案系統/大小/卷類型） | `wmi.logicaldisk` |
 | U10-OS-0037 | Win32_CDROMDrive（讀寫能力/匯流排/托盤） | `wmi.cdrom` |
-| U10-OS-0038 | Win32_VideoController〔查重：擴充 VRAM 類型/掃描模式欄〕 | `wmi.gpu.gap` |
+| U10-OS-0038 | Win32_VideoController〔查重：擴充 VRAM 類型/掃描模式欄〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `wmi.gpu.gap` |
 | U10-OS-0039 | Win32_DesktopMonitor（螢幕自述與 EDID 對照） | `wmi.monitor` |
-| U10-OS-0040 | Win32_NetworkAdapter(+Configuration)〔查重收口〕 | `wmi.net.gap` |
+| U10-OS-0040 | Win32_NetworkAdapter(+Configuration)〔查重收口〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `wmi.net.gap` |
 | U10-OS-0041 | Win32_SoundDevice（音訊硬體清單與狀態） | `wmi.sound` |
 | U10-OS-0042 | Win32_USBController／USBHub／USBDevice（三分列） | `wmi.usb.*` |
 | U10-OS-0043 | Win32_1394Controller／IDEController／SCSIController（匯流排控制面） | `wmi.buses` |
@@ -1719,11 +1719,11 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-OS-0054 | Win32_AllocatedResource（裝置↔資源 IRQ/IO/DMA 關聯圖） | `wmi.allocated` |
 | U10-OS-0055 | IRQ 分配表（逐中斷號之裝置清單——衝突面） | `os.irq.map` |
 | U10-OS-0056 | I/O 埠與 DMA 資源表（legacy 面；現代機多為 MSI——計數即可） | `os.ioport.map` |
-| U10-OS-0057 | Win32_PnPEntity（全量；問題碼過濾用）〔查重〕 | `wmi.pnpentity` |
+| U10-OS-0057 | Win32_PnPEntity（全量；問題碼過濾用）〔查重〕〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `wmi.pnpentity` |
 | U10-OS-0058 | Win32_PnPSignedDriver（簽章/INF 交叉——SE 域引用） | `wmi.signeddriver` |
 | U10-OS-0059 | Win32_SystemDriver（服務型驅動清單/狀態/啟動型） | `wmi.sysdriver` |
 | U10-OS-0060 | Win32_LoadOrderGroup（驅動載入順序組） | `wmi.loadorder` |
-| U10-OS-0061 | Win32_TPM〔查重：已有 WMI 備援路徑——收口〕 | `wmi.tpm.cross` |
+| U10-OS-0061 | Win32_TPM〔查重：已有 WMI 備援路徑——收口〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `wmi.tpm.cross` |
 | U10-OS-0062 | Win32_EncryptableVolume（BitLocker 面——SE 域引用） | `wmi.encryptvol` |
 | U10-OS-0063 | Win32_QuickFixEngineering（修補清單——驅動類 KB 過濾） | `wmi.qfe.drivers` |
 | U10-OS-0064 | Win32_DeviceBus／Win32_SystemBIOS（關聯類對帳） | `wmi.assoc.extra` |
@@ -1857,7 +1857,7 @@ GV（治理/守門/自校）、NX（明文不做）。
 |---|---|---|
 | U10-SE-0001 | 安全開機鏈四環陳述（PK→KEK→db→dbx 各環狀態與缺口） | `sec.sb.chain` |
 | U10-SE-0002 | SetupMode／VendorKeys 交叉（設定模式=信任根未立的證據） | `sec.sb.mode.cross` |
-| U10-SE-0003 | VBS/HVCI 啟用鏈（含未啟用原因碼）〔查重 2.84——收口擴鏈〕〔對映：倉庫既有鍵 virt.vbs／platform.hvci——能力已有、命名空間不同；圈選時對齊〕 | `sec.vbs.state` |
+| U10-SE-0003 | VBS/HVCI 啟用鏈（含未啟用原因碼）〔查重 2.84——收口擴鏈〕〔對映：倉庫既有鍵 virt.vbs／platform.hvci——能力已有、命名空間不同；圈選時對齊〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `sec.vbs.state` |
 | U10-SE-0004 | VBS 服務執行清單（HVCI/憑證防護…實際在跑哪幾個） | `sec.vbs.services` |
 | U10-SE-0005 | Credential Guard 狀態鏈 | `sec.cguard.state` |
 | U10-SE-0006 | 核心 DMA 保護（KB DMA）狀態與例外清單 | `sec.dma.protect` |
@@ -1890,32 +1890,32 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-SE-0033 | 網路儲存過濾器誠實審查（非已知發行者之過濾器在儲存堆疊——清單） | `sec.stack.unknown.filters` |
 | U10-SE-0034 | 可移除儲存政策（GPO 封鎖與否） | `sec.removable.policy` |
 | U10-SE-0035 | USB 裝置允許清單審計（政策在使用者在場時定義；政策缺席=不適用） | `sec.usb.allowlist` |
-| U10-SE-0036 | 週邊韌體可攻擊面陳述（可更新周邊 vs 不可更新——事實面）〔查重 pdev.fw〕 | `sec.pdevfw.surface` |
+| U10-SE-0036 | 週邊韌體可攻擊面陳述（可更新周邊 vs 不可更新——事實面）〔查重 pdev.fw〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `sec.pdevfw.surface` |
 | U10-SE-0037 | 實體埠曝露圖（全部可插入介面之清單——跨 NP/SB 域彙總） | `sec.physical.ports` |
 | U10-SE-0038 | 近距離無線面（BT 可發現/Wi-Fi Direct——狀態面） | `sec.proximity.exposure` |
 | U10-SE-0039 | 生物特徵裝置存在性（指紋/IR 攝影機——裝置面非資料面） | `sec.biometrics.devices` |
 | U10-SE-0040 | 生物特徵資料不存在證明之聲明（本工具永不讀取生物資料——界線） | `sec.biometrics.stance` |
 | U10-SE-0041 | 藍牙配對史（登錄檔 L2——跨 NP 域引用） | `sec.bt.paired.history` |
 | U10-SE-0042 | Wi-Fi 設定檔加密等級清單（開放網路警告——事實標記） | `sec.wifi.openprofiles` |
-| U10-SE-0043 | 憑證主體名稱絕不出現——L3 禁項守門（正對照測試）〔查重：已有——收口〕 | `sec.l3.certname.gate` |
-| U10-SE-0044 | 匯出遮蔽預覽與解除留痕（L2 解除逐條紀錄）〔查重——收口〕 | `sec.export.unmask.ledger` |
+| U10-SE-0043 | 憑證主體名稱絕不出現——L3 禁項守門（正對照測試）〔查重：已有——收口〕〔判定 2026-10-25：收口——已由 P1-048 L3 禁項掃描守門＋「自簽憑證不列主體名稱」正對照測試 實作（DEDUP-VERDICTS）〕| `sec.l3.certname.gate` |
+| U10-SE-0044 | 匯出遮蔽預覽與解除留痕（L2 解除逐條紀錄）〔查重——收口〕〔判定 2026-10-25：收口——已由 P1-047 L2 選擇性解除＋「解除遮蔽須留可稽核紀錄」規則 實作（DEDUP-VERDICTS）〕| `sec.export.unmask.ledger` |
 | U10-SE-0045 | 稽核鏈互驗執行時機（ev.chain.verify 正式流程接入——補 2.87 已申報缺口） | `sec.evchain.schedule` |
 | U10-SE-0046 | 安全態勢報告節（聚合訊號不是分數；逐項來源連結） | `rep.security.posture` |
-| U10-SE-0047 | 韌體風險六把報告節〔查重 fw.risk.facts——報告整合〕 | `rep.fw.risk` |
+| U10-SE-0047 | 韌體風險六把報告節〔查重 fw.risk.facts——報告整合〕〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `rep.fw.risk` |
 | U10-SE-0048 | 硬體變更時間線（安裝/移除事件→設備清單變遷） | `sec.timeline.hwchanges` |
 | U10-SE-0049 | 序號追蹤政策（L2 預設遮蔽；跨機比對時用雜湊——成文） | `sec.serial.policy` |
 | U10-SE-0050 | 掃描器自我安全聲明（唯讀集、無驅動時的降級、寫入閘門零通過——報告節） | `rep.self.statement` |
-| U10-SE-0051 | 出網零聲明之驗證（egress.allowlist 空集的守門）〔查重——收口〕 | `sec.egress.zero` |
+| U10-SE-0051 | 出網零聲明之驗證（egress.allowlist 空集的守門）〔查重——收口〕〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `sec.egress.zero` |
 | U10-SE-0052 | 防篡改：報告尾端內容雜湊（已有——每次報告驗證腳本收口） | `sec.report.hash.verify` |
 | U10-SE-0053 | 威脅模型文件鍵（本工具自身受攻擊面：設定檔/報告路徑） | `docs.threatmodel` |
-| U10-SE-0054 | Smart App Control 三態〔查重 2.84——收口引用〕〔對映：倉庫既有鍵 ds.sac／ds.sac.deep——能力已有、命名空間不同；圈選時對齊〕 | `sec.sac.state` |
+| U10-SE-0054 | Smart App Control 三態〔查重 2.84——收口引用〕〔對映：倉庫既有鍵 ds.sac／ds.sac.deep——能力已有、命名空間不同；圈選時對齊〕〔判定 2026-10-25：收口——已由 ds.sac／ds.sac.deep 實作（DEDUP-VERDICTS）〕| `sec.sac.state` |
 | U10-SE-0055 | Windows Defender 平台版本（L0；僅版本自述） | `sec.defender.ver` |
 | U10-SE-0056 | 安全開機後續引導完整性（ELAM→開機啟動驅動簽章全驗） | `sec.boot.startdrv` |
 | U10-SE-0057 | 韌體回寫防護（寫入閘門對韌體域動詞全拒——正對照） | `sec.fw.writegate` |
-| U10-SE-0058 | 驅動服務 SDDL 異常清單〔查重 2.84——擴展至硬碟控制器類〕〔對映：倉庫既有鍵 sa.sddl.deep／sa.sddl.summary——能力已有、命名空間不同；圈選時對齊〕 | `sec.sddl.controllers` |
-| U10-SE-0059 | 替代資料流掃描（驅動檔案 ADS）〔查重 2.84——收口引用〕 | `sec.ads.drivers` |
-| U10-SE-0060 | 已安裝程式簽章狀態分布〔查重 2.84——硬體相關子集〕 | `sec.apps.signed.hw` |
-| U10-SE-0061 | 登入歷史硬體關聯（裝置插入與登入時間交集——僅事實）〔查重 2.84〕 | `sec.logon.hw.correlate` |
+| U10-SE-0058 | 驅動服務 SDDL 異常清單〔查重 2.84——擴展至硬碟控制器類〕〔對映：倉庫既有鍵 sa.sddl.deep／sa.sddl.summary——能力已有、命名空間不同；圈選時對齊〕〔判定 2026-10-25：收口——已由 sa.sddl.summary／sa.sddl.deep 實作（DEDUP-VERDICTS）〕| `sec.sddl.controllers` |
+| U10-SE-0059 | 替代資料流掃描（驅動檔案 ADS）〔查重 2.84——收口引用〕〔判定 2026-10-25：收口——已由 sa.ads.summary／sa.ads.deep 實作（DEDUP-VERDICTS）〕| `sec.ads.drivers` |
+| U10-SE-0060 | 已安裝程式簽章狀態分布〔查重 2.84——硬體相關子集〕〔判定 2026-10-25：收口——已由 sa.uninst.summary／sa.uninst.deep 實作（DEDUP-VERDICTS）〕| `sec.apps.signed.hw` |
+| U10-SE-0061 | 登入歷史硬體關聯（裝置插入與登入時間交集——僅事實）〔查重 2.84〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `sec.logon.hw.correlate` |
 | U10-SE-0062 | 安全域來源衝突表（同一事實多源不一致之並列） | `sec.source.conflicts` |
 
 # U10-BT ・ 電池／電源／熱／感測器（唯讀；0 K 不是溫度規則全域適用）
@@ -2286,7 +2286,7 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-MT-0033 | 本地歷史存檔 schema（同機跨次比較的資料層） | `mt.history.schema` |
 | U10-MT-0034 | 歷史保留/壓縮政策（磁碟用量上限） | `mt.history.retention` |
 | U10-MT-0035 | 基線學習期定義（多少樣本才算基線——成文） | `mt.baseline.window` |
-| U10-MT-0036 | 季節模式偵測〔查重 2.84——收口引用〕 | `mt.seasonal.cross` |
+| U10-MT-0036 | 季節模式偵測〔查重 2.84——收口引用〕〔判定 2026-10-25：收口——已由 bl.season.summary 實作（DEDUP-VERDICTS）〕| `mt.seasonal.cross` |
 | U10-MT-0037 | 異常定義逐鍵型（門檻從哪來——每型一條出處） | `mt.anomaly.def{k}` |
 | U10-MT-0038 | 異常誤報稽核線（曾被使用者否決的告警保留） | `mt.anomaly.fplog` |
 | U10-MT-0039 | 工具自身鍵的回歸測試（self keys 每版核對） | `mt.self.regression` |
@@ -2294,12 +2294,12 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-MT-0041 | 監看窗統計（窗長與聚合方式） | `mt.monitor.window` |
 | U10-MT-0042 | 禁止插值政策（缺數據不補點——成文） | `mt.nointerp.policy` |
 | U10-MT-0043 | 缺口資料層（缺失以缺口表示，圖層渲染為斷線） | `mt.gap.repr` |
-| U10-MT-0044 | 解碼器全量單元測試〔查重：突變測試已有——擴展目標成文〕 | `mt.decoder.tests` |
+| U10-MT-0044 | 解碼器全量單元測試〔查重：突變測試已有——擴展目標成文〕〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `mt.decoder.tests` |
 | U10-MT-0045 | 性質測試（property-based）引入解碼器族 | `mt.decoder.property` |
 | U10-MT-0046 | 往返測試（decode-encode 一致性，可行者） | `mt.decoder.roundtrip` |
 | U10-MT-0047 | 變形輸入模糊測試（ malformed 表不崩潰、不失靜默） | `mt.decoder.fuzz` |
 | U10-MT-0048 | golden 解碼語料庫（逐解碼器樣本檔） | `mt.decoder.corpus` |
-| U10-MT-0049 | 解碼方法之規格出處註記守門（未註記者測試擋下）〔查重既有規則——自動化〕 | `mt.decoder.citation.gate` |
+| U10-MT-0049 | 解碼方法之規格出處註記守門（未註記者測試擋下）〔查重既有規則——自動化〕〔判定 2026-10-25：收口——已由 SpecRefCoverageTests 實作（DEDUP-VERDICTS）〕| `mt.decoder.citation.gate` |
 | U10-MT-0050 | 解碼器版本追蹤（哪版改過哪個解讀） | `mt.decoder.changelog` |
 | U10-MT-0051 | 知識包版本落章（輸出報告尾端註明用了哪版 KP） | `mt.kp.stamp` |
 | U10-MT-0052 | 逐鍵「來源類型」旗標（實測/裝置自述/知識包/推算四類） | `mt.srctype.{key}` |
@@ -2336,9 +2336,9 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-VZ-0011 | 帶狀散點（strip plot；小樣本首選） | `viz.strip` |
 | U10-VZ-0012 | 散點矩陣（感測器兩兩關聯初篩） | `viz.scattermatrix` |
 | U10-VZ-0013 | 相關矩陣熱圖（係數僅描述不因果——標題強制註記） | `viz.corrmatrix` |
-| U10-VZ-0014 | 桑基圖〔查重 2.84 已有——收口引用〕〔對映：倉庫既有鍵 vr.sankey——能力已有、命名空間不同；圈選時對齊〕 | `viz.sankey.cross` |
+| U10-VZ-0014 | 桑基圖〔查重 2.84 已有——收口引用〕〔對映：倉庫既有鍵 vr.sankey——能力已有、命名空間不同；圈選時對齊〕〔判定 2026-10-25：收口——已由 vr.sankey 實作（DEDUP-VERDICTS）〕| `viz.sankey.cross` |
 | U10-VZ-0015 | 樹圖 treemap（磁碟占用/記憶體映射） | `viz.treemap` |
-| U10-VZ-0016 | 拓撲樹〔查重 2.84——擴充互動〕 | `viz.tree.cross` |
+| U10-VZ-0016 | 拓撲樹〔查重 2.84——擴充互動〕〔判定 2026-10-25：收口——已由 vr.tree 實作（DEDUP-VERDICTS）〕| `viz.tree.cross` |
 | U10-VZ-0017 | 關係圖（裝置↔資源↔驅動網絡） | `viz.graph.net` |
 | U10-VZ-0018 | 甘特時間軸（開機階段分解） | `viz.gantt.boot` |
 | U10-VZ-0019 | 事件帶（節流/WHEA/插拔事件在時間軸上的標記層） | `viz.eventstrip` |
@@ -2396,12 +2396,12 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-VZ-0061 | 六態視覺編碼（Present/NA/NS/IP/U/RE 各有字形＋顏色雙編碼） | `ui.availability.glyphs` |
 | U10-VZ-0062 | 「—」之視覺規範（缺值與零一眼可辨） | `ui.dash.treatment` |
 | U10-VZ-0063 | 表格熱染色（值以百分位著色；參考範圍來自知識包——標註） | `ui.table.heatstain` |
-| U10-VZ-0064 | 事實總表頁 sparkline 欄〔查重 2.86 FactAtlas——擴充〕 | `ui.factatlas.spark` |
+| U10-VZ-0064 | 事實總表頁 sparkline 欄〔查重 2.86 FactAtlas——擴充〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `ui.factatlas.spark` |
 | U10-VZ-0065 | 報告內嵌圖表（離線自足 HTML 內嵌；無 JS 降級仍可讀） | `rep.charts.embed` |
 | U10-VZ-0066 | 報告列印排版（圖表分頁規則） | `rep.print.charts` |
 | U10-VZ-0067 | 視覺化目錄（哪種數據用哪種圖——決策表成文） | `viz.catalog.rules` |
 | U10-VZ-0068 | 圖表治理（准入圖型清單與理由；拒絕清單亦成文） | `viz.governance` |
-| U10-VZ-0069 | 3D 拓撲持續不做〔查重 2.84 NX——重申〕 | `viz.no3d.cross` |
+| U10-VZ-0069 | 3D 拓撲持續不做〔查重 2.84 NX——重申〕〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `viz.no3d.cross` |
 | U10-VZ-0070 | 圖示系統（硬體類型一致圖示集） | `ui.iconset` |
 | U10-VZ-0071 | 狀態色語義（全站同一色只表同一義） | `ui.color.semantics` |
 | U10-VZ-0072 | 資料密度字級（密集表格的排版尺度） | `ui.typography.data` |
@@ -2415,7 +2415,7 @@ GV（治理/守門/自校）、NX（明文不做）。
 | ID | 項目 | 候選鍵 |
 |---|---|---|
 | U10-VZ-0077 | 版面持久化（儀表板佈局存本地） | `ui.layout.persist` |
-| U10-VZ-0078 | 釘選感測器面板（常駐小窗/迷你浮窗〔查重：MiniOverlay 已有——擴充〕 | `ui.pinned.panel` |
+| U10-VZ-0078 | 釘選感測器面板（常駐小窗/迷你浮窗〔查重：MiniOverlay 已有——擴充〕〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `ui.pinned.panel` |
 | U10-VZ-0079 | 自訂儀表板（使用者從鍵清單組頁；不含算式） | `ui.dashboard.custom` |
 | U10-VZ-0080 | 小工具庫架構（圖型×資料源之組合矩陣） | `ui.widget.lib` |
 | U10-VZ-0081 | 即時更新率控制（每頁可調刷新率；暫停鍵） | `ui.refresh.control` |
@@ -2444,12 +2444,12 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-UI-0007 | 讀取失敗顯示開關（內聯顯示全部失敗原因——進階模式） | `ui.failures.toggle` |
 | U10-UI-0008 | 「為什麼是 —？」逐值解釋（六態原因一句話） | `ui.why.dash` |
 | U10-UI-0009 | 術語表頁（本工具用詞定義） | `ui.glossary` |
-| U10-UI-0010 | 逐頁說明〔查重 HelpCatalog——擴充覆蓋新域〕 | `ui.help.coverage` |
+| U10-UI-0010 | 逐頁說明〔查重 HelpCatalog——擴充覆蓋新域〕〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `ui.help.coverage` |
 | U10-UI-0011 | 提示框政策（延遲/內容密度統一） | `ui.tooltip.policy` |
 | U10-UI-0012 | 對話框標準（僅破壞性動作需確認；其餘可復原不擋） | `ui.dialog.policy` |
 | U10-UI-0013 | 通知政策（站內無聲；不彈系統通知） | `ui.notify.policy` |
-| U10-UI-0014 | 三語切換即時生效〔查重：語言工作已完成——收口檢查項〕 | `ui.lang.live.cross` |
-| U10-UI-0015 | 三語鍵同步守門〔查重 lang-* 工具鏈——轉為常設守門〕 | `ui.lang.sync.gate` |
+| U10-UI-0014 | 三語切換即時生效〔查重：語言工作已完成——收口檢查項〕〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `ui.lang.live.cross` |
+| U10-UI-0015 | 三語鍵同步守門〔查重 lang-* 工具鏈——轉為常設守門〕〔判定 2026-10-25：收口——已由 語言樹／往返測試常設守門＋lang-* 工具鏈 實作（DEDUP-VERDICTS）〕| `ui.lang.sync.gate` |
 | U10-UI-0016 | CJK 字型回退堆疊（缺字檢查） | `ui.font.stack` |
 | U10-UI-0017 | 文字縮放（使用者字級調整；布局不破） | `ui.text.scale` |
 | U10-UI-0018 | 焦點可見性標準（鍵盤焦點環全站一致） | `ui.focus.visible` |
@@ -2466,9 +2466,9 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-UI-0029 | 儀表板小工具拖排 | `ui.drag.rearrange` |
 | U10-UI-0030 | 視窗狀態持久化（大小/位置） | `ui.window.persist` |
 | U10-UI-0031 | 多視窗（圖表浮動視窗） | `ui.multiwindow` |
-| U10-UI-0032 | 迷你浮窗擴充〔查重 MiniOverlay——自訂內容版〕 | `ui.mini.custom` |
-| U10-UI-0033 | 應用內更新紀錄檢視〔查重 ChangelogCatalog——頁面收口〕 | `ui.changelog.view` |
-| U10-UI-0034 | 關於頁授權清單〔查重 THIRD-PARTY-NOTICES——收口〕 | `ui.about.licenses` |
+| U10-UI-0032 | 迷你浮窗擴充〔查重 MiniOverlay——自訂內容版〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `ui.mini.custom` |
+| U10-UI-0033 | 應用內更新紀錄檢視〔查重 ChangelogCatalog——頁面收口〕〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `ui.changelog.view` |
+| U10-UI-0034 | 關於頁授權清單〔查重 THIRD-PARTY-NOTICES——收口〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `ui.about.licenses` |
 | U10-UI-0035 | 強調色主題微調（不影響語義色） | `ui.accent.color` |
 | U10-UI-0036 | 單位前綴政策切換（GB=10^9/GiB=2^30 顯示選擇——資料層不變） | `ui.prefix.policy` |
 | U10-UI-0037 | 自訂控制項無障礙檢查清單 | `ui.customctrl.a11y` |
@@ -2480,7 +2480,7 @@ GV（治理/守門/自校）、NX（明文不做）。
 
 | ID | 項目 | 候選鍵 |
 |---|---|---|
-| U10-PF-0001 | HTML 報告產生器〔查重：離線自足已有——擴充節架構〕 | `rep.html.cross` |
+| U10-PF-0001 | HTML 報告產生器〔查重：離線自足已有——擴充節架構〕〔判定 2026-10-25：收口——已由 ReportService 實作（DEDUP-VERDICTS）〕| `rep.html.cross` |
 | U10-PF-0002 | 報告 diff 模式（兩份報告鍵級對照頁） | `rep.diff.mode` |
 | U10-PF-0003 | 報告節級錨點（深連結直達任一節） | `rep.anchors` |
 | U10-PF-0004 | JSON 全量匯出 schema 版本化（semver＋相容宣告） | `exp.json.schema` |
@@ -2488,15 +2488,15 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-PF-0006 | Markdown 匯出（論壇可貼格式） | `exp.md` |
 | U10-PF-0007 | 選擇性匯出（指定域/鍵/裝置子集） | `exp.partial` |
 | U10-PF-0008 | 增量匯出（僅與上次匯出差異鍵） | `exp.incremental` |
-| U10-PF-0009 | 匯出簽章（內嵌雜湊鏈；第三方可驗）〔查重報告雜湊——擴至 JSON/CSV〕 | `exp.hash.chain` |
+| U10-PF-0009 | 匯出簽章（內嵌雜湊鏈；第三方可驗）〔查重報告雜湊——擴至 JSON/CSV〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `exp.hash.chain` |
 | U10-PF-0010 | 匯出遮蔽強制執行（L0–L3 於匯出層再驗一次；正對照測試） | `exp.mask.enforce` |
 | U10-PF-0011 | 排程匯出（使用者設定；headless 執行；僅本地檔） | `exp.schedule` |
-| U10-PF-0012 | Headless 掃描模式〔查重已有——擴充分域逾時參數〕〔對映：倉庫既有鍵 ag.headless——能力已有、命名空間不同；圈選時對齊〕 | `cli.headless.cross` |
+| U10-PF-0012 | Headless 掃描模式〔查重已有——擴充分域逾時參數〕〔對映：倉庫既有鍵 ag.headless——能力已有、命名空間不同；圈選時對齊〕〔判定 2026-10-25：收口——已由 CliService headless 模式 實作（DEDUP-VERDICTS）〕| `cli.headless.cross` |
 | U10-PF-0013 | CLI 退出碼契約（域失敗之結構化退出碼表） | `cli.exit.contract` |
 | U10-PF-0014 | CLI 進度輸出（機器可讀行；人類模式分開） | `cli.progress.machine` |
 | U10-PF-0015 | CLI 過濾旗標（--domain/--key/--device 選擇器） | `cli.filter.flags` |
 | U10-PF-0016 | watch 模式（指定鍵持續輸出；console） | `cli.watch` |
-| U10-PF-0017 | PowerShell 模組逐域 cmdlet〔查重 psm1——補齊新域〕 | `ps.modules.gap` |
+| U10-PF-0017 | PowerShell 模組逐域 cmdlet〔查重 psm1——補齊新域〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `ps.modules.gap` |
 | U10-PF-0018 | PowerShell 豐富物件輸出（物件非純文字） | `ps.objects` |
 | U10-PF-0019 | SDK：唯讀事實鍵讀取函式庫（netstandard；不含 UI） | `sdk.reader` |
 | U10-PF-0020 | SDK 版本政策（semver＋鍵語意凍結承諾範圍） | `sdk.semver` |
@@ -2507,8 +2507,8 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-PF-0025 | 當機處理（本地 minidump；不上傳；下次啟動可匯出報告） | `crash.local` |
 | U10-PF-0026 | 日誌等級與輪替（本地；大小上限） | `log.rotation` |
 | U10-PF-0027 | 診斷包匯出（日誌+設定雜湊+版本；使用者主動觸發） | `diag.bundle` |
-| U10-PF-0028 | 安裝器〔查重 Installer/——收口檢查〕 | `installer.cross` |
-| U10-PF-0029 | 單一檔案發佈驗證自動化〔查重發版技能——轉守門〕 | `release.singlefile.gate` |
+| U10-PF-0028 | 安裝器〔查重 Installer/——收口檢查〕〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `installer.cross` |
+| U10-PF-0029 | 單一檔案發佈驗證自動化〔查重發版技能——轉守門〕〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `release.singlefile.gate` |
 | U10-PF-0030 | 發佈說明產生器（從 ChangelogCatalog 生成 notes——單一來源） | `release.notes.gen` |
 | U10-PF-0031 | 發佈資產清單（exe 位元組數/雜湊入版控可比對） | `release.assets.manifest` |
 | U10-PF-0032 | 版本方案政策（版號規則成文；與發版技能同步） | `release.version.policy` |
@@ -2531,7 +2531,7 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-EN-0009 | CPU 家族解碼表更新（新型號收錄） | `kp.cpufamily.update` |
 | U10-EN-0010 | EDID VIC 表更新 | `kp.vic.update` |
 | U10-EN-0011 | SMART 廠商屬性表更新 | `kp.smartattr.update` |
-| U10-EN-0012 | 知識包版本演進與撤回〔查重 kp.*/key.evolution——收口成流程〕 | `kp.evolution.proc` |
+| U10-EN-0012 | 知識包版本演進與撤回〔查重 kp.*/key.evolution——收口成流程〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `kp.evolution.proc` |
 | U10-EN-0013 | 知識包雜湊驗證（包完整性——導入時） | `kp.verify.import` |
 | U10-EN-0014 | 使用者自訂條目（本地知識包疊加；不外傳） | `kp.user.overrides` |
 | U10-EN-0015 | 機隊隱私（跨機比對僅用雜湊——序號不出本機） | `fleet.privacy.policy` |
@@ -2546,20 +2546,20 @@ GV（治理/守門/自校）、NX（明文不做）。
 | ID | 項目 | 候選鍵 |
 |---|---|---|
 | U10-GV-0001 | 逐域守門政策（GuardRegistry 擴充至新域——每域至少一門） | `guard.domain.coverage` |
-| U10-GV-0002 | 守門白名單上限（成長預算——防白名單腐化）〔查重——收口〕 | `guard.whitelist.budget` |
-| U10-GV-0003 | 誤報治理（FP 紀錄；放寬一律不接受——新域適用）〔查重——收口〕 | `guard.fp.governance` |
-| U10-GV-0004 | 突變測試目標擴充（逐版提升覆蓋域）〔查重 Stryker——排程化〕 | `guard.mutation.schedule` |
-| U10-GV-0005 | 測試數單調閘（測試數只升不降；降必須解釋）〔查重 TestSuiteBaseline——常設〕 | `guard.tests.monotonic` |
-| U10-GV-0006 | 鍵目錄與原始碼逐鍵相等閘〔查重——擴至新域〕 | `guard.catalog.parity` |
-| U10-GV-0007 | 執行期產鍵必須登記閘〔查重 2.85——擴至新動態家族〕 | `guard.runtime.keys` |
-| U10-GV-0008 | 更新紀錄最新筆=版號閘〔查重 ChangelogTests——常設〕 | `guard.changelog.version` |
-| U10-GV-0009 | 檢視 XAML 不得留舊版號閘〔查重 2.87——常設〕 | `guard.xaml.version` |
+| U10-GV-0002 | 守門白名單上限（成長預算——防白名單腐化）〔查重——收口〕〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `guard.whitelist.budget` |
+| U10-GV-0003 | 誤報治理（FP 紀錄；放寬一律不接受——新域適用）〔查重——收口〕〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `guard.fp.governance` |
+| U10-GV-0004 | 突變測試目標擴充（逐版提升覆蓋域）〔查重 Stryker——排程化〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `guard.mutation.schedule` |
+| U10-GV-0005 | 測試數單調閘（測試數只升不降；降必須解釋）〔查重 TestSuiteBaseline——常設〕〔判定 2026-10-25：收口——已由 TestSuiteBaseline 常設 實作（DEDUP-VERDICTS）〕| `guard.tests.monotonic` |
+| U10-GV-0006 | 鍵目錄與原始碼逐鍵相等閘〔查重——擴至新域〕〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `guard.catalog.parity` |
+| U10-GV-0007 | 執行期產鍵必須登記閘〔查重 2.85——擴至新動態家族〕〔判定 2026-10-25：收口——已由 FactKeyRuntimeReconcileTests 常設 實作（DEDUP-VERDICTS）〕| `guard.runtime.keys` |
+| U10-GV-0008 | 更新紀錄最新筆=版號閘〔查重 ChangelogTests——常設〕〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `guard.changelog.version` |
+| U10-GV-0009 | 檢視 XAML 不得留舊版號閘〔查重 2.87——常設〕〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `guard.xaml.version` |
 | U10-GV-0010 | 「不得再寫第二張表」模式推廣（匯流排名稱表前例→新的單一來源風險清單） | `guard.singlesource.list` |
-| U10-GV-0011 | 覆蓋申報基線（已檢視未覆蓋清單逐版成長管控）〔查重——收口〕 | `guard.coverage.baseline` |
-| U10-GV-0012 | 文件對帳閘〔查重——擴至本目錄文件〕 | `guard.docs.reconcile` |
+| U10-GV-0011 | 覆蓋申報基線（已檢視未覆蓋清單逐版成長管控）〔查重——收口〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `guard.coverage.baseline` |
+| U10-GV-0012 | 文件對帳閘〔查重——擴至本目錄文件〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `guard.docs.reconcile` |
 | U10-GV-0013 | 規格出處覆蓋閘（解碼器未註記規格者編譯期警告→錯誤） | `guard.specref.mandatory` |
-| U10-GV-0014 | 發佈驗證（release.verify——每版自動）〔查重——收口〕 | `guard.release.verify` |
-| U10-GV-0015 | 可重現建置（build.reproducible 加強：兩次建置雜湊一致）〔查重——收口〕 | `guard.build.repro` |
+| U10-GV-0014 | 發佈驗證（release.verify——每版自動）〔查重——收口〕〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `guard.release.verify` |
+| U10-GV-0015 | 可重現建置（build.reproducible 加強：兩次建置雜湊一致）〔查重——收口〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `guard.build.repro` |
 | U10-GV-0016 | 授權清單閘（第三方相依授權變更必須顯式通過） | `guard.license.notices` |
 | U10-GV-0017 | 第三方相依版本釘選＋升級評估流程（LHM 等） | `guard.deps.pin` |
 | U10-GV-0018 | 相依安全通告離線包（漏洞比對；離線匯入） | `guard.deps.advisory` |
@@ -2580,11 +2580,11 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-GV-0033 | 安全自審（寫入閘零通過、出網零——每版正對照） | `guard.security.selfaudit` |
 | U10-GV-0034 | 模糊語料成長追蹤（逐版新增變形樣本數） | `guard.fuzz.growth` |
 | U10-GV-0035 | 突變分數逐模組追蹤（低分模組清單驅動補測） | `guard.mutation.scores` |
-| U10-GV-0036 | 守門執行時間預算（GuardBudget——新閘納入）〔查重——收口〕 | `guard.time.budget` |
+| U10-GV-0036 | 守門執行時間預算（GuardBudget——新閘納入）〔查重——收口〕〔判定 2026-10-25：收口（DEDUP-VERDICTS）〕| `guard.time.budget` |
 | U10-GV-0037 | 發佈檢查單自動化（一鍵跑完全部發佈前守門） | `guard.release.checklist` |
 | U10-GV-0038 | 工具自身基準（掃描效能跨版趨勢——防我們變慢） | `guard.selfperf.trend` |
 | U10-GV-0039 | 帳本誠實性（測試+鍵+申報三數對帳——2.87 教訓常設化） | `guard.ledger.threeway` |
-| U10-GV-0040 | 目錄文件稽核工具自跑（入版控且會被跑——2.87 教訓）〔查重——收口〕 | `guard.audit.runs` |
+| U10-GV-0040 | 目錄文件稽核工具自跑（入版控且會被跑——2.87 教訓）〔查重——收口〕〔判定 2026-10-25：新列——可開工；差異與證據見 DEDUP-VERDICTS〕| `guard.audit.runs` |
 | U10-GV-0041 | 域間重複鍵檢查（兩域意外同鍵——衝突清單） | `guard.key.domain.dup` |
 | U10-GV-0042 | 報告樣本回歸（golden 報告 diff——版版比對） | `guard.report.golden` |
 

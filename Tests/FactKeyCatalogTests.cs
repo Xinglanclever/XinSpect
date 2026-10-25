@@ -137,7 +137,7 @@ public class FactKeyCatalogTests
         //（ts.disp.refresh.verify.／ts.disp.modes.cycle.／ts.aud.formats.／ts.aud.jackdetect.／
         // ts.aud.endpoint.state.／ts.pen.pressure.）——成員＝端點／顯示裝置／筆裝置索引，
         // 有幾個是機器環境的事實（與 audio.endpoint.／mon. 同形）；各基底鍵成員固定、仍在靜態目錄。
-        const int FamilyCap = 34;
+        const int FamilyCap = 36;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 

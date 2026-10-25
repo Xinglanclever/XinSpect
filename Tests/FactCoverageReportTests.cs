@@ -185,9 +185,14 @@ public class FactCoverageReportTests
         //（格式支援枚舉、插孔描述、時鐘漂移、登錄檔列舉延遲……各自的來源寫在服務檔頭註解）；
         // 豁免表已在上限（KeyCatalogPolicyTests 的 600 條），照規矩留未覆蓋，上限跟著移到 339。
         // 逐項來源與界線：Services/DeepTest/ 各服務的類別註解。
+        // 2026-10-25 第 269 輪：+7 條（`tpm.view.cross`＝TBS×WMI 兩視圖對照、`uefi.dbt.count`／
+        // `uefi.dbr.count`＝兩個同構簽章資料庫、`uefi.boot.gaps`＝Boot 條目跳號、`ac.tcpa`／
+        // `ac.tcpa.cross`＝TCPA 表與 TPM2 並存、`pdev.fw.surface`＝周邊韌體盤點彙整）。
+        // 全部是「單一來源的陳述」——對照鍵的兩側都來自同一輪讀取（不是兩個獨立來源），
+        // 彙整鍵的數字對回盤點本身；沒有可交叉的第二通路，照規矩留未覆蓋，上限跟著移到 346。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 339,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 339）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 346,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 346）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }

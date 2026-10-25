@@ -19,12 +19,14 @@ public partial class AboutView : UserControl
         Unloaded += (_, _) => LanguageService.Changed -= OnLanguageChanged;
         ApplyVersionCopy();
         FillChangelog();
+        FillLicenses();
     }
 
     private void OnLanguageChanged()
     {
         ApplyVersionCopy();
         FillChangelog();
+        FillLicenses();
     }
 
     private void ApplyVersionCopy()
@@ -80,6 +82,45 @@ public partial class AboutView : UserControl
         int n = ChangelogOlder.Items.Count;
         ChangelogToggle.Content = show ? LanguageService.T("收起更早的版本　▴")
                                        : LanguageService.T($"顯示更早的 {n} 個版本　▾");
+    }
+
+    // ── 第三方授權（U10-UI-0034）────────────────────────────────────────────
+
+    /// <summary>卡片說明列的固定文案（原文繁中；顯示前過 T()）。</summary>
+    private const string LicensesIntroTemplate =
+        "隨程式分發的第三方元件與其授權；本清單是事實摘要，不構成法律意見，授權全文以上游連結為準。";
+
+    /// <summary>
+    /// 授權清單由 <see cref="ThirdPartyNoticesCatalog"/> 從 THIRD-PARTY-NOTICES.md 解析
+    /// （資源優先、檔案其次——單檔發佈時根目錄實檔不隨 exe 走，靠內嵌資源），不是寫死在版面上，
+    /// 清單改了這裡才不會說謊。讀不到時整張卡顯示「讀不到」的原因，不用空清單冒充。
+    /// ItemsSource 在此指定而非 XAML 繫結，理由同 changelog：這一頁的 DataContext 是 MainViewModel。
+    /// </summary>
+    private void FillLicenses()
+    {
+        LicensesIntro.Text = LanguageService.T(LicensesIntroTemplate);
+
+        var report = ThirdPartyNoticesCatalog.Load();
+        if (report.Available)
+        {
+            LicensesStatus.Visibility = Visibility.Collapsed;
+            LicenseList.ItemsSource = report.Entries
+                .Select(e => new
+                {
+                    e.Component,
+                    LicenseAndVersion = string.IsNullOrEmpty(e.Version)
+                        ? LanguageService.T(e.License)
+                        : $"{LanguageService.T(e.License)}　・　{e.Version}",
+                })
+                .ToList();
+        }
+        else
+        {
+            LicenseList.ItemsSource = null;
+            LicensesStatus.Text = LanguageService.T(
+                report.UnavailableReason ?? ThirdPartyNoticesCatalog.MissingReason);
+            LicensesStatus.Visibility = Visibility.Visible;
+        }
     }
 
     // ── 檢查更新（opt-in 網路：只查版本號，不上傳資料）──────────────────────

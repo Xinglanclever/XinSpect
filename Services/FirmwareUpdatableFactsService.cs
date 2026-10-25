@@ -57,6 +57,7 @@ namespace XinSpect;
 public static class FirmwareUpdatableFactsService
 {
     public const string Key = "pdev.fw.updatable";
+    public const string SurfaceKey = "pdev.fw.surface";
 
     private const string Category = "儲存裝置";
     private const string SourceText =
@@ -91,14 +92,23 @@ public static class FirmwareUpdatableFactsService
     public delegate IReadOnlyList<DeviceUpdatability>? UpdatabilityProbe();
 
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at, UpdatabilityProbe? probe = null)
-        => [UpdatableFact(at, probe)];
+    {
+        IReadOnlyList<DeviceUpdatability>? devices;
+        try { devices = (probe ?? new UpdatabilityProbe(ReadUpdatability))(); }
+        catch { devices = null; }
+        return [UpdatableFact(at, devices), SurfaceFact(at, devices)];
+    }
 
     public static HardwareFact UpdatableFact(DateTimeOffset at, UpdatabilityProbe? probe = null)
     {
         IReadOnlyList<DeviceUpdatability>? devices;
         try { devices = (probe ?? new UpdatabilityProbe(ReadUpdatability))(); }
         catch { devices = null; }
+        return UpdatableFact(at, devices);
+    }
 
+    private static HardwareFact UpdatableFact(DateTimeOffset at, IReadOnlyList<DeviceUpdatability>? devices)
+    {
         if (devices is null)
             return new HardwareFact(Key, Category, "周邊韌體可更新性宣告", "", "顆", SourceText,
                 FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError,
@@ -129,6 +139,35 @@ public static class FirmwareUpdatableFactsService
             // Present 的事實不得帶 unavailableReason（HardwareSnapshotService 的不變式）：
             // 「某幾顆讀不到」是斷言的一部分，寫在 Value；不是「為什麼這筆事實讀不到」。
             null);
+    }
+
+    /// <summary>
+    /// 周邊韌體攻擊面彙整（U10-SE-0036；鍵對齊倉庫 pdev.fw.* 命名空間而非目錄的 sec.）：
+    /// 把同一批裝置按「有沒有可更新性證據」分兩邊。<b>這是依賴面（供應鏈）的陳述，
+    /// 不是「已遭入侵」</b>；「無證據」也不是「不可更新」——界線同 <see cref="Key"/>。
+    /// </summary>
+    private static HardwareFact SurfaceFact(DateTimeOffset at, IReadOnlyList<DeviceUpdatability>? devices)
+    {
+        if (devices is null)
+            return new HardwareFact(SurfaceKey, Category, "周邊韌體攻擊面彙整", "", "顆", SourceText,
+                FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError,
+                "裝置列舉失敗——彙整無從做起（與 pdev.fw.updatable 同一次列舉）");
+
+        if (devices.Count == 0)
+            return new HardwareFact(SurfaceKey, Category, "周邊韌體攻擊面彙整", "沒有列舉到實體硬碟", "顆",
+                SourceText, FactTrustLevel.Measured, false, at, null, FactAvailability.NotApplicable,
+                "同一次列舉回空——這是確定的答案，不是讀不到");
+
+        int withEvidence = devices.Count(d => d.HasEvidence);
+        var byChannel = devices.GroupBy(d => d.ChannelName)
+            .Select(g => $"{g.Key} {g.Count()}").ToList();
+        return new HardwareFact(SurfaceKey, Category, "周邊韌體攻擊面彙整",
+            $"{devices.Count} 顆周邊韌體裝置（{string.Join("／", byChannel)}）："
+            + $"具可更新性證據 {withEvidence}、無證據 {devices.Count - withEvidence}。"
+            + "「可更新」陳述的是供應鏈依賴面，不是「已遭入侵」；"
+            + "無證據≠不可更新——逐顆界線見 pdev.fw.updatable",
+            "顆", SourceText, FactTrustLevel.Derived, false, at, withEvidence,
+            FactAvailability.Present, null);
     }
 
     private static string NvmePart(IReadOnlyList<DeviceUpdatability> nvme)

@@ -57,7 +57,7 @@ public class Ultimate10000CatalogTests
     }
 
     private static string MainCatalogPath() =>
-        Path.Combine(RepoRoot(), "docs", "ULTIMATE-10000", "ULTIMATE-10000-EXPANSION-2026-10-24.md");
+        Path.Combine(RepoRoot(), "docs", "ULTIMATE-10000", "ULTIMATE-10000-EXPANSION-2026-10-25.md");
 
     private sealed record DefinitionRow(string Id, string Domain, int Number, string Line);
 
@@ -236,5 +236,132 @@ public class Ultimate10000CatalogTests
     {
         string path = Path.Combine(RepoRoot(), "docs", "ULTIMATE-10000", "ULTIMATE-5000-RESERVOIR-2026-10-24.md");
         Assert.True(File.Exists(path), $"前導文件（已歸檔）不在預期位置：{path}");
+    }
+
+    // ── DEDUP-VERDICTS 文件對帳（第 269 輪，GV-0012／GV-0040 的常設化）──────────
+    //
+    // 背景更正：DEDUP-VERDICTS-2026-10-25 對 GV-0012／GV-0040 的證據引用了
+    // Tests/PlanLibraryTests.cs 類別註解裡那句「稽核工具（work/UltimateAudit/）住在未入版控的
+    // 暫存區」——那句話已經過期：work/UltimateAudit 自 2026-10-18 起（commit 78ba8a0）整目錄
+    // 入了版控（git ls-files 可證 9 個檔案），PlanLibraryTests 本身也是常設閘。文件更正見該
+    // .md 檔尾的「更正（2026-10-25，第 269 輪）」節。
+    //
+    // 這一組測試把「文件對帳」常設化：判定文件自己守自己的帳——統計數字要與表格列數相等、
+    // 證據欄引的每一個檔案都要能在倉庫裡回訪到。文件是帳本，帳本壞了要紅，而不是等下一輪
+    // 人工查重時才被發現。
+
+    /// <summary>DEDUP 判定文件的位置（與主目錄同目錄）。</summary>
+    private static string VerdictsPath() =>
+        Path.Combine(RepoRoot(), "docs", "ULTIMATE-10000", "DEDUP-VERDICTS-2026-10-25.md");
+
+    /// <summary>判定表格的資料列（<c>| U10-… |</c> 開頭），保持文件內順序。</summary>
+    private static List<string> VerdictRows(string text) =>
+        text.Split('\n')
+            .Where(l => Regex.IsMatch(l, @"^\|\s*U10-[A-Z]{2}-\d{4}\b"))
+            .Select(l => l.TrimEnd('\r'))
+            .ToList();
+
+    [Fact]
+    public void 收口判定統計必須自洽()
+    {
+        string path = VerdictsPath();
+        Assert.True(File.Exists(path), $"DEDUP-VERDICTS 不在預期位置：{path}");
+        string text = File.ReadAllText(path);
+
+        // 統計表的三個數字：「| 收口 | **49** |」這種形狀。抓不到就紅——帳本連數字都沒有，
+        // 不存在「先放行、下輪再補」。
+        var declared = new Dictionary<string, int>();
+        foreach (Match m in Regex.Matches(
+                     text, @"^\|\s*(收口|新列|待核)\s*\|\s*\*\*(\d+)\*\*\s*\|\s*$", RegexOptions.Multiline))
+            declared[m.Groups[1].Value] = int.Parse(m.Groups[2].Value);
+
+        Assert.True(declared.Count == 3,
+            "統計表抽不出「收口／新列／待核」三個數字——表格形狀變了或解析壞了。實際抽到：" +
+            (declared.Count == 0 ? "0 筆" : string.Join("、", declared.Select(kv => $"{kv.Key}={kv.Value}"))));
+
+        // 逐列核對結論欄：每條資料列要恰有一個加粗結論標記；分類計數要與統計表相等。
+        var tally = new Dictionary<string, int>();
+        var malformed = new List<string>();
+        foreach (string row in VerdictRows(text))
+        {
+            string id = row.Split('|')[1].Trim();
+            // 候選鍵欄有「tpm.pcr.{sha1\|sha256\|sha384}」這種逃逸管線——先換成佔位符再切欄。
+            string[] marks = Regex.Matches(row.Replace(@"\|", "∣"), @"\*\*(收口|新列|待核)\*\*")
+                .Select(m => m.Groups[1].Value).ToArray();
+            if (marks.Length != 1) { malformed.Add($"{id}（{marks.Length} 個結論標記）"); continue; }
+            tally[marks[0]] = tally.GetValueOrDefault(marks[0]) + 1;
+        }
+
+        Assert.True(malformed.Count == 0,
+            "判定列的結論欄形狀壞了（要恰有一個加粗的收口／新列／待核）：\n" + string.Join("\n", malformed));
+
+        foreach (string label in new[] { "收口", "新列", "待核" })
+            Assert.True(tally.GetValueOrDefault(label) == declared[label],
+                $"統計表說「{label}」有 {declared[label]} 筆，逐列實數 {tally.GetValueOrDefault(label)} 筆——" +
+                "統計沒跟著表格改，或表格混進了不該有的列。");
+
+        int sum = declared.Values.Sum();
+        int actual = VerdictRows(text).Count;
+        Assert.True(sum == actual,
+            $"收口判定統計不自洽：收口 {declared["收口"]} ＋ 新列 {declared["新列"]} ＋ 待核 {declared["待核"]} ＝ {sum}，" +
+            $"但判定表格的資料列數是 {actual}。");
+    }
+
+    [Fact]
+    public void 收口證據必須可回訪()
+    {
+        string text = File.ReadAllText(VerdictsPath());
+        string root = RepoRoot();
+        var rows = VerdictRows(text);
+        Assert.True(rows.Count > 0, "DEDUP-VERDICTS 抽不出任何判定列——表格形狀變了或解析壞了。");
+
+        // 倉庫檔名索引：證據欄混用「Services/Foo.cs:12」與裸檔名「Foo.cs:12」兩種寫法
+        // （後者如「（ChangelogTests.cs:51 斷言）」），裸檔名以「倉庫裡有同名檔案」回訪。
+        // 行號（:12、:43-50）不驗——只驗路徑部分存在。
+        var fileNames = Directory.EnumerateFiles(root, "*", new EnumerationOptions
+            {
+                RecurseSubdirectories = true,
+                IgnoreInaccessible = true,
+            })
+            .Where(p => !p.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
+                     && !p.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")
+                     && !p.Contains($"{Path.DirectorySeparatorChar}.git{Path.DirectorySeparatorChar}")
+                     && !p.Contains("StrykerOutput")
+                     && !p.Contains($"{Path.DirectorySeparatorChar}TestResults{Path.DirectorySeparatorChar}"))
+            .Select(Path.GetFileName)
+            .ToHashSet(StringComparer.Ordinal);
+
+        // 證據欄的路徑形樣：.cs／.md／.ps1，可帶目錄（含 work/、docs/ 深層），行號與標點自然斷開。
+        var evidencePath = new Regex(@"[A-Za-z0-9_\-]+(?:/[A-Za-z0-9_\-]+)*\.(?:cs|md|ps1)\b", RegexOptions.Compiled);
+
+        var noPath = new List<string>();
+        var broken = new List<string>();
+        foreach (string row in rows)
+        {
+            string id = row.Split('|')[1].Trim();
+            string[] cells = row.Replace(@"\|", "∣").Split('|');
+            string evidence = cells.Select(c => c.Trim()).LastOrDefault(c => c.Length > 0) ?? "";
+
+            var paths = evidencePath.Matches(evidence).Select(m => m.Value).Distinct().ToList();
+            if (paths.Count == 0) { noPath.Add(id); continue; }
+
+            foreach (string p in paths)
+            {
+                bool ok = File.Exists(Path.Combine(root, p.Replace('/', Path.DirectorySeparatorChar)))
+                          || fileNames.Contains(Path.GetFileName(p));
+                if (!ok) broken.Add($"{id}：{p}");
+            }
+        }
+
+        // 有些列的證據本來就不是程式檔（stryker-config.json、StrykerOutput/、XAML 行號等），
+        // 允許一定比例抽不到 .cs/.md/.ps1；超過三成代表證據欄整體退化，帳本失去可查性。
+        double ratio = (double)noPath.Count / rows.Count;
+        Assert.True(ratio <= 0.30,
+            $"抽不到證據路徑的判定列 {noPath.Count}/{rows.Count} 條（{ratio:P1}），超過 30% 門檻。" +
+            $"2026-10-25 納管時實測 6/79（7.6%）。樣本：{string.Join("、", noPath.Take(10))}");
+
+        Assert.True(broken.Count == 0,
+            $"有 {broken.Count} 條證據路徑在倉庫裡回訪不到（路徑與檔名都找不到）——證據要能被下一位查帳的人打開：\n" +
+            string.Join("\n", broken.Take(20)));
     }
 }

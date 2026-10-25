@@ -200,6 +200,30 @@ public static class UefiSignatureFactsService
                 string.IsNullOrEmpty(desc) ? $"Boot{idx:X4}（無描述）" : desc, "",
                 "GetFirmwareEnvironmentVariableEx（EFI_LOAD_OPTION Description）", FactTrustLevel.Reported, false, at, null));
         }
+
+        // U10-FW-0021（ULTIMATE-10000 目錄）：Boot#### 編號跳號偵測。
+        // 跳號不是錯誤——編號是韌體自己配置的；把跳號攤出來，是為了讓 uefi.boot.{n} 家族
+        // 「少了一號」時一眼看出是「沒有這個變數」，而不是「掃描漏了」。
+        if (bootEntries.Count == 0)
+        {
+            facts.Add(new HardwareFact("uefi.boot.gaps", Category, "Boot 條目跳號", "無從計算", "個",
+                FirmwareVariableAccess.Source + "（Boot####）", FactTrustLevel.Unknown, false, at,
+                null, FactAvailability.NotApplicable,
+                "掃描窗內沒有任何 Boot#### 變數——沒有條目就沒有跳號可言"
+                + (blocked ? "（而且上一格已標明通路失敗，不是「沒有條目」）" : "")));
+        }
+        else
+        {
+            var present = bootEntries.Select(e => (int)e.Index).ToHashSet();
+            int lo = present.Min(), hi = present.Max();
+            var gaps = Enumerable.Range(lo, hi - lo + 1).Where(i => !present.Contains(i)).ToList();
+            facts.Add(new HardwareFact("uefi.boot.gaps", Category, "Boot 條目跳號",
+                gaps.Count == 0 ? $"無跳號（{lo:X4}–{hi:X4} 連續）" : string.Join("、", gaps.Select(g => $"Boot{g:X4}")),
+                "個", FirmwareVariableAccess.Source + "（Boot####）", FactTrustLevel.Derived, false, at,
+                gaps.Count, FactAvailability.Present,
+                "本服務只掃 Boot0000–Boot001F 且最多列 20 條——範圍外的編號不在這個陳述裡；"
+                + "跳號是韌體的編號配置，不是錯誤"));
+        }
     }
 
     /// <summary>

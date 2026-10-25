@@ -112,6 +112,15 @@ public static class FactKeyDynamicCatalog
                 "端點音量/靜音核對逐端點一筆（ts.aud.endpoint.state.{i}）——端點數由 MMDevice 列舉決定",
             ["ts.pen.pressure."] =
                 "觸控筆壓力能力逐筆裝置一筆（ts.pen.pressure.{i}）——有幾支筆由 GetPointerDevices 列舉決定，沒有筆的機器一個都不產",
+            // ── U10-FW-0005（第 269 輪）：dbt／dbr 簽章資料庫逐條清單 ──────────
+            // **與 uefi.db.list.／dbx.list.／kek.list. 完全同構**：最多列 5 條、
+            // 成員由變數內容決定；變數不存在（韌體未佈建）＝整個家族一條都不產，
+            // 計數鍵 uefi.dbt.count／uefi.dbr.count 成員固定、走靜態目錄。
+            ["uefi.dbt.list."] =
+                "dbt（EFI_IMAGE_SECURITY_DATABASE2，授權時戳簽章資料庫）逐條一筆（uefi.dbt.list.0…）——" +
+                "有幾條清單由該變數的內容決定，本服務最多列 5 條",
+            ["uefi.dbr.list."] =
+                "dbr（授權復原簽章資料庫）逐條一筆（uefi.dbr.list.0…）——同 uefi.dbt.list.，成員由變數內容決定",
         };
 
     /// <summary>執行期鍵是否命中某個已登記的動態家族。</summary>
