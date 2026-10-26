@@ -1,4 +1,4 @@
-using System.Management;
+﻿using System.Management;
 
 namespace XinSpect;
 
@@ -42,6 +42,9 @@ public static class NicHealthFactsService
         return facts;
     }
 
+    /// <summary>MAC 對照的來源字串——三種結果（對照、讀不到、沒有網卡）共用同一個宣稱。</summary>
+    private const string MacSource = "WMI Win32_NetworkAdapter＋OUI 知識庫（IEEE 登記前綴的手工子集）";
+
     /// <summary>MAC 位址 → OUI 廠商（<see cref="OuiKnowledge"/> 知識庫）。每介面一列。</summary>
     public static IReadOnlyList<HardwareFact> CollectMacVendors(DateTimeOffset at,
         Func<IReadOnlyList<(string Name, string Mac)>?>? probe = null)
@@ -49,19 +52,24 @@ public static class NicHealthFactsService
         var adapters = (probe ?? FetchAdaptersWithMac)();
         if (adapters is null)
             return [new HardwareFact("nic.mac.0", Category, "MAC 廠商對照", "", "",
-                "WMI Win32_NetworkAdapter＋OUI 知識庫", FactTrustLevel.Unknown, false, at, null,
+                MacSource, FactTrustLevel.Unknown, false, at, null,
                 FactAvailability.ReadError, "WMI 查詢失敗——MAC 對照讀不到就是不猜")];
         var facts = new List<HardwareFact>();
         for (int i = 0; i < adapters.Count && i < 10; i++)
         {
             var (name, mac) = adapters[i];
+            // 第 285 輪：值末尾帶固定的名稱出處標記（`OuiKnowledge.Describe`）。
+            // 查詢統計靠那一段分類，不再比對「值裡有沒有出現某句中文」——
+            // 舊寫法在 WMI 失敗時把空字串算成命中。
             facts.Add(new HardwareFact($"nic.mac.{i}", Category, $"MAC {name}",
-                $"{mac}（{OuiKnowledge.VendorOf(mac)}）", "",
-                "WMI Win32_NetworkAdapter＋OUI 知識庫", FactTrustLevel.Reported, false, at, null));
+                OuiKnowledge.Describe(mac), "", MacSource, FactTrustLevel.Reported, false, at, null));
         }
         if (adapters.Count == 0)
+            // 這台機器沒有實體網卡：**沒有東西可查**，不是查不到。
+            // 先前標 Present 會讓回收端把它算成一次「無法解析」的查詢。
             facts.Add(new HardwareFact("nic.mac.0", Category, "MAC 廠商對照", "沒有實體網路介面", "",
-                "WMI Win32_NetworkAdapter＋OUI 知識庫", FactTrustLevel.Reported, false, at, null));
+                MacSource, FactTrustLevel.Reported, false, at, null,
+                FactAvailability.NotApplicable, "沒有任何實體網路介面——這一輪沒有 MAC 可以對照"));
         return facts;
     }
 

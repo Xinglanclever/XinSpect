@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -113,21 +113,46 @@ public static class KnowledgeLookupCollector
         return null;
     }
 
-    /// <summary>從既有事實集回收 OUI 查詢的統計。</summary>
+    /// <summary>
+    /// 從既有事實集回收 OUI 查詢的統計（第 285 輪改成看結構化欄位與固定標記）。
+    ///
+    /// <para>
+    /// <b>這裡修掉一個真的會說謊的缺陷：</b>舊寫法比對「值裡有沒有出現某句中文」，
+    /// 而 WMI 查詢失敗時值欄是<b>空字串</b>（狀態在 <c>Availability</c> 上）……
+    /// 於是「一條網卡都沒讀到」被算成<b>一次命中</b>，<c>net.oui</c> 印「1 次查詢全部命中」。
+    /// 現在分三關：①<b>查詢有沒有發生</b>看 <c>Availability</c>（非 Present 一律不進統計，
+    /// 因為那不是查詢結果）；②出處看 <see cref="OuiKnowledge.OriginClausePrefix"/> 那段標記；
+    /// ③有值卻沒有那段標記＝無從分類，<b>不是命中</b>。
+    /// </para>
+    /// </summary>
     public static KnowledgeLookupReport.LookupStats CollectOui(IEnumerable<HardwareFact> facts)
     {
         var lookups = new List<(KnowledgeLookupReport.LookupOutcome, string)>();
         foreach (var f in facts.Where(f => f.Key.StartsWith("nic.mac.", StringComparison.Ordinal)))
         {
+            // 讀不到／沒有網卡：查詢沒有發生。失敗本身由那一把鍵自己申報，不在彙總裡重複算一筆。
+            if (f.Availability != FactAvailability.Present) continue;
+
             string value = f.Value ?? "";
-            var outcome =
-                value.Contains("未收錄", StringComparison.Ordinal) ? KnowledgeLookupReport.LookupOutcome.NotListed
-                : value.Contains("無法解析", StringComparison.Ordinal) ? KnowledgeLookupReport.LookupOutcome.Unparsable
-                : value.Contains("沒有實體網路介面", StringComparison.Ordinal) ? KnowledgeLookupReport.LookupOutcome.Unparsable
-                : KnowledgeLookupReport.LookupOutcome.Hit;
-            lookups.Add((outcome, value));
+            lookups.Add((ClassifyOuiValue(value), value));
         }
         return KnowledgeLookupReport.Summarize(lookups);
+    }
+
+    /// <summary>一條 <c>nic.mac.*</c> 值的查詢結果——讀的是值末尾那段固定標記。</summary>
+    private static KnowledgeLookupReport.LookupOutcome ClassifyOuiValue(string value)
+    {
+        int at = value.IndexOf(OuiKnowledge.OriginClausePrefix, StringComparison.Ordinal);
+        if (at < 0) return KnowledgeLookupReport.LookupOutcome.Unparsable;   // 沒有出處段：無從分類
+
+        string clause = value[(at + OuiKnowledge.OriginClausePrefix.Length)..];
+        if (clause.Contains(OuiKnowledge.UnparsableToken, StringComparison.Ordinal))
+            return KnowledgeLookupReport.LookupOutcome.Unparsable;
+        if (clause.Contains(OuiKnowledge.UnlistedToken, StringComparison.Ordinal))
+            return KnowledgeLookupReport.LookupOutcome.NotListed;
+        if (clause.Contains(OuiKnowledge.CuratedToken, StringComparison.Ordinal))
+            return KnowledgeLookupReport.LookupOutcome.Hit;
+        return KnowledgeLookupReport.LookupOutcome.Unparsable;               // 有段落但讀不懂
     }
 
     /// <summary>知識表鍵字面（供掃描器看見；註冊由主協調者做）：SMART 廠商屬性對照。</summary>

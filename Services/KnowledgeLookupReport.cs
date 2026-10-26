@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -71,15 +71,19 @@ public static class KnowledgeLookupReport
         public int Named => Curated + Registry;
     }
 
-    /// <summary>查一次 OUI。</summary>
+    /// <summary>
+    /// 查一次 OUI。<b>分類看 <see cref="OuiKnowledge.OriginOf"/>，不看拿回來的字串</b>——
+    /// 第 285 輪之前這裡是靠「結果裡有沒有出現某句中文」判斷，換一個字就會安靜地改口。
+    /// </summary>
     public static (LookupOutcome Outcome, string Result) LookupOui(string mac)
     {
         string result = OuiKnowledge.VendorOf(mac);
-        // OuiKnowledge 自己就把兩種失敗分開了（「無法解析的 MAC」／「（未收錄）」），
-        // 這裡只是把它轉成可統計的列舉——不重複判斷邏輯。
-        if (result.Contains("無法解析", StringComparison.Ordinal)) return (LookupOutcome.Unparsable, result);
-        if (result.Contains("未收錄", StringComparison.Ordinal)) return (LookupOutcome.NotListed, result);
-        return (LookupOutcome.Hit, result);
+        return OuiKnowledge.OriginOf(mac) switch
+        {
+            OuiKnowledge.OuiOrigin.Hit => (LookupOutcome.Hit, result),
+            OuiKnowledge.OuiOrigin.Unlisted => (LookupOutcome.NotListed, result),
+            _ => (LookupOutcome.Unparsable, result),
+        };
     }
 
     /// <summary>
