@@ -151,6 +151,13 @@ public static class FactKeyDynamicCatalog
                 "TSC 跨核偏移逐核一筆（ts.tsc.skew.core.{i}）——核集由拓撲決定；通路是既有 WinRing0 MSR 橋唯讀，不可用時整組 NotSupported",
             ["ts.core.uniformity."] =
                 "逐核一致性逐核一筆（ts.core.uniformity.core.{i}）與 spread 總覽——核集由拓撲決定；偏差門檻是啟發式（±15%），值裡標「疑似」不判決",
+            // ── 第 276 輪（U10-GP：EDID CTA-861）──────────────────────────
+            // 成員＝顯示器在視訊資料塊裡實際宣告的 VIC。那是「接了哪一台螢幕、轉接器怎麼寫 EDID」
+            // 的事實：本機兩台就宣告了 17 個與 0 個，換一台機器完全不同，編譯期列不完。
+            // 修訂號／YCbCr 4:2:0／VCDB／HDMI VSDB／HDR／色度學等固定鍵仍在靜態目錄。
+            ["edid.cta.vic."] =
+                "EDID CTA-861 視訊資料塊逐 VIC 一筆（edid.cta.vic.{vic}）——" +
+                "有哪幾個 VIC、哪幾個被標成原生，是顯示器的事實；值裡的時序文字走 VicKnowledge 知識表",
         };
 
     /// <summary>執行期鍵是否命中某個已登記的動態家族。</summary>

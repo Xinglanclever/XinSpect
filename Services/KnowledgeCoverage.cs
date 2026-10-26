@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -45,7 +45,7 @@ public static class KnowledgeCoverage
     }
 
     /// <summary>
-    /// 目前三張手工知識表的收錄狀況。
+    /// 目前六張手工／半手工知識表的收錄狀況。
     /// </summary>
     /// <remarks>
     /// <b>數字是實測的，不是估的</b>：由 <c>KnowledgeCoverageTests</c> 從各表的實際內容數出來並比對，
@@ -64,6 +64,11 @@ public static class KnowledgeCoverage
             "回 Unlisted——HWM 通路只報基址、不猜公式"),
         new("MAC OUI 廠商", 18, "IEEE OUI 登記的知名前綴子集", 0,
             "如實標未收錄，不推測廠商"),
+        // 2026-10-27（第 276 輪）：這張表是**唯一分母可確認的一張**——CTA-861 定義的 VIC
+        // 只有 1–127 與 193–219 兩個區間（128–192、220–255 保留），合計 154 個編號，
+        // 本表全收。分母 154 是有出處的實數，不是估的。
+        new("CTA VIC 時序", 154, "CTA-861 定義的 VIC 1–127 與 193–219（128–192、220–255 為保留）", 154,
+            "回「VIC n（知識表未收錄）」並附原始編號——不猜時序"),
     ];
 
     /// <summary>整體申報：這幾張表都是子集，查不到名字不代表裝置有問題。</summary>

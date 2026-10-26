@@ -62,3 +62,7 @@ lang-*.ps1
 *-shots/
 verify-shots-*/
 
+
+# ---- 建置殘骸（WPF 暫存專案與 repro-build 的 BaseOutputPath 誤植目錄）----
+XinSpect_*_wpftmp.csproj
+Bridge/UsersAdministratorXinSpect*/

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -212,9 +212,15 @@ public class FactCoverageReportTests
         // 從「以空列集申報未被查詢」改成讀真的 ATA SMART 屬性列——同一把鍵，值面升格）。
         // 另 `ev.manifest`／`ev.chain.verify` 從「只有測試在呼叫」變成由 `--evidence-pack` 生產，
         // 鍵本來就在目錄裡（不新增列），值面升格。上限跟著移到 381。
+        // 2026-10-27 第 276 輪：+9 條（`edid.cta.rev`／`edid.cta.ycbcr420`／`edid.cta.vcdb`／
+        // `edid.cta.vsdb.hdmi`／`edid.cta.hfvsdb`／`edid.cta.speaker`／`edid.cta.hdr`／
+        // `edid.cta.colorimetry`／`edid.cta.unknownblocks`＝EDID CTA-861 擴充塊的九個面）。
+        // 全部是**顯示器自己寫在 EDID 裡的宣告**：沒有第二條獨立通路可以再問同一台螢幕
+        // 「你宣告了什麼」（WMI 顯示器清單講的是另一件事，不得互相代言），
+        // 照規矩留未覆蓋，上限跟著移到 390。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 381,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 381）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 390,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 390）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }

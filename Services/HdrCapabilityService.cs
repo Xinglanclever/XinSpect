@@ -8,10 +8,22 @@ public sealed record HdrCapabilityRow(
 
 /// <summary>
 /// HDR 顯示能力解析：
-/// 1) 從登錄檔原始 EDID 找 CTA-861 擴充塊（tag 0x02）內的
-///    HDR Static Metadata Data Block（tag 0x6），解出亮度與支援旗標；
+/// 1) 從登錄檔原始 EDID 找 CTA-861 擴充塊（EDID tag 0x02）內的
+///    HDR Static Metadata Data Block（<b>延伸標籤 6</b>，不是資料塊標籤 6——後者是保留值），
+///    解出 EOTF 位元、靜態中繼資料類型與亮度碼值；
 /// 2) 用 DisplayConfig 的 Advanced Color Info 查 Windows HDR 是否啟用。
 /// 全部零特權、純 API 直讀；讀不到就標示未知，不猜。
+/// <para>
+/// <b>2026-10-27 修掉兩個實質缺陷（第 276 輪）：</b>
+/// ①標籤判錯——舊碼在資料塊集合裡找「標籤 6」，而 HDR 靜態中繼資料是
+/// <b>標籤 7（延伸標籤）＋延伸標籤 6</b>；CTA-861-H Table 60 的標籤 6 是保留值，
+/// 所以真機 EDID 的 <c>E6 06 0D 01 A2 A2 10</c>（標頭 0xE6＝標籤 7）從來沒被匹配到，
+/// 畫面只能一直顯示「未找到」。②位移與換算式錯——EOTF 在 <c>payload[1]</c>、
+/// 期望最大亮度在 <c>payload[3]</c>、最小亮度在 <c>payload[5]</c>（舊碼用了 +2／+3／+4），
+/// 而亮度換算是 <c>50×2^(CV/32)</c>（舊碼寫成 <c>(CV+1)/2</c>）。
+/// 兩者都不拋例外，只是把「有宣告 HDR」講成「未宣告」——<b>錯的標籤只會安靜地講錯話</b>。
+/// 現在整段走 <see cref="Cta861"/>，與 CTA 事實（<c>edid.cta.*</c>）共用同一份解碼器。
+/// </para>
 /// </summary>
 public static class HdrCapabilityService
 {
@@ -38,51 +50,59 @@ public static class HdrCapabilityService
             return rows;
         }
 
-        int extCount = edid[0x7E];
-        for (int ext = 0; ext < extCount; ext++)
+        var extensions = Cta861.ParseExtensions(edid);
+        if (extensions.Count == 0)
         {
-            int extBase = 128 * (ext + 1);
-            if (extBase + 128 > edid.Length) break;
-            if (edid[extBase] != 0x02) continue; // 只看 CTA-861
+            rows.Add(new HdrCapabilityRow("EDID HDR 區塊", "未找到", "EDID 無 CTA-861 擴充塊"));
+            return rows;
+        }
 
-            // CTA-861 data block 區段從 offset 4 開始到 DTD start。
-            int dtdStart = edid[extBase + 2] & 0xFF;
-            if (dtdStart < 4 || dtdStart > 127) continue;
-            int pos = 4;
-            while (pos < dtdStart)
+        // HDR 靜態中繼資料塊可能出現在任何一個 CTA 擴充塊裡（多數面板只有第一個）。
+        CtaHdrStatic? hdr = null;
+        foreach (var extension in extensions)
+        {
+            hdr = Cta861.HdrStatic(extension);
+            if (hdr is not null) break;
+        }
+
+        if (hdr is null)
+        {
+            rows.Add(new HdrCapabilityRow("EDID HDR 區塊", "未找到",
+                "CTA-861 擴充塊裡沒有 HDR 靜態中繼資料塊（延伸標籤 6）"));
+            return rows;
+        }
+
+        // EOTF 四位元逐一陳述：bit1（傳統 gamma HDR 範圍）不是「支援 HDR」，
+        // 真正的 HDR 傳輸函數是 bit2（PQ／ST 2084）與 bit3（HLG）。
+        var eotfNames = new List<string>();
+        if (hdr.TraditionalSdr) eotfNames.Add("傳統 gamma（SDR 範圍）");
+        if (hdr.TraditionalHdr) eotfNames.Add("傳統 gamma（HDR 範圍）");
+        if (hdr.SmpteSt2084) eotfNames.Add("SMPTE ST 2084（PQ）");
+        if (hdr.Hlg) eotfNames.Add("BT.2100 HLG");
+
+        rows.Add(new HdrCapabilityRow("HDR 支援", hdr.AnyHdrEotf ? "是" : "否",
+            hdr.AnyHdrEotf ? "正常" : "面板只宣告傳統 gamma"));
+        rows.Add(new HdrCapabilityRow("EOTF",
+            eotfNames.Count == 0 ? "（一位都沒設）" : string.Join("、", eotfNames),
+            $"EOTF 位元 {hdr.EotfBits:X2}"));
+        rows.Add(new HdrCapabilityRow("靜態中繼資料",
+            hdr.StaticMetadataType1 ? "已宣告類型 1（SMPTE ST 2086 色度＋亮度）" : "未宣告",
+            "—"));
+
+        if (hdr.MaxCll is int maxCode)
+        {
+            // CTA-861-G：期望最大亮度的碼值 CV 換算為 50×2^(CV/32) cd/m²。
+            double maxNits = Cta861.MaxLuminanceNits(maxCode);
+            rows.Add(new HdrCapabilityRow("最大亮度", $"{maxNits:F0} nits",
+                maxNits >= 600 ? "HDR 級" : "SDR 級"));
+            if (hdr.MinCll is int minCode)
             {
-                byte header = edid[extBase + pos];
-                byte tag = (byte)((header >> 5) & 0x07);
-                int len = header & 0x1F;
-                if (len == 0 || pos + 1 + len > dtdStart) break;
-
-                if (tag == 0x06 && len >= 3) // HDR Static Metadata Data Block
-                {
-                    byte sm = edid[extBase + pos + 2];
-                    bool sdrSupported = (sm & 0x01) != 0;
-                    bool hdrSupported = (sm & 0x02) != 0;
-                    rows.Add(new HdrCapabilityRow("HDR 支援", hdrSupported ? "是" : "否",
-                        hdrSupported ? "正常" : "—"));
-                    if (len >= 4)
-                    {
-                        // CTA-861-H：1..255 → 1..4999 nits（(value + 1) / 2）。
-                        double maxNits = (edid[extBase + pos + 3] + 1) / 2.0;
-                        rows.Add(new HdrCapabilityRow("最大亮度", $"{maxNits:F0} nits",
-                            maxNits >= 600 ? "HDR 級" : "SDR 級"));
-                    }
-                    if (len >= 5)
-                    {
-                        // 1..255 → 0.0001..0.0099 cd/m²（2^(value/32) × 0.0001）。
-                        double minNits = Math.Pow(2, edid[extBase + pos + 4] / 32.0) * 0.0001;
-                        rows.Add(new HdrCapabilityRow("最小亮度", $"{minNits:F4} nits", "—"));
-                    }
-                    rows.Add(new HdrCapabilityRow("SDR 相容", sdrSupported ? "是" : "否", "—"));
-                    return rows;
-                }
-                pos += 1 + len;
+                double minNits = Cta861.MinLuminanceNits(maxNits, minCode);
+                rows.Add(new HdrCapabilityRow("最小亮度", $"{minNits:F4} nits",
+                    $"碼值 {minCode}"));
             }
         }
-        rows.Add(new HdrCapabilityRow("EDID HDR 區塊", "未找到", "此面板可能不支援 HDR 或 EDID 未宣告"));
+        rows.Add(new HdrCapabilityRow("SDR 相容", hdr.TraditionalSdr ? "是" : "否", "—"));
         return rows;
     }
 
@@ -195,27 +215,13 @@ public static class HdrCapabilityService
         finally { Marshal.FreeHGlobal(p); }
     }
 
-    /// <summary>從 registry 讀取第一個顯示器的原始 EDID（與其他 EDID 頁同一來源）。</summary>
+    /// <summary>
+    /// 取第一台顯示器的原始 EDID。<b>不自己走登錄檔</b>——EDID 的登錄檔讀取只有一份實作
+    /// （<see cref="EdidService.ReadRawAll"/>），這裡只是取第一筆。
+    /// </summary>
     private static byte[] ReadFirstEdid()
     {
-        try
-        {
-            using var root = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\DISPLAY");
-            if (root is null) return [];
-            foreach (var modelName in root.GetSubKeyNames())
-            {
-                using var model = root.OpenSubKey(modelName);
-                if (model is null) continue;
-                foreach (var instName in model.GetSubKeyNames())
-                {
-                    using var inst = model.OpenSubKey(instName);
-                    using var dp = inst?.OpenSubKey("Device Parameters");
-                    if (dp?.GetValue("EDID") is byte[] e && e.Length >= 128)
-                        return e;
-                }
-            }
-        }
-        catch { }
-        return [];
+        var all = EdidService.ReadRawAll();
+        return all.Count > 0 ? all[0].Edid : [];
     }
 }

@@ -72,6 +72,7 @@ public static class SpecRefRegistry
         typeof(AcpiDeep),        // ACPI 表層深化（BGRT/SPCR/DBG2/HPET/NFIT/MPAM 靜態欄位；actbl1.h、actbl2.h）
         typeof(AcpiPptt),        // ACPI PPTT 拓撲表（acpi_subtable_header／processor／cache；actbl2.h）
         typeof(PciCapabilities), // PCI／PCIe 能力鏈（legacy 0x34 鏈＋擴充 0x100 鏈；核對 Linux pci_regs.h）
+        typeof(Cta861),          // EDID CTA-861 擴充塊（資料塊標籤／延伸標籤／HDR／HDMI VSDB；核對 Linux drm_edid.c）
     ];
 
     /// <summary>列舉解碼器上缺 SpecRef 的公開靜態方法（宣告於本型別者）。</summary>

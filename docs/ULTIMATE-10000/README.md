@@ -9,6 +9,7 @@
 | `AUDIT-dedup.md` | 鍵級查重稽核報告（對 FactKeyCatalog 1,044 鍵＋28 家族：淨新 9,930／收口 71／重複 4）。 |
 | `AUDIT-semantic.md` | 語意抽審（五域 30 列，正確率 30/30）。 |
 | `AUDIT-pending.md` | 待核 75 列攻堅（定案 65 含 27 列勘誤、部分 7、仍待核 3——缺口為微軟未公開 manifest）。 |
+| `ROUND-276-EDID-CTA-2026-10-27.md` | 第 276 輪工作紀錄：GP 域十列（`edid.cta.*`）落地、VIC 知識包（154 條，唯一分母可確認）、以及順手修掉的兩個實質缺陷（HDR 區塊標籤判錯、`nw.edid.summary` 三個數字沒來源）。 |
 | `dedup_check.py`／`sample_check.py` | 可重跑之稽核腳本（絕對路徑寫死）。 |
 | `ULTIMATE-10000-EXPANSION-2026-10-24.md` | 歷史快照（十二批完成時點；**已被 10-25 版取代**，保留供對帳）。 |
 | `ULTIMATE-5000-RESERVOIR-2026-10-24.md` | 前導文件（歸檔；已被主目錄取代）。 |

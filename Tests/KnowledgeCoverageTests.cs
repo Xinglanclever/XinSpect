@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -74,6 +74,22 @@ public class KnowledgeCoverageTests
         int actual = Regex.Matches(text, @"\[""\w\w-\w\w-\w\w""\]").Count;
         var declared = KnowledgeCoverage.Tables.Single(t => t.Name == "MAC OUI 廠商");
         Assert.Equal(actual, declared.Entries);
+    }
+
+    /// <summary>
+    /// CTA VIC 表是唯一「分母可確認」的一張（規格定義的編號區間是封閉的），
+    /// 所以它同時要滿足三件事：申報數＝檔案實數、申報數＝<see cref="VicKnowledge.Count"/>、
+    /// 申報數＝宣告的分母。
+    /// </summary>
+    [Fact]
+    public void CTA_VIC的申報數要等於實際條目數且等於分母()
+    {
+        string text = Read(Path.Combine("XinSpect.Decoders", "VicKnowledge.cs"));
+        int actual = Regex.Matches(text, @"\[\d+\] = \""").Count;
+        var declared = KnowledgeCoverage.Tables.Single(t => t.Name == "CTA VIC 時序");
+        Assert.Equal(actual, declared.Entries);
+        Assert.Equal(VicKnowledge.Count, actual);
+        Assert.Equal(VicKnowledge.Count, declared.Denominator);
     }
 
     // ── 分母不可確認時不得編一個 ──────────────────────────────────────────

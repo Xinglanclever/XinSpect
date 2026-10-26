@@ -47,6 +47,45 @@ public static class EdidService
         var list = new List<MonitorGamutInfo>();
         var seen = new HashSet<string>();
 
+        foreach (var (_, edid) in ReadRawAll())
+        {
+            try
+            {
+                var info = Parse(edid, "—");
+                // 以製造商 + 名稱 + 原色座標去重：同一片面板可能在登錄檔留有多筆執行個體，
+                // 也可能有兩個內容不同的 EDID 描述同一片面板（實測本機 6 筆只有 3 種內容）。
+                string key = info.Manufacturer + "|" + info.Name + "|" + info.PrimariesText;
+                if (seen.Add(key)) list.Add(info);
+            }
+            catch { /* 單一執行個體解析失敗不影響其餘 */ }
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// 讀出登錄檔裡所有顯示器的原始 EDID（<b>依內容雜湊去重</b>），附一個可讀標籤。
+    ///
+    /// <para>
+    /// <b>這是全專案唯一一個「從登錄檔讀 EDID」的實作。</b>原本有兩份：本類別的 <see cref="Detect"/>
+    /// 迴圈，與 <see cref="HdrCapabilityService"/> 的私有 <c>ReadFirstEdid</c>——走同一個機碼、
+    /// 同一種失敗處理，只差在一個解析色域、一個只取第一份。第三個消費者（CTA-861 擴充塊解碼）
+    /// 出現時先收斂成這一份，<b>免得同一個機碼有三種走法各自漂移</b>。
+    /// </para>
+    ///
+    /// <para>
+    /// <b>去重鍵是內容的 SHA-256 而不是機碼路徑：</b>同一片面板常常在
+    /// <c>Enum\DISPLAY\&lt;型號&gt;\&lt;執行個體&gt;</c> 底下有多筆（本機 6 筆只有 3 種內容），
+    /// 逐筆解會讓「兩台顯示器」與「同一台登記三次」看起來一樣。
+    /// </para>
+    ///
+    /// <para>
+    /// <b>讀不到就回空清單</b>——呼叫端要能把「沒有顯示器」與「讀取失敗」分開陳述。
+    /// </para>
+    /// </summary>
+    internal static IReadOnlyList<(string Label, byte[] Edid)> ReadRawAll()
+    {
+        var list = new List<(string, byte[])>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
         try
         {
             using var display = Registry.LocalMachine.OpenSubKey(
@@ -67,17 +106,18 @@ public static class EdidService
                         if (dp?.GetValue("EDID") is not byte[] edid || edid.Length < 128) continue;
                         if (!ValidHeader(edid)) continue;
 
-                        var info = Parse(edid, modelName);
-                        // 以製造商 + 名稱去重（同一顯示器可能於登錄檔留有多筆執行個體）
-                        string key = info.Manufacturer + "|" + info.Name + "|" + info.PrimariesText;
-                        if (seen.Add(key)) list.Add(info);
+                        string hash = Convert.ToHexString(
+                            System.Security.Cryptography.SHA256.HashData(edid));
+                        if (!seen.Add(hash)) continue;
+
+                        string label = $"{ManufacturerId(edid)} {MonitorName(edid) ?? modelName}".Trim();
+                        list.Add((label, edid));
                     }
                     catch { /* 單一執行個體讀取失敗不影響其餘 */ }
                 }
             }
         }
         catch { /* 無存取權或機碼不存在時回傳目前結果 */ }
-
         return list;
     }
 

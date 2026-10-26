@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Management;
 using System.Security.Cryptography;
 using System.Text;
@@ -98,20 +98,57 @@ public static class FinalInventoryFactsService
     public static HardwareFact EdidFact(DateTimeOffset at, EdidProbe? probe = null)
     {
         EdidState? s; try { s = (probe ?? new EdidProbe(ReadEdid))(); } catch { s = null; }
-        if (s is null) return Unavailable(at, EdidKey, CatNetwork, "EDID 全解", FactAvailability.ReadError, "EDID 解析失敗——不猜顯示器能力");
-        return new HardwareFact(EdidKey, CatNetwork, "EDID 全解", $"顯示器 {s.Monitors}、checksum 合格 {s.ValidChecksums}、HDR 區塊 {s.HdrBlocks}、CTA 擴充 {s.CtaExtensions}。只解描述符欄位，不列序號。", "台", "WmiMonitorID／EDID（唯讀）", FactTrustLevel.Measured, false, at, s.Monitors);
+        if (s is null)
+            return Unavailable(at, EdidKey, CatNetwork, "EDID 全解", FactAvailability.ReadError,
+                "讀不到任何可解析的 EDID（Enum\\DISPLAY 底下沒有合法 EDID 值）——"
+                + "**「讀不到」不是「0 台顯示器」**，也不猜顯示器能力");
+        return new HardwareFact(EdidKey, CatNetwork, "EDID 全解",
+            $"顯示器 {s.Monitors}（EDID 內容去重）、128 位元組區塊 checksum 合格 {s.ValidChecksums}、"
+            + $"宣告 HDR 靜態中繼資料的 {s.HdrBlocks} 台、CTA-861 擴充塊 {s.CtaExtensions} 份。"
+            + "只解描述符與 CTA 塊的計數，不列序號；逐塊內容見 edid.cta.*。",
+            "台", "Enum\\DISPLAY 的 Device Parameters\\EDID（唯讀）",
+            FactTrustLevel.Measured, false, at, s.Monitors);
     }
 
-    private static EdidState ReadEdid()
+    /// <summary>
+    /// 走真的 EDID 數出四個數字（第 276 輪修）。
+    ///
+    /// <para>
+    /// <b>這一支原本只數了顯示器台數，另外三個數字寫死 0</b>——於是畫面在真機上長期顯示
+    /// 「checksum 合格 0、HDR 區塊 0、CTA 擴充 0」，而其中一台顯示器其實宣告了 HDR 靜態中繼資料。
+    /// <b>那是「沒讀」被印成「量到 0」</b>：四個數字裡只有一個有來源，另外三個沒有，
+    /// 但長得一模一樣。現在四個都由同一份 <see cref="EdidService.ReadRawAll"/> 數出來
+    /// （與 <c>edid.cta.*</c> 共用同一份讀取與同一個解碼器）。
+    /// </para>
+    ///
+    /// <para>
+    /// <b>checksum 的算法是 EDID 1.4 的規格：</b>每個 128 位元組區塊的位元組和對 256 取餘數必須為 0。
+    /// 這裡只檢查第一個區塊（基本區塊）——後面擴充區塊的 checksum 不列入這個計數，
+    /// 因為那個數字回答的是「這份 EDID 的基本區塊寫得對不對」，不是「整份 EDID 有幾段」。
+    /// </para>
+    /// </summary>
+    private static EdidState? ReadEdid() => CountEdids(EdidService.ReadRawAll());
+
+    /// <summary>
+    /// 由一份 EDID 清單數出四個數字（internal 供測試直接餵假資料；
+    /// 正式路徑的輸入一律是 <see cref="EdidService.ReadRawAll"/>）。
+    /// </summary>
+    internal static EdidState? CountEdids(IReadOnlyList<(string Label, byte[] Edid)> all)
     {
-        int monitors = 0, validChecksums = 0, hdr = 0, cta = 0;
-        try
+        if (all.Count == 0) return null;
+
+        int validChecksums = 0, hdr = 0, cta = 0;
+        foreach (var (_, edid) in all)
         {
-            using var s = new ManagementObjectSearcher(@"root\wmi", "SELECT InstanceName FROM WmiMonitorID");
-            foreach (ManagementObject o in s.Get()) using (o) monitors++;
+            int sum = 0;
+            for (int i = 0; i < 128 && i < edid.Length; i++) sum += edid[i];
+            if (edid.Length >= 128 && (sum & 0xFF) == 0) validChecksums++;
+
+            var extensions = Cta861.ParseExtensions(edid);
+            cta += extensions.Count;
+            if (extensions.Any(e => Cta861.HdrStatic(e) is not null)) hdr++;
         }
-        catch { return new(0, 0, 0, 0); }
-        return new(monitors, validChecksums, hdr, cta);
+        return new EdidState(all.Count, validChecksums, hdr, cta);
     }
 
     public static HardwareFact WolPacketFact(DateTimeOffset at, WolPacketProbe? probe = null)

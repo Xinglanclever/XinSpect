@@ -1,4 +1,4 @@
-namespace XinSpect;
+﻿namespace XinSpect;
 
 /// <summary>
 /// 驅動相依全組事實的<b>單一組合點</b>（V7 WP32）：啟動序列與 CLI 模式共用同一套後端組合——
@@ -101,6 +101,10 @@ public static class EvidenceCollection
         // NVMe 一律不讀（第 263 輪實證：本機 PhysicalDrive 2／4 會卡在核心不可中斷等待）。
         try { svc.LoadSmartLookupStats(); }
         catch { /* 附加功能：讀不到由 SmartLookupProbe／ToSmartFact 標三態，不在這裡中斷啟動 */ }
+        // 第 276 輪：EDID CTA-861 擴充塊（edid.cta.*）。唯讀登錄檔、零特權；
+        // 讀不到（沒有 EDID／沒有 CTA 擴充塊／沒有某個資料塊）由服務寫成三態。
+        try { svc.LoadEdidCta(); }
+        catch { /* 附加功能：讀不到由 EdidCtaFactsService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadVbsState(); }
         catch { /* 附加功能：讀不到由 VbsStateFactsService 標三態，不在這裡中斷啟動 */ }
         // Vol 2 批次（2026-10-11）：自我完整性／CVE 離線對照／伺服器摘要／情境診斷／SBOM——皆唯讀、

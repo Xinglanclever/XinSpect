@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -144,7 +144,10 @@ public class FactKeyCatalogTests
         // 41 → 42（2026-10-25 第 271 輪）：os.wmi.fields.（WMI 未用欄位盤點逐類，成員固定、彙總在靜態目錄）。
         // 42 → 47（2026-10-25 第 272 輪）：ts.vector.flops.／ts.cache.bw.／ts.copy.kernel.／ts.tsc.skew.core.／
         // ts.core.uniformity.core.——成員由檢測矩陣與拓撲決定。
-        const int FamilyCap = 47;
+        // 47 → 48（2026-10-27 第 276 輪）：edid.cta.vic.——成員＝顯示器在視訊資料塊裡實際宣告的 VIC；
+        // 那是「接了哪一台螢幕」的事實，本機兩台顯示器一個宣告 17 個、一個一個都沒宣告，編譯期列不完。
+        // 同批的修訂號／4:2:0／VCDB／HDMI VSDB／HDR／色度學九把成員固定，走靜態目錄。
+        const int FamilyCap = 48;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 
