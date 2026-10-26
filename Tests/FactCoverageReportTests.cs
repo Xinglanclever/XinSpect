@@ -218,9 +218,13 @@ public class FactCoverageReportTests
         // 全部是**顯示器自己寫在 EDID 裡的宣告**：沒有第二條獨立通路可以再問同一台螢幕
         // 「你宣告了什麼」（WMI 顯示器清單講的是另一件事，不得互相代言），
         // 照規矩留未覆蓋，上限跟著移到 390。
+        // 2026-10-27 第 280 輪：+18 條（`os.ev.*` 事件 ID 的十九把逐列鍵＋待核清單彙總，
+        // 其中兩把落在既有規則的輸入面）。這些是**事件記錄的出現次數**：問的是
+        // 「這些已稽核的事件 ID 在這台機器出現過幾次」，沒有第二條獨立通路可以再問一次
+        // 同一件事（WMI 的可靠性計數是另一種聚合，不得互相代言）。照規矩留未覆蓋，上限跟著移到 408。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 390,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 390）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 408,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 408）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }

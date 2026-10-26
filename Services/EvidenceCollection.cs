@@ -101,6 +101,10 @@ public static class EvidenceCollection
         // NVMe 一律不讀（第 263 輪實證：本機 PhysicalDrive 2／4 會卡在核心不可中斷等待）。
         try { svc.LoadSmartLookupStats(); }
         catch { /* 附加功能：讀不到由 SmartLookupProbe／ToSmartFact 標三態，不在這裡中斷啟動 */ }
+        // 第 280 輪：事件 ID 的事實（os.ev.*）。十九次事件記錄查詢，唯讀、零特權；
+        // 放在有名字的收集步驟而不是事實集 getter——理由同 LoadSmartLookupStats。
+        try { svc.LoadEventIdEvidence(); }
+        catch { /* 附加功能：讀不到由 EventIdEvidenceFactsService 標三態，不在這裡中斷啟動 */ }
         // 第 276 輪：EDID CTA-861 擴充塊（edid.cta.*）。唯讀登錄檔、零特權；
         // 讀不到（沒有 EDID／沒有 CTA 擴充塊／沒有某個資料塊）由服務寫成三態。
         try { svc.LoadEdidCta(); }

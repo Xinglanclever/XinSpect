@@ -7,7 +7,7 @@
 ![版本](https://img.shields.io/badge/version-2.99-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-7053%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-7068%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
@@ -386,11 +386,11 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 | C# 源文件 | 1,524 档／272,492 行 | 走访所有 `*.cs`，排除 `bin/`、`obj/`、`publish-*/`、`.git/` |
 | 服务层文件 | 615 档 | `Services/` 之下递归的 `*.cs`（不含 bin／obj） |
 | 接口页（XAML） | 80 页 | `ls Views/*.xaml` |
-| 测试档 | 568 档 | `ls Tests/*.cs` |
-| 测试方法 | 5,815 个 `[Fact]`＋249 个 `[Theory]` | 逐档正则计数 |
-| 运行期测试案例 | 7,053（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
+| 测试档 | 569 档 | `ls Tests/*.cs` |
+| 测试方法 | 5,830 个 `[Fact]`＋249 个 `[Theory]` | 逐档正则计数 |
+| 运行期测试案例 | 7,068（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
 | 公开文档 | 32 份 `docs/*.md`＋5 份 `docs/spec/*.md` | `ls docs/*.md`、`ls docs/spec/*.md` |
-| 事实键目录 | 1,108 键／149 个前缀 | 解析 `FactKeyCatalog.Keys` |
+| 事实键目录 | 1,128 键／149 个前缀 | 解析 `FactKeyCatalog.Keys` |
 | 动态键家族 | 48 个 | 解析 `FactKeyDynamicCatalog.Families` |
 
 **怎么读这张表。** 第一个有用的比例是「5,362 个 `[Fact]` 对 247 个 `[Theory]`」——`[Theory]` 少，说明这个项目的测试风格偏向「一条测试讲一个具体事实」，而不是用数据驱动把同一个断言拷贝很多遍。第二个比例是「512 个测试档对 569 个服务档」：几乎每个服务档都有一个对应的测试档，这是刻意的，因为这个项目最贵的缺陷类别是「服务写完了但没有接进生产路径」（见第十九章 D-16），而对应测试档的存在至少让「写了却没人调用」有机会被看见。
