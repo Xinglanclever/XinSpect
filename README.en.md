@@ -7,7 +7,7 @@ A free, open-source hardware verification, monitoring, and security auditing too
 ![Version](https://img.shields.io/badge/version-2.99-4C8DFF)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![Tests](https://img.shields.io/badge/tests-7040%20passed-3FB950)
+![Tests](https://img.shields.io/badge/tests-7045%20passed-3FB950)
 ![Mutation Score](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
@@ -250,7 +250,7 @@ hardware / firmware / OS ──► fact collection (*FactsService)
 
 | File | Size | Purpose |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.99/XinSpect.exe) | 32.68 MB | Main program (Blue Squadron guard included) |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.99/XinSpect.exe) | 32.76 MB | Main program (Blue Squadron guard included) |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.99/BlueSquadronBridge.exe) | 6.5 MB | Standalone guard process |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.99/XinSpectDeploy.exe) | 7 KB | One-click installer (downloads and deploys automatically) |
 

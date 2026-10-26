@@ -7,7 +7,7 @@
 ![版本](https://img.shields.io/badge/version-2.99-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-7040%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-7045%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
@@ -387,8 +387,8 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 | 服务层文件 | 615 档 | `Services/` 之下递归的 `*.cs`（不含 bin／obj） |
 | 接口页（XAML） | 80 页 | `ls Views/*.xaml` |
 | 测试档 | 566 档 | `ls Tests/*.cs` |
-| 测试方法 | 5,800 个 `[Fact]`＋251 个 `[Theory]` | 逐档正则计数 |
-| 运行期测试案例 | 7,040（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
+| 测试方法 | 5,807 个 `[Fact]`＋249 个 `[Theory]` | 逐档正则计数 |
+| 运行期测试案例 | 7,045（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
 | 公开文档 | 32 份 `docs/*.md`＋5 份 `docs/spec/*.md` | `ls docs/*.md`、`ls docs/spec/*.md` |
 | 事实键目录 | 1,108 键／149 个前缀 | 解析 `FactKeyCatalog.Keys` |
 | 动态键家族 | 48 个 | 解析 `FactKeyDynamicCatalog.Families` |
@@ -464,7 +464,7 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.99/XinSpect.exe) | 34,268,971 bytes | 主程序。蓝色中队守护进程已内置 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.99/XinSpect.exe) | 34,350,891 bytes | 主程序。蓝色中队守护进程已内置 |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.99/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.99/XinSpectDeploy.exe) | 7 KB | 一键安装器（自动下载并部署主程序） |
 
