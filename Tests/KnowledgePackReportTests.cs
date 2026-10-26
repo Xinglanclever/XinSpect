@@ -94,7 +94,14 @@ public class KnowledgePackReportTests
     {
         var fact = KnowledgePackReport.ToSnapshotFact(At, Builtin);
         Assert.Equal(FactAvailability.NotSupported, fact.Availability);
-        Assert.Contains("v2.66", fact.UnavailableReason);
+
+        // 第 283 輪之前這裡斷言的是 "v2.66"——那句手寫字串從 v2.66 起就沒人更新，
+        // 內建表長到九張、兩萬多條時它還寫著「OuiKnowledge／bugcheck 子集」。
+        // 現在理由由清冊推導，所以測的是「推導出來的結果」而不是某一句話。
+        Assert.Equal(BuiltinKnowledgeInventory.SnapshotStatement(), fact.UnavailableReason);
+        Assert.Contains($"{BuiltinKnowledgeInventory.Entries.Count} 張知識表", fact.UnavailableReason);
+        Assert.Contains(BuiltinKnowledgeInventory.OldestSnapshot()!.Value.ToString("yyyy-MM-dd"),
+            fact.UnavailableReason);
     }
 
     // ── kp.update_channel ───────────────────────────────────────────────

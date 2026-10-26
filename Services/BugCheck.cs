@@ -33,6 +33,9 @@ internal static class BugCheck
         [0x0000004A] = ("IRQL_GT_ZERO_AT_SYSTEM_SERVICE", "返回使用者模式時 IRQL 過高，多為驅動程式錯誤。"),
     };
 
+    /// <summary>本表收錄的停止代碼條數（內建知識清冊用；不手抄）。</summary>
+    public static int Count => Table.Count;
+
     public static (string, string) Lookup(uint code) =>
         Table.TryGetValue(code, out var v) ? v : ("（未收錄的停止代碼）", "可上網以此停止代碼查詢，或以 WinDbg 進一步分析傾印檔。");
 }

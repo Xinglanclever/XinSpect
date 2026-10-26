@@ -147,7 +147,9 @@ public class FactKeyCatalogTests
         // 47 → 48（2026-10-27 第 276 輪）：edid.cta.vic.——成員＝顯示器在視訊資料塊裡實際宣告的 VIC；
         // 那是「接了哪一台螢幕」的事實，本機兩台顯示器一個宣告 17 個、一個一個都沒宣告，編譯期列不完。
         // 同批的修訂號／4:2:0／VCDB／HDMI VSDB／HDR／色度學九把成員固定，走靜態目錄。
-        const int FamilyCap = 48;
+        // 48 → 49（2026-10-26 第 283 輪）：kp.builtin.item.——成員＝內建知識表實際有幾張（目前九張）；
+        // 再加一張知識表就自動多一把鍵，編譯期不該為此改目錄。三把彙總鍵 kp.builtin.{tables,entries,oldest} 走靜態目錄。
+        const int FamilyCap = 49;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 

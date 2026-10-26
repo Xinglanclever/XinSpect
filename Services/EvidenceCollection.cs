@@ -101,6 +101,10 @@ public static class EvidenceCollection
         // NVMe 一律不讀（第 263 輪實證：本機 PhysicalDrive 2／4 會卡在核心不可中斷等待）。
         try { svc.LoadSmartLookupStats(); }
         catch { /* 附加功能：讀不到由 SmartLookupProbe／ToSmartFact 標三態，不在這裡中斷啟動 */ }
+        // 第 283 輪：內建知識表清冊（kp.builtin.*）。條數由各表數出來；
+        // 其中 PCI 登錄檔那張要解壓 219 KB 的內嵌資料檔，所以放在收集鏈而不是事實集 getter。
+        try { svc.LoadBuiltinKnowledge(); }
+        catch { /* 附加功能：讀不到由 BuiltinKnowledgeInventory 標三態，不在這裡中斷啟動 */ }
         // 第 280 輪：事件 ID 的事實（os.ev.*）。十九次事件記錄查詢，唯讀、零特權；
         // 放在有名字的收集步驟而不是事實集 getter——理由同 LoadSmartLookupStats。
         try { svc.LoadEventIdEvidence(); }

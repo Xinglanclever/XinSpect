@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""README 逐域展開的產生器（第 282 輪）。
+"""README 逐域展開的產生器（第 282 輪；第 283 輪補上目錄的 6.3 條目）。
 
-README 的第 6.3 節（逐域鍵表）、第 6.5 節（逐鍵出處）與附錄 F（域前綴表）
-是把事實鍵目錄**整份展開**——149 個域、1,128 把鍵。那份內容原本由一次性腳本寫成，
+README 的第 6.3 節（逐域鍵表）、第 6.5 節（逐鍵出處）、附錄 F（域前綴表）與
+附錄 F-2（動態家族）是把事實鍵目錄**整份展開**——149 個域、1,131 把鍵。那份內容原本由一次性腳本寫成，
 改完目錄沒重跑就與原始碼脫節，而且沒有任何東西會叫（第 279 輪補了結構守門，
 但守門只驗「有沒有漏或多」，不會幫你把漏的補上）。
 
 這支工具做兩件事：
 
-  python Tools/gen-readme-domains.py            # 就地重生（只動這三個區段）
+  python Tools/gen-readme-domains.py            # 就地重生（只動它負責的區段）
   python Tools/gen-readme-domains.py --check    # 只比對，不寫檔；有差異 exit 2
 
-**只動它負責的三個區段**，其餘一個字都不碰。已有的列／條目**原樣保留**
+**只動它負責的四個區段＋目錄的 6.3 條目**，其餘一個字都不碰。
+
+目錄那一塊是第 283 輪補的：條目編號與錨點原本靠手維護，於是「章節重編號」與
+「目錄」各自漂移——v2.99 時目錄寫 `6.3.57 域 kp`、章節已經是 `6.3.58`，
+而沒有任何測試看得出來。已有的列／條目**原樣保留**
 （名稱、來源、可信度、註解、原始碼片段都是人工與工具協作的結果，重跑不該洗掉），
 只有目錄裡新出現、文件裡還沒有的鍵才由原始碼抽後設資料補上——
 抽不到就留「—」，那是如實的「這個抽取方式抓不到」，不是遺漏。
@@ -206,20 +210,35 @@ def parse_appendix_f(section):
 
 # ── 生成 ─────────────────────────────────────────────────────────────────
 
+def effective_suffix(domain, keys, parsed):
+    """標題尾巴——「（N 把）」一定要跟著目錄重算。
+
+    它原本是照抄舊文字，於是「這一域多了三把鍵」會生出
+    「標題寫 7 把、表裡列 10 列」的自我矛盾標題（第 283 輪的 kp 域）。
+    """
+    suffix = parsed.get(domain, ("", "", {}))[0]
+    if not suffix:
+        return f"（本版沒有成文的域說明）（{len(keys)} 把）"
+    fixed, replaced = re.subn(r'（\d[\d,]* 把）\s*$', f'（{len(keys)} 把）', suffix)
+    if not replaced:
+        raise SystemExit(f"域 `{domain}` 的標題沒有「（N 把）」尾巴——"
+                         "README 的形狀變了，產生器不猜要改哪裡。")
+    return fixed
+
+
 def build_63(head, parsed, domains, corpus, nl):
     out = [head.rstrip(nl)]
     for n, (domain, keys) in enumerate(domains, 1):
-        suffix, prose, meta = parsed.get(domain, ("", "", {}))
+        documented = bool(parsed.get(domain, ("", "", {}))[0])
+        suffix = effective_suffix(domain, keys, parsed)
+        prose, meta = parsed.get(domain, ("", "", {}))[1:]
         out.append("")
-        if suffix:
-            out.append(f"### 6.3.{n} 域 `{domain}`{suffix}")
-        else:
-            out.append(f"### 6.3.{n} 域 `{domain}`（本版沒有成文的域說明）（{len(keys)} 把）")
+        out.append(f"### 6.3.{n} 域 `{domain}`{suffix}")
         out.append("")
         if prose.strip():
             out.append(prose.strip(nl))
             out.append("")
-        elif not suffix:
+        elif not documented:
             out.append("這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，"
                        "而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，"
                        "**不補一段聽起來合理的說明**。")
@@ -234,6 +253,15 @@ def build_63(head, parsed, domains, corpus, nl):
 
 
 def build_65(head, bullets, domains, corpus, nl):
+    # 開頭那句「N 把鍵之中有 M 把在本版 Services/ 的字面中找得到位置」是現在式宣稱，
+    # 兩個數字都會隨目錄變動——照抄舊文字就等於讓它安靜地變舊。
+    all_keys = [k for _, ks in domains for k in ks]
+    found = sum(1 for k in all_keys if any(('"' + k) in text for _, text in corpus))
+    claim = re.compile(r'\d[\d,]* 把鍵之中有 \d[\d,]* 把')
+    if not claim.search(head):
+        raise SystemExit("6.5 的開頭找不到「N 把鍵之中有 M 把…找得到位置」這一句——"
+                         "README 的形狀變了，產生器不猜要改哪裡。")
+    head = claim.sub(f'{len(all_keys):,} 把鍵之中有 {found:,} 把', head, count=1)
     out = [head.rstrip(nl)]
     for n, (domain, keys) in enumerate(domains, 1):
         out.append("")
@@ -243,6 +271,53 @@ def build_65(head, bullets, domains, corpus, nl):
             out.append(bullets.get(k) or extract_bullet(corpus, k))
         out.append("")
     return normalize(nl.join(out), nl)
+
+
+TOC63_RE = re.compile(r'(?m)^  - \[6\.3 逐域鍵表[^\r\n]*(?:\r?\n  - \[6\.3\.\d+ 域 [^\r\n]*)+')
+
+
+def slugify(text):
+    """GitHub 標題錨點：去掉反引號與標點、空白轉連字號、保留中文與底線。"""
+    out = []
+    for ch in text.replace("`", "").lower():
+        if ch.isalnum() or ch in "-_":
+            out.append(ch)
+        elif ch in " \u00a0\u3000":
+            out.append("-")
+    return "".join(out)
+
+
+def build_toc63(domains, parsed, total_keys, nl):
+    """目錄的 6.3 條目——編號、字數、錨點全部由章節推導。"""
+    rows = [f"  - [6.3 逐域鍵表（{len(domains)} 個域、{total_keys:,} 把鍵）]"
+            f"(#63-逐域鍵表{len(domains)}-個域{total_keys}-把鍵)"]
+    for n, (domain, keys) in enumerate(domains, 1):
+        heading = f"6.3.{n} 域 `{domain}`{effective_suffix(domain, keys, parsed)}"
+        rows.append(f"  - [{heading}](#{slugify(heading)})")
+    return nl.join(rows)
+
+
+def patch_count_lines(text, n_domains, total_keys, n_families, nl):
+    """六行帶數字的標題／目錄行：只改這些行的數字，其餘一行不碰。
+
+    逐行處理而不是全文替換——全文替換會把內文裡**歷史敘述**的舊數字一起改掉，
+    那會讓「當時是多少」變成「現在是多少」。
+    """
+    def fix(line):
+        if line.startswith("- [第 6 部 數據辭典：") or line.startswith("  - [6.3 逐域鍵表"):
+            line = re.sub(r"\d+ 個域、[\d,]+ 把鍵", f"{n_domains} 個域、{total_keys:,} 把鍵", line)
+            line = re.sub(r"-\d+-個域\d+-把鍵", f"-{n_domains}-個域{total_keys}-把鍵", line)
+        elif line.startswith("## 第 6 部 數據辭典：") or line.startswith("### 6.3 逐域鍵表"):
+            line = re.sub(r"\d+ 個域、[\d,]+ 把鍵", f"{n_domains} 個域、{total_keys:,} 把鍵", line)
+        elif line.startswith("  - [附錄 F　"):
+            line = re.sub(r"\d+ 個域的前綴表", f"{n_domains} 個域的前綴表", line)
+            line = re.sub(r"#附錄-f-\d+", f"#附錄-f-{n_domains}", line)
+        elif line.startswith("  - [附錄 F-2　"):
+            line = re.sub(r"\d+ 個動態家族", f"{n_families} 個動態家族", line)
+            line = re.sub(r"#附錄-f-2-\d+", f"#附錄-f-2-{n_families}", line)
+        return line
+
+    return nl.join(fix(line) for line in text.split(nl))
 
 
 def build_appendix_f(descriptions, domains, total_keys, nl):
@@ -352,13 +427,19 @@ def main():
     newF = build_appendix_f(descriptions, domains, len(keys), nl)
     newF2 = build_appendix_f2(root, nl)
 
+    mtoc = TOC63_RE.search(text)
+    if not mtoc:
+        sys.exit("找不到目錄的 6.3 條目區塊（`  - [6.3 逐域鍵表…` 起）——格式變了，先修這支工具")
+    newToc = build_toc63(domains, parsed63, len(keys), nl)
+
     # 由後往前換，避免位移
     result = text
     for (i, j, old, new, name) in sorted(
             [(i63, j63, sec63, new63, "6.3"),
              (i65, j65, sec65, new65, "6.5"),
              (iF, jF, secF, newF, "附錄 F"),
-             (iF2, jF2, text[iF2:jF2], newF2, "附錄 F-2")],
+             (iF2, jF2, text[iF2:jF2], newF2, "附錄 F-2"),
+             (mtoc.start(), mtoc.end(), mtoc.group(0), newToc, "目錄 6.3")],
             key=lambda x: -x[0]):
         if old == new:
             continue
@@ -369,6 +450,8 @@ def main():
             print(f"DRIFT: {name} 與目錄不同（區段內第 {line} 行）")
             print(f"  README: {a}")
             print(f"  應為  : {b}")
+
+    result = patch_count_lines(result, len(domains), len(keys), len(load_families(root)), nl)
 
     if args.check:
         if result != text:

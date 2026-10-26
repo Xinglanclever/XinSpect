@@ -101,4 +101,24 @@ public static class PciKnowledge
         string vendor = VendorName(ids.VendorId) ?? $"Vendor 0x{ids.VendorId:X4}（未收錄）";
         return $"{role} ・ {vendor}（0x{ids.VendorId:X4}:0x{ids.DeviceId:X4}） ・ 類別碼 0x{cls.BaseClass:X2}{cls.SubClass:X2}/progIF 0x{cls.ProgIf:X2} rev 0x{cls.Revision:X2}";
     }
+
+    /// <summary>
+    /// 本表三段的條數（基底類別／子類別／廠商）。<b>由程式數出來，不手抄</b>——
+    /// 內建清冊與覆蓋申報都讀這裡，表改了申報跟著動。
+    /// </summary>
+    [SpecRef("計數即上列三張對照表的成員數（基底類別／子類別／廠商）——逐值掃描列舉域，不由手抄而來的常數")]
+    public static (int BaseClasses, int SubClasses, int Vendors) Counts() => LazyCounts.Value;
+
+    private static readonly System.Lazy<(int, int, int)> LazyCounts = new(() =>
+    {
+        int bases = 0, subs = 0, vendors = 0;
+        for (int b = 0; b <= 0xFF; b++)
+            if (BaseClassName((byte)b) is not null) bases++;
+        for (int b = 0; b <= 0xFF; b++)
+            for (int s = 0; s <= 0xFF; s++)
+                if (SubClassName((byte)b, (byte)s) is not null) subs++;
+        for (int v = 0; v <= 0xFFFF; v++)
+            if (VendorName((ushort)v) is not null) vendors++;
+        return (bases, subs, vendors);
+    }, isThreadSafe: true);
 }

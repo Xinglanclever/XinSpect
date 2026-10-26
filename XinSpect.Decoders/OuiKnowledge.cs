@@ -20,6 +20,9 @@ public static class OuiKnowledge
         ["D8-BB-C1"] = "Microsoft（Surface）", ["9C-B6-D0"] = "Rivet Networks（Killer）",
     };
 
+    /// <summary>本表收錄的 OUI 條數（<c>KnowledgeCoverageTests</c> 與內建清冊用；不手抄）。</summary>
+    public static int Count => Known.Count;
+
     /// <summary>MAC 字串（任意分隔）→ OUI 廠商名。未收錄標「未收錄」、格式壞標「無法解析」。</summary>
     public static string VendorOf(string mac)
     {

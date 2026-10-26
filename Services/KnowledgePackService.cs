@@ -52,8 +52,16 @@ public static class KnowledgePackService
 
     public static string DefaultPath => Path.Combine(AppContext.BaseDirectory, FileName);
 
-    /// <summary>內建表的快照聲明（本版打包時點；沒有更新通道，過期如實說）。</summary>
-    public const string BuiltinSnapshot = "v2.66 內建（OuiKnowledge／bugcheck 子集；打包於 2026-10-11）";
+    /// <summary>
+    /// 內建表的快照聲明。<b>由 <see cref="BuiltinKnowledgeInventory"/> 推導，不是手寫的字串。</b>
+    /// </summary>
+    /// <remarks>
+    /// 這一句原本是寫死的「v2.66 內建（OuiKnowledge／bugcheck 子集；打包於 2026-10-11）」，
+    /// 而它從 v2.66 起就沒動過——內建表早就長成九張、兩萬多條，畫面卻還說只有兩張子集。
+    /// <b>「內建表有哪些東西」的唯一說明停在六個版本前，而它是使用者在畫面上唯一看得到的線索。</b>
+    /// 現在它由清冊算出來：表變了字串自己會變，不可能再落後。
+    /// </remarks>
+    public static string BuiltinSnapshot => BuiltinKnowledgeInventory.SnapshotStatement();
 
     private const string Source = "內建表／knowledge-pack.json（離線）";
 

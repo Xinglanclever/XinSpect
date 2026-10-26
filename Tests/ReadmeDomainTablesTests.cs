@@ -8,7 +8,7 @@ using Xunit;
 namespace XinSpect.Tests;
 
 /// <summary>
-/// README 第 6.3／6.5 節與附錄 F／F-2 是<b>整份鍵目錄的展開</b>（149 個域、1,108 把鍵、48 個家族），
+/// README 第 6.3／6.5 節與附錄 F／F-2 是<b>整份鍵目錄的展開</b>（域數、鍵數、家族數全部由目錄決定，不寫在這裡），
 /// 由產生器一次寫成。這一支把它的<b>結構</b>釘住：域的編號連續、每一域的鍵數與目錄相符、
 /// 展開的鍵集合與目錄逐鍵相等、附錄的首鍵／末鍵真的是字典序首末。
 ///
@@ -289,5 +289,81 @@ public class ReadmeDomainTablesTests
             string head = reason.Length > 20 ? reason[..20] : reason;
             Assert.Contains(head, appendix);
         }
+    }
+
+    // ── 目錄（TOC）：第 283 輪補的守門 ──────────────────────────────────
+
+    /// <summary>GitHub 標題錨點的規則：去反引號與標點、空白轉連字號、保留中文。</summary>
+    private static string Slug(string heading)
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (char ch in heading.Replace("`", "").ToLowerInvariant())
+        {
+            if (char.IsLetterOrDigit(ch) || ch == '-' || ch == '_') sb.Append(ch);
+            else if (ch is ' ' or ' ' or '　') sb.Append('-');
+        }
+        return sb.ToString();
+    }
+
+    [Fact]
+    public void 目錄的6點3條目要與章節逐條對應()
+    {
+        // 第 283 輪之前沒有人管這段目錄：v2.99 的目錄寫「6.3.57 域 kp」，
+        // 而章節已經是「6.3.58」——沒有任何測試看得出來，因為守門只讀章節。
+        // 目錄是三萬行文件的導覽，編號與錨點錯了，等於導覽指到別的地方。
+        string text = Readme();
+        var toc = Regex.Matches(text, @"^  - \[6\.3\.(\d+) 域 `([^`]+)`([^\]]*)\]\(#([^)]+)\)",
+                RegexOptions.Multiline)
+            .Select(m => (Number: int.Parse(m.Groups[1].Value), Domain: m.Groups[2].Value,
+                          Suffix: m.Groups[3].Value.Trim(), Anchor: m.Groups[4].Value))
+            .ToList();
+        var heads = Regex.Matches(text, @"^### 6\.3\.(\d+) 域 `([^`]+)`([^
+]*)",
+                RegexOptions.Multiline)
+            // Heading 保留原文（含前後空白）——錨點是對「整行標題」算的，
+            // 先 Trim 再拼回去會少一個連字號（`ac — ACPI` 與 `ac— ACPI` 是兩個不同的錨點）。
+            .Select(m => (Heading: m.Value[4..], Number: int.Parse(m.Groups[1].Value),
+                          Domain: m.Groups[2].Value, Suffix: m.Groups[3].Value))
+            .ToList();
+
+        var problems = new List<string>();
+        if (toc.Count != heads.Count)
+            problems.Add($"目錄列了 {toc.Count} 條，章節有 {heads.Count} 個");
+
+        for (int i = 0; i < Math.Min(toc.Count, heads.Count); i++)
+        {
+            var (at, ah) = (toc[i], heads[i]);
+            if (at.Number != ah.Number)
+                problems.Add($"第 {i + 1} 條：目錄寫 6.3.{at.Number}，章節是 6.3.{ah.Number}（域 {ah.Domain}）");
+            if (at.Domain != ah.Domain)
+                problems.Add($"第 {i + 1} 條：目錄寫域 {at.Domain}，章節是 {ah.Domain}");
+            if (at.Suffix.Trim() != ah.Suffix.Trim())
+                problems.Add($"第 {i + 1} 條（{ah.Domain}）：目錄寫「{at.Suffix.Trim()}」，章節是「{ah.Suffix.Trim()}」");
+
+            string want = Slug(ah.Heading);
+            if (at.Anchor != want)
+                problems.Add($"第 {i + 1} 條（{ah.Domain}）：錨點 #{at.Anchor} 指不到這個標題（應為 #{want}）");
+        }
+
+        Assert.True(problems.Count == 0,
+            "README 目錄的 6.3 條目與章節對不上（修正方式：python Tools/gen-readme-domains.py）：\n"
+            + string.Join("\n", problems.Take(20)));
+    }
+
+    [Fact]
+    public void 目錄與章節標題的域數鍵數要與目錄相符()
+    {
+        string text = Readme();
+        int domains = CatalogByDomain().Count;
+        int keys = FactKeyCatalog.Keys.Count;
+        int families = FactKeyDynamicCatalog.Families.Count;
+
+        // 兩處正文標題＋兩處目錄條目：四個數字同源，任何一處落後都是同一種說謊。
+        Assert.Contains($"## 第 6 部 數據辭典：{domains} 個域、{keys:N0} 把鍵", text);
+        Assert.Contains($"### 6.3 逐域鍵表（{domains} 個域、{keys:N0} 把鍵）", text);
+        Assert.Contains($"  - [6.3 逐域鍵表（{domains} 個域、{keys:N0} 把鍵）]"
+                        + $"(#63-逐域鍵表{domains}-個域{keys}-把鍵)", text);
+        Assert.Contains($"  - [附錄 F　{domains} 個域的前綴表]", text);
+        Assert.Contains($"  - [附錄 F-2　{families} 個動態家族", text);
     }
 }

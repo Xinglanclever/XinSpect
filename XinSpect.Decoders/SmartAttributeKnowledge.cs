@@ -155,6 +155,14 @@ public static class SmartAttributeKnowledge
     /// <summary>六家的列數（守門與覆蓋申報用）。</summary>
     public static int Count(SmartVendor vendor) => Table(vendor).Count;
 
+    /// <summary>六家的總條數（內建知識清冊用；不手抄）。</summary>
+    public static int TotalCount => Vendors.Sum(Count);
+
+    /// <summary>六個廠商列舉（清冊與測試共用同一份順序）。</summary>
+    public static IReadOnlyList<SmartVendor> Vendors { get; } =
+        [SmartVendor.Samsung, SmartVendor.Seagate, SmartVendor.WesternDigital,
+         SmartVendor.Kingston, SmartVendor.Micron, SmartVendor.SanDisk];
+
     // ── Samsung（官方 Application Note，845 DC PRO／EVO；共 19 列）────────
     // raw 欄位語意逐條出自該文件；文件只描述 raw 者不猜 normalized 公式。
 

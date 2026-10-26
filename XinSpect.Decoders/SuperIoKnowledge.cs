@@ -27,6 +27,10 @@ public static class SuperIoKnowledge
     public static SuperIoFamily Family(ushort chipId) =>
         FamilyTable.TryGetValue(chipId, out SuperIoFamily family) ? family : SuperIoFamily.Unlisted;
 
+    /// <summary>本表收錄的晶片條數（四個家族表的總和；不手抄）。</summary>
+    [SpecRef("計數即 coreboot util/superiotool 四個家族表（ITE／NCT67xx／其他 Nuvoton／Fintek）的成員數——逐表列舉，不由手抄而來的常數")]
+    public static int Count => IteIds.Count + Nct67xxIds.Count + OtherNuvotonIds.Count + FintekIds.Count;
+
     /// <summary>晶片 ID → 型號名。未收錄回 null。</summary>
     [SpecRef("coreboot util/superiotool（GPL-2.0-or-later）ite.c／nuvoton.c／fintek.c 晶片 ID 表；ID 暫存器佈局見 SuperIo.DecodeChipId")]
     public static string? ChipName(ushort chipId) => chipId switch

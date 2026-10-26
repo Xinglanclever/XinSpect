@@ -75,16 +75,39 @@ public static class SpecRefRegistry
         typeof(Cta861),          // EDID CTA-861 擴充塊（資料塊標籤／延伸標籤／HDR／HDMI VSDB；核對 Linux drm_edid.c）
     ];
 
-    /// <summary>列舉解碼器上缺 SpecRef 的公開靜態方法（宣告於本型別者）。</summary>
+    /// <summary>
+    /// 列舉解碼器上缺 SpecRef 的公開靜態成員（方法與**屬性**，宣告於本型別者）。
+    ///
+    /// <para>
+    /// <b>為什麼要數屬性：</b><see cref="SpecRefAttribute"/> 的 <c>AttributeUsage</c> 一開始就允許
+    /// <c>Property</c>，但這支檢查只掃 <c>GetMethods</c>——屬性不是方法，於是
+    /// 「加了 <c>[SpecRef]</c> 的屬性」永遠不算覆蓋，「沒加」也永遠不算缺。
+    /// 第 283 輪替 <c>SuperIoKnowledge.Count</c> 補引用時，補了照樣紅燈，才發現守門本身漏了這一類。
+    /// </para>
+    /// </summary>
     public static IReadOnlyList<string> MethodsMissingRefs()
     {
+        const System.Reflection.BindingFlags Flags =
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static
+            | System.Reflection.BindingFlags.DeclaredOnly;
+
         var missing = new List<string>();
         foreach (var type in CoveredDecoders)
         {
-            foreach (var m in type.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.DeclaredOnly))
+            foreach (var m in type.GetMethods(Flags))
             {
+                // 屬性的 getter／setter 是特殊名稱方法：它們在下面的屬性迴圈裡算，
+                // 不在這裡重複要求一次（屬性的引用寫在屬性上，不寫在存取子上）。
+                if (m.IsSpecialName) continue;
                 if (!m.GetCustomAttributes(typeof(SpecRefAttribute), inherit: false).Any())
                     missing.Add($"{type.Name}.{m.Name}");
+            }
+            foreach (var p in type.GetProperties(Flags))
+            {
+                // 屬性上的引用寫在屬性上；寫在 getter 上的也算（兩種都收）。
+                bool has = p.GetCustomAttributes(typeof(SpecRefAttribute), inherit: false).Any()
+                        || (p.GetGetMethod()?.GetCustomAttributes(typeof(SpecRefAttribute), inherit: false).Any() ?? false);
+                if (!has) missing.Add($"{type.Name}.{p.Name}");
             }
         }
         return missing;
