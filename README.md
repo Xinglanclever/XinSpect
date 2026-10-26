@@ -38,7 +38,7 @@
 | 全站說明條目（圓圈問號） | **286** | `Nav/HelpCatalog.cs` 的 `Entries` 成員數 |
 | 服務檔 | **615** | `find Services -name '*.cs' \| wc -l` |
 | 全域 C# 檔 | **1,453** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`publish-*/`、`.git/` |
-| 版本紀錄筆數 | **104** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
+| 版本紀錄筆數 | **105** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
 | 專案測試基線 | **7,040** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
 
 **這張表不能證明什麼。** 1,108 把鍵不是 1,108 個正確答案；64 頁不是 64 個好設計；7,040 條測試不是 7,040 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
@@ -49,8 +49,8 @@
 
 | 檔案 | 大小 | 說明 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.99/XinSpect.exe) | 34,268,971 bytes | 主程式。藍色中隊守護進程已內建 |
-| [SHA256SUMS.txt](https://github.com/Xinglanclever/XinSpect/releases/download/v2.99/SHA256SUMS.txt) | 約 200 bytes | 逐檔雜湊，發佈後由 `Tools/verify-release.ps1` 對帳 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.99/XinSpect.exe) | 34,350,891 bytes | 主程式。藍色中隊守護進程已內建 |
+| [SHA256SUMS.txt](https://github.com/Xinglanclever/XinSpect/releases/download/v2.99/SHA256SUMS.txt) | 253 bytes | 逐檔雜湊，發佈後由 `Tools/verify-release.ps1` 對帳 |
 
 > **上表的位元組數為本版（v2.99）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
@@ -590,7 +590,7 @@
 6. 服務檔數：`find Services -name '*.cs' | wc -l`（本版 615）。
 7. 測試數：`dotnet test` 的總計，或讀 `Tests/TestSuiteBaseline.cs`（本版 7,040）。
 8. 主程式大小：Release 頁面的 `XinSpect.exe` 位元組數（本版 34,268,971）。
-9. 版本紀錄筆數：數 `Nav/ChangelogCatalog.cs` 的 `Entries`（本版 104）。
+9. 版本紀錄筆數：數 `Nav/ChangelogCatalog.cs` 的 `Entries`（本版 105）。
 10. 孤兒鍵：把目錄鍵與 `Views/`、`Nav/` 兩邊的出口對照（第 2 部給了方法與本版結果）。
 
 ### 0.9 這份文件與程式的關係：文字是被守住的
