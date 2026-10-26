@@ -291,7 +291,94 @@ public class ReadmeDomainTablesTests
         }
     }
 
-    // ── 目錄（TOC）：第 283 輪補的守門 ──────────────────────────────────
+    // ── 第 6.3 節的後設資料欄：第 288 輪補的守門 ───────────────────────
+
+    /// <summary>§6.3 的一列：鍵 → 三格（名稱／來源／可信度）。</summary>
+    private static Dictionary<string, string[]> MetadataRows()
+    {
+        string section = Slice("### 6.3 逐域鍵表", "### 6.4 跨域通則");
+        var map = new Dictionary<string, string[]>(StringComparer.Ordinal);
+        foreach (Match m in Regex.Matches(section,
+                     @"^\| `([^`]+)` \| ([^|]*) \| ([^|]*) \| ([^|]*) \|", RegexOptions.Multiline))
+        {
+            map[m.Groups[1].Value] = [m.Groups[2].Value.Trim(), m.Groups[3].Value.Trim(), m.Groups[4].Value.Trim()];
+        }
+        return map;
+    }
+
+    [Fact]
+    public void 原始碼把名字寫在建構子裡的鍵_第六點三節就要填得出來()
+    {
+        // 這一欄的定義是「原始碼字面」。第 288 輪之前產生器只認「鍵字面直接塞進建構子」，
+        // 而 1,131 把鍵裡有 839 把是「先宣告常數、再 new HardwareFact(常數, …)」——
+        // 於是那一欄幾乎全是「—」，一張 1,131 列的表變成一片破折號。
+        var rows = MetadataRows();
+        // 只認「鍵與名稱都是純字面」的呼叫：名稱若是 `$"來源裁決：{subject}"` 這種插值，
+        // 抽不到是正確的（留「—」比填半個值誠實），這裡就不該要求它。
+        var literal = new Regex(
+            @"new\s+HardwareFact\(\s*""([a-z][a-z0-9_.]+)""\s*,\s*[^,""
+]+,\s*""([^""
+]*)""",
+            RegexOptions.Compiled);
+
+        string corpus = string.Concat(Directory
+            .GetFiles(Path.Combine(RepoRoot(), "Services"), "*.cs", SearchOption.AllDirectories)
+            .Select(File.ReadAllText));
+
+        var catalog = FactKeyCatalog.Keys.ToHashSet(StringComparer.Ordinal);
+        var missing = literal.Matches(corpus).Select(m => m.Groups[1].Value)
+            .Where(k => catalog.Contains(k))
+            .Distinct(StringComparer.Ordinal)
+            // 只要求**名稱**：來源常常是 `$"{Source}｜狀態≠可達"` 這種組合字串，
+            // 抽不到是對的（留「—」比填一個只對一半的值誠實）。
+            .Where(k => !rows.TryGetValue(k, out var cells) || cells[0] == "—")
+            .OrderBy(k => k, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.True(missing.Count == 0,
+            "以下鍵在原始碼裡有「名字與來源都寫死」的建構子呼叫，文件卻還是「—」："
+            + string.Join("、", missing.Take(20))
+            + "（修正方式：python Tools/gen-readme-domains.py）");
+    }
+
+    [Fact]
+    public void 第六點三節的每一列都要是單行()
+    {
+        // 一個儲存格裡有換行，那一列就破了表格——而**既有的守門看不出來**：
+        // 比對用的 `[^|]*` 會跨過換行，所以列被拆成兩行之後仍然「匹配成功」，一路綠。
+        // 第 288 輪真的發生過一次：來源字串在原始碼裡是兩段 `"…" + "…"` 串接，
+        // 產生器把換行與加號原封不動寫進格子（`sb.onboard` 那一列）。
+        string section = Slice("### 6.3 逐域鍵表", "### 6.4 跨域通則");
+
+        var broken = section.Split('\n')
+            .Select(l => l.TrimEnd('\r'))
+            .Where(l => l.StartsWith("| `", StringComparison.Ordinal) && !l.EndsWith("|", StringComparison.Ordinal))
+            .ToList();
+
+        Assert.True(broken.Count == 0,
+            "以下列沒有在自己的那一行收尾（表格破了）：" + Environment.NewLine
+            + string.Join(Environment.NewLine, broken.Take(5)));
+    }
+
+    [Fact]
+    public void 第六點三節的後設資料填寫率不得退步()
+    {
+        // 下限不是目標，是**退化警報**：第 288 輪把「三格全填」的列從 112 推到 683、
+        // 「名稱」欄從 169 推到 964。低於下限代表抽取退化了（常數解析壞掉、
+        // 或有人把產生器改回只認字面），而文件看起來仍然一切正常。
+        //
+        // 為什麼名稱是主要指標：「來源」常常是 `$"{Source}｜狀態≠可達"` 這種組合字串，
+        // 抽不到是正確的；而**同一把鍵有兩條建構路徑時（有值／讀不到），兩條的可信度
+        // 可以不同**——那一格留「—」，因為任選一個都是在替另一條路徑說話。
+        var rows = MetadataRows();
+        int named = rows.Values.Count(c => c[0] != "—");
+        int full = rows.Values.Count(c => c.All(x => x != "—"));
+
+        Assert.True(named >= 900, $"§6.3 只有 {named} 列填了名稱（下限 900，第 288 輪實測 964）");
+        Assert.True(full >= 650, $"§6.3 只有 {full} 列三格全填（下限 650，第 288 輪實測 683）");
+    }
+
+    // ── 目錄（TOC）：第 283 輪補的守門 ──────────────────────────────────    // ── 目錄（TOC）：第 283 輪補的守門 ──────────────────────────────────
 
     /// <summary>GitHub 標題錨點的規則：去反引號與標點、空白轉連字號、保留中文。</summary>
     private static string Slug(string heading)

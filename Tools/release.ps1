@@ -82,18 +82,22 @@ try {
     Ok "preflight: $Version everywhere, baseline $N"
 
     # ---------- full suite ----------
+    # 輸出路徑與 trx 檔名都帶時間戳：殘骸 testhost 會鎖住固定的 obj/_rel_<版號>/ 與 rel.trx，
+    # 那些行程殺不掉也刪不掉（taskkill 回 success 但行程還在），固定路徑等於「再發一次一定撞鎖」
+    # ——MSB3027／MSB3021 說的是檔案被 testhost 佔用，不是產品壞了。
+    $stamp = Get-Date -Format 'HHmmss'
     if ($SkipTests) {
         Write-Host '!!! SKIPPING TEST SUITE (-SkipTests) - only acceptable right after a -DryRun of the same version' -ForegroundColor Yellow
     } else {
         Write-Host '==> full test suite'
-        if (Test-Path 'Tests\TestResults\rel.trx') { Remove-Item 'Tests\TestResults\rel.trx' -Force }
+        $trx = "rel_$stamp.trx"
         # 直出 console（呼叫端自行重定向）——PS 5.1 把大量輸出經管道餵 Out-File 會卡死，
         # 這裡刻意不用管道，維持與手動發版相同的執行方式。
         & dotnet test Tests\XinSpect.Tests.csproj -c Debug --nologo `
-            -p:BaseOutputPath="obj/_rel_$Version/" --logger "trx;LogFileName=rel.trx"
+            -p:BaseOutputPath="obj/_rel_${Version}_$stamp/" --logger "trx;LogFileName=$trx"
         if ($LASTEXITCODE -ne 0) { Fail "test suite exit code $LASTEXITCODE" }
-        $trxPath = 'Tests\TestResults\rel.trx'
-        if (-not (Test-Path $trxPath)) { Fail 'trx result file not found at Tests\TestResults\rel.trx' }
+        $trxPath = "Tests\TestResults\$trx"
+        if (-not (Test-Path $trxPath)) { Fail "trx result file not found at $trxPath" }
         $trxText = [IO.File]::ReadAllText((Resolve-Path $trxPath))
         if ($trxText -notmatch '<ResultSummary outcome="Completed"') { Fail 'suite outcome != Completed' }
         $cn = [regex]::Match($trxText, '<Counters[^>]*/>')
@@ -138,7 +142,7 @@ try {
     Write-Host '==> dotnet publish (single file)'
     & dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false `
         -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
-        -p:BaseOutputPath="obj/_pub_$Version/" -o "publish-$Version" | Out-Null
+        -p:BaseOutputPath="obj/_pub_${Version}_$stamp/" -o "publish-$Version" | Out-Null
     if ($LASTEXITCODE -ne 0) { Fail 'publish failed' }
     $exe = "publish-$Version\XinSpect.exe"
     if (-not (Test-Path $exe)) { Fail "publish output missing: $exe" }

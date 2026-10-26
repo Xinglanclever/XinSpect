@@ -1,4 +1,4 @@
-[简体中文](README.zh-CN.md) · 繁體中文 · [English](README.en.md)
+﻿[简体中文](README.zh-CN.md) · 繁體中文 · [English](README.en.md)
 
 # 曦覽 XinSpect 百科
 
@@ -6,12 +6,12 @@
 
 這份文件不是一般專案的 README。它是一本**百科全書**：把這個程式裡**每一頁、每一格、每一個數字、每一把事實鍵**逐一拆開，寫清楚它是什麼、從哪一條路徑讀來、憑什麼算數、誤差與偏移從哪裡來、以及它**不能**被拿去回答什麼問題。
 
-舊版的 README（2.91 之前的「硬核版說明」，約 16 萬字）不是被翻譯，也不是被搬過來——它的每一章都被重寫、擴充、重排；如果你要找舊版原文，它仍然完整躺在 git 歷史裡：`git show HEAD:README.md`。這一版針對的是 **v2.99** 的這棵樹，所有數字都在這棵樹上複算得出來，數法寫在每一處。
+舊版的 README（2.91 之前的「硬核版說明」，約 16 萬字）不是被翻譯，也不是被搬過來——它的每一章都被重寫、擴充、重排；如果你要找舊版原文，它仍然完整躺在 git 歷史裡：`git show HEAD:README.md`。這一版針對的是 **v3.00** 的這棵樹，所有數字都在這棵樹上複算得出來，數法寫在每一處。
 
-![版本](https://img.shields.io/badge/version-2.99-4C8DFF)
+![版本](https://img.shields.io/badge/version-3.00-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-7146%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-7149%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
@@ -38,10 +38,10 @@
 | 全站說明條目（圓圈問號） | **286** | `Nav/HelpCatalog.cs` 的 `Entries` 成員數 |
 | 服務檔 | **618** | `find Services -name '*.cs' \| wc -l` |
 | 全域 C# 檔 | **1,466** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`publish-*/`、`.git/` |
-| 版本紀錄筆數 | **105** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
-| 專案測試基線 | **7,146** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
+| 版本紀錄筆數 | **106** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
+| 專案測試基線 | **7,149** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
 
-**這張表不能證明什麼。** 1,131 把鍵不是 1,131 個正確答案；64 頁不是 64 個好設計；7,146 條測試不是 7,146 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
+**這張表不能證明什麼。** 1,131 把鍵不是 1,131 個正確答案；64 頁不是 64 個好設計；7,149 條測試不是 7,149 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
 
 ---
 
@@ -49,10 +49,10 @@
 
 | 檔案 | 大小 | 說明 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.99/XinSpect.exe) | 34,350,891 bytes | 主程式。藍色中隊守護進程已內建 |
-| [SHA256SUMS.txt](https://github.com/Xinglanclever/XinSpect/releases/download/v2.99/SHA256SUMS.txt) | 253 bytes | 逐檔雜湊，發佈後由 `Tools/verify-release.ps1` 對帳 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.00/XinSpect.exe) | 34,350,891 bytes | 主程式。藍色中隊守護進程已內建 |
+| [SHA256SUMS.txt](https://github.com/Xinglanclever/XinSpect/releases/download/v3.00/SHA256SUMS.txt) | 253 bytes | 逐檔雜湊，發佈後由 `Tools/verify-release.ps1` 對帳 |
 
-> **上表的位元組數為本版（v2.99）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v3.00）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
 需求：Windows 10 1903 以上／Windows 11、x64、.NET 10 Desktop Runtime（單檔版不含執行階段，需另裝）。想以管理員權限取得感測器、MSR 直讀與超頻頁面，請「以系統管理員身分執行」——不提權不是壞掉，只是那些頁面會整片顯示「—」（原因見第 0 部的六態）。
 
@@ -590,7 +590,7 @@
 6. 服務檔數：`find Services -name '*.cs' | wc -l`（本版 618）。
 7. 測試數：`dotnet test` 的總計，或讀 `Tests/TestSuiteBaseline.cs`（本版 7,040）。
 8. 主程式大小：Release 頁面的 `XinSpect.exe` 位元組數（本版 34,268,971）。
-9. 版本紀錄筆數：數 `Nav/ChangelogCatalog.cs` 的 `Entries`（本版 105）。
+9. 版本紀錄筆數：數 `Nav/ChangelogCatalog.cs` 的 `Entries`（本版 106）。
 10. 孤兒鍵：把目錄鍵與 `Views/`、`Nav/` 兩邊的出口對照（第 2 部給了方法與本版結果）。
 
 ### 0.9 這份文件與程式的關係：文字是被守住的
@@ -2359,35 +2359,35 @@
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
 | `ac.aml.boundary` | AML 位元碼評估界線 | 專案界線宣告（無外部來源） | Measured |
-| `ac.aml.stat` | — | — | — |
+| `ac.aml.stat` | AML 反編譯骨架 | ACPI DSDT／SSDT 位元組統計（不反編譯） | Derived |
 | `ac.aml.str.count` | AML 可列印字串數 | ACPI DSDT/SSDT 詞法掃描 | Measured |
 | `ac.aml.str.sample` | AML 字串樣本 | ACPI DSDT/SSDT 詞法掃描 | Measured |
 | `ac.bgrt` | BGRT 開機圖形表 | ACPI BGRT | Measured |
-| `ac.bgrt.deep` | — | — | — |
+| `ac.bgrt.deep` | BGRT 開機 logo 表 | EnumSystemFirmwareTables ＋ 表頭解析（唯讀） | Reported |
 | `ac.checksum.bad` | 表頭校驗和不符的表 | GetSystemFirmwareTable＋表頭 0x00 總和（ACPI Spec 表頭 Checksum@9） | Measured |
-| `ac.cpc.summary` | — | — | — |
+| `ac.cpc.summary` | CPPC 處理器效能控制 | CPUID／MSR／登錄與 Kernel-Processor-Power 事件（唯讀） | — |
 | `ac.dbg2` | DBG2 除錯埠表 | ACPI DBG2 | Measured |
-| `ac.dbg2.deep` | — | — | — |
+| `ac.dbg2.deep` | DBG2 除錯埠 | EnumSystemFirmwareTables ＋ 表頭解析（唯讀） | Reported |
 | `ac.dbg2.devices` | DBG2 除錯裝置數 | ACPI DBG2 | Measured |
 | `ac.decode.unrecorded` | 本版未逐欄解碼的表簽章 | ACPI 表列×解碼器覆蓋申報 | Derived |
-| `ac.dmar.atsr` | — | — | — |
-| `ac.dmar.coverage` | — | — | — |
-| `ac.dmar.drhd` | — | — | — |
-| `ac.dmar.rmrr` | — | — | — |
-| `ac.dmar.summary` | — | — | — |
-| `ac.dmar.unrecorded` | — | — | — |
-| `ac.dsm.summary` | — | — | — |
+| `ac.dmar.atsr` | 位址轉譯服務 | ACPI 表列（DMAR） | Measured |
+| `ac.dmar.coverage` | 裝置範圍覆蓋 | ACPI 表列（DMAR） | Derived |
+| `ac.dmar.drhd` | IOMMU 硬體單位 | ACPI 表列（DMAR） | Measured |
+| `ac.dmar.rmrr` | 保留記憶體區域（例外清單） | ACPI 表列（DMAR） | Measured |
+| `ac.dmar.summary` | DMAR 彙總 | ACPI 表列（DMAR） | Measured |
+| `ac.dmar.unrecorded` | 未收錄的子結構型別 | ACPI 表列（DMAR） | Measured |
+| `ac.dsm.summary` | _DSM GUID 清單 | EnumSystemFirmwareTables ＋ 表頭解析（唯讀） | Reported |
 | `ac.hpet.full.base` | HPET 基底位址 | ACPI HPET | Measured |
 | `ac.hpet.full.id` | HPET 硬體 ID | ACPI HPET | Measured |
 | `ac.hpet.full.min_tick` | HPET 最小刻度 | ACPI HPET | Measured |
 | `ac.hpet.full.sequence` | HPET 序列號 | ACPI HPET | Measured |
-| `ac.madt.ioapic` | — | — | — |
-| `ac.madt.lapic` | — | — | — |
-| `ac.madt.override` | — | — | — |
-| `ac.madt.summary` | — | — | — |
-| `ac.madt.unrecorded` | — | — | — |
-| `ac.madt.x2apic` | — | — | — |
-| `ac.madt.x2apic.nmi` | — | — | — |
+| `ac.madt.ioapic` | I/O APIC 清單 | ACPI 表列（MADT） | Measured |
+| `ac.madt.lapic` | Local APIC 清單 | ACPI 表列（MADT） | Measured |
+| `ac.madt.override` | 中斷來源覆寫 | ACPI 表列（MADT） | Measured |
+| `ac.madt.summary` | MADT 彙總 | ACPI 表列（MADT） | Measured |
+| `ac.madt.unrecorded` | 未收錄的子結構型別 | ACPI 表列（MADT） | Measured |
+| `ac.madt.x2apic` | Local x2APIC 清單 | ACPI 表列（MADT） | Measured |
+| `ac.madt.x2apic.nmi` | x2APIC NMI | ACPI 表列（MADT） | Measured |
 | `ac.mcfg.full.count` | MCFG 條目數 | ACPI MCFG | Measured |
 | `ac.mcfg.full.list` | MCFG 條目明細 | ACPI MCFG | Measured |
 | `ac.mpam` | MPAM 表 | ACPI MPAM | Measured |
@@ -2396,26 +2396,26 @@
 | `ac.nfit.summary` | NFIT 摘要 | ACPI NFIT | Measured |
 | `ac.pptt.count` | PPTT 處理器節點數 | ACPI PPTT（Processor Properties Topology Table） | Measured |
 | `ac.pptt.summary` | PPTT 拓撲摘要 | ACPI PPTT；欄位核對 Linux actbl2.h | Measured |
-| `ac.pwres.summary` | — | — | — |
+| `ac.pwres.summary` | 電源資源 _PRx | EnumSystemFirmwareTables ＋ 表頭解析（唯讀） | Reported |
 | `ac.spcr` | SPCR 序列主控台表 | ACPI SPCR | Measured |
-| `ac.spcr.deep` | — | — | — |
-| `ac.srat.domain` | — | — | — |
-| `ac.srat.generic` | — | — | — |
-| `ac.srat.mem` | — | — | — |
-| `ac.srat.proc` | — | — | — |
-| `ac.srat.summary` | — | — | — |
-| `ac.srat.unrecorded` | — | — | — |
-| `ac.srat.x2apic` | — | — | — |
+| `ac.spcr.deep` | SPCR 序列主控台 | EnumSystemFirmwareTables ＋ 表頭解析（唯讀） | Reported |
+| `ac.srat.domain` | 宣告的鄰近域 | ACPI 表列（SRAT） | Derived |
+| `ac.srat.generic` | 一般啟動器歸屬 | ACPI 表列（SRAT） | Measured |
+| `ac.srat.mem` | 記憶體歸屬 | ACPI 表列（SRAT） | Measured |
+| `ac.srat.proc` | 處理器歸屬（APIC） | ACPI 表列（SRAT） | Measured |
+| `ac.srat.summary` | SRAT 彙總 | ACPI 表列（SRAT） | Measured |
+| `ac.srat.unrecorded` | 未收錄的子結構型別 | ACPI 表列（SRAT） | Measured |
+| `ac.srat.x2apic` | 處理器歸屬（x2APIC） | ACPI 表列（SRAT） | Measured |
 | `ac.ssdt.third.count` | 非主廠商簽署的 SSDT 數 | ACPI DSDT/SSDT 表頭 OEMID 對照 | Measured |
 | `ac.ssdt.third.list` | 非主廠商 SSDT 清單 | — | Measured |
-| `ac.tables.deep` | — | — | — |
+| `ac.tables.deep` | ACPI 表匯總 | EnumSystemFirmwareTables ＋ 表頭解析（唯讀） | Reported |
 | `ac.tables.signatures` | ACPI 表簽章清單 | ACPI 表列舉（與 acpi.table.* 同一次） | Measured |
 | `ac.tables.summary` | ACPI 表匯總 | EnumSystemFirmwareTables | Measured |
-| `ac.tcpa` | — | — | — |
-| `ac.tcpa.cross` | — | — | — |
-| `ac.tpm2` | — | — | — |
-| `ac.tpm2.method` | — | — | — |
-| `ac.wpbt` | — | — | — |
+| `ac.tcpa` | TCPA 表（TPM 1.2 信任線索） | ACPI 表（GetSystemFirmwareTable，唯讀）；佈局對照 Linux include/acpi/actbl3.h（原典 TCG TPM 1.2 PC Specific Implementation Specification 本機查不到原文，未成文的欄位不解） | Measured |
+| `ac.tcpa.cross` | TCPA × TPM2 兩代信任線索表對照 | ACPI 表（GetSystemFirmwareTable，唯讀）（TCPA／TPM2 表的存在性對照） | Derived |
+| `ac.tpm2` | TPM2 表 | — | — |
+| `ac.tpm2.method` | TPM2 起始方法 | — | — |
+| `ac.wpbt` | WPBT 表 | — | — |
 
 ### 6.3.2 域 `sb` — SMBIOS 與平台識別（53 把）
 
@@ -2423,13 +2423,13 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `sb.boot` | — | — | — |
-| `sb.boot.status` | — | — | — |
-| `sb.bounds.ok` | — | — | — |
+| `sb.boot` | 開機資訊 | SMBIOS Type 32（保留@0x04、狀態@0x06、POST 結果@0x08–0x0D） | Measured |
+| `sb.boot.status` | 上次開機狀態 | SMBIOS Type 32 位移 0x06 | Measured |
+| `sb.bounds.ok` | 表結構邊界 | SMBIOS 結構走訪（最小固定長度、控制代碼唯一、單一實例型別） | Derived |
 | `sb.cross.bios` | — | — | — |
 | `sb.cross.board` | — | — | — |
-| `sb.cross.comparable` | — | — | — |
-| `sb.cross.cpu.count` | — | — | — |
+| `sb.cross.comparable` | 對照涵蓋 | SMBIOS 表列 × WMI Win32_BIOS／Win32_ComputerSystemProduct／Win32_BaseBoard／Win32_Processor | Derived |
+| `sb.cross.cpu.count` | 處理器數 | SMBIOS 表列 × WMI Win32_BIOS／Win32_ComputerSystemProduct／Win32_BaseBoard／Win32_Processor | — |
 | `sb.cross.system` | — | — | — |
 | `sb.dim.count` | 記憶體裝置數 | SMBIOS Type 17 | Measured |
 | `sb.dim.serial.count` | 回報序號的記憶體條數 | SMBIOS Type 17 位移 0x18（只計有無，序號內容不入事實值） | Measured |
@@ -2438,11 +2438,11 @@
 | `sb.m2slot.summary` | M.2／U.2 槽位明細 | SMBIOS Type 9 插槽型別碼 | Measured |
 | `sb.mctl` | 管理控制器主機介面 | SMBIOS Type 42 位移 0x04 | Measured |
 | `sb.memmap.count` | 記憶體映射區段 | 單元測試 | Unknown |
-| `sb.memmap.total` | — | — | — |
+| `sb.memmap.total` | SMBIOS 映射位址合計 | — | Measured |
 | `sb.oem.count` | OEM 字串數 | SMBIOS Type 11 | Measured |
 | `sb.oem.list` | OEM 字串 | SMBIOS Type 11（可能夾帶機器識別碼，標為敏感） | Measured |
-| `sb.onboard` | — | — | — |
-| `sb.onboard.count` | — | — | — |
+| `sb.onboard` | 內建裝置明細 | SMBIOS Type 41（裝置型別@0x04、狀態@0x09、段群組@0x0B、參考指定@0x0D 起每筆 4 bytes） | Measured |
+| `sb.onboard.count` | SMBIOS 宣告的內建裝置數 | SMBIOS Type 41 | Measured |
 | `sb.pci.acs.summary` | — | — | — |
 | `sb.pci.cap.count` | 能力鏈盤點的功能數 | ECAM 4KB 組態空間（legacy 0x34 鏈＋擴充 0x100 鏈） | Measured |
 | `sb.pci.cap.summary` | 能力鏈盤點 | ECAM；能力名稱核對 Linux pci_regs.h | Measured |
@@ -2453,29 +2453,29 @@
 | `sb.pci.vf.summary` | — | — | — |
 | `sb.pcieaer.full.summary` | — | — | — |
 | `sb.psu` | 電源供應器 | SMBIOS Type 39（序號依 L1 原則不列入） | Measured |
-| `sb.psu.count` | — | — | — |
-| `sb.psu.detail` | — | — | — |
-| `sb.psu.power` | — | — | — |
+| `sb.psu.count` | SMBIOS 宣告的電源供應器數 | SMBIOS Type 39 | Measured |
+| `sb.psu.detail` | 電源供應器明細 | SMBIOS Type 39（序號依 L1 原則不列入） | Measured |
+| `sb.psu.power` | 電源供應器額定功率 | SMBIOS Type 39 @0x0C | — |
 | `sb.slot.count` | 系統插槽數 | SMBIOS Type 9 | Measured |
 | `sb.slot.summary` | 系統插槽明細 | SMBIOS Type 9 | Measured |
-| `sb.tpmdev` | — | — | — |
-| `sb.tpmdev.spec` | — | — | — |
-| `sb.tpmdev.state` | — | — | — |
-| `sb.tpmdev.vendor` | — | — | — |
-| `sb.trailing.count` | — | — | — |
-| `sb.type0` | — | — | — |
+| `sb.tpmdev` | TPM 裝置（韌體宣告） | SMBIOS Type 43（廠商 ID@0x04、主要／次要規格版本@0x08／@0x09、韌體版本@0x0A、特性@0x16） | Measured |
+| `sb.tpmdev.spec` | TPM 規格版本（韌體宣告） | SMBIOS Type 43 @0x08／@0x09 | Measured |
+| `sb.tpmdev.state` | TPM 狀態（韌體宣告） | SMBIOS Type 43 特性位元（bit2 啟用、bit3 佔有、bit4 支援 2.0） | Measured |
+| `sb.tpmdev.vendor` | TPM 廠商（韌體宣告） | SMBIOS Type 43 Vendor ID@0x04 | Measured |
+| `sb.trailing.count` | 結構尾巴欄位數 | — | Derived |
+| `sb.type0` | BIOS 資訊 | SMBIOS Type 0（廠商@0x04、版本@0x05、發行日@0x08、ROM 大小@0x09、特性@0x11） | Measured |
 | `sb.type03` | BIOS／系統／主機板／機箱 | SMBIOS Type 0/1/2/3 | Measured |
 | `sb.type03.count` | Type 0–3 到齊數 | SMBIOS Type 0/1/2/3 | Measured |
-| `sb.type1` | — | — | — |
-| `sb.type1.uuid` | — | — | — |
-| `sb.type2` | — | — | — |
-| `sb.type3` | — | — | — |
-| `sb.type4` | — | — | — |
-| `sb.type4.count` | — | — | — |
-| `sb.type45` | — | — | — |
-| `sb.type45.cross` | — | — | — |
-| `sb.type7.count` | — | — | — |
-| `sb.type7.summary` | — | — | — |
+| `sb.type1` | 系統資訊 | SMBIOS Type 1（廠商@0x04、產品@0x05、版本@0x06、序號@0x07、UUID@0x08） | Measured |
+| `sb.type1.uuid` | 系統 UUID | — | — |
+| `sb.type2` | 主機板資訊 | SMBIOS Type 2（廠商@0x04、產品@0x05、版本@0x06、序號@0x07） | Measured |
+| `sb.type3` | 機箱資訊 | SMBIOS Type 3（廠商@0x04、型別@0x05 bit7 鎖、版本@0x06、序號@0x07） | Measured |
+| `sb.type4` | 處理器明細 | — | — |
+| `sb.type4.count` | SMBIOS 宣告的處理器數 | SMBIOS Type 4 | Measured |
+| `sb.type45` | 韌體組件清單存在性 | SMBIOS Type 45（GetSystemFirmwareTable('RSMB')，唯讀）；SMBIOS 3.5+ §7.46 | Measured |
+| `sb.type45.cross` | Type 45 × 周邊韌體版本對照 | SMBIOS Type 45（GetSystemFirmwareTable('RSMB')，唯讀）；SMBIOS 3.5+ §7.46 | Derived |
+| `sb.type7.count` | SMBIOS 宣告的快取數 | SMBIOS Type 7 | Measured |
+| `sb.type7.summary` | 快取明細 | — | — |
 
 ### 6.3.3 域 `fw` — 韌體組成與開機鏈（48 把）
 
@@ -2483,54 +2483,54 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `fw.acpi.missing` | — | — | — |
-| `fw.bcd.summary` | — | — | — |
-| `fw.bg.acm` | — | — | — |
-| `fw.bg.profile` | — | — | — |
-| `fw.bitlocker.summary` | — | — | — |
-| `fw.bootchain.summary` | — | — | — |
-| `fw.bootorder` | — | — | — |
+| `fw.acpi.missing` | ACPI 表存在性對照 | — | — |
+| `fw.bcd.summary` | BCD 全量審計 | BCD（唯讀） | Reported |
+| `fw.bg.acm` | Boot Guard ACM 版本 | — | — |
+| `fw.bg.profile` | Boot Guard profile | SPI 快閃尾端（唯讀 MMIO）＋金標 FIT 解碼器 | Unknown |
+| `fw.bitlocker.summary` | BitLocker 狀態與保護器 | Win32_EncryptableVolume（唯讀） | Reported |
+| `fw.bootchain.summary` | 開機鏈證據聚合卡 | 開機鏈事實彙總 | Derived |
+| `fw.bootorder` | 開機順序 | UEFI 變數（GetFirmwareEnvironmentVariableEx） | — |
 | `fw.capsule.history` | — | — | — |
-| `fw.capsule.summary` | — | — | — |
+| `fw.capsule.summary` | UEFI Capsule／FMP 解析 | 使用者提供之 Capsule 檔（本機唯讀解析） | Measured |
 | `fw.date` | — | — | — |
-| `fw.dbx.generation` | — | — | — |
-| `fw.dbx.sbat` | — | — | — |
-| `fw.doc.reconcile` | — | — | — |
-| `fw.elam.summary` | — | — | — |
-| `fw.fit.count` | — | — | — |
-| `fw.fit.summary` | — | — | — |
-| `fw.fpdt` | — | — | — |
-| `fw.fpdt.post` | — | — | — |
-| `fw.fv` | — | — | — |
-| `fw.fv.cross` | — | — | — |
-| `fw.gpt.summary` | — | — | — |
-| `fw.me` | — | — | — |
-| `fw.me.manifest` | — | — | — |
+| `fw.dbx.generation` | dbx 落後代數＋SBAT | UEFI dbx＋離線釋出表（唯讀） | Reported |
+| `fw.dbx.sbat` | dbx SBAT | UEFI 變數（唯讀） | Reported |
+| `fw.doc.reconcile` | 階段二規格與實作對帳 | docs/ULTIMATE-1000/STAGE-02-FIRMWARE.md 的階段二矩陣（建置時對帳） | Derived |
+| `fw.elam.summary` | ELAM 驅動清單 | ELAM 登錄＋WinTrust（唯讀） | Reported |
+| `fw.fit.count` | FIT 條目數 | SPI 快閃尾端（唯讀 MMIO）＋金標 FIT 解碼器 | Measured |
+| `fw.fit.summary` | FIT 表（開機信任根目錄） | SPI 快閃尾端（唯讀 MMIO）＋金標 FIT 解碼器 | Measured |
+| `fw.fpdt` | FPDT 解碼 | ACPI FPDT（唯讀） | Reported |
+| `fw.fpdt.post` | FPDT 韌體開機階段 | ACPI FPDT／FBPT（唯讀） | — |
+| `fw.fv` | FV 空間統計 | FV 統計（唯讀） | Reported |
+| `fw.fv.cross` | FV／FFS 分解對照 | UEFI PI FV/FFS 解析（既有的 UefiFv.DecodeFvs 結果，不重讀快閃） | — |
+| `fw.gpt.summary` | GPT／分割區審計 | GPT 分割表（唯讀） | Reported |
+| `fw.me` | CSME 韌體足跡 | flash 版本掃描（唯讀） | Reported |
+| `fw.me.manifest` | CSME FTPR manifest | CSME manifest（唯讀） | Reported |
 | `fw.mode` | — | — | — |
-| `fw.psp` | — | — | — |
-| `fw.psp.dir` | — | — | — |
-| `fw.risk.facts.baseline` | — | — | — |
-| `fw.risk.facts.delta` | — | — | — |
-| `fw.risk.facts.gap` | — | — | — |
-| `fw.risk.facts.level` | — | — | — |
-| `fw.risk.facts.parts` | — | — | — |
-| `fw.risk.facts.report` | — | — | — |
-| `fw.rom.count` | — | — | — |
-| `fw.rom.list` | — | — | — |
-| `fw.rt` | — | — | — |
-| `fw.settings.blocked` | — | — | — |
-| `fw.settings.readable` | — | — | — |
-| `fw.smm.summary` | — | — | — |
-| `fw.spiperm.summary` | — | — | — |
-| `fw.tcgl.phase` | — | — | — |
-| `fw.ucode.cve` | — | — | — |
-| `fw.ucode.winner` | — | — | — |
-| `fw.var.attr` | — | — | — |
-| `fw.varstore` | — | — | — |
+| `fw.psp` | AMD PSP 足跡 | PSP 目錄（唯讀） | Reported |
+| `fw.psp.dir` | AMD PSP Directory | PSP directory（唯讀） | Reported |
+| `fw.risk.facts.baseline` | 韌體基線（可離線比對） | 本輪事實的 canonical JSON | Derived |
+| `fw.risk.facts.delta` | 韌體變更報告 | — | Derived |
+| `fw.risk.facts.gap` | 韌體風險缺口申報 | 對帳引擎的三態輸入 | Derived |
+| `fw.risk.facts.level` | 韌體風險等級陳述 | 分級定義屬本專案政策 v | Derived |
+| `fw.risk.facts.parts` | 韌體風險陳述構成 | 對帳規則集（FactRelationRules.All） | Derived |
+| `fw.risk.facts.report` | 韌體稽核報告輸出 | HtmlReportService（自足單檔＋內嵌雜湊） | Derived |
+| `fw.rom.count` | 選項 ROM 裝置數 | PnP 列舉 ＋ PCI 組態空間唯讀 | Measured |
+| `fw.rom.list` | 選項 ROM 清單 | PnP 列舉 ＋ PCI 組態空間唯讀 | — |
+| `fw.rt` | Runtime Services 表列舉 | Runtime Services（唯讀） | Reported |
+| `fw.settings.blocked` | 不可讀的韌體設定來源 | 逐一探測各韌體來源的可及性（唯讀，不改變狀態） | Measured |
+| `fw.settings.readable` | 可讀的韌體設定來源 | 逐一探測各韌體來源的可及性（唯讀，不改變狀態） | Measured |
+| `fw.smm.summary` | SMM 防護深化 | MSR／PCI（唯讀） | Reported |
+| `fw.spiperm.summary` | SPI Descriptor 權限矩陣 | PCH SPI Descriptor（唯讀） | Reported |
+| `fw.tcgl.phase` | TCG log 分階段 | TCG log（唯讀） | Reported |
+| `fw.ucode.cve` | 微碼 CVE 對照 | — | — |
+| `fw.ucode.winner` | 微碼載入鏈對照 | — | — |
+| `fw.var.attr` | UEFI 變數屬性審計 | UEFI 變數屬性（唯讀） | Reported |
+| `fw.varstore` | UEFI 變數空間健全性 | UEFI varstore（唯讀） | — |
 | `fw.vendor` | — | — | — |
 | `fw.version` | — | — | — |
-| `fw.wdac.layer` | — | — | — |
-| `fw.wdac.source` | — | — | — |
+| `fw.wdac.layer` | WDAC 來源層級 | WDAC 政策（唯讀，L2） | Reported |
+| `fw.wdac.source` | WDAC／AppLocker 來源層級 | WDAC／AppLocker 登錄（唯讀） | Reported |
 
 ### 6.3.4 域 `sa` — Windows 安全姿態（45 把）
 
@@ -2542,47 +2542,47 @@
 | `sa.a11y.magnify.exe` | 輔助功能 Debugger：magnify.exe | — | Reported |
 | `sa.a11y.narrator.exe` | 輔助功能 Debugger：narrator.exe | — | Reported |
 | `sa.a11y.osk.exe` | 輔助功能 Debugger：osk.exe | — | Reported |
-| `sa.a11y.read` | 輔助功能審計 | — | Unknown |
+| `sa.a11y.read` | 輔助功能審計 | 登錄檔（HKLM，唯讀） | Unknown |
 | `sa.a11y.sethc.exe` | 輔助功能 Debugger：sethc.exe | — | Reported |
 | `sa.a11y.utilman.exe` | 輔助功能 Debugger：utilman.exe | — | Reported |
-| `sa.acct.summary` | — | — | — |
-| `sa.ads.deep` | — | — | — |
-| `sa.ads.summary` | — | — | — |
-| `sa.appinit.load` | AppInit_DLLs 載入開關 | — | Reported |
-| `sa.appinit.read` | AppInit_DLLs | — | Unknown |
-| `sa.appinit.value` | AppInit_DLLs | — | Reported |
-| `sa.assoc.summary` | — | — | — |
-| `sa.autologon` | — | — | — |
-| `sa.bl.recovery` | — | — | — |
-| `sa.comhij.summary` | — | — | — |
+| `sa.acct.summary` | 帳戶安全審計 | Win32_UserAccount／群組（唯讀） | Reported |
+| `sa.ads.deep` | 替代資料流掃描 | 本機唯讀列舉（登錄／ACL／簽章） | Reported |
+| `sa.ads.summary` | ADS 掃描 | — | Measured |
+| `sa.appinit.load` | AppInit_DLLs 載入開關 | 登錄檔（HKLM，唯讀） | Reported |
+| `sa.appinit.read` | AppInit_DLLs | 登錄檔（HKLM，唯讀） | Unknown |
+| `sa.appinit.value` | AppInit_DLLs | 登錄檔（HKLM，唯讀） | Reported |
+| `sa.assoc.summary` | 檔案關聯劫持 | HKCR／HKCU FileExts（唯讀） | Reported |
+| `sa.autologon` | 自動登入風險 | — | Reported |
+| `sa.bl.recovery` | BitLocker 復原金鑰輪廓 | — | — |
+| `sa.comhij.summary` | COM 劫持偵測 | — | Reported |
 | `sa.exposure.admin_shares` | 管理共用（自動共用） | — | Reported |
 | `sa.exposure.rdp` | 遠端桌面（RDP） | — | Reported |
-| `sa.exposure.read` | 暴露面總覽 | — | Unknown |
+| `sa.exposure.read` | 暴露面總覽 | 登錄檔（HKLM，唯讀） | Unknown |
 | `sa.exposure.remote_registry` | 遠端登錄服務啟動類型 | — | Reported |
 | `sa.exposure.winrm` | WinRM 服務啟動類型 | — | Reported |
-| `sa.ifeo.scan` | IFEO 掃描 | — | Unknown |
-| `sa.logon.deep` | — | — | — |
-| `sa.logon.summary` | — | — | — |
-| `sa.lsp.count` | — | — | — |
-| `sa.lsp.read` | Winsock LSP | — | Unknown |
-| `sa.path.deep` | — | — | — |
-| `sa.path.summary` | — | — | — |
-| `sa.proxy.read` | 系統代理 | — | Unknown |
-| `sa.proxy.winhttp.server` | WinHTTP 代理（服務用） | — | Reported |
-| `sa.proxy.wininet.enable` | WinINET 代理開關 | — | Reported |
-| `sa.proxy.wininet.override` | WinINET 例外清單 | — | Reported |
+| `sa.ifeo.scan` | IFEO 掃描 | 登錄檔（HKLM，唯讀） | Unknown |
+| `sa.logon.deep` | 登入歷史聚合 | Windows Security 記錄檔（4624／4625／4740，只讀計數） | Reported |
+| `sa.logon.summary` | 登入歷史聚合 | Security 4624／4625／4740（只讀計數） | Reported |
+| `sa.lsp.count` | Winsock 分層服務提供者 | — | Reported |
+| `sa.lsp.read` | Winsock LSP | 登錄檔（HKLM，唯讀） | Unknown |
+| `sa.path.deep` | PATH 可寫性 | 本機唯讀列舉（登錄／ACL／簽章） | Reported |
+| `sa.path.summary` | PATH 可寫性偵測 | PATH 環境變數＋目錄 ACL（唯讀） | Reported |
+| `sa.proxy.read` | 系統代理 | 登錄檔（HKLM，唯讀） | Unknown |
+| `sa.proxy.winhttp.server` | WinHTTP 代理（服務用） | 登錄檔（HKLM，唯讀） | Reported |
+| `sa.proxy.wininet.enable` | WinINET 代理開關 | 登錄檔（HKLM，唯讀） | Reported |
+| `sa.proxy.wininet.override` | WinINET 例外清單 | 登錄檔（HKLM，唯讀） | Reported |
 | `sa.proxy.wininet.server` | WinINET 代理伺服器 | — | Reported |
-| `sa.sddl.deep` | — | — | — |
-| `sa.sddl.summary` | — | — | — |
-| `sa.svcbin.deep` | — | — | — |
-| `sa.svcbin.summary` | — | — | — |
-| `sa.uninst.deep` | — | — | — |
-| `sa.uninst.summary` | — | — | — |
-| `sa.winlogon.notify.count` | — | — | — |
-| `sa.winlogon.read` | Winlogon 審計 | — | Unknown |
-| `sa.winlogon.shell` | — | — | — |
-| `sa.winlogon.userinit` | — | — | — |
-| `sa.wmisub.summary` | — | — | — |
+| `sa.sddl.deep` | 服務 SDDL 權限 | 本機唯讀列舉（登錄／ACL／簽章） | Reported |
+| `sa.sddl.summary` | 服務 SDDL 權限審計 | 服務 SDDL（QueryServiceObjectSecurity，唯讀） | Reported |
+| `sa.svcbin.deep` | 服務二進位 ACL | 本機唯讀列舉（登錄／ACL／簽章） | Reported |
+| `sa.svcbin.summary` | 服務二進位 ACL 審計 | Win32_Service＋檔案 ACL（唯讀） | Reported |
+| `sa.uninst.deep` | 已安裝程式簽章審計 | 本機唯讀列舉（登錄／ACL／簽章） | Reported |
+| `sa.uninst.summary` | 已安裝程式簽章審計 | — | Reported |
+| `sa.winlogon.notify.count` | Winlogon Notify 掛點 | — | Reported |
+| `sa.winlogon.read` | Winlogon 審計 | 登錄檔（HKLM，唯讀） | Unknown |
+| `sa.winlogon.shell` | Winlogon Shell | 登錄檔（HKLM，唯讀） | Reported |
+| `sa.winlogon.userinit` | Winlogon Userinit | 登錄檔（HKLM，唯讀） | Reported |
+| `sa.wmisub.summary` | WMI 永久訂閱審計 | root\\subscription（唯讀） | Reported |
 
 ### 6.3.5 域 `fs` — 檔案系統證據（28 把）
 
@@ -2590,34 +2590,34 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `fs.amcache.count` | — | — | — |
-| `fs.amcache.publishers` | — | — | — |
-| `fs.amcache.versions` | — | — | — |
+| `fs.amcache.count` | Amcache 條目數 | Amcache.hve Root\\InventoryApplication（唯讀；欄位語意未對準出處者不顯示） | Derived |
+| `fs.amcache.publishers` | Amcache 發行者分布 | Amcache.hve Root\\InventoryApplication（唯讀；欄位語意未對準出處者不顯示） | Derived |
+| `fs.amcache.versions` | Amcache 版本分布 | Amcache.hve Root\\InventoryApplication（唯讀；欄位語意未對準出處者不顯示） | Derived |
 | `fs.bin.count` | 回收桶條目數 | 各磁碟 $Recycle.Bin 的 $I* 檔計數（不解析原檔名） | Measured |
 | `fs.bin.roots` | 回收桶磁碟 | 逐邏輯磁碟 $Recycle.Bin | Measured |
 | `fs.bin.size_mb` | 回收桶佔用 | 各磁碟 $Recycle.Bin 下 $R* 檔的總位元組數 | Measured |
-| `fs.bits.count` | — | — | — |
-| `fs.bits.summary` | — | — | — |
-| `fs.insthist.count` | — | — | — |
-| `fs.insthist.summary` | — | — | — |
-| `fs.mft.stat` | — | — | — |
-| `fs.mount.count` | — | — | — |
-| `fs.mount.letters` | — | — | — |
-| `fs.mount.volumes` | — | — | — |
-| `fs.pf.count` | — | — | — |
-| `fs.pf.formats` | — | — | — |
-| `fs.pf.latest` | — | — | — |
-| `fs.pf.sample` | — | — | — |
-| `fs.privacy.boundary` | — | — | — |
-| `fs.shim.count` | — | — | — |
-| `fs.shim.latest` | — | — | — |
-| `fs.shim.sample` | — | — | — |
-| `fs.srum.count` | — | — | — |
-| `fs.srum.range` | — | — | — |
+| `fs.bits.count` | BITS 佇列痕跡 | — | Measured |
+| `fs.bits.summary` | BITS 佇列摘要 | — | Measured |
+| `fs.insthist.count` | 安裝痕跡筆數 | — | Measured |
+| `fs.insthist.summary` | 安裝痕跡摘要 | — | Measured |
+| `fs.mft.stat` | NTFS MFT 卷冊統計 | 系統卷冊 FSCTL（唯讀）＋金標解碼器 | — |
+| `fs.mount.count` | MountedDevices 掛載對照 | 登錄檔 MountedDevices（唯讀） | — |
+| `fs.mount.letters` | MountedDevices 碟號指派 | 登錄檔 MountedDevices（唯讀） | Derived |
+| `fs.mount.volumes` | MountedDevices 磁碟區 GUID 路徑 | 登錄檔 MountedDevices（唯讀） | Derived |
+| `fs.pf.count` | — | Prefetch 目錄（唯讀）＋金標檔頭解碼器 | — |
+| `fs.pf.formats` | Prefetch 版本分布 | Prefetch 目錄（唯讀）＋金標檔頭解碼器 | Derived |
+| `fs.pf.latest` | Prefetch 最新一筆 | Prefetch 目錄（唯讀）＋金標檔頭解碼器 | Derived |
+| `fs.pf.sample` | — | Prefetch 目錄（唯讀）＋金標檔頭解碼器 | Derived |
+| `fs.privacy.boundary` | 隱私禁項邊界 | 本專案的禁項清單（FS-013） | Derived |
+| `fs.shim.count` | — | 登錄檔 AppCompatCache（唯讀）＋金標解碼器 | — |
+| `fs.shim.latest` | AppCompatCache 最新條目 | 登錄檔 AppCompatCache（唯讀）＋金標解碼器 | Derived |
+| `fs.shim.sample` | — | 登錄檔 AppCompatCache（唯讀）＋金標解碼器 | Derived |
+| `fs.srum.count` | SRUM 資料庫 | — | Reported |
+| `fs.srum.range` | SRUM 涵蓋範圍 | 無（資料庫不存在） | Reported |
 | `fs.taskhist.count` | 任務痕跡筆數 | — | Measured |
 | `fs.taskhist.last` | 最近任務痕跡 | — | Measured |
 | `fs.taskhist.summary` | 任務痕跡摘要 | — | Measured |
-| `fs.usn.state` | — | — | — |
+| `fs.usn.state` | USN 變更日誌狀態 | 系統卷冊 FSCTL（唯讀）＋金標解碼器 | — |
 
 ### 6.3.6 域 `uefi` — Secure Boot 與映像解析（27 把）
 
@@ -2628,9 +2628,9 @@
 | `uefi.audit_mode` | — | — | — |
 | `uefi.boot.gaps` | Boot 條目跳號 | — | Unknown |
 | `uefi.boot_entries.count` | UEFI 開機條目 | — | Reported |
-| `uefi.boot_order_count` | — | — | — |
-| `uefi.comp.decompressed` | — | — | — |
-| `uefi.comp.supported` | — | — | — |
+| `uefi.boot_order_count` | — | UEFI 變數（GetFirmwareEnvironmentVariableEx） | Reported |
+| `uefi.comp.decompressed` | 本次映像遇到的壓縮引擎 | UEFI PI 區段解析（XinSpect.Decoders/UefiFv.cs 的引擎辨識判斷鏈） | — |
+| `uefi.comp.supported` | 本版認得的映像壓縮引擎 | UEFI PI 區段解析（XinSpect.Decoders/UefiFv.cs 的引擎辨識判斷鏈） | Measured |
 | `uefi.db` | — | — | — |
 | `uefi.db.count` | — | — | — |
 | `uefi.dbr.count` | — | — | — |
@@ -2640,18 +2640,18 @@
 | `uefi.deployed_mode` | — | — | — |
 | `uefi.kek` | — | — | — |
 | `uefi.kek.count` | — | — | — |
-| `uefi.loadopt.count` | — | — | — |
-| `uefi.parse.gaps` | — | — | — |
-| `uefi.parse.tolerant` | — | — | — |
-| `uefi.pe.count` | — | — | — |
-| `uefi.pe.list` | — | — | — |
+| `uefi.loadopt.count` | UEFI 載入選項 | UEFI 變數（GetFirmwareEnvironmentVariableEx） | — |
+| `uefi.parse.gaps` | 走訪缺口 | UEFI PI FV/FFS 走訪的停損計數（XinSpect.Decoders/UefiFv.cs） | Measured |
+| `uefi.parse.tolerant` | 走訪的突變耐受 | UEFI PI FV/FFS 走訪的停損計數（XinSpect.Decoders/UefiFv.cs） | Measured |
+| `uefi.pe.count` | 映像內的 PE32 模組 | UEFI PI FV/FFS/區段樹 ＋ PE/COFF 靜態解析（既有 PeInspect） | Measured |
+| `uefi.pe.list` | PE32 模組清單 | UEFI PI FV/FFS/區段樹 ＋ PE/COFF 靜態解析（既有 PeInspect） | Measured |
 | `uefi.pk` | PK（平台金鑰） | — | Reported |
-| `uefi.section.depth` | — | — | — |
-| `uefi.section.tree` | — | — | — |
+| `uefi.section.depth` | 映像結構樹的形狀 | UEFI PI FV/FFS/區段樹（既有的 UefiFv 解碼器） | Derived |
+| `uefi.section.tree` | 映像結構樹 | UEFI PI FV/FFS/區段樹（既有的 UefiFv 解碼器） | Measured |
 | `uefi.secure_boot` | x | s | Reported |
 | `uefi.setup_mode` | — | — | — |
-| `uefi.version.cross` | — | — | — |
-| `uefi.version.embedded` | — | — | — |
+| `uefi.version.cross` | 映像與韌體版本一致性 | UEFI PI VERSION 區段（型別 0x14）對 SMBIOS Type 0 的宣告版本 | — |
+| `uefi.version.embedded` | 映像內嵌的版本字串 | UEFI PI VERSION 區段（型別 0x14）對 SMBIOS Type 0 的宣告版本 | Measured |
 
 ### 6.3.7 域 `ev` — 證據與匯出（25 把）
 
@@ -2659,31 +2659,31 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `ev.anon` | — | — | — |
-| `ev.audit.timeline` | — | — | — |
-| `ev.chain.verify` | — | — | — |
-| `ev.csv` | — | — | — |
-| `ev.dash` | — | — | — |
-| `ev.diff` | — | — | — |
-| `ev.fleet` | — | — | — |
-| `ev.i18n` | — | — | — |
-| `ev.import` | — | — | — |
-| `ev.manifest` | — | — | — |
-| `ev.migrate` | — | — | — |
-| `ev.namedquery` | — | — | — |
+| `ev.anon` | 匿名化選擇器 | LifecycleReportsFactsService＋SensitiveValuePolicy | Derived |
+| `ev.audit.timeline` | 審計鏈時間軸 | AuditLogService（唯讀） | Reported |
+| `ev.chain.verify` | 證據包互驗 | 寫入閘門／審計鏈 | Measured |
+| `ev.csv` | CSV/MD 匯出 | 表格匯出（唯讀） | Reported |
+| `ev.dash` | 自訂儀表板 | 儀表板配置（唯讀） | Reported |
+| `ev.diff` | 報告差分頁 | 時間膠囊差異（呈現層） | Derived |
+| `ev.fleet` | 機隊並排 | RunOnSnapshots（呈現層） | — |
+| `ev.i18n` | 多語系報告 | 報告語言（唯讀） | Reported |
+| `ev.import` | 統一匯入框架 | 外部 CSV 匯入（唯讀） | Reported |
+| `ev.manifest` | 證據包清單 | 寫入閘門／審計鏈 | Measured |
+| `ev.migrate` | schema 遷移器 | schema 遷移（唯讀宣告） | Reported |
+| `ev.namedquery` | 命名查詢視圖 | 查詢視圖（經寫入閘門） | Reported |
 | `ev.nvram.usage` | — | — | — |
-| `ev.pack` | — | — | — |
+| `ev.pack` | 證據包匯出 | 證據包建構（唯讀） | Reported |
 | `ev.pack.build` | — | — | — |
-| `ev.pdf` | — | — | — |
-| `ev.query.agg` | — | — | — |
-| `ev.rulever` | — | — | — |
-| `ev.schedule` | — | — | — |
-| `ev.var.attrs` | — | — | — |
+| `ev.pdf` | PDF 報告 | 原生 PDF 產生（唯讀） | Reported |
+| `ev.query.agg` | 查詢聚合擴充 | 查詢引擎（唯讀） | Reported |
+| `ev.rulever` | 規則包版本對帳 | 規則包（唯讀） | Reported |
+| `ev.schedule` | 快照排程器 | 工作排程（經寫入閘門） | Reported |
+| `ev.var.attrs` | 變數屬性與長度 | UEFI 變數（GetFirmwareEnvironmentVariableEx 的 pdwAttrib） | — |
 | `ev.var.count` | — | — | — |
-| `ev.verify` | — | — | — |
-| `ev.watch` | — | — | — |
-| `ev.watermark` | — | — | — |
-| `ev.xinsig` | — | — | — |
+| `ev.verify` | 匯出驗證 CLI | schema 檢查（唯讀） | — |
+| `ev.watch` | CLI watch | — | — |
+| `ev.watermark` | 報告浮水印 | 報告渲染（唯讀） | Reported |
+| `ev.xinsig` | .xinsig 密封格式 | 密封格式（唯讀） | Reported |
 
 ### 6.3.8 域 `eg` — 工程自我檢驗（24 把）
 
@@ -2691,30 +2691,30 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `eg.arm64` | — | — | — |
-| `eg.ci` | — | — | — |
-| `eg.corpus` | — | — | — |
-| `eg.coverage` | — | — | — |
-| `eg.docsingle` | — | — | — |
-| `eg.docslinks` | — | — | — |
-| `eg.fuzz` | — | — | — |
-| `eg.hygiene` | — | — | — |
-| `eg.keyapi` | — | — | — |
-| `eg.keydocs` | — | — | — |
-| `eg.knowledge` | — | — | — |
-| `eg.mixarch` | — | — | — |
-| `eg.notimpl` | — | — | — |
-| `eg.p95` | — | — | — |
-| `eg.pagenav` | — | — | — |
-| `eg.perfregress` | — | — | — |
-| `eg.prtemplate` | — | — | — |
-| `eg.realcorpus` | — | — | — |
-| `eg.security` | — | — | — |
-| `eg.selftel` | — | — | — |
-| `eg.semver` | — | — | — |
-| `eg.snapshot.matrix` | — | — | — |
-| `eg.untested` | — | — | — |
-| `eg.winbranch` | — | — | — |
+| `eg.arm64` | ARM64 路徑 | 平台路徑（唯讀宣告） | Reported |
+| `eg.ci` | GitHub Actions CI | CI 配置（唯讀） | Reported |
+| `eg.corpus` | corpus 貢獻包 v2 | — | — |
+| `eg.coverage` | 覆蓋率自動化 | 覆蓋率（唯讀） | Measured |
+| `eg.docsingle` | 文件單一來源 | 文件清單（唯讀） | Reported |
+| `eg.docslinks` | docs 連結驗證 | 連結掃描（唯讀） | Reported |
+| `eg.fuzz` | 結構化 fuzz | Fuzz harness（唯讀） | Reported |
+| `eg.hygiene` | 倉庫衛生 | 倉庫狀態（唯讀） | Reported |
+| `eg.keyapi` | 鍵 semver | 鍵目錄（唯讀） | Reported |
+| `eg.keydocs` | 鍵 API 文件產生 | 鍵文件產生器（唯讀） | Reported |
+| `eg.knowledge` | 知識表離線包 | 知識包（唯讀） | Reported |
+| `eg.mixarch` | 混合架構路徑 | CPUID 拓撲（唯讀） | — |
+| `eg.notimpl` | 已知不可為 | 已知不可為清單（唯讀宣告） | Reported |
+| `eg.p95` | 效能 p95 儀表 | SelfTelemetry（本機，唯讀） | — |
+| `eg.pagenav` | 逐頁導覽文件 | 逐頁文件（唯讀） | Reported |
+| `eg.perfregress` | 效能回歸守門 | 效能基線（唯讀） | Measured |
+| `eg.prtemplate` | PR/issue 模板 | 貢獻模板（唯讀） | Reported |
+| `eg.realcorpus` | 真實樣本語料 | 語料 fixture（唯讀） | Reported |
+| `eg.security` | SECURITY.md | 披露流程（唯讀） | Reported |
+| `eg.selftel` | SelfTelemetry 可視化 | SelfTelemetry（唯讀） | Reported |
+| `eg.semver` | 版號語意凍結 | 版號政策（唯讀宣告） | Reported |
+| `eg.snapshot.matrix` | 新舊快照互讀矩陣 | 快照相容矩陣（唯讀） | Reported |
+| `eg.untested` | 未施測聲明 | 未施測清單（唯讀宣告） | Reported |
+| `eg.winbranch` | Win10/11 分支守門 | 版本分支（唯讀） | Reported |
 
 ### 6.3.9 域 `ms` — 微觀量測（23 把）
 
@@ -2722,29 +2722,29 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `ms.bench.chain` | — | — | — |
-| `ms.benchdrift` | — | — | — |
-| `ms.boot.all` | — | — | — |
-| `ms.boot.summary` | — | — | — |
-| `ms.corelat` | — | — | — |
-| `ms.coresym.summary` | — | — | — |
-| `ms.ctxsw` | — | — | — |
-| `ms.dpc` | — | — | — |
-| `ms.fancurve` | — | — | — |
-| `ms.fanzones` | — | — | — |
-| `ms.fslat.detail` | — | — | — |
-| `ms.fslat.summary` | — | — | — |
-| `ms.gpu.fp16` | — | — | — |
-| `ms.irqaff` | — | — | — |
-| `ms.lo.throughput` | — | — | — |
-| `ms.memlat.summary` | — | — | — |
-| `ms.ping` | — | — | — |
-| `ms.psu.eff` | — | — | — |
-| `ms.sleep` | — | — | — |
-| `ms.tau` | — | — | — |
-| `ms.tlb.summary` | — | — | — |
-| `ms.usbps` | — | — | — |
-| `ms.xnuma` | — | — | — |
+| `ms.bench.chain` | 結果哈希鏈 | BenchRecord＋SHA-256（記憶體，唯讀） | Derived |
+| `ms.benchdrift` | Benchmark 漂移 | DeepBench 哨兵（唯讀） | Derived |
+| `ms.boot.all` | 開機全階段計時 | Diagnostics-Performance 家族（唯讀） | Measured |
+| `ms.boot.summary` | 開機階段 | Diagnostics-Performance 事件（唯讀） | Measured |
+| `ms.corelat` | 核心間延遲矩陣 | 核心間往返微測（唯讀） | Measured |
+| `ms.coresym.summary` | 逐核對稱性檢查 | 逐核 APERF/MPERF 量測（唯讀） | Measured |
+| `ms.ctxsw` | 內容切換基準 | 內容切換微測（唯讀） | Measured |
+| `ms.dpc` | DPC/ISR 延遲 | ETW（唯讀，含開銷） | Measured |
+| `ms.fancurve` | 風扇曲線擬合 | RPM/溫度散點擬合（模型） | Derived |
+| `ms.fanzones` | 多風扇分區階躍 | 同步風扇記錄（唯讀） | Measured |
+| `ms.fslat.detail` | 檔案系統 metadata 微延遲 逐操作 | 本機暫存資料夾上的 metadata 微測（唯讀彙總，不揭露路徑） | Measured |
+| `ms.fslat.summary` | 檔案系統 metadata 微延遲 摘要 | 本機暫存資料夾上的 metadata 微測（同意閘門後才執行；不報路徑） | Measured |
+| `ms.gpu.fp16` | GPU FP16/int8 冒煙 | — | — |
+| `ms.irqaff` | 中斷親和性歸屬 | ETW/MSI（唯讀） | Reported |
+| `ms.lo.throughput` | localhost 環回吞吐 | localhost 環回（不出網） | Measured |
+| `ms.memlat.summary` | 記憶體延遲階梯 | 指標追蹤量測（唯讀） | Measured |
+| `ms.ping` | 網路目標延遲 | — | — |
+| `ms.psu.eff` | PSU 效率估計 | 型號表＋package power（估計） | Derived |
+| `ms.sleep` | 睡眠進出計時 | 睡眠進出實測（唯讀） | Measured |
+| `ms.tau` | 熱時間常數 | 階躍響應擬合（模型） | Derived |
+| `ms.tlb.summary` | TLB 階層探測 | working set 掃描（唯讀） | Measured |
+| `ms.usbps` | USB 吞吐量測 | — | — |
+| `ms.xnuma` | 跨 NUMA 頻寬 | — | — |
 
 ### 6.3.10 域 `nw` — 網路與周邊介面（22 把）
 
@@ -2752,28 +2752,28 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `nw.bt.fw` | — | — | — |
-| `nw.bt.pairing` | — | — | — |
-| `nw.cert.summary` | — | — | — |
-| `nw.dns.summary` | — | — | — |
-| `nw.edid.summary` | — | — | — |
-| `nw.eee.caps` | — | — | — |
-| `nw.fw.summary` | — | — | — |
-| `nw.hidbat.summary` | — | — | — |
-| `nw.icc.summary` | — | — | — |
-| `nw.legacy.summary` | — | — | — |
-| `nw.offload2.summary` | — | — | — |
-| `nw.print.summary` | — | — | — |
-| `nw.printer.summary` | — | — | — |
-| `nw.route.summary` | — | — | — |
-| `nw.sensor.summary` | — | — | — |
-| `nw.smb.summary` | — | — | — |
-| `nw.usb.desc.summary` | — | — | — |
-| `nw.usb.port.summary` | — | — | — |
-| `nw.vnic.summary` | — | — | — |
-| `nw.wifi.summary` | — | — | — |
-| `nw.wol.packets` | — | — | — |
-| `nw.wol.summary` | — | — | — |
+| `nw.bt.fw` | 藍牙韌體版本 | Win32_PnPEntity（Bluetooth，唯讀） | Reported |
+| `nw.bt.pairing` | 藍牙配對歷史 | BTHPORT／Enum\\BTHENUM（只讀計數） | Reported |
+| `nw.cert.summary` | 憑證信任店時間線 | CertOpenStore（Root，唯讀） | Reported |
+| `nw.dns.summary` | DNS 設定＋hosts 異常 | GetNetworkInterfaces＋DNS 政策登錄＋hosts（唯讀） | Reported |
+| `nw.edid.summary` | EDID 全解 | Enum\\DISPLAY 的 Device Parameters\\EDID（唯讀） | Measured |
+| `nw.eee.caps` | EEE 節能乙太網路 | — | Reported |
+| `nw.fw.summary` | 防火牆概覽 | MSFT_NetFirewallProfile／Rule（唯讀） | Reported |
+| `nw.hidbat.summary` | 無線周邊電量 | Win32_PnPEntity＋BatteryStatus（唯讀） | Reported |
+| `nw.icc.summary` | ICC 設定檔綁定 | ICM ProfileAssociations／ProfileList（唯讀） | Reported |
+| `nw.legacy.summary` | LPT／COM 盤點 | — | Reported |
+| `nw.offload2.summary` | 卸載全表 | 網路卸載登錄（唯讀） | Reported |
+| `nw.print.summary` | 列印佇列健康 | Win32_Printer（PrinterStatus／WorkOffline／Shared，唯讀） | Reported |
+| `nw.printer.summary` | 印表機韌體聚合 | Win32_Printer（唯讀） | Reported |
+| `nw.route.summary` | 路由歸屬呈現 | Win32_IP4RouteTable（唯讀） | Reported |
+| `nw.sensor.summary` | 感應器清單 | Win32_PnPEntity（名稱／類別比對，唯讀） | Reported |
+| `nw.smb.summary` | SMB／NetBIOS 硬化 | LanmanServer／LanmanWorkstation 政策登錄（唯讀） | Reported |
+| `nw.usb.desc.summary` | USB 描述符深解 | Win32_PnPEntity／USB 描述符（唯讀） | Reported |
+| `nw.usb.port.summary` | USB 埠映射持久化 | — | Reported |
+| `nw.vnic.summary` | 虛擬網卡盤點 | Win32_NetworkAdapter（PhysicalAdapter=false 或名稱命中） | Reported |
+| `nw.wifi.summary` | Wi-Fi 設定檔清單 | NetworkList／Profiles 登錄（唯讀） | Reported |
+| `nw.wol.packets` | 魔術封包計數 | NIC 電源管理計數器（唯讀） | Reported |
+| `nw.wol.summary` | WOL 事實化 | — | Reported |
 
 ### 6.3.11 域 `os`（本版沒有成文的域說明）（22 把）
 
@@ -2790,7 +2790,7 @@
 | `os.ev.modernstandby.phase` | — | — | — |
 | `os.ev.modernstandby.wake` | — | — | — |
 | `os.ev.ntfs.extra` | — | — | — |
-| `os.ev.pending.sources` | — | — | — |
+| `os.ev.pending.sources` | 事件 ID 待核清單 | docs/ULTIMATE-10000/AUDIT-pending.md（EV 組逐條稽核） | Derived |
 | `os.ev.power.source` | — | — | — |
 | `os.ev.spaces.health` | — | — | — |
 | `os.ev.thermal.notify` | — | — | — |
@@ -2801,8 +2801,8 @@
 | `os.ev.whea.misc` | — | — | — |
 | `os.ev.whea.pcie` | — | — | — |
 | `os.ev.wininit.chkdsk` | — | — | — |
-| `os.memdiag.results.cross` | — | — | — |
-| `os.wmi.fields` | — | — | — |
+| `os.memdiag.results.cross` | Windows 記憶體診斷結果 | Windows 事件檢視器 Microsoft-Windows-MemoryDiagnostics-Results/Operational（唯讀） | Unknown |
+| `os.wmi.fields` | WMI 未用欄位盤點 | 本專案 WMI 查詢字面盤點（守門測試常設對照原始碼） | Derived |
 
 ### 6.3.12 域 `st` — 儲存（20 把）
 
@@ -2810,26 +2810,26 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `st.align.summary` | — | — | — |
-| `st.bridge.summary` | — | — | — |
-| `st.ctrl.tree` | — | — | — |
-| `st.dwpd` | — | — | — |
-| `st.fs.refs` | — | — | — |
-| `st.fs.volumes` | — | — | — |
-| `st.fs.vss` | — | — | — |
-| `st.fw.known` | — | — | — |
-| `st.iscsi.paths` | — | — | — |
-| `st.iscsi.sessions` | — | — | — |
-| `st.legacy.summary` | — | — | — |
-| `st.ntfs.summary` | — | — | — |
-| `st.nvme.err` | — | — | — |
-| `st.nvme.extra` | — | — | — |
-| `st.powerloss` | — | — | — |
-| `st.pstrans.summary` | — | — | — |
-| `st.sanitize.cap` | — | — | — |
-| `st.ss.summary` | — | — | — |
-| `st.wear.summary` | — | — | — |
-| `st.xcheck.summary` | — | — | — |
+| `st.align.summary` | 分區 4K 對齊 vs erase block | Win32_DiskPartition（唯讀） | Reported |
+| `st.bridge.summary` | 外接盒橋接晶片 | 本機唯讀列舉（WMI／IOCTL）＋離線知識表 | Reported |
+| `st.ctrl.tree` | 控制器拓撲樹 | 本機唯讀列舉（WMI／IOCTL）＋離線知識表 | Reported |
+| `st.dwpd` | — | — | Derived |
+| `st.fs.refs` | ReFS 完整性串流 | 本機唯讀列舉（WMI Win32_Volume／Win32_ShadowStorage） | Reported |
+| `st.fs.volumes` | 檔案系統卷冊盤點 | 本機唯讀列舉（WMI Win32_Volume／Win32_ShadowStorage） | Reported |
+| `st.fs.vss` | VSS 儲存空間 | 本機唯讀列舉（WMI Win32_Volume／Win32_ShadowStorage） | Reported |
+| `st.fw.known` | — | — | Reported |
+| `st.iscsi.paths` | iSCSI 多路徑 | — | Reported |
+| `st.iscsi.sessions` | iSCSI 工作階段 | — | Reported |
+| `st.legacy.summary` | 舊式儲存盤點 | Win32_CDROMDrive＋Win32_FloppyDrive | Reported |
+| `st.ntfs.summary` | NTFS 特性審計 | — | Reported |
+| `st.nvme.err` | NVMe 錯誤列舉 | NVMe Health Log（唯讀） | Reported |
+| `st.nvme.extra` | NVMe 補充能力 | NVMe Health Log（唯讀） | Reported |
+| `st.powerloss` | 非預期斷電計數 | NVMe Health Log（唯讀） | Reported |
+| `st.pstrans.summary` | 磁碟電源轉換計數 | MSStorageDriver_FailurePredictData／NVMe SMART 感測器（唯讀） | Reported |
+| `st.sanitize.cap` | NVMe Sanitize 能力 | NVMe Identify Controller（唯讀） | — |
+| `st.ss.summary` | Storage Spaces 拓撲 | 本機唯讀列舉（WMI／IOCTL）＋離線知識表 | Reported |
+| `st.wear.summary` | 儲存磨損／TBW | NVMe Health Log／SMART（唯讀） | Reported |
+| `st.xcheck.summary` | — | — | Derived |
 
 ### 6.3.13 域 `ds` — 裝置安全與憑證（18 把）
 
@@ -2837,23 +2837,23 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `ds.bl.summary` | — | — | — |
+| `ds.bl.summary` | BitLocker 卷級狀態 | — | — |
 | `ds.cert.auto` | — | — | — |
-| `ds.cert.count` | — | — | — |
-| `ds.cert.summary` | — | — | — |
-| `ds.cert.update` | — | — | — |
-| `ds.dashboard` | — | — | — |
-| `ds.devpol.deep` | — | — | — |
-| `ds.devpol.summary` | — | — | — |
-| `ds.dha` | — | — | — |
+| `ds.cert.count` | 憑證數 | — | — |
+| `ds.cert.summary` | 憑證時間線 | — | — |
+| `ds.cert.update` | 憑證自動更新 | — | Reported |
+| `ds.dashboard` | 資料安全摘要 | 本批事實聚合（衍生） | Derived |
+| `ds.devpol.deep` | 裝置安裝限制政策 | — | Reported |
+| `ds.devpol.summary` | 裝置安裝限制政策 | — | — |
+| `ds.dha` | DHA 裝置健康證明 | 未施測聲明（無本地 DHA 驗證通路） | Unknown |
 | `ds.drm` | — | — | — |
-| `ds.efs.count` | — | — | — |
-| `ds.hello.count` | — | — | — |
-| `ds.sac` | — | — | — |
-| `ds.sac.deep` | — | — | — |
-| `ds.selfsigned.count` | — | — | — |
-| `ds.selfsigned.list` | — | — | — |
-| `ds.summary` | — | — | — |
+| `ds.efs.count` | EFS 憑證數 | X509Store（EFS 1.0／.FileEncryption） | — |
+| `ds.hello.count` | Windows Hello 註冊 | — | — |
+| `ds.sac` | Smart App Control | SmartAppControl.exe＋CI\\Policy | — |
+| `ds.sac.deep` | Smart App Control | — | Reported |
+| `ds.selfsigned.count` | 自簽憑證數 | — | — |
+| `ds.selfsigned.list` | 自簽憑證清單 | CertOpenStore 列舉（唯讀，不列主體名稱） | Reported |
+| `ds.summary` | 資料安全摘要 | 本組事實的可用性（輸入不含自己） | Derived |
 | `ds.tls.summary` | — | — | — |
 
 ### 6.3.14 域 `rc` — 復原與系統完整性（18 把）
@@ -2862,24 +2862,24 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `rc.acl.summary` | — | — | — |
-| `rc.backup.summary` | — | — | — |
-| `rc.dump.count` | — | — | — |
-| `rc.dump.latest` | — | — | — |
-| `rc.dump.sample` | — | — | — |
-| `rc.exhaust.summary` | — | — | — |
-| `rc.fastboot.summary` | — | — | — |
-| `rc.hang.summary` | — | — | — |
-| `rc.hiber.summary` | — | — | — |
-| `rc.io.summary` | — | — | — |
-| `rc.link.summary` | — | — | — |
-| `rc.lkr.summary` | — | — | — |
-| `rc.msi.orphan.summary` | — | — | — |
-| `rc.pending` | — | — | — |
-| `rc.rp.summary` | — | — | — |
-| `rc.vss.summary` | — | — | — |
-| `rc.wer.summary` | — | — | — |
-| `rc.winsxs.summary` | — | — | — |
+| `rc.acl.summary` | 系統目錄 ACL 抽查 | Program Files／ProgramData ACL（只讀） | Reported |
+| `rc.backup.summary` | 備份狀態事實 | FileHistory／SystemRestore／VSS（唯讀） | Reported |
+| `rc.dump.count` | 藍屏傾印歷史 | Minidump 目錄（唯讀）＋金標解碼器 | — |
+| `rc.dump.latest` | 藍屏傾印最新一筆 | Minidump 目錄（唯讀）＋金標解碼器 | Derived |
+| `rc.dump.sample` | 藍屏傾印逐份 | Minidump 目錄（唯讀）＋金標解碼器 | Derived |
+| `rc.exhaust.summary` | 資源耗盡事件 | System Resource-Exhaustion-Detector（只讀計數） | Reported |
+| `rc.fastboot.summary` | 快速啟動設定 | HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power | — |
+| `rc.hang.summary` | 懸掛歷史 | Application 1002（只讀計數） | Reported |
+| `rc.hiber.summary` | 休眠檔審計 | 系統磁碟根目錄＋HiberbootEnabled | — |
+| `rc.io.summary` | 逐行程 I/O 排行 | Win32_PerfFormattedData（唯讀） | Reported |
+| `rc.link.summary` | 連結審計 | — | Reported |
+| `rc.lkr.summary` | LiveKernelReports | — | Reported |
+| `rc.msi.orphan.summary` | Installer 快取孤兒 | Installer\\Products 與快取 metadata（唯讀） | Reported |
+| `rc.pending` | PendingFileRename 審計 | — | Reported |
+| `rc.rp.summary` | 還原點清單 | SystemRestore WMI（唯讀） | Reported |
+| `rc.vss.summary` | VSS 供應商審計 | Win32_ShadowProvider／ShadowCopy（唯讀） | Reported |
+| `rc.wer.summary` | WER 崩潰史聚合 | WER ReportArchive／ReportQueue（metadata） | Reported |
+| `rc.winsxs.summary` | WinSxS 健康 | — | Reported |
 
 ### 6.3.15 域 `cpu` — 處理器深入（15 把）
 
@@ -2887,21 +2887,21 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `cpu.die.count` | CPU die 數 | — | Unknown |
-| `cpu.eff.curve` | — | — | — |
+| `cpu.die.count` | CPU die 數 | CPUID leaf 0x1F（Extended Topology Enumeration V2） | Unknown |
+| `cpu.eff.curve` | 能效曲線測繪 | MSR／感測器量測（唯讀） | Measured |
 | `cpu.generation` | — | — | — |
 | `cpu.pkg_c2_us` | — | — | — |
 | `cpu.pkg_c3_us` | — | — | — |
 | `cpu.pkg_c6_us` | — | — | — |
 | `cpu.pkg_c7_us` | — | — | — |
-| `cpu.pl.summary` | — | — | — |
-| `cpu.smi.cstate.summary` | — | — | — |
-| `cpu.stepping.known` | — | — | — |
-| `cpu.thermal.events` | — | — | — |
+| `cpu.pl.summary` | RAPL 功率牆 | MSR 0x606／0x610／0x614（唯讀） | Measured |
+| `cpu.smi.cstate.summary` | SMI／C-state 觀測 | MSR 0x34、0x3F9、0x10（唯讀） | Measured |
+| `cpu.stepping.known` | 步進缺陷集知識表 | CPUID leaf 1＋離線步進表 | — |
+| `cpu.thermal.events` | 溫度節流事件史 | IA32_THERM_STATUS＋Kernel-Processor-Power | Reported |
 | `cpu.tjmax` | — | — | — |
-| `cpu.topology.smt` | 每核心執行緒數（SMT） | — | Measured |
-| `cpu.turbo.summary` | — | — | — |
-| `cpu.volt.summary` | — | — | — |
+| `cpu.topology.smt` | 每核心執行緒數（SMT） | CPUID leaf 0x1F（Extended Topology Enumeration V2） | Measured |
+| `cpu.turbo.summary` | Turbo 比率／AVX offset | MSR 0x1AD／0x1AE／0xCE（唯讀） | Measured |
+| `cpu.volt.summary` | 電壓事實 | 感測器／MSR 唯讀通路 | Reported |
 
 ### 6.3.16 域 `dl` — 行程與執行期診斷（15 把）
 
@@ -2909,21 +2909,21 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `dl.cmdline.count` | — | — | — |
-| `dl.cmdline.summary` | — | — | — |
-| `dl.dll.summary` | — | — | — |
-| `dl.dump` | — | — | — |
-| `dl.etw.filter` | — | — | — |
-| `dl.etw.summary` | — | — | — |
-| `dl.gc.mode` | — | — | — |
-| `dl.gc.summary` | — | — | — |
-| `dl.leak.summary` | — | — | — |
-| `dl.modconflict.count` | — | — | — |
-| `dl.modconflict.summary` | — | — | — |
-| `dl.stack` | — | — | — |
-| `dl.sympath` | — | — | — |
-| `dl.threadpool.count` | — | — | — |
-| `dl.threadpool.summary` | — | — | — |
+| `dl.cmdline.count` | 行程命令列數 | — | — |
+| `dl.cmdline.summary` | 行程命令列清單 | — | — |
+| `dl.dll.summary` | 逐行程 DLL 清單 | Process.Modules ＋ Authenticode（L2，需明示同意） | Reported |
+| `dl.dump` | 行程傾摘（同意閘門） | 同意閘門狀態 | Unknown |
+| `dl.etw.filter` | ETW 逐提供者篩選結果 | — | Measured |
+| `dl.etw.summary` | ETW 篩選視圖 | — | Measured |
+| `dl.gc.mode` | GC 模式 | System.Runtime.GCSettings | Measured |
+| `dl.gc.summary` | GC 回收次數與堆大小 | GC.CollectionCount ＋ GC.GetTotalMemory | Measured |
+| `dl.leak.summary` | 句柄洩漏哨兵 | GetProcessHandleCount（本行程，唯讀） | Derived |
+| `dl.modconflict.count` | 同名模組衝突數 | — | — |
+| `dl.modconflict.summary` | 同名模組衝突 | — | — |
+| `dl.stack` | 崩潰行程堆疊快照 | 同意閘門狀態 | Unknown |
+| `dl.sympath` | 符號路徑 | 環境變數 _NT_SYMBOL_PATH | — |
+| `dl.threadpool.count` | 線程池執行緒數 | ThreadPool.GetAvailableThreads/ThreadCount | Measured |
+| `dl.threadpool.summary` | 線程池狀態 | System.Threading.ThreadPool | Measured |
 
 ### 6.3.17 域 `po` — 作業系統效能計數（15 把）
 
@@ -2931,21 +2931,21 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `po.compression` | — | — | — |
-| `po.freqvar` | — | — | — |
-| `po.gdi` | — | — | — |
-| `po.handles` | — | — | — |
-| `po.pgflt` | — | — | — |
-| `po.pool` | — | — | — |
-| `po.proctree` | — | — | — |
-| `po.rboost` | — | — | — |
-| `po.svcboot.summary` | — | — | — |
-| `po.svcboot.trigger` | — | — | — |
-| `po.svccrash` | — | — | — |
-| `po.syscall.lat` | — | — | — |
-| `po.timerres` | — | — | — |
-| `po.trans` | — | — | — |
-| `po.ws` | — | — | — |
+| `po.compression` | 記憶體壓縮 | — | — |
+| `po.freqvar` | 頻率波動 | 感測器取樣（唯讀） | Measured |
+| `po.gdi` | GDI 物件 | GetGuiResources（唯讀） | Measured |
+| `po.handles` | 系統 handle | GetProcessHandleCount／效能計數器（唯讀） | Measured |
+| `po.pgflt` | 頁面錯誤 | Win32_PerfFormattedData（唯讀） | Measured |
+| `po.pool` | 分頁池 | NtQuerySystemInformation（唯讀） | Measured |
+| `po.proctree` | 行程樹快照簽章 | — | — |
+| `po.rboost` | ReadyBoost | 登錄 ReadyBoost（唯讀） | Reported |
+| `po.svcboot.summary` | 服務就緒時間線 | 事件記錄 Microsoft-Windows-Service Control Manager／Diagnostics-Performance（唯讀） | Reported |
+| `po.svcboot.trigger` | 觸發型服務數 | 事件記錄 Microsoft-Windows-Service Control Manager／Diagnostics-Performance（唯讀） | Reported |
+| `po.svccrash` | 服務崩潰重啟 | 事件記錄 System（唯讀） | Reported |
+| `po.syscall.lat` | 系統呼叫延遲 | — | — |
+| `po.timerres` | 計時器解析度 | NtQueryTimerResolution（唯讀） | Measured |
+| `po.trans` | 狀態遷移頻率 | 效能計數器（唯讀，推測級） | Reported |
+| `po.ws` | 工作集排行 | — | — |
 
 ### 6.3.18 域 `se` — 安全基線與攻擊面（15 把）
 
@@ -2953,21 +2953,21 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `se.audit2.summary` | — | — | — |
-| `se.baseline` | — | — | — |
-| `se.credroam` | — | — | — |
-| `se.cve` | — | — | — |
-| `se.espbaseline` | — | — | — |
-| `se.grade` | — | — | — |
-| `se.kerb.summary` | — | — | — |
-| `se.ntlm` | — | — | — |
-| `se.pipe.count` | — | — | — |
-| `se.pipe.summary` | — | — | — |
-| `se.rdp.cert` | — | — | — |
-| `se.share` | — | — | — |
-| `se.surface` | — | — | — |
-| `se.winre.summary` | — | — | — |
-| `se.wpbt` | — | — | — |
+| `se.audit2.summary` | 進階稽核政策 | — | — |
+| `se.baseline` | 安全基線報告 | 離線基線表（唯讀） | Reported |
+| `se.credroam` | 憑證漫遊 | 登錄政策（唯讀，L2） | Reported |
+| `se.cve` | 作業系統 CVE 離線對照 | 內建／外部離線表 | — |
+| `se.espbaseline` | ESP 簽章基線 | ESP 掃描↔基線 diff（唯讀） | Reported |
+| `se.grade` | 安全摘要分級 | — | Derived |
+| `se.kerb.summary` | Kerberos 設定 | — | Reported |
+| `se.ntlm` | NTLM 使用狀態 | — | Reported |
+| `se.pipe.count` | Named pipe 數 | — | — |
+| `se.pipe.summary` | Named pipe 清單 | — | — |
+| `se.rdp.cert` | RDP 憑證狀態 | — | Reported |
+| `se.share` | SMB 共用權限審計 | SMB 共用↔ACL（唯讀，L2） | Reported |
+| `se.surface` | 攻擊面匯總 | SA/RC/FW 聚合（唯讀） | Derived |
+| `se.winre.summary` | WinRE 回復環境 | — | Reported |
+| `se.wpbt` | WPBT 表存在性 | ACPI 表清單（acpi.tables） | — |
 
 ### 6.3.19 域 `sg` — 症狀對照（14 把）
 
@@ -2975,19 +2975,19 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `sg.audio` | — | — | — |
-| `sg.boot.summary` | — | — | — |
+| `sg.audio` | 聲音為什麼斷 | 本機唯讀（USB 鏈路查詢／音訊端點登錄） | Reported |
+| `sg.boot.summary` | 開機為什麼慢（引導） | Diagnostics-Performance Event 100＋Run 啟動登錄計數 | — |
 | `sg.bt` | — | — | — |
-| `sg.diskfull` | — | — | — |
-| `sg.display` | — | — | — |
-| `sg.freeze` | — | — | — |
-| `sg.hot` | — | — | — |
-| `sg.input` | — | — | — |
-| `sg.mem.summary` | — | — | — |
-| `sg.nicslow` | — | — | — |
+| `sg.diskfull` | 磁碟為什麼滿 | 檔案系統唯讀遍歷 | — |
+| `sg.display` | 白屏引導 | — | — |
+| `sg.freeze` | 電腦為什麼當 | 事件記錄 System ＋ WHEA-Logger | — |
+| `sg.hot` | CPU 為什麼熱（引導） | RAPL MSR＋SMI/C-state 唯讀讀數 | Derived |
+| `sg.input` | 游標卡頓引導 | — | — |
+| `sg.mem.summary` | 誰在佔記憶體（聚合） | Process.WorkingSet64 | — |
+| `sg.nicslow` | 網卡為什麼慢（引導） | Win32_NetworkAdapter＋MSFT_NetAdapter（唯讀） | Reported |
 | `sg.print` | — | — | — |
-| `sg.updcap` | — | — | — |
-| `sg.usbslow` | — | — | — |
+| `sg.updcap` | 更新為什麼卡（引導） | Windows Update 狀態（唯讀） | Reported |
+| `sg.usbslow` | USB 為什麼慢 | 本機唯讀（USB 鏈路查詢／音訊端點登錄） | Reported |
 | `sg.wifi` | — | — | — |
 
 ### 6.3.20 域 `sv` — 伺服器角色（14 把）
@@ -2996,20 +2996,20 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `sv.adds` | — | — | — |
-| `sv.cluster.state` | — | — | — |
+| `sv.adds` | Hyper-V 虛擬交換器 | — | Reported |
+| `sv.cluster.state` | Hyper-V 虛擬交換器 | — | Reported |
 | `sv.core` | 安裝型別（Server Core 判定） | — | Measured |
-| `sv.dhcp` | — | — | — |
-| `sv.dns.zones` | — | — | — |
-| `sv.file.shares` | — | — | — |
-| `sv.hyperv.switches` | — | — | — |
-| `sv.iis.apppools` | — | — | — |
-| `sv.licensing` | — | — | — |
-| `sv.print.queues` | — | — | — |
-| `sv.rds` | — | — | — |
-| `sv.roles.services` | — | — | — |
-| `sv.shares` | — | — | — |
-| `sv.summary` | — | — | — |
+| `sv.dhcp` | Hyper-V 虛擬交換器 | — | Reported |
+| `sv.dns.zones` | Hyper-V 虛擬交換器 | — | Reported |
+| `sv.file.shares` | 檔案共用視角 | WMI root\\CIMV2（Win32_Share／Win32_Printer／Win32_LogicalShareSecuritySetting，唯讀） | Reported |
+| `sv.hyperv.switches` | Hyper-V 虛擬交換器 | WMI root\\virtualization\\v2 Msvm_VirtualEthernetSwitch | Reported |
+| `sv.iis.apppools` | Hyper-V 虛擬交換器 | System32\\inetsrv\\config\\applicationHost.config | Reported |
+| `sv.licensing` | 伺服器角色服務 | WMI root\\CIMV2 SoftwareLicensingProduct（不含金鑰） | Reported |
+| `sv.print.queues` | 列印服務視角 | WMI root\\CIMV2（Win32_Share／Win32_Printer／Win32_LogicalShareSecuritySetting，唯讀） | Reported |
+| `sv.rds` | Hyper-V 虛擬交換器 | — | Reported |
+| `sv.roles.services` | 伺服器角色服務 | WMI root\\CIMV2（Win32_Service／SoftwareLicensingProduct／Win32_Share） | Reported |
+| `sv.shares` | 伺服器角色服務 | WMI root\\CIMV2 Win32_Share | Reported |
+| `sv.summary` | 伺服器合規摘要 | — | — |
 
 ### 6.3.21 域 `tpm` — TPM 與測量開機（13 把）
 
@@ -3018,18 +3018,18 @@
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
 | `tpm.attest.capable` | — | — | — |
-| `tpm.clear.boundary` | — | — | — |
-| `tpm.cross.sb` | — | — | — |
-| `tpm.ev.types` | — | — | — |
-| `tpm.log.histogram` | — | — | — |
-| `tpm.log.summary` | — | — | — |
-| `tpm.owned` | TPM 擁有權與階層狀態 | — | Reported |
+| `tpm.clear.boundary` | TPM 清除與重設界線 | 專案界線宣告（無外部來源） | Unknown |
+| `tpm.cross.sb` | TPM 與 Secure Boot 對照 | 交叉對照（tpm.present × platform.secure_boot／uefi.secure_boot） | — |
+| `tpm.ev.types` | 事件型別統計 | TCG 事件 log（既有的 Tpm2.WalkTcgLog 結果，不重讀） | — |
+| `tpm.log.histogram` | 開機事件型別直方圖 | TCG 事件 log（既有的 Tpm2.WalkTcgLog） | Measured |
+| `tpm.log.summary` | 量測開機日誌摘要 | TCG 事件 log（既有的 Tpm2.WalkTcgLog） | Measured |
+| `tpm.owned` | TPM 擁有權與階層狀態 | Windows WMI（Win32_Tpm；TBS 不可用時的備援） | Reported |
 | `tpm.pcr.banks` | — | — | — |
 | `tpm.present` | TPM 存在 | 單元測試 | Derived |
-| `tpm.replay.summary` | — | — | — |
+| `tpm.replay.summary` | TPM log 重放比對 | TCG log 重放（唯讀）× TPM PCR 實讀 | Derived |
 | `tpm.tcg_log` | — | — | — |
-| `tpm.version` | TPM 規格版本 | — | Reported |
-| `tpm.view.cross` | — | — | — |
+| `tpm.version` | TPM 規格版本 | Windows WMI（Win32_Tpm；TBS 不可用時的備援） | Reported |
+| `tpm.view.cross` | TPM 兩視圖對照（TBS × Win32_Tpm） | TPM2_GetCapability(TPM_PT_FIXED) 經 TBS × Win32_Tpm（root\\cimv2\\security\\microsofttpm）對照 | — |
 
 ### 6.3.22 域 `ws` — 工作站組態（13 把）
 
@@ -3037,19 +3037,19 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `ws.appx.summary` | — | — | — |
-| `ws.autostart.summary` | — | — | — |
-| `ws.bootdrv.summary` | — | — | — |
-| `ws.channel.summary` | — | — | — |
-| `ws.driver.summary` | — | — | — |
-| `ws.dumpcfg.summary` | — | — | — |
-| `ws.kb.known` | — | — | — |
-| `ws.lsa.summary` | — | — | — |
-| `ws.minifilter.summary` | — | — | — |
-| `ws.power.events` | — | — | — |
-| `ws.svc.graph` | — | — | — |
-| `ws.task.summary` | — | — | — |
-| `ws.virt.contra` | — | — | — |
+| `ws.appx.summary` | AppX 簽章一致性 | AppxPackage（唯讀） | Reported |
+| `ws.autostart.summary` | 自啟動聚合 | Run 機碼＋Startup 資料夾＋工作排程器（唯讀） | Reported |
+| `ws.bootdrv.summary` | 開機驅動載入順序 | — | Reported |
+| `ws.channel.summary` | 事件通道健全性 | EventLogSession.GetLogInformation／ChannelConfiguration（唯讀） | Reported |
+| `ws.driver.summary` | 設備驅動清單 | Win32_PnPSignedDriver（唯讀） | Reported |
+| `ws.dumpcfg.summary` | 傾印設定審計 | — | Reported |
+| `ws.kb.known` | KB 已知問題表 | Windows Update history＋離線表（唯讀） | Reported |
+| `ws.lsa.summary` | LSA／CredGuard 卡 | — | Reported |
+| `ws.minifilter.summary` | Minifilter 拓撲 | — | Reported |
+| `ws.power.events` | 供電事件史 | System 事件記錄（唯讀） | Reported |
+| `ws.svc.graph` | 服務依賴圖 | Win32_Service（Name／State／Dependencies，唯讀） | Derived |
+| `ws.task.summary` | 排程任務全解 | schtasks XML（唯讀） | Reported |
+| `ws.virt.contra` | 虛擬化矛盾卡 | Win32_Service＋BCD（唯讀） | Derived |
 
 ### 6.3.23 域 `gx` — 顯示卡廠商介面（12 把）
 
@@ -3057,18 +3057,18 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `gx.amd` | — | — | — |
-| `gx.cap.rt` | — | — | — |
-| `gx.depth` | — | — | — |
-| `gx.drvchain` | — | — | — |
-| `gx.intel` | — | — | — |
-| `gx.multi` | — | — | — |
-| `gx.nv.ecc` | — | — | — |
-| `gx.nv.fan` | — | — | — |
-| `gx.nv.pl` | — | — | — |
-| `gx.nv.state` | — | — | — |
-| `gx.vbios` | — | — | — |
-| `gx.vdisp` | — | — | — |
+| `gx.amd` | ADLX 感測器全表 | ADLX（唯讀） | Measured |
+| `gx.cap.rt` | RT/AI 能力旗標 | D3D 功能階層（唯讀） | — |
+| `gx.depth` | 色深事實 | 顯示模式（唯讀） | Reported |
+| `gx.drvchain` | 驅動版本鏈 | WMI／DXGI（唯讀） | Reported |
+| `gx.intel` | Intel Xe 感測器 | Intel iGPU（唯讀） | Measured |
+| `gx.multi` | 多 GPU 模式 | WMI（唯讀） | Reported |
+| `gx.nv.ecc` | NVIDIA ECC 能力 | NVML（唯讀） | Reported |
+| `gx.nv.fan` | NVIDIA 風扇曲線 | NVML（唯讀） | Measured |
+| `gx.nv.pl` | NVIDIA 功率限制 | NVML（唯讀） | Measured |
+| `gx.nv.state` | NVML 全狀態 | NVML（唯讀） | Measured |
+| `gx.vbios` | VBIOS 版本 | WMI／登錄（唯讀） | — |
+| `gx.vdisp` | 虛擬顯示器偵測 | WMI（唯讀） | Reported |
 
 ### 6.3.24 域 `mu` — 媒體與音訊（12 把）
 
@@ -3076,18 +3076,18 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `mu.cam.count` | — | — | — |
-| `mu.codec.count` | — | — | — |
-| `mu.codec.summary` | — | — | — |
-| `mu.drm.components` | — | — | — |
-| `mu.drm.summary` | — | — | — |
-| `mu.hdr` | — | — | — |
-| `mu.hwdec.summary` | — | — | — |
-| `mu.mf.summary` | — | — | — |
-| `mu.mic.count` | — | — | — |
-| `mu.mic.summary` | — | — | — |
-| `mu.spatial.formats` | — | — | — |
-| `mu.spatial.summary` | — | — | — |
+| `mu.cam.count` | 相機裝置數 | WMI Win32_PnPEntity（PNPClass=Camera） | Measured |
+| `mu.codec.count` | 編解碼器註冊數 | — | — |
+| `mu.codec.summary` | 編解碼器清單 | — | — |
+| `mu.drm.components` | DRM 元件盤點 | 本機唯讀登錄列舉（PlayReady／Widevine／空間音訊元件） | Reported |
+| `mu.drm.summary` | DRM 就緒 | — | Reported |
+| `mu.hdr` | HDR 影片就緒 | — | — |
+| `mu.hwdec.summary` | HEVC／AV1 硬解 | D3D11 VideoDevice＋MFTEnumEx | — |
+| `mu.mf.summary` | 媒體基礎診斷 | mfplat.dll＋MF Platform | — |
+| `mu.mic.count` | 擷取端點數 | — | — |
+| `mu.mic.summary` | 擷取端點摘要 | — | — |
+| `mu.spatial.formats` | 空間音訊格式 | 本機唯讀登錄列舉（PlayReady／Widevine／空間音訊元件） | Reported |
+| `mu.spatial.summary` | 空間音訊 | — | Reported |
 
 ### 6.3.25 域 `ts`（本版沒有成文的域說明）（12 把）
 
@@ -3095,18 +3095,18 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `ts.aud.endpoint.state` | — | — | — |
-| `ts.aud.formats` | — | — | — |
-| `ts.aud.jackdetect` | — | — | — |
-| `ts.clock.session.drift` | — | — | — |
-| `ts.disp.modes.cycle` | — | — | — |
-| `ts.disp.refresh.verify` | — | — | — |
-| `ts.kbd.repeat` | — | — | — |
-| `ts.pen.pressure` | — | — | — |
-| `ts.reg.enum.latency` | — | — | — |
-| `ts.svc.depend.depth` | — | — | — |
-| `ts.touch.maxpoints` | — | — | — |
-| `ts.tsc.skew.max` | — | — | — |
+| `ts.aud.endpoint.state` | 端點音量/靜音 | WASAPI IAudioEndpointVolume（NAudio；只讀不寫） | Unknown |
+| `ts.aud.formats` | 音訊格式支援枚舉 | WASAPI IAudioClient::IsFormatSupported（共用模式純查詢；不初始化、不啟動串流） | Unknown |
+| `ts.aud.jackdetect` | 音訊插孔描述 | WASAPI 端點 KS Proxy KSPROPERTY_JACK_DESCRIPTION（KSPROPSETID_Audio；唯讀） | Unknown |
+| `ts.clock.session.drift` | 會話期時鐘漂移 | DateTime.UtcNow vs QueryPerformanceCounter（Stopwatch；唯讀取樣） | — |
+| `ts.disp.modes.cycle` | 顯示模式清單 | Windows 顯示驅動模式清單 EnumDisplaySettingsEx（usermode 唯讀） | Unknown |
+| `ts.disp.refresh.verify` | 刷新率核對 | Windows 顯示驅動模式清單 EnumDisplaySettingsEx（usermode 唯讀） | Unknown |
+| `ts.kbd.repeat` | 鍵盤重複設定 | Windows SystemParametersInfo（SPI_GETKEYBOARDSPEED／SPI_GETKEYBOARDDELAY／SPI_GETFILTERKEYS；唯讀） | — |
+| `ts.pen.pressure` | 觸控筆壓力能力 | Windows GetPointerDevices／GetPointerDeviceProperties（唯讀） | — |
+| `ts.reg.enum.latency` | ENUM 樹讀取延遲 | HKLM\\SYSTEM\\CurrentControlSet\\Enum（Microsoft.Win32.Registry；唯讀） | — |
+| `ts.svc.depend.depth` | 服務相依深度 | HKLM\\SYSTEM\\CurrentControlSet\\Services（Type／DependOnService；唯讀） | — |
+| `ts.touch.maxpoints` | 觸控多點能力 | Windows GetSystemMetrics（SM_DIGITIZER／SM_MAXIMUMTOUCHES；唯讀） | — |
+| `ts.tsc.skew.max` | TSC 跨核同步 | WinRing0 MSR 0x10（唯讀）＋ QPC 中點夾取；逐核 SetThreadGroupAffinity 釘選 | — |
 
 ### 6.3.26 域 `ux` — 介面與可及性（12 把）
 
@@ -3114,18 +3114,18 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `ux.age` | — | — | — |
-| `ux.copy` | — | — | — |
-| `ux.crashreport` | — | — | — |
-| `ux.dpi` | — | — | — |
-| `ux.eco` | — | — | — |
-| `ux.errors` | — | — | — |
-| `ux.help.search` | — | — | — |
-| `ux.keybrowser` | — | — | — |
-| `ux.palette` | — | — | — |
-| `ux.provenance` | — | — | — |
-| `ux.theme` | — | — | — |
-| `ux.uia` | — | — | — |
+| `ux.age` | 資料年齡 | 事實時戳（唯讀） | Measured |
+| `ux.copy` | 全域右鍵複製 | 複製格式（唯讀） | Reported |
+| `ux.crashreport` | 崩潰報告頁 | 啟動異常偵測（唯讀） | Reported |
+| `ux.dpi` | 雙解析度截圖守門 | DPI 算繪基線（唯讀） | Reported |
+| `ux.eco` | 節能取樣 | 取樣排程（唯讀） | Reported |
+| `ux.errors` | 錯誤聚合頁 | 事實三態聚合（唯讀） | Reported |
+| `ux.help.search` | Help 檢索 | HelpCatalog（唯讀） | Reported |
+| `ux.keybrowser` | 事實鍵瀏覽器 | FactKeyCatalog（唯讀） | Reported |
+| `ux.palette` | 命令面板 | 命令面板（唯讀） | Reported |
+| `ux.provenance` | 逐值溯源 | FactProvenance（唯讀） | Reported |
+| `ux.theme` | 高對比／自動主題 | 主題設定（唯讀） | Reported |
+| `ux.uia` | UIA 守門 | UIA 掃描（唯讀） | Reported |
 
 ### 6.3.27 域 `bl` — 基線與行為學習（11 把）
 
@@ -3133,17 +3133,17 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `bl.baseline` | — | — | — |
-| `bl.boot.summary` | — | — | — |
-| `bl.ci.summary` | — | — | — |
-| `bl.corr.summary` | — | — | — |
-| `bl.events` | — | — | — |
-| `bl.life` | — | — | — |
-| `bl.pattern` | — | — | — |
-| `bl.quality` | — | — | — |
-| `bl.score` | — | — | — |
-| `bl.season.summary` | — | — | — |
-| `bl.temp.forecast` | — | — | — |
+| `bl.baseline` | 自基線 | 歷史倉（分鐘級彙整）＋事件記錄 | Derived |
+| `bl.boot.summary` | 開機效能基線 | 開機事件（Diagnostics-Performance，唯讀） | Measured |
+| `bl.ci.summary` | 預測不確定性 | 歷史倉（分鐘級彙整）＋穩健統計 | Derived |
+| `bl.corr.summary` | 相關性探索 | 歷史倉兩條序列（穩健相關性，唯讀） | Derived |
+| `bl.events` | 事件標註 | 歷史倉（分鐘級彙整）＋事件記錄 | Reported |
+| `bl.life` | 壽命預估 | 磨損事實外推（估計） | — |
+| `bl.pattern` | 負載模式分類 | 歷史倉負載樣本（穩健分群） | Derived |
+| `bl.quality` | 資料品質聲明 | 歷史倉（分鐘級彙整）＋穩健統計 | Derived |
+| `bl.score` | 異常評分 | 歷史倉（分鐘級彙整）＋事件記錄 | Derived |
+| `bl.season.summary` | 季節模式 | 歷史倉（分鐘級彙整）＋穩健統計 | Derived |
+| `bl.temp.forecast` | 溫度趨勢外推 | 歷史倉（分鐘級彙整）＋穩健統計 | Derived |
 
 ### 6.3.28 域 `gpu` — 顯示卡深入（11 把）
 
@@ -3151,17 +3151,17 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `gpu.lz.driver_version` | — | — | — |
-| `gpu.lz.memory` | — | — | — |
-| `gpu.lz.name` | — | — | — |
-| `gpu.radeon.fan` | — | — | — |
-| `gpu.radeon.name` | — | — | — |
-| `gpu.radeon.power` | — | — | — |
-| `gpu.radeon.temp` | — | — | — |
+| `gpu.lz.driver_version` | Intel 顯示驅動版本（Level Zero） | oneAPI Level Zero（ze_loader.dll 唯讀列舉） | — |
+| `gpu.lz.memory` | Intel GPU 顯存 | oneAPI Level Zero（ze_loader.dll 唯讀列舉） | — |
+| `gpu.lz.name` | Intel GPU（Level Zero） | oneAPI Level Zero（ze_loader.dll 唯讀列舉） | — |
+| `gpu.radeon.fan` | Radeon 風扇轉速 | AMD ADL（atiadlxx.dll 唯讀遙測） | Unknown |
+| `gpu.radeon.name` | Radeon 顯示卡（ADL） | — | Measured |
+| `gpu.radeon.power` | Radeon 功耗 | AMD ADL（atiadlxx.dll 唯讀遙測） | Unknown |
+| `gpu.radeon.temp` | Radeon 溫度 | AMD ADL（atiadlxx.dll 唯讀遙測） | Unknown |
 | `gpu.retired_pages` | 顯存退休頁（retired pages） | NVML nvmlDeviceGetRetiredPages | Unknown |
-| `gpu.tdr.delay` | TDR 逾時秒數（TdrDelay） | — | Reported |
-| `gpu.tdr.dpc` | TDR DPC 逾時（TdrDpcDelay） | — | Reported |
-| `gpu.tdr.level` | — | — | — |
+| `gpu.tdr.delay` | TDR 逾時秒數（TdrDelay） | 登錄檔 HKLM\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers | Reported |
+| `gpu.tdr.dpc` | TDR DPC 逾時（TdrDpcDelay） | 登錄檔 HKLM\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers | Reported |
+| `gpu.tdr.level` | TDR 等級（TdrLevel） | 登錄檔 HKLM\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers | Reported |
 
 ### 6.3.29 域 `in` — 工具自身完整性（11 把）
 
@@ -3169,17 +3169,17 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `in.cfg.integrity` | — | — | — |
-| `in.cfg.repair` | — | — | — |
-| `in.debug` | — | — | — |
-| `in.deps` | — | — | — |
-| `in.deps.integrity` | — | — | — |
-| `in.elevation.summary` | — | — | — |
-| `in.env` | — | — | — |
-| `in.privs` | — | — | — |
-| `in.report` | — | — | — |
-| `in.self` | — | — | — |
-| `in.update.sig` | — | — | — |
+| `in.cfg.integrity` | 設定檔完整性 | 本行程（SHA-256／Authenticode／token）＋審計日誌基線 | — |
+| `in.cfg.repair` | 設定自我修復 | settings.json 解析 | — |
+| `in.debug` | 除錯狀態 | Debugger.IsAttached ＋ CheckRemoteDebuggerPresent | Reported |
+| `in.deps` | 已載入模組 | Process.Modules ＋ Authenticode ＋ 載入路徑 | Reported |
+| `in.deps.integrity` | 依賴完整性 | Process.Modules＋Authenticode（唯讀） | Reported |
+| `in.elevation.summary` | 提權最小化審計 | — | — |
+| `in.env` | 執行環境自我聲明 | — | — |
+| `in.privs` | 執行權限 | GetTokenInformation（TokenElevation／TokenIntegrityLevel／TokenPrivileges） | Reported |
+| `in.report` | 自我完整性報告 | 本行程（SHA-256／Authenticode／token）＋審計日誌基線 | Derived |
+| `in.self` | 自身二進位 | — | Measured |
+| `in.update.sig` | 自我更新完整性 | 本專案的更新模型（零網路原則） | Unknown |
 
 ### 6.3.30 域 `rs` — 報告格式（11 把）
 
@@ -3187,15 +3187,15 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `rs.diff.json` | — | — | — |
-| `rs.fleet` | — | — | — |
+| `rs.diff.json` | 機器可讀 diff JSON | LifecycleAndReportsFactsService.SerializeDiffJson | Derived |
+| `rs.fleet` | 機隊批次 CSV | LifecycleAndReportsFactsService.SerializeCsv | Derived |
 | `rs.helpfmt` | — | — | — |
-| `rs.jsonl` | — | — | — |
+| `rs.jsonl` | JSONL 串流 | JsonlExportService.Serialize／WriteAsync | Derived |
 | `rs.manual` | — | — | — |
 | `rs.print` | — | — | — |
-| `rs.rdiff` | — | — | — |
-| `rs.sbom` | — | — | — |
-| `rs.sig` | — | — | — |
+| `rs.rdiff` | 報告版本比較 | — | — |
+| `rs.sbom` | 軟體物料清單（SBOM） | 本機驅動清單（WMI Win32_PnPSignedDriver）＋作業系統＋本程式 | — |
+| `rs.sig` | 報告簽章（審計鏈） | — | — |
 | `rs.svg` | — | — | — |
 | `rs.xlsx` | — | — | — |
 
@@ -3205,17 +3205,17 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `uf.channel` | — | — | — |
-| `uf.dash` | — | — | — |
-| `uf.driver.summary` | — | — | — |
-| `uf.duration.summary` | — | — | — |
-| `uf.ready` | — | — | — |
-| `uf.retry.count` | — | — | — |
-| `uf.retry.summary` | — | — | — |
-| `uf.servicing` | — | — | — |
-| `uf.size.summary` | — | — | — |
-| `uf.source` | — | — | — |
-| `uf.timeline` | — | — | — |
+| `uf.channel` | 更新通道 | — | Reported |
+| `uf.dash` | 更新健康儀表 | uf.source／uf.channel／uf.servicing | Derived |
+| `uf.driver.summary` | 驅動更新分類 | 更新歷史標題分類（唯讀） | Derived |
+| `uf.duration.summary` | 安裝時長歷史 | Windows Update history（唯讀） | Reported |
+| `uf.ready` | 功能更新就緒度 | — | Reported |
+| `uf.retry.count` | 卡住的更新數 | WUA 更新歷史聚合（唯讀） | Derived |
+| `uf.retry.summary` | 更新失敗重試鏈 | WUA 更新歷史聚合（唯讀） | Derived |
+| `uf.servicing` | 服務堆疊版本 | — | Measured |
+| `uf.size.summary` | 累積更新大小史 | Windows Update history（唯讀） | Unknown |
+| `uf.source` | 更新來源 | — | Reported |
+| `uf.timeline` | 更新時間軸 | — | — |
 
 ### 6.3.32 域 `uv` — USB-C／Thunderbolt／CXL（11 把）
 
@@ -3223,17 +3223,17 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `uv.cdat` | — | — | — |
-| `uv.cxl.summary` | — | — | — |
-| `uv.ext` | — | — | — |
-| `uv.hub` | — | — | — |
-| `uv.tb.route` | — | — | — |
-| `uv.tb.sec` | — | — | — |
-| `uv.usb.desc` | — | — | — |
-| `uv.usb.err` | — | — | — |
-| `uv.usb.pwr` | — | — | — |
-| `uv.usb.trim` | — | — | — |
-| `uv.usb4` | — | — | — |
+| `uv.cdat` | CDAT 結構表 | 本機唯讀（韌體結構表／儲存裝置描述元） | Reported |
+| `uv.cxl.summary` | CXL DVSEC | — | — |
+| `uv.ext` | 外接 GPU／HBA 電源 | PnP 列舉（唯讀） | — |
+| `uv.hub` | Hub 電源管理 | USB 集線器（唯讀） | Reported |
+| `uv.tb.route` | TB 路由路徑 | TB 端點（唯讀） | Reported |
+| `uv.tb.sec` | TB 安全等級 | PnP 列舉（唯讀） | — |
+| `uv.usb.desc` | USB 描述元全解 | USB 描述元（唯讀） | Measured |
+| `uv.usb.err` | USB 斷連／重置計數 | USB 事件（唯讀） | Reported |
+| `uv.usb.pwr` | USB 電源角色 | USB Type-C（唯讀） | Reported |
+| `uv.usb.trim` | USB 隨身碟 TRIM 支援 | 本機唯讀（韌體結構表／儲存裝置描述元） | Reported |
+| `uv.usb4` | USB4 埠能力 | — | — |
 
 ### 6.3.33 域 `hm` — 硬體維護與漂移（10 把）
 
@@ -3241,16 +3241,16 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `hm.conflict.summary` | — | — | — |
-| `hm.drivhist.summary` | — | — | — |
-| `hm.hwdiff` | — | — | — |
-| `hm.prob.delta` | — | — | — |
-| `hm.prob.summary` | — | — | — |
-| `hm.sensdrift` | — | — | — |
-| `hm.tree` | — | — | — |
-| `hm.unknown.count` | — | — | — |
-| `hm.unknown.list` | — | — | — |
-| `hm.wake.summary` | — | — | — |
+| `hm.conflict.summary` | 即插即用資源衝突 | WMI Win32_PnPEntity（ConfigManagerErrorCode 12/24/31） | Reported |
+| `hm.drivhist.summary` | 驅動版本變更史 | Win32_PnPSignedDriver＋時間膠囊基線（唯讀） | — |
+| `hm.hwdiff` | 硬體變更時間軸 | 時間膠囊比較（上一份 vs 這一份） | — |
+| `hm.prob.delta` | 裝置錯誤碼變更 | — | — |
+| `hm.prob.summary` | 裝置錯誤碼摘要 | WMI Win32_PnPEntity（ConfigManagerErrorCode） | Reported |
+| `hm.sensdrift` | 感測器校準漂移 | — | — |
+| `hm.tree` | 裝置樹健康總覽 | WMI Win32_PnPEntity | Reported |
+| `hm.unknown.count` | 未知裝置數 | WMI Win32_PnPEntity（Name） | Reported |
+| `hm.unknown.list` | 未知裝置清單 | WMI Win32_PnPEntity（Name） | Reported |
+| `hm.wake.summary` | 裝置喚醒記錄 | powercfg.exe /devicequery wake_armed（OS 內建命令） | Reported |
 
 ### 6.3.34 域 `kp` — 知識包（10 把）
 
@@ -3258,16 +3258,16 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `kp.builtin.entries` | — | — | — |
-| `kp.builtin.oldest` | — | — | — |
-| `kp.builtin.tables` | — | — | — |
-| `kp.digest` | — | — | — |
+| `kp.builtin.entries` | 內建知識表總條數 | BuiltinKnowledgeInventory（清冊） | Derived |
+| `kp.builtin.oldest` | 最舊的知識表快照 | BuiltinKnowledgeInventory（清冊） | — |
+| `kp.builtin.tables` | 內建知識表張數 | BuiltinKnowledgeInventory（清冊） | Derived |
+| `kp.digest` | 知識包完整性 | 內建表／knowledge-pack.json（離線） | — |
 | `kp.evolution.proc` | — | — | — |
-| `kp.miss` | — | — | — |
-| `kp.snapshot_date` | — | — | — |
-| `kp.swap.audit` | — | — | — |
-| `kp.update_channel` | — | — | — |
-| `kp.version` | — | — | — |
+| `kp.miss` | 未收錄查詢 | 內建表／knowledge-pack.json（離線） | Derived |
+| `kp.snapshot_date` | 知識包快照日期 | 內建表／knowledge-pack.json（離線） | — |
+| `kp.swap.audit` | 換包審計 | 內建表／knowledge-pack.json（離線） | — |
+| `kp.update_channel` | 更新通道 | 內建表／knowledge-pack.json（離線） | Reported |
+| `kp.version` | 知識包版次 | 內建表／knowledge-pack.json（離線） | — |
 
 ### 6.3.35 域 `net` — 網路觀測（10 把）
 
@@ -3275,16 +3275,16 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `net.listen.count` | — | — | — |
-| `net.listen.entries` | — | — | — |
-| `net.listen.unverified` | — | — | — |
+| `net.listen.count` | 監聽埠快照 | 連線表（IP Helper）× 行程映像 × WinVerifyTrust | Measured |
+| `net.listen.entries` | 監聽埠明細 | 連線表（IP Helper）× 行程映像 × WinVerifyTrust | Measured |
+| `net.listen.unverified` | 監聽埠簽章未驗證／未通過 | 連線表（IP Helper）× 行程映像 × WinVerifyTrust | Derived |
 | `net.offload` | — | — | — |
 | `net.oui` | — | — | — |
-| `net.wmi.gap` | — | — | — |
-| `net.wmi.gap.ipenabled` | — | — | — |
-| `net.wmi.gap.lease` | — | — | — |
-| `net.wmi.gap.netbios` | — | — | — |
-| `net.wmi.gap.wins` | — | — | — |
+| `net.wmi.gap` | NetworkAdapterConfiguration 補充盤點 | WMI Win32_NetworkAdapterConfiguration（唯讀） | Reported |
+| `net.wmi.gap.ipenabled` | IP 啟用介面數 | WMI Win32_NetworkAdapterConfiguration（唯讀） | Reported |
+| `net.wmi.gap.lease` | DHCP 租約起訖可讀性 | WMI Win32_NetworkAdapterConfiguration（唯讀） | Reported |
+| `net.wmi.gap.netbios` | NetBIOS over TCP/IP 設定 | WMI Win32_NetworkAdapterConfiguration（唯讀） | Reported |
+| `net.wmi.gap.wins` | WINS Proxy 啟用數 | WMI Win32_NetworkAdapterConfiguration（唯讀） | Reported |
 
 ### 6.3.36 域 `ng` — 導覽與覆蓋申報（10 把）
 
@@ -3292,16 +3292,16 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `ng.checklist` | — | — | — |
+| `ng.checklist` | 自訂檢查清單 | — | — |
 | `ng.coverage.covered` | 有規則考慮的鍵數 | — | Derived |
 | `ng.coverage.exempt` | 明文豁免的鍵數 | 單一來源類事實（每條豁免都附理由） | Derived |
 | `ng.coverage.headline` | 覆蓋申報 | FactCoverageReport（掃描期目錄∪執行期鍵） | Derived |
 | `ng.coverage.keys` | 事實鍵總數 | 事實鍵目錄∪執行期鍵 | Derived |
 | `ng.coverage.uncovered` | 未覆蓋的鍵數 | 未被任何規則碰到也未豁免——不是錯誤，但應該被看見 | Derived |
-| `ng.history` | — | — | — |
-| `ng.progress` | — | — | — |
-| `ng.report` | — | — | — |
-| `ng.tree` | — | — | — |
+| `ng.history` | 導覽歷史 | 主視窗切頁（記憶體） | — |
+| `ng.progress` | 檢查進度記憶 | 審計日誌（append-only、雜湊鏈可驗） | Derived |
+| `ng.report` | 診斷報告整合 | 全部事實組的可用性分布（輸入不含自己） | Derived |
+| `ng.tree` | 診斷樹導航 | — | — |
 
 ### 6.3.37 域 `pl` — 平台與封裝（10 把）
 
@@ -3309,16 +3309,16 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `pl.cfgmigrate` | — | — | — |
+| `pl.cfgmigrate` | 設定遷移測試 | 設定 schema 往返（唯讀） | Reported |
 | `pl.forward` | CLI 轉發單一實例 | App.xaml.cs 具名事件 | Reported |
-| `pl.i18ninstaller` | — | — | — |
-| `pl.package` | — | — | — |
-| `pl.pagebudget` | — | — | — |
-| `pl.portable` | — | — | — |
-| `pl.releasenote` | — | — | — |
-| `pl.shotbaseline` | — | — | — |
-| `pl.uiquality` | — | — | — |
-| `pl.upgrade` | — | — | — |
+| `pl.i18ninstaller` | 多語安裝器 | 安裝器語言（唯讀宣告） | Reported |
+| `pl.package` | 便攜／安裝雙包裝 | 封裝狀態（唯讀宣告） | Reported |
+| `pl.pagebudget` | 每頁首載預算 | 首載預算（唯讀） | Reported |
+| `pl.portable` | 綠色零寫入邊界 | 原始碼掃描守門（PortableBoundaryTests） | Derived |
+| `pl.releasenote` | 版本公告自動草稿 | LifecycleAndReportsFactsService.BuildReleaseNoteDraft | Derived |
+| `pl.shotbaseline` | 多語系截圖基線 | 多語算繪基線（唯讀） | Reported |
+| `pl.uiquality` | UI 品質守門 | UI 品質掃描（唯讀） | Reported |
+| `pl.upgrade` | 安裝器升級測試 | — | — |
 
 ### 6.3.38 域 `sc` — 情境檢查（10 把）
 
@@ -3326,16 +3326,16 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `sc.fanbearing` | — | — | — |
-| `sc.io.summary` | — | — | — |
-| `sc.netdrop.summary` | — | — | — |
-| `sc.pcurve.summary` | — | — | — |
-| `sc.slow.summary` | — | — | — |
-| `sc.swap` | — | — | — |
-| `sc.tbaseline` | — | — | — |
-| `sc.uptime.summary` | — | — | — |
-| `sc.verdict.summary` | — | — | — |
-| `sc.verifycheck.summary` | — | — | — |
+| `sc.fanbearing` | 風扇軸承哨兵 | 既有哨兵統計（唯讀） | Derived |
+| `sc.io.summary` | 誰在動硬碟 | Win32_PerfFormattedData_PerfProc_Process（唯讀） | Reported |
+| `sc.netdrop.summary` | 網路中斷事件 | Microsoft-Windows-NetworkProfile／System 事件記錄 | Reported |
+| `sc.pcurve.summary` | 供電穩嗎 | 既有電壓／功率歷史（穩健統計） | Derived |
+| `sc.slow.summary` | 效能為什麼慢 | 既有量測事實並列（唯讀） | Derived |
+| `sc.swap` | 換零件對照 | 時間膠囊差異（唯讀） | Derived |
+| `sc.tbaseline` | 溫度分位數基線 | 歷史溫度序列（唯讀） | Derived |
+| `sc.uptime.summary` | 多久沒重啟摘要 | Environment.TickCount64 | Measured |
+| `sc.verdict.summary` | 該不該修摘要 | 既有 Warning／Critical 判定（聚合） | Derived |
+| `sc.verifycheck.summary` | 二手驗機精靈 | 既有驗機規則聚合（唯讀） | Derived |
 
 ### 6.3.39 域 `tu` — 調校量測（10 把）
 
@@ -3343,16 +3343,16 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `tu.battery` | — | — | — |
-| `tu.jitter` | — | — | — |
-| `tu.matrix` | — | — | — |
-| `tu.memhold` | — | — | — |
-| `tu.nightly` | — | — | — |
-| `tu.pfreq` | — | — | — |
-| `tu.rawpack` | — | — | — |
-| `tu.thermresp` | — | — | — |
-| `tu.ups` | — | — | — |
-| `tu.vdroop` | — | — | — |
+| `tu.battery` | 電池放電曲線 | Win32_Battery（唯讀） | — |
+| `tu.jitter` | 本機抖動量測 | — | — |
+| `tu.matrix` | 多機對照矩陣 | 時間膠囊並排（唯讀） | — |
+| `tu.memhold` | 記憶體保持測試 | — | — |
+| `tu.nightly` | 深測夜間自跑 | — | — |
+| `tu.pfreq` | 功率-頻率擬合 | 感測器量測＋相關性（模型） | Derived |
+| `tu.rawpack` | 深測原始資料包 | 匿名化建構（唯讀） | — |
+| `tu.thermresp` | 溫度響應矩陣 | 感測器量測＋Theil–Sen（模型） | Derived |
+| `tu.ups` | UPS 轉換測試 | — | — |
+| `tu.vdroop` | Vdroop 觀測 | 感測器取樣（推測級） | Measured |
 
 ### 6.3.40 域 `virt` — 虛擬化（10 把）
 
@@ -3377,15 +3377,15 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `bt.cross.vbs` | — | — | — |
-| `bt.ibb` | — | — | — |
-| `bt.km` | — | — | — |
-| `bt.manifests` | — | — | — |
-| `bt.measured_boot` | — | — | — |
-| `bt.measured_boot.evidence` | — | — | — |
-| `bt.recovery` | — | — | — |
-| `bt.root` | — | — | — |
-| `bt.root.types` | — | — | — |
+| `bt.cross.vbs` | 信任根與 VBS 對照 | 交叉對照（bt.root × virt.vbs） | — |
+| `bt.ibb` | 初始開機塊（IBB） | FIT 目錄的條目分類（既有的 FitDecoder） | Measured |
+| `bt.km` | 金鑰模組（KM） | FIT 目錄的條目分類（既有的 FitDecoder） | Unknown |
+| `bt.manifests` | 信任鏈目錄條目 | FIT 目錄的條目分類（既有的 FitDecoder） | Measured |
+| `bt.measured_boot` | 量測開機 | 關鍵 PCR 的延伸狀態（PCR 0／2／4／7） | Measured |
+| `bt.measured_boot.evidence` | 量測證據（關鍵 PCR） | 關鍵 PCR 的延伸狀態（PCR 0／2／4／7） | Measured |
+| `bt.recovery` | 韌體復原路徑 | UEFI 變數 OsIndicationsSupported（唯讀） | — |
+| `bt.root` | 信任根 | 既有事實的交叉陳述（FIT 目錄／關鍵 PCR／Secure Boot） | Derived |
+| `bt.root.types` | 信任根類型與錨點 | 既有事實的交叉陳述（FIT 目錄／關鍵 PCR／Secure Boot） | Derived |
 
 ### 6.3.42 域 `cap` — 存取能力（9 把）
 
@@ -3409,15 +3409,15 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `dv.container.summary` | — | — | — |
-| `dv.env.path` | — | — | — |
-| `dv.nested` | — | — | — |
-| `dv.runtime.summary` | — | — | — |
-| `dv.sdk.summary` | — | — | — |
-| `dv.toolchain.summary` | — | — | — |
-| `dv.vm.count` | — | — | — |
-| `dv.vm.inventory` | — | — | — |
-| `dv.wsl.summary` | — | — | — |
+| `dv.container.summary` | 容器 runtime 狀態 | WMI Win32_Service | — |
+| `dv.env.path` | PATH 重複與衝突審計 | Machine／User PATH（只取計數） | Reported |
+| `dv.nested` | 巢狀虛擬化能力 | Win32_ComputerSystem／Win32_Processor／Win32_DeviceGuard／Win32_OptionalFeature | Reported |
+| `dv.runtime.summary` | .NET／VC++ 執行階段 | — | Reported |
+| `dv.sdk.summary` | SDK 盤點 | PATH／登錄 SDK 探測（唯讀） | Reported |
+| `dv.toolchain.summary` | 開發工具鏈版本 | PATH 搜尋＋FileVersionInfo | — |
+| `dv.vm.count` | 虛擬機數量 | — | Reported |
+| `dv.vm.inventory` | 虛擬機資源配置 | — | Reported |
+| `dv.wsl.summary` | WSL 發行版盤點 | HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Lxss | Reported |
 
 ### 6.3.44 域 `edid`（本版沒有成文的域說明）（9 把）
 
@@ -3428,7 +3428,7 @@
 | `edid.cta.colorimetry` | — | — | — |
 | `edid.cta.hdr` | — | — | — |
 | `edid.cta.hfvsdb` | — | — | — |
-| `edid.cta.rev` | — | — | — |
+| `edid.cta.rev` | CTA 修訂與資料塊 | EDID CTA-861 擴充塊（HKLM\\SYSTEM\\CurrentControlSet\\Enum\\DISPLAY，唯讀） | Reported |
 | `edid.cta.speaker` | — | — | — |
 | `edid.cta.unknownblocks` | — | — | — |
 | `edid.cta.vcdb` | — | — | — |
@@ -3441,15 +3441,15 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `hist.gpudriver` | — | — | — |
-| `hist.memtrain.summary` | — | — | — |
-| `hist.mon.summary` | — | — | — |
-| `hist.nicerr.summary` | — | — | — |
-| `hist.pktloss` | — | — | — |
-| `hist.rules.summary` | — | — | — |
-| `hist.uncore.summary` | — | — | — |
-| `hist.usb.speed` | — | — | — |
-| `hist.vram` | — | — | — |
+| `hist.gpudriver` | GPU 驅動版本史 | 驅動變更歷史（唯讀） | Reported |
+| `hist.memtrain.summary` | 記憶體訓練時長 | Diagnostics-Performance 開機訓練事件（唯讀） | Reported |
+| `hist.mon.summary` | 多螢幕拓撲快照 | EnumDisplayMonitors／GetMonitorInfo／GetDpiForMonitor（唯讀） | Measured |
+| `hist.nicerr.summary` | NIC 錯誤計數趨勢 | NIC 統計（唯讀） | Reported |
+| `hist.pktloss` | 封包損失趨勢 | — | — |
+| `hist.rules.summary` | 規則命中歷史 | 既有快照＋規則結果（唯讀） | Derived |
+| `hist.uncore.summary` | Uncore 頻率歷史 | UncorePmu 讀數（唯讀） | Measured |
+| `hist.usb.speed` | USB 速度歷史 | USB 速度歷程（唯讀） | Reported |
+| `hist.vram` | VRAM 使用歷史 | 歷史倉（唯讀） | Measured |
 
 ### 6.3.46 域 `pw` — 電源（9 把）
 
@@ -3457,15 +3457,15 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `pw.battery.summary` | — | — | — |
-| `pw.ms.compat` | — | — | — |
-| `pw.plan.drift` | — | — | — |
-| `pw.shutdown.summary` | — | — | — |
-| `pw.sleep.cap` | — | — | — |
-| `pw.sleepstudy.summary` | — | — | — |
-| `pw.usbsel` | — | — | — |
-| `pw.wake.summary` | — | — | — |
-| `pw.waketask.summary` | — | — | — |
+| `pw.battery.summary` | 電池健康 | Win32_Battery／BatteryStaticData（唯讀） | Measured |
+| `pw.ms.compat` | 現代待機相容性 | powercfg /a＋平台能力（唯讀） | Reported |
+| `pw.plan.drift` | 電源計畫漂移 | powercfg／電源計畫登錄（唯讀） | Reported |
+| `pw.shutdown.summary` | 最近停機時長 | System EventLog 6006（關機）／6005（開機） | Reported |
+| `pw.sleep.cap` | 睡眠能力矩陣 | CallNtPowerInformation(SystemPowerCapabilities) | Reported |
+| `pw.sleepstudy.summary` | 睡眠研究解碼 | — | Reported |
+| `pw.usbsel` | USB 選擇性暫停 | 作用中電源計畫：2a737441-1930-4402-8d77-b2bebba308a3／48e6b7a6-50f5-4782-a5d4-53bb8f07e226 | Reported |
+| `pw.wake.summary` | 喚醒來源審計 | powercfg（唯讀） | Reported |
+| `pw.waketask.summary` | 排程喚醒對照 | schtasks.exe /query /xml ONE（唯讀 XML，不修改任務） | Reported |
 
 ### 6.3.47 域 `qs` — 查詢系統（9 把）
 
@@ -3474,14 +3474,14 @@
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
 | `qs.cache` | 查詢結果快取 | QueryResultCache（記憶體；不落盤） | Unknown |
-| `qs.grammar` | — | — | — |
-| `qs.help` | — | — | — |
-| `qs.history` | — | — | — |
-| `qs.index` | — | — | — |
-| `qs.keydiff` | — | — | — |
-| `qs.range` | — | — | — |
-| `qs.trust` | — | — | — |
-| `qs.unit` | — | — | — |
+| `qs.grammar` | 查詢文法版本 | QueryGovernanceFactsService.GrammarVersion | Derived |
+| `qs.help` | 懸浮說明覆蓋 | — | — |
+| `qs.history` | 查詢歷史 | — | — |
+| `qs.index` | 查詢索引 | — | — |
+| `qs.keydiff` | 鍵集 diff | — | — |
+| `qs.range` | 鍵範圍檢查 | 內建物理合理域表 | — |
+| `qs.trust` | 來源信任分布 | 各事實的 Trust 標示 | — |
+| `qs.unit` | 單位轉換層 | 事實集的 Unit 欄位 | — |
 
 ### 6.3.48 域 `spi` — SPI 快閃（9 把）
 
@@ -3490,8 +3490,8 @@
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
 | `spi.bios_compare` | BIOS 區比對（vs 參考映像） | s | Measured |
-| `spi.bios_hash` | — | — | — |
-| `spi.entropy_map` | — | — | — |
+| `spi.bios_hash` | — | — | Measured |
+| `spi.entropy_map` | SPI 快閃熵圖（內容組成） | 記憶體映射快閃（唯讀）÷ FREG 區域 | — |
 | `spi.flash_map` | x | s | Unknown |
 | `spi.frap` | SPI 區域存取權限 | — | Measured |
 | `spi.hsfsts` | SPI 快閃鎖定狀態 | s | Measured |
@@ -3505,15 +3505,15 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `zr.aadj` | — | — | — |
-| `zr.cba` | — | — | — |
-| `zr.compliance.baseline` | — | — | — |
-| `zr.compliance.table` | — | — | — |
-| `zr.dynlock` | — | — | — |
-| `zr.mdm` | — | — | — |
-| `zr.passkey` | — | — | — |
-| `zr.report` | — | — | — |
-| `zr.wipe` | — | — | — |
+| `zr.aadj` | Entra 加入狀態 | — | — |
+| `zr.cba` | 憑證型登入 | — | Reported |
+| `zr.compliance.baseline` | 裝置合規基線 | 知識包離線對照清單（使用者提供；缺則不適用） | Derived |
+| `zr.compliance.table` | 合規對照清單 | 知識包離線對照清單（使用者提供；缺則不適用） | Reported |
+| `zr.dynlock` | 動態鎖定設定 | — | Reported |
+| `zr.mdm` | MDM 註冊狀態 | — | — |
+| `zr.passkey` | Passkey 支援 | webauthn.dll＋CurrentBuildNumber | — |
+| `zr.report` | 合規報告 | 本政策組事實 | Derived |
+| `zr.wipe` | 遠端抹除能力 | — | Reported |
 
 ### 6.3.50 域 `amd` — AMD 平台安全（8 把）
 
@@ -3536,14 +3536,14 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `dm.clean` | — | — | — |
-| `dm.conflict` | — | — | — |
-| `dm.dash` | — | — | — |
-| `dm.hidden.summary` | — | — | — |
-| `dm.maint.summary` | — | — | — |
-| `dm.sense` | — | — | — |
-| `dm.taskres.summary` | — | — | — |
-| `dm.timeline.summary` | — | — | — |
+| `dm.clean` | 磁碟清理處理器 | — | — |
+| `dm.conflict` | 維護視窗衝突 | — | — |
+| `dm.dash` | 維護摘要 | 本組事實的可用性（輸入不含自己） | Derived |
+| `dm.hidden.summary` | 隱藏任務偵測 | Task Scheduler XML（唯讀） | Reported |
+| `dm.maint.summary` | 自動維護狀態史 | Microsoft-Windows-TaskScheduler/Operational | — |
+| `dm.sense` | Storage Sense 狀態 | — | — |
+| `dm.taskres.summary` | 任務結果碼全列 | Task Scheduler XML（唯讀） | Reported |
+| `dm.timeline.summary` | 任務運行時間線 | Microsoft-Windows-TaskScheduler/Operational | — |
 
 ### 6.3.52 域 `el` — 外部組件版本（8 把）
 
@@ -3551,14 +3551,14 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `el.advisory.summary` | — | — | — |
-| `el.bios` | — | — | — |
-| `el.browser.versions` | — | — | — |
-| `el.dash` | — | — | — |
-| `el.driver.summary` | — | — | — |
-| `el.office.version` | — | — | — |
-| `el.os` | — | — | — |
-| `el.pack.summary` | — | — | — |
+| `el.advisory.summary` | 韌體公告對照 | 離線公告表＋SMBIOS（唯讀） | Reported |
+| `el.bios` | BIOS EOL | SMBIOS＋離線表（唯讀） | Reported |
+| `el.browser.versions` | 瀏覽器版本 | — | — |
+| `el.dash` | EOL 儀表頁 | 生命週期事實彙總 | Derived |
+| `el.driver.summary` | 驅動 EOL | Win32_PnPSignedDriver＋離線表（唯讀） | Reported |
+| `el.office.version` | Office 版本 | — | — |
+| `el.os` | OS EOL 對照 | 離線 EOL 表＋OS 版本（唯讀） | Reported |
+| `el.pack.summary` | EOL 包版本化 | knowledge-pack.json（離線內容雜湊） | — |
 
 ### 6.3.53 域 `mem` — 記憶體安全與訓練（8 把）
 
@@ -3568,12 +3568,12 @@
 |---|---|---|---|
 | `mem.encryption.sgx` | SGX 安全飛地 | CPUID leaf 7 ECX bit30＋leaf 0x12 sub≥2 | Measured |
 | `mem.encryption.tme` | TME 記憶體加密 | CPUID leaf 7＋MSR 0x982（TME_ACTIVATE） | Unknown |
-| `mem.mixmatch.summary` | — | — | — |
-| `mem.mmio.total` | — | — | — |
-| `mem.mrc.summary` | — | — | — |
-| `mem.ras.summary` | — | — | — |
-| `mem.rowhammer` | — | — | — |
-| `mem.wmi.cross` | — | — | — |
+| `mem.mixmatch.summary` | 混插一致性審計 | SPD／SMBIOS（唯讀） | Reported |
+| `mem.mmio.total` | MMIO 位址空間總量 | — | — |
+| `mem.mrc.summary` | MRC 訓練快照盤點 | MRC 快取檔存在性＋雜湊（唯讀） | Reported |
+| `mem.ras.summary` | SMBIOS RAS 全欄位 | SMBIOS Type 16／17（唯讀） | Reported |
+| `mem.rowhammer` | Rowhammer／記憶體攻擊面 | 本專案誠實界線聲明（V7 §14／§12.5） | Derived |
+| `mem.wmi.cross` | WMI 記憶體對照 | — | — |
 
 ### 6.3.54 域 `vr` — 視覺化（8 把）
 
@@ -3581,14 +3581,14 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `vr.gantt` | — | — | — |
-| `vr.heatmap2d` | — | — | — |
-| `vr.multiaxis` | — | — | — |
-| `vr.radar` | — | — | — |
-| `vr.sankey` | — | — | — |
-| `vr.theme` | — | — | — |
-| `vr.tree` | — | — | — |
-| `vr.zoom` | — | — | — |
+| `vr.gantt` | 開機甘特圖 | — | — |
+| `vr.heatmap2d` | 時間×感測器熱力圖 | 歷史倉（呈現層） | — |
+| `vr.multiaxis` | 多軸對照圖 | 事實並排（呈現層） | — |
+| `vr.radar` | 能力雷達圖 | — | — |
+| `vr.sankey` | 桑基資料流圖 | 事實並排（呈現層） | — |
+| `vr.theme` | 圖表主題匯出 | 主題設定（呈現層） | Reported |
+| `vr.tree` | 拓撲樹狀圖 | 事實並排（呈現層） | — |
+| `vr.zoom` | 歷史圖縮放 | 歷史倉（呈現層） | Reported |
 
 ### 6.3.55 域 `ag` — 代理與自動化（7 把）
 
@@ -3599,9 +3599,9 @@
 | `ag.compose` | — | — | — |
 | `ag.exitcode` | — | — | — |
 | `ag.headless` | — | — | — |
-| `ag.remote` | — | — | — |
+| `ag.remote` | 遠端查詢（明文不做） | 零網路政策 | Unknown |
 | `ag.rotate` | — | — | — |
-| `ag.service` | — | — | — |
+| `ag.service` | 背景服務模式 | 本工具自身能力盤點（唯讀；不建立服務、不註冊排程） | — |
 | `ag.stdin` | — | — | — |
 
 ### 6.3.56 域 `audit` — 審計日誌（7 把）
@@ -3610,13 +3610,13 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `audit.export` | — | — | — |
-| `audit.head` | — | — | — |
+| `audit.export` | 審計鏈匯出 | 寫入閘門／審計鏈 | Derived |
+| `audit.head` | 審計鏈頭 | 寫入閘門／審計鏈 | Measured |
 | `audit.logclear.count` | 稽核記錄清除事件（1102） | 事件記錄 Security log（Event 1102） | Unknown |
 | `audit.logclear.last` | 最近一次記錄清除 | 事件記錄 Security log（Event 1102） | Reported |
-| `audit.mode` | 稽核政策 | — | Unknown |
-| `audit.state_change` | — | — | — |
-| `audit.verify` | — | — | — |
+| `audit.mode` | 稽核政策 | LSA LsaQueryInformationPolicy（PolicyAuditEventsInformation，唯讀） | Unknown |
+| `audit.state_change` | 狀態變更審計 | 寫入閘門／審計鏈 | Derived |
+| `audit.verify` | 審計鏈驗證 | 寫入閘門／審計鏈 | Measured |
 
 ### 6.3.57 域 `dk` — 資料知識（7 把）
 
@@ -3625,11 +3625,11 @@
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
 | `dk.alias.summary` | — | — | — |
-| `dk.anon.stability` | — | — | — |
-| `dk.candidate` | — | — | — |
-| `dk.docmap` | — | — | — |
-| `dk.retention` | — | — | — |
-| `dk.roundtrip` | — | — | — |
+| `dk.anon.stability` | 匿名 ID 穩定性 | Win32_ComputerSystem／Win32_Processor 的正常化描述＋SHA-256 | Derived |
+| `dk.candidate` | 規則候選輔助 | 規則命中歷史（唯讀） | — |
+| `dk.docmap` | 文件-程式對帳 | docs ↔ Services 掃描（唯讀） | Derived |
+| `dk.retention` | 資料保留政策 | 歷史倉（唯讀） | Reported |
+| `dk.roundtrip` | 匯出／匯入往返 | System.Text.Json 記憶體往返（不寫檔） | Derived |
 | `dk.snapshot.age` | — | — | — |
 
 ### 6.3.58 域 `gd` — 圖形驅動（7 把）
@@ -3638,13 +3638,13 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `gd.dx.summary` | — | — | — |
-| `gd.hdr.summary` | — | — | — |
-| `gd.plug.summary` | — | — | — |
-| `gd.shcache.summary` | — | — | — |
-| `gd.tablet.count` | — | — | — |
-| `gd.tdr.summary` | — | — | — |
-| `gd.vrr.summary` | — | — | — |
+| `gd.dx.summary` | DirectX 矩陣 | Win32_VideoController（唯讀） | Reported |
+| `gd.hdr.summary` | HDR 能力鏈 | EDID CTA-861＋DisplayConfig | Reported |
+| `gd.plug.summary` | 熱插拔事件史 | System Display／Kernel-PnP（只讀計數） | Reported |
+| `gd.shcache.summary` | 著色器快取狀態 | LOCALAPPDATA 常見快取目錄 | — |
+| `gd.tablet.count` | 繪圖板／數位筆裝置 | WMI Win32_PnPEntity（名稱比對） | Reported |
+| `gd.tdr.summary` | TDR 事件史 | Display 4101／13（只讀計數） | Reported |
+| `gd.vrr.summary` | VRR 交叉 | 顯示驅動／DisplayConfig（唯讀） | Reported |
 
 ### 6.3.59 域 `of` — 離線檔案分析（7 把）
 
@@ -3652,13 +3652,13 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `of.bcd` | — | — | — |
-| `of.diff` | — | — | — |
-| `of.dump` | — | — | — |
-| `of.evtx` | — | — | — |
-| `of.hive` | — | — | — |
-| `of.raw` | — | — | — |
-| `of.writeblock` | — | — | — |
+| `of.bcd` | 離線 BCD 審計 | 離線 BCD（唯讀） | Reported |
+| `of.diff` | 離線快照差異 | 快照差異（純函式） | Derived |
+| `of.dump` | 離線 minidump 批次 | MinidumpFactsService（唯讀） | Reported |
+| `of.evtx` | .evtx 讀回 | .evtx 檔案（唯讀） | Reported |
+| `of.hive` | 離線 hive 審計 | 離線 hive（唯讀） | Reported |
+| `of.raw` | 離線裸碟讀取 | 裸碟唯讀（FileShare.Read） | Reported |
+| `of.writeblock` | 寫入封鎖聲明 | 原始碼寫入禁令掃描 | — |
 
 ### 6.3.60 域 `pmu` — 效能監控單元（7 把）
 
@@ -3666,9 +3666,9 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `pmu.fixed.0` | 固定計數器 0（唯讀觀察） | — | Unknown |
-| `pmu.fixed_counters` | — | — | — |
-| `pmu.general_counters` | — | — | — |
+| `pmu.fixed.0` | 固定計數器 0（唯讀觀察） | CPUID leaf 0xA＋MSR 0x309–0x30B（唯讀觀察） | Unknown |
+| `pmu.fixed_counters` | 固定功能計數器 | CPUID leaf 0xA | Measured |
+| `pmu.general_counters` | 通用計數器 | CPUID leaf 0xA | Measured |
 | `pmu.uncore.perf_status` | Uncore 目前倍頻（0x621） | MSR 0x620／0x621 | Unknown |
 | `pmu.uncore.platform` | Uncore PMU 平台 | CPUID leaf 1 | Measured |
 | `pmu.uncore.ratio_limit` | Uncore 頻率上限（0x620） | MSR 0x620／0x621 | Unknown |
@@ -3683,8 +3683,8 @@
 | `xt.csharp` | — | — | — |
 | `xt.py` | — | — | — |
 | `xt.registry` | — | — | — |
-| `xt.rest` | — | — | — |
-| `xt.snapshot.fs` | — | — | — |
+| `xt.rest` | REST／HTTP 範例集（明文不做） | 零網路政策 | Unknown |
+| `xt.snapshot.fs` | 時間膠囊檔案整合 | HardwareSnapshotService.Load | Derived |
 | `xt.sysmon.map` | — | — | — |
 | `xt.trigger` | — | — | — |
 
@@ -3694,11 +3694,11 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `gp.dvr.summary` | — | — | — |
-| `gp.hags` | — | — | — |
-| `gp.pollrate` | — | — | — |
-| `gp.present.count` | — | — | — |
-| `gp.present.summary` | — | — | — |
+| `gp.dvr.summary` | Game DVR 清單 | GameBar／Captures 登錄（唯讀） | Reported |
+| `gp.hags` | HAGS／VRR／遊戲模式事實 | GraphicsDrivers／GameBar 登錄（唯讀） | Reported |
+| `gp.pollrate` | 滑鼠輪詢率 | Raw Input 取樣（唯讀，不注入任何輸入） | — |
+| `gp.present.count` | 幀呈現 逐行程計數 | 呈現事件取樣（逐行程計數，不揭露行程名稱） | Measured |
+| `gp.present.summary` | 幀呈現觀測 摘要 | 呈現事件取樣（呼叫端提供的即時 session；本項唯讀判讀，不建立新工作階段） | Measured |
 | `gp.registrypol` | 機器原則檔（Registry.pol） | C:\Windows\System32\GroupPolicy\Machine\Registry.pol 的檔案時間戳——只指紋不解析二進位 | Reported |
 
 ### 6.3.63 域 `platform` — 平台開關（6 把）
@@ -3709,7 +3709,7 @@
 |---|---|---|---|
 | `platform.debug_interface` | — | — | — |
 | `platform.feature_control` | — | — | — |
-| `platform.hvci` | — | — | — |
+| `platform.hvci` | — | MmioBackendSelector / IKernelMsrReader | — |
 | `platform.pawnio` | — | — | — |
 | `platform.secure_boot` | x | s | Reported |
 | `platform.testsigning` | — | — | — |
@@ -3720,12 +3720,12 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `spec.ref` | — | — | — |
-| `spec.ref.conflict` | — | — | — |
-| `spec.ref.coverage` | — | — | — |
-| `spec.ref.granularity` | — | — | — |
-| `spec.ref.unit` | — | — | — |
-| `spec.ref.version` | — | — | — |
+| `spec.ref` | 規格引用 | SpecRef 登錄 | Derived |
+| `spec.ref.conflict` | 出處衝突 | 出處衝突並列 | Derived |
+| `spec.ref.coverage` | 出處覆蓋 | SpecRef 登錄 | Derived |
+| `spec.ref.granularity` | 引用解析度 | SpecRef 登錄 | Derived |
+| `spec.ref.unit` | 換算係數出處 | 單位換算登錄 | Derived |
+| `spec.ref.version` | 規格版本 | SpecRef 登錄 | Derived |
 
 ### 6.3.65 域 `src` — 來源鏈（6 把）
 
@@ -3733,12 +3733,12 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `src.available` | — | — | — |
+| `src.available` | — | 來源可用性接縫 | Derived |
 | `src.capability` | 來源能力矩陣 | 來源能力矩陣 | Derived |
 | `src.chain` | — | 來源裁決鏈 | Derived |
-| `src.circuit` | — | — | — |
+| `src.circuit` | 來源斷路器 | 掃描骨架／降級政策 | Derived |
 | `src.registry.count` | 已註冊來源數 | 來源註冊表 | Derived |
-| `src.retry` | — | — | — |
+| `src.retry` | 失敗重試 | 掃描骨架／降級政策 | Derived |
 
 ### 6.3.66 域 `boot` — 開機（5 把）
 
@@ -3746,7 +3746,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `boot.duration_ms` | 開機耗時 | — | Reported |
+| `boot.duration_ms` | 開機耗時 | 事件記錄 Diagnostics-Performance Event 100（BootTime）＋Win32_OperatingSystem | Reported |
 | `boot.fastboot` | — | — | — |
 | `boot.hibernate` | — | — | — |
 | `boot.last_time` | 最近一次開機 | WMI Win32_OperatingSystem（LastBootUpTime） | Reported |
@@ -3758,11 +3758,11 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `fact.error.reason` | — | — | — |
-| `fact.provenance` | — | — | — |
-| `fact.readerror.reason` | — | — | — |
-| `fact.sensitivity` | — | — | — |
-| `fact.why_unreadable` | — | — | — |
+| `fact.error.reason` | 失敗原因 | 掃描骨架／降級政策 | Derived |
+| `fact.provenance` | 值與出處對應 | 出處稽核 | Derived |
+| `fact.readerror.reason` | 讀取失敗原因 | 狀態覆蓋申報 | Derived |
+| `fact.sensitivity` | 敏感度分級 | 敏感度政策 | Derived |
+| `fact.why_unreadable` | 不可用原因查詢 | 狀態覆蓋申報 | Derived |
 
 ### 6.3.68 域 `mc` — 微碼（5 把）
 
@@ -3770,11 +3770,11 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `mc.cve` | — | — | — |
+| `mc.cve` | 微碼 CVE 對照 | 內建知識表（離線） | Reported |
 | `mc.version` | — | — | — |
-| `mc.version.cross` | — | — | — |
-| `mc.version.msr` | — | — | — |
-| `mc.version.registry` | — | — | — |
+| `mc.version.cross` | 微碼版本對帳 | MSR 0x8B（IA32_BIOS_SIGN_ID）——CPU 自己回的 | — |
+| `mc.version.msr` | 微碼修訂版（MSR） | MSR 0x8B（IA32_BIOS_SIGN_ID）——CPU 自己回的 | — |
+| `mc.version.registry` | 微碼修訂版（登錄檔） | MSR 0x8B（IA32_BIOS_SIGN_ID）——CPU 自己回的 | — |
 
 ### 6.3.69 域 `pci` — PCI 匯流排（5 把）
 
@@ -3782,10 +3782,10 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `pci.bus0.inventory` | — | — | — |
+| `pci.bus0.inventory` | — | PCI 設定空間 0x10-0x24/0x30（唯讀） | Measured |
 | `pci.dev.00.0` | — | — | — |
 | `pci.dev.1f.5` | x | s | Measured |
-| `pci.id` | — | — | — |
+| `pci.id` | PCI 名稱對照 | 內建知識表（離線） | Derived |
 | `pci.res.1f.5` | — | — | — |
 
 ### 6.3.70 域 `psu` — 電源供應器（5 把）
@@ -3794,11 +3794,11 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `psu.model` | — | — | — |
-| `psu.pmbus.pout` | — | — | — |
-| `psu.pmbus.temp1` | — | — | — |
-| `psu.pmbus.vin` | — | — | — |
-| `psu.pmbus.vout` | — | — | — |
+| `psu.model` | 電源型號對照 | 內建知識表（離線） | Reported |
+| `psu.pmbus.pout` | 輸出功率 READ_POUT | PMBus 唯讀掃描（SMBus 0x40–0x4F） | Unknown |
+| `psu.pmbus.temp1` | 溫度 READ_TEMPERATURE_1 | PMBus 唯讀掃描（SMBus 0x40–0x4F） | Unknown |
+| `psu.pmbus.vin` | 輸入電壓 READ_VIN | PMBus 唯讀掃描（SMBus 0x40–0x4F） | Unknown |
+| `psu.pmbus.vout` | 輸出電壓 READ_VOUT | PMBus 唯讀掃描（SMBus 0x40–0x4F） | Unknown |
 
 ### 6.3.71 域 `pv` — 平台視覺與語音（5 把）
 
@@ -3806,11 +3806,11 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `pv.adid.summary` | — | — | — |
-| `pv.ddv` | — | — | — |
-| `pv.speech.summary` | — | — | — |
-| `pv.telemetry` | — | — | — |
-| `pv.uwp.summary` | — | — | — |
+| `pv.adid.summary` | 廣告 ID／活動歷史設定 | — | Reported |
+| `pv.ddv` | 診斷記錄器狀態 | — | Reported |
+| `pv.speech.summary` | 語音／輸入遥測設定 | — | Reported |
+| `pv.telemetry` | 遙測層級事實 | — | Reported |
+| `pv.uwp.summary` | UWP 權限概覽 | AppxManifest capabilities（唯讀） | Reported |
 
 ### 6.3.72 域 `scan` — 掃描健全性（5 把）
 
@@ -3818,11 +3818,11 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `scan.failures` | — | — | — |
-| `scan.partial.count` | — | — | — |
+| `scan.failures` | 掃描失敗總表 | 掃描骨架／降級政策 | Derived |
+| `scan.partial.count` | 中斷保留事實數 | 掃描骨架 | Derived |
 | `scan.restore.ok` | 暫態還原 | 掃描骨架自我檢查 | Derived |
-| `scan.skeleton.adoption` | — | — | — |
-| `scan.step.timeout` | — | — | — |
+| `scan.skeleton.adoption` | 骨架採用數 | 骨架相容性報告 | Derived |
+| `scan.step.timeout` | 步驟逾時 | 掃描骨架 | Derived |
 
 ### 6.3.73 域 `tm` — 時間源（5 把）
 
@@ -3830,11 +3830,11 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `tm.ntp.summary` | — | — | — |
-| `tm.qpc.cost` | — | — | — |
-| `tm.rtc.drift` | — | — | — |
-| `tm.source` | — | — | — |
-| `tm.tzdb` | — | — | — |
+| `tm.ntp.summary` | NTP 同步狀態 | — | Reported |
+| `tm.qpc.cost` | QPC 成本基準 | QueryPerformanceCounter（唯讀） | Measured |
+| `tm.rtc.drift` | RTC 關機漂移 | RTC＋系統時間樣本（唯讀） | Measured |
+| `tm.source` | 時鐘源事實 | CPUID 0x80000007＋W32Time（唯讀） | Reported |
+| `tm.tzdb` | 時區／DST 資源 | TimeZoneInfo.Local＋%SystemRoot%\\System32\\tzres.dll | Reported |
 
 ### 6.3.74 域 `ui`（本版沒有成文的域說明）（5 把）
 
@@ -3867,7 +3867,7 @@
 |---|---|---|---|
 | `asset.chassis` | 機箱類型 | SMBIOS Type 3 位移 0x05 | Reported |
 | `asset.identify` | 機器識別 | SMBIOS Type 1／2／3 | Unknown |
-| `asset.identify.evidence` | — | — | — |
+| `asset.identify.evidence` | 機器識別依據 | SMBIOS Type 1／2／3 | Derived |
 | `asset.uuid` | 系統 UUID | SMBIOS Type 1 位移 0x04–0x13 | Reported |
 
 ### 6.3.77 域 `cm` — 核心與記憶體拓樸（4 把）
@@ -3876,10 +3876,10 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `cm.affinity.summary` | — | — | — |
-| `cm.cache.share.summary` | — | — | — |
-| `cm.numa.proc.summary` | — | — | — |
-| `cm.whea.timeline` | — | — | — |
+| `cm.affinity.summary` | 親和性亂象審計 | Process.ProcessorAffinity 取樣（唯讀） | Reported |
+| `cm.cache.share.summary` | 快取共享拓撲 | CPUID leaf 0x04（Intel SDM／AMD APM 快取幾何） | Derived |
+| `cm.numa.proc.summary` | 行程 NUMA 分布 | — | Reported |
+| `cm.whea.timeline` | WHEA 錯誤時間線 | WHEA-Logger（只讀計數） | Reported |
 
 ### 6.3.78 域 `coverage` — 覆蓋率（4 把）
 
@@ -3887,10 +3887,10 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `coverage.denominator` | — | — | — |
-| `coverage.exempt` | — | — | — |
-| `coverage.gap` | — | — | — |
-| `coverage.threeway.diff` | — | — | — |
+| `coverage.denominator` | 覆蓋分母 | 鍵目錄政策 | Derived |
+| `coverage.exempt` | 豁免理由 | 鍵目錄政策 | Derived |
+| `coverage.gap` | 覆蓋缺口 | 掃描骨架／降級政策 | Derived |
+| `coverage.threeway.diff` | 三方對帳 | 寫入閘門／審計鏈 | Derived |
 
 ### 6.3.79 域 `ec` — 嵌入式控制器（4 把）
 
@@ -3898,10 +3898,10 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `ec.battery.state` | — | — | — |
-| `ec.boundary` | — | — | — |
-| `ec.present` | — | — | — |
-| `ec.thermal.readable` | — | — | — |
+| `ec.battery.state` | 電池充放狀態 | WMI Win32_Battery（既有的 BatteryService） | — |
+| `ec.boundary` | EC 存取界線 | ACPI 表簽章清單（既有的 acpi.table.* 逐表列舉） | Unknown |
+| `ec.present` | 嵌入式控制器（EC） | ACPI 表簽章清單（既有的 acpi.table.* 逐表列舉） | — |
+| `ec.thermal.readable` | 熱管理可讀項盤點 | SMBIOS Type 28／29（韌體自述）＋WMI root\\WMI MSAcpi_ThermalZoneTemperature（OS 端 ACPI 熱區） | — |
 
 ### 6.3.80 域 `ent` — 企業儲存（4 把）
 
@@ -3932,7 +3932,7 @@
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
 | `nic.count` | 網路介面統計 | WMI root\StandardCimv2（MSFT_NetAdapterStatistics） | Unknown |
-| `nic.dirty_count` | — | — | — |
+| `nic.dirty_count` | 有錯誤／丟棄的介面 | WMI MSFT_NetAdapterStatistics | Derived |
 | `nic.gap` | 網卡鏈路落差 | WMI root\StandardCimv2 | Unknown |
 | `nic.mac.0` | MAC 廠商對照 | WMI Win32_NetworkAdapter＋OUI 知識庫 | Unknown |
 
@@ -3942,10 +3942,10 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `pdev.fw.inventory` | — | — | — |
-| `pdev.fw.surface` | — | — | — |
-| `pdev.fw.updatable` | — | — | — |
-| `pdev.fw.version` | — | — | — |
+| `pdev.fw.inventory` | 全裝置韌體版本盤點 | WMI Win32_DiskDrive（既有的 PeripheralFirmwareFactsService 列舉，不重查）；Win32_PnPEntity 僅計數 | — |
+| `pdev.fw.surface` | 周邊韌體攻擊面彙整 | NVMe：Firmware Slot Information（log page 0x03）＋ Identify Controller OACS bit2； | — |
+| `pdev.fw.updatable` | 周邊韌體可更新性宣告 | NVMe：Firmware Slot Information（log page 0x03）＋ Identify Controller OACS bit2； | — |
+| `pdev.fw.version` | 周邊韌體版本盤點 | WMI Win32_DiskDrive（FirmwareRevision，唯讀）；Win32_NetworkAdapter 僅用來數實體網卡 | — |
 
 ### 6.3.84 域 `viz`（本版沒有成文的域說明）（4 把）
 
@@ -3964,10 +3964,10 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `write.allowlist` | — | — | — |
-| `write.count` | — | — | — |
-| `write.ledger` | — | — | — |
-| `write.rollback` | — | — | — |
+| `write.allowlist` | 寫入白名單 | 寫入閘門／審計鏈 | Derived |
+| `write.count` | 寫入計數 | 寫入閘門／審計鏈 | Derived |
+| `write.ledger` | 寫入記帳 | 寫入閘門／審計鏈 | Derived |
+| `write.rollback` | 撤銷與回復 | 寫入閘門／審計鏈 | Derived |
 
 ### 6.3.86 域 `au` — 音訊（3 把）
 
@@ -3975,9 +3975,9 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `au.apo.summary` | — | — | — |
-| `au.drift` | — | — | — |
-| `au.privacy.summary` | — | — | — |
+| `au.apo.summary` | APO 處理鏈 | MMDevices APO 登錄（唯讀） | Reported |
+| `au.drift` | 時鐘漂移量測 | Stopwatch＋音訊裝置時間戳（唯讀） | Measured |
+| `au.privacy.summary` | 隱私開關事實 | CapabilityAccessManager ConsentStore（唯讀） | Reported |
 
 ### 6.3.87 域 `backend` — 後端（3 把）
 
@@ -4015,9 +4015,9 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `dbg.kernel` | 核心除錯 | — | Reported |
-| `dbg.start_options` | 開機參數（原樣） | — | Reported |
-| `dbg.testsigning` | 測試簽章 | — | Reported |
+| `dbg.kernel` | 核心除錯 | 登錄檔 Control\\SystemStartOptions（開機參數原樣） | Reported |
+| `dbg.start_options` | 開機參數（原樣） | 登錄檔 Control\\SystemStartOptions（開機參數原樣） | Reported |
+| `dbg.testsigning` | 測試簽章 | 登錄檔 Control\\SystemStartOptions（開機參數原樣） | Reported |
 
 ### 6.3.91 域 `esp` — EFI 系統分割區（3 把）
 
@@ -4025,9 +4025,9 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `esp.dbx` | ESP 檔案 vs dbx 撤銷清單 | — | Measured |
-| `esp.files` | ESP 上的 .efi 檔案 | — | Measured |
-| `esp.partitions.count` | — | — | — |
+| `esp.dbx` | ESP 檔案 vs dbx 撤銷清單 | ESP 檔案層掃描（唯讀）÷ dbx 交叉引用 | Measured |
+| `esp.files` | ESP 上的 .efi 檔案 | ESP 檔案層掃描（唯讀）÷ dbx 交叉引用 | Measured |
+| `esp.partitions.count` | EFI 系統分割區（ESP） | ESP 檔案層掃描（唯讀）÷ dbx 交叉引用 | — |
 
 ### 6.3.92 域 `exp`（本版沒有成文的域說明）（3 把）
 
@@ -4045,9 +4045,9 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `export.mask` | — | — | — |
-| `export.provenance` | — | — | — |
-| `export.release` | — | — | — |
+| `export.mask` | 匯出遮蔽 | 敏感度政策 | Derived |
+| `export.provenance` | 匯出出處鏈 | 匯出出處 | Derived |
+| `export.release` | L2 解除紀錄 | 敏感度政策 | Derived |
 
 ### 6.3.94 域 `numa` — NUMA（3 把）
 
@@ -4075,9 +4075,9 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `sec.logon.hw.correlate` | — | — | — |
-| `sec.vbs.required` | — | — | — |
-| `sec.vbs.state` | — | — | — |
+| `sec.logon.hw.correlate` | 登入×裝置插入時間交集 | Security 4624×Kernel-PnP 400/410（只讀時間戳） | — |
+| `sec.vbs.required` | VBS 必要屬性 | WMI Win32_DeviceGuard（root\\Microsoft\\Windows\\DeviceGuard，零特權唯讀）；值表＝Microsoft Learn 對準版 | — |
+| `sec.vbs.state` | VBS／HVCI 狀態 | WMI Win32_DeviceGuard（root\\Microsoft\\Windows\\DeviceGuard，零特權唯讀）；值表＝Microsoft Learn 對準版 | — |
 
 ### 6.3.97 域 `time` — 計時器（3 把）
 
@@ -4085,9 +4085,9 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `time.drift.ppm` | — | — | — |
-| `time.hpet` | HPET 計時器 | — | Reported |
-| `time.pm_timer` | ACPI PM timer 區塊 | — | Reported |
+| `time.drift.ppm` | — | ACPI 表列（HPET/FADT）＋QPC 行為量測 | — |
+| `time.hpet` | HPET 計時器 | ACPI 表列（HPET/FADT）＋QPC 行為量測 | Reported |
+| `time.pm_timer` | ACPI PM timer 區塊 | ACPI 表列（HPET/FADT）＋QPC 行為量測 | Reported |
 
 ### 6.3.98 域 `ups` — UPS（3 把）
 
@@ -4095,9 +4095,9 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `ups.battery.percent` | — | — | — |
-| `ups.runtime_minutes` | — | — | — |
-| `ups.status` | — | — | — |
+| `ups.battery.percent` | UPS 電量 | WMI Win32_Battery（HID Battery Class） | — |
+| `ups.runtime_minutes` | UPS 預估續航 | WMI Win32_Battery（HID Battery Class） | — |
+| `ups.status` | UPS 狀態 | WMI Win32_Battery（HID Battery Class） | — |
 
 ### 6.3.99 域 `usb` — USB 匯流排（3 把）
 
@@ -4106,8 +4106,8 @@
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
 | `usb.busiest_controller` | 掛載最多的控制器 | WMI Win32_USBControllerDevice（USB 拓撲相依對） | Derived |
-| `usb.controllers` | — | — | — |
-| `usb.devices` | — | — | — |
+| `usb.controllers` | USB 控制器 | WMI Win32_USBControllerDevice（USB 拓撲相依對） | Reported |
+| `usb.devices` | USB 裝置 | WMI Win32_USBControllerDevice（USB 拓撲相依對） | Reported |
 
 ### 6.3.100 域 `audio`（本版沒有成文的域說明）（2 把）
 
@@ -4117,7 +4117,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `audio.endpoints` | — | — | — |
+| `audio.endpoints` | 音訊端點 | Windows MMDevice API | Unknown |
 | `audio.latency` | 音訊端點緩衝區 | Windows Core Audio（IAudioClient） | Unknown |
 
 ### 6.3.101 域 `build`（本版沒有成文的域說明）（2 把）
@@ -4126,8 +4126,8 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `build.reproducible` | — | — | — |
-| `build.singlefile` | — | — | — |
+| `build.reproducible` | 建置可重現 | 發佈政策 | Measured |
+| `build.singlefile` | 單檔發佈 | 發佈政策 | Measured |
 
 ### 6.3.102 域 `byovd`（本版沒有成文的域說明）（2 把）
 
@@ -4137,7 +4137,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `byovd.hits` | — | — | — |
+| `byovd.hits` | 封鎖清單命中 | 載入中核心模組 vs 微軟建議封鎖規則 | Derived |
 | `byovd.rules` | 微軟建議驅動封鎖清單 | 微軟建議的驅動程式封鎖規則 XML（使用者提供） | Unknown |
 
 ### 6.3.103 域 `cert`（本版沒有成文的域說明）（2 把）
@@ -4146,8 +4146,8 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `cert.foreign_roots` | — | — | — |
-| `cert.plan` | — | — | — |
+| `cert.foreign_roots` | 非微軟本機信任根 | X509Store（Root／LocalMachine） | Derived |
+| `cert.plan` | 認證計畫 | 發佈政策 | Reported |
 
 ### 6.3.104 域 `display`（本版沒有成文的域說明）（2 把）
 
@@ -4168,8 +4168,8 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `drvinsp.drivers.count` | — | — | — |
-| `drvinsp.truncated` | 驅動靜態檢視截斷 | — | Unknown |
+| `drvinsp.drivers.count` | 驅動靜態檢視總數 | 驅動檔案靜態解析（唯讀）÷ PE/COFF | — |
+| `drvinsp.truncated` | 驅動靜態檢視截斷 | 驅動檔案靜態解析（唯讀）÷ PE/COFF | Unknown |
 
 ### 6.3.106 域 `egress`（本版沒有成文的域說明）（2 把）
 
@@ -4177,8 +4177,8 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `egress.allowlist` | — | — | — |
-| `egress.trigger` | — | — | — |
+| `egress.allowlist` | 出網許可清單 | 出網政策 | Reported |
+| `egress.trigger` | 出網觸發 | 出網政策 | Derived |
 
 ### 6.3.107 域 `etl`（本版沒有成文的域說明）（2 把）
 
@@ -4188,8 +4188,8 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `etl.readback` | .etl 內容讀回 | — | Measured |
-| `etl.traces.count` | — | — | — |
+| `etl.readback` | .etl 內容讀回 | TraceEvent 檔案模式讀回（唯讀） | Measured |
+| `etl.traces.count` | 已落地的 ETW 軌跡 | TraceEvent 檔案模式讀回（唯讀） | — |
 
 ### 6.3.108 域 `key`（本版沒有成文的域說明）（2 把）
 
@@ -4197,8 +4197,8 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `key.count` | — | — | — |
-| `key.evolution` | — | — | — |
+| `key.count` | 鍵目錄全集的鍵數 | 鍵目錄政策 | Derived |
+| `key.evolution` | 鍵的演進 | 掃描骨架／降級政策 | Derived |
 
 ### 6.3.109 域 `knowledge`（本版沒有成文的域說明）（2 把）
 
@@ -4206,8 +4206,8 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `knowledge.pack.status` | — | — | — |
-| `knowledge.pack.tables` | — | — | — |
+| `knowledge.pack.status` | 知識包載入 | 內建表／knowledge-pack.json（離線） | — |
+| `knowledge.pack.tables` | 知識包內容 | 內建表／knowledge-pack.json（離線） | Measured |
 
 ### 6.3.110 域 `mchbar`（本版沒有成文的域說明）（2 把）
 
@@ -4215,7 +4215,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `mchbar.base` | — | — | — |
+| `mchbar.base` | MCHBAR 基底 | PCI 0:0.0+0x48 | Measured |
 | `mchbar.registers` | — | — | — |
 
 ### 6.3.111 域 `mon`（本版沒有成文的域說明）（2 把）
@@ -4226,7 +4226,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `mon.count` | — | — | — |
+| `mon.count` | 偵測到的顯示器 | WMI root\\wmi WmiMonitorConnectionParams | Reported |
 | `mon.dp` | DisplayPort 連接的顯示器 | WMI root\wmi WmiMonitorConnectionParams | Derived |
 
 ### 6.3.112 域 `pcieaer`（本版沒有成文的域說明）（2 把）
@@ -4246,8 +4246,8 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `role.surface` | — | — | — |
-| `role.surface.evidence` | — | — | — |
+| `role.surface` | 已安裝角色 | — | — |
+| `role.surface.evidence` | 已安裝角色依據 | WMI Win32_OptionalFeature | Derived |
 
 ### 6.3.114 域 `setuptl`（本版沒有成文的域說明）（2 把）
 
@@ -4257,8 +4257,8 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `setuptl.recent` | 裝置安裝最近區段 | — | Measured |
-| `setuptl.sections.count` | — | — | — |
+| `setuptl.recent` | 裝置安裝最近區段 | setupapi.dev.log（唯讀）÷ 區段標記解析 | Measured |
+| `setuptl.sections.count` | 裝置安裝記錄（setupapi.dev.log） | setupapi.dev.log（唯讀）÷ 區段標記解析 | — |
 
 ### 6.3.115 域 `state`（本版沒有成文的域說明）（2 把）
 
@@ -4266,8 +4266,8 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `state.count` | — | — | — |
-| `state.lattice` | — | — | — |
+| `state.count` | 狀態分布 | 狀態覆蓋申報 | Derived |
+| `state.lattice` | 狀態格與傳播規則 | 狀態格 | Derived |
 
 ### 6.3.116 域 `storage`（本版沒有成文的域說明）（2 把）
 
@@ -4286,7 +4286,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `ata.smart.attr.lookup` | — | — | — |
+| `ata.smart.attr.lookup` | SMART 廠商屬性對照 | SMART 屬性知識表（離線，六家） | — |
 
 ### 6.3.118 域 `cam`（本版沒有成文的域說明）（1 把）
 
@@ -4314,7 +4314,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `contrib.guide` | — | — | — |
+| `contrib.guide` | 貢獻者指南 | 發佈政策 | Reported |
 
 ### 6.3.121 域 `cxl`（本版沒有成文的域說明）（1 把）
 
@@ -4324,7 +4324,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `cxl.cfmws.count` | CXL 固定記憶體窗口 | — | Unknown |
+| `cxl.cfmws.count` | CXL 固定記憶體窗口 | ACPI 表列（CEDT）＋CXL 規格解碼 | Unknown |
 
 ### 6.3.122 域 `data`（本版沒有成文的域說明）（1 把）
 
@@ -4332,7 +4332,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `data.egress.report` | — | — | — |
+| `data.egress.report` | 資料主權 | 資料主權 | Derived |
 
 ### 6.3.123 域 `defender`（本版沒有成文的域說明）（1 把）
 
@@ -4350,7 +4350,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `degrade.mode` | — | — | — |
+| `degrade.mode` | 降級模式 | 掃描骨架／降級政策 | Derived |
 
 ### 6.3.125 域 `diag`（本版沒有成文的域說明）（1 把）
 
@@ -4358,7 +4358,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `diag.count` | — | — | — |
+| `diag.count` | 診斷紀錄 | 掃描骨架／降級政策 | Reported |
 
 ### 6.3.126 域 `doc`（本版沒有成文的域說明）（1 把）
 
@@ -4366,7 +4366,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `doc.reconcile` | — | — | — |
+| `doc.reconcile` | 文件數字對帳 | 發佈政策 | Derived |
 
 ### 6.3.127 域 `dyn`（本版沒有成文的域說明）（1 把）
 
@@ -4374,7 +4374,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `dyn.family` | — | — | — |
+| `dyn.family` | 動態家族 | 鍵目錄政策 | Derived |
 
 ### 6.3.128 域 `evt`（本版沒有成文的域說明）（1 把）
 
@@ -4392,7 +4392,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `file.input.zero_egress` | — | — | — |
+| `file.input.zero_egress` | 供檔零出網 | 供檔邊界 | Reported |
 
 ### 6.3.130 域 `guard`（本版沒有成文的域說明）（1 把）
 
@@ -4400,7 +4400,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `guard.inventory` | — | — | — |
+| `guard.inventory` | 守門清冊 | 寫入閘門／審計鏈 | Derived |
 
 ### 6.3.131 域 `hpa`（本版沒有成文的域說明）（1 把）
 
@@ -4418,7 +4418,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `license.notices` | — | — | — |
+| `license.notices` | 授權與第三方聲明 | 發佈政策 | Reported |
 
 ### 6.3.133 域 `limits`（本版沒有成文的域說明）（1 把）
 
@@ -4426,7 +4426,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `limits.public` | — | — | — |
+| `limits.public` | 公開限制 | 發佈政策 | Reported |
 
 ### 6.3.134 域 `monitor`（本版沒有成文的域說明）（1 把）
 
@@ -4452,7 +4452,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `off.mount.kind` | — | — | — |
+| `off.mount.kind` | 離線來源掛載 | 掛載接縫 | Reported |
 
 ### 6.3.137 域 `oob`（本版沒有成文的域說明）（1 把）
 
@@ -4492,7 +4492,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `release.verify` | — | — | — |
+| `release.verify` | 發佈驗證 | 發佈政策 | Measured |
 
 ### 6.3.142 域 `report`（本版沒有成文的域說明）（1 把）
 
@@ -4500,7 +4500,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `report.class` | — | — | — |
+| `report.class` | 報告分級 | 資料主權 | Derived |
 
 ### 6.3.143 域 `secure`（本版沒有成文的域說明）（1 把）
 
@@ -4508,7 +4508,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `secure.dbx` | — | — | — |
+| `secure.dbx` | 撤銷清單版本 | 內建知識表（離線） | Reported |
 
 ### 6.3.144 域 `smart`（本版沒有成文的域說明）（1 把）
 
@@ -4536,7 +4536,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `test.duration` | — | — | — |
+| `test.duration` | 守門耗時 | 守門預算 | Measured |
 
 ### 6.3.147 域 `tests`（本版沒有成文的域說明）（1 把）
 
@@ -4544,7 +4544,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `tests.baseline` | — | — | — |
+| `tests.baseline` | 測試基線 | 發佈政策 | Measured |
 
 ### 6.3.148 域 `ufv`（本版沒有成文的域說明）（1 把）
 
@@ -4552,7 +4552,7 @@
 
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
-| `ufv.bios.count` | — | — | — |
+| `ufv.bios.count` | UEFI 韌體磁碟區（FV）總數 | 記憶體映射快閃 BIOS 區（唯讀）÷ UEFI PI FV/FFS | — |
 
 ### 6.3.149 域 `usbstor`（本版沒有成文的域說明）（1 把）
 
@@ -8403,11 +8403,11 @@
 | 項目 | 數量 | 數法 |
 |---|---:|---|
 | 測試檔 | **575** | `find Tests -name '*.cs' \| wc -l` |
-| `[Fact]` 方法 | **5,901** | 反射計算測試組件裡的 `[Fact]` 方法（`DeclaredOnly`） |
+| `[Fact]` 方法 | **5,904** | 反射計算測試組件裡的 `[Fact]` 方法（`DeclaredOnly`） |
 | `[Theory]` 方法 | **251** | 同上，`[Theory]` 分開數（它繼承 `[Fact]`，不能混） |
-| 執行期測試案例 | **7,146** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數，也是 README 測試徽章的單一來源） |
+| 執行期測試案例 | **7,149** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數，也是 README 測試徽章的單一來源） |
 
-**兩個比例值得讀。** 一、**`[Theory]` 只占 251 個**：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、**執行期案例數（7,146）大於方法數（6,152）**：差額來自被展開的 `[Theory]` 資料列——這正是基線守門的形狀（下一節）。
+**兩個比例值得讀。** 一、**`[Theory]` 只占 251 個**：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、**執行期案例數（7,149）大於方法數（6,155）**：差額來自被展開的 `[Theory]` 資料列——這正是基線守門的形狀（下一節）。
 
 ### 10.2 基線守門：為什麼「測試數」是一個被釘住的數字
 
@@ -8492,11 +8492,11 @@
 
 這一部把 `Nav/ChangelogCatalog.cs` 的每一筆版本紀錄完整攤開——**這是程式「關於」頁顯示的同一份資料**，也是本專案唯一對「每一版做了什麼」的正式紀錄。寫作規則是：**只寫真的做了的事**；進入版本控制（2026-08-27、v1.2.0）之前的最早階段沒有留下逐項紀錄，就只寫到階段層級並標明日期未留下紀錄，**不為了排面好看補一份想像出來的清單**。
 
-**登記筆數**：105 筆（版號與階段名，新到舊）。
+**登記筆數**：106 筆（版號與階段名，新到舊）。
 
 ### 11.1 這份沿革的四個讀法
 
-**第一，看節奏。** 這份紀錄最新的一筆是 v2.99（2026-10-27），而 v1.2.0 是進入版本控制的起點（2026-08-27）——**兩個月內走了近百個版本**。這代表這個專案的迭代單位很小（一次一個收口、一把鍵、一條守門），而不是「大版本才動一次」。
+**第一，看節奏。** 這份紀錄最新的一筆是 v3.00（2026-10-26），而 v1.2.0 是進入版本控制的起點（2026-08-27）——**兩個月內走了近百個版本**。這代表這個專案的迭代單位很小（一次一個收口、一把鍵、一條守門），而不是「大版本才動一次」。
 
 **第二，看標題的動詞。** 絕大多數標題不是「新增功能」而是「收口」「補上生產端」「接真值」「加守門」——**這棵樹近期的多數工作是把已存在的東西接起來並守住**，而不是往外擴張功能面。
 
@@ -8506,6 +8506,7 @@
 
 ### 11.2 逐版紀錄（新到舊）
 
+- **v3.00**（2026-10-26）：誰守著那些「現在式」：README 數字改成機器複算、內建知識表有了清冊、事實形狀變成守門（第 278–288 輪）（本版 12 項）
 - **v2.99**（2026-10-27）：EDID CTA-861 擴充塊落地、VIC 知識包，與兩個「安靜地講錯話」的缺陷（本版 8 項）
 - **v2.91**（2026-10-26）：把兩把「鍵已登記、值待接入」的收口：SMART 查詢統計接真值、審計鏈互驗補生產端（第 274 輪）（本版 6 項）
 - **v2.90**（2026-10-25）：第二圈：自負載檢測進深測套件、四個可視化控制項與儀表板頁、匯出與報告擴充（第 272–273 輪）（本版 6 項）
@@ -8615,6 +8616,23 @@
 ### 11.3 逐版逐項
 
 以下是每一筆紀錄的翻開內容。**沒有項目的版本（早期階段）只看得到階段層級的描述，這是刻意的留白。**
+
+#### v3.00（2026-10-26）
+
+**誰守著那些「現在式」：README 數字改成機器複算、內建知識表有了清冊、事實形狀變成守門（第 278–288 輪）**
+
+- 第 278 輪：README 那兩張「可複算」的表真的由機器複算——新增 ReadmeStatsTests，把十二個現在式數字（鍵數、域數、家族數、測試方法與案例數、檔案數等）釘在這棵樹上。先前這些數字只靠「改的時候記得一起改」，而人會忘；忘的時候文件仍然讀起來很確定。
+- 第 279 輪：README 的逐域展開（149 域、1,108 鍵、48 個動態家族）補上結構守門：每一域的表列數要等於目錄宣告、鍵要出現在它宣告的域、家族條數不得漂移；順手修掉三處停在舊版的敘述。
+- 第 280 輪：Windows 事件 ID 十九把逐列鍵與待核清單（U10-EV-0001～0020），核心是把四種「沒有」分開陳述：事件日誌服務不可用、查詢失敗、查詢成功但區間內沒有事件、那個事件 ID 根本不存在。四者都印成 0 的話，讀者只會看到「一切正常」。
+- 第 281 輪：內嵌 pci.ids 完整離線對照表（2,519 家廠商、21,619 個裝置、快照 2026.10.01，取 BSD-3-Clause 分支）。兩層擔保寫進值裡：社群登錄檔查得到名字，不等於本程式驗證過那個名字。
+- 第 282 輪：README 逐域展開的產生器入版控（Tools/gen-readme-domains.py，--check 一有漂移就非零退出），並納入 CI 的十類守門。文件從此不是手寫同步的產物。
+- 第 283 輪：內建知識表有了清冊（BuiltinKnowledgeInventory）——那句手寫的「內建表有哪些東西」改成算出來的，保證等級與快照日期變成資料而不是形容詞。過程中修掉一個靜態初始化順序的地雷：日期屬性宣告在集合之後，集合建構時讀到的是 default，日期悄悄變成 0001-01-01。
+- 第 284 輪：PCI 名稱查詢把「手工表」與「登錄檔」分開數——同一個名字不再有兩條查詢路徑輪流回答；出處段落用共用常數產生，讓寫入端與回收統計的讀取端不靠相鄰中文猜。
+- 第 285 輪：修掉一個「讀不到被算成命中」的真缺陷——net.oui 的統計改看結構化欄位。WMI 失敗時值是空的，舊碼用字串比對分類，空字串落進「其餘算命中」，於是「一次查詢全部命中」和讀取錯誤同時印在畫面上。修之前先用探針重現，不是看到可疑就改。
+- 第 286 輪：知識表收錄率補齊三張先前沒列的表（SMART 屬性、BugCheck 停止代碼、BugCheck 符號名），並修掉「守門與申報一起多算 1」——計數器把 switch 運算式主體的箭頭也當成 case，宣告值與錯誤的實測值互相印證，兩邊一起錯。真相是 19/19/14，不是 20/20/15。
+- 第 287 輪：事實集的四個基本形狀變成守門——非 Present 必須說得出理由、鍵名與取樣時刻不得留空、數值不得是 NaN 或無限、豁免表的每一條都要對得上目錄且理由不得是佔位字串。從此「沒有報錯的不知道」不再可能。
+- 第 288 輪：README 第六點三節的逐鍵後設資料從 197 筆手寫來源擴到 970 把鍵（名稱 962、出處 807、擔保 786），做法是把建構子引數真的解析一遍，而不是用逗號切字串。同時修掉一個會把表格撐破的產生器缺陷（跨行的字串串接被當成單一引號字面量），並補上「每一列都要是單行」的守門——舊守門用的樣式能跨換行，看不見這種破法。
+- 帳面：測試 7,040 到 7,149 綠、事實鍵目錄 1,108 到 1,131 把、動態家族 48 到 49 個、覆蓋申報已檢視基線 390 到 408。這一版沒有新增任何硬體通路：新增的全是「把已經存在的東西說清楚並守住」。
 
 #### v2.99（2026-10-27）
 
@@ -12368,7 +12386,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 
 **版本與發佈（1–6）**
 
-1. 本版是 v2.99 —— 看徽章、`XinSpect.csproj` 的 `<Version>`、關於頁三處一致。不一致＝有一處落後（四處同步是硬規則）。
+1. 本版是 v3.00 —— 看徽章、`XinSpect.csproj` 的 `<Version>`、關於頁三處一致。不一致＝有一處落後（四處同步是硬規則）。
 2. 測試 7,040 綠 —— 跑守門五組不依賴硬體；全套請在真機跑。紅燈先分辨是真機依賴還是回歸。
 3. 下載表列的位元組數取自本版真正釋出的那顆 `XinSpect.exe` —— 抓下來自己數 bytes。不符請先確認是不是抓到別的版號的檔案。
 4. 主程式未簽章 —— 內容右鍵「數位簽章」分頁應為空。這正是 O-03。

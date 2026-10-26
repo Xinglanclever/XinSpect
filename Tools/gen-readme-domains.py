@@ -21,6 +21,13 @@ README 的第 6.3 節（逐域鍵表）、第 6.5 節（逐鍵出處）、附錄
 只有目錄裡新出現、文件裡還沒有的鍵才由原始碼抽後設資料補上——
 抽不到就留「—」，那是如實的「這個抽取方式抓不到」，不是遺漏。
 
+**第 288 輪補的兩件事**：①建構子的參數逐一解析（字串逸出與括號深度都照實際走），
+不再用「不能含逗號」的正規表示式硬切——`$"{ms / 1000.0:F1} 秒（{ms} ms）"` 這種值
+會讓舊寫法把「名字明明寫死」的呼叫判成抽不到；②第一參數是常數（
+`new HardwareFact(TablesKey, …)`）也認得，同檔案的 `const string` 會被解析。
+效果：§6.3「名稱／來源／可信度」全填的列從 112 升到 848（共 1,131 列）。
+已經存在的非「—」格子**一律不覆蓋**；「—」視為「還沒抽到」而不是「確定是空」。
+
 用法前提：在倉庫根執行（或任意位置，腳本會自己找根）。
 """
 
@@ -107,23 +114,196 @@ def source_corpus(root):
     return out
 
 
-def extract_meta(corpus, key):
-    """回 (名稱, 來源, 可信度)。抽不到就回 ('—','—','—')。"""
-    pat = re.compile(
-        r'new\s+HardwareFact\(\s*"' + re.escape(key) + r'"\s*,\s*[^,]+,\s*"([^"]*)"\s*,'
-        r'\s*[^,]+?,\s*[^,]+?,\s*"([^"]*)"\s*,\s*FactTrustLevel\.(\w+)')
+def const_values(corpus):
+    """常數名 → 字串值（`public const string XxxKey = "kp.foo.bar";`）。
+
+    <b>為什麼需要這一層：</b>大部分服務不是把鍵字面塞進建構子，而是先宣告常數
+    （`public const string TablesKey = "kp.builtin.tables";`）再 `new HardwareFact(TablesKey, …)`。
+    只認字面的抽取法因此對 1,131 把鍵裡的 839 把什麼都抽不到——§6.3 的
+    「名稱／來源／可信度」欄於是幾乎全是「—」。§6.3 該欄的定義是「原始碼字面」，
+    這些值確實是原始碼裡的固定字串，只是隔了一層常數。
+    """
+    out = {}
+    const = re.compile(r'const\s+string\s+(\w+)\s*=\s*"([^"]+)"')
     for _, text in corpus:
-        m = pat.search(text)
-        if m:
-            return (m.group(1), m.group(2), m.group(3))
-    pat2 = re.compile(
-        r'new\(\s*"' + re.escape(key) + r'"\s*,\s*[^,]+,\s*"([^"]*)"\s*,'
-        r'\s*[^,]+?,\s*[^,]+?,\s*"([^"]*)"\s*,\s*FactTrustLevel\.(\w+)')
+        for m in const.finditer(text):
+            out.setdefault(m.group(1), m.group(2))
+    return out
+
+
+def _split_args(text, start):
+    """從 `(` 之後開始切參數；回 (參數清單, 收尾 `)` 的位置)。
+
+    <b>為什麼不能用正規表示式硬切：</b>參數裡有逗號。`$"{ms / 1000.0:F1} 秒（{ms} ms）"`
+    這種插值字串、`new X(a, b)` 這種巢狀呼叫都會讓 `[^,]+` 提前斷掉，
+    於是「名字明明寫死在第三個參數」的呼叫被判定成抽不到（第 288 輪一次抓到二十幾把）。
+    這裡照字串逸出與括號深度實際走一遍。
+    """
+    args, cur = [], []
+    depth, i, in_str, esc = 0, start, False, False
+    while i < len(text):
+        ch = text[i]
+        if in_str:
+            cur.append(ch)
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+        elif ch == '"':
+            in_str = True
+            cur.append(ch)
+        elif ch in "([{":
+            depth += 1
+            cur.append(ch)
+        elif ch in ")]}":
+            if depth == 0:
+                if ch == ")":
+                    args.append("".join(cur).strip())
+                    return args, i
+                return [], -1
+            depth -= 1
+            cur.append(ch)
+        elif ch == "," and depth == 0:
+            args.append("".join(cur).strip())
+            cur = []
+        else:
+            cur.append(ch)
+        i += 1
+    return [], -1
+
+
+def _one_literal(arg, consts):
+    """單一段落 → 字串值：純字面或同檔常數；其餘回 None。"""
+    if len(arg) >= 2 and arg[0] == '"' and arg[-1] == '"':
+        body = arg[1:-1]
+        if "{" in body or "$" in body or "\n" in body or "\r" in body:
+            return None
+        return body.replace('\\"', '"')
+    if re.fullmatch(r"[A-Za-z_]\w*", arg) and arg in consts:
+        value = consts[arg]
+        return None if ("\n" in value or "\r" in value) else value
+    return None
+
+
+def _arg_literal(arg, consts):
+    """參數 → 字串值。純字面、同檔常數，或**兩者的 `+` 串接**；其餘回 None。
+
+    <b>不猜：</b>`$"…"`（值會變）、`x is not null ? A : B`（兩個答案）都必須回 None——
+    留「—」比填一個只對一半的值誠實。
+
+    <b>為什麼要處理串接：</b>長來源字串在原始碼裡常被折成兩行
+    （`"…@0x09、" + "段群組@0x0B…"`）。舊寫法把整段當成「一個帶引號的字串」收下，
+    於是**把換行與 `+` 原封不動寫進表格儲存格**，那個 `sb.onboard` 列直接破了表
+    （第 288 輪一次抓到；表格破了但守門因為 `[^|]` 可以跨行而照樣綠）。
+    """
+    parts = _split_top(arg, "+")
+    if len(parts) > 1:
+        values = [_one_literal(part, consts) for part in parts]
+        return None if any(v is None for v in values) else "".join(values)
+    return _one_literal(arg, consts)
+
+
+def _split_top(text, sep):
+    """在括號與字串之外依 `sep` 切段（`_split_args` 的同一個走法，可指定分隔字元）。"""
+    parts, cur = [], []
+    depth, in_str, esc = 0, False, False
+    for ch in text:
+        if in_str:
+            cur.append(ch)
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+        elif ch == '"':
+            in_str = True
+            cur.append(ch)
+        elif ch in "([{":
+            depth += 1
+            cur.append(ch)
+        elif ch in ")]}":
+            depth -= 1
+            cur.append(ch)
+        elif ch == sep and depth == 0:
+            parts.append("".join(cur).strip())
+            cur = []
+        else:
+            cur.append(ch)
+    parts.append("".join(cur).strip())
+    return [p for p in parts if p != ""]
+
+
+def ctor_meta(corpus):
+    """鍵 → (名稱, 來源, 可信度)：逐檔解析建構子的參數。
+
+    參數序：`new HardwareFact(Key, Category, Name, Value, Unit, Source, Trust, …)`。
+    名稱取第 3 個、來源取第 6 個、可信度取第 7 個；任何一個不是「原始碼字面或同檔常數」
+    就留 None（呼叫端寫成「—」）。
+    """
+    out = {}
+    sites = {}
+    # 兩種寫法分開處理，因為**可信度不同**：
+    #   ①`new HardwareFact(…)`——型別寫出來了，參數序就是建構子的參數序，可以接受部分抽取；
+    #   ②`new(…)`——只是清單初始化式的一項，**型別不外顯**。同一個檔案裡還有別的 record
+    #     （例如 `os.ev.*` 那張表用的是私有 record，欄位完全不同），照樣會被這個模式抓到，
+    #     於是把「該 record 的第 3 欄」當成名稱填進文件。第 288 輪真的發生過一列
+    #     `os.ev.whea.internal` 的名稱變成「System」。
+    #     所以第二種必須靠「第 7 個參數是 FactTrustLevel.X」認出它真的是 HardwareFact。
+    typed = re.compile(r'new\s+HardwareFact\s*\(')
+    anon = re.compile(r'(?<![\w.])new\s*\(')
     for _, text in corpus:
-        m = pat2.search(text)
-        if m:
-            return (m.group(1), m.group(2), m.group(3))
-    return ("—", "—", "—")
+        consts = {}
+        for m in re.finditer(r'const\s+string\s+(\w+)\s*=\s*"([^"]*)"', text):
+            consts.setdefault(m.group(1), m.group(2))
+
+        def take(match, require_trust):
+            args, _ = _split_args(text, match.end())
+            if len(args) < 7:
+                return None
+            key = _arg_literal(args[0], consts)
+            if not key or not re.fullmatch(r"[a-z][a-z0-9_.]+", key):
+                return None
+            trust = re.fullmatch(r"FactTrustLevel\.(\w+)", args[6])
+            if require_trust and not trust:
+                return None          # 位置對不上＝不是 HardwareFact 的參數序，整筆跳過
+            return key, (_arg_literal(args[2], consts),
+                         _arg_literal(args[5], consts),
+                         trust.group(1) if trust else None)
+
+        for rx, require_trust in ((typed, False), (anon, True)):
+            for m in rx.finditer(text):
+                got = take(m, require_trust)
+                if got is None:
+                    continue
+                key, value = got
+                if any(v is not None for v in value):
+                    sites.setdefault(key, []).append(value)
+
+    # 同一把鍵常常有兩個建構點（「有值」那條與「讀不到」那條），可信度可以不一樣——
+    # `nic.mac.0` 就有 Reported 與 Unknown 兩種。**兩個答案都對，但一欄只能放一個**：
+    # 這時候留「—」，因為任選一個都是在替另一條路徑說話。
+    for key, values in sites.items():
+        merged = []
+        for i in range(3):
+            distinct = {v[i] for v in values if v[i] is not None}
+            merged.append(distinct.pop() if len(distinct) == 1 else None)
+        if any(v is not None for v in merged):
+            out[key] = tuple(merged)
+    return out
+
+
+def extract_meta(key, ctor):
+    """回 (名稱, 來源, 可信度)，抽不到的格子是「—」。
+
+    鍵在原始碼裡可能是字面、也可能是常數——`ctor_meta` 兩種都認（第 288 輪）。
+    """
+    hit = ctor.get(key)
+    if hit is None:
+        return ("—", "—", "—")
+    return tuple(v if v is not None else "—" for v in hit)
 
 
 def extract_bullet(corpus, key):
@@ -226,7 +406,7 @@ def effective_suffix(domain, keys, parsed):
     return fixed
 
 
-def build_63(head, parsed, domains, corpus, nl):
+def build_63(head, parsed, domains, corpus, ctor, nl):
     out = [head.rstrip(nl)]
     for n, (domain, keys) in enumerate(domains, 1):
         documented = bool(parsed.get(domain, ("", "", {}))[0])
@@ -246,7 +426,16 @@ def build_63(head, parsed, domains, corpus, nl):
         out.append("| 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |")
         out.append("|---|---|---|---|")
         for k in keys:
-            name, src, trust = meta.get(k) or extract_meta(corpus, k)
+            # 既有列的名稱／來源／可信度是人工協作結果，**不覆蓋**；
+            # 但「—」代表「沒有值」而不是「確定是空」——第 288 輪起會重抽補上，
+            # 否則產生器認得的新來源永遠填不進已經存在的那一列。
+            saved = meta.get(k)
+            fresh = extract_meta(k, ctor)
+            name, src, trust = (
+                (saved[0] if saved and saved[0] != "—" else fresh[0]),
+                (saved[1] if saved and saved[1] != "—" else fresh[1]),
+                (saved[2] if saved and saved[2] != "—" else fresh[2]),
+            )
             out.append(f"| `{k}` | {cell(name)} | {cell(src)} | {cell(trust)} |")
         out.append("")
     return normalize(nl.join(out), nl)
@@ -422,7 +611,8 @@ def main():
     head65, bullets = parse_65(sec65, nl)
     descriptions = parse_appendix_f(secF)
 
-    new63 = build_63(head63, parsed63, domains, corpus, nl)
+    ctor = ctor_meta(corpus)
+    new63 = build_63(head63, parsed63, domains, corpus, ctor, nl)
     new65 = build_65(head65, bullets, domains, corpus, nl)
     newF = build_appendix_f(descriptions, domains, len(keys), nl)
     newF2 = build_appendix_f2(root, nl)

@@ -1,4 +1,4 @@
-# 參與 XinSpect
+﻿# 參與 XinSpect
 
 感謝你有興趣。這個專案是一支以「讀到什麼就說什麼」為核心的 Windows 硬體檢視工具：
 它把硬體、韌體、作業系統三方的陳述並列，讀不到就寫原因，矛盾就具名列出，**不替使用者下結論**。
@@ -56,7 +56,7 @@ dotnet restore Tests/XinSpect.Tests.csproj
 # 建置（含 Bridge 與解碼器）
 dotnet build Tests/XinSpect.Tests.csproj -c Release
 
-# 全套測試（目前基線見 Tests/TestSuiteBaseline.cs；v2.99 之後為 7,146 條）
+# 全套測試（目前基線見 Tests/TestSuiteBaseline.cs；v2.99 之後為 7,149 條）
 dotnet test Tests/XinSpect.Tests.csproj -c Release
 
 # 只跑文件與目錄守門（CI 跑的就是這一組）

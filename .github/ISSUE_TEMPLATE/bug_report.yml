@@ -17,7 +17,7 @@ body:
     attributes:
       label: XinSpect 版本
       description: 關於頁、`XinSpect.exe --version` 或檔名旁的版號。
-      placeholder: "2.99"
+      placeholder: "3.00"
     validations:
       required: true
 
@@ -78,7 +78,7 @@ body:
       label: 重現步驟
       description: 從啟動到看到問題的最短路徑；若無法穩定重現，請如實說明。
       placeholder: |
-        1. 以系統管理員啟動 2.99
+        1. 以系統管理員啟動 3.00
         2. 切到「…」頁
         3. 按「…」
         4. 看到「…」
