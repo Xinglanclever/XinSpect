@@ -22,7 +22,7 @@
 
 ## 測試
 
-- [ ] `dotnet test Tests/XinSpect.Tests.csproj -c Release` 全綠（本機實測：7,135 條，約 5 分）。
+- [ ] `dotnet test Tests/XinSpect.Tests.csproj -c Release` 全綠（本機實測：7,142 條，約 5 分）。
 - [ ] 新增測試，且測試釘住的是行為，不是實作細節。
 - [ ] 若測試數有變動，已同步 `Tests/TestSuiteBaseline.cs` 與三份 README 徽章。
 - [ ] 若涉及接線，已確認 `ViewEntryGateTests`／`ServiceOrphanGateTests` 沒有新紅燈。

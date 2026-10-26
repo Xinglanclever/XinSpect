@@ -26,16 +26,31 @@ public class KnowledgeCoverageTests
     private static string Read(string relative)
         => File.ReadAllText(Path.Combine(RepoRoot(), relative));
 
-    /// <summary>數出 switch 運算式裡有幾個 case（排除 default 分支）。</summary>
+    /// <summary>
+    /// 數出 switch 運算式裡有幾個 case（排除 default 分支）。
+    ///
+    /// <para>
+    /// <b>從 <c>switch</c> 關鍵字之後才開始數——這一點是第 286 輪修的。</b>
+    /// 這些方法都是運算式主體（<c>VendorName(ushort id) &gt;= id switch</c> 那種形狀），
+    /// 簽名本身就帶一個 <c>=&gt;</c>；從簽名開始數會把那個箭頭算成一個 case。
+    /// 而手寫的申報數當年正是用同一種數法得出的，<b>兩邊一起多 1，守門於是永遠綠</b>。
+    /// 真正的數字（19／19／14）直到與 <see cref="PciKnowledge.Counts()"/> 的第二種數法
+    /// （逐值列舉）對帳才露出來。
+    /// </para>
+    /// </summary>
     private static int CountSwitchCases(string text, string startMarker, string endMarker)
     {
         int i = text.IndexOf(startMarker, StringComparison.Ordinal);
         Assert.True(i >= 0, $"找不到 {startMarker}");
-        int j = endMarker.Length > 0 ? text.IndexOf(endMarker, i, StringComparison.Ordinal) : text.Length;
+        int j = text.IndexOf(endMarker, i, StringComparison.Ordinal);
         Assert.True(j > i, $"找不到 {endMarker}");
         string seg = text[i..j];
+
+        int sw = seg.IndexOf("switch", StringComparison.Ordinal);
+        Assert.True(sw >= 0, $"{startMarker} 不是 switch 運算式——這條數法只認 case 手臂");
+        string arms = seg[sw..];
         // 每個 case 一個 =>；default（`_ =>`）不算條目
-        return Regex.Matches(seg, @"=>").Count - Regex.Matches(seg, @"_ =>").Count;
+        return Regex.Matches(arms, @"=>").Count - Regex.Matches(arms, @"_ =>").Count;
     }
 
     // ── 申報數字必須與表的實際內容一致 ────────────────────────────────────
@@ -47,6 +62,8 @@ public class KnowledgeCoverageTests
         int actual = CountSwitchCases(text, "public static string? BaseClassName", "public static string? SubClassName");
         var declared = KnowledgeCoverage.Tables.Single(t => t.Name == "PCI 基底類別碼");
         Assert.Equal(actual, declared.Entries);
+        // 第二種數法（逐值列舉）必須給同一個答案——第 286 輪就是靠這個對帳抓到多算 1。
+        Assert.Equal(PciKnowledge.Counts().BaseClasses, actual);
     }
 
     [Fact]
@@ -56,6 +73,7 @@ public class KnowledgeCoverageTests
         int actual = CountSwitchCases(text, "public static string? SubClassName", "public static string? VendorName");
         var declared = KnowledgeCoverage.Tables.Single(t => t.Name == "PCI 子類別碼");
         Assert.Equal(actual, declared.Entries);
+        Assert.Equal(PciKnowledge.Counts().SubClasses, actual);
     }
 
     [Fact]
@@ -65,6 +83,7 @@ public class KnowledgeCoverageTests
         int actual = CountSwitchCases(text, "public static string? VendorName", "public static string Describe");
         var declared = KnowledgeCoverage.Tables.Single(t => t.Name == "PCI 廠商 ID");
         Assert.Equal(actual, declared.Entries);
+        Assert.Equal(PciKnowledge.Counts().Vendors, actual);
     }
 
     [Fact]
