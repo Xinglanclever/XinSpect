@@ -1,0 +1,42 @@
+# 依賴更新。
+#
+# 這個 repo 有兩個刻意的版本鎖：
+#   - LibreHardwareMonitorLib 0.9.6：0.9.6 起已無 WinRing0，MSR／MMIO 依賴另外內嵌的 0.9.4；
+#     自動升版會直接動到特權讀取層，因此不交給機器決定。
+#   - Microsoft.NETFramework.ReferenceAssemblies：只為 Bridge 的 net48 建置而存在。
+#
+# 其餘套件走每週一次的群組 PR，避免一次開十幾條。
+
+version: 2
+updates:
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Taipei"
+    open-pull-requests-limit: 5
+    groups:
+      nuget-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      - dependency-name: "LibreHardwareMonitorLib"
+      - dependency-name: "Microsoft.NETFramework.ReferenceAssemblies"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Taipei"
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        patterns:
+          - "*"

@@ -1,0 +1,58 @@
+name: CI
+
+# 為什麼只跑守門測試、不跑全套：
+# 全套 6,999 條裡有一部分會讀真機硬體（SMBIOS、SPD、NVMe…），在 GitHub 的 hosted runner
+# 上可能因「不支援」或「值不一樣」而紅，讓 CI 變成雜訊。硬體全套由貢獻者在本機跑，
+# PR 範本要求貼上實測數字；CI 只釘住「不依賴硬體」的那一層：能建置、版號與文件一致、
+# 事實鍵目錄合法、U10 目錄結構正確、發版腳本沒被拆掉。
+#
+# 這一組是本機已驗證會綠的班底；要加測試請先確認它在乾淨 checkout 上不需要真機。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  build-and-guard:
+    name: 建置與文件守門
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 取出原始碼
+        uses: actions/checkout@v4
+
+      - name: 安裝 .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: 還原
+        run: dotnet restore Tests/XinSpect.Tests.csproj
+
+      - name: 建置（含 Bridge 與解碼器）
+        run: dotnet build Tests/XinSpect.Tests.csproj -c Release --no-restore
+
+      - name: 文件與目錄守門
+        run: dotnet test Tests/XinSpect.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~ChangelogTests|FullyQualifiedName~FactKeyCatalogTests|FullyQualifiedName~Ultimate10000CatalogTests|FullyQualifiedName~ReleasePipelineTests|FullyQualifiedName~ReleaseIntegrityTests" --logger "trx;LogFileName=guard.trx" --results-directory TestResults
+
+      - name: 上傳測試結果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: guard-test-results
+          path: TestResults/guard.trx
+          if-no-files-found: warn

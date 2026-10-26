@@ -1,0 +1,8 @@
+# 贊助渠道。
+#
+# 這裡只列「已經存在」的帳號：填一個不存在的帳號不會讓任何檢查變紅，只會讓
+# Sponsor 按鈕指向不存在的頁面。新增其他平台時，用 custom: 逐行列完整網址（http/https）。
+#
+# 對應的公開說明在 README「社群、貢獻與贊助」一節與 SUPPORT.md。
+
+github: [Xinglanclever]

@@ -1,0 +1,122 @@
+name: 錯誤回報
+description: 程式行為與文件宣稱不符、當掉、讀值錯誤或介面故障。
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        回報前請先確認：
+
+        1. 已在 [Issues](https://github.com/Xinglanclever/XinSpect/issues?q=is%3Aissue) 與 [Discussions](https://github.com/Xinglanclever/XinSpect/discussions) 搜尋過。
+        2. **不要貼序號、UUID、MAC、資產標籤、使用者名稱或完整路徑**。需要附 `--json` 輸出時，先用 `--only` 縮小範圍並自行遮蔽敏感值。
+        3. 若是安全性問題（可利用性、權限提升、資料外洩、審計鏈或更新流程），請走 [私密安全公告](https://github.com/Xinglanclever/XinSpect/security/advisories/new)，不要開公開 Issue。
+
+  - type: input
+    id: version
+    attributes:
+      label: XinSpect 版本
+      description: 關於頁、`XinSpect.exe --version` 或檔名旁的版號。
+      placeholder: "2.91"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: windows
+    attributes:
+      label: Windows 版本
+      options:
+        - Windows 11 25H2
+        - Windows 11 24H2
+        - Windows 11 23H2
+        - Windows 10 22H2
+        - Windows Server 2022／2025
+        - 其他（請寫在「補充」）
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: 執行方式
+      options:
+        - GUI（以系統管理員啟動）
+        - GUI（未提權）
+        - CLI `--json`
+        - CLI 其他子命令
+        - 從源碼建置後執行
+    validations:
+      required: true
+
+  - type: input
+    id: hardware
+    attributes:
+      label: 相關硬體
+      description: 只寫型號，不要寫序號。例如「i7-12700K／Z690／RTX 4070／Samsung 990 Pro」。
+      placeholder: "CPU／主機板／GPU／儲存裝置型號"
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 實際發生什麼
+      description: 貼近事實即可，不需要先推測原因。
+      placeholder: "在『韌體安全』頁按重新整理後，虛擬化平台卡片空白；其他卡片正常。"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 你預期什麼，以及依據
+      description: 文件章節、程式碼位置、微軟文件或規格書都可以。沒有依據也可以寫「不確定」。
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 重現步驟
+      description: 從啟動到看到問題的最短路徑；若無法穩定重現，請如實說明。
+      placeholder: |
+        1. 以系統管理員啟動 2.91
+        2. 切到「…」頁
+        3. 按「…」
+        4. 看到「…」
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 證據（事實鍵、六態、來源）
+      description: 若問題涉及讀值，請附上鍵名、狀態（Present／NotPresent／NotSupported／AccessDenied／ReadError／Unknown）與來源欄位。整份快照請先遮蔽。
+      placeholder: |
+        key: storage.reliability.1.wear
+        state: Present
+        source: NVMe Health Information Log, byte 5
+        value: 33
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日誌或輸出（選填）
+      description: 審計日誌片段、`--json` 節錄或事件記錄。請先移除帳號、路徑與裝置序號。
+      render: shell
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 補充
+      description: 已嘗試的排錯、是否只在特定機器發生、是否裝了防毒或虛擬化工具。
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 送出前確認
+      options:
+        - label: 我已搜尋既有 Issue 與 Discussions，這不是重複回報。
+          required: true
+        - label: 我已移除序號、UUID、MAC、帳號、完整路徑等可識別資料。
+          required: true
+        - label: 我理解本專案由個人維護，沒有支援時效承諾；回覆會盡力而為。
+          required: true

@@ -1,0 +1,19 @@
+# Issue 範本選擇頁。
+#
+# blank_issues_enabled: false —— 不讓空白 Issue 繞過範本。本專案的品質門檻很高，
+# 沒有版本、重現步驟與六態證據的回報無法查，只會來回問三輪。
+
+blank_issues_enabled: false
+
+contact_links:
+  - name: 安全性問題（私密通報）
+    url: https://github.com/Xinglanclever/XinSpect/security/advisories/new
+    about: 可利用性、權限提升、資料外洩、審計鏈或更新流程的問題，請勿開公開 Issue。
+
+  - name: 社群討論（Discussions）
+    url: https://github.com/Xinglanclever/XinSpect/discussions
+    about: 使用問題、判讀討論、硬體覆蓋經驗分享。開 Issue 前先在這裡搜尋。
+
+  - name: 文件、常見問題與疑難排解
+    url: https://github.com/Xinglanclever/XinSpect/blob/main/README.md#%E4%BA%8C%E5%8D%81%E4%B8%89%E5%B8%B8%E8%A6%8B%E5%95%8F%E9%A1%8C
+    about: README 第二十三章與附錄 D 已回答的問題，請先查再開 Issue。

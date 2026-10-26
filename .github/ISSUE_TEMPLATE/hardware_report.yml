@@ -1,0 +1,106 @@
+name: 硬體判讀回報
+description: 某個讀值、狀態或解碼結果與規格／實機不符，或本機硬體完全讀不到。
+title: "[Hardware] "
+labels: ["hardware"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        這一類回報最有價值，也最容易變成「兩個來源各說各話」。請把**雙方各自說了什麼**分開寫，
+        不要先下結論。若問題涉及安全邊界（例如驅動、權限、寫入路徑），請改走
+        [私密安全公告](https://github.com/Xinglanclever/XinSpect/security/advisories/new)。
+
+  - type: dropdown
+    id: domain
+    attributes:
+      label: 能力域
+      options:
+        - 處理器（CPUID／MSR／微碼／頻率）
+        - 記憶體（SPD／時序／通道／ECC）
+        - 主機板與晶片組（Super I/O／PCIe／ACPI）
+        - 顯示卡（PCIe 鏈路／監控／NVML）
+        - 儲存（SMART／NVMe／檔案系統）
+        - 韌體與安全（UEFI／TPM／Secure Boot／VBS）
+        - 感測器（溫度／風扇／電壓）
+        - 作業系統與治理（WMI／事件記錄／更新）
+        - 其他
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: XinSpect 版本
+      placeholder: "2.91"
+    validations:
+      required: true
+
+  - type: input
+    id: hardware
+    attributes:
+      label: 硬體型號
+      description: 只寫型號，不要寫序號、服務標籤或 UUID。
+      placeholder: "ASUS ProArt Z790／i9-14900K／2×32GB DDR5-6000"
+    validations:
+      required: true
+
+  - type: input
+    id: key
+    attributes:
+      label: 相關事實鍵
+      description: 若知道鍵名請填；不知道就填畫面上的項目名稱。
+      placeholder: "mem.spd.0.timing.tCL 或「記憶體時序」"
+
+  - type: textarea
+    id: claims
+    attributes:
+      label: 三個來源各自的說法
+      description: 硬體、韌體、作業系統（或規格書）分別說了什麼？貼原文或數值即可。
+      placeholder: |
+        XinSpect 顯示：…
+        主機板 BIOS：…
+        廠商規格／SMBIOS：…
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-source
+    attributes:
+      label: 你認為正確的值與出處
+      description: 規格書章節、暫存器位址、SMBIOS 型別或 WMI 類別。若只是「看起來不對」，也請如實寫。
+    validations:
+      required: true
+
+  - type: dropdown
+    id: privilege
+    attributes:
+      label: 當時的權限與深層存取狀態
+      options:
+        - 系統管理員＋深層存取已啟用（WinRing0／XsRegProbe）
+        - 系統管理員＋深層存取未啟用
+        - 未提權
+        - 不確定
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 六態與原始輸出（請先遮蔽）
+      description: 狀態是 Present、NotPresent、NotSupported、AccessDenied、ReadError 還是 Unknown？這一欄決定問題是「讀錯」還是「根本沒讀」。
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 補充
+      description: BIOS 版本、記憶體插法、是否虛擬機、是否開了 HVCI／VBS 等。
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 送出前確認
+      options:
+        - label: 我沒有貼序號、UUID、MAC、帳號或完整路徑。
+          required: true
+        - label: 我理解「讀不到」與「讀到 0」是不同的事，已在回報中分開描述。
+          required: true
