@@ -18,29 +18,99 @@ namespace XinSpect;
 ///
 /// <para>
 /// 所以這一支從<b>既有事實集</b>裡把查詢結果收回來：
-/// <c>pci.dev.*</c> 的值裡已經含 <c>PciKnowledge</c> 的描述（含「未收錄」字樣），
-/// <c>nic.mac.*</c> 的值裡已經含 <c>OuiKnowledge</c> 的廠商名。
+/// <c>pci.dev.*</c> 的值末尾有 <see cref="PciIdLookup.OriginClausePrefix"/> 那段兩段式出處說明
+/// （第 284 輪起），<c>nic.mac.*</c> 的值裡含 <c>OuiKnowledge</c> 的廠商名。
 /// 這裡只做「讀回既有欄位並分類」——<b>不重新查表、不猜</b>。
+/// </para>
+///
+/// <para>
+/// <b>分類依據是常數不是自然語言：</b>兩個方向都以
+/// <see cref="PciIdLookup.CuratedToken"/>／<see cref="PciIdLookup.RegistryToken"/>／
+/// <see cref="PciIdLookup.UnlistedToken"/> 為準。相鄰的中文不是契約——
+/// 改一個字就會讓統計安靜地改口，而統計看起來永遠正常。
 /// </para>
 /// </summary>
 public static class KnowledgeLookupCollector
 {
-    /// <summary>從既有事實集回收 PCI 廠商查詢的統計。</summary>
-    public static KnowledgeLookupReport.LookupStats CollectPci(IEnumerable<HardwareFact> facts)
+    /// <summary>
+    /// 從既有事實集回收 PCI 名稱的統計。<b>一次掃描、兩個單位</b>：
+    /// <c>Devices</c> 逐裝置（給 <c>kp.miss</c> 的「幾次查詢、幾次查不到」），
+    /// <c>Names</c> 逐名稱段（給 <c>pci.id</c> 的三層出處）。
+    ///
+    /// <para>
+    /// <b>為什麼要有兩個單位而不是挑一個：</b>「這台機器有幾張卡的名字沒對到」
+    /// 與「這些名字分別是誰說的」是兩個問題。硬用一個數字回答兩個問題，
+    /// 就是先前那個缺陷的形狀——一張卡只要廠商認得就算命中，
+    /// 而從兩萬多筆社群登錄檔撈出來的名字，在統計上與本專案核對過的 15 家一模一樣。
+    /// </para>
+    /// </summary>
+    public static (KnowledgeLookupReport.LookupStats Devices, KnowledgeLookupReport.PciNameStats Names)
+        CollectPci(IEnumerable<HardwareFact> facts)
     {
-        var lookups = new List<(KnowledgeLookupReport.LookupOutcome, string)>();
+        int curated = 0, registry = 0, unlisted = 0, unparsable = 0;
+        int units = 0, unitsHit = 0, unitsMissed = 0, unitsUnparsable = 0;
+
         foreach (var f in facts.Where(f => f.Key.StartsWith("pci.dev.", StringComparison.Ordinal)))
         {
-            string value = f.Value ?? "";
-            // Bus0InventoryService 的值裡，可用性由「（未收錄）」與「讀取失敗」兩種字樣區分；
-            // 其餘都算命中——這不是重新判斷，是讀回它當初寫下的結論。
-            var outcome =
-                value.Contains("未收錄", StringComparison.Ordinal) ? KnowledgeLookupReport.LookupOutcome.NotListed
-                : value.Contains("讀取失敗", StringComparison.Ordinal) ? KnowledgeLookupReport.LookupOutcome.Unparsable
-                : KnowledgeLookupReport.LookupOutcome.Hit;
-            lookups.Add((outcome, value));
+            units++;
+            var one = ClassifyPciValue(f.Value ?? "");
+            curated += one.Curated;
+            registry += one.Registry;
+            unlisted += one.Unlisted;
+            unparsable += one.Unclassifiable;
+
+            // 裝置級：沒有出處段落＝無從判定（不是命中）；有任何一段無法分類或未收錄＝查不到。
+            if (one.HasClause is false || one.Unclassifiable > 0) unitsUnparsable++;
+            else if (one.Unlisted > 0) unitsMissed++;
+            else unitsHit++;
         }
-        return KnowledgeLookupReport.Summarize(lookups);
+
+        var devices = new KnowledgeLookupReport.LookupStats(
+            units, unitsHit, unitsMissed, unitsUnparsable, []);
+        return (devices, new KnowledgeLookupReport.PciNameStats(curated, registry, unlisted, unparsable));
+    }
+
+    /// <summary>一條 <c>pci.dev.*</c> 值的分類結果。</summary>
+    private readonly record struct PciValueTally(
+        bool HasClause, int Curated, int Registry, int Unlisted, int Unclassifiable);
+
+    /// <summary>
+    /// 把一條 <c>pci.dev.*</c> 的值拆成名稱段並各自歸類。
+    ///
+    /// <para>
+    /// <b>沒有出處說明的值算「無法分類」——不是命中。</b>無從分類的數字不能充當已確認；
+    /// 而「有出處段落但其中一段讀不懂」也必須落在無法分類，不能併進未收錄：
+    /// 「表沒收錄這一筆」與「我們的分類程式看不懂自己寫的字」是兩件事。
+    /// </para>
+    /// </summary>
+    private static PciValueTally ClassifyPciValue(string value)
+    {
+        int at = value.IndexOf(PciIdLookup.OriginClausePrefix, StringComparison.Ordinal);
+        if (at < 0) return new PciValueTally(false, 0, 0, 0, 1);
+
+        int curated = 0, registry = 0, unlisted = 0, bad = 0;
+        string clause = value[(at + PciIdLookup.OriginClausePrefix.Length)..];
+        foreach (string segment in clause.Split('、'))
+        {
+            switch (ClassifySegment(segment))
+            {
+                case PciIdLookup.NameOrigin.Curated: curated++; break;
+                case PciIdLookup.NameOrigin.Registry: registry++; break;
+                case PciIdLookup.NameOrigin.Unlisted: unlisted++; break;
+                default: bad++; break;
+            }
+        }
+        if (curated + registry + unlisted == 0) bad = 1;   // 有段落卻一段都讀不懂
+        return new PciValueTally(true, curated, registry, unlisted, bad);
+    }
+
+    /// <summary>一段出處說明（`廠商=手工表`／`裝置=登錄檔 2026.10.01`）→ 出處層。</summary>
+    private static PciIdLookup.NameOrigin? ClassifySegment(string segment)
+    {
+        if (segment.Contains(PciIdLookup.UnlistedToken, StringComparison.Ordinal)) return PciIdLookup.NameOrigin.Unlisted;
+        if (segment.Contains(PciIdLookup.CuratedToken, StringComparison.Ordinal)) return PciIdLookup.NameOrigin.Curated;
+        if (segment.Contains(PciIdLookup.RegistryToken, StringComparison.Ordinal)) return PciIdLookup.NameOrigin.Registry;
+        return null;
     }
 
     /// <summary>從既有事實集回收 OUI 查詢的統計。</summary>

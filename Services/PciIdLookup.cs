@@ -62,8 +62,45 @@ public static class PciIdLookup
             : new Hit(null, NameOrigin.Unlisted, null);
 
     /// <summary>
-    /// 一行裝置描述：角色（類別碼知識）＋廠商＋裝置名＋原始 ID。
-    /// <b>每一段都標明它的來源層</b>；未收錄的段落如實標「未收錄」，不猜。
+    /// 名稱出處段落的<strong>固定開頭</strong>——統計回收靠它切段。
+    ///
+    /// <para>
+    /// <b>為什麼要有這個常數，而不是讓回收端比對整句中文：</b>第 283 輪之前
+    /// <c>KnowledgeLookupCollector</c> 是用「值裡有沒有出現『未收錄』」來判斷命中，
+    /// 於是「廠商查到了、裝置沒收錄」和「兩個都沒收錄」被算成同一種，
+    /// 而「登錄檔給的名字」與「本專案核對過的名字」更是完全分不出來。
+    /// 那條路徑能成立只因為當時兩層的輸出剛好長那樣——<b>相鄰的字串不是契約</b>。
+    /// 現在值裡有一段固定形狀的出處說明，產生端與回收端共用這個常數。
+    /// </para>
+    /// </summary>
+    public const string OriginClausePrefix = "名稱出處：";
+
+    /// <summary>出處代號：本專案手工表。</summary>
+    public const string CuratedToken = "手工表";
+
+    /// <summary>出處代號：上游登錄檔快照（後面接快照版本）。</summary>
+    public const string RegistryToken = "登錄檔";
+
+    /// <summary>出處代號：兩層都沒有。</summary>
+    public const string UnlistedToken = "未收錄";
+
+    /// <summary>一段名稱的出處寫成值裡的字串（`手工表`／`登錄檔 2026.10.01`／`未收錄`）。</summary>
+    public static string OriginText(Hit hit) => hit.Origin switch
+    {
+        NameOrigin.Curated => CuratedToken,
+        NameOrigin.Registry => $"{RegistryToken} {hit.Snapshot}",
+        _ => UnlistedToken,
+    };
+
+    /// <summary>
+    /// 一行裝置描述：角色（類別碼知識）＋廠商＋裝置名＋原始 ID，
+    /// 末尾附一段<strong>名稱出處</strong>說明兩段名字各是誰說的。
+    ///
+    /// <para>
+    /// <b>出處為什麼搬到句尾而不是逐段括號：</b>逐段標會讓裝置名後面什麼都沒有
+    /// （裝置只有登錄檔一層），看起來像「這一段不需要標」——而它其實更需要標。
+    /// 兩段並列在同一句，讀者一眼看到「廠商＝手工表、裝置＝登錄檔」，也知道差別在哪。
+    /// </para>
     /// </summary>
     public static string Describe((ushort VendorId, ushort DeviceId) ids,
         (byte BaseClass, byte SubClass, byte ProgIf, byte Revision) cls)
@@ -75,20 +112,14 @@ public static class PciIdLookup
             : "類別碼未收錄";
 
         var vendor = Vendor(ids.VendorId);
-        string vendorText = vendor.Origin switch
-        {
-            NameOrigin.Curated => vendor.Name!,
-            NameOrigin.Registry => $"{vendor.Name}（登錄檔 {vendor.Snapshot}）",
-            _ => $"Vendor 0x{ids.VendorId:X4}（未收錄）",
-        };
+        string vendorText = vendor.Found ? vendor.Name! : $"Vendor 0x{ids.VendorId:X4}（未收錄）";
 
         var device = Device(ids.VendorId, ids.DeviceId);
-        string deviceText = device.Found
-            ? device.Name!
-            : $"Device 0x{ids.DeviceId:X4}（未收錄）";
+        string deviceText = device.Found ? device.Name! : $"Device 0x{ids.DeviceId:X4}（未收錄）";
 
         return $"{role} ・ {vendorText} {deviceText}（0x{ids.VendorId:X4}:0x{ids.DeviceId:X4}）"
-             + $" ・ 類別碼 0x{cls.BaseClass:X2}{cls.SubClass:X2}/progIF 0x{cls.ProgIf:X2} rev 0x{cls.Revision:X2}";
+             + $" ・ 類別碼 0x{cls.BaseClass:X2}{cls.SubClass:X2}/progIF 0x{cls.ProgIf:X2} rev 0x{cls.Revision:X2}"
+             + $" ・ {OriginClausePrefix}廠商={OriginText(vendor)}、裝置={OriginText(device)}";
     }
 
     /// <summary>一句話說明這張表有多大、多新、誰擔保——給事實層用。</summary>

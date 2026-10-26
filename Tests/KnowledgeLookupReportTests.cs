@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Xunit;
@@ -41,20 +41,34 @@ public class KnowledgeLookupReportTests
     }
 
     [Fact]
-    public void PCI_知名廠商命中()
+    public void PCI_知名廠商命中而且說得出是手工表()
     {
-        var (outcome, result) = KnowledgeLookupReport.LookupPciVendor(0x8086);
+        var (outcome, origin, result) = KnowledgeLookupReport.LookupPciVendor(0x8086);
         Assert.Equal(KnowledgeLookupReport.LookupOutcome.Hit, outcome);
+        Assert.Equal(PciIdLookup.NameOrigin.Curated, origin);
         Assert.Equal("Intel", result);
     }
 
     [Fact]
-    public void PCI_未收錄的廠商要標未收錄並附原始ID()
+    public void PCI_只有登錄檔收錄的廠商也要給名字並標明是登錄檔()
     {
-        var (outcome, result) = KnowledgeLookupReport.LookupPciVendor(0xFFFF);
+        // 第 284 輪之前這一格會回「未收錄」——因為它只問手工表。
+        // 0xFFFF 在 pci.ids 裡是 "Illegal Vendor ID"（哨兵值，不是不存在），
+        // 拿它當「登錄檔認得但手工表沒有」的樣本，同時守住「哨兵值要如實轉述」。
+        var (outcome, origin, result) = KnowledgeLookupReport.LookupPciVendor(0xFFFF);
+        Assert.Equal(KnowledgeLookupReport.LookupOutcome.Hit, outcome);
+        Assert.Equal(PciIdLookup.NameOrigin.Registry, origin);
+        Assert.Contains("Illegal Vendor ID", result);
+    }
+
+    [Fact]
+    public void PCI_兩層都沒收錄時要標未收錄並附原始ID()
+    {
+        var (outcome, origin, result) = KnowledgeLookupReport.LookupPciVendor(0x1234);
         Assert.Equal(KnowledgeLookupReport.LookupOutcome.NotListed, outcome);
+        Assert.Equal(PciIdLookup.NameOrigin.Unlisted, origin);
         Assert.Contains("未收錄", result);
-        Assert.Contains("0xFFFF", result);
+        Assert.Contains("0x1234", result);
     }
 
     // ── 彙總 ────────────────────────────────────────────────────────────
@@ -130,9 +144,8 @@ public class KnowledgeLookupReportTests
     [Fact]
     public void PCI鍵_有未收錄時不是錯誤狀態()
     {
-        var stats = KnowledgeLookupReport.Summarize(
-            [KnowledgeLookupReport.LookupPciVendor(0xFFFF)]);
-        var fact = KnowledgeLookupReport.ToPciFact(At, stats);
+        var fact = KnowledgeLookupReport.ToPciFact(At,
+            new KnowledgeLookupReport.PciNameStats(0, 1, 1, 0));
 
         Assert.Equal(FactAvailability.Unknown, fact.Availability);   // 不是 ReadError
         Assert.NotEqual(FactAvailability.ReadError, fact.Availability);

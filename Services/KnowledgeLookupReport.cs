@@ -49,6 +49,28 @@ public static class KnowledgeLookupReport
         public static LookupStats Empty { get; } = new(0, 0, 0, 0, []);
     }
 
+    /// <summary>
+    /// PCI 名稱段的出處統計（第 284 輪）。<b>一次＝一個名稱段</b>——畫面上的每張卡有
+    /// 廠商與裝置兩段名字，兩段可以各自落在不同的擔保層。
+    ///
+    /// <para>
+    /// <b>為什麼不合成一個「命中」計數：</b>手工表的 15 家是本專案逐條核對過的，
+    /// 登錄檔的兩萬多筆是社群維護、接受投稿、<b>錯誤率不是零</b>的快照。
+    /// 合成之後「命中 45」看起來像單一品質，而讀者無從知道其中有多少只是
+    /// 「某個不認識的人投稿過這個 ID」。分開數不是為了好看，是不讓後者借前者的信用。
+    /// </para>
+    /// </summary>
+    public sealed record PciNameStats(int Curated, int Registry, int Unlisted, int Unparsable)
+    {
+        public static PciNameStats Empty { get; } = new(0, 0, 0, 0);
+
+        /// <summary>名稱段總數。</summary>
+        public int Total => Curated + Registry + Unlisted + Unparsable;
+
+        /// <summary>說得出名字的段數（手工表＋登錄檔）。</summary>
+        public int Named => Curated + Registry;
+    }
+
     /// <summary>查一次 OUI。</summary>
     public static (LookupOutcome Outcome, string Result) LookupOui(string mac)
     {
@@ -60,13 +82,23 @@ public static class KnowledgeLookupReport
         return (LookupOutcome.Hit, result);
     }
 
-    /// <summary>查一次 PCI 廠商。</summary>
-    public static (LookupOutcome Outcome, string Result) LookupPciVendor(ushort vendorId)
+    /// <summary>
+    /// 查一次 PCI 廠商。<b>第二個回傳值是這一格名字的出處</b>——
+    /// 只回名字會讓呼叫端把「本專案核對過」與「上游登錄檔這麼寫」當成同一件事。
+    ///
+    /// <para>
+    /// <b>第 284 輪修掉的缺陷：</b>這裡原本只問 <see cref="PciKnowledge"/>（15 家手工表），
+    /// 於是登錄檔認得的 2,519 家在這裡全部顯示「未收錄」——同一個問題在專案裡有兩條路徑，
+    /// 一條知道登錄檔、一條不知道。現在一律走 <see cref="PciIdLookup"/>。
+    /// </para>
+    /// </summary>
+    public static (LookupOutcome Outcome, PciIdLookup.NameOrigin Origin, string Result)
+        LookupPciVendor(ushort vendorId)
     {
-        string? name = PciKnowledge.VendorName(vendorId);
-        return name is not null
-            ? (LookupOutcome.Hit, name)
-            : (LookupOutcome.NotListed, $"Vendor 0x{vendorId:X4}（未收錄）");
+        var hit = PciIdLookup.Vendor(vendorId);
+        return hit.Found
+            ? (LookupOutcome.Hit, hit.Origin, hit.Name!)
+            : (LookupOutcome.NotListed, hit.Origin, $"Vendor 0x{vendorId:X4}（未收錄）");
     }
 
     /// <summary>把一串查詢結果彙總。</summary>
@@ -87,9 +119,52 @@ public static class KnowledgeLookupReport
     public static HardwareFact ToOuiFact(DateTimeOffset at, LookupStats stats) =>
         ToFact(OuiKey, "OUI 廠商對照", at, stats, "網卡");
 
-    /// <summary>產生 <c>pci.id</code>。</summary>
-    public static HardwareFact ToPciFact(DateTimeOffset at, LookupStats stats) =>
-        ToFact(PciKey, "PCI 廠商對照", at, stats, "PCI 裝置");
+    /// <summary>
+    /// 產生 <c>pci.id</c>——<b>逐名稱段</b>申報三種出處（第 284 輪）。
+    ///
+    /// <para>
+    /// 舊版把「值裡沒有出現『未收錄』」算成命中，所以一張卡只要廠商認得就算命中，
+    /// 而登錄檔給的名字與手工表給的名字在統計上完全一樣。現在改成看值裡那段
+    /// <see cref="PciIdLookup.OriginClausePrefix"/> 說明，兩段各記一次。
+    /// </para>
+    /// </summary>
+    public static HardwareFact ToPciFact(DateTimeOffset at, PciNameStats stats)
+    {
+        if (stats.Total == 0)
+            return new HardwareFact(PciKey, Category, "PCI 名稱對照",
+                "本輪沒有查詢 PCI 名稱", "段", Source, FactTrustLevel.Derived, false, at,
+                0, FactAvailability.NotApplicable, "沒有任何 PCI 裝置需要對照");
+
+        string detail = $"{stats.Total} 個名稱段（每張卡＝廠商＋裝置兩段）："
+            + $"{PciIdLookup.CuratedToken} {stats.Curated}、{PciIdLookup.RegistryToken} {stats.Registry}、"
+            + $"{PciIdLookup.UnlistedToken} {stats.Unlisted}"
+            + (stats.Unparsable > 0 ? $"、無法分類 {stats.Unparsable}" : "")
+            + $" ・ 界線：{PciIdLookup.CuratedToken}是本專案核對過的 15 家，"
+            + $"{PciIdLookup.RegistryToken}是社群維護的快照（錯誤率不是零）——"
+            + "兩者分開數，不讓後者借前者的信用；查不到只代表這份快照沒有那一格。";
+
+        // 三種狀態各有各的處置：
+        //   全部說得出名字 → Present（仍然不是「驗證過」，只是「表裡有」）。
+        //   有未收錄 → Unknown：「這個表沒有這一筆」，不是錯誤，但要被看見。
+        //   有無法分類 → ReadError：那是輸入或生產端的問題，補表沒有用。
+        var availability =
+            stats.Unparsable > 0 ? FactAvailability.ReadError
+            : stats.Unlisted > 0 ? FactAvailability.Unknown
+            : FactAvailability.Present;
+
+        string? reason = availability switch
+        {
+            FactAvailability.ReadError =>
+                $"{stats.Unparsable} 個名稱段沒有帶出處說明（值裡沒有「{PciIdLookup.OriginClausePrefix}」）——"
+                + "那是生產端的問題，不是知識表的缺口",
+            FactAvailability.Unknown =>
+                $"{stats.Unlisted} 個名稱段未收錄——如實顯示原始碼而不猜名稱；要補的是知識表",
+            _ => null,
+        };
+
+        return new HardwareFact(PciKey, Category, "PCI 名稱對照", detail, "段", Source,
+            FactTrustLevel.Derived, false, at, stats.Named, availability, reason);
+    }
 
     private static HardwareFact ToFact(string key, string name, DateTimeOffset at,
         LookupStats stats, string subject)

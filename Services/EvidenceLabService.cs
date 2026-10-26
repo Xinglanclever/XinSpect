@@ -2140,10 +2140,12 @@ public sealed class EvidenceLabService : ObservableObject
 
             // 知識表查詢統計（P1-039／P1-040）：從既有事實集**回收**，
             // 不重新查表——重新查一次假的值會得到一把看起來正常、實際上毫無意義的統計，
-            // 那比不接線更糟。
-            var pciLookups = KnowledgeLookupCollector.CollectPci(baseFacts);
+            // 那比不接線更糟。第 284 輪起 PCI 走兩個單位：裝置級（kp.miss 要的
+            // 「幾次查詢、幾次查不到」）與名稱段級（pci.id 要的三層出處）。
+            var pci = KnowledgeLookupCollector.CollectPci(baseFacts);
+            var pciLookups = pci.Devices;
             var ouiLookups = KnowledgeLookupCollector.CollectOui(baseFacts);
-            baseFacts.Add(KnowledgeLookupReport.ToPciFact(DateTimeOffset.UtcNow, pciLookups));
+            baseFacts.Add(KnowledgeLookupReport.ToPciFact(DateTimeOffset.UtcNow, pci.Names));
             baseFacts.Add(KnowledgeLookupReport.ToOuiFact(DateTimeOffset.UtcNow, ouiLookups));
             // SMART 廠商屬性對照（第 274 輪：接上真值）：這一輪真的讀到的屬性列已在
             // LoadSmartLookupStats 讀完（專屬執行緒＋外層 6 秒預算、只走 ATA），
