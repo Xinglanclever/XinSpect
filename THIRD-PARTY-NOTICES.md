@@ -18,6 +18,7 @@
 | Microsoft.Diagnostics.Tracing.TraceEvent | 3.1.16 | MIT | 附授權文本連結 | https://github.com/Microsoft/perfview |
 | NAudio | 2.* | MIT | 附授權文本連結 | https://github.com/naudio/NAudio |
 | System.ServiceProcess.ServiceController | 9.0.4（Bridge） | MIT | 附授權文本連結 | https://github.com/dotnet/runtime |
+| PCI ID 資料庫（`pci.ids`，內嵌 `XinSpect.Decoders/Data/pci-ids.tsv.gz`） | 快照 2026.10.01 | BSD-3-Clause（上游自述為 GPL-2.0-or-later 或 BSD-3-Clause 雙授權，本專案採後者） | 保留姓名標示與授權聲明；衍生檔只抽廠商與裝置兩段、其餘丟棄；**不因此使本專案受 GPL 約束** | https://pci-ids.ucw.cz/ ；https://github.com/vcrhonek/hwdata |
 
 ## 建置期／測試期元件（不隨程式分發）
 

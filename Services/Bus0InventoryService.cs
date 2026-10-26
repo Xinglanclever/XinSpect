@@ -1,4 +1,4 @@
-namespace XinSpect;
+﻿namespace XinSpect;
 
 /// <summary>
 /// Bus 0 裝置盤點（V7 WP30／A13 的知識層面）：以 PCI 設定空間走訪 bus 0 的 32 個裝置槽，
@@ -69,8 +69,10 @@ public static class Bus0InventoryService
         string name = $"PCI 0:{dev:X2}.{fn}";
         var ids = PciKnowledge.DecodeVendorDevice(idRaw);
         var clsRaw = pci.ReadDword(0, dev, fn, 0x08);
+        // 第 281 輪：描述改走 PciIdLookup（手工表 → 上游登錄檔快照），
+        // 每一段的名字都標明是誰說的；未收錄的段落如實標，不猜。
         string value = clsRaw is { } c
-            ? PciKnowledge.Describe(ids, PciKnowledge.DecodeClassCode(c))
+            ? PciIdLookup.Describe(ids, PciKnowledge.DecodeClassCode(c))
             : $"Vendor 0x{ids.VendorId:X4}:0x{ids.DeviceId:X4}（類別碼讀取失敗，只報原始 ID）";
         return new HardwareFact(key, Category, name, value, "", "PCI 設定空間 0x00/0x08",
             FactTrustLevel.Measured, false, at);

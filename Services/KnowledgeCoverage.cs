@@ -69,6 +69,15 @@ public static class KnowledgeCoverage
         // 本表全收。分母 154 是有出處的實數，不是估的。
         new("CTA VIC 時序", 154, "CTA-861 定義的 VIC 1–127 與 193–219（128–192、220–255 為保留）", 154,
             "回「VIC n（知識表未收錄）」並附原始編號——不猜時序"),
+        // 2026-10-27（第 281 輪）：這兩張的條數**直接取自執行期的資料檔**，不是手抄——
+        // 資料檔換了版本，申報跟著動，不會出現「文件說 21,619 條、程式裡是 22,000 條」。
+        // 分母留 0：pci.ids 每季都在長，本程式無法離線確認「全世界有幾個 PCI 廠商」。
+        new("PCI 廠商 ID（登錄檔快照）", PciIdDatabase.VendorCount,
+            $"pci.ids {PciIdDatabase.SnapshotVersion} 的廠商段（社群維護的登錄檔）", 0,
+            "回「Vendor 0xXXXX（未收錄）」——這份快照沒有那一格，不代表裝置有問題"),
+        new("PCI 裝置 ID（登錄檔快照）", PciIdDatabase.DeviceCount,
+            $"pci.ids {PciIdDatabase.SnapshotVersion} 的裝置段（社群維護的登錄檔）", 0,
+            "回「Device 0xXXXX（未收錄）」——同上，是知識表的邊界不是裝置的缺陷"),
     ];
 
     /// <summary>整體申報：這幾張表都是子集，查不到名字不代表裝置有問題。</summary>

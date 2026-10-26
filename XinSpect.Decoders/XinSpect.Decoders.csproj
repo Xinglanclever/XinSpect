@@ -13,4 +13,10 @@
     <RootNamespace>XinSpect</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- 知識包資料檔（第 281 輪）：PCI 廠商／裝置 ID 對照。以 EmbeddedResource 隨組件分發，
+         不依賴外部檔案、不出網。資料來源與授權見 Data/README.md 與 THIRD-PARTY-NOTICES.md。 -->
+    <EmbeddedResource Include="Data\pci-ids.tsv.gz" LogicalName="XinSpect.Decoders.Data.pci-ids.tsv.gz" />
+  </ItemGroup>
+
 </Project>
