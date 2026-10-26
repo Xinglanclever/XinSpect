@@ -49,7 +49,7 @@
 
 | 檔案 | 大小 | 說明 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.00/XinSpect.exe) | 34,350,891 bytes | 主程式。藍色中隊守護進程已內建 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.00/XinSpect.exe) | 34,624,811 bytes | 主程式。藍色中隊守護進程已內建 |
 | [SHA256SUMS.txt](https://github.com/Xinglanclever/XinSpect/releases/download/v3.00/SHA256SUMS.txt) | 253 bytes | 逐檔雜湊，發佈後由 `Tools/verify-release.ps1` 對帳 |
 
 > **上表的位元組數為本版（v3.00）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
