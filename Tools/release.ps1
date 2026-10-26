@@ -168,13 +168,26 @@ try {
     }
 
     # ---------- release + assets ----------
-    Write-Host '==> create/update Release and upload three assets'
+    Write-Host '==> create/update Release and upload four assets'
     $bridge = 'publish-2.44-bridge\BlueSquadronBridge.exe'
     if (-not (Test-Path $bridge)) { Fail "bridge asset source missing: $bridge" }
-    & python Tools\publish_release.py --tag "v$Version" --title $Title --body-file $BodyFile `
+    $deploy = 'Installer\XinSpectDeploy.exe'
+    # SHA256SUMS.txt 是 README 下載表列的第 4 個資產，verify-release.ps1 會檢查它存在——
+    # 先前這一步是手動上傳的，於是腳本自己永遠跑不到綠燈（v3.00 首跑就撞到）。
+    # 逐檔雜湊一律算自**等一下要上傳的那三個檔案**，不是算自別的目錄。
+    $sums = Join-Path $env:TEMP "SHA256SUMS-$Version.txt"
+    $sumLines = @()
+    foreach ($pair in @(@('XinSpect.exe', $exe), @('BlueSquadronBridge.exe', $bridge), @('XinSpectDeploy.exe', $deploy))) {
+        $h = (Get-FileHash -Algorithm SHA256 -Path $pair[1]).Hash.ToLowerInvariant()
+        $sumLines += "$h  $($pair[0])"
+    }
+    [IO.File]::WriteAllText($sums, (($sumLines -join "`n") + "`n"), (New-Object Text.UTF8Encoding($false)))
+    Write-Host "SHA256SUMS.txt = $((Get-Item $sums).Length) bytes"
+    & python Tools/publish_release.py --tag "v$Version" --title $Title --body-file $BodyFile `
         --asset "XinSpect.exe=$exe" `
         --asset "BlueSquadronBridge.exe=$bridge" `
-        --asset "XinSpectDeploy.exe=Installer\XinSpectDeploy.exe"
+        --asset "XinSpectDeploy.exe=$deploy" `
+        --asset "SHA256SUMS.txt=$sums"
     if ($LASTEXITCODE -ne 0) { Fail 'asset upload failed' }
 
     # ---------- post-release verifier ----------
