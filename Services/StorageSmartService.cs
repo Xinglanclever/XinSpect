@@ -617,9 +617,17 @@ public sealed class StorageSmartService : ObservableObject
     // ── SATA／ATA ──────────────────────────────────────────────────────────
 
     /// <summary>以 SMART_RCV_DRIVE_DATA 取 512 位元組屬性表；失敗回 null（不使用會卡死的 ATA_PASS-THROUGH）。</summary>
+    /// <summary>
+    /// 斷路器的查詢鍵（磁碟, 查詢）中的「查詢」那一半，<b>與 <see cref="TryReadAtaSmartClassic"/> 的
+    /// <c>GuardedRead</c> 逐字相同</b>（同一個 <c>nameof</c>）。給外層自己先問「這一輪該不該直接跳過」的
+    /// 呼叫端用（<see cref="SmartLookupProbe"/>，第 274 輪）——字串若在兩處各寫一份，遲早會漂開，
+    /// 那時斷路器就會變成永遠不跳過、或永遠跳過。
+    /// </summary>
+    public const string AtaAttributesOp = nameof(TryReadAtaSmartClassic);
+
     /// <summary>ATA SMART READ DATA（512B）；失敗或逾時回 null。走看門狗，見 Services/DiskIo.cs。</summary>
     private static byte[]? TryReadAtaSmartClassic(int index)
-        => GuardedRead(index, nameof(TryReadAtaSmartClassic), () => ReadAtaSmartClassicCore(index));
+        => GuardedRead(index, AtaAttributesOp, () => ReadAtaSmartClassicCore(index));
 
     private static byte[]? ReadAtaSmartClassicCore(int index)
     {
@@ -696,9 +704,23 @@ public sealed class StorageSmartService : ObservableObject
     /// **不回空清單**——空清單會被誤讀成「讀到了,但這顆碟沒有任何屬性」,那是另一回事。
     /// </summary>
     public static IReadOnlyList<SmartRow>? TryReadAtaAttributes(int index)
+        => TryReadAtaAttributes(index, null);
+
+    /// <summary>
+    /// 與單參版同一條讀取，但把 <paramref name="driveModel"/> 帶進解碼（第 274 輪）。
+    /// </summary>
+    /// <remarks>
+    /// <b>為什麼需要這個重載：</b><see cref="DecodeAtaAttributes"/> 的「廠商自訂」補強路徑要看型號
+    /// （<see cref="TryVendorFromModel"/> → <c>SmartAttributeKnowledge.Lookup</c>），而單參版永遠用
+    /// <c>null</c> 解碼——headless 的 <c>ata.smart.attr.lookup</c> 若走單參版，
+    /// 統計到的「命中」會永遠是 0（每一筆廠商自訂都只會是「未收錄」），那是一個<b>看起來正常、
+    /// 實際上錯的數字</b>，比不接線更糟。
+    /// <b>不新增第二條讀取路徑</b>：這裡與單參版呼叫同一個 <see cref="TryReadAtaSmartClassic"/>。
+    /// </remarks>
+    public static IReadOnlyList<SmartRow>? TryReadAtaAttributes(int index, string? driveModel)
     {
         byte[]? sector = TryReadAtaSmartClassic(index);
-        return sector is null || sector.Length < 512 ? null : DecodeAtaAttributes(sector);
+        return sector is null || sector.Length < 512 ? null : DecodeAtaAttributes(sector, driveModel);
     }
 
     /// <summary>ATA SMART READ THRESHOLDS（0xD1 簽章，512B 門檻表）；失敗回 null。與 READ DATA 同一 ioctl 通路。</summary>

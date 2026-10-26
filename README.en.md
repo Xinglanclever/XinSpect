@@ -7,7 +7,7 @@ A free, open-source hardware verification, monitoring, and security auditing too
 ![Version](https://img.shields.io/badge/version-2.90-4C8DFF)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![Tests](https://img.shields.io/badge/tests-6969%20passed-3FB950)
+![Tests](https://img.shields.io/badge/tests-6993%20passed-3FB950)
 ![Mutation Score](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
@@ -46,6 +46,7 @@ This is the extended documentation. Every feature lists its data source (which r
 - [23. FAQ](#23-faq)
 - [24. License](#24-license)
 - [25. Author](#25-author)
+- [26. Community, contributions and sponsorship](#26-community-contributions-and-sponsorship)
 - [Appendix A: Utility tools](#appendix-a-utility-tools)
 - [Appendix B: Settings](#appendix-b-settings)
 - [Appendix C: Audit log](#appendix-c-audit-log)
@@ -1224,6 +1225,25 @@ Starting with **v2.69**, this project is released under the [GNU Affero General 
 ## 25. Author
 
 By: Xinglanclever
+
+## 26. Community, contributions and sponsorship
+
+This project has no support desk and no paid tier. Maintenance, interpretation and debugging all happen in public:
+
+| What you want | Where |
+|---|---|
+| Ask what a number means, share interpretation experience | [Discussions](https://github.com/Xinglanclever/XinSpect/discussions) (if it is not enabled yet, open an issue first) |
+| Report a crash, a blank view, or a value that contradicts the docs | [Issues](https://github.com/Xinglanclever/XinSpect/issues/new?template=bug_report.yml) |
+| Report hardware that cannot be read or is decoded incorrectly | [Hardware report](https://github.com/Xinglanclever/XinSpect/issues/new?template=hardware_report.yml) |
+| Suggest a new capability | [Feature request](https://github.com/Xinglanclever/XinSpect/issues/new?template=feature_request.yml) |
+| Send code, a decoder or documentation | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Security issue | [SECURITY.md](SECURITY.md) (**private report only; do not open a public issue**) |
+| Code of conduct incident | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) |
+| Support maintenance | [GitHub Sponsors](https://github.com/sponsors/Xinglanclever) |
+
+**The boundary of sponsorship.** Sponsorship does not affect issue ordering, feature selection, review standards or response time, and it does not buy "nicer-looking numbers". This project has no paid support; if you need a commercial support window, it does not exist here, and the documentation will not pretend otherwise.
+
+**Before you report.** Do not include serial numbers, UUIDs, MAC addresses, asset tags, usernames or full paths. If you need to attach `--json` output, narrow it with `--only` and redact it yourself. The data-sovereignty position is in chapter 14.
 
 ## Appendix A: Utility tools
 

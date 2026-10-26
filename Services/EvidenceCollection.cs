@@ -95,6 +95,12 @@ public static class EvidenceCollection
         catch { /* 附加功能：讀不到由 LocalSecurityAuditService 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadDeepTest(); }
         catch { /* 附加功能：讀不到由 DeepTest 各服務標三態，不在這裡中斷啟動 */ }
+        // 第 274 輪：ata.smart.attr.lookup 的真值（SMART 廠商屬性對照）。
+        // **只能在這裡讀、不能在 AllFacts（getter）裡讀**——這條用專屬執行緒＋6 秒外層預算
+        // 讀 ATA SMART 屬性表；放進 getter 等於每次「看一下事實集」都可能付一次碟 I/O。
+        // NVMe 一律不讀（第 263 輪實證：本機 PhysicalDrive 2／4 會卡在核心不可中斷等待）。
+        try { svc.LoadSmartLookupStats(); }
+        catch { /* 附加功能：讀不到由 SmartLookupProbe／ToSmartFact 標三態，不在這裡中斷啟動 */ }
         try { svc.LoadVbsState(); }
         catch { /* 附加功能：讀不到由 VbsStateFactsService 標三態，不在這裡中斷啟動 */ }
         // Vol 2 批次（2026-10-11）：自我完整性／CVE 離線對照／伺服器摘要／情境診斷／SBOM——皆唯讀、

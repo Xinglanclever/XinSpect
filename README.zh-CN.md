@@ -7,7 +7,7 @@
 ![版本](https://img.shields.io/badge/version-2.90-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-6969%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-6993%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
@@ -44,6 +44,7 @@
 - [二十三、常见问题](#二十三常见问题)
 - [二十四、授权](#二十四授权)
 - [二十五、作者](#二十五作者)
+- [二十六、社区、贡献与赞助](#二十六社区贡献与赞助)
 - [附录 A、实用工具逐项说明](#附录-a实用工具逐项说明)
 - [附录 B、设置页](#附录-b设置页)
 - [附录 C、审计日志](#附录-c审计日志)
@@ -2511,6 +2512,27 @@ O-01 到 O-12 里，至少四条是「知道怎么修，但选择不修」：
 ## 二十五、作者
 
 By：Xinglanclever
+
+## 二十六、社区、贡献与赞助
+
+这个项目没有客服窗口、没有付费方案，维护、判读与除错都靠公开渠道。入口只有这几个：
+
+| 你想做的事 | 去哪里 |
+|---|---|
+| 问「这个数字是什么意思」、分享判读经验 | [Discussions](https://github.com/Xinglanclever/XinSpect/discussions)（若尚未开启，请先开 Issue） |
+| 回报崩溃、画面空白、读数与文件不符 | [Issues](https://github.com/Xinglanclever/XinSpect/issues/new?template=bug_report.yml) |
+| 回报某颗硬件读不到或解码错 | [硬件判读回报](https://github.com/Xinglanclever/XinSpect/issues/new?template=hardware_report.yml) |
+| 建议新能力 | [功能建议](https://github.com/Xinglanclever/XinSpect/issues/new?template=feature_request.yml) |
+| 送程序、解码器或文件 | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| 安全问题 | [SECURITY.md](SECURITY.md)（**走私密通报，不要开公开 Issue**） |
+| 行为守则事件 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) |
+| 支持维护 | [GitHub Sponsors](https://github.com/sponsors/Xinglanclever) |
+
+**赞助的边界。** 赞助不影响 Issue 排序、功能取舍、审查标准或回复时效，也不换取「比较好看的数字」。
+本项目没有付费支持；若你需要商业等级的支持窗口，这里没有，文件也不会假装有。
+
+**回报前请先确认。** 不要附上序号、UUID、MAC、资产标签、用户名或完整路径；
+需要附 `--json` 输出时，先用 `--only` 缩小范围并自行遮蔽。数据主权的立场见第十四章。
 
 ## 附录 A、实用工具逐项说明
 

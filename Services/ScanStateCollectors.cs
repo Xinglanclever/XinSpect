@@ -104,6 +104,74 @@ public static class KnowledgeLookupCollector
         return new HardwareFact(SmartAttrLookupKey, "知識與更新", name, detail, "次", source,
             FactTrustLevel.Derived, false, at, stats.Hits, availability, reason);
     }
+
+    /// <summary>
+    /// 第 274 輪：把統計接上<b>這一輪真的讀到的屬性列</b>的探針結果
+    /// （<see cref="SmartLookupProbe.Result"/>）。
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>為什麼不是在 <c>ToSmartFact(at, stats)</c> 裡就分三態：</b>那個版本只知道「知識表被查了幾次」，
+    /// 不知道「為什麼沒有列」——沒有 ATA 碟、逾時、讀到了但零屬性，三者在統計上長得一模一樣
+    /// （都是 0 次查詢），但在斷言上是<b>三件不同的事</b>。把探針結論一起傳進來，
+    /// 那把鍵才說得出「是沒有對象」「是讀不到」還是「讀到了但沒有屬性」。
+    /// </para>
+    /// <para>
+    /// <b>讀不到不編數字：</b>非 <see cref="SmartLookupProbe.ProbeStatus.Ok"/> 的三態一律
+    /// <c>NumericValue = null</c>（<see cref="HardwareFact"/> 的不變式），統計只在 Ok 時成立。
+    /// </para>
+    /// </remarks>
+    public static HardwareFact ToSmartFact(DateTimeOffset at, KnowledgeLookupReport.LookupStats stats,
+        SmartLookupProbe.Result probe)
+    {
+        const string name = "SMART 廠商屬性對照";
+        const string source = "SMART 屬性知識表（離線，六家）＋本輪 ATA SMART READ DATA 直讀";
+
+        switch (probe.Status)
+        {
+            case SmartLookupProbe.ProbeStatus.ReadError:
+                return new HardwareFact(SmartAttrLookupKey, "知識與更新", name,
+                    "讀不到任何一顆 ATA 碟的 SMART 屬性列，知識表未被查詢", "次", source,
+                    FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError,
+                    (probe.Reason ?? "讀不到，原因不明") + "；" + probe.CoverageNote);
+
+            case SmartLookupProbe.ProbeStatus.NotApplicable:
+                return new HardwareFact(SmartAttrLookupKey, "知識與更新", name,
+                    "沒有可讀的 ATA 通道碟，知識表未被查詢", "次", source,
+                    FactTrustLevel.Unknown, false, at, null, FactAvailability.NotApplicable,
+                    probe.CoverageNote);
+
+            case SmartLookupProbe.ProbeStatus.Unknown:
+                return new HardwareFact(SmartAttrLookupKey, "知識與更新", name,
+                    "讀到了，但這顆碟沒有回報任何 SMART 屬性列——知識表未被查詢", "次", source,
+                    FactTrustLevel.Unknown, false, at, null, FactAvailability.Unknown,
+                    (probe.Reason ?? "碟回應了，但屬性表是空的") + "；" + probe.CoverageNote);
+        }
+
+        // Ok：統計走既有形狀（同一套判定），另外把「幾顆被略過、為什麼」寫進值裡——
+        // 略過不是錯誤，但它是讀者判斷「這份統計涵蓋到哪裡」的必要資訊。
+        var plain = ToSmartFact(at, stats);
+        return new HardwareFact(plain.Key, plain.Category, plain.Name,
+            plain.Value + "；" + probe.CoverageNote,
+            plain.Unit, source, plain.Trust, plain.Sensitive, at,
+            plain.NumericValue, plain.Availability, plain.UnavailableReason);
+    }
+
+    /// <summary>
+    /// 第 274 輪：<b>本輪還沒讀過碟</b>時的 <c>ata.smart.attr.lookup</c>。
+    /// </summary>
+    /// <remarks>
+    /// <b>為什麼要有這一把，而不是「沒讀就讓鍵消失」：</b>鍵消失與「讀了、只是沒有可對照的屬性」
+    /// 在報告上長得一樣（都沒有這把鍵／都是 0 次），而前者是<b>這條收集鏈沒跑</b>。
+    /// 沿用第 271 輪的判準：先讓鍵存在、並如實說出它現在是什麼狀態，不造假查詢次數。
+    /// </remarks>
+    public static HardwareFact ToSmartNotLoaded(DateTimeOffset at)
+        => new(SmartAttrLookupKey, "知識與更新", "SMART 廠商屬性對照",
+            "本輪尚未讀取 SMART 屬性列，知識表未被查詢", "次",
+            "SMART 屬性知識表（離線，六家）", FactTrustLevel.Unknown, false, at,
+            null, FactAvailability.Unknown,
+            "載入點（EvidenceLabService.LoadSmartLookupStats 由 EvidenceCollection.LoadUsermodeFacts 呼叫）"
+            + "這一輪沒有跑：這不是「沒有廠商自訂屬性」，是「沒有讀」");
 }
 
 /// <summary>

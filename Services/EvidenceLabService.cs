@@ -136,6 +136,48 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>裝置合規基線（Vol2 ZR-004）：用知識包裡的合規清單對照本輪事實。清單缺席＝不適用。</summary>
     public IReadOnlyList<HardwareFact> ComplianceFacts { get; private set; } = [];
 
+    /// <summary>
+    /// SMART 廠商屬性對照的真值（第 274 輪，<c>ata.smart.attr.lookup</c>）。
+    /// 由 <see cref="LoadSmartLookupStats"/> 讀入；<see cref="AllFacts"/> 只負責串接，不負責讀。
+    /// </summary>
+    public IReadOnlyList<HardwareFact> SmartLookupFacts { get; private set; } = [];
+
+    /// <summary>
+    /// 讀這一輪的 SMART 屬性列並換算成知識表查詢統計（第 274 輪）。
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>為什麼一定要是一個有名字的 Load 方法，而不是在 <see cref="AllFacts"/> 裡直接算：</b>
+    /// <see cref="AllFacts"/> 是 <b>getter</b>——它被 UI 綁定、被 CLI、被報告匯出、被遙測反覆呼叫
+    /// （<c>EvidenceCollection.ReloadInto</c> 的 finally 就讀了一次）。
+    /// 把一條<b>會阻塞（外層 6 秒預算）的碟讀取</b>放進 getter，等於讓每一次「看一下事實集」
+    /// 都可能付一次碟 I/O，而且還可能同時從兩個執行緒各付一次。
+    /// 那個錯誤不會報錯，只會讓畫面卡一下、然後大家學會「不要點那一頁」。
+    /// </para>
+    /// <para>
+    /// <b>所以分工是：</b>這個方法負責讀（一次，在收集鏈上）；
+    /// <see cref="AllFacts"/> 只把結果 <c>Concat</c> 進來。讀不到的原因（沒有 ATA 碟／逾時／
+    /// 讀到但零屬性）由 <see cref="SmartLookupProbe"/> 帶回、由
+    /// <see cref="KnowledgeLookupCollector.ToSmartFact(DateTimeOffset, KnowledgeLookupReport.LookupStats, SmartLookupProbe.Result)"/>
+    /// 寫成三態，<b>不在這裡編數字</b>。
+    /// </para>
+    /// <para>
+    /// <b>安全界線沿用第 263／271 輪：</b>只走 ATA 通道（NVMe 日誌頁在收集時一律不讀——實測會卡死）、
+    /// 專屬執行緒＋外層 6 秒預算、唯讀零網路。
+    /// </para>
+    /// </remarks>
+    public void LoadSmartLookupStats()
+    {
+        var at = DateTimeOffset.UtcNow;
+        var probe = SmartLookupProbe.Run();
+        SmartLookupFacts =
+        [
+            KnowledgeLookupCollector.ToSmartFact(at,
+                KnowledgeLookupCollector.CollectSmart(probe.Rows), probe),
+        ];
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
+
     /// <summary>FIT 表與 Boot Guard（P0-02／FW-001）：快閃尾端唯讀；驅動通路未就緒＝三態。</summary>
     public IReadOnlyList<HardwareFact> FitFacts { get; private set; } = [];
 
@@ -2046,12 +2088,16 @@ public sealed class EvidenceLabService : ObservableObject
             var ouiLookups = KnowledgeLookupCollector.CollectOui(baseFacts);
             baseFacts.Add(KnowledgeLookupReport.ToPciFact(DateTimeOffset.UtcNow, pciLookups));
             baseFacts.Add(KnowledgeLookupReport.ToOuiFact(DateTimeOffset.UtcNow, ouiLookups));
-            // SMART 廠商屬性對照（第 271 輪接線）：知識表查詢統計的通路與 PCI/OUI 同形。
-            // **本輪以空列集申報「未被查詢」**——StorageSmartService.Rows 是 UI 實例狀態、
-            // 且同步直讀有卡死史（斷路器在 UI 層），真正的逐列統計等顯示層接線完成後接入；
-            // 先讓鍵存在且如實說「未被查詢」，不造假查詢次數。
-            baseFacts.Add(KnowledgeLookupCollector.ToSmartFact(DateTimeOffset.UtcNow,
-                KnowledgeLookupCollector.CollectSmart([])));
+            // SMART 廠商屬性對照（第 274 輪：接上真值）：這一輪真的讀到的屬性列已在
+            // LoadSmartLookupStats 讀完（專屬執行緒＋外層 6 秒預算、只走 ATA），
+            // 這裡**只串接結果**——AllFacts 是 getter，不能放會阻塞的碟讀取。
+            //
+            // 還沒載入時（例如只走 ReloadInto、沒走 LoadUsermodeFacts 的路徑）不讓鍵憑空消失：
+            // 用「本輪尚未讀取」那一把，把「沒讀」與「讀了但沒有可對照的屬性」分開——
+            // 兩者在報告上都表現為 0 次查詢，但一個是沒跑、一個是跑了沒有對象。
+            baseFacts.AddRange(SmartLookupFacts.Count > 0
+                ? SmartLookupFacts
+                : [KnowledgeLookupCollector.ToSmartNotLoaded(DateTimeOffset.UtcNow)]);
 
             // 知識包宣告（P1-033–P1-038）：與既有 LoadKnowledgePack 同一次載入的結果。
             baseFacts.AddRange(KnowledgePackReportCollector.Collect(

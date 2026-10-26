@@ -36,6 +36,12 @@ public static class CliService
     public const string DiffReportArg = "--diff-report";
     public const string OnlyArg = "--only";
 
+    /// <summary>U10-PF／P1-071／P1-072 追蹤鍵：建立可第三方驗證的證據包（<c>--evidence-pack 目錄</c>）。
+    /// 這個命令是 <c>ev.manifest</c> 與 <c>ev.chain.verify</c> 唯一的生產端——兩份產物只有
+    /// 「建立包的那一刻」同時在手上（見 <see cref="EvidencePackBuilder"/> 的說明）。</summary>
+    public const string EvidencePackArg = "--evidence-pack";
+    public const string EvidencePackFactKey = "ev.pack.build";
+
     /// <summary>U10-PF-0007 追蹤鍵：選擇性匯出（<c>--only 前綴1,前綴2</c>）。
     /// 常數刻意不以「Key」命名：事實鍵目錄（FactKeyCatalog）本輪凍結，原始碼掃描器會把
     /// Services/ 裡名稱含「Key」的字串常數掃成事實鍵——這是產品追蹤標記，不是事實鍵。
@@ -80,6 +86,8 @@ public static class CliService
             return RunStdinBatch(collect, stdin, stdout, stderr);
         if (args[0] == DiffReportArg)
             return RunDiffReport(args, stdout, stderr);
+        if (args[0] == EvidencePackArg)
+            return RunEvidencePack(args, collect, stdout, stderr);
         if (args[0] != JsonArg)
         {
             stderr.WriteLine($"未知引數「{args[0]}」。用 --help 看用法。");
@@ -185,6 +193,7 @@ public static class CliService
             new { mode = ErrorsArg, scope = "", output = "JSON", description = "聚合非 Present 三態與原因。" },
             new { mode = StdinBatchArg, scope = "", output = "JSONL", description = "stdin 每行一個 key 前綴；每行輸出一個查詢結果物件。" },
             new { mode = DiffReportArg, scope = "", output = "JSON", description = "兩份匯出報告（HTML／MD／TXT）鍵級互比；輸出只含鍵名與計數，不含值。" },
+            new { mode = EvidencePackArg, scope = "", output = "JSON", description = "建立可第三方驗證的證據包（事實 JSON＋審計鏈副本＋manifest 雜湊清單＋互驗結果）；這是 ev.manifest 與 ev.chain.verify 唯一的生產端。" },
         };
         return JsonSerializer.Serialize(payload, JsonOptions);
     }
@@ -478,6 +487,104 @@ public static class CliService
     /// 公開場合，值進了輸出就等於把遮蔽功能整個繞過。
     /// 退出碼：0＝鍵級全同；2＝有差異（細節在輸出）；1＝致命（引數錯、讀檔失敗、格式不認得）。
     /// </summary>
+    /// <summary>
+    /// 建立證據包：事實 JSON ＋ 審計鏈副本 ＋ manifest（逐檔 SHA-256）＋ 互驗結果。
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// 這個命令是 <c>ev.manifest</c> 與 <c>ev.chain.verify</c> <b>唯一的生產端</b>。
+    /// 那兩把鍵登記在目錄已久、產生它們的方法也早就有測試，但正式流程從沒有人生產——
+    /// 缺的不是鍵，是「兩份產物同時在手上」的那一刻：沒有包就沒有 manifest，
+    /// 也就無從互驗。這裡補的就是那一刻（理由寫在 <see cref="EvidencePackBuilder"/>）。
+    /// </para>
+    /// <para>
+    /// <b>退出碼：</b>0＝包已建立且互驗通過；2＝包已建立但互驗未通過（原因在 verify.json，
+    /// 兩份產物對不上是<b>結果</b>不是執行失敗）；1＝致命（目錄不可寫、收集失敗等）。
+    /// </para>
+    /// </remarks>
+    private static int RunEvidencePack(string[] args, Func<IReadOnlyList<HardwareFact>> collect,
+        TextWriter stdout, TextWriter stderr)
+    {
+        if (args.Length < 2 || args[1].StartsWith("--", StringComparison.Ordinal))
+        {
+            stderr.WriteLine($"{EvidencePackArg} 之後要接輸出目錄：{EvidencePackArg} <目錄>。");
+            return ExitError;
+        }
+        string directory = args[1];
+
+        WriteGate.Reset();
+        IReadOnlyList<HardwareFact> facts;
+        try { facts = collect(); }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"收集失敗：{ex.GetType().Name}：{ex.Message}");
+            return ExitError;
+        }
+
+        var at = DateTimeOffset.UtcNow;
+        var payload = new
+        {
+            generatedAtUtc = at,
+            scope = "evidence-pack",
+            schemaVersion = SnapshotSchemaCompatService.CurrentVersion,
+            schemaCompat = SnapshotSchemaCompatService.CompatibilityRules,
+            count = facts.Count,
+            writeAudit = WriteGate.DescribeSession(),
+            facts = facts.Select(FactJson),
+        };
+        byte[] json = JsonSerializer.SerializeToUtf8Bytes(payload, JsonOptions);
+
+        EvidencePackBuilder.Result built;
+        try
+        {
+            built = EvidencePackBuilder.Build(directory,
+                [("evidence.json", json)],
+                AuditLogService.DefaultPath, at);
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"建立證據包失敗：{ex.GetType().Name}：{ex.Message}");
+            return ExitError;
+        }
+
+        var manifestFact = WriteGateReport.ToManifestFact(at,
+            built.Files.Select(e => (e.File, e.Sha256)).ToList(), built.Missing);
+        var chainFact = WriteGateReport.ToChainVerifyFact(at, built.ChainValid, built.ManifestValid,
+            built.Failure);
+        string verifyJson = EvidencePackBuilder.WriteVerifyReport(built, [manifestFact, chainFact], at);
+
+        WriteGate.Record($"evidence-pack:{Path.GetFileName(Path.TrimEndingDirectorySeparator(built.Directory))}",
+            $"{nameof(CliService)}.{nameof(RunEvidencePack)}",
+            $"包內 {built.Files.Count} 檔、manifest 雜湊 {built.ManifestSha256[..12]}", built.ManifestValid && built.ChainValid);
+
+        string summary = JsonSerializer.Serialize(new
+        {
+            scope = "evidence-pack",
+            directory = built.Directory,
+            fileCount = built.Files.Count,
+            manifestSha256 = built.ManifestSha256,
+            manifestValid = built.ManifestValid,
+            chainValid = built.ChainValid,
+            failure = built.Failure,
+            verifyFile = Path.Combine(built.Directory, EvidencePackBuilder.VerifyFileName),
+            note = "兩者必須互相印證才算數；verify.json 有逐把事實與原因。",
+            verify = verifyJson.Length,
+        }, JsonOptions);
+        string? outPath = OptionValue(args, OutArg);
+        try
+        {
+            if (outPath is not null) File.WriteAllText(outPath, summary);
+            else stdout.WriteLine(summary);
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"無法輸出結果：{ex.Message}");
+            return ExitError;
+        }
+
+        return built.ManifestValid && built.ChainValid ? ExitOk : ExitPartial;
+    }
+
     private static int RunDiffReport(string[] args, TextWriter stdout, TextWriter stderr)
     {
         if (args.Length < 3 || args[1].StartsWith("--", StringComparison.Ordinal)
@@ -558,6 +665,7 @@ public static class CliService
               XinSpect --errors [--out <檔案>]
               XinSpect --stdin-batch
               XinSpect --diff-report <舊報告> <新報告> [--out <檔案>]
+              XinSpect --evidence-pack <目錄>
               XinSpect --help
 
             範圍：
@@ -584,6 +692,11 @@ public static class CliService
                               新增鍵／消失鍵／值變化。<b>輸出只含鍵名與計數，不含任何值</b>——
                               值變化只說「有變」，序號與 MAC 這類識別資訊不會經由 diff 洩漏。
                               格式不認得的檔案如實拒比，不硬解析。
+              evidence-pack   建立可第三方驗證的證據包：事實 JSON＋審計鏈副本＋manifest
+                              （逐檔 SHA-256）＋verify.json（互驗結果）。<b>這是 ev.manifest 與
+                              ev.chain.verify 唯一的生產端</b>——那兩把鍵必須在同一刻、兩份產物
+                              都在手上時才算得出來（拿「當下的鏈」比「過去的 manifest」會永遠對不上）。
+                              退出碼 0＝互驗通過、2＝包已建立但互驗未通過（原因在 verify.json）。
 
             選項：
               --query <前綴>   只輸出 key 以該前綴開頭的事實（例：--query platform.）

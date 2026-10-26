@@ -35,7 +35,8 @@ public class AutomationAndGuidanceFactsTests
         var doc = JsonDocument.Parse(json);
 
         // 8 → 9（2026-10-25 第 272 輪）：--diff-report（U10-PF-0002 報告鍵級對照）進 headless 目錄。
-        Assert.Equal(9, doc.RootElement.GetArrayLength());
+        // 9 → 10（同輪續）：--evidence-pack（ev.manifest／ev.chain.verify 的生產端）進 headless 目錄。
+        Assert.Equal(10, doc.RootElement.GetArrayLength());
         Assert.Contains("--json", json, StringComparison.Ordinal);
         Assert.Contains(CliService.StdinBatchArg, json, StringComparison.Ordinal);
         Assert.Contains("零網路", json, StringComparison.Ordinal);
