@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Xunit;
@@ -84,6 +84,81 @@ public class FactKeyRuntimeReconcileTests
             "執行期產出了無主鍵——覆蓋申報與目錄都看不見它們：" + string.Join("、", homeless) +
             "\n三選一：收進 FactKeyCatalog（靜態可枚舉）、登記進 FactKeyDynamicCatalog（動態家族＋成員由什麼決定）、" +
             "或 ConditionalOnly（互動才產生＋條件）。");
+    }
+
+    /// <summary>
+    /// <b>每一個非 Present 的事實都要說得出為什麼（第 287 輪）。</b>
+    ///
+    /// <para>
+    /// 六態的整個理由是「不知道」不能長得像「量到 0」。但只有狀態碼而沒有理由時，
+    /// 畫面上一樣只看到「不適用」三個字——使用者無從判斷那是「這台機器沒有這個介面」
+    /// 還是「我們讀失敗了」。這條規則是本專案的核心誠實約定，卻一直只靠**寫的人記得**：
+    /// 匯出快照那條路徑會驗，但驗的是「非 Present 不得帶數字」，不是「有沒有寫理由」。
+    /// </para>
+    ///
+    /// <para>
+    /// 這裡跑真收集（與目錄對帳同一組入口），逐筆檢查。紅燈訊息直接列出是哪幾把鍵——
+    /// 一把鍵沒有理由，就是一個使用者無法解讀的狀態。
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Category", "RealHardware")]
+    public void 每一個非Present的事實都要說得出為什麼()
+    {
+        var svc = LoadBothEntries();
+
+        var silent = svc.AllFacts
+            .Where(f => f.Availability != FactAvailability.Present)
+            .Where(f => string.IsNullOrWhiteSpace(f.UnavailableReason))
+            .Select(f => $"{f.Key}（{f.Availability}）")
+            .OrderBy(k => k, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.True(silent.Count == 0,
+            $"有 {silent.Count} 筆事實標了「不是這樣」卻沒說為什麼——"
+            + "使用者看到的是狀態碼，不是原因：\n" + string.Join("\n", silent.Take(30)));
+    }
+
+    /// <summary>
+    /// <b>事實集的基本形狀（第 287 輪）。</b>每一筆 `HardwareFact` 都要能被人拿去做判斷，
+    /// 所以四件事都不能空：鍵、名稱、來源、量測時刻。
+    ///
+    /// <para>
+    /// <b>為什麼「來源」是硬條件：</b>這個專案的每一個數字都宣稱自己可回溯——
+    /// 而回溯的起點就是 <c>Source</c>（哪條通路讀到的）。<b>沒有來源的事實，
+    /// 讀者無從判斷它是不是機器說的</b>，只能選擇相信或不信，那不是可稽核。
+    /// 名稱空著，畫面上就是一條沒有標籤的值；量測時刻是 <c>default</c> 時，
+    /// 「這一輪讀的」與「很久以前讀的」長得一樣。
+    /// </para>
+    ///
+    /// <para>
+    /// 鍵的格式另外由 <see cref="KeyCatalogPolicy.CheckKeyName"/> 判（動態家族成員自成一套規則），
+    /// 這裡不重寫一份規則。
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Category", "RealHardware")]
+    public void 事實集的鍵名稱來源與時刻都不得留空()
+    {
+        var svc = LoadBothEntries();
+        var problems = new List<string>();
+
+        foreach (var f in svc.AllFacts)
+        {
+            if (string.IsNullOrWhiteSpace(f.Key)) problems.Add("（有一筆事實的鍵是空的）");
+            if (string.IsNullOrWhiteSpace(f.Name)) problems.Add($"{f.Key}：名稱是空的");
+            if (string.IsNullOrWhiteSpace(f.Source)) problems.Add($"{f.Key}：來源是空的——這一筆無法回溯");
+            if (f.MeasuredAtUtc == default) problems.Add($"{f.Key}：量測時刻是 default");
+            // NaN／Infinity 會讓 JSON 匯出變成非法文件（JSON 沒有這兩個字面值），
+            // 而它們最常見的來源是「除以零的衍生量」——那正是這一層該攔住的地方。
+            if (f.NumericValue is { } v && (double.IsNaN(v) || double.IsInfinity(v)))
+                problems.Add($"{f.Key}：數值是 {v}（NaN／Infinity 會讓匯出檔變成非法 JSON）");
+            if (KeyCatalogPolicy.CheckKeyName(f.Key) is { } bad) problems.Add($"{f.Key}：{bad}");
+        }
+
+        Assert.True(problems.Count == 0,
+            $"事實集有 {problems.Count} 處基本形狀不合格（每一處都是一筆無法被讀者判斷的輸出）：" + Environment.NewLine
+            + string.Join(Environment.NewLine, problems.Distinct(StringComparer.Ordinal).Take(30)));
     }
 
     /// <summary>

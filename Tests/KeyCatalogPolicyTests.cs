@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Xunit;
@@ -221,6 +221,40 @@ public class KeyCatalogPolicyTests
 
         Assert.Equal(FactAvailability.Unknown, fact.Availability);
         Assert.Contains("而不是提高上限", fact.UnavailableReason);
+    }
+
+    // ── 豁免表本身的可信度（第 287 輪） ─────────────────────────────────
+
+    [Fact]
+    public void 豁免表的每一條都要對得上目錄裡的鍵()
+    {
+        // 豁免是「這把鍵刻意不對帳」的申報。替一個已經不存在的鍵申報豁免，
+        // 除了佔掉上限（600 條）之外別無作用——而且它會讓「已檢視」看起來比實際多。
+        var keys = FactKeyCatalog.Keys.ToHashSet(StringComparer.Ordinal);
+
+        var stale = FactCoverageReport.Exemptions.Keys
+            .Where(p => !keys.Contains(p) && !keys.Any(k => k.StartsWith(p, StringComparison.Ordinal)))
+            .OrderBy(p => p, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.True(stale.Count == 0,
+            "以下豁免條目在目錄裡找不到任何對應的鍵（舊鍵改名或刪除後留下的）：" + Environment.NewLine
+            + string.Join("、", stale));
+    }
+
+    [Fact]
+    public void 豁免理由不得是佔位字串()
+    {
+        // 豁免表的價值全在理由欄：它說明「為什麼這一把不需要第二個來源」。
+        // 理由短到看不出理由（「同上」「單一來源」）等於沒有申報。
+        var shallow = FactCoverageReport.Exemptions
+            .Where(kv => kv.Value.Trim().Length < 20)
+            .Select(kv => $"{kv.Key}（{kv.Value.Trim().Length} 字：{kv.Value}）")
+            .ToList();
+
+        Assert.True(shallow.Count == 0,
+            "以下豁免條目的理由太短，讀者無從判斷它為什麼被豁免：" + Environment.NewLine
+            + string.Join(Environment.NewLine, shallow.Take(20)));
     }
 
     private static string FindRepoRoot()

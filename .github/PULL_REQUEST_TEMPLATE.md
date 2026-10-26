@@ -1,4 +1,4 @@
-## 這個 PR 做了什麼
+﻿## 這個 PR 做了什麼
 
 <!-- 一兩句話。若對應 Issue 或 U10 候選 ID，請一併寫上。 -->
 
@@ -22,7 +22,7 @@
 
 ## 測試
 
-- [ ] `dotnet test Tests/XinSpect.Tests.csproj -c Release` 全綠（本機實測：7,142 條，約 5 分）。
+- [ ] `dotnet test Tests/XinSpect.Tests.csproj -c Release` 全綠（本機實測：7,146 條，約 6–7 分；真機硬體那幾條跑一次採集要一分多鐘）。
 - [ ] 新增測試，且測試釘住的是行為，不是實作細節。
 - [ ] 若測試數有變動，已同步 `Tests/TestSuiteBaseline.cs` 與三份 README 徽章。
 - [ ] 若涉及接線，已確認 `ViewEntryGateTests`／`ServiceOrphanGateTests` 沒有新紅燈。
