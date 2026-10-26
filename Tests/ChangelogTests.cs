@@ -236,6 +236,135 @@ public class ChangelogTests
         }
     }
 
+    // ── 三份文件的沿革與紀錄逐筆對帳 ──────────────────────────────────────
+
+    /// <summary>
+    /// 同一個版號在沿革裡出現兩次，讀者看到的是兩個同名條目——而且兩條的內容會不一樣。
+    /// 簡體版真的這樣過：v2.90／v2.89 各有一條短行加一條長行（短行就是長行的開頭被誤留了一份），
+    /// <b>而沒有任何守門看得出來</b>，因為兩行都「格式正確」、版號也都在。
+    /// </summary>
+    [Fact]
+    public void 三份README的版本沿革不得有重複版號()
+    {
+        var bad = new List<string>();
+
+        foreach (string file in new[] { "README.md", "README.zh-CN.md" })
+        {
+            var seen = new Dictionary<string, int>();
+            string[] lines = ReadRepoFile(file).Split('\n');
+            for (int i = 0; i < lines.Length; i++)
+            {
+                // 抓整段粗體標題：v1.9.1-B1 與 v1.9.1 是兩筆，不能用「數字點數字」去截
+                var m = Regex.Match(lines[i], @"^- \*\*v([^*]+)\*\*");
+                if (!m.Success) continue;
+                string key = m.Groups[1].Value.Trim();
+                if (seen.TryGetValue(key, out int first))
+                    bad.Add($"{file}：v{key} 出現兩次（第 {first + 1} 行與第 {i + 1} 行）");
+                else seen[key] = i;
+            }
+        }
+
+        // 英文版的逐版表是表格形狀（| 3.00 | 2026-10-26 | … |），換一套抓法但問同一件事
+        var seenEn = new Dictionary<string, int>();
+        string[] en = ReadRepoFile("README.en.md").Split('\n');
+        for (int i = 0; i < en.Length; i++)
+        {
+            var m = Regex.Match(en[i], @"^\| (\d+\.\d+) \| \d{4}-\d{2}-\d{2} \|");
+            if (!m.Success) continue;
+            string key = m.Groups[1].Value;
+            if (seenEn.TryGetValue(key, out int first))
+                bad.Add($"README.en.md：{key} 出現兩次（第 {first + 1} 行與第 {i + 1} 行）");
+            else seenEn[key] = i;
+        }
+
+        Assert.True(bad.Count == 0, "版本沿革有重複條目（同一版兩個條目，讀者無從判斷哪個對）：\n"
+            + string.Join("\n", bad));
+    }
+
+    /// <summary>
+    /// README 第十一部的兩層清單要跟紀錄一筆對一筆：11.2 是「一句話一版」，11.3 是「逐項翻開」。
+    /// 兩層都沒有守門時，補了新紀錄只會出現在「關於」頁與資料檔裡——而 README 是這份文件唯一
+    /// 對外的版本沿革，少了那一筆，讀者會以為那一版不存在。
+    /// </summary>
+    [Fact]
+    public void README的兩層沿革都要跟紀錄一筆對一筆()
+    {
+        string text = ReadRepoFile("README.md");
+        int entries = ChangelogCatalog.Entries.Count;
+
+        int bullets = Regex.Matches(Slice(text, "### 11.2 逐版紀錄", "### 11.3 逐版逐項"), @"(?m)^- \*\*").Count;
+        Assert.True(bullets == entries,
+            $"README 第 11.2 節有 {bullets} 筆，紀錄有 {entries} 筆（新紀錄要補一行）");
+
+        int sections = Regex.Matches(Slice(text, "### 11.3 逐版逐項", "## 第 12 部"), @"(?m)^#### v").Count;
+        Assert.True(sections == entries,
+            $"README 第 11.3 節有 {sections} 個「#### v…」小節，紀錄有 {entries} 筆（新紀錄要翻開一節）");
+    }
+
+    /// <summary>
+    /// 最新一筆的逐項文字必須逐字出現在 11.3 那一節。
+    /// 11.2 只寫一句話，真正給讀者的細節在 11.3；那一節先前完全沒有人管，抄錯或漏抄都不會紅。
+    /// 只驗最新一筆是刻意的：它是「這一版做了什麼」唯一的正式說法，也是每次改動最先動到的那一筆。
+    /// </summary>
+    [Fact]
+    public void 最新一筆的逐項文字要逐字出現在逐版逐項()
+    {
+        var latest = ChangelogCatalog.Entries[0];
+        string text = ReadRepoFile("README.md");
+        int start = text.IndexOf("### 11.3 逐版逐項", StringComparison.Ordinal);
+        Assert.True(start >= 0, "找不到第 11.3 節");
+        int head = text.IndexOf("#### v" + latest.Version, start, StringComparison.Ordinal);
+        Assert.True(head >= 0, $"第 11.3 節找不到 v{latest.Version} 那一節");
+        int next = text.IndexOf("\n#### v", head + 4, StringComparison.Ordinal);
+        if (next < 0) next = text.Length;
+        string section = text[head..next];
+
+        var missing = latest.Items.Where(i => !section.Contains("- " + i, StringComparison.Ordinal)).ToList();
+        Assert.True(missing.Count == 0,
+            $"v{latest.Version} 的逐項文字與紀錄不一致（第 11.3 節缺這幾條）：\n" + string.Join("\n", missing));
+    }
+
+    /// <summary>
+    /// 英文版的逐版表宣稱「列出 2.60 以後每一版」——宣稱與內容要一起成立。
+    /// 這張表在 v3.00 之前漏了 v2.99（版本加了、表沒加），而沒有任何東西在數它。
+    /// </summary>
+    [Fact]
+    public void 英文版的逐版表要涵蓋它宣稱的範圍()
+    {
+        string en = ReadRepoFile("README.en.md");
+        Assert.True(en.Contains("every release from 2.60 onward", StringComparison.Ordinal),
+            "英文版宣稱的那句話不見了——這條守門是照著它寫的，句改了就要一起改");
+
+        var have = new HashSet<string>(
+            Regex.Matches(en, @"(?m)^\| (\d+\.\d+) \| \d{4}-\d{2}-\d{2} \|").Select(m => m.Groups[1].Value));
+
+        var missing = ChangelogCatalog.Entries
+            .Select(e => e.Version)
+            .Where(v => AtLeast(v, 2, 60) && !have.Contains(v))
+            .ToList();
+
+        Assert.True(missing.Count == 0,
+            "英文版逐版表宣稱涵蓋 2.60 以後每一版，但少了：" + string.Join("、", missing));
+    }
+
+    /// <summary>版本字串「主.次」是否不低於 <paramref name="major"/>.<paramref name="minor"/>（只比數字，不比字串）。</summary>
+    private static bool AtLeast(string version, int major, int minor)
+    {
+        var parts = version.Split('.');
+        if (parts.Length != 2) return false;
+        if (!int.TryParse(parts[0], out int a) || !int.TryParse(parts[1], out int b)) return false;
+        return a * 100 + b >= major * 100 + minor;
+    }
+
+    private static string Slice(string text, string from, string to)
+    {
+        int i = text.IndexOf(from, StringComparison.Ordinal);
+        Assert.True(i >= 0, $"找不到「{from}」");
+        int j = text.IndexOf(to, i + from.Length, StringComparison.Ordinal);
+        Assert.True(j > i, $"找不到「{to}」（在「{from}」之後）");
+        return text[i..j];
+    }
+
     // ── 讀原始碼樹 ────────────────────────────────────────────────────────
 
     /// <summary>
