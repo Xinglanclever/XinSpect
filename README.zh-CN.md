@@ -7,7 +7,7 @@
 ![版本](https://img.shields.io/badge/version-2.99-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-7045%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-7053%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
@@ -386,9 +386,9 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 | C# 源文件 | 1,524 档／272,492 行 | 走访所有 `*.cs`，排除 `bin/`、`obj/`、`publish-*/`、`.git/` |
 | 服务层文件 | 615 档 | `Services/` 之下递归的 `*.cs`（不含 bin／obj） |
 | 接口页（XAML） | 80 页 | `ls Views/*.xaml` |
-| 测试档 | 566 档 | `ls Tests/*.cs` |
-| 测试方法 | 5,807 个 `[Fact]`＋249 个 `[Theory]` | 逐档正则计数 |
-| 运行期测试案例 | 7,045（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
+| 测试档 | 568 档 | `ls Tests/*.cs` |
+| 测试方法 | 5,815 个 `[Fact]`＋249 个 `[Theory]` | 逐档正则计数 |
+| 运行期测试案例 | 7,053（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
 | 公开文档 | 32 份 `docs/*.md`＋5 份 `docs/spec/*.md` | `ls docs/*.md`、`ls docs/spec/*.md` |
 | 事实键目录 | 1,108 键／149 个前缀 | 解析 `FactKeyCatalog.Keys` |
 | 动态键家族 | 48 个 | 解析 `FactKeyDynamicCatalog.Families` |
