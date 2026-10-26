@@ -11,7 +11,7 @@
 ![版本](https://img.shields.io/badge/version-2.99-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-7084%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-7089%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
@@ -37,11 +37,11 @@
 | XAML 檔（含對話框與控制項） | **80** | `ls Views/*.xaml` |
 | 全站說明條目（圓圈問號） | **286** | `Nav/HelpCatalog.cs` 的 `Entries` 成員數 |
 | 服務檔 | **617** | `find Services -name '*.cs' \| wc -l` |
-| 全域 C# 檔 | **1,460** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`publish-*/`、`.git/` |
+| 全域 C# 檔 | **1,461** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`publish-*/`、`.git/` |
 | 版本紀錄筆數 | **105** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
-| 專案測試基線 | **7,084** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
+| 專案測試基線 | **7,089** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
 
-**這張表不能證明什麼。** 1,128 把鍵不是 1,128 個正確答案；64 頁不是 64 個好設計；7,084 條測試不是 7,084 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
+**這張表不能證明什麼。** 1,128 把鍵不是 1,128 個正確答案；64 頁不是 64 個好設計；7,089 條測試不是 7,089 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
 
 ---
 
@@ -2352,7 +2352,6 @@
 
 ### 6.3 逐域鍵表（149 個域、1,128 把鍵）
 
-
 ### 6.3.1 域 `ac` — ACPI 表與韌體介面（58 把）
 
 **可判定的來源**：ACPI HPET（4 把）；ACPI NFIT（3 把）；ACPI DSDT/SSDT 詞法掃描（2 把）；ACPI DBG2（2 把）；ACPI MCFG（2 把）；專案界線宣告（無外部來源）（1 把） **可判定的可信度**：`Measured`×24；`Derived`×1。
@@ -4449,6 +4448,7 @@
 | 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
 |---|---|---|---|
 | `usbstor.count` | USB 儲存裝置使用痕跡 | 登錄檔 HKLM\SYSTEM\CurrentControlSet\Enum\USBSTOR | Unknown |
+
 ### 6.4 跨域通則：讀鍵、改鍵、加鍵
 
 前面三小節是「有哪些鍵、每一把在哪裡」。這一小節是**使用與維護的規則**：如何從一把鍵的名字讀出它的性質，以及改動時會牽動什麼。
@@ -4516,7 +4516,6 @@
 這一節把 1,128 把鍵逐一對回原始碼：**它被寫在哪個檔案的哪一行、那裡的註解怎麼說、以及產生它的那一行長什麼樣**。「產生它的那一行」優先取真正的生產點（同一處附近有 `HardwareFact(` 建構）——目錄、覆蓋報告與政策檔裡雖然也提到鍵，但那不是鍵的來源，故降到候補。
 
 **覆蓋率申報**：1,128 把鍵之中有 1,128 把在本版 `Services/` 的字面中找得到位置；其餘 0 把抽不到字面（鍵由方法組合、字串拼接或動態家族成員產生）。**抽不到不代表這把鍵不存在**——它仍在編譯期目錄裡、仍有生產者，只是這個抽取方式抓不到。同理，某一把鍵的註解欄若是空的，代表**那個生產點沒有註解**，不是本節省略了它。
-
 
 #### 6.5.1 域 `ac`（58 把）
 
@@ -8034,6 +8033,7 @@
 - **`usbstor.count`** — `Services/SecurityAuditFactsService.cs:149`（生產點）
   - 註解：── 4. USBSTOR 使用痕跡（登錄檔唯讀）──
   - 原始碼：`"usbstor.count", Category, "USB 儲存裝置使用痕跡", "", "", "登錄檔 HKLM\\SYSTEM\\CurrentControlSet\\Enum\\USBSTOR", FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError, "USBSTOR 登錄檔讀取失敗")];`
+
 ## 第 7 部 證據、稽核鏈與資料主權
 
 這一部回答兩個問題：**這份工具的產出能不能當證據用**，以及**它會不會把我的資料帶出去**。兩個問題的答案都是「有條件的可以」，而條件寫在這一部。
@@ -8278,12 +8278,12 @@
 
 | 項目 | 數量 | 數法 |
 |---|---:|---|
-| 測試檔 | **570** | `find Tests -name '*.cs' \| wc -l` |
-| `[Fact]` 方法 | **5,846** | 反射計算測試組件裡的 `[Fact]` 方法（`DeclaredOnly`） |
+| 測試檔 | **571** | `find Tests -name '*.cs' \| wc -l` |
+| `[Fact]` 方法 | **5,851** | 反射計算測試組件裡的 `[Fact]` 方法（`DeclaredOnly`） |
 | `[Theory]` 方法 | **249** | 同上，`[Theory]` 分開數（它繼承 `[Fact]`，不能混） |
-| 執行期測試案例 | **7,084** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數，也是 README 測試徽章的單一來源） |
+| 執行期測試案例 | **7,089** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數，也是 README 測試徽章的單一來源） |
 
-**兩個比例值得讀。** 一、**`[Theory]` 只占 251 個**：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、**執行期案例數（7,084）大於方法數（6,095）**：差額來自被展開的 `[Theory]` 資料列——這正是基線守門的形狀（下一節）。
+**兩個比例值得讀。** 一、**`[Theory]` 只占 251 個**：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、**執行期案例數（7,089）大於方法數（6,100）**：差額來自被展開的 `[Theory]` 資料列——這正是基線守門的形狀（下一節）。
 
 ### 10.2 基線守門：為什麼「測試數」是一個被釘住的數字
 
@@ -10273,7 +10273,8 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `ufv` | 1 | `ufv.bios.count` | `ufv.bios.count` | **（本版無成文說明）** |
 | `usbstor` | 1 | `usbstor.count` | `usbstor.count` | **（本版無成文說明）** |
 
-**總計**：149 個域、1128 把鍵（395 把落在 ≥20 鍵的 12 個大域，其餘 733 把散在 137 個域）。
+**總計**：149 個域、1,128 把鍵（395 把落在 ≥20 鍵的 12 個大域，其餘 733 把散在 137 個域）。
+
 ### 附錄 F-2　48 個動態家族與「成員由什麼決定」
 
 動態家族的成員在編譯期數不出來，所以目錄只登記前綴與理由。下表是全部 48 個前綴與它們各自申報的理由（**抽不到理由的會留白，不補**）。

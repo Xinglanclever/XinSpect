@@ -56,7 +56,7 @@ dotnet restore Tests/XinSpect.Tests.csproj
 # 建置（含 Bridge 與解碼器）
 dotnet build Tests/XinSpect.Tests.csproj -c Release
 
-# 全套測試（目前基線見 Tests/TestSuiteBaseline.cs；v2.91 為 7,084 條）
+# 全套測試（目前基線見 Tests/TestSuiteBaseline.cs；v2.91 為 7,089 條）
 dotnet test Tests/XinSpect.Tests.csproj -c Release
 
 # 只跑文件與目錄守門（CI 跑的就是這一組）
@@ -109,6 +109,19 @@ dotnet test Tests/XinSpect.Tests.csproj -c Release --no-build `
   現在式的數字（版號、測試數、位元組數、規則數、鍵數）只能有一個來源。
 - 版號變動時，`Nav/ChangelogCatalog.cs` 最上面補一筆；`ChangelogTests` 會比對 csproj 版號。
 - 改數字時連守門一起改，不要只改文字。
+
+**README 的逐域展開（6.3／6.5／附錄 F／F-2）由工具重生，不要手改：**
+
+```bash
+python Tools/gen-readme-domains.py          # 重生（只動那四個區段）
+python Tools/gen-readme-domains.py --check  # 只比對；有差異 exit 2
+```
+
+`--check` 是 `ReadmeDomainTablesTests` 的同一件事的手動版——測試紅燈時先跑它看差在哪。
+它**只動它負責的四個區段**，其餘一個字都不碰；既有的列與條目原樣保留
+（名稱、來源、可信度、註解、原始碼片段都是人工與工具協作的結果，重跑不該洗掉），
+只有目錄裡新出現、文件裡還沒有的鍵才由原始碼抽後設資料補上——抽不到就留「—」，
+那是如實的「這個抽取方式抓不到」，不是遺漏。
 
 ---
 
