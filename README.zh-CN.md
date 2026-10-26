@@ -464,7 +464,7 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.91/XinSpect.exe) | 34,228,011 bytes | 主程序。蓝色中队守护进程已内置 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.91/XinSpect.exe) | 34,268,971 bytes | 主程序。蓝色中队守护进程已内置 |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.91/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v2.91/XinSpectDeploy.exe) | 7 KB | 一键安装器（自动下载并部署主程序） |
 
