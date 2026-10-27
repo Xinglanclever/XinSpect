@@ -617,7 +617,12 @@
                                   Margin="12,0,0,0" VerticalAlignment="Center" Unchecked="AiKeyShow_Unchecked"/>
                     </Grid>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
-                               Text="金鑰只存在本機 %APPDATA%\XinSpect\settings.json（純文字，未加密——同一台電腦上的其他程式讀得到）。曦覽不會把金鑰寫進報告、記錄檔或任何對外請求以外的地方。"/>
+                               Text="金鑰只存在本機 %APPDATA%\XinSpect\settings.json，並以 Windows DPAPI 加密（只有本機、此使用者帳號解得開；換機器或換帳號就解不開）。曦覽不會把金鑰寫進報告、記錄檔或任何對外請求以外的地方。"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
+                               Text="{Binding Settings.AiKeyStorageText, StringFormat=目前存放方式：{0}}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource CriticalBrush}"
+                               Text="{Binding Settings.AiKeyLoadErrorText}"/>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Text="模型名稱" Margin="0,14,0,4"/>
                     <Grid IsEnabled="{Binding Settings.AiUsesOwnEndpoint}">
@@ -708,6 +713,27 @@
                     </Grid>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
                                Text="每次請求最多回送幾則舊對話（0 表示全部）。硬體快照本身就佔掉不少上下文，整段歷史一併送出會越談越貴、也容易撞上模型上限。有省略時會在系統提示中告知模型，避免它以為看到的是完整對話。"/>
+
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="90"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="請求長度上限（字元）" VerticalAlignment="Center"/>
+                        <Slider Grid.Column="1" Style="{StaticResource SetSlider}" VerticalAlignment="Center"
+                                Minimum="8000" Maximum="200000" TickFrequency="2000" IsSnapToTickEnabled="True"
+                                Value="{Binding Settings.AiRequestBudgetChars, Mode=TwoWay}"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                   Text="{Binding Settings.AiRequestBudgetChars, StringFormat={}{0:N0}}"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
+                               Text="整包送出內容（系統提示＋硬體快照＋對話）的字元上限。超過時先截斷單則過長訊息、再由最舊的整則丟棄，最後一則提問永遠保留；丟了什麼會寫進系統提示告訴模型，不會讓它以為看到全部。只按「則數」控管擋不住一則貼上的長檔案——那種情況端點會直接回 400，而畫面只會顯示「呼叫失敗」。"/>
+
+                    <CheckBox Style="{StaticResource SetCheck}" Margin="0,14,0,0" Content="送出前遮蔽可識別資訊"
+                              IsChecked="{Binding Settings.AiRedactIdentity, Mode=TwoWay}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
+                               Text="預設開啟（與報告匯出相反：報告留給自己，AI 請求會離開這台電腦）。遮掉的是 UUID、MAC、標了標籤的 IP、C:\Users\使用者路徑、有標籤的序號與主機名稱；型號、容量、時脈、溫度、電壓等判斷需要的讀值一律不動。沒有標籤的 1.0.0.0 這種字串不遮——它多半是版本號，遮掉反而少一個線索。AI 分頁的「傳送內容」按鈕可以看到實際送出的全文。"/>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Text="系統提示詞（要求 AI 客觀公正；可自行修改）" Margin="0,16,0,4"/>
                     <TextBox Style="{StaticResource SetTextBox}" Height="150" TextWrapping="Wrap" AcceptsReturn="True"

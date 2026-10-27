@@ -123,6 +123,88 @@ public partial class AiView : UserControl
         }
     }
 
+    /// <summary>
+    /// 「這次到底會送出去什麼」：把 <see cref="AiService.BuildRequestPreview"/> 的結果整段顯示出來。
+    /// 預覽用的是**與真正請求同一份**組裝流程（遮蔽與長度裁切都已套用），
+    /// 所以它不是「大約長這樣」的示意圖，而是實際內容的全文。
+    /// </summary>
+    private void Preview_Click(object sender, RoutedEventArgs e)
+    {
+        var ai = Vm?.Ai;
+        if (ai is null) return;
+
+        string text;
+        try { text = ai.BuildRequestPreview(); }
+        catch (Exception ex) { text = "無法組出預覽：" + ex.GetType().Name + "：" + ex.Message; }
+
+        var box = new TextBox
+        {
+            Text = text,
+            IsReadOnly = true,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            BorderThickness = new Thickness(0),
+            Padding = new Thickness(14),
+            FontSize = 12.5,
+            FontFamily = new System.Windows.Media.FontFamily("Consolas, Microsoft JhengHei UI, Segoe UI"),
+        };
+        box.SetResourceReference(Control.ForegroundProperty, "PrimaryInkBrush");
+        box.SetResourceReference(Control.BackgroundProperty, "SurfaceBrush");
+
+        var copy = new Button
+        {
+            Content = "複製全文",
+            Padding = new Thickness(14, 6, 14, 6),
+            Margin = new Thickness(0, 0, 10, 0),
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Cursor = System.Windows.Input.Cursors.Hand,
+            Style = TryFindResource("ToolButton") as Style,
+        };
+        copy.Click += (_, _) => { try { Clipboard.SetText(text); } catch { /* 剪貼簿被佔用時不吵 */ } };
+
+        var close = new Button
+        {
+            Content = "關閉",
+            Padding = new Thickness(18, 6, 18, 6),
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Cursor = System.Windows.Input.Cursors.Hand,
+            Style = TryFindResource("PrimaryButton") as Style,
+            IsCancel = true,
+        };
+
+        var buttons = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(14, 10, 14, 12),
+        };
+        buttons.Children.Add(copy);
+        buttons.Children.Add(close);
+
+        var root = new DockPanel();
+        DockPanel.SetDock(buttons, Dock.Bottom);
+        root.Children.Add(buttons);
+        root.Children.Add(box);
+
+        var window = new Window
+        {
+            Title = "傳送內容預覽 ・ 曦覽",
+            Content = root,
+            Width = 900,
+            Height = 660,
+            MinWidth = 520,
+            MinHeight = 320,
+            Owner = Window.GetWindow(this),
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            ShowInTaskbar = false,
+        };
+        window.SetResourceReference(Window.BackgroundProperty, "SurfaceBrush");
+        close.Click += (_, _) => window.Close();
+        window.ShowDialog();
+    }
+
     /// <summary>整段對話（含代理查詢紀錄）複製成純文字，方便貼到別處討論。</summary>
     private void CopyAll_Click(object sender, RoutedEventArgs e)
     {

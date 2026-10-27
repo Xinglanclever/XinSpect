@@ -53,12 +53,22 @@ public sealed class AiService : ObservableObject
     // 逾時放寬：本機 Ollama 首次載入模型可能數十秒，雲端長回覆亦需時間。
     private static readonly HttpClient Http = CreateHttp();
 
+    /// <summary>從送出到「收到回應標頭」的預算。端點不通時要在這段時間內講清楚，不要讓人枯等。</summary>
+    internal static readonly TimeSpan HeaderTimeout = TimeSpan.FromSeconds(45);
+
+    /// <summary>串流模式：兩個資料塊之間最多等這麼久。真的停滯（連心跳都沒有）就沒必要再等。</summary>
+    internal static readonly TimeSpan StreamIdleTimeout = TimeSpan.FromSeconds(90);
+
+    /// <summary>整段模式（非串流）從送出到讀完內容的總預算。</summary>
+    internal static readonly TimeSpan WholeTimeout = TimeSpan.FromSeconds(300);
+
     private static HttpClient CreateHttp()
     {
-        // 逾時 45 秒：共用額度的 Worker 通常 5 秒內回應，本機 Ollama 首次載入模型約 20 秒。
-        // 180 秒會讓使用者在端點不通時枯等三分鐘才看到錯誤，體驗極差。
-        // 串流模式下逐 token 回傳會持續延展活動連線，不受此限。
-        var c = new HttpClient { Timeout = TimeSpan.FromSeconds(45) };
+        // 刻意不設 HttpClient.Timeout：那個逾時涵蓋**整個請求，包括讀取回應內容**，
+        // 設 45 秒等於「模型思考超過 45 秒就把連線砍掉」——長篇評價正好會撞上，
+        // 而錯誤訊息長得像斷線，看不出真正原因是「我們自己等不及」。
+        // 現在把預算拆成三段，由每一次請求自己管：標頭 45 秒、串流停滯 90 秒、整段 300 秒。
+        var c = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
         // 不少 OpenAI 相容中轉站置於 Cloudflare 之後，會以 403 擋掉「無瀏覽器 User-Agent」的請求
         // （.NET HttpClient 預設不帶 UA）。帶上通用瀏覽器 UA 即可通過 Cloudflare 的基本人機驗證。
         c.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent",
@@ -523,7 +533,8 @@ public sealed class AiService : ObservableObject
         try
         {
             await RunAsync(reply, contentParts, cts.Token);
-            StatusText = $"完成 ・ {ResolveModel()}（{ProviderLabel(_settings.AiProviderEnum)}）";
+            StatusText = $"完成 ・ {ResolveModel()}（{ProviderLabel(_settings.AiProviderEnum)}）"
+                         + (LastRedactionCount > 0 ? $" ・ 送出前已遮蔽 {LastRedactionCount} 處可識別資訊" : "");
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested)
         {
@@ -694,33 +705,82 @@ public sealed class AiService : ObservableObject
         payload["max_tokens"] = _settings.AiMaxTokens > 0 ? _settings.AiMaxTokens : 32768;
         if (allowTools) payload["tools"] = Tools!.ToSchema();
 
-        using var req = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
-        };
+        string json = JsonSerializer.Serialize(payload);
         string key = ResolveKey();
-        if (key.Length > 0) req.Headers.TryAddWithoutValidation("Authorization", "Bearer " + key);
 
-        using var resp = await Http.SendAsync(req, stream
-            ? HttpCompletionOption.ResponseHeadersRead : HttpCompletionOption.ResponseContentRead, ct);
-
-        if (!resp.IsSuccessStatusCode)
+        // 暫時性失敗（429 額度、502/503/504 閘道、408）重試有限次。這是安全的：
+        // 走到這裡時還「一個字都沒吐給畫面」，重試不會讓同一段話出現兩次。
+        for (int attempt = 1; ; attempt++)
         {
-            string err = await resp.Content.ReadAsStringAsync(ct);
-            int status = (int)resp.StatusCode;
-            string msg = $"HTTP {status}：{Trim(err, 300)}";
-            // 只在狀態碼真有可能是「不支援串流」時才退回整段模式重試一次；
-            // 其餘一律當成真實錯誤立刻回報，不讓使用者多等一輪才看到 401。
-            throw stream && MayRejectStreaming(status)
-                ? new StreamUnsupportedException(msg)
-                : new HttpRequestException(msg);
+            // HttpRequestMessage 不能重送（第二次送出會擲例外），所以每一輪都重新建一個。
+            using var req = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json"),
+            };
+            if (key.Length > 0) req.Headers.TryAddWithoutValidation("Authorization", "Bearer " + key);
+
+            using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            budget.CancelAfter(HeaderTimeout);
+
+            HttpResponseMessage resp;
+            try
+            {
+                resp = await Http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, budget.Token);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                throw new TimeoutException(
+                    $"{HeaderTimeout.TotalSeconds:F0} 秒內沒有收到回應標頭（端點沒有回應或網路不通）");
+            }
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                string err = await resp.Content.ReadAsStringAsync(ct);
+                int status = (int)resp.StatusCode;
+                string? retryAfterRaw = resp.Headers.RetryAfter?.ToString();
+                if (retryAfterRaw is null && resp.Headers.TryGetValues("Retry-After", out var values))
+                    retryAfterRaw = values.FirstOrDefault();
+                resp.Dispose();
+
+                string msg = $"HTTP {status}：{Trim(err, 300)}";
+                // 只在狀態碼真有可能是「不支援串流」時才退回整段模式重試一次；
+                // 其餘一律當成真實錯誤，不讓使用者多等一輪才看到 401。
+                if (stream && MayRejectStreaming(status)) throw new StreamUnsupportedException(msg);
+
+                var decision = AiRetryPolicy.Decide(status, attempt, AiRetryPolicy.ParseRetryAfter(retryAfterRaw));
+                if (!decision.Retry) throw new HttpRequestException(msg);
+
+                StatusText = $"端點暫時無法回應（{decision.Reason}），{decision.Delay.TotalSeconds:F0} 秒後重試"
+                             + $"（第 {attempt + 1}/{AiRetryPolicy.MaxAttempts} 次）…";
+                await Task.Delay(decision.Delay, ct);
+                continue;
+            }
+
+            bool sse = (resp.Content.Headers.ContentType?.MediaType ?? "")
+                .Contains("event-stream", StringComparison.OrdinalIgnoreCase);
+
+            if (stream && sse)
+            {
+                // 標頭已到：標頭預算收工，改由「串流停滯」計時器管——長回答可以慢慢講，
+                // 但完全沒動靜 90 秒就直接判失敗，而不是陪著一起卡。
+                budget.CancelAfter(Timeout.InfiniteTimeSpan);
+                using (resp) return await ReadStreamAsync(resp, sink, ct);
+            }
+
+            using (resp)
+            {
+                budget.CancelAfter(WholeTimeout);
+                try
+                {
+                    return ParseWhole(await resp.Content.ReadAsStringAsync(budget.Token), sink);
+                }
+                catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+                {
+                    throw new TimeoutException(
+                        $"{WholeTimeout.TotalSeconds:F0} 秒內沒有讀完回應（模型仍在產生，或端點把連線掛著）");
+                }
+            }
         }
-
-        bool sse = (resp.Content.Headers.ContentType?.MediaType ?? "")
-            .Contains("event-stream", StringComparison.OrdinalIgnoreCase);
-        if (stream && sse) return await ReadStreamAsync(resp, sink, ct);
-
-        return ParseWhole(await resp.Content.ReadAsStringAsync(ct), sink);
     }
 
     private static async Task<Round> ReadStreamAsync(HttpResponseMessage resp, ReplySink sink, CancellationToken ct)
@@ -730,8 +790,19 @@ public sealed class AiService : ObservableObject
 
         using var raw = await resp.Content.ReadAsStreamAsync(ct);
         using var rd = new StreamReader(raw, Encoding.UTF8);
-        while (await rd.ReadLineAsync(ct) is string line)
+        using var idle = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        while (true)
         {
+            // 每收到一行就重設停滯計時器：慢但有在動的模型不會被砍，斷線的會。
+            idle.CancelAfter(StreamIdleTimeout);
+            string? line;
+            try { line = await rd.ReadLineAsync(idle.Token); }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                throw new TimeoutException(
+                    $"串流停滯超過 {StreamIdleTimeout.TotalSeconds:F0} 秒（端點沒有再送任何內容）");
+            }
+            if (line is null) break;
             ct.ThrowIfCancellationRequested();
             line = line.Trim();
             if (!line.StartsWith("data:", StringComparison.OrdinalIgnoreCase)) continue;
@@ -835,9 +906,24 @@ public sealed class AiService : ObservableObject
         }
     }
 
-    // 系統提示 ＋ 硬體快照 ＋ 既有對話（工具紀錄與失敗提示不回送模型）
-    // contentParts 不為 null 時，最後一則使用者訊息改用 OpenAI Vision 多部件格式。
-    private List<object> BuildMessages(bool useTools, List<object>? contentParts = null)
+    /// <summary>
+    /// 一次請求「真正要送出去」的內容：系統提示（含快照與工具說明）、逐則歷史、以及
+    /// 為了長度與隱私做了什麼（丟了幾則、截了幾段、遮了幾處）。預覽與實際請求共用同一份結果，
+    /// 所以使用者看到的預覽不會與真正送出的內容有第二份實作。
+    /// </summary>
+    internal sealed record PreparedRequest(
+        string SystemPrompt,
+        IReadOnlyList<string> Texts,
+        IReadOnlyList<bool> IsUser,
+        int DroppedMessages,
+        int ClippedMessages,
+        int Redactions,
+        IReadOnlyList<string> RedactionKinds);
+
+    /// <summary>上一次組裝請求時遮蔽了幾處可識別資訊（0 表示沒遮，或使用者關掉了遮蔽）。</summary>
+    public int LastRedactionCount { get; private set; }
+
+    private PreparedRequest Prepare(bool useTools)
     {
         string sys = string.IsNullOrWhiteSpace(_settings.AiSystemPrompt) ? DefaultSystemPrompt : _settings.AiSystemPrompt;
         string snapshot = "";
@@ -845,23 +931,103 @@ public sealed class AiService : ObservableObject
         if (snapshot.Length > 0) sys += "\n\n===== 本機硬體資訊（真實讀值）=====\n" + snapshot;
         if (useTools) sys += "\n\n" + AgentPrompt;
 
-        // 先挑出「真的該回送」的訊息，再由後往前只留最近 N 則。
-        var keep = SelectHistory(Messages, _settings.AiHistoryTurns, out int dropped);
-        // 有裁掉東西就讓模型知道，否則它會以為自己看到的是完整對話而誤引「你剛才說過」。
-        if (dropped > 0) sys += $"\n\n（註：為控制長度，本次僅回送最近 {keep.Count} 則對話，較早的 {dropped} 則已省略。）";
+        // 先挑出「真的該回送」的訊息（工具紀錄與失敗提示只給人看）。
+        var keep = SelectHistory(Messages, _settings.AiHistoryTurns, out int droppedByTurns);
+        var texts = keep.Select(m => m.Text).ToList();
+        var roles = keep.Select(m => m.IsUser).ToList();
 
-        var msgs = new List<object> { new { role = "system", content = sys } };
-        for (int i = 0; i < keep.Count; i++)
+        // 遮蔽：送出去的內容會離開這台電腦，序號與帳號名稱不是「規格」。
+        int redactions = 0;
+        var kinds = new List<string>();
+        if (_settings.AiRedactIdentity)
         {
-            var m = keep[i];
-            string role = m.IsUser ? "user" : "assistant";
+            var rs = AiRedactor.Apply(sys);
+            sys = rs.Text;
+            redactions += rs.Count;
+            kinds.AddRange(rs.Kinds);
+
+            for (int i = 0; i < texts.Count; i++)
+            {
+                var r = AiRedactor.Apply(texts[i]);
+                texts[i] = r.Text;
+                redactions += r.Count;
+                foreach (string k in r.Kinds)
+                    if (!kinds.Contains(k)) kinds.Add(k);
+            }
+        }
+        LastRedactionCount = redactions;
+
+        // 長度預算：先截斷單則過長，再由最舊的整則丟棄；最後一則（這次的提問）永遠保留。
+        var budgeted = AiRequestBudget.Apply(sys, texts, _settings.AiRequestBudgetChars);
+        sys = budgeted.System;
+        int droppedByBudget = budgeted.DroppedMessages;
+        int totalDropped = droppedByTurns + droppedByBudget;
+
+        // 裁掉什麼都要告訴模型，否則它會以為自己看到的是完整對話而誤引「你剛才說過」。
+        if (droppedByTurns > 0 && totalDropped > droppedByBudget)
+            sys += $"\n\n（註：本次只回送最近 {budgeted.History.Count} 則對話，較早的 {droppedByTurns} 則因則數上限已省略。）";
+        sys += budgeted.Notice;
+
+        // 預算只會從前面丟整則，所以角色序列對齊的是尾部。
+        var keptRoles = roles.Skip(roles.Count - budgeted.History.Count).ToList();
+        return new PreparedRequest(sys, budgeted.History, keptRoles, totalDropped,
+                                   budgeted.ClippedMessages, redactions, kinds);
+    }
+
+    // 系統提示 ＋ 硬體快照 ＋ 既有對話（工具紀錄與失敗提示不回送模型）
+    // contentParts 不為 null 時，最後一則使用者訊息改用 OpenAI Vision 多部件格式。
+    private List<object> BuildMessages(bool useTools, List<object>? contentParts = null)
+    {
+        var prepared = Prepare(useTools);
+        var msgs = new List<object> { new { role = "system", content = prepared.SystemPrompt } };
+        for (int i = 0; i < prepared.Texts.Count; i++)
+        {
+            string role = prepared.IsUser[i] ? "user" : "assistant";
             // 最後一則使用者訊息且有圖片附件時改用多部件格式
-            if (contentParts is not null && i == keep.Count - 1 && m.IsUser)
+            if (contentParts is not null && i == prepared.Texts.Count - 1 && prepared.IsUser[i])
                 msgs.Add(new { role, content = (object)contentParts });
             else
-                msgs.Add(new { role, content = (object)m.Text });
+                msgs.Add(new { role, content = (object)prepared.Texts[i] });
         }
         return msgs;
+    }
+
+    /// <summary>
+    /// 「這次到底會送出去什麼」：套用<b>與真正請求完全相同</b>的遮蔽與長度預算後，拼成人看的文字。
+    /// 使用者有權在看到內容之前決定要不要送——這也讓「遮蔽有沒有生效」不再只是口头承诺。
+    /// 附件圖片以替代文字表示（Base64 不顯示，但會說明有幾張；圖片裡的序號無法遮蔽）。
+    /// </summary>
+    public string BuildRequestPreview()
+    {
+        bool useTools = _settings.AiAgentMode && Tools is { HasTools: true }
+                        && _settings.AiProviderEnum != AiProvider.SharedFree;
+        var p = Prepare(useTools);
+
+        var sb = new StringBuilder();
+        sb.AppendLine("以下是按下送出後會傳給 AI 端點的全部內容（不含金鑰標頭、不含端點網址）。");
+        sb.AppendLine(_settings.AiRedactIdentity
+            ? $"遮蔽：已開啟（本次擋下 {p.Redactions} 處"
+              + (p.RedactionKinds.Count > 0 ? "：" + string.Join("、", p.RedactionKinds) : "") + "）"
+            : "遮蔽：已關閉（序號、MAC、使用者路徑等會原樣送出）");
+        sb.AppendLine($"長度：(UTF-16 字元) 系統 {p.SystemPrompt.Length:N0} ＋ 對話 {p.Texts.Sum(t => t.Length):N0}"
+                      + $" ／ 上限 {_settings.AiRequestBudgetChars:N0}"
+                      + $"；丟棄 {p.DroppedMessages} 則、截斷 {p.ClippedMessages} 段");
+        sb.AppendLine(new string('─', 40));
+        sb.AppendLine("【系統提示】");
+        sb.AppendLine(p.SystemPrompt);
+        for (int i = 0; i < p.Texts.Count; i++)
+        {
+            sb.AppendLine();
+            sb.AppendLine(p.IsUser[i] ? "【使用者】" : "【助理】");
+            sb.AppendLine(p.Texts[i]);
+        }
+        int pending = _pendingAttachments.Count(a => a.Type == AttachmentType.Image);
+        if (pending > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"【附件】{pending} 張圖片以 Base64 內嵌送出（內容不在此預覽；圖片裡的文字與序號無法自動遮蔽）");
+        }
+        return sb.ToString();
     }
 
     /// <summary>
@@ -952,7 +1118,10 @@ public sealed class AiService : ObservableObject
 
     private static string Explain(Exception ex) => ex switch
     {
-        TaskCanceledException => "連線逾時（模型載入或網路過慢）。本機 Ollama 首次載入模型較久，可稍後重試；若使用共用額度，可能是中轉伺服器暫時不可用。",
+        // 三段預算各自會丟出 TimeoutException（標頭 45 秒／串流停滯 90 秒／整段 300 秒）；
+        // 訊息本身已經寫明是哪一段逾時，這裡原樣轉述，不再包一層模糊的「逾時」。
+        TimeoutException te => te.Message,
+        TaskCanceledException => $"連線逾時（標頭 {HeaderTimeout.TotalSeconds:F0} 秒內沒有回應）。本機 Ollama 首次載入模型較久，可稍後重試；若使用共用額度，可能是中轉伺服器暫時不可用。",
         HttpRequestException he when he.Message.Contains("actively refused") || he.Message.Contains("failed to respond")
             || he.Message.Contains("No such host") || he.Message.Contains("沒有正確答覆") || he.Message.Contains("連線嘗試失敗")
             => "無法連線到端點" + (he.Message.Contains("xinspect") ? "（共用額度的中轉伺服器暫時不可用——" +

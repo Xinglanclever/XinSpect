@@ -190,6 +190,49 @@ public sealed class SettingsService : ObservableObject
     /// </summary>
     public int AiHistoryTurns { get => _aiHistoryTurns; set { if (SetProperty(ref _aiHistoryTurns, Math.Clamp(value, 0, 240))) Save(); } }
 
+    private bool _aiRedactIdentity = true;
+    /// <summary>
+    /// 送出前遮蔽可識別資訊（UUID、MAC、標了標籤的 IP、使用者路徑、序號、主機名稱）。
+    /// 預設<b>開啟</b>，與「報告匯出遮罩」的預設相反——報告只留在自己手上，AI 請求會離開這台電腦。
+    /// 型號、容量、時脈、溫度、電壓等判斷需要的讀值一律不動。規則見 <see cref="AiRedactor"/>。
+    /// </summary>
+    public bool AiRedactIdentity { get => _aiRedactIdentity; set { if (SetProperty(ref _aiRedactIdentity, value)) Save(); } }
+
+    private int _aiRequestBudgetChars = AiRequestBudget.DefaultChars;
+    /// <summary>
+    /// 單次請求的內容上限（字元，含系統提示與硬體快照）。超過時先截斷單則過長訊息，
+    /// 再從最舊的整則丟棄——並在系統提示裡如實告知模型少了什麼。
+    /// 只按「則數」控管擋不住一則貼上的長檔案，端點會直接回 400。
+    /// </summary>
+    public int AiRequestBudgetChars
+    {
+        get => _aiRequestBudgetChars;
+        set
+        {
+            int v = Math.Clamp(value <= 0 ? AiRequestBudget.DefaultChars : value,
+                               AiRequestBudget.MinChars, AiRequestBudget.MaxChars);
+            if (SetProperty(ref _aiRequestBudgetChars, v)) Save();
+        }
+    }
+
+    /// <summary>
+    /// 設定檔裡金鑰的實際存放方式（給設定頁顯示的一句話）。載入或儲存時更新——
+    /// 不能在畫面上寫死「已加密」：那句話必須反映磁碟上真正存了什麼。
+    /// </summary>
+    private string _aiKeyStorageText = "未設定金鑰";
+    public string AiKeyStorageText { get => _aiKeyStorageText; private set => SetProperty(ref _aiKeyStorageText, value); }
+
+    /// <summary>載入時解不開金鑰的原因（正常情況為 null）。解不開就是沒有金鑰，不拿密文去簽請求。</summary>
+    private string? _aiKeyLoadError;
+    public string? AiKeyLoadError
+    {
+        get => _aiKeyLoadError;
+        private set { if (SetProperty(ref _aiKeyLoadError, value)) OnPropertyChanged(nameof(AiKeyLoadErrorText)); }
+    }
+
+    /// <summary>給畫面直接繫結的警示文字；沒有問題時是空字串（空字串不佔版面，也不需要轉換器）。</summary>
+    public string AiKeyLoadErrorText => string.IsNullOrEmpty(_aiKeyLoadError) ? "" : "⚠ " + _aiKeyLoadError;
+
     private bool _aiProactive;
     /// <summary>
     /// 主動診斷：溫度／負載警示觸發時，自動請 AI 就地分析一次原因與處置。
@@ -322,6 +365,8 @@ public sealed class SettingsService : ObservableObject
         public bool AiKeepHistory { get; set; } = true;
         public int AiMaxTokens { get; set; }
         public int AiHistoryTurns { get; set; } = 12;
+        public bool AiRedactIdentity { get; set; } = true;
+        public int AiRequestBudgetChars { get; set; } = AiRequestBudget.DefaultChars;
         public bool AiProactive { get; set; }
         public bool ReportMaskIdentity { get; set; }
         public double? MiniLeft { get; set; }
@@ -380,7 +425,20 @@ public sealed class SettingsService : ObservableObject
                     _aiProvider = Math.Clamp(p.AiProvider, 0, (int)XinSpect.AiProvider.SharedFree);
                     if (_aiProvider == (int)XinSpect.AiProvider.SharedFree && !SharedAiEndpoint.IsConfigured) _aiProvider = 0;
                     if (!string.IsNullOrWhiteSpace(p.AiBaseUrl)) _aiBaseUrl = p.AiBaseUrl;
-                    _aiApiKey = p.AiApiKey ?? "";
+                    // 金鑰可能是 DPAPI 密文（新版）或明文（舊版／不支援 DPAPI 的環境）。
+                    // 解不開就當成沒有金鑰並記下原因——絕不把密文本身當成金鑰送去簽請求。
+                    AiKeyLoadError = null;
+                    if (SecretProtector.TryUnprotect(p.AiApiKey, out string key, out string? keyError, out _))
+                    {
+                        _aiApiKey = key;
+                        AiKeyStorageText = SecretProtector.StorageText(p.AiApiKey);
+                    }
+                    else
+                    {
+                        _aiApiKey = "";
+                        AiKeyLoadError = keyError;
+                        AiKeyStorageText = "無法解密（" + keyError + "）";
+                    }
                     if (!string.IsNullOrWhiteSpace(p.AiModel)) _aiModel = p.AiModel;
                     _aiTemperature = Math.Clamp(p.AiTemperature, 0, 2);
                     if (!string.IsNullOrWhiteSpace(p.AiSystemPrompt)) _aiSystemPrompt = p.AiSystemPrompt;
@@ -389,6 +447,9 @@ public sealed class SettingsService : ObservableObject
                     _aiKeepHistory = p.AiKeepHistory;
                     _aiMaxTokens = Math.Clamp(p.AiMaxTokens, 0, 32768);
                     _aiHistoryTurns = Math.Clamp(p.AiHistoryTurns, 0, 240);
+                    _aiRedactIdentity = p.AiRedactIdentity;
+                    _aiRequestBudgetChars = Math.Clamp(p.AiRequestBudgetChars <= 0 ? AiRequestBudget.DefaultChars : p.AiRequestBudgetChars,
+                                                       AiRequestBudget.MinChars, AiRequestBudget.MaxChars);
                     _aiProactive = p.AiProactive;
                     _reportMaskIdentity = p.ReportMaskIdentity;
                     _miniLeft = p.MiniLeft;
@@ -424,6 +485,32 @@ public sealed class SettingsService : ObservableObject
         if (upgraded) Save();
     }
 
+    /// <summary>
+    /// 把金鑰轉成要寫進設定檔的形式：支援 DPAPI 就加密（<c>dpapi:v1:</c> 前綴），
+    /// 不支援或加密失敗則退回明文——但一定把<b>實際</b>情形寫進 <see cref="AiKeyStorageText"/>。
+    /// 畫面顯示「已加密」而檔案裡是明文，正是這一條要防的事。
+    /// </summary>
+    private string ProtectKeyForDisk(string plain)
+    {
+        if (string.IsNullOrEmpty(plain))
+        {
+            AiKeyStorageText = "未設定金鑰";
+            return "";
+        }
+        try
+        {
+            string protectedValue = SecretProtector.Protect(plain);
+            AiKeyStorageText = SecretProtector.StorageText(protectedValue);
+            return protectedValue;
+        }
+        catch (Exception ex)
+        {
+            Diag.Swallow("金鑰加密", ex, "無法以 DPAPI 加密，金鑰將以明文存放並在設定頁如實標示");
+            AiKeyStorageText = "明文（DPAPI 加密失敗：" + ex.GetType().Name + "）";
+            return plain;
+        }
+    }
+
     private void Save()
     {
         if (_loading) return;
@@ -446,7 +533,7 @@ public sealed class SettingsService : ObservableObject
                 MemLoadThreshold = _memLoadThreshold,
                 AiProvider = _aiProvider,
                 AiBaseUrl = _aiBaseUrl,
-                AiApiKey = _aiApiKey,
+                AiApiKey = ProtectKeyForDisk(_aiApiKey),
                 AiModel = _aiModel,
                 AiTemperature = _aiTemperature,
                 AiSystemPrompt = _aiSystemPrompt,
@@ -455,6 +542,8 @@ public sealed class SettingsService : ObservableObject
                 AiKeepHistory = _aiKeepHistory,
                 AiMaxTokens = _aiMaxTokens,
                 AiHistoryTurns = _aiHistoryTurns,
+                AiRedactIdentity = _aiRedactIdentity,
+                AiRequestBudgetChars = _aiRequestBudgetChars,
                 AiProactive = _aiProactive,
                 ReportMaskIdentity = _reportMaskIdentity,
                 MiniLeft = _miniLeft,
