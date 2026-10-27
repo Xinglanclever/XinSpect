@@ -277,7 +277,7 @@ public sealed class SettingsService : ObservableObject
 
     // 懸浮窗項目開關：使用者自己決定要盯哪幾行，避免全開太亂
     private bool _miniShowCpu = true, _miniShowGpu = true, _miniShowMem = true,
-                 _miniShowClock = true, _miniShowFps = true, _miniShowLow1 = true, _miniShowLow01;
+                 _miniShowClock = true, _miniShowFps = true, _miniShowLow1 = true, _miniShowLow01 = true;
     public bool MiniShowCpu   { get => _miniShowCpu;   set { if (SetProperty(ref _miniShowCpu, value)) Save(); } }
     public bool MiniShowGpu   { get => _miniShowGpu;   set { if (SetProperty(ref _miniShowGpu, value)) Save(); } }
     public bool MiniShowMem   { get => _miniShowMem;   set { if (SetProperty(ref _miniShowMem, value)) Save(); } }
@@ -286,6 +286,34 @@ public sealed class SettingsService : ObservableObject
     public bool MiniShowFps   { get => _miniShowFps;   set { if (SetProperty(ref _miniShowFps, value)) Save(); } }
     public bool MiniShowLow1  { get => _miniShowLow1;  set { if (SetProperty(ref _miniShowLow1, value)) Save(); } }
     public bool MiniShowLow01 { get => _miniShowLow01; set { if (SetProperty(ref _miniShowLow01, value)) Save(); } }
+
+    // 第二批項目（2026-10-27）：預設全部開啟——使用者說「預設全部」，要減自己關。
+    private bool _miniShowCpuPower = true, _miniShowCpuVolt = true, _miniShowMemUsage = true,
+                 _miniShowGpuClock = true, _miniShowGpuVram = true, _miniShowGpuFan = true,
+                 _miniShowGpuPower = true, _miniShowVrm = true;
+    /// <summary>處理器封裝功耗（W）。</summary>
+    public bool MiniShowCpuPower { get => _miniShowCpuPower; set { if (SetProperty(ref _miniShowCpuPower, value)) Save(); } }
+    /// <summary>處理器核心電壓（V）。</summary>
+    public bool MiniShowCpuVolt { get => _miniShowCpuVolt; set { if (SetProperty(ref _miniShowCpuVolt, value)) Save(); } }
+    /// <summary>記憶體用量（已用／總量）。</summary>
+    public bool MiniShowMemUsage { get => _miniShowMemUsage; set { if (SetProperty(ref _miniShowMemUsage, value)) Save(); } }
+    /// <summary>顯示卡核心時脈。</summary>
+    public bool MiniShowGpuClock { get => _miniShowGpuClock; set { if (SetProperty(ref _miniShowGpuClock, value)) Save(); } }
+    /// <summary>顯示記憶體用量（已用／總量）。</summary>
+    public bool MiniShowGpuVram { get => _miniShowGpuVram; set { if (SetProperty(ref _miniShowGpuVram, value)) Save(); } }
+    /// <summary>顯示卡風扇轉速百分比。</summary>
+    public bool MiniShowGpuFan { get => _miniShowGpuFan; set { if (SetProperty(ref _miniShowGpuFan, value)) Save(); } }
+    /// <summary>顯示卡功耗（W）。</summary>
+    public bool MiniShowGpuPower { get => _miniShowGpuPower; set { if (SetProperty(ref _miniShowGpuPower, value)) Save(); } }
+    /// <summary>主機板 VRM 溫度。</summary>
+    public bool MiniShowVrm { get => _miniShowVrm; set { if (SetProperty(ref _miniShowVrm, value)) Save(); } }
+
+    private int _miniStyle;
+    /// <summary>
+    /// 懸浮窗風格：0＝曦覽（沿用主題色），1＝微星 Afterburner／RTSS 那種 OSD（黑底、等寬數字、
+    /// 標籤與數值分色的密集排版）。<b>只影響外觀</b>，顯示哪幾項由上面那組開關決定。
+    /// </summary>
+    public int MiniStyle { get => _miniStyle; set { if (SetProperty(ref _miniStyle, MiniOverlayCatalog.NormalizeStyle(value))) Save(); } }
 
     // ── 動態視覺效果 ─────────────────────────────────────
     private bool _motionEnabled = true;
@@ -381,6 +409,15 @@ public sealed class SettingsService : ObservableObject
         public double? MiniTop { get; set; }
         public double MiniOpacity { get; set; } = 0.9;
         public bool MiniCompact { get; set; }
+        public int MiniStyle { get; set; }
+        public bool MiniShowCpuPower { get; set; } = true;
+        public bool MiniShowCpuVolt { get; set; } = true;
+        public bool MiniShowMemUsage { get; set; } = true;
+        public bool MiniShowGpuClock { get; set; } = true;
+        public bool MiniShowGpuVram { get; set; } = true;
+        public bool MiniShowGpuFan { get; set; } = true;
+        public bool MiniShowGpuPower { get; set; } = true;
+        public bool MiniShowVrm { get; set; } = true;
         public bool MiniTopmost { get; set; } = true;
         public bool MiniShowCpu { get; set; } = true;
         public bool MiniShowGpu { get; set; } = true;
@@ -465,6 +502,15 @@ public sealed class SettingsService : ObservableObject
                     _miniTop = p.MiniTop;
                     _miniOpacity = Math.Clamp(p.MiniOpacity, 0.4, 1.0);
                     _miniCompact = p.MiniCompact;
+                    _miniStyle = MiniOverlayCatalog.NormalizeStyle(p.MiniStyle);
+                    _miniShowCpuPower = p.MiniShowCpuPower;
+                    _miniShowCpuVolt = p.MiniShowCpuVolt;
+                    _miniShowMemUsage = p.MiniShowMemUsage;
+                    _miniShowGpuClock = p.MiniShowGpuClock;
+                    _miniShowGpuVram = p.MiniShowGpuVram;
+                    _miniShowGpuFan = p.MiniShowGpuFan;
+                    _miniShowGpuPower = p.MiniShowGpuPower;
+                    _miniShowVrm = p.MiniShowVrm;
                     _miniTopmost = p.MiniTopmost;
                     _miniShowCpu = p.MiniShowCpu;
                     _miniShowGpu = p.MiniShowGpu;
@@ -560,6 +606,15 @@ public sealed class SettingsService : ObservableObject
                 MiniTop = _miniTop,
                 MiniOpacity = _miniOpacity,
                 MiniCompact = _miniCompact,
+                MiniStyle = _miniStyle,
+                MiniShowCpuPower = _miniShowCpuPower,
+                MiniShowCpuVolt = _miniShowCpuVolt,
+                MiniShowMemUsage = _miniShowMemUsage,
+                MiniShowGpuClock = _miniShowGpuClock,
+                MiniShowGpuVram = _miniShowGpuVram,
+                MiniShowGpuFan = _miniShowGpuFan,
+                MiniShowGpuPower = _miniShowGpuPower,
+                MiniShowVrm = _miniShowVrm,
                 MiniTopmost = _miniTopmost,
                 MiniShowCpu = _miniShowCpu,
                 MiniShowGpu = _miniShowGpu,

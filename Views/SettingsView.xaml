@@ -225,6 +225,15 @@
                               IsChecked="{Binding Settings.MiniTopmost, Mode=TwoWay}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
                                Text="取消後會被其他視窗蓋住，但仍留在畫面上。這兩項也能在監視器自己的標題列上就地切換。"/>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="外觀風格" Margin="0,14,0,4"/>
+                    <ComboBox SelectedIndex="{Binding Settings.MiniStyle, Mode=TwoWay}" MaxWidth="280" HorizontalAlignment="Left"
+                              ToolTip="只換外觀；顯示哪幾項與讀值來源完全不變">
+                        <ComboBoxItem Content="曦覽（XinSpect）"/>
+                        <ComboBoxItem Content="微星 Afterburner（OSD）"/>
+                    </ComboBox>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="曦覽＝沿用主題色與一般字型；Afterburner（OSD）＝黑底、等寬數字、紅色邊框的密集排版（RTSS 那種）。要增減顯示的項目，點監視器標題列的齒輪：預設全部開啟，關掉就少一行。"/>
                 </StackPanel>
             </Border>
 

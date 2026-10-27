@@ -118,16 +118,42 @@ public partial class MiniOverlayWindow : Window
         menu.Items.Add(new System.Windows.Controls.MenuItem
         {
             // ContextMenu 不在視覺樹上，標題一律在產出點過 T。
-            Header = LanguageService.T("顯示項目（FPS 三行讀「幀時間監測」頁的即時量測）"),
+            Header = LanguageService.T("顯示項目（FPS 三行讀「幀時間監測」頁的即時量測；預設全開，可自行關閉）"),
             IsEnabled = false,
         });
-        AddItem("CPU", "Settings.MiniShowCpu");
-        AddItem("GPU", "Settings.MiniShowGpu");
-        AddItem(LanguageService.T("記憶體"), "Settings.MiniShowMem");
-        AddItem(LanguageService.T("頻率"), "Settings.MiniShowClock");
-        AddItem("FPS", "Settings.MiniShowFps");
-        AddItem("1% Low", "Settings.MiniShowLow1");
-        AddItem("0.1% Low", "Settings.MiniShowLow01");
+
+        // 項目清單只有一份（MiniOverlayCatalog）：選單、XAML 與設定頁都指回同一組設定屬性，
+        // 加一列不會再出現「選單有、畫面沒有」那種漏接。
+        string? group = null;
+        foreach (var item in MiniOverlayCatalog.Items)
+        {
+            if (group != item.Group)
+            {
+                group = item.Group;
+                menu.Items.Add(new System.Windows.Controls.MenuItem
+                {
+                    Header = LanguageService.T(group),
+                    IsEnabled = false,
+                    FontWeight = System.Windows.FontWeights.SemiBold,
+                });
+            }
+            AddItem(LanguageService.T(item.Label), "Settings." + item.SettingsProperty);
+        }
+
+        menu.Items.Add(new System.Windows.Controls.Separator());
+        foreach (int style in new[] { MiniOverlayCatalog.StyleXinSpect, MiniOverlayCatalog.StyleAfterburner })
+        {
+            int captured = style;
+            var mi = new System.Windows.Controls.MenuItem
+            {
+                Header = LanguageService.T("風格：" + MiniOverlayCatalog.StyleName(style)),
+                IsCheckable = true,
+                IsChecked = Cfg?.MiniStyle == style,
+                StaysOpenOnClick = false,
+            };
+            mi.Click += (_, _) => { if (Cfg is { } c) c.MiniStyle = captured; };
+            menu.Items.Add(mi);
+        }
         menu.PlacementTarget = btn;
         menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
         menu.IsOpen = true;
