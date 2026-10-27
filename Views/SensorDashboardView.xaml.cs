@@ -26,13 +26,26 @@ public partial class SensorDashboardView : UserControl, IPageLifecycle
     private DispatcherTimer? _timer;
     private readonly SensorDashboardService.CoreHeatBuffer _coreHeat = new(CoreColumns);
 
+    /// <summary>建構完成後才允許 <see cref="RefreshSpc"/> 動工。</summary>
+    /// <remarks>
+    /// <b>這不是防禦性寫法，是在修一個真的卡死。</b>初選 <c>SelectedIndex = 0</c> 會立刻觸發
+    /// <c>SelectionChanged</c>，而 <see cref="RefreshSpc"/> 會去查歷史倉
+    /// （<c>HistoryStore.Query</c>，讀 %APPDATA% 的 history.bin）。只要那個檔案正被另一個行程鎖著、
+    /// 或磁碟很慢，這一頁就會<b>在建構子裡卡住</b>——使用者看到的是「點不進去」，
+    /// 而「建構每一個畫面」的測試則表現成 90 秒逾時（2026-10-27 實測）。
+    /// 建構子只負責把控制項準備好，真正的搬運交給 <see cref="OnActivated"/>。
+    /// </remarks>
+    private bool _ready;
+
     public SensorDashboardView()
     {
         InitializeComponent();
         Calendar.Month = DateTime.Today;   // 初值：本月（資料仍在 OnActivated 彙整）
         // 初選放在 InitializeComponent 之後：寫在 XAML 的 IsSelected 會在 Spc／History 等
         // 具名控制項還沒建立時就觸發 SelectionChanged，於是 OnActivated 以外的那條路就 NRE。
+        // 這一行仍會觸發 SelectionChanged——由 _ready 擋掉，等 OnActivated 再一起算。
         MetricCombo.SelectedIndex = 0;
+        _ready = true;
     }
 
     private MainViewModel? Vm => DataContext as MainViewModel ?? Shell.Vm;
@@ -53,7 +66,10 @@ public partial class SensorDashboardView : UserControl, IPageLifecycle
 
     public void OnDeactivated() => _timer?.Stop();
 
-    private void MetricCombo_Changed(object sender, SelectionChangedEventArgs e) => RefreshSpc();
+    private void MetricCombo_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (_ready) RefreshSpc();
+    }
 
     // ── 彙整：全部是搬運，沒有讀取 ──────────────────────────────────────────
 
@@ -104,12 +120,23 @@ public partial class SensorDashboardView : UserControl, IPageLifecycle
 
         // 歷史倉的既有記錄：最近 6 小時、分鐘級。指標整段沒有讀值（本機無此感測器）時
         // MetricPoints 回空陣列，控制圖畫「沒有樣本」——不把 0 串成量測。
-        var nowUtc = DateTime.UtcNow;
-        var series = vm.History.Query(nowUtc - TimeSpan.FromHours(6), nowUtc);
-        var points = SensorDashboardService.MetricPoints(series, metric);
+        // 讀歷史檔失敗（檔案被鎖、磁碟讀錯）也不該讓整頁倒下：如實說「讀不到」而不是留一張空圖。
+        try
+        {
+            var nowUtc = DateTime.UtcNow;
+            var series = vm.History.Query(nowUtc - TimeSpan.FromHours(6), nowUtc);
+            var points = SensorDashboardService.MetricPoints(series, metric);
 
-        Spc.SeriesTitle = HistoryMetrics.Titles[metric];
-        Spc.Points = points.Length > 0 ? new ControlChart.SpcSeries(points) : null;
+            Spc.SeriesTitle = HistoryMetrics.Titles[metric];
+            Spc.Points = points.Length > 0 ? new ControlChart.SpcSeries(points) : null;
+        }
+        catch (Exception)
+        {
+            // 標題直接寫「讀不到」：RefreshAll 最後會把狀態列改成通用說明，
+            // 在這裡寫狀態列會被蓋掉，所以訊息掛在圖表標題上。
+            Spc.SeriesTitle = HistoryMetrics.Titles[metric] + "（歷史倉讀不到）";
+            Spc.Points = null;
+        }
     }
 
     private void RefreshCalendar(MainViewModel vm)

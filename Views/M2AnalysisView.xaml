@@ -65,6 +65,48 @@
                 </StackPanel>
             </Border>
 
+            <!-- 可能是 M.2（BIOS 未標型別）：與上面那張卡分開，因為這是推論不是量到的事實 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="可能是 M.2 的插槽（BIOS 未標型別）"/>
+                    <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" Margin="0,2,0,6"
+                               Text="以下是 BIOS 標成「PCI Express x4」的插槽：M.2 NVMe 通常是 x4，但 BIOS 沒寫它是 M.2。列在這裡是推測，不是量測結果。"/>
+                    <ItemsControl ItemsSource="{Binding PossibleSlots}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,4,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" MinWidth="140"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Designation}" FontWeight="Medium"
+                                               Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Type}"
+                                               Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- 本機磁碟的外型說明 -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <local:SectionHead Text="本機磁碟 ・ 外型判定"/>
+                    <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" Margin="0,2,0,6"
+                               Text="Windows 的磁碟 API 只回報介面（NVMe／SATA），不區分 M.2 與 U.2。這裡只在有第一手證據時說出外型（例如型號字串帶 SFF／U.2），其餘如實說「未回報」。"/>
+                    <ItemsControl ItemsSource="{Binding DriveNotes}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,3,0,3"
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <!-- M.2 尺寸對照 -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                 <StackPanel>

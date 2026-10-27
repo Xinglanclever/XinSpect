@@ -11,7 +11,15 @@ public sealed class M2AnalysisService : ObservableObject
     private string _detectedSlots = "（偵測中…）";
     public string DetectedSlots { get => _detectedSlots; private set => SetProperty(ref _detectedSlots, value); }
 
+    /// <summary>BIOS 明講是 M.2／U.2 的插槽（量到的事實）。</summary>
     public ObservableCollection<SmbiosSlotRow> Slots { get; } = [];
+
+    /// <summary>BIOS 只標成 PCI Express x4、沒有說它是 M.2 的插槽（<b>推論</b>，顯示時要標明）。</summary>
+    public ObservableCollection<SmbiosSlotRow> PossibleSlots { get; } = [];
+
+    /// <summary>本機每一顆磁碟的外型說明（有第一手證據才說外型，其餘如實說未回報）。</summary>
+    public ObservableCollection<string> DriveNotes { get; } = [];
+
     public List<M2FormFactor> FormFactors { get; } = BuildFormFactors();
     public List<M2KeySpec> KeySpecs { get; } = BuildKeySpecs();
 
@@ -22,31 +30,37 @@ public sealed class M2AnalysisService : ObservableObject
 
     void DetectSlots()
     {
+        var typed = new List<SmbiosSlotRow>();
+        var inferred = new List<SmbiosSlotRow>();
+        var drives = new List<string>();
+
         try
         {
-            var smbios = new SmbiosService();
-            int count = 0;
-            foreach (var slot in smbios.Slots)
+            foreach (var slot in new SmbiosService().Slots)
             {
-                var typeLower = slot.Type.ToLowerInvariant();
-                // 只認實際會出現的字串。原本還列了 0x14/0x15/0x17/0x1f… 等十六進位碼，
-                // 但 SmbiosService.SlotTypeName 對已知碼一律回中文名（0x17→「M.2 Socket 3」），
-                // 那些條件永遠為假——留著只會讓後人以為它們在起作用。
-                if (typeLower.Contains("m.2") || typeLower.Contains("sff-8639") ||
-                    typeLower.Contains("u.2"))
-                {
-                    Slots.Add(slot);
-                    count++;
-                }
+                bool isTyped = M2Detection.IsTypedM2OrU2(slot.Type);
+                if (isTyped) { typed.Add(slot); continue; }
+                if (M2Detection.IsInferredM2(slot, isTyped)) inferred.Add(slot);
             }
-            DetectedSlots = count > 0
-                ? $"偵測到 {count} 個 M.2 / U.2 插槽"
-                : "SMBIOS 未回報 M.2 / U.2 插槽（不代表沒有——部分主機板不在 Type 9 裡列出 M.2）";
         }
-        catch
+        catch { /* 讀不到 SMBIOS 不影響下面的磁碟清單 */ }
+
+        int nvme = 0;
+        try
         {
-            DetectedSlots = "（SMBIOS 讀取失敗）";
+            foreach (var disk in DiskInfoService.Query())
+            {
+                if (disk.Kind == DiskKind.NvmeSsd) nvme++;
+                drives.Add($"{disk.CountText} ・ {disk.Model} ・ {M2Detection.DescribeDriveForm(disk.Kind, disk.Model)}");
+            }
         }
+        catch { /* 磁碟清單讀不到時照實只講插槽 */ }
+
+        foreach (var s in typed) Slots.Add(s);
+        foreach (var s in inferred) PossibleSlots.Add(s);
+        foreach (string d in drives) DriveNotes.Add(d);
+
+        DetectedSlots = M2Detection.Summarize(typed, inferred, nvme);
     }
 
     static List<M2FormFactor> BuildFormFactors() =>
