@@ -157,6 +157,13 @@ public sealed class SettingsService : ObservableObject
     /// <summary>取樣溫度 0–2：越低越保守一致，越高越有創意發散。</summary>
     public double AiTemperature { get => _aiTemperature; set { if (SetProperty(ref _aiTemperature, Math.Clamp(value, 0, 2))) Save(); } }
 
+    private string _browserHomeUrl = "";
+    /// <summary>
+    /// 內建瀏覽器的首頁。留空＝內建的離線「硬體導航」頁；填入 http(s) 網址就取代它（設定頁可隨時清空改回）。
+    /// 只認網頁位址——其他協定會被 <see cref="BrowserPolicy.ResolveHomeUrl"/> 視為未設定，不會變成一個打不開的首頁。
+    /// </summary>
+    public string BrowserHomeUrl { get => _browserHomeUrl; set { if (SetProperty(ref _browserHomeUrl, value)) Save(); } }
+
     private string _aiSystemPrompt = AiService.DefaultSystemPrompt;
     /// <summary>系統提示詞（可由使用者自訂；一鍵重置回內建預設）。</summary>
     public string AiSystemPrompt { get => _aiSystemPrompt; set { if (SetProperty(ref _aiSystemPrompt, value)) Save(); } }
@@ -362,6 +369,7 @@ public sealed class SettingsService : ObservableObject
         public string? AiSystemPrompt { get; set; }
         public bool AiStreaming { get; set; } = true;
         public bool AiAgentMode { get; set; } = true;
+        public string? BrowserHomeUrl { get; set; }
         public bool AiKeepHistory { get; set; } = true;
         public int AiMaxTokens { get; set; }
         public int AiHistoryTurns { get; set; } = 12;
@@ -425,6 +433,7 @@ public sealed class SettingsService : ObservableObject
                     _aiProvider = Math.Clamp(p.AiProvider, 0, (int)XinSpect.AiProvider.SharedFree);
                     if (_aiProvider == (int)XinSpect.AiProvider.SharedFree && !SharedAiEndpoint.IsConfigured) _aiProvider = 0;
                     if (!string.IsNullOrWhiteSpace(p.AiBaseUrl)) _aiBaseUrl = p.AiBaseUrl;
+                    if (!string.IsNullOrWhiteSpace(p.BrowserHomeUrl)) _browserHomeUrl = p.BrowserHomeUrl;
                     // 金鑰可能是 DPAPI 密文（新版）或明文（舊版／不支援 DPAPI 的環境）。
                     // 解不開就當成沒有金鑰並記下原因——絕不把密文本身當成金鑰送去簽請求。
                     AiKeyLoadError = null;
@@ -533,6 +542,7 @@ public sealed class SettingsService : ObservableObject
                 MemLoadThreshold = _memLoadThreshold,
                 AiProvider = _aiProvider,
                 AiBaseUrl = _aiBaseUrl,
+                BrowserHomeUrl = _browserHomeUrl,
                 AiApiKey = ProtectKeyForDisk(_aiApiKey),
                 AiModel = _aiModel,
                 AiTemperature = _aiTemperature,

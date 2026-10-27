@@ -104,7 +104,7 @@ public static class EnglishStrings
         // ── 日期 ──
         ["西元紀年"] = "Gregorian",
         ["公元纪年"] = "Gregorian",
-        ["民國紀年"] = "Minguo (ROC)",
+        ["民國紀年"] = "R.O.C Era",
         ["中華黃帝紀元"] = "Yellow Emperor Era",
         ["宣統紀年〔大清〕"] = "Xuantong Era (Qing)",
         ["哆啦A夢紀元〔惡搞〕"] = "Doraemon Era (Fun)",
@@ -1320,7 +1320,7 @@ public static class EnglishStrings
         ["量到什麼"] = "What was measured",
         ["量每一支驅動的 DPC／ISR 在 CPU 上的執行時長，排出肇事模組排行（ETW 核心追蹤，零驅動安裝）。音訊爆音、滑鼠瞬間停頓、串流掉幀，往往是某支驅動的 DPC 吃掉數百微秒——這個資料只有作業系統知道。經驗法則：單次超過 1000 µs 就值得注意，但它只是統計不是判決。"] = "Measures how long each driver's DPCs/ISRs run on CPU, ranking the guilty modules (ETW kernel tracing, zero driver installs). Audio pops, mouse freezes, stream frame drops are often one driver's DPC eating hundreds of microseconds — data only the OS knows. Rule of thumb: a single event over 1000 µs deserves attention; it is a statistic, not a verdict.",
         ["量測"] = "Measure",
-        ["量測對外網路的延遲、下載與上傳速度。需連外，測試期間會消耗流量。NTU 台大（台灣學術網路）與 SGIX（新加坡交換中心）可原生量測；HKBN 香港寬頻與測速網（中國大陸）未提供公開量測端點，將跳轉至內建瀏覽器開啟其官方測速頁，測完可由瀏覽器工具列的「回到測速頁面」返回。"] = "Measures latency, download and upload to the outside world. Needs internet; consumes traffic during the test. NTU (Taiwan academic network) and SGIX (Singapore) measure natively; HKBN Hong Kong and Speedtest (mainland China) have no public measurement endpoints — they open their official speed-test pages in the embedded browser instead; \"Back to speed test\" in the toolbar returns.",
+        ["量測對外網路的延遲、下載與上傳速度。需連外，測試期間會消耗流量。NTU 台大（臺灣學術網路）與 SGIX（新加坡交換中心）可原生量測；HKBN 香港寬頻與測速網（中國大陸）未提供公開量測端點，將跳轉至內建瀏覽器開啟其官方測速頁，測完可由瀏覽器工具列的「回到測速頁面」返回。"] = "Measures latency, download and upload to the outside world. Needs internet; consumes traffic during the test. NTU (Taiwan academic network) and SGIX (Singapore) measure natively; HKBN Hong Kong and Speedtest (mainland China) have no public measurement endpoints — they open their official speed-test pages in the embedded browser instead; \"Back to speed test\" in the toolbar returns.",
         ["量測時長"] = "Measurement duration",
         ["量測條件"] = "Measurement conditions",
         ["金鑰只存在本機 %APPDATA%\\XinSpect\\settings.json（純文字，未加密——同一台電腦上的其他程式讀得到）。曦覽不會把金鑰寫進報告、記錄檔或任何對外請求以外的地方。"] = "Keys are stored only at %APPDATA%\\XinSpect\\settings.json (plain text, unencrypted — other programs on this machine can read it). XinSpect never writes keys into reports, logs, or anywhere except the outbound request itself.",

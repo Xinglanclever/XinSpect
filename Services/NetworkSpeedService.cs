@@ -34,7 +34,7 @@ public sealed record SpeedSample(
 
 /// <summary>
 /// 網速測試：對所選節點量測延遲／抖動、下載與上傳吞吐量。多執行緒串流、時間窗取樣，
-/// 支援 NTU 台大（speed5 學術網路，台灣）與 SGIX（新加坡交換中心，OpenSpeedTest）等原生量測節點；
+/// 支援 NTU 台大（speed5 學術網路，臺灣）與 SGIX（新加坡交換中心，OpenSpeedTest）等原生量測節點；
 /// HKBN 香港寬頻與測速網（中國大陸）未提供可供程式直接量測的公開端點，
 /// 故改跳轉至內建瀏覽器開啟其官方測速頁（WebPage），測完可由瀏覽器的「回到測速頁面」返回。
 /// 需連外；除本測試外不傳送任何本機資料。各節點端點均經實際探測驗證（2026-08-29）。
@@ -43,7 +43,7 @@ public sealed class NetworkSpeedService
 {
     public static readonly SpeedNode[] Nodes =
     {
-        new() { Name = "NTU 台大", Note = "學術網路・台灣", Protocol = NodeProtocol.NtuSpeed5,
+        new() { Name = "NTU 台大", Note = "學術網路・臺灣", Protocol = NodeProtocol.NtuSpeed5,
                 DownloadUrl = "http://speed5.ntu.edu.tw/speed5/server/?module=download&size=",
                 UploadUrl   = "http://speed5.ntu.edu.tw/speed5/server/?module=upload",
                 PingUrl     = "http://speed5.ntu.edu.tw/speed5/server/" },

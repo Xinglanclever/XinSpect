@@ -76,6 +76,25 @@ internal static class BrowserHome
         <a href="https://www.yahoo.com/">Yahoo</a>
         <a href="https://github.com/">GitHub</a>
       </div>
+      <div class="card">
+        <h3>社群 ・ 論壇</h3>
+        <a href="https://www.ptt.cc/bbs/index.html">PTT 批踢踢</a>
+        <a href="https://www.chiphell.com/">Chiphell 芯片論壇</a>
+        <a href="https://forum.gamer.com.tw/">巴哈姆特</a>
+        <a href="https://www.mobile01.com/">Mobile01</a>
+        <a href="https://www.coolaler.com/">滄者極限</a>
+        <a href="https://www.reddit.com/r/hardware/">Reddit r/hardware</a>
+        <a href="https://www.techpowerup.com/forums/">TechPowerUp 論壇</a>
+        <a href="https://www.overclock.net/">Overclock.net</a>
+      </div>
+      <div class="card">
+        <h3>科技媒體</h3>
+        <a href="https://www.techpowerup.com/">TechPowerUp 資料庫</a>
+        <a href="https://www.anandtech.com/">AnandTech</a>
+        <a href="https://www.tomshardware.com/">Tom's Hardware</a>
+        <a href="https://www.ithome.com.tw/">iThome</a>
+        <a href="https://www.4gamers.com.tw/">4Gamers</a>
+      </div>
     </div>
     <div class="foot">曦覽 XinSpect ・ 連結於本分頁內開啟</div>
   </div>

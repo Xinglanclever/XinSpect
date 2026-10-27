@@ -100,6 +100,34 @@ public static class BrowserPolicy
         return new BrowserInput(BrowserInputKind.Search, null, text, "");
     }
 
+    /// <summary>
+    /// 使用者自訂的首頁。留空／解析不出來／不是 http(s) 一律回 <c>null</c>＝用內建的離線起始頁。
+    /// </summary>
+    /// <remarks>
+    /// <b>為什麼只在這裡判定「能不能當首頁」：</b>首頁是每次按「首頁」鍵與啟動時都會走的字串，
+    /// 如果它被存成 <c>file:///…</c> 或 <c>javascript:…</c>，就會變成一個<b>每次啟動都失敗的首頁</b>——
+    /// 使用者看到的是一頁空白，而不是「這個設定不合法」。所以設定頁寫入時不擋，
+    /// 判定集中在這裡：不合法就安靜退回內建頁（設定頁會即時顯示判定結果）。
+    /// </remarks>
+    public static Uri? ResolveHomeUrl(string? configured)
+    {
+        if (string.IsNullOrWhiteSpace(configured)) return null;
+        string text = configured.Trim();
+
+        // 有「看起來像協定」的前綴就照它解析、不補 https：
+        // 否則 magnet:?xt=… 會被補成 https://magnet/…，變成一個「合法但錯的」首頁。
+        // 判斷條件不含小數點，才不會把 example.com:8080/x 這種「主機:埠」誤認成協定。
+        int colon = text.IndexOf(':');
+        int slash = text.IndexOf('/');
+        bool hasScheme = colon > 0
+                         && (slash < 0 || colon < slash)
+                         && !text[..colon].Contains('.');
+
+        if (!hasScheme) text = "https://" + text;
+        if (!Uri.TryCreate(text, UriKind.Absolute, out var uri)) return null;
+        return uri.Scheme is "http" or "https" ? uri : null;
+    }
+
     /// <summary>這個已經解析好的 URI 能不能在內建瀏覽器裡導覽。</summary>
     /// <remarks>
     /// <b>起始頁不是 about:blank。</b>WebView2 的 <c>NavigateToString</c> 實際導覽到的是

@@ -228,6 +228,29 @@
                 </StackPanel>
             </Border>
 
+            <!-- ═══ 內建瀏覽器 ═══ -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <local:SectionHead Text="內建瀏覽器 ・ 首頁" HelpKey="settings/內建瀏覽器"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="按瀏覽器工具列的「首頁」時去哪裡。留空＝內建的離線「硬體導航」頁（常用檢測工具、跑分、驅動、論壇與科技媒體連結）。"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="自訂首頁網址（不必打 https://）" Margin="0,12,0,4"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0" Style="{StaticResource SetTextBox}"
+                                 Text="{Binding Settings.BrowserHomeUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="例：ptt.cc/bbs/index.html 或 https://www.chiphell.com/"/>
+                        <Button Grid.Column="1" Style="{StaticResource ToolButton}" Content="清除" Margin="8,0,0,0"
+                                Click="ClearHomeUrl_Click" ToolTip="清空並改回內建的硬體導航頁"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap"
+                               Text="只接受 http／https 網址；其他內容（含 file:、javascript:）一律視為未設定、回到內建頁——不會留下一個每次啟動都打不開的首頁。"/>
+                </StackPanel>
+            </Border>
+
             <!-- ═══ 驅動就緒 ═══ -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>

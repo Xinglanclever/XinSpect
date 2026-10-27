@@ -273,6 +273,34 @@ public class BrowserPolicyTests
         Assert.Equal(1.0, z, 10);
     }
 
+    // ── 自訂首頁 ──────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void 沒填首頁就回內建頁(string? configured)
+        => Assert.Null(BrowserPolicy.ResolveHomeUrl(configured));
+
+    [Theory]
+    [InlineData("ptt.cc/bbs/index.html", "https://ptt.cc/bbs/index.html")]      // 沒打協定就補 https
+    [InlineData("http://example.com/a?b=1", "http://example.com/a?b=1")]        // http 照用
+    [InlineData("  https://www.chiphell.com/  ", "https://www.chiphell.com/")]  // 頭尾空白吃掉
+    public void 網址首頁會被正規化(string configured, string expected)
+        => Assert.Equal(expected, BrowserPolicy.ResolveHomeUrl(configured)?.ToString());
+
+    [Theory]
+    [InlineData("file:///C:/Windows/win.ini")]
+    [InlineData("javascript:alert(1)")]
+    [InlineData("data:text/html,<b>x</b>")]
+    [InlineData("about:blank")]
+    [InlineData("magnet:?xt=urn:btih:abc")]
+    public void 不是網頁的首頁一律視為沒設定(string configured)
+    {
+        // 不合法＝回到內建頁，而不是留下一個每次按首頁都失敗的設定。
+        Assert.Null(BrowserPolicy.ResolveHomeUrl(configured));
+    }
+
     private static string RepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

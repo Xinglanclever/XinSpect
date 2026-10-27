@@ -210,9 +210,17 @@ public partial class SettingsView : UserControl
               + "所以額度可能用完，也可能被隨時關閉；選這一項時，硬體規格與感測數據會經中轉送到 Cloudflare 的模型。";
     }
 
-    // 一鍵重置：把系統提示詞還原為內建預設（要求 AI 客觀公正的版本）。
-    private void ResetPrompt_Click(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// 清空自訂首頁，改回內建的離線「硬體導航」頁。
+    /// 設定本身是即時存檔的，所以這裡只做「把值清空」一件事——判定留給 BrowserPolicy。
+    /// </summary>
+    private void ClearHomeUrl_Click(object sender, RoutedEventArgs e)
     {
+        if (Vm?.Settings is { } settings) settings.BrowserHomeUrl = "";
+    }
+
+    // 一鍵重置：把系統提示詞還原為內建預設（要求 AI 客觀公正的版本）。
+    private void ResetPrompt_Click(object sender, RoutedEventArgs e)    {
         var vm = Vm;
         if (vm is null) return;
         vm.Settings.AiSystemPrompt = AiService.DefaultSystemPrompt;

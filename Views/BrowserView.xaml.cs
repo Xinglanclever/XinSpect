@@ -207,6 +207,23 @@ public partial class BrowserView : UserControl
     private void GoHome()
     {
         if (!_ready) return;
+
+        // 使用者在設定裡指定了首頁就跳那裡。判定集中在 BrowserPolicy：
+        // 留空或不是 http(s) 一律當「沒設定」，不會變成一個每次啟動都失敗的首頁。
+        if (BrowserPolicy.ResolveHomeUrl(Shell.Vm?.Settings.BrowserHomeUrl) is { } custom)
+        {
+            AddressBar.Text = custom.ToString();
+            try
+            {
+                Web.Source = custom;
+                return;
+            }
+            catch
+            {
+                ShowNotice("自訂首頁打不開，已改用內建的硬體導航頁。");
+            }
+        }
+
         AddressBar.Text = "";
         _selfDocumentNav = true;
         try { Web.NavigateToString(BrowserHome.Html); }

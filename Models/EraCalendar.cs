@@ -34,7 +34,7 @@ public static class EraCalendar
 
     /// <summary>英語模式的紀年名稱（與繁體清單同序同長度，索引映射沿用非簡體那組）。</summary>
     public static string[] GetNamesEnglish() =>
-        new[] { "Gregorian", "Minguo (ROC)", "Yellow Emperor Era", "Xuantong Era (Qing)", "Doraemon Era (Fun)" };
+        new[] { "Gregorian", "R.O.C Era", "Yellow Emperor Era", "Xuantong Era (Qing)", "Doraemon Era (Fun)" };
 
     /// <summary>顯示索引 → 模式（簡體清單不含民國，索引與列舉值在簡體下不對應——2026-10-07 修的卡住 bug）。</summary>
     public static EraMode FromIndex(bool simplified, int index)
@@ -92,7 +92,7 @@ public static class EraCalendar
         string date = t.ToString("MMMM d, yyyy  HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
         return mode switch
         {
-            EraMode.Minguo => $"Minguo {t.Year - 1911} · {date}",
+            EraMode.Minguo => $"R.O.C Era {t.Year - 1911} · {date}",
             EraMode.Huangdi => $"Yellow Emperor {t.Year + 2698} · {date}",
             EraMode.Xuantong => $"Xuantong {t.Year - 1908} · {date}",
             EraMode.Doraemon => (t.Year >= 2112
