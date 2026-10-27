@@ -349,8 +349,7 @@ public static partial class HardwareSnapshotService
     /// 所以保留下原長，而且鍵本身、狀態、數值一律不動（那是內容與判斷，不是敘述）。
     /// </para>
     /// </remarks>
-    private static HardwareSnapshotFact ClampText(HardwareSnapshotFact fact) => fact with
-    {
+    private static HardwareSnapshotFact ClampText(HardwareSnapshotFact fact) => fact with    {
         Category = Clamp(fact.Category, 128),
         Name = Clamp(fact.Name, 256),
         Source = Clamp(fact.Source, 512),
@@ -368,9 +367,32 @@ public static partial class HardwareSnapshotService
     private static string Clamp(string value, int max)
     {
         if (value.Length <= max) return value;
-        string marker = $"……（原文 {value.Length:N0} 字，已截斷）";
+        string marker = TruncationMarker + $"{value.Length:N0} 字，已截斷）";
         int keep = Math.Max(0, max - marker.Length);
         return value[..keep] + marker;
+    }
+
+    /// <summary>
+    /// 截短痕跡的開頭。<b>只有這一份字面</b>：產生它的地方（<see cref="Clamp"/>）與
+    /// 數它的地方（<see cref="CountTruncatedTexts"/>）共用同一個常數，
+    /// 否則「回報截斷」會隨著措辭改動變成永遠 0。
+    /// </summary>
+    public const string TruncationMarker = "……（原文 ";
+
+    /// <summary>
+    /// 這份快照裡有幾筆事實的文字被截短過（值或讀不到的原因）。
+    /// </summary>
+    /// <remarks>
+    /// <b>為什麼要數：</b>截斷是「檔案裡看得到、但存檔的人不一定會去翻」的那種資訊。
+    /// 建立膠囊之後摘要要說出「有 N 筆說明過長已截斷」，否則使用者會以為自己存的是一份完整紀錄。
+    /// 它<b>只回報、不改變</b>——不回填文字，也不把它算成遺失。
+    /// </remarks>
+    public static int CountTruncatedTexts(HardwareSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        return snapshot.Facts.Count(f =>
+            (f.UnavailableReason?.Contains(TruncationMarker, StringComparison.Ordinal) ?? false)
+            || (f.Value?.Contains(TruncationMarker, StringComparison.Ordinal) ?? false));
     }
 
     private static void ValidateSnapshot(HardwareSnapshot snapshot)
@@ -399,52 +421,57 @@ public static partial class HardwareSnapshotService
     /// 「UnavailableReason 超過 512 字元」，而使用者存的是整份時間膠囊，
     /// 既不知道那是什麼欄位，也不知道是哪一筆（2026-10-26 的實際回報）。
     /// </summary>
+    /// <remarks>
+    /// 刻意<b>不再帶 <c>paramName</c></b>：.NET 會把它接成「(Parameter 'UnavailableReason')」，
+    /// 那串字對使用者沒有意義，而且會被原樣貼到畫面上。開發者要的資訊（哪一把鍵、哪個欄位）
+    /// 已經在句子裡了。
+    /// </remarks>
     private static void ValidateFact(HardwareSnapshotFact fact)
     {
         try { ValidateFactCore(fact); }
         catch (ArgumentException ex)
         {
-            throw new ArgumentException($"事實 {fact.Key ?? "（無鍵）"}：{ex.Message}", ex.ParamName);
+            throw new ArgumentException($"事實 {fact.Key ?? "（無鍵）"}：{ex.Message}");
         }
     }
 
     private static void ValidateFactCore(HardwareSnapshotFact fact)
     {
         if (!FactKeyRegex().IsMatch(fact.Key ?? ""))
-            throw new ArgumentException("事實 key 必須為 1–160 字元的穩定 ASCII 路徑（小寫字母、數字、點、底線、連字號或方括號）。");
-        RequireText(fact.Category, nameof(fact.Category), 128);
-        RequireText(fact.Name, nameof(fact.Name), 256);
-        RequireText(fact.Source, nameof(fact.Source), 512);
-        if (!Enum.IsDefined(fact.Availability)) throw new ArgumentException("availability 無效。");
+            throw new ArgumentException("鍵不是合法的路徑格式（小寫字母、數字、點、底線、連字號或方括號，最長 160 字元）。");
+        RequireText(fact.Category, "分類", 128);
+        RequireText(fact.Name, "名稱", 256);
+        RequireText(fact.Source, "來源", 512);
+        if (!Enum.IsDefined(fact.Availability)) throw new ArgumentException("狀態不是已知的六種之一。");
         if (fact.Availability == FactAvailability.Present)
         {
             // 讀到且確認：值必填，且不得帶「讀不到的原因」。
-            RequireText(fact.Value, nameof(fact.Value), 16_384);
+            RequireText(fact.Value, "值", 16_384);
             if (!string.IsNullOrWhiteSpace(fact.UnavailableReason))
-                throw new ArgumentException("可用的事實不得帶 unavailableReason。");
+                throw new ArgumentException("這一筆已確認讀到，就不該再帶「讀不到的原因」——兩者互相矛盾。");
         }
         else if (fact.Availability == FactAvailability.Unknown)
         {
             // 有值但未確認：值必填（它的重點就是「拿到了東西」），必須說明為何不敢背書，
             // 且**不得帶 numericValue**——numericValue 是可計算欄位，允許它等於邀請呼叫端
             // 拿未確認的值去算。字串值留給人看，數值要等到確認後才有。
-            RequireText(fact.Value, nameof(fact.Value), 16_384);
-            RequireText(fact.UnavailableReason, nameof(fact.UnavailableReason), 512);
+            RequireText(fact.Value, "值", 16_384);
+            RequireText(fact.UnavailableReason, "讀不到的原因", 512);
             if (fact.NumericValue is not null)
-                throw new ArgumentException("未確認的事實不得帶 numericValue——要計算請先確認來源。");
+                throw new ArgumentException("這一筆還沒確認，就不該帶數值欄位——要計算請先確認來源。");
         }
         else
         {
             // 讀不到：值可為空，但必須說明原因，且不得帶數值——誠實原則，不以 0 填補。
-            if (fact.Value is null || fact.Value.Length > 16_384) throw new ArgumentException("value 過長或為 null。");
-            RequireText(fact.UnavailableReason, nameof(fact.UnavailableReason), 512);
-            if (fact.NumericValue is not null) throw new ArgumentException("讀不到的事實不得帶 numericValue。");
+            if (fact.Value is null || fact.Value.Length > 16_384) throw new ArgumentException("值過長或沒有值。");
+            RequireText(fact.UnavailableReason, "讀不到的原因", 512);
+            if (fact.NumericValue is not null) throw new ArgumentException("讀不到的事實不得帶數值。");
         }
-        if (fact.Unit is { } unit && unit.Length > 64) throw new ArgumentException("unit 過長。");
+        if (fact.Unit is { } unit && unit.Length > 64) throw new ArgumentException("單位過長。");
         if (fact.NumericValue is { } n && (double.IsNaN(n) || double.IsInfinity(n)))
-            throw new ArgumentException("numericValue 必須是有限數值。");
-        if (!Enum.IsDefined(fact.Trust)) throw new ArgumentException("trust 無效。");
-        if (fact.MeasuredAtUtc == default) throw new ArgumentException("measuredAtUtc 不可為預設值。");
+            throw new ArgumentException("數值必須是有限值（NaN 與無限大寫不進 JSON）。");
+        if (!Enum.IsDefined(fact.Trust)) throw new ArgumentException("可信度不是已知的值。");
+        if (fact.MeasuredAtUtc == default) throw new ArgumentException("沒有一個量測時間——那會讓「這一輪讀的」與「很久以前讀的」長得一樣。");
     }
 
     private static void ValidateAnonymousMachineId(string value)
@@ -514,10 +541,15 @@ public static partial class HardwareSnapshotService
         return value.Trim() is not ("—" or "Default string" or "To Be Filled By O.E.M." or "To Be Filled By OEM" or "System Serial Number");
     }
 
+    /// <summary>
+    /// 必填且有長度上限的文字。<paramref name="name"/> 是<b>給人看的欄位名</b>（中文），
+    /// 不是 C# 屬性名，也刻意不當 <c>paramName</c> 傳——那會讓訊息長出一段
+    /// 「(Parameter 'x')」的尾巴，而它對讀訊息的人沒有意義。
+    /// </summary>
     private static string RequireText(string? value, string name, int maxLength)
     {
-        if (string.IsNullOrWhiteSpace(value)) throw new ArgumentException($"{name} 不可空白。", name);
-        if (value.Length > maxLength) throw new ArgumentException($"{name} 超過 {maxLength} 字元。", name);
+        if (string.IsNullOrWhiteSpace(value)) throw new ArgumentException($"{name}不可空白。");
+        if (value.Length > maxLength) throw new ArgumentException($"{name}超過 {maxLength} 字元。");
         return value;
     }
 

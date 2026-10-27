@@ -167,7 +167,7 @@ public partial class EvidenceLabView : UserControl
         }
         catch (Exception ex)
         {
-            ExternalReportStatus.Text = $"讀取失敗：{ex.Message}";
+            ExternalReportStatus.Text = $"讀取失敗：{UserFacingError.Describe(ex)}";
         }
     }
 }

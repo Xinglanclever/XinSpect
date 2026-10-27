@@ -120,5 +120,42 @@ public class SnapshotReasonClampTests
         var fact = Fact("test.reason.blank", "   ");
         var ex = Assert.Throws<ArgumentException>(() => Make(fact));
         Assert.Contains("test.reason.blank", ex.Message);
+        Assert.Contains("讀不到的原因", ex.Message);            // 欄位名是人話，不是 C# 屬性名
+        Assert.DoesNotContain("Parameter", ex.Message);        // 沒有 .NET 接上的參數名尾巴
+    }
+
+    // ── 截斷要回報：存檔摘要要說出有幾筆被截短 ──────────────────────────
+
+    [Fact]
+    public void 存檔摘要要說出有幾筆說明被截斷()
+    {
+        var snapshot = Make(
+            Fact("test.reason.long", new string('長', 900)),
+            Fact("test.reason.short", "短原因"),
+            Fact("test.value.long", null, new string('值', 20_000), FactAvailability.Present));
+
+        string summary = EvidenceLabService.DescribeSave(snapshot, includeSensitive: false);
+
+        Assert.Contains("3 項事實", summary);
+        Assert.Contains("2 筆說明過長已截斷", summary);          // 一筆原因、一筆值
+    }
+
+    [Fact]
+    public void 沒有截斷時摘要不該多出那句話()
+    {
+        var snapshot = Make(Fact("test.reason.short", "短原因"));
+        Assert.DoesNotContain("已截斷", EvidenceLabService.DescribeSave(snapshot, includeSensitive: false));
+    }
+
+    [Fact]
+    public void 截斷計數只算真的被截短的筆數()
+    {
+        var clean = Make(Fact("a.clean", "正常長度"));
+        var cut = Make(Fact("a.cut", new string('長', 900)));
+        var alsoCut = Make(Fact("a.cut2", null, new string('值', 20_000), FactAvailability.Present));
+
+        Assert.Equal(0, HardwareSnapshotService.CountTruncatedTexts(clean));
+        Assert.Equal(1, HardwareSnapshotService.CountTruncatedTexts(cut));
+        Assert.Equal(1, HardwareSnapshotService.CountTruncatedTexts(alsoCut));
     }
 }

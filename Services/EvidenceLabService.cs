@@ -2225,7 +2225,7 @@ public sealed class EvidenceLabService : ObservableObject
                 new HardwareSnapshotSaveOptions { SensitiveValues = policy });
             ShowFacts(snapshot);
             Changes.Clear();
-            Summary = $"{snapshot.Facts.Count} 項事實 ・ {(includeSensitive ? "保留敏感識別" : "敏感值已遮蔽")} ・ SHA-256 完整性封套";
+            Summary = DescribeSave(snapshot, includeSensitive);
             Status = "時間膠囊已儲存。雜湊只能偵測檔案是否被改動，不是數位簽章。";
             AppendAudit("建立時間膠囊", "時間膠囊", Summary, snapshot.Integrity.Hash, snapshot.AnonymousMachineId);
         }
@@ -2234,9 +2234,22 @@ public sealed class EvidenceLabService : ObservableObject
         {
             Changes.Clear();
             Summary = "儲存失敗";
-            Status = ex.Message;
+            // 顯示用的字要拿掉 .NET 的參數名尾巴；原始訊息仍在例外物件裡，寫日誌照樣拿得到。
+            Status = UserFacingError.Describe(ex);
         }
         finally { IsBusy = false; }
+    }
+
+    /// <summary>
+    /// 存檔後的摘要句。截斷要說出來：檔案裡雖然留了痕跡，但存檔的人不一定會去翻——
+    /// 不說的話，他會以為自己存的是一份完整紀錄。
+    /// </summary>
+    internal static string DescribeSave(HardwareSnapshot snapshot, bool includeSensitive)
+    {
+        int truncated = HardwareSnapshotService.CountTruncatedTexts(snapshot);
+        return $"{snapshot.Facts.Count} 項事實 ・ {(includeSensitive ? "保留敏感識別" : "敏感值已遮蔽")}"
+               + " ・ SHA-256 完整性封套"
+               + (truncated > 0 ? $" ・ {truncated} 筆說明過長已截斷（各筆末尾標了原長）" : "");
     }
 
     private static string KindText(AssetEventKind kind) => kind switch
@@ -2295,7 +2308,7 @@ public sealed class EvidenceLabService : ObservableObject
         {
             Changes.Clear();
             Summary = "比較失敗";
-            Status = ex.Message;
+            Status = UserFacingError.Describe(ex);
         }
         finally { IsBusy = false; }
     }
@@ -2319,7 +2332,7 @@ public sealed class EvidenceLabService : ObservableObject
             Facts.Clear();
             Changes.Clear();
             Summary = "載入失敗";
-            Status = ex.Message;
+            Status = UserFacingError.Describe(ex);
         }
         finally { IsBusy = false; }
     }
