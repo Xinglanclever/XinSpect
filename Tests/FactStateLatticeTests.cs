@@ -237,14 +237,33 @@ public class FactStateLatticeTests
     [Fact]
     public void Unknown狀態_不得帶numericValue()
     {
-        // numericValue 是可計算欄位；允許未確認的值帶數值等於邀請呼叫端拿它去算
-        Assert.Throws<ArgumentException>(() => Build(Fact(FactAvailability.Unknown, numeric: 1234)));
+        // numericValue 是可計算欄位；允許未確認的值帶數值等於邀請呼叫端拿它去算。
+        //
+        // 第 302 輪之後，違反格式的事實不再讓整份快照拋例外——那一筆會被換成
+        // 「沒通過檢查」的讀不到事實（值清空、不帶數字），其餘照常寫入。
+        // 界線沒有鬆：數值一樣進不了快照，而且原因寫在那一筆上、鍵也留著。
+        var stored = Assert.Single(Build(Fact(FactAvailability.Unknown, numeric: 1234)).Facts);
+
+        Assert.Equal(FactAvailability.ReadError, stored.Availability);
+        Assert.Null(stored.NumericValue);
+        Assert.Equal("", stored.Value);
+        Assert.StartsWith(HardwareSnapshotService.RejectedMarker, stored.UnavailableReason);
+        Assert.Contains("還沒確認", stored.UnavailableReason);
+        Assert.Equal("test.unconfirmed", stored.Key);
     }
 
     [Fact]
     public void Unknown狀態_不得缺原因()
     {
-        Assert.Throws<ArgumentException>(() => Build(Fact(FactAvailability.Unknown, reason: null)));
+        // 同一條界線：沒有「為什麼不敢背書」的 Unknown 一樣是格式不合格，
+        // 被退成讀不到的事實，而不是安靜地當成一筆已確認的資料。
+        var stored = Assert.Single(Build(Fact(FactAvailability.Unknown, reason: null)).Facts);
+
+        Assert.Equal(FactAvailability.ReadError, stored.Availability);
+        Assert.Equal("", stored.Value);
+        Assert.Null(stored.NumericValue);
+        Assert.StartsWith(HardwareSnapshotService.RejectedMarker, stored.UnavailableReason);
+        Assert.Contains("讀不到的原因不可空白", stored.UnavailableReason);
     }
 
     [Fact]
@@ -281,6 +300,14 @@ public class FactStateLatticeTests
     [Fact]
     public void ReadError仍不得帶數值_與Unknown同一條界線()
     {
-        Assert.Throws<ArgumentException>(() => Build(Fact(FactAvailability.ReadError, numeric: 1)));
+        // 讀不到卻帶著數字，是最容易一路算下去的那種錯。現在它不會讓整份存不了，
+        // 但那一筆會被退掉、值清空、原因寫明；數字不會活著進到快照裡。
+        var stored = Assert.Single(Build(Fact(FactAvailability.ReadError, numeric: 1)).Facts);
+
+        Assert.Equal(FactAvailability.ReadError, stored.Availability);
+        Assert.Null(stored.NumericValue);
+        Assert.Equal("", stored.Value);
+        Assert.StartsWith(HardwareSnapshotService.RejectedMarker, stored.UnavailableReason);
+        Assert.Contains("讀不到的事實不得帶數值", stored.UnavailableReason);
     }
 }

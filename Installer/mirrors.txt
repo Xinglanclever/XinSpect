@@ -1,0 +1,21 @@
+# XinSpectDeploy 的鏡像清單（安裝器開機時抓這一個檔案，抓不到就用 exe 內建的預設值）
+#
+# 格式：編號|網址|模式
+#   模式 direct ＝ 網址是「檔案所在目錄」，安裝器自己抓 XinSpect.exe 與 BlueSquadronBridge.exe
+#   模式 page   ＝ 網址是分享頁，安裝器只開瀏覽器，請使用者在頁面上按「下載」
+#
+# 規矩：
+#   1. 只列真的存在、而且已經自己點過一次的連結。留著空行比留一個死連結好。
+#   2. 網盤沒有穩定直連就不要硬寫 direct——下載到 HTML 會被安裝器判成失敗（那是對的），
+#      使用者只會覺得「按了 3 結果失敗」。
+#   3. 改完這一行不用重編 exe；只有改到 exe 內建的預設值才需要重跑 Tools\build-installer.ps1。
+
+1|https://github.com/Xinglanclever/XinSpect/releases/latest/download/|direct
+
+# 2 ＝ Google Drive：上傳後把分享連結（或直接抓檔案用的 uc?export=download&id=…）貼在這裡。
+#     網址含「id=」時，安裝器遇到 Google 的「無法掃描病毒」確認頁會自動改走
+#     drive.usercontent.google.com 的 confirm=t 直連。
+# 2|https://drive.google.com/uc?export=download&id=<FILE_ID>|direct
+
+# 3 ＝ 中國網盤（123 雲盤）：分享頁沒有穩定直連，一律用 page 模式。
+# 3|https://www.123pan.com/s/<SHARE_ID>|page

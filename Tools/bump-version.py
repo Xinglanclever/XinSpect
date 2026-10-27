@@ -90,7 +90,9 @@ def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--version", required=True, help="新版本，例如 3.03")
     ap.add_argument("--codename", required=True, help="代號，例如 Ultima XII")
-    ap.add_argument("--title", required=True, help="一句話標題（Changelog 與沿革用）")
+    ap.add_argument("--title", required=True, help="一句話標題（Changelog 與沿革用，正體）")
+    ap.add_argument("--title-zh-cn", help="簡體版沿革那一行的標題（不給就直接沿用正體，並印提醒）")
+    ap.add_argument("--title-en", help="英文版沿革表那一行的摘要（不給就直接沿用正體，並印提醒）")
     ap.add_argument("--date", required=True, help="YYYY-MM-DD")
     ap.add_argument("--items", help="一行一項的純文字檔")
     ap.add_argument("--root", help="倉庫根目錄（預設由腳本位置推導）")
@@ -107,9 +109,27 @@ def main(argv=None):
     items = read_items(args.items)
     if not items:
         raise SystemExit("--items 是必要的：ChangelogCatalog 的每一筆都要有內容")
+    # 三份 README 的沿革各用各的語言：只給 --title 的話，簡中與英文會被塞進正體標題
+    # （v3.03 就發生過），所以這裡要求呼叫端明確給，沒給就沿用並在最後提醒。
+    title_zh = args.title_zh_cn or args.title
+    title_en = args.title_en or args.title
 
     def doc(rel):
         return Doc(os.path.join(root, rel))
+
+    def sync_date(d, pattern, label):
+        """把句子括號裡的日期換成這一版的日期。
+
+        版號那一段由 replace() 換掉，日期卻留在原地——v3.03 就是這樣寫成
+        「v3.03（2026-10-26）」的。日期不能靠人手補，所以這裡連日期一起對齊。
+        """
+        m = re.search(pattern, d.text)
+        if not m:
+            raise SystemExit("MISS %s（%s）：找不到文件版本句" % (d.path, label))
+        old = m.group(0)
+        new = old[:m.start(1) - m.start(0)] + args.date + old[m.end(1) - m.start(0):]
+        if old != new:
+            d.replace(old, new, label)
 
     # 舊版號從 csproj 讀——不從使用者參數拿，避免「以為自己在升 3.02→3.03，其實是 3.01」。
     proj = doc("XinSpect.csproj")
@@ -169,6 +189,7 @@ def main(argv=None):
     md.replace("releases/download/v%s/" % OLD, "releases/download/v%s/" % V, "README 下載連結")
     md.replace("本版（v%s）實際發佈的檔案大小" % OLD, "本版（v%s）實際發佈的檔案大小" % V, "README 註腳")
     md.replace("最新的一筆是 v%s（" % OLD, "最新的一筆是 v%s（" % V, "README 11.1")
+    sync_date(md, r"最新的一筆是 v%s（(\d{4}-\d{2}-\d{2})）" % re.escape(V), "README 11.1 日期")
     md.replace("本版是 v%s ——" % OLD, "本版是 v%s ——" % V, "README 結語")
 
     bullet = "- **v%s**（%s）：%s（本版 %d 項）" % (V, args.date, args.title, len(items))
@@ -194,7 +215,8 @@ def main(argv=None):
     zh.replace("releases/download/v%s/" % OLD, "releases/download/v%s/" % V, "zh 下載連結")
     zh.replace("本版（v%s）实际发布的文件大小" % OLD, "本版（v%s）实际发布的文件大小" % V, "zh 註腳")
     zh.replace("本文档对应 XinSpect v%s（" % OLD, "本文档对应 XinSpect v%s（" % V, "zh 文件版本")
-    zh_bullet = "- **v%s %s**（%s）：%s" % (V, args.codename, args.date, args.title)
+    sync_date(zh, r"本文档对应 XinSpect v%s（(\d{4}-\d{2}-\d{2})）" % re.escape(V), "zh 文件版本日期")
+    zh_bullet = "- **v%s %s**（%s）：%s" % (V, args.codename, args.date, title_zh)
     zh.insert_before("- **v%s Ultima" % OLD if ("- **v%s Ultima" % OLD) in zh.text else "- **v%s %s**" % (OLD, old_code or ""),
                      zh_bullet + "\n", "zh 沿革")
 
@@ -205,6 +227,7 @@ def main(argv=None):
     en.replace("Document scope (v%s)" % OLD, "Document scope (v%s)" % V, "en 文件範圍")
     en.replace("**About this document**: it corresponds to XinSpect v%s (" % OLD,
                "**About this document**: it corresponds to XinSpect v%s (" % V, "en 文件版本")
+    sync_date(en, r"corresponds to XinSpect v%s \((\d{4}-\d{2}-\d{2})\)" % re.escape(V), "en 文件版本日期")
     # 英文版的 ledger 句也寫了「N entries (M dated releases + 4 stages)」，一併更新
     en_before = en.text
     en.text = re.sub(
@@ -214,7 +237,7 @@ def main(argv=None):
     if en.text != en_before:
         en.dirty = True
 
-    en_row = "| %s | %s | %s |" % (V, args.date, args.title)
+    en_row = "| %s | %s | %s |" % (V, args.date, title_en)
     en.insert_before("| %s | " % OLD, en_row + "\n", "en 沿革表")
 
     docs = [proj, about, sec, bug, hw, cat, md, zh, en]
@@ -247,6 +270,18 @@ def main(argv=None):
     if zh_text.count("- **v%s " % V) != 1:
         problems.append("zh-CN 沿革的 %s 出現 %d 次（應為 1）" % (V, zh_text.count("- **v%s " % V)))
 
+    en_text = io.open(os.path.join(root, "README.en.md"), encoding="utf-8-sig").read()
+    # 文件版本句的日期：v3.03 曾經版號換了、日期留在上一版，讀起來就是「v3.03（2026-10-26）」。
+    for label, text, pat in [
+        ("README 11.1", md_text, "最新的一筆是 v%s（%s）" % (V, args.date)),
+        ("zh-CN 文件版本", zh_text, "本文档对应 XinSpect v%s（%s）" % (V, args.date)),
+        ("en 文件版本", en_text, "corresponds to XinSpect v%s (%s)" % (V, args.date)),
+        ("zh-CN 沿革", zh_text, "- **v%s %s**（%s）：" % (V, args.codename, args.date)),
+        ("en 沿革表", en_text, "| %s | %s |" % (V, args.date)),
+    ]:
+        if pat not in text:
+            problems.append("%s 對不上這一版：%r 不在檔裡" % (label, pat))
+
     if problems:
         print("BUMP-FAIL:")
         for p in problems:
@@ -254,6 +289,8 @@ def main(argv=None):
         return 2
 
     print("OK：%s 已寫進八個地方，目錄共 %d 筆；沒有重複。" % (V, n_entries))
+    if not args.title_zh_cn or not args.title_en:
+        print("提醒：沒有給 --title-zh-cn / --title-en，簡體與英文的沿革沿用了正體標題。")
     print("提醒：測試數、鍵數、域數、家族數仍要另外更新——那些是機器算的，不是這支腳本猜得出來的。")
     return 0
 

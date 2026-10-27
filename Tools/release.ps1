@@ -76,6 +76,16 @@ try {
     }
     Ok 'preflight: every tracked-buildable .cs is in git'
 
+    # ---------- preflight: 安裝器必須現編，不能上傳上一次的成品 ----------
+    # Installer/XinSpectDeploy.exe 是二進位檔：改了 Install.cs 而忘了重編不會有任何編譯錯誤，
+    # 只會安靜地上傳一個舊安裝器。每次發佈都在這裡重編一次，有改動就一起進發佈提交。
+    Write-Host '==> preflight (installer rebuild)'
+    & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'build-installer.ps1')
+    if ($LASTEXITCODE -ne 0) { Fail 'installer build failed' }
+    $deployChanged = git status --porcelain -- 'Installer/XinSpectDeploy.exe'
+    if ($deployChanged) { Write-Host "  note: installer rebuilt; it will be part of the release commit" }
+    Ok 'preflight: installer rebuilt from Install.cs'
+
     $zhFiles = @('README.md', 'README.zh-CN.md')
     foreach ($f in ($zhFiles + @('README.en.md'))) {
         $t = (ReadUtf8 $f)[0]

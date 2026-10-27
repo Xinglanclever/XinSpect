@@ -38,7 +38,7 @@
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,0"
                                Text="硬體資訊總覽 ・ 即時偵測工具"/>
                     <TextBlock x:Name="VersionMetadata" Style="{StaticResource FieldLabel}" Margin="0,2,0,0"
-                               Text="版本 3.02 ・ Ultima XI ・ 便攜單一執行檔"/>
+                               Text="版本 3.03 ・ Ultima XII ・ 便攜單一執行檔"/>
 
                     <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,16"/>
 

@@ -4,10 +4,10 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一运行档发布，免安装；对硬件与系统的读取以唯读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-3.02-4C8DFF)
+![版本](https://img.shields.io/badge/version-3.03-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-7353%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-7361%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
@@ -388,7 +388,7 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 | 接口页（XAML） | 80 页 | `ls Views/*.xaml` |
 | 测试档 | 571 档 | `ls Tests/*.cs` |
 | 测试方法 | 5,851 个 `[Fact]`＋249 个 `[Theory]` | 逐档正则计数 |
-| 运行期测试案例 | 7,353（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
+| 运行期测试案例 | 7,361（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
 | 公开文档 | 32 份 `docs/*.md`＋5 份 `docs/spec/*.md` | `ls docs/*.md`、`ls docs/spec/*.md` |
 | 事实键目录 | 1,131 键／149 个前缀 | 解析 `FactKeyCatalog.Keys` |
 | 动态键家族 | 49 个 | 解析 `FactKeyDynamicCatalog.Families` |
@@ -464,11 +464,13 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.02/XinSpect.exe) | 34,698,539 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.02/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.02/XinSpectDeploy.exe) | 7 KB | 一键安装器（自动下载并部署主程序） |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.03/XinSpect.exe) | 34,698,539 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.03/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.03/XinSpectDeploy.exe) | 13,312 bytes | 一键安装器（可选 GitHub／Google Drive／中国网盘三个下载来源） |
 
-> **上表的字节数为本版（v3.02）实际发布的文件大小（沿用 v2.91 的实测值，发布后更新）**；请以 Release 页面列出的文件为准。
+> **上表的字节数为本版（v3.03）实际发布的文件大小（沿用 v2.91 的实测值，发布后更新）**；请以 Release 页面列出的文件为准。
+
+安装器（`XinSpectDeploy.exe`）会列出三个来源：**1** 是 GitHub 最新版（全自动部署主程序＋守护进程）、**2** 是 Google Drive 镜像、**3** 是中国网盘（123 云盘）分享页——网盘没有稳定直连，所以它只打开浏览器并告诉你按哪里，不会把分享页存成一个假的 exe。镜像链接集中在 `Installer/mirrors.txt`，安装器启动时会抓一份最新的（3 秒超时，拿不到就用内置的）；某一格还没有链接时，菜单上会写「尚未提供」，按下去会先说明再改用 GitHub。下载完成后一律检查 PE 标头，抓到 HTML（分享页、限流页、Google 的病毒扫描确认页）会被挡下、删档并说出内容像什么。
 
 ### 4.1 版本与完整性
 
@@ -2409,6 +2411,7 @@ O-01 到 O-12 里，至少四条是「知道怎么修，但选择不修」：
 
 ## 二十二、版本沿革
 
+- **v3.03 Ultima XII**（2026-10-27）：看得到的地方都修好了：主页与论坛导航、传感器仪表盘复活、M.2／U.2 两层判定、悬浮小窗 15 项与双风格（第 301–308 轮）
 - **v3.02 Ultima XI**（2026-10-26）：看得见的完成与看不见的接线（第 292–299 轮）——**第 292 轮**三语文件对齐＋跨版本守门；**第 293 轮**DevTools 改成缺省关闭（文件早就这样写）＋页面缩放；**第 294 轮**AI 用量显示（只显示端点回报的 token，没回报不印 0）；**第 295 轮**XAML 资源键守门＋端点自检；**第 296 轮**95 个画面真的被建起来一次（收掉「UI 只到编译通过」的申报）；**第 297 轮**AI 请求路径可测（假 HttpMessageHandler）＋重试上一则；**第 298 轮**AI 对话汇出 Markdown（标头写清楚遮蔽与用量）；**第 299 轮**浏览器页内寻找（字串走 JSON 编码）。测试 7,232→7,293 绿、事实键 1,131 不变、家族 49、覆盖基线 408。
 - **v3.01 Ultima X**（2026-10-26）：守门补到会走的地方（第 289–291 轮）——**第 289 轮**：沿革逐笔对账，修掉简体版重複条目（v2.90／v2.89 各一条短行＋一条长行），补四条守门（不得有重複版号、11.2 笔数与 11.3 节数等于纪录笔数、最新一笔逐字出现在 11.3、英文版逐版表要涵盖它宣称的 2.60 以后每一版）。**第 290 轮**：AI 六件事（字元预算 60,000、三段逾时 45／90／300 秒、429 等暂时性失败依 Retry-After 有限次重试且只在吐字前、送出前遮蔽并有「传送内容」预览、金钥 DPAPI 加密落地、解不开就没有金钥）。**第 291 轮**：浏览器五件事（只开 http／https、下载落 %LOCALAPPDATA% 且不覆盖、装置权限一律拒绝、载入失败给人话与重试、清除浏览资料）。测试 7,149→7,231 绿、事实键 1,131 不变、家族 49、覆盖基线 408。
 - **v3.00 Ultima IX**（2026-10-26）：谁守着那些「现在式」——这一版没有新增任何硬件通路，十一個轮次全部在收同一件事：文件与知识表里那些看起来确定的数字，到底由谁守着。第 278 轮：README 两张「可复算」的表真的由机器复算（ReadmeStatsTests 把十二个现在式数字钉在树上）。第 279 轮：逐域展开补结构守门并修掉三处停在旧版的叙述。第 280 轮：Windows 事件 ID 十九把逐列键＋待核清单，四種「没有」分开陈述（服务不可用／查询失败／区间内无事件／事件 ID 不存在）——四者都印成 0 的话，读者只看到「一切正常」。第 281 轮：内嵌 pci.ids 完整离线对照表（2,519 厂商／21,619 装置、快照 2026.10.01、取 BSD-3-Clause 分支），两层担保写进值里：登录档查得到名字不等于本程序验证过它。第 282 轮：逐域展开产生器入版控（Tools/gen-readme-domains.py --check）并纳入 CI 十类守门。第 283 轮：内建知识表清册（BuiltinKnowledgeInventory），保证等级与快照日期变成资料；顺带修掉静态初始化顺序地雷（日期属性宣告在集合之后，集合建构时读到 default，日期悄悄变成 0001-01-01）。第 284 轮：pci.id 把「手工表」与「登录档」分开数，出处段用共用常数产生，写端与读端不必靠相邻中文猜。第 285 轮：修掉真缺陷「读不到被算成命中」——net.oui 的 WMI 失败时值是空的，旧码用字串比对分类，空字串落进「其余算命中」，于是「一次查询全部命中」与读取错误同时印在画面上；改前先用探针重现。第 286 轮：收录率补三张漏列的表，并修掉「守门与申报一起多算 1」——计数器把 switch 主体箭头也算成 case，真相是 19/19/14 而不是 20/20/15。第 287 轮：事实集四个基本形状成守门（非 Present 要有理由、键名与时刻不得留空、数值不得 NaN／无限、豁免表每条要对得上目录）。第 288 轮：README 第六点三节逐键后设资料从 197 笔扩到 970 把键（名称 962／出处 807／担保 786），靠真的解析建构子引数；并修掉会撑破表格的产生器缺陷、补「每列都要单行」守门。测试 7,040→7,149 绿、事实键 1,108→1,131、动态家族 48→49、覆盖基线 390→408。
@@ -2638,7 +2641,7 @@ By：Xinglanclever
 
 ---
 
-**文档本身的版本**：本文档对应 XinSpect v3.02（2026-10-26）。正体中文为母本，简体中文由 OpenCC（tw2sp）自动转换，英文版为全量对译；三份文档共用同一组事实与守门。若你在简体版看到不顺的词，那是转换器的选择，不是原文的意思——请以正体版为准。
+**文档本身的版本**：本文档对应 XinSpect v3.03（2026-10-27）。正体中文为母本，简体中文由 OpenCC（tw2sp）自动转换，英文版为全量对译；三份文档共用同一组事实与守门。若你在简体版看到不顺的词，那是转换器的选择，不是原文的意思——请以正体版为准。
 
 ---
 
