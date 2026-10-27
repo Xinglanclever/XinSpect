@@ -47,6 +47,12 @@ public partial class AiView : UserControl
 
     private async void Send_Click(object sender, RoutedEventArgs e) => await SendAsync();
 
+    /// <summary>重試上一則提問：失敗、被停止或模型沒回覆時才看得到這顆鍵。</summary>
+    private async void Retry_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm?.Ai is { } ai && ai.CanRetry) await ai.RetryLastAsync();
+    }
+
     private async void Evaluate_Click(object sender, RoutedEventArgs e)
     {
         if (Vm?.Ai is { } ai) await ai.EvaluateAsync();

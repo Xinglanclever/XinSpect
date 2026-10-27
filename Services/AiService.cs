@@ -76,6 +76,29 @@ public sealed class AiService : ObservableObject
         return c;
     }
 
+    /// <summary>
+    /// 測試注入點：換一個假的 <see cref="HttpMessageHandler"/> 就能在沒有網路的情況下驗證整條請求路徑
+    /// （重試、串流解析、用量解析、失敗訊息）。正式執行時永遠是 null，走共用的 <see cref="Http"/>。
+    /// </summary>
+    private HttpMessageHandler? _handlerOverride;
+    internal HttpMessageHandler? HandlerOverride
+    {
+        get => _handlerOverride;
+        set
+        {
+            _handlerOverride = value;
+            _clientOverride?.Dispose();
+            _clientOverride = null;
+        }
+    }
+
+    private HttpClient? _clientOverride;
+
+    private HttpClient Client
+        => HandlerOverride is null
+           ? Http
+           : _clientOverride ??= new HttpClient(HandlerOverride) { Timeout = Timeout.InfiniteTimeSpan };
+
     private readonly SettingsService _settings;
     private readonly AiChatStore _chat;
 
@@ -303,7 +326,7 @@ public sealed class AiService : ObservableObject
     // 付費相容端點（如中轉站）的 /v1/models 多需帶 API 金鑰，故一併傳入 Authorization。
     // 兩條路徑皆失敗且無任何模型時，向外拋出最後一個錯誤（通常為 OpenAI 相容路徑的真實 HTTP 狀態，
     // 例如 401/403），避免把「金鑰無效」誤報為「端點無模型」而讓使用者摸不著頭緒。
-    private static async Task<List<string>> FetchModelListAsync(string baseUrl, string? apiKey)
+    private async Task<List<string>> FetchModelListAsync(string baseUrl, string? apiKey)
     {
         var result = new List<string>();
         Exception? lastError = null;
@@ -340,12 +363,12 @@ public sealed class AiService : ObservableObject
         return result;
     }
 
-    private static async Task<JsonDocument?> GetJsonAsync(string url, string? apiKey)
+    private async Task<JsonDocument?> GetJsonAsync(string url, string? apiKey)
     {
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         if (!string.IsNullOrWhiteSpace(apiKey))
             req.Headers.TryAddWithoutValidation("Authorization", "Bearer " + apiKey.Trim());
-        using var resp = await Http.SendAsync(req);
+        using var resp = await Client.SendAsync(req);
         if (!resp.IsSuccessStatusCode)
         {
             // 據實回報 HTTP 狀態與伺服器訊息，讓「一鍵獲取」能明確顯示 401/403 等原因
@@ -364,6 +387,7 @@ public sealed class AiService : ObservableObject
             if (!SetProperty(ref _isBusy, value)) return;
             OnPropertyChanged(nameof(CanSend));
             OnPropertyChanged(nameof(CanCancel));
+            OnPropertyChanged(nameof(CanRetry));
         }
     }
     public bool CanSend => !_isBusy;
@@ -376,6 +400,10 @@ public sealed class AiService : ObservableObject
 
     // 待送附件。
     private readonly List<PendingAttachment> _pendingAttachments = new();
+
+    // 上一則送出的內容：重試時要沿用同一份（附件已被消費，不能只是重打文字）
+    private string? _lastUserText;
+    private List<object>? _lastContentParts;
 
     /// <summary>
     /// 停止目前的請求。已經串流出來的文字會留在畫面上並註明是中途停止的——
@@ -570,6 +598,72 @@ public sealed class AiService : ObservableObject
         var contentParts = ConsumePendingAttachments(ref userText);
 
         Messages.Add(new AiMessage { IsUser = true, Text = userText });
+        _lastUserText = userText;
+        _lastContentParts = contentParts;
+        await RunTurnAsync(contentParts, kind);
+    }
+
+    /// <summary>
+    /// 重試上一則提問：把那一則之後的東西（失敗或中斷的回覆、工具查詢列）整批移除再送一次。
+    /// 不新增使用者氣泡——否則同一句問題會在畫面上出現兩次。
+    /// 附件沿用上一次送出的內容（圖片已經被消費掉，重送時要拿回同一份）。
+    /// </summary>
+    public async Task RetryLastAsync()
+    {
+        if (IsBusy) return;
+        int index = LastUserIndex();
+        if (index < 0) return;
+
+        while (Messages.Count > index + 1) Messages.RemoveAt(Messages.Count - 1);
+        if (_lastUserText is null) _lastUserText = Messages[index].Text;
+        await RunTurnAsync(_lastContentParts, AiRequestKind.Chat);
+    }
+
+    /// <summary>最後一則使用者訊息的位置；沒有就回 -1。</summary>
+    private int LastUserIndex()
+    {
+        for (int i = Messages.Count - 1; i >= 0; i--)
+            if (Messages[i].IsUser) return i;
+        return -1;
+    }
+
+    /// <summary>
+    /// 這一則回覆是不是「失敗／被停止／空的」——只有這種情形才該提供重試。
+    /// 正常回答後面不給重試鍵：那會讓使用者以為「再按一次會得到不同答案」，而多數端點不是這樣運作。
+    /// </summary>
+    public bool CanRetry
+    {
+        get
+        {
+            if (IsBusy) return false;
+            int index = LastUserIndex();
+            if (index < 0) return false;
+            if (index == Messages.Count - 1) return true;       // 失敗回覆已被清掉，只剩提問
+            var last = Messages[^1];
+            if (last.IsUser || last.IsTool) return false;
+            return IsUnusableReply(last.Text);
+        }
+    }
+
+    /// <summary>
+    /// 這一則回覆是不是「不能用」的：占位字、失敗提示、被使用者停止、模型什麼都沒回。
+    /// 判斷寫在這裡而不是散在畫面層——重試鍵要跟錯誤訊息用同一套判準，否則會出現
+    /// 「畫面顯示失敗但沒有重試鍵」或「正常回答旁邊有重試鍵」兩種不一致。
+    /// </summary>
+    internal static bool IsUnusableReply(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return true;
+        if (text == Placeholder) return true;
+        if (text.StartsWith('⚠')) return true;
+        if (text.Contains("（已停止", StringComparison.Ordinal)) return true;
+        if (text.Contains("已由你手動停止", StringComparison.Ordinal)) return true;
+        if (text == "（模型沒有回覆任何內容）") return true;
+        return false;
+    }
+
+    /// <summary>把一次請求的主體（錯誤處理、取消、存檔）與「誰加了使用者氣泡」分開。</summary>
+    private async Task RunTurnAsync(List<object>? contentParts, AiRequestKind kind)
+    {
         var reply = new AiMessage { IsUser = false, Text = Placeholder };
         Messages.Add(reply);
         HasMessages = true;
@@ -783,7 +877,7 @@ public sealed class AiService : ObservableObject
             HttpResponseMessage resp;
             try
             {
-                resp = await Http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, budget.Token);
+                resp = await Client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, budget.Token);
             }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             {

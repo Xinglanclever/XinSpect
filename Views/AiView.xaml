@@ -119,6 +119,10 @@
                             ToolTip="中止目前的請求。已經顯示出來的文字會保留，並註明是中途停止、不是完整回答。"
                             Visibility="{Binding Ai.CanCancel, Converter={StaticResource BoolToVis}}"
                             Click="Stop_Click"/>
+                    <Button Style="{StaticResource ToolButton}" Content="重試上一則" Margin="0,0,10,0"
+                            ToolTip="把上一則提問再送一次（附件沿用同一份）。只在失敗、被停止或模型沒有回覆時出現——正常回答旁邊不給重試鍵。"
+                            Visibility="{Binding Ai.CanRetry, Converter={StaticResource BoolToVis}}"
+                            Click="Retry_Click"/>
                     <Button Style="{StaticResource ToolButton}" Content="清除對話" Click="Clear_Click"/>
                     <Button Style="{StaticResource ToolButton}" Content="複製整段對話" Margin="10,0,0,0"
                             ToolTip="把目前對話（含代理查詢紀錄）整段複製到剪貼簿，可直接貼給別人"
