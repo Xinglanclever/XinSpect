@@ -11,7 +11,7 @@
 ![版本](https://img.shields.io/badge/version-3.01-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-7277%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-7293%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
@@ -37,11 +37,11 @@
 | XAML 檔（含對話框與控制項） | **80** | `ls Views/*.xaml` |
 | 全站說明條目（圓圈問號） | **286** | `Nav/HelpCatalog.cs` 的 `Entries` 成員數 |
 | 服務檔 | **624** | `find Services -name '*.cs' \| wc -l` |
-| 全域 C# 檔 | **1,481** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`publish-*/`、`.git/` |
+| 全域 C# 檔 | **1,483** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`publish-*/`、`.git/` |
 | 版本紀錄筆數 | **107** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
-| 專案測試基線 | **7,277** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
+| 專案測試基線 | **7,293** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
 
-**這張表不能證明什麼。** 1,131 把鍵不是 1,131 個正確答案；64 頁不是 64 個好設計；7,277 條測試不是 7,277 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
+**這張表不能證明什麼。** 1,131 把鍵不是 1,131 個正確答案；64 頁不是 64 個好設計；7,293 條測試不是 7,293 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
 
 ---
 
@@ -1728,6 +1728,7 @@
 - **下載有自己的落地位置。** 一律存到 `%LOCALAPPDATA%\XinSpect\Downloads`，同名不覆蓋（自動加「 (1)」），開始與完成都會顯示存到哪裡；工具列的 ⬇ 直接開那個資料夾。走系統的「另存新檔」對話框時，使用者按取消或存到別處都不會在畫面上留下痕跡。
 - **裝置權限一律拒絕。** 麥克風、攝影機、位置、通知、剪貼簿讀取、感測器、連續自動下載全部回絕並顯示提示——「默默允許」是最糟的一種，使用者不會知道剛剛同意了什麼。
 - **載入失敗要說原因。** DNS 查不到、連線被拒、逾時、TLS 憑證問題各自有一句人話，並提供「重試／回首頁」；憑證錯誤不會被略過。🧹 鈕清除 Cookie／快取／本機儲存後回首頁（停在原頁只會看起來還在登入）。
+- **頁內尋找**：工具列的 🔍 或 Ctrl＋F 叫出尋找列，Enter 下一個、Shift＋Enter 上一個、Esc 收起來。WebView2 沒有內建尋找列，所以是叫頁面自己 `window.find`——那代表你的字會被拼進一段 JavaScript，因此一律走 JSON 編碼（`Views/BrowserFind.cs`，有測試釘住：引號、反斜線、`</script>`、`');` 都只能是字串內容）。
 - **開發者工具預設關閉。** DevTools 是一個能對頁面執行任意腳本、檢視 Cookie 的完整介面，而這個行程是管理員權杖——它只在明確設定 `XINSPECT_BROWSER_DEVTOOLS=1` 後才開啟。**縮放**由本頁自己管：工具列的 −／百分比／＋ 與 Ctrl＋滾輪，範圍 50%–200%，連按十次再縮回十次會精準回到 100%（用格數算而不是浮點累加）。
 
 ---
@@ -8410,12 +8411,12 @@
 
 | 項目 | 數量 | 數法 |
 |---|---:|---|
-| 測試檔 | **583** | `find Tests -name '*.cs' \| wc -l` |
-| `[Fact]` 方法 | **5,975** | 反射計算測試組件裡的 `[Fact]` 方法（`DeclaredOnly`） |
-| `[Theory]` 方法 | **262** | 同上，`[Theory]` 分開數（它繼承 `[Fact]`，不能混） |
-| 執行期測試案例 | **7,277** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數，也是 README 測試徽章的單一來源） |
+| 測試檔 | **584** | `find Tests -name '*.cs' \| wc -l` |
+| `[Fact]` 方法 | **5,979** | 反射計算測試組件裡的 `[Fact]` 方法（`DeclaredOnly`） |
+| `[Theory]` 方法 | **265** | 同上，`[Theory]` 分開數（它繼承 `[Fact]`，不能混） |
+| 執行期測試案例 | **7,293** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數，也是 README 測試徽章的單一來源） |
 
-**兩個比例值得讀。** 一、**`[Theory]` 只占 251 個**：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、**執行期案例數（7,277）大於方法數（6,237）**：差額來自被展開的 `[Theory]` 資料列——這正是基線守門的形狀（下一節）。
+**兩個比例值得讀。** 一、**`[Theory]` 只占 251 個**：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、**執行期案例數（7,293）大於方法數（6,244）**：差額來自被展開的 `[Theory]` 資料列——這正是基線守門的形狀（下一節）。
 
 ### 10.2 基線守門：為什麼「測試數」是一個被釘住的數字
 

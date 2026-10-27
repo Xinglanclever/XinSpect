@@ -62,6 +62,7 @@
     <Grid Margin="0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -81,6 +82,7 @@
                 <Button Style="{StaticResource NavBtn}" Click="Go_Click" Content="→" ToolTip="前往" VerticalAlignment="Center"/>
                 <Button Style="{StaticResource NavBtn}" Click="OpenExternal_Click" Content="↗" ToolTip="以系統瀏覽器開啟目前網址" VerticalAlignment="Center"/>
                 <Button Style="{StaticResource NavBtn}" Click="Downloads_Click" Content="⬇" ToolTip="開啟下載資料夾（%LOCALAPPDATA%\XinSpect\Downloads）" VerticalAlignment="Center"/>
+                <Button Style="{StaticResource NavBtn}" Click="FindToggle_Click" Content="🔍" ToolTip="頁內尋找（Ctrl＋F 亦可在網址列有焦點時用；頁面內按 Ctrl＋F 由 Chromium 自己處理）" VerticalAlignment="Center"/>
                 <Button Style="{StaticResource NavBtn}" Click="ClearData_Click" Content="🧹" ToolTip="清除瀏覽資料（Cookie、快取、本機儲存）" VerticalAlignment="Center"/>
                 <Button Style="{StaticResource NavBtn}" Click="ZoomOut_Click" Content="−" ToolTip="縮小（Ctrl＋滾輪亦可；範圍 50%–200%）" VerticalAlignment="Center"/>
                 <Button x:Name="ZoomResetBtn" Style="{StaticResource ReturnBtn}" Click="ZoomReset_Click"
@@ -90,8 +92,23 @@
             </WrapPanel>
         </Border>
 
+        <!-- 頁內尋找列：預設收起，按工具列的 🔍 或 Ctrl＋F 打開 -->
+        <Border x:Name="FindBar" Grid.Row="1" Visibility="Collapsed" Background="{DynamicResource SurfaceBrush}"
+                Padding="8,6" Margin="0,0,0,8" CornerRadius="10">
+            <WrapPanel VerticalAlignment="Center">
+                <TextBlock Style="{StaticResource FieldLabel}" Text="頁內尋找" VerticalAlignment="Center" Margin="4,0,8,0"/>
+                <TextBox x:Name="FindBox" Width="240" Style="{StaticResource AddressBox}" Margin="0,0,8,0"
+                         KeyDown="FindBox_KeyDown"/>
+                <Button Style="{StaticResource ToolButton}" Content="上一個" Margin="0,0,6,0" Click="FindPrev_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="下一個" Margin="0,0,6,0" Click="FindNext_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="關閉" Click="FindClose_Click"/>
+                <TextBlock x:Name="FindHint" Style="{StaticResource Subtitle}" VerticalAlignment="Center"
+                           Margin="10,0,0,0" TextWrapping="Wrap"/>
+            </WrapPanel>
+        </Border>
+
         <!-- WebView2 承載區（含未安裝執行階段時的後備提示） -->
-        <Border Grid.Row="1" CornerRadius="10" ClipToBounds="True" Background="{DynamicResource PagePlaneBrush}">
+        <Border Grid.Row="2" CornerRadius="10" ClipToBounds="True" Background="{DynamicResource PagePlaneBrush}">
             <Grid>
                 <wv2:WebView2 x:Name="Web" PreviewMouseWheel="Web_PreviewMouseWheel"/>
                 <Border x:Name="Fallback" Visibility="Collapsed" Background="{DynamicResource SurfaceBrush}">

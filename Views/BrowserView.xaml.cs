@@ -26,6 +26,7 @@ public partial class BrowserView : UserControl
         InitializeComponent();
         AddressBar.Text = "";
         Loaded += BrowserView_Loaded;
+        PreviewKeyDown += BrowserView_PreviewKeyDown;   // 焦點在本頁的 WPF 控制項時（例如網址列）也能叫出尋找列
     }
 
     private async void BrowserView_Loaded(object sender, RoutedEventArgs e)
@@ -214,6 +215,93 @@ public partial class BrowserView : UserControl
         LoadBar.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
         ReloadBtn.Content = on ? "✕" : "⟳";
         ReloadBtn.ToolTip = on ? LanguageService.T("停止載入") : LanguageService.T("重新整理");
+    }
+
+    // ── 頁內尋找 ──────────────────────────────────────────────────────────
+
+    private void BrowserView_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.F && (Keyboard.Modifiers & ModifierKeys.Control) != 0)
+        {
+            ShowFind();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape && FindBar.Visibility == Visibility.Visible)
+        {
+            HideFind();
+            e.Handled = true;
+        }
+    }
+
+    private void ShowFind()
+    {
+        FindBar.Visibility = Visibility.Visible;
+        FindBox.Focus();
+        FindBox.SelectAll();
+    }
+
+    private void HideFind()
+    {
+        FindBar.Visibility = Visibility.Collapsed;
+        FindHint.Text = "";
+    }
+
+    private void FindToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (FindBar.Visibility == Visibility.Visible) HideFind();
+        else ShowFind();
+    }
+
+    private void FindClose_Click(object sender, RoutedEventArgs e) => HideFind();
+
+    private void FindBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            RunFind(backwards: (Keyboard.Modifiers & ModifierKeys.Shift) != 0);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape)
+        {
+            HideFind();
+            e.Handled = true;
+        }
+    }
+
+    private void FindNext_Click(object sender, RoutedEventArgs e) => RunFind(backwards: false);
+    private void FindPrev_Click(object sender, RoutedEventArgs e) => RunFind(backwards: true);
+
+    /// <summary>
+    /// 叫頁面自己找：<c>window.find</c> 回傳 true／false。字串一律走 JSON 編碼
+    /// （見 <see cref="BrowserFind"/>）——這一頁跑在管理員權杖的分頁裡。
+    /// </summary>
+    private async void RunFind(bool backwards)
+    {
+        string term = FindBox.Text;
+        if (!BrowserFind.IsUsableTerm(term))
+        {
+            FindHint.Text = "請輸入要尋找的字（最多 " + BrowserFind.MaxTermLength + " 個字元）。";
+            return;
+        }
+
+        var core = Web.CoreWebView2;
+        if (core is null)
+        {
+            FindHint.Text = "瀏覽器尚未就緒。";
+            return;
+        }
+
+        try
+        {
+            string result = await core.ExecuteScriptAsync(BrowserFind.Script(term, backwards));
+            FindHint.Text = result.Trim().Equals("true", StringComparison.OrdinalIgnoreCase)
+                ? ""
+                : "找不到「" + term + "」";
+        }
+        catch (Exception ex)
+        {
+            FindHint.Text = "尋找失敗：" + ex.Message;
+        }
     }
 
     // ── 縮放（按鈕與 Ctrl＋滾輪共用同一套夾範圍規則）────────────────────────
