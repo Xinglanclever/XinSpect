@@ -11,6 +11,7 @@ namespace XinSpect.Tests;
 /// 序號原樣送出去沒有人知道、金鑰明文躺在設定檔裡。測試要把這些行為釘成<b>可預期的</b>。
 /// </para>
 /// </summary>
+[Collection(WpfCollection.Name)]
 public class AiHardeningTests
 {
     // ── 請求長度預算 ──────────────────────────────────────────────────────

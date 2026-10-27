@@ -635,6 +635,9 @@
                         <Button Grid.Column="1" Style="{StaticResource ToolButton}" Content="一鍵獲取"
                                 Margin="10,0,0,0" VerticalAlignment="Center" Click="FetchModels_Click"/>
                     </Grid>
+                    <Button Style="{StaticResource ToolButton}" Content="測試連線（只查模型清單）" Margin="0,8,0,0"
+                            HorizontalAlignment="Left" Click="TestConnection_Click"
+                            ToolTip="量端點延遲並取回模型清單；不會送出對話，所以不會產生 token 費用"/>
                     <ComboBox x:Name="AiModelsCombo" Style="{StaticResource DarkCombo}" Margin="0,8,0,0"
                               ItemsSource="{Binding Ai.Models}"
                               SelectionChanged="AiModel_Picked"

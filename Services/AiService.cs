@@ -249,6 +249,56 @@ public sealed class AiService : ObservableObject
         }
     }
 
+    /// <summary>共用額度不提供端點自檢的理由（模型由中轉決定，端點裡沒有可查的清單）。</summary>
+    public const string SharedProbeText =
+        "共用額度不提供端點自檢：模型由中轉決定，端點裡沒有可查的模型清單。請直接按一次「一鍵評價」確認能不能用。";
+
+    /// <summary>
+    /// 端點自檢：只查模型清單並量延遲，<b>不送出對話</b>——所以不會產生 token 費用。
+    /// 錯誤原樣轉述（HTTP 狀態與伺服器訊息），並更新 <see cref="StatusText"/> 供設定頁顯示。
+    /// </summary>
+    public async Task<string> TestConnectionAsync()
+    {
+        if (_settings.AiProviderEnum == AiProvider.SharedFree)
+        {
+            StatusText = SharedProbeText;
+            return SharedProbeText;
+        }
+
+        string baseUrl = (_settings.AiBaseUrl ?? "").Trim().TrimEnd('/');
+        if (baseUrl.Length == 0)
+        {
+            const string missing = "尚未填入 API 端點（Base URL）。";
+            StatusText = missing;
+            return missing;
+        }
+
+        StatusText = "正在檢查端點（只查模型清單，不會送出對話）…";
+        var watch = Stopwatch.StartNew();
+        int models = 0;
+        string? error = null;
+        try
+        {
+            var names = await FetchModelListAsync(baseUrl, (_settings.AiApiKey ?? "").Trim());
+            models = names.Count;
+        }
+        catch (Exception ex) { error = Explain(ex); }
+        watch.Stop();
+
+        string text = DescribeProbe(error is null, watch.ElapsedMilliseconds, models, error);
+        StatusText = text;
+        return text;
+    }
+
+    /// <summary>
+    /// 自檢結果的一句話。成功時刻意寫明「沒有送出對話」——否則使用者會擔心按一下就花了錢；
+    /// 失敗時附上花了多少毫秒，因為「連不上」與「連很慢才失敗」是不同的問題。
+    /// </summary>
+    internal static string DescribeProbe(bool ok, long elapsedMs, int models, string? error)
+        => ok
+           ? $"端點可用 ・ 回應 {elapsedMs:N0} ms ・ 回報 {models} 個模型（只查模型清單，沒有送出對話、不會產生 token 費用）"
+           : $"端點不可用（等 {elapsedMs:N0} ms）：{error}";
+
     // 先試 Ollama 的 /api/tags，再試 OpenAI 相容的 /v1/models，合併去重。
     // 付費相容端點（如中轉站）的 /v1/models 多需帶 API 金鑰，故一併傳入 Authorization。
     // 兩條路徑皆失敗且無任何模型時，向外拋出最後一個錯誤（通常為 OpenAI 相容路徑的真實 HTTP 狀態，

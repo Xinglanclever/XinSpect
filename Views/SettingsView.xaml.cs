@@ -245,6 +245,15 @@ public partial class SettingsView : UserControl
         if (Vm is { } vm) await vm.Ai.FetchModelsAsync();
     }
 
+    /// <summary>
+    /// 端點自檢：只查模型清單並量延遲，不送出對話（不會產生 token 費用）。
+    /// 結果寫進狀態列（設定頁的提示行綁 Ai.StatusText）。
+    /// </summary>
+    private async void TestConnection_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm is { } vm) await vm.Ai.TestConnectionAsync();
+    }
+
     // 於下拉選單挑選模型：帶入模型名稱欄位。
     private void AiModel_Picked(object sender, SelectionChangedEventArgs e)
     {
