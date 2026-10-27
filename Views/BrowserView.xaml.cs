@@ -60,8 +60,12 @@ public partial class BrowserView : UserControl
             core.SourceChanged += (_, _) => SyncAddress();
             core.HistoryChanged += (_, _) => SyncNavButtons();
             core.NewWindowRequested += Core_NewWindowRequested;
-            core.NavigationStarting += (_, _) => SetLoading(true);
-            core.NavigationCompleted += (_, _) => SetLoading(false);
+            // 導覽政策、下載落地位置、裝置權限：三件事都走有測試守著的 BrowserPolicy，
+            // 不在事件處理常式裡現寫規則（現寫的規則沒有人驗，也沒有第二個人知道它存在）。
+            core.NavigationStarting += Core_NavigationStarting;
+            core.NavigationCompleted += Core_NavigationCompleted;
+            core.DownloadStarting += Core_DownloadStarting;
+            core.PermissionRequested += Core_PermissionRequested;
 
             _ready = true;
             SyncNavButtons();
@@ -86,11 +90,19 @@ public partial class BrowserView : UserControl
     }
 
     // 網頁要求開新視窗（target=_blank 等）：一律導回本檢視內開啟，不另彈系統視窗。
+    // 這裡也要過導覽政策：新視窗請求同樣可能是 file:// 或 javascript:。
     private void Core_NewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
     {
         e.Handled = true;
-        if (_ready && !string.IsNullOrWhiteSpace(e.Uri))
-            Web.Source = new Uri(e.Uri);
+        if (!_ready || string.IsNullOrWhiteSpace(e.Uri)) return;
+
+        if (!BrowserPolicy.IsNavigationAllowed(Uri.TryCreate(e.Uri, UriKind.Absolute, out var u) ? u : null))
+        {
+            string scheme = u?.Scheme ?? "未知";
+            ShowNotice("已擋下一個不是網頁的新視窗連結（" + scheme + "）。\n" + BrowserPolicy.DescribeBlocked(scheme));
+            return;
+        }
+        Web.Source = u!;
     }
 
     private void SyncAddress()
@@ -108,32 +120,28 @@ public partial class BrowserView : UserControl
         FwdBtn.IsEnabled = core?.CanGoForward ?? false;
     }
 
-    // 將使用者輸入解析為「直接前往的網址」或「以 Bing 搜尋的關鍵字」；空字串回 null（表示回起始頁）。
-    private static Uri? ResolveInput(string raw)
-    {
-        var text = raw.Trim();
-        if (text.Length == 0) return null;
-
-        // 已含協定 → 直接前往
-        if (text.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-            text.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-            if (Uri.TryCreate(text, UriKind.Absolute, out var abs)) return abs;
-
-        // 看起來像網域（含點、不含空白）→ 補上 https://
-        bool looksLikeHost = !text.Contains(' ') && text.Contains('.');
-        if (looksLikeHost && Uri.TryCreate("https://" + text, UriKind.Absolute, out var host))
-            return host;
-
-        // 其餘一律以 Bing 搜尋
-        return new Uri("https://www.bing.com/search?q=" + Uri.EscapeDataString(text));
-    }
-
+    // 網址列的解析規則住在 BrowserPolicy（有測試釘住）：只有 http／https 能載入，
+    // 本機路徑、javascript:、data:、自訂協定一律擋下並說明原因。
     private void Navigate()
     {
         if (!_ready) return;
-        var target = ResolveInput(AddressBar.Text);
-        try { if (target is null) GoHome(); else Web.Source = target; }
-        catch { /* 無效輸入時不動作 */ }
+        var input = BrowserPolicy.Resolve(AddressBar.Text);
+        switch (input.Kind)
+        {
+            case BrowserInputKind.Home:
+                GoHome();
+                break;
+            case BrowserInputKind.Url when input.Target is not null:
+                try { Web.Source = input.Target; }
+                catch { ShowNotice("無法開啟這個網址。"); }
+                break;
+            case BrowserInputKind.Search:
+                Web.Source = new Uri(BrowserPolicy.SearchBase + Uri.EscapeDataString(input.Query));
+                break;
+            default:
+                ShowNotice(input.Reason);
+                break;
+        }
     }
 
     private void AddressBar_KeyDown(object sender, KeyEventArgs e)
@@ -157,9 +165,15 @@ public partial class BrowserView : UserControl
     public void NavigateTo(string url)
     {
         if (string.IsNullOrWhiteSpace(url)) return;
+        // 內部呼叫端也一樣要過政策：今天只有自家頁面在呼叫，明天不會記得這條規矩。
+        if (!BrowserPolicy.IsNavigationAllowed(Uri.TryCreate(url, UriKind.Absolute, out var target) ? target : null))
+        {
+            ShowNotice("已擋下不是網頁的跳轉（" + url + "）。");
+            return;
+        }
         if (!_ready) { _pendingNavUrl = url; return; }
-        try { Web.Source = new Uri(url); AddressBar.Text = url; }
-        catch { /* 無效網址時不動作 */ }
+        try { Web.Source = target; AddressBar.Text = url; }
+        catch { ShowNotice("無法開啟這個網址。"); }
     }
 
     /// <summary>設定「回到測速頁面」一類的返回鈕：帶子工具鍵即顯示，傳 null 隱藏。</summary>
@@ -195,24 +209,197 @@ public partial class BrowserView : UserControl
         ReloadBtn.ToolTip = on ? LanguageService.T("停止載入") : LanguageService.T("重新整理");
     }
 
+    // ── 導覽政策、下載、權限 ──────────────────────────────────────────────
+
+    private System.Windows.Threading.DispatcherTimer? _noticeTimer;
+
+    /// <summary>在網頁區左下角顯示一則提示（自動消失）。被擋下的導覽、下載位置、權限拒絕都走這裡。</summary>
+    private void ShowNotice(string text)
+    {
+        NoticeText.Text = text;
+        Notice.Visibility = Visibility.Visible;
+        _noticeTimer?.Stop();
+        _noticeTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(9) };
+        _noticeTimer.Tick += (_, _) =>
+        {
+            Notice.Visibility = Visibility.Collapsed;
+            _noticeTimer?.Stop();
+        };
+        _noticeTimer.Start();
+    }
+
+    private void Core_NavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
+    {
+        Uri? target = Uri.TryCreate(e.Uri, UriKind.Absolute, out var u) ? u : null;
+        if (!BrowserPolicy.IsNavigationAllowed(target))
+        {
+            // 網頁裡的連結也一樣：只要不是 http／https 就不載入，並說出被擋的是什麼。
+            e.Cancel = true;
+            string scheme = target?.Scheme ?? "未知";
+            ShowNotice("已擋下一個不是網頁的連結（" + scheme + "）。\n"
+                       + BrowserPolicy.DescribeBlocked(scheme));
+            return;
+        }
+        HideNavError();
+        SetLoading(true);
+    }
+
+    private void Core_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
+    {
+        SetLoading(false);
+        if (e.IsSuccess) { HideNavError(); return; }
+        ShowNavError(DescribeWebError(e.WebErrorStatus));
+    }
+
+    /// <summary>WebView2 的錯誤碼翻成「這裡發生什麼事、可以怎麼做」，不要只丟一個數字。</summary>
+    private static string DescribeWebError(CoreWebView2WebErrorStatus status) => status switch
+    {
+        CoreWebView2WebErrorStatus.HostNameNotResolved => "找不到這個網域（DNS 查不到）。檢查網址是否拼錯，或這台機器目前的 DNS 是否正常。",
+        CoreWebView2WebErrorStatus.ServerUnreachable or CoreWebView2WebErrorStatus.ConnectionAborted
+            or CoreWebView2WebErrorStatus.ConnectionReset => "連不上伺服器（連線被拒絕或中斷）。網站可能暫時不可用，或本機網路／防火牆擋住了。",
+        CoreWebView2WebErrorStatus.Timeout => "連線逾時。網站沒有回應，稍後再試或檢查網路。",
+        CoreWebView2WebErrorStatus.Disconnected => "網路已中斷。",
+        CoreWebView2WebErrorStatus.CannotConnect => "無法建立連線（可能是 TLS／憑證問題，或網站拒絕了這個連線）。",
+        CoreWebView2WebErrorStatus.CertificateCommonNameIsIncorrect or CoreWebView2WebErrorStatus.CertificateExpired
+            or CoreWebView2WebErrorStatus.ClientCertificateContainsErrors or CoreWebView2WebErrorStatus.CertificateRevoked
+            or CoreWebView2WebErrorStatus.CertificateIsInvalid
+            => "網站的 TLS 憑證有問題（名稱不符、過期或已撤銷）。內建瀏覽器不會略過憑證警告。",
+        CoreWebView2WebErrorStatus.ErrorHttpInvalidServerResponse => "伺服器回應了無效的內容。",
+        CoreWebView2WebErrorStatus.OperationCanceled => "載入已取消。",
+        CoreWebView2WebErrorStatus.UnexpectedError => "未預期的錯誤（WebView2 沒有給更具體的原因）。",
+        _ => "載入失敗：" + status,
+    };
+
+    private void ShowNavError(string message)
+    {
+        NavErrorMsg.Text = message;
+        NavError.Visibility = Visibility.Visible;
+    }
+
+    private void HideNavError() => NavError.Visibility = Visibility.Collapsed;
+
+    private void NavErrorRetry_Click(object sender, RoutedEventArgs e)
+    {
+        HideNavError();
+        try { Web.CoreWebView2?.Reload(); } catch { /* 尚未就緒時無事可做 */ }
+    }
+
+    private void NavErrorHome_Click(object sender, RoutedEventArgs e)
+    {
+        HideNavError();
+        GoHome();
+    }
+
+    /// <summary>
+    /// 下載一律落到程式自己的資料夾（<c>%LOCALAPPDATA%\XinSpect\Downloads</c>），
+    /// 一律不覆蓋既有檔案、也一律告訴使用者存到哪裡。原本走 WebView2 的預設行為：
+    /// 跳出系統另存對話框，使用者按取消或存到別處都不會在畫面上留下任何痕跡。
+    /// </summary>
+    private void Core_DownloadStarting(object? sender, CoreWebView2DownloadStartingEventArgs e)
+    {
+        var op = e.DownloadOperation;
+        try
+        {
+            System.IO.Directory.CreateDirectory(BrowserPolicy.DownloadFolder);
+            string suggested = System.IO.Path.GetFileName(e.ResultFilePath ?? "");
+            string path = BrowserPolicy.UniquePath(BrowserPolicy.DownloadFolder, suggested, System.IO.File.Exists);
+
+            e.ResultFilePath = path;    // 指定路徑
+            e.Handled = true;           // 且不再跳系統的「另存新檔」對話框
+            ShowNotice("開始下載：" + System.IO.Path.GetFileName(path) + "\n儲存於 " + BrowserPolicy.DownloadFolder);
+
+            op.StateChanged += (_, _) => Dispatcher.BeginInvoke(() =>
+            {
+                if (op.State == CoreWebView2DownloadState.Completed)
+                {
+                    string size = op.TotalBytesToReceive is > 0
+                        ? $"，{op.TotalBytesToReceive:N0} bytes" : "";
+                    ShowNotice("下載完成：" + System.IO.Path.GetFileName(op.ResultFilePath) + size
+                               + "\n檔案在 " + BrowserPolicy.DownloadFolder);
+                }
+                else if (op.State == CoreWebView2DownloadState.Interrupted)
+                {
+                    ShowNotice("下載中斷（" + op.InterruptReason + "）："
+                               + System.IO.Path.GetFileName(op.ResultFilePath));
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            ShowNotice("無法決定下載位置，這次下載已取消：" + ex.Message);
+            e.Cancel = true;
+        }
+    }
+
+    /// <summary>
+    /// 裝置權限一律拒絕。硬體檢測工具沒有任何理由把麥克風／攝影機／位置權限交給網頁；
+    /// 而且「默默允許」是最糟的一種——使用者不會知道剛剛同意了什麼。
+    /// </summary>
+    private void Core_PermissionRequested(object? sender, CoreWebView2PermissionRequestedEventArgs e)
+    {
+        e.State = CoreWebView2PermissionState.Deny;
+        string host = Uri.TryCreate(e.Uri, UriKind.Absolute, out var u) ? u.Host : e.Uri;
+        ShowNotice("已拒絕「" + PermissionName(e.PermissionKind) + "」權限要求（" + host + "）。\n"
+                   + "內建瀏覽器一律不授予裝置權限；需要的話請用系統瀏覽器開這個網站。");
+    }
+
+    private static string PermissionName(CoreWebView2PermissionKind kind) => kind switch
+    {
+        CoreWebView2PermissionKind.Microphone => "麥克風",
+        CoreWebView2PermissionKind.Camera => "攝影機",
+        CoreWebView2PermissionKind.Geolocation => "位置",
+        CoreWebView2PermissionKind.Notifications => "通知",
+        CoreWebView2PermissionKind.ClipboardRead => "剪貼簿讀取",
+        CoreWebView2PermissionKind.OtherSensors => "感測器",
+        CoreWebView2PermissionKind.MultipleAutomaticDownloads => "連續自動下載",
+        CoreWebView2PermissionKind.Autoplay => "自動播放",
+        CoreWebView2PermissionKind.WindowManagement => "視窗管理",
+        _ => kind.ToString(),
+    };
+
+    /// <summary>清除 Cookie、快取與本機儲存。清除後會回首頁——停在原頁只會看起來「還在登入」。</summary>
+    private async void ClearData_Click(object sender, RoutedEventArgs e)
+    {
+        var core = Web.CoreWebView2;
+        if (core is null) { ShowNotice("瀏覽器尚未就緒。"); return; }
+        try
+        {
+            await core.Profile.ClearBrowsingDataAsync(CoreWebView2BrowsingDataKinds.AllProfile);
+            GoHome();
+            ShowNotice("已清除 Cookie、快取與本機儲存（各網站會視為未登入）。");
+        }
+        catch (Exception ex)
+        {
+            ShowNotice("清除失敗：" + ex.Message);
+        }
+    }
+
     private void OpenExternal_Click(object sender, RoutedEventArgs e)
     {
         var url = Web.Source?.ToString();
         if (string.IsNullOrWhiteSpace(url)) url = AddressBar.Text?.Trim();
         if (string.IsNullOrWhiteSpace(url)) return;
-        try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
-        catch { /* 無可用系統瀏覽器時靜默略過 */ }
+        // 交給系統瀏覽器之前先確認是網頁——那條路徑沒有我們的導覽政策保護。
+        var input = BrowserPolicy.Resolve(url);
+        if (input.Kind == BrowserInputKind.Url && input.Target is { } target)
+        {
+            try { Process.Start(new ProcessStartInfo(target.AbsoluteUri) { UseShellExecute = true }); }
+            catch { ShowNotice("找不到可用的系統瀏覽器。"); }
+        }
+        else
+        {
+            ShowNotice("這一頁不是網頁，沒有可交給系統瀏覽器開啟的位址。");
+        }
     }
 
     private void Downloads_Click(object sender, RoutedEventArgs e)
     {
         try
         {
-            var downloads = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-            Process.Start(new ProcessStartInfo(downloads) { UseShellExecute = true });
+            System.IO.Directory.CreateDirectory(BrowserPolicy.DownloadFolder);
+            Process.Start(new ProcessStartInfo(BrowserPolicy.DownloadFolder) { UseShellExecute = true });
         }
-        catch { /* 資料夾不存在或無權限時靜默略過 */ }
+        catch (Exception ex) { ShowNotice("無法開啟下載資料夾：" + ex.Message); }
     }
 
     private void Link_RequestNavigate(object sender, RequestNavigateEventArgs e)

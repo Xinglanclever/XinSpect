@@ -80,7 +80,8 @@
                          Style="{StaticResource AddressBox}" KeyDown="AddressBar_KeyDown"/>
                 <Button Style="{StaticResource NavBtn}" Click="Go_Click" Content="→" ToolTip="前往" VerticalAlignment="Center"/>
                 <Button Style="{StaticResource NavBtn}" Click="OpenExternal_Click" Content="↗" ToolTip="以系統瀏覽器開啟目前網址" VerticalAlignment="Center"/>
-                <Button Style="{StaticResource NavBtn}" Click="Downloads_Click" Content="⬇" ToolTip="開啟下載資料夾" VerticalAlignment="Center"/>
+                <Button Style="{StaticResource NavBtn}" Click="Downloads_Click" Content="⬇" ToolTip="開啟下載資料夾（%LOCALAPPDATA%\XinSpect\Downloads）" VerticalAlignment="Center"/>
+                <Button Style="{StaticResource NavBtn}" Click="ClearData_Click" Content="🧹" ToolTip="清除瀏覽資料（Cookie、快取、本機儲存）" VerticalAlignment="Center"/>
                 <local:HelpDot HelpKey="browser/瀏覽器" Margin="8,0,0,0"/>
             </WrapPanel>
         </Border>
@@ -106,6 +107,33 @@
                 <ProgressBar x:Name="LoadBar" Height="3" VerticalAlignment="Top" IsIndeterminate="True"
                              Background="Transparent" BorderThickness="0"
                              Foreground="{DynamicResource AccentBrush}" Visibility="Collapsed"/>
+
+                <!-- 載入失敗頁：WebView2 預設只會留一片空白，使用者看不出是「網站掛了」還是「網路斷了」 -->
+                <Border x:Name="NavError" Visibility="Collapsed" Background="{DynamicResource SurfaceBrush}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="560" Margin="24">
+                        <TextBlock Text="這個頁面沒有載入成功" FontSize="18" FontWeight="Bold"
+                                   Foreground="{DynamicResource PrimaryInkBrush}" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="NavErrorMsg" TextWrapping="Wrap" Margin="0,12,0,0"
+                                   Foreground="{DynamicResource SecondaryInkBrush}" TextAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0">
+                            <Button Style="{StaticResource ToolButton}" Content="重試" Margin="0,0,10,0"
+                                    Click="NavErrorRetry_Click"/>
+                            <Button Style="{StaticResource ToolButton}" Content="回首頁" Click="NavErrorHome_Click"/>
+                        </StackPanel>
+                        <TextBlock Margin="0,12,0,0" TextWrapping="Wrap" TextAlignment="Center" FontSize="12"
+                                   Foreground="{DynamicResource SecondaryInkBrush}"
+                                   Text="提示：內建瀏覽器只開 http／https，且不會略過 TLS 憑證警告。"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 提示條：被擋下的連結、下載位置、權限拒絕都寫在這裡（9 秒後自動收起） -->
+                <Border x:Name="Notice" Visibility="Collapsed" VerticalAlignment="Bottom" HorizontalAlignment="Left"
+                        Margin="12" Padding="12,8" CornerRadius="8" MaxWidth="620"
+                        Background="{DynamicResource Surface2Brush}" BorderThickness="1"
+                        BorderBrush="{DynamicResource HairlineBrush}">
+                    <TextBlock x:Name="NoticeText" TextWrapping="Wrap" FontSize="12.5"
+                               Foreground="{DynamicResource PrimaryInkBrush}"/>
+                </Border>
             </Grid>
         </Border>
     </Grid>
