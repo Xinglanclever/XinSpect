@@ -11,7 +11,7 @@
 ![版本](https://img.shields.io/badge/version-3.01-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-7258%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-7260%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
@@ -37,11 +37,11 @@
 | XAML 檔（含對話框與控制項） | **80** | `ls Views/*.xaml` |
 | 全站說明條目（圓圈問號） | **286** | `Nav/HelpCatalog.cs` 的 `Entries` 成員數 |
 | 服務檔 | **623** | `find Services -name '*.cs' \| wc -l` |
-| 全域 C# 檔 | **1,477** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`publish-*/`、`.git/` |
+| 全域 C# 檔 | **1,478** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`publish-*/`、`.git/` |
 | 版本紀錄筆數 | **107** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
-| 專案測試基線 | **7,258** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
+| 專案測試基線 | **7,260** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
 
-**這張表不能證明什麼。** 1,131 把鍵不是 1,131 個正確答案；64 頁不是 64 個好設計；7,258 條測試不是 7,258 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
+**這張表不能證明什麼。** 1,131 把鍵不是 1,131 個正確答案；64 頁不是 64 個好設計；7,260 條測試不是 7,260 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
 
 ---
 
@@ -8410,12 +8410,12 @@
 
 | 項目 | 數量 | 數法 |
 |---|---:|---|
-| 測試檔 | **580** | `find Tests -name '*.cs' \| wc -l` |
-| `[Fact]` 方法 | **5,956** | 反射計算測試組件裡的 `[Fact]` 方法（`DeclaredOnly`） |
+| 測試檔 | **581** | `find Tests -name '*.cs' \| wc -l` |
+| `[Fact]` 方法 | **5,958** | 反射計算測試組件裡的 `[Fact]` 方法（`DeclaredOnly`） |
 | `[Theory]` 方法 | **262** | 同上，`[Theory]` 分開數（它繼承 `[Fact]`，不能混） |
-| 執行期測試案例 | **7,258** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數，也是 README 測試徽章的單一來源） |
+| 執行期測試案例 | **7,260** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數，也是 README 測試徽章的單一來源） |
 
-**兩個比例值得讀。** 一、**`[Theory]` 只占 251 個**：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、**執行期案例數（7,258）大於方法數（6,218）**：差額來自被展開的 `[Theory]` 資料列——這正是基線守門的形狀（下一節）。
+**兩個比例值得讀。** 一、**`[Theory]` 只占 251 個**：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、**執行期案例數（7,260）大於方法數（6,220）**：差額來自被展開的 `[Theory]` 資料列——這正是基線守門的形狀（下一節）。
 
 ### 10.2 基線守門：為什麼「測試數」是一個被釘住的數字
 
@@ -8437,8 +8437,10 @@
 | 整合測試 | 服務→事實集→匯出／快照的路徑 | 只在生產路徑上出現的順序問題 |
 | 不變式測試 | 事實模型的兩條不變式（第 2.4 節） | 語意錯誤（值是對的、意思錯了） |
 | 守門／對帳測試 | 目錄↔原始碼、文件↔程式、規則↔輸出、XAML 資源鍵↔佈景字典 | 「兩個都對的數字被講成一句錯話」 |
+| 畫面建構測試 | 95 個 UserControl／Window 的 XAML 在 STA 執行緒上真的 `new` 得起來（MainWindow 除外，理由寫在測試裡） | 互動行為（按下去之後發生什麼）與視覺外觀 |
 | 真機／fixture 測試 | 本機硬體的真實位元組（例如三條模組的 SPD） | 換了硬體就必須重錄（**fixture 是快照，不是通則**） |
 | 突變測試 | 測試本身有沒有用（見 10.4） | 突變範圍外的程式 |
+| 內嵌頁面測試 | 瀏覽器起始頁的 HTML 結構與「連結全部是 https」 | 頁面渲染結果 |
 | 效能預算測試 | 冷啟動與收集的時間上限 | 長時間的退化（趨勢要人看） |
 
 ### 10.4 突變測試：範圍是刻意限制的
