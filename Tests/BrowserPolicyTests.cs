@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using Xunit;
 
 namespace XinSpect.Tests;
@@ -113,6 +113,29 @@ public class BrowserPolicyTests
     public void 空網址不算可導覽()
     {
         Assert.False(BrowserPolicy.IsNavigationAllowed(null));
+    }
+
+    /// <summary>
+    /// 起始頁是「我們自己產生的一份 HTML」，WebView2 送出的導覽是
+    /// <c>data:text/html;charset=utf-8;base64,…</c>——不是 about:blank。
+    /// 2026-10-26 的正式版就是因為把它當成頁面裡的 data: 連結擋掉，整頁首頁變空白。
+    /// 所以：只有在呼叫端明確標記「這次是我自己送的」時才放行，而且只放行 HTML。
+    /// </summary>
+    [Fact]
+    public void 自己送出的起始頁文件可以放行_頁面裡的data連結不行()
+    {
+        var home = new Uri("data:text/html;charset=utf-8;base64,PGgxPkhPPC9oMT4=");
+
+        Assert.False(BrowserPolicy.IsNavigationAllowed(home));                 // 頁面裡的 data: 照樣擋
+        Assert.True(BrowserPolicy.IsNavigationAllowed(home, allowSelfDocument: true));
+        Assert.True(BrowserPolicy.IsSelfDocument(home));
+
+        var image = new Uri("data:image/png;base64,iVBORw0KGgo=");
+        Assert.False(BrowserPolicy.IsSelfDocument(image));
+        Assert.False(BrowserPolicy.IsNavigationAllowed(image, allowSelfDocument: true));   // 只認 HTML
+
+        Assert.False(BrowserPolicy.IsSelfDocument(new Uri("about:blank")));
+        Assert.False(BrowserPolicy.IsSelfDocument(new Uri("https://example.com/")));
     }
 
     [Fact]

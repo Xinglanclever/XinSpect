@@ -48,7 +48,9 @@
                     <local:SectionHead Text="溫度控制圖" HelpKey="sensordash/溫度控制圖"/>
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,6">
                         <ComboBox x:Name="MetricCombo" Width="170" SelectionChanged="MetricCombo_Changed">
-                            <ComboBoxItem Content="處理器溫度" Tag="1" IsSelected="True"/>
+                            <!-- 初選在建構子尾端設定（SelectedIndex＝0）：寫在這裡會在建置 XAML 時就觸發
+                                 SelectionChanged，而那時下方的 Spc 控制項還沒被建立。 -->
+                            <ComboBoxItem Content="處理器溫度" Tag="1"/>
                             <ComboBoxItem Content="處理器負載" Tag="0"/>
                             <ComboBoxItem Content="顯示卡溫度" Tag="5"/>
                             <ComboBoxItem Content="記憶體使用率" Tag="11"/>

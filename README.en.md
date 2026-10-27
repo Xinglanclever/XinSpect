@@ -7,7 +7,7 @@ A free, open-source hardware verification, monitoring, and security auditing too
 ![Version](https://img.shields.io/badge/version-3.02-4C8DFF)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![Tests](https://img.shields.io/badge/tests-7298%20passed-3FB950)
+![Tests](https://img.shields.io/badge/tests-7289%20passed-3FB950)
 ![Mutation Score](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
@@ -321,7 +321,7 @@ The order follows the left navigation. Each section lists sources first, then wh
 
 ### 6.1 Overview group
 
-**My PC (simple-mode home)**. Health, temperatures, hardware inventory and troubleshooting on one page for readers unfamiliar with hardware terms. Hidden from the sidebar in advanced mode; still reachable from the command palette. The "conclusion" is backed by facts and six states: a red health item opens the fact, its source and its reason.
+**My PC (simple-mode home)**. Health, temperatures and hardware inventory on one page for readers unfamiliar with hardware terms. Hidden from the sidebar in advanced mode; still reachable from the command palette. The "conclusion" is backed by facts and six states: a red health item opens the fact, its source and its reason.
 
 **Overview**. Full machine specification and live status: CPU (model, cores/threads, clock, load), motherboard (vendor badge and model), memory (capacity, channels, speed), GPU (model, VRAM), storage (capacity and activity). CPU and board vendors get their logos/badges.
 

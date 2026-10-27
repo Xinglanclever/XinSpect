@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 
 namespace XinSpect.Tests;
 
@@ -6,20 +6,14 @@ namespace XinSpect.Tests;
 /// 「免費共用額度」與「留言建議」的回歸測試。
 ///
 /// 這兩件事共用同一個中轉，而且都牽涉到「這支程式裡到底有沒有秘密」與「共用額度會不會被燒光」——
-/// 所以要盯的不是畫面長相，是三條界線：exe 裡不能有金鑰、共用額度只能走一鍵評價、
+/// 所以要盯的不是畫面長相，是兩條界線：exe 裡不能有金鑰、
 /// 設定檔裡的供應商編號不能因為手改而讓程式崩掉。
+/// （「共用額度只能走一鍵評價」那條界線已於 2026-10-26 撤除，實際行為改由
+/// <c>AiNetworkPathTests.共用額度可以自由對話</c> 以假 handler 驗證。）
 /// </summary>
 public class SharedAiAndFeedbackTests
 {
     // ── 中轉端點 ────────────────────────────────────────────────────────────
-
-    [Fact]
-    public void 共用額度只開放一鍵評價()
-    {
-        Assert.True(SharedAiEndpoint.Allows(AiRequestKind.Evaluate));
-        Assert.False(SharedAiEndpoint.Allows(AiRequestKind.Chat));
-        Assert.False(SharedAiEndpoint.Allows(AiRequestKind.Proactive));
-    }
 
     /// <summary>
     /// 選項文字必須和實際狀態一致：作者還沒填中轉網址時要說「尚未啟用」，

@@ -1,4 +1,4 @@
-<UserControl x:Class="XinSpect.BeginnerDashboardView"
+﻿<UserControl x:Class="XinSpect.BeginnerDashboardView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect">
@@ -82,23 +82,6 @@
                     </StackPanel>
                 </Border>
             </Grid>
-
-            <!-- 故障排查嚮導入口 -->
-            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
-                <StackPanel>
-                    <local:SectionHead Text="遇到問題？" HelpKey="beginner/故障排查"/>
-                    <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,4,0,8"
-                               Text="選一個最像你現在碰到的情況，我帶你一步一步排查。"/>
-                    <WrapPanel>
-                        <Button Style="{StaticResource ToolButton}" Content="電腦很慢" Tag="slow" Click="Troubleshoot_Click" Margin="0,0,8,8"/>
-                        <Button Style="{StaticResource ToolButton}" Content="遊戲卡頓" Tag="game" Click="Troubleshoot_Click" Margin="0,0,8,8"/>
-                        <Button Style="{StaticResource ToolButton}" Content="藍屏當機" Tag="bsod" Click="Troubleshoot_Click" Margin="0,0,8,8"/>
-                        <Button Style="{StaticResource ToolButton}" Content="風扇太吵" Tag="fan" Click="Troubleshoot_Click" Margin="0,0,8,8"/>
-                        <Button Style="{StaticResource ToolButton}" Content="開機很慢" Tag="boot" Click="Troubleshoot_Click" Margin="0,0,8,8"/>
-                        <Button Style="{StaticResource ToolButton}" Content="網路不穩" Tag="net" Click="Troubleshoot_Click" Margin="0,0,8,8"/>
-                    </WrapPanel>
-                </StackPanel>
-            </Border>
 
             <!-- 健康明細 -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,4">

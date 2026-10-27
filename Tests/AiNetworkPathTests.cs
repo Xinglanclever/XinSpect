@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -192,6 +192,31 @@ public class AiNetworkPathTests
 
             Assert.Equal(2, handler.Calls.Count);
             Assert.Contains("ping-42", handler.Calls[1]);   // 第二次送出的仍是同一則提問（JSON 會把中文轉義，所以用 ASCII）
+        }
+        finally { Cleanup(settings, folder, p, u, m); }
+    }
+
+    /// <summary>
+    /// 共用額度自 2026-10-26 起全面開放：自由對話（不是只有「一鍵評價」）要真的送出請求、
+    /// 真的拿到回答。先前這條路會在本地直接停住並貼一段「只開放一鍵評價」的說明——
+    /// 使用者看起來就是「AI 壞了」。這裡用假 handler 釘住行為，不只看原始碼怎麼寫。
+    /// </summary>
+    [Fact]
+    public async Task 共用額度可以自由對話()
+    {
+        var handler = new FakeHandler(Answer("共用額度也能對話"));
+        var ai = Make(handler, out var settings, out string folder);
+        var (p, u, m) = (settings.AiProviderEnum, settings.AiBaseUrl, settings.AiModel);
+        try
+        {
+            settings.AiProvider = (int)AiProvider.SharedFree;
+            await ai.SendAsync("你好");
+
+            Assert.Single(handler.Calls);
+            Assert.Contains(SharedAiEndpoint.BaseUrl.TrimEnd('/') + "/chat/completions", handler.Calls[0]);
+            Assert.Contains(SharedAiEndpoint.Model, handler.Calls[0]);   // 模型代號由中轉決定
+            Assert.Equal("共用額度也能對話", ai.Messages[^1].Text);
+            Assert.DoesNotContain("只開放", ai.Messages[^1].Text);
         }
         finally { Cleanup(settings, folder, p, u, m); }
     }

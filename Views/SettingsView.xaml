@@ -568,7 +568,7 @@
                 <StackPanel>
                     <local:SectionHead Text="AI 評價" HelpKey="settings/AI 評價"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
-                               Text="把本機真實硬體規格與即時感測數據交給 AI 做客觀評價。可用本機免費模型（Ollama，無須金鑰、資料不出本機）、填入任何 OpenAI 相容的 API 端點與金鑰，或用免費共用額度（模型由 Cloudflare Workers AI 提供，經作者自架中轉分享，只開放「一鍵評價」）。"/>
+                               Text="把本機真實硬體規格與即時感測數據交給 AI 做客觀評價。可用本機免費模型（Ollama，無須金鑰、資料不出本機）、填入任何 OpenAI 相容的 API 端點與金鑰，或用免費共用額度（模型由 Cloudflare Workers AI 提供，經作者自架中轉分享；對話、評價與主動診斷都可以用）。"/>
 
                     <Grid Margin="0,14,0,0">
                         <Grid.ColumnDefinitions>

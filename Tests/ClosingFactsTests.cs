@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Xunit;
@@ -124,12 +124,12 @@ public class ClosingFactsTests
         var facts = Collect(pages: () => [
             ("bottleneck", "瓶頸診斷", "總覽"),
             ("history", "時間膠囊", "系統"),
-            ("troubleshoot", "疑難排解", "工具")]);
+            ("sensors", "感測器", "監控")]);
         var f = Fact(facts, ClosingFactsService.TreeKey);
 
         Assert.Equal(3, f.NumericValue);
         Assert.Contains("瓶頸診斷", f.Value);
-        Assert.Contains("疑難排解", f.Value);
+        Assert.Contains("感測器", f.Value);
         Assert.Contains("不是診斷背書", f.Value);
     }
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,8 +10,8 @@ namespace XinSpect.Tests;
 /// <summary>
 /// 檢視入口守門：<b>Views/ 裡的每一頁都要有人指得到它。</b>
 /// <para>
-/// 這一條的存在理由是一個真的發生過的例子：`Views/TroubleshootView.xaml`——整頁故障排查嚮導
-/// （六個症狀、可能原因、檢查步驟、建議動作）寫完、服務與測試都在，卻沒有出現在
+/// 這一條的存在理由是一個真的發生過的例子：2026-10-18 的故障排查嚮導頁（已於 2026-10-26 移除）
+/// 整頁（六個症狀、可能原因、檢查步驟、建議動作）寫完、服務與測試都在，卻沒有出現在
 /// <see cref="PageRegistry"/> 裡、也沒有任何其他檔案提到它。它會編譯、它會通過煙霧測試
 /// （沒人建構它就不會壞），而使用者的世界裡它<b>不存在</b>——
 /// 「做了但看不到」與「沒做」在畫面上長得一模一樣。

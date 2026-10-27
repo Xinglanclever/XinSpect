@@ -1,4 +1,4 @@
-# 免費共用額度中轉（Cloudflare Worker）
+﻿# 免費共用額度中轉（Cloudflare Worker）
 
 曦覽的「免費共用（Cloudflare Workers AI）」那個 AI 選項，連的就是這支 Worker。
 上游用的是 Cloudflare 自家的 **Workers AI**，所以整條路上沒有任何 API 金鑰。
@@ -72,8 +72,8 @@ Workers AI 回的不是 OpenAI 的形狀，Worker 會把它包成 `chat.completi
 
 ## 上限與煞車
 
-參數都在 `worker.js` 開頭的 `LIMITS`：每個 IP 每小時 6 次評價、全站每天 400 次、
-回覆上限 1200 tokens、提示詞上限 24000 字、留言每 IP 每小時 3 則。改完要重新 `deploy`。
+參數都在 `worker.js` 開頭的 `LIMITS`：每個 IP 每小時 60 次、全站每天 3,000 次、
+回覆上限 1200 tokens、提示詞上限 60,000 字、留言每 IP 每小時 3 則。改完要重新 `deploy`。
 
 要臨時關掉整條共用額度，把 `wrangler.toml` 的 `ENABLED` 改成 `"0"` 再 deploy；
 程式那側會收到 503 並顯示「作者已暫時關閉免費共用額度」，不會當掉。
@@ -124,6 +124,7 @@ npx wrangler secret put UPSTREAM_KEY
 ## 成本
 
 Workers 免費方案每天 10 萬次請求，這個用量用不完；Workers AI 每天也有一定的免費額度，
-超過才計費。曦覽只讓「一鍵評價」走這條額度——自由對話、主動診斷與診斷代理都不走
-（代理一次提問可能連發六、七次請求），這個限制寫在 `Services/SharedAiEndpoint.cs`。
+超過才計費。曦覽自 2026-10-26 起<b>全面開放</b>這條額度：自由對話、一鍵評價、主動診斷與
+診斷代理都走它（代理一次提問可能連發六、七次請求）。因此額度控管全部落在 Worker 這一側——
+`LIMITS` 裡的每日上限、單次長度與限流就是唯一的那道閘門，要調就調這裡。
 

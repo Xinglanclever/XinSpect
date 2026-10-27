@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using Xunit;
@@ -17,6 +17,13 @@ namespace XinSpect.Tests;
 /// 這裡對每個有無參數建構子的 <see cref="UserControl"/>／<see cref="Window"/> 做一次
 /// <c>new</c>：不顯示、不觸發 <c>Loaded</c>、不碰硬體。建不起來就是缺陷——
 /// 使用者第一次打開那一頁會看到同樣的例外。
+/// </para>
+/// <para>
+/// <b>2026-10-26 追加：建構時要有一個「真實外殼」在場。</b>先前這裡的 <see cref="Shell.Vm"/>
+/// 永遠是 null（沒有 MainWindow），於是「事件處理常式在 InitializeComponent 期間就觸發、
+/// 而它讀的具名控制項還沒被建立」這類缺陷全部被 null 早退遮住——感測器儀表板就是這樣在正式版
+/// 直接「打不開」（`Object reference not set…`），測試卻全綠。現在建構每一頁時都掛著一個
+/// 帶 <see cref="MainViewModel"/> 的 MainWindow，條件與使用者實際開頁時一致。
 /// </para>
 /// </summary>
 [Collection(WpfCollection.Name)]
@@ -78,20 +85,27 @@ public class ViewConstructionTests
         var failures = new List<string>();
         OnSta(() =>
         {
-            foreach (var type in types)
+            // 使用者開頁時 Shell.Vm 一定拿得到：先把後備 VM 掛上，重現這個條件。
+            var previous = Shell.VmForTests;
+            Shell.VmForTests = new MainViewModel();
+            try
             {
-                try
+                foreach (var type in types)
                 {
-                    object? instance = Activator.CreateInstance(type);
-                    Assert.NotNull(instance);
-                    (instance as IDisposable)?.Dispose();
-                }
-                catch (Exception ex)
-                {
-                    var inner = ex is TargetInvocationException { InnerException: { } ie } ? ie : ex;
-                    failures.Add($"{type.Name}：{inner.GetType().Name}：{inner.Message}");
+                    try
+                    {
+                        object? instance = Activator.CreateInstance(type);
+                        Assert.NotNull(instance);
+                        (instance as IDisposable)?.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        var inner = ex is TargetInvocationException { InnerException: { } ie } ? ie : ex;
+                        failures.Add($"{type.Name}：{inner.GetType().Name}：{inner.Message}");
+                    }
                 }
             }
+            finally { Shell.VmForTests = previous; }
         });
 
         Assert.True(failures.Count == 0,

@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Threading;
 
 namespace XinSpect;
@@ -49,7 +49,16 @@ public static class Shell
     /// 主 ViewModel。給「檢視在延遲載入時 DataContext 還沒指派」的情境當後備；
     /// 非 UI 執行緒時回 null。
     /// </summary>
-    public static MainViewModel? Vm => TopWindow?.DataContext as MainViewModel;
+    public static MainViewModel? Vm => VmForTests ?? TopWindow?.DataContext as MainViewModel;
+
+    /// <summary>
+    /// 測試用的後備 VM。<b>正式執行時永遠是 null</b>；存在的唯一理由是
+    /// <c>Application</c> 的 <see cref="Window"/> 綁在建立它的那條執行緒上，
+    /// 而測試的每條 STA 執行緒都拿不到那份所有權——沒有這個後備，「使用者開頁時
+    /// Shell.Vm 拿得到」這個條件在測試裡就重現不出來（2026-10-26 感測器儀表板的
+    /// 建構期 NRE 就是這樣逃過整個測試套件的）。
+    /// </summary>
+    internal static MainViewModel? VmForTests { get; set; }
 
     /// <summary>
     /// 把動作排到 UI 執行緒執行。沒有 Application（單元測試、關機途中）時安靜忽略——

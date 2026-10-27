@@ -30,6 +30,9 @@ public partial class SensorDashboardView : UserControl, IPageLifecycle
     {
         InitializeComponent();
         Calendar.Month = DateTime.Today;   // 初值：本月（資料仍在 OnActivated 彙整）
+        // 初選放在 InitializeComponent 之後：寫在 XAML 的 IsSelected 會在 Spc／History 等
+        // 具名控制項還沒建立時就觸發 SelectionChanged，於是 OnActivated 以外的那條路就 NRE。
+        MetricCombo.SelectedIndex = 0;
     }
 
     private MainViewModel? Vm => DataContext as MainViewModel ?? Shell.Vm;
@@ -94,7 +97,9 @@ public partial class SensorDashboardView : UserControl, IPageLifecycle
     private void RefreshSpc()
     {
         var vm = Vm;
-        if (vm is null || MetricCombo.SelectedItem is not ComboBoxItem item
+        // Spc 可能是 null：XAML 事件在建構期間（具名欄位尚未全部指派）就可能被觸發。
+        // 這個防護不是裝飾——2026-10-26 真的因此在正式版裡整頁建不起來。
+        if (vm is null || Spc is null || MetricCombo?.SelectedItem is not ComboBoxItem item
             || item.Tag is not string tag || !int.TryParse(tag, out int metric)) return;
 
         // 歷史倉的既有記錄：最近 6 小時、分鐘級。指標整段沒有讀值（本機無此感測器）時

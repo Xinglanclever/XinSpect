@@ -1,4 +1,4 @@
-namespace XinSpect;
+﻿namespace XinSpect;
 
 /// <summary>
 /// 「免費共用」AI 額度的連線設定：模型由 <b>Cloudflare Workers AI</b> 提供，經作者自架的中轉
@@ -23,10 +23,10 @@ namespace XinSpect;
 /// 部署方式見 <c>cloudflare/ai-proxy/README.md</c>。
 /// </para>
 /// <para>
-/// <b>刻意的限制</b>：共用額度只開放「一鍵評價」這種一次性請求（<see cref="AiRequestKind.Evaluate"/>），
-/// 自由對話、主動診斷與診斷代理（會連續呼叫工具、一次評價可能變成六七次請求）都不走共用額度。
-/// 這不是技術限制，是為了讓有限的額度撐得久一點；想要完整體驗的人可以改用本機 Ollama（免費）
-/// 或自填金鑰。
+/// <b>全面開放（2026-10-26 起）</b>：自由對話、一鍵評價、主動診斷與診斷代理都走這條額度。
+/// 先前只開放「一鍵評價」，是為了讓有限的免費額度撐久一點；但使用者分不出
+/// 「這條額度不能對話」與「AI 壞了」，而限制的代價比它省下的額度更貴。
+/// 額度上限、限流與總量控制全部留在中轉那一側——被濫用時作者關得掉、調得動，不必重新發版。
 /// </para>
 /// </remarks>
 public static class SharedAiEndpoint
@@ -64,17 +64,4 @@ public static class SharedAiEndpoint
         + "而 Cloudflare 的 workers.dev 網域在中國大陸被 GFW（防火長城）封鎖。"
         + "若你在中國大陸且未使用代理，這兩項功能將無法連線。"
         + "本程式不內建任何代理功能——請改用本機 Ollama（完全離線）或自填可連線的 OpenAI 相容端點。";
-
-    /// <summary>這條額度目前允許哪一種請求。</summary>
-    public static bool Allows(AiRequestKind kind) => kind == AiRequestKind.Evaluate;
-
-    /// <summary>不允許時顯示給使用者的說明（要說清楚替代方案，不能只說不行）。</summary>
-    public const string NotAllowedText =
-        "共用額度只開放「一鍵評價」。\n\n" +
-        "這條額度的模型由 Cloudflare Workers AI 提供，每天只有固定的免費用量，"
-        + "所以自由對話、主動診斷與診斷代理沒有納入——"
-        + "代理模式一次提問可能連續發出六、七次請求，很快就會把大家的額度用完。\n\n"
-        + "想要不受限的完整體驗，請到「設定 → AI 評價」改成：\n"
-        + "・本機 Ollama：免費、離線、資料不出本機（建議）\n"
-        + "・OpenAI 相容 API：自填端點與金鑰，額度是你自己的";
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -89,7 +89,7 @@ public static class GuardRegistry
         new("檢視入口守門", GuardPolicy.GuardMode.SourceScan,
             "整頁畫面寫完（XAML、後置程式碼、服務、單元測試都在），卻沒有任何人指得到它——"
             + "它會編譯，煙霧測試也不會紅（沒人建構它就不會壞），而使用者的世界裡它不存在；"
-            + "2026-10-18 的 TroubleshootView 就是這個形狀：故障排查嚮導做完，卻不在註冊表裡",
+            + "2026-10-18 的故障排查嚮導頁（已於 2026-10-26 移除）就是這個形狀：整頁做完，卻不在註冊表裡",
             new GuardPolicy.GuardLevel(
                 "Views/ 裡的檢視沒有任何其他檔案引用它",
                 "『有引用、但引用路徑本身也到不了使用者面前』——那要與命令面板／註冊表三方對帳"),

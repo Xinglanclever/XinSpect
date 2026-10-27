@@ -16,20 +16,6 @@ namespace XinSpect;
 /// 只能往後追加，不可調換既有順序，否則舊設定檔會選到別的供應商。</remarks>
 public enum AiProvider { Ollama, OpenAiCompatible, SharedFree }
 
-/// <summary>
-/// 一次請求的來源。共用額度只開放 <see cref="Evaluate"/>——
-/// 判斷寫在 <see cref="SharedAiEndpoint.Allows"/>，這裡只負責如實標記請求是誰發的。
-/// </summary>
-public enum AiRequestKind
-{
-    /// <summary>使用者在對話框裡自己打的字。</summary>
-    Chat,
-    /// <summary>「一鍵評價」：一次性的整機評價。</summary>
-    Evaluate,
-    /// <summary>硬體警示觸發的主動診斷。</summary>
-    Proactive,
-}
-
 /// <summary>對話中的一則訊息（使用者 / AI / 本機工具查詢紀錄），供聊天列表繫結。</summary>
 public sealed class AiMessage : ObservableObject
 {
@@ -274,7 +260,7 @@ public sealed class AiService : ObservableObject
 
     /// <summary>共用額度不提供端點自檢的理由（模型由中轉決定，端點裡沒有可查的清單）。</summary>
     public const string SharedProbeText =
-        "共用額度不提供端點自檢：模型由中轉決定，端點裡沒有可查的模型清單。請直接按一次「一鍵評價」確認能不能用。";
+        "共用額度不提供端點自檢：模型由中轉決定，端點裡沒有可查的模型清單。直接在對話框問一句，就知道通不通。";
 
     /// <summary>
     /// 端點自檢：只查模型清單並量延遲，<b>不送出對話</b>——所以不會產生 token 費用。
@@ -589,9 +575,9 @@ public sealed class AiService : ObservableObject
         StatusText = "對話已清除。";
     }
 
-    /// <summary>一鍵評價：以內建（或自訂）提示詞＋硬體快照，請 AI 產出整機評價。共用額度只開放這一種請求。</summary>
+    /// <summary>一鍵評價：以內建（或自訂）提示詞＋硬體快照，請 AI 產出整機評價。</summary>
     public Task EvaluateAsync() => SendAsync(
-        "請根據上述硬體資訊，對這台電腦做一次完整、客觀的評價。", AiRequestKind.Evaluate);
+        "請根據上述硬體資訊，對這台電腦做一次完整、客觀的評價。");
 
     /// <summary>
     /// 主動診斷：溫度／負載警示觸發時自動請 AI 就地分析一次。
@@ -601,19 +587,20 @@ public sealed class AiService : ObservableObject
     public Task ProactiveAsync(string label, string alertText)
     {
         if (IsBusy) return Task.CompletedTask;
-        // 共用額度不開放主動診斷：安靜略過，不要冒出一則「不允許」的訊息去打斷使用者。
-        if (_settings.AiProviderEnum == AiProvider.SharedFree) return Task.CompletedTask;
-        if (string.IsNullOrWhiteSpace(_settings.AiBaseUrl) || string.IsNullOrWhiteSpace(_settings.AiModel))
-            return Task.CompletedTask;
+        // 共用額度的端點與模型不在設定裡（由 SharedAiEndpoint 提供），
+        // 所以不能只看 AiBaseUrl／AiModel 這兩個欄位——那兩個在共用額度下本來就是空的。
+        bool configured = _settings.AiProviderEnum == AiProvider.SharedFree
+                          || (!string.IsNullOrWhiteSpace(_settings.AiBaseUrl)
+                              && !string.IsNullOrWhiteSpace(_settings.AiModel));
+        if (!configured) return Task.CompletedTask;
 
         return SendAsync($"【主動診斷】本機剛剛觸發硬體警示：{alertText}。"
             + $"請針對「{label}」呼叫必要的唯讀工具查明現況（例如即時讀值、所有溫度、事件紀錄、歷史統計、風扇現況），"
-            + "說明最可能的原因，以及現在具體該做什麼。查不到的資料請如實說明沒有，不要臆測。",
-            AiRequestKind.Proactive);
+            + "說明最可能的原因，以及現在具體該做什麼。查不到的資料請如實說明沒有，不要臆測。");
     }
 
     /// <summary>送出一則使用者訊息並取得 AI 回覆（含硬體快照作為系統背景；代理模式下可自行查工具）。</summary>
-    public async Task SendAsync(string userText, AiRequestKind kind = AiRequestKind.Chat)
+    public async Task SendAsync(string userText)
     {
         if (IsBusy) return;
         userText = (userText ?? "").Trim();
@@ -626,7 +613,7 @@ public sealed class AiService : ObservableObject
         Messages.Add(new AiMessage { IsUser = true, Text = userText });
         _lastUserText = userText;
         _lastContentParts = contentParts;
-        await RunTurnAsync(contentParts, kind);
+        await RunTurnAsync(contentParts);
     }
 
     /// <summary>
@@ -642,7 +629,7 @@ public sealed class AiService : ObservableObject
 
         while (Messages.Count > index + 1) Messages.RemoveAt(Messages.Count - 1);
         if (_lastUserText is null) _lastUserText = Messages[index].Text;
-        await RunTurnAsync(_lastContentParts, AiRequestKind.Chat);
+        await RunTurnAsync(_lastContentParts);
     }
 
     /// <summary>最後一則使用者訊息的位置；沒有就回 -1。</summary>
@@ -688,20 +675,11 @@ public sealed class AiService : ObservableObject
     }
 
     /// <summary>把一次請求的主體（錯誤處理、取消、存檔）與「誰加了使用者氣泡」分開。</summary>
-    private async Task RunTurnAsync(List<object>? contentParts, AiRequestKind kind)
+    private async Task RunTurnAsync(List<object>? contentParts)
     {
         var reply = new AiMessage { IsUser = false, Text = Placeholder };
         Messages.Add(reply);
         HasMessages = true;
-
-        // 共用額度的範圍限制：直接把原因與替代方案寫在氣泡裡，不發出請求也不假裝失敗。
-        if (_settings.AiProviderEnum == AiProvider.SharedFree && !SharedAiEndpoint.Allows(kind))
-        {
-            reply.Text = SharedAiEndpoint.NotAllowedText;
-            StatusText = "共用額度只開放一鍵評價。";
-            if (_settings.AiKeepHistory) _chat.Save(Messages);
-            return;
-        }
 
         IsBusy = true;
         StatusText = "正在呼叫 AI 模型…";
@@ -802,10 +780,9 @@ public sealed class AiService : ObservableObject
     {
         string url = ResolveUrl();
         string model = ResolveModel();
-        // 共用額度不開放診斷代理：代理一次提問會連續發出多次請求（每輪工具查詢都是一次），
-        // 一個人就能把大家的額度吃光。想用代理請改本機 Ollama 或自填金鑰。
-        bool useTools = _settings.AiAgentMode && Tools is { HasTools: true }
-                        && _settings.AiProviderEnum != AiProvider.SharedFree;
+        // 代理模式（會連續發出多次請求）自 2026-10-26 起對共用額度一併開放；
+        // 額度上限改由中轉那一側擋，程式這一端不再自己劃一條看不見的界。
+        bool useTools = _settings.AiAgentMode && Tools is { HasTools: true };
         var msgs = BuildMessages(useTools, contentParts);
         var sink = new ReplySink(reply);
 
@@ -1183,8 +1160,7 @@ public sealed class AiService : ObservableObject
     /// </summary>
     public string BuildRequestPreview()
     {
-        bool useTools = _settings.AiAgentMode && Tools is { HasTools: true }
-                        && _settings.AiProviderEnum != AiProvider.SharedFree;
+        bool useTools = _settings.AiAgentMode && Tools is { HasTools: true };
         var p = Prepare(useTools);
 
         var sb = new StringBuilder();

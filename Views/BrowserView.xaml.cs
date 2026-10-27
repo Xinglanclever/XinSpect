@@ -20,6 +20,7 @@ public partial class BrowserView : UserControl
     private bool _isLoading;
     private string? _pendingNavUrl;   // 於瀏覽器就緒前收到的導覽請求（如自網速頁跳轉），就緒後補跳
     private string? _returnUtilityKey;   // 自他頁跳轉而來（如網速測試）時的返回目標子工具鍵；非空時顯示返回鈕
+    private bool _selfDocumentNav;   // 剛剛那一次 NavigateToString 是我自己送出的（起始頁）
 
     public BrowserView()
     {
@@ -201,11 +202,15 @@ public partial class BrowserView : UserControl
     }
 
     // 回到內建離線起始頁（硬體導航）。以 NavigateToString 載入，不需外部檔案。
+    // NavigateToString 送出的是 data:text/html 導覽（不是 about:blank），所以要先記下
+    // 「這一次是我自己送出的」，否則會被導覽政策當成頁面裡的 data: 連結擋掉、留下空白頁。
     private void GoHome()
     {
         if (!_ready) return;
         AddressBar.Text = "";
-        try { Web.NavigateToString(BrowserHome.Html); } catch { }
+        _selfDocumentNav = true;
+        try { Web.NavigateToString(BrowserHome.Html); }
+        catch { _selfDocumentNav = false; }
     }
 
     // 切換載入狀態：顯示／隱藏頂端進度條，並讓重新整理鍵在「停止」與「重新整理」間切換。
@@ -350,7 +355,10 @@ public partial class BrowserView : UserControl
     private void Core_NavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
     {
         Uri? target = Uri.TryCreate(e.Uri, UriKind.Absolute, out var u) ? u : null;
-        if (!BrowserPolicy.IsNavigationAllowed(target))
+        // 只放行「剛由 GoHome 送出的那一次」自帶文件；旗標立刻消費掉，頁面之後的 data: 連結照樣擋。
+        bool selfDocument = _selfDocumentNav;
+        _selfDocumentNav = false;
+        if (!BrowserPolicy.IsNavigationAllowed(target, selfDocument))
         {
             // 網頁裡的連結也一樣：只要不是 http／https 就不載入，並說出被擋的是什麼。
             e.Cancel = true;
@@ -365,6 +373,7 @@ public partial class BrowserView : UserControl
 
     private void Core_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
     {
+        _selfDocumentNav = false;   // 導覽已結束：旗標不得留到下一次使用者操作
         SetLoading(false);
         if (e.IsSuccess) { HideNavError(); return; }
         ShowNavError(DescribeWebError(e.WebErrorStatus));

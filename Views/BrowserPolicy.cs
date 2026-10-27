@@ -101,13 +101,28 @@ public static class BrowserPolicy
     }
 
     /// <summary>這個已經解析好的 URI 能不能在內建瀏覽器裡導覽。</summary>
-    public static bool IsNavigationAllowed(Uri? uri)
+    /// <remarks>
+    /// <b>起始頁不是 about:blank。</b>WebView2 的 <c>NavigateToString</c> 實際導覽到的是
+    /// <c>data:text/html;charset=utf-8;base64,…</c>（2026-10-26 在執行中的瀏覽器上實測確認），
+    /// 而 <c>data:</c> 在政策裡是被擋的協定——第 291 輪加上導覽政策後，首頁就變成一片空白。
+    /// 所以「我們自己剛送出的那一份文件」必須放行，但由呼叫端明確說出這一次是自己送出的
+    /// （<paramref name="allowSelfDocument"/>）；頁面裡的 data: 連結照樣擋。
+    /// </remarks>
+    public static bool IsNavigationAllowed(Uri? uri, bool allowSelfDocument = false)
     {
         if (uri is null) return false;
         if (uri.Scheme is "http" or "https") return true;
-        // about:blank 是我們自己用 NavigateToString 載入起始頁時會出現的位址，不算外部導覽。
-        return uri.Scheme == "about" && uri.AbsolutePath.Equals("blank", StringComparison.OrdinalIgnoreCase);
+        if (uri.Scheme == "about" && uri.AbsolutePath.Equals("blank", StringComparison.OrdinalIgnoreCase)) return true;
+        return allowSelfDocument && IsSelfDocument(uri);
     }
+
+    /// <summary>
+    /// 是不是 <c>NavigateToString</c> 產生的 HTML 文件（<c>data:text/html…</c>）。
+    /// 只認 HTML——<c>data:image/…</c> 之類一樣是「頁面把內容塞成網址」，不因此放行。
+    /// </summary>
+    public static bool IsSelfDocument(Uri? uri)
+        => uri is { Scheme: "data" }
+           && uri.AbsoluteUri.StartsWith("data:text/html", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>被擋下時給人看的一句話（要說出「是什麼」與「去哪裡做」）。</summary>
     public static string DescribeBlocked(string scheme) => scheme.ToLowerInvariant() switch
