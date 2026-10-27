@@ -52,10 +52,17 @@ public partial class BrowserView : UserControl
             await Web.EnsureCoreWebView2Async(env);
 
             var core = Web.CoreWebView2;
-            // 預設以 Bing 為搜尋引擎；關閉不必要的開發者干擾，保留右鍵與狀態列。
+            // 預設以 Bing 為搜尋引擎；保留右鍵與狀態列。
             core.Settings.AreDefaultContextMenusEnabled = true;
             core.Settings.IsStatusBarEnabled = true;
-            core.Settings.AreDevToolsEnabled = true;
+            // DevTools 是一個能對頁面執行任意腳本、檢視 Cookie 的完整介面，而這個行程是管理員權杖。
+            // 只有在明確設了環境變數時才開（理由與變數名寫在 BrowserPolicy）——預設擺著等於常駐一個提權介面。
+            core.Settings.AreDevToolsEnabled =
+                BrowserPolicy.DevToolsAllowed(Environment.GetEnvironmentVariable(BrowserPolicy.DevToolsEnvVar));
+            // 縮放由本頁自己管（按鈕與 Ctrl＋滾輪，範圍夾在 50%–200%）；
+            // 留著 WebView2 內建的縮放鍵會變成兩套規則同時改同一個值。
+            core.Settings.IsZoomControlEnabled = false;
+            ApplyZoom(1.0);
 
             core.SourceChanged += (_, _) => SyncAddress();
             core.HistoryChanged += (_, _) => SyncNavButtons();
@@ -207,6 +214,30 @@ public partial class BrowserView : UserControl
         LoadBar.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
         ReloadBtn.Content = on ? "✕" : "⟳";
         ReloadBtn.ToolTip = on ? LanguageService.T("停止載入") : LanguageService.T("重新整理");
+    }
+
+    // ── 縮放（按鈕與 Ctrl＋滾輪共用同一套夾範圍規則）────────────────────────
+
+    private double _zoom = 1.0;
+
+    private void ApplyZoom(double value)
+    {
+        _zoom = BrowserPolicy.ClampZoom(value);
+        try { if (Web.CoreWebView2 is not null) Web.ZoomFactor = _zoom; }
+        catch { /* 尚未就緒時設定會在初始化後重套 */ }
+        if (ZoomResetBtn is not null)
+            ZoomResetBtn.Content = (_zoom * 100).ToString("F0", System.Globalization.CultureInfo.InvariantCulture) + "%";
+    }
+
+    private void ZoomIn_Click(object sender, RoutedEventArgs e) => ApplyZoom(BrowserPolicy.NextZoom(_zoom, +1));
+    private void ZoomOut_Click(object sender, RoutedEventArgs e) => ApplyZoom(BrowserPolicy.NextZoom(_zoom, -1));
+    private void ZoomReset_Click(object sender, RoutedEventArgs e) => ApplyZoom(1.0);
+
+    private void Web_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if ((Keyboard.Modifiers & ModifierKeys.Control) == 0) return;
+        ApplyZoom(BrowserPolicy.NextZoom(_zoom, e.Delta > 0 ? +1 : -1));
+        e.Handled = true;   // 不要讓縮放同時捲動頁面
     }
 
     // ── 導覽政策、下載、權限 ──────────────────────────────────────────────

@@ -192,4 +192,70 @@ public class BrowserPolicyTests
         foreach (BrowserInputKind k in Enum.GetValues<BrowserInputKind>())
             Assert.True(Enum.IsDefined(k));
     }
+
+    // ── 開發者工具與縮放 ──────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    [InlineData("0", false)]
+    [InlineData("false", false)]
+    [InlineData("no", false)]
+    [InlineData("1", true)]
+    [InlineData("TRUE", true)]
+    [InlineData(" yes ", true)]
+    [InlineData("on", true)]
+    public void 開發者工具只在明確要求時開啟(string? env, bool expected)
+    {
+        // 這個行程是管理員權杖；DevTools 不是「一個好用的面板」，是能對頁面執行任意腳本的介面。
+        Assert.Equal(expected, BrowserPolicy.DevToolsAllowed(env));
+    }
+
+    /// <summary>
+    /// 原始碼守門：DevTools 只能透過 <c>DevToolsAllowed(...)</c> 決定。
+    /// 直接寫 <c>= true</c> 就等於把上面那條政策繞過去，而且行為測試看不到（要真的開窗才看得出來）。
+    /// </summary>
+    [Fact]
+    public void 開發者工具不得在原始碼裡被無條件打開()
+    {
+        string text = File.ReadAllText(Path.Combine(RepoRoot(), "Views", "BrowserView.xaml.cs"));
+        // 先把所有空白壓成單一空格再比對：指派跨了兩行，直接用正則會被回溯繞過。
+        string flat = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ");
+
+        Assert.Contains("AreDevToolsEnabled = BrowserPolicy.DevToolsAllowed", flat, StringComparison.Ordinal);
+        Assert.DoesNotContain("AreDevToolsEnabled = true", flat, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void 縮放級距精準且夾在範圍內()
+    {
+        Assert.Equal(1.0, BrowserPolicy.NextZoom(1.0, 0));
+        Assert.Equal(1.1, BrowserPolicy.NextZoom(1.0, +1), 6);
+        Assert.Equal(0.9, BrowserPolicy.NextZoom(1.0, -1), 6);
+
+        // 到頂就停住，不會因為連按而無限放大
+        Assert.Equal(BrowserPolicy.MaxZoom, BrowserPolicy.NextZoom(BrowserPolicy.MaxZoom, +1));
+        Assert.Equal(BrowserPolicy.MinZoom, BrowserPolicy.NextZoom(BrowserPolicy.MinZoom, -1));
+
+        // 不合理的輸入回到 100%，不要讓整個頁面變成 0 倍或 NaN
+        Assert.Equal(1.0, BrowserPolicy.ClampZoom(double.NaN));
+        Assert.Equal(1.0, BrowserPolicy.ClampZoom(double.PositiveInfinity));
+        Assert.Equal(BrowserPolicy.MinZoom, BrowserPolicy.ClampZoom(-5));
+
+        // 連按十次放大再十次縮小必須精準回到 100%（浮點累加會差一點，這裡用格數算）
+        double z = 1.0;
+        for (int i = 0; i < 10; i++) z = BrowserPolicy.NextZoom(z, +1);
+        Assert.Equal(BrowserPolicy.MaxZoom, z, 10);
+        for (int i = 0; i < 10; i++) z = BrowserPolicy.NextZoom(z, -1);
+        Assert.Equal(1.0, z, 10);
+    }
+
+    private static string RepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "XinSpect.csproj")))
+            dir = dir.Parent;
+        Assert.NotNull(dir);
+        return dir!.FullName;
+    }
 }

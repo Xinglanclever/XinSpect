@@ -7,7 +7,7 @@
 ![版本](https://img.shields.io/badge/version-3.01-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-7232%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-7243%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
@@ -388,7 +388,7 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 | 接口页（XAML） | 80 页 | `ls Views/*.xaml` |
 | 测试档 | 571 档 | `ls Tests/*.cs` |
 | 测试方法 | 5,851 个 `[Fact]`＋249 个 `[Theory]` | 逐档正则计数 |
-| 运行期测试案例 | 7,232（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
+| 运行期测试案例 | 7,243（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
 | 公开文档 | 32 份 `docs/*.md`＋5 份 `docs/spec/*.md` | `ls docs/*.md`、`ls docs/spec/*.md` |
 | 事实键目录 | 1,131 键／149 个前缀 | 解析 `FactKeyCatalog.Keys` |
 | 动态键家族 | 49 个 | 解析 `FactKeyDynamicCatalog.Families` |
@@ -605,7 +605,7 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 **送出前你看得到全部**：AI 分页的「传送内容」把这次请求的全文摊开，用的是**与真正请求同一份**组装流程。**遮蔽缺省开启**（与报告导出相反——报告留给自己，AI 请求会离开这台机器）：UUID、MAC、标了标签的 IP、`C:\Users\` 使用者路径、有标签的序号与主机名称换成「（已遮蔽：类别）」；型号、容量、时脉、温度、电压一律不动，没有标签的 `1.0.0.0` 也不遮（多半是版本号）。**长度有上限**（缺省 60,000 字元）：超过时先截断单则过长讯息、再由最旧的整则丢弃，最后一则提问永远保留，丢了什么会写进系统提示告诉模型。**连线分三段计时**（标头 45 秒／串流停滞 90 秒／整段 300 秒），429／502／503／504／408 依端点的 `Retry-After` 有限次重试，且只在还没吐出任何字之前重试。
 
-**内置浏览器**。基于系统的 WebView2，用来开官方下载页、测速页与说明文件。**只开 http／https**：`file://`、`javascript:`、`data:`、`about:`、`ms-settings:`、`steam:` 等一律挡下并说明原因——网页只要能载入本机路径，就能把这台机器上的档案内容显示出来。**下载一律落到 `%LOCALAPPDATA%\XinSpect\Downloads`**，同名不覆盖，开始与完成都显示存到哪里。**装置权限一律拒绝**（麦克风、摄影机、位置、通知、剪贴簿读取、传感器、连续自动下载）并显示提示。载入失败会说出原因（DNS、逾时、TLS 凭证）并提供重试／回首页，凭证错误不略过；清除浏览资料后回首页。
+**内置浏览器**。基于系统的 WebView2，用来开官方下载页、测速页与说明文件。**开发者工具缺省关闭**（这个行程是管理员权杖；只有设了 `XINSPECT_BROWSER_DEVTOOLS=1` 才开），**缩放**在 50%–200% 之间（工具列 −／百分比／＋ 与 Ctrl＋滚轮）。**只开 http／https**：`file://`、`javascript:`、`data:`、`about:`、`ms-settings:`、`steam:` 等一律挡下并说明原因——网页只要能载入本机路径，就能把这台机器上的档案内容显示出来。**下载一律落到 `%LOCALAPPDATA%\XinSpect\Downloads`**，同名不覆盖，开始与完成都显示存到哪里。**装置权限一律拒绝**（麦克风、摄影机、位置、通知、剪贴簿读取、传感器、连续自动下载）并显示提示。载入失败会说出原因（DNS、逾时、TLS 凭证）并提供重试／回首页，凭证错误不略过；清除浏览资料后回首页。
 
 ### 6.2 处理器
 
@@ -2030,7 +2030,7 @@ D-07 是一个典型的「安静的错误」：`uefi.db`／`dbx` 从发布以来
 | O-03 | 主程序未做代码签章，SmartScreen 可能拦阻 | 供应链与可用性 | 文档不教用户关闭；未来可考虑签章 |
 | O-04 | 审计链是无密钥 SHA-256 | 可整链重算 | 见 V-02，尚未实作 HMAC |
 | O-05 | 自签 CA 私钥长期留在 `%ProgramData%\XinSpect\Driver` | 凭证滥用面 | 建议用完即关；见 V-07 |
-| O-06 | 内置浏览器在管理员权杖下运行，DevTools 缺省打开 | 提权浏览面 | 见 V-01，尚未分离权杖 |
+| O-06 | 内置浏览器在管理员权杖下运行 | 提权浏览面 | 见 V-01，尚未分离权杖；DevTools 已改为缺省关闭（`XINSPECT_BROWSER_DEVTOOLS=1` 才开） |
 | O-07 | 深测暂存盘名固定（`XinSpect.deepbench.tmp`） | 符号链接风险 | 见 V-13，尚未改随机名 |
 | O-08 | PMU 编程验证未与 wpr 等参考工具对照（S5 未运行） | 验证缺口 | 标「多轮测试・不保证可用」 |
 | O-09 | 本轮添加的 NVMe 读取路径没有跑实机 golden | 验证缺口 | 证据模式不激活脚本；标「来源具备、实值待人工扫描」 |

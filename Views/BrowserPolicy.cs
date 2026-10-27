@@ -124,6 +124,50 @@ public static class BrowserPolicy
     };
 
     /// <summary>
+    /// 開發者工具只在<b>明確要求</b>時打開：這個程式以管理員權杖執行，DevTools 是一個能對頁面
+    /// 執行任意腳本、檢視 Cookie 與本機儲存的完整介面。使用者要除錯自己的網頁時可以開，
+    /// 但預設不該擺在那裡——「預設開啟」等於把一個提權介面常駐在畫面上。
+    ///
+    /// <para>開啟方式：設定環境變數 <c>XINSPECT_BROWSER_DEVTOOLS=1</c> 再啟動程式（刻意不做成按鈕：
+    /// 做成按鈕等於每個使用者都會看到它，而它只對除錯的人有意义）。</para>
+    /// </summary>
+    public const string DevToolsEnvVar = "XINSPECT_BROWSER_DEVTOOLS";
+
+    /// <summary>解析環境變數：<c>1</c>／<c>true</c>／<c>yes</c>／<c>on</c> 視為開啟，其餘一律關閉（含未設定）。</summary>
+    public static bool DevToolsAllowed(string? envValue)
+    {
+        if (string.IsNullOrWhiteSpace(envValue)) return false;
+        string v = envValue.Trim().ToLowerInvariant();
+        return v is "1" or "true" or "yes" or "on";
+    }
+
+    /// <summary>縮放下限：再小就只是把字變糊，不會多看到東西。</summary>
+    public const double MinZoom = 0.5;
+
+    /// <summary>縮放上限：再大就只剩兩三個字，導覽列還得靠捲動。</summary>
+    public const double MaxZoom = 2.0;
+
+    /// <summary>每次點按鈕的縮放級距。</summary>
+    public const double ZoomStep = 0.1;
+
+    /// <summary>
+    /// 依方向調整縮放並夾在範圍內。<paramref name="direction"/> 為正放大、負縮小、0 不變。
+    /// 直接乘加會累積浮點誤差（0.1 十次不等於 1.0），所以先取整到小數第一位再加。
+    /// </summary>
+    public static double NextZoom(double current, int direction)
+    {
+        double now = ClampZoom(current);
+        if (direction == 0) return now;
+        double steps = Math.Round((now - 1.0) / ZoomStep);        // 目前是幾格
+        steps += Math.Sign(direction);
+        return ClampZoom(1.0 + steps * ZoomStep);
+    }
+
+    /// <summary>把任意值夾進 [<see cref="MinZoom"/>, <see cref="MaxZoom"/>]；非有限值一律回 1.0（100%）。</summary>
+    public static double ClampZoom(double value)
+        => double.IsFinite(value) ? Math.Clamp(value, MinZoom, MaxZoom) : 1.0;
+
+    /// <summary>
     /// 把網站建議的檔名洗成安全的本機檔名：去掉路徑（含 <c>..\..</c>）、換掉非法字元、
     /// 避開 Windows 保留名、限制長度。洗不出名字就用 <c>download</c>——不要用空字串去組路徑。
     /// </summary>

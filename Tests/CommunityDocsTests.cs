@@ -128,7 +128,7 @@ public class CommunityDocsTests
     [Fact]
     public void 三份README對AI與瀏覽器的界線要寫到同一組事實()
     {
-        string[] facts = ["DPAPI", "javascript:", @"XinSpect\Downloads", "Retry-After"];
+        string[] facts = ["DPAPI", "javascript:", @"XinSpect\Downloads", "Retry-After", "XINSPECT_BROWSER_DEVTOOLS"];
         var missing = new List<string>();
 
         foreach (string file in new[] { "README.md", "README.zh-CN.md", "README.en.md" })
