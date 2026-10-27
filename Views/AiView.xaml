@@ -287,6 +287,11 @@
                 <Button Grid.Column="2" Style="{StaticResource PrimaryButton}" Content="送出" MinWidth="88" Margin="10,0,0,0"
                         VerticalAlignment="Stretch" IsEnabled="{Binding Ai.CanSend}" Click="Send_Click"/>
             </Grid>
+
+            <!-- 用量：端點回報的 token 數（不是估算）。沒有回報時明說「端點沒有回報用量」，不印 0。 -->
+            <TextBlock Margin="0,6,0,0" FontSize="11.5" TextWrapping="Wrap"
+                       Foreground="{DynamicResource MutedInkBrush}"
+                       Text="{Binding Ai.Usage.Summary}"/>
         </StackPanel>
     </Grid>
 </UserControl>

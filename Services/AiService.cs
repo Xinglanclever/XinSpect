@@ -85,6 +85,12 @@ public sealed class AiService : ObservableObject
     /// <summary>診斷代理可呼叫的本機唯讀工具箱（由 <c>AiToolboxBuilder</c> 建立並注入）。</summary>
     public AiToolbox? Tools { get; set; }
 
+    /// <summary>
+    /// 這個工作階段的 token 用量（端點回報的，不是本程式估算的）。
+    /// 代理模式一問會連續發多次請求，每一次都算一次——所以「1 次提問」可能對應好幾次請求。
+    /// </summary>
+    public AiUsageCounter Usage { get; } = new();
+
     public AiService(SettingsService settings, string? chatFolder = null)
     {
         _settings = settings;
@@ -473,6 +479,7 @@ public sealed class AiService : ObservableObject
     {
         Messages.Clear();
         HasMessages = false;
+        Usage.Reset();          // 清對話就是重新開始；沿用舊的累計會讓兩個工作階段的用量混在一起
         _pendingAttachments.Clear();
         _chat.Delete();
         StatusText = "對話已清除。";
@@ -577,7 +584,7 @@ public sealed class AiService : ObservableObject
     private sealed record ToolCall(string Id, string Name, string Args);
 
     /// <summary>一輪呼叫的結果：模型說的文字，以及它要求執行的工具（空表示這就是最終答案）。</summary>
-    private sealed record Round(string Content, List<ToolCall> Calls);
+    private sealed record Round(string Content, List<ToolCall> Calls, AiUsage Usage = default);
 
     /// <summary>端點不接受 <c>stream=true</c> 時內部使用，用來退回整段模式重試一次。</summary>
     private sealed class StreamUnsupportedException(string message) : Exception(message);
@@ -636,6 +643,7 @@ public sealed class AiService : ObservableObject
         {
             bool allowTools = useTools && round <= MaxToolRounds;
             var r = await CallAsync(url, model, msgs, allowTools, sink, ct);
+            Usage.Add(r.Usage);
 
             if (r.Calls.Count == 0)
             {
@@ -787,6 +795,7 @@ public sealed class AiService : ObservableObject
     {
         var content = new StringBuilder();
         var accs = new SortedDictionary<int, ToolAcc>();
+        AiUsage usage = AiUsage.None;
 
         using var raw = await resp.Content.ReadAsStreamAsync(ct);
         using var rd = new StreamReader(raw, Encoding.UTF8);
@@ -812,6 +821,11 @@ public sealed class AiService : ObservableObject
             try
             {
                 using var doc = JsonDocument.Parse(json);
+                // 用量可能出現在任何一塊（OpenAI 相容端點多半放在最後一塊，且那一塊的 choices 是空陣列），
+                // 所以要在「跳過沒有 choices 的塊」之前先讀——否則永遠讀不到。
+                var chunkUsage = AiUsage.Parse(doc.RootElement);
+                if (chunkUsage.Reported) usage = chunkUsage;
+
                 if (!doc.RootElement.TryGetProperty("choices", out var ch)
                     || ch.ValueKind != JsonValueKind.Array || ch.GetArrayLength() == 0) continue;
                 if (!ch[0].TryGetProperty("delta", out var d)) continue;
@@ -831,7 +845,7 @@ public sealed class AiService : ObservableObject
                                                        kv.Value.Name, kv.Value.Args.ToString()))
             .Where(c => c.Name.Length > 0)
             .ToList();
-        return new Round(content.ToString(), calls);
+        return new Round(content.ToString(), calls, usage);
     }
 
     /// <summary>
@@ -894,7 +908,7 @@ public sealed class AiService : ObservableObject
                     }
 
                 if (text.Trim().Length > 0) sink.Append(text.Trim());
-                if (text.Trim().Length > 0 || calls.Count > 0) return new Round(text, calls);
+                if (text.Trim().Length > 0 || calls.Count > 0) return new Round(text, calls, AiUsage.Parse(root));
             }
 
             // 部分相容端點的錯誤格式
