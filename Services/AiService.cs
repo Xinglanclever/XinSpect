@@ -414,6 +414,12 @@ public sealed class AiService : ObservableObject
         try { _cts?.Cancel(); } catch (ObjectDisposedException) { /* 已收尾，無事可做 */ }
     }
 
+    /// <summary>
+    /// 讓畫面層回報一件「不是對話內容」的狀態（例如對話匯出成功或失敗）。
+    /// 狀態字串的寫入端集中在 AiService，畫面才不會各自拼一套說法。
+    /// </summary>
+    public void ReportStatus(string text) => StatusText = text;
+
     private string _statusText = "尚未連線 — 於「設定 › AI 評價」選擇供應商與模型後即可使用。";
     public string StatusText { get => _statusText; private set => SetProperty(ref _statusText, value); }
 
@@ -550,6 +556,26 @@ public sealed class AiService : ObservableObject
                 : null;
         }
         catch { return null; }
+    }
+
+    /// <summary>
+    /// 目前對話的 Markdown 匯出文字。遮蔽狀態跟隨設定（預設開啟），用量取本工作階段的端點回報值。
+    /// 刻意做成純字串而不是直接寫檔：呼叫端才知道要存到哪裡，而內容可以先用測試釘住。
+    /// </summary>
+    public string BuildTranscript(DateTimeOffset now)
+    {
+        var usage = new AiUsage(
+            (int)Math.Min(int.MaxValue, Usage.PromptTokens),
+            (int)Math.Min(int.MaxValue, Usage.CompletionTokens),
+            (int)Math.Min(int.MaxValue, Usage.TotalTokens));
+        return AiTranscript.Build(Messages, now, ModelLabelOrFallback(),
+                                  ProviderLabel(_settings.AiProviderEnum), _settings.AiRedactIdentity, usage);
+    }
+
+    /// <summary>匯出用：模型還沒設定時不該丟例外（匯出對話與「能不能送出請求」是兩件事）。</summary>
+    private string ModelLabelOrFallback()
+    {
+        try { return ResolveModel(); } catch { return "（未設定）"; }
     }
 
     /// <summary>清空對話（同時刪除本機保存檔）。</summary>

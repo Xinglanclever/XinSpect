@@ -127,6 +127,9 @@
                     <Button Style="{StaticResource ToolButton}" Content="複製整段對話" Margin="10,0,0,0"
                             ToolTip="把目前對話（含代理查詢紀錄）整段複製到剪貼簿，可直接貼給別人"
                             Click="CopyAll_Click"/>
+                    <Button Style="{StaticResource ToolButton}" Content="匯出對話" Margin="10,0,0,0"
+                            ToolTip="存成 Markdown：標頭會寫明時間、模型、供應商、這次有沒有遮蔽與遮蔽了幾處；圖片內容不會在檔案裡"
+                            Click="Export_Click"/>
                     <Button Style="{StaticResource ToolButton}" Content="傳送內容" Margin="10,0,0,0"
                             ToolTip="看看這次送出到底包含哪些內容（遮蔽與長度裁切都已經套用）——送出前你看得到全部"
                             Click="Preview_Click"/>

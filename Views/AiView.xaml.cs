@@ -47,6 +47,38 @@ public partial class AiView : UserControl
 
     private async void Send_Click(object sender, RoutedEventArgs e) => await SendAsync();
 
+    /// <summary>
+    /// 匯出對話成 Markdown。預設放在「文件」資料夾、檔名帶時間戳；內容由
+    /// <see cref="AiService.BuildTranscript"/> 產生（遮蔽狀態與用量都在標頭寫明）。
+    /// </summary>
+    private void Export_Click(object sender, RoutedEventArgs e)
+    {
+        var ai = Vm?.Ai;
+        if (ai is null) return;
+
+        var now = DateTimeOffset.Now;
+        var dialog = new SaveFileDialog
+        {
+            Title = "匯出 AI 對話",
+            Filter = "Markdown (*.md)|*.md|文字檔 (*.txt)|*.txt",
+            FileName = AiTranscript.SuggestFileName(now),
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            AddExtension = true,
+            OverwritePrompt = true,
+        };
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
+
+        try
+        {
+            System.IO.File.WriteAllText(dialog.FileName, ai.BuildTranscript(now), new System.Text.UTF8Encoding(false));
+            ai.ReportStatus("已匯出：" + dialog.FileName);
+        }
+        catch (Exception ex)
+        {
+            ai.ReportStatus("匯出失敗：" + ex.Message);
+        }
+    }
+
     /// <summary>重試上一則提問：失敗、被停止或模型沒回覆時才看得到這顆鍵。</summary>
     private async void Retry_Click(object sender, RoutedEventArgs e)
     {
