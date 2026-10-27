@@ -119,6 +119,30 @@ public class CommunityDocsTests
             + "——這會讓 CI 綠得漂亮，而它一個測試都沒跑（「通過」與「沒有檢查」長得一樣）");
     }
 
+    /// <summary>
+    /// 三份 README 是同一個產品對三種讀者的說法，但過去只改一份的情況真的發生過：
+    /// AI 的送出前遮蔽與金鑰 DPAPI 加密、瀏覽器只開 http(s) 與下載位置，這些**安全界線**
+    /// 最先只出現在正體版，另外兩份還停在舊說法（「金鑰存在本機」就是一句在加密實作之後
+    /// 才變成不完整的宣稱）。這裡不驗句子怎麼寫，只驗同一組硬事實三份都在。
+    /// </summary>
+    [Fact]
+    public void 三份README對AI與瀏覽器的界線要寫到同一組事實()
+    {
+        string[] facts = ["DPAPI", "javascript:", @"XinSpect\Downloads", "Retry-After"];
+        var missing = new List<string>();
+
+        foreach (string file in new[] { "README.md", "README.zh-CN.md", "README.en.md" })
+        {
+            string text = ReadRepoFile(file);
+            foreach (string fact in facts)
+                if (!text.Contains(fact, StringComparison.Ordinal))
+                    missing.Add($"{file}：找不到「{fact}」——這一版的 AI／瀏覽器界線沒有寫進這一份");
+        }
+
+        Assert.True(missing.Count == 0,
+            "三份 README 對同一組安全事實的說法不一致（改一份就要改三份）：\n" + string.Join("\n", missing));
+    }
+
     /// <summary>讀原始碼樹裡的檔案（路徑相對於倉庫根目錄）。從測試輸出目錄往上找 csproj。</summary>
     private static string ReadRepoFile(string relativePath)
     {
