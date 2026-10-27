@@ -113,15 +113,20 @@ public class SnapshotReasonClampTests
 
     // ── 訊息：要指名是哪一把鍵 ────────────────────────────────────────
 
+    /// <summary>
+    /// 空白的原因（不是太長）仍然不合法——那是「沒說為什麼」，不是「原因很短」。
+    /// 但現在它<b>不會讓整份存檔失敗</b>：那一筆變成「讀不到」並寫出鍵與欄位名。
+    /// </summary>
     [Fact]
-    public void 驗證失敗的訊息要指名是哪一把鍵()
+    public void 不合格的訊息要指名是哪一把鍵與哪個欄位()
     {
-        // 空白的原因（不是太長）仍然不合法——那是「沒說為什麼」，不是「原因很短」。
-        var fact = Fact("test.reason.blank", "   ");
-        var ex = Assert.Throws<ArgumentException>(() => Make(fact));
-        Assert.Contains("test.reason.blank", ex.Message);
-        Assert.Contains("讀不到的原因", ex.Message);            // 欄位名是人話，不是 C# 屬性名
-        Assert.DoesNotContain("Parameter", ex.Message);        // 沒有 .NET 接上的參數名尾巴
+        var snapshot = Make(Fact("test.reason.blank", "   "));
+        string reason = snapshot.Facts.Single().UnavailableReason!;
+
+        Assert.StartsWith(HardwareSnapshotService.RejectedMarker, reason);
+        Assert.Contains("test.reason.blank", reason);   // 哪一筆
+        Assert.Contains("讀不到的原因", reason);          // 哪個欄位（中文，不是 C# 屬性名）
+        Assert.DoesNotContain("Parameter", reason);      // 沒有 .NET 接上的參數名尾巴
     }
 
     // ── 截斷要回報：存檔摘要要說出有幾筆被截短 ──────────────────────────
@@ -157,5 +162,67 @@ public class SnapshotReasonClampTests
         Assert.Equal(0, HardwareSnapshotService.CountTruncatedTexts(clean));
         Assert.Equal(1, HardwareSnapshotService.CountTruncatedTexts(cut));
         Assert.Equal(1, HardwareSnapshotService.CountTruncatedTexts(alsoCut));
+    }
+
+    // ── 單筆不合格不能讓整份快照存不了 ──────────────────────────────────
+
+    [Fact]
+    public void 不合格的一筆要被標記而不是讓整份存檔失敗()
+    {
+        var bad = Fact("test.bad.source", "某個原因") with { Source = "   " };
+        var snapshot = Make(bad, Fact("test.good", "正常"));
+
+        Assert.Equal(2, snapshot.Facts.Count);                       // 兩筆都在，沒有整份被退
+        var rejected = snapshot.Facts.Single(f => f.Key == "test.bad.source");
+        Assert.Equal(FactAvailability.ReadError, rejected.Availability);
+        Assert.StartsWith(HardwareSnapshotService.RejectedMarker, rejected.UnavailableReason);
+        Assert.Contains("來源", rejected.UnavailableReason);          // 說出是哪個欄位不合格
+        Assert.Equal(1, HardwareSnapshotService.CountRejectedFacts(snapshot));
+        Assert.Equal("正常", snapshot.Facts.Single(f => f.Key == "test.good").UnavailableReason);
+    }
+
+    [Fact]
+    public void 重複的鍵要被標成重複而不是讓整份存檔失敗()
+    {
+        var snapshot = Make(Fact("dup.key", "第一筆"), Fact("dup.key", "第二筆"));
+
+        Assert.Equal(2, snapshot.Facts.Count);
+        Assert.Single(snapshot.Facts, f => f.Key == "dup.key");
+        Assert.Single(snapshot.Facts, f => f.Key.StartsWith("snapshot.rejected.", StringComparison.Ordinal));
+        Assert.Contains("重複", snapshot.Facts.Single(f => f.Key.StartsWith("snapshot.rejected.", StringComparison.Ordinal)).UnavailableReason);
+    }
+
+    [Fact]
+    public void 不合法的鍵會換成替代鍵並把原鍵寫進原因()
+    {
+        var snapshot = Make(Fact("Bad Key With Spaces", "原因"));
+
+        var f = snapshot.Facts.Single();
+        Assert.StartsWith("snapshot.rejected.", f.Key);
+        Assert.Contains("Bad Key With Spaces", f.UnavailableReason);
+    }
+
+    [Fact]
+    public void 不合格的替代事實本身也要通過驗證且可存檔()
+    {
+        var snapshot = Make(Fact("test.bad2", "原因") with { Category = "", Name = "", Source = "" });
+        string path = Path.Combine(Path.GetTempPath(), "XinSpect_reject_" + Guid.NewGuid().ToString("N") + ".xinsnapshot");
+        try
+        {
+            HardwareSnapshotService.Save(path, snapshot);
+            var loaded = HardwareSnapshotService.Load(path);
+            Assert.Single(loaded.Facts);
+            Assert.Equal("未分類", loaded.Facts[0].Category);
+            Assert.Equal("本程式", loaded.Facts[0].Source);
+        }
+        finally { try { File.Delete(path); } catch { } }
+    }
+
+    [Fact]
+    public void 摘要要說出有幾筆未通過檢查()
+    {
+        var snapshot = Make(Fact("test.bad3", "原因") with { Source = "" }, Fact("test.ok", "正常"));
+        string summary = EvidenceLabService.DescribeSave(snapshot, includeSensitive: false);
+        Assert.Contains("1 筆未通過格式檢查", summary);
     }
 }

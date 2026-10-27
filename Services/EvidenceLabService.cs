@@ -2247,9 +2247,11 @@ public sealed class EvidenceLabService : ObservableObject
     internal static string DescribeSave(HardwareSnapshot snapshot, bool includeSensitive)
     {
         int truncated = HardwareSnapshotService.CountTruncatedTexts(snapshot);
+        int rejected = HardwareSnapshotService.CountRejectedFacts(snapshot);
         return $"{snapshot.Facts.Count} 項事實 ・ {(includeSensitive ? "保留敏感識別" : "敏感值已遮蔽")}"
                + " ・ SHA-256 完整性封套"
-               + (truncated > 0 ? $" ・ {truncated} 筆說明過長已截斷（各筆末尾標了原長）" : "");
+               + (truncated > 0 ? $" ・ {truncated} 筆說明過長已截斷（各筆末尾標了原長）" : "")
+               + (rejected > 0 ? $" ・ {rejected} 筆未通過格式檢查（已標成「讀不到」並寫出原因）" : "");
     }
 
     private static string KindText(AssetEventKind kind) => kind switch

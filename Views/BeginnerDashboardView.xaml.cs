@@ -21,4 +21,14 @@ public partial class BeginnerDashboardView : UserControl
 
     private void Export_Click(object sender, RoutedEventArgs e)
         => Vm?.ExportReport();
+
+    /// <summary>
+    /// 一鍵評價本機：先跳到 AI 分頁（結果在那裡），再送出評價請求。
+    /// 順序刻意是「先跳再送」——請求要好幾秒，使用者要能看到它正在跑，而不是畫面沒反應。
+    /// </summary>
+    private async void Evaluate_Click(object sender, RoutedEventArgs e)
+    {
+        Shell.Main?.NavigateToAi();
+        if (Vm?.Ai is { } ai) await ai.EvaluateAsync();
+    }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Xunit;
 using XinSpect;
 
@@ -152,8 +153,7 @@ public class GpuDeepFactsTests
     [Fact]
     public void 本批十四把鍵齊()
     {
-        var facts = GpuDeepFactsService.Collect(At);
-        string[] keys =
+        var facts = GpuDeepFactsService.Collect(At);        string[] keys =
         [
             GpuDeepFactsService.NvStateKey, GpuDeepFactsService.NvFanKey, GpuDeepFactsService.NvPlKey,
             GpuDeepFactsService.NvEccKey, GpuDeepFactsService.AmdKey, GpuDeepFactsService.IntelKey,
@@ -164,5 +164,71 @@ public class GpuDeepFactsTests
         foreach (string k in keys) Assert.Contains(facts, f => f.Key == k);
         Assert.Equal(14, facts.Count);
         Assert.Equal(14, facts.Select(f => f.Key).Distinct(StringComparer.Ordinal).Count());
+    }
+
+    // ── 外層預算：卡住的探針不能把整個行程帶走 ──────────────────────────
+
+    /// <summary>
+    /// 2026-10-26 實證：`Collect` 的預設探針會走真的 WMI，機器被卡住時 testhost 停在
+    /// 不可中斷等待裡、連 taskkill 都殺不掉。預算加在 <see cref="GpuDeepFactsService.Collect"/>，
+    /// 這裡注入一個「永遠不回來」的探針來驗：呼叫端必須在預算內回來，而且那一把要說出「問不到」。
+    /// </summary>
+    [Fact]
+    public void 探針逾時要在預算內回來並如實說問不到()
+    {
+        using var release = new ManualResetEventSlim(false);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            var facts = GpuDeepFactsService.Collect(At,
+                vbios: () => { release.Wait(TimeSpan.FromSeconds(30)); return "不該拿到這個值"; },
+                budgetMs: 120);
+            sw.Stop();
+
+            Assert.True(sw.Elapsed < TimeSpan.FromSeconds(5), $"Collect 花了 {sw.Elapsed.TotalSeconds:0.0} 秒");
+
+            var vbios = facts.Single(f => f.Key == GpuDeepFactsService.VbiosKey);
+            Assert.Equal(FactAvailability.ReadError, vbios.Availability);
+            Assert.Contains("沒有回來", vbios.UnavailableReason);
+            Assert.Contains("不是", vbios.UnavailableReason);   // 「這不是『沒有這張卡』」
+            Assert.Null(vbios.NumericValue);                      // 讀不到不編數字
+            Assert.Equal(14, facts.Count);                        // 逾時不會讓鍵消失
+        }
+        finally { release.Set(); }   // 放掉那條執行緒，別留給下一個測試
+    }
+
+    /// <summary>逾時只影響卡住的那一把，其他事實照樣有值。</summary>
+    [Fact]
+    public void 逾時只影響卡住的那一把()
+    {
+        using var release = new ManualResetEventSlim(false);
+        try
+        {
+            var facts = GpuDeepFactsService.Collect(At,
+                vbios: () => { release.Wait(TimeSpan.FromSeconds(30)); return null; },
+                multi: () => (2, false),
+                budgetMs: 120);
+
+            Assert.Equal(FactAvailability.ReadError, facts.Single(f => f.Key == GpuDeepFactsService.VbiosKey).Availability);
+            var multi = facts.Single(f => f.Key == GpuDeepFactsService.MultiKey);
+            Assert.Equal(FactAvailability.Present, multi.Availability);
+            Assert.Equal(2, multi.NumericValue);
+        }
+        finally { release.Set(); }
+    }
+
+    /// <summary>沒逾時的探針不受預算影響（預算不是「一律當成讀不到」）。</summary>
+    [Fact]
+    public void 正常探針不受預算影響()
+    {
+        var facts = GpuDeepFactsService.Collect(At,
+            vbios: () => "86.04.9C.00.1A",
+            depth: () => 32,
+            budgetMs: 2_000);
+
+        var vbios = facts.Single(f => f.Key == GpuDeepFactsService.VbiosKey);
+        Assert.Equal(FactAvailability.Present, vbios.Availability);
+        Assert.Contains("86.04.9C.00.1A", vbios.Value);
+        Assert.Equal(32, facts.Single(f => f.Key == GpuDeepFactsService.DepthKey).NumericValue);
     }
 }

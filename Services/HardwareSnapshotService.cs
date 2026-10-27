@@ -308,6 +308,20 @@ public static partial class HardwareSnapshotService
         Facts = snapshot.Facts.OrderBy(x => x.Key, StringComparer.Ordinal).ToArray(),
     };
 
+    /// <summary>
+    /// 逐筆整理事實：截短過長文字、遮蔽敏感值、統一時間。
+    /// </summary>
+    /// <remarks>
+    /// <b>單筆不合格不再讓整份快照失敗。</b>2026-10-26 之後仍然成立的道理：使用者按的是
+    /// 「建立時間膠囊」，他要的是一份能存下來的紀錄；某一個生產端寫出格式不對的一筆，
+    /// 不該讓他連存都存不了。所以不合格的那一筆會被換成
+    /// <see cref="RejectedMarker"/> 開頭的「讀不到」事實——鍵還在、原因寫清楚、其餘照常，
+    /// 而且存檔摘要會說出有幾筆。
+    /// <para>
+    /// <b>不靜默丟棄：</b>把它換成「這一筆沒通過檢查，原因是…」而不是刪掉，
+    /// 是因為刪掉之後「少了一筆」看起來和「這一輪沒有這項資料」一模一樣。
+    /// </para>
+    /// </remarks>
     private static IReadOnlyList<HardwareSnapshotFact> NormalizeFacts(
         IEnumerable<HardwareSnapshotFact> facts,
         SensitiveValuePolicy policy)
@@ -318,8 +332,15 @@ public static partial class HardwareSnapshotService
         {
             if (fact is null) throw new ArgumentException("事實集合不可包含 null。", nameof(facts));
             var safe = ClampText(fact);
-            ValidateFact(safe);
-            if (!keys.Add(safe.Key)) throw new ArgumentException($"事實 key 重複：{safe.Key}", nameof(facts));
+            string? rejection = null;
+            try { ValidateFact(safe); }
+            catch (ArgumentException ex) { rejection = ex.Message; }
+
+            if (rejection is not null)
+                safe = RejectedFact(safe, rejection, keys);
+            else if (!keys.Add(safe.Key))
+                safe = RejectedFact(safe, $"事實 key 重複：{safe.Key}", keys);
+
             list.Add(safe with
             {
                 Value = safe.Sensitive && policy == SensitiveValuePolicy.Redact
@@ -331,6 +352,38 @@ public static partial class HardwareSnapshotService
             if (list.Count > MaxFacts) throw new ArgumentException($"事實筆數不可超過 {MaxFacts:N0}。", nameof(facts));
         }
         return list.OrderBy(x => x.Key, StringComparer.Ordinal).ToArray();
+    }
+
+    /// <summary>不合格事實的替代品：原鍵（可用時）＋明確的「沒通過檢查」原因，值清空、不帶數字。</summary>
+    private static HardwareSnapshotFact RejectedFact(HardwareSnapshotFact fact, string rejection, HashSet<string> keys)
+    {
+        string key;
+        if (FactKeyRegex().IsMatch(fact.Key ?? "") && keys.Add(fact.Key!))
+        {
+            key = fact.Key!;
+        }
+        else
+        {
+            // 鍵本身不合法或重複：換一個明確的替代鍵，並把原鍵寫進原因（不讓它消失）。
+            int n = keys.Count + 1;
+            key = "snapshot.rejected." + n;
+            while (!keys.Add(key)) key = "snapshot.rejected." + ++n;
+            rejection = $"原鍵「{fact.Key}」：{rejection}";
+        }
+
+        return new HardwareSnapshotFact
+        {
+            Key = key,
+            Category = string.IsNullOrWhiteSpace(fact.Category) ? "未分類" : Clamp(fact.Category, 128),
+            Name = string.IsNullOrWhiteSpace(fact.Name) ? key : Clamp(fact.Name, 256),
+            Value = "",
+            Source = string.IsNullOrWhiteSpace(fact.Source) ? "本程式" : Clamp(fact.Source, 512),
+            Trust = FactTrustLevel.Unknown,
+            Sensitive = false,
+            MeasuredAtUtc = fact.MeasuredAtUtc == default ? DateTimeOffset.UtcNow : fact.MeasuredAtUtc,
+            Availability = FactAvailability.ReadError,
+            UnavailableReason = Clamp(RejectedMarker + rejection, 512),
+        };
     }
 
     /// <summary>
@@ -349,7 +402,8 @@ public static partial class HardwareSnapshotService
     /// 所以保留下原長，而且鍵本身、狀態、數值一律不動（那是內容與判斷，不是敘述）。
     /// </para>
     /// </remarks>
-    private static HardwareSnapshotFact ClampText(HardwareSnapshotFact fact) => fact with    {
+    private static HardwareSnapshotFact ClampText(HardwareSnapshotFact fact) => fact with
+    {
         Category = Clamp(fact.Category, 128),
         Name = Clamp(fact.Name, 256),
         Source = Clamp(fact.Source, 512),
@@ -378,6 +432,20 @@ public static partial class HardwareSnapshotService
     /// 否則「回報截斷」會隨著措辭改動變成永遠 0。
     /// </summary>
     public const string TruncationMarker = "……（原文 ";
+
+    /// <summary>
+    /// 「這一筆沒通過快照格式檢查」的開頭。同樣只有一份字面，
+    /// 產生端（<see cref="RejectedFact"/>）與計數端（<see cref="CountRejectedFacts"/>）共用。
+    /// </summary>
+    public const string RejectedMarker = "這一筆沒有通過快照格式檢查（其餘事實照常寫入）：";
+
+    /// <summary>這份快照裡有幾筆事實是因為格式不合格、被替換成「讀不到」的（不是因為真的讀不到）。</summary>
+    public static int CountRejectedFacts(HardwareSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        return snapshot.Facts.Count(f =>
+            f.UnavailableReason?.StartsWith(RejectedMarker, StringComparison.Ordinal) ?? false);
+    }
 
     /// <summary>
     /// 這份快照裡有幾筆事實的文字被截短過（值或讀不到的原因）。

@@ -94,6 +94,12 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- 一鍵評價放在工具列最左邊：它是最主要的動作，先前放在最後一欄（Column 7），
+                         視窗一窄就被右側那一排工具鈕擠出畫面——使用者回報「找不到」。
+                         主要動作永遠看得見，比排在右邊漂亮重要。 -->
+                    <Button Style="{StaticResource PrimaryButton}" Content="一鍵評價本機　▸" Margin="0,0,14,0"
+                            IsEnabled="{Binding Ai.CanSend}" Click="Evaluate_Click"
+                            ToolTip="把這台電腦的硬體事實交給 AI，請它寫一段評價（共用額度、本機 Ollama 或自填端點都可以）"/>
                     <TextBlock Style="{StaticResource FieldValue}" VerticalAlignment="Center"
                                Text="{Binding Settings.AiModel, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='模型：{0}'}"/>
                     <Button Style="{StaticResource ToolButton}" Content="⚙" FontSize="13" Padding="4,2" Margin="6,0,0,0"
@@ -134,8 +140,6 @@
                             ToolTip="看看這次送出到底包含哪些內容（遮蔽與長度裁切都已經套用）——送出前你看得到全部"
                             Click="Preview_Click"/>
                 </StackPanel>
-                <Button Grid.Column="7" Style="{StaticResource PrimaryButton}" Content="一鍵評價本機　▸"
-                        IsEnabled="{Binding Ai.CanSend}" Click="Evaluate_Click"/>
                 <TextBlock Grid.Column="5" Style="{StaticResource Subtitle}" VerticalAlignment="Center"
                            HorizontalAlignment="Right" Margin="16,0,16,0" TextTrimming="CharacterEllipsis"
                            Text="{Binding Ai.StatusText}"/>

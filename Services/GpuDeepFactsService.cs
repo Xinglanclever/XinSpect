@@ -56,18 +56,108 @@ public static class GpuDeepFactsService
     public delegate (bool Rt, bool Ai)? RtProbe();
     public delegate IReadOnlyList<string>? GpuDrvHistProbe();
 
+    /// <summary>
+    /// 一支探針最多等多久。WMI／DXGI 查詢在驅動被卡住時會<b>無限等待</b>，
+    /// 而且擋的是呼叫執行緒——沒有這個預算，一次收集就能把整個行程（含測試）拖死。
+    /// </summary>
+    /// <remarks>
+    /// 2026-10-26 實證：全套測試卡在 <c>GpuDeepFactsTests.本批十四把鍵齊</c>（走真的 WMI），
+    /// testhost 停在不可中斷等待裡、<c>taskkill</c> 也殺不掉。同一個坑第 263 輪在 NVMe 上踩過，
+    /// 那時的做法是「專屬執行緒＋外層預算」，這裡照同一套辦：逾時就留下一條背景執行緒
+    /// （中止不了，見 <c>SmartLookupProbe</c> 的說明），但<b>整個行程不會跟著卡住</b>。
+    /// </remarks>
+    public const int DefaultProbeBudgetMs = 2500;
+
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at,
         NvStateProbe? nvState = null, NvFanProbe? nvFan = null, NvPlProbe? nvPl = null, NvEccProbe? nvEcc = null,
         AmdProbe? amd = null, IntelProbe? intel = null, VbiosProbe? vbios = null, VramHistProbe? vramHist = null,
         DrvChainProbe? drvChain = null, MultiProbe? multi = null, VdispProbe? vdisp = null, DepthProbe? depth = null,
-        RtProbe? rt = null, GpuDrvHistProbe? gpuDrvHist = null)
-        =>
-        [
+        RtProbe? rt = null, GpuDrvHistProbe? gpuDrvHist = null, int budgetMs = DefaultProbeBudgetMs)
+    {
+        // 只有「預設會真的去問驅動」的六把要包預算；其餘預設探針是 `() => null`，包了只是多一條執行緒。
+        // 注入的探針一律走同一條路（測試才能驗到逾時語意），它們在測試裡都是瞬間回傳。
+        var timedOut = new HashSet<string>(StringComparer.Ordinal);
+        var facts = new List<HardwareFact>(14)
+        {
             NvStateFact(at, nvState), NvFanFact(at, nvFan), NvPlFact(at, nvPl), NvEccFact(at, nvEcc),
-            AmdFact(at, amd), IntelFact(at, intel), VbiosFact(at, vbios), VramHistFact(at, vramHist),
-            DrvChainFact(at, drvChain), MultiFact(at, multi), VdispFact(at, vdisp), DepthFact(at, depth),
-            RtFact(at, rt), GpuDrvHistFact(at, gpuDrvHist),
-        ];
+            AmdFact(at, amd), IntelFact(at, intel),
+            // 事實方法的參數是自訂委派，所以這裡包成「同型別、但內部走預算」的委派；
+            // 「沒注入就用真探針」的判斷留在 lambda 裡，讓注入的假件也走同一條預算路徑（測試才驗得到逾時）。
+            VbiosFact(at, () => Guard(() => vbios is null ? ReadVbios() : vbios(), VbiosKey, timedOut, budgetMs)),
+            VramHistFact(at, vramHist),
+            DrvChainFact(at, () => Guard(() => drvChain is null ? ReadDrvChain() : drvChain(), DrvChainKey, timedOut, budgetMs)),
+            MultiFact(at, () => Guard(() => multi is null ? ReadMulti() : multi(), MultiKey, timedOut, budgetMs)),
+            VdispFact(at, () => Guard(() => vdisp is null ? ReadVdisp() : vdisp(), VdispKey, timedOut, budgetMs)),
+            DepthFact(at, () => Guard(() => depth is null ? ReadDepth() : depth(), DepthKey, timedOut, budgetMs)),
+            RtFact(at, rt),
+            GpuDrvHistFact(at, () => Guard(() => gpuDrvHist is null ? ReadGpuDrvHist() : gpuDrvHist(), GpuDrvHistKey, timedOut, budgetMs)),
+        };
+
+        // 逾時的那幾把要改寫成「讀不到」——探針回 null 時原本會被講成
+        // 「本機無獨立 GPU」或「途徑不足」，那是把「問不到」講成「沒有」。
+        return facts.Select(f => timedOut.Contains(f.Key) ? ProbeTimeoutFact(at, f) : f).ToArray();
+    }
+
+    private static HardwareFact ProbeTimeoutFact(DateTimeOffset at, HardwareFact original)
+        => new(original.Key, Cat, original.Name, "", "", original.Source, FactTrustLevel.Unknown, false, at, null,
+            FactAvailability.ReadError,
+            $"探針在 {DefaultProbeBudgetMs / 1000.0:0.#} 秒內沒有回來——這<b>不是</b>「沒有這張卡」，"
+            + "是問不到（驅動或 WMI 被其他程序卡住）。本專案不重試、不降級成猜測；重開機或關掉佔用顯示驅動的程式後再看一次。");
+
+    /// <summary>在有名字的專屬執行緒上跑探針，最多等 <paramref name="budgetMs"/>；逾時就把鍵記進 <paramref name="timedOut"/>。</summary>
+    /// <remarks>
+    /// 三個多載共用同一段執行緒邏輯（<see cref="TryRun"/>），差別只在回傳型別：
+    /// 結構版的 <c>T?</c> 是 <see cref="Nullable{T}"/>，參考型別版的 <c>T?</c> 是可為 null 的參考，
+    /// 兩者在泛型約束上不能寫成同一個方法。
+    /// </remarks>
+    private static T? Guard<T>(Func<T?> probe, string key, HashSet<string> timedOut, int budgetMs) where T : struct
+    {
+        if (TryRun(probe, key, budgetMs, out var result)) return result;
+        timedOut.Add(key);
+        return null;
+    }
+
+    /// <summary>字串結果的探針版本（<c>VbiosProbe</c>）。</summary>
+    private static string? Guard(Func<string?> probe, string key, HashSet<string> timedOut, int budgetMs)
+    {
+        if (TryRun(probe, key, budgetMs, out var result)) return result;
+        timedOut.Add(key);
+        return null;
+    }
+
+    /// <summary>清單結果的探針版本（<c>GpuDrvHistProbe</c>）。</summary>
+    private static IReadOnlyList<string>? Guard(Func<IReadOnlyList<string>?> probe, string key,
+        HashSet<string> timedOut, int budgetMs)
+    {
+        if (TryRun(probe, key, budgetMs, out var result)) return result;
+        timedOut.Add(key);
+        return null;
+    }
+
+    /// <summary>專屬執行緒＋外層預算。回 <c>false</c> 代表逾時（那條執行緒留在原地，收不回來）。</summary>
+    /// <remarks>
+    /// <b>這裡刻意不 <c>using</c>／<c>Dispose</c> 那顆事件。</b>逾時之後探針執行緒還活著，
+    /// 它稍後會呼叫 <c>Set()</c>；若先把事件處置掉，那一行會在<b>背景執行緒上</b>丟
+    /// <see cref="ObjectDisposedException"/>——未處理的背景執行緒例外會直接終止整個行程，
+    /// 也就是「本來只是問不到一張卡，結果程式被關掉」。一顆事件物件換一條失控執行緒的安全，值得。
+    /// </remarks>
+    private static bool TryRun<T>(Func<T> probe, string key, int budgetMs, out T result)
+    {
+        T local = default!;
+        var done = new ManualResetEventSlim(false);
+        var thread = new Thread(() =>
+        {
+            try { local = probe(); }
+            catch { local = default!; }
+            finally { done.Set(); }
+        })
+        { IsBackground = true, Name = "XinSpect.GpuProbe." + key };
+
+        thread.Start();
+        bool finished = done.Wait(budgetMs);
+        result = local;
+        return finished;
+    }
 
     private static HardwareFact NoGpu(DateTimeOffset at, string key, string name)
         => new(key, Cat, name, "", "", "NVML／ADLX／Xe（唯讀）", FactTrustLevel.Unknown, false, at, null,

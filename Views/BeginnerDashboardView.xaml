@@ -71,8 +71,13 @@
                 <Border Grid.Column="4" Style="{StaticResource Card}">
                     <StackPanel>
                         <local:SectionHead Text="快速動作" HelpKey="beginner/快速動作"/>
-                        <Button Style="{StaticResource PrimaryButton}" Content="清理垃圾檔案"
-                                Click="Cleanup_Click" Margin="0,8,0,6" HorizontalAlignment="Stretch"/>
+                        <!-- 一鍵評價本機放在最上面：這是最容易看懂的一項（把已量到的讀值交給 AI 說人話），
+                             而且不必先切到進階模式去找 AI 分頁。 -->
+                        <Button Style="{StaticResource PrimaryButton}" Content="一鍵評價本機　▸"
+                                Click="Evaluate_Click" Margin="0,8,0,6" HorizontalAlignment="Stretch"
+                                ToolTip="把這台電腦的硬體事實交給 AI，請它寫一段評價；按下後會跳到 AI 分頁顯示結果"/>
+                        <Button Style="{StaticResource ToolButton}" Content="清理垃圾檔案"
+                                Click="Cleanup_Click" Margin="0,0,0,6" HorizontalAlignment="Stretch"/>
                         <Button Style="{StaticResource ToolButton}" Content="釋放記憶體"
                                 Click="MemClean_Click" Margin="0,0,0,6" HorizontalAlignment="Stretch"/>
                         <Button Style="{StaticResource ToolButton}" Content="匯出硬體報告"
