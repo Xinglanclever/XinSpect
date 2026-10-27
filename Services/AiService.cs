@@ -1084,6 +1084,19 @@ public sealed class AiService : ObservableObject
     /// <summary>上一次組裝請求時遮蔽了幾處可識別資訊（0 表示沒遮，或使用者關掉了遮蔽）。</summary>
     public int LastRedactionCount { get; private set; }
 
+    /// <summary>
+    /// 這次請求實際採用的字元預算。共用額度走作者的中轉，而中轉有它自己的提示詞上限
+    /// （<see cref="SharedAiEndpoint.PromptCharCap"/>）：不先夾住的話，使用者把預算調高
+    /// 只會換來一句 413。夾住之後截斷發生在本機，而且系統提示會說明截了什麼。
+    /// </summary>
+    private int EffectiveBudgetChars(out bool clampedByRelay)
+    {
+        int configured = _settings.AiRequestBudgetChars;
+        clampedByRelay = _settings.AiProviderEnum == AiProvider.SharedFree
+                         && configured > SharedAiEndpoint.PromptCharCap;
+        return clampedByRelay ? SharedAiEndpoint.PromptCharCap : configured;
+    }
+
     private PreparedRequest Prepare(bool useTools)
     {
         string sys = string.IsNullOrWhiteSpace(_settings.AiSystemPrompt) ? DefaultSystemPrompt : _settings.AiSystemPrompt;
@@ -1119,7 +1132,7 @@ public sealed class AiService : ObservableObject
         LastRedactionCount = redactions;
 
         // 長度預算：先截斷單則過長，再由最舊的整則丟棄；最後一則（這次的提問）永遠保留。
-        var budgeted = AiRequestBudget.Apply(sys, texts, _settings.AiRequestBudgetChars);
+        var budgeted = AiRequestBudget.Apply(sys, texts, EffectiveBudgetChars(out _));
         sys = budgeted.System;
         int droppedByBudget = budgeted.DroppedMessages;
         int totalDropped = droppedByTurns + droppedByBudget;
@@ -1170,7 +1183,10 @@ public sealed class AiService : ObservableObject
               + (p.RedactionKinds.Count > 0 ? "：" + string.Join("、", p.RedactionKinds) : "") + "）"
             : "遮蔽：已關閉（序號、MAC、使用者路徑等會原樣送出）");
         sb.AppendLine($"長度：(UTF-16 字元) 系統 {p.SystemPrompt.Length:N0} ＋ 對話 {p.Texts.Sum(t => t.Length):N0}"
-                      + $" ／ 上限 {_settings.AiRequestBudgetChars:N0}"
+                      + $" ／ 上限 {EffectiveBudgetChars(out bool clampedByRelay):N0}"
+                      + (clampedByRelay
+                          ? $"（設定值 {_settings.AiRequestBudgetChars:N0} 超過中轉上限，已自動調降）"
+                          : "")
                       + $"；丟棄 {p.DroppedMessages} 則、截斷 {p.ClippedMessages} 段");
         sb.AppendLine(new string('─', 40));
         sb.AppendLine("【系統提示】");

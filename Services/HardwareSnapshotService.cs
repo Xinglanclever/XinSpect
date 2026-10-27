@@ -317,19 +317,60 @@ public static partial class HardwareSnapshotService
         foreach (var fact in facts)
         {
             if (fact is null) throw new ArgumentException("事實集合不可包含 null。", nameof(facts));
-            ValidateFact(fact);
-            if (!keys.Add(fact.Key)) throw new ArgumentException($"事實 key 重複：{fact.Key}", nameof(facts));
-            list.Add(fact with
+            var safe = ClampText(fact);
+            ValidateFact(safe);
+            if (!keys.Add(safe.Key)) throw new ArgumentException($"事實 key 重複：{safe.Key}", nameof(facts));
+            list.Add(safe with
             {
-                Value = fact.Sensitive && policy == SensitiveValuePolicy.Redact
-                    ? IsRedacted(fact.Value) ? fact.Value : RedactedToken(fact.Value)
-                    : fact.Value,
-                NumericValue = fact.Sensitive && policy == SensitiveValuePolicy.Redact ? null : fact.NumericValue,
-                MeasuredAtUtc = NormalizeUtc(fact.MeasuredAtUtc),
+                Value = safe.Sensitive && policy == SensitiveValuePolicy.Redact
+                    ? IsRedacted(safe.Value) ? safe.Value : RedactedToken(safe.Value)
+                    : safe.Value,
+                NumericValue = safe.Sensitive && policy == SensitiveValuePolicy.Redact ? null : safe.NumericValue,
+                MeasuredAtUtc = NormalizeUtc(safe.MeasuredAtUtc),
             });
             if (list.Count > MaxFacts) throw new ArgumentException($"事實筆數不可超過 {MaxFacts:N0}。", nameof(facts));
         }
         return list.OrderBy(x => x.Key, StringComparer.Ordinal).ToArray();
+    }
+
+    /// <summary>
+    /// 把超過 schema 上限的文字截短，並在末尾留下「原文 N 字」的痕跡。
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>為什麼不讓它失敗：</b>一個生產端寫出長句子，不該讓整份時間膠囊存不起來。
+    /// 2026-10-26 使用者實際回報的畫面是「儲存失敗／UnavailableReason 超過 512 字元」——
+    /// 他做的事是「建立時間膠囊」，而錯誤訊息在講一個他從沒聽過的欄位。
+    /// 那條路徑（逐顆碟的 SMART 失敗清單）已經在生產端加上限，這裡是最後一道：
+    /// 日後任何新的生產端都不會再用同一種方式讓存檔失敗。
+    /// </para>
+    /// <para>
+    /// <b>但截斷必須看得見。</b>安靜截短會讓「這段話到此為止」被讀成「原因就這麼多」——
+    /// 所以保留下原長，而且鍵本身、狀態、數值一律不動（那是內容與判斷，不是敘述）。
+    /// </para>
+    /// </remarks>
+    private static HardwareSnapshotFact ClampText(HardwareSnapshotFact fact) => fact with
+    {
+        Category = Clamp(fact.Category, 128),
+        Name = Clamp(fact.Name, 256),
+        Source = Clamp(fact.Source, 512),
+        // null! 不是為了消警告：.NET 的 required string 允許反序列化出 null，而「值為 null」
+        // 本身就是 ValidateFactCore 要如實拒絕的狀態——這裡不替它補一個空字串。
+        Value = fact.Value is null ? null! : Clamp(fact.Value, 16_384),
+        UnavailableReason = fact.UnavailableReason is null
+            ? null
+            : string.IsNullOrWhiteSpace(fact.UnavailableReason)
+                ? fact.UnavailableReason
+                : Clamp(fact.UnavailableReason, 512),
+    };
+
+    /// <summary>截到 <paramref name="max"/> 字元以內，末尾註明原文長度。</summary>
+    private static string Clamp(string value, int max)
+    {
+        if (value.Length <= max) return value;
+        string marker = $"……（原文 {value.Length:N0} 字，已截斷）";
+        int keep = Math.Max(0, max - marker.Length);
+        return value[..keep] + marker;
     }
 
     private static void ValidateSnapshot(HardwareSnapshot snapshot)
@@ -353,7 +394,21 @@ public static partial class HardwareSnapshotService
             throw new InvalidDataException("integrity 必須是 64 位小寫十六進位 SHA-256；它不是簽章。");
     }
 
+    /// <summary>
+    /// 驗證單筆事實。<b>錯誤訊息一定要指名是哪一把鍵</b>——否則畫面只會說
+    /// 「UnavailableReason 超過 512 字元」，而使用者存的是整份時間膠囊，
+    /// 既不知道那是什麼欄位，也不知道是哪一筆（2026-10-26 的實際回報）。
+    /// </summary>
     private static void ValidateFact(HardwareSnapshotFact fact)
+    {
+        try { ValidateFactCore(fact); }
+        catch (ArgumentException ex)
+        {
+            throw new ArgumentException($"事實 {fact.Key ?? "（無鍵）"}：{ex.Message}", ex.ParamName);
+        }
+    }
+
+    private static void ValidateFactCore(HardwareSnapshotFact fact)
     {
         if (!FactKeyRegex().IsMatch(fact.Key ?? ""))
             throw new ArgumentException("事實 key 必須為 1–160 字元的穩定 ASCII 路徑（小寫字母、數字、點、底線、連字號或方括號）。");

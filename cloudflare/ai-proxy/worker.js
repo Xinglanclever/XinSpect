@@ -7,7 +7,7 @@
  * 只存在 Cloudflare 的 Secret 裡，連作者自己在儀表板上也看不到明文。
  *
  * 這支 Worker 同時做三件事：
- *   POST /v1/chat/completions   OpenAI 相容的聊天中轉（只給「一鍵評價」用）
+ *   POST /v1/chat/completions   OpenAI 相容的聊天中轉（自由對話、一鍵評價、主動診斷都走這裡）
  *   POST /feedback              收「留言建議」（只收使用者自己打的字）
  *   GET  /inbox?k=…             作者自己看留言的唯讀列表（要帶 INBOX_KEY）
  *
@@ -51,7 +51,7 @@ export default {
   },
 };
 
-// ── 一鍵評價 ────────────────────────────────────────────────────────────────
+// ── 聊天中轉：這裡是共用額度唯一的閘門（次數、長度、上游選擇）────────────────
 async function handleChat(request, env) {
   if (!isEnabled(env))
     return json({ error: { message: "作者已暫時關閉免費共用額度。請改用本機 Ollama，或在設定裡自填端點與金鑰。" } }, 503);

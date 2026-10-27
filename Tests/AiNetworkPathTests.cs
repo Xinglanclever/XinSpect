@@ -240,4 +240,128 @@ public class AiNetworkPathTests
         Assert.True(AiService.IsUnusableReply("（已停止，這次沒有取得任何回覆）"));
         Assert.False(AiService.IsUnusableReply("這是一段正常的回答"));
     }
+
+    /// <summary>
+    /// 主動診斷原本對共用額度是「安靜略過」：警示響了、什麼都沒發生，也沒有人知道為什麼。
+    /// 現在它要真的送出請求——這一條釘住「不會再默默跳過」。
+    /// </summary>
+    [Fact]
+    public async Task 共用額度也會真的送主動診斷()
+    {
+        var handler = new FakeHandler(Answer("溫度偏高但仍在範圍內"));
+        var ai = Make(handler, out var settings, out string folder);
+        var (p, u, m) = (settings.AiProviderEnum, settings.AiBaseUrl, settings.AiModel);
+        try
+        {
+            settings.AiProvider = (int)AiProvider.SharedFree;
+            await ai.ProactiveAsync("處理器溫度", "CPU 92°C 超過 90°C");
+
+            Assert.Single(handler.Calls);
+            Assert.Contains(SharedAiEndpoint.BaseUrl.TrimEnd('/') + "/chat/completions", handler.Calls[0]);
+            Assert.Contains("92", handler.Calls[0]);          // 警示內容真的被送出去（不是只送一句空話）
+            Assert.Equal("溫度偏高但仍在範圍內", ai.Messages[^1].Text);
+        }
+        finally { Cleanup(settings, folder, p, u, m); }
+    }
+
+    /// <summary>
+    /// 代理模式（模型自己要求呼叫本機唯讀工具、程式執行後再問一輪）在共用額度下也要走完。
+    /// 這是「一鍵評價之外都不開放」那條界線拿掉之後最容易壞的一條路：它會連發多次請求，
+    /// 而先前的程式碼在第一次呼叫前就把它擋掉了。
+    /// </summary>
+    [Fact]
+    public async Task 共用額度也會走完代理模式的多輪工具呼叫()
+    {
+        var handler = new FakeHandler(
+            () => Json("{\"choices\":[{\"message\":{\"content\":\"\",\"tool_calls\":["
+                       + "{\"id\":\"c1\",\"type\":\"function\",\"function\":"
+                       + "{\"name\":\"cpu_temp\",\"arguments\":\"{}\"}}]}}]}"),
+            Answer("目前 61 度，正常"));
+        var ai = Make(handler, out var settings, out string folder);
+        var (p, u, m) = (settings.AiProviderEnum, settings.AiBaseUrl, settings.AiModel);
+        bool agent = settings.AiAgentMode;
+        try
+        {
+            settings.AiProvider = (int)AiProvider.SharedFree;
+            settings.AiAgentMode = true;
+            var box = new AiToolbox();
+            box.Add("cpu_temp", "讀取處理器溫度", _ => "61 °C");
+            ai.Tools = box;
+
+            await ai.SendAsync("現在幾度");
+
+            Assert.Equal(2, handler.Calls.Count);                 // 第一輪要工具、第二輪給答案
+            Assert.Contains("\"tools\"", handler.Calls[0]);        // 工具定義真的隨請求送出去
+            Assert.Contains("61", handler.Calls[1]);               // 工具回傳值回到第二輪的對話裡
+            Assert.Equal("目前 61 度，正常", ai.Messages[^1].Text);
+            Assert.Contains(ai.Messages, x => x.IsTool);           // 畫面上看得到「查了什麼」
+        }
+        finally
+        {
+            settings.AiAgentMode = agent;
+            Cleanup(settings, folder, p, u, m);
+        }
+    }
+
+    /// <summary>
+    /// 使用者把字元預算調到 20 萬（本機 Ollama 吃得很下），但共用額度走的是作者的中轉，
+    /// 中轉只收 6 萬字——不夾住的話，這一問會以 413 失敗，而畫面只說「呼叫失敗」。
+    /// 夾住之後截斷發生在本機，且系統提示會說明截了什麼。
+    /// </summary>
+    [Fact]
+    public async Task 共用額度會把字元預算夾到中轉上限()
+    {
+        var handler = new FakeHandler(Answer("好"));
+        var ai = Make(handler, out var settings, out string folder);
+        var (p, u, m) = (settings.AiProviderEnum, settings.AiBaseUrl, settings.AiModel);
+        int budget = settings.AiRequestBudgetChars;
+        try
+        {
+            settings.AiProvider = (int)AiProvider.SharedFree;
+            settings.AiRequestBudgetChars = 200_000;
+
+            await ai.SendAsync("你好");
+
+            Assert.Single(handler.Calls);
+            // 請求本體（含硬體快照）不得超過中轉上限——用請求字元數當代理指標，
+            // JSON 外殼會再多幾百字元，所以留一點餘裕。
+            Assert.True(handler.Calls[0].Length < SharedAiEndpoint.PromptCharCap + 5_000,
+                $"請求長度 {handler.Calls[0].Length:N0} 超過中轉上限 {SharedAiEndpoint.PromptCharCap:N0}");
+
+            // 預覽要說出「已自動調降」，否則使用者以為自己設的 20 萬生效了。
+            string preview = ai.BuildRequestPreview();
+            Assert.Contains("中轉上限", preview);
+            Assert.Contains("已自動調降", preview);
+        }
+        finally
+        {
+            settings.AiRequestBudgetChars = budget;
+            Cleanup(settings, folder, p, u, m);
+        }
+    }
+
+    /// <summary>
+    /// 夾住只針對共用額度：自填端點（本機 Ollama）沒有那條上限，設多少就用多少。
+    /// </summary>
+    [Fact]
+    public async Task 自填端點的字元預算不受中轉上限影響()
+    {
+        var handler = new FakeHandler(Answer("好"));
+        var ai = Make(handler, out var settings, out string folder);
+        var (p, u, m) = (settings.AiProviderEnum, settings.AiBaseUrl, settings.AiModel);
+        int budget = settings.AiRequestBudgetChars;
+        try
+        {
+            settings.AiRequestBudgetChars = 200_000;
+
+            await ai.SendAsync("你好");
+
+            Assert.DoesNotContain("中轉上限", ai.BuildRequestPreview());
+        }
+        finally
+        {
+            settings.AiRequestBudgetChars = budget;
+            Cleanup(settings, folder, p, u, m);
+        }
+    }
 }

@@ -59,6 +59,12 @@ public static class SmartLookupProbe
     public const int DefaultBudgetMs = 6000;
 
     /// <summary>
+    /// 失敗清單最多逐顆列出幾顆碟。上限存在的理由見 <see cref="JoinFailureLines"/>：
+    /// 這串字要放進 <c>UnavailableReason</c>，而它是 512 字元的欄位。
+    /// </summary>
+    internal const int MaxFailureLines = 5;
+
+    /// <summary>
     /// NVMe 略過的成文原因。<b>不是「不明原因跳過」</b>——原因、實證輪次與後果都要寫出來，
     /// 否則下一個人會以為只是忘了接，然後把它「順手補上」。
     /// </summary>
@@ -123,6 +129,20 @@ public static class SmartLookupProbe
                 return string.Join("；", parts);
             }
         }
+    }
+
+    /// <summary>
+    /// 逐顆碟的失敗說明合併成一句，<b>有上限</b>。這串字會被放進事實的
+    /// <c>UnavailableReason</c>，而快照 schema 的上限是 512 字元——碟多的機器會撞上，
+    /// 症狀是整個時間膠囊存不起來（2026-10-26 使用者回報，畫面只說
+    /// 「UnavailableReason 超過 512 字元」）。超出時說出「還有幾顆沒逐顆列出」，
+    /// 不用安靜截斷——讀者要看得出這份清單不完整。
+    /// </summary>
+    internal static string JoinFailureLines(IReadOnlyList<string> lines, int max)
+    {
+        if (lines.Count <= max) return string.Join("；", lines);
+        return string.Join("；", lines.Take(max))
+               + $"；另有 {lines.Count - max} 顆同樣讀不到（逐顆原因未列出）";
     }
 
     /// <summary>
@@ -244,7 +264,7 @@ public static class SmartLookupProbe
 
         if (failures.Count > 0)
             return new Result(ProbeStatus.ReadError, [], [], skipped, inv.Disks.Count,
-                string.Join("；", failures));
+                JoinFailureLines(failures, MaxFailureLines));
 
         if (ataCandidates > 0 && skippedByBudgetOrBreaker > 0)
             return new Result(ProbeStatus.ReadError, [], [], skipped, inv.Disks.Count,

@@ -44,6 +44,18 @@ public static class SharedAiEndpoint
     /// </summary>
     public static readonly string Model = "auto";
 
+    /// <summary>
+    /// 中轉接受的提示詞字元上限。<b>這是中轉那一側的限制，不是本程式可以放寬的</b>：
+    /// 送超過這個長度，Worker 直接回 413，而使用者看到的只是一句「呼叫失敗」。
+    /// 本程式在共用額度下會先把預算夾到這裡，讓「截斷」發生在本機並在提示裡說明，
+    /// 而不是把請求丟出去之後才失敗。
+    /// <para>
+    /// 數字必須與 <c>cloudflare/ai-proxy/worker.js</c> 的 <c>LIMITS.maxPromptChars</c> 一致；
+    /// 兩邊各自寫死會漂移，所以有一條測試直接讀那個檔案當守門（<c>RelayLimitParityTests</c>）。
+    /// </para>
+    /// </summary>
+    public const int PromptCharCap = 60_000;
+
     /// <summary>共用額度是否可用（作者是否已填入中轉網址）。</summary>
     public static bool IsConfigured => BaseUrl.Trim().Length > 0;
 

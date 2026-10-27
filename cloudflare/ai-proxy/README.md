@@ -128,3 +128,8 @@ Workers 免費方案每天 10 萬次請求，這個用量用不完；Workers AI 
 診斷代理都走它（代理一次提問可能連發六、七次請求）。因此額度控管全部落在 Worker 這一側——
 `LIMITS` 裡的每日上限、單次長度與限流就是唯一的那道閘門，要調就調這裡。
 
+調 `maxPromptChars` 時記得客戶端也有一個對應的常數：`SharedAiEndpoint.PromptCharCap`。
+程式的字元預算是使用者可調的（預設 60,000、最高 400,000），但走共用額度時會先夾到
+`PromptCharCap`——夾住之後截斷發生在本機，系統提示會說明截了什麼；不夾的話使用者只會拿到一句 413。
+兩個數字由 `Tests/RelayLimitParityTests` 直接對帳，改一邊沒改另一邊會紅。
+

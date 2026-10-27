@@ -203,7 +203,10 @@ public partial class SettingsView : UserControl
         AiSharedNote.Text = !SharedAiEndpoint.IsConfigured
             ? "免費共用額度目前尚未啟用（這個版本裡還沒有中轉網址），請用本機 Ollama 或自填端點與金鑰。"
             : "共用額度的模型由 Cloudflare Workers AI 提供，經作者自架的中轉分享（這支程式裡不含任何金鑰），"
-              + "自由對話、一鍵評價、主動診斷與診斷代理都可以用。Workers AI 每天的免費用量是固定的、UTC 零時歸零，"
+              + "自由對話、一鍵評價、主動診斷與診斷代理都可以用。"
+              + $"中轉有它自己的限流與長度上限（單次約 {SharedAiEndpoint.PromptCharCap:N0} 字）："
+              + "超過時本機會先截短並在提示裡說明，不會把請求丟出去才失敗。"
+              + "Workers AI 每天的免費用量是固定的、UTC 零時歸零，"
               + "所以額度可能用完，也可能被隨時關閉；選這一項時，硬體規格與感測數據會經中轉送到 Cloudflare 的模型。";
     }
 
