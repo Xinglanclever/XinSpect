@@ -576,6 +576,7 @@ public static class FactKeyCatalog
         "ms.usbps",
         "ms.xnuma",
         "msr.0x8b",
+        "mt.budget.summary",
         "mt.cost.summary",
         "mt.repeat.summary",
         "mt.stamp.range",

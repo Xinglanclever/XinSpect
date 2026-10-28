@@ -23,6 +23,9 @@ public static class FactKeyDynamicCatalog
     public static IReadOnlyDictionary<string, string> Families { get; } =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
+            ["mt.budget."] =
+                "逐域量測預算一筆（成員＝這一版真的有預算陳述的域，由預算表決定而不是機器）——" +
+                "寫的是視窗、換算式、精度由誰決定；由驅動決定的一律寫「不給誤差上限」",
             ["mt.repeat.key."] =
                 "逐鍵重複性一筆（成員＝這一輪實際重複量的鍵，编译期数不出来）——" +
                 "只寫跨度與漂移，不給穩定／不穩定的分數（多少算穩取決於鍵的語意）",
