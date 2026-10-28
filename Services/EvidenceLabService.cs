@@ -2134,6 +2134,9 @@ public sealed class EvidenceLabService : ObservableObject
             // 覆蓋統計（NG-006）：與 cap.*／qs.range 同款，輸入是前面各組的聯集、不含自己——無自我指涉
             baseFacts.AddRange(CoverageFactsService.Collect(DateTimeOffset.UtcNow,
                 baseFacts.Select(f => f.Key).Distinct(StringComparer.Ordinal).ToList(), CoverageService.RuntimeRules()));
+            // 量測時間戳出處（U10-MT-0003，第 310 輪）：同樣吃前面各組的聯集、不含自己——
+            // 含自己會讓「範圍」每跑一次多一筆，永遠算不完。
+            baseFacts.AddRange(MeasurementStampFactsService.Collect(baseFacts, DateTimeOffset.UtcNow));
             // 鍵範圍檢查（QS-001）與 cap.* 同款：輸入是前面各組的聯集、不含自己——無遞迴
             baseFacts.Add(KeyRangeGuardService.Collect(DateTimeOffset.UtcNow, baseFacts));
             // 診斷報告整合（NG-004）與提權審計／更新儀表（IN-005／UF-010）：同上，分母不含自己

@@ -23,6 +23,9 @@ public static class FactKeyDynamicCatalog
     public static IReadOnlyDictionary<string, string> Families { get; } =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
+            ["mt.stamp.lag."] =
+                "逐域「最舊一筆落後最新一刻」一筆（成員＝這一輪真的有東西落後的域，编译期数不出来）——" +
+                "值只寫落後多少，不判斷好壞",
             ["os.dev.issue."] =
                 "逐 PnP 裝置的問題碼一筆（成員＝機器上有幾台有問題的裝置，编译期数不出来）——键序按 instance ID 排序，不是按名称",
             ["os.dev.status."] =
