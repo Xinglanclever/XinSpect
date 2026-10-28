@@ -117,7 +117,11 @@ try {
         $trx = "rel_$stamp.trx"
         # 直出 console（呼叫端自行重定向）——PS 5.1 把大量輸出經管道餵 Out-File 會卡死，
         # 這裡刻意不用管道，維持與手動發版相同的執行方式。
-        & dotnet test Tests\XinSpect.Tests.csproj -c Debug --nologo `
+        # -m:1 ＋ 關共用編譯器：平行節點與常駐的 csc 伺服器會同時要一大塊 commit，
+        # 在 commit 吃緊的機器上直接讓編譯器以 0xC0000142（DLL init failed）結束，
+        # 或讓 MSBuild 只印一句 "Out of memory."。單節點一次只起一個 csc，實測過得了。
+        & dotnet test Tests\XinSpect.Tests.csproj -c Debug --nologo -m:1 `
+            -p:UseSharedCompilation=false `
             -p:BaseOutputPath="obj/_rel_${Version}_$stamp/" --logger "trx;LogFileName=$trx"
         if ($LASTEXITCODE -ne 0) { Fail "test suite exit code $LASTEXITCODE" }
         $trxPath = "Tests\TestResults\$trx"
@@ -164,8 +168,9 @@ try {
 
     # ---------- publish ----------
     Write-Host '==> dotnet publish (single file)'
-    & dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false `
+    & dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -m:1 `
         -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
+        -p:UseSharedCompilation=false `
         -p:BaseOutputPath="obj/_pub_${Version}_$stamp/" -o "publish-$Version" | Out-Null
     if ($LASTEXITCODE -ne 0) { Fail 'publish failed' }
     $exe = "publish-$Version\XinSpect.exe"

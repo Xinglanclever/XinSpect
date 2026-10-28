@@ -6,7 +6,7 @@
 
 這份文件不是一般專案的 README。它是一本**百科全書**：把這個程式裡**每一頁、每一格、每一個數字、每一把事實鍵**逐一拆開，寫清楚它是什麼、從哪一條路徑讀來、憑什麼算數、誤差與偏移從哪裡來、以及它**不能**被拿去回答什麼問題。
 
-舊版的 README（2.91 之前的「硬核版說明」，約 16 萬字）不是被翻譯，也不是被搬過來——它的每一章都被重寫、擴充、重排；如果你要找舊版原文，它仍然完整躺在 git 歷史裡：`git show HEAD:README.md`。這一版針對的是 **v3.03** 的這棵樹，所有數字都在這棵樹上複算得出來，數法寫在每一處。
+舊版的 README（2.91 之前的「硬核版說明」，約 16 萬字）不是被翻譯，也不是被搬過來——它的每一章都被重寫、擴充、重排；如果你要找舊版原文，它已原樣保存在 [手冊.md](手冊.md)。這一版針對的是 **v3.03** 的這棵樹，所有數字都在這棵樹上複算得出來，數法寫在每一處。
 
 ![版本](https://img.shields.io/badge/version-3.03-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
@@ -49,7 +49,7 @@
 
 | 檔案 | 大小 | 說明 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.03/XinSpect.exe) | 34,698,539 bytes | 主程式。藍色中隊守護進程已內建 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.03/XinSpect.exe) | 34,723,115 bytes | 主程式。藍色中隊守護進程已內建 |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.03/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。要脫離主程式單獨跑防護時使用 |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.03/XinSpectDeploy.exe) | 13,312 bytes | 一鍵安裝器。按 1 GitHub、按 2 Google Drive、按 3 中國網盤分享頁 |
 | [SHA256SUMS.txt](https://github.com/Xinglanclever/XinSpect/releases/download/v3.03/SHA256SUMS.txt) | 253 bytes | 逐檔雜湊，發佈後由 `Tools/verify-release.ps1` 對帳 |
@@ -8634,7 +8634,7 @@
 - 共用額度的字元預算夾到中轉服務的實際上限 6 萬字元，並用測試直接讀 worker.js 對帳，兩邊改了不同步就紅燈。
 - 版號與文件數字全部由工具機器複算（測試方法數、事實鍵、說明條目），三份 README 的徽章共用同一個來源。
 - 第 308 輪：一鍵安裝器（XinSpectDeploy.exe）可以選來源：按 1 從 GitHub 最新版全自動部署、按 2 從 Google Drive 鏡像、按 3 開中國網盤（123 雲盤）分享頁。網盤沒有穩定直連，所以第 3 格只開瀏覽器並說清楚要按哪裡。鏡像連結集中在 Installer/mirrors.txt，安裝器啟動時抓一份最新的（3 秒逾時，拿不到就用內建的）；某一格還沒有連結時，選單上如實寫「尚未提供」，按下去會先說明再改用 GitHub。下載完成後一律驗 PE 標頭：分享頁、限流頁、Google 的病毒掃描確認頁被存成 XinSpect.exe 會被擋下、刪檔並說出內容像什麼。另外把安裝器的建置寫成 Tools/build-installer.ps1（.NET Framework 4.8 的 csc，成品 13,312 bytes），發佈前一定重編。
-- 如實說明：這一版是在可用記憶體見底的機器上完成的，WPF 畫面建構與煙霧測試沒有跑起來，所以新增或改動的頁面（感測器儀表板、懸浮小窗的兩種風格、AI 分頁按鈕位置、設定頁新卡片、M.2 卡）只確認可編譯，沒有在畫面上看過；重開機後要補驗。
+- 如實說明：這一版的全套 7,361 條在本機跑綠（含 95 個畫面的建構測試），「每一頁都建得起來」這次是跑過的；但外觀仍沒有在螢幕上逐頁看過，硬體那幾條讀的是這台機器的值，換一台機器數字會不同。
 
 #### v3.02（2026-10-26）
 

@@ -1,4 +1,4 @@
-﻿[简体中文](README.zh-CN.md) · 繁体中文 · [English](README.en.md)
+﻿简体中文 · [繁体中文](README.md) · [English](README.en.md)
 
 # 曦览 XinSpect
 
@@ -464,11 +464,11 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.03/XinSpect.exe) | 34,698,539 bytes | 主程序。蓝色中队守护进程已内置 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.03/XinSpect.exe) | 34,723,115 bytes | 主程序。蓝色中队守护进程已内置 |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.03/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.03/XinSpectDeploy.exe) | 13,312 bytes | 一键安装器（可选 GitHub／Google Drive／中国网盘三个下载来源） |
 
-> **上表的字节数为本版（v3.03）实际发布的文件大小（沿用 v2.91 的实测值，发布后更新）**；请以 Release 页面列出的文件为准。
+> **上表的字节数为本版（v3.03）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
 安装器（`XinSpectDeploy.exe`）会列出三个来源：**1** 是 GitHub 最新版（全自动部署主程序＋守护进程）、**2** 是 Google Drive 镜像、**3** 是中国网盘（123 云盘）分享页——网盘没有稳定直连，所以它只打开浏览器并告诉你按哪里，不会把分享页存成一个假的 exe。镜像链接集中在 `Installer/mirrors.txt`，安装器启动时会抓一份最新的（3 秒超时，拿不到就用内置的）；某一格还没有链接时，菜单上会写「尚未提供」，按下去会先说明再改用 GitHub。下载完成后一律检查 PE 标头，抓到 HTML（分享页、限流页、Google 的病毒扫描确认页）会被挡下、删档并说出内容像什么。
 

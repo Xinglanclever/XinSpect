@@ -175,10 +175,20 @@ public sealed class HardwareSnapshotServiceTests : IDisposable
         File.WriteAllText(unknown, json);
         Assert.Throws<InvalidDataException>(() => HardwareSnapshotService.Load(unknown));
 
-        Assert.Throws<ArgumentException>(() => Snapshot([
+        // 重複鍵：第 302 輪之後不再讓整份快照拋例外——第二筆被換成「沒通過檢查」的
+        // 讀不到事實（替代鍵 snapshot.rejected.N，原鍵寫進原因），第一筆照常保留。
+        // JSON 多出的欄位仍然整份拒絕（上面那一半），兩件事的嚴重程度不同：
+        // 一個是「這份檔案不是我們的格式」，一個是「這一筆重複了」。
+        var duplicate = Snapshot([
             Fact("same.key", "A", "A", "1"),
             Fact("same.key", "B", "B", "2"),
-        ]));
+        ]);
+
+        Assert.Equal(2, duplicate.Facts.Count);
+        Assert.Equal("A", Assert.Single(duplicate.Facts, f => f.Key == "same.key").Name);
+        var rejected = Assert.Single(duplicate.Facts, f => f.Key.StartsWith("snapshot.rejected.", StringComparison.Ordinal));
+        Assert.StartsWith(HardwareSnapshotService.RejectedMarker, rejected.UnavailableReason);
+        Assert.Contains("same.key", rejected.UnavailableReason);
     }
 
     [Fact]
