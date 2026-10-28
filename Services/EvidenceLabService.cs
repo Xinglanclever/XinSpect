@@ -222,6 +222,21 @@ public sealed class EvidenceLabService : ObservableObject
     /// 由 <see cref="LoadDeviceTruth"/> 讀入；<see cref="AllFacts"/> 只串接不讀。
     /// </summary>
     public IReadOnlyList<HardwareFact> DeviceTruthFacts { get; private set; } = [];
+    /// <summary>一個收集步驟的代價（U10-MT-0004，第 310 輪）：名稱、毫秒、是否成功。</summary>
+    public sealed record CollectionStep(string Name, double Milliseconds, bool Succeeded);
+
+    private readonly List<CollectionStep> _steps = [];
+
+    /// <summary>最近一次收集的步驟代價；由 <c>EvidenceCollection</c> 的計時器填入，不由事實集 getter 產生。</summary>
+    public IReadOnlyList<CollectionStep> Steps => _steps;
+
+    /// <summary>每次收集重新計時：步驟代價講的是「這一輪」，不是累計。</summary>
+    public void ClearSteps() => _steps.Clear();
+
+    /// <summary>記下一個收集步驟的代價（由 <c>EvidenceCollection.Measure</c> 呼叫）。</summary>
+    public void RecordStep(string name, double milliseconds, bool succeeded)
+        => _steps.Add(new CollectionStep(name, milliseconds, succeeded));
+
 
     /// <summary>列舉 PnP 裝置並投影成事實（唯讀 SetupAPI，零特權、零網路）。</summary>
     /// <remarks>
@@ -2134,6 +2149,9 @@ public sealed class EvidenceLabService : ObservableObject
             // 覆蓋統計（NG-006）：與 cap.*／qs.range 同款，輸入是前面各組的聯集、不含自己——無自我指涉
             baseFacts.AddRange(CoverageFactsService.Collect(DateTimeOffset.UtcNow,
                 baseFacts.Select(f => f.Key).Distinct(StringComparer.Ordinal).ToList(), CoverageService.RuntimeRules()));
+            // 收集步驟的讀取代價（U10-MT-0004，第 311 輪）：由 EvidenceCollection 的計時器提供，
+            // 不在 getter 裡重跑任何讀取；代價是步驟級，逐鍵代價未量（理由寫在服務裡）。
+            baseFacts.AddRange(MeasurementCostFactsService.Collect(Steps, DateTimeOffset.UtcNow));
             // 量測時間戳出處（U10-MT-0003，第 310 輪）：同樣吃前面各組的聯集、不含自己——
             // 含自己會讓「範圍」每跑一次多一筆，永遠算不完。
             baseFacts.AddRange(MeasurementStampFactsService.Collect(baseFacts, DateTimeOffset.UtcNow));

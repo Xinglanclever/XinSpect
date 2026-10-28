@@ -23,6 +23,9 @@ public static class FactKeyDynamicCatalog
     public static IReadOnlyDictionary<string, string> Families { get; } =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
+            ["mt.cost.step."] =
+                "逐收集步驟的讀取代價一筆（成員＝這一輪實際跑了幾個收集步驟，编译期数不出来）——" +
+                "代價是步驟級不是逐鍵：一個步驟可能生產數十把鍵，攤到每把鍵上只會得到沒有意義的精確數字",
             ["mt.stamp.lag."] =
                 "逐域「最舊一筆落後最新一刻」一筆（成員＝這一輪真的有東西落後的域，编译期数不出来）——" +
                 "值只寫落後多少，不判斷好壞",
