@@ -59,8 +59,6 @@
     <!-- 視窗圖示（標題列／工作列）；以 Resource 編入，單檔發佈亦可用 pack URI 讀取 -->
     <Resource Include="Assets\ShrineGuaiGuai.jpg" />
     <Resource Include="Assets\app.ico" />
-    <!-- 啟程儀式音樂：不嵌入 Resource，因為播完要刪除（一次即焚） -->
-    <Content Include="Assets\ceremony.mp3" CopyToOutputDirectory="PreserveNewest" />
     <!-- 關於頁「By：Xinglanclever」旁的動畫 GIF；以 Resource 編入，pack URI 讀取後逐格輪播 -->
     <Resource Include="Assets\hug.gif" />
     <!-- 關於頁 DeepSeek 旁的大肥魚動圖 -->
@@ -69,6 +67,10 @@
          內嵌為資源（邏輯名對應 Services/ThirdPartyNoticesCatalog.ResourceName）才讀得到；
          讀取順序「資源優先、磁碟檔其次、皆無＝如實標缺」，磁碟檔只是開發機退路。 -->
     <EmbeddedResource Include="THIRD-PARTY-NOTICES.md" LogicalName="XinSpect.THIRD-PARTY-NOTICES.md" />
+    <!-- 百科（README.md 經 Tools/gen-docs-html.py 產生的自足 HTML）：程式內翻閱用。
+         內嵌而不是帶側檔，單檔發佈才讀得到；內容與倉庫檔逐位元組相同（Tests/DocsHtmlTests 钉住），
+         不會出現「程式裡的百科」與「倉庫裡的百科」各說各話。 -->
+    <EmbeddedResource Include="百科.html" LogicalName="XinSpect.Encyclopedia.html" />
   </ItemGroup>
 
   <!-- WinForms 僅供系統匣（TrayService）使用；移除其全域 using 以免與 WPF 的 System.Windows.* 型別衝突 -->

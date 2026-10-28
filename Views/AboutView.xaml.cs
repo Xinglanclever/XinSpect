@@ -166,6 +166,15 @@ public partial class AboutView : UserControl
         }
     }
 
+    private void OpenEncyclopedia_Click(object sender, RoutedEventArgs e)
+    {
+        // 內嵌的百科（README.md 產生的自足 HTML）：離線、可翻閱定位。
+        // 讀不到或 WebView2 缺席時，視窗自己會說清楚原因並提供「用瀏覽器開啟」。
+        var dlg = new EncyclopediaWindow { Owner = Window.GetWindow(this) };
+        try { dlg.ShowDialog(); }
+        catch (Exception ex) { Diag.Swallow("開啟百科", ex, "本次不開啟百科視窗"); }
+    }
+
     private void OpenReleases_Click(object sender, RoutedEventArgs e)
     {
         try { Process.Start(new ProcessStartInfo(UpdateCheckService.ReleasesPageUrl) { UseShellExecute = true }); }

@@ -1,7 +1,7 @@
 ﻿name: CI
 
 # 為什麼只跑守門測試、不跑全套：
-# 全套 7,391 條裡有一部分會讀真機硬體（SMBIOS、SPD、NVMe…），在 GitHub 的 hosted runner
+# 全套 7,406 條裡有一部分會讀真機硬體（SMBIOS、SPD、NVMe…），在 GitHub 的 hosted runner
 # 上可能因「不支援」或「值不一樣」而紅，讓 CI 變成雜訊。硬體全套由貢獻者在本機跑，
 # PR 範本要求貼上實測數字；CI 只釘住「不依賴硬體」的那一層：能建置、版號與文件一致、
 # 事實鍵目錄合法、U10 目錄結構正確、發版腳本沒被拆掉。
@@ -61,6 +61,12 @@ jobs:
         # 與 ReadmeGeneratorTests 重疊是刻意的：那條測試驗「工具對這棵樹說 OK」，
         # 這一步在 CI 上把同一件事再跑一次並留下輸出（PR 上直接看得到它比對了幾把鍵）。
         run: python Tools/gen-readme-domains.py --check
+
+      - name: 百科／手冊 HTML 與來源 .md 的對帳
+        # 這一對檔案沒有任何手寫內容：百科.html 來自 README.md、手冊.html 來自 手冊.md。
+        # 改了 .md 沒重跑產生器，GitHub 上的說法與程式裡翻閱到的說法就會不同——
+        # 這一步與 Tests/DocsHtmlTests 重疊也是刻意的（測試釘住內容，CI 留下比對輸出）。
+        run: python Tools/gen-docs-html.py --check
 
       - name: 上傳測試結果
         if: always()

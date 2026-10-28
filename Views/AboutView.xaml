@@ -76,6 +76,11 @@
                                 Padding="10,4" Margin="8,0,0,0"
                                 Click="CheckUpdate_Click"
                                 ToolTip="僅向 GitHub 查詢最新版本號，不上傳本機任何資料"/>
+                        <Button x:Name="OpenEncyclopediaBtn" Content="開啟百科（可翻閱）"
+                                Style="{StaticResource ToolButton}"
+                                Padding="10,4" Margin="8,0,0,0"
+                                Click="OpenEncyclopedia_Click"
+                                ToolTip="內嵌的完整百科：左側目錄可點、標題有錨點、可找字；完全離線"/>
                     </StackPanel>
                     <TextBlock x:Name="UpdateResultText" Visibility="Collapsed" TextWrapping="Wrap" Margin="0,6,0,0"
                                Style="{StaticResource FieldLabel}"/>

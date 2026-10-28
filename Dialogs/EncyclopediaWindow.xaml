@@ -1,0 +1,48 @@
+<Window x:Class="XinSpect.EncyclopediaWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="曦覽 XinSpect 百科"
+        Width="1120" Height="820" MinWidth="720" MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource PagePlaneBrush}"
+        FontFamily="{StaticResource AppFont}" UseLayoutRounding="True">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 工具列：回到目錄／頁內尋找／用瀏覽器開啟。文件本身是自足 HTML，沒有指令碼，
+             所以「找字」走 WebView2 的 window.find（與內建瀏覽器同一支）。 -->
+        <WrapPanel Grid.Row="0" Margin="2,0,0,8">
+            <Button Content="回到目錄" Style="{StaticResource ToolButton}" Margin="0,0,6,0"
+                    Click="Toc_Click" ToolTip="回到文件開頭與左側目錄"/>
+            <TextBox x:Name="FindBox" Width="240" Style="{StaticResource SetTextBox}" Margin="0,0,6,0"
+                     KeyDown="FindBox_KeyDown" ToolTip="輸入關鍵字後按 Enter；再按一次找下一個"/>
+            <Button Content="找下一個" Style="{StaticResource ToolButton}" Margin="0,0,6,0" Click="FindNext_Click"/>
+            <Button Content="用瀏覽器開啟" Style="{StaticResource ToolButton}" Click="OpenExternal_Click"
+                    ToolTip="以本機 HTML 檔在預設瀏覽器開啟（同樣離線、不上網）"/>
+            <TextBlock x:Name="StatusText" Style="{StaticResource Subtitle}" VerticalAlignment="Center"
+                       Margin="10,0,0,0" TextWrapping="Wrap"/>
+        </WrapPanel>
+
+        <Border Grid.Row="1" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource SurfaceBrush}">
+            <Grid>
+                <wv2:WebView2 x:Name="Web"/>
+
+                <!-- WebView2 執行階段缺失、初始化失敗、或百科讀不到時，說清楚是哪一種 -->
+                <Border x:Name="Fallback" Visibility="Collapsed" Background="{DynamicResource SurfaceBrush}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="620" Margin="24">
+                        <TextBlock Text="百科無法在程式內顯示" FontSize="18" FontWeight="Bold"
+                                   Foreground="{DynamicResource PrimaryInkBrush}" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="FallbackMsg" TextWrapping="Wrap" Margin="0,10,0,0"
+                                   Foreground="{DynamicResource SecondaryInkBrush}" TextAlignment="Center"/>
+                        <Button Content="用瀏覽器開啟" Style="{StaticResource ToolButton}" Margin="0,16,0,0"
+                                HorizontalAlignment="Center" Click="OpenExternal_Click"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

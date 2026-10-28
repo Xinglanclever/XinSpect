@@ -577,6 +577,7 @@ public static class FactKeyCatalog
         "ms.xnuma",
         "msr.0x8b",
         "mt.cost.summary",
+        "mt.repeat.summary",
         "mt.stamp.range",
         "mu.cam.count",
         "mu.codec.count",

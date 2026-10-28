@@ -110,7 +110,11 @@ public static class EvidenceCollection
         Measure(svc, "LoadEventIdEvidence", () => svc.LoadEventIdEvidence());  // 附加功能：讀不到由 EventIdEvidenceFactsService 標三態，不在這裡中斷啟動
         // 第 309 輪：逐裝置的問題碼／狀態旗標／驅動證據（os.dev.*）。唯讀 SetupAPI 列舉，
         // 幾百毫秒級；同樣放在有名字的收集步驟而不是事實集 getter。
-        Measure(svc, "LoadDeviceTruth", () => svc.LoadDeviceTruth());  // 附加功能：列舉失敗由 DeviceTruthFactsService 記成 ReadError，不在這裡中斷啟動
+        Measure(svc, "LoadDeviceTruth", () => svc.LoadDeviceTruth());
+        // 第 312 輪：逐鍵重複性（mt.repeat.*）。連量五輪便宜的即時值，總預算 3 秒。
+        Measure(svc, "LoadMeasurementRepeat", () => svc.LoadMeasurementRepeat());
+        // 讀不到由 MeasurementRepeatFactsService 標三態，不在這裡中斷啟動
+  // 附加功能：列舉失敗由 DeviceTruthFactsService 記成 ReadError，不在這裡中斷啟動
         // 第 276 輪：EDID CTA-861 擴充塊（edid.cta.*）。唯讀登錄檔、零特權；
         // 讀不到（沒有 EDID／沒有 CTA 擴充塊／沒有某個資料塊）由服務寫成三態。
         Measure(svc, "LoadEdidCta", () => svc.LoadEdidCta());  // 附加功能：讀不到由 EdidCtaFactsService 標三態，不在這裡中斷啟動
