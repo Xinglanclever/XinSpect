@@ -1,4 +1,4 @@
-[简体中文](WHITEPAPER.zh-CN.md) · [English](WHITEPAPER.en.md) · 繁体中文
+简体中文 · [English](WHITEPAPER.en.md) · [繁体中文](WHITEPAPER.md)
 
 # 曦览 XinSpect 技术白皮书
 
