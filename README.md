@@ -1,4 +1,4 @@
-﻿[简体中文](README.zh-CN.md) · 繁體中文 · [English](README.en.md)
+[简体中文](README.zh-CN.md) · 繁體中文 · [English](README.en.md)
 
 # 曦覽 XinSpect 百科
 
@@ -11,7 +11,7 @@
 ![版本](https://img.shields.io/badge/version-3.03-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-7361%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-7373%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
@@ -29,19 +29,19 @@
 
 | 類別 | 數量 | 數法（在倉庫根執行） |
 |---|---:|---|
-| 編譯期事實鍵 | **1,131** | `Services/FactKeyCatalog.cs` 的 `Keys` 成員數 |
-| 事實域（鍵的第一段前綴） | **149** | 1,131 把鍵各自取第一段後去重 |
-| 動態鍵家族 | **49** | `Services/FactKeyDynamicCatalog.cs` 的 `Families` 成員數 |
+| 編譯期事實鍵 | **1,132** | `Services/FactKeyCatalog.cs` 的 `Keys` 成員數 |
+| 事實域（鍵的第一段前綴） | **149** | 1,132 把鍵各自取第一段後去重 |
+| 動態鍵家族 | **52** | `Services/FactKeyDynamicCatalog.cs` 的 `Families` 成員數 |
 | 一鍵域／≤3 鍵域／≥20 鍵域 | 33／64／12 | 以域分組後計數 |
 | 可到達畫面（`PageRegistry`） | **63** | `Nav/PageRegistry.cs` 的 `Key =` 條目數 |
 | XAML 檔（含對話框與控制項） | **79** | `ls Views/*.xaml` |
 | 全站說明條目（圓圈問號） | **285** | `Nav/HelpCatalog.cs` 的 `Entries` 成員數 |
-| 服務檔 | **626** | `find Services -name '*.cs' \| wc -l` |
-| 全域 C# 檔 | **1,492** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`publish-*/`、`.git/` |
+| 服務檔 | **627** | `find Services -name '*.cs' \| wc -l` |
+| 全域 C# 檔 | **1,494** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`publish-*/`、`.git/` |
 | 版本紀錄筆數 | **109** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
-| 專案測試基線 | **7,361** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
+| 專案測試基線 | **7,373** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
 
-**這張表不能證明什麼。** 1,131 把鍵不是 1,131 個正確答案；63 頁不是 63 個好設計；7,361 條測試不是 7,361 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
+**這張表不能證明什麼。** 1,132 把鍵不是 1,132 個正確答案；63 頁不是 63 個好設計；7,373 條測試不是 7,373 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
 
 ---
 
@@ -110,8 +110,8 @@
   - [2.2 服務層的形狀](#22-服務層的形狀)
   - [2.3 一個服務的解剖（以 ACPI 表服務為例）](#23-一個服務的解剖以-acpi-表服務為例)
   - [2.4 事實模型：一個 record 與兩條不變式](#24-事實模型一個-record-與兩條不變式)
-  - [2.5 事實鍵目錄：1,131 把鍵為什麼要固定在編譯期](#25-事實鍵目錄1108-把鍵為什麼要固定在編譯期)
-  - [2.6 動態家族：49 個「我列不完」的申報](#26-動態家族49-個我列不完的申報)
+  - [2.5 事實鍵目錄：1,132 把鍵為什麼要固定在編譯期](#25-事實鍵目錄1132-把鍵為什麼要固定在編譯期)
+  - [2.6 動態家族：52 個「我列不完」的申報](#26-動態家族52-個我列不完的申報)
   - [2.7 分母宣告與覆蓋申報](#27-分母宣告與覆蓋申報)
   - [2.8 出口與孤兒：事實的三種去處](#28-出口與孤兒事實的三種去處)
   - [2.9 交叉對帳引擎：把矛盾變成第一類公民](#29-交叉對帳引擎把矛盾變成第一類公民)
@@ -204,10 +204,10 @@
   - [5.11 量測路徑分層與可信度慣例](#511-量測路徑分層與可信度慣例)
   - [5.12 誤差預算：每一類量測的誤差從哪裡來](#512-誤差預算每一類量測的誤差從哪裡來)
   - [5.13 量測的實務紀律（給要做研究的人）](#513-量測的實務紀律給要做研究的人)
-- [第 6 部 數據辭典：149 個域、1,131 把鍵](#第-6-部-數據辭典149-個域1128-把鍵)
+- [第 6 部 數據辭典：149 個域、1,132 把鍵](#第-6-部-數據辭典149-個域1128-把鍵)
   - [6.1 怎麼讀這一部](#61-怎麼讀這一部)
   - [6.2 最大的十一個域：逐域判讀要點](#62-最大的十一個域逐域判讀要點)
-  - [6.3 逐域鍵表（149 個域、1,131 把鍵）](#63-逐域鍵表149-個域1131-把鍵)
+  - [6.3 逐域鍵表（149 個域、1,132 把鍵）](#63-逐域鍵表149-個域1132-把鍵)
   - [6.3.1 域 `ac` — ACPI 表與韌體介面（58 把）](#631-域-ac--acpi-表與韌體介面58-把)
   - [6.3.2 域 `sb` — SMBIOS 與平台識別（53 把）](#632-域-sb--smbios-與平台識別53-把)
   - [6.3.3 域 `fw` — 韌體組成與開機鏈（48 把）](#633-域-fw--韌體組成與開機鏈48-把)
@@ -217,8 +217,8 @@
   - [6.3.7 域 `ev` — 證據與匯出（25 把）](#637-域-ev--證據與匯出25-把)
   - [6.3.8 域 `eg` — 工程自我檢驗（24 把）](#638-域-eg--工程自我檢驗24-把)
   - [6.3.9 域 `ms` — 微觀量測（23 把）](#639-域-ms--微觀量測23-把)
-  - [6.3.10 域 `nw` — 網路與周邊介面（22 把）](#6310-域-nw--網路與周邊介面22-把)
-  - [6.3.11 域 `os`（本版沒有成文的域說明）（22 把）](#6311-域-os本版沒有成文的域說明22-把)
+  - [6.3.10 域 `os`（本版沒有成文的域說明）（23 把）](#6310-域-os本版沒有成文的域說明23-把)
+  - [6.3.11 域 `nw` — 網路與周邊介面（22 把）](#6311-域-nw--網路與周邊介面22-把)
   - [6.3.12 域 `st` — 儲存（20 把）](#6312-域-st--儲存20-把)
   - [6.3.13 域 `ds` — 裝置安全與憑證（18 把）](#6313-域-ds--裝置安全與憑證18-把)
   - [6.3.14 域 `rc` — 復原與系統完整性（18 把）](#6314-域-rc--復原與系統完整性18-把)
@@ -431,7 +431,7 @@
   - [附錄 D 二十個常見誤判](#附錄-d-二十個常見誤判)
   - [附錄 E 常見問題](#附錄-e-常見問題)
   - [附錄 F　149 個域的前綴表](#附錄-f-149-個域的前綴表)
-  - [附錄 F-2　49 個動態家族與「成員由什麼決定」](#附錄-f-2-49-個動態家族與成員由什麼決定)
+  - [附錄 F-2　52 個動態家族與「成員由什麼決定」](#附錄-f-2-52-個動態家族與成員由什麼決定)
   - [附錄 G　全站說明條目逐條（285 條）](#附錄-g-全站說明條目逐條285-條)
   - [附錄 H　服務檔地圖（618 個檔案）](#附錄-h-服務檔地圖618-個檔案)
   - [附錄 I 六態與可信度速查卡](#附錄-i-六態與可信度速查卡)
@@ -493,7 +493,7 @@
 | **事實（fact）** | 一個帶鍵、值、單位、來源、可信度、時刻、可用性的資料項 | 不是「結論」。事實不帶建議，也不替使用者下判斷 |
 | **事實鍵（fact key）** | 穩定識別字，如 `ac.dmar.summary`；前綴是域 | 不是畫面欄位名；也不保證跨版本不改（第 6 部逐域說明哪些已經改過） |
 | **域（domain）** | 鍵的第一段前綴，本版共 **149** 個 | 不是側邊欄分組。一個域可能橫跨多頁，一頁也可能用到多個域 |
-| **動態家族（dynamic family）** | 成員由機器決定、編譯期數不出來的鍵群，本版共 **49** 個前綴 | 不是「例外」。它是申報：明說「這群我列不完，而成員由什麼決定」 |
+| **動態家族（dynamic family）** | 成員由機器決定、編譯期數不出來的鍵群，本版共 **52** 個前綴 | 不是「例外」。它是申報：明說「這群我列不完，而成員由什麼決定」 |
 | **服務（service）** | 一個負責讀某類事實的類別，通常一個檔案一個服務 | 不是背景常駐程式。服務是被收集流程叫用的讀取器 |
 | **收集輪（round）** | 一次「開始收集」到「事實集穩定」的完整週期 | 不是即時更新的每個 tick。tick 只更新少數即時值 |
 | **事實集（fact set）** | 一輪收集的產物：鍵→事實的對應 | 不是快照檔。快照是事實集加上雜湊信封後的落地檔 |
@@ -586,7 +586,7 @@
 這份文件的每一個結構性數字都可以自己驗：
 
 1. 事實鍵數：數 `Services/FactKeyCatalog.cs` 的 `Keys` 成員。
-2. 域數：把 1,131 把鍵各取第一段後去重（本版 149）。
+2. 域數：把 1,132 把鍵各取第一段後去重（本版 149）。
 3. 動態家族數：數 `FactKeyDynamicCatalog.Families` 的成員（本版 49）。
 4. 畫面數：數 `Nav/PageRegistry.cs` 的 `Key =` 條目（本版 64）。
 5. 說明條目數：數 `Nav/HelpCatalog.cs` 的 `Entries` 成員（本版 286）。
@@ -918,9 +918,9 @@
 
 **這兩條不變式合起來說明一個設計態度**：資料模型的錯誤不要用例外處理，要用**收斂加痕跡**處理。因為這個工具的價值在於「跑完整台機器」，一個服務的疏忽不該讓整場掃描崩潰。
 
-### 2.5 事實鍵目錄：1,131 把鍵為什麼要固定在編譯期
+### 2.5 事實鍵目錄：1,132 把鍵為什麼要固定在編譯期
 
-**目錄的內容。** `Services/FactKeyCatalog.cs` 是一個凍結的清單，本版 **1,131** 把鍵，一律以全字串字典序排列。
+**目錄的內容。** `Services/FactKeyCatalog.cs` 是一個凍結的清單，本版 **1,132** 把鍵，一律以全字串字典序排列。
 
 **為什麼不執行期掃原始碼。** 發佈版只有單一 exe，目錄裡只有 `Assets/` 與執行檔，**沒有 `Services/`**。掃不到時會回報「0 個鍵」，而覆蓋申報會把 0 讀成「全部都覆蓋了」——那是「掃不到」冒充「沒有問題」，正是本專案最不該犯的錯。所以改成編譯期固定的目錄＋測試守門（`FactKeyCatalogTests` 重新掃描 `Services/` 原始碼並與目錄逐鍵比對）。
 
@@ -928,9 +928,9 @@
 
 **命名規範。** 鍵必須符合 `^[a-z][a-z0-9]*(\.[a-z0-9_]+)+$`（`KeyCatalogPolicy.KeyPattern`）。**這條規則與動態家族的存在是同一件事的兩面**：因為目錄要能編譯期比對，成員不確定的鍵就必須走家族——所以「不符合格式」不是疏漏，是**訊號**：它在說「這個鍵的成員我列不完」。
 
-**域。** 1,131 把鍵的第一段去重後共 **149** 個域；其中 33 個域只有一把鍵、65 個域不超過三把、11 個域有 20 把以上（`ac` 58、`sb` 53、`fw` 48、`sa` 45、`fs` 28、`uefi` 27、`ev` 25、`eg` 24、`ms` 23、`nw` 22、`st` 20）。第 6 部逐域展開。
+**域。** 1,132 把鍵的第一段去重後共 **149** 個域；其中 33 個域只有一把鍵、65 個域不超過三把、11 個域有 20 把以上（`ac` 58、`sb` 53、`fw` 48、`sa` 45、`fs` 28、`uefi` 27、`ev` 25、`eg` 24、`ms` 23、`nw` 22、`st` 20）。第 6 部逐域展開。
 
-### 2.6 動態家族：49 個「我列不完」的申報
+### 2.6 動態家族：52 個「我列不完」的申報
 
 `Services/FactKeyDynamicCatalog.cs` 登記 **48** 個動態前綴，每一筆都要寫「為什麼編譯期數不出成員」與「成員由什麼決定」。例如：
 
@@ -987,7 +987,7 @@
 - **快照是檔案，不是狀態。** 時間膠囊與原始暫存器快照是帶雜湊信封的檔案，載入時逐位元組驗證。檔案損壞會被拒載，而不是被部分採信。
 - **缺值不填補。** 差分只比對同一台機器的兩份快照；這次讀不到的鍵列為「消失」，不用舊值填補。這一條看起來很笨——明明知道上次是多少——但用舊值填補等於偽造一次成功的讀取。
 
-**快取的三個實際位置。** 一是事實層的短期快取（同一輪內多頁共用同一次讀取），二是編譯期的鍵目錄（1,131 個鍵固定，避免「掃不到原始碼就當作全部覆蓋」），三是驅動與橋接二進位的解壓落地（SHA-256 校驗後快取）。三者的共同點是：**可以重建、可以驗證、可以刪掉重來。**
+**快取的三個實際位置。** 一是事實層的短期快取（同一輪內多頁共用同一次讀取），二是編譯期的鍵目錄（1,132 個鍵固定，避免「掃不到原始碼就當作全部覆蓋」），三是驅動與橋接二進位的解壓落地（SHA-256 校驗後快取）。三者的共同點是：**可以重建、可以驗證、可以刪掉重來。**
 
 ### 2.13 時間：三種時鐘與各自的陷阱
 
@@ -1031,7 +1031,7 @@
 
 1. **單一行程承擔特權與介面。** 主程式以管理員權杖執行時，介面、內建瀏覽器、AI 對話、報告產生都在同一個行程裡。任何在介面層的程式碼執行都等於管理員。正確的修法是權杖分離，但那會讓「讀一個 MSR」變成跨行程呼叫，代價是延遲與複雜度——**這是一個還沒有付的代價**。
 2. **服務數量本身就是一種風險。** 618 個服務檔意味著「接線」是一個真實的問題：服務寫好、測試綠、但沒有進生產路徑（第 12 部的 D-16、D-17）。答案是守門，不是減少數量。
-3. **事實鍵目錄需要人維持誠實。** 1,131 個鍵加上 49 個動態家族，靠的是「執行期出現的鍵要嘛在目錄、要嘛命中家族前綴，否則對帳紅燈」。這條規則能抓「有產出但沒登記」，**抓不到「登記了但語意寫錯」**。目錄是申報，不是證明。
+3. **事實鍵目錄需要人維持誠實。** 1,132 個鍵加上 52 個動態家族，靠的是「執行期出現的鍵要嘛在目錄、要嘛命中家族前綴，否則對帳紅燈」。這條規則能抓「有產出但沒登記」，**抓不到「登記了但語意寫錯」**。目錄是申報，不是證明。
 
 ## 第 3 部 功能地圖：63 個可到達畫面逐頁解剖
 
@@ -1430,7 +1430,7 @@
 
 **誤差與邊界。** ①「本次未收集」的清單長度取決於這一輪跑了哪些收集器；②走勢欄只覆蓋同一工作階段（跨重啟的長期曲線在歷史頁）；③目錄鍵數是**編譯期**數字，與執行期實際生產的鍵數不同（後者含動態家族成員）。
 
-**誤用警告。** 「事實總表顯示 1,131 把鍵，所以程式有 1,131 個功能」——鍵是**可定位的事實**粒度，不是使用者感知的功能粒度；反過來說，「表上有一把鍵」也不保證這台機器讀得到它。
+**誤用警告。** 「事實總表顯示 1,132 把鍵，所以程式有 1,132 個功能」——鍵是**可定位的事實**粒度，不是使用者感知的功能粒度；反過來說，「表上有一把鍵」也不保證這台機器讀得到它。
 
 ---
 
@@ -2046,7 +2046,7 @@
 
 ### 5.2 校準的十條規則
 
-以下十條貫穿全部 1,131 把鍵。**每一條都附一個「違反時長什麼樣子」，因為規則只有在能被辨認出來時才有用。**
+以下十條貫穿全部 1,132 把鍵。**每一條都附一個「違反時長什麼樣子」，因為規則只有在能被辨認出來時才有用。**
 
 1. **單位先於數值。** 儲存容量 `GB` 與 `GiB` 差 7.4%；`MT/s` 與 `MHz` 在 DDR 上是兩倍關係。違反的樣子：兩台機器的「32 GB」其實是 32×10⁹ 與 32×2³⁰。
 2. **時刻先於數值。** 沒有時刻的數字無法判斷是現況還是殘留。違反的樣子：快照裡的 62 °C 被當成現在的溫度。
@@ -2180,13 +2180,13 @@
 5. **介入要單一**：一次改一個變因，否則你觀察到的是「整包改動」的效果。
 6. **保留證據**：只留一張截圖等於只留結論而丟掉證據；至少要留測項、判定、樣本數、環境摘要與非「無異常」項目的原始統計。
 
-## 第 6 部 數據辭典：149 個域、1,131 把鍵
+## 第 6 部 數據辭典：149 個域、1,132 把鍵
 
 這一部是整本百科的骨架。**每一個域、每一把鍵都在這裡**：鍵是什麼、由誰生產、來源是哪一條通路、可信度落在哪一級、以及它最常被誤讀成什麼。它同時是查閱用的（配合目錄）與維護用的（改一把鍵之前先看它在哪一域、有沒有鄰居）。
 
 ### 6.1 怎麼讀這一部
 
-**分母先講清楚。** 這一部的分母是**編譯期目錄**（`Services/FactKeyCatalog.Keys`，1,131 把），不是「本輪收集到的事實」。這個選擇的理由在第 1.13 節說過：若用本輪收集當分母，「有實作但這次沒跑到」就會從表上消失，而那正好是最該被看見的東西。
+**分母先講清楚。** 這一部的分母是**編譯期目錄**（`Services/FactKeyCatalog.Keys`，1,132 把），不是「本輪收集到的事實」。這個選擇的理由在第 1.13 節說過：若用本輪收集當分母，「有實作但這次沒跑到」就會從表上消失，而那正好是最該被看見的東西。
 
 **鍵的三段結構。** 一把鍵的形狀是 `<域>.<家族>.<成員>`：
 
@@ -2348,7 +2348,7 @@
 
 **誤用警告。** 「`st.wear.summary` 的耗損百分比較低，所以碟還很健康」——**那是韌體的估算**；它與實際可靠度之間的關係由廠商定義。要更強的證據需要看 `st.nvme.err` 的錯誤計數趨勢與表面掃描結果。
 
-### 6.3 逐域鍵表（149 個域、1,131 把鍵）
+### 6.3 逐域鍵表（149 個域、1,132 把鍵）
 
 ### 6.3.1 域 `ac` — ACPI 表與韌體介面（58 把）
 
@@ -2744,7 +2744,37 @@
 | `ms.usbps` | USB 吞吐量測 | — | — |
 | `ms.xnuma` | 跨 NUMA 頻寬 | — | — |
 
-### 6.3.10 域 `nw` — 網路與周邊介面（22 把）
+### 6.3.10 域 `os`（本版沒有成文的域說明）（23 把）
+
+這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，**不補一段聽起來合理的說明**。
+
+| 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
+|---|---|---|---|
+| `os.dev.summary` | PnP 裝置彙總 | SetupAPI 裝置列舉＋驅動證據（唯讀） | Reported |
+| `os.ev.chkdsk` | — | — | — |
+| `os.ev.display.tdr2` | — | — | — |
+| `os.ev.dsm` | — | — | — |
+| `os.ev.kernelboot.extra` | — | — | — |
+| `os.ev.kpp.parking` | — | — | — |
+| `os.ev.kstorage` | — | — | — |
+| `os.ev.modernstandby.phase` | — | — | — |
+| `os.ev.modernstandby.wake` | — | — | — |
+| `os.ev.ntfs.extra` | — | — | — |
+| `os.ev.pending.sources` | 事件 ID 待核清單 | docs/ULTIMATE-10000/AUDIT-pending.md（EV 組逐條稽核） | Derived |
+| `os.ev.power.source` | — | — | — |
+| `os.ev.spaces.health` | — | — | — |
+| `os.ev.thermal.notify` | — | — | — |
+| `os.ev.timechange` | — | — | — |
+| `os.ev.usb.hub` | — | — | — |
+| `os.ev.userpnp.install` | — | — | — |
+| `os.ev.whea.internal` | — | — | — |
+| `os.ev.whea.misc` | — | — | — |
+| `os.ev.whea.pcie` | — | — | — |
+| `os.ev.wininit.chkdsk` | — | — | — |
+| `os.memdiag.results.cross` | Windows 記憶體診斷結果 | Windows 事件檢視器 Microsoft-Windows-MemoryDiagnostics-Results/Operational（唯讀） | Unknown |
+| `os.wmi.fields` | WMI 未用欄位盤點 | 本專案 WMI 查詢字面盤點（守門測試常設對照原始碼） | Derived |
+
+### 6.3.11 域 `nw` — 網路與周邊介面（22 把）
 
 這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，**不補一段聽起來合理的說明**。
 
@@ -2772,35 +2802,6 @@
 | `nw.wifi.summary` | Wi-Fi 設定檔清單 | NetworkList／Profiles 登錄（唯讀） | Reported |
 | `nw.wol.packets` | 魔術封包計數 | NIC 電源管理計數器（唯讀） | Reported |
 | `nw.wol.summary` | WOL 事實化 | — | Reported |
-
-### 6.3.11 域 `os`（本版沒有成文的域說明）（22 把）
-
-這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，**不補一段聽起來合理的說明**。
-
-| 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
-|---|---|---|---|
-| `os.ev.chkdsk` | — | — | — |
-| `os.ev.display.tdr2` | — | — | — |
-| `os.ev.dsm` | — | — | — |
-| `os.ev.kernelboot.extra` | — | — | — |
-| `os.ev.kpp.parking` | — | — | — |
-| `os.ev.kstorage` | — | — | — |
-| `os.ev.modernstandby.phase` | — | — | — |
-| `os.ev.modernstandby.wake` | — | — | — |
-| `os.ev.ntfs.extra` | — | — | — |
-| `os.ev.pending.sources` | 事件 ID 待核清單 | docs/ULTIMATE-10000/AUDIT-pending.md（EV 組逐條稽核） | Derived |
-| `os.ev.power.source` | — | — | — |
-| `os.ev.spaces.health` | — | — | — |
-| `os.ev.thermal.notify` | — | — | — |
-| `os.ev.timechange` | — | — | — |
-| `os.ev.usb.hub` | — | — | — |
-| `os.ev.userpnp.install` | — | — | — |
-| `os.ev.whea.internal` | — | — | — |
-| `os.ev.whea.misc` | — | — | — |
-| `os.ev.whea.pcie` | — | — | — |
-| `os.ev.wininit.chkdsk` | — | — | — |
-| `os.memdiag.results.cross` | Windows 記憶體診斷結果 | Windows 事件檢視器 Microsoft-Windows-MemoryDiagnostics-Results/Operational（唯讀） | Unknown |
-| `os.wmi.fields` | WMI 未用欄位盤點 | 本專案 WMI 查詢字面盤點（守門測試常設對照原始碼） | Derived |
 
 ### 6.3.12 域 `st` — 儲存（20 把）
 
@@ -4593,13 +4594,13 @@
 - 因此**跨版本的鍵比較需要先確認鍵還在不在**；拿 v2.80 的鍵表去對 v2.91 的匯出檔，會出現「這把鍵消失了」的假差異。
 - 目錄本身有守門（`FactKeyCatalogTests` 逐鍵比對原始碼），所以**鍵的改名一定會被測試看見**；但**鍵的語意改變不會**——那把鍵還是同一把鍵，只是它現在的意思不同了。**這是目錄的已知極限**（第 2.16 節第 3 點）。
 
-#### 6.4.3 動態家族：49 個「成員由機器決定」的家族
+#### 6.4.3 動態家族：52 個「成員由機器決定」的家族
 
 目錄只列**編譯期列得完**的鍵；成員由機器決定的走動態家族。判讀時的三條規則：
 
 1. **家族的成員數不是常數。** 一台機器有 3 張 PCI 裝置就有 3 把 `pci.dev.*`，另一台有 9 張就有 9 把。
 2. **家族前綴必須有人生產**（殭屍前綴會紅燈），所以「有家族卻沒有成員」代表這台機器真的沒有那類東西。
-3. **家族的成員不計入 1,131 這個分母。** 所以「覆蓋率」的分子分母都必須說清楚有沒有含家族——這正是 `coverage.denominator` 與 `dyn.family` 這兩把鍵存在的理由。
+3. **家族的成員不計入 1,132 這個分母。** 所以「覆蓋率」的分子分母都必須說清楚有沒有含家族——這正是 `coverage.denominator` 與 `dyn.family` 這兩把鍵存在的理由。
 
 #### 6.4.4 孤兒鍵：有生產、沒有出口
 
@@ -4626,9 +4627,9 @@
 
 ### 6.5 逐鍵出處：原始碼裡怎麼說它
 
-這一節把 1,131 把鍵逐一對回原始碼：**它被寫在哪個檔案的哪一行、那裡的註解怎麼說、以及產生它的那一行長什麼樣**。「產生它的那一行」優先取真正的生產點（同一處附近有 `HardwareFact(` 建構）——目錄、覆蓋報告與政策檔裡雖然也提到鍵，但那不是鍵的來源，故降到候補。
+這一節把 1,132 把鍵逐一對回原始碼：**它被寫在哪個檔案的哪一行、那裡的註解怎麼說、以及產生它的那一行長什麼樣**。「產生它的那一行」優先取真正的生產點（同一處附近有 `HardwareFact(` 建構）——目錄、覆蓋報告與政策檔裡雖然也提到鍵，但那不是鍵的來源，故降到候補。
 
-**覆蓋率申報**：1,131 把鍵之中有 1,131 把在本版 `Services/` 的字面中找得到位置；其餘 0 把抽不到字面（鍵由方法組合、字串拼接或動態家族成員產生）。**抽不到不代表這把鍵不存在**——它仍在編譯期目錄裡、仍有生產者，只是這個抽取方式抓不到。同理，某一把鍵的註解欄若是空的，代表**那個生產點沒有註解**，不是本節省略了它。
+**覆蓋率申報**：1,132 把鍵之中有 1,132 把在本版 `Services/` 的字面中找得到位置；其餘 0 把抽不到字面（鍵由方法組合、字串拼接或動態家族成員產生）。**抽不到不代表這把鍵不存在**——它仍在編譯期目錄裡、仍有生產者，只是這個抽取方式抓不到。同理，某一把鍵的註解欄若是空的，代表**那個生產點沒有註解**，不是本節省略了它。
 
 #### 6.5.1 域 `ac`（58 把）
 
@@ -5576,7 +5577,59 @@
   - 註解：/ ⑤ 睡眠計時的 Modern Standby 未施測要標明；⑥ 讀不到一律三態。 / </para> / </remarks>
   - 原始碼：`"ms.xnuma"; public const string TauKey = "ms.tau"; public const string FanCurveKey = "ms.fancurve"; public const string CoreLatKey = "ms.corelat";`
 
-#### 6.5.10 域 `nw`（22 把）
+#### 6.5.10 域 `os`（23 把）
+
+- **`os.dev.summary`** — `Services/DeviceTruthFactsService.cs:32`（提及處）
+  - 註解：<summary>彙總鍵：在場／不在場／有問題／缺驅動／未簽章／過舊的台數。</summary>
+  - 原始碼：`public const string SummaryKey = "os.dev.summary";`
+- **`os.ev.chkdsk`** — `Services/EventIdEvidenceFactsService.cs:71`（提及處）
+  - 原始碼：`public const string ChkdskKey = "os.ev.chkdsk";`
+- **`os.ev.display.tdr2`** — `Services/EventIdEvidenceFactsService.cs:75`（提及處）
+  - 原始碼：`public const string DisplayTdr2Key = "os.ev.display.tdr2";`
+- **`os.ev.dsm`** — `Services/EventIdEvidenceFactsService.cs:77`（提及處）
+  - 原始碼：`public const string DsmKey = "os.ev.dsm";`
+- **`os.ev.kernelboot.extra`** — `Services/EventIdEvidenceFactsService.cs:64`（提及處）
+  - 原始碼：`public const string KernelBootExtraKey = "os.ev.kernelboot.extra";`
+- **`os.ev.kpp.parking`** — `Services/EventIdEvidenceFactsService.cs:79`（提及處）
+  - 原始碼：`public const string KppParkingKey = "os.ev.kpp.parking";`
+- **`os.ev.kstorage`** — `Services/EventIdEvidenceFactsService.cs:73`（提及處）
+  - 原始碼：`public const string KStorageKey = "os.ev.kstorage";`
+- **`os.ev.modernstandby.phase`** — `Services/EventIdEvidenceFactsService.cs:67`（提及處）
+  - 原始碼：`public const string ModernStandbyPhaseKey = "os.ev.modernstandby.phase";`
+- **`os.ev.modernstandby.wake`** — `Services/EventIdEvidenceFactsService.cs:66`（提及處）
+  - 原始碼：`public const string ModernStandbyWakeKey = "os.ev.modernstandby.wake";`
+- **`os.ev.ntfs.extra`** — `Services/EventIdEvidenceFactsService.cs:72`（提及處）
+  - 原始碼：`public const string NtfsExtraKey = "os.ev.ntfs.extra";`
+- **`os.ev.pending.sources`** — `Services/EventIdEvidenceFactsService.cs:58`（提及處）
+  - 原始碼：`public const string PendingKey = "os.ev.pending.sources";`
+- **`os.ev.power.source`** — `Services/EventIdEvidenceFactsService.cs:78`（提及處）
+  - 原始碼：`public const string PowerSourceKey = "os.ev.power.source";`
+- **`os.ev.spaces.health`** — `Services/EventIdEvidenceFactsService.cs:82`（提及處）
+  - 原始碼：`public const string SpacesHealthKey = "os.ev.spaces.health";`
+- **`os.ev.thermal.notify`** — `Services/EventIdEvidenceFactsService.cs:80`（提及處）
+  - 原始碼：`public const string ThermalNotifyKey = "os.ev.thermal.notify";`
+- **`os.ev.timechange`** — `Services/EventIdEvidenceFactsService.cs:65`（提及處）
+  - 原始碼：`public const string TimeChangeKey = "os.ev.timechange";`
+- **`os.ev.usb.hub`** — `Services/EventIdEvidenceFactsService.cs:74`（提及處）
+  - 原始碼：`public const string UsbHubKey = "os.ev.usb.hub";`
+- **`os.ev.userpnp.install`** — `Services/EventIdEvidenceFactsService.cs:76`（提及處）
+  - 原始碼：`public const string UserPnpInstallKey = "os.ev.userpnp.install";`
+- **`os.ev.whea.internal`** — `Services/EventIdEvidenceFactsService.cs:68`（提及處）
+  - 原始碼：`public const string WheaInternalKey = "os.ev.whea.internal";`
+- **`os.ev.whea.misc`** — `Services/EventIdEvidenceFactsService.cs:70`（提及處）
+  - 原始碼：`public const string WheaMiscKey = "os.ev.whea.misc";`
+- **`os.ev.whea.pcie`** — `Services/EventIdEvidenceFactsService.cs:69`（提及處）
+  - 原始碼：`public const string WheaPcieKey = "os.ev.whea.pcie";`
+- **`os.ev.wininit.chkdsk`** — `Services/EventIdEvidenceFactsService.cs:81`（提及處）
+  - 原始碼：`public const string WininitChkdskKey = "os.ev.wininit.chkdsk";`
+- **`os.memdiag.results.cross`** — `Services/DeepTest/MemoryDiagResultsFactsService.cs:24`（生產點（無註解））
+  - 註解：/ 照實的 Present 值——不拿「0 筆」冒充「跑過沒錯誤」。 / </para> / </remarks>
+  - 原始碼：`"os.memdiag.results.cross"; public const string ChannelName = "Microsoft-Windows-MemoryDiagnostics-Results/Operational"; public const string Source = "Windows 事件檢視器 Microsoft-Windows-MemoryDiagnostics-Results/Operational（唯讀）";`
+- **`os.wmi.fields`** — `Services/WmiFieldInventoryService.cs:37`（生產點（無註解））
+  - 註解：/ <summary>彙總鍵。</summary>
+  - 原始碼：`"os.wmi.fields"; /// <summary>逐類家族前綴（刻意不含 Key——這是家族，成員隨盤點表增減）。</summary> public const string OsWmiFieldsPrefix = "os.wmi.fields.";`
+
+#### 6.5.11 域 `nw`（22 把）
 
 - **`nw.bt.fw`** — `Services/FactCoverageReport.cs:411`（提及處）
   - 原始碼：`"nw.bt.fw"] = "藍牙韌體（NW-017）：無線電與版本收錄計數；查無＝未收錄。", ["nw.printer.summary"] = "印表機韌體（NW-020）：印表機與版本聚合；缺源如實列缺源。", ["au.drift"] = "時鐘漂移（AU-003）：取樣量測結果；不是長期保證。", ["ws.power.events"] = "供電事件史（WS-001）：41／1074／6008 事件計數；痕跡不是根因。",`
@@ -5639,55 +5692,6 @@
 - **`nw.wol.summary`** — `Services/NetworkSystemInventoryFactsService.cs:27`（生產點（無註解））
   - 註解：/ 不啟停服務或事件通道、不改 Storage Spaces、不改隱私設定、不出網查時間。</para> / <para><b>誠實界線</b>：0 是值；讀不到用三態附原因；不列印表機名稱、IP、路由端點或事件內容。</para> / </remarks>
   - 原始碼：`"nw.wol.summary"; /// <summary>NW-014：EEE（節能乙太網路）能力——單獨一把鍵，因為「省電」與「能不能被喚醒」常常互相拉扯。</summary> public const string EeeKey = "nw.eee.caps"; public const string RouteKey = "nw.route.summary";`
-
-#### 6.5.11 域 `os`（22 把）
-
-- **`os.ev.chkdsk`** — `Services/EventIdEvidenceFactsService.cs:71`（提及處）
-  - 原始碼：`public const string ChkdskKey = "os.ev.chkdsk";`
-- **`os.ev.display.tdr2`** — `Services/EventIdEvidenceFactsService.cs:75`（提及處）
-  - 原始碼：`public const string DisplayTdr2Key = "os.ev.display.tdr2";`
-- **`os.ev.dsm`** — `Services/EventIdEvidenceFactsService.cs:77`（提及處）
-  - 原始碼：`public const string DsmKey = "os.ev.dsm";`
-- **`os.ev.kernelboot.extra`** — `Services/EventIdEvidenceFactsService.cs:64`（提及處）
-  - 原始碼：`public const string KernelBootExtraKey = "os.ev.kernelboot.extra";`
-- **`os.ev.kpp.parking`** — `Services/EventIdEvidenceFactsService.cs:79`（提及處）
-  - 原始碼：`public const string KppParkingKey = "os.ev.kpp.parking";`
-- **`os.ev.kstorage`** — `Services/EventIdEvidenceFactsService.cs:73`（提及處）
-  - 原始碼：`public const string KStorageKey = "os.ev.kstorage";`
-- **`os.ev.modernstandby.phase`** — `Services/EventIdEvidenceFactsService.cs:67`（提及處）
-  - 原始碼：`public const string ModernStandbyPhaseKey = "os.ev.modernstandby.phase";`
-- **`os.ev.modernstandby.wake`** — `Services/EventIdEvidenceFactsService.cs:66`（提及處）
-  - 原始碼：`public const string ModernStandbyWakeKey = "os.ev.modernstandby.wake";`
-- **`os.ev.ntfs.extra`** — `Services/EventIdEvidenceFactsService.cs:72`（提及處）
-  - 原始碼：`public const string NtfsExtraKey = "os.ev.ntfs.extra";`
-- **`os.ev.pending.sources`** — `Services/EventIdEvidenceFactsService.cs:58`（提及處）
-  - 原始碼：`public const string PendingKey = "os.ev.pending.sources";`
-- **`os.ev.power.source`** — `Services/EventIdEvidenceFactsService.cs:78`（提及處）
-  - 原始碼：`public const string PowerSourceKey = "os.ev.power.source";`
-- **`os.ev.spaces.health`** — `Services/EventIdEvidenceFactsService.cs:82`（提及處）
-  - 原始碼：`public const string SpacesHealthKey = "os.ev.spaces.health";`
-- **`os.ev.thermal.notify`** — `Services/EventIdEvidenceFactsService.cs:80`（提及處）
-  - 原始碼：`public const string ThermalNotifyKey = "os.ev.thermal.notify";`
-- **`os.ev.timechange`** — `Services/EventIdEvidenceFactsService.cs:65`（提及處）
-  - 原始碼：`public const string TimeChangeKey = "os.ev.timechange";`
-- **`os.ev.usb.hub`** — `Services/EventIdEvidenceFactsService.cs:74`（提及處）
-  - 原始碼：`public const string UsbHubKey = "os.ev.usb.hub";`
-- **`os.ev.userpnp.install`** — `Services/EventIdEvidenceFactsService.cs:76`（提及處）
-  - 原始碼：`public const string UserPnpInstallKey = "os.ev.userpnp.install";`
-- **`os.ev.whea.internal`** — `Services/EventIdEvidenceFactsService.cs:68`（提及處）
-  - 原始碼：`public const string WheaInternalKey = "os.ev.whea.internal";`
-- **`os.ev.whea.misc`** — `Services/EventIdEvidenceFactsService.cs:70`（提及處）
-  - 原始碼：`public const string WheaMiscKey = "os.ev.whea.misc";`
-- **`os.ev.whea.pcie`** — `Services/EventIdEvidenceFactsService.cs:69`（提及處）
-  - 原始碼：`public const string WheaPcieKey = "os.ev.whea.pcie";`
-- **`os.ev.wininit.chkdsk`** — `Services/EventIdEvidenceFactsService.cs:81`（提及處）
-  - 原始碼：`public const string WininitChkdskKey = "os.ev.wininit.chkdsk";`
-- **`os.memdiag.results.cross`** — `Services/DeepTest/MemoryDiagResultsFactsService.cs:24`（生產點（無註解））
-  - 註解：/ 照實的 Present 值——不拿「0 筆」冒充「跑過沒錯誤」。 / </para> / </remarks>
-  - 原始碼：`"os.memdiag.results.cross"; public const string ChannelName = "Microsoft-Windows-MemoryDiagnostics-Results/Operational"; public const string Source = "Windows 事件檢視器 Microsoft-Windows-MemoryDiagnostics-Results/Operational（唯讀）";`
-- **`os.wmi.fields`** — `Services/WmiFieldInventoryService.cs:37`（生產點（無註解））
-  - 註解：/ <summary>彙總鍵。</summary>
-  - 原始碼：`"os.wmi.fields"; /// <summary>逐類家族前綴（刻意不含 Key——這是家族，成員隨盤點表增減）。</summary> public const string OsWmiFieldsPrefix = "os.wmi.fields.";`
 
 #### 6.5.12 域 `st`（20 把）
 
@@ -8400,12 +8404,12 @@
 
 | 項目 | 數量 | 數法 |
 |---|---:|---|
-| 測試檔 | **592** | `find Tests -name '*.cs' \| wc -l` |
-| `[Fact]` 方法 | **6,034** | 反射計算測試組件裡的 `[Fact]` 方法（`DeclaredOnly`） |
+| 測試檔 | **593** | `find Tests -name '*.cs' \| wc -l` |
+| `[Fact]` 方法 | **6,046** | 反射計算測試組件裡的 `[Fact]` 方法（`DeclaredOnly`） |
 | `[Theory]` 方法 | **269** | 同上，`[Theory]` 分開數（它繼承 `[Fact]`，不能混） |
-| 執行期測試案例 | **7,361** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數，也是 README 測試徽章的單一來源） |
+| 執行期測試案例 | **7,373** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數，也是 README 測試徽章的單一來源） |
 
-**兩個比例值得讀。** 一、**`[Theory]` 只占 269 個**：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、**執行期案例數（7,361）大於方法數（6,303）**：差額來自被展開的 `[Theory]` 資料列——這正是基線守門的形狀（下一節）。
+**兩個比例值得讀。** 一、**`[Theory]` 只占 269 個**：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、**執行期案例數（7,373）大於方法數（6,315）**：差額來自被展開的 `[Theory]` 資料列——這正是基線守門的形狀（下一節）。
 
 ### 10.2 基線守門：為什麼「測試數」是一個被釘住的數字
 
@@ -9895,7 +9899,7 @@
 | L-7 | 虛擬機 | 韌體與感測器多數被虛擬層遮蔽 | 六態會大量出現 `NotApplicable`／`Unknown`，那是誠實結果 |
 | L-8 | 即時性 | 這是「檢視與量測」工具，不是取樣率導向的即時監控 | 需要毫秒級連續記錄請用專門的記錄器；本工具的解析度見第 5 部 |
 | L-9 | 寫入面 | 除深測的低階測項（PMU／RDT 等，全部經同意閘門與寫入帳本）外不寫入硬體 | 不做 BIOS 更新、不改 SPD、不修 registry |
-| L-10 | 覆蓋 | 63 個可到達畫面對 149 個域、1,131 把鍵 | 有些鍵沒有專屬畫面（只出現在總表／匯出／命令列），這是數量差的原因 |
+| L-10 | 覆蓋 | 63 個可到達畫面對 149 個域、1,132 把鍵 | 有些鍵沒有專屬畫面（只出現在總表／匯出／命令列），這是數量差的原因 |
 
 **一句話的讀法。** 看到「—」先問是哪一種非 `Present`；看到「沒有這一項」先問是限制還是缺陷——第 12.3 節就是缺陷那一欄。
 
@@ -9996,7 +10000,7 @@
 
 ### 13.4 不做的比較
 
-不與其他工具做「誰讀得多」的競賽，理由是**分母不同就不可加**：對方算「顯示了幾個欄位」，本工具算「登記了 1,131 把鍵裡這次收集到幾把」。同一台機器、同一天，兩個數字可以差一倍而兩邊都沒有錯——這正是第 0 部講的「分母陷阱」。
+不與其他工具做「誰讀得多」的競賽，理由是**分母不同就不可加**：對方算「顯示了幾個欄位」，本工具算「登記了 1,132 把鍵裡這次收集到幾把」。同一台機器、同一天，兩個數字可以差一倍而兩邊都沒有錯——這正是第 0 部講的「分母陷阱」。
 
 ### 13.5 拿它來檢查另一個工具的四個步驟
 
@@ -10146,7 +10150,7 @@
 | `ReadError` | 試過但失敗，且原因未確認 |
 | 格（lattice） | 六態之間的強弱序結構；衍生事實取來源中最弱者（合取傳播） |
 | 合取傳播 | 三個來源都 `Present` 才是 `Present`；一個讀不到，結論就不能宣稱可用 |
-| 分母 | 宣稱的範圍。本文件的分母是編譯期目錄（1,131 把鍵），不是「這次掃到什麼」 |
+| 分母 | 宣稱的範圍。本文件的分母是編譯期目錄（1,132 把鍵），不是「這次掃到什麼」 |
 | 分母陷阱 | 換分母不改分子，卻讓比例變好看（第 0 部的「數字騙法」之一） |
 
 **量測**
@@ -10230,7 +10234,7 @@
 | 測試基線 | 7,040（`TestSuiteBaseline.ProjectTests`） | 唯一來源；低於測試方法數即紅燈 |
 | 覆蓋基線 | 381 | 遞增需留理由 |
 | 對帳規則數 | 26（執行期） | 歷史文字曾寫 29（O-01） |
-| 事實鍵目錄 | 1,131 把／149 域 | 編譯期目錄為分母 |
+| 事實鍵目錄 | 1,132 把／149 域 | 編譯期目錄為分母 |
 | 動態家族 | 48 個前綴 | 成員由執行期決定 |
 | 可到達畫面 | 64 | 由導覽註冊表與獨立視窗合計 |
 | 說明條目 | 284 條 | 每頁圓圈問號的內容 |
@@ -10319,8 +10323,8 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `ev` | 25 | `ev.anon` | `ev.xinsig` | 證據與匯出 |
 | `eg` | 24 | `eg.arm64` | `eg.winbranch` | 工程自我檢驗 |
 | `ms` | 23 | `ms.bench.chain` | `ms.xnuma` | 微觀量測 |
+| `os` | 23 | `os.dev.summary` | `os.wmi.fields` | **（本版無成文說明）** |
 | `nw` | 22 | `nw.bt.fw` | `nw.wol.summary` | 網路與周邊介面 |
-| `os` | 22 | `os.ev.chkdsk` | `os.wmi.fields` | **（本版無成文說明）** |
 | `st` | 20 | `st.align.summary` | `st.xcheck.summary` | 儲存 |
 | `ds` | 18 | `ds.bl.summary` | `ds.tls.summary` | 裝置安全與憑證 |
 | `rc` | 18 | `rc.acl.summary` | `rc.winsxs.summary` | 復原與系統完整性 |
@@ -10460,11 +10464,11 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `ufv` | 1 | `ufv.bios.count` | `ufv.bios.count` | **（本版無成文說明）** |
 | `usbstor` | 1 | `usbstor.count` | `usbstor.count` | **（本版無成文說明）** |
 
-**總計**：149 個域、1,131 把鍵（395 把落在 ≥20 鍵的 12 個大域，其餘 736 把散在 137 個域）。
+**總計**：149 個域、1,132 把鍵（396 把落在 ≥20 鍵的 12 個大域，其餘 736 把散在 137 個域）。
 
-### 附錄 F-2　49 個動態家族與「成員由什麼決定」
+### 附錄 F-2　52 個動態家族與「成員由什麼決定」
 
-動態家族的成員在編譯期數不出來，所以目錄只登記前綴與理由。下表是全部 49 個前綴與它們各自申報的理由（**抽不到理由的會留白，不補**）。
+動態家族的成員在編譯期數不出來，所以目錄只登記前綴與理由。下表是全部 52 個前綴與它們各自申報的理由（**抽不到理由的會留白，不補**）。
 
 | 家族前綴 | 為什麼是動態家族／成員由什麼決定 |
 |---|---|
@@ -10484,6 +10488,9 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `monitor.` | 顯示器實體逐台一筆（實例名 DesktopMonitorN…）——名稱與數量由 WMI 枚舉決定；monitor.summary 是固定全鍵，在目錄 |
 | `net.listen.` | 監聽埠逐埠一筆（協定＋埠號）——這台機器在等誰連入是機器狀態，埠集由連線表決定，编译期列不完 |
 | `numa.node.` | NUMA 節點逐個一筆（節點號）——節點數由 GetNumaHighestNodeNumber 回報，單節點到 8 節點的平台都存在 |
+| `os.dev.driver.` | 逐 PnP 裝置的驅動證據一筆（提供者／版本／日期／簽章；每台機器装的驅動不同） |
+| `os.dev.issue.` | 逐 PnP 裝置的問題碼一筆（成員＝機器上有幾台有問題的裝置，编译期数不出来）——键序按 instance ID 排序，不是按名称 |
+| `os.dev.status.` | 逐 PnP 裝置的狀態旗標一筆（只收有 finding 的裝置；同上，成員由機器決定） |
 | `os.wmi.fields.` | WMI 未用欄位盤點逐類一筆（os.wmi.fields.{類別名}）——成員＝已納入盤點的 WMI 類別（processor/diskdrive/videocontroller），成員固定但走家族與逐類明細並列（彙總鍵 os.wmi.fields 在靜態目錄） |
 | `pci.dev.` | bus 0 盤點每張存在的裝置一筆（成員＝裝置號 dev.fn）——有哪些裝置是機器的事實，编译期列不完 |
 | `pci.res.` | PCI 擴充資源（BAR）每張有資源的裝置一筆——同上，成員由匯流排枚舉決定 |
@@ -12453,7 +12460,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 
 **結構與分母（13–18）**
 
-13. 事實鍵目錄是 1,131 把、149 域 —— 開事實總表頁看總數。
+13. 事實鍵目錄是 1,132 把、149 域 —— 開事實總表頁看總數。
 14. 動態家族 48 個 —— 目錄裡以「前綴＋理由」登記，成員不在編譯期。
 15. 可到達畫面 64 個 —— 導覽註冊表＋獨立視窗清單。
 16. 說明條目 284 條 —— 附錄 G 是它的全表。

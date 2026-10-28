@@ -222,9 +222,12 @@ public class FactCoverageReportTests
         // 其中兩把落在既有規則的輸入面）。這些是**事件記錄的出現次數**：問的是
         // 「這些已稽核的事件 ID 在這台機器出現過幾次」，沒有第二條獨立通路可以再問一次
         // 同一件事（WMI 的可靠性計數是另一種聚合，不得互相代言）。照規矩留未覆蓋，上限跟著移到 408。
+        // 2026-10-29 第 309 輪：+1 條（`os.dev.summary`——PnP 裝置的彙總台數）。它是**這台機器
+        // 列舉出來幾台裝置**的計數：沒有第二條獨立通路可以再問一次「你列到幾台」，
+        // 逐台明細在 `os.dev.*` 家族裡（那些有自己的輸入面）。上限跟著移到 409。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 408,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 408）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 409,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 409）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }

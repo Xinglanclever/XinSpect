@@ -109,6 +109,10 @@ public static class EvidenceCollection
         // 放在有名字的收集步驟而不是事實集 getter——理由同 LoadSmartLookupStats。
         try { svc.LoadEventIdEvidence(); }
         catch { /* 附加功能：讀不到由 EventIdEvidenceFactsService 標三態，不在這裡中斷啟動 */ }
+        // 第 309 輪：逐裝置的問題碼／狀態旗標／驅動證據（os.dev.*）。唯讀 SetupAPI 列舉，
+        // 幾百毫秒級；同樣放在有名字的收集步驟而不是事實集 getter。
+        try { svc.LoadDeviceTruth(); }
+        catch { /* 附加功能：列舉失敗由 DeviceTruthFactsService 記成 ReadError，不在這裡中斷啟動 */ }
         // 第 276 輪：EDID CTA-861 擴充塊（edid.cta.*）。唯讀登錄檔、零特權；
         // 讀不到（沒有 EDID／沒有 CTA 擴充塊／沒有某個資料塊）由服務寫成三態。
         try { svc.LoadEdidCta(); }

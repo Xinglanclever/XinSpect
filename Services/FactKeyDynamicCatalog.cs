@@ -23,6 +23,12 @@ public static class FactKeyDynamicCatalog
     public static IReadOnlyDictionary<string, string> Families { get; } =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
+            ["os.dev.issue."] =
+                "逐 PnP 裝置的問題碼一筆（成員＝機器上有幾台有問題的裝置，编译期数不出来）——键序按 instance ID 排序，不是按名称",
+            ["os.dev.status."] =
+                "逐 PnP 裝置的狀態旗標一筆（只收有 finding 的裝置；同上，成員由機器決定）",
+            ["os.dev.driver."] =
+                "逐 PnP 裝置的驅動證據一筆（提供者／版本／日期／簽章；每台機器装的驅動不同）",
             ["pci.dev."] =
                 "bus 0 盤點每張存在的裝置一筆（成員＝裝置號 dev.fn）——有哪些裝置是機器的事實，编译期列不完",
             ["pci.res."] =
