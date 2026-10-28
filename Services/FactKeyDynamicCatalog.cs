@@ -23,6 +23,9 @@ public static class FactKeyDynamicCatalog
     public static IReadOnlyDictionary<string, string> Families { get; } =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
+            ["boot.order.item."] =
+                "開機選單逐項一筆（成員＝這台機器 displayorder 上有幾項，編譯期數不出來）——" +
+                "順序就是鍵的序號：第 1 位是選單最上面那一項",
             ["secboot.empty."] =
                 "逐環「存在但零條目」一筆（成員＝這一台真的空著的環，由機器決定）——" +
                 "刻意只收「讀得到但沒內容」；讀不到的環不是空，寫在總覽的讀不到理由裡",

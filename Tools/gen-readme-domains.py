@@ -493,18 +493,27 @@ def patch_count_lines(text, n_domains, total_keys, n_families, nl):
     那會讓「當時是多少」變成「現在是多少」。
     """
     def fix(line):
-        if line.startswith("- [第 6 部 數據辭典：") or line.startswith("  - [6.3 逐域鍵表"):
-            line = re.sub(r"\d+ 個域、[\d,]+ 把鍵", f"{n_domains} 個域、{total_keys:,} 把鍵", line)
-            line = re.sub(r"-\d+-個域\d+-把鍵", f"-{n_domains}-個域{total_keys}-把鍵", line)
-        elif line.startswith("## 第 6 部 數據辭典：") or line.startswith("### 6.3 逐域鍵表"):
-            line = re.sub(r"\d+ 個域、[\d,]+ 把鍵", f"{n_domains} 個域、{total_keys:,} 把鍵", line)
-        elif line.startswith("  - [附錄 F　"):
-            line = re.sub(r"\d+ 個域的前綴表", f"{n_domains} 個域的前綴表", line)
-            line = re.sub(r"#附錄-f-\d+", f"#附錄-f-{n_domains}", line)
-        elif line.startswith("  - [附錄 F-2　"):
-            line = re.sub(r"\d+ 個動態家族", f"{n_families} 個動態家族", line)
-            line = re.sub(r"#附錄-f-2-\d+", f"#附錄-f-2-{n_families}", line)
-        return line
+        # 目錄行有兩格縮排，標題行沒有——先剝掉縮排再判斷，否則「  - [第 6 部 …」永遠對不上
+        # （第 315 輪實測：那一條目錄的錨點因此一直停在舊數字上）。
+        indent = line[:len(line) - len(line.lstrip(" "))]
+        body = line[len(indent):]
+
+        if body.startswith("- [第 6 部 數據辭典：") or body.startswith("- [6.3 逐域鍵表"):
+            body = re.sub(r"\d+ 個域、[\d,]+ 把鍵", f"{n_domains} 個域、{total_keys:,} 把鍵", body)
+            body = re.sub(r"數據辭典\d+-個域\d+-把鍵", f"數據辭典{n_domains}-個域{total_keys}-把鍵", body)
+        elif body.startswith("## 第 6 部 數據辭典：") or body.startswith("### 6.3 逐域鍵表"):
+            body = re.sub(r"\d+ 個域、[\d,]+ 把鍵", f"{n_domains} 個域、{total_keys:,} 把鍵", body)
+        elif body.startswith("- [2.5 事實鍵目錄：") or body.startswith("### 2.5 事實鍵目錄："):
+            # 這一節的標題與目錄都把鍵數嵌在文字裡，錨點也帶著它：三處一起改，否則目錄指到上一版。
+            body = re.sub(r"事實鍵目錄：[\d,]+ 把鍵", f"事實鍵目錄：{total_keys:,} 把鍵", body)
+            body = re.sub(r"#25-事實鍵目錄\d+-把鍵", f"#25-事實鍵目錄{total_keys}-把鍵", body)
+        elif body.startswith("- [附錄 F　"):
+            body = re.sub(r"\d+ 個域的前綴表", f"{n_domains} 個域的前綴表", body)
+            body = re.sub(r"#附錄-f-\d+", f"#附錄-f-{n_domains}", body)
+        elif body.startswith("- [附錄 F-2　"):
+            body = re.sub(r"\d+ 個動態家族", f"{n_families} 個動態家族", body)
+            body = re.sub(r"#附錄-f-2-\d+", f"#附錄-f-2-{n_families}", body)
+        return indent + body
 
     return nl.join(fix(line) for line in text.split(nl))
 

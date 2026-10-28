@@ -113,3 +113,20 @@
 
 第一圈＝硬體事實（量得到）；第二圈＝呈現與操作（看得見、用得到）；第三圈＝**可信度**（說得清楚為什麼讀不到、量測本身有多準）。
 三圈合起來才是「誠實工具」的完整形狀——前兩圈讓程式說得出話，第三圈決定那句話能不能被信。
+
+## 已結案（截至第 315 輪，2026-10-29）
+
+清單是申報，做完的也要留在帳上——否則「還剩幾項」只能靠猜。以下每一項都有提交與全套綠為憑：
+
+| ID | 兌現的鍵 | 輪次 | 提交 |
+|---|---|---|---|
+| OS-0002／OS-0003／OS-0004 | `os.dev.issue.*`／`os.dev.status.*`／`os.dev.driver.*`＋`os.dev.summary` | 309 | `a76afc4` |
+| MT-0003 | `mt.stamp.range`＋`mt.stamp.lag.*` | 310 | `6823c57` |
+| MT-0004 | `mt.cost.summary`＋`mt.cost.step.*` | 311 | `45755a2` |
+| MT-0001 | `mt.repeat.summary`＋`mt.repeat.key.*` | 312 | `cb48fd3` |
+| MT-0002 | `mt.budget.summary`＋`mt.budget.*` | 313 | `6d2700a` |
+| SE-0001／SE-0002 | `secboot.chain`＋`secboot.empty.*` | 314 | `514ab75` |
+| BD-0001／BD-0003 | `boot.order.summary`／`.default`／`.timeout`＋`boot.order.item.*` | 315 | 本輪 |
+
+剩下的 19 項裡，`BD-0001` 與 `BD-0003` 是同一支 `bcdedit /enum` 讀回來的一體兩面，
+所以一輪收兩項不違反「一輪一件事」——它仍然只有一個新的讀取面。

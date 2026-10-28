@@ -113,6 +113,8 @@ public static class EvidenceCollection
         Measure(svc, "LoadDeviceTruth", () => svc.LoadDeviceTruth());
         // 第 312 輪：逐鍵重複性（mt.repeat.*）。連量五輪便宜的即時值，總預算 3 秒。
         Measure(svc, "LoadMeasurementRepeat", () => svc.LoadMeasurementRepeat());
+        // BCD 開機順序（BD-0001／BD-0003）：一次 bcdedit /enum，5 秒上限；唯讀
+        Measure(svc, "LoadBootOrder", () => svc.LoadBootOrder());
         // 讀不到由 MeasurementRepeatFactsService 標三態，不在這裡中斷啟動
   // 附加功能：列舉失敗由 DeviceTruthFactsService 記成 ReadError，不在這裡中斷啟動
         // 第 276 輪：EDID CTA-861 擴充塊（edid.cta.*）。唯讀登錄檔、零特權；
