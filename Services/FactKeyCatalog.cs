@@ -920,6 +920,7 @@ public static class FactKeyCatalog
         "sec.logon.hw.correlate",
         "sec.vbs.required",
         "sec.vbs.state",
+        "secboot.chain",
         "secure.dbx",
         "setuptl.recent",
         "setuptl.sections.count",

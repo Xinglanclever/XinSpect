@@ -237,9 +237,12 @@ public class FactCoverageReportTests
         // 2026-10-29 第 313 輪：+1 條（`mt.budget.summary`——逐域量測預算的總覽）。
         // 它數的是「這一版寫出了幾個域的量測方式」，是我們自己的陳述；沒有第二條獨立通路
         // 能再問一次「你自述了幾個域」（逐域明細在 `mt.budget.*` 家族裡）。上限跟著移到 413。
+        // 2026-10-29 第 314 輪：+1 條（`secboot.chain`——安全開機四環總覽）。它把 PK／KEK／db／dbx
+        // 與 Setup Mode 併成一句；四個環各自的輸入面在 `uefi.*`（那些已有規則），但「併起來之後
+        // 是什麼結論」沒有第二條獨立通路可以再算一次。上限跟著移到 414。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 413,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 413）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 414,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 414）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }

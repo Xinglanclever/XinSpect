@@ -23,6 +23,9 @@ public static class FactKeyDynamicCatalog
     public static IReadOnlyDictionary<string, string> Families { get; } =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
+            ["secboot.empty."] =
+                "逐環「存在但零條目」一筆（成員＝這一台真的空著的環，由機器決定）——" +
+                "刻意只收「讀得到但沒內容」；讀不到的環不是空，寫在總覽的讀不到理由裡",
             ["mt.budget."] =
                 "逐域量測預算一筆（成員＝這一版真的有預算陳述的域，由預算表決定而不是機器）——" +
                 "寫的是視窗、換算式、精度由誰決定；由驅動決定的一律寫「不給誤差上限」",

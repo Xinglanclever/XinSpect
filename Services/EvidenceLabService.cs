@@ -2193,6 +2193,9 @@ public sealed class EvidenceLabService : ObservableObject
             // 逐域量測預算（U10-MT-0002，第 313 輪）：純陳述、不讀硬體；
             // 放在聯集之後是因為它跟前面各域的量測方式直接對照（視窗／換算／精度由誰決定）。
             baseFacts.AddRange(MeasurementBudgetFactsService.Collect(DateTimeOffset.UtcNow));
+            // 安全開機四環（U10-SE-0001／SE-0002，第 314 輪）：吃上面已經產生的事實（uefi.pk／
+            // uefi.kek.count／uefi.db.count／uefi.dbx.count／uefi.setup_mode），不重讀任何變數。
+            baseFacts.AddRange(SecureBootChainFactsService.Collect(baseFacts, DateTimeOffset.UtcNow));
             // 鍵範圍檢查（QS-001）與 cap.* 同款：輸入是前面各組的聯集、不含自己——無遞迴
             baseFacts.Add(KeyRangeGuardService.Collect(DateTimeOffset.UtcNow, baseFacts));
             // 診斷報告整合（NG-004）與提權審計／更新儀表（IN-005／UF-010）：同上，分母不含自己

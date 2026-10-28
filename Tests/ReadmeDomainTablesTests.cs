@@ -316,8 +316,10 @@ public class ReadmeDomainTablesTests
         // 只認「鍵與名稱都是純字面」的呼叫：名稱若是 `$"來源裁決：{subject}"` 這種插值，
         // 抽不到是正確的（留「—」比填半個值誠實），這裡就不該要求它。
         var literal = new Regex(
-            @"new\s+HardwareFact\(\s*""([a-z][a-z0-9_.]+)""\s*,\s*[^,""
-]+,\s*""([^""
+            @"new\s+HardwareFact\(\s*""([a-z][a-z0-9_.]+)""\s*,\s*[^,""
+
+]+,\s*""([^""
+
 ]*)""",
             RegexOptions.Compiled);
 
@@ -392,6 +394,39 @@ public class ReadmeDomainTablesTests
         return sb.ToString();
     }
 
+    /// <summary>
+    /// 每一條站內錨點都要指得到標題。6.3 那種逐條對應只守得住一段；
+    /// 「2.5 事實鍵目錄：N 把鍵」與「第 6 部 … N 個域」這種<b>標題內嵌會變動的數字</b>
+    /// 的錨點沒人守，於是每輪把鍵數 1,136→1,137 之後，目錄就指到上一版的標題（第 313、314 輪各踩一次）。
+    /// </summary>
+    [Fact]
+    public void 三份README的站內錨點都要指得到標題()
+    {
+        var problems = new List<string>();
+        foreach (string file in new[] { "README.md", "README.zh-CN.md", "README.en.md" })
+        {
+            string path = Path.Combine(RepoRoot(), file);
+            if (!File.Exists(path)) continue;
+            string text = File.ReadAllText(path);
+
+            var headings = text.Split('\n')
+                .Where(l => l.StartsWith('#'))
+                .Select(l => Slug(l.TrimStart('#').Trim()))
+                .ToHashSet(StringComparer.Ordinal);
+
+            foreach (Match m in Regex.Matches(text, @"\]\(#([^)]+)\)"))
+            {
+                string anchor = m.Groups[1].Value;
+                if (!headings.Contains(anchor))
+                    problems.Add($"{file}：# {anchor}");
+            }
+        }
+
+        Assert.True(problems.Count == 0,
+            "站內錨點指不到任何標題（讀者點了會停在頁首；通常是標題裡的數字改了、目錄沒改）：\n"
+            + string.Join("\n", problems.Distinct().Take(20)));
+    }
+
     [Fact]
     public void 目錄的6點3條目要與章節逐條對應()
     {
@@ -404,7 +439,8 @@ public class ReadmeDomainTablesTests
             .Select(m => (Number: int.Parse(m.Groups[1].Value), Domain: m.Groups[2].Value,
                           Suffix: m.Groups[3].Value.Trim(), Anchor: m.Groups[4].Value))
             .ToList();
-        var heads = Regex.Matches(text, @"^### 6\.3\.(\d+) 域 `([^`]+)`([^
+        var heads = Regex.Matches(text, @"^### 6\.3\.(\d+) 域 `([^`]+)`([^
+
 ]*)",
                 RegexOptions.Multiline)
             // Heading 保留原文（含前後空白）——錨點是對「整行標題」算的，
