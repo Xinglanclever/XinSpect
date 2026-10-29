@@ -107,15 +107,16 @@ public class ReadmeStatsTests
         return (facts, theories);
     }
 
-    /// <summary>由事實鍵目錄算出的域統計（鍵數、域數、一鍵域／≤3 鍵域／≥20 鍵域）。</summary>
-    private static (int Keys, int Domains, int OneKey, int UpToThree, int AtLeastTwenty) DomainStats()
+    /// <summary>由事實鍵目錄算出的域統計（鍵數、域數、一鍵域／≤3 鍵域／≥20 鍵域）與服務檔數。</summary>
+    private static (int Keys, int Domains, int OneKey, int UpToThree, int AtLeastTwenty, int Services) DomainStats()
     {
         var byDomain = FactKeyCatalog.Keys
             .GroupBy(k => k.Split('.')[0], StringComparer.Ordinal)
             .Select(g => g.Count())
             .ToList();
         return (FactKeyCatalog.Keys.Count, byDomain.Count,
-            byDomain.Count(c => c == 1), byDomain.Count(c => c <= 3), byDomain.Count(c => c >= 20));
+            byDomain.Count(c => c == 1), byDomain.Count(c => c <= 3), byDomain.Count(c => c >= 20),
+            Directory.GetFiles(Path.Combine(RepoRoot(), "Services"), "*.cs", SearchOption.AllDirectories).Length);
     }
 
     // ── 主表 ──────────────────────────────────────────────────────────────
@@ -222,5 +223,249 @@ public class ReadmeStatsTests
         Assert.Contains($"Of {keys:N0} catalogue keys", text);
         Assert.Contains($"catalogue ({keys:N0} keys)", text);
         Assert.Contains($"All {keys:N0} keys", text);
+    }
+
+    // ── 散落在正文裡的現在式數字：第 318 輪補 ─────────────────────────────
+    //
+    // 為什麼要補這一組：第 318 輪對帳時，規模表（第一節那張）全綠，而正文裡**同一批數字**
+    // 停在三十幾輪前——域數寫 150（實況 151）、動態家族寫 49（實況 59）、服務檔寫 618（實況 639）、
+    // 測試寫 7,040（實況 7,467）、說明條目寫 286（實況 285，還比實況多）、畫面寫 64（實況 63）。
+    // 守門只看表格，於是「表格是真的、正文是舊的」可以同時成立——一份文件裡兩個答案，
+    // 讀者無從判斷哪一個算數。這一組把正文那幾處也接上同一個來源。
+
+    /// <summary>可到達畫面數（主頁面＋實用工具兩份註冊表）。</summary>
+    private static int ReachablePages() => PageRegistry.Pages.Count + PageRegistry.Utilities.Count;
+
+    [Fact]
+    public void 零點八節的十條複算算式要用本版數字()
+    {
+        string text = Readme();
+        var d = DomainStats();
+        var problems = new List<string>();
+
+        // 只抓「數字＋單位」那一段，不整行比對：算式那幾句的說明文字會改，
+        // 但括號裡的「本版 N」是現在式宣稱，必須與這棵樹同源。
+        void Check(string fragment)
+        {
+            if (!text.Contains(fragment, StringComparison.Ordinal))
+                problems.Add($"找不到：「{fragment}」");
+        }
+
+        Check($"去重（本版 {d.Domains}）。");
+        Check($"的成員（本版 {FactKeyDynamicCatalog.Families.Count}）。");
+        Check($"`Key =` 條目（本版 {ReachablePages()}）。");
+        Check($"`Entries` 成員（本版 {HelpCatalog.All.Count}）。");
+        Check($"wc -l`（本版 {d.Services}）。");
+        Check($"`Tests/TestSuiteBaseline.cs`（本版 {TestSuiteBaseline.ProjectTests:N0}）。");
+
+        Assert.True(problems.Count == 0,
+            "README 第 0.8 節的複算算式與這棵樹不符（這些數字與規模表同源，必須一起改）：\n"
+            + string.Join("\n", problems));
+    }
+
+    [Fact]
+    public void 服務層章節的三處服務檔數要等於實況()
+    {
+        // 第 2.2 節同一個數字出現三次（「底下有 N 個」「為什麼是 N 而不是 60」「N 個服務檔意味著」）。
+        // 只改一處是最常見的漏法：句子讀起來還通，數字卻自相矛盾。
+        string text = Readme();
+        int services = Directory.GetFiles(Path.Combine(RepoRoot(), "Services"), "*.cs",
+            SearchOption.AllDirectories).Length;
+
+        Assert.Contains($"`Services/` 底下有 **{services}** 個 `.cs` 檔", text);
+        Assert.Contains($"**為什麼服務數量是 {services} 而不是 60。**", text);
+        Assert.Contains($"**服務數量本身就是一種風險。** {services} 個服務檔意味著", text);
+        Assert.Contains($"2. **服務數量本身就是一種風險。** {services} 個服務檔意味著", text);
+    }
+
+    [Fact]
+    public void 二點五節的域統計要與目錄相符()
+    {
+        // 這一句把四個數字串在一起（域數、一鍵域、≤3 鍵域、≥20 鍵域），還把 12 個大域逐一列出。
+        // 其中任何一個變了而句子沒改，讀者看到的是一份「看起來很精確」的舊帳。
+        string text = Readme();
+        var d = DomainStats();
+
+        var byDomain = FactKeyCatalog.Keys
+            .GroupBy(k => k.Split('.')[0], StringComparer.Ordinal)
+            .Select(g => (Domain: g.Key, Count: g.Count()))
+            .Where(x => x.Count >= 20)
+            .OrderByDescending(x => x.Count).ThenBy(x => x.Domain, StringComparer.Ordinal)
+            .ToList();
+        string listed = string.Join("、", byDomain.Select(x => $"`{x.Domain}` {x.Count}"));
+
+        Assert.Contains($"共 **{d.Domains}** 個域；其中 {d.OneKey} 個域只有一把鍵、"
+                        + $"{d.UpToThree} 個域不超過三把、{d.AtLeastTwenty} 個域有 20 把以上（{listed}）", text);
+    }
+
+    [Fact]
+    public void 動態家族章節的標題與數字要等於登記數()
+    {
+        string text = Readme();
+        int families = FactKeyDynamicCatalog.Families.Count;
+
+        Assert.Contains($"### 2.6 動態家族：{families} 個「我列不完」的申報", text);
+        Assert.Contains($"登記 **{families}** 個動態前綴", text);
+        Assert.Contains($"1,145 個鍵加上 {families} 個動態家族", text);
+    }
+
+    [Fact]
+    public void 第六點二節的域清單要等於鍵數二十把以上的域()
+    {
+        // 「最大的 N 個域」不是編輯挑的，是**算出來的**：鍵數 ≥20。
+        // 第 318 輪之前這一段停在「十一個」——`os` 域在第 309 輪長到 23 把之後就該進來，
+        // 但沒有任何東西會叫。這一條從目錄重算門檻、清單與合計，三者一起釘住。
+        string text = Readme();
+        var big = FactKeyCatalog.Keys
+            .GroupBy(k => k.Split('.')[0], StringComparer.Ordinal)
+            .Select(g => (Domain: g.Key, Count: g.Count()))
+            .Where(x => x.Count >= 20)
+            .OrderByDescending(x => x.Count).ThenBy(x => x.Domain, StringComparer.Ordinal)
+            .ToList();
+        int total = big.Sum(x => x.Count);
+
+        Assert.Contains($"### 6.2 最大的{ToChinese(big.Count)}個域：逐域判讀要點", text);
+        Assert.Contains($"  - [6.2 最大的{ToChinese(big.Count)}個域：逐域判讀要點]", text);
+        Assert.Contains($"它們合計 {total} 把鍵", text);
+
+        // 每一域的標題：`#### 6.2.N \`域\` — 說明（N 把）`，編號連續、計數與目錄相符。
+        var heads = System.Text.RegularExpressions.Regex.Matches(text,
+                @"^#### 6\.2\.(\d+) `([^`]+)` — [^（]*（(\d+) 把）$", RegexOptions.Multiline)
+            .Select(m => (Number: int.Parse(m.Groups[1].Value), Domain: m.Groups[2].Value,
+                          Count: int.Parse(m.Groups[3].Value)))
+            .ToList();
+
+        Assert.Equal(big.Count, heads.Count);
+        for (int i = 0; i < heads.Count; i++)
+        {
+            Assert.Equal(i + 1, heads[i].Number);
+            Assert.Equal(big[i].Domain, heads[i].Domain);
+            Assert.Equal(big[i].Count, heads[i].Count);
+        }
+    }
+
+    /// <summary>12 → 「十二」（README 的標題用中文數字，最多到二十）。</summary>
+    private static string ToChinese(int n) => n switch
+    {
+        < 10 => "一二三四五六七八九"[n - 1].ToString(),
+        10 => "十",
+        < 20 => "十" + "一二三四五六七八九"[n - 11],
+        20 => "二十",
+        _ => n.ToString(),
+    };
+
+    [Fact]
+    public void 附錄H的列集合與標題計數要等於Services的實況()
+    {
+        // 附錄 H 是「找到負責某件事的檔案」的地圖。第 318 輪之前它是一次性腳本寫的：
+        // 標題寫 618、表上 615 列、磁碟上 639 個檔，其中還有 1 列指向已刪除的檔案。
+        // 三個數字互相矛盾，而沒有守門看著——地圖缺一頁，比沒有地圖更難查。
+        string text = Readme();
+        int i = text.IndexOf("### 附錄 H", StringComparison.Ordinal);
+        int j = text.IndexOf("### 附錄 I", i, StringComparison.Ordinal);
+        Assert.True(i > 0 && j > i, "README 找不到附錄 H 區段");
+        string section = text[i..j];
+
+        var files = Directory.GetFiles(Path.Combine(RepoRoot(), "Services"), "*.cs", SearchOption.AllDirectories)
+            .Select(f => Path.GetRelativePath(RepoRoot(), f).Replace('\\', '/'))
+            .OrderBy(f => f, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.Contains($"### 附錄 H　服務檔地圖（{files.Count} 個檔案）", section);
+        Assert.Contains($"  - [附錄 H　服務檔地圖（{files.Count} 個檔案）]"
+                        + $"(#附錄-h-服務檔地圖{files.Count}-個檔案)", text);
+
+        var rows = Regex.Matches(section, @"^\| `([^`]+)` \| \d+ \| \d+ \|", RegexOptions.Multiline)
+            .Select(m => m.Groups[1].Value).ToList();
+        Assert.Equal(rows.Count, rows.Distinct(StringComparer.Ordinal).Count());
+
+        var missing = files.Except(rows, StringComparer.Ordinal).ToList();
+        var extra = rows.Except(files, StringComparer.Ordinal).ToList();
+        Assert.True(missing.Count == 0 && extra.Count == 0,
+            "附錄 H 與 Services/ 不一致（修正方式：python Tools/gen-readme-domains.py）：\n"
+            + $"磁碟有而表上沒有（{missing.Count}）：{string.Join("、", missing.Take(10))}\n"
+            + $"表上有而磁碟沒有（{extra.Count}）：{string.Join("、", extra.Take(10))}");
+    }
+
+    [Fact]
+    public void 附錄H的每個數字都要與檔案當場相符()
+    {
+        // 列存在不代表數字對：行數與類別數是**當場數出來的**，不是抄的。
+        // 這一條用與產生器相同的兩個數法重算，抽驗全表。
+        string text = Readme();
+        int i = text.IndexOf("### 附錄 H", StringComparison.Ordinal);
+        int j = text.IndexOf("### 附錄 I", i, StringComparison.Ordinal);
+        string section = text[i..j];
+
+        var rows = Regex.Matches(section, @"^\| `([^`]+)` \| (\d+) \| (\d+) \|", RegexOptions.Multiline)
+            .Select(m => (Path: m.Groups[1].Value, Lines: int.Parse(m.Groups[2].Value),
+                          Classes: int.Parse(m.Groups[3].Value)))
+            .ToList();
+        Assert.NotEmpty(rows);
+
+        var problems = new List<string>();
+        foreach (var (rel, lines, classes) in rows)
+        {
+            string full = Path.Combine(RepoRoot(), rel.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(full)) { problems.Add($"{rel}：檔案不存在"); continue; }
+
+            string raw = File.ReadAllText(full);
+            int actualLines = raw.Split('\n').Length;
+            int actualClasses = raw.Split('\n')
+                .Where(l => !l.TrimStart().StartsWith("//", StringComparison.Ordinal))
+                .Count(l => Regex.IsMatch(l,
+                    @"^\s*(?:(?:public|internal|private|protected|file|static|sealed|abstract|partial|readonly|unsafe|new)\s+)*class\s+[A-Za-z_]"));
+
+            if (actualLines != lines) problems.Add($"{rel}：寫 {lines} 行，實際 {actualLines}");
+            if (actualClasses != classes) problems.Add($"{rel}：寫 {classes} 個類別，實際 {actualClasses}");
+        }
+
+        Assert.True(problems.Count == 0,
+            "附錄 H 的行數／類別數與檔案不符（修正方式：python Tools/gen-readme-domains.py）：\n"
+            + string.Join("\n", problems.Take(20)));
+    }
+
+    [Fact]
+    public void 附錄J與第三部的說明條目數要等於HelpCatalog()
+    {
+        string text = Readme();
+        int help = HelpCatalog.All.Count;
+
+        Assert.Contains($"另有 **{help}** 條圓圈問號說明條目", text);
+        Assert.Contains($"**二、圓圈問號（{help} 條說明）。**", text);
+        Assert.Contains($"全站 {help} 條說明條目中", text);
+        Assert.Contains($"16. 說明條目 {help} 條 —— 附錄 G 是它的全表。", text);
+        Assert.Contains($"| 說明條目 | {help} 條 | 每頁圓圈問號的內容 |", text);
+        Assert.Contains($"  - [附錄 G　全站說明條目逐條（{help} 條）]", text);
+    }
+
+    [Fact]
+    public void 附錄C門檻速查表的結構數字要用本版數字()
+    {
+        // 附錄 C 自稱「所有成文的門檻都在這裡」，其中六列是**可複算的結構數字**。
+        // 第 318 輪對帳時它們停在 381／150／48／64／284／7,040——比正文又舊一輪。
+        string text = Readme();
+        var d = DomainStats();
+
+        Assert.Contains($"| 測試基線 | {TestSuiteBaseline.ProjectTests:N0}（`TestSuiteBaseline.ProjectTests`） |", text);
+        Assert.Contains($"| 覆蓋基線 | {FactCoverageReport.ReviewedUncoveredBaseline} |", text);
+        Assert.Contains($"| 事實鍵目錄 | {d.Keys:N0} 把／{d.Domains} 域 |", text);
+        Assert.Contains($"| 動態家族 | {FactKeyDynamicCatalog.Families.Count} 個前綴 |", text);
+        Assert.Contains($"| 可到達畫面 | {ReachablePages()} |", text);
+        Assert.Contains($"| 說明條目 | {HelpCatalog.All.Count} 條 |", text);
+    }
+
+    [Fact]
+    public void 附錄J的結構與分母條目要用本版數字()
+    {
+        string text = Readme();
+        var d = DomainStats();
+
+        Assert.Contains($"2. 測試 {TestSuiteBaseline.ProjectTests:N0} 綠 —— 跑守門五組不依賴硬體", text);
+        Assert.Contains($"13. 事實鍵目錄是 {d.Keys:N0} 把、{d.Domains} 域", text);
+        Assert.Contains($"14. 動態家族 {FactKeyDynamicCatalog.Families.Count} 個", text);
+        Assert.Contains($"15. 可到達畫面 {ReachablePages()} 個", text);
+        Assert.Contains($"17. 服務檔 {d.Services} 個", text);
+        Assert.Contains($"| `Services/` | 事實的生產端（{d.Services} 個檔案） |", text);
     }
 }

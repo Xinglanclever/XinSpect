@@ -30,6 +30,15 @@ namespace XinSpect;
 /// </remarks>
 public static class FactCoverageReport
 {
+    /// <summary>已檢視的未覆蓋上限（README 的「覆蓋基線」就是這個數字）。</summary>
+    /// <remarks>
+    /// 這個數字每往上移一條，都必須在 <c>FactCoverageReportTests</c> 寫明「為什麼沒有第二條通路」——
+    /// 它不是配額，是「我逐條看過這些，並承認它們只能靠一條路徑」的申報。
+    /// 放在這裡而不是只寫在測試裡，是為了讓 README 的守門有單一來源可讀：
+    /// 一個數字寫在文件、一個寫在測試、第三個寫在腦子裡，遲早三個都不一樣。
+    /// </remarks>
+    public const int ReviewedUncoveredBaseline = 419;
+
     /// <summary>明文豁免：刻意不對帳的事實鍵前綴與理由。</summary>
     /// <remarks>
     /// 豁免的門檻是「這類事實沒有第二個來源可以交叉」——不是「懶得寫規則」。

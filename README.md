@@ -13,7 +13,7 @@
 ![版本](https://img.shields.io/badge/version-3.03-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-7467%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-7478%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
@@ -41,9 +41,9 @@
 | 服務檔 | **639** | `find Services -name '*.cs' \| wc -l` |
 | 全域 C# 檔 | **1,516** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`publish-*/`、`.git/` |
 | 版本紀錄筆數 | **109** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
-| 專案測試基線 | **7,467** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
+| 專案測試基線 | **7,478** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
 
-**這張表不能證明什麼。** 1,145 把鍵不是 1,145 個正確答案；63 頁不是 63 個好設計；7,467 條測試不是 7,467 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
+**這張表不能證明什麼。** 1,145 把鍵不是 1,145 個正確答案；63 頁不是 63 個好設計；7,478 條測試不是 7,478 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
 
 ---
 
@@ -113,7 +113,7 @@
   - [2.3 一個服務的解剖（以 ACPI 表服務為例）](#23-一個服務的解剖以-acpi-表服務為例)
   - [2.4 事實模型：一個 record 與兩條不變式](#24-事實模型一個-record-與兩條不變式)
   - [2.5 事實鍵目錄：1,145 把鍵為什麼要固定在編譯期](#25-事實鍵目錄1145-把鍵為什麼要固定在編譯期)
-  - [2.6 動態家族：55 個「我列不完」的申報](#26-動態家族55-個我列不完的申報)
+  - [2.6 動態家族：59 個「我列不完」的申報](#26-動態家族59-個我列不完的申報)
   - [2.7 分母宣告與覆蓋申報](#27-分母宣告與覆蓋申報)
   - [2.8 出口與孤兒：事實的三種去處](#28-出口與孤兒事實的三種去處)
   - [2.9 交叉對帳引擎：把矛盾變成第一類公民](#29-交叉對帳引擎把矛盾變成第一類公民)
@@ -208,7 +208,7 @@
   - [5.13 量測的實務紀律（給要做研究的人）](#513-量測的實務紀律給要做研究的人)
 - [第 6 部 數據辭典：151 個域、1,145 把鍵](#第-6-部-數據辭典151-個域1145-把鍵)
   - [6.1 怎麼讀這一部](#61-怎麼讀這一部)
-  - [6.2 最大的十一個域：逐域判讀要點](#62-最大的十一個域逐域判讀要點)
+  - [6.2 最大的十二個域：逐域判讀要點](#62-最大的十二個域逐域判讀要點)
   - [6.3 逐域鍵表（151 個域、1,145 把鍵）](#63-逐域鍵表151-個域1145-把鍵)
   - [6.3.1 域 `ac` — ACPI 表與韌體介面（58 把）](#631-域-ac--acpi-表與韌體介面58-把)
   - [6.3.2 域 `sb` — SMBIOS 與平台識別（53 把）](#632-域-sb--smbios-與平台識別53-把)
@@ -437,7 +437,7 @@
   - [附錄 F　151 個域的前綴表](#附錄-f-151-個域的前綴表)
   - [附錄 F-2　59 個動態家族與「成員由什麼決定」](#附錄-f-2-59-個動態家族與成員由什麼決定)
   - [附錄 G　全站說明條目逐條（285 條）](#附錄-g-全站說明條目逐條285-條)
-  - [附錄 H　服務檔地圖（618 個檔案）](#附錄-h-服務檔地圖618-個檔案)
+  - [附錄 H　服務檔地圖（639 個檔案）](#附錄-h-服務檔地圖639-個檔案)
   - [附錄 I 六態與可信度速查卡](#附錄-i-六態與可信度速查卡)
   - [附錄 J 三十條可自行驗證的宣稱](#附錄-j-三十條可自行驗證的宣稱)
   - [附錄 K 倉庫地圖](#附錄-k-倉庫地圖)
@@ -590,12 +590,12 @@
 這份文件的每一個結構性數字都可以自己驗：
 
 1. 事實鍵數：數 `Services/FactKeyCatalog.cs` 的 `Keys` 成員。
-2. 域數：把 1,145 把鍵各取第一段後去重（本版 150）。
-3. 動態家族數：數 `FactKeyDynamicCatalog.Families` 的成員（本版 49）。
-4. 畫面數：數 `Nav/PageRegistry.cs` 的 `Key =` 條目（本版 64）。
-5. 說明條目數：數 `Nav/HelpCatalog.cs` 的 `Entries` 成員（本版 286）。
-6. 服務檔數：`find Services -name '*.cs' | wc -l`（本版 618）。
-7. 測試數：`dotnet test` 的總計，或讀 `Tests/TestSuiteBaseline.cs`（本版 7,040）。
+2. 域數：把 1,145 把鍵各取第一段後去重（本版 151）。
+3. 動態家族數：數 `FactKeyDynamicCatalog.Families` 的成員（本版 59）。
+4. 畫面數：數 `Nav/PageRegistry.cs` 的 `Key =` 條目（本版 63）。
+5. 說明條目數：數 `Nav/HelpCatalog.cs` 的 `Entries` 成員（本版 285）。
+6. 服務檔數：`find Services -name '*.cs' | wc -l`（本版 639）。
+7. 測試數：`dotnet test` 的總計，或讀 `Tests/TestSuiteBaseline.cs`（本版 7,478）。
 8. 主程式大小：Release 頁面的 `XinSpect.exe` 位元組數（本版 34,268,971）。
 9. 版本紀錄筆數：數 `Nav/ChangelogCatalog.cs` 的 `Entries`（本版 109）。
 10. 孤兒鍵：把目錄鍵與 `Views/`、`Nav/` 兩邊的出口對照（第 2 部給了方法與本版結果）。
@@ -608,7 +608,7 @@
 
 ### 0.10 時態與引號的規則
 
-- **現在式宣稱**（「本版有 7,040 條測試」）只用在有守門的數字上。
+- **現在式宣稱**（「本版有 7,478 條測試」）只用在有守門的數字上。
 - **過去式故事**（「v2.53 的標籤沒被推上去」）用來說明規則的來源，寫成故事而不是規則。
 - **未成文** 是一個正式標記，不是修辭。看到它代表：這件事程式中確實存在某種行為，但沒有人把它寫成可驗證的文件。
 - 引號裡的句子如果出自程式註解或程式碼，會標明檔案；如果出自本文件的作者判斷，會明白用「這份文件認為」開頭。
@@ -895,11 +895,11 @@
 
 ### 2.2 服務層的形狀
 
-`Services/` 底下有 **618** 個 `.cs` 檔，絕大多數是一個檔案一個服務。服務的共同形狀是：**一個 `Collect` 或等價的入口、把結果寫成 `HardwareFact` 的集合、以及一個對應的測試檔**。
+`Services/` 底下有 **639** 個 `.cs` 檔，絕大多數是一個檔案一個服務。服務的共同形狀是：**一個 `Collect` 或等價的入口、把結果寫成 `HardwareFact` 的集合、以及一個對應的測試檔**。
 
-**為什麼服務數量是 618 而不是 60。** 因為這個專案的計數單位是「可定位的事實與收口」，不是「使用者感覺得到的功能」。一個服務通常負責一類介面（一張 ACPI 表、一種韌體介面、一組 MSR），而這些介面的數量本來就以百計——ACPI 有數十種表、MSR 有數千個、SMBIOS 有數十種型別。
+**為什麼服務數量是 639 而不是 60。** 因為這個專案的計數單位是「可定位的事實與收口」，不是「使用者感覺得到的功能」。一個服務通常負責一類介面（一張 ACPI 表、一種韌體介面、一組 MSR），而這些介面的數量本來就以百計——ACPI 有數十種表、MSR 有數千個、SMBIOS 有數十種型別。
 
-**服務數量本身就是一種風險。** 618 個服務檔意味著「接線」是一個真實的問題：服務寫好、測試綠、但沒有進生產路徑，這種缺陷在這個專案發生過不只一次（第 12 部的 D-16、D-17）。目前的答案是**守門**（孤兒掃描、視圖入口閘門、事實鍵對帳），而不是減少服務數量。
+**服務數量本身就是一種風險。** 639 個服務檔意味著「接線」是一個真實的問題：服務寫好、測試綠、但沒有進生產路徑，這種缺陷在這個專案發生過不只一次（第 12 部的 D-16、D-17）。目前的答案是**守門**（孤兒掃描、視圖入口閘門、事實鍵對帳），而不是減少服務數量。**這 639 個檔案的逐檔地圖在附錄 H，那張表的列集合由 `Tools/gen-readme-domains.py` 從 `Services/` 直接生成——它不是另一份名冊，所以不會再有「檔案加了、地圖沒加」的漂移。**
 
 ### 2.3 一個服務的解剖（以 ACPI 表服務為例）
 
@@ -932,11 +932,11 @@
 
 **命名規範。** 鍵必須符合 `^[a-z][a-z0-9]*(\.[a-z0-9_]+)+$`（`KeyCatalogPolicy.KeyPattern`）。**這條規則與動態家族的存在是同一件事的兩面**：因為目錄要能編譯期比對，成員不確定的鍵就必須走家族——所以「不符合格式」不是疏漏，是**訊號**：它在說「這個鍵的成員我列不完」。
 
-**域。** 1,145 把鍵的第一段去重後共 **150** 個域；其中 33 個域只有一把鍵、65 個域不超過三把、12 個域有 20 把以上（`ac` 58、`sb` 53、`fw` 48、`sa` 45、`fs` 28、`uefi` 27、`ev` 25、`eg` 24、`ms` 23、`nw` 22、`st` 20）。第 6 部逐域展開。
+**域。** 1,145 把鍵的第一段去重後共 **151** 個域；其中 34 個域只有一把鍵、65 個域不超過三把、12 個域有 20 把以上（`ac` 58、`sb` 53、`fw` 48、`sa` 45、`fs` 28、`uefi` 27、`ev` 25、`eg` 24、`ms` 23、`os` 23、`nw` 22、`st` 20）。第 6 部逐域展開。
 
-### 2.6 動態家族：55 個「我列不完」的申報
+### 2.6 動態家族：59 個「我列不完」的申報
 
-`Services/FactKeyDynamicCatalog.cs` 登記 **48** 個動態前綴，每一筆都要寫「為什麼編譯期數不出成員」與「成員由什麼決定」。例如：
+`Services/FactKeyDynamicCatalog.cs` 登記 **59** 個動態前綴，每一筆都要寫「為什麼編譯期數不出成員」與「成員由什麼決定」。例如：
 
 - `pci.dev.`：bus 0 盤點每張存在的裝置一筆（成員＝裝置號 dev.fn）——有哪些裝置是機器的事實，編譯期列不完。
 - `pci.res.`：PCI 擴充資源（BAR）每張有資源的裝置一筆，成員由匯流排枚舉決定。
@@ -1034,12 +1034,12 @@
 寫架構最沒有價值的一段是「本架構優雅且可擴充」。有價值的是承認它哪裡脆弱。
 
 1. **單一行程承擔特權與介面。** 主程式以管理員權杖執行時，介面、內建瀏覽器、AI 對話、報告產生都在同一個行程裡。任何在介面層的程式碼執行都等於管理員。正確的修法是權杖分離，但那會讓「讀一個 MSR」變成跨行程呼叫，代價是延遲與複雜度——**這是一個還沒有付的代價**。
-2. **服務數量本身就是一種風險。** 618 個服務檔意味著「接線」是一個真實的問題：服務寫好、測試綠、但沒有進生產路徑（第 12 部的 D-16、D-17）。答案是守門，不是減少數量。
-3. **事實鍵目錄需要人維持誠實。** 1,145 個鍵加上 55 個動態家族，靠的是「執行期出現的鍵要嘛在目錄、要嘛命中家族前綴，否則對帳紅燈」。這條規則能抓「有產出但沒登記」，**抓不到「登記了但語意寫錯」**。目錄是申報，不是證明。
+2. **服務數量本身就是一種風險。** 639 個服務檔意味著「接線」是一個真實的問題：服務寫好、測試綠、但沒有進生產路徑（第 12 部的 D-16、D-17）。答案是守門，不是減少數量。
+3. **事實鍵目錄需要人維持誠實。** 1,145 個鍵加上 59 個動態家族，靠的是「執行期出現的鍵要嘛在目錄、要嘛命中家族前綴，否則對帳紅燈」。這條規則能抓「有產出但沒登記」，**抓不到「登記了但語意寫錯」**。目錄是申報，不是證明。
 
 ## 第 3 部 功能地圖：63 個可到達畫面逐頁解剖
 
-這一部是給使用者的部分：每一頁在回答什麼、畫面上每一格的資料從哪裡來、它憑什麼算數、以及**最常被誤用的講法**。全站共有 **63** 個可到達畫面（`Nav/PageRegistry.cs`；`Views/` 下另有對話框與控制項共 79 個 XAML），另有 **284** 條圓圈問號說明條目（`Nav/HelpCatalog.cs`）——這些條目的存在本身就是這個專案的一個立場：**每一區塊都要能回答「這是什麼、按下去會怎樣、安不安全」，而且那句話要與程式碼的實作對得上。**
+這一部是給使用者的部分：每一頁在回答什麼、畫面上每一格的資料從哪裡來、它憑什麼算數、以及**最常被誤用的講法**。全站共有 **63** 個可到達畫面（`Nav/PageRegistry.cs`；`Views/` 下另有對話框與控制項共 79 個 XAML），另有 **285** 條圓圈問號說明條目（`Nav/HelpCatalog.cs`）——這些條目的存在本身就是這個專案的一個立場：**每一區塊都要能回答「這是什麼、按下去會怎樣、安不安全」，而且那句話要與程式碼的實作對得上。**
 
 ### 3.0 每一頁的固定五段
 
@@ -1872,7 +1872,7 @@
 
 **一、命令面板（Ctrl+K／Ctrl+P）。** 它是「簡易模式」的補償機制：被收起來的進階頁面仍然搜得到。**導覽的唯一入口是側邊欄與命令面板**——工具箱不做導覽（1.9.0 移除那個標籤的理由），因為兩個入口講同一件事只會讓使用者懷疑它們不同。
 
-**二、圓圈問號（284 條說明）。** 每一區塊標題旁有一個問號，內容是「這是什麼、能做什麼、安不安全」三段，外加一句風險結論（安全／注意／危險）。**這些文字與程式碼的實作對得上，是專案的寫作要求**；同一個名詞在多頁出現時共用同一段文字，改一次全站一致。
+**二、圓圈問號（285 條說明）。** 每一區塊標題旁有一個問號，內容是「這是什麼、能做什麼、安不安全」三段，外加一句風險結論（安全／注意／危險）。**這些文字與程式碼的實作對得上，是專案的寫作要求**；同一個名詞在多頁出現時共用同一段文字，改一次全站一致。
 
 **三、風險徽章與同意閘門。** 會寫入系統或硬體的功能一律標風險等級；「危險」等級的動作在執行前需要明確同意，且多數有第二道服務層閘門。**風險分級與閘門的三階段（提權、確認、執行）見第 8 部。**
 
@@ -2200,9 +2200,11 @@
 
 **四欄的讀法。** 6.3 的每一張表有四欄：**鍵、名稱、來源、可信度**。其中名稱與來源是**原始碼裡的字面值**——有些鍵由方法或迴圈生產，字面上抽不到，那些欄位就是「—」。**「—」的意思是「本版文件沒有從字面抽出這個欄位」，不是「這把鍵沒有名稱或來源」。** 這句話必須寫在這裡，否則讀者會把留白讀成缺失（而本文件全篇的立場正好相反：留白就是留白，不猜）。
 
-### 6.2 最大的十一個域：逐域判讀要點
+### 6.2 最大的十二個域：逐域判讀要點
 
-**為什麼先講這十一域。** 它們合計 373 把鍵（約全樹三分之一），而且它們的成員名字最像「協定術語」，最容易讓讀者以為自己看懂了。以下每一域寫三件事：**這一域在回答什麼、它的鍵家族長什麼樣、以及它的誤差與誤用**。
+**為什麼先講這十二域。** 它們合計 396 把鍵（約全樹三分之一），而且它們的成員名字最像「協定術語」，最容易讓讀者以為自己看懂了。以下每一域寫三件事：**這一域在回答什麼、它的鍵家族長什麼樣、以及它的誤差與誤用**。
+
+**這一份清單的邊界是算出來的，不是挑的。** 收錄條件就是「鍵數 ≥20」——目前剛好十二個域符合，最小的一個是 20 把。所以它不是「重要的十二域」，是**「大到值得逐域寫一段判讀」的十二域**；`os` 域在第 309 輪長到 23 把之後才進入這份清單，`nw`／`st` 則因為門檻剛好落在 20 而留在裡面。守門測試會從目錄重算這條界線（`ReadmeStatsTests.第六點二節的域清單要等於鍵數二十把以上的域`），所以它不會再安靜地停在舊的十一域。
 
 ---
 
@@ -2330,7 +2332,17 @@
 
 ---
 
-#### 6.2.10 `nw` — 網路與周邊介面（22 把）
+#### 6.2.10 `os` — 作業系統面的事件與裝置（23 把）
+
+**在回答什麼。** 「作業系統自己記了什麼、以及它對裝置的診斷」：Windows 事件記錄裡那些**能被機器讀成事實**的條目（開機階段的額外事件、時間跳動、現代待機的階段與喚醒、WHEA 的三個來源、chkdsk、NTFS、儲存、USB 集線器、TDR2、使用者模式 PnP 安裝、DSM、電源來源、核心處理器停駐、熱通知、wininit 的 chkdsk），加上**逐裝置的診斷投影**（問題碼、狀態旗標、驅動證據）與兩個清冊（WMI 欄位、記憶體診斷的交叉結果）。
+
+**鍵家族。** `os.dev.summary`（在場／不在場／有問題／缺驅動／未簽章／過舊的台數）＋三個動態家族 `os.dev.issue.*`／`os.dev.status.*`／`os.dev.driver.*`（每台有事的裝置一筆，成員由這台機器裝了什麼決定）；`os.ev.*`（二十把逐類事件）；`os.wmi.fields`＋`os.wmi.fields.*`（WMI 欄位清冊）；`os.memdiag.results.cross`（記憶體診斷與其他來源的交叉）。
+
+**來源與可信度。** `Reported` 為主（事件記錄、WMI、SetupAPI 的裝置列舉）。**這一域的價值不在數字，在「有說與沒說的分界」**：問題碼 0 的裝置不進明細（健康由彙總回答），問題碼讀不到寫 `ReadError` 而不是 0，事件區間內沒有事件與事件 ID 不存在是兩種不同的「沒有」。
+
+**誤用警告。** 「`os.dev.summary` 說有 3 台有問題，所以這台機器有 3 個故障」——**那是 Windows 的判斷，不是本工具的判斷**。問題碼要回去看 `os.dev.issue.*` 是哪一個碼、以及 `os.dev.status.*` 有沒有指出「碼是 0 但裝置沒在跑」（驅動未開機、NoDisplayInUI 這類情形只有旗標看得出來）。
+
+#### 6.2.11 `nw` — 網路與周邊介面（22 把）
 
 **在回答什麼。** 「周邊裝置的鏈路與協定事實」：藍牙韌體與配對、Wi-Fi、USB 埠與描述元、HID 電池、認證、DNS、路由、休眠喚醒、印表機、感測器、SMB、虛擬網卡、ICC、EEE 能力、EDID。
 
@@ -2342,7 +2354,7 @@
 
 ---
 
-#### 6.2.11 `st` — 儲存（20 把）
+#### 6.2.12 `st` — 儲存（20 把）
 
 **在回答什麼。** 「磁碟的健康、對齊、磨耗、電源與多路徑事實」：對齊、橋接、控制器樹、磨耗、NVMe 錯誤與額外欄位、斷電、VSS、iSCSI、NTFS、SAN 抹除能力、雙埠、檔案系統參照。
 
@@ -8475,11 +8487,11 @@
 | 項目 | 數量 | 數法 |
 |---|---:|---|
 | 測試檔 | **602** | `find Tests -name '*.cs' \| wc -l` |
-| `[Fact]` 方法 | **6,140** | 反射計算測試組件裡的 `[Fact]` 方法（`DeclaredOnly`） |
+| `[Fact]` 方法 | **6,151** | 反射計算測試組件裡的 `[Fact]` 方法（`DeclaredOnly`） |
 | `[Theory]` 方法 | **269** | 同上，`[Theory]` 分開數（它繼承 `[Fact]`，不能混） |
-| 執行期測試案例 | **7,467** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數，也是 README 測試徽章的單一來源） |
+| 執行期測試案例 | **7,478** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數，也是 README 測試徽章的單一來源） |
 
-**兩個比例值得讀。** 一、**`[Theory]` 只占 269 個**：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、**執行期案例數（7,467）大於方法數（6,409）**：差額來自被展開的 `[Theory]` 資料列——這正是基線守門的形狀（下一節）。
+**兩個比例值得讀。** 一、**`[Theory]` 只占 269 個**：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、**執行期案例數（7,478）大於方法數（6,420）**：差額來自被展開的 `[Theory]` 資料列——這正是基線守門的形狀（下一節）。
 
 ### 10.2 基線守門：為什麼「測試數」是一個被釘住的數字
 
@@ -9969,7 +9981,7 @@
 | L-7 | 虛擬機 | 韌體與感測器多數被虛擬層遮蔽 | 六態會大量出現 `NotApplicable`／`Unknown`，那是誠實結果 |
 | L-8 | 即時性 | 這是「檢視與量測」工具，不是取樣率導向的即時監控 | 需要毫秒級連續記錄請用專門的記錄器；本工具的解析度見第 5 部 |
 | L-9 | 寫入面 | 除深測的低階測項（PMU／RDT 等，全部經同意閘門與寫入帳本）外不寫入硬體 | 不做 BIOS 更新、不改 SPD、不修 registry |
-| L-10 | 覆蓋 | 63 個可到達畫面對 150 個域、1,145 把鍵 | 有些鍵沒有專屬畫面（只出現在總表／匯出／命令列），這是數量差的原因 |
+| L-10 | 覆蓋 | 63 個可到達畫面對 151 個域、1,145 把鍵 | 有些鍵沒有專屬畫面（只出現在總表／匯出／命令列），這是數量差的原因 |
 
 **一句話的讀法。** 看到「—」先問是哪一種非 `Present`；看到「沒有這一項」先問是限制還是缺陷——第 12.3 節就是缺陷那一欄。
 
@@ -10121,7 +10133,7 @@
 ### 14.4 加一頁畫面的三個步驟
 
 1. **註冊導覽**：沒有這一步，頁面存在但沒有任何路徑到得了（D-17 就是這樣發生的）。
-2. **寫說明條目**：每一頁的圓圈問號要回答「這是什麼／讀到什麼／按下去會怎樣／安不安全」。全站 284 條說明條目中，風險欄只有三種：`ReadOnly`／`Caution`／`Danger`。
+2. **寫說明條目**：每一頁的圓圈問號要回答「這是什麼／讀到什麼／按下去會怎樣／安不安全」。全站 285 條說明條目中，風險欄只有三種：`ReadOnly`／`Caution`／`Danger`。
 3. **確認它讀得到**：新頁面的資料來源必須是既有的收集步驟或明確新增的步驟，且不引入新的提權需求。
 
 ### 14.5 這份文件自己的失效條件
@@ -10154,7 +10166,7 @@
 
 ### 15.2 本機測試
 
-- **全套**：7,040 條（`TestSuiteBaseline.ProjectTests` 是唯一來源）。其中一部分會讀真機硬體（SMBIOS、SPD、NVMe…），**換一台機器可能因「不支援」或「值不一樣」而紅**——那是預期行為，不是回歸。
+- **全套**：7,478 條（`TestSuiteBaseline.ProjectTests` 是唯一來源）。其中一部分會讀真機硬體（SMBIOS、SPD、NVMe…），**換一台機器可能因「不支援」或「值不一樣」而紅**——那是預期行為，不是回歸。
 - **守門子集**：`ChangelogTests`、`FactKeyCatalogTests`、`Ultimate10000CatalogTests`、`ReleasePipelineTests`、`ReleaseIntegrityTests` 五組不依賴硬體，任何機器都該綠。
 - **判讀紅燈**：先問「這條測試讀真機嗎」。是的話先比對是不是環境差；不是的話就是回歸。**不要把環境差當成回歸去改測試，也不要把回歸當成環境差去忽略。**
 
@@ -10162,7 +10174,7 @@
 
 倉庫的 `.github/workflows/ci.yml` 在 `windows-latest` 上做四件事：還原、建置、跑上面那五組守門測試、上傳 `guard.trx`。抓取的時機是 `push` 到 `main`、任何 `pull_request`、以及手動觸發。
 
-**為什麼不跑全套**（這是 CI 檔開頭的註解，也是設計裁決）：全套 7,040 條裡有一部分會讀真機硬體，在 GitHub 的 hosted runner 上可能因「不支援」或「值不一樣」而紅，**讓 CI 變成雜訊**——而一個充滿雜訊的 CI 會訓練人忽略紅燈，那是比沒有 CI 更糟的狀態。硬體全套由貢獻者在本機跑，PR 範本要求貼上實測數字。
+**為什麼不跑全套**（這是 CI 檔開頭的註解，也是設計裁決）：全套 7,478 條裡有一部分會讀真機硬體，在 GitHub 的 hosted runner 上可能因「不支援」或「值不一樣」而紅，**讓 CI 變成雜訊**——而一個充滿雜訊的 CI 會訓練人忽略紅燈，那是比沒有 CI 更糟的狀態。硬體全套由貢獻者在本機跑，PR 範本要求貼上實測數字。
 
 ### 15.4 發佈產線：每一道閘門都是事故留下的
 
@@ -10236,7 +10248,7 @@
 | 削波 | 連續 ≥3 個滿格樣本（單點滿格可能是合法峰值） |
 | dBFS | 相對滿格的分貝值；0 樣本以 **−120 dBFS 底線**呈現，不用 −∞ |
 | 誤差預算 | 一個數字身上疊了幾層誤差、各佔多少 |
-| 覆蓋基線 | 本專案用來追蹤「事實鍵的產出覆蓋」的計數基線（目前 381） |
+| 覆蓋基線 | 本專案用來追蹤「事實鍵的產出覆蓋」的計數基線（目前 419） |
 
 **硬體與韌體**
 
@@ -10260,7 +10272,7 @@
 | 詞 | 意思 |
 |---|---|
 | 守門 | 一條會在任何機器上紅／綠的規則；本文件的每一個現在式數字都盡量有守門 |
-| 現在式宣稱 | 「本版是 vX」「測試 7,040 綠」這類今天為真、明天可能為假的句子 |
+| 現在式宣稱 | 「本版是 vX」「測試 7,478 綠」這類今天為真、明天可能為假的句子 |
 | 交叉對帳 | 同一事實多來源互相印證；結論只有一致／矛盾／無法驗證 |
 | 寫入帳本 | 所有硬體寫入的紀錄；與同意閘門並列兩道閘門 |
 | 同意閘門 | 深測低階測項執行前的明示同意 |
@@ -10301,13 +10313,13 @@
 | 斷路器冷卻 | 一顆碟一個冷卻期最多洩一條執行緒 | 同上；不吃執行緒集區 |
 | 報告／匯出零命中 | 退出碼 2 | `--only` 分母聲明 |
 | CI 逾時 | 30 分鐘 | `.github/workflows/ci.yml` |
-| 測試基線 | 7,040（`TestSuiteBaseline.ProjectTests`） | 唯一來源；低於測試方法數即紅燈 |
-| 覆蓋基線 | 381 | 遞增需留理由 |
+| 測試基線 | 7,478（`TestSuiteBaseline.ProjectTests`） | 唯一來源；低於測試方法數即紅燈 |
+| 覆蓋基線 | 419 | 遞增需留理由 |
 | 對帳規則數 | 26（執行期） | 歷史文字曾寫 29（O-01） |
-| 事實鍵目錄 | 1,145 把／150 域 | 編譯期目錄為分母 |
-| 動態家族 | 48 個前綴 | 成員由執行期決定 |
-| 可到達畫面 | 64 | 由導覽註冊表與獨立視窗合計 |
-| 說明條目 | 284 條 | 每頁圓圈問號的內容 |
+| 事實鍵目錄 | 1,145 把／151 域 | 編譯期目錄為分母 |
+| 動態家族 | 59 個前綴 | 成員由執行期決定 |
+| 可到達畫面 | 63 | 導覽註冊表（主頁面＋實用工具）的 `Key` 條目數；獨立視窗另計在 XAML 檔數裡 |
+| 說明條目 | 285 條 | 每頁圓圈問號的內容 |
 
 ### 附錄 D 二十個常見誤判
 
@@ -11866,9 +11878,11 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
   - 這是什麼：Thunderbolt 與 USB4 控制器、路由器與裝置的存在和安全連線狀態。
   - 功能／怎麼讀：這類控制器有自己的韌體與安全模型；未授權裝置可能只被列舉到控制器層。這裡只讀系統與裝置回報，不授權、不解鎖、不改變安全設定。
 
-### 附錄 H　服務檔地圖（618 個檔案）
+### 附錄 H　服務檔地圖（639 個檔案）
 
 `Services/` 底下的每一個 `.cs`：路徑、行數、以及它宣告了幾個類別。**這張表的用途是「找到負責某件事的檔案」**——事實鍵的生產點在哪裡，先看這張表，再回頭看 6.5 的逐鍵出處。
+
+**這兩個數字怎麼數。** 行數＝檔案以 `\n` 切開後的段數（結尾有換行時最後一段是空的，所以等於 `wc -l` 加 1）；類別數＝`class` 關鍵字宣告的數量，含巢狀類別與 `partial` 的每一部分，`interface`／`record`／`struct`／`enum` 不計，註解行不計。**它們是「這個檔案有多長、宣告了幾個型別」的粗量，不是品質或重要性的度量。**字串常數裡出現 `class ` 也會被算進類別數——這是這個數法的已知邊界，不假裝它是編譯器的答案。
 
 | 檔案 | 行數 | 類別數 |
 |---|---:|---:|
@@ -11882,9 +11896,14 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/AcpiTcpaFactsService.cs` | 170 | 1 |
 | `Services/AcpiTpm2WpbtFactsService.cs` | 207 | 1 |
 | `Services/AdvancedSupplementFactsService.cs` | 627 | 1 |
-| `Services/AiChatStore.cs` | 77 | 1 |
-| `Services/AiService.cs` | 982 | 3 |
+| `Services/AiChatStore.cs` | 77 | 2 |
+| `Services/AiRedactor.cs` | 113 | 1 |
+| `Services/AiRequestBudget.cs` | 112 | 1 |
+| `Services/AiRetryPolicy.cs` | 68 | 1 |
+| `Services/AiService.cs` | 1327 | 6 |
 | `Services/AiTools.cs` | 146 | 2 |
+| `Services/AiTranscript.cs` | 108 | 1 |
+| `Services/AiUsage.cs` | 103 | 1 |
 | `Services/AlertService.cs` | 108 | 2 |
 | `Services/AmcacheFactsService.cs` | 153 | 1 |
 | `Services/AmdSecurityFactsService.cs` | 164 | 1 |
@@ -11893,7 +11912,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/AssetFactsService.cs` | 139 | 1 |
 | `Services/AtaIdentify.cs` | 120 | 1 |
 | `Services/AtomicWrite.cs` | 21 | 1 |
-| `Services/AudioEndpointFactsService.cs` | 143 | 1 |
+| `Services/AudioEndpointFactsService.cs` | 143 | 2 |
 | `Services/AudioLatencyFactsService.cs` | 199 | 1 |
 | `Services/AudioSpectrumService.cs` | 227 | 2 |
 | `Services/AuditExportReport.cs` | 160 | 1 |
@@ -11903,6 +11922,8 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/BackendEnvironmentService.cs` | 208 | 1 |
 | `Services/BaselineForecastFactsService.cs` | 230 | 1 |
 | `Services/BaselineLearningService.cs` | 274 | 2 |
+| `Services/BatteryHealthFactsService.cs` | 135 | 1 |
+| `Services/BatteryHealthReader.cs` | 76 | 1 |
 | `Services/BatteryService.cs` | 112 | 2 |
 | `Services/BatteryStateFactsService.cs` | 96 | 1 |
 | `Services/BenchErrorMargin.cs` | 141 | 1 |
@@ -11923,13 +11944,16 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/BootBreakdownService.cs` | 193 | 1 |
 | `Services/BootFastStartupFactsService.cs` | 124 | 1 |
 | `Services/BootGuardFactsService.cs` | 175 | 1 |
+| `Services/BootOrderFactsService.cs` | 229 | 1 |
+| `Services/BootOrderReader.cs` | 61 | 1 |
 | `Services/BootRepairService.cs` | 141 | 1 |
 | `Services/BootTimingFactsService.cs` | 80 | 1 |
 | `Services/BottleneckAnalyzer.cs` | 580 | 4 |
 | `Services/BsodService.cs` | 100 | 2 |
 | `Services/Bufferbloat.cs` | 26 | 1 |
-| `Services/BugCheck.cs` | 39 | 1 |
-| `Services/Bus0InventoryService.cs` | 100 | 1 |
+| `Services/BugCheck.cs` | 42 | 1 |
+| `Services/BuiltinKnowledgeInventory.cs` | 235 | 1 |
+| `Services/Bus0InventoryService.cs` | 143 | 1 |
 | `Services/BusCapabilityFactsService.cs` | 198 | 1 |
 | `Services/BusDeepDiveFactsService.cs` | 347 | 1 |
 | `Services/ByovdCompareService.cs` | 110 | 1 |
@@ -11937,8 +11961,8 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/CameraFactsService.cs` | 56 | 1 |
 | `Services/CapabilityMatrixService.cs` | 66 | 1 |
 | `Services/CeilingDecoder.cs` | 543 | 3 |
-| `Services/CeilingService.cs` | 1176 | 1 |
-| `Services/CeremonyService.cs` | 123 | 1 |
+| `Services/CeilingService.cs` | 1176 | 2 |
+| `Services/CeremonyService.cs` | 131 | 1 |
 | `Services/ChassisAndHpaFactsService.cs` | 187 | 2 |
 | `Services/ChecklistFactsService.cs` | 261 | 1 |
 | `Services/ChessBenchService.cs` | 401 | 1 |
@@ -11983,29 +12007,29 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/DeepBench/Adapters/CopyKernelBandwidthAdapter.cs` | 106 | 1 |
 | `Services/DeepBench/Adapters/CoreLatencyAdapter.cs` | 69 | 1 |
 | `Services/DeepBench/Adapters/CoreUniformityAdapter.cs` | 121 | 1 |
-| `Services/DeepBench/Adapters/HardwareRandomBenchAdapter.cs` | 384 | 3 |
+| `Services/DeepBench/Adapters/HardwareRandomBenchAdapter.cs` | 384 | 4 |
 | `Services/DeepBench/Adapters/LegacySnapshotStamp.cs` | 34 | 1 |
 | `Services/DeepBench/Adapters/LoadedLatencyAdapter.cs` | 78 | 1 |
 | `Services/DeepBench/Adapters/MemoryEccWheaStressAdapter.cs` | 149 | 1 |
 | `Services/DeepBench/Adapters/NetworkStackLatencyAdapter.cs` | 200 | 3 |
-| `Services/DeepBench/Adapters/SlcSustainedWriteAdapter.cs` | 291 | 2 |
+| `Services/DeepBench/Adapters/SlcSustainedWriteAdapter.cs` | 291 | 4 |
 | `Services/DeepBench/Adapters/StreamBandwidthAdapter.cs` | 74 | 1 |
 | `Services/DeepBench/Adapters/TopDownAdapter.cs` | 100 | 1 |
 | `Services/DeepBench/Adapters/TscCrossCoreSyncAdapter.cs` | 129 | 1 |
 | `Services/DeepBench/Adapters/VectorWidthThroughputAdapter.cs` | 105 | 1 |
-| `Services/DeepBench/AudioBufferGlitchService.cs` | 376 | 4 |
+| `Services/DeepBench/AudioBufferGlitchService.cs` | 376 | 5 |
 | `Services/DeepBench/BoostRecoveryService.cs` | 332 | 3 |
 | `Services/DeepBench/BranchSpeculationService.cs` | 312 | 3 |
-| `Services/DeepBench/CoherenceLockService.cs` | 485 | 3 |
+| `Services/DeepBench/CoherenceLockService.cs` | 485 | 5 |
 | `Services/DeepBench/ConfidenceEngineService.cs` | 205 | 3 |
 | `Services/DeepBench/CpuMicroarchBenchService.cs` | 421 | 1 |
 | `Services/DeepBench/CryptoMicrobenchService.cs` | 216 | 1 |
 | `Services/DeepBench/DeepBenchCatalog.cs` | 73 | 1 |
 | `Services/DeepBench/DeepBenchMeasurementStatistics.cs` | 114 | 1 |
 | `Services/DeepBench/DeepBenchSuitePlanner.cs` | 67 | 1 |
-| `Services/DeepBench/DiskIoMatrixService.cs` | 464 | 2 |
+| `Services/DeepBench/DiskIoMatrixService.cs` | 464 | 5 |
 | `Services/DeepBench/DramMappingInferenceService.cs` | 337 | 4 |
-| `Services/DeepBench/GauntletMultiDomainService.cs` | 329 | 3 |
+| `Services/DeepBench/GauntletMultiDomainService.cs` | 329 | 4 |
 | `Services/DeepBench/GpuCodecThroughputService.cs` | 168 | 2 |
 | `Services/DeepBench/GpuDispatchJitterService.cs` | 225 | 2 |
 | `Services/DeepBench/GpuFp32ComputeService.cs` | 219 | 5 |
@@ -12015,9 +12039,9 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/DeepBench/Interop/D3D11Native.cs` | 1693 | 1 |
 | `Services/DeepBench/Interop/D3D11PresentFramePacingEngine.cs` | 402 | 1 |
 | `Services/DeepBench/Interop/MediaFoundationEngine.cs` | 293 | 2 |
-| `Services/DeepBench/Interop/WindowsBoostRecoveryEngine.cs` | 210 | 1 |
+| `Services/DeepBench/Interop/WindowsBoostRecoveryEngine.cs` | 210 | 3 |
 | `Services/DeepBench/Interop/WindowsPowerStateLatencyEngine.cs` | 143 | 1 |
-| `Services/DeepBench/Interop/WindowsThroughputDegradationEngine.cs` | 277 | 1 |
+| `Services/DeepBench/Interop/WindowsThroughputDegradationEngine.cs` | 277 | 3 |
 | `Services/DeepBench/MemoryNumaTlbLargePageService.cs` | 807 | 5 |
 | `Services/DeepBench/Orchestration/DeepBenchCrossDomainSynthesis.cs` | 89 | 1 |
 | `Services/DeepBench/Orchestration/DeepBenchOrchestrator.cs` | 110 | 1 |
@@ -12026,20 +12050,20 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/DeepBench/PowerStateLatencyService.cs` | 307 | 3 |
 | `Services/DeepBench/PresentFramePacingService.cs` | 270 | 2 |
 | `Services/DeepBench/ReviewFixProbes.cs` | 54 | 3 |
-| `Services/DeepBench/SmtContentionService.cs` | 443 | 3 |
-| `Services/DeepBench/StorageFlushDurabilityService.cs` | 395 | 2 |
+| `Services/DeepBench/SmtContentionService.cs` | 443 | 4 |
+| `Services/DeepBench/StorageFlushDurabilityService.cs` | 395 | 4 |
 | `Services/DeepBench/StorageGpuPipelineService.cs` | 252 | 3 |
-| `Services/DeepBench/StorageIocpEngineService.cs` | 600 | 4 |
-| `Services/DeepBench/StorageWriteIntegrityService.cs` | 395 | 3 |
+| `Services/DeepBench/StorageIocpEngineService.cs` | 600 | 5 |
+| `Services/DeepBench/StorageWriteIntegrityService.cs` | 395 | 5 |
 | `Services/DeepBench/ThroughputDegradationService.cs` | 232 | 3 |
-| `Services/DeepBench/TopologyCoreBandwidthService.cs` | 413 | 3 |
-| `Services/DeepBench/TopologyHybridPlacementService.cs` | 650 | 4 |
+| `Services/DeepBench/TopologyCoreBandwidthService.cs` | 413 | 4 |
+| `Services/DeepBench/TopologyHybridPlacementService.cs` | 650 | 6 |
 | `Services/DeepBench/UxSyntheticWorkloadService.cs` | 305 | 3 |
 | `Services/DeepBenchMethodology2FactsService.cs` | 323 | 1 |
 | `Services/DeepBenchSecondWaveFactsService.cs` | 386 | 1 |
 | `Services/DeepTest/AudioEndpointStateService.cs` | 89 | 1 |
-| `Services/DeepTest/AudioFormatProbeService.cs` | 249 | 1 |
-| `Services/DeepTest/AudioJackDetectService.cs` | 264 | 1 |
+| `Services/DeepTest/AudioFormatProbeService.cs` | 249 | 2 |
+| `Services/DeepTest/AudioJackDetectService.cs` | 264 | 2 |
 | `Services/DeepTest/CacheBandwidthLadderService.cs` | 125 | 1 |
 | `Services/DeepTest/ClockSessionDriftService.cs` | 70 | 1 |
 | `Services/DeepTest/CopyKernelBandwidthService.cs` | 146 | 1 |
@@ -12056,7 +12080,8 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/DeepTest/VectorWidthThroughputService.cs` | 225 | 1 |
 | `Services/DevDiagAndCorrelationFactsService.cs` | 221 | 1 |
 | `Services/DeviceComplianceFactsService.cs` | 174 | 1 |
-| `Services/DeviceDiagnosticService.cs` | 430 | 3 |
+| `Services/DeviceDiagnosticService.cs` | 430 | 4 |
+| `Services/DeviceTruthFactsService.cs` | 219 | 1 |
 | `Services/Diag.cs` | 125 | 2 |
 | `Services/DimmLayout.cs` | 367 | 4 |
 | `Services/DimmReferenceService.cs` | 196 | 1 |
@@ -12077,7 +12102,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/DramTrafficService.cs` | 195 | 1 |
 | `Services/DriverAnalysisService.cs` | 268 | 1 |
 | `Services/DriverAuditDecoder.cs` | 153 | 2 |
-| `Services/DriverAuditService.cs` | 187 | 1 |
+| `Services/DriverAuditService.cs` | 187 | 2 |
 | `Services/DriverInspectionFactsService.cs` | 189 | 1 |
 | `Services/DriverMmioReader.cs` | 189 | 2 |
 | `Services/DriverMsrReader.cs` | 170 | 1 |
@@ -12088,10 +12113,11 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/EfiVariableFactsService.cs` | 129 | 1 |
 | `Services/EgressPolicy.cs` | 122 | 1 |
 | `Services/EmbeddedControllerFactsService.cs` | 109 | 1 |
+| `Services/EncyclopediaCatalog.cs` | 101 | 1 |
 | `Services/EndpointPolicyFactsService.cs` | 338 | 1 |
 | `Services/EngineeringGovernance2FactsService.cs` | 363 | 1 |
 | `Services/EngineeringGovernanceFactsService.cs` | 312 | 1 |
-| `Services/EnglishStrings.cs` | 1848 | 1 |
+| `Services/EnglishStrings.cs` | 1839 | 1 |
 | `Services/EnterpriseStorageFactsService.cs` | 114 | 1 |
 | `Services/EnvCheckService.cs` | 181 | 2 |
 | `Services/EnvironmentDiagnosticsFactsService.cs` | 339 | 1 |
@@ -12101,33 +12127,34 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/EtlReadbackService.cs` | 135 | 1 |
 | `Services/EtwFilterViewService.cs` | 214 | 1 |
 | `Services/EtwTraceService.cs` | 361 | 1 |
+| `Services/EventIdEvidenceFactsService.cs` | 355 | 1 |
 | `Services/EventLogSummaryService.cs` | 88 | 2 |
-| `Services/EventsService.cs` | 340 | 2 |
-| `Services/EvidenceCollection.cs` | 299 | 1 |
+| `Services/EventsService.cs` | 340 | 4 |
+| `Services/EvidenceCollection.cs` | 233 | 1 |
 | `Services/EvidenceExportFactsService.cs` | 263 | 1 |
-| `Services/EvidenceLabService.cs` | 2565 | 1 |
+| `Services/EvidenceLabService.cs` | 2775 | 1 |
 | `Services/EvidencePackBuilder.cs` | 213 | 1 |
 | `Services/EvidenceTimelineService.cs` | 478 | 1 |
 | `Services/ExportAndCacheFactsService.cs` | 116 | 2 |
 | `Services/ExportUxFactsService.cs` | 260 | 1 |
 | `Services/ExternalAcquisitionService.cs` | 50 | 1 |
 | `Services/ExternalReportService.cs` | 233 | 1 |
-| `Services/ExternalSensors/Aida64SharedMem.cs` | 135 | 0 |
+| `Services/ExternalSensors/Aida64SharedMem.cs` | 135 | 1 |
 | `Services/ExternalSensors/CoreTempSharedMem.cs` | 253 | 1 |
 | `Services/ExternalSensors/ExternalReading.cs` | 27 | 0 |
 | `Services/ExternalSensors/ExternalSensorService.cs` | 201 | 1 |
 | `Services/ExternalSensors/HwInfoSharedMem.cs` | 216 | 1 |
 | `Services/FactAtlasService.cs` | 364 | 1 |
-| `Services/FactCoverageReport.cs` | 758 | 1 |
-| `Services/FactKeyCatalog.cs` | 1152 | 1 |
-| `Services/FactKeyDynamicCatalog.cs` | 172 | 1 |
+| `Services/FactCoverageReport.cs` | 767 | 1 |
+| `Services/FactKeyCatalog.cs` | 1189 | 1 |
+| `Services/FactKeyDynamicCatalog.cs` | 207 | 1 |
 | `Services/FactQuery.cs` | 44 | 0 |
 | `Services/FactRelationEngine.cs` | 526 | 2 |
 | `Services/FactStateLattice.cs` | 149 | 1 |
 | `Services/FactStateReport.cs` | 179 | 1 |
 | `Services/FakeCapacityTestService.cs` | 115 | 1 |
 | `Services/FanControlRow.cs` | 89 | 1 |
-| `Services/FanCurveService.cs` | 509 | 3 |
+| `Services/FanCurveService.cs` | 509 | 5 |
 | `Services/FeedbackService.cs` | 250 | 1 |
 | `Services/FileHash.cs` | 32 | 1 |
 | `Services/FileSystemVolumeFactsService.cs` | 240 | 1 |
@@ -12136,7 +12163,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/FirmwareDeepFactsService.cs` | 390 | 1 |
 | `Services/FirmwareDocReconcileFactsService.cs` | 98 | 1 |
 | `Services/FirmwareFvCrossFactsService.cs` | 90 | 1 |
-| `Services/FirmwareModeFactsService.cs` | 217 | 1 |
+| `Services/FirmwareModeFactsService.cs` | 217 | 2 |
 | `Services/FirmwareRecoveryFactsService.cs` | 116 | 1 |
 | `Services/FirmwareRiskFactsService.cs` | 308 | 1 |
 | `Services/FirmwareService.cs` | 216 | 2 |
@@ -12160,14 +12187,14 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/Gpu/NvmlInterop.cs` | 161 | 1 |
 | `Services/GpuAnalysisService.cs` | 220 | 1 |
 | `Services/GpuCodecService.cs` | 368 | 3 |
-| `Services/GpuDeepFactsService.cs` | 425 | 1 |
+| `Services/GpuDeepFactsService.cs` | 515 | 1 |
 | `Services/GpuRenderTestService.cs` | 390 | 1 |
 | `Services/GpuStressService.cs` | 490 | 1 |
 | `Services/GpuTdrFactsService.cs` | 101 | 1 |
 | `Services/GuardBudget.cs` | 90 | 1 |
 | `Services/GuardPolicy.cs` | 179 | 1 |
 | `Services/GuardRegistry.cs` | 131 | 1 |
-| `Services/HardwareSnapshotService.cs` | 488 | 0 |
+| `Services/HardwareSnapshotService.cs` | 643 | 1 |
 | `Services/HdrCapabilityService.cs` | 228 | 1 |
 | `Services/HistoryStore.cs` | 623 | 3 |
 | `Services/HomeHealthSummaryService.cs` | 92 | 1 |
@@ -12187,10 +12214,10 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/KeyCatalogPolicy.cs` | 253 | 1 |
 | `Services/KeyRangeGuardService.cs` | 111 | 1 |
 | `Services/KeyboardShortcutCatalog.cs` | 39 | 1 |
-| `Services/KnowledgeCoverage.cs` | 84 | 1 |
-| `Services/KnowledgeLookupReport.cs` | 131 | 1 |
+| `Services/KnowledgeCoverage.cs` | 133 | 1 |
+| `Services/KnowledgeLookupReport.cs` | 210 | 1 |
 | `Services/KnowledgePackReport.cs` | 183 | 1 |
-| `Services/KnowledgePackService.cs` | 221 | 1 |
+| `Services/KnowledgePackService.cs` | 229 | 1 |
 | `Services/LanguageService.cs` | 364 | 2 |
 | `Services/LargePageDecoder.cs` | 122 | 3 |
 | `Services/LargePageService.cs` | 299 | 1 |
@@ -12205,7 +12232,8 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/LocalSecurityAuditService.cs` | 360 | 1 |
 | `Services/LogonHardwareCorrelationFactsService.cs` | 116 | 1 |
 | `Services/LoopbackSignalService.cs` | 37 | 1 |
-| `Services/M2AnalysisService.cs` | 106 | 1 |
+| `Services/M2AnalysisService.cs` | 120 | 1 |
+| `Services/M2Detection.cs` | 86 | 1 |
 | `Services/MachineAgeDecoder.cs` | 130 | 2 |
 | `Services/MachineAgeService.cs` | 110 | 1 |
 | `Services/MachineVerdict.cs` | 89 | 1 |
@@ -12215,7 +12243,11 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/McaService.cs` | 159 | 2 |
 | `Services/MchbarService.cs` | 98 | 1 |
 | `Services/MeasuredBootFactsService.cs` | 174 | 1 |
+| `Services/MeasurementBudgetFactsService.cs` | 125 | 1 |
+| `Services/MeasurementCostFactsService.cs` | 105 | 1 |
 | `Services/MeasurementMethodologyFactsService.cs` | 286 | 1 |
+| `Services/MeasurementRepeatFactsService.cs` | 139 | 1 |
+| `Services/MeasurementStampFactsService.cs` | 161 | 1 |
 | `Services/MediaProtectionFactsService.cs` | 203 | 1 |
 | `Services/MemBandwidthMath.cs` | 268 | 5 |
 | `Services/MemBandwidthService.cs` | 400 | 1 |
@@ -12229,6 +12261,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/MemoryTruthService.cs` | 126 | 2 |
 | `Services/MicrocodeVersionFactsService.cs` | 183 | 1 |
 | `Services/MigrationAggregator.cs` | 155 | 4 |
+| `Services/MiniOverlayCatalog.cs` | 74 | 1 |
 | `Services/MinidumpFactsService.cs` | 137 | 1 |
 | `Services/MmioAccess.cs` | 44 | 2 |
 | `Services/MmioBackendSelector.cs` | 32 | 1 |
@@ -12244,10 +12277,10 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/NetOffloadFactsService.cs` | 115 | 2 |
 | `Services/NetWmiGapFactsService.cs` | 135 | 1 |
 | `Services/NetworkSecurityInventoryFactsService.cs` | 251 | 1 |
-| `Services/NetworkService.cs` | 222 | 1 |
+| `Services/NetworkService.cs` | 222 | 2 |
 | `Services/NetworkSpeedService.cs` | 275 | 2 |
 | `Services/NetworkSystemInventoryFactsService.cs` | 477 | 1 |
-| `Services/NicHealthFactsService.cs` | 113 | 1 |
+| `Services/NicHealthFactsService.cs` | 121 | 1 |
 | `Services/NicLinkFactsService.cs` | 196 | 1 |
 | `Services/NpuComputeBenchService.cs` | 50 | 1 |
 | `Services/NpuDetectionService.cs` | 264 | 1 |
@@ -12271,10 +12304,12 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/Overclock/OcModels.cs` | 512 | 6 |
 | `Services/Overclock/OcSettings.cs` | 118 | 1 |
 | `Services/Overclock/OverclockService.cs` | 1120 | 1 |
-| `Services/Overclock/SiliconProbeService.cs` | 531 | 1 |
+| `Services/Overclock/SiliconProbeService.cs` | 531 | 3 |
 | `Services/Overclock/SiliconQuality.cs` | 530 | 1 |
 | `Services/Overclock/XtuOcEngine.cs` | 495 | 1 |
 | `Services/PciCapabilityFactsService.cs` | 168 | 1 |
+| `Services/PciClassFactsService.cs` | 90 | 1 |
+| `Services/PciIdLookup.cs` | 137 | 1 |
 | `Services/PciResourceAuditService.cs` | 422 | 3 |
 | `Services/PcieAnalysisService.cs` | 386 | 4 |
 | `Services/PcieLinkDecoder.cs` | 246 | 2 |
@@ -12285,7 +12320,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/PeripheralFirmwareInventoryFactsService.cs` | 127 | 1 |
 | `Services/PlatformDeepDiveFactsService.cs` | 256 | 1 |
 | `Services/PlatformExpansionFactsService.cs` | 309 | 1 |
-| `Services/PlatformGovernanceFactsService.cs` | 392 | 1 |
+| `Services/PlatformGovernanceFactsService.cs` | 407 | 1 |
 | `Services/PlatformReconciliationFactsService.cs` | 191 | 1 |
 | `Services/PlatformSecurityMsrFacts.cs` | 96 | 2 |
 | `Services/PlatformTrustService.cs` | 196 | 2 |
@@ -12299,7 +12334,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/PrefetchFactsService.cs` | 154 | 1 |
 | `Services/PresentObservationFactsService.cs` | 192 | 1 |
 | `Services/ProductAndPlatformFactsService.cs` | 211 | 1 |
-| `Services/ProfileService.cs` | 445 | 3 |
+| `Services/ProfileService.cs` | 445 | 4 |
 | `Services/PsuPmbusFactsService.cs` | 168 | 2 |
 | `Services/QueryExecutor.cs` | 55 | 1 |
 | `Services/QueryGovernanceFactsService.cs` | 84 | 1 |
@@ -12315,9 +12350,9 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/RecycleBinFactsService.cs` | 101 | 1 |
 | `Services/ReleaseReport.cs` | 286 | 1 |
 | `Services/ReliabilityHistoryService.cs` | 193 | 2 |
-| `Services/ReportDiffService.cs` | 221 | 0 |
-| `Services/ReportExportChainService.cs` | 163 | 0 |
-| `Services/ReportService.cs` | 944 | 1 |
+| `Services/ReportDiffService.cs` | 221 | 1 |
+| `Services/ReportExportChainService.cs` | 163 | 1 |
+| `Services/ReportService.cs` | 944 | 3 |
 | `Services/ResilienceReport.cs` | 257 | 1 |
 | `Services/ResizableBarDecoder.cs` | 138 | 2 |
 | `Services/ResizableBarService.cs` | 288 | 1 |
@@ -12329,13 +12364,15 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/SbomService.cs` | 154 | 1 |
 | `Services/ScanSkeleton.cs` | 194 | 1 |
 | `Services/ScanSkeletonReport.cs` | 154 | 1 |
-| `Services/ScanStateCollectors.cs` | 271 | 4 |
+| `Services/ScanStateCollectors.cs` | 366 | 4 |
 | `Services/ScanStateFactsService.cs` | 125 | 1 |
 | `Services/ScanStepTimeout.cs` | 69 | 1 |
 | `Services/ScenarioGuidanceFactsService.cs` | 135 | 1 |
 | `Services/ScenarioSecondWaveFactsService.cs` | 221 | 1 |
 | `Services/ScenarioThirdWaveFactsService.cs` | 217 | 1 |
 | `Services/ScheduledTaskStartup.cs` | 136 | 2 |
+| `Services/SecretProtector.cs` | 166 | 1 |
+| `Services/SecureBootChainFactsService.cs` | 150 | 1 |
 | `Services/SecurityAuditDeepFactsService.cs` | 462 | 1 |
 | `Services/SecurityAuditFactsService.cs` | 177 | 1 |
 | `Services/SecurityAuditSupplementFactsService.cs` | 315 | 1 |
@@ -12345,8 +12382,8 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/SensorDashboardService.cs` | 198 | 2 |
 | `Services/SensorLogService.cs` | 111 | 1 |
 | `Services/SensorSanity.cs` | 95 | 1 |
-| `Services/SensorService.Fans.cs` | 74 | 0 |
-| `Services/SensorService.cs` | 552 | 1 |
+| `Services/SensorService.Fans.cs` | 74 | 1 |
+| `Services/SensorService.cs` | 552 | 5 |
 | `Services/ServerComplianceFactsService.cs` | 77 | 1 |
 | `Services/ServerModeFactsService.cs` | 70 | 1 |
 | `Services/ServerRoleConditionalFactsService.cs` | 507 | 1 |
@@ -12355,16 +12392,16 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/ServiceBootFactsService.cs` | 160 | 1 |
 | `Services/ServiceInventoryService.cs` | 96 | 1 |
 | `Services/ServiceModeFactsService.cs` | 132 | 1 |
-| `Services/SettingsService.cs` | 559 | 1 |
+| `Services/SettingsService.cs` | 713 | 2 |
 | `Services/SetupApiTimelineService.cs` | 99 | 1 |
-| `Services/SharedAiEndpoint.cs` | 81 | 1 |
-| `Services/Shell.cs` | 66 | 1 |
+| `Services/SharedAiEndpoint.cs` | 80 | 1 |
+| `Services/Shell.cs` | 75 | 1 |
 | `Services/ShimcacheFactsService.cs` | 118 | 1 |
 | `Services/ShrineMath.cs` | 72 | 1 |
 | `Services/SlcCacheBenchService.cs` | 214 | 3 |
 | `Services/SleepDiagnosticsService.cs` | 187 | 1 |
 | `Services/SmartFailingNowFactsService.cs` | 99 | 1 |
-| `Services/SmartLookupProbe.cs` | 280 | 1 |
+| `Services/SmartLookupProbe.cs` | 300 | 1 |
 | `Services/SmbiosCrossFactsService.cs` | 312 | 1 |
 | `Services/SmbiosDeepFactsService.cs` | 210 | 1 |
 | `Services/SmbiosFacts.cs` | 127 | 1 |
@@ -12401,7 +12438,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/SpiFlashService.cs` | 212 | 1 |
 | `Services/SrumReadbackService.cs` | 112 | 1 |
 | `Services/StartupService.cs` | 362 | 2 |
-| `Services/StorageAndScenarioReconciliationFactsService.cs` | 406 | 1 |
+| `Services/StorageAndScenarioReconciliationFactsService.cs` | 406 | 3 |
 | `Services/StorageDeepFactsService.cs` | 269 | 1 |
 | `Services/StorageProbeBreaker.cs` | 105 | 1 |
 | `Services/StorageReliabilityFactsService.cs` | 245 | 2 |
@@ -12413,10 +12450,11 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/SuperIoProbeService.cs` | 87 | 1 |
 | `Services/SuperPiService.cs` | 272 | 1 |
 | `Services/SystemInfoService.cs` | 254 | 1 |
+| `Services/SystemUtilSampler.cs` | 110 | 1 |
 | `Services/TaskHistoryFactsService.cs` | 102 | 1 |
 | `Services/TbUsb4Service.cs` | 44 | 1 |
 | `Services/TerminalService.cs` | 170 | 1 |
-| `Services/ThemeService.cs` | 369 | 1 |
+| `Services/ThemeService.cs` | 369 | 2 |
 | `Services/ThermalReachFactsService.cs` | 179 | 1 |
 | `Services/ThermalStickyService.cs` | 87 | 2 |
 | `Services/ThirdPartyNoticesCatalog.cs` | 126 | 1 |
@@ -12436,7 +12474,6 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/TransientScope.cs` | 121 | 2 |
 | `Services/TrayService.cs` | 121 | 1 |
 | `Services/TrendSentinelService.cs` | 266 | 1 |
-| `Services/TroubleshootService.cs` | 104 | 2 |
 | `Services/TrustOpsFactsService.cs` | 223 | 1 |
 | `Services/TrustRootFactsService.cs` | 190 | 1 |
 | `Services/TrustRootVbsCrossFactsService.cs` | 176 | 1 |
@@ -12457,9 +12494,10 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/UpgradeAdvisor.cs` | 452 | 4 |
 | `Services/UpsFactsService.cs` | 89 | 1 |
 | `Services/UsbLinkDecoder.cs` | 245 | 1 |
-| `Services/UsbLinkService.cs` | 358 | 1 |
+| `Services/UsbLinkService.cs` | 358 | 2 |
 | `Services/UsbTopologyService.cs` | 86 | 1 |
 | `Services/UserExperience2FactsService.cs` | 250 | 1 |
+| `Services/UserFacingError.cs` | 53 | 1 |
 | `Services/VbsStateFactsService.cs` | 191 | 1 |
 | `Services/VerifyFactsCollector.cs` | 79 | 1 |
 | `Services/VerifyRules.cs` | 562 | 3 |
@@ -12478,7 +12516,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/WinRing0MmioReader.cs` | 58 | 1 |
 | `Services/WindowsUpdateHistoryService.cs` | 118 | 1 |
 | `Services/WingetService.cs` | 418 | 3 |
-| `Services/WinsatService.cs` | 251 | 1 |
+| `Services/WinsatService.cs` | 251 | 2 |
 | `Services/WiringDecisions.cs` | 60 | 1 |
 | `Services/WmiFieldInventoryService.cs` | 113 | 1 |
 | `Services/WriteGate.cs` | 76 | 1 |
@@ -12522,7 +12560,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 **版本與發佈（1–6）**
 
 1. 本版是 v3.03 —— 看徽章、`XinSpect.csproj` 的 `<Version>`、關於頁三處一致。不一致＝有一處落後（四處同步是硬規則）。
-2. 測試 7,040 綠 —— 跑守門五組不依賴硬體；全套請在真機跑。紅燈先分辨是真機依賴還是回歸。
+2. 測試 7,478 綠 —— 跑守門五組不依賴硬體；全套請在真機跑。紅燈先分辨是真機依賴還是回歸。
 3. 下載表列的位元組數取自本版真正釋出的那顆 `XinSpect.exe` —— 抓下來自己數 bytes。不符請先確認是不是抓到別的版號的檔案。
 4. 主程式未簽章 —— 內容右鍵「數位簽章」分頁應為空。這正是 O-03。
 5. 授權是 AGPL-3.0-or-later —— 讀 `LICENSE` 開頭三行。
@@ -12539,11 +12577,11 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 
 **結構與分母（13–18）**
 
-13. 事實鍵目錄是 1,145 把、150 域 —— 開事實總表頁看總數。
-14. 動態家族 48 個 —— 目錄裡以「前綴＋理由」登記，成員不在編譯期。
-15. 可到達畫面 64 個 —— 導覽註冊表＋獨立視窗清單。
-16. 說明條目 284 條 —— 附錄 G 是它的全表。
-17. 服務檔 615 個 —— 附錄 H 是清單。
+13. 事實鍵目錄是 1,145 把、151 域 —— 開事實總表頁看總數。
+14. 動態家族 59 個 —— 目錄裡以「前綴＋理由」登記，成員不在編譯期。
+15. 可到達畫面 63 個 —— 導覽註冊表（主頁面＋實用工具）的 `Key` 條目數；獨立視窗另計在 XAML 檔數裡。
+16. 說明條目 285 條 —— 附錄 G 是它的全表。
+17. 服務檔 639 個 —— 附錄 H 是清單。
 18. 對帳規則是 26 條（不是歷史文字裡的 29）—— O-01 的處置。
 
 **量測（19–24）**
@@ -12577,7 +12615,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 |---|---|---|
 | `Nav/` | 導覽註冊表與版本沿革資料 | `ChangelogCatalog.cs`（第 11 部的資料來源）、導覽註冊表（可達性守門的依據） |
 | `Views/` | 畫面（XAML＋後置程式） | 63 個可到達畫面的實際版面；說明條目掛在這裡 |
-| `Services/` | 事實的生產端（615 個檔案） | 附錄 H 是完整清單；每一把鍵的來源多半在這裡 |
+| `Services/` | 事實的生產端（639 個檔案） | 附錄 H 是完整清單；每一把鍵的來源多半在這裡 |
 | `Services/DeepBench/` | 深測套件與測項目錄 | 第 4 部的測項全表 |
 | `Models/` | 資料模型與預算 | 事實鍵目錄、`PerfBudget.cs`（冷啟動門檻） |
 | `Bridge/` | 一切硬體存取的收斂點 | 三個寫入 API、寫入帳本、特權層（WinRing0／XsRegProbe） |

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""README 逐域展開的產生器（第 282 輪；第 283 輪補上目錄的 6.3 條目）。
+"""README 逐域展開的產生器（第 282 輪；第 283 輪補上目錄的 6.3 條目；第 318 輪接上附錄 H）。
 
-README 的第 6.3 節（逐域鍵表）、第 6.5 節（逐鍵出處）、附錄 F（域前綴表）與
-附錄 F-2（動態家族）是把事實鍵目錄**整份展開**——149 個域、1,131 把鍵。那份內容原本由一次性腳本寫成，
-改完目錄沒重跑就與原始碼脫節，而且沒有任何東西會叫（第 279 輪補了結構守門，
+README 的第 6.3 節（逐域鍵表）、第 6.5 節（逐鍵出處）、附錄 F（域前綴表）、
+附錄 F-2（動態家族）與附錄 H（服務檔地圖）是把事實鍵目錄與服務檔**整份展開**。那份內容原本由
+一次性腳本寫成，改完目錄沒重跑就與原始碼脫節，而且沒有任何東西會叫（第 279 輪補了結構守門，
 但守門只驗「有沒有漏或多」，不會幫你把漏的補上）。
 
 這支工具做兩件事：
@@ -12,7 +12,7 @@ README 的第 6.3 節（逐域鍵表）、第 6.5 節（逐鍵出處）、附錄
   python Tools/gen-readme-domains.py            # 就地重生（只動它負責的區段）
   python Tools/gen-readme-domains.py --check    # 只比對，不寫檔；有差異 exit 2
 
-**只動它負責的四個區段＋目錄的 6.3 條目**，其餘一個字都不碰。
+**只動它負責的五個區段＋目錄的 6.3 條目**，其餘一個字都不碰。
 
 目錄那一塊是第 283 輪補的：條目編號與錨點原本靠手維護，於是「章節重編號」與
 「目錄」各自漂移——v2.99 時目錄寫 `6.3.57 域 kp`、章節已經是 `6.3.58`，
@@ -36,13 +36,15 @@ import os
 import re
 import sys
 
-# ── 常數：這支工具負責的三個區段 ─────────────────────────────────────────
+# ── 常數：這支工具負責的五個區段 ─────────────────────────────────────────
 SEC_63_START = "### 6.3 逐域鍵表"
 SEC_63_END = "### 6.4 跨域通則"
 SEC_65_START = "### 6.5 逐鍵出處"
 SEC_65_END = "## 第 7 部"
 APP_F_START = "### 附錄 F　"
 APP_F_END = "### 附錄 F-2"
+APP_H_START = "### 附錄 H　"
+APP_H_END = "### 附錄 I"
 
 CATALOG = os.path.join("Services", "FactKeyCatalog.cs")
 FAMILIES = os.path.join("Services", "FactKeyDynamicCatalog.cs")
@@ -486,8 +488,8 @@ def build_toc63(domains, parsed, total_keys, nl):
     return nl.join(rows)
 
 
-def patch_count_lines(text, n_domains, total_keys, n_families, nl):
-    """六行帶數字的標題／目錄行：只改這些行的數字，其餘一行不碰。
+def patch_count_lines(text, n_domains, total_keys, n_families, n_services, nl):
+    """帶數字的標題／目錄行：只改這些行的數字，其餘一行不碰。
 
     逐行處理而不是全文替換——全文替換會把內文裡**歷史敘述**的舊數字一起改掉，
     那會讓「當時是多少」變成「現在是多少」。
@@ -513,6 +515,11 @@ def patch_count_lines(text, n_domains, total_keys, n_families, nl):
         elif body.startswith("- [附錄 F-2　"):
             body = re.sub(r"\d+ 個動態家族", f"{n_families} 個動態家族", body)
             body = re.sub(r"#附錄-f-2-\d+", f"#附錄-f-2-{n_families}", body)
+        elif body.startswith("- [附錄 H　"):
+            # 第 318 輪：這一條目錄與它的標題都嵌著服務檔數，而兩者都沒有守門——
+            # 附錄 H 的標題因此停在 618（實況 639），目錄的錨點也一起指到舊標題。
+            body = re.sub(r"（\d+ 個檔案）", f"（{n_services} 個檔案）", body)
+            body = re.sub(r"#附錄-h-服務檔地圖\d+-個檔案", f"#附錄-h-服務檔地圖{n_services}-個檔案", body)
         return indent + body
 
     return nl.join(fix(line) for line in text.split(nl))
@@ -568,6 +575,68 @@ def build_appendix_f2(root, nl):
     return normalize(nl.join(out), nl)
 
 
+def service_files(root):
+    """`Services/` 底下所有 `.cs`，路徑相對倉庫根、以 `/` 分隔、字典序。
+
+    附錄 H 的列集合**就是這個清單**——沒有第二份名冊。第 318 輪之前這張表是一次性腳本寫的，
+    於是新增的服務檔永遠不會出現在地圖上（實測：檔案 639、表上 615，其中還有 1 列指向已刪除的檔案）。
+    """
+    base = os.path.join(root, SERVICES)
+    out = []
+    for dirpath, _, files in os.walk(base):
+        for name in files:
+            if name.endswith(".cs"):
+                p = os.path.join(dirpath, name)
+                out.append(os.path.relpath(p, root).replace(os.sep, "/"))
+    out.sort()
+    return out
+
+
+# 類別宣告：修飾詞（含 partial）任意組合之後接 `class` 與型別名。
+# 不含 interface／record／struct／enum——它們不是 class，混進來會讓「這個檔案宣告了幾個類別」
+# 變成「這個檔案宣告了幾個型別」，而表格的用途是找檔案，標題就得說它數的是什麼。
+CLASS_DECL = re.compile(
+    r'^\s*(?:(?:public|internal|private|protected|file|static|sealed|abstract|'
+    r'partial|readonly|unsafe|new)\s+)*class\s+[A-Za-z_]', re.M)
+
+
+def count_classes(text):
+    """`class` 宣告數（含巢狀與 partial 的每一部分）；註解行不計。
+
+    註解行先剔掉，因為 `// 這個 class 負責…` 這種句子會被逐行正規表示式誤認成宣告。
+    字串常數裡出現 `class ` 的情況（例如匯出程式碼時組字串）同樣會被算進來——這是這個數法的
+    已知邊界，寫在附錄 H 的說明裡：**它是「這個檔案有多長、宣告了幾個型別」的粗量**，
+    不是品質指標，也不是編譯器的答案。
+    """
+    body = "\n".join(line for line in text.split("\n") if not line.lstrip().startswith("//"))
+    return len(CLASS_DECL.findall(body))
+
+
+def build_appendix_h(root, files, nl):
+    """附錄 H：服務檔地圖（路徑、行數、類別數）——三個數字都由這棵樹當場算。"""
+    out = [
+        f"### 附錄 H　服務檔地圖（{len(files)} 個檔案）",
+        "",
+        "`Services/` 底下的每一個 `.cs`：路徑、行數、以及它宣告了幾個類別。"
+        "**這張表的用途是「找到負責某件事的檔案」**——事實鍵的生產點在哪裡，先看這張表，"
+        "再回頭看 6.5 的逐鍵出處。",
+        "",
+        "**這兩個數字怎麼數。** 行數＝檔案以 `\\n` 切開後的段數（結尾有換行時最後一段是空的，"
+        "所以等於 `wc -l` 加 1）；類別數＝`class` 關鍵字宣告的數量，含巢狀類別與 `partial` 的每一部分，"
+        "`interface`／`record`／`struct`／`enum` 不計，註解行不計。"
+        "**它們是「這個檔案有多長、宣告了幾個型別」的粗量，不是品質或重要性的度量。**"
+        "字串常數裡出現 `class ` 也會被算進類別數——這是這個數法的已知邊界，不假裝它是編譯器的答案。",
+        "",
+        "| 檔案 | 行數 | 類別數 |",
+        "|---|---:|---:|",
+    ]
+    for rel in files:
+        raw = read(os.path.join(root, rel))
+        out.append(f"| `{rel}` | {len(raw.split(chr(10)))} | {count_classes(raw)} |")
+    out.append("")
+    return normalize(nl.join(out), nl)
+
+
 def normalize(text, nl):
     """把區段收斂成穩定形狀：連續空行最多一行、結尾恰好一個空行。
 
@@ -597,7 +666,8 @@ def first_difference(a, b):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="重生 README 的逐域展開（6.3／6.5／附錄 F／F-2）")
+    ap = argparse.ArgumentParser(
+        description="重生 README 的逐域展開（6.3／6.5／附錄 F／F-2／附錄 H）")
     ap.add_argument("--check", action="store_true",
                     help="只比對不寫檔；有差異 exit 2")
     args = ap.parse_args()
@@ -615,6 +685,7 @@ def main():
     i65, j65, sec65 = slice_section(text, SEC_65_START, SEC_65_END)
     iF, jF, secF = slice_section(text, APP_F_START, APP_F_END)
     iF2, jF2, _ = slice_section(text, APP_F_END, "### 附錄 G")
+    iH, jH, secH = slice_section(text, APP_H_START, APP_H_END)
 
     head63, parsed63 = parse_63(sec63, nl)
     head65, bullets = parse_65(sec65, nl)
@@ -625,6 +696,8 @@ def main():
     new65 = build_65(head65, bullets, domains, corpus, nl)
     newF = build_appendix_f(descriptions, domains, len(keys), nl)
     newF2 = build_appendix_f2(root, nl)
+    services = service_files(root)
+    newH = build_appendix_h(root, services, nl)
 
     mtoc = TOC63_RE.search(text)
     if not mtoc:
@@ -638,6 +711,7 @@ def main():
              (i65, j65, sec65, new65, "6.5"),
              (iF, jF, secF, newF, "附錄 F"),
              (iF2, jF2, text[iF2:jF2], newF2, "附錄 F-2"),
+             (iH, jH, secH, newH, "附錄 H"),
              (mtoc.start(), mtoc.end(), mtoc.group(0), newToc, "目錄 6.3")],
             key=lambda x: -x[0]):
         if old == new:
@@ -650,20 +724,23 @@ def main():
             print(f"  README: {a}")
             print(f"  應為  : {b}")
 
-    result = patch_count_lines(result, len(domains), len(keys), len(load_families(root)), nl)
+    result = patch_count_lines(result, len(domains), len(keys), len(load_families(root)),
+                               len(services), nl)
 
     if args.check:
         if result != text:
-            print(f"\nREADME 的逐域展開落後於事實鍵目錄（{len(keys)} 把鍵、{len(domains)} 個域）。")
+            print(f"\nREADME 的逐域展開落後於事實鍵目錄（{len(keys)} 把鍵、{len(domains)} 個域、"
+                  f"{len(services)} 個服務檔）。")
             print("修正方式：python Tools/gen-readme-domains.py")
             return 2
-        print(f"OK：6.3／6.5／附錄 F／F-2 與目錄一致（{len(keys)} 把鍵、{len(domains)} 個域、"
-              f"{len(load_families(root))} 個家族）")
+        print(f"OK：6.3／6.5／附錄 F／F-2／附錄 H 與目錄一致（{len(keys)} 把鍵、{len(domains)} 個域、"
+              f"{len(load_families(root))} 個家族、{len(services)} 個服務檔）")
         return 0
 
     if result != text:
         write(path, result)
-        print(f"已重生 README 的逐域展開：{len(keys)} 把鍵、{len(domains)} 個域。")
+        print(f"已重生 README 的逐域展開：{len(keys)} 把鍵、{len(domains)} 個域、"
+              f"{len(services)} 個服務檔。")
     else:
         print("沒有變更（README 已與目錄一致）。")
     return 0

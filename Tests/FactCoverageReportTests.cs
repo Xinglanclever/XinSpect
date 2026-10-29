@@ -247,10 +247,25 @@ public class FactCoverageReportTests
         // 它數的是「本版對照表解到第幾層」，沒有第二條獨立通路能再問一次「你的表收錄了多少」
         // （逐功能的原始類別碼本身是可稽核的，那些事實有自己的輸入面）。上限跟著移到 419。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 419,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 419）。新增事實時請順手評估要不要納入對帳，"
+        int baseline = FactCoverageReport.ReviewedUncoveredBaseline;
+        Assert.True(s.Uncovered <= baseline,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 {baseline}）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
+    }
+
+    [Fact]
+    public void README的覆蓋基線要等於程式的已檢視上限()
+    {
+        // 這個數字原本只活在測試裡，README 卻另外寫了一份（兩份都是「現在式宣稱」）。
+        // 第 318 輪對帳時發現：程式是 419、README 還停在 381——差了三十八輪的增量，
+        // 而沒有守門看著它。上限的單一來源是 FactCoverageReport.ReviewedUncoveredBaseline。
+        int baseline = FactCoverageReport.ReviewedUncoveredBaseline;
+        var root = RepoRoot();
+        string readme = File.ReadAllText(Path.Combine(root, "README.md"));
+
+        Assert.Contains($"| 覆蓋基線 | {baseline} | 遞增需留理由 |", readme);
+        Assert.Contains($"計數基線（目前 {baseline}）", readme);
     }
 
     [Fact]
