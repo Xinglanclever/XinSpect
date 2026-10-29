@@ -243,9 +243,12 @@ public class FactCoverageReportTests
         // 2026-10-29 第 316 輪：+4 條（`pw.battery.design_mwh`／`full_mwh`／`wear_pct`／`cycle_count`）。
         // 這四把與 `pw.battery.summary` 讀的是同一批 WMI 欄位（同一條通路，不得互相代言），
         // 而機器上沒有第二個地方能再問一次「這顆電池的設計容量是多少」。上限跟著移到 418。
+        // 2026-10-29 第 317 輪：+1 條（`pci.class.summary`——類別碼三層解碼的收錄度自述）。
+        // 它數的是「本版對照表解到第幾層」，沒有第二條獨立通路能再問一次「你的表收錄了多少」
+        // （逐功能的原始類別碼本身是可稽核的，那些事實有自己的輸入面）。上限跟著移到 419。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 418,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 418）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 419,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 419）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }

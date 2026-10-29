@@ -677,6 +677,7 @@ public static class FactKeyCatalog
         "os.memdiag.results.cross",
         "os.wmi.fields",
         "pci.bus0.inventory",
+        "pci.class.summary",
         "pci.dev.00.0",
         "pci.dev.1f.5",
         "pci.id",

@@ -23,6 +23,9 @@ public static class FactKeyDynamicCatalog
     public static IReadOnlyDictionary<string, string> Families { get; } =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
+            ["pci.class.dev."] =
+                "逐 PCI 功能的類別三層一筆（成員＝這台機器 bus 0 掃到幾個功能，編譯期數不出來）——" +
+                "三層各自查表，查不到就寫「本版沒有這一層的名稱」，不拿別層的名字頂替",
             ["boot.order.item."] =
                 "開機選單逐項一筆（成員＝這台機器 displayorder 上有幾項，編譯期數不出來）——" +
                 "順序就是鍵的序號：第 1 位是選單最上面那一項",

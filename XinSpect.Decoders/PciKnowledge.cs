@@ -103,11 +103,57 @@ public static class PciKnowledge
     }
 
     /// <summary>
+    /// progIF（程式介面）→ 細節名：<b>只收錄 PCI-SIG 指派表裡沒有爭議的幾格</b>。
+    /// 未收錄回 null——呼叫端要如實寫「本版沒有這一格的名稱，只報原值」，
+    /// 不能拿子類別的名字冒充（USB 控制器與 USB 主機是兩件事）。
+    /// </summary>
+    [SpecRef("PCI-SIG, PCI Code and Vendor ID Assignments Spec 的 Programming Interface 指派（僅收錄 USB 控制器、NVMe、AHCI 三組常見格）")]
+    public static string? ProgIfName(byte baseClass, byte subClass, byte progIf) => (baseClass, subClass) switch
+    {
+        (0x0C, 0x03) => progIf switch
+        {
+            0x00 => "UHCI（USB 1.x 主機控制器）",
+            0x10 => "OHCI（USB 1.x 主機控制器）",
+            0x20 => "EHCI（USB 2.0 主機控制器）",
+            0x30 => "XHCI（USB 3.x 主機控制器）",
+            _ => null,
+        },
+        (0x01, 0x08) => progIf switch
+        {
+            0x01 => "NVMHCI",
+            0x02 => "NVMe（NVM Express）",
+            _ => null,
+        },
+        (0x01, 0x06) => progIf switch
+        {
+            0x01 => "AHCI 1.0",
+            _ => null,
+        },
+        _ => null,
+    };
+
+    /// <summary>
     /// 本表三段的條數（基底類別／子類別／廠商）。<b>由程式數出來，不手抄</b>——
     /// 內建清冊與覆蓋申報都讀這裡，表改了申報跟著動。
     /// </summary>
     [SpecRef("計數即上列三張對照表的成員數（基底類別／子類別／廠商）——逐值掃描列舉域，不由手抄而來的常數")]
     public static (int BaseClasses, int SubClasses, int Vendors) Counts() => LazyCounts.Value;
+
+    /// <summary>progIF 表收錄幾格（由程式掃描列舉域數出來，不手抄）。</summary>
+    [SpecRef("計數即 ProgIfName 對照表的成員數——逐值掃描列舉域，不由手抄的常數（與 Counts 同一個規矩）")]
+    public static int ProgIfCount()
+    {
+        int n = 0;
+        for (int b = 0; b <= 0xFF; b++)
+            for (int s = 0; s <= 0xFF; s++)
+            {
+                // 先問子類別表：progIF 只在有子類別的 (base, sub) 底下才有意義，這樣是 25×256 而不是 256³。
+                if (SubClassName((byte)b, (byte)s) is null) continue;
+                for (int p = 0; p <= 0xFF; p++)
+                    if (ProgIfName((byte)b, (byte)s, (byte)p) is not null) n++;
+            }
+        return n;
+    }
 
     private static readonly System.Lazy<(int, int, int)> LazyCounts = new(() =>
     {

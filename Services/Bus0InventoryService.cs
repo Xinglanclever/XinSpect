@@ -22,32 +22,14 @@ public static class Bus0InventoryService
             return [Unavailable(invKey, invName, source, at, FactAvailability.InsufficientPrivilege,
                 pci.UnavailableReason ?? "缺 ring0：特權讀取未就緒")];
 
+        var (found, readErrors) = Walk(pci);
         var facts = new List<HardwareFact>();
-        int devices = 0, functions = 0, readErrors = 0;
-        for (byte dev = 0; dev < 32; dev++)
+        int devices = found.Select(f => f.Dev).Distinct().Count();
+        int functions = found.Count;
+        foreach (var (dev, fn, idRaw) in found)
         {
-            var id0 = pci.ReadDword(0, dev, 0, 0x00);
-            if (id0 is null) { readErrors++; continue; }
-            if (id0.Value == 0xFFFFFFFF) continue; // 空槽：PCI 慣例全 F，不是錯誤
-
-            devices++;
-            functions++;
-            facts.Add(DeviceFact(dev, 0, id0.Value, pci, at));
-            facts.Add(ResourceFact(dev, 0, pci, at));
-
-            // 多功能位元：header type（0x0C dword bits[23:16]）bit7。未設就不掃 fn 1–7（規格行為）。
-            bool multiFunction = pci.ReadDword(0, dev, 0, 0x0C) is { } header && (header & (1u << 23)) != 0;
-            if (!multiFunction) continue;
-
-            for (byte fn = 1; fn < 8; fn++)
-            {
-                var id = pci.ReadDword(0, dev, fn, 0x00);
-                if (id is null) { readErrors++; continue; }
-                if (id.Value == 0xFFFFFFFF) continue;
-                functions++;
-                facts.Add(DeviceFact(dev, fn, id.Value, pci, at));
-                facts.Add(ResourceFact(dev, fn, pci, at));
-            }
+            facts.Add(DeviceFact(dev, fn, idRaw, pci, at));
+            facts.Add(ResourceFact(dev, fn, pci, at));
         }
 
         if (facts.Count == 0 && readErrors > 0)
@@ -61,6 +43,65 @@ public static class Bus0InventoryService
             "", source, FactTrustLevel.Measured, false, at,
             NumericValue: devices));
         return facts;
+    }
+
+    /// <summary>
+    /// 依規格走訪 bus 0：多功能位元（header type bits[23:16] 的 bit7）未設就不掃 fn 1–7。
+    /// 盤點與類別解碼共用這一段，避免兩套走訪各自漂移。
+    /// </summary>
+    private static (List<(byte Dev, byte Fn, uint IdRaw)> Found, int ReadErrors) Walk(IPciConfigReader pci)
+    {
+        var found = new List<(byte, byte, uint)>();
+        int readErrors = 0;
+
+        for (byte dev = 0; dev < 32; dev++)
+        {
+            var id0 = pci.ReadDword(0, dev, 0, 0x00);
+            if (id0 is null) { readErrors++; continue; }
+            if (id0.Value == 0xFFFFFFFF) continue; // 空槽：PCI 慣例全 F，不是錯誤
+
+            found.Add((dev, 0, id0.Value));
+
+            bool multiFunction = pci.ReadDword(0, dev, 0, 0x0C) is { } header && (header & (1u << 23)) != 0;
+            if (!multiFunction) continue;
+
+            for (byte fn = 1; fn < 8; fn++)
+            {
+                var id = pci.ReadDword(0, dev, fn, 0x00);
+                if (id is null) { readErrors++; continue; }
+                if (id.Value == 0xFFFFFFFF) continue;
+                found.Add((dev, fn, id.Value));
+            }
+        }
+
+        return (found, readErrors);
+    }
+
+    /// <summary>
+    /// 讀 bus 0 每個功能的類別碼（設定空間 0x08），給 <see cref="PciClassFactsService"/> 解碼三層。
+    /// 與盤點共用同一趟走訪；讀取單格失敗只讓那個功能缺席，並回報次數。
+    /// </summary>
+    public static (IReadOnlyList<PciClassFactsService.Sample> Samples, int ReadErrors, string? Reason) ReadClasses(
+        IPciConfigReader pci)
+    {
+        if (!pci.Available)
+            return ([], 0, pci.UnavailableReason ?? "缺 ring0：特權讀取未就緒");
+
+        var (found, walkErrors) = Walk(pci);
+        var samples = new List<PciClassFactsService.Sample>(found.Count);
+        int classErrors = 0;
+        foreach (var (dev, fn, _) in found)
+        {
+            var cls = pci.ReadDword(0, dev, fn, 0x08);
+            if (cls is null) { classErrors++; continue; }
+            samples.Add(new PciClassFactsService.Sample(dev, fn, cls.Value));
+        }
+
+        int readErrors = walkErrors + classErrors;
+        if (samples.Count == 0 && readErrors > 0)
+            return ([], readErrors, $"bus 0 類別碼讀取失敗 {readErrors} 次——PCI 設定空間不可達");
+
+        return (samples, readErrors, null);
     }
 
     private static HardwareFact DeviceFact(byte dev, byte fn, uint idRaw, IPciConfigReader pci, DateTimeOffset at)
