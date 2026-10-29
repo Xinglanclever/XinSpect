@@ -251,6 +251,10 @@ public class FactCoverageReportTests
         // 硬體面（AvailableSecurityProperties）四層併成一個結論。**四層各自的值**都可以被
         // 別的鍵再問一次（`sec.vbs.state` 讀的就是同一份 WMI），但「併起來之後算哪一級」
         // 是本服務的判定，沒有第二條獨立通路能再算一次。上限跟著移到 420。
+        // 2026-10-30 第 320 輪：+1 條（`sec.vbs.services.summary`——VBS 安全服務清單總覽）。
+        // 它數的是「設定幾個、執行幾個」，輸入是同一份 Win32_DeviceGuard 快照；
+        // 逐服務的成員在 `sec.vbs.svc.` 家族裡（那些也是同一條通路的投影），
+        // 而機器上沒有第二個地方能再問一次「你設定了幾個服務」。上限跟著移到 421。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
         int baseline = FactCoverageReport.ReviewedUncoveredBaseline;
         Assert.True(s.Uncovered <= baseline,

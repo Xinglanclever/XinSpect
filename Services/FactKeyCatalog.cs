@@ -928,6 +928,7 @@ public static class FactKeyCatalog
         "sec.credguard.chain",
         "sec.logon.hw.correlate",
         "sec.vbs.required",
+        "sec.vbs.services.summary",
         "sec.vbs.state",
         "secboot.chain",
         "secure.dbx",

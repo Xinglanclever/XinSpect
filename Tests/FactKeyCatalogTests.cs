@@ -149,7 +149,10 @@ public class FactKeyCatalogTests
         // 同批的修訂號／4:2:0／VCDB／HDMI VSDB／HDR／色度學九把成員固定，走靜態目錄。
         // 48 → 49（2026-10-26 第 283 輪）：kp.builtin.item.——成員＝內建知識表實際有幾張（目前九張）；
         // 再加一張知識表就自動多一把鍵，編譯期不該為此改目錄。三把彙總鍵 kp.builtin.{tables,entries,oldest} 走靜態目錄。
-        const int FamilyCap = 59;
+        // 59 → 60（2026-10-30 第 320 輪）：sec.vbs.svc.（U10-SE-0004 逐 VBS 安全服務）——
+        // 成員＝Win32_DeviceGuard 兩張清單的聯集，機器裝了哪些安全服務編譯期列不完；
+        // 代碼 0（無服務）是哨兵不是服務，不進家族。彙總鍵 sec.vbs.services.summary 走靜態目錄。
+        const int FamilyCap = 60;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 
