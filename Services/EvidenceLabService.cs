@@ -222,6 +222,8 @@ public sealed class EvidenceLabService : ObservableObject
     /// 由 <see cref="LoadDeviceTruth"/> 讀入；<see cref="AllFacts"/> 只串接不讀。
     /// </summary>
     public IReadOnlyList<HardwareFact> DeviceTruthFacts { get; private set; } = [];
+    /// <summary>裝置樹全圖（U10-OS-0001，第 321 輪）：devnode 階層，與 DeviceTruthFacts 共用同一次列舉。</summary>
+    public IReadOnlyList<HardwareFact> DeviceTreeFacts { get; private set; } = [];
     /// <summary>逐鍵重複性（U10-MT-0001，第 312 輪）：同一個鍵連量幾輪，看它穩不穩。</summary>
     public IReadOnlyList<HardwareFact> MeasurementRepeatFacts { get; private set; } = [];
 
@@ -333,18 +335,30 @@ public sealed class EvidenceLabService : ObservableObject
     /// </remarks>
     public void LoadDeviceTruth()
     {
+        DateTimeOffset at = DateTimeOffset.UtcNow;
         try
         {
             var report = new DeviceDiagnosticService().Scan();
-            DeviceTruthFacts = DeviceTruthFactsService.Collect(report, DateTimeOffset.UtcNow);
+            DeviceTruthFacts = DeviceTruthFactsService.Collect(report, at);
+            // 第 321 輪（OS-0001）：同一份報告再投影一次，這次是 devnode 階層。
+            // 樹已經在 DeviceDiagnosticReport.Roots 裡（第 309 輪就建好了），
+            // 所以這一輪**沒有新增任何讀取面**——只是多一個消費者。
+            DeviceTreeFacts = DeviceTreeFactsService.Collect(report, at);
         }
         catch (Exception ex)
         {
+            string reason = UserFacingError.Describe(ex);
             DeviceTruthFacts =
             [
                 new HardwareFact(DeviceTruthFactsService.SummaryKey, "裝置（PnP）", "PnP 裝置彙總", "", "台",
-                    "SetupAPI 裝置列舉（唯讀）", FactTrustLevel.Reported, false, DateTimeOffset.UtcNow,
-                    null, FactAvailability.ReadError, UserFacingError.Describe(ex))
+                    "SetupAPI 裝置列舉（唯讀）", FactTrustLevel.Reported, false, at,
+                    null, FactAvailability.ReadError, reason)
+            ];
+            DeviceTreeFacts =
+            [
+                new HardwareFact(DeviceTreeFactsService.SummaryKey, "裝置（PnP）", "裝置樹全圖", "", "台",
+                    "SetupAPI 裝置列舉（唯讀）", FactTrustLevel.Reported, false, at,
+                    null, FactAvailability.ReadError, "同一次裝置列舉失敗——沒有樹可建：" + reason)
             ];
         }
     }
@@ -2261,7 +2275,7 @@ public sealed class EvidenceLabService : ObservableObject
                 .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(FirmwareRiskFacts).Concat(FirmwareRiskDeltaFacts).Concat(IoPortFacts).Concat(CmosFacts)
                 .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(UefiDbtDbrFacts).Concat(EfiVariableFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(TpmViewCrossFacts).Concat(TpmReplayFacts)
                 .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(VbsStateFacts).Concat(CredentialGuardFacts).Concat(VbsServiceFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EtwFilterViewFacts).Concat(FsMetadataLatencyFacts).Concat(PresentObservationFacts).Concat(SrumReadbackFacts).Concat(AmcacheFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(ListenPortFacts).Concat(LocalSecurityAuditFacts)
-                .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ComplianceFacts).Concat(ServerComplianceFacts).Concat(ServerRoleDeepFacts).Concat(ServerRoleConditionalFacts).Concat(ServerRoleFilePrintFacts).Concat(MaintenanceFacts).Concat(EnvironmentRuntimeFacts).Concat(ClosingFacts).Concat(QueryInsightFacts).Concat(ChecklistFacts).Concat(TrustOpsFacts).Concat(ZeroTrustFacts).Concat(DataSecurityFacts).Concat(EndpointPolicyFacts).Concat(ScenarioFacts).Concat(ScenarioSecondWaveFacts).Concat(MultimediaFacts).Concat(MediaProtectionFacts).Concat(ExportCacheFacts).Concat(MaintenanceDashboardFacts).Concat(VolumeEncryptionFacts).Concat(QueryGovernanceFacts).Concat(LifecycleReportsFacts).Concat(GovernanceExtraFacts).Concat(InterchangeReportFacts).Concat(AutomationGuidanceFacts).Concat(ServiceModeFacts).Concat(RecoveryPowerInteropFacts).Concat(EnvironmentDiagnosticsFacts).Concat(AdvancedSupplementFacts).Concat(OperationsInventoryFacts).Concat(NetworkSystemInventoryFacts).Concat(InventoryGovernanceFacts).Concat(NetworkSecurityInventoryFacts).Concat(FinalInventoryFacts).Concat(RecoveryInventoryFacts).Concat(RecoveryDisplayFacts).Concat(SecurityAuditSupplementFacts).Concat(LifecycleMaintenanceFacts).Concat(FirmwareAuditFacts).Concat(PlatformGovernanceFacts).Concat(PlatformDeepDiveFacts).Concat(PlatformExpansionFacts).Concat(PlatformReconciliationFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(StorageScenarioReconciliationFacts).Concat(PerformanceObservationFacts).Concat(ServiceBootFacts).Concat(DeepBenchSecondWaveFacts).Concat(GovernanceKnowledgeFacts).Concat(BusDeepDiveFacts).Concat(BusCapabilityFacts).Concat(EngineeringGovernanceFacts).Concat(VisualizationFacts).Concat(OfflineAnalysisFacts).Concat(ProductPlatformFacts).Concat(MeasurementMethodologyFacts).Concat(LifecycleSecurityFacts).Concat(DeepBenchMethodology2Facts).Concat(EvidenceExportFacts).Concat(ExportUxFacts).Concat(UserExperience2Facts).Concat(GpuDeepFacts).Concat(FirmwareDeepFacts).Concat(EngineeringGovernance2Facts).Concat(StorageDeepFacts).Concat(FileSystemVolumeFacts).Concat(IscsiSessionFacts).Concat(HyperVInventoryFacts).Concat(BaselineForecastFacts).Concat(DevDiagCorrelationFacts).Concat(SecurityAuditDeepFacts).Concat(BitLockerRecoveryFacts).Concat(AcpiDeepFacts).Concat(CppcCapabilityFacts).Concat(MousePollRateFacts).Concat(DeepTestFacts).Concat(EdidCtaFacts).Concat(EventIdEvidenceFacts).Concat(DeviceTruthFacts).Concat(MeasurementRepeatFacts).Concat(BootOrderFacts).Concat(BatteryHealthFacts).Concat(PciClassFacts).Concat(BuiltinKnowledgeFacts).Concat(DataSecurityDeepFacts).Concat(ScenarioThirdWaveFacts).Concat(SbomFacts)
+                .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ComplianceFacts).Concat(ServerComplianceFacts).Concat(ServerRoleDeepFacts).Concat(ServerRoleConditionalFacts).Concat(ServerRoleFilePrintFacts).Concat(MaintenanceFacts).Concat(EnvironmentRuntimeFacts).Concat(ClosingFacts).Concat(QueryInsightFacts).Concat(ChecklistFacts).Concat(TrustOpsFacts).Concat(ZeroTrustFacts).Concat(DataSecurityFacts).Concat(EndpointPolicyFacts).Concat(ScenarioFacts).Concat(ScenarioSecondWaveFacts).Concat(MultimediaFacts).Concat(MediaProtectionFacts).Concat(ExportCacheFacts).Concat(MaintenanceDashboardFacts).Concat(VolumeEncryptionFacts).Concat(QueryGovernanceFacts).Concat(LifecycleReportsFacts).Concat(GovernanceExtraFacts).Concat(InterchangeReportFacts).Concat(AutomationGuidanceFacts).Concat(ServiceModeFacts).Concat(RecoveryPowerInteropFacts).Concat(EnvironmentDiagnosticsFacts).Concat(AdvancedSupplementFacts).Concat(OperationsInventoryFacts).Concat(NetworkSystemInventoryFacts).Concat(InventoryGovernanceFacts).Concat(NetworkSecurityInventoryFacts).Concat(FinalInventoryFacts).Concat(RecoveryInventoryFacts).Concat(RecoveryDisplayFacts).Concat(SecurityAuditSupplementFacts).Concat(LifecycleMaintenanceFacts).Concat(FirmwareAuditFacts).Concat(PlatformGovernanceFacts).Concat(PlatformDeepDiveFacts).Concat(PlatformExpansionFacts).Concat(PlatformReconciliationFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(StorageScenarioReconciliationFacts).Concat(PerformanceObservationFacts).Concat(ServiceBootFacts).Concat(DeepBenchSecondWaveFacts).Concat(GovernanceKnowledgeFacts).Concat(BusDeepDiveFacts).Concat(BusCapabilityFacts).Concat(EngineeringGovernanceFacts).Concat(VisualizationFacts).Concat(OfflineAnalysisFacts).Concat(ProductPlatformFacts).Concat(MeasurementMethodologyFacts).Concat(LifecycleSecurityFacts).Concat(DeepBenchMethodology2Facts).Concat(EvidenceExportFacts).Concat(ExportUxFacts).Concat(UserExperience2Facts).Concat(GpuDeepFacts).Concat(FirmwareDeepFacts).Concat(EngineeringGovernance2Facts).Concat(StorageDeepFacts).Concat(FileSystemVolumeFacts).Concat(IscsiSessionFacts).Concat(HyperVInventoryFacts).Concat(BaselineForecastFacts).Concat(DevDiagCorrelationFacts).Concat(SecurityAuditDeepFacts).Concat(BitLockerRecoveryFacts).Concat(AcpiDeepFacts).Concat(CppcCapabilityFacts).Concat(MousePollRateFacts).Concat(DeepTestFacts).Concat(EdidCtaFacts).Concat(EventIdEvidenceFacts).Concat(DeviceTruthFacts).Concat(DeviceTreeFacts).Concat(MeasurementRepeatFacts).Concat(BootOrderFacts).Concat(BatteryHealthFacts).Concat(PciClassFacts).Concat(BuiltinKnowledgeFacts).Concat(DataSecurityDeepFacts).Concat(ScenarioThirdWaveFacts).Concat(SbomFacts)
                 .ToList();
             baseFacts.AddRange(CapabilityMatrixService.Collect(baseFacts, DateTimeOffset.UtcNow));
             // 覆蓋統計（NG-006）：與 cap.*／qs.range 同款，輸入是前面各組的聯集、不含自己——無自我指涉

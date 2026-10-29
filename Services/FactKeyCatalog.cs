@@ -654,6 +654,7 @@ public static class FactKeyCatalog
         "off.mount.kind",
         "oob.ipmi",
         "os.dev.summary",
+        "os.devtree.summary",
         "os.ev.chkdsk",
         "os.ev.display.tdr2",
         "os.ev.dsm",

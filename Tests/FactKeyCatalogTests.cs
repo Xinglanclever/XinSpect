@@ -152,7 +152,10 @@ public class FactKeyCatalogTests
         // 59 → 60（2026-10-30 第 320 輪）：sec.vbs.svc.（U10-SE-0004 逐 VBS 安全服務）——
         // 成員＝Win32_DeviceGuard 兩張清單的聯集，機器裝了哪些安全服務編譯期列不完；
         // 代碼 0（無服務）是哨兵不是服務，不進家族。彙總鍵 sec.vbs.services.summary 走靜態目錄。
-        const int FamilyCap = 60;
+        // 60 → 61（2026-10-30 第 321 輪）：os.devtree.root.（U10-OS-0001 devnode 樹的逐根）——
+        // 成員＝這台機器列舉出幾個根節點（PC 上通常個位數到十幾，但由韌體與驅動堆疊決定）；
+        // 彙總鍵 os.devtree.summary 走靜態目錄。
+        const int FamilyCap = 61;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 

@@ -53,6 +53,9 @@ public static class FactKeyDynamicCatalog
                 "逐 PnP 裝置的狀態旗標一筆（只收有 finding 的裝置；同上，成員由機器決定）",
             ["os.dev.driver."] =
                 "逐 PnP 裝置的驅動證據一筆（提供者／版本／日期／簽章；每台機器装的驅動不同）",
+            ["os.devtree.root."] =
+                "devnode 樹的每個根一筆（成員＝這台機器列舉出幾個根節點，編譯期數不出來）——" +
+                "值寫該根的子樹規模、最深層數與直接子節點；鍵序按 instance ID 排序，不是按名稱",
             ["pci.dev."] =
                 "bus 0 盤點每張存在的裝置一筆（成員＝裝置號 dev.fn）——有哪些裝置是機器的事實，编译期列不完",
             ["pci.res."] =

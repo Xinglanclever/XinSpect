@@ -17,6 +17,7 @@
 | `ROUND-318-README-RECONCILIATION-2026-10-30.md` | 第 318 輪：**沒有新增硬體通路**，只清掉 README 裡「同一批數字的第二個答案」——附錄 H 接進產生器（615 列→639）、正文九個舊數字回填、6.2 補第 12 個 ≥20 鍵域（`os`）、新增 11 條守門。 |
 | `ROUND-319-CREDGUARD-CHAIN-2026-10-30.md` | 第 319 輪（U10-SE-0005）：Credential Guard 從一個布林變成四層狀態鏈（`sec.credguard.chain`），並修掉 `ws.lsa.summary` 把 VBS 總開關標成「Credential Guard」的標籤錯誤、以及 `VbsSnapshot` 把「清單讀不到」寫成「清單是空的」。 |
 | `ROUND-320-VBS-SERVICES-2026-10-30.md` | 第 320 輪（U10-SE-0004）：VBS 安全服務清單從一句人話變成逐服務的鍵（`sec.vbs.services.summary`＋`sec.vbs.svc.*`）；代碼 0（無服務）是哨兵不進家族、兩張清單的成員取聯集、缺一張時只出讀得到的那一半。沒有新增讀取面。 |
+| `ROUND-321-DEVTREE-2026-10-30.md` | 第 321 輪（U10-OS-0001）：裝置樹全圖（`os.devtree.summary`＋`os.devtree.root.*`）——層級分布、「根」有兩種（真的沒有父／父不在清單）分開計數、成環節點如實申報。樹在第 309 輪就建好了，這一輪只多一個消費者。 |
 | `dedup_check.py`／`sample_check.py` | 可重跑之稽核腳本（絕對路徑寫死）。 |
 | `ULTIMATE-10000-EXPANSION-2026-10-24.md` | 歷史快照（十二批完成時點；**已被 10-25 版取代**，保留供對帳）。 |
 | `ULTIMATE-5000-RESERVOIR-2026-10-24.md` | 前導文件（歸檔；已被主目錄取代）。 |

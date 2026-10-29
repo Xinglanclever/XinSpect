@@ -255,6 +255,10 @@ public class FactCoverageReportTests
         // 它數的是「設定幾個、執行幾個」，輸入是同一份 Win32_DeviceGuard 快照；
         // 逐服務的成員在 `sec.vbs.svc.` 家族裡（那些也是同一條通路的投影），
         // 而機器上沒有第二個地方能再問一次「你設定了幾個服務」。上限跟著移到 421。
+        // 2026-10-30 第 321 輪：+1 條（`os.devtree.summary`——devnode 樹的層級分布）。
+        // 它數的是「幾層、每層幾台、幾個根」，輸入是第 309 輪同一份 SetupAPI 列舉；
+        // 逐根的明細在 `os.devtree.root.` 家族裡。樹本身是 Windows 回報的 Parent 關聯，
+        // 沒有第二條獨立通路能再建一次同一棵樹（CM_Get_Parent 是同一條）。上限跟著移到 422。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
         int baseline = FactCoverageReport.ReviewedUncoveredBaseline;
         Assert.True(s.Uncovered <= baseline,
