@@ -925,6 +925,7 @@ public static class FactKeyCatalog
         "se.surface",
         "se.winre.summary",
         "se.wpbt",
+        "sec.credguard.chain",
         "sec.logon.hw.correlate",
         "sec.vbs.required",
         "sec.vbs.state",

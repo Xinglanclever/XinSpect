@@ -306,7 +306,7 @@ public class ReadmeStatsTests
 
         Assert.Contains($"### 2.6 動態家族：{families} 個「我列不完」的申報", text);
         Assert.Contains($"登記 **{families}** 個動態前綴", text);
-        Assert.Contains($"1,145 個鍵加上 {families} 個動態家族", text);
+        Assert.Contains($"{FactKeyCatalog.Keys.Count:N0} 個鍵加上 {families} 個動態家族", text);
     }
 
     [Fact]

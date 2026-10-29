@@ -29,7 +29,7 @@ public static class FinalInventoryFactsService
     public sealed record UsbDescState(int UsbDevices, int BosDevices, int SuperspeedDevices);
     public sealed record EdidState(int Monitors, int ValidChecksums, int HdrBlocks, int CtaExtensions);
     public sealed record WolPacketState(int CountersPresent, long ReceivedMagicPackets);
-    public sealed record LsaState(string? RunAsPpl, string? CredentialGuard, int ProtectedProcesses);
+    public sealed record LsaState(string? RunAsPpl, string? VbsMasterSwitch, int ProtectedProcesses);
     public sealed record AppxState(int Packages, int PublisherMismatches, int Unverified);
     public sealed record VirtContraState(bool VmmsRunning, string? HypervisorLaunchType, bool Contradiction);
     public sealed record TaskState(int LogonTasks, int BootTasks, int DisabledTriggers, int MissingExecutables);
@@ -164,14 +164,23 @@ public static class FinalInventoryFactsService
     {
         LsaState? s; try { s = (probe ?? new LsaProbe(ReadLsa))(); } catch { s = null; }
         if (s is null) return Unavailable(at, LsaKey, CatSecurity, "LSA／CredGuard 卡", FactAvailability.ReadError, "LSA 保護設定讀取失敗——不猜保護狀態");
-        return new HardwareFact(LsaKey, CatSecurity, "LSA／CredGuard 卡", $"RunAsPPL {Raw(s.RunAsPpl)}、Credential Guard {Raw(s.CredentialGuard)}、受保護程序 {s.ProtectedProcesses}。缺源如實列缺源；不判整體安全。", "", @"HKLM\SYSTEM\CurrentControlSet\Control\Lsa＋DeviceGuard", FactTrustLevel.Reported, false, at);
+        // 第 319 輪修掉一個標籤錯誤：這裡讀的是 EnableVirtualizationBasedSecurity，那是 **VBS 的總開關**，
+        // 不是 Credential Guard 的設定（後者是 Lsa\LsaCfgFlags 與 DeviceGuard\Scenarios\CredentialGuard）。
+        // 原本寫成「Credential Guard 1」，於是「VBS 開著但 Credential Guard 沒開」這台機器
+        // 會被讀成「Credential Guard 已開」。正確的狀態鏈見 sec.credguard.chain。
+        return new HardwareFact(LsaKey, CatSecurity, "LSA／CredGuard 卡",
+            $"RunAsPPL {Raw(s.RunAsPpl)}、VBS 總開關（EnableVirtualizationBasedSecurity）{Raw(s.VbsMasterSwitch)}、"
+            + $"受保護程序 {s.ProtectedProcesses}。**這個總開關不是 Credential Guard 的設定**——"
+            + "Credential Guard 的設定面／政策面／執行面／硬體面見 `sec.credguard.chain`。"
+            + "缺源如實列缺源；不判整體安全。",
+            "", @"HKLM\SYSTEM\CurrentControlSet\Control\Lsa＋DeviceGuard", FactTrustLevel.Reported, false, at);
     }
 
     private static LsaState ReadLsa()
     {
         string? ppl = ReadHklmString(@"SYSTEM\CurrentControlSet\Control\Lsa", "RunAsPPL");
-        string? cg = ReadHklmString(@"SYSTEM\CurrentControlSet\Control\DeviceGuard", "EnableVirtualizationBasedSecurity");
-        return new LsaState(ppl, cg, 0);
+        string? vbs = ReadHklmString(@"SYSTEM\CurrentControlSet\Control\DeviceGuard", "EnableVirtualizationBasedSecurity");
+        return new LsaState(ppl, vbs, 0);
     }
 
     public static HardwareFact AppxFact(DateTimeOffset at, AppxProbe? probe = null)

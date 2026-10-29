@@ -101,4 +101,25 @@ public class VbsStateFactsTests
         Assert.Contains("沒有任何屬性被要求", required.Value);
         Assert.Contains("≠「硬體不支援」", required.Value);
     }
+
+    [Fact]
+    public void 清單欄位缺席要標未知_不得代填成空清單()
+    {
+        // 第 319 輪：四張清單改成可空。「欄位缺席」與「清單是空的」是兩個斷言——
+        // 原本兩者都塌成空清單，於是「讀不到 Required」被寫成「沒有任何屬性被要求」，
+        // 那正是本專案明文禁止的混淆（0 與讀不到）。
+        var facts = VbsStateFactsService.Collect(At, Probe(
+            new VbsStateFactsService.VbsSnapshot(2, null, null, null, null)));
+
+        var required = facts.Single(f => f.Key == VbsStateFactsService.RequiredKey);
+        Assert.Equal(FactAvailability.Unknown, required.Availability);
+        Assert.Null(required.NumericValue);
+        Assert.Contains("欄位缺席", required.UnavailableReason);
+        Assert.Contains("不是「沒有任何屬性被要求」", required.UnavailableReason);
+
+        var state = facts.Single(f => f.Key == VbsStateFactsService.StateKey);
+        Assert.Contains("執行中的安全服務：讀不到", state.Value);
+        Assert.Contains("不代填成「0 個服務」", state.Value);
+        Assert.Contains("已設定：讀不到", state.Value);
+    }
 }

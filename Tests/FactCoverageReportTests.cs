@@ -246,6 +246,11 @@ public class FactCoverageReportTests
         // 2026-10-29 第 317 輪：+1 條（`pci.class.summary`——類別碼三層解碼的收錄度自述）。
         // 它數的是「本版對照表解到第幾層」，沒有第二條獨立通路能再問一次「你的表收錄了多少」
         // （逐功能的原始類別碼本身是可稽核的，那些事實有自己的輸入面）。上限跟著移到 419。
+        // 2026-10-30 第 319 輪：+1 條（`sec.credguard.chain`——Credential Guard 狀態鏈）。
+        // 它把設定面（登錄檔）、政策面（VBS 總開關）、執行面（SecurityServicesRunning）、
+        // 硬體面（AvailableSecurityProperties）四層併成一個結論。**四層各自的值**都可以被
+        // 別的鍵再問一次（`sec.vbs.state` 讀的就是同一份 WMI），但「併起來之後算哪一級」
+        // 是本服務的判定，沒有第二條獨立通路能再算一次。上限跟著移到 420。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
         int baseline = FactCoverageReport.ReviewedUncoveredBaseline;
         Assert.True(s.Uncovered <= baseline,

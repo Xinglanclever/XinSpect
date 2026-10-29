@@ -15,6 +15,7 @@
 | `ROUND-276-EDID-CTA-2026-10-27.md` | 第 276 輪工作紀錄：GP 域十列（`edid.cta.*`）落地、VIC 知識包（154 條，唯一分母可確認）、以及順手修掉的兩個實質缺陷（HDR 區塊標籤判錯、`nw.edid.summary` 三個數字沒來源）。 |
 | `CIRCLE-3-PROGRESS-2026-10-29.md` | 第三圈（第 309–317 輪）進度報告：主題、逐輪一覽、九輪抓到的八個真問題、固定方法、還剩什麼、怎麼複算。 |
 | `ROUND-318-README-RECONCILIATION-2026-10-30.md` | 第 318 輪：**沒有新增硬體通路**，只清掉 README 裡「同一批數字的第二個答案」——附錄 H 接進產生器（615 列→639）、正文九個舊數字回填、6.2 補第 12 個 ≥20 鍵域（`os`）、新增 11 條守門。 |
+| `ROUND-319-CREDGUARD-CHAIN-2026-10-30.md` | 第 319 輪（U10-SE-0005）：Credential Guard 從一個布林變成四層狀態鏈（`sec.credguard.chain`），並修掉 `ws.lsa.summary` 把 VBS 總開關標成「Credential Guard」的標籤錯誤、以及 `VbsSnapshot` 把「清單讀不到」寫成「清單是空的」。 |
 | `dedup_check.py`／`sample_check.py` | 可重跑之稽核腳本（絕對路徑寫死）。 |
 | `ULTIMATE-10000-EXPANSION-2026-10-24.md` | 歷史快照（十二批完成時點；**已被 10-25 版取代**，保留供對帳）。 |
 | `ULTIMATE-5000-RESERVOIR-2026-10-24.md` | 前導文件（歸檔；已被主目錄取代）。 |

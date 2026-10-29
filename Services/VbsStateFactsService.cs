@@ -30,6 +30,12 @@ namespace XinSpect;
 /// 規格的固定成員，清單內容隨機器變——逐碼開鍵會讓「沒要求的屬性」產生一堆空鍵；
 /// 把清單成文在一把鍵裡，缺與不缺一眼可讀。家族若成員固定就只出單鍵，這裡就是那個形狀。
 /// </para>
+///
+/// <para>
+/// <b>第 319 輪補的兩件事：</b>①四張清單欄位改為可空——<c>null</c>＝欄位讀不到、空清單＝讀到且確實是空的
+/// （原本兩者都塌成空清單，「讀不到」被寫成「沒有」）；②<see cref="Collect(DateTimeOffset, SnapshotProbe?, out VbsSnapshot?)"/>
+/// 把同一份查詢結果交出去，讓 <see cref="CredentialGuardFactsService"/> 的狀態鏈不必再查一次 WMI。
+/// </para>
 /// </summary>
 public static class VbsStateFactsService
 {
@@ -40,21 +46,36 @@ public static class VbsStateFactsService
     public const string RequiredKey = "sec.vbs.required";
 
     /// <summary>一次查詢拿到的全部欄位。<c>null</c>＝命名空間或類別不存在（NotApplicable）。</summary>
+    /// <remarks>
+    /// <b>清單欄位也是可空的（第 319 輪改）。</b>原本四張清單一律用空清單代表「沒有」，
+    /// 於是「欄位缺席（讀不到）」與「清單是空的（真的沒有）」塌成同一個答案——
+    /// 那是這個專案明文禁止的混淆（見第 0.3 節：0 與「讀不到」是兩個斷言）。
+    /// 現在 <c>null</c>＝欄位讀不到，空清單＝讀到且確實是空的。
+    /// </remarks>
     public sealed record VbsSnapshot(
         uint? Status,
-        IReadOnlyList<uint> Required,
-        IReadOnlyList<uint> Available,
-        IReadOnlyList<uint> Configured,
-        IReadOnlyList<uint> Running);
+        IReadOnlyList<uint>? Required,
+        IReadOnlyList<uint>? Available,
+        IReadOnlyList<uint>? Configured,
+        IReadOnlyList<uint>? Running);
 
     public delegate VbsSnapshot? SnapshotProbe();
 
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at, SnapshotProbe? probe = null)
+        => Collect(at, probe, out _);
+
+    /// <summary>
+    /// 同上，並把這一輪的快照交出來——<b>同一份查詢結果給兩個消費者用</b>
+    /// （<see cref="CredentialGuardFactsService"/> 的狀態鏈要讀同一批 Running／Available 清單）。
+    /// 兩支各自再查一次 WMI 就會有兩個答案的可能，而那種不一致在畫面上看起來像設定在變。
+    /// </summary>
+    public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at, SnapshotProbe? probe, out VbsSnapshot? snapshot)
     {
         VbsSnapshot? s;
         bool threw = false;
         try { s = (probe ?? new SnapshotProbe(RealRead))(); }
         catch { s = null; threw = true; }
+        snapshot = s;
 
         if (s is null)
         {
@@ -84,9 +105,11 @@ public static class VbsStateFactsService
             ? $"{st}（{StatusName(st)}）"
             : "未回報（欄位讀不到，不代填）";
 
-        string running = s.Running.Count == 0
-            ? "無（0＝沒有服務在跑）"
-            : string.Join("、", s.Running.Select(ServiceName));
+        string running = s.Running is null
+            ? "讀不到（欄位缺席，不代填成「0 個服務」）"
+            : s.Running.Count == 0
+                ? "無（0＝沒有服務在跑）"
+                : string.Join("、", s.Running.Select(ServiceName));
 
         string reasonFace = s.Status == 0u
             ? "**未啟用≠不支援**：必要屬性 " + DescribeList(s.Required, PropertyName)
@@ -105,6 +128,12 @@ public static class VbsStateFactsService
 
     private static HardwareFact RequiredFact(DateTimeOffset at, VbsSnapshot s)
     {
+        // 「清單讀不到」與「清單是空的」是兩個斷言：前者 Unknown（不帶數字），後者 Present 帶 0。
+        if (s.Required is null)
+            return new HardwareFact(RequiredKey, Category, "VBS 必要屬性", "", "項", Source,
+                FactTrustLevel.Unknown, false, at, null, FactAvailability.Unknown,
+                "RequiredSecurityProperties 欄位缺席——讀不到清單，不是「沒有任何屬性被要求」；不代填成 0 項");
+
         return new HardwareFact(RequiredKey, Category, "VBS 必要屬性",
             s.Required.Count == 0
                 ? "0（沒有任何屬性被要求——這是政策面的事實；「沒要求」≠「硬體不支援」）"
@@ -115,8 +144,10 @@ public static class VbsStateFactsService
             FactAvailability.Present, null);
     }
 
-    private static string DescribeList(IReadOnlyList<uint> list, Func<uint, string> name) =>
-        list.Count == 0 ? "（空清單）" : string.Join("、", list.Select(name));
+    private static string DescribeList(IReadOnlyList<uint>? list, Func<uint, string> name) =>
+        list is null ? "讀不到（欄位缺席）"
+        : list.Count == 0 ? "（空清單）"
+        : string.Join("、", list.Select(name));
 
     /// <summary>VirtualizationBasedSecurityStatus：0 未啟用、1 已啟用但未執行、2 已啟用且執行中。</summary>
     internal static string StatusName(uint v) => v switch
@@ -175,16 +206,22 @@ public static class VbsStateFactsService
         catch { return null; }
     }
 
-    private static IReadOnlyList<uint> ToUIntList(object? v)
+    /// <summary>
+    /// WMI 陣列欄位 → 清單。<b>欄位缺席（<c>null</c>）回 <c>null</c>，不是空清單</b>——
+    /// 「讀不到」與「確實是空的」是兩個斷言（第 319 輪改）。轉換失敗的單一元素如實缺席。
+    /// </summary>
+    private static IReadOnlyList<uint>? ToUIntList(object? v)
     {
+        if (v is null) return null;
         try
         {
-            if (v is not Array arr || arr.Length == 0) return [];
+            if (v is not Array arr) return null;
+            if (arr.Length == 0) return [];
             var list = new List<uint>(arr.Length);
             foreach (var item in arr)
                 if (ToUInt(item) is { } n) list.Add(n);
             return list;
         }
-        catch { return []; }
+        catch { return null; }
     }
 }
