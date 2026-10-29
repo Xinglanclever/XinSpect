@@ -115,6 +115,8 @@ public static class EvidenceCollection
         Measure(svc, "LoadMeasurementRepeat", () => svc.LoadMeasurementRepeat());
         // BCD 開機順序（BD-0001／BD-0003）：一次 bcdedit /enum，5 秒上限；唯讀
         Measure(svc, "LoadBootOrder", () => svc.LoadBootOrder());
+        // 電池健康三件事（BT-0002～BT-0004）：Win32_Battery 計數＋三條 root\WMI 查詢，唯讀
+        Measure(svc, "LoadBatteryHealth", () => svc.LoadBatteryHealth());
         // 讀不到由 MeasurementRepeatFactsService 標三態，不在這裡中斷啟動
   // 附加功能：列舉失敗由 DeviceTruthFactsService 記成 ReadError，不在這裡中斷啟動
         // 第 276 輪：EDID CTA-861 擴充塊（edid.cta.*）。唯讀登錄檔、零特權；

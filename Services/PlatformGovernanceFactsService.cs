@@ -40,7 +40,8 @@ public static class PlatformGovernanceFactsService
     public sealed record UwpState(int Packages, int WithBroadCapabilities, int SystemCapabilities, int UserCapabilities);
     public sealed record SdkState(int Jdks, int Pythons, int Nodes, int Dotnets);
     public sealed record VrrState(int Adapters, int VrrCapable, int VrrEnabled, int Mismatches);
-    public sealed record BatteryState(int Batteries, int? DesignCapacity, int? FullChargeCapacity, int CycleCount, double? HealthPercent);
+    /// <summary>電池健康樣本。<c>CycleCount</c> 可空：沒回報與「0 次」是不同的斷言（第 316 輪修）。</summary>
+    public sealed record BatteryState(int Batteries, int? DesignCapacity, int? FullChargeCapacity, int? CycleCount, double? HealthPercent);
     public sealed record NicTrendState(int Adapters, long Discards, long Errors, int AdaptersWithErrors);
 
     public delegate SddlState? SddlProbe();
@@ -339,12 +340,12 @@ public static class PlatformGovernanceFactsService
         BatteryState? s; try { s = (probe ?? new BatteryProbe(ReadBattery))(); } catch { s = null; }
         if (s is null) return Unavailable(at, BatteryKey, CatPower, "電池健康", FactAvailability.NotApplicable, "沒有電池——桌機不適用，不是讀取失敗");
         double? health = s.DesignCapacity is int d && d > 0 && s.FullChargeCapacity is int f ? f * 100.0 / d : null;
-        return new HardwareFact(BatteryKey, CatPower, "電池健康", $"電池 {s.Batteries}、設計容量 {(s.DesignCapacity is int dc ? dc + " mWh" : "未回報")}、滿充 {(s.FullChargeCapacity is int fc ? fc + " mWh" : "未回報")}、循環 {s.CycleCount}、健康 {(health is double h ? h.ToString("0.#") + "%" : "未回報")}。只讀，不預測剩餘壽命。", "個", "Win32_Battery／BatteryStaticData（唯讀）", FactTrustLevel.Measured, false, at, s.Batteries);
+        return new HardwareFact(BatteryKey, CatPower, "電池健康", $"電池 {s.Batteries}、設計容量 {(s.DesignCapacity is int dc ? dc + " mWh" : "未回報")}、滿充 {(s.FullChargeCapacity is int fc ? fc + " mWh" : "未回報")}、循環 {(s.CycleCount is int cy ? cy + " 次" : "未回報")}、健康 {(health is double h ? h.ToString("0.#") + "%" : "未回報")}。只讀，不預測剩餘壽命。", "個", "Win32_Battery／BatteryStaticData（唯讀）", FactTrustLevel.Measured, false, at, s.Batteries);
     }
 
     private static BatteryState? ReadBattery()
     {
-        int batteries = 0; int? design = null, full = null; int cycles = 0;
+        int batteries = 0; int? design = null, full = null; int? cycles = null;
         try
         {
             using var s = new ManagementObjectSearcher("SELECT DesignCapacity, FullChargeCapacity FROM Win32_Battery");
@@ -357,6 +358,20 @@ public static class PlatformGovernanceFactsService
         }
         catch { }
         if (batteries == 0) return null;
+        // 循環次數在 root\WMI 的 BatteryCycleCount，不在 Win32_Battery；
+        // 先前這裡固定傳 0，於是每一台有電池的機器都被寫成「循環 0」——那不是沒讀到，是編出來的。
+        try
+        {
+            using var s = new ManagementObjectSearcher("root\\WMI", "SELECT CycleCount FROM BatteryCycleCount");
+            foreach (ManagementObject o in s.Get()) using (o)
+            {
+                if (o["CycleCount"] is null) continue;
+                int value = Convert.ToInt32(o["CycleCount"]);
+                if (value > 0) { cycles = value; break; }
+            }
+        }
+        catch { /* 部分機型沒有這個類別：留 null，由事實層說「未回報」 */ }
+
         return new(batteries, design, full, cycles, null);
     }
 

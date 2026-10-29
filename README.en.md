@@ -7,7 +7,7 @@ A free, open-source hardware verification, monitoring, and security auditing too
 ![Version](https://img.shields.io/badge/version-3.03-4C8DFF)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![Tests](https://img.shields.io/badge/tests-7442%20passed-3FB950)
+![Tests](https://img.shields.io/badge/tests-7455%20passed-3FB950)
 ![Mutation Score](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
@@ -298,7 +298,7 @@ To remove: close the program, delete those folders. If deep access was enabled, 
 | 1–2 | Open "Firmware Security" | How many verdicts are red or grey; grey means "cannot verify," not "fine" |
 | 2–3 | Open "Storage" | SMART current value vs threshold; HPA hidden capacity |
 | 3–4 | Create a time capsule | The snapshot's SHA-256 and its "not collected" list |
-| 4–5 | Open the coverage report in Settings | Of 1,140 catalogue keys, how many this machine produced and measured |
+| 4–5 | Open the coverage report in Settings | Of 1,144 catalogue keys, how many this machine produced and measured |
 
 ### 5.2 What elevation changes
 
@@ -868,11 +868,11 @@ This chapter is not a feature list. It takes eleven mechanisms that are hard to 
 
 **Problem**: if the coverage denominator is "what this run found," coverage is always 100% — the unscanned items are not in the denominator. It is a completely normal-looking lie.
 
-**Mechanism**: a compile-time static catalogue (1,140 keys) plus registered dynamic families (membership determined by the machine, but the prefix must be findable in source) plus runtime reconciliation (produced keys vs declared keys). A new key with no home turns the suite red. Coverage separates "received" from "measured"; absence is "not collected this run."
+**Mechanism**: a compile-time static catalogue (1,144 keys) plus registered dynamic families (membership determined by the machine, but the prefix must be findable in source) plus runtime reconciliation (produced keys vs declared keys). A new key with no home turns the suite red. Coverage separates "received" from "measured"; absence is "not collected this run."
 
 **Failure mode**: a stale catalogue (a feature adds keys without registering them). The guard catches "produced but undeclared," not "never written at all"; the latter needs human inventory.
 
-**Boundary**: coverage means "handled," not "handled correctly." All 1,140 keys can be covered while half are decoded wrongly — that is the job of golden vectors and mutation testing.
+**Boundary**: coverage means "handled," not "handled correctly." All 1,144 keys can be covered while half are decoded wrongly — that is the job of golden vectors and mutation testing.
 
 ## 18. Comparison with other tools
 
@@ -1309,7 +1309,7 @@ Every item under Utility Tools states its data source and privilege requirement:
 - **AI**: endpoint, key, model and prompt.
 - **One-click initialise**: re-runs module detection without rebuilding the per-second pulse.
 - **Blue Squadron toggle**: starts/stops the guard and records the choice — if it was off last time, it does not come back at boot.
-- **Fact-key coverage report**: the 1,140-key catalogue against this run; uncovered-but-reviewed baselines require a per-item reason.
+- **Fact-key coverage report**: the 1,144-key catalogue against this run; uncovered-but-reviewed baselines require a per-item reason.
 
 ## Appendix C: Audit log
 

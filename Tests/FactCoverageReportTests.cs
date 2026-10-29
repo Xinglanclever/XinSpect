@@ -240,9 +240,12 @@ public class FactCoverageReportTests
         // 2026-10-29 第 314 輪：+1 條（`secboot.chain`——安全開機四環總覽）。它把 PK／KEK／db／dbx
         // 與 Setup Mode 併成一句；四個環各自的輸入面在 `uefi.*`（那些已有規則），但「併起來之後
         // 是什麼結論」沒有第二條獨立通路可以再算一次。上限跟著移到 414。
+        // 2026-10-29 第 316 輪：+4 條（`pw.battery.design_mwh`／`full_mwh`／`wear_pct`／`cycle_count`）。
+        // 這四把與 `pw.battery.summary` 讀的是同一批 WMI 欄位（同一條通路，不得互相代言），
+        // 而機器上沒有第二個地方能再問一次「這顆電池的設計容量是多少」。上限跟著移到 418。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
-        Assert.True(s.Uncovered <= 414,
-            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 414）。新增事實時請順手評估要不要納入對帳，"
+        Assert.True(s.Uncovered <= 418,
+            $"未覆蓋的事實鍵增至 {s.Uncovered} 個（已檢視基線 418）。新增事實時請順手評估要不要納入對帳，"
             + $"或加進 FactCoverageReport.Exemptions 並寫明理由。前 20 個未覆蓋：\n"
             + string.Join("\n", s.UncoveredKeys.Take(20)));
     }

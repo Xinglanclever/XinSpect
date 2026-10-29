@@ -126,7 +126,8 @@
 | MT-0001 | `mt.repeat.summary`＋`mt.repeat.key.*` | 312 | `cb48fd3` |
 | MT-0002 | `mt.budget.summary`＋`mt.budget.*` | 313 | `6d2700a` |
 | SE-0001／SE-0002 | `secboot.chain`＋`secboot.empty.*` | 314 | `514ab75` |
-| BD-0001／BD-0003 | `boot.order.summary`／`.default`／`.timeout`＋`boot.order.item.*` | 315 | 本輪 |
+| BD-0001／BD-0003 | `boot.order.summary`／`.default`／`.timeout`＋`boot.order.item.*` | 315 | `5f93153` |
+| BT-0002／BT-0003／BT-0004 | `pw.battery.design_mwh`／`.full_mwh`／`.wear_pct`／`.cycle_count`（並修掉既有 `pw.battery.summary` 把沒揭露的循環次數寫成「循環 0」） | 316 | 本輪 |
 
-剩下的 19 項裡，`BD-0001` 與 `BD-0003` 是同一支 `bcdedit /enum` 讀回來的一體兩面，
-所以一輪收兩項不違反「一輪一件事」——它仍然只有一個新的讀取面。
+剩下的 16 項裡，`BD-0001` 與 `BD-0003` 是同一支 `bcdedit /enum` 讀回來的一體兩面，
+所以一輪收兩項不違反「一輪一件事」——它仍然只有一個新的讀取面。BT 三項同理：同一次 WMI 讀取的三個欄位。
