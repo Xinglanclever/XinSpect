@@ -70,6 +70,7 @@ public static class SpecRefRegistry
         typeof(NtfsBootSectorDecoder), // NTFS 開機磁區 BPB（Microsoft「NTFS Volume Boot Record」逐欄位移）
         typeof(UsbHubNodeDecoder), // USB 根集線器 USB_NODE_INFORMATION（usbioctl.h：NodeType／hub descriptor／bNumberOfPorts）
         typeof(AcpiFadt), // ACPI FADT 指標欄（FACS／DSDT 的 32 與 64 位位址；ACPI Spec 6.4 §5.2.9）
+        typeof(WheaMemorySectionDecoder), // CPER 記憶體錯誤節區（cper.h 的 CPER_FIELD_CHECK 逐欄位移；WHEA_MEMERRTYPE_* 0x00–0x0C）
         typeof(KernelDumpDecoder), // 核心傾印 PAGEDU64 檔頭＋bugcheck 知識表（真檔驗證＋Microsoft Learn）
         typeof(TpmReplay), // TCG log 重放（PC Client 起始值＋extend 鏈；TPM 2.0 Part 1／PC Client Profile）
         typeof(AcpiDeep),        // ACPI 表層深化（BGRT/SPCR/DBG2/HPET/NFIT/MPAM 靜態欄位；actbl1.h、actbl2.h）

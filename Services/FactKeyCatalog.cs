@@ -1166,6 +1166,8 @@ public static class FactKeyCatalog
         "vr.theme",
         "vr.tree",
         "vr.zoom",
+        "whea.mem.boundary",
+        "whea.mem.summary",
         "write.allowlist",
         "write.count",
         "write.ledger",

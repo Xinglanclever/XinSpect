@@ -157,7 +157,9 @@ public class FactKeyCatalogTests
         // 彙總鍵 os.devtree.summary 走靜態目錄。
         // 61 → 62（2026-10-30 第 323 輪）：usb.hub.ports.——成員＝這台機器有幾顆 USB 根集線器。
         // 根集線器數隨主機板與插了幾個 PCIe USB 卡而變，編譯期不該為此改目錄。
-        const int FamilyCap = 62;
+        // 62 → 63（2026-10-30 第 326 輪）：whea.mem.rec.——成員＝這台機器回報過幾筆 WHEA 記憶體事件。
+        // 事件筆數是機器的事實，編譯期不該為此改目錄。
+        const int FamilyCap = 63;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 

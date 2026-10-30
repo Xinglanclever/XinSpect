@@ -94,6 +94,7 @@ public class DecoderHardeningTests
             "NtfsBootSectorDecoder",
             "UsbHubNodeDecoder",
             "AcpiFadt",
+            "WheaMemorySectionDecoder",
             "KernelDumpDecoder",
             "TpmReplay",
             "AcpiDeep",
