@@ -1,5 +1,7 @@
 [简体中文](README.zh-CN.md) · 繁體中文 · [English](README.en.md)
 
+[![官方網站](https://img.shields.io/badge/%F0%9F%8C%90_%E5%AE%98%E6%96%B9%E7%B6%B2%E7%AB%99-xinspect--browser--preview.wild--chimpanzee.workers.dev-4C8DFF?style=for-the-badge&logo=cloudflare&logoColor=white)](https://xinspect-browser-preview.wild-chimpanzee.workers.dev)
+
 > ## 🌐 [官方網站：xinspect-browser-preview.wild-chimpanzee.workers.dev ↗](https://xinspect-browser-preview.wild-chimpanzee.workers.dev)
 >
 > **產品總覽 · 事實目錄 · 功能與資料源 · 三源對帳 · 證據與快照 · 版本沿革 · 下載與需求** —— 一頁看完。

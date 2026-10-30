@@ -1,5 +1,7 @@
 ﻿[繁體中文](README.md) · [简体中文](README.zh-CN.md) · English
 
+[![Official site](https://img.shields.io/badge/%F0%9F%8C%90_OFFICIAL_SITE-xinspect--browser--preview.wild--chimpanzee.workers.dev-4C8DFF?style=for-the-badge&logo=cloudflare&logoColor=white)](https://xinspect-browser-preview.wild-chimpanzee.workers.dev)
+
 > ## 🌐 [Official site: xinspect-browser-preview.wild-chimpanzee.workers.dev ↗](https://xinspect-browser-preview.wild-chimpanzee.workers.dev)
 >
 > **Product overview · Fact catalogue · Features and data sources · Three-source reconciliation · Evidence and snapshots · Version history · Downloads and requirements** — all on one page.
