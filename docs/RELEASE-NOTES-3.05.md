@@ -4,6 +4,15 @@
 
 **官方網站：<https://xinspect-browser-preview.wild-chimpanzee.workers.dev>**
 
+<div style="border:2px solid #4C8DFF;border-radius:10px;padding:14px 18px;margin:0 0 18px;background:rgba(76,141,255,0.08)">
+
+### 🌐 官方網站 ・ [xinspect-browser-preview.wild-chimpanzee.workers.dev](https://xinspect-browser-preview.wild-chimpanzee.workers.dev)
+
+**產品總覽 · 事實目錄 · 功能與資料源 · 三源對帳 · 證據與快照 · 版本沿革 · 下載與需求** —— 一頁看完。
+網站只呈現說明，**不會掃描你的電腦**。
+
+</div>
+
 ## 這一版做了什麼
 
 官網在此之前只存在於使用者的瀏覽器書籤裡——**程式裡沒有任何一處指得到它**。這一版把它接到三個會被人看到的地方，而且是三個不同的人：已經裝了程式的人（關於頁）、正在用內建瀏覽器的人（起始頁）、在 GitHub 上讀文件的人（三份 README）。
