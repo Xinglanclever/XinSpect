@@ -50,7 +50,7 @@ public static class SmartFailingNowFactsService
                 if (verdict.State == StorageSmartService.WctempState.Warning)
                     facts.Add(new HardwareFact($"smart.wctemp.{i}", Category, $"NVMe 溫度警告（{label}）",
                         $"合成溫度 {composite}°C 已達 WCTEMP {wThreshold}°C——超過廠商警告門檻", "°C",
-                        "NVMe Identify Controller 0x14A＋健康紀錄", FactTrustLevel.Derived, false, at, composite));
+                        "NVMe Identify Controller 0x10A＋健康紀錄", FactTrustLevel.Derived, false, at, composite));
             }
 
             if (attrs is null)

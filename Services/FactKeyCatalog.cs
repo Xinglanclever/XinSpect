@@ -634,6 +634,8 @@ public static class FactKeyCatalog
         "numa.slit.nodes",
         "numa.topology",
         "numa.topology.xnode",
+        "nvme.rsvd.boundary",
+        "nvme.rsvd.summary",
         "nw.bt.fw",
         "nw.bt.pairing",
         "nw.cert.summary",

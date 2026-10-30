@@ -60,9 +60,9 @@ public class SmartThresholdTests
     [Fact]
     public void NVMe_WCTEMP對照_超過警告_未提供如實標()
     {
-        // WCTEMP 在 Identify Controller 偏移 0x14A（u16 LE，°C；0＝未提供）
+        // WCTEMP 在 Identify Controller 偏移 0x10A（u16 LE，°C；0＝未提供）
         var idc = new byte[4096];
-        BitConverter.GetBytes((ushort)70).CopyTo(idc, 0x14A);
+        BitConverter.GetBytes((ushort)70).CopyTo(idc, 0x10A);
         var ok = XinSpect.StorageSmartService.EvaluateWctemp(compositeTempC: 65, identifyController: idc);
         Assert.Equal(XinSpect.StorageSmartService.WctempState.Normal, ok.State);
         Assert.Equal(70, ok.ThresholdC);

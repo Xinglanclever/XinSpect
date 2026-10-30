@@ -800,14 +800,14 @@ public sealed class StorageSmartService : ObservableObject
     public sealed record WctempVerdict(WctempState State, int ThresholdC, int CompositeC);
 
     /// <summary>
-    /// NVMe 溫度門檻對照：WCTEMP 在 Identify Controller 偏移 0x14A（u16 LE，°C；0＝未提供）。
+    /// NVMe 溫度門檻對照：WCTEMP 在 Identify Controller 偏移 0x10A（u16 LE，°C；0＝未提供）。
     /// 合成溫度 ≥ WCTEMP＝警告。
     /// </summary>
     public static WctempVerdict EvaluateWctemp(int compositeTempC, byte[] identifyController)
     {
-        if (identifyController is null || identifyController.Length < 0x14C)
+        if (identifyController is null || identifyController.Length < 0x10C)
             return new WctempVerdict(WctempState.NotProvided, 0, compositeTempC);
-        ushort wctemp = BitConverter.ToUInt16(identifyController, 0x14A);
+        ushort wctemp = BitConverter.ToUInt16(identifyController, 0x10A);
         if (wctemp == 0) return new WctempVerdict(WctempState.NotProvided, 0, compositeTempC);
         return new WctempVerdict(compositeTempC >= wctemp ? WctempState.Warning : WctempState.Normal, wctemp, compositeTempC);
     }

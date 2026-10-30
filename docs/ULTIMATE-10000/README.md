@@ -25,6 +25,7 @@
 | `ROUND-326-WHEA-MEMORY-2026-10-30.md` | 第 326 輪（U10-WH-0003＋WH-0004）：WHEA 記憶體節區（`whea.mem.summary`／`whea.mem.rec.*`／`whea.mem.boundary`）——CPER 逐欄位移照 cper.h 的 CPER_FIELD_CHECK；**ValidBits 沒設的欄位不印成 0**（「Module 0」與「韌體沒說」是兩件事）；錯誤類型碼只收 0x00–0x0C。事件 data 段的外層包裝沒有可核出處，**因此本版不拆 blob**——列得出筆數，說不出哪一條 DIMM，並把這件事寫成事實。 |
 | `ROUND-327-XHCI-2026-10-30.md` | 第 327 輪（U10-NP-0002）：xHCI 版本與支援速度（`usb.xhci.summary`／`usb.xhci.ctrl.*`／`usb.xhci.boundary`）——能力區逐欄照 xHCI 規格 1.1 §5.3；控制器由 ROOT_HUB30 的父節點找出（不靠 class code 猜）。**速度值不換算成 Mb/s**：PSIM／PSIS 的位界在規格表與 Linux 標頭互相矛盾，只輸出原值。讀不到時只說缺哪一步，不從驅動版本反推。 |
 | `ROUND-328-FLEET-BASELINE-2026-10-30.md` | 第 328 輪（U10-EN-0001）：同型號族群基線（`fleet.summary`／`fleet.peer.*`／`fleet.boundary`）——只讀本機快照目錄、**不上傳**（型別層有守門：兩個檔案不得出現 HttpClient／WebRequest／Socket）；型號是字串相等不是 SKU 知識；樣本少於 4 份只給中位數不給 z 分數；只比每份都有數值的鍵。 |
+| `ROUND-329-NVME-RESERVED-2026-10-30.md` | 第 329 輪（U10-NV-0029）：NVMe Identify 保留區非零掃描（`nvme.rsvd.summary`／`nvme.rsvd.disk.*`／`nvme.rsvd.boundary`）——八段保留區共 1,530 位元組（邊界由 nvme.h 逐欄累加）；廠商區 vs 不算保留區。**同輪抓到已在出貨的缺陷**：WCTEMP 位移寫成 0x14A（實際落在 sanicap 裡），正解是 0x10A——程式與測試用了同一個錯誤假設，所以一路綠燈。 |
 | `dedup_check.py`／`sample_check.py` | 可重跑之稽核腳本（絕對路徑寫死）。 |
 | `ULTIMATE-10000-EXPANSION-2026-10-24.md` | 歷史快照（十二批完成時點；**已被 10-25 版取代**，保留供對帳）。 |
 | `ULTIMATE-5000-RESERVOIR-2026-10-24.md` | 前導文件（歸檔；已被主目錄取代）。 |

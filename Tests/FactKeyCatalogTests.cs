@@ -163,7 +163,9 @@ public class FactKeyCatalogTests
         // 控制器數隨主機板與插了幾個 PCIe USB 卡而變，編譯期不該為此改目錄。
         // 64 → 65（2026-10-30 第 328 輪）：fleet.peer.——成員＝本機快照裡出現兩次以上的型號數。
         // 成員由「存過幾份快照、每份是哪個型號」決定，編譯期不該為此改目錄。
-        const int FamilyCap = 65;
+        // 65 → 66（2026-10-30 第 329 輪）：nvme.rsvd.disk.——成員＝這台機器有幾顆能讀到 Identify 的 NVMe。
+        // 硬碟數是機器的事實，編譯期不該為此改目錄。
+        const int FamilyCap = 66;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 
