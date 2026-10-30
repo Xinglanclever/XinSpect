@@ -1,5 +1,10 @@
 ﻿[繁體中文](README.md) · [简体中文](README.zh-CN.md) · English
 
+> ## 🌐 [Official site: xinspect-browser-preview.wild-chimpanzee.workers.dev ↗](https://xinspect-browser-preview.wild-chimpanzee.workers.dev)
+>
+> **Product overview · Fact catalogue · Features and data sources · Three-source reconciliation · Evidence and snapshots · Version history · Downloads and requirements** — all on one page.
+> The site only presents documentation; it **does not scan your machine** and needs no installation.
+
 # XinSpect
 
 A free, open-source hardware verification, monitoring, and security auditing tool for Windows. Ships as a single portable executable. Read-only by default; the few operations that write are gated behind explicit consent and labelled with their risks. It collects and transmits no user data.
@@ -7,7 +12,7 @@ A free, open-source hardware verification, monitoring, and security auditing too
 ![Version](https://img.shields.io/badge/version-3.04-4C8DFF)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![Tests](https://img.shields.io/badge/tests-7679%20passed-3FB950)
+![Tests](https://img.shields.io/badge/tests-7685%20passed-3FB950)
 ![Mutation Score](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 

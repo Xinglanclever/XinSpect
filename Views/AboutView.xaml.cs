@@ -52,6 +52,15 @@ public partial class AboutView : UserControl
         bool simplified = LanguageService.IsSimplified;
         VersionTitle.Text = AppInfo.HeaderTitle(simplified);
         VersionMetadata.Text = AppInfo.VersionMetadata(simplified);
+        // 官網位址就寫在按鈕旁邊：按鈕本身不透露要去哪裡，而「按下去會離開程式」
+        // 這件事應該在按之前就看得到。
+        OfficialSiteText.Text = AppInfo.OfficialSiteDisplay;
+    }
+
+    private void OpenSite_Click(object sender, RoutedEventArgs e)
+    {
+        try { Process.Start(new ProcessStartInfo(AppInfo.OfficialSiteUrl) { UseShellExecute = true }); }
+        catch (Exception ex) { Diag.Swallow("開啟官方網站", ex, "本次不開啟瀏覽器"); }
     }
 
     // ── 版本更新紀錄 ────────────────────────────────────────────────────────

@@ -33,6 +33,8 @@ internal static class BrowserHome
   .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:16px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 18px; }
   .card h3 { margin:0 0 10px; font-size:14px; color:var(--accent); font-weight:700; }
+  /* 官方網站那張卡：整格用強調色描邊，讓它從一排工具連結裡先被看到。 */
+  .card-site { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset; }
   .card a { display:block; color:var(--ink); text-decoration:none; font-size:14px; padding:6px 0;
          border-bottom:1px solid transparent; }
   .card a:hover { color:var(--accent); }
@@ -48,6 +50,10 @@ internal static class BrowserHome
       <button type="submit">搜尋</button>
     </form>
     <div class="grid">
+      <div class="card card-site">
+        <h3>曦覽官方網站</h3>
+        <a href="https://xinspect-browser-preview.wild-chimpanzee.workers.dev">產品總覽 ・ 事實目錄 ・ 三源對帳 ・ 下載與需求 ↗</a>
+      </div>
       <div class="card">
         <h3>硬體檢測</h3>
         <a href="https://www.cpuid.com/softwares/cpu-z.html">CPU-Z</a>
