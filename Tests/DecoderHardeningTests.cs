@@ -92,6 +92,7 @@ public class DecoderHardeningTests
             "PrefetchHeaderDecoder",
             "NtfsVolumeDecoder",
             "NtfsBootSectorDecoder",
+            "UsbHubNodeDecoder",
             "KernelDumpDecoder",
             "TpmReplay",
             "AcpiDeep",

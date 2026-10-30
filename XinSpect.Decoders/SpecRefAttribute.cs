@@ -68,6 +68,7 @@ public static class SpecRefRegistry
         typeof(PrefetchHeaderDecoder), // Prefetch .pf 檔頭（MAM 容器／SCCA 各版本；Zimmerman Prefetch 庫出處）
         typeof(NtfsVolumeDecoder), // NTFS 卷冊 FSCTL 輸出（winioctl.h NTFS_VOLUME_DATA_BUFFER／USN_JOURNAL_DATA）
         typeof(NtfsBootSectorDecoder), // NTFS 開機磁區 BPB（Microsoft「NTFS Volume Boot Record」逐欄位移）
+        typeof(UsbHubNodeDecoder), // USB 根集線器 USB_NODE_INFORMATION（usbioctl.h：NodeType／hub descriptor／bNumberOfPorts）
         typeof(KernelDumpDecoder), // 核心傾印 PAGEDU64 檔頭＋bugcheck 知識表（真檔驗證＋Microsoft Learn）
         typeof(TpmReplay), // TCG log 重放（PC Client 起始值＋extend 鏈；TPM 2.0 Part 1／PC Client Profile）
         typeof(AcpiDeep),        // ACPI 表層深化（BGRT/SPCR/DBG2/HPET/NFIT/MPAM 靜態欄位；actbl1.h、actbl2.h）

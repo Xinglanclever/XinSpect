@@ -155,7 +155,9 @@ public class FactKeyCatalogTests
         // 60 → 61（2026-10-30 第 321 輪）：os.devtree.root.（U10-OS-0001 devnode 樹的逐根）——
         // 成員＝這台機器列舉出幾個根節點（PC 上通常個位數到十幾，但由韌體與驅動堆疊決定）；
         // 彙總鍵 os.devtree.summary 走靜態目錄。
-        const int FamilyCap = 61;
+        // 61 → 62（2026-10-30 第 323 輪）：usb.hub.ports.——成員＝這台機器有幾顆 USB 根集線器。
+        // 根集線器數隨主機板與插了幾個 PCIe USB 卡而變，編譯期不該為此改目錄。
+        const int FamilyCap = 62;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 
