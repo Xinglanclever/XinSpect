@@ -4,7 +4,7 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一运行档发布，免安装；对硬件与系统的读取以唯读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-3.03-4C8DFF)
+![版本](https://img.shields.io/badge/version-3.04-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![测试](https://img.shields.io/badge/tests-7679%20passed-3FB950)
@@ -464,11 +464,11 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.03/XinSpect.exe) | 34,723,115 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.03/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.03/XinSpectDeploy.exe) | 13,312 bytes | 一键安装器（可选 GitHub／Google Drive／中国网盘三个下载来源） |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.04/XinSpect.exe) | 34,723,115 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.04/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.04/XinSpectDeploy.exe) | 13,312 bytes | 一键安装器（可选 GitHub／Google Drive／中国网盘三个下载来源） |
 
-> **上表的字节数为本版（v3.03）实际发布的文件大小**；请以 Release 页面列出的文件为准。
+> **上表的字节数为本版（v3.04）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
 安装器（`XinSpectDeploy.exe`）会列出三个来源：**1** 是 GitHub 最新版（全自动部署主程序＋守护进程）、**2** 是 Google Drive 镜像、**3** 是中国网盘（123 云盘）分享页——网盘没有稳定直连，所以它只打开浏览器并告诉你按哪里，不会把分享页存成一个假的 exe。镜像链接集中在 `Installer/mirrors.txt`，安装器启动时会抓一份最新的（3 秒超时，拿不到就用内置的）；某一格还没有链接时，菜单上会写「尚未提供」，按下去会先说明再改用 GitHub。下载完成后一律检查 PE 标头，抓到 HTML（分享页、限流页、Google 的病毒扫描确认页）会被挡下、删档并说出内容像什么。
 
@@ -2411,6 +2411,7 @@ O-01 到 O-12 里，至少四条是「知道怎么修，但选择不修」：
 
 ## 二十二、版本沿革
 
+- **v3.04 Ultima XII**（2026-10-30）：把「读不到、量不准、不知道什么时候量的」都写成事实（第 309–330 轮）——装置诊断接进事实层（问题码 null 与 0 是两件事）、报告的数字是什么时候量的（跨度与落后超过 5 秒的域）、104 个收集步骤逐步骤耗时、逐键重複性五轮、逐域量测预算（精度由程式还是驱动决定）、安全开机四环併成一笔（「空着」与「读不到」不混）、BCD 开机顺序（唯读一次 bcdedit，不指定输出编码）、电池健康拆成三把键并修掉编出来的「循环 0」、类别码三层解码、装置树全图、NTFS 开机磁区、USB 根集线器埠数、ACPI 根指标表、PCIe 两条读取通道、WHEA 记忆体节区、xHCI 能力区（位界矛盾就不换算）、同型号族群基线（本机计算、不连网）、NVMe 保留区扫描（顺带修掉 WCTEMP 位移：0x14A 落在 sanicap 里，正解 0x10A）、以及四条平时看不出来的缺陷（子行程死锁、原子写入暂存档名、历史仓尾端垃圾、外部报告无上限）。测试 7,361→7,679 绿、事实键 1,166 不变。
 - **v3.03 Ultima XII**（2026-10-27）：看得到的地方都修好了：主页与论坛导航、传感器仪表盘复活、M.2／U.2 两层判定、悬浮小窗 15 项与双风格（第 301–308 轮）
 - **v3.02 Ultima XI**（2026-10-26）：看得见的完成与看不见的接线（第 292–299 轮）——**第 292 轮**三语文件对齐＋跨版本守门；**第 293 轮**DevTools 改成缺省关闭（文件早就这样写）＋页面缩放；**第 294 轮**AI 用量显示（只显示端点回报的 token，没回报不印 0）；**第 295 轮**XAML 资源键守门＋端点自检；**第 296 轮**95 个画面真的被建起来一次（收掉「UI 只到编译通过」的申报）；**第 297 轮**AI 请求路径可测（假 HttpMessageHandler）＋重试上一则；**第 298 轮**AI 对话汇出 Markdown（标头写清楚遮蔽与用量）；**第 299 轮**浏览器页内寻找（字串走 JSON 编码）。测试 7,232→7,293 绿、事实键 1,131 不变、家族 49、覆盖基线 408。
 - **v3.01 Ultima X**（2026-10-26）：守门补到会走的地方（第 289–291 轮）——**第 289 轮**：沿革逐笔对账，修掉简体版重複条目（v2.90／v2.89 各一条短行＋一条长行），补四条守门（不得有重複版号、11.2 笔数与 11.3 节数等于纪录笔数、最新一笔逐字出现在 11.3、英文版逐版表要涵盖它宣称的 2.60 以后每一版）。**第 290 轮**：AI 六件事（字元预算 60,000、三段逾时 45／90／300 秒、429 等暂时性失败依 Retry-After 有限次重试且只在吐字前、送出前遮蔽并有「传送内容」预览、金钥 DPAPI 加密落地、解不开就没有金钥）。**第 291 轮**：浏览器五件事（只开 http／https、下载落 %LOCALAPPDATA% 且不覆盖、装置权限一律拒绝、载入失败给人话与重试、清除浏览资料）。测试 7,149→7,231 绿、事实键 1,131 不变、家族 49、覆盖基线 408。
@@ -2641,7 +2642,7 @@ By：Xinglanclever
 
 ---
 
-**文档本身的版本**：本文档对应 XinSpect v3.03（2026-10-27）。正体中文为母本，简体中文由 OpenCC（tw2sp）自动转换，英文版为全量对译；三份文档共用同一组事实与守门。若你在简体版看到不顺的词，那是转换器的选择，不是原文的意思——请以正体版为准。
+**文档本身的版本**：本文档对应 XinSpect v3.04（2026-10-30）。正体中文为母本，简体中文由 OpenCC（tw2sp）自动转换，英文版为全量对译；三份文档共用同一组事实与守门。若你在简体版看到不顺的词，那是转换器的选择，不是原文的意思——请以正体版为准。
 
 ---
 
