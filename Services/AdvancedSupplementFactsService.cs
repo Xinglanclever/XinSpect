@@ -564,29 +564,19 @@ public static class AdvancedSupplementFactsService
     private static string Clean(string? value) => string.IsNullOrWhiteSpace(value) ? "未回報" : value.Trim();
     private static string YesNo(bool value) => value ? "是" : "否";
 
+    /// <summary>
+    /// 唯讀執行外部工具並取回標準輸出（第 330 輪，修 D4）。
+    /// </summary>
+    /// <remarks>
+    /// 先前這一版<b>重導了 stderr 卻一次都不讀</b>，而且先 <c>ReadToEnd()</c> 才
+    /// <c>WaitForExit(timeout)</c>：子行程往 stderr 寫滿 4 KB 就鎖死，逾時那行永遠到不了。
+    /// 現在改走 <see cref="ProcessRunner"/>，兩個串流都在等逾時之前開始讀。
+    /// <b>這是整檔共用的工具</b>，所以改這裡等於一次修掉所有呼叫端。
+    /// </remarks>
     private static string? RunProcess(string fileName, string[] args, int timeoutMs)
     {
-        try
-        {
-            var psi = new ProcessStartInfo(fileName)
-            {
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            };
-            foreach (string arg in args) psi.ArgumentList.Add(arg);
-            using var process = Process.Start(psi);
-            if (process is null) return null;
-            string stdout = process.StandardOutput.ReadToEnd();
-            if (!process.WaitForExit(timeoutMs))
-            {
-                try { process.Kill(entireProcessTree: true); } catch { }
-                return null;
-            }
-            return process.ExitCode == 0 ? stdout : null;
-        }
-        catch { return null; }
+        var run = ProcessRunner.Run(fileName, args, timeoutMs);
+        return run.Succeeded ? run.Stdout : null;
     }
 
     private static HardwareFact Unavailable(DateTimeOffset at, string key, string category, string name,

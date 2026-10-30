@@ -23,38 +23,17 @@ public static class BootOrderReader
     /// <summary>讀一次 BCD；讀不到就是 <c>null</c> 加一句理由，不抛例外。</summary>
     public static (string? Output, string? Reason) TryReadEnum()
     {
-        try
-        {
-            var psi = new ProcessStartInfo("bcdedit.exe", "/enum")
-            {
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-            };
+        // 第 330 輪（修 D4）：先前這裡是先 ReadToEnd 再 WaitForExit——那個順序有死鎖。
+        // 現在改走 ProcessRunner：兩個串流在 WaitForExit 之前就開始非同步讀。
+        var run = ProcessRunner.Run("bcdedit.exe", ["/enum"], TimeoutMs);
+        if (run.TimedOut) return (null, run.Reason);
+        if (run.Stdout is null) return (null, run.Reason ?? "bcdedit /enum 沒有任何輸出");
 
-            using var process = Process.Start(psi);
-            if (process is null) return (null, "bcdedit.exe 沒有啟動起來（行程物件是空的）");
+        if (string.IsNullOrWhiteSpace(run.Stdout))
+            return (null, string.IsNullOrWhiteSpace(run.Stderr)
+                ? "bcdedit /enum 沒有任何輸出"
+                : $"bcdedit /enum 沒有輸出，錯誤訊息：{run.Stderr.Trim()}");
 
-            string output = process.StandardOutput.ReadToEnd();
-            string error = process.StandardError.ReadToEnd();
-
-            if (!process.WaitForExit(TimeoutMs))
-            {
-                try { process.Kill(entireProcessTree: true); } catch { /* 已經結束就沒什麼好殺的 */ }
-                return (null, $"bcdedit /enum 在 {TimeoutMs / 1000} 秒內沒有回應，已中止");
-            }
-
-            if (string.IsNullOrWhiteSpace(output))
-                return (null, string.IsNullOrWhiteSpace(error)
-                    ? "bcdedit /enum 沒有任何輸出"
-                    : $"bcdedit /enum 沒有輸出，錯誤訊息：{error.Trim()}");
-
-            return (output, null);
-        }
-        catch (Exception ex)
-        {
-            return (null, "呼叫 bcdedit /enum 失敗：" + ex.Message);
-        }
+        return (run.Stdout, null);
     }
 }

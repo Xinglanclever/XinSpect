@@ -25,9 +25,35 @@ public static class ExternalReportService
 
     // ---- 自動偵測格式 ----------------------------------------------------------
 
+    /// <summary>
+    /// 可解析的檔案大小上限（64 MiB）。這是**界線**，不是效能調校參數。
+    /// </summary>
+    /// <remarks>
+    /// 來源是使用者用檔案對話框選的任意檔案。先前這裡無條件 <c>ReadAllBytes</c>：
+    /// 選到一顆 3 GB 的 HWiNFO 全紀錄、或誤選一個 <c>.iso</c>，就是一次大配置＋編碼偵測＋
+    /// 後續整份 <c>Split</c>，最壞 OOM 或長時間無回應——而畫面上不會說為什麼。
+    /// 超過就**明白回報**，不靜默失敗（界線要出現在 Status 字串裡）。
+    /// </remarks>
+    public const long MaxBytes = 64L * 1024 * 1024;
+
     public static ReportResult ParseFile(string path)
     {
         string ext = Path.GetExtension(path).ToLowerInvariant();
+        string name = Path.GetFileName(path);
+        long length;
+        try { length = new FileInfo(path).Length; }
+        catch (Exception ex)
+        {
+            return new(name, "未知", $"讀不到檔案大小：{ex.Message}", []);
+        }
+        if (length > MaxBytes)
+        {
+            return new(name, "未知",
+                $"檔案過大（{length / (1024.0 * 1024.0):0.0} MB），未解析：本頁上限 "
+                + $"{MaxBytes / (1024 * 1024)} MB，整檔讀進記憶體會讓程式長時間無回應或失敗",
+                []);
+        }
+
         var bytes = File.ReadAllBytes(path);
         // BOM 檢測：UTF-8 BOM (EF BB BF)、UTF-16 LE BOM (FF FE)
         string text;

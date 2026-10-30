@@ -517,6 +517,12 @@ public sealed class HistoryStore : IDisposable
 
         const int M = HistoryMetrics.Count;
         int n = (raw.Length - HeaderBytes) / RecordBytes;
+        // 尾端不足一筆的位元組是崩潰留下的半截紀錄。只忽略它是不夠的：
+        // Append 走 FileMode.Append，會把新紀錄接在**真正的檔尾**——也就是垃圾之後。
+        // 檔案於是變成「表頭＋n 筆＋k 位元組垃圾＋1 筆」，下一次 Load 會把那一筆讀在錯的位移上，
+        // 時間戳變成隨機值而被丟棄。原本靠下面 `_minTicks.Count != n` 觸發的 Compact 自癒，
+        // 但代價是「崩潰後的第一筆會掉」。把條件補上，這種檔案在載入當場就重寫乾淨。
+        bool hasTailGarbage = (raw.Length - HeaderBytes) % RecordBytes != 0;
         // 一次要進四個 List、每筆 21 個浮點：先備妥容量，免去反覆倍增（30 天檔約 4 MB，倍增會多丟一倍垃圾）
         _minTicks.EnsureCapacity(n);
         _minMin.EnsureCapacity(n * M);
@@ -539,7 +545,7 @@ public sealed class HistoryStore : IDisposable
                 _minMax.Add(BitConverter.ToSingle(raw, b + 8));
             }
         }
-        if (_minTicks.Count != n) Compact();     // 有紀錄被剔除 → 回寫瘦身
+        if (_minTicks.Count != n || hasTailGarbage) Compact();   // 有紀錄被剔除或尾端有垃圾 → 回寫瘦身
     }
 
     // append 記憶體鏡射中第 index 筆到檔尾（檔案不存在時先寫表頭）。
@@ -584,11 +590,13 @@ public sealed class HistoryStore : IDisposable
     }
 
     // 整份回寫（表頭 + 全部紀錄）。先寫暫存檔再覆蓋，避免中途失敗留下半截檔案。
+    private static int _compactSeq;
     private void Compact()
     {
         const int M = HistoryMetrics.Count;
         Directory.CreateDirectory(Folder);
-        string tmp = FilePath + ".tmp";
+        // 暫存名含行程 ID 與遞增序號：多實例同時寫同一個資料夾時不會互踩（理由同 AtomicWrite）。
+        string tmp = $"{FilePath}.{Environment.ProcessId}.{Interlocked.Increment(ref _compactSeq)}.tmp";
         using (var fs = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
         using (var w = new BinaryWriter(fs))
         {
