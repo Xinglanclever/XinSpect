@@ -159,7 +159,9 @@ public class FactKeyCatalogTests
         // 根集線器數隨主機板與插了幾個 PCIe USB 卡而變，編譯期不該為此改目錄。
         // 62 → 63（2026-10-30 第 326 輪）：whea.mem.rec.——成員＝這台機器回報過幾筆 WHEA 記憶體事件。
         // 事件筆數是機器的事實，編譯期不該為此改目錄。
-        const int FamilyCap = 63;
+        // 63 → 64（2026-10-30 第 327 輪）：usb.xhci.ctrl.——成員＝這台機器有幾個 xHCI 控制器。
+        // 控制器數隨主機板與插了幾個 PCIe USB 卡而變，編譯期不該為此改目錄。
+        const int FamilyCap = 64;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 

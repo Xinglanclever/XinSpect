@@ -23,6 +23,7 @@
 | `ROUND-324-ACPI-ROOT-2026-10-30.md` | 第 324 輪（U10-AC-0001＋AC-0002）：ACPI 根指標表這一層（`ac.root.summary`／`.dsdt`／`.boundary`）——實測 RSDP 與 RSDT／XSDT 在 usermode 都拿不到（29 張表逐張看過，兩張都不在），所以「缺的表」的原因是 OS 沒給；能驗的照驗：FADT 的 FACS／DSDT 32 與 64 位位址。同輪修掉外部審查指出的 USB 埠數三處缺陷（D1 位元組寬度、D2 IOCTL input、D3 0x2A）與 D5／D6／D7／D8／D12／D13。 |
 | `ROUND-325-PCIE-ACCESS-2026-10-30.md` | 第 325 輪（U10-PC-0001）：PCIe 設定空間的存取方法宣告（`pcie.access.summary`／`.agreement`／`.boundary`）——舊式 0xCF8／0xCFC（前 256 位元組）與 ECAM（4 KiB/功能）兩條通道的可用性分開寫，並比對 0:0.0 那一格；「一致」只證明兩條通道通到同一台裝置，不證明 ID 正確。沒有新增讀取後端。 |
 | `ROUND-326-WHEA-MEMORY-2026-10-30.md` | 第 326 輪（U10-WH-0003＋WH-0004）：WHEA 記憶體節區（`whea.mem.summary`／`whea.mem.rec.*`／`whea.mem.boundary`）——CPER 逐欄位移照 cper.h 的 CPER_FIELD_CHECK；**ValidBits 沒設的欄位不印成 0**（「Module 0」與「韌體沒說」是兩件事）；錯誤類型碼只收 0x00–0x0C。事件 data 段的外層包裝沒有可核出處，**因此本版不拆 blob**——列得出筆數，說不出哪一條 DIMM，並把這件事寫成事實。 |
+| `ROUND-327-XHCI-2026-10-30.md` | 第 327 輪（U10-NP-0002）：xHCI 版本與支援速度（`usb.xhci.summary`／`usb.xhci.ctrl.*`／`usb.xhci.boundary`）——能力區逐欄照 xHCI 規格 1.1 §5.3；控制器由 ROOT_HUB30 的父節點找出（不靠 class code 猜）。**速度值不換算成 Mb/s**：PSIM／PSIS 的位界在規格表與 Linux 標頭互相矛盾，只輸出原值。讀不到時只說缺哪一步，不從驅動版本反推。 |
 | `dedup_check.py`／`sample_check.py` | 可重跑之稽核腳本（絕對路徑寫死）。 |
 | `ULTIMATE-10000-EXPANSION-2026-10-24.md` | 歷史快照（十二批完成時點；**已被 10-25 版取代**，保留供對帳）。 |
 | `ULTIMATE-5000-RESERVOIR-2026-10-24.md` | 前導文件（歸檔；已被主目錄取代）。 |

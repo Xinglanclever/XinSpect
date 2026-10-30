@@ -95,6 +95,7 @@ public class DecoderHardeningTests
             "UsbHubNodeDecoder",
             "AcpiFadt",
             "WheaMemorySectionDecoder",
+            "XhciCapabilityDecoder",
             "KernelDumpDecoder",
             "TpmReplay",
             "AcpiDeep",

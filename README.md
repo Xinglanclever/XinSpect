@@ -13,7 +13,7 @@
 ![版本](https://img.shields.io/badge/version-3.03-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-7604%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-7628%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 
@@ -31,19 +31,19 @@
 
 | 類別 | 數量 | 數法（在倉庫根執行） |
 |---|---:|---|
-| 編譯期事實鍵 | **1,160** | `Services/FactKeyCatalog.cs` 的 `Keys` 成員數 |
-| 事實域（鍵的第一段前綴） | **153** | 1,160 把鍵各自取第一段後去重 |
-| 動態鍵家族 | **63** | `Services/FactKeyDynamicCatalog.cs` 的 `Families` 成員數 |
+| 編譯期事實鍵 | **1,162** | `Services/FactKeyCatalog.cs` 的 `Keys` 成員數 |
+| 事實域（鍵的第一段前綴） | **153** | 1,162 把鍵各自取第一段後去重 |
+| 動態鍵家族 | **64** | `Services/FactKeyDynamicCatalog.cs` 的 `Families` 成員數 |
 | 一鍵域／≤3 鍵域／≥20 鍵域 | 34／65／12 | 以域分組後計數 |
 | 可到達畫面（`PageRegistry`） | **63** | `Nav/PageRegistry.cs` 的 `Key =` 條目數 |
 | XAML 檔（含對話框與控制項） | **79** | `ls Views/*.xaml` |
 | 全站說明條目（圓圈問號） | **285** | `Nav/HelpCatalog.cs` 的 `Entries` 成員數 |
-| 服務檔 | **649** | `find Services -name '*.cs' \| wc -l` |
-| 全域 C# 檔 | **1,539** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`publish-*/`、`.git/` |
+| 服務檔 | **651** | `find Services -name '*.cs' \| wc -l` |
+| 全域 C# 檔 | **1,543** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`publish-*/`、`.git/` |
 | 版本紀錄筆數 | **109** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
-| 專案測試基線 | **7,604** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
+| 專案測試基線 | **7,628** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
 
-**這張表不能證明什麼。** 1,160 把鍵不是 1,160 個正確答案；63 頁不是 63 個好設計；7,604 條測試不是 7,604 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
+**這張表不能證明什麼。** 1,162 把鍵不是 1,162 個正確答案；63 頁不是 63 個好設計；7,628 條測試不是 7,628 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
 
 ---
 
@@ -112,8 +112,8 @@
   - [2.2 服務層的形狀](#22-服務層的形狀)
   - [2.3 一個服務的解剖（以 ACPI 表服務為例）](#23-一個服務的解剖以-acpi-表服務為例)
   - [2.4 事實模型：一個 record 與兩條不變式](#24-事實模型一個-record-與兩條不變式)
-  - [2.5 事實鍵目錄：1,160 把鍵為什麼要固定在編譯期](#25-事實鍵目錄1160-把鍵為什麼要固定在編譯期)
-  - [2.6 動態家族：62 個「我列不完」的申報](#26-動態家族63-個我列不完的申報)
+  - [2.5 事實鍵目錄：1,162 把鍵為什麼要固定在編譯期](#25-事實鍵目錄1162-把鍵為什麼要固定在編譯期)
+  - [2.6 動態家族：62 個「我列不完」的申報](#26-動態家族64-個我列不完的申報)
   - [2.7 分母宣告與覆蓋申報](#27-分母宣告與覆蓋申報)
   - [2.8 出口與孤兒：事實的三種去處](#28-出口與孤兒事實的三種去處)
   - [2.9 交叉對帳引擎：把矛盾變成第一類公民](#29-交叉對帳引擎把矛盾變成第一類公民)
@@ -206,10 +206,10 @@
   - [5.11 量測路徑分層與可信度慣例](#511-量測路徑分層與可信度慣例)
   - [5.12 誤差預算：每一類量測的誤差從哪裡來](#512-誤差預算每一類量測的誤差從哪裡來)
   - [5.13 量測的實務紀律（給要做研究的人）](#513-量測的實務紀律給要做研究的人)
-- [第 6 部 數據辭典：153 個域、1,160 把鍵](#第-6-部-數據辭典153-個域1160-把鍵)
+- [第 6 部 數據辭典：153 個域、1,162 把鍵](#第-6-部-數據辭典153-個域1162-把鍵)
   - [6.1 怎麼讀這一部](#61-怎麼讀這一部)
   - [6.2 最大的十二個域：逐域判讀要點](#62-最大的十二個域逐域判讀要點)
-  - [6.3 逐域鍵表（153 個域、1,160 把鍵）](#63-逐域鍵表153-個域1160-把鍵)
+  - [6.3 逐域鍵表（153 個域、1,162 把鍵）](#63-逐域鍵表153-個域1162-把鍵)
   - [6.3.1 域 `ac` — ACPI 表與韌體介面（61 把）](#631-域-ac--acpi-表與韌體介面61-把)
   - [6.3.2 域 `sb` — SMBIOS 與平台識別（53 把）](#632-域-sb--smbios-與平台識別53-把)
   - [6.3.3 域 `fw` — 韌體組成與開機鏈（48 把）](#633-域-fw--韌體組成與開機鏈48-把)
@@ -271,21 +271,21 @@
   - [6.3.59 域 `gd` — 圖形驅動（7 把）](#6359-域-gd--圖形驅動7-把)
   - [6.3.60 域 `of` — 離線檔案分析（7 把）](#6360-域-of--離線檔案分析7-把)
   - [6.3.61 域 `pmu` — 效能監控單元（7 把）](#6361-域-pmu--效能監控單元7-把)
-  - [6.3.62 域 `xt` — 跨工具對照（7 把）](#6362-域-xt--跨工具對照7-把)
-  - [6.3.63 域 `gp` — 遊戲與呈現（6 把）](#6363-域-gp--遊戲與呈現6-把)
-  - [6.3.64 域 `pci` — PCI 匯流排（6 把）](#6364-域-pci--pci-匯流排6-把)
-  - [6.3.65 域 `platform` — 平台開關（6 把）](#6365-域-platform--平台開關6-把)
-  - [6.3.66 域 `spec` — 規格參照（6 把）](#6366-域-spec--規格參照6-把)
-  - [6.3.67 域 `src` — 來源鏈（6 把）](#6367-域-src--來源鏈6-把)
-  - [6.3.68 域 `fact` — 事實中介資料（5 把）](#6368-域-fact--事實中介資料5-把)
-  - [6.3.69 域 `mc` — 微碼（5 把）](#6369-域-mc--微碼5-把)
-  - [6.3.70 域 `psu` — 電源供應器（5 把）](#6370-域-psu--電源供應器5-把)
-  - [6.3.71 域 `pv` — 平台視覺與語音（5 把）](#6371-域-pv--平台視覺與語音5-把)
-  - [6.3.72 域 `scan` — 掃描健全性（5 把）](#6372-域-scan--掃描健全性5-把)
-  - [6.3.73 域 `sec`（本版沒有成文的域說明）（5 把）](#6373-域-sec本版沒有成文的域說明5-把)
-  - [6.3.74 域 `tm` — 時間源（5 把）](#6374-域-tm--時間源5-把)
-  - [6.3.75 域 `ui`（本版沒有成文的域說明）（5 把）](#6375-域-ui本版沒有成文的域說明5-把)
-  - [6.3.76 域 `usb` — USB 匯流排（5 把）](#6376-域-usb--usb-匯流排5-把)
+  - [6.3.62 域 `usb` — USB 匯流排（7 把）](#6362-域-usb--usb-匯流排7-把)
+  - [6.3.63 域 `xt` — 跨工具對照（7 把）](#6363-域-xt--跨工具對照7-把)
+  - [6.3.64 域 `gp` — 遊戲與呈現（6 把）](#6364-域-gp--遊戲與呈現6-把)
+  - [6.3.65 域 `pci` — PCI 匯流排（6 把）](#6365-域-pci--pci-匯流排6-把)
+  - [6.3.66 域 `platform` — 平台開關（6 把）](#6366-域-platform--平台開關6-把)
+  - [6.3.67 域 `spec` — 規格參照（6 把）](#6367-域-spec--規格參照6-把)
+  - [6.3.68 域 `src` — 來源鏈（6 把）](#6368-域-src--來源鏈6-把)
+  - [6.3.69 域 `fact` — 事實中介資料（5 把）](#6369-域-fact--事實中介資料5-把)
+  - [6.3.70 域 `mc` — 微碼（5 把）](#6370-域-mc--微碼5-把)
+  - [6.3.71 域 `psu` — 電源供應器（5 把）](#6371-域-psu--電源供應器5-把)
+  - [6.3.72 域 `pv` — 平台視覺與語音（5 把）](#6372-域-pv--平台視覺與語音5-把)
+  - [6.3.73 域 `scan` — 掃描健全性（5 把）](#6373-域-scan--掃描健全性5-把)
+  - [6.3.74 域 `sec`（本版沒有成文的域說明）（5 把）](#6374-域-sec本版沒有成文的域說明5-把)
+  - [6.3.75 域 `tm` — 時間源（5 把）](#6375-域-tm--時間源5-把)
+  - [6.3.76 域 `ui`（本版沒有成文的域說明）（5 把）](#6376-域-ui本版沒有成文的域說明5-把)
   - [6.3.77 域 `acpi` — ACPI 錯誤表（4 把）](#6377-域-acpi--acpi-錯誤表4-把)
   - [6.3.78 域 `asset` — 資產（4 把）](#6378-域-asset--資產4-把)
   - [6.3.79 域 `cm` — 核心與記憶體拓樸（4 把）](#6379-域-cm--核心與記憶體拓樸4-把)
@@ -437,9 +437,9 @@
   - [附錄 D 二十個常見誤判](#附錄-d-二十個常見誤判)
   - [附錄 E 常見問題](#附錄-e-常見問題)
   - [附錄 F　153 個域的前綴表](#附錄-f-153-個域的前綴表)
-  - [附錄 F-2　63 個動態家族與「成員由什麼決定」](#附錄-f-2-63-個動態家族與成員由什麼決定)
+  - [附錄 F-2　64 個動態家族與「成員由什麼決定」](#附錄-f-2-64-個動態家族與成員由什麼決定)
   - [附錄 G　全站說明條目逐條（285 條）](#附錄-g-全站說明條目逐條285-條)
-  - [附錄 H　服務檔地圖（649 個檔案）](#附錄-h-服務檔地圖649-個檔案)
+  - [附錄 H　服務檔地圖（651 個檔案）](#附錄-h-服務檔地圖651-個檔案)
   - [附錄 I 六態與可信度速查卡](#附錄-i-六態與可信度速查卡)
   - [附錄 J 三十條可自行驗證的宣稱](#附錄-j-三十條可自行驗證的宣稱)
   - [附錄 K 倉庫地圖](#附錄-k-倉庫地圖)
@@ -499,7 +499,7 @@
 | **事實（fact）** | 一個帶鍵、值、單位、來源、可信度、時刻、可用性的資料項 | 不是「結論」。事實不帶建議，也不替使用者下判斷 |
 | **事實鍵（fact key）** | 穩定識別字，如 `ac.dmar.summary`；前綴是域 | 不是畫面欄位名；也不保證跨版本不改（第 6 部逐域說明哪些已經改過） |
 | **域（domain）** | 鍵的第一段前綴，本版共 **153** 個 | 不是側邊欄分組。一個域可能橫跨多頁，一頁也可能用到多個域 |
-| **動態家族（dynamic family）** | 成員由機器決定、編譯期數不出來的鍵群，本版共 **63** 個前綴 | 不是「例外」。它是申報：明說「這群我列不完，而成員由什麼決定」 |
+| **動態家族（dynamic family）** | 成員由機器決定、編譯期數不出來的鍵群，本版共 **64** 個前綴 | 不是「例外」。它是申報：明說「這群我列不完，而成員由什麼決定」 |
 | **服務（service）** | 一個負責讀某類事實的類別，通常一個檔案一個服務 | 不是背景常駐程式。服務是被收集流程叫用的讀取器 |
 | **收集輪（round）** | 一次「開始收集」到「事實集穩定」的完整週期 | 不是即時更新的每個 tick。tick 只更新少數即時值 |
 | **事實集（fact set）** | 一輪收集的產物：鍵→事實的對應 | 不是快照檔。快照是事實集加上雜湊信封後的落地檔 |
@@ -592,12 +592,12 @@
 這份文件的每一個結構性數字都可以自己驗：
 
 1. 事實鍵數：數 `Services/FactKeyCatalog.cs` 的 `Keys` 成員。
-2. 域數：把 1,160 把鍵各取第一段後去重（本版 153）。
-3. 動態家族數：數 `FactKeyDynamicCatalog.Families` 的成員（本版 63）。
+2. 域數：把 1,162 把鍵各取第一段後去重（本版 153）。
+3. 動態家族數：數 `FactKeyDynamicCatalog.Families` 的成員（本版 64）。
 4. 畫面數：數 `Nav/PageRegistry.cs` 的 `Key =` 條目（本版 63）。
 5. 說明條目數：數 `Nav/HelpCatalog.cs` 的 `Entries` 成員（本版 285）。
-6. 服務檔數：`find Services -name '*.cs' | wc -l`（本版 649）。
-7. 測試數：`dotnet test` 的總計，或讀 `Tests/TestSuiteBaseline.cs`（本版 7,604）。
+6. 服務檔數：`find Services -name '*.cs' | wc -l`（本版 651）。
+7. 測試數：`dotnet test` 的總計，或讀 `Tests/TestSuiteBaseline.cs`（本版 7,628）。
 8. 主程式大小：Release 頁面的 `XinSpect.exe` 位元組數（本版 34,268,971）。
 9. 版本紀錄筆數：數 `Nav/ChangelogCatalog.cs` 的 `Entries`（本版 109）。
 10. 孤兒鍵：把目錄鍵與 `Views/`、`Nav/` 兩邊的出口對照（第 2 部給了方法與本版結果）。
@@ -610,7 +610,7 @@
 
 ### 0.10 時態與引號的規則
 
-- **現在式宣稱**（「本版有 7,604 條測試」）只用在有守門的數字上。
+- **現在式宣稱**（「本版有 7,628 條測試」）只用在有守門的數字上。
 - **過去式故事**（「v2.53 的標籤沒被推上去」）用來說明規則的來源，寫成故事而不是規則。
 - **未成文** 是一個正式標記，不是修辭。看到它代表：這件事程式中確實存在某種行為，但沒有人把它寫成可驗證的文件。
 - 引號裡的句子如果出自程式註解或程式碼，會標明檔案；如果出自本文件的作者判斷，會明白用「這份文件認為」開頭。
@@ -897,11 +897,11 @@
 
 ### 2.2 服務層的形狀
 
-`Services/` 底下有 **649** 個 `.cs` 檔，絕大多數是一個檔案一個服務。服務的共同形狀是：**一個 `Collect` 或等價的入口、把結果寫成 `HardwareFact` 的集合、以及一個對應的測試檔**。
+`Services/` 底下有 **651** 個 `.cs` 檔，絕大多數是一個檔案一個服務。服務的共同形狀是：**一個 `Collect` 或等價的入口、把結果寫成 `HardwareFact` 的集合、以及一個對應的測試檔**。
 
-**為什麼服務數量是 649 而不是 60。** 因為這個專案的計數單位是「可定位的事實與收口」，不是「使用者感覺得到的功能」。一個服務通常負責一類介面（一張 ACPI 表、一種韌體介面、一組 MSR），而這些介面的數量本來就以百計——ACPI 有數十種表、MSR 有數千個、SMBIOS 有數十種型別。
+**為什麼服務數量是 651 而不是 60。** 因為這個專案的計數單位是「可定位的事實與收口」，不是「使用者感覺得到的功能」。一個服務通常負責一類介面（一張 ACPI 表、一種韌體介面、一組 MSR），而這些介面的數量本來就以百計——ACPI 有數十種表、MSR 有數千個、SMBIOS 有數十種型別。
 
-**服務數量本身就是一種風險。** 649 個服務檔意味著「接線」是一個真實的問題：服務寫好、測試綠、但沒有進生產路徑，這種缺陷在這個專案發生過不只一次（第 12 部的 D-16、D-17）。目前的答案是**守門**（孤兒掃描、視圖入口閘門、事實鍵對帳），而不是減少服務數量。**這 649 個檔案的逐檔地圖在附錄 H，那張表的列集合由 `Tools/gen-readme-domains.py` 從 `Services/` 直接生成——它不是另一份名冊，所以不會再有「檔案加了、地圖沒加」的漂移。**
+**服務數量本身就是一種風險。** 651 個服務檔意味著「接線」是一個真實的問題：服務寫好、測試綠、但沒有進生產路徑，這種缺陷在這個專案發生過不只一次（第 12 部的 D-16、D-17）。目前的答案是**守門**（孤兒掃描、視圖入口閘門、事實鍵對帳），而不是減少服務數量。**這 651 個檔案的逐檔地圖在附錄 H，那張表的列集合由 `Tools/gen-readme-domains.py` 從 `Services/` 直接生成——它不是另一份名冊，所以不會再有「檔案加了、地圖沒加」的漂移。**
 
 ### 2.3 一個服務的解剖（以 ACPI 表服務為例）
 
@@ -924,9 +924,9 @@
 
 **這兩條不變式合起來說明一個設計態度**：資料模型的錯誤不要用例外處理，要用**收斂加痕跡**處理。因為這個工具的價值在於「跑完整台機器」，一個服務的疏忽不該讓整場掃描崩潰。
 
-### 2.5 事實鍵目錄：1,160 把鍵為什麼要固定在編譯期
+### 2.5 事實鍵目錄：1,162 把鍵為什麼要固定在編譯期
 
-**目錄的內容。** `Services/FactKeyCatalog.cs` 是一個凍結的清單，本版 **1,160** 把鍵，一律以全字串字典序排列。
+**目錄的內容。** `Services/FactKeyCatalog.cs` 是一個凍結的清單，本版 **1,162** 把鍵，一律以全字串字典序排列。
 
 **為什麼不執行期掃原始碼。** 發佈版只有單一 exe，目錄裡只有 `Assets/` 與執行檔，**沒有 `Services/`**。掃不到時會回報「0 個鍵」，而覆蓋申報會把 0 讀成「全部都覆蓋了」——那是「掃不到」冒充「沒有問題」，正是本專案最不該犯的錯。所以改成編譯期固定的目錄＋測試守門（`FactKeyCatalogTests` 重新掃描 `Services/` 原始碼並與目錄逐鍵比對）。
 
@@ -934,11 +934,11 @@
 
 **命名規範。** 鍵必須符合 `^[a-z][a-z0-9]*(\.[a-z0-9_]+)+$`（`KeyCatalogPolicy.KeyPattern`）。**這條規則與動態家族的存在是同一件事的兩面**：因為目錄要能編譯期比對，成員不確定的鍵就必須走家族——所以「不符合格式」不是疏漏，是**訊號**：它在說「這個鍵的成員我列不完」。
 
-**域。** 1,160 把鍵的第一段去重後共 **153** 個域；其中 34 個域只有一把鍵、65 個域不超過三把、12 個域有 20 把以上（`ac` 61、`sb` 53、`fw` 48、`sa` 45、`fs` 30、`uefi` 27、`ev` 25、`eg` 24、`os` 24、`ms` 23、`nw` 22、`st` 20）。第 6 部逐域展開。
+**域。** 1,162 把鍵的第一段去重後共 **153** 個域；其中 34 個域只有一把鍵、65 個域不超過三把、12 個域有 20 把以上（`ac` 61、`sb` 53、`fw` 48、`sa` 45、`fs` 30、`uefi` 27、`ev` 25、`eg` 24、`os` 24、`ms` 23、`nw` 22、`st` 20）。第 6 部逐域展開。
 
-### 2.6 動態家族：63 個「我列不完」的申報
+### 2.6 動態家族：64 個「我列不完」的申報
 
-`Services/FactKeyDynamicCatalog.cs` 登記 **63** 個動態前綴，每一筆都要寫「為什麼編譯期數不出成員」與「成員由什麼決定」。例如：
+`Services/FactKeyDynamicCatalog.cs` 登記 **64** 個動態前綴，每一筆都要寫「為什麼編譯期數不出成員」與「成員由什麼決定」。例如：
 
 - `pci.dev.`：bus 0 盤點每張存在的裝置一筆（成員＝裝置號 dev.fn）——有哪些裝置是機器的事實，編譯期列不完。
 - `pci.res.`：PCI 擴充資源（BAR）每張有資源的裝置一筆，成員由匯流排枚舉決定。
@@ -993,7 +993,7 @@
 - **快照是檔案，不是狀態。** 時間膠囊與原始暫存器快照是帶雜湊信封的檔案，載入時逐位元組驗證。檔案損壞會被拒載，而不是被部分採信。
 - **缺值不填補。** 差分只比對同一台機器的兩份快照；這次讀不到的鍵列為「消失」，不用舊值填補。這一條看起來很笨——明明知道上次是多少——但用舊值填補等於偽造一次成功的讀取。
 
-**快取的三個實際位置。** 一是事實層的短期快取（同一輪內多頁共用同一次讀取），二是編譯期的鍵目錄（1,160 個鍵固定，避免「掃不到原始碼就當作全部覆蓋」），三是驅動與橋接二進位的解壓落地（SHA-256 校驗後快取）。三者的共同點是：**可以重建、可以驗證、可以刪掉重來。**
+**快取的三個實際位置。** 一是事實層的短期快取（同一輪內多頁共用同一次讀取），二是編譯期的鍵目錄（1,162 個鍵固定，避免「掃不到原始碼就當作全部覆蓋」），三是驅動與橋接二進位的解壓落地（SHA-256 校驗後快取）。三者的共同點是：**可以重建、可以驗證、可以刪掉重來。**
 
 ### 2.13 時間：三種時鐘與各自的陷阱
 
@@ -1036,8 +1036,8 @@
 寫架構最沒有價值的一段是「本架構優雅且可擴充」。有價值的是承認它哪裡脆弱。
 
 1. **單一行程承擔特權與介面。** 主程式以管理員權杖執行時，介面、內建瀏覽器、AI 對話、報告產生都在同一個行程裡。任何在介面層的程式碼執行都等於管理員。正確的修法是權杖分離，但那會讓「讀一個 MSR」變成跨行程呼叫，代價是延遲與複雜度——**這是一個還沒有付的代價**。
-2. **服務數量本身就是一種風險。** 649 個服務檔意味著「接線」是一個真實的問題：服務寫好、測試綠、但沒有進生產路徑（第 12 部的 D-16、D-17）。答案是守門，不是減少數量。
-3. **事實鍵目錄需要人維持誠實。** 1,160 個鍵加上 63 個動態家族，靠的是「執行期出現的鍵要嘛在目錄、要嘛命中家族前綴，否則對帳紅燈」。這條規則能抓「有產出但沒登記」，**抓不到「登記了但語意寫錯」**。目錄是申報，不是證明。
+2. **服務數量本身就是一種風險。** 651 個服務檔意味著「接線」是一個真實的問題：服務寫好、測試綠、但沒有進生產路徑（第 12 部的 D-16、D-17）。答案是守門，不是減少數量。
+3. **事實鍵目錄需要人維持誠實。** 1,162 個鍵加上 64 個動態家族，靠的是「執行期出現的鍵要嘛在目錄、要嘛命中家族前綴，否則對帳紅燈」。這條規則能抓「有產出但沒登記」，**抓不到「登記了但語意寫錯」**。目錄是申報，不是證明。
 
 ## 第 3 部 功能地圖：63 個可到達畫面逐頁解剖
 
@@ -1436,7 +1436,7 @@
 
 **誤差與邊界。** ①「本次未收集」的清單長度取決於這一輪跑了哪些收集器；②走勢欄只覆蓋同一工作階段（跨重啟的長期曲線在歷史頁）；③目錄鍵數是**編譯期**數字，與執行期實際生產的鍵數不同（後者含動態家族成員）。
 
-**誤用警告。** 「事實總表顯示 1,160 把鍵，所以程式有 1,160 個功能」——鍵是**可定位的事實**粒度，不是使用者感知的功能粒度；反過來說，「表上有一把鍵」也不保證這台機器讀得到它。
+**誤用警告。** 「事實總表顯示 1,162 把鍵，所以程式有 1,162 個功能」——鍵是**可定位的事實**粒度，不是使用者感知的功能粒度；反過來說，「表上有一把鍵」也不保證這台機器讀得到它。
 
 ---
 
@@ -2052,7 +2052,7 @@
 
 ### 5.2 校準的十條規則
 
-以下十條貫穿全部 1,160 把鍵。**每一條都附一個「違反時長什麼樣子」，因為規則只有在能被辨認出來時才有用。**
+以下十條貫穿全部 1,162 把鍵。**每一條都附一個「違反時長什麼樣子」，因為規則只有在能被辨認出來時才有用。**
 
 1. **單位先於數值。** 儲存容量 `GB` 與 `GiB` 差 7.4%；`MT/s` 與 `MHz` 在 DDR 上是兩倍關係。違反的樣子：兩台機器的「32 GB」其實是 32×10⁹ 與 32×2³⁰。
 2. **時刻先於數值。** 沒有時刻的數字無法判斷是現況還是殘留。違反的樣子：快照裡的 62 °C 被當成現在的溫度。
@@ -2186,13 +2186,13 @@
 5. **介入要單一**：一次改一個變因，否則你觀察到的是「整包改動」的效果。
 6. **保留證據**：只留一張截圖等於只留結論而丟掉證據；至少要留測項、判定、樣本數、環境摘要與非「無異常」項目的原始統計。
 
-## 第 6 部 數據辭典：153 個域、1,160 把鍵
+## 第 6 部 數據辭典：153 個域、1,162 把鍵
 
 這一部是整本百科的骨架。**每一個域、每一把鍵都在這裡**：鍵是什麼、由誰生產、來源是哪一條通路、可信度落在哪一級、以及它最常被誤讀成什麼。它同時是查閱用的（配合目錄）與維護用的（改一把鍵之前先看它在哪一域、有沒有鄰居）。
 
 ### 6.1 怎麼讀這一部
 
-**分母先講清楚。** 這一部的分母是**編譯期目錄**（`Services/FactKeyCatalog.Keys`，1,160 把），不是「本輪收集到的事實」。這個選擇的理由在第 1.13 節說過：若用本輪收集當分母，「有實作但這次沒跑到」就會從表上消失，而那正好是最該被看見的東西。
+**分母先講清楚。** 這一部的分母是**編譯期目錄**（`Services/FactKeyCatalog.Keys`，1,162 把），不是「本輪收集到的事實」。這個選擇的理由在第 1.13 節說過：若用本輪收集當分母，「有實作但這次沒跑到」就會從表上消失，而那正好是最該被看見的東西。
 
 **鍵的三段結構。** 一把鍵的形狀是 `<域>.<家族>.<成員>`：
 
@@ -2366,7 +2366,7 @@
 
 **誤用警告。** 「`st.wear.summary` 的耗損百分比較低，所以碟還很健康」——**那是韌體的估算**；它與實際可靠度之間的關係由廠商定義。要更強的證據需要看 `st.nvme.err` 的錯誤計數趨勢與表面掃描結果。
 
-### 6.3 逐域鍵表（153 個域、1,160 把鍵）
+### 6.3 逐域鍵表（153 個域、1,162 把鍵）
 
 ### 6.3.1 域 `ac` — ACPI 表與韌體介面（61 把）
 
@@ -3716,7 +3716,21 @@
 | `pmu.uncore.ratio_limit` | Uncore 頻率上限（0x620） | MSR 0x620／0x621 | Unknown |
 | `pmu.version` | PMU 版本 | CPUID leaf 0xA | Unknown |
 
-### 6.3.62 域 `xt` — 跨工具對照（7 把）
+### 6.3.62 域 `usb` — USB 匯流排（7 把）
+
+**可判定的來源**：WMI Win32_USBControllerDevice（USB 拓撲相依對）（1 把） **可判定的可信度**：`Derived`×1。
+
+| 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
+|---|---|---|---|
+| `usb.busiest_controller` | 掛載最多的控制器 | WMI Win32_USBControllerDevice（USB 拓撲相依對） | Derived |
+| `usb.controllers` | USB 控制器 | WMI Win32_USBControllerDevice（USB 拓撲相依對） | Reported |
+| `usb.devices` | USB 裝置 | WMI Win32_USBControllerDevice（USB 拓撲相依對） | Reported |
+| `usb.hub.boundary` | USB 埠事實的界線宣告 | 專案界線宣告（無外部來源） | Measured |
+| `usb.hub.summary` | USB 根集線器埠數彙總 | SetupAPI 裝置清單 ＋ hub descriptor（IOCTL_USB_GET_NODE_INFORMATION，唯讀） | — |
+| `usb.xhci.boundary` | xHCI 能力區的界線宣告 | 專案界線宣告（無外部來源） | Measured |
+| `usb.xhci.summary` | xHCI 控制器版本與支援速度 | xHCI 能力暫存器區（MMIO：CAPLENGTH／HCIVERSION／HCSPARAMS1／HCCPARAMS1） | Unknown |
+
+### 6.3.63 域 `xt` — 跨工具對照（7 把）
 
 這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，**不補一段聽起來合理的說明**。
 
@@ -3730,7 +3744,7 @@
 | `xt.sysmon.map` | — | — | — |
 | `xt.trigger` | — | — | — |
 
-### 6.3.63 域 `gp` — 遊戲與呈現（6 把）
+### 6.3.64 域 `gp` — 遊戲與呈現（6 把）
 
 **可判定的來源**：C:\Windows\System32\GroupPolicy\Machine\Registry.pol 的檔案時間戳——只指紋不解析二進位（1 把） **可判定的可信度**：`Reported`×1。
 
@@ -3743,7 +3757,7 @@
 | `gp.present.summary` | 幀呈現觀測 摘要 | 呈現事件取樣（呼叫端提供的即時 session；本項唯讀判讀，不建立新工作階段） | Measured |
 | `gp.registrypol` | 機器原則檔（Registry.pol） | C:\Windows\System32\GroupPolicy\Machine\Registry.pol 的檔案時間戳——只指紋不解析二進位 | Reported |
 
-### 6.3.64 域 `pci` — PCI 匯流排（6 把）
+### 6.3.65 域 `pci` — PCI 匯流排（6 把）
 
 **可判定的來源**：s（1 把） **可判定的可信度**：`Measured`×1。
 
@@ -3756,7 +3770,7 @@
 | `pci.id` | PCI 名稱對照 | 內建知識表（離線） | Derived |
 | `pci.res.1f.5` | — | — | — |
 
-### 6.3.65 域 `platform` — 平台開關（6 把）
+### 6.3.66 域 `platform` — 平台開關（6 把）
 
 **可判定的來源**：s（1 把） **可判定的可信度**：`Reported`×1。
 
@@ -3769,7 +3783,7 @@
 | `platform.secure_boot` | x | s | Reported |
 | `platform.testsigning` | — | — | — |
 
-### 6.3.66 域 `spec` — 規格參照（6 把）
+### 6.3.67 域 `spec` — 規格參照（6 把）
 
 這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，**不補一段聽起來合理的說明**。
 
@@ -3782,7 +3796,7 @@
 | `spec.ref.unit` | 換算係數出處 | 單位換算登錄 | Derived |
 | `spec.ref.version` | 規格版本 | SpecRef 登錄 | Derived |
 
-### 6.3.67 域 `src` — 來源鏈（6 把）
+### 6.3.68 域 `src` — 來源鏈（6 把）
 
 **可判定的來源**：來源能力矩陣（1 把）；來源裁決鏈（1 把）；來源註冊表（1 把） **可判定的可信度**：`Derived`×3。
 
@@ -3795,7 +3809,7 @@
 | `src.registry.count` | 已註冊來源數 | 來源註冊表 | Derived |
 | `src.retry` | 失敗重試 | 掃描骨架／降級政策 | Derived |
 
-### 6.3.68 域 `fact` — 事實中介資料（5 把）
+### 6.3.69 域 `fact` — 事實中介資料（5 把）
 
 這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，**不補一段聽起來合理的說明**。
 
@@ -3807,7 +3821,7 @@
 | `fact.sensitivity` | 敏感度分級 | 敏感度政策 | Derived |
 | `fact.why_unreadable` | 不可用原因查詢 | 狀態覆蓋申報 | Derived |
 
-### 6.3.69 域 `mc` — 微碼（5 把）
+### 6.3.70 域 `mc` — 微碼（5 把）
 
 這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，**不補一段聽起來合理的說明**。
 
@@ -3819,7 +3833,7 @@
 | `mc.version.msr` | 微碼修訂版（MSR） | MSR 0x8B（IA32_BIOS_SIGN_ID）——CPU 自己回的 | — |
 | `mc.version.registry` | 微碼修訂版（登錄檔） | MSR 0x8B（IA32_BIOS_SIGN_ID）——CPU 自己回的 | — |
 
-### 6.3.70 域 `psu` — 電源供應器（5 把）
+### 6.3.71 域 `psu` — 電源供應器（5 把）
 
 這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，**不補一段聽起來合理的說明**。
 
@@ -3831,7 +3845,7 @@
 | `psu.pmbus.vin` | 輸入電壓 READ_VIN | PMBus 唯讀掃描（SMBus 0x40–0x4F） | Unknown |
 | `psu.pmbus.vout` | 輸出電壓 READ_VOUT | PMBus 唯讀掃描（SMBus 0x40–0x4F） | Unknown |
 
-### 6.3.71 域 `pv` — 平台視覺與語音（5 把）
+### 6.3.72 域 `pv` — 平台視覺與語音（5 把）
 
 這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，**不補一段聽起來合理的說明**。
 
@@ -3843,7 +3857,7 @@
 | `pv.telemetry` | 遙測層級事實 | — | Reported |
 | `pv.uwp.summary` | UWP 權限概覽 | AppxManifest capabilities（唯讀） | Reported |
 
-### 6.3.72 域 `scan` — 掃描健全性（5 把）
+### 6.3.73 域 `scan` — 掃描健全性（5 把）
 
 **可判定的來源**：掃描骨架自我檢查（1 把） **可判定的可信度**：`Derived`×1。
 
@@ -3855,7 +3869,7 @@
 | `scan.skeleton.adoption` | 骨架採用數 | 骨架相容性報告 | Derived |
 | `scan.step.timeout` | 步驟逾時 | 掃描骨架 | Derived |
 
-### 6.3.73 域 `sec`（本版沒有成文的域說明）（5 把）
+### 6.3.74 域 `sec`（本版沒有成文的域說明）（5 把）
 
 這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，**不補一段聽起來合理的說明**。
 
@@ -3867,7 +3881,7 @@
 | `sec.vbs.services.summary` | VBS 安全服務清單 | WMI Win32_DeviceGuard 的 SecurityServicesConfigured／SecurityServicesRunning（唯讀）；值表＝Microsoft Learn 對準版 | — |
 | `sec.vbs.state` | VBS／HVCI 狀態 | WMI Win32_DeviceGuard（root\\Microsoft\\Windows\\DeviceGuard，零特權唯讀）；值表＝Microsoft Learn 對準版 | — |
 
-### 6.3.74 域 `tm` — 時間源（5 把）
+### 6.3.75 域 `tm` — 時間源（5 把）
 
 這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，**不補一段聽起來合理的說明**。
 
@@ -3879,7 +3893,7 @@
 | `tm.source` | 時鐘源事實 | CPUID 0x80000007＋W32Time（唯讀） | Reported |
 | `tm.tzdb` | 時區／DST 資源 | TimeZoneInfo.Local＋%SystemRoot%\\System32\\tzres.dll | Reported |
 
-### 6.3.75 域 `ui`（本版沒有成文的域說明）（5 把）
+### 6.3.76 域 `ui`（本版沒有成文的域說明）（5 把）
 
 這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，**不補一段聽起來合理的說明**。
 
@@ -3890,18 +3904,6 @@
 | `ui.home.healthcards` | — | — | — |
 | `ui.keys.map` | — | — | — |
 | `ui.table.controls` | — | — | — |
-
-### 6.3.76 域 `usb` — USB 匯流排（5 把）
-
-**可判定的來源**：WMI Win32_USBControllerDevice（USB 拓撲相依對）（1 把） **可判定的可信度**：`Derived`×1。
-
-| 鍵 | 名稱（原始碼字面） | 來源（原始碼字面） | 可信度 |
-|---|---|---|---|
-| `usb.busiest_controller` | 掛載最多的控制器 | WMI Win32_USBControllerDevice（USB 拓撲相依對） | Derived |
-| `usb.controllers` | USB 控制器 | WMI Win32_USBControllerDevice（USB 拓撲相依對） | Reported |
-| `usb.devices` | USB 裝置 | WMI Win32_USBControllerDevice（USB 拓撲相依對） | Reported |
-| `usb.hub.boundary` | USB 埠事實的界線宣告 | 專案界線宣告（無外部來源） | Measured |
-| `usb.hub.summary` | USB 根集線器埠數彙總 | SetupAPI 裝置清單 ＋ hub descriptor（IOCTL_USB_GET_NODE_INFORMATION，唯讀） | — |
 
 ### 6.3.77 域 `acpi` — ACPI 錯誤表（4 把）
 
@@ -4674,7 +4676,7 @@
 
 1. **家族的成員數不是常數。** 一台機器有 3 張 PCI 裝置就有 3 把 `pci.dev.*`，另一台有 9 張就有 9 把。
 2. **家族前綴必須有人生產**（殭屍前綴會紅燈），所以「有家族卻沒有成員」代表這台機器真的沒有那類東西。
-3. **家族的成員不計入 1,160 這個分母。** 所以「覆蓋率」的分子分母都必須說清楚有沒有含家族——這正是 `coverage.denominator` 與 `dyn.family` 這兩把鍵存在的理由。
+3. **家族的成員不計入 1,162 這個分母。** 所以「覆蓋率」的分子分母都必須說清楚有沒有含家族——這正是 `coverage.denominator` 與 `dyn.family` 這兩把鍵存在的理由。
 
 #### 6.4.4 孤兒鍵：有生產、沒有出口
 
@@ -4701,9 +4703,9 @@
 
 ### 6.5 逐鍵出處：原始碼裡怎麼說它
 
-這一節把 1,160 把鍵逐一對回原始碼：**它被寫在哪個檔案的哪一行、那裡的註解怎麼說、以及產生它的那一行長什麼樣**。「產生它的那一行」優先取真正的生產點（同一處附近有 `HardwareFact(` 建構）——目錄、覆蓋報告與政策檔裡雖然也提到鍵，但那不是鍵的來源，故降到候補。
+這一節把 1,162 把鍵逐一對回原始碼：**它被寫在哪個檔案的哪一行、那裡的註解怎麼說、以及產生它的那一行長什麼樣**。「產生它的那一行」優先取真正的生產點（同一處附近有 `HardwareFact(` 建構）——目錄、覆蓋報告與政策檔裡雖然也提到鍵，但那不是鍵的來源，故降到候補。
 
-**覆蓋率申報**：1,160 把鍵之中有 1,160 把在本版 `Services/` 的字面中找得到位置；其餘 0 把抽不到字面（鍵由方法組合、字串拼接或動態家族成員產生）。**抽不到不代表這把鍵不存在**——它仍在編譯期目錄裡、仍有生產者，只是這個抽取方式抓不到。同理，某一把鍵的註解欄若是空的，代表**那個生產點沒有註解**，不是本節省略了它。
+**覆蓋率申報**：1,162 把鍵之中有 1,162 把在本版 `Services/` 的字面中找得到位置；其餘 0 把抽不到字面（鍵由方法組合、字串拼接或動態家族成員產生）。**抽不到不代表這把鍵不存在**——它仍在編譯期目錄裡、仍有生產者，只是這個抽取方式抓不到。同理，某一把鍵的註解欄若是空的，代表**那個生產點沒有註解**，不是本節省略了它。
 
 #### 6.5.1 域 `ac`（61 把）
 
@@ -7388,7 +7390,27 @@
 - **`pmu.version`** — `Services/PmuCapabilityFactsService.cs:24`（生產點）
   - 原始碼：`"pmu.version", Category, "PMU 版本", "", "", "CPUID leaf 0xA", FactTrustLevel.Unknown, false, at, null, FactAvailability.NotSupported, "CPUID 0xA 版本＝0：此處理器沒有架構 PMU——無此硬體不是錯誤")]; }`
 
-#### 6.5.62 域 `xt`（7 把）
+#### 6.5.62 域 `usb`（7 把）
+
+- **`usb.busiest_controller`** — `Services/UsbTopologyService.cs:22`（生產點）
+  - 註解：/ 摘要三件事：控制器數、裝置數、最忙碌控制器的掛載數——「誰掛得最多」是排查供電與頻寬 / 衝突的實用指紋。WMI 的相依對只有一層（controller→device），更深層級的 hub 樹不猜。 / </summary>
+  - 原始碼：`"usb.busiest_controller" }.Select(key => new HardwareFact(key, Category, NameOf(key), "", "", "WMI Win32_USBControllerDevice（USB 拓撲相依對）", FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError,`
+- **`usb.controllers`** — `Services/UsbTopologyService.cs:22`（生產點）
+  - 註解：/ 摘要三件事：控制器數、裝置數、最忙碌控制器的掛載數——「誰掛得最多」是排查供電與頻寬 / 衝突的實用指紋。WMI 的相依對只有一層（controller→device），更深層級的 hub 樹不猜。 / </summary>
+  - 原始碼：`"usb.controllers", "usb.devices", "usb.busiest_controller" }.Select(key => new HardwareFact(key, Category, NameOf(key), "", "", "WMI Win32_USBControllerDevice（USB 拓撲相依對）", FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError,`
+- **`usb.devices`** — `Services/UsbTopologyService.cs:22`（生產點）
+  - 註解：/ 摘要三件事：控制器數、裝置數、最忙碌控制器的掛載數——「誰掛得最多」是排查供電與頻寬 / 衝突的實用指紋。WMI 的相依對只有一層（controller→device），更深層級的 hub 樹不猜。 / </summary>
+  - 原始碼：`"usb.devices", "usb.busiest_controller" }.Select(key => new HardwareFact(key, Category, NameOf(key), "", "", "WMI Win32_USBControllerDevice（USB 拓撲相依對）", FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError,`
+- **`usb.hub.boundary`** — `Services/FactKeyCatalog.cs:1115`（提及處）
+  - 原始碼：`"usb.hub.boundary",`
+- **`usb.hub.summary`** — `Services/FactKeyCatalog.cs:1116`（提及處）
+  - 原始碼：`"usb.hub.summary",`
+- **`usb.xhci.boundary`** — `Services/FactKeyCatalog.cs:1123`（提及處）
+  - 原始碼：`"usb.xhci.boundary",`
+- **`usb.xhci.summary`** — `Services/FactKeyCatalog.cs:1124`（提及處）
+  - 原始碼：`"usb.xhci.summary",`
+
+#### 6.5.63 域 `xt`（7 把）
 
 - **`xt.csharp`** — `Services/InterchangeAndReportFactsService.cs:26`（生產點（無註解））
   - 註解：/ <para><b>全部零網路</b>：產生器只讀呼叫端給定的本機資料或專案目錄；不呼叫 web hook、REST、上傳或下載。</para> / <para><b>匯出不是判決</b>：SVG／XLSX／HTML 只呈現既有事實與可用性；敏感值依政策遮蔽，路徑與識別值不進匿名範本。</para> / </remarks>
@@ -7411,7 +7433,7 @@
   - 註解：/ <para><b>全部零網路</b>：產生器只讀呼叫端給定的本機資料或專案目錄；不呼叫 web hook、REST、上傳或下載。</para> / <para><b>匯出不是判決</b>：SVG／XLSX／HTML 只呈現既有事實與可用性；敏感值依政策遮蔽，路徑與識別值不進匿名範本。</para> / </remarks>
   - 原始碼：`"xt.trigger"; public const string SnapshotKey = "xt.snapshot.fs"; public const string RegistryKey = "xt.registry"; /// <summary>XT-003：REST／HTTP 範例集——<b>明文不做</b>，這把鍵是那句聲明本身。</summary>`
 
-#### 6.5.63 域 `gp`（6 把）
+#### 6.5.64 域 `gp`（6 把）
 
 - **`gp.dvr.summary`** — `Services/FactCoverageReport.cs:515`（提及處）
   - 原始碼：`"gp.dvr.summary"] = "Game DVR（GP-002）：登錄狀態；不列遊戲或檔案。", ["cm.cache.share.summary"] = "快取共享拓撲（CM-005）：CPUID leaf 0x04 共享遮罩單一來源；上界由硬體回報，無第二通路可交叉。", ["dv.nested"] = "巢狀虛擬化能力（DV-002）：Hypervisor／韌體／VBS／選用功能合併陳述；能力存在不等於來賓必定可巢狀，不判決。", ["dv.runtime.summary"] = ".NET／VC++ 執行階段（DV-003）：登`
@@ -7429,7 +7451,7 @@
 - **`gp.registrypol`** — `Services/AuditPolicyService.cs:86`（生產點）
   - 原始碼：`"gp.registrypol", Category, "機器原則檔（Registry.pol）", $"存在（最後寫入 {File.GetLastWriteTimeUtc(registryPolPath):yyyy-MM-dd HH:mm} UTC）", "", "C:\\Windows\\System32\\GroupPolicy\\Machine\\Registry.pol 的檔案時間戳——只指紋不解析二進位", FactTrustLevel.Reported, false, at, null`
 
-#### 6.5.64 域 `pci`（6 把）
+#### 6.5.65 域 `pci`（6 把）
 
 - **`pci.bus0.inventory`** — `Services/Bus0InventoryService.cs:20`（生產點（無註解））
   - 註解：/ <summary>SPI 控制器（0:1F.5）的盤點事實鍵——供對帳規則交叉引用。</summary>
@@ -7448,7 +7470,7 @@
 - **`pci.res.1f.5`** — `Services/FactKeyCatalog.cs:652`（提及處）
   - 原始碼：`"pci.res.1f.5", "pcieaer.ecam", "pcieaer.scan", "pdev.fw.inventory",`
 
-#### 6.5.65 域 `platform`（6 把）
+#### 6.5.66 域 `platform`（6 把）
 
 - **`platform.debug_interface`** — `Services/PlatformSecurityMsrFacts.cs:51`（生產點（無註解））
   - 註解：/ （0xC80，矽除錯埠啟用／鎖定／曾發生除錯事件）。讀不到（缺 ring0、平台未實作）一律三態標原因； / raw=0 的「未實作 vs 未啟用」歧義在文字裡明說，不冒判決。 / </summary>
@@ -7465,7 +7487,7 @@
 - **`platform.testsigning`** — `Services/BackendEnvironmentService.cs:80`（生產點）
   - 原始碼：`"platform.testsigning", name = "測試簽章模式", source = "NtQuerySystemInformation(103) CodeIntegrityOptions"; return x.CodeIntegrityOptions is not { } options ? Unavailable(key, name, source, at, FactAvailability.ReadError, "CodeIntegrityOptions 讀取失敗") : new HardwareFact(ke`
 
-#### 6.5.66 域 `spec`（6 把）
+#### 6.5.67 域 `spec`（6 把）
 
 - **`spec.ref`** — `Services/ScanStateFactsService.cs:112`（生產點（無註解））
   - 註解：/ 變成「自動被接上」，於是守門就再也抓不到漏接。 / </para> / </summary>
@@ -7486,7 +7508,7 @@
   - 註解：/ <item><c>fact.provenance</c>——值可回溯到出處的位置。</item> / </list> / </summary>
   - 原始碼：`"spec.ref.version"; public const string UnitKey = "spec.ref.unit"; public const string ProvenanceKey = "fact.provenance"; public const string ConflictKey = "spec.ref.conflict";`
 
-#### 6.5.67 域 `src`（6 把）
+#### 6.5.68 域 `src`（6 把）
 
 - **`src.available`** — `Services/SourceAvailability.cs:72`（生產點（無註解））
   - 註解：/ 而後者讓它看起來像「來源說它現在不能讀」——後者才是實情。 / </para> / </summary>
@@ -7506,7 +7528,7 @@
   - 註解：/ 才不會只看見成功的那些而以為一切正常。 / </para> / </summary>
   - 原始碼：`"src.retry"; public const string FailuresKey = "scan.failures"; private const string Category = "韌性與降級";`
 
-#### 6.5.68 域 `fact`（5 把）
+#### 6.5.69 域 `fact`（5 把）
 
 - **`fact.error.reason`** — `Services/ResilienceReport.cs:29`（生產點（無註解））
   - 註解：/ 才不會只看見成功的那些而以為一切正常。 / </para> / </summary>
@@ -7524,7 +7546,7 @@
   - 註解：來源層申報自己的可用性與優先序、六態申報自己的分布、出處申報自己的覆蓋面。 對帳的前提是有兩個獨立來源；這些鍵沒有第二個來源，能對的是「紀錄與實際是否一致」， 那寫在各自的單元測試裡。豁免不是免檢——每一條都寫明為什麼無法交叉。
   - 原始碼：`"fact.why_unreadable"] = "不可用原因的查詢結果：同上，它是查詢介面而不是受查的事實。", ["fact.provenance"] = "值與出處的對應稽核結果：它檢查的就是「有沒有出處」，再拿它去跟另一個來源對帳會變成無限後退。", ["fact.sensitivity"] = "敏感度分級的統計量：分級依據是鍵名與 Sensitive 標記，單一來源。", ["spec."] = "規格引用的覆蓋面申報（條數、解析度、覆蓋、版本）。來源是本專案自己的 SpecRef 登錄，沒有第二份登錄可對；能`
 
-#### 6.5.69 域 `mc`（5 把）
+#### 6.5.70 域 `mc`（5 把）
 
 - **`mc.cve`** — `Services/DomainKnowledgeReport.cs:25`（生產點（無註解））
   - 註解：/ 這三把鍵的工作就是把那個空白填成一句誠實的話。 / </para> / </summary>
@@ -7542,7 +7564,7 @@
   - 註解：/ 而那是本服務看不到的部分。 / </para> / </summary>
   - 原始碼：`"mc.version.registry"; public const string CrossKey = "mc.version.cross"; /// <summary>注入的輸入——測試不必真的讀 MSR 或登錄檔。</summary>`
 
-#### 6.5.70 域 `psu`（5 把）
+#### 6.5.71 域 `psu`（5 把）
 
 - **`psu.model`** — `Services/DomainKnowledgeReport.cs:27`（生產點（無註解））
   - 註解：/ 這三把鍵的工作就是把那個空白填成一句誠實的話。 / </para> / </summary>
@@ -7556,7 +7578,7 @@
 - **`psu.pmbus.vout`** — `Services/FactKeyCatalog.cs:702`（提及處）
   - 原始碼：`"psu.pmbus.vout", "pv.adid.summary", "pv.ddv", "pv.speech.summary",`
 
-#### 6.5.71 域 `pv`（5 把）
+#### 6.5.72 域 `pv`（5 把）
 
 - **`pv.adid.summary`** — `Services/NetworkSystemInventoryFactsService.cs:35`（生產點（無註解））
   - 註解：/ <summary>NW-014：EEE（節能乙太網路）能力——單獨一把鍵，因為「省電」與「能不能被喚醒」常常互相拉扯。</summary>
@@ -7571,7 +7593,7 @@
 - **`pv.uwp.summary`** — `Services/FactCoverageReport.cs:481`（提及處）
   - 原始碼：`"pv.uwp.summary"] = "UWP 權限（PV-004）：權限分類計數；不列套件名稱。", ["dv.sdk.summary"] = "SDK 盤點（DV-005）：PATH／登錄計數；不代表專案使用。", ["gd.vrr.summary"] = "VRR 交叉（GD-007）：能力 vs 啟用；不代為判定。", ["pw.battery.summary"] = "電池健康（AU-004）：設計／滿充／循環；無電池 N/A，不預測壽命。",`
 
-#### 6.5.72 域 `scan`（5 把）
+#### 6.5.73 域 `scan`（5 把）
 
 - **`scan.failures`** — `Services/ResilienceReport.cs:31`（生產點（無註解））
   - 註解：/ 才不會只看見成功的那些而以為一切正常。 / </para> / </summary>
@@ -7589,7 +7611,7 @@
   - 註解：/ 「沒有逾時」與「根本沒跑」在報告上必須長得不一樣。 / </para> / </summary>
   - 原始碼：`"scan.step.timeout"; public const string PartialKey = "scan.partial.count"; public const string ZeroEgressKey = "file.input.zero_egress";`
 
-#### 6.5.73 域 `sec`（5 把）
+#### 6.5.74 域 `sec`（5 把）
 
 - **`sec.credguard.chain`** — `Services/CredentialGuardFactsService.cs:34`（提及處）
   - 註解：<summary>狀態鏈（靜態鍵）。</summary>
@@ -7606,7 +7628,7 @@
   - 註解：/ 把清單成文在一把鍵裡，缺與不缺一眼可讀。家族若成員固定就只出單鍵，這裡就是那個形狀。 / </para> / </summary>
   - 原始碼：`"sec.vbs.state"; public const string RequiredKey = "sec.vbs.required"; /// <summary>一次查詢拿到的全部欄位。<c>null</c>＝命名空間或類別不存在（NotApplicable）。</summary>`
 
-#### 6.5.74 域 `tm`（5 把）
+#### 6.5.75 域 `tm`（5 把）
 
 - **`tm.ntp.summary`** — `Services/NetworkSystemInventoryFactsService.cs:37`（生產點（無註解））
   - 註解：/ <summary>NW-014：EEE（節能乙太網路）能力——單獨一把鍵，因為「省電」與「能不能被喚醒」常常互相拉扯。</summary>
@@ -7620,7 +7642,7 @@
 - **`tm.tzdb`** — `Services/FactCoverageReport.cs:383`（提及處）
   - 原始碼：`"tm.tzdb"] = "時區／DST 資源（TM-004）：TimeZoneInfo 與 tzres.dll 版本；Windows 不提供 IANA tzdb 版本。", ["pv.ddv"] = "診斷記錄器狀態（PV-003）：Autologger 登錄計數；不啟停記錄器、不讀事件內容。", ["nw.print.summary"] = "列印佇列健康（NW-012）：Win32_Printer 狀態計數；不列印表機名稱或連接埠。", ["nw.wol.summary"] = "WOL 事實化（NW-014）：電源管理登錄宣告；設定關不等`
 
-#### 6.5.75 域 `ui`（5 把）
+#### 6.5.76 域 `ui`（5 把）
 
 - **`ui.dashboard.sensors`** — `Services/SensorDashboardService.cs:26`（生產點（無註解））
   - 註解：/ <summary>本功能的追蹤鍵（U10-VZ-0057 感測器儀表板頁）。const 字面寫在 Services/ 原始碼裡供收口對帳； / 常數名不含「Key」——事實鍵目錄本輪凍結，掃描器會把含「Key」的常數掃成事實鍵（見 <see cref="VizTrackingKeys"/>）。</summary>
@@ -7637,22 +7659,6 @@
 - **`ui.table.controls`** — `Services/FactAtlasService.cs:86`（提及處）
   - 註解：/ 常數刻意不以「Key」命名：事實鍵目錄本輪凍結，掃描器會把名稱含「Key」的字串常數 / 掃成事實鍵——這是產品追蹤標記，不是事實鍵。字面值照放在 Services/ 供收口對帳。 / </summary>
   - 原始碼：`"ui.table.controls"; private IReadOnlyList<HardwareFact> _facts = []; private string _filter = "";`
-
-#### 6.5.76 域 `usb`（5 把）
-
-- **`usb.busiest_controller`** — `Services/UsbTopologyService.cs:22`（生產點）
-  - 註解：/ 摘要三件事：控制器數、裝置數、最忙碌控制器的掛載數——「誰掛得最多」是排查供電與頻寬 / 衝突的實用指紋。WMI 的相依對只有一層（controller→device），更深層級的 hub 樹不猜。 / </summary>
-  - 原始碼：`"usb.busiest_controller" }.Select(key => new HardwareFact(key, Category, NameOf(key), "", "", "WMI Win32_USBControllerDevice（USB 拓撲相依對）", FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError,`
-- **`usb.controllers`** — `Services/UsbTopologyService.cs:22`（生產點）
-  - 註解：/ 摘要三件事：控制器數、裝置數、最忙碌控制器的掛載數——「誰掛得最多」是排查供電與頻寬 / 衝突的實用指紋。WMI 的相依對只有一層（controller→device），更深層級的 hub 樹不猜。 / </summary>
-  - 原始碼：`"usb.controllers", "usb.devices", "usb.busiest_controller" }.Select(key => new HardwareFact(key, Category, NameOf(key), "", "", "WMI Win32_USBControllerDevice（USB 拓撲相依對）", FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError,`
-- **`usb.devices`** — `Services/UsbTopologyService.cs:22`（生產點）
-  - 註解：/ 摘要三件事：控制器數、裝置數、最忙碌控制器的掛載數——「誰掛得最多」是排查供電與頻寬 / 衝突的實用指紋。WMI 的相依對只有一層（controller→device），更深層級的 hub 樹不猜。 / </summary>
-  - 原始碼：`"usb.devices", "usb.busiest_controller" }.Select(key => new HardwareFact(key, Category, NameOf(key), "", "", "WMI Win32_USBControllerDevice（USB 拓撲相依對）", FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError,`
-- **`usb.hub.boundary`** — `Services/FactKeyCatalog.cs:1115`（提及處）
-  - 原始碼：`"usb.hub.boundary",`
-- **`usb.hub.summary`** — `Services/FactKeyCatalog.cs:1116`（提及處）
-  - 原始碼：`"usb.hub.summary",`
 
 #### 6.5.77 域 `acpi`（4 把）
 
@@ -8555,12 +8561,12 @@
 
 | 項目 | 數量 | 數法 |
 |---|---:|---|
-| 測試檔 | **611** | `find Tests -name '*.cs' \| wc -l` |
-| `[Fact]` 方法 | **6,277** | 反射計算測試組件裡的 `[Fact]` 方法（`DeclaredOnly`） |
+| 測試檔 | **612** | `find Tests -name '*.cs' \| wc -l` |
+| `[Fact]` 方法 | **6,301** | 反射計算測試組件裡的 `[Fact]` 方法（`DeclaredOnly`） |
 | `[Theory]` 方法 | **269** | 同上，`[Theory]` 分開數（它繼承 `[Fact]`，不能混） |
-| 執行期測試案例 | **7,604** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數，也是 README 測試徽章的單一來源） |
+| 執行期測試案例 | **7,628** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數，也是 README 測試徽章的單一來源） |
 
-**兩個比例值得讀。** 一、**`[Theory]` 只占 269 個**：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、**執行期案例數（7,604）大於方法數（6,546）**：差額來自被展開的 `[Theory]` 資料列——這正是基線守門的形狀（下一節）。
+**兩個比例值得讀。** 一、**`[Theory]` 只占 269 個**：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、**執行期案例數（7,628）大於方法數（6,570）**：差額來自被展開的 `[Theory]` 資料列——這正是基線守門的形狀（下一節）。
 
 ### 10.2 基線守門：為什麼「測試數」是一個被釘住的數字
 
@@ -10050,7 +10056,7 @@
 | L-7 | 虛擬機 | 韌體與感測器多數被虛擬層遮蔽 | 六態會大量出現 `NotApplicable`／`Unknown`，那是誠實結果 |
 | L-8 | 即時性 | 這是「檢視與量測」工具，不是取樣率導向的即時監控 | 需要毫秒級連續記錄請用專門的記錄器；本工具的解析度見第 5 部 |
 | L-9 | 寫入面 | 除深測的低階測項（PMU／RDT 等，全部經同意閘門與寫入帳本）外不寫入硬體 | 不做 BIOS 更新、不改 SPD、不修 registry |
-| L-10 | 覆蓋 | 63 個可到達畫面對 153 個域、1,160 把鍵 | 有些鍵沒有專屬畫面（只出現在總表／匯出／命令列），這是數量差的原因 |
+| L-10 | 覆蓋 | 63 個可到達畫面對 153 個域、1,162 把鍵 | 有些鍵沒有專屬畫面（只出現在總表／匯出／命令列），這是數量差的原因 |
 
 **一句話的讀法。** 看到「—」先問是哪一種非 `Present`；看到「沒有這一項」先問是限制還是缺陷——第 12.3 節就是缺陷那一欄。
 
@@ -10151,7 +10157,7 @@
 
 ### 13.4 不做的比較
 
-不與其他工具做「誰讀得多」的競賽，理由是**分母不同就不可加**：對方算「顯示了幾個欄位」，本工具算「登記了 1,160 把鍵裡這次收集到幾把」。同一台機器、同一天，兩個數字可以差一倍而兩邊都沒有錯——這正是第 0 部講的「分母陷阱」。
+不與其他工具做「誰讀得多」的競賽，理由是**分母不同就不可加**：對方算「顯示了幾個欄位」，本工具算「登記了 1,162 把鍵裡這次收集到幾把」。同一台機器、同一天，兩個數字可以差一倍而兩邊都沒有錯——這正是第 0 部講的「分母陷阱」。
 
 ### 13.5 拿它來檢查另一個工具的四個步驟
 
@@ -10235,7 +10241,7 @@
 
 ### 15.2 本機測試
 
-- **全套**：7,604 條（`TestSuiteBaseline.ProjectTests` 是唯一來源）。其中一部分會讀真機硬體（SMBIOS、SPD、NVMe…），**換一台機器可能因「不支援」或「值不一樣」而紅**——那是預期行為，不是回歸。
+- **全套**：7,628 條（`TestSuiteBaseline.ProjectTests` 是唯一來源）。其中一部分會讀真機硬體（SMBIOS、SPD、NVMe…），**換一台機器可能因「不支援」或「值不一樣」而紅**——那是預期行為，不是回歸。
 - **守門子集**：`ChangelogTests`、`FactKeyCatalogTests`、`Ultimate10000CatalogTests`、`ReleasePipelineTests`、`ReleaseIntegrityTests` 五組不依賴硬體，任何機器都該綠。
 - **判讀紅燈**：先問「這條測試讀真機嗎」。是的話先比對是不是環境差；不是的話就是回歸。**不要把環境差當成回歸去改測試，也不要把回歸當成環境差去忽略。**
 
@@ -10243,7 +10249,7 @@
 
 倉庫的 `.github/workflows/ci.yml` 在 `windows-latest` 上做四件事：還原、建置、跑上面那五組守門測試、上傳 `guard.trx`。抓取的時機是 `push` 到 `main`、任何 `pull_request`、以及手動觸發。
 
-**為什麼不跑全套**（這是 CI 檔開頭的註解，也是設計裁決）：全套 7,604 條裡有一部分會讀真機硬體，在 GitHub 的 hosted runner 上可能因「不支援」或「值不一樣」而紅，**讓 CI 變成雜訊**——而一個充滿雜訊的 CI 會訓練人忽略紅燈，那是比沒有 CI 更糟的狀態。硬體全套由貢獻者在本機跑，PR 範本要求貼上實測數字。
+**為什麼不跑全套**（這是 CI 檔開頭的註解，也是設計裁決）：全套 7,628 條裡有一部分會讀真機硬體，在 GitHub 的 hosted runner 上可能因「不支援」或「值不一樣」而紅，**讓 CI 變成雜訊**——而一個充滿雜訊的 CI 會訓練人忽略紅燈，那是比沒有 CI 更糟的狀態。硬體全套由貢獻者在本機跑，PR 範本要求貼上實測數字。
 
 ### 15.4 發佈產線：每一道閘門都是事故留下的
 
@@ -10301,7 +10307,7 @@
 | `ReadError` | 試過但失敗，且原因未確認 |
 | 格（lattice） | 六態之間的強弱序結構；衍生事實取來源中最弱者（合取傳播） |
 | 合取傳播 | 三個來源都 `Present` 才是 `Present`；一個讀不到，結論就不能宣稱可用 |
-| 分母 | 宣稱的範圍。本文件的分母是編譯期目錄（1,160 把鍵），不是「這次掃到什麼」 |
+| 分母 | 宣稱的範圍。本文件的分母是編譯期目錄（1,162 把鍵），不是「這次掃到什麼」 |
 | 分母陷阱 | 換分母不改分子，卻讓比例變好看（第 0 部的「數字騙法」之一） |
 
 **量測**
@@ -10317,7 +10323,7 @@
 | 削波 | 連續 ≥3 個滿格樣本（單點滿格可能是合法峰值） |
 | dBFS | 相對滿格的分貝值；0 樣本以 **−120 dBFS 底線**呈現，不用 −∞ |
 | 誤差預算 | 一個數字身上疊了幾層誤差、各佔多少 |
-| 覆蓋基線 | 本專案用來追蹤「事實鍵的產出覆蓋」的計數基線（目前 435） |
+| 覆蓋基線 | 本專案用來追蹤「事實鍵的產出覆蓋」的計數基線（目前 438） |
 
 **硬體與韌體**
 
@@ -10341,7 +10347,7 @@
 | 詞 | 意思 |
 |---|---|
 | 守門 | 一條會在任何機器上紅／綠的規則；本文件的每一個現在式數字都盡量有守門 |
-| 現在式宣稱 | 「本版是 vX」「測試 7,604 綠」這類今天為真、明天可能為假的句子 |
+| 現在式宣稱 | 「本版是 vX」「測試 7,628 綠」這類今天為真、明天可能為假的句子 |
 | 交叉對帳 | 同一事實多來源互相印證；結論只有一致／矛盾／無法驗證 |
 | 寫入帳本 | 所有硬體寫入的紀錄；與同意閘門並列兩道閘門 |
 | 同意閘門 | 深測低階測項執行前的明示同意 |
@@ -10382,11 +10388,11 @@
 | 斷路器冷卻 | 一顆碟一個冷卻期最多洩一條執行緒 | 同上；不吃執行緒集區 |
 | 報告／匯出零命中 | 退出碼 2 | `--only` 分母聲明 |
 | CI 逾時 | 30 分鐘 | `.github/workflows/ci.yml` |
-| 測試基線 | 7,604（`TestSuiteBaseline.ProjectTests`） | 唯一來源；低於測試方法數即紅燈 |
-| 覆蓋基線 | 435 | 遞增需留理由 |
+| 測試基線 | 7,628（`TestSuiteBaseline.ProjectTests`） | 唯一來源；低於測試方法數即紅燈 |
+| 覆蓋基線 | 438 | 遞增需留理由 |
 | 對帳規則數 | 26（執行期） | 歷史文字曾寫 29（O-01） |
-| 事實鍵目錄 | 1,160 把／153 域 | 編譯期目錄為分母 |
-| 動態家族 | 63 個前綴 | 成員由執行期決定 |
+| 事實鍵目錄 | 1,162 把／153 域 | 編譯期目錄為分母 |
+| 動態家族 | 64 個前綴 | 成員由執行期決定 |
 | 可到達畫面 | 63 | 導覽註冊表（主頁面＋實用工具）的 `Key` 條目數；獨立視窗另計在 XAML 檔數裡 |
 | 說明條目 | 285 條 | 每頁圓圈問號的內容 |
 
@@ -10526,6 +10532,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `gd` | 7 | `gd.dx.summary` | `gd.vrr.summary` | 圖形驅動 |
 | `of` | 7 | `of.bcd` | `of.writeblock` | 離線檔案分析 |
 | `pmu` | 7 | `pmu.fixed.0` | `pmu.version` | 效能監控單元 |
+| `usb` | 7 | `usb.busiest_controller` | `usb.xhci.summary` | USB 匯流排 |
 | `xt` | 7 | `xt.csharp` | `xt.trigger` | 跨工具對照 |
 | `gp` | 6 | `gp.dvr.summary` | `gp.registrypol` | 遊戲與呈現 |
 | `pci` | 6 | `pci.bus0.inventory` | `pci.res.1f.5` | PCI 匯流排 |
@@ -10540,7 +10547,6 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `sec` | 5 | `sec.credguard.chain` | `sec.vbs.state` | **（本版無成文說明）** |
 | `tm` | 5 | `tm.ntp.summary` | `tm.tzdb` | 時間源 |
 | `ui` | 5 | `ui.dashboard.sensors` | `ui.table.controls` | **（本版無成文說明）** |
-| `usb` | 5 | `usb.busiest_controller` | `usb.hub.summary` | USB 匯流排 |
 | `acpi` | 4 | `acpi.bert.record` | `acpi.tables` | ACPI 錯誤表 |
 | `asset` | 4 | `asset.chassis` | `asset.uuid` | 資產 |
 | `cm` | 4 | `cm.affinity.summary` | `cm.whea.timeline` | 核心與記憶體拓樸 |
@@ -10619,11 +10625,11 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `ufv` | 1 | `ufv.bios.count` | `ufv.bios.count` | **（本版無成文說明）** |
 | `usbstor` | 1 | `usbstor.count` | `usbstor.count` | **（本版無成文說明）** |
 
-**總計**：153 個域、1,160 把鍵（402 把落在 ≥20 鍵的 12 個大域，其餘 758 把散在 141 個域）。
+**總計**：153 個域、1,162 把鍵（402 把落在 ≥20 鍵的 12 個大域，其餘 760 把散在 141 個域）。
 
-### 附錄 F-2　63 個動態家族與「成員由什麼決定」
+### 附錄 F-2　64 個動態家族與「成員由什麼決定」
 
-動態家族的成員在編譯期數不出來，所以目錄只登記前綴與理由。下表是全部 63 個前綴與它們各自申報的理由（**抽不到理由的會留白，不補**）。
+動態家族的成員在編譯期數不出來，所以目錄只登記前綴與理由。下表是全部 64 個前綴與它們各自申報的理由（**抽不到理由的會留白，不補**）。
 
 | 家族前綴 | 為什麼是動態家族／成員由什麼決定 |
 |---|---|
@@ -10689,6 +10695,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `uefi.dbx.list.` | dbx（撤銷簽章資料庫）的簽章清單逐條一筆——同 uefi.db.list.，成員由變數內容決定，最多 5 條 |
 | `uefi.kek.list.` | KEK 的簽章清單逐條一筆——同 uefi.db.list.，成員由變數內容決定，最多 5 條 |
 | `usb.hub.ports.` | 逐 USB 根集線器一筆（成員＝這台機器有幾顆根集線器，編譯期數不出來）——序號按 instance ID 排序；埠數讀不到的那一顆也佔一個成員（標讀不到，不從家族消失） |
+| `usb.xhci.ctrl.` | 逐 xHCI 控制器一筆（成員＝這台機器有幾個 xHCI 控制器，編譯期數不出來）——來源是 USB 根集線器（ROOT_HUB30）的父節點；能力區讀不到的那一個也佔成員（標讀不到，不從家族消失） |
 | `whea.mem.rec.` | 逐筆 WHEA 記憶體錯誤記錄一筆（成員＝這台機器回報過幾筆，編譯期數不出來）——序號按時間新到舊；節區讀不到或太短的那一筆不佔成員（它會在彙總裡如實計數） |
 
 ### 附錄 G　全站說明條目逐條（285 條）
@@ -11953,7 +11960,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
   - 這是什麼：Thunderbolt 與 USB4 控制器、路由器與裝置的存在和安全連線狀態。
   - 功能／怎麼讀：這類控制器有自己的韌體與安全模型；未授權裝置可能只被列舉到控制器層。這裡只讀系統與裝置回報，不授權、不解鎖、不改變安全設定。
 
-### 附錄 H　服務檔地圖（649 個檔案）
+### 附錄 H　服務檔地圖（651 個檔案）
 
 `Services/` 底下的每一個 `.cs`：路徑、行數、以及它宣告了幾個類別。**這張表的用途是「找到負責某件事的檔案」**——事實鍵的生產點在哪裡，先看這張表，再回頭看 6.5 的逐鍵出處。
 
@@ -12211,7 +12218,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/EventsService.cs` | 340 | 4 |
 | `Services/EvidenceCollection.cs` | 235 | 1 |
 | `Services/EvidenceExportFactsService.cs` | 263 | 1 |
-| `Services/EvidenceLabService.cs` | 2866 | 1 |
+| `Services/EvidenceLabService.cs` | 2885 | 1 |
 | `Services/EvidencePackBuilder.cs` | 213 | 1 |
 | `Services/EvidenceTimelineService.cs` | 478 | 1 |
 | `Services/ExportAndCacheFactsService.cs` | 116 | 2 |
@@ -12225,8 +12232,8 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/ExternalSensors/HwInfoSharedMem.cs` | 216 | 1 |
 | `Services/FactAtlasService.cs` | 364 | 1 |
 | `Services/FactCoverageReport.cs` | 767 | 1 |
-| `Services/FactKeyCatalog.cs` | 1209 | 1 |
-| `Services/FactKeyDynamicCatalog.cs` | 219 | 1 |
+| `Services/FactKeyCatalog.cs` | 1211 | 1 |
+| `Services/FactKeyDynamicCatalog.cs` | 222 | 1 |
 | `Services/FactQuery.cs` | 44 | 0 |
 | `Services/FactRelationEngine.cs` | 526 | 2 |
 | `Services/FactStateLattice.cs` | 149 | 1 |
@@ -12606,6 +12613,8 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 | `Services/WmiFieldInventoryService.cs` | 113 | 1 |
 | `Services/WriteGate.cs` | 76 | 1 |
 | `Services/WriteGateReport.cs` | 296 | 1 |
+| `Services/XhciControllerReader.cs` | 109 | 1 |
+| `Services/XhciFactsService.cs` | 172 | 1 |
 | `Services/XiangqiEngine.cs` | 296 | 1 |
 | `Services/XsRegProbeContract.cs` | 61 | 1 |
 | `Services/ZeroTrustFactsService.cs` | 412 | 1 |
@@ -12645,7 +12654,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 **版本與發佈（1–6）**
 
 1. 本版是 v3.03 —— 看徽章、`XinSpect.csproj` 的 `<Version>`、關於頁三處一致。不一致＝有一處落後（四處同步是硬規則）。
-2. 測試 7,604 綠 —— 跑守門五組不依賴硬體；全套請在真機跑。紅燈先分辨是真機依賴還是回歸。
+2. 測試 7,628 綠 —— 跑守門五組不依賴硬體；全套請在真機跑。紅燈先分辨是真機依賴還是回歸。
 3. 下載表列的位元組數取自本版真正釋出的那顆 `XinSpect.exe` —— 抓下來自己數 bytes。不符請先確認是不是抓到別的版號的檔案。
 4. 主程式未簽章 —— 內容右鍵「數位簽章」分頁應為空。這正是 O-03。
 5. 授權是 AGPL-3.0-or-later —— 讀 `LICENSE` 開頭三行。
@@ -12662,11 +12671,11 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 
 **結構與分母（13–18）**
 
-13. 事實鍵目錄是 1,160 把、153 域 —— 開事實總表頁看總數。
-14. 動態家族 63 個 —— 目錄裡以「前綴＋理由」登記，成員不在編譯期。
+13. 事實鍵目錄是 1,162 把、153 域 —— 開事實總表頁看總數。
+14. 動態家族 64 個 —— 目錄裡以「前綴＋理由」登記，成員不在編譯期。
 15. 可到達畫面 63 個 —— 導覽註冊表（主頁面＋實用工具）的 `Key` 條目數；獨立視窗另計在 XAML 檔數裡。
 16. 說明條目 285 條 —— 附錄 G 是它的全表。
-17. 服務檔 649 個 —— 附錄 H 是清單。
+17. 服務檔 651 個 —— 附錄 H 是清單。
 18. 對帳規則是 26 條（不是歷史文字裡的 29）—— O-01 的處置。
 
 **量測（19–24）**
@@ -12700,7 +12709,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 |---|---|---|
 | `Nav/` | 導覽註冊表與版本沿革資料 | `ChangelogCatalog.cs`（第 11 部的資料來源）、導覽註冊表（可達性守門的依據） |
 | `Views/` | 畫面（XAML＋後置程式） | 63 個可到達畫面的實際版面；說明條目掛在這裡 |
-| `Services/` | 事實的生產端（649 個檔案） | 附錄 H 是完整清單；每一把鍵的來源多半在這裡 |
+| `Services/` | 事實的生產端（651 個檔案） | 附錄 H 是完整清單；每一把鍵的來源多半在這裡 |
 | `Services/DeepBench/` | 深測套件與測項目錄 | 第 4 部的測項全表 |
 | `Models/` | 資料模型與預算 | 事實鍵目錄、`PerfBudget.cs`（冷啟動門檻） |
 | `Bridge/` | 一切硬體存取的收斂點 | 三個寫入 API、寫入帳本、特權層（WinRing0／XsRegProbe） |

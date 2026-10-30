@@ -1120,6 +1120,8 @@ public static class FactKeyCatalog
         "usb.devices",
         "usb.hub.boundary",
         "usb.hub.summary",
+        "usb.xhci.boundary",
+        "usb.xhci.summary",
         "usbstor.count",
         "uv.cdat",
         "uv.cxl.summary",

@@ -37,7 +37,7 @@ public static class FactCoverageReport
     /// 放在這裡而不是只寫在測試裡，是為了讓 README 的守門有單一來源可讀：
     /// 一個數字寫在文件、一個寫在測試、第三個寫在腦子裡，遲早三個都不一樣。
     /// </remarks>
-    public const int ReviewedUncoveredBaseline = 435;
+    public const int ReviewedUncoveredBaseline = 438;
 
     /// <summary>明文豁免：刻意不對帳的事實鍵前綴與理由。</summary>
     /// <remarks>
