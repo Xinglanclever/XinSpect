@@ -381,6 +381,8 @@ public static class FactKeyCatalog
         "fact.sensitivity",
         "fact.why_unreadable",
         "file.input.zero_egress",
+        "fleet.boundary",
+        "fleet.summary",
         "fs.amcache.count",
         "fs.amcache.publishers",
         "fs.amcache.versions",

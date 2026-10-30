@@ -24,6 +24,7 @@
 | `ROUND-325-PCIE-ACCESS-2026-10-30.md` | 第 325 輪（U10-PC-0001）：PCIe 設定空間的存取方法宣告（`pcie.access.summary`／`.agreement`／`.boundary`）——舊式 0xCF8／0xCFC（前 256 位元組）與 ECAM（4 KiB/功能）兩條通道的可用性分開寫，並比對 0:0.0 那一格；「一致」只證明兩條通道通到同一台裝置，不證明 ID 正確。沒有新增讀取後端。 |
 | `ROUND-326-WHEA-MEMORY-2026-10-30.md` | 第 326 輪（U10-WH-0003＋WH-0004）：WHEA 記憶體節區（`whea.mem.summary`／`whea.mem.rec.*`／`whea.mem.boundary`）——CPER 逐欄位移照 cper.h 的 CPER_FIELD_CHECK；**ValidBits 沒設的欄位不印成 0**（「Module 0」與「韌體沒說」是兩件事）；錯誤類型碼只收 0x00–0x0C。事件 data 段的外層包裝沒有可核出處，**因此本版不拆 blob**——列得出筆數，說不出哪一條 DIMM，並把這件事寫成事實。 |
 | `ROUND-327-XHCI-2026-10-30.md` | 第 327 輪（U10-NP-0002）：xHCI 版本與支援速度（`usb.xhci.summary`／`usb.xhci.ctrl.*`／`usb.xhci.boundary`）——能力區逐欄照 xHCI 規格 1.1 §5.3；控制器由 ROOT_HUB30 的父節點找出（不靠 class code 猜）。**速度值不換算成 Mb/s**：PSIM／PSIS 的位界在規格表與 Linux 標頭互相矛盾，只輸出原值。讀不到時只說缺哪一步，不從驅動版本反推。 |
+| `ROUND-328-FLEET-BASELINE-2026-10-30.md` | 第 328 輪（U10-EN-0001）：同型號族群基線（`fleet.summary`／`fleet.peer.*`／`fleet.boundary`）——只讀本機快照目錄、**不上傳**（型別層有守門：兩個檔案不得出現 HttpClient／WebRequest／Socket）；型號是字串相等不是 SKU 知識；樣本少於 4 份只給中位數不給 z 分數；只比每份都有數值的鍵。 |
 | `dedup_check.py`／`sample_check.py` | 可重跑之稽核腳本（絕對路徑寫死）。 |
 | `ULTIMATE-10000-EXPANSION-2026-10-24.md` | 歷史快照（十二批完成時點；**已被 10-25 版取代**，保留供對帳）。 |
 | `ULTIMATE-5000-RESERVOIR-2026-10-24.md` | 前導文件（歸檔；已被主目錄取代）。 |

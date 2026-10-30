@@ -161,7 +161,9 @@ public class FactKeyCatalogTests
         // 事件筆數是機器的事實，編譯期不該為此改目錄。
         // 63 → 64（2026-10-30 第 327 輪）：usb.xhci.ctrl.——成員＝這台機器有幾個 xHCI 控制器。
         // 控制器數隨主機板與插了幾個 PCIe USB 卡而變，編譯期不該為此改目錄。
-        const int FamilyCap = 64;
+        // 64 → 65（2026-10-30 第 328 輪）：fleet.peer.——成員＝本機快照裡出現兩次以上的型號數。
+        // 成員由「存過幾份快照、每份是哪個型號」決定，編譯期不該為此改目錄。
+        const int FamilyCap = 65;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 
