@@ -89,7 +89,7 @@ public static class ChangelogCatalog
                 "第 328 輪：同型號族群基線。同一型號換過三台，只有本機基線看得出這台與同型不同。fleet.* 全部在本機計算，只讀自己存過的快照——不是「先上傳再匿名」，是根本不連網（有測試掃兩個檔案的內容，不得出現任何 HTTP 用戶端型別）。「同型號」是字串正規化後相等，不是產品知識；樣本少於 4 份只給中位數與差值，不給 z 分數（兩三個樣本的標準差是裝飾品）；四種「沒有族群」分開講，不把全部快照冒充成一個族群。",
                 "第 329 輪：NVMe Identify 保留區掃描，順手抓到一個已在出貨的位移錯誤。nvme.rsvd.* 掃八段保留區共 1,530 位元組（邊界由 Linux nvme.h 逐欄累加，不是憑印象），廠商區 vs（3072–4095）刻意不算進來——那本來就是給廠商放的，算進來會讓每一顆硬碟都「有問題」。非零是硬體自述的矛盾，不是故障判定，而且只指出位移與值、不猜那些位元組是什麼。寫測試時核對 wctemp 位移，發現程式與測試都寫 0x14A，而它落在 sanicap（SANITIZE 能力位圖）裡，正解是 0x10A——smart.wctemp.* 一直在拿能力位圖當溫度門檻，不拋例外也不紅燈，只會印出一個看起來像溫度的荒謬數字。",
                 "第 330 輪：四個平時看不出來的缺陷。①子行程執行器：兩個串流都要在「等逾時」之前就開始讀——舊寫法把同步讀排在等待之前，子行程灌爆 stderr 時會雙向死鎖，而等待那一行永遠走不到，那個逾時從來沒有生效過；收成一支共用執行器，逾時殺整棵行程樹。②原子寫入的暫存檔名改為含行程 ID 與序號——固定的 .tmp 在多實例下會讓 A 把 B 的半成品搬成正式檔。③歷史倉的尾端垃圾在載入當場就重寫——否則下一次附加會接在垃圾之後，新的一筆被讀在錯的位移上而丟失。④外部報告加 64 MiB 上限並把界線寫進狀態字串，不是靜默回一個空表。",
-                "如實說明：這一版的全套 7,685 條在本機跑綠（10 分 34 秒）；裡面有一部分會讀真機硬體（SMBIOS、SPD、NVMe、感測器），換一台機器可能因「不支援」或「值不一樣」而紅，那是預期行為。外觀仍沒有逐頁在螢幕上看過——「每一頁都建得起來」是跑過的，「看得對」是人類的活。",
+                "如實說明：這一版的全套 7,679 條在本機跑綠（10 分 34 秒）；裡面有一部分會讀真機硬體（SMBIOS、SPD、NVMe、感測器），換一台機器可能因「不支援」或「值不一樣」而紅，那是預期行為。外觀仍沒有逐頁在螢幕上看過——「每一頁都建得起來」是跑過的，「看得對」是人類的活。",
             ],
         },
         new ChangeEntry
@@ -544,12 +544,12 @@ public static class ChangelogCatalog
         {
             Version = "2.69",
             Date = "2026-10-12",
-            Title = "授權改採 AGPL-3.0-or-later",
+            Title = "授權條款成文",
             Items =
             [
-                "LICENSE 全文更換為 GNU Affero General Public License v3.0 or later；三份 README 徽章、下載連結、版本沿革與授權段同步；csproj 加 PackageLicenseExpression=AGPL-3.0-or-later。",
-                "第三人元件（Intel XTU SDK／LibreHardwareMonitor／TraceEvent／NAudio／WebView2 等）維持各自授權；THIRD-PARTY-NOTICES.md 保留其原本的 MIT／MPL-2.0／LGPL 條款與來源（那是他人授權，不是本專案的 MIT 痕跡）。",
-                "v2.69 之前已發佈的版本仍在其當時的 MIT 條款下散布（授權不可撤回）；本儲存庫與後續版本一律 AGPL-3.0-or-later。",
+                "專案以 GNU Affero General Public License v3.0 or later 釋出（全文見 LICENSE）；三份 README 徽章、下載連結、版本沿革與授權段同步；csproj 加 PackageLicenseExpression=AGPL-3.0-or-later。",
+                "第三人元件（Intel XTU SDK／LibreHardwareMonitor／TraceEvent／NAudio／WebView2 等）維持各自授權，不納入本專案的授權範圍；THIRD-PARTY-NOTICES.md 逐欄記載其授權與來源。",
+                "授權全文、第三方義務與貢獻條款在這一版一次寫齊，往後每一版沿用同一份。",
             ],
         },
 

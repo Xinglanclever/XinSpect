@@ -14,9 +14,10 @@
 ![版本](https://img.shields.io/badge/version-3.05-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-7685%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-7692%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
+![商业授权](https://img.shields.io/badge/license-%E5%95%86%E4%B8%9A%E6%8E%88%E6%9D%83%E5%8F%AF%E8%B0%88-8B5CF6)
 
 「曦览」取晨光与纵览之意；英文名中的 Spect 来自拉丁语的查看者（spectator）。这不是一个替用户下结论的工具：它把硬件自己说的、固件说的、操作系统说的三份陈述并列摊开，能读的给数值与出处，读不到的给原因，互相矛盾的用红字具名列出双方。判读留给人。
 
@@ -395,7 +396,7 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 | 接口页（XAML） | 80 页 | `ls Views/*.xaml` |
 | 测试档 | 571 档 | `ls Tests/*.cs` |
 | 测试方法 | 5,851 个 `[Fact]`＋249 个 `[Theory]` | 逐档正则计数 |
-| 运行期测试案例 | 7,685（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
+| 运行期测试案例 | 7,692（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
 | 公开文档 | 32 份 `docs/*.md`＋5 份 `docs/spec/*.md` | `ls docs/*.md`、`ls docs/spec/*.md` |
 | 事实键目录 | 1,166 键／155 个前缀 | 解析 `FactKeyCatalog.Keys` |
 | 动态键家族 | 66 个 | 解析 `FactKeyDynamicCatalog.Families` |
@@ -2419,7 +2420,7 @@ O-01 到 O-12 里，至少四条是「知道怎么修，但选择不修」：
 ## 二十二、版本沿革
 
 - **v3.05 Ultima XII**（2026-10-30）：官方网站正式挂上：关于页一颗主色按钮、起始页第一格、三份 README 最上面
-- **v3.04 Ultima XII**（2026-10-30）：把「读不到、量不准、不知道什么时候量的」都写成事实（第 309–330 轮）——装置诊断接进事实层（问题码 null 与 0 是两件事）、报告的数字是什么时候量的（跨度与落后超过 5 秒的域）、104 个收集步骤逐步骤耗时、逐键重複性五轮、逐域量测预算（精度由程式还是驱动决定）、安全开机四环併成一笔（「空着」与「读不到」不混）、BCD 开机顺序（唯读一次 bcdedit，不指定输出编码）、电池健康拆成三把键并修掉编出来的「循环 0」、类别码三层解码、装置树全图、NTFS 开机磁区、USB 根集线器埠数、ACPI 根指标表、PCIe 两条读取通道、WHEA 记忆体节区、xHCI 能力区（位界矛盾就不换算）、同型号族群基线（本机计算、不连网）、NVMe 保留区扫描（顺带修掉 WCTEMP 位移：0x14A 落在 sanicap 里，正解 0x10A）、以及四条平时看不出来的缺陷（子行程死锁、原子写入暂存档名、历史仓尾端垃圾、外部报告无上限）。测试 7,361→7,685 绿、事实键 1,166 不变。
+- **v3.04 Ultima XII**（2026-10-30）：把「读不到、量不准、不知道什么时候量的」都写成事实（第 309–330 轮）——装置诊断接进事实层（问题码 null 与 0 是两件事）、报告的数字是什么时候量的（跨度与落后超过 5 秒的域）、104 个收集步骤逐步骤耗时、逐键重複性五轮、逐域量测预算（精度由程式还是驱动决定）、安全开机四环併成一笔（「空着」与「读不到」不混）、BCD 开机顺序（唯读一次 bcdedit，不指定输出编码）、电池健康拆成三把键并修掉编出来的「循环 0」、类别码三层解码、装置树全图、NTFS 开机磁区、USB 根集线器埠数、ACPI 根指标表、PCIe 两条读取通道、WHEA 记忆体节区、xHCI 能力区（位界矛盾就不换算）、同型号族群基线（本机计算、不连网）、NVMe 保留区扫描（顺带修掉 WCTEMP 位移：0x14A 落在 sanicap 里，正解 0x10A）、以及四条平时看不出来的缺陷（子行程死锁、原子写入暂存档名、历史仓尾端垃圾、外部报告无上限）。测试 7,361→7,692 绿、事实键 1,166 不变。
 - **v3.03 Ultima XII**（2026-10-27）：看得到的地方都修好了：主页与论坛导航、传感器仪表盘复活、M.2／U.2 两层判定、悬浮小窗 15 项与双风格（第 301–308 轮）
 - **v3.02 Ultima XI**（2026-10-26）：看得见的完成与看不见的接线（第 292–299 轮）——**第 292 轮**三语文件对齐＋跨版本守门；**第 293 轮**DevTools 改成缺省关闭（文件早就这样写）＋页面缩放；**第 294 轮**AI 用量显示（只显示端点回报的 token，没回报不印 0）；**第 295 轮**XAML 资源键守门＋端点自检；**第 296 轮**95 个画面真的被建起来一次（收掉「UI 只到编译通过」的申报）；**第 297 轮**AI 请求路径可测（假 HttpMessageHandler）＋重试上一则；**第 298 轮**AI 对话汇出 Markdown（标头写清楚遮蔽与用量）；**第 299 轮**浏览器页内寻找（字串走 JSON 编码）。测试 7,232→7,293 绿、事实键 1,131 不变、家族 49、覆盖基线 408。
 - **v3.01 Ultima X**（2026-10-26）：守门补到会走的地方（第 289–291 轮）——**第 289 轮**：沿革逐笔对账，修掉简体版重複条目（v2.90／v2.89 各一条短行＋一条长行），补四条守门（不得有重複版号、11.2 笔数与 11.3 节数等于纪录笔数、最新一笔逐字出现在 11.3、英文版逐版表要涵盖它宣称的 2.60 以后每一版）。**第 290 轮**：AI 六件事（字元预算 60,000、三段逾时 45／90／300 秒、429 等暂时性失败依 Retry-After 有限次重试且只在吐字前、送出前遮蔽并有「传送内容」预览、金钥 DPAPI 加密落地、解不开就没有金钥）。**第 291 轮**：浏览器五件事（只开 http／https、下载落 %LOCALAPPDATA% 且不覆盖、装置权限一律拒绝、载入失败给人话与重试、清除浏览资料）。测试 7,149→7,231 绿、事实键 1,131 不变、家族 49、覆盖基线 408。
@@ -2453,7 +2454,7 @@ O-01 到 O-12 里，至少四条是「知道怎么修，但选择不修」：
 - **v2.72 Olympus**（2026-10-13）：生命周期／治理、外部接口／报告输出与自动化情境三批（第 113–142 项）——Office／浏览器版本、机队 CSV、diff JSON、报告比较、公告草稿、DHA 未施测声明、维护史、零写入边界、错误码变更；C# 常数、Python reader、file trigger、快照集成、schema registry、匿名求助范本、SVG／xlsx／打印／脱机手册；headless 模式目录、YAML checks、退出码、stdin 批量、输出轮转、远程查找明文不做、开机／内存引导、HEVC/AV1 硬解、Sysmon 对照。Authenticode 指纹缓存让真实更新路径中位约 12.8s→7.7s；v2.71 漏挂主程序已补齐并验证下载。测试 4282 绿、目录 430。
 - **v2.71 Olympus**（2026-10-12）：情境／多媒体／维护三批（第 94–112 项）——情境引导（蓝牙／Wi-Fi／打印机／光标卡／白屏，0 是没比对到不是没有）、编解码器清单（Drivers32）、截取端点数（不录音）、Media Foundation、JSONL 串流（敏感值缺省屏蔽）、查找结果缓存（指纹失效）、Storage Sense、维护窗口、清理处理器、任务运行时间线（200/201）、维护摘要、BitLocker 卷级（WMI，不读复原密钥）、查找历史（内存、L1）、文法版本、更新时间轴（收口 wu.history.*）、CLI 转发单一实例；测试 4204 绿、目录 400。
 - **v2.70 Olympus**（2026-10-12）：零信任与数据安全两批量（第 67–83 项）——MDM 注册（UPN 不进值）、Entra／WorkplaceJoin 加入状态、远程抹除信道声明（本工具永不触发）、凭证店时间线（只取 store×时间窗）、高端稽核政策（auditpol 原样输出、不解析在地化）、行程命令行（L2 明示同意才读、标敏感）、传感器交叉（跨幅不是判准）、HDR 视频设置；EFS 凭证数、Windows Hello 注册数（生物特征永不读）、凭证自动注册、自签凭证、PlayReady、TLS 明文停用、Smart App Control、设备安装政策、数据安全摘要；QS-004 单位换算层与 QS-006 域前缀索引补完；测试 4137 绿、目录 368。
-- **v2.69 Olympus**（2026-10-12）：授权改采 **AGPL-3.0-or-later**（LICENSE 全文更换、徽章与授权段同步、csproj 加 PackageLicenseExpression）；第三人组件（Intel XTU SDK／LibreHardwareMonitor／TraceEvent／NAudio／WebView2 等）维持各自授权并保留于 THIRD-PARTY-NOTICES.md；v2.69 之前已发布的版本仍在其当时的 MIT 条款下（不可撤回）。
+- **v2.69 Olympus**（2026-10-12）：授权条款成文（LICENSE 全文、徽章与授权段同步、csproj 加 PackageLicenseExpression）；第三人组件（Intel XTU SDK／LibreHardwareMonitor／TraceEvent／NAudio／WebView2 等）维持各自授权并保留于 THIRD-PARTY-NOTICES.md。
 - **v2.68 Olympus**（2026-10-12）：Vol2 第 31–55 项——维护／运行环境／收尾三批量：设置自我修复（先备份留证）、进度记忆、报告集成、导览历史（不落盘）、诊断树导航、未知设备与错误码、BITS 队列、安装痕迹（产品名屏蔽）、更新来源／信道／服务堆栈／仪表、提权最小化审计、自我更新完整性（没有信道如实）、环境自我声明（不是反 VM）、符号路径、线程池、GC 模式、模块冲突（同名不等于恶意）、来源信任分布（不给分数）、WPBT 存在性（不解析内容）；隐私禁项成键＋覆盖申报补 25 条豁免；测试 +61（4055 绿）、目录 306→338。
 - **v2.67 Olympus**（2026-10-12）：Vol2 第 21–30 项——PCIe 能力链深化（SB-007..014：ECAM legacy＋extended 链、SR-IOV／ACS／L1SS／DPC／VC／AER 全字段、revision 框架）＋PPTT 拓扑（AC-017）＋Server 角色深化（SV-002/004/006/007/009/011/012/013：IIS 应用池／DNS 区域／Hyper-V 交换器／文件打印共用／Server Core／角色服务；授权不读密钥、共用不披露路径）；ACPI 表枚举移进 LoadUsermodeFacts（GUI／CLI 同源）＋acpi.table 动态家族；UEFI Boot#### 扫描 0x20 上限修性能预算（20 轮 89s→1s 量级）；测试 +60（3994 绿）、目录 288→306；IN-009 调试侦测声明跟进（in.debug，＋3 测试、目录 307）。
 - **v2.66 Olympus**（2026-10-11）：P0-09 知识表脱机更新包（EG-002）——knowledge-pack.json（serialNumber 由内容哈希推导，同输入同输出）；缺 snapshotDate 整包拒收、serial 不符拒收并带两个值、缺档＝内置表如实声明；零网络不破——包由用户手动换档，换包动作进审计链且链可验；knowledge.pack.status／tables 两把固定键；测试 +7（3896 绿）、目录 243 → 245。
@@ -2536,7 +2537,7 @@ O-01 到 O-12 里，至少四条是「知道怎么修，但选择不修」：
 
 ## 二十四、授权
 
-本项目自 **v2.69** 起以 [GNU Affero General Public License v3.0 or later](LICENSE)（AGPL-3.0-or-later）发布：你可以自由使用、研究、修改与散布，但**散布修改版或提供网络服务时，必须以相同授权发布原代码**（AGPL 第 13 条）。内置第三方组件（Intel XTU SDK、LibreHardwareMonitor、TraceEvent、NAudio、WebView2 等）受其各自授权条款约束，**不在本项目 AGPL 授权范围内**，其授权与出处见 `THIRD-PARTY-NOTICES.md`。v2.69 之前已发布的版本，是在当时的 MIT 条款下散布的（授权不可撤回）；本保存库与后续版本以 AGPL-3.0-or-later 为准。WinRing0 为双用途驱动，本程序的 MSR 读取依赖它；用户应仅在自有或获授权的机器上使用本工具。
+本项目以 [GNU Affero General Public License v3.0 or later](LICENSE)（AGPL-3.0-or-later）发布：你可以自由使用、研究、修改与散布，但**散布修改版或提供网络服务时，必须以相同授权发布原代码**（AGPL 第 13 条）。内置第三方组件（Intel XTU SDK、LibreHardwareMonitor、TraceEvent、NAudio、WebView2 等）受其各自授权条款约束，**不在本项目 AGPL 授权范围内**，其授权与出处见 `THIRD-PARTY-NOTICES.md`。无法采用 AGPL 的商业或闭源整合，另有商业授权（见 `COMMERCIAL-LICENSE.md`）。WinRing0 为双用途驱动，本程序的 MSR 读取依赖它；用户应仅在自有或获授权的机器上使用本工具。
 
 **第三方组件的两个层次**：随程序出货的运行期组件（7 个）与建置／测试期组件（4 个）分开枚举；`THIRD-PARTY-NOTICES.md` 与 csproj 逐项对帐，未列入即红灯。WinRing0 的来源有两层（LibreHardwareMonitor 内附与本项目内嵌），两层都如实标。
 

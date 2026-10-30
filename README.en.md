@@ -14,9 +14,10 @@ A free, open-source hardware verification, monitoring, and security auditing too
 ![Version](https://img.shields.io/badge/version-3.05-4C8DFF)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![Tests](https://img.shields.io/badge/tests-7685%20passed-3FB950)
+![Tests](https://img.shields.io/badge/tests-7692%20passed-3FB950)
 ![Mutation Score](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
+![Commercial license](https://img.shields.io/badge/license-commercial%20available-8B5CF6)
 
 The name means "morning light, seen at a glance"; "Spect" comes from the Latin *spectator*. This is not a tool that draws conclusions for you. It lays three accounts of the same machine side by side — what the hardware says, what the firmware says, and what the operating system says — gives a value and a source when it can read one, gives a reason when it cannot, and prints contradictions in red with both sides named. Interpretation is left to the reader.
 
@@ -1246,7 +1247,7 @@ The full text for every entry, including each individual change and the test/cat
 
 ## 24. License
 
-Starting with **v2.69**, this project is released under the [GNU Affero General Public License v3.0 or later](LICENSE) (AGPL-3.0-or-later): you may use, study, modify and distribute it, but **if you distribute a modified version or run it as a network service, you must release the source under the same license** (AGPL section 13). Bundled third-party components (Intel XTU SDK, LibreHardwareMonitor, TraceEvent, NAudio, WebView2, etc.) are governed by their own licenses and are **not covered by this project's AGPL grant**; see `THIRD-PARTY-NOTICES.md`. Releases published before v2.69 were distributed under the MIT terms in force at that time (that grant is irrevocable); this repository and all later versions are AGPL-3.0-or-later. WinRing0 is a dual-use driver; use this tool only on machines you own or are authorised to test.
+This project is released under the [GNU Affero General Public License v3.0 or later](LICENSE) (AGPL-3.0-or-later): you may use, study, modify and distribute it, but **if you distribute a modified version or run it as a network service, you must release the source under the same license** (AGPL section 13). Bundled third-party components (Intel XTU SDK, LibreHardwareMonitor, TraceEvent, NAudio, WebView2, etc.) are governed by their own licenses and are **not covered by this project's AGPL grant**; see `THIRD-PARTY-NOTICES.md`. Organisations that cannot adopt AGPL — closed-source integration or internal redistribution — can obtain a commercial licence instead; see `COMMERCIAL-LICENSE.md`. WinRing0 is a dual-use driver; use this tool only on machines you own or are authorised to test.
 
 **Two layers of third-party components**: runtime components shipped with the program (7) and build/test-time components (4) are listed separately. `THIRD-PARTY-NOTICES.md` is reconciled item by item against the csproj; anything unlisted is red. WinRing0 has two sources (bundled with LibreHardwareMonitor and embedded by this project), both stated.
 

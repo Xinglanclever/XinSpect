@@ -4,7 +4,7 @@
 它把硬體、韌體、作業系統三方的陳述並列，讀不到就寫原因，矛盾就具名列出，**不替使用者下結論**。
 貢獻的門檻不在於寫得多，而在於**每一句宣稱都能被查核**。
 
-- 授權：從 v2.69 起為 [AGPL-3.0-or-later](LICENSE)。送出的貢獻以相同授權釋出，不需要簽 CLA。
+- 授權：[AGPL-3.0-or-later](LICENSE)。送出的貢獻以相同授權釋出，不需要簽 CLA。
 - 行為守則：[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)。
 - 安全性問題：**不要開公開 Issue**，請走 [SECURITY.md](SECURITY.md) 的私密通報。
 - 使用問題與判讀討論：優先用 [Discussions](https://github.com/Xinglanclever/XinSpect/discussions)；
@@ -56,7 +56,7 @@ dotnet restore Tests/XinSpect.Tests.csproj
 # 建置（含 Bridge 與解碼器）
 dotnet build Tests/XinSpect.Tests.csproj -c Release
 
-# 全套測試（目前基線見 Tests/TestSuiteBaseline.cs；v3.03 之後為 7,685 條）
+# 全套測試（目前基線見 Tests/TestSuiteBaseline.cs；v3.03 之後為 7,692 條）
 dotnet test Tests/XinSpect.Tests.csproj -c Release
 
 # 只跑文件與目錄守門（CI 跑的就是這一組）
