@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>曦覽 XinSpect 百科</title>
-<!-- 由 README.md 產生（sha256 7dab486ec796）；產生器：Tools/gen-docs-html.py；本檔不手改。 -->
+<!-- 由 README.md 產生（sha256 41aa3971ba4e）；產生器：Tools/gen-docs-html.py；本檔不手改。 -->
 <style>:root{--ink:#1f2328;--sub:#57606a;--hair:#d0d7de;--surface:#f6f8fa;--link:#0969da;--accent:#1b6fd6;--badge:#ddf4ff}
 @media (prefers-color-scheme:dark){:root{--ink:#e6edf3;--sub:#9198a1;--hair:#30363d;--surface:#161b22;--link:#4493f8;--accent:#4493f8;--badge:#0d2b45}}
 *{box-sizing:border-box}
@@ -109,7 +109,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <a class="toc-sub" href="#22-服務層的形狀">2.2 服務層的形狀</a>
 <a class="toc-sub" href="#23-一個服務的解剖以-acpi-表服務為例">2.3 一個服務的解剖（以 ACPI 表服務為例）</a>
 <a class="toc-sub" href="#24-事實模型一個-record-與兩條不變式">2.4 事實模型：一個 record 與兩條不變式</a>
-<a class="toc-sub" href="#25-事實鍵目錄1155-把鍵為什麼要固定在編譯期">2.5 事實鍵目錄：1,155 把鍵為什麼要固定在編譯期</a>
+<a class="toc-sub" href="#25-事實鍵目錄1158-把鍵為什麼要固定在編譯期">2.5 事實鍵目錄：1,158 把鍵為什麼要固定在編譯期</a>
 <a class="toc-sub" href="#26-動態家族62-個我列不完的申報">2.6 動態家族：62 個「我列不完」的申報</a>
 <a class="toc-sub" href="#27-分母宣告與覆蓋申報">2.7 分母宣告與覆蓋申報</a>
 <a class="toc-sub" href="#28-出口與孤兒事實的三種去處">2.8 出口與孤兒：事實的三種去處</a>
@@ -207,10 +207,10 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <a class="toc-sub" href="#512-誤差預算每一類量測的誤差從哪裡來">5.12 誤差預算：每一類量測的誤差從哪裡來</a>
 <a class="toc-sub" href="#513-量測的實務紀律給要做研究的人">5.13 量測的實務紀律（給要做研究的人）</a>
 </details>
-<details class="toc-part"><summary><a href="#第-6-部-數據辭典151-個域1155-把鍵">第 6 部 數據辭典：151 個域、1,155 把鍵</a></summary>
+<details class="toc-part"><summary><a href="#第-6-部-數據辭典152-個域1158-把鍵">第 6 部 數據辭典：152 個域、1,158 把鍵</a></summary>
 <a class="toc-sub" href="#61-怎麼讀這一部">6.1 怎麼讀這一部</a>
 <a class="toc-sub" href="#62-最大的十二個域逐域判讀要點">6.2 最大的十二個域：逐域判讀要點</a>
-<a class="toc-sub" href="#63-逐域鍵表151-個域1155-把鍵">6.3 逐域鍵表（151 個域、1,155 把鍵）</a>
+<a class="toc-sub" href="#63-逐域鍵表152-個域1158-把鍵">6.3 逐域鍵表（152 個域、1,158 把鍵）</a>
 <a class="toc-sub" href="#631-域-ac--acpi-表與韌體介面61-把">6.3.1 域 ac — ACPI 表與韌體介面（61 把）</a>
 <a class="toc-sub" href="#632-域-sb--smbios-與平台識別53-把">6.3.2 域 sb — SMBIOS 與平台識別（53 把）</a>
 <a class="toc-sub" href="#633-域-fw--韌體組成與開機鏈48-把">6.3.3 域 fw — 韌體組成與開機鏈（48 把）</a>
@@ -308,60 +308,61 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <a class="toc-sub" href="#6395-域-exp本版沒有成文的域說明3-把">6.3.95 域 exp（本版沒有成文的域說明）（3 把）</a>
 <a class="toc-sub" href="#6396-域-export--匯出治理3-把">6.3.96 域 export — 匯出治理（3 把）</a>
 <a class="toc-sub" href="#6397-域-numa--numa3-把">6.3.97 域 numa — NUMA（3 把）</a>
-<a class="toc-sub" href="#6398-域-rep本版沒有成文的域說明3-把">6.3.98 域 rep（本版沒有成文的域說明）（3 把）</a>
-<a class="toc-sub" href="#6399-域-time--計時器3-把">6.3.99 域 time — 計時器（3 把）</a>
-<a class="toc-sub" href="#63100-域-ups--ups3-把">6.3.100 域 ups — UPS（3 把）</a>
-<a class="toc-sub" href="#63101-域-audio本版沒有成文的域說明2-把">6.3.101 域 audio（本版沒有成文的域說明）（2 把）</a>
-<a class="toc-sub" href="#63102-域-build本版沒有成文的域說明2-把">6.3.102 域 build（本版沒有成文的域說明）（2 把）</a>
-<a class="toc-sub" href="#63103-域-byovd本版沒有成文的域說明2-把">6.3.103 域 byovd（本版沒有成文的域說明）（2 把）</a>
-<a class="toc-sub" href="#63104-域-cert本版沒有成文的域說明2-把">6.3.104 域 cert（本版沒有成文的域說明）（2 把）</a>
-<a class="toc-sub" href="#63105-域-display本版沒有成文的域說明2-把">6.3.105 域 display（本版沒有成文的域說明）（2 把）</a>
-<a class="toc-sub" href="#63106-域-drvinsp本版沒有成文的域說明2-把">6.3.106 域 drvinsp（本版沒有成文的域說明）（2 把）</a>
-<a class="toc-sub" href="#63107-域-egress本版沒有成文的域說明2-把">6.3.107 域 egress（本版沒有成文的域說明）（2 把）</a>
-<a class="toc-sub" href="#63108-域-etl本版沒有成文的域說明2-把">6.3.108 域 etl（本版沒有成文的域說明）（2 把）</a>
-<a class="toc-sub" href="#63109-域-key本版沒有成文的域說明2-把">6.3.109 域 key（本版沒有成文的域說明）（2 把）</a>
-<a class="toc-sub" href="#63110-域-knowledge本版沒有成文的域說明2-把">6.3.110 域 knowledge（本版沒有成文的域說明）（2 把）</a>
-<a class="toc-sub" href="#63111-域-mchbar本版沒有成文的域說明2-把">6.3.111 域 mchbar（本版沒有成文的域說明）（2 把）</a>
-<a class="toc-sub" href="#63112-域-mon本版沒有成文的域說明2-把">6.3.112 域 mon（本版沒有成文的域說明）（2 把）</a>
-<a class="toc-sub" href="#63113-域-pcieaer本版沒有成文的域說明2-把">6.3.113 域 pcieaer（本版沒有成文的域說明）（2 把）</a>
-<a class="toc-sub" href="#63114-域-role本版沒有成文的域說明2-把">6.3.114 域 role（本版沒有成文的域說明）（2 把）</a>
-<a class="toc-sub" href="#63115-域-setuptl本版沒有成文的域說明2-把">6.3.115 域 setuptl（本版沒有成文的域說明）（2 把）</a>
-<a class="toc-sub" href="#63116-域-state本版沒有成文的域說明2-把">6.3.116 域 state（本版沒有成文的域說明）（2 把）</a>
-<a class="toc-sub" href="#63117-域-storage本版沒有成文的域說明2-把">6.3.117 域 storage（本版沒有成文的域說明）（2 把）</a>
-<a class="toc-sub" href="#63118-域-ata本版沒有成文的域說明1-把">6.3.118 域 ata（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63119-域-cam本版沒有成文的域說明1-把">6.3.119 域 cam（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63120-域-chassis本版沒有成文的域說明1-把">6.3.120 域 chassis（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63121-域-contrib本版沒有成文的域說明1-把">6.3.121 域 contrib（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63122-域-cxl本版沒有成文的域說明1-把">6.3.122 域 cxl（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63123-域-data本版沒有成文的域說明1-把">6.3.123 域 data（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63124-域-defender本版沒有成文的域說明1-把">6.3.124 域 defender（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63125-域-degrade本版沒有成文的域說明1-把">6.3.125 域 degrade（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63126-域-diag本版沒有成文的域說明1-把">6.3.126 域 diag（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63127-域-doc本版沒有成文的域說明1-把">6.3.127 域 doc（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63128-域-dyn本版沒有成文的域說明1-把">6.3.128 域 dyn（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63129-域-evt本版沒有成文的域說明1-把">6.3.129 域 evt（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63130-域-file本版沒有成文的域說明1-把">6.3.130 域 file（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63131-域-guard本版沒有成文的域說明1-把">6.3.131 域 guard（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63132-域-hpa本版沒有成文的域說明1-把">6.3.132 域 hpa（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63133-域-license本版沒有成文的域說明1-把">6.3.133 域 license（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63134-域-limits本版沒有成文的域說明1-把">6.3.134 域 limits（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63135-域-monitor本版沒有成文的域說明1-把">6.3.135 域 monitor（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63136-域-msr本版沒有成文的域說明1-把">6.3.136 域 msr（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63137-域-off本版沒有成文的域說明1-把">6.3.137 域 off（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63138-域-oob本版沒有成文的域說明1-把">6.3.138 域 oob（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63139-域-ps本版沒有成文的域說明1-把">6.3.139 域 ps（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63140-域-raid本版沒有成文的域說明1-把">6.3.140 域 raid（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63141-域-reg本版沒有成文的域說明1-把">6.3.141 域 reg（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63142-域-release本版沒有成文的域說明1-把">6.3.142 域 release（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63143-域-report本版沒有成文的域說明1-把">6.3.143 域 report（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63144-域-secboot本版沒有成文的域說明1-把">6.3.144 域 secboot（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63145-域-secure本版沒有成文的域說明1-把">6.3.145 域 secure（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63146-域-smart本版沒有成文的域說明1-把">6.3.146 域 smart（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63147-域-smbus本版沒有成文的域說明1-把">6.3.147 域 smbus（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63148-域-test本版沒有成文的域說明1-把">6.3.148 域 test（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63149-域-tests本版沒有成文的域說明1-把">6.3.149 域 tests（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63150-域-ufv本版沒有成文的域說明1-把">6.3.150 域 ufv（本版沒有成文的域說明）（1 把）</a>
-<a class="toc-sub" href="#63151-域-usbstor本版沒有成文的域說明1-把">6.3.151 域 usbstor（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#6398-域-pcie本版沒有成文的域說明3-把">6.3.98 域 pcie（本版沒有成文的域說明）（3 把）</a>
+<a class="toc-sub" href="#6399-域-rep本版沒有成文的域說明3-把">6.3.99 域 rep（本版沒有成文的域說明）（3 把）</a>
+<a class="toc-sub" href="#63100-域-time--計時器3-把">6.3.100 域 time — 計時器（3 把）</a>
+<a class="toc-sub" href="#63101-域-ups--ups3-把">6.3.101 域 ups — UPS（3 把）</a>
+<a class="toc-sub" href="#63102-域-audio本版沒有成文的域說明2-把">6.3.102 域 audio（本版沒有成文的域說明）（2 把）</a>
+<a class="toc-sub" href="#63103-域-build本版沒有成文的域說明2-把">6.3.103 域 build（本版沒有成文的域說明）（2 把）</a>
+<a class="toc-sub" href="#63104-域-byovd本版沒有成文的域說明2-把">6.3.104 域 byovd（本版沒有成文的域說明）（2 把）</a>
+<a class="toc-sub" href="#63105-域-cert本版沒有成文的域說明2-把">6.3.105 域 cert（本版沒有成文的域說明）（2 把）</a>
+<a class="toc-sub" href="#63106-域-display本版沒有成文的域說明2-把">6.3.106 域 display（本版沒有成文的域說明）（2 把）</a>
+<a class="toc-sub" href="#63107-域-drvinsp本版沒有成文的域說明2-把">6.3.107 域 drvinsp（本版沒有成文的域說明）（2 把）</a>
+<a class="toc-sub" href="#63108-域-egress本版沒有成文的域說明2-把">6.3.108 域 egress（本版沒有成文的域說明）（2 把）</a>
+<a class="toc-sub" href="#63109-域-etl本版沒有成文的域說明2-把">6.3.109 域 etl（本版沒有成文的域說明）（2 把）</a>
+<a class="toc-sub" href="#63110-域-key本版沒有成文的域說明2-把">6.3.110 域 key（本版沒有成文的域說明）（2 把）</a>
+<a class="toc-sub" href="#63111-域-knowledge本版沒有成文的域說明2-把">6.3.111 域 knowledge（本版沒有成文的域說明）（2 把）</a>
+<a class="toc-sub" href="#63112-域-mchbar本版沒有成文的域說明2-把">6.3.112 域 mchbar（本版沒有成文的域說明）（2 把）</a>
+<a class="toc-sub" href="#63113-域-mon本版沒有成文的域說明2-把">6.3.113 域 mon（本版沒有成文的域說明）（2 把）</a>
+<a class="toc-sub" href="#63114-域-pcieaer本版沒有成文的域說明2-把">6.3.114 域 pcieaer（本版沒有成文的域說明）（2 把）</a>
+<a class="toc-sub" href="#63115-域-role本版沒有成文的域說明2-把">6.3.115 域 role（本版沒有成文的域說明）（2 把）</a>
+<a class="toc-sub" href="#63116-域-setuptl本版沒有成文的域說明2-把">6.3.116 域 setuptl（本版沒有成文的域說明）（2 把）</a>
+<a class="toc-sub" href="#63117-域-state本版沒有成文的域說明2-把">6.3.117 域 state（本版沒有成文的域說明）（2 把）</a>
+<a class="toc-sub" href="#63118-域-storage本版沒有成文的域說明2-把">6.3.118 域 storage（本版沒有成文的域說明）（2 把）</a>
+<a class="toc-sub" href="#63119-域-ata本版沒有成文的域說明1-把">6.3.119 域 ata（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63120-域-cam本版沒有成文的域說明1-把">6.3.120 域 cam（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63121-域-chassis本版沒有成文的域說明1-把">6.3.121 域 chassis（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63122-域-contrib本版沒有成文的域說明1-把">6.3.122 域 contrib（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63123-域-cxl本版沒有成文的域說明1-把">6.3.123 域 cxl（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63124-域-data本版沒有成文的域說明1-把">6.3.124 域 data（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63125-域-defender本版沒有成文的域說明1-把">6.3.125 域 defender（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63126-域-degrade本版沒有成文的域說明1-把">6.3.126 域 degrade（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63127-域-diag本版沒有成文的域說明1-把">6.3.127 域 diag（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63128-域-doc本版沒有成文的域說明1-把">6.3.128 域 doc（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63129-域-dyn本版沒有成文的域說明1-把">6.3.129 域 dyn（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63130-域-evt本版沒有成文的域說明1-把">6.3.130 域 evt（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63131-域-file本版沒有成文的域說明1-把">6.3.131 域 file（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63132-域-guard本版沒有成文的域說明1-把">6.3.132 域 guard（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63133-域-hpa本版沒有成文的域說明1-把">6.3.133 域 hpa（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63134-域-license本版沒有成文的域說明1-把">6.3.134 域 license（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63135-域-limits本版沒有成文的域說明1-把">6.3.135 域 limits（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63136-域-monitor本版沒有成文的域說明1-把">6.3.136 域 monitor（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63137-域-msr本版沒有成文的域說明1-把">6.3.137 域 msr（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63138-域-off本版沒有成文的域說明1-把">6.3.138 域 off（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63139-域-oob本版沒有成文的域說明1-把">6.3.139 域 oob（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63140-域-ps本版沒有成文的域說明1-把">6.3.140 域 ps（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63141-域-raid本版沒有成文的域說明1-把">6.3.141 域 raid（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63142-域-reg本版沒有成文的域說明1-把">6.3.142 域 reg（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63143-域-release本版沒有成文的域說明1-把">6.3.143 域 release（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63144-域-report本版沒有成文的域說明1-把">6.3.144 域 report（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63145-域-secboot本版沒有成文的域說明1-把">6.3.145 域 secboot（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63146-域-secure本版沒有成文的域說明1-把">6.3.146 域 secure（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63147-域-smart本版沒有成文的域說明1-把">6.3.147 域 smart（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63148-域-smbus本版沒有成文的域說明1-把">6.3.148 域 smbus（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63149-域-test本版沒有成文的域說明1-把">6.3.149 域 test（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63150-域-tests本版沒有成文的域說明1-把">6.3.150 域 tests（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63151-域-ufv本版沒有成文的域說明1-把">6.3.151 域 ufv（本版沒有成文的域說明）（1 把）</a>
+<a class="toc-sub" href="#63152-域-usbstor本版沒有成文的域說明1-把">6.3.152 域 usbstor（本版沒有成文的域說明）（1 把）</a>
 <a class="toc-sub" href="#64-跨域通則讀鍵改鍵加鍵">6.4 跨域通則：讀鍵、改鍵、加鍵</a>
 <a class="toc-sub" href="#65-逐鍵出處原始碼裡怎麼說它">6.5 逐鍵出處：原始碼裡怎麼說它</a>
 </details>
@@ -444,10 +445,10 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <a class="toc-sub" href="#附錄-c-門檻速查">附錄 C 門檻速查</a>
 <a class="toc-sub" href="#附錄-d-二十個常見誤判">附錄 D 二十個常見誤判</a>
 <a class="toc-sub" href="#附錄-e-常見問題">附錄 E 常見問題</a>
-<a class="toc-sub" href="#附錄-f-151-個域的前綴表">附錄 F　151 個域的前綴表</a>
+<a class="toc-sub" href="#附錄-f-152-個域的前綴表">附錄 F　152 個域的前綴表</a>
 <a class="toc-sub" href="#附錄-f-2-62-個動態家族與成員由什麼決定">附錄 F-2　62 個動態家族與「成員由什麼決定」</a>
 <a class="toc-sub" href="#附錄-g-全站說明條目逐條285-條">附錄 G　全站說明條目逐條（285 條）</a>
-<a class="toc-sub" href="#附錄-h-服務檔地圖646-個檔案">附錄 H　服務檔地圖（646 個檔案）</a>
+<a class="toc-sub" href="#附錄-h-服務檔地圖647-個檔案">附錄 H　服務檔地圖（647 個檔案）</a>
 <a class="toc-sub" href="#附錄-i-六態與可信度速查卡">附錄 I 六態與可信度速查卡</a>
 <a class="toc-sub" href="#附錄-j-三十條可自行驗證的宣稱">附錄 J 三十條可自行驗證的宣稱</a>
 <a class="toc-sub" href="#附錄-k-倉庫地圖">附錄 K 倉庫地圖</a>
@@ -455,7 +456,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </details>
 </nav>
 <main>
-<header class="doc"><div class="meta">曦覽 XinSpect 百科 ・ 來源：<code>README.md</code>（sha256 <code>7dab486ec796</code>）・ 自足 HTML：無 CDN、無外部字型、無指令碼 ・ 定位：左側目錄、標題懸停有 ¶ 錨點、瀏覽器 Ctrl+F 找字</div></header>
+<header class="doc"><div class="meta">曦覽 XinSpect 百科 ・ 來源：<code>README.md</code>（sha256 <code>41aa3971ba4e</code>）・ 自足 HTML：無 CDN、無外部字型、無指令碼 ・ 定位：左側目錄、標題懸停有 ¶ 錨點、瀏覽器 Ctrl+F 找字</div></header>
 <p><a href="https://github.com/Xinglanclever/XinSpect/blob/main/README.zh-CN.md">简体中文</a> · 繁體中文 · <a href="https://github.com/Xinglanclever/XinSpect/blob/main/README.en.md">English</a></p>
 <p><strong>可翻閱版（自足 HTML，含目錄與錨點，離線可讀）：<a href="百科.html">百科.html</a> ・ <a href="手冊.html">手冊.html</a></strong></p>
 <h1 id="曦覽-xinspect-百科"><a class="self" href="#曦覽-xinspect-百科">¶</a> 曦覽 XinSpect 百科</h1>
@@ -465,7 +466,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <p><span class="badge">版本 ・ 3.03</span><br>
 <span class="badge">平台 ・ Windows x64</span><br>
 <span class="badge">框架 ・ 10.0-</span>-512BD4)<br>
-<span class="badge">測試 ・ 7572 passed</span><br>
+<span class="badge">測試 ・ 7585 passed</span><br>
 <span class="badge">突變分數 ・ 82%25</span><br>
 <span class="badge">授權 ・ AGPL-3.0-or-later</span></p>
 <hr>
@@ -480,19 +481,19 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <th style="text-align:right">數量</th>
 <th>數法（在倉庫根執行）</th>
 </tr></thead><tbody>
-<tr><td>編譯期事實鍵</td><td style="text-align:right"><strong>1,155</strong></td><td><code>Services/FactKeyCatalog.cs</code> 的 <code>Keys</code> 成員數</td></tr>
-<tr><td>事實域（鍵的第一段前綴）</td><td style="text-align:right"><strong>151</strong></td><td>1,155 把鍵各自取第一段後去重</td></tr>
+<tr><td>編譯期事實鍵</td><td style="text-align:right"><strong>1,158</strong></td><td><code>Services/FactKeyCatalog.cs</code> 的 <code>Keys</code> 成員數</td></tr>
+<tr><td>事實域（鍵的第一段前綴）</td><td style="text-align:right"><strong>152</strong></td><td>1,158 把鍵各自取第一段後去重</td></tr>
 <tr><td>動態鍵家族</td><td style="text-align:right"><strong>62</strong></td><td><code>Services/FactKeyDynamicCatalog.cs</code> 的 <code>Families</code> 成員數</td></tr>
-<tr><td>一鍵域／≤3 鍵域／≥20 鍵域</td><td style="text-align:right">34／63／12</td><td>以域分組後計數</td></tr>
+<tr><td>一鍵域／≤3 鍵域／≥20 鍵域</td><td style="text-align:right">34／64／12</td><td>以域分組後計數</td></tr>
 <tr><td>可到達畫面（<code>PageRegistry</code>）</td><td style="text-align:right"><strong>63</strong></td><td><code>Nav/PageRegistry.cs</code> 的 <code>Key =</code> 條目數</td></tr>
 <tr><td>XAML 檔（含對話框與控制項）</td><td style="text-align:right"><strong>79</strong></td><td><code>ls Views/*.xaml</code></td></tr>
 <tr><td>全站說明條目（圓圈問號）</td><td style="text-align:right"><strong>285</strong></td><td><code>Nav/HelpCatalog.cs</code> 的 <code>Entries</code> 成員數</td></tr>
-<tr><td>服務檔</td><td style="text-align:right"><strong>646</strong></td><td><code>find Services -name '*.cs' | wc -l</code></td></tr>
-<tr><td>全域 C# 檔</td><td style="text-align:right"><strong>1,533</strong></td><td>走訪所有 <code>*.cs</code>，排除 <code>obj/</code>、<code>bin/</code>、<code>publish-*/</code>、<code>.git/</code></td></tr>
+<tr><td>服務檔</td><td style="text-align:right"><strong>647</strong></td><td><code>find Services -name '*.cs' | wc -l</code></td></tr>
+<tr><td>全域 C# 檔</td><td style="text-align:right"><strong>1,535</strong></td><td>走訪所有 <code>*.cs</code>，排除 <code>obj/</code>、<code>bin/</code>、<code>publish-*/</code>、<code>.git/</code></td></tr>
 <tr><td>版本紀錄筆數</td><td style="text-align:right"><strong>109</strong></td><td><code>Nav/ChangelogCatalog.cs</code> 的 <code>Entries</code> 成員數</td></tr>
-<tr><td>專案測試基線</td><td style="text-align:right"><strong>7,572</strong></td><td><code>Tests/TestSuiteBaseline.cs</code> 的 <code>ProjectTests</code>（<code>dotnet test</code> 的總數）</td></tr>
+<tr><td>專案測試基線</td><td style="text-align:right"><strong>7,585</strong></td><td><code>Tests/TestSuiteBaseline.cs</code> 的 <code>ProjectTests</code>（<code>dotnet test</code> 的總數）</td></tr>
 </tbody></table>
-<p><strong>這張表不能證明什麼。</strong> 1,155 把鍵不是 1,155 個正確答案；63 頁不是 63 個好設計；7,572 條測試不是 7,572 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。</p>
+<p><strong>這張表不能證明什麼。</strong> 1,158 把鍵不是 1,158 個正確答案；63 頁不是 63 個好設計；7,585 條測試不是 7,585 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。</p>
 <hr>
 <h2 id="下載與檔案大小"><a class="self" href="#下載與檔案大小">¶</a> 下載與檔案大小</h2>
 <table>
@@ -564,7 +565,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li><a href="#22-服務層的形狀">2.2 服務層的形狀</a>
 </li><li><a href="#23-一個服務的解剖以-acpi-表服務為例">2.3 一個服務的解剖（以 ACPI 表服務為例）</a>
 </li><li><a href="#24-事實模型一個-record-與兩條不變式">2.4 事實模型：一個 record 與兩條不變式</a>
-</li><li><a href="#25-事實鍵目錄1155-把鍵為什麼要固定在編譯期">2.5 事實鍵目錄：1,155 把鍵為什麼要固定在編譯期</a>
+</li><li><a href="#25-事實鍵目錄1158-把鍵為什麼要固定在編譯期">2.5 事實鍵目錄：1,158 把鍵為什麼要固定在編譯期</a>
 </li><li><a href="#26-動態家族62-個我列不完的申報">2.6 動態家族：62 個「我列不完」的申報</a>
 </li><li><a href="#27-分母宣告與覆蓋申報">2.7 分母宣告與覆蓋申報</a>
 </li><li><a href="#28-出口與孤兒事實的三種去處">2.8 出口與孤兒：事實的三種去處</a>
@@ -665,11 +666,11 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li><a href="#512-誤差預算每一類量測的誤差從哪裡來">5.12 誤差預算：每一類量測的誤差從哪裡來</a>
 </li><li><a href="#513-量測的實務紀律給要做研究的人">5.13 量測的實務紀律（給要做研究的人）</a>
 </li></ul>
-</li><li><a href="#第-6-部-數據辭典151-個域1155-把鍵">第 6 部 數據辭典：151 個域、1,155 把鍵</a>
+</li><li><a href="#第-6-部-數據辭典152-個域1158-把鍵">第 6 部 數據辭典：152 個域、1,158 把鍵</a>
 <ul>
 <li><a href="#61-怎麼讀這一部">6.1 怎麼讀這一部</a>
 </li><li><a href="#62-最大的十二個域逐域判讀要點">6.2 最大的十二個域：逐域判讀要點</a>
-</li><li><a href="#63-逐域鍵表151-個域1155-把鍵">6.3 逐域鍵表（151 個域、1,155 把鍵）</a>
+</li><li><a href="#63-逐域鍵表152-個域1158-把鍵">6.3 逐域鍵表（152 個域、1,158 把鍵）</a>
 </li><li><a href="#631-域-ac--acpi-表與韌體介面61-把">6.3.1 域 <code>ac</code> — ACPI 表與韌體介面（61 把）</a>
 </li><li><a href="#632-域-sb--smbios-與平台識別53-把">6.3.2 域 <code>sb</code> — SMBIOS 與平台識別（53 把）</a>
 </li><li><a href="#633-域-fw--韌體組成與開機鏈48-把">6.3.3 域 <code>fw</code> — 韌體組成與開機鏈（48 把）</a>
@@ -767,60 +768,61 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li><a href="#6395-域-exp本版沒有成文的域說明3-把">6.3.95 域 <code>exp</code>（本版沒有成文的域說明）（3 把）</a>
 </li><li><a href="#6396-域-export--匯出治理3-把">6.3.96 域 <code>export</code> — 匯出治理（3 把）</a>
 </li><li><a href="#6397-域-numa--numa3-把">6.3.97 域 <code>numa</code> — NUMA（3 把）</a>
-</li><li><a href="#6398-域-rep本版沒有成文的域說明3-把">6.3.98 域 <code>rep</code>（本版沒有成文的域說明）（3 把）</a>
-</li><li><a href="#6399-域-time--計時器3-把">6.3.99 域 <code>time</code> — 計時器（3 把）</a>
-</li><li><a href="#63100-域-ups--ups3-把">6.3.100 域 <code>ups</code> — UPS（3 把）</a>
-</li><li><a href="#63101-域-audio本版沒有成文的域說明2-把">6.3.101 域 <code>audio</code>（本版沒有成文的域說明）（2 把）</a>
-</li><li><a href="#63102-域-build本版沒有成文的域說明2-把">6.3.102 域 <code>build</code>（本版沒有成文的域說明）（2 把）</a>
-</li><li><a href="#63103-域-byovd本版沒有成文的域說明2-把">6.3.103 域 <code>byovd</code>（本版沒有成文的域說明）（2 把）</a>
-</li><li><a href="#63104-域-cert本版沒有成文的域說明2-把">6.3.104 域 <code>cert</code>（本版沒有成文的域說明）（2 把）</a>
-</li><li><a href="#63105-域-display本版沒有成文的域說明2-把">6.3.105 域 <code>display</code>（本版沒有成文的域說明）（2 把）</a>
-</li><li><a href="#63106-域-drvinsp本版沒有成文的域說明2-把">6.3.106 域 <code>drvinsp</code>（本版沒有成文的域說明）（2 把）</a>
-</li><li><a href="#63107-域-egress本版沒有成文的域說明2-把">6.3.107 域 <code>egress</code>（本版沒有成文的域說明）（2 把）</a>
-</li><li><a href="#63108-域-etl本版沒有成文的域說明2-把">6.3.108 域 <code>etl</code>（本版沒有成文的域說明）（2 把）</a>
-</li><li><a href="#63109-域-key本版沒有成文的域說明2-把">6.3.109 域 <code>key</code>（本版沒有成文的域說明）（2 把）</a>
-</li><li><a href="#63110-域-knowledge本版沒有成文的域說明2-把">6.3.110 域 <code>knowledge</code>（本版沒有成文的域說明）（2 把）</a>
-</li><li><a href="#63111-域-mchbar本版沒有成文的域說明2-把">6.3.111 域 <code>mchbar</code>（本版沒有成文的域說明）（2 把）</a>
-</li><li><a href="#63112-域-mon本版沒有成文的域說明2-把">6.3.112 域 <code>mon</code>（本版沒有成文的域說明）（2 把）</a>
-</li><li><a href="#63113-域-pcieaer本版沒有成文的域說明2-把">6.3.113 域 <code>pcieaer</code>（本版沒有成文的域說明）（2 把）</a>
-</li><li><a href="#63114-域-role本版沒有成文的域說明2-把">6.3.114 域 <code>role</code>（本版沒有成文的域說明）（2 把）</a>
-</li><li><a href="#63115-域-setuptl本版沒有成文的域說明2-把">6.3.115 域 <code>setuptl</code>（本版沒有成文的域說明）（2 把）</a>
-</li><li><a href="#63116-域-state本版沒有成文的域說明2-把">6.3.116 域 <code>state</code>（本版沒有成文的域說明）（2 把）</a>
-</li><li><a href="#63117-域-storage本版沒有成文的域說明2-把">6.3.117 域 <code>storage</code>（本版沒有成文的域說明）（2 把）</a>
-</li><li><a href="#63118-域-ata本版沒有成文的域說明1-把">6.3.118 域 <code>ata</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63119-域-cam本版沒有成文的域說明1-把">6.3.119 域 <code>cam</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63120-域-chassis本版沒有成文的域說明1-把">6.3.120 域 <code>chassis</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63121-域-contrib本版沒有成文的域說明1-把">6.3.121 域 <code>contrib</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63122-域-cxl本版沒有成文的域說明1-把">6.3.122 域 <code>cxl</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63123-域-data本版沒有成文的域說明1-把">6.3.123 域 <code>data</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63124-域-defender本版沒有成文的域說明1-把">6.3.124 域 <code>defender</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63125-域-degrade本版沒有成文的域說明1-把">6.3.125 域 <code>degrade</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63126-域-diag本版沒有成文的域說明1-把">6.3.126 域 <code>diag</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63127-域-doc本版沒有成文的域說明1-把">6.3.127 域 <code>doc</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63128-域-dyn本版沒有成文的域說明1-把">6.3.128 域 <code>dyn</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63129-域-evt本版沒有成文的域說明1-把">6.3.129 域 <code>evt</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63130-域-file本版沒有成文的域說明1-把">6.3.130 域 <code>file</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63131-域-guard本版沒有成文的域說明1-把">6.3.131 域 <code>guard</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63132-域-hpa本版沒有成文的域說明1-把">6.3.132 域 <code>hpa</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63133-域-license本版沒有成文的域說明1-把">6.3.133 域 <code>license</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63134-域-limits本版沒有成文的域說明1-把">6.3.134 域 <code>limits</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63135-域-monitor本版沒有成文的域說明1-把">6.3.135 域 <code>monitor</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63136-域-msr本版沒有成文的域說明1-把">6.3.136 域 <code>msr</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63137-域-off本版沒有成文的域說明1-把">6.3.137 域 <code>off</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63138-域-oob本版沒有成文的域說明1-把">6.3.138 域 <code>oob</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63139-域-ps本版沒有成文的域說明1-把">6.3.139 域 <code>ps</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63140-域-raid本版沒有成文的域說明1-把">6.3.140 域 <code>raid</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63141-域-reg本版沒有成文的域說明1-把">6.3.141 域 <code>reg</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63142-域-release本版沒有成文的域說明1-把">6.3.142 域 <code>release</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63143-域-report本版沒有成文的域說明1-把">6.3.143 域 <code>report</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63144-域-secboot本版沒有成文的域說明1-把">6.3.144 域 <code>secboot</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63145-域-secure本版沒有成文的域說明1-把">6.3.145 域 <code>secure</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63146-域-smart本版沒有成文的域說明1-把">6.3.146 域 <code>smart</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63147-域-smbus本版沒有成文的域說明1-把">6.3.147 域 <code>smbus</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63148-域-test本版沒有成文的域說明1-把">6.3.148 域 <code>test</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63149-域-tests本版沒有成文的域說明1-把">6.3.149 域 <code>tests</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63150-域-ufv本版沒有成文的域說明1-把">6.3.150 域 <code>ufv</code>（本版沒有成文的域說明）（1 把）</a>
-</li><li><a href="#63151-域-usbstor本版沒有成文的域說明1-把">6.3.151 域 <code>usbstor</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#6398-域-pcie本版沒有成文的域說明3-把">6.3.98 域 <code>pcie</code>（本版沒有成文的域說明）（3 把）</a>
+</li><li><a href="#6399-域-rep本版沒有成文的域說明3-把">6.3.99 域 <code>rep</code>（本版沒有成文的域說明）（3 把）</a>
+</li><li><a href="#63100-域-time--計時器3-把">6.3.100 域 <code>time</code> — 計時器（3 把）</a>
+</li><li><a href="#63101-域-ups--ups3-把">6.3.101 域 <code>ups</code> — UPS（3 把）</a>
+</li><li><a href="#63102-域-audio本版沒有成文的域說明2-把">6.3.102 域 <code>audio</code>（本版沒有成文的域說明）（2 把）</a>
+</li><li><a href="#63103-域-build本版沒有成文的域說明2-把">6.3.103 域 <code>build</code>（本版沒有成文的域說明）（2 把）</a>
+</li><li><a href="#63104-域-byovd本版沒有成文的域說明2-把">6.3.104 域 <code>byovd</code>（本版沒有成文的域說明）（2 把）</a>
+</li><li><a href="#63105-域-cert本版沒有成文的域說明2-把">6.3.105 域 <code>cert</code>（本版沒有成文的域說明）（2 把）</a>
+</li><li><a href="#63106-域-display本版沒有成文的域說明2-把">6.3.106 域 <code>display</code>（本版沒有成文的域說明）（2 把）</a>
+</li><li><a href="#63107-域-drvinsp本版沒有成文的域說明2-把">6.3.107 域 <code>drvinsp</code>（本版沒有成文的域說明）（2 把）</a>
+</li><li><a href="#63108-域-egress本版沒有成文的域說明2-把">6.3.108 域 <code>egress</code>（本版沒有成文的域說明）（2 把）</a>
+</li><li><a href="#63109-域-etl本版沒有成文的域說明2-把">6.3.109 域 <code>etl</code>（本版沒有成文的域說明）（2 把）</a>
+</li><li><a href="#63110-域-key本版沒有成文的域說明2-把">6.3.110 域 <code>key</code>（本版沒有成文的域說明）（2 把）</a>
+</li><li><a href="#63111-域-knowledge本版沒有成文的域說明2-把">6.3.111 域 <code>knowledge</code>（本版沒有成文的域說明）（2 把）</a>
+</li><li><a href="#63112-域-mchbar本版沒有成文的域說明2-把">6.3.112 域 <code>mchbar</code>（本版沒有成文的域說明）（2 把）</a>
+</li><li><a href="#63113-域-mon本版沒有成文的域說明2-把">6.3.113 域 <code>mon</code>（本版沒有成文的域說明）（2 把）</a>
+</li><li><a href="#63114-域-pcieaer本版沒有成文的域說明2-把">6.3.114 域 <code>pcieaer</code>（本版沒有成文的域說明）（2 把）</a>
+</li><li><a href="#63115-域-role本版沒有成文的域說明2-把">6.3.115 域 <code>role</code>（本版沒有成文的域說明）（2 把）</a>
+</li><li><a href="#63116-域-setuptl本版沒有成文的域說明2-把">6.3.116 域 <code>setuptl</code>（本版沒有成文的域說明）（2 把）</a>
+</li><li><a href="#63117-域-state本版沒有成文的域說明2-把">6.3.117 域 <code>state</code>（本版沒有成文的域說明）（2 把）</a>
+</li><li><a href="#63118-域-storage本版沒有成文的域說明2-把">6.3.118 域 <code>storage</code>（本版沒有成文的域說明）（2 把）</a>
+</li><li><a href="#63119-域-ata本版沒有成文的域說明1-把">6.3.119 域 <code>ata</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63120-域-cam本版沒有成文的域說明1-把">6.3.120 域 <code>cam</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63121-域-chassis本版沒有成文的域說明1-把">6.3.121 域 <code>chassis</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63122-域-contrib本版沒有成文的域說明1-把">6.3.122 域 <code>contrib</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63123-域-cxl本版沒有成文的域說明1-把">6.3.123 域 <code>cxl</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63124-域-data本版沒有成文的域說明1-把">6.3.124 域 <code>data</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63125-域-defender本版沒有成文的域說明1-把">6.3.125 域 <code>defender</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63126-域-degrade本版沒有成文的域說明1-把">6.3.126 域 <code>degrade</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63127-域-diag本版沒有成文的域說明1-把">6.3.127 域 <code>diag</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63128-域-doc本版沒有成文的域說明1-把">6.3.128 域 <code>doc</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63129-域-dyn本版沒有成文的域說明1-把">6.3.129 域 <code>dyn</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63130-域-evt本版沒有成文的域說明1-把">6.3.130 域 <code>evt</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63131-域-file本版沒有成文的域說明1-把">6.3.131 域 <code>file</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63132-域-guard本版沒有成文的域說明1-把">6.3.132 域 <code>guard</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63133-域-hpa本版沒有成文的域說明1-把">6.3.133 域 <code>hpa</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63134-域-license本版沒有成文的域說明1-把">6.3.134 域 <code>license</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63135-域-limits本版沒有成文的域說明1-把">6.3.135 域 <code>limits</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63136-域-monitor本版沒有成文的域說明1-把">6.3.136 域 <code>monitor</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63137-域-msr本版沒有成文的域說明1-把">6.3.137 域 <code>msr</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63138-域-off本版沒有成文的域說明1-把">6.3.138 域 <code>off</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63139-域-oob本版沒有成文的域說明1-把">6.3.139 域 <code>oob</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63140-域-ps本版沒有成文的域說明1-把">6.3.140 域 <code>ps</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63141-域-raid本版沒有成文的域說明1-把">6.3.141 域 <code>raid</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63142-域-reg本版沒有成文的域說明1-把">6.3.142 域 <code>reg</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63143-域-release本版沒有成文的域說明1-把">6.3.143 域 <code>release</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63144-域-report本版沒有成文的域說明1-把">6.3.144 域 <code>report</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63145-域-secboot本版沒有成文的域說明1-把">6.3.145 域 <code>secboot</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63146-域-secure本版沒有成文的域說明1-把">6.3.146 域 <code>secure</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63147-域-smart本版沒有成文的域說明1-把">6.3.147 域 <code>smart</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63148-域-smbus本版沒有成文的域說明1-把">6.3.148 域 <code>smbus</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63149-域-test本版沒有成文的域說明1-把">6.3.149 域 <code>test</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63150-域-tests本版沒有成文的域說明1-把">6.3.150 域 <code>tests</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63151-域-ufv本版沒有成文的域說明1-把">6.3.151 域 <code>ufv</code>（本版沒有成文的域說明）（1 把）</a>
+</li><li><a href="#63152-域-usbstor本版沒有成文的域說明1-把">6.3.152 域 <code>usbstor</code>（本版沒有成文的域說明）（1 把）</a>
 </li><li><a href="#64-跨域通則讀鍵改鍵加鍵">6.4 跨域通則：讀鍵、改鍵、加鍵</a>
 </li><li><a href="#65-逐鍵出處原始碼裡怎麼說它">6.5 逐鍵出處：原始碼裡怎麼說它</a>
 </li></ul>
@@ -912,10 +914,10 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li><a href="#附錄-c-門檻速查">附錄 C 門檻速查</a>
 </li><li><a href="#附錄-d-二十個常見誤判">附錄 D 二十個常見誤判</a>
 </li><li><a href="#附錄-e-常見問題">附錄 E 常見問題</a>
-</li><li><a href="#附錄-f-151-個域的前綴表">附錄 F　151 個域的前綴表</a>
+</li><li><a href="#附錄-f-152-個域的前綴表">附錄 F　152 個域的前綴表</a>
 </li><li><a href="#附錄-f-2-62-個動態家族與成員由什麼決定">附錄 F-2　62 個動態家族與「成員由什麼決定」</a>
 </li><li><a href="#附錄-g-全站說明條目逐條285-條">附錄 G　全站說明條目逐條（285 條）</a>
-</li><li><a href="#附錄-h-服務檔地圖646-個檔案">附錄 H　服務檔地圖（646 個檔案）</a>
+</li><li><a href="#附錄-h-服務檔地圖647-個檔案">附錄 H　服務檔地圖（647 個檔案）</a>
 </li><li><a href="#附錄-i-六態與可信度速查卡">附錄 I 六態與可信度速查卡</a>
 </li><li><a href="#附錄-j-三十條可自行驗證的宣稱">附錄 J 三十條可自行驗證的宣稱</a>
 </li><li><a href="#附錄-k-倉庫地圖">附錄 K 倉庫地圖</a>
@@ -975,8 +977,8 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><strong>事實（fact）</strong></td><td>一個帶鍵、值、單位、來源、可信度、時刻、可用性的資料項</td><td>不是「結論」。事實不帶建議，也不替使用者下判斷</td></tr>
 <tr><td><strong>事實鍵（fact key）</strong></td><td>穩定識別字，如 <code>ac.dmar.summary</code>；前綴是域</td><td>不是畫面欄位名；也不保證跨版本不改（第 6 部逐域說明哪些已經改過）</td></tr>
-<tr><td><strong>域（domain）</strong></td><td>鍵的第一段前綴，本版共 <strong>150</strong> 個</td><td>不是側邊欄分組。一個域可能橫跨多頁，一頁也可能用到多個域</td></tr>
-<tr><td><strong>動態家族（dynamic family）</strong></td><td>成員由機器決定、編譯期數不出來的鍵群，本版共 <strong>55</strong> 個前綴</td><td>不是「例外」。它是申報：明說「這群我列不完，而成員由什麼決定」</td></tr>
+<tr><td><strong>域（domain）</strong></td><td>鍵的第一段前綴，本版共 <strong>152</strong> 個</td><td>不是側邊欄分組。一個域可能橫跨多頁，一頁也可能用到多個域</td></tr>
+<tr><td><strong>動態家族（dynamic family）</strong></td><td>成員由機器決定、編譯期數不出來的鍵群，本版共 <strong>62</strong> 個前綴</td><td>不是「例外」。它是申報：明說「這群我列不完，而成員由什麼決定」</td></tr>
 <tr><td><strong>服務（service）</strong></td><td>一個負責讀某類事實的類別，通常一個檔案一個服務</td><td>不是背景常駐程式。服務是被收集流程叫用的讀取器</td></tr>
 <tr><td><strong>收集輪（round）</strong></td><td>一次「開始收集」到「事實集穩定」的完整週期</td><td>不是即時更新的每個 tick。tick 只更新少數即時值</td></tr>
 <tr><td><strong>事實集（fact set）</strong></td><td>一輪收集的產物：鍵→事實的對應</td><td>不是快照檔。快照是事實集加上雜湊信封後的落地檔</td></tr>
@@ -1068,12 +1070,12 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <p>這份文件的每一個結構性數字都可以自己驗：</p>
 <ol>
 <li>事實鍵數：數 <code>Services/FactKeyCatalog.cs</code> 的 <code>Keys</code> 成員。
-</li><li>域數：把 1,155 把鍵各取第一段後去重（本版 151）。
+</li><li>域數：把 1,158 把鍵各取第一段後去重（本版 152）。
 </li><li>動態家族數：數 <code>FactKeyDynamicCatalog.Families</code> 的成員（本版 62）。
 </li><li>畫面數：數 <code>Nav/PageRegistry.cs</code> 的 <code>Key =</code> 條目（本版 63）。
 </li><li>說明條目數：數 <code>Nav/HelpCatalog.cs</code> 的 <code>Entries</code> 成員（本版 285）。
-</li><li>服務檔數：<code>find Services -name '*.cs' | wc -l</code>（本版 646）。
-</li><li>測試數：<code>dotnet test</code> 的總計，或讀 <code>Tests/TestSuiteBaseline.cs</code>（本版 7,572）。
+</li><li>服務檔數：<code>find Services -name '*.cs' | wc -l</code>（本版 647）。
+</li><li>測試數：<code>dotnet test</code> 的總計，或讀 <code>Tests/TestSuiteBaseline.cs</code>（本版 7,585）。
 </li><li>主程式大小：Release 頁面的 <code>XinSpect.exe</code> 位元組數（本版 34,268,971）。
 </li><li>版本紀錄筆數：數 <code>Nav/ChangelogCatalog.cs</code> 的 <code>Entries</code>（本版 109）。
 </li><li>孤兒鍵：把目錄鍵與 <code>Views/</code>、<code>Nav/</code> 兩邊的出口對照（第 2 部給了方法與本版結果）。
@@ -1083,7 +1085,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <p>所以現在有三組測試盯著這份文件本身：版號與徽章（<code>ChangelogTests</code>）、下載連結與位元組數宣稱（<code>ReleaseIntegrityTests</code>）、主程式列的形狀（<code>ReleasePipelineTests</code>）。<strong>這份文件的數字不是「寫得準」，而是「改壞了會紅燈」。</strong> 這也是為什麼這份文件敢把大量數字放在正文裡：它們每一個都有一個機器在旁邊看著。</p>
 <h3 id="010-時態與引號的規則"><a class="self" href="#010-時態與引號的規則">¶</a> 0.10 時態與引號的規則</h3>
 <ul>
-<li><strong>現在式宣稱</strong>（「本版有 7,572 條測試」）只用在有守門的數字上。
+<li><strong>現在式宣稱</strong>（「本版有 7,585 條測試」）只用在有守門的數字上。
 </li><li><strong>過去式故事</strong>（「v2.53 的標籤沒被推上去」）用來說明規則的來源，寫成故事而不是規則。
 </li><li><strong>未成文</strong> 是一個正式標記，不是修辭。看到它代表：這件事程式中確實存在某種行為，但沒有人把它寫成可驗證的文件。
 </li><li>引號裡的句子如果出自程式註解或程式碼，會標明檔案；如果出自本文件的作者判斷，會明白用「這份文件認為」開頭。
@@ -1302,9 +1304,9 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <p><strong>為什麼要分這麼多層。</strong> 因為「讀不到」對使用者的意義完全不同：探測失敗代表這台機器沒有這個東西（換一台就有）；讀取失敗代表有這個東西但這次沒拿到（重跑可能就有）；解碼失敗代表拿到了但不敢下結論（需要人看原始位元組）。三者塌成一個「N/A」，使用者就永遠不知道該不該重試。</p>
 <p><strong>鏈上最脆弱的一段是第三段。</strong> 第一、二段的失敗是確定的、第四段以後的失敗是可重現的，只有特權讀取會出現「這一次卡住六秒、下一次零點二秒」的行為。專案對此的處置不是重試到成功，而是<strong>外層預算加斷路器</strong>：超過預算就放棄這一個事實並記下原因，連續失敗就冷卻該路徑，讓下一個事實有機會跑完。</p>
 <h3 id="22-服務層的形狀"><a class="self" href="#22-服務層的形狀">¶</a> 2.2 服務層的形狀</h3>
-<p><code>Services/</code> 底下有 <strong>646</strong> 個 <code>.cs</code> 檔，絕大多數是一個檔案一個服務。服務的共同形狀是：<strong>一個 <code>Collect</code> 或等價的入口、把結果寫成 <code>HardwareFact</code> 的集合、以及一個對應的測試檔</strong>。</p>
-<p><strong>為什麼服務數量是 646 而不是 60。</strong> 因為這個專案的計數單位是「可定位的事實與收口」，不是「使用者感覺得到的功能」。一個服務通常負責一類介面（一張 ACPI 表、一種韌體介面、一組 MSR），而這些介面的數量本來就以百計——ACPI 有數十種表、MSR 有數千個、SMBIOS 有數十種型別。</p>
-<p><strong>服務數量本身就是一種風險。</strong> 646 個服務檔意味著「接線」是一個真實的問題：服務寫好、測試綠、但沒有進生產路徑，這種缺陷在這個專案發生過不只一次（第 12 部的 D-16、D-17）。目前的答案是<strong>守門</strong>（孤兒掃描、視圖入口閘門、事實鍵對帳），而不是減少服務數量。<strong>這 646 個檔案的逐檔地圖在附錄 H，那張表的列集合由 <code>Tools/gen-readme-domains.py</code> 從 <code>Services/</code> 直接生成——它不是另一份名冊，所以不會再有「檔案加了、地圖沒加」的漂移。</strong></p>
+<p><code>Services/</code> 底下有 <strong>647</strong> 個 <code>.cs</code> 檔，絕大多數是一個檔案一個服務。服務的共同形狀是：<strong>一個 <code>Collect</code> 或等價的入口、把結果寫成 <code>HardwareFact</code> 的集合、以及一個對應的測試檔</strong>。</p>
+<p><strong>為什麼服務數量是 647 而不是 60。</strong> 因為這個專案的計數單位是「可定位的事實與收口」，不是「使用者感覺得到的功能」。一個服務通常負責一類介面（一張 ACPI 表、一種韌體介面、一組 MSR），而這些介面的數量本來就以百計——ACPI 有數十種表、MSR 有數千個、SMBIOS 有數十種型別。</p>
+<p><strong>服務數量本身就是一種風險。</strong> 647 個服務檔意味著「接線」是一個真實的問題：服務寫好、測試綠、但沒有進生產路徑，這種缺陷在這個專案發生過不只一次（第 12 部的 D-16、D-17）。目前的答案是<strong>守門</strong>（孤兒掃描、視圖入口閘門、事實鍵對帳），而不是減少服務數量。<strong>這 647 個檔案的逐檔地圖在附錄 H，那張表的列集合由 <code>Tools/gen-readme-domains.py</code> 從 <code>Services/</code> 直接生成——它不是另一份名冊，所以不會再有「檔案加了、地圖沒加」的漂移。</strong></p>
 <h3 id="23-一個服務的解剖以-acpi-表服務為例"><a class="self" href="#23-一個服務的解剖以-acpi-表服務為例">¶</a> 2.3 一個服務的解剖（以 ACPI 表服務為例）</h3>
 <p>以 <code>Services/AcpiTableService.cs</code> 為例，一個典型服務裡有四種東西：</p>
 <ol>
@@ -1319,12 +1321,12 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <p><strong>不變式二：<code>Availability</code> 是 <code>Present</code> 時，呼叫端給的說明會被併進 <code>Value</code>，<code>UnavailableReason</code> 留空。</strong> 理由：<code>UnavailableReason</code> 是「為什麼讀不到」的欄位，而 <code>Present</code> 的事實沒有「讀不到」可言。這個錯誤在本專案發生過第二次——有一批服務把「這把鍵與那把的區隔」寫進了 <code>Present</code> 的理由欄，五處一起，而<strong>單元測試全綠、只有整合測試紅燈</strong>（因為那條檢查只在匯出快照那條路徑上跑）。</p>
 <p><strong>處置與第一條一致：不 throw，而是把放錯位置的東西搬到對的位置並留下痕跡。</strong> 那些話不是垃圾——它們是「這個值是什麼意思」，而那正是 <code>Value</code> 該說的事。搬到別處丟掉會失去資訊，留在原地會讓整個掃描在匯出時崩潰。</p>
 <p><strong>這兩條不變式合起來說明一個設計態度</strong>：資料模型的錯誤不要用例外處理，要用<strong>收斂加痕跡</strong>處理。因為這個工具的價值在於「跑完整台機器」，一個服務的疏忽不該讓整場掃描崩潰。</p>
-<h3 id="25-事實鍵目錄1155-把鍵為什麼要固定在編譯期"><a class="self" href="#25-事實鍵目錄1155-把鍵為什麼要固定在編譯期">¶</a> 2.5 事實鍵目錄：1,155 把鍵為什麼要固定在編譯期</h3>
-<p><strong>目錄的內容。</strong> <code>Services/FactKeyCatalog.cs</code> 是一個凍結的清單，本版 <strong>1,155</strong> 把鍵，一律以全字串字典序排列。</p>
+<h3 id="25-事實鍵目錄1158-把鍵為什麼要固定在編譯期"><a class="self" href="#25-事實鍵目錄1158-把鍵為什麼要固定在編譯期">¶</a> 2.5 事實鍵目錄：1,158 把鍵為什麼要固定在編譯期</h3>
+<p><strong>目錄的內容。</strong> <code>Services/FactKeyCatalog.cs</code> 是一個凍結的清單，本版 <strong>1,158</strong> 把鍵，一律以全字串字典序排列。</p>
 <p><strong>為什麼不執行期掃原始碼。</strong> 發佈版只有單一 exe，目錄裡只有 <code>Assets/</code> 與執行檔，<strong>沒有 <code>Services/</code></strong>。掃不到時會回報「0 個鍵」，而覆蓋申報會把 0 讀成「全部都覆蓋了」——那是「掃不到」冒充「沒有問題」，正是本專案最不該犯的錯。所以改成編譯期固定的目錄＋測試守門（<code>FactKeyCatalogTests</code> 重新掃描 <code>Services/</code> 原始碼並與目錄逐鍵比對）。</p>
 <p><strong>排序的教訓。</strong> 目錄一律全字串字典序；插鍵時整塊重排，不要手找位置——找前綴會把 <code>gp.*</code> 插到 <code>gpu.*</code> 後面。這個教訓來自一次真實的錯位，但「錯了幾段／幾鍵」<strong>沒有留下可對帳的紀錄</strong>（<code>git log -S</code> 追不到）。能確認的是往後不會再無從舉證：<code>FactKeyCatalogTests.目錄排序壞掉時要指名錯位的鍵與位置</code> 會在紅燈訊息裡直接指出第幾位、哪兩把鍵。<strong>這是一個示範：專案對「說不出細節的歷史」的處置是不補一個沒人能驗證的數字。</strong></p>
 <p><strong>命名規範。</strong> 鍵必須符合 <code>^[a-z][a-z0-9]*(\.[a-z0-9_]+)+$</code>（<code>KeyCatalogPolicy.KeyPattern</code>）。<strong>這條規則與動態家族的存在是同一件事的兩面</strong>：因為目錄要能編譯期比對，成員不確定的鍵就必須走家族——所以「不符合格式」不是疏漏，是<strong>訊號</strong>：它在說「這個鍵的成員我列不完」。</p>
-<p><strong>域。</strong> 1,155 把鍵的第一段去重後共 <strong>151</strong> 個域；其中 34 個域只有一把鍵、63 個域不超過三把、12 個域有 20 把以上（<code>ac</code> 61、<code>sb</code> 53、<code>fw</code> 48、<code>sa</code> 45、<code>fs</code> 30、<code>uefi</code> 27、<code>ev</code> 25、<code>eg</code> 24、<code>os</code> 24、<code>ms</code> 23、<code>nw</code> 22、<code>st</code> 20）。第 6 部逐域展開。</p>
+<p><strong>域。</strong> 1,158 把鍵的第一段去重後共 <strong>152</strong> 個域；其中 34 個域只有一把鍵、64 個域不超過三把、12 個域有 20 把以上（<code>ac</code> 61、<code>sb</code> 53、<code>fw</code> 48、<code>sa</code> 45、<code>fs</code> 30、<code>uefi</code> 27、<code>ev</code> 25、<code>eg</code> 24、<code>os</code> 24、<code>ms</code> 23、<code>nw</code> 22、<code>st</code> 20）。第 6 部逐域展開。</p>
 <h3 id="26-動態家族62-個我列不完的申報"><a class="self" href="#26-動態家族62-個我列不完的申報">¶</a> 2.6 動態家族：62 個「我列不完」的申報</h3>
 <p><code>Services/FactKeyDynamicCatalog.cs</code> 登記 <strong>62</strong> 個動態前綴，每一筆都要寫「為什麼編譯期數不出成員」與「成員由什麼決定」。例如：</p>
 <ul>
@@ -1366,7 +1368,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li><strong>快照是檔案，不是狀態。</strong> 時間膠囊與原始暫存器快照是帶雜湊信封的檔案，載入時逐位元組驗證。檔案損壞會被拒載，而不是被部分採信。
 </li><li><strong>缺值不填補。</strong> 差分只比對同一台機器的兩份快照；這次讀不到的鍵列為「消失」，不用舊值填補。這一條看起來很笨——明明知道上次是多少——但用舊值填補等於偽造一次成功的讀取。
 </li></ul>
-<p><strong>快取的三個實際位置。</strong> 一是事實層的短期快取（同一輪內多頁共用同一次讀取），二是編譯期的鍵目錄（1,155 個鍵固定，避免「掃不到原始碼就當作全部覆蓋」），三是驅動與橋接二進位的解壓落地（SHA-256 校驗後快取）。三者的共同點是：<strong>可以重建、可以驗證、可以刪掉重來。</strong></p>
+<p><strong>快取的三個實際位置。</strong> 一是事實層的短期快取（同一輪內多頁共用同一次讀取），二是編譯期的鍵目錄（1,158 個鍵固定，避免「掃不到原始碼就當作全部覆蓋」），三是驅動與橋接二進位的解壓落地（SHA-256 校驗後快取）。三者的共同點是：<strong>可以重建、可以驗證、可以刪掉重來。</strong></p>
 <h3 id="213-時間三種時鐘與各自的陷阱"><a class="self" href="#213-時間三種時鐘與各自的陷阱">¶</a> 2.13 時間：三種時鐘與各自的陷阱</h3>
 <p>凡是「隨時間變化」的事實，都需要說明它用哪個時鐘量的。</p>
 <table>
@@ -1409,8 +1411,8 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <p>寫架構最沒有價值的一段是「本架構優雅且可擴充」。有價值的是承認它哪裡脆弱。</p>
 <ol>
 <li><strong>單一行程承擔特權與介面。</strong> 主程式以管理員權杖執行時，介面、內建瀏覽器、AI 對話、報告產生都在同一個行程裡。任何在介面層的程式碼執行都等於管理員。正確的修法是權杖分離，但那會讓「讀一個 MSR」變成跨行程呼叫，代價是延遲與複雜度——<strong>這是一個還沒有付的代價</strong>。
-</li><li><strong>服務數量本身就是一種風險。</strong> 646 個服務檔意味著「接線」是一個真實的問題：服務寫好、測試綠、但沒有進生產路徑（第 12 部的 D-16、D-17）。答案是守門，不是減少數量。
-</li><li><strong>事實鍵目錄需要人維持誠實。</strong> 1,155 個鍵加上 62 個動態家族，靠的是「執行期出現的鍵要嘛在目錄、要嘛命中家族前綴，否則對帳紅燈」。這條規則能抓「有產出但沒登記」，<strong>抓不到「登記了但語意寫錯」</strong>。目錄是申報，不是證明。
+</li><li><strong>服務數量本身就是一種風險。</strong> 647 個服務檔意味著「接線」是一個真實的問題：服務寫好、測試綠、但沒有進生產路徑（第 12 部的 D-16、D-17）。答案是守門，不是減少數量。
+</li><li><strong>事實鍵目錄需要人維持誠實。</strong> 1,158 個鍵加上 62 個動態家族，靠的是「執行期出現的鍵要嘛在目錄、要嘛命中家族前綴，否則對帳紅燈」。這條規則能抓「有產出但沒登記」，<strong>抓不到「登記了但語意寫錯」</strong>。目錄是申報，不是證明。
 </li></ol>
 <h2 id="第-3-部-功能地圖63-個可到達畫面逐頁解剖"><a class="self" href="#第-3-部-功能地圖63-個可到達畫面逐頁解剖">¶</a> 第 3 部 功能地圖：63 個可到達畫面逐頁解剖</h2>
 <p>這一部是給使用者的部分：每一頁在回答什麼、畫面上每一格的資料從哪裡來、它憑什麼算數、以及<strong>最常被誤用的講法</strong>。全站共有 <strong>63</strong> 個可到達畫面（<code>Nav/PageRegistry.cs</code>；<code>Views/</code> 下另有對話框與控制項共 79 個 XAML），另有 <strong>285</strong> 條圓圈問號說明條目（<code>Nav/HelpCatalog.cs</code>）——這些條目的存在本身就是這個專案的一個立場：<strong>每一區塊都要能回答「這是什麼、按下去會怎樣、安不安全」，而且那句話要與程式碼的實作對得上。</strong></p>
@@ -1688,7 +1690,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li></ul>
 <p><strong>來源與可信度。</strong> 這一頁是<strong>呈現層</strong>：所有值都是別處產生的（<code>Derived</code> 的重排），但狀態與來源逐列保留。</p>
 <p><strong>誤差與邊界。</strong> ①「本次未收集」的清單長度取決於這一輪跑了哪些收集器；②走勢欄只覆蓋同一工作階段（跨重啟的長期曲線在歷史頁）；③目錄鍵數是<strong>編譯期</strong>數字，與執行期實際生產的鍵數不同（後者含動態家族成員）。</p>
-<p><strong>誤用警告。</strong> 「事實總表顯示 1,155 把鍵，所以程式有 1,155 個功能」——鍵是<strong>可定位的事實</strong>粒度，不是使用者感知的功能粒度；反過來說，「表上有一把鍵」也不保證這台機器讀得到它。</p>
+<p><strong>誤用警告。</strong> 「事實總表顯示 1,158 把鍵，所以程式有 1,158 個功能」——鍵是<strong>可定位的事實</strong>粒度，不是使用者感知的功能粒度；反過來說，「表上有一把鍵」也不保證這台機器讀得到它。</p>
 <hr>
 <h3 id="320-執行緒遷移與排程落點migration"><a class="self" href="#320-執行緒遷移與排程落點migration">¶</a> 3.20 執行緒遷移與排程落點（<code>migration</code>）</h3>
 <p><strong>定位。</strong> 執行緒在核心之間被搬動的頻率，以及每一次搬動丟掉了哪一層快取。</p>
@@ -2107,7 +2109,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tbody></table>
 <p><strong>兩份契約的關係是「上游與下游」</strong>：來源錯了，統計再正確也是錯的；來源對了，統計錯了仍然會給出一個看起來專業的錯結論。<strong>這個專案對後者的防線是「把方法寫出來」</strong>——每一則統計結論都要附方法、樣本數與實際數字供核對。</p>
 <h3 id="52-校準的十條規則"><a class="self" href="#52-校準的十條規則">¶</a> 5.2 校準的十條規則</h3>
-<p>以下十條貫穿全部 1,155 把鍵。<strong>每一條都附一個「違反時長什麼樣子」，因為規則只有在能被辨認出來時才有用。</strong></p>
+<p>以下十條貫穿全部 1,158 把鍵。<strong>每一條都附一個「違反時長什麼樣子」，因為規則只有在能被辨認出來時才有用。</strong></p>
 <ol>
 <li><strong>單位先於數值。</strong> 儲存容量 <code>GB</code> 與 <code>GiB</code> 差 7.4%；<code>MT/s</code> 與 <code>MHz</code> 在 DDR 上是兩倍關係。違反的樣子：兩台機器的「32 GB」其實是 32×10⁹ 與 32×2³⁰。
 </li><li><strong>時刻先於數值。</strong> 沒有時刻的數字無法判斷是現況還是殘留。違反的樣子：快照裡的 62 °C 被當成現在的溫度。
@@ -2245,10 +2247,10 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li><strong>介入要單一</strong>：一次改一個變因，否則你觀察到的是「整包改動」的效果。
 </li><li><strong>保留證據</strong>：只留一張截圖等於只留結論而丟掉證據；至少要留測項、判定、樣本數、環境摘要與非「無異常」項目的原始統計。
 </li></ol>
-<h2 id="第-6-部-數據辭典151-個域1155-把鍵"><a class="self" href="#第-6-部-數據辭典151-個域1155-把鍵">¶</a> 第 6 部 數據辭典：151 個域、1,155 把鍵</h2>
+<h2 id="第-6-部-數據辭典152-個域1158-把鍵"><a class="self" href="#第-6-部-數據辭典152-個域1158-把鍵">¶</a> 第 6 部 數據辭典：152 個域、1,158 把鍵</h2>
 <p>這一部是整本百科的骨架。<strong>每一個域、每一把鍵都在這裡</strong>：鍵是什麼、由誰生產、來源是哪一條通路、可信度落在哪一級、以及它最常被誤讀成什麼。它同時是查閱用的（配合目錄）與維護用的（改一把鍵之前先看它在哪一域、有沒有鄰居）。</p>
 <h3 id="61-怎麼讀這一部"><a class="self" href="#61-怎麼讀這一部">¶</a> 6.1 怎麼讀這一部</h3>
-<p><strong>分母先講清楚。</strong> 這一部的分母是<strong>編譯期目錄</strong>（<code>Services/FactKeyCatalog.Keys</code>，1,155 把），不是「本輪收集到的事實」。這個選擇的理由在第 1.13 節說過：若用本輪收集當分母，「有實作但這次沒跑到」就會從表上消失，而那正好是最該被看見的東西。</p>
+<p><strong>分母先講清楚。</strong> 這一部的分母是<strong>編譯期目錄</strong>（<code>Services/FactKeyCatalog.Keys</code>，1,158 把），不是「本輪收集到的事實」。這個選擇的理由在第 1.13 節說過：若用本輪收集當分母，「有實作但這次沒跑到」就會從表上消失，而那正好是最該被看見的東西。</p>
 <p><strong>鍵的三段結構。</strong> 一把鍵的形狀是 <code>&lt;域&gt;.&lt;家族&gt;.&lt;成員&gt;</code>：</p>
 <ul>
 <li><strong>域</strong>（第一段）：共 150 個，長度從 1 把鍵到 58 把鍵不等（<code>ac</code> 61、<code>sb</code> 53、<code>fw</code> 48、<code>sa</code> 45…）。
@@ -2338,7 +2340,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <p><strong>鍵家族。</strong> <code>st.align.summary</code>／<code>st.bridge.summary</code>／<code>st.ctrl.tree</code>；<code>st.wear.summary</code>／<code>st.nvme.err</code>／<code>st.nvme.extra</code>；<code>st.powerloss</code>／<code>st.pstrans.summary</code>／<code>st.dwpd</code>；<code>st.fs.volumes</code>／<code>st.fs.vss</code>／<code>st.fs.refs</code>／<code>st.ntfs.summary</code>；<code>st.iscsi.paths</code>／<code>st.iscsi.sessions</code>／<code>st.sanitize.cap</code>；<code>st.ss.summary</code>／<code>st.fw.known</code>／<code>st.xcheck.summary</code>／<code>st.legacy.summary</code>。</p>
 <p><strong>來源與可信度。</strong> <code>Reported</code>（韌體自報的健康與能力）＋<code>Measured</code>（結構讀取）＋<code>Derived</code>（對帳）。</p>
 <p><strong>誤用警告。</strong> 「<code>st.wear.summary</code> 的耗損百分比較低，所以碟還很健康」——<strong>那是韌體的估算</strong>；它與實際可靠度之間的關係由廠商定義。要更強的證據需要看 <code>st.nvme.err</code> 的錯誤計數趨勢與表面掃描結果。</p>
-<h3 id="63-逐域鍵表151-個域1155-把鍵"><a class="self" href="#63-逐域鍵表151-個域1155-把鍵">¶</a> 6.3 逐域鍵表（151 個域、1,155 把鍵）</h3>
+<h3 id="63-逐域鍵表152-個域1158-把鍵"><a class="self" href="#63-逐域鍵表152-個域1158-把鍵">¶</a> 6.3 逐域鍵表（152 個域、1,158 把鍵）</h3>
 <h3 id="631-域-ac--acpi-表與韌體介面61-把"><a class="self" href="#631-域-ac--acpi-表與韌體介面61-把">¶</a> 6.3.1 域 <code>ac</code> — ACPI 表與韌體介面（61 把）</h3>
 <p><strong>可判定的來源</strong>：ACPI HPET（4 把）；ACPI NFIT（3 把）；ACPI DSDT/SSDT 詞法掃描（2 把）；ACPI DBG2（2 把）；ACPI MCFG（2 把）；專案界線宣告（無外部來源）（1 把） <strong>可判定的可信度</strong>：<code>Measured</code>×24；<code>Derived</code>×1。</p>
 <table>
@@ -4387,7 +4389,20 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>numa.topology</code></td><td>—</td><td>—</td><td>—</td></tr>
 <tr><td><code>numa.topology.xnode</code></td><td>—</td><td>—</td><td>—</td></tr>
 </tbody></table>
-<h3 id="6398-域-rep本版沒有成文的域說明3-把"><a class="self" href="#6398-域-rep本版沒有成文的域說明3-把">¶</a> 6.3.98 域 <code>rep</code>（本版沒有成文的域說明）（3 把）</h3>
+<h3 id="6398-域-pcie本版沒有成文的域說明3-把"><a class="self" href="#6398-域-pcie本版沒有成文的域說明3-把">¶</a> 6.3.98 域 <code>pcie</code>（本版沒有成文的域說明）（3 把）</h3>
+<p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
+<table>
+<thead><tr>
+<th>鍵</th>
+<th>名稱（原始碼字面）</th>
+<th>來源（原始碼字面）</th>
+<th>可信度</th>
+</tr></thead><tbody>
+<tr><td><code>pcie.access.agreement</code></td><td>兩條設定空間路徑的一致性</td><td>舊式 0xCF8／0xCFC（I/O 埠）與 ECAM（MCFG＋MMIO）兩條路徑的可用性與一致性</td><td>—</td></tr>
+<tr><td><code>pcie.access.boundary</code></td><td>PCIe 設定空間的界線宣告</td><td>專案界線宣告（無外部來源）</td><td>Measured</td></tr>
+<tr><td><code>pcie.access.summary</code></td><td>PCIe 設定空間的存取方法</td><td>舊式 0xCF8／0xCFC（I/O 埠）與 ECAM（MCFG＋MMIO）兩條路徑的可用性與一致性</td><td>Derived</td></tr>
+</tbody></table>
+<h3 id="6399-域-rep本版沒有成文的域說明3-把"><a class="self" href="#6399-域-rep本版沒有成文的域說明3-把">¶</a> 6.3.99 域 <code>rep</code>（本版沒有成文的域說明）（3 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4400,7 +4415,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>rep.sec.cover</code></td><td>—</td><td>—</td><td>—</td></tr>
 <tr><td><code>rep.sec.summary</code></td><td>—</td><td>—</td><td>—</td></tr>
 </tbody></table>
-<h3 id="6399-域-time--計時器3-把"><a class="self" href="#6399-域-time--計時器3-把">¶</a> 6.3.99 域 <code>time</code> — 計時器（3 把）</h3>
+<h3 id="63100-域-time--計時器3-把"><a class="self" href="#63100-域-time--計時器3-把">¶</a> 6.3.100 域 <code>time</code> — 計時器（3 把）</h3>
 <p><strong>可判定的可信度</strong>：<code>Reported</code>×2。</p>
 <table>
 <thead><tr>
@@ -4413,7 +4428,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>time.hpet</code></td><td>HPET 計時器</td><td>ACPI 表列（HPET/FADT）＋QPC 行為量測</td><td>Reported</td></tr>
 <tr><td><code>time.pm_timer</code></td><td>ACPI PM timer 區塊</td><td>ACPI 表列（HPET/FADT）＋QPC 行為量測</td><td>Reported</td></tr>
 </tbody></table>
-<h3 id="63100-域-ups--ups3-把"><a class="self" href="#63100-域-ups--ups3-把">¶</a> 6.3.100 域 <code>ups</code> — UPS（3 把）</h3>
+<h3 id="63101-域-ups--ups3-把"><a class="self" href="#63101-域-ups--ups3-把">¶</a> 6.3.101 域 <code>ups</code> — UPS（3 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4426,7 +4441,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>ups.runtime_minutes</code></td><td>UPS 預估續航</td><td>WMI Win32_Battery（HID Battery Class）</td><td>—</td></tr>
 <tr><td><code>ups.status</code></td><td>UPS 狀態</td><td>WMI Win32_Battery（HID Battery Class）</td><td>—</td></tr>
 </tbody></table>
-<h3 id="63101-域-audio本版沒有成文的域說明2-把"><a class="self" href="#63101-域-audio本版沒有成文的域說明2-把">¶</a> 6.3.101 域 <code>audio</code>（本版沒有成文的域說明）（2 把）</h3>
+<h3 id="63102-域-audio本版沒有成文的域說明2-把"><a class="self" href="#63102-域-audio本版沒有成文的域說明2-把">¶</a> 6.3.102 域 <code>audio</code>（本版沒有成文的域說明）（2 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <p><strong>可判定的來源</strong>：Windows Core Audio（IAudioClient）（1 把） <strong>可判定的可信度</strong>：<code>Unknown</code>×1。</p>
 <table>
@@ -4439,7 +4454,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>audio.endpoints</code></td><td>音訊端點</td><td>Windows MMDevice API</td><td>Unknown</td></tr>
 <tr><td><code>audio.latency</code></td><td>音訊端點緩衝區</td><td>Windows Core Audio（IAudioClient）</td><td>Unknown</td></tr>
 </tbody></table>
-<h3 id="63102-域-build本版沒有成文的域說明2-把"><a class="self" href="#63102-域-build本版沒有成文的域說明2-把">¶</a> 6.3.102 域 <code>build</code>（本版沒有成文的域說明）（2 把）</h3>
+<h3 id="63103-域-build本版沒有成文的域說明2-把"><a class="self" href="#63103-域-build本版沒有成文的域說明2-把">¶</a> 6.3.103 域 <code>build</code>（本版沒有成文的域說明）（2 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4451,7 +4466,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>build.reproducible</code></td><td>建置可重現</td><td>發佈政策</td><td>Measured</td></tr>
 <tr><td><code>build.singlefile</code></td><td>單檔發佈</td><td>發佈政策</td><td>Measured</td></tr>
 </tbody></table>
-<h3 id="63103-域-byovd本版沒有成文的域說明2-把"><a class="self" href="#63103-域-byovd本版沒有成文的域說明2-把">¶</a> 6.3.103 域 <code>byovd</code>（本版沒有成文的域說明）（2 把）</h3>
+<h3 id="63104-域-byovd本版沒有成文的域說明2-把"><a class="self" href="#63104-域-byovd本版沒有成文的域說明2-把">¶</a> 6.3.104 域 <code>byovd</code>（本版沒有成文的域說明）（2 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <p><strong>可判定的來源</strong>：微軟建議的驅動程式封鎖規則 XML（使用者提供）（1 把） <strong>可判定的可信度</strong>：<code>Unknown</code>×1。</p>
 <table>
@@ -4464,7 +4479,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>byovd.hits</code></td><td>封鎖清單命中</td><td>載入中核心模組 vs 微軟建議封鎖規則</td><td>Derived</td></tr>
 <tr><td><code>byovd.rules</code></td><td>微軟建議驅動封鎖清單</td><td>微軟建議的驅動程式封鎖規則 XML（使用者提供）</td><td>Unknown</td></tr>
 </tbody></table>
-<h3 id="63104-域-cert本版沒有成文的域說明2-把"><a class="self" href="#63104-域-cert本版沒有成文的域說明2-把">¶</a> 6.3.104 域 <code>cert</code>（本版沒有成文的域說明）（2 把）</h3>
+<h3 id="63105-域-cert本版沒有成文的域說明2-把"><a class="self" href="#63105-域-cert本版沒有成文的域說明2-把">¶</a> 6.3.105 域 <code>cert</code>（本版沒有成文的域說明）（2 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4476,7 +4491,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>cert.foreign_roots</code></td><td>非微軟本機信任根</td><td>X509Store（Root／LocalMachine）</td><td>Derived</td></tr>
 <tr><td><code>cert.plan</code></td><td>認證計畫</td><td>發佈政策</td><td>Reported</td></tr>
 </tbody></table>
-<h3 id="63105-域-display本版沒有成文的域說明2-把"><a class="self" href="#63105-域-display本版沒有成文的域說明2-把">¶</a> 6.3.105 域 <code>display</code>（本版沒有成文的域說明）（2 把）</h3>
+<h3 id="63106-域-display本版沒有成文的域說明2-把"><a class="self" href="#63106-域-display本版沒有成文的域說明2-把">¶</a> 6.3.106 域 <code>display</code>（本版沒有成文的域說明）（2 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <p><strong>可判定的來源</strong>：WMI Win32_VideoController（PCI 列舉且非基本顯示）（1 把）；WMI Win32_VideoController（1 把） <strong>可判定的可信度</strong>：<code>Derived</code>×1；<code>Unknown</code>×1。</p>
 <table>
@@ -4489,7 +4504,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>display.hw.gpu</code></td><td>硬體 GPU 在場狀態</td><td>WMI Win32_VideoController（PCI 列舉且非基本顯示）</td><td>Derived</td></tr>
 <tr><td><code>display.summary</code></td><td>顯示轉接器組成</td><td>WMI Win32_VideoController</td><td>Unknown</td></tr>
 </tbody></table>
-<h3 id="63106-域-drvinsp本版沒有成文的域說明2-把"><a class="self" href="#63106-域-drvinsp本版沒有成文的域說明2-把">¶</a> 6.3.106 域 <code>drvinsp</code>（本版沒有成文的域說明）（2 把）</h3>
+<h3 id="63107-域-drvinsp本版沒有成文的域說明2-把"><a class="self" href="#63107-域-drvinsp本版沒有成文的域說明2-把">¶</a> 6.3.107 域 <code>drvinsp</code>（本版沒有成文的域說明）（2 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <p><strong>可判定的可信度</strong>：<code>Unknown</code>×1。</p>
 <table>
@@ -4502,7 +4517,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>drvinsp.drivers.count</code></td><td>驅動靜態檢視總數</td><td>驅動檔案靜態解析（唯讀）÷ PE/COFF</td><td>—</td></tr>
 <tr><td><code>drvinsp.truncated</code></td><td>驅動靜態檢視截斷</td><td>驅動檔案靜態解析（唯讀）÷ PE/COFF</td><td>Unknown</td></tr>
 </tbody></table>
-<h3 id="63107-域-egress本版沒有成文的域說明2-把"><a class="self" href="#63107-域-egress本版沒有成文的域說明2-把">¶</a> 6.3.107 域 <code>egress</code>（本版沒有成文的域說明）（2 把）</h3>
+<h3 id="63108-域-egress本版沒有成文的域說明2-把"><a class="self" href="#63108-域-egress本版沒有成文的域說明2-把">¶</a> 6.3.108 域 <code>egress</code>（本版沒有成文的域說明）（2 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4514,7 +4529,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>egress.allowlist</code></td><td>出網許可清單</td><td>出網政策</td><td>Reported</td></tr>
 <tr><td><code>egress.trigger</code></td><td>出網觸發</td><td>出網政策</td><td>Derived</td></tr>
 </tbody></table>
-<h3 id="63108-域-etl本版沒有成文的域說明2-把"><a class="self" href="#63108-域-etl本版沒有成文的域說明2-把">¶</a> 6.3.108 域 <code>etl</code>（本版沒有成文的域說明）（2 把）</h3>
+<h3 id="63109-域-etl本版沒有成文的域說明2-把"><a class="self" href="#63109-域-etl本版沒有成文的域說明2-把">¶</a> 6.3.109 域 <code>etl</code>（本版沒有成文的域說明）（2 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <p><strong>可判定的可信度</strong>：<code>Measured</code>×1。</p>
 <table>
@@ -4527,7 +4542,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>etl.readback</code></td><td>.etl 內容讀回</td><td>TraceEvent 檔案模式讀回（唯讀）</td><td>Measured</td></tr>
 <tr><td><code>etl.traces.count</code></td><td>已落地的 ETW 軌跡</td><td>TraceEvent 檔案模式讀回（唯讀）</td><td>—</td></tr>
 </tbody></table>
-<h3 id="63109-域-key本版沒有成文的域說明2-把"><a class="self" href="#63109-域-key本版沒有成文的域說明2-把">¶</a> 6.3.109 域 <code>key</code>（本版沒有成文的域說明）（2 把）</h3>
+<h3 id="63110-域-key本版沒有成文的域說明2-把"><a class="self" href="#63110-域-key本版沒有成文的域說明2-把">¶</a> 6.3.110 域 <code>key</code>（本版沒有成文的域說明）（2 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4539,7 +4554,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>key.count</code></td><td>鍵目錄全集的鍵數</td><td>鍵目錄政策</td><td>Derived</td></tr>
 <tr><td><code>key.evolution</code></td><td>鍵的演進</td><td>掃描骨架／降級政策</td><td>Derived</td></tr>
 </tbody></table>
-<h3 id="63110-域-knowledge本版沒有成文的域說明2-把"><a class="self" href="#63110-域-knowledge本版沒有成文的域說明2-把">¶</a> 6.3.110 域 <code>knowledge</code>（本版沒有成文的域說明）（2 把）</h3>
+<h3 id="63111-域-knowledge本版沒有成文的域說明2-把"><a class="self" href="#63111-域-knowledge本版沒有成文的域說明2-把">¶</a> 6.3.111 域 <code>knowledge</code>（本版沒有成文的域說明）（2 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4551,7 +4566,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>knowledge.pack.status</code></td><td>知識包載入</td><td>內建表／knowledge-pack.json（離線）</td><td>—</td></tr>
 <tr><td><code>knowledge.pack.tables</code></td><td>知識包內容</td><td>內建表／knowledge-pack.json（離線）</td><td>Measured</td></tr>
 </tbody></table>
-<h3 id="63111-域-mchbar本版沒有成文的域說明2-把"><a class="self" href="#63111-域-mchbar本版沒有成文的域說明2-把">¶</a> 6.3.111 域 <code>mchbar</code>（本版沒有成文的域說明）（2 把）</h3>
+<h3 id="63112-域-mchbar本版沒有成文的域說明2-把"><a class="self" href="#63112-域-mchbar本版沒有成文的域說明2-把">¶</a> 6.3.112 域 <code>mchbar</code>（本版沒有成文的域說明）（2 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4563,7 +4578,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>mchbar.base</code></td><td>MCHBAR 基底</td><td>PCI 0:0.0+0x48</td><td>Measured</td></tr>
 <tr><td><code>mchbar.registers</code></td><td>—</td><td>—</td><td>—</td></tr>
 </tbody></table>
-<h3 id="63112-域-mon本版沒有成文的域說明2-把"><a class="self" href="#63112-域-mon本版沒有成文的域說明2-把">¶</a> 6.3.112 域 <code>mon</code>（本版沒有成文的域說明）（2 把）</h3>
+<h3 id="63113-域-mon本版沒有成文的域說明2-把"><a class="self" href="#63113-域-mon本版沒有成文的域說明2-把">¶</a> 6.3.113 域 <code>mon</code>（本版沒有成文的域說明）（2 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <p><strong>可判定的來源</strong>：WMI root\wmi WmiMonitorConnectionParams（1 把） <strong>可判定的可信度</strong>：<code>Derived</code>×1。</p>
 <table>
@@ -4576,7 +4591,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>mon.count</code></td><td>偵測到的顯示器</td><td>WMI root\\wmi WmiMonitorConnectionParams</td><td>Reported</td></tr>
 <tr><td><code>mon.dp</code></td><td>DisplayPort 連接的顯示器</td><td>WMI root\wmi WmiMonitorConnectionParams</td><td>Derived</td></tr>
 </tbody></table>
-<h3 id="63113-域-pcieaer本版沒有成文的域說明2-把"><a class="self" href="#63113-域-pcieaer本版沒有成文的域說明2-把">¶</a> 6.3.113 域 <code>pcieaer</code>（本版沒有成文的域說明）（2 把）</h3>
+<h3 id="63114-域-pcieaer本版沒有成文的域說明2-把"><a class="self" href="#63114-域-pcieaer本版沒有成文的域說明2-把">¶</a> 6.3.114 域 <code>pcieaer</code>（本版沒有成文的域說明）（2 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <p><strong>可判定的來源</strong>：ACPI MCFG（1 把）；ECAM（1 把） <strong>可判定的可信度</strong>：<code>Measured</code>×2。</p>
 <table>
@@ -4589,7 +4604,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>pcieaer.ecam</code></td><td>ECAM 基底</td><td>ACPI MCFG</td><td>Measured</td></tr>
 <tr><td><code>pcieaer.scan</code></td><td>PCIe AER 掃描</td><td>ECAM</td><td>Measured</td></tr>
 </tbody></table>
-<h3 id="63114-域-role本版沒有成文的域說明2-把"><a class="self" href="#63114-域-role本版沒有成文的域說明2-把">¶</a> 6.3.114 域 <code>role</code>（本版沒有成文的域說明）（2 把）</h3>
+<h3 id="63115-域-role本版沒有成文的域說明2-把"><a class="self" href="#63115-域-role本版沒有成文的域說明2-把">¶</a> 6.3.115 域 <code>role</code>（本版沒有成文的域說明）（2 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4601,7 +4616,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>role.surface</code></td><td>已安裝角色</td><td>—</td><td>—</td></tr>
 <tr><td><code>role.surface.evidence</code></td><td>已安裝角色依據</td><td>WMI Win32_OptionalFeature</td><td>Derived</td></tr>
 </tbody></table>
-<h3 id="63115-域-setuptl本版沒有成文的域說明2-把"><a class="self" href="#63115-域-setuptl本版沒有成文的域說明2-把">¶</a> 6.3.115 域 <code>setuptl</code>（本版沒有成文的域說明）（2 把）</h3>
+<h3 id="63116-域-setuptl本版沒有成文的域說明2-把"><a class="self" href="#63116-域-setuptl本版沒有成文的域說明2-把">¶</a> 6.3.116 域 <code>setuptl</code>（本版沒有成文的域說明）（2 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <p><strong>可判定的可信度</strong>：<code>Measured</code>×1。</p>
 <table>
@@ -4614,7 +4629,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>setuptl.recent</code></td><td>裝置安裝最近區段</td><td>setupapi.dev.log（唯讀）÷ 區段標記解析</td><td>Measured</td></tr>
 <tr><td><code>setuptl.sections.count</code></td><td>裝置安裝記錄（setupapi.dev.log）</td><td>setupapi.dev.log（唯讀）÷ 區段標記解析</td><td>—</td></tr>
 </tbody></table>
-<h3 id="63116-域-state本版沒有成文的域說明2-把"><a class="self" href="#63116-域-state本版沒有成文的域說明2-把">¶</a> 6.3.116 域 <code>state</code>（本版沒有成文的域說明）（2 把）</h3>
+<h3 id="63117-域-state本版沒有成文的域說明2-把"><a class="self" href="#63117-域-state本版沒有成文的域說明2-把">¶</a> 6.3.117 域 <code>state</code>（本版沒有成文的域說明）（2 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4626,7 +4641,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>state.count</code></td><td>狀態分布</td><td>狀態覆蓋申報</td><td>Derived</td></tr>
 <tr><td><code>state.lattice</code></td><td>狀態格與傳播規則</td><td>狀態格</td><td>Derived</td></tr>
 </tbody></table>
-<h3 id="63117-域-storage本版沒有成文的域說明2-把"><a class="self" href="#63117-域-storage本版沒有成文的域說明2-把">¶</a> 6.3.117 域 <code>storage</code>（本版沒有成文的域說明）（2 把）</h3>
+<h3 id="63118-域-storage本版沒有成文的域說明2-把"><a class="self" href="#63118-域-storage本版沒有成文的域說明2-把">¶</a> 6.3.118 域 <code>storage</code>（本版沒有成文的域說明）（2 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <p><strong>可判定的可信度</strong>：<code>Unknown</code>×1；<code>Reported</code>×1。</p>
 <table>
@@ -4639,7 +4654,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>storage.reliability.available</code></td><td>儲存可靠性計數器</td><td>—</td><td>Unknown</td></tr>
 <tr><td><code>storage.reliability.count</code></td><td>可靠性計數器涵蓋磁碟數</td><td>—</td><td>Reported</td></tr>
 </tbody></table>
-<h3 id="63118-域-ata本版沒有成文的域說明1-把"><a class="self" href="#63118-域-ata本版沒有成文的域說明1-把">¶</a> 6.3.118 域 <code>ata</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63119-域-ata本版沒有成文的域說明1-把"><a class="self" href="#63119-域-ata本版沒有成文的域說明1-把">¶</a> 6.3.119 域 <code>ata</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4650,7 +4665,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>ata.smart.attr.lookup</code></td><td>SMART 廠商屬性對照</td><td>SMART 屬性知識表（離線，六家）</td><td>—</td></tr>
 </tbody></table>
-<h3 id="63119-域-cam本版沒有成文的域說明1-把"><a class="self" href="#63119-域-cam本版沒有成文的域說明1-把">¶</a> 6.3.119 域 <code>cam</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63120-域-cam本版沒有成文的域說明1-把"><a class="self" href="#63120-域-cam本版沒有成文的域說明1-把">¶</a> 6.3.120 域 <code>cam</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <p><strong>可判定的來源</strong>：WMI Win32_PnPEntity（PNPClass Camera/Image）（1 把） <strong>可判定的可信度</strong>：<code>Unknown</code>×1。</p>
 <table>
@@ -4662,7 +4677,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>cam.count</code></td><td>攝影機/UVC 裝置</td><td>WMI Win32_PnPEntity（PNPClass Camera/Image）</td><td>Unknown</td></tr>
 </tbody></table>
-<h3 id="63120-域-chassis本版沒有成文的域說明1-把"><a class="self" href="#63120-域-chassis本版沒有成文的域說明1-把">¶</a> 6.3.120 域 <code>chassis</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63121-域-chassis本版沒有成文的域說明1-把"><a class="self" href="#63121-域-chassis本版沒有成文的域說明1-把">¶</a> 6.3.121 域 <code>chassis</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <p><strong>可判定的來源</strong>：SMBIOS Type 3（MSSmbs_RawSMBiosTables）（1 把） <strong>可判定的可信度</strong>：<code>Unknown</code>×1。</p>
 <table>
@@ -4674,7 +4689,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>chassis.security_status</code></td><td>機箱開啟偵測</td><td>SMBIOS Type 3（MSSmbs_RawSMBiosTables）</td><td>Unknown</td></tr>
 </tbody></table>
-<h3 id="63121-域-contrib本版沒有成文的域說明1-把"><a class="self" href="#63121-域-contrib本版沒有成文的域說明1-把">¶</a> 6.3.121 域 <code>contrib</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63122-域-contrib本版沒有成文的域說明1-把"><a class="self" href="#63122-域-contrib本版沒有成文的域說明1-把">¶</a> 6.3.122 域 <code>contrib</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4685,7 +4700,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>contrib.guide</code></td><td>貢獻者指南</td><td>發佈政策</td><td>Reported</td></tr>
 </tbody></table>
-<h3 id="63122-域-cxl本版沒有成文的域說明1-把"><a class="self" href="#63122-域-cxl本版沒有成文的域說明1-把">¶</a> 6.3.122 域 <code>cxl</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63123-域-cxl本版沒有成文的域說明1-把"><a class="self" href="#63123-域-cxl本版沒有成文的域說明1-把">¶</a> 6.3.123 域 <code>cxl</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <p><strong>可判定的可信度</strong>：<code>Unknown</code>×1。</p>
 <table>
@@ -4697,7 +4712,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>cxl.cfmws.count</code></td><td>CXL 固定記憶體窗口</td><td>ACPI 表列（CEDT）＋CXL 規格解碼</td><td>Unknown</td></tr>
 </tbody></table>
-<h3 id="63123-域-data本版沒有成文的域說明1-把"><a class="self" href="#63123-域-data本版沒有成文的域說明1-把">¶</a> 6.3.123 域 <code>data</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63124-域-data本版沒有成文的域說明1-把"><a class="self" href="#63124-域-data本版沒有成文的域說明1-把">¶</a> 6.3.124 域 <code>data</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4708,7 +4723,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>data.egress.report</code></td><td>資料主權</td><td>資料主權</td><td>Derived</td></tr>
 </tbody></table>
-<h3 id="63124-域-defender本版沒有成文的域說明1-把"><a class="self" href="#63124-域-defender本版沒有成文的域說明1-把">¶</a> 6.3.124 域 <code>defender</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63125-域-defender本版沒有成文的域說明1-把"><a class="self" href="#63125-域-defender本版沒有成文的域說明1-把">¶</a> 6.3.125 域 <code>defender</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <p><strong>可判定的來源</strong>：WMI root\Microsoft\Windows\Defender（MSFT_MpPreference）（1 把） <strong>可判定的可信度</strong>：<code>Unknown</code>×1。</p>
 <table>
@@ -4720,7 +4735,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>defender.exclusions.count</code></td><td>Defender 排除清單</td><td>WMI root\Microsoft\Windows\Defender（MSFT_MpPreference）</td><td>Unknown</td></tr>
 </tbody></table>
-<h3 id="63125-域-degrade本版沒有成文的域說明1-把"><a class="self" href="#63125-域-degrade本版沒有成文的域說明1-把">¶</a> 6.3.125 域 <code>degrade</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63126-域-degrade本版沒有成文的域說明1-把"><a class="self" href="#63126-域-degrade本版沒有成文的域說明1-把">¶</a> 6.3.126 域 <code>degrade</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4731,7 +4746,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>degrade.mode</code></td><td>降級模式</td><td>掃描骨架／降級政策</td><td>Derived</td></tr>
 </tbody></table>
-<h3 id="63126-域-diag本版沒有成文的域說明1-把"><a class="self" href="#63126-域-diag本版沒有成文的域說明1-把">¶</a> 6.3.126 域 <code>diag</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63127-域-diag本版沒有成文的域說明1-把"><a class="self" href="#63127-域-diag本版沒有成文的域說明1-把">¶</a> 6.3.127 域 <code>diag</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4742,7 +4757,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>diag.count</code></td><td>診斷紀錄</td><td>掃描骨架／降級政策</td><td>Reported</td></tr>
 </tbody></table>
-<h3 id="63127-域-doc本版沒有成文的域說明1-把"><a class="self" href="#63127-域-doc本版沒有成文的域說明1-把">¶</a> 6.3.127 域 <code>doc</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63128-域-doc本版沒有成文的域說明1-把"><a class="self" href="#63128-域-doc本版沒有成文的域說明1-把">¶</a> 6.3.128 域 <code>doc</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4753,7 +4768,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>doc.reconcile</code></td><td>文件數字對帳</td><td>發佈政策</td><td>Derived</td></tr>
 </tbody></table>
-<h3 id="63128-域-dyn本版沒有成文的域說明1-把"><a class="self" href="#63128-域-dyn本版沒有成文的域說明1-把">¶</a> 6.3.128 域 <code>dyn</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63129-域-dyn本版沒有成文的域說明1-把"><a class="self" href="#63129-域-dyn本版沒有成文的域說明1-把">¶</a> 6.3.129 域 <code>dyn</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4764,7 +4779,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>dyn.family</code></td><td>動態家族</td><td>鍵目錄政策</td><td>Derived</td></tr>
 </tbody></table>
-<h3 id="63129-域-evt本版沒有成文的域說明1-把"><a class="self" href="#63129-域-evt本版沒有成文的域說明1-把">¶</a> 6.3.129 域 <code>evt</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63130-域-evt本版沒有成文的域說明1-把"><a class="self" href="#63130-域-evt本版沒有成文的域說明1-把">¶</a> 6.3.130 域 <code>evt</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <p><strong>可判定的來源</strong>：Windows 事件記錄 System log（EventLogReader）（1 把） <strong>可判定的可信度</strong>：<code>Reported</code>×1。</p>
 <table>
@@ -4776,7 +4791,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>evt.system.7d</code></td><td>7 天內嚴重／錯誤事件</td><td>Windows 事件記錄 System log（EventLogReader）</td><td>Reported</td></tr>
 </tbody></table>
-<h3 id="63130-域-file本版沒有成文的域說明1-把"><a class="self" href="#63130-域-file本版沒有成文的域說明1-把">¶</a> 6.3.130 域 <code>file</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63131-域-file本版沒有成文的域說明1-把"><a class="self" href="#63131-域-file本版沒有成文的域說明1-把">¶</a> 6.3.131 域 <code>file</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4787,7 +4802,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>file.input.zero_egress</code></td><td>供檔零出網</td><td>供檔邊界</td><td>Reported</td></tr>
 </tbody></table>
-<h3 id="63131-域-guard本版沒有成文的域說明1-把"><a class="self" href="#63131-域-guard本版沒有成文的域說明1-把">¶</a> 6.3.131 域 <code>guard</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63132-域-guard本版沒有成文的域說明1-把"><a class="self" href="#63132-域-guard本版沒有成文的域說明1-把">¶</a> 6.3.132 域 <code>guard</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4798,7 +4813,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>guard.inventory</code></td><td>守門清冊</td><td>寫入閘門／審計鏈</td><td>Derived</td></tr>
 </tbody></table>
-<h3 id="63132-域-hpa本版沒有成文的域說明1-把"><a class="self" href="#63132-域-hpa本版沒有成文的域說明1-把">¶</a> 6.3.132 域 <code>hpa</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63133-域-hpa本版沒有成文的域說明1-把"><a class="self" href="#63133-域-hpa本版沒有成文的域說明1-把">¶</a> 6.3.133 域 <code>hpa</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <p><strong>可判定的來源</strong>：ATA IDENTIFY＋WMI Win32_DiskDrive（1 把） <strong>可判定的可信度</strong>：<code>Unknown</code>×1。</p>
 <table>
@@ -4810,7 +4825,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>hpa.dco</code></td><td>HPA／DCO 隱藏容量</td><td>ATA IDENTIFY＋WMI Win32_DiskDrive</td><td>Unknown</td></tr>
 </tbody></table>
-<h3 id="63133-域-license本版沒有成文的域說明1-把"><a class="self" href="#63133-域-license本版沒有成文的域說明1-把">¶</a> 6.3.133 域 <code>license</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63134-域-license本版沒有成文的域說明1-把"><a class="self" href="#63134-域-license本版沒有成文的域說明1-把">¶</a> 6.3.134 域 <code>license</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4821,7 +4836,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>license.notices</code></td><td>授權與第三方聲明</td><td>發佈政策</td><td>Reported</td></tr>
 </tbody></table>
-<h3 id="63134-域-limits本版沒有成文的域說明1-把"><a class="self" href="#63134-域-limits本版沒有成文的域說明1-把">¶</a> 6.3.134 域 <code>limits</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63135-域-limits本版沒有成文的域說明1-把"><a class="self" href="#63135-域-limits本版沒有成文的域說明1-把">¶</a> 6.3.135 域 <code>limits</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4832,7 +4847,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>limits.public</code></td><td>公開限制</td><td>發佈政策</td><td>Reported</td></tr>
 </tbody></table>
-<h3 id="63135-域-monitor本版沒有成文的域說明1-把"><a class="self" href="#63135-域-monitor本版沒有成文的域說明1-把">¶</a> 6.3.135 域 <code>monitor</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63136-域-monitor本版沒有成文的域說明1-把"><a class="self" href="#63136-域-monitor本版沒有成文的域說明1-把">¶</a> 6.3.136 域 <code>monitor</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <p><strong>可判定的來源</strong>：WMI WmiMonitorID ＋ WmiMonitorConnectionParams ＋ Win32_DesktopMonitor（1 把） <strong>可判定的可信度</strong>：<code>Unknown</code>×1。</p>
 <table>
@@ -4844,7 +4859,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>monitor.summary</code></td><td>顯示器組成</td><td>WMI WmiMonitorID ＋ WmiMonitorConnectionParams ＋ Win32_DesktopMonitor</td><td>Unknown</td></tr>
 </tbody></table>
-<h3 id="63136-域-msr本版沒有成文的域說明1-把"><a class="self" href="#63136-域-msr本版沒有成文的域說明1-把">¶</a> 6.3.136 域 <code>msr</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63137-域-msr本版沒有成文的域說明1-把"><a class="self" href="#63137-域-msr本版沒有成文的域說明1-把">¶</a> 6.3.137 域 <code>msr</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4855,7 +4870,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>msr.0x8b</code></td><td>—</td><td>—</td><td>—</td></tr>
 </tbody></table>
-<h3 id="63137-域-off本版沒有成文的域說明1-把"><a class="self" href="#63137-域-off本版沒有成文的域說明1-把">¶</a> 6.3.137 域 <code>off</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63138-域-off本版沒有成文的域說明1-把"><a class="self" href="#63138-域-off本版沒有成文的域說明1-把">¶</a> 6.3.138 域 <code>off</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4866,7 +4881,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>off.mount.kind</code></td><td>離線來源掛載</td><td>掛載接縫</td><td>Reported</td></tr>
 </tbody></table>
-<h3 id="63138-域-oob本版沒有成文的域說明1-把"><a class="self" href="#63138-域-oob本版沒有成文的域說明1-把">¶</a> 6.3.138 域 <code>oob</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63139-域-oob本版沒有成文的域說明1-把"><a class="self" href="#63139-域-oob本版沒有成文的域說明1-把">¶</a> 6.3.139 域 <code>oob</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4877,7 +4892,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>oob.ipmi</code></td><td>—</td><td>—</td><td>—</td></tr>
 </tbody></table>
-<h3 id="63139-域-ps本版沒有成文的域說明1-把"><a class="self" href="#63139-域-ps本版沒有成文的域說明1-把">¶</a> 6.3.139 域 <code>ps</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63140-域-ps本版沒有成文的域說明1-把"><a class="self" href="#63140-域-ps本版沒有成文的域說明1-把">¶</a> 6.3.140 域 <code>ps</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4888,7 +4903,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>ps.modules.gap</code></td><td>—</td><td>—</td><td>—</td></tr>
 </tbody></table>
-<h3 id="63140-域-raid本版沒有成文的域說明1-把"><a class="self" href="#63140-域-raid本版沒有成文的域說明1-把">¶</a> 6.3.140 域 <code>raid</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63141-域-raid本版沒有成文的域說明1-把"><a class="self" href="#63141-域-raid本版沒有成文的域說明1-把">¶</a> 6.3.141 域 <code>raid</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4899,7 +4914,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>raid.oob</code></td><td>—</td><td>—</td><td>—</td></tr>
 </tbody></table>
-<h3 id="63141-域-reg本版沒有成文的域說明1-把"><a class="self" href="#63141-域-reg本版沒有成文的域說明1-把">¶</a> 6.3.141 域 <code>reg</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63142-域-reg本版沒有成文的域說明1-把"><a class="self" href="#63142-域-reg本版沒有成文的域說明1-把">¶</a> 6.3.142 域 <code>reg</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4910,7 +4925,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>reg.microcode</code></td><td>—</td><td>—</td><td>—</td></tr>
 </tbody></table>
-<h3 id="63142-域-release本版沒有成文的域說明1-把"><a class="self" href="#63142-域-release本版沒有成文的域說明1-把">¶</a> 6.3.142 域 <code>release</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63143-域-release本版沒有成文的域說明1-把"><a class="self" href="#63143-域-release本版沒有成文的域說明1-把">¶</a> 6.3.143 域 <code>release</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4921,7 +4936,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>release.verify</code></td><td>發佈驗證</td><td>發佈政策</td><td>Measured</td></tr>
 </tbody></table>
-<h3 id="63143-域-report本版沒有成文的域說明1-把"><a class="self" href="#63143-域-report本版沒有成文的域說明1-把">¶</a> 6.3.143 域 <code>report</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63144-域-report本版沒有成文的域說明1-把"><a class="self" href="#63144-域-report本版沒有成文的域說明1-把">¶</a> 6.3.144 域 <code>report</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4932,7 +4947,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>report.class</code></td><td>報告分級</td><td>資料主權</td><td>Derived</td></tr>
 </tbody></table>
-<h3 id="63144-域-secboot本版沒有成文的域說明1-把"><a class="self" href="#63144-域-secboot本版沒有成文的域說明1-把">¶</a> 6.3.144 域 <code>secboot</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63145-域-secboot本版沒有成文的域說明1-把"><a class="self" href="#63145-域-secboot本版沒有成文的域說明1-把">¶</a> 6.3.145 域 <code>secboot</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4943,7 +4958,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>secboot.chain</code></td><td>安全開機四環</td><td>併既有 UEFI 事實（uefi.pk／uefi.kek.count／uefi.db.count／uefi.dbx.count／uefi.setup_mode）</td><td>—</td></tr>
 </tbody></table>
-<h3 id="63145-域-secure本版沒有成文的域說明1-把"><a class="self" href="#63145-域-secure本版沒有成文的域說明1-把">¶</a> 6.3.145 域 <code>secure</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63146-域-secure本版沒有成文的域說明1-把"><a class="self" href="#63146-域-secure本版沒有成文的域說明1-把">¶</a> 6.3.146 域 <code>secure</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4954,7 +4969,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>secure.dbx</code></td><td>撤銷清單版本</td><td>內建知識表（離線）</td><td>Reported</td></tr>
 </tbody></table>
-<h3 id="63146-域-smart本版沒有成文的域說明1-把"><a class="self" href="#63146-域-smart本版沒有成文的域說明1-把">¶</a> 6.3.146 域 <code>smart</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63147-域-smart本版沒有成文的域說明1-把"><a class="self" href="#63147-域-smart本版沒有成文的域說明1-把">¶</a> 6.3.147 域 <code>smart</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <p><strong>可判定的來源</strong>：SMART READ DATA＋READ THRESHOLDS（1 把） <strong>可判定的可信度</strong>：<code>Unknown</code>×1。</p>
 <table>
@@ -4966,7 +4981,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>smart.failing_now.count</code></td><td>SMART failing-now</td><td>SMART READ DATA＋READ THRESHOLDS</td><td>Unknown</td></tr>
 </tbody></table>
-<h3 id="63147-域-smbus本版沒有成文的域說明1-把"><a class="self" href="#63147-域-smbus本版沒有成文的域說明1-把">¶</a> 6.3.147 域 <code>smbus</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63148-域-smbus本版沒有成文的域說明1-把"><a class="self" href="#63148-域-smbus本版沒有成文的域說明1-把">¶</a> 6.3.148 域 <code>smbus</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <p><strong>可判定的來源</strong>：PCH SMBus 掃描（1 把） <strong>可判定的可信度</strong>：<code>Measured</code>×1。</p>
 <table>
@@ -4978,7 +4993,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>smbus.tsod</code></td><td>TSOD 溫度感測器掃描</td><td>PCH SMBus 掃描</td><td>Measured</td></tr>
 </tbody></table>
-<h3 id="63148-域-test本版沒有成文的域說明1-把"><a class="self" href="#63148-域-test本版沒有成文的域說明1-把">¶</a> 6.3.148 域 <code>test</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63149-域-test本版沒有成文的域說明1-把"><a class="self" href="#63149-域-test本版沒有成文的域說明1-把">¶</a> 6.3.149 域 <code>test</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -4989,7 +5004,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>test.duration</code></td><td>守門耗時</td><td>守門預算</td><td>Measured</td></tr>
 </tbody></table>
-<h3 id="63149-域-tests本版沒有成文的域說明1-把"><a class="self" href="#63149-域-tests本版沒有成文的域說明1-把">¶</a> 6.3.149 域 <code>tests</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63150-域-tests本版沒有成文的域說明1-把"><a class="self" href="#63150-域-tests本版沒有成文的域說明1-把">¶</a> 6.3.150 域 <code>tests</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -5000,7 +5015,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>tests.baseline</code></td><td>測試基線</td><td>發佈政策</td><td>Measured</td></tr>
 </tbody></table>
-<h3 id="63150-域-ufv本版沒有成文的域說明1-把"><a class="self" href="#63150-域-ufv本版沒有成文的域說明1-把">¶</a> 6.3.150 域 <code>ufv</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63151-域-ufv本版沒有成文的域說明1-把"><a class="self" href="#63151-域-ufv本版沒有成文的域說明1-把">¶</a> 6.3.151 域 <code>ufv</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <table>
 <thead><tr>
@@ -5011,7 +5026,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </tr></thead><tbody>
 <tr><td><code>ufv.bios.count</code></td><td>UEFI 韌體磁碟區（FV）總數</td><td>記憶體映射快閃 BIOS 區（唯讀）÷ UEFI PI FV/FFS</td><td>—</td></tr>
 </tbody></table>
-<h3 id="63151-域-usbstor本版沒有成文的域說明1-把"><a class="self" href="#63151-域-usbstor本版沒有成文的域說明1-把">¶</a> 6.3.151 域 <code>usbstor</code>（本版沒有成文的域說明）（1 把）</h3>
+<h3 id="63152-域-usbstor本版沒有成文的域說明1-把"><a class="self" href="#63152-域-usbstor本版沒有成文的域說明1-把">¶</a> 6.3.152 域 <code>usbstor</code>（本版沒有成文的域說明）（1 把）</h3>
 <p>這個域在本版沒有一句話的說明——它的名字是原始碼裡的前綴，而前人沒有替它寫過定位。下表照實列出它的鍵與可判定的後設資料，<strong>不補一段聽起來合理的說明</strong>。</p>
 <p><strong>可判定的來源</strong>：登錄檔 HKLM\SYSTEM\CurrentControlSet\Enum\USBSTOR（1 把） <strong>可判定的可信度</strong>：<code>Unknown</code>×1。</p>
 <table>
@@ -5058,7 +5073,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <ol>
 <li><strong>家族的成員數不是常數。</strong> 一台機器有 3 張 PCI 裝置就有 3 把 <code>pci.dev.*</code>，另一台有 9 張就有 9 把。
 </li><li><strong>家族前綴必須有人生產</strong>（殭屍前綴會紅燈），所以「有家族卻沒有成員」代表這台機器真的沒有那類東西。
-</li><li><strong>家族的成員不計入 1,155 這個分母。</strong> 所以「覆蓋率」的分子分母都必須說清楚有沒有含家族——這正是 <code>coverage.denominator</code> 與 <code>dyn.family</code> 這兩把鍵存在的理由。
+</li><li><strong>家族的成員不計入 1,158 這個分母。</strong> 所以「覆蓋率」的分子分母都必須說清楚有沒有含家族——這正是 <code>coverage.denominator</code> 與 <code>dyn.family</code> 這兩把鍵存在的理由。
 </li></ol>
 <h4 id="644-孤兒鍵有生產沒有出口"><a class="self" href="#644-孤兒鍵有生產沒有出口">¶</a> 6.4.4 孤兒鍵：有生產、沒有出口</h4>
 <p><strong>「有實作、有測試、但使用者在畫面上看不到」</strong> 是這個專案實測過最貴的缺陷類別之一。事實總表（3.20）就是為了收斂它而存在的頁面：<strong>每一把鍵都在那裡</strong>，包括只出現在匯出檔的那些。</p>
@@ -5080,8 +5095,8 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li><strong>域的「一句話說明」來自既有的功能與數據辭典</strong>（90 個域有成文說明）；其餘域在本版沒有成文說明，6.3 會逐域明說「本版沒有成文的域說明」，<strong>不補一段聽起來合理的話</strong>。
 </li></ol>
 <h3 id="65-逐鍵出處原始碼裡怎麼說它"><a class="self" href="#65-逐鍵出處原始碼裡怎麼說它">¶</a> 6.5 逐鍵出處：原始碼裡怎麼說它</h3>
-<p>這一節把 1,155 把鍵逐一對回原始碼：<strong>它被寫在哪個檔案的哪一行、那裡的註解怎麼說、以及產生它的那一行長什麼樣</strong>。「產生它的那一行」優先取真正的生產點（同一處附近有 <code>HardwareFact(</code> 建構）——目錄、覆蓋報告與政策檔裡雖然也提到鍵，但那不是鍵的來源，故降到候補。</p>
-<p><strong>覆蓋率申報</strong>：1,155 把鍵之中有 1,155 把在本版 <code>Services/</code> 的字面中找得到位置；其餘 0 把抽不到字面（鍵由方法組合、字串拼接或動態家族成員產生）。<strong>抽不到不代表這把鍵不存在</strong>——它仍在編譯期目錄裡、仍有生產者，只是這個抽取方式抓不到。同理，某一把鍵的註解欄若是空的，代表<strong>那個生產點沒有註解</strong>，不是本節省略了它。</p>
+<p>這一節把 1,158 把鍵逐一對回原始碼：<strong>它被寫在哪個檔案的哪一行、那裡的註解怎麼說、以及產生它的那一行長什麼樣</strong>。「產生它的那一行」優先取真正的生產點（同一處附近有 <code>HardwareFact(</code> 建構）——目錄、覆蓋報告與政策檔裡雖然也提到鍵，但那不是鍵的來源，故降到候補。</p>
+<p><strong>覆蓋率申報</strong>：1,158 把鍵之中有 1,158 把在本版 <code>Services/</code> 的字面中找得到位置；其餘 0 把抽不到字面（鍵由方法組合、字串拼接或動態家族成員產生）。<strong>抽不到不代表這把鍵不存在</strong>——它仍在編譯期目錄裡、仍有生產者，只是這個抽取方式抓不到。同理，某一把鍵的註解欄若是空的，代表<strong>那個生產點沒有註解</strong>，不是本節省略了它。</p>
 <h4 id="651-域-ac61-把"><a class="self" href="#651-域-ac61-把">¶</a> 6.5.1 域 <code>ac</code>（61 把）</h4>
 <ul>
 <li><strong><code>ac.aml.boundary</code></strong> — <code>Services/AcpiTableService.cs:92</code>（生產點）
@@ -10454,7 +10469,22 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <li>註解：單節點時的重點不是「只有 1 個」，而是「跨節點的行為在本機根本無從驗證」。 誠實契約：未驗證 ≠ 可用。本機看不到跨節點延遲，不代表這台機器有那個能力， 也不代表沒有——就是沒量到。
 </li><li>原始碼：<code>"numa.topology.xnode", Category, "跨節點延遲／頻寬", nodes == 1 ? "無從量測：本機只有一個節點，沒有第二個節點可比較" : $"可量測：{nodes} 個節點，跨節點路徑存在",</code>
 </li></ul>
-<h4 id="6598-域-rep3-把"><a class="self" href="#6598-域-rep3-把">¶</a> 6.5.98 域 <code>rep</code>（3 把）</h4>
+<h4 id="6598-域-pcie3-把"><a class="self" href="#6598-域-pcie3-把">¶</a> 6.5.98 域 <code>pcie</code>（3 把）</h4>
+<ul>
+<li><strong><code>pcie.access.agreement</code></strong> — <code>Services/FactKeyCatalog.cs:696</code>（提及處）
+<ul>
+<li>原始碼：<code>"pcie.access.agreement",</code>
+</li></ul>
+</li></ul>
+</li><li><strong><code>pcie.access.boundary</code></strong> — <code>Services/FactKeyCatalog.cs:697</code>（提及處）
+<ul>
+<li>原始碼：<code>"pcie.access.boundary",</code>
+</li></ul>
+</li><li><strong><code>pcie.access.summary</code></strong> — <code>Services/FactKeyCatalog.cs:698</code>（提及處）
+<ul>
+<li>原始碼：<code>"pcie.access.summary",</code>
+</li></ul>
+<h4 id="6599-域-rep3-把"><a class="self" href="#6599-域-rep3-把">¶</a> 6.5.99 域 <code>rep</code>（3 把）</h4>
 <ul>
 <li><strong><code>rep.diff.mode</code></strong> — <code>Services/ReportDiffService.cs:51</code>（生產點（無註解））
 <ul>
@@ -10472,7 +10502,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <li>註解：/ &lt;summary&gt;U10-RP-0002 追蹤鍵：系統摘要頁（一頁人讀——只陳述計數與清單，不合成評分）。&lt;/summary&gt;
 </li><li>原始碼：<code>"rep.sec.summary"; /// &lt;summary&gt;顯示另存對話框並寫出報告；成功回傳路徑，取消回傳 &lt;c&gt;null&lt;/c&gt;。&lt;/summary&gt; public static string? Export(MainViewModel vm)</code>
 </li></ul>
-<h4 id="6599-域-time3-把"><a class="self" href="#6599-域-time3-把">¶</a> 6.5.99 域 <code>time</code>（3 把）</h4>
+<h4 id="65100-域-time3-把"><a class="self" href="#65100-域-time3-把">¶</a> 6.5.100 域 <code>time</code>（3 把）</h4>
 <ul>
 <li><strong><code>time.drift.ppm</code></strong> — <code>Services/TimeSyncFactsService.cs:57</code>（生產點）
 <ul>
@@ -10487,7 +10517,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <ul>
 <li>原始碼：<code>"time.pm_timer", Category, "ACPI PM timer 區塊", pmBlock is { } block ? $"0x{block:X}（{block}）" : "", "", Source, FactTrustLevel.Reported, false, at, pmBlock is { } b ? (double)b : null,</code>
 </li></ul>
-<h4 id="65100-域-ups3-把"><a class="self" href="#65100-域-ups3-把">¶</a> 6.5.100 域 <code>ups</code>（3 把）</h4>
+<h4 id="65101-域-ups3-把"><a class="self" href="#65101-域-ups3-把">¶</a> 6.5.101 域 <code>ups</code>（3 把）</h4>
 <ul>
 <li><strong><code>ups.battery.percent</code></strong> — <code>Services/UpsFactsService.cs:26</code>（生產點（無註解））
 <ul>
@@ -10503,7 +10533,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <ul>
 <li>原始碼：<code>"ups.status", "usb.busiest_controller", "usb.controllers", "usb.devices",</code>
 </li></ul>
-<h4 id="65101-域-audio2-把"><a class="self" href="#65101-域-audio2-把">¶</a> 6.5.101 域 <code>audio</code>（2 把）</h4>
+<h4 id="65102-域-audio2-把"><a class="self" href="#65102-域-audio2-把">¶</a> 6.5.102 域 <code>audio</code>（2 把）</h4>
 <ul>
 <li><strong><code>audio.endpoints</code></strong> — <code>Services/KeyRangeGuardService.cs:48</code>（生產點（無註解））
 <ul>
@@ -10516,7 +10546,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <li>註解：/ &lt;summary&gt;收集音訊端點緩衝區事實。測試以注入樣本取代。&lt;/summary&gt;
 </li><li>原始碼：<code>"audio.latency", Category, "音訊端點緩衝區", "", "", "Windows Core Audio（IAudioClient）", FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError, "讀取失敗：" + ex.Message), ];</code>
 </li></ul>
-<h4 id="65102-域-build2-把"><a class="self" href="#65102-域-build2-把">¶</a> 6.5.102 域 <code>build</code>（2 把）</h4>
+<h4 id="65103-域-build2-把"><a class="self" href="#65103-域-build2-把">¶</a> 6.5.103 域 <code>build</code>（2 把）</h4>
 <ul>
 <li><strong><code>build.reproducible</code></strong> — <code>Services/ReleaseReport.cs:27</code>（生產點（無註解））
 <ul>
@@ -10529,7 +10559,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <li>註解：/ 它就一定會漂移&lt;/b&gt;。所以每一項都要有一個「重跑得出來」的來源。 / &lt;/para&gt; / &lt;/summary&gt;
 </li><li>原始碼：<code>"build.singlefile"; public const string ReproducibleKey = "build.reproducible"; public const string VerifyKey = "release.verify"; public const string BaselineKey = "tests.baseline";</code>
 </li></ul>
-<h4 id="65103-域-byovd2-把"><a class="self" href="#65103-域-byovd2-把">¶</a> 6.5.103 域 <code>byovd</code>（2 把）</h4>
+<h4 id="65104-域-byovd2-把"><a class="self" href="#65104-域-byovd2-把">¶</a> 6.5.104 域 <code>byovd</code>（2 把）</h4>
 <ul>
 <li><strong><code>byovd.hits</code></strong> — <code>Services/ByovdCompareService.cs:79</code>（生產點（無註解））
 <ul>
@@ -10540,7 +10570,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <ul>
 <li>原始碼：<code>"byovd.rules", Category, "微軟建議驅動封鎖清單", "", "", "微軟建議的驅動程式封鎖規則 XML（使用者提供）", FactTrustLevel.Unknown, false, at, null, FactAvailability.NotSupported, "未提供封鎖清單檔：可自微軟文件下載「建議的驅動程式封鎖規則」XML，放到程式目錄 Rules\\byovd-blocklist.xml 或以 --byovd 指定——缺檔不是錯誤，只是這道比對未啟用")];</code>
 </li></ul>
-<h4 id="65104-域-cert2-把"><a class="self" href="#65104-域-cert2-把">¶</a> 6.5.104 域 <code>cert</code>（2 把）</h4>
+<h4 id="65105-域-cert2-把"><a class="self" href="#65105-域-cert2-把">¶</a> 6.5.105 域 <code>cert</code>（2 把）</h4>
 <ul>
 <li><strong><code>cert.foreign_roots</code></strong> — <code>Services/SecurityAuditFactsService.cs:119</code>（生產點（無註解））
 <ul>
@@ -10553,7 +10583,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <li>註解：── ULTIMATE-1000 階段一後半（2026-10-16，P1-051–P1-105）：韌性、發佈與自我申報 ── 與前一批同一個判斷：這一族的來源就是它自己——韌性申報自己的重試與斷路器、 發佈申報自己的建置與基線、文件對帳申報自己的數字。對帳的前提是有兩個獨立來源。
 </li><li>原始碼：<code>"cert.plan"] = "認證計畫：來源是認證項目的狀態宣告，不是量測值。", ["limits.public"] = "公開限制清單：來源是本專案自己的限制聲明——它不是量測，是承諾的邊界。", ["contrib.guide"] = "貢獻者指南：文件內容不是機器事實，沒有第二個來源可以交叉——" + "它的正確性由「照著做能不能跑起來」驗證，那要人工執行。",</code>
 </li></ul>
-<h4 id="65105-域-display2-把"><a class="self" href="#65105-域-display2-把">¶</a> 6.5.105 域 <code>display</code>（2 把）</h4>
+<h4 id="65106-域-display2-把"><a class="self" href="#65106-域-display2-把">¶</a> 6.5.106 域 <code>display</code>（2 把）</h4>
 <ul>
 <li><strong><code>display.hw.gpu</code></strong> — <code>Services/DisplayAdapterFactsService.cs:55</code>（生產點）
 <ul>
@@ -10566,7 +10596,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <li>註解：/ &lt;summary&gt;收集顯示轉接器事實。測試以注入樣本取代。&lt;/summary&gt;
 </li><li>原始碼：<code>"display.summary", Category, "顯示轉接器組成", "", "", "WMI Win32_VideoController", FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError, "讀取失敗：" + ex.Message), ];</code>
 </li></ul>
-<h4 id="65106-域-drvinsp2-把"><a class="self" href="#65106-域-drvinsp2-把">¶</a> 6.5.106 域 <code>drvinsp</code>（2 把）</h4>
+<h4 id="65107-域-drvinsp2-把"><a class="self" href="#65107-域-drvinsp2-把">¶</a> 6.5.107 域 <code>drvinsp</code>（2 把）</h4>
 <ul>
 <li><strong><code>drvinsp.drivers.count</code></strong> — <code>Services/DriverInspectionFactsService.cs:25</code>（生產點（無註解））
 <ul>
@@ -10578,7 +10608,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <ul>
 <li>原始碼：<code>"drvinsp.truncated", Category, "驅動靜態檢視截斷", $"另有 {truncated} 顆非系統目錄驅動超出本版檢視上限（{MaxDrivers} 顆）——如實說明，不假裝檢視完", "", Source, FactTrustLevel.Unknown, false, at)); return facts;</code>
 </li></ul>
-<h4 id="65107-域-egress2-把"><a class="self" href="#65107-域-egress2-把">¶</a> 6.5.107 域 <code>egress</code>（2 把）</h4>
+<h4 id="65108-域-egress2-把"><a class="self" href="#65108-域-egress2-把">¶</a> 6.5.108 域 <code>egress</code>（2 把）</h4>
 <ul>
 <li><strong><code>egress.allowlist</code></strong> — <code>Services/EgressPolicy.cs:26</code>（生產點（無註解））
 <ul>
@@ -10591,7 +10621,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <li>註解：/ 變成一個可以回答的問題，而不是一句保證。 / &lt;/para&gt; / &lt;/summary&gt;
 </li><li>原始碼：<code>"egress.trigger"; private const string Category = "資料邊界"; private const string Source = "出網政策";</code>
 </li></ul>
-<h4 id="65108-域-etl2-把"><a class="self" href="#65108-域-etl2-把">¶</a> 6.5.108 域 <code>etl</code>（2 把）</h4>
+<h4 id="65109-域-etl2-把"><a class="self" href="#65109-域-etl2-把">¶</a> 6.5.109 域 <code>etl</code>（2 把）</h4>
 <ul>
 <li><strong><code>etl.readback</code></strong> — <code>Services/EtlReadbackService.cs:122</code>（生產點）
 <ul>
@@ -10603,7 +10633,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <li>註解：/ 也不丟棄假裝沒看見；讀回失敗（檔案被佔用、非 .etl、解析中斷）如實回原因。讀回是唯讀的。 / &lt;/para&gt; / &lt;/remarks&gt;
 </li><li>原始碼：<code>"etl.traces.count"; private const string Source = "TraceEvent 檔案模式讀回（唯讀）"; /// &lt;summary&gt;讀回最近幾個軌跡的內容（全部讀會拖慢 reload；摘要明說只讀了前幾個）。&lt;/summary&gt;</code>
 </li></ul>
-<h4 id="65109-域-key2-把"><a class="self" href="#65109-域-key2-把">¶</a> 6.5.109 域 <code>key</code>（2 把）</h4>
+<h4 id="65110-域-key2-把"><a class="self" href="#65110-域-key2-把">¶</a> 6.5.110 域 <code>key</code>（2 把）</h4>
 <ul>
 <li><strong><code>key.count</code></strong> — <code>Services/KeyCatalogPolicy.cs:25</code>（提及處）
 <ul>
@@ -10616,7 +10646,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <li>註解：── ULTIMATE-1000 階段一後半（2026-10-16，P1-051–P1-105）：韌性、發佈與自我申報 ── 與前一批同一個判斷：這一族的來源就是它自己——韌性申報自己的重試與斷路器、 發佈申報自己的建置與基線、文件對帳申報自己的數字。對帳的前提是有兩個獨立來源。
 </li><li>原始碼：<code>"key.evolution"] = "鍵的演進申報（版號與增刪）：來源是目錄本身的版本紀錄，單一來源。", ["diag.count"] = "診斷紀錄計數：來源是本程式的診斷機制自己，自己對自己交叉沒有意義。", ["degrade.mode"] = "降級模式申報：來源是各功能的模式宣告，不是量測值。", ["build."] = "建置與發佈形態（單檔、可重現、驗證）：來源是建置產物本身；可重現性的驗證方式是「兩次建置比對」，不是跨來源對帳。",</code>
 </li></ul>
-<h4 id="65110-域-knowledge2-把"><a class="self" href="#65110-域-knowledge2-把">¶</a> 6.5.110 域 <code>knowledge</code>（2 把）</h4>
+<h4 id="65111-域-knowledge2-把"><a class="self" href="#65111-域-knowledge2-把">¶</a> 6.5.111 域 <code>knowledge</code>（2 把）</h4>
 <ul>
 <li><strong><code>knowledge.pack.status</code></strong> — <code>Services/KnowledgePackService.cs:47</code>（生產點（無註解））
 <ul>
@@ -10629,7 +10659,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <li>註解：/ &lt;summary&gt;U10-EN-0012 追蹤鍵：知識包版本演進與撤回流程（成文與守門見 / docs/ULTIMATE-10000/KNOWLEDGE-PACK-PROCEDURE-2026-10-25.md 與 KnowledgePackEvolutionTests）。&lt;/summary&gt;
 </li><li>原始碼：<code>"knowledge.pack.tables"; /// &lt;summary&gt;預設包檔名（與執行檔同目錄；不存在＝內建表）。&lt;/summary&gt; public const string FileName = "knowledge-pack.json";</code>
 </li></ul>
-<h4 id="65111-域-mchbar2-把"><a class="self" href="#65111-域-mchbar2-把">¶</a> 6.5.111 域 <code>mchbar</code>（2 把）</h4>
+<h4 id="65112-域-mchbar2-把"><a class="self" href="#65112-域-mchbar2-把">¶</a> 6.5.112 域 <code>mchbar</code>（2 把）</h4>
 <ul>
 <li><strong><code>mchbar.base</code></strong> — <code>Services/FactRelationEngine.cs:110</code>（生產點（無註解））
 <ul>
@@ -10642,7 +10672,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <li>註解：/ &lt;summary&gt;MSR 0x8B（IA32_BIOS_SIGN_ID）高 32 位＝目前生效微碼修訂版。鍵名全小寫（事實鍵規則）。&lt;/summary&gt;
 </li><li>原始碼：<code>"mchbar.registers"; public const string TjMaxKey = "cpu.tjmax"; public const string BiosCntlKey = "chipset.bios_cntl"; public const string SmramcKey = "chipset.smramc";</code>
 </li></ul>
-<h4 id="65112-域-mon2-把"><a class="self" href="#65112-域-mon2-把">¶</a> 6.5.112 域 <code>mon</code>（2 把）</h4>
+<h4 id="65113-域-mon2-把"><a class="self" href="#65113-域-mon2-把">¶</a> 6.5.113 域 <code>mon</code>（2 把）</h4>
 <ul>
 <li><strong><code>mon.count</code></strong> — <code>Services/MonitorConnectionService.cs:18</code>（生產點）
 <ul>
@@ -10655,7 +10685,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <li>註解：/ WP10 顯示面：螢幕連接介面（WMI root\wmi WmiMonitorConnectionParams，usermode）。 / 「這台螢幕是走 DP 還是 HDMI」是週邊診斷的第一件事——WMI 有答就直接講，讀不到三態。 / &lt;/summary&gt;
 </li><li>原始碼：<code>"mon.dp", "mon.0" }.Select(key =&gt; new HardwareFact(key, Category, NameOf(key), "", "", "WMI root\\wmi WmiMonitorConnectionParams（螢幕連接介面）", FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError,</code>
 </li></ul>
-<h4 id="65113-域-pcieaer2-把"><a class="self" href="#65113-域-pcieaer2-把">¶</a> 6.5.113 域 <code>pcieaer</code>（2 把）</h4>
+<h4 id="65114-域-pcieaer2-把"><a class="self" href="#65114-域-pcieaer2-把">¶</a> 6.5.114 域 <code>pcieaer</code>（2 把）</h4>
 <ul>
 <li><strong><code>pcieaer.ecam</code></strong> — <code>Services/EcamAerService.cs:39</code>（生產點）
 <ul>
@@ -10666,7 +10696,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <ul>
 <li>原始碼：<code>"pcieaer.scan", Category, "PCIe AER 掃描", $"掃描 bus {primary.StartBus}-{lastBus}：{devices} 個裝置、{withAer} 個帶 AER 能力{rangeNote}", "", "ECAM", FactTrustLevel.Measured, false, at)); return facts;</code>
 </li></ul>
-<h4 id="65114-域-role2-把"><a class="self" href="#65114-域-role2-把">¶</a> 6.5.114 域 <code>role</code>（2 把）</h4>
+<h4 id="65115-域-role2-把"><a class="self" href="#65115-域-role2-把">¶</a> 6.5.115 域 <code>role</code>（2 把）</h4>
 <ul>
 <li><strong><code>role.surface</code></strong> — <code>Services/EvidenceLabService.cs:599</code>（生產點（無註解））
 <ul>
@@ -10679,7 +10709,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <li>註解：/ &lt;summary&gt;已安裝角色卡片的依據列。&lt;/summary&gt;
 </li><li>原始碼：<code>"role.surface.evidence")?.Value ?? ""; /// &lt;summary&gt;顯示器組成的一行摘要。&lt;/summary&gt; public string MonitorSummary =&gt;</code>
 </li></ul>
-<h4 id="65115-域-setuptl2-把"><a class="self" href="#65115-域-setuptl2-把">¶</a> 6.5.115 域 <code>setuptl</code>（2 把）</h4>
+<h4 id="65116-域-setuptl2-把"><a class="self" href="#65116-域-setuptl2-把">¶</a> 6.5.116 域 <code>setuptl</code>（2 把）</h4>
 <ul>
 <li><strong><code>setuptl.recent</code></strong> — <code>Services/SetupApiTimelineService.cs:91</code>（生產點）
 <ul>
@@ -10691,7 +10721,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <li>註解：/ 解析不出的欄位（時間、狀態）如實為 null；記錄會被系統輪替清舊，這裡看到的是現存檔案的內容。 / &lt;/para&gt; / &lt;/remarks&gt;
 </li><li>原始碼：<code>"setuptl.sections.count"; private const string Source = "setupapi.dev.log（唯讀）÷ 區段標記解析"; private const string LogPath = "inf\\setupapi.dev.log";</code>
 </li></ul>
-<h4 id="65116-域-state2-把"><a class="self" href="#65116-域-state2-把">¶</a> 6.5.116 域 <code>state</code>（2 把）</h4>
+<h4 id="65117-域-state2-把"><a class="self" href="#65117-域-state2-把">¶</a> 6.5.117 域 <code>state</code>（2 把）</h4>
 <ul>
 <li><strong><code>state.count</code></strong> — <code>Services/FactStateReport.cs:28</code>（生產點（無註解））
 <ul>
@@ -10704,7 +10734,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <li>註解：── P1-020 逐態統計 ────────────────────────────────────────────────
 </li><li>原始碼：<code>"state.lattice"; public const string ReadErrorReasonKey = "fact.readerror.reason"; public const string WhyUnreadableKey = "fact.why_unreadable";</code>
 </li></ul>
-<h4 id="65117-域-storage2-把"><a class="self" href="#65117-域-storage2-把">¶</a> 6.5.117 域 <code>storage</code>（2 把）</h4>
+<h4 id="65118-域-storage2-把"><a class="self" href="#65118-域-storage2-把">¶</a> 6.5.118 域 <code>storage</code>（2 把）</h4>
 <ul>
 <li><strong><code>storage.reliability.available</code></strong> — <code>Services/StorageReliabilityFactsService.cs:165</code>（生產點）
 <ul>
@@ -10716,7 +10746,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <ul>
 <li>原始碼：<code>"storage.reliability.count", Category, "可靠性計數器涵蓋磁碟數", rows.Count.ToString(), "顆", Source, FactTrustLevel.Reported, false, at, rows.Count)); foreach (var r in rows) facts.AddRange(ForDisk(at, r));</code>
 </li></ul>
-<h4 id="65118-域-ata1-把"><a class="self" href="#65118-域-ata1-把">¶</a> 6.5.118 域 <code>ata</code>（1 把）</h4>
+<h4 id="65119-域-ata1-把"><a class="self" href="#65119-域-ata1-把">¶</a> 6.5.119 域 <code>ata</code>（1 把）</h4>
 <ul>
 <li><strong><code>ata.smart.attr.lookup</code></strong> — <code>Services/ScanStateCollectors.cs:64</code>（生產點（無註解））
 <ul>
@@ -10724,7 +10754,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"ata.smart.attr.lookup"; /// &lt;summary&gt; /// 從 SMART 屬性列回收知識表查詢的統計（第 270 輪 SMART 知識包的消費端接線）。</code>
 </li></ul>
 </li></ul>
-<h4 id="65119-域-cam1-把"><a class="self" href="#65119-域-cam1-把">¶</a> 6.5.119 域 <code>cam</code>（1 把）</h4>
+<h4 id="65120-域-cam1-把"><a class="self" href="#65120-域-cam1-把">¶</a> 6.5.120 域 <code>cam</code>（1 把）</h4>
 <ul>
 <li><strong><code>cam.count</code></strong> — <code>Services/CameraFactsService.cs:21</code>（生產點）
 <ul>
@@ -10732,14 +10762,14 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"cam.count", Category, "攝影機/UVC 裝置", "", "", "WMI Win32_PnPEntity（PNPClass Camera/Image）", FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError, "WMI 查詢失敗——攝影機列舉讀不到就是不猜")];</code>
 </li></ul>
 </li></ul>
-<h4 id="65120-域-chassis1-把"><a class="self" href="#65120-域-chassis1-把">¶</a> 6.5.120 域 <code>chassis</code>（1 把）</h4>
+<h4 id="65121-域-chassis1-把"><a class="self" href="#65121-域-chassis1-把">¶</a> 6.5.121 域 <code>chassis</code>（1 把）</h4>
 <ul>
 <li><strong><code>chassis.security_status</code></strong> — <code>Services/ChassisAndHpaFactsService.cs:35</code>（生產點）
 <ul>
 <li>原始碼：<code>"chassis.security_status", Category, "機箱開啟偵測", "", "", "SMBIOS Type 3（MSSmbs_RawSMBiosTables）", FactTrustLevel.Unknown, false, at, null, FactAvailability.NotSupported, "SMBIOS 資料讀不到——機箱開啟偵測在無 SMBIOS 的環境（如 VM）不可用")];</code>
 </li></ul>
 </li></ul>
-<h4 id="65121-域-contrib1-把"><a class="self" href="#65121-域-contrib1-把">¶</a> 6.5.121 域 <code>contrib</code>（1 把）</h4>
+<h4 id="65122-域-contrib1-把"><a class="self" href="#65122-域-contrib1-把">¶</a> 6.5.122 域 <code>contrib</code>（1 把）</h4>
 <ul>
 <li><strong><code>contrib.guide</code></strong> — <code>Services/FactCoverageReport.cs:672</code>（提及處）
 <ul>
@@ -10747,14 +10777,14 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"contrib.guide"] = "貢獻者指南：文件內容不是機器事實，沒有第二個來源可以交叉——" + "它的正確性由「照著做能不能跑起來」驗證，那要人工執行。", ["doc.reconcile"] = "文件數字對帳：來源是文件與程式兩邊的對照結果，已是第三者對照，不再疊規則。", ["scan.failures"] = "掃描失敗總表：輸入是全部步驟的成敗分布，自己對自己交叉沒有意義（同 ng.report）。",</code>
 </li></ul>
 </li></ul>
-<h4 id="65122-域-cxl1-把"><a class="self" href="#65122-域-cxl1-把">¶</a> 6.5.122 域 <code>cxl</code>（1 把）</h4>
+<h4 id="65123-域-cxl1-把"><a class="self" href="#65123-域-cxl1-把">¶</a> 6.5.123 域 <code>cxl</code>（1 把）</h4>
 <ul>
 <li><strong><code>cxl.cfmws.count</code></strong> — <code>Services/CxlFactsService.cs:29</code>（生產點）
 <ul>
 <li>原始碼：<code>"cxl.cfmws.count", Category, "CXL 固定記憶體窗口", "", "", Source, FactTrustLevel.Unknown, false, at, null, FactAvailability.NotApplicable, "表列裡沒有 CEDT：此平台沒有（或韌體未提供）CXL 固定記憶體窗口——無此硬體不是錯誤")]; }</code>
 </li></ul>
 </li></ul>
-<h4 id="65123-域-data1-把"><a class="self" href="#65123-域-data1-把">¶</a> 6.5.123 域 <code>data</code>（1 把）</h4>
+<h4 id="65124-域-data1-把"><a class="self" href="#65124-域-data1-把">¶</a> 6.5.124 域 <code>data</code>（1 把）</h4>
 <ul>
 <li><strong><code>data.egress.report</code></strong> — <code>Services/DataSovereigntyReport.cs:26</code>（生產點（無註解））
 <ul>
@@ -10762,7 +10792,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"data.egress.report"; public const string ReportClassKey = "report.class"; private const string Category = "資料邊界";</code>
 </li></ul>
 </li></ul>
-<h4 id="65124-域-defender1-把"><a class="self" href="#65124-域-defender1-把">¶</a> 6.5.124 域 <code>defender</code>（1 把）</h4>
+<h4 id="65125-域-defender1-把"><a class="self" href="#65125-域-defender1-把">¶</a> 6.5.125 域 <code>defender</code>（1 把）</h4>
 <ul>
 <li><strong><code>defender.exclusions.count</code></strong> — <code>Services/SecurityAuditFactsService.cs:23</code>（生產點）
 <ul>
@@ -10770,7 +10800,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"defender.exclusions.count", Category, "Defender 排除清單", "", "", "WMI root\\Microsoft\\Windows\\Defender（MSFT_MpPreference）", FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError, "MSFT_MpPreference 查詢失敗（Defender 未啟用或被協力防毒取代）——讀不到就是不猜")];</code>
 </li></ul>
 </li></ul>
-<h4 id="65125-域-degrade1-把"><a class="self" href="#65125-域-degrade1-把">¶</a> 6.5.125 域 <code>degrade</code>（1 把）</h4>
+<h4 id="65126-域-degrade1-把"><a class="self" href="#65126-域-degrade1-把">¶</a> 6.5.126 域 <code>degrade</code>（1 把）</h4>
 <ul>
 <li><strong><code>degrade.mode</code></strong> — <code>Services/FactCoverageReport.cs:665</code>（提及處）
 <ul>
@@ -10778,7 +10808,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"degrade.mode"] = "降級模式申報：來源是各功能的模式宣告，不是量測值。", ["build."] = "建置與發佈形態（單檔、可重現、驗證）：來源是建置產物本身；可重現性的驗證方式是「兩次建置比對」，不是跨來源對帳。", ["release.verify"] = "發佈驗證：來源是發佈資產的雜湊與驗證腳本，單一來源。", ["tests.baseline"] = "測試基線：來源是測試執行結果；它與徽章的關係是同一份數字的兩種呈現。",</code>
 </li></ul>
 </li></ul>
-<h4 id="65126-域-diag1-把"><a class="self" href="#65126-域-diag1-把">¶</a> 6.5.126 域 <code>diag</code>（1 把）</h4>
+<h4 id="65127-域-diag1-把"><a class="self" href="#65127-域-diag1-把">¶</a> 6.5.127 域 <code>diag</code>（1 把）</h4>
 <ul>
 <li><strong><code>diag.count</code></strong> — <code>Services/FactCoverageReport.cs:664</code>（提及處）
 <ul>
@@ -10786,7 +10816,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"diag.count"] = "診斷紀錄計數：來源是本程式的診斷機制自己，自己對自己交叉沒有意義。", ["degrade.mode"] = "降級模式申報：來源是各功能的模式宣告，不是量測值。", ["build."] = "建置與發佈形態（單檔、可重現、驗證）：來源是建置產物本身；可重現性的驗證方式是「兩次建置比對」，不是跨來源對帳。", ["release.verify"] = "發佈驗證：來源是發佈資產的雜湊與驗證腳本，單一來源。",</code>
 </li></ul>
 </li></ul>
-<h4 id="65127-域-doc1-把"><a class="self" href="#65127-域-doc1-把">¶</a> 6.5.127 域 <code>doc</code>（1 把）</h4>
+<h4 id="65128-域-doc1-把"><a class="self" href="#65128-域-doc1-把">¶</a> 6.5.128 域 <code>doc</code>（1 把）</h4>
 <ul>
 <li><strong><code>doc.reconcile</code></strong> — <code>Services/FactCoverageReport.cs:674</code>（提及處）
 <ul>
@@ -10794,7 +10824,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"doc.reconcile"] = "文件數字對帳：來源是文件與程式兩邊的對照結果，已是第三者對照，不再疊規則。", ["scan.failures"] = "掃描失敗總表：輸入是全部步驟的成敗分布，自己對自己交叉沒有意義（同 ng.report）。", ["fact.error.reason"] = "失敗原因彙總：來源就是那些失敗的事實本身，同 fact.readerror.reason。", ["src.circuit"] = "來源斷路器狀態：來源是本程式的保護機制自己，單一來源。",</code>
 </li></ul>
 </li></ul>
-<h4 id="65128-域-dyn1-把"><a class="self" href="#65128-域-dyn1-把">¶</a> 6.5.128 域 <code>dyn</code>（1 把）</h4>
+<h4 id="65129-域-dyn1-把"><a class="self" href="#65129-域-dyn1-把">¶</a> 6.5.129 域 <code>dyn</code>（1 把）</h4>
 <ul>
 <li><strong><code>dyn.family</code></strong> — <code>Services/KeyCatalogPolicy.cs:26</code>（提及處）
 <ul>
@@ -10802,14 +10832,14 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"dyn.family"; public const string DenominatorKey = "coverage.denominator"; public const string ExemptKey = "coverage.exempt";</code>
 </li></ul>
 </li></ul>
-<h4 id="65129-域-evt1-把"><a class="self" href="#65129-域-evt1-把">¶</a> 6.5.129 域 <code>evt</code>（1 把）</h4>
+<h4 id="65130-域-evt1-把"><a class="self" href="#65130-域-evt1-把">¶</a> 6.5.130 域 <code>evt</code>（1 把）</h4>
 <ul>
 <li><strong><code>evt.system.7d</code></strong> — <code>Services/EventLogSummaryService.cs:30</code>（生產點）
 <ul>
 <li>原始碼：<code>"evt.system.7d", Category, "7 天內嚴重／錯誤事件", "", "", "Windows 事件記錄 System log（EventLogReader）", FactTrustLevel.Reported, false, at, null, FactAvailability.ReadError, "System log 查詢失敗——事件記錄讀不到就是不猜")];</code>
 </li></ul>
 </li></ul>
-<h4 id="65130-域-file1-把"><a class="self" href="#65130-域-file1-把">¶</a> 6.5.130 域 <code>file</code>（1 把）</h4>
+<h4 id="65131-域-file1-把"><a class="self" href="#65131-域-file1-把">¶</a> 6.5.131 域 <code>file</code>（1 把）</h4>
 <ul>
 <li><strong><code>file.input.zero_egress</code></strong> — <code>Services/ScanSkeletonReport.cs:26</code>（生產點（無註解））
 <ul>
@@ -10817,7 +10847,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"file.input.zero_egress"; // ── P1-001 / P1-012 骨架採用數 ──────────────────────────────────────</code>
 </li></ul>
 </li></ul>
-<h4 id="65131-域-guard1-把"><a class="self" href="#65131-域-guard1-把">¶</a> 6.5.131 域 <code>guard</code>（1 把）</h4>
+<h4 id="65132-域-guard1-把"><a class="self" href="#65132-域-guard1-把">¶</a> 6.5.132 域 <code>guard</code>（1 把）</h4>
 <ul>
 <li><strong><code>guard.inventory</code></strong> — <code>Services/WriteGateReport.cs:25</code>（生產點（無註解））
 <ul>
@@ -10825,14 +10855,14 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"guard.inventory"; public const string CountKey = "write.count"; public const string LedgerKey = "write.ledger"; public const string AllowlistKey = "write.allowlist";</code>
 </li></ul>
 </li></ul>
-<h4 id="65132-域-hpa1-把"><a class="self" href="#65132-域-hpa1-把">¶</a> 6.5.132 域 <code>hpa</code>（1 把）</h4>
+<h4 id="65133-域-hpa1-把"><a class="self" href="#65133-域-hpa1-把">¶</a> 6.5.133 域 <code>hpa</code>（1 把）</h4>
 <ul>
 <li><strong><code>hpa.dco</code></strong> — <code>Services/ChassisAndHpaFactsService.cs:137</code>（生產點）
 <ul>
 <li>原始碼：<code>"hpa.dco", Category, "HPA／DCO 隱藏容量", "", "", "ATA IDENTIFY＋WMI Win32_DiskDrive", FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError, "磁碟列舉失敗——HPA 對照讀不到；DCO（Device Configuration Overlay）需廠商私有命令，刻意不實作")];</code>
 </li></ul>
 </li></ul>
-<h4 id="65133-域-license1-把"><a class="self" href="#65133-域-license1-把">¶</a> 6.5.133 域 <code>license</code>（1 把）</h4>
+<h4 id="65134-域-license1-把"><a class="self" href="#65134-域-license1-把">¶</a> 6.5.134 域 <code>license</code>（1 把）</h4>
 <ul>
 <li><strong><code>license.notices</code></strong> — <code>Services/FactCoverageReport.cs:669</code>（提及處）
 <ul>
@@ -10840,7 +10870,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"license.notices"] = "授權與第三方聲明：來源是本專案自己的宣告，沒有第二份清單可對。", ["cert.plan"] = "認證計畫：來源是認證項目的狀態宣告，不是量測值。", ["limits.public"] = "公開限制清單：來源是本專案自己的限制聲明——它不是量測，是承諾的邊界。", ["contrib.guide"] = "貢獻者指南：文件內容不是機器事實，沒有第二個來源可以交叉——"</code>
 </li></ul>
 </li></ul>
-<h4 id="65134-域-limits1-把"><a class="self" href="#65134-域-limits1-把">¶</a> 6.5.134 域 <code>limits</code>（1 把）</h4>
+<h4 id="65135-域-limits1-把"><a class="self" href="#65135-域-limits1-把">¶</a> 6.5.135 域 <code>limits</code>（1 把）</h4>
 <ul>
 <li><strong><code>limits.public</code></strong> — <code>Services/FactCoverageReport.cs:671</code>（提及處）
 <ul>
@@ -10848,7 +10878,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"limits.public"] = "公開限制清單：來源是本專案自己的限制聲明——它不是量測，是承諾的邊界。", ["contrib.guide"] = "貢獻者指南：文件內容不是機器事實，沒有第二個來源可以交叉——" + "它的正確性由「照著做能不能跑起來」驗證，那要人工執行。", ["doc.reconcile"] = "文件數字對帳：來源是文件與程式兩邊的對照結果，已是第三者對照，不再疊規則。",</code>
 </li></ul>
 </li></ul>
-<h4 id="65135-域-monitor1-把"><a class="self" href="#65135-域-monitor1-把">¶</a> 6.5.135 域 <code>monitor</code>（1 把）</h4>
+<h4 id="65136-域-monitor1-把"><a class="self" href="#65136-域-monitor1-把">¶</a> 6.5.136 域 <code>monitor</code>（1 把）</h4>
 <ul>
 <li><strong><code>monitor.summary</code></strong> — <code>Services/MonitorFactsService.cs:38</code>（生產點）
 <ul>
@@ -10856,7 +10886,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"monitor.summary", Category, "顯示器組成", "", "", "WMI WmiMonitorID ＋ WmiMonitorConnectionParams ＋ Win32_DesktopMonitor", FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError, "讀取失敗：" + ex.Message),</code>
 </li></ul>
 </li></ul>
-<h4 id="65136-域-msr1-把"><a class="self" href="#65136-域-msr1-把">¶</a> 6.5.136 域 <code>msr</code>（1 把）</h4>
+<h4 id="65137-域-msr1-把"><a class="self" href="#65137-域-msr1-把">¶</a> 6.5.137 域 <code>msr</code>（1 把）</h4>
 <ul>
 <li><strong><code>msr.0x8b</code></strong> — <code>Services/CpuFirmwareFactsService.cs:61</code>（生產點（無註解））
 <ul>
@@ -10864,7 +10894,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"msr.0x8b", name = "微碼修訂版（MSR 0x8B）", source = "MSR 0x8B（IA32_BIOS_SIGN_ID）bits[63:32]，逐實體核綁定讀取"; if (unavailableReason is not null) return Unavailable(key, name, source, at, FactAvailability.InsufficientPrivilege, unavailableReason);</code>
 </li></ul>
 </li></ul>
-<h4 id="65137-域-off1-把"><a class="self" href="#65137-域-off1-把">¶</a> 6.5.137 域 <code>off</code>（1 把）</h4>
+<h4 id="65138-域-off1-把"><a class="self" href="#65138-域-off1-把">¶</a> 6.5.138 域 <code>off</code>（1 把）</h4>
 <ul>
 <li><strong><code>off.mount.kind</code></strong> — <code>Services/OfflineInputMount.cs:91</code>（生產點（無註解））
 <ul>
@@ -10872,7 +10902,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"off.mount.kind"; public static HardwareFact ToFact(DateTimeOffset at, IReadOnlyList&lt;MountRecord&gt; mounts) {</code>
 </li></ul>
 </li></ul>
-<h4 id="65138-域-oob1-把"><a class="self" href="#65138-域-oob1-把">¶</a> 6.5.138 域 <code>oob</code>（1 把）</h4>
+<h4 id="65139-域-oob1-把"><a class="self" href="#65139-域-oob1-把">¶</a> 6.5.139 域 <code>oob</code>（1 把）</h4>
 <ul>
 <li><strong><code>oob.ipmi</code></strong> — <code>Services/OobFactsService.cs:25</code>（生產點）
 <ul>
@@ -10880,7 +10910,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"oob.ipmi", name = "帶外管理（IPMI）", source = "SMBIOS Type 38（IPMI 裝置）存在性"; return bmcPresent switch { true =&gt; new HardwareFact(key, Category, name,</code>
 </li></ul>
 </li></ul>
-<h4 id="65139-域-ps1-把"><a class="self" href="#65139-域-ps1-把">¶</a> 6.5.139 域 <code>ps</code>（1 把）</h4>
+<h4 id="65140-域-ps1-把"><a class="self" href="#65140-域-ps1-把">¶</a> 6.5.140 域 <code>ps</code>（1 把）</h4>
 <ul>
 <li><strong><code>ps.modules.gap</code></strong> — <code>Services/CliService.cs:21</code>（生產點（無註解））
 <ul>
@@ -10888,7 +10918,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"ps.modules.gap"; public const string JsonArg = "--json"; public const string EvidenceScope = "evidence";</code>
 </li></ul>
 </li></ul>
-<h4 id="65140-域-raid1-把"><a class="self" href="#65140-域-raid1-把">¶</a> 6.5.140 域 <code>raid</code>（1 把）</h4>
+<h4 id="65141-域-raid1-把"><a class="self" href="#65141-域-raid1-把">¶</a> 6.5.141 域 <code>raid</code>（1 把）</h4>
 <ul>
 <li><strong><code>raid.oob</code></strong> — <code>Services/OobFactsService.cs:44</code>（生產點）
 <ul>
@@ -10896,7 +10926,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"raid.oob", name = "RAID 帶外（MegaRAID）", source = "PCI 類別碼 0104/0107 盤點"; return raidPresent switch { true =&gt; new HardwareFact(key, Category, name,</code>
 </li></ul>
 </li></ul>
-<h4 id="65141-域-reg1-把"><a class="self" href="#65141-域-reg1-把">¶</a> 6.5.141 域 <code>reg</code>（1 把）</h4>
+<h4 id="65142-域-reg1-把"><a class="self" href="#65142-域-reg1-把">¶</a> 6.5.142 域 <code>reg</code>（1 把）</h4>
 <ul>
 <li><strong><code>reg.microcode</code></strong> — <code>Services/CpuFirmwareFactsService.cs:85</code>（生產點（無註解））
 <ul>
@@ -10904,7 +10934,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"reg.microcode", name = "微碼修訂版（登錄檔）", source = "登錄檔 CentralProcessor\\0「Update Revision」"; if (raw is null) return Unavailable(key, name, source, at, FactAvailability.NotSupported, "登錄值不存在");</code>
 </li></ul>
 </li></ul>
-<h4 id="65142-域-release1-把"><a class="self" href="#65142-域-release1-把">¶</a> 6.5.142 域 <code>release</code>（1 把）</h4>
+<h4 id="65143-域-release1-把"><a class="self" href="#65143-域-release1-把">¶</a> 6.5.143 域 <code>release</code>（1 把）</h4>
 <ul>
 <li><strong><code>release.verify</code></strong> — <code>Services/FactCoverageReport.cs:667</code>（提及處）
 <ul>
@@ -10912,7 +10942,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"release.verify"] = "發佈驗證：來源是發佈資產的雜湊與驗證腳本，單一來源。", ["tests.baseline"] = "測試基線：來源是測試執行結果；它與徽章的關係是同一份數字的兩種呈現。", ["license.notices"] = "授權與第三方聲明：來源是本專案自己的宣告，沒有第二份清單可對。", ["cert.plan"] = "認證計畫：來源是認證項目的狀態宣告，不是量測值。",</code>
 </li></ul>
 </li></ul>
-<h4 id="65143-域-report1-把"><a class="self" href="#65143-域-report1-把">¶</a> 6.5.143 域 <code>report</code>（1 把）</h4>
+<h4 id="65144-域-report1-把"><a class="self" href="#65144-域-report1-把">¶</a> 6.5.144 域 <code>report</code>（1 把）</h4>
 <ul>
 <li><strong><code>report.class</code></strong> — <code>Services/DataSovereigntyReport.cs:27</code>（生產點（無註解））
 <ul>
@@ -10920,14 +10950,14 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"report.class"; private const string Category = "資料邊界"; private const string Source = "資料主權";</code>
 </li></ul>
 </li></ul>
-<h4 id="65144-域-secboot1-把"><a class="self" href="#65144-域-secboot1-把">¶</a> 6.5.144 域 <code>secboot</code>（1 把）</h4>
+<h4 id="65145-域-secboot1-把"><a class="self" href="#65145-域-secboot1-把">¶</a> 6.5.145 域 <code>secboot</code>（1 把）</h4>
 <ul>
 <li><strong><code>secboot.chain</code></strong> — <code>Services/FactKeyCatalog.cs:923</code>（提及處）
 <ul>
 <li>原始碼：<code>"secboot.chain",</code>
 </li></ul>
 </li></ul>
-<h4 id="65145-域-secure1-把"><a class="self" href="#65145-域-secure1-把">¶</a> 6.5.145 域 <code>secure</code>（1 把）</h4>
+<h4 id="65146-域-secure1-把"><a class="self" href="#65146-域-secure1-把">¶</a> 6.5.146 域 <code>secure</code>（1 把）</h4>
 <ul>
 <li><strong><code>secure.dbx</code></strong> — <code>Services/DomainKnowledgeReport.cs:26</code>（生產點（無註解））
 <ul>
@@ -10935,7 +10965,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"secure.dbx"; public const string PsuKey = "psu.model"; private const string Category = "知識與更新";</code>
 </li></ul>
 </li></ul>
-<h4 id="65146-域-smart1-把"><a class="self" href="#65146-域-smart1-把">¶</a> 6.5.146 域 <code>smart</code>（1 把）</h4>
+<h4 id="65147-域-smart1-把"><a class="self" href="#65147-域-smart1-把">¶</a> 6.5.147 域 <code>smart</code>（1 把）</h4>
 <ul>
 <li><strong><code>smart.failing_now.count</code></strong> — <code>Services/SmartFailingNowFactsService.cs:23</code>（生產點）
 <ul>
@@ -10943,14 +10973,14 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"smart.failing_now.count", Category, "SMART failing-now", "", "", "SMART READ DATA＋READ THRESHOLDS", FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError, "來源未提供 SMART 資料——沒有可比對的屬性，不以 0 冒充")]; var (attrs, thresholds, wctemp) = single</code>
 </li></ul>
 </li></ul>
-<h4 id="65147-域-smbus1-把"><a class="self" href="#65147-域-smbus1-把">¶</a> 6.5.147 域 <code>smbus</code>（1 把）</h4>
+<h4 id="65148-域-smbus1-把"><a class="self" href="#65148-域-smbus1-把">¶</a> 6.5.148 域 <code>smbus</code>（1 把）</h4>
 <ul>
 <li><strong><code>smbus.tsod</code></strong> — <code>Services/TsodSurveyor.cs:63</code>（生產點）
 <ul>
 <li>原始碼：<code>"smbus.tsod", Category, "TSOD 溫度感測器掃描", "0x18–0x1F 無裝置回應（模組未掛 TSOD，或掛在 iMC 匯流排——後者本批未掃）", "", "PCH SMBus 掃描", FactTrustLevel.Measured, false, at)); return facts;</code>
 </li></ul>
 </li></ul>
-<h4 id="65148-域-test1-把"><a class="self" href="#65148-域-test1-把">¶</a> 6.5.148 域 <code>test</code>（1 把）</h4>
+<h4 id="65149-域-test1-把"><a class="self" href="#65149-域-test1-把">¶</a> 6.5.149 域 <code>test</code>（1 把）</h4>
 <ul>
 <li><strong><code>test.duration</code></strong> — <code>Services/GuardBudget.cs:26</code>（生產點（無註解））
 <ul>
@@ -10958,7 +10988,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"test.duration"; /// &lt;summary&gt; /// 一個守門的時間預算。&lt;see cref="Hard"/&gt; 是紅燈線，&lt;see cref="Soft"/&gt; 是提醒線。</code>
 </li></ul>
 </li></ul>
-<h4 id="65149-域-tests1-把"><a class="self" href="#65149-域-tests1-把">¶</a> 6.5.149 域 <code>tests</code>（1 把）</h4>
+<h4 id="65150-域-tests1-把"><a class="self" href="#65150-域-tests1-把">¶</a> 6.5.150 域 <code>tests</code>（1 把）</h4>
 <ul>
 <li><strong><code>tests.baseline</code></strong> — <code>Services/FactCoverageReport.cs:668</code>（提及處）
 <ul>
@@ -10966,7 +10996,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"tests.baseline"] = "測試基線：來源是測試執行結果；它與徽章的關係是同一份數字的兩種呈現。", ["license.notices"] = "授權與第三方聲明：來源是本專案自己的宣告，沒有第二份清單可對。", ["cert.plan"] = "認證計畫：來源是認證項目的狀態宣告，不是量測值。", ["limits.public"] = "公開限制清單：來源是本專案自己的限制聲明——它不是量測，是承諾的邊界。",</code>
 </li></ul>
 </li></ul>
-<h4 id="65150-域-ufv1-把"><a class="self" href="#65150-域-ufv1-把">¶</a> 6.5.150 域 <code>ufv</code>（1 把）</h4>
+<h4 id="65151-域-ufv1-把"><a class="self" href="#65151-域-ufv1-把">¶</a> 6.5.151 域 <code>ufv</code>（1 把）</h4>
 <ul>
 <li><strong><code>ufv.bios.count</code></strong> — <code>Services/UefiFvFactsService.cs:27</code>（生產點（無註解））
 <ul>
@@ -10974,7 +11004,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li>原始碼：<code>"ufv.bios.count"; private const string Source = "記憶體映射快閃 BIOS 區（唯讀）÷ UEFI PI FV/FFS"; /// &lt;summary&gt;本版讀取上限（BIOS 區）：超過就如實拒讀，不假裝讀完。&lt;/summary&gt;</code>
 </li></ul>
 </li></ul>
-<h4 id="65151-域-usbstor1-把"><a class="self" href="#65151-域-usbstor1-把">¶</a> 6.5.151 域 <code>usbstor</code>（1 把）</h4>
+<h4 id="65152-域-usbstor1-把"><a class="self" href="#65152-域-usbstor1-把">¶</a> 6.5.152 域 <code>usbstor</code>（1 把）</h4>
 <ul>
 <li><strong><code>usbstor.count</code></strong> — <code>Services/SecurityAuditFactsService.cs:149</code>（生產點）
 <ul>
@@ -11212,12 +11242,12 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <th style="text-align:right">數量</th>
 <th>數法</th>
 </tr></thead><tbody>
-<tr><td>測試檔</td><td style="text-align:right"><strong>609</strong></td><td><code>find Tests -name '*.cs' | wc -l</code></td></tr>
-<tr><td><code>[Fact]</code> 方法</td><td style="text-align:right"><strong>6,245</strong></td><td>反射計算測試組件裡的 <code>[Fact]</code> 方法（<code>DeclaredOnly</code>）</td></tr>
+<tr><td>測試檔</td><td style="text-align:right"><strong>610</strong></td><td><code>find Tests -name '*.cs' | wc -l</code></td></tr>
+<tr><td><code>[Fact]</code> 方法</td><td style="text-align:right"><strong>6,258</strong></td><td>反射計算測試組件裡的 <code>[Fact]</code> 方法（<code>DeclaredOnly</code>）</td></tr>
 <tr><td><code>[Theory]</code> 方法</td><td style="text-align:right"><strong>269</strong></td><td>同上，<code>[Theory]</code> 分開數（它繼承 <code>[Fact]</code>，不能混）</td></tr>
-<tr><td>執行期測試案例</td><td style="text-align:right"><strong>7,572</strong></td><td><code>Tests/TestSuiteBaseline.cs</code> 的 <code>ProjectTests</code>（<code>dotnet test</code> 的總數，也是 README 測試徽章的單一來源）</td></tr>
+<tr><td>執行期測試案例</td><td style="text-align:right"><strong>7,585</strong></td><td><code>Tests/TestSuiteBaseline.cs</code> 的 <code>ProjectTests</code>（<code>dotnet test</code> 的總數，也是 README 測試徽章的單一來源）</td></tr>
 </tbody></table>
-<p><strong>兩個比例值得讀。</strong> 一、<strong><code>[Theory]</code> 只占 269 個</strong>：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、<strong>執行期案例數（7,572）大於方法數（6,514）</strong>：差額來自被展開的 <code>[Theory]</code> 資料列——這正是基線守門的形狀（下一節）。</p>
+<p><strong>兩個比例值得讀。</strong> 一、<strong><code>[Theory]</code> 只占 269 個</strong>：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、<strong>執行期案例數（7,585）大於方法數（6,527）</strong>：差額來自被展開的 <code>[Theory]</code> 資料列——這正是基線守門的形狀（下一節）。</p>
 <h3 id="102-基線守門為什麼測試數是一個被釘住的數字"><a class="self" href="#102-基線守門為什麼測試數是一個被釘住的數字">¶</a> 10.2 基線守門：為什麼「測試數」是一個被釘住的數字</h3>
 <p><code>TestSuiteBaseline.ProjectTests</code> 是專案測試數的<strong>唯一來源</strong>，而 README 的測試徽章必須等於它。<strong>這條守門的存在理由是一個真實的舊缺陷</strong>：徽章曾經停在一個舊數字，而同一份文件的版本沿革已經寫到更新的版本——<strong>「一張紙上兩個數字，讀者無從判斷」</strong>。</p>
 <p>守門的兩層：</p>
@@ -12591,7 +12621,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td>L-7</td><td>虛擬機</td><td>韌體與感測器多數被虛擬層遮蔽</td><td>六態會大量出現 <code>NotApplicable</code>／<code>Unknown</code>，那是誠實結果</td></tr>
 <tr><td>L-8</td><td>即時性</td><td>這是「檢視與量測」工具，不是取樣率導向的即時監控</td><td>需要毫秒級連續記錄請用專門的記錄器；本工具的解析度見第 5 部</td></tr>
 <tr><td>L-9</td><td>寫入面</td><td>除深測的低階測項（PMU／RDT 等，全部經同意閘門與寫入帳本）外不寫入硬體</td><td>不做 BIOS 更新、不改 SPD、不修 registry</td></tr>
-<tr><td>L-10</td><td>覆蓋</td><td>63 個可到達畫面對 151 個域、1,155 把鍵</td><td>有些鍵沒有專屬畫面（只出現在總表／匯出／命令列），這是數量差的原因</td></tr>
+<tr><td>L-10</td><td>覆蓋</td><td>63 個可到達畫面對 152 個域、1,158 把鍵</td><td>有些鍵沒有專屬畫面（只出現在總表／匯出／命令列），這是數量差的原因</td></tr>
 </tbody></table>
 <p><strong>一句話的讀法。</strong> 看到「—」先問是哪一種非 <code>Present</code>；看到「沒有這一項」先問是限制還是缺陷——第 12.3 節就是缺陷那一欄。</p>
 <h3 id="123-仍開著的洞o-01-至-o-12"><a class="self" href="#123-仍開著的洞o-01-至-o-12">¶</a> 12.3 仍開著的洞（O-01 至 O-12）</h3>
@@ -12694,7 +12724,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li><strong>要「跑得快不快」</strong>：本工具的量測有明確的配置與樣本數（第 4、5 部），把它當成「同機前後比較」的工具，而不是「跨機排名」的工具。
 </li></ul>
 <h3 id="134-不做的比較"><a class="self" href="#134-不做的比較">¶</a> 13.4 不做的比較</h3>
-<p>不與其他工具做「誰讀得多」的競賽，理由是<strong>分母不同就不可加</strong>：對方算「顯示了幾個欄位」，本工具算「登記了 1,155 把鍵裡這次收集到幾把」。同一台機器、同一天，兩個數字可以差一倍而兩邊都沒有錯——這正是第 0 部講的「分母陷阱」。</p>
+<p>不與其他工具做「誰讀得多」的競賽，理由是<strong>分母不同就不可加</strong>：對方算「顯示了幾個欄位」，本工具算「登記了 1,158 把鍵裡這次收集到幾把」。同一台機器、同一天，兩個數字可以差一倍而兩邊都沒有錯——這正是第 0 部講的「分母陷阱」。</p>
 <h3 id="135-拿它來檢查另一個工具的四個步驟"><a class="self" href="#135-拿它來檢查另一個工具的四個步驟">¶</a> 13.5 拿它來檢查另一個工具的四個步驟</h3>
 <ol>
 <li><strong>同一時刻、同一台機器</strong>：兩邊都重讀一次，排除快取與時序差。
@@ -12773,13 +12803,13 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li></ul>
 <h3 id="152-本機測試"><a class="self" href="#152-本機測試">¶</a> 15.2 本機測試</h3>
 <ul>
-<li><strong>全套</strong>：7,572 條（<code>TestSuiteBaseline.ProjectTests</code> 是唯一來源）。其中一部分會讀真機硬體（SMBIOS、SPD、NVMe…），<strong>換一台機器可能因「不支援」或「值不一樣」而紅</strong>——那是預期行為，不是回歸。
+<li><strong>全套</strong>：7,585 條（<code>TestSuiteBaseline.ProjectTests</code> 是唯一來源）。其中一部分會讀真機硬體（SMBIOS、SPD、NVMe…），<strong>換一台機器可能因「不支援」或「值不一樣」而紅</strong>——那是預期行為，不是回歸。
 </li><li><strong>守門子集</strong>：<code>ChangelogTests</code>、<code>FactKeyCatalogTests</code>、<code>Ultimate10000CatalogTests</code>、<code>ReleasePipelineTests</code>、<code>ReleaseIntegrityTests</code> 五組不依賴硬體，任何機器都該綠。
 </li><li><strong>判讀紅燈</strong>：先問「這條測試讀真機嗎」。是的話先比對是不是環境差；不是的話就是回歸。<strong>不要把環境差當成回歸去改測試，也不要把回歸當成環境差去忽略。</strong>
 </li></ul>
 <h3 id="153-ci刻意只跑守門那一層"><a class="self" href="#153-ci刻意只跑守門那一層">¶</a> 15.3 CI：刻意只跑守門那一層</h3>
 <p>倉庫的 <code>.github/workflows/ci.yml</code> 在 <code>windows-latest</code> 上做四件事：還原、建置、跑上面那五組守門測試、上傳 <code>guard.trx</code>。抓取的時機是 <code>push</code> 到 <code>main</code>、任何 <code>pull_request</code>、以及手動觸發。</p>
-<p><strong>為什麼不跑全套</strong>（這是 CI 檔開頭的註解，也是設計裁決）：全套 7,572 條裡有一部分會讀真機硬體，在 GitHub 的 hosted runner 上可能因「不支援」或「值不一樣」而紅，<strong>讓 CI 變成雜訊</strong>——而一個充滿雜訊的 CI 會訓練人忽略紅燈，那是比沒有 CI 更糟的狀態。硬體全套由貢獻者在本機跑，PR 範本要求貼上實測數字。</p>
+<p><strong>為什麼不跑全套</strong>（這是 CI 檔開頭的註解，也是設計裁決）：全套 7,585 條裡有一部分會讀真機硬體，在 GitHub 的 hosted runner 上可能因「不支援」或「值不一樣」而紅，<strong>讓 CI 變成雜訊</strong>——而一個充滿雜訊的 CI 會訓練人忽略紅燈，那是比沒有 CI 更糟的狀態。硬體全套由貢獻者在本機跑，PR 範本要求貼上實測數字。</p>
 <h3 id="154-發佈產線每一道閘門都是事故留下的"><a class="self" href="#154-發佈產線每一道閘門都是事故留下的">¶</a> 15.4 發佈產線：每一道閘門都是事故留下的</h3>
 <p>發佈不走手動步驟，走 <code>Tools/release.ps1</code>。這條產線上的每一道檢查都對應一次真實的疏失：</p>
 <table>
@@ -12832,7 +12862,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><code>ReadError</code></td><td>試過但失敗，且原因未確認</td></tr>
 <tr><td>格（lattice）</td><td>六態之間的強弱序結構；衍生事實取來源中最弱者（合取傳播）</td></tr>
 <tr><td>合取傳播</td><td>三個來源都 <code>Present</code> 才是 <code>Present</code>；一個讀不到，結論就不能宣稱可用</td></tr>
-<tr><td>分母</td><td>宣稱的範圍。本文件的分母是編譯期目錄（1,155 把鍵），不是「這次掃到什麼」</td></tr>
+<tr><td>分母</td><td>宣稱的範圍。本文件的分母是編譯期目錄（1,158 把鍵），不是「這次掃到什麼」</td></tr>
 <tr><td>分母陷阱</td><td>換分母不改分子，卻讓比例變好看（第 0 部的「數字騙法」之一）</td></tr>
 </tbody></table>
 <p><strong>量測</strong></p>
@@ -12850,7 +12880,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td>削波</td><td>連續 ≥3 個滿格樣本（單點滿格可能是合法峰值）</td></tr>
 <tr><td>dBFS</td><td>相對滿格的分貝值；0 樣本以 <strong>−120 dBFS 底線</strong>呈現，不用 −∞</td></tr>
 <tr><td>誤差預算</td><td>一個數字身上疊了幾層誤差、各佔多少</td></tr>
-<tr><td>覆蓋基線</td><td>本專案用來追蹤「事實鍵的產出覆蓋」的計數基線（目前 429）</td></tr>
+<tr><td>覆蓋基線</td><td>本專案用來追蹤「事實鍵的產出覆蓋」的計數基線（目前 432）</td></tr>
 </tbody></table>
 <p><strong>硬體與韌體</strong></p>
 <table>
@@ -12878,7 +12908,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <th>意思</th>
 </tr></thead><tbody>
 <tr><td>守門</td><td>一條會在任何機器上紅／綠的規則；本文件的每一個現在式數字都盡量有守門</td></tr>
-<tr><td>現在式宣稱</td><td>「本版是 vX」「測試 7,572 綠」這類今天為真、明天可能為假的句子</td></tr>
+<tr><td>現在式宣稱</td><td>「本版是 vX」「測試 7,585 綠」這類今天為真、明天可能為假的句子</td></tr>
 <tr><td>交叉對帳</td><td>同一事實多來源互相印證；結論只有一致／矛盾／無法驗證</td></tr>
 <tr><td>寫入帳本</td><td>所有硬體寫入的紀錄；與同意閘門並列兩道閘門</td></tr>
 <tr><td>同意閘門</td><td>深測低階測項執行前的明示同意</td></tr>
@@ -12912,10 +12942,10 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td>斷路器冷卻</td><td>一顆碟一個冷卻期最多洩一條執行緒</td><td>同上；不吃執行緒集區</td></tr>
 <tr><td>報告／匯出零命中</td><td>退出碼 2</td><td><code>--only</code> 分母聲明</td></tr>
 <tr><td>CI 逾時</td><td>30 分鐘</td><td><code>.github/workflows/ci.yml</code></td></tr>
-<tr><td>測試基線</td><td>7,572（<code>TestSuiteBaseline.ProjectTests</code>）</td><td>唯一來源；低於測試方法數即紅燈</td></tr>
-<tr><td>覆蓋基線</td><td>429</td><td>遞增需留理由</td></tr>
+<tr><td>測試基線</td><td>7,585（<code>TestSuiteBaseline.ProjectTests</code>）</td><td>唯一來源；低於測試方法數即紅燈</td></tr>
+<tr><td>覆蓋基線</td><td>432</td><td>遞增需留理由</td></tr>
 <tr><td>對帳規則數</td><td>26（執行期）</td><td>歷史文字曾寫 29（O-01）</td></tr>
-<tr><td>事實鍵目錄</td><td>1,155 把／151 域</td><td>編譯期目錄為分母</td></tr>
+<tr><td>事實鍵目錄</td><td>1,158 把／152 域</td><td>編譯期目錄為分母</td></tr>
 <tr><td>動態家族</td><td>62 個前綴</td><td>成員由執行期決定</td></tr>
 <tr><td>可到達畫面</td><td>63</td><td>導覽註冊表（主頁面＋實用工具）的 <code>Key</code> 條目數；獨立視窗另計在 XAML 檔數裡</td></tr>
 <tr><td>說明條目</td><td>285 條</td><td>每頁圓圈問號的內容</td></tr>
@@ -12973,7 +13003,7 @@ A：附錄 K 有七個步驟，第 5 步（放在收集步驟而不是 getter）
 A：以程式為準，並把文件修掉。<strong>文件漂移會被測試抓到的部分以測試為準</strong>（那是最硬的來源）。</p>
 <p><strong>Q：這是免費的嗎？</strong><br>
 A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種特定的自由軟體授權。商業使用請讀授權條文。</p>
-<h3 id="附錄-f-151-個域的前綴表"><a class="self" href="#附錄-f-151-個域的前綴表">¶</a> 附錄 F　151 個域的前綴表</h3>
+<h3 id="附錄-f-152-個域的前綴表"><a class="self" href="#附錄-f-152-個域的前綴表">¶</a> 附錄 F　152 個域的前綴表</h3>
 <p>這張表是鍵空間的地圖：<strong>域、鍵數、字典序首鍵與末鍵、以及這一域有沒有成文說明</strong>。「說明」欄為空代表本版沒有替這一域寫過定位——那是一件該被看見的事，不是排版問題。</p>
 <table>
 <thead><tr>
@@ -13080,6 +13110,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 <tr><td><code>exp</code></td><td style="text-align:right">3</td><td><code>exp.hash.chain</code></td><td><code>exp.partial</code></td><td><strong>（本版無成文說明）</strong></td></tr>
 <tr><td><code>export</code></td><td style="text-align:right">3</td><td><code>export.mask</code></td><td><code>export.release</code></td><td>匯出治理</td></tr>
 <tr><td><code>numa</code></td><td style="text-align:right">3</td><td><code>numa.slit.nodes</code></td><td><code>numa.topology.xnode</code></td><td>NUMA</td></tr>
+<tr><td><code>pcie</code></td><td style="text-align:right">3</td><td><code>pcie.access.agreement</code></td><td><code>pcie.access.summary</code></td><td></td></tr>
 <tr><td><code>rep</code></td><td style="text-align:right">3</td><td><code>rep.diff.mode</code></td><td><code>rep.sec.summary</code></td><td><strong>（本版無成文說明）</strong></td></tr>
 <tr><td><code>time</code></td><td style="text-align:right">3</td><td><code>time.drift.ppm</code></td><td><code>time.pm_timer</code></td><td>計時器</td></tr>
 <tr><td><code>ups</code></td><td style="text-align:right">3</td><td><code>ups.battery.percent</code></td><td><code>ups.status</code></td><td>UPS</td></tr>
@@ -13135,7 +13166,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 <tr><td><code>ufv</code></td><td style="text-align:right">1</td><td><code>ufv.bios.count</code></td><td><code>ufv.bios.count</code></td><td><strong>（本版無成文說明）</strong></td></tr>
 <tr><td><code>usbstor</code></td><td style="text-align:right">1</td><td><code>usbstor.count</code></td><td><code>usbstor.count</code></td><td><strong>（本版無成文說明）</strong></td></tr>
 </tbody></table>
-<p><strong>總計</strong>：151 個域、1,155 把鍵（402 把落在 ≥20 鍵的 12 個大域，其餘 753 把散在 139 個域）。</p>
+<p><strong>總計</strong>：152 個域、1,158 把鍵（402 把落在 ≥20 鍵的 12 個大域，其餘 756 把散在 140 個域）。</p>
 <h3 id="附錄-f-2-62-個動態家族與成員由什麼決定"><a class="self" href="#附錄-f-2-62-個動態家族與成員由什麼決定">¶</a> 附錄 F-2　62 個動態家族與「成員由什麼決定」</h3>
 <p>動態家族的成員在編譯期數不出來，所以目錄只登記前綴與理由。下表是全部 62 個前綴與它們各自申報的理由（<strong>抽不到理由的會留白，不補</strong>）。</p>
 <table>
@@ -15034,7 +15065,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 </li><li>功能／怎麼讀：這類控制器有自己的韌體與安全模型；未授權裝置可能只被列舉到控制器層。這裡只讀系統與裝置回報，不授權、不解鎖、不改變安全設定。
 </li></ul>
 </li></ul>
-<h3 id="附錄-h-服務檔地圖646-個檔案"><a class="self" href="#附錄-h-服務檔地圖646-個檔案">¶</a> 附錄 H　服務檔地圖（646 個檔案）</h3>
+<h3 id="附錄-h-服務檔地圖647-個檔案"><a class="self" href="#附錄-h-服務檔地圖647-個檔案">¶</a> 附錄 H　服務檔地圖（647 個檔案）</h3>
 <p><code>Services/</code> 底下的每一個 <code>.cs</code>：路徑、行數、以及它宣告了幾個類別。<strong>這張表的用途是「找到負責某件事的檔案」</strong>——事實鍵的生產點在哪裡，先看這張表，再回頭看 6.5 的逐鍵出處。</p>
 <p><strong>這兩個數字怎麼數。</strong> 行數＝檔案以 <code>\n</code> 切開後的段數（結尾有換行時最後一段是空的，所以等於 <code>wc -l</code> 加 1）；類別數＝<code>class</code> 關鍵字宣告的數量，含巢狀類別與 <code>partial</code> 的每一部分，<code>interface</code>／<code>record</code>／<code>struct</code>／<code>enum</code> 不計，註解行不計。<strong>它們是「這個檔案有多長、宣告了幾個型別」的粗量，不是品質或重要性的度量。</strong>字串常數裡出現 <code>class </code> 也會被算進類別數——這是這個數法的已知邊界，不假裝它是編譯器的答案。</p>
 <table>
@@ -15293,7 +15324,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 <tr><td><code>Services/EventsService.cs</code></td><td style="text-align:right">340</td><td style="text-align:right">4</td></tr>
 <tr><td><code>Services/EvidenceCollection.cs</code></td><td style="text-align:right">235</td><td style="text-align:right">1</td></tr>
 <tr><td><code>Services/EvidenceExportFactsService.cs</code></td><td style="text-align:right">263</td><td style="text-align:right">1</td></tr>
-<tr><td><code>Services/EvidenceLabService.cs</code></td><td style="text-align:right">2834</td><td style="text-align:right">1</td></tr>
+<tr><td><code>Services/EvidenceLabService.cs</code></td><td style="text-align:right">2846</td><td style="text-align:right">1</td></tr>
 <tr><td><code>Services/EvidencePackBuilder.cs</code></td><td style="text-align:right">213</td><td style="text-align:right">1</td></tr>
 <tr><td><code>Services/EvidenceTimelineService.cs</code></td><td style="text-align:right">478</td><td style="text-align:right">1</td></tr>
 <tr><td><code>Services/ExportAndCacheFactsService.cs</code></td><td style="text-align:right">116</td><td style="text-align:right">2</td></tr>
@@ -15307,7 +15338,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 <tr><td><code>Services/ExternalSensors/HwInfoSharedMem.cs</code></td><td style="text-align:right">216</td><td style="text-align:right">1</td></tr>
 <tr><td><code>Services/FactAtlasService.cs</code></td><td style="text-align:right">364</td><td style="text-align:right">1</td></tr>
 <tr><td><code>Services/FactCoverageReport.cs</code></td><td style="text-align:right">767</td><td style="text-align:right">1</td></tr>
-<tr><td><code>Services/FactKeyCatalog.cs</code></td><td style="text-align:right">1204</td><td style="text-align:right">1</td></tr>
+<tr><td><code>Services/FactKeyCatalog.cs</code></td><td style="text-align:right">1207</td><td style="text-align:right">1</td></tr>
 <tr><td><code>Services/FactKeyDynamicCatalog.cs</code></td><td style="text-align:right">216</td><td style="text-align:right">1</td></tr>
 <tr><td><code>Services/FactQuery.cs</code></td><td style="text-align:right">44</td><td style="text-align:right">0</td></tr>
 <tr><td><code>Services/FactRelationEngine.cs</code></td><td style="text-align:right">526</td><td style="text-align:right">2</td></tr>
@@ -15474,6 +15505,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 <tr><td><code>Services/PciIdLookup.cs</code></td><td style="text-align:right">137</td><td style="text-align:right">1</td></tr>
 <tr><td><code>Services/PciResourceAuditService.cs</code></td><td style="text-align:right">422</td><td style="text-align:right">3</td></tr>
 <tr><td><code>Services/PcieAnalysisService.cs</code></td><td style="text-align:right">386</td><td style="text-align:right">4</td></tr>
+<tr><td><code>Services/PcieConfigAccessFactsService.cs</code></td><td style="text-align:right">209</td><td style="text-align:right">1</td></tr>
 <tr><td><code>Services/PcieLinkDecoder.cs</code></td><td style="text-align:right">246</td><td style="text-align:right">2</td></tr>
 <tr><td><code>Services/PcieLinkService.cs</code></td><td style="text-align:right">317</td><td style="text-align:right">1</td></tr>
 <tr><td><code>Services/PcieVerifyFacts.cs</code></td><td style="text-align:right">33</td><td style="text-align:right">1</td></tr>
@@ -15729,7 +15761,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 <p><strong>版本與發佈（1–6）</strong></p>
 <ol>
 <li>本版是 v3.03 —— 看徽章、<code>XinSpect.csproj</code> 的 <code>&lt;Version&gt;</code>、關於頁三處一致。不一致＝有一處落後（四處同步是硬規則）。
-</li><li>測試 7,572 綠 —— 跑守門五組不依賴硬體；全套請在真機跑。紅燈先分辨是真機依賴還是回歸。
+</li><li>測試 7,585 綠 —— 跑守門五組不依賴硬體；全套請在真機跑。紅燈先分辨是真機依賴還是回歸。
 </li><li>下載表列的位元組數取自本版真正釋出的那顆 <code>XinSpect.exe</code> —— 抓下來自己數 bytes。不符請先確認是不是抓到別的版號的檔案。
 </li><li>主程式未簽章 —— 內容右鍵「數位簽章」分頁應為空。這正是 O-03。
 </li><li>授權是 AGPL-3.0-or-later —— 讀 <code>LICENSE</code> 開頭三行。
@@ -15746,11 +15778,11 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 </li></ol>
 <p><strong>結構與分母（13–18）</strong></p>
 <ol>
-<li>事實鍵目錄是 1,155 把、151 域 —— 開事實總表頁看總數。
+<li>事實鍵目錄是 1,158 把、152 域 —— 開事實總表頁看總數。
 </li><li>動態家族 62 個 —— 目錄裡以「前綴＋理由」登記，成員不在編譯期。
 </li><li>可到達畫面 63 個 —— 導覽註冊表（主頁面＋實用工具）的 <code>Key</code> 條目數；獨立視窗另計在 XAML 檔數裡。
 </li><li>說明條目 285 條 —— 附錄 G 是它的全表。
-</li><li>服務檔 646 個 —— 附錄 H 是清單。
+</li><li>服務檔 647 個 —— 附錄 H 是清單。
 </li><li>對帳規則是 26 條（不是歷史文字裡的 29）—— O-01 的處置。
 </li></ol>
 <p><strong>量測（19–24）</strong></p>
@@ -15785,7 +15817,7 @@ A：授權是 AGPL-3.0-or-later（v2.69 起），不是「免費」而是一種�
 </tr></thead><tbody>
 <tr><td><code>Nav/</code></td><td>導覽註冊表與版本沿革資料</td><td><code>ChangelogCatalog.cs</code>（第 11 部的資料來源）、導覽註冊表（可達性守門的依據）</td></tr>
 <tr><td><code>Views/</code></td><td>畫面（XAML＋後置程式）</td><td>63 個可到達畫面的實際版面；說明條目掛在這裡</td></tr>
-<tr><td><code>Services/</code></td><td>事實的生產端（646 個檔案）</td><td>附錄 H 是完整清單；每一把鍵的來源多半在這裡</td></tr>
+<tr><td><code>Services/</code></td><td>事實的生產端（647 個檔案）</td><td>附錄 H 是完整清單；每一把鍵的來源多半在這裡</td></tr>
 <tr><td><code>Services/DeepBench/</code></td><td>深測套件與測項目錄</td><td>第 4 部的測項全表</td></tr>
 <tr><td><code>Models/</code></td><td>資料模型與預算</td><td>事實鍵目錄、<code>PerfBudget.cs</code>（冷啟動門檻）</td></tr>
 <tr><td><code>Bridge/</code></td><td>一切硬體存取的收斂點</td><td>三個寫入 API、寫入帳本、特權層（WinRing0／XsRegProbe）</td></tr>

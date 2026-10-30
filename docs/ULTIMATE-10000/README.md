@@ -21,6 +21,7 @@
 | `ROUND-322-NTFS-BOOT-2026-10-30.md` | 第 322 輪（U10-FS-0001＋FS-0002）：NTFS 開機磁區的 BPB 逐欄（`fs.ntfs.bpb`）與 MFT／MFTMirr 起點對帳（`fs.ntfs.mft.layout`）——把「磁碟自己寫的字」跟 `FSCTL_GET_NTFS_VOLUME_DATA` 並排；順手釘住有號位元組的 −10＝2^10 位元組陷阱，並拒絕為 0x50 的校驗和欄編一條規則。 |
 | `ROUND-323-USB-HUB-PORTS-2026-10-30.md` | 第 323 輪（U10-NP-0003）：USB 根集線器埠數（`usb.hub.summary`＋`usb.hub.ports.*`＋`usb.hub.boundary`）——「空埠」＝埠數（hub descriptor）−在場子裝置數（PnP 樹），減法不成立時不給數字；NP-0002 的控制器版本在 MMIO、本版讀不到，寫進界線宣告。 |
 | `ROUND-324-ACPI-ROOT-2026-10-30.md` | 第 324 輪（U10-AC-0001＋AC-0002）：ACPI 根指標表這一層（`ac.root.summary`／`.dsdt`／`.boundary`）——實測 RSDP 與 RSDT／XSDT 在 usermode 都拿不到（29 張表逐張看過，兩張都不在），所以「缺的表」的原因是 OS 沒給；能驗的照驗：FADT 的 FACS／DSDT 32 與 64 位位址。同輪修掉外部審查指出的 USB 埠數三處缺陷（D1 位元組寬度、D2 IOCTL input、D3 0x2A）與 D5／D6／D7／D8／D12／D13。 |
+| `ROUND-325-PCIE-ACCESS-2026-10-30.md` | 第 325 輪（U10-PC-0001）：PCIe 設定空間的存取方法宣告（`pcie.access.summary`／`.agreement`／`.boundary`）——舊式 0xCF8／0xCFC（前 256 位元組）與 ECAM（4 KiB/功能）兩條通道的可用性分開寫，並比對 0:0.0 那一格；「一致」只證明兩條通道通到同一台裝置，不證明 ID 正確。沒有新增讀取後端。 |
 | `dedup_check.py`／`sample_check.py` | 可重跑之稽核腳本（絕對路徑寫死）。 |
 | `ULTIMATE-10000-EXPANSION-2026-10-24.md` | 歷史快照（十二批完成時點；**已被 10-25 版取代**，保留供對帳）。 |
 | `ULTIMATE-5000-RESERVOIR-2026-10-24.md` | 前導文件（歸檔；已被主目錄取代）。 |
