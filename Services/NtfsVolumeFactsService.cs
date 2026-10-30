@@ -88,15 +88,34 @@ public static class NtfsVolumeFactsService
     public static IReadOnlyList<HardwareFact> CollectForThisMachine(DateTimeOffset at, IVolumeProbe? probe = null) =>
         Collect(at, probe ?? new SystemVolumeProbe());
 
-    public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at, IVolumeProbe probe)
+    /// <summary>
+    /// 同 <see cref="CollectForThisMachine(DateTimeOffset, IVolumeProbe)"/>，但把<b>這一次</b>解析到的
+    /// 卷冊資料交出去，讓開機磁區那一側（<see cref="NtfsBootSectorFactsService"/>）不必再發一次 FSCTL。
+    /// </summary>
+    /// <remarks>
+    /// 為什麼要這個 <c>out</c>：對帳的兩邊必須是<b>同一輪的同一份資料</b>。
+    /// 若兩支服務各發一次 <c>FSCTL_GET_NTFS_VOLUME_DATA</c>，兩次之間卷冊可能剛好被掛載／卸載，
+    /// 於是「不一致」可能只是兩次讀取之間世界變了——那是自己製造的假訊號。
+    /// </remarks>
+    public static IReadOnlyList<HardwareFact> CollectForThisMachine(
+        DateTimeOffset at, IVolumeProbe? probe, out NtfsVolumeData? driverSide) =>
+        Collect(at, probe ?? new SystemVolumeProbe(), out driverSide);
+
+    public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at, IVolumeProbe probe) =>
+        Collect(at, probe, out _);
+
+    public static IReadOnlyList<HardwareFact> Collect(
+        DateTimeOffset at, IVolumeProbe probe, out NtfsVolumeData? driverSide)
     {
-        var mft = CollectMft(at, probe);
+        var mft = CollectMft(at, probe, out driverSide);
         var usn = CollectUsn(at, probe);
         return mft.Concat(usn).ToList();
     }
 
-    private static IReadOnlyList<HardwareFact> CollectMft(DateTimeOffset at, IVolumeProbe probe)
+    private static IReadOnlyList<HardwareFact> CollectMft(
+        DateTimeOffset at, IVolumeProbe probe, out NtfsVolumeData? driverSide)
     {
+        driverSide = null;
         var r = probe.Query(SystemVolumeProbe.FsctlGetNtfsVolumeData, NtfsVolumeDecoder.VolumeDataBytes);
         if (r.Data is null)
             return [MftUnavailable(at, r.Error, "MFT 卷冊資料讀取失敗")];
@@ -104,6 +123,7 @@ public static class NtfsVolumeFactsService
         var v = NtfsVolumeDecoder.ParseVolumeData(r.Data);
         if (v is null)
             return [MftUnavailable(at, 0, $"輸出僅 {r.Data.Length} 位元組（< {NtfsVolumeDecoder.VolumeDataBytes}）——不猜欄位")];
+        driverSide = v;
 
         long? records = NtfsVolumeDecoder.EstimateRecords(v);
         double usedPct = v.TotalClusters > 0 ? 100.0 * (v.TotalClusters - v.FreeClusters) / v.TotalClusters : 0;

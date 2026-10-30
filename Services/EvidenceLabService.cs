@@ -1521,10 +1521,14 @@ public sealed class EvidenceLabService : ObservableObject
 
     public void LoadFsForensics()
     {
+        // NTFS 卷冊與開機磁區共用「同一輪的同一份驅動端資料」——見 NtfsVolumeFactsService
+        // 的 out 參數說明：兩支各發一次 FSCTL 會讓「不一致」可能只是兩次讀取之間世界變了。
+        var ntfs = NtfsVolumeFactsService.CollectForThisMachine(DateTimeOffset.UtcNow, null, out var driverSide);
         FsForensicFacts = ShimcacheFactsService.CollectForThisMachine(DateTimeOffset.UtcNow)
             .Concat(MountedDevicesFactsService.CollectForThisMachine(DateTimeOffset.UtcNow))
             .Concat(PrefetchFactsService.CollectForThisMachine(DateTimeOffset.UtcNow))
-            .Concat(NtfsVolumeFactsService.CollectForThisMachine(DateTimeOffset.UtcNow))
+            .Concat(ntfs)
+            .Concat(NtfsBootSectorFactsService.CollectForThisMachine(DateTimeOffset.UtcNow, null, driverSide))
             .Concat(RecycleBinFactsService.Collect(DateTimeOffset.UtcNow))
             .Concat(TaskHistoryFactsService.Collect(DateTimeOffset.UtcNow))
             .Concat(MinidumpFactsService.CollectForThisMachine(DateTimeOffset.UtcNow)).ToList();

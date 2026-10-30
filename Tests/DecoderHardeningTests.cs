@@ -91,6 +91,7 @@ public class DecoderHardeningTests
             "AppCompatCacheDecoder",
             "PrefetchHeaderDecoder",
             "NtfsVolumeDecoder",
+            "NtfsBootSectorDecoder",
             "KernelDumpDecoder",
             "TpmReplay",
             "AcpiDeep",

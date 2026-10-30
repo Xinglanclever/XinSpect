@@ -25,8 +25,13 @@ namespace XinSpect;
 /// </remarks>
 public static class FactKeyCatalog
 {
-    /// <summary>本版建置時掃到的事實鍵，共 1131 個（＝本清單的成員數；另有 49 個動態家族見
+    /// <summary>本版建置時掃到的事實鍵（＝本清單的成員數；另有動態家族見
     /// <see cref="FactKeyDynamicCatalog"/>，那些的成員由機器事實決定，不列在這裡）。
+    /// <b>這裡刻意不寫「共 N 個」。</b>這句原本寫著「共 1131 個…另有 49 個動態家族」，
+    /// 兩個數字都停在很久以前（實際已到 1,150／61），而且<b>沒有任何守門在盯它</b>——
+    /// README 的數字有 <c>ReadmeStatsTests</c> 釘住，這句沒有，於是它安静地留在舊版。
+    /// 與其再寫一個會過期的數字，不如把「誰是單一來源」寫清楚：鍵數以 <see cref="Count"/> 為準、
+    /// 家族數以 <see cref="FactKeyDynamicCatalog.Families"/> 為準，兩者都由測試對帳。
     /// <b>本清單一律以全字串字典序排列</b>——<c>FactKeyCatalogTests.目錄不得有重複鍵且要排序</c> 釘住這件事；
     /// 插鍵時整塊重排，不要手找位置（找前綴會把 <c>gp.*</c> 插到 <c>gpu.*</c> 後面）。
     /// 這個教訓來自一次真實的錯位，但「錯了幾段／幾鍵」<b>沒有留下可對帳的紀錄</b>：
@@ -387,6 +392,8 @@ public static class FactKeyCatalog
         "fs.mount.count",
         "fs.mount.letters",
         "fs.mount.volumes",
+        "fs.ntfs.bpb",
+        "fs.ntfs.mft.layout",
         "fs.pf.count",
         "fs.pf.formats",
         "fs.pf.latest",

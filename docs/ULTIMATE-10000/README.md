@@ -18,6 +18,7 @@
 | `ROUND-319-CREDGUARD-CHAIN-2026-10-30.md` | 第 319 輪（U10-SE-0005）：Credential Guard 從一個布林變成四層狀態鏈（`sec.credguard.chain`），並修掉 `ws.lsa.summary` 把 VBS 總開關標成「Credential Guard」的標籤錯誤、以及 `VbsSnapshot` 把「清單讀不到」寫成「清單是空的」。 |
 | `ROUND-320-VBS-SERVICES-2026-10-30.md` | 第 320 輪（U10-SE-0004）：VBS 安全服務清單從一句人話變成逐服務的鍵（`sec.vbs.services.summary`＋`sec.vbs.svc.*`）；代碼 0（無服務）是哨兵不進家族、兩張清單的成員取聯集、缺一張時只出讀得到的那一半。沒有新增讀取面。 |
 | `ROUND-321-DEVTREE-2026-10-30.md` | 第 321 輪（U10-OS-0001）：裝置樹全圖（`os.devtree.summary`＋`os.devtree.root.*`）——層級分布、「根」有兩種（真的沒有父／父不在清單）分開計數、成環節點如實申報。樹在第 309 輪就建好了，這一輪只多一個消費者。 |
+| `ROUND-322-NTFS-BOOT-2026-10-30.md` | 第 322 輪（U10-FS-0001＋FS-0002）：NTFS 開機磁區的 BPB 逐欄（`fs.ntfs.bpb`）與 MFT／MFTMirr 起點對帳（`fs.ntfs.mft.layout`）——把「磁碟自己寫的字」跟 `FSCTL_GET_NTFS_VOLUME_DATA` 並排；順手釘住有號位元組的 −10＝2^10 位元組陷阱，並拒絕為 0x50 的校驗和欄編一條規則。 |
 | `dedup_check.py`／`sample_check.py` | 可重跑之稽核腳本（絕對路徑寫死）。 |
 | `ULTIMATE-10000-EXPANSION-2026-10-24.md` | 歷史快照（十二批完成時點；**已被 10-25 版取代**，保留供對帳）。 |
 | `ULTIMATE-5000-RESERVOIR-2026-10-24.md` | 前導文件（歸檔；已被主目錄取代）。 |
