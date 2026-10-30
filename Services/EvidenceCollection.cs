@@ -144,8 +144,10 @@ public static class EvidenceCollection
         Measure(svc, "LoadDataSecurity", () => svc.LoadDataSecurity());  // 附加功能：讀不到由 DataSecurityFactsService 標三態，不在這裡中斷啟動
         Measure(svc, "LoadEndpointPolicy", () => svc.LoadEndpointPolicy());  // 附加功能：讀不到由 EndpointPolicyFactsService 標三態，不在這裡中斷啟動
         Measure(svc, "LoadScenarios", () => svc.LoadScenarios());  // 附加功能：讀不到由 ScenarioGuidanceFactsService／ScenarioSecondWaveFactsService 標三態，不在這裡中斷啟動
-        Measure(svc, "LoadMultimedia", () => svc.LoadMultimedia());  // 附加功能：讀不到由 MultimediaFactsService 標三態，不在這裡中斷啟動
-        Measure(svc, "LoadMultimedia", () => svc.LoadMultimedia());  // 附加功能：讀不到由 MultimediaFactsService／MediaProtectionFactsService 標三態，不在這裡中斷啟動
+        // 附加功能：讀不到由 MultimediaFactsService／MediaProtectionFactsService 標三態，不在這裡中斷啟動。
+        // LoadMultimedia 已經同時收這兩組（見 EvidenceLabService.LoadMultimedia），所以只呼叫一次——
+        // 先前這裡連著兩行同一個呼叫，第二行是複製貼上留下的重複工作。
+        Measure(svc, "LoadMultimedia", () => svc.LoadMultimedia());
         Measure(svc, "LoadExportCache", () => svc.LoadExportCache());  // 附加功能：讀不到由 JsonlExportService／QueryResultCache 標三態，不在這裡中斷啟動
         Measure(svc, "LoadMaintenanceDashboard", () => svc.LoadMaintenanceDashboard());  // 附加功能：讀不到由 MaintenanceDashboardFactsService 標三態，不在這裡中斷啟動
         Measure(svc, "LoadVolumeEncryption", () => svc.LoadVolumeEncryption());  // 附加功能：讀不到由 VolumeEncryptionFactsService 標三態，不在這裡中斷啟動

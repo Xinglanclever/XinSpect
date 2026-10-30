@@ -51,7 +51,29 @@ public sealed class SystemUsbHubProbe : IUsbHubProbe
     public static string InterfacePath(string instanceId) =>
         @"\\?\" + instanceId.ToLowerInvariant().Replace('\\', '#') + "#" + HubInterfaceGuid;
 
+    /// <summary>
+    /// 單顆根的查詢上限。健康的 hub 對這個 IOCTL 是毫秒級；到了秒級就已經不對了
+    /// （休眠喚醒中的 hub、韌體卡住的 xHCI 控制器）。
+    /// </summary>
+    public const int TimeoutMs = 2000;
+
     public UsbHubRead Read(string instanceId)
+    {
+        // 第 324 輪（D8）：與 StorageSmartService 同一條規則——**會卡在核心裡的同步 IOCTL 要圈起來**。
+        // 這個 IOCTL 沒有 overlapped 版本可用，所以用 DiskIo 的「逾時就不等它」策略：
+        // 洩掉一條執行緒，換整條收集不被一顆壞 hub 凍住。
+        //
+        // 逾時與「讀不到」必須分開講：逾時是「這顆 hub 沒回應」，
+        // 而 ReadError 是「它回了，但回的東西不能用」。兩者混在一起，
+        // 讀者就分不出「該重開機」還是「該查驅動」。
+        var (result, timedOut) = DiskIo.GuardedProbe(() => ReadCore(instanceId), TimeoutMs);
+        if (timedOut)
+            return new UsbHubRead(instanceId, null, 0,
+                $"查詢逾時（{TimeoutMs} ms 內沒回來）——這顆 hub 沒回應，不是它說「沒有埠」");
+        return result ?? new UsbHubRead(instanceId, null, 0, "查詢沒有回傳結果——不猜");
+    }
+
+    private static UsbHubRead ReadCore(string instanceId)
     {
         IntPtr handle = CreateFileW(InterfacePath(instanceId), GenericReadWrite, ShareReadWrite,
             IntPtr.Zero, OpenExisting, 0, IntPtr.Zero);
@@ -62,9 +84,12 @@ public sealed class SystemUsbHubProbe : IUsbHubProbe
         }
         try
         {
+            // 這個 IOCTL 的 input 就是 USB_NODE_INFORMATION 本身（NodeType 要填 UsbHub＝0，
+            // 零初始化等同填好）；in/out 用同一個緩衝區，與 UsbLinkService.WalkHub 同一個形狀。
+            // 傳 null input 會拿到 ERROR_INVALID_PARAMETER（87），看起來像「這台機器讀不到」。
             var buffer = new byte[256];
-            if (!DeviceIoControl(handle, IoctlGetNodeInformation, null, 0, buffer, (uint)buffer.Length,
-                    out uint returned, IntPtr.Zero))
+            if (!DeviceIoControl(handle, IoctlGetNodeInformation, buffer, (uint)buffer.Length,
+                    buffer, (uint)buffer.Length, out uint returned, IntPtr.Zero))
             {
                 uint err = (uint)Marshal.GetLastWin32Error();
                 return new UsbHubRead(instanceId, null, err, "IOCTL 失敗（" + err + "）");
@@ -120,17 +145,25 @@ public static class UsbRootHubFactsService
     public static IReadOnlyList<HardwareFact> Collect(
         DeviceDiagnosticReport report, DateTimeOffset at, IUsbHubProbe probe)
     {
-        var hubs = report.Devices
+        // 只數**在場**的根。ghost（換過主板、拆掉擴充卡之後留下的殘影）也在 Devices 裡，
+        // 但它沒有埠可數：把它算進「幾顆根」會讓總覽多一顆，而那一顆永遠回「開檔失敗」——
+        // 於是「這台機器有 4 顆根、其中 1 顆讀不到」會被誤讀成硬體問題，實際上是歷史殘影。
+        var allHubs = report.Devices
             .Where(d => d.InstanceId.StartsWith(@"USB\ROOT_HUB", StringComparison.OrdinalIgnoreCase))
             .OrderBy(d => d.InstanceId, StringComparer.Ordinal)
             .ToList();
+        var hubs = allHubs.Where(d => d.IsPresent).ToList();
+        int ghosts = allHubs.Count - hubs.Count;
 
         if (hubs.Count == 0)
             return
             [
                 new HardwareFact(SummaryKey, Category, "USB 根集線器埠數彙總", "", "埠", Source,
                     FactTrustLevel.Unknown, false, at, null, FactAvailability.NotApplicable,
-                    "這份裝置清單裡沒有任何 USB 根集線器——不是「讀不到埠數」，是這台機器沒有根集線器可數"),
+                    ghosts > 0
+                        ? $"這份清單裡有 {ghosts} 顆根集線器但**都不在場**（歷史殘影）——沒有可數的埠；"
+                          + "不是「讀不到埠數」"
+                        : "這份裝置清單裡沒有任何 USB 根集線器——不是「讀不到埠數」，是這台機器沒有根集線器可數"),
                 BoundaryFact(at),
             ];
 
@@ -161,7 +194,7 @@ public static class UsbRootHubFactsService
             facts.Add(PortsFact(index, hub.InstanceId, ports, children, at));
         }
 
-        facts.Add(SummaryFact(hubs.Count, totalPorts, totalChildren, unreadable, unknownPorts, at));
+        facts.Add(SummaryFact(hubs.Count, ghosts, totalPorts, totalChildren, unreadable, unknownPorts, at));
         facts.Add(BoundaryFact(at));
         return facts;
     }
@@ -179,8 +212,8 @@ public static class UsbRootHubFactsService
             FactTrustLevel.Measured, false, at, ports);
     }
 
-    private static HardwareFact SummaryFact(int hubs, int ports, int children, int unreadable, int unknownPorts,
-        DateTimeOffset at)
+    private static HardwareFact SummaryFact(int hubs, int ghosts, int ports, int children, int unreadable,
+        int unknownPorts, DateTimeOffset at)
     {
         string portsFace = unreadable == 0
             ? $"共 {ports} 個埠"
@@ -191,7 +224,9 @@ public static class UsbRootHubFactsService
               + (unknownPorts > 0 ? $"{unknownPorts} 顆根的在場子裝置比埠數多（複合／內建裝置不佔獨立埠）；" : "")
               + "任何一種情形下「埠數 − 子裝置數」都不是可靠的空埠數"
             : $"空埠 {ports - children} 個（埠數 − 在場子裝置數）";
-        string value = $"{hubs} 顆 USB 根集線器・{portsFace}・在場子裝置 {children} 個・{freeFace}"
+        string value = $"{hubs} 顆 USB 根集線器"
+            + (ghosts > 0 ? $"（另有 {ghosts} 顆不在場的殘影未計入）" : "")
+            + $"・{portsFace}・在場子裝置 {children} 個・{freeFace}"
             + "・用途：這一欄回答「還能不能再接」的量級，不是頻寬或供電餘裕——那些要看控制器與裝置本身";
         return new HardwareFact(SummaryKey, Category, "USB 根集線器埠數彙總", value, "埠", Source,
             FactTrustLevel.Derived, false, at, unreadable == 0 ? ports : null,

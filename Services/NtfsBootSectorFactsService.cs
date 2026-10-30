@@ -33,8 +33,15 @@ public sealed class SystemBootSectorProbe : IBootSectorProbe
     private const uint ShareReadWrite = 0x00000003;
     private const uint OpenExisting = 3;
 
-    /// <summary>查詢目標：系統卷冊。與 <see cref="SystemVolumeProbe.SystemVolume"/> 同一個裝置。</summary>
-    public static string SystemVolume => @"\\.\C:";
+    /// <summary>
+    /// 查詢目標：與 <see cref="SystemVolumeProbe.SystemVolume"/> <b>同一個裝置</b>——
+    /// 直接沿用它的解析，不另外寫一份「系統碟在哪」。
+    /// </summary>
+    /// <remarks>
+    /// 兩處各自寫一份推導，遲早會一個改了一個沒改：那時 FSCTL 讀的是 D:、
+    /// 開機磁區讀的是 C:，而兩把鍵都標「系統碟」。
+    /// </remarks>
+    public static string SystemVolume => SystemVolumeProbe.SystemVolume;
 
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode, EntryPoint = "CreateFileW")]
     private static extern IntPtr CreateFileW(string name, uint access, uint share, IntPtr security,
@@ -154,7 +161,7 @@ public static class NtfsBootSectorFactsService
             : $"未宣告／算不出來（號誌欄 {b.ClustersPerIndexBuffer}）";
 
         string value =
-            $"系統碟開機磁區（磁區 0，{NtfsBootSectorDecoder.SectorBytes} 位元組）：OEM `{b.OemId}`"
+            $"系統碟 {SystemVolumeProbe.SystemDriveText()} 開機磁區（磁區 0，{NtfsBootSectorDecoder.SectorBytes} 位元組）：OEM `{b.OemId}`"
             + $"・每扇區 {b.BytesPerSector} B・每叢 {b.SectorsPerCluster} 扇區＝{cluster}"
             + $"・保留扇區 {b.ReservedSectors}・媒體描述符 0x{b.MediaDescriptor:X2}"
             + $"・每磁軌 {b.SectorsPerTrack} 扇區／磁頭 {b.Heads}（歷史欄位，不代表現況）"
@@ -211,7 +218,7 @@ public static class NtfsBootSectorFactsService
                 ? "一致（值不列）"
                 : "**不一致**（值不列）";
 
-        string value = $"系統碟 MFT 起始 LCN：{mftPair}；MFTMirr 起始 LCN：{mirrPair}"
+        string value = $"系統碟 {SystemVolumeProbe.SystemDriveText()} MFT 起始 LCN：{mftPair}；MFTMirr 起始 LCN：{mirrPair}"
             + $"・卷序號兩來源：{serial}"
             + $"・卷內自洽：{bounds}"
             + "・界線：LCN 是叢號不是位元組位移（換算需乘每叢位元組，兩者都列在 fs.ntfs.bpb）；"

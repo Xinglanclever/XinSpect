@@ -40,8 +40,40 @@ public sealed class SystemVolumeProbe : IVolumeProbe
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool CloseHandle(uint handle);
 
-    /// <summary>查詢目標：系統卷冊。多卷冊屬明示觸發（值裡明說）。</summary>
-    public static string SystemVolume => @"\\.\C:";
+    /// <summary>
+    /// 查詢目標：<b>系統卷冊</b>——由 <see cref="Environment.SystemDirectory"/> 推出磁碟機代號，
+    /// 不是寫死 C:。
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// 為什麼要算：Windows 可以裝在 D:（多系統、自訂安裝、VM 映像）。寫死 C: 的程式
+    /// 在那些機器上會去讀<b>另一個卷冊</b>的 BPB 與 FSCTL，然後把結果標成「系統碟」——
+    /// 那不是讀不到，是<b>讀錯了還說得很有把握</b>，比三態失敗更糟。
+    /// </para>
+    /// <para>
+    /// 推不出來（極少見）時退回 C: 並在事實值裡寫明是退回值——不假裝知道。
+    /// </para>
+    /// </remarks>
+    public static string SystemVolume => SystemVolumeDevicePath() ?? @"\\.\C:";
+
+    /// <summary>系統磁碟機代號（<c>D:</c> 這種兩字元形式）；推不出來回 <c>null</c>。</summary>
+    public static string? SystemDriveLetter()
+    {
+        string? root = System.IO.Path.GetPathRoot(Environment.SystemDirectory);
+        if (string.IsNullOrEmpty(root) || !char.IsAsciiLetter(root[0])) return null;
+        return char.ToUpperInvariant(root[0]) + ":";
+    }
+
+    /// <summary>系統卷冊的裝置路徑（裝置命名空間形式）；推不出來回 <c>null</c>。</summary>
+    public static string? SystemVolumeDevicePath()
+    {
+        string? letter = SystemDriveLetter();
+        return letter is null ? null : @"\\.\" + letter;
+    }
+
+    /// <summary>回報用的磁碟機代號文字（<c>C:</c>／<c>D:</c>）；推不出來回「未知代號」。</summary>
+    public static string SystemDriveText() => SystemDriveLetter() ?? "未知代號";
+
 
     public VolumeProbeResult Query(uint fsctl, uint minOutputBytes)
     {
@@ -127,7 +159,7 @@ public static class NtfsVolumeFactsService
 
         long? records = NtfsVolumeDecoder.EstimateRecords(v);
         double usedPct = v.TotalClusters > 0 ? 100.0 * (v.TotalClusters - v.FreeClusters) / v.TotalClusters : 0;
-        string value = $"系統碟 MFT 有效長度 {v.MftValidDataLength / 1048576.0:N1} MiB・記錄大小 {v.BytesPerFileRecordSegment} B"
+        string value = $"系統碟 {SystemVolumeProbe.SystemDriveText()} MFT 有效長度 {v.MftValidDataLength / 1048576.0:N1} MiB・記錄大小 {v.BytesPerFileRecordSegment} B"
             + "・記錄數≈" + (records is { } rec ? rec.ToString("N0") + "（長÷大小，估算未逐條解析）" : "無法估算（記錄大小為 0——如實）")
             + $"・叢 總 {v.TotalClusters:N0}／自由 {v.FreeClusters:N0}（已用 {usedPct:F1}%）"
             + $"・扇區 {v.BytesPerSector} B／簇 {v.BytesPerCluster} B・卷序號刻意不列（機器識別資訊）"
@@ -184,7 +216,7 @@ public static class NtfsVolumeFactsService
             ];
 
         long span = u.NextUsn - u.FirstUsn;
-        string value = $"系統碟 USN 日誌啟用（{u.Version}）：ID 0x{u.UsnJournalId:X}・FirstUsn {u.FirstUsn}・NextUsn {u.NextUsn}"
+        string value = $"系統碟 {SystemVolumeProbe.SystemDriveText()} USN 日誌啟用（{u.Version}）：ID 0x{u.UsnJournalId:X}・FirstUsn {u.FirstUsn}・NextUsn {u.NextUsn}"
             + "・跨度≈" + (span / 1048576.0).ToString("N1") + " MiB（Next−First）"
             + "・上限 " + (u.MaximumSize / 1048576.0).ToString("N0") + " MiB・配置增量 " + (u.AllocationDelta / 1048576.0).ToString("N0") + " MiB"
             + (u.MaxUsn is { } m ? "・MaxUsn " + m : "")

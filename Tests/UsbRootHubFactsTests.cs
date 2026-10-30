@@ -14,13 +14,20 @@ public class UsbRootHubFactsTests
 {
     // ── 合成 IOCTL 輸出 ─────────────────────────────────────────────────
 
-    private static byte[] NodeInfo(int nodeType = 0, byte descriptorLength = 9, byte descriptorType = 0x29, ushort ports = 4)
+    /// <summary>
+    /// 照 Windows 標頭的真實佈局造資料（<c>usbspec.h</c> 在 <c>PSHPACK1.H</c> 内，位移＝宣告順序）：
+    /// <c>bNumberOfPorts</c> 是**一個位元組**（位移 6），<c>wHubCharacteristics</c> 從位移 7 開始。
+    /// 替身必須跟規格一致，不能跟實作的假設一致——先前這裡寫成 u16，於是實作讀錯也一路綠燈。
+    /// </summary>
+    private static byte[] NodeInfo(int nodeType = 0, byte descriptorLength = 9, byte descriptorType = 0x29,
+        byte ports = 4, ushort characteristics = 0x0009)
     {
         var b = new byte[76];
         BinaryPrimitives.WriteInt32LittleEndian(b.AsSpan(0, 4), nodeType);
         b[4] = descriptorLength;
         b[5] = descriptorType;
-        BinaryPrimitives.WriteUInt16LittleEndian(b.AsSpan(6, 2), ports);
+        b[6] = ports;                                                              // bNumberOfPorts（u8）
+        BinaryPrimitives.WriteUInt16LittleEndian(b.AsSpan(7, 2), characteristics);  // wHubCharacteristics（u16）
         return b;
     }
 
@@ -63,6 +70,26 @@ public class UsbRootHubFactsTests
         Assert.Equal(0x29, n.DescriptorType);
         Assert.Equal(26, n.NumberOfPorts);
         Assert.True(n.IsHubDescriptor);
+    }
+
+    [Fact]
+    public void 埠數只取一個位元組_集線器特性不黏進來()
+    {
+        // 真機最常見的 0x0009（per-port 供電切換、無 over-current 回報）：若把位移 6 讀成 u16，
+        // 低位元組 0x09 會變成埠數的高位——4 埠被讀成 0x0904＝2308，後面的「空埠」全部跟著錯。
+        var n = UsbHubNodeDecoder.ParseNodeInformation(NodeInfo(ports: 4, characteristics: 0x0009))!;
+        Assert.Equal(4, n.NumberOfPorts);
+    }
+
+    [Fact]
+    public void 超級速度集線器_0x2A也要認()
+    {
+        // xHCI 根集線器用的是 SuperSpeed hub descriptor（USB 3.0 §10.13.2.1）。
+        // 只認 0x29 的話，現代機器上的每一個 USB 3 根永遠拿不到埠數。
+        var n = UsbHubNodeDecoder.ParseNodeInformation(
+            NodeInfo(descriptorType: 0x2A, descriptorLength: 12, ports: 6))!;
+        Assert.True(n.IsHubDescriptor);
+        Assert.Equal(6, n.NumberOfPorts);
     }
 
     [Fact]

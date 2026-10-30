@@ -93,6 +93,7 @@ public class DecoderHardeningTests
             "NtfsVolumeDecoder",
             "NtfsBootSectorDecoder",
             "UsbHubNodeDecoder",
+            "AcpiFadt",
             "KernelDumpDecoder",
             "TpmReplay",
             "AcpiDeep",

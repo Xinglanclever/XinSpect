@@ -10,6 +10,46 @@ public interface IAcpiTableSource
     IReadOnlyList<byte[]> ReadAll();
 }
 
+/// <summary>
+/// 「同一次收集只列舉一次」的裝飾器（第 324 輪 D12）。
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>為什麼需要它：</b><see cref="AcpiService.Collect"/> 與另外七支 ACPI 服務各自呼叫
+/// <see cref="IAcpiTableSource.ReadAll"/>，於是區區一次「載入 ACPI 事實」會列舉九次。
+/// 九次不是九倍慢而已——<b>它們之間可以有別的事情發生</b>（熱插拔、休眠喚醒），
+/// 於是不同服務可能看到不同的表集合，而每一把鍵都標「同一台机器同一時刻」。
+/// </para>
+/// <para>
+/// <b>為什麼用裝飾器而不是改簽名：</b>改七支服務的簽名要動七個檔案與它們的測試，
+/// 而語意上「這一批事實來自同一次列舉」是<b>呼叫端</b>的責任，不是每支服務的。
+/// 裝飾器把那個責任放在唯一該放的地方：<c>LoadAcpi</c> 的第一行。
+/// </para>
+/// <para>
+/// <b>計數器是做什麼的：</b><see cref="ReadCount"/> 讓「只列舉一次」變成可測的斷言，
+/// 而不是靠讀程式碼相信。它也是唯一能證明這個裝飾器真的生效的辦法。
+/// </para>
+/// </remarks>
+public sealed class OnceAcpiTableSource(IAcpiTableSource inner) : IAcpiTableSource
+{
+    private IReadOnlyList<byte[]>? _cache;
+
+    /// <summary>實際穿透到底層的次數。正確使用時整個生命週期只會是 1（或 0，完全沒人問）。</summary>
+    public int ReadCount { get; private set; }
+
+    public bool Available => inner.Available;
+
+    public string? UnavailableReason => inner.UnavailableReason;
+
+    public IReadOnlyList<byte[]> ReadAll()
+    {
+        if (_cache is not null) return _cache;
+        ReadCount++;
+        _cache = inner.ReadAll();
+        return _cache;
+    }
+}
+
 /// <summary>把 ACPI 表列舉成三態事實：列不到就標不可用，列得到則逐表給簽章/版本/OEM/校驗和，另附一條清單摘要。</summary>
 public static class AcpiService
 {

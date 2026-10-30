@@ -68,6 +68,10 @@ public sealed class EvidenceLabService : ObservableObject
     public void LoadAcpi(IAcpiTableSource source)
     {
         var acpiAt = DateTimeOffset.UtcNow;
+        // 第 324 輪（D12）：九支 ACPI 服務各自 ReadAll，實測一次載入列舉九次。
+        // 包一層裝飾器之後全部走同一次列舉——**這是本次唯一改動「讀幾次」的地方**，
+        // 各服務的簽名一個都沒動（它們本來就只該知道「有一份表清單」，不該管清單怎麼來）。
+        source = new OnceAcpiTableSource(source);
         AcpiFacts = AcpiService.Collect(source, acpiAt)
             // FW-024 FPDT：同一份表來源，另外解 POST 階段時長（見 AcpiFpdtFactsService 的版面出處）。
             .Concat([AcpiFpdtFactsService.Collect(source, acpiAt)])
@@ -87,6 +91,10 @@ public sealed class EvidenceLabService : ObservableObject
             // U10-AC-0042：TCPA 表（TPM 1.2 時代的信任線索表）與 ac.tpm2 的並存陳述；
             // 與上面同一次表讀取的形狀，server 佈局其餘欄位未成文不展開（界線在服務檔）。
             .Concat(AcpiTcpaFactsService.Collect(acpiAt, AcpiTcpaFactsService.ReadTables(source)))
+            // U10-AC-0001／AC-0002（第 324 輪）：根指標表這一層。RSDP 與 RSDT／XSDT 在 usermode
+            // 拿不到，這一輪把「拿不到哪一層」與「FADT 指到的兩張表在哪」變成可查的事實。
+            // 與本方法其他服務同一種接法（各自讀一次表列）——沒有新增裝置，只是又一次列舉。
+            .Concat(AcpiRootFactsService.Collect(source.ReadAll(), acpiAt))
             // P2-038 映像壓縮型別支援清單：**不新增解碼器**，把 UefiFv 既有的
             // 引擎辨識判斷鏈攤開成可查詢的清單（GUID 直接引用 UefiFv 的常數）。
             // **「認得」不等於「能解壓」**——所以語意拆成 supported（認得）
@@ -364,6 +372,16 @@ public sealed class EvidenceLabService : ObservableObject
                 new HardwareFact(DeviceTreeFactsService.SummaryKey, "裝置（PnP）", "裝置樹全圖", "", "台",
                     "SetupAPI 裝置列舉（唯讀）", FactTrustLevel.Reported, false, at,
                     null, FactAvailability.ReadError, "同一次裝置列舉失敗——沒有樹可建：" + reason)
+            ];
+            // 第 324 輪（D6）：USB 埠數也來自同一次列舉，失敗時**必須一起重設**。
+            // 只重設前兩組而讓 UsbHubFacts 留著上一輪的值，畫面上會出現
+            // 「裝置列舉失敗」與「上一輪的埠數」並存——那是最糟的一種組合：
+            // 讀者看得到數字，而那個數字不是這一輪的。
+            UsbHubFacts =
+            [
+                new HardwareFact(UsbRootHubFactsService.SummaryKey, "週邊匯流排", "USB 根集線器埠數彙總",
+                    "", "埠", "SetupAPI 裝置列舉（唯讀）", FactTrustLevel.Unknown, false, at,
+                    null, FactAvailability.ReadError, "同一次裝置列舉失敗——沒有根集線器清單可數：" + reason)
             ];
         }
     }
