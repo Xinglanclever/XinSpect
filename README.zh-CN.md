@@ -11,10 +11,10 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一运行档发布，免安装；对硬件与系统的读取以唯读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-3.05-4C8DFF)
+![版本](https://img.shields.io/badge/version-3.06-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-7692%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-7697%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 ![商业授权](https://img.shields.io/badge/license-%E5%95%86%E4%B8%9A%E6%8E%88%E6%9D%83%E5%8F%AF%E8%B0%88-8B5CF6)
@@ -396,7 +396,7 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 | 接口页（XAML） | 80 页 | `ls Views/*.xaml` |
 | 测试档 | 571 档 | `ls Tests/*.cs` |
 | 测试方法 | 5,851 个 `[Fact]`＋249 个 `[Theory]` | 逐档正则计数 |
-| 运行期测试案例 | 7,692（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
+| 运行期测试案例 | 7,697（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
 | 公开文档 | 32 份 `docs/*.md`＋5 份 `docs/spec/*.md` | `ls docs/*.md`、`ls docs/spec/*.md` |
 | 事实键目录 | 1,166 键／155 个前缀 | 解析 `FactKeyCatalog.Keys` |
 | 动态键家族 | 66 个 | 解析 `FactKeyDynamicCatalog.Families` |
@@ -472,11 +472,11 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.05/XinSpect.exe) | 36,943,659 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.05/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.05/XinSpectDeploy.exe) | 13,312 bytes | 一键安装器（可选 GitHub／Google Drive／中国网盘三个下载来源） |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.06/XinSpect.exe) | 36,943,659 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.06/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.06/XinSpectDeploy.exe) | 15,360 bytes | 一键安装器（可选 GitHub／Google Drive／中国网盘三个下载来源；下载时显示进度条、速度与剩余时间） |
 
-> **上表的字节数为本版（v3.05）实际发布的文件大小**；请以 Release 页面列出的文件为准。
+> **上表的字节数为本版（v3.06）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
 安装器（`XinSpectDeploy.exe`）会列出三个来源：**1** 是 GitHub 最新版（全自动部署主程序＋守护进程）、**2** 是 Google Drive 镜像、**3** 是中国网盘（123 云盘）分享页——网盘没有稳定直连，所以它只打开浏览器并告诉你按哪里，不会把分享页存成一个假的 exe。镜像链接集中在 `Installer/mirrors.txt`，安装器启动时会抓一份最新的（3 秒超时，拿不到就用内置的）；某一格还没有链接时，菜单上会写「尚未提供」，按下去会先说明再改用 GitHub。下载完成后一律检查 PE 标头，抓到 HTML（分享页、限流页、Google 的病毒扫描确认页）会被挡下、删档并说出内容像什么。
 
@@ -2419,6 +2419,7 @@ O-01 到 O-12 里，至少四条是「知道怎么修，但选择不修」：
 
 ## 二十二、版本沿革
 
+- **v3.06 Ultima XII**（2026-10-31）：部署器第一次真正画出下载进度；升级建议的部位徽章改为深灰
 - **v3.05 Ultima XII**（2026-10-30）：官方网站正式挂上：关于页一颗主色按钮、起始页第一格、三份 README 最上面
 - **v3.04 Ultima XII**（2026-10-30）：把「读不到、量不准、不知道什么时候量的」都写成事实（第 309–330 轮）——装置诊断接进事实层（问题码 null 与 0 是两件事）、报告的数字是什么时候量的（跨度与落后超过 5 秒的域）、104 个收集步骤逐步骤耗时、逐键重複性五轮、逐域量测预算（精度由程式还是驱动决定）、安全开机四环併成一笔（「空着」与「读不到」不混）、BCD 开机顺序（唯读一次 bcdedit，不指定输出编码）、电池健康拆成三把键并修掉编出来的「循环 0」、类别码三层解码、装置树全图、NTFS 开机磁区、USB 根集线器埠数、ACPI 根指标表、PCIe 两条读取通道、WHEA 记忆体节区、xHCI 能力区（位界矛盾就不换算）、同型号族群基线（本机计算、不连网）、NVMe 保留区扫描（顺带修掉 WCTEMP 位移：0x14A 落在 sanicap 里，正解 0x10A）、以及四条平时看不出来的缺陷（子行程死锁、原子写入暂存档名、历史仓尾端垃圾、外部报告无上限）。测试 7,361→7,692 绿、事实键 1,166 不变。
 - **v3.03 Ultima XII**（2026-10-27）：看得到的地方都修好了：主页与论坛导航、传感器仪表盘复活、M.2／U.2 两层判定、悬浮小窗 15 项与双风格（第 301–308 轮）
@@ -2651,7 +2652,7 @@ By：Xinglanclever
 
 ---
 
-**文档本身的版本**：本文档对应 XinSpect v3.05（2026-10-30）。正体中文为母本，简体中文由 OpenCC（tw2sp）自动转换，英文版为全量对译；三份文档共用同一组事实与守门。若你在简体版看到不顺的词，那是转换器的选择，不是原文的意思——请以正体版为准。
+**文档本身的版本**：本文档对应 XinSpect v3.06（2026-10-31）。正体中文为母本，简体中文由 OpenCC（tw2sp）自动转换，英文版为全量对译；三份文档共用同一组事实与守门。若你在简体版看到不顺的词，那是转换器的选择，不是原文的意思——请以正体版为准。
 
 ---
 

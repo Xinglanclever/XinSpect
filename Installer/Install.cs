@@ -251,20 +251,7 @@ internal static class Install
     {
         string url = m.Direct ? Url(m, name) : m.BaseUrl;
         Stopwatch sw = Stopwatch.StartNew();
-        using (var wc = new WebClient())
-        {
-            wc.Headers.Add("User-Agent", "XinSpectDeploy");
-            wc.DownloadProgressChanged += (s, e) =>
-            {
-                Console.Write(string.Format("\r  [{2}/{3}] {0}%  ({1} / {4} MB)   ",
-                    e.ProgressPercentage,
-                    e.BytesReceived / 1048576,
-                    step, total,
-                    e.TotalBytesToReceive / 1048576));
-            };
-            wc.DownloadFile(new Uri(url), dest);
-        }
-        sw.Stop();
+        ProgressBar bar = RunDownload(url, dest, step, total);
 
         // 下載到 HTML 是這種安裝器最常見的假成功：分享頁、流量限制頁、病毒掃描警告
         // 都會回 200，存下來的「XinSpect.exe」其實是一張網頁。這裡直接驗 PE 標頭，
@@ -279,11 +266,7 @@ internal static class Install
                 File.Delete(dest);
                 Console.WriteLine();
                 Console.WriteLine("  Google Drive 回了確認頁，改用確認直連重試…");
-                using (var wc2 = new WebClient())
-                {
-                    wc2.Headers.Add("User-Agent", "XinSpectDeploy");
-                    wc2.DownloadFile(new Uri(retry), dest);
-                }
+                bar = RunDownload(retry, dest, step, total);
             }
             if (!LooksLikeProgram(dest))
             {
@@ -296,9 +279,227 @@ internal static class Install
             }
         }
 
+        sw.Stop();
         FileInfo fi = new FileInfo(dest);
-        Console.WriteLine(string.Format("\r  [{2}/{3}] Done: {0:N0} bytes ({1:F1}s)   ",
-            fi.Length, sw.Elapsed.TotalSeconds, step, total));
+        double secs = sw.Elapsed.TotalSeconds;
+        // 整段的平均速度：和進度列上的即時速度是兩件事，這一條是「從按下到現在」的實測。
+        double avg = secs > 0 ? fi.Length / 1048576.0 / secs : 0;
+        bar.Overwrite(string.Format(
+            "  [{0}/{1}] Done: {2:N0} bytes in {3:F1}s ({4:0.0} MB/s)",
+            step, total, fi.Length, secs, avg));
+    }
+
+    // 一次下載＝一條進度列。回傳它，是為了讓最後那行 Done 蓋掉進度列，而不是印在下一行。
+    //
+    // 為什麼自己讀回包而不是用 WebClient：WebClient 的 DownloadProgressChanged 只在非同步
+    // （DownloadFileAsync）那一條路會觸發，同步的 DownloadFile 一次也不會回呼——上一版就是
+    // 掛在這個上面，所以進度列根本沒出現過。自己讀還多了一件事能做：比對 Content-Length 與
+    // 實收位元組數。連線中途斷掉時 Stream.Read 只會回 0，不丟例外，截短過的 exe 照樣有 MZ
+    // 開頭、照樣過 LooksLikeProgram——那是比「下載失敗」更難查的假成功。
+    private static ProgressBar RunDownload(string url, string dest, int step, int total)
+    {
+        ProgressBar bar = new ProgressBar(step, total);
+        try
+        {
+            HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
+            req.UserAgent = "XinSpectDeploy";
+            req.AllowAutoRedirect = true;
+            req.Timeout = 30000;
+            req.ReadWriteTimeout = 30000;
+            // 不開 AutomaticDecompression：開了之後實收位元組會比 Content-Length 多，
+            // 進度就會跑過 100%，到時要解釋的變成進度條而不是下載。
+            using (WebResponse resp = req.GetResponse())
+            {
+                long expected = resp.ContentLength;
+                long received = 0;
+                using (Stream src = resp.GetResponseStream())
+                using (FileStream dst = File.Create(dest))
+                {
+                    byte[] buf = new byte[64 * 1024];
+                    int n;
+                    while ((n = src.Read(buf, 0, buf.Length)) > 0)
+                    {
+                        dst.Write(buf, 0, n);
+                        received += n;
+                        bar.Report(received, expected);
+                    }
+                    dst.Flush();
+                }
+                if (expected > 0 && received != expected)
+                {
+                    throw new InvalidDataException(string.Format(
+                        "連線中途斷開：只收到 {0:N0} / {1:N0} bytes。請改用其他來源或重試。",
+                        received, expected));
+                }
+            }
+        }
+        catch
+        {
+            // 半截的檔案比沒有檔案更危險：它有 MZ 開頭、有大小的確像個程式。
+            TryDelete(dest);
+            bar.ClearLine();
+            throw;
+        }
+        return bar;
+    }
+
+    private static void TryDelete(string path)
+    {
+        try { if (File.Exists(path)) File.Delete(path); } catch { }
+    }
+
+    /// <summary>
+    /// 下載進度列：進度條、即時速度、剩餘時間。
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// 安裝器最怕的不是慢，是「看起來在下載」。所以這裡每一格都有出處：
+    /// 百分比只在伺服器給了 Content-Length 時才算；速度是最近一個取樣區間內的
+    /// 實測位元組除以實測時間；剩餘時間是剩餘位元組除以那個速度。
+    /// </para>
+    /// <para>
+    /// 量不到的一律寫「--」，不印一個看起來很肯定的假數字——分塊傳輸沒有
+    /// Content-Length，硬湊一個百分比只會讓「卡在 100%」變成另一種誤導。
+    /// </para>
+    /// </remarks>
+    private sealed class ProgressBar
+    {
+        // 進度條的長度不是固定的：預設主控台寬 80 欄，而這一行除了條子本身還有
+        // 「[1/4] 」「100.0%」「123.4/1234.5 MB」「12.3 MB/s」「ETA 1:23」。
+        // 條子固定 24 格時整行是 83 字——超過 80 就自動折行，而 \r 只回到「最後一行」的
+        // 行首，於是每畫一次就多留一行殘影，十秒後整個畫面都是半條進度列。
+        // 所以條子寬度依實際視窗算，寧可短一點，也不要折行。
+        private const int MaxBarWidth = 24;
+        private const int MinBarWidth = 8;
+        // 扣除條子以外的固定欄位：head 8 + "[] " 3 + 百分比 6 + 大小 17 + 速度 14 + ETA 11
+        private const int FixedColumns = 59;
+
+        private readonly int _step;
+        private readonly int _total;
+        private readonly Stopwatch _sw = Stopwatch.StartNew();
+
+        private long _lastBytes;
+        private long _lastMs;
+        private long _nextMs;
+        private long _nextPaintMs;
+        private double _speed;
+        private int _printed;
+
+        public ProgressBar(int step, int total)
+        {
+            _step = step;
+            _total = total;
+        }
+
+        /// <summary>目前可用的條子寬度。輸出被重導向時 WindowWidth 會丟例外，那就退回 80。</summary>
+        private static int BarWidth
+        {
+            get
+            {
+                int cols = 80;
+                try
+                {
+                    int w = Console.WindowWidth;
+                    if (w >= 40) cols = w;
+                }
+                catch { }
+                int width = cols - FixedColumns;
+                if (width < MinBarWidth) width = MinBarWidth;
+                if (width > MaxBarWidth) width = MaxBarWidth;
+                return width;
+            }
+        }
+
+        public void Report(long received, long expected)
+        {
+            long ms = _sw.ElapsedMilliseconds;
+            if (_lastMs == 0)
+            {
+                // 第一坨只記基準點，不算速度：從 0 ms 到 1 ms 之間除出來的數字不是速度，是噪訊。
+                // 寧可先顯示「--」，也不要讓使用者看到一個馬上就會被推翻的誇張值。
+                _lastMs = ms;
+                _lastBytes = received;
+                _nextMs = ms + 400;
+            }
+            else if (ms >= _nextMs)
+            {
+                // 速度每 400 ms 取樣一次：太密速度會跳，太疏進度列會一頓一頓。
+                long dMs = ms - _lastMs;
+                if (dMs > 0) _speed = (received - _lastBytes) * 1000.0 / dMs;
+                _lastBytes = received;
+                _lastMs = ms;
+                _nextMs = ms + 400;
+            }
+            // 重畫每 100 ms 一次就夠：每讀到一坨就重畫，50 MB/s 時一秒寫 800 次主控台。
+            if (ms >= _nextPaintMs || _nextPaintMs == 0)
+            {
+                Write(Line(received, expected));
+                _nextPaintMs = ms + 100;
+            }
+        }
+
+        public void Overwrite(string text)
+        {
+            Write(text);
+            Console.WriteLine();
+            _printed = 0;
+        }
+
+        /// <summary>下載失敗時把進度列擦掉，讓下一行的錯誤訊息從乾淨的行首開始。</summary>
+        public void ClearLine()
+        {
+            if (_printed <= 0) return;
+            Console.Write("\r" + new string(' ', _printed) + "\r");
+            _printed = 0;
+        }
+
+        private void Write(string text)
+        {
+            // 這一行全是 ASCII，所以字數就是欄位數，補空白不會錯位。
+            if (text.Length < _printed) text += new string(' ', _printed - text.Length);
+            _printed = text.Length;
+            Console.Write("\r" + text);
+        }
+
+        private string Line(long received, long expected)
+        {
+            string head = string.Format("  [{0}/{1}] ", _step, _total);
+            string speed = _speed > 0
+                ? string.Format("{0,6:0.0} MB/s", _speed / 1048576.0)
+                : "    -- MB/s";
+
+            if (expected <= 0)
+            {
+                // 伺服器沒給 Content-Length：沒有分母，就不編一個百分比。
+                return head + string.Format("{0,8:0.0} MB", received / 1048576.0)
+                     + "  " + speed + "  ETA --:--";
+            }
+
+            double pct = received * 100.0 / expected;
+            if (pct > 100) pct = 100;
+            int barWidth = BarWidth;
+            int fill = (int)(pct * barWidth / 100.0);
+            if (fill < 0) fill = 0;
+            if (fill > barWidth) fill = barWidth;
+
+            double eta = -1;
+            if (_speed > 0 && received < expected) eta = (expected - received) / _speed;
+
+            return head
+                 + "[" + new string('#', fill) + new string('-', barWidth - fill) + "] "
+                 + string.Format("{0,5:0.0}%", pct)
+                 + string.Format(" {0,6:0.0}/{1,6:0.0} MB", received / 1048576.0, expected / 1048576.0)
+                 + "  " + speed
+                 + "  ETA " + Eta(eta);
+        }
+
+        private static string Eta(double seconds)
+        {
+            if (seconds < 0 || seconds > 359999) return "--:--";
+            long s = (long)Math.Ceiling(seconds);
+            if (s < 3600) return string.Format("{0}:{1:00}", s / 60, s % 60);
+            return string.Format("{0}:{1:00}:{2:00}", s / 3600, (s % 3600) / 60, s % 60);
+        }
     }
 
     private static string DriveConfirmUrl(string url)

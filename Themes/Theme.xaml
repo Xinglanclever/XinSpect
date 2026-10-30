@@ -12,6 +12,11 @@
     <SolidColorBrush x:Key="MutedInkBrush" Color="#898781"/>
     <SolidColorBrush x:Key="HairlineBrush" Color="#2c2c2a"/>
     <SolidColorBrush x:Key="BaselineBrush" Color="#383835"/>
+    <!-- 升級建議的部位徽章（儲存／記憶體／處理器…）。原本用 SurfaceBrush（#1a1a19），
+         它幾乎與頁面底色同色、又比卡片（#232322）更深，看起來像卡片上的一個洞而不是標籤。
+         改成深灰的一階，讓「這條建議屬於哪個部位」在掃視時分得出來。 -->
+    <SolidColorBrush x:Key="PartChipBrush" Color="#3a3f46"/>
+    <SolidColorBrush x:Key="PartChipInkBrush" Color="#e6e9ee"/>
     <SolidColorBrush x:Key="AccentBrush" Color="#3987e5"/>
     <SolidColorBrush x:Key="AccentDimBrush" Color="#1c5cab"/>
     <!-- 落在強調色上的文字色（白字）；底色由 ThemeService 壓到白字達 WCAG AA 4.5:1 -->

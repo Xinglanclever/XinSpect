@@ -31,7 +31,7 @@ body:
     id: version
     attributes:
       label: XinSpect 版本
-      placeholder: "3.05"
+      placeholder: "3.06"
     validations:
       required: true
 

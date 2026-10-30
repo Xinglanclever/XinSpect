@@ -119,8 +119,8 @@
                                                     <TextBlock Text="{Binding PriorityText}" Foreground="White" FontSize="11.5"/>
                                                 </Border>
                                                 <Border CornerRadius="4" Padding="7,1" Margin="7,0,0,0" VerticalAlignment="Center"
-                                                        Background="{DynamicResource SurfaceBrush}">
-                                                    <TextBlock Text="{Binding PartText}" Foreground="{DynamicResource SecondaryInkBrush}" FontSize="11.5"/>
+                                                        Background="{DynamicResource PartChipBrush}">
+                                                    <TextBlock Text="{Binding PartText}" Foreground="{DynamicResource PartChipInkBrush}" FontSize="11.5"/>
                                                 </Border>
                                                 <TextBlock Text="{Binding Title}" Margin="10,0,0,0" VerticalAlignment="Center"
                                                            FontSize="15" FontWeight="SemiBold"
