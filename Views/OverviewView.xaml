@@ -235,6 +235,148 @@
             </Border>
         </DataTemplate>
 
+        <!-- ═══ 總覽第一眼：三顆膠囊 ＋ 詳細資訊 ═══
+             形狀參照使用者提供的設計稿：上面一排三顆膠囊卡（機型／系統／已運行時間），
+             下面一張「詳細資訊」卡，一列一類裝置。
+             資料全部取自開機時已經讀好的東西（SystemSummary、Cpu、Modules、Live.Gpus、
+             PhysicalDisks、SoundDevices、InstalledNics、Monitors），這一頁不另外掃描——
+             總覽是入口，讓它去等 WMI 是本末倒置。 -->
+
+        <DataTemplate x:Key="Tile.capsules">
+            <Grid Margin="0,0,0,14" DataContext="{Binding Vm}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <local:CapsuleCard Grid.Column="0" Margin="0,0,5,0"
+                                   Label="機型資訊" Glyph="&#xE7F4;"
+                                   Value="{Binding System.SystemModel, TargetNullValue=—}"
+                                   Sub="{Binding System.SystemManufacturer, TargetNullValue=''}"
+                                   Tint="{DynamicResource AccentBrush}"/>
+                <local:CapsuleCard Grid.Column="1" Margin="5,0,5,0"
+                                   Label="系統資訊" Glyph="&#xE770;"
+                                   Value="{Binding System.OsName, TargetNullValue=—}"
+                                   Sub="{Binding System.OsVersion, TargetNullValue=''}"
+                                   Tint="{DynamicResource GoodBrush}"/>
+                <local:CapsuleCard Grid.Column="2" Margin="5,0,0,0"
+                                   Label="已運行時間" Glyph="&#xE916;"
+                                   Value="{Binding System.Uptime, TargetNullValue=—}"
+                                   Sub="{Binding System.BootTime,
+                                         Converter={x:Static local:LangFormatConverter.Instance},
+                                         ConverterParameter='{}開機於 {0}'}"
+                                   Tint="{DynamicResource WarningBrush}"/>
+            </Grid>
+        </DataTemplate>
+
+        <!-- 詳細資訊每一列的「值」可以是一行字、兩行字或一串裝置；共用的小樣板放在上面，
+             列樣板本身只挑一個放進去。 -->
+        <DataTemplate x:Key="Line.text">
+            <TextBlock Style="{StaticResource FieldValue}" Text="{Binding}"/>
+        </DataTemplate>
+        <DataTemplate x:Key="Line.summary">
+            <TextBlock Style="{StaticResource FieldValue}" Text="{Binding DisplayText}"/>
+        </DataTemplate>
+        <DataTemplate x:Key="Line.gpu">
+            <TextBlock Style="{StaticResource FieldValue}">
+                <Run Text="{Binding Name, Mode=OneWay}"/><Run Text="・VRAM "/><Run Text="{Binding VramText, Mode=OneWay}"/>
+            </TextBlock>
+        </DataTemplate>
+        <DataTemplate x:Key="Line.monitor">
+            <TextBlock Style="{StaticResource FieldValue}">
+                <Run Text="{Binding Name, Mode=OneWay}"/><Run Text="（"/><Run Text="{Binding Manufacturer, Mode=OneWay}"/><Run Text="）"/>
+            </TextBlock>
+        </DataTemplate>
+
+        <DataTemplate x:Key="Tile.details">
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" DataContext="{Binding Vm}">
+                <StackPanel>
+                    <local:SectionHead Text="詳細資訊" HelpKey="overview/詳細資訊"/>
+
+                    <local:InfoRow Label="主機板">
+                        <local:InfoRow.Value>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap">
+                                    <Run Text="{Binding System.BoardVendor, Mode=OneWay}"/><Run Text="　"/><Run Text="{Binding System.BoardModel, Mode=OneWay}"/>
+                                </TextBlock>
+                                <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap">
+                                    <Run Text="BIOS "/><Run Text="{Binding System.BiosVersion, Mode=OneWay}"/><Run Text="（"/><Run Text="{Binding System.BiosDate, Mode=OneWay}"/><Run Text="）"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </local:InfoRow.Value>
+                    </local:InfoRow>
+
+                    <local:InfoRow Label="處理器">
+                        <local:InfoRow.Value>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource FieldValue}" Text="{Binding Cpu.Name}" TextWrapping="Wrap"/>
+                                <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" Text="{Binding Cpu.SummaryText}"/>
+                            </StackPanel>
+                        </local:InfoRow.Value>
+                    </local:InfoRow>
+
+                    <local:InfoRow Label="記憶體">
+                        <local:InfoRow.Value>
+                            <StackPanel>
+                                <ItemsControl ItemsSource="{Binding Modules}" ItemTemplate="{StaticResource Line.summary}"/>
+                                <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0"
+                                           Text="{Binding Live.MemUsageText,
+                                                  Converter={x:Static local:LangFormatConverter.Instance},
+                                                  ConverterParameter='{}目前使用 {0}'}"/>
+                            </StackPanel>
+                        </local:InfoRow.Value>
+                    </local:InfoRow>
+
+                    <local:InfoRow Label="顯示卡">
+                        <local:InfoRow.Value>
+                            <ItemsControl ItemsSource="{Binding Live.Gpus}" ItemTemplate="{StaticResource Line.gpu}"/>
+                        </local:InfoRow.Value>
+                    </local:InfoRow>
+
+                    <local:InfoRow Label="顯示器">
+                        <local:InfoRow.Value>
+                            <StackPanel>
+                                <ItemsControl ItemsSource="{Binding Monitors}" ItemTemplate="{StaticResource Line.monitor}"/>
+                                <TextBlock Style="{StaticResource FieldValue}" Text="未讀到（EDID 未提供或為虛擬顯示器）"
+                                           Visibility="{Binding HasNoMonitors, Converter={StaticResource BoolToVis}}"/>
+                            </StackPanel>
+                        </local:InfoRow.Value>
+                    </local:InfoRow>
+
+                    <local:InfoRow Label="硬碟">
+                        <local:InfoRow.Value>
+                            <StackPanel>
+                                <ItemsControl ItemsSource="{Binding PhysicalDisks}" ItemTemplate="{StaticResource Line.summary}"/>
+                                <TextBlock Style="{StaticResource FieldValue}" Text="未讀到（磁碟列舉沒有回報）"
+                                           Visibility="{Binding HasPhysicalDisks, Converter={StaticResource InverseBoolToVis}}"/>
+                            </StackPanel>
+                        </local:InfoRow.Value>
+                    </local:InfoRow>
+
+                    <local:InfoRow Label="聲卡">
+                        <local:InfoRow.Value>
+                            <StackPanel>
+                                <ItemsControl ItemsSource="{Binding SoundDevices}" ItemTemplate="{StaticResource Line.text}"/>
+                                <TextBlock Style="{StaticResource FieldValue}" Text="未讀到（作業系統沒有回報音訊裝置）"
+                                           Visibility="{Binding HasSoundDevices, Converter={StaticResource InverseBoolToVis}}"/>
+                            </StackPanel>
+                        </local:InfoRow.Value>
+                    </local:InfoRow>
+
+                    <local:InfoRow Label="網卡">
+                        <local:InfoRow.Value>
+                            <StackPanel>
+                                <ItemsControl ItemsSource="{Binding InstalledNics}" ItemTemplate="{StaticResource Line.summary}"/>
+                                <TextBlock Style="{StaticResource FieldValue}" Text="未讀到（沒有實體網路卡或查詢失敗）"
+                                           Visibility="{Binding HasInstalledNics, Converter={StaticResource InverseBoolToVis}}"/>
+                            </StackPanel>
+                        </local:InfoRow.Value>
+                    </local:InfoRow>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
         <local:DashboardTileTemplateSelector x:Key="TileTemplate"/>
         <!-- 深色核取方塊（與歷史回放／風扇分頁同一視覺語彙）-->
         <Style x:Key="TileCheck" TargetType="CheckBox">
@@ -282,6 +424,10 @@
                         Content="複製規格摘要" Click="CopySpec_Click"
                         ToolTip="把八行規格複製到剪貼簿，方便貼到論壇或聊天室問人。不含電腦名稱、使用者名稱與任何序號。"/>
             </DockPanel>
+
+            <!-- 一句話說明這一頁現在是什麼（設計稿上也有一行副標）：先報機型與裝置，不是先報即時數字。 -->
+            <TextBlock Style="{StaticResource Subtitle}" Margin="2,-4,0,12" TextWrapping="Wrap"
+                       Text="本機型號、系統與關鍵硬體參數的摘要；即時數據請到各自的專頁，儀表預設收起。"/>
 
             <!-- 自訂面板：只在按下「自訂磁貼」時展開，平時不佔畫面 -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14"

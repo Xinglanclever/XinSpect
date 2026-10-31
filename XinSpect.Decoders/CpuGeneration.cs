@@ -31,8 +31,14 @@ public static class CpuGeneration
         (6, 0x9E) => "Kaby Lake-X / Coffee Lake（用戶端）",
         (6, 0xA5) => "Comet Lake（用戶端）",
         (6, 0xA6) => "Comet Lake（行動）",
-        (6, 0x97) => "Rocket Lake（用戶端）",
+        // 0x97 是 Alder Lake-S（i5-12600K 的簽章是 family 6、model 151、stepping 2），
+        // Rocket Lake 是 0xA7（i7-11700K 是 6／167／1）。這一格先前寫成 Rocket Lake，與
+        // Models／MicroarchProfile.cs 的 `0xA7 => Cypress Cove` 互相矛盾——兩張表對同一顆
+        // 處理器給出不同答案時，錯的是這一張：0xA7 在 LibreHardwareMonitor 的 IntelCpu.cs
+        // 有具名 SKU（Core i5/i7 11xxx）可回查，0x97 那格則標著 Alder Lake（第 12 代）。
+        (6, 0x97) => "Alder Lake（用戶端）",
         (6, 0x9A) => "Alder Lake（用戶端）",
+        (6, 0xA7) => "Rocket Lake（用戶端）",
         (6, 0xB7) => "Raptor Lake（用戶端）",
         (6, 0xBA) => "Raptor Lake-P（行動）",
         (6, 0xAA) => "Meteor Lake（用戶端）",

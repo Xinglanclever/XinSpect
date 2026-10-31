@@ -189,6 +189,11 @@ public sealed class NicInfo
     public string Mac { get; set; } = "—";
 
     public Brand Brand => Brands.Resolve(Manufacturer, Name);
+
+    /// <summary>總覽「詳細資訊」用的單行摘要：名稱、鏈路速度（速度讀不到時只留名稱，不補一個假數字）。</summary>
+    public string DisplayText => Name is not ("—" or "")
+        ? (SpeedText is "—" or "" or "-" ? Name : $"{Name}・{SpeedText}")
+        : "—";
 }
 
 /// <summary>CPU-Z 報告的整體解析結果。</summary>

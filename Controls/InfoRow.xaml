@@ -1,0 +1,26 @@
+<UserControl x:Class="XinSpect.InfoRow"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <!-- 詳細資訊的一列：左邊一個小圓點、中間固定寬度的標籤、右邊放值（可以是多行或多筆裝置）。
+         值的內容有單行文字（主機板）、兩行（處理器）與一整個 ItemsControl（硬碟、網卡），
+         所以值用 ContentPresenter 轉接，而不是一個 TextBlock 綁字串。 -->
+    <Border Background="{DynamicResource Surface2Brush}" CornerRadius="10"
+            Padding="13,10" Margin="0,0,0,6" SnapsToDevicePixels="True">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="86"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Ellipse Grid.Column="0" Width="6" Height="6" Margin="1,0,13,0" VerticalAlignment="Center"
+                     Fill="{DynamicResource AccentBrush}" Opacity="0.85"/>
+            <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}" VerticalAlignment="Top"
+                       Margin="0,1,0,0"
+                       Text="{Binding Label, RelativeSource={RelativeSource AncestorType={x:Type local:InfoRow}}}"/>
+            <ContentPresenter Grid.Column="2" VerticalAlignment="Top"
+                              Content="{Binding Value, RelativeSource={RelativeSource AncestorType={x:Type local:InfoRow}}}"/>
+        </Grid>
+    </Border>
+</UserControl>

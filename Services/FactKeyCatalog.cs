@@ -215,6 +215,7 @@ public static class FactKeyCatalog
         "cpu.tjmax",
         "cpu.topology.smt",
         "cpu.turbo.summary",
+        "cpu.uarch",
         "cpu.volt.summary",
         "cxl.cfmws.count",
         "data.egress.report",

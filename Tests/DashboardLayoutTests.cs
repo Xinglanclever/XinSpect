@@ -111,6 +111,24 @@ public sealed class DashboardLayoutTests
     }
 
     /// <summary>
+    /// 2026-10-31 起的預設：打開程式先看清楚「這台機器是什麼」，而不是一組跳動的數字。
+    /// 即時儀表／走勢／七段數字仍在目錄裡，只是預設不勾——使用者到「自訂磁貼」勾一下就有；
+    /// 已經存過版面的使用者不受影響（存檔優先於內建預設，見上面的解析測試）。
+    /// </summary>
+    [Fact]
+    public void 總覽預設先摘要_即時儀錶盤預設關閉()
+    {
+        var plan = DashboardLayout.Plan(null);
+
+        Assert.Equal("capsules", plan[0].Id);
+        Assert.True(plan.First(p => p.Id == "capsules").Visible);
+        Assert.True(plan.First(p => p.Id == "details").Visible);
+
+        foreach (string live in new[] { "gauges", "trends", "trends2", "digits" })
+            Assert.False(plan.First(p => p.Id == live).Visible, $"{live} 應該是預設關閉");
+    }
+
+    /// <summary>
     /// 目錄裡的每一塊磁貼，總覽頁都要有對應的 <c>Tile.{識別碼}</c> 樣板；反之也不該留下孤兒樣板。
     /// 少了樣板，那塊磁貼在畫面上就是一片空白；多了樣板則是刪磁貼時忘了收尾（1.9.0 移除
     /// 「AI 評價」磁貼時，目錄與樣板必須一起拿掉，只動一邊都會壞）。

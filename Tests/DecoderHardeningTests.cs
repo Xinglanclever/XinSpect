@@ -48,8 +48,12 @@ public class DecoderHardeningTests
         Assert.Equal("Kaby Lake-X / Coffee Lake（用戶端）", CpuGeneration.GenerationName(6, 0x9E));
         Assert.Equal("Comet Lake（用戶端）", CpuGeneration.GenerationName(6, 0xA5));
         Assert.Equal("Comet Lake（行動）", CpuGeneration.GenerationName(6, 0xA6));
-        Assert.Equal("Rocket Lake（用戶端）", CpuGeneration.GenerationName(6, 0x97));
+        // 0x97＝Alder Lake-S（i5-12600K 的 CPUID 是 6／151／2）、0xA7＝Rocket Lake（i7-11700K 是 6／167／1）。
+        // 這兩格先前對調過，與 MicroarchProfile 的 0xA7 → Cypress Cove 互相矛盾；
+        // 值钉死在這裡，是為了之後誰再動表會立刻看到衝突。
+        Assert.Equal("Alder Lake（用戶端）", CpuGeneration.GenerationName(6, 0x97));
         Assert.Equal("Alder Lake（用戶端）", CpuGeneration.GenerationName(6, 0x9A));
+        Assert.Equal("Rocket Lake（用戶端）", CpuGeneration.GenerationName(6, 0xA7));
         Assert.Equal("Raptor Lake（用戶端）", CpuGeneration.GenerationName(6, 0xB7));
         Assert.Equal("Raptor Lake-P（行動）", CpuGeneration.GenerationName(6, 0xBA));
         Assert.Equal("Meteor Lake（用戶端）", CpuGeneration.GenerationName(6, 0xAA));

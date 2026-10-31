@@ -1,0 +1,34 @@
+<UserControl x:Class="XinSpect.CapsuleCard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect">
+    <!-- 膠囊卡：圓角外框 ＋ 左側圖示圓角方塊 ＋ 標籤／主值／副值三行。
+         圓角半徑刻意大於一般卡片（16 對 10），視覺上才像「一顆膠囊」而不是「一張卡」。 -->
+    <Border CornerRadius="16" Background="{DynamicResource SurfaceBrush}"
+            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
+            Padding="16,13" SnapsToDevicePixels="True">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0" Width="40" Height="40" VerticalAlignment="Center">
+                <Border x:Name="IconPlane" CornerRadius="12" Opacity="0.18"/>
+                <TextBlock x:Name="IconGlyph" FontFamily="Segoe MDL2 Assets" FontSize="17"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+
+            <StackPanel Grid.Column="1" Margin="13,0,0,0" VerticalAlignment="Center">
+                <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Label,
+                           RelativeSource={RelativeSource AncestorType={x:Type local:CapsuleCard}}}"/>
+                <TextBlock FontFamily="{StaticResource AppFont}" FontSize="17" FontWeight="SemiBold"
+                           Foreground="{DynamicResource PrimaryInkBrush}" Margin="0,2,0,0"
+                           TextTrimming="CharacterEllipsis"
+                           Text="{Binding Value, RelativeSource={RelativeSource AncestorType={x:Type local:CapsuleCard}}}"/>
+                <TextBlock x:Name="SubText" Style="{StaticResource Subtitle}" Margin="0,1,0,0"
+                           TextTrimming="CharacterEllipsis"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>
