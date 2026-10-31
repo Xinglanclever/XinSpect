@@ -5,7 +5,7 @@ using System.Windows.Media;
 
 namespace XinSpect;
 
-public enum AppTheme { Dark, Light, ExtremeEdition, Swiss }
+public enum AppTheme { Dark, Light, ExtremeEdition, Swiss, SwissDark }
 
 /// <summary>
 /// 強調色定義：Main 為主色（漸層頂近似），Dim 為暗端（漸層底），GradTop 為漸層頂亮端。
@@ -127,7 +127,7 @@ public static class ThemeService
         {
             AppTheme.Light => 1,
             AppTheme.ExtremeEdition => 2,
-            AppTheme.Swiss => 3,
+            AppTheme.Swiss or AppTheme.SwissDark => 3,
             _ => 0,
         };
         set => Theme = value switch
@@ -181,13 +181,35 @@ public static class ThemeService
         "#E0E0E0", "#A0A0A0", "#686868",
         "#252525", "#303030", "#0E0E0E");
 
+    // 瑞士現代主義（深色）：同一個語彙的暗底版——近黑紙面、純白墨、細線，一樣直角與大字。
+    private static readonly Palette SwissDarkPalette = new(
+        "#111111", "#111111", "#1b1b1b",
+        "#ffffff", "#e8e8e8", "#9a9a9a",
+        "#2e2e2e", "#4a4a4a", "#111111");
+
     private static Palette Current => _theme switch
     {
         AppTheme.Light => LightPalette,
         AppTheme.ExtremeEdition => ExtremeEditionPalette,
         AppTheme.Swiss => SwissPalette,
+        AppTheme.SwissDark => SwissDarkPalette,
         _ => DarkPalette,
     };
+
+    /// <summary>兩種瑞士版（淺底／暗底）共用同一組幾何、字級與配色規則。</summary>
+    private static bool IsSwiss => _theme is AppTheme.Swiss or AppTheme.SwissDark;
+
+    /// <summary>瑞士版是否用深色底。設定頁在選了瑞士版時顯示的那個開關。</summary>
+    public static bool SwissDarkMode
+    {
+        get => _theme == AppTheme.SwissDark;
+        set
+        {
+            var target = value ? AppTheme.SwissDark : AppTheme.Swiss;
+            if (_theme == target) return;
+            Theme = target;
+        }
+    }
 
     // ---- 初始化 ----------------------------------------------------------
 
@@ -210,8 +232,8 @@ public static class ThemeService
             _accent = FindAccent("blue");
 
         // 瑞士紅只在瑞士版出現：進瑞士版時強制換成它，離開時若還停在瑞士紅就收回曦藍。
-        if (_theme == AppTheme.Swiss && _accent.Key != "swiss") _accent = FindAccent("swiss");
-        else if (_theme != AppTheme.Swiss && _accent.Key == "swiss") _accent = FindAccent("blue");
+        if (IsSwiss && _accent.Key != "swiss") _accent = FindAccent("swiss");
+        else if (!IsSwiss && _accent.Key == "swiss") _accent = FindAccent("blue");
 
         var p = Current;
 
@@ -236,7 +258,7 @@ public static class ThemeService
         SetBrush("AccentButtonBrush", btn.Solid);
 
         // 強調漸層（按鈕底）：頂=亮端、底=暗端，兩端都已壓到白字達標
-        if (_theme == AppTheme.Swiss)
+        if (IsSwiss)
             SetGradient("AccentGradientBrush", btn.Solid, btn.Solid);   // 瑞士版：平塗，不要漸層
         else
             SetGradient("AccentGradientBrush", btn.Top, btn.Bottom);
@@ -247,7 +269,7 @@ public static class ThemeService
         double tintRatio = _theme == AppTheme.ExtremeEdition ? 0.88
                          : _theme == AppTheme.Dark ? 0.80 : 0.86;
         Color tint = Blend(Accent.MainColor, plane, tintRatio);
-        if (_theme == AppTheme.Swiss)
+        if (IsSwiss)
             SetGradientStops("HeaderGradientBrush", (0.0, Hex(p.HeaderMid)), (0.45, Hex(p.HeaderMid)), (1.0, surface));
         else
             SetGradientStops("HeaderGradientBrush",
@@ -273,7 +295,7 @@ public static class ThemeService
 
         // 幾何與字級：瑞士版要直角與大字，其餘主題維持原本的圓角與字級。
         // 這兩個是 Theme.xaml 宣告的資源，樣式一律以 DynamicResource 取用，換掉即全站生效。
-        bool swiss = _theme == AppTheme.Swiss;
+        bool swiss = IsSwiss;
         SetResource("Radius.Card",    swiss ? new CornerRadius(0) : new CornerRadius(10));
         SetResource("Radius.Control", swiss ? new CornerRadius(0) : new CornerRadius(8));
         SetResource("Radius.Capsule", swiss ? new CornerRadius(0) : new CornerRadius(16));

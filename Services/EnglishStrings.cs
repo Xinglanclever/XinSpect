@@ -1120,6 +1120,10 @@ public static class EnglishStrings
         ["系統總覽"] = "System overview",
         ["系統資訊"] = "System info",
         ["機型資訊"] = "Model",
+        ["深色模式（深色瑞士風格）"] = "Dark mode (dark Swiss)",
+        ["黑白反轉的同一套規則：近黑紙面、白墨、直角、大字，強調色仍是瑞士紅。"]
+            = "The same rules inverted: near-black paper, white ink, right angles, larger type — the accent is still Swiss red.",
+        ["隱藏外框（只留底板與讀值）"] = "Hide the outer frame (keep only the panel and readings)",
         ["微架構"] = "Microarchitecture",
         ["本機型號、系統與關鍵硬體參數的摘要；即時數據請到各自的專頁，儀表預設收起。"]
             = "A summary of this machine's model, OS and key hardware; live readings live on their own pages — the gauges start collapsed.",

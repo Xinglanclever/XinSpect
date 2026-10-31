@@ -43,8 +43,8 @@
                             </TextBlock.Style>
                         </TextBlock>
                     </StackPanel>
-                    <!-- 東方之星副標題：僅極限版主題可見，預設模糊，懸停清晰 -->
-                    <TextBlock x:Name="EasterEggTitle" Text="奧林帕斯山" FontSize="28" FontWeight="Normal"
+                    <!-- 東方之星副標題：僅極限版主題可見，預設模糊，懸停清晰。3.11 起代號改為 Swiss。 -->
+                    <TextBlock x:Name="EasterEggTitle" Text="瑞士" FontSize="28" FontWeight="Normal"
                                FontFamily="SimSun" FontStyle="Italic"
                                Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"
                                Margin="18,0,0,0" Visibility="Collapsed">

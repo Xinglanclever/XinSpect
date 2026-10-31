@@ -96,6 +96,14 @@ public class ThemeSwitchTests
             Assert.True((double)Application.Current.Resources["FontSize.Body"] > 13.5, "瑞士版的字級要比其他主題大一級");
             Assert.Equal("#FFD6001C", ColorOf("AccentBrush").ToString());   // 瑞士紅只在這一版出現
 
+            // 深色瑞士：同一套直角與字級，只是紙面反轉成近黑。
+            ThemeService.SwissDarkMode = true;
+            Assert.Equal("#FF111111", ColorOf("PagePlaneBrush").ToString());
+            Assert.Equal(new CornerRadius(0), (CornerRadius)Application.Current.Resources["Radius.Card"]);
+            Assert.Equal("#FFD6001C", ColorOf("AccentBrush").ToString());
+            ThemeService.SwissDarkMode = false;
+            Assert.Equal("#FFFFFFFF", ColorOf("PagePlaneBrush").ToString());
+
             ThemeService.Theme = AppTheme.Light;
             Assert.Equal(new CornerRadius(10), (CornerRadius)Application.Current.Resources["Radius.Card"]);
             Assert.Equal(13.0, (double)Application.Current.Resources["FontSize.Body"]);

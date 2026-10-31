@@ -143,6 +143,12 @@
                                   SelectionChanged="Theme_Changed"/>
                     </Grid>
 
+                    <!-- 只在選了瑞士版時出現：同一個語彙的暗底版本，不是另一個主題。 -->
+                    <CheckBox x:Name="SwissDarkCheck" Style="{StaticResource SetCheck}" Margin="155,10,0,0"
+                              Content="深色模式（深色瑞士風格）" Visibility="Collapsed"
+                              Checked="SwissDark_Changed" Unchecked="SwissDark_Changed"
+                              ToolTip="黑白反轉的同一套規則：近黑紙面、白墨、直角、大字，強調色仍是瑞士紅。"/>
+
                     <TextBlock Style="{StaticResource FieldLabel}" Text="強調色" Margin="0,16,0,8"/>
                     <ItemsControl x:Name="AccentList">
                         <ItemsControl.ItemsPanel>
@@ -223,6 +229,8 @@
                               IsChecked="{Binding Settings.MiniCompact, Mode=TwoWay}"/>
                     <CheckBox Style="{StaticResource SetCheck}" Margin="0,10,0,0" Content="釘選於最上層"
                               IsChecked="{Binding Settings.MiniTopmost, Mode=TwoWay}"/>
+                    <CheckBox Style="{StaticResource SetCheck}" Margin="0,10,0,0" Content="隱藏外框（只留底板與讀值）"
+                              IsChecked="{Binding Settings.MiniHideBorder, Mode=TwoWay}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
                                Text="取消後會被其他視窗蓋住，但仍留在畫面上。這兩項也能在監視器自己的標題列上就地切換。"/>
 

@@ -275,6 +275,10 @@ public sealed class SettingsService : ObservableObject
     /// <summary>釘選在最上層。取消後會被其他視窗蓋住，但仍留在畫面上。</summary>
     public bool MiniTopmost { get => _miniTopmost; set { if (SetProperty(ref _miniTopmost, value)) Save(); } }
 
+    private bool _miniHideBorder;
+    /// <summary>隱藏迷你監視器外框（只剩底板與文字；預設不隱藏）。</summary>
+    public bool MiniHideBorder { get => _miniHideBorder; set { if (SetProperty(ref _miniHideBorder, value)) Save(); } }
+
     // 懸浮窗項目開關：使用者自己決定要盯哪幾行，避免全開太亂
     private bool _miniShowCpu = true, _miniShowGpu = true, _miniShowMem = true,
                  _miniShowClock = true, _miniShowFps = true, _miniShowLow1 = true, _miniShowLow01 = true;
@@ -419,6 +423,7 @@ public sealed class SettingsService : ObservableObject
         public bool MiniShowGpuPower { get; set; } = true;
         public bool MiniShowVrm { get; set; } = true;
         public bool MiniTopmost { get; set; } = true;
+        public bool MiniHideBorder { get; set; }
         public bool MiniShowCpu { get; set; } = true;
         public bool MiniShowGpu { get; set; } = true;
         public bool MiniShowMem { get; set; } = true;
@@ -512,6 +517,7 @@ public sealed class SettingsService : ObservableObject
                     _miniShowGpuPower = p.MiniShowGpuPower;
                     _miniShowVrm = p.MiniShowVrm;
                     _miniTopmost = p.MiniTopmost;
+                    _miniHideBorder = p.MiniHideBorder;
                     _miniShowCpu = p.MiniShowCpu;
                     _miniShowGpu = p.MiniShowGpu;
                     _miniShowMem = p.MiniShowMem;
@@ -616,6 +622,7 @@ public sealed class SettingsService : ObservableObject
                 MiniShowGpuPower = _miniShowGpuPower,
                 MiniShowVrm = _miniShowVrm,
                 MiniTopmost = _miniTopmost,
+                MiniHideBorder = _miniHideBorder,
                 MiniShowCpu = _miniShowCpu,
                 MiniShowGpu = _miniShowGpu,
                 MiniShowMem = _miniShowMem,

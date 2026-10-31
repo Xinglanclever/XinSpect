@@ -23,8 +23,10 @@ public partial class SettingsView : UserControl
         {
             if (ThemeCombo.SelectedIndex != ThemeService.ThemeIndex)
                 ThemeCombo.SelectedIndex = ThemeService.ThemeIndex;
+            SyncSwissDarkCheck();
             ShowAccentHint();
         });
+        SyncSwissDarkCheck();
 
         // 首次進入設定頁時自動跑一次環境自檢（背景偵測，不阻塞 UI）；之後由使用者按鈕手動重檢。
         Loaded += (_, _) =>
@@ -68,6 +70,24 @@ public partial class SettingsView : UserControl
     private void Theme_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (ThemeCombo.SelectedIndex >= 0) ThemeService.ThemeIndex = ThemeCombo.SelectedIndex;
+        SyncSwissDarkCheck();
+        ShowAccentHint();
+    }
+
+    /// <summary>瑞士版專屬的「深色模式」開關：只有選了瑞士版才看得到，狀態跟著 ThemeService 走。</summary>
+    private void SyncSwissDarkCheck()
+    {
+        if (SwissDarkCheck is null) return;
+        bool swiss = ThemeService.ThemeIndex == 3;
+        SwissDarkCheck.Visibility = swiss ? Visibility.Visible : Visibility.Collapsed;
+        bool dark = ThemeService.SwissDarkMode;
+        if (SwissDarkCheck.IsChecked != dark) SwissDarkCheck.IsChecked = dark;
+    }
+
+    private void SwissDark_Changed(object sender, RoutedEventArgs e)
+    {
+        bool want = SwissDarkCheck.IsChecked == true;
+        if (ThemeService.SwissDarkMode != want) ThemeService.SwissDarkMode = want;
         ShowAccentHint();
     }
 

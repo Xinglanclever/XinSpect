@@ -10,7 +10,7 @@
         FontFamily="{StaticResource AppFont}" UseLayoutRounding="True">
     <Grid>
         <!-- 半透明底板：只有底板變淡，上層讀值文字維持不透明才讀得清楚 -->
-        <Border x:Name="Backdrop" CornerRadius="14"
+        <Border x:Name="Backdrop" CornerRadius="{DynamicResource Radius.Capsule}"
                 Opacity="{Binding Settings.MiniOpacity, Mode=OneWay}"
                 BorderThickness="1.2">
             <Border.Style>
@@ -19,12 +19,17 @@
                 <Style TargetType="Border">
                     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
                     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                    <Setter Property="CornerRadius" Value="14"/>
+                    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Capsule}"/>
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding Settings.MiniStyle}" Value="1">
                             <Setter Property="Background" Value="#E6000000"/>
                             <Setter Property="BorderBrush" Value="#FFB00000"/>
                             <Setter Property="CornerRadius" Value="3"/>
+                        </DataTrigger>
+                        <!-- 設定頁的「隱藏外框」：只留底板與讀值，拖曳與內容都不受影響。 -->
+                        <DataTrigger Binding="{Binding Settings.MiniHideBorder}" Value="True">
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="BorderBrush" Value="Transparent"/>
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>
@@ -35,12 +40,12 @@
         </Border>
 
         <!-- 內容（不透明，可拖曳） -->
-        <Border x:Name="DragSurface" CornerRadius="14" Background="Transparent"
+        <Border x:Name="DragSurface" CornerRadius="{DynamicResource Radius.Capsule}" Background="Transparent"
                 MouseLeftButtonDown="Drag">
             <Border.Style>
                 <Style TargetType="Border">
                     <Setter Property="Padding" Value="16,13"/>
-                    <Setter Property="CornerRadius" Value="14"/>
+                    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Capsule}"/>
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding Settings.MiniStyle}" Value="1">
                             <!-- OSD 風格：等寬數字，讀值對齊時不會左右跳動。
