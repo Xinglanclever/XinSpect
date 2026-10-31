@@ -48,6 +48,18 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "3.09",
+            Date = "2026-10-31",
+            Title = "圖示換成品牌插畫：藍色 X ＋ 兩張視窗卡",
+            Items =
+            [
+                "應用程式圖示換成品牌插畫：藍色 X ＋ 兩張視窗卡。exe 圖示、工作列、視窗左上角與捷徑共用同一個 app.ico，一起換。",
+                "六個尺寸（256/128/64/48/32/16）都從 1024 母圖重取樣，不是拿 256 再放大；裁切以下方「XinSpect」字樣之前為界，小尺寸不會糊成一團。",
+                "換圖流程收成一行：覆蓋 Assets/brand-source.jpg → 跑 make_icon.ps1（內部呼叫 Tools/make-icon.py）→ 提交 app.ico。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "3.08",
             Date = "2026-10-31",
             Title = "授權在程式裡也寫成雙授權，並寫明適用於所有版本",
