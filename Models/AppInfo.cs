@@ -44,12 +44,12 @@ public static class AppInfo
     public static string OfficialSiteDisplay => OfficialSiteUrl.Replace("https://", "", StringComparison.Ordinal);
 
     /// <summary>
-    /// 版本代號：2.5 起為 Olympus（奧林帕斯山／奧林匹斯山）。
-    /// 舊代號 Everest（額菲爾士峰／珠穆朗玛峰）已於 2026-10-03 更名——繁中彩蛋顯示
-    /// 「奧林帕斯山」、簡中轉換表顯示「奧林匹斯山」（見 MainWindow 與 ZhTerms）。
+    /// 版本代號。<b>測試版（experiment/swiss-helvetica）起改為 Swiss</b>：這一版是介面語彙的
+    /// 實驗，代號跟著換，畫面上才不會看起來像又一個 Olympus 小版本。
+    /// 正式線仍以 Olympus 為代號（2.5 起）；Everest（額菲爾士峰／珠穆朗玛峰）於 2026-10-03 更名為 Olympus。
     /// </summary>
     public static string VersionCodename(bool simplified)
-        => "Olympus";
+        => "Swiss";
 
     public static string WindowTitle(bool simplified)
         => $"XinSpect v{ShortVersion} {VersionCodename(simplified)}";

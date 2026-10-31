@@ -111,6 +111,13 @@ public sealed class AiService : ObservableObject
         {
             if (e.PropertyName == nameof(SettingsService.AiKeepHistory) && !_settings.AiKeepHistory)
                 _chat.Delete();
+
+            // 工具列那行「模型：…」必須跟著供應商與模型設定重算：共用額度的模型不在 AiModel 這個欄位裡，
+            // 直接綁 Settings.AiModel 會永遠停在上一台（Ollama／API）的型號——2026-11-01 回報的缺陷。
+            if (e.PropertyName is nameof(SettingsService.AiProvider)
+                or nameof(SettingsService.AiModel)
+                or nameof(SettingsService.AiBaseUrl))
+                OnPropertyChanged(nameof(ModelText));
         };
 
         if (!_settings.AiKeepHistory) return;
@@ -557,6 +564,13 @@ public sealed class AiService : ObservableObject
         return AiTranscript.Build(Messages, now, ModelLabelOrFallback(),
                                   ProviderLabel(_settings.AiProviderEnum), _settings.AiRedactIdentity, usage);
     }
+
+    /// <summary>
+    /// 工具列顯示的「模型：…」。<b>必須經 <see cref="ResolveModel"/> 解析</b>，不能直接綁設定欄位：
+    /// 共用額度用的是 Cloudflare Workers AI 的模型，那個名字不在 <c>AiModel</c> 裡
+    /// （走 SharedAiEndpoint），綁設定欄位就會顯示成上一台本機 Ollama 或自填 API 的型號。
+    /// </summary>
+    public string ModelText => ModelLabelOrFallback();
 
     /// <summary>匯出用：模型還沒設定時不該丟例外（匯出對話與「能不能送出請求」是兩件事）。</summary>
     private string ModelLabelOrFallback()

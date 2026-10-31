@@ -18,6 +18,24 @@ public class UpdateCheckServiceTests
     public void 版本比較逐段數字而不是逐字串(string a, string b, int expected)
         => Assert.Equal(expected, Math.Sign(UpdateCheckService.CompareVersions(a, b)));
 
+    /// <summary>
+    /// 轉址備援（2026-11-01）：匿名呼叫 api.github.com 常常直接 403（同一出口 IP 共用額度），
+    /// 於是「檢查更新」對那些人永遠是「查不到」。備援改讀 <c>/releases/latest</c> 的 302 Location，
+    /// 拿到 tag 之後走的是<b>同一套</b>判定——兩條路各寫一份就會有一天互相矛盾。
+    /// </summary>
+    [Fact]
+    public void 轉址備援拿到的tag走同一套判定()
+    {
+        Assert.True(UpdateCheckService.JudgeTag("3.10", "v3.11").UpdateAvailable);
+        Assert.True(UpdateCheckService.JudgeTag("3.10", "v3.10").UpToDate);
+        Assert.Equal("3.11", UpdateCheckService.JudgeTag("3.10", "v3.11").LatestVersion);
+
+        // 兩條路都失敗時仍必須是「查不到」，不得冒充「已是最新」。
+        var none = UpdateCheckService.JudgeTag("3.10", null);
+        Assert.False(none.UpdateAvailable);
+        Assert.False(none.UpToDate);
+    }
+
     [Fact]
     public void 遠端較新時判定有新版並帶出版本()
     {

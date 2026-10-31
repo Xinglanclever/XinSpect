@@ -973,7 +973,7 @@ public static class EnglishStrings
         ["深度審計與時間軸"] = "Deep audit & timeline",
         ["深度規格 (CPU-Z)"] = "Deep specs (CPU-Z)",
         ["深度識別（CPU-Z）"] = "Deep identification (CPU-Z)",
-        ["深／淺色主題與八種強調色。選擇後整個介面立即換色（無須重啟），並記憶為下次啟動的外觀。"] = "Dark/light theme and eight accent colors. Switching recolors the entire interface immediately (no restart) and is remembered for next launch.",
+        ["四種主題（深色／淺色／極限版／瑞士現代主義平面化設計）與九種強調色。選擇後整個介面立即換色（無須重啟），並記憶為下次啟動的外觀。"] = "Four themes (dark, light, Extreme Edition, Swiss Modernist flat design) and nine accent colours. Switching recolours the entire interface immediately (no restart) and is remembered for next launch.",
         ["清理垃圾檔案"] = "Clean junk files",
         ["清理所選"] = "Clean selected",
         ["清空所有工作集"] = "Empty all working sets",

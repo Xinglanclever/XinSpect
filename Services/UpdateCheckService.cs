@@ -43,6 +43,15 @@ public static class UpdateCheckService
         if (string.IsNullOrWhiteSpace(tag))
             return new Verdict(false, false, null, "查不到（GitHub 沒有回報版本標籤）——程式不假裝已是最新。");
 
+        return JudgeTag(localVersion, tag);
+    }
+
+    /// <summary>同一個判定的另一半：拿到 tag 之後的部分，API 與轉址兩條路共用，避免兩套邏輯各說各話。</summary>
+    public static Verdict JudgeTag(string localVersion, string? tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag))
+            return new Verdict(false, false, null, "查不到（GitHub 沒有回報版本標籤）——程式不假裝已是最新。");
+
         string latest = tag.TrimStart('v', 'V');
         if (CompareVersions(latest, localVersion) > 0)
             return new Verdict(true, false, latest, $"有新版 v{latest}（目前 v{localVersion}）——可到下載頁取得。");
@@ -71,13 +80,39 @@ public static class UpdateCheckService
             using var req = new HttpRequestMessage(HttpMethod.Get, ReleasesApiUrl);
             req.Headers.UserAgent.ParseAdd("XinSpect-UpdateCheck");
             using var resp = await Http.SendAsync(req).ConfigureAwait(false);
-            if (!resp.IsSuccessStatusCode) return Judge(localVersion, null);
-            string json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-            return Judge(localVersion, json);
+            if (resp.IsSuccessStatusCode)
+            {
+                string json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+                return Judge(localVersion, json);
+            }
+        }
+        catch { /* 落到轉址備援；兩條都失敗才回「查不到」 */ }
+
+        // 匿名呼叫 api.github.com 很容易拿到 403（同一出口 IP 的所有人共用每小時 60 次的額度），
+        // 而「檢查更新」對那些使用者就永遠是「查不到」。備援走網頁版的 /releases/latest：
+        // 它只是一個 302，Location 尾巴就是 tag，不經 API、沒有那個額度限制。
+        string? redirected = await ResolveLatestTagAsync().ConfigureAwait(false);
+        return JudgeTag(localVersion, redirected);
+    }
+
+    /// <summary>讀 <c>/releases/latest</c> 的 302 轉址目標，取出 tag（例如 <c>v3.10</c>）。失敗回 null。</summary>
+    private static async Task<string?> ResolveLatestTagAsync()
+    {
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, ReleasesPageUrl);
+            req.Headers.UserAgent.ParseAdd("XinSpect-UpdateCheck");
+            var handler = new HttpClientHandler { AllowAutoRedirect = false };
+            using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(15) };
+            using var resp = await client.SendAsync(req).ConfigureAwait(false);
+            var location = resp.Headers.Location?.ToString();
+            if (string.IsNullOrWhiteSpace(location)) return null;
+            int at = location.LastIndexOf("/tag/", StringComparison.Ordinal);
+            return at < 0 ? null : location[(at + 5)..];
         }
         catch
         {
-            return Judge(localVersion, null);
+            return null;
         }
     }
 }

@@ -5,7 +5,7 @@
     <!-- 詳細資訊的一列：左邊一個小圓點、中間固定寬度的標籤、右邊放值（可以是多行或多筆裝置）。
          值的內容有單行文字（主機板）、兩行（處理器）與一整個 ItemsControl（硬碟、網卡），
          所以值用 ContentPresenter 轉接，而不是一個 TextBlock 綁字串。 -->
-    <Border Background="{DynamicResource Surface2Brush}" CornerRadius="0"
+    <Border Background="{DynamicResource Surface2Brush}" CornerRadius="{DynamicResource Radius.Control}"
             Padding="13,10" Margin="0,0,0,6" SnapsToDevicePixels="True">
         <Grid>
             <Grid.ColumnDefinitions>

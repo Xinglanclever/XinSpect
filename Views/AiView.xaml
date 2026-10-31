@@ -101,7 +101,7 @@
                             IsEnabled="{Binding Ai.CanSend}" Click="Evaluate_Click"
                             ToolTip="把這台電腦的硬體事實交給 AI，請它寫一段評價（共用額度、本機 Ollama 或自填端點都可以）"/>
                     <TextBlock Style="{StaticResource FieldValue}" VerticalAlignment="Center"
-                               Text="{Binding Settings.AiModel, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='模型：{0}'}"/>
+                               Text="{Binding Ai.ModelText, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='模型：{0}'}"/>
                     <Button Style="{StaticResource ToolButton}" Content="⚙" FontSize="13" Padding="4,2" Margin="6,0,0,0"
                             ToolTip="前往設定頁的 AI 區塊"
                             Click="BtnGoAiSettings_Click" Cursor="Hand"/>

@@ -5,7 +5,7 @@ using System.Windows.Media;
 
 namespace XinSpect;
 
-public enum AppTheme { Dark, Light, ExtremeEdition }
+public enum AppTheme { Dark, Light, ExtremeEdition, Swiss }
 
 /// <summary>
 /// 強調色定義：Main 為主色（漸層頂近似），Dim 為暗端（漸層底），GradTop 為漸層頂亮端。
@@ -56,7 +56,7 @@ public static class ThemeService
     /// <summary>可選強調色（設定頁色票順序）。宣告於最前，因靜態欄位初始化依文字順序執行。</summary>
     public static IReadOnlyList<AccentPreset> Presets { get; } =
     [
-        // 測試版：瑞士紅（#D6001C）——瑞士現代主義的招牌紅，只用來點題，不當大面積底色。
+        // 瑞士現代主義的招牌紅：只在瑞士版出現，其餘主題不主動選它。
         new("swiss",  "瑞士紅", "#d6001c", "#8f0012", "#e8253c"),
         new("blue",   "曦藍", "#3987e5", "#1c5cab", "#4c96f0"),
         new("teal",   "青碧", "#17a2a2", "#0d6b6b", "#22b8b8"),
@@ -120,21 +120,35 @@ public static class ThemeService
         set { if (value >= 0 && value < Presets.Count) Accent = Presets[value]; }
     }
 
-    /// <summary>目前主題的索引（0=深色、1=淺色、2=極限版；供設定頁下拉選單使用）。</summary>
+    /// <summary>目前主題的索引（0=深色、1=淺色、2=極限版、3=瑞士現代主義平面化；供設定頁下拉選單使用）。</summary>
     public static int ThemeIndex
     {
-        get => _theme switch { AppTheme.Light => 1, AppTheme.ExtremeEdition => 2, _ => 0 };
-        set => Theme = value switch { 1 => AppTheme.Light, 2 => AppTheme.ExtremeEdition, _ => AppTheme.Dark };
+        get => _theme switch
+        {
+            AppTheme.Light => 1,
+            AppTheme.ExtremeEdition => 2,
+            AppTheme.Swiss => 3,
+            _ => 0,
+        };
+        set => Theme = value switch
+        {
+            1 => AppTheme.Light,
+            2 => AppTheme.ExtremeEdition,
+            3 => AppTheme.Swiss,
+            _ => AppTheme.Dark,
+        };
     }
 
-    /// <summary>主題名稱（設定頁下拉選單項目）。</summary>
-    public static IReadOnlyList<string> ThemeNames { get; } = ["深色", "淺色", "極限版（東方之星）"];
+    /// <summary>主題名稱（設定頁下拉選單項目）。順序即選單順序：瑞士版排在極限版（東方之星）之後。</summary>
+    public static IReadOnlyList<string> ThemeNames { get; } =
+        ["深色", "淺色", "極限版（東方之星）", "瑞士現代主義平面化設計"];
 
-    /// <summary>在深／淺／極限版間切換（命令面板用）。</summary>
+    /// <summary>在深／淺／極限版／瑞士版之間循環（命令面板用）。</summary>
     public static void ToggleTheme() => Theme = _theme switch
     {
         AppTheme.Dark => AppTheme.Light,
         AppTheme.Light => AppTheme.ExtremeEdition,
+        AppTheme.ExtremeEdition => AppTheme.Swiss,
         _ => AppTheme.Dark,
     };
 
@@ -149,9 +163,14 @@ public static class ThemeService
         "#ffffff", "#c3c2b7", "#898781",
         "#2c2c2a", "#383835", "#181819");
 
-    // 淺色（測試版改成瑞士現代）：純白紙面、純黑墨、髮絲灰線。
-    // 對比：黑對白 21:1；次要墨 #1f1f1f 約 16:1；弱墨 #6b6b6b 仍 >4.5:1（AA 正文）。
+    // 淺色：以暖白紙面為底，墨色維持與深色相同的三級對比階梯（主/次/弱）
     private static readonly Palette LightPalette = new(
+        "#f2f2ef", "#ffffff", "#eceae5",
+        "#17171a", "#4a4a45", "#7c7a74",
+        "#dedcd6", "#c9c7c0", "#f7f6f3");
+
+    // 瑞士現代主義平面化設計：白紙、黑墨、髮絲線、瑞士紅。刻意不用任何漸層與圓角。
+    private static readonly Palette SwissPalette = new(
         "#ffffff", "#ffffff", "#f4f4f4",
         "#000000", "#1f1f1f", "#6b6b6b",
         "#d0d0d0", "#9a9a9a", "#ffffff");
@@ -166,6 +185,7 @@ public static class ThemeService
     {
         AppTheme.Light => LightPalette,
         AppTheme.ExtremeEdition => ExtremeEditionPalette,
+        AppTheme.Swiss => SwissPalette,
         _ => DarkPalette,
     };
 
@@ -175,12 +195,6 @@ public static class ThemeService
     public static void Initialize()
     {
         LoadPrefs();
-        // 測試版：開機固定以「淺色＝瑞士現代」起步，否則存過深色偏好的機器永遠看不到這次實驗。
-        // 使用者仍可在設定頁切回深色；重開機又回到瑞士版面（測試版的預期行為）。
-        _theme = AppTheme.Light;
-        // 強調色不強制：使用者自己挑過的（青碧、翠綠…）照他的走。只有在還沒挑過、
-        // 仍是預設曦藍時才換成瑞士紅——否則「八色強調色」在測試版裡會變成一個騙人的選單。
-        if (_accent.Key == "blue") _accent = FindAccent("swiss");
         ApplyAll();
     }
 
@@ -195,6 +209,9 @@ public static class ThemeService
         else if (_theme != AppTheme.ExtremeEdition && _accent.Key == "rog")
             _accent = FindAccent("blue");
 
+        // 瑞士紅只在瑞士版出現：進瑞士版時強制換成它，離開時若還停在瑞士紅就收回曦藍。
+        if (_theme == AppTheme.Swiss && _accent.Key != "swiss") _accent = FindAccent("swiss");
+        else if (_theme != AppTheme.Swiss && _accent.Key == "swiss") _accent = FindAccent("blue");
 
         var p = Current;
 
@@ -219,8 +236,8 @@ public static class ThemeService
         SetBrush("AccentButtonBrush", btn.Solid);
 
         // 強調漸層（按鈕底）：頂=亮端、底=暗端，兩端都已壓到白字達標
-        if (_theme == AppTheme.Light)
-            SetGradient("AccentGradientBrush", btn.Solid, btn.Solid);   // 瑞士現代：平塗，不要漸層
+        if (_theme == AppTheme.Swiss)
+            SetGradient("AccentGradientBrush", btn.Solid, btn.Solid);   // 瑞士版：平塗，不要漸層
         else
             SetGradient("AccentGradientBrush", btn.Top, btn.Bottom);
 
@@ -230,16 +247,16 @@ public static class ThemeService
         double tintRatio = _theme == AppTheme.ExtremeEdition ? 0.88
                          : _theme == AppTheme.Dark ? 0.80 : 0.86;
         Color tint = Blend(Accent.MainColor, plane, tintRatio);
-        if (_theme == AppTheme.Light)
+        if (_theme == AppTheme.Swiss)
             SetGradientStops("HeaderGradientBrush", (0.0, Hex(p.HeaderMid)), (0.45, Hex(p.HeaderMid)), (1.0, surface));
         else
             SetGradientStops("HeaderGradientBrush",
-                (0.0, tint),
-                (0.45, Hex(p.HeaderMid)),
-                (1.0, surface));
+            (0.0, tint),
+            (0.45, Hex(p.HeaderMid)),
+            (1.0, surface));
 
-        // 狀態色：淺色主題下原深色版飽和度偏亮，壓暗以維持與紙面的對比
-        if (_theme != AppTheme.Light)
+        // 狀態色：淺色／瑞士版下原深色版飽和度偏亮，壓暗以維持與紙面的對比
+        if (_theme is not (AppTheme.Light or AppTheme.Swiss))
         {
             Set("GoodBrush", "#0ca30c");
             Set("WarningBrush", "#fab219");
@@ -253,6 +270,26 @@ public static class ThemeService
             Set("SeriousBrush", "#c85a2c");
             Set("CriticalBrush", "#b52626");
         }
+
+        // 幾何與字級：瑞士版要直角與大字，其餘主題維持原本的圓角與字級。
+        // 這兩個是 Theme.xaml 宣告的資源，樣式一律以 DynamicResource 取用，換掉即全站生效。
+        bool swiss = _theme == AppTheme.Swiss;
+        SetResource("Radius.Card",    swiss ? new CornerRadius(0) : new CornerRadius(10));
+        SetResource("Radius.Control", swiss ? new CornerRadius(0) : new CornerRadius(8));
+        SetResource("Radius.Capsule", swiss ? new CornerRadius(0) : new CornerRadius(16));
+        // 瑞士版字級整體放大一級：13→14.5、12→13、12.5→13.5、13.5→15、15→17、20→24。
+        SetResource("FontSize.Body",     swiss ? 14.5 : 13.0);
+        SetResource("FontSize.Subtitle", swiss ? 13.0 : 12.0);
+        SetResource("FontSize.Label",    swiss ? 13.5 : 12.5);
+        SetResource("FontSize.Value",    swiss ? 15.0 : 13.5);
+        SetResource("FontSize.Section",  swiss ? 17.0 : 15.0);
+        SetResource("FontSize.Title",    swiss ? 24.0 : 20.0);
+    }
+
+    /// <summary>換掉一個非筆刷類的佈景資源（圓角、字級）。同樣是「整支換掉」而不是就地改值。</summary>
+    private static void SetResource(string key, object value)
+    {
+        if (Application.Current is { } app) app.Resources[key] = value;
     }
 
     // ---- 偏好持久化（獨立小檔，早於 SettingsService 建立即可讀取）--------

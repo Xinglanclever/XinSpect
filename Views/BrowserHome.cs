@@ -6,6 +6,25 @@ namespace XinSpect;
 /// </summary>
 internal static class BrowserHome
 {
+    /// <summary>
+    /// 依目前主題著色的起始頁。起始頁是內嵌 HTML，吃不到 WPF 的 DynamicResource，所以顏色要用
+    /// 呼叫端傳進來的值改寫 <c>:root</c>；瑞士版另把圓角歸零（那一版沒有圓角這種語彙）。
+    /// 純函式：不讀全域狀態，測試可以直接比對字串。
+    /// </summary>
+    public static string ThemedHtml(string plane, string card, string ink, string sub, string line,
+                                    string accent, bool square)
+    {
+        string html = Html.Replace(
+            ":root { --bg:#1e2023; --card:#26282c; --ink:#eef1f5; --sub:#9aa3ad; --line:#3a3d42; --accent:#4c8dff; }",
+            ":root { --bg:" + plane + "; --card:" + card + "; --ink:" + ink + "; --sub:" + sub
+            + "; --line:" + line + "; --accent:" + accent + "; }");
+        // 字體：瑞士版把 Helvetica 排到最前（中文仍由後面的 JhengHei 接手）。
+        html = html.Replace("font-family:\"Microsoft JhengHei UI\"",
+                            "font-family:\"Helvetica\",\"Helvetica Neue\",Arial,\"Microsoft JhengHei UI\"");
+        if (square) html = System.Text.RegularExpressions.Regex.Replace(html, @"border-radius:\d+px", "border-radius:0");
+        return html;
+    }
+
     public const string Html = """
 <!doctype html>
 <html lang="zh-Hant">

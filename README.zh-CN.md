@@ -14,7 +14,7 @@
 ![版本](https://img.shields.io/badge/version-3.11-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-7713%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-7715%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 ![商业授权](https://img.shields.io/badge/license-%E5%95%86%E4%B8%9A%E6%8E%88%E6%9D%83%E5%8F%AF%E8%B0%88-8B5CF6)
@@ -396,7 +396,7 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 | 接口页（XAML） | 80 页 | `ls Views/*.xaml` |
 | 测试档 | 571 档 | `ls Tests/*.cs` |
 | 测试方法 | 5,851 个 `[Fact]`＋249 个 `[Theory]` | 逐档正则计数 |
-| 运行期测试案例 | 7,713（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
+| 运行期测试案例 | 7,715（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
 | 公开文档 | 32 份 `docs/*.md`＋5 份 `docs/spec/*.md` | `ls docs/*.md`、`ls docs/spec/*.md` |
 | 事实键目录 | 1,167 键／155 个前缀 | 解析 `FactKeyCatalog.Keys` |
 | 动态键家族 | 66 个 | 解析 `FactKeyDynamicCatalog.Families` |
@@ -472,7 +472,7 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.11/XinSpect.exe) | 37,319,467 bytes | 主程序。蓝色中队守护进程已内置 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.11/XinSpect.exe) | 37,323,563 bytes | 主程序。蓝色中队守护进程已内置 |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.11/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.11/XinSpectDeploy.exe) | 15,360 bytes | 一键安装器（可选 GitHub／Google Drive／中国直连线路三个下载来源；下载时显示进度条、速度与剩余时间） |
 
@@ -2419,7 +2419,7 @@ O-01 到 O-12 里，至少四条是「知道怎么修，但选择不修」：
 
 ## 二十二、版本沿革
 
-- **v3.11 Ultima XII**（2026-10-31）：界面换成瑞士现代风格与 Helvetica（测试版）
+- **v3.11 Swiss**（2026-10-31）：界面换成瑞士现代风格与 Helvetica（测试版）
 - **v3.10 Ultima XII**（2026-10-31）：总览先讲清楚这台机器是什么：胶囊摘要＋详细信息，仪表默认收起
 - **v3.09 Ultima XII**（2026-10-31）：图标换成品牌插画：蓝色 X ＋ 两张窗口卡
 - **v3.08 Ultima XII**（2026-10-31）：授权在程序里也写成双授权，并写明适用于所有版本

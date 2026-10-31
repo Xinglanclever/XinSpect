@@ -5,8 +5,8 @@ namespace XinSpect.Tests;
 public class AppInfoTests
 {
     [Theory]
-    [InlineData(false, "Olympus")]
-    [InlineData(true, "Olympus")]
+    [InlineData(false, "Swiss")]
+    [InlineData(true, "Swiss")]
     public void 版本標題與代號依語言模式選擇(bool simplified, string codename)
     {
         Assert.Equal(codename, AppInfo.VersionCodename(simplified));

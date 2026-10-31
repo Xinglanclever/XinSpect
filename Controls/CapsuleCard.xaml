@@ -4,7 +4,7 @@
              xmlns:local="clr-namespace:XinSpect">
     <!-- 膠囊卡：圓角外框 ＋ 左側圖示圓角方塊 ＋ 標籤／主值／副值三行。
          圓角半徑刻意大於一般卡片（16 對 10），視覺上才像「一顆膠囊」而不是「一張卡」。 -->
-    <Border CornerRadius="0" Background="{DynamicResource SurfaceBrush}"
+    <Border CornerRadius="{DynamicResource Radius.Capsule}" Background="{DynamicResource SurfaceBrush}"
             BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
             Padding="16,13" SnapsToDevicePixels="True">
         <Grid>
@@ -14,7 +14,7 @@
             </Grid.ColumnDefinitions>
 
             <Grid Grid.Column="0" Width="40" Height="40" VerticalAlignment="Center">
-                <Border x:Name="IconPlane" CornerRadius="0" Opacity="0.18"/>
+                <Border x:Name="IconPlane" CornerRadius="{DynamicResource Radius.Control}" Opacity="0.18"/>
                 <TextBlock x:Name="IconGlyph" FontFamily="Segoe MDL2 Assets" FontSize="17"
                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Grid>

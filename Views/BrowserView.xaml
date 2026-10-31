@@ -18,7 +18,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="8"
+                        <Border Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Radius.Control}"
                                 BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
                             <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
                         </Border>
@@ -37,7 +37,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="8">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Radius.Control}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -69,7 +69,7 @@
         <!-- 工具列：WrapPanel 自動換行——窄窗／低 DPI 時網址列與按鈕折到下一行，不再水平截斷。
              網址列以固定寬度參與折行（WrapPanel 不支援 * 填滿），寬窗時一行容納，窄窗時自動獨立一行。 -->
         <Border Grid.Row="0" Background="{DynamicResource SurfaceBrush}" Padding="8,8" Margin="0,0,0,8"
-                CornerRadius="10">
+                CornerRadius="{DynamicResource Radius.Control}">
             <WrapPanel VerticalAlignment="Center">
                 <Button x:Name="BackBtn" Style="{StaticResource NavBtn}" Click="Back_Click"   Content="‹"  ToolTip="上一頁"/>
                 <Button x:Name="FwdBtn"  Style="{StaticResource NavBtn}" Click="Forward_Click" Content="›"  ToolTip="下一頁"/>
@@ -94,7 +94,7 @@
 
         <!-- 頁內尋找列：預設收起，按工具列的 🔍 或 Ctrl＋F 打開 -->
         <Border x:Name="FindBar" Grid.Row="1" Visibility="Collapsed" Background="{DynamicResource SurfaceBrush}"
-                Padding="8,6" Margin="0,0,0,8" CornerRadius="10">
+                Padding="8,6" Margin="0,0,0,8" CornerRadius="{DynamicResource Radius.Control}">
             <WrapPanel VerticalAlignment="Center">
                 <TextBlock Style="{StaticResource FieldLabel}" Text="頁內尋找" VerticalAlignment="Center" Margin="4,0,8,0"/>
                 <TextBox x:Name="FindBox" Width="240" Style="{StaticResource AddressBox}" Margin="0,0,8,0"
@@ -108,7 +108,7 @@
         </Border>
 
         <!-- WebView2 承載區（含未安裝執行階段時的後備提示） -->
-        <Border Grid.Row="2" CornerRadius="10" ClipToBounds="True" Background="{DynamicResource PagePlaneBrush}">
+        <Border Grid.Row="2" CornerRadius="{DynamicResource Radius.Control}" ClipToBounds="True" Background="{DynamicResource PagePlaneBrush}">
             <Grid>
                 <wv2:WebView2 x:Name="Web" PreviewMouseWheel="Web_PreviewMouseWheel"/>
                 <Border x:Name="Fallback" Visibility="Collapsed" Background="{DynamicResource SurfaceBrush}">
@@ -149,7 +149,7 @@
 
                 <!-- 提示條：被擋下的連結、下載位置、權限拒絕都寫在這裡（9 秒後自動收起） -->
                 <Border x:Name="Notice" Visibility="Collapsed" VerticalAlignment="Bottom" HorizontalAlignment="Left"
-                        Margin="12" Padding="12,8" CornerRadius="8" MaxWidth="620"
+                        Margin="12" Padding="12,8" CornerRadius="{DynamicResource Radius.Control}" MaxWidth="620"
                         Background="{DynamicResource Surface2Brush}" BorderThickness="1"
                         BorderBrush="{DynamicResource HairlineBrush}">
                     <TextBlock x:Name="NoticeText" TextWrapping="Wrap" FontSize="12.5"

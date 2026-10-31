@@ -24,11 +24,22 @@ public partial class HelpDot : UserControl
         Apply();
         // 說明文字在程式碼裡產生（取自 HelpCatalog），視覺樹掃描涵蓋不到 ToolTip 內容，
         // 因此在產出點過 T，並在語言切換時重套一次。
-        Loaded += (_, _) => LanguageService.Changed += OnLanguageChanged;   // 頁面快取會反覆 Unloaded，回來時要重新接上
-        Unloaded += (_, _) => LanguageService.Changed -= OnLanguageChanged;
+        Loaded += (_, _) =>
+        {
+            LanguageService.Changed += OnLanguageChanged;
+            ThemeService.Changed += OnThemeChanged;
+        };
+        Unloaded += (_, _) =>
+        {
+            LanguageService.Changed -= OnLanguageChanged;
+            ThemeService.Changed -= OnThemeChanged;
+        };
     }
 
     private void OnLanguageChanged() => Apply();
+
+    /// <summary>主題換了要重新套一次顏色；問號本身是 SetResourceReference，會自己跟著換。</summary>
+    private void OnThemeChanged() => Apply();
 
     public static readonly DependencyProperty HelpKeyProperty = DependencyProperty.Register(
         nameof(HelpKey), typeof(string), typeof(HelpDot),
@@ -55,17 +66,20 @@ public partial class HelpDot : UserControl
         TipDoes.Text = LanguageService.T(e.Does);
         TipRisk.Text = LanguageService.T(e.RiskLine);
 
-        var brush = Brush(e.Risk switch
+        string riskKey = e.Risk switch
         {
             HelpRisk.Danger => "CriticalBrush",
             HelpRisk.Caution => "WarningBrush",
             _ => "GoodBrush",
-        });
-        TipRisk.Foreground = brush;
+        };
+        // 用 SetResourceReference 而不是直接指派 Brush 物件：指派會把「當下那一刻」的筆刷快取住，
+        // 切換主題（尤其換到白紙底的瑞士版）之後，深色主題的淺灰字留在白底上就等於消失。
         // 唯讀項目的圓圈保持低調（灰）：整頁大半是唯讀，全部染色就等於沒有標示；
         // 只有真的會寫進硬體或系統的項目才把圓圈本身變成黃／紅。
-        Dot.BorderBrush = e.Risk == HelpRisk.ReadOnly ? Brush("MutedInkBrush") : brush;
-        Glyph.Foreground = e.Risk == HelpRisk.ReadOnly ? Brush("SecondaryInkBrush") : brush;
+        bool readOnly = e.Risk == HelpRisk.ReadOnly;
+        Dot.SetResourceReference(BorderBrushProperty, readOnly ? "MutedInkBrush" : riskKey);
+        Glyph.SetResourceReference(ForegroundProperty, readOnly ? "SecondaryInkBrush" : riskKey);
+        TipRisk.SetResourceReference(ForegroundProperty, riskKey);
     }
 
     private Brush Brush(string key)

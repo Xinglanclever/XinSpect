@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Xunit;
@@ -72,15 +73,57 @@ public class ThemeSwitchTests
             ThemeService.Accent = ThemeService.FindAccent("crimson");
             Assert.NotEqual(blue, ColorOf("AccentBrush"));
             Assert.NotEqual(blueGrad, GradientTopOf("AccentGradientBrush"));
+            Assert.NotEqual(blueHeader, GradientTopOf("HeaderGradientBrush"));
+        });
+    }
 
-            // 測試版（瑞士現代）：淺色的標題列是平塗白，刻意不隨強調色著染——這是這一版的設計選擇，
-            // 不是換色失效。著染的契約沒有被拿掉，只是換到深色下驗（下面三行）。
-            Assert.Equal(blueHeader, GradientTopOf("HeaderGradientBrush"));
-            Assert.Equal(Colors.White, GradientTopOf("HeaderGradientBrush"));
+    [Fact]
+    public void 瑞士版是直角與大字_離開後圓角與曦藍都回來()
+    {
+        RunSta(() =>
+        {
+            WpfEnv.Ensure();
+            ThemeService.Initialize();
+
             ThemeService.Theme = AppTheme.Dark;
-            var darkHeader = GradientTopOf("HeaderGradientBrush");
-            ThemeService.Accent = ThemeService.FindAccent("teal");
-            Assert.NotEqual(darkHeader, GradientTopOf("HeaderGradientBrush"));
+            ThemeService.Accent = ThemeService.FindAccent("blue");
+            Assert.Equal(new CornerRadius(10), (CornerRadius)Application.Current.Resources["Radius.Card"]);
+            var blueAccent = ColorOf("AccentBrush");
+
+            ThemeService.Theme = AppTheme.Swiss;
+            Assert.Equal(new CornerRadius(0), (CornerRadius)Application.Current.Resources["Radius.Card"]);
+            Assert.Equal(new CornerRadius(0), (CornerRadius)Application.Current.Resources["Radius.Control"]);
+            Assert.True((double)Application.Current.Resources["FontSize.Body"] > 13.5, "瑞士版的字級要比其他主題大一級");
+            Assert.Equal("#FFD6001C", ColorOf("AccentBrush").ToString());   // 瑞士紅只在這一版出現
+
+            ThemeService.Theme = AppTheme.Light;
+            Assert.Equal(new CornerRadius(10), (CornerRadius)Application.Current.Resources["Radius.Card"]);
+            Assert.Equal(13.0, (double)Application.Current.Resources["FontSize.Body"]);
+            Assert.Equal(blueAccent, ColorOf("AccentBrush"));               // 離開瑞士版不再強留瑞士紅
+
+            // 換資源不等於畫面真的變了：把一張真的掛在視窗裡的卡片抓來問，切換後它的圓角有沒有跟著改。
+            // （使用者回報過「其他主題也變直角」——那正是這條要防的回歸。）
+            var card = new Border { Style = (Style)Application.Current.Resources["Card"], Width = 40, Height = 20 };
+            var win = new Window
+            {
+                Content = card, Width = 120, Height = 80,
+                Left = -4000, Top = -4000, ShowActivated = false, ShowInTaskbar = false,
+                WindowStyle = WindowStyle.None,
+            };
+            win.Show();
+            try
+            {
+                ThemeService.Theme = AppTheme.Dark;
+                Pump();
+                Assert.Equal(10, card.CornerRadius.TopLeft);
+                ThemeService.Theme = AppTheme.Swiss;
+                Pump();
+                Assert.Equal(0, card.CornerRadius.TopLeft);
+                ThemeService.Theme = AppTheme.Dark;
+                Pump();
+                Assert.Equal(10, card.CornerRadius.TopLeft);
+            }
+            finally { win.Close(); }
         });
     }
 

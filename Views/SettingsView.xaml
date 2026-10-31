@@ -130,7 +130,7 @@
                 <StackPanel>
                     <local:SectionHead Text="外觀" HelpKey="settings/外觀"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
-                               Text="深／淺色主題與八種強調色。選擇後整個介面立即換色（無須重啟），並記憶為下次啟動的外觀。"/>
+                               Text="四種主題（深色／淺色／極限版／瑞士現代主義平面化設計）與九種強調色。選擇後整個介面立即換色（無須重啟），並記憶為下次啟動的外觀。"/>
 
                     <Grid Margin="0,14,0,0">
                         <Grid.ColumnDefinitions>

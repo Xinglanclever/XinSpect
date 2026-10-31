@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Navigation;
 using Microsoft.Web.WebView2.Core;
 
@@ -226,9 +227,23 @@ public partial class BrowserView : UserControl
 
         AddressBar.Text = "";
         _selfDocumentNav = true;
-        try { Web.NavigateToString(BrowserHome.Html); }
+        try { Web.NavigateToString(ThemedHomeHtml()); }
         catch { _selfDocumentNav = false; }
     }
+
+    /// <summary>
+    /// 起始頁是內嵌 HTML，吃不到 DynamicResource，所以把目前的佈景色與圓角語彙一起傳進去。
+    /// 瑞士版：白紙黑字、直角、Helvetica；其餘主題沿用原本的深色起始頁。
+    /// </summary>
+    private static string ThemedHomeHtml() => BrowserHome.ThemedHtml(
+        Hex("PagePlaneBrush"), Hex("Surface2Brush"), Hex("PrimaryInkBrush"),
+        Hex("MutedInkBrush"), Hex("HairlineBrush"), Hex("AccentBrush"),
+        ThemeService.Theme == AppTheme.Swiss);
+
+    private static string Hex(string key)
+        => Application.Current?.TryFindResource(key) is SolidColorBrush b
+            ? $"#{b.Color.R:X2}{b.Color.G:X2}{b.Color.B:X2}"
+            : "#FFFFFF";
 
     // 切換載入狀態：顯示／隱藏頂端進度條，並讓重新整理鍵在「停止」與「重新整理」間切換。
     private void SetLoading(bool on)
