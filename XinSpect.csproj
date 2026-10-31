@@ -22,9 +22,9 @@
     <AssemblyTitle>曦覽 XinSpect 硬體資訊總覽</AssemblyTitle>
     <Company>Xinglanclever</Company>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
-    <Version>3.07</Version>
+    <Version>3.08</Version>
     <!-- FileVersion 只吃數字，表達不了「-B1」；第四段就是拿來標這種同版號的後續建置的 -->
-    <FileVersion>3.07.0.0</FileVersion>
+    <FileVersion>3.08.0.0</FileVersion>
     <!-- 內嵌 PDB：發佈維持單一執行檔，CrashLog 記錄的堆疊仍帶行號（portable PDB 預設會另產生 XinSpect.pdb） -->
     <DebugType>embedded</DebugType>
     <Copyright>By：Xinglanclever ・ Claude Opus 5 ・ 2026年9月8日</Copyright>
@@ -191,13 +191,14 @@
       <XtuBridgeProj>$(MSBuildProjectDirectory)\Bridge\XtuBridge.csproj</XtuBridgeProj>
       <XtuBridgeExe>$(MSBuildProjectDirectory)\Bridge\bin\$(Configuration)\net48\XtuBridge.exe</XtuBridgeExe>
     </PropertyGroup>
-    <!-- RuntimeIdentifier 要清掉：`dotnet publish -r win-x64` 會把它當全域屬性傳進來，
-         而 .NET Framework 4.8 的橋接程式沒有 RID，產出會落到 bin\$(Configuration)
-et48\win-x64\，
-         這裡卻在老路徑找。本機看起來沒事，因為先前的 build 已經把老路徑填好了；
+    <!-- RuntimeIdentifier 與 BaseOutputPath 都要處理：`dotnet publish` 會把它們當全域屬性
+         傳進來。① 橋接程式是 .NET Framework 4.8、沒有 RID，要清掉，否則產出多一層 win-x64；
+         ② 發佈用 -p:BaseOutputPath=obj/_pub_*/ 時，橋接產出會跟著落到 obj 底下而不是 bin——
+         但留空也不行，SDK 會把 Exclude 算成 /** 去列整顆磁碟（MSB5029），所以要明確指回
+         專案自己的 bin。本機看起來沒事，因為先前的 build 已經把老路徑填好了；
          乾淨 clone 直接 publish 一定失敗。 -->
-    <MSBuild Projects="$(XtuBridgeProj)" Targets="Restore" Properties="Configuration=$(Configuration);RuntimeIdentifier=" />
-    <MSBuild Projects="$(XtuBridgeProj)" Targets="Build" Properties="Configuration=$(Configuration);RuntimeIdentifier=" />
+    <MSBuild Projects="$(XtuBridgeProj)" Targets="Restore" Properties="Configuration=$(Configuration);RuntimeIdentifier=;BaseOutputPath=bin\" />
+    <MSBuild Projects="$(XtuBridgeProj)" Targets="Build" Properties="Configuration=$(Configuration);RuntimeIdentifier=;BaseOutputPath=bin\" />
     <Error Condition="!Exists('$(XtuBridgeExe)')" Text="超頻橋接程式建置後仍找不到產出：$(XtuBridgeExe)" />
     <ItemGroup>
       <EmbeddedResource Include="$(XtuBridgeExe)">

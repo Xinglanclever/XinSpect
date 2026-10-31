@@ -62,6 +62,7 @@ public class CommercialLicenseTests
         Assert.Contains("dual licensing", doc);
         Assert.Contains("二選一", doc);
         Assert.Contains("兩者不疊加", doc);
+        Assert.Contains("適用範圍：所有版本", doc);
 
         // 範圍的界線：沒有 CLA，商業授權只能涵蓋著作權人擁有的部分。
         Assert.Contains("不要求簽 CLA", doc);
@@ -168,6 +169,8 @@ public class CommercialLicenseTests
         // 授權模式要說成雙授權，而不是「主要一種、另外附帶一種」。
         Assert.Contains("雙授權", about);
         Assert.Contains("dual licensing", about);
+        // 雙授權不是「從這一版起」：文件要寫明適用於所有版本。
+        Assert.Contains("所有版本", about);
 
         string help = Read(Path.Combine("Nav", "HelpCatalog.cs"));
         Assert.DoesNotContain("嚴禁", help);

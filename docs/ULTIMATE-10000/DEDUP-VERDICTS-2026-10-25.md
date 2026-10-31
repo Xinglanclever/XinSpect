@@ -102,8 +102,8 @@
 | U10-VZ-0069 | 3D 拓撲持續不做（重申） | `viz.no3d.cross` | **收口**：政策重申與程式碼現狀一致——確無 3D 拓撲實作 | csproj 無 Helix/3D 套件；`Viewport3D`/`HelixToolkit` 於 Views/Controls 0 命中 |
 | U10-VZ-0078 | 釘選感測器面板（常駐小窗/迷你浮窗） | `ui.pinned.panel` | **收口**：MiniOverlayWindow 已是常駐感測器小窗（CPU 負載/溫度等即時值） | MiniOverlayWindow.xaml:5,28,64-74（「曦覽 監視器」＋Live 繫結） |
 | U10-UI-0010 | 逐頁說明（HelpCatalog——擴充覆蓋新域） | `ui.help.coverage` | **收口**：HelpCatalog 已實作（逐頁說明＋自足 HTML 手冊產生）；新域條目為內容增量 | Services/LanguageService.cs:20；Services/InterchangeAndReportFactsService.cs:72,478-479 |
-| U10-UI-0014 | 三語切換即時生效（收口檢查項） | `ui.lang.live.cross` | **收口**：LanguageService 有語言切換事件、訂閱者重新產生動態文字；另有 lang-livecheck.ps1 驗證 | Services/LanguageService.cs:53,302；lang-livecheck.ps1（根目錄） |
-| U10-UI-0015 | 三語鍵同步守門（轉常設守門） | `ui.lang.sync.gate` | **收口**：已由語言樹／往返測試常設守門＋lang-* 工具鏈實作 | Tests/LanguageTreeTests.cs、Tests/LanguageRoundTripTests.cs、Tests/LanguageServiceTests.cs；lang-find.ps1 |
+| U10-UI-0014 | 三語切換即時生效（收口檢查項） | `ui.lang.live.cross` | **收口**：LanguageService 有語言切換事件、訂閱者重新產生動態文字 | Services/LanguageService.cs:53,302；Views/AboutView.xaml.cs:18；Controls/HelpDot.xaml.cs:27；MiniOverlayWindow.xaml.cs:25；Services/DriverReadyService.cs:54（訂閱 Changed 後重新產生動態文字） |
+| U10-UI-0015 | 三語鍵同步守門（轉常設守門） | `ui.lang.sync.gate` | **收口**：已由語言樹／往返測試常設守門＋lang-* 工具鏈實作 | Tests/LanguageTreeTests.cs、Tests/LanguageRoundTripTests.cs、Tests/LanguageServiceTests.cs |
 | U10-UI-0032 | 迷你浮窗擴充（自訂內容版） | `ui.mini.custom` | **新列**：與 MiniOverlayWindow 的差異在於——既有內容固定（CPU/溫度等監視器欄位），使用者自訂內容版未實作 | MiniOverlayWindow.xaml:21-74（固定欄位佈局） |
 | U10-UI-0033 | 應用內更新紀錄檢視（頁面收口） | `ui.changelog.view` | **收口**：ChangelogCatalog 已實作，關於頁呈現版本條目並有守門測試 | Services/LifecycleAndReportsFactsService.cs:187-206；Views/AboutView.xaml（ChangelogTests.cs:51 斷言） |
 | U10-UI-0034 | 關於頁授權清單（收口） | `ui.about.licenses` | **新列**：與 THIRD-PARTY-NOTICES 的差異在於——檔案在根目錄存在，但關於頁無授權清單呈現（grep 0 命中） | THIRD-PARTY-NOTICES.md（根目錄）；Views/AboutView.xaml(.cs) 無 THIRD-PARTY/授權清單命中 |

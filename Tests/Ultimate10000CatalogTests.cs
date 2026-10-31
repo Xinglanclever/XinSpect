@@ -332,7 +332,9 @@ public class Ultimate10000CatalogTests
             .ToHashSet(StringComparer.Ordinal);
 
         // 證據欄的路徑形樣：.cs／.md／.ps1，可帶目錄（含 work/、docs/ 深層），行號與標點自然斷開。
-        var evidencePath = new Regex(@"[A-Za-z0-9_\-]+(?:/[A-Za-z0-9_\-]+)*\.(?:cs|md|ps1)\b", RegexOptions.Compiled);
+        // 各段允許內嵌小數點：WPF 的 code-behind 是「類名.xaml.cs」這種雙副檔名，舊寫法只抓到尾段
+        // 「xaml.cs」，於是任何引用 AboutView.xaml.cs 的證據都被判成回訪不到（假紅）。
+        var evidencePath = new Regex(@"[A-Za-z0-9_.\-]+(?:/[A-Za-z0-9_.\-]+)*\.(?:cs|md|ps1)\b", RegexOptions.Compiled);
 
         var noPath = new List<string>();
         var broken = new List<string>();

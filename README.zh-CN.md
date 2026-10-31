@@ -11,7 +11,7 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一运行档发布，免安装；对硬件与系统的读取以唯读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-3.07-4C8DFF)
+![版本](https://img.shields.io/badge/version-3.08-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![测试](https://img.shields.io/badge/tests-7700%20passed-3FB950)
@@ -472,11 +472,11 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.07/XinSpect.exe) | 36,955,947 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.07/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.07/XinSpectDeploy.exe) | 15,360 bytes | 一键安装器（可选 GitHub／Google Drive／中国网盘三个下载来源；下载时显示进度条、速度与剩余时间） |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.08/XinSpect.exe) | 36,955,947 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.08/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.08/XinSpectDeploy.exe) | 15,360 bytes | 一键安装器（可选 GitHub／Google Drive／中国网盘三个下载来源；下载时显示进度条、速度与剩余时间） |
 
-> **上表的字节数为本版（v3.07）实际发布的文件大小**；请以 Release 页面列出的文件为准。
+> **上表的字节数为本版（v3.08）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
 安装器（`XinSpectDeploy.exe`）会列出三个来源：**1** 是 GitHub 最新版（全自动部署主程序＋守护进程）、**2** 是 Google Drive 镜像、**3** 是中国网盘（123 云盘）分享页——网盘没有稳定直连，所以它只打开浏览器并告诉你按哪里，不会把分享页存成一个假的 exe。镜像链接集中在 `Installer/mirrors.txt`，安装器启动时会抓一份最新的（3 秒超时，拿不到就用内置的）；某一格还没有链接时，菜单上会写「尚未提供」，按下去会先说明再改用 GitHub。下载完成后一律检查 PE 标头，抓到 HTML（分享页、限流页、Google 的病毒扫描确认页）会被挡下、删档并说出内容像什么。
 
@@ -2419,6 +2419,7 @@ O-01 到 O-12 里，至少四条是「知道怎么修，但选择不修」：
 
 ## 二十二、版本沿革
 
+- **v3.08 Ultima XII**（2026-10-31）：授权在程序里也写成双授权，并写明适用于所有版本
 - **v3.07 Ultima XII**（2026-10-31）：免责声明与授权一致：拿掉「禁止商业使用」，关于页加上商业授权路径与品牌标语
 - **v3.06 Ultima XII**（2026-10-31）：部署器第一次真正画出下载进度；升级建议的部位徽章改为深灰
 - **v3.05 Ultima XII**（2026-10-30）：官方网站正式挂上：关于页一颗主色按钮、起始页第一格、三份 README 最上面
@@ -2539,7 +2540,7 @@ O-01 到 O-12 里，至少四条是「知道怎么修，但选择不修」：
 
 ## 二十四、授权
 
-本项目以 [GNU Affero General Public License v3.0 or later](LICENSE)（AGPL-3.0-or-later）发布：你可以自由使用、研究、修改与散布，但**散布修改版或提供网络服务时，必须以相同授权发布原代码**（AGPL 第 13 条）。内置第三方组件（Intel XTU SDK、LibreHardwareMonitor、TraceEvent、NAudio、WebView2 等）受其各自授权条款约束，**不在本项目 AGPL 授权范围内**，其授权与出处见 `THIRD-PARTY-NOTICES.md`。本项目采**双授权（dual licensing）**，两条路二选一、功能相同：AGPL-3.0-or-later 免费，可自由使用、研究、修改、散布与**商业使用**，但散布修改版或提供网络服务时须以相同授权发布原代码；商业授权（见 `COMMERCIAL-LICENSE.md`）付费，供闭源整合、随硬件出货或组织政策禁用 copyleft 的情况，不触发原代码公开义务。两者不叠加。WinRing0 为双用途驱动，本程序的 MSR 读取依赖它；用户应仅在自有或获授权的机器上使用本工具。
+本项目以 [GNU Affero General Public License v3.0 or later](LICENSE)（AGPL-3.0-or-later）发布：你可以自由使用、研究、修改与散布，但**散布修改版或提供网络服务时，必须以相同授权发布原代码**（AGPL 第 13 条）。内置第三方组件（Intel XTU SDK、LibreHardwareMonitor、TraceEvent、NAudio、WebView2 等）受其各自授权条款约束，**不在本项目 AGPL 授权范围内**，其授权与出处见 `THIRD-PARTY-NOTICES.md`。本项目采**双授权（dual licensing）**，适用于所有版本（不限最新版），两条路二选一、功能相同：AGPL-3.0-or-later 免费，可自由使用、研究、修改、散布与**商业使用**，但散布修改版或提供网络服务时须以相同授权发布原代码；商业授权（见 `COMMERCIAL-LICENSE.md`）付费，供闭源整合、随硬件出货或组织政策禁用 copyleft 的情况，不触发原代码公开义务。两者不叠加。WinRing0 为双用途驱动，本程序的 MSR 读取依赖它；用户应仅在自有或获授权的机器上使用本工具。
 
 **第三方组件的两个层次**：随程序出货的运行期组件（7 个）与建置／测试期组件（4 个）分开枚举；`THIRD-PARTY-NOTICES.md` 与 csproj 逐项对帐，未列入即红灯。WinRing0 的来源有两层（LibreHardwareMonitor 内附与本项目内嵌），两层都如实标。
 
@@ -2653,7 +2654,7 @@ By：Xinglanclever
 
 ---
 
-**文档本身的版本**：本文档对应 XinSpect v3.07（2026-10-31）。正体中文为母本，简体中文由 OpenCC（tw2sp）自动转换，英文版为全量对译；三份文档共用同一组事实与守门。若你在简体版看到不顺的词，那是转换器的选择，不是原文的意思——请以正体版为准。
+**文档本身的版本**：本文档对应 XinSpect v3.08（2026-10-31）。正体中文为母本，简体中文由 OpenCC（tw2sp）自动转换，英文版为全量对译；三份文档共用同一组事实与守门。若你在简体版看到不顺的词，那是转换器的选择，不是原文的意思——请以正体版为准。
 
 ---
 
