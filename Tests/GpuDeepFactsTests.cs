@@ -12,12 +12,18 @@ public class GpuDeepFactsTests
 {
     private static readonly DateTimeOffset At = new(2026, 10, 14, 8, 30, 0, TimeSpan.Zero);
 
+    /// <summary>
+    /// 探針沒回值<b>不等於</b>「這台機器沒有獨立顯示卡」——NVML 可能在有卡的機器上載入失敗。
+    /// 回歸案例：一台 TITAN Xp 溫度／功耗都讀得到的機器，報告被寫成「本機無獨立 GPU（僅虛擬顯示轉接器）」。
+    /// </summary>
     [Fact]
-    public void NVML全狀態_無卡不適用非錯誤()
+    public void NVML全狀態_無回值時不宣稱沒有這張卡()
     {
         var f = GpuDeepFactsService.NvStateFact(At, () => null);
         Assert.Equal(FactAvailability.NotApplicable, f.Availability);
-        Assert.Contains("不適用，非錯誤", f.UnavailableReason);
+        Assert.Contains("也可能是", f.UnavailableReason);
+        Assert.DoesNotContain("本機無獨立 GPU", f.UnavailableReason);
+        Assert.Contains("不能讀成", f.UnavailableReason);
     }
 
     [Fact]

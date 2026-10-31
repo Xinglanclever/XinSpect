@@ -85,11 +85,18 @@ internal static class UpgradeFactsCollector
         var disks = vm.PhysicalDisks;
         f.DiskCount = disks.Count;
         f.HddCount = disks.Count(d => d.Kind == DiskKind.Hdd);
-        // 系統碟＝磁碟 0（Windows 慣例）；讀不到索引時不下判斷
-        var sys = disks.FirstOrDefault(d => d.Index == 0);
-        f.SystemDiskIsHdd = sys is { Kind: DiskKind.Hdd };
-
         var c = vm.Volumes.Volumes.FirstOrDefault(v => v.Name.StartsWith('C'));
+
+        // 系統碟位置用 WMI 關聯查（邏輯磁碟 → 分割區 → 實體磁碟）；查不到才退成「只有唯一一顆
+        // 放得進 C:」的容量比對。兩者都不可用就誠實地「不知道」，不再用「磁碟 0 就是系統碟」
+        // 這條慣例——它讓一台系統裝在 NVMe、磁碟 0 是機械硬碟的機器被建議「換系統碟」。
+        var loc = DiskInfoService.LocateSystemDisk(disks, c?.TotalBytes ?? 0);
+        f.SystemDiskKnown = loc is not null;
+        f.SystemDiskIsHdd = loc is { Kind: DiskKind.Hdd };
+        if (loc is not null)
+            f.SystemDiskLabel = $"{Clean($"磁碟 {loc.Index} {loc.Model}")}（{KindZh(loc.Kind)}）"
+                              + (loc.Inferred ? "・容量比對推測" : "・分割區關聯查得");
+
         f.SystemFreePercent = c is { TotalBytes: > 0 } ? 100.0 * c.FreeBytes / c.TotalBytes : -1;
 
         var drives = vm.Live?.Drives;
@@ -110,6 +117,14 @@ internal static class UpgradeFactsCollector
                 ? $"{bad.Model}：{bad.HealthDetail}" : bad.Model;
         }
     }
+
+    private static string KindZh(DiskKind kind) => kind switch
+    {
+        DiskKind.NvmeSsd => "NVMe SSD",
+        DiskKind.SataSsd => "SATA SSD",
+        DiskKind.Hdd => "機械硬碟",
+        _ => "介面未判定",
+    };
 
     // ── 平台 ────────────────────────────────────────────────────────────────
 

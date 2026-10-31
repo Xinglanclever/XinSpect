@@ -20,6 +20,15 @@ public sealed class M2AnalysisService : ObservableObject
     /// <summary>本機每一顆磁碟的外型說明（有第一手證據才說外型，其餘如實說未回報）。</summary>
     public ObservableCollection<string> DriveNotes { get; } = [];
 
+    /// <summary>
+    /// 只含 NVMe 磁碟的外型說明。
+    /// <para>
+    /// M.2 與 U.2 都是 NVMe（或 M.2 SATA，但 Windows 不區分），SATA 2.5 吋、機械硬碟與 USB 隨身碟
+    /// <b>不可能是 M.2／U.2</b>。報告需要這一份，否則「已安裝的 M.2 裝置」會把 HDD 與 USB 一起列進去。
+    /// </para>
+    /// </summary>
+    public ObservableCollection<string> NvmeDriveNotes { get; } = [];
+
     public List<M2FormFactor> FormFactors { get; } = BuildFormFactors();
     public List<M2KeySpec> KeySpecs { get; } = BuildKeySpecs();
 
@@ -46,12 +55,14 @@ public sealed class M2AnalysisService : ObservableObject
         catch { /* 讀不到 SMBIOS 不影響下面的磁碟清單 */ }
 
         int nvme = 0;
+        var nvmeDrives = new List<string>();
         try
         {
             foreach (var disk in DiskInfoService.Query())
             {
-                if (disk.Kind == DiskKind.NvmeSsd) nvme++;
-                drives.Add($"{disk.CountText} ・ {disk.Model} ・ {M2Detection.DescribeDriveForm(disk.Kind, disk.Model)}");
+                string note = $"{disk.CountText} ・ {disk.Model} ・ {M2Detection.DescribeDriveForm(disk.Kind, disk.Model)}";
+                drives.Add(note);
+                if (disk.Kind == DiskKind.NvmeSsd) { nvme++; nvmeDrives.Add(note); }
             }
         }
         catch { /* 磁碟清單讀不到時照實只講插槽 */ }
@@ -59,6 +70,7 @@ public sealed class M2AnalysisService : ObservableObject
         foreach (var s in typed) Slots.Add(s);
         foreach (var s in inferred) PossibleSlots.Add(s);
         foreach (string d in drives) DriveNotes.Add(d);
+        foreach (string d in nvmeDrives) NvmeDriveNotes.Add(d);
 
         DetectedSlots = M2Detection.Summarize(typed, inferred, nvme);
     }

@@ -81,8 +81,15 @@ public sealed class UpgradeFacts
     public double? GpuTempP95 { get; set; }
 
     // ── 儲存 ────────────────────────────────────────────────────────────
-    /// <summary>磁碟 0（一般即系統碟）是否為機械硬碟。</summary>
+    /// <summary>系統碟是否為機械硬碟。<b>只有真的判定出系統碟位置時才可能是 true</b>——
+    /// 「磁碟 0＝系統碟」的慣例假設在多碟機器上是錯的（C: 可能在其實是磁碟 3 的 NVMe 上）。</summary>
     public bool SystemDiskIsHdd { get; set; }
+
+    /// <summary>系統碟位置是否判定出來。false 時一律不下「系統碟是機械硬碟」的判斷。</summary>
+    public bool SystemDiskKnown { get; set; }
+
+    /// <summary>系統碟的識別文字（型號＋介面＋判定方式）；判定不出來為空字串。</summary>
+    public string SystemDiskLabel { get; set; } = "";
     public int HddCount { get; set; }
     public int DiskCount { get; set; }
     /// <summary>系統磁碟區剩餘空間百分比（-1 表示未知）。</summary>
@@ -180,12 +187,12 @@ public static class UpgradeAdvisor
                 Action = "立刻備份重要資料，並安排更換該顆磁碟。",
             });
 
-        if (f.SystemDiskIsHdd)
+        if (f.SystemDiskIsHdd && f.SystemDiskKnown)
             items.Add(new UpgradeSuggestion
             {
                 Part = UpgradePart.Storage, Title = "系統碟換成 NVMe 固態硬碟", Severity = Severity.Serious, Score = 92,
                 Gain = "開機與程式啟動快 5–10 倍（同類升級經驗值）", Cost = "低",
-                Evidence = "磁碟 0（系統碟）為機械硬碟",
+                Evidence = $"系統碟確實在機械硬碟上：{f.SystemDiskLabel}",
                 Action = "換一顆 500 GB 以上的 NVMe SSD 當系統碟，機械硬碟留作資料碟。",
             });
         else if (f.HddCount > 0 && f.DiskCount > f.HddCount)
@@ -389,8 +396,9 @@ public static class UpgradeAdvisor
         if (f.WorstDiskLife is double life && life < 10)
             return ("磁碟壽命", $"S.M.A.R.T. 剩餘壽命僅 {life:0} %，資料安全優先於任何效能升級。", Severity.Critical);
 
-        if (f.SystemDiskIsHdd)
-            return ("系統碟", "系統安裝在機械硬碟上，這是目前最拖慢整機體感的環節。", Severity.Serious);
+        if (f.SystemDiskIsHdd && f.SystemDiskKnown)
+            return ("系統碟", $"系統安裝在機械硬碟上（{f.SystemDiskLabel}），這是目前最拖慢整機體感的環節。",
+                Severity.Serious);
 
         if (f.ThrottleSeen)
             return ("散熱", "已記錄到熱降頻——硬體的效能正被溫度壓住，換零件前先處理散熱。", Severity.Serious);

@@ -11,8 +11,13 @@ namespace XinSpect;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>本機無獨立 GPU</b>（TITAN Xp 已拔除，只剩虛擬顯示轉接器）——廠商路徑（NVML／ADLX／Xe）一律走
-/// <b>無卡 N/A</b>；本機有 3 個虛擬轉接器的<b>真實場景</b>可用於 GX-011 判定。
+/// 廠商路徑（NVML／ADLX／Xe）有沒有回值<b>依機器而定</b>：沒有回值時一律標 N/A，並寫明
+/// 「可能是沒有這張卡、也可能是驅動介面不可用」——不把「問不到」講成「沒有」。虛擬顯示轉接器
+/// （遠端桌面、模擬器、串流工具）是正常場景，GX-011 只陳述偵測結果，不當成惡意。
+/// <para>
+/// 這一段原本寫死「本機無獨立 GPU（TITAN Xp 已拔除）」——那是<b>開發機某一刻的狀態</b>，
+/// 被抄進事實文字後，一台裝著 TITAN Xp、溫度與功耗都讀得到的機器也被報告寫成「無獨立 GPU」。
+/// </para>
 /// </para>
 /// <para>
 /// <b>紅線：</b>① 唯讀——不寫時脈、風扇、功率、ECC；② 無卡一律 N/A 不假裝有值；
@@ -161,7 +166,9 @@ public static class GpuDeepFactsService
 
     private static HardwareFact NoGpu(DateTimeOffset at, string key, string name)
         => new(key, Cat, name, "", "", "NVML／ADLX／Xe（唯讀）", FactTrustLevel.Unknown, false, at, null,
-            FactAvailability.NotApplicable, "本機無獨立 GPU（僅虛擬顯示轉接器）——廠商路徑不適用，非錯誤");
+            FactAvailability.NotApplicable,
+            "廠商深層介面這一輪沒有回值——可能是這台機器沒有獨立顯示卡，也可能是 NVML／ADLX／Xe 介面不可用；"
+            + "兩者都不能讀成「這張卡沒有這項功能」。顯示卡的溫度、功耗、使用率若在基本讀值裡有值，以那些為準。");
 
     // ── GX-001 NVML 全狀態 ─────────────────────────────────────────────
 

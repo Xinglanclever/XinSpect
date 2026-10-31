@@ -116,6 +116,65 @@ public static class DiskInfoService
         return list;
     }
 
+    /// <summary>系統磁碟區所在的實體磁碟；<see cref="Inferred"/> 為 true 時是容量比對的推測。</summary>
+    public sealed record SystemDiskLocation(int Index, string Model, DiskKind Kind, bool Inferred, string Evidence);
+
+    /// <summary>
+    /// 找出系統磁碟區（預設 <c>C:</c>）實際落在哪一顆實體磁碟。
+    /// <para>
+    /// <b>不能假設「磁碟 0 就是系統碟」。</b>那條假設讓一台系統裝在 NVMe（磁碟 3）、資料在
+    /// 磁碟 0 機械硬碟的機器被判成「系統安裝在機械硬碟上」，還據此建議換系統碟——報告自己
+    /// 讀到 C: 1,117 GB，而磁碟 0 只有 931 GB，兩個數字當場對不上。
+    /// </para>
+    /// <para>
+    /// 第一手來源是 WMI 的關聯查詢（邏輯磁碟 → 分割區 → 實體磁碟），不需要提權；
+    /// 查不到才退成容量比對，而且只有在<b>唯一一顆</b>磁碟放得進該磁碟區時才採用，
+    /// 並把 <see cref="SystemDiskLocation.Inferred"/> 標成 true 讓上層照實說明。
+    /// </para>
+    /// </summary>
+    public static SystemDiskLocation? LocateSystemDisk(IReadOnlyList<PhysicalDiskInfo>? disks = null,
+        double volumeTotalBytes = 0, string letter = "C")
+    {
+        disks ??= Query();
+        string id = letter.TrimEnd(':').ToUpperInvariant() + ":";
+
+        try
+        {
+            foreach (var part in Query(null,
+                $"ASSOCIATORS OF {{Win32_LogicalDisk.DeviceID=\"{id}\"}} WHERE AssocClass=Win32_LogicalDiskToPartition"))
+            {
+                string partId = Str(part, "DeviceID");
+                if (partId.Length == 0) continue;
+
+                foreach (var drv in Query(null,
+                    $"ASSOCIATORS OF {{Win32_DiskPartition.DeviceID=\"{partId}\"}} WHERE AssocClass=Win32_DiskDriveToDiskPartition"))
+                {
+                    int idx = I(drv, "Index");
+                    var hit = disks.FirstOrDefault(d => d.Index == idx);
+                    string model = hit is { Model.Length: > 0 } ? hit.Model : Str(drv, "Model");
+                    var kind = hit?.Kind ?? Classify(0, 0, 0, Str(drv, "InterfaceType"));
+                    return new SystemDiskLocation(idx, model, kind, false, $"{id} 的分割區掛在磁碟 {idx}");
+                }
+            }
+        }
+        catch { /* 關聯查詢在某些機型／權限下不可用，退回容量比對 */ }
+
+        return LocateByCapacity(disks, volumeTotalBytes);
+    }
+
+    /// <summary>容量比對的後備判定：只有唯一一顆磁碟放得進該磁碟區時才回它，否則回 null（不猜）。</summary>
+    internal static SystemDiskLocation? LocateByCapacity(IReadOnlyList<PhysicalDiskInfo> disks, double volumeTotalBytes)
+    {
+        if (volumeTotalBytes <= 0) return null;
+        var fits = disks.Where(d => d.SizeBytes >= volumeTotalBytes).OrderBy(d => d.SizeBytes).ToList();
+        if (fits.Count != 1) return null;
+
+        var only = fits[0];
+        return new SystemDiskLocation(only.Index, only.Model, only.Kind, true,
+            $"磁碟區容量 {volumeTotalBytes / 1_000_000_000.0:0} GB 只有「{only.CountText} {only.Model}」放得進，"
+            + "分割區關聯查不到，這是容量比對的推測");
+    }
+
     // InstanceName 通常為「<PNPDeviceID>_0」；以雙向前綴比對容錯
     private static TVal? Lookup<TVal>(Dictionary<string, TVal> map, string pnp)
     {

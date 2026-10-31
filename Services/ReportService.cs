@@ -377,9 +377,11 @@ public static class ReportService
             foreach (var x in m2.PossibleSlots) rows.Add([x.Designation, x.Type, "依 PCIe x4 推測（未經韌體確認）", x.Usage]);
             s.Tbl("M.2 插槽", new[] { "位置", "類型", "判定方式", "用途" }, rows);
         }
-        if (m2.DriveNotes.Count > 0)
-            s.Tbl(null, new[] { "已安裝的 M.2／U.2 裝置（容量 ・ 型號 ・ 外型）" },
-                [.. m2.DriveNotes.Select(x => new[] { x })]);
+        // 只列 NVMe。M.2 與 U.2 都是 NVMe；SATA 2.5 吋、機械硬碟、USB 隨身碟**不可能是 M.2／U.2**，
+        // 從前把全部磁碟都列進來，看起來像「M.2 插槽插了一顆機械硬碟」。
+        if (m2.NvmeDriveNotes.Count > 0)
+            s.Tbl(null, new[] { "已安裝的 NVMe 裝置（M.2／U.2；Windows 不區分兩者）" },
+                [.. m2.NvmeDriveNotes.Select(x => new[] { x })]);
 
         s.Note(smb.Available
             ? "插槽清單來自韌體（SMBIOS），空的插槽也會列出；「依 PCIe x4 推測」那幾列不是韌體說的，是從匯流排寬度反推的，換一張板子可能不成立。"
@@ -516,6 +518,14 @@ public static class ReportService
             s.Tbl("即時讀值", new[] { "裝置", "類型", "容量", "溫度", "剩餘壽命", "已用" }, rows);
         }
 
+        // 系統碟位置：報告自己讀得到 C: 的容量，就該說得出它落在哪一顆——不能讓讀者從「磁碟 0」去猜。
+        var cVol = vm.Volumes.Volumes.FirstOrDefault(v => v.Name.StartsWith('C'));
+        var sys = DiskInfoService.LocateSystemDisk(vm.PhysicalDisks, cVol?.TotalBytes ?? 0);
+        s.Kv(("系統碟位置", sys is null
+            ? "未能判定（不以「磁碟 0 就是系統碟」的慣例假設）"
+            : $"磁碟 {sys.Index} {sys.Model}（{DiskKindText(sys.Kind)}）"
+              + $"・{(sys.Inferred ? "容量比對推測" : "分割區關聯查得")}"));
+
         var vols = new List<string[]>();
         foreach (var v in vm.Volumes.Volumes)
             vols.Add(new[] { v.Name, v.Label, v.TypeText, v.SizeText, v.FreeText, SevText(v.Severity) });
@@ -649,6 +659,14 @@ public static class ReportService
         s.Tbl("審計發現", new[] { "項目", "範圍", "結論", "證據", "來源" }, findings);
         s.Note("差異與發現只陳述本機能證明的事實；讀不到的來源不以舊值或典型值補上，亦不推估剩餘壽命。時間膠囊的 SHA-256 是完整性校驗，不是數位簽章。");
     });
+
+    private static string DiskKindText(DiskKind kind) => kind switch
+    {
+        DiskKind.NvmeSsd => "NVMe SSD",
+        DiskKind.SataSsd => "SATA SSD",
+        DiskKind.Hdd => "機械硬碟",
+        _ => "介面未判定",
+    };
 
     private static string MaskEvidenceDetail(string detail)
     {

@@ -127,12 +127,16 @@ public sealed class HealthReport : ObservableObject
         Severity combined = (Severity)Math.Max((int)lifeSev, (int)diskSev);
         string diskVal = minLife is double ml ? $"{ml:0} %"
                        : diskSev == Severity.Neutral ? "無 S.M.A.R.T. 資料"
-                       : sevDetail.Length > 0 ? sevDetail : "S.M.A.R.T. 異常";
-        // 明細指向較嚴重的那顆磁碟：HDD 磁區問題不輕於 SSD 壽命時顯示 HDD，否則顯示壽命最低的磁碟
-        string diskDetail = diskSev != Severity.Neutral && (int)diskSev >= (int)lifeSev && sevDisk.Length > 0
-                          ? (sevDetail.Length > 0 ? $"{sevDisk}：{sevDetail}" : sevDisk)
-                          : lifeDisk;
-        Set(_diskLife, diskVal, combined, diskDetail);
+                       : "S.M.A.R.T. 異常";
+
+        // 明細<b>兩件都寫、而且各自帶自己的磁碟名</b>。從前這裡只挑「比較嚴重」的那一顆寫，
+        // 於是「67% 剩餘壽命」（180 GB 的 SATA SSD）配上「ST1000LM024：待對映磁區 1」——
+        // 百分比和磁碟名來自不同的兩顆，讀者只能靠猜。
+        var parts = new List<string>();
+        if (minLife is double life) parts.Add($"剩餘壽命 {life:0}%：{lifeDisk}");
+        if (diskSev != Severity.Neutral)
+            parts.Add(sevDetail.Length > 0 ? $"{sevDisk}：{sevDetail}" : $"{sevDisk}：S.M.A.R.T. 異常");
+        Set(_diskLife, diskVal, combined, string.Join(" ・ ", parts));
 
         // 綜合分數與評語
         int score = Math.Clamp(100 - penalty, 0, 100);

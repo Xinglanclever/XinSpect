@@ -115,6 +115,7 @@ public class UpgradeAdvisorTests
         var f = Healthy();
         f.WorstDiskLife = 6;
         f.SystemDiskIsHdd = true;      // 同時有另一條 92 分的建議
+        f.SystemDiskKnown = true;
         var r = UpgradeAdvisor.Analyze(f);
 
         var top = r.Items[0];
@@ -143,9 +144,58 @@ public class UpgradeAdvisorTests
     {
         var f = Healthy();
         f.SystemDiskIsHdd = true;
+        f.SystemDiskKnown = true;
+        f.SystemDiskLabel = "磁碟 0 ST1000LM024（機械硬碟）・分割區關聯查得";
         var r = UpgradeAdvisor.Analyze(f);
-        Assert.True(Has(r, "NVMe 固態硬碟"));
+        var item = Pick(r, "NVMe 固態硬碟");
+        Assert.Contains("ST1000LM024", item.Evidence, StringComparison.Ordinal);   // 說得出是哪一顆
         Assert.Equal("系統碟", r.Bottleneck);
+    }
+
+    /// <summary>
+    /// 系統碟位置判定不出來時，<b>不得</b>沿用「磁碟 0＝系統碟」的慣例。
+    /// 回歸案例：C: 在磁碟 3 的 NVMe 上，磁碟 0 是機械硬碟——舊邏輯因此建議「換系統碟」。
+    /// </summary>
+    [Fact]
+    public void SystemDiskUnknown_NeverClaimsTheSystemIsOnHdd()
+    {
+        var f = Healthy();
+        f.SystemDiskKnown = false;
+        f.SystemDiskIsHdd = false;
+        f.DiskCount = 6;
+        f.HddCount = 1;
+
+        var r = UpgradeAdvisor.Analyze(f);
+        Assert.False(Has(r, "系統碟換成"));
+        Assert.NotEqual("系統碟", r.Bottleneck);
+    }
+
+    /// <summary>
+    /// 系統碟的容量比對後備：<b>只有唯一一顆放得進</b>才准推測，兩顆都放得進就回「不知道」。
+    /// 這是最容易把建議指錯磁碟的一條路，所以測試直接造出那幾種磁碟組合。
+    /// </summary>
+    [Fact]
+    public void LocateByCapacity_只在唯一一顆放得進時才推測()
+    {
+        var disks = new List<PhysicalDiskInfo>
+        {
+            new() { Index = 0, Model = "ST1000LM024", SizeBytes = 1_000_204_886_016, Kind = DiskKind.Hdd },
+            new() { Index = 1, Model = "INTEL SSDSC2BF180A5L", SizeBytes = 180_041_112_576, Kind = DiskKind.SataSsd },
+            new() { Index = 3, Model = "INTEL SSDPE2ME012T4D", SizeBytes = 1_200_272_690_688, Kind = DiskKind.NvmeSsd },
+        };
+
+        // C: 1,117 GB → 只有磁碟 3（1.2 TB）放得進
+        var hit = DiskInfoService.LocateByCapacity(disks, 1_117_000_000_000);
+        Assert.NotNull(hit);
+        Assert.Equal(3, hit!.Index);
+        Assert.True(hit.Inferred);
+        Assert.Equal(DiskKind.NvmeSsd, hit.Kind);
+
+        // 932 GB 的 E: → 磁碟 0 與磁碟 3 都放得進，這種情況不猜
+        Assert.Null(DiskInfoService.LocateByCapacity(disks, 932_000_000_000));
+
+        // 容量讀不到（0）→ 不猜
+        Assert.Null(DiskInfoService.LocateByCapacity(disks, 0));
     }
 
     [Fact]
