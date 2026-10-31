@@ -47,7 +47,7 @@
 | XAML 檔（含對話框與控制項） | **79** | `ls Views/*.xaml` |
 | 全站說明條目（圓圈問號） | **285** | `Nav/HelpCatalog.cs` 的 `Entries` 成員數 |
 | 服務檔 | **655** | `find Services -name '*.cs' \| wc -l` |
-| 全域 C# 檔 | **1,545** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`work/`、`publish-*/`、`.git/` |
+| 全域 C# 檔 | **1,537** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`work/`、`publish-*/`、`.git/` |
 | 版本紀錄筆數 | **113** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
 | 專案測試基線 | **7,700** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
 
