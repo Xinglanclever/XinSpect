@@ -48,6 +48,23 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "3.11",
+            Date = "2026-10-31",
+            Title = "介面換成瑞士現代風格與 Helvetica（測試版）",
+            Items =
+            [
+                "這是一個實驗版，不是正式版本：介面換成瑞士現代主義（International Typographic Style）的語彙，字體換成 Helvetica。合用就留下，不合用整支丟棄——它跑在 experiment/swiss-helvetica 分支上，main 沒有被動到。",
+                "字體：拉丁字母與數字走 Helvetica（機器上沒有時退到 Arial，它是 Helvetica 的公制克隆）；中日韓字仍由 Microsoft JhengHei UI 承接——Helvetica 本身沒有漢字，這一點沒有妥協空間。",
+                "配色：白紙（#FFFFFF）、黑墨（#000000）、髮絲灰線（#D0D0D0）、瑞士紅（#D6001C）只當點題色。次要墨色仍守 WCAG AA 4.5:1，不是把灰調到看不見。",
+                "形狀：所有圓角歸零（卡片、按鈕、輸入框、膠囊卡），標題列與按鈕改成平塗——漸層是另一種風格語彙，留著會讓整個版面變成「深色主題換成白底」而不是瑞士現代。",
+                "層級：標題加大加粗（Title 20→24、SectionHeader 15→16 並改 Bold），標籤維持小字──用字重與字級拉開層級，而不是靠陰影、發光或顏色堆疊。",
+                "區塊標題左側加一道 3 px 紅色短規：這是整個介面唯一的裝飾，也是這一版最像瑞士現代主義的一個記號。",
+                "啟動時固定以淺色（＝瑞士版面）起步，否則存過深色偏好的機器永遠看不到這次實驗；使用者仍可在設定頁切回深色，重開機再回到瑞士版面。強調色八選一照常可用，預設改為瑞士紅（#D6001C）。",
+                "標題列加上「測試版」字樣，Release 標記為 Pre-release，不會蓋掉正式版的下載位置。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "3.10",
             Date = "2026-10-31",
             Title = "總覽先講清楚這台機器是什麼：膠囊摘要＋詳細資訊，儀表預設收起",

@@ -15,9 +15,12 @@
 
 這份文件不是一般專案的 README。它是一本**百科全書**：把這個程式裡**每一頁、每一格、每一個數字、每一把事實鍵**逐一拆開，寫清楚它是什麼、從哪一條路徑讀來、憑什麼算數、誤差與偏移從哪裡來、以及它**不能**被拿去回答什麼問題。
 
-舊版的 README（2.91 之前的「硬核版說明」，約 16 萬字）不是被翻譯，也不是被搬過來——它的每一章都被重寫、擴充、重排；如果你要找舊版原文，它已原樣保存在 [手冊.md](手冊.md)。這一版針對的是 **v3.10** 的這棵樹，所有數字都在這棵樹上複算得出來，數法寫在每一處。
+舊版的 README（2.91 之前的「硬核版說明」，約 16 萬字）不是被翻譯，也不是被搬過來——它的每一章都被重寫、擴充、重排；如果你要找舊版原文，它已原樣保存在 [手冊.md](手冊.md)。這一版針對的是 **v3.11** 的這棵樹，所有數字都在這棵樹上複算得出來，數法寫在每一處。
 
-![版本](https://img.shields.io/badge/version-3.10-4C8DFF)
+![版本](https://img.shields.io/badge/version-3.11-4C8DFF)
+
+> ⚠ **這是 3.11 測試版**：介面換成瑞士現代風格與 Helvetica，屬於設計實驗（`experiment/swiss-helvetica` 分支）。
+> 不建議日常使用；正式版請下載 **3.10**。不合用會整支丟棄。
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![測試](https://img.shields.io/badge/tests-7713%20passed-3FB950)
@@ -48,7 +51,7 @@
 | 全站說明條目（圓圈問號） | **286** | `Nav/HelpCatalog.cs` 的 `Entries` 成員數 |
 | 服務檔 | **655** | `find Services -name '*.cs' \| wc -l` |
 | 全域 C# 檔 | **1,542** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`work/`、`publish-*/`、`.git/` |
-| 版本紀錄筆數 | **116** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
+| 版本紀錄筆數 | **117** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
 | 專案測試基線 | **7,713** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
 
 **這張表不能證明什麼。** 1,167 把鍵不是 1,167 個正確答案；63 頁不是 63 個好設計；7,713 條測試不是 7,713 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
@@ -59,12 +62,12 @@
 
 | 檔案 | 大小 | 說明 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.10/XinSpect.exe) | 37,315,371 bytes | 主程式。藍色中隊守護進程已內建 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.10/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。要脫離主程式單獨跑防護時使用 |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.10/XinSpectDeploy.exe) | 15,360 bytes | 一鍵安裝器。按 1 GitHub、按 2 Google Drive、按 3 中國直連線路；下載時顯示進度條、速度與剩餘時間 |
-| [SHA256SUMS.txt](https://github.com/Xinglanclever/XinSpect/releases/download/v3.10/SHA256SUMS.txt) | 253 bytes | 逐檔雜湊，發佈後由 `Tools/verify-release.ps1` 對帳 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.11/XinSpect.exe) | 37,315,371 bytes | 主程式。藍色中隊守護進程已內建 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.11/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。要脫離主程式單獨跑防護時使用 |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.11/XinSpectDeploy.exe) | 15,360 bytes | 一鍵安裝器。按 1 GitHub、按 2 Google Drive、按 3 中國直連線路；下載時顯示進度條、速度與剩餘時間 |
+| [SHA256SUMS.txt](https://github.com/Xinglanclever/XinSpect/releases/download/v3.11/SHA256SUMS.txt) | 253 bytes | 逐檔雜湊，發佈後由 `Tools/verify-release.ps1` 對帳 |
 
-> **上表的位元組數為本版（v3.10）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v3.11）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
 安裝器（`XinSpectDeploy.exe`）會列出三個來源：**1** 是 GitHub 最新版（全自動部署主程式＋守護進程）、**2** 是 Google Drive 鏡像（分享資料夾，它會開瀏覽器並告訴你要按哪裡）、**3** 是中國直連線路——目錄型端點，安裝器自己抓檔，跟按 1 一樣有進度條、速度與剩餘時間。判斷哪一格用哪種模式，看的是端點本身：只有真的能用 GET 取回目錄下檔案的線路才寫成直連，分享頁一律只開瀏覽器，不會把分享頁存成一個假的 exe。鏡像連結集中在 `Installer/mirrors.txt`，安裝器啟動時會抓一份最新的（3 秒逾時，拿不到就用內建的）；某一格還沒有連結時，選單上會寫「尚未提供」，按下去會先說明再改用 GitHub。下載完成後一律檢查 PE 標頭，抓到 HTML（分享頁、限流頁、Google 的病毒掃描確認頁）會被擋下、刪檔並說出內容像什麼。
 
@@ -609,7 +612,7 @@
 6. 服務檔數：`find Services -name '*.cs' | wc -l`（本版 655）。
 7. 測試數：`dotnet test` 的總計，或讀 `Tests/TestSuiteBaseline.cs`（本版 7,713）。
 8. 主程式大小：Release 頁面的 `XinSpect.exe` 位元組數（本版 34,268,971）。
-9. 版本紀錄筆數：數 `Nav/ChangelogCatalog.cs` 的 `Entries`（本版 116）。
+9. 版本紀錄筆數：數 `Nav/ChangelogCatalog.cs` 的 `Entries`（本版 117）。
 10. 孤兒鍵：把目錄鍵與 `Views/`、`Nav/` 兩邊的出口對照（第 2 部給了方法與本版結果）。
 
 ### 0.9 這份文件與程式的關係：文字是被守住的
@@ -8700,11 +8703,11 @@
 
 這一部把 `Nav/ChangelogCatalog.cs` 的每一筆版本紀錄完整攤開——**這是程式「關於」頁顯示的同一份資料**，也是本專案唯一對「每一版做了什麼」的正式紀錄。寫作規則是：**只寫真的做了的事**；進入版本控制（2026-08-27、v1.2.0）之前的最早階段沒有留下逐項紀錄，就只寫到階段層級並標明日期未留下紀錄，**不為了排面好看補一份想像出來的清單**。
 
-**登記筆數**：116 筆（版號與階段名，新到舊）。
+**登記筆數**：117 筆（版號與階段名，新到舊）。
 
 ### 11.1 這份沿革的四個讀法
 
-**第一，看節奏。** 這份紀錄最新的一筆是 v3.10（2026-10-31），而 v1.2.0 是進入版本控制的起點（2026-08-27）——**兩個月內走了近百個版本**。這代表這個專案的迭代單位很小（一次一個收口、一把鍵、一條守門），而不是「大版本才動一次」。
+**第一，看節奏。** 這份紀錄最新的一筆是 v3.11（2026-10-31），而 v1.2.0 是進入版本控制的起點（2026-08-27）——**兩個月內走了近百個版本**。這代表這個專案的迭代單位很小（一次一個收口、一把鍵、一條守門），而不是「大版本才動一次」。
 
 **第二，看標題的動詞。** 絕大多數標題不是「新增功能」而是「收口」「補上生產端」「接真值」「加守門」——**這棵樹近期的多數工作是把已存在的東西接起來並守住**，而不是往外擴張功能面。
 
@@ -8714,6 +8717,7 @@
 
 ### 11.2 逐版紀錄（新到舊）
 
+- **v3.11**（2026-10-31）：介面換成瑞士現代風格與 Helvetica（測試版）（本版 8 項）
 - **v3.10**（2026-10-31）：總覽先講清楚這台機器是什麼：膠囊摘要＋詳細資訊，儀表預設收起（本版 7 項）
 - **v3.09**（2026-10-31）：圖示換成品牌插畫：藍色 X ＋ 兩張視窗卡（本版 3 項）
 - **v3.08**（2026-10-31）：授權在程式裡也寫成雙授權，並寫明適用於所有版本（本版 2 項）
@@ -8834,6 +8838,19 @@
 ### 11.3 逐版逐項
 
 以下是每一筆紀錄的翻開內容。**沒有項目的版本（早期階段）只看得到階段層級的描述，這是刻意的留白。**
+
+#### v3.11（2026-10-31）
+
+**介面換成瑞士現代風格與 Helvetica（測試版）**
+
+- 這是一個實驗版，不是正式版本：介面換成瑞士現代主義（International Typographic Style）的語彙，字體換成 Helvetica。合用就留下，不合用整支丟棄——它跑在 experiment/swiss-helvetica 分支上，main 沒有被動到。
+- 字體：拉丁字母與數字走 Helvetica（機器上沒有時退到 Arial，它是 Helvetica 的公制克隆）；中日韓字仍由 Microsoft JhengHei UI 承接——Helvetica 本身沒有漢字，這一點沒有妥協空間。
+- 配色：白紙（#FFFFFF）、黑墨（#000000）、髮絲灰線（#D0D0D0）、瑞士紅（#D6001C）只當點題色。次要墨色仍守 WCAG AA 4.5:1，不是把灰調到看不見。
+- 形狀：所有圓角歸零（卡片、按鈕、輸入框、膠囊卡），標題列與按鈕改成平塗——漸層是另一種風格語彙，留著會讓整個版面變成「深色主題換成白底」而不是瑞士現代。
+- 層級：標題加大加粗（Title 20→24、SectionHeader 15→16 並改 Bold），標籤維持小字──用字重與字級拉開層級，而不是靠陰影、發光或顏色堆疊。
+- 區塊標題左側加一道 3 px 紅色短規：這是整個介面唯一的裝飾，也是這一版最像瑞士現代主義的一個記號。
+- 啟動時固定以淺色（＝瑞士版面）起步，否則存過深色偏好的機器永遠看不到這次實驗；使用者仍可在設定頁切回深色，重開機再回到瑞士版面。強調色八選一照常可用，預設改為瑞士紅（#D6001C）。
+- 標題列加上「測試版」字樣，Release 標記為 Pre-release，不會蓋掉正式版的下載位置。
 
 #### v3.10（2026-10-31）
 
@@ -12690,7 +12707,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `Services/TaskHistoryFactsService.cs` | 102 | 1 |
 | `Services/TbUsb4Service.cs` | 44 | 1 |
 | `Services/TerminalService.cs` | 170 | 1 |
-| `Services/ThemeService.cs` | 369 | 2 |
+| `Services/ThemeService.cs` | 385 | 2 |
 | `Services/ThermalReachFactsService.cs` | 179 | 1 |
 | `Services/ThermalStickyService.cs` | 87 | 2 |
 | `Services/ThirdPartyNoticesCatalog.cs` | 126 | 1 |
@@ -12801,7 +12818,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 
 **版本與發佈（1–6）**
 
-1. 本版是 v3.10 —— 看徽章、`XinSpect.csproj` 的 `<Version>`、關於頁三處一致。不一致＝有一處落後（四處同步是硬規則）。
+1. 本版是 v3.11 —— 看徽章、`XinSpect.csproj` 的 `<Version>`、關於頁三處一致。不一致＝有一處落後（四處同步是硬規則）。
 2. 測試 7,713 綠 —— 跑守門五組不依賴硬體；全套請在真機跑。紅燈先分辨是真機依賴還是回歸。
 3. 下載表列的位元組數取自本版真正釋出的那顆 `XinSpect.exe` —— 抓下來自己數 bytes。不符請先確認是不是抓到別的版號的檔案。
 4. 主程式未簽章 —— 內容右鍵「數位簽章」分頁應為空。這正是 O-03。

@@ -40,7 +40,9 @@
         <GradientStop Offset="1" Color="#1c5cab"/>
     </LinearGradientBrush>
 
-    <FontFamily x:Key="AppFont">Microsoft JhengHei UI, Microsoft JhengHei, Segoe UI, sans-serif</FontFamily>
+    <!-- 測試版：拉丁字用 Helvetica（沒有就退 Arial——Helvetica 的公制克隆），
+         中日韓字仍由 JhengHei 承接，Helvetica 本身沒有漢字。 -->
+    <FontFamily x:Key="AppFont">Helvetica, Helvetica Neue, Arial, Microsoft JhengHei UI, Microsoft JhengHei, Segoe UI</FontFamily>
 
     <local:SeverityToBrushConverter x:Key="SeverityToBrush"/>
     <local:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis"/>
@@ -67,8 +69,8 @@
     <Style x:Key="Title" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
         <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
-        <Setter Property="FontSize" Value="20"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="24"/>
+        <Setter Property="FontWeight" Value="Bold"/>
     </Style>
 
     <Style x:Key="Subtitle" TargetType="TextBlock">
@@ -80,8 +82,8 @@
     <Style x:Key="SectionHeader" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
         <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
-        <Setter Property="FontSize" Value="15"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontWeight" Value="Bold"/>
         <Setter Property="Margin" Value="2,0,0,10"/>
     </Style>
 
@@ -113,7 +115,7 @@
         <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="CornerRadius" Value="0"/>
         <Setter Property="Padding" Value="16"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
     </Style>
@@ -129,9 +131,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ProgressBar">
                     <Grid>
-                        <Border x:Name="PART_Track" Background="{TemplateBinding Background}" CornerRadius="3"/>
+                        <Border x:Name="PART_Track" Background="{TemplateBinding Background}" CornerRadius="0"/>
                         <Border x:Name="PART_Indicator" HorizontalAlignment="Left"
-                                Background="{TemplateBinding Foreground}" CornerRadius="3"/>
+                                Background="{TemplateBinding Foreground}" CornerRadius="0"/>
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
@@ -148,10 +150,10 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
-                    <Border x:Name="bd" Background="Transparent" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                    <Border x:Name="bd" Background="Transparent" CornerRadius="0" Padding="{TemplateBinding Padding}">
                         <Grid>
                             <Border x:Name="bar" Width="3" HorizontalAlignment="Left" Margin="-8,2,0,2"
-                                    Background="{DynamicResource AccentBrush}" CornerRadius="2" Visibility="Collapsed"/>
+                                    Background="{DynamicResource AccentBrush}" CornerRadius="0" Visibility="Collapsed"/>
                             <ContentPresenter VerticalAlignment="Center" Margin="6,0,0,0"/>
                         </Grid>
                     </Border>
@@ -189,7 +191,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBox">
-                    <Border x:Name="Bd" SnapsToDevicePixels="True" CornerRadius="8"
+                    <Border x:Name="Bd" SnapsToDevicePixels="True" CornerRadius="0"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}">
@@ -233,7 +235,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
-                    <Border x:Name="bd" Background="Transparent" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                    <Border x:Name="bd" Background="Transparent" CornerRadius="0" Padding="{TemplateBinding Padding}">
                         <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Stretch"/>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -270,7 +272,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="bd" CornerRadius="8" Padding="{TemplateBinding Padding}"
+                    <Border x:Name="bd" CornerRadius="0" Padding="{TemplateBinding Padding}"
                             Background="{DynamicResource Surface2Brush}"
                             BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                         <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
@@ -304,7 +306,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="bd" CornerRadius="5" Background="Transparent">
+                    <Border x:Name="bd" CornerRadius="0" Background="Transparent">
                         <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -331,7 +333,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
-                    <Border x:Name="bd" CornerRadius="7" Background="{DynamicResource Surface2Brush}"
+                    <Border x:Name="bd" CornerRadius="0" Background="{DynamicResource Surface2Brush}"
                             BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1.2">
                         <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
                     </Border>
@@ -356,7 +358,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="bd" CornerRadius="8" Padding="{TemplateBinding Padding}"
+                    <Border x:Name="bd" CornerRadius="0" Padding="{TemplateBinding Padding}"
                             Background="{DynamicResource AccentGradientBrush}">
                         <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
                     </Border>
@@ -382,7 +384,7 @@
         <Setter Property="Background" Value="{DynamicResource Surface2Brush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="CornerRadius" Value="0"/>
         <Setter Property="Padding" Value="9,3"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
     </Style>
@@ -395,7 +397,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ComboBoxItem">
-                    <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                    <Border x:Name="bd" Background="Transparent" CornerRadius="0" Padding="{TemplateBinding Padding}">
                         <ContentPresenter VerticalAlignment="Center" TextElement.Foreground="{DynamicResource SecondaryInkBrush}"/>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -425,7 +427,7 @@
                                       IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
                             <ToggleButton.Template>
                                 <ControlTemplate TargetType="ToggleButton">
-                                    <Border x:Name="bd" CornerRadius="8" Padding="11,0"
+                                    <Border x:Name="bd" CornerRadius="0" Padding="11,0"
                                             Background="{DynamicResource Surface2Brush}"
                                             BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
                                             TextElement.Foreground="{DynamicResource PrimaryInkBrush}">
@@ -456,7 +458,7 @@
                                IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}"
                                Focusable="False" PopupAnimation="Slide">
                             <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource HairlineBrush}"
-                                    BorderThickness="1" CornerRadius="8" Padding="4" Margin="0,4,0,0"
+                                    BorderThickness="1" CornerRadius="0" Padding="4" Margin="0,4,0,0"
                                     MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
                                 <Border.Effect>
                                     <DropShadowEffect BlurRadius="16" ShadowDepth="2" Opacity="0.5" Color="#000000"/>

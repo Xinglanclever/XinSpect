@@ -11,7 +11,7 @@
 
 A free, open-source hardware verification, monitoring, and security auditing tool for Windows. Ships as a single portable executable. Read-only by default; the few operations that write are gated behind explicit consent and labelled with their risks. It collects and transmits no user data.
 
-![Version](https://img.shields.io/badge/version-3.10-4C8DFF)
+![Version](https://img.shields.io/badge/version-3.11-4C8DFF)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![Tests](https://img.shields.io/badge/tests-7713%20passed-3FB950)
@@ -23,7 +23,7 @@ The name means "morning light, seen at a glance"; "Spect" comes from the Latin *
 
 This is the extended documentation. Every feature lists its data source (which register, which WMI class, which API), its decoding basis, what it displays, and **what it deliberately does not do**. Jargon is explained in parentheses on first use. The document itself is guarded by machine checks (chapter 13): the version, test count, download links, byte sizes, and the first changelog entry all fail the build if they fall behind.
 
-> **Document scope (v3.10).** The Traditional Chinese edition ([README.md](README.md)) is the reference text and was expanded in this release to roughly 80,000 characters. The sections added in that pass (3.7–3.12, 6.11–6.18, 7.4–7.9, 8.1–8.5, 9.1–9.4, 10.1–10.4, 11.4–11.7, 12.1–12.3, 13.3–13.7, 14.1–14.4, 15.1–15.3, 16.2–16.7, 17.12–17.18, 18.6–18.8, 19.6–19.9, 20.6–20.10, 21.8–21.13) and appendices F–T exist only in Chinese for now. This English edition remains a complete translation of the 25 chapters and appendices A–E, with a condensed changelog; where the two disagree, the Chinese text is correct.
+> **Document scope (v3.11).** The Traditional Chinese edition ([README.md](README.md)) is the reference text and was expanded in this release to roughly 80,000 characters. The sections added in that pass (3.7–3.12, 6.11–6.18, 7.4–7.9, 8.1–8.5, 9.1–9.4, 10.1–10.4, 11.4–11.7, 12.1–12.3, 13.3–13.7, 14.1–14.4, 15.1–15.3, 16.2–16.7, 17.12–17.18, 18.6–18.8, 19.6–19.9, 20.6–20.10, 21.8–21.13) and appendices F–T exist only in Chinese for now. This English edition remains a complete translation of the 25 chapters and appendices A–E, with a condensed changelog; where the two disagree, the Chinese text is correct.
 
 ---
 
@@ -258,9 +258,9 @@ hardware / firmware / OS ──► fact collection (*FactsService)
 
 | File | Size | Purpose |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.10/XinSpect.exe) | 35.25 MB | Main program (Blue Squadron guard included) |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.10/BlueSquadronBridge.exe) | 6.5 MB | Standalone guard process |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.10/XinSpectDeploy.exe) | 15,360 bytes | One-click installer (three sources: GitHub, Google Drive, China direct line; shows a progress bar, speed and time remaining while downloading) |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.11/XinSpect.exe) | 35.25 MB | Main program (Blue Squadron guard included) |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.11/BlueSquadronBridge.exe) | 6.5 MB | Standalone guard process |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.11/XinSpectDeploy.exe) | 15,360 bytes | One-click installer (three sources: GitHub, Google Drive, China direct line; shows a progress bar, speed and time remaining while downloading) |
 
 The exact byte count of the main executable is published in the Traditional Chinese README and verified after each release; the MB figure here is rounded.
 
@@ -1157,10 +1157,11 @@ Three recurring patterns:
 
 ## 22. Version history
 
-The ledger contains 116 entries (112 dated releases plus four pre-repository stages) from 2026-08-27 to 2026-10-31. The complete itemised ledger lives in the Traditional Chinese [README.md](README.md#二十二版本沿革) and in the About page; the table below lists every release from 2.60 onward with its one-line summary, followed by the earlier milestones grouped by era.
+The ledger contains 117 entries (113 dated releases plus four pre-repository stages) from 2026-08-27 to 2026-10-31. The complete itemised ledger lives in the Traditional Chinese [README.md](README.md#二十二版本沿革) and in the About page; the table below lists every release from 2.60 onward with its one-line summary, followed by the earlier milestones grouped by era.
 
 | Version | Date | Summary |
 |---|---|---|
+| 3.11 | 2026-10-31 | Swiss Modernist interface with Helvetica (beta) |
 | 3.10 | 2026-10-31 | The overview now leads with what this machine is — capsule summary plus a details list; gauges off by default |
 | 3.09 | 2026-10-31 | App icon replaced with the brand artwork (blue X over two window cards) |
 | 3.08 | 2026-10-31 | The app now states dual licensing too, and says it applies to all versions |
@@ -1364,4 +1365,4 @@ Time-capsule creation and comparison are written to `%ProgramData%\XinSpect\Audi
 
 ---
 
-**About this document**: it corresponds to XinSpect v3.10 (2026-10-31). The Traditional Chinese version is the master, the Simplified Chinese version is generated from it with OpenCC (tw2sp), and this English version is a full translation sharing the same facts and guards. If a term in the Simplified version reads oddly, that is the converter's choice, not the original meaning; the Traditional Chinese master is authoritative.
+**About this document**: it corresponds to XinSpect v3.11 (2026-10-31). The Traditional Chinese version is the master, the Simplified Chinese version is generated from it with OpenCC (tw2sp), and this English version is a full translation sharing the same facts and guards. If a term in the Simplified version reads oddly, that is the converter's choice, not the original meaning; the Traditional Chinese master is authoritative.

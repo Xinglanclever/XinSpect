@@ -56,6 +56,8 @@ public static class ThemeService
     /// <summary>可選強調色（設定頁色票順序）。宣告於最前，因靜態欄位初始化依文字順序執行。</summary>
     public static IReadOnlyList<AccentPreset> Presets { get; } =
     [
+        // 測試版：瑞士紅（#D6001C）——瑞士現代主義的招牌紅，只用來點題，不當大面積底色。
+        new("swiss",  "瑞士紅", "#d6001c", "#8f0012", "#e8253c"),
         new("blue",   "曦藍", "#3987e5", "#1c5cab", "#4c96f0"),
         new("teal",   "青碧", "#17a2a2", "#0d6b6b", "#22b8b8"),
         new("green",  "翠綠", "#3ba55d", "#22693a", "#4bbb6e"),
@@ -147,11 +149,12 @@ public static class ThemeService
         "#ffffff", "#c3c2b7", "#898781",
         "#2c2c2a", "#383835", "#181819");
 
-    // 淺色：以暖白紙面為底，墨色維持與深色相同的三級對比階梯（主/次/弱）
+    // 淺色（測試版改成瑞士現代）：純白紙面、純黑墨、髮絲灰線。
+    // 對比：黑對白 21:1；次要墨 #1f1f1f 約 16:1；弱墨 #6b6b6b 仍 >4.5:1（AA 正文）。
     private static readonly Palette LightPalette = new(
-        "#f2f2ef", "#ffffff", "#eceae5",
-        "#17171a", "#4a4a45", "#7c7a74",
-        "#dedcd6", "#c9c7c0", "#f7f6f3");
+        "#ffffff", "#ffffff", "#f4f4f4",
+        "#000000", "#1f1f1f", "#6b6b6b",
+        "#d0d0d0", "#9a9a9a", "#ffffff");
 
     // Extreme Edition「天犼星」：ROG/EVGA 風格——純黑底 + 低飽和暗紅點綴
     private static readonly Palette ExtremeEditionPalette = new(
@@ -172,6 +175,12 @@ public static class ThemeService
     public static void Initialize()
     {
         LoadPrefs();
+        // 測試版：開機固定以「淺色＝瑞士現代」起步，否則存過深色偏好的機器永遠看不到這次實驗。
+        // 使用者仍可在設定頁切回深色；重開機又回到瑞士版面（測試版的預期行為）。
+        _theme = AppTheme.Light;
+        // 強調色不強制：使用者自己挑過的（青碧、翠綠…）照他的走。只有在還沒挑過、
+        // 仍是預設曦藍時才換成瑞士紅——否則「八色強調色」在測試版裡會變成一個騙人的選單。
+        if (_accent.Key == "blue") _accent = FindAccent("swiss");
         ApplyAll();
     }
 
@@ -185,6 +194,7 @@ public static class ThemeService
             _accent = FindAccent("rog");
         else if (_theme != AppTheme.ExtremeEdition && _accent.Key == "rog")
             _accent = FindAccent("blue");
+
 
         var p = Current;
 
@@ -209,7 +219,10 @@ public static class ThemeService
         SetBrush("AccentButtonBrush", btn.Solid);
 
         // 強調漸層（按鈕底）：頂=亮端、底=暗端，兩端都已壓到白字達標
-        SetGradient("AccentGradientBrush", btn.Top, btn.Bottom);
+        if (_theme == AppTheme.Light)
+            SetGradient("AccentGradientBrush", btn.Solid, btn.Solid);   // 瑞士現代：平塗，不要漸層
+        else
+            SetGradient("AccentGradientBrush", btn.Top, btn.Bottom);
 
         // 標題列漸層：以強調色調染頁面底色（深色偏暗、淺色偏亮）
         Color plane = Hex(p.PagePlane);
@@ -217,10 +230,13 @@ public static class ThemeService
         double tintRatio = _theme == AppTheme.ExtremeEdition ? 0.88
                          : _theme == AppTheme.Dark ? 0.80 : 0.86;
         Color tint = Blend(Accent.MainColor, plane, tintRatio);
-        SetGradientStops("HeaderGradientBrush",
-            (0.0, tint),
-            (0.45, Hex(p.HeaderMid)),
-            (1.0, surface));
+        if (_theme == AppTheme.Light)
+            SetGradientStops("HeaderGradientBrush", (0.0, Hex(p.HeaderMid)), (0.45, Hex(p.HeaderMid)), (1.0, surface));
+        else
+            SetGradientStops("HeaderGradientBrush",
+                (0.0, tint),
+                (0.45, Hex(p.HeaderMid)),
+                (1.0, surface));
 
         // 狀態色：淺色主題下原深色版飽和度偏亮，壓暗以維持與紙面的對比
         if (_theme != AppTheme.Light)

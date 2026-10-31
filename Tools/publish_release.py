@@ -41,6 +41,8 @@ def main():
     ap.add_argument("--title", required=True)
     ap.add_argument("--body-file", required=True)
     ap.add_argument("--asset", action="append", default=[])
+    ap.add_argument("--prerelease", action="store_true",
+                    help="標記為 Pre-release（測試版用；不會蓋掉正式版的 latest）")
     ap.add_argument("--repo", default="Xinglanclever/XinSpect")
     args = ap.parse_args()
 
@@ -56,10 +58,13 @@ def main():
     if rel is None:
         rel = api(f"{base}/releases", token, "POST", {
             "tag_name": args.tag, "name": args.title, "body": body,
-            "draft": False, "prerelease": False, "target_commitish": "main"})
+            "draft": False, "prerelease": bool(args.prerelease), "target_commitish": "main"})
         print(f"created release id={rel['id']}")
     else:
-        rel = api(f"{base}/releases/{rel['id']}", token, "PATCH", {"name": args.title, "body": body})
+        patch = {"name": args.title, "body": body}
+        if args.prerelease:
+            patch["prerelease"] = True
+        rel = api(f"{base}/releases/{rel['id']}", token, "PATCH", patch)
         print(f"reused release id={rel['id']}")
 
     existing = {a["name"]: a for a in api(f"{base}/releases/{rel['id']}/assets", token)}

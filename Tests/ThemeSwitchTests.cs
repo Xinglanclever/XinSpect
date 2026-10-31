@@ -72,7 +72,15 @@ public class ThemeSwitchTests
             ThemeService.Accent = ThemeService.FindAccent("crimson");
             Assert.NotEqual(blue, ColorOf("AccentBrush"));
             Assert.NotEqual(blueGrad, GradientTopOf("AccentGradientBrush"));
-            Assert.NotEqual(blueHeader, GradientTopOf("HeaderGradientBrush"));
+
+            // 測試版（瑞士現代）：淺色的標題列是平塗白，刻意不隨強調色著染——這是這一版的設計選擇，
+            // 不是換色失效。著染的契約沒有被拿掉，只是換到深色下驗（下面三行）。
+            Assert.Equal(blueHeader, GradientTopOf("HeaderGradientBrush"));
+            Assert.Equal(Colors.White, GradientTopOf("HeaderGradientBrush"));
+            ThemeService.Theme = AppTheme.Dark;
+            var darkHeader = GradientTopOf("HeaderGradientBrush");
+            ThemeService.Accent = ThemeService.FindAccent("teal");
+            Assert.NotEqual(darkHeader, GradientTopOf("HeaderGradientBrush"));
         });
     }
 
