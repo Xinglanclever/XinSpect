@@ -16,6 +16,7 @@
 # 分享的是資料夾——所以下面的連結設定一次之後不必隨版本改。
 
 1|https://github.com/Xinglanclever/XinSpect/releases/latest/download/|direct
+2|https://drive.google.com/drive/folders/1V3PoEMkee-iI6Ep2dk5r61vsxpohhYDs|page
 
 # 2 ＝ Google Drive：分享 XinSpect/latest/ 資料夾，把資料夾分享連結貼在這裡（page 模式）。
 #     不要貼 uc?export=download&id=…：那是單一檔案，安裝器的 direct 模式會把檔名接上去。

@@ -9,10 +9,10 @@
   "providers": {
     "gdrive": {
       "label": "Google Drive",
-      "enabled": false,
+      "enabled": true,
       "remote": "gdrive:",
       "path": "XinSpect/latest",
-      "share": "",
+      "share": "https://drive.google.com/drive/folders/1V3PoEMkee-iI6Ep2dk5r61vsxpohhYDs",
       "mode": "page"
     },
     "123pan": {
