@@ -31,7 +31,8 @@
     <UseAppHost>true</UseAppHost>
     <!-- 發佈輸出只留執行檔：參考組件的 IntelliSense 文件（WebView2 *.xml）不隨 publish 落地 -->
     <AllowedReferenceRelatedFileExtensions>.none</AllowedReferenceRelatedFileExtensions>
-    <!-- 應用程式圖示（原創「曦覽」曉光儀表標記；由 make_icon.ps1 產生的多尺寸 .ico）-->
+    <!-- 應用程式圖示（品牌插畫：藍色 X ＋ 兩張視窗卡；來源 Assets/brand-source.jpg，
+         由 make_icon.ps1 → Tools/make-icon.py 產生多尺寸 .ico）-->
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
   </PropertyGroup>
 
