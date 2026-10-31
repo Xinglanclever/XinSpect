@@ -24,7 +24,7 @@ namespace XinSpect.Tests;
 /// 鍵數與家族數讀目錄的成員、頁數讀 <see cref="PageRegistry"/>、說明條目讀
 /// <see cref="HelpCatalog.All"/>、版本筆數讀 <see cref="ChangelogCatalog.Entries"/>、
 /// 測試基線讀 <see cref="TestSuiteBaseline.ProjectTests"/>；檔案數則照文件第三欄寫的走訪規則
-/// （排除 <c>obj/</c>、<c>bin/</c>、<c>publish-*/</c>、<c>.git/</c>）。
+/// （排除 <c>obj/</c>、<c>bin/</c>、<c>work/</c>、<c>publish-*/</c>、<c>.git/</c>）。
 /// </para>
 ///
 /// <para>
@@ -69,7 +69,7 @@ public class ReadmeStatsTests
     private static List<string> AllCsFiles()
     {
         var excluded = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            { "bin", "obj", ".git", "node_modules", "TestResults" };
+            { "bin", "obj", ".git", "node_modules", "TestResults", "work", "_trx" };
         var files = new List<string>();
         var pending = new Stack<string>();
         pending.Push(RepoRoot());
