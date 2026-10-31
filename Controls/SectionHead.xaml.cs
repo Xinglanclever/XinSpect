@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 
 namespace XinSpect;
 
@@ -13,7 +15,47 @@ namespace XinSpect;
 /// </summary>
 public partial class SectionHead : UserControl
 {
-    public SectionHead() => InitializeComponent();
+    private bool _ruleDrawn;
+
+    public SectionHead()
+    {
+        InitializeComponent();
+        Loaded += OnLoaded;
+    }
+
+    /// <summary>
+    /// 標題左側那道紅規「畫出來」：140 ms 由左端向右長滿，Opacity 同時淡入。
+    /// <para>
+    /// 用 <see cref="ScaleTransform"/> 而不是動 <c>Width</c>，避免每一格都重新排版文字（3 px 的
+    /// 位移會讓整行標題持續抖動）；動畫結束時還原成靜態狀態，不留下任何 RenderTransform。
+    /// 只演第一次：回到同一頁時分頁本身已經有 <see cref="PageTransition"/>，每道規再各演一次就吵了。
+    /// </para>
+    /// </summary>
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (_ruleDrawn || !Motion.Enabled) return;
+        _ruleDrawn = true;
+
+        var scale = new ScaleTransform(0, 1);
+        Rule.RenderTransformOrigin = new Point(0, 0.5);
+        Rule.RenderTransform = scale;
+        Rule.Opacity = 0;
+
+        var dur = TimeSpan.FromMilliseconds(140);
+        var ease = new QuadraticEase { EasingMode = EasingMode.EaseOut };
+        var grow = new DoubleAnimation(0, 1, dur) { EasingFunction = ease };
+
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty, grow);
+        Rule.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, dur) { EasingFunction = ease });
+        grow.Completed += (_, _) =>
+        {
+            // 交還給版面：動畫基準值若留著，換主題重繪時會多繞一層。
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            Rule.BeginAnimation(OpacityProperty, null);
+            scale.ScaleX = 1;
+            Rule.Opacity = 1;
+        };
+    }
 
     public static readonly DependencyProperty TextProperty = DependencyProperty.Register(
         nameof(Text), typeof(string), typeof(SectionHead), new PropertyMetadata(""));

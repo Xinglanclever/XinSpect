@@ -4,6 +4,8 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 
 namespace XinSpect;
 
@@ -211,6 +213,9 @@ public partial class MainWindow : Window
             EnvironmentRuntimeFactsService.NotePageVisited(def.Key, def.Title);   // NG-005 導覽歷史：只進記憶體，不落盤
             (view as IPageLifecycle)?.OnActivated();
             PageTransition.PlayEnter(Host);   // 切頁淡入 + 輕微上滑
+            // 側欄選取短規用同一種筆觸「畫出來」。容器要等選取生效後才具現化，故排到 Loaded 再找；
+            // 找不到就安靜跳過（寧可不動，也不要晚一步才閃一下）。
+            Dispatcher.InvokeAsync(() => DrawNavBar(def), System.Windows.Threading.DispatcherPriority.Loaded);
 
             // 頁面（新建或快取）顯示時轉為目前語言：從保存的原文出發，故繁體＝還原原文、簡體＝轉換，
             // 冪等可重入。解決「切簡體後才建立的頁」與「快取頁切回繁體仍殘留簡體」兩個縫。
@@ -224,6 +229,40 @@ public partial class MainWindow : Window
         }
 
         ApplyLiveGates();
+    }
+
+    /// <summary>
+    /// 側欄選取短規的入場：120 ms 縱向長滿，與區塊標題那道規是同一種筆觸（介面上所有動態都只有這一個手勢）。
+    /// </summary>
+    /// <remarks>
+    /// 走樣板名稱 <c>bar</c> 而不是視覺樹搜尋：樣板改版時這裡直接取不到、自然跳過，
+    /// 不會誤動別的邊框。容器尚未具現化（或在簡易模式下該項不在清單裡）也不演。
+    /// 結束後把動畫基準值清掉，不留下長駐的 RenderTransform。
+    /// </remarks>
+    private void DrawNavBar(PageDef def)
+    {
+        if (!Motion.Enabled) return;
+        if (Nav.ItemContainerGenerator.ContainerFromItem(def) is not ListBoxItem li) return;
+        li.ApplyTemplate();
+        if (li.Template.FindName("bar", li) is not Border bar) return;
+
+        var scale = new ScaleTransform(1, 0);
+        bar.RenderTransformOrigin = new Point(0.5, 0.5);
+        bar.RenderTransform = scale;
+
+        var dur = TimeSpan.FromMilliseconds(120);
+        var ease = new QuadraticEase { EasingMode = EasingMode.EaseOut };
+        var grow = new DoubleAnimation(0, 1, dur) { EasingFunction = ease };
+
+        scale.BeginAnimation(ScaleTransform.ScaleYProperty, grow);
+        bar.BeginAnimation(OpacityProperty, new DoubleAnimation(0.2, 1, dur) { EasingFunction = ease });
+        grow.Completed += (_, _) =>
+        {
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+            bar.BeginAnimation(OpacityProperty, null);
+            scale.ScaleY = 1;
+            bar.Opacity = 1;
+        };
     }
 
     // 對所有頁面統一重放感測閘門：只有當前頁得到 true。

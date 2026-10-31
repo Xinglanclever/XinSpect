@@ -12364,7 +12364,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `Services/EndpointPolicyFactsService.cs` | 338 | 1 |
 | `Services/EngineeringGovernance2FactsService.cs` | 363 | 1 |
 | `Services/EngineeringGovernanceFactsService.cs` | 312 | 1 |
-| `Services/EnglishStrings.cs` | 1854 | 1 |
+| `Services/EnglishStrings.cs` | 1858 | 1 |
 | `Services/EnterpriseStorageFactsService.cs` | 114 | 1 |
 | `Services/EnvCheckService.cs` | 181 | 2 |
 | `Services/EnvironmentDiagnosticsFactsService.cs` | 339 | 1 |
@@ -12645,7 +12645,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `Services/ServiceBootFactsService.cs` | 160 | 1 |
 | `Services/ServiceInventoryService.cs` | 96 | 1 |
 | `Services/ServiceModeFactsService.cs` | 132 | 1 |
-| `Services/SettingsService.cs` | 713 | 2 |
+| `Services/SettingsService.cs` | 720 | 2 |
 | `Services/SetupApiTimelineService.cs` | 99 | 1 |
 | `Services/SharedAiEndpoint.cs` | 80 | 1 |
 | `Services/Shell.cs` | 75 | 1 |
@@ -12707,7 +12707,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `Services/TaskHistoryFactsService.cs` | 102 | 1 |
 | `Services/TbUsb4Service.cs` | 44 | 1 |
 | `Services/TerminalService.cs` | 170 | 1 |
-| `Services/ThemeService.cs` | 422 | 2 |
+| `Services/ThemeService.cs` | 444 | 2 |
 | `Services/ThermalReachFactsService.cs` | 179 | 1 |
 | `Services/ThermalStickyService.cs` | 87 | 2 |
 | `Services/ThirdPartyNoticesCatalog.cs` | 126 | 1 |

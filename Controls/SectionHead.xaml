@@ -14,7 +14,7 @@
         <!-- 測試版（瑞士現代）：標題左側一道 3 px 紅色短規，是這一版唯一的裝飾。
              瑞士現代主義把「裝飾」壓到最低，只留下結構線與字重；記號用一個小方塊
              比加陰影或漸層更接近那個語彙。 -->
-        <Border Width="3" Height="15" Background="{DynamicResource AccentBrush}"
+        <Border x:Name="Rule" Width="3" Height="15" Background="{DynamicResource AccentBrush}"
                 Margin="0,0,8,0" VerticalAlignment="Center"/>
         <TextBlock x:Name="Head" Style="{StaticResource SectionHeader}" Margin="0"
                    VerticalAlignment="Center"
