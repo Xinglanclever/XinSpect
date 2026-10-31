@@ -12605,7 +12605,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `Services/ReliabilityHistoryService.cs` | 193 | 2 |
 | `Services/ReportDiffService.cs` | 221 | 1 |
 | `Services/ReportExportChainService.cs` | 163 | 1 |
-| `Services/ReportService.cs` | 1212 | 3 |
+| `Services/ReportService.cs` | 1215 | 3 |
 | `Services/ResilienceReport.cs` | 257 | 1 |
 | `Services/ResizableBarDecoder.cs` | 138 | 2 |
 | `Services/ResizableBarService.cs` | 288 | 1 |

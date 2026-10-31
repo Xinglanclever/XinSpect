@@ -96,6 +96,9 @@ public static class ReportService
 
     internal static string BuildMarkdownForTests(MainViewModel vm) => Build(vm, ReportFormat.Markdown);
 
+    /// <summary>首屏膠囊（hero tiles）只存在於 HTML；Markdown 沒有那一塊，要驗它就得渲染 HTML。</summary>
+    internal static string BuildHtmlForTests(MainViewModel vm) => Build(vm, ReportFormat.Html);
+
     private static string Build(MainViewModel vm, ReportFormat fmt)
     {
         bool mask = vm.Settings.ReportMaskIdentity;

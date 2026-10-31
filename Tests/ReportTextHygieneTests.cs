@@ -33,6 +33,29 @@ public sealed class ReportTextHygieneTests
         Assert.Equal("SATA", ReportService.InterfaceText("SATA", DiskKind.SataSsd));
         Assert.Equal("NVMe", ReportService.InterfaceText("—", DiskKind.NvmeSsd));
         Assert.Equal("—", ReportService.InterfaceText("—", DiskKind.Unknown));
+
+        // 再走一次整份 Markdown：幫手函式對不代表欄位真的接上了。
+        var vm = new MainViewModel
+        {
+            PhysicalDisks = new[]
+            {
+                new PhysicalDiskInfo
+                {
+                    Index = 3, Model = "INTEL SSDPE2ME012T4D", Kind = DiskKind.NvmeSsd,
+                    InterfaceType = "SCSI", Firmware = "8DV10110", SerialNumber = "S-1",
+                },
+                new PhysicalDiskInfo
+                {
+                    Index = 0, Model = "ST1000LM024 HN-M101MBB", Kind = DiskKind.Hdd,
+                    InterfaceType = "IDE", Firmware = "2BA30001", SerialNumber = "S-2",
+                },
+            },
+        };
+        string md = ReportService.BuildMarkdownForTests(vm);
+
+        Assert.Contains("SCSI（NVMe）", md, StringComparison.Ordinal);
+        Assert.Contains("IDE（SATA）", md, StringComparison.Ordinal);
+        Assert.Contains("韌體", md, StringComparison.Ordinal);          // 表頭用「韌體」，不是「固件」
     }
 
     [Fact]
@@ -55,6 +78,12 @@ public sealed class ReportTextHygieneTests
         Assert.DoesNotContain("System Product Name", text, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ROG RAMPAGE VI EXTREME OMEGA", text, StringComparison.Ordinal);
         Assert.Contains("韌體未填機型", text, StringComparison.Ordinal);
+
+        // 首屏膠囊只存在於 HTML：兩個佔位字不該被黏在一起當成機型，改印主機板並說明原因。
+        string html = ReportService.BuildHtmlForTests(vm);
+        Assert.Contains("韌體未填機型", html, StringComparison.Ordinal);
+        Assert.Contains("ROG RAMPAGE VI EXTREME OMEGA", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("System manufacturer System Product Name", html, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
