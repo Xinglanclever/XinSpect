@@ -11,7 +11,7 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一运行档发布，免安装；对硬件与系统的读取以唯读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-3.09-4C8DFF)
+![版本](https://img.shields.io/badge/version-3.10-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![测试](https://img.shields.io/badge/tests-7713%20passed-3FB950)
@@ -472,11 +472,11 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.09/XinSpect.exe) | 37,279,531 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.09/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.09/XinSpectDeploy.exe) | 15,360 bytes | 一键安装器（可选 GitHub／Google Drive／中国直连线路三个下载来源；下载时显示进度条、速度与剩余时间） |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.10/XinSpect.exe) | 37,279,531 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.10/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.10/XinSpectDeploy.exe) | 15,360 bytes | 一键安装器（可选 GitHub／Google Drive／中国直连线路三个下载来源；下载时显示进度条、速度与剩余时间） |
 
-> **上表的字节数为本版（v3.09）实际发布的文件大小**；请以 Release 页面列出的文件为准。
+> **上表的字节数为本版（v3.10）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
 安装器（`XinSpectDeploy.exe`）会列出三个来源：**1** 是 GitHub 最新版（全自动部署主程序＋守护进程）、**2** 是 Google Drive 镜像（分享文件夹，它会打开浏览器并告诉你按哪里）、**3** 是中国直连线路——目录型端点，安装器自己抓档，跟按 1 一样有进度条、速度与剩余时间。判断哪一格用哪种模式，看的是端点本身：只有真的能用 GET 取回目录下文件的线路才写成直连，分享页一律只打开浏览器，不会把分享页存成一个假的 exe。镜像链接集中在 `Installer/mirrors.txt`，安装器启动时会抓一份最新的（3 秒超时，拿不到就用内置的）；某一格还没有链接时，菜单上会写「尚未提供」，按下去会先说明再改用 GitHub。下载完成后一律检查 PE 标头，抓到 HTML（分享页、限流页、Google 的病毒扫描确认页）会被挡下、删档并说出内容像什么。
 
@@ -2419,6 +2419,7 @@ O-01 到 O-12 里，至少四条是「知道怎么修，但选择不修」：
 
 ## 二十二、版本沿革
 
+- **v3.10 Ultima XII**（2026-10-31）：总览先讲清楚这台机器是什么：胶囊摘要＋详细信息，仪表默认收起
 - **v3.09 Ultima XII**（2026-10-31）：图标换成品牌插画：蓝色 X ＋ 两张窗口卡
 - **v3.08 Ultima XII**（2026-10-31）：授权在程序里也写成双授权，并写明适用于所有版本
 - **v3.07 Ultima XII**（2026-10-31）：免责声明与授权一致：拿掉「禁止商业使用」，关于页加上商业授权路径与品牌标语
@@ -2655,7 +2656,7 @@ By：Xinglanclever
 
 ---
 
-**文档本身的版本**：本文档对应 XinSpect v3.09（2026-10-31）。正体中文为母本，简体中文由 OpenCC（tw2sp）自动转换，英文版为全量对译；三份文档共用同一组事实与守门。若你在简体版看到不顺的词，那是转换器的选择，不是原文的意思——请以正体版为准。
+**文档本身的版本**：本文档对应 XinSpect v3.10（2026-10-31）。正体中文为母本，简体中文由 OpenCC（tw2sp）自动转换，英文版为全量对译；三份文档共用同一组事实与守门。若你在简体版看到不顺的词，那是转换器的选择，不是原文的意思——请以正体版为准。
 
 ---
 
