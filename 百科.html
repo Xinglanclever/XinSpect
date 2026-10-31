@@ -5,11 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>曦覽 XinSpect 百科</title>
 <!-- 由 README.md 產生（sha256 c5bd947a3cfb）；產生器：Tools/gen-docs-html.py；本檔不手改。 -->
-<style>:root{--ink:#1f2328;--sub:#57606a;--hair:#d0d7de;--surface:#f6f8fa;--link:#0969da;--accent:#1b6fd6;--badge:#ddf4ff}
-@media (prefers-color-scheme:dark){:root{--ink:#e6edf3;--sub:#9198a1;--hair:#30363d;--surface:#161b22;--link:#4493f8;--accent:#4493f8;--badge:#0d2b45}}
+<style>:root{--bg:#fff;--ink:#1f2328;--sub:#57606a;--hair:#d0d7de;--surface:#f6f8fa;--link:#0969da;--accent:#1b6fd6;--badge:#ddf4ff;
+      color-scheme:light}
+/* 深色版：文字色早就跟著 prefers-color-scheme 換了，body 的背景卻一直寫死 #fff——
+   結果在深色介面（應用程式內嵌的 WebView2、或深色模式瀏覽器）變成近白字壓在白底上。
+   背景現在也是變數，兩邊一起換。 */
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--ink:#e6edf3;--sub:#9198a1;--hair:#30363d;--surface:#161b22;
+      --link:#4493f8;--accent:#4493f8;--badge:#0d2b45;color-scheme:dark}}
 *{box-sizing:border-box}
 body{margin:0;font-family:"Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
-     color:var(--ink);background:#fff;line-height:1.7;font-size:15.5px}
+     color:var(--ink);background:var(--bg);line-height:1.7;font-size:15.5px}
 nav.toc{position:fixed;top:0;left:0;width:322px;height:100vh;overflow-y:auto;padding:18px 12px 40px 18px;
         border-right:1px solid var(--hair);background:var(--surface);font-size:13px}
 nav.toc h2{font-size:14px;margin:0 0 10px}

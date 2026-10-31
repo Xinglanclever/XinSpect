@@ -65,6 +65,12 @@ public partial class EncyclopediaWindow : Window
             core.Settings.AreDefaultContextMenusEnabled = false;
             core.Settings.AreDevToolsEnabled = false;
             core.Settings.IsStatusBarEnabled = true;
+            // 這個視窗本身是深色介面（工具列、目錄樹都是深底），百科的 CSS 也用
+            // prefers-color-scheme 分深淺兩版。WebView2 預設跟隨 Windows 的淺色／深色設定，
+            // 於是淺色系統上會出現「深色外殼、白色內文」的割裂——這裡把文件固定成深色，
+            // 跟外殼一致；用一般瀏覽器開同一個檔案時，仍然照瀏覽器的設定走。
+            try { core.Profile.PreferredColorScheme = CoreWebView2PreferredColorScheme.Dark; }
+            catch (Exception) { /* 舊版 WebView2 執行階段沒有這個屬性：維持跟隨系統，不影響閱讀 */ }
             core.SetVirtualHostNameToFolderMapping(
                 VirtualHost, folder, CoreWebView2HostResourceAccessKind.DenyCors);
 
