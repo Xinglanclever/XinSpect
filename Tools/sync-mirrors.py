@@ -194,6 +194,16 @@ def human(n):
 def upload_one(rclone, provider, version, assets, dry):
     """一個網盤：逐檔就地覆寫，然後對帳。回傳 (ok, 說明)。"""
     label = provider.get("label") or "鏡像"
+    if not dry:
+        # copyto 不會替你建出深層資料夾（第一次對著全新網盤上傳就是「directory not found」）。
+        base = provider["remote"].rstrip("/")
+        if not base.endswith(":"):
+            base += ":"
+        r = subprocess.run([rclone, "mkdir", "%s%s" % (base, provider["path"].strip("/"))],
+                           capture_output=True, text=True)
+        if r.returncode != 0:
+            return False, "[%s] 建資料夾失敗：%s（%s）" % (
+                label, provider["path"], (r.stderr or "").strip().splitlines()[-1][:160] if r.stderr else "")
     for name in ASSETS:
         dst = remote_target(provider, name)
         if dry:
