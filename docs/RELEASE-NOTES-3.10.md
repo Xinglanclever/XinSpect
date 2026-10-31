@@ -75,7 +75,7 @@ Rocket Lake 是 0xA7（i7-11700K 是 6／167／1）。也就是說：**所有第
 
 | 檔案 | 用途 |
 |---|---|
-| `XinSpect.exe` | 單一執行檔，免安裝 |
-| `XinSpectDeploy.exe` | 一鍵安裝器（下載、校驗、解壓到 `%LOCALAPPDATA%`、建捷徑） |
-| `百科.html` | 離線百科 |
-| `手冊.html` | 離線手冊 |
+| `XinSpect.exe` | 主程式（便攜單一執行檔，含藍色中隊守護進程） |
+| `BlueSquadronBridge.exe` | 守護進程，要脫離主程式單獨跑防護時使用 |
+| `XinSpectDeploy.exe` | 一鍵安裝器（下載時顯示進度條、速度與剩餘時間） |
+| `SHA256SUMS.txt` | 逐檔雜湊，發佈後由 `Tools/verify-release.ps1` 對帳 |

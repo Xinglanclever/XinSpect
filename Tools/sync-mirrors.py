@@ -79,9 +79,16 @@ def local_asset_paths(version):
     """發版機器上的路徑。找不到就是找不到，不猜。"""
     sums = [os.path.join(tempfile.gettempdir(), "SHA256SUMS-%s.txt" % version),
             os.path.join(ROOT, "obj", "SHA256SUMS-%s.txt" % version)]
+    # 橋接進程優先拿「這次 publish 真的編出來、也真的被嵌進 exe」那一份。
+    # publish-2.44-bridge 是 2.44 留下的固定路徑，內容不隨重建更新；照舊路徑抓就會出現
+    # 「GitHub 上是新編的、網盤上是上一版的」，而且兩份大小剛好一樣（3.10 實際踩到：
+    # 都是 6,502,948 bytes，SHA-256 不同）。舊路徑留著當退路，順序不能反。
+    bridge = os.path.join(ROOT, "BlueSquadron", "bin", "BridgePayload", "BlueSquadronBridge.exe")
+    if not os.path.exists(bridge):
+        bridge = os.path.join(ROOT, "publish-2.44-bridge", "BlueSquadronBridge.exe")
     return {
         "XinSpect.exe": os.path.join(ROOT, "publish-%s" % version, "XinSpect.exe"),
-        "BlueSquadronBridge.exe": os.path.join(ROOT, "publish-2.44-bridge", "BlueSquadronBridge.exe"),
+        "BlueSquadronBridge.exe": bridge,
         "XinSpectDeploy.exe": os.path.join(ROOT, "Installer", "XinSpectDeploy.exe"),
         "SHA256SUMS.txt": next((p for p in sums if os.path.exists(p)), sums[0]),
     }
