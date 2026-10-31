@@ -2539,7 +2539,7 @@ O-01 到 O-12 里，至少四条是「知道怎么修，但选择不修」：
 
 ## 二十四、授权
 
-本项目以 [GNU Affero General Public License v3.0 or later](LICENSE)（AGPL-3.0-or-later）发布：你可以自由使用、研究、修改与散布，但**散布修改版或提供网络服务时，必须以相同授权发布原代码**（AGPL 第 13 条）。内置第三方组件（Intel XTU SDK、LibreHardwareMonitor、TraceEvent、NAudio、WebView2 等）受其各自授权条款约束，**不在本项目 AGPL 授权范围内**，其授权与出处见 `THIRD-PARTY-NOTICES.md`。无法采用 AGPL 的商业或闭源整合，另有商业授权（见 `COMMERCIAL-LICENSE.md`）。WinRing0 为双用途驱动，本程序的 MSR 读取依赖它；用户应仅在自有或获授权的机器上使用本工具。
+本项目以 [GNU Affero General Public License v3.0 or later](LICENSE)（AGPL-3.0-or-later）发布：你可以自由使用、研究、修改与散布，但**散布修改版或提供网络服务时，必须以相同授权发布原代码**（AGPL 第 13 条）。内置第三方组件（Intel XTU SDK、LibreHardwareMonitor、TraceEvent、NAudio、WebView2 等）受其各自授权条款约束，**不在本项目 AGPL 授权范围内**，其授权与出处见 `THIRD-PARTY-NOTICES.md`。本项目采**双授权（dual licensing）**，两条路二选一、功能相同：AGPL-3.0-or-later 免费，可自由使用、研究、修改、散布与**商业使用**，但散布修改版或提供网络服务时须以相同授权发布原代码；商业授权（见 `COMMERCIAL-LICENSE.md`）付费，供闭源整合、随硬件出货或组织政策禁用 copyleft 的情况，不触发原代码公开义务。两者不叠加。WinRing0 为双用途驱动，本程序的 MSR 读取依赖它；用户应仅在自有或获授权的机器上使用本工具。
 
 **第三方组件的两个层次**：随程序出货的运行期组件（7 个）与建置／测试期组件（4 个）分开枚举；`THIRD-PARTY-NOTICES.md` 与 csproj 逐项对帐，未列入即红灯。WinRing0 的来源有两层（LibreHardwareMonitor 内附与本项目内嵌），两层都如实标。
 
