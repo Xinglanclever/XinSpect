@@ -2876,12 +2876,29 @@ public sealed record EvidenceFactRow(string Category, string Name, string Value,
     }
 
     public static EvidenceFactRow From(HardwareSnapshotFact f) => new(f.Category, f.Name,
-        string.IsNullOrEmpty(f.Unit) ? f.Value : $"{f.Value} {f.Unit}", f.Source,
+        WithUnit(f.Value, f.Unit), f.Source,
         HardwareSnapshotService.TrustText(f.Trust), f.Sensitive, f.Availability, f.UnavailableReason);
 
     public static EvidenceFactRow From(HardwareFact f) => new(f.Category, f.Name,
-        string.IsNullOrEmpty(f.Unit) ? f.Value : $"{f.Value} {f.Unit}", f.Source,
+        WithUnit(f.Value, f.Unit), f.Source,
         HardwareSnapshotService.TrustText(f.Trust), f.Sensitive, f.Availability, f.UnavailableReason);
+
+    /// <summary>
+    /// 單位只跟著「光禿禿的數字」。
+    /// <para>
+    /// 從前只要 <c>Unit</c> 非空就無條件接上去，句子型事實於是變成
+    /// 「…全部可回溯到出處 筆」「…涵蓋 52 個解碼器 條」——單位跟著一句話跑，讀起來像模板壞了。
+    /// 數字型事實（「187」＋「條」→「187 條」）行為不變，這也是單位唯一說得通的用法。
+    /// </para>
+    /// </summary>
+    private static string WithUnit(string value, string unit)
+    {
+        if (string.IsNullOrEmpty(unit)) return value;
+        return double.TryParse(value, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out _)
+            ? $"{value} {unit}"
+            : value;
+    }
 }
 
 public sealed record EvidenceChangeRow(string Kind, string Category, string Name, string Before, string After, string Delta, Severity Severity)

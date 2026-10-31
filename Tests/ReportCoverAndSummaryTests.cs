@@ -64,13 +64,13 @@ public sealed class ReportCoverAndSummaryTests
     }
 
     [Fact]
-    public void 系統摘要頁陳述計數_不合成評分()
+    public void 附錄事實普查陳述計數_不合成評分()
     {
         var vm = Vm();
         int expected = vm.EvidenceLab.AllFacts.Count;   // 分母＝本輪事實集（含派生彙總事實）
         string md = ReportService.BuildMarkdownForTests(vm);
 
-        Assert.Contains("## 系統摘要", md, StringComparison.Ordinal);
+        Assert.Contains("## 附錄：事實普查", md, StringComparison.Ordinal);
         Assert.Contains("事實總數", md, StringComparison.Ordinal);
         Assert.Contains($"{expected} 筆", md, StringComparison.Ordinal);
         Assert.Contains("封面測試事實X299", md, StringComparison.Ordinal);               // 注入的事實從韌體安全節帶出
@@ -83,7 +83,7 @@ public sealed class ReportCoverAndSummaryTests
     {
         string md = ReportService.BuildMarkdownForTests(Vm(withFacts: false));
 
-        Assert.Contains("## 系統摘要", md, StringComparison.Ordinal);
+        Assert.Contains("## 附錄：事實普查", md, StringComparison.Ordinal);
         Assert.Contains("事實總數", md, StringComparison.Ordinal);
         Assert.DoesNotContain("封面測試事實X299", md, StringComparison.Ordinal);
     }
@@ -99,6 +99,46 @@ public sealed class ReportCoverAndSummaryTests
 
         Assert.Contains("rep.sec.cover", report, StringComparison.Ordinal);
         Assert.Contains("rep.sec.summary", report, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void 章節順序照讀者動線_事實普查退到最後()
+    {
+        string md = ReportService.BuildMarkdownForTests(Vm());
+
+        int summary = md.IndexOf("## 整機摘要", StringComparison.Ordinal);
+        int system = md.IndexOf("## 系統", StringComparison.Ordinal);
+        int board = md.IndexOf("## 主機板", StringComparison.Ordinal);
+        int facts = md.IndexOf("## 附錄：事實普查", StringComparison.Ordinal);
+
+        Assert.True(summary > 0, "整機摘要必須是正文的第一節");
+        Assert.True(summary < system && system < board, "順序必須是 摘要 → 系統 → 主機板");
+        Assert.True(facts > board, "事實普查是附錄，不能排在正文之前");
+        Assert.Equal(facts, md.LastIndexOf("## ", StringComparison.Ordinal));
+        Assert.Single(md.Split("健康評分").Skip(1));      // 同一個分數只出現一次（首屏磁貼不再重複）
+    }
+
+    [Fact]
+    public void 讀不到的值寫破折號_不寫空白也不寫0MHz()
+    {
+        string md = ReportService.BuildMarkdownForTests(Vm());   // 測試 VM 沒有處理器名稱與時脈
+
+        Assert.Contains("| 型號 | — |", md, StringComparison.Ordinal);
+        Assert.DoesNotContain("0 MHz", md, StringComparison.Ordinal);      // 0 不是時脈，是沒讀到
+        Assert.DoesNotContain("|  |", md, StringComparison.Ordinal);       // 表格不該出現空白格
+    }
+
+    [Fact]
+    public void AI節標示實際解析的供應商與模型()
+    {
+        var vm = Vm();
+        vm.Settings.AiProvider = (int)AiProvider.SharedFree;   // 共用額度：模型不在設定欄位裡
+        vm.Ai.Messages.Add(new AiMessage { Text = "測試回覆內容" });
+
+        string md = ReportService.BuildMarkdownForTests(vm);
+
+        Assert.Contains("Cloudflare Workers AI・auto", md, StringComparison.Ordinal);
+        Assert.Contains("測試回覆內容", md, StringComparison.Ordinal);
     }
 
     private static string? LineContaining(string needle, string text) =>

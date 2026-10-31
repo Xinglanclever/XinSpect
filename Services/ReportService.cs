@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows;
 using Microsoft.Win32;
 
@@ -32,7 +33,7 @@ public static class ReportService
     /// 字串常數掃成事實鍵——這是產品追蹤標記，不是事實鍵。字面值照放在 Services/ 供收口對帳。</summary>
     public const string ReportCoverFactKey = "rep.sec.cover";
 
-    /// <summary>U10-RP-0002 追蹤鍵：系統摘要頁（一頁人讀——只陳述計數與清單，不合成評分）。</summary>
+    /// <summary>U10-RP-0002 追蹤鍵：附錄「事實普查」（逐域計數與六態分布；只陳述計數與清單，不合成評分）。</summary>
     public const string ReportSummaryFactKey = "rep.sec.summary";
 
     /// <summary>顯示另存對話框並寫出報告；成功回傳路徑，取消回傳 <c>null</c>。</summary>
@@ -136,17 +137,24 @@ public static class ReportService
 
     private static List<Section> Collect(MainViewModel vm, bool mask)
     {
+        // 順序＝一個讀者的動線：先「這台機器是什麼」（摘要 → 系統 → 主機板），再逐件零件，
+        // 接著才是量測與證據，最後才是附錄。事實普查（逐域計數）是給查核用的機器頁，
+        // 從前它排在封面後面、把整份報告的第一屏塞滿五位數的計數表——現在退到最後。
         var secs = new List<Section>();
         Cover(secs, vm, mask);
-        SystemDigest(secs, vm);
         Summary(secs, vm);
         SystemInfo(secs, vm, mask);
+        Mainboard(secs, vm);
         Processor(secs, vm);
         Memory(secs, vm);
         Graphics(secs, vm);
         Storage(secs, vm, mask);
         Monitors(secs, vm);
+        Audio(secs, vm);
         Network(secs, vm, mask);
+        Fans(secs, vm);
+        Battery(secs, vm);
+        Npu(secs, vm);
         Sensors(secs, vm);
         Evidence(secs, vm, mask);
         FirmwareSecurity(secs, vm);
@@ -154,6 +162,7 @@ public static class ReportService
         DeepBench(secs, vm);
         Upgrade(secs, vm);
         AiVerdict(secs, vm);
+        FactsAppendix(secs, vm);
         return secs;
     }
 
@@ -190,6 +199,41 @@ public static class ReportService
     private static string Id(string? value, bool mask)
         => mask ? "（已遮蔽）" : string.IsNullOrWhiteSpace(value) ? "—" : value;
 
+    /// <summary>
+    /// 任何「值」只要讀不到就寫「—」。
+    /// <para>
+    /// 頁尾一直宣稱「讀不到的項目以『—』表示」，但從前只有 <see cref="Id"/> 那幾欄真的做到，
+    /// 其餘欄位（代號、封裝、韌體版本……）讀不到時輸出的是一片空白——表格看起來像漏了一格，
+    /// 而頁尾在說它不會這樣。三種格式都走這一個出口，承諾才成立。
+    /// </para>
+    /// </summary>
+    private static string D(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value.Trim();
+
+    /// <summary>
+    /// 事實層在「數字與可用性互相矛盾」時會自動收斂，並把那段處置寫進文字裡
+    /// （<c>**（本筆原本帶了數字 47 而狀態是 Unknown……）**</c>）。那是給維護者看的痕跡，
+    /// 不該出現在使用者要拿去貼論壇的報告裡；完整內容仍在證據實驗室。
+    /// </summary>
+    private static readonly Regex GuardNote = new(
+        @"\*\*（本筆原本帶了數字[^）]*）\*\*", RegexOptions.Compiled);
+
+    /// <summary>事實的顯示文字：去掉內部對帳註記與 Markdown 粗體標記，其餘原樣保留。</summary>
+    private static string FactText(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return "—";
+        string t = GuardNote.Replace(s, "").Replace("**", "").Trim().TrimEnd('；', '，', ' ');
+        return t.Length == 0 ? "—" : t;
+    }
+
+    /// <summary>把幾個可能為空的片段接起來；全部為空回「—」，不留「 / 」或「 ・ 」這種空連接。</summary>
+    private static string J(string sep, params string?[] parts)
+    {
+        // 「—」是佔位符不是值：兩個都讀不到的字串接起來會變成「— / —」，那比一個「—」更誤導。
+        var xs = parts.Where(p => !string.IsNullOrWhiteSpace(p) && p!.Trim() != "—")
+                      .Select(p => p!.Trim()).ToArray();
+        return xs.Length == 0 ? "—" : string.Join(sep, xs);
+    }
+
     // ── 各節內容 ──────────────────────────────────────────────────────────────
 
     /// <summary>封面與執行環境（U10-RP-0001）：工具版號、產生時間與機器識別摘要。
@@ -220,9 +264,14 @@ public static class ReportService
              + "不宣稱兩者相同。本報告只在本機產生，未上傳任何資料。");
     });
 
-    /// <summary>系統摘要頁（U10-RP-0002）：一頁人讀——逐域計數、六態分布與重要發現清單。
-    /// 全部從本輪既有事實集（EvidenceLab.AllFacts）回收；<b>只陳述計數與清單，不合成任何評分</b>。</summary>
-    private static void SystemDigest(List<Section> secs, MainViewModel vm) => Add(secs, "digest", "系統摘要", s =>
+    /// <summary>附錄：事實普查（U10-RP-0002）。逐域計數、六態分布與重要發現清單，
+    /// 全部從本輪既有事實集（EvidenceLab.AllFacts）回收；<b>只陳述計數與清單，不合成任何評分</b>。
+    /// <para>
+    /// 它從 3.10 之前的「系統摘要」改名並退到報告最後：這是給查核的人對帳用的機器頁
+    /// （1,000 多筆事實的分布），不是一般人打開報告想先看到的東西。放在前面會把
+    /// 「這台機器是什麼」壓到第二屏之後。
+    /// </para></summary>
+    private static void FactsAppendix(List<Section> secs, MainViewModel vm) => Add(secs, "digest", "附錄：事實普查", s =>
     {
         var facts = vm.EvidenceLab.AllFacts;
         if (facts.Count == 0)
@@ -285,16 +334,56 @@ public static class ReportService
             ("主機名稱", Id(y.HostName, mask)), ("使用者", Id(y.UserName, mask)),
             ("開機時間", y.BootTime), ("已運行", y.Uptime), ("安裝日期", y.InstallDate),
             ("製造商", y.SystemManufacturer), ("機型", y.SystemModel),
-            ("主機板", $"{y.BoardVendor} {y.BoardModel}".Trim()),
-            ("BIOS", $"{y.BiosVendor} {y.BiosVersion}（{y.BiosDate}）"));
+            ("BIOS", J(" ", y.BiosVendor, y.BiosVersion) + (string.IsNullOrWhiteSpace(y.BiosDate) ? "" : $"（{y.BiosDate}）")));
+        s.Note("主機板本體（晶片組、插槽、M.2 與冷卻裝置）另成一節，見「主機板」；此處只列整機層級的識別與開機資訊。");
+    });
 
+    /// <summary>
+    /// 主機板本體：晶片組與匯流排（原本散在「系統」節的幾列）、SMBIOS 的實體插槽清單、
+    /// M.2 插槽（含「由 PCIe x4 推測」的那一組，必須標明是推測）與韌體回報的冷卻裝置。
+    /// 這些資料開機時就讀好了，不依賴使用者先拜訪某一頁。
+    /// </summary>
+    private static void Mainboard(List<Section> secs, MainViewModel vm) => Add(secs, "mainboard", "主機板", s =>
+    {
         var b = vm.Mainboard;
+        var y = vm.System;
+        s.Kv(("主機板", J(" ", y.BoardVendor, y.BoardModel)));
         if (b.Loaded)
             s.Kv(
                 ("晶片組", b.ChipsetName), ("北橋", b.Northbridge), ("南橋", b.Southbridge),
                 ("匯流排規格", b.BusSpec), ("顯示介面", b.GraphicInterface),
-                ("PCIe 連結", $"{b.PcieLinkWidth} ・ {b.PcieLinkSpeed}"),
-                ("UEFI", b.Uefi), ("LPCIO", $"{b.LpcioVendor} {b.LpcioModel}".Trim()));
+                ("PCIe 連結", J(" ・ ", b.PcieLinkWidth, b.PcieLinkSpeed)),
+                ("UEFI", b.Uefi), ("LPCIO", J(" ", b.LpcioVendor, b.LpcioModel)));
+
+        var smb = vm.Smbios;
+        if (smb.Available)
+        {
+            // 韌體列出的實體插槽（Type 9）。記憶體插槽另見「記憶體」節，這裡只留擴充卡與 M.2。
+            var slots = smb.Slots
+                .Where(x => !x.Type.Contains("DIMM", StringComparison.OrdinalIgnoreCase))
+                .Select(x => new[] { x.Designation, x.Type, x.Width, x.Usage })
+                .ToList();
+            s.Tbl("擴充插槽（SMBIOS Type 9）", new[] { "插槽", "類型", "寬度", "用途" }, slots);
+
+            var cooling = smb.CoolingDevices.Select(x => new[] { x.Key, x.Value }).ToList();
+            s.Tbl("冷卻裝置（SMBIOS Type 29）", new[] { "裝置", "說明" }, cooling);
+        }
+
+        var m2 = vm.M2Analysis;
+        if (m2.Slots.Count > 0 || m2.PossibleSlots.Count > 0)
+        {
+            var rows = new List<string[]>();
+            foreach (var x in m2.Slots) rows.Add([x.Designation, x.Type, "韌體標示", x.Usage]);
+            foreach (var x in m2.PossibleSlots) rows.Add([x.Designation, x.Type, "依 PCIe x4 推測（未經韌體確認）", x.Usage]);
+            s.Tbl("M.2 插槽", new[] { "位置", "類型", "判定方式", "用途" }, rows);
+        }
+        if (m2.DriveNotes.Count > 0)
+            s.Tbl(null, new[] { "已安裝的 M.2／U.2 裝置（容量 ・ 型號 ・ 外型）" },
+                [.. m2.DriveNotes.Select(x => new[] { x })]);
+
+        s.Note(smb.Available
+            ? "插槽清單來自韌體（SMBIOS），空的插槽也會列出；「依 PCIe x4 推測」那幾列不是韌體說的，是從匯流排寬度反推的，換一張板子可能不成立。"
+            : "這一輪沒有讀到 SMBIOS，插槽與冷卻裝置一律留空——不以主機板型號的典型配置頂替。");
     });
 
     private static void Processor(List<Section> secs, MainViewModel vm) => Add(secs, "cpu", "處理器", s =>
@@ -302,19 +391,23 @@ public static class ReportService
         var c = vm.Cpu;
         s.Kv(
             ("型號", c.Name), ("製造商", c.Manufacturer), ("插槽", c.Socket),
-            ("實體核心", $"{c.Cores} 核"), ("邏輯處理器", $"{c.Threads} 執行緒"),
-            ("額定頻率", $"{c.MaxClockMHz:0} MHz"), ("L2 / L3 快取", $"{c.L2Cache} / {c.L3Cache}"));
+            ("實體核心", c.Cores > 0 ? $"{c.Cores} 核" : "—"),
+            ("邏輯處理器", c.Threads > 0 ? $"{c.Threads} 執行緒" : "—"),
+            // 0 不是一個時脈，是「沒讀到」。從前這裡照樣印 0 MHz，等於用一個假數字填空。
+            ("額定頻率", c.MaxClockMHz > 0 ? $"{c.MaxClockMHz:0} MHz" : "—"),
+            ("L2 / L3 快取", J(" / ", c.L2Cache, c.L3Cache)),
+            ("微架構", vm.UarchText));
 
         var d = vm.CpuDetail;
         if (d.Loaded)
             s.Kv(
                 ("代號", d.Codename), ("製程", d.Technology), ("封裝", d.Package),
-                ("步進 / 微碼", $"{d.Stepping} / {d.Microcode}"),
+                ("步進 / 微碼", J(" / ", d.Stepping, d.Microcode)),
                 ("倍頻", d.Multiplier), ("標定頻率", d.StockFreq),
-                ("非睿頻上限 / 睿頻上限", $"{d.MaxNonTurbo} / {d.MaxTurbo}"),
-                ("功耗上限 PL1 / PL2", $"{d.PowerMaxPl1} / {d.PowerMaxPl2}"),
+                ("非睿頻上限 / 睿頻上限", J(" / ", d.MaxNonTurbo, d.MaxTurbo)),
+                ("功耗上限 PL1 / PL2", J(" / ", d.PowerMaxPl1, d.PowerMaxPl2)),
                 ("Tjmax", d.Tjmax),
-                ("快取 L1D / L1I / L2 / L3", $"{d.L1D} / {d.L1I} / {d.L2} / {d.L3}"),
+                ("快取 L1D / L1I / L2 / L3", J(" / ", d.L1D, d.L1I, d.L2, d.L3)),
                 ("指令集", d.Instructions));
 
         if (vm.Live is { } live)
@@ -346,6 +439,19 @@ public static class ReportService
         foreach (var m in vm.Modules)
             rows.Add(new[] { m.Slot, m.Manufacturer, m.PartNumber, m.CapacityText, m.SpeedText });
         s.Tbl("已安裝模組", new[] { "插槽", "製造商", "型號", "容量", "速率" }, rows);
+
+        // 插槽配置：包含**空的**插槽。只列已裝模組的表格看不出「還有兩個洞」，
+        // 而那正是記憶體章節最有決策價值的資訊（要不要加、加哪一槽）。
+        var dimms = vm.Dimms;
+        if (dimms.SlotCount > 0)
+        {
+            var slotRows = dimms.Slots
+                .Select(x => new[] { x.Locator, x.Occupied ? "已安裝" : "空", x.SizeText, x.VendorText, x.PartText, x.SpeedText })
+                .ToList();
+            s.Tbl($"插槽配置（{dimms.OccupiedCount}/{dimms.SlotCount} 裝了模組）",
+                new[] { "插槽", "狀態", "容量", "製造商", "型號", "速率" }, slotRows);
+            s.Kv(("通道判讀", dimms.ChannelHeadline));
+        }
 
         var spd = new List<string[]>();
         foreach (var m in vm.SpdModules)
@@ -387,7 +493,8 @@ public static class ReportService
                 },
             });
 
-        if (vm.CudaVersion is { Length: > 0 } cuda && cuda != "—") s.Kv(("CUDA", cuda));
+        // "****" 是「沒有偵測到 CUDA」的哨兵值（StartupSequence 在失敗時寫入），不是版本號。
+        if (vm.CudaVersion is { Length: > 0 } cuda && cuda is not ("—" or "****")) s.Kv(("CUDA", cuda));
     });
 
     private static void Storage(List<Section> secs, MainViewModel vm, bool mask) => Add(secs, "disk", "儲存裝置", s =>
@@ -426,6 +533,15 @@ public static class ReportService
             s.Note("色域由 EDID 內的原色座標換算，反映的是螢幕韌體聲稱的能力，不等於校色儀實測值。");
     });
 
+    /// <summary>音訊裝置：Windows 回報的裝置名稱（Win32_SoundDevice）。刻意不假裝知道 codec 型號。</summary>
+    private static void Audio(List<Section> secs, MainViewModel vm) => Add(secs, "audio", "音訊裝置", s =>
+    {
+        if (!vm.HasSoundDevices) return;
+        s.Tbl(null, ["裝置"], [.. vm.SoundDevices.Select(x => new[] { x })]);
+        s.Note("名稱來自 Windows 的裝置列舉，反映的是驅動程式宣告的名稱；codec 晶片型號要驅動私有介面才拿得到，"
+             + "曦覽不猜——所以這一節不會出現「Realtek ALC1220」這種沒讀到的型號。");
+    });
+
     private static void Network(List<Section> secs, MainViewModel vm, bool mask) => Add(secs, "net", "網路", s =>
     {
         if (vm.Net is { Adapters.Count: > 0 } net)
@@ -442,14 +558,73 @@ public static class ReportService
         s.Tbl("已安裝的網路卡", new[] { "名稱", "製造商", "類型", "額定速度", "MAC" }, nics);
     });
 
+    /// <summary>風扇：轉速（含顯示卡風扇，LHM 有回報就有）與可控制風扇的輸出、模式。
+    /// 感測器節會把風扇列濾掉，兩邊不重複。</summary>
+    private static void Fans(List<Section> secs, MainViewModel vm) => Add(secs, "fan", "風扇", s =>
+    {
+        if (vm.Live is not { } live) return;
+
+        var speeds = live.AllSensors
+            .Where(x => x.TypeText == "風扇")
+            .Select(x => new[] { x.Group, x.Name, x.ValueText, x.MinText, x.MaxText })
+            .ToList();
+        s.Tbl("風扇轉速", ["群組", "風扇", "轉速", "最小", "最大"], speeds);
+
+        if (live.HasFanControls)
+        {
+            var rows = live.FanControls
+                .Select(f => new[] { f.Name, f.Location, f.RpmText, f.CurrentText, f.ModeText })
+                .ToList();
+            s.Tbl("可控風扇", ["風扇", "位置", "轉速", "目前輸出", "模式"], rows);
+        }
+
+        if (speeds.Count == 0 && !live.HasFanControls) return;
+        s.Note("最小／最大是本次執行期間的極值。「模式」只有在使用者手動接管時才寫「手動」，其餘交由 BIOS；"
+             + "沒有 RPM 的風扇（多數顯示卡）只會出現在「目前輸出」的百分比欄。");
+    });
+
+    /// <summary>電池與電源：筆電才有。桌機整節不出現，而不是留一張全是「—」的表。</summary>
+    private static void Battery(List<Section> secs, MainViewModel vm) => Add(secs, "battery", "電池與電源", s =>
+    {
+        var info = new BatteryService().Read();
+        if (!info.Present) return;
+
+        s.Kv(
+            ("電池", info.Name), ("化學", info.Chemistry),
+            ("目前電量", $"{info.ChargePercent}%"), ("狀態", info.StatusText),
+            ("設計容量", info.DesignText), ("滿充容量", info.FullText),
+            ("損耗", info.WearText), ("循環次數", info.CycleText));
+
+        s.Note("損耗＝1 −（滿充容量 ÷ 設計容量），是韌體回報的兩個容量相除，不是健康度評分；"
+             + "循環次數多數電池不回報，讀不到就寫明讀不到，不推估剩餘壽命。");
+    });
+
+    /// <summary>NPU：只有真的偵測到裝置才成節。沒掃描過或沒有 NPU 時整節不出現。</summary>
+    private static void Npu(List<Section> secs, MainViewModel vm) => Add(secs, "npu", "NPU", s =>
+    {
+        var n = vm.NpuDetection;
+        if (!n.NpuPresent) return;
+
+        s.Kv(
+            ("裝置", n.NpuName), ("驅動", n.NpuDriver), ("驅動日期", n.NpuDriverDate),
+            ("估算算力", n.EstimatedTops));
+        s.Note("裝置與驅動是本機列舉到的；算力那一欄是依型號查表的估計值，不是本機推論實測，"
+             + "也不是這一節的統計——曦覽沒有跑 NPU 推論。");
+    });
+
     private static void Sensors(List<Section> secs, MainViewModel vm) => Add(secs, "sensor", "感測器", s =>
     {
         if (vm.Live is not { AllSensors.Count: > 0 } sl) return;
+
+        // 風扇（轉速與輸出）集中在「風扇」節，這裡濾掉以免同一批讀值在報告裡出現兩次。
         var rows = new List<string[]>();
         foreach (var x in sl.AllSensors)
-            rows.Add(new[] { x.Group, x.Name, x.ValueText, x.MinText, x.MaxText });
+            if (x.TypeText is not ("風扇" or "風扇控制"))
+                rows.Add(new[] { x.Group, x.Name, x.ValueText, x.MinText, x.MaxText });
+
+        if (rows.Count == 0) return;
         s.Tbl(null, new[] { "群組", "名稱", "數值", "最小", "最大" }, rows);
-        s.Note("最小／最大為本次執行期間的極值，關閉曦覽後重新開啟即重新累計。");
+        s.Note("最小／最大為本次執行期間的極值，關閉曦覽後重新開啟即重新累計。風扇讀值列在「風扇」節，不在此重複。");
     });
 
     private static void Evidence(List<Section> secs, MainViewModel vm, bool mask) => Add(secs, "evidence", "硬體證據", s =>
@@ -495,9 +670,11 @@ public static class ReportService
             s.Note("尚未載入任何韌體安全事實（啟動序列未執行或載入失敗）。");
             return;
         }
-        var cells = rows.Select(r => new[] { r.Category, r.Name, r.ValueText, r.Source }).ToList();
+        var cells = rows.Select(r => new[] { r.Category, r.Name, FactText(r.ValueText), r.Source }).ToList();
         s.Tbl("三態事實（讀不到即帶原因）", new[] { "分類", "項目", "判讀", "來源" }, cells);
-        s.Note("裁決只來自本機量到的暫存器位元；缺 ring0／缺自家驅動／平台未實作一律如實標示，不以典型值或舊值填補。XsRegProbe 驅動源碼在 repo 的 XsRegProbe/，載入與否由使用者刻意決定。");
+        s.Note("裁決只來自本機量到的暫存器位元；缺 ring0／缺自家驅動／平台未實作一律如實標示，不以典型值或舊值填補。XsRegProbe 驅動源碼在 repo 的 XsRegProbe/，載入與否由使用者刻意決定。"
+             + "少數列的文字原本夾著自動收斂的內部註記（數字與可用性不一致時的處置說明），報告已濾除；完整原文仍在證據實驗室。"
+             + "「目前 —（值未知，感測器未回報）」這類字樣是韌體自己說不知道，不是漏填。");
     });
 
     private static void Benchmarks(List<Section> secs, MainViewModel vm) => Add(secs, "bench", "跑分紀錄", s =>
@@ -644,8 +821,13 @@ public static class ReportService
             if (m.IsAssistant && m.Text.Trim().Length > 0) text = m.Text.Trim();
         if (text.Length == 0) return;
 
-        s.Note($"以下是 AI 分頁最後一次的回覆，由你自己設定的模型（{vm.Settings.AiModel}）產生，"
-             + "不是量測結果，也不是曦覽的判斷；模型可能誤讀或過度推論，請以上面各節的讀值為準。");
+        // 模型名一律走 Ai.ModelText（＝與實際送出的請求同一個解析函式）。從前這裡直接讀
+        // Settings.AiModel，選共用額度時會標成上一台本機 Ollama／自填 API 的型號——
+        // 工具列修過這個，報告漏了，於是報告會把 Cloudflare 的答案記在別的模型名下。
+        string provider = AiService.ProviderLabel(vm.Settings.AiProviderEnum);
+        s.Note($"以下是 AI 分頁最後一次的回覆，由 {provider}・{vm.Ai.ModelText} 產生，"
+             + "不是量測結果，也不是曦覽的判斷；模型可能誤讀或過度推論，請以上面各節的讀值為準。"
+             + "回覆原文保留在下方，未經改寫。");
         s.Blocks.Add(new Block { Pre = text });
     });
 
@@ -725,18 +907,27 @@ th{color:var(--muted);font-weight:600;font-size:12.5px;background:var(--surface)
         sb.Append(HtmlHead);
         sb.Append("<div class=\"brand\"><i></i>曦覽 XinSpect</div>");
         sb.Append("<h1>硬體報告</h1>");
-        sb.Append($"<div class=\"sub\">產生時間：{Esc(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))}"
-                + $" ・ 主機：{Esc(Id(vm.System.HostName, mask))}"
-                + $" ・ {Esc(vm.Cpu.Name)}</div>");
+        // 標題列只放「有值」的段落：處理器沒讀到時不該在尾巴留一個「・ —」。
+        var subParts = new List<string>
+        {
+            $"產生時間：{DateTime.Now:yyyy-MM-dd HH:mm:ss}",
+            $"主機：{Id(vm.System.HostName, mask)}",
+        };
+        if (!string.IsNullOrWhiteSpace(vm.Cpu.Name) && vm.Cpu.Name.Trim() != "—") subParts.Add(vm.Cpu.Name.Trim());
+        sb.Append($"<div class=\"sub\">{Esc(string.Join(" ・ ", subParts))}</div>");
 
-        // 摘要磁貼：先給結論，細節在下面各節
-        var h = vm.Health;
+        // 首屏三塊磁貼只放「這台機器是什麼」：系統、處理器與記憶體、儲存。
+        // 健康評分從首屏拿掉了——它在「整機摘要」節出現一次就夠；同一份報告裡
+        // 同一個數字出現兩次，讀者會開始懷疑兩個是不是同一個算法算的。
         sb.Append("<div class=\"hero\">");
-        Tile(sb, "健康評分", $"{Esc(h.ScoreText)} <span style=\"font-size:15px;color:var(--muted)\">/ 100</span>",
-             $"{Esc(SevText(h.ScoreSeverity))} ・ {Esc(h.Summary)}");
-        Tile(sb, "系統", Esc(vm.System.OsName), Esc($"{vm.System.SystemManufacturer} {vm.System.SystemModel}".Trim()));
-        Tile(sb, "處理器與記憶體", Esc($"{vm.Cpu.Cores} 核 {vm.Cpu.Threads} 執行緒"),
-             Esc(vm.Timings.DataRateText + " ・ " + vm.Timings.ChannelsText));
+        Tile(sb, "系統", Esc(D(vm.System.OsName)),
+             Esc(J(" ", vm.System.SystemManufacturer, vm.System.SystemModel)));
+        Tile(sb, "處理器與記憶體",
+             Esc(vm.Cpu.Cores > 0 && vm.Cpu.Threads > 0 ? $"{vm.Cpu.Cores} 核 {vm.Cpu.Threads} 執行緒" : "—"),
+             Esc(J(" ・ ", vm.Timings.DataRateText, vm.Timings.ChannelsText)));
+        Tile(sb, "儲存",
+             Esc(vm.PhysicalDisks.Count > 0 ? $"{vm.PhysicalDisks.Count} 顆實體磁碟" : "—"),
+             Esc(D(vm.Volumes.SummaryText)));
         sb.Append("</div>");
 
         sb.Append("<div class=\"toc noprint\">");
@@ -755,7 +946,7 @@ th{color:var(--muted);font-weight:600;font-size:12.5px;background:var(--surface)
                 {
                     sb.Append("<table class=\"kv\">");
                     foreach (var (k, v) in b.Rows)
-                        sb.Append($"<tr><td>{Esc(k)}</td><td class=\"val\">{Esc(v)}</td></tr>");
+                        sb.Append($"<tr><td>{Esc(k)}</td><td class=\"val\">{Esc(D(v))}</td></tr>");
                     sb.Append("</table>");
                 }
                 if (b.Heads is { } heads && b.Cells is { Count: > 0 } cells)
@@ -767,7 +958,7 @@ th{color:var(--muted);font-weight:600;font-size:12.5px;background:var(--surface)
                     {
                         sb.Append("<tr>");
                         for (int i = 0; i < row.Length; i++)
-                            sb.Append(i == 0 ? $"<td class=\"val\">{Esc(row[i])}</td>" : $"<td>{Esc(row[i])}</td>");
+                            sb.Append(i == 0 ? $"<td class=\"val\">{Esc(D(row[i]))}</td>" : $"<td>{Esc(D(row[i]))}</td>");
                         sb.Append("</tr>");
                     }
                     sb.Append("</tbody></table>");
@@ -799,7 +990,7 @@ th{color:var(--muted);font-weight:600;font-size:12.5px;background:var(--surface)
         var sb = new StringBuilder(32768);
         sb.Append("# 曦覽 XinSpect 硬體報告\n\n");
         sb.Append($"產生時間 {DateTime.Now:yyyy-MM-dd HH:mm:ss} ・ 主機 {Id(vm.System.HostName, mask)}"
-                + $" ・ {Md(vm.Cpu.Name)}\n");
+                + (string.IsNullOrWhiteSpace(vm.Cpu.Name) || vm.Cpu.Name.Trim() == "—" ? "" : $" ・ {Md(vm.Cpu.Name)}") + "\n");
 
         foreach (var s in secs)
         {
@@ -837,9 +1028,12 @@ th{color:var(--muted);font-weight:600;font-size:12.5px;background:var(--surface)
         }
     }
 
-    /// <summary>表格格內不能有換行，直豎線也得跳脫，否則欄位會被切錯。</summary>
+    /// <summary>表格格內不能有換行，直豎線也得跳脫，否則欄位會被切錯；空值寫「—」。</summary>
     private static string Md(string? s)
-        => (s ?? "").Replace("|", "\\|").Replace("\r", "").Replace('\n', ' ');
+    {
+        string v = (s ?? "").Replace("\r", "").Replace('\n', ' ');
+        return string.IsNullOrWhiteSpace(v) ? "—" : v.Replace("|", "\\|");
+    }
 
     // ── 純文字 ────────────────────────────────────────────────────────────────
     // 貼進純文字信件或工單用。欄寬依實際內容對齊（以顯示寬度計，中日韓字元算兩格），
@@ -906,8 +1100,12 @@ th{color:var(--muted);font-weight:600;font-size:12.5px;background:var(--surface)
         }
     }
 
+    /// <summary>純文字表格的儲存格：換行壓成空白、空值寫「—」（與 HTML／Markdown 同一個承諾）。</summary>
     private static string One(string? s)
-        => (s ?? "").Replace("\r", "").Replace('\n', ' ').TrimEnd();
+    {
+        string t = (s ?? "").Replace("\r", "").Replace('\n', ' ').TrimEnd();
+        return string.IsNullOrWhiteSpace(t) ? "—" : t;
+    }
 
     /// <summary>以等寬字型下的顯示寬度計算：中日韓與全形符號佔兩格。</summary>
     private static int Wide(string? s)
