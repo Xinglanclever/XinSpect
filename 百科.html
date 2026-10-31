@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>曦覽 XinSpect 百科</title>
-<!-- 由 README.md 產生（sha256 02fea4ac5025）；產生器：Tools/gen-docs-html.py；本檔不手改。 -->
+<!-- 由 README.md 產生（sha256 ae189b8e7462）；產生器：Tools/gen-docs-html.py；本檔不手改。 -->
 <style>:root{--ink:#1f2328;--sub:#57606a;--hair:#d0d7de;--surface:#f6f8fa;--link:#0969da;--accent:#1b6fd6;--badge:#ddf4ff}
 @media (prefers-color-scheme:dark){:root{--ink:#e6edf3;--sub:#9198a1;--hair:#30363d;--surface:#161b22;--link:#4493f8;--accent:#4493f8;--badge:#0d2b45}}
 *{box-sizing:border-box}
@@ -459,7 +459,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </details>
 </nav>
 <main>
-<header class="doc"><div class="meta">曦覽 XinSpect 百科 ・ 來源：<code>README.md</code>（sha256 <code>02fea4ac5025</code>）・ 自足 HTML：無 CDN、無外部字型、無指令碼 ・ 定位：左側目錄、標題懸停有 ¶ 錨點、瀏覽器 Ctrl+F 找字</div></header>
+<header class="doc"><div class="meta">曦覽 XinSpect 百科 ・ 來源：<code>README.md</code>（sha256 <code>ae189b8e7462</code>）・ 自足 HTML：無 CDN、無外部字型、無指令碼 ・ 定位：左側目錄、標題懸停有 ¶ 錨點、瀏覽器 Ctrl+F 找字</div></header>
 <p><a href="https://github.com/Xinglanclever/XinSpect/blob/main/README.zh-CN.md">简体中文</a> · 繁體中文 · <a href="https://github.com/Xinglanclever/XinSpect/blob/main/README.en.md">English</a></p>
 <p><a class="ext" href="https://xinspect-browser-preview.wild-chimpanzee.workers.dev"><span class="badge">官方網站 ・ xinspect-browser-preview.wild-chimpanzee.workers.dev-4C8DFF?style=for-the</span></a></p>
 <blockquote><h2 id="-官方網站xinspect-browser-previewwild-chimpanzeeworkersdev-"><a class="self" href="#-官方網站xinspect-browser-previewwild-chimpanzeeworkersdev-">¶</a> 🌐 <a class="ext" href="https://xinspect-browser-preview.wild-chimpanzee.workers.dev">官方網站：xinspect-browser-preview.wild-chimpanzee.workers.dev ↗</a></h2>
@@ -12975,9 +12975,15 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <p>主程式<strong>未做程式碼簽章</strong>（O-03）。後果是 Windows SmartScreen 可能攔阻第一次執行，顯示「不明的發行者」。這個專案的處置是<strong>承認它</strong>，而不是教使用者關閉警告——教使用者繞過系統警告，等於用文件把一個安全缺口變成慣例。要改善只能靠簽章（這是供應鏈投資，不是文件問題）。</p>
 <h3 id="156-授權與貢獻"><a class="self" href="#156-授權與貢獻">¶</a> 15.6 授權與貢獻</h3>
 <ul>
-<li><strong>授權</strong>：<strong>AGPL-3.0-or-later</strong>（見 <code>LICENSE</code>）。無法採用 AGPL 的商業或閉源整合，另有商業授權（見 <code>COMMERCIAL-LICENSE.md</code>）。送出的貢獻以相同授權釋出，<strong>不需要簽 CLA</strong>。
+<li><strong>授權模式：雙授權（dual licensing）。</strong> 兩條路二選一，功能相同，差別只在散布時要不要公開原始碼：
+<ul>
+<li><strong>AGPL-3.0-or-later</strong>（見 <code>LICENSE</code>）：免費。可自由使用、研究、修改、散布與<strong>商業使用</strong>；散布修改版或把它當成網路服務提供給他人使用時，須以相同授權公開原始碼。
+</li><li><strong>商業授權</strong>（見 <code>COMMERCIAL-LICENSE.md</code>）：付費。給閉源整合、隨硬體出貨，或組織政策禁用 copyleft 的情況；不觸發原始碼公開義務。 兩者不疊加。送出的貢獻以 AGPL-3.0-or-later 釋出、<strong>不需要簽 CLA</strong>，所以商業授權只涵蓋著作權人擁有的部分（目前全部提交都來自專案作者）。
+</li></ul>
+</li></ul>
 </li><li><strong>入口選擇</strong>（<code>CONTRIBUTING.md</code> 的分工）：「這個數字是什麼意思」走 Discussions 的 Q&amp;A／判讀；當掉、畫面空白、讀值與文件不符走錯誤回報；某顆硬體讀不到或解碼錯走硬體判讀回報；新能力走功能建議；安全邊界問題<strong>不要開公開 Issue</strong>，走 <code>SECURITY.md</code> 的私密通報。
-</li><li><strong>回報時不要附上</strong>序號、UUID、MAC、資產標籤、使用者名稱或完整路徑。要附 <code>--json</code> 輸出時，先用 <code>--only</code> 縮小範圍並自行遮蔽敏感值。
+<ul>
+<li><strong>回報時不要附上</strong>序號、UUID、MAC、資產標籤、使用者名稱或完整路徑。要附 <code>--json</code> 輸出時，先用 <code>--only</code> 縮小範圍並自行遮蔽敏感值。
 </li><li><strong>貢獻的門檻不在寫得多，在每一句宣稱都能被查核。</strong> 送 PR 的人要在本機跑硬體全套並貼上數字；改動到的守門紅燈要修因，不是改綠。
 </li><li><strong>行為守則</strong>：<code>CODE_OF_CONDUCT.md</code>；支援問題見 <code>SUPPORT.md</code>。
 </li></ul>
