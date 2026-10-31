@@ -191,8 +191,13 @@
       <XtuBridgeProj>$(MSBuildProjectDirectory)\Bridge\XtuBridge.csproj</XtuBridgeProj>
       <XtuBridgeExe>$(MSBuildProjectDirectory)\Bridge\bin\$(Configuration)\net48\XtuBridge.exe</XtuBridgeExe>
     </PropertyGroup>
-    <MSBuild Projects="$(XtuBridgeProj)" Targets="Restore" Properties="Configuration=$(Configuration)" />
-    <MSBuild Projects="$(XtuBridgeProj)" Targets="Build" Properties="Configuration=$(Configuration)" />
+    <!-- RuntimeIdentifier 要清掉：`dotnet publish -r win-x64` 會把它當全域屬性傳進來，
+         而 .NET Framework 4.8 的橋接程式沒有 RID，產出會落到 bin\$(Configuration)
+et48\win-x64\，
+         這裡卻在老路徑找。本機看起來沒事，因為先前的 build 已經把老路徑填好了；
+         乾淨 clone 直接 publish 一定失敗。 -->
+    <MSBuild Projects="$(XtuBridgeProj)" Targets="Restore" Properties="Configuration=$(Configuration);RuntimeIdentifier=" />
+    <MSBuild Projects="$(XtuBridgeProj)" Targets="Build" Properties="Configuration=$(Configuration);RuntimeIdentifier=" />
     <Error Condition="!Exists('$(XtuBridgeExe)')" Text="超頻橋接程式建置後仍找不到產出：$(XtuBridgeExe)" />
     <ItemGroup>
       <EmbeddedResource Include="$(XtuBridgeExe)">
