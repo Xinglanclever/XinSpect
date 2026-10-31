@@ -32,6 +32,17 @@ public sealed class MainViewModel : ObservableObject
     private CpuStatic _cpu = new();
     public CpuStatic Cpu { get => _cpu; internal set => SetProperty(ref _cpu, value); }
 
+    private string? _uarchText;
+
+    /// <summary>
+    /// 處理器頁「微架構」那一行：Golden Cove、Zen 4、Cypress Cove……（大小核會寫成「P 核 ＋ E 核」）。
+    /// 首次讀取時向 CPUID 問一次就快取——簽章與廠商字串在一台機器上不會變，不必每幀重問。
+    /// 問不到就照實寫「未收錄／CPUID 不可用」，不挑一個最像的填。
+    /// </summary>
+    public string UarchText => _uarchText ??= CpuGeneration.ReadSignature() is { } sig
+        ? (CpuFirmwareFactsService.UarchShortText(sig, CpuUarchTable.ReadVendor()) ?? "對照表未收錄——不猜")
+        : "CPUID 不可用（非 x86 環境）";
+
     private CpuTopology _cpuTopology = new();
     public CpuTopology CpuTopology { get => _cpuTopology; internal set => SetProperty(ref _cpuTopology, value); }
 

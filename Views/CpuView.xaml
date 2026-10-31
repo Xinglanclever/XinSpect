@@ -26,6 +26,9 @@
                         <local:SectionHead Text="規格" HelpKey="cpu/規格"/>
                         <local:FieldRow Label="型號" Value="{Binding Cpu.Name}"/>
                         <local:FieldRow Label="製造商" Value="{Binding Cpu.Manufacturer}"/>
+                        <!-- 微架構＝「核心」，與「世代」（行銷名）不是同一件事：同一代可能有兩種核心，
+                             同一種核心也橫跨好幾代。混合部件會寫成「P 核 ＋ E 核」。 -->
+                        <local:FieldRow Label="微架構" Value="{Binding UarchText}"/>
                         <local:FieldRow Label="插槽" Value="{Binding Cpu.Socket}"/>
                         <local:FieldRow Label="實體核心" Value="{Binding Cpu.Cores, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='{}{0} 核'}"/>
                         <local:FieldRow Label="已啟用核心" Value="{Binding Cpu.EnabledCoresText}"/>

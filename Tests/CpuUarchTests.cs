@@ -209,6 +209,27 @@ public sealed class CpuUarchTests
     }
 
     [Fact]
+    public void 處理器頁的微架構文字不帶簽章_混合部件分得出大小核()
+    {
+        // 處理器頁那一欄只有一行寬：簽章（family／model／stepping）在「完整規格」已逐欄列著，
+        // 這裡再寫一次只會把那一欄擠爆。所以短版只回核心名，且與事實層共用同一個判斷。
+        Assert.Equal("Raptor Cove（P 核）＋ Gracemont（E 核）",
+            CpuFirmwareFactsService.UarchShortText(Sig(6, 0xB7, 2), "GenuineIntel", () => CoreKind.Performance));
+        Assert.Equal("Cypress Cove", CpuFirmwareFactsService.UarchShortText(Sig(6, 0xA7, 1), "GenuineIntel"));
+        Assert.Equal("Zen 4（zen4）", CpuFirmwareFactsService.UarchShortText(Sig(0x19, 0x11, 1), "AuthenticAMD"));
+
+        string? intel = CpuFirmwareFactsService.UarchShortText(Sig(6, 0x97, 2), "GenuineIntel");
+        Assert.NotNull(intel);
+        Assert.DoesNotContain("family", intel);
+        Assert.DoesNotContain("stepping", intel);
+
+        // 讀不到簽章或廠商、或兩張表都沒收錄時回 null，由呼叫端照實顯示「未收錄」。
+        Assert.Null(CpuFirmwareFactsService.UarchShortText(null, "GenuineIntel"));
+        Assert.Null(CpuFirmwareFactsService.UarchShortText(Sig(6, 0x97, 2), null));
+        Assert.Null(CpuFirmwareFactsService.UarchShortText(Sig(6, 0xEF, 0), "GenuineIntel"));
+    }
+
+    [Fact]
     public void 世代表與微架構表對同一顆處理器不打架()
     {
         // 這兩張表先前對 0x97 給過不同答案（世代表寫 Rocket Lake、微架構表寫 Alder Lake 那條線），

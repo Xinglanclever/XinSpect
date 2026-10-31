@@ -1120,6 +1120,7 @@ public static class EnglishStrings
         ["系統總覽"] = "System overview",
         ["系統資訊"] = "System info",
         ["機型資訊"] = "Model",
+        ["微架構"] = "Microarchitecture",
         ["本機型號、系統與關鍵硬體參數的摘要；即時數據請到各自的專頁，儀表預設收起。"]
             = "A summary of this machine's model, OS and key hardware; live readings live on their own pages — the gauges start collapsed.",
         ["已運行時間"] = "Uptime",

@@ -72,22 +72,10 @@ public static class CpuFirmwareFactsService
 
         if (vendor == "GenuineIntel")
         {
-            CoreKind kind = coreKindProbe?.Invoke() ?? ReadCoreKind();
-            var info = MicroarchProfile.Identify(family, model, kind);
-            if (info.IsKnown)
-            {
-                string what = info.Uarch;
-                if (info.IsHybrid)
-                {
-                    // 混合部件：同一個 model 兩種核心。只報大核等於只講一半，所以兩顆都寫出來。
-                    string ecore = MicroarchProfile.Identify(family, model, CoreKind.Efficiency).Uarch;
-                    what = ecore.Length > 0 && ecore != info.Uarch
-                        ? $"{info.Uarch}（P 核）＋ {ecore}（E 核）"
-                        : $"{info.Uarch}（單一核型）";
-                }
-                return new HardwareFact(key, Category, name, $"{what} ・ {sig}", "", source,
+            string? micro = MicroarchText(family, model, coreKindProbe?.Invoke() ?? ReadCoreKind());
+            if (micro is not null)
+                return new HardwareFact(key, Category, name, $"{micro} ・ {sig}", "", source,
                     FactTrustLevel.Measured, false, at, NumericValue: (model << 8) | family);
-            }
         }
 
         string? uarch = CpuUarchTable.Lookup(vendor, family, model);
@@ -98,6 +86,43 @@ public static class CpuFirmwareFactsService
         string display = CpuUarchTable.DisplayName(uarch) ?? uarch;
         return new HardwareFact(key, Category, name, $"{display}（{uarch}）・ {sig}", "", source,
             FactTrustLevel.Measured, false, at, NumericValue: (model << 8) | family);
+    }
+
+    /// <summary>
+    /// 同一件事的短版：只回核心名稱、不帶 CPUID 簽章，給處理器頁那種一行一欄的版面用
+    /// （簽章在「完整規格」裡本來就逐欄列著，這裡再寫一次只是把那一欄擠爆）。
+    /// 兩張表的優先順序與 <see cref="UarchFact"/> 完全相同，共用 <see cref="MicroarchText"/>，不會各說各話。
+    /// </summary>
+    /// <returns>對照表未收錄時回 <c>null</c>——呼叫端要如實說「未收錄」，不要挑一個最像的填。</returns>
+    public static string? UarchShortText(uint? signature, string? vendor, Func<CoreKind>? coreKindProbe = null)
+    {
+        if (signature is not { } eax || string.IsNullOrWhiteSpace(vendor)) return null;
+        var (family, model, _) = CpuGeneration.DecodeSignature(eax);
+
+        if (vendor == "GenuineIntel")
+        {
+            string? micro = MicroarchText(family, model, coreKindProbe?.Invoke() ?? ReadCoreKind());
+            if (micro is not null) return micro;
+        }
+
+        if (CpuUarchTable.Lookup(vendor, family, model) is not { } id) return null;
+        return CpuUarchTable.DisplayName(id) is { } name ? $"{name}（{id}）" : id;
+    }
+
+    /// <summary>
+    /// Intel 的微架構文字：先問 <see cref="MicroarchProfile"/>（認得大小核），問不到才回 null 讓呼叫端改走 cpuinfo 表。
+    /// 混合部件把兩顆核心都寫出來——同一個 model 兩種核心，只報大核等於只講一半。
+    /// </summary>
+    private static string? MicroarchText(int family, int model, CoreKind kind)
+    {
+        var info = MicroarchProfile.Identify(family, model, kind);
+        if (!info.IsKnown) return null;
+        if (!info.IsHybrid) return info.Uarch;
+
+        string ecore = MicroarchProfile.Identify(family, model, CoreKind.Efficiency).Uarch;
+        return ecore.Length > 0 && ecore != info.Uarch
+            ? $"{info.Uarch}（P 核）＋ {ecore}（E 核）"
+            : $"{info.Uarch}（單一核型）";
     }
 
     /// <summary>CPUID 0x1A 的 EAX[31:24] → 核型。leaf 0x1A 不存在時不能拿「最高 leaf 的回音」當答案，先擋掉。</summary>
