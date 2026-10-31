@@ -115,4 +115,31 @@ public class OfficialSiteTests
         Assert.DoesNotContain("@", url, StringComparison.Ordinal);
         Assert.DoesNotContain("utm_", url, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void 關於頁最上面有品牌標語而且只是比內文大一圈()
+    {
+        string xaml = Read(Path.Combine("Views", "AboutView.xaml"));
+        var el = System.Text.RegularExpressions.Regex.Match(
+            xaml, "<TextBlock[^>]*x:Name=\"BrandTagline\"[^>]*>(.*?)</TextBlock>",
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+        Assert.True(el.Success, "關於頁找不到品牌標語區塊（BrandTagline）");
+
+        // 兩句都要在，而且中間真的是 LineBreak——用兩個 TextBlock 疊出來的話，
+        // 行距會被區塊邊界與 Margin 決定，跟同一段文字的兩行不是同一個東西。
+        Assert.Contains("Designed in East Asia", el.Groups[1].Value, StringComparison.Ordinal);
+        Assert.Contains("Manufactured for the World", el.Groups[1].Value, StringComparison.Ordinal);
+        Assert.Contains("<LineBreak/>", el.Groups[1].Value, StringComparison.Ordinal);
+
+        // 位置：在版號那一行之前——它是署名，要一眼就看到，不是卡片底部的小字。
+        int tag = xaml.IndexOf("x:Name=\"BrandTagline\"", StringComparison.Ordinal);
+        int meta = xaml.IndexOf("x:Name=\"VersionMetadata\"", StringComparison.Ordinal);
+        Assert.True(tag > 0 && meta > tag, "標語要在版號之前");
+
+        // 大小：內文 13–13.5、標題 30。這一句是「大一圈」，不是主標也不是註腳。
+        var fs = System.Text.RegularExpressions.Regex.Match(el.Value, "FontSize=\"([0-9.]+)\"");
+        Assert.True(fs.Success, "標語沒有指定字級");
+        double size = double.Parse(fs.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+        Assert.InRange(size, 14.0, 17.0);
+    }
 }

@@ -1573,7 +1573,7 @@ public static class HelpCatalog
         {
             Title = "免責聲明",
             What = "使用條件與責任範圍，以及第三方資料與工具的出處。",
-            Does = "本軟體為免費開源軟體，可自由下載、使用與散布，並嚴禁用於任何商業用途。軟體按「現狀」提供，所偵測之數值僅供參考，作者不對其準確性作任何明示或默示之擔保，一切使用風險由使用者自負。參考來源包含圖吧工具箱 WinUI3 與 Windows Package Manager（winget）等。",
+            Does = "本軟體以 GNU Affero General Public License, version 3 or later（AGPL-3.0-or-later）釋出：可自由下載、使用、研究、修改與散布，包含商業使用；若散布修改版，或把它當成網路服務提供給他人使用，須以相同授權公開原始碼。無法採用 AGPL 的閉源整合，另有商業授權（見 COMMERCIAL-LICENSE.md）。軟體按「現狀」提供，所偵測之數值僅供參考，作者不對其準確性作任何明示或默示之擔保，一切使用風險由使用者自負。參考來源包含圖吧工具箱 WinUI3 與 Windows Package Manager（winget）等。",
         },
         ["about/第三方授權"] = new()
         {

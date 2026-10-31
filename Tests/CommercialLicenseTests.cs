@@ -146,6 +146,48 @@ public class CommercialLicenseTests
     }
 
     [Fact]
+    public void 程式內不得再宣稱禁止商業使用()
+    {
+        // 「嚴禁用於任何商業用途」是 AGPL 之前的說法。AGPL-3.0-or-later 明文允許商業使用，
+        // 而 COMMERCIAL-LICENSE.md 賣的正是「不想公開原始碼的閉源整合」——兩句話同時存在，
+        // 等於告訴使用者「可以買授權，但你不准用」。這條把它擋在介面與文件之外。
+        string about = Read(Path.Combine("Views", "AboutView.xaml"));
+        Assert.DoesNotContain("嚴禁用於任何商業用途", about);
+        Assert.Contains("AGPL-3.0-or-later", about);
+        Assert.Contains("COMMERCIAL-LICENSE.md", about);
+
+        string help = Read(Path.Combine("Nav", "HelpCatalog.cs"));
+        Assert.DoesNotContain("嚴禁", help);
+        Assert.Contains("COMMERCIAL-LICENSE.md", help);
+
+        // README 的說明目錄是 HelpCatalog 的鏡像：只檢查那一行。沿革條目會引用舊句子
+        // （「原本寫……」，那是歷史紀錄，不是現在的宣稱），不能拿整份 README 去掃。
+        string readme = Read("README.md");
+        string? line = readme.Split('\n')
+            .FirstOrDefault(l => l.TrimStart().StartsWith("- 功能／怎麼讀：本軟體", StringComparison.Ordinal));
+        Assert.NotNull(line);
+        Assert.DoesNotContain("嚴禁", line!);
+        Assert.Contains("COMMERCIAL-LICENSE.md", line!);
+    }
+
+    [Fact]
+    public void 免責聲明的英文與中文說同一件事()
+    {
+        string en = Read(Path.Combine("Services", "EnglishStrings.cs"));
+        Assert.DoesNotContain("strictly non-commercial", en);
+        Assert.Contains("including commercially", en);
+        Assert.Contains("AGPL-3.0-or-later", en);
+        Assert.Contains("COMMERCIAL-LICENSE.md", en);
+
+        // 字串表以「中文原文」為鍵：中文改了字而鍵沒跟著改，英文模式會悄悄退回中文，
+        // 不會紅、也不會有人發現。所以關於頁那句話必須原樣出現在鍵裡。
+        string about = Read(Path.Combine("Views", "AboutView.xaml"));
+        var m = System.Text.RegularExpressions.Regex.Match(about, "Text=\"(本軟體以[^\"]*)\"");
+        Assert.True(m.Success, "關於頁找不到免責聲明那句（本軟體以…）");
+        Assert.Contains("[\"" + m.Groups[1].Value + "\"]", en);
+    }
+
+    [Fact]
     public void 第三方清單仍保留別人的授權條款()
     {
         // 反向守門：清掉「本專案曾是 MIT」的痕跡時，**不可以**連帶刪掉別人的 MIT 段落。
