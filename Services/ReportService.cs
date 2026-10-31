@@ -468,7 +468,7 @@ public static class ReportService
             {
                 s.Blocks.Add(new Block
                 {
-                    Caption = $"{g.VendorText}　{g.Name}",
+                    Caption = GpuCaption(g.VendorText, g.Name),
                     Rows = new List<(string, string)>
                     {
                         ("核心時脈", g.CoreClockText), ("記憶體時脈", g.MemClockText),
@@ -505,10 +505,10 @@ public static class ReportService
         foreach (var d in vm.PhysicalDisks)
             phys.Add(new[]
             {
-                d.CountText, d.Model, d.TypeText, d.CapacityText, d.InterfaceType,
+                d.CountText, d.Model, d.TypeText, d.CapacityText, InterfaceText(d.InterfaceType, d.Kind),
                 Id(d.SerialNumber, mask), d.Firmware, $"{SevText(d.HealthSeverity)}　{d.HealthDetail}".Trim(),
             });
-        s.Tbl("實體磁碟", new[] { "編號", "型號", "類型", "容量", "介面", "序號", "固件", "健康" }, phys);
+        s.Tbl("實體磁碟", new[] { "編號", "型號", "類型", "容量", "介面", "序號", "韌體", "健康" }, phys);
 
         if (vm.Live is { Drives.Count: > 0 } dl)
         {
@@ -667,6 +667,59 @@ public static class ReportService
         DiskKind.Hdd => "機械硬碟",
         _ => "介面未判定",
     };
+
+    /// <summary>
+    /// 「介面」欄：Windows 在 Win32_DiskDrive 回報的是驅動堆疊的 <c>InterfaceType</c>
+    /// （NVMe 走 StorPort 所以是 SCSI，SATA 走 ATA 埠所以是 IDE）。原樣照抄會讓讀者
+    /// 以為系統碟插在 IDE 排線上，所以在判得出來的時候補一句真實匯流排：
+    /// 「IDE（SATA）」。判不出來（USB 隨身碟等）就只寫 Windows 的那個值。
+    /// </summary>
+    internal static string InterfaceText(string? raw, DiskKind kind)
+    {
+        var r = (raw ?? "").Trim();
+        var bus = kind switch
+        {
+            DiskKind.NvmeSsd => "NVMe",
+            DiskKind.SataSsd or DiskKind.Hdd => "SATA",
+            _ => "",
+        };
+        if (bus.Length == 0) return D(r);
+        if (r.Length == 0 || r == "—") return bus;
+        return r.Contains(bus, StringComparison.OrdinalIgnoreCase) ? r : $"{r}（{bus}）";
+    }
+
+    /// <summary>
+    /// 顯示卡區塊標題：廠商名常常已經在型號裡（<c>NVIDIA TITAN Xp</c>），
+    /// 再拼一次就成了「NVIDIA　NVIDIA TITAN Xp」。
+    /// </summary>
+    internal static string GpuCaption(string? vendor, string? name)
+    {
+        var n = (name ?? "").Trim();
+        var v = (vendor ?? "").Trim();
+        if (n.Length == 0) return D(v);
+        if (v.Length == 0 || n.StartsWith(v, StringComparison.OrdinalIgnoreCase)) return n;
+        return $"{v}　{n}";
+    }
+
+    /// <summary>
+    /// 首屏「系統」磁貼的第二行：SMBIOS Type 1 沒填時會是 OEM 的佔位字串
+    /// （<c>System manufacturer</c> / <c>System Product Name</c>），照抄等於印了兩個空殼。
+    /// 這時改印主機板型號，並說明為什麼——不假裝那是機型。
+    /// </summary>
+    internal static string MachineText(MainViewModel vm)
+    {
+        var mk = (vm.System.SystemManufacturer ?? "").Replace(" ", "");
+        var md = (vm.System.SystemModel ?? "").Replace(" ", "");
+        bool placeholder = mk.Equals("Systemmanufacturer", StringComparison.OrdinalIgnoreCase)
+                        || md.Equals("SystemProductName", StringComparison.OrdinalIgnoreCase);
+        if (!placeholder)
+        {
+            var s = J(" ", vm.System.SystemManufacturer, vm.System.SystemModel);
+            if (s != "—") return s;
+        }
+        var board = J(" ", vm.System.BoardVendor, vm.System.BoardModel);
+        return board == "—" ? "—" : $"{board}（韌體未填機型）";
+    }
 
     private static string MaskEvidenceDetail(string detail)
     {
@@ -938,11 +991,10 @@ th{color:var(--muted);font-weight:600;font-size:12.5px;background:var(--surface)
         // 健康評分從首屏拿掉了——它在「整機摘要」節出現一次就夠；同一份報告裡
         // 同一個數字出現兩次，讀者會開始懷疑兩個是不是同一個算法算的。
         sb.Append("<div class=\"hero\">");
-        Tile(sb, "系統", Esc(D(vm.System.OsName)),
-             Esc(J(" ", vm.System.SystemManufacturer, vm.System.SystemModel)));
+        Tile(sb, "系統", Esc(D(vm.System.OsName)), Esc(MachineText(vm)));
         Tile(sb, "處理器與記憶體",
              Esc(vm.Cpu.Cores > 0 && vm.Cpu.Threads > 0 ? $"{vm.Cpu.Cores} 核 {vm.Cpu.Threads} 執行緒" : "—"),
-             Esc(J(" ・ ", vm.Timings.DataRateText, vm.Timings.ChannelsText)));
+             Esc(J(" ・ ", vm.Timings.MemorySizeText, vm.Timings.DataRateText, vm.Timings.ChannelsText)));
         Tile(sb, "儲存",
              Esc(vm.PhysicalDisks.Count > 0 ? $"{vm.PhysicalDisks.Count} 顆實體磁碟" : "—"),
              Esc(D(vm.Volumes.SummaryText)));

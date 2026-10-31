@@ -2876,7 +2876,7 @@ public sealed record EvidenceFactRow(string Category, string Name, string Value,
     }
 
     public static EvidenceFactRow From(HardwareSnapshotFact f) => new(f.Category, f.Name,
-        WithUnit(f.Value, f.Unit), f.Source,
+        WithUnit(f.Value, f.Unit ?? ""), f.Source,
         HardwareSnapshotService.TrustText(f.Trust), f.Sensitive, f.Availability, f.UnavailableReason);
 
     public static EvidenceFactRow From(HardwareFact f) => new(f.Category, f.Name,
