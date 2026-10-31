@@ -56,6 +56,16 @@ public class CommercialLicenseTests
         Assert.Contains("不是法律意見", doc);
         // 不得自稱要約（否則會變成對任何人都有效的報價）
         Assert.Contains("不構成要約", doc);
+
+        // 授權模式要寫成「雙授權」：兩條路、二選一、功能相同，差別只在散布時要不要開源。
+        Assert.Contains("雙授權", doc);
+        Assert.Contains("dual licensing", doc);
+        Assert.Contains("二選一", doc);
+        Assert.Contains("兩者不疊加", doc);
+
+        // 範圍的界線：沒有 CLA，商業授權只能涵蓋著作權人擁有的部分。
+        Assert.Contains("不要求簽 CLA", doc);
+        Assert.Contains("著作權人擁有的部分", doc);
     }
 
     [Fact]
