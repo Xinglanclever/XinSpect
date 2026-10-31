@@ -1,4 +1,4 @@
-﻿name: CI
+name: CI
 
 # 為什麼只跑守門測試、不跑全套：
 # 全套 7,712 條裡有一部分會讀真機硬體（SMBIOS、SPD、NVMe…），在 GitHub 的 hosted runner
@@ -33,10 +33,10 @@ jobs:
 
     steps:
       - name: 取出原始碼
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: 安裝 .NET SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "10.0.x"
 
@@ -53,7 +53,7 @@ jobs:
         run: dotnet test Tests/XinSpect.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~ChangelogTests|FullyQualifiedName~FactKeyCatalogTests|FullyQualifiedName~Ultimate10000CatalogTests|FullyQualifiedName~ReleasePipelineTests|FullyQualifiedName~ReleaseIntegrityTests|FullyQualifiedName~ReadmeStatsTests|FullyQualifiedName~ReadmeDomainTablesTests|FullyQualifiedName~ReadmeGeneratorTests|FullyQualifiedName~CommunityDocsTests|FullyQualifiedName~PciIdDatabaseTests" --logger "trx;LogFileName=guard.trx" --results-directory TestResults
 
       - name: 安裝 Python（產生器用）
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -70,7 +70,7 @@ jobs:
 
       - name: 上傳測試結果
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: guard-test-results
           path: TestResults/guard.trx
