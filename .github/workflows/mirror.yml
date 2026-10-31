@@ -1,0 +1,66 @@
+name: 鏡像同步
+
+# 發佈後把四件資產同步到 Google Drive／123 雲盤（Tools/sync-mirrors.py）。
+#
+# 需要一個 repository secret：RCLONE_CONF —— `rclone config file` 那份 rclone.conf 的
+# base64（`base64 -w0 rclone.conf`）。沒設就整個 job 跳過，不會紅：這一步是加分，
+# 不該讓一個還沒設定的人每次發版都看到失敗。
+#
+# 設定步驟見 docs/MIRRORS.md。
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版號（例如 3.08；留空＝讀 csproj）'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 檢查是否設定了 RCLONE_CONF
+        id: gate
+        env:
+          CONF: ${{ secrets.RCLONE_CONF }}
+        run: |
+          if [ -z "$CONF" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "沒有設定 RCLONE_CONF，跳過鏡像同步（docs/MIRRORS.md 有設定步驟）。"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 安裝 rclone 並寫入設定
+        if: steps.gate.outputs.skip == 'false'
+        env:
+          CONF: ${{ secrets.RCLONE_CONF }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq rclone
+          mkdir -p ~/.config/rclone
+          printf '%s' "$CONF" | base64 -d > ~/.config/rclone/rclone.conf
+          rclone listremotes
+
+      - name: 同步並對帳
+        if: steps.gate.outputs.skip == 'false'
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          WANT: ${{ inputs.version }}
+        run: |
+          set -eu
+          VER="${WANT:-${TAG#v}}"
+          # 兩個都空（手動觸發又沒填）就交回腳本自己讀 XinSpect.csproj 的版號。
+          if [ -n "$VER" ]; then
+            python Tools/sync-mirrors.py --sync --source release --version "$VER"
+          else
+            python Tools/sync-mirrors.py --sync --source release
+          fi

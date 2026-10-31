@@ -66,3 +66,6 @@ verify-shots-*/
 # ---- 建置殘骸（WPF 暫存專案與 repro-build 的 BaseOutputPath 誤植目錄）----
 XinSpect_*_wpftmp.csproj
 Bridge/UsersAdministratorXinSpect*/
+
+# Python 執行 Tools/*.py 留下的位元組碼
+__pycache__/

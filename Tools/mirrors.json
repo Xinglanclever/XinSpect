@@ -1,0 +1,27 @@
+{
+  "_說明": [
+    "鏡像同步設定（Tools/sync-mirrors.py 讀這一份）。",
+    "憑證不放這裡：rclone 自己保管（rclone config），這份只寫「上傳到哪、分享連結是什麼」。",
+    "path 是相對 remote 的資料夾，四個檔案就地覆寫；分享連結因此不必隨版本改。",
+    "mode 寫進 Installer/mirrors.txt：direct＝目錄型直連（GitHub 那種），page＝分享頁。",
+    "兩個網盤都不支援「目錄型直連」：Drive 沒有這種端點，123 雲盤的直連會過期，所以都是 page。"
+  ],
+  "providers": {
+    "gdrive": {
+      "label": "Google Drive",
+      "enabled": false,
+      "remote": "gdrive:",
+      "path": "XinSpect/latest",
+      "share": "",
+      "mode": "page"
+    },
+    "123pan": {
+      "label": "123 雲盤",
+      "enabled": false,
+      "remote": "123:",
+      "path": "XinSpect/latest",
+      "share": "",
+      "mode": "page"
+    }
+  }
+}
