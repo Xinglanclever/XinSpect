@@ -165,6 +165,9 @@ public class CommercialLicenseTests
         Assert.DoesNotContain("嚴禁用於任何商業用途", about);
         Assert.Contains("AGPL-3.0-or-later", about);
         Assert.Contains("COMMERCIAL-LICENSE.md", about);
+        // 授權模式要說成雙授權，而不是「主要一種、另外附帶一種」。
+        Assert.Contains("雙授權", about);
+        Assert.Contains("dual licensing", about);
 
         string help = Read(Path.Combine("Nav", "HelpCatalog.cs"));
         Assert.DoesNotContain("嚴禁", help);
@@ -185,14 +188,14 @@ public class CommercialLicenseTests
     {
         string en = Read(Path.Combine("Services", "EnglishStrings.cs"));
         Assert.DoesNotContain("strictly non-commercial", en);
-        Assert.Contains("including commercially", en);
+        Assert.Contains("use commercially", en);
         Assert.Contains("AGPL-3.0-or-later", en);
         Assert.Contains("COMMERCIAL-LICENSE.md", en);
 
         // 字串表以「中文原文」為鍵：中文改了字而鍵沒跟著改，英文模式會悄悄退回中文，
         // 不會紅、也不會有人發現。所以關於頁那句話必須原樣出現在鍵裡。
         string about = Read(Path.Combine("Views", "AboutView.xaml"));
-        var m = System.Text.RegularExpressions.Regex.Match(about, "Text=\"(本軟體以[^\"]*)\"");
+        var m = System.Text.RegularExpressions.Regex.Match(about, "Text=\"(本軟體[^\"]*)\"");
         Assert.True(m.Success, "關於頁找不到免責聲明那句（本軟體以…）");
         Assert.Contains("[\"" + m.Groups[1].Value + "\"]", en);
     }
