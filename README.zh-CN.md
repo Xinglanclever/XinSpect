@@ -474,11 +474,11 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 |---|---|---|
 | [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.08/XinSpect.exe) | 36,955,947 bytes | 主程序。蓝色中队守护进程已内置 |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.08/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.08/XinSpectDeploy.exe) | 15,360 bytes | 一键安装器（可选 GitHub／Google Drive／中国网盘三个下载来源；下载时显示进度条、速度与剩余时间） |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.08/XinSpectDeploy.exe) | 15,360 bytes | 一键安装器（可选 GitHub／Google Drive／中国直连线路三个下载来源；下载时显示进度条、速度与剩余时间） |
 
 > **上表的字节数为本版（v3.08）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
-安装器（`XinSpectDeploy.exe`）会列出三个来源：**1** 是 GitHub 最新版（全自动部署主程序＋守护进程）、**2** 是 Google Drive 镜像、**3** 是中国网盘（123 云盘）分享页——网盘没有稳定直连，所以它只打开浏览器并告诉你按哪里，不会把分享页存成一个假的 exe。镜像链接集中在 `Installer/mirrors.txt`，安装器启动时会抓一份最新的（3 秒超时，拿不到就用内置的）；某一格还没有链接时，菜单上会写「尚未提供」，按下去会先说明再改用 GitHub。下载完成后一律检查 PE 标头，抓到 HTML（分享页、限流页、Google 的病毒扫描确认页）会被挡下、删档并说出内容像什么。
+安装器（`XinSpectDeploy.exe`）会列出三个来源：**1** 是 GitHub 最新版（全自动部署主程序＋守护进程）、**2** 是 Google Drive 镜像（分享文件夹，它会打开浏览器并告诉你按哪里）、**3** 是中国直连线路——目录型端点，安装器自己抓档，跟按 1 一样有进度条、速度与剩余时间。判断哪一格用哪种模式，看的是端点本身：只有真的能用 GET 取回目录下文件的线路才写成直连，分享页一律只打开浏览器，不会把分享页存成一个假的 exe。镜像链接集中在 `Installer/mirrors.txt`，安装器启动时会抓一份最新的（3 秒超时，拿不到就用内置的）；某一格还没有链接时，菜单上会写「尚未提供」，按下去会先说明再改用 GitHub。下载完成后一律检查 PE 标头，抓到 HTML（分享页、限流页、Google 的病毒扫描确认页）会被挡下、删档并说出内容像什么。
 
 ### 4.1 版本与完整性
 

@@ -61,12 +61,12 @@
 |---|---|---|
 | [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.08/XinSpect.exe) | 36,955,947 bytes | 主程式。藍色中隊守護進程已內建 |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.08/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。要脫離主程式單獨跑防護時使用 |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.08/XinSpectDeploy.exe) | 15,360 bytes | 一鍵安裝器。按 1 GitHub、按 2 Google Drive、按 3 中國網盤分享頁；下載時顯示進度條、速度與剩餘時間 |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.08/XinSpectDeploy.exe) | 15,360 bytes | 一鍵安裝器。按 1 GitHub、按 2 Google Drive、按 3 中國直連線路；下載時顯示進度條、速度與剩餘時間 |
 | [SHA256SUMS.txt](https://github.com/Xinglanclever/XinSpect/releases/download/v3.08/SHA256SUMS.txt) | 253 bytes | 逐檔雜湊，發佈後由 `Tools/verify-release.ps1` 對帳 |
 
 > **上表的位元組數為本版（v3.08）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
-安裝器（`XinSpectDeploy.exe`）會列出三個來源：**1** 是 GitHub 最新版（全自動部署主程式＋守護進程）、**2** 是 Google Drive 鏡像、**3** 是中國網盤（123 雲盤）分享頁——網盤沒有穩定直連，所以它只開瀏覽器並告訴你要按哪裡，不會把分享頁存成一個假的 exe。鏡像連結集中在 `Installer/mirrors.txt`，安裝器啟動時會抓一份最新的（3 秒逾時，拿不到就用內建的）；某一格還沒有連結時，選單上會寫「尚未提供」，按下去會先說明再改用 GitHub。下載完成後一律檢查 PE 標頭，抓到 HTML（分享頁、限流頁、Google 的病毒掃描確認頁）會被擋下、刪檔並說出內容像什麼。
+安裝器（`XinSpectDeploy.exe`）會列出三個來源：**1** 是 GitHub 最新版（全自動部署主程式＋守護進程）、**2** 是 Google Drive 鏡像（分享資料夾，它會開瀏覽器並告訴你要按哪裡）、**3** 是中國直連線路——目錄型端點，安裝器自己抓檔，跟按 1 一樣有進度條、速度與剩餘時間。判斷哪一格用哪種模式，看的是端點本身：只有真的能用 GET 取回目錄下檔案的線路才寫成直連，分享頁一律只開瀏覽器，不會把分享頁存成一個假的 exe。鏡像連結集中在 `Installer/mirrors.txt`，安裝器啟動時會抓一份最新的（3 秒逾時，拿不到就用內建的）；某一格還沒有連結時，選單上會寫「尚未提供」，按下去會先說明再改用 GitHub。下載完成後一律檢查 PE 標頭，抓到 HTML（分享頁、限流頁、Google 的病毒掃描確認頁）會被擋下、刪檔並說出內容像什麼。
 
 需求：Windows 10 1903 以上／Windows 11、x64、.NET 10 Desktop Runtime（單檔版不含執行階段，需另裝）。想以管理員權限取得感測器、MSR 直讀與超頻頁面，請「以系統管理員身分執行」——不提權不是壞掉，只是那些頁面會整片顯示「—」（原因見第 0 部的六態）。
 

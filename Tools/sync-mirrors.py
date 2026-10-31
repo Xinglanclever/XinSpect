@@ -149,6 +149,8 @@ def load_config():
     if not providers:
         die("%s 裡沒有 providers" % os.path.relpath(CONFIG_PATH, ROOT))
     for name, p in providers.items():
+        if not p.get("enabled", True):
+            continue  # 還沒接上的 provider 只留名字與說明，不強迫填 remote
         for key in ("remote", "path"):
             if not p.get(key):
                 die("provider %s 缺 %s" % (name, key))
@@ -327,12 +329,12 @@ def run_check(cfg, assets):
 def run_update_mirrors(cfg):
     """依設定檔重寫 mirrors.txt 的 2／3 兩格。分享連結不變就不要跑這個。"""
     wanted = {}
-    for key, prov in ((2, "gdrive"), (3, "123pan")):
+    for key, prov, default_mode in ((2, "gdrive", "page"), (3, "chinadirect", "direct")):
         p = cfg["providers"].get(prov) or {}
         if p.get("enabled", True) and p.get("share"):
-            wanted[key] = (p["share"], p.get("mode", "page" if key == 3 else "direct"))
+            wanted[key] = (p["share"], p.get("mode", default_mode))
     if not wanted:
-        die("設定檔裡沒有可寫進 mirrors.txt 的 share（gdrive／123pan 要 enabled 且有 share）")
+        die("設定檔裡沒有可寫進 mirrors.txt 的 share（gdrive／chinadirect 要 enabled 且有 share）")
 
     with open(MIRRORS_TXT, encoding="utf-8") as f:
         text = f.read()

@@ -6,14 +6,16 @@
 #
 # 規矩：
 #   1. 只列真的存在、而且已經自己點過一次的連結。留著空行比留一個死連結好。
-#   2. 「目錄型直連」只有 GitHub Release 那種真的能 GET 目錄的端點才有。
-#      Google Drive 沒有這種端點（它的 uc?id= 是**單一檔案**，安裝器會把檔名接在後面，
-#      接出來是壞網址）；123 雲盤的直連會過期。所以 2、3 兩格一律 page。
-#   3. 改完這一行不用重編 exe；只有改到 exe 內建的預設值才需要重跑 Tools\build-installer.ps1。
+#   2. direct 只給「真的能用 GET 取回目錄下檔案」的端點（GitHub Release、直連線路、
+#      release 附件那一類）。Google Drive 的 uc?id= 是**單一檔案**，安裝器會把檔名接在
+#      後面，接出來是壞網址——所以第 2 格是 page（開資料夾頁）。
+#   3. 第 3 格是「中國直連線路」：它天生就是 direct（按 3 由安裝器自己抓，有進度條與
+#      速度）。分享頁不屬於這一格——那種連結寫在 2。
+#   4. 改完這一行不用重編 exe；只有改到 exe 內建的預設值才需要重跑 Tools\build-installer.ps1。
 #
 # 自動上傳與對帳：python Tools/sync-mirrors.py --sync（設定見 docs/MIRRORS.md）
-# 兩個網盤都只維護一個固定的 XinSpect/latest/ 資料夾、就地覆寫，
-# 分享的是資料夾——所以下面的連結設定一次之後不必隨版本改。
+# 網盤只維護一個固定的 XinSpect/latest/ 資料夾、就地覆寫，分享的是資料夾——
+# 所以第 2 格的連結設定一次之後不必隨版本改。
 
 1|https://github.com/Xinglanclever/XinSpect/releases/latest/download/|direct
 2|https://drive.google.com/drive/folders/1V3PoEMkee-iI6Ep2dk5r61vsxpohhYDs|page
@@ -22,5 +24,6 @@
 #     不要貼 uc?export=download&id=…：那是單一檔案，安裝器的 direct 模式會把檔名接上去。
 # 2|https://drive.google.com/drive/folders/<FOLDER_ID>|page
 
-# 3 ＝ 中國網盤（123 雲盤）：分享頁沒有穩定直連，一律用 page 模式。
-# 3|https://www.123pan.com/s/<SHARE_ID>|page
+# 3 ＝ 中國直連線路：目錄型端點，結尾要有斜線（安裝器會接上 XinSpect.exe）。
+#     例：3|https://<你的鏡像>/XinSpect/latest/|direct
+# 3|https://<MIRROR_HOST>/XinSpect/latest/|direct

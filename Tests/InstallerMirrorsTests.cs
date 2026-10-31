@@ -149,7 +149,7 @@ public sealed class InstallerMirrorsTests
     }
 
     [Fact]
-    public void 第三格是中國網盤且只能是分享頁模式()
+    public void 第三格是中國直連線路且必須是目錄型端點()
     {
         string src = Source;
         int three = src.IndexOf("Key = \"3\"", StringComparison.Ordinal);
@@ -157,17 +157,19 @@ public sealed class InstallerMirrorsTests
         Assert.True(after > three);
 
         string block = src.Substring(three, after - three);
-        Assert.Contains("網盤", block);
-        // 網盤沒有穩定直連：寫成 direct 就是把「下載到 HTML」當成功。
-        Assert.Contains("Direct = false", block);
+        Assert.Contains("直連線路", block);
+        // 這一格的身份是「能用 GET 取回目錄下檔案的線路」，所以一定是 direct：
+        // 寫成 page 就等於把一個 CDN 降級成要使用者自己按的下載頁，白費了直連。
+        Assert.Contains("Direct = true", block);
+        Assert.DoesNotContain("Direct = false", block);
 
-        // mirrors.txt 裡真的填了 3 的時候也必須是 page。
+        // mirrors.txt 裡真的填了 3 的時候也必須是 direct——分享頁不屬於這一格。
         var line = MirrorList.Split('\n')
             .Select(l => l.Trim())
             .FirstOrDefault(l => l.StartsWith("3|", StringComparison.Ordinal) && !l.StartsWith("#"));
         if (line is not null)
         {
-            Assert.EndsWith("|page", line);
+            Assert.EndsWith("|direct", line);
         }
     }
 
@@ -314,8 +316,8 @@ public sealed class InstallerMirrorsTests
 
         Assert.True(Contains(bytes, Encoding.Unicode.GetBytes("選擇下載來源")),
             "exe 裡找不到新版選單的字串——Install.cs 改了但沒有重跑 Tools\\build-installer.ps1");
-        Assert.True(Contains(bytes, Encoding.Unicode.GetBytes("123 雲盤")),
-            "exe 裡沒有網盤那一格");
+        Assert.True(Contains(bytes, Encoding.Unicode.GetBytes("中國直連線路")),
+            "exe 裡沒有第 3 格（中國直連線路）——Install.cs 改了但沒有重跑 Tools\\build-installer.ps1");
         // 進度列是這一版才有的字串：少了它代表上傳的還是舊 exe。
         Assert.True(Contains(bytes, Encoding.Unicode.GetBytes("MB/s")),
             "exe 裡沒有下載速度的字串——Install.cs 改了但沒有重跑 Tools\\build-installer.ps1");

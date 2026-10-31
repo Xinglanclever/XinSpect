@@ -9,8 +9,9 @@ internal static class Install
 {
     // 一個下載來源。Direct=true 時 BaseUrl 是「檔案所在目錄」，安裝器自己抓；
     // Direct=false 時 BaseUrl 是分享頁，安裝器只開瀏覽器並說清楚要按什麼。
-    // 網盤（尤其 123 雲盤）沒有穩定的直連，假裝能直連只會讓使用者卡在一個
-    // 下載到 HTML 的「XinSpect.exe」上，所以兩者分開處理，不混在一起。
+    // 要用哪一種，看的是**端點本身**：只有真的能用 GET 取回目錄下檔案的
+    // 線路（GitHub Release、自建 CDN、碼雲附件那一類）才寫 direct。網盤的分享頁不是
+    // 目錄、直連又會過期，假裝能直連只會讓使用者卡在一個下載到 HTML 的「XinSpect.exe」上。
     private sealed class Mirror
     {
         public string Key;
@@ -27,7 +28,10 @@ internal static class Install
 
     // 內建預設：留空＝這一版還沒有這個鏡像（選單上如實寫「尚未提供」，不會偷偷退回 GitHub）。
     private const string GoogleDriveFileId = "";
-    private const string ChinaPanShareUrl = "";
+
+    // 中國直連線路：目錄型端點（能用 GET 取回該目錄下的檔名），不是網盤分享頁。
+    // 留空＝還沒有；填了就按 3 由安裝器自己抓，跟按 1 一樣有進度條與速度。
+    private const string ChinaDirectBase = "";
 
     static int Main(string[] args)
     {
@@ -132,9 +136,9 @@ internal static class Install
         list.Add(new Mirror
         {
             Key = "3",
-            Name = "中國網盤（123 雲盤分享頁）",
-            BaseUrl = ChinaPanShareUrl,
-            Direct = false
+            Name = "中國直連線路（鏡像）",
+            BaseUrl = ChinaDirectBase,
+            Direct = true
         });
 
         string text = FetchMirrorList();
