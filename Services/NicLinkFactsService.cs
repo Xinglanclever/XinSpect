@@ -71,27 +71,31 @@ public static class NicLinkFactsService
 
     // ── 生產探測（唯讀 WMI）──
 
+    /// <summary>
+    /// 網卡基礎查詢。欄位名要逐字對過 schema——WQL 混進一個不存在的欄位不是「少一欄」，
+    /// 是<b>整條查詢失敗</b>，畫面上整段網卡落差歸零，看起來像「這台機器沒有網卡」。
+    /// <c>LinkSpeed</c>／<c>MediaType</c> 在 <c>MSFT_NetAdapter</c> 不存在；
+    /// 連線狀態的拼法是 <c>MediaConnectState</c>（UInt32：0 未知／1 已連線／2 未連線）。
+    /// </summary>
+    internal const string BaseQuery =
+        "SELECT Name, InterfaceDescription, Speed, MediaConnectState FROM MSFT_NetAdapter";
+
     internal static IReadOnlyList<NicLinkSample> ReadAll()
     {
         var linkSpeed = new Dictionary<string, ulong>(StringComparer.OrdinalIgnoreCase);
         var desc = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var up = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
-        var media = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var state = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         try
         {
-            using var s = new ManagementObjectSearcher(Scope,
-                "SELECT Name, InterfaceDescription, LinkSpeed, Speed, MediaType, MediaConnectionState "
-                + "FROM MSFT_NetAdapter");
+            using var s = new ManagementObjectSearcher(Scope, BaseQuery);
             foreach (ManagementObject o in s.Get())
                 using (o)
                 {
                     string name = Str(o, "Name");
                     if (name.Length == 0) continue;
                     desc[name] = Str(o, "InterfaceDescription");
-                    media[name] = Str(o, "MediaType");
-                    up[name] = Str(o, "MediaConnectionState")
-                        .Equals("Connected", StringComparison.OrdinalIgnoreCase);
+                    state[name] = o["MediaConnectState"] is { } st ? Convert.ToInt32(st) : 0;
                     linkSpeed[name] = o["Speed"] is { } v ? Convert.ToUInt64(v) : 0;
                 }
         }
@@ -158,14 +162,20 @@ public static class NicLinkFactsService
         foreach (string name in desc.Keys)
         {
             var (cs, cw, ms, mw) = pcie.TryGetValue(name, out var p) ? p : (0, 0, 0, 0);
+            int st = state.TryGetValue(name, out int sv) ? sv : 0;
             result.Add(new NicLinkSample(
                 name,
                 desc[name],
-                up.TryGetValue(name, out bool u) && u,
-                media.TryGetValue(name, out var m) ? m : "",
+                st == 1,
+                // 媒體類型：這個類別沒有可靠欄位（MediaType 不存在；AdapterType 對 Wi-Fi 也回
+                // Ethernet 802.3），所以如實留空，由判讀層印「未知」，不從介面名稱猜。
+                "",
                 cs, cw, ms, mw,
                 linkSpeed.TryGetValue(name, out ulong bps) ? bps : 0,
-                supported.TryGetValue(name, out var sup) ? sup : []));
+                supported.TryGetValue(name, out var sup) ? sup : [])
+            {
+                ConnectStateKnown = st != 0,
+            });
         }
         result.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
         return result;

@@ -41,11 +41,44 @@ public sealed class DeepAccessTests
             Assert.True(File.Exists(Path.Combine(dir, "XinSpectCA.cer")));
             Assert.Contains(store.Trusted, t => t.Length >= 40); // 有 thumbprint 進信任庫
 
+            // 簽 .sys 的那張必須是「葉憑證」：CA=FALSE + Code Signing EKU。
+            // 拿 CA 直接簽會得到 0x80096019（TRUST_E_BASIC_CONSTRAINTS），驅動載不進去。
+            string signPfx = Path.Combine(dir, "XinSpectSign.pfx");
+            string signKey = Path.Combine(dir, "XinSpectSign.pfxkey");
+            Assert.True(File.Exists(signPfx) && File.Exists(signKey));
+            using var leaf = new X509Certificate2(signPfx, File.ReadAllText(signKey).Trim());
+            Assert.Equal(DeepAccessService.SignSubject, leaf.Subject);
+            Assert.False(leaf.Extensions.OfType<X509BasicConstraintsExtension>().Single().CertificateAuthority);
+            Assert.Contains(leaf.Extensions.OfType<X509EnhancedKeyUsageExtension>().Single().EnhancedKeyUsages
+                                .Cast<Oid>(), o => o.Value == "1.3.6.1.5.5.7.3.3");
+
             // CA 本體要真的是自簽根（CA=TRUE），否則後面簽 .sys 這條窄路就是假的
             using var ca = new X509Certificate2(Path.Combine(dir, "XinSpectCA.cer"));
             var constraints = ca.Extensions.OfType<X509BasicConstraintsExtension>().Single();
             Assert.True(constraints.CertificateAuthority);
             Assert.Equal(DeepAccessService.CaSubject, ca.Subject);
+        }
+        finally { try { Directory.Delete(dir, true); } catch { } }
+    }
+
+    [Fact]
+    public void 啟用時會用本機CA簽署未簽章的驅動()
+    {
+        // 部署器送來的是未簽章檔；核心不會載入它。這條測的是「啟用前先簽」這一步。
+        string dir = TempDir();
+        DeploySys(dir);
+        var signer = new FakeSigner();
+        try
+        {
+            var sut = new DeepAccessService(new FakeStore(), new FakeService(), dir,
+                isElevated: true, handshakeProbe: () => null, signer: signer);
+
+            var status = sut.Enable();
+
+            Assert.Equal(1, signer.Calls);
+            Assert.NotNull(signer.LastPfx);
+            Assert.EndsWith("XinSpectSign.pfx", signer.LastPfx!);
+            Assert.Contains(status.Notes, n => n.Contains("簽章"));
         }
         finally { try { Directory.Delete(dir, true); } catch { } }
     }
@@ -248,6 +281,19 @@ public sealed class DeepAccessTests
         public bool IsTrusted(string thumbprint) => Trusted.Contains(thumbprint);
         public void InstallTrusted(X509Certificate2 publicCertificate) => Trusted.Add(publicCertificate.Thumbprint);
         public void RemoveTrusted(string thumbprint) => Trusted.Remove(thumbprint);
+    }
+
+    private sealed class FakeSigner : ISysSigner
+    {
+        public int Calls { get; private set; }
+        public string? LastPfx { get; private set; }
+        public bool Sign(string sysPath, string pfxPath, string password, out string message)
+        {
+            Calls++;
+            LastPfx = pfxPath;
+            message = "已用本機 CA 簽章（假件）。";
+            return true;
+        }
     }
 
     private sealed class FakeService : IDriverServiceControl

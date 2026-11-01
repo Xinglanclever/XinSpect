@@ -25,10 +25,27 @@ public sealed class M2AnalysisService : ObservableObject
 
     public M2AnalysisService()
     {
-        DetectSlots();
+        // 與 CpuPinoutService／DimmReferenceService 同一套規矩：本服務在 MainViewModel 的欄位初始化式
+        // 就 eager 建立（主視窗還沒顯示），而這裡要做兩件可能不回應的事——讀 SMBIOS 韌體表、
+        // 連兩個 WMI 命名空間（root\Microsoft\Windows\Storage、root\WMI）。卡在任何一件上，
+        // 主視窗就永遠不出現。所以收集丢到背景，補資料時再回 UI 執行緒
+        // （Slots／PossibleSlots／DriveNotes 是 ObservableCollection，只能在 UI 執行緒增刪）。
+        _ = Task.Run(() =>
+        {
+            var snap = Collect();
+            Shell.BeginOnUi(() => Apply(snap));
+        });
     }
 
-    void DetectSlots()
+    /// <summary>一次偵測的結果；收集與套用分開，收集才能在背景跑、套用留在 UI 執行緒。</summary>
+    internal sealed record Snapshot(
+        List<SmbiosSlotRow> Typed, List<SmbiosSlotRow> Inferred,
+        List<string> Drives, int Nvme, string Summary);
+
+    /// <summary>
+    /// 收集插槽與磁碟外型。<paramref name="readDisks"/>／<paramref name="timeoutMs"/> 是測試注入點。
+    /// </summary>
+    internal Snapshot Collect(Func<List<PhysicalDiskInfo>>? readDisks = null, int? timeoutMs = null)
     {
         var typed = new List<SmbiosSlotRow>();
         var inferred = new List<SmbiosSlotRow>();
@@ -46,21 +63,34 @@ public sealed class M2AnalysisService : ObservableObject
         catch { /* 讀不到 SMBIOS 不影響下面的磁碟清單 */ }
 
         int nvme = 0;
-        try
+        // DiskInfoService.Query() 會連兩個 WMI 命名空間、逐類別列舉；列舉沒有可用的逾時，
+        // 整機 WMI 卡住時它就永遠不回來（見 WmiGuard）。
+        var (disks, timedOut) = WmiGuard.Probe(readDisks ?? DiskInfoService.Query,
+            timeoutMs ?? WmiGuard.DefaultTimeoutMs);
+
+        if (disks is not null)
         {
-            foreach (var disk in DiskInfoService.Query())
+            foreach (var disk in disks)
             {
                 if (disk.Kind == DiskKind.NvmeSsd) nvme++;
                 drives.Add($"{disk.CountText} ・ {disk.Model} ・ {M2Detection.DescribeDriveForm(disk.Kind, disk.Model)}");
             }
         }
-        catch { /* 磁碟清單讀不到時照實只講插槽 */ }
+        else if (timedOut)
+        {
+            // 讀不到就說讀不到：留白會被看成「這台機器沒有磁碟」。
+            drives.Add("—（WMI 無回應，略過磁碟外型清單）");
+        }
 
-        foreach (var s in typed) Slots.Add(s);
-        foreach (var s in inferred) PossibleSlots.Add(s);
-        foreach (string d in drives) DriveNotes.Add(d);
+        return new Snapshot(typed, inferred, drives, nvme, M2Detection.Summarize(typed, inferred, nvme));
+    }
 
-        DetectedSlots = M2Detection.Summarize(typed, inferred, nvme);
+    void Apply(Snapshot snap)
+    {
+        foreach (var s in snap.Typed) Slots.Add(s);
+        foreach (var s in snap.Inferred) PossibleSlots.Add(s);
+        foreach (string d in snap.Drives) DriveNotes.Add(d);
+        DetectedSlots = snap.Summary;
     }
 
     static List<M2FormFactor> BuildFormFactors() =>

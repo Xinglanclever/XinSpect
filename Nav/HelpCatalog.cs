@@ -2026,7 +2026,7 @@ public static class HelpCatalog
         {
             Title = "深層核心存取",
             What = "載入本專案的 XsRegProbe 白名單唯讀核心驅動，讓 SPI 快閃與 PCIe AER 等 MMIO 暫存器讀得到。驅動源碼在 repo 的 XsRegProbe/，.sys 需自行編譯簽章後載入（見 XsRegProbe/BUILD-給使用者.md）。",
-            Does = "開＝產生本專案自簽 CA 裝進信任庫（只放行這一張憑證，不開全機 test-signing）並啟動 XsRegProbe 服務；關＝移除信任並卸載服務，不留痕跡。非提權執行時按鈕不會做任何變更；驅動對允許清單外的位址一律拒絕。",
+            Does = "開＝產生本專案自簽 CA 裝進信任庫並嘗試啟動 XsRegProbe 服務；關＝移除信任並卸載服務，不留痕跡。非提權執行時按鈕不會做任何變更；驅動對允許清單外的位址一律拒絕。Windows 核心簽章只接受 Microsoft 信任鏈，自簽驅動在未開 testsigning 的機器上會以 577 拒絕載入——這是政策限制，不是設定缺漏；MMIO（SPIBAR／MCHBAR／ECAM）只能靠這支驅動，WinRing0 實測不提供可用的實體記憶體讀取（它只負責 MSR 與 PCI 設定空間）。",
             Risk = HelpRisk.Caution,
             Safety = "會安裝核心驅動服務與本專案簽發的根憑證（皆可完全移除）；驅動唯讀、退出即卸載，但載入任何核心碼前請先看懂建置手冊。",
         },

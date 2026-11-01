@@ -13,6 +13,7 @@
  * 讀不到（例外／映射失敗）就回對應 NTSTATUS，絕不回 0 頂替成功。
  */
 #include <ntddk.h>
+#include <wdmsec.h>   /* IoCreateDeviceSecure 的宣告與實作（wdmsec.lib）在 Win10 之後不會由 ntddk.h 帶進來 */
 #include <intrin.h>
 #include "XrpContract.h"
 
@@ -204,12 +205,16 @@ NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject, _In_ PUNICODE_STRING Regi
     UNICODE_STRING devName = RTL_CONSTANT_STRING(XRP_DEVICE_NAME);
     UNICODE_STRING symLink = RTL_CONSTANT_STRING(XRP_SYMLINK_NAME);
     UNICODE_STRING sddl = RTL_CONSTANT_STRING(L"D:P(A;;GA;;;BA)"); /* 僅管理員完整存取（比照 BlueSquadron） */
-    UNICODE_STRING classGuid = RTL_CONSTANT_STRING(L"{4d36e97d-e325-11ce-bfc1-08002be10318}");
+    /* 裝置類別要的是 GUID，不是字串：先前把 UNICODE_STRING 傳給 LPCGUID 參數，
+       編譯器只給 C4133，執行期會拿指標內容當 GUID 讀（裝置類別變成垃圾）。
+       4d36e97d-… 是 System 類別。 */
+    static const GUID XrpDevClassGuid =
+        { 0x4d36e97d, 0xe325, 0x11ce, { 0xbf, 0xc1, 0x08, 0x00, 0x2b, 0xe1, 0x03, 0x18 } };
 
     NTSTATUS status = IoCreateDeviceSecure(
         DriverObject, 0, &devName,
         FILE_DEVICE_UNKNOWN, FILE_DEVICE_SECURE_OPEN, FALSE,
-        &sddl, &classGuid,
+        &sddl, &XrpDevClassGuid,
         &g_DeviceObject);
     if (!NT_SUCCESS(status)) return status;
 

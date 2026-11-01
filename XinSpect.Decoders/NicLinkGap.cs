@@ -25,7 +25,14 @@ public readonly record struct NicLinkSample(
     int PcieMaxSpeed,
     int PcieMaxWidth,
     ulong EthCurrentBps,
-    IReadOnlyList<ulong> SupportedSpeedsBps);
+    IReadOnlyList<ulong> SupportedSpeedsBps)
+{
+    /// <summary>
+    /// 驅動有沒有回報連線狀態。<c>MediaConnectState＝0</c> 是「未知」，不是「未連線」——
+    /// 把不知道講成未連線，會叫人去查線材／換埠，查錯方向比承認不知道更糟。
+    /// </summary>
+    public bool ConnectStateKnown { get; init; } = true;
+}
 
 /// <summary>
 /// 網卡落差的判讀：把「這張卡宣稱的能力」與「兩條鏈路各自實際跑到的值」擺在一起。
@@ -94,6 +101,13 @@ public static class NicLinkGap
     {
         if (s.Name.Length == 0)
             return new Verdict(GapKind.Unknown, "—（沒有介面資訊）", "介面名稱為空，無從判讀。", false);
+
+        // 驅動沒回報連線狀態（MediaConnectState＝0）時不判。把「不知道」寫成「未連線」是假陳述，
+        // 而且會讓使用者去查線材——查錯方向比說不知道更糟。
+        if (!s.ConnectStateKnown)
+            return new Verdict(GapKind.Unknown, "—（連線狀態未回報）",
+                $"{s.Name}（{s.Description}）：驅動沒有回報 MediaConnectState（0＝未知）。"
+                + "連線狀態未知時不比較鏈路，也不寫成「未連線」——如實標示不適用。", false);
 
         if (!s.IsUp)
             return new Verdict(GapKind.NotConnected,

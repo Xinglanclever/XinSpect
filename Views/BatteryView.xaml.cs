@@ -20,18 +20,33 @@ public partial class BatteryView : UserControl
 
     private double _wearPercent;
 
-    private void Read()
+    private void Read() => _ = Task.Run(() =>
     {
-        var b = _svc.Read();
-        if (!b.Present)
+        // BatteryService 讀的是 root\wmi 的電池類別。整機 WMI 卡住時這條查詢不會回來，
+        // 而這裡原本直接在 UI 執行緒上跑（進頁 Loaded 與「重新讀取」都是）——表現就是「點開電池頁，
+        // 整個視窗凍住」。讀丢背景並加上界，回到 UI 才碰控制項。
+        var (info, timedOut) = WmiGuard.Probe(() => _svc.Read());
+        Shell.BeginOnUi(() => Apply(info, timedOut));
+    });
+
+    void Apply(BatteryInfo? info, bool timedOut)
+    {
+        if (info is null || !info.Present)
         {
             EmptyCard.Visibility = Visibility.Visible;
             InfoCard.Visibility = Visibility.Collapsed;
-            EmptyText.Text = b.Message;
+            EmptyText.Text = info is null
+                ? (timedOut ? "WMI 無回應（root\\wmi 的電池查詢逾時）——稍後再按「重新讀取」。"
+                            : "讀取失敗：系統沒有回報電池資訊。")
+                : info.Message;
+            _wearPercent = -1;
+            UpdateWearBar();
             return;
         }
         EmptyCard.Visibility = Visibility.Collapsed;
         InfoCard.Visibility = Visibility.Visible;
+
+        var b = info;
 
         NameText.Text = b.Name;
         ChargeRow.Value = b.ChargePercent > 0 ? $"{b.ChargePercent}%" : "—";

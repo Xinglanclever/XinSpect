@@ -1,10 +1,22 @@
-# XsRegProbe 建置・簽章・載入手冊（使用者的刻意步驟）
+# XsRegProbe 建置・簽章・載入手冊
+
+> **一般使用者不必看這份。** 部署器（XinSpectDeploy）會把 `XsRegProbe.sys` 放進
+> `C:\ProgramData\XinSpect\Driver\`；程式裡的「深層核心存取 → 開啟」會用本機產生的 CA
+> 簽這支 `.sys` 再裝服務。這份手冊是**開發者**改驅動時用的（或部署器沒把檔案放進去時的備援）。
+
+## 手動建置・簽章・載入（開發者）
 
 > 深層暫存器計畫 §6 閘門：**編 .sys → 裝信任 → 載入 → 驗 MMIO** 這一段由使用者刻意執行，
 > managed 供建置到這裡為止。本機狀態（已實測）：Secure Boot=關、HVCI=關、testsigning=關、WDK km 標頭在
 > （`C:\Program Files (x86)\Windows Kits\10\Include\10.0.28000.0\km\`）。
-> 窄路簽章策略：自簽碼簽 CA 進 LocalMachine Root + Trusted Publishers，**只放行我們這張**（不開全機 test-signing）。
-> 本機 I219-V 自簽網卡驅動已驗證這條路可行。
+> **更正（2026-11-01 實測）**：先前寫「自簽 CA 進 Root＋TrustedPublisher 就能載入」是錯的。
+> 那條路只對**使用者模式**的 Authenticode 有效；Windows 10/11 x64 的**核心模式程式碼完整性**
+> 只接受鏈到 Microsoft 根的簽章。用本專案自簽的葉憑證簽 `.sys`，`signtool verify /pa` 會過，
+> 但 `sc start` 回 **577 (ERROR_INVALID_IMAGE_HASH)**，事件記錄是 CodeIntegrity **3004**
+> 「unable to verify the image integrity」。要讓核心收下這支驅動只有兩條路：
+> **（a）開 testsigning 並重開機**（全域、浮水印、削弱防護），或
+> **（b）送 Microsoft attestation／WHQL 簽章**（EV 憑證＋Partner Center）。
+> 在那之前 XsRegProbe 是**開發機專用**；WinRing0 只提供 MSR 與 PCI 設定空間（實體記憶體讀取實測失敗），MMIO 沒有替代來源。
 
 ## 1. 編譯
 

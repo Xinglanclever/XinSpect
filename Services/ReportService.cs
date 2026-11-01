@@ -439,7 +439,9 @@ public static class ReportService
         var nics = new List<string[]>();
         foreach (var n in vm.InstalledNics)
             nics.Add(new[] { n.Name, n.Manufacturer, n.TypeText, n.SpeedText, Id(n.Mac, mask) });
-        s.Tbl("已安裝的網路卡", new[] { "名稱", "製造商", "類型", "額定速度", "MAC" }, nics);
+        // 「目前速度」不是額定能力：這一欄的值來自 Speed（當下協商到的頻寬），
+        // 標成「額定」會讓 10G 卡顯示 100 Mbps 時被讀成「這張卡只有 100M」。
+        s.Tbl("已安裝的網路卡", new[] { "名稱", "製造商", "類型", "目前速度", "MAC" }, nics);
     });
 
     private static void Sensors(List<Section> secs, MainViewModel vm) => Add(secs, "sensor", "感測器", s =>

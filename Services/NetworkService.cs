@@ -210,7 +210,8 @@ public sealed class NetworkService : ObservableObject
         return b.Length == 0 ? "—" : string.Join(":", b.Select(x => x.ToString("X2")));
     }
 
-    private static string TypeZh(NetworkInterfaceType t) => t switch
+    /// <summary>介面類型的中文名；<see cref="SystemInfoService"/> 也用同一張表（避免兩套對照漂移）。</summary>
+    internal static string TypeZh(NetworkInterfaceType t) => t switch
     {
         NetworkInterfaceType.Ethernet => "乙太網路",
         NetworkInterfaceType.Wireless80211 => "無線網路",

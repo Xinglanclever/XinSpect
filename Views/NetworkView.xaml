@@ -63,7 +63,7 @@
                                             </StackPanel>
                                             <StackPanel Grid.Column="1">
                                                 <local:FieldRow Label="類型" Value="{Binding TypeText}"/>
-                                                <local:FieldRow Label="額定速度" Value="{Binding SpeedText}"/>
+                                                <local:FieldRow Label="目前速度" Value="{Binding SpeedText}"/>
                                                 <local:FieldRow Label="實體位址 (MAC)" Value="{Binding Mac}"/>
                                             </StackPanel>
                                         </Grid>

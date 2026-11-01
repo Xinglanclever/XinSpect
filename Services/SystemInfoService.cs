@@ -1,4 +1,5 @@
 using System.Management;
+using System.Net.NetworkInformation;
 
 namespace XinSpect;
 
@@ -159,6 +160,20 @@ public static class SystemInfoService
     /// <summary>偵測已安裝的實體網路卡（WMI Win32_NetworkAdapter，PhysicalAdapter=TRUE，含未連線者）。</summary>
     public static List<NicInfo> GetNetworkAdapters()
     {
+        // 類型不能直接信 Win32_NetworkAdapter.AdapterType：它對無線網卡也回 "Ethernet 802.3"
+        // （本機的 Wireless-AC 9260 就是這樣被標成乙太網路）。真正分得出 Ethernet／Wireless80211
+        // 的是 System.Net.NetworkInformation，所以用實體位址對回去；對不到才退回 WMI 的字串。
+        var typeByMac = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                string key = ni.GetPhysicalAddress().ToString();
+                if (key.Length > 0) typeByMac[key] = NetworkService.TypeZh(ni.NetworkInterfaceType);
+            }
+        }
+        catch (Exception ex) { Diag.Swallow("讀取介面類型", ex, "類型欄退回 WMI 的 AdapterType"); }
+
         var list = new List<NicInfo>();
         foreach (var o in Query("SELECT Name, Manufacturer, AdapterType, Speed, MACAddress, PhysicalAdapter " +
                                 "FROM Win32_NetworkAdapter WHERE PhysicalAdapter=TRUE"))
@@ -170,7 +185,8 @@ public static class SystemInfoService
             {
                 Name = Str(o, "Name"),
                 Manufacturer = Str(o, "Manufacturer"),
-                TypeText = Str(o, "AdapterType"),
+                TypeText = typeByMac.TryGetValue(mac.Replace(":", ""), out var typeText)
+                    ? typeText : Str(o, "AdapterType"),
                 // 連線中斷時 WMI 的 Speed 常為 Int64.MaxValue 等哨兵值，超出合理上限即視為未知
                 SpeedText = bps > 0 && bps < 1e12 ? $"{bps / 1_000_000.0:0} Mbps" : "—",
                 Mac = mac,
