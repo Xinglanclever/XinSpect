@@ -23,7 +23,7 @@ public sealed class HardwareCatalogServiceTests
         var catalog = CreateCatalog();
         Assert.Empty(catalog.Search("B760M-AYW"));
         Assert.Contains("CPU/GPU", catalog.Attribution, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("不是本機量測", catalog.Limitations);
+        Assert.Contains("不內建", catalog.Limitations);
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public sealed class HardwareCatalogServiceTests
     [Fact]
     public void Missing_user_catalog_is_reported_without_shipping_asset()
     {
-        var catalog = new HardwareCatalogService();
+        var catalog = new HardwareCatalogService(discoverUserCatalog: false);
         Assert.Contains("尚未匯入", catalog.Status);
         Assert.Contains("不內建", catalog.Limitations);
     }

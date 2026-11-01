@@ -15,6 +15,12 @@ public sealed class HardwareCatalogService
     private CatalogPayload? _payload;
     private string? _error;
     private string? _loadedPath;
+    private readonly bool _discoverUserCatalog;
+
+    public HardwareCatalogService(bool discoverUserCatalog = true)
+    {
+        _discoverUserCatalog = discoverUserCatalog;
+    }
 
     public string Status => _payload is not null
         ? $"已載入 {_payload.Records.Count} 筆 CPU/GPU 歷史型號（來源：{Path.GetFileName(_loadedPath)})"
@@ -65,7 +71,7 @@ public sealed class HardwareCatalogService
         if (_payload is not null || _error is not null) return;
         lock (_gate)
         {
-            if (_payload is not null || _error is not null) return;
+            if (_payload is not null || _error is not null || !_discoverUserCatalog) return;
             var configured = Environment.GetEnvironmentVariable("XINSPECT_CPU_GPU_CATALOG");
             var userPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XinSpect", "catalogs", "cpu-gpu-catalog.json");
             var path = !string.IsNullOrWhiteSpace(configured) ? configured : userPath;
