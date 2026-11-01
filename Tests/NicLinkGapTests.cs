@@ -122,7 +122,7 @@ public class NicLinkGapTests
 
         Assert.Equal(NicLinkGap.GapKind.Unknown, v.Kind);
         Assert.False(v.Attention);
-        Assert.Contains("不適用", v.Evidence);
+        Assert.Contains("沒有足夠的 PCIe 速度／寬度資料", v.Evidence);
     }
 
     [Fact]
@@ -141,8 +141,8 @@ public class NicLinkGapTests
         var v = NicLinkGap.Judge(Sample(curSp: 3, curW: 4, maxSp: 3, maxW: 4,
             eth: 1_000_000_000, supported: []));
 
-        Assert.Equal(NicLinkGap.GapKind.None, v.Kind);   // PCIe 與線路都比對過了，只能說相符
-        Assert.DoesNotContain("支援到", v.Headline);      // 但不得宣稱「已達最高支援速率」
+        Assert.Equal(NicLinkGap.GapKind.Unknown, v.Kind);
+        Assert.Contains("速率能力未回報", v.Headline);
     }
 
     [Fact]

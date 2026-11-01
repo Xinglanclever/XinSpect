@@ -116,7 +116,9 @@ public static class NicLinkGap
                 + "未連線時驅動回報的速率為 0，比較它沒有意義。",
                 false);
 
-        // 非 PCIe 裝置（虛擬網卡、Wintun、Wi-Fi 走不同的匯流排）不套 PCIe 段落
+        // PCIe 設定空間缺少寬度資料時，不能把「讀不到」說成「不是 PCIe」。
+        bool hasPcieEvidence = s.PcieCurrentWidth > 0 || s.PcieMaxWidth > 0
+                               || s.PcieCurrentSpeed > 0 || s.PcieMaxSpeed > 0;
         bool isPcie = s.PcieCurrentWidth > 0 || s.PcieMaxWidth > 0;
 
         if (isPcie && s.PcieCurrentSpeed > 0 && s.PcieMaxWidth > 0 && s.PcieCurrentWidth < s.PcieMaxWidth)
@@ -154,11 +156,17 @@ public static class NicLinkGap
                     true);
         }
 
+        if (!hasPcieEvidence)
+            return new Verdict(GapKind.Unknown, "—（PCIe 能力資料未回報）",
+                $"{s.Name}（{s.Description}）：沒有足夠的 PCIe 速度／寬度資料，不能判定它是 PCIe 端點或虛擬介面。", false);
+
         // 線路協商低於這張卡支援的最高速率
         ulong best = 0;
         foreach (ulong v in s.SupportedSpeedsBps) if (v > best) best = v;
-        if (best > 0 && s.EthCurrentBps > 0 && s.EthCurrentBps < best)
-        {
+        if (best == 0)
+            return new Verdict(GapKind.Unknown, "—（速率能力未回報）",
+                $"{s.Name}（{s.Description}）：驅動沒有回報可比較的線路能力清單，不能判定鏈路已到位。", false);
+        if (s.EthCurrentBps > 0 && s.EthCurrentBps < best)
             return new Verdict(GapKind.LineNegotiatedLower,
                 $"線路協商在 {Bps(s.EthCurrentBps)}，這張卡支援到 {Bps(best)}",
                 $"{s.Name}（{s.Description}）：目前線路 {Bps(s.EthCurrentBps)}，驅動回報支援"
@@ -168,7 +176,6 @@ public static class NicLinkGap
                 + "對端設備（交換器埠只到 1G）、或驅動被鎖在固定速率。"
                 + "要分辨請換一條已知規格的線、或改接另一個埠再量一次。",
                 false);
-        }
 
         // 沒有可比較的基準就誠實說不適用：虛擬介面（Wintun／隧道）沒有 PCIe 端點，
         // 速率也是名目值——此時說「相符」是假陳述，因為根本沒有能力值可比。

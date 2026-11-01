@@ -465,4 +465,22 @@ public class CoreTempMapApplyTests
         Assert.Equal(4, entries[1].Temperature);
         Assert.Equal(36, entries[17].Temperature);
     }
+
+    [Fact]
+    public void 標籤缺列時保留空格_不把別核數值填進來()
+    {
+        var entries = Entries(4);
+        var rows = new List<CoreRow>
+        {
+            new("核心 #1") { TempC = 41, LoadPercent = 10 },
+            new("核心 #3") { TempC = 43, LoadPercent = 30 },
+            new("核心 #4") { TempC = 44, LoadPercent = 40 },
+        };
+
+        Assert.True(CoreTempMapService.Apply(entries, rows, threadsPerCore: 2));
+        Assert.Equal(41, entries[0].Temperature);
+        Assert.Null(entries[1].Temperature);
+        Assert.Equal(43, entries[2].Temperature);
+        Assert.Equal(44, entries[3].Temperature);
+    }
 }

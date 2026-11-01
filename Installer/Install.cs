@@ -20,7 +20,7 @@ internal static class Install
         public bool Direct;
     }
 
-    private const string GitHubBase = "https://github.com/Xinglanclever/XinSpect/releases/latest/download/";
+    private const string GitHubBase = "https://github.com/Xinglanclever/XinSpect/releases/download/v3.12/";
 
     // 鏡像連結的「最新版」放在版控裡，安裝器開機時順手抓一次（3 秒逾時，拿不到就用內建的）。
     // 這樣上傳完只要改這一個文字檔，不必重編 exe——也是「連結還沒生出來就先別硬編死」的解。
