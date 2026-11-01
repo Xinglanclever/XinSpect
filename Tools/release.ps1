@@ -71,8 +71,8 @@ try {
     $untracked = & git ls-files --others --exclude-standard -- '*.cs' |
         Where-Object { $_ -notmatch '^(work|obj|bin)/' -and $_ -notmatch '/obj/' -and $_ -notmatch '/bin/' -and $_ -notmatch '^publish-' }
     if ($untracked) {
-        Fail ("以下原始碼沒有進版控——本機能建置（publish 從工作樹編譯），但乾淨 clone 會 CS0246：`n  "
-              + (($untracked | Select-Object -First 20) -join "`n  "))
+        Fail ("以下原始碼沒有進版控——本機能建置（publish 從工作樹編譯），但乾淨 clone 會 CS0246：`n  " +
+              (($untracked | Select-Object -First 20) -join "`n  "))
     }
     Ok 'preflight: every tracked-buildable .cs is in git'
 
