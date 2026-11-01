@@ -42,6 +42,70 @@ public class SecurityScoreTests
     );
 
     [Fact]
+    public void 新基線檢查_每一項都要有自己的發現與扣分()
+    {
+        var bad = GoodSurface() with
+        {
+            SmbSigningRequired = false,
+            SmbEncryptionEnabled = false,
+            NtlmRestricted = false,
+            AsrRulesEnabled = 0,
+            SmartAppControlState = 0,
+            PowerShellScriptBlockLogging = false,
+            DefenderPuaProtection = false,
+            DefenderExclusions = 12,
+            AutoRunDisabled = false,
+        };
+
+        var result = SecurityScoreEngine.Evaluate(
+            new SecurityScoreEngine.DmaFacts(null, null, null, null, null, null, null, null, null),
+            new SecurityScoreEngine.FirmwareFacts(null, null, null, null, null, null, null, null, null, null, null),
+            new SecurityScoreEngine.CpuFacts(null, null, null, null, null, null, null, null, null, null),
+            new SecurityScoreEngine.StorageFacts(null, null, null, null, null),
+            new SecurityScoreEngine.DriverFacts(0, 0, 0, null, null, null, null, null, null),
+            bad);
+
+        var surface = result.Categories.First(c => c.Id == "surface");
+        var ids = surface.Findings.Select(f => f.Id).ToHashSet(StringComparer.Ordinal);
+        foreach (string id in new[]
+                 {
+                     "sfc.smb-sign", "sfc.smb-enc", "sfc.ntlm", "sfc.asr", "sfc.sac",
+                     "sfc.ps-log", "sfc.pua", "sfc.exclusions", "sfc.autoplay",
+                 })
+            Assert.Contains(id, ids);
+
+        var good = SecurityScoreEngine.Evaluate(
+            new SecurityScoreEngine.DmaFacts(null, null, null, null, null, null, null, null, null),
+            new SecurityScoreEngine.FirmwareFacts(null, null, null, null, null, null, null, null, null, null, null),
+            new SecurityScoreEngine.CpuFacts(null, null, null, null, null, null, null, null, null, null),
+            new SecurityScoreEngine.StorageFacts(null, null, null, null, null),
+            new SecurityScoreEngine.DriverFacts(0, 0, 0, null, null, null, null, null, null),
+            GoodSurface() with
+            {
+                SmbSigningRequired = true, SmbEncryptionEnabled = true, NtlmRestricted = true,
+                AsrRulesEnabled = 8, SmartAppControlState = 1, PowerShellScriptBlockLogging = true,
+                DefenderPuaProtection = true, DefenderExclusions = 0, AutoRunDisabled = true,
+            });
+        Assert.True(surface.Score < good.Categories.First(c => c.Id == "surface").Score);
+    }
+
+    [Fact]
+    public void SmartAppControl評估模式只算部分_不是全過也不是全錯()
+    {
+        SecurityPosture Score(int state) => SecurityScoreEngine.Evaluate(
+            new SecurityScoreEngine.DmaFacts(null, null, null, null, null, null, null, null, null),
+            new SecurityScoreEngine.FirmwareFacts(null, null, null, null, null, null, null, null, null, null, null),
+            new SecurityScoreEngine.CpuFacts(null, null, null, null, null, null, null, null, null, null),
+            new SecurityScoreEngine.StorageFacts(null, null, null, null, null),
+            new SecurityScoreEngine.DriverFacts(0, 0, 0, null, null, null, null, null, null),
+            GoodSurface() with { SmartAppControlState = state });
+
+        int S(int state) => Score(state).Categories.First(c => c.Id == "surface").Score;
+        Assert.True(S(2) < S(1));
+        Assert.True(S(2) > S(0));
+    }
+
+    [Fact]
     public void AllGood_ScoresHigh()
     {
         var dma = new SecurityScoreEngine.DmaFacts(
@@ -144,10 +208,11 @@ public class SecurityScoreTests
             $"覆蓋率應該很低，實際 {result.CoveragePercent}%");
         Assert.Contains("資料不足", result.Verdict);
         Assert.DoesNotContain("缺口", result.Verdict);
-        // DMA 只有「有沒有 Thunderbolt 控制器」這一項算量到（沒有＝確認過），
-        // 其餘五條防線應該是 0：全部讀不到。
+        // 3.13：Thunderbolt 安全等級讀不到時不再記成「確認沒有控制器」。
+        // 探測器只讀得到登錄檔的 SecurityLevel；鍵不存在可能是真的沒有控制器，
+        // 也可能是驅動沒回報——分不出來的東西不能算量到，所以六條防線都是 0。
         foreach (var c in result.Categories)
-            Assert.Equal(c.Id == "dma" ? 10 : 0, c.AssessedWeight);
+            Assert.Equal(0, c.AssessedWeight);
     }
 
     [Fact]
@@ -271,9 +336,9 @@ public class SecurityScoreTests
 
         var result = SecurityScoreEngine.Evaluate(dma, fw, cpu, stor, drv, GoodSurface());
         var dmaLine = result.Categories.First(c => c.Id == "dma");
-        // DMA 只剩「有沒有 Thunderbolt」這一項是量得到的（沒有控制器＝已確認），
-        // 其餘八項讀不到，不進分母。
-        Assert.Equal(10, dmaLine.AssessedWeight);
+        // 3.13：Thunderbolt 只剩「讀不到就未評估」——這一條不再當成已確認的量測，
+        // 所以 DMA 這一條防線也整條不進分母。
+        Assert.Equal(0, dmaLine.AssessedWeight);
         // 其他五條防線都是滿的，所以總分應該是高分，而不是被 null 拖下來
         Assert.InRange(result.TotalScore, 80, 100);
         Assert.True(result.CoveragePercent >= 80);

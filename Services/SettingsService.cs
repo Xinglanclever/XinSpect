@@ -77,8 +77,8 @@ public sealed class SettingsService : ObservableObject
     /// <summary>啟程儀式是否已播放（一次即焚）。</summary>
     public bool CeremonyPlayed { get => _ceremonyPlayed; set { if (SetProperty(ref _ceremonyPlayed, value)) Save(); } }
 
-    private bool _blueSquadronEnabled = true;
-    /// <summary>藍色中隊守護進程（BlueSquadronBridge）是否隨程式啟動（安全頁滑動開關，預設開）。</summary>
+    private bool _blueSquadronEnabled;
+    /// <summary>藍色中隊守護進程（BlueSquadronBridge）是否隨程式啟動（安全頁滑動開關，<b>預設關</b>：守護進程會常駐輪詢，預設不替使用者做這個決定）。</summary>
     public bool BlueSquadronEnabled { get => _blueSquadronEnabled; set { if (SetProperty(ref _blueSquadronEnabled, value)) Save(); } }
 
     private bool _simplifiedChinese;
@@ -436,7 +436,7 @@ public sealed class SettingsService : ObservableObject
         public bool FirstRunDone { get; set; }
         public bool AllowMultiInstance { get; set; } = true;
         public bool CeremonyPlayed { get; set; }
-        public bool BlueSquadronEnabled { get; set; } = true;
+        public bool BlueSquadronEnabled { get; set; }
         public bool SimplifiedChinese { get; set; }
         public bool IsEnglish { get; set; }
         public string? DashboardTiles { get; set; }

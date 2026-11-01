@@ -157,6 +157,21 @@ def main(argv=None):
     else:
         about.replace("版本 %s ・" % OLD, "版本 %s ・ %s ・" % (V, args.codename), "AboutView")
 
+    # 2b) AppInfo 代號——標題列與關於頁必須是同一個字；先前只有 AboutView 被改，
+    #     AppInfo 還停在 Swiss，於是同一個視窗裡兩個代號（3.13 修）。
+    #     舊樹／測試沙箱沒有這個檔案時跳過，不讓升版工具為了一個選填處停下來。
+    try:
+        info = doc(os.path.join("Models", "AppInfo.cs"))
+    except (SystemExit, OSError):
+        info = None
+    if info is not None:
+        if old_code:
+            info.replace('public const string Codename = "%s"' % old_code,
+                         'public const string Codename = "%s"' % args.codename, "AppInfo")
+        else:
+            info.insert_before('public const string Codename = "',
+                               'public const string Codename = "%s"' % args.codename, "AppInfo")
+
     # 3) SECURITY
     sec = doc("SECURITY.md")
     sec.replace("（目前 %s）" % OLD, "（目前 %s）" % V, "SECURITY")
@@ -240,7 +255,7 @@ def main(argv=None):
     en_row = "| %s | %s | %s |" % (V, args.date, title_en)
     en.insert_before("| %s | " % OLD, en_row + "\n", "en 沿革表")
 
-    docs = [proj, about, sec, bug, hw, cat, md, zh, en]
+    docs = [d for d in [proj, about, info, sec, bug, hw, cat, md, zh, en] if d is not None]
     if args.dry_run:
         for d in docs:
             if d.dirty:
@@ -265,6 +280,12 @@ def main(argv=None):
             problems.append("README %s 出現 %d 次（應為 1）" % (label, c))
     if ("**登記筆數**：%d 筆" % n_entries) not in md_text:
         problems.append("README 的登記筆數沒有等於目錄的 %d 筆" % n_entries)
+
+    appinfo_path = os.path.join(root, "Models", "AppInfo.cs")
+    if os.path.exists(appinfo_path):
+        if ('public const string Codename = "%s"' % V) not in io.open(
+                appinfo_path, encoding="utf-8-sig").read():
+            problems.append("AppInfo 的 Codename 不是 %s——標題列與關於頁會各說各話" % V)
 
     zh_text = io.open(os.path.join(root, "README.zh-CN.md"), encoding="utf-8-sig").read()
     if zh_text.count("- **v%s " % V) != 1:

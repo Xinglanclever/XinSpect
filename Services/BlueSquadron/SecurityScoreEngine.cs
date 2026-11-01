@@ -84,7 +84,17 @@ public static class SecurityScoreEngine
         bool? SmbV1Disabled,
         bool? WinRmStopped,
         bool? PrintSpoolerStopped,
-        int? DaysSinceUpdate
+        int? DaysSinceUpdate,
+        // ── 3.13 新增的 Windows 11 基線檢查（全部可為 null＝這一台／這一版沒有這個設定）──
+        bool? SmbSigningRequired = null,
+        bool? SmbEncryptionEnabled = null,
+        bool? NtlmRestricted = null,
+        int? AsrRulesEnabled = null,
+        int? SmartAppControlState = null,
+        bool? PowerShellScriptBlockLogging = null,
+        bool? DefenderPuaProtection = null,
+        int? DefenderExclusions = null,
+        bool? AutoRunDisabled = null
     );
 
     // ── 主要進入點 ──────────────────────────────────────────────────────────────────
@@ -208,12 +218,33 @@ public static class SecurityScoreEngine
             SecuritySeverity.Warning, 10,
             "需 VBS + 企業版/教育版 Windows。群組原則：Credential Guard 已啟用。");
 
-        score -= Check(findings, "dma.bitlocker-dma", "BitLocker DMA 防護",
-            f.BitLockerDmaProtection ?? f.BitLockerEnabled,
-            "BitLocker 已啟用（含 DMA 保護）",
-            "BitLocker 未啟用或缺少 DMA 防護",
-            SecuritySeverity.Warning, 10,
-            "啟用 BitLocker 並確認群組原則中「允許新的 DMA 裝置」已關閉。");
+        // BitLocker 與 DMA 防護是兩件事：開了 BitLocker 不代表「允許新的 DMA 裝置」已關閉。
+        // 先前寫 `f.BitLockerDmaProtection ?? f.BitLockerEnabled`，等於在 DMA 保護讀不到時
+        // 替「含 DMA 保護」背書——把不知道的東西講成已知，這一頁最不該犯的錯。
+        if (f.BitLockerDmaProtection is bool dmaProt)
+        {
+            score -= Check(findings, "dma.bitlocker-dma", "BitLocker 與 DMA 防護",
+                dmaProt,
+                "BitLocker 已啟用，且已限制新的 DMA 裝置",
+                "BitLocker 已啟用，但仍允許新的 DMA 裝置（或 BitLocker 未啟用）",
+                SecuritySeverity.Warning, 10,
+                "啟用 BitLocker 並確認群組原則中「允許新的 DMA 裝置」已關閉。");
+        }
+        else if (f.BitLockerEnabled is bool bl)
+        {
+            score -= Check(findings, "dma.bitlocker-dma", "BitLocker 與 DMA 防護",
+                bl,
+                "BitLocker 已啟用（DMA 保護未回報，不宣稱已關閉）",
+                "BitLocker 未啟用",
+                SecuritySeverity.Warning, 10,
+                "啟用 BitLocker；DMA 保護需另外確認群組原則「允許新的 DMA 裝置」。");
+        }
+        else
+        {
+            findings.Add(new SecurityFinding("dma.bitlocker-dma", "", "BitLocker 與 DMA 防護",
+                "未評估——BitLocker 狀態與 DMA 保護都讀不到（權限不足或平台不支援）。",
+                SecuritySeverity.Advisory, null, 10, Assessed: false));
+        }
 
         score -= CheckThunderbolt(findings, f.ThunderboltSecurityLevel, 10);
 
@@ -224,10 +255,12 @@ public static class SecurityScoreEngine
     {
         if (level is null)
         {
+            // 讀不到安全等級有兩種可能：這台真的沒有 Thunderbolt，或驅動沒有回報。
+            // 先前一律寫成「無此攻擊面」並記為良好——那是在不知道的情況下給了一個綠燈。
             findings.Add(new SecurityFinding(
                 "dma.thunderbolt", "DMA 與記憶體保護", "Thunderbolt",
-                "未偵測到 Thunderbolt 控制器（無此攻擊面）。",
-                SecuritySeverity.Good, null, weight));
+                "未評估——沒讀到 Thunderbolt 安全等級（可能沒有控制器，也可能驅動未回報）。",
+                SecuritySeverity.Advisory, null, weight, Assessed: false));
             return 0;
         }
         if (level >= 2)
@@ -676,6 +709,86 @@ public static class SecurityScoreEngine
             SecuritySeverity.Warning, 5,
             "若不需列印，停止並停用 Print Spooler 服務。");
 
+        // ── 3.13：Windows 11／現代勒索軟體防線的基線檢查 ─────────────────────
+        // 這一組的共同原則與其他項目相同：讀不到就記「未評估」、不扣分也不冒充通過。
+
+        score -= Check(findings, "sfc.smb-sign", "SMB 簽章",
+            f.SmbSigningRequired,
+            "SMB 簽章已要求（可偵測中間人竄改）",
+            "SMB 簽章未要求——區網內連線可被中間人竄改",
+            SecuritySeverity.Warning, 5,
+            "群組原則：Microsoft network server: Digitally sign communications (always) = Enabled。");
+
+        score -= Check(findings, "sfc.smb-enc", "SMB 加密",
+            f.SmbEncryptionEnabled,
+            "SMB 加密已啟用",
+            "SMB 加密未啟用（SMB3 可用時建議開啟）",
+            SecuritySeverity.Advisory, 4,
+            "在 LanmanServer\\Parameters 設定 EncryptData = 1（需 SMB3）。");
+
+        score -= Check(findings, "sfc.ntlm", "NTLM 限制",
+            f.NtlmRestricted,
+            "只允許 NTLMv2，並拒絕 LM／NTLM",
+            "NTLM 未限制——可能接受較弱的驗證協定",
+            SecuritySeverity.Warning, 5,
+            "LmCompatibilityLevel 設為 5（Send NTLMv2 response only. Refuse LM & NTLM）。");
+
+        score -= AsrCheck(findings, f.AsrRulesEnabled, 5);
+        score -= SmartAppControlCheck(findings, f.SmartAppControlState, 5);
+
+        score -= Check(findings, "sfc.ps-log", "PowerShell 指令碼區塊記錄",
+            f.PowerShellScriptBlockLogging,
+            "指令碼區塊記錄已啟用",
+            "指令碼區塊記錄未啟用——惡意 PowerShell 不留痕跡",
+            SecuritySeverity.Advisory, 4,
+            "群組原則：Turn on PowerShell Script Block Logging = Enabled。");
+
+        score -= Check(findings, "sfc.pua", "可能不受歡迎的應用程式防護（PUA）",
+            f.DefenderPuaProtection,
+            "PUA 防護已啟用",
+            "PUA 防護未啟用——廣告軟體與綑綁程式不會被攔",
+            SecuritySeverity.Warning, 4,
+            "Windows 安全性 → 病毒與威脅防護 → 管理設定 → 啟用「可能不受歡迎的應用程式」。");
+
+        // 排除路徑是 Defender 最常被濫用的後門：排除區裡的檔案不會被即時掃描。
+        if (f.DefenderExclusions is int exclusions)
+        {
+            if (exclusions == 0)
+            {
+                findings.Add(new SecurityFinding("sfc.exclusions", "", "Defender 排除路徑",
+                    "沒有設定任何排除路徑", SecuritySeverity.Good, null, 4));
+            }
+            else if (exclusions <= 5)
+            {
+                score -= 2;
+                findings.Add(new SecurityFinding("sfc.exclusions", "", "Defender 排除路徑",
+                    $"設定了 {exclusions} 個排除路徑——請逐一確認都是必要的",
+                    SecuritySeverity.Advisory,
+                    "移除不再需要的 Defender 排除路徑；排除區不受即時防護掃描。", 4));
+            }
+            else
+            {
+                score -= 4;
+                findings.Add(new SecurityFinding("sfc.exclusions", "", "Defender 排除路徑",
+                    $"設定了 {exclusions} 個排除路徑——排除區不受即時防護掃描",
+                    SecuritySeverity.Warning,
+                    "逐一檢視 Defender 排除清單；大量排除通常是設定漂移或惡意軟體留下的。", 4));
+            }
+        }
+        else
+        {
+            findings.Add(new SecurityFinding("sfc.exclusions", "", "Defender 排除路徑",
+                "未評估——讀不到 Defender 排除清單。", SecuritySeverity.Advisory, null, 4,
+                Assessed: false));
+        }
+
+        score -= Check(findings, "sfc.autoplay", "自動播放／自動執行",
+            f.AutoRunDisabled,
+            "自動播放與自動執行已停用",
+            "自動播放仍啟用——插入的媒體可自動執行",
+            SecuritySeverity.Advisory, 3,
+            "群組原則：Turn off Autoplay = Enabled（所有磁碟機）。");
+
         // Windows Update age (special: integer)
         if (f.DaysSinceUpdate is int days)
         {
@@ -705,6 +818,85 @@ public static class SecurityScoreEngine
     }
 
     // ── 輔助 ──────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// ASR（攻擊面縮減規則）：只數「封鎖模式」的規則。0 條不是「沒有規則」，是「沒有防線」；
+    /// 1～4 條只算部分——單一條規則擋不住勒索軟體常見的執行鏈。
+    /// </summary>
+    private static int AsrCheck(List<SecurityFinding> findings, int? rules, int weight)
+    {
+        if (rules is not int n)
+        {
+            findings.Add(new SecurityFinding("sfc.asr", "", "攻擊面縮減規則（ASR）",
+                "未評估——讀不到 ASR 規則設定（家用版沒有這個原則，或未設定）。",
+                SecuritySeverity.Advisory, null, weight, Assessed: false));
+            return 0;
+        }
+        if (n >= 5)
+        {
+            findings.Add(new SecurityFinding("sfc.asr", "", "攻擊面縮減規則（ASR）",
+                $"{n} 條 ASR 規則在封鎖模式", SecuritySeverity.Good, null, weight));
+            return 0;
+        }
+        if (n > 0)
+        {
+            findings.Add(new SecurityFinding("sfc.asr", "", "攻擊面縮減規則（ASR）",
+                $"只有 {n} 條 ASR 規則在封鎖模式——建議至少 5 條（勒索軟體與 Office 巨集路徑）",
+                SecuritySeverity.Advisory,
+                "群組原則 → Windows Defender Exploit Guard → Attack Surface Reduction：啟用常見的封鎖規則。",
+                weight));
+            return weight * 3 / 5;
+        }
+        findings.Add(new SecurityFinding("sfc.asr", "", "攻擊面縮減規則（ASR）",
+            "未啟用任何 ASR 規則——勒索軟體常見的執行路徑沒有被封鎖",
+            SecuritySeverity.Warning,
+            "至少啟用「封鎖 Office 應用程式建立子程序」與「封鎖從電子郵件建立的執行檔內容」。",
+            weight));
+        return weight;
+    }
+
+    /// <summary>
+    /// Smart App Control（Windows 11）：1＝強制、2＝評估、0＝關閉。
+    /// 這不是「有沒有這個設定」而是三態：評估模式會放行簽章不明的程式，只能算部分。
+    /// </summary>
+    private static int SmartAppControlCheck(List<SecurityFinding> findings, int? state, int weight)
+    {
+        const string id = "sfc.sac";
+        const string title = "Smart App Control";
+        if (state is not int s)
+        {
+            findings.Add(new SecurityFinding(id, "", title,
+                "此平台沒有 Smart App Control（Windows 10，或重設 Windows 後尚未重新啟用）。",
+                SecuritySeverity.Advisory, null, weight, Assessed: false));
+            return 0;
+        }
+        switch (s)
+        {
+            case 1:
+                findings.Add(new SecurityFinding(id, "", title,
+                    "強制模式：未簽章或信譽不明的程式會被封鎖",
+                    SecuritySeverity.Good, null, weight));
+                return 0;
+            case 2:
+                findings.Add(new SecurityFinding(id, "", title,
+                    "評估模式：只記錄不封鎖，防線尚未生效",
+                    SecuritySeverity.Advisory,
+                    "評估期結束後由 Windows 決定是否轉為強制；若已關閉，重新開啟需重設 Windows。",
+                    weight));
+                return weight / 2;
+            case 0:
+                findings.Add(new SecurityFinding(id, "", title,
+                    "已關閉——只靠使用者自己判斷是否執行未簽章程式",
+                    SecuritySeverity.Warning,
+                    "Windows 安全性 → 應用程式與瀏覽器控制 → Smart App Control（關閉後重開需重設 Windows）。",
+                    weight));
+                return weight;
+            default:
+                findings.Add(new SecurityFinding(id, "", title,
+                    $"未評估——回報未知狀態 {s}。", SecuritySeverity.Advisory, null, weight, Assessed: false));
+                return 0;
+        }
+    }
 
     private static int Check(
         List<SecurityFinding> findings, string id, string title,

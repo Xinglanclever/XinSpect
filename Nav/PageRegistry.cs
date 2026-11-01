@@ -302,7 +302,7 @@ public static class PageRegistry
             IconData = "F0 M3,2 H21 V22 H3 Z M6,6 H18 V8 H6 Z M6,10 H18 V12 H6 Z M6,14 H18 V16 H6 Z "
                      + "M6,18 H14 V20 H6 Z",
             Factory = () => new FactAtlasView(),
-            Hint = "本版實作的每一把事實鍵（1037 把）攤成一張可搜尋的表：誰讀到了值、誰讀不到、誰這一輪沒跑到",
+            Hint = "本版實作的每一把事實鍵（1,167 把）攤成一張可搜尋的表：誰讀到了值、誰讀不到、誰這一輪沒跑到",
             Keywords = ["atlas", "fact", "capacity", "index", "事實總表", "能力", "索引", "所有功能", "全部功能",
                         "功能清單", "看不到", "藏在哪", "有哪些功能", "事實鍵", "key"],
         },
@@ -313,6 +313,15 @@ public static class PageRegistry
             Factory = () => new HardwareCatalogView(),
             Hint = "查詢使用者提供的 2006–2026 CPU／GPU 歷史型號索引；不含 NC 主機板資料",
             Keywords = ["catalog", "hardware catalog", "歷史型號", "型號查詢", "cpu", "gpu", "處理器", "顯示卡", "2006", "2026"],
+        },
+        new()
+        {
+            Key = "surveillance-planning", Title = "監控規劃", Group = GTools,
+            IconData = "F0 M3,3 H21 V21 H3 Z M6,15 H9 V18 H6 Z M10.5,11 H13.5 V18 H10.5 Z M15,7 H18 V18 H15 Z",
+            Factory = () => new SurveillancePlanningView(),
+            Hint = "NVR 容量、接入頻寬、PoE 預算、交換機背板、光纖衰減、壓降、佈線、RAID、無線與 UPS 的設計試算",
+            Keywords = ["cctv", "surveillance", "nvr", "poe", "raid", "監控", "規劃", "試算", "容量", "頻寬",
+                        "光纖", "衰減", "壓降", "佈線", "無線", "ups", "機櫃", "工程"],
         },
         new()
         {

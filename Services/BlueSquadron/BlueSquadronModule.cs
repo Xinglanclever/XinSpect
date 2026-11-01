@@ -68,7 +68,7 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
         private set => SetProperty(ref _bridgeStatus, value);
     }
 
-    private bool _bridgeEnabled = true;
+    private bool _bridgeEnabled;   // 預設關：開關由設定檔決定，未設定（新安裝）時不啟動守護進程
     /// <summary>安全頁「守護進程」滑動開關：關閉即停止進程與輪詢（唯讀態勢評估照常），選擇記入設定檔。</summary>
     public bool BridgeEnabled
     {

@@ -1,0 +1,389 @@
+<UserControl x:Class="XinSpect.SurveillancePlanningView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect"
+             FontFamily="{StaticResource AppFont}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <local:SectionHead Text="監控工程規劃" HelpKey="surveillance-planning/規劃"/>
+
+            <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" Margin="0,2,0,10"
+                       Text="NVR 容量、接入頻寬、PoE、交換機、光纖、壓降、佈線、RAID、無線與 UPS 的設計試算。所有輸入都是你填的設計參數，輸出是公式推導——這一頁不讀本機硬體，數字不是量測值。"/>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="共用參數" Style="{StaticResource ColHead}"/>
+                    <WrapPanel Margin="0,8,0,0">
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="攝影機數" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="CameraCount" Style="{StaticResource SetTextBox}" Width="90" Text="8"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="每支碼率（Mbps）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="Bitrate" Style="{StaticResource SetTextBox}" Width="90" Text="4"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="每日錄影時數" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="HoursPerDay" Style="{StaticResource SetTextBox}" Width="90" Text="24"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="錄影比例（1＝全錄）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="Duty" Style="{StaticResource SetTextBox}" Width="90" Text="1"/>
+                        </StackPanel>
+                    </WrapPanel>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,4,0,0"
+                               Text="移動偵測只錄一部分時間時，錄影比例填 0.3～0.5，不要用 24 小時全錄去估。"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="1　NVR 儲存容量" Style="{StaticResource ColHead}"/>
+                    <WrapPanel Margin="0,8,0,0">
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="保留天數" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="RetentionDays" Style="{StaticResource SetTextBox}" Width="90" Text="30"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="硬碟顆數" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="NvrDisks" Style="{StaticResource SetTextBox}" Width="90" Text="4"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="單碟容量（TB）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="NvrDiskTb" Style="{StaticResource SetTextBox}" Width="90" Text="4"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="RAID 等級" Style="{StaticResource FieldLabel}"/>
+                            <ComboBox x:Name="NvrRaid" Style="{StaticResource DarkCombo}" Width="150" SelectedIndex="2">
+                                <ComboBoxItem Content="RAID 0"/><ComboBoxItem Content="RAID 1"/>
+                                <ComboBoxItem Content="RAID 5"/><ComboBoxItem Content="RAID 6"/>
+                                <ComboBoxItem Content="RAID 10"/><ComboBoxItem Content="RAID 50"/>
+                                <ComboBoxItem Content="RAID 60"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="熱備援顆數" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="NvrSpares" Style="{StaticResource SetTextBox}" Width="90" Text="0"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="檔案系統保留（%）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="NvrFs" Style="{StaticResource SetTextBox}" Width="90" Text="5"/>
+                        </StackPanel>
+                    </WrapPanel>
+                    <TextBlock x:Name="NvrValues" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <TextBlock x:Name="NvrVerdict" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="2　監控接入頻寬" Style="{StaticResource ColHead}"/>
+                    <WrapPanel Margin="0,8,0,0">
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="協定開銷（%）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="ProtocolOverhead" Style="{StaticResource SetTextBox}" Width="90" Text="15"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="NVR 接入能力（Mbps）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="NvrIngest" Style="{StaticResource SetTextBox}" Width="110" Text="200"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="上行線速（Gbps）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="UplinkGbps" Style="{StaticResource SetTextBox}" Width="90" Text="1"/>
+                        </StackPanel>
+                    </WrapPanel>
+                    <TextBlock x:Name="IngressValues" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <TextBlock x:Name="IngressVerdict" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="3　PoE 功率預算" Style="{StaticResource ColHead}"/>
+                    <WrapPanel Margin="0,8,0,0">
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="每機耗電（W）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="PoeWatts" Style="{StaticResource SetTextBox}" Width="90" Text="12.95"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="PoE 埠數" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="PoePorts" Style="{StaticResource SetTextBox}" Width="90" Text="8"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="交換機 PoE 預算（W）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="PoeBudget" Style="{StaticResource SetTextBox}" Width="120" Text="120"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="標準" Style="{StaticResource FieldLabel}"/>
+                            <ComboBox x:Name="PoeStandard" Style="{StaticResource DarkCombo}" Width="130" SelectedIndex="1">
+                                <ComboBoxItem Content="802.3af"/><ComboBoxItem Content="802.3at"/>
+                                <ComboBoxItem Content="802.3bt Type 3"/><ComboBoxItem Content="802.3bt Type 4"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="保留（%）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="PoeReserve" Style="{StaticResource SetTextBox}" Width="90" Text="20"/>
+                        </StackPanel>
+                    </WrapPanel>
+                    <TextBlock x:Name="PoeValues" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <TextBlock x:Name="PoeVerdict" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="4　交換機背板與包轉發" Style="{StaticResource ColHead}"/>
+                    <WrapPanel Margin="0,8,0,0">
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="接入埠數" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="SwPorts" Style="{StaticResource SetTextBox}" Width="90" Text="24"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="每埠線速（Gbps）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="SwSpeed" Style="{StaticResource SetTextBox}" Width="100" Text="1"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="上行埠數" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="SwUplinkPorts" Style="{StaticResource SetTextBox}" Width="90" Text="2"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="上行每埠（Gbps）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="SwUplinkGbps" Style="{StaticResource SetTextBox}" Width="100" Text="1"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="標示背板（Gbps，0＝未填）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="SwBackplane" Style="{StaticResource SetTextBox}" Width="130" Text="56"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="標示包轉發（Mpps，0＝未填）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="SwMpps" Style="{StaticResource SetTextBox}" Width="140" Text="41.66"/>
+                        </StackPanel>
+                    </WrapPanel>
+                    <TextBlock x:Name="SwitchValues" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <TextBlock x:Name="SwitchVerdict" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="5　光纖衰減與鏈路裕度" Style="{StaticResource ColHead}"/>
+                    <WrapPanel Margin="0,8,0,0">
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="光纜長度（km）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="FiberKm" Style="{StaticResource SetTextBox}" Width="100" Text="2"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="波長" Style="{StaticResource FieldLabel}"/>
+                            <ComboBox x:Name="FiberWavelength" Style="{StaticResource DarkCombo}" Width="110" SelectedIndex="1">
+                                <ComboBoxItem Content="850 nm"/><ComboBoxItem Content="1310 nm"/><ComboBoxItem Content="1550 nm"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="接頭數" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="FiberConnectors" Style="{StaticResource SetTextBox}" Width="90" Text="4"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="熔接處數" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="FiberSplices" Style="{StaticResource SetTextBox}" Width="90" Text="2"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="TX 功率（dBm）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="FiberTx" Style="{StaticResource SetTextBox}" Width="100" Text="0"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="RX 靈敏度（dBm）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="FiberRx" Style="{StaticResource SetTextBox}" Width="100" Text="-20"/>
+                        </StackPanel>
+                    </WrapPanel>
+                    <TextBlock x:Name="FiberValues" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <TextBlock x:Name="FiberVerdict" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="6　攝影機端壓降" Style="{StaticResource ColHead}"/>
+                    <WrapPanel Margin="0,8,0,0">
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="PSE 供電（V）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="DropVoltage" Style="{StaticResource SetTextBox}" Width="100" Text="57"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="攝影機耗電（W）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="DropWatts" Style="{StaticResource SetTextBox}" Width="100" Text="25.5"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="線長（m）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="DropMeters" Style="{StaticResource SetTextBox}" Width="90" Text="100"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="線徑" Style="{StaticResource FieldLabel}"/>
+                            <ComboBox x:Name="DropAwg" Style="{StaticResource DarkCombo}" Width="110" SelectedIndex="1">
+                                <ComboBoxItem Content="26 AWG"/><ComboBoxItem Content="24 AWG"/>
+                                <ComboBoxItem Content="23 AWG"/><ComboBoxItem Content="22 AWG"/>
+                                <ComboBoxItem Content="21 AWG"/><ComboBoxItem Content="20 AWG"/>
+                                <ComboBoxItem Content="18 AWG"/><ComboBoxItem Content="16 AWG"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="使用線對數" Style="{StaticResource FieldLabel}"/>
+                            <ComboBox x:Name="DropPairs" Style="{StaticResource DarkCombo}" Width="90" SelectedIndex="0">
+                                <ComboBoxItem Content="2 對"/><ComboBoxItem Content="4 對"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="攝影機最低電壓（V）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="DropMinVoltage" Style="{StaticResource SetTextBox}" Width="120" Text="36"/>
+                        </StackPanel>
+                    </WrapPanel>
+                    <TextBlock x:Name="DropValues" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <TextBlock x:Name="DropVerdict" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="7　佈線用線量" Style="{StaticResource ColHead}"/>
+                    <WrapPanel Margin="0,8,0,0">
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="迴路數" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="CabRuns" Style="{StaticResource SetTextBox}" Width="90" Text="12"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="平均長度（m）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="CabAvg" Style="{StaticResource SetTextBox}" Width="100" Text="40"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="餘裕（%）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="CabSlack" Style="{StaticResource SetTextBox}" Width="90" Text="10"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="每路兩端預留（m）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="CabLoop" Style="{StaticResource SetTextBox}" Width="120" Text="2"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="每箱長度（m）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="CabBox" Style="{StaticResource SetTextBox}" Width="110" Text="305"/>
+                        </StackPanel>
+                    </WrapPanel>
+                    <TextBlock x:Name="CablingValues" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <TextBlock x:Name="CablingVerdict" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="8　RAID 可用容量" Style="{StaticResource ColHead}"/>
+                    <WrapPanel Margin="0,8,0,0">
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="硬碟顆數" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="RaidDisks" Style="{StaticResource SetTextBox}" Width="90" Text="8"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="單碟容量（TB）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="RaidDiskTb" Style="{StaticResource SetTextBox}" Width="100" Text="8"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="RAID 等級" Style="{StaticResource FieldLabel}"/>
+                            <ComboBox x:Name="RaidLevel" Style="{StaticResource DarkCombo}" Width="150" SelectedIndex="3">
+                                <ComboBoxItem Content="RAID 0"/><ComboBoxItem Content="RAID 1"/>
+                                <ComboBoxItem Content="RAID 5"/><ComboBoxItem Content="RAID 6"/>
+                                <ComboBoxItem Content="RAID 10"/><ComboBoxItem Content="RAID 50"/>
+                                <ComboBoxItem Content="RAID 60"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="熱備援顆數" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="RaidSpares" Style="{StaticResource SetTextBox}" Width="100" Text="1"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="每組顆數（RAID 50/60）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="RaidGroup" Style="{StaticResource SetTextBox}" Width="130" Text="6"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="檔案系統保留（%）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="RaidFs" Style="{StaticResource SetTextBox}" Width="120" Text="5"/>
+                        </StackPanel>
+                    </WrapPanel>
+                    <TextBlock x:Name="RaidValues" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <TextBlock x:Name="RaidVerdict" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="9　無線覆蓋" Style="{StaticResource ColHead}"/>
+                    <WrapPanel Margin="0,8,0,0">
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="每台 AP 吞吐（Mbps）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="WlPerAp" Style="{StaticResource SetTextBox}" Width="130" Text="400"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="覆蓋半徑（m）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="WlRadius" Style="{StaticResource SetTextBox}" Width="100" Text="30"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="案場面積（m²）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="WlArea" Style="{StaticResource SetTextBox}" Width="110" Text="2000"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="重疊比例（%）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="WlOverlap" Style="{StaticResource SetTextBox}" Width="100" Text="20"/>
+                        </StackPanel>
+                    </WrapPanel>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,4,0,0"
+                               Text="每台 AP 吞吐是設計值：2.4 GHz 20 MHz 約 70 Mbps、5 GHz 80 MHz 約 400 Mbps、6 GHz 160 MHz 約 800 Mbps。這是估算，不是現場量測。"/>
+                    <TextBlock x:Name="WirelessValues" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <TextBlock x:Name="WirelessVerdict" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="10　UPS 續航與機櫃 U 數" Style="{StaticResource ColHead}"/>
+                    <WrapPanel Margin="0,8,0,0">
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="總負載（W）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="UpsLoad" Style="{StaticResource SetTextBox}" Width="100" Text="150"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="電池容量（Wh）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="UpsWh" Style="{StaticResource SetTextBox}" Width="110" Text="900"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="逆變效率（%）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="UpsEff" Style="{StaticResource SetTextBox}" Width="100" Text="90"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="放電深度（%）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="UpsDod" Style="{StaticResource SetTextBox}" Width="100" Text="80"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="裝置 U 數" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="RackDeviceU" Style="{StaticResource SetTextBox}" Width="90" Text="20"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="保留 U 數" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="RackReservedU" Style="{StaticResource SetTextBox}" Width="90" Text="4"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
+                            <TextBlock Text="機櫃總 U 數" Style="{StaticResource FieldLabel}"/>
+                            <TextBox x:Name="RackTotalU" Style="{StaticResource SetTextBox}" Width="100" Text="24"/>
+                        </StackPanel>
+                    </WrapPanel>
+                    <TextBlock x:Name="UpsValues" Style="{StaticResource FieldValue}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <TextBlock x:Name="UpsVerdict" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                <Button Style="{StaticResource ToolButton}" Content="重新計算" Click="Recalculate_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="複製摘要" Margin="8,0,0,0" Click="Copy_Click"/>
+                <TextBlock x:Name="StatusText" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+            </StackPanel>
+
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,0,0,14"
+                       Text="假設：錄影量以十進位 GB／TB 計（與硬碟標示同一單位）；光纖接頭 0.5 dB、熔接 0.15 dB 取最壞情況；PoE 壓降以定功率負載解二次式，線材電阻用 20 °C 銅導體；背板與包轉發以 64 bytes 最小訊框計算。這些是工程慣例，不是量測值——驗收前仍要實測。"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

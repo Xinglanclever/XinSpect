@@ -66,6 +66,24 @@ public class SettingsPersistenceTests
             $"只抓到 {SavedProperty.Matches(src).Count} 個會存檔的屬性，掃描規則八成失效了");
     }
 
+    /// <summary>
+    /// 藍色中隊的守護進程<b>預設關閉</b>（3.13）。它會在背景常駐輪詢、載入核心驅動，
+    /// 這種東西不能替新使用者預設打開：想用的人自己到安全頁開，選擇會記進設定檔。
+    /// 三處都要關——欄位初始值、Persist 的預設值、模組的初始狀態；漏一處就會出現
+    /// 「設定寫 false、模組起來時卻已經是 true」的視窗。
+    /// </summary>
+    [Fact]
+    public void 藍色中隊守護進程預設關閉()
+    {
+        string src = File.ReadAllText(Path.Combine(RepoRoot(), "Services", "SettingsService.cs"));
+        Assert.DoesNotContain("_blueSquadronEnabled = true", src);
+        Assert.Contains("_blueSquadronEnabled;", src);
+        Assert.DoesNotContain("public bool BlueSquadronEnabled { get; set; } = true;", src);
+
+        string module = File.ReadAllText(Path.Combine(RepoRoot(), "Services", "BlueSquadron", "BlueSquadronModule.cs"));
+        Assert.DoesNotContain("_bridgeEnabled = true", module);
+    }
+
     private static string Block(string src, string from, string to)
     {
         int a = src.IndexOf(from, StringComparison.Ordinal);

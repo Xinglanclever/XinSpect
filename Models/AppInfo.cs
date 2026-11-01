@@ -44,12 +44,14 @@ public static class AppInfo
     public static string OfficialSiteDisplay => OfficialSiteUrl.Replace("https://", "", StringComparison.Ordinal);
 
     /// <summary>
-    /// 版本代號。<b>測試版（experiment/swiss-helvetica）起改為 Swiss</b>：這一版是介面語彙的
-    /// 實驗，代號跟著換，畫面上才不會看起來像又一個 Olympus 小版本。
-    /// 正式線仍以 Olympus 為代號（2.5 起）；Everest（額菲爾士峰／珠穆朗玛峰）於 2026-10-03 更名為 Olympus。
+    /// 版本代號。<b>單一來源</b>：視窗標題、標題列與關於頁共用這一個字串；
+    /// <c>Tools/bump-version.py</c> 升版時會與 AboutView 一起改，避免
+    /// 「標題寫 Swiss、關於頁寫 Ultima XIII」這種一頁兩答。
     /// </summary>
+    public const string Codename = "Ultima XIII";
+
     public static string VersionCodename(bool simplified)
-        => "Swiss";
+        => Codename;
 
     public static string WindowTitle(bool simplified)
         => $"XinSpect v{ShortVersion} {VersionCodename(simplified)}";

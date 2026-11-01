@@ -410,9 +410,20 @@ public sealed class SecurityPostureService : ObservableObject
             WshDisabled: ReadWshDisabled(),
             RdpNlaRequired: ReadRdpNla(),
             SmbV1Disabled: ReadSmbV1Disabled(),
-            WinRmStopped: !IsServiceRunning("WinRM"),
-            PrintSpoolerStopped: !IsServiceRunning("Spooler"),
-            DaysSinceUpdate: ReadDaysSinceUpdate()
+            // 服務狀態讀不到時不可寫成「已停止」：那會把「不知道」記成一個通過。
+            WinRmStopped: IsServiceRunning("WinRM") is bool wr ? !wr : null,
+            PrintSpoolerStopped: IsServiceRunning("Spooler") is bool sp ? !sp : null,
+            DaysSinceUpdate: ReadDaysSinceUpdate(),
+            // ── 3.13：現代 Windows 基線 ──
+            SmbSigningRequired: ReadSmbSigningRequired(),
+            SmbEncryptionEnabled: ReadSmbEncryption(),
+            NtlmRestricted: ReadNtlmRestricted(),
+            AsrRulesEnabled: ReadAsrRules(),
+            SmartAppControlState: ReadSmartAppControl(),
+            PowerShellScriptBlockLogging: ReadPowerShellBlockLogging(),
+            DefenderPuaProtection: ReadDefenderPua(),
+            DefenderExclusions: ReadDefenderExclusions(),
+            AutoRunDisabled: ReadAutoRunDisabled()
         );
     }
 
@@ -917,7 +928,12 @@ public sealed class SecurityPostureService : ObservableObject
         catch { return null; }
     }
 
-    private static bool IsServiceRunning(string serviceName)
+    /// <summary>
+    /// 服務是否在執行。<b>讀取失敗回 null，不是 false</b>——
+    /// 舊版 catch 之後回 false，於是 WMI 一掛，「WinRM 已停止」與「Spooler 已停止」
+    /// 就自動變成兩項通過。那是把「不知道」記成「做對了」。
+    /// </summary>
+    private static bool? IsServiceRunning(string serviceName)
     {
         try
         {
@@ -926,9 +942,123 @@ public sealed class SecurityPostureService : ObservableObject
             using var results = searcher.Get();
             foreach (ManagementObject svc in results)
                 return svc["State"]?.ToString()?.Equals("Running", StringComparison.OrdinalIgnoreCase) == true;
-            return false;
+            return false;   // 查得到、但沒有這個服務＝確實沒在跑
         }
-        catch { return false; }
+        catch { return null; }
+    }
+
+    // ── 3.13：現代 Windows 基線讀取（全部唯讀、登錄檔）──────────────────────────
+    //
+    // 原則與其他偵測器相同：讀不到回 null（「未評估」），不要回一個看起來像結論的 false。
+    // 這些設定大多由群組原則寫入；家用版沒有那個原則鍵，回 null 是如實的。
+
+    private static bool? ReadSmbSigningRequired()
+    {
+        try
+        {
+            using var server = Registry.LocalMachine.OpenSubKey(
+                @"SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters");
+            using var client = Registry.LocalMachine.OpenSubKey(
+                @"SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters");
+            bool? s = server?.GetValue("RequireSecuritySignature") is int sv ? sv == 1 : null;
+            bool? c = client?.GetValue("RequireSecuritySignature") is int cv ? cv == 1 : null;
+            // 兩邊都要要求才算完整；只讀到一邊就照那一邊說。
+            if (s is null && c is null) return null;
+            return (s ?? true) && (c ?? true);
+        }
+        catch { return null; }
+    }
+
+    private static bool? ReadSmbEncryption()
+    {
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(
+                @"SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters");
+            return key?.GetValue("EncryptData") is int v ? v == 1 : null;
+        }
+        catch { return null; }
+    }
+
+    private static bool? ReadNtlmRestricted()
+    {
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Lsa");
+            if (key?.GetValue("LmCompatibilityLevel") is int v) return v >= 5;
+            // 沒設定就是預設值（通常 3）——不是「已限制」。
+            return key is not null ? false : null;
+        }
+        catch { return null; }
+    }
+
+    private static int? ReadAsrRules()
+    {
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(
+                @"SOFTWARE\Policies\Microsoft\Windows Defender\Windows Defender Exploit Guard\ASR\Rules");
+            if (key is null) return 0;
+            return key.GetValueNames().Count(n => key.GetValue(n) is string s && s == "1");
+        }
+        catch { return null; }
+    }
+
+    /// <summary>Smart App Control：0 關閉、1 強制、2 評估。鍵不存在＝這台沒有這個功能。</summary>
+    private static int? ReadSmartAppControl()
+    {
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(
+                @"SYSTEM\CurrentControlSet\Control\CI\Policy");
+            return key?.GetValue("VerifiedAndReputablePolicyState") is int v ? v : null;
+        }
+        catch { return null; }
+    }
+
+    private static bool? ReadPowerShellBlockLogging()
+    {
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(
+                @"SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging");
+            return key?.GetValue("EnableScriptBlockLogging") is int v ? v == 1 : null;
+        }
+        catch { return null; }
+    }
+
+    private static bool? ReadDefenderPua()
+    {
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(
+                @"SOFTWARE\Policies\Microsoft\Windows Defender");
+            return key?.GetValue("PUAProtection") is int v ? v >= 1 : null;
+        }
+        catch { return null; }
+    }
+
+    private static int? ReadDefenderExclusions()
+    {
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(
+                @"SOFTWARE\Microsoft\Windows Defender\Exclusions\Paths");
+            return key?.GetValueNames().Length ?? 0;
+        }
+        catch { return null; }
+    }
+
+    private static bool? ReadAutoRunDisabled()
+    {
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer");
+            // 0xFF 是「所有磁碟機都關閉自動播放」的位元遮罩。
+            return key?.GetValue("NoDriveTypeAutoRun") is int v ? (v & 0xFF) == 0xFF : null;
+        }
+        catch { return null; }
     }
 
     private static int? ReadDaysSinceUpdate()
