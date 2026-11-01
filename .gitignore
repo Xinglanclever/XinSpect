@@ -72,3 +72,7 @@ __pycache__/
 
 # 使用者提供的 CPU/GPU 型號庫衍生檔：不進版控、不隨發佈散布（授權未確認）
 Assets/cpu-gpu-catalog.json
+
+# 驅動建置產物（由 XsRegProbe/Driver/x64build/build.bat 現編，不進版控）
+XsRegProbe/Driver/x64build/*.obj
+XsRegProbe/Driver/x64build/*.sys
