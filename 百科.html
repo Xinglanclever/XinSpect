@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>曦覽 XinSpect 百科</title>
-<!-- 由 README.md 產生（sha256 3ad6fcaa172a）；產生器：Tools/gen-docs-html.py；本檔不手改。 -->
+<!-- 由 README.md 產生（sha256 8b0ab1f0e0c9）；產生器：Tools/gen-docs-html.py；本檔不手改。 -->
 <style>:root{--bg:#fff;--ink:#1f2328;--sub:#57606a;--hair:#d0d7de;--surface:#f6f8fa;--link:#0969da;--accent:#1b6fd6;--badge:#ddf4ff;
       color-scheme:light}
 /* 深色版：文字色早就跟著 prefers-color-scheme 換了，body 的背景卻一直寫死 #fff——
@@ -467,7 +467,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </details>
 </nav>
 <main>
-<header class="doc"><div class="meta">曦覽 XinSpect 百科 ・ 來源：<code>README.md</code>（sha256 <code>3ad6fcaa172a</code>）・ 自足 HTML：無 CDN、無外部字型、無指令碼 ・ 定位：左側目錄、標題懸停有 ¶ 錨點、瀏覽器 Ctrl+F 找字</div></header>
+<header class="doc"><div class="meta">曦覽 XinSpect 百科 ・ 來源：<code>README.md</code>（sha256 <code>8b0ab1f0e0c9</code>）・ 自足 HTML：無 CDN、無外部字型、無指令碼 ・ 定位：左側目錄、標題懸停有 ¶ 錨點、瀏覽器 Ctrl+F 找字</div></header>
 <p><a href="https://github.com/Xinglanclever/XinSpect/blob/main/README.zh-CN.md">简体中文</a> · 繁體中文 · <a href="https://github.com/Xinglanclever/XinSpect/blob/main/README.en.md">English</a></p>
 <p><a class="ext" href="https://xinspect-browser-preview.wild-chimpanzee.workers.dev"><span class="badge">官方網站 ・ xinspect-browser-preview.wild-chimpanzee.workers.dev-4C8DFF?style=for-the</span></a></p>
 <blockquote><h2 id="-官方網站xinspect-browser-previewwild-chimpanzeeworkersdev-"><a class="self" href="#-官方網站xinspect-browser-previewwild-chimpanzeeworkersdev-">¶</a> 🌐 <a class="ext" href="https://xinspect-browser-preview.wild-chimpanzee.workers.dev">官方網站：xinspect-browser-preview.wild-chimpanzee.workers.dev ↗</a></h2>
@@ -526,7 +526,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <tr><td><a class="ext" href="https://github.com/Xinglanclever/XinSpect/releases/download/v3.13/SHA256SUMS.txt">SHA256SUMS.txt</a></td><td>334 bytes</td><td>逐檔雜湊，發佈後由 <code>Tools/verify-release.ps1</code> 對帳</td></tr>
 </tbody></table>
 <blockquote><p><strong>上表的位元組數為本版（v3.13）實際發佈的檔案大小</strong>；請以 Release 頁面列出的檔案為準。</p></blockquote>
-<p>安裝器（<code>XinSpectDeploy.exe</code>）會列出三個來源：<strong>1</strong> 是 GitHub 最新版（全自動部署主程式＋守護進程）、<strong>2</strong> 是 Google Drive 鏡像（分享資料夾，它會開瀏覽器並告訴你要按哪裡）、<strong>3</strong> 是中國直連線路——目錄型端點，安裝器自己抓檔，跟按 1 一樣有進度條、速度與剩餘時間。判斷哪一格用哪種模式，看的是端點本身：只有真的能用 GET 取回目錄下檔案的線路才寫成直連，分享頁一律只開瀏覽器，不會把分享頁存成一個假的 exe。鏡像連結集中在 <code>Installer/mirrors.txt</code>，安裝器啟動時會抓一份最新的（3 秒逾時，拿不到就用內建的）；某一格還沒有連結時，選單上會寫「尚未提供」，按下去會先說明再改用 GitHub。下載完成後一律檢查 PE 標頭，抓到 HTML（分享頁、限流頁、Google 的病毒掃描確認頁）會被擋下、刪檔並說出內容像什麼。</p>
+<p>安裝器（<code>XinSpectDeploy.exe</code>）會列出三個來源：<strong>1</strong> 是 GitHub 最新版（全自動部署主程式＋守護進程；守護進程自 3.13 起預設不啟用，要自己到安全頁開）、<strong>2</strong> 是 Google Drive 鏡像（分享資料夾，它會開瀏覽器並告訴你要按哪裡）、<strong>3</strong> 是中國直連線路——目錄型端點，安裝器自己抓檔，跟按 1 一樣有進度條、速度與剩餘時間。判斷哪一格用哪種模式，看的是端點本身：只有真的能用 GET 取回目錄下檔案的線路才寫成直連，分享頁一律只開瀏覽器，不會把分享頁存成一個假的 exe。鏡像連結集中在 <code>Installer/mirrors.txt</code>，安裝器啟動時會抓一份最新的（3 秒逾時，拿不到就用內建的）；某一格還沒有連結時，選單上會寫「尚未提供」，按下去會先說明再改用 GitHub。下載完成後一律檢查 PE 標頭，抓到 HTML（分享頁、限流頁、Google 的病毒掃描確認頁）會被擋下、刪檔並說出內容像什麼。</p>
 <p>需求：Windows 10 1903 以上／Windows 11、x64、.NET 10 Desktop Runtime（單檔版不含執行階段，需另裝）。想以管理員權限取得感測器、MSR 直讀與超頻頁面，請「以系統管理員身分執行」——不提權不是壞掉，只是那些頁面會整片顯示「—」（原因見第 0 部的六態）。</p>
 <hr>
 <h2 id="目錄"><a class="self" href="#目錄">¶</a> 目錄</h2>
