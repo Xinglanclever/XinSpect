@@ -73,45 +73,80 @@ public sealed class CoreTempMapService : ObservableObject
     }
 
     /// <summary>
-    /// 每秒由感測器迴圈呼叫（UI 執行緒）。
-    /// 從 SensorService.CpuCores 裡把每 N 條邏輯處理器折疊成一條實體核心（取最高溫、平均負載）。
+    /// 每秒由感測器迴圈呼叫（UI 執行緒）。把 <see cref="SensorService.CpuCores"/> 的逐核列對到這裡的實體核心格。
     /// </summary>
     public void Tick()
     {
-        var src = _sensor.CpuCores;
+        bool anyTemp = Apply(Cores, _sensor.CpuCores, _threadsPerCore);
+
+        // 若 LHM 沒有逐核溫度，嘗試 Core Temp 共享記憶體作為備援
+        if (!anyTemp)
+            FallbackCoreTemp();
+    }
+
+    /// <summary>
+    /// 對位與摘要（純函式，測試可直接餵假的逐核列）。
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>為什麼不再乘 threadsPerCore：</b>這條路以前假設 <see cref="SensorService.CpuCores"/> 是
+    /// 「逐邏輯執行緒一列」，所以第 p 格要吃第 2p、2p+1 列。但那張表其實<b>已經是每實體核心一列</b>——
+    /// <see cref="SensorService.CoreIndex"/> 取的 <c>#(\d+)</c> 只命中名稱裡第一個編號，
+    /// 「CPU Core #5 Thread #2」會被歸到核心 5，兩條執行緒合成同一列。
+    /// 於是 18 核的機器上：前 9 格各吃掉<b>兩顆不同核心</b>的最高溫（該格溫度不是它標的那顆核心的），
+    /// 後 9 格起點 18 已超出筆數，整片空白——畫面上就是「只有 9 個核心在跑」。
+    /// </para>
+    /// <para>
+    /// 現在優先用標籤對位（兩邊的標籤同源：都是「核心 #N」）；標籤對不上才退回比率折疊，
+    /// 比率也由實際筆數推導（筆數／格數），而不是寫死 2。混合架構的 TODO 也因此一併解掉。
+    /// </para>
+    /// </remarks>
+    /// <returns>是否至少量到一個溫度（沒有就交給 Core Temp 備援）。</returns>
+    internal static bool Apply(IReadOnlyList<CoreTempEntry> entries, IReadOnlyList<CoreRow> src, int threadsPerCore)
+    {
+        var byLabel = new Dictionary<string, CoreRow>(StringComparer.Ordinal);
+        foreach (var row in src) byLabel[row.Name] = row;
+
+        int ratio = src.Count >= entries.Count && entries.Count > 0 && src.Count % entries.Count == 0
+            ? Math.Max(1, src.Count / entries.Count)
+            : Math.Max(1, threadsPerCore);
+
         bool anyTemp = false;
-
-        for (int p = 0; p < Cores.Count; p++)
+        for (int p = 0; p < entries.Count; p++)
         {
-            var entry = Cores[p];
-
-            // 邏輯→實體映射：LHM 以 CoreRow index 對應邏輯核心，SMT 時每兩條對一個實體核心
-            int loStart = p * _threadsPerCore;
-            int loEnd = Math.Min(loStart + _threadsPerCore, src.Count);
-
+            var entry = entries[p];
             double? maxTemp = null;
             double totalLoad = 0;
             int loadCount = 0;
 
-            for (int li = loStart; li < loEnd; li++)
+            if (byLabel.TryGetValue(entry.Label, out var one))
             {
-                var row = src[li];
-                if (row.TempC.HasValue)
-                {
-                    maxTemp = maxTemp.HasValue ? Math.Max(maxTemp.Value, row.TempC.Value) : row.TempC.Value;
-                    anyTemp = true;
-                }
-                totalLoad += row.LoadPercent;
+                // 標籤對得上就是這顆核心自己的列，不做任何折疊
+                if (one.TempC.HasValue) { maxTemp = one.TempC; anyTemp = true; }
+                totalLoad += one.LoadPercent;
                 loadCount++;
+            }
+            else
+            {
+                int loStart = p * ratio;
+                int loEnd = Math.Min(loStart + ratio, src.Count);
+                for (int li = loStart; li < loEnd; li++)
+                {
+                    var row = src[li];
+                    if (row.TempC.HasValue)
+                    {
+                        maxTemp = maxTemp.HasValue ? Math.Max(maxTemp.Value, row.TempC.Value) : row.TempC.Value;
+                        anyTemp = true;
+                    }
+                    totalLoad += row.LoadPercent;
+                    loadCount++;
+                }
             }
 
             entry.Temperature = maxTemp;
             entry.Load = loadCount > 0 ? totalLoad / loadCount : 0;
         }
-
-        // 若 LHM 沒有逐核溫度，嘗試 Core Temp 共享記憶體作為備援
-        if (!anyTemp)
-            FallbackCoreTemp();
+        return anyTemp;
     }
 
     private void FallbackCoreTemp()

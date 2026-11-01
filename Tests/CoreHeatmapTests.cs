@@ -63,6 +63,28 @@ public class CoreHeatmapContractTests
     }
 
     [Fact]
+    public void 十八核的逐核列要一格對一顆_不能折疊掉一半()
+    {
+        // 歷史缺陷（本機 i9-7980XE 18 核，畫面上只亮 9 格）：
+        // SensorService.CoreIndex 的 #(\d+) 只命中名稱裡第一個編號，「CPU Core #5 Thread #2」
+        // 會併回核心 5，所以 CpuCores 本來就是「每實體核心一列」。舊的對位還乘 threadsPerCore＝2，
+        // 於是前 9 格各吃兩顆核心的最高溫、後 9 格起點超出筆數整片空白。
+        var entries = new List<CoreTempEntry>();
+        foreach (int i in Enumerable.Range(0, 18)) entries.Add(new CoreTempEntry(i, $"核心 #{i + 1}"));
+
+        var rows = new List<CoreRow>();
+        foreach (int i in Enumerable.Range(1, 18)) rows.Add(new CoreRow($"核心 #{i}") { TempC = 40 + i, LoadPercent = i });
+
+        Assert.True(CoreTempMapService.Apply(entries, rows, threadsPerCore: 2));
+
+        for (int i = 0; i < 18; i++)
+        {
+            Assert.Equal(40 + i + 1, entries[i].Temperature);   // 自己那顆的量測值，不是鄰居的最大值
+            Assert.Equal(i + 1, entries[i].Load);
+        }
+    }
+
+    [Fact]
     public void 沒有讀值的核_不畫顏色也不說0度()
     {
         var cell = new CoreHeatCell(0, new FakeCore { TempC = null });
