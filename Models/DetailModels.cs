@@ -190,13 +190,13 @@ public sealed class NicInfo
 
     public Brand Brand => Brands.Resolve(Manufacturer, Name);
 
+    /// <summary>卡片容器（ItemsControl）的無障礙名稱取自 ToString。</summary>
+    public override string ToString() => Name;
+
     /// <summary>總覽「詳細資訊」用的單行摘要：名稱、鏈路速度（速度讀不到時只留名稱，不補一個假數字）。</summary>
     public string DisplayText => Name is not ("—" or "")
         ? (SpeedText is "—" or "" or "-" ? Name : $"{Name}・{SpeedText}")
         : "—";
-
-    /// <summary>卡片容器（ItemsControl）的無障礙名稱取自 ToString，不覆寫會唸成型別名 "XinSpect.NicInfo"。</summary>
-    public override string ToString() => Name;
 }
 
 /// <summary>CPU-Z 報告的整體解析結果。</summary>

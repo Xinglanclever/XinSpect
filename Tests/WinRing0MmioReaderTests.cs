@@ -38,20 +38,33 @@ public class WinRing0MmioReaderTests
 
     private sealed class FakeMmio : IMmioReader, IDisposable
     {
-        public FakeMmio(bool available, string reason) { Available = available; UnavailableReason = reason; }
+        /// <summary>Readable=false 用來模擬「方法存在、Available 為真，但實際讀取一律失敗」——
+        /// 2026-11-01 在實機上看到的 WinRing0 行為。</summary>
+        public FakeMmio(bool available, string reason, bool readable = false)
+        {
+            Available = available; UnavailableReason = reason; Readable = readable;
+        }
 
         public bool Available { get; }
         public string? UnavailableReason { get; }
+        public bool Readable { get; }
         public int DisposeCount { get; private set; }
+        public int ReadCount { get; private set; }
+        public string? LastFailReason => Readable ? null : "讀取失敗（假件）";
 
-        public byte[]? ReadBlock(ulong physicalAddress, int length) => null;
+        public byte[]? ReadBlock(ulong physicalAddress, int length)
+        {
+            ReadCount++;
+            return Readable ? new byte[length] : null;
+        }
+
         public void Dispose() => DisposeCount++;
     }
 
     [Fact]
     public void 主力可用時直接回主力且不打擾備援()
     {
-        var primary = new FakeMmio(true, "");
+        var primary = new FakeMmio(true, "", readable: true);
         var fallback = new FakeMmio(true, "");
         try
         {
@@ -75,6 +88,41 @@ public class WinRing0MmioReaderTests
             Assert.Same(fallback, chosen);
             Assert.Equal(1, primary.DisposeCount);
             Assert.Equal(0, fallback.DisposeCount);
+        }
+        finally { fallback.Dispose(); }
+    }
+
+    [Fact]
+    public void 主力聲稱可讀但探測失敗時備援接手()
+    {
+        // 這就是 2026-11-01 實機上的 WinRing0：MemoryReadAvailable=true、MSR 也通，
+        // 但實體記憶體讀取一律回 false。只看 Available 會讓這條路永遠選不到備援。
+        var primary = new FakeMmio(true, "", readable: false);
+        var fallback = new FakeMmio(true, "", readable: true);
+        var chosen = MmioBackendSelector.Select(() => primary, () => fallback);
+        try
+        {
+            Assert.Same(fallback, chosen);
+            Assert.Equal(1, primary.DisposeCount);
+            // 探測打兩個位址（0x0、0x100000）就夠了，不該把整條備援也拿來試讀。
+            Assert.Equal(2, primary.ReadCount);
+            Assert.Equal(0, fallback.ReadCount);
+        }
+        finally { fallback.Dispose(); }
+    }
+
+    [Fact]
+    public void 探測失敗且備援也不可用時原因要說明宣稱可讀但讀失敗()
+    {
+        var primary = new FakeMmio(true, "", readable: false);
+        var fallback = new FakeMmio(false, "驅動裝置不存在");
+        var chosen = MmioBackendSelector.Select(() => primary, () => fallback);
+        try
+        {
+            Assert.IsType<UnavailableMmioReader>(chosen);
+            Assert.Contains("宣稱可讀", chosen.UnavailableReason);
+            Assert.Contains("0x100000", chosen.UnavailableReason);
+            Assert.Contains("驅動裝置不存在", chosen.UnavailableReason);
         }
         finally { fallback.Dispose(); }
     }

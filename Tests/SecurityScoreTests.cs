@@ -121,7 +121,7 @@ public class SecurityScoreTests
     }
 
     [Fact]
-    public void AllNull_PenalizedButNotZero()
+    public void AllNull_NotScored_NoGapVerdict()
     {
         var dma = new SecurityScoreEngine.DmaFacts(
             null, null, null, null, null, null, null, null, null);
@@ -136,9 +136,45 @@ public class SecurityScoreTests
             0, 0, 0, null, null, null, null, null, null);
 
         var result = SecurityScoreEngine.Evaluate(dma, fw, cpu, stor, drv, NullSurface());
-        // null = 50% deduction per item, so score should be around 50
-        Assert.InRange(result.TotalScore, 30, 70);
-        Assert.True(result.TotalScore < 100, "All-null must not score 100");
+        // 讀不到 ≠ 有缺口：全 null 不可以被算成「50 分的爛機器」，
+        // 而是「沒有資料，所以不給分」。這正是防護頁被抱怨的那個問題。
+        Assert.Equal(0, result.TotalScore);
+        Assert.False(result.HasScore, "全未評估時不該給總分");
+        Assert.True(result.CoveragePercent < 50,
+            $"覆蓋率應該很低，實際 {result.CoveragePercent}%");
+        Assert.Contains("資料不足", result.Verdict);
+        Assert.DoesNotContain("缺口", result.Verdict);
+        // DMA 只有「有沒有 Thunderbolt 控制器」這一項算量到（沒有＝確認過），
+        // 其餘五條防線應該是 0：全部讀不到。
+        foreach (var c in result.Categories)
+            Assert.Equal(c.Id == "dma" ? 10 : 0, c.AssessedWeight);
+    }
+
+    [Fact]
+    public void UnknownItems_DoNotDragScoreDown()
+    {
+        // 同一台機器，量到的那一項是好是壞才是分數的依據；
+        // 讀不到的項目既不該加分，也不該扣分。
+        var dma = new SecurityScoreEngine.DmaFacts(
+            HvciEnabled: true, VbsRunning: null, IommuAvailable: null,
+            DmaProtection: null, CredentialGuard: null,
+            BitLockerEnabled: null, BitLockerDmaProtection: null,
+            ThunderboltSecurityLevel: null, DmaEnforced: null);
+        var fw = new SecurityScoreEngine.FirmwareFacts(
+            null, null, null, null, null, null, null, null, null, null, null);
+        var cpu = new SecurityScoreEngine.CpuFacts(
+            null, null, null, null, null, null, null, null, null, null);
+        var stor = new SecurityScoreEngine.StorageFacts(null, null, null, null, null);
+        var drv = new SecurityScoreEngine.DriverFacts(
+            0, 0, 0, null, null, null, null, null, null);
+
+        var result = SecurityScoreEngine.Evaluate(dma, fw, cpu, stor, drv, NullSurface());
+        var dmaLine = result.Categories.First(c => c.Id == "dma");
+
+        Assert.True(dmaLine.AssessedWeight > 0);
+        Assert.Equal(100, dmaLine.Score);   // 量到的那一項是好的 → 在量得到的範圍內滿分
+        Assert.True(result.CoveragePercent <= 40,
+            $"只量到一項時覆蓋率應該很低，實際 {result.CoveragePercent}%");
     }
 
     [Fact]
@@ -217,10 +253,10 @@ public class SecurityScoreTests
     }
 
     [Fact]
-    public void NullPenalty_Is50Percent()
+    public void NullChecks_AreExcludedFromDenominator()
     {
-        // One null check in a line should deduct ~50% of item weight
-        // All-null DMA should score around 50 (since null = weight/2 penalty)
+        // 一條防線全部讀不到時：該防線 AssessedWeight=0（不是「50 分」），
+        // 也不參與總分的加權。
         var dma = new SecurityScoreEngine.DmaFacts(
             null, null, null, null, null, null, null, null, null);
         var fw = new SecurityScoreEngine.FirmwareFacts(
@@ -234,11 +270,12 @@ public class SecurityScoreTests
             50, 0, 0, true, true, true, true, true, true);
 
         var result = SecurityScoreEngine.Evaluate(dma, fw, cpu, stor, drv, GoodSurface());
-        SecurityCategoryScore? dmaLine = null;
-        foreach (var c in result.Categories)
-            if (c.Id == "dma") dmaLine = c;
-        Assert.NotNull(dmaLine);
-        // All null items = each gets weight/2 penalty, so score should be ~50
-        Assert.InRange(dmaLine.Score, 35, 65);
+        var dmaLine = result.Categories.First(c => c.Id == "dma");
+        // DMA 只剩「有沒有 Thunderbolt」這一項是量得到的（沒有控制器＝已確認），
+        // 其餘八項讀不到，不進分母。
+        Assert.Equal(10, dmaLine.AssessedWeight);
+        // 其他五條防線都是滿的，所以總分應該是高分，而不是被 null 拖下來
+        Assert.InRange(result.TotalScore, 80, 100);
+        Assert.True(result.CoveragePercent >= 80);
     }
 }

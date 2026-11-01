@@ -32,7 +32,7 @@
                         <local:HelpDot HelpKey="firmware-security/深層核心存取" Margin="8,2,0,0"/>
                     </StackPanel>
                     <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="11"
-                               Text="開＝產生本專案自簽 CA 並裝入信任庫、載入 XsRegProbe 白名單唯讀驅動（僅允許清單內的 MSR/MMIO 讀取，退出即卸載）；關＝移除信任並卸載。只信自己這張憑證、不開全機 test-signing；需要管理員權限，未提權時不會做任何變更。MMIO 事實已由 WinRing0 主力後端讀取，本驅動是允許清單內的備援路徑。"/>
+                               Text="開＝產生本專案自簽 CA 並裝入信任庫，再嘗試載入 XsRegProbe 白名單唯讀驅動（僅允許清單內的 MSR/MMIO 讀取，退出即卸載）；關＝移除信任並卸載。需要管理員權限，未提權時不會做任何變更。注意：Windows 的核心簽章只接受 Microsoft 信任鏈，自簽驅動在未開 testsigning 的一般機器上會被拒絕載入（錯誤 577）——這是政策，不是設定漏了。WinRing0 只負責 MSR 與 PCI 設定空間（實測可用）；實體記憶體讀取會失敗，所以 SPIBAR／MCHBAR／ECAM 只能靠這支驅動——開發機專用。"/>
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <Button x:Name="DeepAccessEnableButton" AutomationProperties.AutomationId="DeepAccessEnableButton"
                                 Style="{StaticResource PrimaryButton}" Content="開啟" Click="DeepAccessEnable_Click"/>

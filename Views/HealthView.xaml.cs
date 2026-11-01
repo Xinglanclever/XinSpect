@@ -13,9 +13,37 @@ public partial class HealthView : UserControl, IPageLifecycle
     public HealthView()
     {
         InitializeComponent();
-        SurfaceDriveCombo.ItemsSource = DiskSurfaceScanService.ListVolumes().Select(v => (v.Path, v.Label)).ToList();
-        if (SurfaceDriveCombo.Items.Count > 0) SurfaceDriveCombo.SelectedIndex = 0;
-        TrustRows.ItemsSource = TpmSecureBootService.Read();
+        // 磁碟清單要逐槽開裝置（\\.\X:）、TPM 要查 WMI 的 Win32_Tpm——整機磁碟或 WMI
+        // 卡住時，這兩件事都會同步等到天荒地老。放在建構子裡，第一次點開「健康」頁就會把
+        // 整個視窗凍住；先讓頁面出來，清單隨後補上。
+        _ = Task.Run(LoadHeaderLists);
+    }
+
+    /// <summary>磁碟清單與 TPM／Secure Boot 列：背景讀，回 UI 執行緒才碰控制項。</summary>
+    void LoadHeaderLists()
+    {
+        var volumes = DiskIo.Guarded(DiskSurfaceScanService.ListVolumes)
+                      ?? new List<(string Path, string Label)>();
+        var trust = ReadTrustRows();
+
+        Shell.BeginOnUi(() =>
+        {
+            SurfaceDriveCombo.ItemsSource = volumes.Select(v => (v.Path, v.Label)).ToList();
+            if (SurfaceDriveCombo.Items.Count > 0) SurfaceDriveCombo.SelectedIndex = 0;
+            TrustRows.ItemsSource = trust;
+        });
+    }
+
+    /// <summary>
+    /// TPM／Secure Boot：WMI 沒有回應時照實說。原本的 <see cref="TpmSecureBootService.Read"/>
+    /// 自己會把「讀不到」講成「未找到」，但那是查得到 TPM 命名空間的前提；整機 WMI 卡住時
+    /// 根本走不到那裡，所以要由這裡把「無回應」與「真的沒有 TPM」分開。
+    /// </summary>
+    static List<TrustSecurityRow> ReadTrustRows()
+    {
+        var (rows, timedOut) = WmiGuard.Probe(TpmSecureBootService.Read);
+        if (rows is not null) return rows;
+        return [new TrustSecurityRow("TPM／Secure Boot", "—", timedOut ? "WMI 無回應" : "讀取失敗")];
     }
 
     public void OnActivated()
@@ -56,11 +84,17 @@ public partial class HealthView : UserControl, IPageLifecycle
         DataContext as MainViewModel
         ?? Shell.Vm;
     private void BluetoothRefresh_Click(object sender, RoutedEventArgs e)
-    {
-        var rows = BluetoothBatteryService.Read();
-        BluetoothRows.ItemsSource = rows;
-        BluetoothStatus.Text = rows.Count == 0 ? "未找到藍牙裝置" : $"已列舉 {rows.Count} 個藍牙裝置";
-    }
+        => _ = Task.Run(() =>
+        {
+            var (rows, timedOut) = WmiGuard.Probe(BluetoothBatteryService.Read);
+            Shell.BeginOnUi(() =>
+            {
+                BluetoothRows.ItemsSource = rows;
+                BluetoothStatus.Text = rows is null
+                    ? (timedOut ? "WMI 無回應，稍後再試" : "讀取失敗")
+                    : rows.Count == 0 ? "未找到藍牙裝置" : $"已列舉 {rows.Count} 個藍牙裝置";
+            });
+        });
 
     private async void SurfaceScan_Click(object sender, RoutedEventArgs e)
     {
@@ -92,5 +126,9 @@ public partial class HealthView : UserControl, IPageLifecycle
         finally { SurfaceScanButton.IsEnabled = true; SurfaceProgress.Visibility = Visibility.Collapsed; }
     }
     private void TrustRefresh_Click(object sender, RoutedEventArgs e)
-        => TrustRows.ItemsSource = TpmSecureBootService.Read();
+        => _ = Task.Run(() =>
+        {
+            var rows = ReadTrustRows();
+            Shell.BeginOnUi(() => TrustRows.ItemsSource = rows);
+        });
 }

@@ -79,15 +79,20 @@ internal static class Install
                 return 0;
             }
 
-            Console.WriteLine("  [1/4] Downloading XinSpect.exe (includes LHM + WinRing0 driver + BlueSquadron)...");
-            DownloadFile(chosen, "XinSpect.exe", Path.Combine(dir, "XinSpect.exe"), 1, 4);
+            Console.WriteLine("  [1/5] Downloading XinSpect.exe (includes LHM + WinRing0 driver + BlueSquadron)...");
+            DownloadFile(chosen, "XinSpect.exe", Path.Combine(dir, "XinSpect.exe"), 1, 5, true);
 
-            Console.WriteLine("  [2/4] Downloading BlueSquadronBridge.exe...");
-            DownloadFile(chosen, "BlueSquadronBridge.exe", Path.Combine(dir, "BlueSquadronBridge.exe"), 2, 4);
+            Console.WriteLine("  [2/5] Downloading BlueSquadronBridge.exe...");
+            DownloadFile(chosen, "BlueSquadronBridge.exe", Path.Combine(dir, "BlueSquadronBridge.exe"), 2, 5, true);
 
-            Console.WriteLine("  [3/4] Deployed to Desktop\\XinSpect folder.");
+            // 深層核心存取的驅動：程式按「開啟」會自己簽章＋裝服務，但檔案必須先就位。
+            // 路徑是程式寫死的 %ProgramData%\XinSpect\Driver\XsRegProbe.sys。
+            Console.WriteLine("  [3/5] Deploying XsRegProbe.sys (deep kernel access driver)...");
+            string driverNote = DeployDriver(chosen, dir);
 
-            Console.WriteLine("  [4/4] Launching XinSpect...");
+            Console.WriteLine("  [4/5] Deployed to Desktop\\XinSpect folder.");
+
+            Console.WriteLine("  [5/5] Launching XinSpect...");
             Console.WriteLine();
             Process.Start(new ProcessStartInfo(Path.Combine(dir, "XinSpect.exe")) { UseShellExecute = true });
 
@@ -95,6 +100,7 @@ internal static class Install
             Console.WriteLine("  Deploy complete.");
             Console.WriteLine("  - XinSpect.exe (includes WinRing0 + LHM + BlueSquadron)");
             Console.WriteLine("  - BlueSquadronBridge.exe (standalone guard)");
+            Console.WriteLine("  - " + driverNote);
             Console.WriteLine("  Location: Desktop\\XinSpect\\");
             Console.WriteLine("  ==========================================");
             Console.WriteLine();
@@ -113,6 +119,75 @@ internal static class Install
             Console.WriteLine("  Press any key to close...");
             Pause();
             return 1;
+        }
+    }
+
+    // 部署驅動：下載 XsRegProbe.sys，放進程式指定的固定路徑。
+    // 不在這裡簽章、也不裝憑證——那些是程式裡「深層核心存取」開關的工作
+    // （它會用本機產生的 CA 簽這支 .sys，再把服務裝起來）。這裡只負責「檔案到位」。
+    private static string DeployDriver(Mirror m, string appDir)
+    {
+        string target;
+        bool elevated = IsElevated();
+        if (elevated)
+        {
+            string driverDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "XinSpect", "Driver");
+            target = Path.Combine(driverDir, "XsRegProbe.sys");
+            try
+            {
+                Directory.CreateDirectory(driverDir);
+            }
+            catch (Exception ex)
+            {
+                return "XsRegProbe.sys 未部署（無法建立 " + driverDir + "：" + ex.Message + "）";
+            }
+        }
+        else
+        {
+            // 沒提權：放到程式旁邊，並把「為什麼」講清楚——不假裝部署成功。
+            string side = Path.Combine(appDir, "Driver");
+            Directory.CreateDirectory(side);
+            target = Path.Combine(side, "XsRegProbe.sys");
+        }
+
+        string tmp = target + ".part";
+        try
+        {
+            DownloadFile(m, "XsRegProbe.sys", tmp, 3, 5, false);
+            if (File.Exists(target)) File.Delete(target);
+            File.Move(tmp, target);
+        }
+        catch (Exception ex)
+        {
+            try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
+            return "XsRegProbe.sys 未部署（" + ex.Message + "）——深層核心存取仍可由文件手冊手動建置";
+        }
+
+        if (elevated)
+            return "XsRegProbe.sys -> " + target;
+        return "XsRegProbe.sys -> " + target
+             + "（未以管理員執行，未寫入 ProgramData；請把這個檔複製到 "
+             + Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                            "XinSpect", "Driver", "XsRegProbe.sys")
+             + "，或以管理員身分重新執行本部署器）";
+    }
+
+    private static bool IsElevated()
+    {
+        try
+        {
+            using (System.Security.Principal.WindowsIdentity id =
+                   System.Security.Principal.WindowsIdentity.GetCurrent())
+            {
+                return new System.Security.Principal.WindowsPrincipal(id)
+                    .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+            }
+        }
+        catch
+        {
+            return false;
         }
     }
 
@@ -251,7 +326,7 @@ internal static class Install
         try { Console.ReadKey(true); } catch { }
     }
 
-    private static void DownloadFile(Mirror m, string name, string dest, int step, int total)
+    private static void DownloadFile(Mirror m, string name, string dest, int step, int total, bool requireProgram)
     {
         string url = m.Direct ? Url(m, name) : m.BaseUrl;
         Stopwatch sw = Stopwatch.StartNew();
@@ -260,7 +335,7 @@ internal static class Install
         // 下載到 HTML 是這種安裝器最常見的假成功：分享頁、流量限制頁、病毒掃描警告
         // 都會回 200，存下來的「XinSpect.exe」其實是一張網頁。這裡直接驗 PE 標頭，
         // 不合格就刪掉並說清楚，不讓使用者雙擊一個不是程式的檔案。
-        if (!LooksLikeProgram(dest))
+        if (!LooksLikeDownload(dest, requireProgram))
         {
             // Google Drive 對執行檔常常先回一張「無法掃描病毒」的確認頁，
             // 同一個檔案換成 usercontent 端點並帶 confirm=t 就會直給檔案。
@@ -272,7 +347,7 @@ internal static class Install
                 Console.WriteLine("  Google Drive 回了確認頁，改用確認直連重試…");
                 bar = RunDownload(retry, dest, step, total);
             }
-            if (!LooksLikeProgram(dest))
+            if (!LooksLikeDownload(dest, requireProgram))
             {
                 long len = new FileInfo(dest).Length;
                 string line = FirstLine(Head(dest, 400));
@@ -518,12 +593,33 @@ internal static class Install
         return "https://drive.usercontent.google.com/download?id=" + id + "&export=download&confirm=t";
     }
 
+    private static bool LooksLikeDownload(string path, bool requireProgram)
+    {
+        if (!LooksLikePe(path)) return false;
+        if (!requireProgram) return new FileInfo(path).Length >= 1024;
+        return new FileInfo(path).Length >= 1024 * 100;
+    }
+
     private static bool LooksLikeProgram(string path)
     {
         try
         {
             FileInfo fi = new FileInfo(path);
             if (fi.Length < 1024 * 100) return false;
+            return Head(path, 2).StartsWith("MZ", StringComparison.Ordinal);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool LooksLikePe(string path)
+    {
+        try
+        {
+            FileInfo fi = new FileInfo(path);
+            if (fi.Length < 1024) return false;
             return Head(path, 2).StartsWith("MZ", StringComparison.Ordinal);
         }
         catch

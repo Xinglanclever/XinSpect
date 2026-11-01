@@ -1,0 +1,61 @@
+<UserControl x:Class="XinSpect.HardwareCatalogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XinSpect"
+             FontFamily="{StaticResource AppFont}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <StackPanel>
+            <local:SectionHead Text="歷史型號查詢" HelpKey="atlas/歷史型號查詢"/>
+            <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" Margin="0,2,0,12"
+                       Text="查詢使用者明確匯入的 2006–2026 CPU／GPU 型號索引。為避免未確認再散布權利，本程式不內建 workbook 衍生資料；結果是資料庫記錄，不是本機量測。"/>
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="140"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBox x:Name="SearchBox" Style="{StaticResource SetTextBox}" ToolTip="型號、品牌、家族、插槽或架構" KeyDown="SearchBox_KeyDown"/>
+                        <ComboBox x:Name="KindBox" Grid.Column="1" Margin="8,0,0,0" Style="{StaticResource DarkCombo}" SelectedIndex="0">
+                            <ComboBoxItem Content="全部類型" Tag=""/><ComboBoxItem Content="CPU" Tag="CPU"/><ComboBoxItem Content="GPU" Tag="GPU"/>
+                        </ComboBox>
+                        <Button Grid.Column="2" Margin="8,0,0,0" Style="{StaticResource ToolButton}" Content="查詢" Click="Search_Click"/>
+                        <Button Grid.Column="3" Margin="8,0,0,0" Style="{StaticResource ToolButton}" Content="匯入 JSON" Click="Import_Click"/>
+                    </Grid>
+                    <TextBlock x:Name="StatusText" Style="{StaticResource FieldLabel}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="查詢結果" Style="{StaticResource ColHead}"/>
+                    <ListBox x:Name="Results" Margin="0,8,0,0" Background="Transparent" BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,0,1" Padding="0,7">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="95"/><ColumnDefinition Width="250"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Kind}" Style="{StaticResource FieldLabel}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding DisplayName}" Style="{StaticResource FieldValue}" TextWrapping="Wrap"/>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="{Binding Summary}" Style="{StaticResource FieldLabel}" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding EvidenceText}" Style="{StaticResource FieldLabel}" Margin="0,3,0,0"/>
+                                            <TextBlock Text="{Binding StatusText}" Style="{StaticResource FieldLabel}"/>
+                                            <TextBlock Text="{Binding NotesText}" Style="{StaticResource FieldLabel}" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding SourceText}" Style="{StaticResource FieldLabel}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="來源與限制" Style="{StaticResource ColHead}"/>
+                    <TextBlock x:Name="AttributionText" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <TextBlock x:Name="LimitationsText" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <TextBlock Text="主機板／電源／散熱器資料未內建；本頁只顯示使用者明確匯入且自行確認可使用的 CPU/GPU JSON。" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

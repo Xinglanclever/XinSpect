@@ -57,6 +57,13 @@ public partial class AboutView : UserControl
         OfficialSiteText.Text = AppInfo.OfficialSiteDisplay;
     }
 
+    private void SageQuoteHint_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        SageQuoteText.Visibility = SageQuoteText.Visibility == Visibility.Visible
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+    }
+
     private void OpenSite_Click(object sender, RoutedEventArgs e)
     {
         try { Process.Start(new ProcessStartInfo(AppInfo.OfficialSiteUrl) { UseShellExecute = true }); }

@@ -107,6 +107,7 @@ public sealed class CoreTempMapService : ObservableObject
         var byLabel = new Dictionary<string, CoreRow>(StringComparer.Ordinal);
         foreach (var row in src) byLabel[row.Name] = row;
 
+        bool anyLabelMatch = entries.Any(e => byLabel.ContainsKey(e.Label));
         int ratio = src.Count >= entries.Count && entries.Count > 0 && src.Count % entries.Count == 0
             ? Math.Max(1, src.Count / entries.Count)
             : Math.Max(1, threadsPerCore);
@@ -126,7 +127,7 @@ public sealed class CoreTempMapService : ObservableObject
                 totalLoad += one.LoadPercent;
                 loadCount++;
             }
-            else
+            else if (!anyLabelMatch)
             {
                 int loStart = p * ratio;
                 int loEnd = Math.Min(loStart + ratio, src.Count);

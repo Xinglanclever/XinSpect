@@ -196,8 +196,22 @@ try {
         Write-Host 'byte counts already current - no docs commit needed'
     }
 
+    # ---------- deep kernel driver ----------
+    # 部署器會把這支 .sys 放進 %ProgramData%\XinSpect\Driver，程式按「開啟」時用本機 CA 簽章再載入。
+    # 沒有它，「深層核心存取」就只能叫使用者自己去編（就是那個老問題）。
+    Write-Host '==> build XsRegProbe.sys'
+    $driverSys = 'XsRegProbe\Driver\x64build\XsRegProbe.sys'
+$driverBat = 'XsRegProbe\Driver\x64build\build.bat'
+    if (-not (Test-Path $driverSys)) {
+        if (-not (Test-Path $driverBat)) { Fail "driver asset missing: $driverSys (no build script either)" }
+        & cmd /c $driverBat | Out-Null
+        if ($LASTEXITCODE -ne 0) { Fail 'XsRegProbe.sys build failed (see XsRegProbe/BUILD-給使用者.md)' }
+    }
+    if (-not (Test-Path $driverSys)) { Fail "driver asset missing after build: $driverSys" }
+    Ok "driver $driverSys = $((Get-Item $driverSys).Length) bytes"
+
     # ---------- release + assets ----------
-    Write-Host '==> create/update Release and upload four assets'
+    Write-Host '==> create/update Release and upload five assets'
     $bridge = 'publish-2.44-bridge\BlueSquadronBridge.exe'
     if (-not (Test-Path $bridge)) { Fail "bridge asset source missing: $bridge" }
     $deploy = 'Installer\XinSpectDeploy.exe'
@@ -206,7 +220,7 @@ try {
     # 逐檔雜湊一律算自**等一下要上傳的那三個檔案**，不是算自別的目錄。
     $sums = Join-Path $env:TEMP "SHA256SUMS-$Version.txt"
     $sumLines = @()
-    foreach ($pair in @(@('XinSpect.exe', $exe), @('BlueSquadronBridge.exe', $bridge), @('XinSpectDeploy.exe', $deploy))) {
+    foreach ($pair in @(@('XinSpect.exe', $exe), @('BlueSquadronBridge.exe', $bridge), @('XinSpectDeploy.exe', $deploy), @('XsRegProbe.sys', $driverSys))) {
         $h = (Get-FileHash -Algorithm SHA256 -Path $pair[1]).Hash.ToLowerInvariant()
         $sumLines += "$h  $($pair[0])"
     }
@@ -216,6 +230,7 @@ try {
         --asset "XinSpect.exe=$exe" `
         --asset "BlueSquadronBridge.exe=$bridge" `
         --asset "XinSpectDeploy.exe=$deploy" `
+        --asset "XsRegProbe.sys=$driverSys" `
         --asset "SHA256SUMS.txt=$sums"
     if ($LASTEXITCODE -ne 0) { Fail 'asset upload failed' }
 

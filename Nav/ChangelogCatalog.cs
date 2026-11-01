@@ -48,6 +48,22 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "3.12",
+            Date = "2026-11-01",
+            Title = "以 3.11 Swiss 為底座：新增歷史型號目錄，補齊發佈資產與缺列防護",
+            Items =
+            [
+                "正式採用 3.11 的瑞士現代主義主題（白紙黑墨、直角、Helvetica、瑞士紅短規）作為 3.12 的介面基準，不再從 3.10 另起一條線。",
+                "核心熱力圖沿用 3.11 的標籤對位，並補上缺列防護：某一顆核心沒有感測列時保留空格，不再把別顆核心的數值填進來。",
+                "網卡判讀補齊三態：PCIe 能力欄位全為 0、或支援速率清單為空時，顯示「未回報」而不是「鏈路到位」或「不是 PCIe」。",
+                "新增可選的 CPU／GPU 歷史型號查詢頁；目錄由使用者明確匯入 JSON，程式不內建或散布 workbook 衍生資料，也不含 NC 主機板資料。",
+                "安裝器沿用 `releases/latest/download/`（測試釘住「不寫死版本」，否則舊安裝器會停在舊版），下載回來的每個檔案先驗 PE 標頭與大小：exe 至少 100 KB、`.sys` 至少 1 KB，不符就刪掉，不把錯誤頁存成程式。",
+                "發佈改為四件資產：XinSpect.exe、BlueSquadronBridge.exe、XinSpectDeploy.exe、SHA256SUMS.txt。",
+                "關於頁保留隱藏名言彩蛋：版本資訊旁的淡色點號可滑鼠指向並點擊展開。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "3.11",
             Date = "2026-10-31",
             Title = "介面換成瑞士現代風格與 Helvetica（測試版）",

@@ -421,3 +421,88 @@ public class CoreHeatmapRenderTests
         });
     }
 }
+
+/// <summary>
+/// 逐核對位（<see cref="CoreTempMapService.Apply"/>）：一實體核心一列時不得再折疊，
+/// 列序變了也要靠標籤對回來，標籤對不上才允許退回比率折疊。
+/// </summary>
+/// <remarks>
+/// 這一組是 2026-11-01「18 核只亮 9 格」那個缺陷的守門測試。
+/// 突變檢查要<b>兩邊一起改</b>才會紅：只關掉標籤對位時，比率由筆數推導仍然會得到 1，
+/// 18 筆對 18 格照樣一格一顆；只把比率寫死 2 時，標籤對位又把每一格救回來。
+/// 所以下面另外補了一條「列序被打亂」的測試——那是唯一能單獨咬住標籤分支的情境。
+/// </remarks>
+public class CoreTempMapApplyTests
+{
+    private static List<CoreTempEntry> Entries(int n)
+        => Enumerable.Range(0, n).Select(i => new CoreTempEntry(i, $"核心 #{i + 1}")).ToList();
+
+    private static List<CoreRow> Rows(int n, string name = "核心")
+        => Enumerable.Range(1, n)
+                     .Select(i => { var r = new CoreRow($"{name} #{i}"); r.TempC = i; r.LoadPercent = 9 + i; return r; })
+                     .ToList();
+
+    [Fact]
+    public void 十八核的逐核列要一格對一顆_不能折疊掉一半()
+    {
+        var entries = Entries(18);
+        var rows = Rows(18);
+
+        Assert.True(CoreTempMapService.Apply(entries, rows, threadsPerCore: 2));
+
+        // 每一格都必須拿到自己那顆核心的溫度；舊行為下前 9 格會變成「兩顆取最大」，後 9 格是空的。
+        for (int i = 0; i < 18; i++)
+        {
+            Assert.Equal(i + 1, entries[i].Temperature);
+            Assert.Equal(9 + i + 1, entries[i].Load);
+        }
+    }
+
+    [Fact]
+    public void 列序被打亂也要靠標籤對位()
+    {
+        // 真實的感測器列不保證照核心編號排（停用的核心被跳過、E-core 先出現都可能）。
+        // 這一條專門咬住「標籤對位」那個分支：改回按位置折疊時，溫度會整體錯位。
+        var entries = Entries(8);
+        var rows = Rows(8);
+        rows.Reverse();
+
+        CoreTempMapService.Apply(entries, rows, threadsPerCore: 2);
+
+        for (int i = 0; i < 8; i++)
+            Assert.Equal(i + 1, entries[i].Temperature);
+    }
+
+    [Fact]
+    public void 標籤對不上才退回折疊_比率由筆數推導()
+    {
+        // 模擬「真的逐執行緒一列」的來源：名稱對不上核心標籤，36 列對 18 格。
+        var entries = Entries(18);
+        var rows = Rows(36, name: "處理器");
+
+        Assert.True(CoreTempMapService.Apply(entries, rows, threadsPerCore: 1));
+
+        // 比率應由 36／18 推導成 2（不是傳進來的 1）；每格吃兩列取最高溫。
+        Assert.Equal(2, entries[0].Temperature);
+        Assert.Equal(4, entries[1].Temperature);
+        Assert.Equal(36, entries[17].Temperature);
+    }
+
+    [Fact]
+    public void 標籤缺列時保留空格_不把別核數值填進來()
+    {
+        var entries = Entries(4);
+        var rows = new List<CoreRow>
+        {
+            new("核心 #1") { TempC = 41, LoadPercent = 10 },
+            new("核心 #3") { TempC = 43, LoadPercent = 30 },
+            new("核心 #4") { TempC = 44, LoadPercent = 40 },
+        };
+
+        Assert.True(CoreTempMapService.Apply(entries, rows, threadsPerCore: 2));
+        Assert.Equal(41, entries[0].Temperature);
+        Assert.Null(entries[1].Temperature);
+        Assert.Equal(43, entries[2].Temperature);
+        Assert.Equal(44, entries[3].Temperature);
+    }
+}

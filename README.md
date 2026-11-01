@@ -15,15 +15,15 @@
 
 這份文件不是一般專案的 README。它是一本**百科全書**：把這個程式裡**每一頁、每一格、每一個數字、每一把事實鍵**逐一拆開，寫清楚它是什麼、從哪一條路徑讀來、憑什麼算數、誤差與偏移從哪裡來、以及它**不能**被拿去回答什麼問題。
 
-舊版的 README（2.91 之前的「硬核版說明」，約 16 萬字）不是被翻譯，也不是被搬過來——它的每一章都被重寫、擴充、重排；如果你要找舊版原文，它已原樣保存在 [手冊.md](手冊.md)。這一版針對的是 **v3.11** 的這棵樹，所有數字都在這棵樹上複算得出來，數法寫在每一處。
+舊版的 README（2.91 之前的「硬核版說明」，約 16 萬字）不是被翻譯，也不是被搬過來——它的每一章都被重寫、擴充、重排；如果你要找舊版原文，它已原樣保存在 [手冊.md](手冊.md)。這一版針對的是 **v3.12** 的這棵樹，所有數字都在這棵樹上複算得出來，數法寫在每一處。
 
-![版本](https://img.shields.io/badge/version-3.11-4C8DFF)
+![版本](https://img.shields.io/badge/version-3.12-4C8DFF)
 
 > ⚠ **這是 3.11 測試版**：介面換成瑞士現代風格與 Helvetica，屬於設計實驗（`experiment/swiss-helvetica` 分支）。
 > 不建議日常使用；正式版請下載 **3.10**。不合用會整支丟棄。
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-7727%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-7756%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 ![商業授權](https://img.shields.io/badge/license-%E5%95%86%E6%A5%AD%E6%8E%88%E6%AC%8A%E5%8F%AF%E8%AB%87-8B5CF6)
@@ -44,17 +44,17 @@
 |---|---:|---|
 | 編譯期事實鍵 | **1,167** | `Services/FactKeyCatalog.cs` 的 `Keys` 成員數 |
 | 事實域（鍵的第一段前綴） | **155** | 1,167 把鍵各自取第一段後去重 |
-| 動態鍵家族 | **66** | `Services/FactKeyDynamicCatalog.cs` 的 `Families` 成員數 |
+| 動態鍵家族 | **67** | `Services/FactKeyDynamicCatalog.cs` 的 `Families` 成員數 |
 | 一鍵域／≤3 鍵域／≥20 鍵域 | 34／67／12 | 以域分組後計數 |
-| 可到達畫面（`PageRegistry`） | **63** | `Nav/PageRegistry.cs` 的 `Key =` 條目數 |
-| XAML 檔（含對話框與控制項） | **79** | `ls Views/*.xaml` |
-| 全站說明條目（圓圈問號） | **286** | `Nav/HelpCatalog.cs` 的 `Entries` 成員數 |
-| 服務檔 | **655** | `find Services -name '*.cs' \| wc -l` |
-| 全域 C# 檔 | **1,543** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`work/`、`publish-*/`、`.git/` |
-| 版本紀錄筆數 | **117** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
-| 專案測試基線 | **7,727** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
+| 可到達畫面（`PageRegistry`） | **64** | `Nav/PageRegistry.cs` 的 `Key =` 條目數 |
+| XAML 檔（含對話框與控制項） | **80** | `ls Views/*.xaml` |
+| 全站說明條目（圓圈問號） | **287** | `Nav/HelpCatalog.cs` 的 `Entries` 成員數 |
+| 服務檔 | **657** | `find Services -name '*.cs' \| wc -l` |
+| 全域 C# 檔 | **1,548** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`work/`、`publish-*/`、`.git/` |
+| 版本紀錄筆數 | **118** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
+| 專案測試基線 | **7,756** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
 
-**這張表不能證明什麼。** 1,167 把鍵不是 1,167 個正確答案；63 頁不是 63 個好設計；7,727 條測試不是 7,727 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
+**這張表不能證明什麼。** 1,167 把鍵不是 1,167 個正確答案；64 頁不是 64 個好設計；7,756 條測試不是 7,756 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
 
 ---
 
@@ -62,12 +62,12 @@
 
 | 檔案 | 大小 | 說明 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.11/XinSpect.exe) | 37,348,651 bytes | 主程式。藍色中隊守護進程已內建 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.11/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。要脫離主程式單獨跑防護時使用 |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.11/XinSpectDeploy.exe) | 15,360 bytes | 一鍵安裝器。按 1 GitHub、按 2 Google Drive、按 3 中國直連線路；下載時顯示進度條、速度與剩餘時間 |
-| [SHA256SUMS.txt](https://github.com/Xinglanclever/XinSpect/releases/download/v3.11/SHA256SUMS.txt) | 253 bytes | 逐檔雜湊，發佈後由 `Tools/verify-release.ps1` 對帳 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.12/XinSpect.exe) | 37,348,651 bytes | 主程式。藍色中隊守護進程已內建 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.12/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。要脫離主程式單獨跑防護時使用 |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.12/XinSpectDeploy.exe) | 15,360 bytes | 一鍵安裝器。按 1 GitHub、按 2 Google Drive、按 3 中國直連線路；下載時顯示進度條、速度與剩餘時間 |
+| [SHA256SUMS.txt](https://github.com/Xinglanclever/XinSpect/releases/download/v3.12/SHA256SUMS.txt) | 253 bytes | 逐檔雜湊，發佈後由 `Tools/verify-release.ps1` 對帳 |
 
-> **上表的位元組數為本版（v3.11）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v3.12）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
 安裝器（`XinSpectDeploy.exe`）會列出三個來源：**1** 是 GitHub 最新版（全自動部署主程式＋守護進程）、**2** 是 Google Drive 鏡像（分享資料夾，它會開瀏覽器並告訴你要按哪裡）、**3** 是中國直連線路——目錄型端點，安裝器自己抓檔，跟按 1 一樣有進度條、速度與剩餘時間。判斷哪一格用哪種模式，看的是端點本身：只有真的能用 GET 取回目錄下檔案的線路才寫成直連，分享頁一律只開瀏覽器，不會把分享頁存成一個假的 exe。鏡像連結集中在 `Installer/mirrors.txt`，安裝器啟動時會抓一份最新的（3 秒逾時，拿不到就用內建的）；某一格還沒有連結時，選單上會寫「尚未提供」，按下去會先說明再改用 GitHub。下載完成後一律檢查 PE 標頭，抓到 HTML（分享頁、限流頁、Google 的病毒掃描確認頁）會被擋下、刪檔並說出內容像什麼。
 
@@ -124,7 +124,7 @@
   - [2.3 一個服務的解剖（以 ACPI 表服務為例）](#23-一個服務的解剖以-acpi-表服務為例)
   - [2.4 事實模型：一個 record 與兩條不變式](#24-事實模型一個-record-與兩條不變式)
   - [2.5 事實鍵目錄：1,167 把鍵為什麼要固定在編譯期](#25-事實鍵目錄1167-把鍵為什麼要固定在編譯期)
-  - [2.6 動態家族：62 個「我列不完」的申報](#26-動態家族66-個我列不完的申報)
+  - [2.6 動態家族：67 個「我列不完」的申報](#26-動態家族67-個我列不完的申報)
   - [2.7 分母宣告與覆蓋申報](#27-分母宣告與覆蓋申報)
   - [2.8 出口與孤兒：事實的三種去處](#28-出口與孤兒事實的三種去處)
   - [2.9 交叉對帳引擎：把矛盾變成第一類公民](#29-交叉對帳引擎把矛盾變成第一類公民)
@@ -135,7 +135,7 @@
   - [2.14 審計鏈與證據包](#214-審計鏈與證據包)
   - [2.15 資料流全景](#215-資料流全景)
   - [2.16 架構的三個已知弱點](#216-架構的三個已知弱點)
-- [第 3 部 功能地圖：63 個可到達畫面逐頁解剖](#第-3-部-功能地圖63-個可到達畫面逐頁解剖)
+- [第 3 部 功能地圖：64 個可到達畫面逐頁解剖](#第-3-部-功能地圖64-個可到達畫面逐頁解剖)
   - [3.0 每一頁的固定五段](#30-每一頁的固定五段)
   - [3.1 我的電腦（`beginner`）](#31-我的電腦beginner)
   - [3.2 總覽（`overview`）](#32-總覽overview)
@@ -450,9 +450,9 @@
   - [附錄 D 二十個常見誤判](#附錄-d-二十個常見誤判)
   - [附錄 E 常見問題](#附錄-e-常見問題)
   - [附錄 F　155 個域的前綴表](#附錄-f-155-個域的前綴表)
-  - [附錄 F-2　66 個動態家族與「成員由什麼決定」](#附錄-f-2-66-個動態家族與成員由什麼決定)
-  - [附錄 G　全站說明條目逐條（286 條）](#附錄-g-全站說明條目逐條286-條)
-  - [附錄 H　服務檔地圖（655 個檔案）](#附錄-h-服務檔地圖655-個檔案)
+  - [附錄 F-2　67 個動態家族與「成員由什麼決定」](#附錄-f-2-67-個動態家族與成員由什麼決定)
+  - [附錄 G　全站說明條目逐條（287 條）](#附錄-g-全站說明條目逐條287-條)
+  - [附錄 H　服務檔地圖（657 個檔案）](#附錄-h-服務檔地圖657-個檔案)
   - [附錄 I 六態與可信度速查卡](#附錄-i-六態與可信度速查卡)
   - [附錄 J 三十條可自行驗證的宣稱](#附錄-j-三十條可自行驗證的宣稱)
   - [附錄 K 倉庫地圖](#附錄-k-倉庫地圖)
@@ -512,7 +512,7 @@
 | **事實（fact）** | 一個帶鍵、值、單位、來源、可信度、時刻、可用性的資料項 | 不是「結論」。事實不帶建議，也不替使用者下判斷 |
 | **事實鍵（fact key）** | 穩定識別字，如 `ac.dmar.summary`；前綴是域 | 不是畫面欄位名；也不保證跨版本不改（第 6 部逐域說明哪些已經改過） |
 | **域（domain）** | 鍵的第一段前綴，本版共 **155** 個 | 不是側邊欄分組。一個域可能橫跨多頁，一頁也可能用到多個域 |
-| **動態家族（dynamic family）** | 成員由機器決定、編譯期數不出來的鍵群，本版共 **66** 個前綴 | 不是「例外」。它是申報：明說「這群我列不完，而成員由什麼決定」 |
+| **動態家族（dynamic family）** | 成員由機器決定、編譯期數不出來的鍵群，本版共 **67** 個前綴 | 不是「例外」。它是申報：明說「這群我列不完，而成員由什麼決定」 |
 | **服務（service）** | 一個負責讀某類事實的類別，通常一個檔案一個服務 | 不是背景常駐程式。服務是被收集流程叫用的讀取器 |
 | **收集輪（round）** | 一次「開始收集」到「事實集穩定」的完整週期 | 不是即時更新的每個 tick。tick 只更新少數即時值 |
 | **事實集（fact set）** | 一輪收集的產物：鍵→事實的對應 | 不是快照檔。快照是事實集加上雜湊信封後的落地檔 |
@@ -606,13 +606,13 @@
 
 1. 事實鍵數：數 `Services/FactKeyCatalog.cs` 的 `Keys` 成員。
 2. 域數：把 1,167 把鍵各取第一段後去重（本版 155）。
-3. 動態家族數：數 `FactKeyDynamicCatalog.Families` 的成員（本版 66）。
-4. 畫面數：數 `Nav/PageRegistry.cs` 的 `Key =` 條目（本版 63）。
-5. 說明條目數：數 `Nav/HelpCatalog.cs` 的 `Entries` 成員（本版 286）。
-6. 服務檔數：`find Services -name '*.cs' | wc -l`（本版 655）。
-7. 測試數：`dotnet test` 的總計，或讀 `Tests/TestSuiteBaseline.cs`（本版 7,727）。
+3. 動態家族數：數 `FactKeyDynamicCatalog.Families` 的成員（本版 67）。
+4. 畫面數：數 `Nav/PageRegistry.cs` 的 `Key =` 條目（本版 64）。
+5. 說明條目數：數 `Nav/HelpCatalog.cs` 的 `Entries` 成員（本版 287）。
+6. 服務檔數：`find Services -name '*.cs' | wc -l`（本版 657）。
+7. 測試數：`dotnet test` 的總計，或讀 `Tests/TestSuiteBaseline.cs`（本版 7,756）。
 8. 主程式大小：Release 頁面的 `XinSpect.exe` 位元組數（本版 34,268,971）。
-9. 版本紀錄筆數：數 `Nav/ChangelogCatalog.cs` 的 `Entries`（本版 117）。
+9. 版本紀錄筆數：數 `Nav/ChangelogCatalog.cs` 的 `Entries`（本版 118）。
 10. 孤兒鍵：把目錄鍵與 `Views/`、`Nav/` 兩邊的出口對照（第 2 部給了方法與本版結果）。
 
 ### 0.9 這份文件與程式的關係：文字是被守住的
@@ -623,7 +623,7 @@
 
 ### 0.10 時態與引號的規則
 
-- **現在式宣稱**（「本版有 7,727 條測試」）只用在有守門的數字上。
+- **現在式宣稱**（「本版有 7,756 條測試」）只用在有守門的數字上。
 - **過去式故事**（「v2.53 的標籤沒被推上去」）用來說明規則的來源，寫成故事而不是規則。
 - **未成文** 是一個正式標記，不是修辭。看到它代表：這件事程式中確實存在某種行為，但沒有人把它寫成可驗證的文件。
 - 引號裡的句子如果出自程式註解或程式碼，會標明檔案；如果出自本文件的作者判斷，會明白用「這份文件認為」開頭。
@@ -910,11 +910,11 @@
 
 ### 2.2 服務層的形狀
 
-`Services/` 底下有 **655** 個 `.cs` 檔，絕大多數是一個檔案一個服務。服務的共同形狀是：**一個 `Collect` 或等價的入口、把結果寫成 `HardwareFact` 的集合、以及一個對應的測試檔**。
+`Services/` 底下有 **657** 個 `.cs` 檔，絕大多數是一個檔案一個服務。服務的共同形狀是：**一個 `Collect` 或等價的入口、把結果寫成 `HardwareFact` 的集合、以及一個對應的測試檔**。
 
-**為什麼服務數量是 655 而不是 60。** 因為這個專案的計數單位是「可定位的事實與收口」，不是「使用者感覺得到的功能」。一個服務通常負責一類介面（一張 ACPI 表、一種韌體介面、一組 MSR），而這些介面的數量本來就以百計——ACPI 有數十種表、MSR 有數千個、SMBIOS 有數十種型別。
+**為什麼服務數量是 657 而不是 60。** 因為這個專案的計數單位是「可定位的事實與收口」，不是「使用者感覺得到的功能」。一個服務通常負責一類介面（一張 ACPI 表、一種韌體介面、一組 MSR），而這些介面的數量本來就以百計——ACPI 有數十種表、MSR 有數千個、SMBIOS 有數十種型別。
 
-**服務數量本身就是一種風險。** 655 個服務檔意味著「接線」是一個真實的問題：服務寫好、測試綠、但沒有進生產路徑，這種缺陷在這個專案發生過不只一次（第 12 部的 D-16、D-17）。目前的答案是**守門**（孤兒掃描、視圖入口閘門、事實鍵對帳），而不是減少服務數量。**這 654 個檔案的逐檔地圖在附錄 H，那張表的列集合由 `Tools/gen-readme-domains.py` 從 `Services/` 直接生成——它不是另一份名冊，所以不會再有「檔案加了、地圖沒加」的漂移。**
+**服務數量本身就是一種風險。** 657 個服務檔意味著「接線」是一個真實的問題：服務寫好、測試綠、但沒有進生產路徑，這種缺陷在這個專案發生過不只一次（第 12 部的 D-16、D-17）。目前的答案是**守門**（孤兒掃描、視圖入口閘門、事實鍵對帳），而不是減少服務數量。**這 657 個檔案的逐檔地圖在附錄 H，那張表的列集合由 `Tools/gen-readme-domains.py` 從 `Services/` 直接生成——它不是另一份名冊，所以不會再有「檔案加了、地圖沒加」的漂移。**
 
 ### 2.3 一個服務的解剖（以 ACPI 表服務為例）
 
@@ -949,9 +949,9 @@
 
 **域。** 1,167 把鍵的第一段去重後共 **155** 個域；其中 34 個域只有一把鍵、67 個域不超過三把、12 個域有 20 把以上（`ac` 61、`sb` 53、`fw` 48、`sa` 45、`fs` 30、`uefi` 27、`ev` 25、`eg` 24、`os` 24、`ms` 23、`nw` 22、`st` 20）。第 6 部逐域展開。
 
-### 2.6 動態家族：66 個「我列不完」的申報
+### 2.6 動態家族：67 個「我列不完」的申報
 
-`Services/FactKeyDynamicCatalog.cs` 登記 **66** 個動態前綴，每一筆都要寫「為什麼編譯期數不出成員」與「成員由什麼決定」。例如：
+`Services/FactKeyDynamicCatalog.cs` 登記 **67** 個動態前綴，每一筆都要寫「為什麼編譯期數不出成員」與「成員由什麼決定」。例如：
 
 - `pci.dev.`：bus 0 盤點每張存在的裝置一筆（成員＝裝置號 dev.fn）——有哪些裝置是機器的事實，編譯期列不完。
 - `pci.res.`：PCI 擴充資源（BAR）每張有資源的裝置一筆，成員由匯流排枚舉決定。
@@ -1049,12 +1049,12 @@
 寫架構最沒有價值的一段是「本架構優雅且可擴充」。有價值的是承認它哪裡脆弱。
 
 1. **單一行程承擔特權與介面。** 主程式以管理員權杖執行時，介面、內建瀏覽器、AI 對話、報告產生都在同一個行程裡。任何在介面層的程式碼執行都等於管理員。正確的修法是權杖分離，但那會讓「讀一個 MSR」變成跨行程呼叫，代價是延遲與複雜度——**這是一個還沒有付的代價**。
-2. **服務數量本身就是一種風險。** 655 個服務檔意味著「接線」是一個真實的問題：服務寫好、測試綠、但沒有進生產路徑（第 12 部的 D-16、D-17）。答案是守門，不是減少數量。
-3. **事實鍵目錄需要人維持誠實。** 1,167 個鍵加上 66 個動態家族，靠的是「執行期出現的鍵要嘛在目錄、要嘛命中家族前綴，否則對帳紅燈」。這條規則能抓「有產出但沒登記」，**抓不到「登記了但語意寫錯」**。目錄是申報，不是證明。
+2. **服務數量本身就是一種風險。** 657 個服務檔意味著「接線」是一個真實的問題：服務寫好、測試綠、但沒有進生產路徑（第 12 部的 D-16、D-17）。答案是守門，不是減少數量。
+3. **事實鍵目錄需要人維持誠實。** 1,167 個鍵加上 67 個動態家族，靠的是「執行期出現的鍵要嘛在目錄、要嘛命中家族前綴，否則對帳紅燈」。這條規則能抓「有產出但沒登記」，**抓不到「登記了但語意寫錯」**。目錄是申報，不是證明。
 
-## 第 3 部 功能地圖：63 個可到達畫面逐頁解剖
+## 第 3 部 功能地圖：64 個可到達畫面逐頁解剖
 
-這一部是給使用者的部分：每一頁在回答什麼、畫面上每一格的資料從哪裡來、它憑什麼算數、以及**最常被誤用的講法**。全站共有 **63** 個可到達畫面（`Nav/PageRegistry.cs`；`Views/` 下另有對話框與控制項共 79 個 XAML），另有 **286** 條圓圈問號說明條目（`Nav/HelpCatalog.cs`）——這些條目的存在本身就是這個專案的一個立場：**每一區塊都要能回答「這是什麼、按下去會怎樣、安不安全」，而且那句話要與程式碼的實作對得上。**
+這一部是給使用者的部分：每一頁在回答什麼、畫面上每一格的資料從哪裡來、它憑什麼算數、以及**最常被誤用的講法**。全站共有 **64** 個可到達畫面（`Nav/PageRegistry.cs`；`Views/` 下另有對話框與控制項共 80 個 XAML），另有 **287** 條圓圈問號說明條目（`Nav/HelpCatalog.cs`）——這些條目的存在本身就是這個專案的一個立場：**每一區塊都要能回答「這是什麼、按下去會怎樣、安不安全」，而且那句話要與程式碼的實作對得上。**
 
 ### 3.0 每一頁的固定五段
 
@@ -1889,7 +1889,7 @@
 
 **一、命令面板（Ctrl+K／Ctrl+P）。** 它是「簡易模式」的補償機制：被收起來的進階頁面仍然搜得到。**導覽的唯一入口是側邊欄與命令面板**——工具箱不做導覽（1.9.0 移除那個標籤的理由），因為兩個入口講同一件事只會讓使用者懷疑它們不同。
 
-**二、圓圈問號（286 條說明）。** 每一區塊標題旁有一個問號，內容是「這是什麼、能做什麼、安不安全」三段，外加一句風險結論（安全／注意／危險）。**這些文字與程式碼的實作對得上，是專案的寫作要求**；同一個名詞在多頁出現時共用同一段文字，改一次全站一致。
+**二、圓圈問號（287 條說明）。** 每一區塊標題旁有一個問號，內容是「這是什麼、能做什麼、安不安全」三段，外加一句風險結論（安全／注意／危險）。**這些文字與程式碼的實作對得上，是專案的寫作要求**；同一個名詞在多頁出現時共用同一段文字，改一次全站一致。
 
 **三、風險徽章與同意閘門。** 會寫入系統或硬體的功能一律標風險等級；「危險」等級的動作在執行前需要明確同意，且多數有第二道服務層閘門。**風險分級與閘門的三階段（提權、確認、執行）見第 8 部。**
 
@@ -8611,12 +8611,12 @@
 
 | 項目 | 數量 | 數法 |
 |---|---:|---|
-| 測試檔 | **621** | `find Tests -name '*.cs' \| wc -l` |
-| `[Fact]` 方法 | **6,400** | 反射計算測試組件裡的 `[Fact]` 方法（`DeclaredOnly`） |
+| 測試檔 | **623** | `find Tests -name '*.cs' \| wc -l` |
+| `[Fact]` 方法 | **6,429** | 反射計算測試組件裡的 `[Fact]` 方法（`DeclaredOnly`） |
 | `[Theory]` 方法 | **269** | 同上，`[Theory]` 分開數（它繼承 `[Fact]`，不能混） |
-| 執行期測試案例 | **7,727** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數，也是 README 測試徽章的單一來源） |
+| 執行期測試案例 | **7,756** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數，也是 README 測試徽章的單一來源） |
 
-**兩個比例值得讀。** 一、**`[Theory]` 只占 269 個**：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、**執行期案例數（7,727）大於方法數（6,669）**：差額來自被展開的 `[Theory]` 資料列——這正是基線守門的形狀（下一節）。
+**兩個比例值得讀。** 一、**`[Theory]` 只占 269 個**：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、**執行期案例數（7,756）大於方法數（6,698）**：差額來自被展開的 `[Theory]` 資料列——這正是基線守門的形狀（下一節）。
 
 ### 10.2 基線守門：為什麼「測試數」是一個被釘住的數字
 
@@ -8703,11 +8703,11 @@
 
 這一部把 `Nav/ChangelogCatalog.cs` 的每一筆版本紀錄完整攤開——**這是程式「關於」頁顯示的同一份資料**，也是本專案唯一對「每一版做了什麼」的正式紀錄。寫作規則是：**只寫真的做了的事**；進入版本控制（2026-08-27、v1.2.0）之前的最早階段沒有留下逐項紀錄，就只寫到階段層級並標明日期未留下紀錄，**不為了排面好看補一份想像出來的清單**。
 
-**登記筆數**：117 筆（版號與階段名，新到舊）。
+**登記筆數**：118 筆（版號與階段名，新到舊）。
 
 ### 11.1 這份沿革的四個讀法
 
-**第一，看節奏。** 這份紀錄最新的一筆是 v3.11（2026-10-31），而 v1.2.0 是進入版本控制的起點（2026-08-27）——**兩個月內走了近百個版本**。這代表這個專案的迭代單位很小（一次一個收口、一把鍵、一條守門），而不是「大版本才動一次」。
+**第一，看節奏。** 這份紀錄最新的一筆是 v3.12（2026-11-01），而 v1.2.0 是進入版本控制的起點（2026-08-27）——**兩個月內走了近百個版本**。這代表這個專案的迭代單位很小（一次一個收口、一把鍵、一條守門），而不是「大版本才動一次」。
 
 **第二，看標題的動詞。** 絕大多數標題不是「新增功能」而是「收口」「補上生產端」「接真值」「加守門」——**這棵樹近期的多數工作是把已存在的東西接起來並守住**，而不是往外擴張功能面。
 
@@ -8717,6 +8717,7 @@
 
 ### 11.2 逐版紀錄（新到舊）
 
+- **v3.12**（2026-11-01）：以 3.11 Swiss 為底座：新增歷史型號目錄，補齊發佈資產與缺列防護（本版 7 項）
 - **v3.11**（2026-10-31）：介面換成瑞士現代風格與 Helvetica（測試版）（本版 8 項）
 - **v3.10**（2026-10-31）：總覽先講清楚這台機器是什麼：膠囊摘要＋詳細資訊，儀表預設收起（本版 7 項）
 - **v3.09**（2026-10-31）：圖示換成品牌插畫：藍色 X ＋ 兩張視窗卡（本版 3 項）
@@ -8838,6 +8839,18 @@
 ### 11.3 逐版逐項
 
 以下是每一筆紀錄的翻開內容。**沒有項目的版本（早期階段）只看得到階段層級的描述，這是刻意的留白。**
+
+#### v3.12（2026-11-01）
+
+**以 3.11 Swiss 為底座：新增歷史型號目錄，補齊發佈資產與缺列防護**
+
+- 正式採用 3.11 的瑞士現代主義主題（白紙黑墨、直角、Helvetica、瑞士紅短規）作為 3.12 的介面基準，不再從 3.10 另起一條線。
+- 核心熱力圖沿用 3.11 的標籤對位，並補上缺列防護：某一顆核心沒有感測列時保留空格，不再把別顆核心的數值填進來。
+- 網卡判讀補齊三態：PCIe 能力欄位全為 0、或支援速率清單為空時，顯示「未回報」而不是「鏈路到位」或「不是 PCIe」。
+- 新增可選的 CPU／GPU 歷史型號查詢頁；目錄由使用者明確匯入 JSON，程式不內建或散布 workbook 衍生資料，也不含 NC 主機板資料。
+- 安裝器沿用 `releases/latest/download/`（測試釘住「不寫死版本」，否則舊安裝器會停在舊版），下載回來的每個檔案先驗 PE 標頭與大小：exe 至少 100 KB、`.sys` 至少 1 KB，不符就刪掉，不把錯誤頁存成程式。
+- 發佈改為四件資產：XinSpect.exe、BlueSquadronBridge.exe、XinSpectDeploy.exe、SHA256SUMS.txt。
+- 關於頁保留隱藏名言彩蛋：版本資訊旁的淡色點號可滑鼠指向並點擊展開。
 
 #### v3.11（2026-10-31）
 
@@ -10207,7 +10220,7 @@
 | L-7 | 虛擬機 | 韌體與感測器多數被虛擬層遮蔽 | 六態會大量出現 `NotApplicable`／`Unknown`，那是誠實結果 |
 | L-8 | 即時性 | 這是「檢視與量測」工具，不是取樣率導向的即時監控 | 需要毫秒級連續記錄請用專門的記錄器；本工具的解析度見第 5 部 |
 | L-9 | 寫入面 | 除深測的低階測項（PMU／RDT 等，全部經同意閘門與寫入帳本）外不寫入硬體 | 不做 BIOS 更新、不改 SPD、不修 registry |
-| L-10 | 覆蓋 | 63 個可到達畫面對 153 個域、1,167 把鍵 | 有些鍵沒有專屬畫面（只出現在總表／匯出／命令列），這是數量差的原因 |
+| L-10 | 覆蓋 | 64 個可到達畫面對 155 個域、1,167 把鍵 | 有些鍵沒有專屬畫面（只出現在總表／匯出／命令列），這是數量差的原因 |
 
 **一句話的讀法。** 看到「—」先問是哪一種非 `Present`；看到「沒有這一項」先問是限制還是缺陷——第 12.3 節就是缺陷那一欄。
 
@@ -10359,7 +10372,7 @@
 ### 14.4 加一頁畫面的三個步驟
 
 1. **註冊導覽**：沒有這一步，頁面存在但沒有任何路徑到得了（D-17 就是這樣發生的）。
-2. **寫說明條目**：每一頁的圓圈問號要回答「這是什麼／讀到什麼／按下去會怎樣／安不安全」。全站 286 條說明條目中，風險欄只有三種：`ReadOnly`／`Caution`／`Danger`。
+2. **寫說明條目**：每一頁的圓圈問號要回答「這是什麼／讀到什麼／按下去會怎樣／安不安全」。全站 287 條說明條目中，風險欄只有三種：`ReadOnly`／`Caution`／`Danger`。
 3. **確認它讀得到**：新頁面的資料來源必須是既有的收集步驟或明確新增的步驟，且不引入新的提權需求。
 
 ### 14.5 這份文件自己的失效條件
@@ -10392,7 +10405,7 @@
 
 ### 15.2 本機測試
 
-- **全套**：7,727 條（`TestSuiteBaseline.ProjectTests` 是唯一來源）。其中一部分會讀真機硬體（SMBIOS、SPD、NVMe…），**換一台機器可能因「不支援」或「值不一樣」而紅**——那是預期行為，不是回歸。
+- **全套**：7,756 條（`TestSuiteBaseline.ProjectTests` 是唯一來源）。其中一部分會讀真機硬體（SMBIOS、SPD、NVMe…），**換一台機器可能因「不支援」或「值不一樣」而紅**——那是預期行為，不是回歸。
 - **守門子集**：`ChangelogTests`、`FactKeyCatalogTests`、`Ultimate10000CatalogTests`、`ReleasePipelineTests`、`ReleaseIntegrityTests` 五組不依賴硬體，任何機器都該綠。
 - **判讀紅燈**：先問「這條測試讀真機嗎」。是的話先比對是不是環境差；不是的話就是回歸。**不要把環境差當成回歸去改測試，也不要把回歸當成環境差去忽略。**
 
@@ -10400,7 +10413,7 @@
 
 倉庫的 `.github/workflows/ci.yml` 在 `windows-latest` 上做四件事：還原、建置、跑上面那五組守門測試、上傳 `guard.trx`。抓取的時機是 `push` 到 `main`、任何 `pull_request`、以及手動觸發。
 
-**為什麼不跑全套**（這是 CI 檔開頭的註解，也是設計裁決）：全套 7,727 條裡有一部分會讀真機硬體，在 GitHub 的 hosted runner 上可能因「不支援」或「值不一樣」而紅，**讓 CI 變成雜訊**——而一個充滿雜訊的 CI 會訓練人忽略紅燈，那是比沒有 CI 更糟的狀態。硬體全套由貢獻者在本機跑，PR 範本要求貼上實測數字。
+**為什麼不跑全套**（這是 CI 檔開頭的註解，也是設計裁決）：全套 7,756 條裡有一部分會讀真機硬體，在 GitHub 的 hosted runner 上可能因「不支援」或「值不一樣」而紅，**讓 CI 變成雜訊**——而一個充滿雜訊的 CI 會訓練人忽略紅燈，那是比沒有 CI 更糟的狀態。硬體全套由貢獻者在本機跑，PR 範本要求貼上實測數字。
 
 ### 15.4 發佈產線：每一道閘門都是事故留下的
 
@@ -10501,7 +10514,7 @@
 | 詞 | 意思 |
 |---|---|
 | 守門 | 一條會在任何機器上紅／綠的規則；本文件的每一個現在式數字都盡量有守門 |
-| 現在式宣稱 | 「本版是 vX」「測試 7,727 綠」這類今天為真、明天可能為假的句子 |
+| 現在式宣稱 | 「本版是 vX」「測試 7,756 綠」這類今天為真、明天可能為假的句子 |
 | 交叉對帳 | 同一事實多來源互相印證；結論只有一致／矛盾／無法驗證 |
 | 寫入帳本 | 所有硬體寫入的紀錄；與同意閘門並列兩道閘門 |
 | 同意閘門 | 深測低階測項執行前的明示同意 |
@@ -10542,13 +10555,13 @@
 | 斷路器冷卻 | 一顆碟一個冷卻期最多洩一條執行緒 | 同上；不吃執行緒集區 |
 | 報告／匯出零命中 | 退出碼 2 | `--only` 分母聲明 |
 | CI 逾時 | 30 分鐘 | `.github/workflows/ci.yml` |
-| 測試基線 | 7,727（`TestSuiteBaseline.ProjectTests`） | 唯一來源；低於測試方法數即紅燈 |
+| 測試基線 | 7,756（`TestSuiteBaseline.ProjectTests`） | 唯一來源；低於測試方法數即紅燈 |
 | 覆蓋基線 | 444 | 遞增需留理由 |
 | 對帳規則數 | 26（執行期） | 歷史文字曾寫 29（O-01） |
 | 事實鍵目錄 | 1,167 把／155 域 | 編譯期目錄為分母 |
-| 動態家族 | 66 個前綴 | 成員由執行期決定 |
-| 可到達畫面 | 63 | 導覽註冊表（主頁面＋實用工具）的 `Key` 條目數；獨立視窗另計在 XAML 檔數裡 |
-| 說明條目 | 286 條 | 每頁圓圈問號的內容 |
+| 動態家族 | 67 個前綴 | 成員由執行期決定 |
+| 可到達畫面 | 64 | 導覽註冊表（主頁面＋實用工具）的 `Key` 條目數；獨立視窗另計在 XAML 檔數裡 |
+| 說明條目 | 287 條 | 每頁圓圈問號的內容 |
 
 ### 附錄 D 二十個常見誤判
 
@@ -10783,9 +10796,9 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 
 **總計**：155 個域、1,167 把鍵（402 把落在 ≥20 鍵的 12 個大域，其餘 765 把散在 143 個域）。
 
-### 附錄 F-2　66 個動態家族與「成員由什麼決定」
+### 附錄 F-2　67 個動態家族與「成員由什麼決定」
 
-動態家族的成員在編譯期數不出來，所以目錄只登記前綴與理由。下表是全部 66 個前綴與它們各自申報的理由（**抽不到理由的會留白，不補**）。
+動態家族的成員在編譯期數不出來，所以目錄只登記前綴與理由。下表是全部 67 個前綴與它們各自申報的理由（**抽不到理由的會留白，不補**）。
 
 | 家族前綴 | 為什麼是動態家族／成員由什麼決定 |
 |---|---|
@@ -10810,6 +10823,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `mt.repeat.key.` | 逐鍵重複性一筆（成員＝這一輪實際重複量的鍵，编译期数不出来）——只寫跨度與漂移，不給穩定／不穩定的分數（多少算穩取決於鍵的語意） |
 | `mt.stamp.lag.` | 逐域「最舊一筆落後最新一刻」一筆（成員＝這一輪真的有東西落後的域，编译期数不出来）——值只寫落後多少，不判斷好壞 |
 | `net.listen.` | 監聽埠逐埠一筆（協定＋埠號）——這台機器在等誰連入是機器狀態，埠集由連線表決定，编译期列不完 |
+| `nic.gap.` | 逐網卡一筆落差與一筆依據（成員＝這台機器有幾張網路介面，編譯期數不出來）——末段是介面名稱的 ASCII 化（非 ASCII 一律換底線）再接 8 碼雜湊：繁中系統的「乙太網路」也能得到穩定合法的鍵；同名介面靠雜湊區分 |
 | `numa.node.` | NUMA 節點逐個一筆（節點號）——節點數由 GetNumaHighestNodeNumber 回報，單節點到 8 節點的平台都存在 |
 | `nvme.rsvd.disk.` | 逐 NVMe 控制器一筆（成員＝這台機器有幾顆能讀到 Identify 的 NVMe，編譯期數不出來）——Identify 讀不到的那一顆也佔成員（標讀取錯誤，不從家族消失） |
 | `os.dev.driver.` | 逐 PnP 裝置的驅動證據一筆（提供者／版本／日期／簽章；每台機器装的驅動不同） |
@@ -10856,7 +10870,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `usb.xhci.ctrl.` | 逐 xHCI 控制器一筆（成員＝這台機器有幾個 xHCI 控制器，編譯期數不出來）——來源是 USB 根集線器（ROOT_HUB30）的父節點；能力區讀不到的那一個也佔成員（標讀不到，不從家族消失） |
 | `whea.mem.rec.` | 逐筆 WHEA 記憶體錯誤記錄一筆（成員＝這台機器回報過幾筆，編譯期數不出來）——序號按時間新到舊；節區讀不到或太短的那一筆不佔成員（它會在彙總裡如實計數） |
 
-### 附錄 G　全站說明條目逐條（286 條）
+### 附錄 G　全站說明條目逐條（287 條）
 
 全站圓圈問號的內容總表。**這是這個專案對「每一個區塊都要能說清楚它是什麼、按下去會怎樣、安不安全」的具體兑現**；同一個名詞在多頁出現時共用同一段文字，所以這裡是按「分頁代號／區塊標題」排列，而不是按頁面順序。
 
@@ -12121,7 +12135,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
   - 這是什麼：Thunderbolt 與 USB4 控制器、路由器與裝置的存在和安全連線狀態。
   - 功能／怎麼讀：這類控制器有自己的韌體與安全模型；未授權裝置可能只被列舉到控制器層。這裡只讀系統與裝置回報，不授權、不解鎖、不改變安全設定。
 
-### 附錄 H　服務檔地圖（655 個檔案）
+### 附錄 H　服務檔地圖（657 個檔案）
 
 `Services/` 底下的每一個 `.cs`：路徑、行數、以及它宣告了幾個類別。**這張表的用途是「找到負責某件事的檔案」**——事實鍵的生產點在哪裡，先看這張表，再回頭看 6.5 的逐鍵出處。
 
@@ -12178,11 +12192,11 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `Services/BitLockerRecoveryFactsService.cs` | 265 | 1 |
 | `Services/BlueSquadron/BlueSquadronBootstrap.cs` | 133 | 1 |
 | `Services/BlueSquadron/BlueSquadronEngine.cs` | 224 | 1 |
-| `Services/BlueSquadron/BlueSquadronModule.cs` | 487 | 1 |
+| `Services/BlueSquadron/BlueSquadronModule.cs` | 498 | 1 |
 | `Services/BlueSquadron/HardeningAdvisor.cs` | 131 | 1 |
-| `Services/BlueSquadron/SecurityFact.cs` | 74 | 1 |
-| `Services/BlueSquadron/SecurityPostureService.cs` | 1055 | 1 |
-| `Services/BlueSquadron/SecurityScoreEngine.cs` | 702 | 1 |
+| `Services/BlueSquadron/SecurityFact.cs` | 80 | 1 |
+| `Services/BlueSquadron/SecurityPostureService.cs` | 1082 | 1 |
+| `Services/BlueSquadron/SecurityScoreEngine.cs` | 783 | 1 |
 | `Services/BluetoothBatteryService.cs` | 76 | 2 |
 | `Services/BootBreakdownDecoder.cs` | 127 | 3 |
 | `Services/BootBreakdownService.cs` | 193 | 1 |
@@ -12220,7 +12234,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `Services/ComputeChartService.cs` | 336 | 2 |
 | `Services/ContextMenuService.cs` | 222 | 2 |
 | `Services/CoreLatencyService.cs` | 255 | 1 |
-| `Services/CoreTempMapService.cs` | 192 | 2 |
+| `Services/CoreTempMapService.cs` | 193 | 2 |
 | `Services/CoreTimeDecoder.cs` | 179 | 2 |
 | `Services/CoreTimeService.cs` | 178 | 1 |
 | `Services/CorpusUploadService.cs` | 67 | 1 |
@@ -12247,7 +12261,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `Services/DataSecurityFactsService.cs` | 325 | 1 |
 | `Services/DataSovereigntyReport.cs` | 100 | 1 |
 | `Services/DebugConfigService.cs` | 62 | 1 |
-| `Services/DeepAccessService.cs` | 486 | 3 |
+| `Services/DeepAccessService.cs` | 701 | 4 |
 | `Services/DeepBench/Adapters/CacheBandwidthLadderAdapter.cs` | 121 | 1 |
 | `Services/DeepBench/Adapters/CacheLatencyAdapter.cs` | 79 | 1 |
 | `Services/DeepBench/Adapters/CopyKernelBandwidthAdapter.cs` | 106 | 1 |
@@ -12331,7 +12345,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `Services/DeviceTruthFactsService.cs` | 219 | 1 |
 | `Services/Diag.cs` | 125 | 2 |
 | `Services/DimmLayout.cs` | 367 | 4 |
-| `Services/DimmReferenceService.cs` | 196 | 1 |
+| `Services/DimmReferenceService.cs` | 236 | 1 |
 | `Services/DiskBenchService.cs` | 273 | 1 |
 | `Services/DiskFullFactsService.cs` | 214 | 1 |
 | `Services/DiskInfoService.cs` | 279 | 2 |
@@ -12394,7 +12408,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `Services/FactAtlasService.cs` | 364 | 1 |
 | `Services/FactCoverageReport.cs` | 767 | 1 |
 | `Services/FactKeyCatalog.cs` | 1216 | 1 |
-| `Services/FactKeyDynamicCatalog.cs` | 228 | 1 |
+| `Services/FactKeyDynamicCatalog.cs` | 232 | 1 |
 | `Services/FactQuery.cs` | 44 | 0 |
 | `Services/FactRelationEngine.cs` | 526 | 2 |
 | `Services/FactStateLattice.cs` | 149 | 1 |
@@ -12443,6 +12457,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `Services/GuardBudget.cs` | 90 | 1 |
 | `Services/GuardPolicy.cs` | 179 | 1 |
 | `Services/GuardRegistry.cs` | 131 | 1 |
+| `Services/HardwareCatalogService.cs` | 128 | 3 |
 | `Services/HardwareSnapshotService.cs` | 643 | 1 |
 | `Services/HdrCapabilityService.cs` | 228 | 1 |
 | `Services/HistoryStore.cs` | 631 | 3 |
@@ -12513,7 +12528,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `Services/MiniOverlayCatalog.cs` | 74 | 1 |
 | `Services/MinidumpFactsService.cs` | 137 | 1 |
 | `Services/MmioAccess.cs` | 44 | 2 |
-| `Services/MmioBackendSelector.cs` | 32 | 1 |
+| `Services/MmioBackendSelector.cs` | 68 | 1 |
 | `Services/MonitorConnectionService.cs` | 69 | 1 |
 | `Services/MonitorFactsService.cs` | 180 | 1 |
 | `Services/MotherboardAnalysisService.cs` | 152 | 1 |
@@ -12530,7 +12545,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `Services/NetworkSpeedService.cs` | 275 | 2 |
 | `Services/NetworkSystemInventoryFactsService.cs` | 477 | 1 |
 | `Services/NicHealthFactsService.cs` | 121 | 1 |
-| `Services/NicLinkFactsService.cs` | 212 | 1 |
+| `Services/NicLinkFactsService.cs` | 245 | 1 |
 | `Services/NpuComputeBenchService.cs` | 50 | 1 |
 | `Services/NpuDetectionService.cs` | 264 | 1 |
 | `Services/NtfsBootSectorFactsService.cs` | 263 | 2 |
@@ -12762,7 +12777,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `Services/VizPalette.cs` | 78 | 1 |
 | `Services/VizTrackingKeys.cs` | 40 | 1 |
 | `Services/VolumeEncryptionFactsService.cs` | 131 | 1 |
-| `Services/VolumeService.cs` | 119 | 2 |
+| `Services/VolumeService.cs` | 159 | 2 |
 | `Services/VrmControllerService.cs` | 479 | 1 |
 | `Services/WheaErrorService.cs` | 130 | 2 |
 | `Services/WheaMemoryFactsService.cs` | 207 | 1 |
@@ -12776,6 +12791,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `Services/WinsatService.cs` | 251 | 2 |
 | `Services/WiringDecisions.cs` | 60 | 1 |
 | `Services/WmiFieldInventoryService.cs` | 113 | 1 |
+| `Services/WmiGuard.cs` | 60 | 1 |
 | `Services/WriteGate.cs` | 76 | 1 |
 | `Services/WriteGateReport.cs` | 296 | 1 |
 | `Services/XhciControllerReader.cs` | 109 | 1 |
@@ -12818,8 +12834,8 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 
 **版本與發佈（1–6）**
 
-1. 本版是 v3.11 —— 看徽章、`XinSpect.csproj` 的 `<Version>`、關於頁三處一致。不一致＝有一處落後（四處同步是硬規則）。
-2. 測試 7,727 綠 —— 跑守門五組不依賴硬體；全套請在真機跑。紅燈先分辨是真機依賴還是回歸。
+1. 本版是 v3.12 —— 看徽章、`XinSpect.csproj` 的 `<Version>`、關於頁三處一致。不一致＝有一處落後（四處同步是硬規則）。
+2. 測試 7,756 綠 —— 跑守門五組不依賴硬體；全套請在真機跑。紅燈先分辨是真機依賴還是回歸。
 3. 下載表列的位元組數取自本版真正釋出的那顆 `XinSpect.exe` —— 抓下來自己數 bytes。不符請先確認是不是抓到別的版號的檔案。
 4. 主程式未簽章 —— 內容右鍵「數位簽章」分頁應為空。這正是 O-03。
 5. 授權是 AGPL-3.0-or-later —— 讀 `LICENSE` 開頭三行。
@@ -12837,10 +12853,10 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 **結構與分母（13–18）**
 
 13. 事實鍵目錄是 1,167 把、155 域 —— 開事實總表頁看總數。
-14. 動態家族 66 個 —— 目錄裡以「前綴＋理由」登記，成員不在編譯期。
-15. 可到達畫面 63 個 —— 導覽註冊表（主頁面＋實用工具）的 `Key` 條目數；獨立視窗另計在 XAML 檔數裡。
-16. 說明條目 286 條 —— 附錄 G 是它的全表。
-17. 服務檔 655 個 —— 附錄 H 是清單。
+14. 動態家族 67 個 —— 目錄裡以「前綴＋理由」登記，成員不在編譯期。
+15. 可到達畫面 64 個 —— 導覽註冊表（主頁面＋實用工具）的 `Key` 條目數；獨立視窗另計在 XAML 檔數裡。
+16. 說明條目 287 條 —— 附錄 G 是它的全表。
+17. 服務檔 657 個 —— 附錄 H 是清單。
 18. 對帳規則是 26 條（不是歷史文字裡的 29）—— O-01 的處置。
 
 **量測（19–24）**
@@ -12873,8 +12889,8 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | 目錄／檔案 | 責任 | 你會在這裡找到 |
 |---|---|---|
 | `Nav/` | 導覽註冊表與版本沿革資料 | `ChangelogCatalog.cs`（第 11 部的資料來源）、導覽註冊表（可達性守門的依據） |
-| `Views/` | 畫面（XAML＋後置程式） | 63 個可到達畫面的實際版面；說明條目掛在這裡 |
-| `Services/` | 事實的生產端（655 個檔案） | 附錄 H 是完整清單；每一把鍵的來源多半在這裡 |
+| `Views/` | 畫面（XAML＋後置程式） | 64 個可到達畫面的實際版面；說明條目掛在這裡 |
+| `Services/` | 事實的生產端（657 個檔案） | 附錄 H 是完整清單；每一把鍵的來源多半在這裡 |
 | `Services/DeepBench/` | 深測套件與測項目錄 | 第 4 部的測項全表 |
 | `Models/` | 資料模型與預算 | 事實鍵目錄、`PerfBudget.cs`（冷啟動門檻） |
 | `Bridge/` | 一切硬體存取的收斂點 | 三個寫入 API、寫入帳本、特權層（WinRing0／XsRegProbe） |

@@ -116,8 +116,10 @@ public static class NicLinkGap
                 false);
 
 
-        // 非 PCIe 裝置（虛擬網卡、Wintun、Wi-Fi 走不同的匯流排）不套 PCIe 段落
+        // 非 PCIe 裝置（虛擬網卡、Wintun、Wi-Fi 走不同的匯流排）不套 PCIe 段落。
+        // 但「四個 PCIe 欄位全為 0」也可能是功能表讀不到——兩者不能混為一談。
         bool isPcie = s.PcieCurrentWidth > 0 || s.PcieMaxWidth > 0;
+        bool hasPcieEvidence = isPcie || s.PcieCurrentSpeed > 0 || s.PcieMaxSpeed > 0;
 
         if (isPcie && s.PcieCurrentSpeed > 0 && s.PcieMaxWidth > 0 && s.PcieCurrentWidth < s.PcieMaxWidth)
         {
@@ -154,10 +156,20 @@ public static class NicLinkGap
                     true);
         }
 
+        // 沒有 PCIe 能力證據時，不宣稱它是虛擬介面；如實標示讀不到。
+        if (!hasPcieEvidence)
+            return new Verdict(GapKind.Unknown, "—（PCIe 能力資料未回報）",
+                $"{s.Name}（{s.Description}）：PCIe 速度／寬度欄位全為 0，無法分辨是虛擬介面或驅動沒有回報。",
+                false);
+
         // 線路協商低於這張卡支援的最高速率
         ulong best = 0;
         foreach (ulong v in s.SupportedSpeedsBps) if (v > best) best = v;
-        if (best > 0 && s.EthCurrentBps > 0 && s.EthCurrentBps < best)
+        if (best == 0)
+            return new Verdict(GapKind.Unknown, "—（速率能力未回報）",
+                $"{s.Name}（{s.Description}）：驅動沒有回報可比較的線路能力清單，不能判定鏈路已到位。",
+                false);
+        if (s.EthCurrentBps > 0 && s.EthCurrentBps < best)
         {
             return new Verdict(GapKind.LineNegotiatedLower,
                 $"線路協商在 {Bps(s.EthCurrentBps)}，這張卡支援到 {Bps(best)}",

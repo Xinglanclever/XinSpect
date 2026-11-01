@@ -11,10 +11,10 @@
 
 一款免费开源、运行于 Windows 的原生硬件验机、监控与安全稽核工具。以单一运行档发布，免安装；对硬件与系统的读取以唯读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-3.11-4C8DFF)
+![版本](https://img.shields.io/badge/version-3.12-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-7727%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-7756%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 ![商业授权](https://img.shields.io/badge/license-%E5%95%86%E4%B8%9A%E6%8E%88%E6%9D%83%E5%8F%AF%E8%B0%88-8B5CF6)
@@ -396,10 +396,10 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 | 接口页（XAML） | 80 页 | `ls Views/*.xaml` |
 | 测试档 | 571 档 | `ls Tests/*.cs` |
 | 测试方法 | 5,851 个 `[Fact]`＋249 个 `[Theory]` | 逐档正则计数 |
-| 运行期测试案例 | 7,727（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
+| 运行期测试案例 | 7,756（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
 | 公开文档 | 32 份 `docs/*.md`＋5 份 `docs/spec/*.md` | `ls docs/*.md`、`ls docs/spec/*.md` |
 | 事实键目录 | 1,167 键／155 个前缀 | 解析 `FactKeyCatalog.Keys` |
-| 动态键家族 | 66 个 | 解析 `FactKeyDynamicCatalog.Families` |
+| 动态键家族 | 67 个 | 解析 `FactKeyDynamicCatalog.Families` |
 
 **怎么读这张表。** 第一个有用的比例是「5,362 个 `[Fact]` 对 247 个 `[Theory]`」——`[Theory]` 少，说明这个项目的测试风格偏向「一条测试讲一个具体事实」，而不是用数据驱动把同一个断言拷贝很多遍。第二个比例是「512 个测试档对 569 个服务档」：几乎每个服务档都有一个对应的测试档，这是刻意的，因为这个项目最贵的缺陷类别是「服务写完了但没有接进生产路径」（见第十九章 D-16），而对应测试档的存在至少让「写了却没人调用」有机会被看见。
 
@@ -466,17 +466,17 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 1. **单一行程承担特权与接口。** 主程序以管理员权杖运行，接口、内置浏览器、AI 对话、报告产生都在同一个行程里。任何在接口层的代码运行都等于管理员（见第二十章 V-01）。正确的修法是权杖分离，但那会让「读一个 MSR」变成跨行程调用，代价是延迟与复杂度——这是一个还没有付的代价。
 2. **服务数量本身就是一种风险。** 569 个服务档意味着「接线」是一个真实的问题：服务写好、测试绿、但没有进生产路径，这种缺陷在这个项目发生过不只一次（D-16、D-17）。目前的答案是守门（孤儿扫描、`ViewEntryGateTests`、事实键对帐），而不是减少服务数量。
-3. **事实键目录需要人维持诚实。** 1,167 个键加上 66 个动态家族，靠的是「运行期出现的键要嘛在目录、要嘛命中家族前缀，否则对帐红灯」。这条规则能抓「有产出但没登记」，抓不到「登记了但语意写错」。目录是申报，不是证明。
+3. **事实键目录需要人维持诚实。** 1,167 个键加上 67 个动态家族，靠的是「运行期出现的键要嘛在目录、要嘛命中家族前缀，否则对帐红灯」。这条规则能抓「有产出但没登记」，抓不到「登记了但语意写错」。目录是申报，不是证明。
 
 ## 四、下载与系统需求
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.11/XinSpect.exe) | 37,348,651 bytes | 主程序。蓝色中队守护进程已内置 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.11/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.11/XinSpectDeploy.exe) | 15,360 bytes | 一键安装器（可选 GitHub／Google Drive／中国直连线路三个下载来源；下载时显示进度条、速度与剩余时间） |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.12/XinSpect.exe) | 37,348,651 bytes | 主程序。蓝色中队守护进程已内置 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.12/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.12/XinSpectDeploy.exe) | 15,360 bytes | 一键安装器（可选 GitHub／Google Drive／中国直连线路三个下载来源；下载时显示进度条、速度与剩余时间） |
 
-> **上表的字节数为本版（v3.11）实际发布的文件大小**；请以 Release 页面列出的文件为准。
+> **上表的字节数为本版（v3.12）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
 安装器（`XinSpectDeploy.exe`）会列出三个来源：**1** 是 GitHub 最新版（全自动部署主程序＋守护进程）、**2** 是 Google Drive 镜像（分享文件夹，它会打开浏览器并告诉你按哪里）、**3** 是中国直连线路——目录型端点，安装器自己抓档，跟按 1 一样有进度条、速度与剩余时间。判断哪一格用哪种模式，看的是端点本身：只有真的能用 GET 取回目录下文件的线路才写成直连，分享页一律只打开浏览器，不会把分享页存成一个假的 exe。镜像链接集中在 `Installer/mirrors.txt`，安装器启动时会抓一份最新的（3 秒超时，拿不到就用内置的）；某一格还没有链接时，菜单上会写「尚未提供」，按下去会先说明再改用 GitHub。下载完成后一律检查 PE 标头，抓到 HTML（分享页、限流页、Google 的病毒扫描确认页）会被挡下、删档并说出内容像什么。
 
@@ -2419,6 +2419,7 @@ O-01 到 O-12 里，至少四条是「知道怎么修，但选择不修」：
 
 ## 二十二、版本沿革
 
+- **v3.12 Ultima XII**（2026-11-01）：以 3.11 Swiss 為底座：新增歷史型號目錄，補齊发布資產與缺列防護
 - **v3.11 Swiss**（2026-10-31）：界面换成瑞士现代风格与 Helvetica（测试版）
 - **v3.10 Ultima XII**（2026-10-31）：总览先讲清楚这台机器是什么：胶囊摘要＋详细信息，仪表默认收起
 - **v3.09 Ultima XII**（2026-10-31）：图标换成品牌插画：蓝色 X ＋ 两张窗口卡
@@ -2657,7 +2658,7 @@ By：Xinglanclever
 
 ---
 
-**文档本身的版本**：本文档对应 XinSpect v3.11（2026-10-31）。正体中文为母本，简体中文由 OpenCC（tw2sp）自动转换，英文版为全量对译；三份文档共用同一组事实与守门。若你在简体版看到不顺的词，那是转换器的选择，不是原文的意思——请以正体版为准。
+**文档本身的版本**：本文档对应 XinSpect v3.12（2026-11-01）。正体中文为母本，简体中文由 OpenCC（tw2sp）自动转换，英文版为全量对译；三份文档共用同一组事实与守门。若你在简体版看到不顺的词，那是转换器的选择，不是原文的意思——请以正体版为准。
 
 ---
 

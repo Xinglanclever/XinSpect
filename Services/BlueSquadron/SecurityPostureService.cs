@@ -42,12 +42,36 @@ public sealed class SecurityPostureService : ObservableObject
             {
                 OnPropertyChanged(nameof(TotalScore));
                 OnPropertyChanged(nameof(ScoreText));
+                OnPropertyChanged(nameof(ScoreNumber));
+                OnPropertyChanged(nameof(ScoreUnit));
+                OnPropertyChanged(nameof(GaugeValue));
+                OnPropertyChanged(nameof(CoverageText));
             }
         }
     }
 
     public int TotalScore => _posture?.TotalScore ?? 0;
-    public string ScoreText => _posture is null ? "—" : $"{_posture.TotalScore} / 100";
+
+    /// <summary>完整分數字串（給文字輸出的地方用）。</summary>
+    public string ScoreText => _posture is null
+        ? "—"
+        : _posture.HasScore ? $"{_posture.TotalScore} / 100" : "—";
+
+    /// <summary>大數字：覆蓋率不足時顯示「—」，不要拿一個殘缺的分數嚇人。</summary>
+    public string ScoreNumber => _posture is null
+        ? "—"
+        : _posture.HasScore ? _posture.TotalScore.ToString() : "—";
+
+    /// <summary>「/ 100」只在真的給分時出現。</summary>
+    public string ScoreUnit => _posture is { HasScore: true } ? "/ 100" : "";
+
+    /// <summary>儀表：沒有可信分數時歸零，避免畫出一條誤導的弧線。</summary>
+    public int GaugeValue => _posture is { HasScore: true } ? _posture.TotalScore : 0;
+
+    /// <summary>覆蓋率那一行——這一頁最容易犯的錯就是「沒量到」被讀成「有缺口」。</summary>
+    public string CoverageText => _posture is null
+        ? ""
+        : $"已評估 {_posture.CoveragePercent}% · 未評估項目不計分";
 
     public void Refresh(MainViewModel vm)
     {
@@ -64,7 +88,10 @@ public sealed class SecurityPostureService : ObservableObject
             var posture = await Task.Run(() => EvaluateFromVm(vm));
             Posture = posture;
             vm.BlueSquadron.UpdateDefenseLines(posture);
-            Status = "評估完成（全部唯讀偵測）。";
+            Status = posture.CoveragePercent < 80
+                ? $"評估完成，但只量到 {posture.CoveragePercent}% 的項目——"
+                  + "其餘需要系統管理員權限、BlueSquadron 驅動或平台不支援。"
+                : "評估完成（全部唯讀偵測）。";
         }
         catch (Exception ex)
         {

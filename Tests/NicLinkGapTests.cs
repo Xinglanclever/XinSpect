@@ -60,6 +60,26 @@ public class NicLinkGapTests
     }
 
     [Fact]
+    public void 網卡鍵的末段要是ASCII而且同名同鍵不同名不同鍵()
+    {
+        // 繁中系統的介面名稱就是「乙太網路」——直接拼進鍵會產出非 ASCII 的鍵，
+        // 匯出檔在換一個語系之後整批變一次。末段只留 ASCII，辨識靠 8 碼雜湊。
+        foreach (string name in new[] { "乙太網路", "Wi-Fi", "MX-300HL", "", "Ethernet 2" })
+        {
+            string slug = NicLinkFactsService.KeySegment(name);
+            Assert.Matches("^[a-z0-9_]+$", slug);
+            Assert.EndsWith("_" + slug[^8..], slug);
+            Assert.DoesNotContain("__", slug);
+        }
+
+        Assert.Equal(NicLinkFactsService.KeySegment("乙太網路"), NicLinkFactsService.KeySegment("乙太網路"));
+        Assert.NotEqual(NicLinkFactsService.KeySegment("乙太網路"), NicLinkFactsService.KeySegment("乙太網路 3"));
+        Assert.StartsWith("wi_fi_", NicLinkFactsService.KeySegment("Wi-Fi"));
+        Assert.StartsWith("mx_300hl_", NicLinkFactsService.KeySegment("MX-300HL"));
+        Assert.StartsWith("if_", NicLinkFactsService.KeySegment(""));
+    }
+
+    [Fact]
     public void 網卡基礎查詢的欄位只能是MSFT_NetAdapter真的有的()
     {
         // 這一條是為了一個「靜默歸零」的歷史缺陷：查詢裡混進 LinkSpeed／MediaType／
@@ -148,7 +168,7 @@ public class NicLinkGapTests
 
         Assert.Equal(NicLinkGap.GapKind.Unknown, v.Kind);
         Assert.False(v.Attention);
-        Assert.Contains("不適用", v.Evidence);
+        Assert.Contains("PCIe 能力資料未回報", v.Headline);
     }
 
     [Fact]
@@ -167,8 +187,8 @@ public class NicLinkGapTests
         var v = NicLinkGap.Judge(Sample(curSp: 3, curW: 4, maxSp: 3, maxW: 4,
             eth: 1_000_000_000, supported: []));
 
-        Assert.Equal(NicLinkGap.GapKind.None, v.Kind);   // PCIe 與線路都比對過了，只能說相符
-        Assert.DoesNotContain("支援到", v.Headline);      // 但不得宣稱「已達最高支援速率」
+        Assert.Equal(NicLinkGap.GapKind.Unknown, v.Kind);
+        Assert.Contains("速率能力未回報", v.Headline);
     }
 
     [Fact]

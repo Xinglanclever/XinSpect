@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
@@ -22,6 +23,12 @@ public interface IDriverServiceControl
     void Install(string serviceName, string sysPath);
     void Start(string serviceName);
     void StopAndDelete(string serviceName);
+}
+
+/// <summary>驅動簽章接縫：用本機產生的 CA 簽 XsRegProbe.sys。測試注入假件，不在單測叫 signtool。</summary>
+public interface ISysSigner
+{
+    bool Sign(string sysPath, string pfxPath, string password, out string message);
 }
 
 public enum DriverServiceState { NotFound, Stopped, Running, Unknown }
@@ -52,9 +59,11 @@ public sealed class DeepAccessService : ObservableObject
     private readonly string _artifactDir;
     private readonly bool _isElevated;
     private readonly Func<string?> _handshakeProbe;
+    private readonly ISysSigner _signer;
 
     public DeepAccessService(ICertTrustStore? trustStore = null, IDriverServiceControl? serviceControl = null,
-        string? artifactDir = null, bool? isElevated = null, Func<string?>? handshakeProbe = null)
+        string? artifactDir = null, bool? isElevated = null, Func<string?>? handshakeProbe = null,
+        ISysSigner? signer = null)
     {
         _trustStore = trustStore ?? new X509TrustStore();
         _service = serviceControl ?? new ScmDriverService();
@@ -62,6 +71,7 @@ public sealed class DeepAccessService : ObservableObject
             Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "XinSpect", "Driver");
         _isElevated = isElevated ?? IsCurrentUserElevated();
         _handshakeProbe = handshakeProbe ?? DefaultHandshakeProbe;
+        _signer = signer ?? new SigntoolSigner();
         RefreshStatus();
     }
 
@@ -80,6 +90,11 @@ public sealed class DeepAccessService : ObservableObject
     public string CaCerPath => Path.Combine(_artifactDir, "XinSpectCA.cer");
     private string CaPfxPath => Path.Combine(_artifactDir, "XinSpectCA.pfx");
     private string CaKeyPath => Path.Combine(_artifactDir, "XinSpectCA.pfxkey");
+    // 簽 .sys 用的是「由 CA 簽出的葉憑證」，不是 CA 本身：
+    // Authenticode 要求簽章憑證 CA=FALSE 且有 Code Signing EKU；
+    // 拿 CA 直接簽會得到 0x80096019（TRUST_E_BASIC_CONSTRAINTS），驅動載不進去。
+    private string SignPfxPath => Path.Combine(_artifactDir, "XinSpectSign.pfx");
+    private string SignKeyPath => Path.Combine(_artifactDir, "XinSpectSign.pfxkey");
 
     private bool _caTrusted;
     private DriverServiceState _driverState = DriverServiceState.Unknown;
@@ -129,33 +144,68 @@ public sealed class DeepAccessService : ObservableObject
         bool sysPresent = File.Exists(SysPath);
         if (!sysPresent)
         {
-            notes.Add($"未找到 {SysPath}：驅動未安裝。請先依 XsRegProbe/BUILD-給使用者.md 編譯並複製 .sys。");
+            notes.Add($"未找到 {SysPath}：驅動未部署。請以管理員身分重新執行部署器（XinSpectDeploy），"
+                      + "它會把 XsRegProbe.sys 放到這個路徑；手動建置見 XsRegProbe/BUILD-給使用者.md。");
         }
         else
         {
-            switch (driverState)
+            // 部署器送來的是未簽章的 .sys；核心只載入「鏈到已信任根」的映像，
+            // 所以先用本機這張 CA 簽一次（PFX 與密碼檔就是為此留的）。
+            if (!IsSignedByCa(SysPath, ca) && File.Exists(SignPfxPath) && File.Exists(SignKeyPath))
             {
-                case DriverServiceState.NotFound:
-                    _service.Install(ServiceName, SysPath);
-                    _service.Start(ServiceName);
-                    notes.Add($"已安裝並啟動服務 {ServiceName}（白名單唯讀，退出即卸載）。");
-                    break;
-                case DriverServiceState.Stopped:
-                    _service.Start(ServiceName);
-                    notes.Add($"服務 {ServiceName} 已在停止狀態，僅啟動。");
-                    break;
-                case DriverServiceState.Running:
-                    notes.Add($"服務 {ServiceName} 已在執行。");
-                    break;
-                default:
-                    notes.Add($"服務 {ServiceName} 狀態查詢異常，未嘗試啟動。");
-                    break;
+                try
+                {
+                    string pwd = File.ReadAllText(SignKeyPath).Trim();
+                    notes.Add(_signer.Sign(SysPath, SignPfxPath, pwd, out var signMessage)
+                        ? signMessage
+                        : $"簽章失敗：{signMessage}（未簽章的驅動不會載入）");
+                }
+                catch (Exception ex)
+                {
+                    notes.Add($"簽章例外：{ex.Message}（未簽章的驅動不會載入）");
+                }
+            }
+
+            try
+            {
+                switch (driverState)
+                {
+                    case DriverServiceState.NotFound:
+                        _service.Install(ServiceName, SysPath);
+                        _service.Start(ServiceName);
+                        notes.Add($"已安裝並啟動服務 {ServiceName}（白名單唯讀，退出即卸載）。");
+                        break;
+                    case DriverServiceState.Stopped:
+                        _service.Start(ServiceName);
+                        notes.Add($"服務 {ServiceName} 已在停止狀態，僅啟動。");
+                        break;
+                    case DriverServiceState.Running:
+                        notes.Add($"服務 {ServiceName} 已在執行。");
+                        break;
+                    default:
+                        notes.Add($"服務 {ServiceName} 狀態查詢異常，未嘗試啟動。");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                notes.Add($"服務 {ServiceName} 啟動失敗：{ex.Message}。請檢查核心簽章、testsigning 與系統事件記錄。");
             }
             if (_service.QueryState(ServiceName) == DriverServiceState.Running)
             {
                 notes.Add(_handshakeProbe() is { } handshake
                     ? $"驅動{handshake}。"
                     : "服務已啟動，但裝置握手尚未通過（驅動可能載入失敗或簽章未過）——SPI/MMIO 仍三態。");
+            }
+            else
+            {
+                // 實際在 Windows 10/11 x64 上會走到這裡：核心模式程式碼完整性只接受
+                // 鏈到 Microsoft 根的簽章，自簽憑證（即使已在 Root／TrustedPublisher）
+                // 只對使用者模式有效，載入會回 577 ERROR_INVALID_IMAGE_HASH。
+                notes.Add("驅動沒有載入：Windows 拒絕這個核心驅動的簽章"
+                          + "（自簽憑證只在使用者模式有效，核心需 testsigning 或 Microsoft 簽章）。"
+                          + "WinRing0 的 MSR／PCI 設定空間照常；它不提供可用的實體記憶體讀取，"
+                          + "所以 MMIO（SPIBAR／MCHBAR／ECAM）會顯示讀不到。XsRegProbe 請視為開發機專用。");
             }
         }
 
@@ -247,13 +297,18 @@ public sealed class DeepAccessService : ObservableObject
     private string CurrentStateText() => $"\n目前：{StatusText}";
 
     private static string StatusFrom(DeepAccessStatus s) => s.IsEnabled
-        ? "已啟用：CA 已信任、XsRegProbe 執行中（白名單唯讀備援後端）。MMIO 事實由 WinRing0 主力後端服務；驅動提供允許清單內的備援路徑。"
+        ? "已啟用：CA 已信任、XsRegProbe 執行中。MMIO（SPIBAR／MCHBAR／ECAM）由這支白名單唯讀驅動提供；"
+          + "MSR 與 PCI 設定空間照常走 WinRing0，兩者互不遮罩。"
         : "未完全啟用。";
 
     /// <summary>CA 不在就產生：自簽根（CA=TRUE、KeyCertSign）存 .cer（公）與 .pfx+密碼檔（私，供之後簽 .sys）。</summary>
     private X509Certificate2 EnsureCa(List<string> notes)
     {
-        if (TryLoadCa(out var existing) && existing is { } ok) return ok;
+        if (TryLoadCa(out var existing) && existing is { } ok)
+        {
+            EnsureLeafCertificate(existing, notes);
+            return ok;
+        }
 
         Directory.CreateDirectory(_artifactDir);
         using var rsa = RSA.Create(KeyBits);
@@ -267,11 +322,69 @@ public sealed class DeepAccessService : ObservableObject
         string password = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
         File.WriteAllBytes(CaPfxPath, ca.Export(X509ContentType.Pkcs12, password));
         File.WriteAllText(CaKeyPath, password);
+
+        // 葉憑證：拿來簽 .sys 的那一張（CA=FALSE + Code Signing EKU），由上面的 CA 簽出。
+        using var leafKey = RSA.Create(KeyBits);
+        var leafRequest = new CertificateRequest(
+            SignSubject, leafKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        leafRequest.CertificateExtensions.Add(
+            new X509BasicConstraintsExtension(false, false, 0, true));
+        leafRequest.CertificateExtensions.Add(new X509KeyUsageExtension(
+            X509KeyUsageFlags.DigitalSignature, true));
+        leafRequest.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(
+            new OidCollection { new Oid("1.3.6.1.5.5.7.3.3") }, false));   // Code Signing
+        leafRequest.CertificateExtensions.Add(
+            new X509SubjectKeyIdentifierExtension(leafRequest.PublicKey, false));
+        using var leaf = leafRequest.Create(ca, DateTimeOffset.UtcNow.AddDays(-1),
+                                            DateTimeOffset.UtcNow.AddYears(3),
+                                            RandomNumberGenerator.GetBytes(16));
+        string signPassword = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
+        File.WriteAllBytes(SignPfxPath, leaf.CopyWithPrivateKey(leafKey)
+            .Export(X509ContentType.Pkcs12, signPassword));
+        File.WriteAllText(SignKeyPath, signPassword);
+
         // 私鑰材料（PFX＋密碼檔）限 SYSTEM／Administrators：取消繼承、只留這兩條規則
         RestrictToAdmins(CaPfxPath);
         RestrictToAdmins(CaKeyPath);
-        notes.Add($"已產生自簽 CA {CaSubject}（{CaCerPath}；PFX 與密碼檔同目錄且限管理員讀取，供 signtool 簽 .sys）。");
+        RestrictToAdmins(SignPfxPath);
+        RestrictToAdmins(SignKeyPath);
+        notes.Add($"已產生自簽 CA {CaSubject}（{CaCerPath}）與簽章用葉憑證 {SignSubject}"
+                  + "（PFX 與密碼檔同目錄且限管理員讀取，供 signtool 簽 .sys）。");
         return ca;
+    }
+
+    private void EnsureLeafCertificate(X509Certificate2 ca, List<string> notes)
+    {
+        if (File.Exists(SignPfxPath) && File.Exists(SignKeyPath)) return;
+        if (!File.Exists(CaPfxPath) || !File.Exists(CaKeyPath))
+        {
+            notes.Add("既有 CA 缺少私鑰材料，無法補發驅動簽章葉憑證。");
+            return;
+        }
+
+        string caPassword = File.ReadAllText(CaKeyPath).Trim();
+        using var caWithKey = X509CertificateLoader.LoadPkcs12FromFile(CaPfxPath, caPassword,
+            X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
+        using var leafKey = RSA.Create(KeyBits);
+        var leafRequest = new CertificateRequest(
+            SignSubject, leafKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        leafRequest.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, true));
+        leafRequest.CertificateExtensions.Add(new X509KeyUsageExtension(
+            X509KeyUsageFlags.DigitalSignature, true));
+        leafRequest.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(
+            new OidCollection { new Oid("1.3.6.1.5.5.7.3.3") }, false));
+        leafRequest.CertificateExtensions.Add(
+            new X509SubjectKeyIdentifierExtension(leafRequest.PublicKey, false));
+        using var leaf = leafRequest.Create(caWithKey, DateTimeOffset.UtcNow.AddDays(-1),
+                                            DateTimeOffset.UtcNow.AddYears(3),
+                                            RandomNumberGenerator.GetBytes(16));
+        string signPassword = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
+        File.WriteAllBytes(SignPfxPath, leaf.CopyWithPrivateKey(leafKey)
+            .Export(X509ContentType.Pkcs12, signPassword));
+        File.WriteAllText(SignKeyPath, signPassword);
+        RestrictToAdmins(SignPfxPath);
+        RestrictToAdmins(SignKeyPath);
+        notes.Add($"已補發簽章用葉憑證 {SignSubject}（既有 CA 保留不變）。");
     }
 
     /// <summary>把檔案 ACL 收緊為僅 SYSTEM 與 Administrators 可存取（取消繼承、清掉其他規則）。</summary>
@@ -303,6 +416,28 @@ public sealed class DeepAccessService : ObservableObject
             return string.Equals(ca.Subject, CaSubject, StringComparison.Ordinal);
         }
         catch { return false; }
+    }
+
+    /// <summary>這個 .sys 是不是本機的簽章葉憑證簽的（是就不必重簽）。</summary>
+    private static bool IsSignedByCa(string sysPath, X509Certificate2 ca)
+    {
+        try
+        {
+            // Authenticode 簽章只能從 PE 檔裡讀，這條 API 在 .NET 10 標成過時但沒有替代品
+            // （X509CertificateLoader 只讀憑證檔，不解析 Authenticode）。
+#pragma warning disable SYSLIB0057
+            var signed = X509Certificate.CreateFromSignedFile(sysPath);
+#pragma warning restore SYSLIB0057
+            // 簽的是葉憑證（CN=XinSpect Driver Signing），由本機 CA 簽出：
+            // 所以要比「發行者是不是本機 CA」＋「主體是不是我們的葉憑證」，
+            // 不是拿葉憑證的指紋去比 CA 的指紋（那樣永遠不相等，會每次重簽）。
+            return string.Equals(signed.Issuer, ca.Subject, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(signed.Subject, SignSubject, StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;   // 未簽章／讀不到簽章：當成要簽
+        }
     }
 
     private static X509Certificate2 PublicOnly(X509Certificate2 cert)
@@ -482,4 +617,84 @@ public sealed class ScmDriverService : IDriverServiceControl
     [DllImport("advapi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool CloseServiceHandle(IntPtr handle);
+}
+
+/// <summary>
+/// 真實簽章器：用 Windows SDK 的 signtool.exe 以本機 CA 的 PFX 簽 XsRegProbe.sys。
+/// 為什麼一定要簽：核心只載入「鏈到已信任根、且有有效 Authenticode 簽章」的映像；
+/// 部署器送來的是未簽章檔，不簽這一步，服務裝得起來但載不進去。
+/// </summary>
+public sealed class SigntoolSigner : ISysSigner
+{
+    public bool Sign(string sysPath, string pfxPath, string password, out string message)
+    {
+        try
+        {
+            string? signtool = FindSigntool();
+            if (signtool is null)
+            {
+                message = "找不到 signtool.exe（需要 Windows SDK 的簽章工具）";
+                return false;
+            }
+
+            var psi = new System.Diagnostics.ProcessStartInfo(signtool)
+            {
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            };
+            foreach (string a in new[]
+                     {
+                         "sign", "/fd", "sha256", "/f", pfxPath, "/p", password,
+                         "/d", "XinSpect XsRegProbe", sysPath,
+                     })
+                psi.ArgumentList.Add(a);
+
+            using var p = System.Diagnostics.Process.Start(psi);
+            if (p is null)
+            {
+                message = "signtool 無法啟動";
+                return false;
+            }
+            string output = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
+            p.WaitForExit(60000);
+            if (p.ExitCode != 0)
+            {
+                message = "signtool 回 " + p.ExitCode + "：" + FirstLine(output);
+                return false;
+            }
+            message = "已用本機 CA 簽章 XsRegProbe.sys（signtool，/fd sha256）。";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            message = ex.Message;
+            return false;
+        }
+    }
+
+    private static string FirstLine(string s)
+    {
+        int i = s.IndexOf('\n');
+        string line = (i < 0 ? s : s.Substring(0, i)).Trim();
+        return line.Length > 160 ? line.Substring(0, 160) : line;
+    }
+
+    /// <summary>找 Windows SDK 的 signtool（版本目錄由高到低；x64 優先）。</summary>
+    private static string? FindSigntool()
+    {
+        string kits = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+            "Windows Kits", "10", "bin");
+        if (!Directory.Exists(kits)) return null;
+        foreach (string ver in Directory.GetDirectories(kits).OrderByDescending(d => d))
+        {
+            string x64 = Path.Combine(ver, "x64", "signtool.exe");
+            if (File.Exists(x64)) return x64;
+            string x86 = Path.Combine(ver, "x86", "signtool.exe");
+            if (File.Exists(x86)) return x86;
+        }
+        return null;
+    }
 }

@@ -103,18 +103,60 @@ public static class SecurityScoreEngine
             EvalSurface(surface),
         };
 
-        int total = 0;
+        // 只把「真的量到」的防線算進總分：分母是已評估的權重，不是 100。
+        // 沒量到的防線既不加分也不扣分，另外用覆蓋率講清楚缺了哪些。
+        int weightedSum = 0, weightSum = 0, totalWeight = 0;
+        double coverageNum = 0;
         foreach (var c in categories)
-            total += c.Score * c.Weight;
-        total /= 100;
+        {
+            totalWeight += c.Weight;
+            // 這一條防線量到幾成（0~1），再乘上它在總分裡的佔比
+            double catCov = c.TotalWeight > 0
+                ? Math.Clamp((double)c.AssessedWeight / c.TotalWeight, 0, 1)
+                : 0;
+            coverageNum += c.Weight * catCov;
+            if (c.AssessedWeight > 0)
+            {
+                weightedSum += c.Score * c.Weight;
+                weightSum += c.Weight;
+            }
+        }
 
-        string verdict = total switch
+        int total = weightSum > 0 ? weightedSum / weightSum : 0;
+        int coverage = totalWeight > 0
+            ? (int)Math.Round(100.0 * coverageNum / totalWeight)
+            : 0;
+
+        string baseVerdict = total switch
         {
             >= 90 => "防禦態勢優良——大多數已知攻擊面已封閉。",
             >= 70 => "防禦態勢尚可——仍有數項可改進的弱點。",
             >= 50 => "防禦態勢偏弱——存在可被利用的顯著缺口。",
             _ => "防禦態勢危險——多條防線未啟用或存在已知漏洞。",
         };
+
+        // 覆蓋率太低時不給結論。一台沒裝驅動、沒提權的機器，量到的東西太少，
+        // 任何「偏弱／危險」的判定都是拿推測冒充量測。
+        string verdict;
+        bool hasScore = weightSum > 0;
+        if (coverage < 50)
+        {
+            verdict = $"資料不足——只評估了 {coverage}% 的檢查項目，無法判定整體態勢。";
+            hasScore = false;
+        }
+        else if (coverage < 80)
+        {
+            verdict = baseVerdict + $"（已評估 {coverage}%，其餘讀不到，未計入分數）";
+        }
+        else
+        {
+            verdict = baseVerdict;
+        }
+
+        // 不給分的時候就真的是 0：留一個「只量到 10% 卻是 100 分」的數字，
+        // 任何沒看 HasScore 的呼叫端都會把它當成好成績。
+        if (!hasScore)
+            total = 0;
 
         var recs = HardeningAdvisor.Recommend(categories);
 
@@ -123,7 +165,9 @@ public static class SecurityScoreEngine
             Verdict: verdict,
             Categories: categories,
             Recommendations: recs,
-            AssessedAt: DateTimeOffset.UtcNow
+            AssessedAt: DateTimeOffset.UtcNow,
+            CoveragePercent: coverage,
+            HasScore: hasScore
         );
     }
 
@@ -183,7 +227,7 @@ public static class SecurityScoreEngine
             findings.Add(new SecurityFinding(
                 "dma.thunderbolt", "DMA 與記憶體保護", "Thunderbolt",
                 "未偵測到 Thunderbolt 控制器（無此攻擊面）。",
-                SecuritySeverity.Good, null));
+                SecuritySeverity.Good, null, weight));
             return 0;
         }
         if (level >= 2)
@@ -191,7 +235,7 @@ public static class SecurityScoreEngine
             findings.Add(new SecurityFinding(
                 "dma.thunderbolt", "DMA 與記憶體保護", "Thunderbolt 安全等級",
                 $"安全等級 {level}——已限制未授權裝置的 DMA 存取。",
-                SecuritySeverity.Good, null));
+                SecuritySeverity.Good, null, weight));
             return 0;
         }
         int deduct = weight * (2 - level.Value) / 2;
@@ -199,7 +243,8 @@ public static class SecurityScoreEngine
             "dma.thunderbolt", "DMA 與記憶體保護", "Thunderbolt 安全等級不足",
             $"安全等級 {level}——未授權裝置可直接 DMA 存取系統記憶體。",
             SecuritySeverity.Warning,
-            "在 BIOS/UEFI 中將 Thunderbolt Security Level 設為 Secure Connect 或更高。"));
+            "在 BIOS/UEFI 中將 Thunderbolt Security Level 設為 Secure Connect 或更高。",
+            weight));
         return deduct;
     }
 
@@ -224,7 +269,9 @@ public static class SecurityScoreEngine
             "在 BIOS/UEFI 中啟用 Secure Boot 並確認為 Deployed Mode。");
 
         score -= Check(findings, "fw.testsign", "測試簽章模式",
-            f.TestSigningEnabled == false,
+            // 不能寫 `== false`：null（讀不到）會被吸收成 false，直接判成
+            // 「測試簽章已啟用」的 Critical——就是下面那條註解在講的同一個坑。
+            f.TestSigningEnabled is bool ts ? !ts : null,
             "測試簽章未啟用",
             "測試簽章模式已啟用——任何驅動都能載入核心",
             SecuritySeverity.Critical, 15,
@@ -243,14 +290,14 @@ public static class SecurityScoreEngine
             bool is20 = f.TpmVersion.StartsWith("2.", StringComparison.Ordinal);
             if (is20)
                 findings.Add(new SecurityFinding("fw.tpm-ver", "", "TPM 版本",
-                    $"TPM {f.TpmVersion}", SecuritySeverity.Good, null));
+                    $"TPM {f.TpmVersion}", SecuritySeverity.Good, null, Weight: 8));
             else
             {
                 score -= 8;
                 findings.Add(new SecurityFinding("fw.tpm-ver", "", "TPM 版本低於 2.0",
                     $"TPM {f.TpmVersion}——版本低於 2.0，無法滿足 Windows 11 最低需求",
                     SecuritySeverity.Warning,
-                    "升級至 TPM 2.0 以獲得完整的安全功能支援。"));
+                    "升級至 TPM 2.0 以獲得完整的安全功能支援。", Weight: 8));
             }
         }
 
@@ -401,7 +448,7 @@ public static class SecurityScoreEngine
                        || f.EncryptionMethod.Contains("Hardware", StringComparison.OrdinalIgnoreCase);
             if (strong)
                 findings.Add(new SecurityFinding("stor.enc-method", "", "系統磁碟加密強度",
-                    $"使用 {f.EncryptionMethod}", SecuritySeverity.Good, null));
+                    $"使用 {f.EncryptionMethod}", SecuritySeverity.Good, null, Weight: 20));
             else
             {
                 bool isNone = f.EncryptionMethod.Equals("None", StringComparison.OrdinalIgnoreCase);
@@ -409,7 +456,8 @@ public static class SecurityScoreEngine
                 findings.Add(new SecurityFinding("stor.enc-method", "", "系統磁碟加密強度不足",
                     $"使用 {f.EncryptionMethod}——建議升級至 XTS-AES-256",
                     isNone ? SecuritySeverity.Warning : SecuritySeverity.Advisory,
-                    "透過群組原則設定 BitLocker 使用 XTS-AES-256。"));
+                    "透過群組原則設定 BitLocker 使用 XTS-AES-256。",
+                    Weight: isNone ? 20 : 10));
             }
         }
 
@@ -436,6 +484,8 @@ public static class SecurityScoreEngine
     {
         var findings = new List<SecurityFinding>();
         int score = 100;
+        int inventoryWeight = f.TotalDrivers > 0 ? 20 : 0;
+        int vulnerableWeight = f.TotalDrivers > 0 ? 25 : 0;
 
         // Unsigned drivers
         if (f.UnsignedDrivers > 0)
@@ -447,14 +497,14 @@ public static class SecurityScoreEngine
                 $"{f.UnsignedDrivers} 個未簽章驅動",
                 $"偵測到 {f.UnsignedDrivers} 個未經數位簽章的核心驅動（共 {f.TotalDrivers} 個）。",
                 f.UnsignedDrivers >= 3 ? SecuritySeverity.Critical : SecuritySeverity.Warning,
-                "使用「驅動稽核」頁查看並移除未簽章驅動。"));
+                "使用「驅動稽核」頁查看並移除未簽章驅動。", Weight: deduct));
         }
         else
         {
             findings.Add(new SecurityFinding(
                 "drv.unsigned", "驅動與對抗", "所有驅動皆已簽章",
                 $"全部 {f.TotalDrivers} 個驅動皆通過數位簽章驗證。",
-                SecuritySeverity.Good, null));
+                SecuritySeverity.Good, null, Weight: inventoryWeight));
         }
 
         // Known vulnerable (BYOVD)
@@ -466,14 +516,14 @@ public static class SecurityScoreEngine
                 $"{f.KnownVulnerableDrivers} 個已知漏洞驅動",
                 $"偵測到 {f.KnownVulnerableDrivers} 個符合 BYOVD 漏洞清單的驅動。",
                 SecuritySeverity.Critical,
-                "移除或更新這些驅動。"));
+                "移除或更新這些驅動。", Weight: vulnerableWeight));
         }
         else
         {
             findings.Add(new SecurityFinding(
                 "drv.byovd", "驅動與對抗", "未發現已知漏洞驅動",
                 "目前載入的驅動不在 BYOVD 漏洞清單中。",
-                SecuritySeverity.Good, null));
+                SecuritySeverity.Good, null, Weight: vulnerableWeight));
         }
 
         score -= Check(findings, "drv.blocklist", "漏洞驅動阻擋清單",
@@ -632,21 +682,23 @@ public static class SecurityScoreEngine
             bool ok = days <= 30;
             if (ok)
                 findings.Add(new SecurityFinding("sfc.wuage", "", "距上次 Windows Update",
-                    $"近 {days} 天內已安裝更新", SecuritySeverity.Good, null));
+                    $"近 {days} 天內已安裝更新", SecuritySeverity.Good, null, Weight: 11));
             else
             {
                 score -= 11;
                 findings.Add(new SecurityFinding("sfc.wuage", "", "距上次 Windows Update",
                     $"超過 {days} 天未安裝更新，已知漏洞可能未修補",
                     SecuritySeverity.Critical,
-                    "立即執行 Windows Update 並安裝所有安全性更新。"));
+                    "立即執行 Windows Update 並安裝所有安全性更新。", Weight: 11));
             }
         }
         else
         {
-            score -= 5; // unknown = 50% of 11
+            // 讀不到更新天數 ≠ 沒在更新。先前這裡扣 5 分（11 的一半），
+            // 等於把「不知道」記成「一半的錯」——這一頁的老問題就是這樣累出來的。
             findings.Add(new SecurityFinding("sfc.wuage", "", "距上次 Windows Update",
-                "無法讀取上次更新時間", SecuritySeverity.Advisory, null));
+                "未評估——無法讀取上次更新時間", SecuritySeverity.Advisory, null,
+                11, Assessed: false));
         }
 
         return MakeCategory("surface", "系統攻擊面", 30, score, findings);
@@ -661,17 +713,23 @@ public static class SecurityScoreEngine
     {
         if (value is null)
         {
+            // 讀不到 ≠ 有缺口。這一項不扣分、不進分母，只記一筆「未評估」，
+            // 由覆蓋率決定「這個分數能不能拿出來講」。先前這裡扣 50%，
+            // 結果驅動沒載入的機器會被一句「存在可被利用的顯著缺口」定罪——
+            // 把「沒量到」講成「有洞」，正是這一頁最不該犯的錯。
             findings.Add(new SecurityFinding(
-                id, "", title, "讀不到（可能需要系統管理員權限或此功能不適用）。",
-                SecuritySeverity.Advisory, null));
-            return weight / 2;  // null = 50% deduction (stricter)
+                id, "", title,
+                "未評估——這台機器讀不到這一項（許可權限不足、驅動未載入或平台不支援）。",
+                SecuritySeverity.Advisory, null, weight, Assessed: false));
+            return 0;
         }
         if (value == true)
         {
-            findings.Add(new SecurityFinding(id, "", title, goodText, SecuritySeverity.Good, null));
+            // 有量到、而且是好的：把權重記進 finding，覆蓋率才算得到它。
+            findings.Add(new SecurityFinding(id, "", title, goodText, SecuritySeverity.Good, null, weight));
             return 0;
         }
-        findings.Add(new SecurityFinding(id, "", title, badText, badSev, recommendation));
+        findings.Add(new SecurityFinding(id, "", title, badText, badSev, recommendation, weight));
         return badSev switch
         {
             SecuritySeverity.Critical => weight,
@@ -684,8 +742,28 @@ public static class SecurityScoreEngine
     private static SecurityCategoryScore MakeCategory(
         string id, string name, int weight, int score, List<SecurityFinding> findings)
     {
+        // score 是「從 100 扣掉多少」，扣分的分母應該是「這一條防線量到的權重」。
+        // 例如某防線總權重 25，只量到 10（其餘讀不到），扣 4 分要換算成 40% 而不是 16%：
+        // 也就是「在量得到的範圍內，你扣了幾成」，未評估的部分不冒充滿分。
+        // 注意尺度：項目權重是「這一條防線裡的點數」（大致加起來 100），
+        // 不是總分的百分比；Category.Weight 才是它在總分裡的佔比（10/20/…）。
+        // 一開始把兩者混用，覆蓋率算出了 339%——這種數字比錯分數更糟。
+        int assessed = 0, points = 0;
+        foreach (var f in findings)
+        {
+            int w = Math.Max(0, f.Weight);
+            points += w;
+            if (f.Assessed)
+                assessed += w;
+        }
+
+        if (assessed > 0)
+            score = 100 - (int)Math.Round((100 - score) * 100.0 / assessed);
+        else
+            score = 0;          // 全未評估：不給分（上層用覆蓋率決定能不能顯示）
+
         score = Math.Clamp(score, 0, 100);
-        var sev = score switch
+        var sev = assessed == 0 ? SecuritySeverity.Advisory : score switch
         {
             >= 90 => SecuritySeverity.Good,
             >= 70 => SecuritySeverity.Advisory,
@@ -696,6 +774,9 @@ public static class SecurityScoreEngine
             if (string.IsNullOrEmpty(findings[i].Category))
                 findings[i] = findings[i] with { Category = name };
 
-        return new SecurityCategoryScore(id, name, score, weight, sev, findings);
+        return new SecurityCategoryScore(
+            id, name, score, weight, sev, findings,
+            AssessedWeight: assessed,
+            TotalWeight: points > 0 ? points : 100);
     }
 }

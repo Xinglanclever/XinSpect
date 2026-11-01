@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Management;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace XinSpect;
 
@@ -69,17 +71,48 @@ public static class NicLinkFactsService
         foreach (var s in samples)
         {
             var v = NicLinkGap.Judge(s);
-            list.Add(new HardwareFact($"nic.gap.{s.Name}", Category, $"鏈路落差（{s.Name}）",
+            string slug = KeySegment(s.Name);
+            list.Add(new HardwareFact($"nic.gap.{slug}", Category, $"鏈路落差（{s.Name}）",
                 v.Headline, "", "WMI MSFT_NetAdapter ＋ MSFT_NetAdapterHardwareInfoSettingData",
                 FactTrustLevel.Measured, false, at, null,
                 v.Kind == NicLinkGap.GapKind.Unknown
                     ? FactAvailability.NotApplicable : FactAvailability.Present,
                 v.Kind == NicLinkGap.GapKind.Unknown ? v.Evidence : null));
-            list.Add(new HardwareFact($"nic.gap.evidence.{s.Name}", Category, $"鏈路依據（{s.Name}）",
+            list.Add(new HardwareFact($"nic.gap.evidence.{slug}", Category, $"鏈路依據（{s.Name}）",
                 v.Evidence, "", "WMI MSFT_NetAdapter ＋ MSFT_NetAdapterHardwareInfoSettingData",
                 FactTrustLevel.Derived, false, at, null, FactAvailability.Present));
         }
         return list;
+    }
+
+    /// <summary>
+    /// 介面名稱 → 鍵的末段。<b>鍵一路是 ASCII</b>，介面名稱可以是中文（Windows 在繁中系統上就叫「乙太網路」）。
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// 直接用介面名稱當鍵會在繁中系統上產出 <c>nic.gap.乙太網路</c>——那不是合法的鍵，
+    /// 也讓匯出檔的鍵在換一個語系之後全部變一次。這裡只留 ASCII 字母數字，其餘一律換成底線；
+    /// 換完可能是空字串（純中文名稱），或兩個介面撞在同一個字上，所以再接 8 碼雜湊。
+    /// </para>
+    /// <para>
+    /// 人看得懂的名稱仍在事實的 <see cref="HardwareFact.Name"/>（「鏈路落差（乙太網路）」）；
+    /// 鍵只負責穩定與可對帳，兩者不必是同一句話。
+    /// </para>
+    /// </remarks>
+    internal static string KeySegment(string name)
+    {
+        var sb = new StringBuilder();
+        foreach (char c in name.ToLowerInvariant())
+        {
+            bool keep = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
+            if (keep) sb.Append(c);
+            else if (sb.Length > 0 && sb[^1] != '_') sb.Append('_');
+        }
+        string ascii = sb.ToString().Trim('_');
+        if (ascii.Length == 0) ascii = "if";
+        if (ascii.Length > 24) ascii = ascii[..24].TrimEnd('_');
+        string hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(name)))[..8].ToLowerInvariant();
+        return ascii + "_" + hash;
     }
 
     // ── 生產探測（唯讀 WMI）──

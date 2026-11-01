@@ -444,15 +444,26 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
         {
             var line = FindLine(cat.Id);
             if (line is null) continue;
+            // 一條防線如果整條都讀不到，分數是 0——但那是「沒量到」，不是「全關」。
+            // 直接寫成「危險，多項未啟用」就是同一個老問題的縮小版。
+            if (cat.AssessedWeight == 0)
+            {
+                line.Score = 0;
+                line.Severity = SecuritySeverity.Advisory;
+                line.Summary = "未評估——讀不到（權限、驅動或平台不支援）";
+                continue;
+            }
+
             line.Score = cat.Score;
             line.Severity = cat.Severity;
-            line.Summary = cat.Score switch
+            bool partial = cat.TotalWeight > 0 && cat.AssessedWeight < cat.TotalWeight * 8 / 10;
+            line.Summary = (cat.Score switch
             {
                 >= 90 => "防禦良好",
                 >= 70 => "尚可，有改進空間",
                 >= 50 => "偏弱，建議強化",
                 _ => "危險，多項未啟用",
-            };
+            }) + (partial ? "（部分項目未評估）" : "");
         }
     }
 

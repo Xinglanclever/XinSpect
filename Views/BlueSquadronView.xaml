@@ -109,18 +109,20 @@
 
                         <local:RadialGauge Grid.Column="0" Width="180" Height="180" Margin="8,8,24,8"
                                            Caption="THREAT POSTURE" Unit="" Max="100"
-                                           Value="{Binding BlueSquadron.Posture.TotalScore, FallbackValue=0, TargetNullValue=0}"
+                                           Value="{Binding BlueSquadron.Posture.GaugeValue, FallbackValue=0, TargetNullValue=0}"
                                            ArcBrush="{DynamicResource CriticalBrush}"/>
 
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding BlueSquadron.Posture.TotalScore, FallbackValue=0}" FontSize="64" FontWeight="Bold"
+                                <TextBlock Text="{Binding BlueSquadron.Posture.ScoreNumber, FallbackValue=—}" FontSize="64" FontWeight="Bold"
                                            FontFamily="Consolas" Foreground="{DynamicResource PrimaryInkBrush}"/>
-                                <TextBlock Text="/ 100" FontSize="24" FontWeight="Light" VerticalAlignment="Bottom" Margin="4,0,0,14"
+                                <TextBlock Text="{Binding BlueSquadron.Posture.ScoreUnit, FallbackValue=''}" FontSize="24" FontWeight="Light" VerticalAlignment="Bottom" Margin="4,0,0,14"
                                            Foreground="{DynamicResource MutedInkBrush}"/>
                             </StackPanel>
                             <TextBlock Text="{Binding BlueSquadron.Posture.Posture.Verdict, Converter={x:Static local:ChineseConverter.Instance}, FallbackValue=等待首次掃描…}" TextWrapping="Wrap"
                                        FontSize="15" Margin="0,2,0,0" Foreground="{DynamicResource SecondaryInkBrush}"/>
+                            <TextBlock Text="{Binding BlueSquadron.Posture.CoverageText, FallbackValue=''}"
+                                       FontSize="12" Margin="0,6,0,0" Foreground="{DynamicResource MutedInkBrush}"/>
                             <TextBlock FontSize="11" Margin="0,8,0,0" Foreground="{DynamicResource MutedInkBrush}"
                                        FontFamily="Consolas">
                                 <Run Text="LAST SCAN: "/>
