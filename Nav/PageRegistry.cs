@@ -308,6 +308,14 @@ public static class PageRegistry
         },
         new()
         {
+            Key = "hardware-catalog", Title = "歷史型號", Group = GTools,
+            IconData = "F0 M3,2 H21 V22 H3 Z M6,6 H18 V8 H6 Z M6,10 H18 V12 H6 Z M6,14 H18 V16 H6 Z",
+            Factory = () => new HardwareCatalogView(),
+            Hint = "查詢使用者提供的 2006–2026 CPU／GPU 歷史型號索引；不含 NC 主機板資料",
+            Keywords = ["catalog", "hardware catalog", "歷史型號", "型號查詢", "cpu", "gpu", "處理器", "顯示卡", "2006", "2026"],
+        },
+        new()
+        {
             Key = "utilities", Title = "實用工具", Group = GTools,
             IconData = "M3,3 h7 v7 h-7 z M14,3 h7 v7 h-7 z M3,14 h7 v7 h-7 z M14,14 h7 v7 h-7 z",
             Factory = () => new UtilitiesView(),

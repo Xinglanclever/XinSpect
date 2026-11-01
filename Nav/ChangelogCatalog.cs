@@ -48,6 +48,19 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "3.12",
+            Date = "2026-11-01",
+            Title = "新增可選的 CPU／GPU 歷史型號目錄，並收緊發佈與硬體資料邊界",
+            Items =
+            [
+                "新增歷史型號查詢頁：只在使用者明確匯入 JSON 後載入 CPU／GPU 目錄，不把 workbook 衍生資料或 NC 主機板資料隨程式散布。",
+                "版本 3.10 之後的硬體遙測修正與安全評分修正持續保留：網卡查詢、核心熱力圖、WinRing0／XsRegProbe MMIO 裁決與覆蓋率權重都已加入測試。",
+                "發佈安裝器對 XsRegProbe.sys 使用 PE 標頭與最低檔案大小驗證，避免把合法小型驅動誤判成下載失敗；驅動建置腳本改為從自身目錄執行。",
+                "關於頁保留隱藏名言彩蛋：版本資訊旁的淡色點號可滑鼠指向並點擊展開。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "3.10",
             Date = "2026-10-31",
             Title = "總覽先講清楚這台機器是什麼：膠囊摘要＋詳細資訊，儀表預設收起",

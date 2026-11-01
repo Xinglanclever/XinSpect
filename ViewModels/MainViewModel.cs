@@ -328,6 +328,9 @@ public sealed class MainViewModel : ObservableObject
     /// </summary>
     public FactAtlasService FactAtlas { get; } = new();
 
+    /// <summary>離線 CPU/GPU 歷史型號查詢（使用者提供資料；不代表本機量測）。</summary>
+    public HardwareCatalogService HardwareCatalog { get; } = new();
+
     /// <summary>PCI／SPD／裝置／電源／儲存的客觀證據審計與長期時間軸。</summary>
     public HardwareEvidenceViewModel HardwareEvidence { get; }
 
