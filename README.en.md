@@ -258,9 +258,9 @@ hardware / firmware / OS ──► fact collection (*FactsService)
 
 | File | Size | Purpose |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.12/XinSpect.exe) | 35.25 MB | Main program (Blue Squadron guard included) |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.12/XinSpect.exe) | 35.66 MB | Main program (Blue Squadron guard included) |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.12/BlueSquadronBridge.exe) | 6.5 MB | Standalone guard process |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.12/XinSpectDeploy.exe) | 15,360 bytes | One-click installer (three sources: GitHub, Google Drive, China direct line; shows a progress bar, speed and time remaining while downloading) |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.12/XinSpectDeploy.exe) | 16,896 bytes | One-click installer (three sources: GitHub, Google Drive, China direct line; shows a progress bar, speed and time remaining while downloading) |
 
 The exact byte count of the main executable is published in the Traditional Chinese README and verified after each release; the MB figure here is rounded.
 

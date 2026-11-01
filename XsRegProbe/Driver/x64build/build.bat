@@ -2,8 +2,9 @@
 rem Build XsRegProbe.sys without the WDK MSBuild toolset (not installed here).
 rem INCLUDE: WDK km only (mixing UCRT/MSVC headers breaks km\crt).
 rem LIB: WDK km + MSVC + UCRT (link needs LIBCMT).
+rem Working dir is Driver\ (XsRegProbe.c lives there), not this x64build\ folder.
 setlocal
-cd /d "%~dp0"
+cd /d "%~dp0.."
 set MSVC=H:\a\VC\Tools\MSVC\14.51.36231
 set WDK=C:\Program Files (x86)\Windows Kits\10
 set INCLUDE=%WDK%\Include\10.0.28000.0\km;%WDK%\Include\10.0.28000.0\km\crt;%WDK%\Include\10.0.28000.0\shared
@@ -15,4 +16,4 @@ if not exist x64build mkdir x64build
 if errorlevel 1 exit /b 1
 "%MSVC%\bin\Hostx64\x64\link.exe" /nologo /DRIVER /SUBSYSTEM:NATIVE /ENTRY:DriverEntry /OUT:x64build\XsRegProbe.sys x64build\XsRegProbe.obj wdm.lib wdmsec.lib ntoskrnl.lib BufferOverflowK.lib
 if errorlevel 1 exit /b 1
-echo BUILT: %~dp0x64build\XsRegProbe.sys
+echo BUILT: %~dp0XsRegProbe.sys
