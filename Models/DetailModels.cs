@@ -194,6 +194,9 @@ public sealed class NicInfo
     public string DisplayText => Name is not ("—" or "")
         ? (SpeedText is "—" or "" or "-" ? Name : $"{Name}・{SpeedText}")
         : "—";
+
+    /// <summary>卡片容器（ItemsControl）的無障礙名稱取自 ToString，不覆寫會唸成型別名 "XinSpect.NicInfo"。</summary>
+    public override string ToString() => Name;
 }
 
 /// <summary>CPU-Z 報告的整體解析結果。</summary>

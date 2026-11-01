@@ -16,9 +16,10 @@ public class NicLinkGapTests
         string name = "乙太網路", string desc = "Marvell 10G Ethernet connection",
         bool up = true, string media = "802.3",
         int curSp = 3, int curW = 2, int maxSp = 3, int maxW = 4,
-        ulong eth = 1_000_000_000, ulong[]? supported = null)
+        ulong eth = 1_000_000_000, ulong[]? supported = null, int state = 1)
         => new(name, desc, up, media, curSp, curW, maxSp, maxW, eth,
-               supported ?? [100_000_000, 1_000_000_000, 2_500_000_000, 5_000_000_000, 10_000_000_000]);
+               supported ?? [100_000_000, 1_000_000_000, 2_500_000_000, 5_000_000_000, 10_000_000_000],
+               state);
 
     // ── 頻寬換算：編碼效率不能漏 ──────────────────────────────────────────
 
@@ -49,6 +50,31 @@ public class NicLinkGapTests
         Assert.Equal(NicLinkGap.GapKind.NotConnected, v.Kind);
         Assert.False(v.Attention);
         Assert.Contains("未連線", v.Headline);
+
+        // 驅動沒回報狀態（MediaConnectState＝0）不能寫成「未連線」：那會叫使用者去查線材。
+        var unknown = NicLinkGap.Judge(Sample(up: false, eth: 0, state: 0));
+        Assert.Equal(NicLinkGap.GapKind.Unknown, unknown.Kind);
+        Assert.DoesNotContain("未連線", unknown.Headline);
+        Assert.DoesNotContain("目前未連線", unknown.Evidence);
+        Assert.Contains("未回報", unknown.Headline);
+    }
+
+    [Fact]
+    public void 網卡基礎查詢的欄位只能是MSFT_NetAdapter真的有的()
+    {
+        // 這一條是為了一個「靜默歸零」的歷史缺陷：查詢裡混進 LinkSpeed／MediaType／
+        // MediaConnectionState 三個不存在的欄位，WQL 以「查詢無效」整條失敗，
+        // 網卡落差整組讀不到，而畫面上只看得到一整頁空白。
+        // MSFT_NetAdapter 的真實 schema 是 Speed（bit/s）、MediaConnectState（UInt32 0/1/2）。
+        const string q = NicLinkFactsService.BaseQuery;
+        int from = q.IndexOf(" FROM ", StringComparison.Ordinal);
+        Assert.True(from > "SELECT ".Length, q);
+        Assert.True(q.StartsWith("SELECT ", StringComparison.Ordinal), q);
+        Assert.True(q.EndsWith("MSFT_NetAdapter", StringComparison.Ordinal), q);
+
+        string[] picked = q["SELECT ".Length..from]
+            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(["Name", "InterfaceDescription", "Speed", "MediaConnectState"], picked);
     }
 
     [Fact]

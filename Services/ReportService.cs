@@ -568,7 +568,7 @@ public static class ReportService
         var nics = new List<string[]>();
         foreach (var n in vm.InstalledNics)
             nics.Add(new[] { n.Name, n.Manufacturer, n.TypeText, n.SpeedText, Id(n.Mac, mask) });
-        s.Tbl("已安裝的網路卡", new[] { "名稱", "製造商", "類型", "額定速度", "MAC" }, nics);
+        s.Tbl("已安裝的網路卡", new[] { "名稱", "製造商", "類型", "目前速度", "MAC" }, nics);
     });
 
     /// <summary>風扇：轉速（含顯示卡風扇，LHM 有回報就有）與可控制風扇的輸出、模式。

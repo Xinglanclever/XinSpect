@@ -210,7 +210,8 @@ public sealed class NetworkService : ObservableObject
         return b.Length == 0 ? "—" : string.Join(":", b.Select(x => x.ToString("X2")));
     }
 
-    private static string TypeZh(NetworkInterfaceType t) => t switch
+    /// <summary>介面類型的顯示文字。已安裝網卡清單也用它——WMI 的 AdapterType 會把無線網卡標成乙太網路。</summary>
+    internal static string TypeZh(NetworkInterfaceType t) => t switch
     {
         NetworkInterfaceType.Ethernet => "乙太網路",
         NetworkInterfaceType.Wireless80211 => "無線網路",

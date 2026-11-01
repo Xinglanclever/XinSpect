@@ -15,6 +15,10 @@ namespace XinSpect;
 /// <param name="PcieMaxWidth">PCIe 能力寬度（條）；讀不到為 0。</param>
 /// <param name="EthCurrentBps">目前線路速率（bit/s）；未連線或非乙太為 0。</param>
 /// <param name="SupportedSpeedsBps">驅動回報支援的速率清單（bit/s，已排序）；讀不到為空。</param>
+/// <param name="MediaConnectState">
+/// <c>MSFT_NetAdapter.MediaConnectState</c> 的原始值：0 未知、1 已連線、2 未連線。
+/// 預設 1（已連線）讓既有呼叫端維持原語意；0 代表驅動沒回報，判讀層不得把它寫成「未連線」。
+/// </param>
 public readonly record struct NicLinkSample(
     string Name,
     string Description,
@@ -25,7 +29,8 @@ public readonly record struct NicLinkSample(
     int PcieMaxSpeed,
     int PcieMaxWidth,
     ulong EthCurrentBps,
-    IReadOnlyList<ulong> SupportedSpeedsBps);
+    IReadOnlyList<ulong> SupportedSpeedsBps,
+    int MediaConnectState = 1);
 
 /// <summary>
 /// 網卡落差的判讀：把「這張卡宣稱的能力」與「兩條鏈路各自實際跑到的值」擺在一起。
@@ -95,12 +100,21 @@ public static class NicLinkGap
         if (s.Name.Length == 0)
             return new Verdict(GapKind.Unknown, "—（沒有介面資訊）", "介面名稱為空，無從判讀。", false);
 
+        // 驅動沒回報連線狀態（MediaConnectState＝0）時不判。把「不知道」寫成「未連線」是假陳述，
+        // 而「未連線」會讓使用者去查線材——查錯方向比說不知道更糟。
+        if (s.MediaConnectState == 0)
+            return new Verdict(GapKind.Unknown, "—（連線狀態未回報）",
+                $"{s.Name}（{s.Description}）：驅動沒有回報 MediaConnectState（0＝未知）。"
+                + "連線狀態未知時不比較鏈路，也不寫成「未連線」——如實標示不適用。", false);
+
+
         if (!s.IsUp)
             return new Verdict(GapKind.NotConnected,
                 "未連線——無從比較鏈路",
                 $"{s.Name}（{s.Description}）目前未連線（媒體類型 {MediaText(s)}）。"
                 + "未連線時驅動回報的速率為 0，比較它沒有意義。",
                 false);
+
 
         // 非 PCIe 裝置（虛擬網卡、Wintun、Wi-Fi 走不同的匯流排）不套 PCIe 段落
         bool isPcie = s.PcieCurrentWidth > 0 || s.PcieMaxWidth > 0;

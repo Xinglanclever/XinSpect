@@ -11,7 +11,7 @@ namespace XinSpect;
 /// <remarks>
 /// <para>
 /// 三個來源，全部唯讀、usermode 零特權：
-/// ① <c>MSFT_NetAdapter</c>（root\StandardCimv2）——介面名稱、描述、狀態、媒體類型、目前線路速率；
+/// ① <c>MSFT_NetAdapter</c>（root\StandardCimv2）——介面名稱、描述、連線狀態、目前線路速率；
 /// ② <c>MSFT_NetAdapterAdvancedPropertySettingData</c>——驅動回報的 <c>*SpeedDuplex</c> 可選值，
 /// 也就是「這張卡支援哪些速率」的權威來源；
 /// ③ <c>MSFT_NetAdapterHardwareInfoSettingData</c>——PCIe 目前／能力速度與寬度（<c>*SpeedEncoded</c>，已是速度代碼）。
@@ -26,6 +26,19 @@ public static class NicLinkFactsService
 {
     private const string Category = "網路";
     private const string Scope = @"root\StandardCimv2";
+
+    /// <summary>
+    /// 基礎查詢：欄位名必須<b>逐字</b>對過 MSFT_NetAdapter 的實際 schema。
+    /// </summary>
+    /// <remarks>
+    /// 這裡只放真的存在的四個欄位。這個類別沒有 <c>LinkSpeed</c>（速度是 <c>Speed</c>，bit/s）、
+    /// 沒有 <c>MediaType</c>、連線狀態也不叫 <c>MediaConnectionState</c> 而是 <c>MediaConnectState</c>。
+    /// 只要混進任何一個不存在的欄位，整條 WQL 會以「查詢無效」失敗，而且失敗是<b>整組歸零</b>——
+    /// 不是少一欄。這個坑在本檔下面的 MSFT_NetAdapterHardwareInfoSettingData 段已經記過一次，還是復發了，所以拉了一條
+    /// <see cref="NicLinkGapTests"/> 的「網卡基礎查詢的欄位只能是 MSFT_NetAdapter 真的有的」釘住欄位清單。
+    /// </remarks>
+    internal const string BaseQuery =
+        "SELECT Name, InterfaceDescription, Speed, MediaConnectState FROM MSFT_NetAdapter";
 
     /// <summary>收集每張網卡的落差事實。測試以注入樣本取代。</summary>
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at,
@@ -76,22 +89,22 @@ public static class NicLinkFactsService
         var linkSpeed = new Dictionary<string, ulong>(StringComparer.OrdinalIgnoreCase);
         var desc = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var up = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
-        var media = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var state = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         try
         {
-            using var s = new ManagementObjectSearcher(Scope,
-                "SELECT Name, InterfaceDescription, LinkSpeed, Speed, MediaType, MediaConnectionState "
-                + "FROM MSFT_NetAdapter");
+            using var s = new ManagementObjectSearcher(Scope, BaseQuery);
             foreach (ManagementObject o in s.Get())
                 using (o)
                 {
                     string name = Str(o, "Name");
                     if (name.Length == 0) continue;
                     desc[name] = Str(o, "InterfaceDescription");
-                    media[name] = Str(o, "MediaType");
-                    up[name] = Str(o, "MediaConnectionState")
-                        .Equals("Connected", StringComparison.OrdinalIgnoreCase);
+                    // MediaConnectState 是 UInt32 列舉，不是字串：0 未知、1 已連線、2 未連線。
+                    // 舊寫法拿一個不存在的字串欄位跟 "Connected" 比對，查詢直接無效，整組歸零。
+                    int st = Int(o, "MediaConnectState");
+                    state[name] = st;
+                    up[name] = st == 1;
                     linkSpeed[name] = o["Speed"] is { } v ? Convert.ToUInt64(v) : 0;
                 }
         }
@@ -162,10 +175,13 @@ public static class NicLinkFactsService
                 name,
                 desc[name],
                 up.TryGetValue(name, out bool u) && u,
-                media.TryGetValue(name, out var m) ? m : "",
+                // MSFT_NetAdapter 沒有媒體類型欄位（MediaType 不存在，之前誤用導致整條查詢無效）；
+                // 留空讓判讀層如實印「未知」，不從介面名稱猜一個 802.3 出來。
+                "",
                 cs, cw, ms, mw,
                 linkSpeed.TryGetValue(name, out ulong bps) ? bps : 0,
-                supported.TryGetValue(name, out var sup) ? sup : []));
+                supported.TryGetValue(name, out var sup) ? sup : [],
+                state.TryGetValue(name, out int st) ? st : 0));
         }
         result.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
         return result;
