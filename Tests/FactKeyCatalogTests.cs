@@ -167,7 +167,8 @@ public class FactKeyCatalogTests
         // 硬碟數是機器的事實，編譯期不該為此改目錄。
         // 66 → 67（2026-11-01 第 3.12 輪）：nic.gap.——成員＝這台機器有幾張網路介面。
         // 介面名稱是使用者／系統語言決定的字串（繁中就叫「乙太網路」），不是編譯期能列的鍵。
-        const int FamilyCap = 67;
+        // 67 → 68（2026-11-01 第 3.13 輪）：plan.cctv.——成員固定，但只有存過監控規劃才出現。
+        const int FamilyCap = 68;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 

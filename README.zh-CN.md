@@ -14,7 +14,7 @@
 ![版本](https://img.shields.io/badge/version-3.13-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-7816%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-7820%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 ![商业授权](https://img.shields.io/badge/license-%E5%95%86%E4%B8%9A%E6%8E%88%E6%9D%83%E5%8F%AF%E8%B0%88-8B5CF6)
@@ -396,10 +396,10 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 | 接口页（XAML） | 80 页 | `ls Views/*.xaml` |
 | 测试档 | 571 档 | `ls Tests/*.cs` |
 | 测试方法 | 5,851 个 `[Fact]`＋249 个 `[Theory]` | 逐档正则计数 |
-| 运行期测试案例 | 7,816（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
+| 运行期测试案例 | 7,820（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
 | 公开文档 | 32 份 `docs/*.md`＋5 份 `docs/spec/*.md` | `ls docs/*.md`、`ls docs/spec/*.md` |
 | 事实键目录 | 1,167 键／155 个前缀 | 解析 `FactKeyCatalog.Keys` |
-| 动态键家族 | 67 个 | 解析 `FactKeyDynamicCatalog.Families` |
+| 动态键家族 | 68 个 | 解析 `FactKeyDynamicCatalog.Families` |
 
 **怎么读这张表。** 第一个有用的比例是「5,362 个 `[Fact]` 对 247 个 `[Theory]`」——`[Theory]` 少，说明这个项目的测试风格偏向「一条测试讲一个具体事实」，而不是用数据驱动把同一个断言拷贝很多遍。第二个比例是「512 个测试档对 569 个服务档」：几乎每个服务档都有一个对应的测试档，这是刻意的，因为这个项目最贵的缺陷类别是「服务写完了但没有接进生产路径」（见第十九章 D-16），而对应测试档的存在至少让「写了却没人调用」有机会被看见。
 
@@ -466,7 +466,7 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 1. **单一行程承担特权与接口。** 主程序以管理员权杖运行，接口、内置浏览器、AI 对话、报告产生都在同一个行程里。任何在接口层的代码运行都等于管理员（见第二十章 V-01）。正确的修法是权杖分离，但那会让「读一个 MSR」变成跨行程调用，代价是延迟与复杂度——这是一个还没有付的代价。
 2. **服务数量本身就是一种风险。** 569 个服务档意味着「接线」是一个真实的问题：服务写好、测试绿、但没有进生产路径，这种缺陷在这个项目发生过不只一次（D-16、D-17）。目前的答案是守门（孤儿扫描、`ViewEntryGateTests`、事实键对帐），而不是减少服务数量。
-3. **事实键目录需要人维持诚实。** 1,167 个键加上 67 个动态家族，靠的是「运行期出现的键要嘛在目录、要嘛命中家族前缀，否则对帐红灯」。这条规则能抓「有产出但没登记」，抓不到「登记了但语意写错」。目录是申报，不是证明。
+3. **事实键目录需要人维持诚实。** 1,167 个键加上 68 个动态家族，靠的是「运行期出现的键要嘛在目录、要嘛命中家族前缀，否则对帐红灯」。这条规则能抓「有产出但没登记」，抓不到「登记了但语意写错」。目录是申报，不是证明。
 
 ## 四、下载与系统需求
 

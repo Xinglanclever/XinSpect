@@ -15,10 +15,132 @@ public partial class SurveillancePlanningView : UserControl
     public SurveillancePlanningView()
     {
         InitializeComponent();
-        Loaded += (_, _) => Recalculate();
+        Loaded += (_, _) =>
+        {
+            LoadSaved(silent: true);
+            Recalculate();
+        };
     }
 
     private void Recalculate_Click(object sender, RoutedEventArgs e) => Recalculate();
+
+    private void Save_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            SurveillancePlanStore.Save(BuildDocument());
+            StatusText.Text = "已儲存；下次啟動時這份規劃會出現在事實集與匯出報告（plan.cctv.*）。";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "儲存失敗：" + ex.Message;
+        }
+    }
+
+    private void LoadSaved_Click(object sender, RoutedEventArgs e) => LoadSaved(silent: false);
+
+    /// <summary>把存檔填回畫面。檔案不存在或壞掉時，silent 模式只留一句狀態，不改動目前輸入。</summary>
+    private void LoadSaved(bool silent)
+    {
+        var doc = SurveillancePlanStore.Load();
+        if (doc is null)
+        {
+            if (!silent) StatusText.Text = "沒有已儲存的規劃。";
+            return;
+        }
+
+        CameraCount.Text = N(doc.Cameras);
+        Bitrate.Text = N(doc.BitrateMbps);
+        HoursPerDay.Text = N(doc.HoursPerDay);
+        Duty.Text = N(doc.RecordingDuty);
+
+        RetentionDays.Text = N(doc.RetentionDays);
+        NvrDisks.Text = N(doc.NvrDisks);
+        NvrDiskTb.Text = N(doc.NvrDiskTb);
+        NvrRaid.SelectedIndex = doc.NvrRaidIndex;
+        NvrSpares.Text = N(doc.NvrSpares);
+        NvrFs.Text = N(doc.NvrFsPercent);
+
+        ProtocolOverhead.Text = N(doc.ProtocolOverheadPercent);
+        NvrIngest.Text = N(doc.NvrIngestMbps);
+        UplinkGbps.Text = N(doc.UplinkGbps);
+
+        PoeWatts.Text = N(doc.PoeWatts);
+        PoePorts.Text = N(doc.PoePorts);
+        PoeBudget.Text = N(doc.PoeBudgetWatts);
+        PoeStandard.SelectedIndex = doc.PoeStandardIndex;
+        PoeReserve.Text = N(doc.PoeReservePercent);
+
+        SwPorts.Text = N(doc.SwitchPorts);
+        SwSpeed.Text = N(doc.SwitchSpeedGbps);
+        SwUplinkPorts.Text = N(doc.SwitchUplinkPorts);
+        SwUplinkGbps.Text = N(doc.SwitchUplinkGbps);
+        SwBackplane.Text = N(doc.SwitchRatedBackplaneGbps);
+        SwMpps.Text = N(doc.SwitchRatedMpps);
+
+        FiberKm.Text = N(doc.FiberKm);
+        FiberWavelength.SelectedIndex = doc.FiberWavelengthIndex;
+        FiberConnectors.Text = N(doc.FiberConnectors);
+        FiberSplices.Text = N(doc.FiberSplices);
+        FiberTx.Text = N(doc.FiberTxDbm);
+        FiberRx.Text = N(doc.FiberRxDbm);
+
+        DropVoltage.Text = N(doc.DropVoltage);
+        DropWatts.Text = N(doc.DropWatts);
+        DropMeters.Text = N(doc.DropMeters);
+        DropAwg.SelectedIndex = doc.DropAwgIndex;
+        DropPairs.SelectedIndex = doc.DropPairs == 4 ? 1 : 0;
+        DropMinVoltage.Text = N(doc.DropMinVoltage);
+
+        CabRuns.Text = N(doc.CablingRuns);
+        CabAvg.Text = N(doc.CablingAverageMeters);
+        CabSlack.Text = N(doc.CablingSlackPercent);
+        CabBox.Text = N(doc.CablingBoxMeters);
+        CabLoop.Text = N(doc.CablingLoopMeters);
+
+        RaidDisks.Text = N(doc.RaidDisks);
+        RaidDiskTb.Text = N(doc.RaidDiskTb);
+        RaidLevel.SelectedIndex = doc.RaidLevelIndex;
+        RaidSpares.Text = N(doc.RaidSpares);
+        RaidGroup.Text = N(doc.RaidGroupSize);
+        RaidFs.Text = N(doc.RaidFsPercent);
+
+        WlPerAp.Text = N(doc.WirelessPerApMbps);
+        WlRadius.Text = N(doc.WirelessRadiusMeters);
+        WlArea.Text = N(doc.WirelessAreaSquareMeters);
+        WlOverlap.Text = N(doc.WirelessOverlapPercent);
+
+        UpsLoad.Text = N(doc.UpsLoadWatts);
+        UpsWh.Text = N(doc.UpsBatteryWh);
+        UpsEff.Text = N(doc.UpsEfficiencyPercent);
+        UpsDod.Text = N(doc.UpsDepthOfDischargePercent);
+        RackDeviceU.Text = N(doc.RackDeviceU);
+        RackReservedU.Text = N(doc.RackReservedU);
+        RackTotalU.Text = N(doc.RackTotalU);
+
+        if (!silent) StatusText.Text = $"已載入存檔（{doc.SavedAtUtc}）。";
+    }
+
+    /// <summary>把畫面上的輸入收成一份存檔文件。</summary>
+    private SurveillancePlanDocument BuildDocument() => new(
+        Int(CameraCount, 0), Num(Bitrate, 0), Num(HoursPerDay, 24), Num(Duty, 1),
+        Int(RetentionDays, 0), Int(NvrDisks, 0), Num(NvrDiskTb, 0), NvrRaid.SelectedIndex,
+        Int(NvrSpares, 0), Num(NvrFs, 0),
+        Num(ProtocolOverhead, 0), Num(NvrIngest, 0), Num(UplinkGbps, 0),
+        Num(PoeWatts, 0), Int(PoePorts, 0), Num(PoeBudget, 0), PoeStandard.SelectedIndex, Num(PoeReserve, 0),
+        Int(SwPorts, 0), Num(SwSpeed, 0), Int(SwUplinkPorts, 0), Num(SwUplinkGbps, 0),
+        Num(SwBackplane, 0), Num(SwMpps, 0),
+        Num(FiberKm, 0), FiberWavelength.SelectedIndex, Int(FiberConnectors, 0), Int(FiberSplices, 0),
+        Num(FiberTx, 0), Num(FiberRx, -20),
+        Num(DropVoltage, 0), Num(DropWatts, 0), Num(DropMeters, 0), DropAwg.SelectedIndex,
+        PairsFromIndex(DropPairs.SelectedIndex), Num(DropMinVoltage, 36),
+        Int(CabRuns, 0), Num(CabAvg, 0), Num(CabSlack, 0), Num(CabBox, 305), Num(CabLoop, 0),
+        Int(RaidDisks, 0), Num(RaidDiskTb, 0), RaidLevel.SelectedIndex, Int(RaidSpares, 0),
+        Int(RaidGroup, 6), Num(RaidFs, 0),
+        Num(WlPerAp, 0), Num(WlRadius, 0), Num(WlArea, 0), Num(WlOverlap, 0),
+        Num(UpsLoad, 0), Num(UpsWh, 0), Num(UpsEff, 90), Num(UpsDod, 80),
+        Int(RackDeviceU, 0), Int(RackReservedU, 0), Int(RackTotalU, 0),
+        DateTimeOffset.Now.ToString("yyyy-MM-dd HH:mm:ss"));
 
     private void Copy_Click(object sender, RoutedEventArgs e)
     {
@@ -224,6 +346,11 @@ public partial class SurveillancePlanningView : UserControl
         => (int)Math.Round(Num(box, fallback));
 
     private static string Fmt(double v) => v.ToString("#,0.##", CultureInfo.CurrentCulture);
+
+    /// <summary>填回 TextBox 用：不帶千分位，避免再解析時被逗號干擾。</summary>
+    private static string N(double v) => v.ToString("0.###", CultureInfo.InvariantCulture);
+
+    private static string N(int v) => v.ToString(CultureInfo.InvariantCulture);
 
     private static SurveillancePlanning.RaidLevel RaidFromIndex(int i) => i switch
     {

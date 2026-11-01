@@ -378,6 +378,8 @@
 
             <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                 <Button Style="{StaticResource ToolButton}" Content="重新計算" Click="Recalculate_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="儲存這份規劃" Margin="8,0,0,0" Click="Save_Click"/>
+                <Button Style="{StaticResource ToolButton}" Content="載入上次規劃" Margin="8,0,0,0" Click="LoadSaved_Click"/>
                 <Button Style="{StaticResource ToolButton}" Content="複製摘要" Margin="8,0,0,0" Click="Copy_Click"/>
                 <TextBlock x:Name="StatusText" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="12,0,0,0"/>
             </StackPanel>

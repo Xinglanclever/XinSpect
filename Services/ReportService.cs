@@ -157,6 +157,7 @@ public static class ReportService
         Network(secs, vm, mask);
         Fans(secs, vm);
         Battery(secs, vm);
+        Planning(secs, vm);
         Npu(secs, vm);
         Sensors(secs, vm);
         Evidence(secs, vm, mask);
@@ -265,6 +266,19 @@ public static class ReportService
         s.Note("匿名機器碼由本機既有識別資訊（主機名稱、使用者、機型）單向雜湊派生，不含原值，"
              + "用途是讓兩份報告能判斷是否同一台機器；它與時間膠囊的 anonymousMachineId 是不同材料各自派生，"
              + "不宣稱兩者相同。本報告只在本機產生，未上傳任何資料。");
+    });
+
+    /// <summary>
+    /// 監控規劃（3.13）：只在使用者存過規劃時出現。數字全部是設計試算，
+    /// 所以第一句就要講清楚「不是量測」——報告裡的表格最容易讓人誤讀成量到的值。
+    /// </summary>
+    private static void Planning(List<Section> secs, MainViewModel vm) => Add(secs, "planning", "監控規劃（設計試算）", s =>
+    {
+        var facts = vm.EvidenceLab.SurveillancePlanFacts;
+        if (facts.Count == 0) return;
+        s.Note("以下是「監控規劃」頁儲存的設計參數，以公式推導（十進位 GB／TB、最壞情況接頭損失、"
+               + "64 bytes 最小訊框）；這一節不是本機量測值，驗收前仍要實測。");
+        s.Kv(facts.Select(f => (f.Name, $"{f.Value} {f.Unit}".Trim())).ToArray());
     });
 
     /// <summary>附錄：事實普查（U10-RP-0002）。逐域計數、六態分布與重要發現清單，
