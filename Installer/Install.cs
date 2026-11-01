@@ -80,10 +80,10 @@ internal static class Install
             }
 
             Console.WriteLine("  [1/5] Downloading XinSpect.exe (includes LHM + WinRing0 driver + BlueSquadron)...");
-            DownloadFile(chosen, "XinSpect.exe", Path.Combine(dir, "XinSpect.exe"), 1, 5);
+            DownloadFile(chosen, "XinSpect.exe", Path.Combine(dir, "XinSpect.exe"), 1, 5, true);
 
             Console.WriteLine("  [2/5] Downloading BlueSquadronBridge.exe...");
-            DownloadFile(chosen, "BlueSquadronBridge.exe", Path.Combine(dir, "BlueSquadronBridge.exe"), 2, 5);
+            DownloadFile(chosen, "BlueSquadronBridge.exe", Path.Combine(dir, "BlueSquadronBridge.exe"), 2, 5, true);
 
             // 深層核心存取的驅動：程式按「開啟」會自己簽章＋裝服務，但檔案必須先就位。
             // 路徑是程式寫死的 %ProgramData%\XinSpect\Driver\XsRegProbe.sys。
@@ -155,7 +155,7 @@ internal static class Install
         string tmp = target + ".part";
         try
         {
-            DownloadFile(m, "XsRegProbe.sys", tmp, 3, 5);
+            DownloadFile(m, "XsRegProbe.sys", tmp, 3, 5, false);
             if (File.Exists(target)) File.Delete(target);
             File.Move(tmp, target);
         }
@@ -326,7 +326,7 @@ internal static class Install
         try { Console.ReadKey(true); } catch { }
     }
 
-    private static void DownloadFile(Mirror m, string name, string dest, int step, int total)
+    private static void DownloadFile(Mirror m, string name, string dest, int step, int total, bool requireProgram)
     {
         string url = m.Direct ? Url(m, name) : m.BaseUrl;
         Stopwatch sw = Stopwatch.StartNew();
@@ -335,7 +335,7 @@ internal static class Install
         // 下載到 HTML 是這種安裝器最常見的假成功：分享頁、流量限制頁、病毒掃描警告
         // 都會回 200，存下來的「XinSpect.exe」其實是一張網頁。這裡直接驗 PE 標頭，
         // 不合格就刪掉並說清楚，不讓使用者雙擊一個不是程式的檔案。
-        if (!LooksLikeProgram(dest))
+        if (!LooksLikeDownload(dest, requireProgram))
         {
             // Google Drive 對執行檔常常先回一張「無法掃描病毒」的確認頁，
             // 同一個檔案換成 usercontent 端點並帶 confirm=t 就會直給檔案。
@@ -347,7 +347,7 @@ internal static class Install
                 Console.WriteLine("  Google Drive 回了確認頁，改用確認直連重試…");
                 bar = RunDownload(retry, dest, step, total);
             }
-            if (!LooksLikeProgram(dest))
+            if (!LooksLikeDownload(dest, requireProgram))
             {
                 long len = new FileInfo(dest).Length;
                 string line = FirstLine(Head(dest, 400));
@@ -593,12 +593,33 @@ internal static class Install
         return "https://drive.usercontent.google.com/download?id=" + id + "&export=download&confirm=t";
     }
 
+    private static bool LooksLikeDownload(string path, bool requireProgram)
+    {
+        if (!LooksLikePe(path)) return false;
+        if (!requireProgram) return new FileInfo(path).Length >= 1024;
+        return new FileInfo(path).Length >= 1024 * 100;
+    }
+
     private static bool LooksLikeProgram(string path)
     {
         try
         {
             FileInfo fi = new FileInfo(path);
             if (fi.Length < 1024 * 100) return false;
+            return Head(path, 2).StartsWith("MZ", StringComparison.Ordinal);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool LooksLikePe(string path)
+    {
+        try
+        {
+            FileInfo fi = new FileInfo(path);
+            if (fi.Length < 1024) return false;
             return Head(path, 2).StartsWith("MZ", StringComparison.Ordinal);
         }
         catch

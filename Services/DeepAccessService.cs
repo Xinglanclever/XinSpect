@@ -166,23 +166,30 @@ public sealed class DeepAccessService : ObservableObject
                 }
             }
 
-            switch (driverState)
+            try
             {
-                case DriverServiceState.NotFound:
-                    _service.Install(ServiceName, SysPath);
-                    _service.Start(ServiceName);
-                    notes.Add($"已安裝並啟動服務 {ServiceName}（白名單唯讀，退出即卸載）。");
-                    break;
-                case DriverServiceState.Stopped:
-                    _service.Start(ServiceName);
-                    notes.Add($"服務 {ServiceName} 已在停止狀態，僅啟動。");
-                    break;
-                case DriverServiceState.Running:
-                    notes.Add($"服務 {ServiceName} 已在執行。");
-                    break;
-                default:
-                    notes.Add($"服務 {ServiceName} 狀態查詢異常，未嘗試啟動。");
-                    break;
+                switch (driverState)
+                {
+                    case DriverServiceState.NotFound:
+                        _service.Install(ServiceName, SysPath);
+                        _service.Start(ServiceName);
+                        notes.Add($"已安裝並啟動服務 {ServiceName}（白名單唯讀，退出即卸載）。");
+                        break;
+                    case DriverServiceState.Stopped:
+                        _service.Start(ServiceName);
+                        notes.Add($"服務 {ServiceName} 已在停止狀態，僅啟動。");
+                        break;
+                    case DriverServiceState.Running:
+                        notes.Add($"服務 {ServiceName} 已在執行。");
+                        break;
+                    default:
+                        notes.Add($"服務 {ServiceName} 狀態查詢異常，未嘗試啟動。");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                notes.Add($"服務 {ServiceName} 啟動失敗：{ex.Message}。請檢查核心簽章、testsigning 與系統事件記錄。");
             }
             if (_service.QueryState(ServiceName) == DriverServiceState.Running)
             {
@@ -297,7 +304,11 @@ public sealed class DeepAccessService : ObservableObject
     /// <summary>CA 不在就產生：自簽根（CA=TRUE、KeyCertSign）存 .cer（公）與 .pfx+密碼檔（私，供之後簽 .sys）。</summary>
     private X509Certificate2 EnsureCa(List<string> notes)
     {
-        if (TryLoadCa(out var existing) && existing is { } ok) return ok;
+        if (TryLoadCa(out var existing) && existing is { } ok)
+        {
+            EnsureLeafCertificate(existing, notes);
+            return ok;
+        }
 
         Directory.CreateDirectory(_artifactDir);
         using var rsa = RSA.Create(KeyBits);
@@ -340,6 +351,40 @@ public sealed class DeepAccessService : ObservableObject
         notes.Add($"已產生自簽 CA {CaSubject}（{CaCerPath}）與簽章用葉憑證 {SignSubject}"
                   + "（PFX 與密碼檔同目錄且限管理員讀取，供 signtool 簽 .sys）。");
         return ca;
+    }
+
+    private void EnsureLeafCertificate(X509Certificate2 ca, List<string> notes)
+    {
+        if (File.Exists(SignPfxPath) && File.Exists(SignKeyPath)) return;
+        if (!File.Exists(CaPfxPath) || !File.Exists(CaKeyPath))
+        {
+            notes.Add("既有 CA 缺少私鑰材料，無法補發驅動簽章葉憑證。");
+            return;
+        }
+
+        string caPassword = File.ReadAllText(CaKeyPath).Trim();
+        using var caWithKey = X509CertificateLoader.LoadPkcs12FromFile(CaPfxPath, caPassword,
+            X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
+        using var leafKey = RSA.Create(KeyBits);
+        var leafRequest = new CertificateRequest(
+            SignSubject, leafKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        leafRequest.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, true));
+        leafRequest.CertificateExtensions.Add(new X509KeyUsageExtension(
+            X509KeyUsageFlags.DigitalSignature, true));
+        leafRequest.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(
+            new OidCollection { new Oid("1.3.6.1.5.5.7.3.3") }, false));
+        leafRequest.CertificateExtensions.Add(
+            new X509SubjectKeyIdentifierExtension(leafRequest.PublicKey, false));
+        using var leaf = leafRequest.Create(caWithKey, DateTimeOffset.UtcNow.AddDays(-1),
+                                            DateTimeOffset.UtcNow.AddYears(3),
+                                            RandomNumberGenerator.GetBytes(16));
+        string signPassword = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
+        File.WriteAllBytes(SignPfxPath, leaf.CopyWithPrivateKey(leafKey)
+            .Export(X509ContentType.Pkcs12, signPassword));
+        File.WriteAllText(SignKeyPath, signPassword);
+        RestrictToAdmins(SignPfxPath);
+        RestrictToAdmins(SignKeyPath);
+        notes.Add($"已補發簽章用葉憑證 {SignSubject}（既有 CA 保留不變）。");
     }
 
     /// <summary>把檔案 ACL 收緊為僅 SYSTEM 與 Administrators 可存取（取消繼承、清掉其他規則）。</summary>

@@ -290,7 +290,7 @@ public static class SecurityScoreEngine
             bool is20 = f.TpmVersion.StartsWith("2.", StringComparison.Ordinal);
             if (is20)
                 findings.Add(new SecurityFinding("fw.tpm-ver", "", "TPM 版本",
-                    $"TPM {f.TpmVersion}", SecuritySeverity.Good, null));
+                    $"TPM {f.TpmVersion}", SecuritySeverity.Good, null, Weight: 8));
             else
             {
                 score -= 8;
@@ -448,7 +448,7 @@ public static class SecurityScoreEngine
                        || f.EncryptionMethod.Contains("Hardware", StringComparison.OrdinalIgnoreCase);
             if (strong)
                 findings.Add(new SecurityFinding("stor.enc-method", "", "系統磁碟加密強度",
-                    $"使用 {f.EncryptionMethod}", SecuritySeverity.Good, null));
+                    $"使用 {f.EncryptionMethod}", SecuritySeverity.Good, null, Weight: 20));
             else
             {
                 bool isNone = f.EncryptionMethod.Equals("None", StringComparison.OrdinalIgnoreCase);
@@ -484,6 +484,8 @@ public static class SecurityScoreEngine
     {
         var findings = new List<SecurityFinding>();
         int score = 100;
+        int inventoryWeight = f.TotalDrivers > 0 ? 20 : 0;
+        int vulnerableWeight = f.TotalDrivers > 0 ? 25 : 0;
 
         // Unsigned drivers
         if (f.UnsignedDrivers > 0)
@@ -502,7 +504,7 @@ public static class SecurityScoreEngine
             findings.Add(new SecurityFinding(
                 "drv.unsigned", "驅動與對抗", "所有驅動皆已簽章",
                 $"全部 {f.TotalDrivers} 個驅動皆通過數位簽章驗證。",
-                SecuritySeverity.Good, null));
+                SecuritySeverity.Good, null, Weight: inventoryWeight));
         }
 
         // Known vulnerable (BYOVD)
@@ -514,14 +516,14 @@ public static class SecurityScoreEngine
                 $"{f.KnownVulnerableDrivers} 個已知漏洞驅動",
                 $"偵測到 {f.KnownVulnerableDrivers} 個符合 BYOVD 漏洞清單的驅動。",
                 SecuritySeverity.Critical,
-                "移除或更新這些驅動。"));
+                "移除或更新這些驅動。", Weight: vulnerableWeight));
         }
         else
         {
             findings.Add(new SecurityFinding(
                 "drv.byovd", "驅動與對抗", "未發現已知漏洞驅動",
                 "目前載入的驅動不在 BYOVD 漏洞清單中。",
-                SecuritySeverity.Good, null));
+                SecuritySeverity.Good, null, Weight: vulnerableWeight));
         }
 
         score -= Check(findings, "drv.blocklist", "漏洞驅動阻擋清單",
@@ -680,14 +682,14 @@ public static class SecurityScoreEngine
             bool ok = days <= 30;
             if (ok)
                 findings.Add(new SecurityFinding("sfc.wuage", "", "距上次 Windows Update",
-                    $"近 {days} 天內已安裝更新", SecuritySeverity.Good, null));
+                    $"近 {days} 天內已安裝更新", SecuritySeverity.Good, null, Weight: 11));
             else
             {
                 score -= 11;
                 findings.Add(new SecurityFinding("sfc.wuage", "", "距上次 Windows Update",
                     $"超過 {days} 天未安裝更新，已知漏洞可能未修補",
                     SecuritySeverity.Critical,
-                    "立即執行 Windows Update 並安裝所有安全性更新。"));
+                    "立即執行 Windows Update 並安裝所有安全性更新。", Weight: 11));
             }
         }
         else
