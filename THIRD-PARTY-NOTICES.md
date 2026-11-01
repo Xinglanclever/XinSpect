@@ -29,6 +29,15 @@
 | FsCheck.Xunit | 3.4.0 | BSD-3-Clause | property 測試 |
 | dotnet-stryker | 5.x | Apache-2.0 | 突變測試（開發工具） |
 
+## 對照表與資料來源（逐格搬過來，不是套件相依）
+
+這一節不在 `PackageReference` 對帳的範圍內——它們沒有進到任何 `.csproj`，但知識取自別人的成果，
+姓名標示一樣要保留。
+
+| 來源 | 取用範圍 | 授權 | 處置 |
+|---|---|---|---|
+| pytorch/cpuinfo | `src/x86/uarch.c` 的「廠商／family／model → 微架構」對照，改寫為 `XinSpect.Decoders/CpuUarchTable.cs` | BSD-2-Clause | 保留姓名標示與免責聲明；只搬**對照關係**與 case 註解裡的型號名（Zambezi、Vermeer、Raphael……），未複製 C 程式碼，也未引用該專案的任何執行期檔案 |
+
 ## 本專案自身
 
 曦覽 XinSpect 的授權見倉庫 `LICENSE`（若未附，以倉庫根目錄聲明為準）。

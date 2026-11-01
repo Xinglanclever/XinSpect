@@ -46,6 +46,9 @@ public sealed class PhysicalDiskInfo
             return gb >= 1000 ? $"{gb / 1000.0:0.##} TB" : $"{gb:0} GB";
         }
     }
+
+    /// <summary>總覽「詳細資訊」用的單行摘要：型號、容量、介面類型。</summary>
+    public string DisplayText => Model.Length > 0 ? $"{Model}（{CapacityText}・{TypeText}）" : "—";
 }
 
 /// <summary>

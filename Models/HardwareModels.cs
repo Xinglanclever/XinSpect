@@ -65,6 +65,23 @@ public sealed class CpuStatic
     public string CurrentVoltageText => CurrentVoltage > 0 ? $"{CurrentVoltage:0.###} V" : "—";
     public string EnabledCoresText => EnabledCores > 0 ? $"{EnabledCores} 核" : "—";
 
+    /// <summary>
+    /// 總覽「詳細資訊」那一列用的單行摘要：核心、執行緒、L2、L3。
+    /// 缺的那一段直接略過，不留「L2 —」——留白會讓人以為這顆 CPU 沒有 L2。
+    /// </summary>
+    public string SummaryText
+    {
+        get
+        {
+            var parts = new List<string>(4);
+            if (Cores > 0) parts.Add($"{Cores} 核心");
+            if (Threads > 0) parts.Add($"{Threads} 執行緒");
+            if (L2Cache is not ("—" or "")) parts.Add($"L2 {L2Cache}");
+            if (L3Cache is not ("—" or "")) parts.Add($"L3 {L3Cache}");
+            return parts.Count > 0 ? string.Join("・", parts) : "—";
+        }
+    }
+
     public Brand Brand => Brands.Resolve(Manufacturer, Name, Description);
 }
 
@@ -118,6 +135,20 @@ public sealed class MemoryModuleInfo
         : "—";
 
     public Brand Brand => Brands.Resolve(Manufacturer, PartNumber);
+
+    /// <summary>總覽「詳細資訊」用的單行摘要：廠商、料號、容量、頻率（缺值的段落略過，不留「・」空位）。</summary>
+    public string DisplayText
+    {
+        get
+        {
+            var parts = new List<string>(4);
+            if (Manufacturer is not ("—" or "")) parts.Add(Manufacturer);
+            if (PartNumber is not ("—" or "")) parts.Add(PartNumber);
+            if (CapacityGB > 0) parts.Add(CapacityText);
+            if (ConfiguredSpeedMHz > 0) parts.Add(SpeedText);
+            return parts.Count > 0 ? string.Join("・", parts) : "—";
+        }
+    }
 }
 
 /// <summary>記憶體時序（CPU-Z 報告、SPD 直讀或 WMI 原生來源——來源那一列會寫明是哪一個）。</summary>
