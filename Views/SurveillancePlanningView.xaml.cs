@@ -184,7 +184,7 @@ public partial class SurveillancePlanningView : UserControl
     private string BuildSummary()
     {
         var sb = new StringBuilder();
-        sb.AppendLine("曦覽 XinSpect 3.13 監控工程規劃（設計試算，非量測）");
+        sb.AppendLine($"曦覽 XinSpect {AppInfo.ShortVersion} 監控工程規劃（設計試算，非量測）");
         sb.AppendLine();
         foreach (var (title, values, verdict) in new[]
         {
