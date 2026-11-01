@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>曦覽 XinSpect 百科</title>
-<!-- 由 README.md 產生（sha256 dc08b124f738）；產生器：Tools/gen-docs-html.py；本檔不手改。 -->
+<!-- 由 README.md 產生（sha256 3ad6fcaa172a）；產生器：Tools/gen-docs-html.py；本檔不手改。 -->
 <style>:root{--bg:#fff;--ink:#1f2328;--sub:#57606a;--hair:#d0d7de;--surface:#f6f8fa;--link:#0969da;--accent:#1b6fd6;--badge:#ddf4ff;
       color-scheme:light}
 /* 深色版：文字色早就跟著 prefers-color-scheme 換了，body 的背景卻一直寫死 #fff——
@@ -127,7 +127,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <a class="toc-sub" href="#215-資料流全景">2.15 資料流全景</a>
 <a class="toc-sub" href="#216-架構的三個已知弱點">2.16 架構的三個已知弱點</a>
 </details>
-<details class="toc-part"><summary><a href="#第-3-部-功能地圖65-個可到達畫面逐頁解剖">第 3 部 功能地圖：65 個可到達畫面逐頁解剖</a></summary>
+<details class="toc-part"><summary><a href="#第-3-部-功能地圖65-個可到達畫面逐頁解剖與入口邊界">第 3 部 功能地圖：65 個可到達畫面，逐頁解剖與入口邊界</a></summary>
 <a class="toc-sub" href="#30-每一頁的固定五段">3.0 每一頁的固定五段</a>
 <a class="toc-sub" href="#31-我的電腦beginner">3.1 我的電腦（beginner）</a>
 <a class="toc-sub" href="#32-總覽overview">3.2 總覽（overview）</a>
@@ -183,7 +183,10 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <a class="toc-sub" href="#352-關於about">3.52 關於（about）</a>
 <a class="toc-sub" href="#353-系統引導修復bootrepair">3.53 系統引導修復（bootrepair）</a>
 <a class="toc-sub" href="#354-硬體檢測hwtest">3.54 硬體檢測（hwtest）</a>
-<a class="toc-sub" href="#355-跨頁機制三個不屬於任何一頁的東西">3.55 跨頁機制：三個「不屬於任何一頁」的東西</a>
+<a class="toc-sub" href="#355-監控規劃surveillance-planning">3.55 監控規劃（surveillance-planning）</a>
+<a class="toc-sub" href="#356-歷史型號hardware-catalog">3.56 歷史型號（hardware-catalog）</a>
+<a class="toc-sub" href="#357-其餘十一頁操作型量測型與娛樂型">3.57 其餘十一頁：操作型、量測型與娛樂型</a>
+<a class="toc-sub" href="#358-跨頁機制三個不屬於任何一頁的東西">3.58 跨頁機制：三個「不屬於任何一頁」的東西</a>
 </details>
 <details class="toc-part"><summary><a href="#第-4-部-深測中心登記在案的四十三項量測">第 4 部 深測中心：登記在案的四十三項量測</a></summary>
 <a class="toc-sub" href="#41-閱讀界線先講清楚再做">4.1 閱讀界線（先講清楚再做）</a>
@@ -464,7 +467,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </details>
 </nav>
 <main>
-<header class="doc"><div class="meta">曦覽 XinSpect 百科 ・ 來源：<code>README.md</code>（sha256 <code>dc08b124f738</code>）・ 自足 HTML：無 CDN、無外部字型、無指令碼 ・ 定位：左側目錄、標題懸停有 ¶ 錨點、瀏覽器 Ctrl+F 找字</div></header>
+<header class="doc"><div class="meta">曦覽 XinSpect 百科 ・ 來源：<code>README.md</code>（sha256 <code>3ad6fcaa172a</code>）・ 自足 HTML：無 CDN、無外部字型、無指令碼 ・ 定位：左側目錄、標題懸停有 ¶ 錨點、瀏覽器 Ctrl+F 找字</div></header>
 <p><a href="https://github.com/Xinglanclever/XinSpect/blob/main/README.zh-CN.md">简体中文</a> · 繁體中文 · <a href="https://github.com/Xinglanclever/XinSpect/blob/main/README.en.md">English</a></p>
 <p><a class="ext" href="https://xinspect-browser-preview.wild-chimpanzee.workers.dev"><span class="badge">官方網站 ・ xinspect-browser-preview.wild-chimpanzee.workers.dev-4C8DFF?style=for-the</span></a></p>
 <blockquote><h2 id="-官方網站xinspect-browser-previewwild-chimpanzeeworkersdev-"><a class="self" href="#-官方網站xinspect-browser-previewwild-chimpanzeeworkersdev-">¶</a> 🌐 <a class="ext" href="https://xinspect-browser-preview.wild-chimpanzee.workers.dev">官方網站：xinspect-browser-preview.wild-chimpanzee.workers.dev ↗</a></h2>
@@ -593,7 +596,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li><a href="#215-資料流全景">2.15 資料流全景</a>
 </li><li><a href="#216-架構的三個已知弱點">2.16 架構的三個已知弱點</a>
 </li></ul>
-</li><li><a href="#第-3-部-功能地圖65-個可到達畫面逐頁解剖">第 3 部 功能地圖：65 個可到達畫面逐頁解剖</a>
+</li><li><a href="#第-3-部-功能地圖65-個可到達畫面逐頁解剖與入口邊界">第 3 部 功能地圖：65 個可到達畫面，逐頁解剖與入口邊界</a>
 <ul>
 <li><a href="#30-每一頁的固定五段">3.0 每一頁的固定五段</a>
 </li><li><a href="#31-我的電腦beginner">3.1 我的電腦（<code>beginner</code>）</a>
@@ -650,7 +653,10 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li><a href="#352-關於about">3.52 關於（<code>about</code>）</a>
 </li><li><a href="#353-系統引導修復bootrepair">3.53 系統引導修復（<code>bootrepair</code>）</a>
 </li><li><a href="#354-硬體檢測hwtest">3.54 硬體檢測（<code>hwtest</code>）</a>
-</li><li><a href="#355-跨頁機制三個不屬於任何一頁的東西">3.55 跨頁機制：三個「不屬於任何一頁」的東西</a>
+</li><li><a href="#355-監控規劃surveillance-planning">3.55 監控規劃（<code>surveillance-planning</code>）</a>
+</li><li><a href="#356-歷史型號hardware-catalog">3.56 歷史型號（<code>hardware-catalog</code>）</a>
+</li><li><a href="#357-其餘十一頁操作型量測型與娛樂型">3.57 其餘十一頁：操作型、量測型與娛樂型</a>
+</li><li><a href="#358-跨頁機制三個不屬於任何一頁的東西">3.58 跨頁機制：三個「不屬於任何一頁」的東西</a>
 </li></ul>
 </li><li><a href="#第-4-部-深測中心登記在案的四十三項量測">第 4 部 深測中心：登記在案的四十三項量測</a>
 <ul>
@@ -1432,8 +1438,8 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li><strong>服務數量本身就是一種風險。</strong> 660 個服務檔意味著「接線」是一個真實的問題：服務寫好、測試綠、但沒有進生產路徑（第 12 部的 D-16、D-17）。答案是守門，不是減少數量。
 </li><li><strong>事實鍵目錄需要人維持誠實。</strong> 1,167 個鍵加上 68 個動態家族，靠的是「執行期出現的鍵要嘛在目錄、要嘛命中家族前綴，否則對帳紅燈」。這條規則能抓「有產出但沒登記」，<strong>抓不到「登記了但語意寫錯」</strong>。目錄是申報，不是證明。
 </li></ol>
-<h2 id="第-3-部-功能地圖65-個可到達畫面逐頁解剖"><a class="self" href="#第-3-部-功能地圖65-個可到達畫面逐頁解剖">¶</a> 第 3 部 功能地圖：65 個可到達畫面逐頁解剖</h2>
-<p>這一部是給使用者的部分：每一頁在回答什麼、畫面上每一格的資料從哪裡來、它憑什麼算數、以及<strong>最常被誤用的講法</strong>。全站共有 <strong>65</strong> 個可到達畫面（<code>Nav/PageRegistry.cs</code>；<code>Views/</code> 下另有對話框與控制項共 81 個 XAML），另有 <strong>288</strong> 條圓圈問號說明條目（<code>Nav/HelpCatalog.cs</code>）——這些條目的存在本身就是這個專案的一個立場：<strong>每一區塊都要能回答「這是什麼、按下去會怎樣、安不安全」，而且那句話要與程式碼的實作對得上。</strong></p>
+<h2 id="第-3-部-功能地圖65-個可到達畫面逐頁解剖與入口邊界"><a class="self" href="#第-3-部-功能地圖65-個可到達畫面逐頁解剖與入口邊界">¶</a> 第 3 部 功能地圖：65 個可到達畫面，逐頁解剖與入口邊界</h2>
+<p>這一部是給使用者的部分：每一頁在回答什麼、畫面上每一格的資料從哪裡來、它憑什麼算數、以及<strong>最常被誤用的講法</strong>。全站共有 <strong>65</strong> 個可到達畫面（<code>Nav/PageRegistry.cs</code>；<code>Views/</code> 下另有對話框與控制項共 81 個 XAML），§3.1–3.54 逐頁解剖，兩個新頁在 §3.55–3.56，十一個操作型／娛樂型頁面集中在 §3.57；另有 <strong>288</strong> 條圓圈問號說明條目（<code>Nav/HelpCatalog.cs</code>）——這些條目的存在本身就是這個專案的一個立場：<strong>每一區塊都要能回答「這是什麼、按下去會怎樣、安不安全」，而且那句話要與程式碼的實作對得上。</strong></p>
 <h3 id="30-每一頁的固定五段"><a class="self" href="#30-每一頁的固定五段">¶</a> 3.0 每一頁的固定五段</h3>
 <p>為了讓這一部可以查閱而不是只能順讀，每一頁都按同一個順序寫：</p>
 <ol>
@@ -1971,7 +1977,52 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <p><strong>邊界。</strong> 唯讀式檢測：只顯示畫面、播放測試音與接收輸入，不修改任何設定。<strong>動態測試會有大面積快速移動的畫面，對光敏感者請斟酌；喇叭測試會發出聲音，請先把音量調小。</strong></p>
 <p><strong>誤用警告。</strong> 「亮點測試沒看到亮點所以螢幕完美」——這一頁測的是<strong>肉眼可見的明顯缺陷</strong>，不是面板均勻度、色偏或灰階線性；後者需要儀器。</p>
 <hr>
-<h3 id="355-跨頁機制三個不屬於任何一頁的東西"><a class="self" href="#355-跨頁機制三個不屬於任何一頁的東西">¶</a> 3.55 跨頁機制：三個「不屬於任何一頁」的東西</h3>
+<h3 id="355-監控規劃surveillance-planning"><a class="self" href="#355-監控規劃surveillance-planning">¶</a> 3.55 監控規劃（<code>surveillance-planning</code>）</h3>
+<p><strong>定位。</strong> 監控案場的<strong>設計試算</strong>：NVR 容量、接入頻寬、PoE 預算、交換機背板與包轉發、光纖衰減、攝影機端壓降、佈線用線量、RAID 可用容量、無線覆蓋、UPS 續航與機櫃 U 數。<strong>這一頁不讀本機硬體</strong>：所有輸入都是使用者宣告的設計參數，輸出是公式推導。</p>
+<p><strong>畫面解剖（十段＋三個動作）。</strong></p>
+<ul>
+<li><strong>共用參數</strong>：攝影機數、每支碼率、每日錄影時數、錄影比例。錄影比例是給移動偵測用的——只錄一半時間就填 0.5，不要用 24 小時全錄去估。
+</li><li><strong>NVR 容量</strong>：每日 GB＝Mbps × 有效秒數 ÷ 8 ÷ 1000（十進位 GB）；RAID 後可用 TB、可錄天數、缺口 TB。RAID 0／1／5／6／10／50／60 的資料碟數由 parity 推導，熱備援先扣、檔案系統保留再扣。
+</li><li><strong>接入頻寬</strong>：碼率加協定開銷（預設 15%）後對上 NVR 接入能力與上行線速，給兩邊的使用率；超過 80% 就提醒。
+</li><li><strong>PoE 預算</strong>：負載加保留、餘裕、埠數，並單獨檢查每機瓦數是否超過該標準的 PD 上限（af 12.95 W、at 25.5 W、bt Type 3 51 W、Type 4 71.3 W）。
+</li><li><strong>交換機</strong>：全雙工背板＝埠數 × 線速 × 2；包轉發以 64 bytes 最小訊框算（1.488 Mpps／GbE）。標示規格沒填就只算需求，不假裝判斷得出來。
+</li><li><strong>光纖</strong>：光纜長度 × 波長係數＋接頭 0.5 dB／個＋熔接 0.15 dB／處，對上 TX−RX 的鏈路預算；裕度低於 3 dB 就說不足。
+</li><li><strong>壓降</strong>：迴路電阻＝2 × 線長 × 單線電阻 ÷ 對數，解 <code>V² − Vpse·V + P·R = 0</code> 求攝影機端電壓。<strong>不是拿 <code>P ÷ V</code> 當電流</strong>——兩者互相牽制；二次式無解時直說「這條線供不起」。
+</li><li><strong>佈線</strong>：迴路數 ×（平均長度＋兩端預留）×（1＋餘裕），再換算成整箱數（無條件進位）。平均長度超過 90 m 會提醒 TIA-568 的水平通道上限。
+</li><li><strong>RAID</strong>：單獨看一組 RAID 的原始容量、可用容量、效率與容錯顆數；組態不成立時可用容量是 0，但原始容量照算。
+</li><li><strong>無線</strong>：頻寬需要幾台與覆蓋需要幾台取較大者，並說明是哪一個瓶頸。
+</li><li><strong>UPS 與機櫃</strong>：電池 Wh × 逆變效率 × 放電深度 ÷ 負載 W × 60；機櫃 U 數是裝置加保留，超出就說超出幾 U。
+</li><li><strong>儲存／載入／複製</strong>：「儲存這份規劃」把輸入存成 <code>%LocalAppData%\XinSpect\surveillance-plan.json</code>（原子寫入、不上傳）；重開程式會填回上次的參數。<strong>存的是輸入，不是結果</strong>——公式改了，舊檔不會帶著舊答案。存過之後，同一組結果以 <code>plan.cctv.*</code> 進事實集與匯出報告的「監控規劃（設計試算）」一節。
+</li></ul>
+<p><strong>來源與可信度。</strong> 全部是 <code>Derived</code>：來源寫「監控規劃頁的使用者輸入 ＋ 公式推導（設計試算，非量測）」。沒有存檔就<strong>不產任何鍵</strong>——不拿一堆 0 冒充「算出來是零」。</p>
+<p><strong>誤差與邊界。</strong> ①容量用十進位 GB／TB（與硬碟標示同一單位），不是 GiB／TiB；②光纖係數與接頭／熔接損失取<strong>最壞情況</strong>的工程慣例，不是量到的插入損失；③PoE 壓降假設攝影機是定功率負載、線材是 20 °C 銅導體；④包轉發是 64 bytes 最小訊框的理論上限，不是實測吞吐；⑤這一頁不含設備單價與施工成本。</p>
+<p><strong>誤用警告。</strong> 「算出來容量夠、壓降也夠，所以驗收會過」——這些是<strong>設計階段</strong>的推導，實際錄影碼率會隨場景變動、光纖插入損失要用 OTDR／光功率計量、PoE 壓降要用電表量。<strong>驗收前仍要實測</strong>；這一頁的用途是先把明顯配錯的案場擋掉。</p>
+<hr>
+<h3 id="356-歷史型號hardware-catalog"><a class="self" href="#356-歷史型號hardware-catalog">¶</a> 3.56 歷史型號（<code>hardware-catalog</code>）</h3>
+<p><strong>定位。</strong> 查詢使用者自己匯入的 2006–2026 CPU／GPU 型號索引：型號、品牌、家族、插槽、架構、推出年份與規格摘要。<strong>它回答「這顆型號當年是什麼規格」，不是「你機器上這顆跑得怎樣」</strong>——後者看 CPU／主機板／顯示卡頁。</p>
+<p><strong>畫面解剖。</strong> 搜尋方塊比對型號、品牌、家族、插槽與架構；類型可只看 CPU 或 GPU；「匯入 JSON」把使用者選的檔案讀進記憶體。下方結果逐列顯示類型、名稱、摘要、證據、狀態、備註與來源；最底下是來源與限制。</p>
+<p><strong>來源與可信度。</strong> <strong>程式不內建、也不散布任何 workbook 衍生資料</strong>（授權未確認的型號庫不進發佈檔）。資料只來自：<code>XINSPECT_CPU_GPU_CATALOG</code> 環境變數指定的檔案，或 <code>%LocalAppData%\XinSpect\catalogs\cpu-gpu-catalog.json</code>。沒有檔案時狀態是「尚未匯入型號索引」——那不是錯誤，是這一頁的預設狀態。</p>
+<p><strong>誤差與邊界。</strong> ①欄位缺漏就留白，不從相鄰型號推測；②不含主機板、電源與散熱器資料；③匯入的資料只留在記憶體，不寫入系統、不上傳；④索引是文字資料，沒有量測成分。</p>
+<p><strong>誤用警告。</strong> 「索引說這顆是 8 核 16 執行緒」——那是<strong>型號的標稱規格</strong>；這台機器實際跑幾個執行緒、有沒有被 BIOS 關掉，要看 CPU 頁與 SMBIOS 對帳。</p>
+<hr>
+<h3 id="357-其餘十一頁操作型量測型與娛樂型"><a class="self" href="#357-其餘十一頁操作型量測型與娛樂型">¶</a> 3.57 其餘十一頁：操作型、量測型與娛樂型</h3>
+<p>這一節把剩下十一頁各用一段交代<strong>入口、做的事與邊界</strong>。它們的共同點是「操作」或「娛樂」成分高於「讀值」：詳細的量測方法在第 4 部，寫入與同意閘門在第 8 部，這裡不重複。</p>
+<ul>
+<li><strong>效能（<code>bench</code>）</strong>：跑分、烤機、快取延遲與磁碟效能。磁碟效能會建立測試檔，跑完刪除；中途強制關閉可能留下殘檔，不建議在快滿的磁碟上跑。
+</li><li><strong>深測中心（<code>deepbench</code>）</strong>：同一個 Run Session 內的 CPU／拓撲／記憶體／GPU／儲存深測與全量追蹤。每一項的五個欄位與「為什麼不給總分」在第 4 部。
+</li><li><strong>效能天花板（<code>ceiling</code>）</strong>：回答「為什麼跑不到該有的頻率」——溫度牆、功耗牆、電流牆與向量降頻分開講，不合成一個分數。
+</li><li><strong>算力圖（<code>computechart</code>）</strong>：把 CPU／記憶體／GPU／儲存／NPU 各維度的算力畫在一起。<strong>它是視覺化，不是新的量測</strong>：數字全部來自第 4 部的測項。
+</li><li><strong>繪圖管線測試（<code>gpurendertest</code>）</strong>：WPF 繪圖管線的填充率、3D 幾何與文字渲染。<strong>走軟體光柵化、不經 GPU</strong>——它測的是介面層的繪製成本，不是顯示卡的效能。
+</li><li><strong>防護（<code>bluesquadron</code>）</strong>：核心安全態勢：六大防線、即時威脅偵測與強化建議。<strong>守護進程預設關閉</strong>（3.13 起），唯讀態勢評估照常；讀不到的項目記「未評估」，不扣分也不冒充通過。
+</li><li><strong>場景（<code>scenes</code>）</strong>：一鍵切換靜音／均衡／效能：風扇曲線＋電源計劃＋顯示卡上限。<strong>這是寫入型功能</strong>，走第 8 部的同意閘門，且會留下寫入帳。
+</li><li><strong>拜神（<code>shrine</code>）</strong>：娛樂頁——一包綠色乖乖。不讀硬體、不寫系統，純粹是介面彩蛋。
+</li><li><strong>超頻（<code>oc</code>）</strong>：透過 Intel XTU 調整倍頻與電壓（測試版）。<strong>風險最高的一頁</strong>：寫入前要明確同意，套用後可能不穩定；不建議在遠端或無人看管的機器上使用。
+</li><li><strong>顯示卡超頻（<code>gpuoc</code>）</strong>：NVML 功耗／風扇加上 NVAPI 時脈偏移（測試版）。同樣是寫入型，關掉程式不會自動還原成預設值——要自己記得。
+</li><li><strong>系統風扇（<code>fan</code>）</strong>：主機板可控風扇的手動調速與曲線。<strong>關掉程式後風扇不一定回到自動</strong>；離開前請確認風扇曲線已交還主機板。
+</li></ul>
+<p><strong>共同邊界。</strong> 這十一頁的「有值」與「沒值」都要看第 0 部的六態：權限不足、驅動未載入、平台不支援長得都像「—」，但原因不同。<strong>不要把「—」讀成 0，也不要把「畫面有數字」讀成「量測可信」</strong>——後者要看每一項的校準說明。</p>
+<hr>
+<h3 id="358-跨頁機制三個不屬於任何一頁的東西"><a class="self" href="#358-跨頁機制三個不屬於任何一頁的東西">¶</a> 3.58 跨頁機制：三個「不屬於任何一頁」的東西</h3>
 <p>有三件事橫跨所有頁面，放在這裡一次講完，避免在每一頁重複。</p>
 <p><strong>一、命令面板（Ctrl+K／Ctrl+P）。</strong> 它是「簡易模式」的補償機制：被收起來的進階頁面仍然搜得到。<strong>導覽的唯一入口是側邊欄與命令面板</strong>——工具箱不做導覽（1.9.0 移除那個標籤的理由），因為兩個入口講同一件事只會讓使用者懷疑它們不同。</p>
 <p><strong>二、圓圈問號（288 條說明）。</strong> 每一區塊標題旁有一個問號，內容是「這是什麼、能做什麼、安不安全」三段，外加一句風險結論（安全／注意／危險）。<strong>這些文字與程式碼的實作對得上，是專案的寫作要求</strong>；同一個名詞在多頁出現時共用同一段文字，改一次全站一致。</p>
