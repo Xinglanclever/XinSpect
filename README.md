@@ -62,7 +62,7 @@
 
 | 檔案 | 大小 | 說明 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.13/XinSpect.exe) | 37,393,707 bytes | 主程式。藍色中隊守護進程已內建 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.13/XinSpect.exe) | 37,553,451 bytes | 主程式。藍色中隊守護進程已內建 |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.13/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。要脫離主程式單獨跑防護時使用 |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.13/XinSpectDeploy.exe) | 16,896 bytes | 一鍵安裝器。按 1 GitHub、按 2 Google Drive、按 3 中國直連線路；下載時顯示進度條、速度與剩餘時間 |
 | [SHA256SUMS.txt](https://github.com/Xinglanclever/XinSpect/releases/download/v3.13/SHA256SUMS.txt) | 334 bytes | 逐檔雜湊，發佈後由 `Tools/verify-release.ps1` 對帳 |
