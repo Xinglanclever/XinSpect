@@ -134,11 +134,13 @@ public static class ComplianceExportService
             });
         }
 
-        var payload = new
+        // SARIF 的根屬性名是 "$schema"（帶錢號）；匿名型別的識別字不能帶錢號，
+        // 所以用字典輸出，避免實際寫成 "schema" 而被消費者忽略。
+        var payload = new Dictionary<string, object>
         {
-            schema = "https://json.schemastore.org/sarif-2.1.0.json",
-            version = SarifVersion,
-            runs = new[]
+            ["$schema"] = "https://json.schemastore.org/sarif-2.1.0.json",
+            ["version"] = SarifVersion,
+            ["runs"] = new[]
             {
                 new
                 {

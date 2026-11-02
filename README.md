@@ -12352,7 +12352,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `Services/CliService.cs` | 959 | 1 |
 | `Services/ClosingFactsService.cs` | 201 | 1 |
 | `Services/CmosService.cs` | 98 | 1 |
-| `Services/ComplianceExportService.cs` | 485 | 1 |
+| `Services/ComplianceExportService.cs` | 487 | 1 |
 | `Services/ComplianceMappingService.cs` | 583 | 1 |
 | `Services/ComputeChartService.cs` | 336 | 2 |
 | `Services/ContextMenuService.cs` | 222 | 2 |

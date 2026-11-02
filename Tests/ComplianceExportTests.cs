@@ -43,6 +43,9 @@ public class ComplianceExportTests
         var root = doc.RootElement;
 
         Assert.Equal("2.1.0", root.GetProperty("version").GetString());
+        Assert.Equal("https://json.schemastore.org/sarif-2.1.0.json",
+            root.GetProperty("$schema").GetString());
+        Assert.False(root.TryGetProperty("schema", out _), "SARIF 根屬性必須是 $schema，不是 schema");
         var run = root.GetProperty("runs")[0];
         Assert.Equal("XinSpect", run.GetProperty("tool").GetProperty("driver").GetProperty("name").GetString());
 
