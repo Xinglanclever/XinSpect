@@ -352,6 +352,110 @@ public static class ComplianceExportService
             .Replace("\r", "\\r", StringComparison.Ordinal)
             .Replace("\n", "\\n", StringComparison.Ordinal);
 
+    /// <summary>
+    /// OTLP/JSON（logs）：每個控制項／ATT&amp;CK 技術一筆 log record，供 OpenTelemetry 管線收取。
+    /// 只做格式轉譯，不連網；severity 與 CEF 同源，避免兩個出口說不同的話。
+    /// </summary>
+    public static string ToOtel(ComplianceReport report, DateTimeOffset generatedAtUtc)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        string version = ToolVersion();
+        var records = new List<object>();
+        foreach (var control in report.Controls)
+        {
+            records.Add(LogRecord(generatedAtUtc, control.Id, control.Framework,
+                control.Status.ToString(), control.Reason, OtelSeverity(control.Status),
+                control.Evidence.Select(e => e.Key).ToArray(), "compliance.id"));
+        }
+
+        foreach (var technique in report.Techniques)
+        {
+            records.Add(LogRecord(generatedAtUtc, technique.Id, "MITRE ATT&CK",
+                technique.Exposure.ToString(), technique.Reason, OtelSeverity(technique.Exposure),
+                technique.FactKeys.ToArray(), "attack.technique.id"));
+        }
+
+        var payload = new
+        {
+            resourceLogs = new[]
+            {
+                new
+                {
+                    resource = new
+                    {
+                        attributes = new[]
+                        {
+                            Attr("service.name", "XinSpect"),
+                            Attr("service.version", version),
+                        },
+                    },
+                    scopeLogs = new[]
+                    {
+                        new
+                        {
+                            scope = new { name = "XinSpect.Compliance", version },
+                            logRecords = records,
+                        },
+                    },
+                },
+            },
+        };
+
+        return JsonSerializer.Serialize(payload, JsonOptions);
+    }
+
+    private static object LogRecord(DateTimeOffset at, string id, string framework, string status,
+        string reason, (int Number, string Text) severity, string[] keys, string idKey)
+    {
+        var attributes = new List<object>
+        {
+            Attr(idKey, id),
+            Attr("compliance.framework", framework),
+            Attr("compliance.status", status),
+            AttrArray("compliance.keys", keys),
+        };
+
+        return new
+        {
+            timeUnixNano = (at.ToUnixTimeMilliseconds() * 1_000_000L)
+                .ToString(System.Globalization.CultureInfo.InvariantCulture),
+            severityNumber = severity.Number,
+            severityText = severity.Text,
+            body = new { stringValue = $"{id}：{reason}" },
+            attributes,
+        };
+    }
+
+    private static (int Number, string Text) OtelSeverity(ComplianceStatus status) => status switch
+    {
+        ComplianceStatus.NotSatisfied => (17, "ERROR"),
+        ComplianceStatus.Unverifiable => (13, "WARN"),
+        ComplianceStatus.Satisfied => (9, "INFO"),
+        _ => (5, "DEBUG"),
+    };
+
+    private static (int Number, string Text) OtelSeverity(AttackExposure exposure) => exposure switch
+    {
+        AttackExposure.Exposed => (17, "ERROR"),
+        AttackExposure.Unknown => (13, "WARN"),
+        AttackExposure.Mitigated => (9, "INFO"),
+        _ => (5, "DEBUG"),
+    };
+
+    private static object Attr(string key, string value)
+        => new { key, value = new { stringValue = value } };
+
+    private static object AttrArray(string key, string[] values)
+        => new
+        {
+            key,
+            value = new
+            {
+                arrayValue = new { values = values.Select(v => new { stringValue = v }).ToArray() },
+            },
+        };
+
     private static bool IsFailure(ComplianceControl control)
         => control.Status is ComplianceStatus.NotSatisfied or ComplianceStatus.Unverifiable;
 

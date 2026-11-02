@@ -158,6 +158,54 @@ public class ComplianceExportTests
     }
 
     [Fact]
+    public void OTel輸出有resource與scope且severity與CEF同源()
+    {
+        using var doc = JsonDocument.Parse(ComplianceExportService.ToOtel(Report(), At));
+        var resourceLogs = doc.RootElement.GetProperty("resourceLogs");
+        Assert.Equal(1, resourceLogs.GetArrayLength());
+        var resource = resourceLogs[0].GetProperty("resource");
+        Assert.Contains(resource.GetProperty("attributes").EnumerateArray(),
+            a => a.GetProperty("key").GetString() == "service.name"
+                 && a.GetProperty("value").GetProperty("stringValue").GetString() == "XinSpect");
+
+        var scope = resourceLogs[0].GetProperty("scopeLogs")[0];
+        Assert.Equal("XinSpect.Compliance", scope.GetProperty("scope").GetProperty("name").GetString());
+        var records = scope.GetProperty("logRecords").EnumerateArray().ToList();
+        Assert.Equal(7, records.Count);
+
+        JsonElement RecordFor(string id) => Assert.Single(records, r =>
+            r.GetProperty("attributes").EnumerateArray().Any(a =>
+                a.GetProperty("key").GetString() is "compliance.id" or "attack.technique.id"
+                && a.GetProperty("value").GetProperty("stringValue").GetString() == id));
+
+        Assert.Equal(17, RecordFor("NIST-800-147-UPD").GetProperty("severityNumber").GetInt32());
+        Assert.Equal(13, RecordFor("NIST-800-155-QUOTE").GetProperty("severityNumber").GetInt32());
+        Assert.Equal(9, RecordFor("NIST-800-147-WP").GetProperty("severityNumber").GetInt32());
+        Assert.Equal(17, RecordFor("T1542.001").GetProperty("severityNumber").GetInt32());
+        Assert.Matches("^[0-9]+$", RecordFor("NIST-800-147-WP").GetProperty("timeUnixNano").GetString());
+    }
+
+    [Fact]
+    public void CLI的OTel輸出保留退出碼2()
+    {
+        var source = new[]
+        {
+            Fact("chipset.bios_cntl", "最強保護"),
+            Fact("tpm.present", "可用"),
+        };
+
+        var stdout = new StringWriter();
+        int exit = CliService.Run(["--compliance", "--format", "otel"], () => source,
+            stdout, new StringWriter());
+
+        Assert.Equal(CliService.ExitPartial, exit);
+        using var doc = JsonDocument.Parse(stdout.ToString());
+        var records = doc.RootElement.GetProperty("resourceLogs")[0]
+            .GetProperty("scopeLogs")[0].GetProperty("logRecords");
+        Assert.Equal(16, records.GetArrayLength()); // 11 控制項 + 5 ATT&CK
+    }
+
+    [Fact]
     public void CLI的SARIF與JUnit都保留退出碼2且輸出可解析()
     {
         var source = new[]
