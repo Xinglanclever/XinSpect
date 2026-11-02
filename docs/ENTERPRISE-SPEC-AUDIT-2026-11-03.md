@@ -170,7 +170,7 @@ MSR、PCI ECAM、SMBus、SPI 不是可以任意平行的一般記憶體：
 | NIST 800-147／155／193 對照 | **已完成（本輪）** | `--compliance`；11 條控制項，缺資料一律 Unverifiable。 |
 | MITRE ATT&CK 曝險 | **已完成（本輪）** | 5 條技術：T1542.001、T1495、T1014、T1562.001、T1553.006。 |
 | TPM Quote 印證／RFC 3161 時間戳 | C／B | Quote 需真的向 TPM 發命令並驗簽；TSA 需網路。本輪刻意不做，控制項維持 Unverifiable。 |
-| SIEM CEF／OCSF／OTel 輸出 | B | 純格式化工作，不需新硬體；但本專案「零網路」原則下應只寫檔／stdout，不主動連 SIEM。 |
+| SIEM CEF／OTel 輸出 | **已完成（本輪）** | `--compliance --format cef` 或 `--format otel`；純格式化、只寫 stdout／檔案，不主動連 SIEM。OCSF 未做。 |
 | CIS／DISA STIG 條目 | B | 需要維護對照表與版本；不是硬體讀取問題。 |
 | 與 baseline 的差異／竄改位元遮罩 | A／B | 既有的快照 diff／審計鏈可延伸；不是新硬體面。 |
 
