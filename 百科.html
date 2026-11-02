@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>曦覽 XinSpect 百科</title>
-<!-- 由 README.md 產生（sha256 e5de1dca620a）；產生器：Tools/gen-docs-html.py；本檔不手改。 -->
+<!-- 由 README.md 產生（sha256 f1ca33519fea）；產生器：Tools/gen-docs-html.py；本檔不手改。 -->
 <style>:root{--bg:#fff;--ink:#1f2328;--sub:#57606a;--hair:#d0d7de;--surface:#f6f8fa;--link:#0969da;--accent:#1b6fd6;--badge:#ddf4ff;
       color-scheme:light}
 /* 深色版：文字色早就跟著 prefers-color-scheme 換了，body 的背景卻一直寫死 #fff——
@@ -468,7 +468,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </details>
 </nav>
 <main>
-<header class="doc"><div class="meta">曦覽 XinSpect 百科 ・ 來源：<code>README.md</code>（sha256 <code>e5de1dca620a</code>）・ 自足 HTML：無 CDN、無外部字型、無指令碼 ・ 定位：左側目錄、標題懸停有 ¶ 錨點、瀏覽器 Ctrl+F 找字</div></header>
+<header class="doc"><div class="meta">曦覽 XinSpect 百科 ・ 來源：<code>README.md</code>（sha256 <code>f1ca33519fea</code>）・ 自足 HTML：無 CDN、無外部字型、無指令碼 ・ 定位：左側目錄、標題懸停有 ¶ 錨點、瀏覽器 Ctrl+F 找字</div></header>
 <p><a href="https://github.com/Xinglanclever/XinSpect/blob/main/README.zh-CN.md">简体中文</a> · 繁體中文 · <a href="https://github.com/Xinglanclever/XinSpect/blob/main/README.en.md">English</a></p>
 <p><a class="ext" href="https://xinspect-browser-preview.wild-chimpanzee.workers.dev"><span class="badge">官方網站 ・ xinspect-browser-preview.wild-chimpanzee.workers.dev-4C8DFF?style=for-the</span></a></p>
 <blockquote><h2 id="-官方網站xinspect-browser-previewwild-chimpanzeeworkersdev-"><a class="self" href="#-官方網站xinspect-browser-previewwild-chimpanzeeworkersdev-">¶</a> 🌐 <a class="ext" href="https://xinspect-browser-preview.wild-chimpanzee.workers.dev">官方網站：xinspect-browser-preview.wild-chimpanzee.workers.dev ↗</a></h2>
@@ -11373,6 +11373,12 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </li><li><strong>可覆核</strong>：使用者可以用命令列重跑一次畫面上看到的東西，<strong>這是「畫面上的數字不是黑箱」最直接的證明方式</strong>。
 </li></ol>
 <p><strong>本版另外三個證據出口</strong>：<code>--compliance</code> 把既有事實對到 NIST SP 800-147／155／193 與 MITRE ATT&amp;CK，缺資料一律 <code>Unverifiable</code>；預設輸出 JSON，另可加 <code>--format sarif</code>（SARIF 2.1.0）、<code>--format junit</code>（JUnit XML）、<code>--format cef</code>（逐行 Common Event Format）或 <code>--format otel</code>（OTLP/JSON logs）餵給 CI／SIEM／可觀測性管線——四者都讓 <code>Unverifiable</code> 維持可見（SARIF 為 warning、JUnit 為 failure、CEF severity 4、OTel severity WARN），不會被管線讀成綠色。<code>--merkle</code> 對穩定的白名單事實建 SHA-256 Merkle 樹，排除敏感、非 <code>Present</code> 與易變鍵，輸出只含鍵與雜湊；<code>--speculation</code> 產生七項 <code>infer.*</code> 推測，每項同時帶 <code>infer.</code> 鍵名前綴、<code>【推測】</code> 值前綴與 <code>Speculative</code> 信任等級，並列出信心、依據鍵與限制。<strong>推測不進合規判定、也不進 Merkle 指紋</strong>——這一層的存在是為了誠實地說「只能猜到這裡」，不是為了把猜測升格成證據。</p>
+<p><strong>CI／SIEM 的四種消費方式</strong>（都只寫 stdout 或 <code>--out</code> 指定的檔案，不連網）：</p>
+<pre><code class="lang-bash">XinSpect --compliance --format sarif --out compliance.sarif   # GitHub Code Scanning 等
+XinSpect --compliance --format junit --out compliance.xml     # JUnit 測試報告
+XinSpect --compliance --format cef                            # 逐行送 SIEM
+XinSpect --compliance --format otel --out compliance.json     # OTLP/JSON logs</code></pre>
+<p>四種格式的 <code>Unverifiable</code> 都不會變成綠色：SARIF <code>warning</code>、JUnit <code>failure</code>、CEF severity 4、OTel severity <code>WARN</code>。若管線把 warning／skipped 當成通過，那是管線的設定問題，不是輸出的語意問題。</p>
 <h3 id="92-退出碼管線唯一該看的東西"><a class="self" href="#92-退出碼管線唯一該看的東西">¶</a> 9.2 退出碼：管線唯一該看的東西</h3>
 <table>
 <thead><tr>

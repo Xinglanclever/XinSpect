@@ -8634,6 +8634,17 @@
 
 **本版另外三個證據出口**：`--compliance` 把既有事實對到 NIST SP 800-147／155／193 與 MITRE ATT&CK，缺資料一律 `Unverifiable`；預設輸出 JSON，另可加 `--format sarif`（SARIF 2.1.0）、`--format junit`（JUnit XML）、`--format cef`（逐行 Common Event Format）或 `--format otel`（OTLP/JSON logs）餵給 CI／SIEM／可觀測性管線——四者都讓 `Unverifiable` 維持可見（SARIF 為 warning、JUnit 為 failure、CEF severity 4、OTel severity WARN），不會被管線讀成綠色。`--merkle` 對穩定的白名單事實建 SHA-256 Merkle 樹，排除敏感、非 `Present` 與易變鍵，輸出只含鍵與雜湊；`--speculation` 產生七項 `infer.*` 推測，每項同時帶 `infer.` 鍵名前綴、`【推測】` 值前綴與 `Speculative` 信任等級，並列出信心、依據鍵與限制。**推測不進合規判定、也不進 Merkle 指紋**——這一層的存在是為了誠實地說「只能猜到這裡」，不是為了把猜測升格成證據。
 
+**CI／SIEM 的四種消費方式**（都只寫 stdout 或 `--out` 指定的檔案，不連網）：
+
+```bash
+XinSpect --compliance --format sarif --out compliance.sarif   # GitHub Code Scanning 等
+XinSpect --compliance --format junit --out compliance.xml     # JUnit 測試報告
+XinSpect --compliance --format cef                            # 逐行送 SIEM
+XinSpect --compliance --format otel --out compliance.json     # OTLP/JSON logs
+```
+
+四種格式的 `Unverifiable` 都不會變成綠色：SARIF `warning`、JUnit `failure`、CEF severity 4、OTel severity `WARN`。若管線把 warning／skipped 當成通過，那是管線的設定問題，不是輸出的語意問題。
+
 ### 9.2 退出碼：管線唯一該看的東西
 
 | 退出碼 | 意思 | 管線該做什麼 |
