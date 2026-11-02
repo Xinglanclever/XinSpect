@@ -2,7 +2,7 @@
 
 - 日期：2026-11-03
 - 對象：`xinspect_enterprise_grand_specification.md`（八大模組、宣稱 2,000+ 事實鍵）
-- 基線：XinSpect 3.13（`v3.13`，commit `e43f118`），事實鍵目錄 1,174 把、動態家族 68 個、測試基線 7,863
+- 基線：XinSpect 3.13（`v3.13`，commit `e43f118`），事實鍵目錄 1,174 把、動態家族 68 個、測試基線 7,865
 - 方法：逐條比對現有 `Services/` 生產者與 `FactKeyCatalog`；再用本機 Gemini 3.8 Flash（桌面版）對八條關鍵技術宣稱做對抗性判讀；每一條判讀都回頭對程式碼／規格驗證，不把模型輸出當結論
 
 ---
@@ -202,6 +202,7 @@ MSR、PCI ECAM、SMBus、SPI 不是可以任意平行的一般記憶體：
 ```text
 XinSpect --compliance [--format json|sarif|junit|cef|otel] [--out <檔案>]
 XinSpect --compliance-diff <舊 JSON> <新 JSON> [--out <檔案>]
+XinSpect --fleet [--snapshots <目錄>] [--out <檔案>]
 XinSpect --merkle [--out <檔案>]
 XinSpect --speculation [--out <檔案>]
 ```
@@ -218,8 +219,9 @@ XinSpect --speculation [--out <檔案>]
   四者都只轉譯既有判定，不重新量測、不連網。
 - `--merkle` 退出碼：0＝至少一片葉子；2＝沒有穩定事實；1＝致命。
 - `--speculation` 退出碼：0＝七項都產生；2＝推測項數不是七（規則集合漂移）；1＝致命。
+- `--fleet` 退出碼：0＝有可比的同型號族群；2＝沒有快照／沒有型號／沒有第二台；1＝致命。只讀本機快照，不上傳。
   **0 不代表機器安全或合規**——推測不是量測。
-- headless 模式目錄由 10 增為 14（compliance、compliance-diff、merkle、speculation）；`Tests/AutomationAndGuidanceFactsTests.cs` 已同步。
+- headless 模式目錄由 10 增為 15（compliance、compliance-diff、fleet、merkle、speculation）；`Tests/AutomationAndGuidanceFactsTests.cs` 已同步。
 
 ### 4.4 推測層（`--speculation`）
 
@@ -333,12 +335,12 @@ XinSpect --speculation [--out <檔案>]
 
 ## 7. 驗證紀錄
 
-- 新增測試：`Tests/ComplianceMappingTests.cs`、`Tests/FactMerkleTests.cs`、`Tests/CliComplianceTests.cs`、`Tests/ComplianceExportTests.cs`、`Tests/ComplianceExportSpecTests.cs`、`Tests/ComplianceDiffTests.cs`、`Tests/SpeculationFactsTests.cs`。
+- 新增測試：`Tests/ComplianceMappingTests.cs`、`Tests/FactMerkleTests.cs`、`Tests/CliComplianceTests.cs`、`Tests/ComplianceExportTests.cs`、`Tests/ComplianceExportSpecTests.cs`、`Tests/ComplianceDiffTests.cs`、`Tests/FleetCliTests.cs`、`Tests/SpeculationFactsTests.cs`。
 - 新增規格：`docs/spec/compliance-export.v1.md`（五種格式的欄位、跳脫與 severity 對照）。
-- 更新：`Tests/AutomationAndGuidanceFactsTests.cs`（headless 10 → 14）。
+- 更新：`Tests/AutomationAndGuidanceFactsTests.cs`（headless 10 → 15）。
 - 守門子集：`--filter "Speculation|FactKeyCatalog|AutomationAndGuidance"` → **47 passed, 0 failed**。
-- 完整套件：基線 **7,863**；本機因既有 NVMe 核心不可中斷等待，實跑排除 1 條硬體限時測試
-  （`NvmeOverlappedIoTests.真的卡住的碟也要在外層預算內交還控制權`），其餘 **7,862 passed, 0 failed**。
+- 完整套件：基線 **7,865**；本機因既有 NVMe 核心不可中斷等待，實跑排除 1 條硬體限時測試
+  （`NvmeOverlappedIoTests.真的卡住的碟也要在外層預算內交還控制權`），其餘 **7,864 passed, 0 failed**。
   該測試未被跳過、未被改寫，健康機器上照常執行；排除原因是本機磁碟探針會卡住行程，不是本輪程式碼。
 - 目錄：1,174 把靜態鍵（+7 把 `infer.*`）；動態家族 68 個不變。
 - 真機 e2e：

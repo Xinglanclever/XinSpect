@@ -40,7 +40,8 @@ public class AutomationAndGuidanceFactsTests
         // --merkle（穩定事實 SHA-256 指紋）進 headless 目錄。
         // 12 → 13（同日）：--speculation（七項 infer.* 推測，三重標註）進 headless 目錄。
         // 13 → 14（同日）：--compliance-diff（兩份合規 JSON 的判定差異）進 headless 目錄。
-        Assert.Equal(14, doc.RootElement.GetArrayLength());
+        // 14 → 15（同日）：--fleet（只讀本機快照的族群基線）進 headless 目錄。
+        Assert.Equal(15, doc.RootElement.GetArrayLength());
         Assert.Contains("--json", json, StringComparison.Ordinal);
         Assert.Contains(CliService.StdinBatchArg, json, StringComparison.Ordinal);
         Assert.Contains("零網路", json, StringComparison.Ordinal);

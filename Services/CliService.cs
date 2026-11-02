@@ -38,6 +38,8 @@ public static class CliService
     public const string ComplianceArg = "--compliance";
     public const string ComplianceDiffArg = "--compliance-diff";
     public const string ComplianceFormatArg = "--format";
+    public const string FleetArg = "--fleet";
+    public const string FleetSnapshotsArg = "--snapshots";
     public const string MerkleArg = "--merkle";
     public const string SpeculationArg = "--speculation";
 
@@ -101,6 +103,8 @@ public static class CliService
             return RunMerkle(args, collect, stdout, stderr);
         if (args[0] == SpeculationArg)
             return RunSpeculation(args, collect, stdout, stderr);
+        if (args[0] == FleetArg)
+            return RunFleet(args, stdout, stderr);
         if (args[0] != JsonArg)
         {
             stderr.WriteLine($"未知引數「{args[0]}」。用 --help 看用法。");
@@ -211,6 +215,7 @@ public static class CliService
             new { mode = ComplianceDiffArg, scope = "", output = "JSON", description = "比較兩份 --compliance JSON 的控制項／ATT&CK 判定變化；不重新收集、不重新判定。" },
             new { mode = MerkleArg, scope = "", output = "JSON", description = "穩定事實的 SHA-256 Merkle 指紋；白名單＋排除敏感／非 Present／易變鍵，輸出只含鍵與雜湊。" },
             new { mode = SpeculationArg, scope = "", output = "JSON", description = "七項 infer.* 推測；每項都帶【推測】前綴與 Speculative 信任等級，並列信心、依據鍵與限制。不合規、不進 Merkle。" },
+            new { mode = FleetArg, scope = "", output = "JSON", description = "只讀本機快照目錄，彙總同型號族群的 fleet.* 基線；不上傳、不跨機傳輸。--snapshots 可指定目錄。" },
         };
         return JsonSerializer.Serialize(payload, JsonOptions);
     }
@@ -689,6 +694,72 @@ public static class CliService
     }
 
     /// <summary>
+    /// 族群基線（<c>--fleet</c>）：只讀本機快照目錄，彙總同型號族群的 <c>fleet.*</c> 事實。
+    /// 不出網、不上傳、不跨機傳輸。退出碼：0＝有可比的同型號族群；2＝沒有快照／沒有型號／沒有第二台；1＝致命。
+    /// </summary>
+    private static int RunFleet(string[] args, TextWriter stdout, TextWriter stderr)
+    {
+        string directory = OptionValue(args, FleetSnapshotsArg) ?? FleetSnapshotReader.Directory;
+        var at = DateTimeOffset.UtcNow;
+        IReadOnlyList<FleetSnapshot> snapshots;
+        IReadOnlyList<HardwareFact> facts;
+        try
+        {
+            snapshots = FleetSnapshotReader.Read(directory);
+            facts = FleetBaselineFactsService.Collect(snapshots, at);
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"讀取快照失敗：{ex.GetType().Name}：{ex.Message}");
+            return ExitError;
+        }
+
+        var summary = facts.FirstOrDefault(f => f.Key == FleetBaselineFactsService.SummaryKey);
+        bool comparable = summary?.Availability == FactAvailability.Present;
+        var payload = new
+        {
+            generatedAtUtc = at,
+            scope = "fleet",
+            schemaVersion = 1,
+            directory,
+            snapshotCount = snapshots.Count,
+            comparable,
+            facts = facts.Select(f => new
+            {
+                key = f.Key,
+                name = f.Name,
+                value = f.Value,
+                numericValue = f.NumericValue,
+                unit = f.Unit,
+                source = f.Source,
+                trust = f.Trust.ToString(),
+                sensitive = f.Sensitive,
+                measuredAtUtc = f.MeasuredAtUtc,
+                availability = f.Availability.ToString(),
+                unavailableReason = f.UnavailableReason,
+            }),
+            note = "只讀本機快照目錄：不上傳、不跨機傳輸、不查外部資料庫。"
+                 + "「同型號」是字串相等，不是 SKU 知識；樣本少於 4 份只給中位數與範圍，不給 z 分數。"
+                 + "comparable=false（退出碼 2）代表沒有可比的第二台，不是「沒有差異」。",
+        };
+
+        string json = JsonSerializer.Serialize(payload, JsonOptions);
+        string? outPath = OptionValue(args, OutArg);
+        try
+        {
+            if (outPath is not null) File.WriteAllText(outPath, json);
+            else stdout.WriteLine(json);
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"寫出失敗：{ex.Message}");
+            return ExitError;
+        }
+
+        return comparable ? ExitOk : ExitPartial;
+    }
+
+    /// <summary>
     /// 合規基準比較（<c>--compliance-diff</c>）：只讀兩份既有 JSON，不重新收集、不重新判定。
     /// 退出碼：0＝判定全同；2＝有任何新增／消失／改善／退步／變動；1＝讀取或格式錯誤。
     /// </summary>
@@ -962,6 +1033,7 @@ public static class CliService
               XinSpect --compliance-diff <舊 JSON> <新 JSON> [--out <檔案>]
               XinSpect --merkle [--out <檔案>]
               XinSpect --speculation [--out <檔案>]
+              XinSpect --fleet [--snapshots <目錄>] [--out <檔案>]
               XinSpect --help
 
             範圍：
@@ -1012,6 +1084,8 @@ public static class CliService
                               infer. 鍵名前綴、【推測】值前綴與 Speculative 信任等級，
                               並列出信心、依據鍵與限制。<b>推測不是量測、不是合規證據，
                               也不進 Merkle 指紋</b>；退出碼 0 只代表推測已產生。
+              fleet           只讀本機快照目錄，彙總同型號族群的 fleet.* 基線。不上傳、不跨機傳輸；
+                              樣本少於 4 份只給中位數與範圍，不給 z 分數。沒有可比的第二台回退出碼 2。
 
             選項：
               --query <前綴>   只輸出 key 以該前綴開頭的事實（例：--query platform.）
@@ -1022,6 +1096,7 @@ public static class CliService
                                部分報告不是全量報告，引用時請帶分母。篩選後零命中退出碼 2，note 如實說是空匯出。
               --out <檔案>     寫入檔案而非 stdout
               --format <格式>  只用於 --compliance：json（預設）／sarif／junit／cef／otel；其他值回退出碼 1
+              --snapshots <目錄> 只用於 --fleet：指定快照目錄（預設 %AppData%\XinSpect\snapshots）
 
             退出碼：
               --json evidence   0＝全部 Present；2＝有非 Present 的事實（讀不到，或提供者沒提供
@@ -1044,6 +1119,7 @@ public static class CliService
               --merkle          0＝至少一片葉子；2＝沒有任何穩定事實可建樹；1＝致命。
               --speculation     0＝七項推測都產生；2＝推測項數不是七（規則集合漂移）；1＝致命。
                                 0 不代表機器安全或合規——推測不是量測。
+              --fleet           0＝有可比的同型號族群；2＝沒有快照／沒有型號／沒有第二台；1＝致命。
             讀不到的事實如實帶 availability 與原因，絕不以 0／典型值頂替。
             """);
     }
