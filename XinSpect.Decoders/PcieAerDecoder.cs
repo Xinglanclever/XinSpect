@@ -1,7 +1,13 @@
 namespace XinSpect;
 
 /// <summary>PCIe AER（進階錯誤回報）狀態。純解碼：給完整 4KB 擴充組態空間位元組，找出 AER 能力並讀其錯誤狀態位。</summary>
-public readonly record struct AerStatus(uint UncorrectableStatus, uint CorrectableStatus, bool HasUncorrectable, bool HasCorrectable);
+public readonly record struct AerStatus(
+    uint UncorrectableStatus,
+    uint CorrectableStatus,
+    bool HasUncorrectable,
+    bool HasCorrectable,
+    uint? FirstUncorrectableSourceId,
+    uint? FirstCorrectableSourceId);
 
 /// <summary>
 /// PCIe AER 解碼器（純函式）。AER 在擴充組態空間（&gt;0xFF），WinRing0 的 legacy 0xCF8/0xCFC 到不了，
@@ -31,13 +37,27 @@ public static class PcieAer
         return null;
     }
 
-    /// <summary>解 AER：Uncorrectable Error Status 在 +0x04、Correctable Error Status 在 +0x10。越界回 null。</summary>
-    [SpecRef("PCI Express Base Spec, AER Extended Capability 結構：Uncorrectable Error Status @+0x04、Correctable Error Status @+0x10")]
+    /// <summary>
+    /// 解 AER：Uncorrectable Error Status @+0x04、Correctable Error Status @+0x10；
+    /// Root Port 另讀 Error Source Identification @+0x34／Correctable @+0x38（只有狀態位非 0 才取）。
+    /// 越界回 null；非 Root Port 的來源暫存器不是有效值，因此以 null 表示「不宣稱」。
+    /// </summary>
+    [SpecRef("PCI Express Base Spec, AER Extended Capability 結構：Uncorrectable Error Status @+0x04、Correctable Error Status @+0x10、Error Source Identification @+0x34、Correctable Error Source Identification @+0x38；Source ID bits[15:0] 為 bus[15:8]/dev[7:3]/fn[2:0]")]
     public static AerStatus? DecodeAer(ReadOnlySpan<byte> config4k, int aerOffset)
     {
         if (aerOffset < ExtConfigStart || aerOffset + 0x14 > config4k.Length) return null;
         uint unc = BitConverter.ToUInt32(config4k[(aerOffset + 0x04)..(aerOffset + 0x08)]);
         uint corr = BitConverter.ToUInt32(config4k[(aerOffset + 0x10)..(aerOffset + 0x14)]);
-        return new AerStatus(unc, corr, unc != 0, corr != 0);
+
+        uint? firstUnc = null, firstCorr = null;
+        if (aerOffset + 0x3C <= config4k.Length)
+        {
+            uint uncSource = BitConverter.ToUInt32(config4k[(aerOffset + 0x34)..(aerOffset + 0x38)]) & 0xFFFF;
+            uint corrSource = BitConverter.ToUInt32(config4k[(aerOffset + 0x38)..(aerOffset + 0x3C)]) & 0xFFFF;
+            if (unc != 0 && uncSource != 0) firstUnc = uncSource;
+            if (corr != 0 && corrSource != 0) firstCorr = corrSource;
+        }
+
+        return new AerStatus(unc, corr, unc != 0, corr != 0, firstUnc, firstCorr);
     }
 }

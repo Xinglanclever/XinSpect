@@ -111,7 +111,7 @@ MSR、PCI ECAM、SMBus、SPI 不是可以任意平行的一般記憶體：
 | 項目 | 級別 | 現況與說明 |
 |------|------|------------|
 | AER correctable／uncorrectable 狀態 | A／B | 現有 `pcieaer.*` 已能讀部分；**AER status 是 RW1CS 旗標，不是累計計數器**。讀取不應清除；若清除，必須在輸出明說「本次已清」。 |
-| AER 根端口第一錯誤指標 | B | 需逐 root port 讀，且要處理多 function／多 segment。 |
+| AER 根端口第一錯誤指標 | **第一來源已完成** | `pcieaer.aer.*` 逐裝置讀 Error Source Identification（Root Port 專用）；多 segment 仍未掃。0 不代表沒有錯誤。 |
 | PCIe LMR timing／voltage margin | B／C | 需要 vendor driver 或 BMC；Windows 無通用 API。結果是**逐 lane**、量測當下有效，不能存成永久「插槽裕量」。 |
 | TxPreset／RxPresetHint／EQ phase | B | 可從 Link Control／Lane Equalization 狀態讀，需小心不要觸發重新訓練。 |
 | WHEA 錯誤記錄 | A | 已有 WHEA 相關事實；但 WHEA record 與 AER bit 不是一對一，不能互相代言。 |

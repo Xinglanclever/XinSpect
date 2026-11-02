@@ -119,8 +119,15 @@ public static class EcamAerService
         var parts = new List<string>();
         if (st.UncorrectableStatus != 0) parts.Add($"未修正：{Bits(st.UncorrectableStatus, UncorrectableNames)}");
         if (st.CorrectableStatus != 0) parts.Add($"可修正：{Bits(st.CorrectableStatus, CorrectableNames)}");
+        if (st.FirstUncorrectableSourceId is { } uncSource)
+            parts.Add($"第一未修正來源：{SourceIdText(uncSource)}（Root Port 專用）");
+        if (st.FirstCorrectableSourceId is { } corrSource)
+            parts.Add($"第一可修正來源：{SourceIdText(corrSource)}（Root Port 專用）");
         return parts.Count == 0 ? $"AER @0x{aerOffset:X}：無未修正、無可修正錯誤" : $"AER @0x{aerOffset:X}：" + string.Join("；", parts);
     }
+
+    private static string SourceIdText(uint sourceId)
+        => $"{(sourceId >> 8) & 0xFF:X2}:{(sourceId >> 3) & 0x1F:X2}.{sourceId & 0x7}";
 
     private static string Bits(uint raw, string?[] names)
     {

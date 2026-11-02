@@ -71,7 +71,8 @@ public sealed class EcamAerTests
         // bus 0 dev 2 fn 0：裝置存在、AER 能力在 0x100、未修正狀態 bit14（完成逾時）、可修正 bit0（接收器錯誤）
         var mmio = new EcamFakeMmio(EcamBase, new Dictionary<ulong, byte[]>
         {
-            [Dev(0, 2, 0)] = DevicePage(vendorDevice: 0x12348086u, aerOffset: 0x100, uncorr: 0x4000, corr: 0x0001),
+            [Dev(0, 2, 0)] = DevicePage(vendorDevice: 0x12348086u, aerOffset: 0x100, uncorr: 0x4000, corr: 0x0001,
+                uncSource: 0x0200, corrSource: 0x0308),
         });
         var facts = EcamAerService.Collect(mmio, new ListAcpi([McfgTable()]), At);
 
@@ -79,6 +80,8 @@ public sealed class EcamAerTests
         Assert.Equal(FactAvailability.Present, aer.Availability);
         Assert.Contains("完成逾時", aer.Value);
         Assert.Contains("接收器錯誤", aer.Value);
+        Assert.Contains("第一未修正來源：02:00.0（Root Port 專用）", aer.Value);
+        Assert.Contains("第一可修正來源：03:01.0（Root Port 專用）", aer.Value);
         Assert.Contains("0x100", aer.Value);
 
         var scan = facts.Single(x => x.Key == "pcieaer.scan");
@@ -213,7 +216,8 @@ public sealed class EcamAerTests
         return t;
     }
 
-    private static byte[] DevicePage(uint vendorDevice, int? aerOffset, uint uncorr, uint corr)
+    private static byte[] DevicePage(uint vendorDevice, int? aerOffset, uint uncorr, uint corr,
+        uint? uncSource = null, uint? corrSource = null)
     {
         var page = new byte[4096];
         BitConverter.GetBytes(vendorDevice).CopyTo(page, 0x00);
@@ -223,6 +227,8 @@ public sealed class EcamAerTests
             BitConverter.GetBytes(0x00010001u).CopyTo(page, off);
             BitConverter.GetBytes(uncorr).CopyTo(page, off + 0x04); // Uncorrectable Error Status
             BitConverter.GetBytes(corr).CopyTo(page, off + 0x10);   // Correctable Error Status
+            if (uncSource is { } us) BitConverter.GetBytes(us).CopyTo(page, off + 0x34);
+            if (corrSource is { } cs) BitConverter.GetBytes(cs).CopyTo(page, off + 0x38);
         }
         return page;
     }
