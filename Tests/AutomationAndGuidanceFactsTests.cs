@@ -39,7 +39,8 @@ public class AutomationAndGuidanceFactsTests
         // 10 → 12（2026-11-03）：--compliance（NIST 800-147／155／193＋ATT&CK 對照）與
         // --merkle（穩定事實 SHA-256 指紋）進 headless 目錄。
         // 12 → 13（同日）：--speculation（七項 infer.* 推測，三重標註）進 headless 目錄。
-        Assert.Equal(13, doc.RootElement.GetArrayLength());
+        // 13 → 14（同日）：--compliance-diff（兩份合規 JSON 的判定差異）進 headless 目錄。
+        Assert.Equal(14, doc.RootElement.GetArrayLength());
         Assert.Contains("--json", json, StringComparison.Ordinal);
         Assert.Contains(CliService.StdinBatchArg, json, StringComparison.Ordinal);
         Assert.Contains("零網路", json, StringComparison.Ordinal);

@@ -36,6 +36,7 @@ public static class CliService
     public const string DiffReportArg = "--diff-report";
     public const string OnlyArg = "--only";
     public const string ComplianceArg = "--compliance";
+    public const string ComplianceDiffArg = "--compliance-diff";
     public const string ComplianceFormatArg = "--format";
     public const string MerkleArg = "--merkle";
     public const string SpeculationArg = "--speculation";
@@ -94,6 +95,8 @@ public static class CliService
             return RunEvidencePack(args, collect, stdout, stderr);
         if (args[0] == ComplianceArg)
             return RunCompliance(args, collect, stdout, stderr);
+        if (args[0] == ComplianceDiffArg)
+            return RunComplianceDiff(args, stdout, stderr);
         if (args[0] == MerkleArg)
             return RunMerkle(args, collect, stdout, stderr);
         if (args[0] == SpeculationArg)
@@ -205,6 +208,7 @@ public static class CliService
             new { mode = DiffReportArg, scope = "", output = "JSON", description = "兩份匯出報告（HTML／MD／TXT）鍵級互比；輸出只含鍵名與計數，不含值。" },
             new { mode = EvidencePackArg, scope = "", output = "JSON", description = "建立可第三方驗證的證據包（事實 JSON＋審計鏈副本＋manifest 雜湊清單＋互驗結果）；這是 ev.manifest 與 ev.chain.verify 唯一的生產端。" },
             new { mode = ComplianceArg, scope = "", output = "JSON／SARIF／JUnit／CEF／OTLP", description = "把既有事實對到 NIST SP 800-147／155／193 與 MITRE ATT&CK；不新增硬體讀取，缺資料一律 Unverifiable。--format 可選 json、sarif、junit、cef、otel。" },
+            new { mode = ComplianceDiffArg, scope = "", output = "JSON", description = "比較兩份 --compliance JSON 的控制項／ATT&CK 判定變化；不重新收集、不重新判定。" },
             new { mode = MerkleArg, scope = "", output = "JSON", description = "穩定事實的 SHA-256 Merkle 指紋；白名單＋排除敏感／非 Present／易變鍵，輸出只含鍵與雜湊。" },
             new { mode = SpeculationArg, scope = "", output = "JSON", description = "七項 infer.* 推測；每項都帶【推測】前綴與 Speculative 信任等級，並列信心、依據鍵與限制。不合規、不進 Merkle。" },
         };
@@ -685,6 +689,87 @@ public static class CliService
     }
 
     /// <summary>
+    /// 合規基準比較（<c>--compliance-diff</c>）：只讀兩份既有 JSON，不重新收集、不重新判定。
+    /// 退出碼：0＝判定全同；2＝有任何新增／消失／改善／退步／變動；1＝讀取或格式錯誤。
+    /// </summary>
+    private static int RunComplianceDiff(string[] args, TextWriter stdout, TextWriter stderr)
+    {
+        if (args.Length < 3 || args[1].StartsWith("--", StringComparison.Ordinal)
+            || args[2].StartsWith("--", StringComparison.Ordinal))
+        {
+            stderr.WriteLine($"{ComplianceDiffArg} 之後要接兩份 --compliance JSON 的路徑："
+                + $"{ComplianceDiffArg} <舊 JSON> <新 JSON>。");
+            return ExitError;
+        }
+
+        string beforeJson, afterJson;
+        try { beforeJson = File.ReadAllText(args[1]); }
+        catch (Exception ex) { stderr.WriteLine($"讀取舊檔失敗：{ex.Message}"); return ExitError; }
+        try { afterJson = File.ReadAllText(args[2]); }
+        catch (Exception ex) { stderr.WriteLine($"讀取新檔失敗：{ex.Message}"); return ExitError; }
+
+        ComplianceDiff diff;
+        try { diff = ComplianceDiffService.Compare(beforeJson, afterJson); }
+        catch (FormatException ex)
+        {
+            stderr.WriteLine($"格式不認得：{ex.Message}");
+            return ExitError;
+        }
+
+        int Count(IReadOnlyList<ComplianceItemChange> list, ComplianceChangeKind kind)
+            => list.Count(x => x.Kind == kind);
+
+        var payload = new
+        {
+            generatedAtUtc = DateTimeOffset.UtcNow,
+            scope = "compliance-diff",
+            schemaVersion = ComplianceDiffService.SchemaVersion,
+            before = new { path = args[1], controls = diff.ControlsBefore, attack = diff.TechniquesBefore },
+            after = new { path = args[2], controls = diff.ControlsAfter, attack = diff.TechniquesAfter },
+            summary = new
+            {
+                changed = diff.Controls.Count + diff.Techniques.Count,
+                controls = new
+                {
+                    improved = Count(diff.Controls, ComplianceChangeKind.Improved),
+                    regressed = Count(diff.Controls, ComplianceChangeKind.Regressed),
+                    changed = Count(diff.Controls, ComplianceChangeKind.Changed),
+                    added = Count(diff.Controls, ComplianceChangeKind.Added),
+                    removed = Count(diff.Controls, ComplianceChangeKind.Removed),
+                },
+                attack = new
+                {
+                    improved = Count(diff.Techniques, ComplianceChangeKind.Improved),
+                    regressed = Count(diff.Techniques, ComplianceChangeKind.Regressed),
+                    changed = Count(diff.Techniques, ComplianceChangeKind.Changed),
+                    added = Count(diff.Techniques, ComplianceChangeKind.Added),
+                    removed = Count(diff.Techniques, ComplianceChangeKind.Removed),
+                },
+            },
+            controls = diff.Controls,
+            attack = diff.Techniques,
+            note = "只比較兩份 JSON 的判定，不重新收集或驗簽。"
+                 + "Satisfied／Mitigated→其他＝regressed（含證據變成 Unverifiable）；"
+                 + "其他→Satisfied／Mitigated＝improved；其餘判定變動＝changed。"
+                 + "方向只是排序，不是風險評分；退出碼 0 只代表兩份判定相同。",
+        };
+        string json = JsonSerializer.Serialize(payload, JsonOptions);
+        string? outPath = OptionValue(args, OutArg);
+        try
+        {
+            if (outPath is not null) File.WriteAllText(outPath, json);
+            else stdout.WriteLine(json);
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"寫出失敗：{ex.Message}");
+            return ExitError;
+        }
+
+        return diff.Controls.Count == 0 && diff.Techniques.Count == 0 ? ExitOk : ExitPartial;
+    }
+
+    /// <summary>
     /// 穩定事實指紋模式（<c>--merkle</c>）：白名單事實 → canonical payload → SHA-256 Merkle 樹。
     /// 葉子與輸出<b>只含鍵與雜湊，不含值</b>；敏感事實、非 Present 事實、易變鍵一律排除並分類計數。
     /// 退出碼：0＝至少一片葉子；2＝沒有任何穩定事實；1＝收集或寫出失敗。
@@ -874,6 +959,7 @@ public static class CliService
               XinSpect --diff-report <舊報告> <新報告> [--out <檔案>]
               XinSpect --evidence-pack <目錄>
               XinSpect --compliance [--format json|sarif|junit|cef|otel] [--out <檔案>]
+              XinSpect --compliance-diff <舊 JSON> <新 JSON> [--out <檔案>]
               XinSpect --merkle [--out <檔案>]
               XinSpect --speculation [--out <檔案>]
               XinSpect --help
@@ -913,6 +999,10 @@ public static class CliService
                               --format json（預設）／sarif（2.1.0，CI 用）／junit（XML，CI 用）／
                               cef（逐行 Common Event Format）／otel（OTLP/JSON logs）；
                               SARIF 把 Unverifiable 標 warning、JUnit 標 failure，兩者都不會顯示為綠。
+              compliance-diff 比較兩份 --compliance JSON 的判定變化：只讀檔案，不重新收集或驗簽。
+                              Satisfied／Mitigated→其他＝regressed（含證據變成 Unverifiable）；
+                              其他→Satisfied／Mitigated＝improved；其餘判定變動＝changed。
+                              這只是判定差異，不是風險評分；0 只代表兩份判定相同。
               merkle          穩定事實的 SHA-256 Merkle 指紋：白名單鍵＋排除 Sensitive／非 Present／
                               易變鍵，逐葉排序後兩兩合併（落單者原樣提升）。canonical payload 為
                               key＋0x1F＋value＋0x1F＋trust＋0x1F＋source，<b>不含時間</b>；
@@ -949,6 +1039,8 @@ public static class CliService
               --stdin-batch     0＝至少一個非空查詢；2＝空 stdin 或未命中；1＝讀取／收集失敗。
               --compliance      0＝全部 Satisfied／NotApplicable；2＝有任何 NotSatisfied／Unverifiable
                                 或 Exposed／Unknown；1＝致命。
+              --compliance-diff 0＝兩份判定全同；2＝有任何新增／消失／改善／退步／變動；
+                                1＝讀檔失敗或格式不認得。0 不代表機器安全。
               --merkle          0＝至少一片葉子；2＝沒有任何穩定事實可建樹；1＝致命。
               --speculation     0＝七項推測都產生；2＝推測項數不是七（規則集合漂移）；1＝致命。
                                 0 不代表機器安全或合規——推測不是量測。

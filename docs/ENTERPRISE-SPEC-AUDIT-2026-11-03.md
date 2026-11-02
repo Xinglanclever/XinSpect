@@ -2,7 +2,7 @@
 
 - 日期：2026-11-03
 - 對象：`xinspect_enterprise_grand_specification.md`（八大模組、宣稱 2,000+ 事實鍵）
-- 基線：XinSpect 3.13（`v3.13`，commit `e43f118`），事實鍵目錄 1,174 把、動態家族 68 個、測試基線 7,858
+- 基線：XinSpect 3.13（`v3.13`，commit `e43f118`），事實鍵目錄 1,174 把、動態家族 68 個、測試基線 7,863
 - 方法：逐條比對現有 `Services/` 生產者與 `FactKeyCatalog`；再用本機 Gemini 3.8 Flash（桌面版）對八條關鍵技術宣稱做對抗性判讀；每一條判讀都回頭對程式碼／規格驗證，不把模型輸出當結論
 
 ---
@@ -172,7 +172,7 @@ MSR、PCI ECAM、SMBus、SPI 不是可以任意平行的一般記憶體：
 | TPM Quote 印證／RFC 3161 時間戳 | C／B | Quote 需真的向 TPM 發命令並驗簽；TSA 需網路。本輪刻意不做，控制項維持 Unverifiable。 |
 | SIEM CEF／OTel 輸出 | **已完成（本輪）** | `--compliance --format cef` 或 `--format otel`；純格式化、只寫 stdout／檔案，不主動連 SIEM。OCSF 未做。 |
 | CIS／DISA STIG 條目 | B | 需要維護對照表與版本；不是硬體讀取問題。 |
-| 與 baseline 的差異／竄改位元遮罩 | A／B | 既有的快照 diff／審計鏈可延伸；不是新硬體面。 |
+| 與 baseline 的差異／竄改位元遮罩 | **差異已完成** | `--compliance-diff` 比較兩份合規 JSON 的判定；只讀檔、不重新收集。竄改位元遮罩未做。 |
 
 ---
 
@@ -201,11 +201,15 @@ MSR、PCI ECAM、SMBus、SPI 不是可以任意平行的一般記憶體：
 
 ```text
 XinSpect --compliance [--format json|sarif|junit|cef|otel] [--out <檔案>]
+XinSpect --compliance-diff <舊 JSON> <新 JSON> [--out <檔案>]
 XinSpect --merkle [--out <檔案>]
 XinSpect --speculation [--out <檔案>]
 ```
 
 - `--compliance` 退出碼：0＝全部 Satisfied／NotApplicable；2＝有任何 NotSatisfied／Unverifiable 或 Exposed／Unknown；1＝致命。
+- `--compliance-diff` 退出碼：0＝兩份判定全同；2＝有任何新增／消失／改善／退步／變動；1＝讀檔或格式錯誤。
+  Satisfied／Mitigated→其他（含 Unverifiable）＝regressed；其他→Satisfied／Mitigated＝improved；其餘判定變動＝changed。
+  這只是判定差異，不是風險評分；0 不代表機器安全。
 - `--format`：`json`（預設）、`sarif`（2.1.0）、`junit`（XML）、`cef`（逐行 Common Event Format）、`otel`（OTLP/JSON logs）；不認得的值或缺少值回 1，不會默默退回 JSON。
   SARIF 只把非通過項變成 result（NotSatisfied／Exposed＝error，Unverifiable／Unknown＝warning）；
   JUnit 把 Unverifiable／Unknown 記成 failure 而不是 skipped，避免 CI 顯示綠色；
@@ -215,7 +219,7 @@ XinSpect --speculation [--out <檔案>]
 - `--merkle` 退出碼：0＝至少一片葉子；2＝沒有穩定事實；1＝致命。
 - `--speculation` 退出碼：0＝七項都產生；2＝推測項數不是七（規則集合漂移）；1＝致命。
   **0 不代表機器安全或合規**——推測不是量測。
-- headless 模式目錄由 10 增為 13（compliance、merkle、speculation）；`Tests/AutomationAndGuidanceFactsTests.cs` 已同步。
+- headless 模式目錄由 10 增為 14（compliance、compliance-diff、merkle、speculation）；`Tests/AutomationAndGuidanceFactsTests.cs` 已同步。
 
 ### 4.4 推測層（`--speculation`）
 
@@ -329,12 +333,12 @@ XinSpect --speculation [--out <檔案>]
 
 ## 7. 驗證紀錄
 
-- 新增測試：`Tests/ComplianceMappingTests.cs`、`Tests/FactMerkleTests.cs`、`Tests/CliComplianceTests.cs`、`Tests/ComplianceExportTests.cs`、`Tests/ComplianceExportSpecTests.cs`、`Tests/SpeculationFactsTests.cs`。
+- 新增測試：`Tests/ComplianceMappingTests.cs`、`Tests/FactMerkleTests.cs`、`Tests/CliComplianceTests.cs`、`Tests/ComplianceExportTests.cs`、`Tests/ComplianceExportSpecTests.cs`、`Tests/ComplianceDiffTests.cs`、`Tests/SpeculationFactsTests.cs`。
 - 新增規格：`docs/spec/compliance-export.v1.md`（五種格式的欄位、跳脫與 severity 對照）。
-- 更新：`Tests/AutomationAndGuidanceFactsTests.cs`（headless 10 → 13）。
+- 更新：`Tests/AutomationAndGuidanceFactsTests.cs`（headless 10 → 14）。
 - 守門子集：`--filter "Speculation|FactKeyCatalog|AutomationAndGuidance"` → **47 passed, 0 failed**。
-- 完整套件：基線 **7,858**；本機因既有 NVMe 核心不可中斷等待，實跑排除 1 條硬體限時測試
-  （`NvmeOverlappedIoTests.真的卡住的碟也要在外層預算內交還控制權`），其餘 **7,857 passed, 0 failed**。
+- 完整套件：基線 **7,863**；本機因既有 NVMe 核心不可中斷等待，實跑排除 1 條硬體限時測試
+  （`NvmeOverlappedIoTests.真的卡住的碟也要在外層預算內交還控制權`），其餘 **7,862 passed, 0 failed**。
   該測試未被跳過、未被改寫，健康機器上照常執行；排除原因是本機磁碟探針會卡住行程，不是本輪程式碼。
 - 目錄：1,174 把靜態鍵（+7 把 `infer.*`）；動態家族 68 個不變。
 - 真機 e2e：
