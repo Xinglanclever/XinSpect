@@ -93,7 +93,34 @@ CEF:0|XinSpect|XinSpect|<version>|<id>|<name>|<severity>|rt=<epoch-ms> <extensio
   - `attributes`：`compliance.id` 或 `attack.technique.id`、`compliance.framework`、`compliance.status`、
     `compliance.keys`（`arrayValue.stringValue[]`）。
 
-## 7. 版本與變更
+## 7. 基準比較（`--compliance-diff`）
+
+輸入是兩份 `scope = "compliance"` 的 JSON；輸出根物件：
+
+| 欄位 | 說明 |
+|---|---|
+| `scope` | 固定 `compliance-diff` |
+| `schemaVersion` | 目前為 `1` |
+| `before`／`after` | 兩份輸入的路徑與控制項／ATT&CK 數量 |
+| `summary` | `changed` 總數，以及控制項／ATT&CK 各自的改善、退步、變動、新增、消失計數 |
+| `controls`／`attack` | 只列有變化的項目：`id`、`kind`、`before`、`after` |
+
+`kind` 的定義：
+
+| kind | 條件 |
+|---|---|
+| `Added` | 新檔有、舊檔沒有 |
+| `Removed` | 舊檔有、新檔沒有 |
+| `Improved` | 變成 `Satisfied`／`Mitigated` |
+| `Regressed` | 從 `Satisfied`／`Mitigated` 變成其他（**含變成 `Unverifiable`**） |
+| `Changed` | 其他判定變動 |
+
+- 這是判定差異，不是風險評分；不要把它當成「改善了幾個安全問題」的總分。
+- 格式不認得（不是合法 JSON、不是 `scope=compliance`、缺 `controls`、id 重複）時回退出碼 1，不輸出半份結果。
+- 退出碼：0＝兩份判定全同；2＝有任何變化。0 只代表兩份判定相同，不代表機器安全。
+- 不重新收集事實、不重新判定、不驗簽、不連網。
+
+## 8. 版本與變更
 
 - 本規格版本為 v1，對應 `ComplianceMappingService.SchemaVersion = 1`。
 - 新增欄位是相容變更；刪除欄位、改變判定語意或把 `Unverifiable` 改成通過，都是破壞性變更，必須升版。

@@ -42,5 +42,8 @@ public class ComplianceExportSpecTests
         Assert.Contains("`Unverifiable` 永遠不是通過", spec, StringComparison.Ordinal);
         Assert.Contains("不得被寫成 skipped、INFO 或「無 finding」", spec, StringComparison.Ordinal);
         Assert.Contains("`NotSatisfied`／`Unverifiable`／`Exposed`／`Unknown`", spec, StringComparison.Ordinal);
+        Assert.Contains("compliance-diff", spec, StringComparison.Ordinal);
+        Assert.Contains("`Regressed`", spec, StringComparison.Ordinal);
+        Assert.Contains("含變成 `Unverifiable`", spec, StringComparison.Ordinal);
     }
 }
