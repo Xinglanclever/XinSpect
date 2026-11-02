@@ -36,10 +36,14 @@ public class AutomationAndGuidanceFactsTests
 
         // 8 → 9（2026-10-25 第 272 輪）：--diff-report（U10-PF-0002 報告鍵級對照）進 headless 目錄。
         // 9 → 10（同輪續）：--evidence-pack（ev.manifest／ev.chain.verify 的生產端）進 headless 目錄。
-        Assert.Equal(10, doc.RootElement.GetArrayLength());
+        // 10 → 12（2026-11-03）：--compliance（NIST 800-147／155／193＋ATT&CK 對照）與
+        // --merkle（穩定事實 SHA-256 指紋）進 headless 目錄。
+        // 12 → 13（同日）：--speculation（七項 infer.* 推測，三重標註）進 headless 目錄。
+        Assert.Equal(13, doc.RootElement.GetArrayLength());
         Assert.Contains("--json", json, StringComparison.Ordinal);
         Assert.Contains(CliService.StdinBatchArg, json, StringComparison.Ordinal);
         Assert.Contains("零網路", json, StringComparison.Ordinal);
+        Assert.Contains(CliService.SpeculationArg, json, StringComparison.Ordinal);
     }
 
     [Fact]

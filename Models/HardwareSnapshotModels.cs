@@ -9,10 +9,16 @@ public static class HardwareSnapshotSchema
 }
 
 /// <summary>事實的可信程度；這是來源品質標示，不是保證。</summary>
+/// <remarks>
+/// <see cref="Speculative"/> 是 2026-11-03 新增的層級：<b>由間接事實推導、但沒有直接量測或簽章驗證</b>的結果。
+/// 它必須同時出現在鍵名（<c>infer.*</c>）、值的前綴（<c>【推測】</c>）與此信任等級上，
+/// 讓任何只讀 JSON 的消費者也能看出「這不是量測」。合規判定與 Merkle 指紋都不得把它當證據。
+/// </remarks>
 [JsonConverter(typeof(JsonStringEnumConverter<FactTrustLevel>))]
 public enum FactTrustLevel
 {
     Unknown,
+    Speculative,
     Reported,
     Derived,
     Measured,

@@ -41,7 +41,7 @@
         "numericValue": { "type": ["number", "null"], "description": "可計算的數值（若值有數字語意）；沒有則 null。" },
         "unit": { "type": ["string", "null"] },
         "source": { "type": "string", "description": "資料來源（暫存器／WMI／API 名稱）。非自造驗證來源是本工具的硬性要求。" },
-        "trust": { "enum": ["Unknown", "Reported", "Derived", "Measured"], "description": "來源品質標示：Unknown（不可用）／Reported（系統自己記的）／Derived（由其他事實推導）／Measured（本工具量到）。這是標示不是保證。" },
+        "trust": { "enum": ["Unknown", "Reported", "Derived", "Measured", "Speculative"], "description": "來源品質標示：Unknown（不可用）／Reported（系統自己記的）／Derived（由其他事實推導）／Measured（本工具量到）／Speculative（推測，非量測；只出現在 infer.* 鍵，值帶【推測】前綴，且不進合規判定與 Merkle）。這是標示不是保證。" },
         "sensitive": { "type": "boolean" },
         "measuredAtUtc": { "type": "string", "format": "date-time" },
         "availability": { "enum": ["Present", "NotSupported", "InsufficientPrivilege", "ReadError", "NotApplicable", "Unknown"], "description": "可用性契約的型別承載。Present＝讀到且確認（唯一可拿去下結論的狀態）；Unknown＝有值但未確認（快取殘留、來源可疑、多來源尚未仲裁）；NotApplicable／NotSupported＝本機環境事實（不是故障）；InsufficientPrivilege／ReadError＝試過但沒拿到。**2.36 起新增 Unknown**：這是 v1 之內的加法擴充——舊快照（不含 Unknown）仍可讀；但以本 schema 驗證的舊版讀者會拒收含 Unknown 的新快照，因此跨版本交換前請先確認對方支援。格上的強弱序與傳播規則見 docs/spec/METHODOLOGY.md。" },

@@ -35,6 +35,9 @@ public static class CliService
     public const string StdinBatchArg = "--stdin-batch";
     public const string DiffReportArg = "--diff-report";
     public const string OnlyArg = "--only";
+    public const string ComplianceArg = "--compliance";
+    public const string MerkleArg = "--merkle";
+    public const string SpeculationArg = "--speculation";
 
     /// <summary>U10-PF／P1-071／P1-072 追蹤鍵：建立可第三方驗證的證據包（<c>--evidence-pack 目錄</c>）。
     /// 這個命令是 <c>ev.manifest</c> 與 <c>ev.chain.verify</c> 唯一的生產端——兩份產物只有
@@ -88,6 +91,12 @@ public static class CliService
             return RunDiffReport(args, stdout, stderr);
         if (args[0] == EvidencePackArg)
             return RunEvidencePack(args, collect, stdout, stderr);
+        if (args[0] == ComplianceArg)
+            return RunCompliance(args, collect, stdout, stderr);
+        if (args[0] == MerkleArg)
+            return RunMerkle(args, collect, stdout, stderr);
+        if (args[0] == SpeculationArg)
+            return RunSpeculation(args, collect, stdout, stderr);
         if (args[0] != JsonArg)
         {
             stderr.WriteLine($"未知引數「{args[0]}」。用 --help 看用法。");
@@ -194,6 +203,9 @@ public static class CliService
             new { mode = StdinBatchArg, scope = "", output = "JSONL", description = "stdin 每行一個 key 前綴；每行輸出一個查詢結果物件。" },
             new { mode = DiffReportArg, scope = "", output = "JSON", description = "兩份匯出報告（HTML／MD／TXT）鍵級互比；輸出只含鍵名與計數，不含值。" },
             new { mode = EvidencePackArg, scope = "", output = "JSON", description = "建立可第三方驗證的證據包（事實 JSON＋審計鏈副本＋manifest 雜湊清單＋互驗結果）；這是 ev.manifest 與 ev.chain.verify 唯一的生產端。" },
+            new { mode = ComplianceArg, scope = "", output = "JSON", description = "把既有事實對到 NIST SP 800-147／155／193 與 MITRE ATT&CK；不新增硬體讀取，缺資料一律 Unverifiable。" },
+            new { mode = MerkleArg, scope = "", output = "JSON", description = "穩定事實的 SHA-256 Merkle 指紋；白名單＋排除敏感／非 Present／易變鍵，輸出只含鍵與雜湊。" },
+            new { mode = SpeculationArg, scope = "", output = "JSON", description = "七項 infer.* 推測；每項都帶【推測】前綴與 Speculative 信任等級，並列信心、依據鍵與限制。不合規、不進 Merkle。" },
         };
         return JsonSerializer.Serialize(payload, JsonOptions);
     }
@@ -585,6 +597,176 @@ public static class CliService
         return built.ManifestValid && built.ChainValid ? ExitOk : ExitPartial;
     }
 
+    /// <summary>
+    /// 標準對照模式（<c>--compliance</c>）：把既有事實翻成 NIST SP 800-147／155／193 與
+    /// MITRE ATT&amp;CK 的語言。<b>不新增任何硬體讀取</b>；讀不到的控制項一律 Unverifiable。
+    /// 退出碼：0＝全部 Satisfied／NotApplicable；2＝有任何 NotSatisfied／Unverifiable／Exposed／Unknown；
+    /// 1＝收集或寫出失敗。Unverifiable 也回 2——「無法判斷」不該被 CI 讀成通過。
+    /// </summary>
+    private static int RunCompliance(string[] args, Func<IReadOnlyList<HardwareFact>> collect,
+        TextWriter stdout, TextWriter stderr)
+    {
+        WriteGate.Reset();
+        IReadOnlyList<HardwareFact> facts;
+        try { facts = collect(); }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"收集失敗：{ex.GetType().Name}：{ex.Message}");
+            return ExitError;
+        }
+
+        var report = ComplianceMappingService.Evaluate(facts);
+        var controls = report.Controls;
+        var techniques = report.Techniques;
+        var payload = new
+        {
+            generatedAtUtc = DateTimeOffset.UtcNow,
+            scope = "compliance",
+            schemaVersion = ComplianceMappingService.SchemaVersion,
+            summary = new
+            {
+                controls = controls.Count,
+                satisfied = controls.Count(c => c.Status == ComplianceStatus.Satisfied),
+                notSatisfied = controls.Count(c => c.Status == ComplianceStatus.NotSatisfied),
+                unverifiable = controls.Count(c => c.Status == ComplianceStatus.Unverifiable),
+                notApplicable = controls.Count(c => c.Status == ComplianceStatus.NotApplicable),
+                techniques = techniques.Count,
+                mitigated = techniques.Count(t => t.Exposure == AttackExposure.Mitigated),
+                exposed = techniques.Count(t => t.Exposure == AttackExposure.Exposed),
+                unknown = techniques.Count(t => t.Exposure == AttackExposure.Unknown),
+            },
+            controls,
+            attack = techniques,
+            note = "本模式只把既有事實對到標準條文，沒有驗簽、沒有 TPM Quote、沒有觸發復原——"
+                 + "這三類控制項刻意維持 Unverifiable。Satisfied 是「本次看到的事實支持這條控制」，"
+                 + "不是合規證書；Unverifiable 也回退出碼 2。",
+        };
+        string json = JsonSerializer.Serialize(payload, JsonOptions);
+        string? outPath = OptionValue(args, OutArg);
+        try
+        {
+            if (outPath is not null) File.WriteAllText(outPath, json);
+            else stdout.WriteLine(json);
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"寫出失敗：{ex.Message}");
+            return ExitError;
+        }
+
+        bool clean = controls.All(c => c.Status is ComplianceStatus.Satisfied or ComplianceStatus.NotApplicable)
+            && techniques.All(t => t.Exposure is AttackExposure.Mitigated or AttackExposure.NotApplicable);
+        return clean ? ExitOk : ExitPartial;
+    }
+
+    /// <summary>
+    /// 穩定事實指紋模式（<c>--merkle</c>）：白名單事實 → canonical payload → SHA-256 Merkle 樹。
+    /// 葉子與輸出<b>只含鍵與雜湊，不含值</b>；敏感事實、非 Present 事實、易變鍵一律排除並分類計數。
+    /// 退出碼：0＝至少一片葉子；2＝沒有任何穩定事實；1＝收集或寫出失敗。
+    /// </summary>
+    private static int RunMerkle(string[] args, Func<IReadOnlyList<HardwareFact>> collect,
+        TextWriter stdout, TextWriter stderr)
+    {
+        WriteGate.Reset();
+        IReadOnlyList<HardwareFact> facts;
+        try { facts = collect(); }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"收集失敗：{ex.GetType().Name}：{ex.Message}");
+            return ExitError;
+        }
+
+        var tree = FactMerkleService.Build(facts);
+        var payload = new
+        {
+            generatedAtUtc = DateTimeOffset.UtcNow,
+            scope = "merkle",
+            schemaVersion = FactMerkleService.SchemaVersion,
+            algorithm = FactMerkleService.Algorithm,
+            canonicalization = "key ＋ 0x1F ＋ value ＋ 0x1F ＋ trust ＋ 0x1F ＋ source（不含 MeasuredAtUtc）",
+            leafCount = tree.LeafCount,
+            rootSha256 = tree.RootSha256,
+            leaves = tree.Leaves,
+            excluded = tree.Excluded,
+            note = tree.LeafCount == 0
+                ? "沒有穩定事實可建樹——空樹不是指紋，也不代表機器沒有問題。"
+                : "同一台機器、同樣組態與來源文字，跨次收集應得到同一個 root；"
+                  + "root 變了代表白名單內的事實變了，不必然是壞事。輸出不含值。",
+        };
+        string json = JsonSerializer.Serialize(payload, JsonOptions);
+        string? outPath = OptionValue(args, OutArg);
+        try
+        {
+            if (outPath is not null) File.WriteAllText(outPath, json);
+            else stdout.WriteLine(json);
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"寫出失敗：{ex.Message}");
+            return ExitError;
+        }
+        return tree.LeafCount > 0 ? ExitOk : ExitPartial;
+    }
+
+    /// <summary>
+    /// 推測模式（<c>--speculation</c>）：把既有事實餵給 <see cref="SpeculationFactsService"/>，
+    /// 產生七項 <c>infer.*</c>。每一項都同時帶鍵名前綴、值前綴與 <c>Speculative</c> 信任等級。
+    /// 退出碼：0＝七項都產生；2＝有推測項未產生（正常不該發生，發生代表規則集合漂移）；
+    /// 1＝收集或寫出失敗。推測不是錯誤，所以 0 不代表「機器沒問題」。
+    /// </summary>
+    private static int RunSpeculation(string[] args, Func<IReadOnlyList<HardwareFact>> collect,
+        TextWriter stdout, TextWriter stderr)
+    {
+        WriteGate.Reset();
+        IReadOnlyList<HardwareFact> facts;
+        try { facts = collect(); }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"收集失敗：{ex.GetType().Name}：{ex.Message}");
+            return ExitError;
+        }
+
+        var items = SpeculationFactsService.Evaluate(facts, DateTimeOffset.UtcNow);
+        var payload = new
+        {
+            generatedAtUtc = DateTimeOffset.UtcNow,
+            scope = "speculation",
+            schemaVersion = SpeculationFactsService.SchemaVersion,
+            label = SpeculationFactsService.Label,
+            defaultTrust = FactTrustLevel.Speculative.ToString(),
+            count = items.Count,
+            items = items.Select(x => new
+            {
+                key = x.Fact.Key,
+                name = x.Fact.Name,
+                value = x.Fact.Value,
+                trust = x.Fact.Trust.ToString(),
+                availability = x.Fact.Availability.ToString(),
+                confidence = x.Confidence,
+                basisKeys = x.BasisKeys,
+                basis = x.Basis,
+                limitations = x.Limitations,
+            }),
+            note = "全部七項都是間接推導：不是量測、不是簽章驗證、不是合規證據。"
+                 + "鍵名前綴 infer.、值前綴【推測】、信任等級 Speculative 三者同時存在；"
+                 + "合規判定與 Merkle 指紋都不採用本層。退出碼 0 只代表「推測已產生」，"
+                 + "不代表機器安全或合規。",
+        };
+        string json = JsonSerializer.Serialize(payload, JsonOptions);
+        string? outPath = OptionValue(args, OutArg);
+        try
+        {
+            if (outPath is not null) File.WriteAllText(outPath, json);
+            else stdout.WriteLine(json);
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"寫出失敗：{ex.Message}");
+            return ExitError;
+        }
+        return items.Count == 7 ? ExitOk : ExitPartial;
+    }
+
     private static int RunDiffReport(string[] args, TextWriter stdout, TextWriter stderr)
     {
         if (args.Length < 3 || args[1].StartsWith("--", StringComparison.Ordinal)
@@ -666,6 +848,9 @@ public static class CliService
               XinSpect --stdin-batch
               XinSpect --diff-report <舊報告> <新報告> [--out <檔案>]
               XinSpect --evidence-pack <目錄>
+              XinSpect --compliance [--out <檔案>]
+              XinSpect --merkle [--out <檔案>]
+              XinSpect --speculation [--out <檔案>]
               XinSpect --help
 
             範圍：
@@ -697,6 +882,18 @@ public static class CliService
                               ev.chain.verify 唯一的生產端</b>——那兩把鍵必須在同一刻、兩份產物
                               都在手上時才算得出來（拿「當下的鏈」比「過去的 manifest」會永遠對不上）。
                               退出碼 0＝互驗通過、2＝包已建立但互驗未通過（原因在 verify.json）。
+              compliance      把既有事實對到 NIST SP 800-147／155／193 與 MITRE ATT&CK。
+                              <b>不新增任何硬體讀取</b>：更新簽章、遠端 TPM Quote、韌體復原
+                              這三類沒有真正驗證，因此刻意維持 Unverifiable；缺資料絕不升成通過。
+              merkle          穩定事實的 SHA-256 Merkle 指紋：白名單鍵＋排除 Sensitive／非 Present／
+                              易變鍵，逐葉排序後兩兩合併（落單者原樣提升）。canonical payload 為
+                              key＋0x1F＋value＋0x1F＋trust＋0x1F＋source，<b>不含時間</b>；
+                              輸出只含鍵與雜湊，不含值。
+              speculation     七項 infer.* 推測（Boot Guard 狀態、CXL 角色、韌體復原、
+                              更新驗證、TPM Quote、UEFI PQC、範圍聲明）。每一項都同時帶
+                              infer. 鍵名前綴、【推測】值前綴與 Speculative 信任等級，
+                              並列出信心、依據鍵與限制。<b>推測不是量測、不是合規證據，
+                              也不進 Merkle 指紋</b>；退出碼 0 只代表推測已產生。
 
             選項：
               --query <前綴>   只輸出 key 以該前綴開頭的事實（例：--query platform.）
@@ -721,6 +918,11 @@ public static class CliService
               --diff-report     0＝鍵級全同；2＝有差異（新增／消失／變化的鍵在輸出）；
                                 1＝致命（引數錯、讀檔失敗、格式不認得）。
               --stdin-batch     0＝至少一個非空查詢；2＝空 stdin 或未命中；1＝讀取／收集失敗。
+              --compliance      0＝全部 Satisfied／NotApplicable；2＝有任何 NotSatisfied／Unverifiable
+                                或 Exposed／Unknown；1＝致命。
+              --merkle          0＝至少一片葉子；2＝沒有任何穩定事實可建樹；1＝致命。
+              --speculation     0＝七項推測都產生；2＝推測項數不是七（規則集合漂移）；1＝致命。
+                                0 不代表機器安全或合規——推測不是量測。
             讀不到的事實如實帶 availability 與原因，絕不以 0／典型值頂替。
             """);
     }

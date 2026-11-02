@@ -86,6 +86,7 @@ public static partial class HardwareSnapshotService
         FactTrustLevel.Measured => "直接量測",
         FactTrustLevel.Derived => "衍生計算",
         FactTrustLevel.Reported => "來源回報",
+        FactTrustLevel.Speculative => "推測（非量測）",
         _ => "未知",
     };
 
