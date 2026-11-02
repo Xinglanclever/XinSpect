@@ -276,6 +276,82 @@ public static class ComplianceExportService
         return Encoding.UTF8.GetString(buffer.ToArray());
     }
 
+    /// <summary>
+    /// CEF（Common Event Format）逐行輸出：每個控制項／ATT&amp;CK 技術一行，供 SIEM 收取。
+    /// 只做格式轉譯，不連網；severity 由判定映射，不另做風險評分。
+    /// </summary>
+    public static string ToCef(ComplianceReport report, DateTimeOffset generatedAtUtc)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        string version = ToolVersion();
+        var lines = new List<string>();
+        foreach (var control in report.Controls)
+        {
+            lines.Add(CefLine("XinSpect", version, control.Id,
+                $"{control.Framework} {control.Title}",
+                Severity(control.Status), generatedAtUtc,
+                Ext(("externalId", control.Id), ("cat", control.Framework),
+                    ("cs1Label", "Status"), ("cs1", control.Status.ToString()),
+                    ("cs2Label", "EvidenceKeys"),
+                    ("cs2", string.Join('、', control.Evidence.Select(e => e.Key))),
+                    ("msg", control.Reason))));
+        }
+
+        foreach (var technique in report.Techniques)
+        {
+            lines.Add(CefLine("XinSpect", version, technique.Id,
+                $"MITRE ATT&CK {technique.Id} {technique.Name}",
+                Severity(technique.Exposure), generatedAtUtc,
+                Ext(("externalId", technique.Id), ("cat", "MITRE-ATTACK"),
+                    ("cs1Label", "Exposure"), ("cs1", technique.Exposure.ToString()),
+                    ("cs2Label", "FactKeys"),
+                    ("cs2", string.Join('、', technique.FactKeys)),
+                    ("msg", technique.Reason))));
+        }
+
+        return string.Join('\n', lines);
+    }
+
+    private static string CefLine(string vendor, string version, string id, string name, int severity,
+        DateTimeOffset at, string extension)
+        => $"CEF:0|{EscapeHeader(vendor)}|{EscapeHeader("XinSpect")}|{EscapeHeader(version)}|"
+           + $"{EscapeHeader(id)}|{EscapeHeader(name)}|{severity}|"
+           + $"rt={at.ToUnixTimeMilliseconds()} {extension}";
+
+    private static string Ext(params (string Key, string Value)[] fields)
+        => string.Join(' ', fields.Select(f => $"{f.Key}={EscapeExtension(f.Value)}"));
+
+    private static int Severity(ComplianceStatus status) => status switch
+    {
+        ComplianceStatus.NotSatisfied => 8,
+        ComplianceStatus.Unverifiable => 4,
+        ComplianceStatus.Satisfied => 2,
+        _ => 0,
+    };
+
+    private static int Severity(AttackExposure exposure) => exposure switch
+    {
+        AttackExposure.Exposed => 8,
+        AttackExposure.Unknown => 4,
+        AttackExposure.Mitigated => 2,
+        _ => 0,
+    };
+
+    /// <summary>CEF 標頭：反斜線與直線要轉義；換行不能出現在單行事件裡。</summary>
+    private static string EscapeHeader(string value)
+        => value.Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("|", "\\|", StringComparison.Ordinal)
+            .Replace("\r", "\\r", StringComparison.Ordinal)
+            .Replace("\n", "\\n", StringComparison.Ordinal);
+
+    /// <summary>CEF 延伸欄位：反斜線與等號要轉義；換行同理。</summary>
+    private static string EscapeExtension(string value)
+        => value.Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("=", "\\=", StringComparison.Ordinal)
+            .Replace("\r", "\\r", StringComparison.Ordinal)
+            .Replace("\n", "\\n", StringComparison.Ordinal);
+
     private static bool IsFailure(ComplianceControl control)
         => control.Status is ComplianceStatus.NotSatisfied or ComplianceStatus.Unverifiable;
 

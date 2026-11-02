@@ -21,7 +21,7 @@
 
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-7852%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-7855%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 ![商業授權](https://img.shields.io/badge/license-%E5%95%86%E6%A5%AD%E6%8E%88%E6%AC%8A%E5%8F%AF%E8%AB%87-8B5CF6)
@@ -50,9 +50,9 @@
 | 服務檔 | **664** | `find Services -name '*.cs' \| wc -l` |
 | 全域 C# 檔 | **1,565** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`work/`、`publish-*/`、`.git/` |
 | 版本紀錄筆數 | **119** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
-| 專案測試基線 | **7,852** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
+| 專案測試基線 | **7,855** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
 
-**這張表不能證明什麼。** 1,174 把鍵不是 1,174 個正確答案；65 頁不是 65 個好設計；7,852 條測試不是 7,852 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
+**這張表不能證明什麼。** 1,174 把鍵不是 1,174 個正確答案；65 頁不是 65 個好設計；7,855 條測試不是 7,855 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
 
 ---
 
@@ -612,7 +612,7 @@
 4. 畫面數：數 `Nav/PageRegistry.cs` 的 `Key =` 條目（本版 65）。
 5. 說明條目數：數 `Nav/HelpCatalog.cs` 的 `Entries` 成員（本版 288）。
 6. 服務檔數：`find Services -name '*.cs' | wc -l`（本版 664）。
-7. 測試數：`dotnet test` 的總計，或讀 `Tests/TestSuiteBaseline.cs`（本版 7,852）。
+7. 測試數：`dotnet test` 的總計，或讀 `Tests/TestSuiteBaseline.cs`（本版 7,855）。
 8. 主程式大小：Release 頁面的 `XinSpect.exe` 位元組數（本版 34,268,971）。
 9. 版本紀錄筆數：數 `Nav/ChangelogCatalog.cs` 的 `Entries`（本版 119）。
 10. 孤兒鍵：把目錄鍵與 `Views/`、`Nav/` 兩邊的出口對照（第 2 部給了方法與本版結果）。
@@ -625,7 +625,7 @@
 
 ### 0.10 時態與引號的規則
 
-- **現在式宣稱**（「本版有 7,852 條測試」）只用在有守門的數字上。
+- **現在式宣稱**（「本版有 7,855 條測試」）只用在有守門的數字上。
 - **過去式故事**（「v2.53 的標籤沒被推上去」）用來說明規則的來源，寫成故事而不是規則。
 - **未成文** 是一個正式標記，不是修辭。看到它代表：這件事程式中確實存在某種行為，但沒有人把它寫成可驗證的文件。
 - 引號裡的句子如果出自程式註解或程式碼，會標明檔案；如果出自本文件的作者判斷，會明白用「這份文件認為」開頭。
@@ -8632,7 +8632,7 @@
 2. **可管線**：退出碼與 JSON 讓它能被排程、被 CI、被稽核流程使用，而不需要人去點畫面。
 3. **可覆核**：使用者可以用命令列重跑一次畫面上看到的東西，**這是「畫面上的數字不是黑箱」最直接的證明方式**。
 
-**本版另外三個證據出口**：`--compliance` 把既有事實對到 NIST SP 800-147／155／193 與 MITRE ATT&CK，缺資料一律 `Unverifiable`；預設輸出 JSON，另可加 `--format sarif`（SARIF 2.1.0）或 `--format junit`（JUnit XML）餵給 CI——兩者都讓 `Unverifiable` 維持可見（SARIF 為 warning、JUnit 為 failure），不會被管線讀成綠色。`--merkle` 對穩定的白名單事實建 SHA-256 Merkle 樹，排除敏感、非 `Present` 與易變鍵，輸出只含鍵與雜湊；`--speculation` 產生七項 `infer.*` 推測，每項同時帶 `infer.` 鍵名前綴、`【推測】` 值前綴與 `Speculative` 信任等級，並列出信心、依據鍵與限制。**推測不進合規判定、也不進 Merkle 指紋**——這一層的存在是為了誠實地說「只能猜到這裡」，不是為了把猜測升格成證據。
+**本版另外三個證據出口**：`--compliance` 把既有事實對到 NIST SP 800-147／155／193 與 MITRE ATT&CK，缺資料一律 `Unverifiable`；預設輸出 JSON，另可加 `--format sarif`（SARIF 2.1.0）、`--format junit`（JUnit XML）或 `--format cef`（逐行 Common Event Format）餵給 CI／SIEM——三者都讓 `Unverifiable` 維持可見（SARIF 為 warning、JUnit 為 failure、CEF severity 4），不會被管線讀成綠色。`--merkle` 對穩定的白名單事實建 SHA-256 Merkle 樹，排除敏感、非 `Present` 與易變鍵，輸出只含鍵與雜湊；`--speculation` 產生七項 `infer.*` 推測，每項同時帶 `infer.` 鍵名前綴、`【推測】` 值前綴與 `Speculative` 信任等級，並列出信心、依據鍵與限制。**推測不進合規判定、也不進 Merkle 指紋**——這一層的存在是為了誠實地說「只能猜到這裡」，不是為了把猜測升格成證據。
 
 ### 9.2 退出碼：管線唯一該看的東西
 
@@ -8708,11 +8708,11 @@
 | 項目 | 數量 | 數法 |
 |---|---:|---|
 | 測試檔 | **632** | `find Tests -name '*.cs' \| wc -l` |
-| `[Fact]` 方法 | **6,508** | 反射計算測試組件裡的 `[Fact]` 方法（`DeclaredOnly`） |
+| `[Fact]` 方法 | **6,511** | 反射計算測試組件裡的 `[Fact]` 方法（`DeclaredOnly`） |
 | `[Theory]` 方法 | **272** | 同上，`[Theory]` 分開數（它繼承 `[Fact]`，不能混） |
-| 執行期測試案例 | **7,852** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數，也是 README 測試徽章的單一來源） |
+| 執行期測試案例 | **7,855** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數，也是 README 測試徽章的單一來源） |
 
-**兩個比例值得讀。** 一、**`[Theory]` 只占 272 個**：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、**執行期案例數（7,852）大於方法數（6,780）**：差額來自被展開的 `[Theory]` 資料列——這正是基線守門的形狀（下一節）。
+**兩個比例值得讀。** 一、**`[Theory]` 只占 272 個**：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、**執行期案例數（7,855）大於方法數（6,783）**：差額來自被展開的 `[Theory]` 資料列——這正是基線守門的形狀（下一節）。
 
 ### 10.2 基線守門：為什麼「測試數」是一個被釘住的數字
 
@@ -10513,7 +10513,7 @@
 
 ### 15.2 本機測試
 
-- **全套**：7,852 條（`TestSuiteBaseline.ProjectTests` 是唯一來源）。其中一部分會讀真機硬體（SMBIOS、SPD、NVMe…），**換一台機器可能因「不支援」或「值不一樣」而紅**——那是預期行為，不是回歸。
+- **全套**：7,855 條（`TestSuiteBaseline.ProjectTests` 是唯一來源）。其中一部分會讀真機硬體（SMBIOS、SPD、NVMe…），**換一台機器可能因「不支援」或「值不一樣」而紅**——那是預期行為，不是回歸。
 - **守門子集**：`ChangelogTests`、`FactKeyCatalogTests`、`Ultimate10000CatalogTests`、`ReleasePipelineTests`、`ReleaseIntegrityTests` 五組不依賴硬體，任何機器都該綠。
 - **判讀紅燈**：先問「這條測試讀真機嗎」。是的話先比對是不是環境差；不是的話就是回歸。**不要把環境差當成回歸去改測試，也不要把回歸當成環境差去忽略。**
 
@@ -10521,7 +10521,7 @@
 
 倉庫的 `.github/workflows/ci.yml` 在 `windows-latest` 上做四件事：還原、建置、跑上面那五組守門測試、上傳 `guard.trx`。抓取的時機是 `push` 到 `main`、任何 `pull_request`、以及手動觸發。
 
-**為什麼不跑全套**（這是 CI 檔開頭的註解，也是設計裁決）：全套 7,852 條裡有一部分會讀真機硬體，在 GitHub 的 hosted runner 上可能因「不支援」或「值不一樣」而紅，**讓 CI 變成雜訊**——而一個充滿雜訊的 CI 會訓練人忽略紅燈，那是比沒有 CI 更糟的狀態。硬體全套由貢獻者在本機跑，PR 範本要求貼上實測數字。
+**為什麼不跑全套**（這是 CI 檔開頭的註解，也是設計裁決）：全套 7,855 條裡有一部分會讀真機硬體，在 GitHub 的 hosted runner 上可能因「不支援」或「值不一樣」而紅，**讓 CI 變成雜訊**——而一個充滿雜訊的 CI 會訓練人忽略紅燈，那是比沒有 CI 更糟的狀態。硬體全套由貢獻者在本機跑，PR 範本要求貼上實測數字。
 
 ### 15.4 發佈產線：每一道閘門都是事故留下的
 
@@ -10622,7 +10622,7 @@
 | 詞 | 意思 |
 |---|---|
 | 守門 | 一條會在任何機器上紅／綠的規則；本文件的每一個現在式數字都盡量有守門 |
-| 現在式宣稱 | 「本版是 vX」「測試 7,852 綠」這類今天為真、明天可能為假的句子 |
+| 現在式宣稱 | 「本版是 vX」「測試 7,855 綠」這類今天為真、明天可能為假的句子 |
 | 交叉對帳 | 同一事實多來源互相印證；結論只有一致／矛盾／無法驗證 |
 | 寫入帳本 | 所有硬體寫入的紀錄；與同意閘門並列兩道閘門 |
 | 同意閘門 | 深測低階測項執行前的明示同意 |
@@ -10663,7 +10663,7 @@
 | 斷路器冷卻 | 一顆碟一個冷卻期最多洩一條執行緒 | 同上；不吃執行緒集區 |
 | 報告／匯出零命中 | 退出碼 2 | `--only` 分母聲明 |
 | CI 逾時 | 30 分鐘 | `.github/workflows/ci.yml` |
-| 測試基線 | 7,852（`TestSuiteBaseline.ProjectTests`） | 唯一來源；低於測試方法數即紅燈 |
+| 測試基線 | 7,855（`TestSuiteBaseline.ProjectTests`） | 唯一來源；低於測試方法數即紅燈 |
 | 覆蓋基線 | 444 | 遞增需留理由 |
 | 對帳規則數 | 26（執行期） | 歷史文字曾寫 29（O-01） |
 | 事實鍵目錄 | 1,174 把／156 域 | 編譯期目錄為分母 |
@@ -12338,10 +12338,10 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `Services/ChipsetAnalysisService.cs` | 450 | 2 |
 | `Services/ChipsetSecurityService.cs` | 101 | 2 |
 | `Services/CleanupService.cs` | 175 | 2 |
-| `Services/CliService.cs` | 956 | 1 |
+| `Services/CliService.cs` | 958 | 1 |
 | `Services/ClosingFactsService.cs` | 201 | 1 |
 | `Services/CmosService.cs` | 98 | 1 |
-| `Services/ComplianceExportService.cs` | 305 | 1 |
+| `Services/ComplianceExportService.cs` | 381 | 1 |
 | `Services/ComplianceMappingService.cs` | 583 | 1 |
 | `Services/ComputeChartService.cs` | 336 | 2 |
 | `Services/ContextMenuService.cs` | 222 | 2 |
@@ -12952,7 +12952,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 **版本與發佈（1–6）**
 
 1. 本版是 v3.13 —— 看徽章、`XinSpect.csproj` 的 `<Version>`、關於頁三處一致。不一致＝有一處落後（四處同步是硬規則）。
-2. 測試 7,852 綠 —— 跑守門五組不依賴硬體；全套請在真機跑。紅燈先分辨是真機依賴還是回歸。
+2. 測試 7,855 綠 —— 跑守門五組不依賴硬體；全套請在真機跑。紅燈先分辨是真機依賴還是回歸。
 3. 下載表列的位元組數取自本版真正釋出的那顆 `XinSpect.exe` —— 抓下來自己數 bytes。不符請先確認是不是抓到別的版號的檔案。
 4. 主程式未簽章 —— 內容右鍵「數位簽章」分頁應為空。這正是 O-03。
 5. 授權是 AGPL-3.0-or-later —— 讀 `LICENSE` 開頭三行。

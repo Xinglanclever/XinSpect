@@ -95,6 +95,69 @@ public class ComplianceExportTests
     }
 
     [Fact]
+    public void CEF每條控制項與技術各一行_且severity由判定映射()
+    {
+        string cef = ComplianceExportService.ToCef(Report(), At);
+        var lines = cef.Split('\n');
+
+        Assert.Equal(7, lines.Length);
+        Assert.All(lines, line => Assert.StartsWith("CEF:0|XinSpect|XinSpect|", line, StringComparison.Ordinal));
+
+        int SeverityOf(string id)
+        {
+            var line = Assert.Single(lines, l => l.Contains($"|{id}|", StringComparison.Ordinal));
+            return int.Parse(line.Split('|')[6], System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        Assert.Equal(2, SeverityOf("NIST-800-147-WP"));   // Satisfied
+        Assert.Equal(8, SeverityOf("NIST-800-147-UPD"));  // NotSatisfied
+        Assert.Equal(4, SeverityOf("NIST-800-155-QUOTE")); // Unverifiable
+        Assert.Equal(0, SeverityOf("NIST-800-193-RECOVER")); // NotApplicable
+        Assert.Equal(8, SeverityOf("T1542.001"));         // Exposed
+        Assert.Equal(4, SeverityOf("T1495"));             // Unknown
+        Assert.Equal(2, SeverityOf("T1014"));             // Mitigated
+    }
+
+    [Fact]
+    public void CEF會轉義標頭與延伸欄位()
+    {
+        var report = new ComplianceReport(
+        [
+            new ComplianceControl("TEST|ID", "測試|框架", "標題|管線",
+                "需求", ComplianceStatus.NotSatisfied, "原因是 a=b\n下一行",
+                [new ComplianceEvidence("k=v", "Present", null, "note")]),
+        ], []);
+
+        string line = Assert.Single(ComplianceExportService.ToCef(report, At).Split('\n'));
+
+        Assert.Contains(@"TEST\|ID", line, StringComparison.Ordinal);
+        Assert.Contains(@"標題\|管線", line, StringComparison.Ordinal);
+        Assert.Contains(@"a\=b", line, StringComparison.Ordinal);
+        Assert.Contains(@"k\=v", line, StringComparison.Ordinal);
+        Assert.Contains(@"\n下一行", line, StringComparison.Ordinal);
+        Assert.DoesNotContain("\n", line, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CLI的CEF輸出逐行且保留退出碼2()
+    {
+        var source = new[]
+        {
+            Fact("chipset.bios_cntl", "最強保護"),
+            Fact("tpm.present", "可用"),
+        };
+
+        var stdout = new StringWriter();
+        int exit = CliService.Run(["--compliance", "--format", "cef"], () => source,
+            stdout, new StringWriter());
+
+        Assert.Equal(CliService.ExitPartial, exit);
+        var lines = stdout.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(16, lines.Length); // 11 控制項 + 5 ATT&CK
+        Assert.All(lines, line => Assert.StartsWith("CEF:0|", line, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void CLI的SARIF與JUnit都保留退出碼2且輸出可解析()
     {
         var source = new[]

@@ -2,7 +2,7 @@
 
 - 日期：2026-11-03
 - 對象：`xinspect_enterprise_grand_specification.md`（八大模組、宣稱 2,000+ 事實鍵）
-- 基線：XinSpect 3.13（`v3.13`，commit `e43f118`），事實鍵目錄 1,174 把、動態家族 68 個、測試基線 7,852
+- 基線：XinSpect 3.13（`v3.13`，commit `e43f118`），事實鍵目錄 1,174 把、動態家族 68 個、測試基線 7,855
 - 方法：逐條比對現有 `Services/` 生產者與 `FactKeyCatalog`；再用本機 Gemini 3.8 Flash（桌面版）對八條關鍵技術宣稱做對抗性判讀；每一條判讀都回頭對程式碼／規格驗證，不把模型輸出當結論
 
 ---
@@ -200,16 +200,17 @@ MSR、PCI ECAM、SMBus、SPI 不是可以任意平行的一般記憶體：
 ### 4.3 CLI
 
 ```text
-XinSpect --compliance [--format json|sarif|junit] [--out <檔案>]
+XinSpect --compliance [--format json|sarif|junit|cef] [--out <檔案>]
 XinSpect --merkle [--out <檔案>]
 XinSpect --speculation [--out <檔案>]
 ```
 
 - `--compliance` 退出碼：0＝全部 Satisfied／NotApplicable；2＝有任何 NotSatisfied／Unverifiable 或 Exposed／Unknown；1＝致命。
-- `--format`：`json`（預設）、`sarif`（2.1.0）、`junit`（XML）；不認得的值或缺少值回 1，不會默默退回 JSON。
+- `--format`：`json`（預設）、`sarif`（2.1.0）、`junit`（XML）、`cef`（逐行 Common Event Format）；不認得的值或缺少值回 1，不會默默退回 JSON。
   SARIF 只把非通過項變成 result（NotSatisfied／Exposed＝error，Unverifiable／Unknown＝warning）；
-  JUnit 把 Unverifiable／Unknown 記成 failure 而不是 skipped，避免 CI 顯示綠色。
-  兩者都只轉譯既有判定，不重新量測。
+  JUnit 把 Unverifiable／Unknown 記成 failure 而不是 skipped，避免 CI 顯示綠色；
+  CEF 每項一行（severity：NotSatisfied／Exposed＝8、Unverifiable／Unknown＝4），標頭與延伸值都轉義。
+  三者都只轉譯既有判定，不重新量測、不連網。
 - `--merkle` 退出碼：0＝至少一片葉子；2＝沒有穩定事實；1＝致命。
 - `--speculation` 退出碼：0＝七項都產生；2＝推測項數不是七（規則集合漂移）；1＝致命。
   **0 不代表機器安全或合規**——推測不是量測。
@@ -330,8 +331,8 @@ XinSpect --speculation [--out <檔案>]
 - 新增測試：`Tests/ComplianceMappingTests.cs`、`Tests/FactMerkleTests.cs`、`Tests/CliComplianceTests.cs`、`Tests/ComplianceExportTests.cs`、`Tests/SpeculationFactsTests.cs`。
 - 更新：`Tests/AutomationAndGuidanceFactsTests.cs`（headless 10 → 13）。
 - 守門子集：`--filter "Speculation|FactKeyCatalog|AutomationAndGuidance"` → **47 passed, 0 failed**。
-- 完整套件：基線 **7,852**；本機因既有 NVMe 核心不可中斷等待，實跑排除 1 條硬體限時測試
-  （`NvmeOverlappedIoTests.真的卡住的碟也要在外層預算內交還控制權`），其餘 **7,851 passed, 0 failed**。
+- 完整套件：基線 **7,855**；本機因既有 NVMe 核心不可中斷等待，實跑排除 1 條硬體限時測試
+  （`NvmeOverlappedIoTests.真的卡住的碟也要在外層預算內交還控制權`），其餘 **7,854 passed, 0 failed**。
   該測試未被跳過、未被改寫，健康機器上照常執行；排除原因是本機磁碟探針會卡住行程，不是本輪程式碼。
 - 目錄：1,174 把靜態鍵（+7 把 `infer.*`）；動態家族 68 個不變。
 - 真機 e2e：
