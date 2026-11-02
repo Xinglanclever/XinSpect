@@ -36,6 +36,7 @@ public static class CliService
     public const string DiffReportArg = "--diff-report";
     public const string OnlyArg = "--only";
     public const string ComplianceArg = "--compliance";
+    public const string ComplianceFormatArg = "--format";
     public const string MerkleArg = "--merkle";
     public const string SpeculationArg = "--speculation";
 
@@ -203,7 +204,7 @@ public static class CliService
             new { mode = StdinBatchArg, scope = "", output = "JSONL", description = "stdin 每行一個 key 前綴；每行輸出一個查詢結果物件。" },
             new { mode = DiffReportArg, scope = "", output = "JSON", description = "兩份匯出報告（HTML／MD／TXT）鍵級互比；輸出只含鍵名與計數，不含值。" },
             new { mode = EvidencePackArg, scope = "", output = "JSON", description = "建立可第三方驗證的證據包（事實 JSON＋審計鏈副本＋manifest 雜湊清單＋互驗結果）；這是 ev.manifest 與 ev.chain.verify 唯一的生產端。" },
-            new { mode = ComplianceArg, scope = "", output = "JSON", description = "把既有事實對到 NIST SP 800-147／155／193 與 MITRE ATT&CK；不新增硬體讀取，缺資料一律 Unverifiable。" },
+            new { mode = ComplianceArg, scope = "", output = "JSON／SARIF／JUnit", description = "把既有事實對到 NIST SP 800-147／155／193 與 MITRE ATT&CK；不新增硬體讀取，缺資料一律 Unverifiable。--format 可選 json、sarif、junit。" },
             new { mode = MerkleArg, scope = "", output = "JSON", description = "穩定事實的 SHA-256 Merkle 指紋；白名單＋排除敏感／非 Present／易變鍵，輸出只含鍵與雜湊。" },
             new { mode = SpeculationArg, scope = "", output = "JSON", description = "七項 infer.* 推測；每項都帶【推測】前綴與 Speculative 信任等級，並列信心、依據鍵與限制。不合規、不進 Merkle。" },
         };
@@ -618,9 +619,26 @@ public static class CliService
         var report = ComplianceMappingService.Evaluate(facts);
         var controls = report.Controls;
         var techniques = report.Techniques;
+
+        bool formatSpecified = args.Contains(ComplianceFormatArg);
+        string? formatValue = OptionValue(args, ComplianceFormatArg);
+        if (formatSpecified && formatValue is null)
+        {
+            stderr.WriteLine("--format 需要一個值：json、sarif 或 junit。");
+            return ExitError;
+        }
+
+        string format = (formatValue ?? "json").ToLowerInvariant();
+        if (format is not ("json" or "sarif" or "junit"))
+        {
+            stderr.WriteLine($"不支援的格式「{formatValue}」；可用：json、sarif、junit。");
+            return ExitError;
+        }
+
+        var generatedAt = DateTimeOffset.UtcNow;
         var payload = new
         {
-            generatedAtUtc = DateTimeOffset.UtcNow,
+            generatedAtUtc = generatedAt,
             scope = "compliance",
             schemaVersion = ComplianceMappingService.SchemaVersion,
             summary = new
@@ -641,12 +659,17 @@ public static class CliService
                  + "這三類控制項刻意維持 Unverifiable。Satisfied 是「本次看到的事實支持這條控制」，"
                  + "不是合規證書；Unverifiable 也回退出碼 2。",
         };
-        string json = JsonSerializer.Serialize(payload, JsonOptions);
+        string output = format switch
+        {
+            "sarif" => ComplianceExportService.ToSarif(report, generatedAt),
+            "junit" => ComplianceExportService.ToJUnit(report, generatedAt),
+            _ => JsonSerializer.Serialize(payload, JsonOptions),
+        };
         string? outPath = OptionValue(args, OutArg);
         try
         {
-            if (outPath is not null) File.WriteAllText(outPath, json);
-            else stdout.WriteLine(json);
+            if (outPath is not null) File.WriteAllText(outPath, output);
+            else stdout.WriteLine(output);
         }
         catch (Exception ex)
         {
@@ -848,7 +871,7 @@ public static class CliService
               XinSpect --stdin-batch
               XinSpect --diff-report <舊報告> <新報告> [--out <檔案>]
               XinSpect --evidence-pack <目錄>
-              XinSpect --compliance [--out <檔案>]
+              XinSpect --compliance [--format json|sarif|junit] [--out <檔案>]
               XinSpect --merkle [--out <檔案>]
               XinSpect --speculation [--out <檔案>]
               XinSpect --help
@@ -885,6 +908,8 @@ public static class CliService
               compliance      把既有事實對到 NIST SP 800-147／155／193 與 MITRE ATT&CK。
                               <b>不新增任何硬體讀取</b>：更新簽章、遠端 TPM Quote、韌體復原
                               這三類沒有真正驗證，因此刻意維持 Unverifiable；缺資料絕不升成通過。
+                              --format json（預設）／sarif（2.1.0，CI 用）／junit（XML，CI 用）；
+                              SARIF 把 Unverifiable 標 warning、JUnit 標 failure，兩者都不會顯示為綠。
               merkle          穩定事實的 SHA-256 Merkle 指紋：白名單鍵＋排除 Sensitive／非 Present／
                               易變鍵，逐葉排序後兩兩合併（落單者原樣提升）。canonical payload 為
                               key＋0x1F＋value＋0x1F＋trust＋0x1F＋source，<b>不含時間</b>；
@@ -903,6 +928,7 @@ public static class CliService
                                only（選擇條件）與 partial（true＝部分匯出），note 明說「這是 N 筆中的 M 筆」——
                                部分報告不是全量報告，引用時請帶分母。篩選後零命中退出碼 2，note 如實說是空匯出。
               --out <檔案>     寫入檔案而非 stdout
+              --format <格式>  只用於 --compliance：json（預設）／sarif／junit；其他值回退出碼 1
 
             退出碼：
               --json evidence   0＝全部 Present；2＝有非 Present 的事實（讀不到，或提供者沒提供
