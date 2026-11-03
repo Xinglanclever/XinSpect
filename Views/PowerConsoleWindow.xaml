@@ -2,7 +2,6 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="曦覽 強控台 Power Console" Height="760" Width="1180"
-        Icon="pack://application:,,,/Assets/app.ico"
         MinHeight="520" MinWidth="900"
         WindowStartupLocation="CenterScreen"
         FontFamily="{StaticResource AppFont}"
