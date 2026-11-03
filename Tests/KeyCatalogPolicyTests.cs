@@ -159,9 +159,9 @@ public class KeyCatalogPolicyTests
     [Fact]
     public void 豁免_真實豁免表全部以無法交叉為理由()
     {
-        // 這是真實的 584 條豁免表——它們全部要通過，因為它們都是真的無法交叉。
+        // 這是真實的豁免表（2026-11-04 實況 609 條，含 rf.* 四條明文豁免）——它們全部要通過，因為它們都是真的無法交叉。
         // 第一版用關鍵詞比對時這裡紅了 507 條，而當時的錯誤處置是擴大詞表。
-        var fact = KeyCatalogPolicy.ToExemptFact(At, SampleExemptions(), cap: 600);
+        var fact = KeyCatalogPolicy.ToExemptFact(At, SampleExemptions(), cap: 650);
         Assert.Equal(FactAvailability.Present, fact.Availability);
         Assert.Null(fact.UnavailableReason);
     }
