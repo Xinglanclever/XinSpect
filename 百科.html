@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>曦覽 XinSpect 百科</title>
-<!-- 由 README.md 產生（sha256 9654d53924d8）；產生器：Tools/gen-docs-html.py；本檔不手改。 -->
+<!-- 由 README.md 產生（sha256 58356463b382）；產生器：Tools/gen-docs-html.py；本檔不手改。 -->
 <style>:root{--bg:#fff;--ink:#1f2328;--sub:#57606a;--hair:#d0d7de;--surface:#f6f8fa;--link:#0969da;--accent:#1b6fd6;--badge:#ddf4ff;
       color-scheme:light}
 /* 深色版：文字色早就跟著 prefers-color-scheme 換了，body 的背景卻一直寫死 #fff——
@@ -469,7 +469,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </details>
 </nav>
 <main>
-<header class="doc"><div class="meta">曦覽 XinSpect 百科 ・ 來源：<code>README.md</code>（sha256 <code>9654d53924d8</code>）・ 自足 HTML：無 CDN、無外部字型、無指令碼 ・ 定位：左側目錄、標題懸停有 ¶ 錨點、瀏覽器 Ctrl+F 找字</div></header>
+<header class="doc"><div class="meta">曦覽 XinSpect 百科 ・ 來源：<code>README.md</code>（sha256 <code>58356463b382</code>）・ 自足 HTML：無 CDN、無外部字型、無指令碼 ・ 定位：左側目錄、標題懸停有 ¶ 錨點、瀏覽器 Ctrl+F 找字</div></header>
 <p><a href="https://github.com/Xinglanclever/XinSpect/blob/main/README.zh-CN.md">简体中文</a> · 繁體中文 · <a href="https://github.com/Xinglanclever/XinSpect/blob/main/README.en.md">English</a></p>
 <p><a class="ext" href="https://xinspect-browser-preview.wild-chimpanzee.workers.dev"><span class="badge">官方網站 ・ xinspect-browser-preview.wild-chimpanzee.workers.dev-4C8DFF?style=for-the</span></a></p>
 <blockquote><h2 id="-官方網站xinspect-browser-previewwild-chimpanzeeworkersdev-"><a class="self" href="#-官方網站xinspect-browser-previewwild-chimpanzeeworkersdev-">¶</a> 🌐 <a class="ext" href="https://xinspect-browser-preview.wild-chimpanzee.workers.dev">官方網站：xinspect-browser-preview.wild-chimpanzee.workers.dev ↗</a></h2>
@@ -11490,11 +11490,11 @@ XinSpect --fleet --snapshots D:\snapshots                      # 本機同型號
 <th>數法</th>
 </tr></thead><tbody>
 <tr><td>測試檔</td><td style="text-align:right"><strong>639</strong></td><td><code>find Tests -name '*.cs' | wc -l</code></td></tr>
-<tr><td><code>[Fact]</code> 方法</td><td style="text-align:right"><strong>6,538</strong></td><td>反射計算測試組件裡的 <code>[Fact]</code> 方法（<code>DeclaredOnly</code>）</td></tr>
+<tr><td><code>[Fact]</code> 方法</td><td style="text-align:right"><strong>6,539</strong></td><td>反射計算測試組件裡的 <code>[Fact]</code> 方法（<code>DeclaredOnly</code>）</td></tr>
 <tr><td><code>[Theory]</code> 方法</td><td style="text-align:right"><strong>272</strong></td><td>同上，<code>[Theory]</code> 分開數（它繼承 <code>[Fact]</code>，不能混）</td></tr>
 <tr><td>執行期測試案例</td><td style="text-align:right"><strong>7,882</strong></td><td><code>Tests/TestSuiteBaseline.cs</code> 的 <code>ProjectTests</code>（<code>dotnet test</code> 的總數，也是 README 測試徽章的單一來源）</td></tr>
 </tbody></table>
-<p><strong>兩個比例值得讀。</strong> 一、<strong><code>[Theory]</code> 只占 272 個</strong>：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、<strong>執行期案例數（7,882）大於方法數（6,810）</strong>：差額來自被展開的 <code>[Theory]</code> 資料列——這正是基線守門的形狀（下一節）。</p>
+<p><strong>兩個比例值得讀。</strong> 一、<strong><code>[Theory]</code> 只占 272 個</strong>：這個專案的測試風格偏向「一條測試講一個具體事實」，而不是用資料驅動把同一個斷言複製很多遍。二、<strong>執行期案例數（7,882）大於方法數（6,811）</strong>：差額來自被展開的 <code>[Theory]</code> 資料列——這正是基線守門的形狀（下一節）。</p>
 <h3 id="102-基線守門為什麼測試數是一個被釘住的數字"><a class="self" href="#102-基線守門為什麼測試數是一個被釘住的數字">¶</a> 10.2 基線守門：為什麼「測試數」是一個被釘住的數字</h3>
 <p><code>TestSuiteBaseline.ProjectTests</code> 是專案測試數的<strong>唯一來源</strong>，而 README 的測試徽章必須等於它。<strong>這條守門的存在理由是一個真實的舊缺陷</strong>：徽章曾經停在一個舊數字，而同一份文件的版本沿革已經寫到更新的版本——<strong>「一張紙上兩個數字，讀者無從判斷」</strong>。</p>
 <p>守門的兩層：</p>

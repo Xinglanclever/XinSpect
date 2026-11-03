@@ -288,7 +288,8 @@ public partial class PowerConsoleWindow : Window
         if (!cmdFocused && (e.Key == System.Windows.Input.Key.Up || e.Key == System.Windows.Input.Key.Down))
         {
             var buttons = Nav.Children.OfType<Button>().ToList();
-            int i = buttons.IndexOf(Keyboard.FocusedElement as Button);
+            var focused = Keyboard.FocusedElement as Button;
+            int i = focused is null ? -1 : buttons.IndexOf(focused);
             i = e.Key == System.Windows.Input.Key.Up
                 ? (i <= 0 ? buttons.Count - 1 : i - 1)
                 : (i < 0 || i >= buttons.Count - 1 ? 0 : i + 1);
