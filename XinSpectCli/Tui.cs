@@ -54,7 +54,7 @@ internal static class Tui
         return w;
     }
 
-    private static string Pad(string s, int width)
+    internal static string Pad(string s, int width)
     {
         int gap = width - VisibleLength(s);
         return gap <= 0 ? s : s + new string(' ', gap);
@@ -195,6 +195,38 @@ internal static class Tui
         }
         return sb.ToString() + "…";
     }
+
+    // ── 5.5) 走勢圖・獨立螢幕・徽章 ────────────────────────────────────────
+
+    private const string SparkChars = "▁▂▃▄▅▆▇█";
+
+    /// <summary>迷你走勢圖：最後 width 個讀值畫成 ▁▂▃▅▇。</summary>
+    public static string Sparkline(IReadOnlyList<double?> history, double max, int width)
+    {
+        var take = history.Skip(Math.Max(0, history.Count - width)).ToList();
+        if (take.Count == 0) return new string('·', width);
+        var sb = new StringBuilder();
+        foreach (var v in take)
+        {
+            if (v is null) { sb.Append('·'); continue; }
+            int idx = Math.Clamp((int)(Math.Clamp(v.Value, 0, max) / max * (SparkChars.Length - 1)), 0, SparkChars.Length - 1);
+            sb.Append(SparkChars[idx]);
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>進入獨立螢幕（不留捲動殘跡）。</summary>
+    public static void AltScreenEnter() => Console.Write("[?1049h[2J[H" + HideCursor);
+
+    /// <summary>離開獨立螢幕，回到原本的捲動內容。</summary>
+    public static void AltScreenExit() => Console.Write(ShowCursor + "[?1049l");
+
+    /// <summary>色塊徽章。</summary>
+    public static string Badge(string text, string bg, string fg) => $"{bg}{fg} {text} {Reset}";
+
+    /// <summary>細分隔線。</summary>
+    public static void Separator()
+        => Console.WriteLine($"  {Dim}{new string('·', Math.Min(72, ConsoleWidth() - 4))}{Reset}");
 
     // ── 6) Spinner ────────────────────────────────────────────────────────
 

@@ -30,7 +30,7 @@ internal static class Program
     private static readonly string[] Commands =
     [
         "help", "ver", "pages", "page", "domain", "keys", "settings", "changelog",
-        "facts", "fact", "sys", "top", "msr", "pci", "ipc",
+        "facts", "fact", "sys", "top", "dash", "msr", "pci", "ipc",
         "redfish", "compliance", "merkle", "clear", "exit",
     ];
 
@@ -99,6 +99,7 @@ internal static class Program
                     return true;
 
                 case "sys": LiveLine(); return true;
+                case "dash": Dashboard(); return true;
 
                 case "top": LiveTop(rest); return true;
 
@@ -148,7 +149,8 @@ internal static class Program
         [
             ("facts", "採集一輪本機事實（之後的 fact 查詢走這份快取）"),
             ("fact <字>", "在事實快取裡搜鍵名或值"),
-            ("sys", "即時一行：CPU/GPU 溫度與負載、記憶體"),
+            ("sys", "即時 KPI：溫度／負載／記憶體＋進度條與走勢"),
+            ("dash", "全螢幕即時儀表板（獨立螢幕；q 離開）"),
             ("top [秒]", "即時表格持續刷新（預設 2 秒一拍，Ctrl+C 停）"),
             ("msr <索引>", "讀一支 MSR（十六進位，如 msr 0x19C；唯讀）"),
             ("pci scan", "全匯流排 PCI 掃描（bus 0–255，唯讀）"),
@@ -295,6 +297,14 @@ internal static class Program
 
     // ── 即時遙測 ──────────────────────────────────────────────────────────
 
+    private static readonly List<double?> _cpuHist = [], _gpuHist = [], _memHist = [];
+
+    private static void PushHistory((double? CpuT, double? GpuT, double? CpuL, double? MemL) r)
+    {
+        void Push(List<double?> h, double? v) { h.Add(v); if (h.Count > 40) h.RemoveAt(0); }
+        Push(_cpuHist, r.CpuT); Push(_gpuHist, r.GpuT); Push(_memHist, r.MemL);
+    }
+
     private static void LiveLine()
     {
         var svc = new LibreHardwareMonitorLibWrapperOrNull();
@@ -305,13 +315,82 @@ internal static class Program
         }
         using (svc)
         {
-            Tui.Section("即時快照", "sys 單拍 ・ top 2 持續");
-            var (cpuT, gpuT, cpuL, memL) = svc.Read();
-            Tui.Kpi("CPU 溫度", cpuT, " °C", 100, warnAbove: 75, critAbove: 85);
-            Tui.Kpi("CPU 負載", cpuL, " %", 100);
-            Tui.Kpi("GPU 溫度", gpuT, " °C", 100, warnAbove: 75, critAbove: 85);
-            Tui.Kpi("記憶體", memL, " %", 100, warnAbove: 85, critAbove: 95);
+            Tui.Section("即時快照", "sys 單拍 ・ top 2 持續 ・ dash 全螢幕");
+            var r = svc.Read();
+            PushHistory(r);
+            Tui.Kpi("CPU 溫度", r.CpuT, " °C", 100, warnAbove: 75, critAbove: 85);
+            Console.WriteLine($"      {Dim}走勢{Reset} {Tui.Sparkline(_cpuHist, 100, 24)}");
+            Tui.Kpi("CPU 負載", r.CpuL, " %", 100);
+            Tui.Kpi("GPU 溫度", r.GpuT, " °C", 100, warnAbove: 75, critAbove: 85);
+            Console.WriteLine($"      {Dim}走勢{Reset} {Tui.Sparkline(_gpuHist, 100, 24)}");
+            Tui.Kpi("記憶體", r.MemL, " %", 100, warnAbove: 85, critAbove: 95);
+            Console.WriteLine($"      {Dim}走勢{Reset} {Tui.Sparkline(_memHist, 100, 24)}");
         }
+    }
+
+    // ── 全螢幕儀表板：獨立螢幕、原地重繪、q 離開 ────────────────────────────
+
+    private static void Dashboard()
+    {
+        var svc = new LibreHardwareMonitorLibWrapperOrNull();
+        if (svc is null)
+        {
+            Console.WriteLine($"{Red}這台機器拿不到感測器。{Reset}");
+            return;
+        }
+        using (svc)
+        {
+            Tui.AltScreenEnter();
+            try
+            {
+                while (true)
+                {
+                    var r = svc.Read();
+                    PushHistory(r);
+                    Console.Write("\x1b[H");
+                    Console.WriteLine($"{Tui.Dim}┌─ {Tui.Bold}XSC 即時儀表板{Tui.Reset} {Tui.Dim}{new string('─', 44)}{DateTime.Now:HH:mm:ss} ─┐{Tui.Reset}");
+                    Console.WriteLine();
+                    DashRow("CPU 溫度", r.CpuT, "°C", 100, 75, 85, _cpuHist);
+                    DashRow("CPU 負載", r.CpuL, "%", 100, null, null, null);
+                    DashRow("GPU 溫度", r.GpuT, "°C", 100, 75, 85, _gpuHist);
+                    DashRow("記憶體", r.MemL, "%", 100, 85, 95, _memHist);
+                    Console.WriteLine();
+                    Console.WriteLine($"  {Tui.Dim}PCI：{(_pci?.Count.ToString() ?? "未掃（pci scan）")} 台裝置 ・ 藍色中隊 Bridge：本程序未連線（主介面開啟）{Tui.Reset}");
+                    Console.WriteLine();
+                    Console.WriteLine($"{Tui.Dim}  q 離開 ・ 1 秒刷新{Tui.Reset}");
+                    Console.Write($"{Tui.SwissRed}{Tui.Bold}xs{Tui.Reset}{Tui.SwissBlue}▸{Tui.Reset} dash");
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    while (sw.ElapsedMilliseconds < 1000)
+                    {
+                        if (Console.KeyAvailable)
+                        {
+                            var k = Console.ReadKey(true);
+                            if (k.Key == ConsoleKey.Q || (k.Key == ConsoleKey.C && k.Modifiers.HasFlag(ConsoleModifiers.Control)))
+                            {
+                                Tui.AltScreenExit();
+                                Console.WriteLine();
+                                return;
+                            }
+                        }
+                        Thread.Sleep(20);
+                    }
+                }
+            }
+            finally { Tui.AltScreenExit(); }
+        }
+    }
+
+    private static void DashRow(string label, double? v, string unit, double max,
+        double? warn, double? crit, List<double?>? hist)
+    {
+        string vt = v is null ? "——" : $"{v:0.#}{unit}";
+        string vc = v is null ? Tui.Dim
+            : v >= (crit ?? double.MaxValue) ? Tui.SwissRed
+            : v >= (warn ?? double.MaxValue) ? Tui.Amber
+            : Tui.Bold;
+        string bar = Tui.Bar(v, max, 24, warn, crit);
+        string spark = hist is null ? "" : $"  {Tui.Dim}{Tui.Sparkline(hist, max, 18)}{Tui.Reset}";
+        Console.WriteLine("  " + Tui.Pad(label, 10) + Tui.Pad(vc + vt, 14) + bar + spark);
     }
 
     private static void LiveTop(string secondsText)
