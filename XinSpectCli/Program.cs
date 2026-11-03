@@ -48,11 +48,12 @@ internal static class Program
             return CliService.Run(args, Collect, Console.Out, Console.Error);
         }
 
-        Banner();
+        Tui.Welcome(AppInfo.ShortVersion);
+        Tui.Footer("● READY ・ 唯讀模式", "曦覽 XinSpect Console v" + AppInfo.ShortVersion);
         string? line;
         while (true)
         {
-            Console.Write($"{Blue}xs{Reset}{Dim}▸{Reset} ");
+            Tui.Prompt();
             line = ReadLineWithHistory();
             if (line is null) break;              // Ctrl+Z／EOF
             line = line.Trim();
@@ -61,13 +62,6 @@ internal static class Program
             if (!Execute(line)) break;
         }
         return 0;
-    }
-
-    private static void Banner()
-    {
-        Console.WriteLine($"{Bold}曦覽終端機 XinSpect Console{Reset} {Dim}· 唯讀 · 不寫硬體 · 不連網{Reset}");
-        Console.WriteLine($"{Dim}輸入 help 看指令；Tab 補全、↑↓ 歷史、Ctrl+C 停止即時刷新、exit 離開。{Reset}");
-        Console.WriteLine();
     }
 
     // ── 指令分派 ──────────────────────────────────────────────────────────
@@ -171,8 +165,7 @@ internal static class Program
             ("changelog [n]", "看最近 n 版更新紀錄（預設 3）"),
             ("ver / clear / exit", "版號／清屏／離開"),
         ];
-        foreach (var (c, d) in rows)
-            Console.WriteLine($"  {Green}{c,-18}{Reset}{Dim}{d}{Reset}");
+        Tui.Table(["指令", "說明"], rows.Select(r => new[] { r.c, r.d }));
     }
 
     // ── 事實採集與查詢 ────────────────────────────────────────────────────
@@ -184,10 +177,9 @@ internal static class Program
             Console.WriteLine($"{Dim}（使用現有快取；重新採集請再跑一次 facts）{Reset}");
             return;
         }
-        Console.Write($"{Dim}採集中（讀 SMBIOS／WMI／感測器，幾秒到幾十秒）…{Reset}");
+        Tui.SpinnerStart("採集中（讀 SMBIOS／WMI／感測器，幾秒到幾十秒）");
         _cache = Collect();
-        Console.Write("\r\x1b[K");
-        Console.WriteLine($"{Green}{_cache.Count}{Reset} 筆事實已進快取。");
+        Tui.SpinnerStop($"{_cache.Count} 筆事實已進快取。");
     }
 
     private static void SearchFacts(string query)
@@ -221,12 +213,14 @@ internal static class Program
 
     private static void ListPages()
     {
+        Console.WriteLine();
         Console.WriteLine($"{Bold}主頁面（{PageRegistry.Pages.Count}）{Reset}");
-        foreach (var p in PageRegistry.Pages)
-            Console.WriteLine($"  {Blue}{p.Key,-16}{Reset} {p.Title,-14} {Dim}{HintOf(p)}{Reset}");
+        Tui.Table(["KEY", "頁面", "說明"],
+            PageRegistry.Pages.Select(p => new[] { p.Key, p.Title, HintOf(p) }));
+        Console.WriteLine();
         Console.WriteLine($"{Bold}實用工具（{PageRegistry.Utilities.Count}）{Reset}");
-        foreach (var p in PageRegistry.Utilities)
-            Console.WriteLine($"  {Blue}{p.Key,-16}{Reset} {p.Title,-14} {Dim}{HintOf(p)}{Reset}");
+        Tui.Table(["KEY", "工具", "說明"],
+            PageRegistry.Utilities.Select(p => new[] { p.Key, p.Title, HintOf(p) }));
         Console.WriteLine($"{Dim}用 page <key> 看該頁對應的資料（先跑 facts 建快取）。{Reset}");
     }
 
@@ -411,14 +405,18 @@ internal static class Program
     {
         if (rest is "scan" or "")
         {
-            Console.Write($"{Dim}掃描 bus 0–255（唯讀）…{Reset}");
+            Tui.SpinnerStart("掃描 bus 0–255（唯讀）");
             var (devices, error) = PowerConsoleRing0Service.ScanPci();
-            Console.Write("\r\x1b[K");
-            if (devices is null) { Console.WriteLine($"{Red}掃描失敗：{error}{Reset}"); return; }
+            if (devices is null) { Tui.SpinnerStop("掃描失敗：" + error); return; }
             _pci = devices.OrderBy(d => d.Bus).ThenBy(d => d.Device).ThenBy(d => d.Function).ToList();
-            foreach (var (d, i) in _pci.Select((d, i) => (d, i)))
-                Console.WriteLine($"  [{i,2}] {Blue}{d.Bus:X2}:{d.Device:X2}.{d.Function:X0}{Reset} {d.VendorId:X4}:{d.DeviceId:X4}  {Trim(d.Name, 52)}");
-            Console.WriteLine($"{Dim}{_pci.Count} 台。pci dump <n> 看 hex。{Reset}");
+            Tui.SpinnerStop($"找到 {_pci.Count} 台裝置。");
+            Tui.Table(
+                ["#", "BDF", "VEN:DEV", "裝置"],
+                _pci.Select((d, i) => new[]
+                {
+                    i.ToString(), $"{d.Bus:X2}:{d.Device:X2}.{d.Function:X0}",
+                    $"{d.VendorId:X4}:{d.DeviceId:X4}", Trim(d.Name, 46),
+                }));
             return;
         }
         if (rest.StartsWith("dump", StringComparison.Ordinal))
@@ -524,7 +522,8 @@ internal static class Program
                 {
                     Console.WriteLine();
                     Console.WriteLine($"{Dim}" + string.Join("  ", hits) + Reset);
-                    Console.Write($"{Blue}xs{Reset}{Dim}▸{Reset} " + buf.ToString());
+                    Tui.Prompt();
+                    Console.Write(buf.ToString());
                 }
                 continue;
             }
