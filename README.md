@@ -12494,7 +12494,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 | `Services/DriverMmioReader.cs` | 189 | 2 |
 | `Services/DriverMsrReader.cs` | 170 | 1 |
 | `Services/DriverReadyService.cs` | 156 | 1 |
-| `Services/EcamAerService.cs` | 141 | 1 |
+| `Services/EcamAerService.cs` | 144 | 1 |
 | `Services/EdidCtaFactsService.cs` | 423 | 1 |
 | `Services/EdidService.cs` | 303 | 2 |
 | `Services/EfiVariableFactsService.cs` | 129 | 1 |

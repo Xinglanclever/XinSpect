@@ -123,7 +123,10 @@ public static class EcamAerService
             parts.Add($"第一未修正來源：{SourceIdText(uncSource)}（Root Port 專用）");
         if (st.FirstCorrectableSourceId is { } corrSource)
             parts.Add($"第一可修正來源：{SourceIdText(corrSource)}（Root Port 專用）");
-        return parts.Count == 0 ? $"AER @0x{aerOffset:X}：無未修正、無可修正錯誤" : $"AER @0x{aerOffset:X}：" + string.Join("；", parts);
+        string body = parts.Count == 0
+            ? $"AER @0x{aerOffset:X}：無未修正、無可修正錯誤"
+            : $"AER @0x{aerOffset:X}：" + string.Join("；", parts);
+        return body + "（唯讀；本工具未清除 RW1CS 旗標）";
     }
 
     private static string SourceIdText(uint sourceId)
