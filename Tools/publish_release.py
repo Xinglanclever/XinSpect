@@ -10,7 +10,7 @@ Usage:
   python Tools/publish_release.py --tag v2.54 --title "v2.54 ..." --body-file notes.md \
       --asset XinSpect.exe=publish-254/XinSpect.exe --asset BlueSquadronBridge.exe=... [--repo owner/name]
 """
-import argparse, io, json, re, subprocess, sys, urllib.request, urllib.error
+import argparse, io, json, re, subprocess, sys, time, urllib.request, urllib.error
 
 def get_token():
     p = subprocess.run(["git", "credential", "fill"], input="protocol=https\nhost=github.com\n\n",
@@ -28,7 +28,7 @@ def api(url, token, method="GET", payload=None, raw=None, content_type=None):
     if data is not None:
         req.add_header("Content-Type", content_type or "application/json")
     try:
-        with urllib.request.urlopen(req, timeout=300) as r:
+        with urllib.request.urlopen(req, timeout=1800) as r:
             body = r.read()
             return json.loads(body) if body and "json" in (r.headers.get("Content-Type") or "") else body
     except urllib.error.HTTPError as e:
@@ -67,14 +67,29 @@ def main():
         rel = api(f"{base}/releases/{rel['id']}", token, "PATCH", patch)
         print(f"reused release id={rel['id']}")
 
-    existing = {a["name"]: a for a in api(f"{base}/releases/{rel['id']}/assets", token)}
     for spec in args.asset:
         name, path = spec.split("=", 1)
         blob = io.open(path, "rb").read()
-        if name in existing:
-            api(existing[name]["url"], token, "DELETE")
-        up = api(f"https://uploads.github.com/repos/{args.repo}/releases/{rel['id']}/assets?name={name}",
-                 token, "POST", raw=blob, content_type="application/octet-stream")
+        last_error = None
+        for attempt in range(1, 4):
+            # 重試前重新查一次：上一次可能其實已上傳成功，只是等回應時斷線。
+            current = {a["name"]: a for a in api(f"{base}/releases/{rel['id']}/assets", token)}
+            if name in current:
+                api(current[name]["url"], token, "DELETE")
+            try:
+                up = api(f"https://uploads.github.com/repos/{args.repo}/releases/{rel['id']}/assets?name={name}",
+                         token, "POST", raw=blob, content_type="application/octet-stream")
+                break
+            except urllib.error.HTTPError as e:
+                if 400 <= e.code < 500:
+                    raise
+                last_error = e
+            except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+                last_error = e
+            if attempt == 3:
+                raise last_error
+            print(f"retry {name} ({attempt}/3): {last_error}", file=sys.stderr)
+            time.sleep(15 * attempt)
         print(f"uploaded {name}: {up['size']} bytes (local {len(blob)})")
         assert up["size"] == len(blob), f"SIZE MISMATCH for {name}"
 
