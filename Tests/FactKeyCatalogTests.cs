@@ -168,7 +168,9 @@ public class FactKeyCatalogTests
         // 66 → 67（2026-11-01 第 3.12 輪）：nic.gap.——成員＝這台機器有幾張網路介面。
         // 介面名稱是使用者／系統語言決定的字串（繁中就叫「乙太網路」），不是編譯期能列的鍵。
         // 67 → 68（2026-11-01 第 3.13 輪）：plan.cctv.——成員固定，但只有存過監控規劃才出現。
-        const int FamilyCap = 68;
+        // 68 → 69（2026-11-03 第 3.15 輪）：rf.item.——成員＝離線 Redfish 包裡有幾台管理器／機箱／
+        // 系統／電源／風扇／溫度；BMC 給的 Id 是任意字串（ASCII 化成鍵段），編譯期列不完。
+        const int FamilyCap = 69;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 

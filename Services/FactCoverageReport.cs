@@ -37,7 +37,7 @@ public static class FactCoverageReport
     /// 放在這裡而不是只寫在測試裡，是為了讓 README 的守門有單一來源可讀：
     /// 一個數字寫在文件、一個寫在測試、第三個寫在腦子裡，遲早三個都不一樣。
     /// </remarks>
-    public const int ReviewedUncoveredBaseline = 444;
+    public const int ReviewedUncoveredBaseline = 448;
 
     /// <summary>明文豁免：刻意不對帳的事實鍵前綴與理由。</summary>
     /// <remarks>
@@ -497,6 +497,10 @@ public static class FactCoverageReport
         ["hm.drivhist.summary"] = "驅動版本變更史（HM-006）：兩份驅動清單差異，不是連續事件史；不列裝置名稱。",
         ["el.pack.summary"] = "EOL 包版本化（EL-008）：離線包版本與快照；已驗證才標 Measured，較新包仍可能缺項。",
         ["ac.aml.stat"] = "AML 統計（AC-007）：只做 DSDT／SSDT 位元組與 opcode 統計，不解碼 AML 本體。",
+        ["rf.summary"] = "帶外管理摘要（RF-001）：BMC 自我宣告的計數；單一來源，沒有第二條通路。",
+        ["rf.boundary"] = "帶外資料邊界（RF-002）：申報文字本身，不是可對帳的量測。",
+        ["rf.bundle.warnings"] = "離線目錄警告（RF-003）：讀取過程的警告清單，沒有第二條通路。",
+        ["rf.power.consumed"] = "機箱功耗（RF-004）：BMC 回報的單一數字；本工具未量測。",
         ["cpu.smi.cstate.summary"] = "SMI／C-state（CM-002／006）：MSR 差分；SMI 只有次數沒有時間。",
         ["cpu.pl.summary"] = "RAPL 功率牆（CM-015）：MSR 0x606／0x610／0x614；讀不到不宣稱沒有牆。",
         ["hist.memtrain.summary"] = "記憶體訓練時長（CM-017）：開機事件單一來源；無事件不寫 0 毫秒。",

@@ -718,14 +718,26 @@ public static class CliService
         }
 
         bool any = inventory.Managers.Count + inventory.Chassis.Count + inventory.Systems.Count > 0;
+        var at = DateTimeOffset.UtcNow;
+        var facts = RedfishFactsService.Collect(inventory, at);
         var payload = new
         {
-            generatedAtUtc = DateTimeOffset.UtcNow,
+            generatedAtUtc = at,
             scope = "redfish",
             schemaVersion = RedfishBundleService.SchemaVersion,
             source = RedfishBundleService.Source,
             directory = inventory.Directory,
             collectedAtUtc = inventory.CollectedAtUtc,
+            facts = facts.Select(f => new
+            {
+                key = f.Key,
+                name = f.Name,
+                value = f.Value,
+                unit = f.Unit,
+                trust = f.Trust.ToString(),
+                availability = f.Availability.ToString(),
+                reason = f.UnavailableReason,
+            }),
             counts = new
             {
                 managers = inventory.Managers.Count,

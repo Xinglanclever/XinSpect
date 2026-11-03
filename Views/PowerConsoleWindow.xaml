@@ -1,0 +1,338 @@
+<Window x:Class="XinSpect.PowerConsoleWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="曦覽 強控台 Power Console" Height="760" Width="1180"
+        Icon="pack://application:,,,/Assets/app.ico"
+        MinHeight="520" MinWidth="900"
+        WindowStartupLocation="CenterScreen"
+        FontFamily="{StaticResource AppFont}"
+        Background="{DynamicResource PagePlaneBrush}"
+        TextOptions.TextFormattingMode="Ideal"
+        UseLayoutRounding="True">
+    <Window.Resources>
+        <!-- 等寬字：強控台的語言是暫存器與雜湊，不是散文。 -->
+        <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas, Courier New</FontFamily>
+        <Style x:Key="Mono" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource MonoFont}"/>
+        </Style>
+        <Style x:Key="MonoSmall" TargetType="TextBlock" BasedOn="{StaticResource Mono}">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{DynamicResource MutedInkBrush}"/>
+        </Style>
+        <Style x:Key="SecBtn" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="14,12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource Surface2Brush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="Strip" TargetType="Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Padding" Value="16,10"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 頂帶：身分與狀態 -->
+        <Border Grid.Row="0" Background="{DynamicResource PrimaryInkBrush}" Padding="14,8">
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Background="{DynamicResource AccentBrush}" Padding="6,2" Margin="0,0,10,0">
+                        <TextBlock Style="{StaticResource Mono}" Text="POWER CONSOLE" FontSize="11" FontWeight="Bold"
+                                   Foreground="{DynamicResource PagePlaneBrush}"/>
+                    </Border>
+                    <TextBlock Style="{StaticResource Mono}" FontSize="12" FontWeight="Bold"
+                               Foreground="{DynamicResource PagePlaneBrush}"
+                               Text="{Binding AppTitle}"/>
+                    <TextBlock Style="{StaticResource Mono}" FontSize="11" Margin="12,0,0,0" Opacity="0.8"
+                               Foreground="{DynamicResource PagePlaneBrush}"
+                               Text="RING0 唯讀 ・ 資料皆為本機即時值，非概念示意"/>
+                </StackPanel>
+                <TextBlock x:Name="LiveStamp" Style="{StaticResource Mono}" FontSize="11" Opacity="0.8"
+                           Foreground="{DynamicResource PagePlaneBrush}" HorizontalAlignment="Right"
+                           VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 左欄：INDEX -->
+            <Border Grid.Column="0" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Style="{StaticResource Strip}">
+                        <TextBlock Style="{StaticResource Mono}" FontSize="11" FontWeight="Bold"
+                                   Foreground="{DynamicResource MutedInkBrush}" Text="INDEX // 模組 01—05"/>
+                    </Border>
+                    <StackPanel x:Name="Nav">
+                        <Button Style="{StaticResource SecBtn}" Click="Nav_Click" Tag="s1">
+                            <Grid Width="180">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition/><ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="01 總覽遙測" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Column="1" Style="{StaticResource Mono}" FontSize="10"
+                                           Foreground="{DynamicResource MutedInkBrush}" Text="LIVE"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource SecBtn}" Click="Nav_Click" Tag="s2">
+                            <Grid Width="180">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition/><ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="02 Ring0 暫存器" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Column="1" Style="{StaticResource Mono}" FontSize="10"
+                                           Foreground="{DynamicResource MutedInkBrush}" Text="RING0"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource SecBtn}" Click="Nav_Click" Tag="s3">
+                            <Grid Width="180">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition/><ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="03 藍色中隊" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Column="1" Style="{StaticResource Mono}" FontSize="10"
+                                           Foreground="{DynamicResource MutedInkBrush}" Text="ETW"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource SecBtn}" Click="Nav_Click" Tag="s4">
+                            <Grid Width="180">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition/><ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="04 Bridge IPC" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Column="1" Style="{StaticResource Mono}" FontSize="10"
+                                           Foreground="{DynamicResource MutedInkBrush}" Text="JSON"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource SecBtn}" Click="Nav_Click" Tag="s5">
+                            <Grid Width="180">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition/><ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="05 部署與授權" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Column="1" Style="{StaticResource Mono}" FontSize="10"
+                                           Foreground="{DynamicResource MutedInkBrush}" Text="SHA-256"/>
+                            </Grid>
+                        </Button>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- 右側：內容 -->
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+
+                    <!-- SECTION 01：總覽遙測（綁主 VM 的即時緩衝，數字是這台機器當下的值） -->
+                    <StackPanel x:Name="S1">
+                        <Border Style="{StaticResource Strip}">
+                            <TextBlock Style="{StaticResource Mono}" FontSize="11" FontWeight="Bold"
+                                       Foreground="{DynamicResource AccentBrush}" Text="SECTION 01 // 即時遙測（本機現值）"/>
+                        </Border>
+                        <UniformGrid Columns="4" Margin="16,12">
+                            <Border BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,1,0" Padding="0,0,12,0" Margin="0,0,4,0">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource MonoSmall}" Text="01.A / CPU 溫度"/>
+                                    <TextBlock Style="{StaticResource Mono}" FontSize="30" FontWeight="Bold"
+                                               Text="{Binding CpuTempHist.CurrentText}"/>
+                                    <TextBlock Style="{StaticResource MonoSmall}" Text="{Binding CpuClockHist.CurrentText, StringFormat=時脈 {0}}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,1,0" Padding="12,0" Margin="0,0,4,0">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource MonoSmall}" Text="01.B / CPU 負載"/>
+                                    <TextBlock Style="{StaticResource Mono}" FontSize="30" FontWeight="Bold"
+                                               Text="{Binding CpuLoadHist.CurrentText}"/>
+                                    <TextBlock Style="{StaticResource MonoSmall}" Text="{Binding MemHist.CurrentText, StringFormat=記憶體 {0}}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,1,0" Padding="12,0" Margin="0,0,4,0">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource MonoSmall}" Text="01.C / GPU 溫度"/>
+                                    <TextBlock Style="{StaticResource Mono}" FontSize="30" FontWeight="Bold"
+                                               Text="{Binding GpuTempHist.CurrentText}"/>
+                                    <TextBlock Style="{StaticResource MonoSmall}" Text="{Binding GpuVramHist.CurrentText, StringFormat=VRAM {0}}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Padding="12,0">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource MonoSmall}" Text="01.D / GPU 負載"/>
+                                    <TextBlock Style="{StaticResource Mono}" FontSize="30" FontWeight="Bold"
+                                               Text="{Binding GpuHist.CurrentText}"/>
+                                    <TextBlock Style="{StaticResource MonoSmall}" Text="{Binding System.HostName}"/>
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+                        <Border Margin="16,0,16,16" Padding="12" Background="{DynamicResource SurfaceBrush}"
+                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                            <TextBlock Style="{StaticResource MonoSmall}" TextWrapping="Wrap"
+                                       Text="值來自主程式同一條感測管線（LibreHardwareMonitor＋MSR 唯讀）。「—」代表還沒有真實讀值，本控台不補 0、不編數字。"/>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- SECTION 02：Ring0（PCI 設定空間＋MSR，唯讀，真實讀值） -->
+                    <StackPanel x:Name="S2" Visibility="Collapsed">
+                        <Border Style="{StaticResource Strip}">
+                            <Grid>
+                                <TextBlock Style="{StaticResource Mono}" FontSize="11" FontWeight="Bold"
+                                           Foreground="{DynamicResource AccentBrush}" Text="SECTION 02 // RING0 暫存器檢視（唯讀）"/>
+                                <Button x:Name="PciScanButton" HorizontalAlignment="Right" Style="{StaticResource SecBtn}"
+                                        BorderThickness="1" Padding="10,4" Click="PciScan_Click">
+                                    <TextBlock Style="{StaticResource Mono}" FontSize="11" Text="重新掃描 PCI"/>
+                                </Button>
+                            </Grid>
+                        </Border>
+                        <TextBlock x:Name="PciStatus" Style="{StaticResource MonoSmall}" Margin="16,8,16,0"/>
+                        <Grid Margin="16,8,16,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="300"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <ListBox x:Name="PciList" Grid.Column="0" Height="360"
+                                     BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
+                                     Background="{DynamicResource SurfaceBrush}"
+                                     Foreground="{DynamicResource PrimaryInkBrush}"
+                                     SelectionChanged="PciList_SelectionChanged"/>
+                            <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                <TextBlock x:Name="PciDetail" Style="{StaticResource Mono}" FontSize="12"
+                                           TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                <TextBox x:Name="MsrIndexBox" Width="140" HorizontalAlignment="Left"
+                                         FontFamily="{StaticResource MonoFont}" FontSize="12"
+                                         Text="0x19C" ToolTip="MSR 索引（十六進位，例如 0x19C）"/>
+                                <Button x:Name="MsrReadButton" HorizontalAlignment="Left" Margin="0,6,0,6"
+                                        Style="{StaticResource SecBtn}" BorderThickness="1" Padding="10,4"
+                                        Click="MsrRead_Click">
+                                    <TextBlock Style="{StaticResource Mono}" FontSize="11" Text="RDMSR 讀取（唯讀）"/>
+                                </Button>
+                                <TextBlock x:Name="MsrResult" Style="{StaticResource Mono}" FontSize="12" TextWrapping="Wrap"/>
+                                <Border Margin="0,10,0,0" Padding="10" Background="{DynamicResource SurfaceBrush}"
+                                        BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                                    <TextBlock Style="{StaticResource MonoSmall}" TextWrapping="Wrap"
+                                               Text="hex dump 是選中裝置 0x00–0xFF 的設定空間現值；MSR 是指定核心索引的一次 RDMSR。兩者都只讀不寫。"/>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- SECTION 03：藍色中隊（本版未接，如實標示） -->
+                    <StackPanel x:Name="S3" Visibility="Collapsed">
+                        <Border Style="{StaticResource Strip}">
+                            <TextBlock Style="{StaticResource Mono}" FontSize="11" FontWeight="Bold"
+                                       Foreground="{DynamicResource AccentBrush}" Text="SECTION 03 // 藍色中隊安全姿態"/>
+                        </Border>
+                        <Border Margin="16,12" Padding="16" Background="{DynamicResource SurfaceBrush}"
+                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="本版未接入" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
+                                <TextBlock Style="{StaticResource MonoSmall}" TextWrapping="Wrap"
+                                           Text="11 項安全態勢與 ETW 事件流的完整呈現請開主介面的「藍色中隊」頁（同一份資料源）；這裡之後會做濃縮的守門矩陣，接上前不放假表。"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- SECTION 04：Bridge IPC 終端機（走主程式既有引擎，真 JSON 進出） -->
+                    <StackPanel x:Name="S4" Visibility="Collapsed">
+                        <Border Style="{StaticResource Strip}">
+                            <Grid>
+                                <TextBlock Style="{StaticResource Mono}" FontSize="11" FontWeight="Bold"
+                                           Foreground="{DynamicResource AccentBrush}" Text="SECTION 04 // BRIDGE IPC 終端機"/>
+                                <TextBlock x:Name="IpcStatus" Style="{StaticResource Mono}" FontSize="11"
+                                           HorizontalAlignment="Right" Foreground="{DynamicResource MutedInkBrush}"/>
+                            </Grid>
+                        </Border>
+                        <StackPanel Orientation="Horizontal" Margin="16,10,16,0">
+                            <Button Style="{StaticResource SecBtn}" BorderThickness="1" Padding="8,3" Margin="0,0,6,0" Click="IpcPreset_Click" Tag="ping">
+                                <TextBlock Style="{StaticResource Mono}" FontSize="11" Text="ping"/>
+                            </Button>
+                            <Button Style="{StaticResource SecBtn}" BorderThickness="1" Padding="8,3" Margin="0,0,6,0" Click="IpcPreset_Click" Tag="status">
+                                <TextBlock Style="{StaticResource Mono}" FontSize="11" Text="status"/>
+                            </Button>
+                            <Button Style="{StaticResource SecBtn}" BorderThickness="1" Padding="8,3" Margin="0,0,6,0" Click="IpcPreset_Click" Tag="posture">
+                                <TextBlock Style="{StaticResource Mono}" FontSize="11" Text="posture"/>
+                            </Button>
+                            <Button Style="{StaticResource SecBtn}" BorderThickness="1" Padding="8,3" Margin="0,0,6,0" Click="IpcPreset_Click" Tag="threats">
+                                <TextBlock Style="{StaticResource Mono}" FontSize="11" Text="threats"/>
+                            </Button>
+                            <Button Style="{StaticResource SecBtn}" BorderThickness="1" Padding="8,3" Margin="0,0,6,0" Click="IpcPreset_Click" Tag="baseline">
+                                <TextBlock Style="{StaticResource Mono}" FontSize="11" Text="baseline"/>
+                            </Button>
+                            <Button Style="{StaticResource SecBtn}" BorderThickness="1" Padding="8,3" Margin="0,0,6,0" Click="IpcPreset_Click" Tag="snapshot">
+                                <TextBlock Style="{StaticResource Mono}" FontSize="11" Text="snapshot"/>
+                            </Button>
+                            <Button Style="{StaticResource SecBtn}" BorderThickness="1" Padding="8,3" Click="IpcPreset_Click" Tag="probe">
+                                <TextBlock Style="{StaticResource Mono}" FontSize="11" Text="probe"/>
+                            </Button>
+                        </StackPanel>
+                        <TextBox x:Name="IpcRequestBox" Margin="16,10,16,0" Height="90"
+                                 FontFamily="{StaticResource MonoFont}" FontSize="12"
+                                 AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                                 Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource PrimaryInkBrush}"
+                                 BorderBrush="{DynamicResource HairlineBrush}"/>
+                        <Button x:Name="IpcSendButton" HorizontalAlignment="Left" Margin="16,8,16,0"
+                                Style="{StaticResource SecBtn}" BorderThickness="1" Padding="12,5" Click="IpcSend_Click">
+                            <TextBlock Style="{StaticResource Mono}" FontSize="11" Text="發送 JSON 指令"/>
+                        </Button>
+                        <TextBox x:Name="IpcResponseBox" Margin="16,8,16,16" Height="200" IsReadOnly="True"
+                                 FontFamily="{StaticResource MonoFont}" FontSize="12"
+                                 VerticalScrollBarVisibility="Auto" TextWrapping="NoWrap"
+                                 Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource PrimaryInkBrush}"
+                                 BorderBrush="{DynamicResource HairlineBrush}"/>
+                    </StackPanel>
+
+                    <!-- SECTION 05：部署與授權（當場計算本機檔案的雜湊，全是真的） -->
+                    <StackPanel x:Name="S5" Visibility="Collapsed">
+                        <Border Style="{StaticResource Strip}">
+                            <TextBlock Style="{StaticResource Mono}" FontSize="11" FontWeight="Bold"
+                                       Foreground="{DynamicResource AccentBrush}" Text="SECTION 05 // 執行檔 SHA-256 對帳（本機現算）"/>
+                        </Border>
+                        <TextBlock x:Name="HashNote" Style="{StaticResource MonoSmall}" Margin="16,10,16,0"
+                                   TextWrapping="Wrap"
+                                   Text="以下雜湊是開啟這一頁當場對本機檔案計算的 SHA-256；比對對象是 GitHub Release 的 SHA256SUMS.txt。"/>
+                        <TextBlock x:Name="HashList" Style="{StaticResource Mono}" FontSize="12" Margin="16,10,16,16"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- 底帶 -->
+        <Border Grid.Row="2" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0"
+                Background="{DynamicResource SurfaceBrush}" Padding="14,7">
+            <Grid>
+                <TextBlock Style="{StaticResource MonoSmall}" Text="POWER CONSOLE ・ 唯讀 ・ 不寫任何硬體暫存器"/>
+                <TextBlock Style="{StaticResource MonoSmall}" HorizontalAlignment="Right"
+                           Text="{Binding AppSubtitle}"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

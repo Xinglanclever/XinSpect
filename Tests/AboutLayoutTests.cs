@@ -20,16 +20,20 @@ public class AboutLayoutTests
     }
 
     [Fact]
-    public void 關於頁的區塊順序_第三方授權_意見反饋_留言建議_鍵盤快捷鍵()
+    public void 關於頁的區塊順序_意見反饋_留言建議_第三方授權()
     {
+        // 3.15 之後的使用者裁決：第三方授權挪到留言建議下面；快捷鍵留在意見反饋區之後。
         string xaml = RepoFile(Path.Combine("Views", "AboutView.xaml"));
-        int licenses = xaml.IndexOf("Text=\"第三方授權\"", StringComparison.Ordinal);
         int feedback = xaml.IndexOf("Text=\"意見反饋 ・ 聯絡我們\"", StringComparison.Ordinal);
         int message = xaml.IndexOf("Text=\"留言建議\"", StringComparison.Ordinal);
         int shortcuts = xaml.IndexOf("Text=\"鍵盤快捷鍵\"", StringComparison.Ordinal);
+        int licenses = xaml.IndexOf("Text=\"第三方授權\"", StringComparison.Ordinal);
+        int disclaimer = xaml.IndexOf("Text=\"免責聲明\"", StringComparison.Ordinal);
 
-        Assert.True(licenses >= 0 && feedback > licenses && message > feedback && shortcuts > message,
-            $"關於頁區塊順序不對：第三方授權={licenses}、意見反饋={feedback}、留言建議={message}、鍵盤快捷鍵={shortcuts}");
+        Assert.True(feedback >= 0, "找不到意見反饋");
+        Assert.True(feedback < message && message < shortcuts && shortcuts < licenses && licenses < disclaimer,
+            $"關於頁區塊順序不對：意見反饋={feedback}、留言建議={message}、鍵盤快捷鍵={shortcuts}、"
+            + $"第三方授權={licenses}、免責聲明={disclaimer}");
     }
 
     [Fact]

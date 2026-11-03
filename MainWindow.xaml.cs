@@ -357,6 +357,21 @@ public partial class MainWindow : Window
     }
 
     private void Export_Click(object sender, RoutedEventArgs e) => _vm.ExportReport();
+
+    private PowerConsoleWindow? _console;
+    /// <summary>強控台：瑞士工業風的工程檢視。單一實例，開過就帶到前景。</summary>
+    private void Console_Click(object sender, RoutedEventArgs e)
+    {
+        if (_console is null || !_console.IsLoaded)
+        {
+            _console = new PowerConsoleWindow();
+            _console.Closed += (_, _) => _console = null;
+        }
+        _console.Show();
+        if (_console.WindowState == WindowState.Minimized) _console.WindowState = WindowState.Normal;
+        _console.Activate();
+    }
+
     // ===== 迷你浮動監視器 + 系統匣 =====
     private void Mini_Click(object sender, RoutedEventArgs e) => ToggleMini();
 
