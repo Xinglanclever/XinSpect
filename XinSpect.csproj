@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -90,6 +90,9 @@
        本體的預設 glob 收入，會直接破壞 net10 編譯。故一律自各預設項目類型排除。 -->
   <ItemGroup>
     <Compile Remove="Bridge\**\*.cs" />
+    <Compile Remove="XinSpectCli\**\*.cs" />
+    <EmbeddedResource Remove="XinSpectCli\**" />
+    <None Remove="XinSpectCli\**" />
     <EmbeddedResource Remove="Bridge\**" />
     <Content Remove="Bridge\**" />
     <None Remove="Bridge\**" />

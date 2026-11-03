@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>xsc</AssemblyName>
+    <RootNamespace>XinSpectCli</RootNamespace>
+    <!-- 參考的主專案是 WPF WinExe：CLI 這邊也要拉起 WPF 參照，ProjectReference 的型別才解析得到 -->
+    <UseWPF>true</UseWPF>
+    <StartupObject>XinSpectCli.Program</StartupObject>
+    <AssemblyTitle>XinSpect Console（曦覽終端機）</AssemblyTitle>
+    <Product>曦覽 XinSpect</Product>
+    <Version>3.16</Version>
+    <!-- 版號由 Tools/bump-version.py 逐版改；這裡只供顯示，主程式仍以 XinSpect.csproj 為單一來源 -->
+    <!-- AssemblyName xsc：使用者在終端打 xsc 進入互動模式；一次性指令也走 xsc <args> 轉發 CliService -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\XinSpect.csproj" />
+  </ItemGroup>
+
+</Project>
