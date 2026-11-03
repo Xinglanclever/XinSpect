@@ -170,6 +170,26 @@ public sealed class PciAndPpttTests
     }
 
     [Fact]
+    public void DVSEC_CXL聯盟Vendor_摘要原樣列出不冒充能力()
+    {
+        var page = new byte[4096];
+        WriteDword(page, 0x100, 0x0023u);          // DVSEC，鏈結尾
+        WriteU16(page, 0x104, 0x1E98);             // CXL Consortium Vendor ID
+        WriteU16(page, 0x106, (0x20 << 4) | 1);    // length 0x20、revision 1
+        WriteU16(page, 0x108, 0x0000);             // DVSEC ID 0
+
+        var facts = PciCapabilityFactsService.Collect(null!, AcpiWithMcfg(), At,
+            (bus, dev, fn) => dev == 0 && fn == 0 ? page : null);
+
+        var summary = facts.Single(f => f.Key == "sb.pci.cap.summary");
+        Assert.Contains("DVSEC：", summary.Value);
+        Assert.Contains("vendor 0x1E98（CXL 聯盟 Vendor ID）", summary.Value);
+        Assert.Contains("DVSEC ID 0x0000", summary.Value);
+        Assert.Contains("rev 1", summary.Value);
+        Assert.Contains("length 32", summary.Value);
+    }
+
+    [Fact]
     public void 服務_無MCFG_九把鍵標NotApplicable不假裝掃過()
     {
         var facts = PciCapabilityFactsService.Collect(null!, new NoAcpi(), At);

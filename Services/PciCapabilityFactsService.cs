@@ -73,6 +73,7 @@ public static class PciCapabilityFactsService
         var dpcParts = new List<string>();
         var vcParts = new List<string>();
         var aerParts = new List<string>();
+        var dvsecParts = new List<string>();
         var revisions = new List<string>();
 
         foreach (var (dev, fn, page) in scanned)
@@ -96,6 +97,12 @@ public static class PciCapabilityFactsService
                 vcParts.Add($"{where}：Port VC Cap1 0x{vci.PortVcCapability1:X8}、Cap2 0x{vci.PortVcCapability2:X8}");
             if (caps.FirstOrDefault(c => c.Extended && c.Id == 0x01) is { Offset: > 0 } aer && PciCapabilities.AerFullDecode(page, aer.Offset) is { } af)
                 aerParts.Add($"{where}：不可更正狀態 0x{af.UncorrectableStatus:X8}／遮罩 0x{af.UncorrectableMask:X8}／嚴重度 0x{af.UncorrectableSeverity:X8}；可更正狀態 0x{af.CorrectableStatus:X8}／遮罩 0x{af.CorrectableMask:X8}");
+            foreach (var dv in caps.Where(c => c.Extended && c.Id == 0x23))
+            {
+                if (PciCapabilities.Dvsec(page, dv.Offset) is not { } d) continue;
+                string vendorNote = d.VendorId == 0x1E98 ? "（CXL 聯盟 Vendor ID）" : "";
+                dvsecParts.Add($"{where}：vendor 0x{d.VendorId:X4}{vendorNote}、DVSEC ID 0x{d.DvsecId:X4}、rev {d.Revision}、length {d.Length}");
+            }
 
             // MSI-X 表大小（legacy 能力 0x11）：附在能力摘要後面，讓「有幾條中斷向量」也看得到
             if (caps.FirstOrDefault(c => !c.Extended && c.Id == 0x11) is { Offset: > 0 } msix && PciCapabilities.MsixTableSize(page, msix.Offset) is { } msixSize)
@@ -113,7 +120,8 @@ public static class PciCapabilityFactsService
             new HardwareFact("sb.pci.cap.summary", Category, "能力鏈盤點",
                 $"bus 0 掃 {scanned.Count} 個功能：{string.Join("、", topCaps)}"
                 + (readErrors > 0 ? $"；{readErrors} 次讀取失敗（如實缺席）" : "")
-                + "。" + string.Join("；", inventories.Take(10)),
+                + "。" + string.Join("；", inventories.Take(10))
+                + "。DVSEC：" + (dvsecParts.Count == 0 ? "無" : string.Join("；", dvsecParts)),
                 "", "ECAM；能力名稱核對 Linux pci_regs.h", FactTrustLevel.Measured, false, at),
             Summarize("sb.pci.vf.summary", "SR-IOV 虛擬功能", vfParts, "本機 bus 0 無帶 SR-IOV 能力的裝置（虛擬化功能未提供）", at),
             Summarize("sb.pci.acs.summary", "ACS 存取控制", acsParts, "本機 bus 0 無帶 ACS 能力的裝置（多為根埠與交換器才有）", at),

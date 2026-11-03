@@ -22,6 +22,9 @@ public readonly record struct VcInfo(uint PortVcCapability1, uint PortVcCapabili
 public readonly record struct AerFull(uint UncorrectableStatus, uint UncorrectableMask, uint UncorrectableSeverity,
     uint CorrectableStatus, uint CorrectableMask, uint CapabilitiesAndControl);
 
+/// <summary>DVSEC（Designated Vendor-Specific Enhanced Capability）的識別欄位。</summary>
+public readonly record struct DvsecInfo(ushort VendorId, byte Revision, ushort Length, ushort DvsecId);
+
 /// <summary>
 /// PCI 能力鏈的純解碼器：legacy 能力鏈（0x34 起）與擴充能力鏈（0x100 起）走訪，以及各能力的欄位解讀。
 /// </summary>
@@ -83,6 +86,20 @@ public static class PciCapabilities
         }
 
         return list.OrderBy(c => c.Offset).ToList();
+    }
+
+    /// <summary>
+    /// 解 DVSEC（擴充能力 ID 0x23）：Vendor ID @+0x04、Revision/Length @+0x06、DVSEC ID @+0x08。
+    /// 越界回 null；不認識的 vendor／ID 原樣回報，不硬掰成 CXL／UCIe。
+    /// </summary>
+    [SpecRef("PCIe Base Spec, DVSEC Extended Capability（ID 0x23）：DVSEC Vendor ID @+0x04、DVSEC Revision @+0x06 bits[3:0]、DVSEC Length @+0x06 bits[15:4]、DVSEC ID @+0x08")]
+    public static DvsecInfo? Dvsec(ReadOnlySpan<byte> config4k, int dvsecOffset)
+    {
+        if (dvsecOffset < ExtendedStart || dvsecOffset + 0x0A > config4k.Length) return null;
+        ushort vendor = BitConverter.ToUInt16(config4k[(dvsecOffset + 0x04)..(dvsecOffset + 0x06)]);
+        ushort revisionLength = BitConverter.ToUInt16(config4k[(dvsecOffset + 0x06)..(dvsecOffset + 0x08)]);
+        ushort id = BitConverter.ToUInt16(config4k[(dvsecOffset + 0x08)..(dvsecOffset + 0x0A)]);
+        return new DvsecInfo(vendor, (byte)(revisionLength & 0xF), (ushort)(revisionLength >> 4), id);
     }
 
     /// <summary>PCIe Link Capabilities（PCIe 能力 +0x0C）：Max Link Speed bits[3:0]、Max Link Width bits[9:4]、ASPM bits[11:10]。</summary>
