@@ -2,6 +2,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -253,5 +254,140 @@ public partial class PowerConsoleWindow : Window
     {
         _stamp.Stop();
         base.OnClosed(e);
+    }
+
+    // ── 指令行操作＋鍵盤導航 ─────────────────────────────────────────────────
+    //
+    // 這個視窗的設計目標是「手不離鍵盤」：↑↓ 在節區與命令歷史間移動、Enter 執行、
+    // Ctrl+1–5 直接跳節區、Esc 關窗；底部命令列支援 help／pci／msr／ipc／hash／theme。
+    // 指令只映射到既有服務，不開任何新的硬體通路。
+
+    private readonly List<string> _cmdHistory = [];
+    private int _histIndex = -1;
+
+    private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        bool cmdFocused = CmdBox.IsKeyboardFocused || CmdBox.IsKeyboardFocusWithin;
+
+        if (e.Key == System.Windows.Input.Key.Escape)
+        {
+            Close();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.KeyboardDevice.Modifiers == System.Windows.Input.ModifierKeys.Control
+            && e.Key >= System.Windows.Input.Key.D1 && e.Key <= System.Windows.Input.Key.D5)
+        {
+            Show("s" + (e.Key - System.Windows.Input.Key.D1 + 1));
+            e.Handled = true;
+            return;
+        }
+
+        // ↑↓：命令列聚焦時走歷史（由 CmdBox_KeyDown 處理）；否則在節區按鈕間移動
+        if (!cmdFocused && (e.Key == System.Windows.Input.Key.Up || e.Key == System.Windows.Input.Key.Down))
+        {
+            var buttons = Nav.Children.OfType<Button>().ToList();
+            int i = buttons.IndexOf(Keyboard.FocusedElement as Button);
+            i = e.Key == System.Windows.Input.Key.Up
+                ? (i <= 0 ? buttons.Count - 1 : i - 1)
+                : (i < 0 || i >= buttons.Count - 1 ? 0 : i + 1);
+            buttons[i].Focus();
+            e.Handled = true;
+        }
+    }
+
+    private void CmdBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Return)
+        {
+            string cmd = CmdBox.Text.Trim();
+            if (cmd.Length == 0) return;
+            _cmdHistory.Add(cmd);
+            _histIndex = _cmdHistory.Count;
+            CmdBox.Clear();
+            RunCommand(cmd);
+            e.Handled = true;
+        }
+        else if (e.Key == System.Windows.Input.Key.Up)
+        {
+            if (_cmdHistory.Count == 0) return;
+            _histIndex = Math.Max(0, _histIndex - 1);
+            CmdBox.Text = _cmdHistory[_histIndex];
+            CmdBox.CaretIndex = CmdBox.Text.Length;
+            e.Handled = true;
+        }
+        else if (e.Key == System.Windows.Input.Key.Down)
+        {
+            if (_cmdHistory.Count == 0) return;
+            _histIndex = Math.Min(_cmdHistory.Count, _histIndex + 1);
+            CmdBox.Text = _histIndex < _cmdHistory.Count ? _cmdHistory[_histIndex] : "";
+            CmdBox.CaretIndex = CmdBox.Text.Length;
+            e.Handled = true;
+        }
+    }
+
+    private void RunCommand(string cmd)
+    {
+        string[] parts = cmd.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        string head = parts[0].ToLowerInvariant();
+        string rest = parts.Length > 1 ? cmd[(cmd.IndexOf(' ') + 1)..].Trim() : "";
+
+        switch (head)
+        {
+            case "help" or "?":
+                CmdOutput.Text = "指令：s1–s5（切節區）｜pci scan（掃 PCI）｜msr <索引>（讀 MSR，如 msr 0x19C）"
+                    + "｜ipc <指令>（送 Bridge，如 ipc ping）｜hash（算本機 SHA-256）｜theme（循環主題）｜clear｜exit";
+                break;
+
+            case "s1" or "s2" or "s3" or "s4" or "s5" or "01" or "02" or "03" or "04" or "05":
+                Show("s" + (head[0] == 's' ? head[1] : head[1..]));
+                CmdOutput.Text = "→ 節區 " + head;
+                break;
+
+            case "pci":
+                if (rest.StartsWith("scan", StringComparison.Ordinal)) { ScanPci(); CmdOutput.Text = "→ PCI 掃描已啟動。"; }
+                else CmdOutput.Text = "用法：pci scan";
+                break;
+
+            case "msr":
+                if (rest.Length == 0) { CmdOutput.Text = "用法：msr <十六進位索引>，例如 msr 0x19C"; break; }
+                MsrIndexBox.Text = rest;
+                Show("s2");
+                MsrRead_Click(this, new RoutedEventArgs());
+                CmdOutput.Text = "→ 讀取 MSR " + rest + "（結果在節區 02）。";
+                break;
+
+            case "ipc":
+                if (rest.Length == 0) { CmdOutput.Text = "用法：ipc ping｜status｜posture｜threats｜baseline｜snapshot｜probe"; break; }
+                Show("s4");
+                IpcRequestBox.Text = "{\"cmd\":\"" + rest + "\"}";
+                IpcSend_Click(this, new RoutedEventArgs());
+                CmdOutput.Text = "→ 送出 ipc " + rest + "（回應在節區 04）。";
+                break;
+
+            case "hash":
+                Show("s5");
+                ComputeHashes();
+                CmdOutput.Text = "→ SHA-256 已重算（節區 05）。";
+                break;
+
+            case "theme":
+                ThemeService.ToggleTheme();
+                CmdOutput.Text = "→ 主題已切換（" + ThemeService.ThemeNames[ThemeService.ThemeIndex] + "）。";
+                break;
+
+            case "clear":
+                CmdOutput.Text = "";
+                break;
+
+            case "exit" or "quit":
+                Close();
+                break;
+
+            default:
+                CmdOutput.Text = "未知指令：" + head + "（輸入 help 看清單）";
+                break;
+        }
     }
 }

@@ -86,17 +86,6 @@
                                        FontSize="11" Margin="8,1,0,0"/>
                         </StackPanel>
                     </Button>
-                    <Button x:Name="ConsoleButton" Style="{StaticResource ToolButton}" Click="Console_Click"
-                            VerticalAlignment="Center" Margin="0,0,10,0"
-                            ToolTip="強控台（Power Console）：瑞士工業風的工程檢視，即時遙測與執行檔 SHA-256 對帳；唯讀，不寫硬體">
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="15" Height="15" Margin="0,0,7,0">
-                                <Path Fill="{DynamicResource PrimaryInkBrush}"
-                                      Data="F1 M2,4 H22 V8 H2 Z M2,10 H13 V13 H2 Z M2,15 H22 V20 H2 Z"/>
-                            </Viewbox>
-                            <TextBlock Text="強控台" Foreground="{DynamicResource PrimaryInkBrush}" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
                     <Button x:Name="MiniButton" Style="{StaticResource ToolButton}" Click="Mini_Click"
                             VerticalAlignment="Center" Margin="0,0,10,0"
                             ToolTip="喚醒／隱藏迷你浮動監視器；小窗被關掉後可從這裡重新喚醒">
@@ -107,6 +96,17 @@
                             </Viewbox>
                             <TextBlock Text="迷你 HUD" Foreground="{DynamicResource AccentBrush}"
                                        FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="ConsoleButton" Style="{StaticResource ToolButton}" Click="Console_Click"
+                            VerticalAlignment="Center" Margin="0,0,10,0"
+                            ToolTip="強控台（Power Console）：指令行操作（help）、方向鍵與 Ctrl+1–5 導航、Ring0 唯讀檢視；唯讀不寫硬體">
+                        <StackPanel Orientation="Horizontal">
+                            <Viewbox Width="15" Height="15" Margin="0,0,7,0">
+                                <Path Fill="{DynamicResource PrimaryInkBrush}"
+                                      Data="F1 M2,4 H22 V8 H2 Z M2,10 H13 V13 H2 Z M2,15 H22 V20 H2 Z"/>
+                            </Viewbox>
+                            <TextBlock Text="強控台" Foreground="{DynamicResource PrimaryInkBrush}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button x:Name="ExportButton" Style="{StaticResource ToolButton}" Click="Export_Click"

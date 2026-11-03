@@ -51,10 +51,11 @@
         </Style>
     </Window.Resources>
 
-    <Grid>
+    <Grid PreviewKeyDown="Window_PreviewKeyDown">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -324,8 +325,32 @@
             </ScrollViewer>
         </Grid>
 
-        <!-- 底帶 -->
+        <!-- 命令列：指令行操作。↑↓ 換歷史、Enter 執行、help 看清單。 -->
         <Border Grid.Row="2" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0"
+                Background="{DynamicResource SurfaceBrush}" Padding="14,8">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Style="{StaticResource Mono}" FontSize="13" FontWeight="Bold"
+                               Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"
+                               Margin="0,0,8,0" Text="&gt;"/>
+                    <TextBox x:Name="CmdBox" Grid.Column="1" FontFamily="{StaticResource MonoFont}" FontSize="13"
+                             Background="Transparent" Foreground="{DynamicResource PrimaryInkBrush}"
+                             BorderThickness="0" VerticalAlignment="Center"
+                             KeyDown="CmdBox_KeyDown"/>
+                </Grid>
+                <TextBlock x:Name="CmdOutput" Style="{StaticResource Mono}" FontSize="11"
+                           Foreground="{DynamicResource MutedInkBrush}" Margin="16,6,0,0"
+                           TextWrapping="Wrap" MaxHeight="110" VerticalAlignment="Top"
+                           Text="輸入 help 看指令清單。↑↓ 切換節區或命令歷史、Ctrl+1–5 跳節區、Esc 關閉。"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 底帶 -->
+        <Border Grid.Row="3" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0"
                 Background="{DynamicResource SurfaceBrush}" Padding="14,7">
             <Grid>
                 <TextBlock Style="{StaticResource MonoSmall}" Text="POWER CONSOLE ・ 唯讀 ・ 不寫任何硬體暫存器"/>

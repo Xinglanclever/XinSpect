@@ -20,7 +20,7 @@ public class PowerConsoleTests
     }
 
     [Fact]
-    public void 主介面有強控台入口_在迷你HUD旁邊()
+    public void 主介面有強控台入口_緊鄰匯出報告()
     {
         string xaml = RepoFile("MainWindow.xaml");
         int console = xaml.IndexOf("x:Name=\"ConsoleButton\"", StringComparison.Ordinal);
@@ -28,7 +28,30 @@ public class PowerConsoleTests
         int export = xaml.IndexOf("x:Name=\"ExportButton\"", StringComparison.Ordinal);
 
         Assert.True(console >= 0, "MainWindow.xaml 沒有強控台入口（ConsoleButton）");
-        Assert.True(console < mini && mini < export, "強控台按鈕應在迷你 HUD 之前、匯出報告之前");
+        // 使用者裁決：強控台在「匯出報告」旁邊（前一格）；迷你 HUD 再往前。
+        Assert.True(mini >= 0 && mini < console && console < export,
+            $"按鈕順序不對：迷你HUD={mini}、強控台={console}、匯出報告={export}");
+    }
+
+    [Fact]
+    public void 強控台支援指令行與鍵盤操作()
+    {
+        string xaml = RepoFile(Path.Combine("Views", "PowerConsoleWindow.xaml"));
+        string src = RepoFile(Path.Combine("Views", "PowerConsoleWindow.xaml.cs"));
+
+        // 命令列與歷史
+        Assert.Contains("x:Name=\"CmdBox\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"CmdOutput\"", xaml, StringComparison.Ordinal);
+        // 鍵盤導航：方向鍵、Enter、Ctrl+1–5、Esc
+        Assert.Contains("Window_PreviewKeyDown", xaml, StringComparison.Ordinal);
+        Assert.Contains("Key.Escape", src, StringComparison.Ordinal);
+        Assert.Contains("Key.D1", src, StringComparison.Ordinal);
+        Assert.Contains("Key.Up", src, StringComparison.Ordinal);
+        Assert.Contains("Key.Down", src, StringComparison.Ordinal);
+        Assert.Contains("Key.Return", src, StringComparison.Ordinal);
+        // 指令集
+        foreach (string cmd in new[] { "help", "pci scan", "msr", "ipc ", "hash", "theme", "clear", "exit" })
+            Assert.Contains(cmd, src, StringComparison.Ordinal);
     }
 
     [Fact]
