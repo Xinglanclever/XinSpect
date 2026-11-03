@@ -36,7 +36,11 @@ internal static class WmiGuard
     public static (T? Value, bool TimedOut) Probe<T>(Func<T?> read, int timeoutMs = DefaultTimeoutMs)
         where T : class
     {
-        var task = Task.Run(read);
+        // 專用執行緒，不走執行緒集區：整機跑負載時集區可能排不到工，工作根本還沒開始跑就被
+        // 當成「WMI 無回應」——那正是這一類探針最常見的誤報（實測於全套測試滿載時，
+        // 一個立刻丟例外的假讀取被講成逾時）。LongRunning 保證工作是馬上開始，逾時才是真的逾時。
+        var task = Task.Factory.StartNew(read, CancellationToken.None,
+            TaskCreationOptions.LongRunning, TaskScheduler.Default);
         try
         {
             if (task.Wait(timeoutMs)) return (task.Result, false);

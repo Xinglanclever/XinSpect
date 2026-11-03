@@ -41,11 +41,13 @@ public class AutomationAndGuidanceFactsTests
         // 12 → 13（同日）：--speculation（七項 infer.* 推測，三重標註）進 headless 目錄。
         // 13 → 14（同日）：--compliance-diff（兩份合規 JSON 的判定差異）進 headless 目錄。
         // 14 → 15（同日）：--fleet（只讀本機快照的族群基線）進 headless 目錄。
-        Assert.Equal(15, doc.RootElement.GetArrayLength());
+        // 15 → 16（同日）：--redfish（離線 Redfish 目錄、不連網）進 headless 目錄。
+        Assert.Equal(16, doc.RootElement.GetArrayLength());
         Assert.Contains("--json", json, StringComparison.Ordinal);
         Assert.Contains(CliService.StdinBatchArg, json, StringComparison.Ordinal);
         Assert.Contains("零網路", json, StringComparison.Ordinal);
         Assert.Contains(CliService.SpeculationArg, json, StringComparison.Ordinal);
+        Assert.Contains(CliService.RedfishArg, json, StringComparison.Ordinal);
     }
 
     [Fact]

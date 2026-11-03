@@ -87,13 +87,15 @@
                         </StackPanel>
                     </Button>
                     <Button x:Name="MiniButton" Style="{StaticResource ToolButton}" Click="Mini_Click"
-                            VerticalAlignment="Center" Margin="0,0,10,0" ToolTip="切換迷你浮動監視器">
+                            VerticalAlignment="Center" Margin="0,0,10,0"
+                            ToolTip="喚醒／隱藏迷你浮動監視器；小窗被關掉後可從這裡重新喚醒">
                         <StackPanel Orientation="Horizontal">
                             <Viewbox Width="15" Height="15" Margin="0,0,7,0">
-                                <Path Fill="{DynamicResource PrimaryInkBrush}"
+                                <Path Fill="{DynamicResource AccentBrush}"
                                       Data="F1 M3,4 H21 A1,1 0 0 1 22,5 V17 A1,1 0 0 1 21,18 H3 A1,1 0 0 1 2,17 V5 A1,1 0 0 1 3,4 Z M4,6 H20 V16 H4 Z M13,11 H19 V15 H13 Z"/>
                             </Viewbox>
-                            <TextBlock Text="迷你" Foreground="{DynamicResource PrimaryInkBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="迷你 HUD" Foreground="{DynamicResource AccentBrush}"
+                                       FontWeight="SemiBold" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button x:Name="ExportButton" Style="{StaticResource ToolButton}" Click="Export_Click"

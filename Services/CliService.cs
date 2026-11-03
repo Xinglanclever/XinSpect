@@ -40,6 +40,7 @@ public static class CliService
     public const string ComplianceFormatArg = "--format";
     public const string FleetArg = "--fleet";
     public const string FleetSnapshotsArg = "--snapshots";
+    public const string RedfishArg = "--redfish";
     public const string MerkleArg = "--merkle";
     public const string SpeculationArg = "--speculation";
 
@@ -105,6 +106,8 @@ public static class CliService
             return RunSpeculation(args, collect, stdout, stderr);
         if (args[0] == FleetArg)
             return RunFleet(args, stdout, stderr);
+        if (args[0] == RedfishArg)
+            return RunRedfish(args, stdout, stderr);
         if (args[0] != JsonArg)
         {
             stderr.WriteLine($"未知引數「{args[0]}」。用 --help 看用法。");
@@ -216,6 +219,7 @@ public static class CliService
             new { mode = MerkleArg, scope = "", output = "JSON", description = "穩定事實的 SHA-256 Merkle 指紋；白名單＋排除敏感／非 Present／易變鍵，輸出只含鍵與雜湊。" },
             new { mode = SpeculationArg, scope = "", output = "JSON", description = "七項 infer.* 推測；每項都帶【推測】前綴與 Speculative 信任等級，並列信心、依據鍵與限制。不合規、不進 Merkle。" },
             new { mode = FleetArg, scope = "", output = "JSON", description = "只讀本機快照目錄，彙總同型號族群的 fleet.* 基線；不上傳、不跨機傳輸。--snapshots 可指定目錄。" },
+            new { mode = RedfishArg, scope = "", output = "JSON", description = "讀取已匯出的離線 Redfish 目錄樹（BMC／機箱／電源／風扇／溫度）；只讀本機檔案，不連網。" },
         };
         return JsonSerializer.Serialize(payload, JsonOptions);
     }
@@ -694,6 +698,72 @@ public static class CliService
     }
 
     /// <summary>
+    /// 離線 Redfish 目錄（<c>--redfish</c>）：只讀本機 JSON 樹，不連 BMC、不連網。
+    /// 退出碼：0＝至少讀到一個管理器／機箱／系統；2＝沒有可讀資源；1＝引數或寫出失敗。
+    /// </summary>
+    private static int RunRedfish(string[] args, TextWriter stdout, TextWriter stderr)
+    {
+        if (args.Length < 2 || args[1].StartsWith("--", StringComparison.Ordinal))
+        {
+            stderr.WriteLine($"{RedfishArg} 之後要接離線 Redfish 目錄的路徑：{RedfishArg} <目錄>。");
+            return ExitError;
+        }
+
+        RedfishInventory inventory;
+        try { inventory = RedfishBundleService.Read(args[1]); }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"讀取失敗：{ex.GetType().Name}：{ex.Message}");
+            return ExitError;
+        }
+
+        bool any = inventory.Managers.Count + inventory.Chassis.Count + inventory.Systems.Count > 0;
+        var payload = new
+        {
+            generatedAtUtc = DateTimeOffset.UtcNow,
+            scope = "redfish",
+            schemaVersion = RedfishBundleService.SchemaVersion,
+            source = RedfishBundleService.Source,
+            directory = inventory.Directory,
+            collectedAtUtc = inventory.CollectedAtUtc,
+            counts = new
+            {
+                managers = inventory.Managers.Count,
+                chassis = inventory.Chassis.Count,
+                systems = inventory.Systems.Count,
+                powerSupplies = inventory.PowerSupplies.Count,
+                fans = inventory.Fans.Count,
+                temperatures = inventory.Temperatures.Count,
+            },
+            managers = inventory.Managers,
+            chassis = inventory.Chassis,
+            systems = inventory.Systems,
+            powerSupplies = inventory.PowerSupplies,
+            fans = inventory.Fans,
+            temperatures = inventory.Temperatures,
+            powerConsumedWatts = inventory.PowerConsumedWatts,
+            warnings = inventory.Warnings,
+            note = "只讀本機已匯出的 Redfish 目錄樹：不連 BMC、不連網、不送出任何請求。"
+                 + "BMC 回報值是 Reported，不是本工具量測；缺少的集合與壞掉的 JSON 只記警告，不補 0。"
+                 + "退出碼 2 代表沒有讀到管理器／機箱／系統，不代表機器沒有 BMC。",
+        };
+
+        string json = JsonSerializer.Serialize(payload, JsonOptions);
+        string? outPath = OptionValue(args, OutArg);
+        try
+        {
+            if (outPath is not null) File.WriteAllText(outPath, json);
+            else stdout.WriteLine(json);
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"寫出失敗：{ex.Message}");
+            return ExitError;
+        }
+        return any ? ExitOk : ExitPartial;
+    }
+
+    /// <summary>
     /// 族群基線（<c>--fleet</c>）：只讀本機快照目錄，彙總同型號族群的 <c>fleet.*</c> 事實。
     /// 不出網、不上傳、不跨機傳輸。退出碼：0＝有可比的同型號族群；2＝沒有快照／沒有型號／沒有第二台；1＝致命。
     /// </summary>
@@ -1034,6 +1104,7 @@ public static class CliService
               XinSpect --merkle [--out <檔案>]
               XinSpect --speculation [--out <檔案>]
               XinSpect --fleet [--snapshots <目錄>] [--out <檔案>]
+              XinSpect --redfish <離線 Redfish 目錄> [--out <檔案>]
               XinSpect --help
 
             範圍：
@@ -1086,6 +1157,8 @@ public static class CliService
                               也不進 Merkle 指紋</b>；退出碼 0 只代表推測已產生。
               fleet           只讀本機快照目錄，彙總同型號族群的 fleet.* 基線。不上傳、不跨機傳輸；
                               樣本少於 4 份只給中位數與範圍，不給 z 分數。沒有可比的第二台回退出碼 2。
+              redfish         讀取已匯出的離線 Redfish 目錄樹（BMC／機箱／電源／風扇／溫度）；
+                              只讀本機 JSON，不連 BMC、不連網。BMC 回報值是 Reported，不是本工具量測。
 
             選項：
               --query <前綴>   只輸出 key 以該前綴開頭的事實（例：--query platform.）
@@ -1120,6 +1193,7 @@ public static class CliService
               --speculation     0＝七項推測都產生；2＝推測項數不是七（規則集合漂移）；1＝致命。
                                 0 不代表機器安全或合規——推測不是量測。
               --fleet           0＝有可比的同型號族群；2＝沒有快照／沒有型號／沒有第二台；1＝致命。
+              --redfish         0＝至少讀到一個管理器／機箱／系統；2＝沒有可讀資源；1＝致命。
             讀不到的事實如實帶 availability 與原因，絕不以 0／典型值頂替。
             """);
     }

@@ -333,12 +333,13 @@ public static class ThemeService
             if (!File.Exists(PrefPath)) return;
             var p = JsonSerializer.Deserialize<Prefs>(File.ReadAllText(PrefPath));
             if (p is null) return;
-            _theme = p.Theme switch
-            {
-                "Light" => AppTheme.Light,
-                "ExtremeEdition" => AppTheme.ExtremeEdition,
-                _ => AppTheme.Dark,
-            };
+            // 以前只列了 Light／ExtremeEdition，Swiss 與 SwissDark 存得進去卻讀不回來，
+            // 重開後悄悄回到深色（語言不受影響，因為語言存在另一個檔）。
+            // 改成直接解析 enum 並確認值在定義內：舊檔、手改、未來移除的主題都只回到預設，不會讓啟動失敗。
+            _theme = Enum.TryParse<AppTheme>(p.Theme, ignoreCase: true, out var saved)
+                     && Enum.IsDefined(saved)
+                ? saved
+                : AppTheme.Dark;
             _accent = FindAccent(p.Accent);
         }
         catch { /* 偏好毀損則沿用預設（深色 + 曦藍） */ }

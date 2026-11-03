@@ -2,7 +2,7 @@
 
 - 日期：2026-11-03
 - 對象：`xinspect_enterprise_grand_specification.md`（八大模組、宣稱 2,000+ 事實鍵）
-- 基線：XinSpect 3.13（`v3.13`，commit `e43f118`），事實鍵目錄 1,174 把、動態家族 68 個、測試基線 7,866
+- 基線：XinSpect 3.13（`v3.13`，commit `e43f118`），事實鍵目錄 1,174 把、動態家族 68 個、測試基線 7,874
 - 方法：逐條比對現有 `Services/` 生產者與 `FactKeyCatalog`；再用本機 Gemini 3.8 Flash（桌面版）對八條關鍵技術宣稱做對抗性判讀；每一條判讀都回頭對程式碼／規格驗證，不把模型輸出當結論
 
 ---
@@ -339,7 +339,7 @@ XinSpect --speculation [--out <檔案>]
 - 新增規格：`docs/spec/compliance-export.v1.md`（五種格式的欄位、跳脫與 severity 對照）。
 - 更新：`Tests/AutomationAndGuidanceFactsTests.cs`（headless 10 → 15）。
 - 守門子集：`--filter "Speculation|FactKeyCatalog|AutomationAndGuidance"` → **47 passed, 0 failed**。
-- 完整套件：基線 **7,866**；本機因既有 NVMe 核心不可中斷等待，實跑排除 1 條硬體限時測試
+- 完整套件：基線 **7,874**；本機因既有 NVMe 核心不可中斷等待，實跑排除 1 條硬體限時測試
   （`NvmeOverlappedIoTests.真的卡住的碟也要在外層預算內交還控制權`），其餘 **7,864 passed, 0 failed**。
   該測試未被跳過、未被改寫，健康機器上照常執行；排除原因是本機磁碟探針會卡住行程，不是本輪程式碼。
 - 目錄：1,174 把靜態鍵（+7 把 `infer.*`）；動態家族 68 個不變。

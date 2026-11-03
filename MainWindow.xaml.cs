@@ -381,10 +381,16 @@ public partial class MainWindow : Window
         Activate();
     }
 
-    /// <summary>切換迷你浮動監視器（供命令面板呼叫）。</summary>
+    /// <summary>切換迷你浮動監視器（供命令面板與工具列呼叫）。</summary>
     public void ToggleMini()
     {
-        _mini ??= new MiniOverlayWindow { DataContext = _vm };
+        // 使用者可能用 Alt+F4／工作列關掉小窗；已關閉的 WPF Window 不能再 Show()，
+        // 否則「迷你 HUD」鈕看起來像壞掉。關閉後就重建一個，位置仍由 Settings 還原。
+        if (_mini is null || !_mini.IsLoaded)
+        {
+            _mini = new MiniOverlayWindow { DataContext = _vm };
+            _mini.Closed += (_, _) => _mini = null;
+        }
         _mini.Toggle();
     }
 

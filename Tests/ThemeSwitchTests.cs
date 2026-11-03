@@ -136,6 +136,49 @@ public class ThemeSwitchTests
     }
 
     /// <summary>
+    /// 重開後要回到使用者選過的主題。迴歸點：<c>LoadPrefs</c> 曾經只認得 Light／ExtremeEdition，
+    /// Swiss／SwissDark 存得進去卻讀不回來，所以選了瑞士版、重開就變回深色（語言不受影響，因為存在另一個檔）。
+    /// 這裡用 <see cref="ThemeService.Initialize"/> 模擬下一次啟動：它只讀檔並套用，不經過 setter。
+    /// </summary>
+    [Fact]
+    public void 重開後仍套用已存主題_包含兩種瑞士版()
+    {
+        RunSta(() =>
+        {
+            WpfEnv.Ensure();
+            ThemeService.Initialize();
+
+            foreach (var theme in new[] { AppTheme.Light, AppTheme.ExtremeEdition, AppTheme.Swiss, AppTheme.SwissDark })
+            {
+                ThemeService.Theme = theme;      // setter 會寫入 %APPDATA%\XinSpect\appearance.json
+                ThemeService.Initialize();       // 模擬關閉後重開：只讀檔＋套用
+                Assert.Equal(theme, ThemeService.Theme);
+            }
+        });
+    }
+
+    /// <summary>
+    /// 設定頁一被打開也不能把已存的「深色瑞士」改掉。下拉選單只有 4 個索引（瑞士版佔一個），
+    /// 建構時指派 SelectedIndex 會觸發 SelectionChanged，而 <c>ThemeIndex</c> 的 setter 只會設成
+    /// <see cref="AppTheme.Swiss"/>；沒有擋掉的話，光是看設定頁就會把深色瑞士悄悄洗成淺色瑞士。
+    /// </summary>
+    [Fact]
+    public void 設定頁載入時不覆寫已存的深色瑞士版()
+    {
+        RunSta(() =>
+        {
+            WpfEnv.Ensure();
+            ThemeService.Initialize();
+            ThemeService.Theme = AppTheme.SwissDark;
+
+            var page = PageRegistry.Find("settings")!.Factory();
+
+            Assert.NotNull(page);
+            Assert.Equal(AppTheme.SwissDark, ThemeService.Theme);
+        });
+    }
+
+    /// <summary>
     /// 端到端：<b>同一棵</b>已經顯示中的視覺樹，切換外觀後重繪的像素必須真的不一樣。
     /// 只驗資源項目換掉了不夠——DynamicResource 的失效通知只會送到真的掛在視窗裡的樹，
     /// 所以這裡必須把頁面放進一個（挪到畫面外的）Window 並 Show 出來，才是實際情境。

@@ -13,7 +13,11 @@ public partial class SettingsView : UserControl
 
         // 外觀：主題下拉與強調色色票皆由 ThemeService 提供（靜態服務，故於程式碼指派而非繫結）
         ThemeCombo.ItemsSource = ThemeService.ThemeNames;
-        ThemeCombo.SelectedIndex = ThemeService.ThemeIndex;
+        // 指派 SelectedIndex 會同步觸發 SelectionChanged；若不擋，ThemeIndex 的 setter 會把
+        // 已存的「深色瑞士」重新寫成「淺色瑞士」（ThemeIndex 只有 0–3，分不出兩者）。
+        _syncingTheme = true;
+        try { ThemeCombo.SelectedIndex = ThemeService.ThemeIndex; }
+        finally { _syncingTheme = false; }
         AccentList.ItemsSource = ThemeService.Presets;
         ShowAccentHint();
 
@@ -66,9 +70,12 @@ public partial class SettingsView : UserControl
 
     // ── 外觀 ────────────────────────────────────────────────────────────────
 
+    private bool _syncingTheme;
+
     // 主題切換：ThemeService 立即改寫共用筆刷，整棵視覺樹同步換色並持久化。
     private void Theme_Changed(object sender, SelectionChangedEventArgs e)
     {
+        if (_syncingTheme) return;
         if (ThemeCombo.SelectedIndex >= 0) ThemeService.ThemeIndex = ThemeCombo.SelectedIndex;
         SyncSwissDarkCheck();
         ShowAccentHint();
