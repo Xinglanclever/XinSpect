@@ -45,19 +45,17 @@ public class WmiGuardTests
         // 工作要先排進執行緒集區才開始跑；集區被其他測試佔滿時，一個「立刻丟例外」的假讀取
         // 在時間內根本沒被執行，於是被講成「WMI 無回應」——明明它沒有卡住，只是還沒輪到。
         // WmiGuard 改用 LongRunning 的專用執行緒後，探針一定是馬上開始，逾時才代表真的逾時。
+        // 塞集區用有界的 Sleep 而不是事件：事件在 Dispose 後被遲到的集區工 Wait 到，
+        // 會變成未觀察例外把整個測試行程帶走（2026-11-04 實測）。
         int hog = Math.Max(ThreadPool.ThreadCount, 4) * 4;
-        using var release = new ManualResetEventSlim(false);
         for (int i = 0; i < hog; i++)
-            ThreadPool.QueueUserWorkItem(_ => release.Wait(TimeSpan.FromSeconds(10)));
-        try
-        {
-            var (value, timedOut) = WmiGuard.Probe<List<string>>(
-                () => throw new ManagementException("沒有這個命名空間"), timeoutMs: 1_500);
+            ThreadPool.QueueUserWorkItem(_ => Thread.Sleep(3_000));
 
-            Assert.Null(value);
-            Assert.False(timedOut);
-        }
-        finally { release.Set(); }
+        var (value, timedOut) = WmiGuard.Probe<List<string>>(
+            () => throw new ManagementException("沒有這個命名空間"), timeoutMs: 1_500);
+
+        Assert.Null(value);
+        Assert.False(timedOut);
     }
 
     [Fact]
