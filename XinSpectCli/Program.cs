@@ -1,3 +1,4 @@
+using System.IO;
 using System.Text;
 using XinSpect;
 
@@ -28,7 +29,8 @@ internal static class Program
 
     private static readonly string[] Commands =
     [
-        "help", "ver", "facts", "fact", "sys", "top", "msr", "pci", "ipc",
+        "help", "ver", "pages", "page", "domain", "keys", "settings", "changelog",
+        "facts", "fact", "sys", "top", "msr", "pci", "ipc",
         "redfish", "compliance", "merkle", "clear", "exit",
     ];
 
@@ -81,6 +83,13 @@ internal static class Program
             {
                 case "help" or "?": Help(); return true;
                 case "ver": Console.WriteLine(AppInfo.VersionText); return true;
+
+                case "pages": ListPages(); return true;
+                case "page": PageFacts(rest); return true;
+                case "domain": DomainFacts(rest); return true;
+                case "keys": ListKeys(rest); return true;
+                case "settings": ShowSettings(); return true;
+                case "changelog": ShowChangelog(rest); return true;
                 case "clear": Console.Write("\x1b[2J\x1b[H"); return true;
                 case "exit" or "quit" or "q": return false;
 
@@ -154,6 +163,12 @@ internal static class Program
             ("redfish <目錄>", "讀離線 Redfish 目錄（不連網）"),
             ("compliance [格式]", "合規判定（json|sarif|junit|cef|otel）"),
             ("merkle", "穩定事實 Merkle 指紋"),
+            ("pages", "列出 GUI 全部頁面與對應的 CLI 用法（常規版功能對照）"),
+            ("page <key>", "看某頁的資料：以該頁關鍵字過濾事實快取"),
+            ("domain <前綴>", "按鍵前綴過濾事實（如 domain cpu、domain nvme）"),
+            ("keys [字]", "搜尋 1,178 把靜態事實鍵目錄"),
+            ("settings", "讀目前使用者設定（settings.json）"),
+            ("changelog [n]", "看最近 n 版更新紀錄（預設 3）"),
             ("ver / clear / exit", "版號／清屏／離開"),
         ];
         foreach (var (c, d) in rows)
@@ -195,6 +210,94 @@ internal static class Program
     }
 
     private static string Trim(string s, int n) => s.Length <= n ? s : s[..(n - 1)] + "…";
+
+    // ── GUI 全功能對照：頁面清單、逐頁資料、域過濾、鍵目錄、設定、沿革 ────
+
+    private static string HintOf(XinSpect.PageDef p)
+    {
+        string h = p.Hint ?? "";
+        return h.Length > 44 ? h[..44] + "…" : h;
+    }
+
+    private static void ListPages()
+    {
+        Console.WriteLine($"{Bold}主頁面（{PageRegistry.Pages.Count}）{Reset}");
+        foreach (var p in PageRegistry.Pages)
+            Console.WriteLine($"  {Blue}{p.Key,-16}{Reset} {p.Title,-14} {Dim}{HintOf(p)}{Reset}");
+        Console.WriteLine($"{Bold}實用工具（{PageRegistry.Utilities.Count}）{Reset}");
+        foreach (var p in PageRegistry.Utilities)
+            Console.WriteLine($"  {Blue}{p.Key,-16}{Reset} {p.Title,-14} {Dim}{HintOf(p)}{Reset}");
+        Console.WriteLine($"{Dim}用 page <key> 看該頁對應的資料（先跑 facts 建快取）。{Reset}");
+    }
+
+    private static void PageFacts(string key)
+    {
+        if (_cache is null) { Console.WriteLine($"{Red}先跑 facts。{Reset}"); return; }
+        var def = PageRegistry.Pages.Concat(PageRegistry.Utilities)
+            .FirstOrDefault(p => p.Key.Equals(key, StringComparison.OrdinalIgnoreCase)
+                              || p.Title.Contains(key, StringComparison.Ordinal));
+        if (def is null) { Console.WriteLine($"{Red}找不到頁面：{key}（pages 看清單）{Reset}"); return; }
+
+        Console.WriteLine($"{Bold}{def.Title}{Reset} {Dim}[{def.Key}・{def.Group}] {def.Hint}{Reset}");
+        // 頁面關鍵字＋標題＋鍵名套到事實搜尋；這就是「那一頁」在終端裡的等價資料。
+        var terms = new List<string> { def.Key, def.Title };
+        terms.AddRange(def.Keywords);
+        var hits = _cache.Where(f => terms.Any(t =>
+                f.Key.Contains(t, StringComparison.OrdinalIgnoreCase)
+                || f.Name.Contains(t, StringComparison.Ordinal)
+                || f.Value.Contains(t, StringComparison.OrdinalIgnoreCase)))
+            .Take(30).ToList();
+        if (hits.Count == 0)
+            Console.WriteLine($"{Dim}這一頁的資料不在事實快取的關鍵字範圍；domain <前綴> 或 keys <字> 更精準。{Reset}");
+        foreach (var f in hits)
+        {
+            string avail = f.Availability == FactAvailability.Present ? Green : Red;
+            Console.WriteLine($"  {Blue}{f.Key,-34}{Reset} {avail}{f.Availability,-10}{Reset} {Trim(f.Value, 56)}");
+        }
+        Console.WriteLine($"{Dim}{hits.Count} 筆（上限 30）。{Reset}");
+    }
+
+    private static void DomainFacts(string prefix)
+    {
+        if (_cache is null) { Console.WriteLine($"{Red}先跑 facts。{Reset}"); return; }
+        if (prefix.Length == 0)
+        {
+            var domains = _cache.Select(f => f.Key.Split('.')[0]).Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList();
+            Console.WriteLine($"{Bold}本機採集到的域（{domains.Count}）：{Reset}" + string.Join("  ", domains));
+            Console.WriteLine($"{Dim}用法：domain <前綴>，例如 domain cpu{Reset}");
+            return;
+        }
+        SearchFacts(prefix);
+    }
+
+    private static void ListKeys(string query)
+    {
+        var keys = FactKeyCatalog.Keys;
+        IEnumerable<string> rows = keys;
+        if (query.Length > 0) rows = rows.Where(k => k.Contains(query, StringComparison.OrdinalIgnoreCase));
+        var list = rows.Take(40).ToList();
+        foreach (var k in list) Console.WriteLine("  " + k);
+        Console.WriteLine($"{Dim}{list.Count} / {keys.Count} 把靜態鍵（{FactKeyDynamicCatalog.Families.Count} 個動態家族另計）。{Reset}");
+    }
+
+    private static void ShowSettings()
+    {
+        string path = XinSpect.SettingsService.FilePath;
+        if (!File.Exists(path)) { Console.WriteLine($"{Dim}還沒有設定檔（{path}）。{Reset}"); return; }
+        Console.WriteLine($"{Dim}{path}{Reset}");
+        Console.WriteLine(File.ReadAllText(path));
+    }
+
+    private static void ShowChangelog(string nText)
+    {
+        int n = int.TryParse(nText, out int v) && v > 0 ? v : 3;
+        foreach (var e in XinSpect.ChangelogCatalog.Entries.Take(n))
+        {
+            Console.WriteLine($"{Bold}v{e.Version}{Reset} {Dim}{e.DateText}{Reset} — {e.Title}");
+            foreach (var item in e.Items) Console.WriteLine($"  {Dim}・{Reset} {Trim(item, 90)}");
+            Console.WriteLine();
+        }
+    }
 
     // ── 即時遙測 ──────────────────────────────────────────────────────────
 

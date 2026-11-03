@@ -46,4 +46,17 @@ public class XinSpectCliTests
         Assert.DoesNotContain("WritePciConfig", src, StringComparison.Ordinal);
         Assert.DoesNotContain("WriteMsrPair", src, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void CLI要覆蓋常規版的功能面_GUI全頁對照()
+    {
+        // 使用者裁決：CLI 版要有常規（GUI）版的所有功能。載體是 pages／page／domain／
+        // keys／settings／changelog——GUI 的 65 頁底下都是無頭服務，終端以事實查詢呈現同一批資料。
+        string src = File.ReadAllText(Path.Combine(RepoRoot(), "XinSpectCli", "Program.cs"));
+        foreach (string fn in new[] { "ListPages", "PageFacts", "DomainFacts", "ListKeys", "ShowSettings", "ShowChangelog" })
+            Assert.Contains(fn, src, StringComparison.Ordinal);
+        // GUI 頁面清單就是對照表來源
+        Assert.Contains("PageRegistry.Pages", src, StringComparison.Ordinal);
+        Assert.Contains("PageRegistry.Utilities", src, StringComparison.Ordinal);
+    }
 }
