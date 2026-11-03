@@ -25,6 +25,8 @@ internal static class Tui
     public const string SwissRed = "\x1b[91m";
     public const string SwissBlue = "\x1b[94m";
     public const string SwissGreen = "\x1b[92m";
+    public const string Amber = "\x1b[93m";
+    public const string RedBg = "\x1b[101m";
     public const string Invert = "\x1b[7m";
 
     private const string HideCursor = "\x1b[?25l";
@@ -66,36 +68,46 @@ internal static class Tui
 
     // ── 1) 開場歡迎面板 ───────────────────────────────────────────────────
 
-    /// <summary>開場：直角框＋左側瑞士紅短規＋徽章行＋快速開始。參考 Claude Code 的開場框。</summary>
+    /// <summary>開場：直角框＋左側瑞士紅短規＋紅底徽章＋旋轉小知識。參考 Claude Code 的開場框。</summary>
+    private static readonly string[] Tips =
+    [
+        "facts 之後，page cpu、domain nvme 都走同一份快取，不必重掃",
+        "msr 0x19C 是 IA32_THERM_STATUS——CPU 溫度目標的源頭（唯讀）",
+        "pci dump 0 看的是 Host Bridge 的 256B 設定空間原貌",
+        "top 2 會持續刷新；Ctrl+C 停下來，提示符會好好回到你手上",
+        "changelog 1 只看最新一版改了什麼",
+    ];
+
     public static void Welcome(string version)
     {
         int width = Math.Min(78, ConsoleWidth());
         string line = new('─', width - 2);
+        var tip = Tips[Random.Shared.Next(Tips.Length)];
+
         Console.WriteLine();
         Console.WriteLine($"{Dim}┌{line}┐{Reset}");
 
         Row("");
-        Row($"{SwissRed}{Bold}✻{Reset} {Bold}曦覽終端機 XinSpect Console{Reset}");
+        Row($"  {SwissRed}▌{Reset}{SwissRed}{Bold}✻{Reset} {Bold}曦覽終端機{Reset} {Dim}XINSPECT CONSOLE{Reset}");
         Row("");
-        Row($"{Invert} 唯讀 {Reset} {Invert} 不寫硬體 {Reset} {Invert} 不連網 {Reset}   {Dim}v{version}{Reset}");
+        Row($"  {RedBg}{Bold} 唯讀 {Reset} {RedBg}{Bold} 不寫硬體 {Reset} {RedBg}{Bold} 不連網 {Reset}    {Bold}v{version}{Reset}");
+        Row($"  {new string('─', 26)}");
+        Row($"  {Bold}快速開始{Reset}");
+        Row($"    {SwissGreen}facts{Reset}        採集本機硬體事實（一切查詢的底料）");
+        Row($"    {SwissGreen}sys{Reset} / {SwissGreen}top 2{Reset}    即時一行／持續刷新表");
+        Row($"    {SwissGreen}pages{Reset}        GUI 65 頁的終端對照表");
+        Row($"    {SwissGreen}help{Reset}         完整指令清單");
         Row("");
-        Row($"{Dim}——{Reset} 快速開始");
-        Row($"  {SwissGreen}facts{Reset}       採集本機硬體事實（一切查詢的底料）");
-        Row($"  {SwissGreen}sys{Reset} / {SwissGreen}top 2{Reset}   即時一行／持續刷新表");
-        Row($"  {SwissGreen}pages{Reset}       GUI 65 頁的終端對照表");
-        Row($"  {SwissGreen}help{Reset}        完整指令清單");
-        Row("");
-        Row($"{Dim}↑↓ 歷史 ・ Tab 補全 ・ Ctrl+1–5 跳節區（強控台） ・ exit 離開{Reset}");
+        Row($"  {Dim}小知識：{tip}{Reset}");
+        Row($"  {Dim}↑↓ 歷史 ・ Tab 補全 ・ exit 離開{Reset}");
 
         Console.WriteLine($"{Dim}└{line}┘{Reset}");
         Console.WriteLine();
 
         void Row(string content)
         {
-            string inner = "  " + content;
             int pad = Math.Max(0, width - 2 - 2 - VisibleLength(content) - 2);
             Console.WriteLine($"{Dim}│{Reset}  {content}{new string(' ', pad)}  {Dim}│{Reset}");
-            _ = inner;
         }
     }
 
@@ -233,7 +245,30 @@ internal static class Tui
         }
     }
 
-    // ── 7) 節區標頭 ───────────────────────────────────────────────────────
+    // ── 7) 進度條與 KPI ───────────────────────────────────────────────────
+
+    /// <summary>文字進度條：████░░░░，超過門檻整條轉警示色。</summary>
+    public static string Bar(double? value, double max, int width, double? warnAbove = null, double? critAbove = null)
+    {
+        if (value is null) return $"{Dim}{new string('·', width)}{Reset}";
+        double v = Math.Clamp(value.Value, 0, max);
+        int filled = (int)Math.Round(v / max * width);
+        string color = critAbove is not null && value >= critAbove ? SwissRed
+                     : warnAbove is not null && value >= warnAbove ? Amber
+                     : SwissGreen;
+        return $"{color}{new string('█', filled)}{Dim}{new string('░', width - filled)}{Reset}";
+    }
+
+    /// <summary>KPI 列：標題、帶色數值、進度條——sys／top 共用。</summary>
+    public static void Kpi(string label, double? value, string unit, double max,
+        int barWidth = 24, double? warnAbove = null, double? critAbove = null)
+    {
+        string v = value is null ? $"{Dim}——{Reset}" : $"{Bold}{value:0.#}{Reset}{Dim}{unit}{Reset}";
+        Console.WriteLine($"  {Pad(label, 12)}{v}");
+        Console.WriteLine($"  {Pad("", 12)}{Bar(value, max, barWidth, warnAbove, critAbove)}");
+    }
+
+    // ── 8) 節區標頭 ───────────────────────────────────────────────────────
 
     /// <summary>節區標頭：瑞士紅方塊 ＋ 大寫等寬標籤＋右側灰說明。</summary>
     public static void Section(string label, string? note = null)

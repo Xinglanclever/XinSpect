@@ -305,9 +305,12 @@ internal static class Program
         }
         using (svc)
         {
+            Tui.Section("即時快照", "sys 單拍 ・ top 2 持續");
             var (cpuT, gpuT, cpuL, memL) = svc.Read();
-            Console.WriteLine($"CPU {Bold}{Fmt(cpuT)}{Reset}°C {Dim}·{Reset} 負載 {Bold}{Fmt(cpuL)}{Reset}%   "
-                + $"GPU {Bold}{Fmt(gpuT)}{Reset}°C   MEM {Bold}{Fmt(memL)}{Reset}%");
+            Tui.Kpi("CPU 溫度", cpuT, " °C", 100, warnAbove: 75, critAbove: 85);
+            Tui.Kpi("CPU 負載", cpuL, " %", 100);
+            Tui.Kpi("GPU 溫度", gpuT, " °C", 100, warnAbove: 75, critAbove: 85);
+            Tui.Kpi("記憶體", memL, " %", 100, warnAbove: 85, critAbove: 95);
         }
     }
 
@@ -327,11 +330,19 @@ internal static class Program
             while (true)
             {
                 var (cpuT, gpuT, cpuL, memL) = svc.Read();
-                Console.WriteLine($"  {DateTime.Now.ToString("HH:mm:ss"),-10}{Fmt(cpuT),10}{Fmt(cpuL),10}{Fmt(gpuT),10}{Fmt(memL),8}");
+                Console.WriteLine($"  {DateTime.Now.ToString("HH:mm:ss"),-10}"
+                    + $"{Heat(cpuT, 75, 85),10}{Fmt(cpuL),10}{Heat(gpuT, 75, 85),10}{Heat(memL, 85, 95),8}");
                 Thread.Sleep((int)(interval * 1000));
             }
         }
     }
+
+    /// <summary>超過警告／臨界門檻時把數字染黃／染紅（top 表用）。</summary>
+    private static string Heat(double? v, double warn, double crit)
+        => v is null ? "—"
+         : v >= crit ? $"{Tui.SwissRed}{v:0.#}{Tui.Reset}"
+         : v >= warn ? $"{Tui.Amber}{v:0.#}{Tui.Reset}"
+         : v.Value.ToString("0.#");
 
     private static string Fmt(double? v) => v is null ? "—" : v.Value.ToString("0.#");
 
