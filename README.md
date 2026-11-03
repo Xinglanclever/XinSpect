@@ -15,9 +15,9 @@
 
 這份文件不是一般專案的 README。它是一本**百科全書**：把這個程式裡**每一頁、每一格、每一個數字、每一把事實鍵**逐一拆開，寫清楚它是什麼、從哪一條路徑讀來、憑什麼算數、誤差與偏移從哪裡來、以及它**不能**被拿去回答什麼問題。
 
-舊版的 README（2.91 之前的「硬核版說明」，約 16 萬字）不是被翻譯，也不是被搬過來——它的每一章都被重寫、擴充、重排；如果你要找舊版原文，它已原樣保存在 [手冊.md](手冊.md)。這一版針對的是 **v3.13** 的這棵樹，所有數字都在這棵樹上複算得出來，數法寫在每一處。
+舊版的 README（2.91 之前的「硬核版說明」，約 16 萬字）不是被翻譯，也不是被搬過來——它的每一章都被重寫、擴充、重排；如果你要找舊版原文，它已原樣保存在 [手冊.md](手冊.md)。這一版針對的是 **v3.14** 的這棵樹，所有數字都在這棵樹上複算得出來，數法寫在每一處。
 
-![版本](https://img.shields.io/badge/version-3.13-4C8DFF)
+![版本](https://img.shields.io/badge/version-3.14-4C8DFF)
 
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
@@ -49,7 +49,7 @@
 | 全站說明條目（圓圈問號） | **288** | `Nav/HelpCatalog.cs` 的 `Entries` 成員數 |
 | 服務檔 | **665** | `find Services -name '*.cs' \| wc -l` |
 | 全域 C# 檔 | **1,569** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`work/`、`publish-*/`、`.git/` |
-| 版本紀錄筆數 | **119** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
+| 版本紀錄筆數 | **120** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
 | 專案測試基線 | **7,865** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
 
 **這張表不能證明什麼。** 1,174 把鍵不是 1,174 個正確答案；65 頁不是 65 個好設計；7,865 條測試不是 7,865 條保證。規模數字唯一的用途是給讀者一個「值不值得往下讀」的判斷依據。
@@ -60,12 +60,12 @@
 
 | 檔案 | 大小 | 說明 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.13/XinSpect.exe) | 37,553,451 bytes | 主程式。藍色中隊守護進程已內建 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.13/BlueSquadronBridge.exe) | 6,503,948 bytes | 獨立守護進程。要脫離主程式單獨跑防護時使用 |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.13/XinSpectDeploy.exe) | 16,896 bytes | 一鍵安裝器。按 1 GitHub、按 2 Google Drive、按 3 中國直連線路；下載時顯示進度條、速度與剩餘時間 |
-| [SHA256SUMS.txt](https://github.com/Xinglanclever/XinSpect/releases/download/v3.13/SHA256SUMS.txt) | 334 bytes | 逐檔雜湊，發佈後由 `Tools/verify-release.ps1` 對帳 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.14/XinSpect.exe) | 37,553,451 bytes | 主程式。藍色中隊守護進程已內建 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.14/BlueSquadronBridge.exe) | 6,503,948 bytes | 獨立守護進程。要脫離主程式單獨跑防護時使用 |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.14/XinSpectDeploy.exe) | 16,896 bytes | 一鍵安裝器。按 1 GitHub、按 2 Google Drive、按 3 中國直連線路；下載時顯示進度條、速度與剩餘時間 |
+| [SHA256SUMS.txt](https://github.com/Xinglanclever/XinSpect/releases/download/v3.14/SHA256SUMS.txt) | 以 Release 頁面為準 | 逐檔雜湊，發佈後由 `Tools/verify-release.ps1` 對帳 |
 
-> **上表的位元組數為本版（v3.13）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v3.14）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
 安裝器（`XinSpectDeploy.exe`）會列出三個來源：**1** 是 GitHub 最新版（全自動部署主程式＋守護進程；守護進程自 3.13 起預設不啟用，要自己到安全頁開）、**2** 是 Google Drive 鏡像（分享資料夾，它會開瀏覽器並告訴你要按哪裡）、**3** 是中國直連線路——目錄型端點，安裝器自己抓檔，跟按 1 一樣有進度條、速度與剩餘時間。判斷哪一格用哪種模式，看的是端點本身：只有真的能用 GET 取回目錄下檔案的線路才寫成直連，分享頁一律只開瀏覽器，不會把分享頁存成一個假的 exe。鏡像連結集中在 `Installer/mirrors.txt`，安裝器啟動時會抓一份最新的（3 秒逾時，拿不到就用內建的）；某一格還沒有連結時，選單上會寫「尚未提供」，按下去會先說明再改用 GitHub。下載完成後一律檢查 PE 標頭，抓到 HTML（分享頁、限流頁、Google 的病毒掃描確認頁）會被擋下、刪檔並說出內容像什麼。
 
@@ -614,7 +614,7 @@
 6. 服務檔數：`find Services -name '*.cs' | wc -l`（本版 665）。
 7. 測試數：`dotnet test` 的總計，或讀 `Tests/TestSuiteBaseline.cs`（本版 7,865）。
 8. 主程式大小：Release 頁面的 `XinSpect.exe` 位元組數（本版 34,268,971）。
-9. 版本紀錄筆數：數 `Nav/ChangelogCatalog.cs` 的 `Entries`（本版 119）。
+9. 版本紀錄筆數：數 `Nav/ChangelogCatalog.cs` 的 `Entries`（本版 120）。
 10. 孤兒鍵：把目錄鍵與 `Views/`、`Nav/` 兩邊的出口對照（第 2 部給了方法與本版結果）。
 
 ### 0.9 這份文件與程式的關係：文字是被守住的
@@ -8812,11 +8812,11 @@ XinSpect --fleet --snapshots D:\snapshots                      # 本機同型號
 
 這一部把 `Nav/ChangelogCatalog.cs` 的每一筆版本紀錄完整攤開——**這是程式「關於」頁顯示的同一份資料**，也是本專案唯一對「每一版做了什麼」的正式紀錄。寫作規則是：**只寫真的做了的事**；進入版本控制（2026-08-27、v1.2.0）之前的最早階段沒有留下逐項紀錄，就只寫到階段層級並標明日期未留下紀錄，**不為了排面好看補一份想像出來的清單**。
 
-**登記筆數**：119 筆（版號與階段名，新到舊）。
+**登記筆數**：120 筆（版號與階段名，新到舊）。
 
 ### 11.1 這份沿革的四個讀法
 
-**第一，看節奏。** 這份紀錄最新的一筆是 v3.13（2026-11-01），而 v1.2.0 是進入版本控制的起點（2026-08-27）——**兩個月內走了近百個版本**。這代表這個專案的迭代單位很小（一次一個收口、一把鍵、一條守門），而不是「大版本才動一次」。
+**第一，看節奏。** 這份紀錄最新的一筆是 v3.14（2026-11-03），而 v1.2.0 是進入版本控制的起點（2026-08-27）——**兩個月內走了近百個版本**。這代表這個專案的迭代單位很小（一次一個收口、一把鍵、一條守門），而不是「大版本才動一次」。
 
 **第二，看標題的動詞。** 絕大多數標題不是「新增功能」而是「收口」「補上生產端」「接真值」「加守門」——**這棵樹近期的多數工作是把已存在的東西接起來並守住**，而不是往外擴張功能面。
 
@@ -8826,6 +8826,7 @@ XinSpect --fleet --snapshots D:\snapshots                      # 本機同型號
 
 ### 11.2 逐版紀錄（新到舊）
 
+- **v3.14**（2026-11-03）：企業證據出口：合規、Merkle、推測、CI／SIEM 與族群基線（本版 10 項）
 - **v3.13**（2026-11-01）：監控工程規劃＋藍色中隊新基線（本版 6 項）
 - **v3.12**（2026-11-01）：以 3.11 Swiss 為底座：新增歷史型號目錄，補齊發佈資產與缺列防護（本版 7 項）
 - **v3.11**（2026-10-31）：介面換成瑞士現代風格與 Helvetica（測試版）（本版 8 項）
@@ -8949,6 +8950,21 @@ XinSpect --fleet --snapshots D:\snapshots                      # 本機同型號
 ### 11.3 逐版逐項
 
 以下是每一筆紀錄的翻開內容。**沒有項目的版本（早期階段）只看得到階段層級的描述，這是刻意的留白。**
+
+#### v3.14（2026-11-03）
+
+**企業證據出口：合規、Merkle、推測、CI／SIEM 與族群基線**
+
+- 新增 `--compliance`：把既有事實對到 NIST SP 800-147／155／193 與 MITRE ATT&CK；缺資料一律 Unverifiable，不因「沒看到問題」而變成通過。
+- 新增 `--merkle`：對穩定的白名單事實建 SHA-256 Merkle 樹，排除敏感／非 Present／易變鍵；輸出只含鍵與葉雜湊，不含事實值。
+- 新增 `--speculation`：七項 `infer.*` 推測，同時帶鍵名前綴、值前綴「【推測】」與 Speculative 信任等級；明列信心、依據鍵與限制，且不進合規判定與 Merkle。
+- `--compliance` 新增 `--format sarif|junit|cef|otel`：SARIF 2.1.0、JUnit XML、逐行 CEF 與 OTLP/JSON logs；Unverifiable 在四種格式都不會顯示為綠色。
+- 新增 `--compliance-diff`：比較兩份既有合規 JSON，Satisfied／Mitigated 變成其他（含 Unverifiable）標為退步；只讀檔、不重新收集。
+- 新增 `--fleet`：只讀本機快照目錄，彙總同型號族群的 `fleet.*` 基線；不上傳、不跨機傳輸，沒有可比的第二台時回退出碼 2。
+- AER 增加 Root Port 第一錯誤來源（Error Source Identification），並在事實文字明寫「唯讀；本工具未清除 RW1CS 旗標」。
+- 事實鍵目錄新增 7 把 `infer.*`，公開 schema 的信任等級補上 Speculative；推測層與合規／Merkle 的隔離由測試釘住。
+- 新增 `docs/ENTERPRISE-SPEC-AUDIT-2026-11-03.md` 與 `docs/spec/compliance-export.v1.md`，逐條記錄八個企業模組的可取得性、刻意不做的事與匯出格式契約。
+- 本版沒有新增硬體寫入、沒有常駐、沒有主動連網；CI／SIEM／族群基線都只寫 stdout 或指定檔案。
 
 #### v3.13（2026-11-01）
 
@@ -12965,7 +12981,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 
 **版本與發佈（1–6）**
 
-1. 本版是 v3.13 —— 看徽章、`XinSpect.csproj` 的 `<Version>`、關於頁三處一致。不一致＝有一處落後（四處同步是硬規則）。
+1. 本版是 v3.14 —— 看徽章、`XinSpect.csproj` 的 `<Version>`、關於頁三處一致。不一致＝有一處落後（四處同步是硬規則）。
 2. 測試 7,865 綠 —— 跑守門五組不依賴硬體；全套請在真機跑。紅燈先分辨是真機依賴還是回歸。
 3. 下載表列的位元組數取自本版真正釋出的那顆 `XinSpect.exe` —— 抓下來自己數 bytes。不符請先確認是不是抓到別的版號的檔案。
 4. 主程式未簽章 —— 內容右鍵「數位簽章」分頁應為空。這正是 O-03。

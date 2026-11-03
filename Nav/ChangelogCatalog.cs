@@ -48,6 +48,25 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "3.14",
+            Date = "2026-11-03",
+            Title = "企業證據出口：合規、Merkle、推測、CI／SIEM 與族群基線",
+            Items =
+            [
+                "新增 `--compliance`：把既有事實對到 NIST SP 800-147／155／193 與 MITRE ATT&CK；缺資料一律 Unverifiable，不因「沒看到問題」而變成通過。",
+                "新增 `--merkle`：對穩定的白名單事實建 SHA-256 Merkle 樹，排除敏感／非 Present／易變鍵；輸出只含鍵與葉雜湊，不含事實值。",
+                "新增 `--speculation`：七項 `infer.*` 推測，同時帶鍵名前綴、值前綴「【推測】」與 Speculative 信任等級；明列信心、依據鍵與限制，且不進合規判定與 Merkle。",
+                "`--compliance` 新增 `--format sarif|junit|cef|otel`：SARIF 2.1.0、JUnit XML、逐行 CEF 與 OTLP/JSON logs；Unverifiable 在四種格式都不會顯示為綠色。",
+                "新增 `--compliance-diff`：比較兩份既有合規 JSON，Satisfied／Mitigated 變成其他（含 Unverifiable）標為退步；只讀檔、不重新收集。",
+                "新增 `--fleet`：只讀本機快照目錄，彙總同型號族群的 `fleet.*` 基線；不上傳、不跨機傳輸，沒有可比的第二台時回退出碼 2。",
+                "AER 增加 Root Port 第一錯誤來源（Error Source Identification），並在事實文字明寫「唯讀；本工具未清除 RW1CS 旗標」。",
+                "事實鍵目錄新增 7 把 `infer.*`，公開 schema 的信任等級補上 Speculative；推測層與合規／Merkle 的隔離由測試釘住。",
+                "新增 `docs/ENTERPRISE-SPEC-AUDIT-2026-11-03.md` 與 `docs/spec/compliance-export.v1.md`，逐條記錄八個企業模組的可取得性、刻意不做的事與匯出格式契約。",
+                "本版沒有新增硬體寫入、沒有常駐、沒有主動連網；CI／SIEM／族群基線都只寫 stdout 或指定檔案。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "3.13",
             Date = "2026-11-01",
             Title = "監控工程規劃＋藍色中隊新基線",
