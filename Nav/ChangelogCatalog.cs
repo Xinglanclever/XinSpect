@@ -48,6 +48,22 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "3.16",
+            Date = "2026-11-04",
+            Title = "強控台指令控制台＋rf.* 帶外事實域＋主題記憶修正",
+            Items =
+            [
+                "Redfish 離線目錄升格為事實：--redfish 輸出帶 facts 欄，新增 rf.boundary／rf.summary／rf.power.consumed／rf.bundle.warnings 四把靜態鍵與 rf.item. 動態家族；信任等級一律 Reported（值是 BMC 自我宣告），覆蓋申報以明文理由豁免、已檢視基線 444→448。",
+                "新增「強控台 Power Console」視窗：主介面按鈕進入（匯出報告旁），瑞士工業風工程檢視——01 即時遙測（主 VM 同源現值，缺值顯示「—」不補 0）、02 Ring0 唯讀（全匯流排 PCI 掃描＋16×16 設定空間 hex dump＋MSR RDMSR，不引用任何 Write 通路）、04 Bridge IPC 終端機（走主程式既有引擎，真 JSON 進出）、05 部署授權（當場計算本機執行檔 SHA-256）。",
+                "強控台支援指令行操作：help／pci scan／msr <索引>／ipc <指令>／hash／theme／clear／exit，↑↓ 切命令歷史與節區、Ctrl+1–5 直接跳節區、Esc 關窗；入口按鈕在「匯出報告」旁。",
+                "關於頁順序調整：意見反饋 → 留言建議 → 第三方授權 → 鍵盤快捷鍵 → 免責聲明。",
+                "WmiGuard 探針改用 LongRunning 專用執行緒：系統滿載時「快速失敗」不再被誤報成「WMI 無回應」（滿載測試改用有界 Sleep，避免事件 Dispose 後的遲到集區工帶走測試行程）。",
+                "測試基線 7,882；完整套件 7,882 passed, 0 failed（本機 NVMe 卡死 1 條硬體限時測試照舊排除，未被跳過或改寫）。",
+                "本版沒有新增硬體寫入、沒有常駐、沒有主動連網；強控台與 rf.* 都只讀不寫。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "3.15",
             Date = "2026-11-03",
             Title = "主題記憶修正＋離線 Redfish 目錄＋迷你 HUD 重新喚醒",
