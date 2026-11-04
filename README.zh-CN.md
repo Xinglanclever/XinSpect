@@ -1,8 +1,8 @@
 ﻿简体中文 · [繁体中文](README.md) · [English](README.en.md)
 
-[![官方网站](https://img.shields.io/badge/%F0%9F%8C%90_%E5%AE%98%E6%96%B9%E7%BD%91%E7%AB%99-xinspect--web.pages.dev-4C8DFF?style=for-the-badge&logo=cloudflare&logoColor=white)](https://xinspect-web.pages.dev)
+[![官方网站](https://img.shields.io/badge/%F0%9F%8C%90_%E5%AE%98%E6%96%B9%E7%BD%91%E7%AB%99-xinspect.de5.net-4C8DFF?style=for-the-badge&logo=cloudflare&logoColor=white)](https://xinspect.de5.net/)
 
-> ## 🌐 [官方网站：xinspect-web.pages.dev ↗](https://xinspect-web.pages.dev)
+> ## 🌐 [官方网站：xinspect.de5.net ↗](https://xinspect.de5.net/)
 >
 > **产品总览 · 事实目录 · 功能与数据源 · 三源对账 · 证据与快照 · 版本沿革 · 下载与需求** —— 一页看完。
 > 网站只呈现说明，**不会扫描你的电脑**，也不需要任何安装。
