@@ -249,16 +249,16 @@ internal static class Tui
             Console.WriteLine(Row(""));
             Console.WriteLine(Row(Bold + "曦覽終端機" + Reset + Dim + " v" + version + Reset));
             Console.WriteLine(Row(""));
-            Console.WriteLine(Row(Bold + "facts" + Reset + Dim + "  採集 " + staticKeys.ToString("N0") + " 靜態鍵＋" + dynamicFamilies + " 家族{Reset}"));
-            Console.WriteLine(Row(Bold + "book" + Reset + Dim + "   曦覽百科全書 ・ help 指令書{Reset}"));
+            Console.WriteLine(Row(Bold + "facts" + Reset + Dim + "  採集 " + staticKeys.ToString("N0") + " 靜態鍵＋" + dynamicFamilies + " 家族"));
+            Console.WriteLine(Row(Bold + "book" + Reset + Dim + "   曦覽百科全書 ・ help 指令書"));
             Console.WriteLine(Row(""));
             Console.WriteLine(Row(Dim + "cwd: " + ShortCwd() + Reset));
             Console.WriteLine(Row(Dim + "硬體的事實，不編故事。" + Reset));
         }
 
-        Console.WriteLine(Bot());
+        Console.WriteLine($"{BrandRed}┬{new string('─', width - 3)}╯{Reset}");
         Console.WriteLine();
-        Console.WriteLine($"  {Dim}輸入 facts 採集全機事實，或輸入 sys、dash、pages、msr <索引>…{Reset}");
+        Console.WriteLine($"{BrandRed}│{Reset}  {Dim}輸入 facts 採集全機事實，或輸入 sys、dash、pages、msr <索引>…{Reset}");
         Console.WriteLine();
     }
 
@@ -305,8 +305,8 @@ internal static class Tui
         int width;
         try { width = Math.Max(60, Console.WindowWidth - 1); }
         catch { width = 100; }
-        Console.WriteLine($"{Dim}{new string('─', width)}{Reset}");
-        Console.Write($"{BrandRed}{Bold}>{Reset} ");
+        Console.WriteLine($"{BrandRed}╭{new string('─', width - 2)}╮{Reset}");
+        Console.Write($"{BrandRed}│{Reset} {BrandRed}{Bold}>{Reset} ");
     }
 
     // ── 2) 帶標題的方框面板 ───────────────────────────────────────────────
