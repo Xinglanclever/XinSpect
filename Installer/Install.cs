@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 
@@ -27,7 +28,7 @@ internal static class Install
     private const string MirrorListUrl = "https://raw.githubusercontent.com/Xinglanclever/XinSpect/main/Installer/mirrors.txt";
 
     // 內建預設：留空＝這一版還沒有這個鏡像（選單上如實寫「尚未提供」，不會偷偷退回 GitHub）。
-    private const string GoogleDriveFileId = "";
+    private const string GoogleDriveFolderUrl = "https://drive.google.com/drive/folders/1V3PoEMkee-iI6Ep2dk5r61vsxpohhYDs";
 
     // 中國直連線路：目錄型端點（能用 GET 取回該目錄下的檔名），不是網盤分享頁。
     // 留空＝還沒有；填了就按 3 由安裝器自己抓，跟按 1 一樣有進度條與速度。
@@ -45,10 +46,131 @@ internal static class Install
 
         ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
 
+        // 第一層選單：裝什麼。1/2/3 ＝ 主程式（GUI），A/B/C ＝ xsc 終端機。
+        // 兩條路走同一批鏡像端點，只是下載的檔案與步驟數不同。
+        bool xsc = ChooseProduct(args);
         List<Mirror> all = LoadMirrors();
-        Mirror chosen = ChooseMirror(all, args);
+        Mirror chosen = ChooseMirror(all, args, xsc);
         if (chosen == null) { Pause(); return 2; }
 
+        if (xsc) return DeployXsc(chosen);
+        return DeployGui(chosen);
+    }
+
+    // 第一層：按 1/2/3 裝主程式、按 A/B/C 裝 xsc。命令列參數以 -xsc（或 --xsc）指定 xsc 路。
+    private static bool ChooseProduct(string[] args)
+    {
+        if (args != null && Array.Exists(args, a =>
+                a.Trim().Equals("-xsc", StringComparison.OrdinalIgnoreCase) ||
+                a.Trim().Equals("--xsc", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        Console.WriteLine("  要安裝什麼：");
+        Console.WriteLine();
+        Console.WriteLine("    [1/2/3]  XinSpect.exe 主程式（GUI，含守護進程與驅動）");
+        Console.WriteLine("    [A/B/C]  xsc.exe 曦覽終端機（CLI，單檔、唯讀事實查詢）");
+        Console.WriteLine();
+        Console.Write("  按 1 / 2 / 3 或 A / B / C（直接按 Enter 用 1）：");
+
+        string key = "";
+        try
+        {
+            ConsoleKeyInfo k = Console.ReadKey(true);
+            key = k.KeyChar.ToString();
+            Console.WriteLine(key.Length == 0 ? "" : " " + key);
+        }
+        catch { Console.WriteLine(); }
+        Console.WriteLine();
+
+        if (key.Length == 0) return false;                       // Enter ＝ 主程式
+        if (key.Equals("A", StringComparison.OrdinalIgnoreCase) ||
+            key.Equals("B", StringComparison.OrdinalIgnoreCase) ||
+            key.Equals("C", StringComparison.OrdinalIgnoreCase)) return true;
+        if (key == "1" || key == "2" || key == "3") return false;
+
+        Console.WriteLine("  看不懂「" + key + "」，改裝主程式。");
+        Console.WriteLine();
+        return false;
+    }
+
+    // xsc 部署：單檔下載 → 放進 Desktop\XinSpect\ → 詢問要不要開。
+    // xsc 是自含單檔（含 .NET 10 執行階段），不需要 Bridge／驅動，一步到位。
+    private static int DeployXsc(Mirror chosen)
+    {
+        string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+        string dir = Path.Combine(desktop, "XinSpect");
+        string dest = Path.Combine(dir, "xsc.exe");
+
+        Console.WriteLine("  Source : " + chosen.Name);
+        Console.WriteLine("  Target : " + dest);
+        Console.WriteLine();
+
+        try
+        {
+            Directory.CreateDirectory(dir);
+
+            if (!chosen.Direct)
+            {
+                Console.WriteLine("  [1/1] 已開啟分享頁。請在瀏覽器按「下載」，把 xsc.exe 放到：");
+                Console.WriteLine("        " + dir);
+                Console.WriteLine("        " + chosen.BaseUrl);
+                Process.Start(new ProcessStartInfo(chosen.BaseUrl) { UseShellExecute = true });
+                Console.WriteLine();
+                Console.WriteLine("  ==========================================");
+                Console.WriteLine("  下載完成後，把 xsc.exe 放進上面那個資料夾就能直接執行。");
+                Console.WriteLine("  ==========================================");
+                Console.WriteLine();
+                Pause();
+                return 0;
+            }
+
+            Console.WriteLine("  [1/2] Downloading xsc.exe (self-contained: includes .NET 10 runtime, ~100MB)...");
+            DownloadFile(chosen, "xsc.exe", dest, 1, 2, true);
+
+            Console.WriteLine("  [2/2] Deployed to Desktop\\XinSpect folder.");
+            Console.WriteLine();
+            Console.WriteLine("  ==========================================");
+            Console.WriteLine("  Deploy complete.");
+            Console.WriteLine("  - xsc.exe (read-only hardware facts terminal; run xsc in a console)");
+            Console.WriteLine("  Location: Desktop\\XinSpect\\");
+            Console.WriteLine("  ==========================================");
+            Console.WriteLine();
+            Console.Write("  現在就開啟 xsc 終端機嗎？按 Y 開啟，其他鍵跳過：");
+            bool launch = false;
+            try
+            {
+                ConsoleKeyInfo k = Console.ReadKey(true);
+                launch = k.Key == ConsoleKey.Y;
+                Console.WriteLine(k.KeyChar.ToString());
+            }
+            catch { }
+            if (launch)
+            {
+                Process.Start(new ProcessStartInfo("cmd.exe", "/k \"" + dest + "\"") { UseShellExecute = true });
+            }
+            Console.WriteLine();
+            Console.WriteLine("  Press any key to close...");
+            Pause();
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine();
+            Console.WriteLine("  Deploy failed: " + ex.Message);
+            Console.WriteLine();
+            Console.WriteLine("  Manual download:");
+            Console.WriteLine("    https://github.com/Xinglanclever/XinSpect/releases");
+            Console.WriteLine();
+            Console.WriteLine("  Press any key to close...");
+            Pause();
+            return 1;
+        }
+    }
+
+    private static int DeployGui(Mirror chosen)
+    {
         string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
         string dir = Path.Combine(desktop, "XinSpect");
 
@@ -204,9 +326,12 @@ internal static class Install
         list.Add(new Mirror
         {
             Key = "2",
-            Name = "Google Drive（鏡像）",
-            BaseUrl = GoogleDriveFileId.Length == 0 ? "" : "https://drive.google.com/uc?export=download&id=" + GoogleDriveFileId,
-            Direct = true
+            Name = "Google Drive（鏡像分享頁）",
+            BaseUrl = GoogleDriveFolderUrl,
+            // Drive 的分享資料夾不是目錄端點：uc?id= 只對單一檔案有效，安裝器把檔名接上去
+            // 是壞網址。所以內建值走 page 模式（開瀏覽器請使用者按「下載」）；mirrors.txt
+            // 裡若列了真正的 direct 端點會在 ApplyMirrorList 覆寫。
+            Direct = false
         });
         list.Add(new Mirror
         {
@@ -274,28 +399,39 @@ internal static class Install
     }
 
     // 選來源：按鍵或命令列參數（參數是為了讓這一頁能被機器驗，不必真的有人坐在前面按）。
-    private static Mirror ChooseMirror(List<Mirror> all, string[] args)
+    // xsc 路線時把鏡像鍵映射為 A/B/C（A=GitHub、B=Drive、C=中國直連），選單上也以 A/B/C 顯示；
+    // 主程式路線維持 1/2/3。兩種編號指到同一批端點，只是產品與步驟不同。
+    private static Mirror ChooseMirror(List<Mirror> all, string[] args, bool xsc)
     {
-        if (args != null && args.Length > 0)
+        // 命令列參數：第一個若是 -xsc／--xsc 則走 xsc 路，其餘（1/2/3、A/B/C）是來源編號。
+        string[] srcArgs = args ?? new string[0];
+        if (srcArgs.Length > 0 && (srcArgs[0].Trim().Equals("-xsc", StringComparison.OrdinalIgnoreCase) ||
+                                   srcArgs[0].Trim().Equals("--xsc", StringComparison.OrdinalIgnoreCase)))
         {
-            string want = args[0].Trim();
+            srcArgs = srcArgs.Skip(1).ToArray();
+        }
+        if (srcArgs.Length > 0)
+        {
+            string want = NormalizeKey(srcArgs[0].Trim(), xsc);
             foreach (Mirror m in all)
             {
                 if (m.Key == want && m.BaseUrl.Length > 0) return m;
             }
-            Console.WriteLine("  無法使用來源「" + want + "」（沒有提供或沒有這個編號）。");
+            Console.WriteLine("  無法使用來源「" + srcArgs[0].Trim() + "」（沒有提供或沒有這個編號）。");
             Console.WriteLine();
             return null;
         }
 
+        string keys = xsc ? "A / B / C" : "1 / 2 / 3";
         Console.WriteLine("  選擇下載來源：");
         Console.WriteLine();
-        foreach (Mirror m in all)
+        for (int i = 0; i < all.Count; i++)
         {
-            Console.WriteLine("    [" + m.Key + "] " + m.Name + (m.BaseUrl.Length == 0 ? "  —— 尚未提供" : ""));
+            string label = xsc ? "ABC"[i].ToString() : all[i].Key;
+            Console.WriteLine("    [" + label + "] " + all[i].Name + (all[i].BaseUrl.Length == 0 ? "  —— 尚未提供" : ""));
         }
         Console.WriteLine();
-        Console.Write("  按 1 / 2 / 3 選擇（直接按 Enter 用 1，GitHub）：");
+        Console.Write("  按 " + keys + " 選擇（直接按 Enter 用 " + (xsc ? "A" : "1") + "，GitHub）：");
 
         string key = "";
         try
@@ -311,14 +447,28 @@ internal static class Install
         Console.WriteLine();
 
         if (key.Length == 0) return all[0];
+        string wantKey = NormalizeKey(key, xsc);
         foreach (Mirror m in all)
         {
-            if (m.Key == key && m.BaseUrl.Length > 0) return m;
+            if (m.Key == wantKey && m.BaseUrl.Length > 0) return m;
         }
 
         Console.WriteLine("  來源「" + key + "」這版還沒有提供（見上面的「尚未提供」），改用 GitHub。");
         Console.WriteLine();
         return all[0];
+    }
+
+    // 把使用者按的鍵（或參數）正規化成內部鏡像鍵 1/2/3：
+    // A/a→1、B/b→2、C/c→3；1/2/3 原樣通過（兩種編號互通，機器驗證時不必分路）。
+    private static string NormalizeKey(string k, bool xsc)
+    {
+        switch (k.ToUpperInvariant())
+        {
+            case "A": return "1";
+            case "B": return "2";
+            case "C": return "3";
+            default: return k;
+        }
     }
 
     private static void Pause()
