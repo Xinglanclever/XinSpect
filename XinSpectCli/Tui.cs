@@ -132,7 +132,7 @@ internal static class Tui
     /// 字母寬度：X9 I4 N11 S8 P8 E8 C8 T9；組合時字母間 3 格間距。</summary>
     private static readonly string[][] BannerLetters =
     [
-        new[] { "██╗   ██╗", "╚██╗ ██╔╝", " ╚███╔╝ ", " ██╔██╗ ", "╚██╝ ╚██╝" },              // X
+        new[] { "██╗   ██╗", " ╚██╗ ██╔╝", "  ╚███╔╝ ", " ██╔██╗ ", "╚██╝ ╚██╝" },  // X
         new[] { "██╗", "██║", "██║", "██║", "██║" },                                                            // I
         new[] { "███╗   ██╗", "████╗  ██║", "██╔██╗ ██║", "██║╚██╗██║", "██║ ╚████║" },                        // N
         new[] { "███████╗", "██╔════╝", "███████╗", "╚════██║", "███████║" },                                  // S
@@ -549,6 +549,7 @@ internal static class Tui
                     }
                 }
                 catch (OperationCanceledException) { }
+                catch (Exception) { /* 示波器線繪製等 IO 例外：動畫停了就好，程序不能死 */ }
             }, token);
         }
     }

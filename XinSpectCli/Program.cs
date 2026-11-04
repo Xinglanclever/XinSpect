@@ -48,9 +48,16 @@ internal static class Program
             return CliService.Run(args, Collect, Console.Out, Console.Error);
         }
 
-        Tui.Welcome(AppInfo.ShortVersion,
-            staticKeys: FactKeyCatalog.Count,
-            dynamicFamilies: FactKeyDynamicCatalog.Families.Count);
+        try
+        {
+            Tui.Welcome(AppInfo.ShortVersion,
+                staticKeys: FactKeyCatalog.Count,
+                dynamicFamilies: FactKeyDynamicCatalog.Families.Count);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"{Red}歡迎框渲染失敗（不影響指令）：{ex.Message}{Reset}");
+        }
         try { _lastWidth = Console.WindowWidth; } catch { }
         Tui.Footer("● READY ・ 唯讀模式", "曦覽 XinSpect Console v" + AppInfo.ShortVersion);
         var startupStatus = StatusLine();
@@ -666,16 +673,24 @@ internal static class Program
     /// <summary>終端寬度變了就整屏重繪：拖窄時右側自動隱藏，拉寬時重新出現。</summary>
     private static bool CheckResize()
     {
-        if (Console.IsInputRedirected) return false;
-        int w;
-        try { w = Console.WindowWidth; } catch { return false; }
-        if (w == _lastWidth) return false;
-        _lastWidth = w;
-        try { Console.Clear(); } catch { }
-        Tui.Welcome(AppInfo.ShortVersion,
-            staticKeys: FactKeyCatalog.Count,
-            dynamicFamilies: FactKeyDynamicCatalog.Families.Count);
-        return true;
+        try
+        {
+            if (Console.IsInputRedirected) return false;
+            int w;
+            try { w = Console.WindowWidth; } catch { return false; }
+            if (w == _lastWidth) return false;
+            _lastWidth = w;
+            try { Console.Clear(); } catch { }
+            Tui.Welcome(AppInfo.ShortVersion,
+                staticKeys: FactKeyCatalog.Count,
+                dynamicFamilies: FactKeyDynamicCatalog.Families.Count);
+            return true;
+        }
+        catch (Exception)
+        {
+            // resize 重繪途中任何例外（控制台 IO 等）：放棄這次重繪，程序絕不因此死掉
+            return false;
+        }
     }
 
     private static string? ReadLineWithHistory()
@@ -689,15 +704,19 @@ internal static class Program
         int pos = 0;
         while (true)
         {
-            if (CheckResize())
+            try
             {
-                int w;
-                try { w = Math.Max(60, Console.WindowWidth - 1); } catch { w = 100; }
-                Console.WriteLine($"{Tui.Dim}{new string('─', w)}{Tui.Reset}");
-                Console.Write($"{Tui.BrandRed}{Tui.Bold}>{Tui.Reset} " + buf.ToString());
-                if (pos < buf.Length) Console.Write($"\x1b[{buf.Length - pos}D");
-                continue;
+                if (CheckResize())
+                {
+                    int w;
+                    try { w = Math.Max(60, Console.WindowWidth - 1); } catch { w = 100; }
+                    Console.WriteLine($"{Tui.Dim}{new string('─', w)}{Tui.Reset}");
+                    Console.Write($"{Tui.BrandRed}{Tui.Bold}>{Tui.Reset} " + buf.ToString());
+                    if (pos < buf.Length) Console.Write($"\x1b[{buf.Length - pos}D");
+                    continue;
+                }
             }
+            catch { /* resize 重繪失敗不影響輸入 */ }
             var key = Console.ReadKey(intercept: true);
             try
             {
