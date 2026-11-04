@@ -46,8 +46,8 @@ public class XinSpectCliTests
         Assert.Contains("Tui.BootSplash", src, StringComparison.Ordinal);
         Assert.Contains("FactKeyCatalog.Count", src, StringComparison.Ordinal);
         string tui = File.ReadAllText(Path.Combine(root, "XinSpectCli", "Tui.cs"));
-        // 開機序列的誠信：未載入項要走 [ .. ]（sensor.engine），不得全部假裝 OK
-        Assert.Contains("sensor.engine", tui, StringComparison.Ordinal);
+        // 開機序列的誠信：感測引擎未載入要寫「——進站後跑 facts」，不得假裝已就緒
+        Assert.Contains("進站後跑 facts", tui, StringComparison.Ordinal);
         // 不得引入寫入通路
         Assert.DoesNotContain("WritePciConfig", src, StringComparison.Ordinal);
         Assert.DoesNotContain("WriteMsrPair", src, StringComparison.Ordinal);
