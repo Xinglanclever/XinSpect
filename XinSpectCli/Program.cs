@@ -79,6 +79,7 @@ internal static class Program
             {
                 case "help" or "?": CommandBook.Run(rest.Length > 0 ? rest : null); return true;
                 case "book" or "百科" or "手冊": Book.Run(rest.Length > 0 ? rest : null); return true;
+                case "mascot" or "吉祥物": MascotPreview(rest); return true;
                 case "ver":
                     Tui.Frame($"曦覽 XinSpect v{AppInfo.Version}",
                     [
@@ -153,6 +154,39 @@ internal static class Program
     }
 
     // ── 事實採集與查詢 ────────────────────────────────────────────────────
+
+    /// <summary>吉祥物候選預覽：mascot（全部依序）／mascot a／mascot b，每個候選播一輪動畫並標名。</summary>
+    private static void MascotPreview(string arg)
+    {
+        var names = new[] { "A ・ 我的設計（日核菱形）", "B ・ Gemini 設計" };
+        int choice = arg.Trim().ToLowerInvariant() switch
+        {
+            "a" => 0,
+            "b" => 1,
+            _ => -1,
+        };
+        var list = choice >= 0 ? new[] { choice } : new[] { 0, 1 };
+        foreach (var c in list)
+        {
+            Console.WriteLine($"{Tui.BrandRed}{Tui.Bold}候选 {names[c]}{Tui.Reset}");
+            Tui.MascotChoice = c;
+            if (!Console.IsInputRedirected)
+            {
+                for (int round = 0; round < 4; round++)
+                {
+                    Console.WriteLine(Tui.MascotBox(round % 2));
+                    System.Threading.Thread.Sleep(350);
+                    try { Console.Clear(); } catch { }
+                }
+            }
+            else
+            {
+                foreach (var lineText in Tui.MascotFrames[0]) Console.WriteLine("  " + lineText);
+            }
+            Console.WriteLine();
+        }
+        Console.WriteLine($"{Tui.Dim}跟我說選 A 還是 B（或再看一次：mascot）。選定後我把吉祥物換上。{Tui.Reset}");
+    }
 
     private static void EnsureFacts()
     {
@@ -586,7 +620,14 @@ internal static class Program
         while (true)
         {
             var key = Console.ReadKey(intercept: true);
-            if (key.Key == ConsoleKey.Enter) { Console.WriteLine(); return buf.ToString(); }
+            if (key.Key == ConsoleKey.Enter)
+            {
+                Console.WriteLine();
+                int w;
+                try { w = Math.Max(60, Console.WindowWidth - 1); } catch { w = 100; }
+                Console.WriteLine($"  {Tui.Dim}{new string('─', w - 4)}{Tui.Reset}");   // 輸入欄底線（與上線成對）
+                return buf.ToString();
+            }
             if (key.Key == ConsoleKey.Backspace)
             {
                 if (pos > 0)

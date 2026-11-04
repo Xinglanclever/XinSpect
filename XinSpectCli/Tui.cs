@@ -104,30 +104,28 @@ internal static class Tui
         "清點匯流排拓撲與裝置樹中", "確認零寫入唯讀封條狀態中",
     ];
 
-    /// <summary>像素太陽吉祥物兩幀（9×7，有臉：睜眼／眨眼；光線收張）。CP437 方塊字元。</summary>
-    public static readonly string[][] MascotFrames =
+    /// <summary>吉祥物候選。A＝我的設計（原版 9×5 破曉日輪的精修）；B＝Gemini 設計。
+    /// mascot 指令可逐一預覽動畫，選定後把 MascotFrames 指向該候選。</summary>
+    public static readonly string[][][] MascotCandidates =
     [
-        new[]   // 睜眼＋光線收
+        // ── 候選 A（我的設計）：日核菱形＋八向光線，收張兩幀 ──
+        new[]
         {
-            "█       █",
-            "▀█▄   ▄█▀",
-            " ▄█████▄ ",
-            " ██▀ ▀██ ",
-            " ▀█████▀ ",
-            "▄█▀   ▀█▄",
-            "█       █",
+            new[] { "   ▄███▄   ", "▄▀▄█████▄▀▄", "████▀█▀████", "▀▄▀█████▀▄▀", "   ▀███▀   " },
+            new[] { "   ▄███▄   ", "▄▀▄█████▄▀▄", "███▀███▀███", "▀▄▀█████▀▄▀", "   ▀███▀   " },
         },
-        new[]   // 眨眼＋光線張
+        // ── 候選 B（Gemini 設計）：「曦輪」核心＋留白雙眼；半格位移＋單雙線切換＝日珥呼吸＋眨眼 ──
+        new[]
         {
-            "█▄     ▄█",
-            " ▀█▄ ▄█▀ ",
-            "  ▄███▄  ",
-            " ██▀▀▀██ ",
-            "  ▀███▀  ",
-            " ▄█▀ ▀█▄ ",
-            "█▀     ▀█",
+            new[] { "   ▄ ▄ ▄   ", "  ▄█████▄  ", " ▐███████▌ ", "─▐█ ███ █▌─", " ▐███████▌ ", "  ▀█████▀  ", "   ▀ ▀ ▀   " },
+            new[] { " ▀  ▀█▀  ▀ ", " ▀▄█████▄▀ ", "─▐███████▌─", "═▐█▀███▀█▌═", "─▐███████▌─", " ▄▀█████▀▄ ", " ▄  ▄█▄  ▄ " },
         },
     ];
+
+    /// <summary>目前選用的候選（預設 A）。</summary>
+    public static int MascotChoice;
+
+    public static string[][] MascotFrames => MascotCandidates[MascotChoice];
 
     /// <summary>動畫太陽吉祥物（兩幀往返數輪後定格）＋雙欄全寬歡迎框（Claude Code 佈局）。
     /// 左欄：吉祥物＋品牌名＋cwd；右欄：快速開始（真實指令集）＋小知識。
@@ -179,21 +177,12 @@ internal static class Tui
                 int pad = Math.Max(0, (leftW - f.Length) / 2);
                 return new string(' ', pad) + BrandRed + f + Reset;
             }).ToList();
-            var left = new List<string>
-            {
-                "",
-                art[0],
-                art[1],
-                art[2],
-                art[3],
-                art[4],
-                art[5],
-                art[6],
-                "",
-                Bold + "曦覽終端機" + Reset,
-                Dim + "曦覽 XinSpect Console" + Reset,
-                Dim + "cwd: " + ShortCwd() + Reset,
-            };
+            var left = new List<string> { "" };
+            left.AddRange(art);
+            left.Add("");
+            left.Add(Bold + "曦覽終端機" + Reset);
+            left.Add(Dim + "曦覽 XinSpect Console" + Reset);
+            left.Add(Dim + "cwd: " + ShortCwd() + Reset);
             var right = new List<string>
             {
                 SwissRed + Bold + "快速開始" + Reset + Dim + " ・ 全部指令見 help 指令書",
@@ -206,7 +195,7 @@ internal static class Tui
                 "",
                 Dim + new string('─', mid - 6) + Reset,
                 SwissRed + Bold + "小知識" + Reset,
-                Dim + TruncateTip(tip, width - mid - 6) + Reset,
+                Dim + TruncateTip(tip, width - mid - 5) + Reset,
                 "",
             };
             int rows = Math.Max(left.Count, right.Count);
@@ -234,7 +223,7 @@ internal static class Tui
         Console.Write(Bot());
         // 口號嵌在底框線右側（畫完框後 CHA 覆寫）
         string slogan = "硬體的事實，不編故事。";
-        Console.Write($"[{width - VisibleLength(slogan) - 1}G{Dim}{slogan}{Reset}");
+        Console.Write(Esc + $"[{width - VisibleLength(slogan) - 3}G" + Dim + slogan + Reset);
         Console.WriteLine();
         Console.WriteLine();
         Console.WriteLine($"  {Dim}輸入 facts 採集全機事實，或輸入 sys、dash、pages、msr <索引>…{Reset}");
@@ -262,6 +251,20 @@ internal static class Tui
     {
         string cwd = Environment.CurrentDirectory;
         return cwd.Length > 30 ? cwd[..14] + "…" + cwd[^14..] : cwd;
+    }
+
+    /// <summary>靜態吉祥物框（預覽用）：單幀＋品牌名，居中。</summary>
+    public static string MascotBox(int frame)
+    {
+        const int width = 46;
+        var f = MascotFrames[frame];
+        string Row(string body) => $"{BrandRed}│{Reset}" + new string(' ', Math.Max(0, (width - 2 - VisibleLength(body)) / 2)) + body;
+        var sb = new System.Text.StringBuilder();
+        sb.Append($"{BrandRed}╭{new string('─', width - 2)}╮{Reset}" + Environment.NewLine);
+        foreach (var lineText in f) sb.Append(Row(lineText) + Environment.NewLine);
+        sb.Append(Row($"{Dim}曦覽終端機{Reset}") + Environment.NewLine);
+        sb.Append($"{BrandRed}╰{new string('─', width - 2)}╯{Reset}");
+        return sb.ToString();
     }
 
     /// <summary>Claude Code 式輸入框：上方全寬細線＋右對齊狀態行＋紅色 > 提示符。</summary>
