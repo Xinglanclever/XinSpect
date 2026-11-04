@@ -33,7 +33,7 @@ internal static class Tui
     private const string ShowCursor = "\x1b[?25h";
     private const string ClearLine = "\x1b[2K";
     private const string CarriageReturn = "\r";
-    private const string Esc = "\x1b";
+    public const string Esc = "\x1b";
 
     /// <summary>旋轉子幀（braille 點字；Windows Terminal 原生支援）。</summary>
     private static readonly string[] SpinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -209,11 +209,16 @@ internal static class Tui
             var left = new List<string>
             {
                 "",
+                Bold + "Welcome back!" + Reset,
+                Dim + "Type facts to scan · help for the book." + Reset,
+                "",
                 Bold + "曦覽終端機" + Reset,
                 Dim + "曦覽 XinSpect Console" + Reset,
                 "",
                 Dim + "cwd: " + ShortCwd() + Reset,
                 Dim + "硬體的事實，不編故事。" + Reset,
+                "",
+                Dim + "Ready when you are." + Reset,
             };
             var right = new List<string>
             {
@@ -300,9 +305,7 @@ internal static class Tui
         int width;
         try { width = Math.Max(60, Console.WindowWidth - 1); }
         catch { width = 100; }
-        Console.WriteLine($"  {Dim}{new string('─', width - 4)}{Reset}");
-        string status = "● 唯讀 · 不寫硬體 · 不連網  │  ↑↓ 歷史 · Tab 補全 · help 指令書 · book 百科";
-        Console.Write(Esc + $"[{width - VisibleLength(status) - 1}G" + Dim + status + Reset + Environment.NewLine);
+        Console.WriteLine($"{Dim}{new string('─', width)}{Reset}");
         Console.Write($"{BrandRed}{Bold}>{Reset} ");
     }
 

@@ -625,7 +625,10 @@ internal static class Program
                 Console.WriteLine();
                 int w;
                 try { w = Math.Max(60, Console.WindowWidth - 1); } catch { w = 100; }
-                Console.WriteLine($"  {Tui.Dim}{new string('─', w - 4)}{Tui.Reset}");   // 輸入欄底線（與上線成對）
+                Console.WriteLine($"{Tui.Dim}{new string('─', w)}{Tui.Reset}");   // 輸入欄底線（全寬，與上線成對）
+                string status = "● 唯讀 · 不寫硬體 · 不連網  │  ↑↓ 歷史 · Tab 補全 · help 指令書 · book 百科";
+                int scol = Math.Max(1, w - status.Length - 1);
+                Console.Write(Tui.Esc + "[" + scol + "G" + Tui.Dim + status + Tui.Reset + Environment.NewLine);
                 return buf.ToString();
             }
             if (key.Key == ConsoleKey.Backspace)
