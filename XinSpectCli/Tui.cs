@@ -297,8 +297,8 @@ internal static class Tui
         int width;
         try { width = Math.Max(60, Console.WindowWidth - 1); }
         catch { width = 100; }
-        Console.WriteLine($"{BrandRed}╭{new string('─', width - 2)}╮{Reset}");
-        Console.Write($"{BrandRed}│{Reset} {BrandRed}{Bold}>{Reset} ");
+        Console.WriteLine($"{Dim}{new string('─', width)}{Reset}");
+        Console.Write($"{BrandRed}{Bold}>{Reset} ");
     }
 
     // ── 1.9) 框線 helpers（唯一正解：邊框位置一律 CHA 絕對定位，零寬度計算）──

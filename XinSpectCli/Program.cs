@@ -52,6 +52,11 @@ internal static class Program
             staticKeys: FactKeyCatalog.Count,
             dynamicFamilies: FactKeyDynamicCatalog.Families.Count);
         Tui.Footer("● READY ・ 唯讀模式", "曦覽 XinSpect Console v" + AppInfo.ShortVersion);
+        var startupStatus = StatusLine();
+        int sw;
+        try { sw = Math.Max(60, Console.WindowWidth - 1); } catch { sw = 100; }
+        int scol = Math.Max(1, sw - Tui.VisibleLength(startupStatus) - 1);
+        Console.Write(Tui.Esc + "[" + scol + "G" + Tui.Dim + startupStatus + Tui.Reset + Environment.NewLine);
         string? line;
         while (true)
         {
@@ -608,6 +613,42 @@ internal static class Program
 
     // ── 行編輯：↑↓ 歷史、Tab 補全 ─────────────────────────────────────────
 
+    /// <summary>狀態行：面前是什麼權限（SYSTEM／administrator／標準）＋Ring0 驅動是否已註冊。
+    /// 全部如實偵測：登錄檔查 WinRing0／XsRegProbe 服務機碼，查無就是未註冊，不編造就緒。</summary>
+    private static string StatusLine()
+    {
+        string priv;
+        try
+        {
+            using var id = System.Security.Principal.WindowsIdentity.GetCurrent();
+            if (id.User == new System.Security.Principal.SecurityIdentifier("S-1-5-18"))
+                priv = "SYSTEM";
+            else if (new System.Security.Principal.WindowsPrincipal(id)
+                     .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator))
+                priv = "administrator";
+            else
+                priv = "標準權限";
+        }
+        catch { priv = "權限不明"; }
+
+        string ring0 = "ring0 未註冊";
+        try
+        {
+            using var services = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services");
+            if (services is not null)
+                foreach (var name in services.GetSubKeyNames())
+                    if (name.StartsWith("WinRing0", StringComparison.OrdinalIgnoreCase)
+                        || name.StartsWith("XsRegProbe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ring0 = "ring0 驅動已註冊";
+                        break;
+                    }
+        }
+        catch { ring0 = "ring0 —"; }
+
+        return $"{Tui.BrandRed}●{Tui.Reset} {priv} · {ring0}";
+    }
+
     private static string? ReadLineWithHistory()
     {
         // 輸入被重導向（管線／指令稿）時沒有按鍵事件可拿：退回普通 ReadLine，
@@ -624,11 +665,10 @@ internal static class Program
             {
                 int w;
                 try { w = Math.Max(60, Console.WindowWidth - 1); } catch { w = 100; }
-                Console.Write(Tui.Esc + "[" + w + "G" + Tui.BrandRed + "│" + Tui.Reset + Environment.NewLine);
-                Console.WriteLine($"{Tui.BrandRed}╰{new string('─', w - 2)}╯{Tui.Reset}");   // 長方框底線（閉合）
-                string status = "● 唯讀 · 不寫硬體 · 不連網  │  ↑↓ 歷史 · Tab 補全 · help 指令書 · book 百科";
-                int scol = Math.Max(1, w - status.Length - 1);
-                Console.Write(Tui.Esc + "[" + scol + "G" + Tui.Dim + status + Tui.Reset + Environment.NewLine);
+                Console.WriteLine($"{Tui.Dim}{new string('─', w)}{Tui.Reset}");   // 輸入欄底線
+                var st = StatusLine();
+                int scol = Math.Max(1, w - Tui.VisibleLength(st) - 1);
+                Console.Write(Tui.Esc + "[" + scol + "G" + Tui.Dim + st + Tui.Reset + Environment.NewLine);
                 return buf.ToString();
             }
             if (key.Key == ConsoleKey.Backspace)
@@ -690,11 +730,8 @@ internal static class Program
 
     private static void Redraw(StringBuilder buf, int pos)
     {
-        int w;
-        try { w = Math.Max(60, Console.WindowWidth - 1); } catch { w = 100; }
         Console.Write("\r\x1b[K");
-        Console.Write($"{Tui.BrandRed}│{Tui.Reset} {Tui.BrandRed}{Tui.Bold}>{Tui.Reset} " + buf.ToString());
-        Console.Write(Tui.Esc + "[" + w + "G" + Tui.BrandRed + "│" + Tui.Reset);
-        Console.Write(Tui.Esc + "[" + (5 + pos) + "G");   // 游標回輸入位置
+        Console.Write($"{Tui.BrandRed}{Tui.Bold}>{Tui.Reset} " + buf.ToString());
+        if (pos < buf.Length) Console.Write($"\x1b[{buf.Length - pos}D");
     }
 }
