@@ -31,7 +31,7 @@ internal static class Program
     [
         "help", "ver", "pages", "page", "domain", "keys", "settings", "changelog",
         "facts", "fact", "sys", "top", "dash", "msr", "pci", "ipc",
-        "redfish", "compliance", "merkle", "clear", "exit",
+        "redfish", "compliance", "merkle", "book", "百科", "clear", "exit",
     ];
 
     private static readonly List<string> History = [];
@@ -77,7 +77,8 @@ internal static class Program
         {
             switch (cmd)
             {
-                case "help" or "?": Help(); return true;
+                case "help" or "?": CommandBook.Run(rest.Length > 0 ? rest : null); return true;
+                case "book" or "百科" or "手冊": Book.Run(rest.Length > 0 ? rest : null); return true;
                 case "ver":
                     Tui.Frame($"曦覽 XinSpect v{AppInfo.Version}",
                     [
@@ -149,34 +150,6 @@ internal static class Program
             Console.WriteLine($"{Red}{ex.GetType().Name}：{ex.Message}{Reset}");
             return true;
         }
-    }
-
-    private static void Help()
-    {
-        Console.WriteLine($"{Bold}指令{Reset}");
-        (string c, string d)[] rows =
-        [
-            ("facts", "採集一輪本機事實（之後的 fact 查詢走這份快取）"),
-            ("fact <字>", "在事實快取裡搜鍵名或值"),
-            ("sys", "即時 KPI：溫度／負載／記憶體＋進度條與走勢"),
-            ("dash", "全螢幕即時儀表板（獨立螢幕；q 離開）"),
-            ("top [秒]", "即時表格持續刷新（預設 2 秒一拍，Ctrl+C 停）"),
-            ("msr <索引>", "讀一支 MSR（十六進位，如 msr 0x19C；唯讀）"),
-            ("pci scan", "全匯流排 PCI 掃描（bus 0–255，唯讀）"),
-            ("pci dump <n>", "看第 n 台裝置的 256B 設定空間 hex dump"),
-            ("ipc <指令>", "送 BlueSquadronBridge（真 JSON 進出）"),
-            ("redfish <目錄>", "讀離線 Redfish 目錄（不連網）"),
-            ("compliance [格式]", "合規判定（json|sarif|junit|cef|otel）"),
-            ("merkle", "穩定事實 Merkle 指紋"),
-            ("pages", "列出 GUI 全部頁面與對應的 CLI 用法（常規版功能對照）"),
-            ("page <key>", "看某頁的資料：以該頁關鍵字過濾事實快取"),
-            ("domain <前綴>", "按鍵前綴過濾事實（如 domain cpu、domain nvme）"),
-            ("keys [字]", "搜尋 1,178 把靜態事實鍵目錄"),
-            ("settings", "讀目前使用者設定（settings.json）"),
-            ("changelog [n]", "看最近 n 版更新紀錄（預設 3）"),
-            ("ver / clear / exit", "版號／清屏／離開"),
-        ];
-        Tui.Table(["指令", "說明"], rows.Select(r => new[] { r.c, r.d }));
     }
 
     // ── 事實採集與查詢 ────────────────────────────────────────────────────

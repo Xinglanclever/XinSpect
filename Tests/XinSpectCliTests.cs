@@ -56,6 +56,12 @@ public class XinSpectCliTests
         Assert.True(wStart >= 0 && wEnd > wStart, "找不到 Welcome 方法區段");
         Assert.DoesNotContain("✻", tui[wStart..wEnd], StringComparison.Ordinal);
         Assert.DoesNotContain("xs▸", tui, StringComparison.Ordinal);
+        // 指令書與百科：help 分類功能表＋單指令詳解；book 離線嵌入整本百科
+        Assert.True(File.Exists(Path.Combine(root, "XinSpectCli", "CommandBook.cs")), "缺 CommandBook.cs");
+        Assert.Contains("class CommandBook", File.ReadAllText(Path.Combine(root, "XinSpectCli", "CommandBook.cs")), StringComparison.Ordinal);
+        Assert.True(File.Exists(Path.Combine(root, "XinSpectCli", "Book.cs")), "缺 Book.cs");
+        string csproj = File.ReadAllText(Path.Combine(root, "XinSpectCli", "XinSpectCli.csproj"));
+        Assert.Contains("README.md", csproj, StringComparison.Ordinal);
         // 不得引入寫入通路
         Assert.DoesNotContain("WritePciConfig", src, StringComparison.Ordinal);
         Assert.DoesNotContain("WriteMsrPair", src, StringComparison.Ordinal);

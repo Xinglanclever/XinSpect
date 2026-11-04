@@ -134,7 +134,8 @@ internal static class Tui
         Console.WriteLine(Row($"{Bold}facts{Reset}{new string(' ', 7)}{Dim}採集 {staticKeys:N0} 靜態鍵＋{dynamicFamilies} 動態家族 (或 fact <關鍵字>){Reset}"));
         Console.WriteLine(Row($"{Bold}dash{Reset}{new string(' ', 8)}{Dim}全螢幕即時儀表板 (q 離開 · 另有 sys 與 top [秒]){Reset}"));
         Console.WriteLine(Row($"{Bold}pages{Reset}{new string(' ', 7)}{Dim}對照 GUI 全頁 (另有 page · domain · keys){Reset}"));
-        Console.WriteLine(Row($"{Bold}help{Reset}{new string(' ', 8)}{Dim}查看完整指令 (msr · pci · ipc · merkle · 合規){Reset}"));
+        Console.WriteLine(Row($"{Bold}book{Reset}{new string(' ', 7)}{Dim}曦覽百科全書：15 部 362 節，離線可讀{Reset}"));
+        Console.WriteLine(Row($"{Bold}help{Reset}{new string(' ', 8)}{Dim}指令書與百科全書 (help book){Reset}"));
         Console.WriteLine(Row(""));
         Console.WriteLine(Row($"{Dim}cwd: {cwd}{Reset}"));
         Console.WriteLine(Bot());

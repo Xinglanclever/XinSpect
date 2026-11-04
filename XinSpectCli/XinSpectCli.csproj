@@ -33,4 +33,9 @@
     <ProjectReference Include="..\XinSpect.csproj" />
   </ItemGroup>
 
+  <!-- 百科全書（README.md，約 1.5MB）整本嵌入：book 指令離線可讀，不需要外部檔案 -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\README.md" Link="docs\README.md" />
+  </ItemGroup>
+
 </Project>
