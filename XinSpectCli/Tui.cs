@@ -108,11 +108,11 @@ internal static class Tui
     /// mascot 指令可逐一預覽動畫，選定後把 MascotFrames 指向該候選。</summary>
     public static readonly string[][][] MascotCandidates =
     [
-        // ── 候選 A（我的設計）：日核菱形＋八向光線，收張兩幀 ──
+        // ── 候選 A（原版，採用）：日核＋八向光線，破曉兩幀 ──
         new[]
         {
-            new[] { "   ▄███▄   ", "▄▀▄█████▄▀▄", "████▀█▀████", "▀▄▀█████▀▄▀", "   ▀███▀   " },
-            new[] { "   ▄███▄   ", "▄▀▄█████▄▀▄", "███▀███▀███", "▀▄▀█████▀▄▀", "   ▀███▀   " },
+            new[] { "   ▄█▄   ", "▄▀ ███ ▀▄", "█ ▐███▌ █", "▀▄ ███ ▄▀", "   ▀█▀   " },
+            new[] { "    █    ", "  ▄███▄  ", " ▐█████▌ ", "  ▀███▀  ", "    █    " },
         },
         // ── 候選 B（Gemini 設計）：「曦輪」核心＋留白雙眼；半格位移＋單雙線切換＝日珥呼吸＋眨眼 ──
         new[]
@@ -126,6 +126,37 @@ internal static class Tui
     public static int MascotChoice;
 
     public static string[][] MascotFrames => MascotCandidates[MascotChoice];
+
+    private static readonly string[][] BannerLetters =
+    [
+        new[] { "█   █", " █ █ ", "  █  ", " █ █ ", "█   █" },   // X
+        new[] { "███", " █ ", " █ ", " █ ", "███" },                   // I
+        new[] { "█   █", "██  █", "█ █ █", "█  ██", "█   █" },         // N
+        new[] { "█████", "█    ", "█████", "    █", "█████" },         // S
+        new[] { "████ ", "█   █", "████ ", "█    ", "█    " },         // P
+        new[] { "█████", "█    ", "███  ", "█    ", "█████" },         // E
+        new[] { " █████", "█    ", "█    ", "█    ", " █████" },       // C
+        new[] { "█████", "  █  ", "  █  ", "  █  ", "  █  " },         // T
+    ];
+
+    /// <summary>大框字 XINSPECT：5 行組合字（cmd 大字風格）。</summary>
+    public static string[] XinspectBanner()
+    {
+        const string word = "XINSPECT";
+        var rows = new string[5];
+        for (int r = 0; r < 5; r++)
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var ch in word)
+            {
+                var letter = BannerLetters["XINSPECT".IndexOf(ch)];
+                sb.Append(letter[r]);
+                sb.Append("  ");
+            }
+            rows[r] = sb.ToString().TrimEnd();
+        }
+        return rows;
+    }
 
     /// <summary>動畫太陽吉祥物（兩幀往返數輪後定格）＋雙欄全寬歡迎框（Claude Code 佈局）。
     /// 左欄：吉祥物＋品牌名＋cwd；右欄：快速開始（真實指令集）＋小知識。
@@ -142,6 +173,11 @@ internal static class Tui
         string RawRow(string body) => $"{BrandRed}│{Reset}" + new string(' ', Math.Max(0, (width - 2 - VisibleLength(body)) / 2)) + body;
 
         try { Console.Clear(); } catch { /* 重定向時無緩衝可清，照樣印內容 */ }
+
+        // ── 大框字 XINSPECT（cmd 大字）：品牌開場 ──
+        foreach (var lineText in XinspectBanner())
+            Console.WriteLine(RawRow(lineText));
+        Console.WriteLine();
 
         // ── 吉祥物破曉動畫：兩幀往返（光線收張），重定向時跳過 ──
         if (!Console.IsInputRedirected)
@@ -402,6 +438,43 @@ internal static class Tui
     private static Task? _spinnerTask;
     private static readonly object Sync = new();
     private static readonly System.Diagnostics.Stopwatch SpinnerClock = new();
+    private const int ScopeWidth = 24;
+    private static readonly List<double> ScopeSamples = [];
+    private static System.Diagnostics.PerformanceCounter? _cpuCounter;
+    private static bool _cpuCounterBroken;
+
+    /// <summary>取樣 CPU 總負載（0–100）；PerformanceCounter 不可用時回 null，不造假波形。</summary>
+    private static double? SampleCpuLoad()
+    {
+        if (_cpuCounterBroken) return null;
+        try
+        {
+            _cpuCounter ??= new System.Diagnostics.PerformanceCounter("Processor", "% Processor Time", "_Total", true);
+            float v = _cpuCounter.NextValue();
+            return double.IsNaN(v) ? null : Math.Clamp(v, 0, 100);
+        }
+        catch
+        {
+            _cpuCounterBroken = true;
+            return null;
+        }
+    }
+
+    /// <summary>示波器線：最後 width 個取樣畫成高度條（▁▂▃…█），示波器掃描感。</summary>
+    private static string ScopeLine(IReadOnlyList<double> samples, int width)
+    {
+        const string levels = " ▁▂▃▄▅▆▇█";
+        var sb = new System.Text.StringBuilder();
+        sb.Append(new string(' ', Math.Max(0, width - samples.Count)));
+        foreach (var v in samples)
+        {
+            int idx = Math.Clamp((int)Math.Round(v / 100.0 * (levels.Length - 1)), 1, levels.Length - 1);
+            sb.Append(SwissRed);
+            sb.Append(levels[idx]);
+            sb.Append(Reset);
+        }
+        return sb.ToString();
+    }
 
     /// <summary>開始轉圈：星芒往返循環＋隨機動詞；2 秒起顯示經過秒數與 esc 提示。label 留空時抽動詞。</summary>
     public static void SpinnerStart(string? label = null)
@@ -412,6 +485,7 @@ internal static class Tui
             _cts = new CancellationTokenSource();
             var token = _cts.Token;
             string verb = label ?? Verbs[Random.Shared.Next(Verbs.Length)];
+            ScopeSamples.Clear();
             SpinnerClock.Restart();
             Console.Write(HideCursor);
             _spinnerTask = Task.Run(async () =>
@@ -419,6 +493,8 @@ internal static class Tui
                 // 幀序列往返：✢→✶→✻→✽→✻→✶，120ms 一幀
                 int[] seq = [0, 1, 2, 3, 2, 1];
                 int i = 0;
+                bool hasScope = false;
+                int scopeTick = 0;
                 var sw = System.Diagnostics.Stopwatch.StartNew();
                 try
                 {
@@ -435,6 +511,24 @@ internal static class Tui
                             bar += (t >= pos && t < pos + win) ? $"{BrandRed}▓{Reset}" : Dim + "·" + Reset;
                         Console.Write(CarriageReturn + ClearLine + $"{BrandRed}{frame}{Reset} {BrandRed}{verb}{Reset}{Dim}…{Reset} "
                             + $"[{bar}] {Bold}{secs,5:0.0}s{Reset}{Dim} · esc 中斷{Reset}");
+                        // 示波器線：真實 CPU 負載取樣（PerformanceCounter；不可用時整行略過，不造假波形）
+                        scopeTick++;
+                        if (hasScope)
+                            Console.Write(Esc + "[1F" + CarriageReturn + ClearLine);   // 回到 spinner 行（scope 行佔了下一行）
+                        bool drewScope = false;
+                        if (scopeTick % 3 == 0)
+                        {
+                            double? load = SampleCpuLoad();
+                            if (load.HasValue)
+                            {
+                                drewScope = true;
+                                ScopeSamples.Add(load.Value);
+                                if (ScopeSamples.Count > ScopeWidth) ScopeSamples.RemoveAt(0);
+                                string trace = ScopeLine(ScopeSamples, ScopeWidth);
+                                Console.Write(Environment.NewLine + $"  {Dim}CPU ╶{Reset}" + trace + $"{Dim}╴{Reset} {Bold}{load:0}%{Reset}");
+                            }
+                        }
+                        hasScope = drewScope;
                         await Task.Delay(100, token).ConfigureAwait(false);
                     }
                 }
@@ -455,6 +549,7 @@ internal static class Tui
             _cts = null;
             _spinnerTask = null;
             SpinnerClock.Stop();
+            Console.Write(Esc + "[1F" + CarriageReturn + ClearLine);
             Console.Write(CarriageReturn + ClearLine);
             double done = SpinnerClock.Elapsed.TotalSeconds;
             Console.Write($"[{BrandRed}{new string('▓', 22)}{Reset}] {Bold}100.0%{Reset} {Dim}({done:0.00}s){Reset}" + Environment.NewLine);
