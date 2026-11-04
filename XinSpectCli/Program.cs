@@ -60,13 +60,24 @@ internal static class Program
         string? line;
         while (true)
         {
-            Tui.InputFrame();
-            line = ReadLineWithHistory();
-            if (line is null) break;              // Ctrl+Z／EOF
-            line = line.Trim();
-            if (line.Length == 0) continue;
-            History.Add(line);
-            if (!Execute(line)) break;
+            try
+            {
+                Tui.InputFrame();
+                line = ReadLineWithHistory();
+                if (line is null) break;              // Ctrl+Z／EOF
+                line = line.Trim();
+                if (line.Length == 0) continue;
+                History.Add(line);
+                if (!Execute(line)) break;
+            }
+            catch (Exception ex)
+            {
+                // REPL 永不崩：任何例外（控制台 IO、句柄、重導邊緣案例）攔下顯示後繼續，
+                // 使用者絕不被踢回 cmd 提示符——那個 C:/xxx> 就是炸出去的殘骸。
+                try { Console.CursorVisible = true; } catch { }
+                Console.WriteLine();
+                Console.WriteLine($"{Red}內部錯誤（已攔下，直接輸入下一個指令繼續）：{ex.GetType().Name} {ex.Message}{Reset}");
+            }
         }
         return 0;
     }
@@ -661,6 +672,8 @@ internal static class Program
         while (true)
         {
             var key = Console.ReadKey(intercept: true);
+            try
+            {
             if (key.Key == ConsoleKey.Enter)
             {
                 int w;
@@ -725,6 +738,14 @@ internal static class Program
             buf.Insert(pos, key.KeyChar);
             pos++;
             Redraw(buf, pos);
+            }
+            catch (Exception ex)
+            {
+                try { Console.CursorVisible = true; } catch { }
+                Console.WriteLine();
+                Console.WriteLine($"{Red}輸入行錯誤（已攔下）：{ex.GetType().Name} {ex.Message}{Reset}");
+                return buf.ToString();   // 已輸入的內容如實帶回，不輸掉
+            }
         }
     }
 
