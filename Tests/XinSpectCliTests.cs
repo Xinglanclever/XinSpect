@@ -42,12 +42,12 @@ public class XinSpectCliTests
         Assert.Contains("ConsoleKey.Tab", src, StringComparison.Ordinal);
         Assert.Contains("ConsoleKey.UpArrow", src, StringComparison.Ordinal);
         Assert.Contains("唯讀", src, StringComparison.Ordinal);
-        // 開機序列（Gemini 設計稿）：互動模式要播 BootSplash，計數來自真實目錄
-        Assert.Contains("Tui.BootSplash", src, StringComparison.Ordinal);
-        Assert.Contains("FactKeyCatalog.Count", src, StringComparison.Ordinal);
+        // Claude Code 式介面（2026-11-05 裁決）：圓角歡迎框、星芒 spinner、> 提示符
         string tui = File.ReadAllText(Path.Combine(root, "XinSpectCli", "Tui.cs"));
-        // 開機序列的誠信：感測引擎未載入要寫「——進站後跑 facts」，不得假裝已就緒
-        Assert.Contains("進站後跑 facts", tui, StringComparison.Ordinal);
+        Assert.Contains("╭", tui, StringComparison.Ordinal);
+        Assert.Contains("✻", tui, StringComparison.Ordinal);
+        Assert.Contains("隔窗端詳 Ring0 中", tui, StringComparison.Ordinal);
+        Assert.DoesNotContain("xs▸", tui, StringComparison.Ordinal);
         // 不得引入寫入通路
         Assert.DoesNotContain("WritePciConfig", src, StringComparison.Ordinal);
         Assert.DoesNotContain("WriteMsrPair", src, StringComparison.Ordinal);

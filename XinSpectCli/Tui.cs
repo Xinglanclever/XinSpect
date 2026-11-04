@@ -39,7 +39,7 @@ internal static class Tui
 
     // ── 寬度計算 ──────────────────────────────────────────────────────────
 
-    /// <summary>可見寬度：剝掉 ANSI escape，CJK 記 2 格。</summary>
+    /// <summary>可見寬度：剝掉 ANSI escape，CJK／全形字記 2 格。</summary>
     public static int VisibleLength(string s)
     {
         int w = 0;
@@ -50,7 +50,15 @@ internal static class Tui
                 while (i < s.Length && s[i] != 'm') i++;   // 吃到 escape 序列結尾
                 continue;
             }
-            w += char.GetUnicodeCategory(s[i]) == System.Globalization.UnicodeCategory.OtherLetter ? 2 : 1;
+            char c = s[i];
+            // CJK 與全形字一律 2 格：OtherLetter（漢字、假名）＋全形標點 FF01-FF60、CJK 標點 3000-303F。
+            // 少算這些會讓歡迎框的右框線被擠出對位（實測：全形「／」算 1 格、畫 2 格，框線飄出）。
+            w += char.GetUnicodeCategory(c) == System.Globalization.UnicodeCategory.OtherLetter
+                 || (c >= '\uFF01' && c <= '\uFF60')
+                 || (c >= '\u3000' && c <= '\u303F')
+                 || (c >= '\u2190' && c <= '\u2199')   // ↑↓ 箭頭：WT＋CJK 字型下渲染 2 格
+                 || (c >= '\u2733' && c <= '\u2743')   // ✢✶✻✽ 星芒：East Asian Wide
+                 ? 2 : 1;
         }
         return w;
     }
@@ -79,113 +87,60 @@ internal static class Tui
         "changelog 1 只看最新一版改了什麼",
     ];
 
-    public static void Welcome(string version)
-    {
-        int width = Math.Min(78, ConsoleWidth());
-        string line = new('─', width - 2);
-        var tip = Tips[Random.Shared.Next(Tips.Length)];
+    /// <summary>品牌紅（#E30613 的 truecolor；歡迎框框線、✻、⏺、提示符專用，不作內文著色）。</summary>
+    public const string BrandRed = "[38;2;227;6;19m";
 
-        Console.WriteLine();
-        Console.WriteLine($"{Dim}┌{line}┐{Reset}");
+    /// <summary>Claude Code 式星芒 spinner 的幀序列（往返循環）。</summary>
+    private static readonly string[] SparkFrames = ["✢", "✶", "✻", "✽", "✻", "✶"];
 
-        Row("");
-        Row($"  {SwissRed}▌{Reset}{SwissRed}{Bold}✻{Reset} {Bold}曦覽終端機{Reset} {Dim}XINSPECT CONSOLE{Reset}");
-        Row("");
-        Row($"  {RedBg}{Bold} 唯讀 {Reset} {RedBg}{Bold} 不寫硬體 {Reset} {RedBg}{Bold} 不連網 {Reset}    {Bold}v{version}{Reset}");
-        Row($"  {new string('─', 26)}");
-        Row($"  {Bold}快速開始{Reset}");
-        Row($"    {SwissGreen}facts{Reset}        採集本機硬體事實（一切查詢的底料）");
-        Row($"    {SwissGreen}sys{Reset} / {SwissGreen}top 2{Reset}    即時一行／持續刷新表");
-        Row($"    {SwissGreen}pages{Reset}        GUI 65 頁的終端對照表");
-        Row($"    {SwissGreen}help{Reset}         完整指令清單");
-        Row("");
-        Row($"  {Dim}小知識：{tip}{Reset}");
-        Row($"  {Dim}↑↓ 歷史 ・ Tab 補全 ・ exit 離開{Reset}");
-
-        Console.WriteLine($"{Dim}└{line}┘{Reset}");
-        Console.WriteLine();
-
-        void Row(string content)
-        {
-            int pad = Math.Max(0, width - 2 - 2 - VisibleLength(content) - 2);
-            Console.WriteLine($"{Dim}│{Reset}  {content}{new string(' ', pad)}  {Dim}│{Reset}");
-        }
-    }
-
-    // ── 1.5) 開機序列（v3：瑞士紀律＋分組呼吸＋單一收尾） ──
+    /// <summary>採集用俏皮動詞（繁中・硬體語境・每次隨機抽一個）。</summary>
+    private static readonly string[] Verbs =
+    [
+        "叩問北橋中", "傾聽匯流排脈搏中", "隔窗端詳 Ring0 中", "凝視 MSR 暫存器中",
+        "翻閱 SMBIOS 族譜中", "丈量矽晶溫度中", "沿著 PCIe 通道巡邏中", "旁聽 WMI 廣播中",
+        "屏息讀取電壓軌中", "清點針腳電位中", "校準時脈呼吸中", "解析 ACPI 表達式中",
+        "敲門詢問 Named Pipe 中", "核對硬體事實清單中",
+    ];
 
     /// <summary>
-    /// 開機序列 v3。在 v2（單色白＋唯一紅色、點狀引導線）之上再磨三處：
-    /// (1) 事實行分「載入」與「承諾」兩組，中間留一行空——資訊有節奏，不是一長串；
-    /// (2) 拿掉自己的狀態列——Welcome 之後的 Footer 會再收一次尾，兩條 READY 重複；
-    /// (3) 進度條之後補一行灰的小知識，讓畫面落地不懸空。
-    /// 誠信規則不變：值全部來自真實目錄；感測引擎未載入就寫「——」，不編造。
+    /// 歡迎框 v2＝Claude Code 骨架＋原版內容密度：圓角品牌紅細框、✻ 開頭、
+    /// 紅底徽章章（原版的視覺資產，保留）、快速開始、旋轉小知識、快捷鍵提示、cwd。
     /// </summary>
-    public static void BootSplash(int staticKeys, int dynamicFamilies, int pages, int versions)
+    public static void Welcome(string version)
     {
-        int width = Math.Min(72, ConsoleWidth());
+        const int width = 78;
+        int inner = width - 2;
+        var tip = Tips[Random.Shared.Next(Tips.Length)];
 
-        // 一行：左標籤（白）＋點狀引導線（灰）＋右值（白）。值是畫面的主角。
-        string Fact(string label, string value)
+        string Top() => $"{BrandRed}╭{new string('─', inner)}╮{Reset}";
+        string Bot() => $"{BrandRed}╰{new string('─', inner)}╯{Reset}";
+        string Row(string body)
         {
-            int dotCount = Math.Max(3, width - 4 - VisibleLength(label) - VisibleLength(value) - 2);
-            return $"  {Bold}{label}{Reset} {Dim}{new string('·', dotCount)}{Reset} {Bold}{value}{Reset}";
+            // 右框線用 ANSI 絕對定位（CHA, \x1b[78G）釘死在第 78 列——
+            // 不靠補白計算：✻／↑↓／全形標點的實際渲染寬度因字型而異，算出來的 pad 一定有誤差。
+            return $"{BrandRed}│{Reset} {body}\x1b[78G{BrandRed}│{Reset}";
         }
 
-        Console.Clear();
-        Console.WriteLine();
-
-        // ── 標頭：紅方塊＋字距放寬的字標＋右側版號。字重與字距做層級，不靠色。 ──
-        string mark = "曦覽 X I N S P E C T";
-        string ver = $"v{XinSpect.AppInfo.ShortVersion} ・ ULTIMA XVI";
-        Console.WriteLine($"  {SwissRed}{Bold}■{Reset}{Bold} {mark}{Reset}{new string(' ', Math.Max(2, width - 4 - VisibleLength(mark) - VisibleLength(ver)))}{Dim}{ver}{Reset}");
-        Console.WriteLine($"  {Dim}{new string('─', width - 4)}{Reset}");
-        Console.WriteLine();
-        Console.WriteLine($"  {Dim}硬體事實的唯讀視角。讀得到才報，讀不到就說讀不到。{Reset}");
-        Console.WriteLine();
-
-        // ── 事實行：分兩組——「這次載入了什麼」與「永遠遵守什麼」。組間一行空。 ──
-        var loaded = new (string label, string value)[]
-        {
-            ("console",     "UTF-8 ／ ANSI"),
-            ("keys",        $"{staticKeys:N0} static ・ {dynamicFamilies} families"),
-            ("pages",       $"{pages} pages"),
-            ("changelog",   $"{versions} versions"),
-        };
-        var promises = new (string label, string value)[]
-        {
-            ("writes",      "0 paths"),
-            ("network",     "0 sockets"),
-            ("sensor",      "—— 進站後跑 facts"),
-        };
-        foreach (var (label, value) in loaded)
-        {
-            Console.WriteLine(Fact(label, value));
-            System.Threading.Thread.Sleep(90);
-        }
-        Console.WriteLine();
-        foreach (var (label, value) in promises)
-        {
-            Console.WriteLine(Fact(label, value));
-            System.Threading.Thread.Sleep(90);
-        }
+        string cwd = Environment.CurrentDirectory;
+        if (cwd.Length > 52) cwd = cwd[..24] + "…" + cwd[^26..];
 
         Console.WriteLine();
-
-        // ── 載入條：灰軌道、紅色填充。唯一允許紅色出現的第二處。 ──
-        int barW = Math.Min(46, width - 22);
-        for (int fill = 0; fill <= barW; fill++)
-        {
-            double pct = fill * 100.0 / barW;
-            string bar = $"{SwissRed}{new string('■', fill)}{Reset}{Dim}{new string('·', barW - fill)}{Reset}";
-            Console.Write(CarriageReturn + ClearLine + $"  {bar} {Dim}{pct,5:0.0}%{Reset}");
-            System.Threading.Thread.Sleep(20);
-        }
+        Console.WriteLine(Top());
+        Console.WriteLine(Row($"{BrandRed}{Bold}✻{Reset} 歡迎使用 {Bold}曦覽終端機{Reset} {Dim}xsc v{version}{Reset}"));
+        Console.WriteLine(Row(""));
+        Console.WriteLine(Row($"{RedBg}{Bold} 唯讀 {Reset} {RedBg}{Bold} 不寫硬體 {Reset} {RedBg}{Bold} 不連網 {Reset}   {Bold}v{version}{Reset}"));
+        Console.WriteLine(Row(""));
+        Console.WriteLine(Row($"{Bold}facts   {Reset}{Dim}採集全機硬體事實（WMI · PCI · MSR · LHM）{Reset}"));
+        Console.WriteLine(Row($"{Bold}pages   {Reset}{Dim}GUI 全頁的終端對照表{Reset}"));
+        Console.WriteLine(Row($"{Bold}help    {Reset}{Dim}查看完整指令清單{Reset}"));
+        Console.WriteLine(Row(""));
+        Console.WriteLine(Row($"{Dim}小知識 ・ {tip}{Reset}"));
+        Console.WriteLine(Row($"{Dim}↑↓ 歷史 ・ Tab 補全 ・ exit 離開{Reset}"));
+        Console.WriteLine(Row(""));
+        Console.WriteLine(Row($"{Dim}cwd: {cwd}{Reset}"));
+        Console.WriteLine(Bot());
         Console.WriteLine();
-
-        // ── 收尾：一行灰的小知識，畫面落地；狀態列交給 Welcome 流程，不重複。 ──
-        Console.WriteLine();
-        Console.WriteLine($"  {Dim}小知識 ・ help 看完整指令；facts 採集一次，sys／top／dash 共用同一份快取{Reset}");
+        Console.WriteLine($"  {Dim}輸入 facts 採集硬體事實，或輸入 help 查看指令…{Reset}");
         Console.WriteLine();
     }
 
@@ -232,7 +187,7 @@ internal static class Tui
     // ── 4) 提示符與輸入 ───────────────────────────────────────────────────
 
     /// <summary>彩色提示符：紅 xs ＋ 藍 ▸。</summary>
-    public static void Prompt() => Console.Write($"{SwissRed}{Bold}xs{Reset}{SwissBlue}▸{Reset} ");
+    public static void Prompt() => Console.Write($"{BrandRed}{Bold}>{Reset} ");
 
     /// <summary>印提示符並讀一行（重導向時退回 ReadLine）。</summary>
     public static string? ReadInput()
@@ -306,31 +261,39 @@ internal static class Tui
     public static void Separator()
         => Console.WriteLine($"  {Dim}{new string('·', Math.Min(72, ConsoleWidth() - 4))}{Reset}");
 
-    // ── 6) Spinner ────────────────────────────────────────────────────────
+    // ── 6) Spinner（Claude Code 式：星芒往返＋俏皮動詞＋計時） ────────────
 
     private static CancellationTokenSource? _cts;
     private static Task? _spinnerTask;
     private static readonly object Sync = new();
+    private static readonly System.Diagnostics.Stopwatch SpinnerClock = new();
 
-    /// <summary>開始轉圈（幕後執行緒每 80ms 重寫同一行）。</summary>
-    public static void SpinnerStart(string label)
+    /// <summary>開始轉圈：星芒往返循環＋隨機動詞；2 秒起顯示經過秒數與 esc 提示。label 留空時抽動詞。</summary>
+    public static void SpinnerStart(string? label = null)
     {
         lock (Sync)
         {
             if (_cts is not null) return;
             _cts = new CancellationTokenSource();
             var token = _cts.Token;
+            string verb = label ?? Verbs[Random.Shared.Next(Verbs.Length)];
+            SpinnerClock.Restart();
             Console.Write(HideCursor);
             _spinnerTask = Task.Run(async () =>
             {
+                // 幀序列往返：✢→✶→✻→✽→✻→✶，120ms 一幀
+                int[] seq = [0, 1, 2, 3, 2, 1];
                 int i = 0;
+                var sw = System.Diagnostics.Stopwatch.StartNew();
                 try
                 {
                     while (!token.IsCancellationRequested)
                     {
-                        string frame = SpinnerFrames[i++ % SpinnerFrames.Length];
-                        Console.Write($"\r{ClearLine}{SwissBlue}{frame}{Reset} {label}");
-                        await Task.Delay(80, token).ConfigureAwait(false);
+                        string frame = SparkFrames[seq[i++ % seq.Length]];
+                        double secs = sw.Elapsed.TotalSeconds;
+                        string tail = secs >= 2 ? $" ({secs:0}s{Dim} · esc 中斷{Reset})" : "";
+                        Console.Write(CarriageReturn + ClearLine + $"{BrandRed}{frame}{Reset} {BrandRed}{verb}{Reset}{Dim}…{Reset}{Dim}{tail}{Reset}");
+                        await Task.Delay(120, token).ConfigureAwait(false);
                     }
                 }
                 catch (OperationCanceledException) { }
@@ -338,7 +301,7 @@ internal static class Tui
         }
     }
 
-    /// <summary>停止轉圈；doneMessage 非空時以綠 ✔ 取代該行。</summary>
+    /// <summary>停止轉圈；doneMessage 非空時以品牌紅 ⏺ 開頭輸出結果行（Claude Code 式）。</summary>
     public static void SpinnerStop(string? doneMessage = null)
     {
         lock (Sync)
@@ -349,9 +312,10 @@ internal static class Tui
             _cts.Dispose();
             _cts = null;
             _spinnerTask = null;
-            Console.Write($"\r{ClearLine}{ShowCursor}");
+            SpinnerClock.Stop();
+            Console.Write(CarriageReturn + ClearLine + ShowCursor);
             if (!string.IsNullOrEmpty(doneMessage))
-                Console.WriteLine($"{SwissGreen}✔{Reset} {doneMessage}");
+                Console.WriteLine($"{BrandRed}⏺{Reset} {doneMessage}");
         }
     }
 
