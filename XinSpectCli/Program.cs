@@ -622,10 +622,10 @@ internal static class Program
             var key = Console.ReadKey(intercept: true);
             if (key.Key == ConsoleKey.Enter)
             {
+                Console.WriteLine();
                 int w;
                 try { w = Math.Max(60, Console.WindowWidth - 1); } catch { w = 100; }
-                Console.Write(Tui.Esc + "[" + w + "G" + Tui.BrandRed + "│" + Tui.Reset + Environment.NewLine);
-                Console.WriteLine($"{Tui.BrandRed}╰{new string('─', w - 2)}╯{Tui.Reset}");   // 長方框底線（閉合）
+                Console.WriteLine($"{Tui.Dim}{new string('─', w)}{Tui.Reset}");   // 輸入欄底線（全寬，與上線成對）
                 string status = "● 唯讀 · 不寫硬體 · 不連網  │  ↑↓ 歷史 · Tab 補全 · help 指令書 · book 百科";
                 int scol = Math.Max(1, w - status.Length - 1);
                 Console.Write(Tui.Esc + "[" + scol + "G" + Tui.Dim + status + Tui.Reset + Environment.NewLine);
@@ -690,11 +690,8 @@ internal static class Program
 
     private static void Redraw(StringBuilder buf, int pos)
     {
-        int w;
-        try { w = Math.Max(60, Console.WindowWidth - 1); } catch { w = 100; }
         Console.Write("\r\x1b[K");
-        Console.Write($"{Tui.BrandRed}│{Tui.Reset} {Tui.BrandRed}{Tui.Bold}>{Tui.Reset} " + buf.ToString());
-        Console.Write(Tui.Esc + "[" + w + "G" + Tui.BrandRed + "│" + Tui.Reset);
-        Console.Write(Tui.Esc + "[" + (5 + pos) + "G");   // 游標回輸入位置
+        Console.Write($"{Tui.BrandRed}{Tui.Bold}>{Tui.Reset} " + buf.ToString());
+        if (pos < buf.Length) Console.Write($"\x1b[{buf.Length - pos}D");
     }
 }
