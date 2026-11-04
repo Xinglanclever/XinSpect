@@ -479,8 +479,37 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>總覽儀表板版面：使用者自選要顯示哪些磁貼、以什麼順序排（持久化於設定）。</summary>
     public DashboardLayout Dashboard { get; }
 
+    /// <summary>主殼工程列的 RING0 膠囊文字：驅動就緒與否如實反映，不編造「已掛載」。</summary>
+    public string Ring0Capsule => $"RING0: {DriverReady.WinRing0Status}";
+
+    /// <summary>主殼工程列的藍色中隊膠囊文字：防線就緒數／總數，未載入時顯示 —。</summary>
+    public string BlueSquadronCapsule
+    {
+        get
+        {
+            int active = BlueSquadron.DefenseLines.Count(l => l.Active);
+            int total = BlueSquadron.DefenseLines.Count;
+            return total == 0 ? "BLUESQUADRON: —" : $"BLUESQUADRON: {active}/{total} ACTIVE";
+        }
+    }
+
+    /// <summary>事件時間軸磁貼的空狀態開關：有任何事件才列列表，否則顯示「尚未有事件」。</summary>
+    public bool HasRecentEvents => Events.All.Count > 0;
+
     public MainViewModel()
     {
+        // 主殼瑞士工程列：RING0 膠囊要跟著驅動探測狀態走（DriverReady 屬於本次執行的探測結果）
+        DriverReady.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(DriverReadyService.WinRing0Severity) or nameof(DriverReadyService.WinRing0Status))
+                OnPropertyChanged(nameof(Ring0Capsule));
+        };
+        BlueSquadron.Posture.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(SecurityPostureService.Status) or nameof(SecurityPostureService.ScoreText))
+                OnPropertyChanged(nameof(BlueSquadronCapsule));
+        };
+
         // 三個跑分服務共用同一本紀錄簿：分數的唯一誠實基準是本機自己的歷次成績
         Bench = new BenchService(Benchmarks);
         Chess = new ChessBenchService(Benchmarks);

@@ -58,6 +58,7 @@
     <FontFamily x:Key="AppFont">Microsoft JhengHei UI, Microsoft JhengHei, Segoe UI, sans-serif</FontFamily>
 
     <local:SeverityToBrushConverter x:Key="SeverityToBrush"/>
+    <local:PercentToWidthConverter x:Key="PctToWidth"/>
     <local:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis"/>
     <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     <local:CountToVisibilityConverter x:Key="CountToVis"/>

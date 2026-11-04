@@ -45,6 +45,12 @@ public sealed class DashboardLayout : ObservableObject
         new("trends",   "即時走勢",        "近 90 秒的 CPU 使用率、CPU 溫度、記憶體與 GPU 使用率（預設關閉）", false),
         new("trends2",  "更多走勢",        "近 90 秒的 CPU 頻率、GPU 溫度與顯示記憶體用量", false),
         new("digits",   "數字面板",        "七段數字顯示：CPU 使用率、封裝溫度、封裝功耗與記憶體使用率（預設關閉）", false),
+        // 2026-11-04：Gemini 主殼設計稿移植——KPI 觀測台（非對稱主標題＋四格巨型讀值）、
+        // 主機摘要卡（SMBIOS 六列工程視角）、事件時間軸（EventsService 最近幾條）。皆預設開啟；
+        // 已存過版面的舊使用者會在 Plan() 依「存檔未提及→補最後」規則自動看到新磁貼。
+        new("kpihero",    "KPI 觀測台",    "曦覽硬體觀測儀主標題＋CPU 溫度／負載、GPU 溫度、記憶體四格巨型讀值", true),
+        new("hostsummary","主機摘要卡",    "SMBIOS 面向的主機板、處理器、顯示卡、記憶體、系統與開機時間六列", true),
+        new("timeline",   "事件時間軸",    "硬體與安全事件的最近記錄（警示、降頻、藍屏偵測到時出現）", true),
     };
 
     /// <summary>

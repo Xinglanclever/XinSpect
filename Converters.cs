@@ -97,6 +97,27 @@ public sealed class SeverityToBrushConverter : IValueConverter
     };
 }
 
+/// <summary>百分比數值（0–100）→ 指標條寬度（雙精度像素，100% 對應 400）。
+/// null 或非數值 → 0：讀不到就畫零長條，條框本身還在，語意是「等待讀值」而非「滿格」。</summary>
+public sealed class PercentToWidthConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        const double maxPx = 400;
+        double v = value switch
+        {
+            double d => d,
+            int i => i,
+            _ => 0,
+        };
+        // 溫度等讀值可能超過 100（如 0–127°C 感測），Clamp 到條長；負值同樣收斂
+        return Math.Clamp(v, 0, 100) / 100 * maxPx;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => Binding.DoNothing;
+}
+
 /// <summary>終端機執行狀態 → 指示燈顏色（執行中綠、停止灰）。與狀態徽章同一套主題色。</summary>
 public sealed class BoolToRunBrushConverter : IValueConverter
 {

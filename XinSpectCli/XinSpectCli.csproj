@@ -6,7 +6,6 @@
     <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <SelfContained>false</SelfContained>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -21,6 +20,14 @@
     <!-- 版號由 Tools/bump-version.py 逐版改；這裡只供顯示，主程式仍以 XinSpect.csproj 為單一來源 -->
     <!-- AssemblyName xsc：使用者在終端打 xsc 進入互動模式；一次性指令也走 xsc <args> 轉發 CliService -->
     <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- 體積（2026-11-04）：xsc 參考主專案（WPF＋全套事實引擎），自含發佈帶整個 .NET 執行階段
+         與 WPF，壓縮後仍約 100MB，這是「單檔、免裝 .NET」的代價，屬預期。
+         EnableCompressionInSingleFile 只在 self-contained 發佈生效（NETSDK1176）。
+         若追求體積可改 framework-dependent（約 60MB 但需使用者已裝 .NET 10 Desktop Runtime），
+         發佈時以 p:EnableCompressionInSingleFile=false p:SelfContained=false 覆寫即可。 -->
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <SelfContained>true</SelfContained>
   </PropertyGroup>
 
   <ItemGroup>

@@ -167,6 +167,324 @@
         <!-- 健康摘要卡（U10-UI-0048／ui.home.healthcards）：彙整既有事實的計數——
              六態分布、缺源（非 Present）筆數與交叉對帳的矛盾。
              刻意不合成評分、不給紅綠燈：判決在各自的老家（健康頁／韌體安全頁），這裡陳述計數與指路。 -->
+        <!-- ═══ Gemini 主殼設計稿移植（2026-11-04）：三塊新磁貼 ═══
+             KPI hero：非對稱主標題＋四格巨型讀值；主機摘要卡；事件時間軸。
+             設計語彙：瑞士國際主義——直角、粗邊框、等寬小標籤。沿用既有六態與「缺值顯示 —」的承諾。 -->
+
+        <!-- KPI hero：左側主標題區（5/12）＋右側四格 KPI（7/12，2×2）。
+             每格大字＋來源小字＋細指標條；讀不到顯示「—」，跟數字面板同一承諾。 -->
+        <DataTemplate x:Key="Tile.kpihero">
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" Padding="0"
+                    BorderThickness="2" DataContext="{Binding Vm}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="5*"/>
+                        <ColumnDefinition Width="7*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- 左：主標題 -->
+                    <Border Grid.Column="0" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,2,0" Padding="18">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel Grid.Row="0" VerticalAlignment="Top">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <Border Background="{DynamicResource AccentBrush}" Padding="8,2">
+                                        <TextBlock Text="SYSTEM OVERVIEW" FontFamily="Consolas" FontSize="10.5"
+                                                   FontWeight="Bold" Foreground="White"/>
+                                    </Border>
+                                    <TextBlock Text="REALTIME HARDWARE HARNESS" FontFamily="Consolas" FontSize="10.5"
+                                               FontWeight="Bold" Foreground="{DynamicResource MutedInkBrush}"
+                                               VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                </StackPanel>
+                                <TextBlock Text="曦覽硬體觀測儀" FontSize="30" FontWeight="Bold"
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                <TextBlock Text="唯讀硬體事實 ・ 讀得到才報，讀不到就說讀不到"
+                                           FontFamily="Consolas" FontSize="11.5"
+                                           Foreground="{DynamicResource MutedInkBrush}" Margin="0,6,0,0"/>
+                            </StackPanel>
+                            <Border Grid.Row="1" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0"
+                                    Padding="0,10,0,0" Margin="0,14,0,0">
+                                <Grid>
+                                    <TextBlock Text="TELEMETRY SOURCE:" FontFamily="Consolas" FontSize="11"
+                                               Foreground="{DynamicResource MutedInkBrush}"/>
+                                    <TextBlock Text="MSR 0x19C + RAPL + LHM" FontFamily="Consolas" FontSize="11"
+                                               FontWeight="Bold" HorizontalAlignment="Right"
+                                               Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <!-- 右：2×2 四格 KPI -->
+                    <Border Grid.Column="1" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- KPI 01 CPU 溫度 -->
+                            <Border Grid.Row="0" Grid.Column="0" BorderBrush="{DynamicResource HairlineBrush}"
+                                    BorderThickness="0,0,2,2" Padding="14">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid Grid.Row="0">
+                                        <TextBlock Text="01 // CPU 溫度" FontFamily="Consolas" FontSize="10.5"
+                                                   FontWeight="Bold" Foreground="{DynamicResource SeriousBrush}"/>
+                                        <TextBlock Text="MSR 0x19C" FontFamily="Consolas" FontSize="10.5"
+                                                   Foreground="{DynamicResource MutedInkBrush}" HorizontalAlignment="Right"/>
+                                    </Grid>
+                                    <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,4">
+                                        <TextBlock FontFamily="Consolas" FontSize="34" FontWeight="Bold"
+                                                   Foreground="{DynamicResource PrimaryInkBrush}"
+                                                   Text="{Binding Live.CpuTemp, TargetNullValue=—, StringFormat={}{0:0}°}"/>
+                                        <TextBlock FontFamily="Consolas" FontSize="10.5" Margin="0,2,0,0"
+                                                   Foreground="{DynamicResource MutedInkBrush}"
+                                                   Text="{Binding Live.CpuTempText, TargetNullValue=TJMAX OFFSET: 等待讀值}"/>
+                                    </StackPanel>
+                                    <Border Grid.Row="2" Height="6" Background="{DynamicResource Surface2Brush}"
+                                            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                                        <Border Width="{Binding Live.CpuTempPercent, Converter={StaticResource PctToWidth}}"
+                                                HorizontalAlignment="Left"
+                                                Background="{Binding Live.CpuTempSeverity, Converter={StaticResource SeverityToBrush}}"/>
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <!-- KPI 02 CPU 負載 -->
+                            <Border Grid.Row="0" Grid.Column="1" BorderBrush="{DynamicResource HairlineBrush}"
+                                    BorderThickness="0,0,0,2" Padding="14">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid Grid.Row="0">
+                                        <TextBlock Text="02 // CPU 負載" FontFamily="Consolas" FontSize="10.5"
+                                                   FontWeight="Bold" Foreground="{DynamicResource MutedInkBrush}"/>
+                                        <TextBlock Text="TOTAL LOAD" FontFamily="Consolas" FontSize="10.5"
+                                                   Foreground="{DynamicResource MutedInkBrush}" HorizontalAlignment="Right"/>
+                                    </Grid>
+                                    <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,4">
+                                        <TextBlock FontFamily="Consolas" FontSize="34" FontWeight="Bold"
+                                                   Foreground="{DynamicResource PrimaryInkBrush}"
+                                                   Text="{Binding Live.CpuLoad, StringFormat={}{0:0}%}"/>
+                                        <TextBlock FontFamily="Consolas" FontSize="10.5" Margin="0,2,0,0"
+                                                   Foreground="{DynamicResource MutedInkBrush}"
+                                                   Text="{Binding Live.CpuClockText, TargetNullValue=CURRENT CLOCK: 等待讀值,
+                                                          FallbackValue=CURRENT CLOCK: 等待讀值}"/>
+                                    </StackPanel>
+                                    <Border Grid.Row="2" Height="6" Background="{DynamicResource Surface2Brush}"
+                                            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                                        <Border Width="{Binding Live.CpuLoad, Converter={StaticResource PctToWidth}}"
+                                                HorizontalAlignment="Left" Background="{DynamicResource PrimaryInkBrush}"/>
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <!-- KPI 03 GPU 溫度 -->
+                            <Border Grid.Row="1" Grid.Column="0" BorderBrush="{DynamicResource HairlineBrush}"
+                                    BorderThickness="0,2,2,0" Padding="14">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid Grid.Row="0">
+                                        <TextBlock Text="03 // GPU 溫度" FontFamily="Consolas" FontSize="10.5"
+                                                   FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                                        <TextBlock Text="CORE TEMP" FontFamily="Consolas" FontSize="10.5"
+                                                   Foreground="{DynamicResource MutedInkBrush}" HorizontalAlignment="Right"/>
+                                    </Grid>
+                                    <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,4">
+                                        <TextBlock FontFamily="Consolas" FontSize="34" FontWeight="Bold"
+                                                   Foreground="{DynamicResource PrimaryInkBrush}"
+                                                   Text="{Binding Live.GpuTempText, TargetNullValue=—}"/>
+                                        <TextBlock FontFamily="Consolas" FontSize="10.5" Margin="0,2,0,0"
+                                                   Foreground="{DynamicResource MutedInkBrush}"
+                                                   Text="{Binding Live.PrimaryGpu.Name, TargetNullValue=HOTSPOT: 等待讀值,
+                                                          FallbackValue=HOTSPOT: 等待讀值}"/>
+                                    </StackPanel>
+                                    <Border Grid.Row="2" Height="6" Background="{DynamicResource Surface2Brush}"
+                                            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                                        <Border Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left"
+                                                Width="{Binding Live.PrimaryGpu.TempC, Converter={StaticResource PctToWidth}}"/>
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <!-- KPI 04 記憶體 -->
+                            <Border Grid.Row="1" Grid.Column="1" BorderBrush="{DynamicResource HairlineBrush}"
+                                    BorderThickness="0,2,0,0" Padding="14">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid Grid.Row="0">
+                                        <TextBlock Text="04 // 記憶體" FontFamily="Consolas" FontSize="10.5"
+                                                   FontWeight="Bold" Foreground="{DynamicResource MutedInkBrush}"/>
+                                        <TextBlock Text="RAM USAGE" FontFamily="Consolas" FontSize="10.5"
+                                                   Foreground="{DynamicResource MutedInkBrush}" HorizontalAlignment="Right"/>
+                                    </Grid>
+                                    <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,4">
+                                        <TextBlock FontFamily="Consolas" FontSize="34" FontWeight="Bold"
+                                                   Foreground="{DynamicResource PrimaryInkBrush}"
+                                                   Text="{Binding Live.MemLoad, StringFormat={}{0:0}%}"/>
+                                        <TextBlock FontFamily="Consolas" FontSize="10.5" Margin="0,2,0,0"
+                                                   Foreground="{DynamicResource MutedInkBrush}"
+                                                   Text="{Binding Live.MemUsageText, TargetNullValue=ALLOCATED: 等待讀值,
+                                                          FallbackValue=ALLOCATED: 等待讀值}"/>
+                                    </StackPanel>
+                                    <Border Grid.Row="2" Height="6" Background="{DynamicResource Surface2Brush}"
+                                            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                                        <Border Width="{Binding Live.MemLoad, Converter={StaticResource PctToWidth}}"
+                                                HorizontalAlignment="Left" Background="{DynamicResource PrimaryInkBrush}"/>
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- 主機摘要卡：SMBIOS 面向的六列摘要，讀不到顯示「—」（與詳細資訊磁貼同源，是它的工程視角） -->
+        <DataTemplate x:Key="Tile.hostsummary">
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" Padding="0" BorderThickness="2"
+                    DataContext="{Binding Vm}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{DynamicResource Surface2Brush}"
+                            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,0,2" Padding="12,8">
+                        <Grid>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Background="{DynamicResource AccentBrush}" Padding="6,2">
+                                    <TextBlock Text="SPEC" FontFamily="Consolas" FontSize="10"
+                                               FontWeight="Bold" Foreground="White"/>
+                                </Border>
+                                <TextBlock Text="主機系統硬體摘要卡" FontFamily="Consolas" FontSize="12"
+                                           FontWeight="Bold" Margin="8,0,0,0"
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                            <TextBlock Text="SMBIOS // DMI" FontFamily="Consolas" FontSize="10.5"
+                                       FontWeight="Bold" HorizontalAlignment="Right"
+                                       Foreground="{DynamicResource MutedInkBrush}"/>
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Row="1" Margin="0" DataContext="{Binding System}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition/><RowDefinition/><RowDefinition/>
+                            <RowDefinition/><RowDefinition/><RowDefinition/>
+                        </Grid.RowDefinitions>
+                        <local:FieldRow Grid.Row="0" Label="主機板 (MOTHERBOARD)"
+                                        Value="{Binding BoardModel, TargetNullValue=—, FallbackValue=—}"/>
+                        <local:FieldRow Grid.Row="1" Label="CPU 處理器型號"
+                                        Value="{Binding DataContext.Cpu.Name, RelativeSource={RelativeSource AncestorType=UserControl}, TargetNullValue=—, FallbackValue=—}"/>
+                        <local:FieldRow Grid.Row="2" Label="GPU 顯示卡型號"
+                                        Value="{Binding DataContext.Live.PrimaryGpu.Name, RelativeSource={RelativeSource AncestorType=UserControl}, TargetNullValue=—, FallbackValue=—}"/>
+                        <local:FieldRow Grid.Row="3" Label="實體記憶體容量 (RAM)"
+                                        Value="{Binding DataContext.Live.MemUsageText, RelativeSource={RelativeSource AncestorType=UserControl}, TargetNullValue=—, FallbackValue=—}"/>
+                        <local:FieldRow Grid.Row="4" Label="作業系統版本 (OS)"
+                                        Value="{Binding OsVersion, TargetNullValue=—, FallbackValue=—}"/>
+                        <local:FieldRow Grid.Row="5" Label="開機時間 (UPTIME)"
+                                        Value="{Binding Uptime, TargetNullValue=—, FallbackValue=—}"/>
+                    </Grid>
+
+                    <Border Grid.Row="2" Background="{DynamicResource Surface2Brush}"
+                            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0" Padding="8,5">
+                        <TextBlock Text="NO HARDCODED HARDWARE SPECS · STRICT HARDWARE BINDINGS"
+                                   FontFamily="Consolas" FontSize="10"
+                                   Foreground="{DynamicResource MutedInkBrush}" HorizontalAlignment="Center"/>
+                    </Border>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- 事件時間軸：EventsService 的最近 6 條；空白時給啟動中的如實文案，不編事件 -->
+        <DataTemplate x:Key="Tile.timeline">
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14" Padding="0" BorderThickness="2"
+                    DataContext="{Binding Vm}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{DynamicResource Surface2Brush}"
+                            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,0,1" Padding="12,8">
+                        <Grid>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Background="{DynamicResource PrimaryInkBrush}" Padding="6,2">
+                                    <TextBlock Text="LOG" FontFamily="Consolas" FontSize="10"
+                                               FontWeight="Bold" Foreground="{DynamicResource PagePlaneBrush}"/>
+                                </Border>
+                                <TextBlock Text="硬體與安全事件時間軸 (TIMELINE)" FontFamily="Consolas" FontSize="12"
+                                           FontWeight="Bold" Margin="8,0,0,0"
+                                           Foreground="{DynamicResource PrimaryInkBrush}"/>
+                            </StackPanel>
+                            <TextBlock Text="ETW DISPATCH BUFFER" FontFamily="Consolas" FontSize="10.5"
+                                       FontWeight="Bold" HorizontalAlignment="Right"
+                                       Foreground="{DynamicResource MutedInkBrush}"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- 有事件：列表 -->
+                    <ItemsControl Grid.Row="1" ItemsSource="{Binding Events.All}"
+                                  Visibility="{Binding HasRecentEvents, Converter={StaticResource BoolToVis}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,0,1" Padding="12,7">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="76"/>
+                                            <ColumnDefinition Width="96"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding ClockText}" FontFamily="Consolas"
+                                                   FontSize="11" FontWeight="Bold"
+                                                   Foreground="{DynamicResource AccentBrush}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding KindText}" FontFamily="Consolas"
+                                                   FontSize="11" FontWeight="Bold"
+                                                   Foreground="{DynamicResource PrimaryInkBrush}"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Title}" FontSize="11.5" TextTrimming="CharacterEllipsis"
+                                                   Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- 還沒有事件：如實說明 -->
+                    <TextBlock Grid.Row="1" Margin="12,10" FontFamily="Consolas" FontSize="11"
+                               Foreground="{DynamicResource MutedInkBrush}" TextWrapping="Wrap"
+                               Text="尚未有事件——警示、降頻與藍屏偵測到時會出現在這裡。"
+                               Visibility="{Binding HasRecentEvents, Converter={StaticResource InverseBoolToVis}}"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
         <DataTemplate x:Key="Tile.health">
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" DataContext="{Binding Vm}">
                 <StackPanel>

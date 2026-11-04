@@ -64,6 +64,21 @@ public class PowerConsoleTests
         Assert.Contains("唯讀", xaml, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// 3.17：主介面強控台按鈕改為橋接 xsc.exe（同一事實引擎的終端視角）。
+    /// 守門：主程式必須找得到 xsc（找不到要跳如實提示，不得靜默），
+    /// 且不得在主程式內自己 new 內嵌視窗——橋接對象仍守唯讀承諾。
+    /// </summary>
+    [Fact]
+    public void 強控台入口橋接xsc_找不到時如實提示()
+    {
+        string src = RepoFile("MainWindow.xaml.cs");
+        Assert.Contains("FindXsc", src, StringComparison.Ordinal);
+        Assert.Contains("找不到 xsc.exe", src, StringComparison.Ordinal);
+        // 橋接不能退化成內嵌另一份 GUI：PowerConsoleWindow 視窗檔保留供歷史審閱，但主介面不再 new 它
+        Assert.DoesNotContain("new PowerConsoleWindow()", src, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Ring0通路只有讀_不引用任何Write()
     {

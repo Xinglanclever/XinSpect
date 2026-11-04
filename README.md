@@ -1,10 +1,10 @@
 [简体中文](README.zh-CN.md) · 繁體中文 · [English](README.en.md)
 
-[![官方網站](https://img.shields.io/badge/%F0%9F%8C%90_%E5%AE%98%E6%96%B9%E7%B6%B2%E7%AB%99-xinspect--browser--preview.wild--chimpanzee.workers.dev-4C8DFF?style=for-the-badge&logo=cloudflare&logoColor=white)](https://xinspect-browser-preview.wild-chimpanzee.workers.dev)
+[![官方網站](https://img.shields.io/badge/%F0%9F%8C%90_%E5%AE%98%E6%96%B9%E7%B6%B2%E7%AB%99-xinspect--web.pages.dev-4C8DFF?style=for-the-badge&logo=cloudflare&logoColor=white)](https://xinspect-web.pages.dev)
 
-> ## 🌐 [官方網站：xinspect-browser-preview.wild-chimpanzee.workers.dev ↗](https://xinspect-browser-preview.wild-chimpanzee.workers.dev)
+> ## 🌐 [官方網站：xinspect-web.pages.dev ↗](https://xinspect-web.pages.dev)
 >
-> **產品總覽 · 事實目錄 · 功能與資料源 · 三源對帳 · 證據與快照 · 版本沿革 · 下載與需求** —— 一頁看完。
+> **首頁 · xsc 終端機 · 下載 · 版本沿革** —— 瑞士現代主義風格的一頁站，自訂網域 [xinspect.de5.net](https://xinspect.de5.net)。
 > 網站只呈現說明，**不會掃描你的電腦**，也不需要任何安裝。
 
 **可翻閱版（自足 HTML，含目錄與錨點，離線可讀）：[百科.html](百科.html) ・ [手冊.html](手冊.html)**
@@ -60,10 +60,13 @@
 
 | 檔案 | 大小 | 說明 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.16/XinSpect.exe) | 37,815,083 bytes | 主程式。藍色中隊守護進程已內建 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.16/XinSpect.exe) | 37,815,083 bytes | 主程式。藍色中隊守護進程已內建；「強控台」按鈕橋接 xsc 終端機 |
+| [xsc.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.16/xsc.exe) | 99,798,338 bytes | 曦覽終端機（CLI）。可獨立執行，也被主程式強控台喚起；自含 .NET 10 執行階段故體積較大（見下方說明） |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.16/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。要脫離主程式單獨跑防護時使用 |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.16/XinSpectDeploy.exe) | 16,896 bytes | 一鍵安裝器。按 1 GitHub、按 2 Google Drive、按 3 中國直連線路；下載時顯示進度條、速度與剩餘時間 |
 | [SHA256SUMS.txt](https://github.com/Xinglanclever/XinSpect/releases/download/v3.16/SHA256SUMS.txt) | 以 Release 頁面為準 | 逐檔雜湊，發佈後由 `Tools/verify-release.ps1` 對帳 |
+
+> **xsc.exe 為什麼這麼大？** xsc 參考了主專案的全部事實引擎，self-contained 單檔發佈把整個 .NET 10 執行階段＋WPF 一併打包（壓縮後約 100MB）——這是「單檔、免裝 .NET、到處能跑」的代價，屬預期而非異常。若你已裝 .NET 10 Desktop Runtime，可以用 framework-dependent 方式自行編譯得到約 60MB 的版本（見 `XinSpectCli/XinSpectCli.csproj` 內的註解）。
 
 > **上表的位元組數為本版（v3.16）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
