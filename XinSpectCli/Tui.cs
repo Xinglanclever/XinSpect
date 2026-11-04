@@ -169,80 +169,40 @@ internal static class Tui
     }
 
     /// <summary>
-    /// 歡迎框定稿（無圖標版）：框內頂部是大字 XINSPECT（ANSI Shadow 圓角體，字距隨框寬自適應），
-    /// 之下雙欄——左欄品牌名＋全名＋cwd，右欄快速開始＋小知識；口號嵌底框線右側。
-    /// 所有框線與中欄分隔都用 CHA 絕對定位。
+    /// 歡迎框（乾淨定稿）：☼ 標題嵌上框線、紅字封印徽章、快速開始、小知識、cwd、口號內縮。
+    /// 不用大框字、不用吉祥物——兩者在部分終端字型下渲染不可靠。框線一律 CHA 絕對定位。
     /// </summary>
     public static void Welcome(string version, int staticKeys, int dynamicFamilies)
     {
-        int width;
-        try { width = Math.Clamp(Console.WindowWidth - 1, 78, 118); }
-        catch { width = 110; }
-        bool wide = width >= 104;
-        int mid = width / 2;
+        const int width = 78;
+        int inner = width - 2;
 
-        string Top() => $"{BrandRed}╭{new string('─', width - 2)}╮{Reset}";
-        string Bot() => $"{BrandRed}╰{new string('─', width - 2)}╯{Reset}";
-        string RowFull(string body) => $"{BrandRed}│{Reset} {body}[{width}G{BrandRed}│{Reset}";
-        string TwoCol(string left, string right) =>
-            $"{BrandRed}│{Reset} {left}{Esc}[{mid}G{BrandRed}│{Reset} {right}";
+        string Top() => $"{BrandRed}╭{new string('─', inner)}╮{Reset}";
+        string Bot() => $"{BrandRed}╰{new string('─', inner)}╯{Reset}";
+        string Row(string body)
+        {
+            // 右框線 CHA 絕對定位釘死在第 78 列——小知識等含全形標點的行偶發 1 格誤差，不再靠補白計算
+            return $"{BrandRed}│{Reset} {body}[78G{BrandRed}│{Reset}";
+        }
 
-        try { Console.Clear(); } catch { /* 重定向時無緩衝可清 */ }
+        string cwd = Environment.CurrentDirectory;
+        if (cwd.Length > 48) cwd = cwd[..20] + "…" + cwd[^26..];
+
+        try { Console.Clear(); } catch { }
         Console.WriteLine();
         Console.WriteLine(Top());
-
-        // ── 大字 XINSPECT：字距隨框內寬自適應（每字母 65 欄底寬，剩餘平均分給 7 個間隙）──
-        int interior = width - 4;
-        int gap = wide ? Math.Clamp((interior - 65) / 7, 1, 8) : 1;
-        var banner = XinspectBanner(gap);
-        int bannerW = banner[0].Width;
-        int bannerPad = Math.Max(1, (interior - bannerW) / 2);
-        foreach (var (lineText, _) in banner)
-            Console.WriteLine(RowFull(new string(' ', bannerPad) + BrandRed + lineText + Reset));
-        Console.WriteLine(RowFull(""));
-
-        var tip = Tips[Random.Shared.Next(Tips.Length)];
-        if (wide)
-        {
-            var left = new List<string>
-            {
-                "",
-                Bold + "曦覽終端機" + Reset,
-                Dim + "曦覽 XinSpect Console" + Reset,
-                Dim + "cwd: " + ShortCwd() + Reset,
-            };
-            var right = new List<string>
-            {
-                SwissRed + Bold + "快速開始" + Reset + Dim + " ・ 全部指令見 help 指令書",
-                Bold + "facts" + Reset + Dim + "    採集 " + staticKeys.ToString("N0") + " 靜態鍵＋" + dynamicFamilies + " 動態家族",
-                Bold + "dash" + Reset + Dim + "     全螢幕即時儀表板 (q 離開 · sys 與 top [秒])",
-                Bold + "pages" + Reset + Dim + "    GUI 全頁對照 (page · domain · keys)",
-                Bold + "help" + Reset + Dim + "     指令書：分類功能表＋help <指令> 詳解",
-                Bold + "book" + Reset + Dim + "     曦覽百科全書：15 部 362 節，離線可讀",
-                "",
-                Dim + new string('─', mid - 6) + Reset,
-                SwissRed + Bold + "小知識" + Reset,
-                Dim + TruncateTip(tip, width - mid - 5) + Reset,
-            };
-            int rows = Math.Max(left.Count, right.Count);
-            for (int i = 0; i < rows; i++)
-            {
-                string l = i < left.Count ? left[i] : "";
-                string r = i < right.Count ? right[i] : "";
-                Console.WriteLine(TwoCol(l, r));
-            }
-        }
-        else
-        {
-            Console.WriteLine(RowFull(""));
-            Console.WriteLine(RowFull(Bold + "曦覽終端機" + Reset + Dim + " v" + version + Reset));
-            Console.WriteLine(RowFull(Dim + "cwd: " + ShortCwd() + Reset));
-        }
-
-        Console.Write(Bot());
-        string slogan = "硬體的事實，不編故事。";
-        Console.Write(Esc + $"[{width - VisibleLength(slogan) - 3}G" + Dim + slogan + Reset);
-        Console.WriteLine();
+        Console.WriteLine(Row($"{BrandRed}{Bold}☼{Reset} {Bold}曦覽終端機{Reset} {Dim}xsc v{version}{Reset}"));
+        Console.WriteLine(Row($"  {BrandRed}{Bold}唯讀{Reset}{Dim} · {Reset}{BrandRed}{Bold}不寫硬體{Reset}{Dim} · {Reset}{BrandRed}{Bold}不連網{Reset}"));
+        Console.WriteLine(Row(""));
+        Console.WriteLine(Row($"{Bold}facts{Reset}{Dim}    採集 {staticKeys:N0} 靜態鍵＋{dynamicFamilies} 動態家族 (或 fact <關鍵字>){Reset}"));
+        Console.WriteLine(Row($"{Bold}dash{Reset}{Dim}     全螢幕即時儀表板 (q 離開 · 另有 sys 與 top [秒]){Reset}"));
+        Console.WriteLine(Row($"{Bold}pages{Reset}{Dim}    對照 GUI 全頁 (另有 page · domain · keys){Reset}"));
+        Console.WriteLine(Row($"{Bold}book{Reset}{Dim}     曦覽百科全書：15 部 362 節，離線可讀{Reset}"));
+        Console.WriteLine(Row($"{Bold}help{Reset}{Dim}     指令書：分類功能表＋help <指令> 詳解{Reset}"));
+        Console.WriteLine(Row(""));
+        Console.WriteLine(Row($"{Dim}小知識 ・ {Tips[Random.Shared.Next(Tips.Length)]}{Reset}"));
+        Console.WriteLine(Row($"{Dim}cwd: {cwd}{Reset}"));
+        Console.WriteLine(Bot());
         Console.WriteLine();
         Console.WriteLine($"  {Dim}輸入 facts 採集全機事實，或輸入 sys、dash、pages、msr <索引>…{Reset}");
         Console.WriteLine($"  {Dim}唯讀 · 不寫硬體 · 不連網  │  ↑↓ 歷史 · Tab 補全 · help 指令書 · exit 離開{Reset}");
