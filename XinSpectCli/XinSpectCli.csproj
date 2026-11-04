@@ -27,7 +27,6 @@
          發佈時以 p:EnableCompressionInSingleFile=false p:SelfContained=false 覆寫即可。 -->
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
-    <SelfContained>true</SelfContained>
   </PropertyGroup>
 
   <ItemGroup>
