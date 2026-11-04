@@ -168,47 +168,6 @@ internal static class Tui
         return rows;
     }
 
-    /// <summary>迷你字體（左欄 XINSPECT，5 行；字母總寬 32，間距由 leftW 動態分配）。</summary>
-    private static readonly string[][] MiniLetters =
-    [
-        new[] { "█   █", " █ █ ", "  █  ", " █ █ ", "█   █" },   // X (5)
-        new[] { "█", "█", "█", "█", "█" },                             // I (1)
-        new[] { "█   █", "██  █", "█ █ █", "█  ██", "█   █" },         // N (5)
-        new[] { "█████", "█    ", "█████", "    █", "█████" },         // S (5)
-        new[] { "█████ ", "█    █", "█████ ", "█     ", "█     " },     // P (6)
-        new[] { "██████", "█     ", "█████ ", "█     ", "██████" },     // E (6)
-        new[] { " ██████", "█     ", "█     ", "█     ", " ██████" },   // C (7)
-        new[] { "███████", "   █   ", "   █   ", "   █   ", "   █   " },// T (7)
-    ];
-
-    private const string MiniWord = "XINSPECT";
-
-    /// <summary>迷你版 XINSPECT：間距動態撐滿 leftW（從框線到中欄分隔線）。</summary>
-    public static (string Line, int Width)[] MiniBanner(int leftW)
-    {
-        int letters = MiniWord.Sum(ch => MiniLetters[MiniWord.IndexOf(ch)][0].Length);
-        int gap = Math.Max(1, (leftW - letters) / (MiniWord.Length - 1));
-        var rows = new (string Line, int Width)[5];
-        for (int r = 0; r < 5; r++)
-        {
-            var sb = new System.Text.StringBuilder();
-            int total = 0;
-            for (int i = 0; i < MiniWord.Length; i++)
-            {
-                var letter = MiniLetters[MiniWord.IndexOf(MiniWord[i])][r];
-                sb.Append(letter);
-                total += letter.Length;
-                if (i < MiniWord.Length - 1)
-                {
-                    sb.Append(new string(' ', gap));
-                    total += gap;
-                }
-            }
-            rows[r] = (sb.ToString(), total);
-        }
-        return rows;
-    }
-
     /// <summary>動畫太陽吉祥物（兩幀往返數輪後定格）＋雙欄全寬歡迎框（Claude Code 佈局）。
     /// 左欄：吉祥物＋品牌名＋cwd；右欄：快速開始（真實指令集）＋小知識。
     /// 中欄分隔線與右框線都用 CHA 絕對定位——CJK 寬度計算在框線上不可信。</summary>
@@ -246,16 +205,14 @@ internal static class Tui
             string TwoCol(string left, string right) =>
                 $"{BrandRed}│{Reset} {left}{Esc}[{mid}G{BrandRed}│{Reset} {right}";
 
-            var mini = MiniBanner(leftW);
-            int miniPad = Math.Max(0, (leftW - mini[0].Width) / 2);
-            var art = mini.Select(f => new string(' ', miniPad) + BrandRed + f.Line + Reset).ToList();
-            var left = new List<string> { "" };
-            left.AddRange(art);
-            left.Add("");
-            left.Add(Bold + "曦覽終端機" + Reset);
-            left.Add(Dim + "曦覽 XinSpect Console" + Reset);
-            left.Add("");
-            left.Add(Dim + "cwd: " + ShortCwd() + Reset);
+            var left = new List<string>
+            {
+                "",
+                Bold + "曦覽終端機" + Reset,
+                Dim + "曦覽 XinSpect Console" + Reset,
+                "",
+                Dim + "cwd: " + ShortCwd() + Reset,
+            };
             var right = new List<string>
             {
                 SwissRed + Bold + "快速開始" + Reset + Dim + " ・ 全部指令見 help 指令書",
