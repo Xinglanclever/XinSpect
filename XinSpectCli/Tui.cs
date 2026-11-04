@@ -177,35 +177,31 @@ internal static class Tui
         try { width = Math.Clamp(Console.WindowWidth - 1, 78, 118); }
         catch { width = 110; }
         bool wide = width >= 104;
+        int mid = width / 2;
 
-        // 角用 CHA 畫在 width 列：破折號只印 width-3 格，終端實際寬度比 width 窄 1 格也不折行
-        string Top() => $"{BrandRed}╭{new string('─', width - 3)}{Esc}[{width}G╮{Reset}";
-        string Bot() => $"{BrandRed}╰{new string('─', width - 3)}{Esc}[{width}G╯{Reset}";
-        string RawRow(string body) => $"{BrandRed}│{Reset}" + new string(' ', Math.Max(0, (width - 2 - VisibleLength(body)) / 2)) + body;
+        try { Console.Clear(); } catch { }
 
-        try { Console.Clear(); } catch { /* 重定向時無緩衝可清，照樣印內容 */ }
-
-        // ── 大框字 XINSPECT（ANSI Shadow 圓角體）：動畫之後、歡迎框之前 ──
-        if (width >= 88)
+        // ── 大框字 XINSPECT（ANSI Shadow 圓角體）＋ by: xinglanclever ──
+        if (!Console.IsInputRedirected)
         {
-            int gap = width >= 92 ? 3 : 2;
-            var banner = XinspectBanner(gap);
-            int bannerW = banner[0].Width;
-            int bannerPad = Math.Max(0, (width - bannerW) / 2);
-            Console.WriteLine();
-            foreach (var (lineText, _) in banner)
-                Console.WriteLine(new string(' ', bannerPad) + BrandRed + lineText + Reset);
-            Console.WriteLine();
+            if (width >= 79)
+            {
+                int gap = width >= 88 ? 3 : 2;
+                var banner = XinspectBanner(gap);
+                int bannerPad = Math.Max(0, (width - banner[0].Width) / 2);
+                foreach (var (lineText, _) in banner)
+                    Console.WriteLine(new string(' ', bannerPad) + BrandRed + lineText + Reset);
+                string by = "by: xinglanclever";
+                Console.Write(Esc + $"[{width - VisibleLength(by)}G" + Dim + by + Reset);
+                Console.WriteLine();
+            }
         }
+
+        Console.WriteLine(BoxTop(width, $"{BrandRed}{Bold}☼{Reset} {Bold}曦覽終端機{Reset} {Dim}v{version}{Reset}"));
 
         var tip = Tips[Random.Shared.Next(Tips.Length)];
         if (wide)
         {
-            int mid = width / 2;
-            int leftW = mid - 3;
-            string TwoCol(string left, string right) =>
-                $"{BrandRed}│{Reset} {left}{Esc}[{mid}G{BrandRed}│{Reset} {right}";
-
             var left = new List<string>
             {
                 "",
@@ -229,40 +225,38 @@ internal static class Tui
                 Bold + "help" + Reset + Dim + "     指令書：分類功能表＋help <指令> 詳解",
                 Bold + "book" + Reset + Dim + "     曦覽百科全書：15 部 362 節，離線可讀",
                 "",
-                "",
-                Dim + new string('─', mid - 6) + Reset,
+                Dim + new string('─', Math.Max(8, mid - 8)) + Reset,
                 SwissRed + Bold + "小知識" + Reset,
-                Dim + TruncateTip(tip, width - mid - 5) + Reset,
-                "",
+                Dim + TruncateTip(tip, mid - 4) + Reset,
             };
             int rows = Math.Max(left.Count, right.Count);
             for (int i = 0; i < rows; i++)
             {
                 string l = i < left.Count ? left[i] : "";
                 string r = i < right.Count ? right[i] : "";
-                Console.WriteLine(TwoCol(l, r));
+                Console.WriteLine(BoxTwoCol(width, mid, l, r));
             }
         }
         else
         {
-            string Row(string body) => $"{BrandRed}│{Reset} {body}[{width}G{BrandRed}│{Reset}";
-            Console.WriteLine(Row(""));
-            Console.WriteLine(Row(Bold + "曦覽終端機" + Reset + Dim + " v" + version + Reset));
-            Console.WriteLine(Row(""));
-            Console.WriteLine(Row(Bold + "facts" + Reset + Dim + "  採集 " + staticKeys.ToString("N0") + " 靜態鍵＋" + dynamicFamilies + " 家族"));
-            Console.WriteLine(Row(Bold + "book" + Reset + Dim + "   曦覽百科全書 ・ help 指令書"));
-            Console.WriteLine(Row(""));
-            Console.WriteLine(Row(Dim + "cwd: " + ShortCwd() + Reset));
-            Console.WriteLine(Row(Dim + "硬體的事實，不編故事。" + Reset));
+            Console.WriteLine(BoxRow(width, ""));
+            Console.WriteLine(BoxRow(width, Bold + "曦覽終端機" + Reset + Dim + " v" + version + Reset));
+            Console.WriteLine(BoxRow(width, ""));
+            Console.WriteLine(BoxRow(width, Bold + "facts" + Reset + Dim + "  採集 " + staticKeys.ToString("N0") + " 靜態鍵＋" + dynamicFamilies + " 家族"));
+            Console.WriteLine(BoxRow(width, Bold + "book" + Reset + Dim + "   曦覽百科全書 ・ help 指令書"));
+            Console.WriteLine(BoxRow(width, ""));
+            Console.WriteLine(BoxRow(width, Dim + "cwd: " + ShortCwd() + Reset));
+            Console.WriteLine(BoxRow(width, Dim + "硬體的事實，不編故事。" + Reset));
         }
 
-        Console.WriteLine($"{BrandRed}┬{new string('─', width - 3)}╯{Reset}");
+        Console.WriteLine(BoxBot(width));
         Console.WriteLine();
-        Console.WriteLine($"{BrandRed}│{Reset}  {Dim}輸入 facts 採集全機事實，或輸入 sys、dash、pages、msr <索引>…{Reset}");
+        Console.WriteLine($"  {Dim}輸入 facts 採集全機事實，或輸入 sys、dash、pages、msr <索引>…{Reset}");
+        Console.WriteLine($"  {Dim}唯讀 · 不寫硬體 · 不連網  │  ↑↓ 歷史 · Tab 補全 · help 指令書 · exit 離開{Reset}");
         Console.WriteLine();
     }
 
-    /// <summary>小知識超出右欄可用寬時以 … 截斷（避免壓過右框線）。</summary>
+    /// <summary>小知識超出右欄可用寬時以 … 截斷。</summary>
     private static string TruncateTip(string tip, int max)
     {
         if (VisibleLength(tip) <= max) return tip;
@@ -290,12 +284,10 @@ internal static class Tui
     {
         const int width = 46;
         var f = MascotFrames[frame];
-        string Row(string body) => $"{BrandRed}│{Reset}" + new string(' ', Math.Max(0, (width - 2 - VisibleLength(body)) / 2)) + body;
         var sb = new System.Text.StringBuilder();
-        sb.Append($"{BrandRed}╭{new string('─', width - 2)}╮{Reset}" + Environment.NewLine);
-        foreach (var lineText in f) sb.Append(Row(lineText) + Environment.NewLine);
-        sb.Append(Row($"{Dim}曦覽終端機{Reset}") + Environment.NewLine);
-        sb.Append($"{BrandRed}╰{new string('─', width - 2)}╯{Reset}");
+        sb.Append(BoxTop(width, $"{Dim}曦覽終端機{Reset}") + Environment.NewLine);
+        foreach (var lineText in f) sb.Append(BoxRow(width, BrandRed + lineText + Reset) + Environment.NewLine);
+        sb.Append(BoxBot(width));
         return sb.ToString();
     }
 
@@ -309,25 +301,55 @@ internal static class Tui
         Console.Write($"{BrandRed}│{Reset} {BrandRed}{Bold}>{Reset} ");
     }
 
+    // ── 1.9) 框線 helpers（唯一正解：邊框位置一律 CHA 絕對定位，零寬度計算）──
+    // 歷史教訓：所有框線錯位都源於「用 VisibleLength 算補白」——全形標點、模糊寬度字元等
+    // 模糊寬度字元、使用者終端字型回退，都會讓計算值與實際渲染差 1–2 格。
+    // CHA（\x1b[<col>G）把游標釘到絕對欄位，畫不出來就 clamp 到行尾，永不折行、永不錯位。
+    // 內文超寬時會被右框線壓住——那是可接受的降級；框線錯位不可接受。
+
+    /// <summary>框頂：╭ + 破折號 + 標題（CHA 覆寫）+ ╮（CHA 釘在 width 列）。</summary>
+    public static string BoxTop(int width, string title = "")
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append(BrandRed).Append('╭').Append(new string('─', Math.Max(1, width - 3)));
+        sb.Append(Esc).Append('[').Append(width).Append('G').Append('╮').Append(Reset);
+        if (title.Length > 0)
+            sb.Append(Esc).Append("[4G").Append(title).Append(Reset);
+        return sb.ToString();
+    }
+
+    /// <summary>框底：╰ + 破折號 + 附註（CHA 覆寫）+ ╯（CHA 釘在 width 列）。</summary>
+    public static string BoxBot(int width, string note = "")
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append(BrandRed).Append('╰').Append(new string('─', Math.Max(1, width - 3)));
+        sb.Append(Esc).Append('[').Append(width).Append('G').Append('╯').Append(Reset);
+        if (note.Length > 0)
+            sb.Append(Esc).Append("[").Append(width - VisibleLength(note) - 2).Append('G')
+              .Append(Dim).Append(note).Append(Reset);
+        return sb.ToString();
+    }
+
+    /// <summary>框行：│ + 內文 + │（右框線 CHA 釘在 width 列；內文超寬被框線壓住）。</summary>
+    public static string BoxRow(int width, string body)
+        => $"{BrandRed}│{Reset} {body}{Esc}[{width}G{BrandRed}│{Reset}";
+
+    /// <summary>雙欄框行：│ 左欄 │ 右欄 │（中欄與右框線都 CHA 釘死）。</summary>
+    public static string BoxTwoCol(int width, int mid, string left, string right)
+        => $"{BrandRed}│{Reset} {left}{Esc}[{mid}G{BrandRed}│{Reset} {right}{Esc}[{width}G{BrandRed}│{Reset}";
+
     // ── 2) 帶標題的方框面板 ───────────────────────────────────────────────
 
     /// <summary>帶標題面板：標題嵌在上邊線（┌── TITLE ──…），內容行左對齊。</summary>
     public static void Frame(string title, IEnumerable<string> lines)
     {
-        int width = Math.Min(78, ConsoleWidth());
+        const int width = 78;
         var body = lines.ToList();
-        int inner = width - 2;
 
-        string titleText = $" {title.ToUpperInvariant()} ";
-        int titleStart = 3;
-        string top = "┌──" + titleText + new string('─', Math.Max(1, inner - 3 - titleText.Length)) + "┐";
-        Console.WriteLine($"{Dim}{top}{Reset}");
+        Console.WriteLine(BoxTop(width, $"{Bold} {title.ToUpperInvariant()} {Reset}"));
         foreach (var l in body)
-        {
-            int pad = Math.Max(0, inner - 2 - VisibleLength(l));
-            Console.WriteLine($"{Dim}│{Reset} {l}{new string(' ', pad)} {Dim}│{Reset}");
-        }
-        Console.WriteLine($"{Dim}└{new string('─', inner)}┘{Reset}");
+            Console.WriteLine(BoxRow(width, l));
+        Console.WriteLine(BoxBot(width));
     }
 
     // ── 3) 表格 ───────────────────────────────────────────────────────────
