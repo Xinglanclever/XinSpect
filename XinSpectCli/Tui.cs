@@ -33,6 +33,7 @@ internal static class Tui
     private const string ShowCursor = "\x1b[?25h";
     private const string ClearLine = "\x1b[2K";
     private const string CarriageReturn = "\r";
+    private const string Esc = "\x1b";
 
     /// <summary>旋轉子幀（braille 點字；Windows Terminal 原生支援）。</summary>
     private static readonly string[] SpinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -91,56 +92,56 @@ internal static class Tui
     public const string BrandRed = "[38;2;227;6;19m";
 
     /// <summary>Claude Code 式星芒 spinner 的幀序列（往返循環）。</summary>
-    private static readonly string[] SparkFrames = ["✢", "✶", "✻", "✽", "✻", "✶"];
+    private static readonly string[] SparkFrames = ["∙", "∘", "○", "◎", "☼", "◎", "○", "∘"];   // 破曉序列：訊號點擴張為日輪再收回
 
     /// <summary>採集用俏皮動詞（繁中・硬體語境・每次隨機抽一個）。</summary>
     private static readonly string[] Verbs =
     [
-        "叩問北橋中", "傾聽匯流排脈搏中", "隔窗端詳 Ring0 中", "凝視 MSR 暫存器中",
-        "翻閱 SMBIOS 族譜中", "丈量矽晶溫度中", "沿著 PCIe 通道巡邏中", "旁聽 WMI 廣播中",
-        "屏息讀取電壓軌中", "清點針腳電位中", "校準時脈呼吸中", "解析 ACPI 表達式中",
-        "敲門詢問 Named Pipe 中", "核對硬體事實清單中",
+        "走訪 1,178 把靜態事實鍵中", "展開 69 個動態硬體家族中", "隔窗端詳 Ring0 暫存器中",
+        "沿著 PCI 組態空間巡邏中", "旁聽 WMI 與 SMBIOS 事實中", "屏息讀取 LHM 感測器事實中",
+        "敲門詢問 Bridge IPC 管道中", "探詢 Redfish 帶外管理介面中", "逐項核對安全性合規基準中",
+        "計算 Merkle 事實證據樹雜湊中", "對齊 GUI 65 頁結構索引中", "檢索單一硬體事實路徑中",
+        "清點匯流排拓撲與裝置樹中", "確認零寫入唯讀封條狀態中",
     ];
 
     /// <summary>
-    /// 歡迎框 v2＝Claude Code 骨架＋原版內容密度：圓角品牌紅細框、✻ 開頭、
-    /// 紅底徽章章（原版的視覺資產，保留）、快速開始、旋轉小知識、快捷鍵提示、cwd。
+    /// 歡迎框定稿（Gemini 依 xsc 真實指令集設計）：吉祥物 ☼（U+263C 白日光芒＝「曦」），
+    /// 瑞士紅唯一強調色、無紅底徽章（紅字封印）、快速開始 4 行對應真實指令集、
+    /// 標題行右對齊口號、框外誠信註記。右框線以 ANSI CHA 絕對定位釘死。
     /// </summary>
-    public static void Welcome(string version)
+    public static void Welcome(string version, int staticKeys, int dynamicFamilies)
     {
-        const int width = 78;
+        const int width = 66;
         int inner = width - 2;
-        var tip = Tips[Random.Shared.Next(Tips.Length)];
 
         string Top() => $"{BrandRed}╭{new string('─', inner)}╮{Reset}";
         string Bot() => $"{BrandRed}╰{new string('─', inner)}╯{Reset}";
-        string Row(string body)
-        {
-            // 右框線用 ANSI 絕對定位（CHA, \x1b[78G）釘死在第 78 列——
-            // 不靠補白計算：✻／↑↓／全形標點的實際渲染寬度因字型而異，算出來的 pad 一定有誤差。
-            return $"{BrandRed}│{Reset} {body}\x1b[78G{BrandRed}│{Reset}";
-        }
+        string Row(string body) => $"{BrandRed}│{Reset} {body}[{width}G{BrandRed}│{Reset}";
 
         string cwd = Environment.CurrentDirectory;
-        if (cwd.Length > 52) cwd = cwd[..24] + "…" + cwd[^26..];
+        if (cwd.Length > 46) cwd = cwd[..20] + "…" + cwd[^24..];
 
         Console.WriteLine();
         Console.WriteLine(Top());
-        Console.WriteLine(Row($"{BrandRed}{Bold}✻{Reset} 歡迎使用 {Bold}曦覽終端機{Reset} {Dim}xsc v{version}{Reset}"));
+
+        // 標題行：☼ 品牌符號＋白粗體品牌名＋dim 版號；口號右對齊（CHA 定位，不受字寬計算影響）
+        string slogan = "硬體的事實，不編故事。";
+        int sloganCol = width - VisibleLength(slogan);   // 口號末格在 width-1
+        Console.Write($"{BrandRed}│{Reset} {BrandRed}{Bold}☼{Reset} {Bold}曦覽終端機{Reset} {Dim}xsc v{version}{Reset}" + Esc + "[" + sloganCol + "G" + Dim + slogan + Reset + Esc + "[" + width + "G" + BrandRed + "│" + Reset + Environment.NewLine);
+
+        Console.WriteLine(Row($"   {BrandRed}{Bold}唯讀{Reset}{Dim} · {Reset}{BrandRed}{Bold}不寫硬體{Reset}{Dim} · {Reset}{BrandRed}{Bold}不連網{Reset}"));
         Console.WriteLine(Row(""));
-        Console.WriteLine(Row($"{RedBg}{Bold} 唯讀 {Reset} {RedBg}{Bold} 不寫硬體 {Reset} {RedBg}{Bold} 不連網 {Reset}   {Bold}v{version}{Reset}"));
-        Console.WriteLine(Row(""));
-        Console.WriteLine(Row($"{Bold}facts   {Reset}{Dim}採集全機硬體事實（WMI · PCI · MSR · LHM）{Reset}"));
-        Console.WriteLine(Row($"{Bold}pages   {Reset}{Dim}GUI 全頁的終端對照表{Reset}"));
-        Console.WriteLine(Row($"{Bold}help    {Reset}{Dim}查看完整指令清單{Reset}"));
-        Console.WriteLine(Row(""));
-        Console.WriteLine(Row($"{Dim}小知識 ・ {tip}{Reset}"));
-        Console.WriteLine(Row($"{Dim}↑↓ 歷史 ・ Tab 補全 ・ exit 離開{Reset}"));
+        Console.WriteLine(Row($"{Bold}facts{Reset}{new string(' ', 7)}{Dim}採集 {staticKeys:N0} 靜態鍵＋{dynamicFamilies} 動態家族 (或 fact <關鍵字>){Reset}"));
+        Console.WriteLine(Row($"{Bold}dash{Reset}{new string(' ', 8)}{Dim}全螢幕即時儀表板 (q 離開 · 另有 sys 與 top [秒]){Reset}"));
+        Console.WriteLine(Row($"{Bold}pages{Reset}{new string(' ', 7)}{Dim}對照 GUI 全頁 (另有 page · domain · keys){Reset}"));
+        Console.WriteLine(Row($"{Bold}help{Reset}{new string(' ', 8)}{Dim}查看完整指令 (msr · pci · ipc · merkle · 合規){Reset}"));
         Console.WriteLine(Row(""));
         Console.WriteLine(Row($"{Dim}cwd: {cwd}{Reset}"));
         Console.WriteLine(Bot());
+        Console.WriteLine($"  {Dim}註：所有探針嚴格唯讀；通道未就緒時必顯示 [ -- ]，絕不推測或編造。{Reset}");
         Console.WriteLine();
-        Console.WriteLine($"  {Dim}輸入 facts 採集硬體事實，或輸入 help 查看指令…{Reset}");
+        Console.WriteLine($"  {Dim}輸入 facts 採集全機事實，或輸入 sys、dash、pages、msr <索引>…{Reset}");
+        Console.WriteLine($"  {Dim}唯讀 · 不寫硬體 · 不連網  │  ↑↓ 歷史 · Tab 補全 · help 指令 · exit 離開{Reset}");
         Console.WriteLine();
     }
 
@@ -293,7 +294,7 @@ internal static class Tui
                         double secs = sw.Elapsed.TotalSeconds;
                         string tail = secs >= 2 ? $" ({secs:0}s{Dim} · esc 中斷{Reset})" : "";
                         Console.Write(CarriageReturn + ClearLine + $"{BrandRed}{frame}{Reset} {BrandRed}{verb}{Reset}{Dim}…{Reset}{Dim}{tail}{Reset}");
-                        await Task.Delay(120, token).ConfigureAwait(false);
+                        await Task.Delay(100, token).ConfigureAwait(false);
                     }
                 }
                 catch (OperationCanceledException) { }

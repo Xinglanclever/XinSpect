@@ -44,9 +44,17 @@ public class XinSpectCliTests
         Assert.Contains("唯讀", src, StringComparison.Ordinal);
         // Claude Code 式介面（2026-11-05 裁決）：圓角歡迎框、星芒 spinner、> 提示符
         string tui = File.ReadAllText(Path.Combine(root, "XinSpectCli", "Tui.cs"));
+        // 吉祥物 ☼（U+263C 白日光芒＝「曦」）取代 Claude 的 ✻；破曉序列 spinner；> 提示符
         Assert.Contains("╭", tui, StringComparison.Ordinal);
-        Assert.Contains("✻", tui, StringComparison.Ordinal);
-        Assert.Contains("隔窗端詳 Ring0 中", tui, StringComparison.Ordinal);
+        Assert.Contains("☼", tui, StringComparison.Ordinal);
+        Assert.Contains("走訪 1,178 把靜態事實鍵中", tui, StringComparison.Ordinal);
+        Assert.Contains("∙", tui, StringComparison.Ordinal);   // 破曉序列起始幀
+        // ✻ 僅允許出現在寬度註解（VisibleLength 的字元區間註記），介面字串一律用 ☼
+        // ✻ 不得出現在歡迎框本體（VisibleLength 的字元區間註解除外）
+        int wStart = tui.IndexOf("public static void Welcome", StringComparison.Ordinal);
+        int wEnd = tui.IndexOf("// ── 2)", StringComparison.Ordinal);
+        Assert.True(wStart >= 0 && wEnd > wStart, "找不到 Welcome 方法區段");
+        Assert.DoesNotContain("✻", tui[wStart..wEnd], StringComparison.Ordinal);
         Assert.DoesNotContain("xs▸", tui, StringComparison.Ordinal);
         // 不得引入寫入通路
         Assert.DoesNotContain("WritePciConfig", src, StringComparison.Ordinal);

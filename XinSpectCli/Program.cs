@@ -48,7 +48,9 @@ internal static class Program
             return CliService.Run(args, Collect, Console.Out, Console.Error);
         }
 
-        Tui.Welcome(AppInfo.ShortVersion);
+        Tui.Welcome(AppInfo.ShortVersion,
+            staticKeys: FactKeyCatalog.Count,
+            dynamicFamilies: FactKeyDynamicCatalog.Families.Count);
         Tui.Footer("● READY ・ 唯讀模式", "曦覽 XinSpect Console v" + AppInfo.ShortVersion);
         string? line;
         while (true)
@@ -186,9 +188,14 @@ internal static class Program
             Console.WriteLine($"{Dim}（使用現有快取；重新採集請再跑一次 facts）{Reset}");
             return;
         }
-        Tui.SpinnerStart("採集中（讀 SMBIOS／WMI／感測器，幾秒到幾十秒）");
+        Tui.SpinnerStart();
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         _cache = Collect();
-        Tui.SpinnerStop($"{_cache.Count} 筆事實已進快取。");
+        sw.Stop();
+        Tui.SpinnerStop($"facts ({FactKeyCatalog.Count:N0} 靜態鍵 · {FactKeyDynamicCatalog.Families.Count} 動態家族 · 耗時 {sw.Elapsed.TotalSeconds:0.00}s)");
+        // ⎿ 結果行：快取筆數是真實收集到的數量（含動態展開），與靜態鍵數是兩個口徑，都如實報
+        Console.WriteLine($"  {Dim}⎿{Reset}  已進快取 {_cache.Count:N0} 筆事實 · fact <關鍵字> 查單一 · dash 開全螢幕儀表板");
+        Console.WriteLine();
     }
 
     private static void SearchFacts(string query)
