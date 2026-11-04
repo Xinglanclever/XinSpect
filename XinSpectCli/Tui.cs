@@ -178,8 +178,9 @@ internal static class Tui
         catch { width = 110; }
         bool wide = width >= 104;
 
-        string Top() => $"{BrandRed}╭{new string('─', width - 2)}╮{Reset}";
-        string Bot() => $"{BrandRed}╰{new string('─', width - 2)}╯{Reset}";
+        // 角用 CHA 畫在 width 列：破折號只印 width-3 格，終端實際寬度比 width 窄 1 格也不折行
+        string Top() => $"{BrandRed}╭{new string('─', width - 3)}{Esc}[{width}G╮{Reset}";
+        string Bot() => $"{BrandRed}╰{new string('─', width - 3)}{Esc}[{width}G╯{Reset}";
         string RawRow(string body) => $"{BrandRed}│{Reset}" + new string(' ', Math.Max(0, (width - 2 - VisibleLength(body)) / 2)) + body;
 
         try { Console.Clear(); } catch { /* 重定向時無緩衝可清，照樣印內容 */ }
@@ -365,7 +366,7 @@ internal static class Tui
     {
         int width = ConsoleWidth();
         int leftW = VisibleLength(left), rightW = VisibleLength(right);
-        int padding = width - leftW - rightW - 2;
+        int padding = width - leftW - rightW - 3;   // 頭尾各留 1 格餘量：整行剛好等於終端寬度會折行
         if (padding < 1)
         {
             left = Truncate(left, Math.Max(10, width - rightW - 6));
