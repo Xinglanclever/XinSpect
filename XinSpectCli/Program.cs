@@ -48,6 +48,16 @@ internal static class Program
             return CliService.Run(args, Collect, Console.Out, Console.Error);
         }
 
+        // 開機序列（Gemini 設計稿）：互動模式才播；計數全部來自真實目錄，不編數字。
+        // 重導向 stdin 時不播動畫（機器驗證不需要也不該等待）。
+        if (!Console.IsInputRedirected)
+        {
+            Tui.BootSplash(
+                staticKeys: FactKeyCatalog.Count,
+                dynamicFamilies: FactKeyDynamicCatalog.Families.Count,
+                pages: PageRegistry.Pages.Count + PageRegistry.Utilities.Count,
+                versions: ChangelogCatalog.Entries.Count);
+        }
         Tui.Welcome(AppInfo.ShortVersion);
         Tui.Footer("● READY ・ 唯讀模式", "曦覽 XinSpect Console v" + AppInfo.ShortVersion);
         string? line;
