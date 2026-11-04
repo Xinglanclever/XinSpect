@@ -127,33 +127,18 @@ internal static class Tui
 
     public static string[][] MascotFrames => MascotCandidates[MascotChoice];
 
-    private static readonly string[][] BannerLetters =
-    [
-        new[] { "█   █", " █ █ ", "  █  ", " █ █ ", "█   █" },   // X
-        new[] { "███", " █ ", " █ ", " █ ", "███" },                   // I
-        new[] { "█   █", "██  █", "█ █ █", "█  ██", "█   █" },         // N
-        new[] { "█████", "█    ", "█████", "    █", "█████" },         // S
-        new[] { "████ ", "█   █", "████ ", "█    ", "█    " },         // P
-        new[] { "█████", "█    ", "███  ", "█    ", "█████" },         // E
-        new[] { " █████", "█    ", "█    ", "█    ", " █████" },       // C
-        new[] { "█████", "  █  ", "  █  ", "  █  ", "  █  " },         // T
-    ];
+    /// <summary>大框字開場：大寫方塊 X ＋ 小寫 inspect（全字排得下，不再壓縮字距）。</summary>
+    private static readonly string[] BannerX = ["█   █", " █ █ ", "  █  ", " █ █ ", "█   █"];
 
-    /// <summary>大框字 XINSPECT：5 行組合字（cmd 大字風格）。</summary>
+    /// <summary>開場字標 5 行：方塊 X ＋ 中行右接白粗體 inspect。</summary>
     public static string[] XinspectBanner()
     {
-        const string word = "XINSPECT";
         var rows = new string[5];
         for (int r = 0; r < 5; r++)
         {
-            var sb = new System.Text.StringBuilder();
-            foreach (var ch in word)
-            {
-                var letter = BannerLetters["XINSPECT".IndexOf(ch)];
-                sb.Append(letter[r]);
-                sb.Append("  ");
-            }
-            rows[r] = sb.ToString().TrimEnd();
+            rows[r] = r == 2
+                ? $"{BannerX[r]}  {Bold}inspect{Reset}"
+                : BannerX[r];
         }
         return rows;
     }
@@ -174,9 +159,10 @@ internal static class Tui
 
         try { Console.Clear(); } catch { /* 重定向時無緩衝可清，照樣印內容 */ }
 
-        // ── 大框字 XINSPECT（cmd 大字）：品牌開場 ──
+        // ── 大框字 X＋inspect（品牌開場）：固定縮進置中，各行不因可見寬度不同而錯位 ──
+        int bannerPad = Math.Max(0, (width - 16) / 2);
         foreach (var lineText in XinspectBanner())
-            Console.WriteLine(RawRow(lineText));
+            Console.WriteLine(new string(' ', bannerPad) + lineText);
         Console.WriteLine();
 
         // ── 吉祥物破曉動畫：兩幀往返（光線收張），重定向時跳過 ──
