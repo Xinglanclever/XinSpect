@@ -112,11 +112,13 @@ internal static class Tui
         }
     }
 
-    // ── 1.5) 開機序列（v2：瑞士紀律——單色白＋唯一紅色，點狀引導線，留白） ──
+    // ── 1.5) 開機序列（v3：瑞士紀律＋分組呼吸＋單一收尾） ──
 
     /// <summary>
-    /// 開機序列 v2。設計裁決（使用者回饋後重做）：不用塊狀 ASCII 字標、不用綠色 OK 標籤、
-    /// 不做雙欄——配色只有紙白與瑞士紅兩個層級，行與行之間靠留白與點狀引導線對位。
+    /// 開機序列 v3。在 v2（單色白＋唯一紅色、點狀引導線）之上再磨三處：
+    /// (1) 事實行分「載入」與「承諾」兩組，中間留一行空——資訊有節奏，不是一長串；
+    /// (2) 拿掉自己的狀態列——Welcome 之後的 Footer 會再收一次尾，兩條 READY 重複；
+    /// (3) 進度條之後補一行灰的小知識，讓畫面落地不懸空。
     /// 誠信規則不變：值全部來自真實目錄；感測引擎未載入就寫「——」，不編造。
     /// </summary>
     public static void BootSplash(int staticKeys, int dynamicFamilies, int pages, int versions)
@@ -135,24 +137,34 @@ internal static class Tui
 
         // ── 標頭：紅方塊＋字距放寬的字標＋右側版號。字重與字距做層級，不靠色。 ──
         string mark = "曦覽 X I N S P E C T";
-        Console.WriteLine($"  {SwissRed}{Bold}■{Reset}{Bold} {mark}{Reset}{new string(' ', Math.Max(2, width - 4 - VisibleLength(mark) - VisibleLength("v" + XinSpect.AppInfo.ShortVersion + " ・ ULTIMA XVI")))}{Dim}v{XinSpect.AppInfo.ShortVersion} ・ ULTIMA XVI{Reset}");
+        string ver = $"v{XinSpect.AppInfo.ShortVersion} ・ ULTIMA XVI";
+        Console.WriteLine($"  {SwissRed}{Bold}■{Reset}{Bold} {mark}{Reset}{new string(' ', Math.Max(2, width - 4 - VisibleLength(mark) - VisibleLength(ver)))}{Dim}{ver}{Reset}");
         Console.WriteLine($"  {Dim}{new string('─', width - 4)}{Reset}");
         Console.WriteLine();
         Console.WriteLine($"  {Dim}硬體事實的唯讀視角。讀得到才報，讀不到就說讀不到。{Reset}");
         Console.WriteLine();
 
-        // ── 事實行：逐行 90ms 浮現。 ──
-        var facts = new (string label, string value)[]
+        // ── 事實行：分兩組——「這次載入了什麼」與「永遠遵守什麼」。組間一行空。 ──
+        var loaded = new (string label, string value)[]
         {
             ("console",     "UTF-8 ／ ANSI"),
             ("keys",        $"{staticKeys:N0} static ・ {dynamicFamilies} families"),
             ("pages",       $"{pages} pages"),
             ("changelog",   $"{versions} versions"),
+        };
+        var promises = new (string label, string value)[]
+        {
             ("writes",      "0 paths"),
             ("network",     "0 sockets"),
             ("sensor",      "—— 進站後跑 facts"),
         };
-        foreach (var (label, value) in facts)
+        foreach (var (label, value) in loaded)
+        {
+            Console.WriteLine(Fact(label, value));
+            System.Threading.Thread.Sleep(90);
+        }
+        Console.WriteLine();
+        foreach (var (label, value) in promises)
         {
             Console.WriteLine(Fact(label, value));
             System.Threading.Thread.Sleep(90);
@@ -160,7 +172,7 @@ internal static class Tui
 
         Console.WriteLine();
 
-        // ── 載入條：灰軌道、紅色填充、右對齊百分比。唯一允許紅色出現的第二處。 ──
+        // ── 載入條：灰軌道、紅色填充。唯一允許紅色出現的第二處。 ──
         int barW = Math.Min(46, width - 22);
         for (int fill = 0; fill <= barW; fill++)
         {
@@ -170,10 +182,10 @@ internal static class Tui
             System.Threading.Thread.Sleep(20);
         }
         Console.WriteLine();
-        Console.WriteLine();
 
-        // ── 狀態列：紅點 ＋ 白字。與 Footer 同一筆觸。 ──
-        Footer($"{SwissRed}●{Reset} READY ・ 唯讀模式", $"xsc v{XinSpect.AppInfo.ShortVersion}");
+        // ── 收尾：一行灰的小知識，畫面落地；狀態列交給 Welcome 流程，不重複。 ──
+        Console.WriteLine();
+        Console.WriteLine($"  {Dim}小知識 ・ help 看完整指令；facts 採集一次，sys／top／dash 共用同一份快取{Reset}");
         Console.WriteLine();
     }
 
