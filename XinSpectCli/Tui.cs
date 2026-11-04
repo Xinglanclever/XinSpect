@@ -112,136 +112,68 @@ internal static class Tui
         }
     }
 
-    // ── 1.5) 開機序列（Gemini 設計稿移植：probe trace＋指標欄＋BOOT PROGRESS） ──
-
-    /// <summary>ASCII 品牌字標：XINSPECT 五行像素字（玻璃質感 X Logo 的終端化）。</summary>
-    public static readonly string[] XscBanner =
-    [
-        "█ █ ███ █  █ ███ ███ █▀▀ █▀▀ ███",
-        "█ █  █  ██ █ █   █   █▀▀ ▀▀█ █  ",
-        " █   █  █ ██ █▄▄ █▄▄ ▀▀█   █ █  ",
-        "█ █  █  █  █ █   █   █▄▄ ▄▄█ █▄▄",
-        "█ █ ███ █  █ ███ ███ █▀▀ █▀▀ ███",
-    ];
-
-    /// <summary>單行文字的當下可見寬度（本地小工具）。</summary>
-    private static int Vis(string s) => VisibleLength(s);
+    // ── 1.5) 開機序列（v2：瑞士紀律——單色白＋唯一紅色，點狀引導線，留白） ──
 
     /// <summary>
-    /// 開機序列：逐行印出（每行 35ms）的電影感啟動畫面。
-    /// 誠信規則同全域：每一行 [ OK ] 都是當下可驗的真話——鍵數、頁數、版本數來自
-    /// 真實目錄；感測引擎未載入就寫 [ .. ] 與原因，不編造讀值。左欄 probe trace、
-    /// 右欄引擎指標（雙欄同排），底部 BOOT PROGRESS 動畫條與整行反白狀態列。
+    /// 開機序列 v2。設計裁決（使用者回饋後重做）：不用塊狀 ASCII 字標、不用綠色 OK 標籤、
+    /// 不做雙欄——配色只有紙白與瑞士紅兩個層級，行與行之間靠留白與點狀引導線對位。
+    /// 誠信規則不變：值全部來自真實目錄；感測引擎未載入就寫「——」，不編造。
     /// </summary>
     public static void BootSplash(int staticKeys, int dynamicFamilies, int pages, int versions)
     {
-        int width = Math.Min(78, ConsoleWidth());
-        const int leftW = 40;                        // 左欄內文固定寬
-        string frame = new('─', width - 2);
-        string Top() => $"{Dim}┌{frame}┐{Reset}";
-        string Bot() => $"{Dim}└{frame}┘{Reset}";
+        int width = Math.Min(72, ConsoleWidth());
 
-        // 全寬單欄行：│ 內文（補滿） │
-        string Row(string body)
+        // 一行：左標籤（白）＋點狀引導線（灰）＋右值（白）。值是畫面的主角。
+        string Fact(string label, string value)
         {
-            int vis = Vis(body);
-            string pad = new(' ', Math.Max(1, width - 4 - vis));
-            return $"{Dim}│{Reset} {body}{pad} {Dim}│{Reset}";
-        }
-
-        // 雙欄行：│ 左欄內文（補滿到 leftW）│ 右欄內文（補滿） │
-        string Dual(string leftBody, string rightBody)
-        {
-            int lv = Vis(leftBody);
-            string left = lv <= leftW ? leftBody + new string(' ', leftW - lv) : leftBody;
-            int rv = Vis(rightBody);
-            string right = rightBody.Length == 0
-                ? new string(' ', width - 4 - leftW - 2)
-                : " " + rightBody + new string(' ', Math.Max(1, width - 6 - leftW - rv));
-            return $"{Dim}│{Reset} {left}{Dim}│{Reset}{right} {Dim}│{Reset}";
-        }
-
-        string MetricBody(string k, string v) => $"{Dim}{k.PadRight(14)}{Reset}{Bold}{v}{Reset}";
-        string ProbeBody(bool ok, string name, string detail)
-        {
-            string tag = ok ? $"{SwissGreen}{Bold} OK {Reset}" : $"{Amber} .. {Reset}";
-            string d = ok ? detail : $"{Dim}{detail}{Reset}";
-            return $"[{tag}] {Bold}{name}{Reset}{Dim}：{d}{Reset}";
+            int dotCount = Math.Max(3, width - 4 - VisibleLength(label) - VisibleLength(value) - 2);
+            return $"  {Bold}{label}{Reset} {Dim}{new string('·', dotCount)}{Reset} {Bold}{value}{Reset}";
         }
 
         Console.Clear();
-        Console.WriteLine(Top());
+        Console.WriteLine();
 
-        // ── 區塊 1：字標＋右側版本／徽章（設計稿的 header banner） ──
-        string[] badge = ["唯讀", "不寫硬體", "不連網"];
-        for (int r = 0; r < XscBanner.Length; r++)
+        // ── 標頭：紅方塊＋字距放寬的字標＋右側版號。字重與字距做層級，不靠色。 ──
+        string mark = "曦覽 X I N S P E C T";
+        Console.WriteLine($"  {SwissRed}{Bold}■{Reset}{Bold} {mark}{Reset}{new string(' ', Math.Max(2, width - 4 - VisibleLength(mark) - VisibleLength("v" + XinSpect.AppInfo.ShortVersion + " ・ ULTIMA XVI")))}{Dim}v{XinSpect.AppInfo.ShortVersion} ・ ULTIMA XVI{Reset}");
+        Console.WriteLine($"  {Dim}{new string('─', width - 4)}{Reset}");
+        Console.WriteLine();
+        Console.WriteLine($"  {Dim}硬體事實的唯讀視角。讀得到才報，讀不到就說讀不到。{Reset}");
+        Console.WriteLine();
+
+        // ── 事實行：逐行 90ms 浮現。 ──
+        var facts = new (string label, string value)[]
         {
-            string art = $"{SwissRed}{XscBanner[r]}{Reset}";
-            string right = r switch
-            {
-                0 => $"{Bold}xsc v{XinSpect.AppInfo.ShortVersion}{Reset}{Dim} 曦覽終端機{Reset}",
-                1 => $"{RedBg}{Bold} {badge[0]} {Reset}{RedBg}{Bold} {badge[1]} {Reset}",
-                2 => $"{RedBg}{Bold} {badge[2]} {Reset}{Dim} SWISS TERMINAL{Reset}",
-                3 => $"{Dim}硬體事實・讀得到才報{Reset}",
-                _ => "",
-            };
-            Console.WriteLine(Row(art + "  " + right));
+            ("console",     "UTF-8 ／ ANSI"),
+            ("keys",        $"{staticKeys:N0} static ・ {dynamicFamilies} families"),
+            ("pages",       $"{pages} pages"),
+            ("changelog",   $"{versions} versions"),
+            ("writes",      "0 paths"),
+            ("network",     "0 sockets"),
+            ("sensor",      "—— 進站後跑 facts"),
+        };
+        foreach (var (label, value) in facts)
+        {
+            Console.WriteLine(Fact(label, value));
+            System.Threading.Thread.Sleep(90);
         }
 
-        // ── 區塊 2：雙欄 probe trace＋指標（逐行 35ms 的開機感） ──
-        var probes = new (bool ok, string name, string detail)[]
-        {
-            (true,  "console.encoding", "UTF-8 就緒"),
-            (true,  "tui.render",       "ANSI/VT100 管線接通"),
-            (true,  "keys.catalog",     $"{staticKeys} 把靜態鍵載入"),
-            (true,  "keys.dynamic",     $"{dynamicFamilies} 個動態家族註冊"),
-            (true,  "pages.registry",   $"{pages} 頁對照表就緒"),
-            (true,  "changelog",        $"{versions} 個版本全程可考"),
-            (true,  "writes.policy",    "0 條寫入通路（唯讀承諾）"),
-            (true,  "net.policy",       "0 個主動 socket（不連網）"),
-            (false, "sensor.engine",    "未載入，進站後跑 facts 採集"),
-        };
-        var metrics = new (string k, string v)[]
-        {
-            ("ENGINE",      "Ring0/MSR/WMI/LHM"),
-            ("ARCH POLICY", "x64 Read-Only"),
-            ("BUS TARGET",  "PCI 00:00-FF"),
-            ("TRUST TAGS",  "Measured/Reported"),
-            ("SOURCES",     "單一事實快取共用"),
-            ("SOURCES",     ""),
-            ("SOURCES",     ""),
-            ("SOURCES",     ""),
-            ("SOURCES",     ""),
-        };
+        Console.WriteLine();
 
-        Console.WriteLine(Dual(MetricBody("PROBE", "TRACE"), MetricBody("METRIC", "ENGINE")));
-        for (int i = 0; i < probes.Length; i++)
-        {
-            string right = metrics[i].v.Length == 0 ? "" : MetricBody(metrics[i].k, metrics[i].v);
-            Console.WriteLine(Dual(ProbeBody(probes[i].ok, probes[i].name, probes[i].detail), right));
-            System.Threading.Thread.Sleep(35);
-        }
-
-        // ── 區塊 3：OPS 佇列與守門宣言（設計稿的 ops 區塊） ──
-        Console.WriteLine(Row(
-            $"{Dim}OPS:{Reset} keys.catalog {Dim}> {Reset}pages.registry {Dim}> {Reset}facts.await {Amber}{Bold}READY{Reset}"));
-        Console.WriteLine(Row(
-            $"{Dim}MUTATION INTERCEPT: {Reset}{Bold}0 WRITES ISSUED{Reset}{Dim} ・ OUTBOUND NET: 0{Reset}"));
-
-        // ── 區塊 4：BOOT PROGRESS 動畫條 ──
-        Console.WriteLine(Bot());
-        int barW = Math.Min(56, width - 22);
+        // ── 載入條：灰軌道、紅色填充、右對齊百分比。唯一允許紅色出現的第二處。 ──
+        int barW = Math.Min(46, width - 22);
         for (int fill = 0; fill <= barW; fill++)
         {
             double pct = fill * 100.0 / barW;
-            string bar = $"{SwissGreen}{new string('▓', fill)}{Dim}{new string('░', barW - fill)}{Reset}";
-            Console.Write(CarriageReturn + ClearLine + $"{Dim}BOOT PROGRESS{Reset} [{bar}] {Bold}{pct,5:0.0}%{Reset}");
-            System.Threading.Thread.Sleep(22);
+            string bar = $"{SwissRed}{new string('■', fill)}{Reset}{Dim}{new string('·', barW - fill)}{Reset}";
+            Console.Write(CarriageReturn + ClearLine + $"  {bar} {Dim}{pct,5:0.0}%{Reset}");
+            System.Threading.Thread.Sleep(20);
         }
         Console.WriteLine();
+        Console.WriteLine();
 
-        // ── 區塊 5：整行反白狀態列（與 Footer 同一筆觸） ──
-        Footer("● READY ・ 唯讀模式", $"xsc v{XinSpect.AppInfo.ShortVersion} ・ 曦覽 XinSpect Console");
+        // ── 狀態列：紅點 ＋ 白字。與 Footer 同一筆觸。 ──
+        Footer($"{SwissRed}●{Reset} READY ・ 唯讀模式", $"xsc v{XinSpect.AppInfo.ShortVersion}");
         Console.WriteLine();
     }
 
