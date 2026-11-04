@@ -127,18 +127,43 @@ internal static class Tui
 
     public static string[][] MascotFrames => MascotCandidates[MascotChoice];
 
-    /// <summary>大框字開場：大寫方塊 X ＋ 小寫 inspect（全字排得下，不再壓縮字距）。</summary>
-    private static readonly string[] BannerX = ["█   █", " █ █ ", "  █  ", " █ █ ", "█   █"];
+    /// <summary>大框字 XINSPECT（cmd 大字 5 行組合字，全寬 51 欄；寬度不足時自動縮為 X＋inspect）。</summary>
+    /// <summary>大框字 XINSPECT（ANSI Shadow 圓角雙線風：╗╔╝╚ 自帶圓弧感），7 行 × 8 字母。
+    /// 字母寬度：X9 I4 N11 S8 P8 E8 C8 T9；組合時字母間 3 格間距。</summary>
+    private static readonly string[][] BannerLetters =
+    [
+        new[] { "██╗   ██╗", "╚██╗ ██╔╝", " ╚███╔╝ ", " ██╔██╗ ", "╚██╝ ╚██╝" },              // X
+        new[] { "██╗", "██║", "██║", "██║", "██║" },                                                            // I
+        new[] { "███╗   ██╗", "████╗  ██║", "██╔██╗ ██║", "██║╚██╗██║", "██║ ╚████║" },                        // N
+        new[] { "███████╗", "██╔════╝", "███████╗", "╚════██║", "███████║" },                                  // S
+        new[] { "██████╗ ", "██╔══██╗", "██████╔╝", "██╔═══╝ ", "██║     " },                                  // P
+        new[] { "███████╗", "██╔════╝", "█████╗  ", "██╔══╝  ", "███████╗" },                                  // E
+        new[] { " ██████╗", "██╔════╝", "██║     ", "██║     ", "╚██████╗" },                                  // C
+        new[] { "████████╗", "╚══██╔══╝", "   ██║   ", "   ██║   ", "   ██║   " },                             // T
+    ];
 
-    /// <summary>開場字標 5 行：方塊 X ＋ 中行右接白粗體 inspect。</summary>
-    public static string[] XinspectBanner()
+    private const string BannerWord = "XINSPECT";
+
+    /// <summary>開場字標 5 行（ANSI Shadow 圓角體＋寬間距）。空隙由呼叫端以 CHA 對齊，不受字寬影響。</summary>
+    public static (string Line, int Width)[] XinspectBanner(int gap)
     {
-        var rows = new string[5];
+        var rows = new (string Line, int Width)[5];
         for (int r = 0; r < 5; r++)
         {
-            rows[r] = r == 2
-                ? $"{BannerX[r]}  {Bold}inspect{Reset}"
-                : BannerX[r];
+            var sb = new System.Text.StringBuilder();
+            int total = 0;
+            for (int i = 0; i < BannerWord.Length; i++)
+            {
+                var letter = BannerLetters[BannerWord.IndexOf(BannerWord[i])][r];
+                sb.Append(letter);
+                total += letter.Length;
+                if (i < BannerWord.Length - 1)
+                {
+                    sb.Append(new string(' ', gap));
+                    total += gap;
+                }
+            }
+            rows[r] = (sb.ToString(), total);
         }
         return rows;
     }
@@ -158,12 +183,6 @@ internal static class Tui
         string RawRow(string body) => $"{BrandRed}│{Reset}" + new string(' ', Math.Max(0, (width - 2 - VisibleLength(body)) / 2)) + body;
 
         try { Console.Clear(); } catch { /* 重定向時無緩衝可清，照樣印內容 */ }
-
-        // ── 大框字 X＋inspect（品牌開場）：固定縮進置中，各行不因可見寬度不同而錯位 ──
-        int bannerPad = Math.Max(0, (width - 16) / 2);
-        foreach (var lineText in XinspectBanner())
-            Console.WriteLine(new string(' ', bannerPad) + lineText);
-        Console.WriteLine();
 
         // ── 吉祥物破曉動畫：兩幀往返（光線收張），重定向時跳過 ──
         if (!Console.IsInputRedirected)
@@ -185,6 +204,19 @@ internal static class Tui
         string title = $"{BrandRed}{Bold}☼{Reset} {Bold}曦覽終端機{Reset} {Dim}v{version}{Reset}";
         Console.Write($"[6G{title}");
         Console.WriteLine();
+
+        // ── 大框字 XINSPECT（ANSI Shadow 圓角體）：動畫之後、歡迎框之前 ──
+        if (width >= 88)
+        {
+            int gap = width >= 92 ? 3 : 2;
+            var banner = XinspectBanner(gap);
+            int bannerW = banner[0].Width;
+            int bannerPad = Math.Max(0, (width - bannerW) / 2);
+            Console.WriteLine();
+            foreach (var (lineText, _) in banner)
+                Console.WriteLine(new string(' ', bannerPad) + BrandRed + lineText + Reset);
+            Console.WriteLine();
+        }
 
         var tip = Tips[Random.Shared.Next(Tips.Length)];
         if (wide)
