@@ -212,6 +212,7 @@ internal static class Tui
                 Dim + "曦覽 XinSpect Console" + Reset,
                 "",
                 Dim + "cwd: " + ShortCwd() + Reset,
+                Dim + "硬體的事實，不編故事。" + Reset,
             };
             var right = new List<string>
             {
@@ -246,13 +247,10 @@ internal static class Tui
             Console.WriteLine(Row(Bold + "book" + Reset + Dim + "   曦覽百科全書 ・ help 指令書{Reset}"));
             Console.WriteLine(Row(""));
             Console.WriteLine(Row(Dim + "cwd: " + ShortCwd() + Reset));
+            Console.WriteLine(Row(Dim + "硬體的事實，不編故事。" + Reset));
         }
 
-        Console.Write(Bot());
-        // 口號嵌在底框線右側（畫完框後 CHA 覆寫）
-        string slogan = "硬體的事實，不編故事。";
-        Console.Write(Esc + $"[{width - VisibleLength(slogan) - 3}G" + Dim + slogan + Reset);
-        Console.WriteLine();
+        Console.WriteLine(Bot());
         Console.WriteLine();
         Console.WriteLine($"  {Dim}輸入 facts 採集全機事實，或輸入 sys、dash、pages、msr <索引>…{Reset}");
         Console.WriteLine();
