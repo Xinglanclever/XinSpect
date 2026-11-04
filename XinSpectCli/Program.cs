@@ -76,7 +76,14 @@ internal static class Program
             switch (cmd)
             {
                 case "help" or "?": Help(); return true;
-                case "ver": Console.WriteLine(AppInfo.VersionText); return true;
+                case "ver":
+                    Tui.Frame($"曦覽 XinSpect v{AppInfo.Version}",
+                    [
+                        $"代號：{AppInfo.Codename}",
+                        "形式：便攜單一執行檔（GUI）＋ xsc 終端機（本程式）",
+                        "承諾：唯讀 ・ 不寫硬體 ・ 不連網",
+                    ]);
+                    return true;
 
                 case "pages": ListPages(); return true;
                 case "page": PageFacts(rest); return true;
@@ -191,16 +198,25 @@ internal static class Program
         if (query.Length > 0)
             rows = rows.Where(f => f.Key.Contains(query, StringComparison.OrdinalIgnoreCase)
                                 || f.Value.Contains(query, StringComparison.OrdinalIgnoreCase));
-        var list = rows.Take(40).ToList();
-        foreach (var f in list)
-        {
-            string avail = f.Availability == FactAvailability.Present ? Green : Red;
-            Console.WriteLine($"  {Blue}{f.Key,-34}{Reset} {avail}{f.Availability,-10}{Reset} {Trim(f.Value, 60)}");
-        }
+        var list = rows.Take(30).ToList();
+        Tui.Table(
+            ["", "KEY", "狀態", "值"],
+            list.Select(f => new[]
+            {
+                f.Availability switch
+                {
+                    FactAvailability.Present => $"{Tui.SwissGreen}✓{Tui.Reset}",
+                    FactAvailability.Unknown => $"{Tui.Dim}?{Tui.Reset}",
+                    _ => $"{Tui.Amber}⚠{Tui.Reset}",
+                },
+                f.Key,
+                f.Availability.ToString(),
+                Trim(f.Value, 56),
+            }));
         int total = query.Length == 0 ? _cache.Count
             : _cache.Count(f => f.Key.Contains(query, StringComparison.OrdinalIgnoreCase)
                              || f.Value.Contains(query, StringComparison.OrdinalIgnoreCase));
-        Console.WriteLine($"{Dim}… {list.Count} / {total} 筆{Reset}");
+        Console.WriteLine($"{Dim}… {list.Count} / {total} 筆（✓ 讀到 ・ ⚠ 讀取失敗/權限 ・ ? 未確認）{Reset}");
     }
 
     private static string Trim(string s, int n) => s.Length <= n ? s : s[..(n - 1)] + "…";
@@ -288,18 +304,15 @@ internal static class Program
     {
         int n = int.TryParse(nText, out int v) && v > 0 ? v : 3;
         foreach (var e in XinSpect.ChangelogCatalog.Entries.Take(n))
-        {
-            Console.WriteLine($"{Bold}v{e.Version}{Reset} {Dim}{e.DateText}{Reset} — {e.Title}");
-            foreach (var item in e.Items) Console.WriteLine($"  {Dim}・{Reset} {Trim(item, 90)}");
-            Console.WriteLine();
-        }
+            Tui.Frame($"v{e.Version} ・ {e.DateText}",
+                new[] { e.Title, "" }.Concat(e.Items.Select(i => "・ " + Trim(i, 76))));
     }
 
     // ── 即時遙測 ──────────────────────────────────────────────────────────
 
     private static readonly List<double?> _cpuHist = [], _gpuHist = [], _memHist = [];
 
-    private static void PushHistory((double? CpuT, double? GpuT, double? CpuL, double? MemL) r)
+    private static void PushHistory((double? CpuT, double? GpuT, double? CpuL, double? MemL, double? CpuClock, double? CpuPower, double? MemUsed) r)
     {
         void Push(List<double?> h, double? v) { h.Add(v); if (h.Count > 40) h.RemoveAt(0); }
         Push(_cpuHist, r.CpuT); Push(_gpuHist, r.GpuT); Push(_memHist, r.MemL);
@@ -325,8 +338,14 @@ internal static class Program
             Console.WriteLine($"      {Dim}走勢{Reset} {Tui.Sparkline(_gpuHist, 100, 24)}");
             Tui.Kpi("記憶體", r.MemL, " %", 100, warnAbove: 85, critAbove: 95);
             Console.WriteLine($"      {Dim}走勢{Reset} {Tui.Sparkline(_memHist, 100, 24)}");
+            Tui.Separator();
+            Console.WriteLine($"  {Pad("CPU 時脈", 12)}{Bold}{(r.CpuClock is null ? "——" : $"{r.CpuClock:0.00}")}{Reset}{Dim} GHz{Reset}   "
+                + $"{Pad("CPU 功率", 12)}{Bold}{(r.CpuPower is null ? "——" : $"{r.CpuPower:0.#}")}{Reset}{Dim} W{Reset}   "
+                + $"{Pad("記憶體用量", 12)}{Bold}{(r.MemUsed is null ? "——" : $"{r.MemUsed:0.0}")}{Reset}{Dim} GB{Reset}");
         }
     }
+
+    private static string Pad(string s, int w) => s + new string(' ', Math.Max(0, w - Tui.VisibleLength(s)));
 
     // ── 全螢幕儀表板：獨立螢幕、原地重繪、q 離開 ────────────────────────────
 
@@ -350,12 +369,14 @@ internal static class Program
                     Console.Write("\x1b[H");
                     Console.WriteLine($"{Tui.Dim}┌─ {Tui.Bold}XSC 即時儀表板{Tui.Reset} {Tui.Dim}{new string('─', 44)}{DateTime.Now:HH:mm:ss} ─┐{Tui.Reset}");
                     Console.WriteLine();
-                    DashRow("CPU 溫度", r.CpuT, "°C", 100, 75, 85, _cpuHist);
-                    DashRow("CPU 負載", r.CpuL, "%", 100, null, null, null);
-                    DashRow("GPU 溫度", r.GpuT, "°C", 100, 75, 85, _gpuHist);
-                    DashRow("記憶體", r.MemL, "%", 100, 85, 95, _memHist);
+                    DashRow("CPU 溫度", r.CpuT, "°C", 100, 75, 85, _cpuHist, ref _prevCpuT);
+                    DashRow("CPU 負載", r.CpuL, "%", 100, null, null, null, ref _prevCpuL);
+                    DashRow("GPU 溫度", r.GpuT, "°C", 100, 75, 85, _gpuHist, ref _prevGpuT);
+                    DashRow("記憶體", r.MemL, "%", 100, 85, 95, _memHist, ref _prevMem);
+                    DashRow("CPU 時脈", r.CpuClock, "GHz", 6, null, null, null, ref _prevClock);
+                    DashRow("CPU 功率", r.CpuPower, "W", 253, 200, 240, null, ref _prevPower);
                     Console.WriteLine();
-                    Console.WriteLine($"  {Tui.Dim}PCI：{(_pci?.Count.ToString() ?? "未掃（pci scan）")} 台裝置 ・ 藍色中隊 Bridge：本程序未連線（主介面開啟）{Tui.Reset}");
+                    Console.WriteLine($"  {Tui.Dim}記憶體用量 {(r.MemUsed is null ? "——" : r.MemUsed.Value.ToString("0.0") + " GB")} ・ PCI：{(_pci?.Count.ToString() ?? "未掃（pci scan）")} 台 ・ Bridge：本程序未連線{Tui.Reset}");
                     Console.WriteLine();
                     Console.WriteLine($"{Tui.Dim}  q 離開 ・ 1 秒刷新{Tui.Reset}");
                     Console.Write($"{Tui.SwissRed}{Tui.Bold}xs{Tui.Reset}{Tui.SwissBlue}▸{Tui.Reset} dash");
@@ -380,8 +401,11 @@ internal static class Program
         }
     }
 
+    // 漲落箭頭用：與上一拍比較（溫度升＝紅▲、降＝綠▼；負載升＝黃▲）
+    private static double? _prevCpuT, _prevCpuL, _prevGpuT, _prevMem, _prevClock, _prevPower;
+
     private static void DashRow(string label, double? v, string unit, double max,
-        double? warn, double? crit, List<double?>? hist)
+        double? warn, double? crit, List<double?>? hist, ref double? prev)
     {
         string vt = v is null ? "——" : $"{v:0.#}{unit}";
         string vc = v is null ? Tui.Dim
@@ -390,7 +414,13 @@ internal static class Program
             : Tui.Bold;
         string bar = Tui.Bar(v, max, 24, warn, crit);
         string spark = hist is null ? "" : $"  {Tui.Dim}{Tui.Sparkline(hist, max, 18)}{Tui.Reset}";
-        Console.WriteLine("  " + Tui.Pad(label, 10) + Tui.Pad(vc + vt, 14) + bar + spark);
+        // 漲落：與上一拍比。溫度上升是壞事（紅▲）；下降是好事（綠▼）。
+        string trend = v is null || prev is null ? $"{Tui.Dim}●{Reset}"
+            : v > prev + 0.05 ? $"{Tui.SwissRed}▲{Reset}"
+            : v < prev - 0.05 ? $"{Tui.SwissGreen}▼{Reset}"
+            : $"{Tui.Dim}●{Reset}";
+        prev = v;
+        Console.WriteLine("  " + Tui.Pad(label + " " + trend, 12) + Tui.Pad(vc + vt, 14) + bar + spark);
     }
 
     private static void LiveTop(string secondsText)
@@ -408,7 +438,7 @@ internal static class Program
             Console.WriteLine($"  {"時間",-10}{"CPU 溫度",10}{"CPU 負載",10}{"GPU 溫度",10}{"MEM",8}");
             while (true)
             {
-                var (cpuT, gpuT, cpuL, memL) = svc.Read();
+                var (cpuT, gpuT, cpuL, memL, _, _, _) = svc.Read();
                 Console.WriteLine($"  {DateTime.Now.ToString("HH:mm:ss"),-10}"
                     + $"{Heat(cpuT, 75, 85),10}{Fmt(cpuL),10}{Heat(gpuT, 75, 85),10}{Heat(memL, 85, 95),8}");
                 Thread.Sleep((int)(interval * 1000));
@@ -449,27 +479,36 @@ internal static class Program
             }
             catch { _computer = null; }
         }
-        public (double? CpuT, double? GpuT, double? CpuL, double? MemL) Read()
+        public (double? CpuT, double? GpuT, double? CpuL, double? MemL, double? CpuClock, double? CpuPower, double? MemUsed) Read()
         {
             double? cpuT = null, gpuT = null, cpuL = null, memL = null;
-            if (_computer is null) return (null, null, null, null);
+            double? cpuClock = null, cpuPower = null, memUsed = null;
+            if (_computer is null) return (null, null, null, null, null, null, null);
             foreach (var hw in _computer.Hardware)
             {
                 hw.Update();
                 if (hw.HardwareType == LibreHardwareMonitor.Hardware.HardwareType.Cpu)
                     foreach (var s in hw.Sensors)
                     {
-                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Temperature && cpuT is null && s.Value is { } v) cpuT = v;
-                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Load && cpuL is null && s.Value is { } l) cpuL = l;
+                        if (s.Value is not { } v) continue;
+                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Temperature && cpuT is null) cpuT = v;
+                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Load && cpuL is null && s.Name == "CPU Total") cpuL = v;
+                        // 時脈取全核最大（MHz→GHz）；功率取 Package
+                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Clock && v > (cpuClock ?? 0) && s.Name.StartsWith("Core", StringComparison.Ordinal)) cpuClock = v;
+                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Power && s.Name.Contains("Package", StringComparison.OrdinalIgnoreCase)) cpuPower = v;
                     }
                 if (hw.HardwareType is LibreHardwareMonitor.Hardware.HardwareType.GpuNvidia or LibreHardwareMonitor.Hardware.HardwareType.GpuAmd or LibreHardwareMonitor.Hardware.HardwareType.GpuIntel)
                     foreach (var s in hw.Sensors)
                         if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Temperature && gpuT is null && s.Value is { } v) gpuT = v;
                 if (hw.HardwareType == LibreHardwareMonitor.Hardware.HardwareType.Memory)
                     foreach (var s in hw.Sensors)
-                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Load && memL is null && s.Value is { } v) memL = v;
+                    {
+                        if (s.Value is not { } v) continue;
+                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Load && memL is null) memL = v;
+                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Data && s.Name == "Used Memory") memUsed = v;
+                    }
             }
-            return (cpuT, gpuT, cpuL, memL);
+            return (cpuT, gpuT, cpuL, memL, cpuClock is null ? null : cpuClock / 1000.0, cpuPower, memUsed);
         }
         public void Dispose() => _computer?.Close();
     }
