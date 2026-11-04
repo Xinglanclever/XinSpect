@@ -104,11 +104,29 @@ internal static class Tui
         "清點匯流排拓撲與裝置樹中", "確認零寫入唯讀封條狀態中",
     ];
 
-    /// <summary>像素太陽吉祥物兩幀（破曉動畫用；9 欄 × 5 列，CP437 方塊字元）。</summary>
+    /// <summary>像素太陽吉祥物兩幀（9×7，有臉：睜眼／眨眼；光線收張）。CP437 方塊字元。</summary>
     public static readonly string[][] MascotFrames =
     [
-        new[] { "   ▄█▄   ", "▄▀ ███ ▀▄", "█ ▐███▌ █", "▀▄ ███ ▄▀", "   ▀█▀   " },
-        new[] { "    █    ", "  ▄███▄  ", " ▐█████▌ ", "  ▀███▀  ", "    █    " },
+        new[]   // 睜眼＋光線收
+        {
+            "█       █",
+            "▀█▄   ▄█▀",
+            " ▄█████▄ ",
+            " ██▀ ▀██ ",
+            " ▀█████▀ ",
+            "▄█▀   ▀█▄",
+            "█       █",
+        },
+        new[]   // 眨眼＋光線張
+        {
+            "█▄     ▄█",
+            " ▀█▄ ▄█▀ ",
+            "  ▄███▄  ",
+            " ██▀▀▀██ ",
+            "  ▀███▀  ",
+            " ▄█▀ ▀█▄ ",
+            "█▀     ▀█",
+        },
     ];
 
     /// <summary>動畫太陽吉祥物（兩幀往返數輪後定格）＋雙欄全寬歡迎框（Claude Code 佈局）。
@@ -155,14 +173,22 @@ internal static class Tui
             string TwoCol(string left, string right) =>
                 $"{BrandRed}│{Reset} {left}{Esc}[{mid}G{BrandRed}│{Reset} {right}";
 
+            int leftW = mid - 3;
+            var art = MascotFrames[0].Select(f =>
+            {
+                int pad = Math.Max(0, (leftW - f.Length) / 2);
+                return new string(' ', pad) + BrandRed + f + Reset;
+            }).ToList();
             var left = new List<string>
             {
                 "",
-                BrandRed + MascotFrames[0][0] + Reset,
-                BrandRed + MascotFrames[0][1] + Reset,
-                BrandRed + MascotFrames[0][2] + Reset,
-                BrandRed + MascotFrames[0][3] + Reset,
-                BrandRed + MascotFrames[0][4] + Reset,
+                art[0],
+                art[1],
+                art[2],
+                art[3],
+                art[4],
+                art[5],
+                art[6],
                 "",
                 Bold + "曦覽終端機" + Reset,
                 Dim + "曦覽 XinSpect Console" + Reset,
@@ -170,16 +196,18 @@ internal static class Tui
             };
             var right = new List<string>
             {
-                SwissRed + Bold + "快速開始" + Reset + Dim + " ・ 整本百科在 book",
+                SwissRed + Bold + "快速開始" + Reset + Dim + " ・ 全部指令見 help 指令書",
                 Bold + "facts" + Reset + Dim + "    採集 " + staticKeys.ToString("N0") + " 靜態鍵＋" + dynamicFamilies + " 動態家族",
                 Bold + "dash" + Reset + Dim + "     全螢幕即時儀表板 (q 離開 · sys 與 top [秒])",
                 Bold + "pages" + Reset + Dim + "    GUI 全頁對照 (page · domain · keys)",
                 Bold + "help" + Reset + Dim + "     指令書：分類功能表＋help <指令> 詳解",
                 Bold + "book" + Reset + Dim + "     曦覽百科全書：15 部 362 節，離線可讀",
                 "",
+                "",
                 Dim + new string('─', mid - 6) + Reset,
                 SwissRed + Bold + "小知識" + Reset,
                 Dim + TruncateTip(tip, width - mid - 6) + Reset,
+                "",
             };
             int rows = Math.Max(left.Count, right.Count);
             for (int i = 0; i < rows; i++)
