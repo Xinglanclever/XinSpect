@@ -9,7 +9,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>xsc</AssemblyName>
+    <AssemblyName>XinSpectConsole</AssemblyName>
     <RootNamespace>XinSpectCli</RootNamespace>
     <!-- 參考的主專案是 WPF WinExe：CLI 這邊也要拉起 WPF 參照，ProjectReference 的型別才解析得到 -->
     <UseWPF>true</UseWPF>
@@ -18,7 +18,7 @@
     <Product>曦覽 XinSpect</Product>
     <Version>3.16</Version>
     <!-- 版號由 Tools/bump-version.py 逐版改；這裡只供顯示，主程式仍以 XinSpect.csproj 為單一來源 -->
-    <!-- AssemblyName xsc：使用者在終端打 xsc 進入互動模式；一次性指令也走 xsc <args> 轉發 CliService -->
+    <!-- AssemblyName XinSpectConsole：全名上傳；互動模式與一次性指令同一支執行檔 -->
     <InvariantGlobalization>true</InvariantGlobalization>
     <!-- 體積（2026-11-04）：xsc 參考主專案（WPF＋全套事實引擎），自含發佈帶整個 .NET 執行階段
          與 WPF，壓縮後仍約 100MB，這是「單檔、免裝 .NET」的代價，屬預期。

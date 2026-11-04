@@ -55,7 +55,7 @@ internal static class Program
         string? line;
         while (true)
         {
-            Tui.Prompt();
+            Tui.InputFrame();
             line = ReadLineWithHistory();
             if (line is null) break;              // Ctrl+Z／EOF
             line = line.Trim();
@@ -631,7 +631,7 @@ internal static class Program
                 {
                     Console.WriteLine();
                     Console.WriteLine($"{Dim}" + string.Join("  ", hits) + Reset);
-                    Tui.Prompt();
+                    Console.Write($"{Tui.BrandRed}{Tui.Bold}>{Tui.Reset} ");
                     Console.Write(buf.ToString());
                 }
                 continue;
@@ -647,7 +647,7 @@ internal static class Program
     private static void Redraw(StringBuilder buf, int pos)
     {
         Console.Write("\r\x1b[K");
-        Console.Write($"{Blue}xs{Reset}{Dim}▸{Reset} " + buf.ToString());
+        Console.Write($"{Tui.BrandRed}{Tui.Bold}>{Tui.Reset} " + buf.ToString());
         if (pos < buf.Length) Console.Write($"\x1b[{buf.Length - pos}D");
     }
 }

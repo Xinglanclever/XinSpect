@@ -70,7 +70,7 @@ internal static class Install
         Console.WriteLine("  要安裝什麼：");
         Console.WriteLine();
         Console.WriteLine("    [1/2/3]  XinSpect.exe 主程式（GUI，含守護進程與驅動）");
-        Console.WriteLine("    [A/B/C]  xsc.exe 曦覽終端機（CLI，單檔、唯讀事實查詢）");
+        Console.WriteLine("    [A/B/C]  XinSpectConsole.exe 曦覽終端機（CLI，單檔、唯讀事實查詢）");
         Console.WriteLine();
         Console.Write("  按 1 / 2 / 3 或 A / B / C（直接按 Enter 用 1）：");
 
@@ -101,7 +101,7 @@ internal static class Install
     {
         string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
         string dir = Path.Combine(desktop, "XinSpect");
-        string dest = Path.Combine(dir, "xsc.exe");
+        string dest = Path.Combine(dir, "XinSpectConsole.exe");
 
         Console.WriteLine("  Source : " + chosen.Name);
         Console.WriteLine("  Target : " + dest);
@@ -126,14 +126,14 @@ internal static class Install
                 return 0;
             }
 
-            Console.WriteLine("  [1/2] Downloading xsc.exe (self-contained: includes .NET 10 runtime, ~100MB)...");
+            Console.WriteLine("  [1/2] Downloading XinSpectConsole.exe (self-contained: includes .NET 10 runtime, ~100MB)...");
             DownloadFile(chosen, "xsc.exe", dest, 1, 2, true);
 
             Console.WriteLine("  [2/2] Deployed to Desktop\\XinSpect folder.");
             Console.WriteLine();
             Console.WriteLine("  ==========================================");
             Console.WriteLine("  Deploy complete.");
-            Console.WriteLine("  - xsc.exe (read-only hardware facts terminal; run xsc in a console)");
+            Console.WriteLine("  - XinSpectConsole.exe (曦覽終端機; read-only hardware facts console)");
             Console.WriteLine("  Location: Desktop\\XinSpect\\");
             Console.WriteLine("  ==========================================");
             Console.WriteLine();
