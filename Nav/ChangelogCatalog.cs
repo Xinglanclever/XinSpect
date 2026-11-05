@@ -48,6 +48,25 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "3.17",
+            Date = "2026-11-05",
+            Title = "終端機定稿：Claude Code 式界面、永不崩 REPL、百科嵌入",
+            Items =
+            [
+                "輸入框改為 Claude Code 式：兩條全寬長線夾住輸入行，狀態行移到輸入欄下方右對齊。",
+                "右下角新增狀態行：● 權限（SYSTEM／administrator／標準，真實偵測目前身分）· ring0 驅動註冊狀態（登錄檔查 WinRing0／XsRegProbe 服務機碼，查無如實標未註冊）。",
+                "歡迎框左欄填補 Welcome back!（英文問候）與 Ready when you are.，英文行縮短不再被中欄截斷。",
+                "大字 XINSPECT 改 ANSI Shadow 圓角雙線體（字距隨框寬自適應），右下標註 by: xinglanclever。",
+                "REPL 永不崩：主迴圈與輸入按鍵迴圈全部 try/catch，任何控制台 IO／句柄例外攔下顯示後繼續——使用者絕不被踢回 cmd 提示符。",
+                "即時 resize 重繪：拖動視窗邊緣，整個界面跟著新寬度重排（會清掉捲動歷史，Claude Code 同款取捨）。",
+                "框線系統性重構：BoxTop／BoxBot／BoxRow／BoxTwoCol 通用 helpers，角與右框線一律 CHA 絕對定位——全形字寬度計算誤差從源頭根除。",
+                "新增 book 指令：整本百科（15 部 362 節）離線嵌入，目錄→部→節→全文＋關鍵字搜節；help 升級分類指令書＋help <指令> 單頁詳解。",
+                "採集 spinner：破曉序列 ∙∘○◎☼＋14 個繁中採集動詞、掃描進度條＋計時＋真實 CPU 負載示波器線。",
+                "更名 XinSpectConsole.exe（全名上傳）。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "3.16",
             Date = "2026-11-04",
             Title = "強控台指令控制台＋rf.* 帶外事實域＋主題記憶修正",

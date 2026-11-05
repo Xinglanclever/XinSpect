@@ -11,13 +11,13 @@
 
 # 曦覽 XinSpect 百科
 
-**一款免費開源、在 Windows 上執行的原生硬體驗機、監控與安全稽核工具。單一執行檔、免安裝、唯讀為原則、不收集不上傳任何使用者資料。**
+**一款免費開源、在 Windows 上執行的電腦工具箱，帶有 ring0 切核等底層功能：可直接讀寫硬體暫存器（MSR、PCI 設定空間、SMBus 等）。單一執行檔、免安裝，讀取一律唯讀、寫入全部經同意閘門，不收集不上傳任何使用者資料。**
 
 這份文件不是一般專案的 README。它是一本**百科全書**：把這個程式裡**每一頁、每一格、每一個數字、每一把事實鍵**逐一拆開，寫清楚它是什麼、從哪一條路徑讀來、憑什麼算數、誤差與偏移從哪裡來、以及它**不能**被拿去回答什麼問題。
 
-舊版的 README（2.91 之前的「硬核版說明」，約 16 萬字）不是被翻譯，也不是被搬過來——它的每一章都被重寫、擴充、重排；如果你要找舊版原文，它已原樣保存在 [手冊.md](手冊.md)。這一版針對的是 **v3.16** 的這棵樹，所有數字都在這棵樹上複算得出來，數法寫在每一處。
+舊版的 README（2.91 之前的「硬核版說明」，約 16 萬字）不是被翻譯，也不是被搬過來——它的每一章都被重寫、擴充、重排；如果你要找舊版原文，它已原樣保存在 [手冊.md](手冊.md)。這一版針對的是 **v3.17** 的這棵樹，所有數字都在這棵樹上複算得出來，數法寫在每一處。
 
-![版本](https://img.shields.io/badge/version-3.16-4C8DFF)
+![版本](https://img.shields.io/badge/version-3.17-4C8DFF)
 
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
@@ -60,17 +60,20 @@
 
 | 檔案 | 大小 | 說明 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.16/XinSpect.exe) | 37,815,083 bytes | 主程式。藍色中隊守護進程已內建；「強控台」按鈕橋接 xsc 終端機 |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.16/XinSpectConsole.exe) | 99,798,338 bytes | 曦覽終端機（CLI）。可獨立執行，也被主程式強控台喚起；自含 .NET 10 執行階段故體積較大（見下方說明） |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.16/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。要脫離主程式單獨跑防護時使用 |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.16/XinSpectDeploy.exe) | 16,896 bytes | 一鍵安裝器。1/2/3 裝主程式（GitHub／Drive／中國直連）、A/B/C 裝 xsc 終端機（同一批線路）；下載時顯示進度條、速度與剩餘時間 |
-| [SHA256SUMS.txt](https://github.com/Xinglanclever/XinSpect/releases/download/v3.16/SHA256SUMS.txt) | 以 Release 頁面為準 | 逐檔雜湊，發佈後由 `Tools/verify-release.ps1` 對帳 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpect.exe) | 37,815,083 bytes | 主程式。藍色中隊守護進程已內建；「強控台」按鈕橋接 xsc 終端機 |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpectConsole.exe) | 100,307,180 bytes | 曦覽終端機（CLI）。可獨立執行，也被主程式強控台喚起；自含 .NET 10 執行階段故體積較大（見下方說明） |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。要脫離主程式單獨跑防護時使用 |
+| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpect-full.exe) | 198,395,196 bytes | 主程式・帶環境版：.NET 10 Desktop Runtime 一併打包，免裝執行階段（功能與 XinSpect.exe 相同） |
+| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpectConsole-nort.exe) | 65,840,280 bytes | 曦覽終端機・Windows 11／Server 2025・不帶環境：需已裝 .NET 10 Desktop Runtime |
+| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpectConsole-legacy-nort.exe) | 65,840,322 bytes | 曦覽終端機・Windows 10／2016/2019/2022・不帶環境：純文字界面，需已裝 .NET 10 Desktop Runtime |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpectDeploy.exe) | 22,528 bytes | 一鍵安裝器。第一層選裝什麼：A 裝主程式（GUI）、B 裝曦覽終端機；第二層 1/2/3 選下載來源（GitHub／Drive／加速節點）；下載時顯示進度條、速度與剩餘時間 |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpectConsole-legacy.exe) | 100,307,222 bytes | 曦覽終端機（CLI）**純文字相容版**：給 Windows 10／Windows Server 2016、2019、2022 的傳統主控台——無色彩、無框線定位，其餘功能（facts／book／help）相同 |
 
 > **XinSpectConsole.exe 為什麼這麼大？** 曦覽終端機參考了主專案的全部事實引擎，self-contained 單檔發佈把整個 .NET 10 執行階段＋WPF 一併打包（壓縮後約 100MB）——這是「單檔、免裝 .NET、到處能跑」的代價，屬預期而非異常。若你已裝 .NET 10 Desktop Runtime，可以用 framework-dependent 方式自行編譯得到約 60MB 的版本（見 `XinSpectCli/XinSpectCli.csproj` 內的註解）。
 
-> **上表的位元組數為本版（v3.16）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v3.17）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
-安裝器（`XinSpectDeploy.exe`）會列出三個來源：**1** 是 GitHub 最新版（全自動部署主程式＋守護進程；守護進程自 3.13 起預設不啟用，要自己到安全頁開）、**2** 是 Google Drive 鏡像（分享資料夾，它會開瀏覽器並告訴你要按哪裡）、**3** 是中國直連線路——目錄型端點，安裝器自己抓檔，跟按 1 一樣有進度條、速度與剩餘時間。判斷哪一格用哪種模式，看的是端點本身：只有真的能用 GET 取回目錄下檔案的線路才寫成直連，分享頁一律只開瀏覽器，不會把分享頁存成一個假的 exe。鏡像連結集中在 `Installer/mirrors.txt`，安裝器啟動時會抓一份最新的（3 秒逾時，拿不到就用內建的）；某一格還沒有連結時，選單上會寫「尚未提供」，按下去會先說明再改用 GitHub。下載完成後一律檢查 PE 標頭，抓到 HTML（分享頁、限流頁、Google 的病毒掃描確認頁）會被擋下、刪檔並說出內容像什麼。
+安裝器（`XinSpectDeploy.exe`）第一層先選裝什麼：**A** 是 XinSpect.exe 主程式（全自動部署主程式＋守護進程；守護進程自 3.13 起預設不啟用，要自己到安全頁開）、**B** 是曦覽終端機（單檔下載一步到位）；版本都分兩維：**帶環境**（self-contained，免裝 .NET）與**不帶環境**（framework-dependent，機器要已裝 .NET 10 Desktop Runtime）。選 **A** 時問一次：**1** 不帶環境（XinSpect.exe，約 36MB）、**2** 帶環境（XinSpect-full.exe，約 189MB）；選 **B** 時問四版：**1** Windows 11／Server 2025 帶環境（XinSpectConsole.exe，約 100MB）、**2** Windows 10／2016/2019/2022 帶環境（XinSpectConsole-legacy.exe，純文字界面）、**3** Windows 11／Server 2025 不帶環境（XinSpectConsole-nort.exe，約 63MB）、**4** Windows 10／2016/2019/2022 不帶環境（XinSpectConsole-legacy-nort.exe）；接著再選來源：**1** 是 GitHub 最新版、**2** 是 Google Drive 鏡像（分享資料夾，它會開瀏覽器並告訴你要按哪裡）、**3** 是中國加速線路——對 GitHub 加前綴的公開加速節點，安裝器自己抓檔，跟按 1 一樣有進度條、速度與剩餘時間。直連下載有一條備援鏈：latest 網址 → 現場偵測到的版號（不寫死，過期不會安靜裝到舊版）→ Drive 確認直連 → 加速節點前綴，每條試兩次，換線時會說出改去哪裡。判斷哪一格用哪種模式，看的是端點本身：只有真的能用 GET 取回目錄下檔案的線路才寫成直連，分享頁一律只開瀏覽器，不會把分享頁存成一個假的 exe。鏡像連結集中在 `Installer/mirrors.txt`，安裝器啟動時會從 jsDelivr／加速節點／GitHub 三條線抓一份最新的（拿不到就用內建的）；某一格還沒有連結時，選單上會寫「尚未提供」，按下去會先說明再改用 GitHub。下載完成後一律檢查 PE 標頭與大小門檻，抓到 HTML（分享頁、限流頁、Google 的病毒掃描確認頁）會被擋下、刪檔並說出內容像什麼。注意：走第三方加速節點的位元組只能驗 PE 標頭，驗不了發佈者簽章。
 
 需求：Windows 10 1903 以上／Windows 11、x64、.NET 10 Desktop Runtime（單檔版不含執行階段，需另裝）。想以管理員權限取得感測器、MSR 直讀與超頻頁面，請「以系統管理員身分執行」——不提權不是壞掉，只是那些頁面會整片顯示「—」（原因見第 0 部的六態）。
 
@@ -652,7 +655,7 @@
 
 ### 1.1 曦覽是什麼
 
-曦覽是一款 Windows 上的原生硬體驗機、監控與安全稽核工具。它的核心動作只有五個動詞：**讀、列、比、記、說**。
+曦覽是一款 Windows 上的電腦工具箱，帶有 ring0 切核等底層功能——可透過核心驅動直接存取硬體暫存器（MSR、PCI 設定空間、SMBus、ACPI 表等）。它的核心動作有五個動詞：**讀、列、比、記、說**。
 
 - **讀**：從硬體與作業系統讀出事實（暫存器、表格、WMI、驅動、事件、感測器）。
 - **列**：把事實列成可查的表（事實總表以編譯期目錄為分母，不因這次沒讀到就不列）。
@@ -8838,11 +8841,11 @@ XinSpect --fleet --snapshots D:\snapshots                      # 本機同型號
 
 這一部把 `Nav/ChangelogCatalog.cs` 的每一筆版本紀錄完整攤開——**這是程式「關於」頁顯示的同一份資料**，也是本專案唯一對「每一版做了什麼」的正式紀錄。寫作規則是：**只寫真的做了的事**；進入版本控制（2026-08-27、v1.2.0）之前的最早階段沒有留下逐項紀錄，就只寫到階段層級並標明日期未留下紀錄，**不為了排面好看補一份想像出來的清單**。
 
-**登記筆數**：122 筆（版號與階段名，新到舊）。
+**登記筆數**：123 筆（版號與階段名，新到舊）。
 
 ### 11.1 這份沿革的四個讀法
 
-**第一，看節奏。** 這份紀錄最新的一筆是 v3.16（2026-11-04），而 v1.2.0 是進入版本控制的起點（2026-08-27）——**兩個月內走了近百個版本**。這代表這個專案的迭代單位很小（一次一個收口、一把鍵、一條守門），而不是「大版本才動一次」。
+**第一，看節奏。** 這份紀錄最新的一筆是 v3.17（2026-11-05），而 v1.2.0 是進入版本控制的起點（2026-08-27）——**兩個月內走了近百個版本**。這代表這個專案的迭代單位很小（一次一個收口、一把鍵、一條守門），而不是「大版本才動一次」。
 
 **第二，看標題的動詞。** 絕大多數標題不是「新增功能」而是「收口」「補上生產端」「接真值」「加守門」——**這棵樹近期的多數工作是把已存在的東西接起來並守住**，而不是往外擴張功能面。
 
@@ -8852,6 +8855,7 @@ XinSpect --fleet --snapshots D:\snapshots                      # 本機同型號
 
 ### 11.2 逐版紀錄（新到舊）
 
+- **v3.17**（2026-11-05）：終端機定稿：Claude Code 式界面、永不崩 REPL、百科嵌入（本版 10 項）
 - **v3.16**（2026-11-04）：強控台指令控制台＋rf.* 帶外事實域＋主題記憶修正（本版 7 項）
 - **v3.15**（2026-11-03）：主題記憶修正＋離線 Redfish 目錄＋迷你 HUD 重新喚醒（本版 8 項）
 - **v3.14**（2026-11-03）：企業證據出口：合規、Merkle、推測、CI／SIEM 與族群基線（本版 10 項）
@@ -8978,6 +8982,21 @@ XinSpect --fleet --snapshots D:\snapshots                      # 本機同型號
 ### 11.3 逐版逐項
 
 以下是每一筆紀錄的翻開內容。**沒有項目的版本（早期階段）只看得到階段層級的描述，這是刻意的留白。**
+
+#### v3.17（2026-11-05）
+
+**終端機定稿：Claude Code 式界面、永不崩 REPL、百科嵌入**
+
+- 輸入框改為 Claude Code 式：兩條全寬長線夾住輸入行，狀態行移到輸入欄下方右對齊。
+- 右下角新增狀態行：● 權限（SYSTEM／administrator／標準，真實偵測目前身分）· ring0 驅動註冊狀態（登錄檔查 WinRing0／XsRegProbe 服務機碼，查無如實標未註冊）。
+- 歡迎框左欄填補 Welcome back!（英文問候）與 Ready when you are.，英文行縮短不再被中欄截斷。
+- 大字 XINSPECT 改 ANSI Shadow 圓角雙線體（字距隨框寬自適應），右下標註 by: xinglanclever。
+- REPL 永不崩：主迴圈與輸入按鍵迴圈全部 try/catch，任何控制台 IO／句柄例外攔下顯示後繼續——使用者絕不被踢回 cmd 提示符。
+- 即時 resize 重繪：拖動視窗邊緣，整個界面跟著新寬度重排（會清掉捲動歷史，Claude Code 同款取捨）。
+- 框線系統性重構：BoxTop／BoxBot／BoxRow／BoxTwoCol 通用 helpers，角與右框線一律 CHA 絕對定位——全形字寬度計算誤差從源頭根除。
+- 新增 book 指令：整本百科（15 部 362 節）離線嵌入，目錄→部→節→全文＋關鍵字搜節；help 升級分類指令書＋help <指令> 單頁詳解。
+- 採集 spinner：破曉序列 ∙∘○◎☼＋14 個繁中採集動詞、掃描進度條＋計時＋真實 CPU 負載示波器線。
+- 更名 XinSpectConsole.exe（全名上傳）。
 
 #### v3.16（2026-11-04）
 
@@ -13039,7 +13058,7 @@ A：授權是 AGPL-3.0-or-later，不是「免費」而是一種特定的自由�
 
 **版本與發佈（1–6）**
 
-1. 本版是 v3.16 —— 看徽章、`XinSpect.csproj` 的 `<Version>`、關於頁三處一致。不一致＝有一處落後（四處同步是硬規則）。
+1. 本版是 v3.17 —— 看徽章、`XinSpect.csproj` 的 `<Version>`、關於頁三處一致。不一致＝有一處落後（四處同步是硬規則）。
 2. 測試 7,884 綠 —— 跑守門五組不依賴硬體；全套請在真機跑。紅燈先分辨是真機依賴還是回歸。
 3. 下載表列的位元組數取自本版真正釋出的那顆 `XinSpect.exe` —— 抓下來自己數 bytes。不符請先確認是不是抓到別的版號的檔案。
 4. 主程式未簽章 —— 內容右鍵「數位簽章」分頁應為空。這正是 O-03。
