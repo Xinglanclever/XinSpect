@@ -108,9 +108,9 @@ public sealed class InstallerMirrorsTests
     public void 選單編號固定是三格且第一格是GitHub()
     {
         string src = Source;
-        int one = src.IndexOf("Key = \"1\"", StringComparison.Ordinal);
-        int two = src.IndexOf("Key = \"2\"", StringComparison.Ordinal);
-        int three = src.IndexOf("Key = \"3\"", StringComparison.Ordinal);
+        int one = src.IndexOf("new Mirror(\"1\"", StringComparison.Ordinal);
+        int two = src.IndexOf("new Mirror(\"2\"", StringComparison.Ordinal);
+        int three = src.IndexOf("new Mirror(\"3\"", StringComparison.Ordinal);
 
         Assert.True(one > 0, "找不到編號 1：使用者按 1 要能下載");
         Assert.True(two > one, "編號 2 必須在 1 之後（選單順序就是按鍵順序）");
@@ -118,7 +118,7 @@ public sealed class InstallerMirrorsTests
 
         string first = src.Substring(one, two - one);
         Assert.Contains("GitHub", first);
-        Assert.Contains("Direct = true", first);
+        Assert.Contains("direct: true", first);
         // 1 號永遠指向 latest/download：不能寫死版本，否則舊安裝器會停在舊版。
         Assert.Contains("GitHubBase", first);
         Assert.Contains("releases/latest/download/", src);
@@ -129,8 +129,8 @@ public sealed class InstallerMirrorsTests
     public void 第二格是GoogleDrive且走檔案的直連端點()
     {
         string src = Source;
-        int two = src.IndexOf("Key = \"2\"", StringComparison.Ordinal);
-        int three = src.IndexOf("Key = \"3\"", StringComparison.Ordinal);
+        int two = src.IndexOf("new Mirror(\"2\"", StringComparison.Ordinal);
+        int three = src.IndexOf("new Mirror(\"3\"", StringComparison.Ordinal);
         string block = src.Substring(two, three - two);
 
         Assert.Contains("Google Drive", block);
@@ -149,19 +149,19 @@ public sealed class InstallerMirrorsTests
     }
 
     [Fact]
-    public void 第三格是中國直連線路且必須是目錄型端點()
+    public void 第三格是中國加速線路且必須是direct()
     {
         string src = Source;
-        int three = src.IndexOf("Key = \"3\"", StringComparison.Ordinal);
+        int three = src.IndexOf("new Mirror(\"3\"", StringComparison.Ordinal);
         int after = src.IndexOf("string text = FetchMirrorList()", StringComparison.Ordinal);
         Assert.True(after > three);
 
         string block = src.Substring(three, after - three);
-        Assert.Contains("直連線路", block);
+        Assert.Contains("加速線路", block);
         // 這一格的身份是「能用 GET 取回目錄下檔案的線路」，所以一定是 direct：
         // 寫成 page 就等於把一個 CDN 降級成要使用者自己按的下載頁，白費了直連。
-        Assert.Contains("Direct = true", block);
-        Assert.DoesNotContain("Direct = false", block);
+        Assert.Contains("direct: true", block);
+        Assert.DoesNotContain("direct: false", block);
 
         // mirrors.txt 裡真的填了 3 的時候也必須是 direct——分享頁不屬於這一格。
         var line = MirrorList.Split('\n')
@@ -199,10 +199,10 @@ public sealed class InstallerMirrorsTests
     public void 下載回來的東西不是程式就要擋下來並刪掉()
     {
         string src = Source;
-        Assert.Contains("LooksLikeProgram", src);
+        Assert.Contains("LooksLikeDownload", src);
         Assert.Contains("MZ", src);
         // 只報錯不刪檔＝使用者資料夾裡留著一個假 exe，下次還是會雙擊它。
-        Assert.Contains("File.Delete(dest)", src);
+        Assert.Contains("TryDelete(dest)", src);
         Assert.Contains("不是 Windows 程式", src);
         // 也要把「內容像是什麼」寫出來，不然「失敗」兩個字沒辦法分辨是限流頁還是分享頁。
         Assert.Contains("FirstLine(", src);
@@ -295,8 +295,8 @@ public sealed class InstallerMirrorsTests
 
         // ③：真正的程式碼不能一起被削掉
         Assert.Contains("private sealed class ProgressBar", code);
-        Assert.Contains("req.UserAgent = \"XinSpectDeploy\"", code);
-        Assert.Contains("LooksLikeProgram", code);
+        Assert.Contains("XinSpectDeploy/3.17", code);
+        Assert.Contains("LooksLikeDownload", code);
 
         // 逐字字串（@@""）與跳脫字串都不能把狀態機帶歪
         Assert.Contains("\"\\r\"", code);
@@ -311,13 +311,13 @@ public sealed class InstallerMirrorsTests
         Assert.True(File.Exists(exe), "Installer/XinSpectDeploy.exe 不見了");
 
         byte[] bytes = File.ReadAllBytes(exe);
-        Assert.True(bytes.Length < 20 * 1024,
-            $"安裝器 {bytes.Length} bytes：超過 20 KB 就是有人把執行階段塞進來了");
+        Assert.True(bytes.Length < 26 * 1024,
+            $"安裝器 {bytes.Length} bytes：超過 26 KB 就是有人把執行階段塞進來了");
 
         Assert.True(Contains(bytes, Encoding.Unicode.GetBytes("選擇下載來源")),
             "exe 裡找不到新版選單的字串——Install.cs 改了但沒有重跑 Tools\\build-installer.ps1");
-        Assert.True(Contains(bytes, Encoding.Unicode.GetBytes("中國直連線路")),
-            "exe 裡沒有第 3 格（中國直連線路）——Install.cs 改了但沒有重跑 Tools\\build-installer.ps1");
+        Assert.True(Contains(bytes, Encoding.Unicode.GetBytes("中國加速線路")),
+            "exe 裡沒有第 3 格（中國加速線路）——Install.cs 改了但沒有重跑 Tools\\build-installer.ps1");
         // 進度列是這一版才有的字串：少了它代表上傳的還是舊 exe。
         Assert.True(Contains(bytes, Encoding.Unicode.GetBytes("MB/s")),
             "exe 裡沒有下載速度的字串——Install.cs 改了但沒有重跑 Tools\\build-installer.ps1");

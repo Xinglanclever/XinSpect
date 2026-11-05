@@ -40,13 +40,14 @@ try {
     $bytes = (Get-Item $out).Length
     Write-Host "BUILD-OK: $out = $bytes bytes"
     # 安裝器是產品的一部分，所以也要能被驗：這裡只做最小檢查——
-    # 必須是 PE、必須含 .NET 中繼資料、必須在 20 KB 以内（超過就是有人把 runtime 塞進來了）。
+    # 必須是 PE、必須含 .NET 中繼資料、必須在 26 KB 以内（超過就是有人把 runtime 塞進來了；
+    # 下載備援鏈進來之後體積落在 22 KB 上下，上限從 20 KB 放寬到 26 KB）。
     $head = [IO.File]::ReadAllBytes($out)
     if ($head[0] -ne 0x4D -or $head[1] -ne 0x5A) { Write-Host 'BUILD-FAIL: 不是 PE 檔' -ForegroundColor Red; exit 1 }
     $text = [Text.Encoding]::ASCII.GetString($head)
     if ($text -notmatch '_CorDllMain|mscorwks|mscorlib') { Write-Host 'BUILD-FAIL: 看不到 .NET 中繼資料' -ForegroundColor Red; exit 1 }
-    if ($bytes -gt 20000) { Write-Host "BUILD-FAIL: $bytes bytes 超過 20 KB——安裝不該帶 runtime" -ForegroundColor Red; exit 1 }
-    Write-Host 'BUILD-OK: 形態檢查通過（PE + .NET + <20 KB）'
+    if ($bytes -gt 26000) { Write-Host "BUILD-FAIL: $bytes bytes 超過 26 KB——安裝不該帶 runtime" -ForegroundColor Red; exit 1 }
+    Write-Host 'BUILD-OK: 形態檢查通過（PE + .NET + <26 KB）'
 
     # 進度列的驗證：載入剛編好的那支 exe（不是原始碼），用反射餵它假的位元組數，
     # 再起一個本機 HTTP 伺服器真的下載三遍——完整、只回一半就斷線、沒有 Content-Length。
