@@ -16,7 +16,7 @@
     <StartupObject>XinSpectCli.Program</StartupObject>
     <AssemblyTitle>XinSpect Console（曦覽終端機）</AssemblyTitle>
     <Product>曦覽 XinSpect</Product>
-    <Version>3.16</Version>
+    <Version>3.17</Version>
     <!-- 版號由 Tools/bump-version.py 逐版改；這裡只供顯示，主程式仍以 XinSpect.csproj 為單一來源 -->
     <!-- AssemblyName XinSpectConsole：全名上傳；互動模式與一次性指令同一支執行檔 -->
     <InvariantGlobalization>true</InvariantGlobalization>
@@ -36,6 +36,13 @@
   <!-- 百科全書（README.md，約 1.5MB）整本嵌入：book 指令離線可讀，不需要外部檔案 -->
   <ItemGroup>
     <EmbeddedResource Include="..\README.md" Link="docs\README.md" />
+  </ItemGroup>
+
+
+  <!-- 安全姿態 13 把鍵的讀取器：主專案排除 BlueSquadron\**（守護進程專案目錄），
+       這支以原始碼編進終端機——posture 指令直讀 WMI，不經 daemon。 -->
+  <ItemGroup>
+    <Compile Include="..\BlueSquadron\WmiSecurityReader.cs" Link="BridgeSource\WmiSecurityReader.cs" />
   </ItemGroup>
 
 </Project>

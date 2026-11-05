@@ -4,6 +4,13 @@
 [Oo]bj/
 publish/
 publish-*/
+bin-dev/
+bin-dev2/
+bin-dev2l/
+bin-nort/
+bin-legacy-nort/
+bin-reltest/
+bin-alt/
 Bridge/[Bb]in/
 Bridge/[Bb]in2/
 Bridge/[Oo]bj/

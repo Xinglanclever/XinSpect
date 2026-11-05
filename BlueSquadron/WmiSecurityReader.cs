@@ -1,3 +1,4 @@
+using System.IO;
 using System.Management;
 using Microsoft.Win32;
 
@@ -7,7 +8,7 @@ namespace BlueSquadron;
 /// 以 WMI + 登錄檔蒐集安全事實——全部唯讀。
 /// 回傳扁平的 <see cref="SecurityFacts"/> 結構供 Bridge 回報給 XinSpect 評分引擎。
 /// </summary>
-internal sealed class WmiSecurityReader
+public sealed class WmiSecurityReader
 {
     public SecurityFacts ReadAll()
     {
@@ -160,7 +161,7 @@ internal sealed class WmiSecurityReader
 }
 
 /// <summary>由 Bridge 蒐集的扁平安全事實。</summary>
-internal sealed class SecurityFacts
+public sealed class SecurityFacts
 {
     // DMA / Memory
     public bool? HvciRunning { get; set; }

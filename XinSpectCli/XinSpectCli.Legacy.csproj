@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    曦覽終端機「純文字相容版」：XinSpectConsole-legacy.exe
+    給 Windows 10／Windows Server 2016、2019、2022 的傳統主控台（conhost 預設不開 VT，
+    部分環境連 VT 都開不起來）：無色彩、無框線、無 CHA 定位、ASCII spinner。
+
+    為什麼是獨立 csproj 而不是 -p:AssemblyName 覆寫：WPF 的 markup compiler 會生一份
+    暫存專案，命令列覆寫 AssemblyName 時兩份同名專案會撞「Ambiguous project name」。
+    這裡把 DefineConstants=XINSPECT_LEGACY 烘焙進專案，Tui.cs／Program.cs 的
+    Legacy 分支只在這一顆裡生效；兩顆 exe 由同一批 .cs 編出，邏輯單一來源。
+    發佈指令（self-contained 單檔，跟主版同規格）：
+      dotnet publish XinSpectCli/XinSpectCli.Legacy.csproj -c Release \
+        -p:PublishSingleFile=true -p:SelfContained=true -o <dir>
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>XinSpectConsole-legacy</AssemblyName>
+    <RootNamespace>XinSpectCli</RootNamespace>
+    <UseWPF>true</UseWPF>
+    <StartupObject>XinSpectCli.Program</StartupObject>
+    <AssemblyTitle>XinSpect Console（曦覽終端機・純文字相容版）</AssemblyTitle>
+    <Product>曦覽 XinSpect</Product>
+    <Version>3.17</Version>
+    <DefineConstants>XINSPECT_LEGACY</DefineConstants>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\XinSpect.csproj" />
+  </ItemGroup>
+
+  <!-- 百科全書（README.md，約 1.5MB）整本嵌入：book 指令離線可讀，與主版同規格 -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\README.md" Link="docs\README.md" />
+  </ItemGroup>
+
+
+  <!-- 安全姿態 13 把鍵的讀取器：主專案排除 BlueSquadron\**（守護進程專案目錄），
+       這支以原始碼編進終端機——posture 指令直讀 WMI，不經 daemon。 -->
+  <ItemGroup>
+    <Compile Include="..\BlueSquadron\WmiSecurityReader.cs" Link="BridgeSource\WmiSecurityReader.cs" />
+  </ItemGroup>
+
+</Project>

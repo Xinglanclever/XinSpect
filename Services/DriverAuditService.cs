@@ -61,7 +61,8 @@ public sealed class DriverAuditService : ObservableObject
         _ = RefreshAsync();
     }
 
-    private async Task RefreshAsync()
+    /// <summary>載入本體（可等待）：GUI 走 fire-and-forget 的 Refresh()，批次端（CLI）直接 await 這一支。</summary>
+    public async Task RefreshAsync()
     {
         IsLoading = true;
         Status = "查詢驅動存放區中…（第一次查詢 WMI 可能要幾秒）";

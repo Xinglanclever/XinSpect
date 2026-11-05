@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using BlueSquadron;
 using XinSpect;
 
 namespace XinSpectCli;
@@ -20,12 +21,13 @@ namespace XinSpectCli;
 internal static class Program
 {
     // ── ANSI ──────────────────────────────────────────────────────────────
-    private const string Dim = "\x1b[90m";
-    private const string Red = "\x1b[91m";
-    private const string Green = "\x1b[92m";
-    private const string Blue = "\x1b[94m";
-    private const string Bold = "\x1b[1m";
-    private const string Reset = "\x1b[0m";
+    // 顏色跟著 Tui 走：legacy 純文字版全部為空字串，呼叫端寫法不變
+    private static string Dim => Tui.Dim;
+    private static string Red => Tui.SwissRed;
+    private static string Green => Tui.SwissGreen;
+    private static string Blue => Tui.SwissBlue;
+    private static string Bold => Tui.Bold;
+    private static string Reset => Tui.Reset;
 
     private static readonly string[] Commands =
     [
@@ -36,16 +38,40 @@ internal static class Program
 
     private static readonly List<string> History = [];
     private static IReadOnlyList<HardwareFact>? _cache;
+    private static int _frameWidth = 100;   // 輸入框兩條長線的固定寬度（啟動時定，resize 才更新）
 
     private static int Main(string[] args)
     {
         Console.OutputEncoding = Encoding.UTF8;
+        Tui.EnableAnsi();   // Win10 傳統 conhost 預設不開 VT，不開的話整個界面印成原始 ESC 序列
         try { Console.CursorVisible = true; } catch { /* 重導輸出時沒有游標可管 */ }
 
         if (args.Length > 0)
         {
             // xsc compliance --format sarif …：直接轉發既有 CLI 通路後退出
             return CliService.Run(args, Collect, Console.Out, Console.Error);
+        }
+
+        // 重導輸入（管線／批次檔）：ReadKey 在這裡會丟例外，被主迴圈的防護吞掉後回空字串＝無限空轉。
+        // 這條路改用 Console.ReadLine，EOF（null）正常收工；跳過歡迎框——管線輸出要乾淨。
+        if (Console.IsInputRedirected)
+        {
+            while (true)
+            {
+                try
+                {
+                    string? piped = Console.ReadLine();
+                    if (piped is null) break;              // EOF
+                    piped = piped.Trim();
+                    if (piped.Length == 0) continue;
+                    if (!Execute(piped)) break;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"{Red}內部錯誤（已攔下，繼續讀下一行）：{ex.GetType().Name} {ex.Message}{Reset}");
+                }
+            }
+            return 0;
         }
 
         try
@@ -58,19 +84,19 @@ internal static class Program
         {
             Console.WriteLine($"{Red}歡迎框渲染失敗（不影響指令）：{ex.Message}{Reset}");
         }
+        _frameWidth = Tui.CurrentWidth();   // 長直線的固定寬度：啟動時定一次，只有 resize 重繪才更新
         try { _lastWidth = Console.WindowWidth; } catch { }
         Tui.Footer("● READY ・ 唯讀模式", "曦覽 XinSpect Console v" + AppInfo.ShortVersion);
         var startupStatus = StatusLine();
-        int sw;
-        try { sw = Math.Max(60, Console.WindowWidth - 1); } catch { sw = 100; }
-        int scol = Math.Max(1, sw - Tui.VisibleLength(startupStatus) - 1);
-        Console.Write(Tui.Esc + "[" + scol + "G" + Tui.Dim + startupStatus + Tui.Reset + Environment.NewLine);
+        int scol = Math.Max(1, _frameWidth - Tui.VisibleLength(startupStatus) - 1);
+        if (Tui.Legacy) Console.WriteLine(Tui.Dim + startupStatus + Tui.Reset);
+        else Console.Write(Tui.Esc + "[" + scol + "G" + Tui.Dim + startupStatus + Tui.Reset + Environment.NewLine);
         string? line;
         while (true)
         {
             try
             {
-                Tui.InputFrame();
+                Tui.InputFrame(_frameWidth);
                 line = ReadLineWithHistory();
                 if (line is null) break;              // Ctrl+Z／EOF
                 line = line.Trim();
@@ -119,7 +145,10 @@ internal static class Program
                 case "keys": ListKeys(rest); return true;
                 case "settings": ShowSettings(); return true;
                 case "changelog": ShowChangelog(rest); return true;
-                case "clear": Console.Write("\x1b[2J\x1b[H"); return true;
+                case "clear":
+                    if (Tui.Legacy) { try { Console.Clear(); } catch { } }
+                    else Console.Write("\x1b[2J\x1b[H");
+                    return true;
                 case "exit" or "quit" or "q": return false;
 
                 case "facts":
@@ -133,7 +162,31 @@ internal static class Program
                     SearchFacts(rest);
                     return true;
 
+                case "health": HealthSummary(); return true;
+                case "battery": DomainReport("電池健康", ["pw.battery"],
+                    "電池資料來自 root\\WMI BatteryStaticData／BatteryFullChargedCapacity／BatteryCycleCount；沒有電池的機器會如實標 NotApplicable。"); return true;
+                case "storage": DomainReport("儲存總表", ["st", "ata"],
+                    "SMART 原始屬性只有 ata.smart.attr.lookup（ATA 碟；NVMe 一律不讀——第 263 輪實證會卡核心不可中斷等待，理由在百科第 11 部）。"); return true;
+                case "net": DomainReport("網路", ["net", "nw"],
+                    "net.* ＝ 傾聽埠／offload/WMI 缺口；nw.* ＝ 藍牙／DNS／Wi-Fi／WoL／USB 等週邊摘要。"); return true;
+                case "security": DomainReport("安全姿態", ["sec"],
+                    "sec.* ＝ VBS／Credential Guard 等安全事實。即時防護分數走 ipc posture（藍色中隊引擎）。"); return true;
+                case "bsod": BsodScan(); return true;
+                case "posture": PostureReport(); return true;
+                case "firmware": DomainReport("韌體安全", ["fw", "uefi", "spi", "tpm"],
+                    "fw.* ＝ BIOS 寫入保護／SMRAM／ME；uefi.* ＝ 開機鏈；spi.* ＝ BIOS 映像；tpm.* ＝ 平台信任根。裁決卡在 GUI 韌體安全頁。"); return true;
+                case "os": DomainReport("作業系統", ["os"],
+                    "os.* ＝ 版本、授權、更新與安全態勢（Secure Boot／VBS／HVCI／UAC）。"); return true;
+                case "power": DomainReport("電源與睡眠", ["pw"],
+                    "pw.* ＝ 電池（battery 指令看細節）、睡眠能力、喚醒來源、電源計劃漂移。"); return true;
+                case "catalog": CatalogQuery(rest); return true;
+                case "history": HistoryReport(); return true;
+                case "usb": UsbReport(); return true;
+                case "pcie": PcieReport(); return true;
+                case "drivers": DriverReport(); return true;
+
                 case "sys": LiveLine(); return true;
+                case "fan": Fans(); return true;
                 case "dash": Dashboard(); return true;
 
                 case "top": LiveTop(rest); return true;
@@ -356,6 +409,246 @@ internal static class Program
         Push(_cpuHist, r.CpuT); Push(_gpuHist, r.GpuT); Push(_memHist, r.MemL);
     }
 
+    /// <summary>域總表：把快取裡屬於指定前綴的事實攤成一張表——GUI 某頁的資料在終端機的對照視圖。</summary>
+    private static void DomainReport(string title, string[] prefixes, string? note = null)
+    {
+        EnsureFacts();
+        var rows = _cache!.Where(f => prefixes.Any(p => f.Key == p || f.Key.StartsWith(p + ".", StringComparison.Ordinal)))
+            .OrderBy(f => f.Key, StringComparer.Ordinal).ToList();
+        Tui.Section(title, string.Join("・", prefixes) + ".* ・ fact <關鍵字> 看單鍵全文");
+        if (rows.Count == 0)
+        {
+            Console.WriteLine($"{Dim}快取裡沒有這個域的事實——先 facts 採一輪；沒有也可能是真的沒有（如桌上型沒有電池）。{Reset}");
+            return;
+        }
+        Tui.Table(["事實鍵", "值", "狀態"],
+            rows.Select(f => new[]
+            {
+                Trim(f.Key, 34),
+                f.Availability == FactAvailability.Present ? Trim(f.Value + (f.Unit.Length > 0 ? " " + f.Unit : ""), 44) : "——",
+                f.Availability == FactAvailability.Present ? "✓" : $"{f.Availability}{(string.IsNullOrEmpty(f.UnavailableReason) ? "" : "：" + Trim(f.UnavailableReason, 30))}",
+            }));
+        Console.WriteLine($"  {Dim}共 {rows.Count} 把鍵。{Reset}");
+        if (note != null) Console.WriteLine($"  {Dim}{note}{Reset}");
+    }
+
+    /// <summary>健康摘要：六態分布與對帳矛盾——只陳述、不判決（判決在 GUI 的健康頁與 --errors）。</summary>
+    private static void HealthSummary()
+    {
+        EnsureFacts();
+        var sum = HomeHealthSummaryService.Aggregate(_cache!);
+        if (!sum.HasFacts)
+        {
+            Console.WriteLine($"{Dim}快取裡沒有事實可彙整——先 facts 採一輪。{Reset}");
+            return;
+        }
+        Tui.Section("健康摘要", "六態分布 ・ 缺源不扣分，只如實說有幾個");
+        Tui.Table(["狀態", "筆數"],
+        [
+            new[] { "總計（快取裡的事實）", sum.Total.ToString("N0") },
+            new[] { "Present（讀到了）", sum.Present.ToString("N0") },
+            new[] { "NotSupported（這台沒有）", sum.NotSupported.ToString("N0") },
+            new[] { "InsufficientPrivilege（要提權）", sum.InsufficientPrivilege.ToString("N0") },
+            new[] { "ReadError（讀取失敗）", sum.ReadError.ToString("N0") },
+            new[] { "NotApplicable（不適用）", sum.NotApplicable.ToString("N0") },
+            new[] { "Unknown（無法判定）", sum.Unknown.ToString("N0") },
+            new[] { "對帳規則交叉數", sum.ReconcileCount.ToString("N0") },
+        ]);
+        if (sum.ContradictionRules.Count > 0)
+            foreach (var rule in sum.ContradictionRules)
+                Console.WriteLine($"  {Red}對帳矛盾：{rule}{Reset}");
+        else
+            Console.WriteLine($"  {Dim}沒有對帳矛盾。{Reset}");
+    }
+
+    /// <summary>歷史型號查詢：2006–2026 CPU／GPU 索引（使用者提供的內建目錄，離線）。</summary>
+    private static void CatalogQuery(string query)
+    {
+        var svc = new HardwareCatalogService();
+        Tui.Section("歷史型號", svc.Status + " ・ " + svc.Limitations);
+        if (query.Length == 0)
+        {
+            Console.WriteLine($"{Dim}用法：catalog <關鍵字>，例如 catalog 5800X、catalog rtx 3080。{Reset}");
+            return;
+        }
+        var rows = svc.Search(query, limit: 20);
+        if (rows.Count == 0)
+        {
+            Console.WriteLine($"{Dim}「{query}」沒有查到——目錄不含主機板（理由見 attribution）。{Reset}");
+            return;
+        }
+        Tui.Table(["型號", "類別", "年份", "摘要"],
+            rows.Select(r => new[]
+            {
+                Trim(r.DisplayName, 34), Trim(r.Kind, 8), r.Year?.ToString() ?? "—", Trim(r.Summary, 44),
+            }));
+        Console.WriteLine($"  {Dim}{svc.Attribution}{Reset}");
+    }
+
+    /// <summary>歷史回放摘要：讀 HistoryStore 持久化檔，13 指標各給 min／avg／max／P95。</summary>
+    private static void HistoryReport()
+    {
+        using var store = new HistoryStore();
+        if (store.MinuteCount == 0)
+        {
+            Console.WriteLine($"{Dim}沒有歷史記錄（GUI 的歷史記錄功能沒開，或這台還沒累積）。{Reset}");
+            return;
+        }
+        var series = store.Query(DateTime.UtcNow - TimeSpan.FromDays(30), DateTime.UtcNow);
+        Tui.Section("歷史回放摘要", $"近 30 天 ・ {store.MinuteCount:N0} 分鐘取樣 ・ 檔 {store.SizeText}");
+        var rows = new List<string[]>();
+        for (int m = 0; m < HistoryMetrics.Count; m++)
+        {
+            if (!series.HasData(m)) continue;
+            var (min, avg, max, p95) = series.Summarize(m);
+            rows.Add(new[]
+            {
+                Trim(HistoryMetrics.Titles[m], 18),
+                $"{min:0.##}", $"{avg:0.##}", $"{max:0.##}", $"{p95:0.##}",
+                HistoryMetrics.Units[m],
+            });
+        }
+        if (rows.Count == 0)
+        {
+            Console.WriteLine($"{Dim}有檔但這 30 天沒有有效取樣。{Reset}");
+            return;
+        }
+        Tui.Table(["指標", "最小", "平均", "最大", "P95", "單位"], rows);
+        Console.WriteLine($"  {Dim}最早取樣：{store.OldestUtc:yyyy-MM-dd HH:mm} UTC。{Reset}");
+    }
+
+    /// <summary>安全姿態對帳表：13 把鍵逐一攤開（值 → 域），null 如實寫「未回報」——不猜、不編。</summary>
+    private static void PostureReport()
+    {
+        Tui.Section("安全姿態對帳表", "WMI 直讀 13 把鍵 ・ null＝來源沒回報");
+        var f = new WmiSecurityReader().ReadAll();
+        string B(bool? v) => v is null ? "未回報" : v.Value ? "true" : "false";
+        Tui.Table(["鍵", "值", "域"],
+        [
+            new[] { "dma.hvci_running", B(f.HvciRunning), "DMA" },
+            new[] { "dma.vbs_running", B(f.VbsRunning), "DMA" },
+            new[] { "dma.iommu_available", B(f.IommuAvailable), "DMA" },
+            new[] { "dma.dma_protection", B(f.DmaProtection), "DMA" },
+            new[] { "dma.credential_guard", B(f.CredentialGuardRunning), "DMA" },
+            new[] { "dma.cet_enabled", B(f.CetEnabled), "DMA" },
+            new[] { "fw.secureboot_enabled", B(f.SecureBootEnabled), "韌體" },
+            new[] { "fw.testsigning_enabled", B(f.TestSigningEnabled), "韌體" },
+            new[] { "cpu.spec_mitigations", B(f.SpecMitigationsActive), "CPU" },
+            new[] { "drivers.total", f.TotalDriverCount.ToString("N0"), "驅動" },
+            new[] { "drivers.unsigned", f.UnsignedDriverCount.ToString("N0"), "驅動" },
+            new[] { "drivers.blocklist_present", B(f.VulnerableDriverBlocklistPresent), "驅動" },
+            new[] { "tb.security_level", f.ThunderboltSecurityLevel is { } tb ? tb.ToString() : "未回報", "雷電" },
+        ]);
+        Console.WriteLine($"  {Dim}帶權重的防護分數與威脅事件流：ipc posture／ipc threats。{Reset}");
+    }
+
+    /// <summary>USB 鏈路：埠樹、版本、供電與判定——GUI「USB 鏈路」工具的對照視圖。</summary>
+    private static void UsbReport()
+    {
+        var svc = new UsbLinkService();
+        Tui.SpinnerStart("列舉 USB 控制器與埠");
+        svc.RefreshAsync().GetAwaiter().GetResult();   // fire-and-forget 的話 Rows 還是空的
+        Tui.SpinnerStop($"{svc.Rows.Count} 個埠。");
+        if (svc.Rows.Count == 0)
+        {
+            Console.WriteLine($"{Dim}沒有列到埠（需要管理員權限讀 USB 節點資訊）。{Reset}");
+            return;
+        }
+        Tui.Table(["位置", "裝置", "版本", "現況", "判定"],
+            svc.Rows.Select(r => new[]
+            {
+                Trim(r.Location, 8), Trim(r.Name, 30), r.UsbVersion,
+                Trim(r.OperatingText, 10), Trim(r.Verdict, 10),
+            }));
+    }
+
+    /// <summary>PCIe 鏈路：各裝置的鏈路速度／寬度現值與最大值、協商落差判定。</summary>
+    private static void PcieReport()
+    {
+        var svc = new PcieLinkService();
+        Tui.SpinnerStart("讀 PCIe 鏈路");
+        if (!svc.CanRefresh) { /* 上一次載入還在跑 */ }
+        svc.RefreshAsync().GetAwaiter().GetResult();
+        Tui.SpinnerStop($"{svc.Rows.Count} 條鏈路。");
+        if (svc.Rows.Count == 0)
+        {
+            Console.WriteLine($"{Dim}沒有讀到鏈路（需要管理員權限）。{Reset}");
+            return;
+        }
+        Tui.Table(["裝置", "位置", "目前", "最大", "判定"],
+            svc.Rows.Select(r => new[]
+            {
+                Trim(r.Name, 26), Trim(r.Location, 10), r.CurrentText,
+                PcieLinkDecoder.LinkText(r.MaxSpeed, r.MaxWidth), Trim(r.Verdict, 10),
+            }));
+    }
+
+    /// <summary>驅動稽核：裝置→驅動、版本、日期、簽章——唯讀盤點。</summary>
+    private static void DriverReport()
+    {
+        var svc = new DriverAuditService();
+        Tui.SpinnerStart("盤點驅動");
+        svc.RefreshAsync().GetAwaiter().GetResult();
+        Tui.SpinnerStop($"{svc.Rows.Count} 支驅動。");
+        if (svc.Rows.Count == 0)
+        {
+            Console.WriteLine($"{Dim}沒有盤點到驅動（需要管理員權限讀 WMI）。{Reset}");
+            return;
+        }
+        int unsigned = svc.Rows.Count(r => !r.Signed);
+        Tui.Table(["裝置", "類別", "版本", "簽章"],
+            svc.Rows.Take(40).Select(r => new[]
+            {
+                Trim(r.Device, 34), Trim(r.DeviceClass, 8), Trim(r.Version, 18),
+                r.Signed ? "✓" : $"{Red}✗{Reset}",
+            }));
+        Console.WriteLine($"  {Dim}顯示前 40 支（共 {svc.Rows.Count} 支，未簽章 {unsigned} 支）。{Reset}");
+    }
+
+    /// <summary>藍屏記錄：掃 Minidump、解 BugCheck 代碼——唯讀，GUI「藍屏分析」工具的對照視圖。</summary>
+    private static void BsodScan()
+    {
+        var svc = new BsodService();
+        Tui.SpinnerStart("掃描 Minidump");
+        svc.Scan();
+        Tui.SpinnerStop(svc.Status);
+        if (!svc.HasDumps)
+        {
+            Console.WriteLine($"{Dim}沒有藍屏記錄。不是壞事。{Reset}");
+            return;
+        }
+        Tui.Table(["時間", "代碼", "名稱", "參數"],
+            svc.Rows.OrderByDescending(r => r.Time).Take(20).Select(r => new[]
+            {
+                r.TimeText, r.CodeHex, Trim(r.Name, 34), Trim(r.Params, 30),
+            }));
+        Console.WriteLine($"  {Dim}檔案在 C:\\Windows\\Minidump；bsod 只列表，解讀看 GUI 工具頁。{Reset}");
+    }
+
+    /// <summary>風扇轉速：LHM SuperIO 感測器唯讀——寫入（調速曲線）只在 GUI 風扇頁，終端機不做。</summary>
+    private static void Fans()
+    {
+        var svc = new LibreHardwareMonitorLibWrapperOrNull();
+        if (svc is null)
+        {
+            Console.WriteLine($"{Red}這台機器拿不到感測器（LHM 初始化失敗或沒有管理員）。{Reset}");
+            return;
+        }
+        using (svc)
+        {
+            var fans = svc.ReadFans();
+            Tui.Section("風扇轉速", "唯讀 ・ 調速曲線是寫入路徑，只在 GUI 風扇頁");
+            if (fans.Count == 0)
+            {
+                Console.WriteLine($"{Dim}讀不到風扇感測器（SuperIO 晶片沒被 LHM 認出，或轉速為 0）。{Reset}");
+                return;
+            }
+            Tui.Table(["風扇", "轉速"],
+                fans.Select(f => new[] { Trim(f.Name, 36), $"{f.Rpm:0} RPM" }));
+            Console.WriteLine($"  {Dim}共 {fans.Count} 顆。{Reset}");
+        }
+    }
+
     private static void LiveLine()
     {
         var svc = new LibreHardwareMonitorLibWrapperOrNull();
@@ -378,7 +671,7 @@ internal static class Program
             Console.WriteLine($"      {Dim}走勢{Reset} {Tui.Sparkline(_memHist, 100, 24)}");
             Tui.Separator();
             Console.WriteLine($"  {Pad("CPU 時脈", 12)}{Bold}{(r.CpuClock is null ? "——" : $"{r.CpuClock:0.00}")}{Reset}{Dim} GHz{Reset}   "
-                + $"{Pad("CPU 功率", 12)}{Bold}{(r.CpuPower is null ? "——" : $"{r.CpuPower:0.#}")}{Reset}{Dim} W{Reset}   "
+                + $"{Pad("CPU 功率", 12)}{Bold}{(r.CpuPower is null ? "——" : $"{r.CpuPower:0.#}")}{Reset}{Dim} W{(LastPowerWasRapl ? "（RAPL）" : "")}{Reset}   "
                 + $"{Pad("記憶體用量", 12)}{Bold}{(r.MemUsed is null ? "——" : $"{r.MemUsed:0.0}")}{Reset}{Dim} GB{Reset}");
         }
     }
@@ -404,7 +697,8 @@ internal static class Program
                 {
                     var r = svc.Read();
                     PushHistory(r);
-                    Console.Write("\x1b[H");
+                    if (Tui.Legacy) { try { Console.SetCursorPosition(0, 0); } catch { } }
+                    else Console.Write("\x1b[H");
                     Console.WriteLine($"{Tui.Dim}┌─ {Tui.Bold}XSC 即時儀表板{Tui.Reset} {Tui.Dim}{new string('─', 44)}{DateTime.Now:HH:mm:ss} ─┐{Tui.Reset}");
                     Console.WriteLine();
                     DashRow("CPU 溫度", r.CpuT, "°C", 100, 75, 85, _cpuHist, ref _prevCpuT);
@@ -494,11 +788,105 @@ internal static class Program
     private static string Fmt(double? v) => v is null ? "—" : v.Value.ToString("0.#");
 
     /// <summary>LibreHardwareMonitor 的薄包裝；失敗回 null（缺驅動／非管理員是環境事實）。</summary>
+    private static bool _ring0Checked;
+
+    /// <summary>
+    /// WinRing0 服務健檢：服務鍵指向的 .sys 不存在（死指針）時刪掉這個服務。
+    /// LHM 的 Open() 只在服務不存在時用自己的內嵌簽章驅動建一份——死指針不清，
+    /// StartService 永遠失敗，MSR 全滅：核心時脈整排消失、RAPL 功率卡在垃圾值。
+    /// 實例：本機的服務被別家工具註冊到已刪除的桌面資料夾（ImagePath 指向不存在的 .sys）。
+    /// </summary>
+    private static void EnsureRing0Service()
+    {
+        if (_ring0Checked) return;
+        _ring0Checked = true;
+        try
+        {
+            using var id = System.Security.Principal.WindowsIdentity.GetCurrent();
+            if (!new System.Security.Principal.WindowsPrincipal(id)
+                    .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator)) return;
+            const string svc = "WinRing0_1_2_0";
+            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\" + svc);
+            if (key is null) return;   // 沒裝：LHM 會自己建
+            string? image = (key.GetValue("ImagePath") as string)?.Trim();
+            if (string.IsNullOrEmpty(image)) return;
+            // ImagePath 形如 \??\C:\...——剝掉裝置前綴再驗存在性
+            string path = image.StartsWith(@"\??\", StringComparison.Ordinal) ? image[4..] : image;
+            if (File.Exists(path)) return;   // 活的：不動
+            // 死指針：刪服務，讓 LHM 重建
+            var psi = new System.Diagnostics.ProcessStartInfo("sc.exe", "delete " + svc)
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            using var p = System.Diagnostics.Process.Start(psi);
+            p?.WaitForExit(5000);
+        }
+        catch { /* 健檢失敗不擋路：LHM 自己的失敗訊息會照常呈現 */ }
+    }
+
+    /// <summary>
+    /// Ring0 直讀 CPU 時脈與封裝功率——走 XinSpect 自己的 XsRegProbe（msr 指令同一條路，allowlist 內）。
+    /// 時脈：IA32_PERF_STATUS（0x198）位元 15:8 ＝ 目前倍頻，× bus(≈100MHz)。
+    /// 功率：RAPL 能量計數差分——0x606 給能量單位，0x611（PKG_ENERGY_STATUS）兩拍相除；
+    ///       LHM 0.9.6 已無內核驅動（實證：dll 裡沒有驅動資源），它的功率／時脈在沒有別家驅動的機器上是垃圾值。
+    /// 失敗一律回 null，由呼叫端退回 LHM 的值——兩邊都讀不到就顯示「——」，不編。
+    /// </summary>
+    /// <summary>上一次取樣的功率是否來自 RAPL（顯示端用來標來源）。</summary>
+    public static bool LastPowerWasRapl;
+
+    private static (double? Clock, double? Power, double? Temp) Ring0CpuSample()
+    {
+        try
+        {
+            double? clock = null;
+            var perf = PowerConsoleRing0Service.ReadMsr(0x198);
+            if (perf.Error is null)
+            {
+                uint ratio = (uint)((perf.Value >> 8) & 0xFF);
+                if (ratio is > 4 and < 120) clock = ratio * 100.0 / 1000.0;   // × bus(100MHz) → GHz
+            }
+
+            var unit = PowerConsoleRing0Service.ReadMsr(0x606);
+            var e1 = PowerConsoleRing0Service.ReadMsr(0x611);
+            if (unit.Error is not null || e1.Error is not null) return (clock, null, ReadCpuTemp());
+            int div = (int)((unit.Value >> 8) & 0x1F);
+            double joule = 1.0 / Math.Pow(2, div);
+            System.Threading.Thread.Sleep(400);   // 能量差分窗
+            var e2 = PowerConsoleRing0Service.ReadMsr(0x611);
+            if (e2.Error is not null) return (clock, null, null);
+            ulong delta = e2.Value >= e1.Value ? e2.Value - e1.Value : e2.Value + (ulong.MaxValue - e1.Value) + 1;
+            double power = delta * joule / 0.4;
+            if (power is > 0 and < 1500)
+            {
+                LastPowerWasRapl = true;
+                return (clock, power, ReadCpuTemp());
+            }
+            // 計數超帶（本機 RAPL 計數器實證走得極慢）：不硬編功率，溫度照樣走 MSR
+            LastPowerWasRapl = false;
+            return (clock, null, ReadCpuTemp());
+        }
+        catch { LastPowerWasRapl = false; return (null, null, null); }
+    }
+
+    /// <summary>核心溫度：TjMax（0x1A2 位元 23:16）− DTS（0x19C 位元 22:16）。XsRegProbe 直讀，實測與負載同步。</summary>
+    private static double? ReadCpuTemp()
+    {
+        var therm = PowerConsoleRing0Service.ReadMsr(0x19C);
+        var target = PowerConsoleRing0Service.ReadMsr(0x1A2);
+        if (therm.Error is not null || target.Error is not null) return null;
+        int dts = (int)((therm.Value >> 16) & 0x7F);
+        int tjMax = (int)((target.Value >> 16) & 0xFF);
+        double t = tjMax - dts;
+        return t is > 0 and < 150 ? t : null;
+    }
+
     private sealed class LibreHardwareMonitorLibWrapperOrNull : IDisposable
     {
         private readonly LibreHardwareMonitor.Hardware.Computer? _computer;
         public LibreHardwareMonitorLibWrapperOrNull()
         {
+            EnsureRing0Service();
             try
             {
                 var c = new LibreHardwareMonitor.Hardware.Computer
@@ -506,14 +894,25 @@ internal static class Program
                     IsCpuEnabled = true,
                     IsGpuEnabled = true,
                     IsMemoryEnabled = true,
-                    IsMotherboardEnabled = false,
+                    // 主板與 SuperIO 控制器要開：fan 指令讀風扇轉速靠這兩類硬體。
+                    // 仍然全部唯讀——Control 感測器只讀現值，不設值；調速是 GUI 風扇頁的寫入路徑。
+                    IsMotherboardEnabled = true,
                     IsStorageEnabled = false,
                     IsNetworkEnabled = false,
-                    IsControllerEnabled = false,
+                    IsControllerEnabled = true,
                     IsPsuEnabled = false,
                 };
                 c.Open();
                 _computer = c;
+                // 暖機兩拍：RAPL 功率是兩次更新間的能量差，第一拍沒有基準（會跑出 1.4W 這種垃圾值）；
+                // 時脈與部分感測器也要第二拍才有值。GUI 持續輪詢沒這問題，單拍式的終端機必須自己暖。
+                try
+                {
+                    foreach (var hw in _computer.Hardware) hw.Update();
+                    System.Threading.Thread.Sleep(600);
+                    foreach (var hw in _computer.Hardware) hw.Update();
+                }
+                catch { }
             }
             catch { _computer = null; }
         }
@@ -526,15 +925,36 @@ internal static class Program
             {
                 hw.Update();
                 if (hw.HardwareType == LibreHardwareMonitor.Hardware.HardwareType.Cpu)
+                {
+                    // 比照 GUI SensorService 的選法：溫度取第一顆、負載取 CPU Total；
+                    // 功率優先 Package，找不到就取 Power 感測器最大值（不挑第一個——第一個可能是小軌道）；
+                    // 時脈取 Core #* 最大，沒有就取非 Bus 時脈最大（MHz→GHz）。
+                    double? pkgPower = null, maxPower = null, coreClock = null, anyClock = null;
                     foreach (var s in hw.Sensors)
                     {
                         if (s.Value is not { } v) continue;
                         if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Temperature && cpuT is null) cpuT = v;
                         if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Load && cpuL is null && s.Name == "CPU Total") cpuL = v;
-                        // 時脈取全核最大（MHz→GHz）；功率取 Package
-                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Clock && v > (cpuClock ?? 0) && s.Name.StartsWith("Core", StringComparison.Ordinal)) cpuClock = v;
-                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Power && s.Name.Contains("Package", StringComparison.OrdinalIgnoreCase)) cpuPower = v;
+                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Clock)
+                        {
+                            if (s.Name.StartsWith("Core", StringComparison.Ordinal))
+                            {
+                                if (v > (coreClock ?? 0)) coreClock = v;
+                            }
+                            else if (!s.Name.Contains("Bus", StringComparison.OrdinalIgnoreCase) && v > (anyClock ?? 0)) anyClock = v;
+                        }
+                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Power)
+                        {
+                            if (s.Name.Contains("Package", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (v > (pkgPower ?? 0)) pkgPower = v;
+                            }
+                            else if (v > (maxPower ?? 0)) maxPower = v;
+                        }
                     }
+                    cpuClock = coreClock ?? anyClock;
+                    cpuPower = pkgPower ?? maxPower;
+                }
                 if (hw.HardwareType is LibreHardwareMonitor.Hardware.HardwareType.GpuNvidia or LibreHardwareMonitor.Hardware.HardwareType.GpuAmd or LibreHardwareMonitor.Hardware.HardwareType.GpuIntel)
                     foreach (var s in hw.Sensors)
                         if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Temperature && gpuT is null && s.Value is { } v) gpuT = v;
@@ -546,8 +966,37 @@ internal static class Program
                         if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Data && s.Name == "Used Memory") memUsed = v;
                     }
             }
+            // 功率與時脈優先用 XsRegProbe 的 Ring0 直讀（LHM 0.9.6 無驅動時這兩項是垃圾值）；
+            // XsRegProbe 讀不到才退回 LHM 的值，兩邊都沒有就是 null——顯示「——」，不編。
+            var (r0Clock, r0Power, r0Temp) = Ring0CpuSample();
+            // Ring0 的時脈已是 GHz；wrapper 對外介面是 MHz（回傳時再除 1000）——別二次除
+            cpuClock = r0Clock.HasValue ? r0Clock.Value * 1000.0 : cpuClock;
+            cpuPower = r0Power ?? cpuPower;
+            cpuT = r0Temp ?? cpuT;   // MSR 溫度是權威值（LHM 0.9.6 無驅動時它的溫度來源不明）
             return (cpuT, gpuT, cpuL, memL, cpuClock is null ? null : cpuClock / 1000.0, cpuPower, memUsed);
         }
+        /// <summary>風扇轉速：主板／SuperIO 的 Fan 感測器，附最小濾噪（0 RPM 的不列）。</summary>
+        public List<(string Name, double Rpm)> ReadFans()
+        {
+            var fans = new List<(string, double)>();
+            if (_computer is null) return fans;
+            foreach (var hw in _computer.Hardware)
+            {
+                hw.Update();
+                foreach (var sub in hw.SubHardware)
+                {
+                    sub.Update();
+                    foreach (var s in sub.Sensors)
+                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Fan && s.Value is { } v && v > 0)
+                            fans.Add(($"{hw.Name} {sub.Name} {s.Name}".Trim(), v));
+                }
+                foreach (var s in hw.Sensors)
+                    if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Fan && s.Value is { } v && v > 0)
+                        fans.Add(($"{hw.Name} {s.Name}".Trim(), v));
+            }
+            return fans;
+        }
+
         public void Dispose() => _computer?.Close();
     }
 
@@ -708,11 +1157,14 @@ internal static class Program
             {
                 if (CheckResize())
                 {
-                    int w;
-                    try { w = Math.Max(60, Console.WindowWidth - 1); } catch { w = 100; }
-                    Console.WriteLine($"{Tui.Dim}{new string('─', w)}{Tui.Reset}");
+                    _frameWidth = Tui.CurrentWidth();   // resize 重繪是唯一允許更新長線寬度的地方
+                    Console.WriteLine($"{Tui.Dim}{new string('─', _frameWidth)}{Tui.Reset}");
                     Console.Write($"{Tui.BrandRed}{Tui.Bold}>{Tui.Reset} " + buf.ToString());
-                    if (pos < buf.Length) Console.Write($"\x1b[{buf.Length - pos}D");
+                    if (pos < buf.Length)
+                    {
+                        if (Tui.Legacy) Console.Write(new string('\b', buf.Length - pos));
+                        else Console.Write($"\x1b[{buf.Length - pos}D");
+                    }
                     continue;
                 }
             }
@@ -722,12 +1174,11 @@ internal static class Program
             {
             if (key.Key == ConsoleKey.Enter)
             {
-                int w;
-                try { w = Math.Max(60, Console.WindowWidth - 1); } catch { w = 100; }
-                Console.WriteLine($"{Tui.Dim}{new string('─', w)}{Tui.Reset}");   // 輸入欄底線
+                Console.WriteLine($"{Tui.Dim}{new string('─', _frameWidth)}{Tui.Reset}");   // 輸入欄底線（固定長直線）
                 var st = StatusLine();
-                int scol = Math.Max(1, w - Tui.VisibleLength(st) - 1);
-                Console.Write(Tui.Esc + "[" + scol + "G" + Tui.Dim + st + Tui.Reset + Environment.NewLine);
+                int scol = Math.Max(1, _frameWidth - Tui.VisibleLength(st) - 1);
+                if (Tui.Legacy) Console.WriteLine(Tui.Dim + st + Tui.Reset);
+                else Console.Write(Tui.Esc + "[" + scol + "G" + Tui.Dim + st + Tui.Reset + Environment.NewLine);
                 return buf.ToString();
             }
             if (key.Key == ConsoleKey.Backspace)
@@ -741,7 +1192,16 @@ internal static class Program
                 continue;
             }
             if (key.Key == ConsoleKey.LeftArrow) { if (pos > 0) { pos--; Console.Write("\b"); } continue; }
-            if (key.Key == ConsoleKey.RightArrow) { if (pos < buf.Length) { pos++; Console.Write("\x1b[1C"); } continue; }
+            if (key.Key == ConsoleKey.RightArrow)
+            {
+                if (pos < buf.Length)
+                {
+                    pos++;
+                    if (Tui.Legacy) Redraw(buf, pos);   // 純文字版沒有右移控制碼，整行重畫
+                    else Console.Write("\x1b[1C");
+                }
+                continue;
+            }
             if (key.Key == ConsoleKey.Home) { pos = 0; Redraw(buf, pos); continue; }
             if (key.Key == ConsoleKey.End) { pos = buf.Length; Redraw(buf, pos); continue; }
             if (key.Key == ConsoleKey.UpArrow)
@@ -797,6 +1257,14 @@ internal static class Program
 
     private static void Redraw(StringBuilder buf, int pos)
     {
+        if (Tui.Legacy)
+        {
+            // 純文字相容版：只有退格（\b）可靠——整行擦掉重畫，再把游標推回定位
+            Console.Write("\r" + new string(' ', 2 + Tui.VisibleLength(buf.ToString())) + "\r");
+            Console.Write("> " + buf.ToString());
+            if (pos < buf.Length) Console.Write(new string('\b', buf.Length - pos));
+            return;
+        }
         Console.Write("\r\x1b[K");
         Console.Write($"{Tui.BrandRed}{Tui.Bold}>{Tui.Reset} " + buf.ToString());
         if (pos < buf.Length) Console.Write($"\x1b[{buf.Length - pos}D");

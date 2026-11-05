@@ -18,27 +18,89 @@ namespace XinSpectCli;
 /// </remarks>
 internal static class Tui
 {
-    // ── 色票：瑞士紅／瑞士藍／灰墨（深底終端上不刺眼的層級） ─────────────
-    public const string Reset = "\x1b[0m";
-    public const string Bold = "\x1b[1m";
-    public const string Dim = "\x1b[90m";
-    public const string SwissRed = "\x1b[91m";
-    public const string SwissBlue = "\x1b[94m";
-    public const string SwissGreen = "\x1b[92m";
-    public const string Amber = "\x1b[93m";
-    public const string RedBg = "\x1b[101m";
-    public const string Invert = "\x1b[7m";
+    // ── 色票：瑞士紅／瑞士藍／灰墨（深底終端上不刺眼的層級）——定義在上面 Legacy 區塊 ──
 
-    private const string HideCursor = "\x1b[?25l";
-    private const string ShowCursor = "\x1b[?25h";
-    private const string ClearLine = "\x1b[2K";
+    /// <summary>
+    /// 純文字相容版（Windows 10／Server 2016/2019/2022 的傳統主控台）：
+    /// 以 <c>-p:DefineConstants=XINSPECT_LEGACY</c> 編譯。無色彩、無框線、無 CHA 定位、
+    /// ASCII spinner——只靠 \r 與退格控版面，任何主控台都印得出來。
+    /// </summary>
+#if XINSPECT_LEGACY
+    public const bool Legacy = true;
+#else
+    public const bool Legacy = false;
+#endif
+
+    // 以下「色彩與游標控制」全部走屬性而非 const：legacy 版一律回空字串，
+    // 呼叫端的寫法（Tui.Red、$"{Dim}…"）完全不用改。
+    public static string Reset => Legacy ? "" : "\x1b[0m";
+    public static string Bold => Legacy ? "" : "\x1b[1m";
+    public static string Dim => Legacy ? "" : "\x1b[90m";
+    public static string SwissRed => Legacy ? "" : "\x1b[91m";
+    public static string SwissBlue => Legacy ? "" : "\x1b[94m";
+    public static string SwissGreen => Legacy ? "" : "\x1b[92m";
+    public static string Amber => Legacy ? "" : "\x1b[93m";
+    public static string RedBg => Legacy ? "" : "\x1b[101m";
+    public static string Invert => Legacy ? "" : "\x1b[7m";
+    public static string BrandRed => Legacy ? "" : "\x1b[38;2;227;6;19m";
+
+    private static string HideCursor => Legacy ? "" : "\x1b[?25l";
+    private static string ShowCursor => Legacy ? "" : "\x1b[?25h";
+    private static string ClearLine => Legacy ? "" : "\x1b[2K";
     private const string CarriageReturn = "\r";
     public const string Esc = "\x1b";
 
     /// <summary>旋轉子幀（braille 點字；Windows Terminal 原生支援）。</summary>
     private static readonly string[] SpinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
+    // ── 舊版 conhost 的 VT 開關 ────────────────────────────────────────────
+    // Windows 10 傳統主控台（conhost）預設不處理 ANSI/VT 序列，所有 ESC[...m、ESC[nG
+    // 會原樣印在畫面上（Windows Terminal 與 Win11 預設開啟，所以開發機看不到）。
+    // 這裡在啟動時主動打開 ENABLE_VIRTUAL_TERMINAL_PROCESSING；打不開（重導輸出、
+    // 極舊系統）就靜默放棄——不是每個環境都救得動，但不假裝成功。
+    private const int StdOutputHandle = -11;
+    private const uint EnableVirtualTerminalProcessing = 0x0004;
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+    private static extern System.IntPtr GetStdHandle(int nStdHandle);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GetConsoleMode(System.IntPtr hConsoleHandle, out uint lpMode);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool SetConsoleMode(System.IntPtr hConsoleHandle, uint dwMode);
+
+    /// <summary>在輸出任何帶色字串之前呼叫；必須在設定 OutputEncoding 之後——改編碼會重造螢幕緩衝，把 VT 旗標洗掉。</summary>
+    public static void EnableAnsi()
+    {
+        try
+        {
+            if (Console.IsOutputRedirected) return;
+            System.IntPtr h = GetStdHandle(StdOutputHandle);
+            if (h == System.IntPtr.Zero || h == (System.IntPtr)(-1)) return;
+            if (!GetConsoleMode(h, out uint mode)) return;
+            SetConsoleMode(h, mode | EnableVirtualTerminalProcessing);
+        }
+        catch { /* 非 Windows 或無主控台：序列會印出來，但程式不該因此死 */ }
+    }
+
     // ── 寬度計算 ──────────────────────────────────────────────────────────
+
+    /// <summary>依可見寬度裁字串（超出以 … 收尾）；給表格窄寬度防折行用。</summary>
+    private static string TruncToWidth(string s, int max)
+    {
+        if (VisibleLength(s) <= max) return s;
+        var sb = new System.Text.StringBuilder();
+        int w = 0;
+        foreach (char ch in s)
+        {
+            int cw = char.GetUnicodeCategory(ch) == System.Globalization.UnicodeCategory.OtherLetter ? 2 : 1;
+            if (w + cw > max - 1) break;
+            sb.Append(ch);
+            w += cw;
+        }
+        return sb.ToString() + "…";
+    }
 
     /// <summary>可見寬度：剝掉 ANSI escape，CJK／全形字記 2 格。</summary>
     public static int VisibleLength(string s)
@@ -89,10 +151,13 @@ internal static class Tui
     ];
 
     /// <summary>品牌紅（#E30613 的 truecolor；歡迎框框線、✻、⏺、提示符專用，不作內文著色）。</summary>
-    public const string BrandRed = "[38;2;227;6;19m";
+    // BrandRed 已上移到 Legacy 區塊（屬性）
 
     /// <summary>Claude Code 式星芒 spinner 的幀序列（往返循環）。</summary>
-    private static readonly string[] SparkFrames = ["∙", "∘", "○", "◎", "☼", "◎", "○", "∘"];   // 破曉序列：訊號點擴張為日輪再收回
+    // 破曉序列：訊號點擴張為日輪再收回；legacy 版用 ASCII（舊主控台字型未必有這些字形）
+    private static readonly string[] SparkFrames = Legacy
+        ? ["*", "o", ".", "o"]
+        : ["∙", "∘", "○", "◎", "☼", "◎", "○", "∘"];
 
     /// <summary>採集用俏皮動詞（繁中・硬體語境・每次隨機抽一個）。</summary>
     private static readonly string[] Verbs =
@@ -173,6 +238,39 @@ internal static class Tui
     /// 中欄分隔線與右框線都用 CHA 絕對定位——CJK 寬度計算在框線上不可信。</summary>
     public static void Welcome(string version, int staticKeys, int dynamicFamilies)
     {
+        if (Legacy)
+        {
+            // 純文字開場：保留大字 XINSPECT（方塊字元在舊主控台照樣渲染）與全部資訊，
+            // 但零色彩、零框線、零定位——右對齊用空格補，不用 CHA。
+            int w = 100;
+            try { w = Math.Clamp(Console.WindowWidth - 1, 40, 118); } catch { }
+            try { Console.Clear(); } catch { }
+            if (!Console.IsInputRedirected && w >= 79)
+            {
+                var banner = XinspectBanner(w >= 88 ? 3 : 2);
+                int bannerPad = Math.Max(0, (w - banner[0].Width) / 2);
+                foreach (var (lineText, _) in banner)
+                    Console.WriteLine(new string(' ', bannerPad) + lineText);
+                string by = "by: xinglanclever";
+                Console.WriteLine(new string(' ', Math.Max(1, w - by.Length)) + by);
+            }
+            Console.WriteLine();
+            Console.WriteLine($"  曦覽終端機 v{version}（純文字相容版：Windows 10／Server 2016、2019、2022）");
+            Console.WriteLine();
+            Console.WriteLine($"  facts    採集 {staticKeys.ToString("N0")} 靜態鍵＋{dynamicFamilies} 動態家族");
+            Console.WriteLine("  dash     全螢幕即時儀表板 (q 離開 · sys 與 top [秒])");
+            Console.WriteLine("  pages    GUI 全頁對照 (page · domain · keys)");
+            Console.WriteLine("  help     指令書：分類功能表＋help <指令> 詳解");
+            Console.WriteLine("  book     曦覽百科全書：15 部 362 節，離線可讀");
+            Console.WriteLine();
+            Console.WriteLine("  cwd: " + ShortCwd());
+            Console.WriteLine("  硬體的事實，不編故事。");
+            Console.WriteLine();
+            Console.WriteLine("  輸入 facts 採集全機事實，或輸入 sys、dash、pages、msr <索引>…");
+            Console.WriteLine("  唯讀 · 不寫硬體 · 不連網  │  ↑↓ 歷史 · Tab 補全 · help 指令書 · exit 離開");
+            Console.WriteLine();
+            return;
+        }
         int width;
         try { width = Math.Clamp(Console.WindowWidth - 1, 78, 118); }
         catch { width = 110; }
@@ -292,13 +390,20 @@ internal static class Tui
     }
 
     /// <summary>Claude Code 式輸入框：上方全寬細線＋右對齊狀態行＋紅色 > 提示符。</summary>
-    public static void InputFrame()
+    /// <summary>輸入框：兩條全寬長線。width 傳入時用固定寬——長線是長直線，
+    /// 不隨每次重繪時的視窗讀值漂移（兩條線不一樣長就是這麼來的）。</summary>
+    public static void InputFrame(int? width = null)
     {
-        int width;
-        try { width = Math.Max(60, Console.WindowWidth - 1); }
-        catch { width = 100; }
-        Console.WriteLine($"{Dim}{new string('─', width)}{Reset}");
+        int w = width ?? CurrentWidth();
+        Console.WriteLine($"{Dim}{new string('─', w)}{Reset}");
         Console.Write($"{BrandRed}{Bold}>{Reset} ");
+    }
+
+    /// <summary>目前可用的行寬（重導或讀不到時 100）——給固定寬度初次取值用。</summary>
+    public static int CurrentWidth()
+    {
+        try { return Math.Max(60, Console.WindowWidth - 1); }
+        catch { return 100; }
     }
 
     // ── 1.9) 框線 helpers（唯一正解：邊框位置一律 CHA 絕對定位，零寬度計算）──
@@ -310,6 +415,7 @@ internal static class Tui
     /// <summary>框頂：╭ + 破折號 + 標題（CHA 覆寫）+ ╮（CHA 釘在 width 列）。</summary>
     public static string BoxTop(int width, string title = "")
     {
+        if (Legacy) return title;   // 純文字版：沒有框，標題一行
         var sb = new System.Text.StringBuilder();
         sb.Append(BrandRed).Append('╭').Append(new string('─', Math.Max(1, width - 3)));
         sb.Append(Esc).Append('[').Append(width).Append('G').Append('╮').Append(Reset);
@@ -321,6 +427,7 @@ internal static class Tui
     /// <summary>框底：╰ + 破折號 + 附註（CHA 覆寫）+ ╯（CHA 釘在 width 列）。</summary>
     public static string BoxBot(int width, string note = "")
     {
+        if (Legacy) return note;   // 純文字版：只留附註
         var sb = new System.Text.StringBuilder();
         sb.Append(BrandRed).Append('╰').Append(new string('─', Math.Max(1, width - 3)));
         sb.Append(Esc).Append('[').Append(width).Append('G').Append('╯').Append(Reset);
@@ -332,11 +439,12 @@ internal static class Tui
 
     /// <summary>框行：│ + 內文 + │（右框線 CHA 釘在 width 列；內文超寬被框線壓住）。</summary>
     public static string BoxRow(int width, string body)
-        => $"{BrandRed}│{Reset} {body}{Esc}[{width}G{BrandRed}│{Reset}";
+        => Legacy ? body : $"{BrandRed}│{Reset} {body}{Esc}[{width}G{BrandRed}│{Reset}";
 
     /// <summary>雙欄框行：│ 左欄 │ 右欄 │（中欄與右框線都 CHA 釘死）。</summary>
     public static string BoxTwoCol(int width, int mid, string left, string right)
-        => $"{BrandRed}│{Reset} {left}{Esc}[{mid}G{BrandRed}│{Reset} {right}{Esc}[{width}G{BrandRed}│{Reset}";
+        => Legacy ? (left.Length == 0 ? right : right.Length == 0 ? left : left + "　" + right)
+                  : $"{BrandRed}│{Reset} {left}{Esc}[{mid}G{BrandRed}│{Reset} {right}{Esc}[{width}G{BrandRed}│{Reset}";
 
     // ── 2) 帶標題的方框面板 ───────────────────────────────────────────────
 
@@ -364,11 +472,37 @@ internal static class Tui
             widths[c] = Math.Max(VisibleLength(headers[c]), data.Count == 0 ? 0 : data.Max(r => c < r.Length ? VisibleLength(r[c]) : 0));
         for (int c = 0; c < cols; c++) widths[c] = Math.Min(widths[c], 60);
 
+        // 窄終端防折行：整行超出可用寬時把最後一欄裁短（說明欄被裁好過整表錯位折行）。
+        // CHA 釘的是框線不是表格——表格靠等寬字元的 Padding 對齊，折行就是全表錯位。
+        int avail;
+        try { avail = Math.Max(40, Console.WindowWidth - 3); }
+        catch { avail = 117; }
+        int overhead = 3 * (cols - 1) + 2;   // 欄間 " ┆ " 與行首縮排
+        int sum = widths.Sum() + overhead;
+        if (sum > avail)
+        {
+            int excess = sum - avail;
+            int last = cols - 1;
+            int shrink = Math.Min(excess, Math.Max(0, widths[last] - 6));
+            widths[last] -= shrink;
+            excess -= shrink;
+            if (excess > 0)
+            {
+                // 還不夠就從最寬的欄均攤（各留 4 格下限）
+                for (int c = 0; c < last && excess > 0; c++)
+                {
+                    int take = Math.Min(excess, Math.Max(0, widths[c] - 4));
+                    widths[c] -= take;
+                    excess -= take;
+                }
+            }
+        }
+
         Console.WriteLine("  " + string.Join($"{Dim} ┆ {Reset}", headers.Select((h, c) => Bold + Pad(h, widths[c]) + Reset)));
         Console.WriteLine("  " + string.Join($"{Dim}+{Reset}", widths.Select(w => new string('─', w + 2))));
         foreach (var r in data)
             Console.WriteLine("  " + string.Join($"{Dim} ┆ {Reset}",
-                Enumerable.Range(0, cols).Select(c => Pad(c < r.Length ? r[c] : "", widths[c]))));
+                Enumerable.Range(0, cols).Select(c => Pad(TruncToWidth(c < r.Length ? r[c] : "", widths[c]), widths[c]))));
     }
 
     // ── 4) 提示符與輸入 ───────────────────────────────────────────────────
@@ -436,10 +570,18 @@ internal static class Tui
     }
 
     /// <summary>進入獨立螢幕（不留捲動殘跡）。</summary>
-    public static void AltScreenEnter() => Console.Write("[?1049h[2J[H" + HideCursor);
+    public static void AltScreenEnter()
+    {
+        if (Legacy) { try { Console.Clear(); } catch { } return; }
+        Console.Write("\x1b[?1049h\x1b[2J\x1b[H" + HideCursor);
+    }
 
     /// <summary>離開獨立螢幕，回到原本的捲動內容。</summary>
-    public static void AltScreenExit() => Console.Write(ShowCursor + "[?1049l");
+    public static void AltScreenExit()
+    {
+        if (Legacy) return;
+        Console.Write(ShowCursor + "\x1b[?1049l");
+    }
 
     /// <summary>色塊徽章。</summary>
     public static string Badge(string text, string bg, string fg) => $"{bg}{fg} {text} {Reset}";
@@ -452,6 +594,7 @@ internal static class Tui
 
     private static CancellationTokenSource? _cts;
     private static Task? _spinnerTask;
+    private static int _spinPad;   // legacy 擦行用：上一拍的可見寬度
     private static readonly object Sync = new();
     private static readonly System.Diagnostics.Stopwatch SpinnerClock = new();
     private const int ScopeWidth = 24;
@@ -503,6 +646,7 @@ internal static class Tui
             string verb = label ?? Verbs[Random.Shared.Next(Verbs.Length)];
             ScopeSamples.Clear();
             SpinnerClock.Restart();
+            _spinPad = 0;
             Console.Write(HideCursor);
             _spinnerTask = Task.Run(async () =>
             {
@@ -544,7 +688,16 @@ internal static class Tui
                                 Console.Write(Environment.NewLine + $"  {Dim}CPU ╶{Reset}" + trace + $"{Dim}╴{Reset} {Bold}{load:0}%{Reset}");
                             }
                         }
-                        hasScope = drewScope;
+                        // legacy：游標上移（[1F）在舊主控台印不出來，示波器線整段略過
+                        hasScope = drewScope && !Legacy;
+                        if (Legacy)
+                        {
+                            // legacy：ClearLine 是空字串——補空白擦掉上一拍的殘尾
+                            string plain = $"{frame} {verb}… [{bar}] {secs,5:0.0}s · esc 中斷";
+                            int w = VisibleLength(plain);
+                            if (w < _spinPad) Console.Write(new string(' ', _spinPad - w));
+                            _spinPad = w;
+                        }
                         await Task.Delay(100, token).ConfigureAwait(false);
                     }
                 }
@@ -566,8 +719,14 @@ internal static class Tui
             _cts = null;
             _spinnerTask = null;
             SpinnerClock.Stop();
-            Console.Write(Esc + "[1F" + CarriageReturn + ClearLine);
-            Console.Write(CarriageReturn + ClearLine);
+            if (Legacy)
+                Console.Write(CarriageReturn + new string(' ', _spinPad + 2) + CarriageReturn);
+            else
+            {
+                Console.Write(Esc + "[1F" + CarriageReturn + ClearLine);
+                Console.Write(CarriageReturn + ClearLine);
+            }
+            _spinPad = 0;
             double done = SpinnerClock.Elapsed.TotalSeconds;
             Console.Write($"[{BrandRed}{new string('▓', 22)}{Reset}] {Bold}100.0%{Reset} {Dim}({done:0.00}s){Reset}" + Environment.NewLine);
             Console.Write(ShowCursor);

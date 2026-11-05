@@ -58,7 +58,8 @@ public sealed class PcieLinkService : ObservableObject
         _ = RefreshAsync();
     }
 
-    private async Task RefreshAsync()
+    /// <summary>載入本體（可等待）：GUI 走 fire-and-forget 的 Refresh()，批次端（CLI）直接 await 這一支。</summary>
+    public async Task RefreshAsync()
     {
         IsLoading = true;
         Status = "掃描中…";
