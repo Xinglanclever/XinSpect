@@ -15,6 +15,8 @@ namespace XinSpect;
 public sealed class NetAdapter : INotifyPropertyChanged
 {
     public string Name { get; init; } = "";           // 連線名稱（netsh 使用），如「乙太網路」
+    /// <summary>審計 #36：介面名稱可能含雙引號（惡意 DHCP 主機設定），netsh 內插前跳脫。</summary>
+    public string SafeName => Name.Replace("\"", "").Replace("\\", "");
     public string Description { get; init; } = "";     // 介面卡描述（晶片型號）
 
     private string _dnsText = "";
@@ -102,8 +104,8 @@ public sealed class DnsService : INotifyPropertyChanged
         {
             if (preset.Auto)
             {
-                await RunNetsh($"interface ipv4 set dnsservers name=\"{adapter.Name}\" source=dhcp");
-                await RunNetsh($"interface ipv6 set dnsservers name=\"{adapter.Name}\" source=dhcp");
+                await RunNetsh($"interface ipv4 set dnsservers name=\"{adapter.SafeName}\" source=dhcp");
+                await RunNetsh($"interface ipv6 set dnsservers name=\"{adapter.SafeName}\" source=dhcp");
             }
             else
             {
