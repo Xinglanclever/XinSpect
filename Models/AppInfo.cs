@@ -38,7 +38,7 @@ public static class AppInfo
     /// 結尾不帶斜線，讓字串比對與顯示都是同一個形狀。
     /// </para>
     /// </remarks>
-    public const string OfficialSiteUrl = "https://xinspect-browser-preview.wild-chimpanzee.workers.dev";
+    public const string OfficialSiteUrl = "https://xinspect.de5.net";
 
     /// <summary>官網位址的顯示形狀（去掉 <c>https://</c>，給空間有限處用）。</summary>
     public static string OfficialSiteDisplay => OfficialSiteUrl.Replace("https://", "", StringComparison.Ordinal);
