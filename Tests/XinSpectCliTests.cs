@@ -15,6 +15,28 @@ namespace XinSpect.Tests;
 /// </remarks>
 public class XinSpectCliTests
 {
+    [Fact]
+    public void 補全清單必須覆蓋分派switch的所有case()
+    {
+        // 「兩處寫死會漂移」的同款病（RelayLimitParityTests 同款守門）：
+        // Program.cs 的 Tab 補全清單從 CommandBook 推導，這裡釘住——
+        // Execute() 裡出現的每一個 case "X"，都必須能在補全來源（CommandBook 條目名＋別名）裡找到。
+        string src = File.ReadAllText(Path.Combine(RepoRoot(), "XinSpectCli", "Program.cs"));
+        var cases = new System.Text.RegularExpressions.Regex("case .?([a-z?]+)")
+            .Matches(src).Select(m => m.Groups[1].Value).ToHashSet();
+
+        string book = File.ReadAllText(Path.Combine(RepoRoot(), "XinSpectCli", "CommandBook.cs"));
+        var names = new System.Text.RegularExpressions.Regex("new.?.?([a-z?]+)")
+            .Matches(book).Select(m => m.Groups[1].Value).ToHashSet();
+
+        // BuildCommands 補的別名（文檔外可用指令）
+        names.UnionWith(new[] { "refresh", "mascot", "吉祥物", "手冊", "quit", "q", "?" });
+
+        var missing = cases.Where(c => !names.Contains(c)).ToList();
+        Assert.True(missing.Count == 0,
+            "分派 switch 有、補全清單沒有：" + string.Join("、", missing));
+    }
+
     private static string RepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

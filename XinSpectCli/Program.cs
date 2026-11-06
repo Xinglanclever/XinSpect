@@ -29,12 +29,22 @@ internal static class Program
     private static string Bold => Tui.Bold;
     private static string Reset => Tui.Reset;
 
-    private static readonly string[] Commands =
-    [
-        "help", "ver", "pages", "page", "domain", "keys", "settings", "changelog",
-        "facts", "fact", "sys", "top", "dash", "msr", "pci", "ipc",
-        "redfish", "compliance", "merkle", "book", "百科", "clear", "exit",
-    ];
+    // 補全清單從 CommandBook 推導（單一事實來源——此前寫死 23 個、分派已 45+，體驗與
+    // 「兩處寫死會漂移」的同款病）。別名與文檔外的可用指令在此補列。
+    private static readonly string[] Commands = BuildCommands();
+
+    private static string[] BuildCommands()
+    {
+        var names = new List<string>();
+        foreach (var c in CommandBook.Commands)
+        {
+            var name = c.Name.Split(' ')[0];           // 「fact <關鍵字>」→ fact
+            if (!names.Contains(name)) names.Add(name);
+        }
+        foreach (var alias in new[] { "refresh", "mascot", "吉祥物", "手冊", "quit", "q", "?" })
+            if (!names.Contains(alias)) names.Add(alias);
+        return names.OrderBy(n => n, StringComparer.Ordinal).ToArray();
+    }
 
     private static readonly List<string> History = [];
     private static IReadOnlyList<HardwareFact>? _cache;
@@ -56,6 +66,8 @@ internal static class Program
         // 這條路改用 Console.ReadLine，EOF（null）正常收工；跳過歡迎框——管線輸出要乾淨。
         if (Console.IsInputRedirected)
         {
+            // 管線／批次：腳本與代理要能偵測失敗——未知指令與例外都計失敗，退出碼 1。
+            int failures = 0;
             while (true)
             {
                 try
@@ -64,14 +76,25 @@ internal static class Program
                     if (piped is null) break;              // EOF
                     piped = piped.Trim();
                     if (piped.Length == 0) continue;
+                    var first = piped.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (first.Length == 0) continue;
+                    var head = first[0].ToLowerInvariant();
+                    if (!Commands.Contains(head) && head != "help" && head != "?" && head != "exit"
+                        && head != "quit" && head != "q")
+                    {
+                        Console.WriteLine($"{Red}未知指令：{head}{Reset}（help 看清單）");
+                        failures++;
+                        continue;
+                    }
                     if (!Execute(piped)) break;
                 }
                 catch (Exception ex)
                 {
+                    failures++;
                     Console.WriteLine($"{Red}內部錯誤（已攔下，繼續讀下一行）：{ex.GetType().Name} {ex.Message}{Reset}");
                 }
             }
-            return 0;
+            return failures > 0 ? 1 : 0;
         }
 
         try
@@ -101,7 +124,9 @@ internal static class Program
                 if (line is null) break;              // Ctrl+Z／EOF
                 line = line.Trim();
                 if (line.Length == 0) continue;
-                History.Add(line);
+                // 歷史：連續重複不入（↑ 體驗）＋容量上限（長會話記憶體不緩漲）
+                if (History.Count == 0 || History[^1] != line) History.Add(line);
+                if (History.Count > 200) History.RemoveAt(0);
                 if (!Execute(line)) break;
             }
             catch (Exception ex)
@@ -152,9 +177,18 @@ internal static class Program
                 case "exit" or "quit" or "q": return false;
 
                 case "facts":
+                    if (rest.Contains("--refresh", StringComparison.Ordinal) ||
+                        rest.Contains("refresh", StringComparison.Ordinal))
+                        _cache = null;                     // 明確要求重採，快取作廢
                     EnsureFacts();
                     Console.WriteLine($"{Green}{_cache!.Count}{Reset} 筆事實（本機一輪採集）。");
-                    Console.WriteLine($"{Dim}用 fact <關鍵字> 查細節。{Reset}");
+                    Console.WriteLine($"{Dim}用 fact <關鍵字> 查細節；快取過期用 facts --refresh 重採。{Reset}");
+                    return true;
+
+                case "refresh":
+                    _cache = null;
+                    EnsureFacts();
+                    Console.WriteLine($"{Green}已重新採集：{_cache!.Count}{Reset} 筆事實。");
                     return true;
 
                 case "fact":
@@ -211,7 +245,11 @@ internal static class Program
                     return true;
 
                 case "compliance":
-                    RunCli(rest.Length == 0 ? ["--compliance"] : ["--compliance", "--format", rest]);
+                    // 使用者寫「compliance --format sarif」與「compliance sarif」都要能動——
+                    // rest 原樣拆詞往後送，不再整串塞給 --format（那個腳槍已拆除）。
+                    RunCli(rest.Length == 0
+                        ? ["--compliance"]
+                        : ["--compliance", .. rest.Split(' ', StringSplitOptions.RemoveEmptyEntries)]);
                     return true;
 
                 case "merkle":
@@ -269,7 +307,7 @@ internal static class Program
     {
         if (_cache is not null)
         {
-            Console.WriteLine($"{Dim}（使用現有快取；重新採集請再跑一次 facts）{Reset}");
+            Console.WriteLine($"{Dim}（使用現有快取；重採用 facts --refresh 或 refresh）{Reset}");
             return;
         }
         Tui.SpinnerStart();
@@ -1055,20 +1093,51 @@ internal static class Program
         Console.WriteLine($"{Red}用法：pci scan｜pci dump <n>{Reset}");
     }
 
+    private static BlueSquadronEngine? _ipcEngine;
+    private static int _ipcTimeoutMs = 15000;
+
     private static void Ipc(string rest)
     {
-        using var engine = new BlueSquadronEngine();
-        if (!engine.Start())
+        // 逾時可調：ipc timeout <毫秒>（會話級，存到 settings 的路徑留給下一版）
+        if (rest.StartsWith("timeout", StringComparison.OrdinalIgnoreCase))
         {
-            Console.WriteLine($"{Red}Bridge 啟動失敗：{engine.LastError}{Reset}");
+            var msText = rest["timeout".Length..].Trim();
+            if (int.TryParse(msText, out int ms) && ms is > 500 and <= 120000)
+            {
+                _ipcTimeoutMs = ms;
+                Console.WriteLine($"{Dim}ipc 逾時改為 {ms} ms（本會話）。{Reset}");
+                return;
+            }
+            Console.WriteLine($"{Red}用法：ipc timeout <毫秒>（500–120000）{Reset}");
             return;
         }
-        var resp = engine.SendCmd(rest, 15000);
-        Console.WriteLine(resp is { } json ? json.GetRawText() : $"{Red}無回應（逾時）。{Reset}");
+
+        // 引擎會話級快取：連續查 status／threats／baseline 不再每次重啟守護進程握手。
+        if (_ipcEngine is null)
+        {
+            _ipcEngine = new BlueSquadronEngine();
+            if (!_ipcEngine.Start())
+            {
+                Console.WriteLine($"{Red}Bridge 啟動失敗：{_ipcEngine.LastError}{Reset}");
+                _ipcEngine = null;
+                return;
+            }
+        }
+        var resp = _ipcEngine.SendCmd(rest, _ipcTimeoutMs);
+        Console.WriteLine(resp is { } json ? json.GetRawText() : $"{Red}無回應（逾時 {_ipcTimeoutMs} ms——可用 ipc timeout 調整）。{Reset}");
     }
 
     private static int RunCli(string[] args)
-        => CliService.Run(args, Collect, Console.Out, Console.Error);
+    {
+        // REPL 裡剛跑過 facts 時，轉發指令復用快取——不讓使用者再等一整輪採集。
+        // 快取存在時如實告知來源；沒有快取走全量採集（與主程式 CLI 同一路）。
+        if (_cache is not null)
+        {
+            Console.WriteLine($"{Dim}（使用現有快取 {_cache.Count:N0} 筆；重採用 facts --refresh 後再跑）{Reset}");
+            return CliService.Run(args, () => _cache, Console.Out, Console.Error);
+        }
+        return CliService.Run(args, Collect, Console.Out, Console.Error);
+    }
 
     /// <summary>與主程式 CLI 同一條採集路徑（EvidenceLabService＋使用者模式事實）。</summary>
     private static IReadOnlyList<HardwareFact> Collect()

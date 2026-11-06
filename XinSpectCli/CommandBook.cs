@@ -8,7 +8,7 @@ namespace XinSpectCli;
 /// </summary>
 internal static class CommandBook
 {
-    private sealed record Cmd(
+    internal sealed record Cmd(
         string Name,
         string Category,
         string Summary,
@@ -17,7 +17,7 @@ internal static class CommandBook
         string Details,
         string[] Related);
 
-    private static readonly Cmd[] Commands =
+    internal static readonly Cmd[] Commands =
     [
         new("facts", "採集與查詢", "採集一輪全機硬體事實進快取",
             "facts",
@@ -161,8 +161,8 @@ internal static class CommandBook
             ["compliance", "book 7"]),
         new("compliance [格式]", "證據與合規", "合規判定輸出",
             "compliance [json|sarif|junit|cef|otel]",
-            ["compliance", "compliance sarif"],
-            "把快取事實對照合規基準，依指定格式輸出判定結果。",
+            ["compliance", "compliance sarif", "compliance --format sarif"],
+            "把快取事實對照合規基準，依指定格式輸出判定結果。格式可寫在後面（compliance sarif）或用 --format（compliance --format sarif），兩種都通；有快取時直接用快取，不重採。",
             ["merkle", "book 7"]),
         new("merkle", "證據與合規", "穩定事實 Merkle 指紋",
             "merkle",
