@@ -34,7 +34,7 @@ public partial class OverclockView : UserControl
     }
 
     // ── 單一旋鈕：套用 ────────────────────────────────────────────────────
-    private void ApplyKnob_Click(object sender, RoutedEventArgs e)
+    private async void ApplyKnob_Click(object sender, RoutedEventArgs e)
     {
         var oc = Oc;
         if (oc is null || (sender as FrameworkElement)?.DataContext is not OcKnob knob) return;
@@ -80,7 +80,7 @@ public partial class OverclockView : UserControl
         var oc = Oc;
         if (oc is null || !ConfirmHighVoltage(oc)) return;
         try { await oc.ApplyVcore(); }
-        catch (Exception ex) { StatusText = $"Vcore 寫入失敗：{ex.Message}"; }
+        catch (Exception ex) { Diag.Swallow("OverclockView.ApplyVcore", ex, "Vcore 寫入失敗"); }
     }
 
     // ── 體質評分：特徵化（服務端自控負載階梯、背景取樣約 20–30 秒；此處採即發即忘）──
@@ -130,7 +130,7 @@ public partial class OverclockView : UserControl
         };
         if (dlg.ShowDialog() == true)
             try { await oc.ImportProfileFrom(dlg.FileName); }
-            catch (Exception ex) { StatusText = $"匯入失敗：{ex.Message}"; }
+            catch (Exception ex) { Diag.Swallow("OverclockView.ImportProfile", ex, "匯入失敗"); }
     }
 
     private void ApplyLastStable_Click(object sender, RoutedEventArgs e) => _ = Oc?.ApplyLastStable();
@@ -145,7 +145,7 @@ public partial class OverclockView : UserControl
         var oc = Oc;
         if (oc is null || !ConfirmHighVoltage(oc)) return;
         try { await oc.ApplyAll(); }
-        catch (Exception ex) { StatusText = $"全部套用失敗：{ex.Message}"; }
+        catch (Exception ex) { Diag.Swallow("OverclockView.ApplyAll", ex, "全部套用失敗"); }
     }
     private void Discard_Click(object sender, RoutedEventArgs e) => _ = Oc?.DiscardAll();
     private void RestoreDefaults_Click(object sender, RoutedEventArgs e) => _ = Oc?.RestoreDefaults();
