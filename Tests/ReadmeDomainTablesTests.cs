@@ -34,7 +34,7 @@ public class ReadmeDomainTablesTests
         return dir!.FullName;
     }
 
-    private static string Readme() => File.ReadAllText(Path.Combine(RepoRoot(), "README.md"));
+    private static string Readme() => File.ReadAllText(Path.Combine(RepoRoot(), "docs", "百科-v3.17.md"));
 
     private static string Slice(string start, string end)
     {

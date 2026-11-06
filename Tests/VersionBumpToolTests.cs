@@ -44,6 +44,7 @@ public class VersionBumpToolTests
         foreach (string rel in new[]
                  {
                      "XinSpect.csproj", "README.md", "README.zh-CN.md", "README.en.md", "SECURITY.md",
+                     Path.Combine("docs", "百科-v3.17.md"),
                      Path.Combine("Nav", "ChangelogCatalog.cs"),
                      Path.Combine("Views", "AboutView.xaml"),
                      Path.Combine(".github", "ISSUE_TEMPLATE", "bug_report.yml"),
@@ -108,8 +109,10 @@ public class VersionBumpToolTests
             Assert.Equal(1, Count(cat, $"Version = \"{next}\","));
 
             string md = File.ReadAllText(Path.Combine(box, "README.md"));
-            Assert.Equal(1, Count(md, $"- **v{next}**（"));
-            Assert.Equal(1, Count(md, $"#### v{next}（"));
+            // 2026-11-07 README 換修正版後，版本沿革兩層（11.2 bullet／11.3 小節）住進 docs/百科-v3.17.md。
+            string bk = File.ReadAllText(Path.Combine(box, "docs", "百科-v3.17.md"));
+            Assert.Equal(1, Count(bk, $"- **v{next}**（"));
+            Assert.Equal(1, Count(bk, $"#### v{next}（"));
 
             string zh = File.ReadAllText(Path.Combine(box, "README.zh-CN.md"));
             Assert.Equal(1, Count(zh, $"- **v{next} "));

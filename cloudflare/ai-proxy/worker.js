@@ -151,7 +151,8 @@ async function viaWorkersAi(env, model, messages, maxTokens, temperature) {
 }
 
 // ── 留言建議 ────────────────────────────────────────────────────────────────
-// 只收三個欄位：留言、選填的聯絡方式、版本號。其他一律丟掉——程式那側說了「只送你打的字」，
+// 收四個欄位：留言、選填的聯絡方式、版本號，以及 IP 對應的國家代碼（cf-ipcountry，
+// 由 Cloudflare 邊緣附上，留言匣會顯示）。其他一律丟掉——程式那側說了「只送你打的字」，
 // 這側就不能偷收別的，否則那句話就是騙人的。
 async function handleFeedback(request, env) {
   const ip = clientIp(request);

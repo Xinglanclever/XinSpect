@@ -197,32 +197,38 @@ def main(argv=None):
              + body + CNL + "            ]," + CNL + "        }," + CNL)
     cat.insert_before(anchor, block, "ChangelogCatalog")
 
-    # 6) README.md
+    # 6) README.md —— 2026-11-07 換成「修正版」首頁後只留：徽章、下載連結、位元組數註腳。
+    #    版本沿革兩層（11.1/11.2/11.3）隨 87 萬字底稿住進 docs/百科-v3.17.md（見 6-2）。
     md = doc("README.md")
-    md.replace("這一版針對的是 **v%s** 的這棵樹" % OLD, "這一版針對的是 **v%s** 的這棵樹" % V, "README")
     md.replace("badge/version-%s-" % OLD, "badge/version-%s-" % V, "README 徽章")
     md.replace("releases/download/v%s/" % OLD, "releases/download/v%s/" % V, "README 下載連結")
     md.replace("本版（v%s）實際發佈的檔案大小" % OLD, "本版（v%s）實際發佈的檔案大小" % V, "README 註腳")
-    md.replace("最新的一筆是 v%s（" % OLD, "最新的一筆是 v%s（" % V, "README 11.1")
-    sync_date(md, r"最新的一筆是 v%s（(\d{4}-\d{2}-\d{2})）" % re.escape(V), "README 11.1 日期")
-    md.replace("本版是 v%s ——" % OLD, "本版是 v%s ——" % V, "README 結語")
+
+    # 6-2) docs/百科-v3.17.md —— 敘事主體。沿革兩層、結語、登記筆數都從這裡過。
+    bk = doc(os.path.join("docs", "百科-v3.17.md"))
+    bk.replace("這一版針對的是 **v%s** 的這棵樹" % OLD, "這一版針對的是 **v%s** 的這棵樹" % V, "百科 底稿版本")
+    bk.replace("badge/version-%s-" % OLD, "badge/version-%s-" % V, "百科 徽章")
+    bk.replace("releases/download/v%s/" % OLD, "releases/download/v%s/" % V, "百科 下載連結")
+    bk.replace("本版（v%s）實際發佈的檔案大小" % OLD, "本版（v%s）實際發佈的檔案大小" % V, "百科 註腳")
+    bk.replace("最新的一筆是 v%s（" % OLD, "最新的一筆是 v%s（" % V, "百科 11.1")
+    sync_date(bk, r"最新的一筆是 v%s（(\d{4}-\d{2}-\d{2})）" % re.escape(V), "百科 11.1 日期")
+    bk.replace("本版是 v%s ——" % OLD, "本版是 v%s ——" % V, "百科 結語")
 
     bullet = "- **v%s**（%s）：%s（本版 %d 項）" % (V, args.date, args.title, len(items))
-    md_bullet_anchor = "- **v%s**（" % OLD
-    md.insert_before(md_bullet_anchor, bullet + "\n", "README 11.2")
+    bk.insert_before("- **v%s**（" % OLD, bullet + "\n", "百科 11.2")
 
     section = ("#### v%s（%s）" % (V, args.date) + "\n\n**%s**" % args.title + "\n\n"
                + "\n".join("- " + i for i in items) + "\n\n")
-    md.insert_before("#### v%s（" % OLD, section, "README 11.3")
+    bk.insert_before("#### v%s（" % OLD, section, "百科 11.3")
 
     # 6b) 登記筆數：這一筆插進去之後目錄就多了一筆，兩處現在式宣稱要跟著動。
     #     先前這裡漏了，於是工具自己驗不過——驗證碼抓到自己的工具，這正是它該做的事。
     cat_now = cat.text
     n_entries = len(re.findall(r'(?m)^\s*Version = "', cat_now))
-    md_before = md.text
-    md.text = re.sub(r"\*\*登記筆數\*\*：\d+ 筆", "**登記筆數**：%d 筆" % n_entries, md.text)
-    if md.text != md_before:
-        md.dirty = True
+    bk_before = bk.text
+    bk.text = re.sub(r"\*\*登記筆數\*\*：\d+ 筆", "**登記筆數**：%d 筆" % n_entries, bk.text)
+    if bk.text != bk_before:
+        bk.dirty = True
 
     # 7) README.zh-CN.md
     zh = doc("README.zh-CN.md")
@@ -255,7 +261,7 @@ def main(argv=None):
     en_row = "| %s | %s | %s |" % (V, args.date, title_en)
     en.insert_before("| %s | " % OLD, en_row + "\n", "en 沿革表")
 
-    docs = [d for d in [proj, about, info, sec, bug, hw, cat, md, zh, en] if d is not None]
+    docs = [d for d in [proj, about, info, sec, bug, hw, cat, md, bk, zh, en] if d is not None]
     if args.dry_run:
         for d in docs:
             if d.dirty:
@@ -274,12 +280,14 @@ def main(argv=None):
         problems.append("ChangelogCatalog 的 %s 出現 %d 次（應為 1）" % (V, n_new))
 
     md_text = io.open(os.path.join(root, "README.md"), encoding="utf-8-sig").read()
+    # 2026-11-07 後：11.2/11.3/登記筆數/11.1 都住在 docs/百科-v3.17.md；README.md 只剩徽章與下載連結。
+    bk_text = io.open(os.path.join(root, "docs", "百科-v3.17.md"), encoding="utf-8-sig").read()
     for label, pat in [("11.2 bullet", "- **v%s**（" % V), ("11.3 小節", "#### v%s（" % V)]:
-        c = md_text.count(pat)
+        c = bk_text.count(pat)
         if c != 1:
-            problems.append("README %s 出現 %d 次（應為 1）" % (label, c))
-    if ("**登記筆數**：%d 筆" % n_entries) not in md_text:
-        problems.append("README 的登記筆數沒有等於目錄的 %d 筆" % n_entries)
+            problems.append("百科底稿 %s 出現 %d 次（應為 1）" % (label, c))
+    if ("**登記筆數**：%d 筆" % n_entries) not in bk_text:
+        problems.append("百科底稿的登記筆數沒有等於目錄的 %d 筆" % n_entries)
 
     appinfo_path = os.path.join(root, "Models", "AppInfo.cs")
     if os.path.exists(appinfo_path):
@@ -294,7 +302,7 @@ def main(argv=None):
     en_text = io.open(os.path.join(root, "README.en.md"), encoding="utf-8-sig").read()
     # 文件版本句的日期：v3.03 曾經版號換了、日期留在上一版，讀起來就是「v3.03（2026-10-26）」。
     for label, text, pat in [
-        ("README 11.1", md_text, "最新的一筆是 v%s（%s）" % (V, args.date)),
+        ("百科 11.1", bk_text, "最新的一筆是 v%s（%s）" % (V, args.date)),
         ("zh-CN 文件版本", zh_text, "本文档对应 XinSpect v%s（%s）" % (V, args.date)),
         ("en 文件版本", en_text, "corresponds to XinSpect v%s (%s)" % (V, args.date)),
         ("zh-CN 沿革", zh_text, "- **v%s %s**（%s）：" % (V, args.codename, args.date)),

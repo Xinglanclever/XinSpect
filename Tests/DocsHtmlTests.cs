@@ -85,8 +85,8 @@ public class DocsHtmlTests
     public void 百科html記的來源sha256要等於目前READMEmd()
     {
         string html = ReadRepoText("百科.html");
-        // 檔頭：<!-- 由 README.md 產生（sha256 xxxxxxxxxxxx）；… -->
-        Assert.Contains("（sha256 " + Sha12OfRepoFile("README.md") + "）", html);
+        // 檔頭：<!-- 由 docs/百科-v3.17.md 產生（sha256 xxxxxxxxxxxx）；… -->
+        Assert.Contains("（sha256 " + Sha12OfRepoFile(Path.Combine("docs", "百科-v3.17.md")) + "）", html);
     }
 
     [Fact]

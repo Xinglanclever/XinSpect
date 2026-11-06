@@ -49,7 +49,7 @@ APP_H_END = "### 附錄 I"
 CATALOG = os.path.join("Services", "FactKeyCatalog.cs")
 FAMILIES = os.path.join("Services", "FactKeyDynamicCatalog.cs")
 SERVICES = "Services"
-README = "README.md"
+README = os.path.join("docs", "百科-v3.17.md")
 
 
 def repo_root():

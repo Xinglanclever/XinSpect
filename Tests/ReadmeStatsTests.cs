@@ -43,12 +43,18 @@ public class ReadmeStatsTests
         return dir!.FullName;
     }
 
-    private static string Readme() => File.ReadAllText(Path.Combine(RepoRoot(), "README.md"));
+    /// <summary>
+    /// 百科底稿（v3.17 的 87 萬字敘事主體）。2026-11-07 README 換成「修正版」後，
+    /// 各節（0.8／10.1／附錄 H／服務數量敘述）隨底稿搬到 docs/——守門照樣盯著它們。
+    /// </summary>
+    private static string Readme() => File.ReadAllText(Path.Combine(RepoRoot(), "docs", "百科-v3.17.md"));
 
     /// <summary>把表格區塊拆成（列名, 數值）——數值去掉粗體與千分位。</summary>
     private static Dictionary<string, string> Rows(string section, string endMarker)
+        => RowsOf(Readme(), section, endMarker);
+
+    private static Dictionary<string, string> RowsOf(string text, string section, string endMarker)
     {
-        string text = Readme();
         int start = text.IndexOf(section, StringComparison.Ordinal);
         Assert.True(start >= 0, $"README 找不到區段「{section}」");
         int end = text.IndexOf(endMarker, start, StringComparison.Ordinal);
@@ -124,7 +130,9 @@ public class ReadmeStatsTests
     [Fact]
     public void 規模表的每一個數字都要與這棵樹相符()
     {
-        var rows = Rows("## 這棵樹的事實表（可複算）", "\n---");
+        // 2026-11-07 README 換成修正版後，規模表留在 README.md（底稿的其餘各節搬到 docs/百科-v3.17.md）。
+        string text = File.ReadAllText(Path.Combine(RepoRoot(), "README.md"));
+        var rows = RowsOf(text, "## 這棵樹的事實表（可複算）", "\n---");
         var d = DomainStats();
         var (facts, theories) = TestMethodCounts();
 
@@ -144,6 +152,10 @@ public class ReadmeStatsTests
             ["全域 C# 檔"] = AllCsFiles().Count.ToString(),
             ["版本紀錄筆數"] = ChangelogCatalog.Entries.Count.ToString(),
             ["專案測試基線"] = TestSuiteBaseline.ProjectTests.ToString(),
+            // 修正版新增的三列：CLI 指令數從分派表現場數（Execute 的 case 標籤）。
+            ["CLI 指令（`Execute` case 標籤）"] =
+                Regex.Matches(File.ReadAllText(Path.Combine(RepoRoot(), "XinSpectCli", "Program.cs")), @"case """).Count
+                    .ToString(),
         };
 
         var problems = new List<string>();

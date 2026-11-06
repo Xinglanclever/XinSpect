@@ -178,7 +178,8 @@ public class CommercialLicenseTests
 
         // README 的說明目錄是 HelpCatalog 的鏡像：只檢查那一行。沿革條目會引用舊句子
         // （「原本寫……」，那是歷史紀錄，不是現在的宣稱），不能拿整份 README 去掃。
-        string readme = Read("README.md");
+        // 2026-11-07 README 換修正版後，說明目錄（HelpCatalog 鏡像）隨底稿住進 docs/。
+        string readme = Read(Path.Combine("docs", "百科-v3.17.md"));
         string? line = readme.Split('\n')
             .FirstOrDefault(l => l.TrimStart().StartsWith("- 功能／怎麼讀：本軟體", StringComparison.Ordinal));
         Assert.NotNull(line);

@@ -38,7 +38,7 @@ import sys
 
 # ── 文件對：來源 .md → 輸出 .html ────────────────────────────────────────
 DOCS = [
-    ("README.md", "百科.html", "曦覽 XinSpect 百科"),
+    ("docs/百科-v3.17.md", "百科.html", "曦覽 XinSpect 百科"),
     ("手冊.md", "手冊.html", "曦覽 XinSpect 手冊"),
 ]
 

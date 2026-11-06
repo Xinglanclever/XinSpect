@@ -289,7 +289,8 @@ public class ChangelogTests
     [Fact]
     public void README的兩層沿革都要跟紀錄一筆對一筆()
     {
-        string text = ReadRepoFile("README.md");
+        // 2026-11-07 README 換修正版後，11.2／11.3 兩層沿革隨底稿住進 docs/百科-v3.17.md。
+        string text = ReadRepoFile(Path.Combine("docs", "百科-v3.17.md"));
         int entries = ChangelogCatalog.Entries.Count;
 
         int bullets = Regex.Matches(Slice(text, "### 11.2 逐版紀錄", "### 11.3 逐版逐項"), @"(?m)^- \*\*").Count;
@@ -310,7 +311,7 @@ public class ChangelogTests
     public void 最新一筆的逐項文字要逐字出現在逐版逐項()
     {
         var latest = ChangelogCatalog.Entries[0];
-        string text = ReadRepoFile("README.md");
+        string text = ReadRepoFile(Path.Combine("docs", "百科-v3.17.md"));
         int start = text.IndexOf("### 11.3 逐版逐項", StringComparison.Ordinal);
         Assert.True(start >= 0, "找不到第 11.3 節");
         int head = text.IndexOf("#### v" + latest.Version, start, StringComparison.Ordinal);

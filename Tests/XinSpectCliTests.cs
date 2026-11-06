@@ -83,7 +83,7 @@ public class XinSpectCliTests
         Assert.Contains("class CommandBook", File.ReadAllText(Path.Combine(root, "XinSpectCli", "CommandBook.cs")), StringComparison.Ordinal);
         Assert.True(File.Exists(Path.Combine(root, "XinSpectCli", "Book.cs")), "缺 Book.cs");
         string csproj = File.ReadAllText(Path.Combine(root, "XinSpectCli", "XinSpectCli.csproj"));
-        Assert.Contains("README.md", csproj, StringComparison.Ordinal);
+        Assert.Contains("docs" + Path.DirectorySeparatorChar + "百科-v3.17.md", csproj, StringComparison.Ordinal);
         // 不得引入寫入通路
         Assert.DoesNotContain("WritePciConfig", src, StringComparison.Ordinal);
         Assert.DoesNotContain("WriteMsrPair", src, StringComparison.Ordinal);

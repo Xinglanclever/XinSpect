@@ -35,7 +35,7 @@
 
   <!-- 百科全書（README.md，約 1.5MB）整本嵌入：book 指令離線可讀，不需要外部檔案 -->
   <ItemGroup>
-    <EmbeddedResource Include="..\README.md" Link="docs\README.md" />
+    <EmbeddedResource Include="..\docs\百科-v3.17.md" Link="docs\百科-v3.17.md" />
   </ItemGroup>
 
 

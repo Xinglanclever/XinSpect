@@ -275,7 +275,7 @@ public class FactCoverageReportTests
         // 而沒有守門看著它。上限的單一來源是 FactCoverageReport.ReviewedUncoveredBaseline。
         int baseline = FactCoverageReport.ReviewedUncoveredBaseline;
         var root = RepoRoot();
-        string readme = File.ReadAllText(Path.Combine(root, "README.md"));
+        string readme = File.ReadAllText(Path.Combine(root, "docs", "百科-v3.17.md"));
 
         Assert.Contains($"| 覆蓋基線 | {baseline} | 遞增需留理由 |", readme);
         Assert.Contains($"計數基線（目前 {baseline}）", readme);
