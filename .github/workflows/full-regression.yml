@@ -1,0 +1,57 @@
+# 全套回歸的定期驗證（排程・自機託管）。
+#
+# 為什麼存在：全套 7,884 條測試依賴真機（感測器／ring0／WMI），hosted runner 必紅——
+# 所以 CI 的 PR 關只跑守門子集，全套回歸長期靠「作者本機自覺」。這個 workflow 把
+# 「本機自覺」變成「有紀錄的定期驗證」：每週在真機（self-hosted runner）跑一次全套，
+# 紅了開 issue 留檔，不擋任何 PR。
+#
+# 前置（一次性）：
+#   1. 在真機註冊 self-hosted runner（標籤：self-hosted、windows、x64）：
+#      gh api repos/Xinglanclever/XinSpect/actions/runners/registration-token --jq .token
+#      下載 actions-runner（Windows x64），config.sh --url <repo> --token <token> --labels self-hosted
+#      並以「使用者的 Windows 服務」安裝——測試需要管理員權限與感測器存取。
+#   2. Stryker 深度突變另開手動觸發（workflow_dispatch），不進每週排程——突變測試以小時計。
+#
+# 界線：runner 掛在作者的日常機器上——機器關機／重開機中，排程會延後或跳過（GitHub 排程
+#   對 self-hosted 不補跑）；bus factor 是這個設計的已知極限。
+
+name: full-regression
+
+on:
+  schedule:
+    - cron: "0 3 * * 6"   # 每週六 03:00 UTC（真機的上午）
+  workflow_dispatch:       # 手動觸發：真機狀態良好時隨時可跑
+
+jobs:
+  full-suite:
+    runs-on: [self-hosted, windows, x64]
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 前置健檢（僵屍進程會讓 WMI 測試互堵——發現即中止並留檔）
+        shell: pwsh
+        run: |
+          $stale = Get-Process XinSpectConsole,XinSpect -ErrorAction SilentlyContinue
+          if ($stale) {
+            $stale | Format-Table Id,ProcessName,CPU | Out-String | Write-Host
+            Write-Host "::error::發現殘留的曦覽進程（可能卡在核心等待）——先清場再跑，避免 WMI 互堵假紅"
+            exit 1
+          }
+
+      - name: 全套守門測試（Debug・單節點編譯）
+        shell: pwsh
+        run: dotnet test Tests/XinSpect.Tests.csproj -c Debug --nologo -m:1
+
+      - name: 紅了開 issue（綠了在 summary 記一筆）
+        if: failure()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $date = Get-Date -Format 'yyyy-MM-dd HH:mm'
+          gh issue create `
+            --title "全套回歸紅燈（$date・排程）" `
+            --body "排程全套回歸失敗。工作流程執行：$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID`n`n請先分辨：真機依賴（環境變動）還是真回歸。" `
+            --label bug
+          if ($LASTEXITCODE -ne 0) { Write-Host "::warning::開 issue 失敗（gh 未登入？）——測試已紅，請手動留檔" }

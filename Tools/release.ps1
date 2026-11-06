@@ -271,11 +271,27 @@ $driverBat = 'XsRegProbe\Driver\x64build\build.bat'
     Ok "driver $driverSys = $((Get-Item $driverSys).Length) bytes"
 
     # ---------- release + assets ----------
-    Write-Host '==> create/update Release and upload eight assets'
+    Write-Host '==> create/update Release and upload eight assets + SHA256SUMS.txt'
     $bridge = 'publish-2.44-bridge\BlueSquadronBridge.exe'
     if (-not (Test-Path $bridge)) { Fail "bridge asset source missing: $bridge" }
+
+    # SHA256SUMS.txt：逐資產雜湊，讓不用 GitHub API 的使用者也能比對下載完整性。
+    # 界線（寫進檔頭註解）：它防傳輸損毀，防不了能替換整個 Release 的攻擊者——
+    # 同一通道可同時換掉 SUMS；真正的不可否認要簽名（minisign/sigstore，排期）。
+    # 2026-11-06 曾依指示移除、11-07 審計後回復——「每個數字可複算」的自我要求包含發佈物本身。
+    $sums = Join-Path $env:TEMP "SHA256SUMS-$Version.txt"
+    $sumLines = @("# XinSpect v$Version SHA-256",
+                  "# 防下載損毀與傳輸錯誤；不可否認性需簽名驗證（尚未提供）。比對：certutil -hashfile <檔> SHA256")
+    foreach ($a in $assets) {
+        $h = (Get-FileHash -Algorithm SHA256 -Path $a[1]).Hash.ToLowerInvariant()
+        $sumLines += "$h  $($a[0])"
+    }
+    [IO.File]::WriteAllText($sums, (($sumLines -join "`n") + "`n"), (New-Object Text.UTF8Encoding($false)))
+    Ok "SHA256SUMS.txt = $((Get-Item $sums).Length) bytes（逐資產實算）"
+
     $up = @()
     foreach ($a in $assets) { $up += '--asset'; $up += "$($a[0])=$($a[1])" }
+    $up += '--asset'; $up += "SHA256SUMS.txt=$sums"
     & python Tools/publish_release.py --tag "v$Version" --title $Title --body-file $BodyFile @up
     if ($LASTEXITCODE -ne 0) { Fail 'asset upload failed' }
 
