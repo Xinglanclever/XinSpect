@@ -8,6 +8,10 @@ bin-dev/
 bin-dev2/
 bin-pub*/
 bin-reltest/
+bin-reltest2/
+bin-reltest3/
+XinSpect.Decoders/work/
+XinSpect.Decoders/bin-reltest3/
 bin-dev3/
 bin-dev4/
 bin-suite1/

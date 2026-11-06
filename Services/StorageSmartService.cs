@@ -811,10 +811,10 @@ public sealed class StorageSmartService : ObservableObject
         {
             if (a.Id == 0) continue;
             if (!thresholds.TryGetValue(a.Id, out byte th) || th == 0) continue;
-            long value;
-            if (a.RawValue is { } raw) value = (long)Math.Min(raw, long.MaxValue);
-            else if (!long.TryParse(a.ValueText, out value)) continue;
-            if (value <= th) failing.Add(new FailingNowRow(a.Id, a.Name, value, th));
+            // 審計 #28：門檻評比用 normalized 現值（ATA 規格），不是 48 位元 raw 值——
+            // raw=0 的重配置扇區會誤判「現正低於門檻」，因為 normalized 100 > 門檻 5。
+            if (!long.TryParse(a.ValueText, out long normalized)) continue;
+            if (normalized <= th) failing.Add(new FailingNowRow(a.Id, a.Name, normalized, th));
         }
         return failing;
     }

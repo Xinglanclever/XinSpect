@@ -25,11 +25,12 @@ public static class EfiSigListDecoder
             uint listSize = BitConverter.ToUInt32(data, off + 16);
             uint headerSize = BitConverter.ToUInt32(data, off + 20);
             uint sigSize = BitConverter.ToUInt32(data, off + 24);
-            if (listSize == 0 || off + (int)listSize > data.Length) break;
+            if (listSize == 0 || listSize > (uint)data.Length || (long)off + listSize > data.Length) break;   // 審計 #21：uint 直轉 int 會溢出
+            if (headerSize > listSize - 28) break;   // header 不能超過清單本身
             if (sigSize <= 16) { off += (int)listSize; continue; } // 簽章條目至少要有 Owner GUID
-            int sigDataStart = off + 28 + (int)headerSize;
-            int sigDataEnd = off + (int)listSize;
-            int count = sigDataEnd > sigDataStart ? (sigDataEnd - sigDataStart) / (int)sigSize : 0;
+            int sigDataStart = off + 28 + (int)Math.Min(headerSize, int.MaxValue);
+            int sigDataEnd = off + (int)Math.Min(listSize, int.MaxValue);
+            int count = sigDataEnd > sigDataStart ? (sigDataEnd - sigDataStart) / (int)Math.Min(sigSize, int.MaxValue) : 0;
             results.Add(new EfiSignatureListInfo(typeGuid, count, (int)listSize));
             off += (int)listSize;
         }
@@ -71,11 +72,12 @@ public static class EfiSigListDecoder
             uint listSize = BitConverter.ToUInt32(data, off + 16);
             uint headerSize = BitConverter.ToUInt32(data, off + 20);
             uint sigSize = BitConverter.ToUInt32(data, off + 24);
-            if (listSize == 0 || off + (int)listSize > data.Length) break;
+            if (listSize == 0 || listSize > (uint)data.Length || (long)off + listSize > data.Length) break;   // 審計 #21
+            if (headerSize > listSize - 28) break;
             if (typeGuid == Sha256TypeGuid && sigSize == 48) // 16（Owner）+ 32（SHA-256）
             {
-                int sigDataStart = off + 28 + (int)headerSize;
-                int sigDataEnd = off + (int)listSize;
+                int sigDataStart = off + 28 + (int)Math.Min(headerSize, int.MaxValue);
+                int sigDataEnd = off + (int)Math.Min(listSize, int.MaxValue);
                 for (int p = sigDataStart; p + 48 <= sigDataEnd; p += (int)sigSize)
                 {
                     var bytes = new byte[32];
