@@ -52,10 +52,17 @@ internal static class Program
 
     private static int Main(string[] args)
     {
-        Console.OutputEncoding = Encoding.UTF8;
+        try { Console.OutputEncoding = Encoding.UTF8; }
+        catch { /* 管線斷開（stdout 關閉）時設定編碼會丟例外——啟動不能死在這（審計 #22） */ }
         Tui.EnableAnsi();   // Win10 傳統 conhost 預設不開 VT，不開的話整個界面印成原始 ESC 序列
         try { Console.CursorVisible = true; } catch { /* 重導輸出時沒有游標可管 */ }
 
+        // 明示的系統修復動作（審計 #1 的配套）：刪除死指針的 WinRing0 服務。需要管理員。
+        if (args.Length == 1 && args[0].Equals("--repair-ring0", StringComparison.OrdinalIgnoreCase))
+        {
+            RepairRing0Service();
+            return 0;
+        }
         if (args.Length > 0)
         {
             // xsc compliance --format sarif …：直接轉發既有 CLI 通路後退出
@@ -221,9 +228,21 @@ internal static class Program
 
                 case "sys": LiveLine(); return true;
                 case "fan": Fans(); return true;
-                case "dash": Dashboard(); return true;
+                case "dash":
+                    if (Console.IsInputRedirected)
+                    {
+                        Console.WriteLine($"{Red}dash 需要互動終端（按鍵退出）——管線模式請用 sys。{Reset}");
+                        return true;
+                    }
+                    Dashboard(); return true;
 
-                case "top": LiveTop(rest); return true;
+                case "top":
+                    if (Console.IsInputRedirected)
+                    {
+                        Console.WriteLine($"{Red}top 需要互動終端（按鍵退出）——管線模式請用 sys。{Reset}");
+                        return true;
+                    }
+                    LiveTop(rest); return true;
 
                 case "msr":
                     if (rest.Length == 0) { Console.WriteLine($"{Red}用法：msr <十六進位索引>，例如 msr 0x19C{Reset}"); return true; }
@@ -312,7 +331,15 @@ internal static class Program
         }
         Tui.SpinnerStart();
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        _cache = Collect();
+        try
+        {
+            _cache = Collect();
+        }
+        catch
+        {
+            Tui.SpinnerStop("採集中斷——沒有事實進快取。", ok: false);
+            throw;
+        }
         sw.Stop();
         Tui.SpinnerStop($"facts ({FactKeyCatalog.Count:N0} 靜態鍵 · {FactKeyDynamicCatalog.Families.Count} 動態家族 · 耗時 {sw.Elapsed.TotalSeconds:0.00}s)");
         // ⎿ 結果行：快取筆數是真實收集到的數量（含動態展開），與靜態鍵數是兩個口徑，都如實報
@@ -804,14 +831,38 @@ internal static class Program
         }
         using (svc)
         {
-            Console.WriteLine($"{Dim}Ctrl+C 停止。{Reset}");
+            Console.WriteLine($"{Dim}Q 或 Ctrl+C 停止。{Reset}");
             Console.WriteLine($"  {"時間",-10}{"CPU 溫度",10}{"CPU 負載",10}{"GPU 溫度",10}{"MEM",8}");
-            while (true)
+            // 審計 #17：TreatControlCAsInput 未開時 Ctrl+C 是 SIGINT 直接殺進程——
+            // 「提示符會好好回到你手上」的承諾在這裡是假的。開了之後 Ctrl+C 是普通按鍵。
+            bool prevCtrlC = false;
+            try { prevCtrlC = Console.TreatControlCAsInput; } catch { }
+            try { Console.TreatControlCAsInput = true; } catch { }
+            try
             {
-                var (cpuT, gpuT, cpuL, memL, _, _, _) = svc.Read();
-                Console.WriteLine($"  {DateTime.Now.ToString("HH:mm:ss"),-10}"
-                    + $"{Heat(cpuT, 75, 85),10}{Fmt(cpuL),10}{Heat(gpuT, 75, 85),10}{Heat(memL, 85, 95),8}");
-                Thread.Sleep((int)(interval * 1000));
+                while (true)
+                {
+                    var (cpuT, gpuT, cpuL, memL, _, _, _) = svc.Read();
+                    Console.WriteLine($"  {DateTime.Now.ToString("HH:mm:ss"),-10}"
+                        + $"{Heat(cpuT, 75, 85),10}{Fmt(cpuL),10}{Heat(gpuT, 75, 85),10}{Heat(memL, 85, 95),8}");
+                    // 有按鍵就檢查離開（重導輸入下 KeyAvailable 會丟例外＝沒有按鍵）
+                    try
+                    {
+                        if (Console.KeyAvailable)
+                        {
+                            var k = Console.ReadKey(true);
+                            if (k.Key == ConsoleKey.Q ||
+                                (k.Key == ConsoleKey.C && k.Modifiers.HasFlag(ConsoleModifiers.Control)))
+                                break;
+                        }
+                    }
+                    catch { }
+                    Thread.Sleep((int)(interval * 1000));
+                }
+            }
+            finally
+            {
+                try { Console.TreatControlCAsInput = prevCtrlC; } catch { }
             }
         }
     }
@@ -826,32 +877,56 @@ internal static class Program
     private static string Fmt(double? v) => v is null ? "—" : v.Value.ToString("0.#");
 
     /// <summary>LibreHardwareMonitor 的薄包裝；失敗回 null（缺驅動／非管理員是環境事實）。</summary>
-    private static bool _ring0Checked;
+    private static bool _ring0DiagShown;
 
     /// <summary>
-    /// WinRing0 服務健檢：服務鍵指向的 .sys 不存在（死指針）時刪掉這個服務。
-    /// LHM 的 Open() 只在服務不存在時用自己的內嵌簽章驅動建一份——死指針不清，
-    /// StartService 永遠失敗，MSR 全滅：核心時脈整排消失、RAPL 功率卡在垃圾值。
-    /// 實例：本機的服務被別家工具註冊到已刪除的桌面資料夾（ImagePath 指向不存在的 .sys）。
+    /// WinRing0 服務健檢（<b>唯讀診斷</b>）：服務鍵指向的 .sys 不存在（死指針）時——只回報，不動手。
+    /// 審計 #1（2026-11-07）：此前的版本會在「唯讀模式」橫幅下靜默執行 sc.exe delete——
+    /// 對系統狀態的寫入藏在唯讀承諾底下，行為與同屏宣稱直接矛盾。修復改為使用者明示的動作：
+    /// <c>xsc --repair-ring0</c>（刪除死指針服務，讓 LHM 下次用自己的內嵌驅動重建）。
+    /// 實例：服務被別家工具註冊到已刪除的桌面資料夾（ImagePath 指向不存在的 .sys），
+    /// StartService 永遠失敗 → 時脈整排消失、RAPL 功率卡垃圾值。
     /// </summary>
-    private static void EnsureRing0Service()
+    private static (bool DeadPointer, string Diag) DiagnoseRing0Service()
     {
-        if (_ring0Checked) return;
-        _ring0Checked = true;
+        const string svc = "WinRing0_1_2_0";
+        using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\" + svc);
+        if (key is null) return (false, $"服務 {svc} 未安裝（LHM 會在需要時自建）。");
+        string? image = (key.GetValue("ImagePath") as string)?.Trim();
+        if (string.IsNullOrEmpty(image)) return (false, $"服務 {svc} 沒有 ImagePath。");
+        // ImagePath 形如 \??\C:\...——剝掉裝置前綴再驗存在性
+        string path = image.StartsWith(@"\??\", StringComparison.Ordinal) ? image[4..] : image;
+        if (File.Exists(path)) return (false, $"服務 {svc} 指向 {path}（存在）。");
+        return (true, $"服務 {svc} 是死指針：ImagePath 指向不存在的 {path}——StartService 必敗，" +
+                      "時脈／RAPL 功率會全是垃圾值。修復：xsc --repair-ring0（刪除死服務，LHM 下次自建）。");
+    }
+
+    /// <summary>每個 wrapper 實例只顯示一次診斷（死指針才顯示）。</summary>
+    private static void DiagnoseRing0Once()
+    {
+        if (_ring0DiagShown) return;
+        _ring0DiagShown = true;
+        try
+        {
+            var (dead, diag) = DiagnoseRing0Service();
+            if (dead) Console.WriteLine($"{Dim}[{diag}]{Reset}");
+        }
+        catch { }
+    }
+
+    /// <summary>明示的修復動作（--repair-ring0）：刪除死指針的 WinRing0 服務。需要管理員。</summary>
+    private static void RepairRing0Service()
+    {
+        const string svc = "WinRing0_1_2_0";
         try
         {
             using var id = System.Security.Principal.WindowsIdentity.GetCurrent();
             if (!new System.Security.Principal.WindowsPrincipal(id)
-                    .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator)) return;
-            const string svc = "WinRing0_1_2_0";
-            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\" + svc);
-            if (key is null) return;   // 沒裝：LHM 會自己建
-            string? image = (key.GetValue("ImagePath") as string)?.Trim();
-            if (string.IsNullOrEmpty(image)) return;
-            // ImagePath 形如 \??\C:\...——剝掉裝置前綴再驗存在性
-            string path = image.StartsWith(@"\??\", StringComparison.Ordinal) ? image[4..] : image;
-            if (File.Exists(path)) return;   // 活的：不動
-            // 死指針：刪服務，讓 LHM 重建
+                    .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator))
+            {
+                Console.WriteLine($"{Red}需要管理員權限（以系統管理員身分執行再跑 --repair-ring0）。{Reset}");
+                return;
+            }
             var psi = new System.Diagnostics.ProcessStartInfo("sc.exe", "delete " + svc)
             {
                 UseShellExecute = false,
@@ -859,8 +934,12 @@ internal static class Program
             };
             using var p = System.Diagnostics.Process.Start(psi);
             p?.WaitForExit(5000);
+            Console.WriteLine($"{Green}已刪除死指針服務 {svc}——重開機後 LHM 會以自己的內嵌驅動重建。{Reset}");
         }
-        catch { /* 健檢失敗不擋路：LHM 自己的失敗訊息會照常呈現 */ }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"{Red}修復失敗：{ex.Message}{Reset}");
+        }
     }
 
     /// <summary>
@@ -934,7 +1013,7 @@ internal static class Program
         private readonly LibreHardwareMonitor.Hardware.Computer? _computer;
         public LibreHardwareMonitorLibWrapperOrNull()
         {
-            EnsureRing0Service();
+            DiagnoseRing0Once();   // 唯讀診斷：死指針只回報不動手（審計 #1）
             try
             {
                 var c = new LibreHardwareMonitor.Hardware.Computer

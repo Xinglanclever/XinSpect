@@ -1130,7 +1130,9 @@ public static class D3D11Native
 
                 // ID3D11DeviceContext：PSSetSR=8、PSSetShader=9、PSSetSamplers=10、VSSetShader=11、Draw=13、
                 // Map=14、Unmap=15、IASetPrimitiveTopology=24、OMSetRenderTargets=33、RSSetViewports=44、
-                // CopyResource=47、ClearRenderTargetView=50、Flush=111（以 Windows SDK d3d11.h 逐項核對）。
+                // CopyResource=47、ClearRenderTargetView=49、Flush=111（以 Windows SDK d3d11.h 逐項核對；
+                // slot 50 是 ClearUnorderedAccessViewUint——第 267 輪已實機證明並由 DeepBenchReviewFixTests 釘死，
+                // 本檔在該輪漏改，gpu.raster-texture 走 clear 路徑即 0xC0000005——審計 #14 補上）。
                 var psSetSrv = (delegate* unmanaged[Stdcall]<void*, uint, uint, void**, void>)GetVTableSlot(contextPtr, 8);
                 var psSetShader = (delegate* unmanaged[Stdcall]<void*, void*, void**, uint, void>)GetVTableSlot(contextPtr, 9);
                 var psSetSampler = (delegate* unmanaged[Stdcall]<void*, uint, uint, void**, void>)GetVTableSlot(contextPtr, 10);
@@ -1142,7 +1144,7 @@ public static class D3D11Native
                 var omSetRtv = (delegate* unmanaged[Stdcall]<void*, uint, void**, void*, void>)GetVTableSlot(contextPtr, 33);
                 var rsSetViewport = (delegate* unmanaged[Stdcall]<void*, uint, D3D11Viewport*, void>)GetVTableSlot(contextPtr, 44);
                 var copyResource = (delegate* unmanaged[Stdcall]<void*, void*, void*, void>)GetVTableSlot(contextPtr, 47);
-                var clearRtv = (delegate* unmanaged[Stdcall]<void*, void*, float*, void>)GetVTableSlot(contextPtr, 50);
+                var clearRtv = (delegate* unmanaged[Stdcall]<void*, void*, float*, void>)GetVTableSlot(contextPtr, 49);
                 var flush = (delegate* unmanaged[Stdcall]<void*, void>)GetVTableSlot(contextPtr, 111);
 
                 var viewport = new D3D11Viewport { TopLeftX = 0, TopLeftY = 0, Width = workload.Width, Height = workload.Height, MinDepth = 0, MaxDepth = 1 };

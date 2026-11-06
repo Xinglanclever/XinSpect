@@ -711,7 +711,7 @@ internal static class Tui
     }
 
     /// <summary>停止轉圈；doneMessage 非空時以品牌紅 ⏺ 開頭輸出結果行（Claude Code 式）。</summary>
-    public static void SpinnerStop(string? doneMessage = null)
+    public static void SpinnerStop(string? doneMessage = null, bool ok = true)
     {
         lock (Sync)
         {
@@ -731,7 +731,11 @@ internal static class Tui
             }
             _spinPad = 0;
             double done = SpinnerClock.Elapsed.TotalSeconds;
-            Console.Write($"[{BrandRed}{new string('▓', 22)}{Reset}] {Bold}100.0%{Reset} {Dim}({done:0.00}s){Reset}" + Environment.NewLine);
+            // 審計 #7：採集無法預知百分比——「100.0%」只有真正跑完才印；失敗印中斷條，不冒充完成
+            if (ok)
+                Console.Write($"[{BrandRed}{new string('▓', 22)}{Reset}] {Bold}100.0%{Reset} {Dim}({done:0.00}s){Reset}" + Environment.NewLine);
+            else
+                Console.Write($"[{Dim}{new string('░', 10)}{SwissRed}✕{Dim}{new string('░', 11)}{Reset}] {Dim}中斷於 {done:0.00}s{Reset}" + Environment.NewLine);
             Console.Write(ShowCursor);
             if (!string.IsNullOrEmpty(doneMessage))
                 Console.WriteLine($"{BrandRed}⏺{Reset} {doneMessage}");

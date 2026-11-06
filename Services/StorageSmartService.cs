@@ -415,6 +415,11 @@ public sealed class StorageSmartService : ObservableObject
     private static extern bool DeviceIoControlSync(IntPtr device, uint ioControlCode, byte[]? inBuffer, uint inSize,
         byte[] outBuffer, uint outSize, out uint returned, IntPtr overlapped);
 
+    /// <summary>非託管緩衝版本：給 IRP 生命週期超出 P/Invoke 呼叫的 overlapped I/O 用（審計 #16）。</summary>
+    [DllImport("kernel32.dll", EntryPoint = nameof(DeviceIoControl), SetLastError = true)]
+    private static extern bool DeviceIoControlNative(IntPtr device, uint ioControlCode, IntPtr inBuffer, uint inSize,
+        IntPtr outBuffer, uint outSize, out uint returned, IntPtr overlapped);
+
     // ── NVMe ───────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -503,40 +508,61 @@ public sealed class StorageSmartService : ObservableObject
             Marshal.WriteIntPtr(ov, IntPtr.Size, evt);   // OVERLAPPED.hEvent 在 64 位元是 offset 8
 
             const int header = 48;   // STORAGE_PROPERTY_QUERY(8) + STORAGE_PROTOCOL_SPECIFIC_DATA(40)
-            var buf = new byte[header + 512];
-            BitConverter.GetBytes(PropertyIdProtocolSpecificDevice).CopyTo(buf, 0);   // PropertyId
-            BitConverter.GetBytes(0u).CopyTo(buf, 4);                                 // QueryType = PropertyStandardQuery
-            BitConverter.GetBytes(ProtocolTypeNvme).CopyTo(buf, 8);                   // ProtocolType
-            BitConverter.GetBytes(NvmeDataTypeLogPage).CopyTo(buf, 12);               // DataRequested
-            BitConverter.GetBytes(logPage).CopyTo(buf, 16);                            // RequestValue（0x02 健康／0x01 錯誤）
-            BitConverter.GetBytes(0u).CopyTo(buf, 20);                                // RequestSubValue
-            BitConverter.GetBytes((uint)header).CopyTo(buf, 24);                      // ProtocolDataOffset（自緩衝區起算）
-            BitConverter.GetBytes(512u).CopyTo(buf, 28);                              // ProtocolDataLength
+            const int bufLen = header + 512;
+            // 審計 #16：緩衝區改非託管——managed 陣列在 P/Invoke 返回後即解除 pinning，
+            // 而逾時路徑的 IRP 可能之後才完成並寫入原位址（堆積毀損）。非託管緩衝在逾時路徑
+            // 上刻意洩漏（斷路器不再重問，洩漏有界約 560 bytes／每次卡死的碟），IRP 想多晚完成都安全。
+            IntPtr buf = Marshal.AllocHGlobal(bufLen);
+            ZeroMemory(buf, bufLen);
+            var cmd = new byte[header];
+            BitConverter.GetBytes(PropertyIdProtocolSpecificDevice).CopyTo(cmd, 0);   // PropertyId
+            BitConverter.GetBytes(0u).CopyTo(cmd, 4);                                 // QueryType = PropertyStandardQuery
+            BitConverter.GetBytes(ProtocolTypeNvme).CopyTo(cmd, 8);                   // ProtocolType
+            BitConverter.GetBytes(NvmeDataTypeLogPage).CopyTo(cmd, 12);               // DataRequested
+            BitConverter.GetBytes(logPage).CopyTo(cmd, 16);                            // RequestValue（0x02 健康／0x01 錯誤）
+            BitConverter.GetBytes(0u).CopyTo(cmd, 20);                                // RequestSubValue
+            BitConverter.GetBytes((uint)header).CopyTo(cmd, 24);                      // ProtocolDataOffset（自緩衝區起算）
+            BitConverter.GetBytes(512u).CopyTo(cmd, 28);                              // ProtocolDataLength
+            Marshal.Copy(cmd, 0, buf, header);
 
             // METHOD_BUFFERED：輸入與輸出共用同一緩衝區，命令頭必須以輸入傳入才會到達驅動
-            bool ok = DeviceIoControlSync(handle, IoctlStorageQueryProperty, buf, (uint)buf.Length, buf, (uint)buf.Length, out uint ret, ov);
+            bool ok = DeviceIoControlNative(handle, IoctlStorageQueryProperty, buf, (uint)bufLen, buf, (uint)bufLen, out uint ret, ov);
             if (!ok)
             {
                 uint err = (uint)Marshal.GetLastWin32Error();
-                if (err != ErrorIOPending) return (null, false);
+                if (err != ErrorIOPending)
+                {
+                    Marshal.FreeHGlobal(buf);
+                    return (null, false);
+                }
 
                 // 還在跑：等它，最多 NvmeLogTimeoutMs。逾時就 CancelIoEx 請求取消，並在
                 // 取消請求送達後再等一下，讓驅動有機會回應——本機實測：取消請求本身可能被卡在
                 // 裝置的逾時佇列裡（SRB_STATUS_SELECTION_TIMEOUT），所以底層 I/O 有可能仍繼續；
-                // 這裡只確保「送出取消」並回報逾時，剩下交給斷路器不再重問。
+                // 這裡只確保「送出取消」並回報逾時。緩衝區刻意不釋放：IRP 若之後完成仍會寫入，
+                // 寫進已釋放的記憶體比洩漏 560 bytes 更糟；斷路器保證不再重問，洩漏有界。
                 uint wait = WaitForSingleObject(evt, NvmeLogTimeoutMs);
                 if (wait != 0 /* WAIT_OBJECT_0 */)
                 {
                     CancelIoEx(handle, ov);
-                    WaitForSingleObject(evt, 2500);   // 給驅動一點時間回應取消，順便確保緩衝區不再被寫
+                    WaitForSingleObject(evt, 2500);   // 給驅動一點時間回應取消
                     return (null, true);
                 }
-                if (!GetOverlappedResult(handle, ov, out ret, false)) return (null, false);
+                if (!GetOverlappedResult(handle, ov, out ret, false))
+                {
+                    Marshal.FreeHGlobal(buf);
+                    return (null, false);
+                }
             }
 
-            if (ret < header + 512) return (null, false);
+            if (ret < header + 512)
+            {
+                Marshal.FreeHGlobal(buf);
+                return (null, false);
+            }
             var log = new byte[512];
-            Array.Copy(buf, header, log, 0, 512);
+            Marshal.Copy(new IntPtr(buf.ToInt64() + header), log, 0, 512);
+            Marshal.FreeHGlobal(buf);
             return (log, false);
         }
         finally
