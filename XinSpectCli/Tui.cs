@@ -240,17 +240,16 @@ internal static class Tui
     {
         if (Legacy)
         {
-            // 純文字開場：保留大字 XINSPECT（方塊字元在舊主控台照樣渲染）與全部資訊，
-            // 但零色彩、零框線、零定位——右對齊用空格補，不用 CHA。
+            // 純文字開場：零色彩、零框線、零定位——右對齊用空格補，不用 CHA。
+            // 字標也不用方塊字（█╗║╚）：Win10 傳統主控台的點陣字型把它們渲染成碎塊
+            // （2026-11-07 使用者實測截圖），間隔大寫字母是任何字型都安全的寫法。
             int w = 100;
             try { w = Math.Clamp(Console.WindowWidth - 1, 40, 118); } catch { }
             try { Console.Clear(); } catch { }
-            if (!Console.IsInputRedirected && w >= 79)
+            if (!Console.IsInputRedirected)
             {
-                var banner = XinspectBanner(w >= 88 ? 3 : 2);
-                int bannerPad = Math.Max(0, (w - banner[0].Width) / 2);
-                foreach (var (lineText, _) in banner)
-                    Console.WriteLine(new string(' ', bannerPad) + lineText);
+                string wm = "X  I  N  S  P  E  C  T";
+                Console.WriteLine(new string(' ', Math.Max(0, (w - wm.Length) / 2)) + wm);
                 string by = "by: xinglanclever";
                 Console.WriteLine(new string(' ', Math.Max(1, w - by.Length)) + by);
             }
