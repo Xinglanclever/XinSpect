@@ -112,29 +112,29 @@ public sealed class DnsService : INotifyPropertyChanged
                 if (!string.IsNullOrWhiteSpace(preset.V4Primary))
                 {
                     var (code, err) = await RunNetsh(
-                        $"interface ipv4 set dnsservers name=\"{adapter.Name}\" source=static address={preset.V4Primary} register=primary validate=no");
+                        $"interface ipv4 set dnsservers name=\"{adapter.SafeName}\" source=static address={preset.V4Primary} register=primary validate=no");
                     if (code != 0)
                     {
                         Status = $"設定 IPv4 DNS 失敗（netsh 代碼 {code}）：{err}";
                         return false;
                     }
                     if (!string.IsNullOrWhiteSpace(preset.V4Secondary))
-                        await RunNetsh($"interface ipv4 add dnsservers name=\"{adapter.Name}\" address={preset.V4Secondary} index=2 validate=no");
+                        await RunNetsh($"interface ipv4 add dnsservers name=\"{adapter.SafeName}\" address={preset.V4Secondary} index=2 validate=no");
                 }
                 // 僅在預設提供 IPv6 位址時才動 IPv6，避免影響原設定
                 if (!string.IsNullOrWhiteSpace(preset.V6Primary))
                 {
-                    await RunNetsh($"interface ipv6 set dnsservers name=\"{adapter.Name}\" source=static address={preset.V6Primary} register=primary validate=no");
+                    await RunNetsh($"interface ipv6 set dnsservers name=\"{adapter.SafeName}\" source=static address={preset.V6Primary} register=primary validate=no");
                     if (!string.IsNullOrWhiteSpace(preset.V6Secondary))
-                        await RunNetsh($"interface ipv6 add dnsservers name=\"{adapter.Name}\" address={preset.V6Secondary} index=2 validate=no");
+                        await RunNetsh($"interface ipv6 add dnsservers name=\"{adapter.SafeName}\" address={preset.V6Secondary} index=2 validate=no");
                 }
             }
 
             await FlushAsync();
             RefreshOne(adapter);
             Status = preset.Auto
-                ? $"「{adapter.Name}」已還原為自動取得 DNS（DHCP）。"
-                : $"「{adapter.Name}」已套用 {preset.Name} DNS（{preset.Note}）。";
+                ? $"「{adapter.SafeName}」已還原為自動取得 DNS（DHCP）。"
+                : $"「{adapter.SafeName}」已套用 {preset.Name} DNS（{preset.Note}）。";
             return true;
         }
         catch (UnauthorizedAccessException)
