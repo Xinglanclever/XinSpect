@@ -81,7 +81,7 @@ public static class EvidenceCollection
     public static void LoadUsermodeFacts(EvidenceLabService svc, IStorageReliabilitySource? storageReliability = null)
     {
         svc.ClearSteps();  // 每次收集重新計時：步驟代價是「這一輪」的，不是累計
-        Measure(svc, "LoadStorageReliability", () => svc.LoadStorageReliability(storageReliability ?? new StorageReliabilityWmiSource()));  // 附加功能：讀不到由 StorageReliabilityFactsService 標三態，不在這裡中斷啟動
+        Measure(svc, "LoadStorageReliability", () => svc.LoadStorageReliability(storageReliability ?? new StorageReliabilityTimeoutSource(new StorageReliabilityWmiSource())));  // 附加功能：讀不到由 StorageReliabilityFactsService 標三態，不在這裡中斷啟動
         Measure(svc, "LoadDriverInspection", () => svc.LoadDriverInspection());  // 附加功能：讀不到由 DriverInspectionFactsService 標三態，不在這裡中斷啟動
         Measure(svc, "LoadSetupTimeline", () => svc.LoadSetupTimeline());  // 附加功能：讀不到由 SetupApiTimelineService 標三態，不在這裡中斷啟動
         Measure(svc, "LoadEtlReadback", () => svc.LoadEtlReadback());  // 附加功能：讀不到由 EtlReadbackService 標三態，不在這裡中斷啟動

@@ -46,6 +46,67 @@ public interface IStorageReliabilitySource
 }
 
 /// <summary>
+/// WMI 儲存可靠性查詢的硬逾時包裝：把 <see cref="StorageReliabilityWmiSource.Read"/> 放到
+/// 專屬執行緒上跑，超過預算就放棄——呼叫端拿到「逾時」的三態，收集鏈繼續。
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>為什麼需要它（2026-11-06 實測）</b>：守門測試與 CLI 採集並發時，WMI 的
+/// <c>Get()</c>／<c>GetRelated()</c> 會卡死不回——整條收集鏈陪葬，進程停在核心
+/// 不可中斷等待，連 taskkill /F 都殺不掉，只能重開機。逾時的執行緒一樣會留在核心
+/// （與 <see cref="StorageProbeBreaker"/> 類別說明裡 DiskIo 的實測記錄同一代價），
+/// 但犧牲一條執行緒換整條收集鏈活著，是划算的。
+/// </para>
+/// </remarks>
+public sealed class StorageReliabilityTimeoutSource : IStorageReliabilitySource
+{
+    private readonly IStorageReliabilitySource _inner;
+    private readonly int _budgetMs;
+
+    public StorageReliabilityTimeoutSource(IStorageReliabilitySource inner, int budgetMs = 15000)
+    {
+        _inner = inner;
+        _budgetMs = budgetMs;
+    }
+
+    public bool Available { get; private set; } = true;
+
+    public string? UnavailableReason { get; private set; }
+
+    public IReadOnlyList<StorageReliabilityRaw> Read()
+    {
+        IReadOnlyList<StorageReliabilityRaw>? result = null;
+        using var done = new ManualResetEventSlim(false);
+        var worker = new Thread(() =>
+        {
+            try { result = _inner.Read(); }
+            catch { result = []; }
+            finally { try { done.Set(); } catch { } }
+        })
+        {
+            IsBackground = true,
+            Name = "StorageReliability-Wmi-Read",
+        };
+        worker.Start();
+        if (!done.Wait(_budgetMs))
+        {
+            Available = false;
+            UnavailableReason = $"WMI 儲存可靠性查詢逾時（{_budgetMs / 1000} 秒沒有回應）——不再等，收集鏈繼續";
+            return [];
+        }
+        if (result is null)
+        {
+            Available = false;
+            UnavailableReason = "WMI 儲存可靠性查詢失敗";
+            return [];
+        }
+        Available = _inner.Available;
+        UnavailableReason = _inner.UnavailableReason;
+        return result;
+    }
+}
+
+/// <summary>
 /// 生產來源：<c>root\Microsoft\Windows\Storage</c> 的 <c>MSFT_StorageReliabilityCounter</c>。
 /// </summary>
 /// <remarks>
