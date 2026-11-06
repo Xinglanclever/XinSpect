@@ -6,6 +6,10 @@ publish/
 publish-*/
 bin-dev/
 bin-dev2/
+bin-pub*/
+bin-reltest/
+bin-dev2l/
+bin-legacy*/
 bin-dev2l/
 bin-nort/
 bin-legacy-nort/
