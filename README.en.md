@@ -1,8 +1,8 @@
 ﻿[繁體中文](README.md) · [简体中文](README.zh-CN.md) · English
 
-[![Official site](https://img.shields.io/badge/%F0%9F%8C%90_OFFICIAL_SITE-xinspect.de5.net-4C8DFF?style=for-the-badge&logo=cloudflare&logoColor=white)](https://xinspect.de5.net/)
+[![Official site](https://img.shields.io/badge/%F0%9F%8C%90_OFFICIAL_SITE-xinspect.de5.net-4C8DFF?style=for-the-badge&logo=cloudflare&logoColor=white)](https://xinspect.de5.net)
 
-> ## 🌐 [Official site: xinspect.de5.net ↗](https://xinspect.de5.net/)
+> ## 🌐 [Official site: xinspect.de5.net ↗](https://xinspect.de5.net)
 >
 > **Product overview · Fact catalogue · Features and data sources · Three-source reconciliation · Evidence and snapshots · Version history · Downloads and requirements** — all on one page.
 > The site only presents documentation; it **does not scan your machine** and needs no installation.

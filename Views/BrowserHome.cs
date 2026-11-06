@@ -71,7 +71,7 @@ internal static class BrowserHome
     <div class="grid">
       <div class="card card-site">
         <h3>曦覽官方網站</h3>
-        <a href="https://xinspect-browser-preview.wild-chimpanzee.workers.dev">產品總覽 ・ 事實目錄 ・ 三源對帳 ・ 下載與需求 ↗</a>
+        <a href="https://xinspect.de5.net">產品總覽 ・ 事實目錄 ・ 三源對帳 ・ 下載與需求 ↗</a>
       </div>
       <div class="card">
         <h3>硬體檢測</h3>
