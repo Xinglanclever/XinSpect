@@ -412,7 +412,23 @@ public sealed partial class SensorService : ObservableObject, IDisposable
 
     // 超頻模組用的數值型讀值（非格式化字串）：取不到回 null，絕不填假值。
     public double? CpuVoltage => Val(_cpuVolt);
-    public double? CpuPowerW => Val(_cpuPower);
+    private bool? _powerGateResult;
+    /// <summary>審計 #32：LHM 的封裝功率在 RAPL 能量計與功耗脫鉤的平台上是垃圾值（實測 1.2W 恆定）。
+    /// 首次讀取時跑一次 RaplEnergyGate 自證；未通過就回 null（顯示「—」），不冒充瓦數。</summary>
+    public double? CpuPowerW
+    {
+        get
+        {
+            if (!_powerGateResult.HasValue)
+            {
+                RaplEnergyGate.RunOnce(
+                    () => { try { using var b = WinRing0Bridge.Create(); return b.Available ? b.ReadMsrPair64(0x611) : null; } catch { return null; } },
+                    () => { try { return Val(_cpuPkgTemp); } catch { return null; } });
+                _powerGateResult = RaplEnergyGate.Verdict == RaplGateVerdict.Trusted;
+            }
+            return _powerGateResult.Value ? Val(_cpuPower) : null;
+        }
+    }
     public double? VrmTempC => Val(_vrmTemp);
 
     public double MemLoad => Val(_memLoad) ?? 0;
