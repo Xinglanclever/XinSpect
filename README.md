@@ -1,8 +1,8 @@
 [简体中文](README.zh-CN.md) · 繁體中文 · [English](README.en.md)
 
-[![官方網站](https://img.shields.io/badge/%F0%9F%8C%90_%E5%AE%98%E6%96%B9%E7%B6%B2%E7%AB%99-xinspect.de5.net-4C8DFF?style=for-the-badge&logo=cloudflare&logoColor=white)](https://xinspect.de5.net/)
+[![官方網站](https://img.shields.io/badge/%F0%9F%8C%90_%E5%AE%98%E6%96%B9%E7%B6%B2%E7%AB%99-xinspect.de5.net-4C8DFF?style=for-the-badge&logo=cloudflare&logoColor=white)](https://xinspect.de5.net)
 
-> ## 🌐 [官方網站：xinspect.de5.net ↗](https://xinspect.de5.net/)
+> ## 🌐 [官方網站：xinspect.de5.net ↗](https://xinspect.de5.net)
 >
 > **首頁 · xsc 終端機 · 下載 · 版本沿革** —— 瑞士現代主義風格的一頁站，自訂網域 [xinspect.de5.net](https://xinspect.de5.net)。
 > 網站只呈現說明，**不會掃描你的電腦**，也不需要任何安裝。
@@ -392,7 +392,7 @@
   - [7.2 審計鏈的三個層次](#72-審計鏈的三個層次)
   - [7.3 一條誠實界線：檔案不存在不等於驗證通過](#73-一條誠實界線檔案不存在不等於驗證通過)
   - [7.4 快照格式與它的版本](#74-快照格式與它的版本)
-  - [7.5 三條外連路徑（全部要在這份文件裡講清楚）](#75-三條外連路徑全部要在這份文件裡講清楚)
+  - [7.5 五條外連路徑（全部要在這份文件裡講清楚）](#75-三條外連路徑全部要在這份文件裡講清楚)
   - [7.6 資料留在本地的三個層次](#76-資料留在本地的三個層次)
   - [7.7 「資料主權」在實作上長什麼樣](#77-資料主權在實作上長什麼樣)
   - [7.8 敏感欄位清單（匯出前請看一眼）](#78-敏感欄位清單匯出前請看一眼)

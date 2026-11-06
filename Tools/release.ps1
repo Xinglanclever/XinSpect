@@ -248,7 +248,7 @@ try {
     }
     if ($changed.Count -gt 0) {
         git add -- @($changed) | Out-Null
-        git commit -m "docs：README 資產位元組數改為 v$Version 發佈實測值" | Out-Null
+        git commit -m "docs：README 主程式與資產位元組數改為 v$Version 發佈實測值" | Out-Null
         git -c http.version=HTTP/1.1 push origin main | Out-Null
         if ($LASTEXITCODE -ne 0) { Fail 'push docs commit failed' }
         Ok 'docs byte-count commit pushed'
