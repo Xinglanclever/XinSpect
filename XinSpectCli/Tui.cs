@@ -110,7 +110,21 @@ internal static class Tui
         {
             if (s[i] == '\x1b')
             {
-                while (i < s.Length && s[i] != 'm') i++;   // 吃到 escape 序列結尾
+                // ECMA-48：ESC 後若為 CSI（ESC [），參數與中間位元組落在 0x20–0x3F、
+                // 終止位元組落在 0x40–0x7E——m（SGR）只是終止字元之一，G（CHA）、K（清行）、
+                // J（清屏）都是。舊寫法只認 'm'，非 SGR 序列會把後續正文一起吃掉。
+                i++;
+                if (i < s.Length && s[i] == '[')
+                {
+                    i++;
+                    while (i < s.Length && s[i] >= '\u0020' && s[i] <= '\u003f') i++;
+                    if (i < s.Length && s[i] >= '\u0040' && s[i] <= '\u007e') i++;
+                }
+                else
+                {
+                    // 非 CSI（本程式不輸出）：保守吃到 BEL 或字串尾
+                    while (i < s.Length && s[i] != '\u0007') i++;
+                }
                 continue;
             }
             char c = s[i];
@@ -357,17 +371,7 @@ internal static class Tui
     private static string TruncateTip(string tip, int max)
     {
         if (VisibleLength(tip) <= max) return tip;
-        var sb = new System.Text.StringBuilder();
-        int w = 0;
-        foreach (char c in tip)
-        {
-            int cw = char.GetUnicodeCategory(c) == System.Globalization.UnicodeCategory.OtherLetter
-                  || (c >= '！' && c <= '｠') ? 2 : 1;
-            if (w + cw > max - 1) break;
-            sb.Append(c);
-            w += cw;
-        }
-        return sb + "…";
+        return TruncToWidth(tip, max);
     }
 
     private static string ShortCwd()
