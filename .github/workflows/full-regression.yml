@@ -22,6 +22,11 @@ on:
     - cron: "0 3 * * 6"   # 每週六 03:00 UTC（真機的上午）
   workflow_dispatch:       # 手動觸發：真機狀態良好時隨時可跑
 
+# 預設 token 對 issues 只有唯讀——紅燈自動開 issue 需要 write（首跑實證：GraphQL not accessible）。
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   full-suite:
     runs-on: [self-hosted, windows, x64]
