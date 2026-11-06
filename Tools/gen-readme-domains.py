@@ -36,6 +36,12 @@ import os
 import re
 import sys
 
+# hosted CI（Linux）的 stdout 可能不是 UTF-8——CJK 輸出會炸 charmap_encode（c2d188c 的 CI 紅燈）。
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # ── 常數：這支工具負責的五個區段 ─────────────────────────────────────────
 SEC_63_START = "### 6.3 逐域鍵表"
 SEC_63_END = "### 6.4 跨域通則"

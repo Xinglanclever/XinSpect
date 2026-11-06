@@ -36,6 +36,12 @@ import os
 import re
 import sys
 
+# hosted CI（Linux）的 stdout 可能不是 UTF-8——CJK 輸出會炸 charmap_encode（c2d188c 的 CI 紅燈）。
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # ── 文件對：來源 .md → 輸出 .html ────────────────────────────────────────
 DOCS = [
     ("docs/百科-v3.17.md", "百科.html", "曦覽 XinSpect 百科"),
