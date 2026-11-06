@@ -40,7 +40,7 @@ public partial class OverclockView : UserControl
         if (oc is null || (sender as FrameworkElement)?.DataContext is not OcKnob knob) return;
         // 單一電壓旋鈕若超上限亦需確認
         if (knob.Kind == OcKnobKind.Voltage && knob.Target >= SafeVcoreCeiling && !ConfirmHighVoltage(oc)) return;
-        _ = oc.ApplyKnob(knob);
+        await oc.ApplyKnob(knob);
     }
 
     // ── 微調鈕：Tag = 帶符號的級距索引（±1／±2／±3）→ 依旋鈕自身級距增減目標值 ──
@@ -75,11 +75,12 @@ public partial class OverclockView : UserControl
     private void ApplyPlanner_Click(object sender, RoutedEventArgs e) => _ = Oc?.ApplyPlannerAsync();
 
     // ── Vcore：套用（聚合平台會一次寫入全部核心，見 OverclockService.ApplyVcore）──
-    private void ApplyVcore_Click(object sender, RoutedEventArgs e)
+    private async void ApplyVcore_Click(object sender, RoutedEventArgs e)
     {
         var oc = Oc;
         if (oc is null || !ConfirmHighVoltage(oc)) return;
-        _ = oc.ApplyVcore();
+        try { await oc.ApplyVcore(); }
+        catch (Exception ex) { StatusText = $"Vcore 寫入失敗：{ex.Message}"; }
     }
 
     // ── 體質評分：特徵化（服務端自控負載階梯、背景取樣約 20–30 秒；此處採即發即忘）──
@@ -116,7 +117,7 @@ public partial class OverclockView : UserControl
 
     private void ApplyProfile_Click(object sender, RoutedEventArgs e) => _ = Oc?.ApplySelectedProfile();
 
-    private void ImportProfile_Click(object sender, RoutedEventArgs e)
+    private async void ImportProfile_Click(object sender, RoutedEventArgs e)
     {
         var oc = Oc;
         if (oc is null) return;
@@ -128,7 +129,8 @@ public partial class OverclockView : UserControl
             CheckFileExists = true,
         };
         if (dlg.ShowDialog() == true)
-            _ = oc.ImportProfileFrom(dlg.FileName);
+            try { await oc.ImportProfileFrom(dlg.FileName); }
+            catch (Exception ex) { StatusText = $"匯入失敗：{ex.Message}"; }
     }
 
     private void ApplyLastStable_Click(object sender, RoutedEventArgs e) => _ = Oc?.ApplyLastStable();
@@ -138,11 +140,12 @@ public partial class OverclockView : UserControl
     private void StressStop_Click(object sender, RoutedEventArgs e) => Oc?.StopStress();
 
     // ── 全域動作 ──────────────────────────────────────────────────────────
-    private void ApplyAll_Click(object sender, RoutedEventArgs e)
+    private async void ApplyAll_Click(object sender, RoutedEventArgs e)
     {
         var oc = Oc;
-        if (oc is null || !ConfirmHighVoltage(oc)) return;   // 全部套用可能含電壓變更，超上限先確認
-        _ = oc.ApplyAll();
+        if (oc is null || !ConfirmHighVoltage(oc)) return;
+        try { await oc.ApplyAll(); }
+        catch (Exception ex) { StatusText = $"全部套用失敗：{ex.Message}"; }
     }
     private void Discard_Click(object sender, RoutedEventArgs e) => _ = Oc?.DiscardAll();
     private void RestoreDefaults_Click(object sender, RoutedEventArgs e) => _ = Oc?.RestoreDefaults();

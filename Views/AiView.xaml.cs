@@ -124,24 +124,28 @@ public partial class AiView : UserControl
         // Ctrl+V 貼上剪貼簿圖片
         if (e.Key == Key.V && (Keyboard.Modifiers & ModifierKeys.Control) != 0)
         {
-            if (Clipboard.ContainsImage())
+            try
             {
-                var bmpSrc = Clipboard.GetImage();
-                if (bmpSrc is not null)
+                if (Clipboard.ContainsImage())
                 {
-                    var ai = Vm?.Ai;
-                    if (ai is null) return;
-                    var pngBytes = BitmapSourceToPng(bmpSrc);
-                    var att = ai.AttachClipboardImage(pngBytes);
-                    _attachments.Add(new AttachmentViewModel
+                    var bmpSrc = Clipboard.GetImage();
+                    if (bmpSrc is not null)
                     {
-                        FileName = "clipboard.png",
-                        Thumbnail = bmpSrc,
-                        Source = att
-                    });
-                    e.Handled = true;
+                        var ai = Vm?.Ai;
+                        if (ai is null) return;
+                        var pngBytes = BitmapSourceToPng(bmpSrc);
+                        var att = ai.AttachClipboardImage(pngBytes);
+                        _attachments.Add(new AttachmentViewModel
+                        {
+                            FileName = "clipboard.png",
+                            Thumbnail = bmpSrc,
+                            Source = att
+                        });
+                        e.Handled = true;
+                    }
                 }
             }
+            catch { /* Clipboard API 被佔用時丟 COMException——靜默略過（審計 #19） */ }
         }
     }
 
@@ -150,7 +154,7 @@ public partial class AiView : UserControl
     {
         if (sender is FrameworkElement { DataContext: AiMessage msg } && msg.Text.Length > 0)
         {
-            Clipboard.SetText(msg.Text);
+            try { Clipboard.SetText(msg.Text); } catch { return; }
             if (sender is System.Windows.Controls.Button b)
             {
                 b.Content = LanguageService.T("✓ 已複製");
@@ -257,7 +261,7 @@ public partial class AiView : UserControl
             sb.AppendLine($"【{m.RoleText}】{m.Text}");
             sb.AppendLine();
         }
-        Clipboard.SetText(sb.ToString());
+        try { Clipboard.SetText(sb.ToString()); } catch { return; }
         if (sender is System.Windows.Controls.Button b)
         {
             var prev = b.Content;
