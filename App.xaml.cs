@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.IO;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -47,6 +48,34 @@ public partial class App : Application
                 Shutdown(code);
             }
             finally { FreeConsole(); }
+            return;
+        }
+
+        // 提權代理（2026-11-07，asInvoker 配套）：深層核心存取的安裝需要管理員——
+        // 一般權限的主程序以 runas 拉起自己帶 --enable-deep-access，這個提權實例
+        // 做完安裝（一次 UAC、服務常駐）即退出；結果寫回固定檔給一般權限實例呈現。
+        // 置於單一實例邏輯之前：主程序正在跑也不該觸發「已在執行」對話框。
+        if (e.Args.Any(a => a.Equals("--enable-deep-access", StringComparison.OrdinalIgnoreCase)))
+        {
+            int code = 1;
+            string detail = "";
+            try
+            {
+                var status = new DeepAccessService().Enable();
+                code = status.IsEnabled ? 0 : 1;
+                detail = string.Join(Environment.NewLine, status.Notes);
+            }
+            catch (Exception ex)
+            {
+                detail = ex.GetType().Name + "：" + ex.Message;
+            }
+            try
+            {
+                File.WriteAllText(Path.Combine(Path.GetTempPath(), "XinSpect-deepaccess-result.txt"),
+                                  $"{code}\n{detail}");
+            }
+            catch { }
+            Shutdown(code);
             return;
         }
 

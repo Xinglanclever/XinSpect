@@ -204,7 +204,10 @@ NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject, _In_ PUNICODE_STRING Regi
 
     UNICODE_STRING devName = RTL_CONSTANT_STRING(XRP_DEVICE_NAME);
     UNICODE_STRING symLink = RTL_CONSTANT_STRING(XRP_SYMLINK_NAME);
-    UNICODE_STRING sddl = RTL_CONSTANT_STRING(L"D:P(A;;GA;;;BA)"); /* 僅管理員完整存取（比照 BlueSquadron） */
+    UNICODE_STRING sddl = RTL_CONSTANT_STRING(L"D:P(A;;GA;;;BA)(A;;GR;;;BU)");
+    /* 管理員完整存取＋Users 唯讀（2026-11-07）：本驅動白名單唯讀、無任何寫入路徑，
+       開 Users 讀讓 asInvoker 的主程序在服務常駐後免提權即可讀——濫用面由
+       允許清單（位址白名單）收口，不在 SDDL。 */
     /* 裝置類別要的是 GUID，不是字串：先前把 UNICODE_STRING 傳給 LPCGUID 參數，
        編譯器只給 C4133，執行期會拿指標內容當 GUID 讀（裝置類別變成垃圾）。
        4d36e97d-… 是 System 類別。 */

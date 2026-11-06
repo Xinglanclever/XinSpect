@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -8,7 +9,64 @@ public partial class FirmwareSecurityView : UserControl
 {
     public FirmwareSecurityView() => InitializeComponent();
 
-    private async void DeepAccessEnable_Click(object sender, RoutedEventArgs e) => await RunDeepAccessAsync(sut => sut.Enable());
+    private async void DeepAccessEnable_Click(object sender, RoutedEventArgs e)
+    {
+        // asInvoker（2026-11-07）之後：非提權啟動時引導「runas 自我提權代理」——
+        // 一次 UAC 讓提權實例完成安裝（服務常駐），其後一般權限的主程序即可直讀。
+        if (!new System.Security.Principal.WindowsPrincipal(
+                System.Security.Principal.WindowsIdentity.GetCurrent())
+                .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator))
+        {
+            await RunElevatedDeepAccessAsync();
+            return;
+        }
+        await RunDeepAccessAsync(sut => sut.Enable());
+    }
+
+    /// <summary>以 runas 拉起提權代理（--enable-deep-access），輪詢結果檔並呈現；完成後重新掃描狀態。</summary>
+    private async Task RunElevatedDeepAccessAsync()
+    {
+        if (DataContext is not MainViewModel vm) return;
+        var resultPath = Path.Combine(Path.GetTempPath(), "XinSpect-deepaccess-result.txt");
+        try { File.Delete(resultPath); } catch { }
+
+        SetEvidenceBusy(true);
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = Environment.ProcessPath ?? string.Empty,
+                Arguments = "--enable-deep-access",
+                UseShellExecute = true,
+                Verb = "runas",
+            });
+        }
+        catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            // 1223 = ERROR_CANCELLED：使用者按掉了 UAC——如實說，不算失敗
+            Diag.Swallow("FirmwareSecurityView.UacCancelled", ex, "UAC 取消");
+            SetEvidenceBusy(false);
+            return;
+        }
+
+        // 最多等 90 秒（憑證產生＋簽章＋服務安裝要一會兒）；結果檔出現即回報
+        string content = "";
+        for (int i = 0; i < 90; i++)
+        {
+            await Task.Delay(1000);
+            try { content = File.ReadAllText(resultPath); break; }
+            catch { }
+        }
+        SetEvidenceBusy(false);
+
+        var lines = content.Split('\n', 2);
+        var ok = lines.Length > 0 && lines[0].Trim() == "0";
+        var detail = lines.Length > 1 ? lines[1] : "逾時未收到提權實例的結果——可稍後按重新掃描更新狀態。";
+        if (ok)
+            await RunDeepAccessAsync(sut => sut.RefreshStatus());
+        Diag.Swallow("FirmwareSecurityView.ElevatedResult", null,
+            (ok ? "提權安裝完成" : "提權安裝未完成") + "：" + detail);
+    }
 
     private async void DeepAccessDisable_Click(object sender, RoutedEventArgs e) => await RunDeepAccessAsync(sut => sut.Disable());
 
