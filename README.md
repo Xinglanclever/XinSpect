@@ -60,10 +60,10 @@
 
 | 檔案 | 大小 | 說明 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpect.exe) | 37,827,371 bytes | 主程式。藍色中隊守護進程已內建；「強控台」按鈕橋接 xsc 終端機 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpect.exe) | 37,843,755 bytes | 主程式。藍色中隊守護進程已內建；「強控台」按鈕橋接 xsc 終端機 |
 | [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpectConsole.exe) | 100,320,253 bytes | 曦覽終端機（CLI）。可獨立執行，也被主程式強控台喚起；自含 .NET 10 執行階段故體積較大（見下方說明） |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/BlueSquadronBridge.exe) | 6,502,948 bytes | 獨立守護進程。要脫離主程式單獨跑防護時使用 |
-| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpect-full.exe) | 210,593,618 bytes | 主程式・帶環境版：.NET 10 Desktop Runtime 一併打包，免裝執行階段（功能與 XinSpect.exe 相同） |
+| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpect-full.exe) | 210,610,002 bytes | 主程式・帶環境版：.NET 10 Desktop Runtime 一併打包，免裝執行階段（功能與 XinSpect.exe 相同） |
 | [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpectConsole-nort.exe) | 65,850,008 bytes | 曦覽終端機・Windows 11／Server 2025・不帶環境：需已裝 .NET 10 Desktop Runtime |
 | [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpectConsole-legacy-nort.exe) | 65,850,050 bytes | 曦覽終端機・Windows 10／2016/2019/2022・不帶環境：純文字界面，需已裝 .NET 10 Desktop Runtime |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpectDeploy.exe) | 25,600 bytes | 一鍵安裝器。第一層選裝什麼：A 裝主程式（GUI）、B 裝曦覽終端機；第二層 1/2/3 選下載來源（GitHub／Drive／加速節點）；下載時顯示進度條、速度與剩餘時間 |
@@ -75,7 +75,7 @@
 
 安裝器（`XinSpectDeploy.exe`）第一層先選裝什麼：**A** 是 XinSpect.exe 主程式（全自動部署主程式＋守護進程；守護進程自 3.13 起預設不啟用，要自己到安全頁開）、**B** 是曦覽終端機（單檔下載一步到位）；版本都分兩維：**帶環境**（self-contained，免裝 .NET）與**不帶環境**（framework-dependent，機器要已裝 .NET 10 Desktop Runtime）。選 **A** 時問一次：**1** 不帶環境（XinSpect.exe，約 36MB）、**2** 帶環境（XinSpect-full.exe，約 189MB）；選 **B** 時問四版：**1** Windows 11／Server 2025 帶環境（XinSpectConsole.exe，約 100MB）、**2** Windows 10／2016/2019/2022 帶環境（XinSpectConsole-legacy.exe，純文字界面）、**3** Windows 11／Server 2025 不帶環境（XinSpectConsole-nort.exe，約 63MB）、**4** Windows 10／2016/2019/2022 不帶環境（XinSpectConsole-legacy-nort.exe）；接著再選來源：**1** 是 GitHub 最新版、**2** 是 Google Drive 鏡像（分享資料夾，它會開瀏覽器並告訴你要按哪裡）、**3** 是中國加速線路——對 GitHub 加前綴的公開加速節點，安裝器自己抓檔，跟按 1 一樣有進度條、速度與剩餘時間。直連下載有一條備援鏈：latest 網址 → 現場偵測到的版號（不寫死，過期不會安靜裝到舊版）→ Drive 確認直連 → 加速節點前綴，每條試兩次，換線時會說出改去哪裡。判斷哪一格用哪種模式，看的是端點本身：只有真的能用 GET 取回目錄下檔案的線路才寫成直連，分享頁一律只開瀏覽器，不會把分享頁存成一個假的 exe。鏡像連結集中在 `Installer/mirrors.txt`，安裝器啟動時會從 jsDelivr／加速節點／GitHub 三條線抓一份最新的（拿不到就用內建的）；某一格還沒有連結時，選單上會寫「尚未提供」，按下去會先說明再改用 GitHub。下載完成後一律檢查 PE 標頭與大小門檻，抓到 HTML（分享頁、限流頁、Google 的病毒掃描確認頁）會被擋下、刪檔並說出內容像什麼。注意：走第三方加速節點的位元組只能驗 PE 標頭，驗不了發佈者簽章。
 
-需求：Windows 10 1903 以上／Windows 11、x64、.NET 10 Desktop Runtime（單檔版不含執行階段，需另裝）。想以管理員權限取得感測器、MSR 直讀與超頻頁面，請「以系統管理員身分執行」——不提權不是壞掉，只是那些頁面會整片顯示「—」（原因見第 0 部的六態）。
+需求：Windows 10 1903 以上／Windows 11、x64、.NET 10 Desktop Runtime（單檔版不含執行階段，需另裝）。本程式預設以一般權限啟動（asInvoker，最小特權——WebView2、AI 等不該吃管理員令牌）；想取得感測器、MSR 直讀與超頻頁面的完整功能，請「以系統管理員身分執行」——不提權不是壞掉，只是那些頁面會整片顯示「—」（原因見第 0 部的六態），這正是六態降級設計存在的理由。
 
 ---
 

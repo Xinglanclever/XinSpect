@@ -2,11 +2,16 @@
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
   <assemblyIdentity version="1.0.0.0" name="XinSpect.app" />
 
-  <!-- 讀取溫度 / 感測器需要系統管理員權限 -->
+  <!-- 最小特權（2026-11-07）：預設不提權。
+       舊的 requireAdministrator 與整套設計打架——README 的六態降級（「非提權只是那些
+       頁面顯示 —」）、WebView2／AI／檔案掃描的最小特權、開機自啟（requireAdministrator
+       放進普通啟動項會被 UAC 擋）三方全被這一行否決。改 asInvoker 後：
+       一般權限啟動即可用，深層頁面如實降級顯示 —；需要完整功能的場合「以系統管理員
+       身分執行」，ring0 服務的安裝開關本來就會自檢 IsAdmin 並拒絕非提權變更。 -->
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
       </requestedPrivileges>
     </security>
   </trustInfo>

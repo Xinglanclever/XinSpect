@@ -194,7 +194,7 @@ Cold start ≤3 s (measured 2.7 s); other thresholds live in `Models/PerfBudget.
 | Intel XTU bridge | net48 out-of-process bridge (embedded automatically in Release) | Hosts the XTU SDK (the legacy WCF stack .NET 10 removed) for CPU overclocking | Administrator |
 | Blue Squadron guard | .NET 10 console app (embedded automatically in Release) | Live ETW threat detection, driver baseline comparison, JSON IPC over stdin/stdout | User |
 
-The main program declares `requireAdministrator` in `app.manifest`. That buys "plug in and read MSRs/SMART"; the price is that the entire UI — including the embedded browser — runs with an elevated token. This is a deliberate trade-off, not an oversight; its risk and a suggested fix are V-01 in chapter 20.
+The main program used to declare `requireAdministrator` in `app.manifest` — that bought "plug in and read MSRs/SMART" at the price of the entire UI (embedded browser included) running with an elevated token. **Since 2026-11-07 it ships `asInvoker`** (chapter 20's V-01 directly mitigated): it starts with standard privileges, deep pages degrade honestly per the six states, and full functionality wants "Run as administrator".
 
 ### 3.2 Embedding, extraction and integrity
 
@@ -262,7 +262,7 @@ hardware / firmware / OS ──► fact collection (*FactsService)
 | [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpectConsole.exe) | 100,320,253 bytes | XinSpect Console (CLI). Runs standalone and is also launched by the main program's console bridge; larger because it bundles the .NET 10 runtime (for Windows 11 / Server 2025) |
 | [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpectConsole-legacy.exe) | 100,320,295 bytes | XinSpect Console (CLI) **plain-text legacy build** for Windows 10 / Windows Server 2016, 2019, 2022 - no colors, no box positioning; the facts/book/help features are identical |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/BlueSquadronBridge.exe) | 6.5 MB | Standalone guard process |
-| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpect-full.exe) | 210,593,618 bytes | Main program, bundled-runtime build: ships the .NET 10 Desktop Runtime, nothing to install (same features as XinSpect.exe) |
+| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpect-full.exe) | 210,610,002 bytes | Main program, bundled-runtime build: ships the .NET 10 Desktop Runtime, nothing to install (same features as XinSpect.exe) |
 | [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpectConsole-nort.exe) | 65,850,008 bytes | XinSpect Console, Windows 11 / Server 2025, no runtime: requires .NET 10 Desktop Runtime |
 | [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpectConsole-legacy-nort.exe) | 65,850,050 bytes | XinSpect Console, Windows 10 / 2016/2019/2022, no runtime: plain-text UI, requires .NET 10 Desktop Runtime |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpectDeploy.exe) | 25,600 bytes | One-click installer. First pick what to install: **A** the main program (GUI), **B** the XinSpect Console; then pick a source with 1/2/3 (GitHub / Drive / accelerator node); shows a progress bar, speed and time remaining while downloading |
@@ -1018,7 +1018,7 @@ This chapter records the bugs this tree has had and the holes still open. Writin
 
 | Asset | Why it matters |
 |---|---|
-| Administrator token | The main program runs `requireAdministrator`; code execution in that process is administrator |
+| Administrator token | **Changed 2026-11-07**: the main program starts `asInvoker` (standard privileges); when run as administrator (needed for deep pages) this risk row still applies |
 | Kernel drivers (WinRing0 / XsRegProbe) | Arbitrary MSR/MMIO/PCI access is the classic BYOVD target |
 | Self-signed CA private key | Can sign arbitrary drivers — long-term kernel trust |
 | Audit log and snapshots | Evidentiary value; once edited, worthless |
@@ -1036,7 +1036,7 @@ This chapter records the bugs this tree has had and the holes still open. Writin
 
 | ID | Hypothesis | Precondition | Impact | Current mitigation | Recommendation | Status |
 |---|---|---|---|---|---|---|
-| V-01 | The embedded browser browses arbitrary sites with an administrator token | User opens an unknown site in the browser tab | Renderer escape or browser bug → administrator | WebView2's Chromium sandbox/AppContainer; nothing relaxed in code; DevTools off unless `XINSPECT_BROWSER_DEVTOOLS=1` | move the browser to a separate medium-integrity process; longer term drop `requireAdministrator` and elevate per operation | Visible in code (`app.manifest`, `BrowserView.xaml.cs`) |
+| V-01 | The embedded browser browses arbitrary sites with an administrator token | User opens an unknown site in the browser tab | Renderer escape or browser bug → administrator | WebView2's Chromium sandbox/AppContainer; nothing relaxed in code; DevTools off unless `XINSPECT_BROWSER_DEVTOOLS=1` | **Mitigated 2026-11-07**: `requireAdministrator` removed in favor of `asInvoker` — the browser no longer runs elevated by default; a separate medium-integrity process remains future work | Visible in code (`app.manifest`, `BrowserView.xaml.cs`) |
 | V-02 | The audit chain can be recomputed end to end | Attacker already has write access | "Chain intact" no longer proves anything | Unkeyed SHA-256, no external anchor | HMAC with a DPAPI-protected key, or anchor the chain head in a read-only location; add `--verify-audit --anchor` | Confirmed (by design) |
 | V-03 | Device strings may inject into the HTML report | A device name contains `<script>` or attribute-breaking characters | Script execution when the report is opened locally | Custom five-character escaper; report is offline and self-contained | Add a CSP meta tag, forbid scripts, encode by context (attribute/URL), add an injection corpus | Hypothesised (untested) |
 | V-04 | CSV export may allow formula injection | User opens a CSV with `=`, `+`, `-`, `@` device strings in Excel | Formula execution / outbound link | No dedicated handling found | Prefix the first character with `'`; add tests | Hypothesised (untested) |
@@ -1055,7 +1055,7 @@ This chapter records the bugs this tree has had and the holes still open. Writin
 
 | Order | Item | Reason | Cost |
 |---|---|---|---|
-| 1 | V-01 browser token separation | The only high-impact surface reached in normal daily use | Medium (new process model) |
+| 1 | V-01 browser token separation | The only high-impact surface reached in normal daily use | Medium (new process model). **2026-11-07: asInvoker landed, mitigating the token part**; a separate process model remains future work |
 | 2 | V-02 audit-chain HMAC/anchor | Directly affects evidentiary trust | Low (key management + format version) |
 | 3 | V-07 CA key lifecycle | Long-lived, machine-wide impact | Medium (TPM/CNG) |
 | 4 | V-13 temp filename and link check | Low cost, removes a class of local attacks | Low |
@@ -1250,7 +1250,7 @@ The full text for every entry, including each individual change and the test/cat
 
 **Why no total score?** Cross-domain numbers have no common unit. A total score would mean choosing weights for you, and weights are a value judgement, not a fact. Deep Bench gives raw samples and confidence; if you rank, publish your weight table.
 
-**Why does the embedded browser run elevated?** Because the whole process starts with `requireAdministrator`, the price of "plug in and read MSRs." The risk is V-01 and the recommendation is token separation. It is not that the browser needs administrator; it is that they are not separated yet.
+**Why does the embedded browser run elevated?** It used to — the whole process started with `requireAdministrator`. **Since 2026-11-07 the program ships `asInvoker`**: the browser no longer runs elevated by default. Token separation (a dedicated medium-integrity process) remains future work — see V-01.
 
 **Can the audit log be edited?** Editing a middle entry breaks the chain and `--verify-audit` exits 2. A privileged attacker can recompute the whole chain, so it defends against accidents and casual tampering, not a privileged adversary. See V-02.
 

@@ -13,6 +13,7 @@ namespace XinSpect;
 /// </remarks>
 public partial class OverviewView : UserControl
 {
+    private System.Windows.Threading.DispatcherTimer? _copyResetTimer;
     public OverviewView() => InitializeComponent();
 
     // Host.Content 延遲載入時 DataContext 由父容器繼承；點選當下已就緒。仍以主視窗為後備。
@@ -49,14 +50,17 @@ public partial class OverviewView : UserControl
             CopySpecButton.Content = LanguageService.T("複製失敗");
         }
 
-        // 兩秒後恢復原本的字，不留一個永遠寫著「已複製」的按鈕
-        var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
-        timer.Tick += (_, _) =>
+        // 兩秒後恢復原本的字，不留一個永遠寫著「已複製」的按鈕。
+        // 單一實例：連續點擊時先停掉上一顆——多顆並跑會讓較舊的把較新的「已複製」蓋掉（競態）。
+        if (_copyResetTimer is { } prev) prev.Stop();
+        _copyResetTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _copyResetTimer.Tick += (_, _) =>
         {
-            timer.Stop();
+            _copyResetTimer!.Stop();
+            _copyResetTimer = null;
             CopySpecButton.Content = LanguageService.T("複製規格摘要");
         };
-        timer.Start();
+        _copyResetTimer.Start();
     }
 
     // 清單項的 DataContext 就是那塊磁貼，直接取即可（不必反查索引）

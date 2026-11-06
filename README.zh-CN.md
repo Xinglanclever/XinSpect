@@ -325,7 +325,7 @@
 | Intel XTU 桥接 | net48 独立进程（Release 建置自动内嵌） | 承载 XTU SDK（.NET 10 已移除的 WCF 旧版堆栈）供 CPU 超频 | 系统管理员 |
 | 蓝色中队守护进程 | .NET 10 console（Release 建置自动内嵌） | ETW 即时威胁侦测、驱动基线比对、以 stdin/stdout JSON IPC 与主程序通信 | 用户权限 |
 
-主程序在 `app.manifest` 声明 `requireAdministrator`：这个决定换来「插上就能读 MSR／SMART」，代价是整个接口（包含内置浏览器）都在提升后权杖下运行。这是一个明确的取舍，不是疏忽；它的风险与修正建议写在第二十章 V-01。
+主程序曾在 `app.manifest` 声明 `requireAdministrator`——那个决定换来「插上就能读 MSR／SMART」，代价是整个接口（包含内置浏览器）都在提升后权杖下运行。**2026-11-07 起改为 `asInvoker`（第二十章 V-01 的直接缓解落地）**：以一般权限启动，界面可用；深层页面按六态如实降级，完整功能请「以系统管理员身份执行」。
 
 ### 3.2 内嵌、落地与完整性
 
@@ -464,7 +464,7 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 写架构最没有价值的一段是「本架构优雅且可扩充」。有价值的是承认它哪里脆弱。
 
-1. **单一行程承担特权与接口。** 主程序以管理员权杖运行，接口、内置浏览器、AI 对话、报告产生都在同一个行程里。任何在接口层的代码运行都等于管理员（见第二十章 V-01）。正确的修法是权杖分离，但那会让「读一个 MSR」变成跨行程调用，代价是延迟与复杂度——这是一个还没有付的代价。
+1. **单一行程承担特权与接口。** 主程序曾在管理员权杖下运行（V-01）；**2026-11-07 起改为 asInvoker**——默认一般权限，浏览器与 AI 对话不再吃管理员令牌，深层页面如实降级。权杖分离（浏览器独立中完整性进程）仍是后续方向；「读一个 MSR」的跨行程代价由深層核心存取开关与 XsRegProbe 白名单承担。
 2. **服务数量本身就是一种风险。** 569 个服务档意味着「接线」是一个真实的问题：服务写好、测试绿、但没有进生产路径，这种缺陷在这个项目发生过不只一次（D-16、D-17）。目前的答案是守门（孤儿扫描、`ViewEntryGateTests`、事实键对帐），而不是减少服务数量。
 3. **事实键目录需要人维持诚实。** 1,167 个键加上 68 个动态家族，靠的是「运行期出现的键要嘛在目录、要嘛命中家族前缀，否则对帐红灯」。这条规则能抓「有产出但没登记」，抓不到「登记了但语意写错」。目录是申报，不是证明。
 
@@ -472,11 +472,11 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpect.exe) | 37,827,371 bytes | 主程序。蓝色中队守护进程已内置 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpect.exe) | 37,843,755 bytes | 主程序。蓝色中队守护进程已内置 |
 | [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpectConsole.exe) | 100,320,253 bytes | 曦览终端机（CLI）。可独立执行，也被主程序强控台唤起；自含 .NET 10 执行阶段故体积较大（Windows 11／Server 2025 用） |
 | [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpectConsole-legacy.exe) | 100,320,295 bytes | 曦览终端机（CLI）**纯文字兼容版**：给 Windows 10／Windows Server 2016、2019、2022 的传统控制台——无色彩、无框线定位，其余功能（facts／book／help）相同 |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/BlueSquadronBridge.exe) | 6,502,948 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
-| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpect-full.exe) | 210,593,618 bytes | 主程序・带环境版：.NET 10 执行阶段一并打包，免装执行阶段（功能与 XinSpect.exe 相同） |
+| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpect-full.exe) | 210,610,002 bytes | 主程序・带环境版：.NET 10 执行阶段一并打包，免装执行阶段（功能与 XinSpect.exe 相同） |
 | [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpectConsole-nort.exe) | 65,850,008 bytes | 曦览终端机・Windows 11／Server 2025・不带环境：需已装 .NET 10 Desktop Runtime |
 | [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpectConsole-legacy-nort.exe) | 65,850,050 bytes | 曦览终端机・Windows 10／2016/2019/2022・不带环境：纯文字界面，需已装 .NET 10 Desktop Runtime |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.17/XinSpectDeploy.exe) | 25,600 bytes | 一键安装器。第一层选装什么：A 装主程序（GUI）、B 装曦览终端机；第二层 1/2/3 选下载来源（GitHub／Drive／加速节点）；下载时显示进度条、速度与剩余时间 |
@@ -2045,7 +2045,7 @@ D-07 是一个典型的「安静的错误」：`uefi.db`／`dbx` 从发布以来
 | O-03 | 主程序未做代码签章，SmartScreen 可能拦阻 | 供应链与可用性 | 文档不教用户关闭；未来可考虑签章 |
 | O-04 | 审计链是无密钥 SHA-256 | 可整链重算 | 见 V-02，尚未实作 HMAC |
 | O-05 | 自签 CA 私钥长期留在 `%ProgramData%\XinSpect\Driver` | 凭证滥用面 | 建议用完即关；见 V-07 |
-| O-06 | 内置浏览器在管理员权杖下运行 | 提权浏览面 | 见 V-01，尚未分离权杖；DevTools 已改为缺省关闭（`XINSPECT_BROWSER_DEVTOOLS=1` 才开） |
+| O-06 | 内置浏览器曾在管理员权杖下运行 | 提权浏览面 | **已缓解（2026-11-07）**：主程序改 asInvoker，浏览器不再默认提权；DevTools 缺省关闭（`XINSPECT_BROWSER_DEVTOOLS=1` 才开）；权杖分离（独立进程）仍是后续方向 |
 | O-07 | 深测暂存盘名固定（`XinSpect.deepbench.tmp`） | 符号链接风险 | 见 V-13，尚未改随机名 |
 | O-08 | PMU 编程验证未与 wpr 等参考工具对照（S5 未运行） | 验证缺口 | 标「多轮测试・不保证可用」 |
 | O-09 | 本轮添加的 NVMe 读取路径没有跑实机 golden | 验证缺口 | 证据模式不激活脚本；标「来源具备、实值待人工扫描」 |
@@ -2078,7 +2078,7 @@ D-07 是一个典型的「安静的错误」：`uefi.db`／`dbx` 从发布以来
 
 | 资产 | 为什么有价值 |
 |---|---|
-| 管理员权杖 | 主程序以 `requireAdministrator` 运行，任何在此行程内的代码运行都等于管理员 |
+| 管理员权杖 | **已改（2026-11-07）**：主程序 asInvoker 启动，一般权限即可运行；以管理员执行时（深层功能需要）此行风险描述仍然适用 |
 | 内核驱动（WinRing0／XsRegProbe） | 任意 MSR／MMIO／PCI 访问是 BYOVD 的典型目标 |
 | 自签 CA 私钥 | 能签任意驱动，等于长期内核信任 |
 | 审计日志与快照 | 证据的可信度；被改过就失去举证价值 |
@@ -2096,7 +2096,7 @@ D-07 是一个典型的「安静的错误」：`uefi.db`／`dbx` 从发布以来
 
 | 编号 | 假设 | 前提 | 影响 | 现有缓解 | 建议 | 状态 |
 |---|---|---|---|---|---|---|
-| V-01 | 内置浏览器在管理员权杖下浏览任意网站 | 用户用浏览器分页开未知网站 | 渲染进程逃逸或浏览器漏洞 → 直接取得管理员 | WebView2 的 Chromium 沙箱与 AppContainer；代码未放宽 | Release 关闭 DevTools；把浏览器移到独立的中完整性进程；长期考虑移除 `requireAdministrator`、改逐项提权 | 代码可见（`app.manifest`、`BrowserView.xaml.cs`） |
+| V-01 | 内置浏览器在管理员权杖下浏览任意网站 | 用户用浏览器分页开未知网站 | 渲染进程逃逸或浏览器漏洞 → 直接取得管理员 | WebView2 的 Chromium 沙箱与 AppContainer；代码未放宽 | **已缓解（2026-11-07）**：`requireAdministrator` 移除、改 asInvoker——浏览器不再默认带管理员令牌；把浏览器移到独立的中完整性进程仍是后续方向 | 代码可见（`app.manifest`、`BrowserView.xaml.cs`） |
 | V-02 | 审计链可被整链重算 | 攻击者已有写入权限 | 「链完整」不再证明没被改 | 无密钥 SHA-256；无外部锚定 | 改用 HMAC（密钥由 DPAPI 保护）或每日把链头写入唯读位置；提供 `--verify-audit --anchor` | 已证实（设计已知） |
 | V-03 | HTML 报告的设备字符串可能注入 | 设备名称含 `<script>` 或属性转义字符 | 本机打开报告时运行脚本（文件内容可控） | 自写五特殊字符转义；报告脱机自足 | 加入 CSP `<meta>`、禁用 script、对属性与 URL 上下文分别编码；加注入测试语料 | 推测（未实测） |
 | V-04 | CSV 导出可能公式注入 | 用户用 Excel 打开含 `=`、`+`、`-`、`@` 开头的设备字符串 | 打开时运行公式／外连 | 未见专门处理 | 导出时对首字符加 `'`；加测试 | 推测（未实测） |
@@ -2115,7 +2115,7 @@ D-07 是一个典型的「安静的错误」：`uefi.db`／`dbx` 从发布以来
 
 | 顺序 | 项目 | 理由 | 成本 |
 |---|---|---|---|
-| 1 | V-01 浏览器权杖分离 | 唯一「日常使用就会碰到」的高影响面 | 中（需要新的进程模型） |
+| 1 | V-01 浏览器权杖分离 | 唯一「日常使用就会碰到」的高影响面 | 中（需要新的进程模型）。**2026-11-07：asInvoker 已落地，缓解了令牌部分**；独立进程模型仍是后续 |
 | 2 | V-02 审计链 HMAC／锚定 | 直接影响证据的可信度 | 低（密钥管理＋格式版本） |
 | 3 | V-07 CA 私钥生命周期 | 影响是长期的、机器级的 | 中（TPM／CNG） |
 | 4 | V-13 暂存盘名与链接检查 | 成本低、消除一整类本机攻击 | 低 |
@@ -2206,7 +2206,7 @@ O-01 到 O-12 里，至少四条是「知道怎么修，但选择不修」：
 
 这两个功能是整个程序里唯二「会处理外部内容」的地方，所以值得单独看。
 
-**内置浏览器**：基于 WebView2，在同一个行程里跑。数据流是「用户输入网址 → WebView2 连出去 → 页面渲染」。风险面有三个：页面内容可以是恶意的（这是浏览器的本质）、行程带着管理员权杖（见 V-01）、以及 DevTools 缺省可用（开发方便，但也是攻击面）。
+**内置浏览器**：基于 WebView2，在同一个行程里跑。数据流是「用户输入网址 → WebView2 连出去 → 页面渲染」。风险面有三个：页面内容可以是恶意的（这是浏览器的本质）、行程权限（**已缓解：asInvoker 后默认一般权限**；以管理员执行时见 V-01）、以及 DevTools 缺省关闭（`XINSPECT_BROWSER_DEVTOOLS=1` 才开）。
 
 **AI 对话**：缺省没有端点。用户提供端点与密钥后，消息从本机送到那个端点。风险面：用户自己接的端点可能记录一切；对话内容可能含机器识别信息（如果用户贴了快照）；以及模型输出可能被当成事实。
 
@@ -2400,7 +2400,7 @@ O-01 到 O-12 里，至少四条是「知道怎么修，但选择不修」：
 
 | 预测 | 依据 | 会被什么推翻 |
 |---|---|---|
-| 权杖分离会出现在某个 2.9x | 第二十章 V-01 是目前最贵的结构性风险 | 用户对延迟的反弹 |
+| 权杖分离 | 第二十章 V-01：**令牌部分已缓解（2026-11-07 asInvoker）**，独立进程模型待做 | 用户对延迟的反弹 |
 | 主程序签章仍不会做 | 凭证成本没有来源 | 出现愿意负担的赞助者 |
 | 事实键目录会破 1,200 | 目前 1,044，且每轮功能都添加键 | 大规模合并服务 |
 | 测试数会趋于平缓 | 守门类已接近覆盖完主要横向性质 | 出现新的横向性质（例如多语系一致性扩大到全部字符串） |
