@@ -14,6 +14,7 @@ public partial class ChipsetAnalysisView : UserControl
         Loaded += (_, _) =>
         {
             if (_loaded) return;
+            if (Vm?.ChipsetAnalysis is null) return;   // 服務未就緒：不燒掉唯一一次初始化（審計 #47），下次 Loaded 再試
             _loaded = true;
             Vm?.ChipsetAnalysis.Refresh();
         };

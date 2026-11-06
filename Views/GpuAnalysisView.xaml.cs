@@ -16,10 +16,9 @@ public partial class GpuAnalysisView : UserControl, IPageLifecycle
         Loaded += (_, _) =>
         {
             if (_loaded) return;
-            _loaded = true;
-
             _svc = Vm?.GpuAnalysis;
-            if (_svc is null) return;
+            if (_svc is null) return;   // 服務未就緒：不燒掉唯一一次初始化（審計 #47），下次 Loaded 再試
+            _loaded = true;
 
             DataContext = _svc;
             _svc.CollectGpuInfo();
