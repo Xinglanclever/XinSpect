@@ -778,6 +778,16 @@
                     <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
                                Text="預設開啟（與報告匯出相反：報告留給自己，AI 請求會離開這台電腦）。遮掉的是 UUID、MAC、標了標籤的 IP、C:\Users\使用者路徑、有標籤的序號與主機名稱；型號、容量、時脈、溫度、電壓等判斷需要的讀值一律不動。沒有標籤的 1.0.0.0 這種字串不遮——它多半是版本號，遮掉反而少一個線索。AI 分頁的「傳送內容」按鈕可以看到實際送出的全文。"/>
 
+                    <CheckBox Style="{StaticResource SetCheck}" Margin="27,10,0,0" Content="代理模式的工具結果也過遮蔽"
+                              IsChecked="{Binding Settings.AiAgentRedactToolResults, Mode=TwoWay}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="54,2,0,0" TextWrapping="Wrap"
+                               Text="預設開啟。代理模式（主動診斷）每一輪的工具查詢結果（序號、MAC、路徑等）在送 AI 前也過同一套遮蔽。關閉＝你明示同意讓代理模式原樣送出工具結果。"/>
+
+                    <CheckBox Style="{StaticResource SetCheck}" Margin="27,10,0,0" Content="代理模式每輪暫停顯示送出內容"
+                              IsChecked="{Binding Settings.AiAgentPreviewToolResults, Mode=TwoWay}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="54,2,0,0" TextWrapping="Wrap"
+                               Text="預設關閉。開啟後代理模式每一輪的工具結果在送出前顯示在對話裡，代理暫停等你按送出才繼續——讓你看清楚代理到底送了什麼。關閉＝代理連續執行不暫停（較快但你看不到中間過程）。"/>
+
                     <TextBlock Style="{StaticResource FieldLabel}" Text="系統提示詞（要求 AI 客觀公正；可自行修改）" Margin="0,16,0,4"/>
                     <TextBox Style="{StaticResource SetTextBox}" Height="150" TextWrapping="Wrap" AcceptsReturn="True"
                              VerticalScrollBarVisibility="Auto"
