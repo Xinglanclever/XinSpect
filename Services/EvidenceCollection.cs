@@ -69,10 +69,54 @@ public static class EvidenceCollection
     /// <remarks>
     /// 這是<b>步驟級</b>代價，不是逐鍵：一個步驟可能生產數十把鍵，拆不出來也不該假裝拆得出來（U10-MT-0004，第 311 輪）。
     /// </remarks>
+    // 採集調度器的逐步預算（毫秒）：合法步驟都是秒級（全鏈實測 ~65 秒／40+ 步），
+    // 60 秒是寬鬆上限。可用環境變數 XINSPECT_STEP_BUDGET_MS 覆寫（0＝停用看門狗）。
+    // C 的系統性修法（2026-11-07）：與其給每個出血點貼 StorageReliabilityTimeoutSource
+    // 那樣的創可貼，不如在所有步驟的共同出口上裝看門狗——單源死不掉全鏈。
+    // 界線（2026-11-07 實測補記）：逾時的執行緒會留在核心等待（與 DiskIo 實測記錄同一代價，
+    // 一條步驟換一條執行緒）；且被放棄的步驟之後可能把部分事實寫進共享結構——實測形態是
+    // 「下一輪收集的 LoadKnowledgePack 撞上殭屍執行緒晚到寫入的 st.ss.summary 而抛重複鍵」，
+    // 該步驟如實記失敗、鏈繼續。健康開機＋單次採集不會發生；根治（加入路徑按鍵冪等）隨 #3 一起做。
+    private static int StepBudgetMs
+    {
+        get
+        {
+            var raw = Environment.GetEnvironmentVariable("XINSPECT_STEP_BUDGET_MS");
+            return int.TryParse(raw, out var v) && v >= 0 ? v : 60_000;
+        }
+    }
+
     private static void Measure(EvidenceLabService svc, string name, Action action)
     {
         long start = Stopwatch.GetTimestamp();
         bool ok = true;
+        int budget = StepBudgetMs;
+        if (budget > 0)
+        {
+            // 專屬執行緒＋外層預算：逾時就放棄這一步（RecordStep 如實記 false），
+            // 收集鏈繼續——單源死不掉全鏈（2026-11-06／07 兩次 WMI 互堵事故的系統性修法）。
+            using var done = new ManualResetEventSlim(false);
+            Exception? workerError = null;
+            var worker = new Thread(() =>
+            {
+                try { action(); }
+                catch (Exception ex) when (ex is not ThreadInterruptedException) { workerError = ex; }
+                finally { try { done.Set(); } catch { } }
+            })
+            { IsBackground = true, Name = "EvidenceStep-" + name };
+            worker.Start();
+            if (!done.Wait(budget))
+            {
+                svc.RecordStep(name, Stopwatch.GetElapsedTime(start).TotalMilliseconds, false);
+                Console.WriteLine(
+                    $"[XinSpect] 採集步驟 {name} 逾時（{budget / 1000.0:0} 秒無回應）——已放棄，該域以三態呈現，收集鏈繼續。");
+                return;
+            }
+            ok = workerError is null;
+            if (!ok) Console.WriteLine($"[XinSpect] 採集步驟 {name} 失敗：{workerError?.Message}");
+            svc.RecordStep(name, Stopwatch.GetElapsedTime(start).TotalMilliseconds, ok);
+            return;
+        }
         try { action(); }
         catch { ok = false; }
         svc.RecordStep(name, Stopwatch.GetElapsedTime(start).TotalMilliseconds, ok);
