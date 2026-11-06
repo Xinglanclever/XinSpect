@@ -167,28 +167,88 @@ try {
     Ok "pushed main=$($localHead.Substring(0,7)) + tag v$Version on remote"
 
     # ---------- publish ----------
-    Write-Host '==> dotnet publish (single file)'
+    # 八資產矩陣（2026-11-06）：GUI 二版（不帶環境／帶環境）＋ CLI 四版（兩個 Windows 世代 ×
+    # 帶不帶環境）＋ Bridge ＋ 部署器。每顆各自 -o：dotnet publish 會清輸出目錄，
+    # 多資產共用一個目錄會互相刪檔（2026-11-06 實測）。
+    # CLI 的 OutputPath 也各自獨立——預設 bin 被殭屍進程鎖住時不必等重開機。
+    Write-Host '==> dotnet publish (eight assets)'
+    $P = "publish-$Version"
+    $null = New-Item -ItemType Directory -Force -Path $P
+
+    # 1) GUI XinSpect.exe（framework-dependent 單檔）
     & dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -m:1 `
         -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
         -p:UseSharedCompilation=false `
-        -p:BaseOutputPath="obj/_pub_${Version}_$stamp/" -o "publish-$Version" | Out-Null
-    if ($LASTEXITCODE -ne 0) { Fail 'publish failed' }
-    $exe = "publish-$Version\XinSpect.exe"
-    if (-not (Test-Path $exe)) { Fail "publish output missing: $exe" }
-    $bytes = (Get-Item $exe).Length
-    $disp = $bytes.ToString('#,0')
-    Ok "published $exe = $disp bytes"
+        -p:BaseOutputPath="obj/_pub_${Version}_$stamp/" -o "$P-gui" | Out-Null
+    if ($LASTEXITCODE -ne 0) { Fail 'publish gui failed' }
+    Copy-Item "$P-gui\XinSpect.exe" "$P\XinSpect.exe" -Force
 
-    # ---------- byte-count docs commit (zh pair declares exact bytes) ----------
+    # 2) GUI XinSpect-full.exe（self-contained 單檔，免裝 .NET）
+    & dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained true -m:1 `
+        -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
+        -p:UseSharedCompilation=false `
+        -o "$P-guifull" | Out-Null
+    if ($LASTEXITCODE -ne 0) { Fail 'publish gui-full failed' }
+    Copy-Item "$P-guifull\XinSpect.exe" "$P\XinSpect-full.exe" -Force
+
+    # 3) CLI XinSpectConsole.exe（self-contained 單檔）
+    & dotnet publish XinSpectCli\XinSpectCli.csproj -c Release -m:1 `
+        -p:PublishSingleFile=true -p:SelfContained=true -p:UseSharedCompilation=false `
+        -p:OutputPath="XinSpectCli\bin-_pub317" -o "$P-cli" | Out-Null
+    if ($LASTEXITCODE -ne 0) { Fail 'publish cli failed' }
+    Copy-Item "$P-cli\XinSpectConsole.exe" "$P\XinSpectConsole.exe" -Force
+
+    # 4) CLI legacy（self-contained，Win10／Server 2016-2022 純文字相容界面）
+    & dotnet publish XinSpectCli\XinSpectCli.Legacy.csproj -c Release -m:1 `
+        -p:PublishSingleFile=true -p:SelfContained=true -p:UseSharedCompilation=false `
+        -p:OutputPath="XinSpectCli\bin-_pub317l" -o "$P-clilegacy" | Out-Null
+    if ($LASTEXITCODE -ne 0) { Fail 'publish cli-legacy failed' }
+    Copy-Item "$P-clilegacy\XinSpectConsole-legacy.exe" "$P\XinSpectConsole-legacy.exe" -Force
+
+    # 5) CLI nort（framework-dependent：需 .NET 10 Desktop Runtime）
+    & dotnet publish XinSpectCli\XinSpectCli.csproj -c Release -m:1 `
+        -p:PublishSingleFile=true -p:SelfContained=false -p:EnableCompressionInSingleFile=false -p:UseSharedCompilation=false `
+        -p:OutputPath="XinSpectCli\bin-_pubnort" -o "$P-clinort" | Out-Null
+    if ($LASTEXITCODE -ne 0) { Fail 'publish cli-nort failed' }
+    Copy-Item "$P-clinort\XinSpectConsole.exe" "$P\XinSpectConsole-nort.exe" -Force
+
+    # 6) CLI legacy-nort
+    & dotnet publish XinSpectCli\XinSpectCli.Legacy.csproj -c Release -m:1 `
+        -p:PublishSingleFile=true -p:SelfContained=false -p:EnableCompressionInSingleFile=false -p:UseSharedCompilation=false `
+        -p:OutputPath="XinSpectCli\bin-_publnort" -o "$P-clilegacynort" | Out-Null
+    if ($LASTEXITCODE -ne 0) { Fail 'publish cli-legacy-nort failed' }
+    Copy-Item "$P-clilegacynort\XinSpectConsole-legacy.exe" "$P\XinSpectConsole-legacy-nort.exe" -Force
+
+    # 八資產清單（bridge／deployer 由既有產出提供）
+    $assets = @(
+        @('XinSpect.exe', "$P\XinSpect.exe"),
+        @('XinSpect-full.exe', "$P\XinSpect-full.exe"),
+        @('XinSpectConsole.exe', "$P\XinSpectConsole.exe"),
+        @('XinSpectConsole-legacy.exe', "$P\XinSpectConsole-legacy.exe"),
+        @('XinSpectConsole-nort.exe', "$P\XinSpectConsole-nort.exe"),
+        @('XinSpectConsole-legacy-nort.exe', "$P\XinSpectConsole-legacy-nort.exe"),
+        @('BlueSquadronBridge.exe', 'publish-2.44-bridge\BlueSquadronBridge.exe'),
+        @('XinSpectDeploy.exe', 'Installer\XinSpectDeploy.exe')
+    )
+    foreach ($a in $assets) {
+        if (-not (Test-Path $a[1])) { Fail "asset missing: $($a[1])" }
+        Ok ("asset $($a[0]) = " + (Get-Item $a[1]).Length.ToString('#,0') + ' bytes')
+    }
+
+    # ---------- byte-count docs commit（README 表列的每一顆都對實測值）----------
     $changed = @()
-    foreach ($f in $zhFiles) {
+    foreach ($f in $zhFiles + @('README.en.md')) {
         $r = ReadUtf8 $f; $t = $r[0]
-        $new = [regex]::Replace($t, "(XinSpect\.exe\]\([^)]*\) \| )[\d,]+(?= bytes)", ('${1}' + $disp))
-        if ($new -ne $t) { WriteUtf8 $f $new $r[1]; $changed += $f; Write-Host "$f`: byte count -> $disp" }
+        $new = $t
+        foreach ($a in $assets) {
+            $disp = (Get-Item $a[1]).Length.ToString('#,0')
+            $new = [regex]::Replace($new, '(' + [regex]::Escape($a[0]) + '\]\([^)]*\) \| )[\d,]+(?= bytes)', ('${1}' + $disp))
+        }
+        if ($new -ne $t) { WriteUtf8 $f $new $r[1]; $changed += $f; Write-Host "$f`: byte counts updated" }
     }
     if ($changed.Count -gt 0) {
         git add -- @($changed) | Out-Null
-        git commit -m "docs：README 主程式位元組數改為 v$Version 實測值（$disp）" | Out-Null
+        git commit -m "docs：README 資產位元組數改為 v$Version 發佈實測值" | Out-Null
         git -c http.version=HTTP/1.1 push origin main | Out-Null
         if ($LASTEXITCODE -ne 0) { Fail 'push docs commit failed' }
         Ok 'docs byte-count commit pushed'
@@ -197,9 +257,9 @@ try {
     }
 
     # ---------- deep kernel driver ----------
-    # 部署器會把這支 .sys 放進 %ProgramData%\XinSpect\Driver，程式按「開啟」時用本機 CA 簽章再載入。
-    # 沒有它，「深層核心存取」就只能叫使用者自己去編（就是那個老問題）。
-    Write-Host '==> build XsRegProbe.sys'
+    # 只做建置驗證（驅動要能編過）。自 3.17 起隨版不下發 .sys——部署器的驅動步驟遇到
+    # Release 沒有這個檔時會如實說「此版未附」。
+    Write-Host '==> build XsRegProbe.sys (build-only verification)'
     $driverSys = 'XsRegProbe\Driver\x64build\XsRegProbe.sys'
 $driverBat = 'XsRegProbe\Driver\x64build\build.bat'
     if (-not (Test-Path $driverSys)) {
@@ -211,27 +271,12 @@ $driverBat = 'XsRegProbe\Driver\x64build\build.bat'
     Ok "driver $driverSys = $((Get-Item $driverSys).Length) bytes"
 
     # ---------- release + assets ----------
-    Write-Host '==> create/update Release and upload five assets'
+    Write-Host '==> create/update Release and upload eight assets'
     $bridge = 'publish-2.44-bridge\BlueSquadronBridge.exe'
     if (-not (Test-Path $bridge)) { Fail "bridge asset source missing: $bridge" }
-    $deploy = 'Installer\XinSpectDeploy.exe'
-    # SHA256SUMS.txt 是 README 下載表列的第 4 個資產，verify-release.ps1 會檢查它存在——
-    # 先前這一步是手動上傳的，於是腳本自己永遠跑不到綠燈（v3.00 首跑就撞到）。
-    # 逐檔雜湊一律算自**等一下要上傳的那三個檔案**，不是算自別的目錄。
-    $sums = Join-Path $env:TEMP "SHA256SUMS-$Version.txt"
-    $sumLines = @()
-    foreach ($pair in @(@('XinSpect.exe', $exe), @('BlueSquadronBridge.exe', $bridge), @('XinSpectDeploy.exe', $deploy), @('XsRegProbe.sys', $driverSys))) {
-        $h = (Get-FileHash -Algorithm SHA256 -Path $pair[1]).Hash.ToLowerInvariant()
-        $sumLines += "$h  $($pair[0])"
-    }
-    [IO.File]::WriteAllText($sums, (($sumLines -join "`n") + "`n"), (New-Object Text.UTF8Encoding($false)))
-    Write-Host "SHA256SUMS.txt = $((Get-Item $sums).Length) bytes"
-    & python Tools/publish_release.py --tag "v$Version" --title $Title --body-file $BodyFile `
-        --asset "XinSpect.exe=$exe" `
-        --asset "BlueSquadronBridge.exe=$bridge" `
-        --asset "XinSpectDeploy.exe=$deploy" `
-        --asset "XsRegProbe.sys=$driverSys" `
-        --asset "SHA256SUMS.txt=$sums"
+    $up = @()
+    foreach ($a in $assets) { $up += '--asset'; $up += "$($a[0])=$($a[1])" }
+    & python Tools/publish_release.py --tag "v$Version" --title $Title --body-file $BodyFile @up
     if ($LASTEXITCODE -ne 0) { Fail 'asset upload failed' }
 
     # ---------- post-release verifier ----------
