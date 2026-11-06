@@ -205,6 +205,16 @@ public sealed class SettingsService : ObservableObject
     /// </summary>
     public bool AiRedactIdentity { get => _aiRedactIdentity; set { if (SetProperty(ref _aiRedactIdentity, value)) Save(); } }
 
+    private bool _aiAgentRedactToolResults = true;
+    /// <summary>代理模式的逐輪工具結果送 AI 前是否過 AiRedactor 遮蔽（審計 #3：此前工具結果
+    /// 不經遮蔽直送，序號／MAC／啟動項在遮蔽開啟時也漏出）。預設開啟。</summary>
+    public bool AiAgentRedactToolResults { get => _aiAgentRedactToolResults; set { if (SetProperty(ref _aiAgentRedactToolResults, value)) Save(); } }
+
+    private bool _aiAgentPreviewToolResults;
+    /// <summary>代理模式的逐輪工具結果是否寫進送出預覽（審計 #4：此前預覽不包含工具結果，
+    /// 使用者無法事先審查代理到底送了什麼）。開啟後每輪暫停等確認。</summary>
+    public bool AiAgentPreviewToolResults { get => _aiAgentPreviewToolResults; set { if (SetProperty(ref _aiAgentPreviewToolResults, value)) Save(); } }
+
     private int _aiRequestBudgetChars = AiRequestBudget.DefaultChars;
     /// <summary>
     /// 單次請求的內容上限（字元，含系統提示與硬體快照）。超過時先截斷單則過長訊息，
@@ -406,6 +416,8 @@ public sealed class SettingsService : ObservableObject
         public int AiMaxTokens { get; set; }
         public int AiHistoryTurns { get; set; } = 12;
         public bool AiRedactIdentity { get; set; } = true;
+        public bool AiAgentRedactToolResults { get; set; } = true;
+        public bool AiAgentPreviewToolResults { get; set; } = false;
         public int AiRequestBudgetChars { get; set; } = AiRequestBudget.DefaultChars;
         public bool AiProactive { get; set; }
         public bool ReportMaskIdentity { get; set; }
@@ -499,6 +511,8 @@ public sealed class SettingsService : ObservableObject
                     _aiMaxTokens = Math.Clamp(p.AiMaxTokens, 0, 32768);
                     _aiHistoryTurns = Math.Clamp(p.AiHistoryTurns, 0, 240);
                     _aiRedactIdentity = p.AiRedactIdentity;
+                    _aiAgentRedactToolResults = p.AiAgentRedactToolResults;
+                    _aiAgentPreviewToolResults = p.AiAgentPreviewToolResults;
                     _aiRequestBudgetChars = Math.Clamp(p.AiRequestBudgetChars <= 0 ? AiRequestBudget.DefaultChars : p.AiRequestBudgetChars,
                                                        AiRequestBudget.MinChars, AiRequestBudget.MaxChars);
                     _aiProactive = p.AiProactive;
@@ -583,6 +597,8 @@ public sealed class SettingsService : ObservableObject
                 SchemaVersion = CurrentSchema,
                 UpdateIntervalSec = _updateIntervalSec,
                 StartWithWindows = _startWithWindows,
+                AiAgentRedactToolResults = _aiAgentRedactToolResults,
+                AiAgentPreviewToolResults = _aiAgentPreviewToolResults,
                 DefaultEra = _defaultEra,
                 LogIntervalSec = _logIntervalSec,
                 LogFolder = _logFolder,
