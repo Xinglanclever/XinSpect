@@ -136,17 +136,23 @@ NTSTATUS DriverEntry(
 
     /* 3. 驅動/DLL 載入回呼 */
     status = PsSetLoadImageNotifyRoutine(OnImageLoad);
-    if (!NT_SUCCESS(status))
+    if (NT_SUCCESS(status))
+        g_CallbackCaps |= BS_CAP_LOAD_IMAGE;
+    else
         DbgPrint("[BS] PsSetLoadImageNotifyRoutine failed: 0x%08X\n", status);
 
     /* 4. 進程建立回呼 */
     status = PsSetCreateProcessNotifyRoutineEx(OnProcessNotify, FALSE);
-    if (!NT_SUCCESS(status))
+    if (NT_SUCCESS(status))
+        g_CallbackCaps |= BS_CAP_PROCESS;
+    else
         DbgPrint("[BS] PsSetCreateProcessNotifyRoutineEx failed: 0x%08X\n", status);
 
     /* 5. 登錄檔回呼 */
     status = CmRegisterCallbackEx(OnRegistryCallback, &ObAltitude, DriverObject, NULL, &g_CmCookie, NULL);
-    if (!NT_SUCCESS(status))
+    if (NT_SUCCESS(status))
+        g_CallbackCaps |= BS_CAP_REGISTRY;
+    else
     {
         g_CmCookie.QuadPart = 0;
         DbgPrint("[BS] CmRegisterCallbackEx failed: 0x%08X\n", status);
@@ -170,7 +176,9 @@ NTSTATUS DriverEntry(
         cbReg.OperationRegistration      = &opReg;
 
         status = ObRegisterCallbacks(&cbReg, &g_ObHandle);
-        if (!NT_SUCCESS(status))
+        if (NT_SUCCESS(status))
+            g_CallbackCaps |= BS_CAP_OB_PROTECT;
+        else
         {
             g_ObHandle = NULL;
             DbgPrint("[BS] ObRegisterCallbacks failed: 0x%08X\n", status);
@@ -179,6 +187,7 @@ NTSTATUS DriverEntry(
 
     /* 7. MSR 定期快照 */
     MsrSnapshotInit();
+    g_CallbackCaps |= BS_CAP_MSR_SNAPSHOT;
 
     DbgPrint("[BS] Blue Squadron loaded.\n");
     return STATUS_SUCCESS;

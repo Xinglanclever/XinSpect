@@ -709,7 +709,7 @@ internal static class Program
             Console.WriteLine($"      {Dim}走勢{Reset} {Tui.Sparkline(_memHist, 100, 24)}");
             Tui.Separator();
             Console.WriteLine($"  {Pad("CPU 時脈", 12)}{Bold}{(r.CpuClock is null ? "——" : $"{r.CpuClock:0.00}")}{Reset}{Dim} GHz{Reset}   "
-                + $"{Pad("CPU 功率", 12)}{Bold}{(r.CpuPower is null ? "——" : $"{r.CpuPower:0.#}")}{Reset}{Dim} W{(LastPowerWasRapl ? "（RAPL）" : "")}{Reset}   "
+                + $"{Pad("CPU 功率", 12)}{Bold}{(r.CpuPower is null ? "——" : $"{r.CpuPower:0.#}")}{Reset}{Dim}{(r.CpuPower is null && RaplEnergyGate.Verdict == RaplGateVerdict.NotResponding ? $" 能量計未隨負載（原始計數 0x{RaplEnergyGate.LastRawCount:X}）" : r.CpuPower is null && RaplEnergyGate.Verdict == RaplGateVerdict.NoCounter ? " 無能量計" : "")}{(LastPowerWasRapl && RaplEnergyGate.Verdict == RaplGateVerdict.Trusted ? "（RAPL）" : "")}{Reset}   "
                 + $"{Pad("記憶體用量", 12)}{Bold}{(r.MemUsed is null ? "——" : $"{r.MemUsed:0.0}")}{Reset}{Dim} GB{Reset}");
         }
     }
@@ -890,17 +890,27 @@ internal static class Program
             if (unit.Error is not null || e1.Error is not null) return (clock, null, ReadCpuTemp());
             int div = (int)((unit.Value >> 8) & 0x1F);
             double joule = 1.0 / Math.Pow(2, div);
-            System.Threading.Thread.Sleep(400);   // 能量差分窗
-            var e2 = PowerConsoleRing0Service.ReadMsr(0x611);
-            if (e2.Error is not null) return (clock, null, null);
-            ulong delta = e2.Value >= e1.Value ? e2.Value - e1.Value : e2.Value + (ulong.MaxValue - e1.Value) + 1;
-            double power = delta * joule / 0.4;
-            if (power is > 0 and < 1500)
+
+            // 誠實閘門（一次性）：0x611 的速率得先證明會隨負載動，才敢換算成瓦——
+            // 本機（Skylake-X）實測計數器前進但與功耗脫鉤，硬換算得出「18 核滿載 1.2 W」。
+            RaplEnergyGate.RunOnce(
+                () => { var r = PowerConsoleRing0Service.ReadMsr(0x611); return r.Error is null ? r.Value : (ulong?)null; },
+                ReadCpuTemp);
+
+            if (RaplEnergyGate.Verdict == RaplGateVerdict.Trusted)
             {
-                LastPowerWasRapl = true;
-                return (clock, power, ReadCpuTemp());
+                System.Threading.Thread.Sleep(400);   // 能量差分窗（僅在閘門通過後才值得量）
+                var e2 = PowerConsoleRing0Service.ReadMsr(0x611);
+                if (e2.Error is not null) return (clock, null, ReadCpuTemp());
+                ulong delta = e2.Value >= e1.Value ? e2.Value - e1.Value : e2.Value + (ulong.MaxValue - e1.Value) + 1;
+                double power = delta * joule / 0.4;
+                if (power is > 0 and < 1500)
+                {
+                    LastPowerWasRapl = true;
+                    return (clock, power, ReadCpuTemp());
+                }
             }
-            // 計數超帶（本機 RAPL 計數器實證走得極慢）：不硬編功率，溫度照樣走 MSR
+            // 閘門未過（計數器與負載脫鉤）或差分超帶：不硬編功率，溫度照樣走 MSR
             LastPowerWasRapl = false;
             return (clock, null, ReadCpuTemp());
         }

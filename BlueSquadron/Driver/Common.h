@@ -21,6 +21,7 @@
 #define BS_MAX_BLOCK_HASHES    256
 #define BS_MAX_PROTECTED_PIDS  64
 #define BS_MAX_MSR_ENTRIES     16
+#define BS_MAX_CPU             64    /* MSR 快照的 per-CPU 基線上限（單群組；超過則監控停用如實申報） */
 
 typedef enum _BS_EVENT_TYPE {
     BsEventImageLoad = 1,
@@ -74,6 +75,15 @@ typedef struct _BS_MSR_DIFF {
 #define IOCTL_BS_DRIVER_BLOCK     CTL_CODE(BS_DEVICE_TYPE, 0x804, METHOD_BUFFERED, FILE_WRITE_DATA)
 #define IOCTL_BS_PROCESS_PROTECT  CTL_CODE(BS_DEVICE_TYPE, 0x805, METHOD_BUFFERED, FILE_WRITE_DATA)
 #define IOCTL_BS_GET_BASELINE     CTL_CODE(BS_DEVICE_TYPE, 0x806, METHOD_BUFFERED, FILE_READ_DATA)
+#define IOCTL_BS_GET_CAPS         CTL_CODE(BS_DEVICE_TYPE, 0x807, METHOD_BUFFERED, FILE_READ_DATA)
+
+/* 回呼註冊能力旗标（IOCTL_BS_GET_CAPS 回傳）——讓 usermode 核對「四個防護真的註冊上了嗎」，
+   而不是驅動部分失敗仍回 STATUS_SUCCESS（2026-11-07 審計：此前失敗只 DbgPrint）。 */
+#define BS_CAP_LOAD_IMAGE      0x01
+#define BS_CAP_PROCESS         0x02
+#define BS_CAP_REGISTRY        0x04
+#define BS_CAP_OB_PROTECT      0x08
+#define BS_CAP_MSR_SNAPSHOT    0x10
 
 /* ── 全域變數（定義在 Callbacks.c） ───────────────────────────────── */
 extern BS_EVENT       g_EventRing[BS_MAX_EVENTS];
@@ -83,9 +93,14 @@ extern KSPIN_LOCK     g_EventLock;
 extern BS_BLOCK_ENTRY g_BlockList[BS_MAX_BLOCK_HASHES];
 extern volatile LONG  g_BlockCount;
 extern KSPIN_LOCK     g_BlockLock;
+extern BS_MSR_ENTRY g_MsrBaseline[BS_MAX_CPU][BS_MAX_MSR_ENTRIES];   /* per-CPU 基線 */
+extern BOOLEAN      g_MsrBaseValid[BS_MAX_CPU][BS_MAX_MSR_ENTRIES];  /* 基線時讀失敗的條目不參與比對 */
+extern LONG         g_MsrCount;
+extern ULONG        g_CallbackCaps;
 
 /* SHA-256 演算法物件（BCrypt；Callbacks.c 持有、DriverEntry 開 Unload 關） */
 extern PVOID         g_HashProvider;
+extern LARGE_INTEGER g_CmCookie;   /* CmRegisterCallbackEx 的 cookie（登錄回呼取路徑用） */
 
 extern HANDLE         g_ProtectedPids[BS_MAX_PROTECTED_PIDS];
 extern volatile LONG  g_ProtectedCount;

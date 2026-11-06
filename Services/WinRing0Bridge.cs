@@ -332,7 +332,8 @@ public sealed class WinRing0Bridge : IDisposable
         bool ok;
         try { _m.WriteIoPort.Invoke(null, new object?[] { port, value }); ok = true; }
         catch { ok = false; }
-        WriteGate.Record($"I/O 0x{port:X}", CallerOfWrite(), $"out byte 0x{value:X2}", ok);
+        // LHM 的 WriteIoPort 回 void——「沒丟例外」不等於「硬體收到了」，帳本如實記，不寫「成功」
+        WriteGate.Record($"I/O 0x{port:X}", CallerOfWrite(), $"out byte 0x{value:X2}（無例外；LHM 不回確認）", ok);
         return ok;
     }
 

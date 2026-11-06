@@ -117,7 +117,17 @@ namespace XtuBridge
 
                 case "apply":
                 {
-                    ApplyOut a = core.Apply(U32(req, "id"), Dbl(req, "value"), Bool(req, "requiresReboot"));
+                    // 寫入是全協議最危險的一步：id 與 value 必須是「明確給了且合法」——
+                    // 缺欄位／格式錯一律回錯拒絕，絕不把解析失敗的 0 寫進硬體。
+                    uint? id = U32(req, "id");
+                    double? value = Dbl(req, "value");
+                    if (id is null || value is null)
+                        return new Dictionary<string, object>
+                        {
+                            { "ok", false }, { "code", "InvalidRequest" },
+                            { "error", "apply 需要 id 與 value 欄位（數字）；收到或缺漏或格式錯，已拒絕執行。" },
+                        };
+                    ApplyOut a = core.Apply(id.Value, value.Value, Bool(req, "requiresReboot"));
                     return new Dictionary<string, object>
                     {
                         { "ok", a.Ok }, { "code", a.Code }, { "activeKnown", a.ActiveKnown }, { "active", a.Active },
@@ -205,21 +215,23 @@ namespace XtuBridge
             return d.TryGetValue(k, out v) && v != null ? v.ToString() : null;
         }
 
-        private static double Dbl(Dictionary<string, object> d, string k)
+        // 嚴格解析（2026-11-07）：缺欄位或解析失敗回 null——讀取路徑的 null 如實進 JSON，
+        // 寫入路徑（apply）缺欄位即拒絕。此前失敗回 0，apply 會把旋鈕值 0 寫進硬體。
+        private static double? Dbl(Dictionary<string, object> d, string k)
         {
             object v;
             if (d.TryGetValue(k, out v) && v != null)
                 try { return Convert.ToDouble(v, CultureInfo.InvariantCulture); } catch { }
-            return 0;
+            return null;
         }
 
         // JavaScriptSerializer 依大小把整數解析為 Int32/Int64/Decimal，一律先轉 Int64 再收斂為 uint。
-        private static uint U32(Dictionary<string, object> d, string k)
+        private static uint? U32(Dictionary<string, object> d, string k)
         {
             object v;
             if (d.TryGetValue(k, out v) && v != null)
                 try { return Convert.ToUInt32(Convert.ToInt64(v, CultureInfo.InvariantCulture)); } catch { }
-            return 0;
+            return null;
         }
 
         private static bool Bool(Dictionary<string, object> d, string k)

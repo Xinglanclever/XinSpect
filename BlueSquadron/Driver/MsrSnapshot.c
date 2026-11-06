@@ -28,26 +28,87 @@ static const ULONG CriticalMsrs[] = {
 
 #define MSR_COUNT (sizeof(CriticalMsrs) / sizeof(CriticalMsrs[0]))
 
-/* 全域基線（也用於 IOCTL 回傳） */
-BS_MSR_ENTRY g_MsrBaseline[BS_MAX_MSR_ENTRIES];
+/* per-CPU 基線（2026-11-07 重寫）：__readmsr 讀的是「當下核心」的暫存器，而清單裡的
+   SPEC_CTRL（0x48）、FEATURE_CONTROL（0x3A）在真實硬體上逐核合法不同——全域單份基線
+   會把正常差異報成 Critical「MSR 竄改」，安全警報器自己生產假警報（比無警報更傷）。
+   現在：每處理器一枚 DPC（KeSetTargetProcessorDpc 釘核）＋每處理器一份基線；
+   計時器 DPC 只負責把各核的 DPC 排進去。 */
+BS_MSR_ENTRY g_MsrBaseline[BS_MAX_CPU][BS_MAX_MSR_ENTRIES];
+BOOLEAN      g_MsrBaseValid[BS_MAX_CPU][BS_MAX_MSR_ENTRIES];
 LONG         g_MsrCount = 0;
+ULONG        g_CallbackCaps = 0;
 
-static BOOLEAN s_Initialized = FALSE;
+static KDPC      s_CpuDpc[BS_MAX_CPU];
+static BOOLEAN   s_Initialized = FALSE;
+static BOOLEAN   s_Stopping = FALSE;
 
-static VOID ReadCurrentMsrs(BS_MSR_ENTRY* out)
+static VOID ReadCurrentMsrs(BS_MSR_ENTRY* out, BOOLEAN* valid)
 {
     for (ULONG i = 0; i < MSR_COUNT && i < BS_MAX_MSR_ENTRIES; i++)
     {
         out[i].Msr = CriticalMsrs[i];
         __try {
             out[i].Value = __readmsr(CriticalMsrs[i]);
+            valid[i] = TRUE;
         }
         __except (EXCEPTION_EXECUTE_HANDLER) {
-            out[i].Value = (ULONGLONG)-1;  /* 讀不到就標記為 -1 */
+            out[i].Value = (ULONGLONG)-1;  /* IOCTL 相容的舊表示；比對時以 valid 跳過，不毒化基線 */
+            valid[i] = FALSE;
         }
     }
 }
 
+/* 在目標核心上執行（DPC 已釘核）：建立／比對「這顆核」的基線 */
+static VOID NTAPI CpuMsrDpc(
+    _In_ PKDPC Dpc,
+    _In_opt_ PVOID DeferredContext,
+    _In_opt_ PVOID Arg1,
+    _In_opt_ PVOID Arg2)
+{
+    UNREFERENCED_PARAMETER(Dpc);
+    UNREFERENCED_PARAMETER(DeferredContext);
+    UNREFERENCED_PARAMETER(Arg1);
+    UNREFERENCED_PARAMETER(Arg2);
+
+    if (s_Stopping) return;
+
+    ULONG cpu = KeGetCurrentProcessorNumber();
+    if (cpu >= BS_MAX_CPU) return;
+
+    BS_MSR_ENTRY current[BS_MAX_MSR_ENTRIES];
+    BOOLEAN valid[BS_MAX_MSR_ENTRIES] = {0};
+    ReadCurrentMsrs(current, valid);
+
+    if (!s_Initialized || !g_MsrBaseValid[cpu][0])
+    {
+        /* 這顆核的首次基線 */
+        RtlCopyMemory(g_MsrBaseline[cpu], current, sizeof(current));
+        RtlCopyMemory(g_MsrBaseValid[cpu], valid, sizeof(valid));
+        return;
+    }
+
+    for (ULONG i = 0; i < MSR_COUNT && i < BS_MAX_MSR_ENTRIES; i++)
+    {
+        /* 基線時讀失敗的條目不參與比對（-1 是「沒讀到」，不是一個值——
+           暫時性例外不能毒化基線，之後的真值不該被報成竄改） */
+        if (!g_MsrBaseValid[cpu][i] || !valid[i]) continue;
+        if (current[i].Value != g_MsrBaseline[cpu][i].Value)
+        {
+            WCHAR detail[128];
+            _snwprintf(detail, 128,
+                       L"CPU %u MSR 0x%X: 0x%016llX -> 0x%016llX",
+                       cpu, current[i].Msr, g_MsrBaseline[cpu][i].Value, current[i].Value);
+
+            BsPushEvent(BsEventMsrChange, BsSevCritical,
+                        (HANDLE)0, NULL, detail);
+
+            /* 更新該核基線（只報第一次差異，避免持續警報） */
+            g_MsrBaseline[cpu][i].Value = current[i].Value;
+        }
+    }
+}
+
+/* 計時器 DPC：把每核的 DPC 逐一排進各自的核心 */
 static VOID NTAPI TimerDpc(
     _In_ PKDPC Dpc,
     _In_opt_ PVOID DeferredContext,
@@ -59,42 +120,20 @@ static VOID NTAPI TimerDpc(
     UNREFERENCED_PARAMETER(Arg1);
     UNREFERENCED_PARAMETER(Arg2);
 
-    BS_MSR_ENTRY current[BS_MAX_MSR_ENTRIES];
-    ReadCurrentMsrs(current);
+    if (s_Stopping) return;
 
-    if (!s_Initialized)
+    for (ULONG cpu = 0; cpu < BS_MAX_CPU; cpu++)
     {
-        /* 首次：建立基線 */
-        RtlCopyMemory(g_MsrBaseline, current, sizeof(current));
-        g_MsrCount = (LONG)MSR_COUNT;
-        s_Initialized = TRUE;
-        return;
-    }
-
-    /* 比對 */
-    for (ULONG i = 0; i < MSR_COUNT; i++)
-    {
-        if (current[i].Value != g_MsrBaseline[i].Value)
-        {
-            WCHAR detail[128];
-            _snwprintf(detail, 128,
-                       L"MSR 0x%X: 0x%016llX -> 0x%016llX",
-                       current[i].Msr, g_MsrBaseline[i].Value, current[i].Value);
-
-            BsPushEvent(BsEventMsrChange, BsSevCritical,
-                        (HANDLE)0, NULL, detail);
-
-            /* 更新基線（只報第一次差異，避免持續警報） */
-            g_MsrBaseline[i].Value = current[i].Value;
-        }
+        KeSetTargetProcessorDpc(&s_CpuDpc[cpu], (CCHAR)cpu);
+        KeInsertQueueDpc(&s_CpuDpc[cpu], NULL, NULL);
     }
 }
 
 VOID MsrSnapshotInit(void)
 {
-    KeInitializeSpinLock(&g_EventLock);
     KeInitializeTimer(&s_Timer);
-    KeInitializeDpc(&s_Dpc, TimerDpc, NULL);
+    for (ULONG cpu = 0; cpu < BS_MAX_CPU; cpu++)
+        KeInitializeDpc(&s_CpuDpc[cpu], CpuMsrDpc, (PVOID)(ULONG_PTR)cpu);
 
     /* 每 5 秒觸發一次 */
     LARGE_INTEGER period;

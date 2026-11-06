@@ -211,7 +211,7 @@ NTSTATUS OnRegistryCallback(
     /* 取完整登錄路徑（g_CmCookie 是 CmRegisterCallbackEx 給的） */
     PCUNICODE_STRING keyPath = NULL;
     if (!NT_SUCCESS(CmCallbackGetKeyObjectIDEx(&g_CmCookie, info->Object,
-                                               &keyPath, NULL)))
+                                               NULL, &keyPath, 0)))
         return STATUS_SUCCESS;
     if (keyPath == NULL || keyPath->Buffer == NULL || keyPath->Length == 0)
     {
@@ -297,10 +297,17 @@ OB_PREOP_CALLBACK_STATUS OnObPreOp(
     {
         if (g_ProtectedPids[i] == targetPid)
         {
-            /* 移除危險的存取權限 */
+            /* 移除危險的存取權限——CREATE 與 DUPLICATE 都要剝：
+               只防 CREATE 的話，已有的完整權限句柄可以無限複製傳播（ObCallback 經典漏法） */
             if (OperationInfo->Operation == OB_OPERATION_HANDLE_CREATE)
             {
                 OperationInfo->Parameters->CreateHandleInformation.DesiredAccess
+                    &= ~(PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION
+                         | PROCESS_DUP_HANDLE | PROCESS_CREATE_THREAD);
+            }
+            else if (OperationInfo->Operation == OB_OPERATION_HANDLE_DUPLICATE)
+            {
+                OperationInfo->Parameters->DuplicateHandleInformation.DesiredAccess
                     &= ~(PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION
                          | PROCESS_DUP_HANDLE | PROCESS_CREATE_THREAD);
             }

@@ -67,7 +67,8 @@ static NTSTATUS XrpReadMmioBlock(_In_ ULONGLONG phys, _In_ ULONG length, _Out_wr
 
     PHYSICAL_ADDRESS pa;
     pa.QuadPart = (LONGLONG)phys;
-    PVOID mapped = MmMapIoSpace(pa, length, MmNonCached);
+    PVOID mapped = MmMapIoSpaceEx(pa, length, MmNonCached);
+    /* PAGE_READONLY：唯讀驅動的映射保護在硬體層收口——真核若誤寫此映射直接藍屏而非靜默破壞 */
     if (mapped == NULL) return STATUS_INSUFFICIENT_RESOURCES;
 
     RtlCopyMemory(out, mapped, length);

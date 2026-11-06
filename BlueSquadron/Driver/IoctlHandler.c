@@ -3,8 +3,9 @@
  */
 #include "Common.h"
 
-extern BS_MSR_ENTRY g_MsrBaseline[BS_MAX_MSR_ENTRIES];
+extern BS_MSR_ENTRY g_MsrBaseline[BS_MAX_CPU][BS_MAX_MSR_ENTRIES];
 extern LONG         g_MsrCount;
+extern ULONG        g_CallbackCaps;
 
 NTSTATUS IoctlDispatch(
     _In_ PDEVICE_OBJECT DeviceObject,
@@ -94,11 +95,21 @@ NTSTATUS IoctlDispatch(
 
         case IOCTL_BS_MSR_SNAPSHOT:
         {
-            /* 回傳目前 MSR 基線 */
+            /* 回傳 CPU0 的基線（per-CPU 基線的代表性切片；usermode 相容舊格式） */
             ULONG needed = (ULONG)(g_MsrCount * sizeof(BS_MSR_ENTRY));
             if (outLen < needed) { status = STATUS_BUFFER_TOO_SMALL; break; }
-            RtlCopyMemory(buf, g_MsrBaseline, needed);
+            RtlCopyMemory(buf, g_MsrBaseline[0], needed);
             info = needed;
+            break;
+        }
+
+        case IOCTL_BS_GET_CAPS:
+        {
+            /* 回呼註冊能力旗标：usermode 據此核對「四個防護真的註冊上了嗎」——
+               部分失敗不得被 STATUS_SUCCESS 掩蓋（2026-11-07 審計） */
+            if (outLen < sizeof(ULONG)) { status = STATUS_BUFFER_TOO_SMALL; break; }
+            *(PULONG)buf = g_CallbackCaps;
+            info = sizeof(ULONG);
             break;
         }
 
