@@ -3,6 +3,17 @@
  */
 #pragma once
 #include <ntddk.h>
+#include <bcrypt.h>
+
+/* 進程存取權限常數：UM 的 winnt.h 有、KM 標頭沒帶——鷹架時代直接引用 UM 名稱從未編過 */
+#ifndef PROCESS_TERMINATE
+#define PROCESS_TERMINATE      0x0001
+#define PROCESS_CREATE_THREAD  0x0002
+#define PROCESS_VM_OPERATION   0x0008
+#define PROCESS_VM_READ        0x0010
+#define PROCESS_VM_WRITE       0x0020
+#define PROCESS_DUP_HANDLE     0x0040
+#endif
 
 /* ── 事件環形緩衝區 ───────────────────────────────────────────────── */
 #define BS_MAX_EVENTS          1024
@@ -71,6 +82,10 @@ extern KSPIN_LOCK     g_EventLock;
 
 extern BS_BLOCK_ENTRY g_BlockList[BS_MAX_BLOCK_HASHES];
 extern volatile LONG  g_BlockCount;
+extern KSPIN_LOCK     g_BlockLock;
+
+/* SHA-256 演算法物件（BCrypt；Callbacks.c 持有、DriverEntry 開 Unload 關） */
+extern PVOID         g_HashProvider;
 
 extern HANDLE         g_ProtectedPids[BS_MAX_PROTECTED_PIDS];
 extern volatile LONG  g_ProtectedCount;

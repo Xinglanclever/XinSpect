@@ -8,6 +8,7 @@ bin-dev/
 bin-dev2/
 bin-pub*/
 bin-reltest/
+x64build/
 bin-dev2l/
 bin-legacy*/
 bin-dev2l/

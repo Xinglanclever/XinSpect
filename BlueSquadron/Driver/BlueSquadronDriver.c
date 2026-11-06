@@ -3,6 +3,7 @@
  *
  * WDM 核心驅動，提供以下回呼：
  *   1. PsSetLoadImageNotifyRoutine     — 驅動/DLL 載入偵測（BYOVD 攔截）
+ *      （Phase 2 已落地：核心映像丟工作項算 SHA-256 比對阻擋清單；登錄檔敏感路徑記錄）
  *   2. PsSetCreateProcessNotifyRoutineEx — 進程建立/終止偵測
  *   3. CmRegisterCallbackEx             — 登錄檔操作偵測
  *   4. ObRegisterCallbacks              — 物件控制代碼存取偵測（LSASS 保護）
@@ -21,7 +22,7 @@
  *   link /DRIVER:WDM /SUBSYSTEM:NATIVE /ENTRY:DriverEntry
  *      /OUT:BlueSquadron.sys
  *      /LIBPATH:"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.26100.0\km\x64"
- *      ntoskrnl.lib hal.lib wdmsec.lib
+ *      ntoskrnl.lib hal.lib wdmsec.lib bcrypt.lib
  *      BlueSquadronDriver.obj Callbacks.obj IoctlHandler.obj MsrSnapshot.obj
  *
  * 安裝（以系統管理員身分）：
@@ -60,6 +61,13 @@ static VOID DriverUnload(PDRIVER_OBJECT DriverObject)
 
     /* 停 MSR 快照定時器 */
     MsrSnapshotStop();
+
+    /* 關雜湊演算法物件 */
+    if (g_HashProvider != NULL)
+    {
+        BCryptCloseAlgorithmProvider((BCRYPT_ALG_HANDLE)g_HashProvider, 0);
+        g_HashProvider = NULL;
+    }
 
     /* 反註冊回呼 */
     PsRemoveLoadImageNotifyRoutine(OnImageLoad);
@@ -112,6 +120,19 @@ NTSTATUS DriverEntry(
     DriverObject->MajorFunction[IRP_MJ_CREATE]         = IoctlDispatch;
     DriverObject->MajorFunction[IRP_MJ_CLOSE]          = IoctlDispatch;
     DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = IoctlDispatch;
+
+    /* 2.1 鎖初始化（此前漏掉——未初始化的 spin lock 是潛在 BSOD）與雜湊演算法物件 */
+    KeInitializeSpinLock(&g_EventLock);
+    KeInitializeSpinLock(&g_BlockLock);
+    {
+        NTSTATUS hs = BCryptOpenAlgorithmProvider((BCRYPT_ALG_HANDLE *)&g_HashProvider,
+                                                  L"SHA256", NULL, 0);
+        if (!NT_SUCCESS(hs))
+        {
+            g_HashProvider = NULL;   /* 沒有它只少了 BYOVD 比對，其餘回呼照常 */
+            DbgPrint("[BS] BCryptOpenAlgorithmProvider failed: 0x%08X\n", hs);
+        }
+    }
 
     /* 3. 驅動/DLL 載入回呼 */
     status = PsSetLoadImageNotifyRoutine(OnImageLoad);

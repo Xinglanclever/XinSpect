@@ -25,7 +25,10 @@ namespace XtuBridge
         public string Name = "";
         public string Category = "";
         public string Unit = "";
-        public double Min, Max, Default, Boot, Active;
+        public double Min, Max;
+        // 六態哲學：讀不到就是 null，不冒充 0（2026-11-07 修正——此前解析失敗會變 0，
+        // 「回預設」按鈕可能把倍頻設成 0）
+        public double? Default, Boot, Active;
         public bool RealTime, RequiresReboot, ReadOnly, Enabled;
 
         public bool Writable => Enabled && !ReadOnly && Max > Min;
@@ -263,15 +266,17 @@ namespace XtuBridge
                 string name = Prop(ctrl, "Name") == null ? ("控制項#" + id) : Prop(ctrl, "Name").ToString();
                 string category = Prop(ctrl, "Category") == null ? "" : Prop(ctrl, "Category").ToString();
                 string unit = Prop(ctrl, "Units") == null ? "" : Prop(ctrl, "Units").ToString();
-                double def = Dec(Prop(ctrl, "DefaultValue"));
-                double active = Dec(Prop(ctrl, "ActiveValue"));
-                double boot = Dec(Prop(ctrl, "BootValue"));
+                double? def = Dec(Prop(ctrl, "DefaultValue"));
+                double? active = Dec(Prop(ctrl, "ActiveValue"));
+                double? boot = Dec(Prop(ctrl, "BootValue"));
                 bool ro = Prop(ctrl, "ReadOnly") as bool? ?? false;
                 bool en = Prop(ctrl, "Enabled") as bool? ?? true;
                 bool rr = Prop(ctrl, "RequiresReboot") as bool? ?? false;
 
-                double min = ParseD(Call(ctrl, "GetMinPossibleValue")) ?? active;
-                double max = ParseD(Call(ctrl, "GetMaxPossibleValue")) ?? active;
+                double? minQ = ParseD(Call(ctrl, "GetMinPossibleValue")) ?? active;
+                double? maxQ = ParseD(Call(ctrl, "GetMaxPossibleValue")) ?? active;
+                if (minQ is null || maxQ is null) return null;   // 界限與現值都讀不到：不呈現，不編
+                double min = minQ.Value, max = maxQ.Value;
                 if (max < min) { double tmp = min; min = max; max = tmp; }
                 if (max <= min) return null;   // 無可調區間（可能被鎖），略過以保持清單皆可操作
 
@@ -618,10 +623,10 @@ namespace XtuBridge
             foreach (var cid in metaIds)
             {
                 if (shown++ >= 12) break;
-                bool tun = false; double cur = double.NaN;
+                bool tun = false; double? cur = null;
                 try { tun = Call(_tuning, "IsControlTunable", cid) as bool? ?? false; } catch { }
                 try { cur = Dec(Call(_tuning, "GetTuningControlByID", cid)); } catch { }
-                string line = "  #" + cid + " tunable=" + tun + " value=" + cur;
+                string line = "  #" + cid + " tunable=" + tun + " value=" + (cur?.ToString() ?? "unreadable");
                 if (cccType != null)
                 {
                     try
@@ -725,8 +730,8 @@ namespace XtuBridge
         {
             try
             {
-                double v = Dec(Call(_tuning, "GetCoreVoltageValue"));
-                return v > 0 ? (double?)v : null;
+                double? v = Dec(Call(_tuning, "GetCoreVoltageValue"));
+                return (v.HasValue && v.Value > 0) ? v : null;
             }
             catch { return null; }
         }
@@ -807,7 +812,8 @@ namespace XtuBridge
             {
                 double? a = ReadActive(k.Id);
                 if (a.HasValue) { k.Active = a.Value; map[k.Id] = a.Value; }
-                else map[k.Id] = k.Active;
+                else if (k.Active.HasValue) { map[k.Id] = k.Active.Value; }
+                /* 兩者都未知：地圖裡就不放這把鑰匙——「讀不到」不能冒充任何數值 */
             }
             return map;
         }
@@ -1089,9 +1095,10 @@ namespace XtuBridge
             return null;
         }
 
-        private static double Dec(object o)
+        /// <summary>把 XTU SDK 的回傳值轉成可空數值——讀到了但解不開就是 null，不冒充 0。</summary>
+        private static double? Dec(object o)
         {
-            if (o == null) return 0;
+            if (o == null) return null;
             if (o is decimal) return (double)(decimal)o;
             if (o is double) return (double)o;
             if (o is float) return (float)o;
@@ -1104,9 +1111,9 @@ namespace XtuBridge
                 double r;
                 if (double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out r)) return r;
                 if (double.TryParse(s, out r)) return r;
-                return 0;
+                return null;
             }
-            try { return Convert.ToDouble(o, CultureInfo.InvariantCulture); } catch { return 0; }
+            try { return Convert.ToDouble(o, CultureInfo.InvariantCulture); } catch { return null; }
         }
 
         private static double? ParseD(object o)

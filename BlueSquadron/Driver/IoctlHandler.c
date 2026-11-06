@@ -58,17 +58,21 @@ NTSTATUS IoctlDispatch(
 
         case IOCTL_BS_DRIVER_BLOCK:
         {
-            /* 新增一個 SHA-256 到阻擋清單 */
+            /* 新增一個 SHA-256 到阻擋清單（與雜湊工作項的讀取互斥） */
             if (inLen < 32) { status = STATUS_INVALID_PARAMETER; break; }
+            KIRQL irql;
+            KeAcquireSpinLock(&g_BlockLock, &irql);
             LONG idx = InterlockedIncrement(&g_BlockCount) - 1;
             if (idx >= BS_MAX_BLOCK_HASHES)
             {
                 InterlockedDecrement(&g_BlockCount);
+                KeReleaseSpinLock(&g_BlockLock, irql);
                 status = STATUS_INSUFFICIENT_RESOURCES;
                 break;
             }
             RtlCopyMemory(g_BlockList[idx].Sha256, buf, 32);
             g_BlockList[idx].Active = TRUE;
+            KeReleaseSpinLock(&g_BlockLock, irql);
             break;
         }
 

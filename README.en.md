@@ -107,7 +107,7 @@ XinSpect fills those three gaps: six-state reporting, auditable provenance, cros
 
 - **Not antivirus.** It does not block, quarantine, or isolate. Blue Squadron is posture assessment and an event timeline, not endpoint protection.
 - **Not a certification tool.** Every output is a fact or a relationship between facts, never a pass/fail verdict. It will not vouch for a machine.
-- **Not a cloud service.** The fact-collection layer has zero network APIs (enforced by a source scan). All data stays local.
+- **Not a cloud service.** The fact-collection layer has zero network APIs (enforced by a source scan). All data stays local. **The only outbound paths are four user-triggered features** (AI evaluation / corpus upload / feedback / update check, plus the speed test which measures throughput itself) — optional infrastructure, free to use (the AI shared relay's quota is carried by the author); when offline those five don't work and every other feature does. "Proactive diagnosis", once enabled in settings, is triggered automatically by alerts — a semi-automatic path; turn it off or use local Ollama if you don't want that.
 - **Not a universal hardware database.** It only emits decodes with a specification reference. Unknown models are labelled "not covered," not guessed.
 - **Not an overclocking tutorial.** Overclocking and fan control are bridges to existing functionality; they carry risk, and they are wrapped in snapshot, read-back verification, watchdog and automatic restore.
 
@@ -189,7 +189,7 @@ Cold start ≤3 s (measured 2.7 s); other thresholds live in `Models/PerfBudget.
 | Component | Form | Responsibility | Privilege |
 |---|---|---|---|
 | XinSpect main | WPF (.NET 10, single-file publish) | UI, fact collection, reconciliation, reports, Deep Bench, overclocking | Most features none; MSR/SMART/Security log need administrator |
-| WinRing0 | Existing kernel driver (reflection-loads LibreHardwareMonitor's Ring0 module) | Primary MSR / PCI config / physical-memory MMIO reads | Administrator |
+| WinRing0 | Existing kernel driver (reflection-loads LibreHardwareMonitor's Ring0 module) | Primary MSR / PCI config / physical-memory MMIO reads | Administrator. **Honest disclosure — inherited weakness**: its device object can be opened by any process (a well-known local-privilege-escalation abuse surface); mitigated by load-per-use/unload-after (exposure measured in seconds), but while loaded, other processes on the machine can hit it too. The real fix is the in-house signed XsRegProbe; WinRing0 is the compatibility fallback |
 | XsRegProbe | Project's own allow-list read-only driver (C source in `XsRegProbe/`) | Fallback reads of allow-listed MSR/MMIO; everything else refused; unloads on process exit | Administrator; the `.sys` must be compiled and signed by the user |
 | Intel XTU bridge | net48 out-of-process bridge (embedded automatically in Release) | Hosts the XTU SDK (the legacy WCF stack .NET 10 removed) for CPU overclocking | Administrator |
 | Blue Squadron guard | .NET 10 console app (embedded automatically in Release) | Live ETW threat detection, driver baseline comparison, JSON IPC over stdin/stdout | User |
