@@ -27,7 +27,8 @@ internal static class BlueSquadronBootstrap
             .FirstOrDefault(n => n.EndsWith(ExeName, StringComparison.OrdinalIgnoreCase));
         if (exeRes is not null)
         {
-            try { SecureDir(); } catch { }
+            try { SecureDir(); }
+            catch (Exception ex) { Console.Error.WriteLine("[BS Bootstrap] SecureDir 失敗（ACL 設定）: " + ex.Message); }
             string exe = Path.Combine(BridgeDir, ExeName);
             return ExtractVerified(asm, exeRes, exe);
         }

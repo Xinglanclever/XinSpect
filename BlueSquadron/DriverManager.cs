@@ -35,7 +35,24 @@ internal sealed class DriverManager : IDisposable
             }
         }
 
-        // 2. Try to create/start the service
+        // 2. 審計 #39：載入前驗證 .sys 是 PE 映像（MZ 標頭＋合理大小）——
+        //    不該把一個隨機檔案或文字檔當核心驅動載入。
+        try
+        {
+            var sysBytes = File.ReadAllBytes(sysPath);
+            if (sysBytes.Length < 64 || sysBytes[0] != 0x4D || sysBytes[1] != 0x5A)
+            {
+                LastError = $"{sysPath} 不是有效的 PE 映像（缺 MZ 標頭）——可能被竄改或下載損毀。";
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            LastError = $"無法讀取驅動檔 {sysPath}：{ex.Message}";
+            return false;
+        }
+
+        // 3. Try to create/start the service
         try
         {
             if (!ServiceExists())
