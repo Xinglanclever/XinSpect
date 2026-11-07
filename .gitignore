@@ -99,3 +99,6 @@ Assets/cpu-gpu-catalog.json
 # 驅動建置產物（由 XsRegProbe/Driver/x64build/build.bat 現編，不進版控）
 XsRegProbe/Driver/x64build/*.obj
 XsRegProbe/Driver/x64build/*.sys
+
+# 〔修復 v3.20〕release.ps1 的逐資產獨立 publish 輸出目錄（bin 被殭屍鎖住時的替代路徑）
+bin-_pub*/
