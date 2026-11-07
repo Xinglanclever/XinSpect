@@ -480,7 +480,7 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 | [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.20/XinSpectConsole-nort.exe) | 66,004,120 bytes | 曦览终端机・Windows 11／Server 2025・不带环境：需已装 .NET 10 Desktop Runtime |
 | [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.20/XinSpectConsole-legacy-nort.exe) | 66,000,066 bytes | 曦览终端机・Windows 10／2016/2019/2022・不带环境：纯文字界面，需已装 .NET 10 Desktop Runtime |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.20/XinSpectDeploy.exe) | 29,696 bytes | 一键安装器。第一层选装什么：A 装主程序（GUI）、B 装曦览终端机；第二层 1/2/3 选下载来源（GitHub／Drive／加速节点）；下载时显示进度条、速度与剩余时间 |
-| XsRegProbe.sys | **本版未附** | XsRegProbe 內核探測驅動（白名單唯讀 MSR／MMIO，全案審查唯一「優秀」級）。**v3.20 未附：驅動源碼本輪有變更（MsrSnapshot 重寫＋BS_DRIVER_CAPS），須 WDK 機器重編後補上——不拿 v3.18 的舊 .sys 冒充本版驅動**；舊版可從 [v3.18 Release](https://github.com/Xinglanclever/XinSpect/releases) 取得（其 MsrSnapshot 為舊版）。未微軟簽章：主程式以提權會話安裝並建服務；手動載入需測試簽章環境（testsigning） |
+| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.20/XsRegProbe.sys) | 24,064 bytes | XsRegProbe 内核探测驱动（白名单只读 MSR／MMIO，全案审查唯一「优秀」级）。本版重编译版**含槽位基底修正**（槽位从请求头 +8 开始——第三轮严查发现，v3.18 的 .sys 为修正前）。未微软签章：主程序以提权会话安装到 `ProgramData\XinSpect\Driver\` 并建服务；手动加载需测试签名环境（testsigning） |
 
 > **上表的字节数为本版（v3.20）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
