@@ -1,0 +1,12 @@
+# 曦覽 XinSpect v3.20 ・ SHA256SUMS
+# 防傳輸損毀的界線：這是逐資產實算的雜湊，驗的是「下載到位的位元組與上傳時一致」；
+# 不驗發佈者身分（本版資產未做 Authenticode 簽章）。XsRegProbe.sys 本版未附（驅動源碼
+# 本輪有變更，須 WDK 機器重編後補上——不拿 v3.18 的舊 .sys 冒充本版驅動）。
+b6d000f843a1ba4d899f4d953bf3bf9574fca7479e456846306ff27c457ad815  BlueSquadronBridge.exe
+68630fd8651fb24be397a8e4c4ca5c3ce4117e7392490eba3cb553aefc6be648  XinSpect-full.exe
+655525e23c4e6e517cf23f3b81ba5ea0ccac90396477afdc8c9428184442860e  XinSpect.exe
+7a4de111583b6b327bff3b3c1745e4b2e17f40e7db5a462dcf0f016939cf9736  XinSpectConsole-legacy-nort.exe
+f4c7ac5e71c9a29856ec9c8c7aca0889ef1e6675dae012a554949f3c49bdeee3  XinSpectConsole-legacy.exe
+27e122866dd296f3494b5455d27df3e2e6f1348f508d11e028d7e5a29c05655e  XinSpectConsole-nort.exe
+961b74e421be300a214b63d1c380ca14260111600c6a11114447d9e4d0af0d7e  XinSpectConsole.exe
+26cea4829580c684c4ad70856bf3adfed234218228b9c779fa4943b0ddc4bf84  XinSpectDeploy.exe
