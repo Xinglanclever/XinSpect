@@ -291,9 +291,10 @@ def main(argv=None):
 
     appinfo_path = os.path.join(root, "Models", "AppInfo.cs")
     if os.path.exists(appinfo_path):
-        if ('public const string Codename = "%s"' % V) not in io.open(
+        # Codename 是羅馬數字代號（Ultima XVIII），不是版號——比對 --codename 實參（先前錯比版號，每次都假警報）。
+        if ('public const string Codename = "%s"' % args.codename) not in io.open(
                 appinfo_path, encoding="utf-8-sig").read():
-            problems.append("AppInfo 的 Codename 不是 %s——標題列與關於頁會各說各話" % V)
+            problems.append("AppInfo 的 Codename 不是 %s——標題列與關於頁會各說各話" % args.codename)
 
     zh_text = io.open(os.path.join(root, "README.zh-CN.md"), encoding="utf-8-sig").read()
     if zh_text.count("- **v%s " % V) != 1:

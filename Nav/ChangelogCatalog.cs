@@ -48,6 +48,25 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "3.18",
+            Date = "2026-11-07",
+            Title = "審計落實版：116 條修復＋功耗誠實閘門＋按需提權",
+            Items =
+            [
+                "全庫逐行外部審查（約 57,000 行、116 條發現）完成並落實修復：P0 的 sc.exe delete 改唯讀診斷＋顯式 --repair-ring0、AI 代理工具結果過遮蔽、送出預覽涵蓋代理逐輪、進度條誠實中斷列、top Ctrl+C 真可停、管線退出碼三態、OutputEncoding/剪貼簿/Spinner 包 try、D3D11 vtable slot、OVERLAPPED hEvent 偏移 24、EfiSigList 溢出邊界、SMART 改 normalized 現值評門檻、bcdedit 絕對路徑＋DEP fail-open 改 Unknown、DNS 介面名稱 SafeName 全面封口、超頻寫入 await＋嚴格解析（U32/Dbl 轉可空不靜默歸零）。",
+                "功耗誠實閘門 RaplEnergyGate：基準窗→負載窗→能量計響應自證，Skylake-X「滿載 1.2W」類壞計數器不再冒充瓦數——CLI 三態呈現、GUI SensorService.CpuPowerW 首讀自證未過回 null，歷史與瓶頸分析不再吃進假功耗。",
+                "提權改按需會話：主程式改 asInvoker（最小特權——WebView2、AI 不吃管理員令牌），需要 ring0 時 --enable-deep-access 自我提權一次（UAC 取消 1223 如實處理）；XsRegProbe SDDL 開 Users 唯讀，服務常駐後免提權直讀 MSR；非提權啟動的降級路徑完成首次煙霧測試（存活／視窗／寫入／零崩潰）。",
+                "xsc 終端機八項修復：facts 快取可刷新（--refresh／refresh 指令）、Tab 補全清單改由指令書推導＋守門釘住、compliance 旗標可轉發（--out 不再被腳槍吃掉）、管線模式退出碼三態（批次可偵測失敗）、ipc 會話快取（連續指令不再十次冷啟動）、History 有上限有去重、RunCli 快取復用、補全清單守門測試上線。",
+                "WMI 互堵治理：EvidenceCollection.Measure 每步專用執行緒＋60 秒步級看門狗（XINSPECT_STEP_BUDGET_MS 可調）——單一採集點卡核心不再拖死整條鏈，實測三度復發的僵屍互堵止血。",
+                "內核後端鏈入庫：IKernelBackend 介面＋KernelCapability 旗標＋KernelTrustTier 三級＋KernelBackendSelector 能力路由（Auto／SandboxOnly／UniversalAllowed 三模式、逐能力快取），PawnIO／WinRing0／XsRegProbe 以自證證據決定歸隊。",
+                "BlueSquadron 驅動 Phase 2：映像載入回呼丟工作項以 BCrypt SHA-256 比對封鎖清單→Critical 事件、登錄檔回呼以 CmCallbackGetKeyObjectIDEx（五參數）比對敏感前綴→Warning 事件；MsrSnapshot 整檔重寫（per-CPU 基線＋KeSetTargetProcessorDpc 釘核＋KeFlushQueuedDpcs 卸載安全）。",
+                "排程全套回歸上線：GitHub Actions full-regression 每週六 self-hosted runner 執行（前置僵屍進程健檢、紅燈自動開 issue、permissions issues:write 已補），runner xinpect-dev-machine 已註冊（LocalSystem 服務）——「本機自覺」變成「有紀錄的定期驗證」。",
+                "發佈完整性回復：SHA256SUMS.txt 回到發佈矩陣（逐資產實算、檔頭寫明防傳輸損毀的界線），v3.17 Release 已補上九資產對帳。",
+                "README 換成「修正版」：116 條審查申報＋逐條修復狀態表＋規模表重算（全站 C# 檔 1,587／服務檔 673／CLI 指令 40／內核組件 4）；87 萬字百科底稿、兩份審查報告與 104 萬字總藍圖入庫 docs/，守門測試全部跟隨搬遷（文檔守門子集 427/427 綠）。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "3.17",
             Date = "2026-11-05",
             Title = "終端機定稿：Claude Code 式界面、永不崩 REPL、百科嵌入",
