@@ -1,5 +1,9 @@
 /*
- * BlueSquadron.sys — 藍色中隊核心驅動
+ * ⚠ 未編譯——需作者機驗證（WDK 編譯命令見 patch-25.md；本樹未經任何編譯器）
+ *
+ * BlueSquadron.sys — 藍色中隊核心驅動（patch-25 完整替換檔；P0-14 能力帳單）
+ * 累積基底：xs318 現樹 BlueSquadronDriver.c ＋ patch-20 生命週期修復相容（MsrSnapshot
+ * 接縫不變）＋本補丁的逐步狀態記帳。
  *
  * WDM 核心驅動，提供以下回呼：
  *   1. PsSetLoadImageNotifyRoutine     — 驅動/DLL 載入偵測（BYOVD 攔截）
@@ -8,6 +12,12 @@
  *   3. CmRegisterCallbackEx             — 登錄檔操作偵測
  *   4. ObRegisterCallbacks              — 物件控制代碼存取偵測（LSASS 保護）
  *   5. MSR 定期快照比對                  — 核心暫存器完整性
+ *
+ * P0-14（2026-11-07）：DriverEntry 各步的原始 NTSTATUS 記入 g_Status*（Common.h）——
+ *   此前失敗只 DbgPrint（release 機器上看不到），部分失敗被 STATUS_SUCCESS 掩蓋，
+ *   usermode 無從知道「四個防護其實沒起來」。現在 IOCTL_BS_GET_CAPS（IoctlHandler.c）
+ *   一次帶出 FeatureMask＋六步狀態＋MSR 快照活體健康。DbgPrint 保留（testsigning
+ *   機器的驗證手段），但不再是唯一的狀態出口。
  *
  * 編譯需求：
  *   - Visual Studio Build Tools 2022+ 含 C++ 桌面工作負載
@@ -43,13 +53,23 @@ extern VOID OnImageLoad(PUNICODE_STRING FullImageName, HANDLE ProcessId, PIMAGE_
 extern VOID OnProcessNotify(PEPROCESS Process, HANDLE ProcessId, PPS_CREATE_NOTIFY_INFO CreateInfo);
 extern NTSTATUS OnRegistryCallback(PVOID Context, PVOID Arg1, PVOID Arg2);
 extern NTSTATUS IoctlDispatch(PDEVICE_OBJECT DeviceObject, PIRP Irp);
-extern VOID MsrSnapshotInit(void);
+extern NTSTATUS MsrSnapshotInit(void);
 extern VOID MsrSnapshotStop(void);
 
 /* 全域狀態 */
 PDEVICE_OBJECT g_DeviceObject = NULL;
 LARGE_INTEGER  g_CmCookie = {0};
 PVOID          g_ObHandle = NULL;
+
+/* DriverEntry 各步狀態（P0-14 能力帳單的資料源；GET_CAPS 逐一帶出）。
+   初值 STATUS_NOT_IMPLEMENTED：若未來有「提前退出、某步根本沒跑到」的路徑，
+   usermode 看到的是「沒跑到」而不是誤導性的 SUCCESS。 */
+NTSTATUS g_StatusLoadImage    = STATUS_NOT_IMPLEMENTED;
+NTSTATUS g_StatusProcess      = STATUS_NOT_IMPLEMENTED;
+NTSTATUS g_StatusRegistry     = STATUS_NOT_IMPLEMENTED;
+NTSTATUS g_StatusObProtect    = STATUS_NOT_IMPLEMENTED;
+NTSTATUS g_StatusMsrSnapshot  = STATUS_NOT_IMPLEMENTED;
+NTSTATUS g_StatusHashProvider = STATUS_NOT_IMPLEMENTED;
 
 /* ObRegisterCallbacks 需要 altitude 字串 */
 static UNICODE_STRING ObAltitude = RTL_CONSTANT_STRING(L"321000");
@@ -127,6 +147,7 @@ NTSTATUS DriverEntry(
     {
         NTSTATUS hs = BCryptOpenAlgorithmProvider((BCRYPT_ALG_HANDLE *)&g_HashProvider,
                                                   L"SHA256", NULL, 0);
+        g_StatusHashProvider = hs;
         if (!NT_SUCCESS(hs))
         {
             g_HashProvider = NULL;   /* 沒有它只少了 BYOVD 比對，其餘回呼照常 */
@@ -134,8 +155,9 @@ NTSTATUS DriverEntry(
         }
     }
 
-    /* 3. 驅動/DLL 載入回呼 */
+    /* 3. 驅動/DLL 載入回呼——成敗都記帳（P0-14：不再只 DbgPrint） */
     status = PsSetLoadImageNotifyRoutine(OnImageLoad);
+    g_StatusLoadImage = status;
     if (NT_SUCCESS(status))
         g_CallbackCaps |= BS_CAP_LOAD_IMAGE;
     else
@@ -143,6 +165,7 @@ NTSTATUS DriverEntry(
 
     /* 4. 進程建立回呼 */
     status = PsSetCreateProcessNotifyRoutineEx(OnProcessNotify, FALSE);
+    g_StatusProcess = status;
     if (NT_SUCCESS(status))
         g_CallbackCaps |= BS_CAP_PROCESS;
     else
@@ -150,6 +173,7 @@ NTSTATUS DriverEntry(
 
     /* 5. 登錄檔回呼 */
     status = CmRegisterCallbackEx(OnRegistryCallback, &ObAltitude, DriverObject, NULL, &g_CmCookie, NULL);
+    g_StatusRegistry = status;
     if (NT_SUCCESS(status))
         g_CallbackCaps |= BS_CAP_REGISTRY;
     else
@@ -176,6 +200,7 @@ NTSTATUS DriverEntry(
         cbReg.OperationRegistration      = &opReg;
 
         status = ObRegisterCallbacks(&cbReg, &g_ObHandle);
+        g_StatusObProtect = status;
         if (NT_SUCCESS(status))
             g_CallbackCaps |= BS_CAP_OB_PROTECT;
         else
@@ -185,10 +210,22 @@ NTSTATUS DriverEntry(
         }
     }
 
-    /* 7. MSR 定期快照 */
-    MsrSnapshotInit();
-    g_CallbackCaps |= BS_CAP_MSR_SNAPSHOT;
+    /* 7. MSR 定期快照——init 結果記帳；活體健康（基線是否就緒）由 GET_CAPS
+       即時查 MsrSnapshotReady()，這裡只記 init 本身的成敗 */
+    status = MsrSnapshotInit();
+    g_StatusMsrSnapshot = status;
+    if (NT_SUCCESS(status))
+        g_CallbackCaps |= BS_CAP_MSR_SNAPSHOT;
+    else
+        DbgPrint("[BS] MsrSnapshotInit failed: 0x%08X\n", status);
 
-    DbgPrint("[BS] Blue Squadron loaded.\n");
+    /* 載入摘要一行：讓 testsigning 機器的 DbgView 一眼看到能力面（含失敗步驟），
+       與 GET_CAPS 同源、兩條驗證路徑互相對帳 */
+    DbgPrint("[BS] Blue Squadron loaded. caps=0x%02X "
+             "(load=%08X proc=%08X reg=%08X ob=%08X msr=%08X hash=%08X)\n",
+             g_CallbackCaps,
+             (ULONG)g_StatusLoadImage, (ULONG)g_StatusProcess,
+             (ULONG)g_StatusRegistry, (ULONG)g_StatusObProtect,
+             (ULONG)g_StatusMsrSnapshot, (ULONG)g_StatusHashProvider);
     return STATUS_SUCCESS;
 }

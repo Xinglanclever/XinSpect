@@ -76,8 +76,29 @@ public sealed class StorageSmartService : ObservableObject
     private const uint ErrorIOPending = 997;
     private const uint Infinite = 0xFFFFFFFF;
 
-    /// <summary>OVERLAPPED 結構在 64 位元的大小；拿來配置與歸零，不靠 <c>Marshal.SizeOf</c> 猜。</summary>
-    private const int OverlappedSize = 32;
+    /// <summary>
+    /// x64 OVERLAPPED 的正確佈局（winbase.h）：Internal=0、InternalHigh=8、Offset=16、OffsetHigh=20、
+    /// hEvent=24、sizeof=32。<b>不再手寫偏移</b>：配置用 <see cref="Marshal.SizeOf{T}"/>、
+    /// hEvent 寫入用 <see cref="Marshal.StructureToPtr{T}"/>，欄位偏移以
+    /// <see cref="Marshal.OffsetOf{T}(string)"/> 在單元測試釘死（見 patch-02 驗證步驟）。
+    /// 曾經手寫 `WriteIntPtr(ov, IntPtr.Size, evt)` 把 hEvent 寫進 offset 8——那是 InternalHigh，
+    /// 完成時被核心回寫覆蓋、真正收到 IRP 信號的 hEvent 恆為 NULL，每筆 NVMe 紀錄頁查詢都假性逾時。
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Overlapped64
+    {
+        public IntPtr Internal;      // offset 0：完成狀態（NTSTATUS）
+        public IntPtr InternalHigh;  // offset 8：實際傳輸位元組數（核心完成時回寫）
+        public uint Offset;          // offset 16：檔案偏移低 32 位（IOCTL 路徑不用，須為 0）
+        public uint OffsetHigh;      // offset 20：檔案偏移高 32 位（IOCTL 路徑不用，須為 0）
+        public IntPtr hEvent;        // offset 24：完成信號事件（x64 在 20→24 之間有對齊填充）
+    }
+
+    /// <summary>OVERLAPPED 大小以結構宣告推導（x64 = 32），不再手寫。</summary>
+    private static readonly int OverlappedSize = Marshal.SizeOf<Overlapped64>();
+
+    /// <summary>取消後仍等不到 IRP 完成的寬限；再等不到就把 ov／evt／buf 一起洩漏（見 ReadNvmeLogCore 註解）。</summary>
+    private const uint CancelGraceMs = 2500;
 
     /// <summary>NVMe 紀錄頁查詢的等待上限；逾時就真的取消 I/O。</summary>
     private const uint NvmeLogTimeoutMs = 3000;
@@ -498,21 +519,28 @@ public sealed class StorageSmartService : ObservableObject
         if (handle == IntPtr.Zero) return (null, false);
 
         // 事件與重疊結構手動配置：這條路徑沒有 SafeHandle，出事時靠 finally 逐一釋放。
-        IntPtr evt = IntPtr.Zero, ov = IntPtr.Zero;
+        // P1-3 原則：ov／evt／buf 三塊是同一條 IRP 的寫回目標，生命週期必須同進退——
+        // IRP 還在跑就一塊都不能釋放（核心會回寫 ov、信號 evt）；IRP 確定結束才能全釋放。
+        IntPtr evt = IntPtr.Zero, ov = IntPtr.Zero, buf = IntPtr.Zero;
+        bool irpStillOutstanding = false;   // 逾時且寬限期內沒等到完成：三塊資源一起刻意洩漏
         try
         {
             evt = CreateEvent(IntPtr.Zero, true, false, null);
             if (evt == IntPtr.Zero) return (null, false);
             ov = Marshal.AllocHGlobal(OverlappedSize);
-            ZeroMemory(ov, OverlappedSize);
-            Marshal.WriteIntPtr(ov, IntPtr.Size, evt);   // OVERLAPPED.hEvent 在 64 位元是 offset 8
+            ZeroMemory(ov, (UIntPtr)OverlappedSize);
+            // P1-2 修正：以正確宣告的結構填值再整塊拷進非託管記憶體，hEvent 落在 offset 24；
+            // Offset/OffsetHigh 保持 0（DeviceIoControl 的 IOCTL 不用檔案偏移，但不可是垃圾值）。
+            var ovInit = new Overlapped64 { hEvent = evt };
+            Marshal.StructureToPtr(ovInit, ov, false);
 
             const int header = 48;   // STORAGE_PROPERTY_QUERY(8) + STORAGE_PROTOCOL_SPECIFIC_DATA(40)
             const int bufLen = header + 512;
             // 審計 #16：緩衝區改非託管——managed 陣列在 P/Invoke 返回後即解除 pinning，
             // 而逾時路徑的 IRP 可能之後才完成並寫入原位址（堆積毀損）。非託管緩衝在逾時路徑
             // 上刻意洩漏（斷路器不再重問，洩漏有界約 560 bytes／每次卡死的碟），IRP 想多晚完成都安全。
-            IntPtr buf = Marshal.AllocHGlobal(bufLen);
+            IntPtr bufLocal = Marshal.AllocHGlobal(bufLen);
+            buf = bufLocal;
             ZeroMemory(buf, bufLen);
             var cmd = new byte[header];
             BitConverter.GetBytes(PropertyIdProtocolSpecificDevice).CopyTo(cmd, 0);   // PropertyId
@@ -532,43 +560,52 @@ public sealed class StorageSmartService : ObservableObject
                 uint err = (uint)Marshal.GetLastWin32Error();
                 if (err != ErrorIOPending)
                 {
-                    Marshal.FreeHGlobal(buf);
+                    Marshal.FreeHGlobal(buf); buf = IntPtr.Zero;   // IRP 未送出，立即安全釋放
                     return (null, false);
                 }
 
-                // 還在跑：等它，最多 NvmeLogTimeoutMs。逾時就 CancelIoEx 請求取消，並在
-                // 取消請求送達後再等一下，讓驅動有機會回應——本機實測：取消請求本身可能被卡在
-                // 裝置的逾時佇列裡（SRB_STATUS_SELECTION_TIMEOUT），所以底層 I/O 有可能仍繼續；
-                // 這裡只確保「送出取消」並回報逾時。緩衝區刻意不釋放：IRP 若之後完成仍會寫入，
-                // 寫進已釋放的記憶體比洩漏 560 bytes 更糟；斷路器保證不再重問，洩漏有界。
+                // 還在跑：等它，最多 NvmeLogTimeoutMs。逾時就 CancelIoEx 請求取消。
+                // 取消是「請求」不是「保證」（本機實測取消請求可能卡在裝置逾時佇列），
+                // 所以取消後以事件等待為準：等到信號＝IRP 已了結，三塊資源可安全釋放；
+                // 寬限期內仍沒信號＝IRP 還在核心手上，ov／evt／buf 一起刻意洩漏——
+                // 寫進已釋放的記憶體或信號已關閉的控制代碼，比洩漏約 570 bytes 更糟；
+                // 斷路器保證同一顆碟不再重問，洩漏有界（2026-10-14 慣例：洩有界之漏，換不毀堆）。
                 uint wait = WaitForSingleObject(evt, NvmeLogTimeoutMs);
                 if (wait != 0 /* WAIT_OBJECT_0 */)
                 {
                     CancelIoEx(handle, ov);
-                    WaitForSingleObject(evt, 2500);   // 給驅動一點時間回應取消
+                    uint grace = WaitForSingleObject(evt, CancelGraceMs);   // P1-3：以「等完成事件」取代裸 sleep
+                    if (grace != 0 /* WAIT_OBJECT_0 */)
+                        irpStillOutstanding = true;   // finally 據此跳過釋放，整組洩漏
                     return (null, true);
                 }
                 if (!GetOverlappedResult(handle, ov, out ret, false))
                 {
-                    Marshal.FreeHGlobal(buf);
+                    Marshal.FreeHGlobal(buf); buf = IntPtr.Zero;      // IRP 已結束，安全釋放
                     return (null, false);
                 }
             }
 
             if (ret < header + 512)
             {
-                Marshal.FreeHGlobal(buf);
+                Marshal.FreeHGlobal(buf); buf = IntPtr.Zero;
                 return (null, false);
             }
             var log = new byte[512];
             Marshal.Copy(new IntPtr(buf.ToInt64() + header), log, 0, 512);
-            Marshal.FreeHGlobal(buf);
+            Marshal.FreeHGlobal(buf); buf = IntPtr.Zero;
             return (log, false);
         }
         finally
         {
-            if (ov != IntPtr.Zero) Marshal.FreeHGlobal(ov);
-            if (evt != IntPtr.Zero) CloseHandle(evt);
+            // P1-3：IRP 未了結時 ov／evt（連同 buf）一起留給核心——它還要回寫 ov、信號 evt。
+            if (buf != IntPtr.Zero) { /* irpStillOutstanding：刻意洩漏（有界，斷路器把關） */ }
+            if (!irpStillOutstanding)
+            {
+                if (buf != IntPtr.Zero) Marshal.FreeHGlobal(buf);
+                if (ov != IntPtr.Zero) Marshal.FreeHGlobal(ov);
+                if (evt != IntPtr.Zero) CloseHandle(evt);
+            }
             CloseHandle(handle);
         }
     }
@@ -917,7 +954,9 @@ public sealed class StorageSmartService : ObservableObject
     {
         uint bus = TryGetBusType(index, out _);
 
-        if (bus is 16 or 17)
+        // 〔修復 v3.20〕通道判定問 ChannelOf（唯一一份），不在這裡重寫 16/17——
+        // 對照表有兩份遲早漂開（BusTypeName 當年就是這麼修掉的）。
+        if (ChannelOf(bus) == StorageBusChannel.Nvme)
         {
             byte[]? log = TryReadNvmeLog(index);
             if (log is null || log.Length < 0x88) return 0;

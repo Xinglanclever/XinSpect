@@ -40,9 +40,29 @@ public class DeepBenchMeasurementTests
 
         Assert.Equal(5, stats.Median);
         Assert.Equal(100, stats.P95);
-        Assert.Equal(100, stats.P99);
         Assert.Equal(100, stats.Max);
         Assert.Equal(1, stats.OutlierCount);
+        // p99 門檻（≥100 樣本，第 5 部）：10 筆不足——NaN＋標注，不照算。
+        // 〔修復建置 2026-11-08〕patch-06b 原稿此列斷言整份摘要 Insufficient，但同一套代碼的
+        // 三個消費端（ConfidenceEngine managed 鏡像稽核 tight-8→High、DeepBenchViewModel、
+        // 整合報告）都把 Confidence 釘在 CV 分級上，百科 L2186 成文的也是「部分百分位標
+        // Insufficient」——門檻標在 p99 本身（下一列的旗標＋NaN＋SummaryText），Confidence 走
+        // CV：本例 10 筆單調升 CV≈197% → Low。
+        Assert.Equal(DeepBenchConfidence.Low, stats.Confidence);
+        Assert.True(stats.P99Insufficient);
+        Assert.True(double.IsNaN(stats.P99));
+        Assert.Contains("p99 樣本不足", stats.SummaryText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void p99在樣本數達門檻時照算()
+    {
+        // 100 筆 1 + 1 筆 1000：達門檻，最近排名 p99 取第 ceil(0.99*101)=100 筆
+        double[] samples = Enumerable.Repeat(1.0, 100).Append(1000).ToArray();
+        var stats = DeepBenchMeasurementStatistics.FromSamples(samples);
+        Assert.False(stats.P99Insufficient);
+        Assert.Equal(1, stats.P99);
+        Assert.DoesNotContain("p99 樣本不足", stats.SummaryText, StringComparison.Ordinal);
     }
 
     [Theory]

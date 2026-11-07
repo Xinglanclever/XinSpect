@@ -639,6 +639,10 @@ internal static class Tui
     }
 
     /// <summary>開始轉圈：星芒往返循環＋隨機動詞；2 秒起顯示經過秒數與 esc 提示。label 留空時抽動詞。</summary>
+    // 〔修復 v3.20〕審計 D7：重導輸出（xsc facts > log）時 spinner 的 ESC 幀會汙染 log——
+    // 動畫與游標控制全部跳過（取樣照跑，狀態語意不變），真正的結果行照印。
+    private static bool SpinnerVisuals => !Console.IsOutputRedirected;
+
     public static void SpinnerStart(string? label = null)
     {
         lock (Sync)
@@ -650,7 +654,7 @@ internal static class Tui
             ScopeSamples.Clear();
             SpinnerClock.Restart();
             _spinPad = 0;
-            Console.Write(HideCursor);
+            if (SpinnerVisuals) Console.Write(HideCursor);
             _spinnerTask = Task.Run(async () =>
             {
                 // 幀序列往返：✢→✶→✻→✽→✻→✶，120ms 一幀
@@ -672,11 +676,12 @@ internal static class Tui
                         string bar = "";
                         for (int t = 0; t < track; t++)
                             bar += (t >= pos && t < pos + win) ? $"{BrandRed}▓{Reset}" : Dim + "·" + Reset;
-                        Console.Write(CarriageReturn + ClearLine + $"{BrandRed}{frame}{Reset} {BrandRed}{verb}{Reset}{Dim}…{Reset} "
-                            + $"[{bar}] {Bold}{secs,5:0.0}s{Reset}{Dim} · esc 中斷{Reset}");
+                        if (SpinnerVisuals)
+                            Console.Write(CarriageReturn + ClearLine + $"{BrandRed}{frame}{Reset} {BrandRed}{verb}{Reset}{Dim}…{Reset} "
+                                + $"[{bar}] {Bold}{secs,5:0.0}s{Reset}{Dim} · esc 中斷{Reset}");
                         // 示波器線：真實 CPU 負載取樣（PerformanceCounter；不可用時整行略過，不造假波形）
                         scopeTick++;
-                        if (hasScope)
+                        if (hasScope && SpinnerVisuals)
                             Console.Write(Esc + "[1F" + CarriageReturn + ClearLine);   // 回到 spinner 行（scope 行佔了下一行）
                         bool drewScope = false;
                         if (scopeTick % 3 == 0)
@@ -688,12 +693,13 @@ internal static class Tui
                                 ScopeSamples.Add(load.Value);
                                 if (ScopeSamples.Count > ScopeWidth) ScopeSamples.RemoveAt(0);
                                 string trace = ScopeLine(ScopeSamples, ScopeWidth);
-                                Console.Write(Environment.NewLine + $"  {Dim}CPU ╶{Reset}" + trace + $"{Dim}╴{Reset} {Bold}{load:0}%{Reset}");
+                                if (SpinnerVisuals)
+                                    Console.Write(Environment.NewLine + $"  {Dim}CPU ╶{Reset}" + trace + $"{Dim}╴{Reset} {Bold}{load:0}%{Reset}");
                             }
                         }
                         // legacy：游標上移（[1F）在舊主控台印不出來，示波器線整段略過
                         hasScope = drewScope && !Legacy;
-                        if (Legacy)
+                        if (Legacy && SpinnerVisuals)
                         {
                             // legacy：ClearLine 是空字串——補空白擦掉上一拍的殘尾
                             string plain = $"{frame} {verb}… [{bar}] {secs,5:0.0}s · esc 中斷";
@@ -722,25 +728,42 @@ internal static class Tui
             _cts = null;
             _spinnerTask = null;
             SpinnerClock.Stop();
-            if (Legacy)
-                Console.Write(CarriageReturn + new string(' ', _spinPad + 2) + CarriageReturn);
-            else
+            if (SpinnerVisuals)
             {
-                Console.Write(Esc + "[1F" + CarriageReturn + ClearLine);
-                Console.Write(CarriageReturn + ClearLine);
+                if (Legacy)
+                    Console.Write(CarriageReturn + new string(' ', _spinPad + 2) + CarriageReturn);
+                else
+                {
+                    Console.Write(Esc + "[1F" + CarriageReturn + ClearLine);
+                    Console.Write(CarriageReturn + ClearLine);
+                }
             }
             _spinPad = 0;
             double done = SpinnerClock.Elapsed.TotalSeconds;
             // 審計 #7：採集無法預知百分比——「100.0%」只有真正跑完才印；失敗印中斷條，不冒充完成
-            if (ok)
-                Console.Write($"[{BrandRed}{new string('▓', 22)}{Reset}] {Bold}100.0%{Reset} {Dim}({done:0.00}s){Reset}" + Environment.NewLine);
-            else
-                Console.Write($"[{Dim}{new string('░', 10)}{SwissRed}✕{Dim}{new string('░', 11)}{Reset}] {Dim}中斷於 {done:0.00}s{Reset}" + Environment.NewLine);
-            Console.Write(ShowCursor);
+            if (SpinnerVisuals)
+            {
+                if (ok)
+                    Console.Write($"[{BrandRed}{new string('▓', 22)}{Reset}] {Bold}100.0%{Reset} {Dim}({done:0.00}s){Reset}" + Environment.NewLine);
+                else
+                    Console.Write($"[{Dim}{new string('░', 10)}{SwissRed}✕{Dim}{new string('░', 11)}{Reset}] {Dim}中斷於 {done:0.00}s{Reset}" + Environment.NewLine);
+                Console.Write(ShowCursor);
+            }
             if (!string.IsNullOrEmpty(doneMessage))
                 Console.WriteLine($"{BrandRed}⏺{Reset} {doneMessage}");
         }
     }
+
+    /// <summary>
+    /// 以「失敗」狀態收掉轉圈：印中斷條（✕），<b>絕不印 100.0%</b>。
+    /// 審計 #7 的規則是「失敗印中斷條，不冒充完成」——但決定權原本留在
+    /// SpinnerStop 的選擇性參數上，呼叫端忘了傳 <c>ok: false</c> 就把失敗印成 100%
+    /// （實例：pci scan 失敗時「掃描失敗：…」配著 100.0% 同屏）。此方法讓失敗態
+    /// 有自己的名字，不必依賴呼叫端記得參數。
+    /// 轉圈已停（<see cref="SpinnerStop"/> 已執行過）時是無操作——可在 finally 裡無腦呼叫。
+    /// </summary>
+    public static void SpinnerFail(string? failMessage = null)
+        => SpinnerStop(failMessage, ok: false);
 
     // ── 7) 進度條與 KPI ───────────────────────────────────────────────────
 

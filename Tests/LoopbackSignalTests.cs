@@ -10,6 +10,22 @@ namespace XinSpect.Tests;
 public class LoopbackSignalTests
 {
     [Fact]
+    public void 削波看連續而非湊數_孤立滿格是合法峰值()
+    {
+        // 三個孤立滿格（總數 3，最長連續段 1）：舊實作誤判削波，新實作如實不判
+        var isolated = new float[] { 1f, -0.5f, 1f, -0.5f, 1f };
+        var s1 = XinSpect.LoopbackSignalService.Compute(isolated);
+        Assert.False(s1.Clipping);
+        Assert.Equal(1, s1.MaxClippedRun);
+
+        // 間歇兩連＋三連：總數 5 但最長連續段 3 → 成文門檻（連續 ≥3）判削波
+        var mixed = new float[] { 1f, 1f, -0.5f, 1f, 1f, 1f };
+        var s2 = XinSpect.LoopbackSignalService.Compute(mixed);
+        Assert.True(s2.Clipping);
+        Assert.Equal(3, s2.MaxClippedRun);
+    }
+
+    [Fact]
     public void 訊號統計_正弦與滿格與靜音的金標()
     {
         // ±0.5 交替波（方波）：峰值 0.5、RMS 0.5（每個樣本絕對值都是 0.5）

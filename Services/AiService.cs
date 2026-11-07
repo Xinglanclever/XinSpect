@@ -398,6 +398,10 @@ public sealed class AiService : ObservableObject
     private string? _lastUserText;
     private List<object>? _lastContentParts;
 
+    // 〔修復 v3.20〕代理預覽模式的暫停旗標：RunAsync 在「待送出」停輪返回時置位，
+    // 讓 RunTurnAsync 的收尾狀態不再把「暫停中」謊報成「完成」。每輪開頭清除。
+    private bool _pausedForPreview;
+
     /// <summary>
     /// 停止目前的請求。已經串流出來的文字會留在畫面上並註明是中途停止的——
     /// 半截的回答就該看得出是半截，不能讓它看起來像完整結論。
@@ -702,8 +706,12 @@ public sealed class AiService : ObservableObject
         try
         {
             await RunAsync(reply, contentParts, cts.Token);
-            StatusText = $"完成 ・ {ResolveModel()}（{ProviderLabel(_settings.AiProviderEnum)}）"
-                         + (LastRedactionCount > 0 ? $" ・ 送出前已遮蔽 {LastRedactionCount} 處可識別資訊" : "");
+            // 〔修復 v3.20〕預覽模式暫停返回 ≠ 完成：這一輪的工具查詢還停在「待送出」，
+            // 狀態列不得寫「完成」。改報暫停現況與下一步（完整續跑機制 patch-24 明示不做）。
+            StatusText = _pausedForPreview
+                ? "已暫停：代理預覽模式停在這一輪——再次按送出會帶著目前對話繼續（下一輪會重新執行工具查詢）。"
+                : $"完成 ・ {ResolveModel()}（{ProviderLabel(_settings.AiProviderEnum)}）"
+                  + (LastRedactionCount > 0 ? $" ・ 送出前已遮蔽 {LastRedactionCount} 處可識別資訊" : "");
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested)
         {
@@ -742,8 +750,67 @@ public sealed class AiService : ObservableObject
     /// <summary>最多允許模型連續查工具的輪數；超過即要求它直接以文字作答，避免無止境迴圈。</summary>
     private const int MaxToolRounds = 5;
 
-    /// <summary>模型要求執行的一次工具呼叫。</summary>
-    private sealed record ToolCall(string Id, string Name, string Args);
+    /// <summary>模型要求執行的一次工具呼叫。（internal：InsertToolRow 守門測試要直接呼叫）</summary>
+    internal sealed record ToolCall(string Id, string Name, string Args);
+
+    /// <summary>
+    /// 代理模式在目前供應商下是否<b>真的</b>可用。免費共用額度的中轉
+    /// （<c>cloudflare/ai-proxy/worker.js</c>）只轉送 <c>role</c>／<c>content</c> 兩個欄位、
+    /// 剝掉 <c>tools</c> 與 <c>tool_calls</c>：工具定義根本到不了模型，tool 角色的訊息還會被改標成
+    /// user——開著「診斷代理」也不會有任何代理行為，只是安靜退化成普通對話。
+    /// 客端如實禁用：這條額度不支援代理，預覽與說明都照實講，而不是讓使用者以為模型在查本機。
+    /// </summary>
+    internal static bool AgentSupported(AiProvider p) => p != AiProvider.SharedFree;
+
+    /// <summary>
+    /// 這次送出會不會真的走代理模式（與 <see cref="RunAsync"/>、<see cref="BuildRequestPreview"/>
+    /// 共用同一份判斷，三處永遠一致）：診斷代理開啟、供應商支援工具呼叫、而且手上有可用的查詢工具。
+    /// </summary>
+    public bool WillUseAgent =>
+        _settings.AiAgentMode && AgentSupported(_settings.AiProviderEnum) && Tools is { HasTools: true };
+
+    /// <summary>
+    /// 工具結果出國前的唯一通道（審計 #3 的守門點）：遮蔽開啟時過 <see cref="AiRedactor"/>，
+    /// 關閉時原樣放行——那必須是使用者在設定裡的明示選擇，而不是漏網。
+    /// 抽成靜態方法是讓守門測試可以直接釘住它：代理要送出的工具結果一律經過這裡。
+    /// </summary>
+    internal static (string Outbound, bool Redacted, int Count) PrepareToolOutbound(string result, bool redactEnabled)
+    {
+        if (!redactEnabled) return (result, false, 0);
+        var rs = AiRedactor.Apply(result);
+        return (rs.Text, true, rs.Count);
+    }
+
+    // ── 一次性告知（審計 P0-4）——零彈窗版（〔複驗更正〕2026-11-07）──────────
+    // 原稿以 XMsg.Show 彈 modal 對話框告知，違反「修復不得引入任何彈窗」的用戶裁定，
+    // 紅隊複驗已整段撤除。改為三個非 modal 通道組合呈現：
+    //   ①狀態列文字：第一次真的用代理送出的那一輪，StatusText 顯示 AgentNoticeText；
+    //   ②對話列表內嵌提示行：同一次送出時以 IsTool 提示列插進訊息流（InsertAgentNoticeRow）；
+    //   ③設定頁常駐說明：SettingsView 診斷代理說明補句（本補丁第 10 節，永遠可回查）。
+    /// <summary>一次性告知的固定文案（三個通道共用同一份，措辭一致）。</summary>
+    internal const string AgentNoticeText =
+        "診斷代理已生效：模型每一輪都可能索取本機工具查詢結果（溫度、事件、磁碟健康等）並逐輪送出；" +
+        "每一輪實際送出的內容都記在對話列表的「查詢」列（標「✓ 已送出」）。" +
+        "不希望逐輪送出請關閉「診斷代理」，或改用本機 Ollama（完全離線）；設定 › AI 診斷有常駐說明。";
+
+    /// <summary>
+    /// 是否該講一次性告知（審計 P0-4；零彈窗——本方法只判定，不呈現）。
+    /// 呈現由 <see cref="RunAsync"/> 在首次真的走代理時完成：狀態列＋內嵌提示行；
+    /// 講過（AiAgentNoticeShown=true）就永遠不再插入，重裝或清設定檔會重新講一次。
+    /// </summary>
+    internal static bool ShouldNotifyAgentOnce(SettingsService settings)
+        => !settings.AiAgentNoticeShown;
+
+    /// <summary>通道②：把一次性告知以內嵌提示行插進訊息流尾端（非 modal、可回滾瀏覽）。</summary>
+    private void InsertAgentNoticeRow()
+    {
+        Messages.Add(new AiMessage
+        {
+            IsUser = false,
+            IsTool = true,
+            Text = "ℹ️ " + AgentNoticeText,
+        });
+    }
 
     /// <summary>一輪呼叫的結果：模型說的文字，以及它要求執行的工具（空表示這就是最終答案）。</summary>
     private sealed record Round(string Content, List<ToolCall> Calls, AiUsage Usage = default);
@@ -792,11 +859,22 @@ public sealed class AiService : ObservableObject
 
     private async Task RunAsync(AiMessage reply, List<object>? contentParts, CancellationToken ct)
     {
+        _pausedForPreview = false;   // 〔修復 v3.20〕每輪開頭先清，暫停旗標只描述「這一輪」
         string url = ResolveUrl();
         string model = ResolveModel();
-        // 代理模式（會連續發出多次請求）自 2026-10-26 起對共用額度一併開放；
-        // 額度上限改由中轉那一側擋，程式這一端不再自己劃一條看不見的界。
-        bool useTools = _settings.AiAgentMode && Tools is { HasTools: true };
+        // 代理模式只在「真的支援工具呼叫」的供應商上生效：免費共用額度的中轉會剝掉 tools，
+        // 客端如實視為不支援（見 AgentSupported），而不是開著開關卻安靜退化成普通對話。
+        bool useTools = WillUseAgent;
+        // 〔複驗更正〕一次性告知改在服務層觸發（零彈窗）：放在「真的走代理」的判定點上，
+        // SendAsync／Retry／Evaluate／Chip 等所有路徑都覆蓋，View 端不必逐個掛鉤（原稿掛
+        // 四個事件處理器，主動診斷路徑還漏掉——見第 16 節殘餘項的更正）。
+        // 通道①狀態列＋通道②內嵌提示行，均非 modal；先記旗標再呈現，任何重入不重複插行。
+        if (useTools && ShouldNotifyAgentOnce(_settings))
+        {
+            _settings.AiAgentNoticeShown = true;
+            StatusText = AgentNoticeText;      // 通道①：狀態列文字
+            InsertAgentNoticeRow();            // 通道②：對話列表內嵌提示行
+        }
         var msgs = BuildMessages(useTools, contentParts);
         var sink = new ReplySink(reply);
 
@@ -830,31 +908,37 @@ public sealed class AiService : ObservableObject
             {
                 ct.ThrowIfCancellationRequested();
                 string result = Tools!.Invoke(c.Name, c.Args);
-                // 審計 #3：代理模式的工具結果過 AiRedactor 遮蔽（AiAgentRedactToolResults 控制）
-                string outbound = result;
-                if (_settings.AiAgentRedactToolResults && _settings.AiRedactIdentity)
-                {
-                    var rs = AiRedactor.Apply(result);
-                    outbound = rs.Text;
-                    LastRedactionCount += rs.Count;
-                }
-                InsertToolRow(reply, c, outbound);
+                // 審計 #3：工具結果一律經 PrepareToolOutbound——遮蔽開啟時過 AiRedactor，
+                // 關閉時原樣放行（那是使用者在設定裡的明示選擇）。列上要如實標出這一輪是
+                // 「已遮蔽」還是「未遮蔽」送出的。
+                var (outbound, redacted, toolRedactions) =
+                    PrepareToolOutbound(result, _settings.AiAgentRedactToolResults && _settings.AiRedactIdentity);
+                if (redacted) LastRedactionCount += toolRedactions;
+                // 送出的內容（含 6000 字截斷）先定死一份：列表與 tool 訊息用同一份——
+                // 使用者在「查詢」列上看到的就是真的出國的文字，不是另一個修剪過的版本。
+                string sent = Trim(outbound, 6000);
 
-                // 審計 #4：預覽模式開啟時每輪暫停等確認（不靜默連發）
+                // 審計 #4：預覽模式開啟時每輪暫停等確認（不靜默連發）。
+                // 列上標「待送出」：此刻還沒出國，使用者按送出後這一項才會真的送出去。
                 if (_settings.AiAgentPreviewToolResults)
                 {
-                    reply.Text += $"\n[第 {round} 輪工具 {c.Name} 送出：{Trim(outbound, 300)}]";
+                    InsertToolRow(reply, c, sent, redacted, toolRedactions, sentYet: false);
+                    reply.Text += $"\n[第 {round} 輪工具 {c.Name} 待送出（已暫停等你確認）：{Trim(outbound, 300)}]";
                     sink.Break();
+                    _pausedForPreview = true;   // 〔修復 v3.20〕如實告訴收尾端：這是暫停，不是完成
                     return;   // 暫停——使用者按送出後繼續下一輪
                 }
 
+                // 審計 P0-4：先放進即將送出的訊息，立刻記進對話列表並標「已送出」——
+                // 每一輪實際出國的內容（經遮蔽後的實文）在使用者眼前逐輪可見，不必事後翻紀錄。
                 msgs.Add(new Dictionary<string, object?>
                 {
                     ["role"] = "tool",
                     ["tool_call_id"] = c.Id,
                     ["name"] = c.Name,
-                    ["content"] = Trim(outbound, 6000),
+                    ["content"] = sent,
                 });
+                InsertToolRow(reply, c, sent, redacted, toolRedactions, sentYet: true);
             }
             sink.Break();
         }
@@ -1199,16 +1283,24 @@ public sealed class AiService : ObservableObject
 
     /// <summary>
     /// 「這次到底會送出去什麼」：套用<b>與真正請求完全相同</b>的遮蔽與長度預算後，拼成人看的文字。
-    /// 使用者有權在看到內容之前決定要不要送——這也讓「遮蔽有沒有生效」不再只是口头承诺。
+    /// 使用者有權在看到內容之前決定要不要送——這也讓「遮蔽有沒有生效」不再只是口頭承諾。
     /// 附件圖片以替代文字表示（Base64 不顯示，但會說明有幾張；圖片裡的序號無法遮蔽）。
+    /// 措辭對兩種模式都為真：這份預覽永遠只描述「第一輪」；代理模式逐輪的工具結果不在此份裡，
+    /// 但每一輪實際送出的文字（經遮蔽後的實文）都會即時記進對話列表的「查詢」列、標「✓ 已送出」，
+    /// 送出的就是列上看到的那份。
     /// </summary>
     public string BuildRequestPreview()
     {
-        bool useTools = _settings.AiAgentMode && Tools is { HasTools: true };
+        bool useTools = WillUseAgent;
         var p = Prepare(useTools);
 
         var sb = new StringBuilder();
-        sb.AppendLine("以下是按下送出後會傳給 AI 端點的全部內容（不含金鑰標頭、不含端點網址）。");
+        sb.AppendLine("以下是按下送出後「第一輪」會傳給 AI 端點的全部內容（不含金鑰標頭、不含端點網址）。");
+        sb.AppendLine(useTools
+            ? "診斷代理已生效：這只是第一輪。模型每一輪都可能索取本機工具查詢結果並逐輪送出；" +
+              "每一輪實際送出的文字（經遮蔽後的實文）會即時記在對話列表的「查詢」列、標「✓ 已送出」——" +
+              "送出的就是列上看到的那份。不希望逐輪送出請關閉「診斷代理」，或改用本機 Ollama（完全離線）。"
+            : "診斷代理這次不生效（已關閉、免費共用額度的中轉不轉送工具、或沒有可用的查詢工具）：送完這一輪不會再送任何東西。");
         sb.AppendLine(_settings.AiRedactIdentity
             ? $"遮蔽：已開啟（本次擋下 {p.Redactions} 處"
               + (p.RedactionKinds.Count > 0 ? "：" + string.Join("、", p.RedactionKinds) : "") + "）"
@@ -1266,18 +1358,31 @@ public sealed class AiService : ObservableObject
     }
 
     // 工具紀錄插在回覆氣泡之前，讓「先查詢、後結論」的順序在畫面上讀得順。
-    // 分行標出「查了什麼／帶什麼參數／查到什麼」，比單行箭頭格式好讀，也更能對照 AI 結論的依據。
-    private void InsertToolRow(AiMessage reply, ToolCall call, string result)
+    // 列上如實標出三件事：送出時有沒有遮蔽、送了什麼、以及此刻送了沒——
+    // 「送出內容」顯示的是真的放進 tool 訊息的那份文字（呼叫端傳入的 sent 就是
+    // Trim(outbound, 6000) 的結果，同一個截斷），使用者對照「這一輪實際出國的是什麼」
+    // 時看的是同一份，不是另一個修剪過的版本；超出 6000 字時尾端已帶「…」。
+    internal void InsertToolRow(AiMessage reply, ToolCall call, string sent,
+                                bool redacted, int redactions, bool sentYet)
     {
         string args = call.Args.Trim();
         if (args is "{}" or "null") args = "";
+        // 〔修復建置 2026-11-07〕待送出列也要如實披露遮蔽狀態——暫停中的這一輪雖然還沒出國，
+        // 但按送出後會以哪種姿態出國（遮蔽 N 處／原樣出國）使用者現在就該知道（守門測試釘住）。
+        string head = !sentYet
+            ? "⏸ 待送出（代理已暫停，等你按送出才會真的送出）"
+              + (redacted ? $"；送出前已預先遮蔽 {redactions} 處"
+                          : "；未遮蔽——「代理模式的工具結果也過遮蔽」已關閉，按送出即原樣出國")
+            : redacted ? $"✓ 已送出（已遮蔽 {redactions} 處）"
+            : "✓ 已送出（未遮蔽——「代理模式的工具結果也過遮蔽」已關閉）";
         var row = new AiMessage
         {
             IsUser = false,
             IsTool = true,
             Text = "🔍 " + call.Name
                    + (args.Length > 0 ? "\n    參數：" + Trim(args, 120) : "")
-                   + "\n    結果：" + Trim(result, 240),
+                   + "\n    " + head
+                   + "\n    送出內容：" + sent,
         };
         int at = Messages.IndexOf(reply);
         if (at < 0) Messages.Add(row); else Messages.Insert(at, row);

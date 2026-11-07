@@ -1,4 +1,5 @@
-﻿<UserControl x:Class="XinSpect.BlueSquadronView"
+﻿<!-- ⚠ 未編譯——需作者機驗證（dotnet build 命令見 patch-24.md）。完整替換檔：Views/BlueSquadronView.xaml（patch-24，P0-12：唯一改動＝誠實聲明文字補「阻擋模式未實施」） -->
+<UserControl x:Class="XinSpect.BlueSquadronView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect">
@@ -318,8 +319,9 @@
                 <StackPanel>
                     <TextBlock FontSize="12" FontFamily="Consolas" Foreground="{DynamicResource MutedInkBrush}" Margin="0,0,0,6"
                                Text="── HONESTY BOUNDARY ──────────────────────────────"/>
+                    <!-- P0-12（patch-24）：阻擋模式未實施——如實聲明，不在介面上暗示有攔截能力 -->
                     <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
-                               Text="本模組偵測已知攻擊痕跡與平台安全設定的事實狀態。不保證偵測所有威脅。讀不到的項目標為「無法評估」而非危險。所有檢查為唯讀——不修改任何系統設定。評分公式公開透明：每一分的扣除都可在防線展開卡片中追溯到具體的檢查項目與原始值。"/>
+                               Text="本模組偵測已知攻擊痕跡與平台安全設定的事實狀態。不保證偵測所有威脅。讀不到的項目標為「無法評估」而非危險。所有檢查為唯讀——不修改任何系統設定。目前為 Phase 1 偵測模式：所有防線實際執行的只有「偵測與記錄」，「阻擋」模式尚未實施（需要 Phase 2 的核心執行路徑）——即使透過 Bridge 指令把防線設為 block，也不會有任何活動被阻止，狀態列與 status 回應會如實標示 implemented:false。評分公式公開透明：每一分的扣除都可在防線展開卡片中追溯到具體的檢查項目與原始值。"/>
                 </StackPanel>
             </Border>
 

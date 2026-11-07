@@ -294,8 +294,10 @@ public sealed class InstallerMirrorsTests
         Assert.Contains("https://raw.githubusercontent.com/Xinglanclever/XinSpect/main/Installer/mirrors.txt", code);
 
         // ③：真正的程式碼不能一起被削掉
+        // 〔修復建置 2026-11-08〕UserAgent 隨 patch-22 升為 3.18——這裡釘的是「UserAgent 字串
+        // 在去註解後仍活著」，版號跟著樹走。
         Assert.Contains("private sealed class ProgressBar", code);
-        Assert.Contains("XinSpectDeploy/3.17", code);
+        Assert.Contains("XinSpectDeploy/3.18", code);
         Assert.Contains("LooksLikeDownload", code);
 
         // 逐字字串（@@""）與跳脫字串都不能把狀態機帶歪

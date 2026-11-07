@@ -124,9 +124,13 @@ public static class PeInspect
     {
         if (data.Length < 0x40 || data[0] != (byte)'M' || data[1] != (byte)'Z')
             return Fail("不是 MZ 開頭——不是 PE 檔");
-        int peOffset = BitConverter.ToInt32(data, 0x3C);
-        if (peOffset <= 0 || peOffset + 24 > data.Length)
+        // e_lfanew 是無號 32 位元 DWORD：以 long 讀入再做邊界算術。
+        // 原本讀成 int 後 `peOffset + 24` 在 e_lfanew 近 int.MaxValue 時整數溢位轉負、
+        // 繞過越界檢查，隨後 data[peOffset] 直接 IndexOutOfRange——畸形 .sys 崩潰違反如實 Fail 契約。
+        long peOffsetLong = BitConverter.ToUInt32(data, 0x3C);
+        if (peOffsetLong + 24 > data.Length)
             return Fail("e_lfanew 越界——標頭損壞或不是 PE 檔");
+        int peOffset = (int)peOffsetLong;
         if (data[peOffset] != (byte)'P' || data[peOffset + 1] != (byte)'E' || data[peOffset + 2] != 0 || data[peOffset + 3] != 0)
             return Fail("PE 簽章不符");
 
@@ -167,19 +171,22 @@ public static class PeInspect
         if (importRva != 0 && importSize != 0)
         {
             // IMAGE_IMPORT_DESCRIPTOR 陣列，全零項終止；名稱是 RVA 指向的 ASCII-Z
-            int descOff = RvaToFile(sections, importRva) ?? -1;
+            int descOff = RvaToFile(sections, importRva, data.Length) ?? -1;
             for (int n = 0; descOff >= 0 && descOff + 20 <= data.Length && imports.Count < MaxImports; n++)
             {
                 uint nameRva = BitConverter.ToUInt32(data, descOff + 12);
                 uint firstThunk = BitConverter.ToUInt32(data, descOff + 16);
                 if (nameRva == 0 && firstThunk == 0) break; // 全零終止項
-                int nameOff = RvaToFile(sections, nameRva) ?? -1;
+                int nameOff = RvaToFile(sections, nameRva, data.Length) ?? -1;
                 if (nameOff >= 0) imports.Add(ReadAsciiZ(data, nameOff, 64));
-                descOff = RvaToFile(sections, importRva + 20u * ((uint)n + 1)) ?? -1;
+                descOff = RvaToFile(sections, importRva + 20u * ((uint)n + 1), data.Length) ?? -1;
             }
         }
 
-        var (deviceStrings, ioctlCandidates) = ScanSignals(data, sections);
+        var signals = ScanSignals(data, sections);
+        if (signals is null)
+            return Fail("區段原始資料（PointerToRawData／SizeOfRawData）越出檔案範圍——畸形或遭截斷的 .sys");
+        var (deviceStrings, ioctlCandidates) = signals.Value;
 
         return new PeInspectResult(true, null, MachineText(machine), SubsystemText(subsystem), timeStamp,
             sections, imports, deviceStrings, ioctlCandidates);
@@ -188,19 +195,26 @@ public static class PeInspect
     private static PeInspectResult Fail(string reason) =>
         new(false, reason, "", "", 0, [], [], [], []);
 
-    private static int? RvaToFile(IReadOnlyList<PeSectionInfo> sections, uint rva)
+    // fileLength 由呼叫端傳入（data.Length）：換算結果必須整段落在檔案內，否則如實回 null。
+    private static int? RvaToFile(IReadOnlyList<PeSectionInfo> sections, uint rva, int fileLength)
     {
         foreach (var s in sections)
         {
             if (!s.ContainsRva(rva) || s.RawPointer == 0) continue;
-            int delta = (int)(rva - s.VirtualAddress);
-            if (delta >= s.RawSize) return null; // 落在虛擬空間多出的部分（如 .bss）——檔案裡沒有
-            return (int)s.RawPointer + delta;
+            // 全程 long 算術：PointerToRawData 近 uint.MaxValue 時 (int) 會轉負、
+            // uint 差值也可能超出 int 域——畸形 .sys 不得以負位移漏過任何下游守衛。
+            long delta = (long)rva - s.VirtualAddress;   // ContainsRva 已保證 ≥ 0
+            if (delta >= s.RawSize) return null;         // 落在虛擬空間多出的部分（如 .bss）——檔案裡沒有
+            long offset = (long)s.RawPointer + delta;
+            if (offset < 0 || offset >= fileLength) return null;
+            return (int)offset;
         }
         return null;
     }
 
-    private static (IReadOnlyList<string>, IReadOnlyList<PeCtlCandidate>) ScanSignals(byte[] data, IReadOnlyList<PeSectionInfo> sections)
+    /// <returns>區段原始範圍越出檔案（畸形 .sys）時回 null，呼叫端轉 Fail；其餘回訊號組。</returns>
+    private static (IReadOnlyList<string>, IReadOnlyList<PeCtlCandidate>)? ScanSignals(
+        byte[] data, IReadOnlyList<PeSectionInfo> sections)
     {
         var strings = new List<string>();
         var candidates = new List<PeCtlCandidate>();
@@ -210,8 +224,15 @@ public static class PeInspect
         foreach (var s in sections)
         {
             if (s.RawPointer == 0 || s.RawSize == 0) continue;
-            int fileStart = (int)s.RawPointer;
-            int len = (int)Math.Min(s.RawSize, (uint)(data.Length - fileStart));
+            // PointerToRawData／SizeOfRawData 皆為無號 32 位元：一律 long 算術檢查。
+            // 原本 (int)s.RawPointer 在 > 0x7FFFFFFF 時轉負，fileStart 為負會讓
+            // data[fileStart + i]（:221/:240）直接 IndexOutOfRange——畸形 .sys 如實 Fail 不崩。
+            long fileStartLong = s.RawPointer;
+            long rawEnd = fileStartLong + s.RawSize;     // long 域不可能回繞
+            if (fileStartLong >= data.Length || rawEnd > data.Length)
+                return null;                             // 區段原始資料越界＝畸形 .sys：不掃、不猜
+            int fileStart = (int)fileStartLong;
+            int len = (int)s.RawSize;
             if (len <= 4) continue;
 
             if (s.Name.Equals(".text", StringComparison.OrdinalIgnoreCase))

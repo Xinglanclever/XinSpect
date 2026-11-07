@@ -44,13 +44,28 @@ public partial class CleanupView : UserControl
             "垃圾清理", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
         if (ok != MessageBoxResult.OK) return;
 
+        // 〔修復 v3.20〕_busy 與狀態列的復原放進 try/catch/finally：Clean() 半途拋例外時，
+        // 本視圖快取於 MainWindow，原碼會讓「清理」按鈕永久卡死（_busy 恆 true、狀態列停在「清理中」）。
+        // 例外如實寫進狀態列與完成報告，不吞不瞞。
         _busy = true;
         StatusText.Text = LanguageService.T("清理中……");
-        var (_, report) = await Task.Run(() => _svc.Clean());
-        long total = _svc.Categories.Sum(c => c.Size < 0 ? 0 : c.Size);
-        TotalText.Text = LanguageService.T($"可清理總計約 {Human(total)}");
-        StatusText.Text = report.Replace("\n", " ");
-        _busy = false;
+        string report = LanguageService.T("清理中……");   // 先賦值（finally 引用——CS0165）
+        try
+        {
+            var (_, rep) = await Task.Run(() => _svc.Clean());
+            report = rep;
+            long total = _svc.Categories.Sum(c => c.Size < 0 ? 0 : c.Size);
+            TotalText.Text = LanguageService.T($"可清理總計約 {Human(total)}");
+        }
+        catch (Exception ex)
+        {
+            report = LanguageService.T("清理失敗：") + ex.Message;
+        }
+        finally
+        {
+            StatusText.Text = report.Replace("\n", " ");
+            _busy = false;
+        }
         XMsg.Show(report, "垃圾清理", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 

@@ -71,11 +71,12 @@
       "name": "Secure Boot 雙來源（UEFI 變數 vs 登錄檔）",
       "inputs": ["uefi.secure_boot", "platform.secure_boot"],
       "specRefs": ["Microsoft 文件：SecureBoot\\State\\UEFISecureBootEnabled 登錄檔與 UEFI Setup 變數由不同層寫入（開機管理程式 vs 韌體）"],
-      "falseReports": ["開機流程中狀態剛變更（如剛在韌體設定切換 Secure Boot 未重啟）時兩側可能不同步"],
-      "explanation": "Secure Boot 的狀態同時存在於韌體變數與 Windows 登錄檔（兩個獨立寫入者）；比對它們是免費的一致性檢查——寫入不同步或快取過期都會現形",
+      "falseReports": ["開機流程中狀態剛變更（如剛在韌體設定切換 Secure Boot 未重啟）時兩側可能不同步——那是真實不同步不是誤報", "一側讀到非 0/1 的未知值（如「未知值 2」）時走 Unverifiable——是誠實三態不是漏檢"],
+      "explanation": "Secure Boot 的狀態同時存在於韌體變數與 Windows 登錄檔（兩個獨立寫入者）；比對它們是免費的一致性檢查——寫入不同步或快取過期都會現形。兩側呈現口徑不同（UEFI 側「是／否」、登錄檔側「開啟／關閉」），比對必須走 0/1 數值而非字面相等",
       "branches": [
-        { "when": [{ "kind": "valueEqualsKey", "key": "uefi.secure_boot", "otherKey": "platform.secure_boot" }], "then": "Consistent", "reason": "兩個獨立來源同指「{uefi.secure_boot}」——韌體變數與作業系統登錄檔一致" },
-        { "when": [], "then": "Contradicts", "reason": "Secure Boot 雙來源不一致：UEFI 變數＝「{uefi.secure_boot}」、登錄檔＝「{platform.secure_boot}」——這兩個來源由不同層寫入，不一致代表開機流程中狀態變更未同步或其一讀取有誤，優先信 UEFI 變數（韌體自己說的）" }
+        { "when": [{ "kind": "numericPresent", "key": "uefi.secure_boot" }, { "kind": "numericPresent", "key": "platform.secure_boot" }, { "kind": "numericEqualsKey", "key": "uefi.secure_boot", "otherKey": "platform.secure_boot" }], "then": "Consistent", "reason": "兩個獨立來源同指「{uefi.secure_boot}」／「{platform.secure_boot}」——韌體變數與作業系統登錄檔一致（語義等值：是＝開啟、否＝關閉）" },
+        { "when": [{ "kind": "numericPresent", "key": "uefi.secure_boot" }, { "kind": "numericPresent", "key": "platform.secure_boot" }], "then": "Contradicts", "reason": "Secure Boot 雙來源不一致：UEFI 變數＝「{uefi.secure_boot}」、登錄檔＝「{platform.secure_boot}」——這兩個來源由不同層寫入，不一致代表開機流程中狀態變更未同步或其一讀取有誤，優先信 UEFI 變數（韌體自己說的）" },
+        { "when": [], "then": "Unverifiable", "reason": "一側無法解析為 0/1（未知值或非布林）——無法比對，不下判決" }
       ]
     },
     {
@@ -208,12 +209,19 @@
       "id": "pci.spi_facts_without_controller",
       "name": "SPI 事實存在而盤點看不到 SPI 控制器",
       "inputs": ["spi.hsfsts"],
-      "tryLookup": ["pci.dev.1f.5"],
+      "tryLookup": ["pci.dev.1f.5", "pci.bus0.inventory"],
       "specRefs": ["bus 0 盤點（Bus0InventoryService）與 SPI 服務（SpiFlashService）讀的是同一個 PCI 後端（0:1F.5）"],
-      "falseReports": ["收集管線未跑會走 Unverifiable——那是管線未啟動不是矛盾"],
-      "explanation": "bus 0 盤點與 SPI 服務讀的是同一個 PCI 後端；SPI 事實存在而盤點否定控制器存在，代表管線錯亂",
+      "falseReports": [
+        "收集管線未跑會走 Unverifiable——那是管線未啟動不是矛盾",
+        "pci.dev.1f.5 鍵缺席有兩種不可區分的成因（真不在／盤點沒跑），故以 pci.bus0.inventory 為哨兵：它缺席或未跑成時一律 Unverifiable",
+        "盤點值含「讀取失敗」（Bus0InventoryService 逐槽如實缺席）時走 Unverifiable——沒讀到不是看到不存在"
+      ],
+      "explanation": "bus 0 盤點與 SPI 服務讀的是同一個 PCI 後端；盤點確實完成（無讀取失敗）而看不到 0:1F.5、SPI 事實卻存在，代表管線錯亂",
       "branches": [
-        { "when": [{ "kind": "keyMissing", "key": "pci.dev.1f.5" }], "then": "Contradicts", "reason": "bus 0 盤點看不到 0:1F.5（無此裝置），但 SPI 快閃事實宣稱存在——同一 PCI 後端，兩個服務說不同的話，管線狀態矛盾" },
+        { "when": [{ "kind": "keyMissing", "key": "pci.bus0.inventory" }], "then": "Unverifiable", "reason": "bus 0 盤點事實不存在（收集管線未跑）——無從交叉，不下判決" },
+        { "when": [{ "kind": "keyUnavailable", "key": "pci.bus0.inventory" }], "then": "Unverifiable", "reason": "bus 0 盤點未跑成（{pci.bus0.inventory:reason}）——無從交叉，不下判決" },
+        { "when": [{ "kind": "textContains", "key": "pci.bus0.inventory", "text": "讀取失敗" }], "then": "Unverifiable", "reason": "bus 0 盤點部分槽位讀取失敗（該槽如實缺席）——無從區分「真不在」與「沒讀到」，不下判決" },
+        { "when": [{ "kind": "keyMissing", "key": "pci.dev.1f.5" }], "then": "Contradicts", "reason": "bus 0 盤點完成且無讀取失敗，0:1F.5 確實不在盤點結果中，但 SPI 快閃事實宣稱存在——同一 PCI 後端，兩個服務說不同的話，管線狀態矛盾" },
         { "when": [{ "kind": "keyAvailable", "key": "pci.dev.1f.5" }], "then": "Consistent", "reason": "盤點看到 SPI 控制器且 SPI 事實存在——上下游一致" },
         { "when": [], "then": "Unverifiable", "reason": "盤點事實讀不到（{pci.dev.1f.5:reason}）——無從交叉，不下判決" }
       ]
@@ -264,12 +272,16 @@
       "inputs": ["uefi.secure_boot"],
       "tryLookup": ["platform.secure_boot"],
       "specRefs": ["Microsoft 文件：SecureBoot\\State 登錄鍵在 UEFI 系統上由開機管理程式建立"],
-      "falseReports": ["收集管線未跑會走 Unverifiable——那是管線未啟動不是矛盾"],
-      "explanation": "UEFI 變數可讀（特權已啟用）代表平台是 UEFI；此時登錄檔 SecureBoot\\State 鍵理應存在。變數在而登錄檔否定，代表收集管線錯亂",
+      "falseReports": [
+        "收集管線未跑會走 Unverifiable——那是管線未啟動不是矛盾",
+        "platform.secure_boot 的 Unavailable 理由是混合口徑（BackendEnvironmentService：「登錄鍵不存在（可能為 Legacy BIOS 或未提供）或無法讀取」），無法區分「登錄檔否定」與「讀取失敗」——故 keyUnavailable 一律 Unverifiable，本規則現階段沒有 Contradicts 路徑，待理由拆分後才恢復判決力"
+      ],
+      "explanation": "UEFI 變數可讀（特權已啟用）代表平台是 UEFI；此時登錄檔 SecureBoot\\State 鍵理應存在。但現行登錄檔事實的缺席理由混合「鍵不存在」與「無法讀取」，無從證明是登錄檔否定——一律退守 Unverifiable，不下判決",
       "branches": [
         { "when": [{ "kind": "keyMissing", "key": "platform.secure_boot" }], "then": "Unverifiable", "reason": "登錄檔 Secure Boot 事實不存在（收集管線未跑）——無從交叉，不下判決" },
+        { "when": [{ "kind": "keyUnavailable", "key": "platform.secure_boot" }], "then": "Unverifiable", "reason": "登錄檔 Secure Boot 事實讀不到（{platform.secure_boot:reason}）——理由混合「鍵不存在」與「讀取失敗」，無從區分，不下判決" },
         { "when": [{ "kind": "keyAvailable", "key": "platform.secure_boot" }], "then": "Consistent", "reason": "UEFI 變數與登錄檔都確認平台有 Secure Boot 狀態（值的一致性由另一條規則比對）" },
-        { "when": [], "then": "Contradicts", "reason": "UEFI SecureBoot 變數存在（平台確為 UEFI 且權限已啟用），登錄檔卻回報 Secure Boot 狀態不存在——兩個獨立的 Windows 級來源對平台型別說不同的話，管線狀態矛盾" }
+        { "when": [], "then": "Unverifiable", "reason": "登錄檔 Secure Boot 事實狀態不明——無從交叉，不下判決" }
       ]
     },
     {
@@ -347,12 +359,19 @@
       "id": "mchbar_base_without_host_bridge",
       "name": "MCHBAR 基底存在而主機橋缺席",
       "inputs": ["mchbar.base"],
-      "tryLookup": ["pci.dev.00.0"],
+      "tryLookup": ["pci.dev.00.0", "pci.bus0.inventory"],
       "specRefs": ["Intel EDS：MCHBAR 的 64-bit BAR 在主機橋（0:0.0）設定空間 +0x48"],
-      "falseReports": ["收集管線未跑會走 Unverifiable——那是管線未啟動不是矛盾"],
-      "explanation": "MCHBAR 的 64-bit BAR 在主機橋（0:0.0）設定空間 +0x48；盤點否定主機橋存在而基底宣稱存在，代表管線錯亂",
+      "falseReports": [
+        "收集管線未跑會走 Unverifiable——那是管線未啟動不是矛盾",
+        "pci.dev.00.0 鍵缺席有兩種不可區分的成因（真不在／盤點沒跑），故以 pci.bus0.inventory 為哨兵：它缺席或未跑成時一律 Unverifiable",
+        "盤點值含「讀取失敗」時走 Unverifiable——沒讀到不是看到不存在"
+      ],
+      "explanation": "MCHBAR 的 64-bit BAR 在主機橋（0:0.0）設定空間 +0x48；盤點確實完成（無讀取失敗）而看不到主機橋、基底卻宣稱存在，代表管線錯亂",
       "branches": [
-        { "when": [{ "kind": "keyMissing", "key": "pci.dev.00.0" }], "then": "Contradicts", "reason": "bus 0 盤點看不到 0:0.0（無主機橋），但 MCHBAR 基底宣稱存在——MCHBAR BAR 就掛在主機橋設定空間 0x48，管線狀態矛盾" },
+        { "when": [{ "kind": "keyMissing", "key": "pci.bus0.inventory" }], "then": "Unverifiable", "reason": "bus 0 盤點事實不存在（收集管線未跑）——無從交叉，不下判決" },
+        { "when": [{ "kind": "keyUnavailable", "key": "pci.bus0.inventory" }], "then": "Unverifiable", "reason": "bus 0 盤點未跑成（{pci.bus0.inventory:reason}）——無從交叉，不下判決" },
+        { "when": [{ "kind": "textContains", "key": "pci.bus0.inventory", "text": "讀取失敗" }], "then": "Unverifiable", "reason": "bus 0 盤點部分槽位讀取失敗（該槽如實缺席）——無從區分「真不在」與「沒讀到」，不下判決" },
+        { "when": [{ "kind": "keyMissing", "key": "pci.dev.00.0" }], "then": "Contradicts", "reason": "bus 0 盤點完成且無讀取失敗，0:0.0 確實不在盤點結果中（無主機橋），但 MCHBAR 基底宣稱存在——MCHBAR BAR 就掛在主機橋設定空間 0x48，管線狀態矛盾" },
         { "when": [{ "kind": "keyAvailable", "key": "pci.dev.00.0" }], "then": "Consistent", "reason": "主機橋存在且 MCHBAR 基底已解析——上下游一致" },
         { "when": [], "then": "Unverifiable", "reason": "主機橋事實讀不到（{pci.dev.00.0:reason}）——無從交叉，不下判決" }
       ]

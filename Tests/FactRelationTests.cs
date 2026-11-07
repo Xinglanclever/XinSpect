@@ -345,17 +345,25 @@ public sealed class FactRelationTests
             .Single(r => r.RuleId == "tjmax_without_msr_backend");
         Assert.Equal(FactRelation.Contradicts, tjmaxBad.Relation);
 
-        // MCHBAR 基底存在但盤點無主機橋 → 矛盾
+        // MCHBAR 基底存在＋盤點完成且無讀取失敗而無主機橋 → 矛盾；盤點缺席 → 退守 Unverifiable
         var bridgeBad = FactRelationService.Evaluate(FactRelationRules.All,
-            [F("mchbar.base", "0xFEDC0000")])
+            [F("mchbar.base", "0xFEDC0000"), F("pci.bus0.inventory", "bus 0：31 個裝置、33 個功能")])
             .Single(r => r.RuleId == "mchbar_base_without_host_bridge");
         Assert.Equal(FactRelation.Contradicts, bridgeBad.Relation);
         Assert.Contains("0x48", bridgeBad.Reason);
 
+        var bridgeNoInventory = FactRelationService.Evaluate(FactRelationRules.All,
+            [F("mchbar.base", "0xFEDC0000")])
+            .Single(r => r.RuleId == "mchbar_base_without_host_bridge");
+        Assert.Equal(FactRelation.Unverifiable, bridgeNoInventory.Relation);
+
         // 後端都在 → 三條一致
+        // 〔修復建置 2026-11-08〕mchbar_base_without_host_bridge 以 pci.bus0.inventory 為哨兵
+        // （「盤點沒跑」與「0:0.0 真不在」不可區分——缺席一律 Unverifiable），fixture 補上哨兵。
         var ok = FactRelationService.Evaluate(FactRelationRules.All,
         [
             F("backend.mmio", "WinRing0 實體記憶體"), F("backend.msr", "WinRing0"),
+            F("pci.bus0.inventory", "bus 0：31 個裝置、33 個功能"),
             F("pci.dev.00.0", "橋接裝置／Host Bridge ・ Intel"),
             F("mchbar.registers", "已映射可讀"), F("cpu.tjmax", "90"), F("mchbar.base", "0xFEDC0000"),
         ]);
@@ -443,17 +451,16 @@ public sealed class FactRelationTests
     }
 
     [Fact]
-    public void UEFI變數與登錄檔平台型別交叉_否定即矛盾()
+    public void UEFI變數與登錄檔平台型別交叉_登錄檔讀不到時退守三態不冒充矛盾()
     {
         var at = At;
         var bad = FactRelationService.Evaluate(FactRelationRules.All,
         [
             new HardwareFact("uefi.secure_boot", "測試", "x", "是", "", "s", FactTrustLevel.Reported, false, at),
             new HardwareFact("platform.secure_boot", "測試", "x", "", "", "s", FactTrustLevel.Reported, false, at,
-                null, FactAvailability.NotSupported, "登錄鍵不存在（可能為 Legacy BIOS 或未提供）"),
+                null, FactAvailability.NotSupported, "登錄鍵不存在（可能為 Legacy BIOS 或未提供）或無法讀取"),
         ]).Single(r => r.RuleId == "uefi.variable_vs_registry_platform");
-        Assert.Equal(FactRelation.Contradicts, bad.Relation);
-        Assert.Contains("平台型別", bad.Reason);
+        Assert.Equal(FactRelation.Unverifiable, bad.Relation);
 
         var ok = FactRelationService.Evaluate(FactRelationRules.All,
         [
@@ -513,12 +520,17 @@ public sealed class FactRelationTests
         static HardwareFact F(string key, string value, FactAvailability availability = FactAvailability.Present, string? reason = null) =>
             new(key, "測試", key, value, "", "s", FactTrustLevel.Measured, false, At, null, availability, reason);
 
-        // 方向一：SPI 事實存在但盤點無 0:1F.5 → 矛盾
+        // 方向一：SPI 事實存在＋盤點完成且無讀取失敗而無 0:1F.5 → 矛盾；盤點缺席 → 退守 Unverifiable
         var missing = FactRelationService.Evaluate(FactRelationRules.All,
-            [F("spi.hsfsts", "已鎖定（FLOCKDN=1）")])
+            [F("spi.hsfsts", "已鎖定（FLOCKDN=1）"), F("pci.bus0.inventory", "bus 0：31 個裝置、33 個功能")])
             .Single(r => r.RuleId == "pci.spi_facts_without_controller");
         Assert.Equal(FactRelation.Contradicts, missing.Relation);
         Assert.Contains("說不同的話", missing.Reason);
+
+        var noInventory = FactRelationService.Evaluate(FactRelationRules.All,
+            [F("spi.hsfsts", "已鎖定（FLOCKDN=1）")])
+            .Single(r => r.RuleId == "pci.spi_facts_without_controller");
+        Assert.Equal(FactRelation.Unverifiable, noInventory.Relation);
 
         // 方向二：盤點有裝置但 SPI 服務回「無回應」→ 矛盾
         var noResponse = FactRelationService.Evaluate(FactRelationRules.All,
@@ -531,7 +543,10 @@ public sealed class FactRelationTests
         Assert.Contains("不該有兩種答案", noResponse.Reason);
 
         // 兩邊都在 → 兩條規則一致
-        var both = new[] { F("pci.dev.1f.5", "未分類…Intel"), F("spi.hsfsts", "已鎖定（FLOCKDN=1）") };
+        // 〔修復建置 2026-11-08〕pci.spi_facts_without_controller 以 pci.bus0.inventory 為哨兵
+        //（同 mchbar 規則：盤點缺席一律 Unverifiable），fixture 補上哨兵。
+        var both = new[] { F("pci.dev.1f.5", "未分類…Intel"), F("spi.hsfsts", "已鎖定（FLOCKDN=1）"),
+                           F("pci.bus0.inventory", "bus 0：31 個裝置、33 個功能") };
         Assert.Equal(FactRelation.Consistent,
             FactRelationService.Evaluate(FactRelationRules.All, both).Single(r => r.RuleId == "pci.spi_facts_without_controller").Relation);
         Assert.Equal(FactRelation.Consistent,

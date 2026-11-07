@@ -71,15 +71,36 @@ public sealed class DiskBenchService : ObservableObject
     public void PopulateDrives()
     {
         Drives.Clear();
+        foreach (var e in ProbeDriveEntries()) Drives.Add(e);
+        if (_driveIndex >= Drives.Count) SelectedDriveIndex = 0;
+        OnPropertyChanged(nameof(CanStart));
+    }
+
+    /// <summary>
+    /// 〔修復 v3.20〕採集段（自 PopulateDrives 拆出）：GetDrives／IsReady／AvailableFreeSpace 是純 I/O，
+    /// 在睡著的 USB 碟上可達數秒——必須能在背景執行緒跑（P3-5：採集一律 Task.Run）。
+    /// 不碰任何 UI 物件，回傳顯示字串清單；回填交給 <see cref="ApplyDriveEntries"/>（UI 執行緒）。
+    /// </summary>
+    internal static List<string> ProbeDriveEntries()
+    {
+        var entries = new List<string>();
         foreach (var d in DriveInfo.GetDrives())
         {
             try
             {
                 if (d.DriveType != DriveType.Fixed || !d.IsReady) continue;
-                Drives.Add($"{d.Name.TrimEnd('\\')}（可用 {d.AvailableFreeSpace / 1073741824.0:0.0} GB）");
+                entries.Add($"{d.Name.TrimEnd('\\')}（可用 {d.AvailableFreeSpace / 1073741824.0:0.0} GB）");
             }
             catch { /* 部分磁碟查詢屬性可能拋出，略過 */ }
         }
+        return entries;
+    }
+
+    /// <summary>〔修復 v3.20〕以背景採集好的清單回填磁碟機選單——動到 ObservableCollection，必須在 UI 執行緒呼叫。</summary>
+    public void ApplyDriveEntries(List<string> entries)
+    {
+        Drives.Clear();
+        foreach (var e in entries) Drives.Add(e);
         if (_driveIndex >= Drives.Count) SelectedDriveIndex = 0;
         OnPropertyChanged(nameof(CanStart));
     }

@@ -124,6 +124,12 @@ public partial class PowerConsoleWindow : Window
             {
                 IpcSendButton.IsEnabled = true;
                 SyncIpcStatus();
+                if (t.IsFaulted)
+                {
+                    IpcResponseBox.Text = "// 送出失敗：" + t.Exception!.GetBaseException().Message
+                        + "（Bridge 可能已停止。到主介面安全頁重新開啟藍色中隊。）";
+                    return;
+                }
                 var resp = t.Result;
                 IpcResponseBox.Text = resp is { } json
                     ? json.GetRawText()
@@ -146,6 +152,12 @@ public partial class PowerConsoleWindow : Window
             .ContinueWith(t =>
             {
                 _pciScanning = false;
+                if (t.IsFaulted)
+                {
+                    PciStatus.Text = "掃描失敗：" + t.Exception!.GetBaseException().Message
+                        + "（Ring0 通道未就緒時會這樣——請以系統管理員執行或先載入驅動。）";
+                    return;
+                }
                 if (t.Result.Devices is not { } devices)
                 {
                     PciStatus.Text = "掃描失敗：" + t.Result.Error;
@@ -198,15 +210,25 @@ public partial class PowerConsoleWindow : Window
             .ContinueWith(t =>
             {
                 MsrReadButton.IsEnabled = true;
+                if (t.IsFaulted)
+                {
+                    MsrResult.Text = "MSR 0x" + index.ToString("X8") + " 讀取失敗："
+                        + t.Exception!.GetBaseException().Message + "（Ring0 通道未就緒。）";
+                    return;
+                }
                 var r = t.Result;
                 MsrResult.Text = r.Error is { } err ? $"MSR 0x{r.Index:X8}：{err}"
                     : $"MSR 0x{r.Index:X8} = 0x{r.Value:X16}\nEDX 0x{r.Edx:X8} ・ EAX 0x{r.Eax:X8}";
             }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
-    /// <summary>當場計算本機部署物的 SHA-256。檔案不存在就說不存在，不列空列。</summary>
+    /// <summary>當場計算本機部署物的 SHA-256。檔案不存在就說不存在，不列空列。
+    /// 雜湊（數十 MB 讀檔）在背景計算；UI 端只做路徑列舉與結果呈現（P3-7）。</summary>
+    private bool _hashing;
+
     private void ComputeHashes()
     {
+        if (_hashing) return;
         try
         {
             string? exe = Environment.ProcessPath;
@@ -224,28 +246,52 @@ public partial class PowerConsoleWindow : Window
                 if (File.Exists(p)) rows.Add((name, p));
             }
 
+            // Resources 是執行緒親和的：字型必須在 UI 執行緒取好帶進續體。
+            var font = (FontFamily)Resources["MonoFont"];
             HashList.Inlines.Clear();
-            foreach (var (name, path) in rows)
+            HashNote.Text = "正在計算 SHA-256……（背景執行）";
+
+            _hashing = true;
+            Task.Run(() =>
             {
-                var fi = new FileInfo(path);
-                string hash;
-                using (var sha = SHA256.Create())
-                using (var stream = File.OpenRead(path))
-                    hash = Convert.ToHexString(sha.ComputeHash(stream)).ToLowerInvariant();
-
-                var run = new System.Windows.Documents.Run(
-                    $"{name}  ·  {fi.Length:N0} bytes\n  {hash}\n\n")
+                var results = new List<(string Name, long Length, string Hash)>(rows.Count);
+                foreach (var (name, path) in rows)
                 {
-                    FontFamily = (FontFamily)Resources["MonoFont"],
-                };
-                HashList.Inlines.Add(run);
-            }
+                    var fi = new FileInfo(path);
+                    string hash;
+                    using (var sha = SHA256.Create())
+                    using (var stream = File.OpenRead(path))
+                        hash = Convert.ToHexString(sha.ComputeHash(stream)).ToLowerInvariant();
+                    results.Add((name, fi.Length, hash));
+                }
+                return results;
+            }).ContinueWith(t =>
+            {
+                _hashing = false;
+                if (t.IsFaulted)
+                {
+                    var ex = t.Exception!.GetBaseException();
+                    HashList.Text = "計算失敗：" + ex.GetType().Name + "：" + ex.Message;
+                    HashNote.Text = "";
+                    return;
+                }
+                foreach (var (name, length, hash) in t.Result)
+                {
+                    var run = new System.Windows.Documents.Run(
+                        $"{name}  ·  {length:N0} bytes\n  {hash}\n\n")
+                    {
+                        FontFamily = font,
+                    };
+                    HashList.Inlines.Add(run);
+                }
 
-            HashNote.Text = "以下雜湊是剛剛當場對本機檔案計算的 SHA-256；與 GitHub Release 的 SHA256SUMS.txt 比對即可驗證完整性"
-                + "（本控台不連網，下載清單請自行開 Release 頁）。";
+                HashNote.Text = "以下雜湊是剛剛當場對本機檔案計算的 SHA-256；與 GitHub Release 的 SHA256SUMS.txt 比對即可驗證完整性"
+                    + "（本控台不連網，下載清單請自行開 Release 頁）。";
+            }, TaskScheduler.FromCurrentSynchronizationContext());
         }
         catch (Exception ex)
         {
+            _hashing = false;
             HashList.Text = "計算失敗：" + ex.GetType().Name + "：" + ex.Message;
         }
     }

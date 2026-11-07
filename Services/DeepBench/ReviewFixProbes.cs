@@ -27,16 +27,18 @@ public static class DeepBenchViewProbe
 public static class PresentFramePacingNativeProbe
 {
     /// <summary>
-    /// Present pacing engine 用裸 vtable 呼叫 ID3D11DeviceContext：ClearRenderTargetView 是第 49 格。
-    /// 寫成 50 會呼叫到 ClearUnorderedAccessViewUint（下一個同形狀的方法），實機是 0xC0000005 直接結束行程——
-    /// 行為測試看不到這件事，只能釘住原始碼裡的格號。
+    /// Present pacing engine 用裸 vtable 呼叫 ID3D11DeviceContext：ClearRenderTargetView 是第 50 格
+    /// （d3d11.h 權威序：CopyResource=47、UpdateSubresource=48、CopyStructureCount=49、ClearRenderTargetView=50）。
+    /// 第 267 輪曾誤釘為 49——那是 CopyStructureCount；2026-11-07 更正注記回復為 50，
+    /// 並反向釘死 49 不得出現（它會以 (rtv, color) 形狀呼叫三參數的 CopyStructureCount）。
     /// </summary>
     public static bool UsesClearRenderTargetViewSlot()
     {
         string source = File.ReadAllText(Path.Combine(DeepBenchViewProbe.RepoRoot(), "Services", "DeepBench", "Interop", "D3D11PresentFramePacingEngine.cs"));
-        return source.Contains("ContextSlotClearRenderTargetView = 49", StringComparison.Ordinal)
+        return source.Contains("ContextSlotClearRenderTargetView = 50", StringComparison.Ordinal)
             && source.Contains("ContextSlotOMSetRenderTargets = 33", StringComparison.Ordinal)
             && source.Contains("VTable(context, ContextSlotClearRenderTargetView)", StringComparison.Ordinal)
+            && !source.Contains("VTable(context, 49)", StringComparison.Ordinal)
             && !source.Contains("VTable(context, 50)", StringComparison.Ordinal);
     }
 }

@@ -79,7 +79,10 @@ public class NvmeOverlappedIoTests
 
         int coreStart = source.IndexOf("private static (byte[]? Log, bool TimedOut) ReadNvmeLogCore", StringComparison.Ordinal);
         Assert.True(coreStart > 0, "找不到 ReadNvmeLogCore");
-        string core = source.Substring(coreStart, Math.Min(3000, source.Length - coreStart));
+        // 〔修復建置 2026-11-08〕視窗 3000→5500：patch-02 重寫本方法時把取消與釋放的誠實申報
+        // （CancelIoEx 後等完成事件才釋放）寫進方法內註解，CancelIoEx 本體落到第 ~3011 字元——
+        // 原視窗差 11 個字元而失守。守門對象不變（取消仍必須在 ReadNvmeLogCore 內），只放寬視窗。
+        string core = source.Substring(coreStart, Math.Min(5500, source.Length - coreStart));
         Assert.DoesNotContain("OpenDrive(index)", core);
         Assert.Contains("OpenDriveOverlapped(index)", core);
         Assert.Contains("CancelIoEx", core);

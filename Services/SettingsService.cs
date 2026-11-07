@@ -119,6 +119,28 @@ public sealed class SettingsService : ObservableObject
     /// <summary>記憶體負載警示門檻（%），10–100。</summary>
     public double MemLoadThreshold { get => _memLoadThreshold; set { if (SetProperty(ref _memLoadThreshold, Math.Clamp(value, 10, 100))) Save(); } }
 
+    // ── 核心存取後端 ─────────────────────────────────────
+    private int _kernelBackendMode;   // 0=Auto（沙箱優先）、1=SandboxOnly（僅沙箱）、2=UniversalAllowed（允許萬能鑰匙）
+    /// <summary>
+    /// 核心存取後端模式（對應 <see cref="KernelBackendMode"/>）。整數只追加、不調換既有編號
+    /// （與 <see cref="AiProvider"/> 同一紀律）：0／1／2 的意思一旦發佈就凍結。
+    /// 變更當下即通知 <see cref="KernelBackendHost.ApplyMode"/> 重建後端鏈——模式是路由政策，
+    /// 不該等到下次重啟才生效。
+    /// </summary>
+    public int KernelBackendMode
+    {
+        get => _kernelBackendMode;
+        set
+        {
+            var v = Math.Clamp(value, 0, 2);
+            if (!SetProperty(ref _kernelBackendMode, v)) return;
+            OnPropertyChanged(nameof(KernelBackendModeEnum));
+            KernelBackendHost.ApplyMode((KernelBackendMode)v);
+            Save();
+        }
+    }
+    public KernelBackendMode KernelBackendModeEnum => (KernelBackendMode)_kernelBackendMode;
+
     // ── AI 評價 ──────────────────────────────────────────
     private int _aiProvider;   // 0=Ollama（本機免費）、1=OpenAI 相容 API、2=免費共用（作者提供的中轉）
     /// <summary>AI 供應商（對應 <see cref="AiProvider"/>）。</summary>
@@ -214,6 +236,11 @@ public sealed class SettingsService : ObservableObject
     /// <summary>代理模式的逐輪工具結果是否寫進送出預覽（審計 #4：此前預覽不包含工具結果，
     /// 使用者無法事先審查代理到底送了什麼）。開啟後每輪暫停等確認。</summary>
     public bool AiAgentPreviewToolResults { get => _aiAgentPreviewToolResults; set { if (SetProperty(ref _aiAgentPreviewToolResults, value)) Save(); } }
+
+    private bool _aiAgentNoticeShown;
+    /// <summary>「診斷代理會逐輪送出工具查詢結果」的一次性告知是否已經講過（審計 P0-4）。
+    /// 只講一次：講過就不再打擾；重裝或清掉設定檔會重新講一次。</summary>
+    public bool AiAgentNoticeShown { get => _aiAgentNoticeShown; set { if (SetProperty(ref _aiAgentNoticeShown, value)) Save(); } }
 
     private int _aiRequestBudgetChars = AiRequestBudget.DefaultChars;
     /// <summary>
@@ -362,7 +389,11 @@ public sealed class SettingsService : ObservableObject
         Save();
     }
 
-    public SettingsService() => Load();
+    public SettingsService()
+    {
+        Load();
+        KernelBackendHost.ApplyMode(KernelBackendModeEnum);
+    }
 
     /// <summary>
     /// 只從設定檔撈出「是否允許多開」這一個旗標。<c>App.OnStartup</c> 必須在建立
@@ -418,6 +449,7 @@ public sealed class SettingsService : ObservableObject
         public bool AiRedactIdentity { get; set; } = true;
         public bool AiAgentRedactToolResults { get; set; } = true;
         public bool AiAgentPreviewToolResults { get; set; } = false;
+        public bool AiAgentNoticeShown { get; set; }
         public int AiRequestBudgetChars { get; set; } = AiRequestBudget.DefaultChars;
         public bool AiProactive { get; set; }
         public bool ReportMaskIdentity { get; set; }
@@ -453,6 +485,7 @@ public sealed class SettingsService : ObservableObject
         public bool IsEnglish { get; set; }
         public string? DashboardTiles { get; set; }
         public Dictionary<string, string>? ToolSlots { get; set; }
+        public int KernelBackendMode { get; set; }
     }
 
     private void Load()
@@ -513,6 +546,7 @@ public sealed class SettingsService : ObservableObject
                     _aiRedactIdentity = p.AiRedactIdentity;
                     _aiAgentRedactToolResults = p.AiAgentRedactToolResults;
                     _aiAgentPreviewToolResults = p.AiAgentPreviewToolResults;
+                    _aiAgentNoticeShown = p.AiAgentNoticeShown;
                     _aiRequestBudgetChars = Math.Clamp(p.AiRequestBudgetChars <= 0 ? AiRequestBudget.DefaultChars : p.AiRequestBudgetChars,
                                                        AiRequestBudget.MinChars, AiRequestBudget.MaxChars);
                     _aiProactive = p.AiProactive;
@@ -549,6 +583,9 @@ public sealed class SettingsService : ObservableObject
                     _allowMultiInstance = p.AllowMultiInstance;
                     _dashboardTiles = p.DashboardTiles ?? "";
                     if (p.ToolSlots is not null) _toolSlots = new(p.ToolSlots, StringComparer.Ordinal);
+                    // 模式代號夾在有效範圍：設定檔可能被手改過，直接 cast 會得到不存在的模式，
+                    // 後面每個 switch 都會走到預設分支（與 AiProvider 的 Clamp 同一防線）。
+                    _kernelBackendMode = Math.Clamp(p.KernelBackendMode, 0, 2);
                 }
             }
         }
@@ -599,6 +636,7 @@ public sealed class SettingsService : ObservableObject
                 StartWithWindows = _startWithWindows,
                 AiAgentRedactToolResults = _aiAgentRedactToolResults,
                 AiAgentPreviewToolResults = _aiAgentPreviewToolResults,
+                AiAgentNoticeShown = _aiAgentNoticeShown,
                 DefaultEra = _defaultEra,
                 LogIntervalSec = _logIntervalSec,
                 LogFolder = _logFolder,
@@ -656,6 +694,7 @@ public sealed class SettingsService : ObservableObject
                 AllowMultiInstance = _allowMultiInstance,
                 DashboardTiles = _dashboardTiles.Length > 0 ? _dashboardTiles : null,
                 ToolSlots = _toolSlots.Count > 0 ? _toolSlots : null,
+                KernelBackendMode = _kernelBackendMode,
             };
             // 原子寫入：寫一半的 settings.json 會讓下次載入整份回落預設值（見 AtomicWrite）
             AtomicWrite.AllText(FilePath, JsonSerializer.Serialize(p, new JsonSerializerOptions { WriteIndented = true }));

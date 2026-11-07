@@ -13,11 +13,13 @@ public sealed class D3D11PresentFramePacingEngine : IPresentFramePacingEngine
     private const uint DxgiFormatB8G8R8A8Unorm = 87;
     private const int HdFeatureLevel = 0x0B000;
     private const int FeatureLevel11_1 = 0x0B100;
+    private const string MeasurementClassName = "XinSpect-PresentPacing";   // 註冊／註銷共用同名，P3-9
 
-    // ID3D11DeviceContext vtable 格號：50 是 ClearUnorderedAccessViewUint，與 ClearRenderTargetView 同形狀，
-    // 寫錯會把 RTV 當 UAV 解參考，實機 0xC0000005 直接結束行程。
+    // ID3D11DeviceContext vtable 格號（Windows SDK d3d11.h 宣告序）：CopyResource=47、UpdateSubresource=48、
+    // CopyStructureCount=49、ClearRenderTargetView=50、ClearUnorderedAccessViewUint=51。
+    // 第 267 輪曾誤釘為 49（CopyStructureCount，三參數方法），2026-11-07 依權威序回復為 50（見更正注記）。
     private const int ContextSlotOMSetRenderTargets = 33;
-    private const int ContextSlotClearRenderTargetView = 49;
+    private const int ContextSlotClearRenderTargetView = 50;
     private static readonly Guid IidIdxgiDevice = new("54ec77fa-1377-44e6-8c32-88fd5f44c84c");
     private static readonly Guid IidId3D11Texture2D = new("6f15aaf2-d208-4e89-9ab4-489535d34f9c");
 
@@ -135,6 +137,11 @@ public sealed class D3D11PresentFramePacingEngine : IPresentFramePacingEngine
             SafeRelease(swapChain);
             SafeRelease(device);
             if (window != IntPtr.Zero) DestroyWindow(window);
+            // 視窗類別是行程級資源：視窗銷毀後註銷，下一次量測才能重新註冊（P3-9）。
+            // 「註冊成功但建窗失敗」的路徑從 CreateMeasurementWindow 拋出時，window 為零——
+            // 此處無條件嘗試註銷，類別不存在時只是回 false，無副作用。
+            // HINSTANCE 必須與註冊時相同：GetModuleHandleW(null)（exe 模組）每次回同一控制代碼。
+            _ = UnregisterClassW(MeasurementClassName, GetModuleHandleW(null));
         }
     }
 
@@ -240,10 +247,14 @@ public sealed class D3D11PresentFramePacingEngine : IPresentFramePacingEngine
             Style = 0,
             LpfnWndProc = DefWindowProc,
             HInstance = instance,
-            LpszClassName = "XinSpect-PresentPacing",
+            LpszClassName = MeasurementClassName,
         };
+        // 防禦（P3-9）：類別已存在（ERROR_CLASS_ALREADY_EXISTS=1410）時沿用既有註冊——
+        // 同一 wndproc、同一 HINSTANCE，語意等價。正常路徑由 finally 的 UnregisterClassW 保證
+        // 類別已清；此容錯是給「殘留情境」（上一輪量測被行程級中斷、未走 finally）的後備，
+        // 讓重跑不再以「RegisterClassW 失敗」收場。其餘錯誤照舊拋三態例外。
         ushort atom = RegisterClassW(ref windowClass);
-        if (atom == 0)
+        if (atom == 0 && Marshal.GetLastWin32Error() != 1410)
             throw new PresentFramePacingValidationException($"RegisterClassW 失敗，HRESULT=0x{Marshal.GetHRForLastWin32Error():X8}。");
 
         IntPtr window = CreateWindowExW(
@@ -356,6 +367,9 @@ public sealed class D3D11PresentFramePacingEngine : IPresentFramePacingEngine
 
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     private static extern ushort RegisterClassW(ref WNDCLASSW lpWndClass);
+
+    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern bool UnregisterClassW(string lpClassName, IntPtr hInstance);
 
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     private static extern IntPtr CreateWindowExW(

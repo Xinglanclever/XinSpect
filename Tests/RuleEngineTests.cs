@@ -130,11 +130,15 @@ public class RuleEngineTests
             F("platform.secure_boot", "開啟"), F("platform.testsigning", "關閉"));
         yield return S("platform.secureboot_vs_testsigning", FactRelation.Consistent,
             F("platform.secure_boot", "關閉"), F("platform.testsigning", "測試簽章模式開啟（x）"));
-        // uefi.secureboot_vs_registry
+        // uefi.secureboot_vs_registry（口徑：UEFI 側「是／否」、登錄檔側「開啟／關閉」，比對走 0/1）
         yield return S("uefi.secureboot_vs_registry", FactRelation.Consistent,
-            F("uefi.secure_boot", "關閉"), F("platform.secure_boot", "關閉"));
+            F("uefi.secure_boot", "是", 1), F("platform.secure_boot", "開啟", 1));
+        yield return S("uefi.secureboot_vs_registry", FactRelation.Consistent,
+            F("uefi.secure_boot", "否", 0), F("platform.secure_boot", "關閉", 0));
         yield return S("uefi.secureboot_vs_registry", FactRelation.Contradicts,
-            F("uefi.secure_boot", "開啟"), F("platform.secure_boot", "關閉"));
+            F("uefi.secure_boot", "是", 1), F("platform.secure_boot", "關閉", 0));
+        yield return S("uefi.secureboot_vs_registry", FactRelation.Unverifiable,
+            F("uefi.secure_boot", "未知值 2"), F("platform.secure_boot", "開啟", 1)); // 非布林→不冒充矛盾
         // pcieaer.scan_vs_ecam
         yield return S("pcieaer.scan_vs_ecam", FactRelation.Consistent,
             F("pcieaer.ecam", "0xE0000000"), F("pcieaer.scan", "bus 0-31：2 個裝置"));
@@ -189,12 +193,14 @@ public class RuleEngineTests
         yield return S("spi.map_vs_regions", FactRelation.Contradicts,
             F("spi.flash_map", "快閃 16 MiB"), F("spi.regions", "FREG0-5 全為空（未依描述符配置區域）"));
         // pci.spi_facts_without_controller
-        yield return S("pci.spi_facts_without_controller", FactRelation.Consistent,
-            F("pci.dev.1f.5", "SPI 控制器"), F("spi.hsfsts", "已鎖定"));
-        yield return S("pci.spi_facts_without_controller", FactRelation.Contradicts, F("spi.hsfsts", "已鎖定"));
+        yield return S("pci.spi_facts_without_controller", FactRelation.Unverifiable, F("spi.hsfsts", "已鎖定"));
+        yield return S("pci.spi_facts_without_controller", FactRelation.Contradicts,
+            F("spi.hsfsts", "已鎖定"), F("pci.bus0.inventory", "bus 0：31 個裝置、33 個功能"));
         yield return S("pci.spi_facts_without_controller", FactRelation.Unverifiable,
-            F("pci.dev.1f.5", "", availability: FactAvailability.ReadError, reason: "讀取失敗"),
-            F("spi.hsfsts", "已鎖定"));
+            F("spi.hsfsts", "已鎖定"), F("pci.bus0.inventory", "bus 0：0 個裝置、0 個功能；2 次讀取失敗（該槽位如實缺席，不猜）"));
+        yield return S("pci.spi_facts_without_controller", FactRelation.Consistent,
+            F("pci.dev.1f.5", "SPI 控制器"), F("spi.hsfsts", "已鎖定"),
+            F("pci.bus0.inventory", "bus 0：31 個裝置、33 個功能"));
         // pci.spi_controller_reported_unreachable
         yield return S("pci.spi_controller_reported_unreachable", FactRelation.Consistent,
             F("pci.dev.1f.5", "SPI 控制器"), F("spi.hsfsts", "已鎖定"));
@@ -217,9 +223,9 @@ public class RuleEngineTests
         // uefi.variable_vs_registry_platform
         yield return S("uefi.variable_vs_registry_platform", FactRelation.Consistent,
             F("uefi.secure_boot", "是"), F("platform.secure_boot", "關閉"));
-        yield return S("uefi.variable_vs_registry_platform", FactRelation.Contradicts,
+        yield return S("uefi.variable_vs_registry_platform", FactRelation.Unverifiable,
             F("uefi.secure_boot", "是"),
-            F("platform.secure_boot", "", availability: FactAvailability.NotSupported, reason: "登錄鍵不存在"));
+            F("platform.secure_boot", "", availability: FactAvailability.NotSupported, reason: "登錄鍵不存在（可能為 Legacy BIOS 或未提供）或無法讀取"));
         // spi.service_vs_spi_bar_resource
         yield return S("spi.service_vs_spi_bar_resource", FactRelation.Consistent,
             F("pci.res.1f.5", "記憶體（32-bit） 0xFED10000"), F("spi.hsfsts", "已鎖定"));
@@ -260,9 +266,12 @@ public class RuleEngineTests
             F("backend.msr", "", availability: FactAvailability.NotSupported, reason: "無後端"),
             F("cpu.tjmax", "90", 90));
         // mchbar_base_without_host_bridge
+        yield return S("mchbar_base_without_host_bridge", FactRelation.Unverifiable, F("mchbar.base", "0xFEDC0000"));
+        yield return S("mchbar_base_without_host_bridge", FactRelation.Contradicts,
+            F("mchbar.base", "0xFEDC0000"), F("pci.bus0.inventory", "bus 0：31 個裝置、33 個功能"));
         yield return S("mchbar_base_without_host_bridge", FactRelation.Consistent,
-            F("pci.dev.00.0", "Host Bridge ・ Intel"), F("mchbar.base", "0xFEDC0000"));
-        yield return S("mchbar_base_without_host_bridge", FactRelation.Contradicts, F("mchbar.base", "0xFEDC0000"));
+            F("pci.dev.00.0", "Host Bridge ・ Intel"), F("mchbar.base", "0xFEDC0000"),
+            F("pci.bus0.inventory", "bus 0：31 個裝置、33 個功能"));
     }
 
     [Theory]

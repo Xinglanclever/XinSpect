@@ -189,7 +189,17 @@ internal static class StartupSequence
         try { vm.CudaVersion = await (cuda ?? Task.Run(CudaService.DetectVersion)) ?? "****"; }
         catch { vm.CudaVersion = "****"; }
 
-        try { vm.DiskBench.PopulateDrives(); } catch { /* 磁碟清單為附加功能 */ }
+        // 〔修復 v3.20〕採集移出 UI 執行緒（P3-5 鐵律補漏）：磁碟探測（GetDrives＋可用空間，
+        // 睡著的 USB 碟可達數秒）原樣跑在 UI 執行緒上。採集段入 Task.Run；Drives 是繫結中的
+        // ObservableCollection（BenchView 的 ItemsSource，僅此一個呼叫端——RunAsync 與
+        // ReinitializeAsync 都經本方法），清空／回填經 OnUiAsync 收攏回 UI 執行緒。
+        try
+        {
+            var entries = await Task.Run(DiskBenchService.ProbeDriveEntries).ConfigureAwait(false);
+            await OnUiAsync(System.Windows.Application.Current?.Dispatcher,
+                            () => vm.DiskBench.ApplyDriveEntries(entries)).ConfigureAwait(false);
+        }
+        catch { /* 磁碟清單為附加功能 */ }
         try { vm.Monitors = await (edid ?? Task.Run(EdidService.Detect)); } catch { /* 色域為附加功能 */ }
     }
 
@@ -208,51 +218,75 @@ internal static class StartupSequence
         finally { DeepSpecsGate.Release(); }
     }
 
+    /// <summary>
+    /// 把 UI 物件的寫入收攏回 UI 執行緒（P3-5 版式的「套用端」）。
+    /// 無 Dispatcher（單元測試／headless）或已在 UI 執行緒時原地執行——
+    /// 版式沿 DeepBenchViewModel 的先例：前景／背景交界只在這一處，不在呼叫端散落 Invoke。
+    /// </summary>
+    private static async Task OnUiAsync(System.Windows.Threading.Dispatcher? ui, Action apply)
+    {
+        if (ui is null || ui.CheckAccess()) { apply(); return; }
+        await ui.InvokeAsync(apply).Task.ConfigureAwait(false);
+    }
+
     private static async Task LoadDeepSpecsCore(MainViewModel vm)
     {
+        // P3-5：本方法的同步段（WinRing0/SPI/TBS/WMI/D3D11 列舉）原樣跑在 UI 執行緒上——
+        // 呼叫鏈 MainViewModel.Initialize → RunAsync → 本方法全程落在 UI SynchronizationContext，
+        // 「await Task.Run」只把採集丟背景，採集之間的同步段仍凍結視窗。
+        // 版式鐵律：採集一律 Task.Run＋ConfigureAwait(false)；ConfigureAwait(false) 之後**不是**
+        // UI 執行緒，寫 vm 一律經 OnUiAsync 收攏。絕不「整段包一個 Task.Run」——那只是把凍結
+        // 換成 ObservableCollection 跨執行緒寫入的隨機崩潰。
+        var ui = System.Windows.Application.Current?.Dispatcher;
+
         // SPD 先自己讀。讀得到就用它，因為那是模組上的原始位元組（來源那一列會標明是哪一條匯流排）；
         // 讀不到就保留既有值，讓下面的 CPU-Z 報告照原樣填——在讀不到 SPD 的機器上完全沒有回歸。
-        var survey = await Task.Run(ReadSpdDirect);
-        if (survey is not null)
+        var survey = await Task.Run(ReadSpdDirect).ConfigureAwait(false);
+        await OnUiAsync(ui, () =>
         {
-            vm.DirectSpdReads = survey.Modules;
-            vm.DirectSpdReads5 = survey.Ddr5Modules ?? [];
-        }
-        var display4 = SpdDisplay.ToDisplay(vm.DirectSpdReads);
-        var display5 = SpdDisplay.ToDisplay5(vm.DirectSpdReads5);
-        if (display4.Count + display5.Count > 0) vm.SpdModules = display4.Concat(display5).ToList();
+            if (survey is not null)
+            {
+                vm.DirectSpdReads = survey.Modules;
+                vm.DirectSpdReads5 = survey.Ddr5Modules ?? [];
+            }
+            var display4 = SpdDisplay.ToDisplay(vm.DirectSpdReads);
+            var display5 = SpdDisplay.ToDisplay5(vm.DirectSpdReads5);
+            if (display4.Count + display5.Count > 0) vm.SpdModules = display4.Concat(display5).ToList();
+        }).ConfigureAwait(false);
 
         // 晶片組安全暫存器（BIOS_CNTL/SMRAMC）：走 WinRing0 讀 bus 0；讀不到由三態如實標示（缺 ring0 / 非 Intel）。
         // SPI 快閃與 PCIe AER 同場載入：SPIBAR 經 PCI 取得、擴充組態空間要 MMIO——驅動未載時 DriverMmioReader
         // 自動三態（不在生產機自動觸發核心碼，載入後這兩組事實自動翻成真值）。
-        LoadDriverBackedEvidence(vm);
+        // 整段（＝EvidenceCollection.ReloadInto：驅動會話＋PCI/MSR/SMBus/MMIO/ACPI）移背景；
+        // EvidenceLab 走 IReadOnlyList 屬性＋OnPropertyChanged（與下方既有背景的 LoadUsermodeFacts 同一
+        // 信任等級），ObservableCollection 的 Facts/Changes 不在此路徑改動。
+        await Task.Run(() => LoadDriverBackedEvidence(vm)).ConfigureAwait(false);
 
         // ACPI 表清單（usermode 列舉，不需驅動；BERT/HEST/SRAT/DMAR 的有無即是平台能力的指紋）——
         // 已移進 EvidenceCollection.LoadUsermodeFacts（GUI 與 CLI 同一個組合點）。
 
-        // TPM 量測開機鏈（usermode 經 TBS；無 TPM 由服務標三態）。
-        try { vm.EvidenceLab.LoadTpm(); }
+        // TPM 量測開機鏈＋log 重放比對＋虛擬化三態：TBS／WMI／服務查詢整段背景（順序維持原碼——
+        // LoadTpm 的交叉事實語意依賴這個次序，不重排）。
+        try { await Task.Run(() => vm.EvidenceLab.LoadTpm()).ConfigureAwait(false); }
         catch { /* TPM 為附加功能，讀不到由三態標示 */ }
 
-        // TPM log 重放比對（P0-01：log × PCR 實讀的第三者驗證；usermode 經 TBS，同上）。
-        try { vm.EvidenceLab.LoadTpmReplay(); }
+        try { await Task.Run(() => vm.EvidenceLab.LoadTpmReplay()).ConfigureAwait(false); }
         catch { /* 重放為附加功能，讀不到由三態標示 */ }
 
-        // NUMA 拓撲與記憶體攻擊面聲明（usermode）——已移進 EvidenceCollection.LoadUsermodeFacts：
-        // 同一個組合點，GUI 與 CLI 才會拿到同一組平台事實（先前只有 GUI 載入，CLI 的匯出少一截）。
+        // NUMA 拓撲與記憶體攻擊面聲明（usermode）——已移進 EvidenceCollection.LoadUsermodeFacts。
 
         // 虛擬化平台三態（CPUID ＋ 選用功能 ＋ 服務狀態；usermode 唯讀）。
-        try { vm.EvidenceLab.LoadVirtualization(); }
+        try { await Task.Run(() => vm.EvidenceLab.LoadVirtualization()).ConfigureAwait(false); }
         catch { /* 虛擬化狀態為附加功能，讀不到由三態標示 */ }
 
         // 系統與軟體層（WP15：Windows Update 歷史等，usermode；WUA COM 查詢可能數秒，放背景）。
-        try { await Task.Run(() => vm.EvidenceLab.LoadSoftwareFacts()); }
+        try { await Task.Run(() => vm.EvidenceLab.LoadSoftwareFacts()).ConfigureAwait(false); }
         catch { /* 軟體層為附加功能，讀不到由三態標示 */ }
 
         // 儲存可靠性計數器（WMI MSFT_StorageReliabilityCounter，usermode、免管理員；WMI 查詢可能數秒，放背景）。
         // 與 CLI 共用 EvidenceCollection.LoadUsermodeFacts 這一個入口——先前這一組事實接進了 AllFacts
         // 與報告匯出，卻沒有任何地方呼叫載入，等於在真實 App 裡永遠看不到它。
-        try { await Task.Run(() => EvidenceCollection.LoadUsermodeFacts(vm.EvidenceLab)); }
+        try { await Task.Run(() => EvidenceCollection.LoadUsermodeFacts(vm.EvidenceLab)).ConfigureAwait(false); }
         catch { /* 儲存可靠性為附加功能，讀不到由三態標示 */ }
 
         // 基線學習（Vol 2 批次 C／BL-001/004/007）：吃歷史倉的分鐘級序列算本機自己的分位數模型。
@@ -261,67 +295,87 @@ internal static class StartupSequence
         try
         {
             var to = DateTime.UtcNow;
-            await Task.Run(() => vm.EvidenceLab.LoadBaselineLearning(vm.History.Query(to.AddDays(-30), to)));
+            await Task.Run(() => vm.EvidenceLab.LoadBaselineLearning(vm.History.Query(to.AddDays(-30), to)))
+                .ConfigureAwait(false);
         }
         catch { /* 沒有歷史＝空序列，由 BaselineLearningService 如實標「還沒有資料」 */ }
 
         try
         {
-            var report = await CpuzReportService.ReadAsync();
+            // CPU-Z 子行程（spawn＋等報告，10 餘秒）：等待與解析整段背景。
+            var report = await Task.Run(() => CpuzReportService.ReadAsync()).ConfigureAwait(false);
 
-            // 時序（含次要時序），沿用既有繫結物件
-            report.Timings.RaiseAll();
-            vm.Timings = report.Timings;
+            // 報告套用（含 StatusText 與 SpdModules 的退回判斷）回 UI——原碼這些寫入本就在 UI 執行緒。
+            await OnUiAsync(ui, () =>
+            {
+                // 時序（含次要時序），沿用既有繫結物件
+                report.Timings.RaiseAll();
+                vm.Timings = report.Timings;
 
-            // 主機板廠商 CPU-Z 常只給代碼，以 WMI 值補入後再指派（讓 Brand 解析正確）
-            if (report.Board.Vendor == "—" && vm.System.BoardVendor != "—")
-                report.Board.Vendor = vm.System.BoardVendor;
-            if (report.Board.Model == "—" && vm.System.BoardModel != "—")
-                report.Board.Model = vm.System.BoardModel;
+                // 主機板廠商 CPU-Z 常只給代碼，以 WMI 值補入後再指派（讓 Brand 解析正確）
+                if (report.Board.Vendor == "—" && vm.System.BoardVendor != "—")
+                    report.Board.Vendor = vm.System.BoardVendor;
+                if (report.Board.Model == "—" && vm.System.BoardModel != "—")
+                    report.Board.Model = vm.System.BoardModel;
 
-            vm.CpuDetail = report.Cpu;
-            vm.Mainboard = report.Board;
-            vm.CpuzSpdModules = report.Spd;
-            if (vm.SpdModules.Count == 0) vm.SpdModules = report.Spd;   // 原生直讀沒填（DDR4+DDR5 都空）才退回 CPU-Z 報告
-            vm.GpuDetails = report.Gpus;
+                vm.CpuDetail = report.Cpu;
+                vm.Mainboard = report.Board;
+                vm.CpuzSpdModules = report.Spd;
+                if (vm.SpdModules.Count == 0) vm.SpdModules = report.Spd;   // 原生直讀沒填（DDR4+DDR5 都空）才退回 CPU-Z 報告
+                vm.GpuDetails = report.Gpus;
 
-            if (vm.Live is not null)
-                vm.StatusText = ReadyText(vm, report.Ran);
+                if (vm.Live is not null)
+                    vm.StatusText = ReadyText(vm, report.Ran);
+            }).ConfigureAwait(false);
         }
         catch { /* 深度規格為附加，讀取失敗維持 WMI 值 */ }
 
-        // GPU 硬解／編碼能力矩陣：D3D11 VideoDevice 列舉 + MFT 硬體編碼器（零特權、純 API 直讀）
-        try { vm.GpuCodecs = GpuCodecService.Probe().Adapters; }
-        catch { /* 編解碼偵測為附加功能 */ }
-
-        // 核心記憶體池細目（RAMMap 式）：Paged/Nonpaged/Standby 各優先級，零特權直讀
+        // GPU 硬解／編碼能力矩陣：D3D11 VideoDevice 列舉 + MFT 硬體編碼器（零特權、純 API 直讀）——
+        // D3D11 裝置建立可逾百毫秒，列舉背景、套用回 UI。
         try
         {
-            var pool = MemoryPoolService.Read();
-            vm.PoolSnapshot = pool;
-            if (pool is not null)
-                for (int p = 0; p < pool.StandbyByPriorityMB.Length; p++)
-                    vm.PoolStandbyLabels.Add(MemoryPoolService.StandbyLabel(p, pool.StandbyByPriorityMB[p]));
+            var adapters = await Task.Run(() => GpuCodecService.Probe().Adapters).ConfigureAwait(false);
+            await OnUiAsync(ui, () => vm.GpuCodecs = adapters).ConfigureAwait(false);
+        }
+        catch { /* 編解碼偵測為附加功能 */ }
+
+        // 核心記憶體池細目（RAMMap 式）：Paged/Nonpaged/Standby 各優先級，零特權直讀——查詢背景。
+        // PoolStandbyLabels 是 ObservableCollection：Add 必須在 UI 執行緒（原碼靠 context 彈回、現在靠 OnUiAsync 保證）。
+        try
+        {
+            var pool = await Task.Run(MemoryPoolService.Read).ConfigureAwait(false);
+            await OnUiAsync(ui, () =>
+            {
+                vm.PoolSnapshot = pool;
+                if (pool is not null)
+                    for (int p = 0; p < pool.StandbyByPriorityMB.Length; p++)
+                        vm.PoolStandbyLabels.Add(MemoryPoolService.StandbyLabel(p, pool.StandbyByPriorityMB[p]));
+            }).ConfigureAwait(false);
         }
         catch { /* 池細目為附加功能 */ }
 
         // CPU-Z 沒有（未安裝／不在桌面）不代表時脈就只能空著：
         // SPD 直讀結果（上面已讀）與 WMI 設定速率都能把「時脈與時序」補起來，
         // CPU-Z 從「必要依賴」降級為「更完整的選用補充」。
+        // （門檻讀取 vm.Timings.Loaded 是標量唯讀，跨執行緒讀 bool 無撕裂風險；BuildNativeTimings
+        //   原碼即已在 Task.Run 跑、讀 vm.DirectSpdReads，信任等級不變。）
         if (!vm.Timings.Loaded)
         {
-            var native = await Task.Run(() => BuildNativeTimings(vm));
-            if (native is not null)
+            var native = await Task.Run(() => BuildNativeTimings(vm)).ConfigureAwait(false);
+            await OnUiAsync(ui, () =>
             {
-                native.RaiseAll();
-                vm.Timings = native;
-            }
-            else
-            {
-                vm.Timings.Status = "未讀到時序——需要 SPD 直讀（管理員＋驅動）或 CPU-Z 報告其中之一。";
-                vm.Timings.SourceText = "無";
-                vm.Timings.RaiseAll();
-            }
+                if (native is not null)
+                {
+                    native.RaiseAll();
+                    vm.Timings = native;
+                }
+                else
+                {
+                    vm.Timings.Status = "未讀到時序——需要 SPD 直讀（管理員＋驅動）或 CPU-Z 報告其中之一。";
+                    vm.Timings.SourceText = "無";
+                    vm.Timings.RaiseAll();
+                }
+            }).ConfigureAwait(false);
         }
     }
 

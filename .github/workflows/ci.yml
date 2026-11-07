@@ -1,77 +1,78 @@
-﻿name: CI
-
-# 為什麼只跑守門測試、不跑全套：
-# 全套 7,884 條裡有一部分會讀真機硬體（SMBIOS、SPD、NVMe…），在 GitHub 的 hosted runner
-# 上可能因「不支援」或「值不一樣」而紅，讓 CI 變成雜訊。硬體全套由貢獻者在本機跑，
-# PR 範本要求貼上實測數字；CI 只釘住「不依賴硬體」的那一層：能建置、版號與文件一致、
-# 事實鍵目錄合法、U10 目錄結構正確、發版腳本沒被拆掉。
+# XinSpect CI 守門
 #
-# 這一組是本機已驗證會綠的班底；要加測試請先確認它在乾淨 checkout 上不需要真機。
+# 兩條線：
+#   ① push／PR：守門子集（快、不依賴硬體）——類名全部由 Tests/CommunityDocsTests 釘住，
+#      過濾字串打錯字會讓 CI 綠得很漂亮而一個測試都沒跑，那條守門就是防這個的。
+#   ② 每週六：full-regression 全套回歸（全套 7,897 條）在 self-hosted runner
+#      （xinpect-dev-machine，LocalSystem 服務）執行，前置僵屍進程健檢；
+#      紅燈自動開 issue（permissions issues:write 已補）。
+#
+# 測試數是現在式數字，單一來源是 Tests/TestSuiteBaseline.cs 的 ProjectTests；
+# 加測試就改那裡，本註解與 CONTRIBUTING／PR 範本同步跟隨。
+
+name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
-  workflow_dispatch:
+    branches: [main]
+  schedule:
+    - cron: "0 2 * * 6"   # 每週六 02:00 UTC＝本機上午（full-regression）
 
 permissions:
   contents: read
-
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-env:
-  DOTNET_NOLOGO: "true"
-  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  issues: write
 
 jobs:
-  build-and-guard:
-    name: 建置與文件守門
+  guard:
+    name: 守門子集（push／PR）
     runs-on: windows-latest
-    timeout-minutes: 30
-
     steps:
-      - name: 取出原始碼
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: 安裝 .NET SDK
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "10.0.x"
+          dotnet-version: 10.0.x
 
-      - name: 還原
-        run: dotnet restore Tests/XinSpect.Tests.csproj
+      - name: Build tests
+        run: dotnet build Tests\XinSpect.Tests.csproj -c Release -v minimal
 
-      - name: 建置（含 Bridge 與解碼器）
-        run: dotnet build Tests/XinSpect.Tests.csproj -c Release --no-restore
+      - name: Guard subset（不依賴硬體的守門五組＋誠實體系）
+        run: >-
+          dotnet test Tests\XinSpect.Tests.csproj -c Release --no-build
+          --filter "FullyQualifiedName~AiHardeningTests|FullyQualifiedName~ChangelogTests|FullyQualifiedName~ReadmeStatsTests|FullyQualifiedName~CommunityDocsTests|FullyQualifiedName~WarningBaselineTests|FullyQualifiedName~DeepBenchReviewFixTests|FullyQualifiedName~RuleEngineTests"
 
-      - name: 文件與目錄守門
-        # 這一組全部不依賴真機：版號六處、事實鍵目錄、U10 目錄結構、發版腳本、
-        # README 的統計表與逐域展開（後兩者是第 278／279 輪補的——README 自己宣稱
-        # 「可複算」，就必須有機器在算它）。
-        run: dotnet test Tests/XinSpect.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~ChangelogTests|FullyQualifiedName~FactKeyCatalogTests|FullyQualifiedName~Ultimate10000CatalogTests|FullyQualifiedName~ReleasePipelineTests|FullyQualifiedName~ReleaseIntegrityTests|FullyQualifiedName~ReadmeStatsTests|FullyQualifiedName~ReadmeDomainTablesTests|FullyQualifiedName~ReadmeGeneratorTests|FullyQualifiedName~CommunityDocsTests|FullyQualifiedName~PciIdDatabaseTests" --logger "trx;LogFileName=guard.trx" --results-directory TestResults
+  full-regression:
+    name: 全套回歸（每週六・self-hosted）
+    if: github.event_name == 'schedule'
+    runs-on: [self-hosted, xinpect-dev-machine]
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: 安裝 Python（產生器用）
-        uses: actions/setup-python@v5
+      - name: 前置健檢：僵屍進程清理
+        run: |
+          # 上一次量測/建置若留下卡死的子進程，先如實記錄再清理，避免環境性紅燈
+          Get-Process | Where-Object { $_.ProcessName -match 'XinSpect|XinSpectConsole|BlueSquadronBridge|XtuBridge' } | ForEach-Object {
+            Write-Host "殘留進程：$($_.ProcessName) PID=$($_.Id)"; Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Build（含 Bridge 內嵌鏈）
+        run: dotnet build XinSpect.csproj -c Release -v minimal
+
+      - name: Full regression（全套 7,897 條）
+        run: dotnet test Tests\XinSpect.Tests.csproj -c Release --no-build --nologo
+
+      - name: 紅燈自動開 issue
+        if: failure()
+        uses: actions/github-script@v7
         with:
-          python-version: "3.12"
-
-      - name: 逐域展開產生器的自我檢查
-        # 與 ReadmeGeneratorTests 重疊是刻意的：那條測試驗「工具對這棵樹說 OK」，
-        # 這一步在 CI 上把同一件事再跑一次並留下輸出（PR 上直接看得到它比對了幾把鍵）。
-        run: python Tools/gen-readme-domains.py --check
-
-      - name: 百科／手冊 HTML 與來源 .md 的對帳
-        # 這一對檔案沒有任何手寫內容：百科.html 來自 README.md、手冊.html 來自 手冊.md。
-        # 改了 .md 沒重跑產生器，GitHub 上的說法與程式裡翻閱到的說法就會不同——
-        # 這一步與 Tests/DocsHtmlTests 重疊也是刻意的（測試釘住內容，CI 留下比對輸出）。
-        run: python Tools/gen-docs-html.py --check
-
-      - name: 上傳測試結果
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: guard-test-results
-          path: TestResults/guard.trx
-          if-no-files-found: warn
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `full-regression 紅燈（${context.runId}）`,
+              labels: ['ci-red'],
+              body: `每週全套回歸失敗。Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}\n請先看失敗明細再動手，不要憑記憶改。`
+            })

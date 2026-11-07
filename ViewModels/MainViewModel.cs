@@ -487,6 +487,13 @@ public sealed class MainViewModel : ObservableObject
     {
         get
         {
+            // 〔修復 v3.20〕膠囊語意如實化（原本恆印 6/6 ACTIVE 的死代碼地雷拆除）：
+            // DefenseLines 的 Active 是初始硬編碼 true，全案沒有任何程式路徑依真實狀態改寫它；
+            // Bridge 未連線時六條防線更是整個沒在跑——拿硬編碼值數出「6/6 ACTIVE」是編造。
+            // 未連線（BridgeAvailable 是模組自己維護的連線真相）一律如實回「—（未連線）」；
+            // 連線時逐線的真實 ACTIVE 欄位也不存在（態勢評估只回寫分數），本次不加功能、不造新欄位，
+            // 故仍以 DefenseLines 現值計數——該局限在此如實聲明。
+            if (!BlueSquadron.BridgeAvailable) return "BLUESQUADRON: —（未連線）";
             int active = BlueSquadron.DefenseLines.Count(l => l.Active);
             int total = BlueSquadron.DefenseLines.Count;
             return total == 0 ? "BLUESQUADRON: —" : $"BLUESQUADRON: {active}/{total} ACTIVE";
@@ -774,5 +781,6 @@ public sealed class MainViewModel : ObservableObject
         try { Overclock.Dispose(); } catch { /* 釋放超頻引擎（重設監測 / 卸載 SDK）失敗不影響關閉 */ }
         try { GpuOc.Dispose(); } catch { /* 釋放顯示卡超頻引擎（卸載 NVML/NVAPI）失敗不影響關閉 */ }
         try { Terminal.Dispose(); } catch { /* 終止常駐 Shell 行程失敗不影響關閉 */ }
+        try { BlueSquadron?.Dispose(); } catch { /* 停止守護進程與輪詢失敗不影響關閉 */ }   // 〔修復 v3.20〕退出收尾原碼漏了這一顆
     }
 }

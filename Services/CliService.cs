@@ -641,6 +641,30 @@ public static class CliService
             return ExitError;
         }
 
+        // 〔修復 v3.20〕審計 D2：CommandBook 宣稱「compliance sarif」（位置參數）也通，
+        // 原實作只認 --format——位置參數被靜默忽略、照樣輸出 JSON，自動化會吃錯格式。
+        // 補上位置解析：第一個不屬於任何旗標／旗標值的引數，若為五種格式名則視為 format；
+        // 是別的裸字則如實報錯（不猜、不靜默）。取值旗標（--format／--out）連同其值一併跳過。
+        if (formatValue is null)
+        {
+            var valueTakingFlags = new HashSet<string>(StringComparer.Ordinal) { ComplianceFormatArg, OutArg };
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i].StartsWith('-'))
+                {
+                    if (valueTakingFlags.Contains(args[i]) && i + 1 < args.Length) i++;   // 連同旗標值跳過
+                    continue;
+                }
+                if (args[i].ToLowerInvariant() is "json" or "sarif" or "junit" or "cef" or "otel")
+                {
+                    formatValue = args[i];
+                    break;
+                }
+                stderr.WriteLine($"不支援的格式「{args[i]}」；可用：json、sarif、junit、cef、otel（或用 --format）。");
+                return ExitError;
+            }
+        }
+
         string format = (formatValue ?? "json").ToLowerInvariant();
         if (format is not ("json" or "sarif" or "junit" or "cef" or "otel"))
         {

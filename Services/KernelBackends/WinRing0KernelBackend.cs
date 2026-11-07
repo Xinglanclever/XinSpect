@@ -45,9 +45,13 @@ public sealed class WinRing0KernelBackend : IKernelBackend
     private WinRing0KernelBackend(WinRing0Bridge bridge) => _bridge = bridge;
 
     /// <summary>取得橋接會話（引用計數；第一位使用者才真正載入驅動）。失敗回 null 帶原因。</summary>
-    public static WinRing0KernelBackend? Create()
+    public static WinRing0KernelBackend? Create() => Create(out _);
+
+    /// <summary>同上，但把橋接的失敗原因帶出（宿主缺席申報用）。成功時 error 為空字串或殘留訊息，以回傳值為準。</summary>
+    public static WinRing0KernelBackend? Create(out string error)
     {
         var bridge = WinRing0Bridge.Create();
+        error = bridge.Error;
         return bridge.Available ? new WinRing0KernelBackend(bridge) : null;
     }
 

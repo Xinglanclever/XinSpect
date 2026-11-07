@@ -60,7 +60,8 @@ public static class SecurityScoreEngine
     public sealed record DriverFacts(
         int TotalDrivers,
         int UnsignedDrivers,
-        int KnownVulnerableDrivers,
+        // 〔修復 v3.20〕改 int?：WMI 列舉失敗＝未評估（null），不再與「掃過了、0 個」混淆。
+        int? KnownVulnerableDrivers,
         bool? VulnerableDriverBlocklistEnabled,
         bool? LsassProtected,
         bool? WdacActive,
@@ -541,9 +542,18 @@ public static class SecurityScoreEngine
         }
 
         // Known vulnerable (BYOVD)
-        if (f.KnownVulnerableDrivers > 0)
+        // 〔修復 v3.20〕null（WMI 列舉失敗）＝未評估：不扣分、不進分母，如實記一筆未知，
+        // 由覆蓋率呈報——先前列舉失敗回 0，會被當成「未發現已知漏洞驅動」的通過。
+        if (f.KnownVulnerableDrivers is null)
         {
-            score -= Math.Min(25, f.KnownVulnerableDrivers * 12);
+            findings.Add(new SecurityFinding(
+                "drv.byovd", "驅動與對抗", "已知漏洞驅動未評估",
+                "未評估——WMI 列舉已載入驅動失敗（許可權限不足或服務異常），分不清是乾淨還是沒掃到。",
+                SecuritySeverity.Advisory, null, vulnerableWeight, Assessed: false));
+        }
+        else if (f.KnownVulnerableDrivers > 0)
+        {
+            score -= Math.Min(25, f.KnownVulnerableDrivers.Value * 12);
             findings.Add(new SecurityFinding(
                 "drv.byovd", "驅動與對抗",
                 $"{f.KnownVulnerableDrivers} 個已知漏洞驅動",

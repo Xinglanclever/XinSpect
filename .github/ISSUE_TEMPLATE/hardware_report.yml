@@ -1,106 +1,60 @@
-name: 硬體判讀回報
-description: 某個讀值、狀態或解碼結果與規格／實機不符，或本機硬體完全讀不到。
-title: "[Hardware] "
+name: 硬體相容性回報（Hardware report）
+description: 回報特定平台上的偵測缺失、讀值異常或驅動不支援。這是「支援矩陣」的資料來源。
 labels: ["hardware"]
 body:
   - type: markdown
     attributes:
       value: |
-        這一類回報最有價值，也最容易變成「兩個來源各說各話」。請把**雙方各自說了什麼**分開寫，
-        不要先下結論。若問題涉及安全邊界（例如驅動、權限、寫入路徑），請改走
-        [私密安全公告](https://github.com/Xinglanclever/XinSpect/security/advisories/new)。
-
-  - type: dropdown
-    id: domain
-    attributes:
-      label: 能力域
-      options:
-        - 處理器（CPUID／MSR／微碼／頻率）
-        - 記憶體（SPD／時序／通道／ECC）
-        - 主機板與晶片組（Super I/O／PCIe／ACPI）
-        - 顯示卡（PCIe 鏈路／監控／NVML）
-        - 儲存（SMART／NVMe／檔案系統）
-        - 韌體與安全（UEFI／TPM／Secure Boot／VBS）
-        - 感測器（溫度／風扇／電壓）
-        - 作業系統與治理（WMI／事件記錄／更新）
-        - 其他
-    validations:
-      required: true
+        這份範本收集「哪一類硬體上哪一項讀不到／讀錯」的回報，用來校準支援矩陣與降級文案。
+        讀不到就說讀不到（如實申報），最怕的是「看起來有數字但其實是猜的」——如果你懷疑某個值是假的，請在這裡說。
 
   - type: input
     id: version
     attributes:
       label: XinSpect 版本
-      placeholder: "3.18"
-    validations:
-      required: true
-
-  - type: input
-    id: hardware
-    attributes:
-      label: 硬體型號
-      description: 只寫型號，不要寫序號、服務標籤或 UUID。
-      placeholder: "ASUS ProArt Z790／i9-14900K／2×32GB DDR5-6000"
-    validations:
-      required: true
-
-  - type: input
-    id: key
-    attributes:
-      label: 相關事實鍵
-      description: 若知道鍵名請填；不知道就填畫面上的項目名稱。
-      placeholder: "mem.spd.0.timing.tCL 或「記憶體時序」"
-
-  - type: textarea
-    id: claims
-    attributes:
-      label: 三個來源各自的說法
-      description: 硬體、韌體、作業系統（或規格書）分別說了什麼？貼原文或數值即可。
-      placeholder: |
-        XinSpect 顯示：…
-        主機板 BIOS：…
-        廠商規格／SMBIOS：…
+      description: 主介面「關於」頁的版號。
+      placeholder: "3.20"
     validations:
       required: true
 
   - type: textarea
-    id: expected-source
+    id: platform
     attributes:
-      label: 你認為正確的值與出處
-      description: 規格書章節、暫存器位址、SMBIOS 型別或 WMI 類別。若只是「看起來不對」，也請如實寫。
+      label: 平台資訊
+      description: |
+        處理器型號與世代、主機板型號與 BIOS 版本、晶片組、記憶體（有無 XMP／EXPO）、
+        顯示卡、儲存（NVMe 型號）、電源供應器。硬體偵測問題請盡量給全。
+      placeholder: "Ryzen 9 7950X / X670E主板 BIOS 1.2.0.5 / DDR5-6000 EXPO 開 / RTX 4080 / SN850X / 1000W"
     validations:
       required: true
 
   - type: dropdown
-    id: privilege
+    id: symptom
     attributes:
-      label: 當時的權限與深層存取狀態
+      label: 症狀類型
       options:
-        - 系統管理員＋深層存取已啟用（WinRing0／XsRegProbe）
-        - 系統管理員＋深層存取未啟用
-        - 未提權
-        - 不確定
+        - 某項讀值缺漏（顯示「—」或「查不到」）
+        - 讀值明顯錯誤（與已知事實矛盾）
+        - 讀值疑似假數字（像被猜出來的）
+        - 驅動／ring0 載入失敗
+        - 深度測試（DeepBench）無法跑或崩潰
+        - 感測器（風扇／溫度／電壓）異常
+        - 其他
     validations:
       required: true
 
   - type: textarea
-    id: evidence
+    id: detail
     attributes:
-      label: 六態與原始輸出（請先遮蔽）
-      description: 狀態是 Present、NotPresent、NotSupported、AccessDenied、ReadError 還是 Unknown？這一欄決定問題是「讀錯」還是「根本沒讀」。
+      label: 細節描述
+      description: 哪一頁、哪一個欄位、期望看到什麼、實際看到什麼。若有錯誤訊息請原文照貼。
+    validations:
+      required: true
 
   - type: textarea
-    id: extra
+    id: report
     attributes:
-      label: 補充
-      description: BIOS 版本、記憶體插法、是否虛擬機、是否開了 HVCI／VBS 等。
-
-  - type: checkboxes
-    id: confirm
-    attributes:
-      label: 送出前確認
-      options:
-        - label: 我沒有貼序號、UUID、MAC、帳號或完整路徑。
-          required: true
-        - label: 我理解「讀不到」與「讀到 0」是不同的事，已在回報中分開描述。
-          required: true
+      label: 匯出報告內容
+      description: 主介面「匯出報告」產生的檔案內容（去私密部分後貼上或附檔）。
+    validations:
+      required: false

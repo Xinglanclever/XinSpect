@@ -91,21 +91,34 @@ static NTSTATUS XrpQueryInfo(_Out_ XRP_DRIVER_INFO* info)
 }
 
 static NTSTATUS XrpReadMsrList(_In_ const XRP_MSR_REQUEST* req, _In_ ULONG inLen,
-                               _Out_ XRP_MSR_SLOT* slots, _In_ ULONG outBytes, _Out_ ULONG* replyBytes)
+                               _Out_writes_bytes_(outBytes) XRP_MSR_SLOT* slots,
+                               _In_ ULONG outBytes, _Out_ ULONG* replyBytes)
 {
+    /* 槽位基底＝請求頭之後：契約（XrpContract.h:53-57「Slots[Count] 緊隨其後」）與
+       managed 端（DriverMsrReader.cs:139-142 打包、:157-160 解析）都以 offset 8 為槽 0。
+       呼叫端（派遣）必須把 slots 指到 buffer + sizeof(XRP_MSR_REQUEST)。 */
     if (inLen < sizeof(XRP_MSR_REQUEST)) return STATUS_INVALID_PARAMETER;
     ULONG count = req->Count;
     if (count == 0 || count > XRP_MSR_MAX_BATCH) return STATUS_INVALID_PARAMETER;
-    if (outBytes < sizeof(XRP_MSR_REQUEST) + count * sizeof(XRP_MSR_SLOT)) return STATUS_INVALID_PARAMETER;
+
+    /* count ≤ 64 → slotsBytes ≤ 1024，加法不可能溢位 ULONG。
+       inLen 也要覆蓋整個槽位陣列：METHOD_BUFFERED 的 SystemBuffer 只有前 inLen 位元組
+       由 I/O 管理器拷入，越過 inLen 讀 Msr 欄＝讀未初始化集區記憶體。 */
+    ULONG slotsBytes = count * (ULONG)sizeof(XRP_MSR_SLOT);
+    if (inLen < sizeof(XRP_MSR_REQUEST) + slotsBytes ||
+        outBytes < sizeof(XRP_MSR_REQUEST) + slotsBytes)
+        return STATUS_INVALID_PARAMETER;
 
     for (ULONG i = 0; i < count; i++)
     {
-        slots[i].Status = STATUS_ACCESS_DENIED; /* 允許清單外：明確拒絕，不回 0 值 */
-        slots[i].Value = 0;
-        if (!XrpMsrAllowed(slots[i].Msr)) continue;
-        slots[i].Status = XrpReadMsrSafe(slots[i].Msr, &slots[i].Value);
+        XRP_MSR_SLOT* slot = &slots[i];
+        ULONG msr = slot->Msr;                   /* 先取輸入欄，再回填同槽（in/out 同塊不重排） */
+        slot->Status = STATUS_ACCESS_DENIED;     /* 允許清單外：明確拒絕，不回 0 值 */
+        slot->Value = 0;
+        if (!XrpMsrAllowed(msr)) continue;
+        slot->Status = XrpReadMsrSafe(msr, &slot->Value);
     }
-    *replyBytes = sizeof(XRP_MSR_REQUEST) + count * sizeof(XRP_MSR_SLOT);
+    *replyBytes = sizeof(XRP_MSR_REQUEST) + slotsBytes;
     return STATUS_SUCCESS;
 }
 
@@ -159,8 +172,10 @@ static NTSTATUS XrpDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP Irp)
             break;
 
         case IOCTL_XRP_READ_MSR_LIST:
+            /* 槽位基底＝請求頭（8 位元組）之後——與 XrpContract.h 及 managed 端 DriverMsrReader 對齊 */
             status = XrpReadMsrList((const XRP_MSR_REQUEST*)buffer, inLen,
-                                    (XRP_MSR_SLOT*)buffer, outLen, &replyBytes);
+                                    (XRP_MSR_SLOT*)((PUCHAR)buffer + sizeof(XRP_MSR_REQUEST)),
+                                    outLen, &replyBytes);
             break;
 
         case IOCTL_XRP_READ_MMIO:

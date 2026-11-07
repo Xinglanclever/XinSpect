@@ -265,18 +265,15 @@ public class AiNetworkPathTests
     }
 
     /// <summary>
-    /// 代理模式（模型自己要求呼叫本機唯讀工具、程式執行後再問一輪）在共用額度下也要走完。
-    /// 這是「一鍵評價之外都不開放」那條界線拿掉之後最容易壞的一條路：它會連發多次請求，
-    /// 而先前的程式碼在第一次呼叫前就把它擋掉了。
+    /// 舊版釘住「代理在共用額度下也要連發多輪」——但中轉（worker.js）只轉送 role/content、
+    /// 剝掉 tools 與 tool_calls，工具定義根本到不了模型；那條測試釘住的是客端一廂情願的行為
+    /// （FakeHandler 直接回 tool_calls，繞過了中轉）。現在客端如實禁用：共用額度下代理不生效、
+    /// 請求裡沒有工具定義、不會有任何工具被執行，預覽也照實說「不生效」。
     /// </summary>
     [Fact]
-    public async Task 共用額度也會走完代理模式的多輪工具呼叫()
+    public async Task 共用額度下代理不生效且如實標示()
     {
-        var handler = new FakeHandler(
-            () => Json("{\"choices\":[{\"message\":{\"content\":\"\",\"tool_calls\":["
-                       + "{\"id\":\"c1\",\"type\":\"function\",\"function\":"
-                       + "{\"name\":\"cpu_temp\",\"arguments\":\"{}\"}}]}}]}"),
-            Answer("目前 61 度，正常"));
+        var handler = new FakeHandler(Answer("目前 61 度，正常"));
         var ai = Make(handler, out var settings, out string folder);
         var (p, u, m) = (settings.AiProviderEnum, settings.AiBaseUrl, settings.AiModel);
         bool agent = settings.AiAgentMode;
@@ -290,11 +287,12 @@ public class AiNetworkPathTests
 
             await ai.SendAsync("現在幾度");
 
-            Assert.Equal(2, handler.Calls.Count);                 // 第一輪要工具、第二輪給答案
-            Assert.Contains("\"tools\"", handler.Calls[0]);        // 工具定義真的隨請求送出去
-            Assert.Contains("61", handler.Calls[1]);               // 工具回傳值回到第二輪的對話裡
+            Assert.Single(handler.Calls);                          // 沒有工具可呼叫，不會有多輪
+            Assert.DoesNotContain("\"tools\"", handler.Calls[0]);  // 工具定義不送（送了也會被中轉剝掉）
+            Assert.DoesNotContain(ai.Messages, x => x.IsTool);     // 沒有任何工具被執行
+            string preview = ai.BuildRequestPreview();
+            Assert.Contains("不生效", preview);                     // 預覽照實說代理這次不生效
             Assert.Equal("目前 61 度，正常", ai.Messages[^1].Text);
-            Assert.Contains(ai.Messages, x => x.IsTool);           // 畫面上看得到「查了什麼」
         }
         finally
         {

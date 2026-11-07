@@ -223,8 +223,17 @@ public sealed class SecurityPostureService : ObservableObject
             if (row.Key.Contains("IBRS") && row.Value == "是")
                 specMit = true;
         }
-        if (specMit is null && vm.CpuSecurity.Rows.Count > 0)
-            specMit = false;
+        // 〔修復 v3.20〕「沒有 IBRS 列」不再推成「緩解未啟用」：MSR 讀不到／處理器未實作／
+        // 橋接不可用時，CpuSecurityService 根本不會生出「系統啟用：IBRS」這一列（或只生出
+        // 「—（讀取失敗…）」的說明列），列缺席＝沒量到。只有這一列真的量到
+        // （IA32_SPEC_CTRL 位 0）並明說「否」，才判定未啟用；其餘維持 null（未評估）。
+        if (specMit is null)
+        {
+            foreach (var row in vm.CpuSecurity.Rows)
+            {
+                if (row.Key == "系統啟用：IBRS" && row.Value == "否") { specMit = false; break; }
+            }
+        }
 
         bool? dep = ReadDepPolicy();
         bool? aslr = ReadAslrHighEntropy();
@@ -350,7 +359,9 @@ public sealed class SecurityPostureService : ObservableObject
     ];
 
     /// <summary>已載入的核心驅動裡，有幾個檔名落在已知濫用清單上。</summary>
-    private static int CountKnownVulnerableDrivers()
+    /// <remarks>〔修復 v3.20〕WMI 列舉失敗回 null（未評估），不再回 0——0 會被評分端
+    /// 當成「未發現已知漏洞驅動」的通過，把「沒掃到」講成「掃過了、乾淨」。</remarks>
+    private static int? CountKnownVulnerableDrivers()
     {
         try
         {
@@ -369,7 +380,7 @@ public sealed class SecurityPostureService : ObservableObject
             }
             return hits.Count;
         }
-        catch { return 0; }
+        catch { return null; }   // 〔修復 v3.20〕null＝未評估，由評分端記「未評估」不計分
     }
 
     private static SecurityScoreEngine.DriverFacts CollectDriverFacts(MainViewModel vm)
@@ -756,33 +767,10 @@ public sealed class SecurityPostureService : ObservableObject
     /// <c>Win32_DeviceGuard.AvailableSecurityProperties</c> 的屬性 1 代替是錯的——
     /// 那個位元代表「hypervisor 支援（VT-x/AMD-V）」，與 DMA 重對映是兩套不同的硬體功能，
     /// 讀不到就回 null，不要用具名 IOMMU 的結論去誤導使用者。
+    /// P2-24：判斷本體已抽成 <see cref="XinSpect.Common.IommuProbe"/>（Compile Link 與
+    /// BlueSquadronBridge 共用同一份檔案）——本端不再持有第二份 DMAR/IVRS 讀法。
     /// </remarks>
-    private static bool? ReadIommuPresent()
-    {
-        try
-        {
-            int size = EnumSystemFirmwareTables(AcpiSignature, null, 0);
-            if (size <= 0) return null;
-
-            var table = new byte[size];
-            if (EnumSystemFirmwareTables(AcpiSignature, table, size) <= 0) return null;
-
-            for (int i = 0; i + 4 <= size; i += 4)
-            {
-                uint sig = BitConverter.ToUInt32(table, i);
-                if (sig == DmarSignature || sig == IvrsSignature) return true;
-            }
-            return false;
-        }
-        catch { return null; }
-    }
-
-    private const uint AcpiSignature = 0x41435049;  // 'ACPI'
-    private const uint DmarSignature = 0x52414D44;  // 'DMAR'
-    private const uint IvrsSignature = 0x53525649;  // 'IVRS'
-
-    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
-    private static extern int EnumSystemFirmwareTables(uint firmwareTableProviderSignature, byte[]? buffer, int bufferSize);
+    private static bool? ReadIommuPresent() => Common.IommuProbe.IsPresent();
 
     private static bool? ReadStaleDriverCertsClean()
     {
@@ -1152,13 +1140,26 @@ public sealed class SecurityPostureService : ObservableObject
         return null;
     }
 
+    /// <summary>
+    /// 呼叫 bcdedit 讀 BCD 設定（唯讀，/enum）。三條規則（審計 P2-30）：
+    /// ① 檔名用 <see cref="Environment.SystemDirectory"/> 絕對路徑——裸名會吃 CreateProcess
+    ///    搜尋順序（應用程式目錄 → CWD → System32），本程式以管理員執行，等於讓搜尋順序上的
+    ///    任何一個可寫目錄都能挾持一支管理員代跑的假 bcdedit.exe。
+    /// ② System32 裡找不到就回 null（＝未評估），**不退回裸名**——找不到就是找不到，
+    ///    退回搜尋等於把第 ① 條的修復整個拆掉。
+    /// ③ 唯一參數是寫死的 "/enum {current}"，無使用者輸入，維持原樣。
+    /// 同一條原則在 managed 側的版本：組件載入不用 <c>Assembly.LoadWithPartialName</c>
+    /// （過時 API，按檔名在多處解析＝DLL 挾持經典面）；本倉庫的載入一律全名或已驗證 LoadFrom。
+    /// </summary>
     private static string? RunBcdedit(string arguments)
     {
         try
         {
+            string bcdedit = System.IO.Path.Combine(Environment.SystemDirectory, "bcdedit.exe");
+            if (!System.IO.File.Exists(bcdedit)) return null;
             var psi = new ProcessStartInfo
             {
-                FileName = "bcdedit.exe",
+                FileName = bcdedit,
                 Arguments = arguments,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -1167,18 +1168,27 @@ public sealed class SecurityPostureService : ObservableObject
             using var proc = Process.Start(psi);
             if (proc is null) return null;
             string output = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit(5000);
+            // 〔修復 v3.20〕逾時不再放著不管：在 using 區塊內把 bcdedit 收掉，不留背景殭屍；
+            // 被砍掉的輸出不完整，回 null（＝未評估），不拿半截輸出做判讀。
+            if (!proc.WaitForExit(5000))
+            {
+                try { proc.Kill(); } catch { /* 已自行退出 */ }
+                return null;
+            }
             return output;
         }
         catch { return null; }
     }
 
-    private static bool IsCurrentProcessCfg()
+    // 〔修復 v3.20〕回 bool?：模組路徑拿不到或 PE 解析失敗回 null（未評估），不再回 false
+    // 冒充「CFG 未啟用」的判定——呼叫端（ReadCfg → CpuFacts.CfgEnabled → 評分 Check）
+    // 本來就把 null 當「未評估：不扣分、不進分母、記一筆未知」處理。
+    private static bool? IsCurrentProcessCfg()
     {
         try
         {
             var mainMod = Process.GetCurrentProcess().MainModule;
-            if (mainMod?.FileName is null) return false;
+            if (mainMod?.FileName is null) return null;
             using var fs = File.OpenRead(mainMod.FileName);
             using var reader = new BinaryReader(fs);
             fs.Seek(0x3C, SeekOrigin.Begin);
@@ -1187,7 +1197,7 @@ public sealed class SecurityPostureService : ObservableObject
             ushort dllChars = reader.ReadUInt16();
             return (dllChars & 0x4000) != 0;
         }
-        catch { return false; }
+        catch { return null; }   // 〔修復 v3.20〕讀不到＝未評估，不回 false 冒充「CFG 未啟用」
     }
 
     private static uint? ToUInt(object? v)

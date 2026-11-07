@@ -1130,9 +1130,12 @@ public static class D3D11Native
 
                 // ID3D11DeviceContext：PSSetSR=8、PSSetShader=9、PSSetSamplers=10、VSSetShader=11、Draw=13、
                 // Map=14、Unmap=15、IASetPrimitiveTopology=24、OMSetRenderTargets=33、RSSetViewports=44、
-                // CopyResource=47、ClearRenderTargetView=49、Flush=111（以 Windows SDK d3d11.h 逐項核對；
-                // slot 50 是 ClearUnorderedAccessViewUint——第 267 輪已實機證明並由 DeepBenchReviewFixTests 釘死，
-                // 本檔在該輪漏改，gpu.raster-texture 走 clear 路徑即 0xC0000005——審計 #14 補上）。
+                // CopyResource=47、UpdateSubresource=48、CopyStructureCount=49、ClearRenderTargetView=50、
+                // ClearUnorderedAccessViewUint=51、Flush=111（以 Windows SDK d3d11.h 宣告序逐項核對；
+                // CopyResource=47 與 UpdateSubresource=48 已由本檔 FP32／IO 路徑實機驗證，是相鄰錨點）。
+                // 【第 267 輪更正注記（2026-11-07）】該輪把 ClearRenderTargetView 由 50 改釘成 49 是假陽性回退：
+                // 49 實際是 CopyStructureCount（dstBuffer、dstAlignedByteOffset、srcUAV 三參數），以 (rtv, color)
+                // 形狀呼叫同樣會誤解參考而 0xC0000005——該輪觀察到的 clear 路徑崩潰與格號 50 無關。依權威序回復 50。
                 var psSetSrv = (delegate* unmanaged[Stdcall]<void*, uint, uint, void**, void>)GetVTableSlot(contextPtr, 8);
                 var psSetShader = (delegate* unmanaged[Stdcall]<void*, void*, void**, uint, void>)GetVTableSlot(contextPtr, 9);
                 var psSetSampler = (delegate* unmanaged[Stdcall]<void*, uint, uint, void**, void>)GetVTableSlot(contextPtr, 10);
@@ -1144,7 +1147,7 @@ public static class D3D11Native
                 var omSetRtv = (delegate* unmanaged[Stdcall]<void*, uint, void**, void*, void>)GetVTableSlot(contextPtr, 33);
                 var rsSetViewport = (delegate* unmanaged[Stdcall]<void*, uint, D3D11Viewport*, void>)GetVTableSlot(contextPtr, 44);
                 var copyResource = (delegate* unmanaged[Stdcall]<void*, void*, void*, void>)GetVTableSlot(contextPtr, 47);
-                var clearRtv = (delegate* unmanaged[Stdcall]<void*, void*, float*, void>)GetVTableSlot(contextPtr, 49);
+                var clearRtv = (delegate* unmanaged[Stdcall]<void*, void*, float*, void>)GetVTableSlot(contextPtr, 50);
                 var flush = (delegate* unmanaged[Stdcall]<void*, void>)GetVTableSlot(contextPtr, 111);
 
                 var viewport = new D3D11Viewport { TopLeftX = 0, TopLeftY = 0, Width = workload.Width, Height = workload.Height, MinDepth = 0, MaxDepth = 1 };
@@ -1323,6 +1326,7 @@ public static class D3D11Native
         IntPtr hashedBuffer = IntPtr.Zero;
         IntPtr stagingBuffer = IntPtr.Zero;
         IntPtr unorderedAccessView = IntPtr.Zero;
+        IntPtr hashedUavView = IntPtr.Zero;   // 輸出 buffer 的 UAV：finally 必釋（原碼漏此項，P3-8）
         IntPtr computeShader = IntPtr.Zero;
         IntPtr sourceSrv = IntPtr.Zero;
         try
@@ -1387,36 +1391,15 @@ public static class D3D11Native
                 if (hr != 0) ThrowDeviceFailure(hr, getRemoved(dev), "CreateUnorderedAccessView");
                 unorderedAccessView = (IntPtr)uavPtr;
 
-                // 上傳：UpdateSubresource（context slot 48）。
+                // 上傳：createBuffer 時以 SubresourceData 帶入系統記憶體副本（原碼即此形態；
+                // 舊註解寫的 UpdateSubresource 與實作不符，一併更正）。
+                // 舊碼的「偵錯：上傳後立即 readback 驗證」整段移除（P3-8）：正式 readback（下方
+                // stagingBuffer 的 map/unmap，含 try/finally）已驗證上傳與計算的正確性；除錯段在
+                // 量測窗內多灌一次未申報的全尺寸同步回讀，污染時間統計，且 map 成功後若
+                // Console.WriteLine 拋例外會跳過 unmap 即 release（debug layer 明確錯誤）。
 
-                // 偵錯：上傳後立即 readback 驗證
-                {
-                    var copyDbg = (delegate* unmanaged[Stdcall]<void*, void*, void*, void>)GetVTableSlot(contextPtr, 47);
-                    var mapDbg = (delegate* unmanaged[Stdcall]<void*, void*, uint, uint, uint, D3D11MappedSubresource*, int>)GetVTableSlot(contextPtr, 14);
-                    var unmapDbg = (delegate* unmanaged[Stdcall]<void*, void*, uint, void>)GetVTableSlot(contextPtr, 15);
-                    void* stagingDbg = null;
-                    var stagingDescDbg = new D3D11BufferDesc
-                    {
-                        ByteWidth = (uint)byteWidth, Usage = D3D11UsageStaging, BindFlags = 0,
-                        CPUAccessFlags = D3D11CpuAccessRead, MiscFlags = 0, StructureByteStride = 0,
-                    };
-                    int hrDbg = createBuffer(dev, &stagingDescDbg, null, &stagingDbg);
-                    if (hrDbg == 0 && stagingDbg is not null)
-                    {
-                        copyDbg((void*)contextPtr, stagingDbg, sourcePtr);
-                        flushEarly((void*)contextPtr);
-                        var mappedDbg = new D3D11MappedSubresource();
-                        if (mapDbg((void*)contextPtr, stagingDbg, 0, D3D11MapRead, 0, &mappedDbg) == 0 && mappedDbg.Data != IntPtr.Zero)
-                        {
-                            var check = new ReadOnlySpan<uint>((void*)mappedDbg.Data, 4);
-                            Console.WriteLine($"DBG upload readback: {check[0]:X8} {check[1]:X8} {check[2]:X8} {check[3]:X8}");
-                            unmapDbg((void*)contextPtr, stagingDbg, 0);
-                        }
-                        SafeRelease((IntPtr)stagingDbg);
-                    }
-                }
-
-                // 輸出 buffer＋UAV。
+                // 輸出 buffer＋UAV。UAV 一經建立立即收進 finally 釋放的區域——
+                // 原碼只留在區域變數 hashedUavPtr：成功路徑洩漏、失敗路徑（ThrowDeviceFailure）也洩漏。
                 void* hashedPtr = null;
                 hr = createBuffer(dev, &defaultDesc, null, &hashedPtr);
                 if (hr != 0) ThrowDeviceFailure(hr, getRemoved(dev), "CreateBuffer(Hashed)");
@@ -1424,6 +1407,7 @@ public static class D3D11Native
                 void* hashedUavPtr = null;
                 hr = createUav(dev, hashedPtr, &uavDesc, &hashedUavPtr);
                 if (hr != 0) ThrowDeviceFailure(hr, getRemoved(dev), "CreateUnorderedAccessView(Hashed)");
+                hashedUavView = (IntPtr)hashedUavPtr;
 
                 var stagingDesc = new D3D11BufferDesc
                 {
@@ -1462,7 +1446,7 @@ public static class D3D11Native
 
                 void* ctx = (void*)contextPtr;
                 var csSetSrv = (delegate* unmanaged[Stdcall]<void*, uint, uint, void**, void>)GetVTableSlot(contextPtr, 67);
-                void* hashedUav = (void*)hashedUavPtr;
+                void* hashedUav = (void*)hashedUavView;
                 void* sourceSrvForSet = (void*)sourceSrv;
                 void* shader = (void*)computeShader;
                 csSetSrv(ctx, 0, 1, &sourceSrvForSet);
@@ -1505,6 +1489,7 @@ public static class D3D11Native
             SafeRelease(computeShader);
             SafeRelease(sourceSrv);
             SafeRelease(unorderedAccessView);
+            SafeRelease(hashedUavView);   // P3-8：輸出 UAV 原碼未釋（成功與失敗路徑皆漏）
             SafeRelease(stagingBuffer);
             SafeRelease(hashedBuffer);
             SafeRelease(sourceBuffer);

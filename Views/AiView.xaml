@@ -114,7 +114,7 @@
                            Margin="165,0,0,0" HorizontalAlignment="Left" FontSize="12"
                            Text="{Binding Settings.AiTemperature, StringFormat={}{0:0.0}}"/>
                 <CheckBox Grid.Column="3" Style="{StaticResource AiCheck}" Margin="18,0,0,0" Content="診斷代理"
-                          ToolTip="允許 AI 主動呼叫本機唯讀查詢工具（溫度、事件、磁碟健康、歷史統計等）"
+                          ToolTip="允許 AI 主動呼叫本機唯讀查詢工具（溫度、事件、磁碟健康、歷史統計等）。代理會逐輪送出工具查詢結果，每一輪實際送出的內容都會記在對話列表（標「✓ 已送出」）。免費共用額度的中轉不轉送工具，這條額度上代理不生效。"
                           IsChecked="{Binding Settings.AiAgentMode, Mode=TwoWay}"/>
                 <CheckBox Grid.Column="4" Style="{StaticResource AiCheck}" Margin="14,0,0,0" Content="逐字串流"
                           ToolTip="回覆邊產生邊顯示；端點不支援時自動退回整段模式"
@@ -137,7 +137,7 @@
                             ToolTip="存成 Markdown：標頭會寫明時間、模型、供應商、這次有沒有遮蔽與遮蔽了幾處；圖片內容不會在檔案裡"
                             Click="Export_Click"/>
                     <Button Style="{StaticResource ToolButton}" Content="傳送內容" Margin="10,0,0,0"
-                            ToolTip="看看這次送出到底包含哪些內容（遮蔽與長度裁切都已經套用）——送出前你看得到全部"
+                            ToolTip="看看這次送出（第一輪）到底包含哪些內容（遮蔽與長度裁切都已經套用）。代理模式的逐輪工具結果不在此份裡，但每輪實際送出的內容會即時記在對話列表（標「✓ 已送出」）"
                             Click="Preview_Click"/>
                 </StackPanel>
                 <TextBlock Grid.Column="5" Style="{StaticResource Subtitle}" VerticalAlignment="Center"

@@ -40,7 +40,10 @@ public sealed class WmiSecurityReader
                 f.CetEnabled = running.Contains(5u);
 
                 var available = ToUIntArray(m["AvailableSecurityProperties"]);
-                f.IommuAvailable = available.Contains(1u);
+                // P2-24：屬性 1 是「hypervisor 支援（VT-x/AMD-V）」，不是 IOMMU——那是錯譯。
+                // IOMMU 有無走與主體同一份單一事實來源（ACPI DMAR/IVRS，Compile Link 共檔），
+                // 讀不到回 null＝未評估，與主體端三態口徑一致。
+                f.IommuAvailable = XinSpect.Common.IommuProbe.IsPresent();
                 f.DmaProtection = available.Contains(3u);
                 break;
             }

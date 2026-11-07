@@ -8,6 +8,7 @@ namespace XinSpect;
 /// <summary>
 /// 垃圾清理：掃描常見暫存／快取位置的占用大小，勾選後刪除。純本機、無第三方相依。
 /// 僅清理公認安全可再生的位置（各種 Temp、縮圖快取、Prefetch、錯誤報告、資源回收筒）；
+/// 檔案設年齡門檻（<see cref="MinAge"/>，預設 48 小時內一律保留），當機傾印／WER 預設不勾選；
 /// 刪除時逐檔容錯，遇使用中或無權限的檔案自動略過，不影響其他項目。
 /// </summary>
 public sealed class CleanCategory : INotifyPropertyChanged
@@ -34,6 +35,13 @@ public sealed class CleanCategory : INotifyPropertyChanged
 
 public sealed class CleanupService
 {
+    /// <summary>
+    /// 年齡門檻：只清理最後寫入早於此的檔案（預設 48 小時）。剛寫入的暫存檔可能正被
+    /// 安裝程式／下載器／WER 上傳佔用或排程讀取，刪了會弄壞正在跑的程序；舊檔才視為可棄。
+    /// 掃描與刪除共用同一門檻（同一把尺，語意一致——掃出來的「可清理」就是會被刪的）。
+    /// </summary>
+    public static readonly TimeSpan MinAge = TimeSpan.FromHours(48);
+
     public ObservableCollection<CleanCategory> Categories { get; } = new();
 
     public CleanupService() => Build();
@@ -64,9 +72,12 @@ public sealed class CleanupService
             Name = "Prefetch 預先擷取", Description = @"C:\Windows\Prefetch ・ 啟動預取資料（會自動重建）",
             Paths = new[] { Path.Combine(win, "Prefetch") }
         });
+        // 預設不勾選（P3-11）：當機傾印與 WER 佇列是事後除錯的物證，不經回收筒永久刪除
+        // 應是使用者明示的選擇；勾了才有資格清。
         Categories.Add(new CleanCategory
         {
-            Name = "應用程式錯誤報告", Description = "當機傾印與 Windows 錯誤報告（WER）",
+            Name = "應用程式錯誤報告", Selected = false,
+            Description = "當機傾印與 Windows 錯誤報告（WER）・ 預設不勾選——可能含未回報完的當機證據",
             Paths = new[]
             {
                 Path.Combine(local, "CrashDumps"),
@@ -79,36 +90,40 @@ public sealed class CleanupService
         });
     }
 
-    // 背景計算各分類占用大小。
+    // 背景計算各分類占用大小。與 Clean 用同一把尺：只計 MinAge 門檻外的檔案——
+    // 「可清理總計」就是真的會被刪掉的量（原碼掃全量、刪全量但使用中略過，數字對不上）。
     public void Scan()
     {
+        DateTime cutoff = DateTime.UtcNow - MinAge;
         foreach (var c in Categories)
         {
             c.Size = -1;
-            long total = c.IsRecycleBin ? RecycleBinSize() : c.Paths.Sum(DirSize);
+            long total = c.IsRecycleBin ? RecycleBinSize() : c.Paths.Sum(p => DirSize(p, cutoff));
             c.Size = total;
         }
     }
 
-    // 刪除勾選分類的內容；回傳 (釋放位元組, 逐項報告)。
+    // 刪除勾選分類的內容；回傳 (釋放位元組, 逐項報告)。門檻外的檔案原樣保留。
     public (long freed, string report) Clean()
     {
         long freed = 0;
         var lines = new List<string>();
+        DateTime cutoff = DateTime.UtcNow - MinAge;
         foreach (var c in Categories.Where(c => c.Selected))
         {
             long before = c.Size < 0 ? 0 : c.Size;
             if (c.IsRecycleBin) EmptyRecycleBin();
-            else foreach (var p in c.Paths) PurgeDir(p);
+            else foreach (var p in c.Paths) PurgeDir(p, cutoff);
 
-            long after = c.IsRecycleBin ? RecycleBinSize() : c.Paths.Sum(DirSize);
+            long after = c.IsRecycleBin ? RecycleBinSize() : c.Paths.Sum(p => DirSize(p, cutoff));
             long got = Math.Max(0, before - after);
             freed += got;
             c.Size = after;
             lines.Add($"・{c.Name}：釋放約 {Human(got)}");
         }
         if (lines.Count == 0) return (0, "未勾選任何項目。");
-        return (freed, $"清理完成，共釋放約 {Human(freed)}：\n" + string.Join("\n", lines));
+        return (freed, $"清理完成，共釋放約 {Human(freed)}（{MinAge.TotalHours:0} 小時內的新檔一律保留）：\n"
+            + string.Join("\n", lines));
     }
 
     private static string Human(long b) =>
@@ -116,7 +131,7 @@ public sealed class CleanupService
         : b >= 1L << 20 ? $"{b / 1024.0 / 1024:0.0} MB"
         : b >= 1L << 10 ? $"{b / 1024.0:0} KB" : $"{b} B";
 
-    private static long DirSize(string path)
+    private static long DirSize(string path, DateTime cutoff)
     {
         try
         {
@@ -127,22 +142,46 @@ public sealed class CleanupService
             var opts = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
             foreach (var f in Directory.EnumerateFiles(path, "*", opts))
             {
-                try { sum += new FileInfo(f).Length; } catch { /* 略過無權限／使用中 */ }
+                try
+                {
+                    var fi = new FileInfo(f);
+                    if (fi.LastWriteTimeUtc >= cutoff) continue;   // 門檻內：不算進「可清理」，也不會被刪
+                    sum += fi.Length;
+                }
+                catch { /* 略過無權限／使用中 */ }
             }
             return sum;
         }
         catch { return 0; }
     }
 
-    private static void PurgeDir(string path)
+    // 〔修復 v3.20〕刪除改為逐檔套用同一把年齡門檻（與 DirSize 同尺）。原本走「目錄夠舊就
+    // recursive 刪整鍋」，但 Windows 的目錄 mtime 只在直接子項增刪時才更新——一個老目錄裡
+    // 近 48 小時重寫過的檔（日誌、下載到一半的檔）會被整鍋帶走，「48 小時內的新檔一律保留」
+    // 因而不成立。現在遞迴列檔、逐檔比對 cutoff 只刪門檻外的檔；目錄本體只在清空後以
+    // non-recursive 刪除（非空會丟例外，catch 掉＝這輪留著，寧可少清不可誤刪）。
+    private static void PurgeDir(string path, DateTime cutoff)
     {
         try
         {
             if (!Directory.Exists(path)) return;
-            foreach (var f in Directory.EnumerateFiles(path))
-                try { File.Delete(f); } catch { /* 使用中／無權限：略過 */ }
-            foreach (var d in Directory.EnumerateDirectories(path))
-                try { Directory.Delete(d, recursive: true); } catch { /* 略過 */ }
+            // 與 DirSize 同一組 EnumerationOptions（單一 ACL 拒絕不再讓列舉中途拋例外），
+            // 掃出來的「可清理」與真的會被刪的才會是同一份清單。
+            var opts = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
+            foreach (var f in Directory.EnumerateFiles(path, "*", opts))
+                try
+                {
+                    var fi = new FileInfo(f);
+                    if (fi.LastWriteTimeUtc >= cutoff) continue;   // 年齡門檻：新檔不刪
+                    fi.Delete();
+                }
+                catch { /* 使用中／無權限：略過 */ }
+            // 目錄本體：由深到淺走一輪，子目錄先移除、父目錄才有機會跟著變空被移除。
+            var dirs = new List<string>(Directory.EnumerateDirectories(path, "*", opts));
+            dirs.Sort((a, b) => b.Count(c => c is '\\' or '/').CompareTo(a.Count(c => c is '\\' or '/')));
+            foreach (var d in dirs)
+                try { new DirectoryInfo(d).Delete(recursive: false); }
+                catch { /* 非空或無權限：留待下輪，不硬刪 */ }
         }
         catch { /* 略過整個目錄的錯誤 */ }
     }

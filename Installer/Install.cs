@@ -20,6 +20,9 @@ internal static class Install
         public string Name;
         public string BaseUrl;
         public bool Direct;
+        // v2 direct 條目自報的 SHA-256（小寫 hex）。它**不是**放行條件——放行一律以官方
+        // SHA256SUMS.txt 為準；這裡的值只用來偵測「鏡像清單與官方清單互相矛盾」的投毒。
+        public string Sha256;
 
         public Mirror(string key, string name, string baseUrl, bool direct)
         {
@@ -34,6 +37,15 @@ internal static class Install
     }
 
     private const string GitHubBase = "https://github.com/Xinglanclever/XinSpect/releases/latest/download/";
+
+    // 信任根（2）：官方總雜湊清單，與 key 1 同源、編譯期寫死，遠端清單不得改寫。
+    // 發佈流程（Tools/sync-mirrors.py ＋ release.ps1）須把 SHA256SUMS.txt 與資產一起上傳
+    // （sha256sum 慣例格式：<64位小寫hex>␣␣<裸檔名>）。
+    private const string ShaSumsUrl = GitHubBase + "SHA256SUMS.txt";
+
+    // 清單本體的大小上限：64KB 對幾十行鏡像綽綽有餘——超限的一律當「不是清單」丟棄，
+    // 不給「清單抓取」這條路任何被餵大檔的意義。
+    private const int MirrorListMaxBytes = 64 * 1024;
 
     // 鏡像連結的「最新版」放在版控裡，安裝器開機時順手抓一次（拿不到就用內建的）。
     // 這樣上傳完只要改這一個文字檔，不必重編 exe——也是「連結還沒生出來就先別硬編死」的解。
@@ -95,7 +107,43 @@ internal static class Install
         Mirror chosen = ChooseMirror(all, args);
         if (chosen == null) { Pause(); return 2; }
 
-        return xsc ? DeployXsc(chosen, legacy, nort) : DeployGui(chosen, full);
+        // 官方總雜湊清單：整個部署抓一次、所有檔共用。null＝一份都拿不到——
+        // 各 Deploy* 內的 RequireHash 會據此拒裝並三態告知，不在這裡提早退出
+        // （page 模式的「開瀏覽器」不需要雜湊，退出會把那條活路也關掉）。
+        HashList hashes = FetchShaSums(chosen);
+        if (hashes == null)
+            Console.WriteLine("  ⚠ 無法取得官方總雜湊清單（SHA256SUMS.txt）——直連下載將被拒絕。");
+
+        return xsc ? DeployXsc(chosen, legacy, nort, hashes) : DeployGui(chosen, full, hashes);
+    }
+
+    // 決定某檔的「必過雜湊」。規則（分層加固的核心）：
+    //  - 官方格（key 1）：SHA256SUMS 必須取得、必須含該檔、且取得來源必須是官方直連——
+    //    GitHub 直連能下載就一定直連得了 SHA256SUMS，拿不到非官方來源的清單還硬裝，
+    //    等於把「官方」兩個字交給加速節點定義。任一不過 → 例外 → 三態告知。
+    //  - 其他 direct 來源（內建加速 key 3／遠端 v2 條目）：以官方總雜湊表為唯一放行條件；
+    //    鏡像 v2 行自報的雜湊與官方表**矛盾**時，視為清單投毒，整個來源拒用。
+    private static string RequireHash(HashList hl, Mirror m, string fileName)
+    {
+        if (hl == null)
+            throw new InvalidOperationException(string.Format(
+                "無法取得官方總雜湊清單（SHA256SUMS.txt）。{0}已強制雜湊驗證，無法驗證就不安裝。三個選項：\n" +
+                "  ① 稍後重試（可能是 GitHub 暫時連不上）；\n" +
+                "  ② 手動下載後自行核對：https://github.com/Xinglanclever/XinSpect/releases\n" +
+                "  ③ 改用分享頁來源（瀏覽器下載，由你自行把關）。",
+                m.Key == "1" ? "官方格" : "此來源"));
+        if (m.Key == "1" && !hl.OfficialDirect)
+            throw new InvalidOperationException(
+                "官方來源的雜湊清單不是從官方直連取得的——拒絕在這種狀態下安裝「官方」版。請改用手動下載或稍後重試。");
+        string official;
+        if (!hl.ByName.TryGetValue(fileName, out official))
+            throw new InvalidOperationException(string.Format(
+                "總雜湊清單（來源：{0}）沒有「{1}」——此版未發佈該檔或清單過舊，拒絕安裝未知檔案。", hl.Via, fileName));
+        if (m.Sha256 != null && !m.Sha256.Equals(official, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(string.Format(
+                "鏡像清單聲明的雜湊與官方總表矛盾（鏡像 {0} vs 官方 {1}）——清單有被動過手腳的跡象，拒用此鏡像。",
+                m.Sha256, official));
+        return official;
     }
 
     // 第一層：按 A 裝主程式、按 B 裝曦覽終端機。命令列參數以 -xsc（或 --xsc）指定終端機路。
@@ -219,7 +267,7 @@ internal static class Install
 
     // xsc 部署：單檔下載 → 放進 Desktop\XinSpect\ → 詢問要不要開。
     // 終端機是自含單檔（含 .NET 10 執行階段），不需要 Bridge／驅動，一步到位。
-    private static int DeployXsc(Mirror chosen, bool legacy, bool nort)
+    private static int DeployXsc(Mirror chosen, bool legacy, bool nort, HashList hashes)
     {
         try
         {
@@ -258,7 +306,7 @@ internal static class Install
             }
 
             Console.WriteLine("  [1/2] Downloading " + remoteName + " (" + flavor + ")...");
-            DownloadFileWithFallback(chosen, remoteName, dest, 1, 2, requireProgram: true);
+            DownloadFileWithFallback(chosen, remoteName, dest, 1, 2, requireProgram: true, expectSha: RequireHash(hashes, chosen, remoteName));
 
             Console.WriteLine("  [2/2] Deployed to Desktop\\XinSpect folder.");
             Console.WriteLine();
@@ -305,7 +353,7 @@ internal static class Install
         }
     }
 
-    private static int DeployGui(Mirror chosen, bool full)
+    private static int DeployGui(Mirror chosen, bool full, HashList hashes)
     {
         try
         {
@@ -338,15 +386,15 @@ internal static class Install
 
             string guiRemote = full ? "XinSpect-full.exe" : "XinSpect.exe";
             Console.WriteLine("  [1/5] Downloading " + guiRemote + " (includes LHM + WinRing0 driver + BlueSquadron)...");
-            DownloadFileWithFallback(chosen, guiRemote, Path.Combine(dir, "XinSpect.exe"), 1, 5, requireProgram: true);
+            DownloadFileWithFallback(chosen, guiRemote, Path.Combine(dir, "XinSpect.exe"), 1, 5, requireProgram: true, expectSha: RequireHash(hashes, chosen, guiRemote));
 
             Console.WriteLine("  [2/5] Downloading BlueSquadronBridge.exe...");
-            DownloadFileWithFallback(chosen, "BlueSquadronBridge.exe", Path.Combine(dir, "BlueSquadronBridge.exe"), 2, 5, requireProgram: true);
+            DownloadFileWithFallback(chosen, "BlueSquadronBridge.exe", Path.Combine(dir, "BlueSquadronBridge.exe"), 2, 5, requireProgram: true, expectSha: RequireHash(hashes, chosen, "BlueSquadronBridge.exe"));
 
             // 深層核心存取的驅動：程式按「開啟」會自己簽章＋裝服務，但檔案必須先就位。
             // 3.17 起驅動檔不隨 Release 下發——這一步會如實說「未附」，不會假裝成功。
             Console.WriteLine("  [3/5] Deploying XsRegProbe.sys (deep kernel access driver)...");
-            string driverNote = DeployDriver(chosen, dir);
+            string driverNote = DeployDriver(chosen, dir, hashes);
 
             Console.WriteLine("  [4/5] Deployed to Desktop\\XinSpect folder.");
 
@@ -392,7 +440,7 @@ internal static class Install
     // 部署驅動：下載 XsRegProbe.sys，放進程式指定的固定路徑。
     // 不在這裡簽章、也不裝憑證——那些是程式裡「深層核心存取」開關的工作。
     // 這裡只負責「檔案到位」；遠端沒有這個檔（404）是預期內的缺席，與故障分開說。
-    private static string DeployDriver(Mirror m, string appDir)
+    private static string DeployDriver(Mirror m, string appDir, HashList hashes)
     {
         bool elevated = IsElevated();
         string driverDir;
@@ -423,7 +471,7 @@ internal static class Install
         string tmp = target + ".part";
         try
         {
-            DownloadFileWithFallback(m, "XsRegProbe.sys", tmp, 3, 5, requireProgram: false);
+            DownloadFileWithFallback(m, "XsRegProbe.sys", tmp, 3, 5, requireProgram: false, expectSha: RequireHash(hashes, m, "XsRegProbe.sys"));
             if (File.Exists(target)) File.Delete(target);
             File.Move(tmp, target);
         }
@@ -488,27 +536,122 @@ internal static class Install
     {
         foreach (string url in MirrorListUrls)
         {
-            try
-            {
-                HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
-                req.UserAgent = "XinSpectDeploy/3.17";
-                req.Timeout = 6000;
-                req.ReadWriteTimeout = 6000;
-                req.Proxy = WebRequest.GetSystemWebProxy();
-                req.Proxy.Credentials = CredentialCache.DefaultCredentials;
-                using (WebResponse resp = req.GetResponse())
-                using (Stream s = resp.GetResponseStream())
-                using (StreamReader sr = new StreamReader(s, Encoding.UTF8))
-                {
-                    return sr.ReadToEnd();
-                }
-            }
-            catch { }
+            string text = FetchText(url, MirrorListMaxBytes);
+            if (text != null) return text;
         }
         return null;
     }
 
-    // 每行：key|url|direct 或 key|url|page。只認 http/https；看不懂的行直接跳過。
+    // 有界的清單抓取：https 強制、大小上限、逾時 6 秒。半截回應與超限一律回 null——
+    // 寧可回退內建清單，也不讓「清單下載」這條路成為第二個下載面。
+    private static string FetchText(string url, int maxBytes)
+    {
+        if (!url.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) return null;
+        try
+        {
+            HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
+            req.UserAgent = "XinSpectDeploy/3.18";
+            req.Timeout = 6000;
+            req.ReadWriteTimeout = 6000;
+            req.Proxy = WebRequest.GetSystemWebProxy();
+            req.Proxy.Credentials = CredentialCache.DefaultCredentials;
+            using (WebResponse resp = req.GetResponse())
+            using (Stream s = resp.GetResponseStream())
+            {
+                MemoryStream ms = new MemoryStream();
+                byte[] buf = new byte[8192];
+                int total = 0, n;
+                while ((n = s.Read(buf, 0, buf.Length)) > 0)
+                {
+                    total += n;
+                    if (total > maxBytes) return null;   // 超限＝不是清單，當抓取失敗
+                    ms.Write(buf, 0, n);
+                }
+                return Encoding.UTF8.GetString(ms.ToArray());
+            }
+        }
+        catch { return null; }
+    }
+
+    private sealed class HashList
+    {
+        public System.Collections.Generic.Dictionary<string, string> ByName =
+            new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        public string Via = "";          // 這份清單是從哪來的（三態標示給使用者看）
+        public bool OfficialDirect;      // true＝官方直連取得（信任根）
+    }
+
+    // 抓官方總雜湊清單。優先序：GitHub 直連（信任根）→ GhProxies 前綴（信任＝節點營運者，
+    // 降級標示）→ 所選鏡像自帶的那份（信任＝鏡像營運者，最低；只用於完整性，不冒充官方）。
+    // 全數失敗回 null——呼叫端（RequireHash）據此拒裝並三態告知。
+    private static HashList FetchShaSums(Mirror chosen)
+    {
+        List<string[]> routes = new List<string[]>();
+        routes.Add(new string[] { ShaSumsUrl, "官方直連（信任根）", "official" });
+        if (chosen.BaseUrl.IndexOf("github.com", StringComparison.OrdinalIgnoreCase) < 0)
+        {
+            foreach (string p in GhProxies)
+                routes.Add(new string[] { p + ShaSumsUrl, "官方經加速節點（信任＝節點營運者）", "proxy" });
+            if (chosen.Direct && chosen.BaseUrl.Length > 0)
+                routes.Add(new string[] { chosen.Url("SHA256SUMS.txt"), "所選鏡像自帶（信任＝鏡像營運者）", "mirror" });
+        }
+        foreach (string[] r in routes)
+        {
+            string text = FetchText(r[0], MirrorListMaxBytes);
+            if (text == null) continue;
+            HashList hl = ParseShaSums(text);
+            if (hl != null) { hl.Via = r[1]; hl.OfficialDirect = (r[2] == "official"); return hl; }
+        }
+        return null;
+    }
+
+    private static HashList ParseShaSums(string text)
+    {
+        HashList hl = new HashList();
+        string[] lines = text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        foreach (string raw in lines)
+        {
+            string line = raw.Trim();
+            if (line.Length < 66 || line.Length > 300) continue;
+            string hash = line.Substring(0, 64).ToLowerInvariant();
+            if (!IsHex(hash)) continue;
+            if (line[64] != ' ' && line[64] != '*') continue;
+            string name = line.Substring(65).Trim();
+            if (name.Length == 0 || name.IndexOf('/') >= 0 || name.IndexOf('\\') >= 0) continue;  // 只認裸檔名
+            hl.ByName[name] = hash;
+        }
+        return hl.ByName.Count > 0 ? hl : null;
+    }
+
+    private static bool IsHex(string s)
+    {
+        foreach (char c in s)
+        {
+            if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) return false;
+        }
+        return s.Length > 0;
+    }
+
+    private static string Sha256File(string path)
+    {
+        using (System.Security.Cryptography.SHA256 sha = System.Security.Cryptography.SHA256.Create())
+        using (FileStream fs = File.OpenRead(path))
+        {
+            byte[] dig = sha.ComputeHash(fs);
+            StringBuilder sb = new StringBuilder(dig.Length * 2);
+            foreach (byte b in dig) sb.Append(b.ToString("x2"));
+            return sb.ToString();
+        }
+    }
+
+    // 遠端清單解析（v2）：
+    //   v2 direct 行：key|url|direct|<64位hex>|<大小>  —— direct 必附 SHA-256，缺了整行拒收
+    //   v1 page  行：key|url|page                     —— page 模式只開瀏覽器，仍收（v1 相容）
+    //   v1 direct 行：key|url|direct                  —— 無雜湊，拒收（舊檔的 direct 條目需升級，見 patch-22.md 第 4 節）
+    // 鐵律：
+    //   1. 內建 key 1/2/3 是編譯期信任根——遠端清單**不得覆寫**，撞到就忽略並印一行說明。
+    //   2. 只收 https（v1 時代連 http 都收——那是 V2 漏洞的一半）。
+    //   3. 重複 key 不收（先到先得，三條抓取線誰先回誰算）。
     private static void ApplyMirrorList(List<Mirror> mirrors, string text)
     {
         string[] lines = text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
@@ -517,20 +660,36 @@ internal static class Install
             string line = raw.Trim();
             if (line.Length == 0 || line.StartsWith("#")) continue;
             string[] parts = line.Split('|');
-            if (parts.Length < 2) continue;
+            if (parts.Length < 3) continue;
 
             string key = parts[0].Trim();
             string url = parts[1].Trim();
-            if (!url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) &&
-                !url.StartsWith("http://", StringComparison.OrdinalIgnoreCase)) continue;
+            string mode = parts[2].Trim();
+            if (!url.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) continue;
 
-            foreach (Mirror m in mirrors)
+            if (key == "1" || key == "2" || key == "3")
             {
-                if (m.Key != key) continue;
-                m.BaseUrl = url;
-                if (parts.Length >= 3)
-                    m.Direct = parts[2].Trim().Equals("direct", StringComparison.OrdinalIgnoreCase);
+                Console.WriteLine("  mirrors.txt：忽略對內建來源 " + key + " 的覆寫（信任根不可被遠端清單改寫）。");
+                continue;
             }
+            if (mirrors.Exists(delegate(Mirror m) { return m.Key == key; })) continue;
+
+            bool direct = mode.Equals("direct", StringComparison.OrdinalIgnoreCase);
+            Mirror nm = new Mirror(key, "鏡像 " + key + "（來自遠端清單）", url, direct);
+            if (direct)
+            {
+                if (parts.Length >= 4)
+                {
+                    string sha = parts[3].Trim().ToLowerInvariant();
+                    if (sha.Length == 64 && IsHex(sha)) nm.Sha256 = sha;
+                }
+                if (nm.Sha256 == null)
+                {
+                    Console.WriteLine("  mirrors.txt：第 " + key + " 格 direct 條目未附 SHA-256（v2 格式），已拒收。");
+                    continue;
+                }
+            }
+            mirrors.Add(nm);
         }
     }
 
@@ -603,7 +762,7 @@ internal static class Install
 
     // 下載備援鏈：直連 → 指定版號（latest 404 時）→ 確認直連（Drive）→ 加速節點前綴。
     // 每條線試 2 次；換線時把要換去哪裡說出來——不讓使用者對著靜默的重試發呆。
-    private static void DownloadFileWithFallback(Mirror m, string fileName, string dest, int step, int total, bool requireProgram)
+    private static void DownloadFileWithFallback(Mirror m, string fileName, string dest, int step, int total, bool requireProgram, string expectSha)
     {
         string primary = m.Direct ? m.Url(fileName) : m.BaseUrl;
         List<string> chain = new List<string>();
@@ -649,7 +808,7 @@ internal static class Install
             {
                 try
                 {
-                    DownloadFile(chain[i], fileName, dest, step, total, requireProgram);
+                    DownloadFile(chain[i], fileName, dest, step, total, requireProgram, expectSha);
                     return;
                 }
                 catch (Exception ex)
@@ -672,7 +831,7 @@ internal static class Install
         try
         {
             HttpWebRequest req = (HttpWebRequest)WebRequest.Create(GitHubBase + "XinSpect.exe");
-            req.UserAgent = "XinSpectDeploy/3.17";
+            req.UserAgent = "XinSpectDeploy/3.18";
             req.Method = "HEAD";
             req.AllowAutoRedirect = false;   // 只取第一跳的 Location，見上
             req.Timeout = 6000;
@@ -718,7 +877,7 @@ internal static class Install
     // 一次下載＝一條進度列。自己讀回包而不是用 WebClient：同步 DownloadFile 不觸發進度回呼
     // （上一版掛在這裡），而且能比對 Content-Length 與實收位元組——連線中途斷掉時
     // Stream.Read 只回 0 不丟例外，截短過的 exe 照樣有 MZ 開頭，那是更難查的假成功。
-    private static void DownloadFile(string url, string fileName, string dest, int step, int total, bool requireProgram)
+    private static void DownloadFile(string url, string fileName, string dest, int step, int total, bool requireProgram, string expectSha)
     {
         Stopwatch sw = Stopwatch.StartNew();
         ProgressBar bar = RunDownload(url, dest, step, total);
@@ -734,6 +893,20 @@ internal static class Install
             throw new InvalidDataException(string.Format(
                 "{0} 下載回來的不是 Windows 程式（{1:N0} bytes，開頭不是 MZ；內容像是：{2}）。",
                 fileName, len, head));
+        }
+
+        // 全量 SHA-256：唯一放行條件。MZ＋大小檢查降級為「快失效的診斷訊息」——
+        // 它能說清「下載到的是 HTML」，但對惡意 PE 零鑑別力，不再作為放行依據。
+        if (expectSha != null)
+        {
+            string actual = Sha256File(dest);
+            if (!actual.Equals(expectSha, StringComparison.OrdinalIgnoreCase))
+            {
+                TryDelete(dest);
+                throw new InvalidDataException(string.Format(
+                    "{0} 雜湊不符（預期 {1}，實得 {2}）——下載被改寫或傳輸損壞，已刪除，不會安裝。請改用其他來源或重試。",
+                    fileName, expectSha, actual));
+            }
         }
 
         sw.Stop();
@@ -752,7 +925,7 @@ internal static class Install
         try
         {
             HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
-            req.UserAgent = "XinSpectDeploy/3.17";
+            req.UserAgent = "XinSpectDeploy/3.18";
             req.AllowAutoRedirect = true;
             req.Timeout = 90000;
             req.ReadWriteTimeout = 90000;

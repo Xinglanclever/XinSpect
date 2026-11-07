@@ -1,3 +1,17 @@
+// ⚠ 未編譯——需作者機驗證（dotnet build 命令見 patch-25.md）
+//
+// DriverManager.cs — 完整替換檔（patch-25，P0-14 能力帳單 usermode 端）
+// 覆蓋目標：BlueSquadron/DriverManager.cs（原 243 行）
+// 配套：patch-25-Common.h（BS_DRIVER_CAPS 契約）、patch-24-Program.cs（"caps" IPC 指令）。
+//
+// 修復內容（對照原檔）：
+//   原版 TryLoad 成功＝IsLoaded=true，之後一切如常——但驅動「載入成功」不等於
+//   「四個回呼都註冊成功」。本版新增 QueryCaps()：DeviceIoControl(IOCTL_BS_GET_CAPS)
+//   取回 BS_DRIVER_CAPS（Magic＋IoctlVersion 驗證不過就拒用並回 null），把
+//   FeatureMask／六步 NTSTATUS／MSR 快照活體健康交給呼叫端（Program.cs 的 caps 指令
+//   → 主程式 DriverReadyService 狀態卡）。「部分就緒」如實顯示。
+//   其餘逐行同原檔（TryLoad／Unload／SCM 作業／P/Invoke 都不動）。
+
 using System.Runtime.InteropServices;
 using System.ServiceProcess;
 
@@ -14,9 +28,16 @@ internal sealed class DriverManager : IDisposable
     private const string DevicePath = @"\\.\BlueSquadron";
     private const string DriverFileName = "BlueSquadron.sys";
 
+    // IOCTL_BS_GET_CAPS = CTL_CODE(0x8337, 0x807, METHOD_BUFFERED, FILE_READ_DATA)
+    // = (0x8337 << 16) | (1 << 14) | (0x807 << 2) | 0
+    private const uint IOCTL_BS_GET_CAPS = 0x8337401C;
+
     private nint _device = -1;
     public bool IsLoaded { get; private set; }
     public string LastError { get; private set; } = "";
+
+    /// <summary>QueryCaps 失敗原因（回 null 時呼叫端讀這個——不讓「查不到」無聲）。</summary>
+    public string CapsError { get; private set; } = "";
 
     /// <summary>嘗試載入核心驅動。回傳是否成功。</summary>
     public bool TryLoad()
@@ -94,6 +115,81 @@ internal sealed class DriverManager : IDisposable
             LastError = ex.Message;
             return false;
         }
+    }
+
+    // ── P0-14：能力帳單 ──────────────────────────────────────────────────
+
+    /// <summary>IOCTL_BS_GET_CAPS 的原生回覆版面（對 Common.h 的 BS_DRIVER_CAPS；x64＝48 位元組，12 欄 × 4）。</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    private struct BsDriverCapsNative
+    {
+        public uint Magic;
+        public uint IoctlVersion;
+        public uint FeatureMask;
+        public int StatusLoadImage;
+        public int StatusProcess;
+        public int StatusRegistry;
+        public int StatusObProtect;
+        public int StatusMsrSnapshot;
+        public int StatusHashProvider;
+        public uint MsrBaseEntries;
+        public uint MsrDiffCount;
+        public uint ActiveCpus;
+    }
+
+    public const uint BsCapsMagic = 0x31435342U;   // BS_CAPS_MAGIC（'BSC1'）
+    public const uint BsIoctlVersion = 2;          // BS_IOCTL_VERSION
+
+    /// <summary>能力帳單（ 六步 NTSTATUS 為原始值；NT_SUCCESS ⇒ ≥ 0）。</summary>
+    public sealed record BsDriverCaps(
+        uint FeatureMask,
+        int LoadImageStatus,
+        int ProcessStatus,
+        int RegistryStatus,
+        int ObProtectStatus,
+        int MsrSnapshotStatus,
+        int HashProviderStatus,
+        uint MsrBaseEntries,
+        uint MsrDiffCount,
+        uint ActiveCpus);
+
+    /// <summary>
+    /// 查詢驅動能力帳單。驅動未載入／IOCTL 失敗／Magic 或版本驗證不過 →
+    /// 回 null 並設 CapsError（呼叫端三態標示，不猜）。
+    /// </summary>
+    public BsDriverCaps? QueryCaps()
+    {
+        if (_device is not (-1) and not 0)
+        {
+            int size = Marshal.SizeOf<BsDriverCapsNative>();
+            nint ptr = Marshal.AllocHGlobal(size);
+            try
+            {
+                if (DeviceIoControl(_device, IOCTL_BS_GET_CAPS, nint.Zero, 0,
+                                    ptr, (uint)size, out uint ret, nint.Zero)
+                    && ret == (uint)size)
+                {
+                    var n = Marshal.PtrToStructure<BsDriverCapsNative>(ptr);
+                    if (n.Magic != BsCapsMagic || n.IoctlVersion != BsIoctlVersion)
+                    {
+                        CapsError = $"能力帳單版本不符：Magic=0x{n.Magic:X8} V={n.IoctlVersion}" +
+                                    $"（本端預期 Magic=0x{BsCapsMagic:X8} V={BsIoctlVersion}）——驅動與 Bridge 版本不對應，拒用不猜。";
+                        return null;
+                    }
+                    CapsError = "";
+                    return new BsDriverCaps(
+                        n.FeatureMask, n.StatusLoadImage, n.StatusProcess, n.StatusRegistry,
+                        n.StatusObProtect, n.StatusMsrSnapshot, n.StatusHashProvider,
+                        n.MsrBaseEntries, n.MsrDiffCount, n.ActiveCpus);
+                }
+                int err = Marshal.GetLastWin32Error();
+                CapsError = $"IOCTL_BS_GET_CAPS 失敗（錯誤碼 {err}）——驅動可能是舊版（無能力帳單契約）。";
+                return null;
+            }
+            finally { Marshal.FreeHGlobal(ptr); }
+        }
+        CapsError = "驅動未載入（裝置未開啟）";
+        return null;
     }
 
     /// <summary>卸載驅動並清理服務。</summary>
@@ -218,6 +314,11 @@ internal sealed class DriverManager : IDisposable
     private static extern nint CreateFileW(
         string fileName, uint access, uint share, nint securityAttributes,
         uint creation, uint flags, nint template);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool DeviceIoControl(
+        nint device, uint ioControlCode, nint inBuffer, uint inBufferSize,
+        nint outBuffer, uint outBufferSize, out uint bytesReturned, nint overlapped);
 
     [DllImport("kernel32.dll")]
     private static extern bool CloseHandle(nint handle);

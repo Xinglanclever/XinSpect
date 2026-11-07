@@ -1,4 +1,7 @@
-﻿namespace XinSpect;
+﻿// ⚠ 未編譯——需作者機驗證（dotnet build/test 命令見 patch-25.md）
+// 完整替換檔：Nav/ChangelogCatalog.cs（patch-25，P0-14 之 4：v3.18 條目追加更正注記，
+// 唯一改動＝L63 一筆 Items；Latest 版本字串不動，ChangelogTests 不受影響）
+namespace XinSpect;
 
 /// <summary>一個版本的更新紀錄：版號、日期、一句話總結，以及逐項改動。</summary>
 public sealed class ChangeEntry
@@ -48,6 +51,23 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "3.20",
+            Date = "2026-11-08",
+            Title = "修復建置＋全庫深審：三處建置復通、P0-4 補齊、CLI／桌面／服務層 30+ 修復",
+            Items =
+            [
+                "修復建置輪：Bridge（SdkIntegrity 的 net48 wintrust interop＋十六進位等價實作）、BlueSquadronBridge 的 IommuProbe Compile Link 補回、DriverReadyService 的 Severity.Neutral 歸位——三處建置全斷復通，本體與兩座橋 Debug／Release 內嵌鏈全綠。",
+                "repair-pack 缺口補齊：patch-01 的 changelog 更正注記入檔、patch-10 的 Bridge 四點事件接線（基線完整性三態上報真通）、patch-24-preview（P0-4）整套 13 個修改點落實（✓ 已送出遮蔽標記、零彈窗三通道告知、SharedFree 如實禁用、3 條守門測試）、BS_DRIVER_CAPS「84 位元組」探針勘誤（實際 48 位元組、ActiveCpus@44）。",
+                "全庫深審（CLI／桌面／服務層三路並行）發現並修復 30+ 項。CLI：--elevate 提權實例清參進 REPL（原版永遠「未知引數」exit 1）、compliance 位置參數格式真的支援（原被靜默忽略輸出 JSON）、管線退出碼三態入帳（指令例外與 RunCli 回傳值原來全盲，失敗照樣 exit 0）、--repair-ring0 查 sc.exe 退出碼如實回報（失敗不再印成功）。",
+                "服務層：CleanupService 刪除改逐檔年齡門檻（舊目錄裡的新檔不再被整鍋帶走，掃描與刪除同一把尺）、BlueSquadron 威脅時間軸 500 筆上限＋InvariantCulture 時間解析（解析失敗標「時間待校」，不再拿「現在」冒充事件時間）、AiService 代理預覽暫停狀態如實（不再照報「完成」）、BaselineStore 金鑰缺失時 .bak 還原路徑修通、SecurityPosture WMI 失敗改「未評估」不再記成乾淨、IBRS 缺列不再誤判「緩解未啟用」。",
+                "桌面：CleanupView 清理按鈕 try/finally（清理半途失敗不再永久卡死）、磁碟清單採集移出 UI 執行緒（對齊自家 P3-5 鐵律）、關守護進程不再凍結 UI 最多 3 秒、退出收尾補 BlueSquadron.Dispose、SandboxOnly 修復指引如實（改指手動編輯設定檔——設定頁尚無該入口）。",
+                "中轉與網路：worker.js 的 CORS 白名單收進 cors() 本體（非白名單來源不再拿到 ACAO）；DnsService 的 flushdns 失敗如實回報、netsh 輸出改 950 編碼（中文環境不再亂碼）。",
+                "文檔與守門：TestSuiteBaseline 7,884→7,897（交付樹實數 7,894＋P0-4 補入 3 條）、README／百科現在式數字全部對齊實況、.github（CI 工作流程／issue 模板／PR 範本）依守門契約重建、指令書補 mascot／refresh 條目（39→42）、xsc 管線模式 spinner 不再汙染重導輸出。",
+                "驗證：dotnet test 全套 7,897 passed / 0 failed / 0 skipped（Debug）；Release 內嵌鏈建置綠。實機項（WDK 驅動編譯、testsigning、HVCI 情境）維持補丁自述的界線如實申報。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "3.18",
             Date = "2026-11-07",
             Title = "審計落實版：116 條修復＋功耗誠實閘門＋按需提權",
@@ -60,6 +80,8 @@ public static class ChangelogCatalog
                 "WMI 互堵治理：EvidenceCollection.Measure 每步專用執行緒＋60 秒步級看門狗（XINSPECT_STEP_BUDGET_MS 可調）——單一採集點卡核心不再拖死整條鏈，實測三度復發的僵屍互堵止血。",
                 "內核後端鏈入庫：IKernelBackend 介面＋KernelCapability 旗標＋KernelTrustTier 三級＋KernelBackendSelector 能力路由（Auto／SandboxOnly／UniversalAllowed 三模式、逐能力快取），PawnIO／WinRing0／XsRegProbe 以自證證據決定歸隊。",
                 "BlueSquadron 驅動 Phase 2：映像載入回呼丟工作項以 BCrypt SHA-256 比對封鎖清單→Critical 事件、登錄檔回呼以 CmCallbackGetKeyObjectIDEx（五參數）比對敏感前綴→Warning 事件；MsrSnapshot 整檔重寫（per-CPU 基線＋KeSetTargetProcessorDpc 釘核＋KeFlushQueuedDpcs 卸載安全）。",
+                "更正注記（changelog 連鎖錯誤，2026-11-07 第二輪審查 P0-12/13/14）：上一條「BlueSquadron 驅動 Phase 2」與本輪 Bridge 相關條目的宣稱超出當時代碼——(1) 驅動四個回呼註冊失敗只 DbgPrint，部分失敗被 STATUS_SUCCESS 掩蓋、能力面完全不可見；(2) Bridge 的 setPolicy「block」回 ok:true 但全程沒有任何執行路徑會阻止活動；(3) ETW 的漏洞驅動比對只有 5 條硬編碼雜湊，不是微軟建議封鎖清單全量。三項差距本輪如實化：能力以 IOCTL_BS_GET_CAPS（Magic＋IoctlVersion＋FeatureMask＋DriverEntry 六步原始 NTSTATUS＋MSR 快照活體健康）申報並進驅動就緒狀態卡（「部分就緒」如實顯示）；封鎖清單全量載入、缺檔或解析失敗退回 5 條後備並標「降級模式」進時間軸；「block」回應帶 implemented:false 與「Phase 1 僅偵測；阻擋需 Phase 2」說明，status 逐防線回 modeImplemented。已發佈歷史條目不改寫，差距留在此注記裡。",
+                "更正第 267 輪寫進永久紀錄的格號誤診：ClearRenderTargetView 的 vtable 格號是 50，不是該輪釘死的 49——49 是 CopyStructureCount（d3d11.h 權威序：CopyResource=47、UpdateSubresource=48、CopyStructureCount=49、ClearRenderTargetView=50、ClearUnorderedAccessViewUint=51），以 (rtv, color) 形狀呼叫同樣會誤解參考而 0xC0000005，該輪實機觀察到的 clear 路徑崩潰與格號 50 無關（假陽性回退）。沿用『留著原本的錯誤紀錄並標明，不改寫已發佈歷史』的慣例：2.88 的原始記載保持原樣，格號以本注記回復；DeepBenchReviewFixTests（C2b）與 ReviewFixProbes 的釘死斷言同步反向——49 不得出現、50 必須以命名常量出現。",
                 "排程全套回歸上線：GitHub Actions full-regression 每週六 self-hosted runner 執行（前置僵屍進程健檢、紅燈自動開 issue、permissions issues:write 已補），runner xinpect-dev-machine 已註冊（LocalSystem 服務）——「本機自覺」變成「有紀錄的定期驗證」。",
                 "發佈完整性回復：SHA256SUMS.txt 回到發佈矩陣（逐資產實算、檔頭寫明防傳輸損毀的界線），v3.17 Release 已補上九資產對帳。",
                 "README 換成「修正版」：116 條審查申報＋逐條修復狀態表＋規模表重算（全站 C# 檔 1,587／服務檔 673／CLI 指令 40／內核組件 4）；87 萬字百科底稿、兩份審查報告與 104 萬字總藍圖入庫 docs/，守門測試全部跟隨搬遷（文檔守門子集 427/427 綠）。",

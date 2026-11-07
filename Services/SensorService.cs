@@ -413,22 +413,32 @@ public sealed partial class SensorService : ObservableObject, IDisposable
     // 超頻模組用的數值型讀值（非格式化字串）：取不到回 null，絕不填假值。
     public double? CpuVoltage => Val(_cpuVolt);
     private bool? _powerGateResult;
-    /// <summary>審計 #32：LHM 的封裝功率在 RAPL 能量計與功耗脫鉤的平台上是垃圾值（實測 1.2W 恆定）。
-    /// 首次讀取時跑一次 RaplEnergyGate 自證；未通過就回 null（顯示「—」），不冒充瓦數。</summary>
+    /// <summary>審計 #32：LHM 的封裝功率在 RAPL 能量計與功耗脫鉤的平台上是垃圾值（實測 1.2W 恒定）。
+    /// 首讀觸發<b>背景</b>自證（EnsureStarted，射後不理——不在呼叫執行緒上跑 6 秒探測）；
+    /// 未就緒與未通過都回 null（顯示「—」），不冒充瓦數。三態：探測中（null＋狀態字
+    /// 「能量計探測中」）→ 通過（回瓦數）→ 未過（null＋狀態字說明）。
+    /// 探測完成後由下一拍 Publish 重新進本屬性緩存判決。</summary>
     public double? CpuPowerW
     {
         get
         {
             if (!_powerGateResult.HasValue)
             {
-                RaplEnergyGate.RunOnce(
+                RaplEnergyGate.EnsureStarted(
                     () => { try { using var b = WinRing0Bridge.Create(); return b.Available ? b.ReadMsrPair64(0x611) : null; } catch { return null; } },
                     () => { try { return Val(_cpuPkgTemp); } catch { return null; } });
+                if (RaplEnergyGate.IsProbing) return null;   // 探測中：本拍先缺席，UI 顯示「能量計探測中」
                 _powerGateResult = RaplEnergyGate.Verdict == RaplGateVerdict.Trusted;
             }
             return _powerGateResult.Value ? Val(_cpuPower) : null;
         }
     }
+
+    /// <summary>功耗欄的三態狀態字：探測中／未過說明／通過（空字串＝正常顯示瓦數，不佔版面）。</summary>
+    public string CpuPowerStateText =>
+        _powerGateResult is null && RaplEnergyGate.IsProbing ? "能量計探測中"
+        : _powerGateResult is false ? (RaplEnergyGate.Note ?? "功率計數器未隨負載，瓦數不可信")
+        : "";
     public double? VrmTempC => Val(_vrmTemp);
 
     public double MemLoad => Val(_memLoad) ?? 0;

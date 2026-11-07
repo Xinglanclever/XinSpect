@@ -15,6 +15,9 @@ binding = "AI"
 [vars]
 MODEL = "@cf/openai/gpt-oss-120b"
 ENABLED = "1"          # 緊急煞車：改成 "0" 再 deploy，共用額度就整條關閉
+# 來源白名單（patch-11）：會送 Origin 的網頁端來源才受限；桌面 exe／curl 不送 Origin，不受此限。
+# 若官方網站日後換自訂網域，改成逗號分隔的多個 origin 即可（不必改 worker.js）。
+ALLOWED_ORIGINS = "https://xinglanclever.github.io"
 # 想改用外部的 OpenAI 相容端點，就把下面這行取消註解，再 `wrangler secret put UPSTREAM_KEY`。
 # 一旦設了 UPSTREAM_KEY，Worker 就走外部端點，不再用 Workers AI。
 # UPSTREAM_URL = "https://api.openai.com/v1/chat/completions"

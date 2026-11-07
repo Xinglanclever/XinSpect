@@ -3,8 +3,16 @@ namespace XinSpect;
 /// <summary>
 /// Deep Bench 的可信度摘要。所有數字只來自有限樣本；NaN/Infinity 不會被改成零。
 /// </summary>
+/// <remarks>
+/// 成文門檻（百科第 5 部）：「p99 需要至少 100 個樣本才有意義」。樣本不足時
+/// <see cref="DeepBenchMeasurementSummary.P99"/> 回 NaN 並標 <see cref="DeepBenchConfidence.Insufficient"/>，
+/// <b>不照算</b>——算出一個樣本不足的 p99，比留白更糟。
+/// </remarks>
 public static class DeepBenchMeasurementStatistics
 {
+    /// <summary>p99 的樣本數下限（成文於百科第 5 部門檻表：「p99 樣本下限 ≥100｜統計前提」）。</summary>
+    public const int MinSamplesForP99 = 100;
+
     // 索引軸只是同配置重複輪的編號，不是量測條件；其餘軸值組合代表不同的量測配置。
     private static readonly string[] IndexAxisKeys = ["round", "sample"];
 
@@ -48,15 +56,26 @@ public static class DeepBenchMeasurementStatistics
         double mean = finite.Average();
         double median = Percentile(finite, 0.50);
         int outlierCount = finite.Length >= 5 ? CountIqrOutliers(finite) : 0;
-        double cv = mean == 0 ? double.PositiveInfinity : Math.Abs(mean) == 0 ? double.PositiveInfinity : StandardDeviation(finite, mean) / Math.Abs(mean) * 100.0;
+        // 〔修復 v3.20〕移除死分支：mean == 0 已涵蓋 Math.Abs(mean) == 0（含 -0.0），後者不可達。
+        double cv = mean == 0 ? double.PositiveInfinity : StandardDeviation(finite, mean) / Math.Abs(mean) * 100.0;
         var confidence = finite.Length == 1 || mean == 0 || !double.IsFinite(cv)
             ? DeepBenchConfidence.Insufficient
             : cv < 2.0 ? DeepBenchConfidence.High
             : cv < 8.0 ? DeepBenchConfidence.Medium
             : DeepBenchConfidence.Low;
 
+        // 成文門檻（P0-6）：p99 ≥100 樣本才照算；不足時 NaN＋標注 Insufficient，不虛造尾端。
+        // 樣本不足的 p99 是用 1～2 筆尾端樣本冒充「最慢 1%」——比沒有更誤導。
+        // 〔修復建置 2026-11-08 語意裁定〕「標 Insufficient」標的是 p99 這個統計量本身
+        // （P99Insufficient 旗標＋NaN＋SummaryText 標注），不是整份摘要的 Confidence——
+        // 百科 L2186 成文的是「部分百分位會被標成 Insufficient」；Confidence 的單一事實來源
+        // 是 CV 分級（ConfidenceEngine 的 managed 鏡像稽核以 tight-8 樣本期望 High 釘死）。
+        bool p99Insufficient = finite.Length < MinSamplesForP99;
+        double p99 = p99Insufficient ? double.NaN : Percentile(finite, 0.99);
+
         string summary =
-            $"樣本 {finite.Length} 筆，無效 {invalid} 筆；median {median:0.###}，mean {mean:0.###}，CV {FormatCv(cv)}，離群 {outlierCount} 筆，可信度 {confidence}。";
+            $"樣本 {finite.Length} 筆，無效 {invalid} 筆；median {median:0.###}，mean {mean:0.###}，CV {FormatCv(cv)}，離群 {outlierCount} 筆，可信度 {confidence}。"
+            + (p99Insufficient ? $" p99 樣本不足（{finite.Length} < {MinSamplesForP99}，第 5 部門檻）：標 Insufficient，不照算。" : "");
 
         return new DeepBenchMeasurementSummary(
             finite.Length,
@@ -64,12 +83,13 @@ public static class DeepBenchMeasurementStatistics
             mean,
             median,
             Percentile(finite, 0.95),
-            Percentile(finite, 0.99),
+            p99,
             finite[^1],
             double.IsFinite(cv) ? cv : 0,
             outlierCount,
             confidence,
-            summary);
+            summary,
+            p99Insufficient);
     }
 
     /// <summary>最近排名百分位：排序後取第 ceil(p*n) 筆，不內插、不虛造不存在的樣本。</summary>
@@ -110,4 +130,5 @@ public sealed record DeepBenchMeasurementSummary(
     double CvPercent,
     int OutlierCount,
     DeepBenchConfidence Confidence,
-    string SummaryText);
+    string SummaryText,
+    bool P99Insufficient = false);

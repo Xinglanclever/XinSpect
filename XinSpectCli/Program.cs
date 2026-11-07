@@ -41,7 +41,7 @@ internal static class Program
             var name = c.Name.Split(' ')[0];           // 「fact <關鍵字>」→ fact
             if (!names.Contains(name)) names.Add(name);
         }
-        foreach (var alias in new[] { "refresh", "mascot", "吉祥物", "手冊", "quit", "q", "?" })
+        foreach (var alias in new[] { "refresh", "mascot", "吉祥物", "手冊", "百科", "quit", "q", "?" })
             if (!names.Contains(alias)) names.Add(alias);
         return names.OrderBy(n => n, StringComparer.Ordinal).ToArray();
     }
@@ -58,11 +58,54 @@ internal static class Program
         try { Console.CursorVisible = true; } catch { /* 重導輸出時沒有游標可管 */ }
 
         // 明示的系統修復動作（審計 #1 的配套）：刪除死指針的 WinRing0 服務。需要管理員。
+        // 〔修復 v3.20〕審計 D4：成敗如實回報——非管理員 1、sc.exe 失敗 2、成功 0。
         if (args.Length == 1 && args[0].Equals("--repair-ring0", StringComparison.OrdinalIgnoreCase))
         {
-            RepairRing0Service();
-            return 0;
+            return RepairRing0Service();
         }
+
+        // ── 提權（ring0 對齊桌面端 DriverReadyService.RestartElevated）────────
+        // xsc --elevate [ --repair-ring0 ]：以 runas 重啟自身，提權實例完成 WinRing0 服務
+        // 健檢（唯讀）後停留為提權 REPL（或帶 --repair-ring0 時修完即退）。
+        // 三態如實回報：成功 / UAC 被取消或被拒 / 其他失敗——退出碼 0／1／2 對應。
+        // 分工：--elevate 只負責「取得權限」，健檢只讀不動手；刪死指針服務是
+        // --repair-ring0 的明示動作（審計 #1 教訓：系統寫入絕不藏在別的旗標底下）。
+        if (args.Length >= 1 && args[0].Equals("--elevate", StringComparison.OrdinalIgnoreCase))
+        {
+            string[] rest = args[1..];
+            bool repair = rest.Length == 1 && rest[0].Equals("--repair-ring0", StringComparison.OrdinalIgnoreCase);
+            if (rest.Length > 0 && !repair)
+            {
+                Console.WriteLine($"{Red}用法：xsc --elevate [--repair-ring0]{Reset}");
+                return 2;
+            }
+            if (IsElevated())
+            {
+                // 已是管理員：不重啟、不重彈 UAC（防「提權了還一直彋」的迴圈），如實告知後就地繼續。
+                Console.WriteLine($"{Dim}已是系統管理員——不需要提權，直接繼續。{Reset}");
+                if (repair) return RepairRing0Service();
+                AnnounceElevatedRing0Check();
+                // 〔修復 v3.20〕審計 D1：此處 args 仍帶 "--elevate"，下方一次性分派會把它送進
+                // CliService 報「未知引數」後 exit 1——承諾的提權 REPL 從未出現過。清空引數
+                // 讓流程落到 REPL（此時已是提權 REPL），與 Main 註解／CommandBook 的宣稱一致。
+                args = Array.Empty<string>();
+            }
+            else
+            {
+                // 〔複驗更正〕2026-11-07 紅隊複驗：原稿傳 `rest`（args[1..]）——提權實例收到的
+                // 參數**不含 "--elevate"**，Main 的分派永遠進不了 --elevate 分支：
+                // `xsc --elevate` 的提權實例會落成無參數的普通 REPL，第 1 節宣稱的
+                // 「提權實例先做一次 WinRing0 服務健檢」與 `[ring0 健檢]` 一行都不會出現
+                //（驗證路徑 1 必敗）。子行程必須帶回 "--elevate"，讓提權實例重進本分支、
+                // 走 IsElevated()==true 路徑（健檢＋進 REPL；帶 --repair-ring0 時修復退出）。
+                // 提權實例必是管理員，不會再彈 UAC、無遞迴風險。
+                string[] childArgs = repair
+                    ? new[] { "--elevate", "--repair-ring0" }
+                    : new[] { "--elevate" };
+                return RelaunchElevated(childArgs);
+            }
+        }
+
         if (args.Length > 0)
         {
             // xsc compliance --format sarif …：直接轉發既有 CLI 通路後退出
@@ -73,33 +116,46 @@ internal static class Program
         // 這條路改用 Console.ReadLine，EOF（null）正常收工；跳過歡迎框——管線輸出要乾淨。
         if (Console.IsInputRedirected)
         {
-            // 管線／批次：腳本與代理要能偵測失敗——未知指令與例外都計失敗，退出碼 1。
+            // 管線／批次：腳本與代理要能偵測失敗——未知指令、指令例外與 RunCli 非零退出碼都計
+            // 失敗，退出碼 1；整條管線崩到無法繼續才是 2。〔修復 v3.20〕審計 D3：原本 Execute
+            // 永遠回 true、RunCli 回傳值被丟棄，失敗計數是空的，最常見的兩種失敗都 exit 0。
             int failures = 0;
-            while (true)
+            try
             {
-                try
+                while (true)
                 {
-                    string? piped = Console.ReadLine();
-                    if (piped is null) break;              // EOF
-                    piped = piped.Trim();
-                    if (piped.Length == 0) continue;
-                    var first = piped.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    if (first.Length == 0) continue;
-                    var head = first[0].ToLowerInvariant();
-                    if (!Commands.Contains(head) && head != "help" && head != "?" && head != "exit"
-                        && head != "quit" && head != "q")
+                    try
                     {
-                        Console.WriteLine($"{Red}未知指令：{head}{Reset}（help 看清單）");
-                        failures++;
-                        continue;
+                        string? piped = Console.ReadLine();
+                        if (piped is null) break;              // EOF
+                        piped = piped.Trim();
+                        if (piped.Length == 0) continue;
+                        var first = piped.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        if (first.Length == 0) continue;
+                        var head = first[0].ToLowerInvariant();
+                        if (!Commands.Contains(head) && head != "help" && head != "?" && head != "exit"
+                            && head != "quit" && head != "q")
+                        {
+                            Console.WriteLine($"{Red}未知指令：{head}{Reset}（help 看清單）");
+                            failures++;
+                            continue;
+                        }
+                        int r = Execute(piped);
+                        if (r == -1) break;                    // exit／quit：如實收工
+                        if (r != 0) failures++;
                     }
-                    if (!Execute(piped)) break;
+                    catch (Exception ex)
+                    {
+                        failures++;
+                        Console.WriteLine($"{Red}內部錯誤（已攔下，繼續讀下一行）：{ex.GetType().Name} {ex.Message}{Reset}");
+                    }
                 }
-                catch (Exception ex)
-                {
-                    failures++;
-                    Console.WriteLine($"{Red}內部錯誤（已攔下，繼續讀下一行）：{ex.GetType().Name} {ex.Message}{Reset}");
-                }
+            }
+            catch (Exception fatal)
+            {
+                // 輸入流本身崩了（ReadLine 連續拋、主控台句柄失效）＝管線無法繼續——如實回 2。
+                Console.WriteLine($"{Red}管線無法繼續：{fatal.GetType().Name} {fatal.Message}{Reset}");
+                return 2;
             }
             return failures > 0 ? 1 : 0;
         }
@@ -134,7 +190,7 @@ internal static class Program
                 // 歷史：連續重複不入（↑ 體驗）＋容量上限（長會話記憶體不緩漲）
                 if (History.Count == 0 || History[^1] != line) History.Add(line);
                 if (History.Count > 200) History.RemoveAt(0);
-                if (!Execute(line)) break;
+                if (Execute(line) == -1) break;
             }
             catch (Exception ex)
             {
@@ -150,7 +206,10 @@ internal static class Program
 
     // ── 指令分派 ──────────────────────────────────────────────────────────
 
-    private static bool Execute(string line)
+    // 〔修復 v3.20〕審計 D3：Execute 改回「成敗可觀察」——回傳 0＝成功（繼續）、1＝失敗（繼續）、
+    // -1＝結束（exit/quit/提權接手）。原本永遠回 true，管線模式的失敗計數對指令例外與
+    // RunCli 退出碼全盲，「批次可偵測失敗」宣稱空洞。
+    private static int Execute(string line)
     {
         string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         string cmd = parts[0].ToLowerInvariant();
@@ -159,9 +218,9 @@ internal static class Program
         {
             switch (cmd)
             {
-                case "help" or "?": CommandBook.Run(rest.Length > 0 ? rest : null); return true;
-                case "book" or "百科" or "手冊": Book.Run(rest.Length > 0 ? rest : null); return true;
-                case "mascot" or "吉祥物": MascotPreview(rest); return true;
+                case "help" or "?": CommandBook.Run(rest.Length > 0 ? rest : null); return 0;
+                case "book" or "百科" or "手冊": Book.Run(rest.Length > 0 ? rest : null); return 0;
+                case "mascot" or "吉祥物": MascotPreview(rest); return 0;
                 case "ver":
                     Tui.Frame($"曦覽 XinSpect v{AppInfo.Version}",
                     [
@@ -169,19 +228,40 @@ internal static class Program
                         "形式：便攜單一執行檔（GUI）＋ xsc 終端機（本程式）",
                         "承諾：唯讀 ・ 不寫硬體 ・ 不連網",
                     ]);
-                    return true;
+                    return 0;
 
-                case "pages": ListPages(); return true;
-                case "page": PageFacts(rest); return true;
-                case "domain": DomainFacts(rest); return true;
-                case "keys": ListKeys(rest); return true;
-                case "settings": ShowSettings(); return true;
-                case "changelog": ShowChangelog(rest); return true;
+                case "pages": ListPages(); return 0;
+                case "page": PageFacts(rest); return 0;
+                case "domain": DomainFacts(rest); return 0;
+                case "keys": ListKeys(rest); return 0;
+                case "settings": ShowSettings(); return 0;
+                case "changelog": ShowChangelog(rest); return 0;
                 case "clear":
                     if (Tui.Legacy) { try { Console.Clear(); } catch { } }
                     else Console.Write("\x1b[2J\x1b[H");
-                    return true;
-                case "exit" or "quit" or "q": return false;
+                    return 0;
+                case "elevate":
+                    // REPL 內提權：對齊桌面端「以系統管理員重新啟動」按鈕。
+                    if (Console.IsInputRedirected)
+                    {
+                        Console.WriteLine($"{Red}elevate 會彈 UAC——管線模式不適用，請改用 xsc --elevate。{Reset}");
+                        return 0;
+                    }
+                    if (IsElevated())
+                    {
+                        Console.WriteLine($"{Dim}已經是系統管理員——Ring0 通路應已可用（見狀態行）。{Reset}");
+                        return 0;
+                    }
+                    Console.WriteLine($"{Dim}以系統管理員重新啟動 xsc（會彈 UAC）……{Reset}");
+                    // 〔複驗更正〕子行程必須帶 "--elevate"（原稿傳空陣列——提權實例會落成
+                    // 無參數普通 REPL，缺 [ring0 健檢] 行）；同時避免 C#12 集合運算式
+                    // `[]` 在舊 LangVersion 下的相容性疑慮，改 Array.Empty<string>()。
+                    if (RelaunchElevated(new[] { "--elevate" }) == 0)
+                        return -1;   // 提權實例接手，本 REPL 收工——對齊桌面端 Application.Current?.Shutdown()
+                    // 取消／失敗：訊息已如實印出，留在原 REPL 繼續（唯讀功能不受影響）
+                    return 0;
+
+                case "exit" or "quit" or "q": return -1;
 
                 case "facts":
                     if (rest.Contains("--refresh", StringComparison.Ordinal) ||
@@ -190,100 +270,97 @@ internal static class Program
                     EnsureFacts();
                     Console.WriteLine($"{Green}{_cache!.Count}{Reset} 筆事實（本機一輪採集）。");
                     Console.WriteLine($"{Dim}用 fact <關鍵字> 查細節；快取過期用 facts --refresh 重採。{Reset}");
-                    return true;
+                    return 0;
 
                 case "refresh":
                     _cache = null;
                     EnsureFacts();
                     Console.WriteLine($"{Green}已重新採集：{_cache!.Count}{Reset} 筆事實。");
-                    return true;
+                    return 0;
 
                 case "fact":
                     EnsureFacts();
                     SearchFacts(rest);
-                    return true;
+                    return 0;
 
-                case "health": HealthSummary(); return true;
+                case "health": HealthSummary(); return 0;
                 case "battery": DomainReport("電池健康", ["pw.battery"],
-                    "電池資料來自 root\\WMI BatteryStaticData／BatteryFullChargedCapacity／BatteryCycleCount；沒有電池的機器會如實標 NotApplicable。"); return true;
+                    "電池資料來自 root\\WMI BatteryStaticData／BatteryFullChargedCapacity／BatteryCycleCount；沒有電池的機器會如實標 NotApplicable。"); return 0;
                 case "storage": DomainReport("儲存總表", ["st", "ata"],
-                    "SMART 原始屬性只有 ata.smart.attr.lookup（ATA 碟；NVMe 一律不讀——第 263 輪實證會卡核心不可中斷等待，理由在百科第 11 部）。"); return true;
+                    "SMART 原始屬性只有 ata.smart.attr.lookup（ATA 碟；NVMe 一律不讀——第 263 輪實證會卡核心不可中斷等待，理由在百科第 11 部）。"); return 0;
                 case "net": DomainReport("網路", ["net", "nw"],
-                    "net.* ＝ 傾聽埠／offload/WMI 缺口；nw.* ＝ 藍牙／DNS／Wi-Fi／WoL／USB 等週邊摘要。"); return true;
+                    "net.* ＝ 傾聽埠／offload/WMI 缺口；nw.* ＝ 藍牙／DNS／Wi-Fi／WoL／USB 等週邊摘要。"); return 0;
                 case "security": DomainReport("安全姿態", ["sec"],
-                    "sec.* ＝ VBS／Credential Guard 等安全事實。即時防護分數走 ipc posture（藍色中隊引擎）。"); return true;
-                case "bsod": BsodScan(); return true;
-                case "posture": PostureReport(); return true;
+                    "sec.* ＝ VBS／Credential Guard 等安全事實。即時防護分數走 ipc posture（藍色中隊引擎）。"); return 0;
+                case "bsod": BsodScan(); return 0;
+                case "posture": PostureReport(); return 0;
                 case "firmware": DomainReport("韌體安全", ["fw", "uefi", "spi", "tpm"],
-                    "fw.* ＝ BIOS 寫入保護／SMRAM／ME；uefi.* ＝ 開機鏈；spi.* ＝ BIOS 映像；tpm.* ＝ 平台信任根。裁決卡在 GUI 韌體安全頁。"); return true;
+                    "fw.* ＝ BIOS 寫入保護／SMRAM／ME；uefi.* ＝ 開機鏈；spi.* ＝ BIOS 映像；tpm.* ＝ 平台信任根。裁決卡在 GUI 韌體安全頁。"); return 0;
                 case "os": DomainReport("作業系統", ["os"],
-                    "os.* ＝ 版本、授權、更新與安全態勢（Secure Boot／VBS／HVCI／UAC）。"); return true;
+                    "os.* ＝ 版本、授權、更新與安全態勢（Secure Boot／VBS／HVCI／UAC）。"); return 0;
                 case "power": DomainReport("電源與睡眠", ["pw"],
-                    "pw.* ＝ 電池（battery 指令看細節）、睡眠能力、喚醒來源、電源計劃漂移。"); return true;
-                case "catalog": CatalogQuery(rest); return true;
-                case "history": HistoryReport(); return true;
-                case "usb": UsbReport(); return true;
-                case "pcie": PcieReport(); return true;
-                case "drivers": DriverReport(); return true;
+                    "pw.* ＝ 電池（battery 指令看細節）、睡眠能力、喚醒來源、電源計劃漂移。"); return 0;
+                case "catalog": CatalogQuery(rest); return 0;
+                case "history": HistoryReport(); return 0;
+                case "usb": UsbReport(); return 0;
+                case "pcie": PcieReport(); return 0;
+                case "drivers": DriverReport(); return 0;
 
-                case "sys": LiveLine(); return true;
-                case "fan": Fans(); return true;
+                case "sys": LiveLine(); return 0;
+                case "fan": Fans(); return 0;
                 case "dash":
                     if (Console.IsInputRedirected)
                     {
                         Console.WriteLine($"{Red}dash 需要互動終端（按鍵退出）——管線模式請用 sys。{Reset}");
-                        return true;
+                        return 0;
                     }
-                    Dashboard(); return true;
+                    Dashboard(); return 0;
 
                 case "top":
                     if (Console.IsInputRedirected)
                     {
                         Console.WriteLine($"{Red}top 需要互動終端（按鍵退出）——管線模式請用 sys。{Reset}");
-                        return true;
+                        return 0;
                     }
-                    LiveTop(rest); return true;
+                    LiveTop(rest); return 0;
 
                 case "msr":
-                    if (rest.Length == 0) { Console.WriteLine($"{Red}用法：msr <十六進位索引>，例如 msr 0x19C{Reset}"); return true; }
+                    if (rest.Length == 0) { Console.WriteLine($"{Red}用法：msr <十六進位索引>，例如 msr 0x19C{Reset}"); return 0; }
                     ReadMsr(rest);
-                    return true;
+                    return 0;
 
                 case "pci":
                     Pci(rest);
-                    return true;
+                    return 0;
 
                 case "ipc":
-                    if (rest.Length == 0) { Console.WriteLine($"{Red}用法：ipc ping|status|posture|threats|baseline|snapshot|probe{Reset}"); return true; }
+                    if (rest.Length == 0) { Console.WriteLine($"{Red}用法：ipc ping|status|posture|threats|baseline|snapshot|probe{Reset}"); return 0; }
                     Ipc(rest);
-                    return true;
+                    return 0;
 
                 case "redfish":
-                    if (rest.Length == 0) { Console.WriteLine($"{Red}用法：redfish <離線目錄>{Reset}"); return true; }
-                    RunCli(["--redfish", rest]);
-                    return true;
+                    if (rest.Length == 0) { Console.WriteLine($"{Red}用法：redfish <離線目錄>{Reset}"); return 0; }
+                    return RunCli(["--redfish", rest]) == 0 ? 0 : 1;
 
                 case "compliance":
                     // 使用者寫「compliance --format sarif」與「compliance sarif」都要能動——
                     // rest 原樣拆詞往後送，不再整串塞給 --format（那個腳槍已拆除）。
-                    RunCli(rest.Length == 0
+                    return RunCli(rest.Length == 0
                         ? ["--compliance"]
-                        : ["--compliance", .. rest.Split(' ', StringSplitOptions.RemoveEmptyEntries)]);
-                    return true;
+                        : ["--compliance", .. rest.Split(' ', StringSplitOptions.RemoveEmptyEntries)]) == 0 ? 0 : 1;
 
                 case "merkle":
-                    RunCli(["--merkle"]);
-                    return true;
+                    return RunCli(["--merkle"]) == 0 ? 0 : 1;
 
                 default:
                     Console.WriteLine($"{Red}未知指令：{cmd}{Reset}（help 看清單）");
-                    return true;
+                    return 1;
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"{Red}{ex.GetType().Name}：{ex.Message}{Reset}");
-            return true;
+            return 1;
         }
     }
 
@@ -302,7 +379,7 @@ internal static class Program
         var list = choice >= 0 ? new[] { choice } : new[] { 0, 1 };
         foreach (var c in list)
         {
-            Console.WriteLine($"{Tui.BrandRed}{Tui.Bold}候选 {names[c]}{Tui.Reset}");
+            Console.WriteLine($"{Tui.BrandRed}{Tui.Bold}候選 {names[c]}{Tui.Reset}");
             Tui.MascotChoice = c;
             if (!Console.IsInputRedirected)
             {
@@ -612,8 +689,15 @@ internal static class Program
     {
         var svc = new UsbLinkService();
         Tui.SpinnerStart("列舉 USB 控制器與埠");
-        svc.RefreshAsync().GetAwaiter().GetResult();   // fire-and-forget 的話 Rows 還是空的
-        Tui.SpinnerStop($"{svc.Rows.Count} 個埠。");
+        try
+        {
+            svc.RefreshAsync().GetAwaiter().GetResult();   // fire-and-forget 的話 Rows 還是空的
+            Tui.SpinnerStop($"{svc.Rows.Count} 個埠。");
+        }
+        finally
+        {
+            Tui.SpinnerFail("USB 列舉被例外中斷——沒有結果，不印完成。");
+        }
         if (svc.Rows.Count == 0)
         {
             Console.WriteLine($"{Dim}沒有列到埠（需要管理員權限讀 USB 節點資訊）。{Reset}");
@@ -632,9 +716,16 @@ internal static class Program
     {
         var svc = new PcieLinkService();
         Tui.SpinnerStart("讀 PCIe 鏈路");
-        if (!svc.CanRefresh) { /* 上一次載入還在跑 */ }
-        svc.RefreshAsync().GetAwaiter().GetResult();
-        Tui.SpinnerStop($"{svc.Rows.Count} 條鏈路。");
+        try
+        {
+            if (!svc.CanRefresh) { /* 上一次載入還在跑 */ }
+            svc.RefreshAsync().GetAwaiter().GetResult();
+            Tui.SpinnerStop($"{svc.Rows.Count} 條鏈路。");
+        }
+        finally
+        {
+            Tui.SpinnerFail("PCIe 讀取被例外中斷——沒有結果，不印完成。");
+        }
         if (svc.Rows.Count == 0)
         {
             Console.WriteLine($"{Dim}沒有讀到鏈路（需要管理員權限）。{Reset}");
@@ -653,8 +744,15 @@ internal static class Program
     {
         var svc = new DriverAuditService();
         Tui.SpinnerStart("盤點驅動");
-        svc.RefreshAsync().GetAwaiter().GetResult();
-        Tui.SpinnerStop($"{svc.Rows.Count} 支驅動。");
+        try
+        {
+            svc.RefreshAsync().GetAwaiter().GetResult();
+            Tui.SpinnerStop($"{svc.Rows.Count} 支驅動。");
+        }
+        finally
+        {
+            Tui.SpinnerFail("驅動盤點被例外中斷——沒有結果，不印完成。");
+        }
         if (svc.Rows.Count == 0)
         {
             Console.WriteLine($"{Dim}沒有盤點到驅動（需要管理員權限讀 WMI）。{Reset}");
@@ -675,8 +773,15 @@ internal static class Program
     {
         var svc = new BsodService();
         Tui.SpinnerStart("掃描 Minidump");
-        svc.Scan();
-        Tui.SpinnerStop(svc.Status);
+        try
+        {
+            svc.Scan();
+            Tui.SpinnerStop(svc.Status);
+        }
+        finally
+        {
+            Tui.SpinnerFail("Minidump 掃描被例外中斷——沒有結果，不印完成。");
+        }
         if (!svc.HasDumps)
         {
             Console.WriteLine($"{Dim}沒有藍屏記錄。不是壞事。{Reset}");
@@ -857,7 +962,16 @@ internal static class Program
                         }
                     }
                     catch { }
-                    Thread.Sleep((int)(interval * 1000));
+                    // 〔修復 v3.20〕審計 D7：睡眠改 250ms 切片——大間隔不再 (int) 溢位炸
+                    // ArgumentOutOfRangeException，按鍵也在切片間提早醒（不用等完整 interval）。
+                    int totalMs = (int)Math.Min(interval * 1000d, int.MaxValue);
+                    for (int waited = 0; waited < totalMs; waited += 250)
+                    {
+                        Thread.Sleep(Math.Min(250, totalMs - waited));
+                        bool keyHit = false;
+                        try { keyHit = Console.KeyAvailable; } catch { }
+                        if (keyHit) break;   // 有按鍵提早醒——外層迴圈開頭即檢查離開
+                    }
                 }
             }
             finally
@@ -914,8 +1028,12 @@ internal static class Program
         catch { }
     }
 
-    /// <summary>明示的修復動作（--repair-ring0）：刪除死指針的 WinRing0 服務。需要管理員。</summary>
-    private static void RepairRing0Service()
+    /// <summary>
+    /// 明示的修復動作（--repair-ring0）：刪除死指針的 WinRing0 服務。需要管理員。
+    /// 〔修復 v3.20〕審計 D4：回傳 0／1／2（成功／非管理員／sc.exe 失敗）——原本不查
+    /// sc.exe 退出碼，服務不存在（1060）或存取被拒（5）也印綠字成功。
+    /// </summary>
+    private static int RepairRing0Service()
     {
         const string svc = "WinRing0_1_2_0";
         try
@@ -925,7 +1043,7 @@ internal static class Program
                     .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator))
             {
                 Console.WriteLine($"{Red}需要管理員權限（以系統管理員身分執行再跑 --repair-ring0）。{Reset}");
-                return;
+                return 1;
             }
             var psi = new System.Diagnostics.ProcessStartInfo("sc.exe", "delete " + svc)
             {
@@ -933,12 +1051,114 @@ internal static class Program
                 CreateNoWindow = true,
             };
             using var p = System.Diagnostics.Process.Start(psi);
-            p?.WaitForExit(5000);
+            if (p is null)
+            {
+                Console.WriteLine($"{Red}無法啟動 sc.exe——刪除動作沒有發生。{Reset}");
+                return 2;
+            }
+            if (!p.WaitForExit(5000))
+            {
+                try { p.Kill(); } catch { /* 掛死的 sc.exe 只能殺，失敗不隱瞞也無能為力 */ }
+                Console.WriteLine($"{Red}sc.exe 五秒內沒有結束（已終止）——刪除結果未知。{Reset}");
+                return 2;
+            }
+            if (p.ExitCode != 0)
+            {
+                Console.WriteLine($"{Red}sc.exe delete 失敗（代碼 {p.ExitCode}）——服務可能不存在（1060）或存取被拒（5），沒有東西被刪除。{Reset}");
+                return 2;
+            }
             Console.WriteLine($"{Green}已刪除死指針服務 {svc}——重開機後 LHM 會以自己的內嵌驅動重建。{Reset}");
+            return 0;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"{Red}修復失敗：{ex.Message}{Reset}");
+            return 2;
+        }
+    }
+
+    // ── 提權（對齊桌面端 DriverReadyService.RestartElevated，L131-148）──────
+
+    /// <summary>目前行程是否以系統管理員執行（與 StatusLine／RepairRing0Service 同一口徑）。</summary>
+    private static bool IsElevated()
+    {
+        try
+        {
+            using var id = System.Security.Principal.WindowsIdentity.GetCurrent();
+            return new System.Security.Principal.WindowsPrincipal(id)
+                .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+        }
+        catch { return false; }
+    }
+
+    /// <summary>
+    /// 以 runas 重啟自身（childArgs 原樣轉交給提權實例；〔複驗更正〕childArgs 必須含
+    /// "--elevate"——見 Main 分派處的更正注記）。三態如實回報，絕不靜默：
+    /// <list type="bullet">
+    /// <item>0 ＝ UAC 核准，提權實例已啟動——本（標準權限）實例隨即收工，由提權實例接手。</item>
+    /// <item>1 ＝ 提權被取消或被拒（UAC 按了「否」，Win32 1223 ERROR_CANCELLED）——未重新啟動，仍是標準權限，Ring0 通路如實顯示未就緒。</item>
+    /// <item>2 ＝ 其他失敗（拿不到執行檔路徑、殼層拒絕……）。</item>
+    /// </list>
+    /// </summary>
+    private static int RelaunchElevated(string[] childArgs)
+    {
+        string? exe = Environment.ProcessPath;
+        if (exe is null)
+        {
+            Console.WriteLine($"{Red}提權失敗：無法取得執行檔路徑。{Reset}");
+            return 2;
+        }
+        try
+        {
+            // childArgs 只會是 ["--elevate"] 或 ["--elevate", "--repair-ring0"]（Main 已驗），不含空格；仍以保守方式拼。
+            string arguments = string.Join(" ", childArgs.Select(a => a.Contains(' ') ? "\"" + a + "\"" : a));
+            // 〔修復 v3.20〕審計 D7：提權子行程的 Process 句柄用完即還（原本每次提權漏一個）。
+            using var proc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = exe,
+                Arguments = arguments,
+                UseShellExecute = true,
+                Verb = "runas",
+            });
+            Console.WriteLine($"{Green}UAC 已核准——已啟動提權的 xsc；本視窗收工，提權實例接手。{Reset}");
+            Console.WriteLine($"{Dim}提權實例會先做一次 WinRing0 服務健檢（唯讀）；刪除死指針服務仍需明示的 --repair-ring0。{Reset}");
+            return 0;
+        }
+        catch (System.ComponentModel.Win32Exception ex)
+            when (ex.NativeErrorCode == 1223)   // ERROR_CANCELLED：使用者在 UAC 按了「否」
+        {
+            Console.WriteLine($"{Tui.Amber}提權被取消或被拒——未重新啟動，仍是標準權限。{Reset}");
+            Console.WriteLine($"{Dim}Ring0 通路（msr／pci 直讀）會如實顯示未就緒，不會冒充可用。{Reset}");
+            return 1;
+        }
+        catch (System.ComponentModel.Win32Exception ex)
+        {
+            Console.WriteLine($"{Red}提權失敗（Win32 {ex.NativeErrorCode}）：{ex.Message}{Reset}");
+            return 2;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"{Red}提權失敗：{ex.GetType().Name} {ex.Message}{Reset}");
+            return 2;
+        }
+    }
+
+    /// <summary>
+    /// 提權實例進 REPL 前的一次性 WinRing0 服務健檢（<b>唯讀</b>，復用 DiagnoseRing0Service）。
+    /// 桌面端提權後要按「檢測驅動」才看得到狀態；終端機沒有按鈕，就在歡迎框之後主動報一次。
+    /// 三態：未安裝（LHM 會自建）／指向存在的 .sys／死指針（只回報，修復走 --repair-ring0）。
+    /// </summary>
+    private static void AnnounceElevatedRing0Check()
+    {
+        try
+        {
+            var (dead, diag) = DiagnoseRing0Service();
+            Console.WriteLine(dead ? $"{Tui.Amber}[ring0 健檢] {diag}{Reset}" : $"{Dim}[ring0 健檢] {diag}{Reset}");
+        }
+        catch (Exception ex)
+        {
+            // 健檢本身失敗也要說出來，不靜默跳過
+            Console.WriteLine($"{Dim}[ring0 健檢] 健檢無法執行：{ex.Message}{Reset}");
         }
     }
 
@@ -1149,13 +1369,25 @@ internal static class Program
         if (rest is "scan" or "")
         {
             Tui.SpinnerStart("掃描 bus 0–255（唯讀）");
-            var (devices, error) = PowerConsoleRing0Service.ScanPci();
-            if (devices is null) { Tui.SpinnerStop("掃描失敗：" + error); return; }
-            _pci = devices.OrderBy(d => d.Bus).ThenBy(d => d.Device).ThenBy(d => d.Function).ToList();
-            Tui.SpinnerStop($"找到 {_pci.Count} 台裝置。");
+            try
+            {
+                var (devices, error) = PowerConsoleRing0Service.ScanPci();
+                if (devices is null)
+                {
+                    // 失敗走失敗態：印 ✕ 中斷條，絕不先印 100.0% 再說掃描失敗（P0-7 病例本尊）
+                    Tui.SpinnerFail("掃描失敗：" + error);
+                    return;
+                }
+                _pci = devices.OrderBy(d => d.Bus).ThenBy(d => d.Device).ThenBy(d => d.Function).ToList();
+                Tui.SpinnerStop($"找到 {_pci.Count} 台裝置。");
+            }
+            finally
+            {
+                Tui.SpinnerFail("PCI 掃描被例外中斷——沒有結果，不印完成。");
+            }
             Tui.Table(
                 ["#", "BDF", "VEN:DEV", "裝置"],
-                _pci.Select((d, i) => new[]
+                _pci!.Select((d, i) => new[]
                 {
                     i.ToString(), $"{d.Bus:X2}:{d.Device:X2}.{d.Function:X0}",
                     $"{d.VendorId:X4}:{d.DeviceId:X4}", Trim(d.Name, 46),
@@ -1202,6 +1434,8 @@ internal static class Program
         }
 
         // 引擎會話級快取：連續查 status／threats／baseline 不再每次重啟守護進程握手。
+        // 〔修復 v3.20〕審計 D6：引擎死掉後重建（原本 _ipcEngine 非 null 就永不重建，
+        // bridge 真死後每次都假報「逾時」），並在行程退出時優雅收尾。
         if (_ipcEngine is null)
         {
             _ipcEngine = new BlueSquadronEngine();
@@ -1211,9 +1445,26 @@ internal static class Program
                 _ipcEngine = null;
                 return;
             }
+            AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+            {
+                try { _ipcEngine?.Dispose(); } catch { /* 退出收尾不拋 */ }
+            };
         }
         var resp = _ipcEngine.SendCmd(rest, _ipcTimeoutMs);
-        Console.WriteLine(resp is { } json ? json.GetRawText() : $"{Red}無回應（逾時 {_ipcTimeoutMs} ms——可用 ipc timeout 調整）。{Reset}");
+        if (resp is { } json)
+        {
+            Console.WriteLine(json.GetRawText());
+            return;
+        }
+        if (!_ipcEngine.Connected)
+        {
+            // 引擎已標死（bridge 退出／pipe 斷）——如實說「斷線」，不是「逾時」；下次重建。
+            Console.WriteLine($"{Red}Bridge 已斷線（可能已退出）——下次 ipc 指令會自動重新啟動。{Reset}");
+            try { _ipcEngine.Dispose(); } catch { }
+            _ipcEngine = null;
+            return;
+        }
+        Console.WriteLine($"{Red}無回應（逾時 {_ipcTimeoutMs} ms——可用 ipc timeout 調整）。{Reset}");
     }
 
     private static int RunCli(string[] args)
@@ -1327,9 +1578,11 @@ internal static class Program
                 }
             }
             catch { /* resize 重繪失敗不影響輸入 */ }
-            var key = Console.ReadKey(intercept: true);
             try
             {
+                // 〔修復 v3.20〕審計 D5：ReadKey 移進 try——原本主控台句柄失效時在 try 外拋
+                // IOException，被外層主迴圈 catch 接住後下一輪再拋，無限紅字轟炸、連 exit 都打不進。
+                var key = Console.ReadKey(intercept: true);
             if (key.Key == ConsoleKey.Enter)
             {
                 Console.WriteLine($"{Tui.Dim}{new string('─', _frameWidth)}{Tui.Reset}");   // 輸入欄底線（固定長直線）

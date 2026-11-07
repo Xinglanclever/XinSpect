@@ -362,6 +362,25 @@ public sealed class CeilingService : ObservableObject
         catch (Exception ex) { Diag.Swallow($"讀取 MSR 0x{msr:X}", ex, "該項顯示無資料"); return 0; }
     }
 
+    /// <summary>
+    /// 讀一顆封裝／插槽層級的 MSR，並<b>如實區分「讀到 0」與「根本讀不到」</b>。
+    /// 舊的 <see cref="Read"/> 把失敗也回成 0，而 0x613／0x1FC 的顯示端把 0 解讀成
+    /// 「從未累計／已停用」——讀取路徑壞掉會被渲染成滿分健康報告
+    /// （CeilingDecoder L256 自我指認過的陷阱，這裡是它的兩個現行病例）。
+    /// </summary>
+    private static (ulong Value, bool Ok) TryRead(WinRing0Bridge bridge, uint msr)
+    {
+        try
+        {
+            return bridge.ReadMsrPair64(msr) is { } v ? (v, true) : (0UL, false);
+        }
+        catch (Exception ex)
+        {
+            Diag.Swallow($"讀取 MSR 0x{msr:X}", ex, "該項顯示讀取失敗");
+            return (0, false);
+        }
+    }
+
     private sealed record Core(int Index, ProcessorRef First, string LpText);
 
     /// <summary>逐實體核心掃一顆 MSR：每核只用第一個邏輯處理器，SMT 兄弟不重複計算。</summary>
@@ -450,6 +469,8 @@ public sealed class CeilingService : ObservableObject
         public ulong MiscPwrRaw { get; init; }
         public ulong EnergyRaw { get; init; }
         public ulong ThrottleRaw { get; init; }
+        public bool ThrottleReadOk { get; init; }   // MSR 0x613 是否真的讀到（區分「0＝從未累計」與「讀不到」）
+        public bool PowerCtlReadOk { get; init; }   // MSR 0x1FC 是否真的讀到（BD PROCHOT／C1E 的前提）
         public ulong Pp0LimitRaw { get; init; }
         public ulong Pp0EnergyRaw { get; init; }
         public ulong DramEnergyRaw { get; init; }
@@ -495,6 +516,8 @@ public sealed class CeilingService : ObservableObject
         }
 
         var (reasonMsr, reasonRaw, reasonRegText) = ProbeReasonRegister(bridge, cores[0].First);
+        var (powerCtlRaw, powerCtlOk) = TryRead(bridge, MsrPowerCtl);
+        var (throttleRaw, throttleOk) = TryRead(bridge, MsrPkgPerfStatus);
 
         return new Statics
         {
@@ -514,10 +537,12 @@ public sealed class CeilingService : ObservableObject
             TurboNote = turboNote,
             UncoreLimitRaw = Read(bridge, MsrUncoreRatioLimit),
             UncoreStatusRaw = Read(bridge, MsrUncorePerfStatus),
-            PowerCtlRaw = Read(bridge, MsrPowerCtl),
+            PowerCtlRaw = powerCtlRaw,
+            PowerCtlReadOk = powerCtlOk,
             MiscPwrRaw = Read(bridge, MsrMiscPwrMgmt),
             EnergyRaw = Read(bridge, MsrPkgEnergyStatus),
-            ThrottleRaw = Read(bridge, MsrPkgPerfStatus),
+            ThrottleRaw = throttleRaw,
+            ThrottleReadOk = throttleOk,
             Pp0LimitRaw = Read(bridge, MsrPp0PowerLimit),
             Pp0EnergyRaw = Read(bridge, MsrPp0EnergyStatus),
             DramEnergyRaw = Read(bridge, MsrDramEnergyStatus),
@@ -774,29 +799,39 @@ public sealed class CeilingService : ObservableObject
             });
         }
 
-        // 電源控制開關
+        // 電源控制開關（0x1FC）——三態（P0-11）：讀不到就說讀不到，「停用」不冒充結論
+        bool powerCtlOk = s.PowerCtlReadOk;
         bool bdProchot = (s.PowerCtlRaw & 1UL) != 0;
         bool c1e = (s.PowerCtlRaw & 2UL) != 0;
         rows.Add(new CeilingRow
         {
             Name = "雙向 PROCHOT（BD PROCHOT）",
-            Value = bdProchot ? "啟用" : "停用",
-            Evidence = $"MSR 0x1FC 位 0（原始值 0x{s.PowerCtlRaw:X16}）",
-            Severity = Severity.Neutral,
-            Note = bdProchot
-                ? "啟用時，主機板上的其他元件（VRM、感測器）可以拉低 PROCHOT# 迫使 CPU 降頻。"
-                  + "若下面的限制原因出現 PROCHOT# 而 CPU 本身並不燙，就要往這條線查。"
-                : "位 0 = 0：外部元件無法透過 PROCHOT# 迫使 CPU 降頻。",
+            Value = !powerCtlOk ? "讀取失敗" : bdProchot ? "啟用" : "停用",
+            Evidence = !powerCtlOk
+                ? "MSR 0x1FC 無回應（讀取失敗，不是數值 0）"
+                : $"MSR 0x1FC 位 0（原始值 0x{s.PowerCtlRaw:X16}）",
+            Severity = !powerCtlOk ? Severity.Warning : Severity.Neutral,
+            Note = !powerCtlOk
+                ? "0x1FC 讀不到，無法辨識 BD PROCHOT 是啟用還是停用；此列不作判定。" +
+                  "常見原因：Ring0 通路未就緒（需管理員）或平台不提供此暫存器。"
+                : bdProchot
+                    ? "啟用時，主機板上的其他元件（VRM、感測器）可以拉低 PROCHOT# 迫使 CPU 降頻。"
+                      + "若下面的限制原因出現 PROCHOT# 而 CPU 本身並不燙，就要往這條線查。"
+                    : "位 0 = 0：外部元件無法透過 PROCHOT# 迫使 CPU 降頻。",
         });
         rows.Add(new CeilingRow
         {
             Name = "C1E 自動升級",
-            Value = c1e ? "啟用" : "停用",
-            Evidence = $"MSR 0x1FC 位 1（原始值 0x{s.PowerCtlRaw:X16}）",
-            Severity = Severity.Neutral,
-            Note = c1e
-                ? "C1 會被自動升級成 C1E（同時降倍頻與電壓）。省電，但離開閒置時多了一段恢復延遲。"
-                : "位 1 = 0：不做 C1E 自動升級，閒置時的恢復較快、耗電較高。",
+            Value = !powerCtlOk ? "讀取失敗" : c1e ? "啟用" : "停用",
+            Evidence = !powerCtlOk
+                ? "MSR 0x1FC 無回應（讀取失敗，不是數值 0）"
+                : $"MSR 0x1FC 位 1（原始值 0x{s.PowerCtlRaw:X16}）",
+            Severity = !powerCtlOk ? Severity.Warning : Severity.Neutral,
+            Note = !powerCtlOk
+                ? "0x1FC 讀不到，無法辨識 C1E 是啟用還是停用；此列不作判定。"
+                : c1e
+                    ? "C1 會被自動升級成 C1E（同時降倍頻與電壓）。省電，但離開閒置時多了一段恢復延遲。"
+                    : "位 1 = 0：不做 C1E 自動升級，閒置時的恢復較快、耗電較高。",
         });
         rows.Add(new CeilingRow
         {
@@ -825,17 +860,25 @@ public sealed class CeilingService : ObservableObject
 
         uint throttleCounts = (uint)s.ThrottleRaw;
         double throttledSec = CeilingDecoder.ThrottledSeconds(throttleCounts, s.Units.TimeS);
+        // 三態（P0-11）：讀取失敗 ≠ 0（從未累計）。舊版把「0x613 讀不到」渲染成
+        // 綠燈的「從未因功耗上限降頻過」——讀取路徑的失敗被當成了健康證據。
         rows.Add(new CeilingRow
         {
             Name = "封裝功耗節流累計",
-            Value = throttleCounts == 0
-                ? "0（自開機以來從未累計）"
+            Value = !s.ThrottleReadOk ? "讀取失敗"
+                : throttleCounts == 0 ? "0（自開機以來從未累計）"
                 : s.Units.Valid ? $"{throttledSec:0.000} 秒（{throttleCounts} 計數）" : $"{throttleCounts} 計數",
-            Evidence = $"MSR 0x613 = 0x{s.ThrottleRaw:X16}（累計 × RAPL 時間單位）",
-            Severity = throttleCounts == 0 ? Severity.Good : Severity.Warning,
-            Note = throttleCounts == 0
-                ? "這顆累計器從開機到現在一次都沒動：封裝從未因為功耗上限被降頻過。"
-                : "這是自開機以來被封裝功耗上限壓住的總時間。它只往上加，本工具不清它。",
+            Evidence = !s.ThrottleReadOk
+                ? "MSR 0x613 無回應（讀取失敗，不是數值 0）"
+                : $"MSR 0x613 = 0x{s.ThrottleRaw:X16}（累計 × RAPL 時間單位）",
+            Severity = !s.ThrottleReadOk ? Severity.Warning
+                : throttleCounts == 0 ? Severity.Good : Severity.Warning,
+            Note = !s.ThrottleReadOk
+                ? "0x613 讀不到，「從未累計」與「累計很多」都無法排除——此列不算健康證據。" +
+                  "常見原因：Ring0 通路未就緒（需管理員）、資安軟體攔截、或平台不提供此暫存器。"
+                : throttleCounts == 0
+                    ? "這顆累計器從開機到現在一次都沒動：封裝從未因為功耗上限被降頻過。"
+                    : "這是自開機以來被封裝功耗上限壓住的總時間。它只往上加，本工具不清它。",
         });
 
         if (s.ReasonMsr == 0)

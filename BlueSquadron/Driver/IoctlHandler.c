@@ -1,11 +1,15 @@
 /*
- * IoctlHandler.c — DeviceIoControl 派發
+ * ⚠ 未編譯——需作者機驗證（WDK 編譯命令見 patch-25.md）
+ *
+ * IoctlHandler.c — DeviceIoControl 派發（patch-25 完整替換檔；P0-14 能力帳單）
+ * 累積基底：xs318 現樹 IoctlHandler.c ＋ patch-20 的快照 IOCTL 契約兌現
+ * （MSR_SNAPSHOT 整份 per-CPU 基線＋NOT_READY 語意、GET_BASELINE 回 BS_BASELINE_INFO）
+ * ＋本補丁的 GET_CAPS 擴充（BS_DRIVER_CAPS，IoctlVersion 2）。
+ *
+ * 全域狀態宣告集中在 Common.h（g_MsrBaseline／g_MsrCount／g_MsrLock／g_Status*／…），
+ * 此處不再重複（patch-20 修復：重複 extern 的限定詞會撞 volatile）。
  */
 #include "Common.h"
-
-extern BS_MSR_ENTRY g_MsrBaseline[BS_MAX_CPU][BS_MAX_MSR_ENTRIES];
-extern LONG         g_MsrCount;
-extern ULONG        g_CallbackCaps;
 
 NTSTATUS IoctlDispatch(
     _In_ PDEVICE_OBJECT DeviceObject,
@@ -95,30 +99,68 @@ NTSTATUS IoctlDispatch(
 
         case IOCTL_BS_MSR_SNAPSHOT:
         {
-            /* 回傳 CPU0 的基線（per-CPU 基線的代表性切片；usermode 相容舊格式） */
-            ULONG needed = (ULONG)(g_MsrCount * sizeof(BS_MSR_ENTRY));
-            if (outLen < needed) { status = STATUS_BUFFER_TOO_SMALL; break; }
-            RtlCopyMemory(buf, g_MsrBaseline[0], needed);
+            /* 〔複驗更正〕（patch-20 契約）回傳整份 per-CPU 基線——每 CPU 一整行
+               BS_MAX_MSR_ENTRIES（16）條：前 MSR_COUNT（9）條為實際讀值、其後零填充；
+               基線時讀失敗的條目 Value=0xFFFF…，消費端以 valid 對照。
+               （原稿註解寫「CPU0 的 MSR_COUNT 條、CPU1 的…」——複製長度若按 9 條/CPU
+               計會與 [cpu][16] 陣列的行距錯位；MsrSnapshotBaselineBytes 已改整行距。）
+               基線未就緒如實回 NOT_READY——不再回空成功。 */
+            if (!MsrSnapshotReady()) { status = STATUS_DEVICE_NOT_READY; break; }
+            ULONG needed = MsrSnapshotBaselineBytes();
+            if (needed == 0 || outLen < needed) { status = STATUS_BUFFER_TOO_SMALL; break; }
+            KIRQL irql;
+            KeAcquireSpinLock(&g_MsrLock, &irql);
+            RtlCopyMemory(buf, g_MsrBaseline, needed);
+            KeReleaseSpinLock(&g_MsrLock, irql);
             info = needed;
             break;
         }
 
         case IOCTL_BS_GET_CAPS:
         {
-            /* 回呼註冊能力旗标：usermode 據此核對「四個防護真的註冊上了嗎」——
-               部分失敗不得被 STATUS_SUCCESS 掩蓋（2026-11-07 審計） */
-            if (outLen < sizeof(ULONG)) { status = STATUS_BUFFER_TOO_SMALL; break; }
-            *(PULONG)buf = g_CallbackCaps;
-            info = sizeof(ULONG);
+            /* （P0-14 能力帳單）回 BS_DRIVER_CAPS：FeatureMask＋DriverEntry 六步原始
+               NTSTATUS＋MSR 快照活體健康＋基線/差異計數。usermode 據此判「部分就緒」，
+               部分失敗不再被驅動整體 STATUS_SUCCESS 掩蓋。
+               版本防護：Magic＋IoctlVersion 驗不過就讓 usermode 拒用（三態標示），不猜。 */
+            if (outLen < sizeof(BS_DRIVER_CAPS)) { status = STATUS_BUFFER_TOO_SMALL; break; }
+            PBS_DRIVER_CAPS caps = (PBS_DRIVER_CAPS)buf;
+            RtlZeroMemory(caps, sizeof(BS_DRIVER_CAPS));
+            caps->Magic        = BS_CAPS_MAGIC;
+            caps->IoctlVersion = BS_IOCTL_VERSION;
+            caps->FeatureMask  = g_CallbackCaps;
+            caps->StatusLoadImage    = g_StatusLoadImage;
+            caps->StatusProcess      = g_StatusProcess;
+            caps->StatusRegistry     = g_StatusRegistry;
+            caps->StatusObProtect    = g_StatusObProtect;
+            caps->StatusHashProvider = g_StatusHashProvider;
+            /* MSR 快照活體健康：init 失敗→原始失敗碼；在跑但基線未就緒（載入後
+               0-5 秒）→DEVICE_NOT_READY；基線就緒→SUCCESS。 */
+            if (!NT_SUCCESS(g_StatusMsrSnapshot))
+                caps->StatusMsrSnapshot = g_StatusMsrSnapshot;
+            else
+                caps->StatusMsrSnapshot = MsrSnapshotReady()
+                    ? STATUS_SUCCESS : STATUS_DEVICE_NOT_READY;
+            KIRQL irql;
+            KeAcquireSpinLock(&g_MsrLock, &irql);
+            caps->MsrBaseEntries = (ULONG)g_MsrCount;
+            caps->MsrDiffCount   = (ULONG)g_MsrDiffCount;
+            KeReleaseSpinLock(&g_MsrLock, irql);
+            caps->ActiveCpus = g_MsrActiveCpus;
+            info = sizeof(BS_DRIVER_CAPS);
             break;
         }
 
         case IOCTL_BS_GET_BASELINE:
         {
-            /* 回傳 MSR 基線 + 差異數量 */
-            if (outLen < sizeof(LONG)) { status = STATUS_BUFFER_TOO_SMALL; break; }
-            *(PLONG)buf = g_MsrCount;
-            info = sizeof(LONG);
+            /* （patch-20 契約）回傳「基線規模＋差異數」（BS_BASELINE_INFO）——
+               此前 g_MsrCount 恆 0，兩個快照 IOCTL 靜默回空。 */
+            if (outLen < sizeof(BS_BASELINE_INFO)) { status = STATUS_BUFFER_TOO_SMALL; break; }
+            KIRQL irql;
+            KeAcquireSpinLock(&g_MsrLock, &irql);
+            ((PBS_BASELINE_INFO)buf)->BaseEntries = (ULONG)g_MsrCount;
+            ((PBS_BASELINE_INFO)buf)->DiffCount   = (ULONG)g_MsrDiffCount;
+            KeReleaseSpinLock(&g_MsrLock, irql);
+            info = sizeof(BS_BASELINE_INFO);
             break;
         }
 

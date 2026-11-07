@@ -332,4 +332,89 @@ public class AiHardeningTests
             try { Directory.Delete(folder, true); } catch { /* 清不掉不影響結論 */ }
         }
     }
+    // ── 代理模式的工具結果遮蔽守門（審計 P0-4）─────────────────────────────
+
+    [Fact]
+    public void 代理工具結果必須過AiRedactor才准出國()
+    {
+        string raw = "序號：SN-LEAK-4321\nIP 位址：192.168.1.23\nMAC：00-1A-2B-3C-4D-5E\n溫度 65 °C";
+
+        var (outbound, redacted, count) = AiService.PrepareToolOutbound(raw, redactEnabled: true);
+
+        Assert.True(redacted, "遮蔽開啟時工具結果必須真的過 AiRedactor");
+        Assert.DoesNotContain("SN-LEAK-4321", outbound);
+        Assert.DoesNotContain("192.168.1.23", outbound);
+        Assert.DoesNotContain("00-1A-2B-3C-4D-5E", outbound);
+        Assert.Contains("65 °C", outbound);                 // 判斷要用的讀值不能被遮
+        Assert.True(count >= 3, $"序號＋IP＋MAC 至少三處，實際 {count}");
+
+        // 關閉遮蔽＝明示同意原樣送出：必須是「放行」而不是「漏網」——旗標與計數都要如實歸零。
+        var (rawOut, notRedacted, zero) = AiService.PrepareToolOutbound(raw, redactEnabled: false);
+        Assert.False(notRedacted);
+        Assert.Equal(0, zero);
+        Assert.Equal(raw, rawOut);
+    }
+
+    [Fact]
+    public void 工具紀錄列必須標出已送出與遮蔽狀態且顯示實際送出的文字()
+    {
+        var settings = new SettingsService();
+        string folder = Path.Combine(Path.GetTempPath(), "XinSpectAiToolRow_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var ai = new AiService(settings, folder);
+            var reply = new AiMessage { IsUser = false, Text = AiService.Placeholder };
+            ai.Messages.Add(new AiMessage { IsUser = true, Text = "查一下溫度" });
+            ai.Messages.Add(reply);
+
+            string sent = "主機序號：SN-XYZ-9999\n溫度 65 °C";
+            ai.InsertToolRow(reply, new AiService.ToolCall("call-1", "temps", "{}"),
+                             sent, redacted: true, redactions: 1, sentYet: true);
+
+            var row = ai.Messages.First(m => m.IsTool);
+            Assert.Contains("✓ 已送出", row.Text);
+            Assert.Contains("已遮蔽 1 處", row.Text);
+            Assert.Contains("SN-XYZ-9999", row.Text);        // 列上顯示的就是實際送出的那份
+            Assert.Contains("65 °C", row.Text);
+
+            ai.InsertToolRow(reply, new AiService.ToolCall("call-2", "temps", "{}"),
+                             sent, redacted: false, redactions: 0, sentYet: false);
+            var pending = ai.Messages.Where(m => m.IsTool).Last();
+            Assert.Contains("待送出", pending.Text);          // 暫停中的這一輪還沒出國，不能謊稱已送出
+            Assert.DoesNotContain("✓ 已送出", pending.Text);
+            Assert.Contains("未遮蔽", pending.Text);
+        }
+        finally
+        {
+            try { Directory.Delete(folder, true); } catch { /* 清不掉不影響結論 */ }
+        }
+    }
+
+    [Fact]
+    public void 免費共用額度下代理不生效且預覽如實說明()
+    {
+        var settings = new SettingsService();
+        string folder = Path.Combine(Path.GetTempPath(), "XinSpectAiSharedAgent_" + Guid.NewGuid().ToString("N"));
+        int origProvider = settings.AiProvider;
+        bool origAgent = settings.AiAgentMode;
+        try
+        {
+            settings.AiProvider = (int)AiProvider.SharedFree;
+            settings.AiAgentMode = true;
+
+            Assert.False(AiService.AgentSupported(AiProvider.SharedFree));
+            Assert.True(AiService.AgentSupported(AiProvider.Ollama));
+
+            var ai = new AiService(settings, folder);        // Tools 未掛：兩個條件都擋
+            Assert.False(ai.WillUseAgent);
+            string preview = ai.BuildRequestPreview();
+            Assert.Contains("不生效", preview);               // 預覽照實說，不假裝有代理
+        }
+        finally
+        {
+            settings.AiProvider = origProvider;
+            settings.AiAgentMode = origAgent;
+            try { Directory.Delete(folder, true); } catch { /* 清不掉不影響結論 */ }
+        }
+    }
 }

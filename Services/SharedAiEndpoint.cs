@@ -23,10 +23,13 @@
 /// 部署方式見 <c>cloudflare/ai-proxy/README.md</c>。
 /// </para>
 /// <para>
-/// <b>全面開放（2026-10-26 起）</b>：自由對話、一鍵評價、主動診斷與診斷代理都走這條額度。
+/// <b>全面開放（2026-10-26 起）</b>：自由對話、一鍵評價與主動診斷都走這條額度。
 /// 先前只開放「一鍵評價」，是為了讓有限的免費額度撐久一點；但使用者分不出
 /// 「這條額度不能對話」與「AI 壞了」，而限制的代價比它省下的額度更貴。
 /// 額度上限、限流與總量控制全部留在中轉那一側——被濫用時作者關得掉、調得動，不必重新發版。
+/// <b>診斷代理是例外</b>：中轉只轉送 role/content、剝掉工具定義，代理在這條額度上不生效，
+/// 客端如實禁用並標示（見 <see cref="AgentUnsupportedNotice"/> 與 <see cref="AiService.AgentSupported"/>），
+/// 不讓使用者以為模型真的在查本機。
 /// </para>
 /// </remarks>
 public static class SharedAiEndpoint
@@ -76,4 +79,14 @@ public static class SharedAiEndpoint
         + "而 Cloudflare 的 workers.dev 網域在中國大陸被 GFW（防火長城）封鎖。"
         + "若你在中國大陸且未使用代理，這兩項功能將無法連線。"
         + "本程式不內建任何代理功能——請改用本機 Ollama（完全離線）或自填可連線的 OpenAI 相容端點。";
+
+    /// <summary>
+    /// 共用額度上「診斷代理」的如實標示：中轉（<c>cloudflare/ai-proxy/worker.js</c>）只轉送
+    /// role/content、剝掉 tools 與 tool_calls，模型拿不到工具定義、無法呼叫本機查詢工具。
+    /// 客端在這條額度上禁用代理（<see cref="AiService.AgentSupported"/>）並在 UI 顯示這段說明，
+    /// 而不是開著開關卻安靜退化。
+    /// </summary>
+    public const string AgentUnsupportedNotice =
+        "免費共用額度不支援診斷代理：中轉伺服器只轉送對話內容、不轉送工具定義，模型無法呼叫本機查詢工具。" +
+        "在這條額度上勾選「診斷代理」不會生效（也不會因此多送任何東西）。需要代理請改用本機 Ollama 或自填 OpenAI 相容端點。";
 }

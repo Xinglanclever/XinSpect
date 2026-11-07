@@ -56,7 +56,7 @@ dotnet restore Tests/XinSpect.Tests.csproj
 # 建置（含 Bridge 與解碼器）
 dotnet build Tests/XinSpect.Tests.csproj -c Release
 
-# 全套測試（目前基線見 `Tests/TestSuiteBaseline.cs`；3.14 為 7,884 條）
+# 全套測試（目前基線見 `Tests/TestSuiteBaseline.cs`；本樹為 7,897 條）
 dotnet test Tests/XinSpect.Tests.csproj -c Release
 
 # 只跑文件與目錄守門（CI 跑的就是這一組）

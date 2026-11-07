@@ -38,35 +38,53 @@ public sealed class PortUsageService : INotifyPropertyChanged
     private string _status = "";
     public string Status { get => _status; private set { _status = value; OnChanged(nameof(Status)); } }
 
-    // 依協定與本機埠排序後重建清單；PID→行程名以快取避免重複開啟行程控制代碼。
+    // 採集＋排序（不改 Rows／Status，執行緒安全——只讀本機 API、只碰局部狀態）。
+    // 供背景執行緒呼叫；套用請交給 Apply（必須 UI 執行緒，Rows 是 ObservableCollection）。
+    public List<PortRow> Collect()
+    {
+        var rows = new List<PortRow>();
+        var nameCache = new Dictionary<int, string>();
+
+        rows.AddRange(GetTcpTable(AF_INET, "TCP", nameCache));
+        rows.AddRange(GetTcpTable(AF_INET6, "TCP6", nameCache));
+        rows.AddRange(GetUdpTable(AF_INET, "UDP", nameCache));
+        rows.AddRange(GetUdpTable(AF_INET6, "UDP6", nameCache));
+
+        rows.Sort((a, b) =>
+        {
+            int c = a.LocalPort.CompareTo(b.LocalPort);
+            return c != 0 ? c : string.CompareOrdinal(a.Protocol, b.Protocol);
+        });
+        return rows;
+    }
+
+    // 套用採集結果：必須在 UI 執行緒呼叫（Rows 的繫結在 UI 執行緒上）。
+    public void Apply(List<PortRow> rows)
+    {
+        Rows.Clear();
+        foreach (var r in rows) Rows.Add(r);
+        Count = rows.Count;
+        Status = $"共 {rows.Count} 筆連線／監聽埠 ・ {DateTime.Now:HH:mm:ss} 更新";
+    }
+
+    // 同步全流程（採集＋套用），供仍需一步到位的呼叫端；在 UI 執行緒呼叫時即原行為。
     public void Refresh()
     {
         try
         {
-            var rows = new List<PortRow>();
-            var nameCache = new Dictionary<int, string>();
-
-            rows.AddRange(GetTcpTable(AF_INET, "TCP", nameCache));
-            rows.AddRange(GetTcpTable(AF_INET6, "TCP6", nameCache));
-            rows.AddRange(GetUdpTable(AF_INET, "UDP", nameCache));
-            rows.AddRange(GetUdpTable(AF_INET6, "UDP6", nameCache));
-
-            rows.Sort((a, b) =>
-            {
-                int c = a.LocalPort.CompareTo(b.LocalPort);
-                return c != 0 ? c : string.CompareOrdinal(a.Protocol, b.Protocol);
-            });
-
-            Rows.Clear();
-            foreach (var r in rows) Rows.Add(r);
-            Count = rows.Count;
-            Status = $"共 {rows.Count} 筆連線／監聽埠 ・ {DateTime.Now:HH:mm:ss} 更新";
+            Apply(Collect());
         }
         catch (Exception ex)
         {
             Status = "讀取連線表失敗：" + ex.Message;
         }
     }
+
+    // 供 View 呈現採集失敗（Status 本體維持 private set，錯誤文案收口在服務）。
+    public void ReportError(string message) => Status = "讀取連線表失敗：" + message;
+
+    // 供 View 寫一般狀態訊息（Kill 結果、提示等）——零彈窗紀律下所有回饋走狀態列。
+    public void ReportStatus(string message) => Status = message;
 
     // 結束占用連接埠的行程（需足夠權限；系統行程通常無法結束）。
     public (bool ok, string message) KillProcess(int pid)

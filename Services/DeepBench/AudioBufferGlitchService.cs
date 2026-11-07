@@ -232,45 +232,54 @@ public sealed class WindowsAudioBufferGlitchEngine : IAudioBufferGlitchEngine
             throw new AudioBufferGlitchUnsupportedException($"找不到可用的主動音訊裝置：{exception.Message}");
         }
 
-        var profiles = new List<AudioBufferGlitchProfileSamples>();
-        int totalRounds = context.Settings.LatencyProfiles.Count * context.Settings.RoundsPerProfile;
-        int completed = 0;
-        foreach (int latencyMs in context.Settings.LatencyProfiles)
+        try
         {
-            var p50 = new List<double>();
-            var p95 = new List<double>();
-            var p99 = new List<double>();
-            var rates = new List<double>();
-            var samplesPerCallback = new List<double>();
-            var gaps = new List<double>();
-            for (int round = 0; round < context.Settings.RoundsPerProfile; round++)
+            var profiles = new List<AudioBufferGlitchProfileSamples>();
+            int totalRounds = context.Settings.LatencyProfiles.Count * context.Settings.RoundsPerProfile;
+            int completed = 0;
+            foreach (int latencyMs in context.Settings.LatencyProfiles)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                context.Progress.Report(new DeepBenchProgress(
-                    AudioBufferGlitchService.TestId,
-                    completed + 1,
-                    totalRounds,
-                    0.05 + 0.90 * completed / totalRounds,
-                    $"WASAPI {latencyMs} ms／round {round + 1}/{context.Settings.RoundsPerProfile}"));
+                var p50 = new List<double>();
+                var p95 = new List<double>();
+                var p99 = new List<double>();
+                var rates = new List<double>();
+                var samplesPerCallback = new List<double>();
+                var gaps = new List<double>();
+                for (int round = 0; round < context.Settings.RoundsPerProfile; round++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    context.Progress.Report(new DeepBenchProgress(
+                        AudioBufferGlitchService.TestId,
+                        completed + 1,
+                        totalRounds,
+                        0.05 + 0.90 * completed / totalRounds,
+                        $"WASAPI {latencyMs} ms／round {round + 1}/{context.Settings.RoundsPerProfile}"));
 
-                var roundSamples = await MeasureRoundAsync(device, latencyMs, context.Settings.DurationMs, cancellationToken)
-                    .ConfigureAwait(false);
-                if (roundSamples.CallbackCount == 0)
-                    throw new AudioBufferGlitchValidationException($"WASAPI {latencyMs} ms 檔沒有任何回呼；不輸出推算值。");
+                    var roundSamples = await MeasureRoundAsync(device, latencyMs, context.Settings.DurationMs, cancellationToken)
+                        .ConfigureAwait(false);
+                    if (roundSamples.CallbackCount == 0)
+                        throw new AudioBufferGlitchValidationException($"WASAPI {latencyMs} ms 檔沒有任何回呼；不輸出推算值。");
 
-                p50.Add(AudioBufferGlitchService.Percentile(roundSamples.IntervalsMs, 50));
-                p95.Add(AudioBufferGlitchService.Percentile(roundSamples.IntervalsMs, 95));
-                p99.Add(AudioBufferGlitchService.Percentile(roundSamples.IntervalsMs, 99));
-                rates.Add(roundSamples.SampleCount / roundSamples.Elapsed.TotalSeconds);
-                samplesPerCallback.Add(roundSamples.SampleCount / roundSamples.CallbackCount);
-                gaps.Add(AudioBufferGlitchService.CountGaps(roundSamples.IntervalsMs));
-                completed++;
+                    p50.Add(AudioBufferGlitchService.Percentile(roundSamples.IntervalsMs, 50));
+                    p95.Add(AudioBufferGlitchService.Percentile(roundSamples.IntervalsMs, 95));
+                    p99.Add(AudioBufferGlitchService.Percentile(roundSamples.IntervalsMs, 99));
+                    rates.Add(roundSamples.SampleCount / roundSamples.Elapsed.TotalSeconds);
+                    samplesPerCallback.Add(roundSamples.SampleCount / roundSamples.CallbackCount);
+                    gaps.Add(AudioBufferGlitchService.CountGaps(roundSamples.IntervalsMs));
+                    completed++;
+                }
+
+                profiles.Add(new AudioBufferGlitchProfileSamples(latencyMs, p50, p95, p99, rates, samplesPerCallback, gaps));
             }
 
-            profiles.Add(new AudioBufferGlitchProfileSamples(latencyMs, p50, p95, p99, rates, samplesPerCallback, gaps));
+            return new AudioBufferGlitchMeasurement([.. profiles]);
         }
-
-        return new AudioBufferGlitchMeasurement([.. profiles]);
+        finally
+        {
+            // P3-8：MMDevice 包 WASAPI COM 端點，原碼全程無 Dispose——
+            // 每輪量測洩一個 COM 物件與裝置參照。取消與驗證例外的路徑同樣要釋。
+            device.Dispose();
+        }
     }
 
     private static async Task<RenderRoundSamples> MeasureRoundAsync(

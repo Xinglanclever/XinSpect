@@ -211,14 +211,21 @@ public static class FactRelationRules
             [SecureBootUefiKey, SecureBootKey],
             f =>
             {
-                var uefi = f[SecureBootUefiKey].Value;
-                var registry = f[SecureBootKey].Value;
+                // 兩側口徑不同：UEFI 變數側「是／否」（UefiBootFactsService）、
+                // 登錄檔側「開啟／關閉」（BackendEnvironmentService）——字串比對永不相等
+                // （v3.18 每台 UEFI 機器必誤報的根因），改比 NumericValue（0/1）。
+                var uefi = f[SecureBootUefiKey].NumericValue;
+                var registry = f[SecureBootKey].NumericValue;
+                if (uefi is null || registry is null)
+                    return FactRelationOutcome.Unverifiable(
+                        "一側無法解析為 0/1（Secure Boot 狀態應為布林）——無法比對，不下判決");
                 return uefi == registry
-                    ? FactRelationOutcome.Consistent($"兩個獨立來源同指「{uefi}」——韌體變數與作業系統登錄檔一致")
+                    ? FactRelationOutcome.Consistent(
+                        $"兩個獨立來源同指「{f[SecureBootUefiKey].Value}」／「{f[SecureBootKey].Value}」——韌體變數與作業系統登錄檔一致（語義等值：是＝開啟、否＝關閉）")
                     : FactRelationOutcome.Contradicts(
-                        $"Secure Boot 雙來源不一致：UEFI 變數＝「{uefi}」、登錄檔＝「{registry}」——這兩個來源由不同層寫入，不一致代表開機流程中狀態變更未同步或其一讀取有誤，優先信 UEFI 變數（韌體自己說的）");
+                        $"Secure Boot 雙來源不一致：UEFI 變數＝「{f[SecureBootUefiKey].Value}」、登錄檔＝「{f[SecureBootKey].Value}」——這兩個來源由不同層寫入，不一致代表開機流程中狀態變更未同步或其一讀取有誤，優先信 UEFI 變數（韌體自己說的）");
             },
-            "Secure Boot 的狀態同時存在於韌體變數與 Windows 登錄檔（兩個獨立寫入者）；比對它們是免費的一致性檢查——寫入不同步或快取過期都會現形"),
+            "Secure Boot 的狀態同時存在於韌體變數與 Windows 登錄檔（兩個獨立寫入者）；比對它們是免費的一致性檢查。兩側呈現口徑不同（是／否 vs 開啟／關閉），比對走 0/1 數值而非字面相等"),
 
         new("pcieaer.scan_vs_ecam", "AER 掃描與 ECAM 基底資料流一致性",
             [AerScanKey],
@@ -325,15 +332,25 @@ public static class FactRelationRules
             [SpiHsfstsKey],
             f =>
             {
-                // 盤點事實「缺席」正是矛盾條件之一，刻意不列輸入鍵（引擎守衛會轉 Unverifiable），規則內自查。
+                // 盤點管線有沒有跑，以 pci.bus0.inventory 為哨兵：Bus0InventoryService.Collect
+                // 不論成敗必產這一顆（PCI 不可用→Unavailable、可用→Present）；而 pci.dev.1f.5
+                // 鍵缺席有兩種不可區分的成因（真不在／盤點沒跑），不能拿鍵缺席直接判矛盾。
+                if (!f.TryGetValue("pci.bus0.inventory", out var inventory))
+                    return FactRelationOutcome.Unverifiable("bus 0 盤點事實不存在（收集管線未跑）——無從交叉，不下判決");
+                if (inventory.Availability != FactAvailability.Present)
+                    return FactRelationOutcome.Unverifiable(
+                        $"bus 0 盤點未跑成（{inventory.UnavailableReason ?? "原因不明"}）——無從交叉，不下判決");
+                if (inventory.Value.Contains("讀取失敗", StringComparison.Ordinal))
+                    return FactRelationOutcome.Unverifiable(
+                        "bus 0 盤點部分槽位讀取失敗（該槽如實缺席）——無從區分「真不在」與「沒讀到」，不下判決");
                 if (!f.TryGetValue(Bus0InventoryService.SpiControllerKey, out var controller))
                     return FactRelationOutcome.Contradicts(
-                        "bus 0 盤點看不到 0:1F.5（無此裝置），但 SPI 快閃事實宣稱存在——同一 PCI 後端，兩個服務說不同的話，管線狀態矛盾");
+                        "bus 0 盤點完成且無讀取失敗，0:1F.5 確實不在盤點結果中，但 SPI 快閃事實宣稱存在——同一 PCI 後端，兩個服務說不同的話，管線狀態矛盾");
                 return controller.Availability == FactAvailability.Present
                     ? FactRelationOutcome.Consistent("盤點看到 SPI 控制器且 SPI 事實存在——上下游一致")
                     : FactRelationOutcome.Unverifiable($"盤點事實讀不到（{controller.UnavailableReason ?? "原因不明"}）——無從交叉，不下判決");
             },
-            "bus 0 盤點與 SPI 服務讀的是同一個 PCI 後端；SPI 事實存在而盤點否定控制器存在，代表管線錯亂"),
+            "bus 0 盤點與 SPI 服務讀的是同一個 PCI 後端；盤點確實完成而看不到 0:1F.5、SPI 事實卻存在，代表管線錯亂"),
 
         new("pci.spi_controller_reported_unreachable", "SPI 控制器在而 SPI 服務稱無回應",
             [Bus0InventoryService.SpiControllerKey],
@@ -413,14 +430,24 @@ public static class FactRelationRules
             [MchbarBaseKey],
             f =>
             {
+                // 同 pci.spi_facts_without_controller：以 pci.bus0.inventory 為盤點哨兵，
+                // 鍵缺席（真不在 vs 盤點沒跑）不可區分時一律 Unverifiable。
+                if (!f.TryGetValue("pci.bus0.inventory", out var inventory))
+                    return FactRelationOutcome.Unverifiable("bus 0 盤點事實不存在（收集管線未跑）——無從交叉，不下判決");
+                if (inventory.Availability != FactAvailability.Present)
+                    return FactRelationOutcome.Unverifiable(
+                        $"bus 0 盤點未跑成（{inventory.UnavailableReason ?? "原因不明"}）——無從交叉，不下判決");
+                if (inventory.Value.Contains("讀取失敗", StringComparison.Ordinal))
+                    return FactRelationOutcome.Unverifiable(
+                        "bus 0 盤點部分槽位讀取失敗（該槽如實缺席）——無從區分「真不在」與「沒讀到」，不下判決");
                 if (!f.TryGetValue(HostBridgeKey, out var bridge))
                     return FactRelationOutcome.Contradicts(
-                        "bus 0 盤點看不到 0:0.0（無主機橋），但 MCHBAR 基底宣稱存在——MCHBAR BAR 就掛在主機橋設定空間 0x48，管線狀態矛盾");
+                        "bus 0 盤點完成且無讀取失敗，0:0.0 確實不在盤點結果中（無主機橋），但 MCHBAR 基底宣稱存在——MCHBAR BAR 就掛在主機橋設定空間 0x48，管線狀態矛盾");
                 return bridge.Availability == FactAvailability.Present
                     ? FactRelationOutcome.Consistent("主機橋存在且 MCHBAR 基底已解析——上下游一致")
                     : FactRelationOutcome.Unverifiable($"主機橋事實讀不到（{bridge.UnavailableReason ?? "原因不明"}）——無從交叉，不下判決");
             },
-            "MCHBAR 的 64-bit BAR 在主機橋（0:0.0）設定空間 +0x48；盤點否定主機橋存在而基底宣稱存在，代表管線錯亂"),
+            "MCHBAR 的 64-bit BAR 在主機橋（0:0.0）設定空間 +0x48；盤點確實完成而看不到主機橋、基底卻宣稱存在，代表管線錯亂"),
 
         new("uefi.secureboot_vs_setupmode", "Secure Boot 開啟而 Setup Mode 未部署金鑰",
             [SecureBootUefiKey, UefiSetupModeKey],
@@ -498,15 +525,17 @@ public static class FactRelationRules
             [SecureBootUefiKey],
             f =>
             {
-                // 登錄檔事實「NotSupported」正是矛盾條件之一，刻意不列輸入鍵（引擎守衛會轉 Unverifiable），規則內自查。
+                // platform.secure_boot 的 Unavailable 理由是混合口徑（BackendEnvironmentService：
+                // 「登錄鍵不存在（可能為 Legacy BIOS 或未提供）或無法讀取」），無法區分
+                // 「登錄檔否定」與「讀取失敗」——缺席／不可用一律如實 Unverifiable，不冒充矛盾。
                 if (!f.TryGetValue(SecureBootKey, out var registry))
                     return FactRelationOutcome.Unverifiable("登錄檔 Secure Boot 事實不存在（收集管線未跑）——無從交叉，不下判決");
                 return registry.Availability == FactAvailability.Present
                     ? FactRelationOutcome.Consistent("UEFI 變數與登錄檔都確認平台有 Secure Boot 狀態（值的一致性由另一條規則比對）")
-                    : FactRelationOutcome.Contradicts(
-                        "UEFI SecureBoot 變數存在（平台確為 UEFI 且權限已啟用），登錄檔卻回報 Secure Boot 狀態不存在——兩個獨立的 Windows 級來源對平台型別說不同的話，管線狀態矛盾");
+                    : FactRelationOutcome.Unverifiable(
+                        $"登錄檔 Secure Boot 事實讀不到（{registry.UnavailableReason ?? "原因不明"}）——理由混合「鍵不存在」與「讀取失敗」，無從區分，不下判決");
             },
-            "UEFI 變數可讀（特權已啟用）代表平台是 UEFI；此時登錄檔 SecureBoot\\State 鍵理應存在。變數在而登錄檔否定，代表收集管線錯亂"),
+            "UEFI 變數可讀（特權已啟用）代表平台是 UEFI；但現行登錄檔事實的缺席理由混合「鍵不存在」與「無法讀取」，無從證明是登錄檔否定——退守 Unverifiable，待事實產生器拆分理由後才恢復判決力"),
 
         new("chipset.smramc_open_while_locked", "SMRAM 鎖定下對外開放的非法組合",
             [SmramcKey],

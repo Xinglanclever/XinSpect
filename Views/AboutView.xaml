@@ -46,7 +46,7 @@
                                Text="硬體資訊總覽 ・ 即時偵測工具"/>
                     <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                         <TextBlock x:Name="VersionMetadata" Style="{StaticResource FieldLabel}"
-                                   Text="版本 3.18 ・ Ultima XVIII ・ 便攜單一執行檔"/>
+                                   Text="版本 3.20 ・ 深審修復 ・ 便攜單一執行檔"/>
                         <TextBlock x:Name="SageQuoteHint" Text="  · · ·" FontSize="10" Foreground="{DynamicResource MutedInkBrush}" Opacity="0.18" Cursor="Hand" VerticalAlignment="Center" ToolTip="The sages think themselves to be all-knowing, but we alone are wise to the virtue in those acts of folly" MouseLeftButtonUp="SageQuoteHint_Click"/>
                         <TextBlock x:Name="SageQuoteText" Text="The sages think themselves to be all-knowing, but we alone are wise to the virtue in those acts of folly" Visibility="Collapsed" FontSize="10" FontStyle="Italic" Foreground="{DynamicResource MutedInkBrush}" TextWrapping="Wrap" MaxWidth="520" Margin="8,0,0,0" VerticalAlignment="Center"/>
                     </StackPanel>

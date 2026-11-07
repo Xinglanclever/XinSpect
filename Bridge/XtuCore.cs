@@ -103,6 +103,19 @@ namespace XtuBridge
                     return Fill(res);
                 }
 
+                // ── 完整性閘門（審計 P2-23）：xtu_path.txt 是使用者可寫檔，所指路徑不可信；
+                //    載入前驗簽＋比對釘扎，驗不過就拒載。絕不靜默——原因寫進 Message 與 bridge.log。
+                var gate = SdkIntegrity.GateSdk(dll);
+                if (!gate.Ok)
+                {
+                    Status = "Failed";
+                    Message = "Intel XTU SDK 完整性驗證未通過，已拒載：" + gate.Reason
+                            + "　若為 XTU 正常升級，請確認新版為 Intel 簽章後刪除 "
+                            + SdkIntegrity.PinStorePath + " 重新建立釘扎。";
+                    Diag("SDK 完整性閘門拒載：" + gate.Reason + " · 檔案：" + dll);
+                    return Fill(res);
+                }
+
                 // 依賴（XtuCommon.dll / IronCity.* / 驅動組件）從 Client 與 Drivers 目錄解析
                 _resolver = delegate (object s, ResolveEventArgs e)
                 {
@@ -112,6 +125,9 @@ namespace XtuBridge
                         string f = Path.Combine(dir, want);
                         if (File.Exists(f))
                         {
+                            // P2-23：依賴 DLL 同樣過釘扎閘門（首次 session 允許入釘扎，
+                            // 之後只比對）——不能讓攻擊者用「塞一個 XtuCommon.dll」繞過主 DLL 的驗證。
+                            if (!SdkIntegrity.CheckDependency(f)) return null;
                             try { return Assembly.LoadFrom(f); } catch { /* 換下一個目錄 */ }
                         }
                     }
