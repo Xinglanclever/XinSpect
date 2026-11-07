@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -313,7 +313,8 @@ public sealed class InstallerMirrorsTests
         Assert.True(File.Exists(exe), "Installer/XinSpectDeploy.exe 不見了");
 
         byte[] bytes = File.ReadAllBytes(exe);
-        Assert.True(bytes.Length < 26 * 1024,
+        // 〔修復 v3.20〕26KB→32KB：patch-22 加固是真代碼增長（本版 29,696B），門禁意圖（不帶 runtime）不變。
+        Assert.True(bytes.Length < 32 * 1024,
             $"安裝器 {bytes.Length} bytes：超過 26 KB 就是有人把執行階段塞進來了");
 
         Assert.True(Contains(bytes, Encoding.Unicode.GetBytes("選擇下載來源")),

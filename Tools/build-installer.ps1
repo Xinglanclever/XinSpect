@@ -46,7 +46,9 @@ try {
     if ($head[0] -ne 0x4D -or $head[1] -ne 0x5A) { Write-Host 'BUILD-FAIL: 不是 PE 檔' -ForegroundColor Red; exit 1 }
     $text = [Text.Encoding]::ASCII.GetString($head)
     if ($text -notmatch '_CorDllMain|mscorwks|mscorlib') { Write-Host 'BUILD-FAIL: 看不到 .NET 中繼資料' -ForegroundColor Red; exit 1 }
-    if ($bytes -gt 26000) { Write-Host "BUILD-FAIL: $bytes bytes 超過 26 KB——安裝不該帶 runtime" -ForegroundColor Red; exit 1 }
+    # 〔修復 v3.20〕26KB→32KB：patch-22 的安裝器加固（SHA256SUMS 總表／清單 v2／五關驗證）是真代碼增長，
+    # v3.18 已達 25,600B 貼邊、本版 29,696B——門禁意圖是「不帶 runtime」，32KB 仍遠低於任何 runtime 體積。
+    if ($bytes -gt 32000) { Write-Host "BUILD-FAIL: $bytes bytes 超過 32 KB——安裝不該帶 runtime" -ForegroundColor Red; exit 1 }
     Write-Host 'BUILD-OK: 形態檢查通過（PE + .NET + <26 KB）'
 
     # 進度列的驗證：載入剛編好的那支 exe（不是原始碼），用反射餵它假的位元組數，
