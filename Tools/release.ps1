@@ -219,7 +219,21 @@ try {
     if ($LASTEXITCODE -ne 0) { Fail 'publish cli-legacy-nort failed' }
     Copy-Item "$P-clilegacynort\XinSpectConsole-legacy.exe" "$P\XinSpectConsole-legacy-nort.exe" -Force
 
-    # 八資產清單（bridge／deployer 由既有產出提供）
+    # ---------- deep kernel driver ----------
+    # 2026-11-07 使用者裁定：XsRegProbe.sys 每版必上（v3.18 補上後成為常態）——
+    # 先建置驗證，再進資產清單；SHA256SUMS 與 byte-count docs 會自動把它算進去。
+    Write-Host '==> build XsRegProbe.sys'
+    $driverSys = 'XsRegProbe\Driver\x64build\XsRegProbe.sys'
+    $driverBat = 'XsRegProbe\Driver\x64build\build.bat'
+    if (-not (Test-Path $driverSys)) {
+        if (-not (Test-Path $driverBat)) { Fail "driver asset missing: $driverSys (no build script either)" }
+        & cmd /c $driverBat | Out-Null
+        if ($LASTEXITCODE -ne 0) { Fail 'XsRegProbe.sys build failed (see XsRegProbe/BUILD-給使用者.md)' }
+    }
+    if (-not (Test-Path $driverSys)) { Fail "driver asset missing after build: $driverSys" }
+    Ok "driver $driverSys = $((Get-Item $driverSys).Length) bytes"
+
+    # 九件清單（bridge／deployer 由既有產出提供）
     $assets = @(
         @('XinSpect.exe', "$P\XinSpect.exe"),
         @('XinSpect-full.exe', "$P\XinSpect-full.exe"),
@@ -228,7 +242,8 @@ try {
         @('XinSpectConsole-nort.exe', "$P\XinSpectConsole-nort.exe"),
         @('XinSpectConsole-legacy-nort.exe', "$P\XinSpectConsole-legacy-nort.exe"),
         @('BlueSquadronBridge.exe', 'publish-2.44-bridge\BlueSquadronBridge.exe'),
-        @('XinSpectDeploy.exe', 'Installer\XinSpectDeploy.exe')
+        @('XinSpectDeploy.exe', 'Installer\XinSpectDeploy.exe'),
+        @('XsRegProbe.sys', 'XsRegProbe\Driver\x64build\XsRegProbe.sys')
     )
     foreach ($a in $assets) {
         if (-not (Test-Path $a[1])) { Fail "asset missing: $($a[1])" }
@@ -256,22 +271,8 @@ try {
         Write-Host 'byte counts already current - no docs commit needed'
     }
 
-    # ---------- deep kernel driver ----------
-    # 只做建置驗證（驅動要能編過）。自 3.17 起隨版不下發 .sys——部署器的驅動步驟遇到
-    # Release 沒有這個檔時會如實說「此版未附」。
-    Write-Host '==> build XsRegProbe.sys (build-only verification)'
-    $driverSys = 'XsRegProbe\Driver\x64build\XsRegProbe.sys'
-$driverBat = 'XsRegProbe\Driver\x64build\build.bat'
-    if (-not (Test-Path $driverSys)) {
-        if (-not (Test-Path $driverBat)) { Fail "driver asset missing: $driverSys (no build script either)" }
-        & cmd /c $driverBat | Out-Null
-        if ($LASTEXITCODE -ne 0) { Fail 'XsRegProbe.sys build failed (see XsRegProbe/BUILD-給使用者.md)' }
-    }
-    if (-not (Test-Path $driverSys)) { Fail "driver asset missing after build: $driverSys" }
-    Ok "driver $driverSys = $((Get-Item $driverSys).Length) bytes"
-
     # ---------- release + assets ----------
-    Write-Host '==> create/update Release and upload eight assets + SHA256SUMS.txt'
+    Write-Host '==> create/update Release and upload nine assets + SHA256SUMS.txt'
     $bridge = 'publish-2.44-bridge\BlueSquadronBridge.exe'
     if (-not (Test-Path $bridge)) { Fail "bridge asset source missing: $bridge" }
 
