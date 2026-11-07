@@ -266,6 +266,7 @@ hardware / firmware / OS ──► fact collection (*FactsService)
 | [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.18/XinSpectConsole-nort.exe) | 65,908,376 bytes | XinSpect Console, Windows 11 / Server 2025, no runtime: requires .NET 10 Desktop Runtime |
 | [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.18/XinSpectConsole-legacy-nort.exe) | 65,908,418 bytes | XinSpect Console, Windows 10 / 2016/2019/2022, no runtime: plain-text UI, requires .NET 10 Desktop Runtime |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.18/XinSpectDeploy.exe) | 25,600 bytes | One-click installer. First pick what to install: **A** the main program (GUI), **B** the XinSpect Console; then pick a source with 1/2/3 (GitHub / Drive / accelerator node); shows a progress bar, speed and time remaining while downloading |
+| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.18/XsRegProbe.sys) | 24,064 bytes | XsRegProbe kernel probe driver (whitelist read-only MSR/MMIO). Not Microsoft-signed: the app installs it via an elevated session into `ProgramData\XinSpect\Driver`; manual loading requires testsigning |
 
 The exact byte count of the main executable is published in the Traditional Chinese README and verified after each release; the MB figure here is rounded.
 
