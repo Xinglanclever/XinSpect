@@ -174,13 +174,14 @@ public static class KnowledgePackService
         }
         try
         {
-            var entries = AuditLogService.Load(auditPath);
-            var entry = AuditLogService.Append(entries, AuditLogService.CurrentOperator(), "",
-                "knowledge-pack-swap", Path.GetFileName(packPath),
-                $"第 {loaded.Pack.PackVersion} 版／{loaded.Pack.Tables.Count} 張表", loaded.Pack.SerialNumber,
-                DateTimeOffset.UtcNow);
-            entries.Add(entry);
-            AuditLogService.Save(auditPath, entries);
+            AuditLogService.Mutate(auditPath, entries =>
+            {
+                entries.Add(AuditLogService.Append(entries, AuditLogService.CurrentOperator(), "",
+                    "knowledge-pack-swap", Path.GetFileName(packPath),
+                    $"第 {loaded.Pack.PackVersion} 版／{loaded.Pack.Tables.Count} 張表", loaded.Pack.SerialNumber,
+                    DateTimeOffset.UtcNow));
+                return entries;
+            });
             reason = "換包已記進審計鏈（append-only；--verify-audit 可驗）";
             return true;
         }
@@ -211,10 +212,12 @@ public static class KnowledgePackService
         }
         try
         {
-            var entries = AuditLogService.Load(auditPath);
-            entries.Add(AuditLogService.Append(entries, AuditLogService.CurrentOperator(), "",
-                "knowledge-pack-withdraw", serialNumber, reason, "", DateTimeOffset.UtcNow));
-            AuditLogService.Save(auditPath, entries);
+            AuditLogService.Mutate(auditPath, entries =>
+            {
+                entries.Add(AuditLogService.Append(entries, AuditLogService.CurrentOperator(), "",
+                    "knowledge-pack-withdraw", serialNumber, reason, "", DateTimeOffset.UtcNow));
+                return entries;
+            });
             withdrawal = "撤回聲明已記進審計鏈（append-only；--verify-audit 可驗）。撤回後移除包檔，"
                        + "載入層即如實回「沒有外掛知識包——內建表繼續服役」。";
             return true;

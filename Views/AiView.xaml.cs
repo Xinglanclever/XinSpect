@@ -338,31 +338,46 @@ public partial class AiView : UserControl
         if (ai is null) return;
         var ext = Path.GetExtension(filePath).ToLowerInvariant();
 
-        if (_imageExtensions.Contains(ext))
+        if (!_imageExtensions.Contains(ext) && !_textExtensions.Contains(ext))
         {
-            var att = await ai.AttachImageAsync(filePath);
-            var thumb = new BitmapImage();
-            thumb.BeginInit();
-            thumb.CacheOption = BitmapCacheOption.OnLoad;
-            thumb.DecodePixelHeight = 56;
-            thumb.StreamSource = new MemoryStream(att.ImageBytes!);
-            thumb.EndInit();
-            thumb.Freeze();
-            _attachments.Add(new AttachmentViewModel
-            {
-                FileName = att.FileName,
-                Thumbnail = thumb,
-                Source = att
-            });
+            // P3-12：拖入不支援的副檔名原本無聲無息——如實寫進狀態列（零彈窗）。
+            ai.ReportStatus($"未附加「{Path.GetFileName(filePath)}」：不支援的檔案類型（支援圖片與文字檔）。");
+            return;
         }
-        else if (_textExtensions.Contains(ext))
+        try
         {
-            var att = await ai.AttachFileAsync(filePath);
-            _attachments.Add(new AttachmentViewModel
+            if (_imageExtensions.Contains(ext))
             {
-                FileName = att.FileName,
-                Source = att
-            });
+                var att = await ai.AttachImageAsync(filePath);
+                var thumb = new BitmapImage();
+                thumb.BeginInit();
+                thumb.CacheOption = BitmapCacheOption.OnLoad;
+                thumb.DecodePixelHeight = 56;
+                thumb.StreamSource = new MemoryStream(att.ImageBytes!);
+                thumb.EndInit();
+                thumb.Freeze();
+                _attachments.Add(new AttachmentViewModel
+                {
+                    FileName = att.FileName,
+                    Thumbnail = thumb,
+                    Source = att
+                });
+            }
+            else
+            {
+                var att = await ai.AttachFileAsync(filePath);
+                _attachments.Add(new AttachmentViewModel
+                {
+                    FileName = att.FileName,
+                    Source = att
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            // 即發即忘呼叫鏈（_ = AttachFileByPathAsync(...)）的例外在這裡收口：讀檔失敗、
+            // 檔案鎖定、超限（patch-30 將加附件大小上限）都如實進狀態列，不無聲消失。
+            ai.ReportStatus($"附加「{Path.GetFileName(filePath)}」失敗：{ex.Message}");
         }
     }
 

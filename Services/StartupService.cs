@@ -289,35 +289,25 @@ public sealed class StartupService : INotifyPropertyChanged
     {
         try
         {
-            var psi = new ProcessStartInfo("schtasks.exe")
-            {
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            };
-            psi.ArgumentList.Add("/change");
-            psi.ArgumentList.Add("/tn");
-            psi.ArgumentList.Add(e.TaskPath);
-            psi.ArgumentList.Add(enable ? "/enable" : "/disable");
-
-            using var p = Process.Start(psi);
-            if (p is null)
-            {
-                Status = "無法啟動 schtasks.exe。";
-                return false;
-            }
-            // 先把兩條管線讀空再等結束，否則輸出多一點就會互相卡住
-            p.StandardOutput.ReadToEnd();
-            p.StandardError.ReadToEnd();
-            if (!p.WaitForExit(15000))
+            // 絕對路徑：UseShellExecute=false 走 CreateProcess 搜尋語意「CWD 優先於 System32」，
+            // 管理員行程從可寫目錄啟動時裸檔名等於植入執行面（照 WinsatService.cs:88 庫內正解）。
+            // 走 ProcessRunner：兩條輸出管線在 WaitForExit 前就非同步開讀——先前「先同步 ReadToEnd
+            // 兩條管線再 WaitForExit」的順序正是 ProcessRunner 註解點名的 D4 死鎖面。
+            var result = ProcessRunner.Run(Path.Combine(Environment.SystemDirectory, "schtasks.exe"),
+                new[] { "/change", "/tn", e.TaskPath, enable ? "/enable" : "/disable" }, 15000);
+            if (result.TimedOut)
             {
                 Status = $"變更排程工作「{e.Name}」逾時。";
                 return false;
             }
-            if (p.ExitCode != 0)
+            if (result.ExitCode is null)
             {
-                Status = $"無法{(enable ? "啟用" : "停用")}排程工作「{e.Name}」（schtasks 結束代碼 {p.ExitCode}）。"
+                Status = "無法啟動 schtasks.exe。" + (result.Reason is null ? "" : $"（{result.Reason}）");
+                return false;
+            }
+            if (result.ExitCode != 0)
+            {
+                Status = $"無法{(enable ? "啟用" : "停用")}排程工作「{e.Name}」（schtasks 結束碼 {result.ExitCode}）。"
                        + "受系統保護的工作，或需要系統管理員權限的工作會被拒絕。";
                 return false;
             }

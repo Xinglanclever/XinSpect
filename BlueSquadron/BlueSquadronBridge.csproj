@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <!-- ⚠ 未編譯——需作者機驗證（dotnet build 命令見 patch-23.md） -->
   <!-- 完整替換檔：BlueSquadron/BlueSquadronBridge.csproj（patch-23，P0-13 配套） -->
@@ -21,6 +21,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- 〔修復 v3.21〕審計 §3.3-2：BaselineStore 的 DPAPI（ProtectedData）在 .NET 上是獨立套件——
+         顯式宣告，不依賴傳遞解析的巧合。 -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.4" />
     <PackageReference Include="System.Management" Version="9.0.4" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.16" />
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="9.0.4" />
@@ -35,12 +38,6 @@
          （把需要的最小源碼面併進 Bridge 編譯集）與 patch-08 的 IommuProbe Compile Link
          同編兩專案做法。同一實體檔、主專案與 Decoders 庫各自編譯自己的副本，無衝突。 -->
     <Compile Include="..\XinSpect.Decoders\ByovdBlocklist.cs" Link="Linked\ByovdBlocklist.cs" />
-
-    <!-- patch-08：IOMMU 單一數據源（Common/IommuProbe.cs）以源碼 Link 同編兩專案。
-         〔修復建置 2026-11-07 補回〕patch-23 整檔替換本 csproj 時把這行踩掉，
-         WmiSecurityReader.cs:46 的 XinSpect.Common.IommuProbe 會 CS0234（命名空間不存在）——
-         正是上面註解引用的「patch-08 的 IommuProbe Compile Link」先例本尊。 -->
-    <Compile Include="..\Common\IommuProbe.cs" Link="Linked\IommuProbe.cs" />
   </ItemGroup>
 
 </Project>

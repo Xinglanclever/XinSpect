@@ -18,9 +18,10 @@ public static class KernelModuleService
     private const string Category = "系統與軟體";
 
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at,
-        Func<IReadOnlyList<KernelModuleEntry>?>? probe = null)
+        Func<IReadOnlyList<KernelModuleEntry>?>? probe = null, bool enumerationTruncated = false)
     {
-        var entries = (probe ?? FetchLoadedModules)();
+        bool truncated = enumerationTruncated;   // 注入 probe 時可由測試直接釘；生產路徑由 FetchLoadedModules 帶出
+        var entries = probe is not null ? probe() : FetchLoadedModules(out truncated);
         if (entries is null)
             return Unavailable(at, "EnumDeviceDrivers 列舉失敗——核心模組清單讀不到就是不猜");
 
@@ -51,26 +52,90 @@ public static class KernelModuleService
 
         return
         [
-            Fact("kmod.total", "載入中的核心模組", entries.Count.ToString(), "", at, entries.Count),
+            Fact("kmod.total", "載入中的核心模組", entries.Count.ToString(),
+                truncated ? "列舉緩衝已達重呼上限仍回報更多——計數如實截斷，實際載入更多" : "", at, entries.Count),
             Fact("kmod.nonwindows", "非系統目錄的載入模組", nonWinValue, "執行檔不在 \\Windows\\ 下——常駐核心的第三方面", at, nonWin.Count),
             Fact("kmod.nonwindows.sig", "非系統模組 Authenticode", sigValue, "wintrust DRIVER_ACTION_VERIFY；失敗如實帶原始碼", at, nonWin.Count(f => f.SignatureValid is false)),
         ];
     }
 
-    /// <summary>執行檔是否落在 Windows 目錄（大小寫不敏感；空路徑如實回 false）。</summary>
+    /// <summary>
+    /// 執行檔是否落在 Windows 目錄下（嚴格前綴比對，大小寫不敏感；空路徑如實回 false）。
+    /// </summary>
+    /// <remarks>
+    /// <para><b>為什麼不能子字串搜尋</b>：舊版 <c>path.Contains("\\Windows\\")</c> 會把
+    /// <c>C:\Tools\Windows\implant.sys</c> 當成系統模組——正是本服務唯一會逐檔驗 Authenticode 的那一小撮，
+    /// 被這一行整批免驗。前綴比對要一次做滿：</para>
+    /// <para>①正規化 EnumDeviceDrivers 的 NT 原生路徑語形——<c>\??\C:\…</c> 剝前綴、
+    /// <c>\SystemRoot\…</c> 代換成實際 Windows 目錄（舊版對 \SystemRoot\ 語形不命中，把核心模組
+    /// 誤分為非系統、送去驗一個不存在的 Win32 路徑，灌大「無法驗證」名單——連帶修正）；</para>
+    /// <para>②<see cref="Path.GetFullPath"/> 收掉 <c>..</c> 段——<c>C:\Windows\system32\..\..\Tools\x.sys</c>
+    /// 不得靠字面前綴矇混；</para>
+    /// <para>③比對目標含尾端分隔符——<c>C:\WindowsFoo\bar.sys</c> 不算；</para>
+    /// <para>④相對路徑（會被 GetFullPath 用 CWD 補全，分類結果不得 depend on 啟動目錄）與解析失敗一律回
+    /// false——分類不到系統目錄＝照驗，豁免要給得有依據。</para>
+    /// </remarks>
     public static bool IsWindowsDirectory(string path)
-        => !string.IsNullOrWhiteSpace(path)
-           && path.Contains("\\Windows\\", StringComparison.OrdinalIgnoreCase);
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+        string p = path.Trim();
+        if (p.StartsWith(@"\??\", StringComparison.OrdinalIgnoreCase)) p = p[4..];          // NT 裝置命名空間
+        else if (p.StartsWith(@"\\?\", StringComparison.OrdinalIgnoreCase)) p = p[4..];      // Win32 長路徑前綴
+        else if (p.StartsWith(@"\SystemRoot\", StringComparison.OrdinalIgnoreCase))
+            p = WindowsRoot + p["\\SystemRoot".Length..];                                    // 開機代稱→實際目錄
+        if (!Path.IsPathRooted(p)) return false;      // 相對路徑不賭 CWD
+        string full;
+        try { full = Path.GetFullPath(p); }
+        catch { return false; }                        // 非法字元／過長——分類不了就照驗
+        return full.StartsWith(WindowsRoot + "\\", StringComparison.OrdinalIgnoreCase);
+    }
 
-    /// <summary>列舉載入中的核心模組並對非系統目錄者做 Authenticode；列舉失敗回 null。</summary>
-    public static IReadOnlyList<KernelModuleEntry>? FetchLoadedModules()
+    /// <summary>Windows 目錄（無尾端分隔符）。行程生命週期內不變，取一次。</summary>
+    private static readonly string WindowsRoot = ResolveWindowsRoot();
+
+    private static string ResolveWindowsRoot()
     {
         try
         {
-            IntPtr[] buffer = new IntPtr[1024];
+            string w = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+            if (!string.IsNullOrWhiteSpace(w)) return w.TrimEnd('\\');
+        }
+        catch { /* 取不到就退內建預設 */ }
+        return @"C:\Windows";
+    }
+
+    /// <summary>初始緩衝（指標個數，舊版即有的期待值）。多數系統遠低於此。</summary>
+    private const int InitialDriverCapacity = 1024;
+
+    /// <summary>重呼上限（指標個數＝512 KB 指標陣列）。超過仍裝不下即為異常環境，帶截斷標記如實退場。</summary>
+    private const int MaxDriverCapacity = 65536;
+
+    /// <summary>列舉載入中的核心模組並對非系統目錄者做 Authenticode；列舉失敗回 null。</summary>
+    public static IReadOnlyList<KernelModuleEntry>? FetchLoadedModules() => FetchLoadedModules(out _);
+
+    /// <summary>
+    /// 列舉載入中的核心模組。psapi 契約：<c>needed</c>＝實際需要的位元組數——緩衝不足時<b>照契約加大緩衝重呼</b>，
+    /// 不做 <c>Math.Min</c> 靜默截斷（patch-35 前的舊版在超過 1024 個模組時少報且無標記，違反本專案三態契約）。
+    /// 重呼到 <see cref="MaxDriverCapacity"/> 仍裝不下（異常環境）時以 <paramref name="truncated"/> 如實回報，
+    /// 由 <see cref="Collect"/> 把「少報」寫進 <c>kmod.total</c> 的值。
+    /// </summary>
+    public static IReadOnlyList<KernelModuleEntry>? FetchLoadedModules(out bool truncated)
+    {
+        truncated = false;
+        try
+        {
+            IntPtr[] buffer = new IntPtr[InitialDriverCapacity];
             if (!EnumDeviceDrivers(buffer, (uint)(buffer.Length * IntPtr.Size), out uint needed))
                 return null;
-            int count = Math.Min((int)(needed / (uint)IntPtr.Size), buffer.Length);
+            while (needed / (uint)IntPtr.Size > (uint)buffer.Length)
+            {
+                if (buffer.Length >= MaxDriverCapacity) { truncated = true; break; }
+                int next = (int)Math.Min(needed / (uint)IntPtr.Size + 64, MaxDriverCapacity);
+                buffer = new IntPtr[next];
+                if (!EnumDeviceDrivers(buffer, (uint)(buffer.Length * IntPtr.Size), out needed))
+                    return null;
+            }
+            int count = (int)Math.Min(needed / (uint)IntPtr.Size, buffer.Length);
             var entries = new List<KernelModuleEntry>(count);
             for (int i = 0; i < count; i++)
             {

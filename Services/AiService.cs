@@ -356,19 +356,24 @@ public sealed class AiService : ObservableObject
         return result;
     }
 
-    private async Task<JsonDocument?> GetJsonAsync(string url, string? apiKey)
+    private async Task<JsonDocument?> GetJsonAsync(string url, string? apiKey, CancellationToken ct = default)
     {
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         if (!string.IsNullOrWhiteSpace(apiKey))
             req.Headers.TryAddWithoutValidation("Authorization", "Bearer " + apiKey.Trim());
-        using var resp = await Client.SendAsync(req);
+        // P3-11：共用 HttpClient 的 Timeout 是 InfiniteTimeSpan——這裡不掛自己的預算就是無限等。
+        // 沿用主對話路徑同一把尺：以 HeaderTimeout（45 秒）涵蓋「送出到讀完內容」；
+        // 模型清單是小回應，45 秒足夠，端點不通時要在這段時間內講清楚。
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeoutCts.CancelAfter(HeaderTimeout);
+        using var resp = await Client.SendAsync(req, timeoutCts.Token);
         if (!resp.IsSuccessStatusCode)
         {
             // 據實回報 HTTP 狀態與伺服器訊息，讓「一鍵獲取」能明確顯示 401/403 等原因
-            string body = await resp.Content.ReadAsStringAsync();
+            string body = await resp.Content.ReadAsStringAsync(timeoutCts.Token);
             throw new HttpRequestException($"HTTP {(int)resp.StatusCode}：{Trim(body, 200)}");
         }
-        return JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+        return JsonDocument.Parse(await resp.Content.ReadAsStringAsync(timeoutCts.Token));
     }
 
     private bool _isBusy;
@@ -427,10 +432,22 @@ public sealed class AiService : ObservableObject
 
     public IReadOnlyList<PendingAttachment> PendingAttachments => _pendingAttachments;
 
+    // P3-11：附件大小上限。數值是產品可調參數（20 MB 對齊主流 Vision API 的單圖上限；
+    // 文字檔 5 MB 是「嵌入 prompt」的量級上限——再大就該請使用者只貼相關段落）。
+    // 超限一律如實拋例外，由呼叫端（AiView.AttachFileByPathAsync 的狀態列收口）顯示，不彈窗。
+    internal static readonly long MaxImageBytes = 20L * 1024 * 1024;
+    internal static readonly long MaxTextFileBytes = 5L * 1024 * 1024;
+
     /// <summary>附加圖片檔（轉 Base64，可選 OCR 先行辨識文字）。回傳剛建立的附件——呼叫端請用回傳值，
     /// 勿讀 PendingAttachments[^1]（並行附加時會取到別人的那筆）。</summary>
     public async Task<PendingAttachment> AttachImageAsync(string filePath, bool runOcr = false)
     {
+        // P3-11：無上限的 ReadAllBytesAsync 會把數百 MB 圖檔（Base64 後再膨脹 1.33 倍）
+        // 整份塞進請求體——先驗長度再讀，超限如實拒絕。
+        var fi = new FileInfo(filePath);
+        if (fi.Length > MaxImageBytes)
+            throw new InvalidOperationException(
+                $"圖片檔 {fi.Length / 1024.0 / 1024.0:0.#} MB 超過上限 {MaxImageBytes / 1024 / 1024} MB——請先縮圖再附加。");
         var bytes = await File.ReadAllBytesAsync(filePath);
         var ext = Path.GetExtension(filePath).TrimStart('.').ToLowerInvariant();
         var mime = ext switch
@@ -479,6 +496,11 @@ public sealed class AiService : ObservableObject
     /// <summary>附加文字檔（內容直接嵌入訊息）。回傳剛建立的附件。</summary>
     public async Task<PendingAttachment> AttachFileAsync(string filePath)
     {
+        // P3-11：文字檔會整份嵌入 prompt——無上限一樣能把請求體與 token 量撐爆。
+        var fi = new FileInfo(filePath);
+        if (fi.Length > MaxTextFileBytes)
+            throw new InvalidOperationException(
+                $"文字檔 {fi.Length / 1024.0 / 1024.0:0.#} MB 超過上限 {MaxTextFileBytes / 1024 / 1024} MB——請只附加相關段落（或改用剪貼簿節錄）。");
         var text = await File.ReadAllTextAsync(filePath);
         var name = Path.GetFileName(filePath);
         var att = new PendingAttachment
@@ -546,8 +568,25 @@ public sealed class AiService : ObservableObject
             };
             using var proc = Process.Start(psi);
             if (proc is null) return null;
-            var output = await proc.StandardOutput.ReadToEndAsync();
-            await proc.WaitForExitAsync();
+            // P3-11：stderr 與 stdout 同時讀空——PaddleOCR 的進度日誌走 stderr，
+            // 不讀它，管線緩衝一滿 python 就卡在寫、stdout 永不關閉（經典雙管死鎖面）。
+            var stdoutTask = proc.StandardOutput.ReadToEndAsync();
+            var stderrTask = proc.StandardError.ReadToEndAsync();
+            // 整體預算 120 秒：單圖 OCR 的合理上限；逾時砍掉行程樹、如實回 null（不假裝辨識成功）。
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
+            try
+            {
+                await proc.WaitForExitAsync(timeoutCts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                try { proc.Kill(entireProcessTree: true); } catch { /* 已自行結束 */ }
+                // Kill 之後管線關閉，兩個讀取任務自然收尾；在這裡等完是為了不留未觀察的 Task。
+                try { await Task.WhenAll(stdoutTask, stderrTask); } catch { /* 中斷期的 IO 例外無意義 */ }
+                return null;
+            }
+            var output = await stdoutTask;
+            var stderr = await stderrTask;   // 讀完即棄：目的只在排空管線防死鎖，內容不進對話
             return proc.ExitCode == 0 && !string.IsNullOrWhiteSpace(output)
                 ? output.Trim()
                 : null;

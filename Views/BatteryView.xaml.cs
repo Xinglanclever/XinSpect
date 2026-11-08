@@ -78,8 +78,12 @@ public partial class BatteryView : UserControl
 
     private void Read_Click(object sender, RoutedEventArgs e) => Read();
 
+    private bool _generating;
+
     private async void Report_Click(object sender, RoutedEventArgs e)
     {
+        if (_generating) return;   // 防重入：上一份 powercfg 沒收乾淨前不再疊一份
+        _generating = true;
         try
         {
             string outPath = Path.Combine(
@@ -94,7 +98,21 @@ public partial class BatteryView : UserControl
             using var p = Process.Start(psi);
             if (p is not null)
             {
-                await p.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(8));
+                try
+                {
+                    await p.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(8));
+                }
+                catch (TimeoutException)
+                {
+                    // P3-12：逾時不放生——砍掉行程樹、刪掉半份報告。否則孤兒 powercfg 續跑，
+                    // 下一次按「產生報告」時兩份行程搶寫同一個輸出檔（半份報告競爭）。
+                    try { p.Kill(entireProcessTree: true); } catch { /* 已自行結束 */ }
+                    try { File.Delete(outPath); } catch { /* 刪不掉就留給下次覆寫 */ }
+                    XMsg.Show(LanguageService.T("powercfg 8 秒內沒有完成（已中止並清理半份報告）。\n"
+                          + "慢速磁碟或系統忙碌時偶發；請稍後再試一次。"),
+                          "電池分析", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
             }
 
             if (File.Exists(outPath))
@@ -108,5 +126,6 @@ public partial class BatteryView : UserControl
             XMsg.Show("產生電池報告失敗：" + ex.Message, "電池分析",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
+        finally { _generating = false; }
     }
 }

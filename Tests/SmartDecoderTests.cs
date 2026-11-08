@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 using XinSpect;
 
 namespace XinSpect.Tests;
@@ -49,7 +49,7 @@ public class SmartDecoderTests
         Assert.Equal("1.024 TB（2,000,000 單位）", dict["累計讀取（Data Units Read）"]);
         Assert.Equal("512.0 GB（1,000,000 單位）", dict["累計寫入（Data Units Written）"]);
         Assert.Equal("742 次", dict["電源循環"]);
-        Assert.Equal("123,456 小時", dict["通電時間"]);
+        Assert.Equal("123,456 小時（0＝全新碟，非讀不到）", dict["通電時間"]);   // 〔修復 v3.21〕P4-4：0 小時的語意如實標注
         Assert.Equal("3 次", dict["不安全關機"]);
         Assert.Equal("0", dict["媒體與資料完整性錯誤"]);
         Assert.Equal("11", dict["錯誤資訊紀錄項目"]);

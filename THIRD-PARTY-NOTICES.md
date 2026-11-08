@@ -1,4 +1,4 @@
-> **專案授權**：曦覽 XinSpect 以 **AGPL-3.0-or-later** 釋出（見 `LICENSE`）；需要閉源整合的商業授權見 `COMMERCIAL-LICENSE.md`。
+﻿> **專案授權**：曦覽 XinSpect 以 **AGPL-3.0-or-later** 釋出（見 `LICENSE`）；需要閉源整合的商業授權見 `COMMERCIAL-LICENSE.md`。
 > 下表列出的第三方元件**不在**本專案的授權之下——它們各自維持原本的授權（含 MIT／MPL-2.0／LGPL／BSD-3-Clause 等）。這些授權條款要求保留姓名標示與授權聲明，所以**本檔中的第三方段落必須原樣保留**；它們是本專案的授權義務，不是本專案的授權。
 
 # 第三方元件清單（THIRD-PARTY NOTICES）— v2.64
@@ -16,6 +16,7 @@
 | Microsoft.Web.WebView2 | 1.0.4129.50 | MIT | 附授權文本連結 | https://github.com/MicrosoftEdge/WebView2Browser |
 | System.Management | 10.0.11（Bridge 9.0.4） | MIT | 附授權文本連結 | https://github.com/dotnet/runtime |
 | Microsoft.Diagnostics.Tracing.TraceEvent | 3.1.16 | MIT | 附授權文本連結 | https://github.com/Microsoft/perfview |
+| System.Security.Cryptography.ProtectedData | 9.0.4 | MIT | 附授權文本連結 | https://github.com/dotnet/runtime |   <!-- 〔修復 v3.21〕BaselineStore DPAPI 用——顯式 PackageReference 後入列（授權義務成文） -->
 | NAudio | 2.* | MIT | 附授權文本連結 | https://github.com/naudio/NAudio |
 | System.ServiceProcess.ServiceController | 9.0.4（Bridge） | MIT | 附授權文本連結 | https://github.com/dotnet/runtime |
 | PCI ID 資料庫（`pci.ids`，內嵌 `XinSpect.Decoders/Data/pci-ids.tsv.gz`） | 快照 2026.10.01 | BSD-3-Clause（上游自述為 GPL-2.0-or-later 或 BSD-3-Clause 雙授權，本專案採後者） | 保留姓名標示與授權聲明；衍生檔只抽廠商與裝置兩段、其餘丟棄；**不因此使本專案受 GPL 約束** | https://pci-ids.ucw.cz/ ；https://github.com/vcrhonek/hwdata |

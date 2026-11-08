@@ -21,7 +21,9 @@ internal sealed class MetricsPump
     private DispatcherTimer? _timer;
     private bool _ticking;          // 重入防護：上一拍未結束則跳過本拍
     private long _tick;             // 拍數（部分較慢的工作每 N 拍才做一次）
-    private bool _settingsHooked;   // 設定變更訂閱只掛一次，Stop 不退（PropertyChanged 是弱事件）
+    private bool _settingsHooked;   // 設定變更訂閱只掛一次，Stop 不退——PropertyChanged 不是弱事件
+                                    //（強引用；pump 與 MainViewModel 同生命週期，故「不退」是設計而非洩漏），
+                                    // 掛一次防的是 Start/Stop 循環疊 handler
 
     public MetricsPump(MainViewModel vm) => _vm = vm;
 

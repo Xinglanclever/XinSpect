@@ -66,13 +66,30 @@ public sealed class BootRepairService : ObservableObject
         await RunCommandAsync("chkdsk", $"{sys} /scan");
     }
 
-    /// <summary>bootrec /scanos + /rebuildbcd（僅 UEFI 環境有意義）</summary>
+    /// <summary>bootrec /scanos + /rebuildbcd（僅 UEFI 環境有意義）。
+    /// P3-20：rebuildbcd 會重寫 BCD 存放區——動手前先 `bcdedit /export` 做一份位元組級
+    /// 備份；備份不成功就不動手（沒有後路的開機設定修復不該發生）。備份路徑進 Log，
+    /// 還原方式：`bcdedit /import <該檔>`（提權命令列）。</summary>
     public async Task RunBootRecAsync()
     {
         AppendLog("═══ BootRec 引導重建 ═══");
         AppendLog("[bootrec /scanos]");
         await RunCommandAsync("bootrec", "/scanos");
-        AppendLog("[bootrec /rebuildbcd]");
+
+        string backup = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "XinSpect", "bcd-backups", $"BCD-{DateTime.Now:yyyyMMdd-HHmmss}");
+        Directory.CreateDirectory(Path.GetDirectoryName(backup)!);
+        string bcdedit = Path.Combine(Environment.SystemDirectory, "bcdedit.exe");
+        AppendLog($"[bcdedit /export \"{backup}\"]（P3-20：重建前備份現有 BCD 存放區）");
+        int exportCode = await RunCommandAsync(bcdedit, $"/export \"{backup}\"");
+        if (exportCode != 0)
+        {
+            AppendLog($"[中止] BCD 備份未成功（結束代碼 {exportCode}）——不執行 rebuildbcd。" +
+                      "請先確認以系統管理員執行、或手動備份後再跑一次。");
+            return;
+        }
+        AppendLog($"[bootrec /rebuildbcd]（BCD 已備份至 {backup}；如需還原：bcdedit /import \"{backup}\"）");
         await RunCommandAsync("bootrec", "/rebuildbcd");
     }
 
@@ -97,12 +114,12 @@ public sealed class BootRepairService : ObservableObject
 
     // ── 內部 ────────────────────────────────────────────────────
 
-    private async Task RunCommandAsync(string fileName, string arguments)
+    private async Task<int> RunCommandAsync(string fileName, string arguments)
     {
         if (IsRunning)
         {
             AppendLog("[等待] 上一個命令仍在執行…");
-            return;
+            return -1;   // 未執行（防重入讓位）；呼叫端皆丟棄回傳值，唯 BootRec 的備份門會核對
         }
         IsRunning = true;
         AppendLog($"> {fileName} {arguments}");
@@ -127,10 +144,12 @@ public sealed class BootRepairService : ObservableObject
 
             await process.WaitForExitAsync();
             AppendLog($"[結束] 結束代碼 {process.ExitCode}");
+            return process.ExitCode;
         }
         catch (Exception ex)
         {
             AppendLog($"[失敗] {ex.Message}");
+            return -1;
         }
         finally
         {

@@ -35,7 +35,7 @@ public sealed class DriverMsrReader : IKernelMsrReader, IDisposable
     public DriverMsrReader(Func<IRawDeviceChannel>? channelFactory = null) =>
         _channelFactory = channelFactory ?? (() => new RawDeviceChannel());
 
-    public string? BackendName => "XsRegProbe";
+    public string? BackendName => "XsRegProbe 自研白名單核心驅動";
 
     public string? LastFailReason => _lastFailReason;
 

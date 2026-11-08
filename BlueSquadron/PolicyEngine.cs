@@ -1,4 +1,4 @@
-// ⚠ 未編譯——需作者機驗證（dotnet build 命令見 patch-24.md）
+﻿// ✓ 已隨 v3.20／v3.21 建置與全套測試驗證（2026-11-08 REPORT-修復建置；原補丁自述的「未編譯」狀態解除）
 //
 // PolicyEngine.cs — 完整替換檔（patch-24，P0-12 誠實化：阻擋模式如實申報）
 // 覆蓋目標：BlueSquadron/PolicyEngine.cs（原 79 行）
@@ -30,6 +30,14 @@ internal sealed class PolicyEngine
     /// 改成 true 之前，必須先有真的會擋東西的代碼。
     /// </summary>
     public const bool BlockingImplemented = false;
+
+    /// <summary>
+    /// Phase 1 的代碼事實：防線模式與開關只存於本行程記憶體（_modes／_enabled），
+    /// Bridge 進程重啟即回 detect——沒有任何持久化路徑（P4-32）。
+    /// 「改了模式後重啟還在」是錯覺；要持久化需先決策存哪（settings.json／登錄）、
+    /// 與誰合流、與驅動常駐如何同步——那是 Phase 2 的範圍。
+    /// </summary>
+    public const bool ModesPersisted = false;
 
     /// <summary>本引擎認得的防線（與 Bridge 啟動時的預設啟用集一致）。</summary>
     public static readonly string[] KnownLines =

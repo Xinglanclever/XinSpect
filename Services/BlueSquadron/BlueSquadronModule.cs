@@ -1,4 +1,4 @@
-// ⚠ 未編譯——需作者機驗證（dotnet build 命令見 patch-24.md）
+﻿// ✓ 已隨 v3.20／v3.21 建置與全套測試驗證（2026-11-08 REPORT-修復建置；原補丁自述的「未編譯」狀態解除）
 //
 // BlueSquadronModule.cs — 完整替換檔（patch-24，P0-12/13/14 主程式側接線）
 // 覆蓋目標：Services/BlueSquadron/BlueSquadronModule.cs（原 497 行）
@@ -16,7 +16,7 @@
 //   驅動就緒狀態卡——「部分就緒」如實顯示，不再被「驅動載入成功」掩蓋。
 
 using System.Collections.ObjectModel;
-using System.Globalization;
+using System.Globalization;   // 〔修復 v3.21〕審計 P2-3：時間解析不吃當地文化
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Threading;
@@ -57,17 +57,6 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
     public SecurityPostureService Posture { get; } = new();
 
     public ObservableCollection<ThreatEvent> ThreatTimeline { get; } = [];
-
-    // 〔修復 v3.20〕時間軸容量上限：Insert(0, …) 無上限成長會慢慢吃記憶體，而
-    // (Timestamp, Title) 去重是線性掃描、跑在 Dispatcher 上——500 筆上限把兩者一起綁住
-    // （插入後從尾端丟掉最舊的；輪詢與即時推送兩個插入點都套同一份裁切）。
-    private const int TimelineCap = 500;
-
-    private void TrimThreatTimeline()
-    {
-        while (ThreatTimeline.Count > TimelineCap)
-            ThreatTimeline.RemoveAt(ThreatTimeline.Count - 1);
-    }
 
     public ObservableCollection<DefenseLineStatus> DefenseLines { get; } =
     [
@@ -115,17 +104,7 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
             }
             else
             {
-                // 〔修復 v3.20〕停止路徑移出 UI 執行緒：StopBridge 經 Engine.Dispose（內含
-                // WaitForExit(3000)）最多凍結視窗 3 秒。改於背景停止；排隊期間使用者又把開關
-                // 打開（關→開快速來回）的話，這次停止已無意義——讓路給重新啟動。
-                _ = Task.Run(() =>
-                {
-                    var spin = new SpinWait();
-                    while (Volatile.Read(ref _starting) == 1) spin.SpinOnce();  // 啟動進行中先讓它收尾再停
-                    if (Volatile.Read(ref _bridgeEnabled)) return;              // 開關又開了：不停，狀態交給啟動路徑回報
-                    RunOnUI(() => BridgeStatus = "正在停止守護進程…");
-                    StopBridge();
-                });
+                StopBridge();
             }
         }
     }
@@ -183,15 +162,10 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
     // ── Bridge 啟動 ─────────────────────────────────────────────
 
     private int _starting;
-    private int _stopping;   // 〔修復 v3.20〕與 _starting 對稱的停止互鎖：停止改背景後，防 Stop/Start 交錯與重入
 
     /// <summary>帶重入保護的啟動入口：快速來回切換開關或初始化重跑時不會開出第二個進程。</summary>
     private void TryStartBridge()
     {
-        // 〔修復 v3.20〕先等停止路徑收尾（_stopping 與 _starting 對稱互鎖）：停止進行中 Engine
-        // 尚未清空，這裡若直接返回會把「關→開」的重新啟動整個吞掉。
-        var spin = new SpinWait();
-        while (Volatile.Read(ref _stopping) == 1) spin.SpinOnce();
         if (Engine is not null) return;
         if (Interlocked.Exchange(ref _starting, 1) == 1) return;
         try { TryStartBridgeCore(); }
@@ -334,6 +308,31 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
         StartPollingLoop();
     }
 
+    /// <summary>
+    /// P3-19：明確的卸載路徑——送 "unload" 給 Bridge（停止並刪除核心服務）。
+    /// Bridge 端之後的 status／init 如實回 driverLoaded=false；本方法只負責送達與回報，
+    /// 是否提供 UI 入口（設定頁／藍色中隊頁按鈕）屬產品決策——路徑先通，入口不虛構。
+    /// </summary>
+    public async Task<bool> UnloadDriverAsync()
+    {
+        var engine = Engine;
+        if (engine is null || !engine.Connected) return false;
+        try
+        {
+            var resp = await Task.Run(() => engine.SendCmd("unload", 10000));
+            bool ok = resp is { } r && r.TryGetProperty("ok", out var o) && o.ValueKind == JsonValueKind.True;
+            RunOnUI(() => BridgeStatus = ok
+                ? "BlueSquadron 核心服務已卸載（user-mode 偵測防線仍在運行）。"
+                : "卸載指令送達，但 Bridge 回報未成功——以 caps／status 複核。");
+            return ok;
+        }
+        catch
+        {
+            RunOnUI(() => BridgeStatus = "卸載指令失敗（Bridge 無回應或已斷線）。");
+            return false;
+        }
+    }
+
     // ── 輪詢迴圈 ────────────────────────────────────────────────
 
     private void StartPollingLoop()
@@ -400,8 +399,7 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
                             break;
                         }
                     }
-                    if (!dup) ThreatTimeline.Insert(0, captured);
-                    TrimThreatTimeline();   // 〔修復 v3.20〕插入後裁到上限
+                    if (!dup) { ThreatTimeline.Insert(0, captured); TrimThreatTimeline(); }
                 });
             }
         }
@@ -433,9 +431,18 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
                     break;
                 }
             }
-            if (!dup) ThreatTimeline.Insert(0, captured);
-            TrimThreatTimeline();   // 〔修復 v3.20〕插入後裁到上限
+            if (!dup) { ThreatTimeline.Insert(0, captured); TrimThreatTimeline(); }
         });
+    }
+
+    /// <summary>〔修復 v3.21〕審計 P2-2：時間軸上限 500——Bridge 常駐數天的事件只進不出，
+    /// ObservableCollection 會無界成長，去重線性掃描與 UI 虛擬化同時劣化。</summary>
+    private const int TimelineCap = 500;
+
+    private void TrimThreatTimeline()
+    {
+        while (ThreatTimeline.Count > TimelineCap)
+            ThreatTimeline.RemoveAt(ThreatTimeline.Count - 1);
     }
 
     // ── JSON → ThreatEvent ──────────────────────────────────────
@@ -448,10 +455,10 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
     {
         try
         {
-            // 〔修復 v3.20〕時間字串以 InvariantCulture＋RoundtripKind 解析（原寫法吃當地文化，
-            // zh-TW 機器上多半直接解析失敗）。解析失敗不把「現在」冒充成事件時間而不留痕：
-            // 排序顯示仍取收到當下的時間，但標題加掛「（時間待校）」誠實標記。
-            var dto = DateTimeOffset.Now;   // 先給預設（&& 短路時 TryParse 不執行——CS0165）
+            // 〔修復 v3.21〕審計 P2-3：Bridge 送 ISO 8601——以 InvariantCulture＋RoundtripKind
+            // 解析（原寫法吃當地文化，zh-TW 機器上多半直接失敗）。解析失敗不拿「現在」冒充
+            // 事件時間：排序顯示仍取收到當下的時間，但標題加掛「（時間待校）」如實標記。
+            var dto = DateTimeOffset.Now;   // 先賦值（&& 短路時 TryParse 不執行）
             bool tsParsed =
                 el.TryGetProperty("ts", out var tsEl)
                 && DateTimeOffset.TryParse(tsEl.GetString(), CultureInfo.InvariantCulture,
@@ -470,10 +477,7 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
             string detail = el.TryGetProperty("detail", out var dtEl)
                             ? dtEl.GetString() ?? "" : "";
 
-            // 〔修復 v3.20〕時間欄位解析失敗時在標題如實標記——時間軸列只顯示 Timestamp
-            // （HH:mm:ss）與文字欄位，不標的話使用者分不清「事件發生時間」與「收到時間」。
             if (!tsParsed) title += "（時間待校）";
-
             return new ThreatEvent(ts, MapSeverity(severity), line, title, detail);
         }
         catch { return null; }
@@ -522,29 +526,22 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
     /// </summary>
     public void StopBridge()
     {
-        // 〔修復 v3.20〕_stopping 互鎖：背景停止進行中時的再次呼叫（含 Dispose 收尾）直接略過，
-        // 不與其交錯造成 Engine／_pollCts 雙重釋放。
-        if (Interlocked.Exchange(ref _stopping, 1) == 1) return;
-        try
+        _pollCts?.Cancel();
+        _pollCts?.Dispose();
+        _pollCts = null;
+
+        if (Engine is { } eng)
         {
-            _pollCts?.Cancel();
-            _pollCts?.Dispose();
-            _pollCts = null;
-
-            if (Engine is { } eng)
-            {
-                eng.AlertReceived -= OnAlertReceived;
-                eng.Dispose();
-                Engine = null;
-            }
-
-            RunOnUI(() =>
-            {
-                BridgeAvailable = false;
-                BridgeStatus = "Bridge 已停止";
-            });
+            eng.AlertReceived -= OnAlertReceived;
+            eng.Dispose();
+            Engine = null;
         }
-        finally { Interlocked.Exchange(ref _stopping, 0); }
+
+        RunOnUI(() =>
+        {
+            BridgeAvailable = false;
+            BridgeStatus = "Bridge 已停止";
+        });
     }
 
     // ── 防線狀態更新 ────────────────────────────────────────────

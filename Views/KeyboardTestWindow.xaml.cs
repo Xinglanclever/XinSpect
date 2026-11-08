@@ -159,4 +159,23 @@ public partial class KeyboardTestWindow : Window
         MaxHeldText.Text = _maxHeld.ToString();
         TestedText.Text = _tested.Count.ToString();
     }
+
+    /// <summary>
+    /// 失焦殭屍鍵（P3-12）：測試中把焦點切走（Alt+Tab、誤觸 Win 鍵），OS 不會對殘留鍵
+    /// 補送 KeyUp——畫面標成「按住」的鍵會常亮，看起來像實體卡鍵。失焦即整批釋放；
+    /// _tested 保留（那些鍵確實被按過，測試記錄不因切換視窗而消失）。
+    /// </summary>
+    protected override void OnDeactivated(EventArgs e)
+    {
+        base.OnDeactivated(e);
+        ClearHeld();
+    }
+
+    private void ClearHeld()
+    {
+        if (_held.Count == 0) return;
+        _held.Clear();
+        foreach (var k in _caps.Keys) Highlight(k);
+        UpdateStats(Key.None, down: false);   // 只刷新計數（Held=0）；LastKey／MaxHeld／Tested 不動
+    }
 }

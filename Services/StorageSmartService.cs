@@ -646,7 +646,7 @@ public sealed class StorageSmartService : ObservableObject
         rows.Add(new("已使用壽命（Percentage Used）", $"{h.PercentageUsed}%", "", ""));
         rows.Add(new("累計讀取（Data Units Read）", DuText(h.DataUnitsRead), "", ""));
         rows.Add(new("累計寫入（Data Units Written）", DuText(h.DataUnitsWritten), "", ""));
-        rows.Add(new("通電時間", h.PowerOnHours == 0 ? "—" : $"{h.PowerOnHours:N0} 小時", "", ""));
+        rows.Add(new("通電時間", $"{h.PowerOnHours:N0} 小時（0＝全新碟，非讀不到）", "", ""));
         rows.Add(new("電源循環", $"{h.PowerCycles:N0} 次", "", ""));
         rows.Add(new("不安全關機", $"{h.UnsafeShutdowns:N0} 次", "", ""));
         rows.Add(new("媒體與資料完整性錯誤", $"{h.MediaErrors:N0}", "", ""));
@@ -954,9 +954,7 @@ public sealed class StorageSmartService : ObservableObject
     {
         uint bus = TryGetBusType(index, out _);
 
-        // 〔修復 v3.20〕通道判定問 ChannelOf（唯一一份），不在這裡重寫 16/17——
-        // 對照表有兩份遲早漂開（BusTypeName 當年就是這麼修掉的）。
-        if (ChannelOf(bus) == StorageBusChannel.Nvme)
+        if (ChannelOf(bus) == StorageBusChannel.Nvme)   // 〔修復 v3.21〕審計 P4-2：走 ChannelOf 單一事實來源，不硬寫 16/17
         {
             byte[]? log = TryReadNvmeLog(index);
             if (log is null || log.Length < 0x88) return 0;
@@ -1117,7 +1115,10 @@ public sealed class StorageSmartService : ObservableObject
             new("韌體版本（Firmware）", AsciiString(64, 8), "", ""),
             new("總命名空間數（NN）", $"{BitConverter.ToUInt32(data, 516)}", "", ""),
             new("容量（TNVMCAP）", tnvmcap > 0 ? $"{tnvmcap:N0} 位元組（≈{tnvmcap / 1e9:0.0} GB）" : "—", "", ""),
-            new("最大資料傳輸大小（MDTS）", $"{1UL << (data[77] & 0xF):N0} 頁（4 KiB 倍數）", "", ""),
+            new("最大資料傳輸大小（MDTS）",
+                data[77] == 0 ? "無上限（MDTS=0）"
+                : data[77] < 32 ? $"{1UL << data[77]:N0} 頁（4 KiB 倍數，隨 CC.MPS 補正）"
+                : $"0x{data[77]:X2}（慣用範圍外，如實列原始值）", "", ""),
         };
         return rows;
     }
@@ -1162,7 +1163,9 @@ public sealed class StorageSmartService : ObservableObject
             new("序號（Serial）", AsciiString(data, 2 * 10, 10), "", ""),
             new("韌體（Firmware）", AsciiString(data, 2 * 23, 4), "", ""),
             new("裝置類型", isAta ? "ATA" : "ATAPI／未知", "", ""),
-            new("最大 LBA（48-bit）", Le32(2 * 100) != 0 ? $"{Le32(2 * 100):N0} 磁區（≈{Le32(2 * 100) * 512 / 1e12:0.00} TB）" : "—", "", ""),
+            new("最大 LBA（48-bit）", (Le32(2 * 100) != 0 || Le32(2 * 102) != 0)
+                ? $"{Le32(2 * 100) | ((ulong)Le32(2 * 102) << 32):N0} 磁區（≈{(Le32(2 * 100) | ((ulong)Le32(2 * 102) << 32)) * 512 / 1e12:0.00} TB）"
+                : "—", "", ""),
             new("邏輯磁區大小", (Le16(2 * 106) & 0x1000) != 0 ? "4 KiB" : "512 B", "", ""),
             new("實體磁區大小", (Le16(2 * 106) & 0x2000) != 0 ? "4 KiB" : "512 B", "", ""),
             new("支援 TRIM", (Le16(2 * 69) & 0x4000) != 0 ? "是（Data Set Management）" : "否", "", ""),

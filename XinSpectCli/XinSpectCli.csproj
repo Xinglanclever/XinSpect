@@ -33,7 +33,7 @@
     <ProjectReference Include="..\XinSpect.csproj" />
   </ItemGroup>
 
-  <!-- 百科全書（README.md，約 1.5MB）整本嵌入：book 指令離線可讀，不需要外部檔案 -->
+  <!-- 百科全書（docs/百科-v3.17.md，約 1.5MB）整本嵌入（主版嵌入；Legacy 版改內容檔隨行，見 patch-32 P4-28）：book 指令離線可讀，不需要外部檔案 -->
   <ItemGroup>
     <EmbeddedResource Include="..\docs\百科-v3.17.md" Link="docs\百科-v3.17.md" />
   </ItemGroup>

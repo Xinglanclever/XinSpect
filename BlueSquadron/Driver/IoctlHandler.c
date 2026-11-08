@@ -83,17 +83,31 @@ NTSTATUS IoctlDispatch(
 
         case IOCTL_BS_PROCESS_PROTECT:
         {
-            /* 新增一個 PID 到受保護清單 */
+            /* 新增一個 PID 到受保護清單。
+               〔P4-33〕兩處修正：
+               1) 去重——同一 PID 反覆保護不再重複入列擠佔 64 名額（重複呼叫如實回成功，
+                  冪等）；Bridge 端為單執行緒派遣迴圈，掃描＋插入之間無第二寫入者。
+               2) 先寫槽位、後公開計數——讀端以 g_ProtectedCount 為快照界，「先寫後計數」
+                  保證讀到計數就有完整資料；原順序（先 InterlockedIncrement 後寫槽）有
+                  讀到尚未寫入槽位的窗口。 */
             if (inLen < sizeof(ULONG)) { status = STATUS_INVALID_PARAMETER; break; }
             ULONG pid = *(PULONG)buf;
-            LONG idx = InterlockedIncrement(&g_ProtectedCount) - 1;
-            if (idx >= BS_MAX_PROTECTED_PIDS)
+            LONG count = g_ProtectedCount;
+            BOOLEAN exists = FALSE;
+            for (LONG i = 0; i < count && i < BS_MAX_PROTECTED_PIDS; i++)
             {
-                InterlockedDecrement(&g_ProtectedCount);
-                status = STATUS_INSUFFICIENT_RESOURCES;
-                break;
+                if ((ULONG)(ULONG_PTR)g_ProtectedPids[i] == pid) { exists = TRUE; break; }
             }
-            g_ProtectedPids[idx] = (HANDLE)(ULONG_PTR)pid;
+            if (!exists)
+            {
+                if (count >= BS_MAX_PROTECTED_PIDS)
+                {
+                    status = STATUS_INSUFFICIENT_RESOURCES;
+                    break;
+                }
+                g_ProtectedPids[count] = (HANDLE)(ULONG_PTR)pid;   /* 先寫槽位 */
+                InterlockedIncrement(&g_ProtectedCount);           /* 後公開（release 屏障） */
+            }
             break;
         }
 

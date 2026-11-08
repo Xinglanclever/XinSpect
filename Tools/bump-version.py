@@ -29,6 +29,12 @@ import os
 import re
 import sys
 
+# Keep redirected output readable and deterministic on Windows code pages.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 
 # ── 檔案讀寫（保留 BOM 與該檔原本的換行）────────────────────────────────
 

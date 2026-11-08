@@ -1,4 +1,4 @@
-// ⚠ 未編譯——需作者機驗證（dotnet build 命令見 patch-24.md）
+﻿// ✓ 已隨 v3.20／v3.21 建置與全套測試驗證（2026-11-08 REPORT-修復建置；原補丁自述的「未編譯」狀態解除）
 //
 // Program.cs（BlueSquadronBridge 端）— 完整替換檔（patch-24，P0-12 誠實化＋P0-13/14 接線）
 // 覆蓋目標：BlueSquadron/Program.cs（原 371 行）
@@ -104,13 +104,6 @@ internal static class Program
 
         Baseline.Load();
 
-        // patch-10 §1.3(a)：基線完整性驗證失敗時如實上報威脅事件——壞檔已隔離、
-        // 未靜默重校，主體端藍色中隊威脅清單要能看到這一條。
-        if (Baseline.IntegrityFailure)
-            Policy.RecordThreat("warning", "firmware",
-                "基線檔完整性驗證失敗",
-                Baseline.LoadStatus ?? "baseline.json 驗證失敗（壞檔已隔離，未靜默重校）。");
-
         // 啟動 ETW 監控（警告透過 stdout 推送）
         _etw = new EtwWatcher(Policy, alertJson =>
         {
@@ -192,9 +185,6 @@ internal static class Program
                     ["driverLoaded"] = _driver?.IsLoaded ?? false,
                     ["driverError"] = _driver?.LastError ?? "",
                     ["baselineChanges"] = changes.Count,
-                    // patch-10 §1.3(b)：完整性三態隨 init 回應帶給主體（多兩欄不破壞既有解析）。
-                    ["baselineIntegrityFailed"] = Baseline.IntegrityFailure,
-                    ["baselineStatus"] = Baseline.LoadStatus ?? "",
                     ["byovdBlocklist"] = BlocklistInfo(),
                     ["blockingImplemented"] = PolicyEngine.BlockingImplemented,
                     ["facts"] = FactsToDict(facts),
@@ -219,6 +209,7 @@ internal static class Program
                     ["ok"] = true,
                     ["driverLoaded"] = _driver?.IsLoaded ?? false,
                     ["blockingImplemented"] = PolicyEngine.BlockingImplemented,
+                    ["modesPersisted"] = PolicyEngine.ModesPersisted,
                     ["byovdBlocklist"] = BlocklistInfo(),
                     ["lines"] = lines,
                 };
@@ -280,8 +271,8 @@ internal static class Program
                     // 阻擋沒有執行路徑——意向已記錄，但現在的偵測不會因此變成攔截
                     ["implemented"] = !blocking,
                     ["note"] = blocking
-                        ? "已記錄為意向。Phase 1 僅偵測：目前沒有任何執行路徑會阻止此防線上的活動（阻擋需 Phase 2 的核心執行路徑）。"
-                        : "偵測模式已套用（ETW 與核心回呼持續記錄）。"
+                        ? "已記錄為意向。Phase 1 僅偵測：目前沒有任何執行路徑會阻止此防線上的活動（阻擋需 Phase 2 的核心執行路徑）。模式僅存於本行程記憶體，Bridge 重啟即回 detect（未持久化）。"
+                        : "偵測模式已套用（ETW 與核心回呼持續記錄）。模式僅存於本行程記憶體，Bridge 重啟即回 detect（未持久化）。"
                 };
             }
 
@@ -355,6 +346,30 @@ internal static class Program
                 };
             }
 
+            case "unload":
+            {
+                // P3-19：此前 IPC 沒有任何卸載路徑——驅動一載就是常駐（DriverManager.Dispose
+                // 刻意不停服務），想停也停不了。本指令是明確的停用門：主程式送 "unload"
+                // 才停止並刪除核心服務；之後 status／init 的 driverLoaded 如實回 false。
+                if (_driver is null)
+                    return new Dictionary<string, object?>
+                    {
+                        ["ok"] = false,
+                        ["error"] = "驅動管理器未初始化（本進程尚未嘗試載入驅動）",
+                    };
+                bool wasLoaded = _driver.IsLoaded;
+                _driver.Unload();
+                return new Dictionary<string, object?>
+                {
+                    ["ok"] = true,
+                    ["wasLoaded"] = wasLoaded,
+                    ["driverLoaded"] = _driver.IsLoaded,
+                    ["note"] = _driver.IsLoaded
+                        ? "卸載指令已執行，但服務未停止成功——請以 status／caps 複核實際狀態。"
+                        : "核心服務已停止並刪除。重新啟動 Bridge 進程才會再次嘗試載入（init 不會自動重載）。",
+                };
+            }
+
             case "snapshot":
             {
                 var facts = Reader.ReadAll();
@@ -417,11 +432,6 @@ internal static class Program
             Icon = System.Drawing.SystemIcons.Shield,
             Visible = true,
         };
-        // patch-10 §1.3(c)：獨立運行（系統匣）模式也要讓完整性失敗被看見——氣泡如實申報。
-        if (Baseline.IntegrityFailure)
-            tray.ShowBalloonTip(8000, "藍色中隊",
-                "基線檔完整性驗證失敗：" + (Baseline.LoadStatus ?? "壞檔已隔離。"),
-                System.Windows.Forms.ToolTipIcon.Warning);
         var menu = new System.Windows.Forms.ContextMenuStrip();
         menu.Items.Add("狀態：運行中").Enabled = false;
         menu.Items.Add("重新掃描", null, (_, _) =>
@@ -483,9 +493,6 @@ internal static class Program
         }
 
         Baseline.Load();
-        // patch-10 §1.3(d)：probe 模式完整性失敗直接印出——批次/腳本能看到三態結果。
-        if (Baseline.IntegrityFailure)
-            Console.WriteLine("[baseline] 完整性驗證失敗：" + Baseline.LoadStatus);
         var changes = Baseline.Snapshot(facts);
         Console.WriteLine($"BaselineChanges={changes.Count}");
         foreach (var (key, old, @new) in changes)

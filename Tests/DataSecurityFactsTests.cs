@@ -81,8 +81,15 @@ public class DataSecurityFactsTests
         Assert.Contains("已啟用", on.Value);
         Assert.Contains("不表示已成功註冊", on.Value);
 
+        // false＝明文 EnableAutoEnrollment=0——是政策明文，不是「無政策」
         var off = F(Collect(flags: (p, v) => false), DataSecurityFactsService.AutoKey);
-        Assert.Contains("沒有政策", off.Value);
+        Assert.Contains("明文停用", off.Value);
+
+        // null＝鍵或值不存在＝沒有政策——如實 Present「沒有政策」，不併入「未啟用」也不併入「讀取失敗」
+        var noPolicy = F(Collect(flags: (p, v) => null), DataSecurityFactsService.AutoKey);
+        Assert.Equal(FactAvailability.Present, noPolicy.Availability);
+        Assert.Equal(0, noPolicy.NumericValue);
+        Assert.Contains("沒有政策", noPolicy.Value);
     }
 
     [Fact]
@@ -114,6 +121,11 @@ public class DataSecurityFactsTests
     {
         Assert.Contains("已在本機初始化", F(Collect(flags: (p, v) => p.Contains("PlayReady")), DataSecurityFactsService.DrmKey).Value);
         Assert.Contains("尚未初始化", F(Collect(flags: (p, v) => false), DataSecurityFactsService.DrmKey).Value);
+
+        // null＝鍵不存在＝尚未初始化（Present），不是「讀取失敗」——三態不再互併
+        var absent = F(Collect(flags: (p, v) => null), DataSecurityFactsService.DrmKey);
+        Assert.Equal(FactAvailability.Present, absent.Availability);
+        Assert.Contains("登錄鍵不存在", absent.Value);
     }
 
     // ── DS-009 TLS ──────────────────────────────────────────────────────
@@ -136,6 +148,30 @@ public class DataSecurityFactsTests
 
         Assert.Equal(FactAvailability.Unknown, f.Availability);
         Assert.Contains("不假裝", f.UnavailableReason);
+    }
+
+    [Fact]
+    public void TLS_鍵不存在_是未設定不是明確停用()
+    {
+        // 乾淨機器：從未寫過 SCHANNEL per-protocol 子鍵——八項全是「未設定」，
+        // 不是「明確停用」（patch-34 前的舊版會把八項全報成明確停用）
+        var f = F(Collect(flags: (p, v) => null), DataSecurityFactsService.TlsKey);
+
+        Assert.Equal(FactAvailability.Unknown, f.Availability);
+        Assert.Contains("未設定", f.UnavailableReason);
+        Assert.DoesNotContain("明確停用（Enabled=0）：", f.UnavailableReason);
+    }
+
+    [Fact]
+    public void TLS_混合_明文停用與未設定分得清楚()
+    {
+        var f = F(Collect(flags: (p, v) => p.Contains("TLS 1.0\\Client") ? false : null),
+            DataSecurityFactsService.TlsKey);
+
+        Assert.Equal(FactAvailability.Present, f.Availability);
+        Assert.Equal(1, f.NumericValue);
+        Assert.Contains("TLS 1.0 Client", f.Value);
+        Assert.Contains("另有 7 項未設定", f.Value);   // 未設定項如實計數，不進「明確停用」名單
     }
 
     // ── DS-010 SAC ──────────────────────────────────────────────────────

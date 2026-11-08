@@ -25,11 +25,24 @@ public partial class ContextMenuView : UserControl
         Loaded += (_, _) => { if (!_loaded) { _loaded = true; Scan(); } };
     }
 
-    private void Scan()
+    private bool _scanning;
+
+    private async void Scan()
     {
-        MsgText.Text = LanguageService.T("掃描中…");
-        _svc.Scan();
-        MsgText.Text = "";
+        if (_scanning) return;
+        _scanning = true;
+        try
+        {
+            MsgText.Text = LanguageService.T("掃描中…");   // await 之後這行才真的有機會被畫出來
+            var list = await Task.Run(_svc.Collect);       // 登錄檔全掃移出 UI 執行緒
+            _svc.Apply(list);                              // 集合異動回 UI 執行緒
+            MsgText.Text = "";
+        }
+        catch (Exception ex)
+        {
+            MsgText.Text = LanguageService.T("掃描失敗：") + ex.Message;   // 零彈窗：如實進頁面文字
+        }
+        finally { _scanning = false; }
     }
 
     private void Scan_Click(object sender, RoutedEventArgs e) => Scan();

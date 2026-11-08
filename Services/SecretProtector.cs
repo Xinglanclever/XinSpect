@@ -123,6 +123,13 @@ public static class SecretProtector
         byte[] encrypted;
         try { encrypted = Convert.FromBase64String(b64); }
         catch (FormatException) { error = "金鑰欄位的編碼損毀（不是有效的 Base64）"; return false; }
+        if (encrypted.Length == 0)
+        {
+            // "dpapi:v1:" 這種「前綴後空字串」會得到空陣列，往下 AllocHGlobal(0) 炸
+            // OutOfMemoryException、被上層兜成「無法解密」——結果湊合但路徑不精確；直接如實回編碼損毀。
+            error = "金鑰欄位的編碼損毀（前綴後沒有資料）";
+            return false;
+        }
 
         var inBlob = new DATA_BLOB();
         var outBlob = new DATA_BLOB();

@@ -181,49 +181,91 @@ public sealed class HistoryViewModel : ObservableObject
         Changed?.Invoke();
     }
 
-    /// <summary>重新查詢並更新統計。</summary>
-    public void Reload()
+    private bool _reloadRunning;
+    private bool _reloadPending;
+
+    /// <summary>要求重查；進行中的掃描最多合併一個最新請求，不並行掃描或丟棄所有結果。</summary>
+    public void Reload() => _ = ReloadAsync();
+
+    public Task ReloadAsync()
     {
         foreach (var m in Metrics) Active[m.Index] = m.IsOn;
-        Series = _store.Query(_from, _to);
-        Markers = _events.InRange(_from, _to);
+        _reloadPending = true;
+        if (_reloadRunning) return Task.CompletedTask;
+        _reloadRunning = true;
+        return DrainReloadQueueAsync();
+    }
 
-        foreach (var m in Metrics)
+    private async Task DrainReloadQueueAsync()
+    {
+        try
         {
-            // 沒有資料點、或該指標整段皆無讀值（本機沒有這顆感測器）時一律留白，
-            // 不把「沒讀到」的 0 當成量測結果寫進統計欄。
-            if (Series.Count == 0 || !Series.HasData(m.Index)) { m.ClearStats(); continue; }
-            var (mn, avg, mx, p95) = Series.Summarize(m.Index);
-            m.SetStats(mn, avg, mx, p95);
+            while (_reloadPending)
+            {
+                _reloadPending = false;
+                var (from, to) = (_from, _to);
+
+                // One worker owns history and EventLog I/O. Repeated timer ticks coalesce into
+                // one follow-up scan, so slow scans neither pile up nor starve their results.
+                var (series, markers, annotations, stats) = await Task.Run(() =>
+                {
+                    var s = _store.Query(from, to);
+                    var mk = _events.InRange(from, to);
+                    var ann = BaselineLearningService.QueryAnnotations(to - from);
+                    var values = new (double Min, double Avg, double Max, double P95)?[HistoryMetrics.Count];
+                    for (int i = 0; i < HistoryMetrics.Count; i++)
+                        if (s.Count > 0 && s.HasData(i)) values[i] = s.Summarize(i);
+                    return (s, mk, ann, values);
+                });
+
+                if (_reloadPending) continue; // A newer window arrived; skip applying this snapshot.
+
+                Series = series;
+                Markers = markers;
+                foreach (var m in Metrics)
+                {
+                    var value = stats[m.Index];
+                    if (value is { } v) m.SetStats(v.Min, v.Avg, v.Max, v.P95);
+                    else m.ClearStats();
+                }
+
+                OnPropertyChanged(nameof(RangeText));
+                OnPropertyChanged(nameof(TierText));
+                OnPropertyChanged(nameof(CountText));
+                OnPropertyChanged(nameof(StoreText));
+                Sentinel.Analyze(_store, from, to, series);
+
+                if (annotations is null)
+                {
+                    EventAnnotations = [];
+                    EventAnnotationCoverage = "事件記錄讀不到（頻道或權限）——如實標示，不畫成 0 筆";
+                }
+                else
+                {
+                    EventAnnotations = annotations.OrderByDescending(a => a.At).Take(30).ToList();
+                    EventAnnotationCoverage = annotations.Count == 0
+                        ? "視窗內沒有這四類事件（記錄可能被清理）"
+                        : $"{annotations.Count} 筆（顯示最新 {EventAnnotations.Count}）";
+                }
+                OnPropertyChanged(nameof(EventAnnotations));
+                OnPropertyChanged(nameof(EventAnnotationCoverage));
+                StatusText = "";
+                Changed?.Invoke();
+            }
         }
-
-        OnPropertyChanged(nameof(RangeText));
-        OnPropertyChanged(nameof(TierText));
-        OnPropertyChanged(nameof(CountText));
-        OnPropertyChanged(nameof(StoreText));
-
-        // 統計哨兵跟著同一段區間重算。它只讀同一份 Series 的快照、不做 I/O，
-        // 失敗也在服務內部吞掉（哨兵是附加功能，不得影響歷史頁本身）。
-        Sentinel.Analyze(_store, _from, _to);
-
-        // 事件標註（v2.60 BL-007 的 UI 面）：與圖表同區間；附加功能，失敗如實標示、不得影響歷史頁本身。
-        var annotations = BaselineLearningService.QueryAnnotations(_to - _from);
-        if (annotations is null)
+        catch (Exception ex)
         {
-            EventAnnotations = [];
-            EventAnnotationCoverage = "事件記錄讀不到（頻道或權限）——如實標示，不畫成 0 筆";
+            StatusText = "歷史查詢失敗：" + ex.Message;
         }
-        else
+        finally
         {
-            EventAnnotations = annotations.OrderByDescending(a => a.At).Take(30).ToList();
-            EventAnnotationCoverage = annotations.Count == 0
-                ? "視窗內沒有這四類事件（記錄可能被清理）"
-                : $"{annotations.Count} 筆（顯示最新 {EventAnnotations.Count}）";
+            _reloadRunning = false;
+            if (_reloadPending)
+            {
+                _reloadRunning = true;
+                _ = DrainReloadQueueAsync();
+            }
         }
-        OnPropertyChanged(nameof(EventAnnotations));
-        OnPropertyChanged(nameof(EventAnnotationCoverage));
-
-        Changed?.Invoke();
     }
 
     /// <summary>每一拍由檢視呼叫：自動跟隨時把時間窗右緣推到現在。</summary>

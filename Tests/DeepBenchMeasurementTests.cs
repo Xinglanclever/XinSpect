@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Xunit;
 
 namespace XinSpect.Tests;
@@ -42,13 +42,11 @@ public class DeepBenchMeasurementTests
         Assert.Equal(100, stats.P95);
         Assert.Equal(100, stats.Max);
         Assert.Equal(1, stats.OutlierCount);
-        // p99 門檻（≥100 樣本，第 5 部）：10 筆不足——NaN＋標注，不照算。
-        // 〔修復建置 2026-11-08〕patch-06b 原稿此列斷言整份摘要 Insufficient，但同一套代碼的
-        // 三個消費端（ConfidenceEngine managed 鏡像稽核 tight-8→High、DeepBenchViewModel、
-        // 整合報告）都把 Confidence 釘在 CV 分級上，百科 L2186 成文的也是「部分百分位標
-        // Insufficient」——門檻標在 p99 本身（下一列的旗標＋NaN＋SummaryText），Confidence 走
-        // CV：本例 10 筆單調升 CV≈197% → Low。
-        Assert.Equal(DeepBenchConfidence.Low, stats.Confidence);
+        // p99 門檻（≥100 樣本，第 5 部）：10 筆不足——NaN＋標注，不照算
+        // 〔修復 v3.21〕語意裁定（v3.20 輪已留檔）：門檻標在 p99 本身（P99Insufficient＋NaN＋
+        // SummaryText），Confidence 單一事實來源維持 CV 分級——百科 L2186 成文的是「部分百分位
+        // 標 Insufficient」；managed 鏡像稽核（tight-8→High）與 ViewModel／整合報告三面佐證。
+        Assert.Equal(DeepBenchConfidence.Low, stats.Confidence);   // 10 筆單調升 CV≈197% → Low；門檻由下一列的 P99Insufficient 釘
         Assert.True(stats.P99Insufficient);
         Assert.True(double.IsNaN(stats.P99));
         Assert.Contains("p99 樣本不足", stats.SummaryText, StringComparison.Ordinal);

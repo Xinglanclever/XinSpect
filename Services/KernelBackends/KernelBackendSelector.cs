@@ -118,9 +118,70 @@ public sealed class KernelBackendSelector : IDisposable
         _chain.Select(b => (new KernelBackendDescriptor(b.Id, b.DisplayName, b.Tier), b.Capabilities, b.UnavailableReason))
               .ToList();
 
-    public void Dispose()
+    // ── N2：在途引用計數與退役語義 ────────────────────────────────────────
+    // ApplyMode 切換模式時不再就地 Dispose 本選擇器，改為「退役」：等最後一個在途
+    // guard 離場才真正釋放後端鏈。Route 回傳的 route 在鎖外被使用（ReadMsr 等長期
+    // 持有 backend）——沒有這層計數，「模式切換瞬間關掉驅動句柄」會撞上進行中的讀取。
+
+    private int _inFlight;
+    private bool _retired;
+    private int _disposed;
+
+    /// <summary>
+    /// 取一條路徑並把本選擇器記為「在途」。慣例：<c>using var use = …RouteUse(cap);</c>，
+    /// 用完立即 Dispose（guard 釋放＝在途名額歸還）。已退役且後端鏈已釋放後才來的呼叫，
+    /// 如實回「無後端」路徑——宿主此刻已由新選擇器依新模式服務。
+    /// </summary>
+    public KernelRouteUse RouteUse(KernelCapability need)
     {
+        Interlocked.Increment(ref _inFlight);
+        if (Volatile.Read(ref _disposed) == 0)
+            return new KernelRouteUse(this, Route(need));
+        Interlocked.Decrement(ref _inFlight);
+        return new KernelRouteUse(null, new KernelRoute(null,
+            "選擇器已因模式切換退役——請重新路由（宿主會以新模式重建）", []));
+    }
+
+    /// <summary>退役（只由 KernelBackendHost.ApplyMode 呼叫）：無在途者即刻釋放；
+    /// 有在途者則由最後一個 guard 的 EndUse 觸發釋放。</summary>
+    internal void Retire()
+    {
+        Volatile.Write(ref _retired, true);
+        if (Volatile.Read(ref _inFlight) == 0) DisposeCore();
+    }
+
+    private void DisposeCore()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) == 1) return;   // 冪等：退役與最後離場只有一次生效
         foreach (var b in _chain) b.Dispose();
         _chain.Clear();
     }
+
+    private void EndUse()
+    {
+        // 在途名額歸還；若本鏈已退役且這是最後一個在途者——現在才真的釋放後端鏈。
+        if (Interlocked.Decrement(ref _inFlight) == 0 && Volatile.Read(ref _retired))
+            DisposeCore();
+    }
+
+    /// <summary>在途守衛：Dispose 即歸還名額（必要時連鎖觸發已退役鏈的實際釋放）。</summary>
+    public sealed class KernelRouteUse : IDisposable
+    {
+        public KernelRoute Route { get; }
+        private KernelBackendSelector? _owner;
+
+        internal KernelRouteUse(KernelBackendSelector? owner, KernelRoute route)
+        {
+            _owner = owner;
+            Route = route;
+        }
+
+        public void Dispose()
+        {
+            var o = Interlocked.Exchange(ref _owner, null);   // 冪等：重複 Dispose 只歸還一次
+            o?.EndUse();
+        }
+    }
+
+    public void Dispose() => DisposeCore();   // N2：保留直接釋放語義；ApplyMode 走 Retire（等在途者）
 }

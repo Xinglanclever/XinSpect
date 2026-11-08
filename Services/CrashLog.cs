@@ -32,8 +32,15 @@ public static class CrashLog
 
     public static string FilePath => Path.Combine(_folder, "crash.log");
 
-    /// <summary>本次執行期間已記錄的例外筆數（供畫面判斷是否要提示）。</summary>
-    public static int Count { get; private set; }
+    private static int _count;
+
+    /// <summary>本次執行期間已記錄的例外筆數（供畫面判斷是否要提示）。Write 會被多執行緒呼叫，Interlocked 計數。</summary>
+    public static int Count => _count;
+
+    // 檔案寫入專用鎖——與 Diag.FileGate（Diag.cs:48、102-104）同一防護、同一形狀：
+    // 多執行緒同時 Trim/AppendAllText 會撞共享違規，例外被吞、該筆回 false 遺失——
+    // 而這裡掉的偏偏是最需要留痕的當機筆。與 Diag 各自獨立（兩個檔案），互不巢套。
+    private static readonly object FileGate = new();
 
     /// <summary>
     /// 組出一筆紀錄的文字。與寫檔分離，才能在不觸碰檔案系統的情況下驗證格式。
@@ -73,12 +80,15 @@ public static class CrashLog
     /// </summary>
     public static bool Write(string source, Exception? ex)
     {
-        Count++;
+        System.Threading.Interlocked.Increment(ref _count);
         try
         {
-            Directory.CreateDirectory(_folder);
-            Trim();
-            File.AppendAllText(FilePath, Format(source, ex, DateTime.Now), new UTF8Encoding(true));
+            lock (FileGate)
+            {
+                Directory.CreateDirectory(_folder);
+                Trim();
+                File.AppendAllText(FilePath, Format(source, ex, DateTime.Now), new UTF8Encoding(true));
+            }
             return true;
         }
         catch { return false; }

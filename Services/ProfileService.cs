@@ -328,24 +328,17 @@ public sealed class ProfileService : ObservableObject
         PowerPlanText = string.IsNullOrWhiteSpace(name) ? "無法讀取（powercfg 不可用）" : name;
     }
 
-    // 執行 powercfg 並取回輸出；失敗（找不到執行檔、被政策封鎖）回傳空字串與非零碼。
+    // 執行 powercfg 並取回輸出；失敗（找不到執行檔、被政策封鎖、逾時）回非零碼與空輸出。
+    // 走 ProcessRunner：兩條輸出管線在 WaitForExit 前就非同步開讀——先前「兩個同步 ReadToEnd
+    // 串接後才 WaitForExit」的順序正是 ProcessRunner 註解點名的 D4 死鎖面。
+    // 參數是本檔寫死的「/getactivescheme」「/setactive {guid}」「-duplicatescheme {guid}」，
+    // 依空白分切安全（guid 不含空白）。
     private static (int Code, string Out) Run(string args)
     {
-        try
-        {
-            using var p = Process.Start(new ProcessStartInfo("powercfg.exe", args)
-            {
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            });
-            if (p is null) return (-1, "");
-            string outp = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
-            if (!p.WaitForExit(8000)) { try { p.Kill(true); } catch { /* 已結束 */ } return (-1, outp); }
-            return (p.ExitCode, outp);
-        }
-        catch { return (-1, ""); }
+        var r = ProcessRunner.Run(Path.Combine(Environment.SystemDirectory, "powercfg.exe"),
+            args.Split(' ', StringSplitOptions.RemoveEmptyEntries), 8000);
+        if (r.TimedOut || r.ExitCode is null) return (-1, "");
+        return (r.ExitCode.Value, (r.Stdout ?? "") + (r.Stderr ?? ""));
     }
 
     private static readonly System.Text.RegularExpressions.Regex GuidRx =

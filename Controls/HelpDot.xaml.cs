@@ -26,7 +26,9 @@ public partial class HelpDot : UserControl
         // 因此在產出點過 T，並在語言切換時重套一次。
         Loaded += (_, _) =>
         {
+            LanguageService.Changed -= OnLanguageChanged;   // P4-9：重入 Loaded 不疊訂閱（先退再掛）
             LanguageService.Changed += OnLanguageChanged;
+            ThemeService.Changed -= OnThemeChanged;
             ThemeService.Changed += OnThemeChanged;
         };
         Unloaded += (_, _) =>

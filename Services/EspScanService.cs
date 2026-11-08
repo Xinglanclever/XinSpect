@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Management;
 using System.Security.Cryptography;
 
@@ -64,32 +64,40 @@ public static class EspScanService
         bool truncated = false, anyReadError = false;
         foreach (var vol in volumes)
         {
-            IEnumerable<string> paths;
+            // IgnoreInaccessible：無權限子目錄在「迭代中」如實略過——EnumerateFiles 是延後執行，
+            // 舊版的 try 只包住「建立」，foreach 與 catch 之間有縫，一個無權限子目錄就讓整個步驟
+            // 以例外收場，已設計的逐卷降級（「（列舉失敗：vol）」）反而走不到。
+            // AttributesToSkip=None：不得略過 Hidden／System——引導檔常帶這些屬性，略過就會漏掃。
+            var opt = new System.IO.EnumerationOptions   // 〔修復 v3.21〕CS0104：與 System.Management.EnumerationOptions 撞名，顯式限定
+            {
+                RecurseSubdirectories = true,
+                IgnoreInaccessible = true,
+                AttributesToSkip = FileAttributes.None,
+            };
             try
             {
-                paths = Directory.EnumerateFiles(vol, "*.efi", SearchOption.AllDirectories)
-                    .Take(MaxFiles + 1);
+                foreach (var p in Directory.EnumerateFiles(vol, "*.efi", opt))
+                {
+                    if (files.Count >= MaxFiles) { truncated = true; break; }
+                    byte[]? bytes;
+                    try { bytes = readFile(p); }
+                    catch { bytes = null; }
+                    if (bytes is null)
+                    {
+                        anyReadError = true;
+                        files.Add(new EspFileInfo(Relative(vol, p) + "（讀不到）", 0, "", false));
+                        continue;
+                    }
+                    string sha = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+                    files.Add(new EspFileInfo(Relative(vol, p), bytes.Length, sha, false));
+                }
             }
             catch
             {
+                // 卷根進不去（根目錄無權／卷消失）——逐卷降級，不讓整個步驟以例外收場
                 anyReadError = true;
                 files.Add(new EspFileInfo($"（列舉失敗：{vol}）", 0, "", false));
                 continue;
-            }
-            foreach (var p in paths)
-            {
-                if (files.Count >= MaxFiles) { truncated = true; break; }
-                byte[]? bytes;
-                try { bytes = readFile(p); }
-                catch { bytes = null; }
-                if (bytes is null)
-                {
-                    anyReadError = true;
-                    files.Add(new EspFileInfo(Relative(vol, p) + "（讀不到）", 0, "", false));
-                    continue;
-                }
-                string sha = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
-                files.Add(new EspFileInfo(Relative(vol, p), bytes.Length, sha, false));
             }
             if (truncated) break;
         }

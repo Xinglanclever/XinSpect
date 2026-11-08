@@ -262,6 +262,18 @@ public class SelfIntegrityFactsTests
         Assert.True(SelfIntegrityFactsService.IsSideloadCandidate(Path.Combine(Path.GetTempPath(), "a.dll")));
     }
 
+    [Fact]
+    public void 側載候選判定_相似前綴目錄不算()
+    {
+        string roam = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (!string.IsNullOrWhiteSpace(roam))
+            Assert.False(SelfIntegrityFactsService.IsSideloadCandidate(roam + "X\\mod.dll"));
+        string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (!string.IsNullOrWhiteSpace(profile))
+            Assert.False(SelfIntegrityFactsService.IsSideloadCandidate(Path.Combine(profile, "DownloadsX") + "\\lib.dll"));
+        Assert.True(SelfIntegrityFactsService.IsSideloadCandidate(Path.Combine(Path.GetTempPath(), "a.dll")));
+    }
+
     // ── IN-010 報告 ──────────────────────────────────────────────────────
 
     [Fact]

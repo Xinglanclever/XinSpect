@@ -115,7 +115,7 @@ public static class OperationsInventoryFactsService
         if (n.Contains("HYPER-V") || n.Contains("VSWITCH") || n.Contains("VETHERNET")) return "Hyper-V";
         if (n.Contains("WIREGUARD") || n.Contains("TAP-WINDOWS") || n.Contains("OPENVPN") || n.Contains("VPN")) return "VPN／TAP";
         if (n.Contains("VMWARE") || n.Contains("VIRTUALBOX") || n.Contains("VIRTIO")) return "VM 網路";
-        if (n.Contains("LOOPBACK") || n.Contains("NPcap") || n.Contains("NPTEST")) return "測試／迴路";
+        if (n.Contains("LOOPBACK") || n.Contains("NPCAP") || n.Contains("NPTEST")) return "測試／迴路";   // n 已 ToUpperInvariant——"NPcap" 恆 false 的筆誤
         return "其他";
     }
 

@@ -21,10 +21,36 @@ internal static class Book
     static Book()
     {
         var asm = Assembly.GetExecutingAssembly();
-        using var stream = asm.GetManifestResourceStream("XinSpectCli.docs.README.md")
-            ?? throw new InvalidOperationException("找不到嵌入的百科資源（XinSpectCli.docs.README.md）");
-        using var reader = new StreamReader(stream, Encoding.UTF8);
-        Markdown = reader.ReadToEnd().Replace("\r\n", "\n").Split('\n');
+        // P4-28：資源名與嵌入物對齊——v3.18 把嵌入物由 README.md 換成 docs/百科-v3.17.md 時
+        // 沒同步這裡的查找名，book 一直以「找不到嵌入的百科資源」收場。查找順序：
+        // 本組件嵌入（按尾名匹配，防命名慣例漂移）→ exe 旁 docs\ → exe 旁根目錄。
+        // （Legacy 版已改為內容檔隨行、不再雙嵌；單檔發佈時 IncludeAllContentForSelfExtract
+        // 會把內容檔打進 bundle、執行時解到 BaseDirectory，查找照樣命中。）
+        string? markdown = null;
+        string[] names = asm.GetManifestResourceNames();
+        string? resName = names.FirstOrDefault(n => n.EndsWith("百科-v3.17.md", StringComparison.OrdinalIgnoreCase))
+                       ?? names.FirstOrDefault(n => n.EndsWith("README.md", StringComparison.OrdinalIgnoreCase));
+        if (resName is not null)
+        {
+            using var stream = asm.GetManifestResourceStream(resName)
+                ?? throw new InvalidOperationException($"嵌入資源 {resName} 存在但無法開啟");
+            using var reader = new StreamReader(stream, Encoding.UTF8);
+            markdown = reader.ReadToEnd();
+        }
+        else
+        {
+            string exeDir = AppContext.BaseDirectory;
+            string[] candidates =
+            [
+                Path.Combine(exeDir, "docs", "百科-v3.17.md"),
+                Path.Combine(exeDir, "百科-v3.17.md"),
+            ];
+            string? path = candidates.FirstOrDefault(File.Exists)
+                ?? throw new InvalidOperationException(
+                    "找不到百科：本組件未嵌入，且程式目錄（含 docs\\）也沒有 百科-v3.17.md——請隨 exe 發佈 docs\\百科-v3.17.md。");
+            markdown = File.ReadAllText(path, Encoding.UTF8);
+        }
+        Markdown = markdown.Replace("\r\n", "\n").Split('\n');
 
         // 解析結構：## ＝ 部邊界（同時是節的結束），### ＝ 節起點
         string part = "（前言）";
@@ -55,12 +81,16 @@ internal static class Book
     public static void ShowToc()
     {
         var parts = Sections.GroupBy(s => s.PartTitle).ToList();
-        Console.WriteLine($"{Bold}曦覽百科 ・ 全書 {parts.Count} 部 {Sections.Count} 節{Reset}");
+        // P4-27：文件以「## 第 N 部」分部；解析時第一群可能是前言（「（前言）」）——
+        // 原版把前言當「第 1 部」（真第 1 部變第 2 部），且 book 0 因 part>=1 不可達。
+        // 約定：有前言時前言＝第 0 部，其餘部號與文件一致；總數不含前言。
+        int offset = parts.Count > 0 && parts[0].Key == "（前言）" ? 1 : 0;
+        Console.WriteLine($"{Bold}曦覽百科 ・ 全書 {parts.Count - offset} 部{(offset == 1 ? "（另有前言＝第 0 部）" : "")} {Sections.Count} 節{Reset}");
         Console.WriteLine($"{Dim}用法：book <部號> 看該部節清單 ・ book <節號>（如 book 6.3）讀全文 ・ book <關鍵字> 搜節標題{Reset}");
         Console.WriteLine();
         var rows = parts.Select((g, i) => new[]
         {
-            (i + 1).ToString(),
+            (i + 1 - offset).ToString(),
             Bold + g.Key + Reset,
             g.Count().ToString(),
         }).ToArray();
@@ -73,12 +103,13 @@ internal static class Book
     public static void ShowPart(int partIndex)
     {
         var parts = Sections.GroupBy(s => s.PartTitle).ToList();
-        if (partIndex < 1 || partIndex > parts.Count)
+        int offset = parts.Count > 0 && parts[0].Key == "（前言）" ? 1 : 0;
+        if (partIndex < 1 - offset || partIndex > parts.Count - offset)
         {
-            Console.WriteLine($"{Tui.SwissRed}沒有第 {partIndex} 部（全書共 {parts.Count} 部）。{Reset}");
+            Console.WriteLine($"{Tui.SwissRed}沒有第 {partIndex} 部（全書共 {parts.Count - offset} 部{(offset == 1 ? "＋前言（第 0 部）" : "")}）。{Reset}");
             return;
         }
-        var g = parts[partIndex - 1];
+        var g = parts[partIndex + offset - 1];
         Console.WriteLine($"{Bold}{g.Key}{Reset}");
         Console.WriteLine();
         var rows = g.Select(s => new[] { s.Number, s.Title }).ToArray();
@@ -126,7 +157,10 @@ internal static class Book
                     var headers = rows[0];
                     var body = rows.Skip(1).Select(r => Enumerable.Range(0, headers.Length)
                         .Select(ci => ci < r.Length ? r[ci] : "").ToArray());
+                    var overflow = rows.Skip(1).Count(r => r.Length > headers.Length);
                     Tui.Table(headers, body);
+                    if (overflow > 0)
+                        Console.WriteLine($"  {Dim}（有 {overflow} 列的欄數多於表頭，超出部分未顯示——資料仍在原文。）{Reset}");
                     Console.WriteLine();
                 }
                 continue;
@@ -180,7 +214,7 @@ internal static class Book
         {
             // 純數字：優先當部號；但若剛好也是節號（如 0），以節為準前先試部
             var parts = Sections.GroupBy(s => s.PartTitle).ToList();
-            if (part >= 1 && part <= parts.Count) { ShowPart(part); return; }
+            if (part >= 0 && part <= parts.Count) { ShowPart(part); return; }
         }
         if (arg.Contains('.') && arg.Split('.')[0].Length <= 2 && int.TryParse(arg.Split('.')[0], out _))
         {
@@ -198,13 +232,14 @@ internal static class Book
             return line.Length > 3 ? $"{Dim}{line[3..]}{Reset}" : "";
         if (line.StartsWith("| ", StringComparison.Ordinal) || line.StartsWith("|-", StringComparison.Ordinal))
         {
-            if (line.StartsWith("|--", StringComparison.Ordinal) || line.Contains("---|")) return ""; // 表頭分隔列不印
+            if (line.StartsWith("|--", StringComparison.Ordinal)
+                || System.Text.RegularExpressions.Regex.IsMatch(line, @"^\|[\s:\-|]+\|$")) return ""; // 表頭分隔列不印（錨定全行——P4-27：原 Contains("---|") 連含此子串的資料列一起吞）
             var cells = line.Trim('|').Split('|').Select(c => c.Trim()).ToArray();
             return $"{Dim}│{Reset} " + string.Join($" {Dim}│{Reset} ", cells) + $" {Dim}│{Reset}";
         }
         // 標題 → 粗體；連結 → 只留文字；行內代碼反白
         line = System.Text.RegularExpressions.Regex.Replace(line, @"\[([^\]]+)\]\([^)]*\)", "$1");
-        line = line.Replace("**", "");
+        line = System.Text.RegularExpressions.Regex.Replace(line, @"\*\*(.+?)\*\*", m => $"{Bold}{m.Groups[1].Value}{Reset}");
         if (line.StartsWith("#### ", StringComparison.Ordinal)) return $"{Bold}{line[5..]}{Reset}";
         if (line.StartsWith("### ", StringComparison.Ordinal)) return $"{SwissRed}{Bold}■ {line[4..]}{Reset}";
         if (line.StartsWith("## ", StringComparison.Ordinal)) return $"{SwissRed}{Bold}■■ {line[3..]}{Reset}";

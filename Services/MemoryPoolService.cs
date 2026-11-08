@@ -18,14 +18,17 @@ public static class MemoryPoolService
     private static readonly long PageSize = Environment.SystemPageSize;
     private const double MB = 1024.0 * 1024.0;
 
-    /// <summary>單次讀取的完整池細目快照（所有數值以 MB 呈現，誠實不四捨五入到 GB）。</summary>
+    /// <summary>單次讀取的完整池細目快照（所有數值以 MB 呈現，誠實不四捨五入到 GB）。
+    /// 三個 Ok 旗標（P4-5）：對應的 API 這一筆真的讀到了才為 true——false 時該組欄位是
+    /// 「讀不到」，不是 0；呼叫端據此如實標示，不再讓失敗冒充全零快照。</summary>
     public sealed record PoolSnapshot(
         double PagedPoolMB, double NonPagedPoolMB,
         double ZeroedMB, double FreeMB,
         double ModifiedMB, double ModifiedNoWriteMB,
         double BadMB,
         double[] StandbyByPriorityMB,
-        double CommitUsedMB, double CommitLimitMB)
+        double CommitUsedMB, double CommitLimitMB,
+        bool PerfPagesOk, bool MemoryListsOk, bool CommitOk)
     {
         /// <summary>待命清單總計（各優先級加總）。</summary>
         public double StandbyTotalMB => StandbyByPriorityMB.Sum();
@@ -42,6 +45,7 @@ public static class MemoryPoolService
             int perfSize = 4096;
             IntPtr perfBuf = Marshal.AllocHGlobal(perfSize);
             double paged = 0, nonPaged = 0;
+            bool perfOk = false;
             try
             {
                 if (NtQuerySystemInformation(SystemPerformanceInformation, perfBuf, perfSize, out _) == 0)
@@ -49,6 +53,7 @@ public static class MemoryPoolService
                     var raw = Marshal.PtrToStructure<SYSTEM_PERFORMANCE_INFORMATION>(perfBuf);
                     paged = raw.PagedPoolPages * PageSize / (double)MB;
                     nonPaged = raw.NonPagedPoolPages * PageSize / (double)MB;
+                    perfOk = true;
                 }
             }
             finally { Marshal.FreeHGlobal(perfBuf); }
@@ -60,6 +65,7 @@ public static class MemoryPoolService
             double[] standby = new double[8];
             double zeroed = 0, free = 0, modified = 0, modNoWrite = 0, bad = 0;
             double commitUsed = 0, commitLimit = 0;
+            bool listOk = false, commitOk = false;
             try
             {
                 if (NtQuerySystemInformation(SystemMemoryListInformation, listBuf, listSize, out _) == 0)
@@ -72,6 +78,7 @@ public static class MemoryPoolService
                     bad = memList.BadPageCount * PageSize / (double)MB;
                     for (int i = 0; i < 8; i++)
                         standby[i] = memList.PageCountByPriority[i] * PageSize / (double)MB;
+                    listOk = true;
                 }
             }
             finally { Marshal.FreeHGlobal(listBuf); }
@@ -82,9 +89,14 @@ public static class MemoryPoolService
             {
                 commitLimit = ms.ullTotalPageFile / (double)MB;
                 commitUsed = (ms.ullTotalPageFile - ms.ullAvailPageFile) / (double)MB;
+                commitOk = true;
             }
 
-            return new PoolSnapshot(paged, nonPaged, zeroed, free, modified, modNoWrite, bad, standby, commitUsed, commitLimit);
+            // P4-5：兩個 NtQuery 主資料源都失敗＝這台機器這一刻拿不到池細目——回 null（呼叫端
+            // 標「讀不到」），不再回全零快照冒充。單源失敗時照回，由 Ok 旗標說明缺哪一塊。
+            if (!perfOk && !listOk) return null;
+            return new PoolSnapshot(paged, nonPaged, zeroed, free, modified, modNoWrite, bad, standby,
+                                    commitUsed, commitLimit, perfOk, listOk, commitOk);
         }
         catch { return null; }
     }

@@ -28,18 +28,22 @@ public static class KernelBackendHost
     private static KernelBackendMode _mode = KernelBackendMode.Auto;
     private static bool _initialized;
 
-    /// <summary>由 <see cref="SettingsService"/> 帶入（設定服務是實例制，宿主不反向持有它）。</summary>
+    /// <summary>由 <see cref="SettingsService"/> 帶入（設定服務是實例制，宿主不反向持有它）。
+    /// N2：模式切換<b>退役</b>舊選擇器而非就地 Dispose——鎖外可能還有 in-flight 的 guard
+    /// 正拿著舊後端鏈讀值；退役延後到最後一個在途者離場（見 KernelBackendSelector.Retire）。</summary>
     public static void ApplyMode(KernelBackendMode mode)
     {
+        KernelBackendSelector? retired = null;
         lock (Gate)
         {
             if (_initialized && _mode == mode) return;
             _mode = mode;
-            _selector?.Dispose();     // 引用計數歸零；驅動服務本身留到重開機（WinRing0Bridge 既有語義）
+            retired = _selector;      // N2：先退役、不立即 Dispose
             _selector = null;
             _declared.Clear();
-            _initialized = false;     // 下一次 Route／Snapshot 依新模式重建
+            _initialized = false;     // 下一次 Route／RouteUse／Snapshot 依新模式重建
         }
+        retired?.Retire();            // 無在途者即刻釋放；有在途者由最後一個 guard 觸發
     }
 
     /// <summary>為某項能力找後端。第一次呼叫觸發懶初始化（此時才可能載驅動）。</summary>
@@ -49,6 +53,21 @@ public static class KernelBackendHost
         {
             Ensure();
             return _selector!.Route(need);
+        }
+    }
+
+    /// <summary>
+    /// N2：取一條路徑並登記在途。鎖外要<b>使用</b>後端（ReadMsr 等）的呼叫端一律走本入口：
+    /// <c>using var use = KernelBackendHost.RouteUse(cap);</c>——guard 未釋放前，模式切換
+    /// 不會釋放後端鏈，驅動句柄不會在讀取中被關。<see cref="Route"/> 保留給「只看路由、
+    /// 不在鎖外使用後端」的呼叫端。
+    /// </summary>
+    public static KernelBackendSelector.KernelRouteUse RouteUse(KernelCapability need)
+    {
+        lock (Gate)
+        {
+            Ensure();
+            return _selector!.RouteUse(need);   // 在途計數在鎖內登記，歸還（guard.Dispose）在鎖外——兩者皆 Interlocked 安全
         }
     }
 

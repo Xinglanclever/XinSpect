@@ -355,24 +355,28 @@ public static class SelfIntegrityFactsService
     }
 
     /// <summary>載入路徑是否落在使用者可寫位置（側載候選）——只做路徑判定，不下惡意結論。</summary>
+    /// <remarks>標記目錄一律補上尾分隔符再比對：否則 <c>RoamingX</c> 會命中 <c>Roaming</c>、
+    /// <c>DownloadsX</c> 會命中 <c>Downloads</c>——過度列入會污染 in.deps 列名與「側載候選 N 個」計數。</remarks>
     public static bool IsSideloadCandidate(string path)
     {
         if (string.IsNullOrWhiteSpace(path)) return false;
+        string candidate = Path.TrimEndingDirectorySeparator(path);
         string[] markers =
         [
-            Path.GetTempPath(),
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+            Path.TrimEndingDirectorySeparator(Path.GetTempPath()),
+            Path.TrimEndingDirectorySeparator(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)),
+            Path.TrimEndingDirectorySeparator(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)),
+            Path.TrimEndingDirectorySeparator(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)),
         ];
         foreach (string m in markers)
         {
             if (string.IsNullOrWhiteSpace(m)) continue;
-            if (path.StartsWith(m, StringComparison.OrdinalIgnoreCase)) return true;
+            if (candidate.StartsWith(m + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) return true;
         }
         string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        return !string.IsNullOrWhiteSpace(profile)
-               && path.StartsWith(Path.Combine(profile, "Downloads"), StringComparison.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(profile)) return false;
+        string downloads = Path.TrimEndingDirectorySeparator(Path.Combine(profile, "Downloads"));
+        return candidate.StartsWith(downloads + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsJson(string text)

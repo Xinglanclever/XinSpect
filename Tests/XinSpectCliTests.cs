@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Xml.Linq;
 using Xunit;
@@ -30,7 +30,8 @@ public class XinSpectCliTests
             .Matches(book).Select(m => m.Groups[1].Value).ToHashSet();
 
         // BuildCommands 補的別名（文檔外可用指令）
-        names.UnionWith(new[] { "refresh", "mascot", "吉祥物", "手冊", "quit", "q", "?" });
+        names.UnionWith(new[] { "refresh", "mascot", "吉祥物", "百科", "quit", "q", "?" });
+        Assert.Contains("手冊.md 是 v2.91 時代的歷史文件", src, StringComparison.Ordinal);
 
         var missing = cases.Where(c => !names.Contains(c)).ToList();
         Assert.True(missing.Count == 0,
@@ -69,7 +70,8 @@ public class XinSpectCliTests
         // 吉祥物 ☼（U+263C 白日光芒＝「曦」）取代 Claude 的 ✻；破曉序列 spinner；> 提示符
         Assert.Contains("╭", tui, StringComparison.Ordinal);
         Assert.Contains("☼", tui, StringComparison.Ordinal);
-        Assert.Contains("走訪 1,178 把靜態事實鍵中", tui, StringComparison.Ordinal);
+                // 〔修復 v3.21〕P4-23：歡迎行改由 FactKeyCatalog 驅動（不再硬編 1,178——鍵數變動不再漂）
+        Assert.Contains("走訪 {FactKeyCatalog.Count:N0} 把靜態事實鍵中", tui, StringComparison.Ordinal);
         Assert.Contains("∙", tui, StringComparison.Ordinal);   // 破曉序列起始幀
         // ✻ 僅允許出現在寬度註解（VisibleLength 的字元區間註記），介面字串一律用 ☼
         // ✻ 不得出現在歡迎框本體（VisibleLength 的字元區間註解除外）

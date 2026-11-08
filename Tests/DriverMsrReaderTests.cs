@@ -12,6 +12,7 @@ public sealed class DriverMsrReaderTests
     public void 未載驅動_三態標示裝置不存在_讀取回null()
     {
         using var reader = new DriverMsrReader(() => new FakeChannel { OpenResult = false, OpenError = 2 });
+        Assert.Contains("白名單", reader.BackendName);
         Assert.False(reader.Available);
         Assert.Contains("未載入", reader.UnavailableReason);
         Assert.Null(reader.ReadMsr(0xCE));

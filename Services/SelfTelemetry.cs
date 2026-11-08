@@ -83,6 +83,12 @@ public sealed class SelfTelemetry
     public void LoadFromFile(string path)
     {
         var scans = JsonSerializer.Deserialize<List<TelemetryScan>>(File.ReadAllText(path), FileOptions) ?? [];
-        lock (_gate) _scans.AddRange(scans);
+        lock (_gate)
+        {
+            _scans.AddRange(scans);
+            // 檔案是本程式自己寫的，仍不信任其長度：載入後套用與 RecordScan 同一把環形上限，
+            // 保有最新的 MaxScans 筆——與類別宣告的上限承諾一致。
+            if (_scans.Count > MaxScans) _scans.RemoveRange(0, _scans.Count - MaxScans);
+        }
     }
 }

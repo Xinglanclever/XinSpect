@@ -67,5 +67,28 @@ public class KernelModuleTests
         Assert.True(XinSpect.KernelModuleService.IsWindowsDirectory(@"C:\Windows\System32\drivers\acme.sys"));
         Assert.False(XinSpect.KernelModuleService.IsWindowsDirectory(@"C:\Program Files\Acme\acme.sys"));
         Assert.False(XinSpect.KernelModuleService.IsWindowsDirectory(""));
+
+        // patch-35：嚴格前綴——子字串命中不再是系統模組（免驗 Authenticode 的豁免面收緊）
+        Assert.False(XinSpect.KernelModuleService.IsWindowsDirectory(@"C:\Tools\Windows\implant.sys"));
+        Assert.False(XinSpect.KernelModuleService.IsWindowsDirectory(@"C:\WindowsFoo\bar.sys"));
+        Assert.False(XinSpect.KernelModuleService.IsWindowsDirectory(@"C:\Windows\system32\..\..\Tools\evade.sys"));
+        Assert.False(XinSpect.KernelModuleService.IsWindowsDirectory(@"system32\drivers\evil.sys"));   // 相對路徑不賭 CWD
+
+        // EnumDeviceDrivers 的 NT 原生路徑語形照樣分得到（\SystemRoot\ 語形同時是連帶修正：
+        // 舊版不命中、把核心模組送去驗不存在的 Win32 路徑）
+        Assert.True(XinSpect.KernelModuleService.IsWindowsDirectory(@"\??\C:\Windows\System32\drivers\tcpip.sys"));
+        Assert.True(XinSpect.KernelModuleService.IsWindowsDirectory(@"\SystemRoot\System32\ntoskrnl.exe"));
+    }
+
+    [Fact]
+    public void 核心模組_列舉截斷_如實標記不少報()
+    {
+        var facts = XinSpect.KernelModuleService.Collect(At,
+            probe: () => new List<XinSpect.KernelModuleEntry> { M(@"C:\Program Files\Acme\acme.sys", true) },
+            enumerationTruncated: true);
+
+        var total = Assert.Single(facts, f => f.Key == "kmod.total");
+        Assert.Contains("截斷", total.Value);
+        Assert.Contains("實際載入更多", total.Value);
     }
 }

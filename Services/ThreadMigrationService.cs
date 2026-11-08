@@ -30,6 +30,9 @@ namespace XinSpect;
 /// 行程一律不計入，否則就是把觀察者算進觀察結果。</item>
 /// <item><b>只支援單一處理器群組（≤64 邏輯處理器）。</b>多群組機器上事件裡的處理器編號與
 /// 群組相對編號的對應關係另有一套規則，本程式沒有實機驗證過，所以直接拒絕而不是給一個可能錯的數字。</item>
+/// <item><b>拓樸版面驗證。</b>GetLogicalProcessorInformationEx 聯集欄位的偏移隨 Windows 版本演進
+/// （NumaTopologyService 為此刻意不解析它）。記錄 Size 蓋不住遮罩位移、或遮罩沒有蓋住全部
+/// 邏輯處理器時，整份拓樸不採信（回 Empty →「無法量測」），絕不把錯位讀到的遮罩靜默當事實。</item>
 /// </list>
 /// </para>
 /// </remarks>
@@ -57,6 +60,8 @@ public sealed class ThreadMigrationService : ObservableObject, IDisposable
     private int _ownPid;
 
     private CpuLayout _layout = CpuLayout.Empty;
+    // BuildLayout 的版面驗證備註（null＝無異常）；顯示在 TopologyText／「無法量測」訊息裡
+    private string? _topologyNote;
 
     private int _durationSec = 15;
     /// <summary>量測時長（秒），5–60。</summary>
@@ -137,15 +142,18 @@ public sealed class ThreadMigrationService : ObservableObject, IDisposable
                     + "與群組相對編號的對應另有一套規則，本程式沒有實機驗證過，"
                     + "所以不量——給一個可能錯的分層比不給更糟。");
 
+            _topologyNote = null;
             _layout = await Task.Run(BuildLayout);
             TopologyText = _layout.IsKnown
                 ? $"{_layout.Count} 個邏輯處理器 ・ {_layout.CoreOf.Where(c => c >= 0).Distinct().Count()} 顆實體核心 "
                   + $"・ {_layout.LlcCount} 片末級快取 ・ {_layout.NumaCount} 個 NUMA 節點"
+                  + (_topologyNote is null ? "" : "。" + _topologyNote)
                 : "讀不到處理器拓樸，無法分層。";
             if (!_layout.IsKnown)
                 throw new InvalidOperationException(
                     "讀不到處理器拓樸（實體核心與快取歸屬）。沒有拓樸，遷移次數就只是一個沒有量綱的"
-                    + "數字：在 SMT 兄弟之間跳和跨 NUMA 跳是完全不同的兩件事，所以不量。");
+                    + "數字：在 SMT 兄弟之間跳和跨 NUMA 跳是完全不同的兩件事，所以不量。"
+                    + (_topologyNote is null ? "" : "（" + _topologyNote + "）"));
 
             _session = new TraceEventSession("XinSpect-Migration", TraceEventSessionOptions.Create);
             try { _session.EnableKernelProvider(KernelTraceEventParser.Keywords.ContextSwitch); }
@@ -293,7 +301,7 @@ public sealed class ThreadMigrationService : ObservableObject, IDisposable
     /// 末級快取取「本機出現過的最高快取層級」而不是寫死 L3：有些平台的最後一層是 L2（Atom 系的
     /// 模組共用 L2），寫死 L3 在那些機器上會一片都分不出來。
     /// </remarks>
-    private static CpuLayout BuildLayout()
+    private CpuLayout BuildLayout()
     {
         int n = CpuAffinity.TotalLogicalProcessors;
         if (n <= 0) return CpuLayout.Empty;
@@ -302,34 +310,69 @@ public sealed class ThreadMigrationService : ObservableObject, IDisposable
         var llcOf = Enumerable.Repeat(-1, n).ToArray();
         var numaOf = Enumerable.Repeat(-1, n).ToArray();
 
+        // 版面驗證：任何一個關聯的記錄 Size 蓋不住遮罩位移（或趟序越界），整份拓樸不採信。
+        // 遮罩位移隨 Windows 版本演進——錯位移的正確處置是「如實不採信」，不是靜默把垃圾當事實。
+        var coreRecs = Records(RelationProcessorCore, 24);
+        if (coreRecs is null)
+        {
+            _topologyNote = "處理器記錄版面未通過驗證（Size 蓋不住遮罩位移）";
+            return CpuLayout.Empty;
+        }
+
         // 實體核心：一筆一顆核，遮罩裡的位元就是它的 SMT 執行緒
         int core = 0;
-        foreach (var (mask, _) in Records(RelationProcessorCore, 24))
+        foreach (var (mask, _) in coreRecs)
         {
             foreach (int lp in Bits(mask, n)) coreOf[lp] = core;
             core++;
         }
-
-        // NUMA 節點：節點號在聯集起點，遮罩在 +24
-        foreach (var (mask, rec) in Records(RelationNumaNode, 24))
+        // 覆蓋檢查：每顆邏輯處理器都該歸到某顆實體核心；有漏就是版面沒對上
+        if (coreOf.Any(c => c < 0))
         {
-            int node = Marshal.ReadInt32(rec + 8);
-            foreach (int lp in Bits(mask, n)) numaOf[lp] = node;
+            _topologyNote = "核心遮罩沒有蓋住全部邏輯處理器——版面未對上";
+            return CpuLayout.Empty;
+        }
+
+        // NUMA 節點：節點號在聯集起點，遮罩在 +24（Size 驗證在 Records()；蓋不住就整段不採信）
+        var numaRecs = Records(RelationNumaNode, 24);
+        if (numaRecs is null)
+            _topologyNote = "NUMA 記錄版面未通過驗證——NUMA 歸屬不列入分層（不會標跨節點）";
+        else
+        {
+            foreach (var (mask, node) in numaRecs)
+                foreach (int lp in Bits(mask, n)) numaOf[lp] = node;
+            // 有記錄卻半個 LP 都沒指到＝遮罩讀到的是錯位垃圾——跨節點分層如實停用
+            if (numaOf.All(v => v < 0))
+                _topologyNote = "NUMA 記錄存在但遮罩未解析出歸屬——跨節點分層不生效（不會標跨節點）";
         }
 
         // 快取：先掃一遍找出最高層級，再只認那一層
+        var cacheRecs = Records(RelationCache, 32);
+        if (cacheRecs is null)
+        {
+            _topologyNote = "快取記錄版面未通過驗證（Size 蓋不住遮罩位移）";
+            return CpuLayout.Empty;
+        }
+
         int topLevel = 0;
-        foreach (var (_, rec) in Records(RelationCache, 32))
-            topLevel = Math.Max(topLevel, Marshal.ReadByte(rec + 8));
+        foreach (var (_, aux) in cacheRecs)
+            topLevel = Math.Max(topLevel, aux & 0xFF);
 
         if (topLevel > 0)
         {
             int slice = 0;
-            foreach (var (mask, rec) in Records(RelationCache, 32))
+            foreach (var (mask, aux) in cacheRecs)
             {
-                if (Marshal.ReadByte(rec + 8) != topLevel) continue;
+                if ((aux & 0xFF) != topLevel) continue;
                 foreach (int lp in Bits(mask, n)) llcOf[lp] = slice;
                 slice++;
+            }
+            // 覆蓋檢查：末級快取遮罩該蓋住全部 LP；有漏就回 Empty——否則 Classify 會對 −1 端
+            // 靜默落回 SameLlc，「跨末級快取」這個本頁的核心結論會無聲歸零。
+            if (llcOf.Any(c => c < 0))
+            {
+                _topologyNote = "末級快取遮罩沒有蓋住全部邏輯處理器——版面未對上";
+                return CpuLayout.Empty;
             }
         }
 
@@ -337,29 +380,41 @@ public sealed class ThreadMigrationService : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// 走一趟 <c>GetLogicalProcessorInformationEx</c>，回傳每一筆的（群組遮罩、記錄起點）。
-    /// <paramref name="maskOffset"/> 是 GROUP_AFFINITY 在聯集裡的位移（處理器／NUMA 是 24、快取是 32）。
+    /// 走一趟 <c>GetLogicalProcessorInformationEx</c>，回傳每一筆的（群組遮罩、聯集起點 4 bytes）。
+    /// <paramref name="maskOffset"/> 是 GROUP_AFFINITY 在聯集裡的位移（處理器／NUMA 是 24、快取是 32）；
+    /// 第二欄 aux 取自聯集起點——NUMA 是 NodeNumber、快取是 Level（低位元組），呼叫端各取所需。
     /// </summary>
-    private static IEnumerable<(ulong Mask, nint Rec)> Records(int relationship, int maskOffset)
+    /// <remarks>
+    /// <b>回 null＝版面驗證沒過</b>（記錄 Size 蓋不住「聯集起點＋遮罩位移＋一個 ULONG_PTR」、
+    /// 趟序會越過緩衝、或 API 失敗）。位移隨 Windows 版本漂移時，這裡必須擋下來讓呼叫端
+    /// 如實當「讀不到」處理——不得拿部分結果繼續算，也不得越界讀下一筆記錄的標頭。
+    /// 回實體清單而不是 iterator：原版 yield 的記錄指標在緩衝釋放後才被消費，是懸垂指標。
+    /// </remarks>
+    private static List<(ulong Mask, int Aux)>? Records(int relationship, int maskOffset)
     {
         uint len = 0;
         GetLogicalProcessorInformationEx(relationship, 0, ref len);
-        if (len == 0 || Marshal.GetLastWin32Error() != ErrorInsufficientBuffer) yield break;
+        if (len == 0 || Marshal.GetLastWin32Error() != ErrorInsufficientBuffer) return null;
 
         nint buf = Marshal.AllocHGlobal((int)len);
         try
         {
-            if (!GetLogicalProcessorInformationEx(relationship, buf, ref len)) yield break;
+            if (!GetLogicalProcessorInformationEx(relationship, buf, ref len)) return null;
+            var records = new List<(ulong, int)>();
             int off = 0;
             while (off + 8 <= (int)len)
             {
                 nint rec = buf + off;
                 int size = Marshal.ReadInt32(rec + 4);
-                if (size <= 0) break;
+                // 版面驗證：Size 必須完整蓋住「聯集起點（+8）＋遮罩位移＋一個 ULONG_PTR」，
+                // 且不得越過緩衝——否則遮罩讀到的會是下一筆記錄的標頭（甚至緩衝外）。
+                if (size < 8 + maskOffset + 8 || off + size > (int)len) return null;
                 ulong mask = (ulong)Marshal.ReadIntPtr(rec + 8 + maskOffset).ToInt64();
-                yield return (mask, rec);
+                int aux = Marshal.ReadInt32(rec + 8);   // NUMA NodeNumber／快取 Level（低位元組）
+                records.Add((mask, aux));
                 off += size;
             }
+            return records;
         }
         finally { Marshal.FreeHGlobal(buf); }
     }

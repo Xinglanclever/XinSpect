@@ -22,8 +22,11 @@ public partial class HardwareCatalogView : UserControl
 
     private void Search_Click(object sender, RoutedEventArgs e) => Search();
 
-    private void Import_Click(object sender, RoutedEventArgs e)
+    private bool _importing;
+
+    private async void Import_Click(object sender, RoutedEventArgs e)
     {
+        if (_importing) return;   // 防重入：上一份索引解析完之前不再疊一輪（P3-22）
         var dialog = new OpenFileDialog
         {
             Filter = "XinSpect catalog JSON (*.json)|*.json|JSON files (*.json)|*.json",
@@ -32,15 +35,18 @@ public partial class HardwareCatalogView : UserControl
             Title = "匯入已確認可使用的 CPU/GPU JSON 索引"
         };
         if (dialog.ShowDialog() != true || Vm is null) return;
+        _importing = true;
         try
         {
-            Vm.HardwareCatalog.LoadFile(dialog.FileName);
+            StatusText.Text = "匯入中…";   // 大索引解析期間的如實提示（零彈窗）
+            await Vm.HardwareCatalog.LoadFileAsync(dialog.FileName);
             Search();
         }
         catch (Exception ex)
         {
             StatusText.Text = "匯入失敗：" + ex.Message;
         }
+        finally { _importing = false; }
     }
 
     private void Search()

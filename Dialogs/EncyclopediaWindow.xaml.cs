@@ -36,16 +36,17 @@ public partial class EncyclopediaWindow : Window
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        var report = EncyclopediaCatalog.Load();
-        if (!report.Available || string.IsNullOrEmpty(report.Text))
-        {
-            ShowFallback(report.UnavailableReason ?? EncyclopediaCatalog.MissingReason
-                         + "\n（單檔發佈版應內嵌百科；開發機請確認倉庫根有 百科.html）");
-            return;
-        }
-
         try
         {
+            // P4-10：Catalog.Load／fallback 分支原本在 try 之前同步執行——async void 的
+            // 前置例外沒有 catch 能接，直接炸行程。整段收進 try，失敗走 ShowFallback。
+            var report = EncyclopediaCatalog.Load();
+            if (!report.Available || string.IsNullOrEmpty(report.Text))
+            {
+                ShowFallback(report.UnavailableReason ?? EncyclopediaCatalog.MissingReason
+                             + "\n（單檔發佈版應內嵌百科；開發機請確認倉庫根有 百科.html）");
+                return;
+            }
             _localPath = EncyclopediaCatalog.EnsureLocalCopy(report.Text);
             string folder = Path.GetDirectoryName(_localPath) ?? AppContext.BaseDirectory;
 

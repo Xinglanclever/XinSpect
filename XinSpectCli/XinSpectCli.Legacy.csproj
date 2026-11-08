@@ -40,9 +40,11 @@
     <ProjectReference Include="..\XinSpect.csproj" />
   </ItemGroup>
 
-  <!-- 百科全書（README.md，約 1.5MB）整本嵌入：book 指令離線可讀，與主版同規格 -->
+  <!-- P4-28：百科不再雙嵌——Legacy 版以內容檔隨行（IncludeAllContentForSelfExtract 會把它
+       打進單檔 bundle、執行時解到 BaseDirectory），Book.cs 依「嵌入→docs\→exe 旁」查找。
+       省下 ~1.5MB；發佈流程零額外步驟。 -->
   <ItemGroup>
-    <EmbeddedResource Include="..\docs\百科-v3.17.md" Link="docs\百科-v3.17.md" />
+    <Content Include="..\docs\百科-v3.17.md" Link="docs\百科-v3.17.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 

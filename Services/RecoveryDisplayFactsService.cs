@@ -157,7 +157,8 @@ public static class RecoveryDisplayFactsService
         string? active = null;
         try
         {
-            var p = Process.Start(new ProcessStartInfo("powercfg.exe", "/getactivescheme") { UseShellExecute = false, RedirectStandardOutput = true, CreateNoWindow = true });
+            // 絕對路徑（照 WinsatService.cs:88）：CreateProcess 搜尋語意 CWD 優先，管理員行程不得用裸檔名。
+            var p = Process.Start(new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "powercfg.exe"), "/getactivescheme") { UseShellExecute = false, RedirectStandardOutput = true, CreateNoWindow = true });
             if (p is not null) { string o = p.StandardOutput.ReadToEnd(); p.WaitForExit(5000); active = o; }
         }
         catch { }

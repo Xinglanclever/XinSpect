@@ -297,7 +297,8 @@ public sealed class InstallerMirrorsTests
         // 〔修復建置 2026-11-08〕UserAgent 隨 patch-22 升為 3.18——這裡釘的是「UserAgent 字串
         // 在去註解後仍活著」，版號跟著樹走。
         Assert.Contains("private sealed class ProgressBar", code);
-        Assert.Contains("XinSpectDeploy/3.18", code);
+                // 〔修復 v3.21〕審計 R2：UserAgent 版號跟樹走（3.17→3.18→3.21——bump 時手動跟進此釘）。
+        Assert.Contains("XinSpectDeploy/3.21", code);
         Assert.Contains("LooksLikeDownload", code);
 
         // 逐字字串（@@""）與跳脫字串都不能把狀態機帶歪

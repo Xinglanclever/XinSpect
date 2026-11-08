@@ -57,7 +57,9 @@ public static class DiskSurfaceScanService
         int maxBlocks = DefaultMaxBlocks, IProgress<int>? progress = null, CancellationToken ct = default)
     {
         int blockSize = blockSizeKB * 1024;
-        IntPtr h = CreateFile(drivePath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_READ, IntPtr.Zero,
+        // 旗標筆誤修正（READ|READ→READ|WRITE）：與 ListVolumes 同款；授予他人讀寫共享，
+        // 只降低「卷被別的持有者佔住就開不了」的機率，本服務自身僅讀不寫。
+        IntPtr h = CreateFile(drivePath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, IntPtr.Zero,
             OPEN_EXISTING, 0, IntPtr.Zero);
         if (h == INVALID_HANDLE)
             return null;  // 無法開啟（權限不足或路徑不存在）——呼叫端誠實回報
@@ -93,7 +95,11 @@ public static class DiskSurfaceScanService
                 blockSw.Stop();
                 double ms = blockSw.Elapsed.TotalMilliseconds;
 
-                if (!success || bytesRead < blockSize)
+                // 尾塊：卷大小不是區塊整數倍時（常見），最後一塊本來就只讀得到剩餘位元組——
+                // 讀到了就是成功，不得記成「讀取錯誤」。真正的錯誤是：ReadFile 回 false、
+                // 非尾塊卻讀短（對齊內讀短）、或尾塊一個位元組都沒讀到（EOF 早於預期，totalBytes 失真）。
+                bool tailRemainder = i == totalBlocks - 1 && bytesRead > 0 && bytesRead < blockSize;
+                if (!success || (bytesRead < blockSize && !tailRemainder))
                 { blocks.Add(new SurfaceBlock(i, ms, SurfaceBlockStatus.Error, offset)); err++; }
                 else if (ms > SlowThresholdMs)
                 { blocks.Add(new SurfaceBlock(i, ms, SurfaceBlockStatus.Slow, offset)); slow++; }

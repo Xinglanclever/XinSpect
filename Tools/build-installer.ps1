@@ -40,16 +40,15 @@ try {
     $bytes = (Get-Item $out).Length
     Write-Host "BUILD-OK: $out = $bytes bytes"
     # 安裝器是產品的一部分，所以也要能被驗：這裡只做最小檢查——
-    # 必須是 PE、必須含 .NET 中繼資料、必須在 26 KB 以内（超過就是有人把 runtime 塞進來了；
-    # 下載備援鏈進來之後體積落在 22 KB 上下，上限從 20 KB 放寬到 26 KB）。
+    # 必須是 PE、必須含 .NET 中繼資料、必須在 32 KB 以内（超過就是有人把 runtime 塞進來了）。
+    # 〔修復 v3.21〕門禁 26KB→32KB：patch-22 加固（SHA256SUMS 總表／清單 v2／五關驗證）是真代碼
+    # 增長——v3.18 已 25,600B 貼邊、本版 29,696B；門禁意圖「不帶 runtime」不變。
     $head = [IO.File]::ReadAllBytes($out)
     if ($head[0] -ne 0x4D -or $head[1] -ne 0x5A) { Write-Host 'BUILD-FAIL: 不是 PE 檔' -ForegroundColor Red; exit 1 }
     $text = [Text.Encoding]::ASCII.GetString($head)
     if ($text -notmatch '_CorDllMain|mscorwks|mscorlib') { Write-Host 'BUILD-FAIL: 看不到 .NET 中繼資料' -ForegroundColor Red; exit 1 }
-    # 〔修復 v3.20〕26KB→32KB：patch-22 的安裝器加固（SHA256SUMS 總表／清單 v2／五關驗證）是真代碼增長，
-    # v3.18 已達 25,600B 貼邊、本版 29,696B——門禁意圖是「不帶 runtime」，32KB 仍遠低於任何 runtime 體積。
     if ($bytes -gt 32000) { Write-Host "BUILD-FAIL: $bytes bytes 超過 32 KB——安裝不該帶 runtime" -ForegroundColor Red; exit 1 }
-    Write-Host 'BUILD-OK: 形態檢查通過（PE + .NET + <26 KB）'
+    Write-Host 'BUILD-OK: 形態檢查通過（PE + .NET + <32 KB）'
 
     # 進度列的驗證：載入剛編好的那支 exe（不是原始碼），用反射餵它假的位元組數，
     # 再起一個本機 HTTP 伺服器真的下載三遍——完整、只回一半就斷線、沒有 Content-Length。

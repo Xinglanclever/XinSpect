@@ -155,20 +155,12 @@ public sealed class CleanupService
         catch { return 0; }
     }
 
-    // 〔修復 v3.20〕刪除改為逐檔套用同一把年齡門檻（與 DirSize 同尺）。原本走「目錄夠舊就
-    // recursive 刪整鍋」，但 Windows 的目錄 mtime 只在直接子項增刪時才更新——一個老目錄裡
-    // 近 48 小時重寫過的檔（日誌、下載到一半的檔）會被整鍋帶走，「48 小時內的新檔一律保留」
-    // 因而不成立。現在遞迴列檔、逐檔比對 cutoff 只刪門檻外的檔；目錄本體只在清空後以
-    // non-recursive 刪除（非空會丟例外，catch 掉＝這輪留著，寧可少清不可誤刪）。
     private static void PurgeDir(string path, DateTime cutoff)
     {
         try
         {
             if (!Directory.Exists(path)) return;
-            // 與 DirSize 同一組 EnumerationOptions（單一 ACL 拒絕不再讓列舉中途拋例外），
-            // 掃出來的「可清理」與真的會被刪的才會是同一份清單。
-            var opts = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
-            foreach (var f in Directory.EnumerateFiles(path, "*", opts))
+            foreach (var f in Directory.EnumerateFiles(path))
                 try
                 {
                     var fi = new FileInfo(f);
@@ -176,12 +168,16 @@ public sealed class CleanupService
                     fi.Delete();
                 }
                 catch { /* 使用中／無權限：略過 */ }
-            // 目錄本體：由深到淺走一輪，子目錄先移除、父目錄才有機會跟著變空被移除。
-            var dirs = new List<string>(Directory.EnumerateDirectories(path, "*", opts));
-            dirs.Sort((a, b) => b.Count(c => c is '\\' or '/').CompareTo(a.Count(c => c is '\\' or '/')));
-            foreach (var d in dirs)
-                try { new DirectoryInfo(d).Delete(recursive: false); }
-                catch { /* 非空或無權限：留待下輪，不硬刪 */ }
+            foreach (var d in Directory.EnumerateDirectories(path))
+                try
+                {
+                    var di = new DirectoryInfo(d);
+                    // 目錄的 LastWriteTime 隨內容變動：目錄本身不夠舊＝近 48 小時內有新東西落進去。
+                    // 整目錄略過，避免 recursive 刪除把門檻內的新檔一起帶走（寧可少清，不可誤刪）。
+                    if (di.LastWriteTimeUtc >= cutoff) continue;
+                    di.Delete(recursive: true);
+                }
+                catch { /* 略過 */ }
         }
         catch { /* 略過整個目錄的錯誤 */ }
     }

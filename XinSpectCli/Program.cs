@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Text;
 using BlueSquadron;
 using XinSpect;
@@ -41,7 +41,7 @@ internal static class Program
             var name = c.Name.Split(' ')[0];           // 「fact <關鍵字>」→ fact
             if (!names.Contains(name)) names.Add(name);
         }
-        foreach (var alias in new[] { "refresh", "mascot", "吉祥物", "手冊", "百科", "quit", "q", "?" })
+        foreach (var alias in new[] { "refresh", "mascot", "吉祥物", "百科", "quit", "q", "?" })
             if (!names.Contains(alias)) names.Add(alias);
         return names.OrderBy(n => n, StringComparer.Ordinal).ToArray();
     }
@@ -58,7 +58,7 @@ internal static class Program
         try { Console.CursorVisible = true; } catch { /* 重導輸出時沒有游標可管 */ }
 
         // 明示的系統修復動作（審計 #1 的配套）：刪除死指針的 WinRing0 服務。需要管理員。
-        // 〔修復 v3.20〕審計 D4：成敗如實回報——非管理員 1、sc.exe 失敗 2、成功 0。
+        // 〔修復 v3.21〕審計 D4：成敗如實回報——非管理員 1、sc.exe 失敗 2、成功 0。
         if (args.Length == 1 && args[0].Equals("--repair-ring0", StringComparison.OrdinalIgnoreCase))
         {
             return RepairRing0Service();
@@ -81,11 +81,11 @@ internal static class Program
             }
             if (IsElevated())
             {
-                // 已是管理員：不重啟、不重彈 UAC（防「提權了還一直彋」的迴圈），如實告知後就地繼續。
+                // 已是管理員：不重啟、不重彈 UAC（防「提權了還一直彈」的迴圈），如實告知後就地繼續。
                 Console.WriteLine($"{Dim}已是系統管理員——不需要提權，直接繼續。{Reset}");
                 if (repair) return RepairRing0Service();
                 AnnounceElevatedRing0Check();
-                // 〔修復 v3.20〕審計 D1：此處 args 仍帶 "--elevate"，下方一次性分派會把它送進
+                // 〔修復 v3.21〕審計 D1：此處 args 仍帶 "--elevate"，下方一次性分派會把它送進
                 // CliService 報「未知引數」後 exit 1——承諾的提權 REPL 從未出現過。清空引數
                 // 讓流程落到 REPL（此時已是提權 REPL），與 Main 註解／CommandBook 的宣稱一致。
                 args = Array.Empty<string>();
@@ -117,39 +117,39 @@ internal static class Program
         if (Console.IsInputRedirected)
         {
             // 管線／批次：腳本與代理要能偵測失敗——未知指令、指令例外與 RunCli 非零退出碼都計
-            // 失敗，退出碼 1；整條管線崩到無法繼續才是 2。〔修復 v3.20〕審計 D3：原本 Execute
+            // 失敗，退出碼 1；整條管線崩到無法繼續才是 2。〔修復 v3.21〕審計 D3：原本 Execute
             // 永遠回 true、RunCli 回傳值被丟棄，失敗計數是空的，最常見的兩種失敗都 exit 0。
             int failures = 0;
             try
             {
-                while (true)
+            while (true)
+            {
+                try
                 {
-                    try
+                    string? piped = Console.ReadLine();
+                    if (piped is null) break;              // EOF
+                    piped = piped.Trim();
+                    if (piped.Length == 0) continue;
+                    var first = piped.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (first.Length == 0) continue;
+                    var head = first[0].ToLowerInvariant();
+                    if (!Commands.Contains(head) && head != "help" && head != "?" && head != "exit"
+                        && head != "quit" && head != "q")
                     {
-                        string? piped = Console.ReadLine();
-                        if (piped is null) break;              // EOF
-                        piped = piped.Trim();
-                        if (piped.Length == 0) continue;
-                        var first = piped.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                        if (first.Length == 0) continue;
-                        var head = first[0].ToLowerInvariant();
-                        if (!Commands.Contains(head) && head != "help" && head != "?" && head != "exit"
-                            && head != "quit" && head != "q")
-                        {
-                            Console.WriteLine($"{Red}未知指令：{head}{Reset}（help 看清單）");
-                            failures++;
-                            continue;
-                        }
-                        int r = Execute(piped);
-                        if (r == -1) break;                    // exit／quit：如實收工
-                        if (r != 0) failures++;
-                    }
-                    catch (Exception ex)
-                    {
+                        Console.WriteLine($"{Red}未知指令：{head}{Reset}（help 看清單）");
                         failures++;
-                        Console.WriteLine($"{Red}內部錯誤（已攔下，繼續讀下一行）：{ex.GetType().Name} {ex.Message}{Reset}");
+                        continue;
                     }
+                    int r = Execute(piped);
+                    if (r == -1) break;                    // exit／quit：如實收工
+                    if (r != 0) failures++;
                 }
+                catch (Exception ex)
+                {
+                    failures++;
+                    Console.WriteLine($"{Red}內部錯誤（已攔下，繼續讀下一行）：{ex.GetType().Name} {ex.Message}{Reset}");
+                }
+            }
             }
             catch (Exception fatal)
             {
@@ -219,7 +219,10 @@ internal static class Program
             switch (cmd)
             {
                 case "help" or "?": CommandBook.Run(rest.Length > 0 ? rest : null); return 0;
-                case "book" or "百科" or "手冊": Book.Run(rest.Length > 0 ? rest : null); return 0;
+                case "book" or "百科": Book.Run(rest.Length > 0 ? rest : null); return 0;
+                case "手冊":
+                    Console.WriteLine($"{Dim}手冊.md 是 v2.91 時代的歷史文件；目前版文件請用 book（曦覽百科）。{Reset}");
+                    return 1;
                 case "mascot" or "吉祥物": MascotPreview(rest); return 0;
                 case "ver":
                     Tui.Frame($"曦覽 XinSpect v{AppInfo.Version}",
@@ -350,6 +353,13 @@ internal static class Program
                         : ["--compliance", .. rest.Split(' ', StringSplitOptions.RemoveEmptyEntries)]) == 0 ? 0 : 1;
 
                 case "merkle":
+                    // P4-19：原版寫死 ["--merkle"]——merkle 後面跟什麼都無聲消失。
+                    // 多餘字元如實拒絕，不吞。
+                    if (rest.Length > 0)
+                    {
+                        Console.WriteLine($"{Red}merkle 不接受任何參數（收到：{rest}）。{Reset}");
+                        return 1;
+                    }
                     return RunCli(["--merkle"]) == 0 ? 0 : 1;
 
                 default:
@@ -432,6 +442,20 @@ internal static class Program
             rows = rows.Where(f => f.Key.Contains(query, StringComparison.OrdinalIgnoreCase)
                                 || f.Value.Contains(query, StringComparison.OrdinalIgnoreCase));
         var list = rows.Take(30).ToList();
+        // P4-12：單鍵全文出口——查詢與某鍵名完全相等（不分大小寫）時，全文印出該鍰
+        // （值＋單位＋可得性＋不可得原因），不受 56 字截斷。DomainReport 尾註
+        // 「fact <關鍵字> 看單鍵全文」從此是真的。
+        var exact = query.Length > 0
+            ? _cache.FirstOrDefault(f => f.Key.Equals(query.Trim(), StringComparison.OrdinalIgnoreCase))
+            : null;
+        if (exact is not null)
+        {
+            Console.WriteLine($"{Bold}{exact.Key}{Reset} {Dim}〔單鍵全文〕{Reset}");
+            Console.WriteLine($"  狀態：{exact.Availability}{(string.IsNullOrEmpty(exact.UnavailableReason) ? "" : $"（{exact.UnavailableReason}）")}");
+            Console.WriteLine($"  值：{exact.Value}{(exact.Unit.Length > 0 ? " " + exact.Unit : "")}");
+            if (exact.Name.Length > 0 && exact.Name != exact.Key) Console.WriteLine($"  名稱：{exact.Name}");
+            Console.WriteLine();
+        }
         Tui.Table(
             ["", "KEY", "狀態", "值"],
             list.Select(f => new[]
@@ -449,7 +473,7 @@ internal static class Program
         int total = query.Length == 0 ? _cache.Count
             : _cache.Count(f => f.Key.Contains(query, StringComparison.OrdinalIgnoreCase)
                              || f.Value.Contains(query, StringComparison.OrdinalIgnoreCase));
-        Console.WriteLine($"{Dim}… {list.Count} / {total} 筆（✓ 讀到 ・ ⚠ 讀取失敗/權限 ・ ? 未確認）{Reset}");
+        Console.WriteLine($"{Dim}… {list.Count} / {total} 筆（✓ 讀到 ・ ⚠ 讀取失敗/權限 ・ ? 未確認 ・ 值欄截 56 字，單鍵全文：fact <完整鍵名>）{Reset}");
     }
 
     private static string Trim(string s, int n) => s.Length <= n ? s : s[..(n - 1)] + "…";
@@ -472,7 +496,7 @@ internal static class Program
         Console.WriteLine($"{Bold}實用工具（{PageRegistry.Utilities.Count}）{Reset}");
         Tui.Table(["KEY", "工具", "說明"],
             PageRegistry.Utilities.Select(p => new[] { p.Key, p.Title, HintOf(p) }));
-        Console.WriteLine($"{Dim}用 page <key> 看該頁對應的資料（先跑 facts 建快取）。{Reset}");
+        Console.WriteLine($"{Dim}用 page <key> 看該頁對應的資料（先跑 facts 建快取；說明欄截 44 字）。{Reset}");
     }
 
     private static void PageFacts(string key)
@@ -480,7 +504,7 @@ internal static class Program
         if (_cache is null) { Console.WriteLine($"{Red}先跑 facts。{Reset}"); return; }
         var def = PageRegistry.Pages.Concat(PageRegistry.Utilities)
             .FirstOrDefault(p => p.Key.Equals(key, StringComparison.OrdinalIgnoreCase)
-                              || p.Title.Contains(key, StringComparison.Ordinal));
+                              || p.Title.Contains(key, StringComparison.OrdinalIgnoreCase));
         if (def is null) { Console.WriteLine($"{Red}找不到頁面：{key}（pages 看清單）{Reset}"); return; }
 
         Console.WriteLine($"{Bold}{def.Title}{Reset} {Dim}[{def.Key}・{def.Group}] {def.Hint}{Reset}");
@@ -489,7 +513,7 @@ internal static class Program
         terms.AddRange(def.Keywords);
         var hits = _cache.Where(f => terms.Any(t =>
                 f.Key.Contains(t, StringComparison.OrdinalIgnoreCase)
-                || f.Name.Contains(t, StringComparison.Ordinal)
+                || f.Name.Contains(t, StringComparison.OrdinalIgnoreCase)
                 || f.Value.Contains(t, StringComparison.OrdinalIgnoreCase)))
             .Take(30).ToList();
         if (hits.Count == 0)
@@ -512,7 +536,27 @@ internal static class Program
             Console.WriteLine($"{Dim}用法：domain <前綴>，例如 domain cpu{Reset}");
             return;
         }
-        SearchFacts(prefix);
+        // P4-13：域查詢就該是「鍵的網域前綴」——原版轉手 SearchFacts 變成鍵或值全文包含，
+        // 與用法頁承諾的前綴過濾不符（domain nvme 會撈出一堆值裡提到 nvme 的別域事實）。
+        // 現在按前綴過濾（不分大小寫、帶不帶尾點都通）；要全文搜尋請用 fact。
+        string dot = prefix.EndsWith('.') ? prefix : prefix + ".";
+        var hit = _cache.Where(f => f.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                                 || f.Key.StartsWith(dot, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(f => f.Key, StringComparer.Ordinal).ToList();
+        var list = hit.Take(30).ToList();
+        if (list.Count == 0)
+        {
+            Console.WriteLine($"{Dim}快取裡沒有 {prefix}* 前綴的事實——domain（無參數）看有哪些域。{Reset}");
+            return;
+        }
+        Tui.Table(["事實鍵", "值", "狀態"],
+            list.Select(f => new[]
+            {
+                f.Key,
+                f.Availability == FactAvailability.Present ? Trim(f.Value + (f.Unit.Length > 0 ? " " + f.Unit : ""), 44) : "——",
+                f.Availability == FactAvailability.Present ? "✓" : $"{f.Availability}{(string.IsNullOrEmpty(f.UnavailableReason) ? "" : "：" + Trim(f.UnavailableReason, 30))}",
+            }));
+        Console.WriteLine($"{Dim}… {list.Count} / {hit.Count} 筆（值欄截 44 字；單鍵全文：fact <完整鍵名>）{Reset}");
     }
 
     private static void ListKeys(string query)
@@ -570,7 +614,7 @@ internal static class Program
                 f.Availability == FactAvailability.Present ? Trim(f.Value + (f.Unit.Length > 0 ? " " + f.Unit : ""), 44) : "——",
                 f.Availability == FactAvailability.Present ? "✓" : $"{f.Availability}{(string.IsNullOrEmpty(f.UnavailableReason) ? "" : "：" + Trim(f.UnavailableReason, 30))}",
             }));
-        Console.WriteLine($"  {Dim}共 {rows.Count} 把鍵。{Reset}");
+        Console.WriteLine($"  {Dim}共 {rows.Count} 把鍵（值欄截 44 字；單鍵全文：fact <完整鍵名>）。{Reset}");
         if (note != null) Console.WriteLine($"  {Dim}{note}{Reset}");
     }
 
@@ -792,7 +836,7 @@ internal static class Program
             {
                 r.TimeText, r.CodeHex, Trim(r.Name, 34), Trim(r.Params, 30),
             }));
-        Console.WriteLine($"  {Dim}檔案在 C:\\Windows\\Minidump；bsod 只列表，解讀看 GUI 工具頁。{Reset}");
+        Console.WriteLine($"  {Dim}檔案在 C:\\Windows\\Minidump；顯示最近 20 筆（上限）；bsod 只列表，解讀看 GUI 工具頁。{Reset}");
     }
 
     /// <summary>風扇轉速：LHM SuperIO 感測器唯讀——寫入（調速曲線）只在 GUI 風扇頁，終端機不做。</summary>
@@ -878,7 +922,9 @@ internal static class Program
                     DashRow("CPU 時脈", r.CpuClock, "GHz", 6, null, null, null, ref _prevClock);
                     DashRow("CPU 功率", r.CpuPower, "W", 253, 200, 240, null, ref _prevPower);
                     Console.WriteLine();
-                    Console.WriteLine($"  {Tui.Dim}記憶體用量 {(r.MemUsed is null ? "——" : r.MemUsed.Value.ToString("0.0") + " GB")} ・ PCI：{(_pci?.Count.ToString() ?? "未掃（pci scan）")} 台 ・ Bridge：本程序未連線{Tui.Reset}");
+                    // P4-21：Bridge 狀態如實——_ipcEngine 是會話級快取（ipc 指令建立過就在），
+                    // 不再寫死「未連線」。
+                    Console.WriteLine($"  {Tui.Dim}記憶體用量 {(r.MemUsed is null ? "——" : r.MemUsed.Value.ToString("0.0") + " GB")} ・ PCI：{(_pci?.Count.ToString() ?? "未掃（pci scan）")} 台 ・ Bridge：{(_ipcEngine is { Connected: true } ? "已連線（ipc 會話存續中）" : "本程序未連線（ipc 可建立）")}{Tui.Reset}");
                     Console.WriteLine();
                     Console.WriteLine($"{Tui.Dim}  q 離開 ・ 1 秒刷新{Tui.Reset}");
                     Console.Write($"{Tui.SwissRed}{Tui.Bold}xs{Tui.Reset}{Tui.SwissBlue}▸{Tui.Reset} dash");
@@ -962,15 +1008,15 @@ internal static class Program
                         }
                     }
                     catch { }
-                    // 〔修復 v3.20〕審計 D7：睡眠改 250ms 切片——大間隔不再 (int) 溢位炸
-                    // ArgumentOutOfRangeException，按鍵也在切片間提早醒（不用等完整 interval）。
+                    // 〔修復 v3.21〕審計 D7：睡眠改 250ms 切片——大間隔不再 (int) 溢位炸，
+                    // 按鍵也在切片間提早醒（不用等完整 interval）。
                     int totalMs = (int)Math.Min(interval * 1000d, int.MaxValue);
                     for (int waited = 0; waited < totalMs; waited += 250)
                     {
                         Thread.Sleep(Math.Min(250, totalMs - waited));
                         bool keyHit = false;
                         try { keyHit = Console.KeyAvailable; } catch { }
-                        if (keyHit) break;   // 有按鍵提早醒——外層迴圈開頭即檢查離開
+                        if (keyHit) break;
                     }
                 }
             }
@@ -1030,7 +1076,7 @@ internal static class Program
 
     /// <summary>
     /// 明示的修復動作（--repair-ring0）：刪除死指針的 WinRing0 服務。需要管理員。
-    /// 〔修復 v3.20〕審計 D4：回傳 0／1／2（成功／非管理員／sc.exe 失敗）——原本不查
+    /// 〔修復 v3.21〕審計 D4：回傳 0／1／2（成功／非管理員／sc.exe 失敗）——原本不查
     /// sc.exe 退出碼，服務不存在（1060）或存取被拒（5）也印綠字成功。
     /// </summary>
     private static int RepairRing0Service()
@@ -1058,7 +1104,7 @@ internal static class Program
             }
             if (!p.WaitForExit(5000))
             {
-                try { p.Kill(); } catch { /* 掛死的 sc.exe 只能殺，失敗不隱瞞也無能為力 */ }
+                try { p.Kill(); } catch { /* 掛死的 sc.exe 只能殺 */ }
                 Console.WriteLine($"{Red}sc.exe 五秒內沒有結束（已終止）——刪除結果未知。{Reset}");
                 return 2;
             }
@@ -1112,7 +1158,7 @@ internal static class Program
         {
             // childArgs 只會是 ["--elevate"] 或 ["--elevate", "--repair-ring0"]（Main 已驗），不含空格；仍以保守方式拼。
             string arguments = string.Join(" ", childArgs.Select(a => a.Contains(' ') ? "\"" + a + "\"" : a));
-            // 〔修復 v3.20〕審計 D7：提權子行程的 Process 句柄用完即還（原本每次提權漏一個）。
+            // 〔修復 v3.21〕審計 D7：提權子行程的 Process 句柄用完即還。
             using var proc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
                 FileName = exe,
@@ -1434,8 +1480,6 @@ internal static class Program
         }
 
         // 引擎會話級快取：連續查 status／threats／baseline 不再每次重啟守護進程握手。
-        // 〔修復 v3.20〕審計 D6：引擎死掉後重建（原本 _ipcEngine 非 null 就永不重建，
-        // bridge 真死後每次都假報「逾時」），並在行程退出時優雅收尾。
         if (_ipcEngine is null)
         {
             _ipcEngine = new BlueSquadronEngine();
@@ -1445,9 +1489,10 @@ internal static class Program
                 _ipcEngine = null;
                 return;
             }
+            // 〔修復 v3.21〕審計 D6：行程退出時優雅收尾（bridge 平時靠 stdin EOF 自行退出）。
             AppDomain.CurrentDomain.ProcessExit += (_, _) =>
             {
-                try { _ipcEngine?.Dispose(); } catch { /* 退出收尾不拋 */ }
+                try { _ipcEngine?.Dispose(); } catch { }
             };
         }
         var resp = _ipcEngine.SendCmd(rest, _ipcTimeoutMs);
@@ -1458,7 +1503,7 @@ internal static class Program
         }
         if (!_ipcEngine.Connected)
         {
-            // 引擎已標死（bridge 退出／pipe 斷）——如實說「斷線」，不是「逾時」；下次重建。
+            // 〔修復 v3.21〕審計 D6：引擎已標死——如實說「斷線」，不是「逾時」；下次重建。
             Console.WriteLine($"{Red}Bridge 已斷線（可能已退出）——下次 ipc 指令會自動重新啟動。{Reset}");
             try { _ipcEngine.Dispose(); } catch { }
             _ipcEngine = null;
@@ -1580,8 +1625,8 @@ internal static class Program
             catch { /* resize 重繪失敗不影響輸入 */ }
             try
             {
-                // 〔修復 v3.20〕審計 D5：ReadKey 移進 try——原本主控台句柄失效時在 try 外拋
-                // IOException，被外層主迴圈 catch 接住後下一輪再拋，無限紅字轟炸、連 exit 都打不進。
+                // 〔修復 v3.21〕審計 D5：ReadKey 移進 try——主控台句柄失效時在 try 外拋
+                // IOException，被外層主迴圈 catch 接住後下一輪再拋，無限紅字轟炸。
                 var key = Console.ReadKey(intercept: true);
             if (key.Key == ConsoleKey.Enter)
             {

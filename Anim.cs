@@ -46,8 +46,12 @@ public static class Anim
     {
         if (!Motion.Enabled) { fe.Opacity = 1; return; }   // 關掉動態效果：直接到位
 
+        var originalTransform = fe.RenderTransform;
         var tt = new TranslateTransform(0, slide);
-        fe.RenderTransform = tt;
+        var group = new TransformGroup();
+        group.Children.Add(originalTransform);
+        group.Children.Add(tt);
+        fe.RenderTransform = group;
         fe.Opacity = 0;                        // 基準值先歸零，延遲期間不會閃現
 
         var begin = TimeSpan.FromMilliseconds(beginMs);
@@ -59,6 +63,15 @@ public static class Anim
 
         fe.BeginAnimation(UIElement.OpacityProperty, fade);
         tt.BeginAnimation(TranslateTransform.YProperty, rise);
+
+        // Remove only this animation's transform, preserving a transform supplied by the view.
+        rise.Completed += (_, _) =>
+        {
+            if (!ReferenceEquals(fe.RenderTransform, group)) return;
+            fe.BeginAnimation(UIElement.OpacityProperty, null);
+            fe.Opacity = 1;
+            fe.RenderTransform = originalTransform;
+        };
     }
 }
 
@@ -70,14 +83,26 @@ public static class PageTransition
         if (!Motion.Enabled) { host.Opacity = 1; return; }
 
         // 5 px、150 ms：足以交代「換頁了」，又不會讓每一次點擊都像在等轉場。
+        var originalTransform = host.RenderTransform;
         var tt = new TranslateTransform(0, 5);
-        host.RenderTransform = tt;
+        var group = new TransformGroup();
+        group.Children.Add(originalTransform);
+        group.Children.Add(tt);
+        host.RenderTransform = group;
         host.Opacity = 0;
 
         var dur = TimeSpan.FromMilliseconds(150);
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
 
         host.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, dur) { EasingFunction = ease });
-        tt.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(5, 0, dur) { EasingFunction = ease });
+        var rise = new DoubleAnimation(5, 0, dur) { EasingFunction = ease };
+        rise.Completed += (_, _) =>
+        {
+            if (!ReferenceEquals(host.RenderTransform, group)) return;
+            host.BeginAnimation(UIElement.OpacityProperty, null);
+            host.Opacity = 1;
+            host.RenderTransform = originalTransform;
+        };
+        tt.BeginAnimation(TranslateTransform.YProperty, rise);
     }
 }

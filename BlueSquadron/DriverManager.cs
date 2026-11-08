@@ -1,4 +1,4 @@
-// ⚠ 未編譯——需作者機驗證（dotnet build 命令見 patch-25.md）
+﻿// ✓ 已隨 v3.20／v3.21 建置與全套測試驗證（2026-11-08 REPORT-修復建置；原補丁自述的「未編譯」狀態解除）
 //
 // DriverManager.cs — 完整替換檔（patch-25，P0-14 能力帳單 usermode 端）
 // 覆蓋目標：BlueSquadron/DriverManager.cs（原 243 行）
@@ -119,7 +119,7 @@ internal sealed class DriverManager : IDisposable
 
     // ── P0-14：能力帳單 ──────────────────────────────────────────────────
 
-    /// <summary>IOCTL_BS_GET_CAPS 的原生回覆版面（對 Common.h 的 BS_DRIVER_CAPS；x64＝48 位元組，12 欄 × 4）。</summary>
+    /// <summary>IOCTL_BS_GET_CAPS 的原生回覆版面（對 Common.h 的 BS_DRIVER_CAPS；x64＝84 位元組）。</summary>
     [StructLayout(LayoutKind.Sequential)]
     private struct BsDriverCapsNative
     {
@@ -208,7 +208,9 @@ internal sealed class DriverManager : IDisposable
     public void Dispose()
     {
         CloseDevice();
-        // Don't unload service on dispose — leave it running for protection
+        // Dispose 刻意不卸載服務——「保護常駐」是設計決策，不是遺漏（原註解：Don't unload
+        // service on dispose）。P3-19 之前「想停也停不了」：全程式沒有任何卸載路徑。
+        // 現在停用的明確門有兩個：IPC "unload" 指令（Program.cs Dispatch）與本類 Unload()。
     }
 
     private void CloseDevice()

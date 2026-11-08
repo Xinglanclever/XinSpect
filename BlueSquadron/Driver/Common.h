@@ -104,7 +104,7 @@ typedef struct _BS_BASELINE_INFO {
     ULONG DiffCount;     /* 自基線建立以來偵測到的差異次數 */
 } BS_BASELINE_INFO, *PBS_BASELINE_INFO;
 
-/* 能力帳單回覆（IOCTL_BS_GET_CAPS；x64 全 4 位元組對齊＝48 位元組（12 欄 × 4），無隱式填充）：
+/* 能力帳單回覆（IOCTL_BS_GET_CAPS；x64 全 4 位元組對齊＝84 位元組，無隱式填充）：
    DriverEntry 每一步的原始 NTSTATUS 存進對應 g_Status*，usermode 從一個 IOCTL 就能
    回答「驅動載入成功，但哪些防護其實沒起來、為什麼」。StatusMsrSnapshot 是活體健康
    （基線就緒＝SUCCESS、尚未就緒＝DEVICE_NOT_READY、init 失敗＝原始失敗碼），

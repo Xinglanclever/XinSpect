@@ -29,6 +29,8 @@ public partial class UtilitiesView : UserControl, IPageLifecycle
     private UserControl? _current;
     private List<UtilityNavItem>? _items;
 
+    private bool _active;   // 容器頁是否在前景（P3-12：子頁不再於容器未啟用時搶跑 OnActivated）
+
     public UtilitiesView()
     {
         InitializeComponent();
@@ -105,7 +107,10 @@ public partial class UtilitiesView : UserControl, IPageLifecycle
         (_current as IPageLifecycle)?.OnDeactivated();
         _current = view;
         ToolHost.Content = view;
-        (view as IPageLifecycle)?.OnActivated();
+        // 只有容器頁在前景時才啟用子頁；未啟用時（如建構期的 SelectedIndex=0）只實體化、
+        // 不搶跑——等容器 OnActivated 時再啟用（原版在此處直接 OnActivated，容器前景化後
+        // 又呼叫一次＝雙重啟用且無配對停用）。
+        if (_active) (view as IPageLifecycle)?.OnActivated();
     }
 
     /// <summary>切換到指定鍵值的子工具（供命令面板深層跳轉）。找不到則不動作。</summary>
@@ -120,7 +125,7 @@ public partial class UtilitiesView : UserControl, IPageLifecycle
         }
     }
 
-    // 容器頁的生命週期向下轉交給目前顯示的子工具
-    public void OnActivated() => (_current as IPageLifecycle)?.OnActivated();
-    public void OnDeactivated() => (_current as IPageLifecycle)?.OnDeactivated();
+    // 容器頁的生命週期向下轉交給目前顯示的子工具；_active 閘門擋住未前景化時的搶跑啟用
+    public void OnActivated() { _active = true; (_current as IPageLifecycle)?.OnActivated(); }
+    public void OnDeactivated() { _active = false; (_current as IPageLifecycle)?.OnDeactivated(); }
 }

@@ -47,7 +47,49 @@ public static class AuditLogService
         return entries ?? [];
     }
 
+    // ── 寫入面防護 ──────────────────────────────────────────────────────
+    // Save 是整檔覆寫；兩個寫者交錯（同行程兩執行緒，或雙實例各自 Load→Append→Save）
+    // 就會後寫蓋前寫——丟筆、序號斷裂。AuditVerifier 抓得到斷鏈（偵測面在），
+    // 但寫入面不該靠偵測兜底：行程內用監視器鎖，跨實例用命名 Mutex
+    // （與 EvidenceTimelineService 的 Local\XinSpect-EvidenceTimeline-v1 同一模式）。
+    // 鎖順序固定 ProcessGate → FileMutex，單向無死鎖；兩者對同執行緒皆可重入，
+    // Save 在 Mutate 鎖內被呼叫不會自鎖。
+    private static readonly object ProcessGate = new();
+    private static readonly Mutex FileMutex = new(false, @"Local\XinSpect-AuditLog-v1");
+
+    private static void WithFileLock(Action action)
+    {
+        lock (ProcessGate)
+        {
+            bool held = false;
+            try { FileMutex.WaitOne(); held = true; }
+            catch (AbandonedMutexException) { held = true; }   // 前一持有者已死——鎖其實已到手，照樣做
+            try { action(); }
+            finally { if (held) FileMutex.ReleaseMutex(); }
+        }
+    }
+
+    /// <summary>
+    /// 讀→改→寫一口氣在寫入鎖內完成。所有「Load→Append→Save」的組合都必須走這裡——
+    /// 分開呼叫時，兩個寫者各讀到同一份舊狀態、各自加一筆再各自覆寫，只鎖 Save 擋不住這種丟筆。
+    /// update 收到鎖內讀到的現況，回傳要落地的完整清單；回傳值為落地後的清單（呼叫端要回報筆數時用）。
+    /// </summary>
+    public static List<AuditEntry> Mutate(string path, Func<List<AuditEntry>, List<AuditEntry>> update)
+    {
+        List<AuditEntry> result = [];
+        WithFileLock(() =>
+        {
+            var entries = Load(path);
+            result = update(entries);
+            SaveCore(path, result);
+        });
+        return result;
+    }
+
     public static void Save(string path, IReadOnlyList<AuditEntry> entries)
+        => WithFileLock(() => SaveCore(path, entries));
+
+    private static void SaveCore(string path, IReadOnlyList<AuditEntry> entries)
     {
         var dir = Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);

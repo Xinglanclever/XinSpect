@@ -57,24 +57,31 @@ public sealed class ContextMenuService : INotifyPropertyChanged
         ("DesktopBackground",     "桌面背景"),
     };
 
-    public void Scan()
+    /// <summary>登錄檔採集（純讀，不碰 UI 物件）——供背景執行緒呼叫（P3-12：掃描移出 UI 執行緒）。</summary>
+    public List<ContextMenuEntry> Collect()
+    {
+        var list = new List<ContextMenuEntry>();
+        foreach (var (key, name) in Scopes)
+        {
+            ReadStaticVerbs(key, name, list);
+            ReadComHandlers(key, name, list);
+        }
+        // 排序：情境 → 可切換優先 → 名稱。
+        list.Sort((a, b) =>
+        {
+            int c = string.CompareOrdinal(a.Scope, b.Scope);
+            if (c != 0) return c;
+            if (a.CanToggle != b.CanToggle) return a.CanToggle ? -1 : 1;
+            return string.CompareOrdinal(a.DisplayName, b.DisplayName);
+        });
+        return list;
+    }
+
+    /// <summary>把採集結果套進繫結集合——必須在 UI 執行緒呼叫。</summary>
+    public void Apply(List<ContextMenuEntry> list)
     {
         try
         {
-            var list = new List<ContextMenuEntry>();
-            foreach (var (key, name) in Scopes)
-            {
-                ReadStaticVerbs(key, name, list);
-                ReadComHandlers(key, name, list);
-            }
-            // 排序：情境 → 可切換優先 → 名稱。
-            list.Sort((a, b) =>
-            {
-                int c = string.CompareOrdinal(a.Scope, b.Scope);
-                if (c != 0) return c;
-                if (a.CanToggle != b.CanToggle) return a.CanToggle ? -1 : 1;
-                return string.CompareOrdinal(a.DisplayName, b.DisplayName);
-            });
             Entries.Clear();
             foreach (var e in list) Entries.Add(e);
             int toggle = list.Count(x => x.CanToggle);
@@ -85,6 +92,9 @@ public sealed class ContextMenuService : INotifyPropertyChanged
             Status = "讀取右鍵選單失敗：" + ex.Message;
         }
     }
+
+    /// <summary>同步整段（保留給舊呼叫端；UI 路徑請走 Collect→背景→Apply）。</summary>
+    public void Scan() => Apply(Collect());
 
     // 讀取某情境下的靜態 shell 動詞（登錄機碼名稱不分大小寫，故 DesktopBackground\Shell 亦可命中）。
     private static void ReadStaticVerbs(string scopeKey, string scopeName, List<ContextMenuEntry> outList)

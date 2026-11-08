@@ -33,6 +33,8 @@ public static class DataSecurityFactsService
 
     public delegate IReadOnlyList<CertInfo>? CertProbe();
     public delegate IReadOnlyList<string>? HelloProbe();
+    /// <summary>登錄旗標探針契約：true／false＝值明確在場；null＝鍵或值不存在（未設定，OS 預設生效——不是 false）；
+    /// 讀取例外原樣拋出，由呼叫端的 catch 分類（生產通路 <see cref="ReadFlag"/> 不吞例外）。</summary>
     public delegate bool? FlagProbe(string path, string valueName);
     public delegate bool FileExistsProbe(string path);
     public delegate int? IntProbe(string path, string valueName);
@@ -94,16 +96,21 @@ public static class DataSecurityFactsService
     {
         const string path = @"SOFTWARE\Policies\Microsoft\Cryptography\AutoEnrollment";
         bool? auto;
+        bool failed = false;   // 例外與「未設定」分開：null＝鍵或值不存在，failed＝讀取失敗
         try { auto = flags(path, "EnableAutoEnrollment"); }
-        catch { auto = null; }
-        if (auto is null)
+        catch { auto = null; failed = true; }
+        if (failed)
             return new HardwareFact(AutoKey, CatDs, "憑證自動註冊", "", "", @"HKLM\" + path,
                 FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError,
                 "AutoEnrollment 政策鍵讀取失敗——不推測");
+        if (auto is null)
+            return new HardwareFact(AutoKey, CatDs, "憑證自動註冊",
+                "沒有憑證自動註冊政策（鍵或值不存在＝未設定）——「沒有政策」不等於「不會自動註冊」，憑證範本另由 AD／本機管理。",
+                "", @"HKLM\" + path, FactTrustLevel.Reported, false, at, 0);
         return new HardwareFact(AutoKey, CatDs, "憑證自動註冊",
             auto == true
                 ? "群組原則已啟用憑證自動註冊（EnableAutoEnrollment=1）——申請與續期交給政策，不表示已成功註冊任何憑證。"
-                : "群組原則未啟用憑證自動註冊（或無政策）——「沒有政策」不等於「不會自動註冊」，憑證範本另由 AD／本機管理。",
+                : "群組原則明文停用憑證自動註冊（EnableAutoEnrollment=0）——這是政策明文，不是「無政策」。",
             "", @"HKLM\" + path + @"\EnableAutoEnrollment", FactTrustLevel.Reported, false, at, auto == true ? 1 : 0);
     }
 
@@ -126,11 +133,16 @@ public static class DataSecurityFactsService
     {
         const string path = @"SOFTWARE\Microsoft\PlayReady";
         bool? present;
+        bool failed = false;
         try { present = flags(path, ""); }
-        catch { present = null; }
-        if (present is null)
+        catch { present = null; failed = true; }
+        if (failed)
             return new HardwareFact(DrmKey, CatDs, "DRM（PlayReady）", "", "", @"HKLM\" + path,
                 FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError, "PlayReady 登錄讀取失敗——不推測");
+        if (present is null)
+            return new HardwareFact(DrmKey, CatDs, "DRM（PlayReady）",
+                "PlayReady 尚未初始化（登錄鍵不存在）——串流 DRM 內容時才會建立。",
+                "", @"HKLM\" + path + "（鍵存在性）", FactTrustLevel.Reported, false, at, 0);
         return new HardwareFact(DrmKey, CatDs, "DRM（PlayReady）",
             present == true
                 ? "PlayReady 已在本機初始化（登錄有資料）——授權與撤銷狀態屬 DRM 管理，本工具不碰。"
@@ -141,20 +153,42 @@ public static class DataSecurityFactsService
     private static HardwareFact TlsFact(DateTimeOffset at, FlagProbe flags)
     {
         const string root = @"SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols";
-        var disabled = new List<string>();
+        var disabled = new List<string>();   // Enabled=0——明文停用，唯一的「明確停用」
+        var unset = new List<string>();      // 鍵或值不存在＝未設定（OS 預設生效）——不是停用
+        var enabled = new List<string>();    // 明確 Enabled 非 0——明文啟用
+        int readErrors = 0;
         foreach (string version in new[] { "SSL 2.0", "SSL 3.0", "TLS 1.0", "TLS 1.1" })
             foreach (string side in new[] { "Client", "Server" })
-                try { if (flags($"{root}\\{version}\\{side}", "Enabled") == false) disabled.Add($"{version} {side}"); }
-                catch { }
-        if (disabled.Count == 0)
+            {
+                string label = $"{version} {side}";
+                try
+                {
+                    bool? st = flags($"{root}\\{version}\\{side}", "Enabled");
+                    if (st == false) disabled.Add(label);
+                    else if (st is null) unset.Add(label);
+                    else enabled.Add(label);
+                }
+                catch { readErrors++; }   // 讀取失敗逐項如實計數，不再靜默吞掉
+            }
+        if (readErrors == 8)
             return new HardwareFact(TlsKey, CatDs, "TLS 版本停用", "", "", @"HKLM\" + root,
-                FactTrustLevel.Unknown, false, at, null, FactAvailability.Unknown,
-                "SCHANNEL Protocols 沒有任何「明確停用」記錄——這是登錄層事實：Windows 10 2004+／11 的預設停用行為" +
-                "不寫在這裡，本工具不假裝「已停用」也不假裝「全部啟用」");
-        return new HardwareFact(TlsKey, CatDs, "TLS 版本停用",
-            $"明確停用的協定／方向：{string.Join("、", disabled)}。界線：登錄只反映「有明文停用」的部分；" +
-            "未列的版本不代表啟用（要看 OS 預設），停用是防禦事實、不是安全背書。",
-            "項", @"HKLM\" + root + "（Enabled=0）", FactTrustLevel.Reported, false, at, disabled.Count);
+                FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError,
+                "SCHANNEL Protocols 八項全部讀取失敗——讀不到就是不猜");
+        if (disabled.Count > 0)
+            return new HardwareFact(TlsKey, CatDs, "TLS 版本停用",
+                $"明確停用（Enabled=0）：{string.Join("、", disabled)}。"
+                + (unset.Count > 0 ? $"另有 {unset.Count} 項未設定（＝OS 預設生效，未設定不是停用）；" : "")
+                + (enabled.Count > 0 ? $"另有 {enabled.Count} 項明文啟用；" : "")
+                + (readErrors > 0 ? $"{readErrors} 項讀取失敗（如實計數）；" : "")
+                + "界線：登錄只反映「有明文停用」的部分；未列的版本不代表啟用（要看 OS 預設），停用是防禦事實、不是安全背書。",
+                "項", @"HKLM\" + root + "（Enabled=0）", FactTrustLevel.Reported, false, at, disabled.Count);
+        return new HardwareFact(TlsKey, CatDs, "TLS 版本停用", "", "", @"HKLM\" + root,
+            FactTrustLevel.Unknown, false, at, null, FactAvailability.Unknown,
+            "SCHANNEL Protocols 沒有任何「明確停用」（Enabled=0）記錄"
+            + (unset.Count > 0 ? $"；{unset.Count} 項未設定（鍵或值不存在＝OS 預設生效，不是停用）" : "")
+            + (enabled.Count > 0 ? $"；{enabled.Count} 項明文啟用（Enabled 非 0）" : "")
+            + (readErrors > 0 ? $"；{readErrors} 項讀取失敗" : "")
+            + "——這是登錄層事實：Windows 10 2004+／11 的預設停用行為不寫在這裡，本工具不假裝「已停用」也不假裝「全部啟用」");
     }
 
     private static HardwareFact SacFact(DateTimeOffset at, FileExistsProbe fileExists, IntProbe flags)
@@ -280,18 +314,21 @@ public static class DataSecurityFactsService
         catch { return null; }
     }
 
+    /// <summary>
+    /// 登錄旗標三態：true／false＝值在場（int 非 0／0）；<c>null</c>＝鍵或值不存在（＝未設定，OS 預設生效——
+    /// <b>不是「明確 false」</b>，呼叫端必須把 null 如實呈現為「未設定」，不得併入任何一態）。
+    /// 讀取例外<b>不吞</b>、原樣拋給呼叫端的 catch——「未設定」與「讀取失敗」是兩回事，在這裡就分開。
+    /// </summary>
+    /// <remarks>patch-34 前的舊版把「鍵不存在」「值不存在」都譯成 false，<see cref="TlsFact"/> 據此把八項協定
+    /// 全報成「明確停用」——乾淨機器（從未寫過 per-protocol 子鍵）整面假事實。三態就是為了不再冒充。</remarks>
     private static bool? ReadFlag(string path, string valueName)
     {
-        try
-        {
-            if (path.StartsWith(@"HKLM\", StringComparison.OrdinalIgnoreCase)) path = path[5..];
-            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(path);
-            if (key is null) return false;
-            if (string.IsNullOrEmpty(valueName)) return key.SubKeyCount > 0 || key.GetValueNames().Length > 0;
-            object? v = key.GetValue(valueName);
-            return v switch { int i => i != 0, null => false, _ => true };
-        }
-        catch { return null; }
+        if (path.StartsWith(@"HKLM\", StringComparison.OrdinalIgnoreCase)) path = path[5..];
+        using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(path);
+        if (key is null) return null;                    // 機碼不存在＝未設定
+        if (string.IsNullOrEmpty(valueName)) return key.SubKeyCount > 0 || key.GetValueNames().Length > 0;
+        object? v = key.GetValue(valueName);
+        return v switch { int i => i != 0, null => null, _ => true };   // 值不存在＝未設定（null），不是 false
     }
 
     private static IReadOnlyList<(string, string)>? ReadDeviceInstallPolicies()

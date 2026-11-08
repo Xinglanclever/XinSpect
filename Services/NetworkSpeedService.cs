@@ -43,13 +43,13 @@ public sealed class NetworkSpeedService
 {
     public static readonly SpeedNode[] Nodes =
     {
-        new() { Name = "NTU 台大", Note = "學術網路・臺灣", Protocol = NodeProtocol.NtuSpeed5,
+        new() { Name = "NTU 台大", Note = "學術網路・臺灣・明文 HTTP", Protocol = NodeProtocol.NtuSpeed5,
                 DownloadUrl = "http://speed5.ntu.edu.tw/speed5/server/?module=download&size=",
                 UploadUrl   = "http://speed5.ntu.edu.tw/speed5/server/?module=upload",
                 PingUrl     = "http://speed5.ntu.edu.tw/speed5/server/" },
         new() { Name = "HKBN 香港寬頻", Note = "官方測速・香港", Protocol = NodeProtocol.WebPage,
                 WebUrl = "https://www.hkbn.net/personal/broadband/tc/speedtest" },
-        new() { Name = "SGIX 新加坡", Note = "交換中心・新加坡", Protocol = NodeProtocol.OpenSpeedTest,
+        new() { Name = "SGIX 新加坡", Note = "交換中心・新加坡・明文 HTTP", Protocol = NodeProtocol.OpenSpeedTest,
                 DownloadUrl = "http://speedtest.sgix.sg/downloading",   // 每次 30MB 固定串流，由 worker 迴圈持續拉取
                 UploadUrl   = "http://speedtest.sgix.sg/upload",
                 PingUrl     = "http://speedtest.sgix.sg/upload" },
@@ -152,8 +152,9 @@ public sealed class NetworkSpeedService
         if (samples.Count == 0)
             throw new InvalidOperationException(lastErr.Length > 0 ? lastErr : "無法連線至測速節點。");
 
-        samples.Sort();
-        double ping = samples[0];   // 取最小值（最接近純網路往返）
+        double ping = samples.Min();   // 取最小值（最接近純網路往返）
+        // P4-3：jitter 對「時間順序」的相鄰樣本差平均（RFC 3550 式抖動）——原版先 Sort
+        // 再取相鄰差，量的是樣本分布寬度而非抖動，系統性偏樂觀。
         double jitter = 0;
         for (int i = 1; i < samples.Count; i++) jitter += Math.Abs(samples[i] - samples[i - 1]);
         jitter = samples.Count > 1 ? jitter / (samples.Count - 1) : 0;
@@ -265,7 +266,9 @@ public sealed class NetworkSpeedService
                 content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
                 string url = node.UploadUrl + (node.UploadUrl.Contains('?') ? "&" : "?") + "r=" + Guid.NewGuid().ToString("N");
                 using var resp = await _http.PostAsync(url, content, ct);
-                add(payload.Length);   // 送出即計入（伺服器回應內容不重要）
+                // P4-3：非成功狀態碼（伺服器拒收）不算上傳量——PostAsync 對 4xx/5xx 不丟例外，
+                // 原版照計 payload.Length，把被拒絕的整份上傳也當成已送達（上傳量高估）。
+                if (resp.IsSuccessStatusCode) add(payload.Length);
             }
             catch (OperationCanceledException) { break; }
             catch { try { await Task.Delay(50, ct); } catch { break; } }

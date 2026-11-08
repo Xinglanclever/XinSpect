@@ -96,8 +96,11 @@ public sealed class WingetService : ObservableObject
         var path = Path.Combine(Path.GetTempPath(), $"xinspect-winget-{Guid.NewGuid():N}.json");
         try
         {
-            var psi = new ProcessStartInfo("winget",
-                $"export -o \"{path}\" --accept-source-agreements --disable-interactivity")
+            // winget 一律用解析好的絕對路徑（WingetLocator）：裸檔名走 CreateProcess 搜尋語意
+            // 「CWD 優先於 PATH」，管理員行程從可寫目錄啟動時等於一條植入執行面。
+            string? winget = WingetLocator.Resolve();
+            if (winget is null) return new(StringComparer.OrdinalIgnoreCase);   // 解析不到＝如實不可用，不退回裸檔名
+            var psi = new ProcessStartInfo(winget)
             {
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -106,6 +109,12 @@ public sealed class WingetService : ObservableObject
                 StandardOutputEncoding = Encoding.UTF8,
                 StandardErrorEncoding = Encoding.UTF8,
             };
+            // 參數一律 ArgumentList，不做字串內插（暫存路徑含空格也不會破）
+            psi.ArgumentList.Add("export");
+            psi.ArgumentList.Add("-o");
+            psi.ArgumentList.Add(path);
+            psi.ArgumentList.Add("--accept-source-agreements");
+            psi.ArgumentList.Add("--disable-interactivity");
             using var p = Process.Start(psi);
             if (p is null) return new(StringComparer.OrdinalIgnoreCase);
             if (!p.WaitForExit(90_000))
@@ -308,7 +317,10 @@ public sealed class WingetService : ObservableObject
         {
             try
             {
-                var psi = new ProcessStartInfo("winget", "--version")
+                // 同 ExportInstalledIds：絕對路徑才啟動（WingetLocator），不給 CWD 搜尋面。
+                string? winget = WingetLocator.Resolve();
+                if (winget is null) return false;
+                var psi = new ProcessStartInfo(winget, "--version")
                 {
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -371,8 +383,11 @@ public sealed class WingetService : ObservableObject
         {
             try
             {
-                var psi = new ProcessStartInfo("winget",
-                    $"install --id {id} -e --accept-package-agreements --accept-source-agreements --disable-interactivity")
+                // 同上：絕對路徑才啟動。install 會改變系統狀態，是全檔最不能妥協的一處；
+                // 解析不到如實回 -1（既有「無法啟動」路徑），不退回裸檔名。
+                string? winget = WingetLocator.Resolve();
+                if (winget is null) { Append("無法啟動 winget（解析不到執行檔）。"); return -1; }
+                var psi = new ProcessStartInfo(winget)
                 {
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -381,6 +396,14 @@ public sealed class WingetService : ObservableObject
                     StandardOutputEncoding = Encoding.UTF8,
                     StandardErrorEncoding = Encoding.UTF8,
                 };
+                // id 走 ArgumentList——這是本檔最後一處字串內插組 Arguments 的呼叫（同輪低級發現）。
+                psi.ArgumentList.Add("install");
+                psi.ArgumentList.Add("--id");
+                psi.ArgumentList.Add(id);
+                psi.ArgumentList.Add("-e");
+                psi.ArgumentList.Add("--accept-package-agreements");
+                psi.ArgumentList.Add("--accept-source-agreements");
+                psi.ArgumentList.Add("--disable-interactivity");
                 using var p = Process.Start(psi);
                 if (p is null) { Append("無法啟動 winget。"); return -1; }
                 p.OutputDataReceived += (_, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) Append(e.Data); };

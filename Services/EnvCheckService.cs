@@ -154,11 +154,14 @@ public sealed class EnvCheckService : ObservableObject
     }
 
     // 探測 winget 是否可用（執行 winget --version，結束碼 0 視為就緒）。
+    // 同 GpuStressService.DetectWinget：絕對路徑才啟動（WingetLocator），不給 CWD 搜尋面。
     private static bool ProbeWinget()
     {
         try
         {
-            var psi = new ProcessStartInfo("winget", "--version")
+            string? winget = WingetLocator.Resolve();
+            if (winget is null) return false;
+            var psi = new ProcessStartInfo(winget, "--version")
             {
                 UseShellExecute = false,
                 RedirectStandardOutput = true,

@@ -1,4 +1,4 @@
-<!--
+﻿<!--
   PR 規矩（與 CONTRIBUTING.md 同步）：
   不吹噓、不虛帳。改了什麼就寫什麼，驗過什麼就標什麼。
   「宣稱」與「代碼」脫節是本專案審計裡最重的罪——你的 PR 描述就是第一份審計對象。
@@ -15,7 +15,7 @@
 ## 驗證
 
 - [ ] `dotnet build XinSpect.csproj` 綠（Bridge 內嵌鏈包含在內）
-- [ ] 本機實測：7,897 條 綠（`dotnet test`，數字以 `Tests/TestSuiteBaseline.cs` 為準；加了測試就要改基線）
+- [ ] 本機實測：7,905 條 綠（`dotnet test`，數字以 `Tests/TestSuiteBaseline.cs` 為準；加了測試就要改基線）
 - [ ] 若動了 Docs／README／Changelog：`ChangelogTests`＋`ReadmeStatsTests`＋`CommunityDocsTests` 綠
 - [ ] 若動了 Services／UI：在真機上跑過受影響的頁面，沒有只靠測試綠
 - [ ] 若動了驅動（.c／.h）：說明 testsigning 實機驗證狀態（沒驗就如實寫「未驗」）

@@ -51,6 +51,8 @@ public partial class FirstRunWindow : Window
         SimplifiedChinese = false;
         BtnTraditional.BorderBrush = (System.Windows.Media.Brush)FindResource("AccentBrush");
         BtnSimplified.BorderBrush = (System.Windows.Media.Brush)FindResource("HairlineBrush");
+        // 立即轉回繁體預覽（P3-12：原版只換邊框不轉文字——簡體預覽單向不可逆）
+        LanguageService.ConvertVisualTree(this, false);
     }
 
     private void Simplified_Click(object sender, RoutedEventArgs e)

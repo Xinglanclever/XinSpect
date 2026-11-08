@@ -377,8 +377,10 @@ public static class ServerRoleConditionalFactsService
             @"SYSTEM\CurrentControlSet\Services\DHCPServer\Configuration");
         if (cfg is null) return null;
 
-        int scopes = cfg.OpenSubKey("Subnets")?.GetSubKeyNames().Length ?? 0;
-        int ifaces = cfg.OpenSubKey("Interfaces")?.GetSubKeyNames().Length ?? 0;
+        // 子機碼把手要關：先前 OpenSubKey 的回傳沒有 using，每次掃描洩 2 個登錄 handle。
+        int scopes, ifaces;
+        using (var sub = cfg.OpenSubKey("Subnets")) scopes = sub?.GetSubKeyNames().Length ?? 0;
+        using (var subIf = cfg.OpenSubKey("Interfaces")) ifaces = subIf?.GetSubKeyNames().Length ?? 0;
         return new DhcpState(ServiceStateIsRunning("DHCPServer"), scopes, ifaces);
     }
 
@@ -409,7 +411,9 @@ public static class ServerRoleConditionalFactsService
         {
             using var key = Registry.LocalMachine.OpenSubKey(
                 @"SYSTEM\CurrentControlSet\Services\" + service);
-            return key?.GetValue("Start") is { } v && Convert.ToInt32(v) <= 2;
+            // 只認 Start=2（自動）：0=boot／1=system 是驅動級起動型態，不該讀成「已設為自動啟動」
+            // （先前 <= 2 把 0／1 一起算進「自動」，與本方法 doc 與事實文案語意錯位）。
+            return key?.GetValue("Start") is { } v && Convert.ToInt32(v) == 2;
         }
         catch { return false; }
     }

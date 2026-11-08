@@ -56,6 +56,26 @@ public sealed class HardwareCatalogService
         }
     }
 
+    /// <summary>非同步匯入：讀檔與 JSON 解析在背景執行緒（P3-22：原版同步在 UI 執行緒，
+    /// 大索引會凍住視窗）。結果語意與 <see cref="LoadFile"/> 完全一致；例外原樣拋給呼叫端。</summary>
+    public async Task LoadFileAsync(string path, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("未指定檔案", nameof(path));
+        var fullPath = Path.GetFullPath(path);
+        var payload = await Task.Run(() =>
+        {
+            var json = File.ReadAllText(fullPath);
+            return JsonSerializer.Deserialize<CatalogPayload>(json, JsonOptions);
+        }, ct) ?? throw new InvalidDataException("索引內容為空");
+        if (payload.Records.Count == 0) throw new InvalidDataException("索引沒有 CPU/GPU 記錄");
+        lock (_gate)
+        {
+            _payload = payload;
+            _loadedPath = fullPath;
+            _error = null;
+        }
+    }
+
     public string Attribution
     {
         get { EnsureLoaded(); return _payload?.Attribution ?? "尚未匯入使用者提供的資料"; }

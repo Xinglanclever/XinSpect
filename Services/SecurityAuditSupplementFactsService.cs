@@ -1,5 +1,6 @@
 using System.IO;
 using System.Management;
+using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using Microsoft.Win32;
@@ -25,7 +26,9 @@ public static class SecurityAuditSupplementFactsService
 
     public sealed record ComHijackState(int HkcuClasses, int HklmClasses, int HkcuOverrides);
     public sealed record AssocState(int ExeAssociations, int LnkAssociations, int UserOverrides);
-    public sealed record AdsState(int FilesScanned, int FilesWithAds, int TotalStreams);
+    // UnreadableFiles＝開檔／列舉失敗的檔數（未知，刻意不計入 FilesWithAds）——
+    // 打不開的檔案既不能證明「含 ADS」也不能證明「乾淨」，只能如實記未知。
+    public sealed record AdsState(int FilesScanned, int FilesWithAds, int TotalStreams, int UnreadableFiles);
     public sealed record UninstState(int UninstallEntries, int SignedEntries, int UnsignedEntries, int MissingPaths);
     public sealed record AccountState(int Administrators, int EnabledAdmins, int Rid500Present, int OrphanSids);
     public sealed record AutoLogonState(bool DefaultUserNamePresent, bool DefaultPasswordPresent, bool AutoAdminLogonPresent);
@@ -101,37 +104,76 @@ public static class SecurityAuditSupplementFactsService
     {
         AdsState? s; try { s = (probe ?? new AdsProbe(ReadAds))(); } catch { s = null; }
         if (s is null) return Unavailable(at, AdsKey, CatSecurity, "ADS 掃描", FactAvailability.ReadError, "ADS 掃描失敗——不猜資料流");
-        return new HardwareFact(AdsKey, CatSecurity, "ADS 掃描", $"系統目錄掃描 {s.FilesScanned} 檔、含 ADS {s.FilesWithAds} 檔、資料流 {s.TotalStreams} 個。掃描範圍限系統可執行檔；不列檔名或內容。", "個", @"System32 可執行檔 ADS（metadata）", FactTrustLevel.Measured, false, at, s.FilesWithAds);
+        return new HardwareFact(AdsKey, CatSecurity, "ADS 掃描", $"系統目錄掃描 {s.FilesScanned} 檔、含 ADS {s.FilesWithAds} 檔、資料流 {s.TotalStreams} 個、開檔失敗 {s.UnreadableFiles} 檔（未知，不計入含 ADS）。以 FindFirstStreamW 逐檔實數資料流；掃描範圍限系統可執行檔；不列檔名或內容。", "個", @"System32 可執行檔 ADS（metadata）", FactTrustLevel.Measured, false, at, s.FilesWithAds);
+    }
+
+    // ── ADS 列舉（kernel32 FindFirstStreamW）─────────────────────────────
+    // 「::$DATA」是每個檔案都有的主資料流；其餘命名資料流（如 ":Zone.Identifier:$DATA"）
+    // 才是 alternate data stream。FindFirstStreamW／FindNextStreamW 是 kernel32 的正式列舉面，
+    // 不需要 BackupRead 也不需要第三方庫。開檔失敗回 -1，由呼叫端計入「未知」——
+    // 絕不把打不開的檔案算成「含 ADS」（那是本項先前最離譜的輸出）。
+    private const int FindStreamInfoStandard = 0;
+    private const int ErrorHandleEof = 38;   // FindNextStreamW 列舉到底的訊號
+    private static readonly IntPtr InvalidHandleValue = new(-1);
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct WIN32_FIND_STREAM_DATA
+    {
+        public long StreamSize;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 296)]   // MAX_PATH + 36
+        public string cStreamName;
+    }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true, ExactSpelling = true)]
+    private static extern IntPtr FindFirstStreamW(string fileName, int infoLevel, out WIN32_FIND_STREAM_DATA findStreamData, int flags);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true, ExactSpelling = true)]
+    private static extern bool FindNextStreamW(IntPtr findStream, out WIN32_FIND_STREAM_DATA findStreamData);
+
+    [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
+    private static extern bool FindClose(IntPtr findStream);
+
+    /// <summary>實數一個檔案的 alternate data stream 數；回 -1 表示開檔或列舉失敗（未知）。</summary>
+    private static int CountAlternateStreams(string path)
+    {
+        IntPtr h = FindFirstStreamW(path, FindStreamInfoStandard, out WIN32_FIND_STREAM_DATA data, 0);
+        if (h == InvalidHandleValue) return -1;
+        int extra = 0;
+        try
+        {
+            while (true)
+            {
+                string name = data.cStreamName ?? "";
+                if (name.Length > 0 && !string.Equals(name, "::$DATA", StringComparison.Ordinal)) extra++;
+                if (!FindNextStreamW(h, out data))
+                    // ERROR_HANDLE_EOF＝列舉到底；其餘錯誤視為中途失敗，整檔記未知
+                    return Marshal.GetLastWin32Error() == ErrorHandleEof ? extra : -1;
+            }
+        }
+        finally { FindClose(h); }
     }
 
     private static AdsState ReadAds()
     {
-        int files = 0, withAds = 0, streams = 0;
+        int files = 0, withAds = 0, streams = 0, unreadable = 0;
         string root = Environment.SystemDirectory;
-        try
+        // 目錄層級失敗（例如整個列舉被擋）不再內部吞掉：往上拋給 AdsFact 的 catch，
+        // 走既有 ReadError 三態——比把半份結果冒充 Measured 誠實。
+        foreach (string f in Directory.EnumerateFiles(root, "*.exe").Take(500))
         {
-            foreach (string f in Directory.EnumerateFiles(root, "*.exe").Take(500))
-            {
-                files++;
-                try
-                {
-                    var info = new FileInfo(f);
-                    var fs = info.OpenRead(); fs.Close();
-                    // .NET 沒有直接列舉 ADS；以 Win32 API 的 FindFirstStream 為理想，本版只統計可開檔。
-                    streams += 0;
-                }
-                catch { withAds++; }
-            }
+            files++;
+            int extra = CountAlternateStreams(f);
+            if (extra < 0) unreadable++;                       // 開檔／列舉失敗＝未知
+            else if (extra > 0) { withAds++; streams += extra; }
         }
-        catch { }
-        return new(files, withAds, streams);
+        return new(files, withAds, streams, unreadable);
     }
 
     public static HardwareFact UninstFact(DateTimeOffset at, UninstProbe? probe = null)
     {
         UninstState? s; try { s = (probe ?? new UninstProbe(ReadUninst))(); } catch { s = null; }
         if (s is null) return Unavailable(at, UninstKey, CatSecurity, "已安裝程式簽章審計", FactAvailability.ReadError, "Uninstall 登錄讀取失敗——不猜簽章");
-        return new HardwareFact(UninstKey, CatSecurity, "已安裝程式簽章審計", $"登錄項 {s.UninstallEntries}、簽章 {s.SignedEntries}、未簽章 {s.UnsignedEntries}、路徑不存在 {s.MissingPaths}。只列計數，不列程式名稱或憑證。", "項", @"Uninstall 登錄＋Authenticode（唯讀）", FactTrustLevel.Reported, false, at, s.UninstallEntries);
+        return new HardwareFact(UninstKey, CatSecurity, "已安裝程式簽章審計", $"登錄項 {s.UninstallEntries}、路徑不存在 {s.MissingPaths}；簽章 {s.SignedEntries}、未簽章 {s.UnsignedEntries}——本版未實際驗簽（成本考量），這兩格是未驗的 0，不得讀成「全部有簽章」。只列計數，不列程式名稱或憑證。", "項", @"Uninstall 登錄＋Authenticode（唯讀）", FactTrustLevel.Reported, false, at, s.UninstallEntries);
     }
 
     private static UninstState ReadUninst()
@@ -153,7 +195,8 @@ public static class SecurityAuditSupplementFactsService
                 entries++;
                 string? loc = k.GetValue("InstallLocation") as string;
                 if (string.IsNullOrWhiteSpace(loc) || !Directory.Exists(loc)) missing++;
-                // 簽章實際檢查成本高；沒有檔案路徑時以未驗證計，不冒充未簽章。
+                // 簽章實際檢查成本高，本版未驗；signed／unsigned 恆 0，由事實文案如實申報——
+                // 假零群最壞的讀法是「全部有簽章」，這裡把釘子先釘死。
             }
         }
         return new(entries, signed, unsigned, missing);
@@ -163,24 +206,63 @@ public static class SecurityAuditSupplementFactsService
     {
         AccountState? s; try { s = (probe ?? new AccountProbe(ReadAccounts))(); } catch { s = null; }
         if (s is null) return Unavailable(at, AccountKey, CatSecurity, "帳戶安全審計", FactAvailability.ReadError, "本機帳戶讀取失敗——不猜帳戶");
-        return new HardwareFact(AccountKey, CatSecurity, "帳戶安全審計", $"Administrators 成員 {s.Administrators}、啟用 {s.EnabledAdmins}、RID 500 存在 {s.Rid500Present}、孤兒 SID {s.OrphanSids}。存在性非判定；不列使用者名稱或 SID。", "個", "Win32_UserAccount／群組（唯讀）", FactTrustLevel.Reported, false, at, s.Administrators);
+        string adminsText = s.Administrators < 0 ? "未查（群組關聯讀取失敗——不冒充）" : $"{s.Administrators}";
+        string orphanText = s.OrphanSids < 0 ? "未查" : $"{s.OrphanSids}";
+        return new HardwareFact(AccountKey, CatSecurity, "帳戶安全審計", $"Administrators 成員 {adminsText}、啟用中的 RID-500 {s.EnabledAdmins}、RID 500 存在 {s.Rid500Present}、孤兒 SID {orphanText}。存在性非判定；不列使用者名稱或 SID。", "個", "Win32_UserAccount／群組（唯讀）", FactTrustLevel.Reported, false, at, s.Administrators < 0 ? null : s.Administrators);
     }
 
     private static AccountState ReadAccounts()
     {
-        int admins = 0, enabled = 0, rid500 = 0, orphan = 0;
+        int enabled = 0, rid500 = 0;
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         try
         {
-            using var s = new ManagementObjectSearcher("SELECT SID, Disabled FROM Win32_UserAccount WHERE LocalAccount=True");
+            using var s = new ManagementObjectSearcher("SELECT Domain, Name, SID, Disabled FROM Win32_UserAccount WHERE LocalAccount=True");
             foreach (ManagementObject o in s.Get()) using (o)
             {
                 string sid = o["SID"]?.ToString() ?? "";
                 if (sid.EndsWith("-500", StringComparison.Ordinal)) { rid500++; if (o["Disabled"] is bool d && !d) enabled++; }
+                seen.Add($@"{(o["Domain"] as string ?? "")}\{(o["Name"] as string ?? "")}");
             }
-            admins = enabled;
+        }
+        catch { return new(-1, -1, -1, -1); }   // 帳戶清單讀不到：全記未知，不給假零
+
+        // Administrators（S-1-5-32-544）成員數真正查一次（Win32_GroupUser 關聯）——
+        // 先前拿「啟用中的 RID-500」冒充群組成員數，是事實層的假值；查不到記 -1（未查）。
+        // 孤兒＝成員引用的本機帳戶已不存在（懸空 SID）；巢狀群組引用不算孤兒。只數數量，不列名稱。
+        int admins = -1, orphan = -1;
+        try
+        {
+            using var g = new ManagementObjectSearcher(
+                "SELECT PartComponent FROM Win32_GroupUser WHERE GroupComponent=\"Win32_Group.Domain='"
+                + Environment.MachineName.Replace("'", "''") + "',Name='Administrators'\"");
+            admins = 0; orphan = 0;
+            foreach (ManagementObject o in g.Get()) using (o)
+            {
+                admins++;
+                string comp = o["PartComponent"] as string ?? "";
+                if (comp.Contains("Win32_UserAccount", StringComparison.OrdinalIgnoreCase)
+                    && TryAccountRef(comp, out string dom, out string name)
+                    && !seen.Contains(dom + "\\" + name)) orphan++;
+            }
         }
         catch { }
         return new(admins, enabled, rid500, orphan);
+    }
+
+    /// <summary>從 WMI PartComponent 字串（…Win32_UserAccount.Domain="X",Name="y"）取出帳戶參照。</summary>
+    private static bool TryAccountRef(string component, out string domain, out string name)
+    {
+        domain = name = "";
+        int a = component.IndexOf("Domain=\"", StringComparison.OrdinalIgnoreCase);
+        int b = component.IndexOf("Name=\"", StringComparison.OrdinalIgnoreCase);
+        if (a < 0 || b < 0) return false;
+        int aEnd = component.IndexOf('"', a + 8);
+        int bEnd = component.IndexOf('"', b + 6);
+        if (aEnd < 0 || bEnd < 0) return false;
+        domain = component[(a + 8)..aEnd];
+        name = component[(b + 6)..bEnd];
+        return true;
     }
 
     public static HardwareFact AutoLogonFact(DateTimeOffset at, AutoLogonProbe? probe = null)
@@ -206,7 +288,7 @@ public static class SecurityAuditSupplementFactsService
         return new HardwareFact(LogonKey, CatSecurity, "登入歷史聚合", $"近 {s.LastDays} 天成功 {s.Success4624}、失敗 {s.Failure4625}、鎖定 {s.AccountLocked4740}。聚合層級聲明；不列使用者名稱或來源 IP。", "筆", "Security 4624／4625／4740（只讀計數）", FactTrustLevel.Reported, false, at, s.Success4624 + s.Failure4625);
     }
 
-    private static LogonState ReadLogon()
+    private static LogonState? ReadLogon()
     {
         int ok = 0, fail = 0, lockout = 0;
         try
@@ -220,7 +302,7 @@ public static class SecurityAuditSupplementFactsService
                 if (e.Id == 4624) ok++; else if (e.Id == 4625) fail++; else if (e.Id == 4740) lockout++;
             }
         }
-        catch { return new(0, 0, 0, 30); }
+        catch { return null; }   // 讀失敗＝未知，回 null 讓 LogonFact 走 ReadError 三態——不得當「30 天零筆」
         return new(ok, fail, lockout, 30);
     }
 
@@ -263,13 +345,19 @@ public static class SecurityAuditSupplementFactsService
     {
         PathState? s; try { s = (probe ?? new PathProbe(ReadPath))(); } catch { s = null; }
         if (s is null) return Unavailable(at, PathKey, CatSecurity, "PATH 可寫性偵測", FactAvailability.ReadError, "PATH 讀取失敗——不猜可寫目錄");
-        return new HardwareFact(PathKey, CatSecurity, "PATH 可寫性偵測", $"PATH 目錄 {s.Directories}、可寫 {s.WritableDirectories}、使用者可寫 {s.UserWritable}。只列計數，不列目錄路徑；可寫是防禦視角的事實。", "個", "PATH 環境變數＋目錄 ACL（唯讀）", FactTrustLevel.Reported, false, at, s.Directories);
+        return new HardwareFact(PathKey, CatSecurity, "PATH 可寫性偵測", $"PATH 目錄 {s.Directories}、可寫（Everyone）{s.WritableDirectories}、使用者可寫（目前權杖，含其管理員群組）{s.UserWritable}。只列計數，不列目錄路徑；可寫是防禦視角的事實。", "個", "PATH 環境變數＋目錄 ACL（唯讀）", FactTrustLevel.Reported, false, at, s.Directories);
     }
 
     private static PathState ReadPath()
     {
         int dirs = 0, writable = 0, userWritable = 0;
         string path = Environment.GetEnvironmentVariable("PATH") ?? "";
+        // 使用者可寫＝目前行程權杖（含所屬群組）在 ACL 裡有 WriteData——先把權杖 SID 集合備好。
+        var tokenSids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+        if (identity.User is { } self) tokenSids.Add(self.Value);
+        if (identity.Groups is not null)
+            foreach (var g in identity.Groups) tokenSids.Add(g.Value);
         foreach (string p in path.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             if (!Directory.Exists(p)) continue;
@@ -277,10 +365,17 @@ public static class SecurityAuditSupplementFactsService
             try
             {
                 var sec = new DirectoryInfo(p).GetAccessControl();
+                bool world = false, user = false;
                 foreach (FileSystemAccessRule r in sec.GetAccessRules(true, true, typeof(SecurityIdentifier)))
-                    if (r.AccessControlType == AccessControlType.Allow
-                     && (r.FileSystemRights & FileSystemRights.WriteData) != 0
-                     && r.IdentityReference is SecurityIdentifier sid && sid.IsWellKnown(WellKnownSidType.WorldSid)) { writable++; break; }
+                {
+                    if (r.AccessControlType != AccessControlType.Allow) continue;
+                    if (r.IdentityReference is not SecurityIdentifier sid) continue;
+                    if ((r.FileSystemRights & FileSystemRights.WriteData) == 0) continue;
+                    if (sid.IsWellKnown(WellKnownSidType.WorldSid)) world = true;
+                    if (tokenSids.Contains(sid.Value)) user = true;
+                }
+                if (world) writable++;
+                if (user) userWritable++;
             }
             catch { }
         }

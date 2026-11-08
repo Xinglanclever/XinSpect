@@ -261,24 +261,13 @@ public static class ZeroTrustFactsService
 
     private static string? RunAuditPol(string[] args)
     {
-        try
-        {
-            var psi = new ProcessStartInfo("auditpol.exe")
-            {
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                // 不指定 Encoding：讓 .NET 用系統字碼頁（與 auditpol 輸出一致）
-            };
-            foreach (string a in args) psi.ArgumentList.Add(a);
-            using var p = Process.Start(psi);
-            if (p is null) return null;
-            string stdout = p.StandardOutput.ReadToEnd();
-            if (!p.WaitForExit(8000)) { try { p.Kill(true); } catch { } return null; }
-            return string.IsNullOrWhiteSpace(stdout) ? "" : stdout;
-        }
-        catch { return null; }
+        // 走 ProcessRunner：先前把 stderr 導向卻一次都不讀——auditpol 寫滿 4KB 緩衝就互等，
+        // 只能靠逾時兜底成「讀取失敗」（ProcessRunner 註解點名的 D4 死鎖面）。
+        // ProcessRunner 同樣不指定 Encoding：與原行為一致，讓 .NET 用系統字碼頁（與 auditpol 輸出一致）。
+        // 絕對路徑（照 WinsatService.cs:88）：CreateProcess 搜尋語意 CWD 優先，管理員行程不得用裸檔名。
+        var r = ProcessRunner.Run(Path.Combine(Environment.SystemDirectory, "auditpol.exe"), args, 8000);
+        if (r.TimedOut || r.ExitCode is null) return null;
+        return string.IsNullOrWhiteSpace(r.Stdout) ? "" : r.Stdout;
     }
 
     // ── DL-005 行程命令列（L2 opt-in）───────────────────────────────────
@@ -290,9 +279,9 @@ public static class ZeroTrustFactsService
             const string why = "未明示同意（L2）——行程命令列可能含檔案路徑、參數與權杖；預設不讀";
             return
             [
-                new HardwareFact(CmdCountKey, CatDl, "行程命令列數", "", "", "Process／WMI 命令列", FactTrustLevel.Unknown,
+                new HardwareFact(CmdCountKey, CatDl, "行程命令列數", "", "", "WMI Win32_Process.CommandLine", FactTrustLevel.Unknown,
                     false, at, null, FactAvailability.NotApplicable, why),
-                new HardwareFact(CmdSummaryKey, CatDl, "行程命令列清單", "", "", "Process／WMI 命令列", FactTrustLevel.Unknown,
+                new HardwareFact(CmdSummaryKey, CatDl, "行程命令列清單", "", "", "WMI Win32_Process.CommandLine", FactTrustLevel.Unknown,
                     false, at, null, FactAvailability.NotApplicable, why),
             ];
         }
@@ -305,9 +294,9 @@ public static class ZeroTrustFactsService
             const string why = "已同意但命令列列舉失敗——讀不到就是不猜";
             return
             [
-                new HardwareFact(CmdCountKey, CatDl, "行程命令列數", "", "", "Process／WMI 命令列",
+                new HardwareFact(CmdCountKey, CatDl, "行程命令列數", "", "", "WMI Win32_Process.CommandLine",
                     FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError, why),
-                new HardwareFact(CmdSummaryKey, CatDl, "行程命令列清單", "", "", "Process／WMI 命令列",
+                new HardwareFact(CmdSummaryKey, CatDl, "行程命令列清單", "", "", "WMI Win32_Process.CommandLine",
                     FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError, why),
             ];
         }
@@ -316,14 +305,14 @@ public static class ZeroTrustFactsService
         return
         [
             new HardwareFact(CmdCountKey, CatDl, "行程命令列數",
-                ordered.Count.ToString(CultureInfo.InvariantCulture), "條", "Process／WMI 命令列（明示同意後）",
+                ordered.Count.ToString(CultureInfo.InvariantCulture), "條", "WMI Win32_Process.CommandLine（明示同意後）",
                 FactTrustLevel.Reported, false, at, ordered.Count),
             // 明示同意才讀，且屬 L2：值標敏感，匯出預設遮蔽
             new HardwareFact(CmdSummaryKey, CatDl, "行程命令列清單",
                 ordered.Count == 0 ? "（沒有可讀的命令列）"
                     : string.Join("；", ordered.Take(20).Select(x => $"{x.Process}：{x.CommandLine}")) +
                       (ordered.Count > 20 ? $"…等 {ordered.Count - 20} 條" : ""),
-                "", "Process／WMI 命令列（明示同意後；L2）", FactTrustLevel.Reported, true, at, ordered.Count),
+                "", "WMI Win32_Process.CommandLine（明示同意後；L2）", FactTrustLevel.Reported, true, at, ordered.Count),
         ];
     }
 
@@ -331,14 +320,21 @@ public static class ZeroTrustFactsService
     {
         try
         {
+            // 真命令列走 WMI Win32_Process.CommandLine。先前用 Process.MainModule.FileName——那只是
+            // 可執行映像路徑（拿不到參數），卻被填進名為 CommandLine 的欄位，等於拿較弱的資料冒充
+            // 較強的宣告（反向造假，仍是造假）。
+            // 取捨：WMI 較慢（數百 ms），受保護／系統行程可能回 null——如實標「無命令列或讀不到」；
+            // NtQueryInformationProcess 需開其他行程的 handle 讀參數區記憶體，位移隨版本有風險，
+            // 與本檔「宣告式唯讀」的界線不合，故不採。
             var list = new List<(string, string)>();
-            foreach (var p in Process.GetProcesses())
+            using var s = new ManagementObjectSearcher("SELECT Name, CommandLine FROM Win32_Process");
+            foreach (ManagementObject o in s.Get()) using (o)
             {
-                using (p)
-                {
-                    try { list.Add((p.ProcessName, p.MainModule?.FileName ?? "(無主模組)")); }
-                    catch { list.Add((p.ProcessName, "(讀不到)")); }
-                }
+                string name = o["Name"] as string ?? "";
+                if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) name = name[..^4];
+                string? cmd = o["CommandLine"] as string;
+                list.Add((string.IsNullOrWhiteSpace(name) ? "(無名稱)" : name,
+                          string.IsNullOrEmpty(cmd) ? "(無命令列或讀不到)" : cmd));
             }
             return list;
         }

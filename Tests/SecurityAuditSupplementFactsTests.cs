@@ -9,7 +9,8 @@ public class SecurityAuditSupplementFactsTests
     [Fact] public void COM劫持_失敗_ReadError() { var f=SecurityAuditSupplementFactsService.ComHijackFact(At,()=>null); Assert.Equal(FactAvailability.ReadError,f.Availability); }
     [Fact] public void 關聯_無基線聲明() { var f=SecurityAuditSupplementFactsService.AssocFact(At,()=>new(1,1,4)); Assert.Contains("無基線聲明",f.Value); }
     [Fact] public void 關聯_失敗_ReadError() { var f=SecurityAuditSupplementFactsService.AssocFact(At,()=>null); Assert.Equal(FactAvailability.ReadError,f.Availability); }
-    [Fact] public void ADS_掃描範圍聲明() { var f=SecurityAuditSupplementFactsService.AdsFact(At,()=>new(100,2,2)); Assert.Contains("掃描範圍限系統可執行檔",f.Value); }
+    [Fact] public void ADS_掃描範圍聲明() { var f=SecurityAuditSupplementFactsService.AdsFact(At,()=>new(100,2,2,0)); Assert.Contains("掃描範圍限系統可執行檔",f.Value); Assert.Contains("不計入含 ADS",f.Value); }
+    [Fact] public void ADS_開檔失敗算未知不算含ADS() { var f=SecurityAuditSupplementFactsService.AdsFact(At,()=>new(10,0,0,7)); Assert.Contains("開檔失敗 7 檔",f.Value); }
     [Fact] public void ADS_失敗_ReadError() { var f=SecurityAuditSupplementFactsService.AdsFact(At,()=>null); Assert.Equal(FactAvailability.ReadError,f.Availability); }
     [Fact] public void 簽章_不列程式名稱() { var f=SecurityAuditSupplementFactsService.UninstFact(At,()=>new(10,8,2,1)); Assert.Contains("不列程式名稱",f.Value); }
     [Fact] public void 簽章_失敗_ReadError() { var f=SecurityAuditSupplementFactsService.UninstFact(At,()=>null); Assert.Equal(FactAvailability.ReadError,f.Availability); }

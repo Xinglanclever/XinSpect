@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 namespace XinSpect;
 
@@ -25,7 +25,11 @@ public static class BootOrderReader
     {
         // 第 330 輪（修 D4）：先前這裡是先 ReadToEnd 再 WaitForExit——那個順序有死鎖。
         // 現在改走 ProcessRunner：兩個串流在 WaitForExit 之前就開始非同步讀。
-        var run = ProcessRunner.Run("bcdedit.exe", ["/enum"], TimeoutMs);
+        // 〔修復 v3.21〕審計 §3.3-3：裸名 bcdedit.exe 有 CWD 優先搜尋面（管理員行程＝植入執行面）——
+        // 走 patch-09 同款 %SystemRoot%\System32 絕對路徑，缺檔如實回 None。
+        string bcdedit = System.IO.Path.Combine(Environment.SystemDirectory, "bcdedit.exe");
+        if (!System.IO.File.Exists(bcdedit)) return (null, "bcdedit.exe 不存在於 System32——環境異常，不下判決");
+        var run = ProcessRunner.Run(bcdedit, ["/enum"], TimeoutMs);
         if (run.TimedOut) return (null, run.Reason);
         if (run.Stdout is null) return (null, run.Reason ?? "bcdedit /enum 沒有任何輸出");
 

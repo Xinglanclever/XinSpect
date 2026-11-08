@@ -89,11 +89,13 @@ public static partial class ReportExportChainService
             {
                 try
                 {
-                    var entries = AuditLogService.Load(AuditLogService.DefaultPath);
-                    entries.Add(AuditLogService.Append(entries, AuditLogService.CurrentOperator(), "",
-                        ExportAction, Path.GetFileName(exportPath),
-                        $"匯出檔內嵌雜湊鏈（{ChainKey}）", contentHash, DateTimeOffset.UtcNow));
-                    AuditLogService.Save(AuditLogService.DefaultPath, entries);
+                    AuditLogService.Mutate(AuditLogService.DefaultPath, entries =>
+                    {
+                        entries.Add(AuditLogService.Append(entries, AuditLogService.CurrentOperator(), "",
+                            ExportAction, Path.GetFileName(exportPath),
+                            $"匯出檔內嵌雜湊鏈（{ChainKey}）", contentHash, DateTimeOffset.UtcNow));
+                        return entries;
+                    });
                 }
                 catch { /* 記帳失敗不影響已簽好的檔案；鏈的下一環會如實從鏈首重起 */ }
             }

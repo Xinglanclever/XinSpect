@@ -71,11 +71,24 @@ public sealed class StressBridgeService : ObservableObject, IDisposable
     private async Task InitAsync()
     {
         string? slot = _settings.ToolSlots.TryGetValue(SlotName, out var p) ? p : null;
-        string? found = await Task.Run(() => (slot is not null && File.Exists(slot)) ? slot : Locate());
+        bool manual = slot is not null && File.Exists(slot);
+        string? found = await Task.Run(() => manual ? slot : Locate());
         YCruncherPath = found;
-        Status = Available
-            ? "y-cruncher 已就緒。設定時長後按「開始壓測」；它會算 Pi 並自我校驗，抓壓力下的運算錯誤。"
-            : "尚未偵測到 y-cruncher。它是免費可攜工具（zip），請至官方頁下載解壓後「手動指定」其 y-cruncher.exe。";
+        if (!Available)
+        {
+            Status = "尚未偵測到 y-cruncher。它是免費可攜工具（zip），請至官方頁下載解壓後「手動指定」其 y-cruncher.exe。";
+            return;
+        }
+        if (manual)
+        {
+            Status = "y-cruncher 已就緒（手動指定）。設定時長後按「開始壓測」；它會算 Pi 並自我校驗，抓壓力下的運算錯誤。";
+            return;
+        }
+        // 自動偵測掃的是 UserProfile／Desktop 等使用者可寫目錄——與 SelfIntegrityFactsService
+        // 「使用者目錄＝側載候選」同一類路徑，這裡不假裝它已受信任：以管理員行程執行前，
+        // 把 SHA-256 攤開讓使用者自行核對官方發佈雜湊（無網路環境無法代為比對，如實聲明未釘扎）。
+        string hash = await Task.Run(() => FileHash.Of(found!)) ?? "（雜湊計算失敗）";
+        Status = $"y-cruncher 已自動偵測（未經簽章／雜湊釘扎）。SHA-256：{hash}——請與官方發佈頁核對後再開始壓測。";
     }
 
     /// <summary>掃描常見位置尋找 y-cruncher.exe（有限深度，避免整碟遞迴）。可攜工具無固定安裝路徑，故掃使用者目錄。</summary>

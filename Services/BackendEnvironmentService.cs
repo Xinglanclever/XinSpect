@@ -58,8 +58,13 @@ public static class BackendEnvironmentService
     {
         const string source = "MmioBackendSelector / IKernelMsrReader";
         return available
-            ? new HardwareFact(key, Category, name, string.IsNullOrWhiteSpace(backendName) ? "可用（後端名未標示）" : backendName,
-                "", source, FactTrustLevel.Measured, false, at)
+            ? new HardwareFact(key, Category, name,
+                string.IsNullOrWhiteSpace(backendName) ? "可用（後端未自報名稱）" : backendName,
+                "", source,
+                // P4-30：信任層級承載後端身份——連是誰量的都不知道，不能標 Measured
+                //（Measured＝本程式經可指名後端親測）。未標名只能當 Reported（有人回報了值）。
+                string.IsNullOrWhiteSpace(backendName) ? FactTrustLevel.Reported : FactTrustLevel.Measured,
+                false, at)
             : new HardwareFact(key, Category, name, "", "", source, FactTrustLevel.Measured, false, at,
                 Availability: FactAvailability.NotSupported,
                 UnavailableReason: string.IsNullOrWhiteSpace(reason) ? "無可用後端" : reason);

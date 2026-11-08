@@ -252,7 +252,7 @@ try {
 
     # ---------- byte-count docs commit（README 表列的每一顆都對實測值）----------
     $changed = @()
-    foreach ($f in $zhFiles + @('README.en.md')) {
+    foreach ($f in $zhFiles + @('README.en.md', 'docs/百科-v3.17.md')) {
         $r = ReadUtf8 $f; $t = $r[0]
         $new = $t
         foreach ($a in $assets) {

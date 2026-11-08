@@ -1,4 +1,5 @@
-using System.Text;
+﻿using System.Text;
+using XinSpect;
 
 namespace XinSpectCli;
 
@@ -148,6 +149,7 @@ internal static class Tui
 
     private static int ConsoleWidth()
     {
+        // 下限 40＝CJK 表格最小可用寬，兩把尺同一口徑（P4-24）
         try { return Math.Max(40, Console.WindowWidth - 1); }
         catch { return 100; }
     }
@@ -176,7 +178,7 @@ internal static class Tui
     /// <summary>採集用俏皮動詞（繁中・硬體語境・每次隨機抽一個）。</summary>
     private static readonly string[] Verbs =
     [
-        "走訪 1,178 把靜態事實鍵中", "展開 69 個動態硬體家族中", "隔窗端詳 Ring0 暫存器中",
+        $"走訪 {FactKeyCatalog.Count:N0} 把靜態事實鍵中", $"展開 {FactKeyDynamicCatalog.Families.Count} 個動態硬體家族中", "隔窗端詳 Ring0 暫存器中",
         "沿著 PCI 組態空間巡邏中", "旁聽 WMI 與 SMBIOS 事實中", "屏息讀取 LHM 感測器事實中",
         "敲門詢問 Bridge IPC 管道中", "探詢 Redfish 帶外管理介面中", "逐項核對安全性合規基準中",
         "計算 Merkle 事實證據樹雜湊中", "對齊 GUI 65 頁結構索引中", "檢索單一硬體事實路徑中",
@@ -274,7 +276,7 @@ internal static class Tui
             Console.WriteLine("  dash     全螢幕即時儀表板 (q 離開 · sys 與 top [秒])");
             Console.WriteLine("  pages    GUI 全頁對照 (page · domain · keys)");
             Console.WriteLine("  help     指令書：分類功能表＋help <指令> 詳解");
-            Console.WriteLine("  book     曦覽百科全書：15 部 362 節，離線可讀");
+            Console.WriteLine("  book     曦覽百科全書：離線嵌入，部節實數 book 目錄自報");
             Console.WriteLine();
             Console.WriteLine("  cwd: " + ShortCwd());
             Console.WriteLine("  硬體的事實，不編故事。");
@@ -334,7 +336,7 @@ internal static class Tui
                 Bold + "dash" + Reset + Dim + "     全螢幕即時儀表板 (q 離開 · sys 與 top [秒])",
                 Bold + "pages" + Reset + Dim + "    GUI 全頁對照 (page · domain · keys)",
                 Bold + "help" + Reset + Dim + "     指令書：分類功能表＋help <指令> 詳解",
-                Bold + "book" + Reset + Dim + "     曦覽百科全書：15 部 362 節，離線可讀",
+                Bold + "book" + Reset + Dim + "     曦覽百科全書：離線嵌入，部節實數 book 目錄自報",
                 "",
                 Dim + new string('─', Math.Max(8, mid - 8)) + Reset,
                 SwissRed + Bold + "小知識" + Reset,
@@ -402,10 +404,11 @@ internal static class Tui
         Console.Write($"{BrandRed}{Bold}>{Reset} ");
     }
 
-    /// <summary>目前可用的行寬（重導或讀不到時 100）——給固定寬度初次取值用。</summary>
+    /// <summary>目前可用的行寬（重導或讀不到時 100）——給固定寬度初次取值用。
+    /// 下限 40＝CJK 表格最小可用寬，與 <see cref="ConsoleWidth"/> 同一口徑（P4-24）。</summary>
     public static int CurrentWidth()
     {
-        try { return Math.Max(60, Console.WindowWidth - 1); }
+        try { return Math.Max(40, Console.WindowWidth - 1); }
         catch { return 100; }
     }
 
@@ -508,19 +511,6 @@ internal static class Tui
                 Enumerable.Range(0, cols).Select(c => Pad(TruncToWidth(c < r.Length ? r[c] : "", widths[c]), widths[c]))));
     }
 
-    // ── 4) 提示符與輸入 ───────────────────────────────────────────────────
-
-    /// <summary>彩色提示符：紅 xs ＋ 藍 ▸。</summary>
-    public static void Prompt() => Console.Write($"{BrandRed}{Bold}>{Reset} ");
-
-    /// <summary>印提示符並讀一行（重導向時退回 ReadLine）。</summary>
-    public static string? ReadInput()
-    {
-        if (Console.IsInputRedirected) return Console.ReadLine();
-        Prompt();
-        return Console.ReadLine();
-    }
-
     // ── 5) 底部狀態列 ─────────────────────────────────────────────────────
 
     /// <summary>整行反白狀態列：左狀態、右署名；寬度不足先裁左側。</summary>
@@ -553,7 +543,7 @@ internal static class Tui
         return sb.ToString() + "…";
     }
 
-    // ── 5.5) 走勢圖・獨立螢幕・徽章 ────────────────────────────────────────
+    // ── 5.5) 走勢圖・獨立螢幕 ──────────────────────────────────────────────
 
     private const string SparkChars = "▁▂▃▄▅▆▇█";
 
@@ -585,9 +575,6 @@ internal static class Tui
         if (Legacy) return;
         Console.Write(ShowCursor + "\x1b[?1049l");
     }
-
-    /// <summary>色塊徽章。</summary>
-    public static string Badge(string text, string bg, string fg) => $"{bg}{fg} {text} {Reset}";
 
     /// <summary>細分隔線。</summary>
     public static void Separator()
@@ -639,7 +626,7 @@ internal static class Tui
     }
 
     /// <summary>開始轉圈：星芒往返循環＋隨機動詞；2 秒起顯示經過秒數與 esc 提示。label 留空時抽動詞。</summary>
-    // 〔修復 v3.20〕審計 D7：重導輸出（xsc facts > log）時 spinner 的 ESC 幀會汙染 log——
+    // 〔修復 v3.21〕審計 D7：重導輸出（xsc facts > log）時 spinner 的 ESC 幀會汙染 log——
     // 動畫與游標控制全部跳過（取樣照跑，狀態語意不變），真正的結果行照印。
     private static bool SpinnerVisuals => !Console.IsOutputRedirected;
 
@@ -657,7 +644,7 @@ internal static class Tui
             if (SpinnerVisuals) Console.Write(HideCursor);
             _spinnerTask = Task.Run(async () =>
             {
-                // 幀序列往返：✢→✶→✻→✽→✻→✶，120ms 一幀
+                // 幀序列往返：✢→✶→✻→✽→✻→✶，100ms 一幀（Task.Delay(100)）
                 int[] seq = [0, 1, 2, 3, 2, 1];
                 int i = 0;
                 bool hasScope = false;
@@ -678,7 +665,7 @@ internal static class Tui
                             bar += (t >= pos && t < pos + win) ? $"{BrandRed}▓{Reset}" : Dim + "·" + Reset;
                         if (SpinnerVisuals)
                             Console.Write(CarriageReturn + ClearLine + $"{BrandRed}{frame}{Reset} {BrandRed}{verb}{Reset}{Dim}…{Reset} "
-                                + $"[{bar}] {Bold}{secs,5:0.0}s{Reset}{Dim} · esc 中斷{Reset}");
+                                + $"[{bar}] {Bold}{secs,5:0.0}s{Reset}{Dim} · Ctrl+C 結束{Reset}");
                         // 示波器線：真實 CPU 負載取樣（PerformanceCounter；不可用時整行略過，不造假波形）
                         scopeTick++;
                         if (hasScope && SpinnerVisuals)
@@ -702,7 +689,7 @@ internal static class Tui
                         if (Legacy && SpinnerVisuals)
                         {
                             // legacy：ClearLine 是空字串——補空白擦掉上一拍的殘尾
-                            string plain = $"{frame} {verb}… [{bar}] {secs,5:0.0}s · esc 中斷";
+                            string plain = $"{frame} {verb}… [{bar}] {secs,5:0.0}s · Ctrl+C 結束";
                             int w = VisibleLength(plain);
                             if (w < _spinPad) Console.Write(new string(' ', _spinPad - w));
                             _spinPad = w;

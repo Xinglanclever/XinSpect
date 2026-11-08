@@ -133,7 +133,9 @@ public sealed class AmdSmuService
             bool rangeAdj = (tv & (1u << 19)) != 0;
             double t = rawTemp * 0.125;
             if (rangeAdj) t -= 49.0;
-            if (t > 0 && t < 130) tempC = t;
+            // P4-8：合理性窗下修到 -40°C——0°C 與合法冷機負溫是「值」，不是「讀不到」。
+            // IsPlausible 已擋全零／全 1 暫存器，這裡不再用 >0 二次誤殺；-40 以下視為感測器異常。
+            if (t is >= -40 and < 130) tempC = t;
         }
 
         return new AmdSmuTelemetry

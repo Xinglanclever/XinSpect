@@ -1,4 +1,4 @@
-// ⚠ 未編譯——需作者機驗證（dotnet build 命令見 patch-25.md）
+﻿// ✓ 已隨 v3.20／v3.21 建置與全套測試驗證（2026-11-08 REPORT-修復建置；原補丁自述的「未編譯」狀態解除）
 //
 // DriverReadyService.cs — 完整替換檔（patch-25，P0-14：BlueSquadron 驅動進就緒狀態卡）
 // 覆蓋目標：Services/DriverReadyService.cs（原 155 行）
@@ -35,6 +35,10 @@ namespace XinSpect;
 /// </summary>
 public sealed class DriverReadyService : ObservableObject
 {
+    /// <summary>N3 MSR 試讀暫存器：IA32_APIC_BASE（0x1B）——Intel／AMD 架構暫存器、唯讀、
+    /// x86-64 全平台皆有，#GP 風險最低的試讀標的。只判「讀取動作成功與否」，不判值內容。</summary>
+    private const uint ProbeMsrIndex = 0x1B;
+
     /// <summary>目前行程是否以系統管理員執行。</summary>
     public bool IsAdmin { get; } = new WindowsPrincipal(WindowsIdentity.GetCurrent())
         .IsInRole(WindowsBuiltInRole.Administrator);
@@ -126,8 +130,8 @@ public sealed class DriverReadyService : ObservableObject
                 && fmEl.TryGetInt32(out int fm) ? fm : -1;
             if (featureMask < 0)
             {
-                // 〔修復建置 2026-11-07〕Severity 沒有 Advisory 成員（見 Converters.cs 註解：
-                // 有 Advisory 的是 SecuritySeverity）。「回應不完整」屬查不到的變體，歸 Neutral。
+                // 〔修復 v3.21〕審計：Severity 沒有 Advisory 成員（有 Advisory 的是
+                // SecuritySeverity，見 Converters.cs 註解）——「回應不完整」屬查不到的變體，歸 Neutral。
                 BsSeverity = Severity.Neutral;
                 BsStatus = "回應不完整";
                 BsDetail = "caps 回應缺 featureMask 欄——Bridge 與驅動版本可能不對應，如實標示不猜。";
@@ -192,7 +196,7 @@ public sealed class DriverReadyService : ObservableObject
         }
         catch (Exception ex)
         {
-            BsSeverity = Severity.Neutral;   // 解析失敗＝查不到，同上歸 Neutral
+            BsSeverity = Severity.Neutral;   // 〔修復 v3.21〕解析失敗＝查不到，同上歸 Neutral
             BsStatus = "狀態解析失敗";
             BsDetail = $"caps 回應解析例外：{ex.Message}——如實標示，不假設就緒。";
             OnPropertyChanged(nameof(HasBsDetail));
@@ -223,20 +227,29 @@ public sealed class DriverReadyService : ObservableObject
             // 暴露窗口的語義變更見方法頭註與 patch-21.md 第 3 節。
             var probe = await Task.Run(() =>
             {
-                var route = KernelBackendHost.Route(KernelCapability.MsrRead);
+                // N2：經 guard 取路——探測期間使用者切換後端模式（ApplyMode 退役舊鏈），
+                // 在途計數保證後端鏈在讀取完成前不被釋放，驅動句柄不再於讀取中被關。
+                using var use = KernelBackendHost.RouteUse(KernelCapability.MsrRead);
+                var route = use.Route;
                 string? rowReason = null;
                 foreach (var r in KernelBackendHost.Snapshot())
                     if (r.Desc.Id == "winring0") { rowReason = r.Reason; break; }
+
+                // N3：真跑一次 MSR 試讀。「完成一次 MSR 讀取驗證」的宣稱從此有實據；
+                // 試讀不成功時如實降級（見下方分支），不再把「載入成功」說成「驗證過」。
+                ulong? probeValue = route.Backend?.ReadMsr(ProbeMsrIndex);
+
                 return (Available: route.Backend is not null,
                         Error: rowReason ?? route.Explanation,
-                        Backend: route.Backend is { } b ? b.DisplayName + "・" + b.Tier : "無");
+                        Backend: route.Backend is { } b ? b.DisplayName + "・" + b.Tier : "無",
+                        ProbeRead: probeValue);
             });
             var result = (Available: probe.Available, Error: probe.Error);
-            if (result.Available)
+            if (result.Available && probe.ProbeRead is not null)
             {
                 WinRing0Severity = Severity.Good;
                 WinRing0Status = "已就緒";
-                WinRing0Detail = "驅動已成功載入並完成一次 MSR 讀取驗證。頻率真相、MCA、SPD 直讀等底層功能可用。服務後端：" + probe.Backend + "。";
+                WinRing0Detail = $"驅動已成功載入並完成一次 MSR 試讀（0x{ProbeMsrIndex:X} → 0x{probe.ProbeRead!.Value:X}）。頻率真相、MCA、SPD 直讀等底層功能可用。服務後端：" + probe.Backend + "。";
                 if (!IsAdmin)
                 {
                     _winRing0Detail += "（注意：本次以一般權限就載入成功，部分平台仍需管理員權限才能讀到完整 MSR。）";
@@ -244,17 +257,24 @@ public sealed class DriverReadyService : ObservableObject
                     OnPropertyChanged(nameof(HasWinRing0Detail));
                 }
             }
+            else if (result.Available)
+            {
+                // N3：載入成功但試讀不成功——如實說明，不冒充「完成一次 MSR 讀取驗證」。
+                // 後續的 MSR 讀取仍會以三態如實呈現成敗，這裡先把預期講對。
+                WinRing0Severity = Severity.Warning;
+                WinRing0Status = "已載入，MSR 試讀未成功";
+                WinRing0Detail = $"驅動已載入（服務後端：{probe.Backend}），但試讀 MSR 0x{ProbeMsrIndex:X} 未成功" +
+                                 "——底層讀值功能可能受限（權限／虛擬化／平台差異）；後續讀取仍會三態如實回報。";
+            }
             else if (vm.Settings.KernelBackendMode == 1)
             {
                 // SandboxOnly 是使用者刻意的選擇，不是故障：狀態用中性色、原因講清楚，
                 // 不套「載入失敗」的紅色與 HVCI 排障文案——那是給「想載載不了」的人看的。
-                // 〔修復 v3.20〕原文案指向不存在的「設定頁切換入口」——SettingsView 對
-                // KernelBackendMode 沒有任何 UI，照著文案找是死路。如實說明：本版須手動改設定檔。
                 WinRing0Severity = Severity.Neutral;
                 WinRing0Status = "依模式未載入";
-                WinRing0Detail = "設定為「僅沙箱」：WinRing0 萬能鑰匙刻意不載入。MSR／MMIO 將整片三態。" +
-                                 "目前版本尚未提供設定頁的後端切換入口；請手動編輯設定檔中的 " +
-                                 "KernelBackendMode（0=自動／1=SandboxOnly／2=允許萬能鑰匙）後重啟。";
+                WinRing0Detail = "設定為「僅沙箱」：WinRing0 萬能鑰匙刻意不載入。MSR／MMIO 將整片三態，" +
+                                 "目前版本尚未提供設定頁的後端切換入口〔修復 v3.21：原文指引到不存在的 UI〕——" +
+                                 "請手動編輯設定檔中的 KernelBackendMode（0=自動／1=SandboxOnly／2=允許萬能鑰匙）後重啟。";
             }
             else if (!IsAdmin)
             {
@@ -286,9 +306,8 @@ public sealed class DriverReadyService : ObservableObject
         }
         catch (Exception ex)
         {
-            // 〔修復 v3.20〕呼叫端是 async void（設定頁按鈕）——原碼只有 try/finally 沒有 catch，
-            // 例外會沿 async void 直接終結行程。如實寫進總結；各列維持當下值（可能只更新到一半，
-            // 那也是本次真正的進度），不假裝「檢測完成」。IsProbing 由既有的 finally 復原。
+            // 〔修復 v3.21〕審計：ProbeAsync 原本只有 finally 無 catch，呼叫端是 async void——
+            // 例外會落到 App 全域處理器變成泛用「未預期錯誤」；在這裡如實寫進摘要卡。
             Summary = "驅動就緒檢測失敗：" + ex.Message + "（各列維持檢測中斷前的狀態，請重試）";
         }
         finally

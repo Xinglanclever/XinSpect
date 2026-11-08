@@ -187,7 +187,11 @@ public sealed class GpuStressService : ObservableObject, IDisposable
     {
         try
         {
-            var psi = new ProcessStartInfo("winget", "--version")
+            // winget 一律用解析好的絕對路徑：裸檔名走 CreateProcess 搜尋語意「CWD 優先於 PATH」，
+            // 管理員行程從可寫目錄啟動時等於一條植入執行面（見 WingetLocator 的契約註解）。
+            string? winget = WingetLocator.Resolve();
+            if (winget is null) return false;   // 解析不到＝如實不可用，不退回裸檔名
+            var psi = new ProcessStartInfo(winget, "--version")
             { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
             using var p = Process.Start(psi);
             if (p is null) return false;
@@ -212,7 +216,10 @@ public sealed class GpuStressService : ObservableObject, IDisposable
         {
             try
             {
-                var psi = new ProcessStartInfo("winget",
+                // 同 DetectWinget：絕對路徑才啟動；解析不到如實回 -1（既有「無法啟動」路徑），不退回裸檔名。
+                string? winget = WingetLocator.Resolve();
+                if (winget is null) return -1;
+                var psi = new ProcessStartInfo(winget,
                     $"install --id {WingetId} -e --accept-package-agreements --accept-source-agreements --disable-interactivity")
                 { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true, StandardOutputEncoding = Encoding.UTF8 };
                 using var pr = Process.Start(psi);

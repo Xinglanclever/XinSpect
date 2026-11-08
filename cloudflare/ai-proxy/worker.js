@@ -49,21 +49,21 @@ function originAllowed(request, env) {
 
 export default {
   async fetch(request, env) {
-    if (request.method === "OPTIONS") return cors(request, new Response(null, { status: 204 }), env);
+    if (request.method === "OPTIONS") return cors(request, new Response(null, { status: 204 }));
     const url = new URL(request.url);
     try {
       if (url.pathname === "/" || url.pathname === "/health")
-        return json({ ok: true, service: "xinspect-ai-proxy", enabled: isEnabled(env) }, 200, request, env);
+        return json({ ok: true, service: "xinspect-ai-proxy", enabled: isEnabled(env) }, 200, request);
       if (url.pathname === "/v1/chat/completions" && request.method === "POST")
         return await handleChat(request, env);
       if (url.pathname === "/feedback" && request.method === "POST")
         return await handleFeedback(request, env);
       if (url.pathname === "/inbox" && request.method === "GET")
         return await handleInbox(request, env);
-      return json({ error: { message: "沒有這個路徑。" } }, 404, request, env);
+      return json({ error: { message: "沒有這個路徑。" } }, 404, request);
     } catch (e) {
       // 上游或 KV 出錯時，如實回一句話就好——不要把內部細節（更不要把金鑰）倒出去。
-      return json({ error: { message: "中轉發生錯誤：" + short(e && e.message ? e.message : e) } }, 502, request, env);
+      return json({ error: { message: "中轉發生錯誤：" + short(e && e.message ? e.message : e) } }, 502, request);
     }
   },
 };
@@ -71,19 +71,19 @@ export default {
 // ── 聊天中轉：這裡是共用額度唯一的閘門（次數、長度、上游選擇）────────────────
 async function handleChat(request, env) {
   if (!isEnabled(env))
-    return json({ error: { message: "作者已暫時關閉免費共用額度。請改用本機 Ollama，或在設定裡自填端點與金鑰。" } }, 503, request, env);
+    return json({ error: { message: "作者已暫時關閉免費共用額度。請改用本機 Ollama，或在設定裡自填端點與金鑰。" } }, 503, request);
   if (!env.AI && !env.UPSTREAM_KEY)
-    return json({ error: { message: "中轉尚未接上任何上游（沒有 AI 綁定，也沒有 UPSTREAM_KEY）。" } }, 503, request, env);
+    return json({ error: { message: "中轉尚未接上任何上游（沒有 AI 綁定，也沒有 UPSTREAM_KEY）。" } }, 503, request);
   if (!originAllowed(request, env))
-    return json({ error: { message: "此來源不在白名單。" } }, 403, request, env);
+    return json({ error: { message: "此來源不在白名單。" } }, 403, request);
 
   let body;
   try { body = await request.json(); }
-  catch { return json({ error: { message: "請求不是合法的 JSON。" } }, 400, request, env); }
+  catch { return json({ error: { message: "請求不是合法的 JSON。" } }, 400, request); }
 
   const messages = Array.isArray(body && body.messages) ? body.messages : null;
   if (!messages || messages.length === 0)
-    return json({ error: { message: "messages 是空的。" } }, 400, request, env);
+    return json({ error: { message: "messages 是空的。" } }, 400, request);
 
   // 只留 role/content 兩個欄位：客端不該有辦法從這裡夾帶 tools、function_call 之類的東西進上游。
   const clean = [];
@@ -93,7 +93,7 @@ async function handleChat(request, env) {
     const content = m && typeof m.content === "string" ? m.content : "";
     chars += content.length;
     if (chars > LIMITS.maxPromptChars)
-      return json({ error: { message: `內容太長（超過 ${LIMITS.maxPromptChars} 字），共用額度無法處理。` } }, 413, request, env);
+      return json({ error: { message: `內容太長（超過 ${LIMITS.maxPromptChars} 字），共用額度無法處理。` } }, 413, request);
     clean.push({ role: role === "system" || role === "assistant" ? role : "user", content });
   }
 
@@ -113,7 +113,7 @@ async function handleChat(request, env) {
   // 設了 UPSTREAM_KEY 就走外部 OpenAI 相容端點，否則用 Cloudflare 自家的 Workers AI。
   return env.UPSTREAM_KEY
     ? await viaOpenAi(request, env, model, clean, maxTokens, temperature, body.stream === true)
-    : await viaWorkersAi(request, env, model, clean, maxTokens, temperature);
+    : await viaWorkersAi(env, model, clean, maxTokens, temperature);
 }
 
 /** 外部 OpenAI 相容端點：整包轉發，串流回應原樣通過。 */
@@ -132,7 +132,7 @@ async function viaOpenAi(request, env, model, messages, maxTokens, temperature, 
     "content-type": upstream.headers.get("content-type") || "application/json",
     "cache-control": "no-store",
   });
-  return cors(request, new Response(upstream.body, { status: upstream.status, headers }), env);
+  return cors(request, new Response(upstream.body, { status: upstream.status, headers }));
 }
 
 /**
@@ -144,7 +144,7 @@ async function viaOpenAi(request, env, model, messages, maxTokens, temperature, 
  * 代價是評價文字會一次出現而不是逐字冒出來。要串流就得把 Workers AI 的 SSE 逐塊改寫成
  * OpenAI 的 delta 形狀，為了共用額度這個用途不值得。
  */
-async function viaWorkersAi(request, env, model, messages, maxTokens, temperature) {
+async function viaWorkersAi(env, model, messages, maxTokens, temperature) {
   const input = { messages, max_tokens: maxTokens };
   if (temperature !== undefined) input.temperature = temperature;
 
@@ -160,9 +160,7 @@ async function viaWorkersAi(request, env, model, messages, maxTokens, temperatur
         ?? (out.choices && out.choices[0] && out.choices[0].message && out.choices[0].message.content)
         ?? (out.result && out.result.response)
       )) || "";
-  // 〔修復 v3.20〕把 request／env 帶進 json()：白名單內的網頁來源才拿得到 ACAO——
-  // 這條路先前根本沒傳 request，瀏覽器客端一律收不到 CORS 標頭。
-  if (!text) return json({ error: { message: "上游沒有回傳內容，請稍後再試。" } }, 502, request, env);
+  if (!text) return json({ error: { message: "上游沒有回傳內容，請稍後再試。" } }, 502);
 
   return json({
     id: "chatcmpl-" + crypto.randomUUID(),
@@ -170,7 +168,7 @@ async function viaWorkersAi(request, env, model, messages, maxTokens, temperatur
     created: Math.floor(Date.now() / 1000),
     model,
     choices: [{ index: 0, message: { role: "assistant", content: text }, finish_reason: "stop" }],
-  }, 200, request, env);
+  });
 }
 
 // ── 留言建議 ────────────────────────────────────────────────────────────────
@@ -179,16 +177,16 @@ async function viaWorkersAi(request, env, model, messages, maxTokens, temperatur
 // 這側就不能偷收別的，否則那句話就是騙人的。
 async function handleFeedback(request, env) {
   if (!originAllowed(request, env))
-    return json({ error: { message: "此來源不在白名單。" } }, 403, request, env);
+    return json({ error: { message: "此來源不在白名單。" } }, 403, request);
 
   let body;
   try { body = await request.json(); }
-  catch { return json({ error: { message: "請求不是合法的 JSON。" } }, 400, request, env); }
+  catch { return json({ error: { message: "請求不是合法的 JSON。" } }, 400, request); }
 
   const message = typeof body.message === "string" ? body.message.trim() : "";
-  if (message.length === 0) return json({ error: { message: "留言是空的。" } }, 400, request, env);
+  if (message.length === 0) return json({ error: { message: "留言是空的。" } }, 400, request);
   if (message.length > LIMITS.feedbackMaxChars)
-    return json({ error: { message: `留言太長（超過 ${LIMITS.feedbackMaxChars} 字）。` } }, 413, request, env);
+    return json({ error: { message: `留言太長（超過 ${LIMITS.feedbackMaxChars} 字）。` } }, 413, request);
 
   // 配額（P2-40）：驗證全過才 bump——空留言／超長留言不再燒每小時 3 則的額度。
   const ip = clientIp(request);
@@ -220,9 +218,9 @@ async function handleFeedback(request, env) {
     } catch { /* 通知推不出去不該讓使用者的建議白寫，KV 那份已經存好了 */ }
   }
   if (!env.QUOTA && !env.FEEDBACK_WEBHOOK)
-    return json({ error: { message: "中轉尚未設定收件方式（KV 或 webhook）。" } }, 503, request, env);
+    return json({ error: { message: "中轉尚未設定收件方式（KV 或 webhook）。" } }, 503, request);
 
-  return json({ ok: true }, 200, request, env);
+  return json({ ok: true }, 200, request);
 }
 
 // ── 作者收件匣 ──────────────────────────────────────────────────────────────
@@ -374,11 +372,11 @@ async function bump(env, key, ttlSeconds) {
   return next;
 }
 
-function json(obj, status = 200, request = null, env = null) {
+function json(obj, status = 200, request = null) {
   return cors(request, new Response(JSON.stringify(obj), {
     status,
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
-  }), env);
+  }));
 }
 
 /**
@@ -417,19 +415,22 @@ code{font-size:13px}
   });
 }
 
-function cors(request, resp, env = null) {
+function cors(request, resp) {
   const origin = request && request.headers.get("origin");
-  // 〔修復 v3.20〕真正對 ALLOWED_ORIGINS 白名單比對。原 allowedOriginsOfRequest 回傳
-  // [origin] 本身（同義反覆），等於任何網頁來源都拿得到 ACAO 回顯——包括 /、/health、
-  // 404 與頂層 catch。現在：名單內的網頁來源回顯其 origin；無 Origin 的桌面客端與
-  // 名單外來源一律拿不到 ACAO（不用 *）；env 沒傳進來的呼叫點無從驗證，寧可不給
-  // 標頭也不假裝驗過。403 的判定仍由各端點既有的 originAllowed 把關，這裡不重複。
-  if (origin && env && allowedOrigins(env).includes(origin))
+  // 不再是 *：白名單內的網頁來源回顯其 origin；桌面客端（無 Origin）與白名單外的網頁
+  // 都拿不到 ACAO 標頭——後者本來就被 originAllowed 擋在 403，這裡只是不再替它開門。
+  if (origin && allowedOriginsOfRequest(request).includes(origin))
     resp.headers.set("access-control-allow-origin", origin);
   resp.headers.set("access-control-allow-headers", "content-type, authorization");
   resp.headers.set("access-control-allow-methods", "POST, GET, OPTIONS");
   resp.headers.set("vary", "Origin");
   return resp;
+}
+
+function allowedOriginsOfRequest(request) {
+  // url.origin 是 Worker 自己的 origin，本身就在白名單語意之外；僅比對請求聲稱的 Origin 標頭。
+  const origin = request.headers.get("origin");
+  return origin ? [origin] : [];   // 由 cors() 在「origin 在 ALLOWED_ORIGINS 內」前提被呼叫
 }
 
 function short(s, n = 160) {

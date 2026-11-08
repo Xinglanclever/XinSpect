@@ -76,13 +76,15 @@ public sealed class TrendSentinelService : ObservableObject
     /// 以整段區間為分析範圍；資料點過多時等距降採樣（見 <see cref="MaxPoints"/>）。
     /// 任一步驟失敗都不會拋出——哨兵是附加功能，不能影響歷史頁本身。
     /// </remarks>
-    public void Analyze(HistoryStore store, DateTime fromUtc, DateTime toUtc)
+    public void Analyze(HistoryStore store, DateTime fromUtc, DateTime toUtc, HistorySeries? precomputed = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         Findings.Clear();
         try
         {
-            var series = store.Query(fromUtc, toUtc);
+            // precomputed：呼叫端（HistoryViewModel.ReloadAsync）已在背景查好的同區間快照——
+            // 帶進來就不再對 store 重掃一次（原版同一輪重查做了兩遍全量掃描）。
+            var series = precomputed ?? store.Query(fromUtc, toUtc);
             if (series.Count == 0)
             {
                 StatusText = "此區間沒有資料——哨兵無從判讀";

@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -45,14 +45,33 @@ public partial class BrowserView : UserControl
             // 第二份 CreateAsync 直接失敗、瀏覽器頁誤報「未安裝執行階段」。偵測到已有另一份
             // XinSpect 在跑就改用帶 PID 的獨立資料夾（該實例 Cookie／快取不持久，但至少能用）；
             // 單一實例時仍用共用資料夾以保留登入狀態。
-            bool another = Process.GetProcessesByName("XinSpect").Any(p => p.Id != Environment.ProcessId);
+            // P3-12：GetProcessesByName 的每個 Process 都持 OS handle——用完即 Dispose，不再整批漏。
+            bool another = false;
+            foreach (var p in Process.GetProcessesByName("XinSpect"))
+                using (p)
+                    if (p.Id != Environment.ProcessId) { another = true; break; }
             var dataFolder = another
                 ? System.IO.Path.Combine(baseFolder, "inst-" + Environment.ProcessId)
                 : baseFolder;
             System.IO.Directory.CreateDirectory(dataFolder);
 
             var env = await CoreWebView2Environment.CreateAsync(userDataFolder: dataFolder);
-            await Web.EnsureCoreWebView2Async(env);
+            try
+            {
+                await Web.EnsureCoreWebView2Async(env);
+            }
+            // 〔修復 v3.21〕CS0103：所參考的 WebView2 版本沒有 CoreWebView2RuntimeNotFoundException 型別——
+            // 以型別名過濾保留原語意（runtime 缺失的例外不重試，其餘才走帶 PID 資料夾重試）。
+            catch (Exception ex) when (ex.GetType().Name != "CoreWebView2RuntimeNotFoundException")
+            {
+                // P3-12 誤診面：執行階段在、只是資料夾被鎖（改名實例沒被上面的名稱偵測抓到）——
+                // 改用帶 PID 的獨立資料夾重試一次；仍失敗才落到底部後備文案。
+                var retryFolder = System.IO.Path.Combine(baseFolder, "inst-" + Environment.ProcessId);
+                System.IO.Directory.CreateDirectory(retryFolder);
+                var retryEnv = await CoreWebView2Environment.CreateAsync(userDataFolder: retryFolder);
+                await Web.EnsureCoreWebView2Async(retryEnv);
+                _ = ex;   // 重試成功：首敗原因不進 UI（Cookie／快取不持久的事實見上方註解）
+            }
 
             var core = Web.CoreWebView2;
             // 預設以 Bing 為搜尋引擎；保留右鍵與狀態列。
