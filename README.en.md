@@ -1295,7 +1295,7 @@ This project has no support desk and no paid tier. Maintenance, interpretation a
 
 ### Crypto sponsorship
 
-If you would like to support independent maintenance, you can buy the author a coffee. Small contributions of **1 USDT or more are suggested**. This is a voluntary contribution channel and does not include support or response-time commitments. Check the asset and network before sending; on-chain transfers are generally irreversible.
+If you would like to support independent maintenance, you can buy the author a coffee. Please send at least **USD 1.50 equivalent** per contribution (about 1.5 USDT). This is a voluntary contribution channel and does not include support or response-time commitments. Check the asset and network before sending; on-chain transfers are generally irreversible.
 
 | Asset | Network | Address |
 |---|---|---|

@@ -167,7 +167,7 @@ python Tools/gen-readme-domains.py --check  # 只比對；有差異 exit 2
 [github.com/sponsors/Xinglanclever](https://github.com/sponsors/Xinglanclever)。
 贊助不影響 Issue 排序、功能取捨或審查標準；沒有贊助也一樣歡迎貢獻。
 
-也可透過 [README 的加密貨幣贊助清單](README.md#crypto-sponsorship) 請作者喝杯咖啡；小額贊助建議從 1 USDT 起。請核對幣種與網路，鏈上轉帳通常無法撤回。
+也可透過 [README 的加密貨幣贊助清單](README.md#crypto-sponsorship) 請作者喝杯咖啡；每筆贊助請至少等值 1.5 USD（USDT 約 1.5 USDT）。請核對幣種與網路，鏈上轉帳通常無法撤回。
 
 ---
 
