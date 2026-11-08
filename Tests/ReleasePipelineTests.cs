@@ -46,6 +46,9 @@ public class ReleasePipelineTests
         Assert.Contains("ls-remote --tags", s, StringComparison.Ordinal);  // v2.53：--follow-tags 不推 lightweight tag
         Assert.Contains("push origin \"v$Version\"", s, StringComparison.Ordinal); // tag 一律顯式推
         Assert.Contains("PublishSingleFile=true", s, StringComparison.Ordinal);    // 資產必須是單檔版
+        Assert.Contains("publish BlueSquadronBridge failed", s, StringComparison.Ordinal); // Bridge 每版從本源碼重建
+        Assert.Contains("$P-bridge\\BlueSquadronBridge.exe", s, StringComparison.Ordinal); // 不得回用舊版固定目錄
+        Assert.Contains("& cmd /c $driverBat", s, StringComparison.Ordinal); // XsRegProbe.sys 每版重編
         Assert.Contains("publish_release.py", s, StringComparison.Ordinal);       // gh 已死，走 REST
         Assert.Contains("verify-release.ps1", s, StringComparison.Ordinal);       // 發佈後驗證
         Assert.Contains("docs：README 主程式位元組數", s, StringComparison.Ordinal); // 位元組數 docs commit

@@ -30,6 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Common\IommuProbe.cs" Link="Linked\IommuProbe.cs" />
     <!-- P0-13（patch-23）：以源碼 Link 引入微軟建議驅動封鎖清單解碼器（純解碼、零依賴、
          無 P/Invoke——ByovdBlocklist.cs 只用 System.Xml.Linq 與 LINQ）。
          不用 ProjectReference：Bridge 以單一 exe 發佈（BlueSquadronBootstrap SHA-256 驗證

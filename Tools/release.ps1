@@ -219,17 +219,22 @@ try {
     if ($LASTEXITCODE -ne 0) { Fail 'publish cli-legacy-nort failed' }
     Copy-Item "$P-clilegacynort\XinSpectConsole-legacy.exe" "$P\XinSpectConsole-legacy-nort.exe" -Force
 
+    # 7) BlueSquadronBridge.exe (framework-dependent single file, built from this tree)
+    & dotnet publish BlueSquadron\BlueSquadronBridge.csproj -c Release -r win-x64 `
+        --self-contained false -m:1 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
+        -p:UseSharedCompilation=false -p:BaseOutputPath="obj/_pub_${Version}_bridge_$stamp/" `
+        -o "$P-bridge" | Out-Null
+    if ($LASTEXITCODE -ne 0) { Fail 'publish BlueSquadronBridge failed' }
+
     # ---------- deep kernel driver ----------
     # 2026-11-07 使用者裁定：XsRegProbe.sys 每版必上（v3.18 補上後成為常態）——
     # 先建置驗證，再進資產清單；SHA256SUMS 與 byte-count docs 會自動把它算進去。
     Write-Host '==> build XsRegProbe.sys'
     $driverSys = 'XsRegProbe\Driver\x64build\XsRegProbe.sys'
     $driverBat = 'XsRegProbe\Driver\x64build\build.bat'
-    if (-not (Test-Path $driverSys)) {
-        if (-not (Test-Path $driverBat)) { Fail "driver asset missing: $driverSys (no build script either)" }
-        & cmd /c $driverBat | Out-Null
-        if ($LASTEXITCODE -ne 0) { Fail 'XsRegProbe.sys build failed (see XsRegProbe/BUILD-給使用者.md)' }
-    }
+    if (-not (Test-Path $driverBat)) { Fail "driver build script missing: $driverBat" }
+    & cmd /c $driverBat | Out-Null
+    if ($LASTEXITCODE -ne 0) { Fail 'XsRegProbe.sys build failed (see XsRegProbe/BUILD-給使用者.md)' }
     if (-not (Test-Path $driverSys)) { Fail "driver asset missing after build: $driverSys" }
     Ok "driver $driverSys = $((Get-Item $driverSys).Length) bytes"
 
@@ -241,7 +246,7 @@ try {
         @('XinSpectConsole-legacy.exe', "$P\XinSpectConsole-legacy.exe"),
         @('XinSpectConsole-nort.exe', "$P\XinSpectConsole-nort.exe"),
         @('XinSpectConsole-legacy-nort.exe', "$P\XinSpectConsole-legacy-nort.exe"),
-        @('BlueSquadronBridge.exe', 'publish-2.44-bridge\BlueSquadronBridge.exe'),
+        @('BlueSquadronBridge.exe', "$P-bridge\BlueSquadronBridge.exe"),
         @('XinSpectDeploy.exe', 'Installer\XinSpectDeploy.exe'),
         @('XsRegProbe.sys', 'XsRegProbe\Driver\x64build\XsRegProbe.sys')
     )
@@ -273,7 +278,7 @@ try {
 
     # ---------- release + assets ----------
     Write-Host '==> create/update Release and upload nine assets + SHA256SUMS.txt'
-    $bridge = 'publish-2.44-bridge\BlueSquadronBridge.exe'
+    $bridge = "$P-bridge\BlueSquadronBridge.exe"
     if (-not (Test-Path $bridge)) { Fail "bridge asset source missing: $bridge" }
 
     # SHA256SUMS.txt：逐資產雜湊，讓不用 GitHub API 的使用者也能比對下載完整性。
