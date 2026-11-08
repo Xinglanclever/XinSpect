@@ -1,4 +1,4 @@
-﻿[繁體中文](README.md) · [简体中文](README.zh-CN.md) · English
+[繁體中文](README.md) · [简体中文](README.zh-CN.md) · English
 
 [![Official site](https://img.shields.io/badge/%F0%9F%8C%90_OFFICIAL_SITE-xinspect.de5.net-4C8DFF?style=for-the-badge&logo=cloudflare&logoColor=white)](https://xinspect.de5.net)
 
@@ -14,7 +14,7 @@ A free, open-source PC toolbox for Windows with ring0 kernel-level access: it ca
 ![Version](https://img.shields.io/badge/version-3.21-4C8DFF)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![Tests](https://img.shields.io/badge/tests-7905%20passed-3FB950)
+![Tests](https://img.shields.io/badge/tests-7906%20passed-3FB950)
 ![Mutation Score](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 ![Commercial license](https://img.shields.io/badge/license-commercial%20available-8B5CF6)
@@ -259,8 +259,8 @@ hardware / firmware / OS ──► fact collection (*FactsService)
 | File | Size | Purpose |
 |---|---|---|
 | [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpect.exe) | 35.66 MB | Main program (Blue Squadron guard included) |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpectConsole.exe) | 100,413,799 bytes | XinSpect Console (CLI). Runs standalone and is also launched by the main program's console bridge; larger because it bundles the .NET 10 runtime (for Windows 11 / Server 2025) |
-| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpectConsole-legacy.exe) | 100,409,791 bytes | XinSpect Console (CLI) **plain-text legacy build** for Windows 10 / Windows Server 2016, 2019, 2022 - no colors, no box positioning; the facts/book/help features are identical |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpectConsole.exe) | 100,413,845 bytes | XinSpect Console (CLI). Runs standalone and is also launched by the main program's console bridge; larger because it bundles the .NET 10 runtime (for Windows 11 / Server 2025) |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpectConsole-legacy.exe) | 100,409,837 bytes | XinSpect Console (CLI) **plain-text legacy build** for Windows 10 / Windows Server 2016, 2019, 2022 - no colors, no box positioning; the facts/book/help features are identical |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/BlueSquadronBridge.exe) | 6.5 MB | Standalone guard process |
 | [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpect-full.exe) | 210,762,066 bytes | Main program, bundled-runtime build: ships the .NET 10 Desktop Runtime, nothing to install (same features as XinSpect.exe) |
 | [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpectConsole-nort.exe) | 66,048,664 bytes | XinSpect Console, Windows 11 / Server 2025, no runtime: requires .NET 10 Desktop Runtime |
@@ -1292,6 +1292,21 @@ This project has no support desk and no paid tier. Maintenance, interpretation a
 | Support maintenance | [GitHub Sponsors](https://github.com/sponsors/Xinglanclever) |
 
 **The boundary of sponsorship.** Sponsorship does not affect issue ordering, feature selection, review standards or response time, and it does not buy "nicer-looking numbers". This project has no paid support; if you need a commercial support window, it does not exist here, and the documentation will not pretend otherwise.
+
+### Crypto sponsorship
+
+If you would like to support independent maintenance, you can buy the author a coffee. Small contributions of **1 USDT or more are suggested**. This is a voluntary contribution channel and does not include support or response-time commitments. Check the asset and network before sending; on-chain transfers are generally irreversible.
+
+| Asset | Network | Address |
+|---|---|---|
+| USDT | Tron (TRC20) | `TQPk1DfaHBCKNt8W5UUJDH3XkwAArmmNqH` |
+| USDT | Solana | `34o5GGmamdV8k9vYYaaRABZpSNXpphbSXdhBsASN8XN4` |
+| USDT | BNB Smart Chain (BEP20) | `0x8811d8EF822cC9cf546fe24C565b861291e1B704` |
+| USDC | Ethereum (ERC20) | `0x8811d8EF822cC9cf546fe24C565b861291e1B704` |
+| USDC | Solana | `34o5GGmamdV8k9vYYaaRABZpSNXpphbSXdhBsASN8XN4` |
+| USDC | BNB Smart Chain (BEP20) | `0x8811d8EF822cC9cf546fe24C565b861291e1B704` |
+| ETH | Ethereum | `0x8811d8EF822cC9cf546fe24C565b861291e1B704` |
+| BTC | Bitcoin | `1PsY7aUbmHEVdM4g5EVQLncMFDEFnak3qF` |
 
 **Before you report.** Do not include serial numbers, UUIDs, MAC addresses, asset tags, usernames or full paths. If you need to attach `--json` output, narrow it with `--only` and redact it yourself. The data-sovereignty position is in chapter 14.
 

@@ -92,6 +92,21 @@ public class XinSpectCliTests
     }
 
     [Fact]
+    public void CLI輸入區只畫提交後的單條長分隔線()
+    {
+        string root = RepoRoot();
+        string tui = File.ReadAllText(Path.Combine(root, "XinSpectCli", "Tui.cs"));
+        int start = tui.IndexOf("public static void InputFrame()", StringComparison.Ordinal);
+        int end = tui.IndexOf("public static int CurrentWidth()", start, StringComparison.Ordinal);
+        Assert.True(start >= 0 && end > start, "找不到 CLI 輸入框方法");
+        Assert.DoesNotContain("new string('─'", tui[start..end], StringComparison.Ordinal);
+
+        string program = File.ReadAllText(Path.Combine(root, "XinSpectCli", "Program.cs"));
+        Assert.Contains("輸入欄底線（固定長直線）", program, StringComparison.Ordinal);
+        Assert.Contains("Tui.InputFrame();", program, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void CLI要覆蓋常規版的功能面_GUI全頁對照()
     {
         // 使用者裁決：CLI 版要有常規（GUI）版的所有功能。載體是 pages／page／domain／

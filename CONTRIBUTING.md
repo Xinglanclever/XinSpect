@@ -56,7 +56,7 @@ dotnet restore Tests/XinSpect.Tests.csproj
 # 建置（含 Bridge 與解碼器）
 dotnet build Tests/XinSpect.Tests.csproj -c Release
 
-# 全套測試（目前基線見 `Tests/TestSuiteBaseline.cs`；本樹為 7,905 條）
+# 全套測試（目前基線見 `Tests/TestSuiteBaseline.cs`；本樹為 7,906 條）
 dotnet test Tests/XinSpect.Tests.csproj -c Release
 
 # 只跑文件與目錄守門（CI 跑的就是這一組）
@@ -166,6 +166,8 @@ python Tools/gen-readme-domains.py --check  # 只比對；有差異 exit 2
 專案免費且以 AGPL 釋出。若你希望支持維護，GitHub Sponsors 入口在
 [github.com/sponsors/Xinglanclever](https://github.com/sponsors/Xinglanclever)。
 贊助不影響 Issue 排序、功能取捨或審查標準；沒有贊助也一樣歡迎貢獻。
+
+也可透過 [README 的加密貨幣贊助清單](README.md#crypto-sponsorship) 請作者喝杯咖啡；小額贊助建議從 1 USDT 起。請核對幣種與網路，鏈上轉帳通常無法撤回。
 
 ---
 

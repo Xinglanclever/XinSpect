@@ -394,13 +394,9 @@ internal static class Tui
         return sb.ToString();
     }
 
-    /// <summary>Claude Code 式輸入框：上方全寬細線＋右對齊狀態行＋紅色 > 提示符。</summary>
-    /// <summary>輸入框：兩條全寬長線。width 傳入時用固定寬——長線是長直線，
-    /// 不隨每次重繪時的視窗讀值漂移（兩條線不一樣長就是這麼來的）。</summary>
-    public static void InputFrame(int? width = null)
+    /// <summary>輸入框：紅色提示符；提交後由 ReadLineWithHistory 畫一條全寬分隔線。</summary>
+    public static void InputFrame()
     {
-        int w = width ?? CurrentWidth();
-        Console.WriteLine($"{Dim}{new string('─', w)}{Reset}");
         Console.Write($"{BrandRed}{Bold}>{Reset} ");
     }
 

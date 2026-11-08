@@ -53,7 +53,7 @@ public static class ChangelogCatalog
         {
             Version = "3.21",
             Date = "2026-11-09",
-            Title = "深審第二批：第三輪掃掠 15 補丁落地＋審計清單收口＋卷宗合併",
+            Title = "深審第二批修正版：第三輪掃掠 15 補丁落地＋審計清單收口＋卷宗合併",
             Items =
             [
                 "第三輪掃掠 15 補丁（patch-29~43）全套落地：ADS 真掃描（FindFirstStreamW 三態）、DL-005 改收真命令列（Win32_Process）、裸名執行檔 CWD 植入面家族收口（12 處 7 檔）、假零群四項、同步 ReadToEnd 死鎖面接 ProcessRunner、ThreadMigration 位移驗證三態、y-cruncher 雜湊釘選、NPcap 大小寫、ServerRole 語意與 handle、SecretProtector 空 b64、SelfTelemetry 環形上限。",
@@ -61,8 +61,9 @@ public static class ChangelogCatalog
                 "合併修復：v3.20 輪的 P0-4（patch-24-preview 13 個修改點）在 38 補丁樹重新落地，與作者的 P3-11 在 AiService 做三方合併（遮蔽守門＋通知三通道＋附件上限並存）；CLI 深審修復（--elevate 清參進 REPL／compliance 位置參數／管線退出碼三態＋致命回 2／--repair-ring0 查退出碼／ipc 斷線重建＋退出收尾）重新套用；CleanupService 逐檔年齡門檻、時間軸 500 上限、InvariantCulture 時間解析、BaselineStore .bak 金鑰種子、SecurityPosture「未評估」、DnsService 950 編碼、worker.js CORS 等接縫全部重落地。",
                 "§3.3 殘留清倉：安裝器門禁 26→32KB 且 BUILD-OK 訊息對齊（R4）、ProtectedData 顯式 PackageReference＋第三方聲明入列、BootOrderReader 的 bcdedit 改 System32 絕對路徑（patch-09 同族收口）、UserAgent 版號跟樹走（3.18→3.21，R2 裁定）、五檔「⚠ 未編譯」headers 解除（建置與全套測試已驗證）、patch-02 Overlapped64 佈局釘死測試入 Tests/、patch-38 實機探針歸位 XsRegProbe/Verifier。",
                 "作者方 MediaFoundation P3-9 試改回退：vtable 槽位自檢在實機把最小编碼測試打掛（MFCreateSinkWriterFromURL E_INVALIDARG）——P3-9 維持「需實機定性」原判，不帶未驗證變更出貨。",
-                "文檔：三份 README 下載表對齊 v3.21 實發資產、.github 四檔補回（打包工具再次吞掉 dot-目錄）、REPORT 歸屬注記（審計 T2）、TestSuiteBaseline 對齊實數、指令書 42 條維持。",
-                "驗證：dotnet test 全套綠（數字見 README 徽章）、Release 內嵌鏈（XtuBridge net48＋BlueSquadronBridge 單文件）建置綠；XsRegProbe.sys 於 WDK 10.0.28000.0＋MSVC 14.51 環境重編（槽位基底修正在內）。",
+                "文檔與修正版：三份 README 下載表對齊 v3.21 實發資產、.github 四檔補回（打包工具再次吞掉 dot-目錄）、REPORT 歸屬注記（審計 T2）、TestSuiteBaseline 7,905→7,906（加入 CLI 單線守門）、指令書 42 條維持。",
+                "驗證：全套測試 7,906 passed / 0 failed / 0 skipped；CLI 四種單檔變體建置綠，xsc 單線守門測試通過。",
+                "xsc 修正版：輸入提示區移除上邊長線，只保留提交後的一條分隔線，避免書籍內容與指令提示間出現雙長線。",
             ],
         },
         new ChangeEntry

@@ -1,4 +1,4 @@
-﻿[简体中文](README.zh-CN.md) · 繁體中文 · [English](README.en.md)
+[简体中文](README.zh-CN.md) · 繁體中文 · [English](README.en.md)
 
 [![官方網站](https://img.shields.io/badge/%F0%9F%8C%90_%E5%AE%98%E6%96%B9%E7%B6%B2%E7%AB%99-xinspect.de5.net-4C8DFF?style=for-the-badge&logo=cloudflare&logoColor=white)](https://xinspect.de5.net)
 
@@ -15,7 +15,7 @@
 ![版本](https://img.shields.io/badge/version-3.21-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-7905%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-7906%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 ![商業授權](https://img.shields.io/badge/license-%E5%95%86%E6%A5%AD%E6%8E%88%E6%AC%8A%E5%8F%AF%E8%AB%87-8B5CF6)
@@ -52,7 +52,7 @@
 | 服務檔 | **675** | `find Services -name '*.cs' \| wc -l` |
 | 全域 C# 檔 | **1,593** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`work/`、`publish-*/`、`.git/` |
 | 版本紀錄筆數 | **126** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
-| 專案測試基線 | **7,905** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
+| 專案測試基線 | **7,906** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
 | CLI 指令（`Execute` case 標籤） | **42** | `grep -c 'case "' XinSpectCli/Program.cs`（--elevate 由 patch-05 新增；指令書詳解 42 條——mascot/refresh 補入目錄，見 `XinSpectCli/CommandBook.cs`） |
 | 內核組件 | **4** | WinRing0（借）／PawnIO（未接入）／BlueSquadron（防護・毛坯）／XsRegProbe（白名單唯讀探測） |
 | 外部審查發現 | **116** | `docs/審查報告-v3.17.md` 的編目條目（v3.18 增量審查另計 111 條編目，見同目錄） |
@@ -164,14 +164,14 @@
 | 檔案 | 大小 | 說明 |
 |---|---|---|
 | [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpect.exe) | 37,995,819 bytes | 主程式。藍色中隊守護進程已內建；「強控台」按鈕橋接 xsc 終端機 |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpectConsole.exe) | 100,413,799 bytes | 曦覽終端機（CLI）。可獨立執行，也被主程式強控台喚起；自含 .NET 10 執行階段故體積較大（見下方說明） |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpectConsole.exe) | 100,413,845 bytes | 曦覽終端機（CLI）。可獨立執行，也被主程式強控台喚起；自含 .NET 10 執行階段故體積較大（見下方說明） |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/BlueSquadronBridge.exe) | 6,531,620 bytes | 獨立守護進程。要脫離主程式單獨跑防護時使用 |
 | [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpect-full.exe) | 210,762,066 bytes | 主程式・帶環境版：.NET 10 Desktop Runtime 一併打包，免裝執行階段（功能與 XinSpect.exe 相同） |
 | [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpectConsole-nort.exe) | 66,048,664 bytes | 曦覽終端機・Windows 11／Server 2025・不帶環境：需已裝 .NET 10 Desktop Runtime |
 | [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpectConsole-legacy-nort.exe) | 66,044,656 bytes | 曦覽終端機・Windows 10／2016/2019/2022・不帶環境：純文字界面，需已裝 .NET 10 Desktop Runtime |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpectDeploy.exe) | 29,696 bytes | 一鍵安裝器。第一層選裝什麼：A 裝主程式（GUI）、B 裝曦覽終端機；第二層 1/2/3 選下載來源（GitHub／Drive／加速節點）；下載時顯示進度條、速度與剩餘時間 |
 | [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XsRegProbe.sys) | 24,064 bytes | XsRegProbe 內核探測驅動（白名單唯讀 MSR／MMIO，全案審查唯一「優秀」級）。本版重編版**含槽位基底修正**（槽位從請求頭 +8 開始——第三輪嚴查發現，v3.18 的 .sys 為修正前）。未微軟簽章：主程式以提權會話安裝到 `ProgramData\XinSpect\Driver\` 並建服務；手動載入需測試簽章環境（testsigning） |
-| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpectConsole-legacy.exe) | 100,409,791 bytes | 曦覽終端機（CLI）**純文字相容版**：給 Windows 10／Windows Server 2016、2019、2022 的傳統主控台——無色彩、無框線定位，其餘功能（facts／book／help）相同 |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpectConsole-legacy.exe) | 100,409,837 bytes | 曦覽終端機（CLI）**純文字相容版**：給 Windows 10／Windows Server 2016、2019、2022 的傳統主控台——無色彩、無框線定位，其餘功能（facts／book／help）相同 |
 
 逐資產 SHA-256 見 Release 頁的 `SHA256SUMS.txt`（防傳輸損毀；能替換整個 Release 的攻擊者防不了——不可否認性需簽名，列排期）。
 
@@ -183,7 +183,7 @@
 
 ## 版本沿革（近期）
 
-- **v3.21**（2026-11-09）：深審第二批：第三輪掃掠 15 補丁落地＋審計清單收口＋卷宗合併（本版 7 項）
+- **v3.21**（2026-11-09）：深審第二批修正版：第三輪掃掠 15 補丁落地＋審計清單收口＋xsc 輸入區單線（本版 8 項）
 - **v3.20**（2026-11-08）：修復建置＋全庫深審：三處建置復通、P0-4 補齊、CLI／桌面／服務層 30+ 修復（本版 8 項）
 - **v3.18**（2026-11-07）：審計落實版：116 條修復＋功耗誠實閘門＋按需提權（本版 11 項）
 - **v3.17**（2026-11-05）：終端機定稿：Claude Code 式界面、永不崩 REPL、百科嵌入（本版 10 項）
@@ -205,3 +205,20 @@
 ---
 
 **版本：v3.17 修正版（2026-11-07 審計後）· 這棵樹的第一次被完整審計後的第一次自我陳述。**
+
+---
+
+### Crypto sponsorship
+
+若你願意支持個人維護，可請作者喝杯咖啡；小額贊助建議從 **1 USDT** 起。這只是自願贊助渠道，不附帶支援或回覆承諾。請先核對幣種與網路；鏈上轉帳通常無法撤回。
+
+| 幣種 | 網路 | 地址 |
+|---|---|---|
+| USDT | Tron (TRC20) | `TQPk1DfaHBCKNt8W5UUJDH3XkwAArmmNqH` |
+| USDT | Solana | `34o5GGmamdV8k9vYYaaRABZpSNXpphbSXdhBsASN8XN4` |
+| USDT | BNB Smart Chain (BEP20) | `0x8811d8EF822cC9cf546fe24C565b861291e1B704` |
+| USDC | Ethereum (ERC20) | `0x8811d8EF822cC9cf546fe24C565b861291e1B704` |
+| USDC | Solana | `34o5GGmamdV8k9vYYaaRABZpSNXpphbSXdhBsASN8XN4` |
+| USDC | BNB Smart Chain (BEP20) | `0x8811d8EF822cC9cf546fe24C565b861291e1B704` |
+| ETH | Ethereum | `0x8811d8EF822cC9cf546fe24C565b861291e1B704` |
+| BTC | Bitcoin | `1PsY7aUbmHEVdM4g5EVQLncMFDEFnak3qF` |

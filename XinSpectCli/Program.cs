@@ -170,7 +170,7 @@ internal static class Program
         {
             Console.WriteLine($"{Red}歡迎框渲染失敗（不影響指令）：{ex.Message}{Reset}");
         }
-        _frameWidth = Tui.CurrentWidth();   // 長直線的固定寬度：啟動時定一次，只有 resize 重繪才更新
+        _frameWidth = Tui.CurrentWidth();   // 提交後分隔線的固定寬度
         try { _lastWidth = Console.WindowWidth; } catch { }
         Tui.Footer("● READY ・ 唯讀模式", "曦覽 XinSpect Console v" + AppInfo.ShortVersion);
         var startupStatus = StatusLine();
@@ -182,7 +182,7 @@ internal static class Program
         {
             try
             {
-                Tui.InputFrame(_frameWidth);
+                Tui.InputFrame();
                 line = ReadLineWithHistory();
                 if (line is null) break;              // Ctrl+Z／EOF
                 line = line.Trim();
@@ -1611,8 +1611,7 @@ internal static class Program
             {
                 if (CheckResize())
                 {
-                    _frameWidth = Tui.CurrentWidth();   // resize 重繪是唯一允許更新長線寬度的地方
-                    Console.WriteLine($"{Tui.Dim}{new string('─', _frameWidth)}{Tui.Reset}");
+                    _frameWidth = Tui.CurrentWidth();
                     Console.Write($"{Tui.BrandRed}{Tui.Bold}>{Tui.Reset} " + buf.ToString());
                     if (pos < buf.Length)
                     {

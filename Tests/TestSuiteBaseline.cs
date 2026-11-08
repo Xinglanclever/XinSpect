@@ -32,5 +32,5 @@ internal static class TestSuiteBaseline
     /// 而 5476→5505 實際只加了 29 條（見 docs/PROGRESS-PLAN-2026-10-11.md 第 550 項的更正註記）。
     /// </para>
     /// </summary>
-    public const int ProjectTests = 7905;   // 〔修復 v3.21〕7884→7905：38 補丁樹實數（含 WingetLocatorTests 等新增）＋卷宗合併補入的測試；數字來源＝dotnet test 全套總計
+    public const int ProjectTests = 7906;   // 〔v3.21 修正版〕7905＋CLI 單線守門測試；數字來源＝dotnet test 全套總計
 }
