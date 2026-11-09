@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Xunit;
 using XinSpect;
@@ -17,6 +18,20 @@ public class UserExperience2FactsTests
         var f = UserExperience2FactsService.ProvenanceFact(At, () => (10, 1));
         Assert.Contains("溯源≠正確性背書", f.Value);
         Assert.Contains("不猜來源", f.Value);
+    }
+
+    [Fact]
+    public void 溯源缺探針或回報無效計數_不得偽裝成零或有效狀態()
+    {
+        var missing = UserExperience2FactsService.ProvenanceFact(At);
+        var failed = UserExperience2FactsService.ProvenanceFact(At, () => throw new IOException("fixture"));
+        var invalid = UserExperience2FactsService.ProvenanceFact(At, () => (2, 3));
+
+        Assert.Equal(FactAvailability.NotSupported, missing.Availability);
+        Assert.Contains("不宣稱錨點數為零", missing.UnavailableReason, StringComparison.Ordinal);
+        Assert.Equal(FactAvailability.ReadError, failed.Availability);
+        Assert.Equal(FactAvailability.Unknown, invalid.Availability);
+        Assert.Null(invalid.NumericValue);
     }
 
     [Fact]

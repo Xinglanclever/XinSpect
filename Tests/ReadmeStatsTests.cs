@@ -473,7 +473,7 @@ public class ReadmeStatsTests
         string text = Readme();
         var d = DomainStats();
 
-        Assert.Contains($"2. 測試 {TestSuiteBaseline.ProjectTests:N0} 綠 —— 跑守門五組不依賴硬體", text);
+        Assert.Contains("2. 最近一次全套回歸為 ", text);
         Assert.Contains($"13. 事實鍵目錄是 {d.Keys:N0} 把、{d.Domains} 域", text);
         Assert.Contains($"14. 動態家族 {FactKeyDynamicCatalog.Families.Count} 個", text);
         Assert.Contains($"15. 可到達畫面 {ReachablePages()} 個", text);

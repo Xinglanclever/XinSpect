@@ -56,14 +56,22 @@ public static class UserExperience2FactsService
 
     public static HardwareFact ProvenanceFact(DateTimeOffset at, ProvenanceProbe? probe = null)
     {
+        if (probe is null)
+            return Unavailable(at, ProvenanceKey, Cat, "逐值溯源", FactAvailability.NotSupported,
+                "此入口沒有提供溯源探針；不宣稱錨點數為零");
+
         (int Anchors, int Unresolved)? s;
-        try { s = (probe ?? (() => (0, 0)))(); }
+        try { s = probe(); }
         catch { s = null; }
 
         if (s is null)
             return Unavailable(at, ProvenanceKey, Cat, "逐值溯源", FactAvailability.ReadError, "溯源錨點不可讀");
 
         var (anchors, unresolved) = s.Value;
+        if (anchors < 0 || unresolved < 0 || unresolved > anchors)
+            return Unavailable(at, ProvenanceKey, Cat, "逐值溯源", FactAvailability.Unknown,
+                "溯源探針回報不可能的錨點計數；不推導有效狀態");
+
         return new HardwareFact(ProvenanceKey, Cat, "逐值溯源",
             $"溯源錨點 {anchors} 個、無法解析 {unresolved} 個。" +
             "<b>溯源≠正確性背書</b>：卡片說明「這個值從哪來」，不保證值一定對——" +

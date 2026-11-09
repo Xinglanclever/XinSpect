@@ -86,6 +86,42 @@ public class EnglishTreeTests
     }
 
     [Fact]
+    public void 英語翻譯表涵蓋所有導覽頁與工具的標題分組和提示()
+    {
+        foreach (var page in PageRegistry.Pages.Concat(PageRegistry.Utilities))
+        {
+            Assert.True(EnglishStrings.Lookup(page.Title) is not null,
+                $"Missing English page title: {page.Key} / {page.Title}");
+            Assert.True(EnglishStrings.Lookup(page.Group) is not null,
+                $"Missing English navigation group: {page.Key} / {page.Group}");
+            if (!string.IsNullOrWhiteSpace(page.Hint))
+                Assert.True(EnglishStrings.Lookup(page.Hint) is not null,
+                    $"Missing English page hint: {page.Key} / {page.Hint}");
+        }
+    }
+
+    [Fact]
+    public void 英語翻譯表涵蓋常見操作與AI介面文案()
+    {
+        foreach (var text in new[]
+        {
+            "上一個", "下一個", "傳送內容", "匯出對話", "載入上次規劃", "儲存這份規劃",
+            "測試連線（只查模型清單）", "重新載入本輪事實", "開啟百科（可翻閱）", "頁內尋找",
+            "送出前遮蔽可識別資訊", "代理模式每輪暫停顯示送出內容", "代理模式的工具結果也過遮蔽",
+            "這個頁面沒有載入成功", "本版未接入", "唯讀硬體事實 ・ 讀得到才報，讀不到就說讀不到",
+            "磁碟健康狀況如何？請查磁碟健康與剩餘壽命，若有風險請說明該做什麼。",
+            "這台機器的溫度正常嗎？請查所有溫度、風扇現況與歷史統計，判斷有沒有過熱或降頻。",
+            "這套配置玩遊戲夠用嗎？請查規格與顯示卡讀值，說明大概能對應什麼畫質設定。",
+            "時脈 {0}", "記憶體 {0}", "目前存放方式：{0}", "Rank：{0}",
+            "SECTION 01 // 即時遙測（本機現值）", "SECTION 05 // 執行檔 SHA-256 對帳（本機現算）",
+            "以下雜湊是開啟這一頁當場對本機檔案計算的 SHA-256；比對對象是 GitHub Release 的 SHA256SUMS.txt。",
+            "伺服器角色與選用功能只要安裝了就佔三樣成本：磁碟空間、開機與維護時間，以及可被利用的程式碼面積。沒在用的角色不會因為「沒開」就沒有風險——檔案在、服務定義在、更新要跟著裝。本區只陳述裝了什麼與服務狀態，不建議移除任何項目。",
+            "域＝鍵的第一段（ac.dmar.summary 的域是 ac）。「本輪量到」只算真的讀到值的那幾把。",
+        })
+            Assert.True(EnglishStrings.Lookup(text) is not null, $"Missing English UI translation: {text}");
+    }
+
+    [Fact]
     public void 下拉選單項目也要轉_不是只有主視窗()
     {
         RunSta(() =>

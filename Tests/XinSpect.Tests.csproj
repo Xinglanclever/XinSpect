@@ -28,6 +28,7 @@
   <ItemGroup>
     <ProjectReference Include="..\XinSpect.csproj" />
     <ProjectReference Include="..\XinSpect.Decoders\XinSpect.Decoders.csproj" />
+    <Compile Include="..\XinSpectCli\CliLocalization.cs" Link="CliLocalization.cs" />
   </ItemGroup>
 
   <ItemGroup>

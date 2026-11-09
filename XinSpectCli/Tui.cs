@@ -90,6 +90,7 @@ internal static class Tui
     /// <summary>依可見寬度裁字串（超出以 … 收尾）；給表格窄寬度防折行用。</summary>
     private static string TruncToWidth(string s, int max)
     {
+        s = CliLocalization.Translate(s);
         if (VisibleLength(s) <= max) return s;
         var sb = new System.Text.StringBuilder();
         int w = 0;
@@ -106,6 +107,7 @@ internal static class Tui
     /// <summary>可見寬度：剝掉 ANSI escape，CJK／全形字記 2 格。</summary>
     public static int VisibleLength(string s)
     {
+        s = CliLocalization.Translate(s);
         int w = 0;
         for (int i = 0; i < s.Length; i++)
         {

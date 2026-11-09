@@ -41,7 +41,7 @@ internal static class Program
             var name = c.Name.Split(' ')[0];           // 「fact <關鍵字>」→ fact
             if (!names.Contains(name)) names.Add(name);
         }
-        foreach (var alias in new[] { "refresh", "mascot", "吉祥物", "百科", "quit", "q", "?" })
+        foreach (var alias in new[] { "refresh", "mascot", "吉祥物", "百科", "quit", "q", "?", "language" })
             if (!names.Contains(alias)) names.Add(alias);
         return names.OrderBy(n => n, StringComparer.Ordinal).ToArray();
     }
@@ -52,8 +52,17 @@ internal static class Program
 
     private static int Main(string[] args)
     {
+        if (!CliLocalization.TryConsumeOption(args, out string[] remainingArgs, out string? languageError))
+        {
+            Console.Error.WriteLine(languageError);
+            Console.Error.WriteLine("Usage: xsc [--lang zh-TW|zh-CN] [command]");
+            return 2;
+        }
+        args = remainingArgs;
+
         try { Console.OutputEncoding = Encoding.UTF8; }
         catch { /* 管線斷開（stdout 關閉）時設定編碼會丟例外——啟動不能死在這（審計 #22） */ }
+        CliLocalization.InstallConsoleWriters(CliLocalization.IsMachineFormat(args));
         Tui.EnableAnsi();   // Win10 傳統 conhost 預設不開 VT，不開的話整個界面印成原始 ESC 序列
         try { Console.CursorVisible = true; } catch { /* 重導輸出時沒有游標可管 */ }
 
@@ -102,6 +111,8 @@ internal static class Program
                 string[] childArgs = repair
                     ? new[] { "--elevate", "--repair-ring0" }
                     : new[] { "--elevate" };
+                if (CliLocalization.Current == CliLanguage.Simplified)
+                    childArgs = [.. childArgs, "--lang", "zh-CN"];
                 return RelaunchElevated(childArgs);
             }
         }
@@ -224,6 +235,23 @@ internal static class Program
                     Console.WriteLine($"{Dim}手冊.md 是 v2.91 時代的歷史文件；目前版文件請用 book（曦覽百科）。{Reset}");
                     return 1;
                 case "mascot" or "吉祥物": MascotPreview(rest); return 0;
+                case "lang" or "language":
+                    if (string.IsNullOrWhiteSpace(rest))
+                    {
+                        Console.WriteLine(CliLocalization.Current == CliLanguage.Simplified
+                            ? "目前語言：简体中文。用 lang zh-TW 或 lang zh-CN 切换。"
+                            : "目前語言：繁體中文。用 lang zh-TW 或 lang zh-CN 切換。");
+                        return 0;
+                    }
+                    if (!CliLocalization.TrySet(rest))
+                    {
+                        Console.WriteLine("用法：lang zh-TW | zh-CN");
+                        return 1;
+                    }
+                    Console.WriteLine(CliLocalization.Current == CliLanguage.Simplified
+                        ? "已切换到简体中文。"
+                        : "已切換至繁體中文。");
+                    return 0;
                 case "ver":
                     Tui.Frame($"曦覽 XinSpect v{AppInfo.Version}",
                     [

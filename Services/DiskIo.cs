@@ -63,7 +63,10 @@ public static class DiskIo
     public static (T? Value, bool TimedOut) GuardedProbe<T>(Func<T?> read, int timeoutMs = DefaultTimeoutMs)
         where T : class
     {
-        var task = Task.Run(read);
+        // A blocked synchronous IOCTL must not occupy a reusable ThreadPool worker;
+        // enough slow devices would otherwise make healthy reads time out before starting.
+        var task = Task.Factory.StartNew(read, CancellationToken.None,
+            TaskCreationOptions.LongRunning, TaskScheduler.Default);
         try
         {
             if (task.Wait(timeoutMs)) return (task.Result, false);
@@ -84,7 +87,8 @@ public static class DiskIo
     public static (T? Value, bool TimedOut) GuardedProbeValue<T>(Func<T?> read, int timeoutMs = DefaultTimeoutMs)
         where T : struct
     {
-        var task = Task.Run(read);
+        var task = Task.Factory.StartNew(read, CancellationToken.None,
+            TaskCreationOptions.LongRunning, TaskScheduler.Default);
         try
         {
             if (task.Wait(timeoutMs)) return (task.Result, false);

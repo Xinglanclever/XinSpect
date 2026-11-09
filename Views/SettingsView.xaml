@@ -659,7 +659,7 @@
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
                                Text="金鑰只存在本機 %APPDATA%\XinSpect\settings.json，並以 Windows DPAPI 加密（只有本機、此使用者帳號解得開；換機器或換帳號就解不開）。曦覽不會把金鑰寫進報告、記錄檔或任何對外請求以外的地方。"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
-                               Text="{Binding Settings.AiKeyStorageText, StringFormat=目前存放方式：{0}}"/>
+                               Text="{Binding Settings.AiKeyStorageText, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='目前存放方式：{0}'}"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="27,2,0,0" TextWrapping="Wrap"
                                Foreground="{DynamicResource CriticalBrush}"
                                Text="{Binding Settings.AiKeyLoadErrorText}"/>

@@ -42,12 +42,15 @@ public class AutomationAndGuidanceFactsTests
         // 13 → 14（同日）：--compliance-diff（兩份合規 JSON 的判定差異）進 headless 目錄。
         // 14 → 15（同日）：--fleet（只讀本機快照的族群基線）進 headless 目錄。
         // 15 → 16（同日）：--redfish（離線 Redfish 目錄、不連網）進 headless 目錄。
-        Assert.Equal(16, doc.RootElement.GetArrayLength());
+        // 16 → 18（2026-11-09）：企業離線基準的管理端簽署與端點驗證命令進目錄。
+        Assert.Equal(18, doc.RootElement.GetArrayLength());
         Assert.Contains("--json", json, StringComparison.Ordinal);
         Assert.Contains(CliService.StdinBatchArg, json, StringComparison.Ordinal);
         Assert.Contains("零網路", json, StringComparison.Ordinal);
         Assert.Contains(CliService.SpeculationArg, json, StringComparison.Ordinal);
         Assert.Contains(CliService.RedfishArg, json, StringComparison.Ordinal);
+        Assert.Contains(CliService.EnterpriseBaselineArg, json, StringComparison.Ordinal);
+        Assert.Contains(CliService.EnterpriseBaselineSignArg, json, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Xml.Linq;
+using XinSpectCli;
 using Xunit;
 
 namespace XinSpect.Tests;
@@ -104,6 +105,57 @@ public class XinSpectCliTests
         string program = File.ReadAllText(Path.Combine(root, "XinSpectCli", "Program.cs"));
         Assert.Contains("輸入欄底線（固定長直線）", program, StringComparison.Ordinal);
         Assert.Contains("Tui.InputFrame();", program, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CLI語言選項支援繁簡並移除全域參數()
+    {
+        Assert.True(CliLocalization.TryConsumeOption(
+            ["--lang", "zh-CN", "facts"], out var remaining, out var error));
+        Assert.Null(error);
+        Assert.Equal(["facts"], remaining);
+        Assert.Equal(CliLanguage.Simplified, CliLocalization.Current);
+        Assert.Equal("内存与缓存", CliLocalization.Translate("記憶體與快取"));
+        Assert.Equal("未知参数", CliLocalization.Translate("未知引數"));
+
+        Assert.True(CliLocalization.TrySet("zh-TW"));
+        Assert.Equal("記憶體與快取", CliLocalization.Translate("記憶體與快取"));
+    }
+
+    [Fact]
+    public void CLI語言選項不會轉換JSON或SARIF輸出()
+    {
+        Assert.True(CliLocalization.IsMachineFormat(["facts", "--json"]));
+        Assert.True(CliLocalization.IsMachineFormat(["compliance", "--format", "sarif"]));
+        Assert.True(CliLocalization.IsMachineFormat(["--errors"]));
+        Assert.True(CliLocalization.IsMachineFormat(["--stdin-batch"]));
+        Assert.True(CliLocalization.IsMachineFormat(["--compliance", "--format", "junit"]));
+        Assert.True(CliLocalization.IsMachineFormat(["--enterprise-baseline", "policy.json"]));
+        Assert.False(CliLocalization.IsMachineFormat(["facts", "--lang", "zh-CN"]));
+        Assert.False(CliLocalization.IsMachineFormat(["--help"]));
+
+        Assert.False(CliLocalization.TryConsumeOption(["--lang"], out _, out var missingError));
+        Assert.Contains("requires", missingError, StringComparison.OrdinalIgnoreCase);
+        Assert.False(CliLocalization.TryConsumeOption(["--lang", "fr-FR"], out _, out var unsupportedError));
+        Assert.Contains("Unsupported", unsupportedError, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CLI文字輸出包裝器會跟隨互動中的語言切換()
+    {
+        var buffer = new StringWriter();
+        using var writer = CliLocalization.WrapWriter(buffer);
+        try
+        {
+            Assert.True(CliLocalization.TrySet("zh-TW"));
+            writer.WriteLine("記憶體與快取");
+            Assert.True(CliLocalization.TrySet("zh-CN"));
+            writer.WriteLine("記憶體與快取");
+
+            Assert.Equal("記憶體與快取" + Environment.NewLine + "内存与缓存" + Environment.NewLine,
+                buffer.ToString());
+        }
+        finally { CliLocalization.TrySet("zh-TW"); }
     }
 
     [Fact]

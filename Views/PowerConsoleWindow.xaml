@@ -1,6 +1,7 @@
 <Window x:Class="XinSpect.PowerConsoleWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:XinSpect"
         Title="曦覽 強控台 Power Console" Height="760" Width="1180"
         MinHeight="520" MinWidth="900"
         WindowStartupLocation="CenterScreen"
@@ -164,7 +165,7 @@
                                     <TextBlock Style="{StaticResource MonoSmall}" Text="01.A / CPU 溫度"/>
                                     <TextBlock Style="{StaticResource Mono}" FontSize="30" FontWeight="Bold"
                                                Text="{Binding CpuTempHist.CurrentText}"/>
-                                    <TextBlock Style="{StaticResource MonoSmall}" Text="{Binding CpuClockHist.CurrentText, StringFormat=時脈 {0}}"/>
+                                    <TextBlock Style="{StaticResource MonoSmall}" Text="{Binding CpuClockHist.CurrentText, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='時脈 {0}'}"/>
                                 </StackPanel>
                             </Border>
                             <Border BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,1,0" Padding="12,0" Margin="0,0,4,0">
@@ -172,7 +173,7 @@
                                     <TextBlock Style="{StaticResource MonoSmall}" Text="01.B / CPU 負載"/>
                                     <TextBlock Style="{StaticResource Mono}" FontSize="30" FontWeight="Bold"
                                                Text="{Binding CpuLoadHist.CurrentText}"/>
-                                    <TextBlock Style="{StaticResource MonoSmall}" Text="{Binding MemHist.CurrentText, StringFormat=記憶體 {0}}"/>
+                                    <TextBlock Style="{StaticResource MonoSmall}" Text="{Binding MemHist.CurrentText, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='記憶體 {0}'}"/>
                                 </StackPanel>
                             </Border>
                             <Border BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,1,0" Padding="12,0" Margin="0,0,4,0">

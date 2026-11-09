@@ -40,6 +40,12 @@ public static class CliService
     public const string ComplianceFormatArg = "--format";
     public const string FleetArg = "--fleet";
     public const string FleetSnapshotsArg = "--snapshots";
+    public const string EnterpriseBaselineArg = "--enterprise-baseline";
+    public const string EnterpriseBaselineSignArg = "--enterprise-baseline-sign";
+    public const string EnterpriseBaselineTrustedPemArg = "--trusted-key";
+    public const string EnterpriseBaselineSigningPemArg = "--signing-key";
+    public const string EnterpriseBaselinePasswordStdinArg = "--password-stdin";
+    public const string EnterpriseBaselineSnapshotArg = "--snapshot";
     public const string RedfishArg = "--redfish";
     public const string MerkleArg = "--merkle";
     public const string SpeculationArg = "--speculation";
@@ -100,6 +106,10 @@ public static class CliService
             return RunCompliance(args, collect, stdout, stderr);
         if (args[0] == ComplianceDiffArg)
             return RunComplianceDiff(args, stdout, stderr);
+        if (args[0] == EnterpriseBaselineArg)
+            return RunEnterpriseBaseline(args, stdout, stderr);
+        if (args[0] == EnterpriseBaselineSignArg)
+            return RunEnterpriseBaselineSign(args, stdin, stdout, stderr);
         if (args[0] == MerkleArg)
             return RunMerkle(args, collect, stdout, stderr);
         if (args[0] == SpeculationArg)
@@ -219,6 +229,8 @@ public static class CliService
             new { mode = MerkleArg, scope = "", output = "JSON", description = "穩定事實的 SHA-256 Merkle 指紋；白名單＋排除敏感／非 Present／易變鍵，輸出只含鍵與雜湊。" },
             new { mode = SpeculationArg, scope = "", output = "JSON", description = "七項 infer.* 推測；每項都帶【推測】前綴與 Speculative 信任等級，並列信心、依據鍵與限制。不合規、不進 Merkle。" },
             new { mode = FleetArg, scope = "", output = "JSON", description = "只讀本機快照目錄，彙總同型號族群的 fleet.* 基線；不上傳、不跨機傳輸。--snapshots 可指定目錄。" },
+            new { mode = EnterpriseBaselineArg, scope = "", output = "JSON", description = "驗證組織簽署的離線基準套件，對已驗證快照評估；需預先信任公鑰，不輸出硬體值。" },
+            new { mode = EnterpriseBaselineSignArg, scope = "", output = "signed package file", description = "管理端簽署組織基準 JSON；私鑰只由管理者受控環境讀取，不輸出至 stdout。" },
             new { mode = RedfishArg, scope = "", output = "JSON", description = "讀取已匯出的離線 Redfish 目錄樹（BMC／機箱／電源／風扇／溫度）；只讀本機檔案，不連網。" },
         };
         return JsonSerializer.Serialize(payload, JsonOptions);
@@ -865,6 +877,194 @@ public static class CliService
         return comparable ? ExitOk : ExitPartial;
     }
 
+    private static string ReadBoundedUtf8File(string path, int maximumBytes, string description)
+    {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
+            4096, FileOptions.SequentialScan);
+        if (stream.Length > maximumBytes)
+            throw new InvalidDataException($"{description} 超過 {maximumBytes} bytes 上限。");
+
+        byte[] buffer = new byte[maximumBytes + 1];
+        int length = 0;
+        while (length < buffer.Length)
+        {
+            int read = stream.Read(buffer, length, buffer.Length - length);
+            if (read == 0) break;
+            length += read;
+        }
+        if (length > maximumBytes)
+            throw new InvalidDataException($"{description} 超過 {maximumBytes} bytes 上限。");
+
+        string text = new System.Text.UTF8Encoding(false, true).GetString(buffer, 0, length);
+        return text.Length > 0 && text[0] == '\uFEFF' ? text[1..] : text;
+    }
+
+    /// <summary>
+    /// 對已驗證的快照評估組織簽署的離線基準。端點只持有公鑰；私鑰由政策管理者保管。
+    /// </summary>
+    private static int RunEnterpriseBaseline(string[] args, TextWriter stdout, TextWriter stderr)
+    {
+        string? policyPath = args.Length > 1 && !args[1].StartsWith("--", StringComparison.Ordinal)
+            ? args[1] : null;
+        string? publicKeyPath = OptionValue(args, EnterpriseBaselineTrustedPemArg);
+        string? snapshotPath = OptionValue(args, EnterpriseBaselineSnapshotArg);
+        if (policyPath is null || publicKeyPath is null || snapshotPath is null)
+        {
+            stderr.WriteLine("用法：--enterprise-baseline <政策套件.json> --trusted-key <組織公鑰.pem> --snapshot <快照.json> [--out <報告.json>]");
+            return ExitError;
+        }
+
+        string? requestedOutputPath = OptionValue(args, OutArg);
+        if (requestedOutputPath is not null)
+        {
+            try
+            {
+                string destination = Path.GetFullPath(requestedOutputPath);
+                if (new[] { policyPath, publicKeyPath, snapshotPath }
+                    .Any(source => string.Equals(destination, Path.GetFullPath(source), StringComparison.OrdinalIgnoreCase)))
+                {
+                    stderr.WriteLine("企業基準報告不得覆寫政策套件、公鑰或輸入快照。");
+                    return ExitError;
+                }
+            }
+            catch (Exception ex) when (ex is ArgumentException or IOException or NotSupportedException
+                                       or System.Security.SecurityException)
+            {
+                stderr.WriteLine($"企業基準報告路徑無效（{ex.GetType().Name}）。");
+                return ExitError;
+            }
+        }
+
+        EnterpriseBaselineEvaluation evaluation;
+        try
+        {
+            string package = ReadBoundedUtf8File(policyPath,
+                EnterpriseBaselinePackageService.MaxPackageBytes, "政策套件");
+            string trustedPublicKey = ReadBoundedUtf8File(publicKeyPath,
+                EnterpriseBaselinePackageService.MaxKeyPemBytes, "組織信任公鑰");
+
+            // Reject untrusted or expired policies before touching the snapshot input.
+            var verified = EnterpriseBaselinePackageService.Evaluate(package, trustedPublicKey,
+                new Dictionary<string, HardwareFact>(StringComparer.Ordinal), DateTimeOffset.UtcNow);
+            if (!verified.SignatureValid || verified.Expired)
+            {
+                evaluation = verified;
+            }
+            else
+            {
+                var snapshot = HardwareSnapshotService.Load(snapshotPath);
+                var facts = snapshot.Facts.ToDictionary(f => f.Key, f => new HardwareFact(
+                    f.Key, f.Category, f.Name, f.Value, f.Unit ?? "", f.Source, f.Trust,
+                    f.Sensitive, f.MeasuredAtUtc, f.NumericValue, f.Availability, f.UnavailableReason),
+                    StringComparer.Ordinal);
+                evaluation = EnterpriseBaselinePackageService.Evaluate(package, trustedPublicKey, facts,
+                    DateTimeOffset.UtcNow);
+            }
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"企業基準評估失敗（{ex.GetType().Name}）。");
+            return ExitError;
+        }
+
+        string status = !evaluation.SignatureValid ? "Rejected"
+            : evaluation.Expired ? "Expired"
+            : evaluation.NotSatisfied > 0 ? "NotSatisfied"
+            : evaluation.Unverifiable > 0 ? "Unverifiable"
+            : "Satisfied";
+        var payload = new
+        {
+            generatedAtUtc = DateTimeOffset.UtcNow,
+            scope = "enterprise-baseline",
+            schemaVersion = EnterpriseBaselinePackageService.CurrentSchemaVersion,
+            evaluation.PolicyId,
+            evaluation.SignerKeyId,
+            policySignatureValid = evaluation.SignatureValid,
+            evaluation.Expired,
+            status,
+            counts = new
+            {
+                evaluation.Satisfied,
+                evaluation.NotSatisfied,
+                evaluation.Unverifiable,
+            },
+            results = evaluation.Results,
+            evaluation.FailureReason,
+            note = "已驗證的是政策簽章；本評估報告與快照來源未簽章、未做遠端證明。快照 SHA-256 只驗內容完整性，不證明來源。結果只代表此快照符合組織自訂基準，不代表整體安全性或硬體故障判決；輸出不包含事實值。",
+        };
+        string json = JsonSerializer.Serialize(payload, JsonOptions);
+        string? outPath = OptionValue(args, OutArg);
+        try
+        {
+            if (outPath is not null) File.WriteAllText(outPath, json);
+            else stdout.WriteLine(json);
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"寫出企業基準報告失敗（{ex.GetType().Name}）。");
+            return ExitError;
+        }
+
+        return !evaluation.SignatureValid ? ExitError
+            : evaluation.Expired || evaluation.NotSatisfied > 0 || evaluation.Unverifiable > 0
+                ? ExitPartial : ExitOk;
+    }
+
+    private static int RunEnterpriseBaselineSign(string[] args, TextReader? stdin,
+        TextWriter stdout, TextWriter stderr)
+    {
+        string? policyPath = args.Length > 1 && !args[1].StartsWith("--", StringComparison.Ordinal)
+            ? args[1] : null;
+        string? signingKeyPath = OptionValue(args, EnterpriseBaselineSigningPemArg);
+        string? outPath = OptionValue(args, OutArg);
+        if (policyPath is null || signingKeyPath is null || outPath is null
+            || !args.Contains(EnterpriseBaselinePasswordStdinArg, StringComparer.Ordinal))
+        {
+            stderr.WriteLine("用法：<簽章密碼> | --enterprise-baseline-sign <政策.json> --signing-key <加密私鑰.pem> --password-stdin --out <簽章套件.json>；只在管理端執行。");
+            return ExitError;
+        }
+        if (stdin is null || stdin.ReadLine() is not { Length: > 0 } password)
+        {
+            stderr.WriteLine("簽章密碼必須由 stdin 提供；不接受命令列密碼。");
+            return ExitError;
+        }
+
+        try
+        {
+            string destination = Path.GetFullPath(outPath);
+            if (string.Equals(destination, Path.GetFullPath(policyPath), StringComparison.OrdinalIgnoreCase)
+                || string.Equals(destination, Path.GetFullPath(signingKeyPath), StringComparison.OrdinalIgnoreCase))
+            {
+                stderr.WriteLine("簽章套件輸出路徑不得覆寫政策來源或簽章私鑰。");
+                return ExitError;
+            }
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException or NotSupportedException
+                                   or System.Security.SecurityException)
+        {
+            stderr.WriteLine($"企業基準簽署路徑無效（{ex.GetType().Name}）。");
+            return ExitError;
+        }
+
+        try
+        {
+            string policyJson = ReadBoundedUtf8File(policyPath,
+                EnterpriseBaselinePackageService.MaxPackageBytes, "政策 JSON");
+            string privateKeyPem = ReadBoundedUtf8File(signingKeyPath,
+                EnterpriseBaselinePackageService.MaxKeyPemBytes, "簽署私鑰 PEM");
+            string signedPackage = EnterpriseBaselinePackageService.Sign(policyJson, privateKeyPem, password);
+            password = string.Empty;
+            File.WriteAllText(outPath, signedPackage);
+            return ExitOk;
+        }
+        catch (Exception ex)
+        {
+            password = string.Empty;
+            stderr.WriteLine($"企業基準簽署失敗（{ex.GetType().Name}）。");
+            return ExitError;
+        }
+    }
+
     /// <summary>
     /// 合規基準比較（<c>--compliance-diff</c>）：只讀兩份既有 JSON，不重新收集、不重新判定。
     /// 退出碼：0＝判定全同；2＝有任何新增／消失／改善／退步／變動；1＝讀取或格式錯誤。
@@ -1125,6 +1325,7 @@ public static class CliService
             曦覽 XinSpect CLI（V7 WP32）・ headless 事實收集
 
             用法：
+              xsc --lang zh-TW|zh-CN [以下任一命令]（僅切換文字介面；JSON／SARIF 欄位與輸出不變）
               XinSpect --json evidence [--query <key 前綴>] [--only <前綴1,前綴2>] [--out <檔案>]
               XinSpect --compare-flash <參考映像> [--out <檔案>]
               XinSpect --verify-audit [日誌路徑] [--out <檔案>]
@@ -1140,6 +1341,8 @@ public static class CliService
               XinSpect --merkle [--out <檔案>]
               XinSpect --speculation [--out <檔案>]
               XinSpect --fleet [--snapshots <目錄>] [--out <檔案>]
+              XinSpect --enterprise-baseline <政策套件.json> --trusted-key <公鑰.pem> --snapshot <快照.json> [--out <報告.json>]
+              <密碼管線> | XinSpect --enterprise-baseline-sign <政策.json> --signing-key <加密私鑰.pem> --password-stdin --out <簽章套件.json>（管理端）
               XinSpect --redfish <離線 Redfish 目錄> [--out <檔案>]
               XinSpect --help
 
@@ -1206,6 +1409,8 @@ public static class CliService
               --out <檔案>     寫入檔案而非 stdout
               --format <格式>  只用於 --compliance：json（預設）／sarif／junit／cef／otel；其他值回退出碼 1
               --snapshots <目錄> 只用於 --fleet：指定快照目錄（預設 %AppData%\XinSpect\snapshots）
+              --trusted-key <公鑰.pem> 與 --snapshot <快照.json> 只用於 --enterprise-baseline；端點不載入簽章私鑰
+              --signing-key <加密私鑰.pem> 與 --password-stdin 只用於管理端簽署；密碼不放命令列，私鑰不得部署到端點
 
             退出碼：
               --json evidence   0＝全部 Present；2＝有非 Present 的事實（讀不到，或提供者沒提供

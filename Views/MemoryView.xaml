@@ -410,7 +410,7 @@
                                         <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"
                                                    Text="{Binding Serial, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='序號：{0}'}"/>
                                         <TextBlock Style="{StaticResource FieldValue}"
-                                                   Text="{Binding Rank, StringFormat=Rank：{0}}"/>
+                                                   Text="{Binding Rank, Converter={x:Static local:LangFormatConverter.Instance}, ConverterParameter='Rank：{0}'}"/>
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>

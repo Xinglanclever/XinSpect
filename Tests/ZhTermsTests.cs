@@ -40,6 +40,10 @@ public class ZhTermsTests
     [InlineData("檔案總管", "文件资源管理器")]
     [InlineData("剪貼簿", "剪贴板")]
     [InlineData("登錄", "注册表")]
+    [InlineData("引數", "参数")]
+    [InlineData("參數", "参数")]
+    [InlineData("指令", "命令")]
+    [InlineData("指令書", "命令手册")]
     public void 核心技術詞組繁轉簡(string trad, string simp)
         => Assert.Equal(simp, ZhTerms.ApplyToSimp(trad));
 
@@ -81,6 +85,16 @@ public class ZhTermsTests
         Assert.Equal("目前协商到的速度／宽度对装置能力（唯读 PCI 设置空间）",
             LanguageService.ToSimplified("目前協商到的速度／寬度對裝置能力（唯讀 PCI 設定空間）"));
     }
+
+    [Fact]
+    public void 介面常用語以簡體中文慣用詞呈現()
+        => Assert.Equal("主窗口的侧边栏设置页面正在加载中，请检查更新。",
+            LanguageService.ToSimplified("主視窗的側邊欄設定頁面正在載入中，請檢查更新。"));
+
+    [Fact]
+    public void 介面操作詞與硬體顯示詞組一併轉換()
+        => Assert.Equal("打开下拉菜单查看实时监控，并确认删除错误消息。",
+            LanguageService.ToSimplified("打開下拉選單查看即時監控，並確認刪除錯誤訊息。"));
 
     // ── 反向：簡→繁 ──
 
