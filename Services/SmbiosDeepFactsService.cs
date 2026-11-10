@@ -168,10 +168,10 @@ public static class SmbiosDeepFactsService
     {
         ushort chars = s.WordAt(0x0E);
         ushort power = s.WordAt(0x0C);
-        string powerText = (power & 0x8000) != 0 ? "功率未回報" : $"{power} W";
+        string powerText = power == 0x8000 ? "功率未回報" : $"{power} W";
         string present = (chars & 0x0002) != 0 ? "存在" : "不在位";
         string plugged = (chars & 0x0004) == 0 ? "，已插電" : "，未插電";
-        return $"{Str(s, 0x06)}（{Str(s, 0x07)}）{powerText}，{present}{plugged}";
+        return $"{Str(s, 0x06)}（{Str(s, 0x05)}）{powerText}，{present}{plugged}";
     }
 
     private static string MctlTypeName(byte code) => code switch

@@ -56,7 +56,7 @@ public class XinSpectCliTests
     }
 
     [Fact]
-    public void CLI專案與進入點存在()
+    public void CLI專案進入點與離線百科可用()
     {
         string root = RepoRoot();
         Assert.True(File.Exists(Path.Combine(root, "XinSpectCli", "XinSpectCli.csproj")), "缺 XinSpectCli.csproj");
@@ -90,6 +90,24 @@ public class XinSpectCliTests
         // 不得引入寫入通路
         Assert.DoesNotContain("WritePciConfig", src, StringComparison.Ordinal);
         Assert.DoesNotContain("WriteMsrPair", src, StringComparison.Ordinal);
+
+        string markdown = File.ReadAllText(Path.Combine(root, "docs", "百科-v3.17.md"));
+        var headings = System.Text.RegularExpressions.Regex.Matches(markdown,
+            @"^## (第\s*(\d+)\s*部[^\r\n]*)", System.Text.RegularExpressions.RegexOptions.Multiline);
+        Assert.Contains(headings, h => h.Groups[2].Value == "0");
+        var originalOut = Console.Out;
+        try
+        {
+            foreach (System.Text.RegularExpressions.Match heading in headings)
+            {
+                using var output = new StringWriter();
+                Console.SetOut(output);
+                Book.Run(heading.Groups[2].Value);
+                Assert.Contains(heading.Groups[1].Value, output.ToString(), StringComparison.Ordinal);
+                Assert.DoesNotContain("沒有第", output.ToString(), StringComparison.Ordinal);
+            }
+        }
+        finally { Console.SetOut(originalOut); }
     }
 
     [Fact]

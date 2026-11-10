@@ -473,8 +473,8 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 | 文件 | 大小 | 用途 |
 |---|---|---|
 | [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpect.exe) | 38,085,931 bytes | 主程序。蓝色中队守护进程已内置 |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpectConsole.exe) | 100,446,445 bytes | 曦览终端机（CLI）。可独立执行，也被主程序强控台唤起；自含 .NET 10 执行阶段故体积较大（Windows 11／Server 2025 用） |
-| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpectConsole-legacy.exe) | 100,442,437 bytes | 曦览终端机（CLI）**纯文字兼容版**：给 Windows 10／Windows Server 2016、2019、2022 的传统控制台——无色彩、无框线定位，其余功能（facts／book／help）相同 |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpectConsole.exe) | 100,446,535 bytes | 曦览终端机（CLI）。可独立执行，也被主程序强控台唤起；自含 .NET 10 执行阶段故体积较大（Windows 11／Server 2025 用） |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpectConsole-legacy.exe) | 100,442,527 bytes | 曦览终端机（CLI）**纯文字兼容版**：给 Windows 10／Windows Server 2016、2019、2022 的传统控制台——无色彩、无框线定位，其余功能（facts／book／help）相同 |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/BlueSquadronBridge.exe) | 6,531,620 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 | [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpect-full.exe) | 210,852,178 bytes | 主程序・带环境版：.NET 10 执行阶段一并打包，免装执行阶段（功能与 XinSpect.exe 相同） |
 | [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpectConsole-nort.exe) | 66,142,872 bytes | 曦览终端机・Windows 11／Server 2025・不带环境：需已装 .NET 10 Desktop Runtime |
@@ -668,7 +668,7 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 数据源：SMART_RCV_DRIVE_DATA ioctl（disk.sys 代理——刻意不用 ATA_PASS-THROUGH，曾实测卡 IRP；由磁盘类别驱动代理的 SMART 通路久经验证且无弄挂用户磁盘的风险）、NVMe Storage Query Property、WMI Win32_DiskDrive。
 
 - **SMART 属性与门槛（failing-now）**：READ DATA（features 0xD0）取 30 笔属性（ID、现值、最差、原始六字节）；READ THRESHOLDS（features 0xD1）取门槛表。「现值 ≤ 门槛且门槛非 0」判定为现正低于门槛（failing now），逐项摊开并标注「现值 X ≤ 门槛 Y」。门槛 0 依 SMART 规范为无门槛，不参与评比。重新配置磁区（0x05）、待映射磁区（0xC5）、无法修正磁区（0xC6）另有健康裁决。
-- **NVMe**：健康纪录（log page 0x02）全解——合成温度、可用备用、已用寿命百分比、数据单位读写量；WCTEMP 警告（Identify Controller offset 0x14A 的 u16 对照合成温度，达标即警告；0＝未提供如实标）；错误纪录（log page 0x01）；电源状态表（各阶功耗与进入／离开延迟）对实测「刻意闲置 N 毫秒后第一笔 4K 读取要多久」——闲置后第一笔为什么慢，两者同一量级才敢归因于省电状态。
+- **NVMe**：健康纪录（log page 0x02）全解——合成温度、可用备用、已用寿命百分比、数据单位读写量；WCTEMP 警告（Identify Controller offset 0x10A 的 u16 Kelvin 转为摄氏后对照合成温度，达标即警告；0＝未提供如实标）；错误纪录（log page 0x01）；电源状态表（各阶功耗与进入／离开延迟）对实测「刻意闲置 N 毫秒后第一笔 4K 读取要多久」——闲置后第一笔为什么慢，两者同一量级才敢归因于省电状态。
 - **ATA／OS 容量对照**：ATA IDENTIFY 当前可定址磁区对照 Win32_DiskDrive.Size，按实际逻辑磁区大小换算，支持 4Kn。差异不能确认 HPA，一致也不能排除 HPA。尚未读取 READ NATIVE MAX ADDRESS/EXT，DCO 探测亦未实现，标 NotSupported 并说明原因。
 - **磁盘表面扫描**：循序读取逐块（缺省 1 MB，上限可调）量延迟，超过 100 ms 标慢、读取失败标错误。SMART 是固件的自述，这是程序自己读到的——两者互补。以 `\\.\C:` 打开逻辑卷不需管理员权限，仅能读不能写。
 - **假容量写入验证**（H2testw 式）：在目标磁盘以可重现样本（xorshift，chunkIndex 混入种子）写入至指定上限或写满，FlushToDisk 后读回逐字节验证，结束删除暂存盘。「写不进去／读回不一致」是假容量卡（标 512GB 实为 8GB 的刷板卡）与劣化碟的直接证据。需要明确同意——写入量可观且可能加剧濒死媒体损耗，接口与说明均标注风险。此功能未接入任何自动流程，仅在明确调用时运行。

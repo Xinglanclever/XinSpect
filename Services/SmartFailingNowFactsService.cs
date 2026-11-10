@@ -12,7 +12,7 @@ public static class SmartFailingNowFactsService
 
     /// <summary>probe＝(ATA 屬性, ATA 門檻表, NVMe 評比)。供測試注入；生產走 StorageSmartService。</summary>
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at,
-        Func<(List<SmartRow> Attrs, Dictionary<byte, byte> Thresholds,
+        Func<(List<SmartRow> Attrs, Dictionary<byte, byte>? Thresholds,
               (StorageSmartService.WctempState State, int ThresholdC, int CompositeC) Wctemp)?>? probe = null,
         string? diskLabel = null)
     {
@@ -44,7 +44,7 @@ public static class SmartFailingNowFactsService
                 // NVMe：合成溫度自健康紀錄、WCTEMP 自 Identify Controller
                 var health = StorageSmartService.TryReadNvmeHealth(i);
                 var idc = StorageSmartService.TryReadNvmeIdentify(i);
-                int composite = health?.CompositeTempCelsius ?? 0;
+                int? composite = health?.CompositeTempCelsius;
                 var verdict = StorageSmartService.EvaluateWctemp(composite, idc ?? []);
                 wState = verdict.State; wThreshold = verdict.ThresholdC; wComposite = verdict.CompositeC;
                 if (verdict.State == StorageSmartService.WctempState.Warning)
@@ -77,14 +77,22 @@ public static class SmartFailingNowFactsService
     {
         var failing = thresholds is null ? new List<StorageSmartService.FailingNowRow>()
             : StorageSmartService.EvaluateFailingNow(attrs, thresholds);
+        var positive = thresholds?.Where(t => t.Value > 0).ToList() ?? [];
+        bool complete = positive.Count > 0 && positive.All(t => attrs.Any(a => a.Id == t.Key
+            && StorageSmartService.TryNormalizedValue(a, out _)));
+        string? reason = complete ? null : thresholds is null
+            ? "門檻表（0xD1）讀不到，無法確認 failing-now 總數"
+            : "缺少可比對的非零門檻或有效 normalized 屬性，無法確認 failing-now 總數";
         var facts = new List<HardwareFact>
         {
             new($"smart.failing_now{keySuffix}", Category, $"SMART failing-now（{disk}）",
-                thresholds is null ? "門檻表（0xD1）讀不到——不比對門檻，只列屬性現值"
+                !complete ? $"無法確認 failing-now 總數（已確認 {failing.Count} 項低於門檻）"
                     : failing.Count == 0
-                    ? $"沒有現正低於門檻的屬性（評比 {thresholds.Count(kvp => kvp.Value > 0)} 項有門檻者）"
+                    ? $"沒有現正低於門檻的屬性（評比 {positive.Count} 項有門檻者）"
                     : $"{failing.Count} 項現正低於門檻", "項",
-                "SMART READ DATA＋READ THRESHOLDS（0xD1）", FactTrustLevel.Derived, false, at, failing.Count),
+                "SMART READ DATA＋READ THRESHOLDS（0xD1）", complete ? FactTrustLevel.Derived : FactTrustLevel.Unknown,
+                false, at, complete ? failing.Count : null,
+                complete ? FactAvailability.Present : FactAvailability.Unknown, reason),
         };
         for (int i = 0; i < failing.Count; i++)
         {

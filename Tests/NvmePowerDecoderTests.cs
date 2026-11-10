@@ -171,10 +171,10 @@ public class NvmePowerDecoderTests
     [Fact]
     public void APST表解出每個狀態的閒置門檻與目標狀態()
     {
-        // Get Features 0x0C 的資料區：32 筆 × 8 位元組，位 23:8＝閒置毫秒、位 27:24＝目標狀態
+        // Get Features 0x0C：32 筆 × 8 bytes，位 31:8＝閒置毫秒、位 7:3＝目標狀態。
         var data = new byte[256];
         void Entry(int i, uint idleMs, byte target)
-            => BitConverter.GetBytes(((ulong)target << 24) | ((ulong)idleMs << 8)).CopyTo(data, i * 8);
+            => BitConverter.GetBytes(((ulong)target << 3) | ((ulong)idleMs << 8)).CopyTo(data, i * 8);
         Entry(0, 100, 3);
         Entry(1, 250, 4);
 
@@ -184,6 +184,10 @@ public class NvmePowerDecoderTests
         Assert.Equal(3, rows[0].TargetState);
         Assert.Equal(250u, rows[1].IdleMs);
         Assert.Equal(4, rows[1].TargetState);
+        Entry(2, 0x123456, 27);
+        var wide = NvmePowerDecoder.ApstTable(data, stateCount: 3)[2];
+        Assert.Equal(0x123456u, wide.IdleMs);
+        Assert.Equal(27, wide.TargetState);
     }
 
     [Fact]

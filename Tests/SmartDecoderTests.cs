@@ -132,6 +132,9 @@ public class SmartDecoderTests
     [Fact]
     public void 錯誤紀錄的狀態碼要翻成人看得懂的一句話()
     {
+        Assert.Contains("命名空間", NvmeLogDecoder.StatusText(0, 0x0B));
+        Assert.Contains("順序", NvmeLogDecoder.StatusText(0, 0x0C));
+        Assert.Contains("Preempt", NvmeLogDecoder.StatusText(0, 0x1B));
         var entries = NvmeLogDecoder.ErrorEntries(BuildErrorLog());
         var media = entries.First(e => e.ErrorCount == 7);
         Assert.Equal(2, media.StatusCodeType);

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>曦覽 XinSpect 手冊</title>
-<!-- 由 手冊.md 產生（sha256 9a14dcd7c9c6）；產生器：Tools/gen-docs-html.py；本檔不手改。 -->
+<!-- 由 手冊.md 產生（sha256 0a9f83fb9aa6）；產生器：Tools/gen-docs-html.py；本檔不手改。 -->
 <style>:root{--bg:#fff;--ink:#1f2328;--sub:#57606a;--hair:#d0d7de;--surface:#f6f8fa;--link:#0969da;--accent:#1b6fd6;--badge:#ddf4ff;
       color-scheme:light}
 /* 深色版：文字色早就跟著 prefers-color-scheme 換了，body 的背景卻一直寫死 #fff——
@@ -370,7 +370,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 </details>
 </nav>
 <main>
-<header class="doc"><div class="meta">曦覽 XinSpect 手冊 ・ 來源：<code>手冊.md</code>（sha256 <code>9a14dcd7c9c6</code>）・ 自足 HTML：無 CDN、無外部字型、無指令碼 ・ 定位：左側目錄、標題懸停有 ¶ 錨點、瀏覽器 Ctrl+F 找字</div></header>
+<header class="doc"><div class="meta">曦覽 XinSpect 手冊 ・ 來源：<code>手冊.md</code>（sha256 <code>0a9f83fb9aa6</code>）・ 自足 HTML：無 CDN、無外部字型、無指令碼 ・ 定位：左側目錄、標題懸停有 ¶ 錨點、瀏覽器 Ctrl+F 找字</div></header>
 <p><a href="https://github.com/Xinglanclever/XinSpect/blob/main/README.zh-CN.md">简体中文</a> · 繁體中文 · <a href="https://github.com/Xinglanclever/XinSpect/blob/main/README.en.md">English</a></p>
 <blockquote><p><strong>這是什麼檔案。</strong> 本檔是 v2.91 之前作為 README 的「硬核版說明」原文，2026-10-27 起被<br>
 <a href="https://github.com/Xinglanclever/XinSpect/blob/main/README.md">README.md</a>（百科）取代；現在把它自 git 歷史（提交 <code>5721ffc</code>，硬核版的最後一版）<br>
@@ -969,7 +969,7 @@ hr{border:0;border-top:1px solid var(--hair);margin:26px 0}
 <p>資料來源：SMART_RCV_DRIVE_DATA ioctl（disk.sys 代理——刻意不用 ATA_PASS-THROUGH，曾實測卡 IRP；由磁碟類別驅動代理的 SMART 通路久經驗證且無弄掛使用者磁碟的風險）、NVMe Storage Query Property、WMI Win32_DiskDrive。</p>
 <ul>
 <li><strong>SMART 屬性與門檻（failing-now）</strong>：READ DATA（features 0xD0）取 30 筆屬性（ID、現值、最差、原始六位元組）；READ THRESHOLDS（features 0xD1）取門檻表。「現值 ≤ 門檻且門檻非 0」判定為現正低於門檻（failing now），逐項攤開並標注「現值 X ≤ 門檻 Y」。門檻 0 依 SMART 規範為無門檻，不參與評比。重新配置磁區（0x05）、待對映磁區（0xC5）、無法修正磁區（0xC6）另有健康裁決。
-</li><li><strong>NVMe</strong>：健康紀錄（log page 0x02）全解——合成溫度、可用備用、已用壽命百分比、資料單位讀寫量；WCTEMP 警告（Identify Controller offset 0x14A 的 u16 對照合成溫度，達標即警告；0＝未提供如實標）；錯誤紀錄（log page 0x01）；電源狀態表（各階功耗與進入／離開延遲）對實測「刻意閒置 N 毫秒後第一筆 4K 讀取要多久」——閒置後第一筆為什麼慢，兩者同一量級才敢歸因於省電狀態。
+</li><li><strong>NVMe</strong>：健康紀錄（log page 0x02）全解——合成溫度、可用備用、已用壽命百分比、資料單位讀寫量；WCTEMP 警告（Identify Controller offset 0x10A 的 u16 Kelvin 轉為攝氏後對照合成溫度，達標即警告；0＝未提供如實標）；錯誤紀錄（log page 0x01）；電源狀態表（各階功耗與進入／離開延遲）對實測「刻意閒置 N 毫秒後第一筆 4K 讀取要多久」——閒置後第一筆為什麼慢，兩者同一量級才敢歸因於省電狀態。
 </li><li><strong>HPA 隱藏容量</strong>：ATA IDENTIFY 的最大 LBA（words 100–103）對照 Win32_DiskDrive.Size——OS 可見少於韌體聲明即 HPA 作用中，換算隱藏磁區數與 GB。這是翻新碟與容量竄改的直接證據。DCO（Device Configuration Overlay，裝置組態覆蓋層）需廠商私有命令（無公開 usermode 通路），標 NotSupported 並說明原因。
 </li><li><strong>磁碟表面掃描</strong>：循序讀取逐塊（預設 1 MB，上限可調）量延遲，超過 100 ms 標慢、讀取失敗標錯誤。SMART 是韌體的自述，這是程式自己讀到的——兩者互補。以 <code>\\.\C:</code> 開啟邏輯卷不需管理員權限，僅能讀不能寫。
 </li><li><strong>假容量寫入驗證</strong>（H2testw 式）：在目標磁碟以可重現樣本（xorshift，chunkIndex 混入種子）寫入至指定上限或寫滿，FlushToDisk 後讀回逐位元組驗證，結束刪除暫存檔。「寫不進去／讀回不一致」是假容量卡（標 512GB 實為 8GB 的刷板卡）與劣化碟的直接證據。需要明確同意——寫入量可觀且可能加劇瀕死媒體損耗，介面與說明均標註風險。此功能未接入任何自動流程，僅在明確呼叫時執行。

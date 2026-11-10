@@ -87,24 +87,29 @@ public static class SmbiosPowerFactsService
         var parts = psus.Select((s, i) =>
         {
             var fields = new List<string> { $"[{i}]" };
-            string group = Str(s, 0x04);
-            string location = Str(s, 0x07);
+            byte group = s.ByteAt(0x04);
+            string location = Str(s, 0x05);
             string device = Str(s, 0x06);
+            string manufacturer = Str(s, 0x07);
             string revision = Str(s, 0x0B);
 
             if (device.Length > 0) fields.Add(device);
             if (location.Length > 0) fields.Add(location);
-            if (group.Length > 0) fields.Add($"群組 {group}");
+            if (group > 0) fields.Add($"群組 {group}");
+            if (manufacturer.Length > 0) fields.Add($"製造商 {manufacturer}");
             if (revision.Length > 0) fields.Add($"版本 {revision}");
 
             ushort chars = s.WordAt(0x0E);
             ushort power = s.WordAt(0x0C);
-            fields.Add((power & 0x8000) != 0 ? "功率未回報" : $"{power} W");
+            fields.Add(power == 0x8000 ? "功率未回報" : $"{power} W");
             fields.Add((chars & 0x0002) != 0 ? "在位" : "不在位");
             fields.Add((chars & 0x0004) == 0 ? "已插電" : "未插電");
             if ((chars & 0x0001) != 0) fields.Add("有熱插拔");
-            if ((chars & 0x0008) != 0) fields.Add("有電源表");
-            if ((chars & 0x0010) != 0) fields.Add("有解除警告");
+            fields.Add("輸入電壓切換：" + (((chars >> 3) & 0x0F) switch
+            {
+                1 => "其他", 2 => "未知", 3 => "手動", 4 => "自動",
+                5 => "寬範圍", 6 => "不適用", var code => $"代碼 {code}",
+            }));
             return string.Join("／", fields);
         });
 
@@ -117,27 +122,29 @@ public static class SmbiosPowerFactsService
 
     private static HardwareFact PsuPower(DateTimeOffset at, IReadOnlyList<SmbiosStruct> psus)
     {
-        // 只算「有回報功率」的。0x8000 是「未回報」旗標，不是 32768 W。
-        var reported = psus.Where(s => (s.WordAt(0x0C) & 0x8000) == 0).ToList();
-        if (psus.Count == 0 || reported.Count == 0)
+        var present = psus.Where(s => (s.WordAt(0x0E) & 0x0002) != 0).ToList();
+        var reported = present.Where(s => s.WordAt(0x0C) != 0x8000).ToList();
+        if (present.Count == 0)
             return new HardwareFact(PsuPowerKey, Category, "電源供應器額定功率",
                 "", "W", "SMBIOS Type 39 @0x0C", FactTrustLevel.Measured, false, at, null,
                 FactAvailability.NotApplicable,
                 psus.Count == 0
                     ? "SMBIOS 未列 Type 39"
-                    : $"{psus.Count} 個電源供應器都沒有回報功率"
-                      + "（旗標 0x8000 代表未回報）——那是「沒說」而不是「0 瓦」");
+                    : "SMBIOS 未宣告任何電源供應器在位；空槽不計入額定功率");
 
-        int total = reported.Sum(s => s.WordAt(0x0C));
+        if (reported.Count != present.Count)
+            return new HardwareFact(PsuPowerKey, Category, "電源供應器額定功率",
+                $"{present.Count} 個在位供應器中只有 {reported.Count} 個回報功率，無法確認合計；未回報的不以 0 計入",
+                "W", "SMBIOS Type 39 @0x0C", FactTrustLevel.Unknown, false, at, null,
+                FactAvailability.Unknown, "0x8000 代表未回報——那是「沒說」而不是「0 瓦」");
+
+        long total = reported.Sum(s => (long)s.WordAt(0x0C));
         string detail = string.Join("＋", reported.Select(s => $"{s.WordAt(0x0C)} W"));
         return new HardwareFact(PsuPowerKey, Category, "電源供應器額定功率",
             $"{detail}（合計 {total} W）", "W", "SMBIOS Type 39 @0x0C",
             FactTrustLevel.Derived, false, at, total, FactAvailability.Present,
-            reported.Count == psus.Count
-                ? "這是額定功率的總和，**不是可用功率**——轉換效率、各路輸出上限、"
-                  + "以及同時啟動的峰值都不在這個數字裡"
-                : $"{psus.Count} 個之中只有 {reported.Count} 個回報功率，"
-                  + "合計只涵蓋回報的那些——**未回報的不以 0 計入**");
+            "這是在位供應器的額定功率總和，**不是可用功率**——轉換效率、各路輸出上限、"
+            + "以及同時啟動的峰值都不在這個數字裡");
     }
 
     // ── Type 41 ─────────────────────────────────────────────────────────
@@ -161,28 +168,18 @@ public static class SmbiosPowerFactsService
             return Missing(OnboardKey, "內建裝置明細", at, "SMBIOS 未列 Type 41");
 
         var parts = new List<string>();
-        byte[] deviceTypes = onboard.Select(s => s.ByteAt(0x04)).ToArray();
         for (int i = 0; i < onboard.Count; i++)
         {
             var s = onboard[i];
-            var fields = new List<string> { $"[{i}] {DeviceTypeName(deviceTypes[i])}" };
-
-            if (s.Length >= 0x0D)
-            {
-                ushort segments = s.WordAt(0x0B);
-                if (segments > 0) fields.Add($"{segments} 個段群組");
-            }
-
-            // 參考指定：每個 4 bytes（參考型別 u8 ＋ 參考值 u16 ＋ 保留 u8）。
-            int refs = 0;
-            int p = 0x0D;
-            while (p + 4 <= s.Length)
-            {
-                if (s.ByteAt(p) == 0) break;   // 參考型別 0 = 結束
-                refs++;
-                p += 4;
-            }
-            if (refs > 0) fields.Add($"{refs} 筆參考指定");
+            var fields = new List<string> { $"[{i}] {DeviceTypeName((byte)(s.ByteAt(0x05) & 0x7F))}" };
+            string designation = Str(s, 0x04);
+            if (designation.Length > 0) fields.Add(designation);
+            if (s.ByteAt(0x06) > 0) fields.Add($"實例 {s.ByteAt(0x06)}");
+            ushort segment = s.WordAt(0x07);
+            byte bus = s.ByteAt(0x09), devFunc = s.ByteAt(0x0A);
+            fields.Add(segment == 0xFFFF || bus == 0xFF || devFunc == 0xFF
+                ? "PCI 位址未提供"
+                : $"PCI {segment:X4}:{bus:X2}:{devFunc >> 3:X2}.{devFunc & 7}");
 
             string status = OnboardStatus(s);
             if (status.Length > 0) fields.Add(status);
@@ -191,34 +188,30 @@ public static class SmbiosPowerFactsService
         }
 
         return new HardwareFact(OnboardKey, Category, "內建裝置明細",
-            string.Join("；", parts), "", "SMBIOS Type 41（裝置型別@0x04、狀態@0x09、"
-            + "段群組@0x0B、參考指定@0x0D 起每筆 4 bytes）",
+            string.Join("；", parts), "", "SMBIOS Type 41（參考名稱@0x04、型別與啟用位@0x05、"
+            + "實例@0x06、PCI 段@0x07、匯流排@0x09、裝置／功能@0x0A）",
             FactTrustLevel.Measured, false, at, onboard.Count, FactAvailability.Present,
-            "「參考指定」指向的是其他結構——本服務只計數，不追進去看，"
-            + "因為那需要跨結構的關聯解析（列在另一項）");
+            "這是韌體宣告的裝置型別、啟用旗標與 PCI 位址，不代表 OS 驅動已正常啟動");
     }
 
     /// <summary>
-    /// 狀態：長度至少要到 0x0B 才讀得到（@0x09 是 u8，但 @0x0A 起是 0x0B 的裝置型別
-    /// ——這裡只讀 @0x09 的單一位元組，所以門檻是 0x0A）。
+    /// Type 41 的裝置型別低七位與啟用旗標共用 @0x05。
     /// </summary>
     private static string OnboardStatus(SmbiosStruct s)
     {
-        if (s.Length < 0x0A) return "";
-        byte status = s.ByteAt(0x09);
+        if (s.Length < 0x06) return "";
+        byte status = s.ByteAt(0x05);
         string state = (status & 0x80) != 0 ? "已啟用" : "已停用";
-        return status == 0 ? "" : $"{state}（0x{status:X2}）";
+        return $"{state}（0x{status:X2}）";
     }
 
     private static string DeviceTypeName(byte code) => code switch
     {
         0x01 => "其他", 0x02 => "未知", 0x03 => "顯示", 0x04 => "SCSI 控制器",
         0x05 => "乙太網路", 0x06 => "Token Ring", 0x07 => "音效",
-        0x08 => "PCMCIA 控制器", 0x09 => "VLB 控制器", 0x0A => "內部磁碟控制器",
-        0x0B => "SATA 控制器", 0x0C => "內部磁碟", 0x0D => "光碟",
-        0x0E => "磁帶", 0x0F => "快閃記憶體", 0x10 => "SAS 控制器",
-        0x11 => "1394 控制器", 0x12 => "USB 控制器", 0x13 => "光纖通道",
-        0x14 => "iSCSI", 0x15 => "SATA 埠", 0x16 => "SAS 埠", 0x17 => "NVM Express",
+        0x08 => "PATA 控制器", 0x09 => "SATA 控制器", 0x0A => "SAS 控制器",
+        0x0B => "無線網路", 0x0C => "藍牙", 0x0D => "WWAN",
+        0x0E => "eMMC", 0x0F => "NVM Express", 0x10 => "UFS 控制器",
         _ => $"型別 0x{code:X2}",
     };
 

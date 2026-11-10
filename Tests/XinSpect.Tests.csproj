@@ -29,6 +29,9 @@
     <ProjectReference Include="..\XinSpect.csproj" />
     <ProjectReference Include="..\XinSpect.Decoders\XinSpect.Decoders.csproj" />
     <Compile Include="..\XinSpectCli\CliLocalization.cs" Link="CliLocalization.cs" />
+    <Compile Include="..\XinSpectCli\Book.cs" Link="CliBook.cs" />
+    <Compile Include="..\XinSpectCli\Tui.cs" Link="CliTui.cs" />
+    <EmbeddedResource Include="..\docs\百科-v3.17.md" Link="docs\百科-v3.17.md" />
   </ItemGroup>
 
   <ItemGroup>

@@ -178,7 +178,7 @@ public static class NvmePowerDecoder
 
     /// <summary>
     /// 解 Get Features 0x0C 的資料區（32 筆 × 8 位元組）：
-    /// 位 23:8＝閒置門檻（ms）、位 27:24＝目標電源狀態。
+    /// 位 31:8＝閒置門檻（ms）、位 7:3＝目標電源狀態。
     /// </summary>
     public static List<NvmeApstRow> ApstTable(byte[] data, int stateCount)
     {
@@ -190,8 +190,8 @@ public static class NvmePowerDecoder
             rows.Add(new NvmeApstRow
             {
                 State = s,
-                IdleMs = (uint)((v >> 8) & 0xFFFF),
-                TargetState = (int)((v >> 24) & 0x1F),
+                IdleMs = (uint)((v >> 8) & 0xFFFFFF),
+                TargetState = (int)((v >> 3) & 0x1F),
             });
         }
         return rows;

@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
+using System.Globalization;
 using System.Text;
 
 namespace XinSpect;
@@ -838,7 +839,7 @@ public sealed class StorageSmartService : ObservableObject
 
     /// <summary>
     /// 現值對門檻評比。門檻 0＝SMART 規範「無門檻」，不參與評比（不猜）；
-    /// 現值以 SmartRow.RawValue 優先、退回解析 ValueText。
+    /// 現值僅使用 8-bit normalized ValueText，不使用 raw 計數器。
     /// </summary>
     public static IReadOnlyList<FailingNowRow> EvaluateFailingNow(IEnumerable<SmartRow> attrs,
         IReadOnlyDictionary<byte, byte> thresholds)
@@ -850,11 +851,14 @@ public sealed class StorageSmartService : ObservableObject
             if (!thresholds.TryGetValue(a.Id, out byte th) || th == 0) continue;
             // 審計 #28：門檻評比用 normalized 現值（ATA 規格），不是 48 位元 raw 值——
             // raw=0 的重配置扇區會誤判「現正低於門檻」，因為 normalized 100 > 門檻 5。
-            if (!long.TryParse(a.ValueText, out long normalized)) continue;
+            if (!TryNormalizedValue(a, out byte normalized)) continue;
             if (normalized <= th) failing.Add(new FailingNowRow(a.Id, a.Name, normalized, th));
         }
         return failing;
     }
+
+    internal static bool TryNormalizedValue(SmartRow row, out byte value) =>
+        byte.TryParse(row.ValueText, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
 
     /// <summary>NVMe WCTEMP 評比狀態。</summary>
     public enum WctempState { Normal, Warning, NotProvided }
@@ -863,16 +867,17 @@ public sealed class StorageSmartService : ObservableObject
     public sealed record WctempVerdict(WctempState State, int ThresholdC, int CompositeC);
 
     /// <summary>
-    /// NVMe 溫度門檻對照：WCTEMP 在 Identify Controller 偏移 0x10A（u16 LE，°C；0＝未提供）。
+    /// NVMe 溫度門檻對照：WCTEMP 在 Identify Controller 偏移 0x10A（u16 LE，Kelvin；0＝未提供）。
     /// 合成溫度 ≥ WCTEMP＝警告。
     /// </summary>
-    public static WctempVerdict EvaluateWctemp(int compositeTempC, byte[] identifyController)
+    public static WctempVerdict EvaluateWctemp(int? compositeTempC, byte[] identifyController)
     {
-        if (identifyController is null || identifyController.Length < 0x10C)
-            return new WctempVerdict(WctempState.NotProvided, 0, compositeTempC);
+        if (compositeTempC is null || identifyController is null || identifyController.Length < 0x10C)
+            return new WctempVerdict(WctempState.NotProvided, 0, compositeTempC ?? 0);
         ushort wctemp = BitConverter.ToUInt16(identifyController, 0x10A);
-        if (wctemp == 0) return new WctempVerdict(WctempState.NotProvided, 0, compositeTempC);
-        return new WctempVerdict(compositeTempC >= wctemp ? WctempState.Warning : WctempState.Normal, wctemp, compositeTempC);
+        if (wctemp == 0) return new WctempVerdict(WctempState.NotProvided, 0, compositeTempC.Value);
+        int thresholdC = wctemp - 273;
+        return new WctempVerdict(compositeTempC >= thresholdC ? WctempState.Warning : WctempState.Normal, thresholdC, compositeTempC.Value);
     }
 
     /// <summary>NVMe 健康紀錄的型別化快照;讀不到、逾時或長度不足回 <c>null</c>。</summary>

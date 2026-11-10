@@ -81,35 +81,36 @@ internal static class Book
     public static void ShowToc()
     {
         var parts = Sections.GroupBy(s => s.PartTitle).ToList();
-        // P4-27：文件以「## 第 N 部」分部；解析時第一群可能是前言（「（前言）」）——
-        // 原版把前言當「第 1 部」（真第 1 部變第 2 部），且 book 0 因 part>=1 不可達。
-        // 約定：有前言時前言＝第 0 部，其餘部號與文件一致；總數不含前言。
-        int offset = parts.Count > 0 && parts[0].Key == "（前言）" ? 1 : 0;
-        Console.WriteLine($"{Bold}曦覽百科 ・ 全書 {parts.Count - offset} 部{(offset == 1 ? "（另有前言＝第 0 部）" : "")} {Sections.Count} 節{Reset}");
+        Console.WriteLine($"{Bold}曦覽百科 ・ 全書 {parts.Count} 部 {Sections.Count} 節{Reset}");
         Console.WriteLine($"{Dim}用法：book <部號> 看該部節清單 ・ book <節號>（如 book 6.3）讀全文 ・ book <關鍵字> 搜節標題{Reset}");
         Console.WriteLine();
-        var rows = parts.Select((g, i) => new[]
+        var rows = parts.Select(g => new[]
         {
-            (i + 1 - offset).ToString(),
+            PartNumber(g.Key)?.ToString() ?? "—",
             Bold + g.Key + Reset,
             g.Count().ToString(),
         }).ToArray();
         Tui.Table(["#", "部", "節數"], rows);
         Console.WriteLine();
-        Console.WriteLine($"  {Dim}整本百科＝主倉庫 README.md（離線嵌入，不連網）；章節編號與文件目錄一致。{Reset}");
+        Console.WriteLine($"  {Dim}整本百科＝docs/百科-v3.17.md（離線可讀）；章節編號與文件目錄一致。{Reset}");
     }
 
-    /// <summary>列出某一部（依 1 起算序號）的所有節。</summary>
-    public static void ShowPart(int partIndex)
+    private static int? PartNumber(string title)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(title, @"^第\s*(\d+)\s*部");
+        return match.Success && int.TryParse(match.Groups[1].Value, out int number) ? number : null;
+    }
+
+    /// <summary>依文件標題的實際部號列出所有節，包含第 0 部。</summary>
+    public static void ShowPart(int partNumber)
     {
         var parts = Sections.GroupBy(s => s.PartTitle).ToList();
-        int offset = parts.Count > 0 && parts[0].Key == "（前言）" ? 1 : 0;
-        if (partIndex < 1 - offset || partIndex > parts.Count - offset)
+        var g = parts.FirstOrDefault(p => PartNumber(p.Key) == partNumber);
+        if (g is null)
         {
-            Console.WriteLine($"{Tui.SwissRed}沒有第 {partIndex} 部（全書共 {parts.Count - offset} 部{(offset == 1 ? "＋前言（第 0 部）" : "")}）。{Reset}");
+            Console.WriteLine($"{Tui.SwissRed}沒有第 {partNumber} 部（全書共 {parts.Count} 部）。{Reset}");
             return;
         }
-        var g = parts[partIndex + offset - 1];
         Console.WriteLine($"{Bold}{g.Key}{Reset}");
         Console.WriteLine();
         var rows = g.Select(s => new[] { s.Number, s.Title }).ToArray();
@@ -212,9 +213,8 @@ internal static class Book
             arg = arg[..^1];
         if (int.TryParse(arg, out int part) && !arg.Contains('.'))
         {
-            // 純數字：優先當部號；但若剛好也是節號（如 0），以節為準前先試部
-            var parts = Sections.GroupBy(s => s.PartTitle).ToList();
-            if (part >= 0 && part <= parts.Count) { ShowPart(part); return; }
+            ShowPart(part);
+            return;
         }
         if (arg.Contains('.') && arg.Split('.')[0].Length <= 2 && int.TryParse(arg.Split('.')[0], out _))
         {
