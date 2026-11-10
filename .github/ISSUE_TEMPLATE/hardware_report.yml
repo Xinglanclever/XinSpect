@@ -13,7 +13,7 @@ body:
     attributes:
       label: XinSpect 版本
       description: 主介面「關於」頁的版號。
-      placeholder: "3.23"
+      placeholder: "3.24"
     validations:
       required: true
 

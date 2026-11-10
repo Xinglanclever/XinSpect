@@ -29,7 +29,7 @@
     <StartupObject>XinSpectCli.Program</StartupObject>
     <AssemblyTitle>XinSpect Console（曦覽終端機・純文字相容版）</AssemblyTitle>
     <Product>曦覽 XinSpect</Product>
-    <Version>3.23</Version>
+    <Version>3.24</Version>
     <DefineConstants>XINSPECT_LEGACY</DefineConstants>
     <InvariantGlobalization>true</InvariantGlobalization>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>

@@ -774,6 +774,7 @@ public sealed class MainViewModel : ObservableObject
     public void Stop()
     {
         _pump?.Stop();
+        try { Net?.Dispose(); } catch { /* 解除網路變更事件，不影響其餘收尾 */ }
         try { Events.NoteAppStop(); } catch { /* 事件為附加功能 */ }
         try { History.Flush(); } catch { /* 未關閉的分鐘寫不進去只損失最後一分鐘 */ }
         try { SensorLog.StopLogging(); } catch { /* 停止記錄並關檔失敗不影響關閉 */ }

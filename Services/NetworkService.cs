@@ -10,12 +10,19 @@ namespace XinSpect;
 /// 以 System.Net.NetworkInformation 讀取網路介面卡靜態資訊，並每秒計算即時上/下行流量。
 /// 初始化時建立列（就地更新），之後 Refresh() 依累計位元組差值換算速率。
 /// </summary>
-public sealed class NetworkService : ObservableObject
+public sealed class NetworkService : ObservableObject, IDisposable
 {
     private sealed class Prev { public long Rx, Tx; public long Ticks; }
 
     private readonly Dictionary<string, Prev> _prev = new();
     private readonly Stopwatch _clock = Stopwatch.StartNew();
+    private readonly Func<NetworkInterface[]> _readInterfaces;
+    private readonly Func<long> _ticks;
+    private readonly bool _listenForChanges;
+    private Dictionary<string, NetworkInterface> _interfaces = new();
+    private long _inventoryTicks;
+    private int _inventoryDirty = 1;
+    private bool _disposed;
 
     public ObservableCollection<NetAdapterRow> Adapters { get; } = new();
     public MetricHistory TotalDown { get; } = new(90, "", null, "0");
@@ -26,71 +33,107 @@ public sealed class NetworkService : ObservableObject
     public string TotalDownText => NetAdapterRow.Rate(TotalDownBps);
     public string TotalUpText => NetAdapterRow.Rate(TotalUpBps);
 
-    public NetworkService()
+    public NetworkService() : this(NetworkInterface.GetAllNetworkInterfaces, null, true) { }
+
+    internal NetworkService(Func<NetworkInterface[]> readInterfaces, Func<long>? ticks = null,
+        bool listenForChanges = false)
     {
-        try { Build(); } catch { /* best-effort */ }
+        _readInterfaces = readInterfaces;
+        _ticks = ticks ?? (() => _clock.ElapsedTicks);
+        _listenForChanges = listenForChanges;
+        if (_listenForChanges)
+        {
+            NetworkChange.NetworkAddressChanged += OnAddressChanged;
+            NetworkChange.NetworkAvailabilityChanged += OnAvailabilityChanged;
+        }
+        RefreshInventory();
     }
 
-    private void Build()
+    internal void InvalidateInventory() => Interlocked.Exchange(ref _inventoryDirty, 1);
+    private void OnAddressChanged(object? sender, EventArgs e) => InvalidateInventory();
+    private void OnAvailabilityChanged(object? sender, NetworkAvailabilityEventArgs e) => InvalidateInventory();
+
+    private void RefreshInventory()
     {
-        foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+        Interlocked.Exchange(ref _inventoryDirty, 0);
+        NetworkInterface[] nics;
+        try { nics = _readInterfaces(); }
+        catch { InvalidateInventory(); return; }
+
+        var interfaces = new Dictionary<string, NetworkInterface>();
+        foreach (var nic in nics)
         {
             if (!Qualifies(nic)) continue;
-            var row = new NetAdapterRow(nic.Id, nic.Name)
+            interfaces[nic.Id] = nic;
+            var row = Adapters.FirstOrDefault(r => r.Id == nic.Id);
+            if (row is null)
             {
-                Description = nic.Description,
-                TypeText = TypeZh(nic.NetworkInterfaceType),
-                Mac = FormatMac(nic.GetPhysicalAddress()),
-                LinkSpeedText = nic.Speed > 0 ? $"{nic.Speed / 1_000_000.0:0} Mbps" : "—",
-            };
+                row = new NetAdapterRow(nic.Id, nic.Name)
+                {
+                    Description = nic.Description,
+                    TypeText = TypeZh(nic.NetworkInterfaceType),
+                    Mac = FormatMac(nic.GetPhysicalAddress()),
+                };
+                Adapters.Add(row);
+            }
+            row.LinkSpeedText = nic.Speed > 0 ? $"{nic.Speed / 1_000_000.0:0} Mbps" : "—";
             FillIps(nic, row);
             FillConfig(nic, row);
-            Adapters.Add(row);
 
-            // 以「開機至今累計位元組」作為基準，避免首次 Refresh() 將整段歷史流量除以極短時距，
-            // 誤報一筆遠超實際頻寬的虛假尖峰。讀不到統計時退回 0（首拍仍可能偏高，但屬少數例外）。
-            long rx0 = 0, tx0 = 0;
-            try { var st = nic.GetIPStatistics(); rx0 = st.BytesReceived; tx0 = st.BytesSent; }
-            catch (Exception ex) { Diag.Swallow("讀取網卡累計流量基準", ex, $"{row.Name} 首拍速率可能偏高"); }
-            _prev[nic.Id] = new Prev { Rx = rx0, Tx = tx0, Ticks = _clock.ElapsedTicks };
+            if (!_prev.ContainsKey(nic.Id))
+            {
+                try
+                {
+                    var st = nic.GetIPStatistics();
+                    _prev[nic.Id] = new Prev { Rx = st.BytesReceived, Tx = st.BytesSent, Ticks = _ticks() };
+                }
+                catch { /* 首次失敗就不建立基準；下一次成功僅建立基準，不把累計流量當速率 */ }
+            }
         }
+        _interfaces = interfaces;
+        _inventoryTicks = _ticks();
     }
 
     public void Refresh()
     {
+        if (_disposed) return;
+        // 流量統計是即時 API；介面列舉含 IP／DNS 組態，改由網路變更事件失效，並每 30 秒補查。
+        if (Volatile.Read(ref _inventoryDirty) != 0 ||
+            (_ticks() - _inventoryTicks) / (double)Stopwatch.Frequency >= 30)
+            RefreshInventory();
+
         double totalDown = 0, totalUp = 0;
-        NetworkInterface[] nics;
-        try { nics = NetworkInterface.GetAllNetworkInterfaces(); }
-        catch { return; }
-
-        var byId = nics.ToDictionary(n => n.Id, n => n);
-
         foreach (var row in Adapters)
         {
-            if (!byId.TryGetValue(row.Id, out var nic)) continue;
+            if (!_interfaces.TryGetValue(row.Id, out var nic))
+            {
+                row.DownBps = row.UpBps = 0;
+                _prev.Remove(row.Id);
+                continue;
+            }
 
             long rx, tx;
             try { var st = nic.GetIPStatistics(); rx = st.BytesReceived; tx = st.BytesSent; }
-            catch { continue; }
+            catch { row.DownBps = row.UpBps = 0; _prev.Remove(row.Id); continue; }
 
-            long now = _clock.ElapsedTicks;
-            if (_prev.TryGetValue(row.Id, out var p) && p.Ticks > 0)
+            long now = _ticks();
+            double down = 0, up = 0;
+            if (_prev.TryGetValue(row.Id, out var p))
             {
                 double secs = (now - p.Ticks) / (double)Stopwatch.Frequency;
-                if (secs > 0.05)
+                if (secs > 0.05 && rx >= p.Rx && tx >= p.Tx)
                 {
-                    double down = Math.Max(0, rx - p.Rx) / secs;
-                    double up = Math.Max(0, tx - p.Tx) / secs;
-                    row.DownBps = down;
-                    row.UpBps = up;
+                    down = (rx - p.Rx) / secs;
+                    up = (tx - p.Tx) / secs;
                     row.DownHistory.Push(down);
                     row.UpHistory.Push(up);
                     totalDown += down;
                     totalUp += up;
                 }
             }
+            row.DownBps = down;
+            row.UpBps = up;
             _prev[row.Id] = new Prev { Rx = rx, Tx = tx, Ticks = now };
-            FillIps(nic, row);
         }
 
         TotalDownBps = totalDown;
@@ -102,6 +145,17 @@ public sealed class NetworkService : ObservableObject
         OnPropertyChanged(nameof(TotalUpBps));
         OnPropertyChanged(nameof(TotalDownText));
         OnPropertyChanged(nameof(TotalUpText));
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        if (_listenForChanges)
+        {
+            NetworkChange.NetworkAddressChanged -= OnAddressChanged;
+            NetworkChange.NetworkAvailabilityChanged -= OnAvailabilityChanged;
+        }
     }
 
     // 虛擬 / 篩選偽介面的描述特徵：WFP LightWeight Filter、QoS 排程器、WAN Miniport、
