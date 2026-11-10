@@ -15,7 +15,7 @@
 ## 驗證
 
 - [ ] `dotnet build XinSpect.csproj` 綠（Bridge 內嵌鏈包含在內）
-- [ ] 本機實測：7,972 條 綠（`dotnet test`，數字以 `Tests/TestSuiteBaseline.cs` 為準；加了測試就要改基線）
+- [ ] 本機實測：7,973 條 綠（`dotnet test`，數字以 `Tests/TestSuiteBaseline.cs` 為準；加了測試就要改基線）
 - [ ] 若動了 Docs／README／Changelog：`ChangelogTests`＋`ReadmeStatsTests`＋`CommunityDocsTests` 綠
 - [ ] 若動了 Services／UI：在真機上跑過受影響的頁面，沒有只靠測試綠
 - [ ] 若動了驅動（.c／.h）：說明 testsigning 實機驗證狀態（沒驗就如實寫「未驗」）

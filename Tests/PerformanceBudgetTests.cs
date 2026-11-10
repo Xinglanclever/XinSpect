@@ -7,7 +7,7 @@ namespace XinSpect.Tests;
 /// <summary>
 /// A54 效能預算的契約：<b>預算是測試</b>——可重複量測的兩項（全套掃描編排／報告產生）真量真擋；
 /// 三個執行期指標（冷啟動／常駐／CPU 閒置）標 RuntimeOnly，測試釘「登記存在＋門檻未被放寬」，
-/// 實際量測由 SelfTelemetry 在應用程式內記錄（單元測試量它們必然不可重複——誠實界線）。
+/// 完整 App 的三項指標須另行量測；SelfTelemetry 目前只記採集代價，不能證明閒置 CPU 達標。
 /// SelfTelemetry：預設關閉（未啟用 Record 是 no-op）、匿名（只有數字與時間）、本機不上傳。
 /// </summary>
 public class PerformanceBudgetTests : IDisposable

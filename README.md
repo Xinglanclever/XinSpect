@@ -15,7 +15,7 @@
 ![版本](https://img.shields.io/badge/version-3.24-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-7972%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-7973%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 ![商業授權](https://img.shields.io/badge/license-%E5%95%86%E6%A5%AD%E6%8E%88%E6%AC%8A%E5%8F%AF%E8%AB%87-8B5CF6)
@@ -50,9 +50,9 @@
 | XAML 檔（含對話框與控制項） | **82** | `ls Views/*.xaml` |
 | 全站說明條目（圓圈問號） | **288** | `Nav/HelpCatalog.cs` 的 `Entries` 成員數 |
 | 服務檔 | **677** | `find Services -name '*.cs' \| wc -l` |
-| 全域 C# 檔 | **1,601** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`work/`、`publish-*/`、`.git/` |
+| 全域 C# 檔 | **1,602** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`work/`、`publish-*/`、`.git/` |
 | 版本紀錄筆數 | **129** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
-| 專案測試基線 | **7,972** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
+| 專案測試基線 | **7,973** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
 | CLI 指令（`Execute` case 標籤） | **43** | `grep -c 'case "' XinSpectCli/Program.cs`（--elevate 由 patch-05 新增；指令書詳解 43 條——mascot/refresh/language 補入目錄，見 `XinSpectCli/CommandBook.cs`） |
 | 內核組件 | **4** | WinRing0（借）／PawnIO（未接入）／BlueSquadron（防護・毛坯）／XsRegProbe（白名單唯讀探測） |
 | 外部審查發現 | **116** | `docs/審查報告-v3.17.md` 的編目條目（v3.18 增量審查另計 111 條編目，見同目錄） |

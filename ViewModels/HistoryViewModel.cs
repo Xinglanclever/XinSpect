@@ -271,7 +271,7 @@ public sealed class HistoryViewModel : ObservableObject
     /// <summary>每一拍由檢視呼叫：自動跟隨時把時間窗右緣推到現在。</summary>
     public void Tick()
     {
-        if (!_follow) return;
+        if (!_follow || _reloadRunning) return;
         var span = _to - _from;
         _to = DateTime.UtcNow;
         _from = _to - span;

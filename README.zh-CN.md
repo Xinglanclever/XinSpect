@@ -14,7 +14,7 @@
 ![版本](https://img.shields.io/badge/version-3.24-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-7972%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-7973%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 ![商业授权](https://img.shields.io/badge/license-%E5%95%86%E4%B8%9A%E6%8E%88%E6%9D%83%E5%8F%AF%E8%B0%88-8B5CF6)
@@ -391,17 +391,17 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 | 类别 | 数量 | 数法（在仓库根运行） |
 |---|---|---|
-| C# 源文件 | 1,601 档／315,050 行 | 走访所有 `*.cs`，排除 `bin/`、`obj/`、`publish-*/`、`.git/`、`work/`、`TestResults/` |
+| C# 源文件 | 1,602 档／315,074 行 | 走访所有 `*.cs`，排除 `bin/`、`obj/`、`publish-*/`、`.git/`、`work/`、`TestResults/` |
 | 服务层文件 | 677 档 | `Services/` 之下递归的 `*.cs`（不含 bin／obj） |
 | 接口页（XAML） | 82 页 | `ls Views/*.xaml` |
-| 测试档 | 646 档 | `ls Tests/*.cs` |
-| 测试方法 | 6,620 个 `[Fact]`＋272 个 `[Theory]` | 逐档正则计数 |
-| 运行期测试案例 | 7,972（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
+| 测试档 | 647 档 | `ls Tests/*.cs` |
+| 测试方法 | 6,621 个 `[Fact]`＋272 个 `[Theory]` | 逐档正则计数 |
+| 运行期测试案例 | 7,973（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
 | 公开文档 | 51 份 `docs/*.md`＋6 份 `docs/spec/*.md` | `ls docs/*.md`、`ls docs/spec/*.md` |
 | 事实键目录 | 1,178 键／157 个前缀 | 解析 `FactKeyCatalog.Keys` |
 | 动态键家族 | 69 个 | 解析 `FactKeyDynamicCatalog.Families` |
 
-**怎么读这张表。** 第一个有用的比例是「6,620 个 `[Fact]` 对 272 个 `[Theory]`」——`[Theory]` 少，说明这个项目的测试风格偏向「一条测试讲一个具体事实」，而不是用数据驱动把同一个断言拷贝很多遍。第二个比例是「646 个测试档对 677 个服务档」：几乎每个服务档都有一个对应的测试档，这是刻意的，因为这个项目最贵的缺陷类别是「服务写完了但没有接进生产路径」（见第十九章 D-16），而对应测试档的存在至少让「写了却没人调用」有机会被看见。
+**怎么读这张表。** 第一个有用的比例是「6,621 个 `[Fact]` 对 272 个 `[Theory]`」——`[Theory]` 少，说明这个项目的测试风格偏向「一条测试讲一个具体事实」，而不是用数据驱动把同一个断言拷贝很多遍。第二个比例是「647 个测试档对 677 个服务档」：几乎每个服务档都有一个对应的测试档，这是刻意的，因为这个项目最贵的缺陷类别是「服务写完了但没有接进生产路径」（见第十九章 D-16），而对应测试档的存在至少让「写了却没人调用」有机会被看见。
 
 **这张表不能证明什么。** 行数不是品质，测试档数不是覆盖率，1,178 个事实键也不是 1,178 个正确的答案。规模数字唯一的用途是给读者一个「值不值得往下读」的判断依据：一份 25 章的文档如果背后只有三千行程序，那大概是包装；如果有二十五万行，那么第二章的每一条原则背后都真的有东西。
 
