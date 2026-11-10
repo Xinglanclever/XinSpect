@@ -266,6 +266,16 @@ try {
         }
         if ($new -ne $t) { WriteUtf8 $f $new $r[1]; $changed += $f; Write-Host "$f`: byte counts updated" }
     }
+
+    # Updating byte counts changes the Markdown source after the test suite has run.
+    # Keep the embedded/offline encyclopedia in sync before committing release docs.
+    Write-Host '==> regenerate and verify self-contained documentation'
+    & python Tools\gen-docs-html.py
+    if ($LASTEXITCODE -ne 0) { Fail 'docs HTML generation failed' }
+    & python Tools\gen-docs-html.py --check
+    if ($LASTEXITCODE -ne 0) { Fail 'docs HTML is not synchronized after generation' }
+    if (git status --porcelain -- '百科.html' '手冊.html') { $changed += @('百科.html', '手冊.html') }
+
     if ($changed.Count -gt 0) {
         git add -- @($changed) | Out-Null
         git commit -m "docs：README 主程式位元組數（含全部資產）改為 v$Version 發佈實測值" | Out-Null

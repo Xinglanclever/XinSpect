@@ -11,7 +11,7 @@ public sealed class EnterpriseBaselineCliTests : IDisposable
 {
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "XinSpect-enterprise-baseline-" + Guid.NewGuid().ToString("N"));
     private readonly ECDsa _signer = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-    private static readonly DateTimeOffset At = new(2026, 11, 9, 1, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset At = DateTimeOffset.UtcNow;
     private const string SigningPassword = "fixture-only-password";
     private string PrivatePem => _signer.ExportEncryptedPkcs8PrivateKeyPem(SigningPassword,
         new PbeParameters(PbeEncryptionAlgorithm.Aes256Cbc, HashAlgorithmName.SHA256, 100_000));

@@ -550,7 +550,7 @@ internal static class Install
         try
         {
             HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
-            req.UserAgent = "XinSpectDeploy/3.21";
+            req.UserAgent = "XinSpectDeploy/3.22";
             req.Timeout = 6000;
             req.ReadWriteTimeout = 6000;
             req.Proxy = WebRequest.GetSystemWebProxy();
@@ -831,7 +831,7 @@ internal static class Install
         try
         {
             HttpWebRequest req = (HttpWebRequest)WebRequest.Create(GitHubBase + "XinSpect.exe");
-            req.UserAgent = "XinSpectDeploy/3.21";
+            req.UserAgent = "XinSpectDeploy/3.22";
             req.Method = "HEAD";
             req.AllowAutoRedirect = false;   // 只取第一跳的 Location，見上
             req.Timeout = 6000;
@@ -925,7 +925,7 @@ internal static class Install
         try
         {
             HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
-            req.UserAgent = "XinSpectDeploy/3.21";
+            req.UserAgent = "XinSpectDeploy/3.22";
             req.AllowAutoRedirect = true;
             req.Timeout = 90000;
             req.ReadWriteTimeout = 90000;

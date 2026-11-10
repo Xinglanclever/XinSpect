@@ -2027,7 +2027,7 @@ public static class EnglishStrings
         ["可能是 M.2 的插槽（BIOS 未標型別）"] = "Slots that may be M.2 (type not identified by BIOS)",
         ["域＝鍵的第一段（ac.dmar.summary 的域是 ac）。「本輪量到」只算真的讀到值的那幾把。"] = "A domain is the first segment of a key (the domain of ac.dmar.summary is ac). “Measured this run” counts only keys that returned an actual value.",
         ["清除瀏覽資料（Cookie、快取、本機儲存）"] = "Clear browsing data (cookies, cache and local storage)",
-        ["版本 3.21 ・ 交叉論證 ・ 便攜單一執行檔"] = "Version 3.21 ・ Cross-validated ・ Portable single-file executable",
+        ["版本 3.22 ・ 企業離線基準 ・ 便攜單一執行檔"] = "Version 3.22 ・ Enterprise offline baselines ・ Portable single-file executable",
         ["發送 JSON 指令"] = "Send JSON command",
         ["硬體與安全事件時間軸 (TIMELINE)"] = "Hardware and security event timeline",
         ["重新掃描 PCI"] = "Rescan PCI",

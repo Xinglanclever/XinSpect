@@ -11,7 +11,7 @@
 
 A free, open-source PC toolbox for Windows with ring0 kernel-level access: it can read and write hardware registers (MSR, PCI configuration space, SMBus, and more) through its kernel driver. Ships as a single portable executable. Read-only by default; the few operations that write are gated behind explicit consent and labelled with their risks. It collects and transmits no user data.
 
-![Version](https://img.shields.io/badge/version-3.21-4C8DFF)
+![Version](https://img.shields.io/badge/version-3.22-4C8DFF)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
 ![Tests](https://img.shields.io/badge/tests-7949%20passed-3FB950)
@@ -23,7 +23,7 @@ The name means "morning light, seen at a glance"; "Spect" comes from the Latin *
 
 This is the extended documentation. Every feature lists its data source (which register, which WMI class, which API), its decoding basis, what it displays, and **what it deliberately does not do**. Jargon is explained in parentheses on first use. The document itself is guarded by machine checks (chapter 13): the version, test count, download links, byte sizes, and the first changelog entry all fail the build if they fall behind.
 
-> **Document scope (v3.21).** The Traditional Chinese edition ([README.md](README.md)) is the reference text and was expanded in this release to roughly 80,000 characters. The sections added in that pass (3.7–3.12, 6.11–6.18, 7.4–7.9, 8.1–8.5, 9.1–9.4, 10.1–10.4, 11.4–11.7, 12.1–12.3, 13.3–13.7, 14.1–14.4, 15.1–15.3, 16.2–16.7, 17.12–17.18, 18.6–18.8, 19.6–19.9, 20.6–20.10, 21.8–21.13) and appendices F–T exist only in Chinese for now. This English edition remains a complete translation of the 25 chapters and appendices A–E, with a condensed changelog; where the two disagree, the Chinese text is correct.
+> **Document scope (v3.22).** The Traditional Chinese edition ([README.md](README.md)) is the reference text and was expanded in this release to roughly 80,000 characters. The sections added in that pass (3.7–3.12, 6.11–6.18, 7.4–7.9, 8.1–8.5, 9.1–9.4, 10.1–10.4, 11.4–11.7, 12.1–12.3, 13.3–13.7, 14.1–14.4, 15.1–15.3, 16.2–16.7, 17.12–17.18, 18.6–18.8, 19.6–19.9, 20.6–20.10, 21.8–21.13) and appendices F–T exist only in Chinese for now. This English edition remains a complete translation of the 25 chapters and appendices A–E, with a condensed changelog; where the two disagree, the Chinese text is correct.
 
 ---
 
@@ -258,15 +258,15 @@ hardware / firmware / OS ──► fact collection (*FactsService)
 
 | File | Size | Purpose |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpect.exe) | 35.66 MB | Main program (Blue Squadron guard included) |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpectConsole.exe) | 100,413,845 bytes | XinSpect Console (CLI). Runs standalone and is also launched by the main program's console bridge; larger because it bundles the .NET 10 runtime (for Windows 11 / Server 2025) |
-| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpectConsole-legacy.exe) | 100,409,837 bytes | XinSpect Console (CLI) **plain-text legacy build** for Windows 10 / Windows Server 2016, 2019, 2022 - no colors, no box positioning; the facts/book/help features are identical |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/BlueSquadronBridge.exe) | 6.5 MB | Standalone guard process |
-| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpect-full.exe) | 210,762,066 bytes | Main program, bundled-runtime build: ships the .NET 10 Desktop Runtime, nothing to install (same features as XinSpect.exe) |
-| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpectConsole-nort.exe) | 66,048,664 bytes | XinSpect Console, Windows 11 / Server 2025, no runtime: requires .NET 10 Desktop Runtime |
-| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpectConsole-legacy-nort.exe) | 66,044,656 bytes | XinSpect Console, Windows 10 / 2016/2019/2022, no runtime: plain-text UI, requires .NET 10 Desktop Runtime |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XinSpectDeploy.exe) | 29,696 bytes | One-click installer. First pick what to install: **A** the main program (GUI), **B** the XinSpect Console; then pick a source with 1/2/3 (GitHub / Drive / accelerator node); shows a progress bar, speed and time remaining while downloading |
-| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.21/XsRegProbe.sys) | 24,064 bytes | XsRegProbe kernel probe driver (whitelisted read-only MSR/MMIO, the only "excellent"-graded component in the project audit). This rebuild **includes the slot-base fix** (slots start at request header +8 — found by the round-3 deep audit; v3.18 shipped the pre-fix binary). Not Microsoft-signed: the app installs it via an elevated session to `ProgramData\XinSpect\Driver\`; manual loading requires testsigning |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpect.exe) | 35.66 MB | Main program (Blue Squadron guard included) |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole.exe) | 100,413,845 bytes | XinSpect Console (CLI). Runs standalone and is also launched by the main program's console bridge; larger because it bundles the .NET 10 runtime (for Windows 11 / Server 2025) |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole-legacy.exe) | 100,409,837 bytes | XinSpect Console (CLI) **plain-text legacy build** for Windows 10 / Windows Server 2016, 2019, 2022 - no colors, no box positioning; the facts/book/help features are identical |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/BlueSquadronBridge.exe) | 6.5 MB | Standalone guard process |
+| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpect-full.exe) | 210,762,066 bytes | Main program, bundled-runtime build: ships the .NET 10 Desktop Runtime, nothing to install (same features as XinSpect.exe) |
+| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole-nort.exe) | 66,048,664 bytes | XinSpect Console, Windows 11 / Server 2025, no runtime: requires .NET 10 Desktop Runtime |
+| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole-legacy-nort.exe) | 66,044,656 bytes | XinSpect Console, Windows 10 / 2016/2019/2022, no runtime: plain-text UI, requires .NET 10 Desktop Runtime |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectDeploy.exe) | 29,696 bytes | One-click installer. First pick what to install: **A** the main program (GUI), **B** the XinSpect Console; then pick a source with 1/2/3 (GitHub / Drive / accelerator node); shows a progress bar, speed and time remaining while downloading |
+| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XsRegProbe.sys) | 24,064 bytes | XsRegProbe kernel probe driver (whitelisted read-only MSR/MMIO, the only "excellent"-graded component in the project audit). This rebuild **includes the slot-base fix** (slots start at request header +8 — found by the round-3 deep audit; v3.18 shipped the pre-fix binary). Not Microsoft-signed: the app installs it via an elevated session to `ProgramData\XinSpect\Driver\`; manual loading requires testsigning |
 
 The exact byte count of the main executable is published in the Traditional Chinese README and verified after each release; the MB figure here is rounded.
 
@@ -1163,10 +1163,11 @@ Three recurring patterns:
 
 ## 22. Version history
 
-The ledger contains 126 entries (122 dated releases plus four pre-repository stages) from 2026-08-27 to 2026-11-09. The complete itemised ledger lives in the Traditional Chinese [README.md](README.md#二十二版本沿革) and in the About page; the table below lists every release from 2.60 onward with its one-line summary, followed by the earlier milestones grouped by era.
+The ledger contains 127 entries (123 dated releases plus four pre-repository stages) from 2026-08-27 to 2026-11-10. The complete itemised ledger lives in the Traditional Chinese [README.md](README.md#二十二版本沿革) and in the About page; the table below lists every release from 2.60 onward with its one-line summary, followed by the earlier milestones grouped by era.
 
 | Version | Date | Summary |
 |---|---|---|
+| 3.22 | 2026-11-10 | Enterprise offline baselines and hardware source contracts |
 | 3.21 | 2026-11-09 | Audit round 2: sweep patches 29-43 applied, audit list closed out, dossier merge |
 | 3.20 | 2026-11-08 | Build-repair & full audit: all three projects compile again, P0-4 applied, 30+ fixes across CLI/desktop/services |
 | 3.18 | 2026-11-07 | Audit remediation: 116 findings fixed + honest power gate + on-demand elevation |
@@ -1395,4 +1396,4 @@ Time-capsule creation and comparison are written to `%ProgramData%\XinSpect\Audi
 
 ---
 
-**About this document**: it corresponds to XinSpect v3.21 (2026-11-09). The Traditional Chinese version is the master, the Simplified Chinese version is generated from it with OpenCC (tw2sp), and this English version is a full translation sharing the same facts and guards. If a term in the Simplified version reads oddly, that is the converter's choice, not the original meaning; the Traditional Chinese master is authoritative.
+**About this document**: it corresponds to XinSpect v3.22 (2026-11-10). The Traditional Chinese version is the master, the Simplified Chinese version is generated from it with OpenCC (tw2sp), and this English version is a full translation sharing the same facts and guards. If a term in the Simplified version reads oddly, that is the converter's choice, not the original meaning; the Traditional Chinese master is authoritative.

@@ -51,6 +51,21 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "3.22",
+            Date = "2026-11-10",
+            Title = "企業離線基準與硬體來源契約",
+            Items =
+            [
+                "企業離線基準套件：ECDSA P-256 簽章、預先信任公鑰、嚴格 UTF-8 與大小上限；端點先驗簽再讀快照，結果分為 Satisfied、NotSatisfied 與 Unverifiable，不輸出硬體值。",
+                "CLI 企業基準流程：管理端以 stdin 密碼簽署政策，端點以 --trusted-key 評估快照；退出碼、輸入覆寫防護與敏感值界線納入測試。",
+                "硬體來源契約：新增來源 descriptor、權限需求、逾時／取消能力與每來源執行結果；缺報鍵保持 Unknown，例外與逾時明確標為 ReadError，衝突來源不投票也不合併。",
+                "CLI 在地化：支援繁體／簡體語言選項；JSON、SARIF、JUnit、CEF 與 OTel 等機器輸出保持跨語系穩定。",
+                "可靠性修正：同步裝置探測改用 LongRunning 執行緒，來源取消可立即中斷等待，來源描述欄位與敏感度由契約守住，Unknown 事實可安全往返快照。",
+                "驗證與文件：完整回歸 7,949 passed / 0 failed / 0 skipped；README、百科、內嵌 HTML 與下載矩陣同步更新。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "3.21",
             Date = "2026-11-09",
             Title = "深審第二批修正版：第三輪掃掠 15 補丁落地＋審計清單收口＋卷宗合併",
