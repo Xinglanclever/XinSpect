@@ -1,16 +1,17 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Media;
+using OpenccNetLib;
 
 namespace XinSpect;
 
 /// <summary>
-/// 全域語言服務：繁體↔簡體中文。使用 Windows 核心的 LCMapStringEx，不依賴外部字典。
+/// 全域語言服務：繁體↔簡體中文。桌面與 CLI 共用 OpenCC 詞組轉換及產品術語覆寫。
 /// </summary>
 /// <remarks>
 /// <para>
@@ -26,16 +27,17 @@ namespace XinSpect;
 /// </remarks>
 public static class LanguageService
 {
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern int LCMapStringEx(
-        string lpLocaleName, uint dwMapFlags,
-        string lpSrcStr, int cchSrc,
-        char[]? lpDestStr, int cchDest,
-        IntPtr lpVersionInformation, IntPtr lpReserved, IntPtr sortHandle);
-
-    private const uint LCMAP_SIMPLIFIED_CHINESE = 0x02000000;
-    private const uint LCMAP_TRADITIONAL_CHINESE = 0x04000000;
-    private const string LOCALE_NAME_ZH = "zh";
+    private static readonly Lazy<Opencc> TraditionalToSimplified = new(
+        () => new Opencc(OpenccConfig.Tw2Sp, isFrozen: true),
+        LazyThreadSafetyMode.ExecutionAndPublication);
+    private static readonly Lazy<Opencc> SimplifiedToTraditional = new(
+        () => new Opencc(OpenccConfig.S2Twp, isFrozen: true),
+        LazyThreadSafetyMode.ExecutionAndPublication);
+    private static readonly Lazy<Encoding> Big5Encoding = new(() =>
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        return Encoding.GetEncoding(950, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
+    }, LazyThreadSafetyMode.ExecutionAndPublication);
 
     private static bool _simplified;
     private static bool _isEnglish;
@@ -95,7 +97,7 @@ public static class LanguageService
         settings.IsEnglish = _isEnglish;
         if (Shell.Main is { } main)
         {
-            // 兩種模式都走同一棵樹：簡體由 LCMapStringEx 轉，英語由 FromOriginal 的翻譯表分支轉。
+            // 兩種模式都走同一棵樹：簡體由共用 OpenCC 服務轉，英語由 FromOriginal 的翻譯表分支轉。
             ConvertVisualTree(main, _simplified);
             main.RebuildNavIfNeeded();
         }
@@ -140,7 +142,7 @@ public static class LanguageService
     /// 複合字串的翻譯：狀態列是「就緒 ・ 每秒更新中 ・ 深度規格已讀取 ・ 啟動耗時 2.6 秒」
     /// 這樣拼出來的，整串查表一定查不到。這裡按「 ・ 」切開逐段查，段尾帶數字時
     /// （「啟動耗時 2.6 秒」）取最長前綴查表、數字與單位原樣接回。
-    /// 簡體模式不需要這套——LCMapStringEx 逐字轉換本來就吃得下整串。
+    /// 簡體模式不需要這套——共用轉換服務可以直接處理整串。
     /// </summary>
     public static string TComposite(string? text)
     {
@@ -169,34 +171,26 @@ public static class LanguageService
         return string.Join(" ・ ", parts);
     }
 
-    /// <summary>繁體→簡體：先查詞組表（「記憶體」→「内存」），再讓 Windows 處理剩下的逐字轉換。</summary>
+    /// <summary>繁體→簡體：先套用產品硬體詞，再以 OpenCC 台灣繁體詞組配置轉換。</summary>
     public static string ToSimplified(string text)
     {
         if (string.IsNullOrEmpty(text)) return text ?? "";
-        // 先替換技術用語（LCMapStringEx 會把「記憶體」變成「记忆体」而不是「内存」）
         text = ZhTerms.ApplyToSimp(text);
-        // 再讓 Windows 處理剩下的逐字繁→簡
-        int len = LCMapStringEx(LOCALE_NAME_ZH, LCMAP_SIMPLIFIED_CHINESE,
-            text, text.Length, null, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
-        if (len <= 0) return text;
-        var buf = new char[len];
-        int written = LCMapStringEx(LOCALE_NAME_ZH, LCMAP_SIMPLIFIED_CHINESE,
-            text, text.Length, buf, len, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
-        return new string(buf, 0, written > 0 ? written : len);   // 用實際寫入長度，絕不夾帶結尾 NUL
+        return TraditionalToSimplified.Value.Convert(text);
     }
 
-    /// <summary>簡體→繁體：先查反向詞組表，再讓 Windows 處理逐字轉換。</summary>
+    /// <summary>只在原始位元組邊界嚴格解碼 Big5；無效序列會丟例外，不靜默變成亂碼。</summary>
+    public static string DecodeBig5(ReadOnlySpan<byte> bytes) => Big5Encoding.Value.GetString(bytes);
+
+    /// <summary>Big5 位元組 → Unicode → OpenCC／產品詞庫 → 簡體 Unicode。</summary>
+    public static string Big5ToSimplified(ReadOnlySpan<byte> bytes) => ToSimplified(DecodeBig5(bytes));
+
+    /// <summary>簡體→繁體：先套用產品詞組，再用 OpenCC 簡體至台灣繁體配置。</summary>
     public static string ToTraditional(string text)
     {
         if (string.IsNullOrEmpty(text)) return text ?? "";
         text = ZhTerms.ApplyToTrad(text);
-        int len = LCMapStringEx(LOCALE_NAME_ZH, LCMAP_TRADITIONAL_CHINESE,
-            text, text.Length, null, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
-        if (len <= 0) return text;
-        var buf = new char[len];
-        int written = LCMapStringEx(LOCALE_NAME_ZH, LCMAP_TRADITIONAL_CHINESE,
-            text, text.Length, buf, len, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
-        return new string(buf, 0, written > 0 ? written : len);   // 用實際寫入長度，絕不夾帶結尾 NUL
+        return SimplifiedToTraditional.Value.Convert(text);
     }
 
     // 原文保存：第一次轉換某屬性時把原文（XAML 裡的繁體）存起來，之後永遠從原文出發轉換——

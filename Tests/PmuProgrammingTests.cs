@@ -8,6 +8,7 @@ namespace XinSpect.Tests;
 /// **絕不碰 PMI 位元**；每輪「啟用→讀回→工作量→讀計數→還原→讀回確認」，三輪聚合。
 /// 同意閘門（未同意丟例外）、還原在 finally 保證、原值非零時用 OR 不用覆寫。
 /// </summary>
+[Collection(HardwareOperationPolicyCollection.Name)]
 public class PmuProgrammingTests
 {
     private const uint FixedCtrCtrl = 0x38D;
@@ -22,6 +23,7 @@ public class PmuProgrammingTests
     [Fact]
     public void 多輪驗證_啟用讀回_計數器活動_還原確認逐輪成立()
     {
+        using var policy = new EnabledHighRiskPolicy();
         var msr = new FakeMsr();
         var rounds = XinSpect.PmuProgrammingService.RunConsentedVerification(
             userConsent: true, msr: msr, rounds: 3, workload: () => { for (int i = 0; i < 1000; i++) ; });
@@ -40,6 +42,7 @@ public class PmuProgrammingTests
     [Fact]
     public void 多輪驗證_原值非零用OR不覆寫_其他計數器使能位保留()
     {
+        using var policy = new EnabledHighRiskPolicy();
         var msr = new FakeMsr();
         msr.Registers[FixedCtrCtrl] = 0x0C;    // 假設固定計數器 1 已被別人啟用（bit2/3）
         var rounds = XinSpect.PmuProgrammingService.RunConsentedVerification(
@@ -52,6 +55,7 @@ public class PmuProgrammingTests
     [Fact]
     public void 多輪驗證_MSR不可用與無PMU如實三態()
     {
+        using var policy = new EnabledHighRiskPolicy();
         var noRing0 = XinSpect.PmuProgrammingService.RunConsentedVerification(
             userConsent: true, msr: new FakeMsr { Available = false });
         Assert.All(noRing0, r => Assert.False(r.EnableReadbackOk));
@@ -92,5 +96,22 @@ public class PmuProgrammingTests
             Registers[index] = value;
             return true;
         }
+    }
+
+    private sealed class EnabledHighRiskPolicy : IDisposable
+    {
+        public EnabledHighRiskPolicy()
+        {
+            Settings = new SettingsService(loadFromDisk: false)
+            {
+                AdvancedDiagnosticsEnabled = true,
+                HighRiskHardwareOperationsEnabled = true,
+            };
+            HardwareOperationGate.Bind(Settings);
+        }
+
+        public SettingsService Settings { get; }
+
+        public void Dispose() => HardwareOperationGate.Bind(null);
     }
 }

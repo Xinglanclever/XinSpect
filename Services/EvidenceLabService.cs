@@ -72,7 +72,7 @@ public sealed class EvidenceLabService : ObservableObject
         // 包一層裝飾器之後全部走同一次列舉——**這是本次唯一改動「讀幾次」的地方**，
         // 各服務的簽名一個都沒動（它們本來就只該知道「有一份表清單」，不該管清單怎麼來）。
         source = new OnceAcpiTableSource(source);
-        AcpiFacts = AcpiService.Collect(source, acpiAt)
+        var acpiFacts = AcpiService.Collect(source, acpiAt)
             // FW-024 FPDT：同一份表來源，另外解 POST 階段時長（見 AcpiFpdtFactsService 的版面出處）。
             .Concat([AcpiFpdtFactsService.Collect(source, acpiAt)])
             // ULTIMATE-1000 階段二：這三張表共用同一個來源，所以接在同一次讀取上，
@@ -100,28 +100,17 @@ public sealed class EvidenceLabService : ObservableObject
             // **「認得」不等於「能解壓」**——所以語意拆成 supported（認得）
             // 與 decompressed（本次遇到什麼）兩把鍵。
             .Concat(UefiCompressionFactsService.Collect(acpiAt))
-            // P2-092／P2-093：EC 的界線與存在性。
-            // **不新增讀取**——存在性由既有的逐表列舉（acpi.table.*）間接得知，
-            // 而界線鍵什麼都不測，它只說出「本專案不碰 EC 埠」。
-            //
-            // **「沒有 ECDT」與「沒有 EC」是不同的斷言**：ECDT 是可選的表，
-            // ACPI 規格允許以 DSDT 裡的 PNP0C09 描述 EC 而不提供 ECDT。
-            //
-            // ═══ 這裡原本是「讀兩次」，而它已經被修掉了 ═══
-            //
-            // 第一版我在這裡**又呼叫了一次 AcpiService.Collect** 來拿簽章清單——
-            // 那與 TpmFactsService 那處同型，而兩處我都如實標記過。
-            //
-            // **而這一次我沒有只標記，而是把它修掉**：簽章清單現在由
-            // AcpiTableService 自己產出（ac.tables.signatures），
-            // 與 acpi.table.* **來自同一次 source.ReadAll()**——
-            // 所以下面讀的是已經在那份結果裡的事實，不是第二次列舉。
-            .Concat(EmbeddedControllerFactsService.Collect(acpiAt,
-                AcpiService.Collect(source, acpiAt)
-                    .Where(f => f.Key == "ac.tables.signatures")
-                    .SelectMany(f => f.Value.Split('、', StringSplitOptions.RemoveEmptyEntries))
-                    .ToList()))
             .ToList();
+
+        // EC 存在性使用本次 ACPI 簽章清單與 Windows PnP 的 PNP0C09 枚舉；不讀 EC 埠或 RAM。
+        HardwareFact? signaturesFact = acpiFacts.FirstOrDefault(f => f.Key == "ac.tables.signatures");
+        IReadOnlyList<string>? signatures = signaturesFact is null || signaturesFact.NumericValue is null
+            ? null
+            : signaturesFact.NumericValue == 0
+                ? Array.Empty<string>()
+                : signaturesFact.Value.Split('、', StringSplitOptions.RemoveEmptyEntries);
+        AcpiFacts = [.. acpiFacts, .. EmbeddedControllerFactsService.Collect(
+            acpiAt, signatures, EmbeddedControllerFactsService.ReadPnpState())];
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 

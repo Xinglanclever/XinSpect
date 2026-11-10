@@ -64,7 +64,7 @@ public sealed class AmdSmuService
         public bool WritePci(byte bus, byte dev, byte fn, uint reg, uint value)
         {
             using var b = WinRing0Bridge.Create();
-            return b.PciWriteAvailable && b.WritePciConfig(bus, dev, fn, reg, value);
+            return b.PciWriteAvailable && b.WritePciForReadProtocol(bus, dev, fn, reg, value);
         }
 
         public string CpuVendor()

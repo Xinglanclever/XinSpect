@@ -140,22 +140,15 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
         }
 
         await Task.Delay(3000);  // 讓 PlatformTrust、CpuSecurity、DriverAudit 等先跑完
-        try
-        {
-            Posture.Refresh(vm);
-            BridgeStatus = "User-mode 偵測就緒（Phase 1）";
-        }
-        catch
-        {
-            BridgeStatus = "初始化失敗——安全評估為附加功能，不影響其他頁面。";
-        }
 
-        // Phase 2：啟動 Bridge 進程（開關關閉時只做唯讀態勢評估）
+        // 姿態評估由安全頁 OnActivated 觸發；不在每次啟動時額外掃描整份 WMI/登錄表面。
         if (!_bridgeEnabled)
         {
-            BridgeStatus = "守護進程已關閉（唯讀態勢評估照常）";
+            BridgeStatus = "守護進程已關閉（安全態勢於開啟本頁時評估）";
             return;
         }
+
+        BridgeStatus = "守護進程啟動中；安全態勢於開啟本頁時評估";
         await Task.Run(() => TryStartBridge()).ConfigureAwait(false);
     }
 

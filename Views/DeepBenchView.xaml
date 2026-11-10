@@ -8,7 +8,7 @@
             <StackPanel Margin="2,0,0,10">
                 <local:SectionHead Text="深測中心" HelpKey="deepbench/深測中心"/>
                 <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
-                           Text="同一場 Run Session 的 CPU、拓樸、記憶體、GPU 與儲存深測。原 38 項全量登記；可執行與延後項目都會攤開，不把未做過的事說成量測。"/>
+                           Text="同一場 Run Session 的 CPU、拓樸、記憶體、GPU 與儲存深測。44 項全量目錄依 MSDT、HEDT、MODT 或伺服器／工作站平台聚焦；未支援項目如實保留狀態。"/>
             </StackPanel>
 
             <Border Style="{StaticResource Card}" Margin="0,0,0,12">
@@ -45,7 +45,16 @@
                         </StackPanel>
                     </Grid>
 
-                    <UniformGrid Columns="3" Margin="0,0,0,10">
+                    <UniformGrid Columns="2" Margin="0,0,0,10">
+                        <StackPanel Margin="0,0,10,0">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="平台靶向套件"/>
+                            <ComboBox ItemsSource="{Binding TargetOptions}"
+                                      SelectedValuePath="Id"
+                                      SelectedValue="{Binding SelectedTargetId, UpdateSourceTrigger=PropertyChanged}"
+                                      DisplayMemberPath="Title" IsEnabled="{Binding CanStart}"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding SelectedTarget.Platforms}"
+                                       TextWrapping="Wrap" Margin="0,3,0,0"/>
+                        </StackPanel>
                         <StackPanel Margin="0,0,10,0">
                             <TextBlock Style="{StaticResource FieldLabel}" Text="目前檔案"/>
                             <TextBlock Style="{StaticResource FieldValue}" Text="{Binding SelectedProfile}"/>
@@ -85,7 +94,7 @@
 
             <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                 <StackPanel>
-                    <local:SectionHead Text="38 項全量目錄" HelpKey="deepbench/38 項全量目錄"/>
+                    <local:SectionHead Text="44 項全量目錄" HelpKey="deepbench/44 項全量目錄"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
                                Text="Implemented / Integrated 是本期真的可執行；Deferred 明確保留原因。目錄不因尚未實作而隱藏。"/>
                     <ItemsControl ItemsSource="{Binding CatalogRows}">

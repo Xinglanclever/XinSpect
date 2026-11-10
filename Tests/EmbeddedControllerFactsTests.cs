@@ -59,19 +59,14 @@ public class EmbeddedControllerFactsTests
     }
 
     [Fact]
-    public void 有ECDT時要說出不讀它的內容()
+    public void EC存在性使用ACPI與PnP線索且不直接讀取EC()
     {
         var facts = EmbeddedControllerFactsService.Collect(At, ["ECDT"]);
         var p = facts.Single(f => f.Key == EmbeddedControllerFactsService.PresentKey);
 
-        // **這兩句原本測的是不存在的句子。**
-        // 服務檔寫的不是「不讀 ECDT 的內容」，而是「不新增讀取，只做判定」——
-        // 而「存在性用簽章回答」在服務檔裡寫的是「存在性改由 ACPI 表間接得知」。
-        // **斷言的字串要跟著服務檔的實際用詞**，否則它測的是一個沒人寫過的話。
-        // 而位置是類別層的 XML 文件註解：Present 的事實不得帶理由欄（那條不變式），
-        // 而「不讀它的內容」是這一項的界線宣告，不是「為什麼讀不到」。
-        Assert.Contains("存在性改由 ACPI 表間接得知", ServiceSource());
-        Assert.Contains("所以這一項不新增讀取，只做判定", ServiceSource());
+        Assert.Contains("只使用作業系統可列舉的線索", ServiceSource());
+        Assert.Contains("ACPI\\PNP0C09", ServiceSource());
+        Assert.Contains("不讀寫 0x62／0x66 埠", ServiceSource());
     }
 
     [Fact]
@@ -83,11 +78,48 @@ public class EmbeddedControllerFactsTests
         Assert.Equal(FactAvailability.Present, p.Availability);
     }
 
+    [Fact]
+    public void 沒有ECDT時使用PnP的PNP0C09線索()
+    {
+        var pnp = new EmbeddedControllerFactsService.PnpEcState(true,
+        [
+            new EmbeddedControllerFactsService.PnpEcDevice("ACPI EC", "OK", 0),
+        ]);
+        var p = EmbeddedControllerFactsService.Collect(At, [], pnp)
+            .Single(f => f.Key == EmbeddedControllerFactsService.PresentKey);
+
+        Assert.Equal(FactAvailability.Present, p.Availability);
+        Assert.Contains("PnP 已列舉 ACPI EC", p.Value);
+        Assert.Contains("不直接讀寫 EC 埠或 EC RAM", p.Value);
+    }
+
+    [Fact]
+    public void ACPI與PnP都成功但都無線索時不宣稱沒有EC()
+    {
+        var p = EmbeddedControllerFactsService.Collect(At, [],
+                new EmbeddedControllerFactsService.PnpEcState(true, []))
+            .Single(f => f.Key == EmbeddedControllerFactsService.PresentKey);
+
+        Assert.Equal(FactAvailability.NotApplicable, p.Availability);
+        Assert.Contains("不能據此斷言平台沒有 EC", p.UnavailableReason);
+    }
+
+    [Fact]
+    public void PnP失敗且ACPI無ECDT時不猜EC不存在()
+    {
+        var p = EmbeddedControllerFactsService.Collect(At, [],
+                new EmbeddedControllerFactsService.PnpEcState(false, [], "WMI unavailable"))
+            .Single(f => f.Key == EmbeddedControllerFactsService.PresentKey);
+
+        Assert.Equal(FactAvailability.NotSupported, p.Availability);
+        Assert.Contains("WMI unavailable", p.UnavailableReason);
+    }
+
     /// <summary>
     /// 服務檔的原始碼，<b>去掉強調與參照標記</b>後回傳。
     ///
     /// <para>
-    /// <b>為什麼要讀原始碼：</b>「不讀 ECDT 的內容」是<b>這一項的界線宣告</b>——
+    /// <b>為什麼要讀原始碼：</b>「不直接讀寫 EC 埠或 EC RAM」是<b>這一項的界線宣告</b>——
     /// 而 <c>HardwareFact</c> 的第二條不變式（<c>Present</c> ⇒ 說明併進
     /// <c>Value</c>）與 <c>HardwareSnapshotService</c> 的「可用的事實不得帶
     /// unavailableReason」合起來要求這種話不該放在事實的資料欄位裡。

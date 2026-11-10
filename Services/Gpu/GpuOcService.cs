@@ -54,6 +54,7 @@ public sealed class GpuOcService : ObservableObject, IDisposable
 
     private bool _isAdmin;
     public bool IsAdmin { get => _isAdmin; private set => SetProperty(ref _isAdmin, value); }
+    public bool CanApplyHardwareChanges => HardwareOperationGate.CanWriteHardware;
 
     private string _gpuName = "—";
     public string GpuName { get => _gpuName; private set => SetProperty(ref _gpuName, value); }
@@ -109,6 +110,8 @@ public sealed class GpuOcService : ObservableObject, IDisposable
     private string _fanStatus = "";   public string FanStatus   { get => _fanStatus;   private set => SetProperty(ref _fanStatus, value); }
 
     public Task InitializeAsync() => Task.Run(Initialize);
+
+    public void RefreshPolicy() => OnPropertyChanged(nameof(CanApplyHardwareChanges));
 
     private void Initialize()
     {
@@ -396,6 +399,8 @@ public sealed class GpuOcService : ObservableObject, IDisposable
     // ══ 寫入動作 ═══════════════════════════════════════════════════════════════
     public void ApplyPowerLimit()
     {
+        using var writePermit = BeginWrite(nameof(ApplyPowerLimit));
+        if (writePermit is null) { PowerStatus = "高風險硬體寫入未啟用；未修改功耗上限。"; return; }
         if (!NvmlAvailable || PowerDefaultW <= 0) { PowerStatus = "NVML 不可用，無法設定功耗上限。"; return; }
         try
         {
@@ -410,6 +415,8 @@ public sealed class GpuOcService : ObservableObject, IDisposable
 
     public void ApplyCoreOffset()
     {
+        using var writePermit = BeginWrite(nameof(ApplyCoreOffset));
+        if (writePermit is null) { CoreStatus = "高風險硬體寫入未啟用；未修改核心偏移。"; return; }
         if (!NvapiAvailable) { CoreStatus = "NVAPI 不可用，無法設定頻率偏移。"; return; }
         try
         {
@@ -422,6 +429,8 @@ public sealed class GpuOcService : ObservableObject, IDisposable
 
     public void ApplyMemOffset()
     {
+        using var writePermit = BeginWrite(nameof(ApplyMemOffset));
+        if (writePermit is null) { MemStatus = "高風險硬體寫入未啟用；未修改記憶體偏移。"; return; }
         if (!NvapiAvailable) { MemStatus = "NVAPI 不可用，無法設定頻率偏移。"; return; }
         try
         {
@@ -443,6 +452,8 @@ public sealed class GpuOcService : ObservableObject, IDisposable
 
     public void ApplyTempLimit()
     {
+        using var writePermit = BeginWrite(nameof(ApplyTempLimit));
+        if (writePermit is null) { TempStatus = "高風險硬體寫入未啟用；未修改溫度上限。"; return; }
         if (!TempControlAvailable || !_nvmlInited) { TempStatus = "溫度上限控制不可用。"; return; }
         try
         {
@@ -459,6 +470,10 @@ public sealed class GpuOcService : ObservableObject, IDisposable
 
     public void ApplyFan()
     {
+        using var writePermit = FanManual
+            ? BeginWrite(nameof(ApplyFan))
+            : HardwareOperationGate.BeginRecoveryOperation();
+        if (writePermit is null) { FanStatus = "高風險硬體寫入未啟用；未修改風扇控制。"; return; }
         if (!NvmlAvailable) { FanStatus = "NVML 不可用，無法控制風扇。"; return; }
         try
         {
@@ -491,6 +506,7 @@ public sealed class GpuOcService : ObservableObject, IDisposable
     /// <summary>還原安全預設：功耗 100%、頻率偏移歸零、風扇自動、溫度上限回原廠預設值。</summary>
     public void RestoreDefaults()
     {
+        using var recovery = HardwareOperationGate.BeginRecoveryOperation();
         try
         {
             if (NvmlAvailable)
@@ -521,5 +537,13 @@ public sealed class GpuOcService : ObservableObject, IDisposable
     {
         try { if (NvapiAvailable) NvapiInterop.Shutdown(); } catch { }
         try { if (_nvmlInited) NvmlInterop.Shutdown(); } catch { }
+    }
+
+    private static IDisposable? BeginWrite(string operation)
+    {
+        IDisposable? permit = HardwareOperationGate.TryBeginHighRiskOperation();
+        if (permit is null)
+            WriteGate.TryAuthorizeHardwareWrite("GPU 控制", operation, operation);
+        return permit;
     }
 }

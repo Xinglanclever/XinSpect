@@ -18,6 +18,9 @@
 | Microsoft.Diagnostics.Tracing.TraceEvent | 3.1.16 | MIT | 附授權文本連結 | https://github.com/Microsoft/perfview |
 | System.Security.Cryptography.ProtectedData | 9.0.4 | MIT | 附授權文本連結 | https://github.com/dotnet/runtime |   <!-- 〔修復 v3.21〕BaselineStore DPAPI 用——顯式 PackageReference 後入列（授權義務成文） -->
 | NAudio | 2.* | MIT | 附授權文本連結 | https://github.com/naudio/NAudio |
+| OpenccNetLib | 1.7.0 | MIT | 附授權文本連結 | https://github.com/laisuk/OpenccNet |
+| OpenCC 詞庫（OpenccNetLib 內嵌） | OpenccNetLib 1.7.0 | Apache-2.0 | 保留上游詞庫授權；授權全文內嵌為 `XinSpect.OpenCC-Lexicon-Apache-2.0.txt` | https://github.com/BYVoid/OpenCC |
+| OpenccNetLib 相依套件（System.Formats.Cbor、System.Memory、System.Text.Json、ZstdSharp.Port） | OpenccNetLib 1.7.0 相依 | MIT | 保留各套件授權聲明 | https://github.com/laisuk/OpenccNet |
 | System.ServiceProcess.ServiceController | 9.0.4（Bridge） | MIT | 附授權文本連結 | https://github.com/dotnet/runtime |
 | PCI ID 資料庫（`pci.ids`，內嵌 `XinSpect.Decoders/Data/pci-ids.tsv.gz`） | 快照 2026.10.01 | BSD-3-Clause（上游自述為 GPL-2.0-or-later 或 BSD-3-Clause 雙授權，本專案採後者） | 保留姓名標示與授權聲明；衍生檔只抽廠商與裝置兩段、其餘丟棄；**不因此使本專案受 GPL 約束** | https://pci-ids.ucw.cz/ ；https://github.com/vcrhonek/hwdata |
 

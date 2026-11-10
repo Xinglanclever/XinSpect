@@ -244,8 +244,8 @@ def main(argv=None):
     zh.replace("本文档对应 XinSpect v%s（" % OLD, "本文档对应 XinSpect v%s（" % V, "zh 文件版本")
     sync_date(zh, r"本文档对应 XinSpect v%s（(\d{4}-\d{2}-\d{2})）" % re.escape(V), "zh 文件版本日期")
     zh_bullet = "- **v%s %s**（%s）：%s" % (V, args.codename, args.date, title_zh)
-    zh.insert_before("- **v%s Ultima" % OLD if ("- **v%s Ultima" % OLD) in zh.text else "- **v%s %s**" % (OLD, old_code or ""),
-                     zh_bullet + "\n", "zh 沿革")
+    # 繁簡轉換會改變標題用字，不能拿 AboutView 的繁體代號當簡體 README 錨點。
+    zh.insert_before("- **v%s " % OLD, zh_bullet + "\n", "zh 沿革")
 
     # 8) README.en.md
     en = doc("README.en.md")

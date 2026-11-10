@@ -6,9 +6,7 @@ namespace XinSpect.Tests;
 /// 繁簡轉換的詞組表測試。
 /// </summary>
 /// <remarks>
-/// 這張表存在的理由：Windows 的 LCMapStringEx 是逐字轉換，會把「記憶體」變成「记忆体」
-/// 而不是「内存」、「顯示卡」變成「显示卡」而不是「显卡」。這些都是技術用語的在地化，
-/// 不是碼位對映能處理的。
+/// 產品硬體詞表覆寫通用詞庫用語，避免技術詞轉成不符合產品慣例的詞。
 /// </remarks>
 public class ZhTermsTests
 {
@@ -73,7 +71,7 @@ public class ZhTermsTests
     [Fact]
     public void 顯示卡規格整句()
     {
-        // 「螢幕」→「屏幕」走詞組表（大陆说法）；逐字轉換只會給「萤幕」
+        // 「螢幕」→「屏幕」使用產品術語表覆寫通用詞庫。
         Assert.Equal("显卡规格、显存与屏幕色域",
             LanguageService.ToSimplified("顯示卡規格、顯示記憶體與螢幕色域"));
     }
@@ -81,8 +79,8 @@ public class ZhTermsTests
     [Fact]
     public void 匯流排相關整句()
     {
-        // 「裝置」→「装置」、「唯讀」→「唯读」是逐字轉換，不在詞組表裡
-        Assert.Equal("目前协商到的速度／宽度对装置能力（唯读 PCI 设置空间）",
+        // OpenCC 依大陸詞彙轉換「裝置」為「设备」；其他術語由產品詞表保留。
+        Assert.Equal("目前协商到的速度／宽度对设备能力（唯读 PCI 设置空间）",
             LanguageService.ToSimplified("目前協商到的速度／寬度對裝置能力（唯讀 PCI 設定空間）"));
     }
 
@@ -95,6 +93,26 @@ public class ZhTermsTests
     public void 介面操作詞與硬體顯示詞組一併轉換()
         => Assert.Equal("打开下拉菜单查看实时监控，并确认删除错误消息。",
             LanguageService.ToSimplified("打開下拉選單查看即時監控，並確認刪除錯誤訊息。"));
+
+    [Theory]
+    [InlineData("理髮店剪頭髮", "理发店剪头发")]
+    [InlineData("髮型設計與發送通知", "发型设计与发送通知")]
+    public void OpenCC依詞組上下文處理多音義字(string traditional, string simplified)
+        => Assert.Equal(simplified, LanguageService.ToSimplified(traditional));
+
+    [Fact]
+    public void Big5位元組先解碼再套用同一簡體詞庫()
+    {
+        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+        byte[] bytes = System.Text.Encoding.GetEncoding(950).GetBytes("繁體中文：記憶體");
+
+        Assert.Equal("繁體中文：記憶體", LanguageService.DecodeBig5(bytes));
+        Assert.Equal("繁体中文：内存", LanguageService.Big5ToSimplified(bytes));
+    }
+
+    [Fact]
+    public void Big5無效位元組不靜默替換成亂碼()
+        => Assert.Throws<System.Text.DecoderFallbackException>(() => LanguageService.DecodeBig5([0x81]));
 
     // ── 反向：簡→繁 ──
 

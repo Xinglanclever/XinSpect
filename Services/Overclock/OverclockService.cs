@@ -46,6 +46,7 @@ public sealed class OverclockService : ObservableObject, IDisposable
 
     public bool EngineReady => _engine.Status == OcEngineStatus.Ready;
     public bool CanWrite => EngineReady && _engine.Knobs.Any(k => k.Writable);
+    public bool CanUseHardwareWrites => HardwareOperationGate.CanWriteHardware;
     public string EngineName => _engine.Name;
     public string EngineStatusText => _engine.StatusMessage;
     public Severity EngineStatusSeverity => _engine.Status switch
@@ -803,6 +804,9 @@ public sealed class OverclockService : ObservableObject, IDisposable
     // 不處理 IsApplying 防重入（由各公開方法統一管理，避免巢狀誤觸）。寫入後回 UI 執行緒套用狀態。
     private async Task<OcApplyResult> WriteKnobAsync(OcKnob knob, double value)
     {
+        using var writePermit = HardwareOperationGate.TryBeginHighRiskOperation();
+        if (writePermit is null && !HardwareOperationGate.CanWriteHardware)
+            return new OcApplyResult(false, "高風險硬體寫入未啟用；未套用此設定。", null);
         var r = await Task.Run(() => _engine.Apply(knob, value));
         knob.ApplyStatus = r.Message;
         knob.ApplySeverity = r.Ok ? (knob.RequiresReboot ? Severity.Warning : Severity.Good) : Severity.Critical;
@@ -925,6 +929,7 @@ public sealed class OverclockService : ObservableObject, IDisposable
     public async Task RestoreDefaults()
     {
         if (IsApplying) return;
+        using var recovery = HardwareOperationGate.BeginRecoveryOperation();
         IsApplying = true;
         try
         {
@@ -983,6 +988,7 @@ public sealed class OverclockService : ObservableObject, IDisposable
     {
         var p = OcSettings.LoadLastStable();
         if (p is null) { SetAction("尚無『最後穩定設定』可回復。", Severity.Neutral); return; }
+        using var recovery = HardwareOperationGate.BeginRecoveryOperation();
         await ApplyProfile(p, "最後穩定設定");
     }
 
@@ -1001,6 +1007,13 @@ public sealed class OverclockService : ObservableObject, IDisposable
     public async Task SetSpeedOptimizer(bool on, bool extreme)
     {
         if (IsApplying) return;
+        using var writePermit = HardwareOperationGate.TryBeginHighRiskOperation();
+        if (writePermit is null)
+        {
+            WriteGate.TryAuthorizeHardwareWrite("CPU Speed Optimizer", nameof(SetSpeedOptimizer), on ? "啟用" : "停用");
+            SetAction("高風險硬體寫入未啟用；未變更 Speed Optimizer。", Severity.Warning);
+            return;
+        }
         IsApplying = true;
         try
         {
@@ -1016,7 +1029,25 @@ public sealed class OverclockService : ObservableObject, IDisposable
         finally { IsApplying = false; }
     }
 
-    public void StartStress() { _stressGuardTripped = false; _stress.Start(); SetAction("已開始簡易燒機（過熱 ≥100°C 將自動停止並回復）。", Severity.Warning); }
+    public void StartStress()
+    {
+        if (!HardwareOperationGate.CanRunAdvancedDiagnostics)
+        {
+            SetAction("CPU 壓力測試已阻止：請先在設定啟用第一級進階診斷。", Severity.Warning);
+            return;
+        }
+        _stressGuardTripped = false;
+        _stress.Start();
+        if (_stress.IsRunning) SetAction("已開始簡易燒機（過熱 ≥100°C 將自動停止並回復）。", Severity.Warning);
+        else SetAction(_stress.StatusLine, Severity.Warning);
+    }
+
+    public void RefreshPolicy()
+    {
+        OnPropertyChanged(nameof(CanUseHardwareWrites));
+        OnPropertyChanged(nameof(CanWrite));
+        _stress.RefreshPolicy();
+    }
     public void StopStress() { _stress.Cancel(); SetAction("已請求停止燒機。", Severity.Neutral); }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1059,6 +1090,7 @@ public sealed class OverclockService : ObservableObject, IDisposable
     /// <summary>回復至最後穩定基準（看門狗逾時 / 燒機過熱時呼叫）。回傳簡短結果供訊息串接。</summary>
     private string RollbackToStable()
     {
+        using var recovery = HardwareOperationGate.BeginRecoveryOperation();
         if (_rollback is null || _rollback.Items.Count == 0)
         {
             var r = _engine.RestoreDefaults();

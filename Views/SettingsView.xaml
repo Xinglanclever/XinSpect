@@ -191,6 +191,22 @@
                                Text="收起來的是直讀暫存器、編程效能計數器那一類頁面（效能天花板、超頻、PCIe／USB 鏈路、NVMe 電源狀態、DPC 延遲…）。這只是不列在側邊欄——按 Ctrl+K 照樣搜得到每一頁，功能不會消失。首次啟動時問過的「簡略／詳細進階」就是這個開關。"/>
 
                     <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,18,0,0"/>
+                    <local:SectionHead Text="進階診斷與風險政策" Margin="0,16,0,0"/>
+                    <CheckBox Style="{StaticResource SetCheck}" Margin="0,8,0,0"
+                              Content="第一級：進階診斷與 CPU／DRAM 壓力測試（預設關閉）"
+                              IsChecked="{Binding Settings.AdvancedDiagnosticsEnabled, Mode=TwoWay}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Foreground="{DynamicResource WarningBrush}"
+                               TextWrapping="Wrap" Margin="27,3,0,0"
+                               Text="進階測試會讓 CPU 或記憶體短時間高負載；EC 僅做 ACPI 間接識別，不直接讀寫 EC 埠。測試仍需在各功能頁自行啟動。"/>
+                    <CheckBox Style="{StaticResource SetCheck}" Margin="0,12,0,0"
+                              Content="第二級：硬體寫入與合成威脅測試（高風險；預設關閉）"
+                              IsChecked="{Binding Settings.HighRiskHardwareOperationsEnabled, Mode=TwoWay}"
+                              IsEnabled="{Binding Settings.AdvancedDiagnosticsEnabled}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Foreground="{DynamicResource CriticalBrush}"
+                               TextWrapping="Wrap" Margin="27,3,0,0"
+                               Text="必須先開啟第一級。威脅情境只使用合成資料；硬體寫入會改變即時設定，仍需逐項確認。關閉本級不會自動還原已套用的值，還原控制仍可使用。"/>
+
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,18,0,0"/>
                     <local:SectionHead Text="動態視覺效果" HelpKey="settings/動態視覺效果" Margin="0,16,0,0"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
                                Text="逐核液柱的波紋與氣泡、風扇葉片的旋轉、七段數字的漸亮——這些都對應真實讀值，但每一次重繪都要花 GPU 與封裝功耗。曦覽是量測工具，所以這件事必須關得掉。"/>

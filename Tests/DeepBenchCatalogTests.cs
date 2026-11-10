@@ -48,15 +48,16 @@ public class DeepBenchCatalogTests
         "memory.cache-bandwidth-ladder",
         "memory.copy-kernel-bandwidth",
         "topology.tsc-cross-core-sync",
-        "topology.core-uniformity"
+        "topology.core-uniformity",
+        "memory.dram-pattern-integrity"
     ];
 
     [Fact]
-    public void 四十三項全量登記且編號連續()
+    public void 四十四項全量登記且編號連續()
     {
-        Assert.Equal(43, DeepBenchCatalog.All.Count);
-        Assert.Equal(Enumerable.Range(1, 43), DeepBenchCatalog.All.Select(entry => entry.MatrixNumber));
-        Assert.Equal(43, DeepBenchCatalog.All.Select(entry => entry.Id).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(44, DeepBenchCatalog.All.Count);
+        Assert.Equal(Enumerable.Range(1, 44), DeepBenchCatalog.All.Select(entry => entry.MatrixNumber));
+        Assert.Equal(44, DeepBenchCatalog.All.Select(entry => entry.Id).Distinct(StringComparer.Ordinal).Count());
         Assert.All(DeepBenchCatalog.All, entry =>
         {
             Assert.False(string.IsNullOrWhiteSpace(entry.Title));
@@ -144,13 +145,43 @@ public class DeepBenchCatalogTests
     }
 
     [Fact]
-    public void Quick與Full都只選四十三個已接入測項()
+    public void Quick與Full都只選四十四個已接入測項()
     {
         foreach (var profile in new[] { DeepBenchRunProfile.Quick, DeepBenchRunProfile.Full })
         {
             var plan = DeepBenchSuitePlanner.Plan(profile);
             Assert.Equal(Phase1RunnableIds.OrderBy(id => id, StringComparer.Ordinal), plan.SelectedIds.OrderBy(id => id, StringComparer.Ordinal));
         }
+    }
+
+    [Fact]
+    public void 平台靶向套件只選已接入且不重複的測項()
+    {
+        foreach (DeepBenchTargetOption target in DeepBenchTargetCatalog.All)
+        {
+            Assert.NotEmpty(target.TestIds);
+            Assert.Equal(target.TestIds.Count, target.TestIds.Distinct(StringComparer.Ordinal).Count());
+            Assert.All(target.TestIds, id => Assert.Contains(DeepBenchCatalog.All, item => item.Id == id && item.Runnable));
+
+            DeepBenchPlan plan = DeepBenchSuitePlanner.Plan(DeepBenchRunProfile.Quick, target);
+            Assert.NotEmpty(plan.SelectedIds);
+            Assert.Equal(plan.SelectedIds.Count, plan.SelectedIds.Distinct(StringComparer.Ordinal).Count());
+            Assert.All(plan.SelectedIds, id => Assert.Contains(target.TestIds, targetId => targetId == id));
+            Assert.Equal(target.TestIds.Count, plan.SelectedIds.Count);
+        }
+    }
+
+    [Fact]
+    public void 伺服器工作站套件包含NUMA_ECC與長時吞吐且避開GPU編碼測試()
+    {
+        DeepBenchTargetOption target = Assert.IsType<DeepBenchTargetOption>(DeepBenchTargetCatalog.Find("server-workstation"));
+        DeepBenchPlan plan = DeepBenchSuitePlanner.Plan(DeepBenchRunProfile.Full, target);
+
+        Assert.Contains("memory.numa-tlb-largepage", plan.SelectedIds);
+        Assert.Contains("memory.ecc-whea-stress", plan.SelectedIds);
+        Assert.Contains("gauntlet.throughput-degradation", plan.SelectedIds);
+        Assert.DoesNotContain("gpu.codec-throughput", plan.SelectedIds);
+        Assert.DoesNotContain("gpu.dispatch-jitter", plan.SelectedIds);
     }
 
     [Fact]

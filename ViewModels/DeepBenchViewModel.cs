@@ -31,7 +31,9 @@ public sealed class DeepBenchViewModel : ObservableObject
 
     // const 無法被 {Binding} 取值（繫結只走執行個體屬性）；這幾個包裝給 XAML 用，文案單一來源仍是 const。
     public string NoScoreNoticeText => NoScoreNotice;
-    public string ScopeNoticeText => ScopeNotice;
+    public string ScopeNoticeText => ScopeNotice
+        .Replace("四十三個已接入測項（43 項全量）", "四十四個已接入測項（44 項全量）", StringComparison.Ordinal)
+        .Replace("記憶體四項（含 WHEA 壓力關聯）", "記憶體五項（含 WHEA 關聯與 DRAM 圖樣完整性）", StringComparison.Ordinal);
     public string LoadWarningText => LoadWarning;
     public string TempFileWarningText => TempFileWarning;
     public string LocalOnlyNoticeText => LocalOnlyNotice;
@@ -43,6 +45,7 @@ public sealed class DeepBenchViewModel : ObservableObject
     private readonly DeepBenchRunStore _store;
     private readonly IDiskIoFileSystem? _fileSystem;
     private readonly DeepBenchOrchestrator? _injectedOrchestrator;
+    private readonly Func<bool> _advancedDiagnosticsEnabled;
     private CancellationTokenSource? _runCancellation;
 
     public CacheBenchService Cache => _cache;
@@ -51,6 +54,7 @@ public sealed class DeepBenchViewModel : ObservableObject
     public TopDownService TopDown => _topDown;
 
     public ObservableCollection<DeepBenchCatalogEntry> CatalogRows { get; } = [];
+    public IReadOnlyList<DeepBenchTargetOption> TargetOptions => DeepBenchTargetCatalog.All;
     public ObservableCollection<DeepBenchResultCard> ResultCards { get; } = [];
     public ObservableCollection<DeepBenchInsight> Insights { get; } = [];
     public ObservableCollection<DeepBenchHistoryRow> History { get; } = [];
@@ -79,6 +83,21 @@ public sealed class DeepBenchViewModel : ObservableObject
         }
     }
 
+    private DeepBenchTargetOption _selectedTarget = DeepBenchTargetCatalog.Default;
+    private bool _targetManuallySelected;
+    public DeepBenchTargetOption SelectedTarget => _selectedTarget;
+    public string SelectedTargetId
+    {
+        get => _selectedTarget.Id;
+        set
+        {
+            DeepBenchTargetOption? target = DeepBenchTargetCatalog.Find(value);
+            if (target is null) return;
+            _targetManuallySelected = true;
+            SetTarget(target);
+        }
+    }
+
     private string _storageRoot = string.Empty;
     public string StorageRoot { get => _storageRoot; set => SetProperty(ref _storageRoot, value); }
 
@@ -87,8 +106,8 @@ public sealed class DeepBenchViewModel : ObservableObject
 
     public DeepBenchRunState? LastState { get; private set; }
     public DeepBenchRunRecord? CurrentRecord { get; internal set; }
-    public bool CanStart => !IsRunning;
-    public IReadOnlyList<string> SelectedIds => DeepBenchSuitePlanner.Plan(SelectedProfile, [.. CatalogRows]).SelectedIds;
+    public bool CanStart => !IsRunning && _advancedDiagnosticsEnabled();
+    public IReadOnlyList<string> SelectedIds => DeepBenchSuitePlanner.Plan(SelectedProfile, SelectedTarget, [.. CatalogRows]).SelectedIds;
 
     public DeepBenchViewModel(
         CacheBenchService cache,
@@ -97,7 +116,8 @@ public sealed class DeepBenchViewModel : ObservableObject
         DeepBenchRunStore runStore,
         IDiskIoFileSystem? diskIoFileSystem = null,
         DeepBenchOrchestrator? orchestrator = null,
-        TopDownService? topDown = null)
+        TopDownService? topDown = null,
+        Func<bool>? advancedDiagnosticsEnabled = null)
     {
         ArgumentNullException.ThrowIfNull(cache);
         ArgumentNullException.ThrowIfNull(memBandwidth);
@@ -110,6 +130,7 @@ public sealed class DeepBenchViewModel : ObservableObject
         _store = runStore;
         _fileSystem = diskIoFileSystem;
         _injectedOrchestrator = orchestrator;
+        _advancedDiagnosticsEnabled = advancedDiagnosticsEnabled ?? (() => false);
 
         foreach (DeepBenchCatalogEntry entry in DeepBenchCatalog.All) CatalogRows.Add(entry);
         ReloadHistory();
@@ -118,6 +139,26 @@ public sealed class DeepBenchViewModel : ObservableObject
 
     public void SetProfileQuick() => SelectedProfile = DeepBenchRunProfile.Quick;
     public void SetProfileFull() => SelectedProfile = DeepBenchRunProfile.Full;
+
+    public void RefreshPolicy()
+    {
+        OnPropertyChanged(nameof(CanStart));
+        if (IsRunning && !_advancedDiagnosticsEnabled()) Cancel();
+    }
+
+    public void SuggestTarget(string? cpuName, string? socket, string? boardModel)
+    {
+        if (_targetManuallySelected) return;
+        DeepBenchTargetOption suggestion = DeepBenchTargetCatalog.Suggest(cpuName, socket, boardModel);
+        SetTarget(suggestion);
+    }
+
+    private void SetTarget(DeepBenchTargetOption target)
+    {
+        if (!SetProperty(ref _selectedTarget, target)) return;
+        OnPropertyChanged(nameof(SelectedTargetId));
+        OnPropertyChanged(nameof(SelectedIds));
+    }
 
     public void Cancel()
     {
@@ -131,6 +172,13 @@ public sealed class DeepBenchViewModel : ObservableObject
     {
         if (IsRunning) return;
         Errors.Clear();
+        if (!_advancedDiagnosticsEnabled())
+        {
+            StateText = "深測尚未啟用。";
+            AddError("深測已阻止：請先在設定啟用第一級進階診斷。高負載測項不會在背景自動啟動。" );
+            OnPropertyChanged(nameof(CanStart));
+            return;
+        }
         IReadOnlyList<string> selected = SelectedIds;
         if (selected.Count == 0)
         {
@@ -158,7 +206,7 @@ public sealed class DeepBenchViewModel : ObservableObject
                 SelectedProfile,
                 selected,
                 new Progress<DeepBenchProgress>(UpdateProgress),
-                linked.Token).ConfigureAwait(false);
+                linked.Token);
             ReplaceRecord(record);
         }
         catch (OperationCanceledException)
@@ -275,6 +323,7 @@ public sealed class DeepBenchViewModel : ObservableObject
             new CopyKernelBandwidthAdapter(),
             new TscCrossCoreSyncAdapter(),
             new CoreUniformityAdapter(),
+            new DramPatternIntegrityService(),
         ];
         return new DeepBenchOrchestrator(tests, _store);
     }
@@ -288,9 +337,7 @@ public sealed class DeepBenchViewModel : ObservableObject
 
     private void ReplaceRecord(DeepBenchRunRecord record)
     {
-        // StartAsync 以 ConfigureAwait(false) 續行——本方法會在 thread-pool 執行，
-        // 而這些集合已被 UI 的 CollectionView 綁定（跨執行緒改 SourceCollection 會丟
-        // NotSupportedException）——UI 集合的修改一律收攏回 UI 執行緒。
+        // Keep collection updates on the dispatcher even if a caller resumes off the UI thread.
         RunOnUi(() =>
         {
             CurrentRecord = record;

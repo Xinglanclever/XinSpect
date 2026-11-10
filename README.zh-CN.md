@@ -9,12 +9,12 @@
 
 # 曦览 XinSpect
 
-一款免费开源、运行于 Windows 的电脑工具箱，带有 ring0 切核等底层功能：可通过内核驱动直接读写硬件寄存器（MSR、PCI 配置空间、SMBus 等）。以单一运行档发布，免安装；读取以唯读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
+一款免费开源、运行于 Windows 的电脑工具箱。底层读取默认唯读；进阶诊断与 CPU／DRAM 压力测试默认关闭，硬件写入另有第二级开关并需逐项确认。以单一运行档发布，免安装；不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-3.24-4C8DFF)
+![版本](https://img.shields.io/badge/version-3.25-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-7987%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-8047%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 ![商业授权](https://img.shields.io/badge/license-%E5%95%86%E4%B8%9A%E6%8E%88%E6%9D%83%E5%8F%AF%E8%B0%88-8B5CF6)
@@ -33,7 +33,7 @@
 - [四、下载与系统需求](#四下载与系统需求)
 - [五、快速上手](#五快速上手)
 - [六、功能详述](#六功能详述)
-- [七、深测中心（38 项 Run Session）](#七深测中心38-项-run-session)
+- [七、深测中心（44 项 Run Session）](#七深测中心44-项-run-session)
 - [八、监控与量测工具](#八监控与量测工具)
 - [九、证据实验室](#九证据实验室)
 - [十、风险与同意闸门](#十风险与同意闸门)
@@ -391,17 +391,17 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 | 类别 | 数量 | 数法（在仓库根运行） |
 |---|---|---|
-| C# 源文件 | 1,604 档／315,074 行 | 走访所有 `*.cs`，排除 `bin/`、`obj/`、`publish-*/`、`.git/`、`work/`、`TestResults/` |
-| 服务层文件 | 678 档 | `Services/` 之下递归的 `*.cs`（不含 bin／obj） |
+| C# 源文件 | 1,612 档／316,987 行 | 走访所有 `*.cs`，排除 `bin/`、`obj/`、`publish-*/`、`.git/`、`work/`、`TestResults/` |
+| 服务层文件 | 682 档 | `Services/` 之下递归的 `*.cs`（不含 bin／obj） |
 | 接口页（XAML） | 82 页 | `ls Views/*.xaml` |
-| 测试档 | 648 档 | `ls Tests/*.cs` |
-| 测试方法 | 6,635 个 `[Fact]`＋272 个 `[Theory]` | 逐档正则计数 |
-| 运行期测试案例 | 7,987（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
+| 测试档 | 652 档 | `ls Tests/*.cs` |
+| 测试方法 | 6,656 个 `[Fact]`＋277 个 `[Theory]` | 逐档正则计数 |
+| 运行期测试案例 | 8,047（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
 | 公开文档 | 51 份 `docs/*.md`＋6 份 `docs/spec/*.md` | `ls docs/*.md`、`ls docs/spec/*.md` |
 | 事实键目录 | 1,178 键／157 个前缀 | 解析 `FactKeyCatalog.Keys` |
 | 动态键家族 | 69 个 | 解析 `FactKeyDynamicCatalog.Families` |
 
-**怎么读这张表。** 第一个有用的比例是「6,635 个 `[Fact]` 对 272 个 `[Theory]`」——`[Theory]` 少，说明这个项目的测试风格偏向「一条测试讲一个具体事实」，而不是用数据驱动把同一个断言拷贝很多遍。第二个比例是「648 个测试档对 678 个服务档」：几乎每个服务档都有一个对应的测试档，这是刻意的，因为这个项目最贵的缺陷类别是「服务写完了但没有接进生产路径」（见第十九章 D-16），而对应测试档的存在至少让「写了却没人调用」有机会被看见。
+**怎么读这张表。** 第一个有用的比例是「6,656 个 `[Fact]` 对 277 个 `[Theory]`」——`[Theory]` 少，说明这个项目的测试风格偏向「一条测试讲一个具体事实」，而不是用数据驱动把同一个断言拷贝很多遍。第二个比例是「652 个测试档对 682 个服务档」：多数服务档有对应测试，但仍需生产接线守门防止孤立服务，这是刻意关注的缺陷类别（见第十九章 D-16）。
 
 **这张表不能证明什么。** 行数不是品质，测试档数不是覆盖率，1,178 个事实键也不是 1,178 个正确的答案。规模数字唯一的用途是给读者一个「值不值得往下读」的判断依据：一份 25 章的文档如果背后只有三千行程序，那大概是包装；如果有二十五万行，那么第二章的每一条原则背后都真的有东西。
 
@@ -465,24 +465,24 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 写架构最没有价值的一段是「本架构优雅且可扩充」。有价值的是承认它哪里脆弱。
 
 1. **单一行程承担特权与接口。** 主程序曾在管理员权杖下运行（V-01）；**2026-11-07 起改为 asInvoker**——默认一般权限，浏览器与 AI 对话不再吃管理员令牌，深层页面如实降级。权杖分离（浏览器独立中完整性进程）仍是后续方向；「读一个 MSR」的跨行程代价由深層核心存取开关与 XsRegProbe 白名单承担。
-2. **服务数量本身就是一种风险。** 569 个服务档意味着「接线」是一个真实的问题：服务写好、测试绿、但没有进生产路径，这种缺陷在这个项目发生过不只一次（D-16、D-17）。目前的答案是守门（孤儿扫描、`ViewEntryGateTests`、事实键对帐），而不是减少服务数量。
+2. **服务数量本身就是一种风险。** 682 个服务档意味着「接线」是一个真实的问题：服务写好、测试绿、但没有进生产路径，这种缺陷在这个项目发生过不只一次（D-16、D-17）。目前的答案是守门（孤儿扫描、`ViewEntryGateTests`、事实键对帐），而不是减少服务数量。
 3. **事实键目录需要人维持诚实。** 1,167 个键加上 68 个动态家族，靠的是「运行期出现的键要嘛在目录、要嘛命中家族前缀，否则对帐红灯」。这条规则能抓「有产出但没登记」，抓不到「登记了但语意写错」。目录是申报，不是证明。
 
 ## 四、下载与系统需求
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpect.exe) | 38,098,219 bytes | 主程序。蓝色中队守护进程已内置 |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole.exe) | 100,455,541 bytes | 曦览终端机（CLI）。可独立执行，也被主程序强控台唤起；自含 .NET 10 执行阶段故体积较大（Windows 11／Server 2025 用） |
-| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole-legacy.exe) | 100,451,533 bytes | 曦览终端机（CLI）**纯文字兼容版**：给 Windows 10／Windows Server 2016、2019、2022 的传统控制台——无色彩、无框线定位，其余功能（facts／book／help）相同 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/BlueSquadronBridge.exe) | 6,531,620 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
-| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpect-full.exe) | 210,864,466 bytes | 主程序・带环境版：.NET 10 执行阶段一并打包，免装执行阶段（功能与 XinSpect.exe 相同） |
-| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole-nort.exe) | 66,160,280 bytes | 曦览终端机・Windows 11／Server 2025・不带环境：需已装 .NET 10 Desktop Runtime |
-| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole-legacy-nort.exe) | 66,160,368 bytes | 曦览终端机・Windows 10／2016/2019/2022・不带环境：纯文字界面，需已装 .NET 10 Desktop Runtime |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectDeploy.exe) | 29,696 bytes | 一键安装器。第一层选装什么：A 装主程序（GUI）、B 装曦览终端机；第二层 1/2/3 选下载来源（GitHub／Drive／加速节点）；下载时显示进度条、速度与剩余时间 |
-| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XsRegProbe.sys) | 24,064 bytes | XsRegProbe 内核探测驱动（白名单只读 MSR／MMIO，全案审查唯一「优秀」级）。本版重编译版**含槽位基底修正**（槽位从请求头 +8 开始——第三轮严查发现，v3.18 的 .sys 为修正前）。未微软签章：主程序以提权会话安装到 `ProgramData\XinSpect\Driver\` 并建服务；手动加载需测试签名环境（testsigning） |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpect.exe) | 38,098,219 bytes | 主程序。蓝色中队守护进程已内置 |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpectConsole.exe) | 100,455,541 bytes | 曦览终端机（CLI）。可独立执行，也被主程序强控台唤起；自含 .NET 10 执行阶段故体积较大（Windows 11／Server 2025 用） |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpectConsole-legacy.exe) | 100,451,533 bytes | 曦览终端机（CLI）**纯文字兼容版**：给 Windows 10／Windows Server 2016、2019、2022 的传统控制台——无色彩、无框线定位，其余功能（facts／book／help）相同 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/BlueSquadronBridge.exe) | 6,531,620 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpect-full.exe) | 210,864,466 bytes | 主程序・带环境版：.NET 10 执行阶段一并打包，免装执行阶段（功能与 XinSpect.exe 相同） |
+| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpectConsole-nort.exe) | 66,160,280 bytes | 曦览终端机・Windows 11／Server 2025・不带环境：需已装 .NET 10 Desktop Runtime |
+| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpectConsole-legacy-nort.exe) | 66,160,368 bytes | 曦览终端机・Windows 10／2016/2019/2022・不带环境：纯文字界面，需已装 .NET 10 Desktop Runtime |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpectDeploy.exe) | 29,696 bytes | 一键安装器。第一层选装什么：A 装主程序（GUI）、B 装曦览终端机；第二层 1/2/3 选下载来源（GitHub／Drive／加速节点）；下载时显示进度条、速度与剩余时间 |
+| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XsRegProbe.sys) | 24,064 bytes | XsRegProbe 内核探测驱动（白名单只读 MSR／MMIO，全案审查唯一「优秀」级）。本版重编译版**含槽位基底修正**（槽位从请求头 +8 开始——第三轮严查发现，v3.18 的 .sys 为修正前）。未微软签章：主程序以提权会话安装到 `ProgramData\XinSpect\Driver\` 并建服务；手动加载需测试签名环境（testsigning） |
 
-> **上表的字节数为本版（v3.24）实际发布的文件大小**；请以 Release 页面列出的文件为准。
+> **上表的字节数为本版（v3.25）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
 安装器（`XinSpectDeploy.exe`）第一层先选装什么：**A** 是 XinSpect.exe 主程序（全自动部署主程序＋守护进程）、**B** 是曦览终端机（单档下载一步到位）；版本都分两维：**带环境**（self-contained，免装 .NET）与**不带环境**（framework-dependent，机器要已装 .NET 10 Desktop Runtime）。选 **A** 时问一次：**1** 不带环境（XinSpect.exe，约 36MB）、**2** 带环境（XinSpect-full.exe，约 189MB）；选 **B** 时问四版：**1** Windows 11／Server 2025 带环境（XinSpectConsole.exe，约 100MB）、**2** Windows 10／2016/2019/2022 带环境（XinSpectConsole-legacy.exe，纯文字界面）、**3** Windows 11／Server 2025 不带环境（XinSpectConsole-nort.exe，约 63MB）、**4** Windows 10／2016/2019/2022 不带环境（XinSpectConsole-legacy-nort.exe）；接着再选来源：**1** 是 GitHub 最新版、**2** 是 Google Drive 镜像（分享文件夹，它会打开浏览器并告诉你按哪里）、**3** 是中国加速线路——对 GitHub 加前缀的公开加速节点，安装器自己抓档，跟按 1 一样有进度条、速度与剩余时间。直连下载有一条备援链：latest 网址 → 现场侦测到的版号（不写死，过期不会安静装到旧版）→ Drive 确认直连 → 加速节点前缀，每条试两次，换线时会说出改去哪里。判断哪一格用哪种模式，看的是端点本身：只有真的能用 GET 取回目录下文件的线路才写成直连，分享页一律只打开浏览器，不会把分享页存成一个假的 exe。镜像链接集中在 `Installer/mirrors.txt`，安装器启动时会从 jsDelivr／加速节点／GitHub 三条线抓一份最新的（拿不到就用内置的）；某一格还没有链接时，菜单上会写「尚未提供」，按下去会先说明再改用 GitHub。下载完成后一律检查 PE 标头与大小门槛，抓到 HTML（分享页、限流页、Google 的病毒扫描确认页）会被挡下、删档并说出内容像什么。注意：走第三方加速节点的位元组只能验 PE 标头，验不了发布者签章。
 
@@ -860,9 +860,9 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 3. **先看矛盾，再看单点。** 交叉对帐的红字比任何单一数值都值得优先处理——两个来源互相矛盾时，单看哪一个都可能得到错的结论。
 4. **先看边界，再看功能。** 每一页都写了「它不做什么」。这不是免责声明，是使用说明：知道它不做什么，才不会把「没显示」误读成「没问题」。
 
-## 七、深测中心（38 项 Run Session）
+## 七、深测中心（44 项 Run Session）
 
-深测中心是一场 Run Session 的集中量测接口：选择 Quick 或 Full 文件、指定保存根与暂存预算，逐项运行并即时回报进度。**阅读界线**先讲清楚：只并列各项量测的原始样本、可信度（High/Medium/Low/Insufficient）与限制，不加权合成单一总分；跨域、跨数据体的排名不成立（GPU 的 200 分和磁盘的 200 分没有共同单位）。混合不同量测配置的样本会被混池判定拦下——梯子型指针（STREAM kernel×threads、缓存工作集、磁盘 QD ladder）各点是不同配置，平均无意义，混池时改逐点列。38 项全量登记，可运行与延后项目都会摊开，不把未跑的说成量测。
+深测中心是一场 Run Session 的集中量测接口：选择 Quick 或 Full 文件、指定保存根与暂存预算，逐项运行并即时回报进度。**阅读界线**先讲清楚：只并列各项量测的原始样本、可信度（High/Medium/Low/Insufficient）与限制，不加权合成单一总分；跨域、跨数据体的排名不成立（GPU 的 200 分和磁盘的 200 分没有共同单位）。混合不同量测配置的样本会被混池判定拦下——梯子型指针（STREAM kernel×threads、缓存工作集、磁盘 QD ladder）各点是不同配置，平均无意义，混池时改逐点列。44 项全量登记，可运行与延后项目都会摊开，不把未跑的说成量测。新增 DRAM 图样项目只读写本程序最多 16 MiB 的暂存阵列，不访问实体位址或注入 ECC 错误。
 
 ### 7.1 测项全表
 
@@ -907,7 +907,7 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 残留风险：暂存盘名固定，且行程以管理员权限运行；若保存根位于一般用户可写入的目录，同机的中完整性进程理论上可预先创建符号链接（symbolic link）导向其他文件。目前没有实测可利用性，修正建议见第二十章 V-13。
 
-### 7.4 三十八项测项的共同结构
+### 7.4 四十四项测项的共同结构
 
 测项的清单看起来很长，但每一个测项的画面其实只有五个字段：
 
@@ -2425,6 +2425,7 @@ O-01 到 O-12 里，至少四条是「知道怎么修，但选择不修」：
 
 ## 二十二、版本沿革
 
+- **v3.25 双级安全模式与平台靶向深测**（2026-11-11）：两级开关默认关闭；桌面与 CLI 共用安全设置及平台靶向 Deep Bench。新增 OpenCC 繁简转换与严格 Big5 解码、PnP EC 存在性线索，并保留 EC 埠/RAM 不直接读写的界线。
 - **v3.24 監控效能修復**（2026-11-10）：降低实时监控开销与修正流量基准
 - **v3.23 硬體判讀修復**（2026-11-10）：硬件解码与证据准确度修复
 - **v3.22 企業離線基準**（2026-11-10）：企業離線基準與硬體來源契約
@@ -2690,7 +2691,7 @@ By：Xinglanclever
 
 ---
 
-**文档本身的版本**：本文档对应 XinSpect v3.24（2026-11-10）。正体中文为母本，简体中文由 OpenCC（tw2sp）自动转换，英文版为全量对译；三份文档共用同一组事实与守门。若你在简体版看到不顺的词，那是转换器的选择，不是原文的意思——请以正体版为准。
+**文档本身的版本**：本文档对应 XinSpect v3.25（2026-11-11）。正体中文为母本，简体中文由 OpenCC（tw2sp）自动转换，英文版为全量对译；三份文档共用同一组事实与守门。若你在简体版看到不顺的词，那是转换器的选择，不是原文的意思——请以正体版为准。
 
 ---
 
@@ -2849,7 +2850,7 @@ By：Xinglanclever
 | 动态键家族 | 成员由机器决定的键前缀申报 | 让「数不完」不等于「没管」 |
 | 写入闸门 | 硬件写入的稽核帐本与白名单 | 让「唯读为主」有运行面 |
 | 同意闸门 | 有风险操作前的一次性同意 | 让风险不被缺省接受 |
-| 深测（Deep Bench） | 三十八项压力与量测测项 | 与「跑分」区隔 |
+| 深测（Deep Bench） | 四十四项压力与量测测项 | 与「跑分」区隔 |
 | 蓝色中队 | 行程外的态势评估 | 让「主程序被影响」时仍有第二份观察 |
 | 深层访问 | 有限范围的内核读取能力 | 让特权面收敛成一个入口 |
 
@@ -2985,7 +2986,7 @@ By：Xinglanclever
 
 ## 附录 J、测项逐项判读要点
 
-7.1 列的是「有哪些测项」，本附录列的是「每一项在证明什么、不能证明什么、最常见的误读」。写这一节的理由很实际：三十八项测项的数字放在一起时，人会自动开始比较，而比较的前提是知道每个数字背后的量测契约。
+7.1 列的是「有哪些测项」，本附录列的是「每一项在证明什么、不能证明什么、最常见的误读」。写这一节的理由很实际：四十四项测项的数字放在一起时，人会自动开始比较，而比较的前提是知道每个数字背后的量测契约。
 
 ### J.1 处理器类
 

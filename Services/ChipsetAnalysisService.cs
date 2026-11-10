@@ -17,6 +17,9 @@ public sealed class ChipsetAnalysisService : ObservableObject
     private string _hostBridgeName = "";
     public string HostBridgeName { get => _hostBridgeName; private set => SetProperty(ref _hostBridgeName, value); }
 
+    public string NorthbridgeHeading => ChipsetName == "X58" ? "北橋／X58 IOH" : "Host Bridge／CPU Root Complex";
+    public string SouthbridgeHeading => ChipsetName == "X58" ? "南橋／LPC 控制器" : "PCH／南橋";
+
     private string _northbridgeInfo = "";
     public string NorthbridgeInfo { get => _northbridgeInfo; private set => SetProperty(ref _northbridgeInfo, value); }
 
@@ -122,6 +125,9 @@ public sealed class ChipsetAnalysisService : ObservableObject
         // 3) 嘗試從主機板型號或 PCI 名稱查表
         string detected = TryMatchChipset(boardModel, hostBridge, pchDevice);
         ChipsetName = detected;
+        OnPropertyChanged(nameof(NorthbridgeHeading));
+        OnPropertyChanged(nameof(SouthbridgeHeading));
+        ChipsetInfo.Entry platformInfo = ChipsetInfo.Resolve(pchDevice, hostBridge, detected);
 
         // 4) 查表填充詳細資訊
         if (s_profiles.TryGetValue(detected.ToUpperInvariant(), out var profile))
@@ -131,6 +137,18 @@ public sealed class ChipsetAnalysisService : ObservableObject
             SouthbridgeInfo = profile.SouthbridgeDescription;
             Features = new(profile.Features);
             Summary = profile.OneLiner;
+        }
+        else if (platformInfo.Features.Length > 0)
+        {
+            ChipsetVendor = platformInfo.Name.StartsWith("AMD", StringComparison.OrdinalIgnoreCase) ? "AMD" : "Intel";
+            NorthbridgeInfo = detected == "X58"
+                ? $"已識別 Intel X58 Express IOH；CPU、記憶體控制器與通道配置依處理器及主機板。\nHost Bridge: {hostBridge}"
+                : "記憶體控制器與 CPU PCIe 能力須按處理器 SKU 核對；晶片組名稱不代表實際通道數或插槽配置。";
+            SouthbridgeInfo = detected == "X58"
+                ? $"X58 平台另有 ICH 系列南橋；本機列舉：{(pchDevice.Length > 0 ? pchDevice : "未偵測到 LPC 裝置") }"
+                : $"裝置識別：{(pchDevice.Length > 0 ? pchDevice : "未回報獨立 PCH 型號")}";
+            Features = [new("平台範圍", platformInfo.Features)];
+            Summary = platformInfo.Features;
         }
         else
         {
@@ -145,7 +163,7 @@ public sealed class ChipsetAnalysisService : ObservableObject
         }
     }
 
-    private static string TryMatchChipset(string board, string hostBridge, string pch)
+    internal static string TryMatchChipset(string board, string hostBridge, string pch)
     {
         string upper = (board + " " + hostBridge + " " + pch).ToUpperInvariant();
 
@@ -153,15 +171,16 @@ public sealed class ChipsetAnalysisService : ObservableObject
         string[] known =
         [
             "Z890", "Z790", "B760", "H770", "Z690", "B660", "H670", "H610",
-            "X299", "C621", "C622", "W680",
+            "C621A", "C621", "C622", "C624", "C625", "C612", "C608", "C606", "C604", "C602", "C600",
+            "C422", "W790", "X299", "X99", "X79", "X58", "W680",
             "X870E", "X870", "X670E", "X670", "B650E", "B650", "A620",
             "X570", "B550", "A520", "X470", "B450",
-            "X399", "TRX40", "TRX50", "WRX80",
+            "X399", "TRX50", "TRX40", "WRX90", "WRX80", "SP5", "SP3", "EPYC",
         ];
 
         foreach (var name in known)
         {
-            if (upper.Contains(name))
+            if (ContainsChipsetCode(upper, name))
                 return name;
         }
 
@@ -170,6 +189,21 @@ public sealed class ChipsetAnalysisService : ObservableObject
         // 而且呼叫端會拿這個型號去查表，填出一整份假的晶片組規格（幾個 USB、幾條 PCIe 全部是編的）。
         // 晶片組型號是主機板決定的，跟 CPU 世代沒有對應關係——查不到就回未知。
         return "未知";
+    }
+
+    private static bool ContainsChipsetCode(string text, string code)
+    {
+        int start = 0;
+        while ((start = text.IndexOf(code, start, StringComparison.Ordinal)) >= 0)
+        {
+            int end = start + code.Length;
+            bool leftBoundary = start == 0 || !char.IsLetterOrDigit(text[start - 1]);
+            bool rightBoundary = end == text.Length || !char.IsLetterOrDigit(text[end]);
+            if (leftBoundary && rightBoundary) return true;
+            start = end;
+        }
+
+        return false;
     }
 
     // ==================================================================
@@ -272,14 +306,14 @@ public sealed class ChipsetAnalysisService : ObservableObject
         {
             Vendor = "Intel",
             OneLiner = "Intel X299 — Core X / HEDT 平台晶片組 (LGA2066)",
-            NorthbridgeDescription = "已整合至 CPU：四通道 DDR4、最多 48 條 PCIe 3.0",
-            SouthbridgeDescription = "PCH X299：24x PCIe 3.0，8 個 SATA III，多 USB 3.1",
+            NorthbridgeDescription = "記憶體控制器與 CPU PCIe 能力整合於 LGA2066 處理器；Kaby Lake-X、Core X 與 Xeon W SKU 各有差異",
+            SouthbridgeDescription = "PCH X299；實際插槽、SATA、USB 與共享資源依主機板設計",
             Features =
             [
-                new("記憶體", "四通道 DDR4-2933"),
-                new("CPU PCIe", "最多 48x PCIe 3.0"),
-                new("PCH PCIe", "24x PCIe 3.0"),
-                new("SATA", "8x SATA III"),
+                new("記憶體", "通道數與速度依 CPU SKU；Kaby Lake-X 與 Core X 不同"),
+                new("CPU PCIe", "代數與 lanes 依 CPU SKU；不由 X299 型號推算"),
+                new("PCH I/O", "主機板廠商分配並可能與其他裝置共享"),
+                new("相鄰平台", "Xeon W-2100／W-2200 常見 C422，需按 CPU 與主機板分辨"),
             ],
         };
 
@@ -287,14 +321,14 @@ public sealed class ChipsetAnalysisService : ObservableObject
         {
             Vendor = "Intel",
             OneLiner = "Intel C621 — Xeon Scalable 伺服器/工作站晶片組",
-            NorthbridgeDescription = "已整合至 CPU：六通道 DDR4、最多 48 條 PCIe 3.0",
-            SouthbridgeDescription = "PCH C621：20x PCIe 3.0，14 個 SATA III / 8 個 SAS",
+            NorthbridgeDescription = "記憶體控制器與 CPU PCIe 能力整合於處理器；須依 Xeon SKU 與插槽世代確認",
+            SouthbridgeDescription = "PCH C621；板載 SATA／SAS 控制器與連接埠由主機板實作",
             Features =
             [
-                new("記憶體", "六通道 DDR4 ECC"),
-                new("CPU PCIe", "最多 48x PCIe 3.0"),
-                new("PCH PCIe", "20x PCIe 3.0"),
-                new("SATA/SAS", "14x SATA III / 8x SAS 3.0"),
+                new("記憶體", "通道、ECC、RDIMM 與容量依 Xeon SKU、主機板及 BIOS"),
+                new("CPU PCIe", "代數、lanes 與插槽數依 Xeon SKU／平台配置"),
+                new("I/O", "PCH 與板載控制器分開列；晶片組名稱不代表實際連接埠數"),
+                new("相鄰平台", "C621 與 C621A／後續插槽平台不可只按型號相似而互推"),
             ],
         };
 

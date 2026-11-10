@@ -51,6 +51,27 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "3.25",
+            Date = "2026-11-11",
+            Title = "雙級安全模式與平台靶向深測",
+            Items =
+            [
+                "平台靶向：Deep Bench 增加 MSDT、HEDT、MODT 與伺服器／工作站套件；依 CPU 型號、腳座及主機板線索提出建議，使用者手選後不覆寫。Quick／Full 調整被選測項工作量，平台套件決定測項範圍。",
+                "舊平台識別：補入 X58／X79／X99／X299、C602／C612／C621／C422、W790、EPYC SP3／SP5 與 WRX80／WRX90 參考資料，並以完整代碼邊界比對避免型號後綴誤命中。",
+                "Socket 精準度：區分 LGA1366、LGA2011 v1／v3、SP3、SP5 與 Threadripper TR4／sTRX4；WMI 只回報 LGA2011 時標示版本未明。X58 分開呈現外接 IOH／南橋，不再當成 CPU 整合 Root Complex。",
+                "能力敘述：記憶體通道、ECC、PCIe、NUMA 與插槽能力按 CPU SKU／主機板／BIOS 判定；不以晶片組型號冒充實際配置。",
+                "雙級安全模式：兩個開關預設關閉；第一級開啟深度唯讀盤點與 CPU／DRAM 負載，第二級需第一級先開，才允許暫存器／SMBus／PCI／GPU／CPU 硬體寫入與合成威脅測試；改從 WinRing0 寫入入口執行時攔截。",
+                "啟動 CPU 降載：預設不啟動 CPU-Z／深度硬體盤點與環境自檢；安全態勢改為開啟安全頁才掃描。第一級啟用後才啟動深度盤點，關閉時取消可取消的盤點；感測器建構不再重複掃描硬體樹。",
+                "DRAM 完整性：新增最多 16 MiB 程序私有陣列圖樣往返測項，支援取消；不碰實體位址、不注入 ECC 錯誤，也不冒稱 MemTest。",
+                "合成威脅測試：以固定 BYOVD 樣本驗證安全評分器的基線與 Critical 判定，不讀寫實際威脅狀態。",
+                "回歸：新增平台代碼、Socket 歧義、目標套件映射、自動建議、雙級閘門、合成情境與 DRAM 圖樣讀回測試；更新深測目錄至 44 項。",
+                "繁簡轉換：桌面與 CLI 共用 OpenCC 台灣詞組配置及產品術語表；Big5 原始位元組僅在輸入邊界嚴格解碼，CLI 的 char/span 輸出不再漏轉。",
+                "EC 安全盤點：新增 Windows PnP ACPI\\PNP0C09 存在性線索，與 ECDT 分開報告；不直接讀寫 EC 埠或 EC RAM。ECC 能力與 WHEA 記錄仍分來源呈現。",
+                "CLI 對齊：加入兩級安全設定、平台靶向 Deep Bench、EC／ME／晶片組／ECC 查詢；互動與直接命令皆可用，深測支援含空格的暫存路徑且須帶 --confirm，settings 輸出遮蔽金鑰、密碼與 token。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "3.24",
             Date = "2026-11-10",
             Title = "降低即時監控開銷與修正流量基準",

@@ -17,6 +17,7 @@ public sealed class SettingsService : ObservableObject
     private const string TaskName = "XinSpect";   // 工作排程器上的排定名稱
 
     private bool _loading;   // 載入期間不觸發存檔，避免逐欄寫檔
+    private readonly bool _persistChanges;
 
     // ── 一般 ─────────────────────────────────────────────
     private int _updateIntervalSec = 1;
@@ -80,6 +81,46 @@ public sealed class SettingsService : ObservableObject
     private bool _blueSquadronEnabled;
     /// <summary>藍色中隊守護進程（BlueSquadronBridge）是否隨程式啟動（安全頁滑動開關，<b>預設關</b>：守護進程會常駐輪詢，預設不替使用者做這個決定）。</summary>
     public bool BlueSquadronEnabled { get => _blueSquadronEnabled; set { if (SetProperty(ref _blueSquadronEnabled, value)) Save(); } }
+
+    private bool _advancedDiagnosticsEnabled;
+    /// <summary>進階唯讀讀取與 CPU／DRAM 壓力測試總開關；新安裝預設關閉。</summary>
+    public bool AdvancedDiagnosticsEnabled
+    {
+        get => _advancedDiagnosticsEnabled;
+        set
+        {
+            if (!SetProperty(ref _advancedDiagnosticsEnabled, value)) return;
+            if (!value && _highRiskHardwareOperationsEnabled)
+            {
+                _highRiskHardwareOperationsEnabled = false;
+                OnPropertyChanged(nameof(HighRiskHardwareOperationsEnabled));
+            }
+            OnPropertyChanged(nameof(CanUseHighRiskHardwareOperations));
+            Save();
+        }
+    }
+
+    private bool _highRiskHardwareOperationsEnabled;
+    /// <summary>硬體寫入與威脅情境測試總開關；必須先開啟進階診斷，且新安裝預設關閉。</summary>
+    public bool HighRiskHardwareOperationsEnabled
+    {
+        get => _highRiskHardwareOperationsEnabled;
+        set
+        {
+            bool next = value && _advancedDiagnosticsEnabled;
+            if (SetProperty(ref _highRiskHardwareOperationsEnabled, next))
+            {
+                OnPropertyChanged(nameof(CanUseHighRiskHardwareOperations));
+                Save();
+            }
+        }
+    }
+
+    public bool CanUseHighRiskHardwareOperations =>
+        _advancedDiagnosticsEnabled && _highRiskHardwareOperationsEnabled;
+
+    /// <summary>Activates this instance as the process-wide hardware-operation policy source.</summary>
+    public void ActivateHardwareOperationPolicy() => HardwareOperationGate.Bind(this);
 
     private bool _simplifiedChinese;
     /// <summary>介面文字使用簡體中文（預設繁體）。切換後須重啟或呼叫 ConvertVisualTree。</summary>
@@ -389,10 +430,13 @@ public sealed class SettingsService : ObservableObject
         Save();
     }
 
-    public SettingsService()
+    public SettingsService() : this(loadFromDisk: true) { }
+
+    internal SettingsService(bool loadFromDisk)
     {
-        Load();
-        KernelBackendHost.ApplyMode(KernelBackendModeEnum);
+        _persistChanges = loadFromDisk;
+        if (loadFromDisk) Load();
+        if (loadFromDisk) KernelBackendHost.ApplyMode(KernelBackendModeEnum);
     }
 
     /// <summary>
@@ -481,6 +525,8 @@ public sealed class SettingsService : ObservableObject
         public bool AllowMultiInstance { get; set; } = true;
         public bool CeremonyPlayed { get; set; }
         public bool BlueSquadronEnabled { get; set; }
+        public bool AdvancedDiagnosticsEnabled { get; set; }
+        public bool HighRiskHardwareOperationsEnabled { get; set; }
         public bool SimplifiedChinese { get; set; }
         public bool IsEnglish { get; set; }
         public string? DashboardTiles { get; set; }
@@ -578,6 +624,8 @@ public sealed class SettingsService : ObservableObject
                     _firstRunDone = p.FirstRunDone;
                     _ceremonyPlayed = p.CeremonyPlayed;
                     _blueSquadronEnabled = p.BlueSquadronEnabled;
+                    _advancedDiagnosticsEnabled = p.AdvancedDiagnosticsEnabled;
+                    _highRiskHardwareOperationsEnabled = _advancedDiagnosticsEnabled && p.HighRiskHardwareOperationsEnabled;
                     _simplifiedChinese = p.SimplifiedChinese;
                     _isEnglish = p.IsEnglish;
                     _allowMultiInstance = p.AllowMultiInstance;
@@ -625,7 +673,7 @@ public sealed class SettingsService : ObservableObject
 
     private void Save()
     {
-        if (_loading) return;
+        if (_loading || !_persistChanges) return;
         try
         {
             Directory.CreateDirectory(Dir);
@@ -689,6 +737,8 @@ public sealed class SettingsService : ObservableObject
                 FirstRunDone = _firstRunDone,
                 CeremonyPlayed = _ceremonyPlayed,
                 BlueSquadronEnabled = _blueSquadronEnabled,
+                AdvancedDiagnosticsEnabled = _advancedDiagnosticsEnabled,
+                HighRiskHardwareOperationsEnabled = _highRiskHardwareOperationsEnabled,
                 SimplifiedChinese = _simplifiedChinese,
                 IsEnglish = _isEnglish,
                 AllowMultiInstance = _allowMultiInstance,

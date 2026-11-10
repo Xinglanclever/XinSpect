@@ -17,6 +17,9 @@ public partial class BlueSquadronView : UserControl, IPageLifecycle
     private void Refresh_Click(object sender, RoutedEventArgs e)
         => Vm?.BlueSquadron.Posture.Refresh(Vm);
 
+    private void SyntheticThreat_Click(object sender, RoutedEventArgs e)
+        => Vm?.BlueSquadron.Posture.RunSyntheticThreatScenarios();
+
     private MainViewModel? Vm =>
         DataContext as MainViewModel
         ?? Shell.Vm;

@@ -75,7 +75,7 @@ public sealed class CpuPinoutService : ObservableObject
 
     // ── 名稱正規化 ──────────────────────────────────────────
 
-    static string? NormalizeSocketName(string raw)
+    internal static string? NormalizeSocketName(string raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
         string u = raw.ToUpperInvariant().Replace(" ", "");
@@ -86,16 +86,18 @@ public sealed class CpuPinoutService : ObservableObject
         if (u.Contains("LGA1200") || u.Contains("1200")) return "LGA 1200";
         if (u.Contains("LGA1151") || u.Contains("1151")) return "LGA 1151";
         if (u.Contains("LGA2066") || u.Contains("2066")) return "LGA 2066";
-        if (u.Contains("LGA2011") || u.Contains("2011")) return "LGA 2011";
+        if (u.Contains("LGA2011-3") || u.Contains("LGA2011-V3") || u.Contains("LGA2011V3") || u.Contains("2011-3") || u.Contains("2011-V3") || u.Contains("2011V3") || u.Contains("SOCKETR3")) return "LGA 2011-v3";
+        if (u.Contains("LGA2011") || u.Contains("2011") || u == "SOCKETR") return "LGA 2011";
+        if (u.Contains("LGA1366") || u.Contains("1366")) return "LGA 1366";
         if (u.Contains("LGA4677") || u.Contains("4677")) return "LGA 4677";
         if (u.Contains("LGA3647") || u.Contains("3647")) return "LGA 3647";
 
         // AMD AM 系列
         if (u.Contains("AM5"))  return "AM5";
         if (u.Contains("AM4"))  return "AM4";
-        if (u.Contains("SP5"))  return "SP5";
-        if (u.Contains("SP3") || u.Contains("TR4") || u.Contains("STRX4"))
-            return "sTRX4 / TR4 / SP3";
+        if (u.Contains("SP5")) return "SP5";
+        if (u.Contains("SP3")) return "SP3";
+        if (u.Contains("TR4") || u.Contains("STRX4")) return "sTRX4 / TR4";
 
         return null;
     }
@@ -187,57 +189,80 @@ public sealed class CpuPinoutService : ObservableObject
             Name:     "LGA 2066",
             Pins:     2066,
             Mount:    "LGA（平面柵格陣列）",
-            Desc:     "Intel Core X / 高階桌上型 (HEDT) 平台使用的腳座。",
-            Gen:      "Skylake-X — Cascade Lake-X (2017–2019)",
+            Desc:     "Intel Core X 高階桌上型與 Xeon W-2100／W-2200 工作站處理器使用的腳座；晶片組與 CPU 支援需按型號核對。",
+            Gen:      "Kaby Lake-X／Skylake-X／Cascade Lake-X；Xeon W-2100／W-2200",
             Facts:
             [
-                "四通道 DDR4，最高支援 256 GB",
-                "CPU 直出 PCIe 3.0 最多 48 lanes（含 DMI）",
-                "搭配 X299 晶片組，支援 RAID 與 Thunderbolt",
-                "處理器 TDP 自 140W 至 255W 不等",
+                "記憶體通道與 PCIe lanes 依 CPU SKU；Kaby Lake-X 和 Core X 不能共用一組固定規格",
+                "Core X 常見 X299；Xeon W-2100／W-2200 常見 C422，不能只按腳座推定晶片組",
+                "ECC 與 Registered DIMM 支援依 Xeon W 型號、主機板與 BIOS",
                 "接觸面尺寸 52.5 × 45.0 mm，需大型散熱方案",
             ]),
 
-        "LGA 2011" => new(
-            Name:     "LGA 2011 / 2011-v3",
+        "LGA 2011-v3" => new(
+            Name:     "LGA 2011-v3",
             Pins:     2011,
             Mount:    "LGA（平面柵格陣列）",
-            Desc:     "Intel Sandy Bridge-E 至 Broadwell-E HEDT 與 Xeon E5 系列使用的腳座。",
-            Gen:      "Sandy Bridge-E — Broadwell-E / Xeon E5 (2011–2016)",
+            Desc:     "Intel Haswell-E／Broadwell-E 與 Xeon E5 v3／v4 使用的獨立電氣版本。",
+            Gen:      "Haswell-E／Broadwell-E／Xeon E5 v3-v4",
             Facts:
             [
-                "v1 與 v3 電氣不相容，v3 搭配 X99 / C612 晶片組",
-                "四通道 DDR3 (v1) 或 DDR4 (v3)",
-                "CPU 直出 PCIe 3.0 最多 40 lanes",
+                "與 LGA 2011 v1 電氣不相容，不能只看相同針腳數判定相容",
+                "桌面平台常見 X99；Xeon E5 平台常見 C612，仍須由主機板型號確認",
+                "記憶體通道、ECC/RDIMM 與 PCIe 能力依 CPU SKU 和主機板",
+            ]),
+
+        "LGA 2011" => new(
+            Name:     "LGA 2011（版本未明）",
+            Pins:     2011,
+            Mount:    "LGA（平面柵格陣列）",
+            Desc:     "WMI 只回報 LGA 2011 時，無法單靠 SocketDesignation 分辨 v1 與 v3；須交叉核對 CPU 型號與晶片組。",
+            Gen:      "v1／v3 未判定",
+            Facts:
+            [
+                "LGA 2011 v1 與 v3 電氣不相容，不可只看相同針腳數判定相容",
+                "v1 常見 X79／C600 系列並使用 DDR3；v3 常見 X99／C612 並使用 DDR4，需由 CPU／晶片組證據確認",
+                "記憶體通道、ECC／RDIMM 與 PCIe 能力依處理器 SKU 和主機板",
                 "ILM 為窄型與寬型兩種，對應不同散熱安裝方式",
+            ]),
+
+        "LGA 1366" => new(
+            Name:     "LGA 1366",
+            Pins:     1366,
+            Mount:    "LGA（平面柵格陣列）",
+            Desc:     "Intel Nehalem／Westmere 桌上型、工作站與伺服器處理器使用的腳座。",
+            Gen:      "Nehalem／Westmere；Xeon 5500／5600 系列",
+            Facts:
+            [
+                "X58 桌面平台與 5500／5520 系列伺服器晶片組平台是不同主機板設計",
+                "CPU 型號決定記憶體控制器及 QPI 能力；主機板決定插槽與通道佈線",
+                "不與後續 LGA 2011 系列相容",
             ]),
 
         "LGA 4677" => new(
             Name:     "LGA 4677",
             Pins:     4677,
             Mount:    "LGA（平面柵格陣列）",
-            Desc:     "Intel Sapphire Rapids / Emerald Rapids Xeon Scalable 伺服器處理器使用的腳座。",
-            Gen:      "Sapphire Rapids — Emerald Rapids Xeon (2023–)",
+            Desc:     "Intel Xeon Scalable 與 Xeon W-2400／W-3400 工作站處理器使用的腳座。",
+            Gen:      "Xeon Scalable Sapphire Rapids／Emerald Rapids；Xeon W-2400／W-3400",
             Facts:
             [
-                "八通道 DDR5，支援 HBM（部分 SKU）",
-                "CPU 直出最多 80 lanes PCIe 5.0",
-                "支援 CXL 1.1/2.0 記憶體擴展",
-                "基板尺寸為消費級的數倍，散熱需求 350W+",
+                "記憶體通道、HBM、PCIe 與 CXL 能力依 Xeon 型號與平台配置",
+                "伺服器常見 E/F/P 系列平台；Xeon W-2400／W-3400 使用 W790 工作站平台",
+                "LGA 4677 腳座相同不代表不同 Xeon 系列或主機板可互換",
             ]),
 
         "LGA 3647" => new(
             Name:     "LGA 3647",
             Pins:     3647,
             Mount:    "LGA（平面柵格陣列）",
-            Desc:     "Intel Skylake-SP / Cascade Lake-SP Xeon Scalable 伺服器處理器使用的腳座。",
-            Gen:      "Skylake-SP — Cascade Lake-SP / Cooper Lake (2017–2020)",
+            Desc:     "Intel Xeon Scalable 與部分 Xeon W-3200 工作站處理器使用的腳座。",
+            Gen:      "Skylake-SP／Cascade Lake-SP／Cooper Lake；Xeon W-3200",
             Facts:
             [
-                "六通道 DDR4，最高支援 1.5 TB (per socket)",
-                "CPU 直出最多 48 lanes PCIe 3.0",
+                "記憶體通道、容量及 PCIe 能力依處理器型號與平台配置",
+                "C621 常見於 Xeon Scalable／部分 Xeon W 平台；須按主機板與 CPU SKU 核對",
                 "窄型 (P) 與方型 (Square) 兩種 ILM",
-                "TDP 從 70W 至 280W 不等",
             ]),
 
         "AM5" => new(
@@ -272,33 +297,41 @@ public sealed class CpuPinoutService : ObservableObject
                 "拔取散熱器時需注意黏住 CPU 的情形（建議先暖機）",
             ]),
 
-        "sTRX4 / TR4 / SP3" => new(
-            Name:     "sTRX4 / TR4 / SP3",
+        "SP3" => new(
+            Name:     "SP3",
             Pins:     4094,
             Mount:    "LGA（平面柵格陣列）",
-            Desc:     "AMD Threadripper 與 EPYC 系列高階處理器使用的大型腳座家族。",
-            Gen:      "Zen — Zen 3 Threadripper / EPYC (2017–2022)",
+            Desc:     "AMD EPYC 7000 系列伺服器處理器使用的 SP3 腳座。",
+            Gen:      "EPYC Naples／Rome／Milan",
             Facts:
             [
-                "四通道 DDR4（Threadripper）/ 八通道 DDR4（EPYC）",
-                "CPU 直出最多 128 lanes PCIe 4.0（EPYC 7003）",
-                "基板尺寸遠大於消費級，需專用散熱方案",
-                "TR4 → sTRX4 電氣不完全相容，需注意主機板支援列表",
-                "SP3 用於伺服器 EPYC，腳位定義略有不同",
+                "EPYC 7000 系列的記憶體、I/O 與插槽能力依處理器 SKU、主機板及 BIOS",
+                "SP3 與 TR4／sTRX4 腳座名稱相近但平台用途及電氣定義不同",
             ]),
 
         "SP5" => new(
             Name:     "SP5 (LGA 6096)",
             Pins:     6096,
             Mount:    "LGA（平面柵格陣列）",
-            Desc:     "AMD EPYC 9004 (Genoa / Bergamo) 伺服器處理器使用的腳座。",
-            Gen:      "Zen 4 EPYC 9004 — Zen 5 EPYC (2022–)",
+            Desc:     "AMD EPYC 9000 系列伺服器處理器使用的 SP5 腳座。",
+            Gen:      "EPYC Genoa／Bergamo 及後續相容系列",
             Facts:
             [
-                "十二通道 DDR5，單插槽最高支援 6 TB",
-                "CPU 直出最多 128 lanes PCIe 5.0 + CXL 2.0",
-                "目前消費 / 伺服器級別中針腳數最多的 x86 腳座",
-                "TDP 從 200W 至 400W 不等",
+                "記憶體通道、容量、PCIe／CXL 與插槽能力依 EPYC SKU、主機板及 BIOS",
+                "SP5 不與 SP3、SP6 或 Threadripper 腳座互換",
+            ]),
+
+        "sTRX4 / TR4" => new(
+            Name:     "sTRX4 / TR4",
+            Pins:     4094,
+            Mount:    "LGA（平面柵格陣列）",
+            Desc:     "AMD Threadripper HEDT 處理器使用的 TR4／sTRX4 腳座系列。",
+            Gen:      "Threadripper Zen／Zen+／Zen 2",
+            Facts:
+            [
+                "TR4、sTRX4、SP3 外觀與名稱相近但平台及電氣定義不同",
+                "記憶體通道與 PCIe 能力依 Threadripper 型號及主機板",
+                "TR4 與 sTRX4 也需依 CPU、主機板支援列表確認相容",
             ]),
 
         _ => new(

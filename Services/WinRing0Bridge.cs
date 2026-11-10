@@ -275,10 +275,14 @@ public sealed class WinRing0Bridge : IDisposable
     {
         var args = new object?[] { index, eax, edx };
         if (_m is null || _disposed) return false;
+        string target = $"MSR 0x{index:X}";
+        string caller = CallerOfWrite();
+        string detail = $"EAX=0x{eax:X8} EDX=0x{edx:X8}";
+        if (!WriteGate.TryAuthorizeHardwareWrite(target, caller, detail)) return false;
         bool ok;
         try { ok = _m.WriteMsr.Invoke(null, args) is true; }
         catch { ok = false; }
-        WriteGate.Record($"MSR 0x{index:X}", CallerOfWrite(), $"EAX=0x{eax:X8} EDX=0x{edx:X8}", ok);
+        WriteGate.Record(target, caller, detail, ok);
         return ok;
     }
 
@@ -327,13 +331,24 @@ public sealed class WinRing0Bridge : IDisposable
     /// ——只允許 SPD EEPROM 讀取與 DDR4 切頁，寫入保護指令連程式碼路徑都不存在。
     /// </remarks>
     public bool WriteIoPortByte(uint port, byte value)
+        => WriteIoPortByteCore(port, value, readOnlyBusTransaction: false);
+
+    internal bool WriteIoPortForReadProtocol(uint port, byte value)
+        => WriteIoPortByteCore(port, value, readOnlyBusTransaction: true);
+
+    private bool WriteIoPortByteCore(uint port, byte value, bool readOnlyBusTransaction)
     {
         if (_m?.WriteIoPort is null || _disposed) return false;
+        string target = $"I/O 0x{port:X}";
+        string caller = CallerOfWrite();
+        string detail = $"out byte 0x{value:X2}";
+        if (!readOnlyBusTransaction && !WriteGate.TryAuthorizeHardwareWrite(target, caller, detail)) return false;
         bool ok;
         try { _m.WriteIoPort.Invoke(null, new object?[] { port, value }); ok = true; }
         catch { ok = false; }
         // LHM 的 WriteIoPort 回 void——「沒丟例外」不等於「硬體收到了」，帳本如實記，不寫「成功」
-        WriteGate.Record($"I/O 0x{port:X}", CallerOfWrite(), $"out byte 0x{value:X2}（無例外；LHM 不回確認）", ok);
+        WriteGate.Record(target, caller,
+            detail + (readOnlyBusTransaction ? "（讀取協定控制）" : "") + "（無例外；LHM 不回確認）", ok);
         return ok;
     }
 
@@ -354,8 +369,19 @@ public sealed class WinRing0Bridge : IDisposable
     /// </para>
     /// </remarks>
     public bool WritePciConfig(byte bus, byte device, byte function, uint register, uint value)
+        => WritePciConfigCore(bus, device, function, register, value, readOnlyBusTransaction: false);
+
+    internal bool WritePciForReadProtocol(byte bus, byte device, byte function, uint register, uint value)
+        => WritePciConfigCore(bus, device, function, register, value, readOnlyBusTransaction: true);
+
+    private bool WritePciConfigCore(byte bus, byte device, byte function, uint register, uint value,
+        bool readOnlyBusTransaction)
     {
         if (_m?.WritePciConfig is null || _m.GetPciAddress is null || _disposed) return false;
+        string target = $"PCI {bus}:{device:X2}.{function}+0x{register:X}";
+        string caller = CallerOfWrite();
+        string detail = $"dword 0x{value:X8}";
+        if (!readOnlyBusTransaction && !WriteGate.TryAuthorizeHardwareWrite(target, caller, detail)) return false;
         bool ok = false;
         try
         {
@@ -363,8 +389,7 @@ public sealed class WinRing0Bridge : IDisposable
                 ok = _m.WritePciConfig.Invoke(null, new object?[] { addr, register, value }) is true;
         }
         catch { ok = false; }
-        WriteGate.Record($"PCI {bus}:{device:X2}.{function}+0x{register:X}", CallerOfWrite(),
-            $"dword 0x{value:X8}", ok);
+        WriteGate.Record(target, caller, detail + (readOnlyBusTransaction ? "（讀取協定控制）" : ""), ok);
         return ok;
     }
 

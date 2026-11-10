@@ -14,13 +14,26 @@ public interface IPciConfig
 }
 
 /// <summary>把 <see cref="IPciConfig"/> 接到真實的 WinRing0 橋接上。</summary>
-public sealed class WinRing0PciConfig(WinRing0Bridge bridge) : IPciConfig
+public sealed class WinRing0PciConfig : IPciConfig
 {
+    private readonly WinRing0Bridge _bridge;
+    private readonly bool _allowReadProtocolWrites;
+
+    public WinRing0PciConfig(WinRing0Bridge bridge) : this(bridge, allowReadProtocolWrites: false) { }
+
+    internal WinRing0PciConfig(WinRing0Bridge bridge, bool allowReadProtocolWrites)
+    {
+        _bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
+        _allowReadProtocolWrites = allowReadProtocolWrites;
+    }
+
     public uint? Read(byte bus, byte device, byte function, uint register)
-        => bridge.ReadPciConfig(bus, device, function, register);
+        => _bridge.ReadPciConfig(bus, device, function, register);
 
     public bool Write(byte bus, byte device, byte function, uint register, uint value)
-        => bridge.WritePciConfig(bus, device, function, register, value);
+        => _allowReadProtocolWrites
+            ? _bridge.WritePciForReadProtocol(bus, device, function, register, value)
+            : _bridge.WritePciConfig(bus, device, function, register, value);
 }
 
 /// <summary>一組 iMC SMBus 控制器的位置。</summary>

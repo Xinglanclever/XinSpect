@@ -14,10 +14,11 @@ namespace XinSpect;
 /// </summary>
 public static class CpuzReportService
 {
-    public static async Task<CpuzReport> ReadAsync()
+    public static Task<CpuzReport> ReadAsync(CancellationToken cancellationToken = default)
     {
-        return await Task.Run(() =>
+        return Task.Run(() =>
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var r = new CpuzReport();
             string? exe = LocateCpuz();
             if (exe is null)
@@ -45,17 +46,32 @@ public static class CpuzReportService
                 using var p = Process.Start(psi);
                 if (p is null) { r.Status = "無法啟動 CPU-Z"; r.Timings.Status = r.Status; return r; }
 
-                if (!p.WaitForExit(25000))
+                var timeout = Stopwatch.StartNew();
+                while (!p.WaitForExit(250))
                 {
-                    try { p.Kill(true); } catch { }
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (timeout.Elapsed >= TimeSpan.FromSeconds(25))
+                    {
+                        try { p.Kill(true); } catch { }
+                        break;
+                    }
                 }
-                for (int i = 0; i < 12 && !File.Exists(txt); i++) Thread.Sleep(300);
+                cancellationToken.ThrowIfCancellationRequested();
+                for (int i = 0; i < 12 && !File.Exists(txt); i++)
+                {
+                    if (cancellationToken.WaitHandle.WaitOne(300)) cancellationToken.ThrowIfCancellationRequested();
+                }
+                cancellationToken.ThrowIfCancellationRequested();
                 if (!File.Exists(txt)) { r.Status = "CPU-Z 未產生報告"; r.Timings.Status = r.Status; return r; }
 
                 var lines = File.ReadAllText(txt, Encoding.Latin1).Replace("\r", "").Split('\n');
                 Parse(lines, r);
                 r.Ran = true;
                 r.Status = "已由 CPU-Z 讀取深度規格";
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -67,7 +83,7 @@ public static class CpuzReportService
                 TryDelete(txt);
             }
             return r;
-        });
+        }, cancellationToken);
     }
 
     // ---- 解析 ----------------------------------------------------------------

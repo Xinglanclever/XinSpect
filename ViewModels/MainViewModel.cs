@@ -505,6 +505,7 @@ public sealed class MainViewModel : ObservableObject
 
     public MainViewModel()
     {
+        HardwareOperationGate.Bind(Settings);
         // 主殼瑞士工程列：RING0 膠囊要跟著驅動探測狀態走（DriverReady 屬於本次執行的探測結果）
         DriverReady.PropertyChanged += (_, e) =>
         {
@@ -521,7 +522,36 @@ public sealed class MainViewModel : ObservableObject
         Bench = new BenchService(Benchmarks);
         Chess = new ChessBenchService(Benchmarks);
         SuperPi = new SuperPiService(Benchmarks);
-        DeepBench = new DeepBenchViewModel(Cache, MemBandwidth, CoreLatency, new DeepBenchRunStore(), topDown: TopDown);
+        DeepBench = new DeepBenchViewModel(Cache, MemBandwidth, CoreLatency, new DeepBenchRunStore(),
+            topDown: TopDown, advancedDiagnosticsEnabled: () => Settings.AdvancedDiagnosticsEnabled);
+        Settings.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(SettingsService.AdvancedDiagnosticsEnabled)
+                or nameof(SettingsService.HighRiskHardwareOperationsEnabled)
+                or nameof(SettingsService.CanUseHighRiskHardwareOperations))
+            {
+                DeepBench.RefreshPolicy();
+                Overclock.RefreshPolicy();
+                GpuOc.RefreshPolicy();
+                Stress.RefreshPolicy();
+                TopDown.RefreshPolicy();
+                Rdt.RefreshPolicy();
+                DramTraffic.RefreshPolicy();
+                MemTest.RefreshPolicy();
+                LargePage.RefreshPolicy();
+                BlueSquadron.Posture.RefreshPolicy();
+            }
+            if (e.PropertyName == nameof(SettingsService.AdvancedDiagnosticsEnabled)
+                && Settings.AdvancedDiagnosticsEnabled)
+            {
+                _ = StartupSequence.LoadDeepSpecsAsync(this);
+                if (!EnvCheck.HasRun && !EnvCheck.IsRunning) _ = StartupSequence.RunStartupEnvCheckAsync(this);
+            }
+            else if (e.PropertyName == nameof(SettingsService.AdvancedDiagnosticsEnabled))
+            {
+                StartupSequence.CancelDeepSpecs();
+            }
+        };
         // 深測中心儲存根預設值（2026-10-03）：可寫的暫存子目錄——空白儲存根會讓六個儲存測項全數被擋。
         // 預設在生產接線給（單元測試直接建 VM 保持空白，避免誤跑真實測試陣列）；使用者仍可改路徑或用瀏覽挑選。
         DeepBench.StorageRoot = global::System.IO.Path.Combine(global::System.IO.Path.GetTempPath(), "XinSpectDeepBench");

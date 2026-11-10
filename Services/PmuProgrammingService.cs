@@ -41,6 +41,9 @@ public static class PmuProgrammingService
     {
         if (!userConsent)
             throw new InvalidOperationException("PMU 編程驗證需要明確同意才會執行。" + FormatNotice);
+        using var writePermit = HardwareOperationGate.TryBeginHighRiskOperation();
+        if (writePermit is null)
+            throw new InvalidOperationException("PMU 編程驗證需要啟用第二級高風險硬體操作。" + FormatNotice);
         workload ??= SpinWorkload;
 
         var results = new List<PmuRoundResult>();

@@ -73,10 +73,13 @@ public sealed class FanControlRow : ObservableObject
     }
 
     /// <summary>套用手動轉速（%）；value 由呼叫端夾在安全下限與 100 之間。真實寫入硬體。</summary>
-    public void ApplyManual(double value)
+    public bool ApplyManual(double value)
     {
+        if (!WriteGate.TryAuthorizeHardwareWrite($"風扇 {Location}/{Name}", nameof(FanControlRow), $"手動輸出 {value:0}%"))
+            return false;
         _control.SetSoftware((float)System.Math.Clamp(value, 0, 100));
         IsManual = true;
+        return true;
     }
 
     /// <summary>還原為 BIOS／自動控制。</summary>

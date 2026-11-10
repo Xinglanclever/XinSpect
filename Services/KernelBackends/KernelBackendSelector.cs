@@ -107,6 +107,9 @@ public sealed class KernelBackendSelector : IDisposable
     /// <summary>寫 MSR 的快捷。同意閘門在服務層；此處只保證：經萬能鑰匙寫入一定有帳。</summary>
     public KernelWriteOutcome WriteMsr(uint index, ulong value, string caller)
     {
+        string target = $"MSR 0x{index:X}";
+        if (!WriteGate.TryAuthorizeHardwareWrite(target, caller, $"值 0x{value:X}"))
+            return new KernelWriteOutcome(false, "高風險硬體操作未啟用；已阻止 MSR 寫入。");
         var route = Route(KernelCapability.MsrWrite);
         if (route.Backend is not { } b)
             return new KernelWriteOutcome(false, route.Explanation);

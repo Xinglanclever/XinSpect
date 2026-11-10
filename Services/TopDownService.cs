@@ -155,7 +155,8 @@ public class TopDownService : ObservableObject, IDisposable
 
     private bool _running;
     public bool IsRunning { get => _running; private set { if (SetProperty(ref _running, value)) OnPropertyChanged(nameof(CanStart)); } }
-    public bool CanStart => !_running;
+    public bool CanStart => !_running && HardwareOperationGate.CanRunAdvancedDiagnostics
+        && HardwareOperationGate.CanWriteHardware;
 
     private string _phase = "尚未取樣";
     public string Phase { get => _phase; private set => SetProperty(ref _phase, value); }
@@ -196,15 +197,20 @@ public class TopDownService : ObservableObject, IDisposable
     public void Start()
     {
         if (IsRunning) return;
-        _ = RunAsync();
+        _ = RunAsync(CancellationToken.None);
+    }
+
+    public void RefreshPolicy()
+    {
+        OnPropertyChanged(nameof(CanStart));
+        if (IsRunning && (!HardwareOperationGate.CanRunAdvancedDiagnostics || !HardwareOperationGate.CanWriteHardware))
+            Cancel();
     }
 
     /// <summary>給 Hub Adapter 使用的可等待入口；不改變效能頁的 fire-and-forget Start 行為。</summary>
     public virtual async Task SampleAsync(CancellationToken cancellationToken)
     {
-        _cts = new CancellationTokenSource();
-        using CancellationTokenRegistration registration = cancellationToken.Register(Cancel);
-        await RunAsync().ConfigureAwait(false);
+        await RunAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>只做支援探測；Adapter 在真正取樣前使用，避免不支援平台進入高負載路徑。</summary>
@@ -212,10 +218,19 @@ public class TopDownService : ObservableObject, IDisposable
 
     public void Cancel() => _cts?.Cancel();
 
-    private async Task RunAsync()
+    private async Task RunAsync(CancellationToken externalToken)
     {
-        _cts = new CancellationTokenSource();
-        var ct = _cts.Token;
+        using var writePermit = HardwareOperationGate.TryBeginHighRiskOperation();
+        if (writePermit is null)
+        {
+            StatusLine = !HardwareOperationGate.CanRunAdvancedDiagnostics
+                ? "Top-down 取樣已阻止：請先啟用第一級進階診斷。"
+                : "Top-down 需要程式化 PMU 計數器；請先啟用第二級高風險硬體操作。";
+            return;
+        }
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(externalToken);
+        _cts = linked;
+        var ct = linked.Token;
         IsRunning = true;
         Phase = "取樣中";
         ProgressFraction = 0;

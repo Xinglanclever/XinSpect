@@ -8,6 +8,12 @@ public enum DeepBenchFailureKind { None, NotRun, Unsupported, DriverRejected, In
 public enum DeepBenchConfidence { Insufficient, High, Medium, Low }
 public enum DeepBenchRunProfile { Quick, Full }
 
+public sealed record DeepBenchTargetOption(
+    string Id,
+    string Title,
+    string Platforms,
+    IReadOnlyList<string> TestIds);
+
 public sealed record DeepBenchMetricPoint(
     double Value,
     IReadOnlyDictionary<string, string> Axes,

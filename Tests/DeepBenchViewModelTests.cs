@@ -30,14 +30,15 @@ public class DeepBenchViewModelTests
     }
 
     [Fact]
-    public void 目錄顯示四十三項且延後項目不得被隱藏()
+    public void 目錄顯示四十四項且延後項目不得被隱藏()
     {
         using var store = new TempHistoryStore();
         var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
 
-        Assert.Equal(43, vm.CatalogRows.Count);
-        Assert.Equal(43, vm.CatalogRows.Select(row => row.Id).Distinct().Count());
-        Assert.Equal(Enumerable.Range(1, 43), vm.CatalogRows.Select(row => row.MatrixNumber));
+        Assert.Equal(44, vm.CatalogRows.Count);
+        Assert.Equal(44, vm.CatalogRows.Select(row => row.Id).Distinct().Count());
+        Assert.Equal(Enumerable.Range(1, 44), vm.CatalogRows.Select(row => row.MatrixNumber));
+        Assert.Contains(vm.CatalogRows, row => row.Id == "memory.dram-pattern-integrity" && row.Runnable);
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gpu.codec-throughput");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "storage.io-gpu-pipeline");
         Assert.Contains(vm.CatalogRows, row => row.Status == DeepBenchTestStatus.Implemented && row.Id == "gpu.vram-bandwidth");
@@ -66,7 +67,7 @@ public class DeepBenchViewModelTests
     }
 
     [Fact]
-    public void 快速與完整檔都只選四十三個已接入測項()
+    public void 快速與完整檔都只選四十四個已接入測項()
     {
         using var store = new TempHistoryStore();
         var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
@@ -94,7 +95,7 @@ public class DeepBenchViewModelTests
             "memory.cache-bandwidth-ladder",
             "memory.copy-kernel-bandwidth",
             "topology.tsc-cross-core-sync",
-            "topology.core-uniformity"
+            "topology.core-uniformity", "memory.dram-pattern-integrity"
         ];
 
         vm.SelectedProfile = DeepBenchRunProfile.Quick;
@@ -102,6 +103,47 @@ public class DeepBenchViewModelTests
 
         vm.SelectedProfile = DeepBenchRunProfile.Full;
         Assert.Equal(expected, vm.SelectedIds);
+    }
+
+    [Fact]
+    public void 平台目標切換會更新實際深測測項()
+    {
+        using var store = new TempHistoryStore();
+        var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
+        string[] general = [.. vm.SelectedIds];
+
+        vm.SelectedTargetId = "server-workstation";
+
+        Assert.NotEqual(general, vm.SelectedIds);
+        Assert.Contains("memory.numa-tlb-largepage", vm.SelectedIds);
+        Assert.Contains("memory.ecc-whea-stress", vm.SelectedIds);
+        Assert.DoesNotContain("gpu.codec-throughput", vm.SelectedIds);
+    }
+
+    [Fact]
+    public void 使用者手動指定平台後自動建議不得覆蓋()
+    {
+        using var store = new TempHistoryStore();
+        var vm = new DeepBenchViewModel(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store);
+        vm.SelectedTargetId = "hedt";
+
+        vm.SuggestTarget("AMD EPYC 9654", "SP5", "Server board");
+
+        Assert.Equal("hedt", vm.SelectedTargetId);
+    }
+
+    [Fact]
+    public async Task 預設關閉時深測入口不執行也不建立紀錄()
+    {
+        using var store = new TempHistoryStore();
+        var vm = CreateViewModel(store.Store, new FixedDiskFileSystem(256L * 1024 * 1024 * 1024), advancedDiagnosticsEnabled: false);
+
+        Assert.False(vm.CanStart);
+        await vm.StartAsync(CancellationToken.None);
+
+        Assert.False(vm.IsRunning);
+        Assert.Null(vm.LastState);
+        Assert.Contains(vm.Errors, error => error.Contains("第一級", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -143,7 +185,8 @@ public class DeepBenchViewModelTests
         var fileSystem = new FixedDiskFileSystem(256L * 1024 * 1024 * 1024);
         var vm = new DeepBenchViewModel(
             new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store,
-            fileSystem, new DeepBenchOrchestrator(FakeTests()));
+            fileSystem, new DeepBenchOrchestrator(FakeTests()),
+            advancedDiagnosticsEnabled: () => true);
         vm.StorageRoot = "C:\\DeepBench";
         using var cts = new CancellationTokenSource();
 
@@ -265,8 +308,12 @@ public class DeepBenchViewModelTests
         Assert.DoesNotContain("已完成", row.CompletionText, StringComparison.Ordinal);
     }
 
-    private static DeepBenchViewModel CreateViewModel(DeepBenchRunStore store, FixedDiskFileSystem fileSystem) =>
-        new(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store, fileSystem);
+    private static DeepBenchViewModel CreateViewModel(
+        DeepBenchRunStore store,
+        FixedDiskFileSystem fileSystem,
+        bool advancedDiagnosticsEnabled = true) =>
+        new(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store, fileSystem,
+            advancedDiagnosticsEnabled: () => advancedDiagnosticsEnabled);
 
     private static IReadOnlyList<IDeepBenchTest> FakeTests()
     {
@@ -335,6 +382,7 @@ public class DeepBenchViewModelTests
             new FakeDeepBenchTest("memory.copy-kernel-bandwidth", () => SuccessfulResult("memory.copy-kernel-bandwidth")),
             new FakeDeepBenchTest("topology.tsc-cross-core-sync", () => SuccessfulResult("topology.tsc-cross-core-sync")),
             new FakeDeepBenchTest("topology.core-uniformity", () => SuccessfulResult("topology.core-uniformity")),
+            new FakeDeepBenchTest("memory.dram-pattern-integrity", () => SuccessfulResult("memory.dram-pattern-integrity")),
         ];
     }
 

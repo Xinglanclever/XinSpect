@@ -14,6 +14,13 @@
 internal static class StartupSequence
 {
     private static readonly SemaphoreSlim DeepSpecsGate = new(1, 1);
+    private static readonly object DeepSpecsLock = new();
+    private static CancellationTokenSource? _activeDeepSpecs;
+
+    public static void CancelDeepSpecs()
+    {
+        lock (DeepSpecsLock) _activeDeepSpecs?.Cancel();
+    }
     /// <summary>開機序列：讀靜態資訊 → 起感測與網路引擎 → 補齊磁碟／色域／CUDA → 起脈動 → 背景深度規格與自檢。</summary>
     public static async Task RunAsync(MainViewModel vm, MetricsPump pump)
     {
@@ -68,12 +75,14 @@ internal static class StartupSequence
         vm.StartupSeconds = sw.Elapsed.TotalSeconds;      // 實測值，不是估計值
         if (vm.Live is not null) vm.StatusText = ReadyText(vm);
 
-        // 5) 深度規格（背景呼叫 CPU-Z 產生報告，約需 10 餘秒）＋ WinSAT 快取分數
-        _ = LoadDeepSpecsAsync(vm);
+        // 深度硬體盤點會載入多個提供者並啟動 CPU-Z；只在使用者啟用第一級後執行。
+        if (vm.Settings.AdvancedDiagnosticsEnabled) _ = LoadDeepSpecsAsync(vm);
+
+        // WinSAT 快取讀取不執行跑分，保持一般啟動可用。
         _ = vm.Winsat.LoadCachedAsync();
 
         // 6) 首次啟動的環境自檢（待各引擎稍稍就緒後於背景執行一次）
-        _ = RunStartupEnvCheckAsync(vm);
+        if (vm.Settings.AdvancedDiagnosticsEnabled) _ = RunStartupEnvCheckAsync(vm);
 
         // 7) 藍屏傾印併入事件時間軸（掃描 %SystemRoot%\Minidump，以檔名去重可重複呼叫）
         _ = ImportBsodAsync(vm);
@@ -113,7 +122,7 @@ internal static class StartupSequence
         // 一鍵裝機：重新偵測 winget 是否可用
         try { await vm.Winget.DetectAsync(); } catch { /* winget 偵測為附加 */ }
 
-        _ = LoadDeepSpecsAsync(vm);
+        if (vm.Settings.AdvancedDiagnosticsEnabled) _ = LoadDeepSpecsAsync(vm);
         _ = vm.Winsat.LoadCachedAsync();
         _ = vm.Profiles.RefreshPowerPlanAsync();
 
@@ -214,11 +223,25 @@ internal static class StartupSequence
     }
 
     // 深度規格：CPU-Z 子行程報告（時序、SPD、主機板、顯示卡）。以射後不理呼叫，故整段包覆。
-    private static async Task LoadDeepSpecsAsync(MainViewModel vm)
+    internal static async Task LoadDeepSpecsAsync(MainViewModel vm)
     {
+        if (!vm.Settings.AdvancedDiagnosticsEnabled) return;
         if (!await DeepSpecsGate.WaitAsync(0)) return;
-        try { await LoadDeepSpecsCore(vm); }
-        finally { DeepSpecsGate.Release(); }
+        using var cts = new CancellationTokenSource();
+        lock (DeepSpecsLock) _activeDeepSpecs = cts;
+        try
+        {
+            if (vm.Settings.AdvancedDiagnosticsEnabled) await LoadDeepSpecsCore(vm, cts.Token);
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            lock (DeepSpecsLock)
+            {
+                if (ReferenceEquals(_activeDeepSpecs, cts)) _activeDeepSpecs = null;
+            }
+            DeepSpecsGate.Release();
+        }
     }
 
     /// <summary>
@@ -232,7 +255,7 @@ internal static class StartupSequence
         await ui.InvokeAsync(apply).Task.ConfigureAwait(false);
     }
 
-    private static async Task LoadDeepSpecsCore(MainViewModel vm)
+    private static async Task LoadDeepSpecsCore(MainViewModel vm, CancellationToken cancellationToken)
     {
         // P3-5：本方法的同步段（WinRing0/SPI/TBS/WMI/D3D11 列舉）原樣跑在 UI 執行緒上——
         // 呼叫鏈 MainViewModel.Initialize → RunAsync → 本方法全程落在 UI SynchronizationContext，
@@ -241,10 +264,12 @@ internal static class StartupSequence
         // UI 執行緒，寫 vm 一律經 OnUiAsync 收攏。絕不「整段包一個 Task.Run」——那只是把凍結
         // 換成 ObservableCollection 跨執行緒寫入的隨機崩潰。
         var ui = System.Windows.Application.Current?.Dispatcher;
+        cancellationToken.ThrowIfCancellationRequested();
 
         // SPD 先自己讀。讀得到就用它，因為那是模組上的原始位元組（來源那一列會標明是哪一條匯流排）；
         // 讀不到就保留既有值，讓下面的 CPU-Z 報告照原樣填——在讀不到 SPD 的機器上完全沒有回歸。
         var survey = await Task.Run(ReadSpdDirect).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
         await OnUiAsync(ui, () =>
         {
             if (survey is not null)
@@ -267,6 +292,7 @@ internal static class StartupSequence
         // EvidenceLab 走 IReadOnlyList 屬性＋OnPropertyChanged（與下方既有背景的 LoadUsermodeFacts 同一
         // 信任等級），ObservableCollection 的 Facts/Changes 不在此路徑改動。
         await Task.Run(() => LoadDriverBackedEvidence(vm)).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
 
         // ACPI 表清單（usermode 列舉，不需驅動；BERT/HEST/SRAT/DMAR 的有無即是平台能力的指紋）——
         // 已移進 EvidenceCollection.LoadUsermodeFacts（GUI 與 CLI 同一個組合點）。
@@ -275,25 +301,30 @@ internal static class StartupSequence
         // LoadTpm 的交叉事實語意依賴這個次序，不重排）。
         try { await Task.Run(() => vm.EvidenceLab.LoadTpm()).ConfigureAwait(false); }
         catch { /* TPM 為附加功能，讀不到由三態標示 */ }
+        cancellationToken.ThrowIfCancellationRequested();
 
         try { await Task.Run(() => vm.EvidenceLab.LoadTpmReplay()).ConfigureAwait(false); }
         catch { /* 重放為附加功能，讀不到由三態標示 */ }
+        cancellationToken.ThrowIfCancellationRequested();
 
         // NUMA 拓撲與記憶體攻擊面聲明（usermode）——已移進 EvidenceCollection.LoadUsermodeFacts。
 
         // 虛擬化平台三態（CPUID ＋ 選用功能 ＋ 服務狀態；usermode 唯讀）。
         try { await Task.Run(() => vm.EvidenceLab.LoadVirtualization()).ConfigureAwait(false); }
         catch { /* 虛擬化狀態為附加功能，讀不到由三態標示 */ }
+        cancellationToken.ThrowIfCancellationRequested();
 
         // 系統與軟體層（WP15：Windows Update 歷史等，usermode；WUA COM 查詢可能數秒，放背景）。
         try { await Task.Run(() => vm.EvidenceLab.LoadSoftwareFacts()).ConfigureAwait(false); }
         catch { /* 軟體層為附加功能，讀不到由三態標示 */ }
+        cancellationToken.ThrowIfCancellationRequested();
 
         // 儲存可靠性計數器（WMI MSFT_StorageReliabilityCounter，usermode、免管理員；WMI 查詢可能數秒，放背景）。
         // 與 CLI 共用 EvidenceCollection.LoadUsermodeFacts 這一個入口——先前這一組事實接進了 AllFacts
         // 與報告匯出，卻沒有任何地方呼叫載入，等於在真實 App 裡永遠看不到它。
         try { await Task.Run(() => EvidenceCollection.LoadUsermodeFacts(vm.EvidenceLab)).ConfigureAwait(false); }
         catch { /* 儲存可靠性為附加功能，讀不到由三態標示 */ }
+        cancellationToken.ThrowIfCancellationRequested();
 
         // 基線學習（Vol 2 批次 C／BL-001/004/007）：吃歷史倉的分鐘級序列算本機自己的分位數模型。
         // 這一支不能放進 LoadUsermodeFacts——那個入口是「不需驅動的來源」的組合點，而歷史倉住在
@@ -309,7 +340,8 @@ internal static class StartupSequence
         try
         {
             // CPU-Z 子行程（spawn＋等報告，10 餘秒）：等待與解析整段背景。
-            var report = await Task.Run(() => CpuzReportService.ReadAsync()).ConfigureAwait(false);
+            var report = await CpuzReportService.ReadAsync(cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
 
             // 報告套用（含 StatusText 與 SpdModules 的退回判斷）回 UI——原碼這些寫入本就在 UI 執行緒。
             await OnUiAsync(ui, () =>
@@ -342,7 +374,9 @@ internal static class StartupSequence
         // D3D11 裝置建立可逾百毫秒，列舉背景、套用回 UI。
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var adapters = await Task.Run(() => GpuCodecService.Probe().Adapters).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
             await OnUiAsync(ui, () => vm.GpuCodecs = adapters).ConfigureAwait(false);
         }
         catch { /* 編解碼偵測為附加功能 */ }
@@ -351,7 +385,9 @@ internal static class StartupSequence
         // PoolStandbyLabels 是 ObservableCollection：Add 必須在 UI 執行緒（原碼靠 context 彈回、現在靠 OnUiAsync 保證）。
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var pool = await Task.Run(MemoryPoolService.Read).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
             await OnUiAsync(ui, () =>
             {
                 vm.PoolSnapshot = pool;
@@ -486,12 +522,13 @@ internal static class StartupSequence
     }
 
     // 首次啟動的環境自檢：略候片刻讓各引擎與感測器就緒，再於背景跑一次。
-    private static async Task RunStartupEnvCheckAsync(MainViewModel vm)
+    internal static async Task RunStartupEnvCheckAsync(MainViewModel vm)
     {
         try
         {
             await Task.Delay(2500);
-            if (!vm.EnvCheck.HasRun && !vm.EnvCheck.IsRunning) await vm.EnvCheck.RunAsync(vm);
+            if (vm.Settings.AdvancedDiagnosticsEnabled && !vm.EnvCheck.HasRun && !vm.EnvCheck.IsRunning)
+                await vm.EnvCheck.RunAsync(vm);
         }
         catch { /* 環境自檢為附加功能，失敗不影響其餘功能 */ }
     }

@@ -318,6 +318,20 @@ public sealed class FanCurveService : ObservableObject
     {
         if (Curves.Count == 0) return;
 
+        if (!HardwareOperationGate.CanWriteHardware)
+        {
+            foreach (var fan in _fans.Where(f => _applied.ContainsKey(KeyOf(f))))
+            {
+                try { fan.RestoreAuto(); } catch { /* 還原失敗不影響其餘風扇 */ }
+            }
+            _applied.Clear();
+            _atTemp.Clear();
+            Describe(0);
+            if (Curves.Any(c => c.Enabled))
+                StatusText = "高風險硬體寫入未啟用；風扇曲線暫停，風扇交由主機板自動控制。";
+            return;
+        }
+
         double? cpu = live?.CpuTemp;
         double? gpu = live?.PrimaryGpu?.TempC;
         int active = 0;
@@ -362,7 +376,10 @@ public sealed class FanCurveService : ObservableObject
                 if (Math.Abs(target - prev) < 2) continue;   // 變動太小不打擾硬體
             }
 
-            try { fan.ApplyManual(Math.Clamp(target, fan.MinValue, fan.MaxValue)); }
+            try
+            {
+                if (!fan.ApplyManual(Math.Clamp(target, fan.MinValue, fan.MaxValue))) continue;
+            }
             catch { continue; }
 
             _applied[c.Key] = target;
@@ -426,6 +443,7 @@ public sealed class FanCurveService : ObservableObject
     public void DisableAll()
     {
         foreach (var c in Curves) c.Enabled = false;
+        using var recovery = HardwareOperationGate.BeginRecoveryOperation();
         foreach (var f in _fans)
         {
             if (!_applied.ContainsKey(KeyOf(f))) continue;

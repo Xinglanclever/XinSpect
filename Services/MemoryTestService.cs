@@ -104,7 +104,7 @@ public sealed class MemoryTestService : ObservableObject
 
     private bool _running;
     public bool IsRunning { get => _running; private set { if (SetProperty(ref _running, value)) OnPropertyChanged(nameof(CanStart)); } }
-    public bool CanStart => !_running;
+    public bool CanStart => !_running && HardwareOperationGate.CanRunAdvancedDiagnostics;
 
     private string _phase = "尚未測試";
     public string Phase { get => _phase; private set => SetProperty(ref _phase, value); }
@@ -130,13 +130,25 @@ public sealed class MemoryTestService : ObservableObject
     public void Start()
     {
         if (IsRunning) return;
+        if (!HardwareOperationGate.CanRunAdvancedDiagnostics)
+        {
+            StatusLine = "記憶體寫入／回讀測試已阻止：請先在設定啟用第一級進階診斷。";
+            return;
+        }
         _ = RunAsync();
+    }
+
+    public void RefreshPolicy()
+    {
+        OnPropertyChanged(nameof(CanStart));
+        if (IsRunning && !HardwareOperationGate.CanRunAdvancedDiagnostics) Cancel();
     }
 
     public void Cancel() => _cts?.Cancel();
 
     private async Task RunAsync()
     {
+        if (!HardwareOperationGate.CanRunAdvancedDiagnostics) return;
         long avail = AvailableBytes(), size = Planned(avail);
         if (size < BlockBytes)
         {

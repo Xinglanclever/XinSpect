@@ -10,6 +10,7 @@ namespace XinSpect.Tests;
 /// 沒量到就得誠實說明這輪圖樣在抓什麼，而不是留白或亂填一個數字。
 /// 只測純粹的呈現邏輯——真正的寫入／回讀要吃掉數 GB 記憶體，不適合在測試裡跑。
 /// </remarks>
+[Collection(HardwareOperationPolicyCollection.Name)]
 public sealed class MemoryTestRowTests
 {
     private static MemoryTestRow Row(long errors, string? first = null, double seconds = 2.5, double mbPerSec = 1024)
@@ -57,7 +58,7 @@ public sealed class MemoryTestRowTests
         var svc = new MemoryTestService();
 
         Assert.False(svc.IsRunning);
-        Assert.True(svc.CanStart);
+        Assert.False(svc.CanStart);
         Assert.Equal(Severity.Neutral, svc.Verdict);
         Assert.Equal("—", svc.TestedText);
         Assert.Equal("—", svc.ErrorText);

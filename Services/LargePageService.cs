@@ -96,7 +96,7 @@ public sealed class LargePageService : ObservableObject
         private set { if (SetProperty(ref _busy, value)) OnPropertyChanged(nameof(CanMeasure)); }
     }
 
-    public bool CanMeasure => !_busy && _facts.AllocationOk;
+    public bool CanMeasure => !_busy && _facts.AllocationOk && HardwareOperationGate.CanRunAdvancedDiagnostics;
 
     private string _progress = "";
     public string Progress { get => _progress; private set => SetProperty(ref _progress, value); }
@@ -106,6 +106,16 @@ public sealed class LargePageService : ObservableObject
     /// <summary>第一次進頁時檢查環境（權限、大頁單位、試配一塊）。不做量測。</summary>
     public void EnsureChecked()
     {
+        if (!HardwareOperationGate.CanRunAdvancedDiagnostics)
+        {
+            Verdict = new LargePageVerdict
+            {
+                Headline = "進階診斷尚未啟用",
+                Severity = Severity.Neutral,
+                Detail = "請先在設定啟用第一級進階診斷；目前未調整行程權杖或配置大頁。",
+            };
+            return;
+        }
         if (_checked) return;
         _checked = true;
         _ = Task.Run(Probe).ContinueWith(t =>
@@ -123,6 +133,11 @@ public sealed class LargePageService : ObservableObject
     /// <summary>使用者按下才跑：4 KB 頁與大頁各一次指標追逐。</summary>
     public void Measure()
     {
+        if (!HardwareOperationGate.CanRunAdvancedDiagnostics)
+        {
+            Progress = "請先在設定啟用第一級進階診斷。";
+            return;
+        }
         if (_busy || !_facts.AllocationOk) return;
         IsBusy = true;
         _ = Task.Run(() => Chase(_facts, p => Progress = p))
@@ -139,6 +154,12 @@ public sealed class LargePageService : ObservableObject
                 Progress = "";
                 IsBusy = false;
             }, TaskScheduler.FromCurrentSynchronizationContext());
+    }
+
+    public void RefreshPolicy()
+    {
+        OnPropertyChanged(nameof(CanMeasure));
+        if (HardwareOperationGate.CanRunAdvancedDiagnostics) EnsureChecked();
     }
 
     private void Publish(LargePageFacts f)

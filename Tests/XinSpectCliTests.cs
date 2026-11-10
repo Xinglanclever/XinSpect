@@ -167,13 +167,39 @@ public class XinSpectCliTests
         {
             Assert.True(CliLocalization.TrySet("zh-TW"));
             writer.WriteLine("記憶體與快取");
+            writer.Write('髮');
+            writer.WriteLine();
             Assert.True(CliLocalization.TrySet("zh-CN"));
             writer.WriteLine("記憶體與快取");
+            writer.Write('髮');
+            writer.WriteLine();
 
-            Assert.Equal("記憶體與快取" + Environment.NewLine + "内存与缓存" + Environment.NewLine,
+            Assert.Equal("記憶體與快取" + Environment.NewLine + "髮" + Environment.NewLine
+                + "内存与缓存" + Environment.NewLine + "发" + Environment.NewLine,
                 buffer.ToString());
         }
         finally { CliLocalization.TrySet("zh-TW"); }
+    }
+
+    [Fact]
+    public void CLI設定檢視會遮蔽金鑰密碼與token()
+    {
+        string json = """{"AiApiKey":"secret-key","nested":{"refreshToken":"secret-token","label":"visible"}}""";
+        string safe = CliLocalization.RedactSettingsJson(json);
+
+        Assert.DoesNotContain("secret-key", safe, StringComparison.Ordinal);
+        Assert.DoesNotContain("secret-token", safe, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED]", safe, StringComparison.Ordinal);
+        Assert.Contains("visible", safe, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CLI深測引數解析保留含空格的暫存路徑()
+    {
+        string[] expected = ["deepbench", "quick", "server-workstation", "--storage", @"D:\Benchmark Drive\Run 1", "--confirm"];
+        Assert.Equal(expected,
+            CliLocalization.SplitCommandLine(CliLocalization.JoinCommandLine(expected)));
+        Assert.Throws<FormatException>(() => CliLocalization.SplitCommandLine("quick --storage \"D:\\unfinished"));
     }
 
     [Fact]

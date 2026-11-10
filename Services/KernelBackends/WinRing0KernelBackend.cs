@@ -61,7 +61,6 @@ public sealed class WinRing0KernelBackend : IKernelBackend
     {
         uint eax = (uint)(value & 0xFFFFFFFF), edx = (uint)(value >> 32);
         bool ok = _bridge.WriteMsrPair(index, eax, edx);
-        WriteGate.Record($"MSR 0x{index:X}", caller, $"值 0x{value:X}", ok);
         return new KernelWriteOutcome(ok, ok ? null : "WinRing0 WRMSR 回失敗（HVCI／平台拒絕或權限不足）。");
     }
 
@@ -71,7 +70,6 @@ public sealed class WinRing0KernelBackend : IKernelBackend
     public KernelWriteOutcome WritePciConfig(byte bus, byte device, byte function, uint register, uint value, string caller)
     {
         bool ok = _bridge.WritePciConfig(bus, device, function, register, value);
-        WriteGate.Record($"PCI {bus}:{device}.{function}+0x{register:X}", caller, $"值 0x{value:X}", ok);
         return new KernelWriteOutcome(ok, ok ? null : "WinRing0 PCI 寫入回失敗。");
     }
 
@@ -80,7 +78,6 @@ public sealed class WinRing0KernelBackend : IKernelBackend
     public KernelWriteOutcome WriteIoPortByte(uint port, byte value, string caller)
     {
         bool ok = _bridge.WriteIoPortByte(port, value);
-        WriteGate.Record($"IO 0x{port:X}", caller, $"值 0x{value:X2}", ok);
         return new KernelWriteOutcome(ok, ok ? null : "WinRing0 I/O 埠寫入回失敗。");
     }
 

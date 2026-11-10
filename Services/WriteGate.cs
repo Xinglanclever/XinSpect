@@ -37,6 +37,14 @@ public static class WriteGate
         get { lock (Lock) { return [.. SessionLog]; } }
     }
 
+    /// <summary>Rejects state-changing hardware writes unless the second safety level is active.</summary>
+    public static bool TryAuthorizeHardwareWrite(string target, string caller, string detail)
+    {
+        if (HardwareOperationGate.CanWriteHardware) return true;
+        Record(target, caller, detail + "（高風險模式未啟用，未執行）", succeeded: false);
+        return false;
+    }
+
     /// <summary>記一筆寫入。target 如「MSR 0x309」「PCI 0:31.5+0xF0」「IO 0x70」；detail 帶寫入值與結果。</summary>
     public static void Record(string target, string caller, string detail, bool succeeded)
     {

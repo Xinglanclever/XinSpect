@@ -20,7 +20,9 @@ public static class EvidenceCollection
             using var msr = new WinRing0KernelMsrReader();
             using var io = new WinRing0IoPortAccess();
             using var smbusBridge = WinRing0Bridge.Create(); // SMBus 走 I/O 埠；與 readers 共用驅動會話（引用計數）
-            ISmbusIo? smbusIo = smbusBridge.IoPortAvailable ? new WinRing0SmbusIo(smbusBridge) : null;
+            ISmbusIo? smbusIo = smbusBridge.IoPortAvailable
+                ? new WinRing0SmbusIo(smbusBridge, allowProtocolControlWrites: true)
+                : null;
             var mmio = MmioBackendSelector.Select(); // WinRing0 主力 → XsRegProbe 備援 → 帶原因三態
             try
             {

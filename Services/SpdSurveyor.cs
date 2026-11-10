@@ -97,7 +97,7 @@ public static class SpdBusFactory
         if (bridge.IoPortAvailable)
         {
             var pch = SmbusDiscovery.Find((b, d, f, r) => bridge.ReadPciConfig(b, d, f, r), out string note);
-            if (pch is not null) buses.Add(new SmbusController(new WinRing0SmbusIo(bridge), pch.IoBase));
+            if (pch is not null) buses.Add(new SmbusController(new WinRing0SmbusIo(bridge, allowProtocolControlWrites: true), pch.IoBase));
             else notes.Add(note);
         }
         else
@@ -107,7 +107,7 @@ public static class SpdBusFactory
 
         if (bridge.PciWriteAvailable)
         {
-            var pci = new WinRing0PciConfig(bridge);
+            var pci = new WinRing0PciConfig(bridge, allowReadProtocolWrites: true);
             var imc = ImcSmbusDiscovery.Find(pci, out string note);
             foreach (var loc in imc) buses.Add(new ImcSmbusController(pci, loc));
             if (imc.Count == 0) notes.Add(note);

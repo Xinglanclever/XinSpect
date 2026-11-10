@@ -1,5 +1,7 @@
 using System.IO;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Diagnostics.CodeAnalysis;
 using XinSpect;
 
@@ -13,6 +15,7 @@ internal enum CliLanguage
 
 internal static class CliLocalization
 {
+    private static SettingsService? _settings;
     private static readonly HashSet<string> JsonCommands = new(StringComparer.OrdinalIgnoreCase)
     {
         "--json", "--compare-flash", "--verify-audit", "--integrity-baseline", "--sbom",
@@ -23,6 +26,12 @@ internal static class CliLocalization
 
     public static CliLanguage Current { get; private set; }
 
+    public static void Initialize(SettingsService settings)
+    {
+        _settings = settings;
+        Current = settings.SimplifiedChinese ? CliLanguage.Simplified : CliLanguage.Traditional;
+    }
+
     public static bool TrySet(string? value)
     {
         switch (value?.Trim().ToLowerInvariant())
@@ -31,11 +40,21 @@ internal static class CliLocalization
             case "zh-hant":
             case "traditional":
                 Current = CliLanguage.Traditional;
+                if (_settings is not null)
+                {
+                    _settings.SimplifiedChinese = false;
+                    _settings.IsEnglish = false;
+                }
                 return true;
             case "zh-cn":
             case "zh-hans":
             case "simplified":
                 Current = CliLanguage.Simplified;
+                if (_settings is not null)
+                {
+                    _settings.SimplifiedChinese = true;
+                    _settings.IsEnglish = false;
+                }
                 return true;
             default:
                 return false;
@@ -61,6 +80,70 @@ internal static class CliLocalization
                     || args[i + 1].Equals("otel", StringComparison.OrdinalIgnoreCase))) return true;
         }
         return false;
+    }
+
+    internal static string RedactSettingsJson(string json)
+    {
+        JsonNode? root = JsonNode.Parse(json);
+        Redact(root);
+        return root?.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) ?? "null";
+    }
+
+    internal static string[] SplitCommandLine(string input)
+    {
+        var arguments = new List<string>();
+        var current = new StringBuilder();
+        bool quoted = false;
+        bool hasToken = false;
+        foreach (char ch in input)
+        {
+            if (ch == '"')
+            {
+                quoted = !quoted;
+                hasToken = true;
+            }
+            else if (char.IsWhiteSpace(ch) && !quoted)
+            {
+                if (!hasToken) continue;
+                arguments.Add(current.ToString());
+                current.Clear();
+                hasToken = false;
+            }
+            else
+            {
+                current.Append(ch);
+                hasToken = true;
+            }
+        }
+
+        if (quoted) throw new FormatException("引數有未結束的雙引號。");
+        if (hasToken) arguments.Add(current.ToString());
+        return [.. arguments];
+    }
+
+    internal static string JoinCommandLine(IReadOnlyList<string> arguments)
+        => string.Join(' ', arguments.Select(argument =>
+            argument.Any(char.IsWhiteSpace) ? "\"" + argument.Replace("\"", "\\\"", StringComparison.Ordinal) + "\"" : argument));
+
+    private static void Redact(JsonNode? node)
+    {
+        if (node is JsonObject obj)
+        {
+            foreach (string name in obj.Select(pair => pair.Key).ToArray())
+            {
+                if (name.Contains("apikey", StringComparison.OrdinalIgnoreCase)
+                    || name.Contains("password", StringComparison.OrdinalIgnoreCase)
+                    || name.Contains("token", StringComparison.OrdinalIgnoreCase)
+                    || name.Contains("secret", StringComparison.OrdinalIgnoreCase))
+                    obj[name] = "[REDACTED]";
+                else
+                    Redact(obj[name]);
+            }
+        }
+        else if (node is JsonArray array)
+        {
+            foreach (JsonNode? child in array) Redact(child);
+        }
     }
 
     public static void InstallConsoleWriters(bool machineFormat)
@@ -110,10 +193,19 @@ internal static class CliLocalization
         public override string NewLine { get => inner.NewLine; set => inner.NewLine = value; }
 
         public override void Write(string? value) => inner.Write(Translate(value));
-        public override void Write(char value) => inner.Write(value);
+        public override void Write(char value) => inner.Write(Translate(value.ToString()));
         public override void Write(char[] buffer, int index, int count)
             => inner.Write(Translate(new string(buffer, index, count)));
+        public override void Write(ReadOnlySpan<char> buffer)
+            => inner.Write(Translate(buffer.ToString()));
         public override void WriteLine(string? value) => inner.WriteLine(Translate(value));
+        public override void WriteLine(char value) => inner.WriteLine(Translate(value.ToString()));
+        public override void WriteLine(char[]? buffer)
+            => inner.WriteLine(buffer is null ? null : Translate(new string(buffer)));
+        public override void WriteLine(char[] buffer, int index, int count)
+            => inner.WriteLine(Translate(new string(buffer, index, count)));
+        public override void WriteLine(ReadOnlySpan<char> buffer)
+            => inner.WriteLine(Translate(buffer.ToString()));
         public override void WriteLine() => inner.WriteLine();
         public override void Flush() => inner.Flush();
     }

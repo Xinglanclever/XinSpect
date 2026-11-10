@@ -67,7 +67,8 @@ public sealed partial class SensorService : ObservableObject, IDisposable
         _computer.Open();
         _computer.Accept(_visitor);
         BuildCache();
-        Refresh();
+        // Accept above already performs the initial hardware update; publish that sample instead of traversing twice.
+        Publish();
     }
 
     // ---- 初始化快取 -------------------------------------------------------

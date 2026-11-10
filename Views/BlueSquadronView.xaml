@@ -47,6 +47,7 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
                     <Viewbox Grid.Column="0" Width="48" Height="48" Margin="0,0,16,0">
@@ -74,6 +75,9 @@
                             <TextBlock Text=" ・ " Style="{StaticResource FieldLabel}"/>
                             <TextBlock Text="{Binding BlueSquadron.Posture.Status}" Style="{StaticResource FieldLabel}"/>
                         </StackPanel>
+                        <TextBlock Text="{Binding BlueSquadron.Posture.SyntheticThreatAuditStatus}"
+                                   Style="{StaticResource FieldLabel}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource CriticalBrush}"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,18,0">
@@ -85,7 +89,11 @@
                                    Foreground="{DynamicResource PrimaryInkBrush}" Text="守護進程"/>
                     </StackPanel>
 
-                    <Button Grid.Column="3" Style="{StaticResource PrimaryButton}" Content="⟳ 全面掃描"
+                    <Button Grid.Column="3" Style="{StaticResource ToolButton}" Content="合成威脅測試"
+                            VerticalAlignment="Center" Padding="12,8" Margin="0,0,8,0" Click="SyntheticThreat_Click"
+                            IsEnabled="{Binding BlueSquadron.Posture.CanRunSyntheticThreatScenarios}"
+                            ToolTip="只驗證合成事實的評分結果，不碰真實系統"/>
+                    <Button Grid.Column="4" Style="{StaticResource PrimaryButton}" Content="⟳ 全面掃描"
                             VerticalAlignment="Center" Padding="16,8" Click="Refresh_Click"
                             IsEnabled="{Binding BlueSquadron.Posture.CanRefresh}"/>
                 </Grid>

@@ -15,10 +15,23 @@ public interface ISmbusIo
 }
 
 /// <summary>把 <see cref="ISmbusIo"/> 接到真實的 WinRing0 橋接上。</summary>
-public sealed class WinRing0SmbusIo(WinRing0Bridge bridge) : ISmbusIo
+public sealed class WinRing0SmbusIo : ISmbusIo
 {
-    public byte? In(uint port) => bridge.ReadIoPortByte(port);
-    public bool Out(uint port, byte value) => bridge.WriteIoPortByte(port, value);
+    private readonly WinRing0Bridge _bridge;
+    private readonly bool _allowProtocolControlWrites;
+
+    public WinRing0SmbusIo(WinRing0Bridge bridge) : this(bridge, allowProtocolControlWrites: false) { }
+
+    internal WinRing0SmbusIo(WinRing0Bridge bridge, bool allowProtocolControlWrites)
+    {
+        _bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
+        _allowProtocolControlWrites = allowProtocolControlWrites;
+    }
+
+    public byte? In(uint port) => _bridge.ReadIoPortByte(port);
+    public bool Out(uint port, byte value) => _allowProtocolControlWrites
+        ? _bridge.WriteIoPortForReadProtocol(port, value)
+        : _bridge.WriteIoPortByte(port, value);
 }
 
 /// <summary>讀 PCI 設定空間一個 DWORD；讀不到回 <c>null</c>。</summary>

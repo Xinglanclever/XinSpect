@@ -76,7 +76,8 @@ public sealed class RdtService : ObservableObject, IDisposable
 
     private bool _running;
     public bool IsRunning { get => _running; private set { if (SetProperty(ref _running, value)) OnPropertyChanged(nameof(CanStart)); } }
-    public bool CanStart => !_running;
+    public bool CanStart => !_running && HardwareOperationGate.CanRunAdvancedDiagnostics
+        && HardwareOperationGate.CanWriteHardware;
 
     private string _status = "尚未啟動。";
     public string Status { get => _status; private set => SetProperty(ref _status, value); }
@@ -89,6 +90,13 @@ public sealed class RdtService : ObservableObject, IDisposable
     public void Start()
     {
         if (IsRunning) return;
+        if (!HardwareOperationGate.CanRunAdvancedDiagnostics || !HardwareOperationGate.CanWriteHardware)
+        {
+            Status = !HardwareOperationGate.CanRunAdvancedDiagnostics
+                ? "RDT 監測已阻止：請先啟用第一級進階診斷。"
+                : "RDT 需要程式化 MSR；請先啟用第二級高風險硬體操作。";
+            return;
+        }
         _bridge ??= WinRing0Bridge.Create();
         if (_bridge is null || !_bridge.Available)
         {
@@ -117,9 +125,17 @@ public sealed class RdtService : ObservableObject, IDisposable
         _cts?.Cancel();
         _worker?.Join(3000);
         _worker = null;
+        using var recovery = HardwareOperationGate.BeginRecoveryOperation();
         UnassignRmid();
         IsRunning = false;
         Status = "已停止。RMID 指派已歸零。";
+    }
+
+    public void RefreshPolicy()
+    {
+        OnPropertyChanged(nameof(CanStart));
+        if (IsRunning && (!HardwareOperationGate.CanRunAdvancedDiagnostics || !HardwareOperationGate.CanWriteHardware))
+            Stop();
     }
 
     /// <summary>由 UI 每秒呼叫：把背景快照發佈成繫結列（須在 UI 執行緒）。</summary>
@@ -324,6 +340,8 @@ public sealed class RdtService : ObservableObject, IDisposable
         try { _worker?.Join(3000); }
         catch { /* worker 從未啟動（ThreadStateException）等邊界情況；程式正在收尾，不需處理 */ }
         _worker = null;
+        using var recovery = HardwareOperationGate.BeginRecoveryOperation();
+        UnassignRmid();
         try { _bridge?.Dispose(); } catch (Exception ex) { Diag.Swallow("RDT 橋接釋放", ex, "無；程式即將結束"); }
     }
 }

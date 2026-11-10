@@ -131,7 +131,7 @@ public sealed class VrmControllerService : ObservableObject, IDisposable
             ring0.Dispose();
             return null;
         }
-        var io = new WinRing0SmbusIo(ring0);
+        var io = new WinRing0SmbusIo(ring0, allowProtocolControlWrites: true);
         diagnostic = $"SMBus 控制器就緒（SMB_BASE＝0x{loc.IoBase:X4}），可掃描 VRM。";
         return new VrmControllerService(ring0, io, loc.IoBase);
     }
@@ -223,6 +223,13 @@ public sealed class VrmControllerService : ObservableObject, IDisposable
     /// <returns>寫入且讀回驗證成功回 <c>true</c>。</returns>
     public bool WriteLlc(VrmChipInfo chip, int level)
     {
+        using var writePermit = HardwareOperationGate.TryBeginHighRiskOperation();
+        if (writePermit is null)
+        {
+            Status = "LLC 硬體寫入已阻止：請先在設定啟用第一級與高風險模式。";
+            return false;
+        }
+
         // ── 拒絕條件 ──
         if (chip.VendorFamily == VrmVendorFamily.Unknown) return false;
         if (!IsValidLlcLevel(chip, level)) return false;

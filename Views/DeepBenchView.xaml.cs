@@ -6,8 +6,21 @@ namespace XinSpect;
 public partial class DeepBenchView : UserControl
 {
     private CancellationTokenSource? _cancellationToken;
+    private bool _targetSuggestionLoaded;
 
-    public DeepBenchView() => InitializeComponent();
+    public DeepBenchView()
+    {
+        InitializeComponent();
+        Loaded += (_, _) =>
+        {
+            if (_targetSuggestionLoaded) return;
+            MainViewModel? main = Shell.Vm;
+            DeepBenchViewModel? viewModel = ViewModel;
+            if (main is null || viewModel is null || main.Cpu.Name is "" or "—") return;
+            viewModel.SuggestTarget(main.Cpu.Name, main.Cpu.Socket, main.System.BoardModel);
+            _targetSuggestionLoaded = true;
+        };
+    }
 
     private DeepBenchViewModel? ViewModel => DataContext as DeepBenchViewModel ?? (DataContext as MainViewModel)?.DeepBench;
 
@@ -34,6 +47,9 @@ public partial class DeepBenchView : UserControl
     {
         DeepBenchViewModel? vm = ViewModel;
         if (vm is null) return;
+
+        if (Shell.Vm is { } main)
+            vm.SuggestTarget(main.Cpu.Name, main.Cpu.Socket, main.System.BoardModel);
 
         using var cancellation = new CancellationTokenSource();
         _cancellationToken = cancellation;

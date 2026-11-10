@@ -11,8 +11,20 @@ namespace XinSpect.Tests;
 /// SMBus 是共享匯流排，搶了可能停機。
 /// </para>
 /// </remarks>
-public class VrmControllerServiceTests
+[Collection(HardwareOperationPolicyCollection.Name)]
+public sealed class VrmControllerServiceTests : IDisposable
 {
+    private readonly SettingsService _settings = new(loadFromDisk: false);
+
+    public VrmControllerServiceTests()
+    {
+        _settings.AdvancedDiagnosticsEnabled = true;
+        _settings.HighRiskHardwareOperationsEnabled = true;
+        HardwareOperationGate.Bind(_settings);
+    }
+
+    public void Dispose() => HardwareOperationGate.Bind(null);
+
     // ═══════════════════════════════════════════════════════════════════════
     // 純函式：TryIdentifyByDeviceId
     // ═══════════════════════════════════════════════════════════════════════

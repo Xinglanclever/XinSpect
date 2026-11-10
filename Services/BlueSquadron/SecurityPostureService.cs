@@ -25,9 +25,41 @@ public sealed class SecurityPostureService : ObservableObject
     public bool IsLoading
     {
         get => _loading;
-        private set { if (SetProperty(ref _loading, value)) OnPropertyChanged(nameof(CanRefresh)); }
+        private set
+        {
+            if (!SetProperty(ref _loading, value)) return;
+            OnPropertyChanged(nameof(CanRefresh));
+            OnPropertyChanged(nameof(CanRunSyntheticThreatScenarios));
+        }
     }
     public bool CanRefresh => !_loading;
+
+    private string _syntheticThreatAuditStatus = "尚未執行合成威脅情境測試。";
+    public string SyntheticThreatAuditStatus
+    {
+        get => _syntheticThreatAuditStatus;
+        private set => SetProperty(ref _syntheticThreatAuditStatus, value);
+    }
+
+    public bool CanRunSyntheticThreatScenarios => !IsLoading && HardwareOperationGate.CanWriteHardware;
+
+    public void RefreshPolicy() => OnPropertyChanged(nameof(CanRunSyntheticThreatScenarios));
+
+    public void RunSyntheticThreatScenarios()
+    {
+        using var permit = HardwareOperationGate.TryBeginHighRiskOperation();
+        if (permit is null)
+        {
+            SyntheticThreatAuditStatus = "需先啟用第一級診斷與第二級高風險模式。";
+            return;
+        }
+
+        IReadOnlyList<SyntheticThreatScenarioResult> results = SyntheticThreatScenarioAudit.Run();
+        int passed = results.Count(result => result.Passed);
+        SyntheticThreatAuditStatus = passed == results.Count
+            ? $"合成情境 {passed}/{results.Count} 通過：基線未誤報，BYOVD 情境判為 Critical。未讀取或變更真實系統。"
+            : $"合成情境 {passed}/{results.Count} 通過；評分器行為與預期不同。未讀取或變更真實系統。";
+    }
 
     private string _status = "尚未評估。";
     public string Status { get => _status; private set => SetProperty(ref _status, value); }

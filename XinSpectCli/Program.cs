@@ -49,9 +49,13 @@ internal static class Program
     private static readonly List<string> History = [];
     private static IReadOnlyList<HardwareFact>? _cache;
     private static int _frameWidth = 100;   // 輸入框兩條長線的固定寬度（啟動時定，resize 才更新）
+    private static SettingsService? _settings;
 
     private static int Main(string[] args)
     {
+        _settings = new SettingsService();
+        _settings.ActivateHardwareOperationPolicy();
+        CliLocalization.Initialize(_settings);
         if (!CliLocalization.TryConsumeOption(args, out string[] remainingArgs, out string? languageError))
         {
             Console.Error.WriteLine(languageError);
@@ -119,6 +123,8 @@ internal static class Program
 
         if (args.Length > 0)
         {
+            if (args[0].ToLowerInvariant() is "safety" or "deepbench" or "ec" or "me" or "chipset" or "ecc")
+                return Execute(CliLocalization.JoinCommandLine(args));
             // xsc compliance --format sarif …：直接轉發既有 CLI 通路後退出
             return CliService.Run(args, Collect, Console.Out, Console.Error);
         }
@@ -266,6 +272,8 @@ internal static class Program
                 case "domain": DomainFacts(rest); return 0;
                 case "keys": ListKeys(rest); return 0;
                 case "settings": ShowSettings(); return 0;
+                case "safety": return SafetySettings(rest);
+                case "deepbench": return RunDeepBench(rest);
                 case "changelog": ShowChangelog(rest); return 0;
                 case "clear":
                     if (Tui.Legacy) { try { Console.Clear(); } catch { } }
@@ -323,6 +331,14 @@ internal static class Program
                     "net.* ＝ 傾聽埠／offload/WMI 缺口；nw.* ＝ 藍牙／DNS／Wi-Fi／WoL／USB 等週邊摘要。"); return 0;
                 case "security": DomainReport("安全姿態", ["sec"],
                     "sec.* ＝ VBS／Credential Guard 等安全事實。即時防護分數走 ipc posture（藍色中隊引擎）。"); return 0;
+                case "ec": DomainReport("EC／嵌入式控制器", ["ec"],
+                    "只列 ACPI ECDT、Windows PnP 與既有溫度/WHEA 線索；不直接讀寫 EC 埠或 EC RAM。"); return 0;
+                case "me": DomainReport("Intel ME／韌體版本", ["fw.me", "chipset.me_hfs"],
+                    "ME 韌體版本來自 HECI/MKHI 直詢；MEI 驅動版本不是韌體版本。唯讀，不刷寫。"); return 0;
+                case "chipset": DomainReport("晶片組／平台安全", ["chipset"],
+                    "呈現已採集的 BIOS_CNTL、ME_HFS、SMRAMC 等直接暫存器證據；平台型號資料不代表 CPU SKU 能力。"); return 0;
+                case "ecc": DomainReport("ECC／記憶體錯誤更正", ["mem.ras", "whea.mem", "spd"],
+                    "分開呈現模組 ECC 位元、平台能力與 WHEA 記錄；沒有事件不等於 ECC 已驗證正常。"); return 0;
                 case "bsod": BsodScan(); return 0;
                 case "posture": PostureReport(); return 0;
                 case "firmware": DomainReport("韌體安全", ["fw", "uefi", "spi", "tpm"],
@@ -602,7 +618,132 @@ internal static class Program
         string path = XinSpect.SettingsService.FilePath;
         if (!File.Exists(path)) { Console.WriteLine($"{Dim}還沒有設定檔（{path}）。{Reset}"); return; }
         Console.WriteLine($"{Dim}{path}{Reset}");
-        Console.WriteLine(File.ReadAllText(path));
+        Console.WriteLine(CliLocalization.RedactSettingsJson(File.ReadAllText(path)));
+    }
+
+    private static int SafetySettings(string arguments)
+    {
+        if (_settings is null) return 1;
+        string[] parts = arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0 || parts[0].Equals("status", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine($"第一級進階診斷／CPU·DRAM 測試：{(_settings.AdvancedDiagnosticsEnabled ? "開啟" : "關閉")}");
+            Console.WriteLine($"{Red}第二級硬體寫入／威脅測試：{(_settings.HighRiskHardwareOperationsEnabled ? "開啟" : "關閉")}{Reset}");
+            return 0;
+        }
+
+        if (parts.Length != 2 || parts[1] is not ("on" or "off"))
+        {
+            Console.WriteLine($"{Red}用法：safety [status | diagnostics on|off | hardware on|off]{Reset}");
+            return 1;
+        }
+
+        bool enabled = parts[1] == "on";
+        if (parts[0].Equals("diagnostics", StringComparison.OrdinalIgnoreCase))
+        {
+            _settings.AdvancedDiagnosticsEnabled = enabled;
+            Console.WriteLine($"第一級進階診斷已{(enabled ? "開啟" : "關閉")}；{(enabled ? "高負載測試可能增加 CPU／DRAM 使用率。" : "第二級也已關閉。")}");
+            return 0;
+        }
+
+        if (parts[0].Equals("hardware", StringComparison.OrdinalIgnoreCase))
+        {
+            _settings.HighRiskHardwareOperationsEnabled = enabled;
+            if (enabled && !_settings.HighRiskHardwareOperationsEnabled)
+            {
+                Console.WriteLine($"{Red}拒絕：先執行 safety diagnostics on。{Reset}");
+                return 1;
+            }
+            Console.WriteLine(enabled
+                ? $"{Red}高風險硬體寫入／威脅測試已開啟。{Reset}"
+                : "高風險硬體寫入／威脅測試已關閉。");
+            return 0;
+        }
+
+        Console.WriteLine($"{Red}用法：safety [status | diagnostics on|off | hardware on|off]{Reset}");
+        return 1;
+    }
+
+    private static int RunDeepBench(string arguments)
+        => RunDeepBench(CliLocalization.SplitCommandLine(arguments));
+
+    private static int RunDeepBench(string[] parts)
+    {
+        if (parts.Contains("--help", StringComparer.OrdinalIgnoreCase) || parts.Length == 0)
+        {
+            Console.WriteLine("用法：deepbench quick|full [msdt|hedt|modt|server-workstation|all] [--storage <路徑>] --confirm");
+            Console.WriteLine(string.Join(Environment.NewLine, DeepBenchTargetCatalog.All.Select(target => $"  {target.Id}  {target.Title}")));
+            return 0;
+        }
+
+        if (_settings?.AdvancedDiagnosticsEnabled != true)
+        {
+            Console.WriteLine($"{Red}深測未執行：先啟用第一級：safety diagnostics on。{Reset}");
+            return 1;
+        }
+
+        if (!parts.Contains("--confirm", StringComparer.OrdinalIgnoreCase))
+        {
+            Console.WriteLine($"{Red}{DeepBenchViewModel.LoadWarning} 測項也可能寫入暫存測試檔；確認後附上 --confirm。{Reset}");
+            return 1;
+        }
+
+        DeepBenchRunProfile profile = parts[0].Equals("full", StringComparison.OrdinalIgnoreCase)
+            ? DeepBenchRunProfile.Full
+            : parts[0].Equals("quick", StringComparison.OrdinalIgnoreCase)
+                ? DeepBenchRunProfile.Quick
+                : (DeepBenchRunProfile)(-1);
+        if (!Enum.IsDefined(profile))
+        {
+            Console.WriteLine("用法：deepbench quick|full [target] [--storage <路徑>] --confirm");
+            return 1;
+        }
+
+        DeepBenchTargetOption target = DeepBenchTargetCatalog.Default;
+        for (int i = 1; i < parts.Length; i++)
+        {
+            if (parts[i].Equals("--confirm", StringComparison.OrdinalIgnoreCase)) continue;
+            if (parts[i].Equals("--storage", StringComparison.OrdinalIgnoreCase)) { i++; continue; }
+            if (DeepBenchTargetCatalog.Find(parts[i]) is { } found) target = found;
+        }
+
+        string storageRoot = string.Empty;
+        int storageIndex = Array.FindIndex(parts, part => part.Equals("--storage", StringComparison.OrdinalIgnoreCase));
+        if (storageIndex >= 0 && storageIndex + 1 < parts.Length) storageRoot = parts[storageIndex + 1].Trim('"');
+
+        var viewModel = new DeepBenchViewModel(
+            new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(),
+            new DeepBenchRunStore(), topDown: new TopDownService(),
+            advancedDiagnosticsEnabled: () => HardwareOperationGate.CanRunAdvancedDiagnostics)
+        {
+            SelectedProfile = profile,
+            SelectedTargetId = target.Id,
+            StorageRoot = storageRoot,
+        };
+
+        Console.WriteLine($"執行 {profile}／{target.Id}：{viewModel.SelectedIds.Count} 個測項。Ctrl+C 可取消；只保留完成樣本，不補值。");
+        using var cancellation = new CancellationTokenSource();
+        ConsoleCancelEventHandler cancelHandler = (_, eventArgs) =>
+        {
+            eventArgs.Cancel = true;
+            cancellation.Cancel();
+        };
+        Console.CancelKeyPress += cancelHandler;
+        try
+        {
+            viewModel.StartAsync(cancellation.Token).GetAwaiter().GetResult();
+        }
+        finally
+        {
+            Console.CancelKeyPress -= cancelHandler;
+        }
+
+        foreach (string error in viewModel.Errors) Console.Error.WriteLine(error);
+        if (viewModel.CurrentRecord is not { } record) return 1;
+        foreach (DeepBenchTestResult result in record.Results)
+            Console.WriteLine($"{result.TestId}: {result.FailureKind}；{result.Metrics.Sum(metric => metric.Samples.Count)} 筆樣本；{Trim(result.Error ?? result.Configuration, 180)}");
+        Console.WriteLine($"歷史：{new DeepBenchRunStore().Path}");
+        return record.State is DeepBenchRunState.Completed or DeepBenchRunState.Cancelled ? 0 : 1;
     }
 
     private static void ShowChangelog(string nText)

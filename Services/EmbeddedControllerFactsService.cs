@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Management;
 
 namespace XinSpect;
 
@@ -8,8 +9,7 @@ namespace XinSpect;
 /// 嵌入式控制器（EC）的界線與存在性（ULTIMATE-1000 階段二 P2-092／P2-093）。
 ///
 /// <para>
-/// <b>這一項的形狀由規格自己指定：</b>P2-092 說「<b>陳述 EC 埠不讀寫的界線</b>」、
-/// P2-093 說「<b>由既有表間接陳述</b>」。<b>兩句合起來就是「不要直接碰 EC」。</b>
+/// P2-092 要求陳述 EC 埠不讀寫的界線；P2-093 要求只用 ACPI/PnP 線索間接判斷存在性。
 /// </para>
 ///
 /// <para>
@@ -20,15 +20,13 @@ namespace XinSpect;
 /// </para>
 ///
 /// <para>
-/// <b>存在性改由 ACPI 表間接得知：</b>ECDT（Embedded Controller Boot Resources Table）
-/// 存在就代表平台有 EC 的開機資源描述。既有的 <c>acpi.table.*</c> 逐表列舉
-/// （動態家族）已經把簽章清單攤開，<b>所以這一項不新增讀取，只做判定。</b>
+/// <b>存在性只使用作業系統可列舉的線索：</b>ACPI ECDT 表簽章與 PnP 的
+/// <c>ACPI\PNP0C09</c> 裝置清單。這不代表 EC 暫存器或 EC RAM 可直接讀取。
 /// </para>
 ///
 /// <para>
-/// <b>界線：沒有 ECDT 不代表沒有 EC。</b>ECDT 是<b>可選</b>的表
-/// （ACPI 規格允許以 DSDT 裡的 <c>PNP0C09</c> 裝置描述 EC 而不提供 ECDT）。
-/// 本服務<b>只陳述「有沒有從 ACPI 表看到 ECDT」</b>，不宣告「這台機器沒有 EC」。
+/// <b>界線：沒有 ECDT 或 PnP 列舉結果，不足以宣告沒有 EC。</b>
+/// 本服務不讀寫 0x62／0x66 埠，也不讀 EC RAM；只報告 ACPI/PnP 提供的裝置線索。
 /// </para>
 /// </summary>
 public static class EmbeddedControllerFactsService
@@ -39,6 +37,9 @@ public static class EmbeddedControllerFactsService
     public const string PresentKey = "ec.present";
     public const string BoundaryKey = "ec.boundary";
 
+    public sealed record PnpEcDevice(string Name, string? Status, uint? ConfigManagerErrorCode);
+    public sealed record PnpEcState(bool Available, IReadOnlyList<PnpEcDevice> Devices, string? Failure = null);
+
     /// <summary>ECDT 的 ACPI 簽章。</summary>
     public const string EcdtSignature = "ECDT";
 
@@ -47,8 +48,11 @@ public static class EmbeddedControllerFactsService
     /// <c>null</c> 代表那條路讀不到。
     /// </summary>
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at,
-        IReadOnlyList<string>? acpiSignatures)
+        IReadOnlyList<string>? acpiSignatures, PnpEcState? pnpState = null)
     {
+        if (pnpState is not null)
+            return [CollectWithPnp(at, acpiSignatures, pnpState), Boundary(at)];
+
         if (acpiSignatures is null)
             return
             [
@@ -82,7 +86,7 @@ public static class EmbeddedControllerFactsService
                 //
                 // 那些話沒有消失——它們在**這把鍵不 Present 時的理由**裡
                 // （「沒有 ECDT」與「沒有 EC」之別），以及上面的 XML 文件註解裡
-                // （「不讀 ECDT 的內容」那一句）。**`UnavailableReason` 是
+                // （「不直接讀寫 EC 埠或 RAM」那一句）。**`UnavailableReason` 是
                 // 「為什麼讀不到」的欄位，而 Present 的事實沒有「讀不到」可言。**
                 hits.Count == 0
                     ? "**「沒有 ECDT」與「沒有 EC」是不同的斷言。**"
@@ -91,6 +95,80 @@ public static class EmbeddedControllerFactsService
                     : null),
             Boundary(at),
         ];
+    }
+
+    public static PnpEcState ReadPnpState()
+    {
+        try
+        {
+            var devices = new List<PnpEcDevice>();
+            using var searcher = new ManagementObjectSearcher(
+                "SELECT Name, PNPDeviceID, Status, ConfigManagerErrorCode FROM Win32_PnPEntity WHERE PNPDeviceID LIKE 'ACPI%'");
+            using var rows = searcher.Get();
+            foreach (ManagementObject item in rows)
+            {
+                using (item)
+                {
+                    string? id = item["PNPDeviceID"] as string;
+                    if (id is null || !id.StartsWith("ACPI\\PNP0C09", StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    string name = item["Name"] as string ?? "ACPI EC 裝置";
+                    string? status = item["Status"] as string;
+                    uint? code = item["ConfigManagerErrorCode"] is { } raw
+                        ? Convert.ToUInt32(raw, System.Globalization.CultureInfo.InvariantCulture)
+                        : null;
+                    devices.Add(new PnpEcDevice(name, status, code));
+                }
+            }
+            return new PnpEcState(true, devices);
+        }
+        catch (Exception exception)
+        {
+            return new PnpEcState(false, [], exception.Message);
+        }
+    }
+
+    private static HardwareFact CollectWithPnp(DateTimeOffset at,
+        IReadOnlyList<string>? signatures, PnpEcState pnp)
+    {
+        bool acpiAvailable = signatures is not null;
+        bool pnpAvailable = pnp.Available;
+        bool hasEcdt = signatures?.Any(signature =>
+            string.Equals(signature, EcdtSignature, StringComparison.OrdinalIgnoreCase)) == true;
+        PnpEcDevice[] devices = [.. pnp.Devices];
+        string source = Source + "＋Win32_PnPEntity ACPI\\PNP0C09（唯讀列舉）";
+
+        if (hasEcdt || devices.Length > 0)
+        {
+            string[] evidence =
+            [
+                hasEcdt ? "ACPI 表含 ECDT" : "",
+                devices.Length > 0
+                    ? "PnP 已列舉 " + string.Join("、", devices.Select(device =>
+                        device.Name + (device.ConfigManagerErrorCode is uint error && error != 0
+                            ? $"（裝置管理員錯誤碼 {error}）"
+                            : device.Status is { Length: > 0 } status ? $"（{status}）" : "")))
+                    : "",
+                "只列舉作業系統資訊，不直接讀寫 EC 埠或 EC RAM",
+            ];
+            return new HardwareFact(PresentKey, Category, "嵌入式控制器（EC）",
+                string.Join("；", evidence.Where(value => value.Length > 0)), "", source,
+                FactTrustLevel.Derived, false, at, devices.Length > 0 ? devices.Length : null,
+                FactAvailability.Present, null);
+        }
+
+        if (acpiAvailable && pnpAvailable)
+            return new HardwareFact(PresentKey, Category, "嵌入式控制器（EC）",
+                "ACPI 未列出 ECDT；Windows PnP 未列出 ACPI\\PNP0C09 EC 裝置。",
+                "", source, FactTrustLevel.Derived, false, at, null,
+                FactAvailability.NotApplicable,
+                "這只代表本次 ACPI/PnP 列舉沒有 EC 線索；不能據此斷言平台沒有 EC。");
+
+        string acpiFailure = acpiAvailable ? "ACPI 表已列舉" : "ACPI 表清單讀取失敗";
+        string pnpFailure = pnpAvailable ? "PnP 已列舉" : "PnP 列舉失敗（" + (pnp.Failure ?? "原因未提供") + "）";
+        return new HardwareFact(PresentKey, Category, "嵌入式控制器（EC）", "", "", source,
+            FactTrustLevel.Unknown, false, at, null, FactAvailability.NotSupported,
+            $"存在性來源不完整：{acpiFailure}；{pnpFailure}；未找到可用的 EC 存在性線索。");
     }
 
     private static HardwareFact Boundary(DateTimeOffset at)
@@ -103,6 +181,5 @@ public static class EmbeddedControllerFactsService
             + "所以本專案不做。"
             + "**而這把鍵存在的理由就是說出那件事**——"
             + "一個沒說出口的界線，會被讀成「還沒做」而不是「刻意不做」。"
-            + "規格自己也是這樣寫的：P2-092 的目標是「陳述 EC 埠不讀寫的界線」，"
-            + "而 P2-093 的存在性走「由既有表間接陳述」那條路");
+            + "P2-092 要求陳述 EC 埠不讀寫的界線；P2-093 只用 ACPI/PnP 裝置線索間接陳述存在性");
 }

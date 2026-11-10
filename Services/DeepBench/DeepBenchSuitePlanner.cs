@@ -46,20 +46,34 @@ public static class DeepBenchSuitePlanner
         "memory.cache-bandwidth-ladder",
         "memory.copy-kernel-bandwidth",
         "topology.tsc-cross-core-sync",
-        "topology.core-uniformity"
+        "topology.core-uniformity",
+        "memory.dram-pattern-integrity"
     ];
 
     public static DeepBenchPlan Plan(DeepBenchRunProfile profile, IReadOnlyList<DeepBenchCatalogEntry>? catalog = null)
+        => Plan(profile, DeepBenchTargetCatalog.Default, catalog);
+
+    public static DeepBenchPlan Plan(
+        DeepBenchRunProfile profile,
+        DeepBenchTargetOption target,
+        IReadOnlyList<DeepBenchCatalogEntry>? catalog = null)
     {
         _ = profile;
+        ArgumentNullException.ThrowIfNull(target);
         IReadOnlyList<DeepBenchCatalogEntry> entries = catalog ?? DeepBenchCatalog.All;
         var byId = entries.ToDictionary(entry => entry.Id, entry => entry, StringComparer.Ordinal);
-        string[] selected = Phase1Order.Where(byId.ContainsKey).Where(id => byId[id].Runnable).ToArray();
+        var targeted = target.TestIds.ToHashSet(StringComparer.Ordinal);
+        string[] selected = Phase1Order.Where(targeted.Contains).Where(byId.ContainsKey)
+            .Where(id => byId[id].Runnable).ToArray();
         var skipped = entries
             .Where(entry => !selected.Contains(entry.Id, StringComparer.Ordinal))
             .Select(entry => new DeepBenchSkippedEntry(
                 entry.Id,
-                entry.Runnable ? "已登記但不屬於 Phase 1 執行集" : $"Phase {entry.Phase} 尚未實作：{entry.StatusText}"))
+                !entry.Runnable
+                    ? $"Phase {entry.Phase} 尚未實作：{entry.StatusText}"
+                    : targeted.Contains(entry.Id)
+                        ? "目標套件要求此項，但目錄未收錄於 Phase 1 執行集"
+                    : $"不屬於「{target.Title}」目標套件"))
             .ToArray();
         return new DeepBenchPlan(selected, skipped);
     }

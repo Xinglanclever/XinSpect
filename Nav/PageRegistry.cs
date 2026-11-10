@@ -184,7 +184,7 @@ public static class PageRegistry
             Key = "deepbench", Title = "深測中心", Group = GMonitor,
             IconData = "F0 M3,3 H21 V21 H3 Z M6,16 V9 L10,13 L14,6 L18,14 V18 H6 Z",
             Factory = () => new DeepBenchView(),
-            Hint = "同一場 Run Session 的 CPU／拓撲／記憶體／GPU／儲存深測與 38 項全量追蹤",
+            Hint = "同一場 Run Session 的 CPU／拓撲／記憶體／GPU／儲存深測與 44 項平台靶向套件",
             Keywords = ["deep bench", "deepbench", "深測", "深測中心", "benchmark", "跑分", "壓力", "證據"],
             Advanced = true,
         },

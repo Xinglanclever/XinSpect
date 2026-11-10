@@ -41,7 +41,10 @@ public sealed class DramTrafficService : ObservableObject
         private set { if (SetProperty(ref _busy, value)) OnPropertyChanged(nameof(CanMeasure)); }
     }
 
-    public bool CanMeasure => !_busy;
+    public bool CanMeasure => !_busy && HardwareOperationGate.CanRunAdvancedDiagnostics
+        && HardwareOperationGate.CanWriteHardware;
+
+    public void RefreshPolicy() => OnPropertyChanged(nameof(CanMeasure));
 
     private string _status = "按下量測後，會跑一段已知大小的讀取負載，並用它驗證計數器。";
     public string Status { get => _status; private set => SetProperty(ref _status, value); }
@@ -72,6 +75,13 @@ public sealed class DramTrafficService : ObservableObject
     public void Measure()
     {
         if (_busy) return;
+        if (!HardwareOperationGate.CanRunAdvancedDiagnostics || !HardwareOperationGate.CanWriteHardware)
+        {
+            Status = !HardwareOperationGate.CanRunAdvancedDiagnostics
+                ? "DRAM 流量量測已阻止：請先啟用第一級進階診斷。"
+                : "DRAM 流量量測會暫時編程 PMU 計數器；請先啟用第二級高風險硬體操作。";
+            return;
+        }
         IsBusy = true;
         Status = "正在量測（配置 512 MB 並讀滿一次）…";
 
@@ -98,6 +108,8 @@ public sealed class DramTrafficService : ObservableObject
 
     private static Result Run()
     {
+        using var writePermit = HardwareOperationGate.TryBeginHighRiskOperation();
+        if (writePermit is null) return Empty("DRAM PMU 計數器寫入未授權，量測未執行。");
         // 動畫重繪會製造額外的記憶體流量與快取壓力，那會動到自我驗證的比值
         using var quiet = Motion.Suspend();
 
