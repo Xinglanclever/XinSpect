@@ -275,15 +275,17 @@ public class FactStateLatticeTests
     }
 
     [Fact]
-    public void Present的字串值_在UI入口仍會被自動轉成數值()
+    public void Present的字串值_在UI入口也不猜數值()
     {
-        // 對照組：確認過的值該轉就轉，否則這條規則會誤傷正常路徑。
-        // 走 HardwareFact 入口（UI 相容路徑）——TryNumeric 的自動轉換在那條路上。
+        // Present 表示來源可用，不表示顯示字串的數字就是可計算的量測值。
         var fact = new HardwareFact("test.present", "測試", "確認的事實",
             "1234", "", "模擬來源", FactTrustLevel.Reported, false, At, null,
             FactAvailability.Present, null);
         var snapshot = HardwareSnapshotService.Create("t", [fact], includeSensitive: false);
-        Assert.Equal(1234, Assert.Single(snapshot.Facts).NumericValue);
+        Assert.Null(Assert.Single(snapshot.Facts).NumericValue);
+        var numeric = new HardwareFact("test.numeric", "測試", "明確數值",
+            "1234", "", "模擬來源", FactTrustLevel.Reported, false, At, 1234);
+        Assert.Equal(1234, Assert.Single(HardwareSnapshotService.Create("t", [numeric], false).Facts).NumericValue);
     }
 
     [Fact]

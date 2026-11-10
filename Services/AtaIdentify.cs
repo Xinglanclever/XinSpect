@@ -23,8 +23,10 @@ public sealed record AtaIdentifyInfo(
     /// <summary>有標稱轉速才算機械碟；未回報與保留值都不算。</summary>
     public bool IsMechanical => RotationRate is >= 0x0401 and <= 0xFFFE;
 
-    /// <summary>廠商標示的容量（十進位 GB，每磁區 512 位元組）。</summary>
-    public double CapacityGB => TotalLba * 512.0 / 1_000_000_000;
+    public long LogicalSectorBytes { get; init; } = 512;
+
+    /// <summary>當前可定址容量（十進位 GB，依 IDENTIFY 的邏輯磁區大小換算）。</summary>
+    public double CapacityGB => TotalLba * (double)LogicalSectorBytes / 1_000_000_000;
 
     /// <summary>
     /// 韌體更新命令能力：任一支援位為真即為真；兩個來源欄位都有效且皆為假才是明確的假；
@@ -81,6 +83,13 @@ public static class AtaIdentify
         ushort word53 = BitConverter.ToUInt16(d, WordTranslationFieldsValid * 2);
         ushort word69 = BitConverter.ToUInt16(d, WordAdditionalSupport * 2);
         ushort word83 = BitConverter.ToUInt16(d, WordCommandSetSupport * 2);
+        ushort word106 = BitConverter.ToUInt16(d, 106 * 2);
+        long logicalSectorBytes = 512;
+        if ((word106 & 0xD000) == 0x5000)
+        {
+            uint words = BitConverter.ToUInt32(d, 117 * 2);
+            if (words > 256) logicalSectorBytes = words * 2L;
+        }
 
         return new AtaIdentifyInfo(
             model,
@@ -92,7 +101,10 @@ public static class AtaIdentify
             (word83 & 0x0001) != 0,
             (word69 & 0x0100) != 0,
             ((word83 >> 14) & 0x0003) == 0x0001,
-            (word53 & 0x0002) != 0);
+            (word53 & 0x0002) != 0)
+        {
+            LogicalSectorBytes = logicalSectorBytes,
+        };
     }
 
     /// <summary>ATA 的字串欄位以 word 為單位交換位元組（規格如此，不是誰寫錯了）。</summary>

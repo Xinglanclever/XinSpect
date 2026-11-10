@@ -14,7 +14,7 @@ namespace XinSpect;
 /// 而它們在同一台機器上經常對不起來：
 /// </para>
 /// <list type="number">
-///   <item><b>韌體自述</b>：SMBIOS Type 28（溫度探針）與 Type 29（冷卻裝置）——
+///   <item><b>韌體自述</b>：SMBIOS Type 28（溫度探針）與 Type 27（冷卻裝置）——
 ///     那是主機板廠在生產時填的字串與值，與 OS 無關。</item>
 ///   <item><b>OS 端 ACPI 熱區</b>：WMI <c>root\WMI</c> 的 <c>MSAcpi_ThermalZoneTemperature</c>——
 ///     作業系統依 ACPI <c>_TZ</c> 物件建立，值以 <b>0.1 K</b> 表示。</item>
@@ -29,7 +29,7 @@ namespace XinSpect;
 /// </para>
 ///
 /// <para>
-/// <b>界線二：解不開的探針要算得出來。</b>Type 28 未達 0x14、Type 29 未達 0x0C 的結構
+/// <b>界線二：解不開的探針要算得出來。</b>Type 28 未達 0x14、Type 27 未達 0x0C 的結構
 /// （<see cref="SmbiosService"/> 的解碼門檻）不進明細，但<b>要能被數出來</b>——
 /// 「韌體列了 8 個、我們解開 6 個」與「韌體只列了 6 個」是不同的話。
 /// </para>
@@ -42,7 +42,7 @@ namespace XinSpect;
 public static class ThermalReachFactsService
 {
     private const string Category = "平台";
-    private const string Source = "SMBIOS Type 28／29（韌體自述）＋WMI root\\WMI MSAcpi_ThermalZoneTemperature（OS 端 ACPI 熱區）";
+    private const string Source = "SMBIOS Type 28／27（韌體自述）＋WMI root\\WMI MSAcpi_ThermalZoneTemperature（OS 端 ACPI 熱區）";
 
     public const string Key = "ec.thermal.readable";
 
@@ -88,7 +88,7 @@ public static class ThermalReachFactsService
         string firmware = s.FirmwareFailure is null
             ? $"SMBIOS Type 28 溫度探針 {s.FirmwareProbes} 個"
               + (s.FirmwareProbesUndecodable > 0 ? $"（其中 {s.FirmwareProbesUndecodable} 個結構長度不足、解不開）" : "")
-              + $"、Type 29 冷卻裝置 {s.FirmwareCooling} 個"
+              + $"、Type 27 冷卻裝置 {s.FirmwareCooling} 個"
               + (s.FirmwareCoolingUndecodable > 0 ? $"（其中 {s.FirmwareCoolingUndecodable} 個解不開）" : "")
             : $"**讀取失敗（{s.FirmwareFailure}）**，缺源如實列";
 
@@ -127,15 +127,13 @@ public static class ThermalReachFactsService
     /// </summary>
     private static ThermalReachState ReadState()
     {
-        int p28 = 0, p28Bad = 0, c29 = 0, c29Bad = 0;
+        int p28 = 0, p28Bad = 0, c27 = 0, c27Bad = 0;
         string? firmwareFailure = null;
         try
         {
-            var structs = new SmbiosService().Structs;
-            foreach (var t in structs.Where(t => t.Type == 28))
-            { p28++; if (t.Length < 0x14) p28Bad++; }   // 解碼門檻同 SmbiosService.DecodeTemperatureProbe
-            foreach (var t in structs.Where(t => t.Type == 29))
-            { c29++; if (t.Length < 0x0C) c29Bad++; }    // 同 SmbiosService.DecodeCoolingDevice
+            var smbios = new SmbiosService();
+            if (!smbios.Available) firmwareFailure = "SMBIOS 表讀取失敗或無效";
+            else (p28, p28Bad, c27, c27Bad) = CountFirmware(smbios.Structs);
         }
         catch (Exception ex) { firmwareFailure = ex.Message; }
 
@@ -172,7 +170,12 @@ public static class ThermalReachFactsService
         }
         catch (Exception ex) { wmiFailure = ex.Message; }
 
-        return new ThermalReachState(p28, p28Bad, c29, c29Bad, zones, unreported, warmest,
+        return new ThermalReachState(p28, p28Bad, c27, c27Bad, zones, unreported, warmest,
             firmwareFailure, wmiFailure);
     }
+
+    internal static (int Probes, int BadProbes, int Cooling, int BadCooling) CountFirmware(
+        IReadOnlyList<SmbiosStruct> structs) => (
+        structs.Count(s => s.Type == 28), structs.Count(s => s.Type == 28 && s.Length < 0x14),
+        structs.Count(s => s.Type == 27), structs.Count(s => s.Type == 27 && s.Length < 0x0C));
 }

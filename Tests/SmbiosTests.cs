@@ -80,6 +80,18 @@ public class SmbiosTests
         Assert.Equal("F4-3200C16-8GIS", row.Part);
         Assert.Equal("2", row.Rank);
         Assert.Equal("—", row.Configured);   // 結構長度未達 0x22 → 不猜
+        Assert.Equal(64, row.TotalWidth);
+        Assert.Equal(64, row.DataWidth);
+
+        var real = SmbiosParser.Parse(System.IO.File.ReadAllBytes(
+            System.IO.Path.Combine(AppContext.BaseDirectory, "Fixtures", "smbios-real.bin")));
+        foreach (var dimm in real.Where(s => s.Type == 17 && s.WordAt(0x0C) is not (0 or 0xFFFF)))
+        {
+            var decoded = SmbiosService.DecodeMemoryDeviceStruct(dimm)!;
+            Assert.Equal(dimm.WordAt(0x08), decoded.TotalWidth);
+            Assert.Equal(dimm.WordAt(0x0A), decoded.DataWidth);
+            Assert.Equal(dimm.WordAt(0x13), decoded.Registered);
+        }
     }
 
     /// <summary>只帶容量欄位的 Type 17（長度 0x1C，無字串），用來單獨驗容量單位。</summary>
@@ -106,6 +118,24 @@ public class SmbiosTests
 
     [Fact]
     public void Type17解碼_容量未知時不猜() => Assert.Equal("—", SizeOf(0xFFFF));
+
+    [Fact]
+    public void ExtendedMemorySpeedRequiresSentinelAndCompleteField()
+    {
+        var data = new byte[0x5C];
+        BitConverter.GetBytes((ushort)0xFFFF).CopyTo(data, 0x15);
+        BitConverter.GetBytes((ushort)0xFFFF).CopyTo(data, 0x20);
+        BitConverter.GetBytes(100_000u).CopyTo(data, 0x54);
+        BitConverter.GetBytes(90_000u).CopyTo(data, 0x58);
+        var row = SmbiosService.DecodeMemoryDeviceStruct(new(17, 1, data, []))!;
+        Assert.Equal("100000 MT/s", row.Speed);
+        Assert.Equal("90000 MT/s", row.Configured);
+        var shortRow = SmbiosService.DecodeMemoryDeviceStruct(new(17, 1, data[..0x22], []))!;
+        Assert.Equal("—", shortRow.Speed);
+        Assert.Equal("—", shortRow.Configured);
+        data[0x15] = 0; data[0x16] = 0;
+        Assert.Equal("—", SmbiosService.DecodeMemoryDeviceStruct(new(17, 1, data, []))!.Speed);
+    }
 
     [Fact]
     public void Type17解碼_未安裝插槽回報未安裝而非空白()

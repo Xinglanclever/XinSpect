@@ -27,24 +27,28 @@ public class SmbiosProcessorFactsTests
     private static SmbiosStruct Processor(string socket, string vendor, byte family,
         ushort maxSpeed, ushort cores, ushort threads)
     {
-        var d = new byte[0x28];
+        var d = new byte[0x30];
         d[0x04] = 1;                       // Socket Designation → 字串 1
         d[0x06] = family;
         d[0x07] = 2;                       // Manufacturer → 字串 2
         BitConverter.GetBytes(maxSpeed).CopyTo(d, 0x14);
-        BitConverter.GetBytes(cores).CopyTo(d, 0x23);
-        BitConverter.GetBytes(threads).CopyTo(d, 0x25);
+        d[0x18] = 0x41;
+        d[0x23] = cores < 255 ? (byte)cores : (byte)255;
+        d[0x24] = d[0x23];
+        d[0x25] = threads < 255 ? (byte)threads : (byte)255;
+        BitConverter.GetBytes(cores).CopyTo(d, 0x2A);
+        BitConverter.GetBytes(threads).CopyTo(d, 0x2E);
         return Struct(4, d, socket, vendor);
     }
 
-    /// <summary>Type 7：插槽@0x04、配置@0x05、大小@0x09、關聯@0x0C、行大小@0x0D。</summary>
+    /// <summary>Type 7：插槽@0x04、配置@0x05、大小@0x09、關聯@0x12；沒有行大小欄位。</summary>
     private static SmbiosStruct Cache(string socket, byte level, ushort rawSize, byte assoc, ushort lineSize)
     {
         var d = new byte[0x13];
         d[0x04] = 1;
         BitConverter.GetBytes((ushort)(level - 1)).CopyTo(d, 0x05);   // 低 3 位是 level-1
         BitConverter.GetBytes(rawSize).CopyTo(d, 0x09);
-        d[0x0C] = assoc;
+        d[0x12] = assoc;
         d[0x0D] = (byte)lineSize;
         return Struct(7, d, socket);
     }
@@ -126,6 +130,7 @@ public class SmbiosProcessorFactsTests
         // 長度只到 0x20——沒有核心數／執行緒數欄位（SMBIOS 2.5 以前）。
         var d = new byte[0x20];
         d[0x04] = 1;
+        d[0x18] = 0x41;
         var s = Struct(4, d, "CPU0");
 
         var p = SmbiosProcessorFactsService.Collect(At, () => [s])
@@ -177,6 +182,38 @@ public class SmbiosProcessorFactsTests
     public void 快取大小_零代表未提供而不是零快取()
     {
         Assert.Equal(0L, SmbiosProcessorFactsService.DecodeCacheSize(0));
+        Assert.Equal(0L, SmbiosProcessorFactsService.DecodeCacheSize(0xFFFF));
+    }
+
+    [Fact]
+    public void ExtendedCacheSizeUsesInstalledDwordAndItsGranularityFlag()
+    {
+        var data = new byte[0x1B];
+        BitConverter.GetBytes((ushort)0xFFFF).CopyTo(data, 0x09);
+        BitConverter.GetBytes(0x80008000u).CopyTo(data, 0x17);
+        data[0x12] = 0x0E;
+        var fact = SmbiosProcessorFactsService.Collect(At, () => [Struct(7, data)])
+            .Single(f => f.Key == SmbiosProcessorFactsService.CacheKey);
+        Assert.Contains("2097152 KiB", fact.Value);
+        Assert.Contains("20 路", fact.Value);
+    }
+
+    [Fact]
+    public void EmptySocketsAreExcludedAndExtendedCpuCountsAreSeparateWords()
+    {
+        var installed = Processor("CPU0", "Vendor", 0xB3, 4000, 256, 512);
+        installed.Data[0x08] = 1;
+        installed.Data[0x10] = 3;
+        installed = new(4, 1, installed.Data, ["CPU0", "Vendor", "Actual Processor"]);
+        var empty = Processor("CPU1", "Vendor", 0xB3, 4000, 8, 16);
+        empty.Data[0x18] = 0;
+        var facts = SmbiosProcessorFactsService.Collect(At, () => [installed, empty]);
+        Assert.Equal(1, facts.Single(f => f.Key == SmbiosProcessorFactsService.ProcCountKey).NumericValue);
+        string text = facts.Single(f => f.Key == SmbiosProcessorFactsService.ProcKey).Value;
+        Assert.Contains("256 核", text);
+        Assert.Contains("512 執行緒", text);
+        Assert.Contains("Actual Processor", text);
+        Assert.DoesNotContain("CPU1", text);
     }
 
     [Fact]
@@ -190,7 +227,7 @@ public class SmbiosProcessorFactsTests
         Assert.Contains("L3", c.Value);
         Assert.Contains("32768 KiB", c.Value);
         Assert.Contains("16 路關聯", c.Value);
-        Assert.Contains("行 64 位元組", c.Value);
+        Assert.DoesNotContain("行 64 位元組", c.Value);
     }
 
     [Fact]

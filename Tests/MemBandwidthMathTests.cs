@@ -297,13 +297,19 @@ public class MemBandwidthMathTests
         // 1→2→4 顯著增益，4→8 增益 < 5% → 在 4 執行緒時飽和
         var points = new (int, double)[] { (1, 10), (2, 19), (4, 35), (8, 36) };
         Assert.Equal(4, MemBandwidthMath.SaturationThreads(points));
+        Assert.Equal(4, MemBandwidthMath.SaturationThreads(
+            new (int, double)[] { (1, 10), (2, 10.2), (4, 35), (8, 36) }));
     }
 
     [Fact]
     public void 飽和點_持續增益不判定為飽和()
     {
         var points = new (int, double)[] { (1, 10), (2, 19), (4, 35), (8, 60) };
-        Assert.Equal(8, MemBandwidthMath.SaturationThreads(points));
+        Assert.Equal(0, MemBandwidthMath.SaturationThreads(points));
+        var result = MemBandwidthMath.BuildThreadScaleAnalysis(points, points, points, points);
+        Assert.DoesNotContain(result.Read, p => p.IsSaturation);
+        Assert.Contains("未確認飽和點", result.SaturationText);
+        Assert.Equal(0, MemBandwidthMath.SaturationThreads(new (int, double)[] { (1, 0), (2, 0) }));
     }
 
     [Fact]

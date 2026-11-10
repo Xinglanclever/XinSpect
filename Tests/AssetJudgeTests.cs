@@ -13,18 +13,15 @@ namespace XinSpect.Tests;
 public class AssetJudgeTests
 {
     private static AssetField F(string label, string value, bool placeholder = false, string source = "SMBIOS")
-        => new(label, value, source, placeholder);
+        => new(label, value, source, placeholder, label is "系統序號" or "主機板序號" or "機箱序號" or "資產標籤");
 
     // ── 機箱類型 ──────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(0x11)]  // 工作站
-    [InlineData(0x12)]  // 伺服器
-    [InlineData(0x1F)]  // 主機式
-    [InlineData(0x25)]  // 刀鋒機箱
-    [InlineData(0x26)]  // 刀鋒伺服器機箱
-    [InlineData(0x27)]  // 機架式
-    [InlineData(0x32)]  // 嵌入式邊緣伺服器
+    [InlineData(0x11)]  // Main Server Chassis
+    [InlineData(0x17)]  // Rack Mount
+    [InlineData(0x1C)]  // Blade
+    [InlineData(0x1D)]  // Blade Enclosing
     public void 伺服器類機箱_要認出來(byte code)
         => Assert.True(AssetJudge.IsServerChassisType(code));
 
@@ -32,10 +29,15 @@ public class AssetJudgeTests
     [InlineData(0x03)]  // 桌上型
     [InlineData(0x07)]  // 塔式
     [InlineData(0x09)]  // 筆記型
-    [InlineData(0x1C)]  // 膝上型
+    [InlineData(0x1F)]  // Convertible
     [InlineData(0x00)]
     public void 一般用途機箱_不得誤判為伺服器(byte code)
-        => Assert.False(AssetJudge.IsServerChassisType(code));
+    {
+        Assert.False(AssetJudge.IsServerChassisType(code));
+        Assert.False(AssetJudge.IsServerChassisType(0x12));
+        Assert.False(AssetJudge.IsServerChassisType(0x25));
+        Assert.False(AssetJudge.IsServerChassisType(0x32));
+    }
 
     // ── 全部未填：最該提醒的情況 ──────────────────────────────────────────
 
@@ -147,5 +149,34 @@ public class AssetJudgeTests
             Assert.False(string.IsNullOrWhiteSpace(v.Headline));
             Assert.False(string.IsNullOrWhiteSpace(v.Evidence));
         }
+    }
+
+    [Fact]
+    public void ManufacturerAndModelCannotIdentifyAMachineButValidUuidCan()
+    {
+        var record = new AssetRecord([F("系統製造商", "Vendor"), F("系統型號", "Model")], 3, "Desktop", "", false);
+        Assert.False(AssetJudge.Judge(record).CanIdentify);
+        Assert.True(AssetJudge.Judge(record with { Uuid = "00112233-4455-6677-8899-AABBCCDDEEFF" }).CanIdentify);
+        Assert.True(AssetJudge.Judge(record with { Fields = [], Uuid = "00112233-4455-6677-8899-AABBCCDDEEFF" }).CanIdentify);
+        Assert.False(AssetJudge.Judge(record with { Uuid = "00000000-0000-0000-0000-000000000000" }).CanIdentify);
+        Assert.False(AssetJudge.Judge(record with { Uuid = "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF" }).CanIdentify);
+        Assert.False(AssetJudge.Judge(record with { Uuid = "not-a-uuid" }).CanIdentify);
+    }
+
+    [Fact]
+    public void AssetIdentifiersAreRedactedInDefaultSnapshots()
+    {
+        const string serial = "SECRET-SERIAL-123";
+        const string uuid = "00112233-4455-6677-8899-AABBCCDDEEFF";
+        var record = new AssetRecord([F("系統序號", serial)], 3, "Desktop", uuid, false);
+        var facts = AssetFactsService.Collect(DateTimeOffset.UtcNow, () => record);
+        var snapshot = HardwareSnapshotService.Create("test", facts, false);
+        foreach (var fact in snapshot.Facts)
+        {
+            Assert.DoesNotContain(serial, fact.Value);
+            Assert.DoesNotContain(uuid, fact.Value);
+        }
+        Assert.True(facts.Single(f => f.Key == "asset.uuid").Sensitive);
+        Assert.True(facts.Single(f => f.Key == "asset.field.系統序號").Sensitive);
     }
 }

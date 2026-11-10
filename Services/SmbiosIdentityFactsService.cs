@@ -38,10 +38,19 @@ public static class SmbiosIdentityFactsService
     public const string BootStatusKey = "sb.boot.status";
 
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at,
-        Func<IReadOnlyList<SmbiosStruct>>? structsProbe = null)
+        Func<IReadOnlyList<SmbiosStruct>>? structsProbe = null, bool uuidLittleEndian = true)
     {
         IReadOnlyList<SmbiosStruct> structs;
-        try { structs = (structsProbe ?? (() => new SmbiosService().Structs))(); }
+        try
+        {
+            if (structsProbe is not null) structs = structsProbe();
+            else
+            {
+                var service = new SmbiosService();
+                structs = service.Structs;
+                uuidLittleEndian = service.UuidLittleEndian;
+            }
+        }
         catch (Exception ex)
         {
             return Na(at, "SMBIOS 表讀取失敗：" + ex.Message, FactAvailability.ReadError);
@@ -62,7 +71,7 @@ public static class SmbiosIdentityFactsService
         {
             Type0(at, First(byType, 0)),
             Type1(at, type1),
-            Uuid(at, type1),
+            Uuid(at, type1, uuidLittleEndian),
             Type2(at, First(byType, 2)),
             Type3(at, First(byType, 3)),
             Boot(at, type32),
@@ -87,34 +96,34 @@ public static class SmbiosIdentityFactsService
         Add(parts, "版本", Str(s, 0x05));
         Add(parts, "發行日", Str(s, 0x08));
 
-        // ROM 大小：擴充欄位（@0x14 起）只在長度足夠時才讀。
-        // 邊界是「起點 ＋ 寬度」，不是「起點」——0x14 + 4 = 0x18，
-        // 所以需要 Length >= 0x18。第一版寫成 Length > 0x14，
-        // 那只保證索引 0x14 有效，卻去讀了 0x14..0x17。
-        if (s.Length >= 0x18)
+        // DSP0134 Type 0: legacy ROM byte @09h, extended WORD @18h.
+        ulong? rom = null;
+        if (s.ByteAt(0x09) != 0xFF)
+            rom = (ulong)(s.ByteAt(0x09) + 1) * 64 * 1024;
+        else if (s.Length >= 0x1A)
         {
-            ulong rom = s.ByteAt(0x13) == 0xFF && s.Length > 0x18
-                ? (ulong)s.DwordAt(0x14) * 1024 * 1024   // 0xFF = 單位是 MB
-                : (ulong)((s.ByteAt(0x13) + 1) * 64 * 1024);
-            if (rom > 0) parts.Add($"ROM {rom / (1024 * 1024)} MiB");
+            ushort extended = s.WordAt(0x18);
+            ulong size = (ulong)(extended & 0x3FFF);
+            rom = (extended >> 14) switch
+            {
+                0 => size * 1024 * 1024,
+                1 => size * 1024 * 1024 * 1024,
+                _ => null,
+            };
         }
+        if (rom is > 0) parts.Add($"ROM {rom.Value / (1024.0 * 1024):0.####} MiB");
 
-        // 特性旗標是 u16@0x11（兩個位元組：0x11 與 0x12），
-        // 所以需要 Length >= 0x13。第一版寫 > 0x12，那只保證 0x12 有效。
         var chars = new List<string>();
-        if (s.Length >= 0x13)
-        {
-            ulong flags = s.ByteAt(0x11) | ((ulong)s.ByteAt(0x12) << 8);
-            if ((flags & 0x08) != 0) chars.Add("支援升級（BIOS 可更新）");
-            if ((flags & 0x10) != 0) chars.Add("支援開機選單");
-            if ((flags & 0x800) != 0) chars.Add("支援 UEFI");
-            if ((flags & 0x1000) != 0) chars.Add("為 UEFI 平台");
-        }
+        ulong flags = BitConverter.ToUInt64(s.Data, 0x0A);
+        if ((flags & 8) == 0 && (flags & (1ul << 11)) != 0)
+            chars.Add("支援升級（BIOS 可更新）");
+        if (s.Length >= 0x14 && (s.ByteAt(0x13) & 8) != 0)
+            chars.Add("支援 UEFI（能力，不代表本次開機模式）");
 
         return new HardwareFact(BiosKey, Category, "BIOS 資訊",
             string.Join("／", parts) + (chars.Count > 0 ? $";{string.Join("、", chars)}" : ""),
-            "", "SMBIOS Type 0（廠商@0x04、版本@0x05、發行日@0x08、ROM 大小@0x09、特性@0x11）",
-            FactTrustLevel.Measured, false, at, null, FactAvailability.Present,
+            "", "SMBIOS Type 0（ROM@0x09／0x18、特性@0x0A、UEFI 能力@0x13 bit3）",
+            FactTrustLevel.Reported, false, at, null, FactAvailability.Present,
             "這是韌體自述；與 WMI Win32_BIOS 的說法並列時，兩者不同是事實不是錯誤");
     }
 
@@ -138,26 +147,12 @@ public static class SmbiosIdentityFactsService
             "序號屬 L1 敏感欄位，這一項標為敏感；與 WMI Win32_ComputerSystemProduct 並列");
     }
 
-    private static HardwareFact Uuid(DateTimeOffset at, SmbiosStruct? s)
+    private static HardwareFact Uuid(DateTimeOffset at, SmbiosStruct? s, bool littleEndian)
     {
         if (s is null || s.Length < 0x18)
             return Missing(UuidKey, "系統 UUID", at, "SMBIOS 未提供 Type 1 或長度不足");
 
-        // UUID 的三個欄位各自是 little-endian（SMBIOS 2.6+ 規定）：
-        //   Data1 是 4 bytes（@0x08–0x0B）→ 反轉
-        //   Data2 是 2 bytes（@0x0C–0x0D）→ 反轉
-        //   Data3 是 2 bytes（@0x0E–0x0F）→ 反轉
-        //   後 8 bytes（@0x10–0x17）原樣
-        //
-        // 第一版把 @0x08–@0x0F 當成「8 個位元組整段反轉」，於是 Data2 與 Data3
-        // 被攪在一起。那個錯誤出來的結果仍然是一個格式正確的 UUID
-        // ——它看起來完全正常，只是指認到別的機器。
-        byte[] u = new byte[16];
-        u[0] = s.ByteAt(0x0B); u[1] = s.ByteAt(0x0A); u[2] = s.ByteAt(0x09); u[3] = s.ByteAt(0x08);
-        u[4] = s.ByteAt(0x0D); u[5] = s.ByteAt(0x0C);
-        u[6] = s.ByteAt(0x0F); u[7] = s.ByteAt(0x0E);
-        for (int i = 8; i < 16; i++) u[i] = s.ByteAt(0x08 + i);
-
+        byte[] u = s.Data[0x08..0x18];
         bool allZero = u.All(b => b == 0);
         bool allFf = u.All(b => b == 0xFF);
         if (allZero || allFf)
@@ -168,11 +163,10 @@ public static class SmbiosIdentityFactsService
                 "UUID 未設定——那是「沒有這個識別碼」而不是「識別碼是 0」；"
                 + "把它當成一個 UUID 會讓資產比對誤判為同一台");
 
-        string text = $"{u[0]:X2}{u[1]:X2}{u[2]:X2}{u[3]:X2}-{u[4]:X2}{u[5]:X2}-"
-                    + $"{u[6]:X2}{u[7]:X2}-{u[8]:X2}{u[9]:X2}-"
-                    + string.Concat(u[10..].Select(b => b.ToString("X2")));
+        string text = SmbiosService.BufferToUuid(u, littleEndian);
         return new HardwareFact(UuidKey, Category, "系統 UUID", text, "",
-            "SMBIOS Type 1 @0x08（前 3 欄位 little-endian，SMBIOS 2.6+ 規定）",
+            littleEndian ? "SMBIOS Type 1 @0x08（SMBIOS 2.6+ 前三欄 little-endian）"
+                : "SMBIOS Type 1 @0x08（SMBIOS 2.6 以前，network byte order）",
             FactTrustLevel.Measured, true, at, null, FactAvailability.Present,
             "這是機器識別碼（標 L1）：能唯一指認一台機器，所以匯出時預設遮蔽");
     }
@@ -246,36 +240,23 @@ public static class SmbiosIdentityFactsService
                 "SMBIOS 未提供 Type 32——它記錄的是「上一次 POST 的結果」，"
                 + "沒有它就只能從事件記錄推");
 
-        var parts = new List<string>();
-        if (s.Length >= 0x07)
-            parts.Add($"狀態 {BootStatusName(s.ByteAt(0x06))}");
-        // POST 結果是 @0x08–@0x0D（6 個位元組），所以需要 Length >= 0x0E。
-        // 第一版寫 > 0x0A，那只保證 0x0A 有效，卻讀到了 0x0D。
-        if (s.Length >= 0x0E)
-        {
-            byte[] reserved = new byte[6];
-            for (int i = 0; i < 6; i++) reserved[i] = s.ByteAt(0x08 + i);
-            bool allZero = reserved.All(b => b == 0);
-            parts.Add(allZero ? "POST 結果未記錄" : "POST 有記錄（見原始位元組）");
-        }
-
-        return new HardwareFact(BootKey, Category, "開機資訊", string.Join("／", parts), "",
-            "SMBIOS Type 32（保留@0x04、狀態@0x06、POST 結果@0x08–0x0D）",
-            FactTrustLevel.Measured, false, at, null, FactAvailability.Present,
+        return new HardwareFact(BootKey, Category, "開機資訊", $"狀態 {BootStatusName(s.ByteAt(0x0A))}", "",
+            "SMBIOS Type 32（保留@0x04–0x09、開機狀態@0x0A）",
+            FactTrustLevel.Reported, false, at, null, FactAvailability.Present,
             "這是「上一次開機的結果」，不是現在這一台的狀態——"
             + "一台正常運作中的機器可以記錄著三個月前的一次失敗");
     }
 
     private static HardwareFact BootStatus(DateTimeOffset at, SmbiosStruct? s)
     {
-        if (s is null || s.Length < 0x07)
+        if (s is null || s.Length < 0x0B)
             return Missing(BootStatusKey, "上次開機狀態", at, "SMBIOS 未提供 Type 32 或長度不足");
 
-        byte code = s.ByteAt(0x06);
+        byte code = s.ByteAt(0x0A);
         bool ok = code == 0;
         return new HardwareFact(BootStatusKey, Category, "上次開機狀態",
-            ok ? "正常" : $"異常（{BootStatusName(code)}）", "", "SMBIOS Type 32 位移 0x06",
-            FactTrustLevel.Measured, false, at, code,
+            ok ? "正常" : $"狀態（{BootStatusName(code)}）", "", "SMBIOS Type 32 位移 0x0A",
+            FactTrustLevel.Reported, false, at, code,
             ok ? FactAvailability.Present : FactAvailability.Unknown,
             ok ? "上一次開機被記錄為正常——這是歷史紀錄，不是現在的健康狀態"
                : "上一次開機被記錄為異常——那可能是很久以前的事，"
@@ -294,9 +275,9 @@ public static class SmbiosIdentityFactsService
     /// </summary>
     private static string BootStatusName(byte code)
     {
-        string[] status = ["正常", "無開機裝置", "作業系統載入失敗",
-            "韌體失敗", "儲存裝置失敗", "硬體失敗", "使用者請求的啟動", "安全違規",
-            "先前請求的映像復原", "系統韌體復原", "開機選項已改變"];
+        string[] status = ["正常", "無可開機媒體", "一般作業系統失敗",
+            "韌體偵測到硬體失敗", "作業系統偵測到硬體失敗", "使用者請求的開機",
+            "系統安全違規", "先前請求的映像", "系統看門狗逾時"];
         return code < status.Length ? status[code] : $"代碼 {code}";
     }
 

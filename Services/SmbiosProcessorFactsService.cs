@@ -55,7 +55,8 @@ public static class SmbiosProcessorFactsService
         var facts = new List<HardwareFact>();
 
         // ── Type 4 處理器 ────────────────────────────────────────────────
-        var procs = byType.TryGetValue(4, out var s4) ? s4.Where(s => s.Length >= 0x1A).ToList() : [];
+        var procs = byType.TryGetValue(4, out var s4)
+            ? s4.Where(s => s.Length >= 0x1A && (s.ByteAt(0x18) & 0x40) != 0).ToList() : [];
         facts.Add(new HardwareFact(ProcCountKey, Category, "SMBIOS 宣告的處理器數",
             procs.Count.ToString(CultureInfo.InvariantCulture), "顆", Source4,
             FactTrustLevel.Measured, false, at, procs.Count,
@@ -89,7 +90,7 @@ public static class SmbiosProcessorFactsService
         facts.Add(caches.Count > 0
             ? new HardwareFact(CacheKey, Category, "快取明細", DescribeCaches(caches), "",
                 Source7 + "（Socket Designation@0x04、Cache Configuration@0x05、"
-                + "Max Size@0x07、Installed Size@0x09、Associativity@0x0C、Line Size@0x0D）",
+                + "Max Size@0x07、Installed Size@0x09 / Extended@0x17、Associativity@0x12）",
                 FactTrustLevel.Measured, false, at, null, FactAvailability.Present,
                 "快取大小的高位是粒度旗標（bit15 為 1 時單位是 64 KiB），"
                 + "解讀時已依規格換算——這一項是本服務自己算的，不是原始值")
@@ -112,7 +113,7 @@ public static class SmbiosProcessorFactsService
             string? socket = Str(s, 0x04);
             if (socket.Length > 0) fields.Add($"插槽 {socket}");
 
-            string vendor = $"{Str(s, 0x07)} {Str(s, 0x08)}".Trim();
+            string vendor = $"{Str(s, 0x07)} {Str(s, 0x10)}".Trim();
             if (vendor.Length > 0) fields.Add(vendor);
 
             // Family 是位元組代碼（0x01 其他、0x02 未知、0xB3 起是規格列舉）；
@@ -120,17 +121,10 @@ public static class SmbiosProcessorFactsService
             byte family = s.Length > 0x06 ? s.ByteAt(0x06) : (byte)0;
             fields.Add($"家族 0x{family:X2}");
 
-            // 核心數與執行緒數是 u16@0x23／@0x25（SMBIOS 2.5+ 才有；前面的版本欄位較短）。
-            if (s.Length > 0x24)
-            {
-                ushort cores = s.WordAt(0x23);
-                if (cores > 0) fields.Add($"{cores} 核");
-            }
-            if (s.Length > 0x26)
-            {
-                ushort threads = s.WordAt(0x25);
-                if (threads > 0) fields.Add($"{threads} 執行緒");
-            }
+            if (SmbiosService.ProcessorCount(s, 0x23, 0x2A) is { } cores)
+                fields.Add($"{cores} 核");
+            if (SmbiosService.ProcessorCount(s, 0x25, 0x2E) is { } threads)
+                fields.Add($"{threads} 執行緒");
 
             if (s.Length > 0x16)
             {
@@ -162,16 +156,15 @@ public static class SmbiosProcessorFactsService
             ushort config = s.WordAt(0x05);
             fields.Add($"L{(config & 0x07) + 1}");
 
-            long installed = DecodeCacheSize(s.WordAt(0x09));
+            ushort legacySize = s.WordAt(0x09);
+            long installed = legacySize == 0xFFFF && s.Length >= 0x1B
+                ? DecodeExtendedCacheSize(s.DwordAt(0x17)) : DecodeCacheSize(legacySize);
             fields.Add(installed > 0 ? $"{installed / 1024} KiB" : "大小未提供");
 
-            if (s.Length > 0x0D)
+            if (s.Length > 0x12)
             {
-                byte assoc = s.ByteAt(0x0C);
+                byte assoc = s.ByteAt(0x12);
                 if (assoc > 0) fields.Add($"{AssociativityName(assoc)}關聯");
-
-                ushort line = s.ByteAt(0x0D);
-                if (line > 0) fields.Add($"行 {line} 位元組");
             }
 
             parts.Add($"[{i}] " + string.Join("／", fields));
@@ -185,11 +178,14 @@ public static class SmbiosProcessorFactsService
     /// </summary>
     internal static long DecodeCacheSize(ushort raw)
     {
-        if (raw == 0) return 0;
+        if (raw is 0 or 0xFFFF) return 0;
         int granularity = (raw & 0x8000) != 0 ? 64 : 1;
         int value = raw & 0x7FFF;
         return (long)value * granularity * 1024;
     }
+
+    private static long DecodeExtendedCacheSize(uint raw)
+        => (long)(raw & 0x7FFFFFFF) * ((raw & 0x80000000) != 0 ? 64 : 1) * 1024;
 
     private static string AssociativityName(byte code) => code switch
     {
@@ -206,8 +202,7 @@ public static class SmbiosProcessorFactsService
         0x0B => "32 路",
         0x0C => "48 路",
         0x0D => "64 路",
-        0x0E => "96 路",
-        0x0F => "128 路",
+        0x0E => "20 路",
         _ => $"0x{code:X2}",
     };
 

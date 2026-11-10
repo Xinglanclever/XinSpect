@@ -12,10 +12,10 @@
 
 # 曦覽 XinSpect 百科・修正版（v3.17・2026-11-07 審計後）
 
-![版本](https://img.shields.io/badge/version-3.22-4C8DFF)
+![版本](https://img.shields.io/badge/version-3.23-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-7949%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-7966%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授權](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 ![商業授權](https://img.shields.io/badge/license-%E5%95%86%E6%A5%AD%E6%8E%88%E6%AC%8A%E5%8F%AF%E8%AB%87-8B5CF6)
@@ -52,7 +52,7 @@
 | 服務檔 | **677** | `find Services -name '*.cs' \| wc -l` |
 | 全域 C# 檔 | **1,600** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`work/`、`publish-*/`、`.git/` |
 | 版本紀錄筆數 | **127** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
-| 專案測試基線 | **7,949** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
+| 專案測試基線 | **7,966** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
 | CLI 指令（`Execute` case 標籤） | **43** | `grep -c 'case "' XinSpectCli/Program.cs`（--elevate 由 patch-05 新增；指令書詳解 43 條——mascot/refresh/language 補入目錄，見 `XinSpectCli/CommandBook.cs`） |
 | 內核組件 | **4** | WinRing0（借）／PawnIO（未接入）／BlueSquadron（防護・毛坯）／XsRegProbe（白名單唯讀探測） |
 | 外部審查發現 | **116** | `docs/審查報告-v3.17.md` 的編目條目（v3.18 增量審查另計 111 條編目，見同目錄） |
@@ -163,19 +163,19 @@
 
 | 檔案 | 大小 | 說明 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpect.exe) | 38,081,835 bytes | 主程式。藍色中隊守護進程已內建；「強控台」按鈕橋接 xsc 終端機 |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole.exe) | 100,440,723 bytes | 曦覽終端機（CLI）。可獨立執行，也被主程式強控台喚起；自含 .NET 10 執行階段故體積較大（見下方說明） |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/BlueSquadronBridge.exe) | 6,531,620 bytes | 獨立守護進程。要脫離主程式單獨跑防護時使用 |
-| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpect-full.exe) | 210,848,082 bytes | 主程式・帶環境版：.NET 10 Desktop Runtime 一併打包，免裝執行階段（功能與 XinSpect.exe 相同） |
-| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole-nort.exe) | 66,138,776 bytes | 曦覽終端機・Windows 11／Server 2025・不帶環境：需已裝 .NET 10 Desktop Runtime |
-| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole-legacy-nort.exe) | 66,138,864 bytes | 曦覽終端機・Windows 10／2016/2019/2022・不帶環境：純文字界面，需已裝 .NET 10 Desktop Runtime |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectDeploy.exe) | 29,696 bytes | 一鍵安裝器。第一層選裝什麼：A 裝主程式（GUI）、B 裝曦覽終端機；第二層 1/2/3 選下載來源（GitHub／Drive／加速節點）；下載時顯示進度條、速度與剩餘時間 |
-| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XsRegProbe.sys) | 24,064 bytes | XsRegProbe 內核探測驅動（白名單唯讀 MSR／MMIO，全案審查唯一「優秀」級）。本版重編版**含槽位基底修正**（槽位從請求頭 +8 開始——第三輪嚴查發現，v3.18 的 .sys 為修正前）。未微軟簽章：主程式以提權會話安裝到 `ProgramData\XinSpect\Driver\` 並建服務；手動載入需測試簽章環境（testsigning） |
-| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole-legacy.exe) | 100,440,811 bytes | 曦覽終端機（CLI）**純文字相容版**：給 Windows 10／Windows Server 2016、2019、2022 的傳統主控台——無色彩、無框線定位，其餘功能（facts／book／help）相同 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpect.exe) | 38,085,931 bytes | 主程式。藍色中隊守護進程已內建；「強控台」按鈕橋接 xsc 終端機 |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpectConsole.exe) | 100,446,445 bytes | 曦覽終端機（CLI）。可獨立執行，也被主程式強控台喚起；自含 .NET 10 執行階段故體積較大（見下方說明） |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/BlueSquadronBridge.exe) | 6,531,620 bytes | 獨立守護進程。要脫離主程式單獨跑防護時使用 |
+| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpect-full.exe) | 210,852,178 bytes | 主程式・帶環境版：.NET 10 Desktop Runtime 一併打包，免裝執行階段（功能與 XinSpect.exe 相同） |
+| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpectConsole-nort.exe) | 66,142,872 bytes | 曦覽終端機・Windows 11／Server 2025・不帶環境：需已裝 .NET 10 Desktop Runtime |
+| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpectConsole-legacy-nort.exe) | 66,142,960 bytes | 曦覽終端機・Windows 10／2016/2019/2022・不帶環境：純文字界面，需已裝 .NET 10 Desktop Runtime |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpectDeploy.exe) | 29,696 bytes | 一鍵安裝器。第一層選裝什麼：A 裝主程式（GUI）、B 裝曦覽終端機；第二層 1/2/3 選下載來源（GitHub／Drive／加速節點）；下載時顯示進度條、速度與剩餘時間 |
+| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XsRegProbe.sys) | 24,064 bytes | XsRegProbe 內核探測驅動（白名單唯讀 MSR／MMIO，全案審查唯一「優秀」級）。本版重編版**含槽位基底修正**（槽位從請求頭 +8 開始——第三輪嚴查發現，v3.18 的 .sys 為修正前）。未微軟簽章：主程式以提權會話安裝到 `ProgramData\XinSpect\Driver\` 並建服務；手動載入需測試簽章環境（testsigning） |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpectConsole-legacy.exe) | 100,442,437 bytes | 曦覽終端機（CLI）**純文字相容版**：給 Windows 10／Windows Server 2016、2019、2022 的傳統主控台——無色彩、無框線定位，其餘功能（facts／book／help）相同 |
 
 逐資產 SHA-256 見 Release 頁的 `SHA256SUMS.txt`（防傳輸損毀；能替換整個 Release 的攻擊者防不了——不可否認性需簽名，列排期）。
 
-> **上表的位元組數為本版（v3.22）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v3.23）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
 安裝器（`XinSpectDeploy.exe`）第一層先選裝什麼：**A** 是 XinSpect.exe 主程式（全自動部署主程式＋守護進程；守護進程自 3.13 起預設不啟用，要自己到安全頁開）、**B** 是曦覽終端機（單檔下載一步到位）；版本都分兩維：**帶環境**（self-contained，免裝 .NET）與**不帶環境**（framework-dependent，機器要已裝 .NET 10 Desktop Runtime）。下載完成後一律檢查 PE 標頭與大小門檻，抓到 HTML（分享頁、限流頁）會被擋下、刪檔並說出內容像什麼。注意：走第三方加速節點的位元組只能驗 PE 標頭，驗不了發佈者簽章。
 
@@ -183,6 +183,7 @@
 
 ## 版本沿革（近期）
 
+- **v3.23 硬體判讀修復**（2026-11-10）：硬體解碼與證據準確度修復
 - **v3.22 企業離線基準**（2026-11-10）：企業離線基準與硬體來源契約
 - **v3.21**（2026-11-09）：深審第二批修正版：第三輪掃掠 15 補丁落地＋審計清單收口＋xsc 輸入區單線（本版 8 項）
 - **v3.20**（2026-11-08）：修復建置＋全庫深審：三處建置復通、P0-4 補齊、CLI／桌面／服務層 30+ 修復（本版 8 項）

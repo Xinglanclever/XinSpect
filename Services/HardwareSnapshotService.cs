@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -50,7 +49,7 @@ public static partial class HardwareSnapshotService
             Value = x.Value,
             // 只有 Present 才帶可計算的數值。Unknown 就算字串裡有數字也不轉——
             // 「未確認」與「可計算」是兩件事，允許它算等於讓未確認的值混進結果。
-            NumericValue = x.Availability == FactAvailability.Present ? (x.NumericValue ?? TryNumeric(x.Value)) : null,
+            NumericValue = x.Availability == FactAvailability.Present ? x.NumericValue : null,
             Unit = x.Unit,
             Source = x.Source,
             Trust = x.Trust,
@@ -572,9 +571,6 @@ public static partial class HardwareSnapshotService
         fact.Trust, fact.Sensitive, fact.MeasuredAtUtc, fact.NumericValue,
         fact.Availability, fact.UnavailableReason);
 
-    private static double? TryNumeric(string value)
-        => double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
-           && double.IsFinite(parsed) ? parsed : null;
 
     private static double? NumericDelta(HardwareSnapshotFact? before, HardwareSnapshotFact? after)
     {

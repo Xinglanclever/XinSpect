@@ -207,7 +207,8 @@ public static class SmbiosCrossFactsService
     private static HardwareFact CpuCount(DateTimeOffset at,
         IReadOnlyDictionary<byte, List<SmbiosStruct>> byType, int? osCount)
     {
-        var procs = byType.TryGetValue(4, out var s4) ? s4.Where(s => s.Length >= 0x1A).ToList() : [];
+        var procs = byType.TryGetValue(4, out var s4)
+            ? s4.Where(s => s.Length >= 0x1A && (s.ByteAt(0x18) & 0x40) != 0).ToList() : [];
         int? smbiosCount = procs.Count > 0 ? procs.Count : null;
 
         // Type 4 的「核心數」是每一顆的欄位；總執行緒數要把它們加起來。
@@ -215,13 +216,13 @@ public static class SmbiosCrossFactsService
         if (procs.Count > 0)
         {
             long sum = 0;
-            bool any = false;
+            bool complete = true;
             foreach (var p in procs)
             {
-                if (p.Length > 0x26 && p.WordAt(0x25) > 0) { sum += p.WordAt(0x25); any = true; }
-                else if (p.Length > 0x24 && p.WordAt(0x23) > 0) { sum += p.WordAt(0x23); any = true; }
+                if (SmbiosService.ProcessorCount(p, 0x25, 0x2E) is { } threads) sum += threads;
+                else complete = false;
             }
-            if (any) smbiosThreads = sum;
+            if (complete) smbiosThreads = sum;
         }
 
         if (smbiosCount is null && osCount is null)

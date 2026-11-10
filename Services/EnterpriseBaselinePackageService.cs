@@ -70,6 +70,7 @@ public static class EnterpriseBaselinePackageService
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = false,
+        AllowDuplicateProperties = false,
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
         MaxDepth = 16,
         Converters = { new JsonStringEnumConverter(allowIntegerValues: false) },
@@ -90,7 +91,7 @@ public static class EnterpriseBaselinePackageService
         byte[] payload = SerializeCanonical(policy);
         using ECDsa signer = ECDsa.Create();
         signer.ImportFromEncryptedPem(encryptedPrivateKeyPem, password);
-        if (signer.KeySize != 256)
+        if (!IsP256(signer))
             throw new ArgumentException("企業基準簽章只接受 ECDSA P-256 金鑰。", nameof(encryptedPrivateKeyPem));
 
         byte[] signature = signer.SignData(payload, HashAlgorithmName.SHA256,
@@ -138,7 +139,7 @@ public static class EnterpriseBaselinePackageService
             byte[] signature = Convert.FromBase64String(envelope.Signature);
             using ECDsa verifier = ECDsa.Create();
             verifier.ImportFromPem(trustedPublicKeyPem);
-            if (verifier.KeySize != 256 || !string.Equals(KeyId(verifier), envelope.SignerKeyId, StringComparison.Ordinal))
+            if (!IsP256(verifier) || !string.Equals(KeyId(verifier), envelope.SignerKeyId, StringComparison.Ordinal))
                 return Failed("簽發者公鑰與組織信任金鑰不符。");
             if (!verifier.VerifyData(payload, signature, HashAlgorithmName.SHA256,
                     DSASignatureFormat.IeeeP1363FixedFieldConcatenation))
@@ -147,6 +148,9 @@ public static class EnterpriseBaselinePackageService
             var policy = JsonSerializer.Deserialize<EnterpriseBaselinePolicy>(payload, JsonOptions)
                 ?? throw new JsonException("簽署的政策內容為空。");
             ValidatePolicy(policy);
+            if (policy.CreatedAtUtc > nowUtc)
+                return new(true, false, policy.PolicyId, envelope.SignerKeyId, 0, 0, policy.Rules.Count, [],
+                    "政策尚未生效；不評估、不宣告符合。");
             if (policy.ExpiresAtUtc <= nowUtc)
                 return new(true, true, policy.PolicyId, envelope.SignerKeyId, 0, 0, policy.Rules.Count, [],
                     "政策已過期；不評估、不宣告符合。");
@@ -171,6 +175,10 @@ public static class EnterpriseBaselinePackageService
         if (!facts.TryGetValue(rule.Key, out var fact) || fact is null)
             return Result(rule, EnterpriseBaselineStatus.Unverifiable,
                 "本次沒有這把事實鍵；缺資料不算符合。", null);
+        if (!string.Equals(fact.Key, rule.Key, StringComparison.Ordinal)
+            || fact.Value is null || HardwareSnapshotService.IsRedacted(fact.Value))
+            return Result(rule, EnterpriseBaselineStatus.Unverifiable,
+                "事實鍵不符或值已遮蔽；無法對照原始證據。", fact);
         if (fact.Availability != FactAvailability.Present)
             return Result(rule, EnterpriseBaselineStatus.Unverifiable,
                 $"事實狀態為 {fact.Availability}；原始原因留在本機快照，不複製到報告。缺資料不算符合。", fact);
@@ -247,6 +255,9 @@ public static class EnterpriseBaselinePackageService
 
     private static string KeyId(ECDsa key) =>
         Convert.ToHexStringLower(SHA256.HashData(key.ExportSubjectPublicKeyInfo()));
+
+    private static bool IsP256(ECDsa key) =>
+        key.ExportParameters(false).Curve.Oid.Value == ECCurve.NamedCurves.nistP256.Oid.Value;
 
     private static EnterpriseBaselineEvaluation Failed(string reason) =>
         new(false, false, "", "", 0, 0, 0, [], reason);

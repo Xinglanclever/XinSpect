@@ -59,7 +59,12 @@ public class ThermalReachFactsTests
         Assert.Contains("查詢失敗（權限不足", f.Value);
         Assert.Contains("缺源如實列", f.Value);
         Assert.Contains("SMBIOS Type 28 溫度探針 6 個", f.Value);
+        Assert.Contains("Type 27 冷卻裝置 3 個", f.Value);
         Assert.Contains("一條失敗不代表另一條也失敗", f.Value);
+        var inventory = ThermalReachFactsService.CountFirmware([
+            new(28, 1, new byte[0x14], []), new(27, 2, new byte[0x0C], []),
+            new(27, 3, new byte[0x08], []), new(29, 4, new byte[0x16], [])]);
+        Assert.Equal((1, 0, 2, 1), inventory);
     }
 
     [Fact]

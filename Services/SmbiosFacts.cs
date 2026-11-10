@@ -51,14 +51,14 @@ public static class SmbiosFacts
                 $"SMBIOS Type 17 +0x{DimmSize:X2}／+0x{DimmExtendedSize:X2} 加總", now));
 
             // 一台機器可能插著速度不同的模組；取最高的當「標稱」，因為那才是被降下來的那一邊。
-            ushort rated = dimms.Max(d => d.WordAt(DimmSpeed));
+            uint rated = dimms.Max(d => SmbiosService.EffectiveSpeed(d, DimmSpeed, 0x54));
             if (rated > 0)
                 list.Add(Number(FactId.DimmSpeedMts, rated, "MT/s", $"SMBIOS Type 17 +0x{DimmSpeed:X2}", now));
 
             var withConfigured = dimms.Where(d => d.Length > DimmConfigured + 1).ToList();
             if (withConfigured.Count > 0)
             {
-                ushort cur = withConfigured.Max(d => d.WordAt(DimmConfigured));
+                uint cur = withConfigured.Max(d => SmbiosService.EffectiveSpeed(d, DimmConfigured, 0x58));
                 if (cur > 0)
                     list.Add(Number(FactId.DimmConfiguredMts, cur, "MT/s",
                         $"SMBIOS Type 17 +0x{DimmConfigured:X2}", now));
@@ -68,8 +68,13 @@ public static class SmbiosFacts
         var array = all.FirstOrDefault(s => s.Type == 16 && s.Length > ArrayDeviceCount + 1);
         if (array is not null)
         {
-            list.Add(Number(FactId.ArrayMaxCapacityMiB, array.DwordAt(ArrayMaxCapacity) / 1024.0, "MiB",
-                $"SMBIOS Type 16 +0x{ArrayMaxCapacity:X2}（單位 KB）", now));
+            uint legacyMax = array.DwordAt(ArrayMaxCapacity);
+            double? maximum = legacyMax == 0x80000000
+                ? array.Length >= 0x17 ? BitConverter.ToUInt64(array.Data, 0x0F) / (1024.0 * 1024) : null
+                : legacyMax / 1024.0;
+            if (maximum is > 0)
+                list.Add(Number(FactId.ArrayMaxCapacityMiB, maximum.Value, "MiB",
+                    "SMBIOS Type 16 最大容量：KB@0x07 或擴充 bytes@0x0F", now));
             list.Add(Number(FactId.ArraySlotCount, array.WordAt(ArrayDeviceCount), "",
                 $"SMBIOS Type 16 +0x{ArrayDeviceCount:X2}", now));
 
@@ -83,12 +88,14 @@ public static class SmbiosFacts
         // 兩者皆非 0xFFFF(未知)才判得出;全部未知就不產出這個事實,讓規則判「無法判定」。
         var widthKnown = dimms.Where(d => d.Length > DimmDataWidth + 1
             && d.WordAt(DimmTotalWidth) is not (0 or 0xFFFF)
-            && d.WordAt(DimmDataWidth) is not (0 or 0xFFFF)).ToList();
+            && d.WordAt(DimmDataWidth) is not (0 or 0xFFFF)
+            && d.WordAt(DimmTotalWidth) >= d.WordAt(DimmDataWidth)).ToList();
         if (widthKnown.Count > 0)
         {
             bool eccBits = widthKnown.Any(d => d.WordAt(DimmTotalWidth) > d.WordAt(DimmDataWidth));
-            list.Add(Number(FactId.MemEccBitsPresent, eccBits ? 1 : 0, "",
-                $"SMBIOS Type 17 +0x{DimmTotalWidth:X2} 總寬度 vs +0x{DimmDataWidth:X2} 資料寬度", now));
+            if (eccBits || widthKnown.Count == dimms.Count)
+                list.Add(Number(FactId.MemEccBitsPresent, eccBits ? 1 : 0, "",
+                    $"SMBIOS Type 17 +0x{DimmTotalWidth:X2} 總寬度 vs +0x{DimmDataWidth:X2} 資料寬度", now));
         }
         return list;
     }
@@ -102,7 +109,7 @@ public static class SmbiosFacts
         if (d.Length <= DimmSize + 1) return 0;
         ushort raw = d.WordAt(DimmSize);
         if (raw == 0 || raw == 0xFFFF) return 0;
-        if (raw == 0x7FFF) return d.Length > DimmExtendedSize + 3 ? d.DwordAt(DimmExtendedSize) : 0;
+        if (raw == 0x7FFF) return d.Length > DimmExtendedSize + 3 ? d.DwordAt(DimmExtendedSize) & 0x7FFFFFFF : 0;
         return (raw & 0x8000) != 0 ? (raw & 0x7FFF) / 1024.0 : raw;
     }
 

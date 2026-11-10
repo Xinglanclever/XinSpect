@@ -17,15 +17,14 @@ public class SmbiosIdentityFactsTests
         => new(type, 0x0100, data, strings);
 
     private static SmbiosStruct Type0(string vendor, string version, string date,
-        byte romSize, ulong characteristics)
+        byte romSize, ulong characteristics, byte extension2 = 0, ushort extendedRom = 0)
     {
-        // 0x18 而非 0x14：ROM 大小走 0xFF 分支時讀 DwordAt(0x14)，
-        // 那需要索引 0x14..0x17 都有效＝長度至少 0x18。
-        var d = new byte[0x18];
+        var d = new byte[0x1A];
         d[0x04] = 1; d[0x05] = 2; d[0x08] = 3;
         d[0x09] = romSize;
-        d[0x11] = (byte)(characteristics & 0xFF);
-        d[0x12] = (byte)(characteristics >> 8);
+        BitConverter.GetBytes(characteristics).CopyTo(d, 0x0A);
+        d[0x13] = extension2;
+        BitConverter.GetBytes(extendedRom).CopyTo(d, 0x18);
         return Struct(0, d, vendor, version, date);
     }
 
@@ -54,9 +53,9 @@ public class SmbiosIdentityFactsTests
 
     private static SmbiosStruct Type32(byte status)
     {
-        // 0x0E 而非 0x0B：POST 結果讀 0x08..0x0D。
-        var d = new byte[0x0E];
-        d[0x06] = status;
+        var d = new byte[0x0B];
+        d[0x0A] = status;
+        d[0x06] = 0xAA; // Reserved bytes must not be interpreted as status.
         return Struct(32, d);
     }
 
@@ -135,14 +134,26 @@ public class SmbiosIdentityFactsTests
     [Fact]
     public void BIOS特性旗標要解出UEFI與可升級()
     {
-        // bit3 可升級、bit11 支援 UEFI、bit12 為 UEFI 平台 → 0x1808
+        // Characteristics bit 11 = upgradeable; extension byte 2 bit 3 = UEFI supported.
         var facts = SmbiosIdentityFactsService.Collect(At,
-            () => [Type0("V", "1.0", "d", 0x0F, 0x1808)]);
+            () => [Type0("V", "1.0", "d", 0x0F, 1ul << 11, extension2: 8)]);
         var b = facts.Single(f => f.Key == SmbiosIdentityFactsService.BiosKey);
 
         Assert.Contains("支援升級", b.Value);
         Assert.Contains("支援 UEFI", b.Value);
-        Assert.Contains("為 UEFI 平台", b.Value);
+        Assert.DoesNotContain("為 UEFI 平台", b.Value);
+    }
+
+    [Fact]
+    public void BiosRomUsesLegacyByteAndExtendedWordWithUnits()
+    {
+        string Describe(SmbiosStruct s) => SmbiosIdentityFactsService.Collect(At, () => [s])
+            .Single(f => f.Key == SmbiosIdentityFactsService.BiosKey).Value;
+        Assert.Contains("ROM 1 MiB", Describe(Type0("V", "1", "d", 15, 0)));
+        Assert.Contains("ROM 32 MiB", Describe(Type0("V", "1", "d", 255, 0, extendedRom: 32)));
+        Assert.Contains("ROM 2048 MiB", Describe(Type0("V", "1", "d", 255, 0, extendedRom: 0x4002)));
+        Assert.DoesNotContain("ROM ", Describe(Type0("V", "1", "d", 255, 0, extendedRom: 0x8002)));
+        Assert.DoesNotContain("支援升級", Describe(Type0("V", "1", "d", 15, (1ul << 11) | 8)));
     }
 
     [Fact]
@@ -180,6 +191,9 @@ public class SmbiosIdentityFactsTests
 
         // 說明被不變式併進了 Value（Present 的事實不得帶理由欄），所以比前綴（UUID 本身）。
         Assert.StartsWith("00112233-4455-6677-8899-AABBCCDDEEFF", u.Value);
+        var legacy = SmbiosIdentityFactsService.Collect(At, () => [Type1("V", "P", "S", stored)],
+            uuidLittleEndian: false).Single(f => f.Key == SmbiosIdentityFactsService.UuidKey);
+        Assert.StartsWith("33221100-5544-7766-8899-AABBCCDDEEFF", legacy.Value);
     }
 
     [Fact]
@@ -264,7 +278,7 @@ public class SmbiosIdentityFactsTests
     [Fact]
     public void 上次開機狀態非零要說它可能是很久以前的事()
     {
-        var facts = SmbiosIdentityFactsService.Collect(At, () => [Type32(5)]);
+        var facts = SmbiosIdentityFactsService.Collect(At, () => [Type32(3)]);
         var b = facts.Single(f => f.Key == SmbiosIdentityFactsService.BootStatusKey);
 
         Assert.Equal(FactAvailability.Unknown, b.Availability);

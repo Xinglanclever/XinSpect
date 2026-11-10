@@ -9,6 +9,20 @@ namespace XinSpect.Tests;
 /// </summary>
 public class UpdateCheckServiceTests
 {
+    [Fact]
+    public void MalformedVersionCannotBeReportedAsUpToDate()
+    {
+        foreach (string tag in new[] { "latest", "v3.invalid", "vv3.22", "3.-1", "3.22-B1", "3.999999999999" })
+        {
+            var result = UpdateCheckService.JudgeTag("3.22", tag);
+            Assert.False(result.UpToDate);
+            Assert.False(result.UpdateAvailable);
+            Assert.Null(result.LatestVersion);
+        }
+        Assert.False(UpdateCheckService.JudgeTag("invalid", "v3.22").UpToDate);
+        Assert.False(UpdateCheckService.JudgeTag("invalid", "v3.22").UpdateAvailable);
+    }
+
     [Theory]
     [InlineData("2.10", "2.9", 1)]     // 逐字串比較會判反的經典案例：必須逐段 int
     [InlineData("2.9", "2.10", -1)]

@@ -2443,7 +2443,7 @@ CLI 有 12 個旗標，全部離線：
 ## 3.92 單把鍵的域
 
 - **`cam.count`**：相機數。校準：列舉。研究：視訊。
-- **`chassis.security_status`**：機箱防入侵狀態。校準：SMBIOS Type 3。研究：實體安全。
+- **`chassis.security_status`**：機箱安全狀態。來源：SMBIOS Type 3 offset 0x0C；4＝外部介面鎖定、5＝啟用。不是拆機或入侵歷史證據。
 - **`contrib.guide`**：貢獻指南的存在。校準：靜態。研究：治理。
 - **`cxl.cfmws.count`**：CXL 固定記憶體視窗數。校準：讀 CEDT。研究：擴充。
 - **`data.egress.report`**：資料外連報告。校準：靜態＋執行期。研究：主權。
@@ -2455,7 +2455,7 @@ CLI 有 12 個旗標，全部離線：
 - **`evt.system.7d`**：七日系統事件摘要。校準：事件彙整。研究：穩定性。
 - **`file.input.zero_egress`**：輸入檔不外傳的保證。校準：靜態＋檢查。研究：隱私。
 - **`guard.inventory`**：守門測試清單。校準：靜態。研究：品質。
-- **`hpa.dco`**：HPA／DCO 的隱藏容量。校準：ATA IDENTIFY 與 OS 可見量比對。研究：容量異常。
+- **`hpa.dco`**：DCO 探測的可用性，尚未實作。`hpa.*` 容量列僅比較 ATA IDENTIFY 當前可定址容量與 OS；未讀取 native maximum，不能確認或排除 HPA。
 - **`license.notices`**：第三方授權清單。校準：靜態。研究：合規。
 - **`limits.public`**：公開限制清單。校準：靜態。研究：範圍。
 - **`monitor.summary`**：監視器摘要。校準：EDID。研究：盤點。

@@ -162,20 +162,20 @@ public static class MemBandwidthMath
     /// </summary>
     public static int SaturationThreads(IReadOnlyList<(int Threads, double Gbps)> points)
     {
-        if (points.Count < 2) return 0;
-        var sorted = points.OrderBy(p => p.Threads).ToList();
+        var sorted = points.Where(p => p.Threads > 0 && double.IsFinite(p.Gbps) && p.Gbps > 0)
+            .OrderBy(p => p.Threads).ToList();
+        if (sorted.Count < 2) return 0;
         double prev = sorted[0].Gbps;
         for (int i = 1; i < sorted.Count; i++)
         {
             double gain = sorted[i].Gbps / Math.Max(prev, 1e-9) - 1.0;
-            if (gain < 0.05)
+            if (gain < 0.05 && sorted.Skip(i).All(p => p.Gbps < prev * 1.05))
             {
-                // 飽和點：這一級不再顯著增益。取「前一級」作為飽和所在（再上去都在浪費核心）。
                 return sorted[i - 1].Threads;
             }
             prev = sorted[i].Gbps;
         }
-        return sorted[^1].Threads;
+        return 0;
     }
 
     /// <summary>
@@ -195,8 +195,8 @@ public static class MemBandwidthMath
         // 以「讀取」曲線為代表做判讀（最純真的頻寬量測），四條一起看更全面
         int sat = SaturationThreads(read);
         string text = sat > 0
-            ? $"以讀取頻寬為代表，約在 {sat} 執行緒時達到飽和（再往上增益 < 5%）。記憶體控制器約在此被吃滿。"
-            : "資料不足，無法判定飽和點。";
+            ? $"以讀取頻寬為代表，約在 {sat} 執行緒時觀察到平台（後續已測點增益 < 5%）；曲線本身無法確認瓶頸來源。"
+            : "在有效的已測點中未確認飽和點，需更多資料。";
         // 若四條曲線的最高頻寬接近理論上限而飽和很低，補充說明
         return new ThreadScaleAnalysis(r, c, a, t, text);
     }

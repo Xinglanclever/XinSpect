@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace XinSpect;
 
-/// <summary>一支記憶體模組的匯流排寬度（Type 17 位移 0x0C／0x0D）。0 表示讀不到。</summary>
+/// <summary>一支記憶體模組的資料／總寬度（Type 17 位移 0x0A／0x08）。0 表示讀不到。</summary>
 /// <param name="DataWidth">資料寬度（位元）：64＝無 ECC 的標準模組。</param>
 /// <param name="TotalWidth">總寬度（位元）：72＝含 8 位元 ECC 的模組。</param>
 public readonly record struct DimmBusWidth(int DataWidth, int TotalWidth);
@@ -17,9 +17,9 @@ public readonly record struct DimmBusWidth(int DataWidth, int TotalWidth);
 /// 屬性組成，而且它們在 SMBIOS 裡是三組不同的欄位：
 /// </para>
 /// <list type="number">
-/// <item><b>匯流排寬度</b>（Type 17 位移 0x0C／0x0D）：資料寬度 64 位元＝無 ECC 的標準模組；
+/// <item><b>匯流排寬度</b>（Type 17 位移 0x08／0x0A）：資料寬度與總寬度分別陳述；
 /// 總寬度 72 位元＝帶 8 位元 ECC。<b>這一項才是「這支模組有沒有 ECC 顆粒」的證據。</b></item>
-/// <item><b>Registered／Buffered</b>（Type 17 位移 0x15 的 bits 1:0）：registered（RDIMM）、
+/// <item><b>Registered／Buffered</b>（Type 17 位移 0x13 WORD 的 bits 13–15）：registered（RDIMM）、
 /// unbuffered（UDIMM）、或 load-reduced（LRDIMM）。這是「記憶體控制器與模組之間有沒有緩衝晶片」，
 /// 與 ECC 是兩件事——<b>UDIMM 也可以有 ECC（ECC UDIMM）</b>。</item>
 /// <item><b>平台層的錯誤更正能力</b>（Type 16 位移 0x06）：整個陣列是無、同位、單位元 ECC、
@@ -56,25 +56,27 @@ public static class DimmEccJudge
     /// 總寬度比資料寬度多＝多出來的就是 ECC 位元；兩者相等＝沒有 ECC。
     /// <b>讀不到（0）時回 null，不當成「沒有 ECC」。</b>
     /// </summary>
-    [SpecRef("SMBIOS Specification, Memory Device (Type 17)：offset 0x0C 為 Size（此處指 Total Width，單位位元）、0x0D 為 Data Width。Total Width ＝ Data Width 表示無錯誤更正位元；Total Width ＞ Data Width 表示含 ECC 位元（標準 64+8＝72）。欄位為 0 或 0xFFFF 表示未知，不得解讀為 64。")]
+    [SpecRef("SMBIOS DSP0134 Type 17：Total Width@0x08 WORD、Data Width@0x0A WORD，單位 bits。0／FFFFh 表示無法判讀；總寬度小於資料寬度為矛盾，不宣告無 ECC。")]
     public static bool? HasEcc(DimmBusWidth w)
     {
         if (w.DataWidth <= 0 || w.TotalWidth <= 0) return null;
         if (w.TotalWidth == 0xFFFF || w.DataWidth == 0xFFFF) return null;
+        if (w.TotalWidth < w.DataWidth) return null;
         return w.TotalWidth > w.DataWidth;
     }
 
     /// <summary>由 Registered／Buffered 欄位判斷模組型態。</summary>
-    [SpecRef("SMBIOS Specification, Memory Device (Type 17) offset 0x15：Registered/Unbuffered 欄位（bits 1:0）——00h 未知、01h 其他、02h 未知、03h 已註冊（Registered／Buffered）、04h 未緩衝（Unbuffered）。保留或未收錄的值如實標未知，不猜。")]
-    public static ModuleForm FormOf(byte registeredField) => registeredField switch
+    [SpecRef("SMBIOS DSP0134 7.18.3, Type 17 Type Detail@0x13 WORD：bit 13 Registered、bit 14 Unbuffered、bit 15 LRDIMM。衝突旗標回未知；LRDIMM 可同時宣告 Registered。")]
+    public static ModuleForm FormOf(ushort typeDetail) => (typeDetail & 0xE000) switch
     {
-        0x03 => ModuleForm.Registered,
-        0x04 => ModuleForm.Unbuffered,
+        0x2000 => ModuleForm.Registered,
+        0x4000 => ModuleForm.Unbuffered,
+        0x8000 or 0xA000 => ModuleForm.LoadReduced,
         _ => ModuleForm.Unknown,
     };
 
     /// <summary>模組型態的中文名。</summary>
-    [SpecRef("SMBIOS Specification, Memory Device (Type 17) offset 0x15：Registered/Unbuffered 欄位（bits 1:0）的代碼 03h＝Registered／Buffered、04h＝Unbuffered（規格 7.18.6）。名稱僅為代碼的翻譯，不改變量到的值。")]
+    [SpecRef("SMBIOS DSP0134 7.18.3, Type 17 Type Detail@0x13 bits 13–15：Registered、Unbuffered、LRDIMM 的顯示名稱。")]
     public static string FormName(ModuleForm f) => f switch
     {
         ModuleForm.Registered => "Registered（RDIMM，帶緩衝）",

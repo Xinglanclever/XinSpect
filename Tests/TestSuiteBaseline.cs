@@ -32,5 +32,5 @@ internal static class TestSuiteBaseline
     /// 而 5476→5505 實際只加了 29 條（見 docs/PROGRESS-PLAN-2026-10-11.md 第 550 項的更正註記）。
     /// </para>
     /// </summary>
-    public const int ProjectTests = 7949;   // 數字來源＝全套實跑總計＋企業基準 2 測試與來源契約 9 測試
+    public const int ProjectTests = 7966;   // 2026-11-10：v3.22 審查後全套實跑總計
 }

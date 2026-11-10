@@ -93,6 +93,11 @@ public class SmbiosFactsTests
             Assert.False(facts.Has(FactId.DimmSizeTotalMiB));       // 沒插模組就不該有總量這個事實
         else
             Assert.Equal(expectedMiB, facts.Num(FactId.DimmSizeTotalMiB));
+        if (sizeField == 0x7FFF)
+        {
+            BitConverter.GetBytes(extendedSize | 0x80000000).CopyTo(s.Data, 0x1C);
+            Assert.Equal(expectedMiB, new VerifyFacts(SmbiosFacts.From([s], DateTime.UnixEpoch)).Num(FactId.DimmSizeTotalMiB));
+        }
     }
 
     /// <summary>造一個 Type 17 結構：只填本測試在意的欄位，其餘留 0。</summary>
@@ -148,10 +153,37 @@ public class SmbiosFactsTests
     }
 
     [Fact]
-    public void 寬度未知時_不產出ECC位元事實()
+    public void 未知或矛盾欄位_不產出虛構數值()
     {
         var facts = new VerifyFacts(SmbiosFacts.From([Array16(3), DimmWidth(0xFFFF, 0xFFFF)], DateTime.UnixEpoch));
         Assert.False(facts.Has(FactId.MemEccBitsPresent));   // 未知就不猜,讓規則判無法判定
+        foreach (var dimms in new[]
+        {
+            new[] { DimmWidth(32, 64) },
+            new[] { DimmWidth(64, 64), DimmWidth(0xFFFF, 0xFFFF) },
+        })
+            Assert.False(new VerifyFacts(SmbiosFacts.From(dimms, DateTime.UnixEpoch)).Has(FactId.MemEccBitsPresent));
+
+        var unknownSpeed = SyntheticDimm(8192, 0, 0xFFFF, 0xFFFF);
+        var speeds = new VerifyFacts(SmbiosFacts.From([unknownSpeed], DateTime.UnixEpoch));
+        Assert.False(speeds.Has(FactId.DimmSpeedMts));
+        Assert.False(speeds.Has(FactId.DimmConfiguredMts));
+        var extendedData = new byte[0x5C];
+        unknownSpeed.Data.CopyTo(extendedData, 0);
+        BitConverter.GetBytes(100_000u).CopyTo(extendedData, 0x54);
+        BitConverter.GetBytes(90_000u).CopyTo(extendedData, 0x58);
+        speeds = new VerifyFacts(SmbiosFacts.From([new(17, 1, extendedData, [])], DateTime.UnixEpoch));
+        Assert.Equal(100_000, speeds.Num(FactId.DimmSpeedMts));
+        Assert.Equal(90_000, speeds.Num(FactId.DimmConfiguredMts));
+
+        var array = Array16(3);
+        BitConverter.GetBytes(0x80000000u).CopyTo(array.Data, 0x07);
+        Assert.False(new VerifyFacts(SmbiosFacts.From([array], DateTime.UnixEpoch)).Has(FactId.ArrayMaxCapacityMiB));
+        var extendedArray = new byte[0x17];
+        array.Data.CopyTo(extendedArray, 0);
+        BitConverter.GetBytes(1ul << 40).CopyTo(extendedArray, 0x0F);
+        Assert.Equal(1_048_576, new VerifyFacts(SmbiosFacts.From([new(16, 1, extendedArray, [])], DateTime.UnixEpoch))
+            .Num(FactId.ArrayMaxCapacityMiB));
     }
 
     [Fact]

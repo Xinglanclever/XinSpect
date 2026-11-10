@@ -11,7 +11,7 @@ public class DimmLayoutTests
 {
     private static SmbiosDimmRow Row(string locator, string bank = "", string size = "未安裝",
                                      string part = "", string speed = "", string vendor = "",
-                                     int dataWidth = 0, int totalWidth = 0, byte registered = 0)
+                                     int dataWidth = 0, int totalWidth = 0, ushort registered = 0)
         => new(locator, bank, size, "DDR5", speed, "", vendor, "", part, "",
                dataWidth, totalWidth, registered);
 
@@ -230,7 +230,7 @@ public class DimmLayoutTests
     public void ECC三層_平台為單位元ECC且模組帶ECC_不得出現不一致提醒()
     {
         var v = DimmLayout.Build(
-            [Row("DIMM_A1", size: "8 GB", dataWidth: 64, totalWidth: 72, registered: 0x03)],
+            [Row("DIMM_A1", size: "8 GB", dataWidth: 64, totalWidth: 72, registered: 0x2080)],
             platformEcType: 0x05);
 
         string all = string.Join(Environment.NewLine, v.Notes);

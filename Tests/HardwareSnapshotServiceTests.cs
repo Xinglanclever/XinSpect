@@ -12,6 +12,18 @@ public sealed class HardwareSnapshotServiceTests : IDisposable
     public HardwareSnapshotServiceTests() => Directory.CreateDirectory(_directory);
 
     [Fact]
+    public void DisplayTextDoesNotInventNumericEvidence()
+    {
+        HardwareFact F(string key, string value, double? numeric = null) => new(key, "test", key,
+            value, "", "fixture", FactTrustLevel.Reported, false, _measured, numeric);
+        var snapshot = HardwareSnapshotService.Create("test",
+            [F("firmware.version", "3.22"), F("board.serial", "001234"), F("test.zero", "zero", 0)], true);
+        Assert.Null(snapshot.Facts.Single(f => f.Key == "firmware.version").NumericValue);
+        Assert.Null(snapshot.Facts.Single(f => f.Key == "board.serial").NumericValue);
+        Assert.Equal(0, snapshot.Facts.Single(f => f.Key == "test.zero").NumericValue);
+    }
+
+    [Fact]
     public void 保存載入_RoundTrip且同內容序列化確定()
     {
         var snapshot = Snapshot([

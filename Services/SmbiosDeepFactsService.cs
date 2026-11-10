@@ -143,8 +143,8 @@ public static class SmbiosDeepFactsService
         string bank = s.Length > 0x11 ? Str(s, 0x11) : "—";
         string size = FormatSize(s);
         string type = SmbiosService.MemoryTypeName(s.ByteAt(0x12));
-        string speed = s.WordAt(0x15) != 0 ? $"{s.WordAt(0x15)} MT/s" : "速率未報";
-        string configured = s.Length >= 0x22 && s.WordAt(0x20) != 0 ? $"，實跑 {s.WordAt(0x20)}" : "";
+        string speed = SmbiosService.EffectiveSpeed(s, 0x15, 0x54) is > 0 and var rated ? $"{rated} MT/s" : "速率未報";
+        string configured = SmbiosService.EffectiveSpeed(s, 0x20, 0x58) is > 0 and var active ? $"，設定 {active} MT/s（韌體回報）" : "";
         string rank = s.Length > 0x1B && (s.ByteAt(0x1B) & 0x0F) != 0 ? $"，{s.ByteAt(0x1B) & 0x0F} rank" : "";
         return $"{locator}／{bank}：{size} {type} {speed}{configured}{rank}";
     }
@@ -155,9 +155,10 @@ public static class SmbiosDeepFactsService
     {
         ushort raw = s.WordAt(0x0C);
         if (raw == 0) return "未安裝";
+        if (raw == 0xFFFF) return "容量未回報";
         if (raw == 0x7FFF)
         {
-            if (s.Length >= 0x20) return $"{s.DwordAt(0x1C)} MB";
+            if (s.Length >= 0x20) return $"{s.DwordAt(0x1C) & 0x7FFFFFFF} MB";
             return "擴充容量欄不存在";
         }
         return (raw & 0x8000) != 0 ? $"{raw & 0x7FFF} KB" : $"{raw} MB";

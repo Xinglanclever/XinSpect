@@ -8,8 +8,9 @@ namespace XinSpect;
 /// <param name="Value">讀到的原始字串（未經修飾）。</param>
 /// <param name="Source">來源（SMBIOS Type 1／2／3 的哪一欄）。</param>
 /// <param name="IsPlaceholder">是否為韌體未填時的預設字串。</param>
+/// <param name="IsIdentity">序號或資產標籤等個別機器識別材料；製造商、型號與 SKU 不算。</param>
 public readonly record struct AssetField(
-    string Label, string Value, string Source, bool IsPlaceholder);
+    string Label, string Value, string Source, bool IsPlaceholder, bool IsIdentity = false);
 
 /// <summary>一台機器的識別資料集合。</summary>
 /// <param name="Fields">各欄位。</param>
@@ -40,8 +41,8 @@ public readonly record struct AssetRecord(
 /// </para>
 /// <para>
 /// <b>機箱類型是判斷「這是不是伺服器」最直接的證據</b>——韌體自己宣告的，
-/// 不必從型號或外觀猜。代碼 0x11（工作站）、0x12（伺服器）、0x1F（主機式）、
-/// 0x25／0x26（刀鋒）、0x27（機架式）屬於伺服器／機房類。
+/// 不必從型號或外觀猜。代碼 0x11（主伺服器）、0x17（機架式）、
+/// 0x1C／0x1D（刀鋒／刀鋒容納機箱）屬於伺服器／機房類。
 /// </para>
 /// </remarks>
 public static class AssetJudge
@@ -50,37 +51,40 @@ public static class AssetJudge
     /// <param name="Headline">一行結論。</param>
     /// <param name="UsableFields">可用的識別欄位數（非預設字串、非空）。</param>
     /// <param name="PlaceholderFields">韌體未填的欄位數。</param>
-    /// <param name="CanIdentify">是否足以唯一識別這台機器（至少一個可用欄位）。</param>
+    /// <param name="CanIdentify">是否有可用的個別機器識別材料；不保證廠商沒有重複編號。</param>
     /// <param name="Evidence">依據。</param>
     public readonly record struct Verdict(
         string Headline, int UsableFields, int PlaceholderFields, bool CanIdentify, string Evidence);
 
     /// <summary>屬於伺服器／機房類的機箱類型代碼。</summary>
-    [SpecRef("SMBIOS Specification, System Enclosure or Chassis (Type 3) offset 0x05 的 Chassis Type 代碼表（規格 7.4.1）：0x11 工作站、0x12 伺服器、0x1F 主機式機箱、0x25 刀鋒機箱、0x26 刀鋒伺服器機箱、0x27 機架式機箱、0x32 嵌入式邊緣伺服器。分類為本程式的判讀約定。")]
-    public static bool IsServerChassisType(byte code) => code is 0x11 or 0x12 or 0x1F or 0x25 or 0x26 or 0x27 or 0x32;
+    [SpecRef("SMBIOS DSP0134 7.4.1, Type 3 offset 0x05：11h Main Server Chassis、17h Rack Mount、1Ch Blade、1Dh Blade Enclosing。分類為本程式的判讀約定，其他類型不推論為伺服器。")]
+    public static bool IsServerChassisType(byte code) => code is 0x11 or 0x17 or 0x1C or 0x1D;
 
     /// <summary>判讀一組識別資料。</summary>
     [SpecRef("SMBIOS Specification, System Information (Type 1) 的 Serial Number／SKU Number／Family／UUID、Baseboard Information (Type 2) 的 Serial Number、System Enclosure (Type 3) 的 Serial Number／Asset Tag。規格允許這些欄位為「未填」狀態，實作常填預設字串；本判讀如實標示，不代為補值。")]
     public static Verdict Judge(AssetRecord r)
     {
-        if (r.Fields.Count == 0)
+        bool validUuid = Guid.TryParse(r.Uuid, out var uuid) && uuid != Guid.Empty
+            && uuid != new Guid("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF");
+        if (r.Fields.Count == 0 && !validUuid)
             return new Verdict("—（讀不到任何識別欄位）", 0, 0, false,
                 "SMBIOS 的識別欄位一個都沒讀到——無從判斷這台機器的識別資料是否可用。");
 
         int usable = 0, placeholder = 0;
+        bool canIdentify = validUuid;
         var usableNames = new List<string>();
         var missingNames = new List<string>();
         foreach (var f in r.Fields)
         {
-            if (f.Value.Length == 0 || f.IsPlaceholder) { placeholder++; missingNames.Add(f.Label); }
-            else { usable++; usableNames.Add(f.Label); }
+            if (string.IsNullOrWhiteSpace(f.Value) || f.IsPlaceholder) { placeholder++; missingNames.Add(f.Label); }
+            else { usable++; usableNames.Add(f.Label); canIdentify |= f.IsIdentity; }
         }
 
         string chassis = r.ChassisTypeName.Length > 0
             ? $"機箱類型為「{r.ChassisTypeName}」" + (r.IsServerChassis ? "（伺服器／機房類）" : "（一般用途類）")
             : "機箱類型讀不到";
 
-        if (usable == 0)
+        if (usable == 0 && !validUuid)
             return new Verdict(
                 "⚠ 所有識別欄位都是韌體未填——這台機器在資產清單裡無法唯一識別",
                 usable, placeholder, false,
@@ -96,10 +100,12 @@ public static class AssetJudge
             : "，沒有韌體未填的欄位";
 
         return new Verdict(
-            $"可用的識別欄位 {usable} 個（{string.Join("、", usableNames)}）{placeholders}",
-            usable, placeholder, true,
+            $"可用欄位 {usable} 個（{string.Join("、", usableNames)}）{placeholders}；"
+                + (canIdentify ? "有個別機器識別材料" : "缺少序號、資產標籤或有效 UUID，無法唯一識別"),
+            usable, placeholder, canIdentify,
             $"讀到 {r.Fields.Count} 個識別欄位，其中 {usable} 個有實際值、{placeholder} 個是空值或韌體預設字串；"
             + $"{chassis}。" + (r.Uuid.Length > 0 ? $"系統 UUID 為 {r.Uuid}。" : "系統 UUID 讀不到。")
-            + "有實際值的欄位才適合用來識別這台機器；被標注為預設字串的那些請不要當序號使用。");
+            + "製造商、型號與 SKU 不能單獨識別一台機器；序號、資產標籤與有效 UUID 才是識別材料，仍需留意廠商重複編號。"
+            + "被標注為預設字串的那些請不要當序號使用。");
     }
 }

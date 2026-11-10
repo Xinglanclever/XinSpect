@@ -97,15 +97,13 @@ public class MemoryChannelJudgeTests
     }
 
     [Fact]
-    public void 同通道掛兩條_假設站不住要說明達成率偏低是預期的()
+    public void 同通道掛兩條_模組數假設高估上限不得宣稱效能不足()
     {
-        // 這是這個方法存在的理由：上限值不變，但實測通常較低，
-        // 不說的話使用者會以為達成率低是硬體有問題
         string note = MemoryChannelJudge.PeakAssumptionNote(Evidence("DIMM_A1", "DIMM_A2"), 2);
 
         Assert.Contains("2 支", note);
-        Assert.Contains("上限值不變", note);
-        Assert.Contains("預期", note);
+        Assert.Contains("高估整機上限", note);
+        Assert.Contains("不能直接判讀為效能不足", note);
     }
 
     [Fact]

@@ -41,7 +41,7 @@ public sealed class SmbiosSlotRow
 public sealed class SmbiosDimmRow
 {
     public SmbiosDimmRow(string locator, string bank, string size, string type, string speed, string configured, string manufacturer, string serial, string part, string rank,
-        int dataWidth = 0, int totalWidth = 0, byte registered = 0)
+        int dataWidth = 0, int totalWidth = 0, ushort registered = 0)
     { Locator = locator; Bank = bank; Size = size; Type = type; Speed = speed; Configured = configured; Manufacturer = manufacturer; Serial = serial; Part = part; Rank = rank;
       DataWidth = dataWidth; TotalWidth = totalWidth; Registered = registered; }
     public string Locator { get; }
@@ -54,12 +54,12 @@ public sealed class SmbiosDimmRow
     public string Serial { get; }
     public string Part { get; }
     public string Rank { get; }
-    /// <summary>資料寬度（Type 17 位移 0x0D，位元）；0＝讀不到。64＝無 ECC 的標準模組。</summary>
+    /// <summary>資料寬度（Type 17 位移 0x0A，位元）；0＝讀不到。</summary>
     public int DataWidth { get; }
-    /// <summary>總寬度（位移 0x0C，位元）；0＝讀不到。72＝含 8 位元 ECC。</summary>
+    /// <summary>總寬度（位移 0x08，位元）；0＝讀不到。72＝含 8 位元 ECC。</summary>
     public int TotalWidth { get; }
-    /// <summary>Registered／Unbuffered 欄位（位移 0x15 bits 1:0）；0x03＝Registered、0x04＝Unbuffered。</summary>
-    public byte Registered { get; }
+    /// <summary>Type Detail（位移 0x13 WORD）；bits 13／14／15 為 Registered／Unbuffered／LRDIMM。</summary>
+    public ushort Registered { get; }
 }
 
 /// <summary>鍵值資訊列。</summary>
@@ -86,6 +86,7 @@ public sealed class SmbiosService
 
     public bool Available { get; }
     public string VersionText { get; private set; } = "—";
+    internal bool UuidLittleEndian { get; private set; } = true;
 
     public ObservableCollection<SmbiosRow> Bios { get; } = [];
     public ObservableCollection<SmbiosRow> System { get; } = [];
@@ -102,7 +103,7 @@ public sealed class SmbiosService
     public ObservableCollection<SmbiosRow> Chassis { get; } = [];
     /// <summary>溫度探針（Type 28）——韌體自己回報的溫度感測器，與 OS 感測器是兩套口徑。</summary>
     public ObservableCollection<SmbiosRow> TemperatureProbes { get; } = [];
-    /// <summary>冷卻裝置（Type 29）——風扇與其他主動散熱。</summary>
+    /// <summary>冷卻裝置（Type 27）——韌體回報的型態、狀態與標稱轉速。</summary>
     public ObservableCollection<SmbiosRow> CoolingDevices { get; } = [];
     public ObservableCollection<SmbiosSlotRow> Slots { get; } = [];
     public ObservableCollection<SmbiosDimmRow> MemoryDevices { get; } = [];
@@ -112,44 +113,58 @@ public sealed class SmbiosService
 
     public SmbiosService() => Available = Load();
 
+    internal SmbiosService(IReadOnlyList<SmbiosStruct> structs, bool uuidLittleEndian = true)
+    {
+        Structs = structs;
+        UuidLittleEndian = uuidLittleEndian;
+        DecodeStructures(structs, uuidLittleEndian);
+        Available = true;
+    }
+
     private bool Load()
     {
         try
         {
             uint size = GetSystemFirmwareTable(0x52534D42 /* 'RSMB' */, 0, null, 0);
-            if (size == 0) return false;
+            if (size < 8) return false;
             var buf = new byte[size];
             if (GetSystemFirmwareTable(0x52534D42, 0, buf, size) != size) return false;
 
             // RawSMBIOSData：使用方式／主版本／次版本／修訂（各 1B）＋表長（4B LE）＋表本體
             VersionText = $"SMBIOS {buf[1]}.{buf[2]}";
             int tableLen = BitConverter.ToInt32(buf, 4);
-            if (tableLen <= 0 || 8 + tableLen > buf.Length) return false;
+            if (tableLen <= 0 || tableLen > buf.Length - 8) return false;
             var table = buf[8..(8 + tableLen)];
             var structs = SmbiosParser.Parse(table);
             Structs = structs;
 
-            foreach (var s in structs)
-            {
-                switch (s.Type)
-                {
-                    case 0: DecodeBios(s); break;
-                    case 1: DecodeSystem(s); break;
-                    case 2: DecodeBoard(s); break;
-                    case 3: DecodeChassis(s); break;
-                    case 4: DecodeProcessor(s); break;
-                    case 9: DecodeSlot(s); break;
-                    case 16: DecodeMemoryArray(s); break;
-                    case 17: DecodeMemoryDevice(s); break;
-                    case 28: DecodeTemperatureProbe(s); break;
-                    case 29: DecodeCoolingDevice(s); break;
-                }
-            }
+            UuidLittleEndian = buf[1] > 2 || buf[1] == 2 && buf[2] >= 6;
+            DecodeStructures(structs, UuidLittleEndian);
             return true;
         }
         catch
         {
             return false;
+        }
+    }
+
+    private void DecodeStructures(IReadOnlyList<SmbiosStruct> structs, bool uuidLittleEndian)
+    {
+        foreach (var s in structs)
+        {
+            switch (s.Type)
+            {
+                case 0: DecodeBios(s); break;
+                case 1: DecodeSystem(s, uuidLittleEndian); break;
+                case 2: DecodeBoard(s); break;
+                case 3: DecodeChassis(s); break;
+                case 4: DecodeProcessor(s); break;
+                case 9: DecodeSlot(s); break;
+                case 16: DecodeMemoryArray(s); break;
+                case 17: DecodeMemoryDevice(s); break;
+                case 27: DecodeCoolingDevice(s); break;
+                case 28: DecodeTemperatureProbe(s); break;
+            }
         }
     }
 
@@ -161,7 +176,7 @@ public sealed class SmbiosService
         Bios.Add(new SmbiosRow("發行日期", OrDash(s.GetString(s.ByteAt(0x08)))));
     }
 
-    private void DecodeSystem(SmbiosStruct s)
+    private void DecodeSystem(SmbiosStruct s, bool uuidLittleEndian)
     {
         if (s.Length < 0x08) return;
         System.Add(new SmbiosRow("系統製造商", OrDash(s.GetString(s.ByteAt(0x04)))));
@@ -180,9 +195,8 @@ public sealed class SmbiosService
             string family = OrDash(s.GetString(s.ByteAt(0x1A)));
             System.Add(new SmbiosRow("產品家族", family + PlaceholderNote(family)));
         }
-        string uuid = BufferToUuid(s.DwordAt(0x04), s.WordAt(0x08), s.WordAt(0x0A),
-                                   (ushort)((s.Data[0x0D] << 8) | s.Data[0x0C]));
-        System.Add(new SmbiosRow("UUID", uuid));
+        if (s.Length >= 0x18)
+            System.Add(new SmbiosRow("UUID", BufferToUuid(s.Data.AsSpan(0x08, 16), uuidLittleEndian)));
     }
 
     /// <summary>
@@ -210,18 +224,16 @@ public sealed class SmbiosService
     }
 
     /// <summary>
-    /// Type 1 的 UUID（16 位元組）。依規格前三個欄位是<b>小端序</b>（time_low／time_mid／time_high），
-    /// 後兩個是網路序——直接照位元組順序印會得到一個看起來像但其實是錯的 UUID。
-    /// 全 <c>0x00</c>（未編程）與全 <c>0xFF</c>（韌體不支援）要如實區分，不當成一個真的 UUID。
+    /// Type 1 的完整 UUID；SMBIOS 2.6 起前三欄為小端序，較舊版本保留網路序。
+    /// 全 0 表示不存在且不可設定，全 F 表示目前不存在。
     /// </summary>
-    [SpecRef("SMBIOS Specification, System Information (Type 1), offset 0x04–0x13：UUID 為 128 位元，前三個欄位以 little-endian 儲存（time_low u32、time_mid u16、time_hi_and_version u16），後兩個為 big-endian（clock_seq_hi_and_reserved、clock_seq_low u8 與 node u48）。全 0＝未編程、全 F＝不支援——兩者都不是有效的 UUID。")]
-    internal static string BufferToUuid(uint timeLow, ushort timeMid, ushort timeHigh, ushort clockAndNode)
+    [SpecRef("SMBIOS DSP0134 7.2.1, Type 1 offset 0x08–0x17：完整 128 位元 UUID；2.6 起前三欄 little-endian。全 00h＝不存在且不可設定，全 FFh＝目前不存在。")]
+    internal static string BufferToUuid(ReadOnlySpan<byte> raw, bool littleEndian = true)
     {
-        bool allZero = timeLow == 0 && timeMid == 0 && timeHigh == 0 && clockAndNode == 0;
-        if (allZero) return "—（全 0：韌體未編程）";
-        bool allF = timeLow == 0xFFFFFFFF && timeMid == 0xFFFF && timeHigh == 0xFFFF && clockAndNode == 0xFFFF;
-        if (allF) return "—（全 F：韌體不支援）";
-        return $"{timeLow:X8}-{timeMid:X4}-{timeHigh:X4}-{clockAndNode:X4}";
+        if (raw.Length != 16) return "—（UUID 長度不足）";
+        if (raw.IndexOfAnyExcept((byte)0) < 0) return "—（全 0：UUID 不存在且不可設定）";
+        if (raw.IndexOfAnyExcept((byte)0xFF) < 0) return "—（全 F：UUID 目前不存在）";
+        return new Guid(raw, bigEndian: !littleEndian).ToString("D").ToUpperInvariant();
     }
 
     private void DecodeBoard(SmbiosStruct s)
@@ -234,19 +246,16 @@ public sealed class SmbiosService
 
     private void DecodeChassis(SmbiosStruct s)
     {
-        if (s.Length < 0x07) return;
+        if (s.Length < 0x08) return;
         string maker = OrDash(s.GetString(s.ByteAt(0x04)));
         Board.Add(new SmbiosRow("機箱製造商", maker));
         Chassis.Add(new SmbiosRow("機箱製造商", maker + PlaceholderNote(maker)));
 
-        // Type 3 位移 0x05 是<b>機箱類型位元遮罩</b>（可多位），bit 7 為「機箱鎖存在」。
-        // 這一個位元組直接回答「這是不是機架式／刀鋒」——伺服器與工作站的差別就在這裡。
+        // 低 7 位是單一類型代碼，bit 7 另表示機箱鎖存在。
         byte types = s.ByteAt(0x05);
         bool lockPresent = (types & 0x80) != 0;
         byte first = (byte)(types & 0x7F);
         Chassis.Add(new SmbiosRow("機箱類型", ChassisTypeName(first)));
-        if (first == 0x02 && s.Length > 0x06)
-            Chassis.Add(new SmbiosRow("機箱類型（供應商自訂）", $"0x{s.ByteAt(0x06):X2}"));
 
         string serial = OrDash(s.GetString(s.ByteAt(0x07)));
         Chassis.Add(new SmbiosRow("機箱序號", serial + PlaceholderNote(serial)));
@@ -256,7 +265,7 @@ public sealed class SmbiosService
             Chassis.Add(new SmbiosRow("資產標籤", asset + PlaceholderNote(asset)));
         }
         Chassis.Add(new SmbiosRow("機箱鎖", lockPresent ? "存在" : "不存在或未回報"));
-        if (s.Length > 0x0D)
+        if (s.Length > 0x09)
             Chassis.Add(new SmbiosRow("開機狀態", ChassisStateName(s.ByteAt(0x09))));
     }
 
@@ -265,25 +274,19 @@ public sealed class SmbiosService
     /// <b>這一欄是判斷「伺服器 vs 工作站」最直接的證據</b>：機架式／刀鋒／塔式是韌體自己宣告的，
     /// 不需要從機殼外觀或型號去猜。未收錄的代碼如實帶出。
     /// </summary>
-    [SpecRef("SMBIOS Specification, System Enclosure or Chassis (Type 3), offset 0x05：Chassis Type，位元遮罩（bit 7 為 Chassis Lock Present，低 7 位為主類型）。代碼表見規格 7.4.1；本表只收錄有把握的子集，未收錄如實顯示原代碼。")]
+    [SpecRef("SMBIOS DSP0134 7.4.1, Type 3 offset 0x05：bit 7 為 Chassis Lock Present，低 7 位為 Chassis Type 列舉代碼（01h–24h），不是位元遮罩。")]
     public static string ChassisTypeName(byte code) => code switch
     {
         0x01 => "其他", 0x02 => "未知", 0x03 => "桌上型（Desktop）", 0x04 => "低腳位桌上型",
         0x05 => "披薩盒", 0x06 => "迷你塔式", 0x07 => "塔式", 0x08 => "可攜式",
         0x09 => "筆記型", 0x0A => "筆記型", 0x0B => "手持式", 0x0C => "連線站",
-        0x0D => "子機（Sub Chassis）", 0x0E => "擴充座", 0x0F => "低矮型桌上型",
-        0x10 => "PC-98", 0x11 => "工作站", 0x12 => "伺服器", 0x13 => "周邊裝置",
-        0x14 => "可攜式（膝上型）", 0x15 => "輕省筆電", 0x16 => "超級筆電",
-        0x17 => "可攜式（攜帶型）", 0x18 => "穿戴式", 0x19 => "平板", 0x1A => "抽取式轉換",
-        0x1B => "桌上型（All-in-One）", 0x1C => "膝上型（Sub Notebook）",
-        0x1D => "太空節省型（Space-saving）", 0x1E => "午餐盒式", 0x1F => "主機式（Main Server Chassis）",
-        0x20 => "擴充機箱", 0x21 => "低調桌上型", 0x22 => "多系統機箱", 0x23 => "緊湊式 PCI/PCIe",
-        0x24 => "進階緊湊式 PCI/PCIe", 0x25 => "刀鋒機箱", 0x26 => "刀鋒伺服器機箱",
-        0x27 => "機架式機箱（Rack Mount）", 0x28 => "桌上型機箱（Desktop）",
-        0x29 => "直立式（Sealed-case PC）", 0x2A => "多系統緊湊式 PCI/PCIe",
-        0x2B => "嵌入式 PC", 0x2C => "迷你 PC", 0x2D => "棒狀 PC", 0x2E => "子筆記型",
-        0x2F => "桌上型 All-in-One", 0x30 => "物聯網閘道", 0x31 => "嵌入式邊緣運算",
-        0x32 => "嵌入式邊緣伺服器", 0x33 => "物聯網感測器",
+        0x0D => "一體式（All-in-One）", 0x0E => "子筆記型", 0x0F => "節省空間型",
+        0x10 => "午餐盒式", 0x11 => "主伺服器機箱", 0x12 => "擴充機箱", 0x13 => "子機箱",
+        0x14 => "匯流排擴充機箱", 0x15 => "周邊裝置機箱", 0x16 => "RAID 機箱",
+        0x17 => "機架式機箱（Rack Mount）", 0x18 => "密封式 PC", 0x19 => "多系統機箱",
+        0x1A => "CompactPCI", 0x1B => "AdvancedTCA", 0x1C => "刀鋒機箱", 0x1D => "刀鋒容納機箱",
+        0x1E => "平板", 0x1F => "可轉換式", 0x20 => "可拆卸式", 0x21 => "物聯網閘道",
+        0x22 => "嵌入式 PC", 0x23 => "迷你 PC", 0x24 => "棒狀 PC",
         _ => $"0x{code:X2}（規格未收錄）",
     };
 
@@ -303,65 +306,62 @@ public sealed class SmbiosService
     {
         if (s.Length < 0x14) return;
         string desc = OrDash(s.GetString(s.ByteAt(0x04)));
-        string value = TemperatureText(s.WordAt(0x08));
-        TemperatureProbes.Add(new SmbiosRow(desc, $"{value}（{TemperatureStatusName((byte)(s.ByteAt(0x06) & 0x1F))}）"));
+        string nominal = s.Length >= 0x16 ? TemperatureText(s.WordAt(0x14)) : "—（未回報）";
+        string status = TemperatureStatusName((byte)(s.ByteAt(0x05) >> 5));
+        TemperatureProbes.Add(new SmbiosRow(desc,
+            $"標稱 {nominal}，最小 {TemperatureText(s.WordAt(0x08))}，最大 {TemperatureText(s.WordAt(0x06))}（{status}；韌體規格，非即時溫度）"));
     }
 
     /// <summary>
-    /// Type 28／29 共同的值欄位（Word）。
-    /// 最高位（0x8000）為「值未知」，其餘 15 位以 <b>1/10 度（或 1/10 單位）</b>為單位——
-    /// 這是規格明訂的刻度，不是猜的。值未知時如實標，不當成 0。
+    /// Type 28 溫度為有號 16 位元、0.1 °C；只有 0x8000 是未知值。
     /// </summary>
-    [SpecRef("SMBIOS Specification, Temperature Probe (Type 28) offset 0x08 與 Cooling Device (Type 29) offset 0x06：Value 為 WORD，bit 15 為「值未知」（0x8000），其餘 15 位以 1/10 度（溫度）或 1/10 單位（轉速／功率）表示。bit 15 為 1 時不得解讀為數值。")]
+    [SpecRef("SMBIOS DSP0134 7.29, Type 28：Maximum@0x06、Minimum@0x08、Nominal@0x14，signed WORD，單位 0.1 °C；8000h 表示未知，其餘負值有效。")]
     internal static string TemperatureText(ushort raw)
     {
-        if ((raw & 0x8000) != 0) return "—（值未知，感測器未回報）";
-        return $"{raw / 10.0:0.0} °C";
+        if (raw == 0x8000) return "—（值未知，感測器未回報）";
+        return $"{unchecked((short)raw) / 10.0:0.0} °C";
     }
 
-    /// <summary>Type 28 的狀態欄位（位移 0x06 的低 5 位）。</summary>
-    [SpecRef("SMBIOS Specification, Temperature Probe (Type 28) offset 0x06：Status and Nominal Value，低 5 位為感測器狀態代碼（規格 7.21.3）。未收錄如實帶原代碼。")]
+    /// <summary>Type 28 位移 0x05 bits 7:5 的狀態代碼。</summary>
+    [SpecRef("SMBIOS DSP0134 7.27.1 / 7.29, Type 28 offset 0x05 bits 7:5：01h Other、02h Unknown、03h OK、04h Non-critical、05h Critical、06h Non-recoverable。未宣告過高或過低方向。")]
     public static string TemperatureStatusName(byte code) => code switch
     {
-        0x01 => "其他", 0x02 => "未知", 0x03 => "正常", 0x04 => "過高（非重大）",
-        0x05 => "過高（重大）", 0x06 => "過低（非重大）", 0x07 => "過低（重大）",
-        0x08 => "過高（不可回復）", 0x09 => "過低（不可回復）",
+        0x01 => "其他", 0x02 => "未知", 0x03 => "正常", 0x04 => "非重大",
+        0x05 => "重大", 0x06 => "不可回復",
         _ => $"狀態 0x{code:X2}",
     };
 
-    /// <summary>冷卻裝置（Type 29）：風扇、鼓風機、幫浦等主動散熱。</summary>
+    /// <summary>冷卻裝置（Type 27）；標稱轉速不代表目前轉速。</summary>
     private void DecodeCoolingDevice(SmbiosStruct s)
     {
         if (s.Length < 0x0C) return;
-        string desc = OrDash(s.GetString(s.ByteAt(0x04)));
-        byte typeAndStatus = s.ByteAt(0x05);
+        string desc = s.Length >= 0x0F ? OrDash(s.GetString(s.ByteAt(0x0E))) : "冷卻裝置";
+        byte typeAndStatus = s.ByteAt(0x06);
         string kind = CoolingTypeName((byte)(typeAndStatus & 0x1F));
-        bool active = (typeAndStatus & 0x20) == 0;   // bit 5：0＝主動散熱（風扇會轉）、1＝被動
-        string speed = CoolingValueText(s.WordAt(0x06));
+        string status = TemperatureStatusName((byte)(typeAndStatus >> 5));
+        string speed = s.Length >= 0x0E ? CoolingValueText(s.WordAt(0x0C)) : "—（未回報）";
         CoolingDevices.Add(new SmbiosRow(desc,
-            $"{kind}，{(active ? "主動散熱" : "被動散熱")}，目前 {speed}"));
+            $"{kind}，{status}，標稱轉速 {speed}（非即時轉速）"));
     }
 
-    /// <summary>Type 29 的裝置類型（位移 0x05 的低 5 位）與狀態。bit 5＝0 主動／1 被動。</summary>
-    [SpecRef("SMBIOS Specification, Cooling Device (Type 29) offset 0x05：Device Type and Status，低 5 位為裝置類型（01h 其他、02h 未知、03h 風扇、04h 離心鼓風機、05h 晶片風扇、06h 機箱風扇、07h 電源供應器風扇、08h 排氣風扇、10h 幫浦…），bit 5 為 Cooling Device Status（0＝主動、1＝被動）。")]
+    /// <summary>Type 27 位移 0x06 bits 4:0 的裝置類型。</summary>
+    [SpecRef("SMBIOS DSP0134 7.28.1, Type 27 offset 0x06：bits 4:0 為類型，08h Heat Pipe、09h Integrated Refrigeration、10h Active Cooling、11h Passive Cooling；bits 7:5 為狀態。")]
     public static string CoolingTypeName(byte code) => code switch
     {
         0x01 => "其他", 0x02 => "未知", 0x03 => "風扇", 0x04 => "離心鼓風機",
         0x05 => "晶片風扇", 0x06 => "機箱風扇", 0x07 => "電源供應器風扇",
-        0x08 => "排氣風扇", 0x09 => "管線風扇", 0x10 => "電源／其他幫浦",
-        0x11 => "晶片幫浦", 0x12 => "機箱幫浦", 0x13 => "電源供應器幫浦",
+        0x08 => "熱導管", 0x09 => "整合式製冷", 0x10 => "主動散熱", 0x11 => "被動散熱",
         _ => $"0x{code:X2}",
     };
 
     /// <summary>
-    /// Type 29 的值欄位。<b>單位由「風扇類型」決定</b>：風扇與幫浦是 RPM，
-    /// 其他裝置是相對值（百分比）。
+    /// Type 27 的標稱轉速（RPM）；0x8000 表示未知或非旋轉裝置。
     /// </summary>
-    [SpecRef("SMBIOS Specification, Cooling Device (Type 29) offset 0x06：Value 為 WORD，bit 15 為「值未知」（0x8000）。裝置類型為風扇（03h–09h）或幫浦（10h–13h）時單位為 RPM，其餘為相對值。")]
+    [SpecRef("SMBIOS DSP0134 7.28, Type 27 offset 0x0C：Nominal Speed，unsigned WORD，單位 RPM。只有 8000h 表示未知或非旋轉裝置。")]
     internal static string CoolingValueText(ushort raw)
     {
-        if ((raw & 0x8000) != 0) return "—（值未知，感測器未回報）";
-        return $"{raw & 0x7FFF}";
+        if (raw == 0x8000) return "—（值未知或非旋轉裝置）";
+        return $"{raw} RPM";
     }
 
     private void DecodeProcessor(SmbiosStruct s)
@@ -375,13 +375,12 @@ public sealed class SmbiosService
         if (cur > 0) Processor.Add(new SmbiosRow("目前時脈", $"{cur} MHz"));
         else if (extClk > 0) Processor.Add(new SmbiosRow("外部時脈", $"{extClk} MHz"));
         if (s.Length < 0x28) return;
-        byte core = s.ByteAt(0x23), enabled = s.ByteAt(0x24), threads = s.ByteAt(0x25);
-        if (core != 0)
-            Processor.Add(new SmbiosRow("核心數", s.Length >= 0x2C && core == 0xFF ? s.WordAt(0x2A).ToString() : core.ToString()));
-        if (enabled != 0)
-            Processor.Add(new SmbiosRow("啟用核心數", s.Length >= 0x2E && enabled == 0xFF ? s.WordAt(0x2C).ToString() : enabled.ToString()));
-        if (threads != 0)
-            Processor.Add(new SmbiosRow("執行緒數", s.Length >= 0x30 && threads == 0xFF ? s.WordAt(0x2E).ToString() : threads.ToString()));
+        if (ProcessorCount(s, 0x23, 0x2A) is { } core)
+            Processor.Add(new SmbiosRow("核心數", core.ToString()));
+        if (ProcessorCount(s, 0x24, 0x2C) is { } enabled)
+            Processor.Add(new SmbiosRow("啟用核心數", enabled.ToString()));
+        if (ProcessorCount(s, 0x25, 0x2E) is { } threads)
+            Processor.Add(new SmbiosRow("執行緒數", threads.ToString()));
         if (s.Length >= 0x23)
         {
             var serial = OrDash(s.GetString(s.ByteAt(0x20)));
@@ -389,6 +388,19 @@ public sealed class SmbiosService
             if (serial != "—") Processor.Add(new SmbiosRow("序號", serial));
             if (part != "—") Processor.Add(new SmbiosRow("型號", part));
         }
+    }
+
+    // Type 4 counts are bytes; FFh selects a separate extended WORD, never the adjacent byte.
+    internal static int? ProcessorCount(SmbiosStruct s, int offset, int extendedOffset)
+    {
+        if (s.Length <= offset) return null;
+        int count = s.ByteAt(offset);
+        if (count == 0xFF)
+        {
+            if (s.Length < extendedOffset + 2) return null;
+            count = s.WordAt(extendedOffset);
+        }
+        return count > 0 ? count : null;
     }
 
     private void DecodeSlot(SmbiosStruct s)
@@ -417,7 +429,7 @@ public sealed class SmbiosService
         }
         else if (cap != 0)
         {
-            MemoryArray.Add(new SmbiosRow("最大容量", $"{cap / 1024.0:0.#} GB"));
+            MemoryArray.Add(new SmbiosRow("最大容量", $"{cap / (1024.0 * 1024):0.#} GB"));
         }
     }
 
@@ -435,10 +447,10 @@ public sealed class SmbiosService
         string sizeText;
         if (size == 0) sizeText = "未安裝";
         else if (size == 0xFFFF) sizeText = "—";
-        else if (size == 0x7FFF && s.Length >= 0x20)
+        else if (size == 0x7FFF)
         {
-            uint ext = s.DwordAt(0x1C) & 0x7FFFFFFF;
-            sizeText = (ext & 0x3FF) != 0 ? $"{ext} MiB"
+            uint ext = s.Length >= 0x20 ? s.DwordAt(0x1C) & 0x7FFFFFFF : 0;
+            sizeText = ext == 0 ? "—" : (ext & 0x3FF) != 0 ? $"{ext} MiB"
                      : (ext & 0xFFC00) != 0 ? $"{ext >> 10} GiB"
                      : $"{ext >> 20} TiB";
         }
@@ -452,29 +464,36 @@ public sealed class SmbiosService
         else
             sizeText = $"{size / 1024.0:0.#} GB";
 
-        ushort speed = s.WordAt(0x15);
-        ushort configured = s.Length >= 0x22 ? s.WordAt(0x20) : (ushort)0;
+        uint speed = EffectiveSpeed(s, 0x15, 0x54);
+        uint configured = EffectiveSpeed(s, 0x20, 0x58);
 
         var rankByte = s.Length >= 0x1C ? s.ByteAt(0x1B) : (byte)0;
         string rank = (rankByte & 0x0F) == 0 ? "—" : $"{rankByte & 0x0F}";
 
-        // 寬度與 Registered 欄位：位移 0x0C＝Total Width、0x0D＝Data Width（皆 16 位元，單位位元）、
-        // 0x15 bits 1:0＝Registered/Unbuffered。長度不足時回 0／0，由判讀層標「讀不到」。
-        int totalWidth = s.Length > 0x0D ? s.WordAt(0x0C) : 0;
-        int dataWidth = s.Length > 0x0E ? s.WordAt(0x0D) : 0;
-        byte registered = s.Length > 0x15 ? (byte)(s.ByteAt(0x15) & 0x03) : (byte)0;
+        int totalWidth = s.WordAt(0x08);
+        int dataWidth = s.WordAt(0x0A);
+        ushort registered = s.WordAt(0x13);
 
         return new SmbiosDimmRow(
             OrDash(s.GetString(s.ByteAt(0x10))),
             OrDash(s.GetString(s.ByteAt(0x11))),
             sizeText,
             MemoryTypeName(s.ByteAt(0x12)),
-            speed > 0 && speed != 0xFFFF ? $"{speed} MT/s" : "—",
-            configured > 0 && configured != 0xFFFF ? $"{configured} MT/s" : "—",
+            speed > 0 ? $"{speed} MT/s" : "—",
+            configured > 0 ? $"{configured} MT/s" : "—",
             OrDash(s.GetString(s.ByteAt(0x17))),
             OrDash(s.GetString(s.ByteAt(0x18))),
             OrDash(s.GetString(s.ByteAt(0x1A))),
             rank, dataWidth, totalWidth, registered);
+    }
+
+    internal static uint EffectiveSpeed(SmbiosStruct s, int offset, int extendedOffset)
+    {
+        if (s.Length < offset + 2) return 0;
+        ushort legacy = s.WordAt(offset);
+        return legacy == 0xFFFF
+            ? s.Length >= extendedOffset + 4 ? s.DwordAt(extendedOffset) : 0
+            : legacy;
     }
 
     /// <summary>Type 9 → 插槽列（純函式；結構長度不足時回 null）。</summary>

@@ -45,7 +45,7 @@ public class SmbiosCrossFactsTests
     }
 
     /// <summary>
-    /// Type 4：執行緒數是 u16@0x25，所以長度至少要 0x27。
+    /// Type 4：執行緒數是 BYTE@0x25，FFh 時改讀 WORD@0x2E。
     ///
     /// <para>
     /// 第一版寫 <c>new byte[0x1A]</c>（我心裡想的是「Type 4 的最小長度」），
@@ -57,8 +57,11 @@ public class SmbiosCrossFactsTests
     /// </summary>
     private static SmbiosStruct Type4(ushort threads, ushort handle = 0x0400)
     {
-        var d = new byte[0x27];
-        BitConverter.GetBytes(threads).CopyTo(d, 0x25);
+        var d = new byte[0x30];
+        d[0x18] = 0x41;
+        d[0x25] = threads < 255 ? (byte)threads : (byte)255;
+        d[0x26] = 0xFC;
+        BitConverter.GetBytes(threads).CopyTo(d, 0x2E);
         return Struct(4, d, handle);
     }
 
@@ -190,6 +193,17 @@ public class SmbiosCrossFactsTests
 
         Assert.Contains("具體的落差", c.Value);
         Assert.Contains("不判斷誰對", c.Value);
+    }
+
+    [Fact]
+    public void UnknownThreadCountCannotBecomePartialTotalOrCoreCount()
+    {
+        var unknown = Type4(0);
+        unknown.Data[0x23] = 8;
+        var facts = SmbiosCrossFactsService.Collect(At, Os(cpus: 32), () => [Type4(16), unknown]);
+        string value = facts.Single(f => f.Key == SmbiosCrossFactsService.CpuCountKey).Value;
+        Assert.DoesNotContain("合計", value);
+        Assert.DoesNotContain("具體的落差", value);
     }
 
     [Fact]

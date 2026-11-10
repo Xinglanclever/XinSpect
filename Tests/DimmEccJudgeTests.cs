@@ -32,6 +32,7 @@ public class DimmEccJudgeTests
         Assert.Null(DimmEccJudge.HasEcc(new DimmBusWidth(0, 0)));
         Assert.Null(DimmEccJudge.HasEcc(new DimmBusWidth(64, 0xFFFF)));
         Assert.Null(DimmEccJudge.HasEcc(new DimmBusWidth(0xFFFF, 0xFFFF)));
+        Assert.Null(DimmEccJudge.HasEcc(new DimmBusWidth(72, 64)));
     }
 
     [Fact]
@@ -44,14 +45,20 @@ public class DimmEccJudgeTests
     // ── 第二層：模組型態（Registered 欄位） ───────────────────────────────
 
     [Theory]
-    [InlineData(0x03, DimmEccJudge.ModuleForm.Registered)]
-    [InlineData(0x04, DimmEccJudge.ModuleForm.Unbuffered)]
+    [InlineData(0x2080, DimmEccJudge.ModuleForm.Registered)]
+    [InlineData(0x4080, DimmEccJudge.ModuleForm.Unbuffered)]
     [InlineData(0x00, DimmEccJudge.ModuleForm.Unknown)]
     [InlineData(0x01, DimmEccJudge.ModuleForm.Unknown)]
     [InlineData(0x02, DimmEccJudge.ModuleForm.Unknown)]
     [InlineData(0xFF, DimmEccJudge.ModuleForm.Unknown)]
-    public void Registered欄位_只認規格明訂的兩個值(byte field, DimmEccJudge.ModuleForm expected)
-        => Assert.Equal(expected, DimmEccJudge.FormOf(field));
+    [InlineData(0x8080, DimmEccJudge.ModuleForm.LoadReduced)]
+    [InlineData(0xA080, DimmEccJudge.ModuleForm.LoadReduced)]
+    [InlineData(0x6080, DimmEccJudge.ModuleForm.Unknown)]
+    public void Registered欄位_只認TypeDetail的規格位元(ushort field, DimmEccJudge.ModuleForm expected)
+    {
+        Assert.Equal(expected, DimmEccJudge.FormOf(field));
+        Assert.Equal(DimmEccJudge.ModuleForm.Unknown, DimmEccJudge.FormOf(0xE080));
+    }
 
     [Fact]
     public void 型態名稱_要看得出RDIMM與UDIMM的分別()

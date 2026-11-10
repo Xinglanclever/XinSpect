@@ -160,6 +160,51 @@ public sealed class EnterpriseBaselinePackageTests : IDisposable
     }
 
     [Fact]
+    public void FuturePolicyIsVerifiedButDoesNotEvaluateFacts()
+    {
+        var future = Policy(new EnterpriseBaselineRule("sensor.cpu.temp",
+            EnterpriseBaselineMatch.NumericRange, Minimum: 0, Maximum: 100))
+            with { CreatedAtUtc = Now.AddDays(1) };
+        var futureResult = EnterpriseBaselinePackageService.Evaluate(
+            EnterpriseBaselinePackageService.Sign(future, PrivatePem, SigningPassword), PublicPem,
+            new Dictionary<string, HardwareFact> { ["sensor.cpu.temp"] = Fact("sensor.cpu.temp", "40", 40) }, Now);
+        Assert.True(futureResult.SignatureValid);
+        Assert.Equal(0, futureResult.Satisfied);
+        Assert.Equal(1, futureResult.Unverifiable);
+        Assert.NotNull(futureResult.FailureReason);
+    }
+
+    [Fact]
+    public void RedactedOrMismatchedEvidenceCannotSatisfyOrFailAPolicy()
+    {
+        string package = EnterpriseBaselinePackageService.Sign(Policy(
+            new EnterpriseBaselineRule("device.serial", EnterpriseBaselineMatch.Exact, "expected")), PrivatePem, SigningPassword);
+        foreach (var fact in new[]
+        {
+            Fact("device.serial", HardwareSnapshotService.RedactedValue),
+            Fact("device.serial", HardwareSnapshotService.RedactedPrefix + "hash"),
+            Fact("other.key", "expected"),
+        })
+        {
+            var result = EnterpriseBaselinePackageService.Evaluate(package, PublicPem,
+                new Dictionary<string, HardwareFact> { ["device.serial"] = fact }, Now);
+            Assert.Equal(1, result.Unverifiable);
+            Assert.Equal(0, result.Satisfied);
+            Assert.Equal(0, result.NotSatisfied);
+        }
+    }
+
+    [Fact]
+    public void Other256BitCurvesCannotBeSignedAsP256()
+    {
+        using var other = ECDsa.Create(ECCurve.CreateFromFriendlyName("secP256k1"));
+        string privateKey = other.ExportEncryptedPkcs8PrivateKeyPem(SigningPassword,
+            new PbeParameters(PbeEncryptionAlgorithm.Aes256Cbc, HashAlgorithmName.SHA256, 100_000));
+        Assert.Throws<ArgumentException>(() => EnterpriseBaselinePackageService.Sign(
+            Policy(new EnterpriseBaselineRule("cpu.cores", EnterpriseBaselineMatch.Exact, "8")), privateKey, SigningPassword));
+    }
+
+    [Fact]
     public void 重複鍵或無效界線_簽發前拒絕()
     {
         var duplicate = Policy(
@@ -172,6 +217,18 @@ public sealed class EnterpriseBaselinePackageTests : IDisposable
         Assert.Throws<ArgumentException>(() => EnterpriseBaselinePackageService.Sign(duplicate, PrivatePem, SigningPassword));
         Assert.Throws<ArgumentException>(() => EnterpriseBaselinePackageService.Sign(invertedRange, PrivatePem, SigningPassword));
         Assert.Throws<ArgumentException>(() => EnterpriseBaselinePackageService.Sign(nullRule, PrivatePem, SigningPassword));
+    }
+
+    [Fact]
+    public void DuplicateJsonPropertiesAreRejectedInSourceAndEnvelope()
+    {
+        Assert.Throws<JsonException>(() => EnterpriseBaselinePackageService.Sign(
+            "{\"schemaVersion\":1,\"schemaVersion\":1}", PrivatePem, SigningPassword));
+        string package = EnterpriseBaselinePackageService.Sign(
+            Policy(new EnterpriseBaselineRule("cpu.cores", EnterpriseBaselineMatch.Exact, "8")), PrivatePem, SigningPassword);
+        string duplicate = package[..^1] + ",\"algorithm\":\"ECDSA-P256-SHA256\"}";
+        Assert.False(EnterpriseBaselinePackageService.Evaluate(duplicate, PublicPem,
+            new Dictionary<string, HardwareFact>(), Now).SignatureValid);
     }
 
     [Fact]

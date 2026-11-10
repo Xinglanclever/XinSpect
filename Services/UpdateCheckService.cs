@@ -52,7 +52,11 @@ public static class UpdateCheckService
         if (string.IsNullOrWhiteSpace(tag))
             return new Verdict(false, false, null, "查不到（GitHub 沒有回報版本標籤）——程式不假裝已是最新。");
 
-        string latest = tag.TrimStart('v', 'V');
+        string latest = tag[0] is 'v' or 'V' ? tag[1..] : tag;
+        static bool Valid(string value) => Version.TryParse(value, out _)
+            && value.Split('.').All(s => s.Length > 0 && s.All(char.IsAsciiDigit));
+        if (!Valid(latest) || !Valid(localVersion))
+            return new Verdict(false, false, null, "查不到（版本標籤格式無效），無法判定是否有更新。");
         if (CompareVersions(latest, localVersion) > 0)
             return new Verdict(true, false, latest, $"有新版 v{latest}（目前 v{localVersion}）——可到下載頁取得。");
         return new Verdict(false, true, latest, $"已是最新版（v{localVersion}）。");

@@ -220,6 +220,27 @@ public sealed class EnterpriseBaselineCliTests : IDisposable
         Assert.Contains("InvalidDataException", signError.ToString(), StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void FuturePolicyDoesNotReadSnapshotOrCollectHardware()
+    {
+        var now = DateTimeOffset.UtcNow;
+        string policyPath = Write("future-policy.json", EnterpriseBaselinePackageService.Sign(
+            new EnterpriseBaselinePolicy(1, "future", now.AddDays(1), now.AddDays(2),
+                [new("cpu.model", EnterpriseBaselineMatch.Exact, "CPU")]), PrivatePem, SigningPassword));
+        string keyPath = Write("future-public.pem", _signer.ExportSubjectPublicKeyInfoPem());
+        string snapshotPath = Write("invalid-future-snapshot.json", "{}");
+        var output = new StringWriter();
+        var error = new StringWriter();
+        int exit = CliService.Run(["--enterprise-baseline", policyPath,
+                "--trusted-key", keyPath, "--snapshot", snapshotPath],
+            () => throw new InvalidOperationException("Hardware must not be collected"), output, error);
+        Assert.Equal(CliService.ExitPartial, exit);
+        Assert.Empty(error.ToString());
+        using var report = JsonDocument.Parse(output.ToString());
+        Assert.True(report.RootElement.GetProperty("policySignatureValid").GetBoolean());
+        Assert.Equal(0, report.RootElement.GetProperty("counts").GetProperty("satisfied").GetInt32());
+    }
+
     private string Write(string name, string content)
     {
         string path = Path.Combine(_directory, name);

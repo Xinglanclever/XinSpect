@@ -946,7 +946,7 @@ public static class CliService
             // Reject untrusted or expired policies before touching the snapshot input.
             var verified = EnterpriseBaselinePackageService.Evaluate(package, trustedPublicKey,
                 new Dictionary<string, HardwareFact>(StringComparer.Ordinal), DateTimeOffset.UtcNow);
-            if (!verified.SignatureValid || verified.Expired)
+            if (!verified.SignatureValid || verified.FailureReason is not null)
             {
                 evaluation = verified;
             }

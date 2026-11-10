@@ -58,7 +58,7 @@ public sealed class SmbiosDeepFactsTests
         Assert.Contains("16384 MB", v);
         Assert.Contains("DDR4", v);
         Assert.Contains("3600 MT/s", v);
-        Assert.Contains("實跑 3200", v);
+        Assert.Contains("設定 3200 MT/s", v);
         Assert.DoesNotContain("ABC12345", v); // 序號只在「有無」計數，不進事實值
     }
 
@@ -68,6 +68,8 @@ public sealed class SmbiosDeepFactsTests
         var facts = SmbiosDeepFactsService.Collect(At, () => [Dimm("DIMM_A1", "", 0x7FFF, 0x1A, 3600, 0, 0, 0, [], extendedMb: 32768)]);
 
         Assert.Contains("32768 MB", facts.Single(f => f.Key == "sb.dim.summary").Value);
+        Assert.Equal("容量未回報", SmbiosDeepFactsService.FormatSize(Dimm("", "", 0xFFFF, 0x1A, 0, 0, 0, 0, [])));
+        Assert.Equal("32768 MB", SmbiosDeepFactsService.FormatSize(Dimm("", "", 0x7FFF, 0x1A, 0, 0, 0, 0, [], extendedMb: 0x80008000)));
     }
 
     [Fact]

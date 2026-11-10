@@ -11,10 +11,10 @@
 
 一款免费开源、运行于 Windows 的电脑工具箱，带有 ring0 切核等底层功能：可通过内核驱动直接读写硬件寄存器（MSR、PCI 配置空间、SMBus 等）。以单一运行档发布，免安装；读取以唯读为原则，少数涉及写入的功能均设有同意闸门并明确标注风险。本程序不收集、不上传任何用户数据。
 
-![版本](https://img.shields.io/badge/version-3.22-4C8DFF)
+![版本](https://img.shields.io/badge/version-3.23-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-7949%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-7966%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 ![商业授权](https://img.shields.io/badge/license-%E5%95%86%E4%B8%9A%E6%8E%88%E6%9D%83%E5%8F%AF%E8%B0%88-8B5CF6)
@@ -101,7 +101,7 @@
 
 | 读者 | 想回答的问题 | 建议入口 |
 |---|---|---|
-| 二手电脑买家 | 这台机器有没有被拆过、改过、藏过容量？ | 快速上手 → 机箱打开、HPA、SMART failing-now、microcode 对帐 |
+| 二手电脑买家 | 容量、识别材料与健康数据是否互相吻合？ | 快速上手 → ATA／OS 容量对照、SMART failing-now、microcode 对帐 |
 | 组装与升级者 | 内存插对信道了吗？PCIe 跑在该有的速度吗？ | 内存 SPD 直读、PCIe 落差、ReBAR 实况 |
 | 系统不稳的拥有者 | 是温度、功耗、驱动，还是固件在偷时间？ | 瓶颈诊断、性能天花板、DPC 延迟、SMI |
 | 安全稽核者 | 这台机器的信任根与攻击面长什么样？ | 固件安全、平台可信度、蓝色中队、驱动签章 |
@@ -109,7 +109,7 @@
 
 ### 1.3 适用场景
 
-- **二手电脑买卖前的验机**：机箱打开侦测（SMBIOS 入侵事件）、HPA 隐藏容量（Host Protected Area，硬盘固件声明但操作系统看不到的保留区；翻新碟与容量窜改的直接证据）、SMART 现正低于门槛判定、微码修订交叉核对、驱动签章稽核、Defender 排除清单稽核、USBSTOR 使用痕迹、非微软根凭证稽核、假容量写入验证；
+- **二手电脑买卖前的验机**：机箱安全状态、ATA／OS 容量对照、SMART 现正低于门槛判定、微码修订交叉核对、驱动签章稽核、Defender 排除清单稽核、USBSTOR 使用痕迹、非微软根凭证稽核、假容量写入验证。机箱安全状态不是入侵历史，容量差异也不能单独证明 HPA 或翻新。
 - **组装与升级后的硬件确认**：SPD 直读与插槽配置、内存信道、PCIe 链路协商速度、USB 链路速度、显示链路色彩编码、ReBAR 生效状态；
 - **系统不稳定时的归因**：瓶颈诊断、性能天花板（温度墙／功耗墙／电流墙归因）、隐形停顿（SMI，System Management Interrupt，固件在操作系统看不见的模式下插队处理的中断）、DPC 延迟肇事驱动、线程迁移、机器检查纪录；
 - **安全状态稽核**：固件安全寄存器（BIOS_CNTL、SMRAMC）、蓝色中队六防线态势、BYOVD（Bring Your Own Vulnerable Driver，攻击者自带有漏洞的签章驱动来取得内核权限）封锁清单比对、深层访问豁免开关；
@@ -395,13 +395,13 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 | 服务层文件 | 677 档 | `Services/` 之下递归的 `*.cs`（不含 bin／obj） |
 | 接口页（XAML） | 82 页 | `ls Views/*.xaml` |
 | 测试档 | 645 档 | `ls Tests/*.cs` |
-| 测试方法 | 6,597 个 `[Fact]`＋272 个 `[Theory]` | 逐档正则计数 |
-| 运行期测试案例 | 7,949（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
+| 测试方法 | 6,614 个 `[Fact]`＋272 个 `[Theory]` | 逐档正则计数 |
+| 运行期测试案例 | 7,966（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
 | 公开文档 | 51 份 `docs/*.md`＋6 份 `docs/spec/*.md` | `ls docs/*.md`、`ls docs/spec/*.md` |
 | 事实键目录 | 1,178 键／157 个前缀 | 解析 `FactKeyCatalog.Keys` |
 | 动态键家族 | 69 个 | 解析 `FactKeyDynamicCatalog.Families` |
 
-**怎么读这张表。** 第一个有用的比例是「6,597 个 `[Fact]` 对 272 个 `[Theory]`」——`[Theory]` 少，说明这个项目的测试风格偏向「一条测试讲一个具体事实」，而不是用数据驱动把同一个断言拷贝很多遍。第二个比例是「645 个测试档对 677 个服务档」：几乎每个服务档都有一个对应的测试档，这是刻意的，因为这个项目最贵的缺陷类别是「服务写完了但没有接进生产路径」（见第十九章 D-16），而对应测试档的存在至少让「写了却没人调用」有机会被看见。
+**怎么读这张表。** 第一个有用的比例是「6,614 个 `[Fact]` 对 272 个 `[Theory]`」——`[Theory]` 少，说明这个项目的测试风格偏向「一条测试讲一个具体事实」，而不是用数据驱动把同一个断言拷贝很多遍。第二个比例是「645 个测试档对 677 个服务档」：几乎每个服务档都有一个对应的测试档，这是刻意的，因为这个项目最贵的缺陷类别是「服务写完了但没有接进生产路径」（见第十九章 D-16），而对应测试档的存在至少让「写了却没人调用」有机会被看见。
 
 **这张表不能证明什么。** 行数不是品质，测试档数不是覆盖率，1,178 个事实键也不是 1,178 个正确的答案。规模数字唯一的用途是给读者一个「值不值得往下读」的判断依据：一份 25 章的文档如果背后只有三千行程序，那大概是包装；如果有二十五万行，那么第二章的每一条原则背后都真的有东西。
 
@@ -472,17 +472,17 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 | 文件 | 大小 | 用途 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpect.exe) | 38,081,835 bytes | 主程序。蓝色中队守护进程已内置 |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole.exe) | 100,440,723 bytes | 曦览终端机（CLI）。可独立执行，也被主程序强控台唤起；自含 .NET 10 执行阶段故体积较大（Windows 11／Server 2025 用） |
-| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole-legacy.exe) | 100,440,811 bytes | 曦览终端机（CLI）**纯文字兼容版**：给 Windows 10／Windows Server 2016、2019、2022 的传统控制台——无色彩、无框线定位，其余功能（facts／book／help）相同 |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/BlueSquadronBridge.exe) | 6,531,620 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
-| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpect-full.exe) | 210,848,082 bytes | 主程序・带环境版：.NET 10 执行阶段一并打包，免装执行阶段（功能与 XinSpect.exe 相同） |
-| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole-nort.exe) | 66,138,776 bytes | 曦览终端机・Windows 11／Server 2025・不带环境：需已装 .NET 10 Desktop Runtime |
-| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole-legacy-nort.exe) | 66,138,864 bytes | 曦览终端机・Windows 10／2016/2019/2022・不带环境：纯文字界面，需已装 .NET 10 Desktop Runtime |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectDeploy.exe) | 29,696 bytes | 一键安装器。第一层选装什么：A 装主程序（GUI）、B 装曦览终端机；第二层 1/2/3 选下载来源（GitHub／Drive／加速节点）；下载时显示进度条、速度与剩余时间 |
-| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XsRegProbe.sys) | 24,064 bytes | XsRegProbe 内核探测驱动（白名单只读 MSR／MMIO，全案审查唯一「优秀」级）。本版重编译版**含槽位基底修正**（槽位从请求头 +8 开始——第三轮严查发现，v3.18 的 .sys 为修正前）。未微软签章：主程序以提权会话安装到 `ProgramData\XinSpect\Driver\` 并建服务；手动加载需测试签名环境（testsigning） |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpect.exe) | 38,085,931 bytes | 主程序。蓝色中队守护进程已内置 |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpectConsole.exe) | 100,446,445 bytes | 曦览终端机（CLI）。可独立执行，也被主程序强控台唤起；自含 .NET 10 执行阶段故体积较大（Windows 11／Server 2025 用） |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpectConsole-legacy.exe) | 100,442,437 bytes | 曦览终端机（CLI）**纯文字兼容版**：给 Windows 10／Windows Server 2016、2019、2022 的传统控制台——无色彩、无框线定位，其余功能（facts／book／help）相同 |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/BlueSquadronBridge.exe) | 6,531,620 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
+| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpect-full.exe) | 210,852,178 bytes | 主程序・带环境版：.NET 10 执行阶段一并打包，免装执行阶段（功能与 XinSpect.exe 相同） |
+| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpectConsole-nort.exe) | 66,142,872 bytes | 曦览终端机・Windows 11／Server 2025・不带环境：需已装 .NET 10 Desktop Runtime |
+| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpectConsole-legacy-nort.exe) | 66,142,960 bytes | 曦览终端机・Windows 10／2016/2019/2022・不带环境：纯文字界面，需已装 .NET 10 Desktop Runtime |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XinSpectDeploy.exe) | 29,696 bytes | 一键安装器。第一层选装什么：A 装主程序（GUI）、B 装曦览终端机；第二层 1/2/3 选下载来源（GitHub／Drive／加速节点）；下载时显示进度条、速度与剩余时间 |
+| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.23/XsRegProbe.sys) | 24,064 bytes | XsRegProbe 内核探测驱动（白名单只读 MSR／MMIO，全案审查唯一「优秀」级）。本版重编译版**含槽位基底修正**（槽位从请求头 +8 开始——第三轮严查发现，v3.18 的 .sys 为修正前）。未微软签章：主程序以提权会话安装到 `ProgramData\XinSpect\Driver\` 并建服务；手动加载需测试签名环境（testsigning） |
 
-> **上表的字节数为本版（v3.22）实际发布的文件大小**；请以 Release 页面列出的文件为准。
+> **上表的字节数为本版（v3.23）实际发布的文件大小**；请以 Release 页面列出的文件为准。
 
 安装器（`XinSpectDeploy.exe`）第一层先选装什么：**A** 是 XinSpect.exe 主程序（全自动部署主程序＋守护进程）、**B** 是曦览终端机（单档下载一步到位）；版本都分两维：**带环境**（self-contained，免装 .NET）与**不带环境**（framework-dependent，机器要已装 .NET 10 Desktop Runtime）。选 **A** 时问一次：**1** 不带环境（XinSpect.exe，约 36MB）、**2** 带环境（XinSpect-full.exe，约 189MB）；选 **B** 时问四版：**1** Windows 11／Server 2025 带环境（XinSpectConsole.exe，约 100MB）、**2** Windows 10／2016/2019/2022 带环境（XinSpectConsole-legacy.exe，纯文字界面）、**3** Windows 11／Server 2025 不带环境（XinSpectConsole-nort.exe，约 63MB）、**4** Windows 10／2016/2019/2022 不带环境（XinSpectConsole-legacy-nort.exe）；接着再选来源：**1** 是 GitHub 最新版、**2** 是 Google Drive 镜像（分享文件夹，它会打开浏览器并告诉你按哪里）、**3** 是中国加速线路——对 GitHub 加前缀的公开加速节点，安装器自己抓档，跟按 1 一样有进度条、速度与剩余时间。直连下载有一条备援链：latest 网址 → 现场侦测到的版号（不写死，过期不会安静装到旧版）→ Drive 确认直连 → 加速节点前缀，每条试两次，换线时会说出改去哪里。判断哪一格用哪种模式，看的是端点本身：只有真的能用 GET 取回目录下文件的线路才写成直连，分享页一律只打开浏览器，不会把分享页存成一个假的 exe。镜像链接集中在 `Installer/mirrors.txt`，安装器启动时会从 jsDelivr／加速节点／GitHub 三条线抓一份最新的（拿不到就用内置的）；某一格还没有链接时，菜单上会写「尚未提供」，按下去会先说明再改用 GitHub。下载完成后一律检查 PE 标头与大小门槛，抓到 HTML（分享页、限流页、Google 的病毒扫描确认页）会被挡下、删档并说出内容像什么。注意：走第三方加速节点的位元组只能验 PE 标头，验不了发布者签章。
 
@@ -571,7 +571,7 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 1. 以系统管理员身分运行 `XinSpect.exe`（不提权也可以运行，多数 usermode 功能照常，特权功能会如实标示）。
 2. 左侧导览的「**固件安全**」页：查看 BIOS 写入保护、SMRAM 锁定、交叉对帐判决卡；激活「深层访问」可让 SPI 快闪与 PCIe AER 事实翻成真值。
-3. 「**保存设备**」页：逐碟 SMART 属性与 failing-now 判定、NVMe 健康与 WCTEMP、HPA 隐藏容量。
+3. 「**保存设备**」页：逐碟 SMART 属性与 failing-now 判定、NVMe 健康与 WCTEMP、ATA／OS 容量对照。
 4. 「**深测中心**」：设置保存根后按 Quick 或 Full 运行 38 项量测；结果为原始样本并列，不含加权总分。
 5. 「**防护**」页：蓝色中队态势评估与即时威胁时间轴；守护进程开关在此页。
 6. 「**证据实验室**」：创建时间胶囊（快照），之后可逐栏差分、导出 HTML 报告或原始寄存器快照。
@@ -582,7 +582,7 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 |---|---|---|
 | 0–1 | 开「我的电脑」 | 健康度是不是有红字；红字点进去看到原因，不是看到 0 |
 | 1–2 | 开「固件安全」 | 判决卡有几条红、几条灰；灰的代表「无法验证」，不是「没问题」 |
-| 2–3 | 开「保存设备」 | SMART 现值 vs 门槛；HPA 隐藏容量是否为 0 |
+| 2–3 | 开「保存设备」 | SMART 现值 vs 门槛；ATA／OS 容量差异 |
 | 3–4 | 开「证据实验室」创建一个时间胶囊 | 快照的 SHA-256 与「本次未收集」清单 |
 | 4–5 | 设置页看「事实键覆盖申报」 | 目录 1,167 把键中，这台机器这一轮收到几把、量到几把 |
 
@@ -650,9 +650,9 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 ### 6.4 主板
 
-数据源：SMBIOS（MSSmbs_RawSMBiosTables）、ACPI（GetSystemFirmwareTable）、Super I/O 设置端口 0x2E/0x4E、PCI 设置空间（WinRing0）、CMOS 端口。
+数据源：SMBIOS 与 ACPI（GetSystemFirmwareTable）、Super I/O 设置端口 0x2E/0x4E、PCI 设置空间（WinRing0）、CMOS 端口。
 
-- **机箱打开侦测**：SMBIOS Type 3（System Enclosure）offset 12 的 Security Status。值 5 表示固件记录了机壳打开事件——这是拆机的固件级证据，接口以警示色呈现并建议追问来源。offset 5 的机箱类型（Tower／桌面／Rack Mount 等）一并解出。
+- **机箱安全状态**：SMBIOS Type 3 offset 0x0C 的 Security Status。值 4 是外部接口锁定，值 5 是外部接口启用，均不表示机箱曾被打开。offset 5 的低 7 位是机箱类型，bit 7 另表示机箱锁存在。
 - **BIOS／芯片组**：版本、日期、厂商。
 - **Super I/O**：0x2E/0x4E 设置端口以两种进入串行尝试，唯读芯片 ID 与厂商 ID（名称对照取自 coreboot superiotool 的 ite.c/nuvoton.c，出处标明），设置模式在任何路径（含例外）以 finally 退出——把芯片留在设置模式是系统风险。HWM（Hardware Monitor）传感器：选 LDN 4（环境控制器）取基址后，以 base+5（index）／base+6（data）读取——风扇 RPM（ITE 公式 1,350,000÷(divisor×count)，count 0/0xFFFF 为无效，不回 0 RPM）、温度（8-bit 二补数）、电压（LSB 16 mV，标明「未经主板校准」——芯片端读值不等于实际电压）。
 - **PCI Bus 0 盘点**：三十二槽扫描，多功能比特决定 function 扫描深度；PCI-SIG 类别码知识库转角色名称（未收录标「未收录」）；每设备列出 BAR（Base Address Register，基底地址寄存器）地址与类型。BAR 大小需写入探测（写全 F 读遮罩），本工具对 PCI 设置空间唯读，故不出大小。
@@ -669,7 +669,7 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 - **SMART 属性与门槛（failing-now）**：READ DATA（features 0xD0）取 30 笔属性（ID、现值、最差、原始六字节）；READ THRESHOLDS（features 0xD1）取门槛表。「现值 ≤ 门槛且门槛非 0」判定为现正低于门槛（failing now），逐项摊开并标注「现值 X ≤ 门槛 Y」。门槛 0 依 SMART 规范为无门槛，不参与评比。重新配置磁区（0x05）、待映射磁区（0xC5）、无法修正磁区（0xC6）另有健康裁决。
 - **NVMe**：健康纪录（log page 0x02）全解——合成温度、可用备用、已用寿命百分比、数据单位读写量；WCTEMP 警告（Identify Controller offset 0x14A 的 u16 对照合成温度，达标即警告；0＝未提供如实标）；错误纪录（log page 0x01）；电源状态表（各阶功耗与进入／离开延迟）对实测「刻意闲置 N 毫秒后第一笔 4K 读取要多久」——闲置后第一笔为什么慢，两者同一量级才敢归因于省电状态。
-- **HPA 隐藏容量**：ATA IDENTIFY 的最大 LBA（words 100–103）对照 Win32_DiskDrive.Size——OS 可见少于固件声明即 HPA 作用中，换算隐藏磁区数与 GB。这是翻新碟与容量窜改的直接证据。DCO（Device Configuration Overlay，设备组态覆盖层）需厂商私有命令（无公开 usermode 通路），标 NotSupported 并说明原因。
+- **ATA／OS 容量对照**：ATA IDENTIFY 当前可定址磁区对照 Win32_DiskDrive.Size，按实际逻辑磁区大小换算，支持 4Kn。差异不能确认 HPA，一致也不能排除 HPA。尚未读取 READ NATIVE MAX ADDRESS/EXT，DCO 探测亦未实现，标 NotSupported 并说明原因。
 - **磁盘表面扫描**：循序读取逐块（缺省 1 MB，上限可调）量延迟，超过 100 ms 标慢、读取失败标错误。SMART 是固件的自述，这是程序自己读到的——两者互补。以 `\\.\C:` 打开逻辑卷不需管理员权限，仅能读不能写。
 - **假容量写入验证**（H2testw 式）：在目标磁盘以可重现样本（xorshift，chunkIndex 混入种子）写入至指定上限或写满，FlushToDisk 后读回逐字节验证，结束删除暂存盘。「写不进去／读回不一致」是假容量卡（标 512GB 实为 8GB 的刷板卡）与劣化碟的直接证据。需要明确同意——写入量可观且可能加剧濒死媒体损耗，接口与说明均标注风险。此功能未接入任何自动流程，仅在明确调用时运行。
 - 通电时数与机龄推估（SMART Power-On Hours＋出厂日期启发式）、QD（Queue Depth，队列深度）梯度性能曲线、容量／固件／序号、NVMe 识别数据。
@@ -1552,7 +1552,7 @@ if ($LASTEXITCODE -eq 2) { Write-Error "审计链断裂，停止盘点" }
 11. **突变测试只覆盖纯解码器**——主项目（WPF＋特权通路）的突变面由注入式测试与金标矢量承担。
 12. **快照哈希是完整性信封不是数字签章**——只能侦测文件被改动，不能证明出自本工具。
 13. **PMU 编程验证尚未与参考工具对照**——沙箱方案 S5 未运行，标「多轮测试・不保证可用」。
-14. **DCO 需厂商私有命令**，未实作。
+14. **HPA native maximum 与 DCO 探测尚未实现**，容量对照不能确认或排除它们。
 15. **ATA_PASS-THROUGH 刻意不用**（曾实测卡 IRP）；SMART 走 disk.sys 代理的 SMART_RCV_DRIVE_DATA。
 16. **规则市集（需签章信任模型）、二手平台 API、SDK/仿真器**刻意不做。
 
@@ -1757,7 +1757,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 
 **失效模式**：把 raw 当成匿名数据分享。raw 不匿名化，可能含序号与 UUID。
 
-**边界**：raw 只涵盖「本工具读得到」的范围；读不到的面（例如需要厂商命令的 DCO）不在里面，缺失本身就是信息。
+**边界**：raw 只涵盖「本工具读得到」的范围；未实现的探测面（例如 DCO）不在里面，缺失本身就是信息。
 
 ### 17.6 审计哈希链：可脱机验证的动作纪录
 
@@ -1840,7 +1840,7 @@ dotnet publish XinSpect.csproj -c Release -r win-x64 --self-contained false -p:P
 | 传感监控 | HWiNFO、AIDA64、LibreHardwareMonitor | 传感器覆盖广、图表成熟、长期社群验证 | 每个读值带出处与六态；读不到不画成 0 | 传感器数量与图表功能不如专门工具 |
 | 规格识别 | CPU-Z、GPU-Z | 启动快、型号与制程数据完整、辨识准确 | 规格之外还给 MSR 实测与跨来源对帐 | 行动版、在线数据库、认证分数没有 |
 | 保存健康 | CrystalDiskInfo、各家 SSD 工具 | SMART 呈现清楚、通知与常驻成熟 | failing-now 逐项摊开、HPA、假容量写入、NVMe 电源状态对照 | 厂商专属固件更新与保固集成没有 |
-| 验机／假容量 | H2testw 类工具 | 写入验证方法简单可靠、广为人知 | 同样的写入验证，加上 HPA、SMART、机箱打开、微码对帐 | 专注度不如单一用途工具，操作步骤较多 |
+| 验机／假容量 | H2testw 类工具 | 写入验证方法简单可靠、广为人知 | 同样的写入验证，加上 ATA／OS 容量对照、SMART、机箱安全状态、微码对帐 | 专注度不如单一用途工具，操作步骤较多 |
 | 压力与稳定性 | OCCT、Prime95、MemTest86 | 压力模型成熟、社群基准多、可长时间烧机 | 深测只给原始样本与可信度，不给总分；与事实层连动 | 压力强度与测试种类不如专门烧机工具 |
 | 安全稽核 | Autoruns、Process Explorer、CHIPSEC | 各自领域的深度与生态系 | 固件寄存器、对帐、证据快照、审计链集成在同一个事实模型 | 不是端点防护、不阻挡、不隔离 |
 | 固件／底层 | CHIPSEC、RWEverything、厂商工具 | 底层覆盖深、可直接操作硬件 | 唯读优先、白名单驱动、每个值有规格出处 | 可做的事刻意较少（不写入、不绕过） |
@@ -2425,6 +2425,7 @@ O-01 到 O-12 里，至少四条是「知道怎么修，但选择不修」：
 
 ## 二十二、版本沿革
 
+- **v3.23 硬體判讀修復**（2026-11-10）：硬件解码与证据准确度修复
 - **v3.22 企業離線基準**（2026-11-10）：企業離線基準與硬體來源契約
 - **v3.21 交叉論證**（2026-11-09）：深審第二批：第三轮扫掠 15 补丁落地＋审计清单收口＋卷宗合并
 - **v3.20 深審修復**（2026-11-08）：修复建置＋全库深审：三处建置复通、P0-4 补齐、CLI／桌面／服务层 30+ 修复
@@ -2688,7 +2689,7 @@ By：Xinglanclever
 
 ---
 
-**文档本身的版本**：本文档对应 XinSpect v3.22（2026-11-10）。正体中文为母本，简体中文由 OpenCC（tw2sp）自动转换，英文版为全量对译；三份文档共用同一组事实与守门。若你在简体版看到不顺的词，那是转换器的选择，不是原文的意思——请以正体版为准。
+**文档本身的版本**：本文档对应 XinSpect v3.23（2026-11-10）。正体中文为母本，简体中文由 OpenCC（tw2sp）自动转换，英文版为全量对译；三份文档共用同一组事实与守门。若你在简体版看到不顺的词，那是转换器的选择，不是原文的意思——请以正体版为准。
 
 ---
 

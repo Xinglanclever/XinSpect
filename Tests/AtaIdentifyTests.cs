@@ -94,6 +94,20 @@ public class AtaIdentifyTests
     public void 容量以每磁區512位元組換算成廠商標示的GB()
         => Assert.Equal(1000.2, AtaIdentify.Decode(Synthetic())!.CapacityGB, 1);
 
+    [Fact]
+    public void FourKnCapacityUsesWords106And117Through118()
+    {
+        var data = Synthetic(lba48: 1_000_000);
+        BitConverter.GetBytes((ushort)0x5000).CopyTo(data, 106 * 2);
+        BitConverter.GetBytes(2048u).CopyTo(data, 117 * 2);
+        var info = AtaIdentify.Decode(data)!;
+        Assert.Equal(4096, info.LogicalSectorBytes);
+        Assert.Equal(4.096, info.CapacityGB, 6);
+
+        BitConverter.GetBytes((ushort)0x1000).CopyTo(data, 106 * 2);
+        Assert.Equal(512, AtaIdentify.Decode(data)!.LogicalSectorBytes);
+    }
+
     [Theory]
     [InlineData((ushort)0x0000, (ushort)0x0001, true, false)] // word83 bit0
     [InlineData((ushort)0x0100, (ushort)0x0000, false, true)] // word69 bit8
