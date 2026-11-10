@@ -164,6 +164,7 @@ public static class CpuzReportService
 
     private static void ParseTimings(string[] L, int start, int end, MemoryTimings t)
     {
+        t.SourceText = "CPU-Z 報告";
         string? G(string label) => Get(L, label, start, end);
 
         t.MemoryTypeText = G("Memory Type") ?? "—";

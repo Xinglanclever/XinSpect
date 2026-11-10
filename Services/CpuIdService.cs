@@ -603,13 +603,13 @@ public sealed class CpuIdService
         /// <summary>leaf 0x1A：混合架構的核心類型。</summary>
         public static string DecodeHybrid(uint eax)
         {
-            uint type = eax & 0xFF;
-            uint nativeModel = (eax >> 8) & 0xFF;
+            uint type = eax >> 24;
+            uint nativeModel = eax & 0x00FFFFFF;
             return type switch
             {
                 0 => "—",
-                0x20 => $"E-core（效率核，native model 0x{nativeModel:X2}）",
-                0x40 => $"P-core（效能核，native model 0x{nativeModel:X2}）",
+                0x20 => $"E-core（效率核，native model 0x{nativeModel:X6}）",
+                0x40 => $"P-core（效能核，native model 0x{nativeModel:X6}）",
                 _ => $"類型 0x{type:X2}",
             };
         }

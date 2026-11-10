@@ -107,6 +107,7 @@ public class CpuFirmwareFactsTests
         Assert.Equal((byte)0x55, m);
         Assert.Equal((byte)4, s);
         Assert.Contains("Skylake-X", CpuGeneration.GenerationName(f, m));
+        Assert.Contains("Broadwell", CpuGeneration.GenerationName(6, 0x4F));
 
         var known = CpuFirmwareFactsService.GenerationFact(0x050654, At);
         Assert.Equal(FactAvailability.Present, known.Availability);

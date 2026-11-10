@@ -103,8 +103,11 @@ public class CpuIdTests
     public void 混合架構類型解碼()
     {
         Assert.Equal("—", CpuIdService.Decoder.DecodeHybrid(0));
-        Assert.Contains("E-core", CpuIdService.Decoder.DecodeHybrid(0x20 | (0x5Cu << 8)));
-        Assert.Contains("P-core", CpuIdService.Decoder.DecodeHybrid(0x40 | (0x97u << 8)));
+        // Intel SDM leaf 1A：EAX[31:24] 是核心類型，EAX[23:0] 是原生型號。
+        Assert.Contains("E-core", CpuIdService.Decoder.DecodeHybrid(0x2000005C));
+        Assert.Contains("P-core", CpuIdService.Decoder.DecodeHybrid(0x40000097));
+        Assert.Contains("0x123456", CpuIdService.Decoder.DecodeHybrid(0x40123456));
+        Assert.DoesNotContain("P-core", CpuIdService.Decoder.DecodeHybrid(0x00000040));
     }
 
     [Fact]

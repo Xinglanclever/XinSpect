@@ -38,6 +38,7 @@ internal static class StartupSequence
         vm.StatusText = "正在啟動感測器引擎…";
         try { vm.Live = await sensorTask; }
         catch (Exception ex) { vm.StatusText = "感測器初始化失敗（溫度/頻率不可用）：" + ex.Message; }
+        vm.CpuDetail = HardwareReadingPriority.ResolveCpu(HardwareReadingPriority.ReadNativeCpu(vm), vm.Cpu, null);
 
         // 3) 網路監控
         try { vm.Net = await netTask; } catch { /* 網路資訊為附加功能 */ }
@@ -153,6 +154,8 @@ internal static class StartupSequence
                  SystemInfoService.GetNetworkAdapters()));
 
             vm.System = summary;
+            if (vm.CpuId.Supported && vm.CpuId.Brand is not ("—" or ""))
+                cpu.Name = vm.CpuId.Brand;
             vm.Cpu = cpu;
             vm.CpuTopology = await Task.Run(CpuTopologyService.Build);
             vm.Modules.Clear();
@@ -252,6 +255,9 @@ internal static class StartupSequence
             var display4 = SpdDisplay.ToDisplay(vm.DirectSpdReads);
             var display5 = SpdDisplay.ToDisplay5(vm.DirectSpdReads5);
             if (display4.Count + display5.Count > 0) vm.SpdModules = display4.Concat(display5).ToList();
+            vm.Timings = HardwareReadingPriority.ResolveMemory(BuildNativeTimings(vm), BuildWmiTimings(vm.Modules), null);
+            vm.Timings.RaiseAll();
+            vm.CpuDetail = HardwareReadingPriority.ResolveCpu(HardwareReadingPriority.ReadNativeCpu(vm), vm.Cpu, null);
         }).ConfigureAwait(false);
 
         // 晶片組安全暫存器（BIOS_CNTL/SMRAMC）：走 WinRing0 讀 bus 0；讀不到由三態如實標示（缺 ring0 / 非 Intel）。
@@ -309,8 +315,9 @@ internal static class StartupSequence
             await OnUiAsync(ui, () =>
             {
                 // 時序（含次要時序），沿用既有繫結物件
-                report.Timings.RaiseAll();
-                vm.Timings = report.Timings;
+                vm.Timings = HardwareReadingPriority.ResolveMemory(
+                    BuildNativeTimings(vm), BuildWmiTimings(vm.Modules), report.Timings);
+                vm.Timings.RaiseAll();
 
                 // 主機板廠商 CPU-Z 常只給代碼，以 WMI 值補入後再指派（讓 Brand 解析正確）
                 if (report.Board.Vendor == "—" && vm.System.BoardVendor != "—")
@@ -318,7 +325,8 @@ internal static class StartupSequence
                 if (report.Board.Model == "—" && vm.System.BoardModel != "—")
                     report.Board.Model = vm.System.BoardModel;
 
-                vm.CpuDetail = report.Cpu;
+                vm.CpuDetail = HardwareReadingPriority.ResolveCpu(
+                    HardwareReadingPriority.ReadNativeCpu(vm), vm.Cpu, report.Cpu);
                 vm.Mainboard = report.Board;
                 vm.CpuzSpdModules = report.Spd;
                 if (vm.SpdModules.Count == 0) vm.SpdModules = report.Spd;   // 原生直讀沒填（DDR4+DDR5 都空）才退回 CPU-Z 報告
@@ -354,29 +362,6 @@ internal static class StartupSequence
         }
         catch { /* 池細目為附加功能 */ }
 
-        // CPU-Z 沒有（未安裝／不在桌面）不代表時脈就只能空著：
-        // SPD 直讀結果（上面已讀）與 WMI 設定速率都能把「時脈與時序」補起來，
-        // CPU-Z 從「必要依賴」降級為「更完整的選用補充」。
-        // （門檻讀取 vm.Timings.Loaded 是標量唯讀，跨執行緒讀 bool 無撕裂風險；BuildNativeTimings
-        //   原碼即已在 Task.Run 跑、讀 vm.DirectSpdReads，信任等級不變。）
-        if (!vm.Timings.Loaded)
-        {
-            var native = await Task.Run(() => BuildNativeTimings(vm)).ConfigureAwait(false);
-            await OnUiAsync(ui, () =>
-            {
-                if (native is not null)
-                {
-                    native.RaiseAll();
-                    vm.Timings = native;
-                }
-                else
-                {
-                    vm.Timings.Status = "未讀到時序——需要 SPD 直讀（管理員＋驅動）或 CPU-Z 報告其中之一。";
-                    vm.Timings.SourceText = "無";
-                    vm.Timings.RaiseAll();
-                }
-            }).ConfigureAwait(false);
-        }
     }
 
     /// <summary>
@@ -398,6 +383,7 @@ internal static class StartupSequence
                 return new MemoryTimings
                 {
                     Loaded = true,
+                    IsJedecReference = true,
                     SourceText = "SPD 直讀（" + first.Bus + "）・JEDEC 標準值",
                     Status = "已由 SPD 直讀填入。注意：這是模組的 JEDEC 標準時序；"
                            + "若 BIOS 已開 XMP／EXPO，實際時序會比這裡更緊——完整對照仍以 CPU-Z 報告或 BIOS 為準。",
@@ -425,6 +411,7 @@ internal static class StartupSequence
             return new MemoryTimings
             {
                 Loaded = true,
+                IsJedecReference = true,
                 SourceText = "SPD 直讀（" + first5.Bus + "）・DDR5 基準時序（未在本機驗證）",
                 Status = "已由 DDR5 SPD 直讀填入基準（JEDEC）時序。解碼器尚未在實機 DDR5 上驗證；"
                        + "若 BIOS 已開 XMP／EXPO，實際時序會比這裡更緊。",
@@ -441,12 +428,18 @@ internal static class StartupSequence
         }
 
         // ── 來源二：WMI（Win32_PhysicalMemory 的 ConfiguredClockSpeed＝目前設定的資料速率）──
-        var mods = vm.Modules;
-        if (mods is { Count: > 0 } && mods[0].ConfiguredSpeedMHz > 0)
+        return BuildWmiTimings(vm.Modules);
+    }
+
+    internal static MemoryTimings? BuildWmiTimings(IReadOnlyList<MemoryModuleInfo> mods)
+    {
+        if (mods is { Count: > 0 })
         {
-            int configured = mods[0].ConfiguredSpeedMHz;
+            var rates = mods.Select(m => m.ConfiguredSpeedMHz).Distinct().ToArray();
+            int configured = rates.Length == 1 && rates[0] > 0 ? rates[0] : 0;
             double totalGb = mods.Sum(m => m.CapacityGB);
-            string type = mods[0].MemoryType.Length > 0 ? mods[0].MemoryType : "DDR";
+            string type = mods[0].MemoryType.StartsWith("DDR", StringComparison.OrdinalIgnoreCase)
+                ? mods[0].MemoryType : "DDR";
             return new MemoryTimings
             {
                 Loaded = false,   // 時序欄位沒有來源，不假裝有
@@ -454,7 +447,7 @@ internal static class StartupSequence
                 Status = "已由 Windows（WMI）取得目前設定的資料速率；時序（CL／tRCD 等）WMI 不提供，"
                        + "需 SPD 直讀（以系統管理員執行）或 CPU-Z 報告才讀得到。",
                 MemoryTypeText = type,
-                DataRateText = $"{type}-{configured}（WMI 設定值）",
+                DataRateText = configured > 0 ? $"{type}-{configured}（WMI 設定值）" : "—",
                 DramFrequencyMHz = configured / 2.0,   // DDR：資料速率 ÷ 2 ＝記憶體時鐘
                 MemorySizeText = totalGb > 0 ? $"{totalGb:0.#} GB（{mods.Count} 條）" : "—",
             };

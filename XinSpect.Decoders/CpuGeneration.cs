@@ -24,7 +24,7 @@ public static class CpuGeneration
     /// <summary>Family 6 model → 微架構／世代名。只收錄有把握的子集；null＝未收錄，不猜。</summary>
     public static string? GenerationName(byte family, byte model) => (family, model) switch
     {
-        (6, 0x4F) => "Skylake（伺服器 SP）",
+        (6, 0x4F) => "Broadwell-E / Broadwell-EP（HEDT／伺服器）",
         (6, 0x55) => "Skylake-X / Cascade Lake（HEDT／伺服器）",
         (6, 0x5E) => "Skylake（用戶端）",
         (6, 0x8E) => "Kaby Lake / Coffee Lake / Whiskey Lake / Amber Lake（行動與低功耗）",

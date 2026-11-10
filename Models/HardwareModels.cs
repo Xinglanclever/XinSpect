@@ -154,6 +154,9 @@ public sealed class MemoryModuleInfo
 /// <summary>記憶體時序（CPU-Z 報告、SPD 直讀或 WMI 原生來源——來源那一列會寫明是哪一個）。</summary>
 public sealed class MemoryTimings : ObservableObject
 {
+    /// <summary>SPD 的 JEDEC 能力表，不是控制器目前運行時序。</summary>
+    public bool IsJedecReference { get; set; }
+
     private string _status = "尚未讀取";
     public string Status { get => _status; set => SetProperty(ref _status, value); }
 
@@ -187,7 +190,7 @@ public sealed class MemoryTimings : ObservableObject
     public string FrequencyText => DramFrequencyMHz > 0 ? $"{DramFrequencyMHz:0.#} MHz" : "—";
     /// <summary>時序摘要字串，例：16-22-22-38 2T。</summary>
     public string PrimaryTimingsText =>
-        Loaded ? $"{CL}-{TRCD}-{TRP}-{TRAS}" + (CommandRate != "—" ? $"  {CommandRate}" : "") : "—";
+        Loaded ? (IsJedecReference ? "JEDEC 基準：" : "") + $"{CL}-{TRCD}-{TRP}-{TRAS}" + (CommandRate != "—" ? $"  {CommandRate}" : "") : "—";
 
     public void RaiseAll()
     {

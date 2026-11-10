@@ -14,7 +14,7 @@ A free, open-source PC toolbox for Windows with ring0 kernel-level access: it ca
 ![Version](https://img.shields.io/badge/version-3.24-4C8DFF)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![Tests](https://img.shields.io/badge/tests-7973%20passed-3FB950)
+![Tests](https://img.shields.io/badge/tests-7987%20passed-3FB950)
 ![Mutation Score](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 ![Commercial license](https://img.shields.io/badge/license-commercial%20available-8B5CF6)
@@ -259,12 +259,12 @@ hardware / firmware / OS ──► fact collection (*FactsService)
 | File | Size | Purpose |
 |---|---|---|
 | [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpect.exe) | 38.09 MB | Main program (Blue Squadron guard included) |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole.exe) | 100,448,193 bytes | XinSpect Console (CLI). Runs standalone and is also launched by the main program's console bridge; larger because it bundles the .NET 10 runtime (for Windows 11 / Server 2025) |
-| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole-legacy.exe) | 100,444,185 bytes | XinSpect Console (CLI) **plain-text legacy build** for Windows 10 / Windows Server 2016, 2019, 2022 - no colors, no box positioning; the facts/book/help features are identical |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole.exe) | 100,451,223 bytes | XinSpect Console (CLI). Runs standalone and is also launched by the main program's console bridge; larger because it bundles the .NET 10 runtime (for Windows 11 / Server 2025) |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole-legacy.exe) | 100,447,215 bytes | XinSpect Console (CLI) **plain-text legacy build** for Windows 10 / Windows Server 2016, 2019, 2022 - no colors, no box positioning; the facts/book/help features are identical |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/BlueSquadronBridge.exe) | 6,531,620 bytes | Standalone guard process |
 | [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpect-full.exe) | 210,856,274 bytes | Main program, bundled-runtime build: ships the .NET 10 Desktop Runtime, nothing to install (same features as XinSpect.exe) |
-| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole-nort.exe) | 66,150,040 bytes | XinSpect Console, Windows 11 / Server 2025, no runtime: requires .NET 10 Desktop Runtime |
-| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole-legacy-nort.exe) | 66,146,032 bytes | XinSpect Console, Windows 10 / 2016/2019/2022, no runtime: plain-text UI, requires .NET 10 Desktop Runtime |
+| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole-nort.exe) | 66,153,112 bytes | XinSpect Console, Windows 11 / Server 2025, no runtime: requires .NET 10 Desktop Runtime |
+| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole-legacy-nort.exe) | 66,149,104 bytes | XinSpect Console, Windows 10 / 2016/2019/2022, no runtime: plain-text UI, requires .NET 10 Desktop Runtime |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectDeploy.exe) | 29,696 bytes | One-click installer. First pick what to install: **A** the main program (GUI), **B** the XinSpect Console; then pick a source with 1/2/3 (GitHub / Drive / accelerator node); shows a progress bar, speed and time remaining while downloading |
 | [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XsRegProbe.sys) | 24,064 bytes | XsRegProbe kernel probe driver (whitelisted read-only MSR/MMIO, the only "excellent"-graded component in the project audit). This rebuild **includes the slot-base fix** (slots start at request header +8 — found by the round-3 deep audit; v3.18 shipped the pre-fix binary). Not Microsoft-signed: the app installs it via an elevated session to `ProgramData\XinSpect\Driver\`; manual loading requires testsigning |
 

@@ -14,7 +14,7 @@
 ![版本](https://img.shields.io/badge/version-3.24-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-7973%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-7987%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 ![授权](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 ![商业授权](https://img.shields.io/badge/license-%E5%95%86%E4%B8%9A%E6%8E%88%E6%9D%83%E5%8F%AF%E8%B0%88-8B5CF6)
@@ -391,17 +391,17 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 
 | 类别 | 数量 | 数法（在仓库根运行） |
 |---|---|---|
-| C# 源文件 | 1,602 档／315,074 行 | 走访所有 `*.cs`，排除 `bin/`、`obj/`、`publish-*/`、`.git/`、`work/`、`TestResults/` |
-| 服务层文件 | 677 档 | `Services/` 之下递归的 `*.cs`（不含 bin／obj） |
+| C# 源文件 | 1,604 档／315,074 行 | 走访所有 `*.cs`，排除 `bin/`、`obj/`、`publish-*/`、`.git/`、`work/`、`TestResults/` |
+| 服务层文件 | 678 档 | `Services/` 之下递归的 `*.cs`（不含 bin／obj） |
 | 接口页（XAML） | 82 页 | `ls Views/*.xaml` |
-| 测试档 | 647 档 | `ls Tests/*.cs` |
-| 测试方法 | 6,621 个 `[Fact]`＋272 个 `[Theory]` | 逐档正则计数 |
-| 运行期测试案例 | 7,973（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
+| 测试档 | 648 档 | `ls Tests/*.cs` |
+| 测试方法 | 6,635 个 `[Fact]`＋272 个 `[Theory]` | 逐档正则计数 |
+| 运行期测试案例 | 7,987（徽章与 `TestSuiteBaseline` 的单一来源） | `dotnet test` 的「测试数总计」 |
 | 公开文档 | 51 份 `docs/*.md`＋6 份 `docs/spec/*.md` | `ls docs/*.md`、`ls docs/spec/*.md` |
 | 事实键目录 | 1,178 键／157 个前缀 | 解析 `FactKeyCatalog.Keys` |
 | 动态键家族 | 69 个 | 解析 `FactKeyDynamicCatalog.Families` |
 
-**怎么读这张表。** 第一个有用的比例是「6,621 个 `[Fact]` 对 272 个 `[Theory]`」——`[Theory]` 少，说明这个项目的测试风格偏向「一条测试讲一个具体事实」，而不是用数据驱动把同一个断言拷贝很多遍。第二个比例是「647 个测试档对 677 个服务档」：几乎每个服务档都有一个对应的测试档，这是刻意的，因为这个项目最贵的缺陷类别是「服务写完了但没有接进生产路径」（见第十九章 D-16），而对应测试档的存在至少让「写了却没人调用」有机会被看见。
+**怎么读这张表。** 第一个有用的比例是「6,635 个 `[Fact]` 对 272 个 `[Theory]`」——`[Theory]` 少，说明这个项目的测试风格偏向「一条测试讲一个具体事实」，而不是用数据驱动把同一个断言拷贝很多遍。第二个比例是「648 个测试档对 678 个服务档」：几乎每个服务档都有一个对应的测试档，这是刻意的，因为这个项目最贵的缺陷类别是「服务写完了但没有接进生产路径」（见第十九章 D-16），而对应测试档的存在至少让「写了却没人调用」有机会被看见。
 
 **这张表不能证明什么。** 行数不是品质，测试档数不是覆盖率，1,178 个事实键也不是 1,178 个正确的答案。规模数字唯一的用途是给读者一个「值不值得往下读」的判断依据：一份 25 章的文档如果背后只有三千行程序，那大概是包装；如果有二十五万行，那么第二章的每一条原则背后都真的有东西。
 
@@ -473,12 +473,12 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 | 文件 | 大小 | 用途 |
 |---|---|---|
 | [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpect.exe) | 38,090,027 bytes | 主程序。蓝色中队守护进程已内置 |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole.exe) | 100,448,193 bytes | 曦览终端机（CLI）。可独立执行，也被主程序强控台唤起；自含 .NET 10 执行阶段故体积较大（Windows 11／Server 2025 用） |
-| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole-legacy.exe) | 100,444,185 bytes | 曦览终端机（CLI）**纯文字兼容版**：给 Windows 10／Windows Server 2016、2019、2022 的传统控制台——无色彩、无框线定位，其余功能（facts／book／help）相同 |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole.exe) | 100,451,223 bytes | 曦览终端机（CLI）。可独立执行，也被主程序强控台唤起；自含 .NET 10 执行阶段故体积较大（Windows 11／Server 2025 用） |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole-legacy.exe) | 100,447,215 bytes | 曦览终端机（CLI）**纯文字兼容版**：给 Windows 10／Windows Server 2016、2019、2022 的传统控制台——无色彩、无框线定位，其余功能（facts／book／help）相同 |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/BlueSquadronBridge.exe) | 6,531,620 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 | [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpect-full.exe) | 210,856,274 bytes | 主程序・带环境版：.NET 10 执行阶段一并打包，免装执行阶段（功能与 XinSpect.exe 相同） |
-| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole-nort.exe) | 66,150,040 bytes | 曦览终端机・Windows 11／Server 2025・不带环境：需已装 .NET 10 Desktop Runtime |
-| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole-legacy-nort.exe) | 66,146,032 bytes | 曦览终端机・Windows 10／2016/2019/2022・不带环境：纯文字界面，需已装 .NET 10 Desktop Runtime |
+| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole-nort.exe) | 66,153,112 bytes | 曦览终端机・Windows 11／Server 2025・不带环境：需已装 .NET 10 Desktop Runtime |
+| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectConsole-legacy-nort.exe) | 66,149,104 bytes | 曦览终端机・Windows 10／2016/2019/2022・不带环境：纯文字界面，需已装 .NET 10 Desktop Runtime |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XinSpectDeploy.exe) | 29,696 bytes | 一键安装器。第一层选装什么：A 装主程序（GUI）、B 装曦览终端机；第二层 1/2/3 选下载来源（GitHub／Drive／加速节点）；下载时显示进度条、速度与剩余时间 |
 | [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.24/XsRegProbe.sys) | 24,064 bytes | XsRegProbe 内核探测驱动（白名单只读 MSR／MMIO，全案审查唯一「优秀」级）。本版重编译版**含槽位基底修正**（槽位从请求头 +8 开始——第三轮严查发现，v3.18 的 .sys 为修正前）。未微软签章：主程序以提权会话安装到 `ProgramData\XinSpect\Driver\` 并建服务；手动加载需测试签名环境（testsigning） |
 

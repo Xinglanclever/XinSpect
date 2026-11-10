@@ -67,12 +67,12 @@ public static class SpdConsistencyAuditService
 
     public static CurrentMemoryTimingEvidence? FromCurrentTimings(MemoryTimings? timings)
     {
-        if (timings is null || !timings.Loaded) return null;
+        if (timings is null || !timings.Loaded || timings.IsJedecReference) return null;
         int? rate = ParseSpeedMTs(timings.DataRateText);
         if (rate is null && timings.DramFrequencyMHz > 0)
             rate = (int)Math.Round(timings.DramFrequencyMHz * 2 / 10.0) * 10;
         return new CurrentMemoryTimingEvidence(
-            "CPU-Z 目前時序（全機）",
+            string.IsNullOrWhiteSpace(timings.SourceText) ? "目前時序（來源未標示）" : timings.SourceText,
             NonGeneric(timings.MemoryTypeText),
             rate,
             NonGeneric(timings.PrimaryTimingsText));
