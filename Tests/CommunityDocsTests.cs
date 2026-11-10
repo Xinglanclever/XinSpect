@@ -96,6 +96,11 @@ public class CommunityDocsTests
         Assert.True(m.Success, "ci.yml 找不到「全套 X,XXX 條」的註解");
         Assert.True(m.Groups[1].Value == n,
             $"ci.yml 寫 {m.Groups[1].Value} 條，但基線是 {n} 條");
+
+        string full = text[text.IndexOf("  full-regression:", StringComparison.Ordinal)..];
+        Assert.Contains("dotnet build Tests\\XinSpect.Tests.csproj", full, StringComparison.Ordinal);
+        Assert.Equal(2, Regex.Matches(full, @"-p:OutputPath=bin/CiFull_\$\{\{ github\.run_id \}\}/").Count);
+        Assert.DoesNotContain("Stop-Process", full, StringComparison.Ordinal);
     }
 
     // ── 真守門：CI 的過濾字串不得靜默地什麼都沒跑到 ─────────────────────────
