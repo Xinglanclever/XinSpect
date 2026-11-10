@@ -62,6 +62,14 @@ public sealed class EvidenceLabIntegrationTests
     public void 同型號多顯卡不會產生重複快照鍵()
     {
         var vm = SampleVm();
+        var duplicate = new HardwareFact("st.ss.summary", "儲存", "儲存池", "已回報", "", "測試",
+            FactTrustLevel.Reported, false, DateTimeOffset.UtcNow);
+        typeof(EvidenceLabService).GetProperty(nameof(EvidenceLabService.NetworkSystemInventoryFacts))!
+            .SetValue(vm.EvidenceLab, new[] { duplicate });
+        typeof(EvidenceLabService).GetProperty(nameof(EvidenceLabService.StorageDeepFacts))!
+            .SetValue(vm.EvidenceLab, new[] { duplicate });
+        vm.EvidenceLab.LoadKnowledgePack();
+        Assert.NotEmpty(vm.EvidenceLab.ComplianceFacts);
         vm.GpuDetails =
         [
             new GpuDetail { Name = "Same GPU", VendorId = "10DE", ModelId = "1234", RevisionId = "A1" },

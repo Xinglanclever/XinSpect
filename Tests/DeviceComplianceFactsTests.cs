@@ -55,6 +55,15 @@ public class DeviceComplianceFactsTests
         Assert.Equal(1, e.Met);
         Assert.Equal(1, e.Unresolved);
         Assert.Contains(e.Detail, d => d.RequirementId == "C-2" && !d.Met && d.Reason.Contains("鍵表可能改版"));
+
+        var indexed = DeviceComplianceFactsService.IndexUnambiguousFacts(
+            [Good("in.self"), Good("st.ss.summary"), Bad("st.ss.summary", FactAvailability.ReadError)]);
+        Assert.Single(indexed);
+        var ambiguous = DeviceComplianceFactsService.Evaluate("2026-10-01",
+            new Dictionary<string, string> { ["C-1"] = "in.self", ["C-2"] = "st.ss.summary" }, indexed);
+        Assert.Equal(1, ambiguous.Met);
+        Assert.Equal(1, ambiguous.Unresolved);
+        Assert.Contains(ambiguous.Detail, d => d.RequirementId == "C-2" && !d.Met && d.Reason.Contains("重複"));
     }
 
     [Fact]

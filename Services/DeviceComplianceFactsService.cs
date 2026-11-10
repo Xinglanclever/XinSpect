@@ -53,6 +53,12 @@ public static class DeviceComplianceFactsService
         string SnapshotDate, int Total, int Met, int Unresolved,
         IReadOnlyList<RequirementResult> Detail);
 
+    /// <summary>重複鍵的證據有歧義，不任選來源，也不讓字典建構中斷整份評估。</summary>
+    internal static IReadOnlyDictionary<string, HardwareFact> IndexUnambiguousFacts(IEnumerable<HardwareFact> facts)
+        => facts.GroupBy(f => f.Key, StringComparer.Ordinal)
+            .Where(g => g.Count() == 1)
+            .ToDictionary(g => g.Key, g => g.Single(), StringComparer.Ordinal);
+
     /// <summary>
     /// 評估一份合規清單。<paramref name="requirements"/> 是「要求識別碼 → 事實鍵」；
     /// <paramref name="facts"/> 是本輪事實（用來查值）。
@@ -72,7 +78,7 @@ public static class DeviceComplianceFactsService
             if (!facts.TryGetValue(key, out var fact))
             {
                 unresolved++;
-                detail.Add(new RequirementResult(id, false, $"找不到事實鍵 {key}（鍵表可能改版）——不算符合"));
+                detail.Add(new RequirementResult(id, false, $"找不到唯一的事實鍵 {key}（來源缺失、重複或鍵表可能改版）——不算符合"));
                 continue;
             }
             if (fact.Availability != FactAvailability.Present)

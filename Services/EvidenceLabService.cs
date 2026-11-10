@@ -137,7 +137,7 @@ public sealed class EvidenceLabService : ObservableObject
         ComplianceFacts = DeviceComplianceFactsService.Collect(
             at,
             KnowledgePackService.Load(KnowledgePackService.DefaultPath).Pack,
-            AllFacts.ToDictionary(f => f.Key, f => f, StringComparer.Ordinal));
+            DeviceComplianceFactsService.IndexUnambiguousFacts(AllFacts));
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
