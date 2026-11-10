@@ -80,7 +80,8 @@ internal static class HardwareReadingPriority
             return read(source);
         }
         var frequency = new[] { current, wmi, report, direct }
-            .FirstOrDefault(t => t is not null && Positive(t.DramFrequencyMHz));
+            .FirstOrDefault(t => t is not null && (Positive(t.DramFrequencyMHz)
+                || t.DramFrequencyMHz == 0 && Known(t.DataRateText)));
         var result = new MemoryTimings
         {
             Loaded = timing?.Loaded == true,

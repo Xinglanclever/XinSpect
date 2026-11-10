@@ -155,7 +155,8 @@ public class HardwareReadingPriorityTests
     {
         var result = StartupSequence.BuildWmiTimings([new MemoryModuleInfo { ConfiguredSpeedMHz = 3200 }]);
         Assert.NotNull(result);
-        Assert.StartsWith("DDR-3200", result.DataRateText);
+        Assert.StartsWith("記憶體-3200", result.DataRateText);
+        Assert.Equal(0, result.DramFrequencyMHz);
     }
 
     private static MemoryTimings Current(string source, double frequency, string cl) => new()

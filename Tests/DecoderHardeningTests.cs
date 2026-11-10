@@ -41,7 +41,7 @@ public class DecoderHardeningTests
     [Fact]
     public void 世代對照表_全收錄項逐條釘值()
     {
-        Assert.Equal("Skylake（伺服器 SP）", CpuGeneration.GenerationName(6, 0x4F));
+        Assert.Equal("Broadwell-E / Broadwell-EP（HEDT／伺服器）", CpuGeneration.GenerationName(6, 0x4F));
         Assert.Equal("Skylake-X / Cascade Lake（HEDT／伺服器）", CpuGeneration.GenerationName(6, 0x55));
         Assert.Equal("Skylake（用戶端）", CpuGeneration.GenerationName(6, 0x5E));
         Assert.Contains("Kaby Lake", CpuGeneration.GenerationName(6, 0x8E));
