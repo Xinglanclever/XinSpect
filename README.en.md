@@ -258,9 +258,9 @@ hardware / firmware / OS ──► fact collection (*FactsService)
 
 | File | Size | Purpose |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpect.exe) | 35.66 MB | Main program (Blue Squadron guard included) |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole.exe) | 100,440,381 bytes | XinSpect Console (CLI). Runs standalone and is also launched by the main program's console bridge; larger because it bundles the .NET 10 runtime (for Windows 11 / Server 2025) |
-| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole-legacy.exe) | 100,440,469 bytes | XinSpect Console (CLI) **plain-text legacy build** for Windows 10 / Windows Server 2016, 2019, 2022 - no colors, no box positioning; the facts/book/help features are identical |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpect.exe) | 38.08 MB | Main program (Blue Squadron guard included) |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole.exe) | 100,440,723 bytes | XinSpect Console (CLI). Runs standalone and is also launched by the main program's console bridge; larger because it bundles the .NET 10 runtime (for Windows 11 / Server 2025) |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole-legacy.exe) | 100,440,811 bytes | XinSpect Console (CLI) **plain-text legacy build** for Windows 10 / Windows Server 2016, 2019, 2022 - no colors, no box positioning; the facts/book/help features are identical |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/BlueSquadronBridge.exe) | 6.5 MB | Standalone guard process |
 | [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpect-full.exe) | 210,848,082 bytes | Main program, bundled-runtime build: ships the .NET 10 Desktop Runtime, nothing to install (same features as XinSpect.exe) |
 | [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole-nort.exe) | 66,138,776 bytes | XinSpect Console, Windows 11 / Server 2025, no runtime: requires .NET 10 Desktop Runtime |

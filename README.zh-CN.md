@@ -473,8 +473,8 @@ README 这种文档最容易腐坏的地方是「规模描述」——写「数�
 | 文件 | 大小 | 用途 |
 |---|---|---|
 | [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpect.exe) | 38,081,835 bytes | 主程序。蓝色中队守护进程已内置 |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole.exe) | 100,440,381 bytes | 曦览终端机（CLI）。可独立执行，也被主程序强控台唤起；自含 .NET 10 执行阶段故体积较大（Windows 11／Server 2025 用） |
-| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole-legacy.exe) | 100,440,469 bytes | 曦览终端机（CLI）**纯文字兼容版**：给 Windows 10／Windows Server 2016、2019、2022 的传统控制台——无色彩、无框线定位，其余功能（facts／book／help）相同 |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole.exe) | 100,440,723 bytes | 曦览终端机（CLI）。可独立执行，也被主程序强控台唤起；自含 .NET 10 执行阶段故体积较大（Windows 11／Server 2025 用） |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole-legacy.exe) | 100,440,811 bytes | 曦览终端机（CLI）**纯文字兼容版**：给 Windows 10／Windows Server 2016、2019、2022 的传统控制台——无色彩、无框线定位，其余功能（facts／book／help）相同 |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/BlueSquadronBridge.exe) | 6,531,620 bytes | 独立守护进程。仅在需要脱离主程序单独运行防护时使用 |
 | [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpect-full.exe) | 210,848,082 bytes | 主程序・带环境版：.NET 10 执行阶段一并打包，免装执行阶段（功能与 XinSpect.exe 相同） |
 | [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.22/XinSpectConsole-nort.exe) | 66,138,776 bytes | 曦览终端机・Windows 11／Server 2025・不带环境：需已装 .NET 10 Desktop Runtime |
