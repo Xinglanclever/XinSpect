@@ -33,6 +33,9 @@ chk "feed.xml 20 items"                     20  "$(curl -s "$BASE/feed.xml" | gr
 chk "index-en.html 200（跟隨 308 正規化）"    200 "$(curl -sL -o /dev/null -w "%{http_code}" "$BASE/index-en.html")"
 has "zh↔en hreflang 互通"                     2   "$(echo "$H" | grep -c 'hreflang="en"')"
 has "EN 頁連回 zh"                            1   "$(curl -sL "$BASE/index-en.html" | grep -c 'hreflang="zh-Hant"')"
+has "EN 頁 JSON-LD"                           2   "$(curl -sL "$BASE/index-en.html" | grep -c 'application/ld+json')"
+chk "og-en.png 200"                         200 "$(code "$BASE/og-en.png")"
+has "贊助地址複製按鈕"                        1   "$(echo "$H" | grep -c 'copyBtn')"
 chk "nosniff 頭"                            1   "$(curl -s -I "$BASE/" | grep -ci 'x-content-type-options: nosniff')"
 chk "Referrer-Policy 頭"                    1   "$(curl -s -I "$BASE/" | grep -ci 'referrer-policy')"
 

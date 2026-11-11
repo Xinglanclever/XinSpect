@@ -78,6 +78,9 @@ p code,li code{background:#efefe9;padding:2px 6px;font-size:.92em}
 footer a:hover{color:var(--ink);text-decoration:underline}
 @media(pointer:fine){html{scrollbar-width:thin;scrollbar-color:#b9b9b2 transparent}}
 @media print{.topbar,#toTop,#progress,.skip,#menuBtn{display:none!important}body{background:#fff}section{padding:24px 0}}
+.copyBtn{border:2px solid var(--ink);background:var(--paper);font-size:11px;padding:3px 10px;margin-top:6px;cursor:pointer;font-weight:700;font-family:inherit;color:var(--ink)}
+.copyBtn:hover{background:var(--ink);color:#fff}
+@media(max-width:760px){.tbl-scroll::before{content:"← 左右滑動檢視 →";display:block;font-size:11px;color:var(--grey);letter-spacing:.1em;margin-bottom:6px}}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);margin-top:56px;background:var(--paper)}
 .stats>div{padding:26px 28px;border-right:1px solid var(--line)}
 .stats>div:last-child{border-right:none}
@@ -185,7 +188,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
 
 <main id="main">
 <div class="hero"><div class="wrap">
-  <div class="kicker">READ-ONLY HARDWARE FACTS ・ v3.26 ULTIMA XXVI</div>
+  <div class="kicker" lang="en">READ-ONLY HARDWARE FACTS ・ v3.26 ULTIMA XXVI</div>
   <h1>硬體的事實，<br>不<em>編</em>故事。</h1>
   <p>曦覽是一部唯讀的 Windows 硬體事實採集器：1,178 個靜態事實鍵、69 個動態家族，讀得到就報，讀不到就老實說讀不到。單一執行檔，免安裝，附一支 Claude Code 式的終端機 xsc。</p>
   <div class="cta">
@@ -619,6 +622,25 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
 </div></footer>
 
 <button id="toTop" type="button" aria-label="回到頁首" title="回到頁首">↑</button>
+
+<script>
+(function(){
+  'use strict';
+  document.querySelectorAll('.sponsor-table td:nth-child(3) code').forEach(function(c){
+    var b=document.createElement('button');
+    b.type='button';b.className='copyBtn';b.textContent='複製';
+    b.setAttribute('aria-label','複製鏈上地址');
+    b.addEventListener('click',function(){
+      navigator.clipboard.writeText(c.textContent).then(function(){
+        b.textContent='✓ 已複製';
+        setTimeout(function(){b.textContent='複製';},1500);
+      }).catch(function(){ b.textContent='✕ 請手動框選'; });
+    });
+    c.parentNode.appendChild(b);
+  });
+})();
+</script>
+
 
 <script>
 (function(){

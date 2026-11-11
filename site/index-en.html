@@ -18,7 +18,7 @@
 <meta property="og:title" content="XinSpect — Hardware facts, not stories">
 <meta property="og:description" content="Read-only Windows hardware fact collector: 1,178 static fact keys, 157 domains, 69 dynamic families. No writes, no network. Single executable + Claude-Code-style terminal.">
 <meta property="og:url" content="https://xinspect.de5.net/index-en.html">
-<meta property="og:image" content="https://xinspect.de5.net/og.png">
+<meta property="og:image" content="https://xinspect.de5.net/og-en.png">
 <meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <style>
@@ -108,6 +108,37 @@ footer a:hover{color:var(--ink);text-decoration:underline}
 @media(max-width:760px){.grid{grid-template-columns:1fr}.dl-grid{grid-template-columns:1fr}nav{gap:14px}nav a:not(.dl),#lang{display:none}.hero{padding:56px 0 48px}.dl-card{padding:24px 22px}.cta .btn{width:100%;text-align:center}.sec-head{flex-wrap:wrap;gap:8px}.sec-head .note{margin-left:0}.pre{font-size:12px;padding:18px 16px}section{padding:52px 0}.stats{grid-template-columns:1fr 1fr}.stats>div{border-bottom:1px solid var(--line)}.stats>div:nth-child(even){border-right:none}.stats>div:nth-child(n+3){border-bottom:none}.tbl-scroll{overflow-x:auto}#log,.asset-table{min-width:560px}}
 @media print{.topbar,#toTop{display:none!important}body{background:#fff}section{padding:24px 0}}
 </style>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "XinSpect 曦覽",
+  "operatingSystem": "Windows 10 (1903+) / Windows 11, x64",
+  "applicationCategory": "UtilityApplication",
+  "softwareVersion": "3.26",
+  "dateModified": "2026-11-12",
+  "author": { "@type": "Person", "name": "Xinglanclever" },
+  "license": "https://github.com/Xinglanclever/XinSpect/blob/main/LICENSE",
+  "url": "https://xinspect.de5.net/index-en.html",
+  "downloadUrl": "https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectDeploy.exe",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Read-only Windows hardware fact collector: 1,178 static fact keys across 157 domains, 69 dynamic families. No hardware writes, no network. Single executable plus a Claude-Code-style terminal."
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    { "@type": "Question", "name": "Will XinSpect touch my hardware?", "acceptedAnswer": { "@type": "Answer", "text": "Fact collection is strictly read-only. Hardware writes require the second security tier plus per-item confirmation, and every write is automatically logged." } },
+    { "@type": "Question", "name": "Why do some pages show only a dash?", "acceptedAnswer": { "@type": "Answer", "text": "The app starts with normal privileges; sensors and direct MSR reads need administrator. Without elevation those pages honestly show a dash with reasons — the six-state degradation design." } },
+    { "@type": "Question", "name": "Does it phone home?", "acceptedAnswer": { "@type": "Answer", "text": "Fact collection is entirely local with no network. The AI page is optional; its API key is DPAPI-encrypted on disk." } },
+    { "@type": "Question", "name": "Is it free for commercial use?", "acceptedAnswer": { "@type": "Answer", "text": "Dual licensing with identical features: AGPL-3.0-or-later is free including commercial use; closed-source integration uses the commercial license." } },
+    { "@type": "Question", "name": "Which systems are supported?", "acceptedAnswer": { "@type": "Answer", "text": "Windows 10 1903+ and Windows 11, x64. The terminal also ships a plain-console build for Windows Server 2016, 2019 and 2022." } }
+  ]
+}
+</script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
