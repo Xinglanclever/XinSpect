@@ -19,6 +19,7 @@
 <meta property="og:description" content="Read-only Windows hardware fact collector: 1,178 static fact keys, 157 domains, 69 dynamic families. No writes, no network. Single executable + Claude-Code-style terminal.">
 <meta property="og:url" content="https://xinspect.de5.net/index-en.html">
 <meta property="og:image" content="https://xinspect.de5.net/og-en.png">
+<meta property="og:image:alt" content="XinSpect — Hardware facts, not stories">
 <meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <style>
@@ -115,6 +116,9 @@ footer{border-top:3px solid var(--ink);padding:40px 0 60px;color:var(--grey);fon
 footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
 footer a:hover{color:var(--ink);text-decoration:underline}
 @media(max-width:760px){.grid{grid-template-columns:1fr}.dl-grid{grid-template-columns:1fr}nav{gap:14px}nav a:not(.dl),#lang{display:none}.hero{padding:56px 0 48px}.dl-card{padding:24px 22px}.cta .btn{width:100%;text-align:center}.sec-head{flex-wrap:wrap;gap:8px}.sec-head .note{margin-left:0}.pre{font-size:12px;padding:18px 16px}section{padding:52px 0}.stats{grid-template-columns:1fr 1fr}.stats>div{border-bottom:1px solid var(--line)}.stats>div:nth-child(even){border-right:none}.stats>div:nth-child(n+3){border-bottom:none}.tbl-scroll{overflow-x:auto}#log,.asset-table{min-width:560px}}
+[id]{scroll-margin-top:76px}
+.star{display:inline-flex;align-items:center;gap:5px}
+.star b{color:var(--ink)}
 @media print{.topbar,#toTop{display:none!important}body{background:#fff}section{padding:24px 0}}
 </style>
 
@@ -491,7 +495,7 @@ footer a:hover{color:var(--ink);text-decoration:underline}
 
 <footer><div class="wrap">
   <div>XinSpect 曦覽 ・ read-only hardware fact collector ・ © 2026 Xinglanclever</div>
-  <div><a rel="noopener" href="https://github.com/Xinglanclever/XinSpect">GitHub</a> ・ <a href="#faq">FAQ</a> ・ <a href="#security">Security</a> ・ <a href="feed.xml">RSS</a> ・ <a href="/">繁體中文</a></div>
+  <div><a rel="noopener" href="https://github.com/Xinglanclever/XinSpect">GitHub</a> ・ <span class="star" id="gh-star"></span> ・ <a href="#faq">FAQ</a> ・ <a href="#security">Security</a> ・ <a href="feed.xml">RSS</a> ・ <a href="/">繁體中文</a></div>
 </div></footer>
 
 <button id="toTop" type="button" aria-label="Back to top" title="Back to top" style="position:fixed;right:22px;bottom:22px;border:2px solid var(--ink);background:var(--paper);width:46px;height:46px;font-size:18px;font-weight:700;cursor:pointer;display:none;z-index:20;color:var(--ink)">↑</button>
@@ -563,6 +567,25 @@ footer a:hover{color:var(--ink);text-decoration:underline}
     toTop.style.display = document.documentElement.scrollTop > 600 ? 'block' : 'none';
   }, { passive: true });
   toTop.addEventListener('click', function(){ scrollTo({ top: 0, behavior: 'smooth' }); });
+  /* '/' focuses the release filter */
+  addEventListener('keydown',function(e){
+    if(e.key==='/' && !/^(INPUT|TEXTAREA|BUTTON|SUMMARY)$/.test(document.activeElement.tagName)){
+      var f=document.getElementById('log-q'); if(f){ e.preventDefault(); f.focus(); f.scrollIntoView({block:'center'}); }
+    }
+  });
+  /* GitHub 星標（sessionStorage 快取一小時） */
+  var st=document.getElementById('gh-star');
+  if(st){
+    var c=sessionStorage.getItem('xs-star');
+    var put=function(n){ st.innerHTML='★ <b>'+n+'</b>'; };
+    if(c){ try{ var o=JSON.parse(c); if(Date.now()-o.t<3600000) put(o.n); }catch(e){} }
+    else {
+      fetch('https://api.github.com/repos/Xinglanclever/XinSpect')
+        .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+        .then(function(o){ var n=o.stargazers_count; sessionStorage.setItem('xs-star',JSON.stringify({t:Date.now(),n:n})); put(n); })
+        .catch(function(){});
+    }
+  }
 })();
 </script>
 

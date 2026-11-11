@@ -24,6 +24,7 @@
 <meta property="og:description" content="唯讀的 Windows 硬體事實採集器：1,178 個靜態事實鍵、69 個動態家族，不寫硬體、不連網。單一執行檔免安裝，附 Claude Code 式終端機 xsc。">
 <meta property="og:url" content="https://xinspect.de5.net/">
 <meta property="og:image" content="https://xinspect.de5.net/og.png">
+<meta property="og:image:alt" content="曦覽 XinSpect — 硬體的事實，不編故事">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:locale" content="zh_Hant">
@@ -78,6 +79,9 @@ a{color:inherit;text-decoration:none}
 p code,li code{background:#efefe9;padding:2px 6px;font-size:.92em}
 footer a:hover{color:var(--ink);text-decoration:underline}
 @media(pointer:fine){html{scrollbar-width:thin;scrollbar-color:#b9b9b2 transparent}}
+[id]{scroll-margin-top:76px}
+.star{display:inline-flex;align-items:center;gap:5px}
+.star b{color:var(--ink)}
 @media print{.topbar,#toTop,#progress,.skip,#menuBtn{display:none!important}body{background:#fff}section{padding:24px 0}}
 .copyBtn{border:2px solid var(--ink);background:var(--paper);font-size:11px;padding:3px 10px;margin-top:6px;cursor:pointer;font-weight:700;font-family:inherit;color:var(--ink)}
 .copyBtn:hover{background:var(--ink);color:#fff}
@@ -564,7 +568,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
 
 <footer><div class="wrap">
   <div>曦覽 XinSpect ・ 唯讀硬體事實採集器 ・ © 2026 Xinglanclever</div>
-  <div><a rel="noopener" href="https://github.com/Xinglanclever/XinSpect">GitHub</a> ・ <a href="#domains">事實域</a>
+  <div><a rel="noopener" href="https://github.com/Xinglanclever/XinSpect">GitHub</a> ・ <span class="star" id="gh-star"></span> ・ <a href="#domains">事實域</a>
     <a href="#faq">常見問</a> ・ <a href="#security">安全</a> ・ <a href="feed.xml">RSS</a> ・ <a hreflang="en" href="index-en.html">English</a> ・ <a href="#license">授權</a> ・ <a href="#license">聯絡</a></div>
 </div></footer>
 
@@ -770,6 +774,25 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
       mb.textContent = '☰';
     });
   });
+  /* ‘/’聚焦沿革篩選框 */
+  addEventListener('keydown',function(e){
+    if(e.key==='/' && !/^(INPUT|TEXTAREA|BUTTON|SUMMARY)$/.test(document.activeElement.tagName)){
+      var f=document.getElementById('log-q'); if(f){ e.preventDefault(); f.focus(); f.scrollIntoView({block:'center'}); }
+    }
+  });
+  /* GitHub 星標（sessionStorage 快取一小時） */
+  var st=document.getElementById('gh-star');
+  if(st){
+    var c=sessionStorage.getItem('xs-star');
+    var put=function(n){ st.innerHTML='★ <b>'+n+'</b>'; };
+    if(c){ try{ var o=JSON.parse(c); if(Date.now()-o.t<3600000) put(o.n); }catch(e){} }
+    else {
+      fetch('https://api.github.com/repos/Xinglanclever/XinSpect')
+        .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+        .then(function(o){ var n=o.stargazers_count; sessionStorage.setItem('xs-star',JSON.stringify({t:Date.now(),n:n})); put(n); })
+        .catch(function(){});
+    }
+  }
 })();
 </script>
 
