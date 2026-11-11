@@ -2,10 +2,12 @@
 <rss version="2.0"><channel>
   <title>曦覽 XinSpect 版本沿革</title>
   <link>https://xinspect.de5.net/</link>
-  <description>唯讀的 Windows 硬體事實採集器——版本更新紀錄（最新 20 筆，全程 131 筆見官網）</description>
+  <description>唯讀的 Windows 硬體事實採集器——版本更新紀錄（最新 20 筆，全程見官網）</description>
+  <language>zh-Hant</language>
+  <generator>XinSpect site tools (Tools/gen-site-data.py)</generator>
   <lastBuildDate>2026-11-12T00:00:00Z</lastBuildDate>
     <item>
-      <title>3.26 — DIMM SPD 偵測與來源診斷修正</title>
+      <title>3.26 — DIMM SPD 與核心映射修正、審計口徑核實</title>
       <link>https://xinspect.de5.net/#log-v3.26</link>
       <guid isPermaLink="false">xinspect-3.26</guid>
       <pubDate>2026-11-12T00:00:00Z</pubDate>
@@ -124,6 +126,4 @@
       <guid isPermaLink="false">xinspect-3.06</guid>
       <pubDate>2026-10-31T00:00:00Z</pubDate>
     </item>
-  <language>zh-Hant</language>
-  <generator>XinSpect site tools (Tools/gen-site-data.py)</generator>
 </channel></rss>

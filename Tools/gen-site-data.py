@@ -39,9 +39,33 @@ feed = (
     '<rss version="2.0"><channel>\n'
     "  <title>曦覽 XinSpect 版本沿革</title>\n"
     "  <link>https://xinspect.de5.net/</link>\n"
-    "  <description>唯讀的 Windows 硬體事實採集器——版本更新紀錄（最新 20 筆，全程 131 筆見官網）</description>\n"
+    "  <description>唯讀的 Windows 硬體事實採集器——版本更新紀錄（最新 20 筆，全程見官網）</description>\n"
+    "  <language>zh-Hant</language>\n"
+    "  <generator>XinSpect site tools (Tools/gen-site-data.py)</generator>\n"
     f"  <lastBuildDate>{escape(latest['date'] or '1970-01-01')}T00:00:00Z</lastBuildDate>\n"
     + "\n".join(items) + "\n</channel></rss>\n"
 )
 (SITE / "feed.xml").write_text(feed, encoding="utf-8", newline="\n")
 print(f"changelog.json: {len(entries)} entries (latest {latest['v']}); feed.xml: 20 items")
+
+# ── site/factkeys.json：157 域 → 全部鍵名（點域片彈出全域鍵表）──
+import collections
+cat = (ROOT / "Services" / "FactKeyCatalog.cs").read_text(encoding="utf-8-sig")
+seg = cat[cat.index("Keys { get; }"):]
+import re as _re
+mk = _re.search(r"=\s*\[(.*?)\];", seg, _re.S)
+allkeys = _re.findall(r'"([a-z][a-z0-9]*(?:\.[a-z0-9_]+)+)"', mk.group(1))
+byd = collections.defaultdict(list)
+for k in sorted(set(allkeys)):
+    byd[k.split(".")[0]].append(k)
+doms_sorted = sorted(byd.items(), key=lambda x: (-len(x[1]), x[0]))
+fk = {
+    "total": len(set(allkeys)),
+    "domainCount": len(doms_sorted),
+    "domains": [{"d": d, "n": len(ks), "keys": ks} for d, ks in doms_sorted],
+}
+(SITE / "factkeys.json").write_text(
+    json.dumps(fk, ensure_ascii=False, separators=(",", ":")) + chr(10),
+    encoding="utf-8", newline="\n")
+print(f"factkeys.json: {fk['total']} keys / {fk['domainCount']} domains")
+

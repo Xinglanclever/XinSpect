@@ -101,6 +101,16 @@ footer a:hover{color:var(--ink);text-decoration:underline}
 .faq summary::after{content:"+";color:var(--red);font-weight:700;flex:none}
 .faq details[open] summary::after{content:"−"}
 .faq .a{padding:0 26px 22px;font-size:14px;color:#555;max-width:760px}
+.dom span{cursor:pointer}
+.dom span:hover{border-color:var(--ink)}
+#keydlg::backdrop{background:rgba(17,17,17,.55)}
+.krow{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+.krow code{flex:1;overflow-wrap:anywhere;font-size:12.5px;background:none;padding:0}
+.krow .copyBtn{margin-top:0}
+.knone{color:var(--grey);font-size:13px;padding:12px 0}
+.copyBtn{border:2px solid var(--ink);background:var(--paper);font-size:11px;padding:3px 10px;margin-top:6px;cursor:pointer;font-weight:700;font-family:inherit;color:var(--ink)}
+.copyBtn:hover{background:var(--ink);color:#fff}
+
 .states{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:14px}
 .states>div{background:var(--paper);padding:16px 12px;text-align:center}
 .states code{font-size:13px;font-weight:700}
@@ -412,7 +422,8 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
 
 <section id="domains" style="border-top:1px solid var(--line)"><div class="wrap">
   <div class="sec-head"><span class="sq"></span><h2>事實域分布</h2><span class="note">157 域 ・ 1,178 把鍵 ・ 由源碼逐鍵複算</span></div>
-  <p style="font-size:14px;color:#555;max-width:760px;margin-bottom:22px">每把鍵的第一段就是它的域。157 個域全部列出，數字是各域收錄的鍵數——紅框是收錄最多的 15 個主戰場域，只有一把的域也如實列出，不藏。</p>
+  <p style="font-size:14px;color:#555;max-width:760px;margin-bottom:14px">每把鍵的第一段就是它的域。157 個域全部列出，數字是各域收錄的鍵數——紅框是收錄最多的 15 個主戰場域，只有一把的域也如實列出，不藏。<b>點任何一個域片，看該域的全部鍵名。</b></p>
+  <button type="button" id="keyall" class="btn ghost" style="padding:8px 16px;font-size:12px">搜全部 1,178 把鍵</button>
   <div class="dom">
     <span class="hot"><code>ac</code><b>61</b></span>
 <span class="hot"><code>sb</code><b>53</b></span>
@@ -654,6 +665,15 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
     .catch(function(){});
 })();
 </script>
+<dialog id="keydlg" aria-labelledby="keytitle" style="border:2px solid var(--ink);background:var(--paper);color:var(--ink);padding:22px 24px;max-width:640px;width:calc(100vw - 48px)">
+  <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px">
+    <h3 id="keytitle" style="font-size:18px">域</h3>
+    <span id="keycount" style="font-size:12px;color:var(--grey)"></span>
+    <button type="button" id="keyclose" class="btn ghost" style="margin-left:auto;padding:6px 14px;font-size:12px">關閉 ESC</button>
+  </div>
+  <input id="keyfilter" type="search" placeholder="篩選鍵名…" aria-label="篩選鍵名" autocomplete="off" style="border:2px solid var(--ink);padding:9px 12px;font-size:13px;width:100%;background:var(--paper);font-family:inherit;margin-bottom:10px">
+  <div id="keylist" style="max-height:60vh;overflow:auto;border-top:2px solid var(--ink);padding-top:8px"></div>
+</dialog>
 </main>
 
 <footer><div class="wrap">
@@ -822,5 +842,6 @@ addEventListener('beforeprint',function(){
   document.querySelectorAll('.faq details').forEach(function(d){ d.open=true; });
 });
 </script>
+<script src="dict.js"></script>
 </body>
 </html>
