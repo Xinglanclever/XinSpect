@@ -4,7 +4,7 @@
 
 > ## 🌐 [官方網站：xinspect.de5.net ↗](https://xinspect.de5.net)
 >
-> **首頁 · xsc 終端機 · 下載 · 版本沿革** —— 瑞士現代主義風格的一頁站，自訂網域 [xinspect.de5.net](https://xinspect.de5.net)。
+> **首頁 · xsc 終端機 · 下載 · 版本沿革** —— 瑞士現代主義風格的雙語站（繁中＋English），自訂網域 [xinspect.de5.net](https://xinspect.de5.net)。
 > 網站只呈現說明，**不會掃描你的電腦**，也不需要任何安裝。
 
 **可翻閱版（自足 HTML，含目錄與錨點，離線可讀）：[百科.html](百科.html) ・ [手冊.html](手冊.html)**

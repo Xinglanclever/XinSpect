@@ -38,6 +38,11 @@ chk "og-en.png 200"                         200 "$(code "$BASE/og-en.png")"
 for img in shot-xsc-facts shot-xsc-sys shot-xsc-book; do
   chk "截圖 $img.png 200"                    200 "$(code "$BASE/$img.png")"
 done
+has "錨點 scroll-margin 修復"                   1   "$(echo "$H" | grep -c 'scroll-margin-top')"
+has "‘/’篩選快捷鍵（zh）"                      1   "$(echo "$H" | grep -c "e.key==='/'")"
+has "GitHub 星標徽章（zh）"                     1   "$(echo "$H" | grep -c 'gh-star')"
+has "EN 贊助區塊（含複製按鈕目標）"            1   "$(curl -sL "$BASE/index-en.html" | grep -c 'sponsor-table')"
+has "GitHub 星標徽章（en）"                     1   "$(curl -sL "$BASE/index-en.html" | grep -c 'gh-star')"
 has "贊助地址複製按鈕"                        1   "$(echo "$H" | grep -c 'copyBtn')"
 has "CSP 頭"                                1   "$(curl -s -I "$BASE/" | grep -ci 'content-security-policy')"
 _D="obj/_v_changelog.json"; _F="obj/_v_feed.xml"; curl -s "$BASE/changelog.json" > "$_D"; curl -s "$BASE/feed.xml" > "$_F"
