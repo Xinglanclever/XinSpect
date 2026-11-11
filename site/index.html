@@ -588,7 +588,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
 <section id="changelog"><div class="wrap">
   <div class="sec-head"><span class="sq"></span><h2>最近的更新</h2><span class="note" id="log-count">131 筆全程可考</span></div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
-    <input id="log-q" type="search" placeholder="篩選版本或內容…（按 / 跳到這裡）" aria-label="篩選更新紀錄" autocomplete="off" style="border:2px solid var(--ink);padding:10px 14px;font-size:14px;width:min(360px,100%);background:var(--paper);font-family:inherit">
+    <input id="log-q" type="search" placeholder="篩選版本或內容…（按 c 跳到這裡）" aria-label="篩選更新紀錄" autocomplete="off" style="border:2px solid var(--ink);padding:10px 14px;font-size:14px;width:min(360px,100%);background:var(--paper);font-family:inherit">
     <button id="log-more" type="button" class="btn ghost" style="padding:10px 18px;font-size:13px;display:none">展開全部</button>
   </div>
   <p id="log-status" class="vh" role="status" aria-live="polite"></p>
@@ -669,6 +669,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
   <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px">
     <h3 id="keytitle" style="font-size:18px">域</h3>
     <span id="keycount" style="font-size:12px;color:var(--grey)"></span>
+    <button type="button" id="keycopyall" class="btn ghost" style="padding:6px 14px;font-size:12px">複製清單</button>
     <button type="button" id="keyclose" class="btn ghost" style="margin-left:auto;padding:6px 14px;font-size:12px">關閉 ESC</button>
   </div>
   <input id="keyfilter" type="search" placeholder="篩選鍵名…" aria-label="篩選鍵名" autocomplete="off" style="border:2px solid var(--ink);padding:9px 12px;font-size:13px;width:100%;background:var(--paper);font-family:inherit;margin-bottom:10px">

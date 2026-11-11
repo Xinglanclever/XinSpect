@@ -71,6 +71,24 @@
     if (allBtn) allBtn.addEventListener('click', openAll);
     filterEl.addEventListener('input', render);
     var closeBtn = document.getElementById('keyclose');
+    var copyAllBtn = document.getElementById('keycopyall');
+    if (copyAllBtn) copyAllBtn.addEventListener('click', function(){
+      var q=(filterEl.value||'').trim().toLowerCase();
+      var rows=current.filter(function(k){return !q||k.indexOf(q)>-1;});
+      if(!rows.length) return;
+      navigator.clipboard.writeText(rows.join('\n')).then(function(){
+        copyAllBtn.textContent = label('✓ 已複製 '+rows.length+' 行','✓ Copied '+rows.length);
+        setTimeout(function(){ copyAllBtn.textContent = label('複製清單','Copy list'); },1500);
+      }).catch(function(){});
+    });
+    /* ‘/’全域鍵搜尋；‘c’聚焦沿革篩選 */
+    addEventListener('keydown',function(e){
+      if(/^(INPUT|TEXTAREA|BUTTON|SUMMARY)$/.test(document.activeElement.tagName)) return;
+      if(e.key==='/'){ e.preventDefault(); openAll(); }
+      if(e.key==='c'||e.key==='C'){
+        var f=document.getElementById('log-q'); if(f){ f.focus(); f.scrollIntoView({block:'center'}); }
+      }
+    });
     if (closeBtn) closeBtn.addEventListener('click', function () { dlg.close(); });
     dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
     listEl.addEventListener('click', function (e) {
