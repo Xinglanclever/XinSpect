@@ -11,6 +11,7 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://github.com">
 <link rel="preconnect" href="https://objects.githubusercontent.com">
+<link rel="preload" href="changelog.json" as="fetch">
 <link rel="mask-icon" href="favicon.svg" color="#E30613">
 <link rel="manifest" href="site.webmanifest">
 <meta property="og:type" content="website">
@@ -33,8 +34,8 @@
   "name": "曦覽 XinSpect",
   "operatingSystem": "Windows 10 (1903+) / Windows 11, x64",
   "applicationCategory": "UtilityApplication",
-  "softwareVersion": "3.25",
-  "dateModified": "2026-11-11",
+  "softwareVersion": "3.26",
+  "dateModified": "2026-11-12",
   "author": { "@type": "Person", "name": "Xinglanclever" },
   "license": "https://github.com/Xinglanclever/XinSpect/blob/main/LICENSE",
   "url": "https://xinspect.de5.net/",
@@ -162,18 +163,19 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
     <a href="#faq">常見問</a>
     <a href="#security">安全</a>
     <a href="#changelog">更新</a>
-    <a class="dl" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectDeploy.exe">下載 v3.25</a>
+    <a class="dl" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectDeploy.exe">下載 v3.26</a>
     <button id="menuBtn" type="button" aria-expanded="false" aria-controls="main" aria-label="開合導覽選單">☰</button>
   </nav>
 </div><div id="progress" aria-hidden="true"></div></header>
 
 <main id="main">
 <div class="hero"><div class="wrap">
-  <div class="kicker">READ-ONLY HARDWARE FACTS ・ v3.25 ULTIMA XXV</div>
+  <div class="kicker">READ-ONLY HARDWARE FACTS ・ v3.26 ULTIMA XXVI</div>
   <h1>硬體的事實，<br>不<em>編</em>故事。</h1>
   <p>曦覽是一部唯讀的 Windows 硬體事實採集器：1,178 個靜態事實鍵、69 個動態家族，讀得到就報，讀不到就老實說讀不到。單一執行檔，免安裝，附一支 Claude Code 式的終端機 xsc。</p>
   <div class="cta">
     <a class="btn red" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectDeploy.exe">↓ 下載部署器（推薦）</a>
+    <a class="btn ghost" href="#faq">先看常見問題</a>
   </div>
   <p style="margin-top:18px;color:#555;font-size:14px;max-width:640px">下載 29 KB 的部署器就等於下載了整個曦覽——A 裝主程式、B 裝終端機，三個下載來源可切換，下載完自動驗證再落地。詳細能部署什麼，見下方下載節。</p>
   <div class="badges">
@@ -184,7 +186,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
     <div role="listitem"><div class="n">1,178</div><div class="l">靜態事實鍵</div></div>
     <div role="listitem"><div class="n"><i>69</i></div><div class="l">動態家族 ・ 157 事實域</div></div>
     <div role="listitem"><div class="n">65</div><div class="l">個可到達畫面</div></div>
-    <div role="listitem"><div class="n"><i>130</i></div><div class="l">筆沿革全程可考</div></div>
+    <div role="listitem"><div class="n"><i>131</i></div><div class="l">筆沿革全程可考</div></div>
   </div>
 </div></div>
 
@@ -199,10 +201,10 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
 
 <section id="xsc"><div class="wrap">
   <div class="sec-head"><span class="sq"></span><h2>xsc — 像 Claude Code 一樣操作你的機器</h2><span class="note">SWISS TERMINAL</span></div>
-  <pre class="pre" role="img" aria-label="xsc 終端機示範畫面：唯讀、不寫硬體、不連網，v3.25，快速開始列出 facts、sys、pages、help 指令"><span class="c">$ xsc</span>
+  <pre class="pre" role="img" aria-label="xsc 終端機示範畫面：唯讀、不寫硬體、不連網，v3.26，快速開始列出 facts、sys、pages、help 指令"><span class="c">$ xsc</span>
 ┌──────────────────────────────────────────────────────────────────┐
   <span class="r">▌✻</span> <b>曦覽終端機</b> <span class="c">XINSPECT CONSOLE</span>
-  <span class="r"> 唯讀 </span> <span class="r"> 不寫硬體 </span> <span class="r"> 不連網 </span>    <b>v3.25</b>
+  <span class="r"> 唯讀 </span> <span class="r"> 不寫硬體 </span> <span class="r"> 不連網 </span>    <b>v3.26</b>
   <b>快速開始</b>
     <span class="g">facts</span>        採集本機硬體事實（一切查詢的底料）
     <span class="g">sys</span> / <span class="g">top 2</span>    即時一行／持續刷新表
@@ -214,7 +216,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
 </div></section>
 
 <section id="dl" style="border-top:1px solid var(--line)"><div class="wrap">
-  <div class="sec-head"><span class="sq"></span><h2>下載</h2><span class="note">v3.25 ・ ULTIMA XXV ・ 2026-11-11</span></div>
+  <div class="sec-head"><span class="sq"></span><h2>下載</h2><span class="note">v3.26 ・ ULTIMA XXVI ・ 2026-11-12</span></div>
   <div class="dl-card" style="border-top:4px solid var(--red);padding:40px 44px">
     <h3 style="font-size:26px">XinSpectDeploy.exe</h3>
     <div class="tag">一鍵安裝器 ・ 官方唯一推薦入口 ・ 29 KB ・ 免安裝</div>
@@ -299,7 +301,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
 </div></section>
 
 <section id="changelog"><div class="wrap">
-  <div class="sec-head"><span class="sq"></span><h2>最近的更新</h2><span class="note" id="log-count">130 筆全程可考</span></div>
+  <div class="sec-head"><span class="sq"></span><h2>最近的更新</h2><span class="note" id="log-count">131 筆全程可考</span></div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
     <input id="log-q" type="search" placeholder="篩選版本或內容…" aria-label="篩選更新紀錄" autocomplete="off" style="border:2px solid var(--ink);padding:10px 14px;font-size:14px;width:min(360px,100%);background:var(--paper);font-family:inherit">
     <button id="log-more" type="button" class="btn ghost" style="padding:10px 18px;font-size:13px;display:none">展開全部</button>
@@ -308,6 +310,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
   <div class="tbl-scroll"><table id="log"><caption class="vh">版本更新紀錄，由 changelog.json 載入</caption><thead><tr><th scope="col">版本</th><th scope="col">日期</th><th scope="col">內容</th></tr></thead><tbody></tbody></table></div>
   <p id="log-none" style="display:none;color:var(--grey);font-size:14px;padding:18px 0">沒有符合篩選的版本。</p>
   <p id="log-err" style="display:none;color:var(--red);font-size:14px;padding:18px 0">更新紀錄載入失敗——請重新整理，或到 <a style="color:var(--blue);font-weight:700" href="https://github.com/Xinglanclever/XinSpect/releases">GitHub Releases</a> 查看沿革。</p>
+  <noscript><p style="color:var(--grey);font-size:14px;padding:18px 0">瀏覽器停用 JavaScript，沿革表格無法載入——完整版本沿革見 <a style="color:var(--blue);font-weight:700" rel="noopener" href="https://github.com/Xinglanclever/XinSpect/blob/main/Nav/ChangelogCatalog.cs">ChangelogCatalog.cs</a>（131 筆全程可考）。</p></noscript>
 </div></section>
 
 <footer><div class="wrap">

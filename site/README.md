@@ -19,11 +19,11 @@ bash Tools/verify-site.sh
 ```
 
 逐項檢查線上：200／404、SEO 標記、新節區、部署器唯一入口（直連鏈接必須為 0）、安全頭、
-changelog.json 筆數（130）與最新版號等於 `XinSpect.csproj` 的 `<Version>`。
+changelog.json 筆數（131）與最新版號等於 `XinSpect.csproj` 的 `<Version>`。
 
 ## 更新紀錄（changelog.json）
 
-由 `Nav/ChangelogCatalog.cs` 全量抽出（130 筆＝128 版號＋2 個進倉前階段，欄位順序差異已容忍）。
+由 `Nav/ChangelogCatalog.cs` 全量抽出（131 筆＝129 版號＋2 個進倉前階段，欄位順序差異已容忍）。
 每次改版號後重新生成：
 
 ```bash
@@ -36,4 +36,4 @@ python -I <gen_changelog.py>   # 腳本見當次會話工作區；抽法：逐 C
 - **下載定位**：全站唯一入口是 XinSpectDeploy.exe（部署器）；主程式與終端機的直連鏈接**刻意為零**。
 - **宣稱對帳**：1,178 靜態鍵（FactKeyCatalog）、69 動態家族（FactKeyDynamicCatalog）、157 事實域、
   65 畫面——改動前先對源碼複算，不寫沒驗證過的數字。
-- **版本稱號**：hero 的「ULTIMA〈羅馬數字〉」為站點自創，按小版本號推（3.16=XVI、3.25=XXV）。
+- **版本稱號**：hero 的「ULTIMA〈羅馬數字〉」為站點自創，按小版本號推（3.16=XVI、3.26=XXVI）。

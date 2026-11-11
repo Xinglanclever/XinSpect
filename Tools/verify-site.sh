@@ -30,7 +30,7 @@ chk "Referrer-Policy 頭"                    1   "$(curl -s -I "$BASE/" | grep -
 
 # changelog.json 對帳：筆數與最新版號須等於專案版本
 J=$(curl -s "$BASE/changelog.json?v=$RANDOM")
-chk "changelog.json 130 筆"                 130 "$(echo "$J" | python -I -c "import json,sys;print(len(json.load(sys.stdin)))")"
+CNT=$(grep -c "Version = " "$(dirname "$0")/../Nav/ChangelogCatalog.cs"); chk "changelog.json 筆數等於目錄（$CNT）" "$CNT" "$(echo "$J" | python -I -c "import json,sys;print(len(json.load(sys.stdin)))")"
 VER=$(sed -n 's/.*<Version>\(.*\)<\/Version>.*/\1/p' "$(dirname "$0")/../XinSpect.csproj" | head -1)
 chk "最新版號等於專案版本（$VER）"            "$VER" "$(echo "$J" | python -I -c "import json,sys;print(json.load(sys.stdin)[0]['v'])")"
 
