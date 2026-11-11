@@ -46,6 +46,13 @@ import json,sys,xml.etree.ElementTree as ET
 d=json.load(open(sys.argv[1],encoding='utf-8'))
 pd=ET.parse(sys.argv[2]).getroot().find('channel/item/pubDate').text
 print(1 if pd.startswith(d[0]['date'] or '1970') else 0)" "$_D" "$_F")"; rm -f "$_D" "$_F"
+# 內聯 JS 語法守衛：抓線上頁面的 script 逐一 node --check（防手編破語法）
+mkdir -p obj/_v_js
+curl -s "$BASE/?v=$RANDOM$RANDOM" > obj/_v_js/zh.html
+curl -s "$BASE/index-en.html?v=$RANDOM$RANDOM" > obj/_v_js/en.html
+chk "zh 內聯 JS 語法"  0  "$(python -I Tools/check-js.py obj/_v_js/zh.html)"
+chk "en 內聯 JS 語法"  0  "$(python -I Tools/check-js.py obj/_v_js/en.html)"
+rm -rf obj/_v_js
 chk "nosniff 頭"                            1   "$(curl -s -I "$BASE/" | grep -ci 'x-content-type-options: nosniff')"
 chk "Referrer-Policy 頭"                    1   "$(curl -s -I "$BASE/" | grep -ci 'referrer-policy')"
 
