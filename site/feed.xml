@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel>
+  <title>曦覽 XinSpect 版本沿革</title>
+  <link>https://xinspect.de5.net/</link>
+  <description>唯讀的 Windows 硬體事實採集器——版本更新紀錄（最新 20 筆，全程 131 筆見官網）</description>
+  <lastBuildDate>2026-11-12T00:00:00Z</lastBuildDate>
+    <item>
+      <title>3.26 — DIMM SPD 偵測與來源診斷修正</title>
+      <link>https://xinspect.de5.net/#log-v3.26</link>
+      <guid isPermaLink="false">xinspect-3.26</guid>
+      <pubDate>2026-11-12T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.25 — 雙級安全模式與平台靶向深測</title>
+      <link>https://xinspect.de5.net/#log-v3.25</link>
+      <guid isPermaLink="false">xinspect-3.25</guid>
+      <pubDate>2026-11-11T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.24 — 降低即時監控開銷與修正流量基準</title>
+      <link>https://xinspect.de5.net/#log-v3.24</link>
+      <guid isPermaLink="false">xinspect-3.24</guid>
+      <pubDate>2026-11-10T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.23 — 硬體解碼與證據準確度修復</title>
+      <link>https://xinspect.de5.net/#log-v3.23</link>
+      <guid isPermaLink="false">xinspect-3.23</guid>
+      <pubDate>2026-11-10T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.22 — 企業離線基準與硬體來源契約</title>
+      <link>https://xinspect.de5.net/#log-v3.22</link>
+      <guid isPermaLink="false">xinspect-3.22</guid>
+      <pubDate>2026-11-10T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.21 — 深審第二批修正版：第三輪掃掠 15 補丁落地＋審計清單收口＋卷宗合併</title>
+      <link>https://xinspect.de5.net/#log-v3.21</link>
+      <guid isPermaLink="false">xinspect-3.21</guid>
+      <pubDate>2026-11-09T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.20 — 修復建置＋全庫深審：三處建置復通、P0-4 補齊、CLI／桌面／服務層 30+ 修復</title>
+      <link>https://xinspect.de5.net/#log-v3.20</link>
+      <guid isPermaLink="false">xinspect-3.20</guid>
+      <pubDate>2026-11-08T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.18 — 審計落實版：116 條修復＋功耗誠實閘門＋按需提權</title>
+      <link>https://xinspect.de5.net/#log-v3.18</link>
+      <guid isPermaLink="false">xinspect-3.18</guid>
+      <pubDate>2026-11-07T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.17 — 終端機定稿：Claude Code 式界面、永不崩 REPL、百科嵌入</title>
+      <link>https://xinspect.de5.net/#log-v3.17</link>
+      <guid isPermaLink="false">xinspect-3.17</guid>
+      <pubDate>2026-11-05T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.16 — 強控台指令控制台＋rf.* 帶外事實域＋主題記憶修正</title>
+      <link>https://xinspect.de5.net/#log-v3.16</link>
+      <guid isPermaLink="false">xinspect-3.16</guid>
+      <pubDate>2026-11-04T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.15 — 主題記憶修正＋離線 Redfish 目錄＋迷你 HUD 重新喚醒</title>
+      <link>https://xinspect.de5.net/#log-v3.15</link>
+      <guid isPermaLink="false">xinspect-3.15</guid>
+      <pubDate>2026-11-03T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.14 — 企業證據出口：合規、Merkle、推測、CI／SIEM 與族群基線</title>
+      <link>https://xinspect.de5.net/#log-v3.14</link>
+      <guid isPermaLink="false">xinspect-3.14</guid>
+      <pubDate>2026-11-03T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.13 — 監控工程規劃＋藍色中隊新基線</title>
+      <link>https://xinspect.de5.net/#log-v3.13</link>
+      <guid isPermaLink="false">xinspect-3.13</guid>
+      <pubDate>2026-11-01T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.12 — 以 3.11 Swiss 為底座：新增歷史型號目錄，補齊發佈資產與缺列防護</title>
+      <link>https://xinspect.de5.net/#log-v3.12</link>
+      <guid isPermaLink="false">xinspect-3.12</guid>
+      <pubDate>2026-11-01T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.11 — 介面換成瑞士現代風格與 Helvetica（測試版）</title>
+      <link>https://xinspect.de5.net/#log-v3.11</link>
+      <guid isPermaLink="false">xinspect-3.11</guid>
+      <pubDate>2026-10-31T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.10 — 總覽先講清楚這台機器是什麼：膠囊摘要＋詳細資訊，儀表預設收起</title>
+      <link>https://xinspect.de5.net/#log-v3.10</link>
+      <guid isPermaLink="false">xinspect-3.10</guid>
+      <pubDate>2026-10-31T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.09 — 圖示換成品牌插畫：藍色 X ＋ 兩張視窗卡</title>
+      <link>https://xinspect.de5.net/#log-v3.09</link>
+      <guid isPermaLink="false">xinspect-3.09</guid>
+      <pubDate>2026-10-31T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.08 — 授權在程式裡也寫成雙授權，並寫明適用於所有版本</title>
+      <link>https://xinspect.de5.net/#log-v3.08</link>
+      <guid isPermaLink="false">xinspect-3.08</guid>
+      <pubDate>2026-10-31T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.07 — 免責聲明與授權一致：拿掉「禁止商業使用」，關於頁加上商業授權路徑與品牌標語</title>
+      <link>https://xinspect.de5.net/#log-v3.07</link>
+      <guid isPermaLink="false">xinspect-3.07</guid>
+      <pubDate>2026-10-31T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.06 — 部署器第一次真的畫出下載進度；升級建議的部位徽章改成深灰</title>
+      <link>https://xinspect.de5.net/#log-v3.06</link>
+      <guid isPermaLink="false">xinspect-3.06</guid>
+      <pubDate>2026-10-31T00:00:00Z</pubDate>
+    </item>
+</channel></rss>

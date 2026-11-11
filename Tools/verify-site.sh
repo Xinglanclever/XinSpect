@@ -25,6 +25,11 @@ has "移動端選單在頁上"                       1   "$(echo "$H" | grep -c 
 has "部署器下載鏈接"                          1   "$(echo "$H" | grep -c 'download/XinSpectDeploy.exe')"
 chk "無直連主程式鏈接"                        0   "$(echo "$H" | grep -c 'download/XinSpect.exe')"
 chk "無直連終端機鏈接"                        0   "$(echo "$H" | grep -c 'download/XinSpectConsole.exe')"
+has "事實域分布節在頁上"                      1   "$(echo "$H" | grep -c 'id="domains"')"
+has "誠實邊界節在頁上"                        1   "$(echo "$H" | grep -c 'id="limits"')"
+has "安裝步驟與資產對照在頁上"                 1   "$(echo "$H" | grep -c 'asset-table')"
+chk "feed.xml 200"                          200 "$(code "$BASE/feed.xml")"
+chk "feed.xml 20 items"                     20  "$(curl -s "$BASE/feed.xml" | grep -c '<item>')"
 chk "nosniff 頭"                            1   "$(curl -s -I "$BASE/" | grep -ci 'x-content-type-options: nosniff')"
 chk "Referrer-Policy 頭"                    1   "$(curl -s -I "$BASE/" | grep -ci 'referrer-policy')"
 

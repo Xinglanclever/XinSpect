@@ -14,6 +14,7 @@
 <link rel="preload" href="changelog.json" as="fetch">
 <link rel="mask-icon" href="favicon.svg" color="#E30613">
 <link rel="manifest" href="site.webmanifest">
+<link rel="alternate" type="application/rss+xml" title="曦覽 XinSpect 版本沿革" href="feed.xml">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="曦覽 XinSpect">
 <meta property="og:title" content="曦覽 XinSpect — 硬體事實，不編故事">
@@ -89,6 +90,16 @@ footer a:hover{color:var(--ink);text-decoration:underline}
 .faq summary::after{content:"+";color:var(--red);font-weight:700;flex:none}
 .faq details[open] summary::after{content:"−"}
 .faq .a{padding:0 26px 22px;font-size:14px;color:#555;max-width:760px}
+.dom{display:flex;flex-wrap:wrap;gap:6px}
+.dom span{border:1px solid var(--line);padding:5px 10px;font-size:12px;color:var(--grey);display:inline-flex;align-items:center;gap:7px}
+.dom span code{font-size:12px;color:var(--ink);background:none;padding:0}
+.dom span b{font-weight:700;color:var(--grey)}
+.dom span.hot{border:2px solid var(--red)}
+.dom span.hot code,.dom span.hot b{color:var(--red)}
+.dl-card .no{font-size:12px;color:var(--red);font-weight:700;letter-spacing:.2em;margin-bottom:10px}
+.asset-table td:first-child{font-weight:700;white-space:nowrap}
+.asset-table td:nth-child(2){white-space:nowrap;color:var(--grey)}
+.asset-table td:last-child{color:#555;font-size:13px}
 @media(max-width:760px){.stats{grid-template-columns:1fr 1fr}.stats>div{border-bottom:1px solid var(--line)}.stats>div:nth-child(even){border-right:none}.stats>div:nth-child(n+3){border-bottom:none}}
 .topbar{border-bottom:3px solid var(--ink);background:var(--paper);position:sticky;top:0;z-index:10}
 .topbar .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
@@ -160,6 +171,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
   <nav aria-label="主導覽">
     <a href="#why">特色</a>
     <a href="#xsc">終端機</a>
+    <a href="#domains">事實域</a>
     <a href="#faq">常見問</a>
     <a href="#security">安全</a>
     <a href="#changelog">更新</a>
@@ -216,7 +228,8 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
 </div></section>
 
 <section id="dl" style="border-top:1px solid var(--line)"><div class="wrap">
-  <div class="sec-head"><span class="sq"></span><h2>下載</h2><span class="note">v3.26 ・ ULTIMA XXVI ・ 2026-11-12</span></div>
+  <div class="sec-head"><span class="sq"></span><h2>下載</h2><span class="note">v3.26 ・ ULTIMA XXVI ・ 2026-11-12</span>
+  <span class="note" id="rel-live" style="margin-left:18px;color:var(--grey)"></span></div>
   <div class="dl-card" style="border-top:4px solid var(--red);padding:40px 44px">
     <h3 style="font-size:26px">XinSpectDeploy.exe</h3>
     <div class="tag">一鍵安裝器 ・ 官方唯一推薦入口 ・ 29 KB ・ 免安裝</div>
@@ -298,6 +311,219 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
     </div>
   </div>
   <p style="margin-top:18px;font-size:13px;color:var(--grey)">發現安全問題？請依 <a style="color:var(--blue);font-weight:700" rel="noopener" href="https://github.com/Xinglanclever/XinSpect/blob/main/SECURITY.md">SECURITY.md</a> 的私密管道回報——那是唯一保證不公開的入口。</p>
+
+  <div class="dl-grid" style="margin-top:18px">
+    <div class="dl-card">
+      <div class="no">STEP 1</div><h3 style="font-size:16px">下載部署器</h3>
+      <p>XinSpectDeploy.exe，29 KB 單一執行檔，免安裝——它本身就是官方唯一入口。</p>
+    </div>
+    <div class="dl-card">
+      <div class="no">STEP 2</div><h3 style="font-size:16px">第一層：選部署什麼</h3>
+      <p><b style="color:var(--red)">A</b> 主程式（全自動部署 GUI＋守護進程）或 <b style="color:var(--red)">B</b> 曦覽終端機（單檔一步到位）。</p>
+    </div>
+    <div class="dl-card">
+      <div class="no">STEP 3</div><h3 style="font-size:16px">第二層：選下載來源</h3>
+      <p>GitHub／Google Drive／加速節點。鏡像清單每次啟動自動抓取——來源連結日後更新，也不用重下部署器。</p>
+    </div>
+    <div class="dl-card">
+      <div class="no">STEP 4</div><h3 style="font-size:16px">看著它驗完落地</h3>
+      <p>進度條、速度、剩餘時間全程可見；完成後自動驗 PE 標頭與大小門檻，驗過才寫入磁碟。要感測器與 MSR 直讀，裝完「以系統管理員身分執行」。</p>
+    </div>
+  </div>
+
+  <div style="margin-top:18px;border:1px solid var(--line)">
+    <div style="padding:20px 26px;border-bottom:1px solid var(--line)">
+      <div style="font-size:12px;letter-spacing:.14em;color:var(--grey);text-transform:uppercase;font-weight:700">版本變體對照 ・ v3.26 實發大小</div>
+      <p style="font-size:13px;color:var(--grey);margin:6px 0 0">部署器會自動取得下列檔案——站上刻意不提供直連，入口只有部署器。逐資產 SHA-256 見 Release 的 <code>SHA256SUMS.txt</code>。</p>
+    </div>
+    <div class="tbl-scroll"><table class="asset-table">
+      <thead><tr><th scope="col">檔案</th><th scope="col">大小</th><th scope="col">用途</th></tr></thead><tbody>
+      <tr><td>XinSpectDeploy.exe</td><td>29,696 bytes</td><td>一鍵安裝器——本頁唯一下載入口</td></tr>
+      <tr><td>XinSpect.exe</td><td>39,242,860 bytes</td><td>主程式（GUI）。藍色中隊守護進程已內建；「強控台」按鈕橋接 xsc 終端機</td></tr>
+      <tr><td>XinSpect-full.exe</td><td>212,009,107 bytes</td><td>主程式帶環境版：.NET 10 Desktop Runtime 一併打包，免裝執行階段（功能相同）</td></tr>
+      <tr><td>XinSpectConsole.exe</td><td>101,266,211 bytes</td><td>曦覽終端機自含版：可獨立執行，也被主程式強控台喚起</td></tr>
+      <tr><td>XinSpectConsole-nort.exe</td><td>67,317,721 bytes</td><td>終端機・Windows 11／Server 2025・不帶環境（需已裝 .NET 10 Desktop Runtime）</td></tr>
+      <tr><td>XinSpectConsole-legacy-nort.exe</td><td>67,313,713 bytes</td><td>終端機・Windows 10／2016/2019/2022・不帶環境・純文字界面</td></tr>
+      <tr><td>XinSpectConsole-legacy.exe</td><td>101,266,299 bytes</td><td>終端機純文字相容版（自含）：無色彩、無框線定位，facts／book／help 功能相同</td></tr>
+      <tr><td>BlueSquadronBridge.exe</td><td>6,531,620 bytes</td><td>獨立守護進程：要脫離主程式單獨跑防護時使用</td></tr>
+      <tr><td>XsRegProbe.sys</td><td>24,064 bytes</td><td>內核探測驅動（白名單唯讀 MSR／MMIO）。主程式以提權會話安裝並建服務；手動載入需測試簽章環境</td></tr>
+    </tbody></table></div>
+  </div>
+</div></section>
+
+<section id="limits" style="border-top:1px solid var(--line)"><div class="wrap">
+  <div class="sec-head"><span class="sq"></span><h2>誠實邊界</h2><span class="note">還沒修好的 ・ 如實公告</span></div>
+  <p style="font-size:14px;color:#555;max-width:760px;margin-bottom:22px">審查報告全表見 <a style="color:var(--blue);font-weight:700" rel="noopener" href="https://github.com/Xinglanclever/XinSpect/blob/main/docs/%E5%AF%A9%E6%9F%A5%E5%A0%B1%E5%91%8A-v3.17.md">docs/審查報告-v3.17.md</a>。以下項目已登記、還沒修——列出來不是瑕疵品清單，是「不假裝已經做完」的證據。</p>
+  <div class="dl-grid">
+    <div class="dl-card"><h3 style="font-size:16px">SDK 路徑 DLL 注入面</h3><div class="tag">XtuCore</div><p>Intel XTU SDK 的載入路徑還有注入面待收口。</p></div>
+    <div class="dl-card"><h3 style="font-size:16px">IOMMU 事實兩份漂移</h3><div class="tag">WmiSecurityReader</div><p>同一組 IOMMU 事實存在兩份來源，讀值可能不一致，待收斂成單一來源。</p></div>
+    <div class="dl-card"><h3 style="font-size:16px">SpecOverride／CFG fail-open</h3><div class="tag">防繞過</div><p>覆寫檔與設定檔在異常時現為放行（fail-open），該收緊為 fail-closed。</p></div>
+    <div class="dl-card"><h3 style="font-size:16px">baseline.json 無完整性保護</h3><div class="tag">簽名排期</div><p>基線檔尚無完整性保護；發佈者簽章（不可否認性）同在排期——如實公告，不假裝已有。</p></div>
+  </div>
+</div></section>
+
+<section id="domains" style="border-top:1px solid var(--line)"><div class="wrap">
+  <div class="sec-head"><span class="sq"></span><h2>事實域分布</h2><span class="note">157 域 ・ 1,178 把鍵 ・ 由源碼逐鍵複算</span></div>
+  <p style="font-size:14px;color:#555;max-width:760px;margin-bottom:22px">每把鍵的第一段就是它的域。157 個域全部列出，數字是各域收錄的鍵數——紅框是收錄最多的 15 個主戰場域，只有一把的域也如實列出，不藏。</p>
+  <div class="dom">
+    <span class="hot"><code>ac</code><b>61</b></span>
+<span class="hot"><code>sb</code><b>53</b></span>
+<span class="hot"><code>fw</code><b>48</b></span>
+<span class="hot"><code>sa</code><b>45</b></span>
+<span class="hot"><code>fs</code><b>30</b></span>
+<span class="hot"><code>uefi</code><b>27</b></span>
+<span class="hot"><code>ev</code><b>25</b></span>
+<span class="hot"><code>eg</code><b>24</b></span>
+<span class="hot"><code>os</code><b>24</b></span>
+<span class="hot"><code>ms</code><b>23</b></span>
+<span class="hot"><code>nw</code><b>22</b></span>
+<span class="hot"><code>st</code><b>20</b></span>
+<span class="hot"><code>ds</code><b>18</b></span>
+<span class="hot"><code>rc</code><b>18</b></span>
+<span class="hot"><code>cpu</code><b>16</b></span>
+<span><code>dl</code><b>15</b></span>
+<span><code>po</code><b>15</b></span>
+<span><code>se</code><b>15</b></span>
+<span><code>sg</code><b>14</b></span>
+<span><code>sv</code><b>14</b></span>
+<span><code>pw</code><b>13</b></span>
+<span><code>tpm</code><b>13</b></span>
+<span><code>ws</code><b>13</b></span>
+<span><code>gx</code><b>12</b></span>
+<span><code>mu</code><b>12</b></span>
+<span><code>ts</code><b>12</b></span>
+<span><code>ux</code><b>12</b></span>
+<span><code>bl</code><b>11</b></span>
+<span><code>gpu</code><b>11</b></span>
+<span><code>in</code><b>11</b></span>
+<span><code>rs</code><b>11</b></span>
+<span><code>uf</code><b>11</b></span>
+<span><code>uv</code><b>11</b></span>
+<span><code>hm</code><b>10</b></span>
+<span><code>kp</code><b>10</b></span>
+<span><code>net</code><b>10</b></span>
+<span><code>ng</code><b>10</b></span>
+<span><code>pl</code><b>10</b></span>
+<span><code>sc</code><b>10</b></span>
+<span><code>tu</code><b>10</b></span>
+<span><code>virt</code><b>10</b></span>
+<span><code>bt</code><b>9</b></span>
+<span><code>cap</code><b>9</b></span>
+<span><code>dv</code><b>9</b></span>
+<span><code>edid</code><b>9</b></span>
+<span><code>hist</code><b>9</b></span>
+<span><code>qs</code><b>9</b></span>
+<span><code>spi</code><b>9</b></span>
+<span><code>zr</code><b>9</b></span>
+<span><code>amd</code><b>8</b></span>
+<span><code>boot</code><b>8</b></span>
+<span><code>dm</code><b>8</b></span>
+<span><code>el</code><b>8</b></span>
+<span><code>mem</code><b>8</b></span>
+<span><code>vr</code><b>8</b></span>
+<span><code>ag</code><b>7</b></span>
+<span><code>audit</code><b>7</b></span>
+<span><code>dk</code><b>7</b></span>
+<span><code>gd</code><b>7</b></span>
+<span><code>infer</code><b>7</b></span>
+<span><code>of</code><b>7</b></span>
+<span><code>pmu</code><b>7</b></span>
+<span><code>usb</code><b>7</b></span>
+<span><code>xt</code><b>7</b></span>
+<span><code>gp</code><b>6</b></span>
+<span><code>pci</code><b>6</b></span>
+<span><code>platform</code><b>6</b></span>
+<span><code>spec</code><b>6</b></span>
+<span><code>src</code><b>6</b></span>
+<span><code>fact</code><b>5</b></span>
+<span><code>mc</code><b>5</b></span>
+<span><code>psu</code><b>5</b></span>
+<span><code>pv</code><b>5</b></span>
+<span><code>scan</code><b>5</b></span>
+<span><code>sec</code><b>5</b></span>
+<span><code>tm</code><b>5</b></span>
+<span><code>ui</code><b>5</b></span>
+<span><code>acpi</code><b>4</b></span>
+<span><code>asset</code><b>4</b></span>
+<span><code>cm</code><b>4</b></span>
+<span><code>coverage</code><b>4</b></span>
+<span><code>ec</code><b>4</b></span>
+<span><code>ent</code><b>4</b></span>
+<span><code>ie</code><b>4</b></span>
+<span><code>mt</code><b>4</b></span>
+<span><code>nic</code><b>4</b></span>
+<span><code>pdev</code><b>4</b></span>
+<span><code>rf</code><b>4</b></span>
+<span><code>viz</code><b>4</b></span>
+<span><code>write</code><b>4</b></span>
+<span><code>au</code><b>3</b></span>
+<span><code>backend</code><b>3</b></span>
+<span><code>chipset</code><b>3</b></span>
+<span><code>cmos</code><b>3</b></span>
+<span><code>dbg</code><b>3</b></span>
+<span><code>esp</code><b>3</b></span>
+<span><code>exp</code><b>3</b></span>
+<span><code>export</code><b>3</b></span>
+<span><code>numa</code><b>3</b></span>
+<span><code>pcie</code><b>3</b></span>
+<span><code>rep</code><b>3</b></span>
+<span><code>time</code><b>3</b></span>
+<span><code>ups</code><b>3</b></span>
+<span><code>audio</code><b>2</b></span>
+<span><code>build</code><b>2</b></span>
+<span><code>byovd</code><b>2</b></span>
+<span><code>cert</code><b>2</b></span>
+<span><code>display</code><b>2</b></span>
+<span><code>drvinsp</code><b>2</b></span>
+<span><code>egress</code><b>2</b></span>
+<span><code>etl</code><b>2</b></span>
+<span><code>fleet</code><b>2</b></span>
+<span><code>key</code><b>2</b></span>
+<span><code>knowledge</code><b>2</b></span>
+<span><code>mchbar</code><b>2</b></span>
+<span><code>mon</code><b>2</b></span>
+<span><code>nvme</code><b>2</b></span>
+<span><code>pcieaer</code><b>2</b></span>
+<span><code>role</code><b>2</b></span>
+<span><code>setuptl</code><b>2</b></span>
+<span><code>state</code><b>2</b></span>
+<span><code>storage</code><b>2</b></span>
+<span><code>whea</code><b>2</b></span>
+<span><code>ata</code><b>1</b></span>
+<span><code>cam</code><b>1</b></span>
+<span><code>chassis</code><b>1</b></span>
+<span><code>contrib</code><b>1</b></span>
+<span><code>cxl</code><b>1</b></span>
+<span><code>data</code><b>1</b></span>
+<span><code>defender</code><b>1</b></span>
+<span><code>degrade</code><b>1</b></span>
+<span><code>diag</code><b>1</b></span>
+<span><code>doc</code><b>1</b></span>
+<span><code>dyn</code><b>1</b></span>
+<span><code>evt</code><b>1</b></span>
+<span><code>file</code><b>1</b></span>
+<span><code>guard</code><b>1</b></span>
+<span><code>hpa</code><b>1</b></span>
+<span><code>license</code><b>1</b></span>
+<span><code>limits</code><b>1</b></span>
+<span><code>monitor</code><b>1</b></span>
+<span><code>msr</code><b>1</b></span>
+<span><code>off</code><b>1</b></span>
+<span><code>oob</code><b>1</b></span>
+<span><code>ps</code><b>1</b></span>
+<span><code>raid</code><b>1</b></span>
+<span><code>reg</code><b>1</b></span>
+<span><code>release</code><b>1</b></span>
+<span><code>report</code><b>1</b></span>
+<span><code>secboot</code><b>1</b></span>
+<span><code>secure</code><b>1</b></span>
+<span><code>smart</code><b>1</b></span>
+<span><code>smbus</code><b>1</b></span>
+<span><code>test</code><b>1</b></span>
+<span><code>tests</code><b>1</b></span>
+<span><code>ufv</code><b>1</b></span>
+<span><code>usbstor</code><b>1</b></span>
+  </div>
 </div></section>
 
 <section id="changelog"><div class="wrap">
@@ -315,7 +541,8 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
 
 <footer><div class="wrap">
   <div>曦覽 XinSpect ・ 唯讀硬體事實採集器 ・ © 2026 Xinglanclever</div>
-  <div><a rel="noopener" href="https://github.com/Xinglanclever/XinSpect">GitHub</a> ・ <a href="#faq">常見問</a> ・ <a href="#security">安全</a> ・ <a href="#license">授權</a> ・ <a href="#license">聯絡</a></div>
+  <div><a rel="noopener" href="https://github.com/Xinglanclever/XinSpect">GitHub</a> ・ <a href="#domains">事實域</a>
+    <a href="#faq">常見問</a> ・ <a href="#security">安全</a> ・ <a href="feed.xml">RSS</a> ・ <a href="#license">授權</a> ・ <a href="#license">聯絡</a></div>
 </div></footer>
 
 <section id="license"><div class="wrap">
@@ -351,11 +578,41 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
     </tbody></table></div>
   </div>
 </div></section>
+
+<script>
+(function(){
+  'use strict';
+  var el=document.getElementById('rel-live');
+  if(!el) return;
+  var base='v3.26 ・ ULTIMA XXVI ・ 2026-11-12';
+  el.textContent=base;
+  var cached=sessionStorage.getItem('xs-rel');
+  function render(r){
+    if(!r||!r.tag_name){return;}
+    var tag=r.tag_name.replace(/^v/,'');
+    if(tag==='3.26'){
+      el.textContent=base+' ・ GitHub 最新 ✓ 已同步';
+    }else{
+      el.textContent=base+' ・ GitHub 最新 '+r.tag_name+'（本頁尚未同步）';
+      el.style.color='var(--red)';
+    }
+  }
+  if(cached){
+    try{render(JSON.parse(cached));}catch(e){}
+    return;
+  }
+  fetch('https://api.github.com/repos/Xinglanclever/XinSpect/releases/latest')
+    .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+    .then(function(r){ sessionStorage.setItem('xs-rel', JSON.stringify(r)); render(r); })
+    .catch(function(){});
+})();
+</script>
 </main>
 
 <footer><div class="wrap">
   <div>曦覽 XinSpect ・ 唯讀硬體事實採集器 ・ © 2026 Xinglanclever</div>
-  <div><a rel="noopener" href="https://github.com/Xinglanclever/XinSpect">GitHub</a> ・ <a href="#faq">常見問</a> ・ <a href="#security">安全</a> ・ <a href="#license">授權</a> ・ <a href="#license">聯絡</a></div>
+  <div><a rel="noopener" href="https://github.com/Xinglanclever/XinSpect">GitHub</a> ・ <a href="#domains">事實域</a>
+    <a href="#faq">常見問</a> ・ <a href="#security">安全</a> ・ <a href="feed.xml">RSS</a> ・ <a href="#license">授權</a> ・ <a href="#license">聯絡</a></div>
 </div></footer>
 
 <button id="toTop" type="button" aria-label="回到頁首" title="回到頁首">↑</button>
