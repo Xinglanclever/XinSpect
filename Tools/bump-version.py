@@ -203,12 +203,13 @@ def main(argv=None):
              + body + CNL + "            ]," + CNL + "        }," + CNL)
     cat.insert_before(anchor, block, "ChangelogCatalog")
 
-    # 6) README.md —— 2026-11-07 換成「修正版」首頁後只留：徽章、下載連結、位元組數註腳。
-    #    版本沿革兩層（11.1/11.2/11.3）隨 87 萬字底稿住進 docs/百科-v3.17.md（見 6-2）。
+    # 6) README.md：同步近期版號摘要；逐項沿革仍以百科底稿為準（見 6-2）。
     md = doc("README.md")
     md.replace("badge/version-%s-" % OLD, "badge/version-%s-" % V, "README 徽章")
     md.replace("releases/download/v%s/" % OLD, "releases/download/v%s/" % V, "README 下載連結")
     md.replace("本版（v%s）實際發佈的檔案大小" % OLD, "本版（v%s）實際發佈的檔案大小" % V, "README 註腳")
+    md_bullet = "- **v%s %s**（%s）：%s" % (V, args.title, args.date, title_zh)
+    md.insert_before("- **v%s " % OLD, md_bullet + "\n", "README 版本沿革")
 
     # 6-2) docs/百科-v3.17.md —— 敘事主體。沿革兩層、結語、登記筆數都從這裡過。
     bk = doc(os.path.join("docs", "百科-v3.17.md"))

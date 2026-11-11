@@ -48,7 +48,7 @@ public static class AppInfo
     /// <c>Tools/bump-version.py</c> 升版時會與 AboutView 一起改，避免
     /// 「標題寫 Swiss、關於頁寫 Ultima XIII」這種一頁兩答。
     /// </summary>
-    public const string Codename = "雙級安全模式與平台靶向深測";
+    public const string Codename = "Ultima XXVII";
 
     public static string VersionCodename(bool simplified)
         => Codename;

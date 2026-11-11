@@ -13,6 +13,7 @@
 /// </remarks>
 internal static class StartupSequence
 {
+    private static readonly TimeSpan SpdDirectReadTimeout = TimeSpan.FromSeconds(30);
     private static readonly SemaphoreSlim DeepSpecsGate = new(1, 1);
     private static readonly object DeepSpecsLock = new();
     private static CancellationTokenSource? _activeDeepSpecs;
@@ -20,6 +21,13 @@ internal static class StartupSequence
     public static void CancelDeepSpecs()
     {
         lock (DeepSpecsLock) _activeDeepSpecs?.Cancel();
+    }
+
+    internal static void DisableDeepSpecs(MainViewModel vm)
+    {
+        CancelDeepSpecs();
+        ShowMemoryWmiFallback(vm);
+        vm.SpdReadStatusText = "SPD 深度讀取未執行：第一級進階診斷目前關閉。上方資料保留 Windows SMBIOS/WMI 來源。";
     }
     /// <summary>開機序列：讀靜態資訊 → 起感測與網路引擎 → 補齊磁碟／色域／CUDA → 起脈動 → 背景深度規格與自檢。</summary>
     public static async Task RunAsync(MainViewModel vm, MetricsPump pump)
@@ -77,6 +85,7 @@ internal static class StartupSequence
 
         // 深度硬體盤點會載入多個提供者並啟動 CPU-Z；只在使用者啟用第一級後執行。
         if (vm.Settings.AdvancedDiagnosticsEnabled) _ = LoadDeepSpecsAsync(vm);
+        else ShowMemoryWmiFallback(vm);
 
         // WinSAT 快取讀取不執行跑分，保持一般啟動可用。
         _ = vm.Winsat.LoadCachedAsync();
@@ -123,6 +132,7 @@ internal static class StartupSequence
         try { await vm.Winget.DetectAsync(); } catch { /* winget 偵測為附加 */ }
 
         if (vm.Settings.AdvancedDiagnosticsEnabled) _ = LoadDeepSpecsAsync(vm);
+        else ShowMemoryWmiFallback(vm);
         _ = vm.Winsat.LoadCachedAsync();
         _ = vm.Profiles.RefreshPowerPlanAsync();
 
@@ -169,6 +179,7 @@ internal static class StartupSequence
             vm.CpuTopology = await Task.Run(CpuTopologyService.Build);
             vm.Modules.Clear();
             foreach (var m in modules) vm.Modules.Add(m);
+            ShowMemoryWmiFallback(vm);
             vm.SoundDevices = sound;
             vm.InstalledNics = nics;
 
@@ -227,8 +238,7 @@ internal static class StartupSequence
     {
         if (!vm.Settings.AdvancedDiagnosticsEnabled)
         {
-            await OnUiAsync(System.Windows.Application.Current?.Dispatcher, () =>
-                vm.SpdReadStatusText = "SPD 深度讀取未執行：第一級進階診斷目前關閉。上方實體模組資料來自 Windows SMBIOS/WMI。")
+            await OnUiAsync(System.Windows.Application.Current?.Dispatcher, () => DisableDeepSpecs(vm))
                 .ConfigureAwait(false);
             return;
         }
@@ -274,14 +284,43 @@ internal static class StartupSequence
 
         // SPD 先自己讀。讀取期間保留 Windows SMBIOS/WMI 清單，並明示來源切換；
         // 結果或失敗原因都要進畫面，不能讓空清單看起來像沒有做過讀取。
-        await OnUiAsync(ui, () => vm.SpdReadStatusText = "正在直接讀取 DIMM SPD；Windows 模組清單仍顯示 SMBIOS/WMI 資料。")
-            .ConfigureAwait(false);
+        await OnUiAsync(ui, () =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!vm.Settings.AdvancedDiagnosticsEnabled) return;
+            vm.SpdReadStatusText = "正在直接讀取 DIMM SPD；Windows 模組清單仍保留 SMBIOS/WMI 資料。";
+            bool hasWmiRate = vm.Timings.SourceText == "Windows 設定速率（WMI）"
+                && vm.Timings.DataRateText != "—";
+            vm.Timings.Status = hasWmiRate
+                ? "Windows 設定速率已先顯示；正在讀取 SPD 以補充模組時序。"
+                : "正在讀取 SPD；Windows 尚未提供可用的設定速率。";
+            vm.Timings.RaiseAll();
+        }).ConfigureAwait(false);
         var spdTimer = System.Diagnostics.Stopwatch.StartNew();
-        var survey = await Task.Run(ReadSpdDirect).ConfigureAwait(false);
+        using var spdTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var spdTask = Task.Run(() => ReadSpdDirect(spdTimeout.Token), spdTimeout.Token);
+        SpdSurvey survey;
+        try
+        {
+            survey = await spdTask.WaitAsync(SpdDirectReadTimeout, cancellationToken).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            spdTimeout.Cancel();
+            survey = new SpdSurvey([], [],
+                [$"SPD 直讀超過 {SpdDirectReadTimeout.TotalSeconds:0} 秒，已取消本次掃描；保留 Windows WMI 設定值。"], []);
+        }
+        catch (OperationCanceledException)
+        {
+            spdTimeout.Cancel();
+            throw;
+        }
         spdTimer.Stop();
         cancellationToken.ThrowIfCancellationRequested();
         await OnUiAsync(ui, () =>
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!vm.Settings.AdvancedDiagnosticsEnabled) return;
             vm.DirectSpdReads = survey.Modules;
             vm.DirectSpdReads5 = survey.Ddr5Modules ?? [];
             vm.SpdReadStatusText = SpdSurveyDiagnostics.Format(survey, spdTimer.ElapsedMilliseconds);
@@ -432,6 +471,35 @@ internal static class StartupSequence
 
     }
 
+    internal static MemoryTimings BuildInitialMemoryTimings(IReadOnlyList<MemoryModuleInfo> modules,
+                                                             bool advancedDiagnosticsEnabled)
+    {
+        var timings = BuildWmiTimings(modules) ?? new MemoryTimings { SourceText = "無" };
+        bool hasWmiRecords = timings.SourceText == "Windows 設定速率（WMI）";
+        bool hasWmiRate = hasWmiRecords && timings.DataRateText != "—";
+        timings.Status = hasWmiRate
+            ? advancedDiagnosticsEnabled
+                ? "已由 Windows（WMI）取得目前設定速率；實際時序待 SPD 直讀或 CPU-Z 報告補充。"
+                : "已由 Windows（WMI）取得目前設定速率；進階診斷關閉，未執行 SPD 直讀。"
+            : hasWmiRecords
+                ? advancedDiagnosticsEnabled
+                    ? "Windows 已列出記憶體模組，但未提供設定速率；可由 SPD 直讀補充模組資料。"
+                    : "Windows 已列出記憶體模組，但未提供設定速率；進階診斷關閉，未執行 SPD 直讀。"
+                : advancedDiagnosticsEnabled
+                    ? "Windows 未回報記憶體模組或設定速率；可由 SPD 直讀補充模組資料。"
+                    : "Windows 未回報記憶體模組或設定速率；進階診斷關閉，未執行 SPD 直讀。";
+        return timings;
+    }
+
+    internal static void ShowMemoryWmiFallback(MainViewModel vm)
+    {
+        vm.Timings = BuildInitialMemoryTimings(vm.Modules, vm.Settings.AdvancedDiagnosticsEnabled);
+        vm.Timings.RaiseAll();
+        vm.SpdReadStatusText = vm.Settings.AdvancedDiagnosticsEnabled
+            ? "已載入 Windows SMBIOS/WMI 模組資料；SPD 深度讀取等待執行。"
+            : "SPD 深度讀取未執行：第一級進階診斷目前關閉。模組清單與設定速率來自 Windows SMBIOS/WMI。";
+    }
+
     /// <summary>
     /// 不靠 CPU-Z 組出一組記憶體時脈資訊。
     /// 優先序：SPD 直讀（模組原始位元組，含 JEDEC 時序）→ WMI 設定速率（只有頻率，沒有時序）。
@@ -533,16 +601,18 @@ internal static class StartupSequence
     /// 先以 Windows PnP 找出有限的 iMC PCI function，再逐條匯流排做硬體仲裁。
     /// 讀不到時回傳帶原因的空結果，保留已成功的其他 DIMM；不以空清單冒充正常完成。
     /// </remarks>
-    private static SpdSurvey ReadSpdDirect()
+    private static SpdSurvey ReadSpdDirect(CancellationToken cancellationToken)
     {
         var notes = new List<string>();
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             using var bridge = WinRing0Bridge.Create();
             if (!bridge.Available)
                 return new SpdSurvey([], [], [$"原生 SPD 直讀不可用：{bridge.Error}"], []);
 
             var buses = SpdBusFactory.Candidates(bridge, notes);
+            cancellationToken.ThrowIfCancellationRequested();
             if (buses.Count == 0)
                 return new SpdSurvey([], [], notes.Count > 0 ? notes : ["找不到可用的 SPD 讀取匯流排。"], []);
 
@@ -554,7 +624,11 @@ internal static class StartupSequence
             }
             if (lockNote.Length > 0) notes.Add(lockNote);
 
-            return SpdSurveyor.Survey(buses, notes);
+            return SpdSurveyor.Survey(buses, notes, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {

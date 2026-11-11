@@ -51,6 +51,18 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "3.27",
+            Date = "2026-11-12",
+            Title = "記憶體 WMI 即時回退與 SPD 逾時修正",
+            Items =
+            [
+                "記憶體畫面先顯示 Windows SMBIOS/WMI 提供的設定速率與來源，不再等 SPD 直讀結束才更新；第一級進階診斷關閉時也顯示明確的 WMI 狀態，不留「讀取中…」。",
+                "SPD 掃描加入 30 秒逾時及可取消的位元組／匯流排邊界；取消時復位 SPD 頁並釋放 SMBus，超時保留 WMI 回退並列出原因。",
+                "新增 WMI 即時回退與取消後釋放匯流排回歸測試。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "3.26",
             Date = "2026-11-12",
             Title = "DIMM SPD 與核心映射修正、審計口徑核實",

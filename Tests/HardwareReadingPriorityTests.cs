@@ -159,6 +159,25 @@ public class HardwareReadingPriorityTests
         Assert.Equal(0, result.DramFrequencyMHz);
     }
 
+    [Fact]
+    public void InitialMemoryPageShowsWmiFallbackWithoutWaitingForSpd()
+    {
+        var available = StartupSequence.BuildInitialMemoryTimings([
+            new MemoryModuleInfo { MemoryType = "DDR4", ConfiguredSpeedMHz = 3200, CapacityGB = 8 }
+        ], advancedDiagnosticsEnabled: false);
+
+        Assert.Equal("Windows 設定速率（WMI）", available.SourceText);
+        Assert.Equal("DDR4-3200（WMI 設定值）", available.DataRateText);
+        Assert.Contains("已由 Windows（WMI）取得目前設定速率", available.Status);
+        Assert.Contains("進階診斷關閉", available.Status);
+        Assert.DoesNotContain("讀取中", available.Status);
+
+        var unavailable = StartupSequence.BuildInitialMemoryTimings([], advancedDiagnosticsEnabled: false);
+        Assert.Equal("無", unavailable.SourceText);
+        Assert.Contains("Windows 未回報記憶體模組", unavailable.Status);
+        Assert.DoesNotContain("讀取中", unavailable.Status);
+    }
+
     private static MemoryTimings Current(string source, double frequency, string cl) => new()
     {
         Loaded = true, SourceText = source, DramFrequencyMHz = frequency,

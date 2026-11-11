@@ -32,7 +32,8 @@ public sealed record SpdSurvey(IReadOnlyList<SpdDirectRead> Modules,
 public static class SpdSurveyor
 {
     /// <summary>呼叫端負責先取得軟體層的匯流排鎖（<see cref="SmbusBusLock"/>）並在結束後釋放。</summary>
-    public static SpdSurvey Survey(IEnumerable<ISpdBus> buses, IEnumerable<string>? initialNotes = null)
+    public static SpdSurvey Survey(IEnumerable<ISpdBus> buses, IEnumerable<string>? initialNotes = null,
+                                   CancellationToken cancellationToken = default)
     {
         var modules = new List<SpdDirectRead>();
         var ddr5Modules = new List<SpdDirectRead5>();
@@ -41,6 +42,7 @@ public static class SpdSurveyor
 
         foreach (var bus in buses)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             bool acquired;
             string reason;
             try { acquired = bus.TryAcquireBus(out reason); }
@@ -57,11 +59,13 @@ public static class SpdSurveyor
 
             try
             {
-                var scan = SpdReader.ReadAll(bus);
+                cancellationToken.ThrowIfCancellationRequested();
+                var scan = SpdReader.ReadAll(bus, cancellationToken);
                 if (scan.BusNote.Length > 0) notes.Add($"{bus.Description}：{scan.BusNote}");
 
                 foreach (var slot in scan.Slots)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     if (slot.Kind == SpdKind.Empty) continue;
 
                     if (slot.Kind == SpdKind.Ddr4 && slot.Raw is not null
@@ -78,6 +82,10 @@ public static class SpdSurveyor
                     }
                     problems.Add(slot);
                 }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {

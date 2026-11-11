@@ -560,7 +560,7 @@ public sealed class MainViewModel : ObservableObject
             }
             else if (e.PropertyName == nameof(SettingsService.AdvancedDiagnosticsEnabled))
             {
-                StartupSequence.CancelDeepSpecs();
+                StartupSequence.DisableDeepSpecs(this);
             }
         };
         // 深測中心儲存根預設值（2026-10-03）：可寫的暫存子目錄——空白儲存根會讓六個儲存測項全數被擋。
