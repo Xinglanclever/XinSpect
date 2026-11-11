@@ -34,6 +34,6 @@ python -I <gen_changelog.py>   # 腳本見當次會話工作區；抽法：逐 C
 
 - **畫風**：紅 `#E30613`／墨 `#111`／紙 `#FAFAF7`，零圓角零陰影，Helvetica；與 GUI／xsc 一致。
 - **下載定位**：全站唯一入口是 XinSpectDeploy.exe（部署器）；主程式與終端機的直連鏈接**刻意為零**。
-- **宣稱對帳**：1,178 靜態鍵（FactKeyCatalog）、69 動態家族（FactKeyDynamicCatalog）、157 事實域、
+- **宣稱對帳**：1,178 靜態目錄鍵（FactKeyCatalog；含硬體、OS、安全、診斷與治理，並非硬體讀值數）、69 動態家族（FactKeyDynamicCatalog）、157 事實域、
   65 畫面——改動前先對源碼複算，不寫沒驗證過的數字。
 - **版本稱號**：hero 的「ULTIMA〈羅馬數字〉」為站點自創，按小版本號推（3.16=XVI、3.26=XXVI）。

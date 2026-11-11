@@ -35,6 +35,9 @@ has "zh↔en hreflang 互通"                     2   "$(echo "$H" | grep -c 'hr
 has "EN 頁連回 zh"                            1   "$(curl -sL "$BASE/index-en.html" | grep -c 'hreflang="zh-Hant"')"
 has "EN 頁 JSON-LD"                           2   "$(curl -sL "$BASE/index-en.html" | grep -c 'application/ld+json')"
 chk "og-en.png 200"                         200 "$(code "$BASE/og-en.png")"
+for img in shot-xsc-facts shot-xsc-sys shot-xsc-book; do
+  chk "截圖 $img.png 200"                    200 "$(code "$BASE/$img.png")"
+done
 has "贊助地址複製按鈕"                        1   "$(echo "$H" | grep -c 'copyBtn')"
 has "CSP 頭"                                1   "$(curl -s -I "$BASE/" | grep -ci 'content-security-policy')"
 _D="obj/_v_changelog.json"; _F="obj/_v_feed.xml"; curl -s "$BASE/changelog.json" > "$_D"; curl -s "$BASE/feed.xml" > "$_F"

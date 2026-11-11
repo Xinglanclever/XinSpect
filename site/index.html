@@ -159,6 +159,13 @@ tr.latest td.v::after{content:"最新";font-size:11px;background:var(--red);colo
 code,pre{font-family:"Cascadia Mono",Consolas,monospace}
 .pre{background:var(--ink);color:#e8e8e4;padding:26px 28px;font-size:13.5px;line-height:1.75;overflow-x:auto}
 .pre .c{color:#8f8f8a}.pre .g{color:#7fd17f}.pre .b{color:#7fb4ff}.pre .r{color:#ff7b72}
+.shots{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:26px}
+.shot{border:2px solid var(--ink);display:block;position:relative;background:#000}
+.shot img{width:100%;height:auto;display:block}
+.shot:hover img{opacity:.9}
+.shot .cap{position:absolute;left:0;bottom:0;background:var(--red);color:#fff;font-size:12px;font-weight:700;padding:5px 12px;letter-spacing:.08em}
+.shot.wide{grid-column:1/-1}
+@media(max-width:760px){.shots{grid-template-columns:1fr}}
 .dl-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line)}
 .dl-card{background:var(--paper);padding:32px}
 .dl-card h3{font-size:20px;margin-bottom:6px}
@@ -191,7 +198,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
 <div class="hero"><div class="wrap">
   <div class="kicker" lang="en">READ-ONLY HARDWARE FACTS ・ v3.26 ULTIMA XXVI</div>
   <h1>硬體的事實，<br>不<em>編</em>故事。</h1>
-  <p>曦覽是一部唯讀的 Windows 硬體事實採集器：1,178 個靜態事實鍵、69 個動態家族，讀得到就報，讀不到就老實說讀不到。單一執行檔，免安裝，附一支 Claude Code 式的終端機 xsc。</p>
+  <p>曦覽是一部唯讀的 Windows 硬體事實採集器：1,178 個目錄鍵涵蓋硬體、OS、安全、診斷與來源等項目，並非 1,178 項硬體讀值；另有 69 個動態家族。單一執行檔，免安裝，附一支 Claude Code 式的終端機 xsc。</p>
   <div class="cta">
     <a class="btn red" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectDeploy.exe">↓ 下載部署器（推薦）</a>
     <a class="btn ghost" href="#faq">先看常見問題</a>
@@ -202,7 +209,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
     <span class="badge">免安裝</span><span class="badge">繁體中文／English</span><span class="badge">.NET 10 自含</span>
   </div>
   <div class="stats" role="list" aria-label="關鍵數字">
-    <div role="listitem"><div class="n">1,178</div><div class="l">靜態事實鍵</div></div>
+    <div role="listitem"><div class="n">1,178</div><div class="l">靜態目錄鍵</div></div>
     <div role="listitem"><div class="n"><i>69</i></div><div class="l">動態家族 ・ 157 事實域</div></div>
     <div role="listitem"><div class="n">65</div><div class="l">個可到達畫面</div></div>
     <div role="listitem"><div class="n"><i>131</i></div><div class="l">筆沿革全程可考</div></div>
@@ -231,6 +238,12 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
     <span class="g">help</span>         完整指令清單
 └──────────────────────────────────────────────────────────────────┘
 <span class="r">xs</span><span class="b">▸</span> <span class="c">▁▂▃▅▇ 走勢、漲落箭頭、KPI 條——GUI 有的，終端機也有。</span></pre>
+  <div class="shots">
+    <a class="shot" href="shot-xsc-facts.png" target="_blank" rel="noopener"><img src="shot-xsc-facts.png" alt="xsc 實際畫面：facts 指令一輪採集 2,036 筆事實" loading="lazy" width="1280" height="684"><span class="cap">facts ・ 一輪採集 2,036 筆</span></a>
+    <a class="shot" href="shot-xsc-sys.png" target="_blank" rel="noopener"><img src="shot-xsc-sys.png" alt="xsc 實際畫面：sys 即時快照，CPU 溫度負載與記憶體走勢條" loading="lazy" width="1280" height="684"><span class="cap">sys ・ 即時快照儀表</span></a>
+    <a class="shot wide" href="shot-xsc-book.png" target="_blank" rel="noopener"><img src="shot-xsc-book.png" alt="xsc 實際畫面：book 曦覽百科全書目錄，16 部 362 節" loading="lazy" width="1280" height="684"><span class="cap">book ・ 曦覽百科 16 部 362 節</span></a>
+  </div>
+  <p style="margin-top:10px;font-size:12px;color:var(--grey)">實際畫面，攝於 v3.16（點圖看原尺寸）。上方的終端機示意為排版用重繪，非截圖。</p>
   <p style="margin-top:22px;color:#555;font-size:15px">指令涵蓋 GUI 全部 65 頁的事實面：<code>pages</code>、<code>page cpu</code>、<code>domain nvme</code>、<code>keys</code>、<code>settings</code>、<code>changelog</code>、<code>msr 0x19C</code>、<code>pci dump 0</code>、<code>dash</code>（全螢幕儀表板，q 離開）。</p>
 </div></section>
 
@@ -302,7 +315,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
   <div class="dl-grid">
     <div class="dl-card">
       <h3 style="font-size:16px">唯讀守門</h3><div class="tag">不引用任何寫入通路</div>
-      <p>守門測試釘死事實採集「不引用任何寫入通路」；內核探測驅動 XsRegProbe 為白名單唯讀（MSR／MMIO），經內部審查為全案唯一「優秀」級。</p>
+      <p>守門測試限制事實採集不引用硬體寫入通路；XsRegProbe 以白名單限制 MSR／MMIO 讀取。本次修正其 MMIO 頁面保護旗標。現有審查屬 AI 輔助的內部檢視，不是獨立第三方安全審計。</p>
     </div>
     <div class="dl-card">
       <h3 style="font-size:16px">寫入稽核</h3><div class="tag">每次寫入自動記帳</div>
@@ -591,16 +604,15 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
   'use strict';
   var el=document.getElementById('rel-live');
   if(!el) return;
-  var base='v3.26 ・ ULTIMA XXVI ・ 2026-11-12';
-  el.textContent=base;
+  el.textContent='';
   var cached=sessionStorage.getItem('xs-rel');
   function render(r){
     if(!r||!r.tag_name){return;}
     var tag=r.tag_name.replace(/^v/,'');
     if(tag==='3.26'){
-      el.textContent=base+' ・ GitHub 最新 ✓ 已同步';
+      el.textContent='GitHub 最新 ✓ 已同步';
     }else{
-      el.textContent=base+' ・ GitHub 最新 '+r.tag_name+'（本頁尚未同步）';
+      el.textContent='GitHub 最新 '+r.tag_name+'（本頁尚未同步）';
       el.style.color='var(--red)';
     }
   }
