@@ -16,6 +16,7 @@
 <link rel="manifest" href="site.webmanifest">
 <link rel="alternate" type="application/rss+xml" title="曦覽 XinSpect 版本沿革" href="feed.xml">
 <link rel="alternate" hreflang="zh-Hant" href="https://xinspect.de5.net/">
+<link rel="alternate" hreflang="x-default" href="https://xinspect.de5.net/">
 <link rel="alternate" hreflang="en" href="https://xinspect.de5.net/index-en.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="曦覽 XinSpect">
@@ -269,27 +270,27 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
 <section id="faq" style="border-top:1px solid var(--line)"><div class="wrap">
   <div class="sec-head"><span class="sq"></span><h2>常見問題</h2><span class="note">FAQ ・ 有什麼答什麼</span></div>
   <div class="faq">
-    <details>
+    <details id="faq-1">
       <summary>它會動我的硬體嗎？會寫壞嗎？</summary>
       <div class="a">事實採集全程唯讀：PCI 掃描、MSR 讀取、韌體面解析都不寫入。超頻等真正寫硬體的功能不在預設路徑上——底層功能依雙級安全設定開啟，硬體寫入另需第二級安全與逐項確認，且每次寫入自動記帳（CLI 可申報）。</div>
     </details>
-    <details>
+    <details id="faq-2">
       <summary>為什麼有些頁面整片顯示「—」？</summary>
       <div class="a">不是壞掉。程式預設以一般權限啟動（asInvoker 最小特權）；感測器、MSR 直讀與超頻需要「以系統管理員身分執行」。不提權時那些頁面如實顯示「—」並標明原因——這正是六態降級設計（Present／NotSupported／InsufficientPrivilege 等）存在的理由：讀不到就說讀不到，不補 0、不編值。</div>
     </details>
-    <details>
+    <details id="faq-3">
       <summary>會連網嗎？資料會上傳嗎？</summary>
       <div class="a">硬體事實採集全部在本機完成，不連網。AI 頁為選用功能，走 Cloudflare Workers AI，需要你自己的 API 金鑰——金鑰以 Windows DPAPI 加密後才寫進 settings.json，解不開就是「沒有金鑰＋原因」，不會明文落盤。</div>
     </details>
-    <details>
+    <details id="faq-4">
       <summary>怎麼安裝、怎麼升級？</summary>
       <div class="a">下載 29 KB 的 XinSpectDeploy.exe（本頁下載節），A 裝主程式、B 裝終端機，三個來源可切換。升級同樣走部署器——鏡像清單每次啟動自動抓取，永遠拿到最新版。</div>
     </details>
-    <details>
+    <details id="faq-5">
       <summary>免費嗎？商業使用可以嗎？</summary>
       <div class="a">雙授權、功能完全相同：AGPL-3.0-or-later 免費，<b>包括商業使用</b>（散布修改版或以網路服務提供時須開源）；閉源整合、隨硬體出貨、禁 copyleft 的組織走商業授權。細節見下方授權節。</div>
     </details>
-    <details>
+    <details id="faq-6">
       <summary>支援哪些系統？</summary>
       <div class="a">Windows 10 1903 以上／Windows 11、x64。帶環境版免裝 .NET 10 Desktop Runtime；曦覽終端機另有純文字相容版，支援 Windows Server 2016、2019、2022。</div>
     </details>
@@ -742,6 +743,12 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
     });
   });
 })();
+</script>
+
+<script>
+addEventListener('beforeprint',function(){
+  document.querySelectorAll('.faq details').forEach(function(d){ d.open=true; });
+});
 </script>
 </body>
 </html>

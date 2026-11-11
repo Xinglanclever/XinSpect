@@ -368,5 +368,11 @@ footer a:hover{color:var(--ink);text-decoration:underline}
   toTop.addEventListener('click', function(){ scrollTo({ top: 0, behavior: 'smooth' }); });
 })();
 </script>
+
+<script>
+addEventListener('beforeprint',function(){
+  document.querySelectorAll('.faq details').forEach(function(d){ d.open=true; });
+});
+</script>
 </body>
 </html>

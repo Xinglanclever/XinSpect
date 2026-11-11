@@ -36,6 +36,13 @@ has "EN 頁連回 zh"                            1   "$(curl -sL "$BASE/index-en
 has "EN 頁 JSON-LD"                           2   "$(curl -sL "$BASE/index-en.html" | grep -c 'application/ld+json')"
 chk "og-en.png 200"                         200 "$(code "$BASE/og-en.png")"
 has "贊助地址複製按鈕"                        1   "$(echo "$H" | grep -c 'copyBtn')"
+has "CSP 頭"                                1   "$(curl -s -I "$BASE/" | grep -ci 'content-security-policy')"
+_D="obj/_v_changelog.json"; _F="obj/_v_feed.xml"; curl -s "$BASE/changelog.json" > "$_D"; curl -s "$BASE/feed.xml" > "$_F"
+chk "feed 首筆日期＝最新版日期"               1   "$(python -I -c "
+import json,sys,xml.etree.ElementTree as ET
+d=json.load(open(sys.argv[1],encoding='utf-8'))
+pd=ET.parse(sys.argv[2]).getroot().find('channel/item/pubDate').text
+print(1 if pd.startswith(d[0]['date'] or '1970') else 0)" "$_D" "$_F")"; rm -f "$_D" "$_F"
 chk "nosniff 頭"                            1   "$(curl -s -I "$BASE/" | grep -ci 'x-content-type-options: nosniff')"
 chk "Referrer-Policy 頭"                    1   "$(curl -s -I "$BASE/" | grep -ci 'referrer-policy')"
 
