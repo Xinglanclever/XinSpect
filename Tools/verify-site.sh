@@ -60,6 +60,8 @@ print(1 if pd.startswith(d[0]['date'] or '1970') else 0)" "$_D" "$_F")"; rm -f "
 mkdir -p obj/_v_js
 curl -s "$BASE/?v=$RANDOM$RANDOM" > obj/_v_js/zh.html
 curl -s "$BASE/index-en.html?v=$RANDOM$RANDOM" > obj/_v_js/en.html
+chk "zh HTML 靜態檢查（配對/重複id/img alt）"  0  "$(python -I -X utf8 Tools/check-html.py obj/_v_js/zh.html)"
+chk "en HTML 靜態檢查（配對/重複id/img alt）"  0  "$(python -I -X utf8 Tools/check-html.py obj/_v_js/en.html)"
 chk "zh 內聯 JS 語法"  0  "$(python -I Tools/check-js.py obj/_v_js/zh.html)"
 chk "en 內聯 JS 語法"  0  "$(python -I Tools/check-js.py obj/_v_js/en.html)"
 rm -rf obj/_v_js
