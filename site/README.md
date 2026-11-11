@@ -18,7 +18,7 @@ wrangler OAuth 憑證在本機；`_headers` 會一併上傳（nosniff／Referrer
 bash Tools/verify-site.sh
 ```
 
-逐項檢查線上（43 項）：200／404、SEO 標記、新節區（事實域／誠實邊界／FAQ／安全）、部署器唯一入口（直連鏈接必須為 0）、
+逐項檢查線上（51 項）：200／404、SEO 標記、新節區（六態／事實域／誠實邊界／FAQ／安全）、部署器唯一入口（直連鏈接必須為 0）、錨點 scroll-margin、行動端語言切換、GitHub 星標、百科連結、贊助複製按鈕、
 安全頭（CSP／nosniff／Referrer-Policy）、changelog.json 筆數動態等於 ChangelogCatalog.cs 的 Version 出現數、
 最新版號等於 `XinSpect.csproj` 的 `<Version>`、feed.xml 20 筆且首筆日期＝最新版日期、zh／en 內聯 script 逐一 `node --check`（語法守衛，見下）。
 
