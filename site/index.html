@@ -327,7 +327,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
     </details>
     <details id="faq-2">
       <summary>為什麼有些頁面整片顯示「—」？</summary>
-      <div class="a">不是壞掉。程式預設以一般權限啟動（asInvoker 最小特權）；感測器、MSR 直讀與超頻需要「以系統管理員身分執行」。不提權時那些頁面如實顯示「—」並標明原因——這正是六態降級設計（Present／NotSupported／InsufficientPrivilege 等）存在的理由：讀不到就說讀不到，不補 0、不編值。</div>
+      <div class="a">不是壞掉。程式預設以一般權限啟動（asInvoker 最小特權）；感測器、MSR 直讀與超頻需要「以系統管理員身分執行」。不提權時那些頁面如實顯示「—」並標明原因——這正是<a href="#states" style="color:var(--blue);font-weight:700">六態降級設計</a>（Present／NotSupported／InsufficientPrivilege 等）存在的理由：讀不到就說讀不到，不補 0、不編值。</div>
     </details>
     <details id="faq-3">
       <summary>會連網嗎？資料會上傳嗎？</summary>

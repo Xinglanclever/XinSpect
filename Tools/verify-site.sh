@@ -56,6 +56,8 @@ has "辭典 dialog 標記（zh）"                    1   "$(echo "$H" | grep -c
 has "辭典 dialog 標記（en）"                    1   "$(curl -sL "$BASE/index-en.html" | grep -c 'id="keydlg"')"
 has "六態條（zh）"                            1   "$(echo "$H" | grep -c 'id="states"')"
 has "六態條（en）"                            1   "$(curl -sL "$BASE/index-en.html" | grep -c 'id="states"')"
+chk "security.txt 200"                      200 "$(code "$BASE/.well-known/security.txt")"
+chk "security.txt Expires 標頭"              1   "$(curl -s "$BASE/.well-known/security.txt" | grep -c '^Expires: ')"
 has "百科線上閱讀連結（zh）"                    1   "$(echo "$H" | grep -c 'docs/%E7%99%BE%E7%A7%91-v3.17.md')"
 has "百科線上閱讀連結（en）"                    1   "$(curl -sL "$BASE/index-en.html" | grep -c 'docs/%E7%99%BE%E7%A7%91-v3.17.md')"
 has "EN 贊助區塊（含複製按鈕目標）"            1   "$(curl -sL "$BASE/index-en.html" | grep -c 'sponsor-table')"

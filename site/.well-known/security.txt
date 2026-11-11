@@ -1,0 +1,5 @@
+Contact: https://github.com/Xinglanclever/XinSpect/blob/main/SECURITY.md
+Policy: https://github.com/Xinglanclever/XinSpect/blob/main/SECURITY.md
+Preferred-Languages: zh-Hant, en
+Canonical: https://xinspect.de5.net/.well-known/security.txt
+Expires: 2027-11-12T00:00:00Z
