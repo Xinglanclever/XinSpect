@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://xinspect.de5.net/sitemap.xml

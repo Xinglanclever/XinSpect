@@ -1,0 +1,11 @@
+{
+  "name": "曦覽 XinSpect",
+  "short_name": "XinSpect",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "theme_color": "#FAFAF7",
+  "background_color": "#FAFAF7",
+  "display": "browser",
+  "start_url": "https://xinspect.de5.net/"
+}
