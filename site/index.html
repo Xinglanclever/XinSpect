@@ -72,7 +72,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
     <a href="#why">特色</a>
     <a href="#xsc">終端機</a>
     <a href="#changelog">更新</a>
-    <a class="dl" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpect.exe">下載 v3.25</a>
+    <a class="dl" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectDeploy.exe">下載 v3.25</a>
   </nav>
 </div></header>
 
@@ -81,9 +81,11 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
   <h1>硬體的事實，<br>不<em>編</em>故事。</h1>
   <p>曦覽是一部唯讀的 Windows 硬體事實採集器：1,178 個靜態事實鍵、69 個動態家族，讀得到就報，讀不到就老實說讀不到。單一執行檔，免安裝，附一支 Claude Code 式的終端機 xsc。</p>
   <div class="cta">
-    <a class="btn red" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpect.exe">↓ 下載 XinSpect.exe（GUI）</a>
-    <a class="btn ghost" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectConsole.exe">↓ xsc.exe（終端機）</a>
+    <a class="btn red" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectDeploy.exe">↓ 下載部署器（推薦）</a>
+    <a class="btn ghost" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpect.exe">↓ 直連 XinSpect.exe（GUI）</a>
+    <a class="btn ghost" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectConsole.exe">↓ 直連 xsc.exe（終端機）</a>
   </div>
+  <p style="margin-top:18px;color:#555;font-size:14px;max-width:640px">部署器只有 29 KB：A 裝主程式、B 裝曦覽終端機；GitHub／Google Drive／加速節點三個來源可切換，下載完自動驗 PE 標頭。中國大陸網路請用部署器選加速節點。</p>
   <div class="badges">
     <span class="badge r">唯讀</span><span class="badge r">不寫硬體</span><span class="badge r">不連網</span>
     <span class="badge">免安裝</span><span class="badge">繁體中文／English</span><span class="badge">.NET 10 自含</span>
@@ -118,22 +120,27 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
 <section id="dl" style="border-top:1px solid var(--line)"><div class="wrap">
   <div class="sec-head"><span class="sq"></span><h2>下載</h2><span class="note">v3.25 ・ ULTIMA XXV ・ 2026-11-11</span></div>
   <div class="dl-grid">
-    <div class="dl-card">
-      <h3>XinSpect.exe</h3><div class="tag">GUI ・ 單一執行檔 ・ 免安裝</div>
-      <p>65 頁硬體事實、強控台、合規出口。SHA-256 見 Release 的 SHA256SUMS.txt。</p>
-      <a class="btn red" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpect.exe">GitHub 下載</a>
+    <div class="dl-card" style="grid-column:1/-1;border-top:4px solid var(--red)">
+      <h3>XinSpectDeploy.exe</h3><div class="tag">一鍵安裝器 ・ 推薦 ・ 29 KB</div>
+      <p>第一層選裝什麼：<b>A</b> 主程式（GUI）、<b>B</b> 曦覽終端機；第二層選下載來源：GitHub／Google Drive／加速節點。進度條、速度、剩餘時間，下載完一律驗 PE 標頭。中國大陸網路請選加速節點。</p>
+      <a class="btn red" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectDeploy.exe">下載部署器</a>
     </div>
     <div class="dl-card">
-      <h3>XinSpectConsole.exe</h3><div class="tag">終端機 ・ 單一執行檔</div>
+      <h3>XinSpect.exe</h3><div class="tag">GUI ・ 單一執行檔 ・ 免安裝 ・ 直連</div>
+      <p>65 頁硬體事實、強控台、合規出口。SHA-256 見 Release 的 SHA256SUMS.txt。</p>
+      <a class="btn ghost" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpect.exe">GitHub 直連下載</a>
+    </div>
+    <div class="dl-card">
+      <h3>XinSpectConsole.exe</h3><div class="tag">終端機 ・ 單一執行檔 ・ 直連</div>
       <p>Claude Code 式 REPL＋全螢幕 dash。GUI 65 頁功能面的終端對照。</p>
-      <a class="btn ghost" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectConsole.exe">GitHub 下載</a>
+      <a class="btn ghost" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectConsole.exe">GitHub 直連下載</a>
     </div>
   </div>
-  <p style="margin-top:18px;font-size:13px;color:var(--grey)">中國加速節點／Google Drive 鏡像：安裝器 XinSpectDeploy.exe（A 裝主程式、B 裝曦覽終端機）開機即抓鏡像清單，或直接開 <a style="color:var(--blue)" href="https://drive.google.com/drive/folders/1V3PoEMkee-iI6Ep2dk5r61vsxpohhYDs">Drive latest/ 資料夾</a>。</p>
+  <p style="margin-top:18px;font-size:13px;color:var(--grey)">Google Drive 鏡像：部署器第二格即走 Drive（開機自動抓鏡像清單），或直接開 <a style="color:var(--blue)" href="https://drive.google.com/drive/folders/1V3PoEMkee-iI6Ep2dk5r61vsxpohhYDs">Drive latest/ 資料夾</a>。</p>
 </div></section>
 
 <section id="changelog"><div class="wrap">
-  <div class="sec-head"><span class="sq"></span><h2>最近的更新</h2><span class="note">118 版全程可考</span></div>
+  <div class="sec-head"><span class="sq"></span><h2>最近的更新</h2><span class="note">125 版全程可考</span></div>
   <table id="log"><thead><tr><th>版本</th><th>日期</th><th>內容</th></tr></thead><tbody></tbody></table>
 </div></section>
 
