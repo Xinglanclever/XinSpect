@@ -158,6 +158,9 @@ tr.latest td.v::after{content:"最新";font-size:11px;background:var(--red);colo
 .sponsor-table td code{overflow-wrap:anywhere;word-break:break-all;font-size:12px}
 code,pre{font-family:"Cascadia Mono",Consolas,monospace}
 .pre{background:var(--ink);color:#e8e8e4;padding:26px 28px;font-size:13.5px;line-height:1.75;overflow-x:auto}
+.pre .ln{display:block;opacity:0;transform:translateY(3px)}
+.pre.on .ln{opacity:1;transform:none;transition:opacity .3s ease,transform .3s ease}
+@media (prefers-reduced-motion: reduce){.pre .ln{opacity:1!important;transform:none!important;transition:none!important}}
 .pre .c{color:#8f8f8a}.pre .g{color:#7fd17f}.pre .b{color:#7fb4ff}.pre .r{color:#ff7b72}
 .shots{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:26px}
 .shot{border:2px solid var(--ink);display:block;position:relative;background:#000}
@@ -586,7 +589,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
   <div style="margin-top:36px;max-width:820px">
     <div style="font-size:12px;letter-spacing:.14em;color:var(--grey);text-transform:uppercase;font-weight:700;margin-bottom:6px">自願贊助 ・ Optional support</div>
     <p style="font-size:14px;color:#555">若願意支持個人維護，可以請作者喝杯咖啡；每筆贊助請至少等值 1.5 USD（USDT 約 1.5 USDT）。這只是自願贊助渠道，不附帶支援承諾。請先核對幣種與網路；鏈上轉帳通常無法撤回。</p>
-    <div class="tbl-scroll"><table class="sponsor-table"><thead><tr><th>幣種</th><th>網路</th><th>地址</th></tr></thead><tbody>
+    <div class="tbl-scroll"><table class="sponsor-table"><caption class="vh">自願贊助款渠道一覽，非購買入口</caption><thead><tr><th>幣種</th><th>網路</th><th>地址</th></tr></thead><tbody>
       <tr><td>USDT</td><td>Tron (TRC20)</td><td><code>TQPk1DfaHBCKNt8W5UUJDH3XkwAArmmNqH</code></td></tr>
       <tr><td>USDT</td><td>Solana</td><td><code>34o5GGmamdV8k9vYYaaRABZpSNXpphbSXdhBsASN8XN4</code></td></tr>
       <tr><td>USDT</td><td>BNB Smart Chain (BEP20)</td><td><code>0x8811d8EF822cC9cf546fe24C565b861291e1B704</code></td></tr>
@@ -711,6 +714,19 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
       tb.innerHTML = '';
       err.style.display = '';
     });
+  /* 終端機示範逐行顯現（reduced-motion 由 CSS 關閉） */
+  document.querySelectorAll('.pre').forEach(function(pre){
+    var lines=pre.innerHTML.split('\n');
+    pre.innerHTML=lines.map(function(l,i){
+      return '<span class="ln" style="transition-delay:'+(i*90)+'ms">'+(l||' ')+'</span>';
+    }).join('\n');
+    if('IntersectionObserver' in window){
+      var io=new IntersectionObserver(function(es){
+        es.forEach(function(en){ if(en.isIntersecting){ pre.classList.add('on'); io.disconnect(); } });
+      },{threshold:.3});
+      io.observe(pre);
+    } else { pre.classList.add('on'); }
+  });
 })();
 </script>
 <script>

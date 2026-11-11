@@ -83,6 +83,9 @@ tr.latest td.v::after{content:"LATEST";font-size:11px;background:var(--red);colo
 code,pre{font-family:"Cascadia Mono",Consolas,monospace}
 p code{background:#efefe9;padding:2px 6px;font-size:.92em}
 .pre{background:var(--ink);color:#e8e8e4;padding:26px 28px;font-size:13.5px;line-height:1.75;overflow-x:auto}
+.pre .ln{display:block;opacity:0;transform:translateY(3px)}
+.pre.on .ln{opacity:1;transform:none;transition:opacity .3s ease,transform .3s ease}
+@media (prefers-reduced-motion: reduce){.pre .ln{opacity:1!important;transform:none!important;transition:none!important}}
 .pre .c{color:#8f8f8a}.pre .g{color:#7fd17f}.pre .b{color:#7fb4ff}.pre .r{color:#ff7b72}
 .dl-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line)}
 .dl-card{background:var(--paper);padding:32px}
@@ -101,6 +104,12 @@ p code{background:#efefe9;padding:2px 6px;font-size:.92em}
 .faq summary::after{content:"+";color:var(--red);font-weight:700;flex:none}
 .faq details[open] summary::after{content:"−"}
 .faq .a{padding:0 26px 22px;font-size:14px;color:#555;max-width:760px}
+.dom{display:flex;flex-wrap:wrap;gap:6px}
+.dom span{border:1px solid var(--line);padding:5px 10px;font-size:12px;color:var(--grey);display:inline-flex;align-items:center;gap:7px}
+.dom span code{font-size:12px;color:var(--ink);background:none;padding:0}
+.dom span b{font-weight:700;color:var(--grey)}
+.dom span.hot{border:2px solid var(--red)}
+.dom span.hot code,.dom span.hot b{color:var(--red)}
 #log-q{border:2px solid var(--ink);padding:10px 14px;font-size:14px;width:min(360px,100%);background:var(--paper);font-family:inherit}
 footer{border-top:3px solid var(--ink);padding:40px 0 60px;color:var(--grey);font-size:13px}
 footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
@@ -149,6 +158,7 @@ footer a:hover{color:var(--ink);text-decoration:underline}
     <a href="#why">Features</a>
     <a href="#xsc">Terminal</a>
     <a href="#download">Download</a>
+    <a href="#domains">Domains</a>
     <a href="#faq">FAQ</a>
     <a href="#security">Security</a>
     <a href="#changelog">Changelog</a>
@@ -279,6 +289,170 @@ footer a:hover{color:var(--ink);text-decoration:underline}
     <div class="dl-card"><h3 style="font-size:16px">Local encryption & integrity</h3><div class="tag">DPAPI ・ SHA-256</div><p>AI API keys are DPAPI-encrypted before touching disk; downloads always pass PE header and size-floor checks; per-asset SHA-256 lives in the Release's SHA256SUMS.txt. Publisher signing (non-repudiation) is honestly listed as scheduled, not pretended.</p></div>
   </div>
   <p style="margin-top:18px;font-size:13px;color:var(--grey)">Found a security issue? Please use the private channel in <a style="color:var(--blue);font-weight:700" rel="noopener" href="https://github.com/Xinglanclever/XinSpect/blob/main/SECURITY.md">SECURITY.md</a> — the only entry guaranteed to stay private.</p>
+</div></section>
+
+<section id="domains" style="border-top:1px solid var(--line)"><div class="wrap">
+  <div class="sec-head"><span class="sq"></span><h2>Fact-domain spread</h2><span class="note">157 domains ・ 1,178 keys ・ recomputed from source</span></div>
+  <p style="font-size:14px;color:#555;max-width:760px;margin-bottom:22px">The first segment of every key names its domain. All 157 domains are listed with their key counts — red frames mark the 15 busiest mainline domains, single-key domains are listed just as honestly.</p>
+  <div class="dom">
+    <span class="hot"><code>ac</code><b>61</b></span>
+    <span class="hot"><code>sb</code><b>53</b></span>
+    <span class="hot"><code>fw</code><b>48</b></span>
+    <span class="hot"><code>sa</code><b>45</b></span>
+    <span class="hot"><code>fs</code><b>30</b></span>
+    <span class="hot"><code>uefi</code><b>27</b></span>
+    <span class="hot"><code>ev</code><b>25</b></span>
+    <span class="hot"><code>eg</code><b>24</b></span>
+    <span class="hot"><code>os</code><b>24</b></span>
+    <span class="hot"><code>ms</code><b>23</b></span>
+    <span class="hot"><code>nw</code><b>22</b></span>
+    <span class="hot"><code>st</code><b>20</b></span>
+    <span class="hot"><code>ds</code><b>18</b></span>
+    <span class="hot"><code>rc</code><b>18</b></span>
+    <span class="hot"><code>cpu</code><b>16</b></span>
+    <span><code>dl</code><b>15</b></span>
+    <span><code>po</code><b>15</b></span>
+    <span><code>se</code><b>15</b></span>
+    <span><code>sg</code><b>14</b></span>
+    <span><code>sv</code><b>14</b></span>
+    <span><code>pw</code><b>13</b></span>
+    <span><code>tpm</code><b>13</b></span>
+    <span><code>ws</code><b>13</b></span>
+    <span><code>gx</code><b>12</b></span>
+    <span><code>mu</code><b>12</b></span>
+    <span><code>ts</code><b>12</b></span>
+    <span><code>ux</code><b>12</b></span>
+    <span><code>bl</code><b>11</b></span>
+    <span><code>gpu</code><b>11</b></span>
+    <span><code>in</code><b>11</b></span>
+    <span><code>rs</code><b>11</b></span>
+    <span><code>uf</code><b>11</b></span>
+    <span><code>uv</code><b>11</b></span>
+    <span><code>hm</code><b>10</b></span>
+    <span><code>kp</code><b>10</b></span>
+    <span><code>net</code><b>10</b></span>
+    <span><code>ng</code><b>10</b></span>
+    <span><code>pl</code><b>10</b></span>
+    <span><code>sc</code><b>10</b></span>
+    <span><code>tu</code><b>10</b></span>
+    <span><code>virt</code><b>10</b></span>
+    <span><code>bt</code><b>9</b></span>
+    <span><code>cap</code><b>9</b></span>
+    <span><code>dv</code><b>9</b></span>
+    <span><code>edid</code><b>9</b></span>
+    <span><code>hist</code><b>9</b></span>
+    <span><code>qs</code><b>9</b></span>
+    <span><code>spi</code><b>9</b></span>
+    <span><code>zr</code><b>9</b></span>
+    <span><code>amd</code><b>8</b></span>
+    <span><code>boot</code><b>8</b></span>
+    <span><code>dm</code><b>8</b></span>
+    <span><code>el</code><b>8</b></span>
+    <span><code>mem</code><b>8</b></span>
+    <span><code>vr</code><b>8</b></span>
+    <span><code>ag</code><b>7</b></span>
+    <span><code>audit</code><b>7</b></span>
+    <span><code>dk</code><b>7</b></span>
+    <span><code>gd</code><b>7</b></span>
+    <span><code>infer</code><b>7</b></span>
+    <span><code>of</code><b>7</b></span>
+    <span><code>pmu</code><b>7</b></span>
+    <span><code>usb</code><b>7</b></span>
+    <span><code>xt</code><b>7</b></span>
+    <span><code>gp</code><b>6</b></span>
+    <span><code>pci</code><b>6</b></span>
+    <span><code>platform</code><b>6</b></span>
+    <span><code>spec</code><b>6</b></span>
+    <span><code>src</code><b>6</b></span>
+    <span><code>fact</code><b>5</b></span>
+    <span><code>mc</code><b>5</b></span>
+    <span><code>psu</code><b>5</b></span>
+    <span><code>pv</code><b>5</b></span>
+    <span><code>scan</code><b>5</b></span>
+    <span><code>sec</code><b>5</b></span>
+    <span><code>tm</code><b>5</b></span>
+    <span><code>ui</code><b>5</b></span>
+    <span><code>acpi</code><b>4</b></span>
+    <span><code>asset</code><b>4</b></span>
+    <span><code>cm</code><b>4</b></span>
+    <span><code>coverage</code><b>4</b></span>
+    <span><code>ec</code><b>4</b></span>
+    <span><code>ent</code><b>4</b></span>
+    <span><code>ie</code><b>4</b></span>
+    <span><code>mt</code><b>4</b></span>
+    <span><code>nic</code><b>4</b></span>
+    <span><code>pdev</code><b>4</b></span>
+    <span><code>rf</code><b>4</b></span>
+    <span><code>viz</code><b>4</b></span>
+    <span><code>write</code><b>4</b></span>
+    <span><code>au</code><b>3</b></span>
+    <span><code>backend</code><b>3</b></span>
+    <span><code>chipset</code><b>3</b></span>
+    <span><code>cmos</code><b>3</b></span>
+    <span><code>dbg</code><b>3</b></span>
+    <span><code>esp</code><b>3</b></span>
+    <span><code>exp</code><b>3</b></span>
+    <span><code>export</code><b>3</b></span>
+    <span><code>numa</code><b>3</b></span>
+    <span><code>pcie</code><b>3</b></span>
+    <span><code>rep</code><b>3</b></span>
+    <span><code>time</code><b>3</b></span>
+    <span><code>ups</code><b>3</b></span>
+    <span><code>audio</code><b>2</b></span>
+    <span><code>build</code><b>2</b></span>
+    <span><code>byovd</code><b>2</b></span>
+    <span><code>cert</code><b>2</b></span>
+    <span><code>display</code><b>2</b></span>
+    <span><code>drvinsp</code><b>2</b></span>
+    <span><code>egress</code><b>2</b></span>
+    <span><code>etl</code><b>2</b></span>
+    <span><code>fleet</code><b>2</b></span>
+    <span><code>key</code><b>2</b></span>
+    <span><code>knowledge</code><b>2</b></span>
+    <span><code>mchbar</code><b>2</b></span>
+    <span><code>mon</code><b>2</b></span>
+    <span><code>nvme</code><b>2</b></span>
+    <span><code>pcieaer</code><b>2</b></span>
+    <span><code>role</code><b>2</b></span>
+    <span><code>setuptl</code><b>2</b></span>
+    <span><code>state</code><b>2</b></span>
+    <span><code>storage</code><b>2</b></span>
+    <span><code>whea</code><b>2</b></span>
+    <span><code>ata</code><b>1</b></span>
+    <span><code>cam</code><b>1</b></span>
+    <span><code>chassis</code><b>1</b></span>
+    <span><code>contrib</code><b>1</b></span>
+    <span><code>cxl</code><b>1</b></span>
+    <span><code>data</code><b>1</b></span>
+    <span><code>defender</code><b>1</b></span>
+    <span><code>degrade</code><b>1</b></span>
+    <span><code>diag</code><b>1</b></span>
+    <span><code>doc</code><b>1</b></span>
+    <span><code>dyn</code><b>1</b></span>
+    <span><code>evt</code><b>1</b></span>
+    <span><code>file</code><b>1</b></span>
+    <span><code>guard</code><b>1</b></span>
+    <span><code>hpa</code><b>1</b></span>
+    <span><code>license</code><b>1</b></span>
+    <span><code>limits</code><b>1</b></span>
+    <span><code>monitor</code><b>1</b></span>
+    <span><code>msr</code><b>1</b></span>
+    <span><code>off</code><b>1</b></span>
+    <span><code>oob</code><b>1</b></span>
+    <span><code>ps</code><b>1</b></span>
+    <span><code>raid</code><b>1</b></span>
+    <span><code>reg</code><b>1</b></span>
+    <span><code>release</code><b>1</b></span>
+    <span><code>report</code><b>1</b></span>
+    <span><code>secboot</code><b>1</b></span>
+    <span><code>secure</code><b>1</b></span>
+    <span><code>smart</code><b>1</b></span>
+    <span><code>smbus</code><b>1</b></span>
+    <span><code>test</code><b>1</b></span>
+    <span><code>tests</code><b>1</b></span>
+    <span><code>ufv</code><b>1</b></span>
+    <span><code>usbstor</code><b>1</b></span>
+  </div>
 </div></section>
 
 <section id="changelog"><div class="wrap">
