@@ -9,6 +9,9 @@
 
 # XinSpect
 
+**Deeper, more accurate, more stable—more honest.**
+*Altius, accuratius, stabilius—veracius.*
+
 A free, open-source PC toolbox for Windows. Low-level reads are read-only by default; advanced diagnostics and CPU/DRAM stress tests are off by default, and hardware writes require a second safety switch plus per-action confirmation. Ships as a single portable executable and collects or transmits no user data.
 
 > **Scope and audit limits (2026-11-12):** 1,178 is the mixed hardware/OS/security/diagnostic/governance key catalogue, not a count of hardware readings. Production kernel access uses third-party WinRing0 and the in-house XsRegProbe. PawnIO is unbound; the BlueSquadron kernel prototype has only passed a local build and is not packaged or runtime-validated. Reviews are author/AI-assisted, not independent security certification. See [claim verification](docs/AUDIT-CLAIMS-2026-11-12.md).

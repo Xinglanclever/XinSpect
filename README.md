@@ -12,6 +12,9 @@
 
 # 曦覽 XinSpect 百科・修正版（v3.17・2026-11-07 審計後）
 
+**更深、更準、更穩——更誠實。**
+*Altius, accuratius, stabilius—veracius.*
+
 ![版本](https://img.shields.io/badge/version-3.26-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
