@@ -82,10 +82,8 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
   <p>曦覽是一部唯讀的 Windows 硬體事實採集器：1,178 個靜態事實鍵、69 個動態家族，讀得到就報，讀不到就老實說讀不到。單一執行檔，免安裝，附一支 Claude Code 式的終端機 xsc。</p>
   <div class="cta">
     <a class="btn red" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectDeploy.exe">↓ 下載部署器（推薦）</a>
-    <a class="btn ghost" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpect.exe">↓ 直連 XinSpect.exe（GUI）</a>
-    <a class="btn ghost" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectConsole.exe">↓ 直連 xsc.exe（終端機）</a>
   </div>
-  <p style="margin-top:18px;color:#555;font-size:14px;max-width:640px">部署器只有 29 KB：A 裝主程式、B 裝曦覽終端機；GitHub／Google Drive／加速節點三個來源可切換，下載完自動驗 PE 標頭。中國大陸網路請用部署器選加速節點。</p>
+  <p style="margin-top:18px;color:#555;font-size:14px;max-width:640px">下載 29 KB 的部署器就等於下載了整個曦覽——A 裝主程式、B 裝終端機，三個下載來源可切換，下載完自動驗證再落地。詳細能部署什麼，見下方下載節。</p>
   <div class="badges">
     <span class="badge r">唯讀</span><span class="badge r">不寫硬體</span><span class="badge r">不連網</span>
     <span class="badge">免安裝</span><span class="badge">繁體中文／English</span><span class="badge">.NET 10 自含</span>
@@ -119,24 +117,34 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
 
 <section id="dl" style="border-top:1px solid var(--line)"><div class="wrap">
   <div class="sec-head"><span class="sq"></span><h2>下載</h2><span class="note">v3.25 ・ ULTIMA XXV ・ 2026-11-11</span></div>
-  <div class="dl-grid">
-    <div class="dl-card" style="grid-column:1/-1;border-top:4px solid var(--red)">
-      <h3>XinSpectDeploy.exe</h3><div class="tag">一鍵安裝器 ・ 推薦 ・ 29 KB</div>
-      <p>第一層選裝什麼：<b>A</b> 主程式（GUI）、<b>B</b> 曦覽終端機；第二層選下載來源：GitHub／Google Drive／加速節點。進度條、速度、剩餘時間，下載完一律驗 PE 標頭。中國大陸網路請選加速節點。</p>
-      <a class="btn red" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectDeploy.exe">下載部署器</a>
+  <div class="dl-card" style="border-top:4px solid var(--red);padding:40px 44px">
+    <h3 style="font-size:26px">XinSpectDeploy.exe</h3>
+    <div class="tag">一鍵安裝器 ・ 官方唯一推薦入口 ・ 29 KB ・ 免安裝</div>
+    <p style="max-width:820px">下載它就等於下載了整個曦覽：29 KB 的安裝器內含鏡像清單邏輯，每次啟動自動抓取最新連結（3 秒逾時，抓不到就用內建值）——鏡像通路日後更新，也不用重新下載安裝器。第一層選<b>部署什麼</b>，第二層選<b>從哪裡下載</b>，進度條、速度、剩餘時間全程可見，下載完自動驗證再落地。</p>
+    <p style="margin-bottom:0"><a class="btn red" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectDeploy.exe">↓ 下載部署器（GitHub）</a>&nbsp;&nbsp;<a class="btn ghost" href="https://drive.google.com/drive/folders/1V3PoEMkee-iI6Ep2dk5r61vsxpohhYDs">Drive latest/ 資料夾</a></p>
+  </div>
+
+  <div class="dl-grid" style="margin-top:18px">
+    <div class="dl-card">
+      <h3 style="font-size:16px">第一層 ・ 部署什麼</h3><div class="tag">A / B 二選一</div>
+      <p><b style="color:var(--red)">A — XinSpect.exe 主程式（GUI）</b><br>65 頁硬體事實、強控台、合規出口。全自動部署主程式＋藍色中隊守護進程；守護進程自 3.13 起預設不啟用，裝完可到安全頁自行開啟。</p>
+      <p><b style="color:var(--red)">B — 曦覽終端機 xsc</b><br>Claude Code 式 REPL＋全螢幕 dash，單檔下載一步到位，不需要 GUI 也能操作全部事實面。</p>
+      <p style="margin-bottom:0"><b>兩維版本任選：</b><b>帶環境</b>（self-contained，.NET 10 Desktop Runtime 一併打包，免裝執行階段，體積較大）／<b>不帶環境</b>（framework-dependent，機器需已裝 .NET 10 Desktop Runtime，體積較小）。</p>
     </div>
     <div class="dl-card">
-      <h3>XinSpect.exe</h3><div class="tag">GUI ・ 單一執行檔 ・ 免安裝 ・ 直連</div>
-      <p>65 頁硬體事實、強控台、合規出口。SHA-256 見 Release 的 SHA256SUMS.txt。</p>
-      <a class="btn ghost" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpect.exe">GitHub 直連下載</a>
+      <h3 style="font-size:16px">第二層 ・ 從哪裡下載</h3><div class="tag">1 / 2 / 3 三個來源</div>
+      <p><b style="color:var(--red)">1 — GitHub</b><br>releases/latest 直連，全自動部署主程式＋Bridge，海外網路首選。</p>
+      <p><b style="color:var(--red)">2 — Google Drive 鏡像</b><br>latest/ 資料夾就地覆寫、永遠最新；遇到 Drive 對 exe 的「無法掃描病毒」攔截頁，安裝器會自動改走直連重試。</p>
+      <p style="margin-bottom:0"><b style="color:var(--red)">3 — 加速節點（中國大陸）</b><br>第三方節點以分享頁方式開啟。注意：走加速節點拿到的位元組只能驗 PE 標頭，驗不了發佈者簽章。</p>
     </div>
-    <div class="dl-card">
-      <h3>XinSpectConsole.exe</h3><div class="tag">終端機 ・ 單一執行檔 ・ 直連</div>
-      <p>Claude Code 式 REPL＋全螢幕 dash。GUI 65 頁功能面的終端對照。</p>
-      <a class="btn ghost" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectConsole.exe">GitHub 直連下載</a>
+    <div class="dl-card" style="grid-column:1/-1">
+      <h3 style="font-size:16px">下載完之後 ・ 安裝器的安全檢查</h3><div class="tag">每個位元組都先驗再落地</div>
+      <p style="margin-bottom:12px">下載過程顯示進度條、速度與剩餘時間；完成後一律檢查 <b>PE 標頭與大小門檻</b>——抓到 HTML（分享頁、限流頁）會被擋下、刪檔，並如實說出抓回來的內容像什麼，不會把垃圾存成 exe。</p>
+      <p style="margin-bottom:12px"><b>系統需求：</b>Windows 10 1903 以上／Windows 11、x64。帶環境版免裝 .NET；不帶環境版需先裝 <b>.NET 10 Desktop Runtime</b>。</p>
+      <p style="margin-bottom:12px"><b>權限：</b>主程式預設以一般權限啟動（asInvoker 最小特權）。想取得感測器、MSR 直讀與超頻頁面的完整功能，請「以系統管理員身分執行」——不提權不是壞掉，那些頁面會整片如實顯示「—」（六態降級設計存在的理由）。</p>
+      <p style="margin-bottom:0"><b>完整性：</b>逐資產 SHA-256 見 Release 頁的 <code>SHA256SUMS.txt</code>（防傳輸損毀）。</p>
     </div>
   </div>
-  <p style="margin-top:18px;font-size:13px;color:var(--grey)">Google Drive 鏡像：部署器第二格即走 Drive（開機自動抓鏡像清單），或直接開 <a style="color:var(--blue)" href="https://drive.google.com/drive/folders/1V3PoEMkee-iI6Ep2dk5r61vsxpohhYDs">Drive latest/ 資料夾</a>。</p>
 </div></section>
 
 <section id="changelog"><div class="wrap">
