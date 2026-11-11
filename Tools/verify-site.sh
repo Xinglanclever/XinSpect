@@ -30,6 +30,9 @@ has "誠實邊界節在頁上"                        1   "$(echo "$H" | grep -c
 has "安裝步驟與資產對照在頁上"                 1   "$(echo "$H" | grep -c 'asset-table')"
 chk "feed.xml 200"                          200 "$(code "$BASE/feed.xml")"
 chk "feed.xml 20 items"                     20  "$(curl -s "$BASE/feed.xml" | grep -c '<item>')"
+chk "index-en.html 200（跟隨 308 正規化）"    200 "$(curl -sL -o /dev/null -w "%{http_code}" "$BASE/index-en.html")"
+has "zh↔en hreflang 互通"                     2   "$(echo "$H" | grep -c 'hreflang="en"')"
+has "EN 頁連回 zh"                            1   "$(curl -sL "$BASE/index-en.html" | grep -c 'hreflang="zh-Hant"')"
 chk "nosniff 頭"                            1   "$(curl -s -I "$BASE/" | grep -ci 'x-content-type-options: nosniff')"
 chk "Referrer-Policy 頭"                    1   "$(curl -s -I "$BASE/" | grep -ci 'referrer-policy')"
 

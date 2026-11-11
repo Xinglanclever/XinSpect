@@ -1,6 +1,6 @@
 # site/ — 曦覽官網
 
-瑞士現代主義一頁站（index.html + changelog.json + og.png + 404.html），部署到 Cloudflare Pages
+瑞士現代主義雙語站（index.html＋index-en.html＋changelog.json＋feed.xml＋og.png＋404.html＋robots/sitemap/webmanifest/_headers），部署到 Cloudflare Pages
 專案 `xinspect-web`，自訂網域 https://xinspect.de5.net（技術備援 xinspect-web.pages.dev）。
 
 ## 部署

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XinSpect — Hardware facts, not stories</title>
+<meta name="description" content="XinSpect: a read-only Windows hardware fact collector. 1,178 static fact keys across 157 domains, 69 dynamic families, 65 reachable screens. No hardware writes, no network. Single executable, no install, plus a Claude-Code-style terminal (xsc).">
+<meta name="author" content="Xinglanclever">
+<meta name="theme-color" content="#FAFAF7">
+<link rel="canonical" href="https://xinspect.de5.net/index-en.html">
+<link rel="alternate" hreflang="zh-Hant" href="https://xinspect.de5.net/">
+<link rel="alternate" hreflang="en" href="https://xinspect.de5.net/index-en.html">
+<link rel="alternate" type="application/rss+xml" title="XinSpect release notes (RSS)" href="feed.xml">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="site.webmanifest">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="XinSpect 曦覽">
+<meta property="og:title" content="XinSpect — Hardware facts, not stories">
+<meta property="og:description" content="Read-only Windows hardware fact collector: 1,178 static fact keys, 157 domains, 69 dynamic families. No writes, no network. Single executable + Claude-Code-style terminal.">
+<meta property="og:url" content="https://xinspect.de5.net/index-en.html">
+<meta property="og:image" content="https://xinspect.de5.net/og.png">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{--red:#E30613;--ink:#111;--paper:#FAFAF7;--grey:#70706b;--line:#d8d8d3;--blue:#1D4ED8}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:"Helvetica Neue",Helvetica,"Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;background:var(--paper);color:var(--ink);line-height:1.6;-webkit-font-smoothing:antialiased}
+.skip{position:absolute;left:-9999px;top:0;background:var(--red);color:#fff;padding:10px 18px;font-weight:700;z-index:100}
+.skip:focus{left:12px;top:12px}
+:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+::selection{background:var(--red);color:#fff}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+a{color:inherit;text-decoration:none}
+.btn,nav a,#toTop{transition:background .15s,color .15s,box-shadow .15s}
+.topbar{border-bottom:3px solid var(--ink);background:var(--paper);position:sticky;top:0;z-index:10}
+.topbar .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px}
+.brand .sq{width:22px;height:22px;background:var(--red)}
+nav{display:flex;gap:26px;font-size:14px;letter-spacing:.04em;align-items:center}
+nav a{color:var(--grey);text-transform:uppercase}
+nav a:hover{color:var(--ink)}
+nav a.on{color:var(--ink);box-shadow:inset 0 -3px 0 var(--red)}
+nav a.dl{color:#fff;background:var(--red);padding:8px 16px}
+#lang{border:2px solid var(--ink);padding:6px 12px;font-size:13px;font-weight:700}
+.hero{padding:88px 0 72px;border-bottom:1px solid var(--line)}
+.hero .kicker{color:var(--red);font-weight:700;letter-spacing:.28em;font-size:12px;text-transform:uppercase}
+.hero h1{font-size:clamp(44px,7vw,84px);line-height:1.02;letter-spacing:-.02em;margin:18px 0 22px;font-weight:700}
+.hero h1 em{font-style:normal;color:var(--red)}
+.hero p{max-width:620px;font-size:18px;color:#444}
+.cta{margin-top:36px;display:flex;gap:14px;flex-wrap:wrap}
+.btn{display:inline-block;padding:14px 28px;font-weight:700;font-size:15px;border:2px solid var(--ink)}
+.btn.red{background:var(--red);border-color:var(--red);color:#fff}
+.btn.red:hover{background:#b80510}
+.btn.ghost:hover{background:var(--ink);color:#fff}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);margin-top:56px;background:var(--paper)}
+.stats>div{padding:26px 28px;border-right:1px solid var(--line)}
+.stats>div:last-child{border-right:none}
+.stats .n{font-size:44px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.stats .n i{font-style:normal;color:var(--red)}
+.stats .l{font-size:12px;color:var(--grey);letter-spacing:.14em;text-transform:uppercase;margin-top:8px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);border-left:1px solid var(--line);border-bottom:1px solid var(--line)}
+.cell{border-right:1px solid var(--line);border-top:1px solid var(--line);padding:36px 28px}
+.cell .no{font-size:12px;color:var(--red);font-weight:700;letter-spacing:.2em}
+.cell h3{margin:10px 0 8px;font-size:19px}
+.cell p{font-size:14px;color:#555}
+section{padding:72px 0}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:36px}
+.sec-head .sq{width:14px;height:14px;background:var(--red);flex:none;transform:translateY(1px)}
+.sec-head h2{font-size:30px;letter-spacing:-.01em}
+.sec-head .note{color:var(--grey);font-size:13px;margin-left:auto;letter-spacing:.08em}
+.badges{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}
+.badge{border:2px solid var(--ink);padding:6px 14px;font-size:13px;font-weight:700}
+.badge.r{border-color:var(--red);color:var(--red)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--grey);border-bottom:2px solid var(--ink);padding:10px 12px}
+td{border-bottom:1px solid var(--line);padding:12px}
+td.v{font-weight:700;white-space:nowrap;color:var(--red)}
+td.d{color:var(--grey);white-space:nowrap}
+tbody tr:hover td{background:#f1f1ec}
+tr.latest td{background:#fbeaea}
+tr.latest td.v::after{content:"LATEST";font-size:11px;background:var(--red);color:#fff;padding:2px 8px;margin-left:10px;letter-spacing:.1em;vertical-align:1px}
+code,pre{font-family:"Cascadia Mono",Consolas,monospace}
+p code{background:#efefe9;padding:2px 6px;font-size:.92em}
+.pre{background:var(--ink);color:#e8e8e4;padding:26px 28px;font-size:13.5px;line-height:1.75;overflow-x:auto}
+.pre .c{color:#8f8f8a}.pre .g{color:#7fd17f}.pre .b{color:#7fb4ff}.pre .r{color:#ff7b72}
+.dl-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line)}
+.dl-card{background:var(--paper);padding:32px}
+.dl-card h3{font-size:20px;margin-bottom:6px}
+.dl-card .tag{font-size:12px;color:var(--grey);letter-spacing:.1em;margin-bottom:18px}
+.dl-card p{font-size:14px;color:#555;margin-bottom:20px}
+.dl-card .no{font-size:12px;color:var(--red);font-weight:700;letter-spacing:.2em;margin-bottom:10px}
+.asset-table td:first-child{font-weight:700;white-space:nowrap}
+.asset-table td:nth-child(2){white-space:nowrap;color:var(--grey)}
+.asset-table td:last-child{color:#555;font-size:13px}
+.faq{border:1px solid var(--line)}
+.faq details{border-bottom:1px solid var(--line)}
+.faq details:last-child{border-bottom:none}
+.faq summary{cursor:pointer;padding:20px 26px;font-weight:700;font-size:16px;list-style:none;display:flex;justify-content:space-between;gap:14px;align-items:baseline}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";color:var(--red);font-weight:700;flex:none}
+.faq details[open] summary::after{content:"−"}
+.faq .a{padding:0 26px 22px;font-size:14px;color:#555;max-width:760px}
+#log-q{border:2px solid var(--ink);padding:10px 14px;font-size:14px;width:min(360px,100%);background:var(--paper);font-family:inherit}
+footer{border-top:3px solid var(--ink);padding:40px 0 60px;color:var(--grey);font-size:13px}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
+footer a:hover{color:var(--ink);text-decoration:underline}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.dl-grid{grid-template-columns:1fr}nav{gap:14px}nav a:not(.dl),#lang{display:none}.hero{padding:56px 0 48px}.dl-card{padding:24px 22px}.cta .btn{width:100%;text-align:center}.sec-head{flex-wrap:wrap;gap:8px}.sec-head .note{margin-left:0}.pre{font-size:12px;padding:18px 16px}section{padding:52px 0}.stats{grid-template-columns:1fr 1fr}.stats>div{border-bottom:1px solid var(--line)}.stats>div:nth-child(even){border-right:none}.stats>div:nth-child(n+3){border-bottom:none}.tbl-scroll{overflow-x:auto}#log,.asset-table{min-width:560px}}
+@media print{.topbar,#toTop{display:none!important}body{background:#fff}section{padding:24px 0}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar"><div class="wrap">
+  <a class="brand" href="index-en.html"><span class="sq" aria-hidden="true"></span>XinSpect 曦覽</a>
+  <nav aria-label="Main">
+    <a href="#why">Features</a>
+    <a href="#download">Download</a>
+    <a href="#faq">FAQ</a>
+    <a href="#security">Security</a>
+    <a href="#changelog">Changelog</a>
+    <a class="dl" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectDeploy.exe">Get v3.26</a>
+    <a id="lang" href="/">繁體中文</a>
+  </nav>
+</div></header>
+
+<main id="main">
+<div class="hero"><div class="wrap">
+  <div class="kicker">READ-ONLY HARDWARE FACTS ・ v3.26 ULTIMA XXVI</div>
+  <h1>Hardware facts,<br>not <em>stories</em>.</h1>
+  <p>XinSpect is a read-only hardware fact collector for Windows: 1,178 static fact keys across 157 domains, plus 69 dynamic families. If it can read a value, it reports it; if it can't, it says so — it never invents one. Single executable, no install, bundled with a Claude-Code-style terminal called <b>xsc</b>.</p>
+  <div class="cta">
+    <a class="btn red" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectDeploy.exe">↓ Get the deployer (recommended)</a>
+    <a class="btn ghost" href="#faq">Read the FAQ first</a>
+  </div>
+  <p style="margin-top:18px;color:#555;font-size:14px;max-width:640px">The deployer is 29 KB and is the only download entry on this site — it fetches everything else (GUI app or terminal) from three switchable sources, verifies every byte before writing it to disk. Details below.</p>
+  <div class="badges">
+    <span class="badge r">Read-only</span><span class="badge r">No hardware writes</span><span class="badge r">No network</span>
+    <span class="badge">No install</span><span class="badge">Traditional Chinese / English</span><span class="badge">.NET 10</span>
+  </div>
+  <div class="stats" role="list" aria-label="Key numbers">
+    <div role="listitem"><div class="n">1,178</div><div class="l">static fact keys</div></div>
+    <div role="listitem"><div class="n"><i>69</i></div><div class="l">dynamic families ・ 157 domains</div></div>
+    <div role="listitem"><div class="n">65</div><div class="l">reachable screens</div></div>
+    <div role="listitem"><div class="n"><i>131</i></div><div class="l">release notes, fully traceable</div></div>
+  </div>
+</div></div>
+
+<div class="wrap" id="why"><div class="grid">
+  <div class="cell"><div class="no">01</div><h3>Fact system</h3><p>Every number carries a key name, a source and a trust level (Measured／Reported／Derived). Present, NotSupported, InsufficientPrivilege — states are classified honestly, nothing is zero-filled.</p></div>
+  <div class="cell"><div class="no">02</div><h3>Ring-0 read-only probes</h3><p>Full-bus PCI scan (bus 0–255), MSR reads, UEFI／ME／Pluton firmware surfaces. Guard tests pin down "references no write path".</p></div>
+  <div class="cell"><div class="no">03</div><h3>rf.* out-of-band facts</h3><p>Offline Redfish catalogs promoted to facts: BMC self-reports are always marked Reported, clearly separated from local measurements.</p></div>
+  <div class="cell"><div class="no">04</div><h3>Power Console</h3><p>Keyboard-first command console: live telemetry, PCI／MSR, Bridge IPC, SHA-256 deploy authorization, ↑↓ history, Ctrl+1–5 sections.</p></div>
+  <div class="cell"><div class="no">05</div><h3>Compliance & evidence</h3><p>Compliance mapping, Merkle trees, CI／SIEM exports, family baselines — the formats auditors ask for, all at once.</p></div>
+  <div class="cell"><div class="no">06</div><h3>Swiss modernist UI</h3><p>Helvetica, right angles, red／white／black. The 65 GUI screens and the terminal share one headless service, so both look and tell the truth the same way.</p></div>
+</div></div>
+
+<section id="download" style="border-top:1px solid var(--line)"><div class="wrap">
+  <div class="sec-head"><span class="sq"></span><h2>Download</h2><span class="note">v3.26 ・ ULTIMA XXVI ・ 2026-11-12</span></div>
+  <div class="dl-card" style="border-top:4px solid var(--red);padding:40px 44px">
+    <h3 style="font-size:26px">XinSpectDeploy.exe</h3>
+    <div class="tag">One-click deployer ・ the only official entry ・ 29 KB ・ no install</div>
+    <p style="max-width:820px">Downloading it downloads all of XinSpect: the 29 KB deployer carries mirror-list logic and fetches fresh links at every start (3-second timeout, built-in values as fallback) — when mirrors change later, you never re-download the deployer. First pick <b>what to deploy</b>, then <b>where to download from</b>; progress, speed and ETA are visible throughout, and every byte is verified before landing.</p>
+    <p style="margin-bottom:0"><a class="btn red" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectDeploy.exe">↓ Get the deployer (GitHub)</a>&nbsp;&nbsp;<a class="btn ghost" href="https://drive.google.com/drive/folders/1V3PoEMkee-iI6Ep2dk5r61vsxpohhYDs">Drive latest/ folder</a></p>
+  </div>
+
+  <div class="dl-grid" style="margin-top:18px">
+    <div class="dl-card">
+      <div class="no">STEP 1</div><h3 style="font-size:16px">Get the deployer</h3>
+      <p>XinSpectDeploy.exe — 29 KB single executable, no install. It is the only official download entry.</p>
+    </div>
+    <div class="dl-card">
+      <div class="no">STEP 2</div><h3 style="font-size:16px">Layer 1: pick what to deploy</h3>
+      <p><b style="color:var(--red)">A</b> — the GUI app (deploys the app plus the Blue Squadron guardian; the guardian is off by default since 3.13, enable it on the Security page), or <b style="color:var(--red)">B</b> — the xsc terminal, one single-file download.</p>
+    </div>
+    <div class="dl-card">
+      <div class="no">STEP 3</div><h3 style="font-size:16px">Layer 2: pick a source</h3>
+      <p>GitHub／Google Drive／accelerated node (mainland China). The mirror list is fetched fresh at every launch — links can change without re-downloading the deployer.</p>
+    </div>
+    <div class="dl-card">
+      <div class="no">STEP 4</div><h3 style="font-size:16px">Watch it land, verified</h3>
+      <p>Progress bar, speed and ETA throughout; after download the PE header and size floor are always checked — HTML error pages are rejected, deleted, and described honestly. For sensors and direct MSR reads, run as administrator afterwards.</p>
+    </div>
+  </div>
+
+  <div style="margin-top:18px;border:1px solid var(--line)">
+    <div style="padding:20px 26px;border-bottom:1px solid var(--line)">
+      <div style="font-size:12px;letter-spacing:.14em;color:var(--grey);text-transform:uppercase;font-weight:700">Release variants ・ v3.26 actual sizes</div>
+      <p style="font-size:13px;color:var(--grey);margin:6px 0 0">The deployer fetches these automatically — this site deliberately offers no direct links; the deployer is the only entry. Per-asset SHA-256 in <code>SHA256SUMS.txt</code> on the Release page.</p>
+    </div>
+    <div class="tbl-scroll"><table class="asset-table">
+      <thead><tr><th scope="col">File</th><th scope="col">Size</th><th scope="col">Purpose</th></tr></thead><tbody>
+      <tr><td>XinSpectDeploy.exe</td><td>29,696 bytes</td><td>One-click deployer — the only download entry on this site</td></tr>
+      <tr><td>XinSpect.exe</td><td>39,242,860 bytes</td><td>Main GUI app. Blue Squadron guardian built in; the Power Console button bridges to xsc</td></tr>
+      <tr><td>XinSpect-full.exe</td><td>212,009,107 bytes</td><td>Self-contained GUI: .NET 10 Desktop Runtime bundled (same features)</td></tr>
+      <tr><td>XinSpectConsole.exe</td><td>101,266,211 bytes</td><td>Self-contained terminal: runs standalone, also launched by the Power Console</td></tr>
+      <tr><td>XinSpectConsole-nort.exe</td><td>67,317,721 bytes</td><td>Terminal, Windows 11／Server 2025, framework-dependent (needs .NET 10 Desktop Runtime)</td></tr>
+      <tr><td>XinSpectConsole-legacy-nort.exe</td><td>67,313,713 bytes</td><td>Terminal, Windows 10／2016/2019/2022, framework-dependent, plain console</td></tr>
+      <tr><td>XinSpectConsole-legacy.exe</td><td>101,266,299 bytes</td><td>Plain-console compatible terminal (self-contained): no color, no box drawing; facts／book／help identical</td></tr>
+      <tr><td>BlueSquadronBridge.exe</td><td>6,531,620 bytes</td><td>Standalone guardian process, for running protection without the main app</td></tr>
+      <tr><td>XsRegProbe.sys</td><td>24,064 bytes</td><td>Kernel probe driver (whitelist read-only MSR／MMIO). Installed by the app in an elevated session; manual loading needs test signing</td></tr>
+    </tbody></table></div>
+  </div>
+</div></section>
+
+<section id="faq" style="border-top:1px solid var(--line)"><div class="wrap">
+  <div class="sec-head"><span class="sq"></span><h2>FAQ</h2><span class="note">straight answers only</span></div>
+  <div class="faq">
+    <details><summary>Will it touch my hardware? Can it break anything?</summary><div class="a">Fact collection is strictly read-only: PCI scan, MSR reads and firmware parsing write nothing. Overclocking-style writes are not on the default path — hardware writes require the second security tier plus per-item confirmation, and every write is automatically logged (the CLI can report the ledger).</div></details>
+    <details><summary>Why do some pages show only "—"? </summary><div class="a">Nothing is broken. The app starts with normal privileges (asInvoker, least privilege); sensors, direct MSR reads and overclocking pages need "Run as administrator". Without elevation those pages honestly show "—" with reasons — that is the six-state degradation design doing its job: unreadable means unreadable, never zero-filled, never invented.</div></details>
+    <details><summary>Does it phone home? Is anything uploaded?</summary><div class="a">Hardware fact collection happens entirely on the machine, with no network. The AI page is optional and uses Cloudflare Workers AI with your own API key — the key is encrypted with Windows DPAPI before it is written to settings.json; if it can't be decrypted you get "no key + reason", never plaintext on disk.</div></details>
+    <details><summary>How do I install and upgrade?</summary><div class="a">Download the 29 KB XinSpectDeploy.exe (see Download above): A for the GUI app, B for the terminal, three switchable sources. Upgrades go through the same deployer — its mirror list is fetched fresh at every launch, so you always get the latest build.</div></details>
+    <details><summary>Is it free? Can I use it commercially?</summary><div class="a">Dual licensing with identical features: AGPL-3.0-or-later is free, <b>including commercial use</b> (distribute modified versions or offer it as a network service and you must share source under the same license); closed-source integration, bundling with hardware, or copyleft-hostile organizations use the commercial license. Details in the licensing section below.</div></details>
+    <details><summary>Which systems are supported?</summary><div class="a">Windows 10 1903+／Windows 11, x64. Self-contained builds need no .NET install; the terminal also ships a plain-console build for Windows Server 2016, 2019 and 2022.</div></details>
+  </div>
+</div></section>
+
+<section id="security" style="border-top:1px solid var(--line)"><div class="wrap">
+  <div class="sec-head"><span class="sq"></span><h2>Security & privacy</h2><span class="note">boundaries stated in the open</span></div>
+  <div class="dl-grid">
+    <div class="dl-card"><h3 style="font-size:16px">Read-only guard</h3><div class="tag">references no write path</div><p>Guard tests pin fact collection to "references no write path"; the XsRegProbe kernel driver is whitelist read-only (MSR／MMIO) and was rated the only "excellent" in the internal audit.</p></div>
+    <div class="dl-card"><h3 style="font-size:16px">Write ledger</h3><div class="tag">every write logged automatically</div><p>Operations that actually write hardware are off the fact path: every write is logged automatically and the CLI can report the ledger; writes additionally require the second security tier and per-item confirmation.</p></div>
+    <div class="dl-card"><h3 style="font-size:16px">Least privilege</h3><div class="tag">asInvoker ・ no hidden elevation</div><p>The app starts with normal privileges; elevation is an explicit decision, never a hidden one. Components that shouldn't hold an admin token (WebView2, AI) are kept on the low-privilege side.</p></div>
+    <div class="dl-card"><h3 style="font-size:16px">Local encryption & integrity</h3><div class="tag">DPAPI ・ SHA-256</div><p>AI API keys are DPAPI-encrypted before touching disk; downloads always pass PE header and size-floor checks; per-asset SHA-256 lives in the Release's SHA256SUMS.txt. Publisher signing (non-repudiation) is honestly listed as scheduled, not pretended.</p></div>
+  </div>
+  <p style="margin-top:18px;font-size:13px;color:var(--grey)">Found a security issue? Please use the private channel in <a style="color:var(--blue);font-weight:700" rel="noopener" href="https://github.com/Xinglanclever/XinSpect/blob/main/SECURITY.md">SECURITY.md</a> — the only entry guaranteed to stay private.</p>
+</div></section>
+
+<section id="changelog"><div class="wrap">
+  <div class="sec-head"><span class="sq"></span><h2>Recent releases</h2><span class="note" id="log-count">131 entries, fully traceable</span></div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+    <input id="log-q" type="search" placeholder="Filter by version or content…" aria-label="Filter release notes" autocomplete="off" style="border:2px solid var(--ink);padding:10px 14px;width:min(360px,100%)">
+    <button id="log-more" type="button" class="btn ghost" style="padding:10px 18px;font-size:13px;display:none">Show all</button>
+  </div>
+  <p id="log-status" class="vh" role="status" aria-live="polite"></p>
+  <div class="tbl-scroll"><table id="log"><caption class="vh">Release notes, loaded from changelog.json</caption><thead><tr><th scope="col">Version</th><th scope="col">Date</th><th scope="col">What changed</th></tr></thead><tbody></tbody></table></div>
+  <p id="log-none" style="display:none;color:var(--grey);font-size:14px;padding:18px 0">No entries match the filter.</p>
+  <p id="log-err" style="display:none;color:var(--red);font-size:14px;padding:18px 0">Loading the release notes failed — please refresh, or check <a style="color:var(--blue);font-weight:700" href="https://github.com/Xinglanclever/XinSpect/releases">GitHub Releases</a>.</p>
+  <p style="font-size:13px;color:var(--grey);margin-top:10px">注：release notes are kept in the original Traditional Chinese, untranslated on purpose — paraphrasing them would risk telling a story the code doesn't.</p>
+</div></section>
+
+<section id="license" style="border-top:1px solid var(--line)"><div class="wrap">
+  <div class="sec-head"><span class="sq"></span><h2>Dual licensing</h2><span class="note">identical features ・ pick one</span></div>
+  <div class="dl-grid">
+    <div class="dl-card">
+      <h3 style="color:var(--blue)">AGPL-3.0-or-later</h3><div class="tag">Free & open source</div>
+      <p>Individuals, research, teaching, internal use, and products willing to stay open. Free to use, modify and redistribute, <b>including commercially</b> — but distributing modified versions or offering it as a network service requires sharing your source under the same license.</p>
+      <a class="btn ghost" rel="noopener" href="https://github.com/Xinglanclever/XinSpect/blob/main/LICENSE">Read the AGPL terms</a>
+    </div>
+    <div class="dl-card">
+      <h3 style="color:var(--red)">Commercial license</h3><div class="tag">Paid ・ closed-source integration</div>
+      <p>Closed-source integration, bundling with shipped hardware, or organizations that disallow copyleft. No source-disclosure obligation by contract, covering <b>all versions</b> of this project. Scope and terms in the licensing document.</p>
+      <a class="btn red" rel="noopener" href="https://github.com/Xinglanclever/XinSpect/blob/main/COMMERCIAL-LICENSE.md">Read the commercial terms</a>
+    </div>
+  </div>
+  <div style="margin-top:22px;border:1px solid var(--line);padding:22px 26px">
+    <div style="font-size:12px;letter-spacing:.14em;color:var(--grey);text-transform:uppercase;font-weight:700;margin-bottom:8px">Contact</div>
+    <p style="font-size:15px;color:#444">For commercial licensing, private matters or security reports: open a thread on <a style="color:var(--blue);font-weight:700" rel="noopener" href="https://github.com/Xinglanclever/XinSpect/discussions">GitHub Discussions</a>, or use the private channel in <a style="color:var(--blue);font-weight:700" rel="noopener" href="https://github.com/Xinglanclever/XinSpect/blob/main/SECURITY.md">SECURITY.md</a> (the only entry guaranteed not to be public). General issues can go straight to GitHub Issues.</p>
+  </div>
+</div></section>
+</main>
+
+<footer><div class="wrap">
+  <div>XinSpect 曦覽 ・ read-only hardware fact collector ・ © 2026 Xinglanclever</div>
+  <div><a rel="noopener" href="https://github.com/Xinglanclever/XinSpect">GitHub</a> ・ <a href="#faq">FAQ</a> ・ <a href="#security">Security</a> ・ <a href="feed.xml">RSS</a> ・ <a href="/">繁體中文</a></div>
+</div></footer>
+
+<button id="toTop" type="button" aria-label="Back to top" title="Back to top" style="position:fixed;right:22px;bottom:22px;border:2px solid var(--ink);background:var(--paper);width:46px;height:46px;font-size:18px;font-weight:700;cursor:pointer;display:none;z-index:20;color:var(--ink)">↑</button>
+
+<script>
+(function(){
+  'use strict';
+  var PAGE = 15, all = [], shown = PAGE, filtered = null;
+  var tb = document.querySelector('#log tbody'),
+      q  = document.getElementById('log-q'),
+      more = document.getElementById('log-more'),
+      none = document.getElementById('log-none'),
+      err  = document.getElementById('log-err'),
+      status = document.getElementById('log-status'),
+      count = document.getElementById('log-count');
+  function esc(s){ return s.replace(/[&<>"]/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function rows(list, n){
+    return list.slice(0, n).map(function(e, i){
+      return '<tr id="log-v'+esc(e.v)+'"' + (i===0 ? ' class="latest"' : '') +
+        '><td class="v">'+(e.date ? 'v'+esc(e.v) : esc(e.v))+'</td><td class="d">'+(esc(e.date)||'—')+'</td><td>'+esc(e.title)+'</td></tr>';
+    }).join('');
+  }
+  function refresh(){
+    var list = filtered || all, n = filtered ? list.length : shown;
+    tb.innerHTML = rows(list, n);
+    none.style.display = filtered && !list.length ? '' : 'none';
+    more.style.display = (!filtered && all.length > shown) ? '' : 'none';
+    if (more.style.display === '') more.textContent = 'Show all ' + all.length;
+    status.textContent = filtered ? (list.length + ' entries after filter') : ('showing ' + Math.min(n, all.length) + ' / ' + all.length);
+  }
+  q.addEventListener('input', function(){
+    var t = q.value.trim().toLowerCase();
+    if (!t) { filtered = null; count.textContent = all.length + ' entries, fully traceable'; }
+    else {
+      filtered = all.filter(function(e){
+        return e.v.toLowerCase().indexOf(t) > -1 || e.title.toLowerCase().indexOf(t) > -1 || e.date.indexOf(t) > -1; });
+      count.textContent = 'Filter: ' + filtered.length + ' / ' + all.length;
+    }
+    refresh();
+  });
+  more.addEventListener('click', function(){ shown = all.length; refresh(); });
+  fetch('changelog.json')
+    .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(es){
+      all = es;
+      count.textContent = all.length + ' entries, fully traceable';
+      refresh();
+      var h = location.hash.match(/^#log-v(.+)$/);
+      if (h) { var row = document.getElementById('log-v' + h[1]); if (row) row.scrollIntoView(); }
+    })
+    .catch(function(){ tb.innerHTML = ''; err.style.display = ''; });
+
+  var links = {};
+  document.querySelectorAll('nav a[href^="#"]').forEach(function(a){ links[a.hash.slice(1)] = a; });
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(en){
+        if (en.isIntersecting && links[en.target.id]) {
+          Object.keys(links).forEach(function(k){ links[k].classList.remove('on'); });
+          links[en.target.id].classList.add('on');
+        }
+      });
+    }, { rootMargin: '-40% 0px -55% 0px' });
+    Object.keys(links).forEach(function(id){ var el = document.getElementById(id); if (el) io.observe(el); });
+  }
+  var toTop = document.getElementById('toTop');
+  addEventListener('scroll', function(){
+    toTop.style.display = document.documentElement.scrollTop > 600 ? 'block' : 'none';
+  }, { passive: true });
+  toTop.addEventListener('click', function(){ scrollTo({ top: 0, behavior: 'smooth' }); });
+})();
+</script>
+</body>
+</html>
