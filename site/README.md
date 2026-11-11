@@ -18,17 +18,30 @@ wrangler OAuth 憑證在本機；`_headers` 會一併上傳（nosniff／Referrer
 bash Tools/verify-site.sh
 ```
 
-逐項檢查線上：200／404、SEO 標記、新節區、部署器唯一入口（直連鏈接必須為 0）、安全頭、
-changelog.json 筆數（131）與最新版號等於 `XinSpect.csproj` 的 `<Version>`。
+逐項檢查線上（43 項）：200／404、SEO 標記、新節區（事實域／誠實邊界／FAQ／安全）、部署器唯一入口（直連鏈接必須為 0）、
+安全頭（CSP／nosniff／Referrer-Policy）、changelog.json 筆數動態等於 ChangelogCatalog.cs 的 Version 出現數、
+最新版號等於 `XinSpect.csproj` 的 `<Version>`、feed.xml 20 筆且首筆日期＝最新版日期、zh／en 內聯 script 逐一 `node --check`（語法守衛，見下）。
+
+## JS 語法守衛
+
+```bash
+python -I Tools/check-js.py obj/_v_js/zh.html   # 先把 html 複製到 obj/ 再跑
+```
+
+抽取指定 html 的內聯 `<script>` 逐一 `node --check`，印出失敗塊數。**切勿對 site/ 內的 html 直接跑**——抽取的 .js 會寫在同目錄、跟著部署出去。
+
+## 資料生成
+
+```bash
+python -I Tools/gen-site-data.py
+```
+
+從 `Nav/ChangelogCatalog.cs` 全量生成 `site/changelog.json`（131 筆＝版號＋進倉前階段）與 `site/feed.xml`（最新 20 筆 RSS）。值守 Cron（automation-10c018e5，每 6 小時）會在版本變化時自動執行本流程並部署。
 
 ## 更新紀錄（changelog.json）
 
 由 `Nav/ChangelogCatalog.cs` 全量抽出（131 筆＝129 版號＋2 個進倉前階段，欄位順序差異已容忍）。
-每次改版號後重新生成：
-
-```bash
-python -I <gen_changelog.py>   # 腳本見當次會話工作區；抽法：逐 ChangeEntry 區塊抓 Version/Date/Title
-```
+每次改版號後重新生成（見上方「資料生成」）。
 
 ## 結構與規矩
 
