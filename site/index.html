@@ -43,6 +43,19 @@
   "description": "唯讀的 Windows 硬體事實採集器：1,178 個靜態事實鍵、69 個動態家族，不寫硬體、不連網。單一執行檔免安裝，附 Claude Code 式終端機 xsc。"
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    { "@type": "Question", "name": "曦覽會動我的硬體嗎？", "acceptedAnswer": { "@type": "Answer", "text": "事實採集全程唯讀；超頻等硬體寫入另需第二級安全與逐項確認，且每次寫入自動記帳。" } },
+    { "@type": "Question", "name": "為什麼有些頁面顯示「—」？", "acceptedAnswer": { "@type": "Answer", "text": "預設以一般權限啟動；提權後才會開啟感測器與 MSR 直讀，未提權時如實顯示「—」並標明原因（六態降級設計）。" } },
+    { "@type": "Question", "name": "會連網嗎？", "acceptedAnswer": { "@type": "Answer", "text": "硬體事實採集全部在本機完成，不連網；AI 頁為選用功能，API 金鑰以 Windows DPAPI 加密存放。" } },
+    { "@type": "Question", "name": "免費嗎？可以商業使用嗎？", "acceptedAnswer": { "@type": "Answer", "text": "雙授權：AGPL-3.0-or-later 免費且包括商業使用；閉源整合走商業授權。" } },
+    { "@type": "Question", "name": "支援哪些系統？", "acceptedAnswer": { "@type": "Answer", "text": "Windows 10 1903 以上／Windows 11、x64；終端機另有支援 Windows Server 2016、2019、2022 的純文字相容版。" } }
+  ]
+}
+</script>
 <style>
 :root{--red:#E30613;--ink:#111;--paper:#FAFAF7;--grey:#70706b;--line:#d8d8d3;--blue:#1D4ED8}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -55,6 +68,27 @@ body{font-family:"Helvetica Neue",Helvetica,"Noto Sans TC","Microsoft JhengHei",
 @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto!important}*{transition:none!important;animation:none!important}}
 .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
 a{color:inherit;text-decoration:none}
+::selection{background:var(--red);color:#fff}
+.btn,nav a,#toTop,#menuBtn{transition:background .15s,color .15s,box-shadow .15s}
+p code,li code{background:#efefe9;padding:2px 6px;font-size:.92em}
+footer a:hover{color:var(--ink);text-decoration:underline}
+@media(pointer:fine){html{scrollbar-width:thin;scrollbar-color:#b9b9b2 transparent}}
+@media print{.topbar,#toTop,#progress,.skip,#menuBtn{display:none!important}body{background:#fff}section{padding:24px 0}}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);margin-top:56px;background:var(--paper)}
+.stats>div{padding:26px 28px;border-right:1px solid var(--line)}
+.stats>div:last-child{border-right:none}
+.stats .n{font-size:44px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.stats .n i{font-style:normal;color:var(--red)}
+.stats .l{font-size:12px;color:var(--grey);letter-spacing:.14em;text-transform:uppercase;margin-top:8px}
+.faq{border:1px solid var(--line)}
+.faq details{border-bottom:1px solid var(--line)}
+.faq details:last-child{border-bottom:none}
+.faq summary{cursor:pointer;padding:20px 26px;font-weight:700;font-size:16px;list-style:none;display:flex;justify-content:space-between;gap:14px;align-items:baseline}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";color:var(--red);font-weight:700;flex:none}
+.faq details[open] summary::after{content:"−"}
+.faq .a{padding:0 26px 22px;font-size:14px;color:#555;max-width:760px}
+@media(max-width:760px){.stats{grid-template-columns:1fr 1fr}.stats>div{border-bottom:1px solid var(--line)}.stats>div:nth-child(even){border-right:none}.stats>div:nth-child(n+3){border-bottom:none}}
 .topbar{border-bottom:3px solid var(--ink);background:var(--paper);position:sticky;top:0;z-index:10}
 .topbar .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
 .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px}
@@ -114,7 +148,7 @@ code,pre{font-family:"Cascadia Mono",Consolas,monospace}
 .dl-card p{font-size:14px;color:#555;margin-bottom:20px}
 footer{border-top:3px solid var(--ink);padding:40px 0 60px;color:var(--grey);font-size:13px}
 footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
-@media(max-width:760px){.grid{grid-template-columns:1fr}.dl-grid{grid-template-columns:1fr}nav{gap:14px}nav a:not(.dl){display:none}#menuBtn{display:block}body.navopen nav{position:absolute;left:0;right:0;top:60px;background:var(--paper);border-bottom:3px solid var(--ink);flex-direction:column;align-items:flex-start;padding:18px 24px;gap:16px}body.navopen nav a:not(.dl){display:block}}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.dl-grid{grid-template-columns:1fr}nav{gap:14px}nav a:not(.dl){display:none}#menuBtn{display:block}body.navopen nav{position:absolute;left:0;right:0;top:60px;background:var(--paper);border-bottom:3px solid var(--ink);flex-direction:column;align-items:flex-start;padding:18px 24px;gap:16px}body.navopen nav a:not(.dl){display:block}.hero{padding:56px 0 48px}.dl-card{padding:24px 22px}.cta .btn{width:100%;text-align:center}.sec-head{flex-wrap:wrap;gap:8px}.sec-head .note{margin-left:0}.pre{font-size:12px;padding:18px 16px}section{padding:52px 0}#log-q{width:100%}.tbl-scroll{overflow-x:auto}#log,.sponsor-table{min-width:560px}}
 </style>
 </head>
 <body>
@@ -125,6 +159,8 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
   <nav aria-label="主導覽">
     <a href="#why">特色</a>
     <a href="#xsc">終端機</a>
+    <a href="#faq">常見問</a>
+    <a href="#security">安全</a>
     <a href="#changelog">更新</a>
     <a class="dl" href="https://github.com/Xinglanclever/XinSpect/releases/latest/download/XinSpectDeploy.exe">下載 v3.25</a>
     <button id="menuBtn" type="button" aria-expanded="false" aria-controls="main" aria-label="開合導覽選單">☰</button>
@@ -143,6 +179,12 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
   <div class="badges">
     <span class="badge r">唯讀</span><span class="badge r">不寫硬體</span><span class="badge r">不連網</span>
     <span class="badge">免安裝</span><span class="badge">繁體中文／English</span><span class="badge">.NET 10 自含</span>
+  </div>
+  <div class="stats" role="list" aria-label="關鍵數字">
+    <div role="listitem"><div class="n">1,178</div><div class="l">靜態事實鍵</div></div>
+    <div role="listitem"><div class="n"><i>69</i></div><div class="l">動態家族 ・ 157 事實域</div></div>
+    <div role="listitem"><div class="n">65</div><div class="l">個可到達畫面</div></div>
+    <div role="listitem"><div class="n"><i>130</i></div><div class="l">筆沿革全程可考</div></div>
   </div>
 </div></div>
 
@@ -203,21 +245,74 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
   </div>
 </div></section>
 
+<section id="faq" style="border-top:1px solid var(--line)"><div class="wrap">
+  <div class="sec-head"><span class="sq"></span><h2>常見問題</h2><span class="note">FAQ ・ 有什麼答什麼</span></div>
+  <div class="faq">
+    <details>
+      <summary>它會動我的硬體嗎？會寫壞嗎？</summary>
+      <div class="a">事實採集全程唯讀：PCI 掃描、MSR 讀取、韌體面解析都不寫入。超頻等真正寫硬體的功能不在預設路徑上——底層功能依雙級安全設定開啟，硬體寫入另需第二級安全與逐項確認，且每次寫入自動記帳（CLI 可申報）。</div>
+    </details>
+    <details>
+      <summary>為什麼有些頁面整片顯示「—」？</summary>
+      <div class="a">不是壞掉。程式預設以一般權限啟動（asInvoker 最小特權）；感測器、MSR 直讀與超頻需要「以系統管理員身分執行」。不提權時那些頁面如實顯示「—」並標明原因——這正是六態降級設計（Present／NotSupported／InsufficientPrivilege 等）存在的理由：讀不到就說讀不到，不補 0、不編值。</div>
+    </details>
+    <details>
+      <summary>會連網嗎？資料會上傳嗎？</summary>
+      <div class="a">硬體事實採集全部在本機完成，不連網。AI 頁為選用功能，走 Cloudflare Workers AI，需要你自己的 API 金鑰——金鑰以 Windows DPAPI 加密後才寫進 settings.json，解不開就是「沒有金鑰＋原因」，不會明文落盤。</div>
+    </details>
+    <details>
+      <summary>怎麼安裝、怎麼升級？</summary>
+      <div class="a">下載 29 KB 的 XinSpectDeploy.exe（本頁下載節），A 裝主程式、B 裝終端機，三個來源可切換。升級同樣走部署器——鏡像清單每次啟動自動抓取，永遠拿到最新版。</div>
+    </details>
+    <details>
+      <summary>免費嗎？商業使用可以嗎？</summary>
+      <div class="a">雙授權、功能完全相同：AGPL-3.0-or-later 免費，<b>包括商業使用</b>（散布修改版或以網路服務提供時須開源）；閉源整合、隨硬體出貨、禁 copyleft 的組織走商業授權。細節見下方授權節。</div>
+    </details>
+    <details>
+      <summary>支援哪些系統？</summary>
+      <div class="a">Windows 10 1903 以上／Windows 11、x64。帶環境版免裝 .NET 10 Desktop Runtime；曦覽終端機另有純文字相容版，支援 Windows Server 2016、2019、2022。</div>
+    </details>
+  </div>
+</div></section>
+
+<section id="security" style="border-top:1px solid var(--line)"><div class="wrap">
+  <div class="sec-head"><span class="sq"></span><h2>安全與隱私</h2><span class="note">SECURITY ・ 邊界寫在明處</span></div>
+  <div class="dl-grid">
+    <div class="dl-card">
+      <h3 style="font-size:16px">唯讀守門</h3><div class="tag">不引用任何寫入通路</div>
+      <p>守門測試釘死事實採集「不引用任何寫入通路」；內核探測驅動 XsRegProbe 為白名單唯讀（MSR／MMIO），經內部審查為全案唯一「優秀」級。</p>
+    </div>
+    <div class="dl-card">
+      <h3 style="font-size:16px">寫入稽核</h3><div class="tag">每次寫入自動記帳</div>
+      <p>真正會寫硬體的操作不在事實路徑上：每次硬體寫入自動記帳、CLI 可申報；超頻等寫入另需第二級安全與逐項確認。</p>
+    </div>
+    <div class="dl-card">
+      <h3 style="font-size:16px">最小特權</h3><div class="tag">asInvoker ・ 不吃管理員令牌</div>
+      <p>預設以一般權限啟動；提權是顯式決定而非隱藏行為。WebView2、AI 等不該吃管理員令牌的元件被擋在小特權側。</p>
+    </div>
+    <div class="dl-card">
+      <h3 style="font-size:16px">本機加密與完整性</h3><div class="tag">DPAPI ・ SHA-256</div>
+      <p>AI API 金鑰以 Windows DPAPI 加密後才落盤；部署下載一律驗 PE 標頭與大小門檻，逐資產 SHA-256 見 Release 的 SHA256SUMS.txt。發佈者簽章（不可否認性）已列入排期，如實公告而非假裝已有。</p>
+    </div>
+  </div>
+  <p style="margin-top:18px;font-size:13px;color:var(--grey)">發現安全問題？請依 <a style="color:var(--blue);font-weight:700" rel="noopener" href="https://github.com/Xinglanclever/XinSpect/blob/main/SECURITY.md">SECURITY.md</a> 的私密管道回報——那是唯一保證不公開的入口。</p>
+</div></section>
+
 <section id="changelog"><div class="wrap">
-  <div class="sec-head"><span class="sq"></span><h2>最近的更新</h2><span class="note" id="log-count">125 版全程可考</span></div>
+  <div class="sec-head"><span class="sq"></span><h2>最近的更新</h2><span class="note" id="log-count">130 筆全程可考</span></div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
     <input id="log-q" type="search" placeholder="篩選版本或內容…" aria-label="篩選更新紀錄" autocomplete="off" style="border:2px solid var(--ink);padding:10px 14px;font-size:14px;width:min(360px,100%);background:var(--paper);font-family:inherit">
     <button id="log-more" type="button" class="btn ghost" style="padding:10px 18px;font-size:13px;display:none">展開全部</button>
   </div>
   <p id="log-status" class="vh" role="status" aria-live="polite"></p>
-  <table id="log"><caption class="vh">版本更新紀錄，由 changelog.json 載入</caption><thead><tr><th scope="col">版本</th><th scope="col">日期</th><th scope="col">內容</th></tr></thead><tbody></tbody></table>
+  <div class="tbl-scroll"><table id="log"><caption class="vh">版本更新紀錄，由 changelog.json 載入</caption><thead><tr><th scope="col">版本</th><th scope="col">日期</th><th scope="col">內容</th></tr></thead><tbody></tbody></table></div>
   <p id="log-none" style="display:none;color:var(--grey);font-size:14px;padding:18px 0">沒有符合篩選的版本。</p>
   <p id="log-err" style="display:none;color:var(--red);font-size:14px;padding:18px 0">更新紀錄載入失敗——請重新整理，或到 <a style="color:var(--blue);font-weight:700" href="https://github.com/Xinglanclever/XinSpect/releases">GitHub Releases</a> 查看沿革。</p>
 </div></section>
 
 <footer><div class="wrap">
   <div>曦覽 XinSpect ・ 唯讀硬體事實採集器 ・ © 2026 Xinglanclever</div>
-  <div><a rel="noopener" href="https://github.com/Xinglanclever/XinSpect">GitHub</a> ・ <a href="#license">授權</a> ・ <a href="#license">聯絡</a></div>
+  <div><a rel="noopener" href="https://github.com/Xinglanclever/XinSpect">GitHub</a> ・ <a href="#faq">常見問</a> ・ <a href="#security">安全</a> ・ <a href="#license">授權</a> ・ <a href="#license">聯絡</a></div>
 </div></footer>
 
 <section id="license"><div class="wrap">
@@ -241,7 +336,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
   <div style="margin-top:36px;max-width:820px">
     <div style="font-size:12px;letter-spacing:.14em;color:var(--grey);text-transform:uppercase;font-weight:700;margin-bottom:6px">自願贊助 ・ Optional support</div>
     <p style="font-size:14px;color:#555">若願意支持個人維護，可以請作者喝杯咖啡；每筆贊助請至少等值 1.5 USD（USDT 約 1.5 USDT）。這只是自願贊助渠道，不附帶支援承諾。請先核對幣種與網路；鏈上轉帳通常無法撤回。</p>
-    <table class="sponsor-table"><thead><tr><th>幣種</th><th>網路</th><th>地址</th></tr></thead><tbody>
+    <div class="tbl-scroll"><table class="sponsor-table"><thead><tr><th>幣種</th><th>網路</th><th>地址</th></tr></thead><tbody>
       <tr><td>USDT</td><td>Tron (TRC20)</td><td><code>TQPk1DfaHBCKNt8W5UUJDH3XkwAArmmNqH</code></td></tr>
       <tr><td>USDT</td><td>Solana</td><td><code>34o5GGmamdV8k9vYYaaRABZpSNXpphbSXdhBsASN8XN4</code></td></tr>
       <tr><td>USDT</td><td>BNB Smart Chain (BEP20)</td><td><code>0x8811d8EF822cC9cf546fe24C565b861291e1B704</code></td></tr>
@@ -250,14 +345,14 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
       <tr><td>USDC</td><td>BNB Smart Chain (BEP20)</td><td><code>0x8811d8EF822cC9cf546fe24C565b861291e1B704</code></td></tr>
       <tr><td>ETH</td><td>Ethereum</td><td><code>0x8811d8EF822cC9cf546fe24C565b861291e1B704</code></td></tr>
       <tr><td>BTC</td><td>Bitcoin</td><td><code>1PsY7aUbmHEVdM4g5EVQLncMFDEFnak3qF</code></td></tr>
-    </tbody></table>
+    </tbody></table></div>
   </div>
 </div></section>
 </main>
 
 <footer><div class="wrap">
   <div>曦覽 XinSpect ・ 唯讀硬體事實採集器 ・ © 2026 Xinglanclever</div>
-  <div><a rel="noopener" href="https://github.com/Xinglanclever/XinSpect">GitHub</a> ・ <a href="#license">授權</a> ・ <a href="#license">聯絡</a></div>
+  <div><a rel="noopener" href="https://github.com/Xinglanclever/XinSpect">GitHub</a> ・ <a href="#faq">常見問</a> ・ <a href="#security">安全</a> ・ <a href="#license">授權</a> ・ <a href="#license">聯絡</a></div>
 </div></footer>
 
 <button id="toTop" type="button" aria-label="回到頁首" title="回到頁首">↑</button>
@@ -278,7 +373,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
   function rows(list, n){
     return list.slice(0, n).map(function(e, i){
       return '<tr id="log-v'+esc(e.v)+'"' + (i===0 ? ' class="latest"' : '') +
-        '><td class="v">v'+esc(e.v)+'</td><td class="d">'+esc(e.date)+'</td><td>'+esc(e.title)+'</td></tr>';
+        '><td class="v">'+(e.date ? 'v'+esc(e.v) : esc(e.v))+'</td><td class="d">'+(esc(e.date)||'—')+'</td><td>'+esc(e.title)+'</td></tr>';
     }).join('');
   }
   function refresh(){
@@ -286,12 +381,12 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
     tb.innerHTML = rows(list, n);
     none.style.display = filtered && !list.length ? '' : 'none';
     more.style.display = (!filtered && all.length > shown) ? '' : 'none';
-    if (more.style.display === '') more.textContent = '展開全部 ' + all.length + ' 版';
+    if (more.style.display === '') more.textContent = '展開全部 ' + all.length + ' 筆';
     status.textContent = filtered ? ('篩選後 ' + list.length + ' 版') : ('顯示 ' + Math.min(n, all.length) + ' / ' + all.length + ' 版');
   }
   q.addEventListener('input', function(){
     var t = q.value.trim().toLowerCase();
-    if (!t) { filtered = null; count.textContent = all.length + ' 版全程可考'; }
+    if (!t) { filtered = null; count.textContent = all.length + ' 筆全程可考'; }
     else {
       filtered = all.filter(function(e){
         return e.v.toLowerCase().indexOf(t) > -1 ||
@@ -306,7 +401,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
     .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(function(es){
       all = es;
-      count.textContent = all.length + ' 版全程可考';
+      count.textContent = all.length + ' 筆全程可考';
       refresh();
       var h = location.hash.match(/^#log-v(.+)$/);
       if (h) {
