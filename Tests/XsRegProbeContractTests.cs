@@ -60,6 +60,17 @@ public sealed class XsRegProbeContractTests
         Assert.False(XsRegProbeContract.MmioRangeAllowed(0xFED10000, 0));
     }
 
+    [Fact]
+    public void MMIO映射使用唯讀且不快取的頁面保護()
+    {
+        string source = ReadRepoFile(Path.Combine("XsRegProbe", "Driver", "XsRegProbe.c"));
+        var calls = Regex.Matches(source, @"MmMapIoSpaceEx\s*\(\s*pa\s*,\s*length\s*,\s*([^)]*)\)");
+
+        var call = Assert.Single(calls);
+        Assert.Equal("PAGE_READONLY | PAGE_NOCACHE",
+            Regex.Replace(call.Groups[1].Value, @"\s+", " ").Trim());
+    }
+
     private static string Match(string source, string pattern) =>
         Regex.Match(source, pattern).Groups[1].Value is { Length: > 0 } v
             ? v

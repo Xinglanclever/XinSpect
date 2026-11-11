@@ -32,5 +32,5 @@ internal static class TestSuiteBaseline
     /// 而 5476→5505 實際只加了 29 條（見 docs/PROGRESS-PLAN-2026-10-11.md 第 550 項的更正註記）。
     /// </para>
     /// </summary>
-    public const int ProjectTests = 8047;   // 2026-11-11：v3.25 全套執行總數＋CLI 引數路徑回歸
+    public const int ProjectTests = 8048;   // 2026-11-12：補 XsRegProbe MMIO 頁面保護回歸測試
 }

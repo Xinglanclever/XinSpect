@@ -81,11 +81,15 @@ public class SpdSurveyorTests
     [Fact]
     public void 沒有SPD的匯流排只留一句匯流排層級說明()
     {
-        var survey = SpdSurveyor.Survey([new StubBus("空匯流排")]);
+        var survey = SpdSurveyor.Survey([new StubBus("空匯流排")], ["iMC 匯流排被韌體持有"]);
 
         Assert.Empty(survey.Modules);
         Assert.Empty(survey.Problems);
         Assert.Contains(survey.Notes, n => n.StartsWith("空匯流排：") && n.Contains("沒有任何 DDR4／DDR5 SPD"));
+        string text = SpdSurveyDiagnostics.Format(survey, 27_000);
+        Assert.Contains("沒有讀到 SPD 模組", text);
+        Assert.Contains("27.0 秒", text);
+        Assert.Contains("iMC 匯流排被韌體持有", text);
     }
 
     [Fact]
@@ -117,12 +121,19 @@ public class SpdSurveyorTests
     {
         var broken = RealSpd();
         broken[2] = 0x12;                        // 型別碼寫 DDR5，但 byte 0/1 不是 hub 識別——不是能直讀的 SPD5118
-        var survey = SpdSurveyor.Survey([new StubBus("匯流排", (0x50, broken))]);
+        var survey = SpdSurveyor.Survey(
+            [new StubBus("匯流排", (0x50, RealSpd()), (0x52, broken))],
+            ["PCH SMBus：此平台的 SPD 位於 iMC"]);
 
-        Assert.Empty(survey.Modules);
+        Assert.Single(survey.Modules);
         var slot = Assert.Single(survey.Problems);
         Assert.Equal(SpdKind.Unknown, slot.Kind);
         Assert.Contains("0x12", slot.Note);
+        string text = SpdSurveyDiagnostics.Format(survey, 1234);
+        Assert.Contains("讀到 1 條 SPD 模組", text);
+        Assert.Contains("1.2 秒", text);
+        Assert.Contains("0x52 Unknown", text);
+        Assert.Contains("PCH SMBus", text);
     }
 
     [Fact]
@@ -131,14 +142,14 @@ public class SpdSurveyorTests
         var img = new byte[1024];
         for (int i = 0; i < img.Length; i++) img[i] = (byte)(0x40 ^ i);
         img[2] = SpdReader.Ddr5TypeCode;
-        var bus = new StubBus5("DDR5 匯流排", (0x50, img));
+        var bus = new StubBus5("DDR5 匯流排", (0x51, img));
 
         var survey = SpdSurveyor.Survey([bus]);
 
         Assert.Empty(survey.Modules);
         var m = Assert.Single(survey.Ddr5Modules!);
         Assert.Equal("DDR5 匯流排", m.Bus);
-        Assert.Equal(0x50, m.Address);
+        Assert.Equal(0x51, m.Address);
         Assert.Equal("4.1", m.Decoded5.SpdRevision);   // byte 1＝0x41 → 兩個 nibble
         Assert.Equal(2048, m.Decoded5.SpdSizeBytes);    // byte 0＝0x40 → bits[6:4]＝4
         Assert.Equal(0x12, m.Decoded5.SpdRevision.Length > 0 ? 0x12 : 0); // 佔位：type code 在 Decode 內檢查
@@ -162,7 +173,9 @@ internal sealed class StubBus5(string description, params (byte Addr, byte[] Raw
     public bool SendByte(byte slave7, byte data)
     {
         SpdBusAddresses.EnsurePageSelect(slave7);
-        return true;                             // DDR4 切頁裝置存在與否不影響 DDR5 hub 通路
+        LastStatus = SmbusStatus.NoDevice;       // DDR5 hub 不應回應 DDR4 專用的切頁位址
+        LastError = "沒有 DDR4 切頁裝置";
+        return false;
     }
 
     public bool WriteByteData(byte slave7, byte command, byte value)

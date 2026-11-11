@@ -6,8 +6,8 @@ namespace XinSpect;
 /// 翻譯成後端介面，並把信任等級如實標為 <see cref="KernelTrustTier.Universal"/>。
 /// </summary>
 /// <remarks>
-/// <b>風險申報（沿用橋接頭註並抬高到後端層）：</b>WinRing0 裝置無呼叫者校驗——驅動載入後
-/// 到重開機前，同機其他程序理論上也能透過它存取 MSR。介面在選擇此後端時必須向使用者
+/// <b>風險申報：</b>WinRing0 未對呼叫者做本應用身分綁定；驅動載入期間，其他取得裝置存取權的程序
+/// 也可能使用其通用介面。最後一份橋接 Close 會嘗試卸載，成敗取決於引用與服務狀態。介面必須向使用者
 /// 展示這一行；<see cref="KernelBackendSelector"/> 的模式開關是使用者說了算的地方。
 /// </remarks>
 /// <remarks>

@@ -1,5 +1,5 @@
 /*
- * ⚠ 未編譯——需作者機驗證（WDK 編譯命令見 patch-25.md）
+ * ⚠ 核心驅動未封裝、未簽章、未做執行驗證；本機編譯狀態以 Driver/build.bat 為準。
  *
  * IoctlHandler.c — DeviceIoControl 派發（patch-25 完整替換檔；P0-14 能力帳單）
  * 累積基底：xs318 現樹 IoctlHandler.c ＋ patch-20 的快照 IOCTL 契約兌現

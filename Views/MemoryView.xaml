@@ -105,6 +105,8 @@
             <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="120">
                 <StackPanel>
                     <local:SectionHead Text="實體模組" HelpKey="memory/實體模組"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,6"
+                               Text="Windows SMBIOS/WMI 回報；不是 SPD 晶片直讀。"/>
                     <Grid Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="100"/>
@@ -155,11 +157,17 @@
                 </StackPanel>
             </Border>
 
-            <!-- SPD 深度資料 (CPU-Z) -->
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0"
+                    Visibility="{Binding HasSpdReadStatus, Converter={StaticResource BoolToVis}}">
+                <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"
+                           Text="{Binding SpdReadStatusText}"/>
+            </Border>
+
+            <!-- SPD 深度資料 -->
             <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="180"
                     Visibility="{Binding HasSpdModules, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <local:SectionHead Text="SPD 深度資料 (CPU-Z)" HelpKey="memory/SPD 深度資料 (CPU-Z)"/>
+                    <local:SectionHead Text="DIMM SPD 深度資料" HelpKey="memory/DIMM SPD 深度資料"/>
                     <ItemsControl ItemsSource="{Binding SpdModules}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>

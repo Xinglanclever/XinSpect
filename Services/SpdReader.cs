@@ -84,15 +84,16 @@ public static class SpdReader
         // 所以它 NAK 就代表「這條匯流排上沒有 SPD」——那是一句匯流排層級的結論，
         // 不該變成八個位址各自回一句一模一樣的「讀不到」。
         if (!bus.SendByte(PageSelect0, 0x00) && bus.LastStatus == SmbusStatus.NoDevice
-            && !ProbeDdr5(bus, FirstAddress))
+            && !Enumerable.Range(0, AddressCount)
+                .Select(i => (byte)(FirstAddress + i))
+                .Any(address => ProbeDdr5(bus, address)))
         {
             var empty = new List<SpdSlot>(AddressCount);
             for (int i = 0; i < AddressCount; i++)
                 empty.Add(new SpdSlot((byte)(FirstAddress + i), SpdKind.Empty, null, ""));
             return new SpdScan(empty,
                 "這條 SMBus 上沒有任何 DDR4／DDR5 SPD——DDR4 切頁裝置 0x36 與 DDR5 hub 暫存器都沒有回應。"
-                + "HEDT 與伺服器平台（X299、C621、LGA3647、Threadripper）的 DIMM SPD 通常掛在"
-                + "處理器記憶體控制器自己的 SMBus 區段上，不在 PCH 這一條；本讀取器只實作 PCH 那條路徑。");
+                + "已檢查標準 SPD 位址 0x50–0x57。HEDT 與伺服器平台也可能將 DIMM SPD 接在另一條處理器 iMC SMBus；整機巡檢會逐條檢查。");
         }
 
         var slots = new List<SpdSlot>(AddressCount);
@@ -102,9 +103,6 @@ public static class SpdReader
 
     private static SpdSlot ReadOne(ISpdBus bus, byte address)
     {
-        if (!SelectPage(bus, 0))
-            return new SpdSlot(address, SpdKind.Unreadable, null, "無法選擇 SPD 頁：" + bus.LastError);
-
         // DDR5：SPD5118 hub 的 MR0/MR1 恆為 0x51/0x18（暫存器空間，不經切頁）。先探它，
         // 再落回 DDR4 的型別碼讀法——DDR4 EEPROM 的 byte 0/1 是別的內容，不會誤判。
         byte? hubIdHigh = bus.ReadByteData(address, 0x00);
@@ -118,6 +116,13 @@ public static class SpdReader
                     ? new SpdSlot(address, SpdKind.Unreadable, null, note5)
                     : new SpdSlot(address, SpdKind.Ddr5, raw5, note5);
             }
+        }
+
+        if (!SelectPage(bus, 0))
+        {
+            if (hubIdHigh is null && bus.LastStatus == SmbusStatus.NoDevice)
+                return new SpdSlot(address, SpdKind.Empty, null, "");
+            return new SpdSlot(address, SpdKind.Unreadable, null, "無法選擇 SPD 頁：" + bus.LastError);
         }
 
         byte? type = bus.ReadByteData(address, TypeCodeOffset);

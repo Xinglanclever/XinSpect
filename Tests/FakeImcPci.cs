@@ -39,6 +39,7 @@ internal sealed class FakeImcPci : IPciConfig
     public readonly Dictionary<(int Seg, byte Slave), byte[]> Modules = [];
 
     public readonly List<(uint Reg, uint Value)> Writes = [];
+    public int ReadCount { get; private set; }
 
     /// <summary>目前選到的 SPD 頁，供測試斷言收尾有沒有復位。</summary>
     public byte Page { get; private set; }
@@ -63,6 +64,7 @@ internal sealed class FakeImcPci : IPciConfig
 
     public uint? Read(byte bus, byte device, byte function, uint register)
     {
+        ReadCount++;
         if (AccessGone) return null;
         EnsureInit();
         if (DeviceMissing || bus != Bus || device != Dev || function != Fn) return 0xFFFFFFFF;

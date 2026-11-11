@@ -12,7 +12,7 @@ set LIB=%WDK%\Lib\10.0.28000.0\km\x64;%MSVC%\lib\x64;%WDK%\Lib\10.0.28000.0\ucrt
 if not exist "%MSVC%\bin\Hostx64\x64\cl.exe" exit /b 2
 if not exist "%WDK%\Include\10.0.28000.0\km\ntddk.h" exit /b 3
 if not exist x64build mkdir x64build
-"%MSVC%\bin\Hostx64\x64\cl.exe" /nologo /c /O2 /GS- /kernel /D_AMD64_=1 /DAMD64 /DWIN32=100 /D_WIN32_WINNT=0x0A00 /DNTDDI_VERSION=0x0A000000 /Fo:x64build\XsRegProbe.obj XsRegProbe.c
+"%MSVC%\bin\Hostx64\x64\cl.exe" /nologo /c /O2 /GS- /kernel /utf-8 /D_AMD64_=1 /DAMD64 /DWIN32=100 /D_WIN32_WINNT=0x0A00 /DNTDDI_VERSION=0x0A000000 /Fo:x64build\XsRegProbe.obj XsRegProbe.c
 if errorlevel 1 exit /b 1
 "%MSVC%\bin\Hostx64\x64\link.exe" /nologo /DRIVER /SUBSYSTEM:NATIVE /ENTRY:DriverEntry /OUT:x64build\XsRegProbe.sys x64build\XsRegProbe.obj wdm.lib wdmsec.lib ntoskrnl.lib BufferOverflowK.lib
 if errorlevel 1 exit /b 1

@@ -225,7 +225,13 @@ internal static class StartupSequence
     // 深度規格：CPU-Z 子行程報告（時序、SPD、主機板、顯示卡）。以射後不理呼叫，故整段包覆。
     internal static async Task LoadDeepSpecsAsync(MainViewModel vm)
     {
-        if (!vm.Settings.AdvancedDiagnosticsEnabled) return;
+        if (!vm.Settings.AdvancedDiagnosticsEnabled)
+        {
+            await OnUiAsync(System.Windows.Application.Current?.Dispatcher, () =>
+                vm.SpdReadStatusText = "SPD 深度讀取未執行：第一級進階診斷目前關閉。上方實體模組資料來自 Windows SMBIOS/WMI。")
+                .ConfigureAwait(false);
+            return;
+        }
         if (!await DeepSpecsGate.WaitAsync(0)) return;
         using var cts = new CancellationTokenSource();
         lock (DeepSpecsLock) _activeDeepSpecs = cts;
@@ -266,17 +272,19 @@ internal static class StartupSequence
         var ui = System.Windows.Application.Current?.Dispatcher;
         cancellationToken.ThrowIfCancellationRequested();
 
-        // SPD 先自己讀。讀得到就用它，因為那是模組上的原始位元組（來源那一列會標明是哪一條匯流排）；
-        // 讀不到就保留既有值，讓下面的 CPU-Z 報告照原樣填——在讀不到 SPD 的機器上完全沒有回歸。
+        // SPD 先自己讀。讀取期間保留 Windows SMBIOS/WMI 清單，並明示來源切換；
+        // 結果或失敗原因都要進畫面，不能讓空清單看起來像沒有做過讀取。
+        await OnUiAsync(ui, () => vm.SpdReadStatusText = "正在直接讀取 DIMM SPD；Windows 模組清單仍顯示 SMBIOS/WMI 資料。")
+            .ConfigureAwait(false);
+        var spdTimer = System.Diagnostics.Stopwatch.StartNew();
         var survey = await Task.Run(ReadSpdDirect).ConfigureAwait(false);
+        spdTimer.Stop();
         cancellationToken.ThrowIfCancellationRequested();
         await OnUiAsync(ui, () =>
         {
-            if (survey is not null)
-            {
-                vm.DirectSpdReads = survey.Modules;
-                vm.DirectSpdReads5 = survey.Ddr5Modules ?? [];
-            }
+            vm.DirectSpdReads = survey.Modules;
+            vm.DirectSpdReads5 = survey.Ddr5Modules ?? [];
+            vm.SpdReadStatusText = SpdSurveyDiagnostics.Format(survey, spdTimer.ElapsedMilliseconds);
             var display4 = SpdDisplay.ToDisplay(vm.DirectSpdReads);
             var display5 = SpdDisplay.ToDisplay5(vm.DirectSpdReads5);
             if (display4.Count + display5.Count > 0) vm.SpdModules = display4.Concat(display5).ToList();
@@ -361,14 +369,38 @@ internal static class StartupSequence
                     HardwareReadingPriority.ReadNativeCpu(vm), vm.Cpu, report.Cpu);
                 vm.Mainboard = report.Board;
                 vm.CpuzSpdModules = report.Spd;
-                if (vm.SpdModules.Count == 0) vm.SpdModules = report.Spd;   // 原生直讀沒填（DDR4+DDR5 都空）才退回 CPU-Z 報告
+                if (vm.DirectSpdReads.Count + vm.DirectSpdReads5.Count == 0)
+                {
+                    if (report.Spd.Count > 0)
+                    {
+                        vm.SpdModules = report.Spd;
+                        vm.SpdReadStatusText += "\n深度資料來源：CPU-Z 報告（原生 SPD 直讀未取得模組）。";
+                    }
+                    else
+                    {
+                        vm.SpdReadStatusText += "\nCPU-Z 報告也沒有 SPD 模組資料；上方實體模組清單仍是 Windows SMBIOS/WMI 來源。";
+                    }
+                }
+                else if (report.Spd.Count > 0)
+                {
+                    vm.SpdReadStatusText += "\nCPU-Z 獨立報告已保留供來源交叉核對。";
+                }
                 vm.GpuDetails = report.Gpus;
 
                 if (vm.Live is not null)
                     vm.StatusText = ReadyText(vm, report.Ran);
             }).ConfigureAwait(false);
         }
-        catch { /* 深度規格為附加，讀取失敗維持 WMI 值 */ }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await OnUiAsync(ui, () => vm.SpdReadStatusText +=
+                $"\nCPU-Z 報告讀取失敗（{ex.GetType().Name}：{ex.Message}）；上方仍為 Windows SMBIOS/WMI 資料。")
+                .ConfigureAwait(false);
+        }
 
         // GPU 硬解／編碼能力矩陣：D3D11 VideoDevice 列舉 + MFT 硬體編碼器（零特權、純 API 直讀）——
         // D3D11 裝置建立可逾百毫秒，列舉背景、套用回 UI。
@@ -498,27 +530,37 @@ internal static class StartupSequence
     /// 走 SMBus 把每條記憶體模組的 SPD 直接讀回來（背景執行緒）。任何一關過不了就回空清單。
     /// </summary>
     /// <remarks>
-    /// 三道讓路：沒有驅動或沒有管理員權限就不讀；具名互斥鎖取不到（CPU-Z／AIDA64／燈光軟體
-    /// 正在用匯流排）就不搶；每一條匯流排的硬體旗號取不到也各自跳過。
-    /// 回空清單不是錯誤，只是這台機器這一刻讀不到——呼叫端會退回 CPU-Z 報告那條路徑。
+    /// 先以 Windows PnP 找出有限的 iMC PCI function，再逐條匯流排做硬體仲裁。
+    /// 讀不到時回傳帶原因的空結果，保留已成功的其他 DIMM；不以空清單冒充正常完成。
     /// </remarks>
-    private static SpdSurvey? ReadSpdDirect()
+    private static SpdSurvey ReadSpdDirect()
     {
+        var notes = new List<string>();
         try
         {
             using var bridge = WinRing0Bridge.Create();
-            if (!bridge.Available) return null;
+            if (!bridge.Available)
+                return new SpdSurvey([], [], [$"原生 SPD 直讀不可用：{bridge.Error}"], []);
 
-            var notes = new List<string>();
             var buses = SpdBusFactory.Candidates(bridge, notes);
-            if (buses.Count == 0) return null;
+            if (buses.Count == 0)
+                return new SpdSurvey([], [], notes.Count > 0 ? notes : ["找不到可用的 SPD 讀取匯流排。"], []);
 
-            using var busLock = SmbusBusLock.TryAcquire(SmbusBusLock.WellKnownName, 500, out _);
-            if (busLock is null) return null;
+            using var busLock = SmbusBusLock.TryAcquire(SmbusBusLock.WellKnownName, 500, out string lockNote);
+            if (busLock is null)
+            {
+                notes.Add(lockNote.Length > 0 ? lockNote : "SMBus 匯流排目前由其他程式使用，已放棄讀取。");
+                return new SpdSurvey([], [], notes, []);
+            }
+            if (lockNote.Length > 0) notes.Add(lockNote);
 
-            return SpdSurveyor.Survey(buses);
+            return SpdSurveyor.Survey(buses, notes);
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            notes.Add($"原生 SPD 直讀中斷（{ex.GetType().Name}：{ex.Message}）。");
+            return new SpdSurvey([], [], notes, []);
+        }
     }
 
     // 首次啟動的環境自檢：略候片刻讓各引擎與感測器就緒，再於背景跑一次。

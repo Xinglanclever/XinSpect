@@ -1,5 +1,5 @@
 /*
- * ⚠ 未編譯——需作者機驗證（WDK 編譯命令見 patch-25.md）
+ * ⚠ 核心驅動未封裝、未簽章、未做執行驗證；本機編譯狀態以 Driver/build.bat 為準。
  *
  * MsrSnapshot.c — MSR 定期快照與比對（patch-25 完整替換檔）
  * 累積基底：patch-20 的 per-CPU 完整重寫（六類病灶修復，修復清單見下）不變；
@@ -148,8 +148,8 @@ static VOID NTAPI CpuMsrDpc(
         if (current[i].Value != g_MsrBaseline[cpu][i].Value)
         {
             WCHAR detail[128];
-            _snwprintf(detail, 128,
-                       L"CPU %u MSR 0x%X: 0x%016llX -> 0x%016llX",
+            RtlStringCchPrintfW(detail, RTL_NUMBER_OF(detail),
+                       L"CPU %u MSR 0x%X: 0x%016I64X -> 0x%016I64X",
                        cpu, current[i].Msr, g_MsrBaseline[cpu][i].Value, current[i].Value);
             detail[127] = L'\0';
 

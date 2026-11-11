@@ -1,6 +1,5 @@
 /*
- * ⚠ 未編譯——需作者機驗證（WDK 編譯命令見 patch-25.md，與倉庫 BlueSquadronDriver.c
- *    檔頭既有 cl 命令同款）
+ * ⚠ 核心驅動未封裝、未簽章、未做執行驗證；本機編譯狀態以 Driver/build.bat 為準。
  *
  * Common.h — 共用結構與常數（patch-25 完整替換檔；P0-14 能力帳單）
  * 累積基底：xs318 現樹 Common.h ＋ patch-20 的 extern 契約（g_MsrCount volatile／
@@ -10,14 +9,25 @@
 #pragma once
 #include <ntddk.h>
 #include <bcrypt.h>
+#include <ntstrsafe.h>
 
 /* 進程存取權限常數：UM 的 winnt.h 有、KM 標頭沒帶——鷹架時代直接引用 UM 名稱從未編過 */
 #ifndef PROCESS_TERMINATE
 #define PROCESS_TERMINATE      0x0001
+#endif
+#ifndef PROCESS_CREATE_THREAD
 #define PROCESS_CREATE_THREAD  0x0002
+#endif
+#ifndef PROCESS_VM_OPERATION
 #define PROCESS_VM_OPERATION   0x0008
+#endif
+#ifndef PROCESS_VM_READ
 #define PROCESS_VM_READ        0x0010
+#endif
+#ifndef PROCESS_VM_WRITE
 #define PROCESS_VM_WRITE       0x0020
+#endif
+#ifndef PROCESS_DUP_HANDLE
 #define PROCESS_DUP_HANDLE     0x0040
 #endif
 

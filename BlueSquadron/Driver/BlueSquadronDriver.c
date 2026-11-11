@@ -1,5 +1,5 @@
 /*
- * ⚠ 未編譯——需作者機驗證（WDK 編譯命令見 patch-25.md；本樹未經任何編譯器）
+ * ⚠ 核心驅動未封裝、未簽章、未做執行驗證；本機編譯狀態以 Driver/build.bat 為準。
  *
  * BlueSquadron.sys — 藍色中隊核心驅動（patch-25 完整替換檔；P0-14 能力帳單）
  * 累積基底：xs318 現樹 BlueSquadronDriver.c ＋ patch-20 生命週期修復相容（MsrSnapshot
@@ -73,11 +73,18 @@ NTSTATUS g_StatusHashProvider = STATUS_NOT_IMPLEMENTED;
 
 /* ObRegisterCallbacks 需要 altitude 字串 */
 static UNICODE_STRING ObAltitude = RTL_CONSTANT_STRING(L"321000");
+static const GUID BlueSquadronDeviceClassGuid =
+    { 0x9a4e0c2f, 0x1f63, 0x4d77, { 0x9c, 0x5e, 0x51, 0x27, 0x30, 0x8b, 0x44, 0xa1 } };
+
+OB_PREOP_CALLBACK_STATUS OnObPreOp(
+    _In_ PVOID RegistrationContext,
+    _Inout_ POB_PRE_OPERATION_INFORMATION Info);
 
 /* 反載入 */
 static VOID DriverUnload(PDRIVER_OBJECT DriverObject)
 {
     UNICODE_STRING symLink = RTL_CONSTANT_STRING(L"\\DosDevices\\BlueSquadron");
+    UNREFERENCED_PARAMETER(DriverObject);
 
     /* 停 MSR 快照定時器 */
     MsrSnapshotStop();
@@ -121,11 +128,10 @@ NTSTATUS DriverEntry(
        \\.\/BlueSquadron 並操作驅動封鎖清單與行程保護——那是權限提升。
        D:P(A;;GA;;;BA) = 僅允許 Builtin Administrators 完整存取。 */
     UNICODE_STRING sddl = RTL_CONSTANT_STRING(L"D:P(A;;GA;;;BA)");
-    UNICODE_STRING classGuid = RTL_CONSTANT_STRING(L"{4d36e97d-e325-11ce-bfc1-08002be10318}");
     status = IoCreateDeviceSecure(
         DriverObject, 0, &devName,
         FILE_DEVICE_UNKNOWN, FILE_DEVICE_SECURE_OPEN, FALSE,
-        &sddl, &classGuid,
+        &sddl, &BlueSquadronDeviceClassGuid,
         &g_DeviceObject);
     if (!NT_SUCCESS(status)) return status;
 
@@ -190,7 +196,6 @@ NTSTATUS DriverEntry(
         opReg.ObjectType = PsProcessType;
         opReg.Operations = OB_OPERATION_HANDLE_CREATE | OB_OPERATION_HANDLE_DUPLICATE;
         /* PreOperation 和 PostOperation 定義在 Callbacks.c */
-        extern OB_PREOP_CALLBACK_STATUS OnObPreOp(PVOID, POB_PRE_OPERATION_INFORMATION);
         opReg.PreOperation = OnObPreOp;
 
         cbReg.Version                    = OB_FLT_REGISTRATION_VERSION;

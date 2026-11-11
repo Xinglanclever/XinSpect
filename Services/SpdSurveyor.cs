@@ -32,16 +32,24 @@ public sealed record SpdSurvey(IReadOnlyList<SpdDirectRead> Modules,
 public static class SpdSurveyor
 {
     /// <summary>呼叫端負責先取得軟體層的匯流排鎖（<see cref="SmbusBusLock"/>）並在結束後釋放。</summary>
-    public static SpdSurvey Survey(IEnumerable<ISpdBus> buses)
+    public static SpdSurvey Survey(IEnumerable<ISpdBus> buses, IEnumerable<string>? initialNotes = null)
     {
         var modules = new List<SpdDirectRead>();
         var ddr5Modules = new List<SpdDirectRead5>();
         var problems = new List<SpdSlot>();
-        var notes = new List<string>();
+        var notes = initialNotes?.Where(n => !string.IsNullOrWhiteSpace(n)).ToList() ?? [];
 
         foreach (var bus in buses)
         {
-            if (!bus.TryAcquireBus(out string reason))
+            bool acquired;
+            string reason;
+            try { acquired = bus.TryAcquireBus(out reason); }
+            catch (Exception ex)
+            {
+                notes.Add($"{bus.Description}：取得匯流排時發生例外（{ex.GetType().Name}：{ex.Message}）。");
+                continue;
+            }
+            if (!acquired)
             {
                 notes.Add($"{bus.Description}：{reason}");
                 continue;
@@ -71,13 +79,44 @@ public static class SpdSurveyor
                     problems.Add(slot);
                 }
             }
+            catch (Exception ex)
+            {
+                notes.Add($"{bus.Description}：掃描中斷（{ex.GetType().Name}：{ex.Message}）；其他匯流排仍會繼續。");
+            }
             finally
             {
-                bus.ReleaseBus();
+                try { bus.ReleaseBus(); }
+                catch (Exception ex)
+                {
+                    notes.Add($"{bus.Description}：釋放匯流排時發生例外（{ex.GetType().Name}：{ex.Message}）。");
+                }
             }
         }
 
         return new SpdSurvey(modules, problems, notes, ddr5Modules);
+    }
+}
+
+/// <summary>Formats SPD scan outcomes for the memory page without hiding partial failures.</summary>
+public static class SpdSurveyDiagnostics
+{
+    public static string Format(SpdSurvey survey, long elapsedMilliseconds)
+    {
+        ArgumentNullException.ThrowIfNull(survey);
+        int count = survey.Modules.Count + (survey.Ddr5Modules?.Count ?? 0);
+        string headline = count == 0
+            ? $"沒有讀到 SPD 模組；耗時 {Math.Max(0, elapsedMilliseconds) / 1000.0:0.0} 秒。"
+            : $"讀到 {count} 條 SPD 模組；耗時 {Math.Max(0, elapsedMilliseconds) / 1000.0:0.0} 秒。";
+        var details = survey.Problems.Select(p => $"0x{p.Address:X2} {p.Kind}：{p.Note}")
+            .Concat(survey.Notes)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.Ordinal)
+            .Take(6)
+            .ToList();
+        int total = survey.Problems.Count + survey.Notes.Count(x => !string.IsNullOrWhiteSpace(x));
+        if (details.Count == 0) return headline;
+        string more = total > details.Count ? $"\n另有 {total - details.Count} 項診斷訊息。" : "";
+        return headline + "\n" + string.Join("\n", details) + more;
     }
 }
 
@@ -90,7 +129,8 @@ public static class SpdSurveyor
 /// </remarks>
 public static class SpdBusFactory
 {
-    public static List<ISpdBus> Candidates(WinRing0Bridge bridge, List<string> notes)
+    public static List<ISpdBus> Candidates(WinRing0Bridge bridge, List<string> notes,
+                                            IPciFunctionLocationSource? locationSource = null)
     {
         var buses = new List<ISpdBus>();
 
@@ -108,9 +148,25 @@ public static class SpdBusFactory
         if (bridge.PciWriteAvailable)
         {
             var pci = new WinRing0PciConfig(bridge, allowReadProtocolWrites: true);
-            var imc = ImcSmbusDiscovery.Find(pci, out string note);
-            foreach (var loc in imc) buses.Add(new ImcSmbusController(pci, loc));
-            if (imc.Count == 0) notes.Add(note);
+            IReadOnlyList<PciFunctionAddress> candidates;
+            string locationNote;
+            try { candidates = (locationSource ?? new WindowsPciFunctionLocationSource())
+                    .Find(0x8086, 0x2085, out locationNote); }
+            catch (Exception ex)
+            {
+                candidates = [];
+                locationNote = $"Windows PCI 位置列舉失敗（{ex.GetType().Name}：{ex.Message}）；已略過全 PCI 空間探測。";
+            }
+            if (candidates.Count == 0)
+            {
+                notes.Add("處理器 iMC SMBus：" + locationNote);
+            }
+            else
+            {
+                var imc = ImcSmbusDiscovery.Find(pci, candidates, out string note);
+                foreach (var loc in imc) buses.Add(new ImcSmbusController(pci, loc));
+                if (imc.Count == 0) notes.Add("處理器 iMC SMBus：" + note);
+            }
         }
         else
         {

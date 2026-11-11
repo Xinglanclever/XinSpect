@@ -390,6 +390,17 @@ public sealed class MainViewModel : ObservableObject
     public IReadOnlyList<SpdModule> SpdModules { get => _spdModules; internal set { if (SetProperty(ref _spdModules, value)) OnPropertyChanged(nameof(HasSpdModules)); } }
     public bool HasSpdModules => _spdModules.Count > 0;
 
+    private string _spdReadStatusText = "";
+    public string SpdReadStatusText
+    {
+        get => _spdReadStatusText;
+        internal set
+        {
+            if (SetProperty(ref _spdReadStatusText, value)) OnPropertyChanged(nameof(HasSpdReadStatus));
+        }
+    }
+    public bool HasSpdReadStatus => !string.IsNullOrWhiteSpace(_spdReadStatusText);
+
     private IReadOnlyList<SpdDirectRead> _directSpdReads = Array.Empty<SpdDirectRead>();
     /// <summary>原生 SMBus 讀回的 SPD 位元組與解碼結果；供證據稽核交叉核對，不以 CPU-Z 顯示模型反推。</summary>
     public IReadOnlyList<SpdDirectRead> DirectSpdReads { get => _directSpdReads; internal set => SetProperty(ref _directSpdReads, value); }

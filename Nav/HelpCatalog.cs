@@ -287,11 +287,11 @@ public static class HelpCatalog
             What = "每一條記憶體的插槽位置、容量、廠牌、型號、標稱速度與序號。",
             Does = "資料來自韌體 SMBIOS；四條插槽只插兩條時，未插的插槽不會出現。想確認雙通道是否成立，看插槽位置（通常 A2／B2）。",
         },
-        ["memory/SPD 深度資料 (CPU-Z)"] = new()
+        ["memory/DIMM SPD 深度資料"] = new()
         {
-            Title = "SPD 深度資料 (CPU-Z)",
+            Title = "DIMM SPD 深度資料",
             What = "模組上 SPD 晶片裡的原廠資料：JEDEC 標準時序表與 XMP／EXPO 超頻設定檔。",
-            Does = "用來對照「模組支援什麼」與「目前實際跑什麼」：XMP 檔寫 3600 而上方時序只有 2133，就是 BIOS 沒開 XMP。",
+            Does = "優先直接讀取模組 SPD 原始資料；若硬體讀取不可用，才以 CPU-Z 報告補值。每列都標示來源；JEDEC/XMP 能力不等於目前運行時序。",
         },
 
         ["memory/圖樣檢測"] = new()

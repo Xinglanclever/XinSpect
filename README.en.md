@@ -11,11 +11,14 @@
 
 A free, open-source PC toolbox for Windows. Low-level reads are read-only by default; advanced diagnostics and CPU/DRAM stress tests are off by default, and hardware writes require a second safety switch plus per-action confirmation. Ships as a single portable executable and collects or transmits no user data.
 
-![Version](https://img.shields.io/badge/version-3.25-4C8DFF)
+> **Scope and audit limits (2026-11-12):** 1,178 is the mixed hardware/OS/security/diagnostic/governance key catalogue, not a count of hardware readings. Production kernel access uses third-party WinRing0 and the in-house XsRegProbe. PawnIO is unbound; the BlueSquadron kernel prototype has only passed a local build and is not packaged or runtime-validated. Reviews are author/AI-assisted, not independent security certification. See [claim verification](docs/AUDIT-CLAIMS-2026-11-12.md).
+
+![Version](https://img.shields.io/badge/version-3.26-4C8DFF)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![Tests](https://img.shields.io/badge/tests-8047%20passed-3FB950)
+![Tests](https://img.shields.io/badge/tests-8048%20passed-3FB950)
 ![Mutation Score](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
+> The 82% Stryker score covers only the pure-function `XinSpect.Decoders` library, not the GUI, CLI, or privileged access layer.
 ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 ![Commercial license](https://img.shields.io/badge/license-commercial%20available-8B5CF6)
 
@@ -23,7 +26,7 @@ The name means "morning light, seen at a glance"; "Spect" comes from the Latin *
 
 This is the extended documentation. Every feature lists its data source (which register, which WMI class, which API), its decoding basis, what it displays, and **what it deliberately does not do**. Jargon is explained in parentheses on first use. The document itself is guarded by machine checks (chapter 13): the version, test count, download links, byte sizes, and the first changelog entry all fail the build if they fall behind.
 
-> **Document scope (v3.25).** The Traditional Chinese edition ([README.md](README.md)) is the reference text and was expanded in v3.24 to roughly 80,000 characters. This release adds platform-targeted Deep Bench suites; the sections added in the v3.24 documentation pass and appendices F–T still exist only in Chinese for now. This English edition remains a complete translation of the 25 chapters and appendices A–E, with a condensed changelog; where the two disagree, the Chinese text is correct.
+> **Document scope (v3.26).** The Traditional Chinese edition ([README.md](README.md)) is the reference text and was expanded in v3.24 to roughly 80,000 characters. This release fixes DIMM SPD discovery and makes direct-read timing and fallback sources explicit; the sections added in the v3.24 documentation pass and appendices F–T still exist only in Chinese for now. This English edition remains a complete translation of the 25 chapters and appendices A–E, with a condensed changelog; where the two disagree, the Chinese text is correct.
 
 ---
 
@@ -258,15 +261,15 @@ hardware / firmware / OS ──► fact collection (*FactsService)
 
 | File | Size | Purpose |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpect.exe) | 38.10 MB | Main program (Blue Squadron guard included) |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpectConsole.exe) | 101,266,211 bytes | XinSpect Console (CLI). Runs standalone and is also launched by the main program's console bridge; larger because it bundles the .NET 10 runtime (for Windows 11 / Server 2025) |
-| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpectConsole-legacy.exe) | 101,266,299 bytes | XinSpect Console (CLI) **plain-text legacy build** for Windows 10 / Windows Server 2016, 2019, 2022 - no colors, no box positioning; the facts/book/help features are identical |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/BlueSquadronBridge.exe) | 6,531,620 bytes | Standalone guard process |
-| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpect-full.exe) | 212,009,107 bytes | Main program, bundled-runtime build: ships the .NET 10 Desktop Runtime, nothing to install (same features as XinSpect.exe) |
-| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpectConsole-nort.exe) | 67,317,721 bytes | XinSpect Console, Windows 11 / Server 2025, no runtime: requires .NET 10 Desktop Runtime |
-| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpectConsole-legacy-nort.exe) | 67,313,713 bytes | XinSpect Console, Windows 10 / 2016/2019/2022, no runtime: plain-text UI, requires .NET 10 Desktop Runtime |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpectDeploy.exe) | 29,696 bytes | One-click installer. First pick what to install: **A** the main program (GUI), **B** the XinSpect Console; then pick a source with 1/2/3 (GitHub / Drive / accelerator node); shows a progress bar, speed and time remaining while downloading |
-| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XsRegProbe.sys) | 24,064 bytes | XsRegProbe kernel probe driver (whitelisted read-only MSR/MMIO, the only "excellent"-graded component in the project audit). This rebuild **includes the slot-base fix** (slots start at request header +8 — found by the round-3 deep audit; v3.18 shipped the pre-fix binary). Not Microsoft-signed: the app installs it via an elevated session to `ProgramData\XinSpect\Driver\`; manual loading requires testsigning |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.26/XinSpect.exe) | 38.10 MB | Main program (Blue Squadron guard included) |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.26/XinSpectConsole.exe) | 101,266,211 bytes | XinSpect Console (CLI). Runs standalone and is also launched by the main program's console bridge; larger because it bundles the .NET 10 runtime (for Windows 11 / Server 2025) |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.26/XinSpectConsole-legacy.exe) | 101,266,299 bytes | XinSpect Console (CLI) **plain-text legacy build** for Windows 10 / Windows Server 2016, 2019, 2022 - no colors, no box positioning; the facts/book/help features are identical |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.26/BlueSquadronBridge.exe) | 6,531,620 bytes | Standalone guard process |
+| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.26/XinSpect-full.exe) | 212,009,107 bytes | Main program, bundled-runtime build: ships the .NET 10 Desktop Runtime, nothing to install (same features as XinSpect.exe) |
+| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.26/XinSpectConsole-nort.exe) | 67,317,721 bytes | XinSpect Console, Windows 11 / Server 2025, no runtime: requires .NET 10 Desktop Runtime |
+| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.26/XinSpectConsole-legacy-nort.exe) | 67,313,713 bytes | XinSpect Console, Windows 10 / 2016/2019/2022, no runtime: plain-text UI, requires .NET 10 Desktop Runtime |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.26/XinSpectDeploy.exe) | 29,696 bytes | One-click installer. First pick what to install: **A** the main program (GUI), **B** the XinSpect Console; then pick a source with 1/2/3 (GitHub / Drive / accelerator node); shows a progress bar, speed and time remaining while downloading |
+| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.26/XsRegProbe.sys) | 24,064 bytes | XsRegProbe kernel probe driver (whitelisted read-only MSR/MMIO; internally reviewed, not independently certified). This rebuild **includes the slot-base fix** (slots start at request header +8 — found by the round-3 deep audit; v3.18 shipped the pre-fix binary). Not Microsoft-signed: the app installs it via an elevated session to `ProgramData\XinSpect\Driver\`; manual loading requires testsigning |
 
 The exact byte count of the main executable is published in the Traditional Chinese README and verified after each release; the MB figure here is rounded.
 
@@ -366,7 +369,10 @@ Sources: CPUID (usermode), MSRs (per-physical-core through WinRing0), registry.
 
 Sources: SMBUS (allow-listed addresses, direct), SMBIOS, WMI, ACPI SLIT, Windows memory APIs.
 
-- **SPD direct read**: tries the PCH SMBus and the processor iMC SMBus, labelling each read with its bus. Decodes manufacturer, serial, module part number, nominal and actual speed, primary and secondary timings (tCL/tRCD/tRP/tRAS and sub-timings). Unreadable buses get a reason; an empty slot is not a fault.
+- **SPD direct read**: tries the PCH SMBus and the processor iMC SMBus, labelling each read with its bus. Decodes manufacturer, serial, module part number, nominal and actual speed, primary and secondary timings (tCL/tRCD/tRP/tRAS and sub-timings). Unreadable buses get a reason; an empty slot is not a fault. Since v3.26, three upgrades:
+    - **iMC targeting via Windows PnP** (the SetupAPI present-device list): the iMC's PCI functions are located directly by vendor/device pair, replacing the old probe-every-one-of-65,536-BDF approach — bus discovery is noticeably faster on HEDT/server platforms, where DIMM SPD usually hangs off the processor's own iMC SMBus; a failed lookup reports a diagnostic instead of silently skipping.
+    - **DDR5 covers all eight standard addresses 0x50–0x57**: the SPD5118 hub's identity magic (MR0/MR1 = 0x51/0x18, read through the hub's register space with no page switching) is probed first, so DDR5 no longer depends on the DDR4-only page switcher — DDR5 modules at 0x51–0x57, previously misreported as "no module on the bus", now read correctly.
+    - **Source transparency**: the memory page distinguishes the three sources — the SMBIOS/WMI list, SPD direct reads and the CPU-Z fallback — and shows direct-read elapsed time and per-bus failure/partial-success reasons (an exception on one bus is recorded as a single note while the other buses keep scanning); the full SPD dual-read comparison stays on the direct-read path.
 - **TSOD**: TSE2004-compatible temperature (bits[15:4], two's complement, 1/16 °C) at allow-listed addresses 0x18–0x1F.
 - **ECC status**, slot layout and channel identification (if it cannot tell, it says so; see 6.1). ECC is reported as enabled/disabled and supported/unsupported; "supported" is never written as "active."
 - **Rowhammer**: a risk statement plus a stress probe, not a proper attack. The probe hammers two hot spots inside a self-owned contiguous buffer, verifies xorshift samples (chunk index mixed into the seed) byte by byte, and excludes the hot-spot offsets from verification. It requires explicit consent (UI checkbox plus a service-layer exception on unconsented calls). The UI and result say "unverified": usermode cannot execute clflush, so the probe does not guarantee triggering Rowhammer and its result is not a memory-reliability conclusion. Multi-round mode (10 independent probes) carries the same warning: zero flips does not imply Rowhammer resistance.
@@ -1163,10 +1169,11 @@ Three recurring patterns:
 
 ## 22. Version history
 
-The ledger contains 130 entries (126 dated releases plus four pre-repository stages) from 2026-08-27 to 2026-11-11. The complete itemised ledger lives in the Traditional Chinese [README.md](README.md#二十二版本沿革) and in the About page; the table below lists every release from 2.60 onward with its one-line summary, followed by the earlier milestones grouped by era.
+The ledger contains 131 entries (127 dated releases plus four pre-repository stages) from 2026-08-27 to 2026-11-12. The complete itemised ledger lives in the Traditional Chinese [README.md](README.md#二十二版本沿革) and in the About page; the table below lists every release from 2.60 onward with its one-line summary, followed by the earlier milestones grouped by era.
 
 | Version | Date | Summary |
 |---|---|---|
+| 3.26 | 2026-11-12 | Fix DIMM SPD discovery, DDR5 address coverage and source/timing diagnostics |
 | 3.25 | 2026-11-11 | Desktop/CLI safety and targeted Deep Bench parity, OpenCC conversion, strict Big5 decoding and safe EC presence detection |
 | 3.24 | 2026-11-10 | Reduce monitoring overhead and correct network sampling baselines |
 | 3.23 | 2026-11-10 | Hardware decoding and evidence accuracy fixes |
@@ -1248,7 +1255,7 @@ The full text for every entry, including each individual change and the test/cat
 
 **Why does the v2.87 changelog say 29 rules when the document says 26?** The runtime set is 26 (`FactRelationRules.All`; `CoverageService.RuntimeRuleCount` also says 26). 29 is historical text, recorded as O-01. This document treats 26 as the only fact and does not rewrite published history.
 
-**Is an 82% mutation score enough?** Knowledge-table data files are deliberately excluded (asserting every string equals snapshot duplication); the main WPF/privileged program cannot be mutation-tested and is covered by injected tests and golden vectors. 82% is "within the tested scope," and the ledger records each batch.
+**What does the 82% mutation score cover?** The current Stryker configuration targets only `XinSpect.Decoders`. It does not include the GUI, CLI, or privileged access layer. Knowledge tables are excluded; other layers have unit tests and golden vectors, which do not contribute to this mutation score.
 
 **Does it collect my data?** No. The fact layer has zero network APIs (source-scan guard). The five network features — AI review, feedback, speed test, network latency, update check — all require you to initiate them.
 
@@ -1399,4 +1406,4 @@ Time-capsule creation and comparison are written to `%ProgramData%\XinSpect\Audi
 
 ---
 
-**About this document**: it corresponds to XinSpect v3.25 (2026-11-11). The Traditional Chinese version is the master, the Simplified Chinese version is generated from it with OpenCC (tw2sp), and this English version is a full translation sharing the same facts and guards. If a term in the Simplified version reads oddly, that is the converter's choice, not the original meaning; the Traditional Chinese master is authoritative.
+**About this document**: it corresponds to XinSpect v3.26 (2026-11-12). The Traditional Chinese version is the master, the Simplified Chinese version is generated from it with OpenCC (tw2sp), and this English version is a full translation sharing the same facts and guards. If a term in the Simplified version reads oddly, that is the converter's choice, not the original meaning; the Traditional Chinese master is authoritative.

@@ -51,6 +51,21 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "3.26",
+            Date = "2026-11-12",
+            Title = "DIMM SPD 與核心映射修正、審計口徑核實",
+            Items =
+            [
+                "XsRegProbe：MMIO 映射改用 PAGE_READONLY | PAGE_NOCACHE，補頁面保護旗標回歸測試；修正三語文件的突變分數、目錄鍵與內部審計口徑。",
+                "BlueSquadron 原型：修正核心連結庫、裝置 GUID 型別與安全字串格式化，完成本機編譯；未封裝、未簽章、未載入驗證。",
+                "iMC 尋址：用 Windows PnP 列舉目標 PCI function，取代逐一探測 65,536 個 BDF，縮短 HEDT／伺服器平台的 SPD 匯流排定位時間。",
+                "DDR5 偵測：檢查 0x50–0x57 全部標準 hub 位址；DDR5 不再依賴 DDR4 專用切頁器，0x51–0x57 的模組可正常讀取。",
+                "來源透明：記錄原生 SPD 讀取耗時、逐匯流排失敗與部分成功；畫面明確區分 SMBIOS/WMI 清單、SPD 直讀和 CPU-Z 回退。",
+                "精度：保留完整 SPD 雙讀比對；新增 PCI 位置解碼、DDR5 非 0x50 位址及失敗原因顯示回歸驗證。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "3.25",
             Date = "2026-11-11",
             Title = "雙級安全模式與平台靶向深測",

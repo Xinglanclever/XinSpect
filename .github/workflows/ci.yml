@@ -3,7 +3,7 @@
 # 兩條線：
 #   ① push／PR：守門子集（快、不依賴硬體）——類名全部由 Tests/CommunityDocsTests 釘住，
 #      過濾字串打錯字會讓 CI 綠得很漂亮而一個測試都沒跑，那條守門就是防這個的。
-#   ② 每週六：full-regression 全套回歸（全套 8,047 條）在 self-hosted runner
+#   ② 每週六：full-regression 全套回歸（全套 8,048 條）在 self-hosted runner
 #      （xinpect-dev-machine，LocalSystem 服務）執行，前置唯讀行程健檢與隔離建置；
 #      紅燈自動開 issue（permissions issues:write 已補）。
 #
@@ -60,7 +60,7 @@ jobs:
       - name: Build tests（含主程式與 Bridge 內嵌鏈）
         run: dotnet build Tests\XinSpect.Tests.csproj -c Release -v minimal -p:OutputPath=bin/CiFull_${{ github.run_id }}/
 
-      - name: Full regression（全套 8,047 條）
+      - name: Full regression（全套 8,048 條）
         run: dotnet test Tests\XinSpect.Tests.csproj -c Release --no-build --nologo -p:OutputPath=bin/CiFull_${{ github.run_id }}/
 
       - name: 紅燈自動開 issue

@@ -12,13 +12,16 @@
 
 # 曦覽 XinSpect 百科・修正版（v3.17・2026-11-07 審計後）
 
-![版本](https://img.shields.io/badge/version-3.25-4C8DFF)
+![版本](https://img.shields.io/badge/version-3.26-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-8047%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-8048%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
+> Stryker 82% 僅涵蓋 `XinSpect.Decoders` 純解碼器類別庫，不代表整個 GUI、CLI 或核心存取層。
 ![授權](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
 ![商業授權](https://img.shields.io/badge/license-%E5%95%86%E6%A5%AD%E6%8E%88%E6%AC%8A%E5%8F%AF%E8%AB%87-8B5CF6)
+
+> **能力與審計口徑（2026-11-12）**：1,178 是跨硬體、OS、安全、診斷與治理的目錄鍵數，不是硬體讀值數。生產核心路徑為第三方 WinRing0 與自研 XsRegProbe；PawnIO 未綁定，BlueSquadron 核心僅本機編譯通過、未封裝或執行驗證。審查為作者與 AI 輔助檢視。核查與修正見 [審計指控核查](docs/AUDIT-CLAIMS-2026-11-12.md)。
 
 **一款免費開源、在 Windows 上執行的電腦工具箱。底層讀取預設唯讀；進階診斷與 CPU／DRAM 壓力測試預設關閉，硬體寫入另有第二級開關並需逐項確認。單一執行檔、免安裝，不收集不上傳任何使用者資料。**
 
@@ -32,7 +35,7 @@
 
 ## 這份文件的一句話說明
 
-曦覽的立場：**一台電腦的每一項性質，都應該分成三份陳述來看——硬體自己說的、韌體說的、作業系統說的。** 能讀的給數值與出處，讀不到的給原因（六態），互相矛盾的用紅字具名列出雙方，判讀留給人。本版新增第四份陳述：**審計者說的**——116 條外部審查發現、含審計者自己的誤報，全部在案。
+曦覽的立場：**一台電腦的每一項性質，都應該分成三份陳述來看——硬體自己說的、韌體說的、作業系統說的。** 能讀的給數值與出處，讀不到的給原因（六態），互相矛盾的用紅字具名列出雙方，判讀留給人。本版新增第四份陳述：**審計者說的**——116 條 AI 輔助內部審查編目，含審計者自己的誤報；不是獨立第三方審計。
 
 ---
 
@@ -51,13 +54,13 @@
 | 全站說明條目（圓圈問號） | **288** | `Nav/HelpCatalog.cs` 的 `Entries` 成員數 |
 | 服務檔 | **682** | `find Services -name '*.cs' \| wc -l` |
 | 全域 C# 檔 | **1,612** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`work/`、`publish-*/`、`.git/` |
-| 版本紀錄筆數 | **130** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
-| 專案測試基線 | **8,047** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
+| 版本紀錄筆數 | **131** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
+| 專案測試基線 | **8,048** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
 | CLI 指令（`Execute` case 標籤） | **49** | `grep -c 'case "' XinSpectCli/Program.cs` |
-| 內核組件 | **4** | WinRing0（借）／PawnIO（未接入）／BlueSquadron（防護・毛坯）／XsRegProbe（白名單唯讀探測） |
-| 外部審查發現 | **116** | `docs/審查報告-v3.17.md` 的編目條目（v3.18 增量審查另計 111 條編目，見同目錄） |
+| 核心／特權後端列項 | **4** | WinRing0（第三方、已接入）／XsRegProbe（自研、已接入）／PawnIO（未接入）／BlueSquadron 核心驅動（未封裝） |
+| AI 輔助內部審查編目 | **116** | `docs/審查報告-v3.17.md` 的編目條目；v3.18 另列 111 條。不是確認缺陷數，也不是第三方審計 |
 
-**這張表不能證明什麼。** 1,178 把鍵不是 1,178 個正確答案；116 條發現也不是 116 個皆真的斷言——外部審查約有一到兩成誤報率，每條都帶 `檔案:行號` 供按圖索驥，偽者請撕。
+**這張表不能證明什麼。** 1,178 是硬體、作業系統、安全、診斷、來源與治理等項目的整體目錄數，不是 1,178 項硬體讀值。審查編目也不是確認缺陷數；報告記錄了代理發現與作者驗證，不能替代獨立第三方審計。
 
 ---
 
@@ -110,16 +113,16 @@
 ## 這棵樹上有什麼（四個入口）
 
 ### 入口一：GUI（65 個可到達畫面）
-驗機、監控、超頻、韌體安全稽核、深測中心 44 項、垃圾清理、藍屏分析、DNS/Hosts/右鍵選單……逐頁解剖見百科第 3 部（[docs/百科-v3.17.md](docs/百科-v3.17.md)）。底層功能依權限與雙級安全設定開啟；預設關閉進階盤點與負載，硬體寫入另需第二級及逐項確認。
+驗機、監控、超頻、韌體安全稽核、深測中心 44 項、垃圾清理、藍屏分析、DNS/Hosts/右鍵選單……逐頁解剖見百科第 3 部（[docs/百科-v3.17.md](docs/百科-v3.17.md)）。底層功能依權限與雙級安全設定開啟；預設關閉進階盤點與負載，硬體寫入另需第二級及逐項確認。v3.26 起記憶體頁明確區分 SMBIOS/WMI 清單、SPD 直讀與 CPU-Z 回退三條來源，附直讀耗時與逐匯流排失敗原因；iMC 匯流排定位改走 Windows PnP，DDR5 覆蓋 0x50–0x57 全部標準位址。
 
 ### 入口二：xsc 終端機（CLI，40 指令）
 `facts` 採集全機事實 → `page`/`domain`/`fact` 查詢 → `msr`/`pci` 直讀 → `ipc` 守護進程 → `compliance`/`merkle` 證據導出 → `book` 離線百科。**修正版新增申報**：CLI 四檔 2,562 行逐行審查；P0-1 與 P1-4/5/9 在此層——CLI 曾是本版最需要修的層，P0-1/P1-4/P1-9 已修。
 
-### 入口三：特權層（四枚內核組件＋橋接）
-- **XsRegProbe**：白名單唯讀 MSR/MMIO 探測驅動——全案審查的唯一「優秀」級，229 行在可窮舉證明範圍內；SDDL 已開 Users 唯讀（按需提權會話的地基）；
+### 入口三：特權層（兩條已接入核心路徑，另有兩項未完成）
+- **XsRegProbe**：白名單限制的 MSR/MMIO 唯讀探測驅動；本次修正 `MmMapIoSpaceEx` 保護旗標並加回歸測試。內部檢視不構成安全證明或第三方認證；
 - **WinRing0**（借自 LHM 0.9.4）：萬能鑰匙，裝置無呼叫者校驗，暴露窗口與退役順序（§5.7）在案；
-- **BlueSquadron**：防護驅動，毛坯狀態如實申報（映像載入只記不算、阻擋清單收了不執行）；
-- **PawnIO**：8-30 因「成功卻回零」退回；修正版的後端鏈設計（`KernelBackends` 補丁包）讓它**用自證證據決定何時歸隊**。
+- **BlueSquadron**：C# Bridge 已建置；核心 C 驅動僅完成本機編譯，尚未封裝、簽章或執行驗證，不列為生產核心路徑；
+- **PawnIO**：Native 綁定與 `ModulePins` 未完成，本版能力為空、未接入生產路徑。
 
 ### 入口四：審計層（新增）
 修正版首次把審查本身納入文檔：116 條的完整清單（[docs/審查報告-v3.17.md](docs/審查報告-v3.17.md)）、審計者誤報的申報、修復分叉史（D3D11 slot／IOMMU／netsh 三案：為什麼修一份漏一份）、以及**守門紅燈事件**（規模表兩格過期被外部審計先於 CI 發現——守門測試的存在理由與失敗方式，同時入案）。v3.18 增量審查（111 條編目＋夜間自報去重）見 [docs/審查報告-v3.18.md](docs/審查報告-v3.18.md)。
@@ -153,19 +156,19 @@
 
 | 檔案 | 大小 | 說明 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpect.exe) | 39,242,860 bytes | 主程式。藍色中隊守護進程已內建；「強控台」按鈕橋接 xsc 終端機 |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpectConsole.exe) | 101,266,211 bytes | 曦覽終端機（CLI）。可獨立執行，也被主程式強控台喚起；自含 .NET 10 執行階段故體積較大（見下方說明） |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/BlueSquadronBridge.exe) | 6,531,620 bytes | 獨立守護進程。要脫離主程式單獨跑防護時使用 |
-| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpect-full.exe) | 212,009,107 bytes | 主程式・帶環境版：.NET 10 Desktop Runtime 一併打包，免裝執行階段（功能與 XinSpect.exe 相同） |
-| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpectConsole-nort.exe) | 67,317,721 bytes | 曦覽終端機・Windows 11／Server 2025・不帶環境：需已裝 .NET 10 Desktop Runtime |
-| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpectConsole-legacy-nort.exe) | 67,313,713 bytes | 曦覽終端機・Windows 10／2016/2019/2022・不帶環境：純文字界面，需已裝 .NET 10 Desktop Runtime |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpectDeploy.exe) | 29,696 bytes | 一鍵安裝器。第一層選裝什麼：A 裝主程式（GUI）、B 裝曦覽終端機；第二層 1/2/3 選下載來源（GitHub／Drive／加速節點）；下載時顯示進度條、速度與剩餘時間 |
-| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XsRegProbe.sys) | 24,064 bytes | XsRegProbe 內核探測驅動（白名單唯讀 MSR／MMIO，全案審查唯一「優秀」級）。本版重編版**含槽位基底修正**（槽位從請求頭 +8 開始——第三輪嚴查發現，v3.18 的 .sys 為修正前）。未微軟簽章：主程式以提權會話安裝到 `ProgramData\XinSpect\Driver\` 並建服務；手動載入需測試簽章環境（testsigning） |
-| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.25/XinSpectConsole-legacy.exe) | 101,266,299 bytes | 曦覽終端機（CLI）**純文字相容版**：給 Windows 10／Windows Server 2016、2019、2022 的傳統主控台——無色彩、無框線定位，其餘功能（facts／book／help）相同 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.26/XinSpect.exe) | 39,242,860 bytes | 主程式。藍色中隊守護進程已內建；「強控台」按鈕橋接 xsc 終端機 |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.26/XinSpectConsole.exe) | 101,266,211 bytes | 曦覽終端機（CLI）。可獨立執行，也被主程式強控台喚起；自含 .NET 10 執行階段故體積較大（見下方說明） |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.26/BlueSquadronBridge.exe) | 6,531,620 bytes | 獨立守護進程。要脫離主程式單獨跑防護時使用 |
+| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.26/XinSpect-full.exe) | 212,009,107 bytes | 主程式・帶環境版：.NET 10 Desktop Runtime 一併打包，免裝執行階段（功能與 XinSpect.exe 相同） |
+| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.26/XinSpectConsole-nort.exe) | 67,317,721 bytes | 曦覽終端機・Windows 11／Server 2025・不帶環境：需已裝 .NET 10 Desktop Runtime |
+| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.26/XinSpectConsole-legacy-nort.exe) | 67,313,713 bytes | 曦覽終端機・Windows 10／2016/2019/2022・不帶環境：純文字界面，需已裝 .NET 10 Desktop Runtime |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.26/XinSpectDeploy.exe) | 29,696 bytes | 一鍵安裝器。第一層選裝什麼：A 裝主程式（GUI）、B 裝曦覽終端機；第二層 1/2/3 選下載來源（GitHub／Drive／加速節點）；下載時顯示進度條、速度與剩餘時間 |
+| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.26/XsRegProbe.sys) | 24,064 bytes | XsRegProbe 內核探測驅動（白名單唯讀 MSR／MMIO；內部檢視不構成第三方認證）。本版重編版**含槽位基底修正**（槽位從請求頭 +8 開始——第三輪嚴查發現，v3.18 的 .sys 為修正前）。未微軟簽章：主程式以提權會話安裝到 `ProgramData\XinSpect\Driver\` 並建服務；手動載入需測試簽章環境（testsigning） |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.26/XinSpectConsole-legacy.exe) | 101,266,299 bytes | 曦覽終端機（CLI）**純文字相容版**：給 Windows 10／Windows Server 2016、2019、2022 的傳統主控台——無色彩、無框線定位，其餘功能（facts／book／help）相同 |
 
 逐資產 SHA-256 見 Release 頁的 `SHA256SUMS.txt`（防傳輸損毀；能替換整個 Release 的攻擊者防不了——不可否認性需簽名，列排期）。
 
-> **上表的位元組數為本版（v3.25）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
+> **上表的位元組數為本版（v3.26）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。
 
 安裝器（`XinSpectDeploy.exe`）第一層先選裝什麼：**A** 是 XinSpect.exe 主程式（全自動部署主程式＋守護進程；守護進程自 3.13 起預設不啟用，要自己到安全頁開）、**B** 是曦覽終端機（單檔下載一步到位）；版本都分兩維：**帶環境**（self-contained，免裝 .NET）與**不帶環境**（framework-dependent，機器要已裝 .NET 10 Desktop Runtime）。下載完成後一律檢查 PE 標頭與大小門檻，抓到 HTML（分享頁、限流頁）會被擋下、刪檔並說出內容像什麼。注意：走第三方加速節點的位元組只能驗 PE 標頭，驗不了發佈者簽章。
 
@@ -173,6 +176,7 @@
 
 ## 版本沿革（近期）
 
+- **v3.26 DIMM SPD 偵測與診斷修正**（2026-11-12）：iMC 改用 Windows PnP 定位；補上 DDR5 0x51–0x57 hub 偵測及直讀／SMBIOS-WMI／CPU-Z 來源與耗時診斷。
 - **v3.25 雙級安全模式與平台靶向深測**（2026-11-11）：兩級開關預設關閉；桌面與 CLI 共用安全設定及平台靶向 Deep Bench。新增 OpenCC 繁簡轉換與嚴格 Big5 解碼、PnP EC 存在性線索，並保留 EC 埠/RAM 不直接讀寫的界線。
 - **v3.24 監控效能修復**（2026-11-10）：降低即時監控開銷與修正流量基準
   - CPU／DRAM 同義欄位依原生直讀 → WMI → CPU-Z 補缺；SPD JEDEC 基準不再被當成目前運行時序，修正歷史慢查詢重複取代結果。
@@ -186,7 +190,7 @@
 - **v3.15**（2026-11-03）：主題記憶修正＋離線 Redfish 目錄＋迷你 HUD 重新喚醒（本版 8 項）
 - **v3.14**（2026-11-03）：企業證據出口：合規、Merkle、推測、CI／SIEM 與族群基線（本版 10 項）
 
-完整 130 筆沿革見 [docs/百科-v3.17.md](docs/百科-v3.17.md) 第 11 部。
+完整 131 筆沿革見 [docs/百科-v3.17.md](docs/百科-v3.17.md) 第 11 部。
 
 ---
 
@@ -194,7 +198,7 @@
 
 - 本版是修正版的**第一塊磚**（約 1.4 萬字元），佔繁中 104 萬字計畫目標量 1.3%。逐章擴寫按[總藍圖](docs/百科-修正版-總藍圖.md)流水線推進，每章核實後入庫；
 - 狀態表反映的是 2026-11-07 main 的修復 commit；「已修復」不代表「已驗證」——標「需真機驗證」的條目以實機覆核為準；
-- 外部審查由 AI 代理執行，誤報率約一至兩成；本文件沿用同一個立場：**讀者可按圖索驥，偽者請撕**；
+- 審查報告由 AI 代理輔助、作者查證部分發現；誤報比例是作者估計，沒有獨立第三方審計；
 - 本文件未回答：性能對比、推薦配置、購買建議——判讀留給人。
 
 ---

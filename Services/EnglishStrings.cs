@@ -272,7 +272,7 @@ public static class EnglishStrings
         ["SMBIOS 原始表"] = "SMBIOS raw tables",
         ["SMBIOS 插槽列表"] = "SMBIOS slot list",
         ["SMBIOS 記憶體裝置"] = "SMBIOS memory devices",
-        ["SPD 深度資料 (CPU-Z)"] = "SPD deep data (CPU-Z)",
+        ["DIMM SPD 深度資料"] = "DIMM SPD details",
         ["SuperPI 圓周率運算"] = "SuperPI pi computation",
         ["TPM 走 Win32_Tpm WMI；Secure Boot 走 registry。兩者是 Windows 11 資格判斷的硬指標。"] = "TPM via Win32_Tpm WMI; Secure Boot via registry. Both are hard indicators for Windows 11 eligibility.",
         ["UEFI 變數直讀 Secure Boot 四態與開機項目數、Hypervisor 簽章（VBS 開啟時 MSR／計時可信度會變，必須明說）、微碼修訂版。全部唯讀。"] = "UEFI variable direct read of Secure Boot's four states and boot entry count, hypervisor signature (with VBS on, MSR/timing trustworthiness changes and must be disclosed), and microcode revision. All read-only.",

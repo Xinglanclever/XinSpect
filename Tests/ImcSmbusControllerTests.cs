@@ -28,6 +28,8 @@ public class ImcSmbusControllerTests
         => new(pci, new ImcSmbusLocation(FakeImcPci.Bus, FakeImcPci.Dev, FakeImcPci.Fn, segment),
                transactionTimeoutMs: 30);
 
+    private static PciFunctionAddress Target => new(FakeImcPci.Bus, FakeImcPci.Dev, FakeImcPci.Fn);
+
     private static byte[] Image(byte seed)
     {
         var img = new byte[SpdReader.Ddr4Size];
@@ -42,24 +44,48 @@ public class ImcSmbusControllerTests
     [Fact]
     public void 找出兩組控制器()
     {
-        var found = ImcSmbusDiscovery.Find(new FakeImcPci(), out var note);
+        var pci = new FakeImcPci();
+        var found = ImcSmbusDiscovery.Find(pci, [Target], out var note);
 
         Assert.Equal(2, found.Count);
         Assert.All(found, f => Assert.Equal(FakeImcPci.Bus, f.Bus));
         Assert.All(found, f => Assert.Equal(FakeImcPci.Dev, f.Device));
         Assert.Equal([0, 1], found.Select(f => f.Segment));
         Assert.Contains("16:1E.5", note);
+        Assert.Equal(7, pci.ReadCount); // 一次裝置 ID + 每組三個暫存器；不掃其他 BDF。
+
+        foreach (var (address, bus, device, function) in new[]
+        {
+            (0x001E0005u, (byte)0x16, (byte)0x1E, (byte)5),
+            (0x00000000u, (byte)0x00, (byte)0x00, (byte)0),
+            (0x001F0007u, (byte)0xFF, (byte)0x1F, (byte)7),
+        })
+        {
+            Assert.True(WindowsPciFunctionLocationSource.TryDecodeAddress(bus, address, out var decoded));
+            Assert.Equal(new PciFunctionAddress(bus, device, function), decoded);
+        }
+        Assert.True(WindowsPciFunctionLocationSource.TryDecodeDword([0x05, 0x00, 0x1E, 0x00], out uint value));
+        Assert.Equal(0x001E0005u, value);
+        Assert.False(WindowsPciFunctionLocationSource.TryDecodeDword([0x05, 0x00, 0x1E], out _));
     }
 
     [Fact]
     public void 只有一組有效時就只回一組()
-        => Assert.Single(ImcSmbusDiscovery.Find(new FakeImcPci { OnlyOneSegment = true }, out _));
+        => Assert.Single(ImcSmbusDiscovery.Find(new FakeImcPci { OnlyOneSegment = true }, [Target], out _));
 
     [Fact]
     public void 找不到裝置時回空清單並說明()
     {
-        Assert.Empty(ImcSmbusDiscovery.Find(new FakeImcPci { DeviceMissing = true }, out var note));
-        Assert.Contains("找不到", note);
+        var pci = new FakeImcPci { DeviceMissing = true };
+        Assert.Empty(ImcSmbusDiscovery.Find(pci, [Target], out var note));
+        Assert.Contains("找不到有效", note);
+        Assert.Equal(1, pci.ReadCount);
+
+        foreach (uint address in new[] { 0x00200000u, 0x00000008u, 0xFFFF_FFFFu })
+            Assert.False(WindowsPciFunctionLocationSource.TryDecodeAddress(0, address, out _));
+        Assert.Empty(ImcSmbusDiscovery.Find(pci, [], out note));
+        Assert.Contains("略過全 PCI 空間探測", note);
+        Assert.Equal(1, pci.ReadCount);
     }
 
     // ---- 交易 ----
