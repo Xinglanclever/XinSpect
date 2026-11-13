@@ -5,7 +5,13 @@
   <description>唯讀的 Windows 硬體事實採集器——版本更新紀錄（最新 20 筆，全程見官網）</description>
   <language>zh-Hant</language>
   <generator>XinSpect site tools (Tools/gen-site-data.py)</generator>
-  <lastBuildDate>2026-11-12T00:00:00Z</lastBuildDate>
+  <lastBuildDate>2026-11-14T00:00:00Z</lastBuildDate>
+    <item>
+      <title>3.28 — 內建工具箱擴充與 Agent 唯讀橋接</title>
+      <link>https://xinspect.de5.net/#log-v3.28</link>
+      <guid isPermaLink="false">xinspect-3.28</guid>
+      <pubDate>2026-11-14T00:00:00Z</pubDate>
+    </item>
     <item>
       <title>3.26 — DIMM SPD 與核心映射修正、審計口徑核實</title>
       <link>https://xinspect.de5.net/#log-v3.26</link>
@@ -118,12 +124,6 @@
       <title>3.07 — 免責聲明與授權一致：拿掉「禁止商業使用」，關於頁加上商業授權路徑與品牌標語</title>
       <link>https://xinspect.de5.net/#log-v3.07</link>
       <guid isPermaLink="false">xinspect-3.07</guid>
-      <pubDate>2026-10-31T00:00:00Z</pubDate>
-    </item>
-    <item>
-      <title>3.06 — 部署器第一次真的畫出下載進度；升級建議的部位徽章改成深灰</title>
-      <link>https://xinspect.de5.net/#log-v3.06</link>
-      <guid isPermaLink="false">xinspect-3.06</guid>
       <pubDate>2026-10-31T00:00:00Z</pubDate>
     </item>
 </channel></rss>
