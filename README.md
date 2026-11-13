@@ -2,6 +2,8 @@
 
 [![官方網站](https://img.shields.io/badge/%F0%9F%8C%90_%E5%AE%98%E6%96%B9%E7%B6%B2%E7%AB%99-xinspect.de5.net-4C8DFF?style=for-the-badge&logo=cloudflare&logoColor=white)](https://xinspect.de5.net)
 
+> 官方網站只呈現說明（產品總覽、事實目錄、版本沿革、下載），**不會掃描你的電腦**，也不需要安裝。
+
 # 曦覽 XinSpect
 
 **同一台機器，三份陳述並排：硬體說的、韌體說的、作業系統說的。**
