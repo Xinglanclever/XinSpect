@@ -40,6 +40,8 @@ for img in shot-xsc-facts shot-xsc-sys shot-xsc-book; do
 done
 has "錨點 scroll-margin 修復"                   1   "$(echo "$H" | grep -c 'scroll-margin-top')"
 has "‘/’篩選快捷鍵（zh）"                      1   "$(echo "$H" | grep -c "e.key==='/'")"
+has "FAQ 深鏈自動展開（zh）"                    1   "$(echo "$H" | grep -c "location.hash.match(/^#faq-")"
+has "FAQ 深鏈自動展開（en）"                    1   "$(curl -sL "$BASE/index-en.html" | grep -c "location.hash.match(/^#faq-")"
 has "行動端語言切換可見（zh）"                  1   "$(echo "$H" | grep -c 'nav a:not(.dl):not(#lang)')"
 has "行動端語言切換可見（en）"                  1   "$(curl -sL "$BASE/index-en.html" | grep -c 'nav a:not(.dl){display:none}#lang{display:inline-block}')"
 has "GitHub 星標徽章（zh）"                     1   "$(echo "$H" | grep -c 'gh-star')"

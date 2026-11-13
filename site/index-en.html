@@ -649,6 +649,12 @@ footer a:hover{color:var(--ink);text-decoration:underline}
 addEventListener('beforeprint',function(){
   document.querySelectorAll('.faq details').forEach(function(d){ d.open=true; });
 });
+  /* FAQ 深鏈自動展開：#faq-N 跳轉時打開該問答並滾動 */
+  var fm = location.hash.match(/^#faq-([1-9])$/);
+  if (fm) {
+    var fd = document.getElementById('faq-' + fm[1]);
+    if (fd) { fd.open = true; setTimeout(function(){ fd.scrollIntoView({block:'center'}); }, 300); }
+  }
 </script>
 <script src="dict.js"></script>
 </body>
