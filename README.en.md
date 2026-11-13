@@ -1172,7 +1172,7 @@ Three recurring patterns:
 
 ## 22. Version history
 
-The ledger contains 132 entries (128 dated releases plus four pre-repository stages) from 2026-08-27 to 2026-11-12. The complete itemised ledger lives in the Traditional Chinese [README.md](README.md#二十二版本沿革) and in the About page; the table below lists every release from 2.60 onward with its one-line summary, followed by the earlier milestones grouped by era.
+The ledger contains 132 entries (128 dated releases plus four pre-repository stages) from 2026-08-27 to 2026-11-12. The complete itemised ledger lives in the Traditional Chinese [docs/百科-v3.17.md](docs/百科-v3.17.md) and in the About page; the table below lists every release from 2.60 onward with its one-line summary, followed by the earlier milestones grouped by era.
 
 | Version | Date | Summary |
 |---|---|---|
@@ -1245,7 +1245,7 @@ The ledger contains 132 entries (128 dated releases plus four pre-repository sta
 - **2.0–2.27 (2026-09 → 10-08)**: the long build-out of hardware pages, deep registers, evidence lab, Deep Bench, Blue Squadron, CLI and the public specifications.
 - **1.2–1.9 (2026-08-27 → 09)**: the first version-controlled releases; 1.0, 1.1, Release candidate and Beta predate the repository and carry only stage-level descriptions.
 
-The full text for every entry, including each individual change and the test/catalogue counts recorded at the time, is in [README.md](README.md#二十二版本沿革). It is kept in one place on purpose: three hand-maintained copies would drift, and the guards would only catch part of it.
+The full text for every entry, including each individual change and the test/catalogue counts recorded at the time, is in [docs/百科-v3.17.md](docs/百科-v3.17.md). It is kept in one place on purpose: three hand-maintained copies would drift, and the guards would only catch part of it.
 
 ## 23. FAQ
 
