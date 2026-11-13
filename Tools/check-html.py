@@ -60,6 +60,13 @@ c.close()
 for t, line in stack:
     problems.append("未閉合 <%s>（開於 line %d）" % (t, line))
 
+# 內鏈錨點完整性：每個 href="#x" 都要有對應 id（#log-v* 由 JS 動態生成，豁免）
+targets = set(ids.keys())
+for m in re.finditer(r'href="#([^"]+)"', h):
+    tgt = m.group(1)
+    if tgt and not tgt.startswith("log-v") and tgt not in targets:
+        problems.append("內鏈錨點無目標：#%s" % tgt)
+
 for p in problems:
     sys.stderr.write(p + "\n")
 print(len(problems))
