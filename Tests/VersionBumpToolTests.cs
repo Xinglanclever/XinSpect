@@ -109,7 +109,8 @@ public class VersionBumpToolTests
             Assert.Equal(1, Count(cat, $"Version = \"{next}\","));
 
             string md = File.ReadAllText(Path.Combine(box, "README.md"));
-            // 2026-11-07 README 換修正版後，版本沿革兩層（11.2 bullet／11.3 小節）住進 docs/百科-v3.17.md。
+            Assert.Equal(1, Count(md, $"- **v{next} "));
+            // 完整逐項沿革住在 docs/百科-v3.17.md，首頁保留近期版本摘要。
             string bk = File.ReadAllText(Path.Combine(box, "docs", "百科-v3.17.md"));
             Assert.Equal(1, Count(bk, $"- **v{next}**（"));
             Assert.Equal(1, Count(bk, $"#### v{next}（"));

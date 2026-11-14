@@ -78,15 +78,20 @@ public static class SpdReader
     public const byte PageSelect1 = 0x37;
 
     /// <summary>掃過 0x50–0x57 全部八個位址。呼叫端必須先取得匯流排旗號。</summary>
-    public static SpdScan ReadAll(ISpdBus bus)
+    public static SpdScan ReadAll(ISpdBus bus, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         // 先探切頁裝置。DDR4 的 SPA0（0x36）只有在這條匯流排上真的掛著 DDR4 SPD 時才會回應，
         // 所以它 NAK 就代表「這條匯流排上沒有 SPD」——那是一句匯流排層級的結論，
         // 不該變成八個位址各自回一句一模一樣的「讀不到」。
         if (!bus.SendByte(PageSelect0, 0x00) && bus.LastStatus == SmbusStatus.NoDevice
             && !Enumerable.Range(0, AddressCount)
                 .Select(i => (byte)(FirstAddress + i))
-                .Any(address => ProbeDdr5(bus, address)))
+                .Any(address =>
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    return ProbeDdr5(bus, address, cancellationToken);
+                }))
         {
             var empty = new List<SpdSlot>(AddressCount);
             for (int i = 0; i < AddressCount; i++)
@@ -97,27 +102,34 @@ public static class SpdReader
         }
 
         var slots = new List<SpdSlot>(AddressCount);
-        for (int i = 0; i < AddressCount; i++) slots.Add(ReadOne(bus, (byte)(FirstAddress + i)));
+        for (int i = 0; i < AddressCount; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            slots.Add(ReadOne(bus, (byte)(FirstAddress + i), cancellationToken));
+        }
         return new SpdScan(slots, "");
     }
 
-    private static SpdSlot ReadOne(ISpdBus bus, byte address)
+    private static SpdSlot ReadOne(ISpdBus bus, byte address, CancellationToken cancellationToken)
     {
         // DDR5：SPD5118 hub 的 MR0/MR1 恆為 0x51/0x18（暫存器空間，不經切頁）。先探它，
         // 再落回 DDR4 的型別碼讀法——DDR4 EEPROM 的 byte 0/1 是別的內容，不會誤判。
+        cancellationToken.ThrowIfCancellationRequested();
         byte? hubIdHigh = bus.ReadByteData(address, 0x00);
         if (hubIdHigh == Ddr5HubIdHigh)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             byte? hubIdLow = bus.ReadByteData(address, 0x01);
             if (hubIdLow == Ddr5HubIdLow)
             {
-                byte[]? raw5 = ReadDdr5Confirmed(bus, address, out string note5);
+                byte[]? raw5 = ReadDdr5Confirmed(bus, address, out string note5, cancellationToken);
                 return raw5 is null
                     ? new SpdSlot(address, SpdKind.Unreadable, null, note5)
                     : new SpdSlot(address, SpdKind.Ddr5, raw5, note5);
             }
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         if (!SelectPage(bus, 0))
         {
             if (hubIdHigh is null && bus.LastStatus == SmbusStatus.NoDevice)
@@ -125,6 +137,7 @@ public static class SpdReader
             return new SpdSlot(address, SpdKind.Unreadable, null, "無法選擇 SPD 頁：" + bus.LastError);
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         byte? type = bus.ReadByteData(address, TypeCodeOffset);
         if (type is null)
             return bus.LastStatus == SmbusStatus.NoDevice
@@ -142,7 +155,7 @@ public static class SpdReader
             return new SpdSlot(address, SpdKind.Unknown, null,
                 $"未知的 SPD 型別碼 0x{type:X2}（本讀取器只解 DDR4），不解讀。");
 
-        byte[]? raw = ReadDdr4Confirmed(bus, address, out string note);
+        byte[]? raw = ReadDdr4Confirmed(bus, address, out string note, cancellationToken);
         return raw is null
             ? new SpdSlot(address, SpdKind.Unreadable, null, note)
             : new SpdSlot(address, SpdKind.Ddr4, raw, note);
@@ -164,12 +177,13 @@ public static class SpdReader
     /// 逐位元組比對兩次讀取不需要知道任何位移，卻涵蓋全部 512 位元組——嚴格地更強。
     /// </para>
     /// </remarks>
-    public static byte[]? ReadDdr4Confirmed(ISpdBus bus, byte address, out string note)
+    public static byte[]? ReadDdr4Confirmed(ISpdBus bus, byte address, out string note,
+                                             CancellationToken cancellationToken = default)
     {
-        byte[]? first = ReadDdr4(bus, address, out note);
+        byte[]? first = ReadDdr4(bus, address, out note, cancellationToken);
         if (first is null) return null;
 
-        byte[]? second = ReadDdr4(bus, address, out string secondNote);
+        byte[]? second = ReadDdr4(bus, address, out string secondNote, cancellationToken);
         if (second is null)
         {
             note = $"位址 0x{address:X2} 的 SPD 第一次讀得到、第二次讀不到，判為讀不到：{secondNote}";
@@ -178,6 +192,7 @@ public static class SpdReader
 
         for (int i = 0; i < Ddr4Size; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (first[i] == second[i]) continue;
             note = $"位址 0x{address:X2} 的 SPD 連讀兩次不一致（偏移 0x{i:X3} 先讀到 0x{first[i]:X2}、"
                  + $"再讀到 0x{second[i]:X2}），判為讀不到。這是傳輸出錯，不是 SPD 被改過——"
@@ -188,7 +203,8 @@ public static class SpdReader
     }
 
     /// <summary>把一條 DDR4 模組的 512 位元組全部讀回來（含切頁）。任何一個位元組讀不到就整條放棄。</summary>
-    public static byte[]? ReadDdr4(ISpdBus bus, byte address, out string note)
+    public static byte[]? ReadDdr4(ISpdBus bus, byte address, out string note,
+                                    CancellationToken cancellationToken = default)
     {
         note = "";
         var raw = new byte[Ddr4Size];
@@ -196,6 +212,7 @@ public static class SpdReader
         {
             for (int page = 0; page < 2; page++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (!SelectPage(bus, page))
                 {
                     note = $"無法切到 SPD 第 {page} 頁：{bus.LastError}";
@@ -203,6 +220,7 @@ public static class SpdReader
                 }
                 for (int i = 0; i < PageSize; i++)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     byte? b = bus.ReadByteData(address, (byte)i);
                     if (b is null)
                     {
@@ -234,22 +252,26 @@ public static class SpdReader
         => bus.SendByte(page == 0 ? PageSelect0 : PageSelect1, 0x00);
 
     /// <summary>探 0x50 有沒有 SPD5118 hub（MR0/MR1＝0x51/0x18）。用於匯流排層級的「整條都空」判斷。</summary>
-    private static bool ProbeDdr5(ISpdBus bus, byte address)
+    private static bool ProbeDdr5(ISpdBus bus, byte address, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         byte? hi = bus.ReadByteData(address, 0x00);
-        return hi == Ddr5HubIdHigh && bus.ReadByteData(address, 0x01) == Ddr5HubIdLow;
+        if (hi != Ddr5HubIdHigh) return false;
+        cancellationToken.ThrowIfCancellationRequested();
+        return bus.ReadByteData(address, 0x01) == Ddr5HubIdLow;
     }
 
     /// <summary>
     /// 把一條 DDR5 模組的 1024 位元組讀回來<b>兩次並逐位元組比對</b>；兩次不一樣就判讀不到。
     /// 與 DDR4 同一條規則的理由也相同：逐位元組比對涵蓋整個 EEPROM，不需要知道任何位移。
     /// </summary>
-    public static byte[]? ReadDdr5Confirmed(ISpdBus bus, byte address, out string note)
+    public static byte[]? ReadDdr5Confirmed(ISpdBus bus, byte address, out string note,
+                                             CancellationToken cancellationToken = default)
     {
-        byte[]? first = ReadDdr5(bus, address, out note);
+        byte[]? first = ReadDdr5(bus, address, out note, cancellationToken);
         if (first is null) return null;
 
-        byte[]? second = ReadDdr5(bus, address, out string secondNote);
+        byte[]? second = ReadDdr5(bus, address, out string secondNote, cancellationToken);
         if (second is null)
         {
             note = $"位址 0x{address:X2} 的 SPD 第一次讀得到、第二次讀不到，判為讀不到：{secondNote}";
@@ -258,6 +280,7 @@ public static class SpdReader
 
         for (int i = 0; i < Ddr5Size; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (first[i] == second[i]) continue;
             note = $"位址 0x{address:X2} 的 SPD 連讀兩次不一致（偏移 0x{i:X3} 先讀到 0x{first[i]:X2}、"
                  + $"再讀到 0x{second[i]:X2}），判為讀不到。這是傳輸出錯，不是 SPD 被改過——"
@@ -274,11 +297,13 @@ public static class SpdReader
     /// 讀完復位回第 0 頁——頁是匯流排上的狀態，與 DDR4 切頁同一條紀律。
     /// <b>未在本機驗證</b>：本機沒有 DDR5 硬體；此路徑的行為以合成測試釘住協定形狀。
     /// </summary>
-    public static byte[]? ReadDdr5(ISpdBus bus, byte address, out string note)
+    public static byte[]? ReadDdr5(ISpdBus bus, byte address, out string note,
+                                    CancellationToken cancellationToken = default)
     {
         note = "";
         byte mr11PageRegister = SpdBusAddresses.Ddr5PageSelectRegister;
         // MR11 read-modify-write：只動 bits[2:0]（頁選擇），其餘位元保持原值。
+        cancellationToken.ThrowIfCancellationRequested();
         byte? mr11 = bus.ReadByteData(address, mr11PageRegister);
         if (mr11 is null)
         {
@@ -292,6 +317,7 @@ public static class SpdReader
         {
             for (int page = 0; page < Ddr5PageCount; page++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (!bus.WriteByteData(address, mr11PageRegister, (byte)(mr11Base | page)))
                 {
                     note = $"無法切到 DDR5 SPD 第 {page} 頁：{bus.LastError}";
@@ -299,6 +325,7 @@ public static class SpdReader
                 }
                 for (int i = 0; i < Ddr5PageSize; i++)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     byte? b = bus.ReadByteData(address, (byte)(Ddr5EepromBase + i));
                     if (b is null)
                     {

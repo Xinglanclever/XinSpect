@@ -24,6 +24,7 @@ public class SpdSurveyorTests
         public SmbusStatus LastStatus { get; private set; } = SmbusStatus.Ok;
         public bool AcquireFails;
         public string AcquireReason = "";
+        public Action? AfterAcquire;
         public bool Released { get; private set; }
 
         private int _page;
@@ -31,6 +32,7 @@ public class SpdSurveyorTests
         public bool TryAcquireBus(out string reason)
         {
             reason = AcquireFails ? AcquireReason : "";
+            if (!AcquireFails) AfterAcquire?.Invoke();
             return !AcquireFails;
         }
 
@@ -113,6 +115,17 @@ public class SpdSurveyorTests
         var bus = new StubBus("半條匯流排", (0x50, RealSpd()));
         SpdSurveyor.Survey([bus]);
 
+        Assert.True(bus.Released);
+    }
+
+    [Fact]
+    public void 取消SPD掃描時釋放已取得的匯流排()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var bus = new StubBus("可取消匯流排") { AfterAcquire = cancellation.Cancel };
+
+        Assert.Throws<OperationCanceledException>(() =>
+            SpdSurveyor.Survey([bus], cancellationToken: cancellation.Token));
         Assert.True(bus.Released);
     }
 
