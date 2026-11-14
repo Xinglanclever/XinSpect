@@ -16,7 +16,7 @@
     <StartupObject>XinSpectCli.Program</StartupObject>
     <AssemblyTitle>XinSpect Console（曦覽終端機）</AssemblyTitle>
     <Product>曦覽 XinSpect</Product>
-    <Version>3.25</Version>
+    <Version>3.28</Version>
     <!-- 版號由 Tools/bump-version.py 逐版改；這裡只供顯示，主程式仍以 XinSpect.csproj 為單一來源 -->
     <!-- AssemblyName XinSpectConsole：全名上傳；互動模式與一次性指令同一支執行檔 -->
     <InvariantGlobalization>true</InvariantGlobalization>

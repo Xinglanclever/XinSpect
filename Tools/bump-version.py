@@ -230,6 +230,8 @@ def main(argv=None):
         md.replace(published_note, "本版（v%s）實際發佈的檔案大小" % V, "README 註腳")
     else:
         md.replace(pending_note, "本版（v%s）的預定發佈資產清單" % V, "README 候選版註腳")
+    md_bullet = "- **v%s %s**（%s）：%s" % (V, args.title, args.date, args.title)
+    md.insert_before("- **v%s " % OLD, md_bullet + "\n", "README 版本沿革")
 
     # 6-2) docs/百科-v3.17.md —— 敘事主體。沿革兩層、結語、登記筆數都從這裡過。
     bk = doc(os.path.join("docs", "百科-v3.17.md"))
@@ -268,11 +270,13 @@ def main(argv=None):
     zh.replace("releases/download/v%s/" % OLD, "releases/download/v%s/" % V, "zh 下載連結")
     published_note = "本版（v%s）实际发布的文件大小" % OLD
     pending_note = "本版（v%s）的预定发布资产清单" % OLD
+    release_note = "上表的字节数为本版（v%s）实际发布的文件大小" % OLD
     if published_note in zh.text:
         zh.replace(published_note, "本版（v%s）实际发布的文件大小" % V, "zh 註腳")
+    elif release_note in zh.text:
+        zh.replace(release_note, "上表的字节数为本版（v%s）实际发布的文件大小" % V, "zh 註腳")
     else:
         zh.replace(pending_note, "本版（v%s）的预定发布资产清单" % V, "zh 候選版註腳")
-    zh.replace("本版（v%s）的预定发布资产清单" % OLD, "本版（v%s）的预定发布资产清单" % V, "zh 候選版註腳")
     zh.replace("本文档对应 XinSpect v%s（" % OLD, "本文档对应 XinSpect v%s（" % V, "zh 文件版本")
     sync_date(zh, r"本文档对应 XinSpect v%s（(\d{4}-\d{2}-\d{2})）" % re.escape(V), "zh 文件版本日期")
     zh_bullet = "- **v%s %s**（%s）：%s" % (V, args.codename, args.date, title_zh)
@@ -283,10 +287,14 @@ def main(argv=None):
     en = doc("README.en.md")
     en.replace("badge/version-%s-" % OLD, "badge/version-%s-" % V, "en 徽章")
     en.replace("releases/download/v%s/" % OLD, "releases/download/v%s/" % V, "en 下載連結")
-    en.replace("The v%s asset list is a release draft." % OLD,
-               "The v%s asset list is a release draft." % V, "en 候選版資產註記")
-    en.replace("no v%s binaries are claimed as published yet." % OLD,
-               "no v%s binaries are claimed as published yet." % V, "en 候選版發佈註記")
+    published_note = "published bytes of **v%s**" % OLD
+    if published_note in en.text:
+        en.replace(published_note, "published bytes of **v%s**" % V, "en 已發佈資產註記")
+    else:
+        en.replace("The v%s asset list is a release draft." % OLD,
+                   "The v%s asset list is a release draft." % V, "en 候選版資產註記")
+        en.replace("no v%s binaries are claimed as published yet." % OLD,
+                   "no v%s binaries are claimed as published yet." % V, "en 候選版發佈註記")
     en.replace("Document scope (v%s)" % OLD, "Document scope (v%s)" % V, "en 文件範圍")
     en.replace("**About this document**: it corresponds to XinSpect v%s (" % OLD,
                "**About this document**: it corresponds to XinSpect v%s (" % V, "en 文件版本")

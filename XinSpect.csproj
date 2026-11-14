@@ -22,9 +22,9 @@
     <AssemblyTitle>曦覽 XinSpect 硬體資訊總覽</AssemblyTitle>
     <Company>Xinglanclever</Company>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
-    <Version>3.27</Version>
+    <Version>3.28</Version>
     <!-- FileVersion 只吃數字，表達不了「-B1」；第四段就是拿來標這種同版號的後續建置的 -->
-    <FileVersion>3.27.0.0</FileVersion>
+    <FileVersion>3.28.0.0</FileVersion>
     <!-- 內嵌 PDB：發佈維持單一執行檔，CrashLog 記錄的堆疊仍帶行號（portable PDB 預設會另產生 XinSpect.pdb） -->
     <DebugType>embedded</DebugType>
     <Copyright>By：Xinglanclever ・ Claude Opus 5 ・ 2026年9月8日</Copyright>
@@ -43,6 +43,8 @@
     <!-- ETW 消費（幀時間／DPC 延遲）：純 managed，零驅動、零注入 -->
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.16" />
     <PackageReference Include="NAudio" Version="2.*" />
+    <!-- OpenccNetLib 1.7.0 brings 8.0.0 transitively; pin the patched CBOR implementation. -->
+    <PackageReference Include="System.Formats.Cbor" Version="8.0.2" />
     <PackageReference Include="OpenccNetLib" Version="1.7.0" ExcludeAssets="contentFiles" />
     <!-- WinRing0 的來源：LHM 0.9.6 起已移除 Ring0／WinRing0（0.9.4 的 Ring0 內嵌了 gzip 過的 WinRing0x64）。
          單檔發佈的使用者端沒有 NuGet 快取，所以 0.9.4 必須跟著執行檔走（見檔尾的 EmbedLhm094）。

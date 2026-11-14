@@ -51,6 +51,20 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "3.28",
+            Date = "2026-11-14",
+            Title = "內建工具箱擴充與 Agent 唯讀橋接",
+            Items =
+            [
+                "v3.27 修正併入：SPD 掃描支援取消與 30 秒逾時取消；啟動先呈現 Windows SMBIOS/WMI 記憶體資料，SPD 逾時後總覽回到 WMI 值。",
+                "工具箱擴充：完整保留全部內建項目；使用者可新增、編輯、移除自訂 EXE 與 HTTP/HTTPS 網址，獨立保存。",
+                "工具去重：相同正規化路徑與參數或相同網址合併為別名；相同程式的不同參數保留為不同動作；EXE 參數逐項傳遞並於啟動前明示權限風險。",
+                "Agent 橋接：新增 protocol v1 capabilities、collect_snapshot、get_fact、verify_snapshot；輸出沿用 HardwareSnapshot schema v1，敏感值預設遮蔽。",
+                "能力邊界：橋接目前只涵蓋既有 CLI evidence 與儲存可靠性資料，不宣稱完整桌面硬體快照；不嵌入 Agent 主程式，也不提供硬體變更命令。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "3.27",
             Date = "2026-11-12",
             Title = "記憶體 WMI 即時回退與 SPD 逾時修正",

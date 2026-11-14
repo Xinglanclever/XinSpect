@@ -65,6 +65,7 @@ public sealed class WindowsBoostRecoveryEngine : IBoostRecoveryEngine
             gate.Stop();
             foreach (Thread worker in workers)
                 worker.Join();
+            gate.Dispose();
             Marshal.FreeHGlobal(buffer);
             _runLock.Release();
         }
@@ -158,15 +159,35 @@ public sealed class WindowsBoostRecoveryEngine : IBoostRecoveryEngine
         return new BoostRecoverySample(phase, timeMs, currentMin, currentMax, limitMin, limitMax);
     }
 
-    private sealed class PulseGate
+    private sealed class PulseGate : IDisposable
     {
-        private int _state;
+        private readonly ManualResetEventSlim _load = new(false);
+        private readonly ManualResetEventSlim _stop = new(false);
+        private readonly WaitHandle[] _waitHandles;
 
-        public void SetLoad(bool active) => Volatile.Write(ref _state, active ? 2 : 1);
+        public PulseGate() => _waitHandles = [_stop.WaitHandle, _load.WaitHandle];
 
-        public void Stop() => Volatile.Write(ref _state, 0);
+        public void SetLoad(bool active)
+        {
+            if (active) _load.Set();
+            else _load.Reset();
+        }
 
-        public int State => Volatile.Read(ref _state);
+        public void Stop()
+        {
+            _stop.Set();
+            _load.Set();
+        }
+
+        public bool WaitForLoadOrStop() => WaitHandle.WaitAny(_waitHandles) != 0 && !_stop.IsSet;
+
+        public bool IsLoadActive => _load.IsSet && !_stop.IsSet;
+
+        public void Dispose()
+        {
+            _load.Dispose();
+            _stop.Dispose();
+        }
     }
 
     private sealed class PulseWorker(PulseGate gate)
@@ -176,9 +197,9 @@ public sealed class WindowsBoostRecoveryEngine : IBoostRecoveryEngine
         public void Run()
         {
             long local = 1;
-            while (gate.State != 0)
+            while (gate.WaitForLoadOrStop())
             {
-                if (gate.State == 2)
+                while (gate.IsLoadActive)
                 {
                     for (int index = 0; index < LoadSliceIterations; index++)
                     {
@@ -187,10 +208,6 @@ public sealed class WindowsBoostRecoveryEngine : IBoostRecoveryEngine
                     }
 
                     _checksum = unchecked(_checksum + local);
-                }
-                else
-                {
-                    Thread.Yield();
                 }
             }
 

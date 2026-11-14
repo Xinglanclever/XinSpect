@@ -32,5 +32,5 @@ internal static class TestSuiteBaseline
     /// 而 5476→5505 實際只加了 29 條（見 docs/PROGRESS-PLAN-2026-10-11.md 第 550 項的更正註記）。
     /// </para>
     /// </summary>
-    public const int ProjectTests = 8050;   // 2026-11-12：補記憶體 WMI 即時回退、SPD 取消釋放與升版沿革回歸測試
+    public const int ProjectTests = 8059;   // 2026-11-14：工具箱去重與 Agent 橋接回歸測試
 }
