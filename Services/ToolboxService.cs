@@ -12,6 +12,8 @@ public enum ToolKind
     WebLink,
     /// <summary>偵測是否已安裝：找到則啟動，否則開啟官方下載頁。</summary>
     DetectApp,
+    /// <summary>使用者新增的本機程式。</summary>
+    CustomApp,
 }
 
 /// <summary>
@@ -33,14 +35,26 @@ public sealed class ToolItem : ObservableObject
     public required string Name { get; init; }
     public required string Description { get; init; }
     public required ToolKind Kind { get; init; }
-    /// <summary>System：可執行檔 / .msc / .cpl 名稱；WebLink／DetectApp：URL。</summary>
+    /// <summary>System：可執行檔 / .msc / .cpl 名稱；WebLink／DetectApp：URL；CustomApp：本機 EXE 路徑。</summary>
     public required string Target { get; init; }
+    public string[] LaunchArguments { get; init; } = [];
+    public bool IsCustom { get; init; }
     /// <summary>DetectApp：候選安裝路徑（找到即啟動）。</summary>
     public string[] Candidates { get; init; } = Array.Empty<string>();
     /// <summary>分組標題（供畫面分類）。</summary>
     public required string Group { get; init; }
     /// <summary>搜尋用的額外詞彙（英文名、別名、俗稱）。</summary>
+    private readonly List<string> _userAliases = [];
     public string[] Keywords { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> UserAliases => _userAliases;
+
+    internal void AddAlias(string alias)
+    {
+        if (string.IsNullOrWhiteSpace(alias)
+            || Keywords.Any(x => string.Equals(x, alias.Trim(), StringComparison.OrdinalIgnoreCase))
+            || _userAliases.Any(x => string.Equals(x, alias.Trim(), StringComparison.OrdinalIgnoreCase))) return;
+        _userAliases.Add(alias.Trim());
+    }
 
     /// <summary>危險等級。預設 <see cref="ToolRisk.Normal"/>。</summary>
     public ToolRisk Risk { get; init; } = ToolRisk.Normal;
@@ -97,7 +111,7 @@ public sealed class ToolItem : ObservableObject
     }
 
     /// <summary>是否可裝入本機執行檔（Windows 內建工具不需要插槽）。</summary>
-    public bool CanSlot => Kind is not ToolKind.System;
+    public bool CanSlot => Kind is ToolKind.WebLink or ToolKind.DetectApp;
 
     private string? _slotPath;
     /// <summary>使用者裝入插槽的本機可執行檔路徑（下載後「裝進去」，之後主鈕即直接啟動它）。</summary>
@@ -161,7 +175,7 @@ public sealed class ToolboxService : ObservableObject
     private string _status = "點選工具即可啟動。第三方工具一律導向官方下載，未內含任何外部執行檔。";
     public string StatusLine { get => _status; private set => SetProperty(ref _status, value); }
 
-    public IReadOnlyList<ToolItem> Tools { get; } = new List<ToolItem>
+    private readonly List<ToolItem> _tools = new()
     {
         // ── 系統診斷 ──────────────────────────────────────────────
         new() { Group = "系統診斷", Name = "裝置管理員",       Description = "檢視與管理硬體裝置、驅動程式", Kind = ToolKind.System, Target = "devmgmt.msc" },
@@ -604,6 +618,9 @@ public sealed class ToolboxService : ObservableObject
                          + "寫進去的內容與後果完全在你手上。" },
     };
 
+    /// <summary>內建目錄唯讀保留；使用者項目追加其後。</summary>
+    public IReadOnlyList<ToolItem> Tools => _tools;
+
     /// <summary>依 <see cref="ToolItem.Group"/> 分組後的工具清單（保留定義順序）。</summary>
     public IReadOnlyList<ToolGroup> Groups => Tools
         .GroupBy(t => t.Group)
@@ -645,14 +662,16 @@ public sealed class ToolboxService : ObservableObject
         // 對應頁面的標題也納入搜尋：打「大檔掃描」要找得到 WizTree，那是對照說明在講的那一頁。
         var hit = Tools.Where(t => ToolboxFilter.Matches(
             _query, t.Name, t.Description, t.Group, t.NativeTitle,
-            t.Keywords.Length == 0 ? null : string.Join(' ', t.Keywords))).ToList();
+            t.Keywords.Length == 0 && t.UserAliases.Count == 0
+                ? null
+                : string.Join(' ', t.Keywords.Concat(t.UserAliases)))).ToList();
 
         FilteredGroups = hit
             .GroupBy(t => t.Group)
             .Select(g => new ToolGroup { Title = g.Key, Items = g.ToList() })
             .ToList();
 
-        FilterSummary = ToolboxFilter.Summarize(_query, hit.Count, Tools.Count);
+        FilterSummary = ToolboxFilter.Summarize(_query, hit.Count, _tools.Count);
     }
 
     public ToolboxService() => RefreshFilter();
@@ -704,6 +723,22 @@ public sealed class ToolboxService : ObservableObject
                         StatusLine = $"未偵測到 {tool.Name}，已開啟官方下載頁面。";
                     }
                     break;
+
+                case ToolKind.CustomApp:
+                    if (!File.Exists(tool.Target))
+                    {
+                        StatusLine = $"找不到自訂程式：{tool.Target}。請編輯工具項目並重新選擇檔案。";
+                        break;
+                    }
+                    var start = new ProcessStartInfo(tool.Target)
+                    {
+                        UseShellExecute = false,
+                        WorkingDirectory = Path.GetDirectoryName(tool.Target) ?? "",
+                    };
+                    foreach (var argument in tool.LaunchArguments) start.ArgumentList.Add(argument);
+                    Process.Start(start);
+                    StatusLine = $"已啟動自訂工具：{tool.Name}";
+                    break;
             }
         }
         catch (Exception ex)
@@ -723,9 +758,227 @@ public sealed class ToolboxService : ObservableObject
     public void AttachSettings(SettingsService settings)
     {
         _settings = settings;
-        foreach (var t in Tools)
+        foreach (var t in _tools)
+        {
             if (settings.ToolSlots.TryGetValue(t.Name, out var path))
                 t.SlotPath = path;
+            ApplySavedAliases(t, settings.ToolboxAliases);
+        }
+
+        foreach (var saved in settings.ToolboxCustomTools)
+        {
+            if (saved is null) continue;
+            try
+            {
+                var loaded = AddCustomToolCore(saved, requireExistingFile: false, save: false);
+                ApplySavedAliases(loaded.Item, settings.ToolboxAliases);
+            }
+            catch (ArgumentException ex) { Diag.Swallow("載入自訂工具", ex, $"略過無效項目「{saved.Name}」"); }
+        }
+        RefreshFilter();
+    }
+
+    public ToolboxAddResult AddCustomTool(ToolboxCustomTool definition)
+    {
+        var result = AddCustomToolCore(definition, requireExistingFile: true, save: true);
+        return result;
+    }
+
+    private ToolboxAddResult AddCustomToolCore(ToolboxCustomTool definition, bool requireExistingFile, bool save)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        if (string.IsNullOrWhiteSpace(definition.Name) || definition.Name.Trim().Length > 80)
+            throw new ArgumentException("工具名稱必須為 1–80 個字元。", nameof(definition));
+        if (string.IsNullOrWhiteSpace(definition.Group) || definition.Group.Trim().Length > 48)
+            throw new ArgumentException("分類名稱必須為 1–48 個字元。", nameof(definition));
+        if (definition.Description?.Length > 500)
+            throw new ArgumentException("說明不可超過 500 個字元。", nameof(definition));
+        if (definition.Arguments is { Length: > 64 }
+            || definition.Arguments?.Any(a => a is null || a.Length > 2048 || a.Contains('\0')) == true)
+            throw new ArgumentException("啟動參數最多 64 個，每個不可超過 2048 個字元。", nameof(definition));
+        string[] arguments = definition.Arguments?.Select(a => a.Trim()).ToArray() ?? [];
+
+        string target;
+        string identity;
+        if (definition.Kind == ToolKind.CustomApp)
+        {
+            target = ToolboxIdentity.NormalizePath(definition.Target);
+            if (Path.GetExtension(target).Equals(".exe", StringComparison.OrdinalIgnoreCase) is false)
+                throw new ArgumentException("本機自訂程式必須是 .exe 檔案。", nameof(definition));
+            if (requireExistingFile && !File.Exists(target))
+                throw new ArgumentException("選擇的執行檔不存在。", nameof(definition));
+            identity = ToolboxIdentity.ForExecutable(target, arguments);
+        }
+        else if (definition.Kind == ToolKind.WebLink)
+        {
+            if (definition.Arguments is { Length: > 0 })
+                throw new ArgumentException("網址工具不支援啟動參數。", nameof(definition));
+            identity = ToolboxIdentity.ForUrl(definition.Target);
+            target = identity[4..];
+        }
+        else
+        {
+            throw new ArgumentException("自訂項目只接受本機 EXE 或 HTTP/HTTPS 網址。", nameof(definition));
+        }
+
+        var duplicate = FindDuplicate(identity);
+        if (duplicate is not null)
+        {
+            duplicate.AddAlias(definition.Name);
+            if (save) _settings?.AddToolboxAlias(identity, definition.Name);
+            if (save) SaveCustomTools();
+            RefreshFilter();
+            StatusLine = $"「{definition.Name}」已與「{duplicate.Name}」合併為別名，沒有建立重複項目。";
+            return new ToolboxAddResult(duplicate, Added: false, Merged: true);
+        }
+
+        if (_tools.Any(t => string.Equals(t.Name, definition.Name.Trim(), StringComparison.OrdinalIgnoreCase)))
+            throw new ArgumentException("已有同名工具，請換一個顯示名稱。", nameof(definition));
+
+        var item = new ToolItem
+        {
+            Name = definition.Name.Trim(),
+            Description = string.IsNullOrWhiteSpace(definition.Description) ? "使用者新增的工具。" : definition.Description.Trim(),
+            Group = definition.Group.Trim(),
+            Kind = definition.Kind,
+            Target = target,
+            LaunchArguments = arguments,
+            IsCustom = true,
+        };
+        if (_settings is not null) ApplySavedAliases(item, _settings.ToolboxAliases);
+        _tools.Add(item);
+        if (save) SaveCustomTools();
+        RefreshFilter();
+        StatusLine = $"已新增自訂工具「{item.Name}」。";
+        return new ToolboxAddResult(item, Added: true, Merged: false);
+    }
+
+    public void RemoveCustomTool(ToolItem tool)
+    {
+        if (!tool.IsCustom || !_tools.Remove(tool)) return;
+        SaveCustomTools();
+        RefreshFilter();
+        StatusLine = $"已移除自訂工具「{tool.Name}」。內建清單未變更。";
+    }
+
+    public ToolboxAddResult UpdateCustomTool(ToolItem current, ToolboxCustomTool definition)
+    {
+        if (!current.IsCustom) throw new ArgumentException("只能編輯使用者新增的工具。", nameof(current));
+        int index = _tools.IndexOf(current);
+        if (index < 0) throw new ArgumentException("工具已不在目錄中。", nameof(current));
+        _tools.RemoveAt(index);
+        try
+        {
+            var result = AddCustomToolCore(definition, requireExistingFile: true, save: false);
+            if (result.Added)
+            {
+                _tools.Remove(result.Item);
+                _tools.Insert(Math.Min(index, _tools.Count), result.Item);
+                CarryAliases(current, result.Item, definition);
+            }
+            else if (result.Merged)
+            {
+                CarryAliases(current, result.Item, definition);
+            }
+            SaveCustomTools();
+            RefreshFilter();
+            return result;
+        }
+        catch
+        {
+            _tools.Insert(Math.Min(index, _tools.Count), current);
+            RefreshFilter();
+            throw;
+        }
+    }
+
+    private void SaveCustomTools()
+        => _settings?.SetToolboxCustomTools(_tools.Where(t => t.IsCustom).Select(t => new ToolboxCustomTool
+        {
+            Name = t.Name,
+            Description = t.Description,
+            Group = t.Group,
+            Kind = t.Kind,
+            Target = t.Target,
+            Arguments = t.LaunchArguments,
+        }));
+
+    private void CarryAliases(ToolItem source, ToolItem destination, ToolboxCustomTool definition)
+    {
+        string identity = definition.Kind == ToolKind.WebLink
+            ? ToolboxIdentity.ForUrl(definition.Target)
+            : ToolboxIdentity.ForExecutable(definition.Target, definition.Arguments?.Select(a => a.Trim()));
+        foreach (var alias in source.UserAliases.Append(source.Name))
+        {
+            destination.AddAlias(alias);
+            _settings?.AddToolboxAlias(identity, alias);
+        }
+    }
+
+    private ToolItem? FindDuplicate(string identity)
+        => _tools.FirstOrDefault(tool => GetIdentities(tool).Contains(identity, StringComparer.Ordinal));
+
+    private static IEnumerable<string> GetIdentities(ToolItem tool)
+    {
+        if (tool.Kind == ToolKind.CustomApp)
+            yield return ToolboxIdentity.ForExecutable(tool.Target, tool.LaunchArguments);
+        else if (tool.Kind == ToolKind.DetectApp)
+        {
+            foreach (var candidate in tool.Candidates)
+                if (TryExecutableIdentity(candidate, out var candidateIdentity)) yield return candidateIdentity;
+            if (TryUrlIdentity(tool.Target, out var detectUrlIdentity)) yield return detectUrlIdentity;
+        }
+        else if (tool.Kind == ToolKind.WebLink)
+        {
+            if (TryUrlIdentity(tool.Target, out var urlIdentity)) yield return urlIdentity;
+        }
+        else if (tool.Kind == ToolKind.System
+            && TrySystemExecutableIdentity(tool.Target, out var systemIdentity))
+            yield return systemIdentity;
+
+        if (tool.SlotPath is { Length: > 0 } slotPath
+            && TryExecutableIdentity(slotPath, out var slotIdentity)) yield return slotIdentity;
+    }
+
+    private static bool TryExecutableIdentity(string path, out string identity)
+    {
+        try { identity = ToolboxIdentity.ForExecutable(path); return true; }
+        catch { identity = ""; return false; }
+    }
+
+    private static bool TryUrlIdentity(string url, out string identity)
+    {
+        try { identity = ToolboxIdentity.ForUrl(url); return true; }
+        catch { identity = ""; return false; }
+    }
+
+    private static bool TrySystemExecutableIdentity(string target, out string identity)
+    {
+        identity = "";
+        if (string.IsNullOrWhiteSpace(target) || target.EndsWith(".msc", StringComparison.OrdinalIgnoreCase)
+            || target.EndsWith(".cpl", StringComparison.OrdinalIgnoreCase)) return false;
+
+        string fileName = Path.GetFileName(target);
+        if (Path.GetExtension(fileName).Length == 0) fileName += ".exe";
+        var search = new List<string> { Environment.SystemDirectory, Environment.GetFolderPath(Environment.SpecialFolder.Windows) };
+        search.AddRange((Environment.GetEnvironmentVariable("PATH") ?? "")
+            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(p => p.Trim('"')));
+        foreach (string directory in search.Where(Directory.Exists))
+        {
+            string candidate = Path.Combine(directory, fileName);
+            if (!File.Exists(candidate)) continue;
+            identity = ToolboxIdentity.ForExecutable(candidate);
+            return true;
+        }
+        return false;
+    }
+
+    private static void ApplySavedAliases(ToolItem tool, IReadOnlyDictionary<string, string[]> aliases)
+    {
+        foreach (var identity in GetIdentities(tool))
+            if (aliases.TryGetValue(identity, out var names) && names is not null)
+                foreach (var name in names) tool.AddAlias(name);
     }
 
     /// <summary>將某工具裝入指定的本機執行檔並持久化。</summary>

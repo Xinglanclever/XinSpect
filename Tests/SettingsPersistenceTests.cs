@@ -66,6 +66,22 @@ public class SettingsPersistenceTests
             $"只抓到 {SavedProperty.Matches(src).Count} 個會存檔的屬性，掃描規則八成失效了");
     }
 
+    [Fact]
+    public void 工具箱自訂目錄與合併別名會進入設定存取三段()
+    {
+        string src = File.ReadAllText(Path.Combine(RepoRoot(), "Services", "SettingsService.cs"));
+        string persist = Block(src, "private sealed class Persist", "\n    }");
+        string load = Block(src, "private void Load()", "private void Save()");
+        string save = Block(src, "private void Save()", "\n    private ");
+
+        foreach (string field in new[] { "ToolboxCustomTools", "ToolboxAliases" })
+        {
+            Assert.Contains(field, persist);
+            Assert.Contains(field, load);
+            Assert.Contains(field, save);
+        }
+    }
+
     /// <summary>
     /// 藍色中隊的守護進程<b>預設關閉</b>（3.13）。它會在背景常駐輪詢、載入核心驅動，
     /// 這種東西不能替新使用者預設打開：想用的人自己到安全頁開，選擇會記進設定檔。

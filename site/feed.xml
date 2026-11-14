@@ -13,6 +13,12 @@
       <pubDate>2026-11-14T00:00:00Z</pubDate>
     </item>
     <item>
+      <title>3.27 — 記憶體 WMI 即時回退與 SPD 逾時修正</title>
+      <link>https://xinspect.de5.net/#log-v3.27</link>
+      <guid isPermaLink="false">xinspect-3.27</guid>
+      <pubDate>2026-11-12T00:00:00Z</pubDate>
+    </item>
+    <item>
       <title>3.26 — DIMM SPD 與核心映射修正、審計口徑核實</title>
       <link>https://xinspect.de5.net/#log-v3.26</link>
       <guid isPermaLink="false">xinspect-3.26</guid>
@@ -118,12 +124,6 @@
       <title>3.08 — 授權在程式裡也寫成雙授權，並寫明適用於所有版本</title>
       <link>https://xinspect.de5.net/#log-v3.08</link>
       <guid isPermaLink="false">xinspect-3.08</guid>
-      <pubDate>2026-10-31T00:00:00Z</pubDate>
-    </item>
-    <item>
-      <title>3.07 — 免責聲明與授權一致：拿掉「禁止商業使用」，關於頁加上商業授權路徑與品牌標語</title>
-      <link>https://xinspect.de5.net/#log-v3.07</link>
-      <guid isPermaLink="false">xinspect-3.07</guid>
       <pubDate>2026-10-31T00:00:00Z</pubDate>
     </item>
 </channel></rss>

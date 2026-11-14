@@ -1,3 +1,4 @@
+using System.IO;
 using Xunit;
 
 namespace XinSpect.Tests;
@@ -142,6 +143,118 @@ public class ToolboxFilterTests
         svc.ClearFilter();
         Assert.Equal("", svc.Query);
         Assert.Equal(svc.Tools.Count, svc.FilteredGroups.Sum(g => g.Items.Count));
+    }
+
+    [Fact]
+    public void 相同正規化網址合併而不同查詢參數不合併()
+    {
+        Assert.Equal(
+            ToolboxIdentity.ForUrl("HTTPS://EXAMPLE.COM:443/tools/#overview"),
+            ToolboxIdentity.ForUrl("https://example.com/tools"));
+        Assert.NotEqual(
+            ToolboxIdentity.ForUrl("https://example.com/tools?mode=read"),
+            ToolboxIdentity.ForUrl("https://example.com/tools?mode=write"));
+        Assert.Equal(
+            ToolboxIdentity.ForUrl("https://example.com/tools/?mode=read#details"),
+            ToolboxIdentity.ForUrl("https://example.com/tools?mode=read"));
+    }
+
+    [Fact]
+    public void 同一路徑同參數合併為別名而保留不同參數動作()
+    {
+        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".exe");
+        File.WriteAllBytes(path, []);
+        try
+        {
+            var service = new ToolboxService();
+            int builtInCount = service.Tools.Count;
+            var first = service.AddCustomTool(new ToolboxCustomTool
+            {
+                Name = "我的掃描器",
+                Description = "本機工具",
+                Group = "自訂工具",
+                Kind = ToolKind.CustomApp,
+                Target = path,
+                Arguments = ["--scan", "disk 1"],
+            });
+            var duplicate = service.AddCustomTool(new ToolboxCustomTool
+            {
+                Name = "磁碟掃描",
+                Group = "磁碟工具",
+                Kind = ToolKind.CustomApp,
+                Target = Path.Combine(Path.GetDirectoryName(path)!, ".", Path.GetFileName(path)),
+                Arguments = ["--scan", "disk 1"],
+            });
+            var differentAction = service.AddCustomTool(new ToolboxCustomTool
+            {
+                Name = "全碟掃描",
+                Group = "自訂工具",
+                Kind = ToolKind.CustomApp,
+                Target = path,
+                Arguments = ["--scan-all"],
+            });
+
+            Assert.True(first.Added);
+            Assert.True(duplicate.Merged);
+            Assert.Same(first.Item, duplicate.Item);
+            Assert.Contains("磁碟掃描", first.Item.UserAliases);
+            Assert.True(differentAction.Added);
+            Assert.Equal(builtInCount + 2, service.Tools.Count);
+            Assert.Equal(builtInCount + 2, service.FilteredGroups.Sum(g => g.Items.Count));
+
+            var updated = service.UpdateCustomTool(first.Item, new ToolboxCustomTool
+            {
+                Name = "自訂磁碟掃描",
+                Description = "更新過的本機工具",
+                Group = "自訂工具",
+                Kind = ToolKind.CustomApp,
+                Target = path,
+                Arguments = ["--scan", "disk 1"],
+            });
+            Assert.True(updated.Added);
+            Assert.Contains("磁碟掃描", updated.Item.UserAliases);
+            Assert.Contains("我的掃描器", updated.Item.UserAliases);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void 新增網址重複項合併別名且不替換任何內建項目()
+    {
+        var service = new ToolboxService();
+        var builtin = service.Tools.First(t => t.Name == "CPU-Z");
+        int count = service.Tools.Count;
+        const string duplicateUrl = "HTTPS://WWW.CPUID.COM:443/softwares/cpu-z.html#download";
+        Assert.Equal(ToolboxIdentity.ForUrl(builtin.Target), ToolboxIdentity.ForUrl(duplicateUrl));
+        var urlResult = service.AddCustomTool(new ToolboxCustomTool
+        {
+            Name = "CPU-Z 官網別名",
+            Group = "自訂工具",
+            Kind = ToolKind.WebLink,
+            Target = duplicateUrl,
+        });
+
+        Assert.True(urlResult.Merged, $"{urlResult.Item.Name}; kind={builtin.Kind}; target={builtin.Target}; status={service.StatusLine}; "
+            + $"builtinId={ToolboxIdentity.ForUrl(builtin.Target)}; newId={ToolboxIdentity.ForUrl(duplicateUrl)}");
+        Assert.Same(builtin, urlResult.Item);
+        Assert.Contains("CPU-Z 官網別名", builtin.UserAliases);
+        Assert.Equal(count, service.Tools.Count);
+
+        string path = Path.Combine(Environment.SystemDirectory, "dxdiag.exe");
+        if (!File.Exists(path)) return;
+        var dxdiag = service.Tools.First(t => t.Name == "DirectX 診斷");
+        var systemResult = service.AddCustomTool(new ToolboxCustomTool
+        {
+            Name = "DirectX 診斷自訂捷徑",
+            Group = "自訂工具",
+            Kind = ToolKind.CustomApp,
+            Target = path,
+        });
+
+        Assert.True(systemResult.Merged);
+        Assert.Same(dxdiag, systemResult.Item);
+        Assert.Contains("DirectX 診斷自訂捷徑", dxdiag.UserAliases);
+        Assert.Equal(count, service.Tools.Count);
     }
 
     // ── 危險等級 ────────────────────────────────────────────────

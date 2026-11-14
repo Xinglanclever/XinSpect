@@ -21,7 +21,7 @@ internal static class CliLocalization
         "--json", "--compare-flash", "--verify-audit", "--integrity-baseline", "--sbom",
         "--disk-usage", "--errors", "--stdin-batch", "--diff-report", "--evidence-pack",
         "--compliance", "--compliance-diff", "--enterprise-baseline", "--merkle",
-        "--speculation", "--fleet", "--redfish",
+        "--speculation", "--fleet", "--redfish", CliService.AgentBridgeArg,
     };
 
     public static CliLanguage Current { get; private set; }

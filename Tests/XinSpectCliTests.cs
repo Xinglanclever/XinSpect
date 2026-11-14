@@ -149,6 +149,7 @@ public class XinSpectCliTests
         Assert.True(CliLocalization.IsMachineFormat(["--stdin-batch"]));
         Assert.True(CliLocalization.IsMachineFormat(["--compliance", "--format", "junit"]));
         Assert.True(CliLocalization.IsMachineFormat(["--enterprise-baseline", "policy.json"]));
+        Assert.True(CliLocalization.IsMachineFormat([CliService.AgentBridgeArg, "capabilities"]));
         Assert.False(CliLocalization.IsMachineFormat(["facts", "--lang", "zh-CN"]));
         Assert.False(CliLocalization.IsMachineFormat(["--help"]));
 

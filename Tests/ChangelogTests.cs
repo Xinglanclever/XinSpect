@@ -77,6 +77,13 @@ public class ChangelogTests
         Assert.False(string.IsNullOrEmpty(version), "XinSpect.csproj 裡找不到 <Version>");
         Assert.False(string.IsNullOrEmpty(fileVersion), "XinSpect.csproj 裡找不到 <FileVersion>");
         Assert.StartsWith(version + ".", fileVersion);
+
+        foreach (string consoleProject in new[] { "XinSpectCli.csproj", "XinSpectCli.Legacy.csproj" })
+        {
+            string path = ReadRepoFile(Path.Combine("XinSpectCli", consoleProject));
+            string consoleVersion = Regex.Match(path, @"<Version>([^<]+)</Version>").Groups[1].Value;
+            Assert.Equal(version, consoleVersion);
+        }
     }
 
     /// <summary>
@@ -226,7 +233,8 @@ public class ChangelogTests
         {
             var lines = ReadRepoFile(file)
                 .Split('\n')
-                .Where(l => l.Contains("實際發佈的檔案大小") || l.Contains("实际发布的文件大小"))
+                .Where(l => l.Contains("實際發佈的檔案大小") || l.Contains("实际发布的文件大小")
+                    || l.Contains("預定發佈資產清單") || l.Contains("预定发布资产清单"))
                 .ToList();
             Assert.True(lines.Count == 1, $"{file}：下載表註腳應該只有一句，實際找到 {lines.Count} 句");
 

@@ -422,11 +422,35 @@ public sealed class SettingsService : ObservableObject
     /// <summary>工具箱「插槽」：工具名稱 → 使用者裝入的本機可執行檔路徑（下載後裝進插槽，之後直接啟動）。</summary>
     public IReadOnlyDictionary<string, string> ToolSlots => _toolSlots;
 
+    private List<ToolboxCustomTool> _toolboxCustomTools = [];
+    /// <summary>工具箱自訂項目；與版本控管的內建目錄分開保存。</summary>
+    public IReadOnlyList<ToolboxCustomTool> ToolboxCustomTools => _toolboxCustomTools;
+
+    private Dictionary<string, string[]> _toolboxAliases = new(StringComparer.Ordinal);
+    /// <summary>新增項目與既有路徑／網址合併後保存的使用者別名。</summary>
+    public IReadOnlyDictionary<string, string[]> ToolboxAliases => _toolboxAliases;
+
     /// <summary>設定或移除某工具的插槽路徑（path 為空即移除），並立即持久化。</summary>
     public void SetToolSlot(string name, string? path)
     {
         if (string.IsNullOrWhiteSpace(path)) _toolSlots.Remove(name);
         else _toolSlots[name] = path;
+        Save();
+    }
+
+    public void SetToolboxCustomTools(IEnumerable<ToolboxCustomTool> tools)
+    {
+        _toolboxCustomTools = tools.Take(500).ToList();
+        Save();
+    }
+
+    public void AddToolboxAlias(string identity, string alias)
+    {
+        if (string.IsNullOrWhiteSpace(identity) || string.IsNullOrWhiteSpace(alias)) return;
+        if (!_toolboxAliases.TryGetValue(identity, out var aliases))
+            _toolboxAliases[identity] = aliases = [];
+        if (aliases.Any(x => string.Equals(x, alias.Trim(), StringComparison.OrdinalIgnoreCase))) return;
+        _toolboxAliases[identity] = [.. aliases, alias.Trim()];
         Save();
     }
 
@@ -531,6 +555,8 @@ public sealed class SettingsService : ObservableObject
         public bool IsEnglish { get; set; }
         public string? DashboardTiles { get; set; }
         public Dictionary<string, string>? ToolSlots { get; set; }
+        public List<ToolboxCustomTool>? ToolboxCustomTools { get; set; }
+        public Dictionary<string, string[]>? ToolboxAliases { get; set; }
         public int KernelBackendMode { get; set; }
     }
 
@@ -631,6 +657,9 @@ public sealed class SettingsService : ObservableObject
                     _allowMultiInstance = p.AllowMultiInstance;
                     _dashboardTiles = p.DashboardTiles ?? "";
                     if (p.ToolSlots is not null) _toolSlots = new(p.ToolSlots, StringComparer.Ordinal);
+                    if (p.ToolboxCustomTools is not null) _toolboxCustomTools = p.ToolboxCustomTools.Take(500).ToList();
+                    if (p.ToolboxAliases is not null)
+                        _toolboxAliases = new(p.ToolboxAliases, StringComparer.Ordinal);
                     // 模式代號夾在有效範圍：設定檔可能被手改過，直接 cast 會得到不存在的模式，
                     // 後面每個 switch 都會走到預設分支（與 AiProvider 的 Clamp 同一防線）。
                     _kernelBackendMode = Math.Clamp(p.KernelBackendMode, 0, 2);
@@ -744,6 +773,8 @@ public sealed class SettingsService : ObservableObject
                 AllowMultiInstance = _allowMultiInstance,
                 DashboardTiles = _dashboardTiles.Length > 0 ? _dashboardTiles : null,
                 ToolSlots = _toolSlots.Count > 0 ? _toolSlots : null,
+                ToolboxCustomTools = _toolboxCustomTools.Count > 0 ? _toolboxCustomTools : null,
+                ToolboxAliases = _toolboxAliases.Count > 0 ? _toolboxAliases : null,
                 KernelBackendMode = _kernelBackendMode,
             };
             // 原子寫入：寫一半的 settings.json 會讓下次載入整份回落預設值（見 AtomicWrite）

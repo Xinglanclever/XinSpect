@@ -65,6 +65,15 @@ public static partial class HardwareSnapshotService
     public static Task SaveAsync(string path, HardwareSnapshot snapshot, HardwareSnapshotSaveOptions? options = null)
         => Task.Run(() => Save(path, snapshot, options));
 
+    /// <summary>序列化為與磁碟檔案相同的確定性 JSON；預設遮蔽敏感值。</summary>
+    public static string ToJson(HardwareSnapshot snapshot, HardwareSnapshotSaveOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        options ??= new HardwareSnapshotSaveOptions();
+        ValidatePolicy(options.SensitiveValues);
+        return Encoding.UTF8.GetString(Serialize(PrepareForSave(snapshot, options.SensitiveValues)));
+    }
+
     public static Task<HardwareSnapshot> LoadAsync(string path)
         => Task.Run(() => Load(path));
 

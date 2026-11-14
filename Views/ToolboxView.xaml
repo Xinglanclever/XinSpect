@@ -35,7 +35,7 @@
         <StackPanel>
             <local:SectionHead Text="工具箱" HelpKey="toolbox/工具箱"/>
 
-            <!-- ===== 工具目錄（Windows 內建 ＋ 第三方導向） =====
+            <!-- ===== 工具目錄（內建項目＋第三方導向＋使用者自訂） =====
                  1.6.2 起這裡不再放曦覽自己的功能按鈕：那些頁面本來就在左側欄與 Ctrl+K 裡，
                  在工具箱再擺一排跳頁鈕只是同一件事出現兩次。自家功能改以不可點的
                  「曦覽內建：X」標籤掛在對應的第三方項目旁，當作「這個你不必再裝」的註記。 -->
@@ -43,11 +43,12 @@
                 <StackPanel>
                     <local:SectionHead Text="工具目錄" HelpKey="toolbox/工具目錄"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,10" TextWrapping="Wrap"
-                               Text="兩種來源混編：Windows 內建工具一鍵開啟；第三方工具一律導向官方下載頁，本程式不內含任何外部執行檔。會寫韌體、抹碟或改開機結構的項目旁邊掛一枚警告徽章，滑過去看得到最壞情況。若曦覽已經做到同一件事，滑過主按鈕的提示會誠實寫出兩者差在哪（含曦覽做不到的部分）。"/>
+                               Text="內建工具完整保留；第三方項目仍導向官方來源，也可加入自訂 EXE 或 HTTP/HTTPS 網址。相同程式與參數或相同網址會合併為別名。自訂 EXE 會以目前帳戶權限執行，不受本程式沙箱隔離。"/>
 
                     <Grid Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <TextBox Grid.Column="0" Style="{StaticResource SearchBox}"
@@ -55,6 +56,8 @@
                                  ToolTip="以空白分隔多個詞彙；全部命中才會列出（例如「ssd 健康」）。名稱、說明、分類、英文別名都在搜尋範圍內。"/>
                         <Button Grid.Column="1" Style="{StaticResource ToolButton}" Margin="12,0,0,0"
                                 Content="清除" Click="ClearFilter_Click" ToolTip="清空搜尋詞"/>
+                        <Button Grid.Column="2" Style="{StaticResource ToolButton}" Margin="8,0,0,0"
+                                Content="新增工具" Click="AddCustomTool_Click" ToolTip="新增本機 EXE 或 HTTP/HTTPS 網址"/>
                     </Grid>
 
                     <ItemsControl ItemsSource="{Binding Toolbox.FilteredGroups}">
@@ -98,6 +101,14 @@
                                                             </ContextMenu>
                                                         </Button.ContextMenu>
                                                     </Button>
+                                                    <Button Style="{StaticResource ToolButton}" Margin="4,0,0,0"
+                                                            Content="編輯" ToolTip="編輯自訂工具"
+                                                            Tag="{Binding}" Click="CustomEdit_Click"
+                                                            Visibility="{Binding IsCustom, Converter={StaticResource BoolToVis}}"/>
+                                                    <Button Style="{StaticResource ToolButton}" Margin="4,0,0,0"
+                                                            Content="移除" ToolTip="移除此自訂工具"
+                                                            Tag="{Binding}" Click="CustomRemove_Click"
+                                                            Visibility="{Binding IsCustom, Converter={StaticResource BoolToVis}}"/>
                                                 </StackPanel>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>

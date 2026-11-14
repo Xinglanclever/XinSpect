@@ -152,6 +152,22 @@ def main(argv=None):
     proj.replace("<Version>%s</Version>" % OLD, "<Version>%s</Version>" % V, "csproj")
     proj.replace("<FileVersion>%s.0.0</FileVersion>" % OLD, "<FileVersion>%s.0.0</FileVersion>" % V, "csproj")
 
+    # The standalone console products carry their own assembly package versions;
+    # keep both aligned with the main hardware engine they reference.
+    cli_projects = []
+    for rel in (os.path.join("XinSpectCli", "XinSpectCli.csproj"),
+                os.path.join("XinSpectCli", "XinSpectCli.Legacy.csproj")):
+        full = os.path.join(root, rel)
+        if not os.path.isfile(full):
+            continue
+        cli = doc(rel)
+        match = re.search(r"<Version>([^<]+)</Version>", cli.text)
+        if not match:
+            raise SystemExit("%s 裡找不到 <Version>" % rel)
+        cli.replace("<Version>%s</Version>" % match.group(1),
+                    "<Version>%s</Version>" % V, rel)
+        cli_projects.append(cli)
+
     # 2) AboutView
     about = doc(os.path.join("Views", "AboutView.xaml"))
     old_code = None
@@ -203,20 +219,29 @@ def main(argv=None):
              + body + CNL + "            ]," + CNL + "        }," + CNL)
     cat.insert_before(anchor, block, "ChangelogCatalog")
 
-    # 6) README.md：同步近期版號摘要；逐項沿革仍以百科底稿為準（見 6-2）。
+    # 6) README.md —— 2026-11-07 換成「修正版」首頁後只留：徽章、下載連結、位元組數註腳。
+    #    版本沿革兩層（11.1/11.2/11.3）隨 87 萬字底稿住進 docs/百科-v3.17.md（見 6-2）。
     md = doc("README.md")
     md.replace("badge/version-%s-" % OLD, "badge/version-%s-" % V, "README 徽章")
     md.replace("releases/download/v%s/" % OLD, "releases/download/v%s/" % V, "README 下載連結")
-    md.replace("本版（v%s）實際發佈的檔案大小" % OLD, "本版（v%s）實際發佈的檔案大小" % V, "README 註腳")
-    md_bullet = "- **v%s %s**（%s）：%s" % (V, args.title, args.date, title_zh)
-    md.insert_before("- **v%s " % OLD, md_bullet + "\n", "README 版本沿革")
+    published_note = "本版（v%s）實際發佈的檔案大小" % OLD
+    pending_note = "本版（v%s）的預定發佈資產清單" % OLD
+    if published_note in md.text:
+        md.replace(published_note, "本版（v%s）實際發佈的檔案大小" % V, "README 註腳")
+    else:
+        md.replace(pending_note, "本版（v%s）的預定發佈資產清單" % V, "README 候選版註腳")
 
     # 6-2) docs/百科-v3.17.md —— 敘事主體。沿革兩層、結語、登記筆數都從這裡過。
     bk = doc(os.path.join("docs", "百科-v3.17.md"))
     bk.replace("這一版針對的是 **v%s** 的這棵樹" % OLD, "這一版針對的是 **v%s** 的這棵樹" % V, "百科 底稿版本")
     bk.replace("badge/version-%s-" % OLD, "badge/version-%s-" % V, "百科 徽章")
     bk.replace("releases/download/v%s/" % OLD, "releases/download/v%s/" % V, "百科 下載連結")
-    bk.replace("本版（v%s）實際發佈的檔案大小" % OLD, "本版（v%s）實際發佈的檔案大小" % V, "百科 註腳")
+    published_note = "本版（v%s）實際發佈的檔案大小" % OLD
+    pending_note = "本版（v%s）的預定發佈資產清單" % OLD
+    if published_note in bk.text:
+        bk.replace(published_note, "本版（v%s）實際發佈的檔案大小" % V, "百科 註腳")
+    else:
+        bk.replace(pending_note, "本版（v%s）的預定發佈資產清單" % V, "百科 候選版註腳")
     bk.replace("最新的一筆是 v%s（" % OLD, "最新的一筆是 v%s（" % V, "百科 11.1")
     sync_date(bk, r"最新的一筆是 v%s（(\d{4}-\d{2}-\d{2})）" % re.escape(V), "百科 11.1 日期")
     bk.replace("本版是 v%s ——" % OLD, "本版是 v%s ——" % V, "百科 結語")
@@ -241,7 +266,13 @@ def main(argv=None):
     zh = doc("README.zh-CN.md")
     zh.replace("badge/version-%s-" % OLD, "badge/version-%s-" % V, "zh 徽章")
     zh.replace("releases/download/v%s/" % OLD, "releases/download/v%s/" % V, "zh 下載連結")
-    zh.replace("本版（v%s）实际发布的文件大小" % OLD, "本版（v%s）实际发布的文件大小" % V, "zh 註腳")
+    published_note = "本版（v%s）实际发布的文件大小" % OLD
+    pending_note = "本版（v%s）的预定发布资产清单" % OLD
+    if published_note in zh.text:
+        zh.replace(published_note, "本版（v%s）实际发布的文件大小" % V, "zh 註腳")
+    else:
+        zh.replace(pending_note, "本版（v%s）的预定发布资产清单" % V, "zh 候選版註腳")
+    zh.replace("本版（v%s）的预定发布资产清单" % OLD, "本版（v%s）的预定发布资产清单" % V, "zh 候選版註腳")
     zh.replace("本文档对应 XinSpect v%s（" % OLD, "本文档对应 XinSpect v%s（" % V, "zh 文件版本")
     sync_date(zh, r"本文档对应 XinSpect v%s（(\d{4}-\d{2}-\d{2})）" % re.escape(V), "zh 文件版本日期")
     zh_bullet = "- **v%s %s**（%s）：%s" % (V, args.codename, args.date, title_zh)
@@ -252,6 +283,10 @@ def main(argv=None):
     en = doc("README.en.md")
     en.replace("badge/version-%s-" % OLD, "badge/version-%s-" % V, "en 徽章")
     en.replace("releases/download/v%s/" % OLD, "releases/download/v%s/" % V, "en 下載連結")
+    en.replace("The v%s asset list is a release draft." % OLD,
+               "The v%s asset list is a release draft." % V, "en 候選版資產註記")
+    en.replace("no v%s binaries are claimed as published yet." % OLD,
+               "no v%s binaries are claimed as published yet." % V, "en 候選版發佈註記")
     en.replace("Document scope (v%s)" % OLD, "Document scope (v%s)" % V, "en 文件範圍")
     en.replace("**About this document**: it corresponds to XinSpect v%s (" % OLD,
                "**About this document**: it corresponds to XinSpect v%s (" % V, "en 文件版本")
@@ -268,7 +303,7 @@ def main(argv=None):
     en_row = "| %s | %s | %s |" % (V, args.date, title_en)
     en.insert_before("| %s | " % OLD, en_row + "\n", "en 沿革表")
 
-    docs = [d for d in [proj, about, info, sec, bug, hw, cat, md, bk, zh, en] if d is not None]
+    docs = [d for d in [proj, about, info, sec, bug, hw, cat, md, bk, zh, en, *cli_projects] if d is not None]
     if args.dry_run:
         for d in docs:
             if d.dirty:

@@ -49,6 +49,7 @@ public static class CliService
     public const string RedfishArg = "--redfish";
     public const string MerkleArg = "--merkle";
     public const string SpeculationArg = "--speculation";
+    public const string AgentBridgeArg = "--agent-bridge";
 
     /// <summary>U10-PF／P1-071／P1-072 追蹤鍵：建立可第三方驗證的證據包（<c>--evidence-pack 目錄</c>）。
     /// 這個命令是 <c>ev.manifest</c> 與 <c>ev.chain.verify</c> 唯一的生產端——兩份產物只有
@@ -84,6 +85,8 @@ public static class CliService
             PrintHelp(stdout);
             return ExitOk;
         }
+        if (args[0] == AgentBridgeArg)
+            return RunAgentBridge(args, collect, stdout, stderr);
         if (args[0] == CompareArg)
             return RunCompare(args, compare, stdout, stderr);
         if (args[0] == VerifyAuditArg)
@@ -205,6 +208,114 @@ public static class CliService
         return facts.All(f => f.Availability == FactAvailability.Present) ? ExitOk : ExitPartial;
     }
 
+    private static int RunAgentBridge(string[] args, Func<IReadOnlyList<HardwareFact>> collect,
+        TextWriter stdout, TextWriter stderr)
+    {
+        if (args.Length < 2)
+        {
+            stderr.WriteLine("用法：--agent-bridge capabilities | collect_snapshot [--out <檔案>] | get_fact <key> [--out <檔案>] | verify_snapshot <檔案>");
+            return ExitError;
+        }
+
+        switch (args[1])
+        {
+            case "capabilities" when args.Length == 2:
+                stdout.WriteLine(JsonSerializer.Serialize(AgentBridgeService.Capabilities(), JsonOptions));
+                return ExitOk;
+
+            case "collect_snapshot":
+            case "snapshot":
+            case "get_fact":
+            {
+                bool singleFact = args[1] == "get_fact";
+                int baseLength = singleFact ? 3 : 2;
+                string? key = singleFact && args.Length >= baseLength ? args[2] : null;
+                bool hasOutput = args.Length == baseLength + 2;
+                if (args.Length != baseLength && !hasOutput
+                    || hasOutput && (args[^2] != OutArg || string.IsNullOrWhiteSpace(args[^1])))
+                {
+                    stderr.WriteLine("橋接命令引數格式錯誤。");
+                    return ExitError;
+                }
+                if (singleFact && string.IsNullOrWhiteSpace(key))
+                {
+                    stderr.WriteLine("get_fact 需要完整的事實 key。");
+                    return ExitError;
+                }
+
+                string? outPath = hasOutput ? args[^1] : null;
+
+                WriteGate.Reset();
+                IReadOnlyList<HardwareFact> facts;
+                try { facts = collect(); }
+                catch (Exception ex)
+                {
+                    stderr.WriteLine($"硬體事實收集失敗：{ex.GetType().Name}：{ex.Message}");
+                    return ExitError;
+                }
+
+                if (singleFact && !facts.Any(f => string.Equals(f.Key, key, StringComparison.Ordinal)))
+                {
+                    stdout.WriteLine(JsonSerializer.Serialize(new
+                    {
+                        protocolVersion = AgentBridgeService.ProtocolVersion,
+                        operation = "get_fact",
+                        key,
+                        availability = "NotSupported",
+                        reason = "本次 evidence 收集沒有此 key；未將其推斷為不存在。",
+                    }, JsonOptions));
+                    return ExitPartial;
+                }
+
+                try
+                {
+                    var snapshot = AgentBridgeService.CreateSnapshot(facts, singleFact ? key : null);
+                    if (outPath is null)
+                        stdout.WriteLine(HardwareSnapshotService.ToJson(snapshot));
+                    else
+                        HardwareSnapshotService.Save(outPath, snapshot);
+                }
+                catch (Exception ex)
+                {
+                    stderr.WriteLine($"橋接輸出失敗：{ex.GetType().Name}：{ex.Message}");
+                    return ExitError;
+                }
+                return ExitOk;
+            }
+
+            case "verify_snapshot" when args.Length == 3:
+                try
+                {
+                    var snapshot = HardwareSnapshotService.Load(args[2]);
+                    stdout.WriteLine(JsonSerializer.Serialize(new
+                    {
+                        protocolVersion = AgentBridgeService.ProtocolVersion,
+                        operation = "verify_snapshot",
+                        valid = true,
+                        snapshotSchemaVersion = snapshot.SchemaVersion,
+                        factCount = snapshot.Facts.Count,
+                        integrityAlgorithm = snapshot.Integrity.Algorithm,
+                    }, JsonOptions));
+                    return ExitOk;
+                }
+                catch (Exception ex)
+                {
+                    stdout.WriteLine(JsonSerializer.Serialize(new
+                    {
+                        protocolVersion = AgentBridgeService.ProtocolVersion,
+                        operation = "verify_snapshot",
+                        valid = false,
+                        error = ex.GetType().Name + ": " + ex.Message,
+                    }, JsonOptions));
+                    return ExitPartial;
+                }
+
+            default:
+                stderr.WriteLine("未知的 Agent bridge 操作。用 --agent-bridge capabilities 查看支援項目。");
+                return ExitError;
+        }
+    }
+
     /// <summary>
     /// BIOS 區 vs 參考映像比對模式（WP4 第二層的 CLI 面）。
     /// 退出碼：0＝一致；2＝有差異或三態（比對沒能完成／大小不符——細節在輸出）；1＝致命（讀檔失敗等）。
@@ -214,6 +325,7 @@ public static class CliService
     {
         var payload = new[]
         {
+            new { mode = AgentBridgeArg, scope = AgentBridgeService.Scope, output = "JSON / HardwareSnapshot v1", description = "獨立 Agent 的一回合唯讀橋接；protocolVersion 協商、能力列舉、collect_snapshot／get_fact／verify_snapshot。明示目前不是完整 WPF 硬體總覽。" },
             new { mode = JsonArg, scope = EvidenceScope, output = "JSON", description = "headless 事實收集；支援 --query／--only 前綴選擇與 --out 檔案，部分匯出如實帶分母，零網路。" },
             new { mode = CompareArg, scope = "", output = "JSON", description = "BIOS 區與參考映像逐塊比對；只讀本機映像。" },
             new { mode = VerifyAuditArg, scope = "", output = "JSON", description = "驗證本機審計日誌雜湊鏈。" },
@@ -1326,6 +1438,10 @@ public static class CliService
 
             用法：
               xsc --lang zh-TW|zh-CN [以下任一命令]（僅切換文字介面；JSON／SARIF 欄位與輸出不變）
+              XinSpect --agent-bridge capabilities
+              XinSpect --agent-bridge collect_snapshot [--out <檔案>]
+              XinSpect --agent-bridge get_fact <完整 key> [--out <檔案>]
+              XinSpect --agent-bridge verify_snapshot <快照.json>
               XinSpect --json evidence [--query <key 前綴>] [--only <前綴1,前綴2>] [--out <檔案>]
               XinSpect --compare-flash <參考映像> [--out <檔案>]
               XinSpect --verify-audit [日誌路徑] [--out <檔案>]
@@ -1347,6 +1463,9 @@ public static class CliService
               XinSpect --help
 
             範圍：
+              --agent-bridge   protocolVersion 1；快照採 HardwareSnapshot schema v1，預設遮蔽敏感值。
+                              僅涵蓋下列 CLI evidence／儲存可靠性範圍，不是完整 WPF 硬體總覽或即時感測器；
+                              僅提供 capabilities／collect_snapshot／get_fact／verify_snapshot，沒有變更命令。
               evidence        驅動相依證據組：晶片組安全、SPI 快閃、平台安全 MSR、MCHBAR、
                               PCIe AER、後端與環境、CPU 韌體身分、I/O 埠、CMOS、SMBus、
                               UEFI 開機設定、Super I/O、PCI 裝置盤點、交叉對帳、ACPI 表清單；

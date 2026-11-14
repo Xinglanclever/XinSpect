@@ -50,6 +50,8 @@ public class VersionBumpToolTests
                      Path.Combine(".github", "ISSUE_TEMPLATE", "bug_report.yml"),
                      Path.Combine(".github", "ISSUE_TEMPLATE", "hardware_report.yml"),
                      Path.Combine("Tools", "bump-version.py"),
+                     Path.Combine("XinSpectCli", "XinSpectCli.csproj"),
+                     Path.Combine("XinSpectCli", "XinSpectCli.Legacy.csproj"),
                  })
         {
             string src = Path.Combine(root, rel);
@@ -141,6 +143,8 @@ public class VersionBumpToolTests
             Assert.True(r.ExitCode == 0, r.Output);
 
             Assert.Contains($"<Version>{next}</Version>", File.ReadAllText(Path.Combine(box, "XinSpect.csproj")));
+            Assert.Contains($"<Version>{next}</Version>", File.ReadAllText(Path.Combine(box, "XinSpectCli", "XinSpectCli.csproj")));
+            Assert.Contains($"<Version>{next}</Version>", File.ReadAllText(Path.Combine(box, "XinSpectCli", "XinSpectCli.Legacy.csproj")));
             Assert.Contains($"版本 {next} ・", File.ReadAllText(Path.Combine(box, "Views", "AboutView.xaml")));
             Assert.Contains($"（目前 {next}）", File.ReadAllText(Path.Combine(box, "SECURITY.md")));
             Assert.Contains($"placeholder: \"{next}\"",
