@@ -7,6 +7,8 @@
   Cache-Control: public, max-age=604800
 /*.json
   Cache-Control: public, max-age=300
+/sw.js
+  Cache-Control: no-cache
 /*.svg
   Cache-Control: public, max-age=604800
 /*.xml

@@ -6,8 +6,8 @@ BASE=${1:-https://xinspect.de5.net}
 fail=0
 chk(){ if [ "$2" = "$3" ]; then echo "ok   $1"; else echo "FAIL $1（期望 $2 實得 $3）"; fail=1; fi; }
 has(){ if [ "$3" -ge "$2" ]; then echo "ok   $1"; else echo "FAIL $1（至少 $2 實得 $3）"; fail=1; fi; }
-code(){ curl -s -o /dev/null -w "%{http_code}" "$1"; }
-H=$(curl -s "$BASE/?v=verify-$RANDOM$RANDOM")
+code(){ curl -s --retry 3 --retry-delay 1 --retry-all-errors --max-time 30 -o /dev/null -w "%{http_code}" "$1"; }
+H=$(curl -s --retry 3 --retry-delay 1 --retry-all-errors --max-time 30 "$BASE/?v=verify-$RANDOM$RANDOM")
 
 chk "首頁 200"                              200 "$(code "$BASE/")"
 chk "robots.txt 200"                        200 "$(code "$BASE/robots.txt")"
@@ -50,6 +50,9 @@ has "color-scheme meta（en）"                  1   "$(curl -sL "$BASE/index-en
 chk "feed.xml language 標籤"                 1   "$(curl -s "$BASE/feed.xml" | grep -c '<language>zh-Hant</language>')"
 chk "factkeys.json 200"                     200 "$(code "$BASE/factkeys.json")"
 chk "factkeys.json 1,178 鍵／157 域"          1   "$(curl -s "$BASE/factkeys.json" | python -I -c "import json,sys;d=json.load(sys.stdin);print(1 if d['total']==1178 and d['domainCount']==157 else 0)")"
+chk "sw.js 200"                             200 "$(code "$BASE/sw.js")"
+has "SW 註冊（zh）"                           1   "$(echo "$H" | grep -c 'serviceWorker')"
+has "SW 註冊（en）"                           1   "$(curl -sL "$BASE/index-en.html" | grep -c 'serviceWorker')"
 chk "dict.js 200"                           200 "$(code "$BASE/dict.js")"
 has "全域鍵搜尋快捷鍵（dict.js）"              1   "$(grep -c "e.key==='/'" site/dict.js)"
 has "dialog 複製清單（zh）"                    1   "$(echo "$H" | grep -c 'keycopyall')"
