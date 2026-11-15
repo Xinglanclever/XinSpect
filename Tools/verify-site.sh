@@ -50,7 +50,8 @@ has "color-scheme meta（zh）"                  1   "$(echo "$H" | grep -c 'col
 has "color-scheme meta（en）"                  1   "$(curl -sL "$BASE/index-en.html" | grep -c 'color-scheme')"
 chk "feed.xml language 標籤"                 1   "$(curl -s "$BASE/feed.xml" | grep -c '<language>zh-Hant</language>')"
 chk "factkeys.json 200"                     200 "$(code "$BASE/factkeys.json")"
-chk "factkeys.json 1,178 鍵／157 域"          1   "$(curl -s "$BASE/factkeys.json" | python -I -c "import json,sys;d=json.load(sys.stdin);print(1 if d['total']==1178 and d['domainCount']==157 else 0)")"
+NKEYS=$(python -I Tools/count-keys.py)
+chk "factkeys.json 鍵數＝源碼目錄（$NKEYS）"   1   "$(curl -s "$BASE/factkeys.json" | python -I -c "import json,sys;d=json.load(sys.stdin);print(1 if d['total']==$NKEYS else 0)")"
 has "HSTS 頭"                                1   "$(curl -s -I "$BASE/" | grep -ci 'strict-transport-security')"
 has "COOP 頭"                                1   "$(curl -s -I "$BASE/" | grep -ci 'cross-origin-opener-policy')"
 has "沿革版本號直鏈 Release（zh）"              1   "$(echo "$H" | grep -c 'releases/tag/v')"
