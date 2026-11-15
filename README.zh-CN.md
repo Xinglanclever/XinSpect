@@ -93,15 +93,15 @@
 
 | 文件 | 大小 | 说明 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.29/XinSpect.exe) | 39,304,345 bytes | 主程序。蓝色中队守护进程已内置；「强控台」按钮桥接 xsc 终端机 |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.29/XinSpectConsole.exe) | 101,291,466 bytes | 曦览终端机（CLI）。可独立运行，也被主程序强控台唤起；自带 .NET 10 运行时故体积较大 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.29/XinSpect.exe) | 36,579,481 bytes | 主程序。蓝色中队守护进程已内置；「强控台」按钮桥接 xsc 终端机 |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.29/XinSpectConsole.exe) | 98,519,874 bytes | 曦览终端机（CLI）。可独立运行，也被主程序强控台唤起；自带 .NET 10 运行时故体积较大 |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.29/BlueSquadronBridge.exe) | 6,531,620 bytes | 独立守护进程。要脱离主程序单独跑防护时使用 |
-| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.29/XinSpect-full.exe) | 212,070,592 bytes | 主程序・带环境版：.NET 10 Desktop Runtime 一并打包，免装运行时（功能与 XinSpect.exe 相同） |
-| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.29/XinSpectConsole-nort.exe) | 67,384,326 bytes | 曦览终端机・Windows 11／Server 2025・不带环境：需已装 .NET 10 Desktop Runtime |
-| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.29/XinSpectConsole-legacy-nort.exe) | 67,384,414 bytes | 曦览终端机・Windows 10／2016/2019/2022・不带环境：纯文本界面，需已装 .NET 10 Desktop Runtime |
+| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.29/XinSpect-full.exe) | 209,345,728 bytes | 主程序・带环境版：.NET 10 Desktop Runtime 一并打包，免装运行时（功能与 XinSpect.exe 相同） |
+| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.29/XinSpectConsole-nort.exe) | 64,666,630 bytes | 曦览终端机・Windows 11／Server 2025・不带环境：需已装 .NET 10 Desktop Runtime |
+| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.29/XinSpectConsole-legacy-nort.exe) | 64,662,622 bytes | 曦览终端机・Windows 10／2016/2019/2022・不带环境：纯文本界面，需已装 .NET 10 Desktop Runtime |
 | [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.29/XinSpectDeploy.exe) | 29,696 bytes | 一键安装器。第一层选装什么：A 装主程序（GUI）、B 装曦览终端机；第二层 1/2/3 选下载来源（GitHub／Drive／加速节点） |
 | [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.29/XsRegProbe.sys) | 24,064 bytes | XsRegProbe 内核探测驱动（白名单只读 MSR／MMIO；内部检视不构成第三方认证）。未微软签名：主程序以提权会话安装到 `ProgramData\XinSpect\Driver\` 并建服务；手动加载需测试签名环境（testsigning） |
-| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.29/XinSpectConsole-legacy.exe) | 101,291,554 bytes | 曦览终端机（CLI）**纯文本兼容版**：给 Windows 10／Windows Server 2016、2019、2022 的传统主控台——无色彩、无框线定位，其余功能（facts／book／help）相同 |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.29/XinSpectConsole-legacy.exe) | 98,519,962 bytes | 曦览终端机（CLI）**纯文本兼容版**：给 Windows 10／Windows Server 2016、2019、2022 的传统主控台——无色彩、无框线定位，其余功能（facts／book／help）相同 |
 
 > **上表的字节数为本版（v3.29）实际发布的文件大小**；请以 Release 页面列出的文件为准。逐资产 SHA-256 见 Release 页的 `SHA256SUMS.txt`（防传输损毁；能替换整个 Release 的攻击者防不了——不可否认性需签名，列排期）。
 
