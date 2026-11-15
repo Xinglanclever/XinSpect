@@ -78,7 +78,8 @@ public static class SpdReader
     public const byte PageSelect1 = 0x37;
 
     /// <summary>掃過 0x50–0x57 全部八個位址。呼叫端必須先取得匯流排旗號。</summary>
-    public static SpdScan ReadAll(ISpdBus bus, CancellationToken cancellationToken = default)
+    public static SpdScan ReadAll(ISpdBus bus, CancellationToken cancellationToken = default,
+                                  Action<SpdSlot>? slotRead = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         // 先探切頁裝置。DDR4 的 SPA0（0x36）只有在這條匯流排上真的掛著 DDR4 SPD 時才會回應，
@@ -105,7 +106,9 @@ public static class SpdReader
         for (int i = 0; i < AddressCount; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            slots.Add(ReadOne(bus, (byte)(FirstAddress + i), cancellationToken));
+            var slot = ReadOne(bus, (byte)(FirstAddress + i), cancellationToken);
+            slots.Add(slot);
+            slotRead?.Invoke(slot);
         }
         return new SpdScan(slots, "");
     }

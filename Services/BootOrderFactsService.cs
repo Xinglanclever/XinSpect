@@ -72,6 +72,8 @@ public static class BootOrderFactsService
                     FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError, reason),
                 new HardwareFact(DefaultEntryKey, Category, "預設開機項", "", "", Source,
                     FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError, reason),
+                new HardwareFact(TimeoutKey, Category, "選單等待", "", "秒", Source,
+                    FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError, reason),
             ];
         }
 

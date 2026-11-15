@@ -207,6 +207,25 @@ public class VolumeProbeStartupTests
     }
 
     [Fact]
+    public void 磁碟探測不依賴共享執行緒集區排程()
+    {
+        int queuedOnThreadPool = 0;
+        int foregroundWorkers = 0;
+        var readings = VolumeService.Collect(d =>
+        {
+            if (Thread.CurrentThread.IsThreadPoolThread)
+                Interlocked.Increment(ref queuedOnThreadPool);
+            if (!Thread.CurrentThread.IsBackground)
+                Interlocked.Increment(ref foregroundWorkers);
+            return new VolumeService.VolumeReading(d.Name.TrimEnd('\\'), d.Name, "TEST", "NTFS", 100, 40);
+        }, timeoutMs: 5_000);
+
+        Assert.NotEmpty(readings);
+        Assert.Equal(0, queuedOnThreadPool);
+        Assert.Equal(0, foregroundWorkers);
+    }
+
+    [Fact]
     public void 某一輪逾時不會把已知的總量打成零()
     {
         bool hang = false;

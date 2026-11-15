@@ -159,9 +159,7 @@ public static class EvidenceCollection
         Measure(svc, "LoadDeviceTruth", () => svc.LoadDeviceTruth());
         // 第 312 輪：逐鍵重複性（mt.repeat.*）。連量五輪便宜的即時值，總預算 3 秒。
         Measure(svc, "LoadMeasurementRepeat", () => svc.LoadMeasurementRepeat());
-        // BCD 開機順序（BD-0001／BD-0003）：一次 bcdedit /enum，5 秒上限；唯讀
-        Measure(svc, "LoadBootOrder", () => svc.LoadBootOrder());
-        // BCD 其餘元素（BD-0002／0004～0007／0011／0014／0023／0024／0030）：/enum＋/enum firmware 各一次，唯讀
+        // BCD 開機順序與元素共用 /enum all；韌體順序另讀 /enum firmware，均唯讀且各 5 秒上限。
         Measure(svc, "LoadBcdElements", () => svc.LoadBcdElements());
         // 電池健康三件事（BT-0002～BT-0004）：Win32_Battery 計數＋三條 root\WMI 查詢，唯讀
         Measure(svc, "LoadBatteryHealth", () => svc.LoadBatteryHealth());

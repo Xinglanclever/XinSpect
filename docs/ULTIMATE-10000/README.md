@@ -27,7 +27,8 @@
 | `ROUND-328-FLEET-BASELINE-2026-10-30.md` | 第 328 輪（U10-EN-0001）：同型號族群基線（`fleet.summary`／`fleet.peer.*`／`fleet.boundary`）——只讀本機快照目錄、**不上傳**（型別層有守門：兩個檔案不得出現 HttpClient／WebRequest／Socket）；型號是字串相等不是 SKU 知識；樣本少於 4 份只給中位數不給 z 分數；只比每份都有數值的鍵。 |
 | `ROUND-329-NVME-RESERVED-2026-10-30.md` | 第 329 輪（U10-NV-0029）：NVMe Identify 保留區非零掃描（`nvme.rsvd.summary`／`nvme.rsvd.disk.*`／`nvme.rsvd.boundary`）——八段保留區共 1,530 位元組（邊界由 nvme.h 逐欄累加）；廠商區 vs 不算保留區。**同輪抓到已在出貨的缺陷**：WCTEMP 位移寫成 0x14A（實際落在 sanicap 裡），正解是 0x10A——程式與測試用了同一個錯誤假設，所以一路綠燈。 |
 | `ROUND-330-PROCESS-RUNNER-2026-10-30.md` | 第 330 輪（修外部缺陷報告 D4／D9／D10／D11）：① `Services/ProcessRunner.cs`——兩個串流都用非同步讀**且在 `WaitForExit` 之前就開始讀**，逾時殺整棵行程樹（舊寫法下 `timeoutMs` 是安慰劑：子行程灌爆 stderr 時 `WaitForExit` 那行永遠走不到）；② `AtomicWrite` 暫存名由固定 `.tmp` 改為含行程 ID 與序號（多實例併發會把別人的半成品搬成正式檔）；③ `HistoryStore` 尾端垃圾在載入當場重寫（否則下一次 append 接在垃圾後、新的一筆讀在錯位移而丟失）；④ `ExternalReportService` 加 64 MiB 上限並把界線寫進 Status。19 條新測試，含會灌爆 pipe、併發 300 次、造 64 MB 檔案的情境。 |
-| `HANDOFF-2026-11-16.md` | **第四圈交接文檔**：現況總帳（1,202 鍵／8,094 基線）、三輪摘要、剩餘批次的精確規格（WMI 補遺／SMART Intel+HGST／唯讀檢測）、已知問題七條、驗證指令集——給接手者的單一入口。 |
+| `ROUND-334-ACCURACY-EDID-BCD-2026-11-16.md` | 第 334 輪：BCD 錯誤狀態與欄位精度、DMT 位圖／時序校正、EDID/CTA checksum 診斷、Volume 排程與 v3.28 回歸修補；記錄下一批 WMI 候選的查重邊界。 |
+| `HANDOFF-2026-11-16.md` | **第四圈交接文檔**：現況總帳、四輪摘要、剩餘批次的精確規格（WMI 補遺／SMART Intel+HGST／唯讀檢測）、已知問題與驗證指令——給接手者的單一入口。 |
 | `CIRCLE-4-CANDIDATES-2026-11-15.md` | **第四圈 32 項候選（意義層：解碼表讓自述能被讀懂＋BCD 現值＋WMI 補遺）**，六批次（WHEA 知識包／DMT／BCD／WMI／SMART 補遺／唯讀檢測）；附孤兒盤點的工具誤判教訓（`grep` 需 `-a`）。 |
 | `ROUND-333-BCD-ELEMENTS-2026-11-16.md` | 第 333 輪（第四圈批次三）：BCD 開機元素現值十把鍵（toolsdisplayorder／bootsequence／device+path／nx／hypervisorlaunchtype／badmemory／mem.trim／fwbootmgr／BD-0030 界線）——/enum 與 /enum firmware 兩次唯讀呼叫，兩層各自三態。 |
 | `ROUND-332-DMT-KP-2026-11-16.md` | 第 332 輪（第四圈批次二）：DMT 顯示時序知識包——DMT 全表 88 條＋established timing 兩張位圖（17＋44）；est3 全數對到 DMT、est1 四條遺產模式如實列名；表體由抽取腳本從 Linux drm_edid.c 機器生成。 |

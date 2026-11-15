@@ -155,7 +155,7 @@ try {
     Write-Host ("staged: " + ($staged -join ', '))
     git commit -m "$Title ＋ 版號 $Version" | Out-Null
     git tag "v$Version"
-    git -c http.version=HTTP/1.1 push origin main | Out-Null
+    git -c http.version=HTTP/1.1 push origin HEAD:main | Out-Null
     if ($LASTEXITCODE -ne 0) { Fail 'push main failed' }
     git -c http.version=HTTP/1.1 push origin "v$Version" | Out-Null
     if ($LASTEXITCODE -ne 0) { Fail "push tag v$Version failed" }
@@ -279,7 +279,7 @@ try {
     if ($changed.Count -gt 0) {
         git add -- @($changed) | Out-Null
         git commit -m "docs：README 主程式位元組數（含全部資產）改為 v$Version 發佈實測值" | Out-Null
-        git -c http.version=HTTP/1.1 push origin main | Out-Null
+        git -c http.version=HTTP/1.1 push origin HEAD:main | Out-Null
         if ($LASTEXITCODE -ne 0) { Fail 'push docs commit failed' }
         Ok 'docs byte-count commit pushed'
     } else {

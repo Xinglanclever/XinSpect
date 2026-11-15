@@ -290,25 +290,23 @@ public sealed class EvidenceLabService : ObservableObject
 
     /// <summary>
     /// 讀一次 BCD 的其餘元素（U10-BD-0002／0004～0007／0011／0014／0023／0024／0030，第 333 輪）：
-    /// 與 LoadBootOrder 同一個執行檔的兩次唯讀呼叫（/enum＋/enum firmware），解析共用助手。
+    /// 開機順序與元素共用同一次 /enum all 快照，避免重複開行程與跨快照不一致。
     /// </summary>
     public void LoadBcdElements()
     {
         DateTimeOffset at = DateTimeOffset.UtcNow;
         try
         {
-            var (output, reason) = BootOrderReader.TryReadEnum();
+            var (output, reason) = BootOrderReader.TryReadEnumAll();
             var (fwOutput, fwReason) = BootOrderReader.TryReadEnumFirmware();
+            BootOrderFacts = BootOrderFactsService.Collect(output, reason, at);
             BcdElementsFacts = BcdElementsFactsService.Collect(output, fwOutput, reason, fwReason, at);
         }
         catch (Exception ex)
         {
-            BcdElementsFacts =
-            [
-                new HardwareFact(BcdElementsFactsService.AccessStatementKey, "開機", "BCD 存取法", "", "",
-                    "bcdedit（唯讀）", FactTrustLevel.Unknown, false, at,
-                    null, FactAvailability.ReadError, UserFacingError.Describe(ex))
-            ];
+            string reason = UserFacingError.Describe(ex);
+            BootOrderFacts = BootOrderFactsService.Collect(null, reason, at);
+            BcdElementsFacts = BcdElementsFactsService.Collect(null, null, reason, reason, at);
         }
     }
 
@@ -423,7 +421,10 @@ public sealed class EvidenceLabService : ObservableObject
     /// </remarks>
     public void LoadEdidCta()
     {
-        EdidCtaFacts = EdidCtaFactsService.Collect(DateTimeOffset.UtcNow);
+        var snapshot = EdidService.ReadRawSnapshot();
+        var at = DateTimeOffset.UtcNow;
+        EdidCtaFacts = EdidCtaFactsService.Collect(at, () => snapshot.Edids.ToList(), snapshot.Errors)
+            .Concat(EdidTimingFactsService.Collect(snapshot, at)).ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
@@ -691,7 +692,7 @@ public sealed class EvidenceLabService : ObservableObject
     private static string? ReadModel(byte[] identify)
     {
         if (identify.Length < 64) return null;
-        string raw = System.Text.Encoding.ASCII.GetString(identify, 24, 40).TrimEnd(' ', ' ').Trim();
+        string raw = System.Text.Encoding.ASCII.GetString(identify, 24, 40).TrimEnd('\0', ' ').Trim();
         return raw.Length == 0 ? null : raw;
     }
 

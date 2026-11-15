@@ -142,7 +142,8 @@ public partial class ToolboxView : UserControl
         ToolboxCustomTool? result = null;
         accept.Click += (_, _) =>
         {
-            string[] args = arguments.Text.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            string[] args = arguments.Text.Length == 0 ? []
+                : arguments.Text.Split(["\r\n", "\n"], StringSplitOptions.None);
             bool isUrl = Uri.TryCreate(target.Text.Trim(), UriKind.Absolute, out var uri)
                 && uri.Scheme is "http" or "https";
             result = new ToolboxCustomTool

@@ -51,6 +51,20 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "3.29",
+            Date = "2026-11-16",
+            Title = "時序更精確，硬體掃描更可靠",
+            Items =
+            [
+                "修正 EDID established timing 位址與 Apple 1152x870 模式，新增 EDID 時序解碼，完整 DTD 才匹配 DMT。",
+                "CTA-861 基本塊與擴充塊加入 checksum 診斷；不完整資料標示 Unknown，保留已驗證的部分宣告。",
+                "BCD 錯誤出口碼、缺少物件、badmemorylist 來源與 truncatememory 單位修正；OS 與韌體讀取各用正確命名空間。",
+                "SPD 掃描逾時保留已完成模組；自訂工具 URL 與 EXE 參數身份避免誤合併。",
+                "修正 XsRegProbe 重疊緩衝區覆寫請求地址，並讓磁碟探測不受共享執行緒集區飽和影響。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "3.28",
             Date = "2026-11-14",
             Title = "內建工具箱擴充與 Agent 唯讀橋接",

@@ -297,24 +297,8 @@ internal static class StartupSequence
             vm.Timings.RaiseAll();
         }).ConfigureAwait(false);
         var spdTimer = System.Diagnostics.Stopwatch.StartNew();
-        using var spdTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var spdTask = Task.Run(() => ReadSpdDirect(spdTimeout.Token), spdTimeout.Token);
-        SpdSurvey survey;
-        try
-        {
-            survey = await spdTask.WaitAsync(SpdDirectReadTimeout, cancellationToken).ConfigureAwait(false);
-        }
-        catch (TimeoutException)
-        {
-            spdTimeout.Cancel();
-            survey = new SpdSurvey([], [],
-                [$"SPD 直讀超過 {SpdDirectReadTimeout.TotalSeconds:0} 秒，已取消本次掃描；保留 Windows WMI 設定值。"], []);
-        }
-        catch (OperationCanceledException)
-        {
-            spdTimeout.Cancel();
-            throw;
-        }
+        var survey = await SpdScanRunner.RunAsync(ReadSpdDirect, SpdDirectReadTimeout, cancellationToken)
+            .ConfigureAwait(false);
         spdTimer.Stop();
         cancellationToken.ThrowIfCancellationRequested();
         await OnUiAsync(ui, () =>
@@ -601,7 +585,7 @@ internal static class StartupSequence
     /// 先以 Windows PnP 找出有限的 iMC PCI function，再逐條匯流排做硬體仲裁。
     /// 讀不到時回傳帶原因的空結果，保留已成功的其他 DIMM；不以空清單冒充正常完成。
     /// </remarks>
-    private static SpdSurvey ReadSpdDirect(CancellationToken cancellationToken)
+    private static SpdSurvey ReadSpdDirect(CancellationToken cancellationToken, Action<SpdSurvey> progress)
     {
         var notes = new List<string>();
         try
@@ -624,7 +608,7 @@ internal static class StartupSequence
             }
             if (lockNote.Length > 0) notes.Add(lockNote);
 
-            return SpdSurveyor.Survey(buses, notes, cancellationToken);
+            return SpdSurveyor.Survey(buses, notes, cancellationToken, progress);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

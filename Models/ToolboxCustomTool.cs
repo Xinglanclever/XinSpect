@@ -21,9 +21,14 @@ public static class ToolboxIdentity
     public static string ForExecutable(string path, IEnumerable<string>? arguments = null)
     {
         string normalizedPath = NormalizePath(path).ToUpperInvariant();
-        string argumentKey = string.Join("\0", arguments ?? []);
+        // Length-prefix each argument: [] and [""] must not identify the same action.
+        string argumentKey = string.Join("\0", (arguments ?? []).Select(a =>
+            a.Length.ToString(System.Globalization.CultureInfo.InvariantCulture) + ":" + a));
         return "exe:" + normalizedPath + "\0" + argumentKey;
     }
+
+    internal static string LegacyExecutableIdentity(string path, IEnumerable<string>? arguments = null)
+        => "exe:" + NormalizePath(path).ToUpperInvariant() + "\0" + string.Join("\0", arguments ?? []);
 
     public static string ForUrl(string value)
     {
@@ -31,13 +36,9 @@ public static class ToolboxIdentity
             || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             throw new ArgumentException("網址只接受完整的 HTTP 或 HTTPS 位址。", nameof(value));
 
-        var builder = new UriBuilder(uri) { Fragment = "" };
-        if (builder.Path.Length > 1) builder.Path = builder.Path.TrimEnd('/');
-        var normalized = builder.Uri;
-        string path = normalized.GetComponents(UriComponents.Path, UriFormat.UriEscaped);
-        string query = normalized.GetComponents(UriComponents.Query, UriFormat.UriEscaped);
-        return "url:" + normalized.GetLeftPart(UriPartial.Authority) + "/" + path
-             + (query.Length == 0 ? "" : "?" + query);
+        // A fragment can select a SPA route; /tools and /tools/ can be different resources.
+        // Uri still canonicalizes the scheme, host and default port without removing those parts.
+        return "url:" + uri.AbsoluteUri;
     }
 
     public static string NormalizePath(string path)

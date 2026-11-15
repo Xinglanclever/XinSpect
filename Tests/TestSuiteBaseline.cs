@@ -32,5 +32,5 @@ internal static class TestSuiteBaseline
     /// 而 5476→5505 實際只加了 29 條（見 docs/PROGRESS-PLAN-2026-10-11.md 第 550 項的更正註記）。
     /// </para>
     /// </summary>
-    public const int ProjectTests = 8094;   // 2026-11-16：U10 第四圈批次一＋二（WHEA 節區＋DMT 時序）＋35 測試
+    public const int ProjectTests = 8132;   // 2026-11-16：Round 334 全套實跑，8132 通過
 }

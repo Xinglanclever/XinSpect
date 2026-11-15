@@ -1498,6 +1498,13 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-GP-0127 | 螢幕電源狀態（on/standby/deep sleep 輪詢；觀察） | `disp.power.state` |
 | U10-GP-0128 | 顯示模式變更歷史（事件日誌源；僅事實） | `disp.mode.history` |
 | U10-GP-0129 | 護眼認證宣告（TÜV 等；僅 EDID/型錄來源——讀不到不推測） | `disp.lowblue.claim` |
+
+> **實作進度（Round 334，2026-11-16）**：U10-GP-0087、0089、0091–0095、0099 已有
+> 唯讀 EDID 解碼消費端，聚合輸出鍵為 `edid.timings`。該鍵保存 Established、Standard、base/CTA
+> DTD 的時序宣告與 checksum 診斷；幾何候選、progressive DTD 全欄精確比對、交錯式時序保守處理
+> 與目前讀取的界線見 `ROUND-334-ACCURACY-EDID-BCD-2026-11-16.md`。
+> 描述元型別（GP-0090）、DisplayID、標準/範圍描述元與逐描述元鍵仍未完成，不能把這幾列標成全項完工。
+
 # U10-NP ・ USB／周邊／Type-C／網路（唯讀；知識包三態規則沿舊）
 
 ## USB 主控與集線器（14 項）

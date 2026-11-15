@@ -44,16 +44,13 @@ public static class HdrCapabilityService
             rows.Add(new HdrCapabilityRow("EDID HDR 區塊", "未知", "未取得可用 EDID"));
             return rows;
         }
-        if (edid.Length < 256)
-        {
-            rows.Add(new HdrCapabilityRow("EDID HDR 區塊", "未找到", "EDID 無擴充塊"));
-            return rows;
-        }
-
-        var extensions = Cta861.ParseExtensions(edid);
+        var parsed = Cta861.ParseExtensionsWithDiagnostics(edid);
+        var extensions = parsed.Extensions;
         if (extensions.Count == 0)
         {
-            rows.Add(new HdrCapabilityRow("EDID HDR 區塊", "未找到", "EDID 無 CTA-861 擴充塊"));
+            rows.Add(parsed.Issues.Count > 0
+                ? new HdrCapabilityRow("EDID HDR 區塊", "未知", string.Join("；", parsed.Issues))
+                : new HdrCapabilityRow("EDID HDR 區塊", "未找到", "EDID 無 CTA-861 擴充塊"));
             return rows;
         }
 
@@ -67,8 +64,10 @@ public static class HdrCapabilityService
 
         if (hdr is null)
         {
-            rows.Add(new HdrCapabilityRow("EDID HDR 區塊", "未找到",
-                "CTA-861 擴充塊裡沒有 HDR 靜態中繼資料塊（延伸標籤 6）"));
+            rows.Add(parsed.Issues.Count > 0
+                ? new HdrCapabilityRow("EDID HDR 區塊", "未知", string.Join("；", parsed.Issues))
+                : new HdrCapabilityRow("EDID HDR 區塊", "未找到",
+                    "CTA-861 擴充塊裡沒有 HDR 靜態中繼資料塊（延伸標籤 6）"));
             return rows;
         }
 
@@ -80,8 +79,11 @@ public static class HdrCapabilityService
         if (hdr.SmpteSt2084) eotfNames.Add("SMPTE ST 2084（PQ）");
         if (hdr.Hlg) eotfNames.Add("BT.2100 HLG");
 
+        string completeness = parsed.Issues.Count > 0
+            ? "部分擴充塊未通過完整性檢查；以下只列有效塊"
+            : "正常";
         rows.Add(new HdrCapabilityRow("HDR 支援", hdr.AnyHdrEotf ? "是" : "否",
-            hdr.AnyHdrEotf ? "正常" : "面板只宣告傳統 gamma"));
+            parsed.Issues.Count > 0 ? completeness : hdr.AnyHdrEotf ? "正常" : "面板只宣告傳統 gamma"));
         rows.Add(new HdrCapabilityRow("EOTF",
             eotfNames.Count == 0 ? "（一位都沒設）" : string.Join("、", eotfNames),
             $"EOTF 位元 {hdr.EotfBits:X2}"));

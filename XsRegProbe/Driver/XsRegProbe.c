@@ -128,12 +128,15 @@ static NTSTATUS XrpReadMmio(_In_ const XRP_MMIO_REQUEST* req, _In_ ULONG inLen,
     if (inLen < sizeof(XRP_MMIO_REQUEST)) return STATUS_INVALID_PARAMETER;
     if (outBytes < FIELD_OFFSET(XRP_MMIO_REPLY, Data)) return STATUS_INVALID_PARAMETER;
 
-    reply->Length = 0;
+    /* METHOD_BUFFERED shares the input and output buffer. Cache all request
+       fields before writing the reply: reply->Length overlaps address bits 63:32. */
+    ULONGLONG physicalAddress = req->PhysicalAddress;
     ULONG length = req->Length;
+    reply->Length = 0;
     if (length == 0 || length > XRP_MMIO_MAX || outBytes < FIELD_OFFSET(XRP_MMIO_REPLY, Data) + length)
         return STATUS_INVALID_PARAMETER;
 
-    NTSTATUS status = XrpReadMmioBlock(req->PhysicalAddress, length, reply->Data);
+    NTSTATUS status = XrpReadMmioBlock(physicalAddress, length, reply->Data);
     if (!NT_SUCCESS(status)) return status; /* 不回填 Data：讀不到就明說，不給半成品 */
 
     reply->Status = status;

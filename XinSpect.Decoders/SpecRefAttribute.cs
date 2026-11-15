@@ -78,6 +78,8 @@ public static class SpecRefRegistry
         typeof(AcpiPptt),        // ACPI PPTT 拓撲表（acpi_subtable_header／processor／cache；actbl2.h）
         typeof(PciCapabilities), // PCI／PCIe 能力鏈（legacy 0x34 鏈＋擴充 0x100 鏈；核對 Linux pci_regs.h）
         typeof(Cta861),          // EDID CTA-861 擴充塊（資料塊標籤／延伸標籤／HDR／HDMI VSDB；核對 Linux drm_edid.c）
+        typeof(DmtKnowledge),     // VESA DMT 與 EDID established timing 對照表
+        typeof(EdidTimings),      // EDID established／standard／DTD／CTA DTD 宣告解碼
     ];
 
     /// <summary>

@@ -23,6 +23,9 @@ public static class BootOrderReader
     /// <summary>讀一次 BCD（<c>/enum</c>）；讀不到就是 <c>null</c> 加一句理由，不抛例外。</summary>
     public static (string? Output, string? Reason) TryReadEnum() => TryRead(["/enum"], "/enum");
 
+    /// <summary>同一份快照讀取所有物件（含韌體與 {badmemory} 繼承物件）。</summary>
+    public static (string? Output, string? Reason) TryReadEnumAll() => TryRead(["/enum", "all"], "/enum all");
+
     /// <summary>
     /// 讀一次 BCD 的韌體開機管理器（<c>/enum firmware</c>，U10-BD-0004，第 333 輪）。
     /// 與 <see cref="TryReadEnum"/> 同一個執行檔、同一個逾時、同一個唯讀承諾——只多一個參數。
@@ -39,7 +42,17 @@ public static class BootOrderReader
         string bcdedit = System.IO.Path.Combine(Environment.SystemDirectory, "bcdedit.exe");
         if (!System.IO.File.Exists(bcdedit)) return (null, "bcdedit.exe 不存在於 System32——環境異常，不下判決");
         var run = ProcessRunner.Run(bcdedit, args, TimeoutMs);
+        return Interpret(run, label);
+    }
+
+    internal static (string? Output, string? Reason) Interpret(ProcessRunResult run, string label)
+    {
         if (run.TimedOut) return (null, run.Reason);
+        if (!run.Succeeded)
+        {
+            string detail = run.Reason ?? (string.IsNullOrWhiteSpace(run.Stderr) ? run.Stdout : run.Stderr) ?? "沒有錯誤訊息";
+            return (null, $"bcdedit {label} 失敗（結束碼 {run.ExitCode?.ToString() ?? "未知"}）：{detail.Trim()}");
+        }
         if (run.Stdout is null) return (null, run.Reason ?? $"bcdedit {label} 沒有任何輸出");
 
         if (string.IsNullOrWhiteSpace(run.Stdout))

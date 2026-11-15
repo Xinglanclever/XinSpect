@@ -45,6 +45,7 @@ public class ReleasePipelineTests
         Assert.Contains("trx;LogFileName", s, StringComparison.Ordinal);   // 全綠才准發（以 trx 計數器為準）
         Assert.Contains("ls-remote --tags", s, StringComparison.Ordinal);  // v2.53：--follow-tags 不推 lightweight tag
         Assert.Contains("push origin \"v$Version\"", s, StringComparison.Ordinal); // tag 一律顯式推
+        Assert.Equal(2, s.Split("push origin HEAD:main", StringSplitOptions.None).Length - 1); // managed worktree 上也推目前 HEAD，而非另一個本機 main
         Assert.Contains("PublishSingleFile=true", s, StringComparison.Ordinal);    // 資產必須是單檔版
         Assert.Contains("publish BlueSquadronBridge failed", s, StringComparison.Ordinal); // Bridge 每版從本源碼重建
         Assert.Contains("$P-bridge\\BlueSquadronBridge.exe", s, StringComparison.Ordinal); // 不得回用舊版固定目錄

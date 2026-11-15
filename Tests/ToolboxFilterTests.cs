@@ -150,11 +150,11 @@ public class ToolboxFilterTests
     {
         Assert.Equal(
             ToolboxIdentity.ForUrl("HTTPS://EXAMPLE.COM:443/tools/#overview"),
-            ToolboxIdentity.ForUrl("https://example.com/tools"));
+            ToolboxIdentity.ForUrl("https://example.com/tools/#overview"));
         Assert.NotEqual(
             ToolboxIdentity.ForUrl("https://example.com/tools?mode=read"),
             ToolboxIdentity.ForUrl("https://example.com/tools?mode=write"));
-        Assert.Equal(
+        Assert.NotEqual(
             ToolboxIdentity.ForUrl("https://example.com/tools/?mode=read#details"),
             ToolboxIdentity.ForUrl("https://example.com/tools?mode=read"));
     }
@@ -224,7 +224,7 @@ public class ToolboxFilterTests
         var service = new ToolboxService();
         var builtin = service.Tools.First(t => t.Name == "CPU-Z");
         int count = service.Tools.Count;
-        const string duplicateUrl = "HTTPS://WWW.CPUID.COM:443/softwares/cpu-z.html#download";
+        const string duplicateUrl = "HTTPS://WWW.CPUID.COM:443/softwares/cpu-z.html";
         Assert.Equal(ToolboxIdentity.ForUrl(builtin.Target), ToolboxIdentity.ForUrl(duplicateUrl));
         var urlResult = service.AddCustomTool(new ToolboxCustomTool
         {

@@ -87,7 +87,7 @@ public sealed class VolumeService : ObservableObject
     internal sealed record VolumeReading(
         string Name, string Root, string Label, string Format, double Total, double Free);
 
-    /// <summary>對每一顆碟丢一個探測，整批只等到 <see cref="ProbeTimeoutMs"/>；逾時的那顆這輪不給讀數。</summary>
+    /// <summary>每顆磁碟用專用執行緒探測，避免共享執行緒集區飽和時整批尚未啟動便逾時。</summary>
     internal static List<VolumeReading> Collect(Func<DriveInfo, VolumeReading?> probe, int timeoutMs = ProbeTimeoutMs)
     {
         var results = new List<VolumeReading>();
@@ -96,7 +96,21 @@ public sealed class VolumeService : ObservableObject
         catch { return results; }
 
         var tasks = new List<Task<VolumeReading?>>(drives.Length);
-        foreach (var d in drives) tasks.Add(Task.Run(() => probe(d)));
+        foreach (var d in drives)
+        {
+            var completion = new TaskCompletionSource<VolumeReading?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var thread = new Thread(() =>
+            {
+                try { completion.TrySetResult(probe(d)); }
+                catch (Exception ex) { completion.TrySetException(ex); }
+            })
+            {
+                IsBackground = true,
+                Name = "XinSpect volume probe",
+            };
+            thread.Start();
+            tasks.Add(completion.Task);
+        }
 
         try { Task.WaitAll([.. tasks], timeoutMs); }
         catch { /* 個別探測失敗不影響其他顆；逾時由下方狀態判斷 */ }

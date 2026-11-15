@@ -10,8 +10,8 @@ namespace XinSpect;
 /// 讓 detailed timing／standard timing 裡的時序能被「叫出名字」。
 /// </para>
 /// <para>
-/// <b>沒有新讀取面：</b>純知識包（與第 331 輪的 WHEA 節區表同款）——Collect 不做 I/O。
-/// EDID 位元組的對照消費者留給 EDID 解碼側（Cta861.cs／EdidService）下一輪接。
+/// <b>本服務是純知識包：</b>Collect 不做 I/O。產品端的 <see cref="EdidTimings"/> 已在 EDID 解碼路徑
+/// 讀取 established、standard、base DTD 與 CTA DTD；DTD 用完整時序比對，standard 只回報唯一幾何候選。
 /// </para>
 /// </remarks>
 public static class DmtFactsService
@@ -82,11 +82,11 @@ public static class DmtFactsService
             new HardwareFact(SummaryKey, Category, "DMT 時序知識包彙總",
                 $"收錄 {modes} 條 VESA DMT 模式（0x01–0x58，含 {DmtKnowledge.Modes.Count(m => m.ReducedBlanking)} 條 RB 變體與 "
                 + $"{DmtKnowledge.Modes.Count(m => m.Interlaced)} 條交錯式）、{est1} 條 established timing I、{est3} 條 established timing III"
-                + $"・這是**解碼表**（讓 EDID 時序有名字），不是行為——EDID 位元組的消費者在 EDID 解碼側，本輪不接",
+                + "・這是解碼表；產品端 EDID DTD 消費者以完整時序比對，standard timing 僅列候選",
                 "條", Source, FactTrustLevel.Measured, false, at, modes),
             new HardwareFact(ModesKey, Category, "DMT 逐模式對照表",
                 string.Join("\n", rows), "條", Source, FactTrustLevel.Measured, false, at, modes),
-            new HardwareFact(Est1Key, Category, "Established Timing I 位圖對照（EDID 位元組 32–34）",
+            new HardwareFact(Est1Key, Category, "Established Timing I 位圖對照（EDID 位元組 35–37）",
                 string.Join("\n", est1Rows) + $"・24 位中 {24 - est1} 位保留未定義，如實不列",
                 "條", Source, FactTrustLevel.Measured, false, at, est1),
             new HardwareFact(Est3Key, Category, "Established Timing III 描述元位圖對照",
@@ -107,12 +107,11 @@ public static class DmtFactsService
                 DmtKnowledge.Version + "・更新通道：規格修訂時以公開源逐欄重對照，版本字串隨之更新",
                 "", Source, FactTrustLevel.Measured, false, at, null),
             new HardwareFact(BoundaryKey, Category, "DMT 時序知識包的界線宣告",
-                "① 本包是**解碼表**：DMT 全表與 established timing 兩張位圖的對照，不含任何 EDID 讀取——"
-                + "EDID 位元組的消費者在 EDID 解碼側，本輪不接；"
+                "① 本包是**解碼表**：DMT 全表與 established timing 兩張位圖的對照；產品端 EDID 解碼已接入，"
+                + "由同一份登錄檔 EDID 快照讀 established／standard／DTD；"
                 + "② **CVT-RB 生成式時序明文不做**（沿主目錄 VC-0039／NX 立場）：本表只收 VESA DMT 已定案的 88 條，"
                 + "不生成任何「應該存在」的時序；"
-                + "③ est1 的 17 條中有 " + est1Misses.Count + " 條**非 DMT 遺產模式**（640x480@67、832x624@75、720x400@88、"
-                + "1024x768@43i 等）——對不到 DMT 不是錯，是歷史；"
+                + "③ est1 的非 DMT 遺產模式如實由對照計算列出（含 Apple 1152x870@75）；"
                 + "④ HDMI VIC（VSDB）與 CTA VIC 分命名空間（見 vic.hdmivs.cta），本表不收 HDMI VIC；"
                 + "⑤ 刷新率字串原樣保留（59.94 不捨入成 60）——查找時全欄位都對才命中",
                 "", "專案界線宣告（無外部來源）", FactTrustLevel.Measured, false, at, null),

@@ -60,7 +60,16 @@ public class Cta861DecoderTests
         header.CopyTo(edid, 0);
         edid[0x7E] = 1;
         extension.CopyTo(edid, 128);
+        SetChecksum(edid, 0);
+        SetChecksum(edid, 128);
         return edid;
+    }
+
+    private static void SetChecksum(byte[] edid, int start)
+    {
+        int sum = 0;
+        for (int i = 0; i < 127; i++) sum += edid[start + i];
+        edid[start + 127] = (byte)(-sum);
     }
 
     // ── 擴充塊走訪 ────────────────────────────────────────────────────────
@@ -78,6 +87,7 @@ public class Cta861DecoderTests
     {
         var edid = EdidWithExtension(Chd0030Extension);
         edid[0x7E] = 4;   // 宣告 4 個，實際只有 1 個 128 位元組區塊
+        SetChecksum(edid, 0);
         var extensions = Cta861.ParseExtensions(edid);
         Assert.Single(extensions);
         Assert.Equal(3, extensions[0].Revision);
@@ -88,11 +98,21 @@ public class Cta861DecoderTests
     public void DTD起點越界時_不猜資料塊但保留修訂號()
     {
         var extension = (byte[])Chd0030Extension.Clone();
-        extension[2] = 0;       // DTD 起點 0（非法，合法範圍 4–127）
+        extension[2] = 2;       // 1–3 無效；0 表示沒有 DTD 區域
         var parsed = Cta861.ParseExtensions(EdidWithExtension(extension));
-        Assert.Single(parsed);
-        Assert.Empty(parsed[0].Blocks);
-        Assert.Equal(3, parsed[0].Revision);
+        Assert.Empty(parsed);
+        var diagnostic = Cta861.ParseExtensionsWithDiagnostics(EdidWithExtension(extension));
+        Assert.Contains(diagnostic.Issues, issue => issue.Contains("DTD 起點無效"));
+    }
+
+    [Fact]
+    public void ExtensionChecksumFailureIsReportedAndSkipped()
+    {
+        byte[] edid = EdidWithExtension(Chd0030Extension);
+        edid[255] ^= 1;
+        var parsed = Cta861.ParseExtensionsWithDiagnostics(edid);
+        Assert.Empty(parsed.Extensions);
+        Assert.Contains(parsed.Issues, issue => issue.Contains("擴充塊 1 checksum 無效"));
     }
 
     [Fact]
@@ -413,7 +433,16 @@ public class EdidCtaFactsTests
         header.CopyTo(edid, 0);
         edid[0x7E] = 1;
         extension.CopyTo(edid, 128);
+        SetChecksum(edid, 0);
+        SetChecksum(edid, 128);
         return edid;
+    }
+
+    private static void SetChecksum(byte[] edid, int start)
+    {
+        int sum = 0;
+        for (int i = 0; i < 127; i++) sum += edid[start + i];
+        edid[start + 127] = (byte)(-sum);
     }
 
     private static IReadOnlyList<HardwareFact> Collect(params (string Label, byte[] Edid)[] edids)
@@ -447,17 +476,58 @@ public class EdidCtaFactsTests
     }
 
     [Fact]
+    public void RegistryReadFailureWithoutEdidIsReadError_NotNoDisplays()
+    {
+        var facts = EdidCtaFactsService.Collect(At, () => [], ["Device Parameters access denied"]);
+        Assert.All(facts, f =>
+        {
+            Assert.Equal(FactAvailability.ReadError, f.Availability);
+            Assert.Contains("Device Parameters access denied", f.UnavailableReason);
+            Assert.Null(f.NumericValue);
+        });
+    }
+
+    [Fact]
     public void EDID有但沒有CTA擴充塊時標不適用_不是宣告了零項()
     {
         var plain = new byte[128];
         byte[] header = [0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00];
         header.CopyTo(plain, 0);
+        SetChecksum(plain, 0);
         var facts = Collect(("DEL S2719DGF", plain));
         Assert.All(facts, f =>
         {
             Assert.Equal(FactAvailability.NotApplicable, f.Availability);
             Assert.Contains("不是「宣告了 0 項」", f.UnavailableReason!);
         });
+    }
+
+    [Fact]
+    public void InvalidBaseChecksumIsUnknown_NotNoCtaDeclaration()
+    {
+        byte[] edid = (byte[])Chd0030.Clone();
+        edid[20] ^= 1;
+        var facts = Collect(("CHU CHUD", edid));
+        Assert.All(facts, f =>
+        {
+            Assert.Equal(FactAvailability.Unknown, f.Availability);
+            Assert.Contains("基本塊 checksum 無效", f.UnavailableReason);
+            Assert.Null(f.NumericValue);
+        });
+    }
+
+    [Fact]
+    public void OneInvalidDisplayMakesAggregateUnknownButKeepsValidPartialData()
+    {
+        byte[] bad = (byte[])Mtt1337.Clone();
+        bad[255] ^= 1;
+        var facts = Collect(("CHU CHUD", Chd0030), ("bad", bad));
+        var vic = facts.Single(f => f.Key == "edid.cta.vic.16");
+        Assert.Equal(FactAvailability.Unknown, vic.Availability);
+        Assert.Contains("CHU CHUD", vic.Value);
+        Assert.Contains("擴充塊 1 checksum 無效", vic.UnavailableReason);
+        Assert.Null(vic.NumericValue);
+        Assert.All(facts, f => Assert.Equal(FactAvailability.Unknown, f.Availability));
     }
 
     [Fact]
@@ -570,7 +640,15 @@ public class HdrCapabilityRegressionTests
         edid[0x7E] = 1;
         for (int i = 0; i < 128; i++)
             edid[128 + i] = Convert.ToByte(hex.Substring(i * 2, 2), 16);
+        SetChecksum(edid, 0);
         return edid;
+    }
+
+    private static void SetChecksum(byte[] edid, int start)
+    {
+        int sum = 0;
+        for (int i = 0; i < 127; i++) sum += edid[start + i];
+        edid[start + 127] = (byte)(-sum);
     }
 
     [Fact]
@@ -599,6 +677,26 @@ public class HdrCapabilityRegressionTests
         Assert.Contains("BT.2100 HLG", eotf.Value);
         Assert.DoesNotContain("傳統 gamma（HDR 範圍）", eotf.Value);
     }
+
+    [Fact]
+    public void InvalidBaseChecksumReportsUnknown_NotNoHdr()
+    {
+        byte[] edid = RealHdrEdid();
+        edid[20] ^= 1;
+        var row = HdrCapabilityService.Read(edid).Single(r => r.Label == "EDID HDR 區塊");
+        Assert.Equal("未知", row.Value);
+        Assert.Contains("基本塊 checksum 無效", row.Status);
+    }
+
+    [Fact]
+    public void InvalidExtensionChecksumReportsUnknown_NotNoHdr()
+    {
+        byte[] edid = RealHdrEdid();
+        edid[255] ^= 1;
+        var row = HdrCapabilityService.Read(edid).Single(r => r.Label == "EDID HDR 區塊");
+        Assert.Equal("未知", row.Value);
+        Assert.Contains("擴充塊 1 checksum 無效", row.Status);
+    }
 }
 
 /// <summary>
@@ -617,6 +715,8 @@ public class EdidSummaryCountTests
         header.CopyTo(edid, 0);
         edid[0x7E] = 1;
         extension.CopyTo(edid, 128);
+        SetChecksum(edid, 0);
+        SetChecksum(edid, 128);
         return edid;
     }
 
@@ -625,7 +725,15 @@ public class EdidSummaryCountTests
         var edid = new byte[128];
         byte[] header = [0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00];
         header.CopyTo(edid, 0);
+        SetChecksum(edid, 0);
         return edid;
+    }
+
+    private static void SetChecksum(byte[] edid, int start)
+    {
+        int sum = 0;
+        for (int i = 0; i < 127; i++) sum += edid[start + i];
+        edid[start + 127] = (byte)(-sum);
     }
 
     [Fact]
@@ -644,7 +752,7 @@ public class EdidSummaryCountTests
     {
         var good = PlainBasicBlock();
         // 讓 128 位元組的和為 0 mod 256：最後一位補上抵消值
-        int sum = good.Sum(b => (int)b);
+        int sum = good.Take(127).Sum(b => (int)b);
         good[127] = (byte)((256 - (sum & 0xFF)) & 0xFF);
 
         var state = FinalInventoryFactsService.CountEdids([("A", good)]);

@@ -34,6 +34,10 @@ public class BcdElementsTests
         description             Windows 11
         nx                      OptIn
         hypervisorlaunchtype    Off
+
+        RAM Defects
+        --------------------
+        identifier              {badmemory}
         badmemorylist           0x1234 0x5678
         badmemoryaccess         Yes
         """;
@@ -91,7 +95,7 @@ public class BcdElementsTests
         var dev = Fact(facts, BcdElementsFactsService.LoaderDeviceKey);
         Assert.Contains("partition=C:", dev.Value);
         Assert.Contains("partition=D:", dev.Value);
-        Assert.Contains("device 與 osdevice 不一致", dev.Value);
+        Assert.DoesNotContain("BitLocker", dev.Value);
         Assert.Equal("OptIn", Fact(facts, BcdElementsFactsService.NxKey).Value);
         Assert.Equal("Off", Fact(facts, BcdElementsFactsService.HvLaunchKey).Value);
     }
@@ -105,7 +109,7 @@ public class BcdElementsTests
         Assert.Contains("0x1234", bad.Value);
         Assert.Contains("0x5678", bad.Value);
         var trim = Fact(facts, BcdElementsFactsService.MemTrimKey);
-        Assert.Contains("沒有 removememory／truncatedmemory 欄位", trim.Value);
+        Assert.Contains("沒有 removememory／truncatememory 欄位", trim.Value);
     }
 
     [Fact]
@@ -154,13 +158,13 @@ public class BcdElementsTests
     }
 
     [Fact]
-    public void 非UEFI機器韌體層是NotApplicable()
+    public void 缺韌體物件不足以判定非UEFI()
     {
         const string legacy = "舊版作業系統\n--------------------\nidentifier              {legacy}";
         var facts = BcdElementsFactsService.Collect(EnumOutput, legacy, null, null, DateTimeOffset.UnixEpoch);
         var fw = Fact(facts, BcdElementsFactsService.FwBootMgrKey);
-        Assert.Equal(FactAvailability.NotApplicable, fw.Availability);
-        Assert.Contains("不從 WMI 推測", fw.UnavailableReason);
+        Assert.Equal(FactAvailability.Unknown, fw.Availability);
+        Assert.Contains("不推斷平台類型", fw.UnavailableReason);
     }
 
     [Fact]
@@ -178,7 +182,8 @@ public class BcdElementsTests
         Assert.Contains("沒有 bootsequence 欄位", seq.Value);
         // loader 找不到時的形狀：default 沒有 → loader 區塊找不到 → 如實說
         var dev = Fact(facts, BcdElementsFactsService.LoaderDeviceKey);
-        Assert.Contains("找不到系統載入器區塊", dev.Value);
+        Assert.Equal(FactAvailability.Unknown, dev.Availability);
+        Assert.Contains("系統載入器", dev.UnavailableReason);
     }
 
     [Fact]

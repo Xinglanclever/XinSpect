@@ -316,6 +316,7 @@ public static class FactKeyCatalog
         "edid.cta.vcdb",
         "edid.cta.vsdb.hdmi",
         "edid.cta.ycbcr420",
+        "edid.timings",
         "eg.arm64",
         "eg.ci",
         "eg.corpus",

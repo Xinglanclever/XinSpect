@@ -54,6 +54,7 @@ public static class FactCoverageReport
                        + "它與取樣率的關係是算術（毫秒＝框架÷取樣率），不是對帳。",
             ["role."] = "已安裝角色與功能來自選用功能與服務清單，單一來源；服務狀態是同一份資料的延伸。",
             ["display."] = "顯示轉接器識別來自 WMI 單一來源。PNP 匯流排來源與 EDID 的交叉已寫在判讀層。",
+            ["edid.timings"] = "顯示器宣告時序來自登錄檔 EDID 單一讀取面；DMT 是解碼參照表，不是第二份面板時序。",
             ["monitor."] = "顯示器組成來自 WMI 的 EDID 解析結果，單一來源。",
             ["mon."] = "顯示器連接介面（VideoOutputTechnology）單一來源。",
             ["virt."] = "虛擬化的三個觀測值（CPUID／選用功能／服務）本來就是刻意分開陳述的三件事。"

@@ -20,6 +20,7 @@
 | `spd-ddr4-real-dimm2.bin` | DDR4 UDIMM 8 GB，料號 `ZJ-4000-C18-8G-RWMC`，**製造日期與序號在 SPD 裡都是空的**。 | 2026-09-05 |
 | `spd-ddr4-real-dimm3.bin` | 與 dimm1 同批（同料號、同週次、同 CRC），序號不同。 | 2026-09-05 |
 | `spd-ddr4-self-read-tampered.bin` | 本機第四條模組，**由曦覽自己走處理器 iMC SMBus 讀回來**。位元組 0 被歸零而 CRC 沒重算——真實的「SPD 被動過」樣本。 | 2026-09-05 |
+| `edid-dell-u2412m.bin` | Dell U2412M 的 128 位元組 EDID 基本塊；取自 [linuxhw/EDID](https://github.com/linuxhw/EDID/blob/master/Digital/Dell/DELA002/D6B4489D2733)，用於驗證 established timing 位圖與完整 DTD。 | 2026-11-16 |
 
 ### 兩份來源互相對過，逐位元組完全相同
 
