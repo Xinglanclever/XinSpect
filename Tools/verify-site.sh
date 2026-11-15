@@ -50,7 +50,16 @@ has "color-scheme meta（en）"                  1   "$(curl -sL "$BASE/index-en
 chk "feed.xml language 標籤"                 1   "$(curl -s "$BASE/feed.xml" | grep -c '<language>zh-Hant</language>')"
 chk "factkeys.json 200"                     200 "$(code "$BASE/factkeys.json")"
 chk "factkeys.json 1,178 鍵／157 域"          1   "$(curl -s "$BASE/factkeys.json" | python -I -c "import json,sys;d=json.load(sys.stdin);print(1 if d['total']==1178 and d['domainCount']==157 else 0)")"
+has "HSTS 頭"                                1   "$(curl -s -I "$BASE/" | grep -ci 'strict-transport-security')"
+has "COOP 頭"                                1   "$(curl -s -I "$BASE/" | grep -ci 'cross-origin-opener-policy')"
+has "沿革版本號直鏈 Release（zh）"              1   "$(echo "$H" | grep -c 'releases/tag/v')"
+has "沿革版本號直鏈 Release（en）"              1   "$(curl -sL "$BASE/index-en.html" | grep -c 'releases/tag/v')"
 chk "sw.js 200"                             200 "$(code "$BASE/sw.js")"
+for v in MagnumOpus_600s_ZH_TW MagnumOpus_600s_ZH_CN MagnumOpus_600s_EN; do
+  chk "影片資產 $v 200（GitHub）"           200 "$(curl -sIL --retry 3 --retry-all-errors --max-time 60 -o /dev/null -w "%{http_code}" "https://github.com/Xinglanclever/XinSpect/releases/download/v3.28/XinSpect_$v.mp4")"
+done
+has "影片節（zh）"                           1   "$(echo "$H" | grep -c 'id="video"')"
+has "影片節（en）"                           1   "$(curl -sL "$BASE/index-en.html" | grep -c 'id="video"')"
 has "SW 註冊（zh）"                           1   "$(echo "$H" | grep -c 'serviceWorker')"
 has "SW 註冊（en）"                           1   "$(curl -sL "$BASE/index-en.html" | grep -c 'serviceWorker')"
 chk "dict.js 200"                           200 "$(code "$BASE/dict.js")"
