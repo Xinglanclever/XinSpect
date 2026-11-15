@@ -4,6 +4,7 @@
 set -u
 BASE=${1:-https://xinspect.de5.net}
 fail=0
+VER=$(sed -n 's/.*<Version>\(.*\)<\/Version>.*/\1/p' "$(dirname "$0")/../XinSpect.csproj" | head -1)
 chk(){ if [ "$2" = "$3" ]; then echo "ok   $1"; else echo "FAIL $1（期望 $2 實得 $3）"; fail=1; fi; }
 has(){ if [ "$3" -ge "$2" ]; then echo "ok   $1"; else echo "FAIL $1（至少 $2 實得 $3）"; fail=1; fi; }
 code(){ curl -s --retry 3 --retry-delay 1 --retry-all-errors --max-time 30 -o /dev/null -w "%{http_code}" "$1"; }
@@ -60,7 +61,12 @@ for v in MagnumOpus_600s_ZH_TW MagnumOpus_600s_ZH_CN MagnumOpus_600s_EN; do
 done
 has "影片節（zh）"                           1   "$(echo "$H" | grep -c 'id="video"')"
 has "影片節（en）"                           1   "$(curl -sL "$BASE/index-en.html" | grep -c 'id="video"')"
-has "SW 註冊（zh）"                           1   "$(echo "$H" | grep -c 'serviceWorker')"
+# hero kicker 版本須等於專案版本
+mkdir -p obj/_v_js
+echo "$H" > obj/_v_js/hero.html
+chk "hero kicker 版本＝專案版本（$VER）"      1   "$(python -I -X utf8 Tools/check-hero.py obj/_v_js/hero.html "$VER")"
+curl -s --retry 3 --retry-all-errors --max-time 30 -H "User-Agent: xs-verify" "https://api.github.com/repos/Xinglanclever/XinSpect/releases/latest" > obj/_v_js/rel.json
+chk "資產表大小＝GitHub Release 實況"        0   "$(python -I -X utf8 Tools/check-assets.py obj/_v_js/hero.html obj/_v_js/rel.json)"
 has "SW 註冊（en）"                           1   "$(curl -sL "$BASE/index-en.html" | grep -c 'serviceWorker')"
 chk "dict.js 200"                           200 "$(code "$BASE/dict.js")"
 has "全域鍵搜尋快捷鍵（dict.js）"              1   "$(grep -c "e.key==='/'" site/dict.js)"
