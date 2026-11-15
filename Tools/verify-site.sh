@@ -61,6 +61,9 @@ for v in MagnumOpus_600s_ZH_TW MagnumOpus_600s_ZH_CN MagnumOpus_600s_EN; do
   chk "影片資產 $v 200（GitHub）"           200 "$(curl -sIL --retry 3 --retry-all-errors --max-time 60 -o /dev/null -w "%{http_code}" "https://github.com/Xinglanclever/XinSpect/releases/download/v3.28/XinSpect_$v.mp4")"
 done
 has "影片節（zh）"                           1   "$(echo "$H" | grep -c 'id="video"')"
+has "EN 誠實邊界節"                           1   "$(curl -sL "$BASE/index-en.html" | grep -c 'id="limits"')"
+has "三支影片全嵌入（zh）"                     2   "$(echo "$H" | grep -c 'video-poster-ZH_CN\|video-poster-EN')"
+has "三支影片全嵌入（en）"                     1   "$(curl -sL "$BASE/index-en.html" | grep -c 'video-poster-ZH_TW')"
 has "影片節（en）"                           1   "$(curl -sL "$BASE/index-en.html" | grep -c 'id="video"')"
 # hero kicker 版本須等於專案版本
 mkdir -p obj/_v_js

@@ -320,7 +320,8 @@ footer a:hover{color:var(--ink);text-decoration:underline}
   <div class="vids">
     <div class="vid"><video controls preload="none" width="1280" height="720" poster="video-poster-EN.jpg" src="https://github.com/Xinglanclever/XinSpect/releases/download/v3.28/XinSpect_MagnumOpus_600s_EN.mp4"></video><div class="vlab"><span>English</span><span>1080p ・ 36.8 MB ・ <a href="https://github.com/Xinglanclever/XinSpect/releases/download/v3.28/XinSpect_MagnumOpus_600s_EN.mp4">Download</a></span></div></div>
   </div>
-  <div class="vother"><span style="color:var(--grey);align-self:center">Other languages:</span><a href="https://github.com/Xinglanclever/XinSpect/releases/download/v3.28/XinSpect_MagnumOpus_600s_ZH_TW.mp4" lang="zh-Hant">繁體中文版</a><a href="https://github.com/Xinglanclever/XinSpect/releases/download/v3.28/XinSpect_MagnumOpus_600s_ZH_CN.mp4" lang="zh-CN">簡體中文版</a></div>
+    <div class="vid"><video controls preload="none" width="1280" height="720" poster="video-poster-ZH_TW.jpg" src="https://github.com/Xinglanclever/XinSpect/releases/download/v3.28/XinSpect_MagnumOpus_600s_ZH_TW.mp4"></video><div class="vlab"><span lang="zh-Hant">繁體中文版（ZH-TW）</span><span>1080p ・ 41.9 MB ・ <a href="https://github.com/Xinglanclever/XinSpect/releases/download/v3.28/XinSpect_MagnumOpus_600s_ZH_TW.mp4">Download</a></span></div></div>
+    <div class="vid"><video controls preload="none" width="1280" height="720" poster="video-poster-ZH_CN.jpg" src="https://github.com/Xinglanclever/XinSpect/releases/download/v3.28/XinSpect_MagnumOpus_600s_ZH_CN.mp4"></video><div class="vlab"><span lang="zh-CN">簡體中文版（ZH-CN）</span><span>1080p ・ 40.9 MB ・ <a href="https://github.com/Xinglanclever/XinSpect/releases/download/v3.28/XinSpect_MagnumOpus_600s_ZH_CN.mp4">Download</a></span></div></div>
 </div></section>
 
 <section id="faq" style="border-top:1px solid var(--line)"><div class="wrap">
@@ -344,6 +345,17 @@ footer a:hover{color:var(--ink);text-decoration:underline}
     <div class="dl-card"><h3 style="font-size:16px">Local encryption & integrity</h3><div class="tag">DPAPI ・ SHA-256</div><p>AI API keys are DPAPI-encrypted before touching disk; downloads always pass PE header and size-floor checks; per-asset SHA-256 lives in the Release's SHA256SUMS.txt. Publisher signing (non-repudiation) is honestly listed as scheduled, not pretended.</p></div>
   </div>
   <p style="margin-top:18px;font-size:13px;color:var(--grey)">Found a security issue? Please use the private channel in <a style="color:var(--blue);font-weight:700" rel="noopener" href="https://github.com/Xinglanclever/XinSpect/blob/main/SECURITY.md">SECURITY.md</a> — the only entry guaranteed to stay private.</p>
+</div></section>
+
+<section id="limits" style="border-top:1px solid var(--line)"><div class="wrap">
+  <div class="sec-head"><span class="sq"></span><h2>Honest limits</h2><span class="note">registered, not yet fixed</span></div>
+  <p style="font-size:14px;color:#555;max-width:760px;margin-bottom:22px">Full audit table in <a style="color:var(--blue);font-weight:700" rel="noopener" href="https://github.com/Xinglanclever/XinSpect/blob/main/docs/%E5%AF%A9%E6%9F%A5%E5%A0%B1%E5%91%8A-v3.17.md">docs/審查報告-v3.17.md</a>. The items below are registered and not yet fixed — listing them is evidence that we don't pretend to be finished.</p>
+  <div class="dl-grid">
+    <div class="dl-card"><h3 style="font-size:16px">SDK path DLL injection surface</h3><div class="tag">XtuCore</div><p>The Intel XTU SDK load path still has an injection surface to close.</p></div>
+    <div class="dl-card"><h3 style="font-size:16px">IOMMU facts, two drifting copies</h3><div class="tag">WmiSecurityReader</div><p>The same IOMMU facts exist in two sources that may disagree — to be converged into one.</p></div>
+    <div class="dl-card"><h3 style="font-size:16px">SpecOverride／CFG fail-open</h3><div class="tag">bypass hardening</div><p>Override and config files currently fail open on anomalies; they should fail closed.</p></div>
+    <div class="dl-card"><h3 style="font-size:16px">baseline.json without integrity protection</h3><div class="tag">signing scheduled</div><p>The baseline file has no integrity protection yet; publisher signing (non-repudiation) is also scheduled — stated openly, not pretended.</p></div>
+  </div>
 </div></section>
 
 <section id="domains" style="border-top:1px solid var(--line)"><div class="wrap">
