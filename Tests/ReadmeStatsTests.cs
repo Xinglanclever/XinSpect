@@ -327,7 +327,10 @@ public class ReadmeStatsTests
         // 「最大的 N 個域」不是編輯挑的，是**算出來的**：鍵數 ≥20。
         // 第 318 輪之前這一段停在「十一個」——`os` 域在第 309 輪長到 23 把之後就該進來，
         // 但沒有任何東西會叫。這一條從目錄重算門檻、清單與合計，三者一起釘住。
-        string text = Readme();
+        // 2026-11-15 第 331 輪：v3.28 的 README 重構（b2ac571／deaf314）把 6.2 的正文搬進
+        // docs/百科-v3.17.md，README.md 只留規模表——這條守門的讀取對象跟著搬，
+        // 否則它在重構之後就是一條紅燈（HEAD 實測：README.md 裡 0 個 `#### 6.2.N` 標題）。
+        string text = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "百科-v3.17.md"));
         var big = FactKeyCatalog.Keys
             .GroupBy(k => k.Split('.')[0], StringComparer.Ordinal)
             .Select(g => (Domain: g.Key, Count: g.Count()))
@@ -342,7 +345,7 @@ public class ReadmeStatsTests
 
         // 每一域的標題：`#### 6.2.N \`域\` — 說明（N 把）`，編號連續、計數與目錄相符。
         var heads = System.Text.RegularExpressions.Regex.Matches(text,
-                @"^#### 6\.2\.(\d+) `([^`]+)` — [^（]*（(\d+) 把）$", RegexOptions.Multiline)
+                @"^#### 6\.2\.(\d+) `([^`]+)` — [^（]*（(\d+) 把）?$", RegexOptions.Multiline)
             .Select(m => (Number: int.Parse(m.Groups[1].Value), Domain: m.Groups[2].Value,
                           Count: int.Parse(m.Groups[3].Value)))
             .ToList();

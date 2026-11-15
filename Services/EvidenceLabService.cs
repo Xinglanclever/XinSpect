@@ -2418,6 +2418,10 @@ public sealed class EvidenceLabService : ObservableObject
             // 安全開機四環（U10-SE-0001／SE-0002，第 314 輪）：吃上面已經產生的事實（uefi.pk／
             // uefi.kek.count／uefi.db.count／uefi.dbx.count／uefi.setup_mode），不重讀任何變數。
             baseFacts.AddRange(SecureBootChainFactsService.Collect(baseFacts, DateTimeOffset.UtcNow));
+            // WHEA 節區知識包（U10 第四圈批次一，第 331 輪）：純對照表、零讀取面——
+            // 讓 os.ev.whea.* 的事件接得上「這是哪一類節區／哪一種通知」。內容不隨機器變化，
+            // 放在 getter 的純陳述區（與 MeasurementBudget 同款），不走收集步驟。
+            baseFacts.AddRange(WheaSectionFactsService.Collect(DateTimeOffset.UtcNow));
             // 鍵範圍檢查（QS-001）與 cap.* 同款：輸入是前面各組的聯集、不含自己——無遞迴
             baseFacts.Add(KeyRangeGuardService.Collect(DateTimeOffset.UtcNow, baseFacts));
             // 診斷報告整合（NG-004）與提權審計／更新儀表（IN-005／UF-010）：同上，分母不含自己

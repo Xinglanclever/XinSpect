@@ -1,4 +1,4 @@
-namespace XinSpect.Tests;
+﻿namespace XinSpect.Tests;
 
 /// <summary>
 /// 目前這一棵樹的專案測試數——README 測試徽章的單一來源。
@@ -32,5 +32,5 @@ internal static class TestSuiteBaseline
     /// 而 5476→5505 實際只加了 29 條（見 docs/PROGRESS-PLAN-2026-10-11.md 第 550 項的更正註記）。
     /// </para>
     /// </summary>
-    public const int ProjectTests = 8059;   // 2026-11-14：工具箱去重與 Agent 橋接回歸測試
+    public const int ProjectTests = 8071;   // 2026-11-15：U10 第四圈批次一（WHEA 節區知識包）＋12 測試
 }

@@ -27,6 +27,8 @@
 | `ROUND-328-FLEET-BASELINE-2026-10-30.md` | 第 328 輪（U10-EN-0001）：同型號族群基線（`fleet.summary`／`fleet.peer.*`／`fleet.boundary`）——只讀本機快照目錄、**不上傳**（型別層有守門：兩個檔案不得出現 HttpClient／WebRequest／Socket）；型號是字串相等不是 SKU 知識；樣本少於 4 份只給中位數不給 z 分數；只比每份都有數值的鍵。 |
 | `ROUND-329-NVME-RESERVED-2026-10-30.md` | 第 329 輪（U10-NV-0029）：NVMe Identify 保留區非零掃描（`nvme.rsvd.summary`／`nvme.rsvd.disk.*`／`nvme.rsvd.boundary`）——八段保留區共 1,530 位元組（邊界由 nvme.h 逐欄累加）；廠商區 vs 不算保留區。**同輪抓到已在出貨的缺陷**：WCTEMP 位移寫成 0x14A（實際落在 sanicap 裡），正解是 0x10A——程式與測試用了同一個錯誤假設，所以一路綠燈。 |
 | `ROUND-330-PROCESS-RUNNER-2026-10-30.md` | 第 330 輪（修外部缺陷報告 D4／D9／D10／D11）：① `Services/ProcessRunner.cs`——兩個串流都用非同步讀**且在 `WaitForExit` 之前就開始讀**，逾時殺整棵行程樹（舊寫法下 `timeoutMs` 是安慰劑：子行程灌爆 stderr 時 `WaitForExit` 那行永遠走不到）；② `AtomicWrite` 暫存名由固定 `.tmp` 改為含行程 ID 與序號（多實例併發會把別人的半成品搬成正式檔）；③ `HistoryStore` 尾端垃圾在載入當場重寫（否則下一次 append 接在垃圾後、新的一筆讀在錯位移而丟失）；④ `ExternalReportService` 加 64 MiB 上限並把界線寫進 Status。19 條新測試，含會灌爆 pipe、併發 300 次、造 64 MB 檔案的情境。 |
+| `CIRCLE-4-CANDIDATES-2026-11-15.md` | **第四圈 32 項候選（意義層：解碼表讓自述能被讀懂＋BCD 現值＋WMI 補遺）**，六批次（WHEA 知識包／DMT／BCD／WMI／SMART 補遺／唯讀檢測）；附孤兒盤點的工具誤判教訓（`grep` 需 `-a`）。 |
+| `ROUND-331-WHEA-SECTION-KP-2026-11-15.md` | 第 331 輪（第四圈批次一）：WHEA 節區知識包——`whea.sec.*` 六把鍵（15 節區 GUID＋8 通知類型＋9 格 PCIe 埠型別）；IA64 條目因 Linux cper.h 的 GUID_INIT 位元組數不符（9≠8、巨集未展開）**不命名、待核**；接手一條既有紅燈（6.2 守門的讀取對象跟著 v3.28 重構搬到百科）。 |
 | `dedup_check.py`／`sample_check.py` | 可重跑之稽核腳本（絕對路徑寫死）。 |
 | `ULTIMATE-10000-EXPANSION-2026-10-24.md` | 歷史快照（十二批完成時點；**已被 10-25 版取代**，保留供對帳）。 |
 | `ULTIMATE-5000-RESERVOIR-2026-10-24.md` | 前導文件（歸檔；已被主目錄取代）。 |

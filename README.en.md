@@ -1,4 +1,4 @@
-[繁體中文](README.md) · [简体中文](README.zh-CN.md) · English
+﻿[繁體中文](README.md) · [简体中文](README.zh-CN.md) · English
 
 [![Official site](https://img.shields.io/badge/%F0%9F%8C%90_OFFICIAL_SITE-xinspect.de5.net-4C8DFF?style=for-the-badge&logo=cloudflare&logoColor=white)](https://xinspect.de5.net)
 
@@ -15,7 +15,7 @@ Where it can read, it gives the value and its source (which register, which WMI 
 ![Version](https://img.shields.io/badge/version-3.28-4C8DFF)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![Tests](https://img.shields.io/badge/tests-8059%20passed-3FB950)
+![Tests](https://img.shields.io/badge/tests-8071%20passed-3FB950)
 ![Mutation Score](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 > The 82% Stryker score covers only the pure-function `XinSpect.Decoders` library, not the GUI, CLI, or privileged access layer.
 ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
@@ -156,16 +156,16 @@ Every number here can be counted on a clean checkout. **How you count is part of
 
 | Item | Count | How to count (from the repo root) |
 |---|---:|---|
-| Catalogue keys / domains | 1,178 / 157 | Members of `Keys` in `Services/FactKeyCatalog.cs`; deduplicated first segment |
+| Catalogue keys / domains | 1,184 / 157 | Members of `Keys` in `Services/FactKeyCatalog.cs`; deduplicated first segment |
 | Dynamic key families | 69 | Members of `Families` in `Services/FactKeyDynamicCatalog.cs` |
 | Reachable pages | 65 | `Key =` entries in `Nav/PageRegistry.cs` |
 | Help entries | 288 | Members of `Entries` in `Nav/HelpCatalog.cs` |
-| Service files | 683 | `find Services -name '*.cs' \| wc -l` |
-| Test cases (baseline) | 8,059 | `ProjectTests` in `Tests/TestSuiteBaseline.cs` |
+| Service files | 684 | `find Services -name '*.cs' \| wc -l` |
+| Test cases (baseline) | 8,071 | `ProjectTests` in `Tests/TestSuiteBaseline.cs` |
 | CLI commands | 49 | `grep -c 'case "' XinSpectCli/Program.cs` |
 | Changelog entries | 133 | Members of `Entries` in `Nav/ChangelogCatalog.cs` |
 
-Of 1,178 catalogue keys, most are reachable on mainstream platforms; special chipsets, OEM BIOSes, virtual machines and older platforms fall back to the six states. The fact catalogue (1,178 keys) spans hardware, operating system, security, diagnostics, provenance and governance — it is a catalogue, not a count of hardware readings. All 1,178 keys are listed with provenance in the Chinese encyclopedia.
+Of 1,184 catalogue keys, most are reachable on mainstream platforms; special chipsets, OEM BIOSes, virtual machines and older platforms fall back to the six states. The fact catalogue (1,184 keys) spans hardware, operating system, security, diagnostics, provenance and governance — it is a catalogue, not a count of hardware readings. All 1,184 keys are listed with provenance in the Chinese encyclopedia.
 
 **What this table does not prove.** A catalogue key is not a hardware reading; the review catalogue (116 items in v3.17, 111 in v3.18) is not a count of confirmed defects and not a third-party audit.
 
@@ -189,7 +189,7 @@ cd XinSpect
 
 dotnet build XinSpect.csproj -c Release
 dotnet build XinSpectCli/XinSpectCli.csproj -c Release
-dotnet test Tests/XinSpect.Tests.csproj          # 8,059-case baseline
+dotnet test Tests/XinSpect.Tests.csproj          # 8,071-case baseline
 
 python Tools/gen-docs-html.py                    # regenerate 百科.html / 手冊.html
 python Tools/gen-readme-domains.py --check       # guard: README domain expansion vs catalogue

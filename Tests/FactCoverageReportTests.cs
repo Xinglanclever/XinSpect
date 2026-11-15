@@ -259,6 +259,16 @@ public class FactCoverageReportTests
         // 它數的是「幾層、每層幾台、幾個根」，輸入是第 309 輪同一份 SetupAPI 列舉；
         // 逐根的明細在 `os.devtree.root.` 家族裡。樹本身是 Windows 回報的 Parent 關聯，
         // 沒有第二條獨立通路能再建一次同一棵樹（CM_Get_Parent 是同一條）。上限跟著移到 422。
+        // 2026-11-15 第 331 輪（U10 第四圈批次一）：+6 條（WHEA 節區知識包）。六把全是
+        // 解碼表／界線的自我申報，來源就是出處表本身，沒有第二條通路可交叉：
+        //   `whea.sec.kp.summary`／`.kp.sections`／`.kp.notify`——知識包收錄筆數與兩張 GUID 對照表
+        //     （UEFI 規格附錄 N.2.1／N.2.2，分母由 WheaSectionKnowledgeTests 釘住）；
+        //   `whea.sec.pcie.devtype`——PCIe 埠型別碼表（SDK cper.h 列舉，2／3 未定義如實標）；
+        //   `whea.sec.ipf.legacy`——IPF 遺產節區的 NotApplicable 申報（Linux cper.h 該條
+        //     GUID_INIT 位元組數不符，本版不命名其 GUID，待核）；
+        //   `whea.sec.boundary`——界線宣告（不拆 blob、未收錄 GUID 不猜語意）。
+        // 淨額 +2：基線 448 設定時的實況其實是 444（餘額 4），六條進來後實況 450，
+        // 上限照實況移到 450。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
         int baseline = FactCoverageReport.ReviewedUncoveredBaseline;
         Assert.True(s.Uncovered <= baseline,

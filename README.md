@@ -1,4 +1,4 @@
-[简体中文](README.zh-CN.md) · 繁體中文 · [English](README.en.md)
+﻿[简体中文](README.zh-CN.md) · 繁體中文 · [English](README.en.md)
 
 [![官方網站](https://img.shields.io/badge/%F0%9F%8C%90_%E5%AE%98%E6%96%B9%E7%B6%B2%E7%AB%99-xinspect.de5.net-4C8DFF?style=for-the-badge&logo=cloudflare&logoColor=white)](https://xinspect.de5.net)
 
@@ -17,7 +17,7 @@
 ![版本](https://img.shields.io/badge/version-3.28-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-8059%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-8071%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 > Stryker 82% 僅涵蓋 `XinSpect.Decoders` 純解碼器類別庫，不代表整個 GUI、CLI 或核心存取層。
 ![授權](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
@@ -159,22 +159,22 @@ xsc --lang zh-CN             # 介面語言
 
 | 類別 | 數量 | 數法（在倉庫根執行） |
 |---|---:|---|
-| 編譯期事實鍵 | **1,178** | `Services/FactKeyCatalog.cs` 的 `Keys` 成員數 |
-| 事實域（鍵的第一段前綴） | **157** | 1,178 把鍵各自取第一段後去重 |
+| 編譯期事實鍵 | **1,184** | `Services/FactKeyCatalog.cs` 的 `Keys` 成員數 |
+| 事實域（鍵的第一段前綴） | **157** | 1,184 把鍵各自取第一段後去重 |
 | 動態鍵家族 | **69** | `Services/FactKeyDynamicCatalog.cs` 的 `Families` 成員數 |
-| 一鍵域／≤3 鍵域／≥20 鍵域 | 34／67／12 | 以域分組後計數 |
+| 一鍵域／≤3 鍵域／≥20 鍵域 | 34／66／12 | 以域分組後計數 |
 | 可到達畫面（`PageRegistry`） | **65** | `Nav/PageRegistry.cs` 的 `Key =` 條目數 |
 | XAML 檔（含對話框與控制項） | **82** | `ls Views/*.xaml` |
 | 全站說明條目（圓圈問號） | **288** | `Nav/HelpCatalog.cs` 的 `Entries` 成員數 |
-| 服務檔 | **683** | `find Services -name '*.cs' \| wc -l` |
-| 全域 C# 檔 | **1,615** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`work/`、`publish-*/`、`.git/` |
+| 服務檔 | **684** | `find Services -name '*.cs' \| wc -l` |
+| 全域 C# 檔 | **1,618** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`work/`、`publish-*/`、`.git/` |
 | 版本紀錄筆數 | **133** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
-| 專案測試基線 | **8,059** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
+| 專案測試基線 | **8,071** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
 | CLI 指令（`Execute` case 標籤） | **49** | `grep -c 'case "' XinSpectCli/Program.cs` |
 | 核心／特權後端列項 | **4** | WinRing0（第三方、已接入）／XsRegProbe（自研、已接入）／PawnIO（未接入）／BlueSquadron 核心驅動（未封裝） |
 | AI 輔助內部審查編目 | **116** | `docs/審查報告-v3.17.md` 的編目條目；v3.18 另列 111 條。不是確認缺陷數，也不是第三方審計 |
 
-**這張表不能證明什麼。** 1,178 是硬體、作業系統、安全、診斷、來源與治理等項目的整體目錄數，不是 1,178 項硬體讀值。審查編目也不是確認缺陷數；報告記錄了代理發現與作者驗證，不能替代獨立第三方審計。
+**這張表不能證明什麼。** 1,184 是硬體、作業系統、安全、診斷、來源與治理等項目的整體目錄數，不是 1,184 項硬體讀值。審查編目也不是確認缺陷數；報告記錄了代理發現與作者驗證，不能替代獨立第三方審計。
 
 ---
 
@@ -185,7 +185,7 @@ xsc --lang zh-CN             # 介面語言
 1. **核心通路面**：生產路徑是第三方 **WinRing0** 與自研 **XsRegProbe**（白名單唯讀 MSR／MMIO）。**PawnIO 未接入**（Native 綁定與 `ModulePins` 未完成）；**BlueSquadron** 的 C 核心驅動僅本機編譯通過，未封裝、未簽章、未執行驗證，**不列為生產核心路徑**。
 2. **沒有微軟簽章**（EV 憑證＋WHQL 是錢與流程）。因此「從 GitHub Release 直連下載」是使用者的必要紀律；`SHA256SUMS.txt` 只能防傳輸損毀，不能防替換整個 Release 的攻擊者。
 3. **審查不是第三方認證**。v3.17 的 116 條與 v3.18 的 111 條是作者與 AI 代理輔助的內部檢視，含審計者自己的誤報；完整清單與修復狀態見 [docs/審查報告-v3.17.md](docs/審查報告-v3.17.md)、[docs/審查報告-v3.18.md](docs/審查報告-v3.18.md)。
-4. **硬體長尾**：1,178 把鍵在主流平台上覆蓋良好，特殊晶片組、OEM 客製 BIOS、虛擬機與老平台會落回六態的「讀不到＋原因」，那不是 bug 被藏起來，而是原因被寫出來。
+4. **硬體長尾**：1,184 把鍵在主流平台上覆蓋良好，特殊晶片組、OEM 客製 BIOS、虛擬機與老平台會落回六態的「讀不到＋原因」，那不是 bug 被藏起來，而是原因被寫出來。
 5. **判讀留給人**：本工具不回答性能排名、推薦配置、購買建議，也不跨機型比大小。
 6. **文檔稅**：代碼、鍵目錄、說明條目、百科、README 是五重表示；守門測試釘住一致性，而守門也會紅燈失守——長期解法是單一來源生成。
 7. **bus factor**：專案由單人＋AI 代理維護，品質依賴守門人本人；HANDOFF 制度是對沖，不是解藥。
@@ -200,7 +200,7 @@ cd XinSpect
 
 dotnet build XinSpect.csproj -c Release          # 主程式
 dotnet build XinSpectCli/XinSpectCli.csproj -c Release
-dotnet test Tests/XinSpect.Tests.csproj          # 8,059 項基線
+dotnet test Tests/XinSpect.Tests.csproj          # 8,071 項基線
 
 python Tools/gen-docs-html.py                    # README.md → 百科.html（改了 README 就要重跑）
 python Tools/gen-readme-domains.py --check       # 守門：README 逐域展開與鍵目錄一致
