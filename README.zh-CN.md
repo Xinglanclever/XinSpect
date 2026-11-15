@@ -17,7 +17,7 @@
 ![版本](https://img.shields.io/badge/version-3.28-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-8071%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-8084%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 > Stryker 82% 仅覆盖 `XinSpect.Decoders` 纯解码器类库，不代表整个 GUI、CLI 或内核访问层。
 ![授权](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
@@ -160,16 +160,16 @@ xsc --lang zh-TW             # 界面语言
 
 | 项目 | 数量 | 数法（在仓库根运行） |
 |---|---:|---|
-| 事实键目录 | 1,184 键／157 个前缀 | `Services/FactKeyCatalog.cs` 的 `Keys` 成员数，取第一段前缀去重 |
+| 事实键目录 | 1,192 键／159 个前缀 | `Services/FactKeyCatalog.cs` 的 `Keys` 成员数，取第一段前缀去重 |
 | 动态键家族 | 69 个 | `Services/FactKeyDynamicCatalog.cs` 的 `Families` 成员数 |
 | 可到达画面 | 65 | `Nav/PageRegistry.cs` 的 `Key =` 条目数 |
 | 说明条目 | 288 | `Nav/HelpCatalog.cs` 的 `Entries` 成员数 |
-| 服务文件 | 684 | `find Services -name '*.cs' \| wc -l` |
-| 运行期测试案例 | 8,071（`Tests/TestSuiteBaseline.cs` 的 `ProjectTests`） | `dotnet test` 总数 |
+| 服务文件 | 685 | `find Services -name '*.cs' \| wc -l` |
+| 运行期测试案例 | 8,084（`Tests/TestSuiteBaseline.cs` 的 `ProjectTests`） | `dotnet test` 总数 |
 | CLI 指令 | 49 | `grep -c 'case "' XinSpectCli/Program.cs` |
 | 版本记录 | 133 | `Nav/ChangelogCatalog.cs` 的 `Entries` 成员数 |
 
-**这张表不能证明什么。** 1,184 是硬件、操作系统、安全、诊断、来源与治理等项目的整体目录数，不是 1,184 项硬件读值。
+**这张表不能证明什么。** 1,192 是硬件、操作系统、安全、诊断、来源与治理等项目的整体目录数，不是 1,192 项硬件读值。
 
 ## 诚实边界
 
@@ -191,7 +191,7 @@ cd XinSpect
 
 dotnet build XinSpect.csproj -c Release
 dotnet build XinSpectCli/XinSpectCli.csproj -c Release
-dotnet test Tests/XinSpect.Tests.csproj          # 8,071 项基线
+dotnet test Tests/XinSpect.Tests.csproj          # 8,084 项基线
 
 python Tools/gen-docs-html.py                    # 生成 百科.html／手册.html
 python Tools/gen-readme-domains.py --check       # 守门：README 逐域展开与键目录一致

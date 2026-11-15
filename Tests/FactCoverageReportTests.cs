@@ -269,6 +269,14 @@ public class FactCoverageReportTests
         //   `whea.sec.boundary`——界線宣告（不拆 blob、未收錄 GUID 不猜語意）。
         // 淨額 +2：基線 448 設定時的實況其實是 444（餘額 4），六條進來後實況 450，
         // 上限照實況移到 450。
+        // 2026-11-16 第 332 輪（U10 第四圈批次二）：+8 條（DMT 時序知識包）。八把全是解碼表
+        // 與界線的自我申報，來源就是出處表本身（VESA DMT v1.0r12＋E-EDID §3.8，經 Linux
+        // drm_edid.c 對照），沒有第二條通路可交叉：
+        //   `dmt.kp.summary`／`.kp.modes`——DMT 88 條全表與收錄筆數（分母由 DmtKnowledgeTests 釘住）；
+        //   `dmt.kp.est1`／`.kp.est3`——established timing 兩張位圖的逐條對照；
+        //   `vic.kp.selfcheck`——位圖↔DMT 自校結果；`vic.hdmivs.cta`——分命名空間成文；
+        //   `vic.kp.version`——版本與來源宣告；`dmt.kp.boundary`——界線（CVT-RB 明文不做等）。
+        // 上限照實況移到 458。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
         int baseline = FactCoverageReport.ReviewedUncoveredBaseline;
         Assert.True(s.Uncovered <= baseline,
