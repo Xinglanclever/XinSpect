@@ -277,6 +277,15 @@ public class FactCoverageReportTests
         //   `vic.kp.selfcheck`——位圖↔DMT 自校結果；`vic.hdmivs.cta`——分命名空間成文；
         //   `vic.kp.version`——版本與來源宣告；`dmt.kp.boundary`——界線（CVT-RB 明文不做等）。
         // 上限照實況移到 458。
+        // 2026-11-16 第 333 輪（U10 第四圈批次三）：+10 條（BCD 開機元素現值）。十把全是
+        // bcdedit /enum＋/enum firmware 的唯讀投影——同一個讀取面的不同欄位，欄位之間沒有
+        // 第二條獨立通路（BCD 沒有另一個官方 API 同時回答這些元素）：
+        //   `bcd.bootmgr.tools`／`.bootmgr.bootsequence`／`.bootmgr.device`——{bootmgr} 的
+        //     toolsdisplayorder／bootsequence／device+path；
+        //   `bcd.loader.device`／`.loader.nx`／`.loader.hvlaunch`——default 載入器的定位與政策；
+        //   `bcd.badmemory.list`／`.mem.trim`——壞記憶體頁框與記憶體遮蔽；
+        //   `bcd.fwbootmgr.order`——韌體層順序（/enum firmware，與 UEFI 變數路徑不同源）；
+        //   `bcd.access.statement`——存取法與新鮮度界線。上限照實況移到 468。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
         int baseline = FactCoverageReport.ReviewedUncoveredBaseline;
         Assert.True(s.Uncovered <= baseline,

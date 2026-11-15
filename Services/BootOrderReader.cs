@@ -20,8 +20,17 @@ public static class BootOrderReader
     /// <summary>等 bcdedit 回應的上限：超過就殺掉並如實說「沒回應」。</summary>
     public const int TimeoutMs = 5000;
 
-    /// <summary>讀一次 BCD；讀不到就是 <c>null</c> 加一句理由，不抛例外。</summary>
-    public static (string? Output, string? Reason) TryReadEnum()
+    /// <summary>讀一次 BCD（<c>/enum</c>）；讀不到就是 <c>null</c> 加一句理由，不抛例外。</summary>
+    public static (string? Output, string? Reason) TryReadEnum() => TryRead(["/enum"], "/enum");
+
+    /// <summary>
+    /// 讀一次 BCD 的韌體開機管理器（<c>/enum firmware</c>，U10-BD-0004，第 333 輪）。
+    /// 與 <see cref="TryReadEnum"/> 同一個執行檔、同一個逾時、同一個唯讀承諾——只多一個參數。
+    /// </summary>
+    public static (string? Output, string? Reason) TryReadEnumFirmware() =>
+        TryRead(["/enum", "firmware"], "/enum firmware");
+
+    private static (string? Output, string? Reason) TryRead(string[] args, string label)
     {
         // 第 330 輪（修 D4）：先前這裡是先 ReadToEnd 再 WaitForExit——那個順序有死鎖。
         // 現在改走 ProcessRunner：兩個串流在 WaitForExit 之前就開始非同步讀。
@@ -29,14 +38,14 @@ public static class BootOrderReader
         // 走 patch-09 同款 %SystemRoot%\System32 絕對路徑，缺檔如實回 None。
         string bcdedit = System.IO.Path.Combine(Environment.SystemDirectory, "bcdedit.exe");
         if (!System.IO.File.Exists(bcdedit)) return (null, "bcdedit.exe 不存在於 System32——環境異常，不下判決");
-        var run = ProcessRunner.Run(bcdedit, ["/enum"], TimeoutMs);
+        var run = ProcessRunner.Run(bcdedit, args, TimeoutMs);
         if (run.TimedOut) return (null, run.Reason);
-        if (run.Stdout is null) return (null, run.Reason ?? "bcdedit /enum 沒有任何輸出");
+        if (run.Stdout is null) return (null, run.Reason ?? $"bcdedit {label} 沒有任何輸出");
 
         if (string.IsNullOrWhiteSpace(run.Stdout))
             return (null, string.IsNullOrWhiteSpace(run.Stderr)
-                ? "bcdedit /enum 沒有任何輸出"
-                : $"bcdedit /enum 沒有輸出，錯誤訊息：{run.Stderr.Trim()}");
+                ? $"bcdedit {label} 沒有任何輸出"
+                : $"bcdedit {label} 沒有輸出，錯誤訊息：{run.Stderr.Trim()}");
 
         return (run.Stdout, null);
     }

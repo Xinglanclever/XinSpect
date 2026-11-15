@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace XinSpect;
 
@@ -155,7 +155,8 @@ public static class BootOrderFactsService
 
     // ── 解析 ─────────────────────────────────────────────────────────
 
-    private static List<Dictionary<string, List<string>>> ParseBlocks(string text)
+    /// <summary>把 <c>bcdedit /enum</c> 文字切成區塊（第 333 輪起公開：BCD 元素服務共用同一份解析，不另寫第二個解析器）。</summary>
+    public static List<Dictionary<string, List<string>>> ParseBlocks(string text)
     {
         var blocks = new List<Dictionary<string, List<string>>>();
         Dictionary<string, List<string>>? current = null;
@@ -204,16 +205,18 @@ public static class BootOrderFactsService
         return t.Length >= 3 && t.All(c => c == '-');
     }
 
-    private static List<string> Identifiers(Dictionary<string, List<string>> block)
+    /// <summary>區塊的 identifier 欄位（可能多值）。</summary>
+    public static List<string> Identifiers(Dictionary<string, List<string>> block)
         => Values(block, "identifier");
 
-    /// <summary>欄位值：多行清單（displayorder）要在空白處切開。</summary>
-    private static List<string> Values(Dictionary<string, List<string>> block, string name)
+    /// <summary>欄位值：多行清單（displayorder）要在空白處切開。第 333 輪起公開（同上理由）。</summary>
+    public static List<string> Values(Dictionary<string, List<string>> block, string name)
         => block.TryGetValue(name, out var raw)
             ? raw.SelectMany(v => v.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToList()
             : [];
 
-    private static Dictionary<string, string> DescribeAll(List<Dictionary<string, List<string>>> blocks)
+    /// <summary>identifier→description 的對照（第 333 輪起公開：BCD 元素服務共用）。</summary>
+    public static Dictionary<string, string> DescribeAll(List<Dictionary<string, List<string>>> blocks)
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var block in blocks)
