@@ -51,6 +51,23 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "3.30",
+            Date = "2026-11-16",
+            Title = "來源更清楚，量測更可靠",
+            Items =
+            [
+                "WMI 硬體類補遺與官方清單對帳：四類 provider 資料、86 類盤點及 22 類直接查詢分開標示。",
+                "SMART Intel/Solidigm 與 HGST 屬性按已核完整型號解讀；未核 OEM、協定或單位保留未知。",
+                "修正時鐘回撥、NVMe 查詢封包與描述子驗證、SAS／Storage Spaces 協定路由及來源截止判定。",
+                "磁碟唯讀掃描接上桌面與 CLI：可取消、四種塊尺、限定範圍及可選重讀；仍待實機矩陣驗證。",
+                "修正 Core Temp 每 CPU 核心數、TjMax 索引與華氏單位；熱力圖備援先收 TjMax 再換算差值，拒絕歧義核心映射。",
+                "新增 Core Temp／LHM 核心溫度候選差異展示；來源更新時間與實體核心對應未經實機驗證，不作精度認證。",
+                "AI 暫時性 HTTP 錯誤支援首次請求後最多 10 次重試；保留取消、退避與串流輸出後不重試。",
+                "新增工程憲法與代理必讀入口：深度、真實、安全、來源追溯及精確定義成為接手要求。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "3.29",
             Date = "2026-11-16",
             Title = "時序更精確，硬體掃描更可靠",

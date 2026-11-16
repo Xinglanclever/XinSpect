@@ -71,6 +71,15 @@ public sealed class ExternalSensorService : ObservableObject
     /// <summary>最近一次查詢取得的所有讀數。</summary>
     public ObservableCollection<ExternalReading> Readings { get; } = new();
 
+    public ObservableCollection<CoreTemperatureComparison> CoreTemperatureComparisons { get; } = new();
+
+    private string _comparisonStatus = "按重新偵測後核對 Core Temp 與 LHM 的逐核心溫度。";
+    public string ComparisonStatus
+    {
+        get => _comparisonStatus;
+        private set => SetProperty(ref _comparisonStatus, value);
+    }
+
     /// <summary>各來源偵測狀態。</summary>
     public ObservableCollection<SourceStatus> Sources { get; } = new();
 
@@ -79,11 +88,13 @@ public sealed class ExternalSensorService : ObservableObject
     /// <summary>
     /// 重新整理：依 <see cref="Mode"/> 嘗試各來源，合併結果。
     /// </summary>
-    public void Refresh()
+    public void Refresh(IReadOnlyList<CoreTemperatureSample>? primarySamples = null)
     {
         IsLoading = true;
         Readings.Clear();
         Sources.Clear();
+        CoreTemperatureComparisons.Clear();
+        ComparisonStatus = "交叉比對尚未完成。";
 
         var errors = new List<string>();
         int totalCount = 0;
@@ -157,6 +168,19 @@ public sealed class ExternalSensorService : ObservableObject
             else
             {
                 Status = "所有外部來源均無法連線";
+            }
+
+            if (primarySamples is null)
+            {
+                ComparisonStatus = "LHM 感測快照不可用，未做交叉核對。";
+            }
+            else
+            {
+                var comparisons = SensorCrossCheckService.CompareCoreTemperatures(primarySamples, Readings);
+                foreach (var comparison in comparisons) CoreTemperatureComparisons.Add(comparison);
+                ComparisonStatus = comparisons.Count == 0
+                    ? "沒有可比對的逐核心溫度（限單 CPU、非異質 Intel，需名稱與正規化序號相同、讀取時間差 ≤3 秒）。"
+                    : $"已按序號比對 {comparisons.Count} 個核心候選；來源更新時間與核心對應未經實機驗證，差值不代表精度。";
             }
         }
         catch (Exception ex)

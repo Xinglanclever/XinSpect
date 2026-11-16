@@ -1,6 +1,8 @@
+using System.Text.RegularExpressions;
+
 namespace XinSpect;
 
-/// <summary>SMART 知識表收錄的六家廠商。</summary>
+/// <summary>SMART 知識表收錄的八家廠商／品牌群。</summary>
 public enum SmartVendor
 {
     Samsung,
@@ -11,6 +13,10 @@ public enum SmartVendor
     /// <summary>Micron（別名 Crucial——消費品牌同一家）。</summary>
     Micron,
     SanDisk,
+    /// <summary>Intel 與 Solidigm SSD（上游 drivedb 對 S46x0/S45x0 共用條目）。</summary>
+    IntelSolidigm,
+    /// <summary>HGST 機械碟（含與 Hitachi 產品世代重疊的具名系列）。</summary>
+    Hgst,
 }
 
 /// <summary>
@@ -38,11 +44,11 @@ public sealed record SmartAttributeInfo(
     string Source);
 
 /// <summary>
-/// SMART 廠商屬性知識表（ULTIMATE-10000 第 14 列：六家屬性 ID→語意對照，raw/normalized 分開）。
+/// SMART 廠商屬性知識表（ULTIMATE-10000 第 14 列：八家屬性 ID→語意對照，raw/normalized 分開）。
 /// <b>知識層的純查詢</b>——不改寫 <see cref="StorageSmartService"/> 的顯示（誰要消費由接線決定）；
 /// 未收錄的 ID／廠商回 null（未知），不丟例外、不猜語意。
 /// <para>
-/// 出處（皆為 2026-10-25 抓取）：
+/// 每列 Source 記錄其出處與抓取日期；新增 Intel/Solidigm 與 HGST 映射於 2026-11-16 從 smartmontools 上游 drivedb.h 核對。
 /// <list type="bullet">
 /// <item><b>Samsung</b>：官方《Samsung SSD Application Note for Data Centers — S.M.A.R.T.》
 /// （© 2014 Samsung Electronics，semiconductor.samsung.com/resources/others/SSD_Application_Note_SMART_final.pdf，
@@ -58,14 +64,18 @@ public sealed record SmartAttributeInfo(
 /// （該條目自註對照 Micron 官方 TN-FD-22《Client SSD SMART Attributes》Rev. E，2018-09-28）。</item>
 /// <item><b>SanDisk</b>：smartmontools drivedb.h〈Marvell based SanDisk SSDs〉條目
 /// （SanDisk 未發布官方屬性文件——官方論壇明言不公開，故引開源解碼表）。</item>
+/// <item><b>Intel/Solidigm</b>：smartmontools 上游 drivedb.h〈Intel 730 and DC S35x0/3610/3700〉、
+/// 〈Intel/Solidigm S46x0/S45x0〉等系列；表列只適用於來源明確列出的系列，不推廣到所有品牌機種。</item>
+/// <item><b>HGST</b>：只收有具名 He6／He8／He10 型號佐證的 22 Helium_Level；
+/// DEFAULT HDD 的 220／240 不冒充 HGST 已驗證定義。</item>
 /// </list>
 /// </para>
 /// </summary>
-[SpecRef("六家屬性出處見各列 Source 欄與類別摘要；溫度字組拆解另見 smartmontools atacmds.cpp RAWFMT_TEMPMINMAX")]
+[SpecRef("各品牌群屬性出處見各列 Source 欄與類別摘要；Intel/Solidigm、HGST 以 smartmontools drivedb.h 對照；溫度字組拆解另見 atacmds.cpp RAWFMT_TEMPMINMAX")]
 public static class SmartAttributeKnowledge
 {
-    /// <summary>全部出處的抓取日期（列在每列 Source 欄尾）。</summary>
-    public const string FetchedDate = "2026-10-25";
+    /// <summary>知識表最近一次擴充／上游核對日期；各列 Source 保留各自的實際出處日期。</summary>
+    public const string FetchedDate = "2026-11-16";
 
     // ── 出處常數（逐列引用，稽核面）─────────────────────────────────────
 
@@ -85,10 +95,19 @@ public static class SmartAttributeKnowledge
         "smartmontools atacmds.cpp RAWFMT_TEMPMINMAX（GitHub master，2026-10-25 抓取）";
     private const string SanDiskDb =
         "smartmontools drivedb.h〈Marvell based SanDisk SSDs〉（GitHub master，2026-10-25 抓取；SanDisk 未發布官方屬性文件）";
+    private const string IntelSolidigmDb =
+        "smartmontools drivedb.h〈Intel 730/DC S35x0/3610/3700；Intel/Solidigm S46x0/S45x0〉（https://github.com/smartmontools/smartmontools/blob/a3aee76ed7f342efebd5f01631be1d79f7fdb780/drivedb/drivedb.h，2026-11-16 抓取；依各條目限定系列）";
+    private const string Intel5400Db =
+        "smartmontools drivedb.h〈Intel SSD Pro 5400s Series〉（https://github.com/smartmontools/smartmontools/blob/a3aee76ed7f342efebd5f01631be1d79f7fdb780/drivedb/drivedb.h，2026-11-16 抓取；249=NAND_Writes_1GiB）";
+    private const string HgstDb =
+        "smartmontools drivedb.h〈HGST Ultrastar He6/He8/He10〉與 DEFAULT 22（https://github.com/smartmontools/smartmontools/blob/a3aee76ed7f342efebd5f01631be1d79f7fdb780/drivedb/drivedb.h，2026-11-16 抓取；具名型號條目明示 Helium_Level）";
 
     /// <summary>ATA 慣例的通用說明——Samsung／WD 文件只描述 raw 時，normalized 如實標記不猜公式。</summary>
     private const string NormConvention =
         "normalized 0–253 相對值（100 起頭遞減）為 ATA 慣例；來源文件未給本屬性的換算公式，不猜";
+
+    private const string NormUnspecified =
+        "normalized 與 worst 依裝置原欄位照列；此上游條目未給換算公式，不假設起始值、百分比或遞減方向";
 
     // ── 查詢介面 ─────────────────────────────────────────────────────────
 
@@ -102,10 +121,12 @@ public static class SmartAttributeKnowledge
             SmartVendor.Kingston => KingstonTable,
             SmartVendor.Micron => MicronTable,
             SmartVendor.SanDisk => SanDiskTable,
+            SmartVendor.IntelSolidigm => IntelSolidigmTable,
+            SmartVendor.Hgst => HgstTable,
             _ => [],
         };
 
-    /// <summary>純查詢：廠商＋屬性 ID → 知識列。未收錄回 null（未知），不丟例外。</summary>
+    /// <summary>參考表查詢，不能據此推定裝置適用性。消費端使用 <see cref="LookupForModel"/>。</summary>
     public static SmartAttributeInfo? Lookup(SmartVendor vendor, byte attributeId)
     {
         var table = vendor switch
@@ -116,6 +137,8 @@ public static class SmartAttributeKnowledge
             SmartVendor.Kingston => KingstonIndex,
             SmartVendor.Micron => MicronIndex,
             SmartVendor.SanDisk => SanDiskIndex,
+            SmartVendor.IntelSolidigm => IntelSolidigmIndex,
+            SmartVendor.Hgst => HgstIndex,
             _ => null,
         };
         return table is not null && table.TryGetValue(attributeId, out var info) ? info : null;
@@ -126,6 +149,61 @@ public static class SmartAttributeKnowledge
     /// 認不得的廠商回 null——「未知廠商」與「未知 ID」都是未知，不是錯誤。</summary>
     public static SmartAttributeInfo? Lookup(string? vendor, byte attributeId) =>
         TryNormalizeVendor(vendor, out SmartVendor v) ? Lookup(v, attributeId) : null;
+
+    /// <summary>新增品牌群必須核對完整型號；舊六組維持既有知識表路徑。</summary>
+    public static bool RequiresModelScope(SmartVendor vendor) =>
+        vendor is SmartVendor.IntelSolidigm or SmartVendor.Hgst;
+
+    /// <summary>
+    /// 裝置用查詢：Intel/Solidigm 僅接受三個具名 SATA 系列，HGST 僅接受具名氦氣系列。
+    /// 未收錄、NVMe、OEM 尾碼、只有行銷名均回未知。不得把品牌識別當成屬性語意證據。
+    /// </summary>
+    public static SmartAttributeInfo? LookupForModel(SmartVendor vendor, string? model, byte attributeId)
+    {
+        if (!RequiresModelScope(vendor)) return Lookup(vendor, attributeId);
+        string m = (model ?? "").Trim();
+        if (m.Length is 0 or > 160) return null;
+        // WMI 可能附加 Windows 裝置類型；只剝掉已知尾綴，不丟棄真正的 OEM 型號尾碼。
+        foreach (string suffix in new[] { " ATA Device", " SCSI Disk Device", " SATA Disk Device" })
+            if (m.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+            {
+                m = m[..^suffix.Length].TrimEnd();
+                break;
+            }
+
+        if (vendor == SmartVendor.Hgst)
+            return attributeId == 22 && MatchesModel(m,
+                "HGST (HUS726060ALA64[01]|HUH7280(60|80)AL[EN]60[014]|HUH7210(08|10)AL[EN]60[014])")
+                ? Lookup(vendor, attributeId) : null;
+
+        bool dc = MatchesModel(m,
+            "INTEL SSDSC(1N|[12]B)[ABGPX]((080|100|120|150|160|200|240|300|400|480|600|800)[GH][3467][CERT]?|(012|016)T[46])");
+        // 上游允許一字元尾碼；這裡取嚴格子集，避免套到另有定義的 Dell／Lenovo OEM。
+        bool s46 = MatchesModel(m,
+            "(INTEL|SOLIDIGM) SSDSC(2K|KK)(B|G)(240G|480G|960G|019T|038T|076T)[78Z]");
+        bool pro5400 = MatchesModel(m,
+            "INTEL SSDSC[2K]KF((120|180|240|256|360|480|512)H|010X)6");
+        if (!dc && !s46 && !pro5400) return null;
+        if (attributeId == 249 && !pro5400) return null;
+        if (pro5400 && attributeId is not (170 or 171 or 172 or 174 or 183 or 187 or 192
+                or 225 or 226 or 227 or 228 or 232 or 233 or 241 or 242 or 249)) return null;
+
+        var info = Lookup(vendor, attributeId);
+        if (info is null) return null;
+        if (pro5400)
+            return info with
+            {
+                Name = attributeId == 174 ? "Unexpected Power Loss Count（非預期斷電數）" : info.Name,
+                Source = Intel5400Db,
+            };
+        if (dc && attributeId == 190)
+            return info with { Name = "Case Temperature（外殼溫度）" };
+        return info;
+    }
+
+    private static bool MatchesModel(string model, string pattern) =>
+        Regex.IsMatch(model, "\\A(?:" + pattern + ")\\z",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
 
     /// <summary>廠商名正規化：比照知識庫「未收錄回未知不猜」的慣例。</summary>
     public static bool TryNormalizeVendor(string? name, out SmartVendor vendor)
@@ -147,21 +225,29 @@ public static class SmartAttributeKnowledge
                 vendor = SmartVendor.Micron; return true;
             case var s when s.Equals("SanDisk", StringComparison.OrdinalIgnoreCase):
                 vendor = SmartVendor.SanDisk; return true;
+            case var s when s.Equals("Intel", StringComparison.OrdinalIgnoreCase)
+                         || s.Equals("Intel SSD", StringComparison.OrdinalIgnoreCase)
+                         || s.Equals("Intel/Solidigm", StringComparison.OrdinalIgnoreCase)
+                         || s.Equals("Solidigm", StringComparison.OrdinalIgnoreCase):
+                vendor = SmartVendor.IntelSolidigm; return true;
+            case var s when s.Equals("HGST", StringComparison.OrdinalIgnoreCase):
+                vendor = SmartVendor.Hgst; return true;
             default:
                 vendor = default; return false;
         }
     }
 
-    /// <summary>六家的列數（守門與覆蓋申報用）。</summary>
+    /// <summary>各廠商／品牌群列數（守門與覆蓋申報用）。</summary>
     public static int Count(SmartVendor vendor) => Table(vendor).Count;
 
-    /// <summary>六家的總條數（內建知識清冊用；不手抄）。</summary>
+    /// <summary>全部品牌群的總條數（內建知識清冊用；不手抄）。</summary>
     public static int TotalCount => Vendors.Sum(Count);
 
-    /// <summary>六個廠商列舉（清冊與測試共用同一份順序）。</summary>
+    /// <summary>全部品牌群列舉（清冊與測試共用同一份順序）。</summary>
     public static IReadOnlyList<SmartVendor> Vendors { get; } =
         [SmartVendor.Samsung, SmartVendor.Seagate, SmartVendor.WesternDigital,
-         SmartVendor.Kingston, SmartVendor.Micron, SmartVendor.SanDisk];
+         SmartVendor.Kingston, SmartVendor.Micron, SmartVendor.SanDisk,
+         SmartVendor.IntelSolidigm, SmartVendor.Hgst];
 
     // ── Samsung（官方 Application Note，845 DC PRO／EVO；共 19 列）────────
     // raw 欄位語意逐條出自該文件；文件只描述 raw 者不猜 normalized 公式。
@@ -516,6 +602,62 @@ public static class SmartAttributeKnowledge
             "48 位元單一計數（raw48）", NormConvention, "GB", true, SanDiskDb),
     ];
 
+    // ── Intel/Solidigm（上游僅列有型號的系列；系列以外不外推）────────────
+
+    private static readonly IReadOnlyList<SmartAttributeInfo> IntelSolidigmTable =
+    [
+        new(170, "Available Reserved Space（可用保留空間）",
+            "48 位元單一計數（raw48）；限定 730/DC S35x0/3610/3700、S46x0/S45x0 與 Pro 5400s；不套用 311/320 的 Reserve_Block_Count", NormUnspecified, "—", true, IntelSolidigmDb),
+        new(171, "Program Fail Count（程式化失敗數）",
+            "48 位元單一計數（raw48）；上游系列條目名稱一致", NormUnspecified, "次", true, IntelSolidigmDb),
+        new(172, "Erase Fail Count（抹除失敗數）",
+            "48 位元單一計數（raw48）；上游系列條目名稱一致", NormUnspecified, "次", true, IntelSolidigmDb),
+        new(174, "Unsafe Shutdown Count（非預期斷電數）",
+            "48 位元單一計數（raw48）；名稱依列明系列條目", NormUnspecified, "次", true, IntelSolidigmDb),
+        new(183, "SATA Downshift Count（SATA 降速數）",
+            "48 位元單一計數（raw48）", NormUnspecified, "次", true, IntelSolidigmDb),
+        new(184, "End-to-End Error（端對端錯誤數）",
+            "48 位元單一計數（raw48）", NormUnspecified, "個", true, IntelSolidigmDb),
+        new(187, "Uncorrectable Error Count（不可修正錯誤數）",
+            "48 位元單一計數（raw48）", NormUnspecified, "個", false, IntelSolidigmDb),
+        new(190, "Drive Temperature（磁碟溫度）",
+            "tempminmax；raw 字組的拆解依上游格式識別碼，未在此推算額外欄位", NormUnspecified, "°C", false, IntelSolidigmDb),
+        new(192, "Unsafe Shutdown Count（非預期斷電數）",
+            "48 位元單一計數（raw48）；本次完整型號白名單內均為 Unsafe Shutdown；不套其他系列的 Power-Off Retract", NormUnspecified, "次", false, IntelSolidigmDb),
+        new(199, "CRC Error Count（CRC 錯誤數）",
+            "48 位元單一計數（raw48）；只按列明 Intel SSD 系列解讀", NormUnspecified, "個", false, IntelSolidigmDb),
+        new(225, "Host Writes（主機寫入量）",
+            "48 位元單一計數（raw48）；列明系列每單位為 32 MiB，bytes = raw × 32 MiB", NormUnspecified, "32 MiB/count", false, IntelSolidigmDb),
+        new(226, "Workload Media Wear Indicator（工作負載媒體磨損指示）",
+            "48 位元單一計數（raw48）；上游註記 timed workload percent × 1024；不等同整碟已耗壽命百分比", NormUnspecified, "1/1024 %", true, IntelSolidigmDb),
+        new(227, "Workload Host Reads Percent（工作負載主機讀取比例）",
+            "48 位元單一計數（raw48）；名稱為 reads workload percent，不推斷其窗口或公式", NormUnspecified, "%", true, IntelSolidigmDb),
+        new(228, "Workload Minutes（工作負載時間）",
+            "48 位元單一計數（raw48）", NormUnspecified, "分鐘", true, IntelSolidigmDb),
+        new(232, "Available Reserved Space（可用保留空間）",
+            "48 位元單一計數（raw48）；不同系列的 normalized 公式未統一，不猜", NormUnspecified, "—", false, IntelSolidigmDb),
+        new(233, "Media Wearout Indicator（媒體磨損指示）",
+            "48 位元單一計數（raw48）；依 drivedb.h 指定 Intel/Solidigm 系列，normalized 仍按 ATA 欄位原樣陳述", NormUnspecified, "—", false, IntelSolidigmDb),
+        new(234, "Thermal Throttle Status（熱節流狀態）",
+            "raw24/raw32:04321 上游格式；不可當作一般整數計數或直接推定節流次數", NormUnspecified, "—", true, IntelSolidigmDb),
+        new(241, "Host Writes 32MiB（主機寫入量）",
+            "48 位元單一計數（raw48）；此列限定使用上游標示 32MiB 的系列，bytes = raw × 32 MiB", NormUnspecified, "32 MiB/count", false, IntelSolidigmDb),
+        new(242, "Host Reads 32MiB（主機讀取量）",
+            "48 位元單一計數（raw48）；此列限定使用上游標示 32MiB 的系列，bytes = raw × 32 MiB", NormUnspecified, "32 MiB/count", false, IntelSolidigmDb),
+        new(243, "NAND Writes 32MiB（NAND 寫入量）",
+            "48 位元單一計數（raw48）；每單位為 32 MiB；NAND 內部寫入不等於 host writes", NormUnspecified, "32 MiB/count", true, IntelSolidigmDb),
+        new(249, "NAND Writes 1GiB（NAND 寫入量）",
+            "48 位元單一計數（raw48）；每單位為 1 GiB，限定 Intel SSD Pro 5400s；不能套到 S46x0/S45x0", NormUnspecified, "1 GiB/count", true, Intel5400Db),
+    ];
+
+    // ── HGST（只收具名型號有明示的 22；DEFAULT 不是廠商驗證）──────────
+
+    private static readonly IReadOnlyList<SmartAttributeInfo> HgstTable =
+    [
+        new(22, "Helium Level（氦氣含量指標）",
+            "raw16(raw16)；限定來源列出的 He6／He8／He10 完整型號與實際回報的 22；不能僅由品牌推定充氦，不能換算成液位、壓力或濃度", NormUnspecified, "—", true, HgstDb),
+    ];
+
     // ── 查詢索引（懶建——表本身是不可變清單，索引只是 Dictionary 視圖）────
 
     private static readonly Dictionary<byte, SmartAttributeInfo> SamsungIndex = Index(SamsungTable);
@@ -524,6 +666,8 @@ public static class SmartAttributeKnowledge
     private static readonly Dictionary<byte, SmartAttributeInfo> KingstonIndex = Index(KingstonTable);
     private static readonly Dictionary<byte, SmartAttributeInfo> MicronIndex = Index(MicronTable);
     private static readonly Dictionary<byte, SmartAttributeInfo> SanDiskIndex = Index(SanDiskTable);
+    private static readonly Dictionary<byte, SmartAttributeInfo> IntelSolidigmIndex = Index(IntelSolidigmTable);
+    private static readonly Dictionary<byte, SmartAttributeInfo> HgstIndex = Index(HgstTable);
 
     private static Dictionary<byte, SmartAttributeInfo> Index(IReadOnlyList<SmartAttributeInfo> table) =>
         table.ToDictionary(a => a.Id, a => a);

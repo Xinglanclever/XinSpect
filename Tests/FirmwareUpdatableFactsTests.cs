@@ -240,13 +240,13 @@ public class FirmwareUpdatableFactsTests
 
     [Theory]
     [InlineData(17u, StorageSmartService.StorageBusChannel.Nvme)]
-    [InlineData(16u, StorageSmartService.StorageBusChannel.Nvme)]
+    [InlineData(16u, StorageSmartService.StorageBusChannel.None)]
     [InlineData(3u, StorageSmartService.StorageBusChannel.Ata)]
-    [InlineData(10u, StorageSmartService.StorageBusChannel.Ata)]
+    [InlineData(10u, StorageSmartService.StorageBusChannel.None)]
     [InlineData(11u, StorageSmartService.StorageBusChannel.Ata)]
     [InlineData(7u, StorageSmartService.StorageBusChannel.None)]
     [InlineData(0u, StorageSmartService.StorageBusChannel.None)]
-    public void 通道分群與原本寫死的常數逐字相同(uint bus, StorageSmartService.StorageBusChannel expected)
+    public void 通道只對明確協定開啟_虛擬層與SAS不猜通道(uint bus, StorageSmartService.StorageBusChannel expected)
         => Assert.Equal(expected, StorageSmartService.ChannelOf(bus));
 
     [Fact]
@@ -268,6 +268,8 @@ public class FirmwareUpdatableFactsTests
         // 另一份表要委派過來，而不是自己再抄一次
         Assert.Contains("StorageSmartService.BusTypeName",
             File.ReadAllText(Path.Combine(services, "DiskInfoService.cs")));
+        Assert.Contains("StorageSmartService.ChannelOf(bus)",
+            File.ReadAllText(Path.Combine(services, "NvmePowerService.cs")));
     }
 
     // ── 攻擊面彙整（U10-SE-0036，pdev.fw.surface）──────────────────────

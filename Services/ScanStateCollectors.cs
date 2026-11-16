@@ -181,7 +181,7 @@ public static class KnowledgeLookupCollector
     public static HardwareFact ToSmartFact(DateTimeOffset at, KnowledgeLookupReport.LookupStats stats)
     {
         const string name = "SMART 廠商屬性對照";
-        const string source = "SMART 屬性知識表（離線，六家）";
+        const string source = "SMART 屬性知識表（離線，八個品牌群）";
         if (stats.Total == 0)
             return new HardwareFact(SmartAttrLookupKey, "知識與更新", name,
                 "本輪沒有「廠商自訂」屬性需要對照", "次", source, FactTrustLevel.Derived, false, at,
@@ -220,7 +220,7 @@ public static class KnowledgeLookupCollector
         SmartLookupProbe.Result probe)
     {
         const string name = "SMART 廠商屬性對照";
-        const string source = "SMART 屬性知識表（離線，六家）＋本輪 ATA SMART READ DATA 直讀";
+        const string source = "SMART 屬性知識表（離線，八個品牌群）＋本輪 ATA SMART READ DATA 直讀";
 
         switch (probe.Status)
         {
@@ -263,7 +263,7 @@ public static class KnowledgeLookupCollector
     public static HardwareFact ToSmartNotLoaded(DateTimeOffset at)
         => new(SmartAttrLookupKey, "知識與更新", "SMART 廠商屬性對照",
             "本輪尚未讀取 SMART 屬性列，知識表未被查詢", "次",
-            "SMART 屬性知識表（離線，六家）", FactTrustLevel.Unknown, false, at,
+            "SMART 屬性知識表（離線，八個品牌群）", FactTrustLevel.Unknown, false, at,
             null, FactAvailability.Unknown,
             "載入點（EvidenceLabService.LoadSmartLookupStats 由 EvidenceCollection.LoadUsermodeFacts 呼叫）"
             + "這一輪沒有跑：這不是「沒有廠商自訂屬性」，是「沒有讀」");

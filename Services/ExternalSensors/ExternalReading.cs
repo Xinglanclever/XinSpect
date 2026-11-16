@@ -22,5 +22,11 @@ public sealed record ExternalReading(
     /// <summary>最大值 (僅 HWiNFO 提供)</summary>
     double? Max = null,
     /// <summary>平均值 (僅 HWiNFO 提供)</summary>
-    double? Avg = null
+    double? Avg = null,
+    /// <summary>讀取器識別到的裝置型號；不代表硬體感測元件 ID。</summary>
+    string? DeviceIdentity = null,
+    /// <summary>逐核心來源的零起始索引。</summary>
+    int? ChannelIndex = null,
+    /// <summary>本程式取得該共享記憶體快照的時間，不是來源工具最後更新時間。</summary>
+    DateTimeOffset? CapturedAtUtc = null
 );

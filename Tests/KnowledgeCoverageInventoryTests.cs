@@ -39,7 +39,7 @@ public class KnowledgeCoverageInventoryTests
         ["superio"] = ["Super I/O 晶片名稱"],
         ["oui"] = ["MAC OUI 廠商"],
         ["cta-vic"] = ["CTA VIC 時序"],
-        ["smart"] = ["SMART 屬性（六家）"],
+        ["smart"] = ["SMART 屬性（八個品牌群）"],
         ["bugcheck-code"] = ["BugCheck 停止代碼"],
         ["bugcheck-symbol"] = ["BugCheck 符號名"],
     };

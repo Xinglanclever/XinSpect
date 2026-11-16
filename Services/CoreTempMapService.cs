@@ -47,6 +47,7 @@ public sealed class CoreTempEntry : ObservableObject, ICoreHeatCell
 public sealed class CoreTempMapService : ObservableObject
 {
     private readonly SensorService _sensor;
+    private readonly CpuTopology _topology;
     private readonly int _physicalCores;
     private readonly int _threadsPerCore;
 
@@ -59,12 +60,9 @@ public sealed class CoreTempMapService : ObservableObject
     public CoreTempMapService(SensorService sensor, CpuTopology topo)
     {
         _sensor = sensor;
+        _topology = topo;
         _physicalCores = Math.Max(topo.PhysicalCores, 1);
         _threadsPerCore = topo.Smt ? 2 : 1;
-        // TODO 混合架構（P-core SMT + E-core 無 SMT）時 _threadsPerCore 是固定值，
-        // 會讓 E-core 溫度映射到錯的實體核心。正確做法是取用 per-core 的邏輯執行緒數，
-        // 但 CpuTopology 目前未暴露此資訊。待 CpuTopology 加入 CoreType 後修正。
-        // 本機（X299 i9-7980XE）無混合架構，此問題無法本機驗證。
 
         // 建立每實體核心一列
         for (int i = 0; i < _physicalCores; i++)
@@ -152,41 +150,60 @@ public sealed class CoreTempMapService : ObservableObject
 
     private void FallbackCoreTemp()
     {
-        if (!CoreTempSharedMem.TryRead(out var readings, out _)) return;
-
-        double? firstTjMax = null;
-        int coreIdx = 0;
-        foreach (var r in readings)
-        {
-            // TjMax 列一律是絕對攝氏，不受華氏設定影響（CoreTempSharedMem 已處理）
-            if (r.SensorType == "Temperature" &&
-                r.Label.EndsWith("TjMax", StringComparison.OrdinalIgnoreCase))
-            {
-                firstTjMax ??= r.Value;
-                continue;
-            }
-
-            // 逐核溫度：可能是絕對值（Temperature）或距 TjMax 的差值（TemperatureDelta）
-            if (r.SensorType is not ("Temperature" or "TemperatureDelta")) continue;
-
-            if (coreIdx < Cores.Count)
-            {
-                double temp = r.Value;
-
-                // 華氏模式：Core Temp 回報的絕對溫度是華氏，要轉回攝氏才能顯示
-                if (r.SensorType == "Temperature" && r.Unit == "°F")
-                    temp = (temp - 32) * 5.0 / 9.0;
-
-                // 距 TjMax 模式：用已知的 TjMax 重建絕對溫度
-                if (r.SensorType == "TemperatureDelta" && firstTjMax.HasValue)
-                    temp = firstTjMax.Value - temp;
-                else if (r.SensorType == "TemperatureDelta")
-                    { coreIdx++; continue; }   // 沒有 TjMax 就不猜
-
-                Cores[coreIdx].Temperature = temp;
-                coreIdx++;
-            }
-        }
-        TjMax ??= firstTjMax;
+        TjMax = null;
+        if (!_topology.Loaded || _topology.PhysicalPackages != 1 || !_sensor.HasComparableIntelCoreOrder
+            || !CoreTempSharedMem.TryRead(out var readings, out _)) return;
+        ApplyExternalReadings(Cores, readings, _sensor.CpuName, _topology.PhysicalPackages,
+            _sensor.HasComparableIntelCoreOrder, out double? tjMax);
+        TjMax = tjMax;
     }
+
+    internal static bool ApplyExternalReadings(IReadOnlyList<CoreTempEntry> entries,
+        IReadOnlyList<ExternalReading> readings, string cpuName, int packages, bool knownCoreOrder,
+        out double? tjMax)
+    {
+        tjMax = null;
+        foreach (var entry in entries) entry.Temperature = null;
+        if (packages != 1 || !knownCoreOrder || entries.Count == 0
+            || string.IsNullOrWhiteSpace(cpuName) || cpuName == "—") return false;
+
+        var temperatures = readings.Where(r => r.Source == "Core Temp"
+            && r.ChannelIndex.HasValue && r.SensorType is "Temperature" or "TemperatureDelta").ToArray();
+        if (temperatures.Length != entries.Count
+            || temperatures.Any(r => !string.Equals(r.DeviceIdentity?.Trim(), cpuName.Trim(), StringComparison.Ordinal))
+            || temperatures.Select(r => r.ChannelIndex).Distinct().Count() != entries.Count
+            || entries.Select(e => e.PhysicalCoreId).Distinct().Count() != entries.Count
+            || entries.Any(e => !temperatures.Any(r => r.ChannelIndex == e.PhysicalCoreId))) return false;
+
+        // TjMax appears after the core rows in the reader; collect it before converting deltas.
+        var limits = readings.Where(r => r.Source == "Core Temp" && r.SensorType == "Temperature"
+            && !r.ChannelIndex.HasValue && r.DeviceIdentity?.Trim() == cpuName.Trim()
+            && r.Label.EndsWith("TjMax", StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (limits.Length == 1)
+        {
+            double limit = Celsius(limits[0], delta: false);
+            if (double.IsFinite(limit) && limit is > 0 and < 200) tjMax = limit;
+        }
+
+        bool any = false;
+        foreach (var entry in entries)
+        {
+            var reading = temperatures.Single(r => r.ChannelIndex == entry.PhysicalCoreId);
+            bool delta = reading.SensorType == "TemperatureDelta";
+            double value = Celsius(reading, delta);
+            if (!double.IsFinite(value) || (delta && (!tjMax.HasValue || value < 0))) continue;
+            double absolute = delta ? tjMax!.Value - value : value;
+            if (!double.IsFinite(absolute) || absolute is <= -273.15 or >= 200) continue;
+            entry.Temperature = absolute;
+            any = true;
+        }
+        return any;
+    }
+
+    private static double Celsius(ExternalReading reading, bool delta) => reading.Unit switch
+    {
+        "°C" => reading.Value,
+        "°F" => (reading.Value - (delta ? 0 : 32)) * 5 / 9,
+        _ => double.NaN,
+    };
 }

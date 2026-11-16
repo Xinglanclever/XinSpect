@@ -28,7 +28,7 @@
 | 11 | ATA／SATA | IDENTIFY word 級＋SMART 屬性表＋錯誤/自測日誌＋SCT（ACS-4） | 280 |
 | 12 | SAS／SMP | Report General／PHY／錯誤計數（有控制器才適用） | 80 |
 | 13 | 檔案系統／卷／分割 | NTFS/FAT32/exFAT/ReFS 超級塊欄位、GPT/MBR、Storage Spaces、VSS | 150 |
-| 14 | SMART 廠商屬性表（知識包） | 六家屬性 ID→語意對照（raw/normalized 分開） | 120 |
+| 14 | SMART 廠商屬性表（知識包） | 八個品牌群屬性 ID→語意對照（raw/normalized 分開；新兩組依完整型號） | 162 |
 | 15 | NVMe 廠商日誌頁（知識包） | 公開工具可見之廠商日誌 0xC0–0xFF 族 | 150 |
 | 16 | PCIe 能力目錄 | 經典 ~25 型＋延伸 ~50 型逐欄（含 AER 逐計數器、L1 子狀態、等化） | 350 |
 | 17 | USB／Type-C／類別描述元 | 標準＋類別描述元（billboard/PD/audio/video/CCID/storage）、UCSI | 300 |
@@ -1238,7 +1238,7 @@ GV（治理/守門/自校）、NX（明文不做）。
 | U10-AT-0063 | 200–206 廠商區（Write Error Rate/Multi-Zone Error Rate…知識包） | `ata.smart.vendor200s` |
 | U10-AT-0064 | 222/223/224/225（Load/Load-Retry/Load-Friction/Load-In time 等家族） | `ata.smart.id222s` |
 | U10-AT-0065 | 231 SSD Life Left（廠商換算差異聲明） | `ata.smart.id231` |
-| U10-AT-0066 | 232 Endurance Remaining／233 Media Wearout Indicator（Intel 語意） | `ata.smart.id232_233` |
+| U10-AT-0066 | 232 Available Reserved Space／233 Media Wearout Indicator（僅已核 Intel 系列，不泛套 OEM） | `ata.smart.id232_233` |
 | U10-AT-0067 | 234/241/242 Total LBAs Written/Read（換算 TB；出處式成文） | `ata.smart.id241s` |
 | U10-AT-0068 | 249/250（NAND writes/Head Flying Hours——知識包） | `ata.smart.id249s` |
 | U10-AT-0069 | 未知屬性 ID 清單（知識包未收錄者僅列 ID/值三聯，不猜） | `ata.smart.unknown` |
@@ -3341,7 +3341,11 @@ API 級接縫——這不是文書工作，是把規格表逐欄位變成可稽�
 | U10-HU-0122 | HID 裝置之報告率宣告 vs 實測（描述元宣告值僅供參考——量測域引用） | `hid.desc.rate.claim` |
 | U10-HU-0123 | Vendor 頁/Usage 原始登記（不解碼，清單化） | `hid.vendor.usage` |
 
-# U10-WM ・ WMI 硬體類官方清單補遺（來源：Microsoft Learn 電腦系統硬體類別頁，2026-10-24 核對）
+# U10-WM ・ WMI 硬體類官方清單補遺
+
+> 更正（2026-11-16）：下方 36 個 U10-WM 編號是從 Microsoft Learn 硬體類別文件挑出的功能候選項，**不是官方頁面全表**。完整頁面 86 類與 Services 直接 WQL 查詢 22 類的逐類對帳已由 U10-WM-0036／`wmi.official.coverage` 完成；未直接查詢的 64 類不代表沒有替代來源或平台不支援。
+
+來源：Microsoft Learn [Computer System Hardware Classes](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/computer-system-hardware-classes)，2026-11-16 核對。
 
 | ID | 項目 | 候選鍵 |
 |---|---|---|
@@ -3380,7 +3384,7 @@ API 級接縫——這不是文書工作，是把規格表逐欄位變成可稽�
 | U10-WM-0033 | CIM_VideoControllerResolution（解析率物件清單——模式表佐證） | `wmi.cim.resolution` |
 | U10-WM-0034 | 效能計數器類家族（Win32_PerfRawData/FormattedData_*——逐計數器集一列之動態家族骨架） | `wmi.perf.family` |
 | U10-WM-0035 | 效能計數器類選摘（PerfOS/PerfDisk/PerfNet/PerfProc＋ThermalZoneInformation/ProcessorInformation 等硬體相關集） | `wmi.perf.hwsets` |
-| U10-WM-0036 | 官方硬體類清單對帳（本目錄覆蓋率 vs Learn 頁全表——缺者補列、多者註明來源） | `wmi.official.coverage` |
+| U10-WM-0036 | 官方硬體類清單對帳（Learn 頁 86 類 vs 直接 WQL 查詢；36 項是候選子集） | `wmi.official.coverage` |
 
 # U10-BD ・ BCD 開機設定元素（bcdedit 唯讀；逐元素一列）
 
@@ -3485,24 +3489,26 @@ API 級接縫——這不是文書工作，是把規格表逐欄位變成可稽�
 | U10-WH-0014 | 泛用錯誤狀態塊（Error Status Block）位元組解碼 | `whea.ghes.bits` |
 | U10-WH-0015 | 通知類型（HEST/GHES 來源：GPIO/SCI/HED/NMI…）解碼表 | `whea.notify.types` |
 
-# U10-KP ・ SMART 廠商屬性知識包（六廠；raw 語意按公開知識、三態）
+# U10-KP ・ SMART 廠商屬性知識包（八個品牌群；raw 語意按公開知識、三態）
+
+> Round 336（2026-11-16）：同表共 162 列；新增兩組的顯示路徑核對完整型號。E8=232 已核定為可用保留空間，E7=231 不泛套；HGST 僅 22 有本批具名型號佐證，220/240 與廠商換算仍待證。
 
 | ID | 項目 | 候選鍵 |
 |---|---|---|
 | U10-KP-0001 | Samsung：177 Wear Level／187 Uncorrectable／190 Airflow 溫度 | `kp.smart.samsung.177_187_190` |
 | U10-KP-0002 | Samsung：195 ECC／199 CRC／241/242 LBA 讀寫 | `kp.smart.samsung.io` |
 | U10-KP-0003 | Samsung：170/173/174/176 保留區語意（知識包，已定案（2026-10-25 稽核；來源見 AUDIT-pending.md）） | `kp.smart.samsung.res` |
-| U10-KP-0004 | Intel/Solidigm：233 Media Wearout／234 Thermal Throttle 計數 | `kp.smart.intel.wear` |
-| U10-KP-0005 | Intel/Solidigm：241/242 主機寫/讀單位（換算式成文） | `kp.smart.intel.hostio` |
-| U10-KP-0006 | Intel/Solidigm：E7/E8 舊介面屬性（遺產，已定案（2026-10-25 稽核；來源見 AUDIT-pending.md）） | `kp.smart.intel.legacy` |
+| U10-KP-0004 | Intel/Solidigm：233 Media Wearout／234 Thermal Throttle raw format（依具名系列） | `kp.smart.intel.wear` |
+| U10-KP-0005 | Intel/Solidigm：241/242 Host Writes/Reads（限定 32MiB 格式系列） | `kp.smart.intel.hostio` |
+| U10-KP-0006 | Intel/Solidigm：E8=232 Available Reserved Space（已核系列）；E7=231 不泛套，保留缺口 | `kp.smart.intel.legacy` |
 | U10-KP-0007 | WD（HDD）：1/4/5/9/10/11 族（raw 編碼特性聲明） | `kp.smart.wd.hdd` |
 | U10-KP-0008 | WD：196/197/198/200 重配置族語意 | `kp.smart.wd.realloc` |
 | U10-KP-0009 | Seagate：raw 多欄位打包編碼之警示規則（十六進位多欄拆解；僅展示拆解不診斷） | `kp.smart.seagate.rawfmt` |
 | U10-KP-0010 | Seagate：1/7/195 族語意（raw≠錯誤數之著名誤讀警示） | `kp.smart.seagate.warn` |
-| U10-KP-0011 | HGST：22 Head Flying Hours／220 Disk Shift／221?（【勘誤定案：ID 22=Current Helium Level（氦氣液位）；Head Flying Hours=ID 240；220=Disk Shift（drivedb.h）】） | `kp.smart.hgst.mech` |
-| U10-KP-0012 | HGST：194/196/198 標準族之廠商換算聲明 | `kp.smart.hgst.std` |
+| U10-KP-0011 | HGST：22 Helium Level（具名 He6/8/10 型號）；220/240 只有 DEFAULT 定義，廠商型號佐證未完成 | `kp.smart.hgst.mech` |
+| U10-KP-0012 | HGST：194/196/198 保留通稱，廠商專屬換算仍待證 | `kp.smart.hgst.std` |
 | U10-KP-0013 | Micron/Crucial：170–174 保留/成長缺陷區（已定案（2026-10-25 稽核；來源見 AUDIT-pending.md）） | `kp.smart.micron.defects` |
-| U10-KP-0014 | Micron：231 SSD 壽命左／249 NAND 寫入（【勘誤定案：Crucial/Micron 壽命=202、寫入=246/247/248——231/249 為 Intel 語意】） | `kp.smart.micron.life` |
+| U10-KP-0014 | Micron：231 SSD 壽命左／249 NAND 寫入（【勘誤定案：Crucial/Micron 壽命=202、寫入=246/247/248；231 不泛稱 Intel 壽命，249 僅依具名系列命名】） | `kp.smart.micron.life` |
 | U10-KP-0015 | Kingston：231 壽命左／241/242（已定案（2026-10-25 稽核；來源見 AUDIT-pending.md）） | `kp.smart.kingston` |
 | U10-KP-0016 | SanDisk：233 媒體磨損（【勘誤定案：SanDisk 233=Total_NAND_Writes_GiB；磨損%=230、可用保留=232（drivedb.h）】） | `kp.smart.sandisk` |
 | U10-KP-0017 | 屬性 ID 重疊政策（同一 ID 各廠不同義——按廠商分流解碼，無廠商資訊即原始值） | `kp.smart.idcollision.policy` |
@@ -3589,7 +3595,7 @@ API 級接縫——這不是文書工作，是把規格表逐欄位變成可稽�
 | U10-TS-0189 | 網路：串列延遲（細包 RTT） | 自負載 | `ts.net.smallpkts` |
 | U10-TS-0190 | 電池：待機耗電測量（定時長之淨耗電） | 唯讀 | `ts.bat.idle.drain` |
 | U10-TS-0191 | 感測器：雙後端交叉驗證測試（同值兩源比對——重複量測之自動化） | 唯讀 | `ts.sensor.dualsrc` |
-| U10-TS-0192 | 時鐘：會話期漂移（開掃到結束之累計差） | 唯讀 | `ts.clock.session.drift` |
+| U10-TS-0192 | 時鐘：會話期漂移（開掃到結束之累計差；已有共用入口，Round 337 校正回撥與數值邊界） | 唯讀 | `ts.clock.session.drift` |
 | U10-TS-0193 | USB：逐埠速度驗證（已知裝置插各埠——半自動，使用者配合） | 輔助 | `ts.usb.perport` |
 | U10-TS-0194 | 螢幕：逐模式自動循環（全模式截圖比對穩定性） | 唯讀 | `ts.disp.mode.auto` |
 | U10-TS-0195 | 音訊：逐取樣率毛刺輪測 | 自負載 | `ts.aud.per.rate` |

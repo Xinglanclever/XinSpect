@@ -123,6 +123,8 @@ internal static class Program
 
         if (args.Length > 0)
         {
+            if (args[0].Equals("surface", StringComparison.OrdinalIgnoreCase))
+                return RunSurfaceScan(args[1..]);
             if (args[0].ToLowerInvariant() is "safety" or "deepbench" or "ec" or "me" or "chipset" or "ecc")
                 return Execute(CliLocalization.JoinCommandLine(args));
             // xsc compliance --format sarif …：直接轉發既有 CLI 通路後退出
@@ -327,6 +329,7 @@ internal static class Program
                     "電池資料來自 root\\WMI BatteryStaticData／BatteryFullChargedCapacity／BatteryCycleCount；沒有電池的機器會如實標 NotApplicable。"); return 0;
                 case "storage": DomainReport("儲存總表", ["st", "ata"],
                     "SMART 原始屬性只有 ata.smart.attr.lookup（ATA 碟；NVMe 一律不讀——第 263 輪實證會卡核心不可中斷等待，理由在百科第 11 部）。"); return 0;
+                case "surface": return RunSurfaceScan(rest.Split(' ', StringSplitOptions.RemoveEmptyEntries));
                 case "net": DomainReport("網路", ["net", "nw"],
                     "net.* ＝ 傾聽埠／offload/WMI 缺口；nw.* ＝ 藍牙／DNS／Wi-Fi／WoL／USB 等週邊摘要。"); return 0;
                 case "security": DomainReport("安全姿態", ["sec"],
@@ -416,6 +419,56 @@ internal static class Program
             Console.WriteLine($"{Red}{ex.GetType().Name}：{ex.Message}{Reset}");
             return 1;
         }
+    }
+
+    private static int RunSurfaceScan(string[] args)
+    {
+        if (args.Length is < 1 or > 3 || args.Any(arg => arg.Equals("--help", StringComparison.OrdinalIgnoreCase)))
+        {
+            Console.WriteLine("用法：xsc surface <C:> [512|8192|65536|131072|all] [--repeat]");
+            return args.Length > 0 && args.Any(arg => arg.Equals("--help", StringComparison.OrdinalIgnoreCase)) ? 0 : 2;
+        }
+        string drive = args[0].TrimEnd('\\', '/');
+        if (drive.Length != 2 || !char.IsAsciiLetter(drive[0]) || drive[1] != ':')
+        {
+            Console.Error.WriteLine("僅接受本機磁碟代號，例如 C:。");
+            return 2;
+        }
+        int[] sizes = [512, 8192, 65536, 131072];
+        bool repeat = false;
+        foreach (string arg in args[1..])
+        {
+            if (arg.Equals("--repeat", StringComparison.OrdinalIgnoreCase)) repeat = true;
+            else if (arg.Equals("all", StringComparison.OrdinalIgnoreCase)) sizes = [512, 8192, 65536, 131072];
+            else if (int.TryParse(arg, out int size) && size is 512 or 8192 or 65536 or 131072) sizes = [size];
+            else { Console.Error.WriteLine($"不支援的選項：{arg}"); return 2; }
+        }
+
+        using var cancellation = new CancellationTokenSource();
+        ConsoleCancelEventHandler handler = (_, eventArgs) => { eventArgs.Cancel = true; cancellation.Cancel(); };
+        Console.CancelKeyPress += handler;
+        try
+        {
+            string path = $"\\\\.\\{char.ToUpperInvariant(drive[0])}:";
+            Console.WriteLine($"唯讀掃描 {drive}，每種塊尺最多 64 MiB；Ctrl+C 取消。");
+            var results = DiskSurfaceScanService.ScanProfilesAsync(path, sizes, repeat,
+                ct: cancellation.Token).GetAwaiter().GetResult();
+            if (results is null) { Console.Error.WriteLine("無法開啟本機固定卷或取得卷大小。"); return 1; }
+            foreach (var item in results)
+            {
+                string sector = item.Scan.LogicalSectorBytes > 0 ? $"{item.Scan.LogicalSectorBytes} B" : "未知";
+                Console.WriteLine($"{item.BlockSizeBytes} B・第 {item.Pass} 次：覆蓋 {item.Scan.TotalBytes / (1024.0 * 1024):F1} MiB，"
+                    + $"磁區 {sector}，OK {item.Scan.OkCount}，慢 {item.Scan.SlowCount}，"
+                    + $"錯誤 {item.Scan.ErrorCount}，重試 {item.Scan.RetryCount}，{item.Scan.ElapsedSec:F1}s");
+            }
+            return 0;
+        }
+        catch (OperationCanceledException)
+        {
+            Console.WriteLine("已取消。");
+            return 130;
+        }
+        finally { Console.CancelKeyPress -= handler; }
     }
 
     // ── 事實採集與查詢 ────────────────────────────────────────────────────

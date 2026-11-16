@@ -1081,6 +1081,7 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(TimeSyncFactsService.Collect(at, new Win32AcpiTableSource()))
             .Concat(CxlFactsService.Collect(at, new Win32AcpiTableSource()))
             .Concat(UsbTopologyService.Collect(at))
+            .Concat(WmiSupplementFactsService.Collect(at))
             .Concat(MonitorConnectionService.Collect(at))
             .Concat(CameraFactsService.Collect(at))
             .Concat(EnterpriseStorageFactsService.Collect(at))

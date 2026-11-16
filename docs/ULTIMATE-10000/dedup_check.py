@@ -2,8 +2,9 @@
 """
 dedup_check.py — 曦覽 XinSpect 擴展目錄（ULTIMATE-10000）對倉庫既有事實鍵的查重對帳。
 
-可重跑：所有路徑寫死絕對路徑；報告（AUDIT-dedup.md）中的每個數字都來自本腳本輸出。
-用法：python dedup_check.py
+可重跑：預設使用本腳本所在 checkout 的主目錄與鍵目錄，不依賴作者的 .zcode 草稿。
+用法：python docs/ULTIMATE-10000/dedup_check.py [--repo PATH] [--catalog PATH] [--marked PATH]
+輸出是候選鍵名稱的查重線索，不是功能完成率；命中仍須檢查生產接線與測試。
 
 比對三級（對「目錄列的候選鍵」逐一判定）：
   (i)   重複     —— 鍵與既有全鍵完全相等（或僅大小寫差）。
@@ -17,16 +18,15 @@ dedup_check.py — 曦覽 XinSpect 擴展目錄（ULTIMATE-10000）對倉庫既�
 另計：目錄內部自重複鍵（同一鍵出現在多列）——單獨呈報，不併入 (i)。
 無鍵列（如 NX 域「不做」宣言）不參與三級判定，單獨計數。
 """
+import argparse
+from pathlib import Path
 import re
 import sys
 from collections import Counter, defaultdict
 
 sys.stdout.reconfigure(encoding="utf-8")
 
-CATALOG = r"C:\Users\Administrator\.zcode\workspace\draft-0533e841-8f3d-4ca8-8b24-3606a2327a55\ULTIMATE-10000-EXPANSION-2026-10-24.md"
-MARKED = r"C:\Users\Administrator\.zcode\workspace\draft-0533e841-8f3d-4ca8-8b24-3606a2327a55\U10-parts\dup-marked.md"
-REPO_STATIC = r"C:\Users\Administrator\XinSpect\Services\FactKeyCatalog.cs"
-REPO_DYN = r"C:\Users\Administrator\XinSpect\Services\FactKeyDynamicCatalog.cs"
+DEFAULT_REPO = Path(__file__).resolve().parents[2]
 
 ROW_RE = re.compile(r"^\|\s*(U10-([A-Z]{2})-(\d{4}))\s*\|")
 # 鍵形狀：字母/數字開頭；成員為字母、數字、底線、點、{} 萬用/交替段、*、逗號、@、+、連字號。
@@ -41,10 +41,10 @@ REPO_KEY_RE = re.compile(r'^\s*"([a-z0-9_.]+)",$')
 FAM_RE = re.compile(r'^\s*\["([^"]+)"\]')
 
 
-def load_repo():
-    with open(REPO_STATIC, encoding="utf-8") as f:
+def load_repo(repo):
+    with open(repo / "Services" / "FactKeyCatalog.cs", encoding="utf-8") as f:
         keys = [m.group(1) for line in f for m in [REPO_KEY_RE.match(line)] if m]
-    with open(REPO_DYN, encoding="utf-8") as f:
+    with open(repo / "Services" / "FactKeyDynamicCatalog.cs", encoding="utf-8") as f:
         fams = [m.group(1) for line in f for m in [FAM_RE.match(line)] if m]
     return keys, fams
 
@@ -119,13 +119,23 @@ TIER_NAME = {"DUP": "重複", "CONV": "疑似收口", "NEW": "淨新"}
 
 
 def main():
-    repo_keys, fams = load_repo()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--repo", type=Path, default=DEFAULT_REPO)
+    parser.add_argument("--catalog", type=Path)
+    parser.add_argument("--marked", type=Path, help="可選的待查重列文件；預設不讀外部草稿")
+    args = parser.parse_args()
+    repo = args.repo.resolve()
+    catalog = args.catalog or repo / "docs" / "ULTIMATE-10000" / "ULTIMATE-10000-EXPANSION-2026-10-25.md"
+    repo_keys, fams = load_repo(repo)
     assert len(repo_keys) == len(set(repo_keys)), "repo 鍵有重複"
     repo_lower = {k.lower(): k for k in repo_keys}
     fams_lower = sorted({f.lower() for f in fams})
-    rows, anomalies = parse_catalog(CATALOG)
+    rows, anomalies = parse_catalog(catalog)
 
     print("== 輸入基線 ==")
+    print(f"倉庫: {repo}")
+    print(f"目錄: {catalog.resolve()}")
+    print("注意：以下僅比對鍵名；不代表完成率或硬體支援率。")
     print(f"倉庫全鍵（FactKeyCatalog.cs）: {len(repo_keys)}")
     print(f"動態家族（FactKeyDynamicCatalog.cs）: {len(fams_lower)}")
     print(f"目錄列總數: {len(rows)}")
@@ -196,10 +206,10 @@ def main():
         if r["tier"] == "DUP":
             print(f"  {r['id']}（{r['name']}）→ 重複：`{r['key']}`＝既有鍵 `{r['ev']}`")
 
-    # 79 列標記判定
-    marked_rows, _ = parse_catalog(MARKED)
+    # 標記列可選，歷史的外部 79 列草稿不再是必要依賴。
+    marked_rows, _ = parse_catalog(args.marked) if args.marked else ([], [])
     print()
-    print(f"== 標記待查重列（dup-marked.md）：{len(marked_rows)} 列 ==")
+    print(f"== 標記待查重列（{args.marked or '未指定'}）：{len(marked_rows)} 列 ==")
     by_id = {r["id"]: r for r in keyed}
     miss = [r["id"] for r in marked_rows if r["id"] not in by_id]
     print(f"未能在主目錄找到對應含鍵列者: {len(miss)}" + (f" → {miss}" if miss else ""))
@@ -214,7 +224,7 @@ def main():
             print(f"  - {r['id']}（{cat['name']}）→ 淨新：`{cat['key']}`（倉庫無此鍵亦無前綴關係）")
         else:
             print(f"  - {r['id']}（{cat['name']}）→ {TIER_NAME[cat['tier']]}：`{cat['key']}`（{cat['etype']}：{cat['ev']}）")
-    print(f"標記 79 列判定分佈：淨新 {mc['NEW']}／疑似收口 {mc['CONV']}／重複 {mc['DUP']}／無法判定 {len(miss)}")
+    print(f"標記 {len(marked_rows)} 列判定分佈：淨新 {mc['NEW']}／疑似收口 {mc['CONV']}／重複 {mc['DUP']}／無法判定 {len(miss)}")
 
     # 輔助證據（不影響三級判定）：對標記列列出倉庫「近鄰鍵」——
     # 與目錄鍵之最長共同字元前綴 ≥3 且落在點邊界上（即至少共用首段命名空間）。

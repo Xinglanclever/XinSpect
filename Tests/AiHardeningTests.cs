@@ -98,6 +98,8 @@ public class AiHardeningTests
     [Fact]
     public void 重試次數有上限()
     {
+        Assert.Equal(11, AiRetryPolicy.MaxAttempts); // 首次＋10 次額外重試
+        Assert.True(AiRetryPolicy.Decide(429, attempt: 10).Retry);
         var last = AiRetryPolicy.Decide(429, attempt: AiRetryPolicy.MaxAttempts);
         Assert.False(last.Retry);
         Assert.Contains("已連續失敗", last.Reason);

@@ -286,6 +286,10 @@ public class FactCoverageReportTests
         //   `bcd.badmemory.list`／`.mem.trim`——壞記憶體頁框與記憶體遮蔽；
         //   `bcd.fwbootmgr.order`——韌體層順序（/enum firmware，與 UEFI 變數路徑不同源）；
         //   `bcd.access.statement`——存取法與新鮮度界線。上限照實況移到 468。
+        // 2026-11-16 第 335 輪（U10-WM）：+5 條 WMI 事實。四條是 Windows provider 自己的資源／關聯視圖；
+        // PCI、I/O 0x80、SMBIOS 與 CPUID 沒有可逐列對應的同義資料。第五條是 Microsoft Learn 全頁
+        // 86 類清單 vs 直接 WQL 查詢 22 類的盤點，來源字面由 WmiSupplementFactsTests 逐類對帳，
+        // 不是硬體支援率或第二條硬體讀取路徑。不上湊數規則，也不以家族豁免隱藏；上限移到 473。
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
         int baseline = FactCoverageReport.ReviewedUncoveredBaseline;
         Assert.True(s.Uncovered <= baseline,

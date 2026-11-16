@@ -32,8 +32,9 @@ public sealed partial class SensorService : ObservableObject, IDisposable
     // 以此鎖與旗標序列化，避免關閉瞬間背景 Poll 存取已 Close 的原生控制代碼而崩潰。
     private readonly object _pollLock = new();
     private volatile bool _disposed;
+    private DateTimeOffset? _lastPollAtUtc;
 
-    private sealed class CoreBind { public ISensor? Clk, Load, Temp; public CoreRow Row = null!; }
+    private sealed class CoreBind { public int Index; public ISensor? Clk, Load, Temp; public CoreRow Row = null!; }
     private sealed class GpuBind { public ISensor? Temp, HotSpot, VramTemp, Load, CoreClk, MemClk, Fan, FanRpm, Power, VramUsed, VramTotal; public GpuRow Row = null!; }
     private sealed class StorageBind { public ISensor? Temp, Life, Used, Activity; public bool LifeConsumed; public StorageRow Row = null!; }
 
@@ -52,6 +53,40 @@ public sealed partial class SensorService : ObservableObject, IDisposable
     public ObservableCollection<SensorRow> AllSensors { get; } = new();
 
     public string CpuName { get; private set; } = "—";
+
+    internal bool HasComparableIntelCoreOrder
+    {
+        get
+        {
+            lock (_pollLock)
+            {
+                if (_disposed) return false;
+                var cpus = _computer.Hardware.Where(hw => hw.HardwareType == HardwareType.Cpu).ToArray();
+                return cpus.Length == 1
+                    && cpus[0].Identifier.ToString().StartsWith("/intelcpu/", StringComparison.Ordinal)
+                    && !cpus[0].Sensors.Any(s => s.Name.StartsWith("P-Core #", StringComparison.Ordinal)
+                        || s.Name.StartsWith("E-Core #", StringComparison.Ordinal));
+            }
+        }
+    }
+
+    public IReadOnlyList<CoreTemperatureSample> CaptureCoreTemperatureSamples()
+    {
+        lock (_pollLock)
+        {
+            if (_disposed || _lastPollAtUtc is not DateTimeOffset capturedAt ||
+                string.IsNullOrWhiteSpace(CpuName) || CpuName == "—")
+                return Array.Empty<CoreTemperatureSample>();
+            if (!HasComparableIntelCoreOrder)
+                return Array.Empty<CoreTemperatureSample>();
+            return _cores
+                .Select(core => SensorCrossCheckService.LhmCoreIndex(core.Temp?.Name) is int index
+                    && index >= 0 && Val(core.Temp) is double value
+                    ? new CoreTemperatureSample("LHM", CpuName, index, value, capturedAt)
+                    : null)
+                .Where(sample => sample is not null).Select(sample => sample!).ToArray();
+        }
+    }
 
     public SensorService()
     {
@@ -128,7 +163,7 @@ public sealed partial class SensorService : ObservableObject, IDisposable
         {
             if (!byIndex.TryGetValue(i, out var b))
             {
-                b = new CoreBind { Row = new CoreRow($"核心 #{i}") };
+                b = new CoreBind { Index = i, Row = new CoreRow($"核心 #{i}") };
                 byIndex[i] = b;
             }
             return b;
@@ -145,7 +180,9 @@ public sealed partial class SensorService : ObservableObject, IDisposable
             {
                 case SensorType.Clock: b.Clk = s; break;
                 case SensorType.Load: b.Load ??= s; break;
-                case SensorType.Temperature: b.Temp = s; break;
+                case SensorType.Temperature when !s.Name.Contains("TjMax", StringComparison.OrdinalIgnoreCase):
+                    b.Temp = s;
+                    break;
             }
         }
 
@@ -226,6 +263,7 @@ public sealed partial class SensorService : ObservableObject, IDisposable
         {
             if (_disposed) return;   // 已釋放後遲到的背景 Poll 直接略過
             _computer.Accept(_visitor);
+            _lastPollAtUtc = DateTimeOffset.UtcNow;
         }
     }
 

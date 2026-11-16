@@ -534,11 +534,23 @@
                         <local:SectionHead Text="磁碟表面掃描" HelpKey="health/磁碟表面掃描"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                             <ComboBox x:Name="SurfaceDriveCombo" Width="120" Style="{StaticResource DarkCombo}" Margin="0,0,8,0"/>
+                            <ComboBox x:Name="SurfaceBlockSizeCombo" Width="100" Style="{StaticResource DarkCombo}" Margin="0,0,8,0"
+                                      SelectedIndex="0" ToolTip="選擇一種讀取塊尺；每種最多讀取 64 MiB。">
+                                <ComboBoxItem Content="512 B" Tag="512"/>
+                                <ComboBoxItem Content="8 KB" Tag="8192"/>
+                                <ComboBoxItem Content="64 KB" Tag="65536"/>
+                                <ComboBoxItem Content="128 KB" Tag="131072"/>
+                                <ComboBoxItem Content="全部塊尺" Tag="all"/>
+                            </ComboBox>
+                            <CheckBox x:Name="SurfaceRepeatCheck" Content="重讀" VerticalAlignment="Center" Margin="0,0,8,0"
+                                      ToolTip="對同一範圍再讀一次；速度差不代表快取容量。"/>
                             <Button x:Name="SurfaceScanButton" Style="{StaticResource PrimaryButton}" Content="開始掃描" Click="SurfaceScan_Click"/>
+                            <Button x:Name="SurfaceCancelButton" Content="取消" Click="SurfaceCancel_Click"
+                                    IsEnabled="False" Margin="8,0,0,0"/>
                         </StackPanel>
                     </Grid>
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,6" TextWrapping="Wrap"
-                               Text="循序讀取邏輯卷，逐 1 MB 區塊量延遲，標記慢區（&gt;100 ms）與讀取錯誤。這是實際讀一輪的量測，和 SMART 報告值互補。"/>
+                               Text="僅掃描本機固定卷，唯讀緩衝 I/O；每種塊尺最多 64 MiB。可選同範圍重讀，速度差不推算快取容量。慢區門檻 100 ms。"/>
                     <TextBlock x:Name="SurfaceStatus" Style="{StaticResource Subtitle}" Margin="0,0,0,6" TextWrapping="Wrap"/>
                     <ProgressBar x:Name="SurfaceProgress" Height="6" Minimum="0" Maximum="100" Visibility="Collapsed"/>
                     <ItemsControl x:Name="SurfaceResults" Margin="0,8,0,0">

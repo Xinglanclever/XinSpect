@@ -100,7 +100,7 @@ public class AiNetworkPathTests
         {
             await ai.SendAsync("你好");
 
-            Assert.Equal(3, handler.Calls.Count);              // 第一次＋兩次重試
+            Assert.Equal(3, handler.Calls.Count);              // 前兩次重試成功後立即停止
             Assert.Equal("收到了", ai.Messages[^1].Text);
             Assert.False(ai.CanRetry);                         // 正常回答旁邊不給重試
         }
@@ -110,10 +110,8 @@ public class AiNetworkPathTests
     [Fact]
     public async Task 重試用完就停止並保留錯誤敘述()
     {
-        var handler = new FakeHandler(
-            Status(HttpStatusCode.TooManyRequests),
-            Status(HttpStatusCode.TooManyRequests),
-            Status(HttpStatusCode.TooManyRequests));
+        var handler = new FakeHandler(Enumerable.Range(0, AiRetryPolicy.MaxAttempts)
+            .Select(_ => Status(HttpStatusCode.TooManyRequests)).ToArray());
         var ai = Make(handler, out var settings, out string folder);
         var (p, u, m) = (settings.AiProviderEnum, settings.AiBaseUrl, settings.AiModel);
         try
