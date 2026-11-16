@@ -1,4 +1,4 @@
-﻿# XinSpect CI 守門
+# XinSpect CI 守門
 #
 # 兩條線：
 #   ① push／PR：守門子集（快、不依賴硬體）——類名全部由 Tests/CommunityDocsTests 釘住，
@@ -29,10 +29,10 @@ jobs:
     name: 守門子集（push／PR）
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
 
@@ -49,7 +49,7 @@ jobs:
     if: github.event_name == 'schedule'
     runs-on: [self-hosted, xinpect-dev-machine]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: 前置健檢：記錄執行中行程
         run: |
@@ -65,7 +65,7 @@ jobs:
 
       - name: 紅燈自動開 issue
         if: failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             await github.rest.issues.create({
