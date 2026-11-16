@@ -44,7 +44,7 @@
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.16" />
     <PackageReference Include="NAudio" Version="2.*" />
     <!-- OpenccNetLib 1.7.0 brings 8.0.0 transitively; pin the patched CBOR implementation. -->
-    <PackageReference Include="System.Formats.Cbor" Version="8.0.2" />
+    <PackageReference Include="System.Formats.Cbor" Version="11.0.0" />
     <PackageReference Include="OpenccNetLib" Version="1.7.0" ExcludeAssets="contentFiles" />
     <!-- WinRing0 的來源：LHM 0.9.6 起已移除 Ring0／WinRing0（0.9.4 的 Ring0 內嵌了 gzip 過的 WinRing0x64）。
          單檔發佈的使用者端沒有 NuGet 快取，所以 0.9.4 必須跟著執行檔走（見檔尾的 EmbedLhm094）。
