@@ -10,8 +10,11 @@ public static class HardwareOperationGate
 
     public static bool CanRunAdvancedDiagnostics => Volatile.Read(ref _settings)?.AdvancedDiagnosticsEnabled == true;
 
+    internal static bool IsHighRiskModeEnabled =>
+        Volatile.Read(ref _settings)?.CanUseHighRiskHardwareOperations == true;
+
     public static bool CanWriteHardware =>
-        Volatile.Read(ref _settings)?.CanUseHighRiskHardwareOperations == true || OperationDepth.Value > 0;
+        IsHighRiskModeEnabled || OperationDepth.Value > 0;
 
     internal static void Bind(SettingsService? settings) => Volatile.Write(ref _settings, settings);
 

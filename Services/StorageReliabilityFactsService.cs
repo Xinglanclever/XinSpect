@@ -1,4 +1,5 @@
 using System.Management;
+using System.Runtime.CompilerServices;
 
 namespace XinSpect;
 
@@ -46,8 +47,8 @@ public interface IStorageReliabilitySource
 }
 
 /// <summary>
-/// WMI 儲存可靠性查詢的硬逾時包裝：把 <see cref="StorageReliabilityWmiSource.Read"/> 放到
-/// 專屬執行緒上跑，超過預算就放棄——呼叫端拿到「逾時」的三態，收集鏈繼續。
+/// WMI 儲存可靠性查詢的呼叫端逾時包裝：把 <see cref="StorageReliabilityWmiSource.Read"/> 放到
+/// 專屬執行緒上跑，超過預算便停止等待——底層讀取未被取消，收集鏈以失敗狀態繼續。
 /// </summary>
 /// <remarks>
 /// <para>
@@ -57,52 +58,212 @@ public interface IStorageReliabilitySource
 /// （與 <see cref="StorageProbeBreaker"/> 類別說明裡 DiskIo 的實測記錄同一代價），
 /// 但犧牲一條執行緒換整條收集鏈活著，是划算的。
 /// </para>
+/// <para>
+/// 同一個 inner 物件共用執行中閘門；換包裝器也不能重開尚未結束的讀取。
+/// 逾時後不處置 inner 或同步資源，也不把晚到結果改寫成該次呼叫成功。
+/// 通用包裝器的閘門按來源物件身份隔離；正式 StorageReliabilityWmiSource 另在 Read
+/// 邊界共用本機 StorageWMI 閘門，跨來源實例仍不重發。其他直接 StorageWMI 查詢
+/// （DiskInfo 等）尚未接入，也沒有跨程序的提供者斷路器。
+/// </para>
 /// </remarks>
 public sealed class StorageReliabilityTimeoutSource : IStorageReliabilitySource
 {
     private readonly IStorageReliabilitySource _inner;
     private readonly int _budgetMs;
+    private readonly ReadState _state;
+    private static readonly ConditionalWeakTable<IStorageReliabilitySource, ReadState> States = new();
+
+    private sealed class ReadState
+    {
+        public Task<ReadResult>? InFlight;
+    }
+
+    private sealed record ReadResult(IReadOnlyList<StorageReliabilityRaw> Rows, bool Available, string? Reason);
 
     public StorageReliabilityTimeoutSource(IStorageReliabilitySource inner, int budgetMs = 15000)
     {
+        ArgumentNullException.ThrowIfNull(inner);
+        ArgumentOutOfRangeException.ThrowIfNegative(budgetMs);
         _inner = inner;
         _budgetMs = budgetMs;
+        _state = States.GetValue(inner, _ => new ReadState());
     }
 
     public bool Available { get; private set; } = true;
 
     public string? UnavailableReason { get; private set; }
 
+    /// <summary>注入生命週期回歸等待底層讀取及結果狀態存取結束；不會取消或釋放來源。</summary>
+    internal Task ReadCompletion
+    {
+        get { lock (_state) return _state.InFlight ?? Task.CompletedTask; }
+    }
+
     public IReadOnlyList<StorageReliabilityRaw> Read()
     {
-        IReadOnlyList<StorageReliabilityRaw>? result = null;
-        using var done = new ManualResetEventSlim(false);
-        var worker = new Thread(() =>
+        TaskCompletionSource<ReadResult> completion;
+        lock (_state)
         {
-            try { result = _inner.Read(); }
-            catch { result = []; }
-            finally { try { done.Set(); } catch { } }
-        })
-        {
-            IsBackground = true,
-            Name = "StorageReliability-Wmi-Read",
-        };
-        worker.Start();
-        if (!done.Wait(_budgetMs))
-        {
-            Available = false;
-            UnavailableReason = $"WMI 儲存可靠性查詢逾時（{_budgetMs / 1000} 秒沒有回應）——不再等，收集鏈繼續";
-            return [];
+            if (_state.InFlight is { IsCompleted: false })
+                return Failure("同一儲存可靠性來源的先前讀取仍在執行——未取消底層查詢，不再啟動另一個讀取");
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _state.InFlight = completion.Task;
         }
-        if (result is null)
+
+        try
         {
-            Available = false;
-            UnavailableReason = "WMI 儲存可靠性查詢失敗";
-            return [];
+            var worker = new Thread(() =>
+            {
+                ReadResult result;
+                try
+                {
+                    // Read 與其結果狀態在同一 worker 內完成；狀態 getter 也可能失敗或卡住。
+                    var rows = _inner.Read();
+                    result = rows is null
+                        ? new([], false, "儲存可靠性來源違反契約：Read 回傳 null")
+                        : new(rows, _inner.Available, _inner.UnavailableReason);
+                }
+                catch (Exception ex)
+                {
+                    result = new([], false, $"儲存可靠性來源讀取或結果狀態失敗：{ex.GetType().Name}：{ex.Message}");
+                }
+                // 只有 inner 讀取與狀態存取均已結束，才開放後續讀取；晚到結果不碰包裝器狀態。
+                completion.SetResult(result);
+            })
+            {
+                IsBackground = true,
+                Name = "StorageReliability-Wmi-Read",
+            };
+            worker.Start();
         }
-        Available = _inner.Available;
-        UnavailableReason = _inner.UnavailableReason;
+        catch (Exception ex)
+        {
+            completion.SetResult(new([], false, $"無法啟動儲存可靠性讀取：{ex.GetType().Name}：{ex.Message}"));
+        }
+        if (!completion.Task.Wait(_budgetMs))
+            return Failure($"WMI 儲存可靠性查詢逾時（{_budgetMs} 毫秒沒有回應）——底層查詢未取消，收集鏈繼續");
+
+        var outcome = completion.Task.Result;
+        Available = outcome.Available;
+        UnavailableReason = outcome.Reason;
+        return outcome.Rows;
+    }
+
+    private IReadOnlyList<StorageReliabilityRaw> Failure(string reason)
+    {
+        Available = false;
+        UnavailableReason = reason;
+        return [];
+    }
+}
+
+/// <summary>可靠性查詢專用的程序內 provider 閘門；其他直接 WMI 路徑尚未接入。</summary>
+internal static class StorageReliabilityWmiReadGate
+{
+    // 本機官方 storagewmi.mof:3-10、508/550/1104 的註冊身份；不是執行中的 provider PID。
+    internal const string LocalStorageProvider =
+        @"local|root\Microsoft\Windows\Storage|StorageWMI|{B4A6821D-4D2E-40DD-9EE0-89C2CD07BF69}";
+
+    private static readonly object Sync = new();
+    private static readonly Dictionary<string, object> Active = new(StringComparer.OrdinalIgnoreCase);
+
+    internal static IDisposable? TryEnter(string identity)
+    {
+        lock (Sync)
+        {
+            if (Active.ContainsKey(identity)) return null;
+            var owner = new object();
+            var lease = new Lease(identity, owner);
+            Active.Add(identity, owner);
+            return lease;
+        }
+    }
+
+    private sealed class Lease(string identity, object owner) : IDisposable
+    {
+        private object? _owner = owner;
+
+        public void Dispose()
+        {
+            var held = Interlocked.Exchange(ref _owner, null);
+            if (held is null) return;
+            lock (Sync)
+            {
+                if (Active.TryGetValue(identity, out var current) && ReferenceEquals(held, current))
+                    Active.Remove(identity);
+            }
+        }
+    }
+}
+
+/// <summary>正式 COM 查詢共用的收尾：保留原讀取失敗，清理失敗有界彙總並停止後續查詢。</summary>
+internal static class StorageReliabilityWmiCleanup
+{
+    internal const int MaximumCleanupDiagnostics = 7;
+    internal const int MaximumDiagnosticCharacters = 4096;
+
+    internal static T Run<T>(Func<Scope, T> read)
+    {
+        var scope = new Scope();
+        T result = default!;
+        Exception? primary = null;
+        try { result = read(scope); }
+        catch (CleanupInterruptedException) { /* 清理已記錄；不捏造另一個讀取失敗。 */ }
+        catch (Exception ex) { primary = ex; }
+        var reason = scope.FailureReason(primary);
+        if (reason is not null) throw new InvalidOperationException(reason, primary);
         return result;
+    }
+
+    private sealed class CleanupInterruptedException : Exception { }
+
+    internal sealed class Scope
+    {
+        private readonly List<string> _cleanupFailures = [];
+        private int _cleanupFailureCount;
+
+        internal T Use<TResource, T>(TResource resource, string stage, Func<TResource, T> read)
+            where TResource : IDisposable
+        {
+            bool readFailed = false;
+            try { return read(resource); }
+            catch { readFailed = true; throw; }
+            finally
+            {
+                try { resource.Dispose(); }
+                catch (Exception ex)
+                {
+                    if (_cleanupFailureCount < int.MaxValue) _cleanupFailureCount++;
+                    if (_cleanupFailures.Count < MaximumCleanupDiagnostics)
+                        _cleanupFailures.Add(Describe("清理失敗 " + stage, ex));
+                    // 原失敗仍在傳遞時絕不替換它；成功讀取後的清理失敗則中止新交易。
+                    if (!readFailed) throw new CleanupInterruptedException();
+                }
+            }
+        }
+
+        internal string? FailureReason(Exception? primary)
+        {
+            if (primary is null && _cleanupFailureCount == 0) return null;
+            var details = new List<string>();
+            if (primary is not null) details.Add(Describe("原始讀取失敗", primary));
+            details.AddRange(_cleanupFailures);
+            if (_cleanupFailureCount > _cleanupFailures.Count)
+                details.Add($"另有 {_cleanupFailureCount - _cleanupFailures.Count} 項清理失敗未列；已嘗試處置所有取得的資源");
+            string reason = string.Join("；", details);
+            return Limit(reason, MaximumDiagnosticCharacters);
+        }
+
+        private static string Describe(string stage, Exception error)
+        {
+            string message;
+            try { message = error.Message; }
+            catch { message = "例外訊息不可讀"; }
+            return $"{Limit(stage, 64)}：{Limit(error.GetType().Name, 128)}：{Limit(message, 256)}";
+        }
+
+        private static string Limit(string value, int length)
+            => value.Length <= length ? value : value[..(length - 1)] + "…";
     }
 }
 
@@ -118,36 +279,115 @@ public sealed class StorageReliabilityTimeoutSource : IStorageReliabilitySource
 public sealed class StorageReliabilityWmiSource : IStorageReliabilitySource
 {
     private const string Namespace = @"root\Microsoft\Windows\Storage";
+    private readonly Func<IQuery> _openQuery;
+    private readonly string _providerIdentity;
+
+    // 此 seam 保留正式 Read／timeout wrapper／gate；測試只替換 COM 查詢與資源生命週期。
+    internal interface IQuery : IDisposable
+    {
+        IReadOnlyList<StorageReliabilityRaw> Read();
+    }
+
+    public StorageReliabilityWmiSource()
+        : this(static () => new WmiQuery(), StorageReliabilityWmiReadGate.LocalStorageProvider) { }
+
+    internal StorageReliabilityWmiSource(Func<IQuery> openQuery,
+        string providerIdentity = StorageReliabilityWmiReadGate.LocalStorageProvider)
+    {
+        ArgumentNullException.ThrowIfNull(openQuery);
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerIdentity);
+        _openQuery = openQuery;
+        _providerIdentity = providerIdentity;
+    }
 
     public bool Available { get; private set; } = true;
     public string? UnavailableReason { get; private set; }
 
     public IReadOnlyList<StorageReliabilityRaw> Read()
     {
-        var rows = new List<StorageReliabilityRaw>();
+        // 所有正式 source 實例共用此註冊身份；不按物件、WQL 或類別分鎖。
+        // lease 由執行 Read 的 worker 持有，呼叫端 timeout 不會釋放它。
+        using var lease = StorageReliabilityWmiReadGate.TryEnter(_providerIdentity);
+        if (lease is null)
+        {
+            Available = false;
+            UnavailableReason = "本機 StorageWMI 的先前可靠性查詢或清理仍在執行——未取消底層操作，不再發出另一個查詢";
+            return [];
+        }
+
         try
         {
-            var disks = new ManagementObjectSearcher(Namespace, "SELECT * FROM MSFT_PhysicalDisk");
-            foreach (ManagementObject disk in disks.Get())
+            IReadOnlyList<StorageReliabilityRaw>? rows = null;
+            var failures = new List<string>();
+            var query = _openQuery() ?? throw new InvalidOperationException("可靠性查詢違反契約：factory 回傳 null");
+            try
             {
-                using (disk)
-                {
-                    foreach (ManagementObject rel in disk.GetRelated("MSFT_StorageReliabilityCounter"))
-                    {
-                        using (rel) rows.Add(ReadOne(rel));
-                    }
-                }
+                rows = query.Read() ?? throw new InvalidOperationException("可靠性查詢違反契約：Read 回傳 null");
+            }
+            catch (Exception ex)
+            {
+                failures.Add($"讀取失敗：{ex.GetType().Name}：{ex.Message}");
+            }
+            finally
+            {
+                // 清理必須完成才離開 lease；另外捕獲，不讓 Dispose 覆蓋原始讀取失敗。
+                try { query.Dispose(); }
+                catch (Exception ex) { failures.Add($"清理失敗：{ex.GetType().Name}：{ex.Message}"); }
+            }
+            if (failures.Count != 0)
+            {
+                Available = false;
+                UnavailableReason = string.Join("；", failures);
+                return [];
             }
             Available = true;
             UnavailableReason = null;
+            return rows!;
         }
         catch (Exception ex)
         {
             Available = false;
             UnavailableReason = $"{ex.GetType().Name}：{ex.Message}";
-            rows.Clear();
+            return [];
         }
-        return rows;
+    }
+
+    internal sealed class WmiQuery : IQuery
+    {
+        private readonly Func<StorageReliabilityWmiCleanup.Scope, IReadOnlyList<StorageReliabilityRaw>> _read;
+
+        // 注入只替換 COM 操作；正式 Read 的有界收尾與外層 source/gate 保持相同。
+        internal WmiQuery(Func<StorageReliabilityWmiCleanup.Scope, IReadOnlyList<StorageReliabilityRaw>>? read = null)
+            => _read = read ?? ReadCom;
+
+        public IReadOnlyList<StorageReliabilityRaw> Read() => StorageReliabilityWmiCleanup.Run(_read);
+
+        private static IReadOnlyList<StorageReliabilityRaw> ReadCom(StorageReliabilityWmiCleanup.Scope cleanup)
+            => cleanup.Use(new ManagementObjectSearcher(Namespace, "SELECT * FROM MSFT_PhysicalDisk"), "searcher",
+                searcher => cleanup.Use(searcher.Get(), "disk collection",
+                    disks => cleanup.Use(disks.GetEnumerator(), "disk enumerator", diskEnumerator =>
+                    {
+                        var rows = new List<StorageReliabilityRaw>();
+                        while (diskEnumerator.MoveNext())
+                        {
+                            cleanup.Use((ManagementObject)diskEnumerator.Current, "disk",
+                                disk => cleanup.Use(disk.GetRelated("MSFT_StorageReliabilityCounter"), "related collection",
+                                    related => cleanup.Use(related.GetEnumerator(), "related enumerator", relEnumerator =>
+                                    {
+                                        while (relEnumerator.MoveNext())
+                                            cleanup.Use((ManagementObject)relEnumerator.Current, "counter", rel =>
+                                            {
+                                                rows.Add(ReadOne(rel));
+                                                return true;
+                                            });
+                                        return true;
+                                    })));
+                        }
+                        return rows;
+                    })));
+
+        // ReadCom 已透過同一 cleanup scope 嘗試處置每個取得的 COM 資源與列舉器。
+        public void Dispose() { }
     }
 
     private static StorageReliabilityRaw ReadOne(ManagementBaseObject o) => new(

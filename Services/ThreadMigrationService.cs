@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.Tracing.Parsers;
@@ -394,29 +394,26 @@ public sealed class ThreadMigrationService : ObservableObject, IDisposable
     {
         uint len = 0;
         GetLogicalProcessorInformationEx(relationship, 0, ref len);
-        if (len == 0 || Marshal.GetLastWin32Error() != ErrorInsufficientBuffer) return null;
+        if (!WindowsTopologyBuffer.IsWithinBudget(len) || Marshal.GetLastWin32Error() != ErrorInsufficientBuffer) return null;
 
+        uint capacity = len;
         nint buf = Marshal.AllocHGlobal((int)len);
         try
         {
-            if (!GetLogicalProcessorInformationEx(relationship, buf, ref len)) return null;
-            var records = new List<(ulong, int)>();
-            int off = 0;
-            while (off + 8 <= (int)len)
-            {
-                nint rec = buf + off;
-                int size = Marshal.ReadInt32(rec + 4);
-                // 版面驗證：Size 必須完整蓋住「聯集起點（+8）＋遮罩位移＋一個 ULONG_PTR」，
-                // 且不得越過緩衝——否則遮罩讀到的會是下一筆記錄的標頭（甚至緩衝外）。
-                if (size < 8 + maskOffset + 8 || off + size > (int)len) return null;
-                ulong mask = (ulong)Marshal.ReadIntPtr(rec + 8 + maskOffset).ToInt64();
-                int aux = Marshal.ReadInt32(rec + 8);   // NUMA NodeNumber／快取 Level（低位元組）
-                records.Add((mask, aux));
-                off += size;
-            }
-            return records;
+            if (!GetLogicalProcessorInformationEx(relationship, buf, ref len) || len > capacity) return null;
+            var bytes = new byte[(int)len];
+            Marshal.Copy(buf, bytes, 0, bytes.Length);
+            return ParseRecords(bytes, relationship);
         }
         finally { Marshal.FreeHGlobal(buf); }
+    }
+
+    internal static List<(ulong Mask, int Aux)>? ParseRecords(byte[] bytes, int relationship)
+    {
+        var records = WindowsTopologyBuffer.Parse(bytes);
+        if (records is null || records.Any(r => r.Relationship != relationship ||
+            r.Affinities.Count != 1 || r.Affinities[0].Group != 0)) return null;
+        return records.Select(r => (r.Affinities[0].Mask, r.Aux)).ToList();
     }
 
     private static IEnumerable<int> Bits(ulong mask, int max)

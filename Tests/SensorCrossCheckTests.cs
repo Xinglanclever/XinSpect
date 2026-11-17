@@ -1,21 +1,157 @@
 using System.IO.MemoryMappedFiles;
+using System.Diagnostics;
 using System.Text;
+using System.Reflection;
+using LibreHardwareMonitor.Hardware;
 using Xunit;
 
 namespace XinSpect.Tests;
 
 public sealed class SensorCrossCheckTests
 {
+    [Fact]
+    public void CpuAcquisitionCallbackCompletesBeforeLaterDeviceUpdate()
+    {
+        long clock = 10;
+        var calls = new List<string>();
+        SensorAcquisition? cpuAcquisition = null;
+        var cpu = FakeHardware("cpu", () => { calls.Add("cpu update"); clock = 20; });
+        var later = FakeHardware("later", () => { calls.Add("later update"); clock = 5000; });
+        var visitor = new UpdateVisitor((hardware, acquisition) =>
+        {
+            calls.Add(hardware.Name + " callback");
+            if (ReferenceEquals(hardware, cpu)) cpuAcquisition = acquisition;
+        }, () => clock);
+
+        visitor.VisitHardware(cpu);
+        visitor.VisitHardware(later);
+
+        Assert.Equal(new[] { "cpu update", "cpu callback", "later update", "later callback" }, calls);
+        Assert.Equal(new SensorAcquisition(10, 20), cpuAcquisition);
+    }
+
+    [Fact]
+    public void FailedTraversalClearsCpuSnapshotAndDoesNotMutateEarlierCapture()
+    {
+        float temperature = 60;
+        bool failLater = false, closed = false;
+        var sensor = DispatchProxy.Create<ISensor, HardwareProxy>();
+        ((HardwareProxy)(object)sensor).InvokeMethod = (method, _) => method.Name switch
+        {
+            "get_Name" => "CPU Core #1",
+            "get_SensorType" => SensorType.Temperature,
+            "get_Value" => temperature,
+            _ => throw new InvalidOperationException("Unexpected fake sensor call: " + method.Name),
+        };
+        var cpu = FakeHardware("CPU X", () => { }, [sensor]);
+        var later = FakeHardware("later", () =>
+        {
+            if (failLater) throw new InvalidOperationException("Later device failed.");
+        }, type: HardwareType.Memory);
+        var computer = DispatchProxy.Create<IComputer, HardwareProxy>();
+        ((HardwareProxy)(object)computer).InvokeMethod = (method, args) => method.Name switch
+        {
+            "get_Hardware" => new[] { cpu, later },
+            "Accept" => RunUpdate(() => ((IVisitor)args![0]!).VisitComputer(computer)),
+            "Traverse" => RunUpdate(() =>
+            {
+                var visitor = (IVisitor)args![0]!;
+                visitor.VisitHardware(cpu);
+                visitor.VisitHardware(later);
+            }),
+            _ => throw new InvalidOperationException("Unexpected fake computer call: " + method.Name),
+        };
+        using (var service = new SensorService(computer, () => { }, () => closed = true))
+        {
+            var original = service.CaptureCoreTemperatureSamples();
+            Assert.Equal(60, Assert.Single(original).Celsius);
+            temperature = 90;
+            Assert.Equal(60, Assert.Single(service.CaptureCoreTemperatureSamples()).Celsius);
+            failLater = true;
+            Assert.Throws<InvalidOperationException>(service.Poll);
+            Assert.Empty(service.CaptureCoreTemperatureSamples());
+            Assert.Equal(60, Assert.Single(original).Celsius);
+        }
+        Assert.True(closed);
+    }
+
+    private static IHardware FakeHardware(string name, Action update, ISensor[]? sensors = null,
+        HardwareType type = HardwareType.Cpu)
+    {
+        var hardware = DispatchProxy.Create<IHardware, HardwareProxy>();
+        ((HardwareProxy)(object)hardware).InvokeMethod = (method, _) => method.Name switch
+        {
+            "get_Name" => name,
+            "get_HardwareType" => type,
+            "get_Identifier" => new Identifier("intelcpu", "0"),
+            "get_Sensors" => sensors ?? Array.Empty<ISensor>(),
+            "get_SubHardware" => Array.Empty<IHardware>(),
+            "Update" => RunUpdate(update),
+            _ => throw new InvalidOperationException("Unexpected fake hardware call: " + method.Name),
+        };
+        return hardware;
+    }
+
+    private static object? RunUpdate(Action update) { update(); return null; }
+
+    public class HardwareProxy : DispatchProxy
+    {
+        public Func<MethodInfo, object?[]?, object?> InvokeMethod { get; set; } = null!;
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+            => InvokeMethod(targetMethod!, args);
+    }
+
     private static readonly DateTimeOffset Now = new(2026, 11, 16, 4, 0, 0, TimeSpan.Zero);
+
+    private static SensorAcquisition Acquisition(int secondsAgo = 0)
+        => new((20L - secondsAgo) * Stopwatch.Frequency, (20L - secondsAgo) * Stopwatch.Frequency);
 
     private static CoreTemperatureSample Lhm(string device = "CPU X", int core = 0, double c = 60,
         int secondsAgo = 0)
-        => new("LHM", device, core, c, Now.AddSeconds(-secondsAgo));
+        => new("LHM", device, core, c, Now.AddSeconds(-secondsAgo), Acquisition(secondsAgo));
 
     private static ExternalReading CoreTemp(string device = "CPU X", int core = 0, double value = 62,
         string type = "Temperature", string unit = "°C", int secondsAgo = 1)
         => new("Core Temp", type, $"{device} Core #{core}", value, unit,
-            DeviceIdentity: device, ChannelIndex: core, CapturedAtUtc: Now.AddSeconds(-secondsAgo));
+            DeviceIdentity: device, ChannelIndex: core, CapturedAtUtc: Now.AddSeconds(-secondsAgo),
+            Acquisition: Acquisition(secondsAgo));
+
+    [Fact]
+    public void WallClockCorrectionsCannotHideOrCreateAcquisitionGaps()
+    {
+        Assert.Empty(SensorCrossCheckService.CompareCoreTemperatures(
+            [Lhm(secondsAgo: 10) with { CapturedAtUtc = Now }], [CoreTemp(secondsAgo: 0)]));
+        Assert.Single(SensorCrossCheckService.CompareCoreTemperatures(
+            [Lhm() with { CapturedAtUtc = Now.AddHours(-1) }], [CoreTemp()]));
+    }
+
+    [Fact]
+    public void MissingOrInvalidMonotonicBoundsCannotBeCompared()
+    {
+        foreach (var window in new SensorAcquisition?[] { null, new(-1, 0), new(20, 10) })
+        {
+            Assert.Empty(SensorCrossCheckService.CompareCoreTemperatures(
+                [Lhm() with { Acquisition = window }], [CoreTemp()]));
+            Assert.Empty(SensorCrossCheckService.CompareCoreTemperatures(
+                [Lhm()], [CoreTemp() with { Acquisition = window }]));
+        }
+    }
+
+    [Fact]
+    public void SlowAcquisitionCannotBeStampedFreshAtCompletion()
+    {
+        Assert.Empty(SensorCrossCheckService.CompareCoreTemperatures(
+            [Lhm() with { Acquisition = new(15L * Stopwatch.Frequency, 20L * Stopwatch.Frequency) }],
+            [CoreTemp(secondsAgo: 0)]));
+    }
+
+    [Fact]
+    public void MaximumMonotonicValuesDoNotOverflowSubtraction()
+    {
+        Assert.Empty(SensorCrossCheckService.CompareCoreTemperatures(
+            [Lhm() with { Acquisition = new(0, 0) }],
+            [CoreTemp() with { Acquisition = new(long.MaxValue, long.MaxValue) }]));
+    }
 
     [Fact]
     public void 同裝置同核心且三秒內唯一才配對()

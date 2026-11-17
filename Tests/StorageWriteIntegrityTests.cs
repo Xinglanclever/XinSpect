@@ -37,7 +37,7 @@ public class StorageWriteIntegrityTests
     }
 
     [Fact]
-    public async Task 成功完整性測試只用固定暫存檔並保留原始樣本()
+    public async Task 注入引擎管理自己的檔案並保留原始樣本()
     {
         string root = Path.Combine(Path.GetTempPath(), "xinspect-write-integrity");
         string expected = Path.Combine(root, "XinSpect.deepbench.tmp");
@@ -97,6 +97,36 @@ public class StorageWriteIntegrityTests
         Assert.Empty(fileSystem.CreatedPaths);
     }
 
+    [Fact]
+    public async Task GuardFailureDoesNotDeleteExistingUnownedPlanPath()
+    {
+        string root = Path.GetTempPath();
+        string existing = Path.Combine(root, "XinSpect.deepbench.tmp");
+        var fileSystem = new FakeDiskFileSystem { AvailableFreeSpace = 1 };
+        fileSystem.Files[existing] = true;
+        var service = new StorageWriteIntegrityService(root, 128 * 1024 * 1024, fileSystem, new FakeIntegrityEngine());
+        var result = await service.RunAsync(CreateContext(), CancellationToken.None);
+        Assert.Equal(DeepBenchFailureKind.NotRun, result.FailureKind);
+        Assert.True(fileSystem.Exists(existing));
+        Assert.Empty(fileSystem.CreatedPaths);
+        Assert.Empty(fileSystem.DeletedPaths);
+    }
+
+    [Fact]
+    public async Task SuccessfulInjectedEngineDoesNotAuthorizeServicePathDeletion()
+    {
+        string root = Path.GetTempPath();
+        string existing = Path.Combine(root, "XinSpect.deepbench.tmp");
+        var fileSystem = new FakeDiskFileSystem { AvailableFreeSpace = 10 * GiB };
+        fileSystem.Files[existing] = true;
+        var engine = new FakeIntegrityEngine { SimulateOwnedFixture = false };
+        var result = await new StorageWriteIntegrityService(root, 128 * 1024 * 1024, fileSystem, engine)
+            .RunAsync(CreateContext(), CancellationToken.None);
+        Assert.Equal(DeepBenchFailureKind.None, result.FailureKind);
+        Assert.True(fileSystem.Exists(existing));
+        Assert.Empty(fileSystem.DeletedPaths);
+    }
+
     private static DeepBenchRunContext CreateContext() =>
         new(Guid.NewGuid(), DeepBenchRunProfile.Quick, new Progress<DeepBenchProgress>());
 
@@ -117,6 +147,7 @@ public class StorageWriteIntegrityTests
         public static StorageWriteIntegrityPoint ValidPoint { get; } = new(
             "prng", 8 * 1024 * 1024, [400, 401], [900, 901], [50, 51], []);
 
+        public bool SimulateOwnedFixture = true;
         public int Calls;
         public string? LastPath;
         public StorageWriteIntegrityPoint Point { get; set; } = ValidPoint;
@@ -126,8 +157,10 @@ public class StorageWriteIntegrityTests
         {
             Calls++;
             LastPath = context.TempFilePath;
+            if (!SimulateOwnedFixture) return Task.FromResult(new StorageWriteIntegrityMeasurement([Point], context.TempFilePath));
             context.FileSystem.Create(context.TempFilePath);
-            return Task.FromResult(new StorageWriteIntegrityMeasurement([Point]));
+            try { return Task.FromResult(new StorageWriteIntegrityMeasurement([Point], context.TempFilePath)); }
+            finally { context.FileSystem.Delete(context.TempFilePath); }
         }
     }
 }

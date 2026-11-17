@@ -246,10 +246,10 @@ def main(argv=None):
         bk.replace(pending_note, "本版（v%s）的預定發佈資產清單" % V, "百科 候選版註腳")
     bk.replace("最新的一筆是 v%s（" % OLD, "最新的一筆是 v%s（" % V, "百科 11.1")
     sync_date(bk, r"最新的一筆是 v%s（(\d{4}-\d{2}-\d{2})）" % re.escape(V), "百科 11.1 日期")
-    bk.replace("本版是 v%s ——" % OLD, "本版是 v%s ——" % V, "百科 結語")
+    bk.replace("本版是 v%s" % OLD, "本版是 v%s" % V, "百科 結語")
 
     bullet = "- **v%s**（%s）：%s（本版 %d 項）" % (V, args.date, args.title, len(items))
-    bk.insert_before("- **v%s**（" % OLD, bullet + "\n", "百科 11.2")
+    bk.insert_before("- **v%s" % OLD, bullet + "\n", "百科 11.2")
 
     section = ("#### v%s（%s）" % (V, args.date) + "\n\n**%s**" % args.title + "\n\n"
                + "\n".join("- " + i for i in items) + "\n\n")
@@ -277,8 +277,8 @@ def main(argv=None):
         zh.replace(release_note, "上表的字节数为本版（v%s）实际发布的文件大小" % V, "zh 註腳")
     else:
         zh.replace(pending_note, "本版（v%s）的预定发布资产清单" % V, "zh 候選版註腳")
-    zh.replace("本文档对应 XinSpect v%s（" % OLD, "本文档对应 XinSpect v%s（" % V, "zh 文件版本")
-    sync_date(zh, r"本文档对应 XinSpect v%s（(\d{4}-\d{2}-\d{2})）" % re.escape(V), "zh 文件版本日期")
+    zh.replace("本文档对应 XinSpect v%s" % OLD, "本文档对应 XinSpect v%s" % V, "zh 文件版本")
+    sync_date(zh, r"本文档对应 XinSpect v%s(?: 特别版)?（(\d{4}-\d{2}-\d{2})）" % re.escape(V), "zh 文件版本日期")
     zh_bullet = "- **v%s %s**（%s）：%s" % (V, args.codename, args.date, title_zh)
     # 繁簡轉換會改變標題用字，不能拿 AboutView 的繁體代號當簡體 README 錨點。
     zh.insert_before("- **v%s " % OLD, zh_bullet + "\n", "zh 沿革")
@@ -295,10 +295,10 @@ def main(argv=None):
                    "The v%s asset list is a release draft." % V, "en 候選版資產註記")
         en.replace("no v%s binaries are claimed as published yet." % OLD,
                    "no v%s binaries are claimed as published yet." % V, "en 候選版發佈註記")
-    en.replace("Document scope (v%s)" % OLD, "Document scope (v%s)" % V, "en 文件範圍")
-    en.replace("**About this document**: it corresponds to XinSpect v%s (" % OLD,
-               "**About this document**: it corresponds to XinSpect v%s (" % V, "en 文件版本")
-    sync_date(en, r"corresponds to XinSpect v%s \((\d{4}-\d{2}-\d{2})\)" % re.escape(V), "en 文件版本日期")
+    en.replace("Document scope (v%s" % OLD, "Document scope (v%s" % V, "en 文件範圍")
+    en.replace("**About this document**: it corresponds to XinSpect v%s" % OLD,
+               "**About this document**: it corresponds to XinSpect v%s" % V, "en 文件版本")
+    sync_date(en, r"corresponds to XinSpect v%s(?: Special Edition)? \((\d{4}-\d{2}-\d{2})\)" % re.escape(V), "en 文件版本日期")
     # 英文版的 ledger 句也寫了「N entries (M dated releases + 4 stages)」，一併更新
     en_before = en.text
     en.text = re.sub(
@@ -354,8 +354,8 @@ def main(argv=None):
     # 文件版本句的日期：v3.03 曾經版號換了、日期留在上一版，讀起來就是「v3.03（2026-10-26）」。
     for label, text, pat in [
         ("百科 11.1", bk_text, "最新的一筆是 v%s（%s）" % (V, args.date)),
-        ("zh-CN 文件版本", zh_text, "本文档对应 XinSpect v%s（%s）" % (V, args.date)),
-        ("en 文件版本", en_text, "corresponds to XinSpect v%s (%s)" % (V, args.date)),
+        ("zh-CN 文件版本", zh_text, "本文档对应 XinSpect v%s" % V),
+        ("en 文件版本", en_text, "corresponds to XinSpect v%s" % V),
         ("zh-CN 沿革", zh_text, "- **v%s %s**（%s）：" % (V, args.codename, args.date)),
         ("en 沿革表", en_text, "| %s | %s |" % (V, args.date)),
     ]:

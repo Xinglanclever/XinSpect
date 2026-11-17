@@ -27,8 +27,6 @@ public class MeasurementQuietTests
          "指標追逐量單筆存取延遲，旁邊有動畫在重繪會混進爭用成本"),
         ("Services/NvmePowerService.cs", "Sweep",
          "整趟大半時間是刻意的閒置，動畫會把機器叫著，變成量「有活動時的閒置」"),
-        ("Services/DramTrafficService.cs", "Run",
-         "動畫的重繪本身會製造記憶體流量與快取壓力，會動到自我驗證的比值"),
         ("Services/ThreadMigrationService.cs", "RunAsync",
          "量的就是「執行緒被搬了幾次」，而動畫每一幀重繪都會製造上下文切換與遷移"),
         ("Services/Overclock/SiliconProbeService.cs", "Run",

@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -102,6 +103,7 @@ public static class CoreTempSharedMem
                 return false;
             }
 
+            long readStarted = Stopwatch.GetTimestamp();
             // ── 讀取基本資訊 ──
             uint coreCnt = accessor.ReadUInt32(OffsetCoreCnt);
             uint cpuCnt  = accessor.ReadUInt32(OffsetCpuCnt);
@@ -237,7 +239,9 @@ public static class CoreTempSharedMem
                 ));
             }
 
-            readings = result;
+            var acquisition = new SensorAcquisition(readStarted, Stopwatch.GetTimestamp());
+            readings = result.Select(reading => reading with
+                { CapturedAtUtc = capturedAt, Acquisition = acquisition }).ToArray();
             return true;
         }
         catch (System.IO.FileNotFoundException)

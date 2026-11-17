@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 namespace XinSpect;
 
 /// <summary>
-/// 儲存裝置協定查詢的斷路器：記住「這顆磁碟的這條查詢不會回來」，冷卻期間不再重問。
+/// 儲存操作斷路器：記住呼叫端分類的逾時或有界操作失敗，冷卻期間略過相同磁碟與操作；不是壞碟診斷。
 /// </summary>
 /// <remarks>
 /// <para>
@@ -33,7 +33,7 @@ namespace XinSpect;
 /// </remarks>
 public static class StorageProbeBreaker
 {
-    /// <summary>已知不回應的（磁碟, 查詢）多久之後再試一次。見類別說明的取捨。</summary>
+    /// <summary>已知逾時或失敗的（磁碟, 操作）多久之後再試一次。見類別說明的取捨。</summary>
     public const int CooldownMs = 10 * 60 * 1000;
 
     /// <summary>診斷閘：<c>XINSPECT_DISK_BREAKER=off</c> 時完全不經斷路器（不記也不跳），供 A/B 對照。</summary>
@@ -60,15 +60,25 @@ public static class StorageProbeBreaker
     /// 冷卻到期會一併把記錄拿掉，讓下一次真的去問。
     /// </summary>
     public static bool ShouldSkip(int index, string op, long? nowMs = null)
+        => ShouldSkip(index, op, nowMs, beforeExpiredRemoval: null);
+
+    // Deterministic expiry/interleaving seam; production supplies no callback.
+    internal static bool ShouldSkip(int index, string op, long? nowMs, Action? beforeExpiredRemoval)
     {
         if (!Enabled) return false;
-        if (!Tripped.TryGetValue((index, op), out long trippedAt)) return false;
+        var key = (index, op);
+        if (!Tripped.TryGetValue(key, out long trippedAt)) return false;
         if ((nowMs ?? Environment.TickCount64) - trippedAt < CooldownMs) return true;
-        Tripped.TryRemove((index, op), out _);
-        return false;
+        beforeExpiredRemoval?.Invoke();
+        // ICollection.Remove on ConcurrentDictionary atomically compares both key and value.
+        // An expiry check must never delete a newer Trip written after our snapshot.
+        bool removed = ((ICollection<KeyValuePair<(int Index, string Op), long>>)Tripped)
+            .Remove(new KeyValuePair<(int Index, string Op), long>(key, trippedAt));
+        // On replacement, keep this attempt blocked too; no retry loop under contention.
+        return !removed && Tripped.ContainsKey(key);
     }
 
-    /// <summary>記下「這顆磁碟的這條查詢逾時了」。只有逾時才記（見 <see cref="DiskIo.GuardedProbe{T}"/>）。</summary>
+    /// <summary>記下呼叫端已分類的逾時或有界操作失敗；本核心不自行判斷錯誤種類，也不診斷裝置健康。</summary>
     public static void Trip(int index, string op, long? nowMs = null)
     {
         if (!Enabled) return;
@@ -81,16 +91,18 @@ public static class StorageProbeBreaker
     /// <summary>
     /// 直接回報這個（磁碟, 查詢）的結果，不走 <see cref="DiskIo"/> 看門狗。
     /// </summary>
-    /// <returns><c>true</c>＝讀到了，順便把記錄清掉；<c>false</c>＝沒讀到，記下失敗。</returns>
+    /// <returns><c>true</c>＝讀到了；不清除其他已開始操作的故障記錄；<c>false</c>＝沒讀到，記下失敗。</returns>
     /// <remarks>
     /// <b>為什麼需要（2026-10-14）</b>：NVMe 紀錄頁改走可取消的 overlapped I/O 之後，
     /// 那條路<b>自己就知道</b>逾時（<c>CancelIoEx</c> 分支），不必再從看門狗繞一圈——
     /// 繞一圈會讓同一次查詢被兩種逾時機制各記一次帳，還會多留一條執行緒。
     /// 記帳語意與 <see cref="Trip"/> 相同：沒讀到就記，冷卻期間 <see cref="ShouldSkip"/> 直接跳過。
+    /// 成功只回報該次讀取結果；不得清除另一個已派發查詢較晚回報的故障。
+    /// 正式呼叫端在派發前走 ShouldSkip，過期記錄由該方法清除後才允許重試。
     /// </remarks>
     public static bool Report(int index, string op, bool read, long? nowMs = null)
     {
-        if (read) { Tripped.TryRemove((index, op), out _); return true; }
+        if (read) return true;
         Trip(index, op, nowMs);
         return false;
     }

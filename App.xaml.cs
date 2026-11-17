@@ -128,12 +128,7 @@ public partial class App : Application
 
     /// <summary>CLI 模式的事實收集：headless 建 EvidenceLabService，與啟動序列共用 <see cref="EvidenceCollection"/> 組合點。</summary>
     private static IReadOnlyList<HardwareFact> CollectForCli()
-    {
-        var svc = new EvidenceLabService();
-        EvidenceCollection.ReloadInto(svc);
-        EvidenceCollection.LoadUsermodeFacts(svc);   // 儲存可靠性計數器（WMI，免管理員）
-        return svc.AllFacts;
-    }
+        => EvidenceCollection.CollectForCli();
 
     [DllImport("user32.dll")]
     private static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);

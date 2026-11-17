@@ -1,4 +1,4 @@
-﻿namespace XinSpect;
+namespace XinSpect;
 
 /// <summary>
 /// 開機偵測序列：把「哪些資訊在什麼時候、以什麼順序被讀進來」集中於一處。
@@ -29,9 +29,16 @@ internal static class StartupSequence
         ShowMemoryWmiFallback(vm);
         vm.SpdReadStatusText = "SPD 深度讀取未執行：第一級進階診斷目前關閉。上方資料保留 Windows SMBIOS/WMI 來源。";
     }
+    /// <summary>一般啟動的參考資料階段；重入只共用每個服務自己的那一次收集。</summary>
+    internal static Task StartReferenceDataAsync(MainViewModel vm) => Task.WhenAll(
+        vm.CpuPinout.StartDetectionAsync(), vm.DimmReference.StartDetectionAsync(),
+        vm.M2Analysis.StartDetectionAsync());
+
     /// <summary>開機序列：讀靜態資訊 → 起感測與網路引擎 → 補齊磁碟／色域／CUDA → 起脈動 → 背景深度規格與自檢。</summary>
     public static async Task RunAsync(MainViewModel vm, MetricsPump pump)
     {
+        // 這三份參考資料仍在一般啟動載入，不受深度診斷開關限制；純建構不查詢。
+        _ = StartReferenceDataAsync(vm);
         var sw = System.Diagnostics.Stopwatch.StartNew();
 
         // 0) 已存設定：啟動時的預設紀年
@@ -353,7 +360,8 @@ internal static class StartupSequence
         // 儲存可靠性計數器（WMI MSFT_StorageReliabilityCounter，usermode、免管理員；WMI 查詢可能數秒，放背景）。
         // 與 CLI 共用 EvidenceCollection.LoadUsermodeFacts 這一個入口——先前這一組事實接進了 AllFacts
         // 與報告匯出，卻沒有任何地方呼叫載入，等於在真實 App 裡永遠看不到它。
-        try { await Task.Run(() => EvidenceCollection.LoadUsermodeFacts(vm.EvidenceLab)).ConfigureAwait(false); }
+        long? knowledgeGeneration = null;
+        try { knowledgeGeneration = await Task.Run(() => EvidenceCollection.LoadUsermodeFactsDeferred(vm.EvidenceLab)).ConfigureAwait(false); }
         catch { /* 儲存可靠性為附加功能，讀不到由三態標示 */ }
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -363,15 +371,25 @@ internal static class StartupSequence
         try
         {
             var to = DateTime.UtcNow;
-            await Task.Run(() => vm.EvidenceLab.LoadBaselineLearning(vm.History.Query(to.AddDays(-30), to)))
+            await Task.Run(() => vm.EvidenceLab.LoadBaselineLearningFromHistory(
+                () => vm.History.Query(to.AddDays(-30), to), cancellationToken))
                 .ConfigureAwait(false);
         }
-        catch { /* 沒有歷史＝空序列，由 BaselineLearningService 如實標「還沒有資料」 */ }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch { /* 來源失敗由共用入口發布本次 ReadError；取消不發布新結果。 */ }
 
         try
         {
             // CPU-Z 子行程（spawn＋等報告，10 餘秒）：等待與解析整段背景。
-            var report = await CpuzReportService.ReadAsync(cancellationToken).ConfigureAwait(false);
+            var report = await SpdScanRunner.RunExternalAsync(
+                () => CpuzReportService.ReadAsync(cancellationToken), cancellationToken).ConfigureAwait(false);
+            if (report is null)
+            {
+                await OnUiAsync(ui, () => vm.SpdReadStatusText +=
+                    "\n原生 SPD 工作尚未結束，已略過 CPU-Z 硬體報告。").ConfigureAwait(false);
+            }
+            else
+            {
             cancellationToken.ThrowIfCancellationRequested();
 
             // 報告套用（含 StatusText 與 SpdModules 的退回判斷）回 UI——原碼這些寫入本就在 UI 執行緒。
@@ -413,6 +431,7 @@ internal static class StartupSequence
                 if (vm.Live is not null)
                     vm.StatusText = ReadyText(vm, report.Ran);
             }).ConfigureAwait(false);
+            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -453,6 +472,16 @@ internal static class StartupSequence
         }
         catch { /* 池細目為附加功能 */ }
 
+        // BaselineLearning is part of AllFacts and is collected after the shared usermode phase.
+        // Finalize on a worker only after the GUI extra sources; never enumerate VM UI collections.
+        cancellationToken.ThrowIfCancellationRequested();
+        if (knowledgeGeneration is { } generation)
+            await Task.Run(() =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                EvidenceCollection.CompleteUsermodeFacts(vm.EvidenceLab, generation, cancellationToken: cancellationToken);
+            }).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
     }
 
     internal static MemoryTimings BuildInitialMemoryTimings(IReadOnlyList<MemoryModuleInfo> modules,
@@ -504,6 +533,10 @@ internal static class StartupSequence
                 {
                     Loaded = true,
                     IsJedecReference = true,
+                    TimingFactTrust = FactTrustLevel.Derived,
+                    TimingFactAvailability = FactAvailability.Present,
+                    RateFactTrust = FactTrustLevel.Derived,
+                    RateFactAvailability = FactAvailability.Present,
                     SourceText = "SPD 直讀（" + first.Bus + "）・JEDEC 標準值",
                     Status = "已由 SPD 直讀填入。注意：這是模組的 JEDEC 標準時序；"
                            + "若 BIOS 已開 XMP／EXPO，實際時序會比這裡更緊——完整對照仍以 CPU-Z 報告或 BIOS 為準。",
@@ -532,6 +565,10 @@ internal static class StartupSequence
             {
                 Loaded = true,
                 IsJedecReference = true,
+                TimingFactTrust = FactTrustLevel.Derived,
+                TimingFactAvailability = FactAvailability.Present,
+                RateFactTrust = FactTrustLevel.Derived,
+                RateFactAvailability = FactAvailability.Present,
                 SourceText = "SPD 直讀（" + first5.Bus + "）・DDR5 基準時序（未在本機驗證）",
                 Status = "已由 DDR5 SPD 直讀填入基準（JEDEC）時序。解碼器尚未在實機 DDR5 上驗證；"
                        + "若 BIOS 已開 XMP／EXPO，實際時序會比這裡更緊。",
@@ -552,31 +589,7 @@ internal static class StartupSequence
     }
 
     internal static MemoryTimings? BuildWmiTimings(IReadOnlyList<MemoryModuleInfo> mods)
-    {
-        if (mods is { Count: > 0 })
-        {
-            var rates = mods.Select(m => m.ConfiguredSpeedMHz).Distinct().ToArray();
-            int configured = rates.Length == 1 && rates[0] > 0 ? rates[0] : 0;
-            double totalGb = mods.Sum(m => m.CapacityGB);
-            string type = mods[0].MemoryType;
-            bool knownType = !string.IsNullOrWhiteSpace(type) && type is not ("—" or "-");
-            string prefix = knownType ? type : "記憶體";
-            return new MemoryTimings
-            {
-                Loaded = false,   // 時序欄位沒有來源，不假裝有
-                SourceText = "Windows 設定速率（WMI）",
-                Status = "已由 Windows（WMI）取得目前設定的資料速率；時序（CL／tRCD 等）WMI 不提供，"
-                       + "需 SPD 直讀（以系統管理員執行）或 CPU-Z 報告才讀得到。",
-                MemoryTypeText = type,
-                DataRateText = configured > 0 ? $"{prefix}-{configured}（WMI 設定值）" : "—",
-                DramFrequencyMHz = !knownType ? 0 : type.Contains("DDR", StringComparison.OrdinalIgnoreCase)
-                    ? configured / 2.0 : configured,
-                MemorySizeText = totalGb > 0 ? $"{totalGb:0.#} GB（{mods.Count} 條）" : "—",
-            };
-        }
-
-        return null;
-    }
+        => WmiMemoryTimings.Build(mods);
 
     /// <summary>
     /// 走 SMBus 把每條記憶體模組的 SPD 直接讀回來（背景執行緒）。任何一關過不了就回空清單。

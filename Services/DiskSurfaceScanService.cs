@@ -19,8 +19,8 @@ public sealed record SurfaceScanResult(
 public sealed record SurfaceProfileResult(int BlockSizeBytes, int Pass, SurfaceScanResult Scan);
 
 /// <summary>
-/// 磁碟表面掃描：循序讀取邏輯卷或實體磁碟，逐塊量延遲，標記慢區／讀取錯誤。
-/// 用 <c>\\.\C:</c> 開啟邏輯卷（不需系統管理員，僅能讀不能寫）；如果被拒則誠實回報。
+/// 磁碟表面掃描：循序讀取已核單一 ATA/SATA backing device 的邏輯卷，逐塊量延遲。
+/// 用 <c>\\.\C:</c> 開啟邏輯卷與對應實體磁碟的唯讀 handle；權限不足或拓撲不明則拒讀。
 /// 這是「實際讀一輪」的量測，和 SMART 報告值是互補——SMART 是韌體說的，這裡是我們自己讀的。
 /// </summary>
 public static class DiskSurfaceScanService
@@ -59,11 +59,16 @@ public static class DiskSurfaceScanService
 
     // 預設掃描參數
     public const int DefaultBlockSizeKB = 1024;   // 1 MB 區塊
-    public const int DefaultMaxBlocks = 2048;      // 上限 2 GB（安全值，可由呼叫端覆寫）
+    public const int DefaultMaxBlocks = 2048;      // 舊同步入口的預設範圍；不代表安全性或全碟驗證。
+    public const int MaxProfileBytes = 64 * 1024 * 1024;
+    public const string PreflightUnavailableMessage =
+        "未開始掃描：需可讀取、幾何有效且可核對單一 ATA/SATA 實體磁碟的本機固定卷；"
+        + "NVMe、RAID、Storage Spaces、身份不明或已觸發斷路器的路徑均拒讀。";
+    internal const string BreakerOperation = "DiskSurfaceScan";
     private const double SlowThresholdMs = 100.0;  // 超過 100 ms 標為慢
 
     /// <summary>
-    /// 掃描磁碟表面。drivePath 例如 <c>\\.\C:</c> 或 <c>\\.\PhysicalDrive0</c>。
+    /// 掃描邏輯卷，例如 <c>\\.\C:</c>；需通過 backing-device 身份與協定預檢。
     /// maxBlocks 限制掃描範圍（0＝不限制）。progress 回報已完成百分比（0-100）。
     /// </summary>
     public static SurfaceScanResult? Scan(string drivePath, int blockSizeKB = DefaultBlockSizeKB,
@@ -74,34 +79,26 @@ public static class DiskSurfaceScanService
         ArgumentOutOfRangeException.ThrowIfNegative(maxBlocks);
         ct.ThrowIfCancellationRequested();
         int blockSize = blockSizeKB * 1024;
-        // 旗標筆誤修正（READ|READ→READ|WRITE）：與 ListVolumes 同款；授予他人讀寫共享，
-        // 只降低「卷被別的持有者佔住就開不了」的機率，本服務自身僅讀不寫。
-        IntPtr h = CreateFile(drivePath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, IntPtr.Zero,
-            OPEN_EXISTING, 0, IntPtr.Zero);
-        if (h == INVALID_HANDLE)
-            return null;  // 無法開啟（權限不足或路徑不存在）——呼叫端誠實回報
-
-        try
+        using var backing = DiskSurfaceBackingDevice.Open(drivePath, ct);
+        if (backing is null) return null;
+        using var observation = new ReadFailureObservation(backing.DiskIndex);
+        ct.ThrowIfCancellationRequested();
+        long totalBytes;
+        try { totalBytes = RandomAccess.GetLength(backing.Handle); }
+        catch (IOException) { ct.ThrowIfCancellationRequested(); return null; }
+        ct.ThrowIfCancellationRequested();
+        if (totalBytes <= 0) return null;
+        if (blockSize % backing.SectorAlignment.Logical != 0 || totalBytes % backing.SectorAlignment.Logical != 0) return null;
+        var scan = ReadBlocks(drivePath, totalBytes, blockSize, maxBlocks, (offset, buffer, requested) =>
         {
-            if (!GetFileSizeEx(h, out long totalBytes) || totalBytes <= 0)
-            {
-                // FILE_END 回傳的才是長度；再 seek 到 FILE_BEGIN 會把它覆成 0。
-                // 每次讀取都會定位，不需在此重設指標。
-                if (!SetFilePointerEx(h, 0, out totalBytes, 2) || totalBytes <= 0)
-                    return null;
-            }
-
-            return ReadBlocks(drivePath, totalBytes, blockSize, maxBlocks, (offset, buffer, requested) =>
-            {
-                if (!SetFilePointerEx(h, offset, out _, FILE_BEGIN))
-                    return (false, 0);
-                bool success = ReadFile(h, buffer, (uint)requested, out uint bytesRead, IntPtr.Zero);
-                return (success, (int)bytesRead);
-            }, progress, ct);
-        }
-        finally { CloseHandle(h); }
+            ct.ThrowIfCancellationRequested();
+            using var aligned = new DiskSurfaceBackingDevice.AlignedBuffer(requested, backing.SectorAlignment.Physical);
+            try { return (true, observation.Read(() => RandomAccess.Read(backing.Handle, aligned.GetSpan(), offset), ct)); }
+            catch (IOException ex) when ((ex.HResult & 0xffff) != 87) { return (false, 0); }
+        }, progress, ct);
+        return scan is null ? null : scan with { LogicalSectorBytes = backing.SectorAlignment.Logical,
+            IoMode = "volume synchronous / aligned; cache policy provider-dependent" };
     }
-
     /// <summary>可取消的本機固定卷唯讀掃描；每個 ReadAsync 的緩衝區生命週期由 .NET 管理至 I/O 完成。</summary>
     public static async Task<SurfaceScanResult?> ScanAsync(string drivePath, int blockSizeBytes,
         int maxBytes = 64 * 1024 * 1024, IProgress<int>? progress = null,
@@ -110,28 +107,31 @@ public static class DiskSurfaceScanService
         ArgumentOutOfRangeException.ThrowIfLessThan(blockSizeBytes, 512);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(blockSizeBytes, 128 * 1024);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxBytes);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(maxBytes, MaxProfileBytes);
         ct.ThrowIfCancellationRequested();
 
-        if (!TryGetLocalVolume(drivePath, out string root, out int sectorBytes)) return null;
-        SafeFileHandle handle;
-        try
+        if (!TryGetLocalVolume(drivePath, ct, out string root, out int sectorBytes)
+            || blockSizeBytes % sectorBytes != 0) return null;
+        ct.ThrowIfCancellationRequested();
+        using var backing = DiskSurfaceBackingDevice.Open(drivePath, ct);
+        if (backing is null) return null;
+        using var observation = new ReadFailureObservation(backing.DiskIndex);
+        var handle = backing.Handle;
         {
-            handle = File.OpenHandle(drivePath, FileMode.Open, FileAccess.Read,
-                FileShare.ReadWrite, FileOptions.Asynchronous);
-        }
-        catch (IOException) { return null; }
-        catch (UnauthorizedAccessException) { return null; }
-
-        using (handle)
-        {
+            ct.ThrowIfCancellationRequested();
             long totalBytes;
             try { totalBytes = RandomAccess.GetLength(handle); }
-            catch (IOException) { return null; }
+            catch (IOException) { ct.ThrowIfCancellationRequested(); return null; }
+            ct.ThrowIfCancellationRequested();
             if (totalBytes <= 0) return null;
             long scanBytes = Math.Min(totalBytes, maxBytes);
-            return await ReadBlocksAsync(drivePath, scanBytes, blockSizeBytes, sectorBytes,
-                (offset, buffer, token) => RandomAccess.ReadAsync(handle, buffer, offset, token),
+            if (backing.SectorAlignment.Logical != sectorBytes || scanBytes % sectorBytes != 0) return null;
+            var scan = await ReadBlocksAsync(drivePath, scanBytes, blockSizeBytes, sectorBytes,
+                (offset, buffer, token) => ReadAlignedAsync(offset, buffer, backing.SectorAlignment,
+                    (position, memory, cancellation) => observation.ReadAsync(
+                        () => RandomAccess.ReadAsync(handle, memory, position, cancellation), cancellation), token),
                 progress, ct).ConfigureAwait(false);
+            return scan is null ? null : scan with { IoMode = "volume async / aligned; cache policy provider-dependent" };
         }
     }
 
@@ -140,50 +140,146 @@ public static class DiskSurfaceScanService
         IProgress<int>? progress = null, CancellationToken ct = default)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxBytes);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(maxBytes, MaxProfileBytes);
         ArgumentNullException.ThrowIfNull(blockSizes);
-        int[] sizes = blockSizes.Distinct().ToArray();
-        if (sizes.Length == 0 || sizes.Any(size => size is not (512 or 8192 or 65536 or 131072)))
+        ct.ThrowIfCancellationRequested();
+        // Bound enumeration as well as I/O: an unbounded/repeating caller enumerable must not hang preflight.
+        int[] requestedSizes = blockSizes.Take(5).ToArray();
+        int[] sizes = requestedSizes.Distinct().ToArray();
+        if (requestedSizes.Length > 4 || sizes.Length == 0 || sizes.Any(size => size is not (512 or 8192 or 65536 or 131072)))
             throw new ArgumentException("只支援 512 B、8 KB、64 KB、128 KB 塊尺。", nameof(blockSizes));
         ct.ThrowIfCancellationRequested();
-        if (!TryGetLocalVolume(drivePath, out _, out int sectorBytes)) return null;
+        if (!TryGetLocalVolume(drivePath, ct, out _, out int sectorBytes)
+            || sizes.Any(size => size % sectorBytes != 0)) return null;
+        ct.ThrowIfCancellationRequested();
 
-        SafeFileHandle handle;
-        try
+        using var backing = DiskSurfaceBackingDevice.Open(drivePath, ct);
+        if (backing is null) return null;
+        using var observation = new ReadFailureObservation(backing.DiskIndex);
+        var handle = backing.Handle;
         {
-            handle = File.OpenHandle(drivePath, FileMode.Open, FileAccess.Read,
-                FileShare.ReadWrite, FileOptions.Asynchronous);
-        }
-        catch (IOException) { return null; }
-        catch (UnauthorizedAccessException) { return null; }
-
-        using (handle)
-        {
+            ct.ThrowIfCancellationRequested();
             long totalBytes;
             try { totalBytes = RandomAccess.GetLength(handle); }
-            catch (IOException) { return null; }
+            catch (IOException) { ct.ThrowIfCancellationRequested(); return null; }
+            ct.ThrowIfCancellationRequested();
             if (totalBytes <= 0) return null;
             long scanBytes = Math.Min(totalBytes, maxBytes);
-            var results = new List<SurfaceProfileResult>(sizes.Length * (repeat ? 2 : 1));
-            int passes = repeat ? 2 : 1;
-            int totalRuns = sizes.Length * passes;
-            for (int sizeIndex = 0; sizeIndex < sizes.Length; sizeIndex++)
-            for (int pass = 1; pass <= passes; pass++)
-            {
-                ct.ThrowIfCancellationRequested();
-                int runIndex = sizeIndex * passes + pass - 1;
-                var runProgress = progress is null ? null : new Progress<int>(value =>
-                    progress.Report((runIndex * 100 + value) / totalRuns));
-                var scan = await ReadBlocksAsync(drivePath, scanBytes, sizes[sizeIndex], sectorBytes,
-                    (offset, buffer, token) => RandomAccess.ReadAsync(handle, buffer, offset, token),
-                    runProgress, ct).ConfigureAwait(false);
-                if (scan is null) return null;
-                results.Add(new SurfaceProfileResult(sizes[sizeIndex], pass, scan));
-            }
-            return results;
+            if (backing.SectorAlignment.Logical != sectorBytes || scanBytes % sectorBytes != 0) return null;
+            var results = await ReadProfilesAsync(drivePath, scanBytes, sizes, repeat, sectorBytes,
+                (offset, buffer, token) => ReadAlignedAsync(offset, buffer, backing.SectorAlignment,
+                    (position, memory, cancellation) => observation.ReadAsync(
+                        () => RandomAccess.ReadAsync(handle, memory, position, cancellation), cancellation), token),
+                progress, ct).ConfigureAwait(false);
+            return results?.Select(result => result with { Scan = result.Scan with
+                { IoMode = "volume async / aligned; cache policy provider-dependent" } }).ToArray();
         }
     }
 
-    private static bool TryGetLocalVolume(string drivePath, out string root, out int sectorBytes)
+    /// <summary>
+    /// Observes completed native data-read failures for one verified backing disk. This records
+    /// path cooldown evidence, never a diagnosis of bad media. Configuration/permission/cancellation
+    /// failures and short-count observations alone are not device-I/O error evidence.
+    /// </summary>
+    internal sealed class ReadFailureObservation(int diskIndex) : IDisposable
+    {
+        private bool _deviceIoFailed, _disposed;
+
+        // Windows SDK 10.0.26100.0 shared/winerror.h: only HRESULT_FROM_WIN32 device/read failures.
+        internal static bool IsDeviceIoFailure(IOException error)
+            => ((uint)error.HResult & 0xFFFF0000u) == 0x80070000u
+                && (error.HResult & 0xFFFF) is 21 or 23 or 27 or 30 or 31 or 121 or 1117 or 1167 or 1460;
+
+        internal int Read(Func<int> read, CancellationToken ct)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            ct.ThrowIfCancellationRequested();
+            try { return read(); }
+            catch (IOException ex) when (!ct.IsCancellationRequested && IsDeviceIoFailure(ex))
+            {
+                _deviceIoFailed = true;
+                throw;
+            }
+        }
+
+        internal async ValueTask<int> ReadAsync(Func<ValueTask<int>> read, CancellationToken ct)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            ct.ThrowIfCancellationRequested();
+            try { return await read().ConfigureAwait(false); }
+            catch (IOException ex) when (!ct.IsCancellationRequested && IsDeviceIoFailure(ex))
+            {
+                _deviceIoFailed = true;
+                throw;
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            // Awaited reads have finished before this scope exits. Keep the existing bounded retry
+            // contract, then suppress later scans after any confirmed I/O failure, even if retried.
+            // Success must not clear a fault concurrently recorded by another session on this disk.
+            if (_deviceIoFailed) StorageProbeBreaker.Report(diskIndex, BreakerOperation, read: false);
+        }
+    }
+
+    internal static async ValueTask<int> ReadAlignedAsync(long offset, Memory<byte> destination,
+        DiskSurfaceBackingDevice.Alignment alignment,
+        Func<long, Memory<byte>, CancellationToken, ValueTask<int>> read, CancellationToken ct)
+    {
+        if (offset < 0 || offset % alignment.Logical != 0 || destination.Length == 0
+            || destination.Length % alignment.Logical != 0)
+            throw new InvalidOperationException("卷讀取的位移或長度不符合已回報的磁區幾何；不是媒體壞塊。");
+        ct.ThrowIfCancellationRequested();
+        using var aligned = new DiskSurfaceBackingDevice.AlignedBuffer(destination.Length, alignment.Physical);
+        int count;
+        try { count = await read(offset, aligned.Memory, ct).ConfigureAwait(false); }
+        catch (IOException ex) when ((ex.HResult & 0xffff) == 87)
+        { throw new InvalidOperationException("卷讀取設定遭 ERROR_INVALID_PARAMETER 拒絕；不當作媒體壞塊重試。", ex); }
+        ct.ThrowIfCancellationRequested();
+        if (count > 0 && count <= destination.Length && count % alignment.Logical != 0)
+            throw new InvalidOperationException("卷短讀長度不符合磁區幾何；不發出未對齊的續讀。");
+        if (count > 0 && count <= destination.Length) aligned.Memory[..count].CopyTo(destination);
+        return count;
+    }
+
+    internal static async Task<IReadOnlyList<SurfaceProfileResult>?> ReadProfilesAsync(string drivePath,
+        long scanBytes, int[] sizes, bool repeat, int sectorBytes,
+        Func<long, Memory<byte>, CancellationToken, ValueTask<int>> read,
+        IProgress<int>? progress = null, CancellationToken ct = default)
+    {
+        var results = new List<SurfaceProfileResult>(sizes.Length * (repeat ? 2 : 1));
+        var retryBudget = new ReadRetryBudget();
+        int passes = repeat ? 2 : 1;
+        int totalRuns = sizes.Length * passes;
+        for (int sizeIndex = 0; sizeIndex < sizes.Length; sizeIndex++)
+        for (int pass = 1; pass <= passes; pass++)
+        {
+            ct.ThrowIfCancellationRequested();
+            int runIndex = sizeIndex * passes + pass - 1;
+            var runProgress = progress is null ? null : new ProfileProgress(progress, runIndex, totalRuns);
+            var scan = await ReadBlocksAsync(drivePath, scanBytes, sizes[sizeIndex], sectorBytes,
+                read, runProgress, ct, retryBudget).ConfigureAwait(false);
+            if (scan is null) return null;
+            results.Add(new SurfaceProfileResult(sizes[sizeIndex], pass, scan));
+        }
+        ct.ThrowIfCancellationRequested();
+        return results;
+    }
+
+    internal sealed class ReadRetryBudget
+    {
+        public int Remaining { get; set; } = 10;
+    }
+
+    private sealed class ProfileProgress(IProgress<int> progress, int runIndex, int totalRuns) : IProgress<int>
+    {
+        public void Report(int value) => progress.Report((runIndex * 100 + value) / totalRuns);
+    }
+
+    private static bool TryGetLocalVolume(string drivePath, CancellationToken ct, out string root, out int sectorBytes)
     {
         root = string.Empty;
         sectorBytes = 0;
@@ -191,17 +287,35 @@ public static class DiskSurfaceScanService
             !drivePath.StartsWith("\\\\.\\", StringComparison.Ordinal) ||
             drivePath[5] != ':' || drivePath[4] is < 'A' or > 'Z') return false;
         root = $"{drivePath[4]}:\\";
-        if (GetDriveType(root) != DRIVE_FIXED) return false;
-        if (GetDiskFreeSpace(root, out _, out uint bytesPerSector, out _, out _) &&
+        sectorBytes = ReadLocalGeometry(root, GetDriveType, path =>
+        {
+            bool ok = GetDiskFreeSpace(path, out _, out uint bytes, out _, out _);
+            return (ok, bytes);
+        }, ct);
+        return sectorBytes != 0;
+    }
+
+    // These synchronous OS metadata calls have no cancellation token. Check between stages;
+    // cancellation cannot promise termination of a metadata call already inside the kernel.
+    internal static int ReadLocalGeometry(string root, Func<string, uint> driveTypeQuery,
+        Func<string, (bool Success, uint BytesPerSector)> sectorQuery, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        uint driveType = driveTypeQuery(root);
+        ct.ThrowIfCancellationRequested();
+        if (driveType != DRIVE_FIXED) return 0;
+        var (geometryRead, bytesPerSector) = sectorQuery(root);
+        ct.ThrowIfCancellationRequested();
+        if (geometryRead &&
             bytesPerSector is >= 512 and <= 65536 && (bytesPerSector & (bytesPerSector - 1)) == 0)
-            sectorBytes = (int)bytesPerSector;
-        return true;
+            return (int)bytesPerSector;
+        return 0;
     }
 
     internal static async Task<SurfaceScanResult?> ReadBlocksAsync(string drivePath, long totalBytes,
         int blockSize, int logicalSectorBytes,
         Func<long, Memory<byte>, CancellationToken, ValueTask<int>> read,
-        IProgress<int>? progress = null, CancellationToken ct = default)
+        IProgress<int>? progress = null, CancellationToken ct = default, ReadRetryBudget? retryBudget = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(blockSize, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(logicalSectorBytes, 0);
@@ -215,7 +329,7 @@ public static class DiskSurfaceScanService
         var buffer = new byte[(int)Math.Min(blockSize, totalBytes)];
         var sw = Stopwatch.StartNew();
         int ok = 0, slow = 0, errors = 0;
-        int retriesRemaining = 10;
+        retryBudget ??= new ReadRetryBudget();
         int retriesUsed = 0;
 
         for (int i = 0; i < totalBlocks; i++)
@@ -234,6 +348,7 @@ public static class DiskSurfaceScanService
                 {
                     while (received < requested)
                     {
+                        ct.ThrowIfCancellationRequested();
                         int count = await read(offset + received,
                             buffer.AsMemory(received, requested - received), ct).ConfigureAwait(false);
                         if (count <= 0 || count > requested - received) { complete = false; break; }
@@ -244,8 +359,8 @@ public static class DiskSurfaceScanService
                 catch (IOException) { complete = false; }
                 catch (UnauthorizedAccessException) { complete = false; }
                 if (complete && received == requested) break;
-                if (retriesRemaining == 0) break;
-                retriesRemaining--;
+                if (retryBudget.Remaining == 0) break;
+                retryBudget.Remaining--;
                 retriesUsed++;
                 ct.ThrowIfCancellationRequested();
             }
@@ -262,6 +377,7 @@ public static class DiskSurfaceScanService
                 progress?.Report((int)((i + 1L) * 100 / totalBlocks));
         }
 
+        ct.ThrowIfCancellationRequested();
         sw.Stop();
         return new SurfaceScanResult(drivePath, totalBytes, blockSize, totalBlocks,
             blocks, sw.Elapsed.TotalSeconds, ok, slow, errors, logicalSectorBytes, "buffered async", retriesUsed);
@@ -310,6 +426,7 @@ public static class DiskSurfaceScanService
             if (i % 16 == 0 || i == totalBlocks - 1)
                 progress?.Report((int)((i + 1L) * 100 / totalBlocks));
         }
+        ct.ThrowIfCancellationRequested();
         sw.Stop();
         return new SurfaceScanResult(drivePath, totalBytes, blockSize, totalBlocks,
             blocks, sw.Elapsed.TotalSeconds, ok, slow, errors);

@@ -11,46 +11,136 @@ internal static partial class AiToolboxBuilder
 {
     // ── 記憶體 ──────────────────────────────────────────────────────────────
 
-    private static void AddMemory(AiToolbox box, MainViewModel vm)
+    private static void AddMemory(AiToolbox box, MainViewModel vm) =>
+        AddMemory(box, () => vm.Timings, () =>
+        {
+            var sb = new StringBuilder();
+            if (vm.Modules.Count == 0) sb.AppendLine("實體模組：未讀到（虛擬機或權限不足時 SMBIOS 可能為空）");
+            foreach (var m in vm.Modules)
+                sb.AppendLine($"模組「{m.Slot}」：{m.Manufacturer} {m.PartNumber}・{m.CapacityText}"
+                              + $"・{m.MemoryType} {m.FormFactor}・{m.SpeedText}・電壓 {m.Voltage}");
+
+            foreach (var s in vm.SpdModules)
+            {
+                sb.AppendLine($"SPD「{s.Slot}」：{s.Manufacturer} {s.PartNumber}・{s.MemoryType} {s.ModuleFormat}"
+                              + $"・{s.Size}・最高頻寬 {s.MaxBandwidth}・JEDEC 上限 {s.MaxJedec}"
+                              + $"・標稱電壓 {s.NominalVoltage}・製造日期 {s.ManufacturingDate}");
+                if (s.HasXmp) sb.AppendLine($"　XMP／EXPO 設定檔：{s.XmpSummary}");
+            }
+
+            if (vm.Live is { } live && live.MemTotalGB > 0)
+                sb.AppendLine($"目前用量：{live.MemUsageText}（{live.MemLoadText}）");
+
+            return sb.ToString();
+        });
+
+    // The same registration/delegate is used by production and hardware-free injected tests.
+    internal static void AddMemory(AiToolbox box, Func<MemoryTimings> timings, Func<string> inventory)
     {
+        ArgumentNullException.ThrowIfNull(box);
+        ArgumentNullException.ThrowIfNull(timings);
+        ArgumentNullException.ThrowIfNull(inventory);
         box.Add("get_memory_detail",
-            "取得記憶體的完整細節：型別與通道組態、實際執行頻率與等效資料率、主要時序（CL-tRCD-tRP-tRAS）、"
-            + "tRFC 與命令率、每支實體模組的插槽／製造商／料號／容量／標定與實跑頻率／電壓，"
-            + "以及 SPD 內的 JEDEC 與 XMP／EXPO 設定檔。要判斷記憶體是否插對通道、有沒有吃到標定頻率時用這個。",
+            "提供記憶體型別、通道與模組摘要；對時序和速率逐項標示來源、可用性與信任；"
+            + "區分來源回報的目前值、Windows 設定值與 SPD JEDEC 基準，未確認值不能視為目前運行值。"
+            + "另附每支模組與 SPD 的 JEDEC／XMP／EXPO 資料。",
             _ =>
             {
-                var sb = new StringBuilder();
-                var t = vm.Timings;
-                if (!t.Loaded) sb.AppendLine($"（時序讀取狀態：{t.Status}）");
-                Line(sb, "記憶體型別", t.MemoryTypeText);
-                Line(sb, "通道組態", t.ChannelsText);
-                Line(sb, "實際頻率", t.FrequencyText);
-                Line(sb, "等效資料率", t.DataRateText);
-                Line(sb, "主要時序", t.PrimaryTimingsText);
-                Line(sb, "tRFC", t.TRFC);
-                Line(sb, "命令率", t.CommandRate);
-                Line(sb, "Uncore／記憶體控制器", t.UncoreText);
-                Line(sb, "總容量", t.MemorySizeText);
-                Line(sb, "主橋", t.HostBridge);
-
-                if (vm.Modules.Count == 0) sb.AppendLine("實體模組：未讀到（虛擬機或權限不足時 SMBIOS 可能為空）");
-                foreach (var m in vm.Modules)
-                    sb.AppendLine($"模組「{m.Slot}」：{m.Manufacturer} {m.PartNumber}・{m.CapacityText}"
-                                  + $"・{m.MemoryType} {m.FormFactor}・{m.SpeedText}・電壓 {m.Voltage}");
-
-                foreach (var s in vm.SpdModules)
-                {
-                    sb.AppendLine($"SPD「{s.Slot}」：{s.Manufacturer} {s.PartNumber}・{s.MemoryType} {s.ModuleFormat}"
-                                  + $"・{s.Size}・最高頻寬 {s.MaxBandwidth}・JEDEC 上限 {s.MaxJedec}"
-                                  + $"・標稱電壓 {s.NominalVoltage}・製造日期 {s.ManufacturingDate}");
-                    if (s.HasXmp) sb.AppendLine($"　XMP／EXPO 設定檔：{s.XmpSummary}");
-                }
-
-                if (vm.Live is { } live && live.MemTotalGB > 0)
-                    sb.AppendLine($"目前用量：{live.MemUsageText}（{live.MemLoadText}）");
-
+                var sb = new StringBuilder(FormatMemoryTimingDescription(timings()));
+                sb.Append(inventory());
                 return Done(sb, "（未讀到任何記憶體資訊）");
             });
+    }
+
+    /// <summary>Pure description of the selected memory quantities; no VM, clock, hardware or external I/O.</summary>
+    internal static string FormatMemoryTimingDescription(MemoryTimings timings)
+    {
+        ArgumentNullException.ThrowIfNull(timings);
+        var sb = new StringBuilder();
+        // Loaded only means timing fields were populated. It does not establish current-value scope.
+        sb.AppendLine($"時序讀取狀態：{timings.Status}");
+        Line(sb, "記憶體型別", timings.MemoryTypeText);
+        Line(sb, "通道組態", timings.ChannelsText);
+        Line(sb, "總容量", timings.MemorySizeText);
+        Line(sb, "主橋", timings.HostBridge);
+
+        // Share R380's quantity/state rules. The timestamp is not output or used as a source update time.
+        var facts = EvidenceLabService.CollectMemoryTimingFacts(timings, DateTimeOffset.UnixEpoch);
+        HardwareFact? timing = facts.FirstOrDefault(f => f.Key == "memory.current");
+        HardwareFact? rate = facts.FirstOrDefault(f => f.Key == "memory.rate");
+        if (timing is not null)
+        {
+            AppendQuantity(timing.Name, timing.Value, timing.Source, timing.Trust,
+                timing.Availability, timing.UnavailableReason);
+        }
+        else
+            AppendQuantity("目前時序", "—", Source(timings.TimingFactSource),
+                timings.TimingFactTrust ?? FactTrustLevel.Unknown,
+                FactStateLattice.Weakest(timings.TimingFactAvailability, FactAvailability.Unknown),
+                timings.TimingFactReason ?? "尚未取得時序欄位；不代表沒有記憶體。");
+
+        if (Known(timings.TRFC)) AppendTimingExtra("tRFC（沿用時序範圍）", timings.TRFC);
+        if (Known(timings.CommandRate)) AppendTimingExtra("命令率（沿用時序範圍）", timings.CommandRate);
+
+        if (rate is not null)
+            AppendQuantity(rate.Name, rate.Value, rate.Source, rate.Trust,
+                rate.Availability, rate.UnavailableReason);
+        else
+            AppendQuantity("資料速率", "—", Source(timings.RateFactSource),
+                timings.RateFactTrust ?? FactTrustLevel.Unknown,
+                FactStateLattice.Weakest(timings.RateFactAvailability, FactAvailability.Unknown),
+                timings.RateFactReason ?? "未取得可用資料速率；沒有以零或舊值補入。");
+
+        if (double.IsFinite(timings.DramFrequencyMHz) && timings.DramFrequencyMHz > 0)
+        {
+            bool reference = timings.RateIsJedecReference
+                || timings.IsJedecReference && !Known(timings.RateFactSource);
+            string name = reference ? "JEDEC 參考時脈（非目前運行值）"
+                : timings.RateIsConfigured ? "設定時脈換算（非即時量測）"
+                : "DRAM 時脈（沿用資料速率來源與範圍）";
+            FactTrustLevel clockTrust = rate?.Trust ?? timings.RateFactTrust ?? FactTrustLevel.Unknown;
+            if (clockTrust is not (FactTrustLevel.Unknown or FactTrustLevel.Speculative)
+                && (reference || timings.RateIsConfigured)) clockTrust = FactTrustLevel.Derived;
+            string? clockReason = rate is null
+                ? (string.IsNullOrWhiteSpace(timings.RateFactReason) ? "" : timings.RateFactReason + "；")
+                    + "缺少對應資料速率文字的確認資訊；時脈不是獨立量測。"
+                : timings.RateIsConfigured && !reference
+                    ? "由所選設定速率換算；不是即時或獨立量測。"
+                        + (string.IsNullOrWhiteSpace(rate.UnavailableReason) ? "" : "；" + rate.UnavailableReason)
+                    : rate.UnavailableReason;
+            AppendQuantity(name,
+                timings.DramFrequencyMHz.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + " MHz",
+                rate?.Source ?? Source(timings.RateFactSource),
+                clockTrust,
+                rate?.Availability ?? FactStateLattice.Weakest(timings.RateFactAvailability, FactAvailability.Unknown),
+                clockReason);
+        }
+
+        // R380 has no separate provenance for this legacy extra field.
+        if (Known(timings.UncoreText))
+            AppendQuantity("Uncore／記憶體控制器附加欄位", timings.UncoreText,
+                Source(null), FactTrustLevel.Unknown, FactAvailability.Unknown,
+                "未提供此欄位的獨立來源與目前值確認；保留原文供檢視。");
+        return sb.ToString();
+
+        static bool Known(string? value) => !string.IsNullOrWhiteSpace(value)
+            && value.Trim() is not ("—" or "-" or "N/A");
+        string Source(string? specific) => Known(specific) ? specific!
+            : Known(timings.SourceText) ? timings.SourceText : "來源未標示";
+        void AppendTimingExtra(string name, string value) => AppendQuantity(name, value,
+            timing?.Source ?? Source(timings.TimingFactSource),
+            timing?.Trust ?? timings.TimingFactTrust ?? FactTrustLevel.Unknown,
+            timing?.Availability ?? FactStateLattice.Weakest(timings.TimingFactAvailability, FactAvailability.Unknown),
+            timing?.UnavailableReason ?? (timing is null ? "沒有完整目前時序的確認資訊；附加欄位僅保留原文。" : null));
+        void AppendQuantity(string name, string value, string source, FactTrustLevel trust,
+            FactAvailability availability, string? reason)
+        {
+            string content = availability == FactAvailability.Present ? value
+                : Known(value) ? "保留內容（不得當成已確認目前值）：" + value : "未取得值";
+            sb.AppendLine($"{name}：{content}；來源：{source}；可用性：{availability}（{FactStateLattice.Describe(availability)}）；"
+                + $"信任：{trust}（{HardwareSnapshotService.TrustText(trust)}）"
+                + (string.IsNullOrWhiteSpace(reason) ? "" : "；原因：" + reason));
+        }
     }
 
     // ── 網路 ────────────────────────────────────────────────────────────────

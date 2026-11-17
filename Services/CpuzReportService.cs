@@ -33,6 +33,7 @@ public static class CpuzReportService
             string txt = baseName + ".txt";
             TryDelete(txt);
 
+            Process? process = null;
             try
             {
                 var psi = new ProcessStartInfo
@@ -43,7 +44,7 @@ public static class CpuzReportService
                     WindowStyle = ProcessWindowStyle.Hidden,
                     CreateNoWindow = true,
                 };
-                using var p = Process.Start(psi);
+                var p = process = Process.Start(psi);
                 if (p is null) { r.Status = "無法啟動 CPU-Z"; r.Timings.Status = r.Status; return r; }
 
                 var timeout = Stopwatch.StartNew();
@@ -80,6 +81,20 @@ public static class CpuzReportService
             }
             finally
             {
+                // Cancellation must not release the shared hardware gate while
+                // the external process is still scanning the bus.
+                if (process is not null)
+                {
+                    try
+                    {
+                        if (!process.HasExited)
+                        {
+                            try { process.Kill(true); } catch { }
+                            process.WaitForExit();
+                        }
+                    }
+                    finally { process.Dispose(); }
+                }
                 TryDelete(txt);
             }
             return r;
@@ -181,6 +196,10 @@ public static class CpuzReportService
     private static void ParseTimings(string[] L, int start, int end, MemoryTimings t)
     {
         t.SourceText = "CPU-Z 報告";
+        t.TimingFactTrust = FactTrustLevel.Reported;
+        t.RateFactTrust = FactTrustLevel.Reported;
+        t.TimingFactAvailability = FactAvailability.Present;
+        t.RateFactAvailability = FactAvailability.Present;
         string? G(string label) => Get(L, label, start, end);
 
         t.MemoryTypeText = G("Memory Type") ?? "—";

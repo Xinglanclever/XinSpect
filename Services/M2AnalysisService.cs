@@ -32,18 +32,35 @@ public sealed class M2AnalysisService : ObservableObject
     public List<M2FormFactor> FormFactors { get; } = BuildFormFactors();
     public List<M2KeySpec> KeySpecs { get; } = BuildKeySpecs();
 
-    public M2AnalysisService()
+    private readonly object _detectionLock = new();
+    private readonly Func<List<PhysicalDiskInfo>>? _readDisks;
+    private readonly Func<IEnumerable<SmbiosSlotRow>>? _readSlots;
+    private readonly Action<Action> _publish;
+    private Task? _detectionTask;
+    internal bool DetectionStarted { get { lock (_detectionLock) return _detectionTask is not null; } }
+
+    public M2AnalysisService() : this(autoDetect: true) { }
+
+    internal M2AnalysisService(bool autoDetect,
+        Func<List<PhysicalDiskInfo>>? readDisks = null,
+        Func<IEnumerable<SmbiosSlotRow>>? readSlots = null,
+        Action<Action>? publish = null)
     {
-        // 與 CpuPinoutService／DimmReferenceService 同一套規矩：本服務在 MainViewModel 的欄位初始化式
-        // 就 eager 建立（主視窗還沒顯示），而這裡要做兩件可能不回應的事——讀 SMBIOS 韌體表、
-        // 連兩個 WMI 命名空間（root\Microsoft\Windows\Storage、root\WMI）。卡在任何一件上，
-        // 主視窗就永遠不出現。所以收集丟到背景，補資料時再回 UI 執行緒
-        // （Slots／PossibleSlots／DriveNotes／NvmeDriveNotes 是 ObservableCollection，只能在 UI 執行緒增刪）。
-        _ = Task.Run(() =>
-        {
-            var snap = Collect();
-            Shell.BeginOnUi(() => Apply(snap));
-        });
+        _readDisks = readDisks;
+        _readSlots = readSlots;
+        _publish = publish ?? (action => Shell.BeginOnUi(action));
+        if (autoDetect) _ = StartDetectionAsync();
+    }
+
+    // Task 表示收集完成且嘗試提交 UI callback；不保證 Apply 已執行。
+    internal Task StartDetectionAsync()
+    {
+        lock (_detectionLock)
+            return _detectionTask ??= Task.Run(() =>
+            {
+                var snap = Collect(_readDisks, readSlots: _readSlots);
+                _publish(() => Apply(snap));
+            });
     }
 
     /// <summary>一次偵測的結果；收集與套用分開，收集才能在背景跑、套用留在 UI 執行緒。</summary>
@@ -54,7 +71,8 @@ public sealed class M2AnalysisService : ObservableObject
     /// <summary>
     /// 收集插槽與磁碟外型。<paramref name="readDisks"/>／<paramref name="timeoutMs"/> 是測試注入點。
     /// </summary>
-    internal Snapshot Collect(Func<List<PhysicalDiskInfo>>? readDisks = null, int? timeoutMs = null)
+    internal Snapshot Collect(Func<List<PhysicalDiskInfo>>? readDisks = null, int? timeoutMs = null,
+        Func<IEnumerable<SmbiosSlotRow>>? readSlots = null)
     {
         var typed = new List<SmbiosSlotRow>();
         var inferred = new List<SmbiosSlotRow>();
@@ -62,7 +80,7 @@ public sealed class M2AnalysisService : ObservableObject
 
         try
         {
-            foreach (var slot in new SmbiosService().Slots)
+            foreach (var slot in readSlots is null ? new SmbiosService().Slots : readSlots())
             {
                 bool isTyped = M2Detection.IsTypedM2OrU2(slot.Type);
                 if (isTyped) { typed.Add(slot); continue; }

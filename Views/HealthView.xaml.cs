@@ -119,14 +119,14 @@ public partial class HealthView : UserControl, IPageLifecycle
             SurfaceProgress.Visibility = Visibility.Collapsed;
             if (results is null)
             {
-                SurfaceStatus.Text = "無法開啟本機固定卷，或無法取得卷大小。";
+                SurfaceStatus.Text = DiskSurfaceScanService.PreflightUnavailableMessage;
                 return;
             }
             long coveredBytes = results[0].Scan.TotalBytes;
             string sectorText = results[0].Scan.LogicalSectorBytes > 0
                 ? $"{results[0].Scan.LogicalSectorBytes} B" : "未知";
             SurfaceStatus.Text = $"{label}・覆蓋 {coveredBytes / (1024.0 * 1024):F1} MiB・"
-                + $"邏輯磁區 {sectorText}・緩衝 I/O・重試 {results.Sum(x => x.Scan.RetryCount)} 次";
+                + $"邏輯磁區 {sectorText}・{results[0].Scan.IoMode}・重試 {results.Sum(x => x.Scan.RetryCount)} 次";
             SurfaceResults.ItemsSource = results.Select(result => new
             {
                 Label = $"{result.BlockSizeBytes} B・第 {result.Pass} 次",

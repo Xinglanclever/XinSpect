@@ -38,22 +38,25 @@ public sealed class DimmReferenceService : ObservableObject
     private List<DimmGeneration> _allGenerations = [];
     public List<DimmGeneration> AllGenerations { get => _allGenerations; private set => SetProperty(ref _allGenerations, value); }
 
+    private readonly object _detectionLock = new();
+    private readonly Func<List<DimmModuleRow>?>? _readModules;
+    private Task? _detectionTask;
+    internal bool DetectionStarted { get { lock (_detectionLock) return _detectionTask is not null; } }
+
     public DimmReferenceService() : this(autoDetect: true) { }
 
-    /// <summary>
-    /// <paramref name="autoDetect"/> 只給測試用：<c>false</c> 時不自動查 WMI，
-    /// 測試才能用注入的查詢驗證逾時與判讀，而不必和建構子丢出去的背景查詢搶同一個欄位。
-    /// </summary>
-    internal DimmReferenceService(bool autoDetect)
+    // MainViewModel 延後到正式 Startup；獨立使用仍自動啟動，測試可注入來源。
+    internal DimmReferenceService(bool autoDetect, Func<List<DimmModuleRow>?>? readModules = null)
     {
+        _readModules = readModules;
         AllGenerations = BuildAllGenerations();
-        if (!autoDetect) return;
+        if (autoDetect) _ = StartDetectionAsync();
+    }
 
-        // 建構子是在 MainViewModel 的欄位初始化式裡被呼叫的——主視窗還沒顯示、而且就在 UI 執行緒上。
-        // WMI 的列舉沒有可用的逾時（見 WmiGuard 的說明），在這裡同步查詢等於把「視窗出不來」
-        // 綁在「WMI 什麼時候回來」上：2026-10-31 那五份只有行程、沒有視窗的曦覽就是卡在這一行。
-        // 屬性全是純量／List（沒有 ObservableCollection），背景設值時 WPF 會把 PropertyChanged 封送回 UI。
-        _ = Task.Run(() => DetectAndLoad());
+    internal Task StartDetectionAsync()
+    {
+        lock (_detectionLock)
+            return _detectionTask ??= Task.Run(() => DetectAndLoad(_readModules));
     }
 
     /// <summary>

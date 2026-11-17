@@ -427,22 +427,22 @@
                 </StackPanel>
             </Border>
 
-            <!-- L3 未命中與 DRAM 實際流量：架構事件＋自我驗證 -->
+            <!-- Architectural LLC events and equivalent bytes. -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                 <StackPanel>
                     <Grid>
-                        <local:SectionHead Text="L3 未命中與 DRAM 實際流量" HelpKey="memory/L3 未命中與 DRAM 實際流量"/>
+                        <local:SectionHead Text="末級快取事件與等效流量" HelpKey="memory/L3 未命中與 DRAM 實際流量"/>
                         <Button Style="{StaticResource PrimaryButton}" Content="開始量測"
                                 HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="120"
                                 IsEnabled="{Binding DramTraffic.CanMeasure}" Click="DramTrafficMeasure_Click"/>
                     </Grid>
                     <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,8,0,0"
-                               Text="每一次末級快取未命中，就是一條 64 位元組的快取行真的從記憶體被搬上來。這裡數的是那個次數——與「本程式能跑出多少頻寬」是不同的問題。"/>
+                               Text="選定邏輯處理器的 LLC 未命中按每次 64 位元組換算等效量；不代表 DRAM 實際傳輸，也未隔離其他工作負載。"/>
 
-                    <local:FieldRow Label="L3 未命中" Value="{Binding DramTraffic.MissText}"/>
-                    <local:FieldRow Label="L3 參照" Value="{Binding DramTraffic.ReferenceText}"/>
-                    <local:FieldRow Label="L3 命中率" Value="{Binding DramTraffic.HitText}"/>
-                    <local:FieldRow Label="DRAM 讀取流量" Value="{Binding DramTraffic.TrafficText}"/>
+                    <local:FieldRow Label="LLC 未命中" Value="{Binding DramTraffic.MissText}"/>
+                    <local:FieldRow Label="LLC 參照" Value="{Binding DramTraffic.ReferenceText}"/>
+                    <local:FieldRow Label="LLC 事件命中比" Value="{Binding DramTraffic.HitText}"/>
+                    <local:FieldRow Label="LLC 等效流量" Value="{Binding DramTraffic.TrafficText}"/>
 
                     <Border Margin="0,12,0,0" Padding="12,10" CornerRadius="6"
                             Background="{DynamicResource Surface2Brush}">

@@ -23,6 +23,65 @@ public class CliServiceTests : IDisposable
         new(key, "測試", key, value, "", "測試來源", FactTrustLevel.Measured, false, At, null, availability, reason);
 
     [Fact]
+    public void SensorComparisonUsesOnlyInjectedSnapshotAndDisclosesLimits()
+    {
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+        var time = new SensorAcquisition(100, 200);
+        int code = CliService.Run([CliService.SensorCrossCheckArg],
+            () => throw new InvalidOperationException("Full collection must not run."), stdout, stderr,
+            sensorCapture: () => new(
+                [new("LHM", "CPU X", 0, 60, At, time)],
+                [new("Core Temp", "Temperature", "Core 0", 62, "°C", DeviceIdentity: "CPU X",
+                    ChannelIndex: 0, CapturedAtUtc: At, Acquisition: time)]));
+        Assert.Equal(CliService.ExitOk, code);
+        using var json = System.Text.Json.JsonDocument.Parse(stdout.ToString());
+        Assert.Equal(1, json.RootElement.GetProperty("comparisonCount").GetInt32());
+        Assert.False(json.RootElement.GetProperty("precisionVerified").GetBoolean());
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, json.RootElement.GetProperty("sourceUpdatedAtUtc").ValueKind);
+        Assert.Empty(stderr.ToString());
+    }
+
+    [Fact]
+    public void MissingSensorSourceIsPartialAndCanWriteJson()
+    {
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+        int code = CliService.Run([CliService.SensorCrossCheckArg, "--out", _outPath],
+            () => throw new InvalidOperationException(), stdout, stderr,
+            sensorCapture: () => new([], [], "Core Temp 未執行"));
+        Assert.Equal(CliService.ExitPartial, code);
+        Assert.Empty(stdout.ToString());
+        using var json = System.Text.Json.JsonDocument.Parse(File.ReadAllText(_outPath));
+        Assert.Equal("Unknown", json.RootElement.GetProperty("availability").GetString());
+        Assert.Equal("Core Temp 未執行", json.RootElement.GetProperty("sourceError").GetString());
+    }
+
+    [Theory]
+    [InlineData("--out")]
+    [InlineData("--unknown")]
+    public void InvalidSensorArgumentsNeverCapture(string option)
+    {
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+        bool captured = false;
+        Assert.Equal(CliService.ExitError, CliService.Run([CliService.SensorCrossCheckArg, option],
+            () => [], stdout, stderr, sensorCapture: () => { captured = true; return new([], []); }));
+        Assert.False(captured);
+    }
+
+    [Fact]
+    public void SensorCaptureFailuresReturnErrorWithoutInventedReadings()
+    {
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+        Assert.Equal(CliService.ExitError, CliService.Run([CliService.SensorCrossCheckArg],
+            () => [], stdout, stderr, sensorCapture: () => throw new InvalidOperationException("capture failure")));
+        Assert.Empty(stdout.ToString());
+        Assert.Contains("capture failure", stderr.ToString());
+    }
+
+    [Fact]
     public void 進入點仍要走在CLI分支且不得再對StartupUri賦值()
     {
         // 這一條不是行為測試，是進入點的守門，理由是一個真實的災難：

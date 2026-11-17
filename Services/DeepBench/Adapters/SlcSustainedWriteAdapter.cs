@@ -42,7 +42,7 @@ public sealed class SlcSustainedWriteAdapter(
     {
         DateTime started = DateTime.UtcNow;
         DeepBenchTestResult result;
-        Exception? cleanupFailure = null;
+        bool engineDispatched = false;
         DiskIoPlan? plan = null;
         try
         {
@@ -69,6 +69,7 @@ public sealed class SlcSustainedWriteAdapter(
                 else
                 {
                     context.Progress.Report(new DeepBenchProgress(TestId, 0, 1, 0.02, $"準備 {target / (double)GiB:0} GiB 持續寫入"));
+                    engineDispatched = true;
                     SlcSustainedWriteMeasurement measurement = await _engine.MeasureAsync(
                         new SlcSustainedWriteContext(plan.TempFilePath, target, context.Progress, _fileSystem),
                         cancellationToken).ConfigureAwait(false);
@@ -89,32 +90,10 @@ public sealed class SlcSustainedWriteAdapter(
         {
             result = Failed(context, started, DeepBenchFailureKind.PlatformError, exception.Message);
         }
-        finally
-        {
-            if (plan is not null)
-            {
-                try
-                {
-                    if (_fileSystem.Exists(plan.TempFilePath)) _fileSystem.Delete(plan.TempFilePath);
-                }
-                catch (Exception exception)
-                {
-                    cleanupFailure = exception;
-                }
-            }
-        }
-
-        if (cleanupFailure is not null)
-        {
-            result = result with
-            {
-                FailureKind = DeepBenchFailureKind.PlatformError,
-                Error = $"量測結束但暫存檔刪除失敗：{cleanupFailure.Message}",
-                Limitations = [.. result.Limitations, "請手動確認 XinSpect.deepbench.tmp 是否仍存在。"],
-            };
-        }
-
-        context.Progress.Report(new DeepBenchProgress(TestId, 1, 1, 1, "暫存檔已清理"));
+        context.Progress.Report(new DeepBenchProgress(TestId, 1, 1, 1,
+            engineDispatched
+                ? "量測引擎已返回；本場 handle 的清理由引擎負責，未另行驗證刪除。"
+                : "未啟動量測引擎，未建立或清理暫存檔。"));
         return result;
     }
 
@@ -204,7 +183,7 @@ public sealed class SlcSustainedWriteAdapter(
                 "Cliff detected",
                 "flag",
                 false,
-                "throughput < 35% of peak with a 6-sample post-window below 45%",
+                "candidate < 35% of peak; median of candidate plus next 5 samples < 45%; incomplete windows excluded",
                 [cliffSeconds >= 0 ? 1 : 0],
                 [new DeepBenchMetricPoint(cliffSeconds >= 0 ? 1 : 0, new Dictionary<string, string>(), [cliffSeconds >= 0 ? 1 : 0])]),
             new(
@@ -225,10 +204,10 @@ public sealed class SlcSustainedWriteAdapter(
             context.Profile,
             started,
             DateTime.UtcNow,
-            $"{targetText} 目標；暫存檔 {plan.TempFilePath}；4 MiB 循序寫入；每秒 FlushToDisk 並取樣",
+            $"{targetText} 目標；暫存目錄 {plan.StorageRoot}；本場唯一檔案；4 MiB 循序寫入；每秒 FlushToDisk 並取樣",
             metrics,
             [
-                $"唯一暫存檔：{plan.TempFilePath}；啟動前已揭露路徑。",
+                $"暫存目錄：{plan.StorageRoot}；本場建立唯一檔案並持有同一 handle；關閉時要求 DeleteOnClose，未另行驗證刪除。",
                 $"目標寫入量 {targetText}；量到 {measurement.Samples.Count} 秒吞吐曲線。",
                 "每個取樣窗先 FlushToDisk，量的是已送過 Flush 的寫入路徑。",
             ],
@@ -242,7 +221,7 @@ public sealed class SlcSustainedWriteAdapter(
     }
 
     private static DeepBenchTestResult Cancelled(DeepBenchRunContext context, DateTime started) =>
-        new(TestId, context.SessionId, context.Profile, started, DateTime.UtcNow, "已取消", [], [], ["取消後關閉並刪除暫存檔。"], DeepBenchFailureKind.Cancelled, "使用者取消。");
+        new(TestId, context.SessionId, context.Profile, started, DateTime.UtcNow, "已取消", [], [], ["取消會等量測 worker 與 flush 真正結束後關閉本場 handle，未另行驗證刪除。"], DeepBenchFailureKind.Cancelled, "使用者取消。");
 
     private static DeepBenchTestResult Failed(DeepBenchRunContext context, DateTime started, DeepBenchFailureKind kind, string error) =>
         new(TestId, context.SessionId, context.Profile, started, DateTime.UtcNow, "未完成", [], [], ["不從未完成曲線推算。"], kind, error);
@@ -277,7 +256,7 @@ public sealed class SlcSustainedWriteAdapter(
                     item.Item2)));
 
             List<SlcSample> samples = await Task.Run(
-                () => SlcCacheBenchService.WriteSustained(context.TempFilePath, context.TargetBytes, cancellationToken, reporter),
+                () => SlcCacheBenchService.WriteUnique(Path.GetDirectoryName(context.TempFilePath)!, context.TargetBytes, cancellationToken, reporter),
                 cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             return new SlcSustainedWriteMeasurement(samples);

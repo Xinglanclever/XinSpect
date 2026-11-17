@@ -66,10 +66,10 @@ public class AmdSmuServiceTests
 
         pci.Writes.Clear();
         pci.Registers[(0, 0, 0, 0xBC)] = 0xDEADBEEF;
-        var result = svc.SmnRead(0x12345678);
+        var result = svc.SmnRead(0x00059800);
 
         // 確認寫了 index
-        Assert.Contains(pci.Writes, w => w.Reg == 0xB8 && w.Value == 0x12345678);
+        Assert.Contains(pci.Writes, w => w.Reg == 0xB8 && w.Value == 0x00059800);
         Assert.Equal(0xDEADBEEFu, result);
     }
 
@@ -173,4 +173,140 @@ public class AmdSmuServiceTests
         Assert.Empty(t.Cores);
         Assert.Contains("尚未收錄", t.Status);
     }
+    [Fact]
+    public async Task TransactionsAcrossInstancesCannotInterleaveAddresses()
+    {
+        using var selected = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        using var secondStarted = new ManualResetEventSlim();
+        var pci = new ScheduledPci();
+        var first = new AmdSmuService(pci);
+        var second = new AmdSmuService(pci);
+        pci.AfterWrite = address =>
+        {
+            if (address != 0x59800) return;
+            selected.Set();
+            Assert.True(release.Wait(TimeSpan.FromSeconds(3)));
+        };
+        var a = Task.Run(() => first.ReadTransaction(0xB8, 0xBC, 0x59800, default));
+        Task<uint?>? b = null;
+        try
+        {
+            Assert.True(selected.Wait(TimeSpan.FromSeconds(3)));
+            b = Task.Run(() =>
+            {
+                secondStarted.Set();
+                return second.ReadTransaction(0xB8, 0xBC, 0x50000, default);
+            });
+            Assert.True(secondStarted.Wait(TimeSpan.FromSeconds(3)));
+        }
+        finally { release.Set(); }
+        Assert.Equal(0x59800u, await a.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.NotNull(b);
+        Assert.Equal(0x50000u, await b!.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.Equal(new[] { "W59800", "R59800", "W50000", "R50000" }, pci.Events);
+    }
+
+    [Fact]
+    public void ExceptionAndCancellationReleaseTransactionGate()
+    {
+        var pci = new ScheduledPci();
+        var service = new AmdSmuService(pci);
+        pci.AfterWrite = _ => throw new InvalidOperationException("injected");
+        Assert.Throws<InvalidOperationException>(() => service.ReadTransaction(0xB8, 0xBC, 0x59800, default));
+        using var cancellation = new CancellationTokenSource();
+        pci.AfterWrite = _ => cancellation.Cancel();
+        Assert.Throws<OperationCanceledException>(() => service.ReadTransaction(0xB8, 0xBC, 0x59800, cancellation.Token));
+        Assert.DoesNotContain(pci.Events, value => value.StartsWith("R"));
+        pci.AfterWrite = null;
+        Assert.Equal(0x50000u, service.ReadTransaction(0xB8, 0xBC, 0x50000, default));
+    }
+
+    [Fact]
+    public void NativeTransactionHoldsOneSessionThroughReadAndDisposesOnFailure()
+    {
+        int opens = 0, disposals = 0;
+        var session = new FakeSession(() => disposals++);
+        var adapter = new AmdSmuService.WinRing0PciAccess(() => { opens++; return session; });
+        var service = new AmdSmuService(adapter);
+        Assert.Equal(7u, service.ReadTransaction(0xB8, 0xBC, 0x59800, default));
+        Assert.Equal(1, opens);
+        Assert.Equal(1, disposals);
+        Assert.Equal(new[] { "write", "read", "dispose" }, session.Events);
+        session.ThrowRead = true;
+        Assert.Throws<InvalidOperationException>(() => service.ReadTransaction(0xB8, 0xBC, 0x59800, default));
+        Assert.Equal(2, opens);
+        Assert.Equal(2, disposals);
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        Assert.Throws<OperationCanceledException>(() => service.ReadTransaction(0xB8, 0xBC, 0x59800, cancelled.Token));
+        Assert.Equal(2, opens);
+        Assert.Null(service.ReadTransaction(0xB8, 0xBC, 0x12345678, default));
+        Assert.Equal(2, opens);
+    }
+
+    [Fact]
+    public async Task CancelledWaiterNeverStartsHardwareTransaction()
+    {
+        using var selected = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        using var cancellation = new CancellationTokenSource();
+        var pci = new ScheduledPci();
+        pci.AfterWrite = _ => { selected.Set(); Assert.True(release.Wait(TimeSpan.FromSeconds(3))); };
+        var first = new AmdSmuService(pci);
+        var second = new AmdSmuService(pci);
+        var active = Task.Run(() => first.ReadTransaction(0xB8, 0xBC, 0x59800, default));
+        try
+        {
+            Assert.True(selected.Wait(TimeSpan.FromSeconds(3)));
+            using var started = new ManualResetEventSlim();
+            var waiter = Task.Run(() =>
+            {
+                started.Set();
+                return second.ReadTransaction(0xB8, 0xBC, 0x50000, cancellation.Token);
+            });
+            Assert.True(started.Wait(TimeSpan.FromSeconds(3)));
+            cancellation.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+                await waiter.WaitAsync(TimeSpan.FromSeconds(3)));
+            Assert.Equal(new[] { "W59800" }, pci.Events);
+        }
+        finally { release.Set(); }
+        Assert.Equal(0x59800u, await active.WaitAsync(TimeSpan.FromSeconds(5)));
+    }
+
+    private sealed class ScheduledPci : AmdSmuService.IPciAccess
+    {
+        private uint _selected;
+        public List<string> Events { get; } = [];
+        public Action<uint>? AfterWrite { get; set; }
+        public string CpuVendor() => "AuthenticAMD";
+        public bool WritePci(byte bus, byte dev, byte fn, uint reg, uint value)
+        {
+            _selected = value;
+            Events.Add($"W{value:X}");
+            AfterWrite?.Invoke(value);
+            return true;
+        }
+        public uint? ReadPci(byte bus, byte dev, byte fn, uint reg)
+        {
+            Events.Add($"R{_selected:X}");
+            return _selected;
+        }
+    }
+
+    private sealed class FakeSession(Action onDispose) : AmdSmuService.ISmnSession
+    {
+        public List<string> Events { get; } = [];
+        public bool ThrowRead { get; set; }
+        public bool WriteIndex(uint register, uint address) { Events.Add("write"); return true; }
+        public uint? Read(uint register)
+        {
+            Events.Add("read");
+            if (ThrowRead) throw new InvalidOperationException("injected");
+            return 7;
+        }
+        public void Dispose() { Events.Add("dispose"); onDispose(); }
+    }
+
 }

@@ -121,9 +121,8 @@ public sealed class TopDownCoreRow
 /// <item><b>AnyThread（PERFEVTSEL 位 21）取樣，逐實體核心呈現。</b>IDQ_UOPS_NOT_DELIVERED.CORE 本質是核心層事件，
 /// SMT 下按邏輯處理器歸因會重複計算；開 AnyThread 後四個事件都是整顆實體核心的量，分母 4 × CLKS 才對得上。</item>
 /// <item><b>逐核心序列取樣</b>：每顆核心釘選後量測固定視窗，故不同核心的取樣時間點不同（非同一瞬間快照）。</item>
-/// <item><b>取樣前後完整存讀 PERFEVTSEL0–3 與 GLOBAL_CTRL</b>，還原成原值；期間只清除 GLOBAL_CTRL 的位 0–3
-/// （通用計數器），固定計數器的啟用位元原封不動。本機實測 GLOBAL_CTRL=0x60000000F、FIXED_CTR_CTRL=0x220
-/// 取樣後皆完好如初。若同時有別的分析工具（VTune／PCM）在用 PMC，兩者會互相覆蓋——這是硬體只有 4 個計數器的必然。</item>
+/// <item>計數器所有權及平台寫回能力尚未證實；生產編程維持拒絕，不搶占其他 PMU 使用者。
+/// 注入交易可驗保存／恢復及錯誤處理，但不構成平台實機驗證。</item>
 /// </list>
 /// MSR 讀寫經 <see cref="WinRing0Bridge"/>（風險聲明見該類別）。
 /// </remarks>
@@ -245,6 +244,12 @@ public class TopDownService : ObservableObject, IDisposable
         try
         {
             if (!DetectSupport()) { Phase = "不支援"; StatusLine = SupportText; return; }
+            if (!ProductionProgrammingVerified())
+            {
+                Phase = "不支援";
+                StatusLine = "Top-down PMU 編程未執行：核心／SMT 計數器獨占與完整位寬寫回尚無平台驗證；不提供推測讀數。";
+                return;
+            }
             _bridge ??= WinRing0Bridge.Create();
             if (_bridge is null || !_bridge.Available)
             {
@@ -300,7 +305,7 @@ public class TopDownService : ObservableObject, IDisposable
         catch (OperationCanceledException)
         {
             Phase = "已停止";
-            StatusLine = "取樣已停止，計數器已還原原值。";
+                StatusLine = "取樣已停止；未完成取樣不輸出讀數。";
         }
         catch (Exception ex)
         {
@@ -372,6 +377,11 @@ public class TopDownService : ObservableObject, IDisposable
         SupportText = $"{uarch.DisplayName} ・ PMU 版本 {version}、通用計數器 {nGp} 個（{gpWidth} 位元）。"
                     + uarch.TmaNote
                     + "本工具只使用 PMC0–3，不變動作業系統正在使用的固定計數器。";
+        if (!ProductionProgrammingVerified())
+        {
+            SupportText += " 編程未支援：核心／SMT 計數器獨占與完整位寬寫回尚未驗證，不提供讀數。";
+            return false;
+        }
         return true;
     }
 
@@ -407,49 +417,119 @@ public class TopDownService : ObservableObject, IDisposable
 
     /// <summary>
     /// 在指定邏輯處理器上取樣一次。存原值 → 停通用計數器 → 編程 → 啟用 → 等視窗 → 讀 → 還原。
-    /// 讀不到（橋接失敗）時回全 0，上層會視為閒置並顯示 —，不會拿舊值或估計值頂替。
+    /// 缺少平台所有權證據時拒絕；不能用零值冒充閒置。
     /// </summary>
     private ulong[] SampleOne(ProcessorRef target, CancellationToken ct)
     {
-        var v = new ulong[4];
-        using var pin = CpuAffinity.Pinned(target);
-        if (!pin.Ok) { Diag.Swallow("Top-down 釘選核心", null, $"核心 {target.Label(true)} 無法釘選，該列顯示 —"); return v; }
+        ct.ThrowIfCancellationRequested();
+        throw new NotSupportedException("Top-down PMU 編程未執行：尚無核心／SMT 計數器獨占與完整位寬寫回驗證，不能安全提供讀數。");
+    }
+
+    // No platform has supplied the ownership/full-width restoration evidence required by this path.
+    private static bool ProductionProgrammingVerified() => false;
+
+    /// <summary>
+    /// Isolated transaction for injected MSR access. The caller must establish platform-specific
+    /// exclusive ownership and full-width counter write support before requesting any write.
+    /// Intel SDM Vol.3 performance monitoring: IA32_PERFEVTSELx / IA32_PMCx / IA32_PERF_GLOBAL_CTRL.
+    /// A successful fake transaction proves lifecycle logic only, not hardware ownership.
+    /// </summary>
+    internal static TopDownPmuResult SampleTransaction(Func<uint, ulong?> read,
+        Func<uint, ulong, bool> write, Func<bool> livePolicy, Action<CancellationToken> window,
+        bool configurationVerified, CancellationToken ct)
+    {
+        if (!configurationVerified)
+            return new(FactAvailability.NotSupported, null, "PMU ownership and counter write configuration are unverified.", false);
+        var saved = new Dictionary<uint, ulong>();
+        var values = new ulong[4];
+        bool mutated = false, restored = true;
+        FactAvailability availability = FactAvailability.ReadError;
+        string reason = "PMU sampling did not finish.";
+        void RequirePolicy()
+        {
+            ct.ThrowIfCancellationRequested();
+            if (!livePolicy()) throw new OperationCanceledException("Current hardware policy denies PMU programming.");
+        }
+        void Program(uint index, ulong value)
+        {
+            RequirePolicy();
+            mutated = true; // A false return or exception may still have changed hardware.
+            if (!write(index, value) || read(index) != value)
+                throw new InvalidOperationException($"PMU write/readback failed at 0x{index:X}.");
+        }
+        bool Restore(uint index, ulong value)
+        {
+            try { bool ok = write(index, value); return read(index) == value && ok; }
+            catch { return false; }
+        }
         try
         {
-            ulong savedGlobal = _bridge!.ReadMsrPair64(MsrGlobalCtrl) ?? 0;
-            var savedSel = new ulong[4];
-            for (uint i = 0; i < 4; i++) savedSel[i] = _bridge.ReadMsrPair64(MsrPerfEvtSel0 + i) ?? 0;
-
-            Write64(MsrGlobalCtrl, savedGlobal & ~0xFUL);   // 只停 PMC0–3，固定計數器的啟用位元不動
-            for (uint i = 0; i < 4; i++)
+            RequirePolicy();
+            foreach (uint index in new[] { MsrGlobalCtrl, MsrPerfEvtSel0, MsrPerfEvtSel0 + 1,
+                MsrPerfEvtSel0 + 2, MsrPerfEvtSel0 + 3, MsrPmc0, MsrPmc0 + 1, MsrPmc0 + 2, MsrPmc0 + 3 })
             {
-                Write64(MsrPerfEvtSel0 + i, Sel(Events[i].Ev, Events[i].Um, anyThread: true));
-                Write64(MsrPmc0 + i, 0);
+                if (read(index) is not { } value)
+                    return new(FactAvailability.Unknown, null, $"PMU baseline unavailable at 0x{index:X}; no writes issued.", false);
+                saved.Add(index, value);
             }
-            Write64(MsrGlobalCtrl, savedGlobal | 0xFUL);
+            if ((saved[MsrGlobalCtrl] & 0xF) != 0 || Enumerable.Range(0, 4).Any(i => saved[MsrPerfEvtSel0 + (uint)i] != 0))
+                return new(FactAvailability.Unknown, null, "PMC0–3 are busy or have retained configuration; no writes issued.", false);
+            // Recheck immediately before the first mutation; ownership must also be held by the caller.
+            foreach (var entry in saved)
+                if (read(entry.Key) != entry.Value)
+                    return new(FactAvailability.Unknown, null, "PMU baseline changed before programming; no writes issued.", false);
             try
             {
-                ct.WaitHandle.WaitOne(WindowMs);
-                for (uint i = 0; i < 4; i++) v[i] = _bridge.ReadMsrPair64(MsrPmc0 + i) ?? 0;
+                Program(MsrGlobalCtrl, saved[MsrGlobalCtrl] & ~0xFUL);
+                for (uint i = 0; i < 4; i++)
+                {
+                    Program(MsrPerfEvtSel0 + i, Sel(Events[i].Ev, Events[i].Um, anyThread: true));
+                    Program(MsrPmc0 + i, 0);
+                }
+                Program(MsrGlobalCtrl, saved[MsrGlobalCtrl] | 0xFUL);
+                RequirePolicy();
+                window(ct);
+                RequirePolicy();
+                Program(MsrGlobalCtrl, saved[MsrGlobalCtrl] & ~0xFUL);
+                for (uint i = 0; i < 4; i++)
+                    values[i] = read(MsrPmc0 + i) ?? throw new InvalidOperationException("PMU sample read failed.");
+                availability = FactAvailability.Present;
+                reason = "PMU sample and verified restoration completed (injected transaction contract).";
             }
             finally
             {
-                Write64(MsrGlobalCtrl, savedGlobal & ~0xFUL);
-                for (uint i = 0; i < 4; i++) Write64(MsrPerfEvtSel0 + i, savedSel[i]);
-                Write64(MsrGlobalCtrl, savedGlobal);
+                if (mutated)
+                {
+                    // Recovery is restorative, independent of the now-current policy/cancellation state.
+                    using var recovery = HardwareOperationGate.BeginRecoveryOperation();
+                    restored &= Restore(MsrGlobalCtrl, saved[MsrGlobalCtrl] & ~0xFUL);
+                    for (uint i = 0; i < 4; i++)
+                    {
+                        restored &= Restore(MsrPerfEvtSel0 + i, saved[MsrPerfEvtSel0 + i]);
+                        restored &= Restore(MsrPmc0 + i, saved[MsrPmc0 + i]);
+                    }
+                    restored &= Restore(MsrGlobalCtrl, saved[MsrGlobalCtrl]);
+                    foreach (var entry in saved)
+                    {
+                        try { restored &= read(entry.Key) == entry.Value; }
+                        catch { restored = false; }
+                    }
+                }
             }
+        }
+        catch (OperationCanceledException)
+        {
+            availability = FactAvailability.Unknown;
+            reason = "PMU sampling canceled or policy revoked; no sample is published.";
         }
         catch (Exception ex)
         {
-            Diag.Swallow("Top-down PMU 取樣", ex, $"核心 {target.Label(true)} 的四桶顯示 —");
-            return new ulong[4];
+            reason = "PMU transaction failed (" + ex.GetType().Name + "); no sample is published.";
         }
-        ct.ThrowIfCancellationRequested();
-        return v;
+        if (!restored)
+            return new(FactAvailability.ReadError, null, "PMU restoration could not be verified; no sample is published.", false);
+        return new(availability, availability == FactAvailability.Present ? values : null, reason, mutated);
     }
-
-    private void Write64(uint index, ulong value)
-        => _bridge!.WriteMsrPair(index, (uint)(value & 0xFFFFFFFF), (uint)(value >> 32));
 
     public void Dispose()
     {
@@ -458,3 +538,5 @@ public class TopDownService : ObservableObject, IDisposable
         catch (Exception ex) { Diag.Swallow("Top-down 橋接釋放", ex, "無；程式即將結束"); }
     }
 }
+
+internal sealed record TopDownPmuResult(FactAvailability Availability, ulong[]? Values, string Reason, bool Restored);

@@ -20,7 +20,13 @@ public class RedfishFactsTests
         [new RedfishFan("FAN1", 5400, "Enabled/OK")],
         [new RedfishTemperature("CPU", 43.5, 85, "Enabled/OK")],
         187.5,
-        ["被拒絕的 @odata.id：http://example.com（外部 URL 不追）"]);
+        ["被拒絕的 @odata.id：http://example.com（外部 URL 不追）"])
+        {
+            PowerControlsComplete = true,
+            PowerControls = [new("/redfish/v1/Chassis/1U", "/redfish/v1/Chassis/1U/Power", 0,
+                "0", "/redfish/v1/Chassis/1U/Power#/PowerControl/0", "System power", "Chassis", 187.5)
+                { ScopeResolved = true }],
+        };
 
     [Fact]
     public void 全部事實都是Reported_沒有任何Measured()
@@ -50,8 +56,9 @@ public class RedfishFactsTests
         var again = RedfishFactsService.Collect(Inventory(), At);
         var items = once.Where(f => f.Key.StartsWith("rf.item.", StringComparison.Ordinal)).ToList();
         Assert.NotEmpty(items);
-        Assert.Contains(items, f => f.Key == "rf.item.temp.CPU");
-        Assert.Contains(items, f => f.Key == "rf.item.psu.PSU1");
+        Assert.Contains(items, f => f.Key.StartsWith("rf.item.temp.cpu-", StringComparison.Ordinal));
+        Assert.Contains(items, f => f.Key.StartsWith("rf.item.psu.psu1-", StringComparison.Ordinal));
+        Assert.All(items, f => Assert.Matches(@"^[a-z0-9](?:[a-z0-9._\-\[\]]{0,159})$", f.Key));
         // 同一份包重讀：鍵集合完全一致（順序也一致）
         Assert.Equal(items.Select(f => f.Key), again.Where(f => f.Key.StartsWith("rf.item.", StringComparison.Ordinal)).Select(f => f.Key));
         // 全部鍵要嘛在目錄、要嘛命中動態家族
@@ -77,5 +84,63 @@ public class RedfishFactsTests
         var facts = RedfishFactsService.Collect(Inventory(), At);
         var warnings = facts.First(f => f.Key == "rf.bundle.warnings");
         Assert.Contains("外部 URL", warnings.Value, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void 序號事實敏感且逐項沿用來源採集時間()
+    {
+        var inventory = Inventory() with { CollectedAtUtc = new DateTimeOffset(2026, 11, 3, 16, 0, 0, TimeSpan.FromHours(8)) };
+        var facts = RedfishFactsService.Collect(inventory, At);
+        Assert.True(facts.Single(f => f.Value.Contains("SN123", StringComparison.Ordinal)).Sensitive);
+        Assert.All(facts.Where(f => f.Key.StartsWith("rf.item.", StringComparison.Ordinal)
+            || f.Key == "rf.power.consumed"), f =>
+        {
+            Assert.Equal(At, f.MeasuredAtUtc);
+            Assert.Contains("2026-11-03T08:00:00.0000000+00:00", f.Source);
+            Assert.Contains("2026-11-03T12:00:00.0000000+00:00", f.Source);
+        });
+    }
+
+    [Fact]
+    public void 未知採集時間不冒充即時可用數值()
+    {
+        var facts = RedfishFactsService.Collect(Inventory() with { CollectedAtUtc = null }, At);
+        Assert.All(facts.Where(f => f.Key.StartsWith("rf.item.", StringComparison.Ordinal)
+            || f.Key == "rf.power.consumed" || f.Key == "rf.summary"), f =>
+        {
+            Assert.Equal(FactAvailability.Unknown, f.Availability);
+            Assert.Null(f.NumericValue);
+            Assert.Contains("採集時間", f.UnavailableReason);
+            Assert.Equal(At, f.MeasuredAtUtc);
+            Assert.Contains("來源採集時間未知", f.Source);
+        });
+    }
+
+    [Fact]
+    public void 標點截長與重複Id不產生重複鍵()
+    {
+        string longPrefix = new('A', 50);
+        var inventory = Inventory() with { Fans = new[] { "A/B", "A-B", "???", "!!!", longPrefix + "1", longPrefix + "2", "A/B", "cpu", "CPU", "Cpu" }
+            .Select(id => new RedfishFan(id, 1000, null)).ToArray() };
+        var first = RedfishFactsService.Collect(inventory, At).Where(f => f.Key.StartsWith("rf.item.fan.")).Select(f => f.Key).ToArray();
+        Assert.Equal(10, first.Distinct().Count());
+        Assert.All(first, key => Assert.Matches(@"^[a-z0-9](?:[a-z0-9._\-\[\]]{0,159})$", key));
+        Assert.Equal(first, RedfishFactsService.Collect(inventory, At).Where(f => f.Key.StartsWith("rf.item.fan.")).Select(f => f.Key));
+    }
+
+    [Fact]
+    public void 預設時間膠囊序列化遮蔽機箱序號()
+    {
+        var facts = RedfishFactsService.Collect(Inventory(), At);
+        string chassisKey = facts.Single(f => f.Key.StartsWith("rf.item.chassis.", StringComparison.Ordinal)
+            && f.Sensitive).Key;
+        var snapshot = HardwareSnapshotService.Create("test", facts, includeSensitive: true);
+        string json = HardwareSnapshotService.ToJson(snapshot);
+        Assert.DoesNotContain("SN123", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("snapshot.rejected", json, StringComparison.Ordinal);
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        var chassis = doc.RootElement.GetProperty("facts").EnumerateArray()
+            .Single(f => f.GetProperty("key").GetString() == chassisKey);
+        Assert.Contains("已遮蔽", chassis.GetProperty("value").GetString());
     }
 }

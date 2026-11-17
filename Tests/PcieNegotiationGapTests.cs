@@ -51,21 +51,35 @@ public class PcieNegotiationGapTests
 
     // ── 省電宣告 ──────────────────────────────────────────────────────────
 
-    [Fact]
-    public void 省電宣告_取的是ASPM與L0sL1位而非時鐘電源管理()
+    [Theory]
+    [InlineData(0u, false)]
+    [InlineData(1u << 9, false)] // width field
+    [InlineData(7u << 12, false)] // L0s latency, not L1 substates
+    [InlineData(7u << 15, false)] // L1 latency
+    [InlineData(1u << 10, true)]
+    [InlineData(1u << 11, true)]
+    [InlineData(1u << 18, true)] // independent ClockPM capability
+    public void PowerCapabilities_ExcludeWidthAndLatency(uint raw, bool expected)
+        => Assert.Equal(expected, PcieNegotiationGap.DeclaresPowerSaving(raw));
+
+    [Theory]
+    [InlineData(0u, "未宣告", "未宣告")]
+    [InlineData(1u << 10, "L0s", "未宣告")]
+    [InlineData(1u << 11, "L1", "未宣告")]
+    [InlineData(3u << 10 | 1u << 18, "L0s＋L1", "支援")]
+    [InlineData(1u << 18, "未宣告", "支援")]
+    public void PowerCapabilities_NeverProveSpeedCause(uint raw, string aspm, string clock)
     {
-        // Link Capabilities：bits 11:10＝ASPM Support、bit 12＝L1 Substates、
-        // bit 9／bit 18＝時鐘電源管理（Clock Power Management 與其宣告）。
-        // 近年平台上時鐘電源管理幾乎每條鏈路都是 1，單獨看它會把每張卡都判成「有省電能力」，
-        // 這個旗標就失去區分力，所以它單獨出現不算數。
-        Assert.False(PcieNegotiationGap.DeclaresPowerSaving(0));
-        Assert.False(PcieNegotiationGap.DeclaresPowerSaving(1u << 18));
-        Assert.True(PcieNegotiationGap.DeclaresPowerSaving(1u << 10));   // L0s
-        Assert.True(PcieNegotiationGap.DeclaresPowerSaving(1u << 11));   // L1
-        Assert.True(PcieNegotiationGap.DeclaresPowerSaving(1u << 12));   // L1 Substates
-        Assert.True(PcieNegotiationGap.DeclaresPowerSaving(0x2u << 10)); // ASPM＝L1
-        // 速度與寬度欄位本身不能滲進來（實務上幾乎都非 0）
-        Assert.False(PcieNegotiationGap.DeclaresPowerSaving(0x100 | 4));
+        string text = PcieNegotiationGap.PowerSavingCapabilityEvidence(raw);
+        Assert.Contains("ASPM " + aspm, text);
+        Assert.Contains("ClockPM " + clock, text);
+        Assert.Contains("不代表已啟用", text);
+        Assert.Contains("不能證明本次降速原因", text);
+        var gap = PcieNegotiationGap.Judge(new(4, 16, 1, 16, 0, 0, 0, false));
+        Assert.Equal(PcieNegotiationGap.GapKind.SpeedMaybeIdle, gap.Kind);
+        Assert.Contains("無法確認", gap.Evidence);
+        Assert.DoesNotContain("設計行為", gap.Evidence);
+        Assert.DoesNotContain("不是故障", gap.Evidence);
     }
 
     // ── 落差分類：已知答案 ────────────────────────────────────────────────

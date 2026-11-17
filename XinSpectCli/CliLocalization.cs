@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using XinSpect;
 
 namespace XinSpectCli;
@@ -16,12 +17,14 @@ internal enum CliLanguage
 internal static class CliLocalization
 {
     private static SettingsService? _settings;
+    private static readonly ConditionalWeakTable<TextWriter, TextWriter> MachineWriters = new();
     private static readonly HashSet<string> JsonCommands = new(StringComparer.OrdinalIgnoreCase)
     {
         "--json", "--compare-flash", "--verify-audit", "--integrity-baseline", "--sbom",
         "--disk-usage", "--errors", "--stdin-batch", "--diff-report", "--evidence-pack",
         "--compliance", "--compliance-diff", "--enterprise-baseline", "--merkle",
-        "--speculation", "--fleet", "--redfish", CliService.AgentBridgeArg,
+        "--speculation", "--fleet", "--redfish", CliService.AgentBridgeArg, CliService.SensorCrossCheckArg,
+        "sensor-crosscheck",
     };
 
     public static CliLanguage Current { get; private set; }
@@ -149,11 +152,20 @@ internal static class CliLocalization
     public static void InstallConsoleWriters(bool machineFormat)
     {
         if (machineFormat) return;
-        Console.SetOut(WrapWriter(Console.Out));
-        Console.SetError(WrapWriter(Console.Error));
+        var stdout = MachineWriter(Console.Out);
+        var stderr = MachineWriter(Console.Error);
+        Console.SetOut(WrapWriter(stdout));
+        Console.SetError(WrapWriter(stderr));
+        // Console.SetOut/SetError add a synchronized wrapper that hides LocalizedWriter.
+        MachineWriters.Add(Console.Out, stdout);
+        MachineWriters.Add(Console.Error, stderr);
     }
 
     internal static TextWriter WrapWriter(TextWriter writer) => new LocalizedWriter(writer);
+
+    internal static TextWriter MachineWriter(TextWriter writer)
+        => MachineWriters.TryGetValue(writer, out var original) ? MachineWriter(original)
+            : writer is LocalizedWriter localized ? MachineWriter(localized.Inner) : writer;
 
     public static bool TryConsumeOption(string[] args, out string[] remaining, out string? error)
     {
@@ -187,6 +199,7 @@ internal static class CliLocalization
 
     private sealed class LocalizedWriter(TextWriter inner) : TextWriter
     {
+        internal TextWriter Inner => inner;
         public override Encoding Encoding => inner.Encoding;
         public override IFormatProvider FormatProvider => inner.FormatProvider;
         [AllowNull]

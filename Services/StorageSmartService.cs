@@ -960,19 +960,25 @@ public sealed class StorageSmartService : ObservableObject
     /// 不套任何廠商公式。讀不到就回 0，由呼叫端顯示「讀不到」，不猜。
     /// </remarks>
     public static long TryReadPowerOnHours(int index)
+        => ReadPowerOnHours(TryGetBusType(index, out _),
+            () => TryReadNvmeLog(index), () => TryReadAtaSmartClassic(index));
+
+    // Production routing/decoding; injected delegates replace only native reads in tests.
+    internal static long ReadPowerOnHours(uint bus, Func<byte[]?> readNvme, Func<byte[]?> readAta)
     {
-        uint bus = TryGetBusType(index, out _);
 
         if (ChannelOf(bus) == StorageBusChannel.Nvme)   // 〔修復 v3.21〕審計 P4-2：走 ChannelOf 單一事實來源，不硬寫 16/17
         {
-            byte[]? log = TryReadNvmeLog(index);
+            byte[]? log = readNvme();
             if (log is null || log.Length < 0x88) return 0;
             ulong v = 0;
             for (int i = 7; i >= 0; i--) v = (v << 8) | log[0x80 + i];
             return v > long.MaxValue ? 0 : (long)v;
         }
 
-        byte[]? sector = TryReadAtaSmartClassic(index);
+        if (ChannelOf(bus) != StorageBusChannel.Ata) return 0;
+
+        byte[]? sector = readAta();
         if (sector is null || sector.Length < 362) return 0;
         // SMART 資料區：偏移 2 起，每 12 位元組一筆屬性；[0]=ID、[5..7]=原始值低三位元組
         for (int o = 2; o + 12 <= 362; o += 12)

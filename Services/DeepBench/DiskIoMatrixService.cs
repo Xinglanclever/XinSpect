@@ -51,7 +51,7 @@ public sealed record DiskIoPointMeasurement(
     IReadOnlyList<double> ThroughputSamples,
     IReadOnlyList<double> LatencySamplesUs);
 
-public sealed record DiskIoMeasurement(IReadOnlyList<DiskIoPointMeasurement> Points);
+public sealed record DiskIoMeasurement(IReadOnlyList<DiskIoPointMeasurement> Points, string? OwnedTempFilePath = null);
 
 internal sealed class InvalidDiskIoMeasurementException : InvalidOperationException
 {
@@ -60,8 +60,8 @@ internal sealed class InvalidDiskIoMeasurementException : InvalidOperationExcept
 
 /// <summary>
 /// 磁碟 QD 階梯與 4K 混合讀寫深測。資料面使用 FILE_FLAG_NO_BUFFERING、WriteThrough、
-/// 磁區對齊原生記憶體與多個 async worker；控制面保證只建立 XinSpect.deepbench.tmp，
-/// 且結束、例外、取消都會關閉並刪除。
+/// 磁區對齊原生記憶體與多個 async worker；資料面以 CreateNew 建立本場唯一暫存檔，
+/// 全部 I/O 完成後才關閉同一 handle 並要求 OS DeleteOnClose。
 /// </summary>
 public sealed class DiskIoMatrixService : IDeepBenchTest
 {
@@ -114,7 +114,6 @@ public sealed class DiskIoMatrixService : IDeepBenchTest
     {
         DateTime started = DateTime.UtcNow;
         DeepBenchTestResult result;
-        Exception? cleanupFailure = null;
         DiskIoPlan? plan = null;
         try
         {
@@ -134,6 +133,7 @@ public sealed class DiskIoMatrixService : IDeepBenchTest
                     plan.TempFilePath, plan.TempBudgetBytes, dataLength, context.Profile, _kind, context.Progress, _fileSystem);
                 DiskIoMeasurement measurement = await _engine.MeasureAsync(engineContext, cancellationToken).ConfigureAwait(false);
                 ValidateMeasurement(measurement);
+                string measuredPath = measurement.OwnedTempFilePath ?? "注入引擎未提供實際檔案路徑";
                 IReadOnlyList<DeepBenchMetric> metrics = CreateMetrics(_kind, measurement.Points);
                 result = new DeepBenchTestResult(
                     Id,
@@ -141,10 +141,10 @@ public sealed class DiskIoMatrixService : IDeepBenchTest
                     context.Profile,
                     started,
                     DateTime.UtcNow,
-                    $"{_kind switch { DiskIoMatrixKind.QdLadder => "QD ladder", _ => "4K mixed R/W" }}；暫存檔 {plan.TempFilePath}；預算 {plan.TempBudgetBytes / 1024.0 / 1024.0:0} MiB；預算後可用 {plan.FreeSpaceAfterBudgetBytes / 1024.0 / 1024 / 1024:0.0} GB；未緩衝直接 I/O",
+                    $"{_kind switch { DiskIoMatrixKind.QdLadder => "QD ladder", _ => "4K mixed R/W" }}；暫存檔 {measuredPath}；預算 {plan.TempBudgetBytes / 1024.0 / 1024.0:0} MiB；預算後可用 {plan.FreeSpaceAfterBudgetBytes / 1024.0 / 1024 / 1024:0.0} GB；未緩衝直接 I/O",
                     metrics,
                     [
-                        $"唯一暫存檔：{TempFileName}；啟動前已揭露 {plan.TempFilePath}。",
+                        $"本場實際暫存檔：{measuredPath}；固定計畫名稱不作為資料面路徑。",
                         $"資料長度 {dataLength / 1024.0 / 1024.0:0} MiB；預算後仍保留至少 8 GB。",
                         "每個點位保留多輪 IOPS/MiB/s 樣本與逐筆完成延遲。",
                     ],
@@ -152,6 +152,7 @@ public sealed class DiskIoMatrixService : IDeepBenchTest
                         "FILE_FLAG_NO_BUFFERING + WriteThrough 繞過 OS 檔案快取；裝置內建快取、驅動與檔案系統行為仍屬實機路徑。",
                         "佇列以 async worker 維持，不是核心原生 io_uring/iocompletion 生成器；尾端與排程會包含在實測內。",
                         "結果只在本次暫存檔與本機路徑上成立，不代表整碟其他區域。",
+                        "同一 ReadWrite handle 保持至所有準備與 worker I/O 完成；關閉時要求 OS DeleteOnClose，未另行驗證刪除結果。",
                     ],
                     DeepBenchFailureKind.None,
                     null);
@@ -169,31 +170,7 @@ public sealed class DiskIoMatrixService : IDeepBenchTest
         {
             result = Failed(context, started, DeepBenchFailureKind.PlatformError, exception.Message);
         }
-        finally
-        {
-            if (plan is not null)
-            {
-                try
-                {
-                    if (_fileSystem.Exists(plan.TempFilePath)) _fileSystem.Delete(plan.TempFilePath);
-                }
-                catch (Exception exception)
-                {
-                    cleanupFailure = exception;
-                }
-            }
-        }
-
-        if (cleanupFailure is not null)
-        {
-            result = result with
-            {
-                FailureKind = DeepBenchFailureKind.PlatformError,
-                Error = $"量測結束但暫存檔刪除失敗：{cleanupFailure.Message}",
-                Limitations = [.. result.Limitations, "請手動確認 XinSpect.deepbench.tmp 是否仍存在。"],
-            };
-        }
-        context.Progress.Report(new DeepBenchProgress(Id, 1, 1, 1, "暫存檔已清理"));
+        context.Progress.Report(new DeepBenchProgress(Id, 1, 1, 1, "量測流程已結束"));
         return result;
     }
 
@@ -270,7 +247,7 @@ public sealed class DiskIoMatrixService : IDeepBenchTest
     }
 
     private DeepBenchTestResult Cancelled(DeepBenchRunContext context, DateTime started) =>
-        new(_id, context.SessionId, context.Profile, started, DateTime.UtcNow, "已取消", [], [], ["取消後關閉並刪除暫存檔。"], DeepBenchFailureKind.Cancelled, "使用者取消。");
+        new(_id, context.SessionId, context.Profile, started, DateTime.UtcNow, "已取消", [], [], ["取消後先等待已提交 I/O 完成，再關閉本場 handle 並要求 OS DeleteOnClose；未另行驗證刪除結果。"], DeepBenchFailureKind.Cancelled, "使用者取消。");
 
     private DeepBenchTestResult Failed(DeepBenchRunContext context, DateTime started, DeepBenchFailureKind kind, string error) =>
         new(_id, context.SessionId, context.Profile, started, DateTime.UtcNow, "未完成", [], [], ["不推算缺失點位。"], kind, error);
@@ -292,7 +269,7 @@ public sealed class DiskIoMatrixService : IDeepBenchTest
         public void Delete(string path) => File.Delete(path);
     }
 
-    private sealed class UnbufferedDiskIoEngine : IDiskIoEngine
+    internal sealed class UnbufferedDiskIoEngine : IDiskIoEngine
     {
         private const int OperationsPerWorkerPerRound = 256;
         private const int SampleRounds = 2;
@@ -300,10 +277,35 @@ public sealed class DiskIoMatrixService : IDeepBenchTest
         private static readonly int[] QuickQueueDepths = [1, 4, 16];
         private static readonly int[] MixedReadPercents = [100, 70, 50, 30, 0];
 
+        private readonly Func<string, OwnedTemporaryFile> _create;
+        private readonly Func<DiskIoEngineContext, SafeFileHandle, CancellationToken, Task<DiskIoMeasurement>> _measure;
+
+        internal UnbufferedDiskIoEngine(
+            Func<string, OwnedTemporaryFile>? create = null,
+            Func<DiskIoEngineContext, SafeFileHandle, CancellationToken, Task<DiskIoMeasurement>>? measure = null)
+        {
+            _create = create ?? (directory => OwnedTemporaryFile.Create(directory, "XinSpect.deepbench",
+                NoBuffering | FileOptions.WriteThrough));
+            _measure = measure ?? MeasureOwnedAsync;
+        }
+
         public async Task<DiskIoMeasurement> MeasureAsync(DiskIoEngineContext context, CancellationToken cancellationToken)
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(context.TempFilePath)!);
-            await PrepareFileAsync(context, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            string directory = Path.GetDirectoryName(context.TempFilePath)!;
+            Directory.CreateDirectory(directory);
+            using OwnedTemporaryFile temp = _create(directory);
+            cancellationToken.ThrowIfCancellationRequested();
+            // The awaited operation owns all nested awaits/WhenAll joins: lease outlives every I/O.
+            DiskIoMeasurement result = await _measure(context, temp.Handle, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            return result with { OwnedTempFilePath = temp.Path };
+        }
+
+        private static async Task<DiskIoMeasurement> MeasureOwnedAsync(
+            DiskIoEngineContext context, SafeFileHandle handle, CancellationToken cancellationToken)
+        {
+            await PrepareFileAsync(context, handle, cancellationToken).ConfigureAwait(false);
             var configs = GetConfigurations(context.Kind, context.Profile);
             var points = new List<DiskIoPointMeasurement>(configs.Count);
             for (int i = 0; i < configs.Count; i++)
@@ -314,7 +316,7 @@ public sealed class DiskIoMatrixService : IDeepBenchTest
                     context.Kind == DiskIoMatrixKind.QdLadder ? QdTestId : MixedTestId,
                     i, configs.Count, 0.1 + 0.8 * i / configs.Count,
                     $"block {block / 1024}K ・ QD {queueDepth} ・ R {readPercent}%"));
-                points.Add(await MeasurePointAsync(context.TempFilePath, context.DataLengthBytes, block, queueDepth, readPercent, cancellationToken).ConfigureAwait(false));
+                points.Add(await MeasurePointAsync(handle, context.DataLengthBytes, block, queueDepth, readPercent, cancellationToken).ConfigureAwait(false));
             }
             return new DiskIoMeasurement(points);
         }
@@ -330,28 +332,22 @@ public sealed class DiskIoMatrixService : IDeepBenchTest
             return (from block in blocks from queue in queues select (block, queue, 100)).ToList();
         }
 
-        private static async Task PrepareFileAsync(DiskIoEngineContext context, CancellationToken cancellationToken)
+        private static async Task PrepareFileAsync(DiskIoEngineContext context, SafeFileHandle handle, CancellationToken cancellationToken)
         {
             const int chunkBytes = 1024 * 1024;
             using var buffer = new AlignedBufferManager(chunkBytes);
             Random.Shared.NextBytes(buffer.Memory.Span);
-            using SafeFileHandle handle = File.OpenHandle(
-                context.TempFilePath,
-                FileMode.Create,
-                FileAccess.Write,
-                FileShare.None,
-                NoBuffering | FileOptions.WriteThrough,
-                context.DataLengthBytes);
+            RandomAccess.SetLength(handle, context.DataLengthBytes);
             for (long offset = 0; offset < context.DataLengthBytes; offset += chunkBytes)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await RandomAccess.WriteAsync(handle, buffer.Memory, offset, cancellationToken).ConfigureAwait(false);
+                await RandomAccess.WriteAsync(handle, buffer.Memory[..(int)Math.Min(chunkBytes, context.DataLengthBytes - offset)], offset, cancellationToken).ConfigureAwait(false);
             }
             RandomAccess.FlushToDisk(handle);
         }
 
         private static async Task<DiskIoPointMeasurement> MeasurePointAsync(
-            string path, long dataLength, int blockBytes, int queueDepth, int readPercent, CancellationToken cancellationToken)
+            SafeFileHandle handle, long dataLength, int blockBytes, int queueDepth, int readPercent, CancellationToken cancellationToken)
         {
             int bufferLength = blockBytes * queueDepth;
             using var buffer = new AlignedBufferManager(bufferLength);
@@ -359,15 +355,6 @@ public sealed class DiskIoMatrixService : IDeepBenchTest
             var iops = new List<double>(SampleRounds);
             var throughput = new List<double>(SampleRounds);
             var latencies = new List<double>(queueDepth * OperationsPerWorkerPerRound * SampleRounds);
-            FileOptions options = readPercent == 100
-                ? NoBuffering
-                : NoBuffering | FileOptions.WriteThrough;
-            using SafeFileHandle handle = File.OpenHandle(
-                path,
-                FileMode.Open,
-                readPercent == 100 ? FileAccess.Read : FileAccess.ReadWrite,
-                FileShare.None,
-                options);
             for (int round = 0; round < SampleRounds; round++)
             {
                 cancellationToken.ThrowIfCancellationRequested();

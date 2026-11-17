@@ -172,17 +172,25 @@ public class StorageReliabilityFactsTests
     }
 
     [Fact]
-    public void 共用組裝點要把來源接進事實清單不能讓它永遠是空的()
+    [Trait("Category", "InjectedComposition")]
+    public void 共用組裝點注入其餘來源仍把可靠性接進事實清單與渲染列()
     {
         // 先前這一組事實接進了 AllFacts 與報告匯出，卻沒有任何地方呼叫載入——
         // 服務層測試全綠，真實 App 裡卻永遠是空的。這一條釘住「有人接線」。
         var svc = new EvidenceLabService();
         var source = new FakeSource { Rows = [Blank with { DeviceId = 0, Wear = 12 }] };
 
-        // 儲存收口的 NVMe 探針走注入：本條釘的是「來源有接進事實清單」，不是磁碟回應。
-        using var readers = StorageAndScenarioReconciliationFactsService.UseReaders(new SyntheticStorageReaders());
-        EvidenceCollection.LoadUsermodeFacts(svc, source);
+        // 本條釘的是可靠性來源的組裝與呈現；其餘來源注入為不收集的合成階段，
+        // 不觸發全機 WMI／EventLog／磁碟探測。完整來源整合另由 RealHardwareFactSnapshot 保留。
+        int otherSourceCollections = 0;
+        EvidenceCollection.LoadUsermodeFacts(svc, source, other =>
+        {
+            Assert.Same(svc, other);
+            otherSourceCollections++;
+        });
 
+        Assert.Equal(1, otherSourceCollections);
+        Assert.Equal("LoadStorageReliability", Assert.Single(svc.Steps).Name);
         Assert.NotEmpty(svc.StorageReliabilityFacts);
         Assert.Contains(svc.StorageReliabilityFacts, f => f.Key == "storage.reliability.0.wear" && f.Value == "12");
         Assert.Contains(svc.AllFacts, f => f.Key == "storage.reliability.0.wear");
@@ -192,16 +200,22 @@ public class StorageReliabilityFactsTests
     }
 
     [Fact]
-    public void 共用組裝點在來源爆炸時不得把例外丟出去()
+    [Trait("Category", "InjectedComposition")]
+    public void 共用組裝點注入其餘來源時可靠性例外仍留下錯誤且繼續收集()
     {
         // 附加功能：來源爆炸（注入一個會丟的假來源）不能讓啟動或 CLI 整批失敗。
         var svc = new EvidenceLabService();
 
-        // 儲存收口的 NVMe 探針走注入：本條只管「來源爆炸不外洩」，不該順便去問實機磁碟
-        // （本機的紀錄頁查詢會卡在驅動裡，會讓這條測試卡住而不是失敗）。
-        using var readers = StorageAndScenarioReconciliationFactsService.UseReaders(new SyntheticStorageReaders());
-        EvidenceCollection.LoadUsermodeFacts(svc, new ThrowingSource());
+        // 注入其餘來源，並驗證可靠性來源失敗後仍到達下一收集階段。
+        int otherSourceCollections = 0;
+        EvidenceCollection.LoadUsermodeFacts(svc, new ThrowingSource(), other =>
+        {
+            Assert.Same(svc, other);
+            otherSourceCollections++;
+        });
 
+        Assert.Equal(1, otherSourceCollections);
+        Assert.Equal("LoadStorageReliability", Assert.Single(svc.Steps).Name);
         // 三態要留下痕跡，不是靜默什麼都沒有——空集合讀起來像「沒問題」。
         var f = Assert.Single(svc.StorageReliabilityFacts);
         Assert.Equal(FactAvailability.ReadError, f.Availability);
@@ -215,15 +229,416 @@ public class StorageReliabilityFactsTests
         public IReadOnlyList<StorageReliabilityRaw> Read() => throw new InvalidOperationException("WMI 整個炸掉");
     }
 
-    /// <summary>合成儲存讀取器：鍵與三態照規格產生，值固定，不碰實機。</summary>
-    private sealed class SyntheticStorageReaders : StorageAndScenarioReconciliationFactsService.IReaders
+    [Fact]
+    public void 逾時包裝不能把來源例外吞成沒有計數器()
     {
-        public IReadOnlyList<StorageAndScenarioReconciliationFactsService.WearSample>? Wear() =>
-            [new(7, 512.5, 1424, 100)];
+        var wrapped = new StorageReliabilityTimeoutSource(new ThrowingSource(), 5000);
 
-        public (ulong UnsafeShutdowns, ulong PowerCycles)? PowerLoss() => (5, 200);
+        var f = Assert.Single(StorageReliabilityFactsService.Collect(At, wrapped));
 
-        public bool? Sanitize() => null;
+        Assert.Equal(FactAvailability.ReadError, f.Availability);
+        Assert.Contains("InvalidOperationException", f.UnavailableReason);
+        Assert.Contains("WMI 整個炸掉", f.UnavailableReason);
+        Assert.DoesNotContain("不是錯誤", f.UnavailableReason);
+    }
+
+    private sealed class ThrowingStatusSource(string property) : IStorageReliabilitySource
+    {
+        public bool Available => property == nameof(Available)
+            ? throw new InvalidOperationException("Available getter 失敗") : true;
+        public string? UnavailableReason => throw new InvalidOperationException("UnavailableReason getter 失敗");
+        public IReadOnlyList<StorageReliabilityRaw> Read() => [];
+    }
+
+    [Theory]
+    [InlineData("Available")]
+    [InlineData("UnavailableReason")]
+    public void 逾時包裝的來源狀態getter例外也必須成為可見失敗(string property)
+    {
+        var wrapped = new StorageReliabilityTimeoutSource(new ThrowingStatusSource(property), 5000);
+
+        var f = Assert.Single(StorageReliabilityFactsService.Collect(At, wrapped));
+
+        Assert.Equal(FactAvailability.ReadError, f.Availability);
+        Assert.Contains(property + " getter 失敗", f.UnavailableReason);
+        Assert.Contains("InvalidOperationException", f.UnavailableReason);
+    }
+
+    [Fact]
+    public void 逾時包裝保留零值及來源自行回報的失敗()
+    {
+        var good = new StorageReliabilityTimeoutSource(
+            new FakeSource { Rows = [Blank with { DeviceId = 4, Wear = 0 }] }, 5000);
+        var wear = Assert.Single(StorageReliabilityFactsService.Collect(At, good),
+            f => f.Key == "storage.reliability.4.wear");
+        Assert.Equal(FactAvailability.Present, wear.Availability);
+        Assert.Equal(0d, wear.NumericValue);
+
+        var bad = new StorageReliabilityTimeoutSource(new FailsOnReadSource(), 5000);
+        var failure = Assert.Single(StorageReliabilityFactsService.Collect(At, bad));
+        Assert.Equal(FactAvailability.ReadError, failure.Availability);
+        Assert.Contains("提供者載入失敗", failure.UnavailableReason);
+    }
+
+    /// <summary>同步來源由測試 finally 明確釋放；沒有真 WMI，也不留永久卡住的 worker。</summary>
+    private sealed class ControlledSource : IStorageReliabilitySource
+    {
+        public readonly TaskCompletionSource Entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _reads;
+        public int Reads => Volatile.Read(ref _reads);
+        public bool Available => true;
+        public string? UnavailableReason => null;
+        public void Release() => _release.TrySetResult();
+        public IReadOnlyList<StorageReliabilityRaw> Read()
+        {
+            Interlocked.Increment(ref _reads);
+            Entered.TrySetResult();
+            _release.Task.GetAwaiter().GetResult();
+            return [Blank with { Wear = 0 }];
+        }
+    }
+
+    [Fact]
+    public async Task 逾時後同一來源換包裝器也不能重開且晚到結果不得覆蓋失敗()
+    {
+        var source = new ControlledSource();
+        var first = new StorageReliabilityTimeoutSource(source, 0);
+        try
+        {
+            var timeout = Assert.Single(StorageReliabilityFactsService.Collect(At, first));
+            Assert.Equal(FactAvailability.ReadError, timeout.Availability);
+            Assert.Contains("逾時", timeout.UnavailableReason);
+            await source.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            var again = Assert.Single(StorageReliabilityFactsService.Collect(At, first));
+            var otherWrapper = new StorageReliabilityTimeoutSource(source, 5000);
+            var other = Assert.Single(StorageReliabilityFactsService.Collect(At, otherWrapper));
+            Assert.Equal(FactAvailability.ReadError, again.Availability);
+            Assert.Equal(FactAvailability.ReadError, other.Availability);
+            Assert.Contains("先前讀取仍在執行", again.UnavailableReason);
+            Assert.Contains("先前讀取仍在執行", other.UnavailableReason);
+            Assert.Equal(1, source.Reads);
+        }
+        finally
+        {
+            source.Release();
+            await first.ReadCompletion.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+
+        Assert.False(first.Available); // 背景完成不得把已返回的失敗改成成功。
+        Assert.Contains("先前讀取仍在執行", first.UnavailableReason);
+        var recovered = new StorageReliabilityTimeoutSource(source, 5000);
+        Assert.Contains(StorageReliabilityFactsService.Collect(At, recovered),
+            f => f.Key == "storage.reliability.0.wear" && f.Availability == FactAvailability.Present);
+        Assert.Equal(2, source.Reads); // 確實結束後才可再次讀；不是永久封鎖來源。
+    }
+
+    [Fact]
+    public async Task 尚未逾時的讀取也必須排除另一個包裝器同時讀相同來源()
+    {
+        var source = new ControlledSource();
+        var first = new StorageReliabilityTimeoutSource(source, 5000);
+        var pending = Task.Run(() => StorageReliabilityFactsService.Collect(At, first));
+        try
+        {
+            await source.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var second = new StorageReliabilityTimeoutSource(source, 5000);
+            var rejected = Assert.Single(StorageReliabilityFactsService.Collect(At, second));
+            Assert.Equal(FactAvailability.ReadError, rejected.Availability);
+            Assert.Contains("先前讀取仍在執行", rejected.UnavailableReason);
+            Assert.Equal(1, source.Reads);
+        }
+        finally
+        {
+            source.Release();
+            await pending.WaitAsync(TimeSpan.FromSeconds(5));
+            await first.ReadCompletion.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+
+        Assert.True(first.Available);
+        Assert.Equal(1, source.Reads);
+    }
+
+    private sealed class ControlledWmiQuery : StorageReliabilityWmiSource.IQuery
+    {
+        public readonly TaskCompletionSource ReadEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public readonly TaskCompletionSource DisposeEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _readRelease = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _disposeRelease = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly bool _throwRead;
+        private readonly bool _throwDispose;
+        private int _disposeCalls;
+        public int DisposeCalls => Volatile.Read(ref _disposeCalls);
+
+        public ControlledWmiQuery(bool blockRead = false, bool blockDispose = false,
+            bool throwRead = false, bool throwDispose = false)
+        {
+            _throwRead = throwRead;
+            _throwDispose = throwDispose;
+            if (!blockRead) _readRelease.TrySetResult();
+            if (!blockDispose) _disposeRelease.TrySetResult();
+        }
+
+        public IReadOnlyList<StorageReliabilityRaw> Read()
+        {
+            ReadEntered.TrySetResult();
+            _readRelease.Task.GetAwaiter().GetResult();
+            if (_throwRead) throw new InvalidOperationException("合成 WMI 遲到讀取失敗");
+            return [Blank with { Wear = 23 }];
+        }
+
+        public void Dispose()
+        {
+            Interlocked.Increment(ref _disposeCalls);
+            DisposeEntered.TrySetResult();
+            _disposeRelease.Task.GetAwaiter().GetResult();
+            if (_throwDispose) throw new InvalidOperationException("合成 WMI 遲到清理失敗");
+        }
+
+        public void Release()
+        {
+            _readRelease.TrySetResult();
+            _disposeRelease.TrySetResult();
+        }
+    }
+
+    [Fact]
+    public async Task StorageWMI逾時後不同source實例不得重發且不能提早清理()
+    {
+        string identity = "test-storage-provider-" + Guid.NewGuid().ToString("N");
+        var query = new ControlledWmiQuery(blockRead: true);
+        var firstSource = new StorageReliabilityWmiSource(() => query, identity);
+        var first = new StorageReliabilityTimeoutSource(firstSource, 0);
+        int otherQueries = 0;
+        try
+        {
+            var timeout = Assert.Single(StorageReliabilityFactsService.Collect(At, first));
+            Assert.Equal(FactAvailability.ReadError, timeout.Availability);
+            Assert.Contains("逾時", timeout.UnavailableReason);
+            await query.ReadEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            var secondSource = new StorageReliabilityWmiSource(() =>
+            {
+                Interlocked.Increment(ref otherQueries);
+                return new ControlledWmiQuery();
+            }, identity.ToUpperInvariant());
+            var second = new StorageReliabilityTimeoutSource(secondSource, 5000);
+            var denied = Assert.Single(StorageReliabilityFactsService.Collect(At, second));
+            Assert.Equal(FactAvailability.ReadError, denied.Availability);
+            Assert.Contains("先前可靠性查詢或清理仍在執行", denied.UnavailableReason);
+            Assert.Equal(0, otherQueries);
+            Assert.Equal(0, query.DisposeCalls);
+        }
+        finally
+        {
+            query.Release();
+            await first.ReadCompletion.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+
+        Assert.Equal(1, query.DisposeCalls);
+        Assert.False(first.Available);
+        Assert.Contains("逾時", first.UnavailableReason);
+        var recovered = new StorageReliabilityWmiSource(() => new ControlledWmiQuery(), identity);
+        Assert.Contains(StorageReliabilityFactsService.Collect(At,
+            new StorageReliabilityTimeoutSource(recovered, 5000)),
+            f => f.Key == "storage.reliability.0.wear" && f.Value == "23");
+    }
+
+    [Fact]
+    public async Task StorageWMI不同provider身份不應互相封鎖()
+    {
+        string identity = "test-storage-provider-" + Guid.NewGuid().ToString("N");
+        var query = new ControlledWmiQuery(blockRead: true);
+        var first = new StorageReliabilityTimeoutSource(
+            new StorageReliabilityWmiSource(() => query, identity), 0);
+        try
+        {
+            Assert.Equal(FactAvailability.ReadError,
+                Assert.Single(StorageReliabilityFactsService.Collect(At, first)).Availability);
+            await query.ReadEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var independent = new StorageReliabilityWmiSource(() => new ControlledWmiQuery(), identity + "-other");
+            Assert.Contains(StorageReliabilityFactsService.Collect(At,
+                new StorageReliabilityTimeoutSource(independent, 5000)),
+                f => f.Key == "storage.reliability.0.wear" && f.Availability == FactAvailability.Present);
+            Assert.Equal(0, query.DisposeCalls);
+        }
+        finally
+        {
+            query.Release();
+            await first.ReadCompletion.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+    }
+
+    [Fact]
+    public async Task StorageWMI讀完但Dispose尚未結束仍不得重發()
+    {
+        string identity = "test-storage-provider-" + Guid.NewGuid().ToString("N");
+        var query = new ControlledWmiQuery(blockDispose: true);
+        var first = new StorageReliabilityTimeoutSource(
+            new StorageReliabilityWmiSource(() => query, identity), 0);
+        int otherQueries = 0;
+        try
+        {
+            Assert.Equal(FactAvailability.ReadError,
+                Assert.Single(StorageReliabilityFactsService.Collect(At, first)).Availability);
+            await query.DisposeEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var second = new StorageReliabilityWmiSource(() =>
+            {
+                Interlocked.Increment(ref otherQueries);
+                return new ControlledWmiQuery();
+            }, identity);
+            var denied = Assert.Single(StorageReliabilityFactsService.Collect(At,
+                new StorageReliabilityTimeoutSource(second, 5000)));
+            Assert.Equal(FactAvailability.ReadError, denied.Availability);
+            Assert.Contains("清理仍在執行", denied.UnavailableReason);
+            Assert.Equal(0, otherQueries);
+        }
+        finally
+        {
+            query.Release();
+            await first.ReadCompletion.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        Assert.Equal(1, query.DisposeCalls);
+        Assert.False(first.Available);
+    }
+
+    [Fact]
+    public void StorageWMI讀取與Dispose同時失敗必須保留兩個原因並在完整清理後釋放閘門()
+    {
+        string identity = "test-storage-provider-" + Guid.NewGuid().ToString("N");
+        var query = new ControlledWmiQuery(throwRead: true, throwDispose: true);
+        var source = new StorageReliabilityWmiSource(() => query, identity);
+
+        var failure = Assert.Single(StorageReliabilityFactsService.Collect(At,
+            new StorageReliabilityTimeoutSource(source, 5000)));
+
+        Assert.Equal(FactAvailability.ReadError, failure.Availability);
+        Assert.Contains("讀取失敗：InvalidOperationException：合成 WMI 遲到讀取失敗", failure.UnavailableReason);
+        Assert.Contains("清理失敗：InvalidOperationException：合成 WMI 遲到清理失敗", failure.UnavailableReason);
+        Assert.Equal(1, query.DisposeCalls);
+        var next = new StorageReliabilityWmiSource(() => new ControlledWmiQuery(), identity);
+        Assert.Contains(StorageReliabilityFactsService.Collect(At,
+            new StorageReliabilityTimeoutSource(next, 5000)),
+            f => f.Key == "storage.reliability.0.wear" && f.Availability == FactAvailability.Present);
+    }
+
+    [Theory]
+    [InlineData(true, false, "讀取失敗")]
+    [InlineData(false, true, "清理失敗")]
+    [InlineData(true, true, "讀取失敗")]
+    public async Task StorageWMI遲到讀取或清理例外不得覆寫逾時且結束後應釋放閘門(
+        bool throwRead, bool throwDispose, string reason)
+    {
+        string identity = "test-storage-provider-" + Guid.NewGuid().ToString("N");
+        var query = new ControlledWmiQuery(blockRead: true, throwRead: throwRead, throwDispose: throwDispose);
+        var source = new StorageReliabilityWmiSource(() => query, identity);
+        var first = new StorageReliabilityTimeoutSource(source, 0);
+        try
+        {
+            var timeout = Assert.Single(StorageReliabilityFactsService.Collect(At, first));
+            Assert.Equal(FactAvailability.ReadError, timeout.Availability);
+            Assert.Contains("逾時", timeout.UnavailableReason);
+            await query.ReadEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        finally
+        {
+            query.Release();
+            await first.ReadCompletion.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+
+        Assert.False(source.Available);
+        Assert.Contains(reason, source.UnavailableReason);
+        Assert.Contains("InvalidOperationException", source.UnavailableReason);
+        if (throwRead) Assert.Contains("合成 WMI 遲到讀取失敗", source.UnavailableReason);
+        if (throwDispose) Assert.Contains("合成 WMI 遲到清理失敗", source.UnavailableReason);
+        Assert.Equal(1, query.DisposeCalls);
+        Assert.False(first.Available);
+        Assert.Contains("逾時", first.UnavailableReason);
+        var next = new StorageReliabilityWmiSource(() => new ControlledWmiQuery(), identity);
+        Assert.Contains(StorageReliabilityFactsService.Collect(At,
+            new StorageReliabilityTimeoutSource(next, 5000)),
+            f => f.Key == "storage.reliability.0.wear" && f.Availability == FactAvailability.Present);
+    }
+
+    private sealed class CleanupResource(string name, List<string> disposed, bool fail = false) : IDisposable
+    {
+        public void Dispose()
+        {
+            disposed.Add(name);
+            if (fail) throw new InvalidOperationException("cleanup-" + name);
+        }
+    }
+
+    [Fact]
+    public void 正式WmiQuery收尾路徑保留原讀取與多層清理失敗且繼續處置外層()
+    {
+        string identity = "test-storage-provider-" + Guid.NewGuid().ToString("N");
+        var disposed = new List<string>();
+        var query = new StorageReliabilityWmiSource.WmiQuery(cleanup =>
+            cleanup.Use(new CleanupResource("searcher", disposed, true), "searcher", outerResource =>
+                cleanup.Use<CleanupResource, IReadOnlyList<StorageReliabilityRaw>>(
+                    new CleanupResource("related", disposed, true), "related", innerResource =>
+                        throw new InvalidOperationException("original-counter-read"))));
+        var source = new StorageReliabilityWmiSource(() => query, identity);
+        var failure = Assert.Single(StorageReliabilityFactsService.Collect(At,
+            new StorageReliabilityTimeoutSource(source, 5000)));
+
+        Assert.Equal(FactAvailability.ReadError, failure.Availability);
+        Assert.Contains("original-counter-read", failure.UnavailableReason);
+        Assert.Contains("cleanup-related", failure.UnavailableReason);
+        Assert.Contains("cleanup-searcher", failure.UnavailableReason);
+        Assert.Equal(new[] { "related", "searcher" }, disposed);
+        var next = new StorageReliabilityWmiSource(() => new ControlledWmiQuery(), identity);
+        Assert.Contains(StorageReliabilityFactsService.Collect(At,
+            new StorageReliabilityTimeoutSource(next, 5000)),
+            f => f.Key == "storage.reliability.0.wear" && f.Availability == FactAvailability.Present);
+    }
+
+    [Fact]
+    public void 正式WmiQuery清理失敗的診斷有界但每個已取得資源仍被處置()
+    {
+        var disposed = new List<string>();
+        var originalReadFailure = new InvalidOperationException("original-read-" + new string('x', 20000));
+        IReadOnlyList<StorageReliabilityRaw> Nest(StorageReliabilityWmiCleanup.Scope cleanup, int depth)
+        {
+            if (depth == 0) throw originalReadFailure;
+            string name = "resource-" + depth;
+            return cleanup.Use(new CleanupResource(name, disposed, true), name, _ => Nest(cleanup, depth - 1));
+        }
+        var query = new StorageReliabilityWmiSource.WmiQuery(cleanup => Nest(cleanup, 12));
+
+        var error = Assert.Throws<InvalidOperationException>(() => query.Read());
+
+        Assert.Equal(12, disposed.Count);
+        Assert.Equal(12, disposed.Distinct(StringComparer.Ordinal).Count());
+        Assert.Contains("original-read-", error.Message);
+        Assert.Contains("另有 5 項清理失敗未列", error.Message);
+        Assert.True(error.Message.Length <= StorageReliabilityWmiCleanup.MaximumDiagnosticCharacters);
+        Assert.Same(originalReadFailure, error.InnerException);
+    }
+
+    [Fact]
+    public void 正式WmiQuery讀取成功但清理失敗不得回Present或繼續下一交易()
+    {
+        string identity = "test-storage-provider-" + Guid.NewGuid().ToString("N");
+        var disposed = new List<string>();
+        bool nextTransaction = false;
+        var query = new StorageReliabilityWmiSource.WmiQuery(cleanup =>
+        {
+            cleanup.Use(new CleanupResource("counter", disposed, true), "counter", _ => true);
+            nextTransaction = true;
+            return [Blank with { Wear = 23 }];
+        });
+        var source = new StorageReliabilityWmiSource(() => query, identity);
+        var failure = Assert.Single(StorageReliabilityFactsService.Collect(At,
+            new StorageReliabilityTimeoutSource(source, 5000)));
+
+        Assert.Equal(FactAvailability.ReadError, failure.Availability);
+        Assert.Contains("cleanup-counter", failure.UnavailableReason);
+        Assert.DoesNotContain("原始讀取失敗", failure.UnavailableReason);
+        Assert.False(nextTransaction);
+        Assert.Single(disposed);
     }
 
     [Fact]
@@ -233,12 +648,14 @@ public class StorageReliabilityFactsTests
         // 服務有、測試有、事實鍵也接進了 AllFacts——就是**沒有任何地方呼叫載入**，
         // 所以真實 App 與 CLI 裡永遠是空的。單元測試測不到「有沒有人接線」。
         // 原始碼層的守門是唯一能在不載入驅動的前提下檢查啟動路徑的辦法。
-        foreach (string file in new[] { "App.xaml.cs", Path.Combine("ViewModels", "StartupSequence.cs") })
-        {
-            string path = Path.Combine(FindRepoRoot(), file);
-            Assert.True(File.Exists(path), $"{file} 不存在——路徑改了就要一起改這裡");
-            Assert.Contains("LoadUsermodeFacts", File.ReadAllText(path));
-        }
+        string root = FindRepoRoot();
+        string app = File.ReadAllText(Path.Combine(root, "App.xaml.cs"));
+        string startup = File.ReadAllText(Path.Combine(root, "ViewModels", "StartupSequence.cs"));
+        string collection = File.ReadAllText(Path.Combine(root, "Services", "EvidenceCollection.cs"));
+
+        Assert.Contains("EvidenceCollection.CollectForCli", app);
+        Assert.Contains("EvidenceCollection.LoadUsermodeFactsDeferred", startup);
+        Assert.Contains("LoadUsermodeFactsWithPlatform", collection);
     }
 
     private static string FindRepoRoot()

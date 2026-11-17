@@ -15,7 +15,7 @@ public static partial class HardwareSnapshotService
 {
     public const string RedactedValue = "[已遮蔽]";
     public const string RedactedPrefix = "[已遮蔽]:";
-    private const int MaxFileBytes = 16 * 1024 * 1024;
+    internal const int MaxFileBytes = 16 * 1024 * 1024;
     private const int MaxFacts = 100_000;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -175,39 +175,54 @@ public static partial class HardwareSnapshotService
         if (json.Length > MaxFileBytes)
             throw new InvalidDataException($"時間膠囊超過 {MaxFileBytes / 1024 / 1024} MiB 上限。");
 
-        string tempPath = fullPath + ".tmp";
-        try
-        {
-            using (var stream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None,
-                       64 * 1024, FileOptions.WriteThrough))
-            {
-                stream.Write(json);
-                stream.Flush(flushToDisk: true);
-            }
-            if (!options.Overwrite && File.Exists(fullPath))
-                throw new IOException("目標時間膠囊已存在，且未允許覆寫。");
-            File.Move(tempPath, fullPath, options.Overwrite);
-        }
-        finally
-        {
-            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
-        }
+        SavePrepared(fullPath, json, options.Overwrite, SnapshotSaveFile.Create);
+    }
+
+    // The same default owner writes, flushes and publishes its created handle. A factory seam
+    // permits ordering/failure regressions without replacing the production ownership protocol.
+    internal static void SavePrepared(string fullPath, byte[] json, bool overwrite,
+        Func<string, ISnapshotSaveFile> create)
+    {
+        using var owner = create(fullPath);
+        owner.Write(json);
+        owner.Flush();
+        owner.Publish(fullPath, overwrite);
     }
 
     /// <summary>載入並驗證 schema、資料限制與 SHA-256 完整性；不接受尾隨或未知 JSON 欄位。</summary>
     public static HardwareSnapshot Load(string path)
     {
         string fullPath = ValidatePath(path, forWrite: false);
-        var info = new FileInfo(fullPath);
-        if (!info.Exists) throw new FileNotFoundException("找不到硬體時間膠囊。", fullPath);
-        if (info.Length <= 0 || info.Length > MaxFileBytes)
-            throw new InvalidDataException("硬體時間膠囊大小無效或超過安全上限。");
+        // Check and consume the same opened handle. A separate FileInfo.Length preflight followed
+        // by ReadAllBytes can reopen a replaced/grown file and allocate without the intended cap.
+        using var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read,
+            64 * 1024, FileOptions.SequentialScan);
+        return LoadFromStream(stream);
+    }
 
-        byte[] json = File.ReadAllBytes(fullPath);
+    /// <summary>
+    /// Bounded read and the existing sole snapshot validator, shared by all persisted-snapshot
+    /// consumers. Does not trust Length/seek metadata, close the caller's stream or reopen a path.
+    /// </summary>
+    internal static HardwareSnapshot LoadFromStream(Stream stream)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        if (!stream.CanRead) throw new ArgumentException("快照串流不可讀。", nameof(stream));
+        // Fixed memory budget: at most 16 MiB + one overflow-detection byte before JSON parsing.
+        byte[] json = new byte[MaxFileBytes + 1];
+        int length = 0;
+        while (length < json.Length)
+        {
+            int read = stream.Read(json, length, json.Length - length);
+            if (read == 0) break;
+            length += read;
+        }
+        if (length == 0 || length > MaxFileBytes)
+            throw new InvalidDataException("硬體時間膠囊大小無效或超過安全上限。");
         HardwareSnapshot snapshot;
         try
         {
-            snapshot = JsonSerializer.Deserialize<HardwareSnapshot>(json, JsonOptions)
+            snapshot = JsonSerializer.Deserialize<HardwareSnapshot>(json.AsSpan(0, length), JsonOptions)
                 ?? throw new InvalidDataException("硬體時間膠囊內容是 null。");
         }
         catch (JsonException ex)

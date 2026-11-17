@@ -1,115 +1,113 @@
-using Xunit;
-
+﻿using Xunit;
 namespace XinSpect.Tests;
-
-/// <summary>
-/// NUMA 拓撲事實（WP21）的契約：多節點／單節點呈現、遮罩與 popcount、節點查詢失敗三態、
-/// API 不可用整組三態。全部注入探測，不碰真 kernel32。
-/// </summary>
 public class NumaTopologyTests
 {
-    private static readonly DateTimeOffset At = new(2026, 10, 3, 0, 0, 0, TimeSpan.Zero);
-
-    [Fact]
-    public void 雙節點_節點數與遮罩成列_popcount正確()
+    private static readonly DateTimeOffset At = new(2026, 11, 17, 0, 0, 0, TimeSpan.Zero);
+    private static byte[] Node(uint id, params (ulong Mask, ushort Group)[] groups)
     {
-        var facts = NumaTopologyService.Collect(At,
-            highestNodeProbe: () => 1,
-            nodeMaskProbe: node => node switch
-            {
-                0 => (0x00000000000000FFUL, 0),  // 8 個邏輯 CPU
-                1 => (0x0000000000FF0000UL, 0),  // 8 個邏輯 CPU（不同區段）
-                _ => null,
-            });
-
-        var top = Assert.Single(facts, f => f.Key == "numa.topology");
-        Assert.Contains("2 個 NUMA 節點", top.Value);
-        Assert.Equal(2, top.NumericValue);
-
-        var n0 = Assert.Single(facts, f => f.Key == "numa.node.0");
-        Assert.Contains("0xFF（8 個邏輯 CPU、群組 0）", n0.Value);
-        Assert.Equal(8, n0.NumericValue);
-
-        var n1 = Assert.Single(facts, f => f.Key == "numa.node.1");
-        Assert.Contains("0xFF0000", n1.Value);
+        var data = new byte[32 + 16 * groups.Length];
+        BitConverter.GetBytes(6).CopyTo(data, 0);
+        BitConverter.GetBytes(data.Length).CopyTo(data, 4);
+        BitConverter.GetBytes(id).CopyTo(data, 8);
+        BitConverter.GetBytes((ushort)groups.Length).CopyTo(data, 30);
+        for (int i = 0; i < groups.Length; i++) {
+            BitConverter.GetBytes(groups[i].Mask).CopyTo(data, 32 + 16 * i);
+            BitConverter.GetBytes(groups[i].Group).CopyTo(data, 40 + 16 * i);
+        }
+        return data;
+    }
+    private static IReadOnlyList<HardwareFact> Facts(byte[] bytes)
+        => NumaTopologyService.Collect(At, () => NumaTopologyService.Parse(bytes));
+    [Fact]
+    public void MultiGroupAndSparseIdsEnumerateActualNodes()
+    {
+        var facts = Facts(Node(2, (3, 0), (3, 1)).Concat(Node(9000, (12, 0))).ToArray());
+        Assert.Equal(2, Assert.Single(facts, f => f.Key == "numa.topology").NumericValue);
+        var node = Assert.Single(facts, f => f.Key == "numa.node.2");
+        Assert.Equal(4, node.NumericValue);
+        Assert.Contains("群組 1", node.Value);
+        Assert.Contains(facts, f => f.Key == "numa.node.9000");
+        Assert.Equal(FactAvailability.Unknown, Assert.Single(facts, f => f.Key == "numa.topology.xnode").Availability);
+    }
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void NodesWithoutActiveProcessorsRemainWithoutMemoryCapacityInference(bool zeroAffinity)
+    {
+        var memory = zeroAffinity ? Node(10, (0, 0)) : Node(10);
+        var facts = Facts(Node(0, (3, 0)).Concat(memory).ToArray());
+        Assert.Equal(2, Assert.Single(facts, f => f.Key == "numa.topology").NumericValue);
+        var node = Assert.Single(facts, f => f.Key == "numa.node.10");
+        Assert.Equal(0, node.NumericValue);
+        Assert.Contains("是否為純記憶體節點未確認", node.Value);
+    }
+    [Fact]
+    public void MemoryOnlyZeroGroupCanRetainZeroedNativeArraySlot()
+    {
+        var bytes = Node(5, (0, 0));
+        BitConverter.GetBytes((ushort)0).CopyTo(bytes, 30);
+        Assert.Equal(FactAvailability.Present, NumaTopologyService.Parse(bytes).Availability);
+        bytes[32] = 1;
+        Assert.Equal(FactAvailability.ReadError, NumaTopologyService.Parse(bytes).Availability);
+    }
+    [Fact]
+    public void SingleNodeIsNotCrossNodeMeasurementEvidence()
+    {
+        var facts = Facts(Node(0, (3, 0)));
+        Assert.Equal(FactAvailability.NotApplicable, Assert.Single(facts, f => f.Key == "numa.topology.xnode").Availability);
+    }
+    [Fact]
+    public void MalformedBuffersRejectWholeSnapshot()
+    {
+        var good = Node(0, (3, 0));
+        var oversized = good.ToArray();
+        BitConverter.GetBytes(int.MaxValue).CopyTo(oversized, 4);
+        var badCount = good.ToArray();
+        BitConverter.GetBytes((ushort)2).CopyTo(badCount, 30);
+        var oldRelation = good.ToArray();
+        BitConverter.GetBytes(0).CopyTo(oldRelation, 0);
+        foreach (var bytes in new[] { Array.Empty<byte>(), good[..^1], good.Concat(new byte[1]).ToArray(), oversized, badCount, oldRelation,
+            good.Concat(good).ToArray(), Node(0, (1, 0), (2, 0)), good.Concat(Node(1, (1, 0))).ToArray() })
+        {
+            Assert.Equal(FactAvailability.ReadError, NumaTopologyService.Parse(bytes).Availability);
+            Assert.DoesNotContain(Facts(bytes), f => f.Availability == FactAvailability.Present);
+        }
+    }
+    [Theory]
+    [InlineData(87, FactAvailability.NotSupported)]
+    [InlineData(50, FactAvailability.NotSupported)]
+    [InlineData(5, FactAvailability.ReadError)]
+    [InlineData(122, FactAvailability.ReadError)]
+    public void NativeFailurePreservesUnsupportedVersusFailed(int error, FactAvailability expected)
+    {
+        var facts = NumaTopologyService.Collect(At, () => NumaTopologyService.NativeFailure(error));
+        Assert.All(facts, f => Assert.Equal(expected, f.Availability));
+    }
+    [Fact]
+    public void NodeAndBufferBudgetsAreBounded()
+    {
+        Assert.Equal(FactAvailability.Unknown, NumaTopologyService.Parse(new byte[NumaTopologyService.MaxBufferBytes + 1]).Availability);
+        var nodes = Enumerable.Range(0, NumaTopologyService.MaxEnumeratedNodes).SelectMany(i => Node((uint)i)).ToArray();
+        Assert.Equal(FactAvailability.Present, NumaTopologyService.Parse(nodes).Availability);
+        Assert.Equal(FactAvailability.Unknown, NumaTopologyService.Parse(nodes.Concat(Node(uint.MaxValue)).ToArray()).Availability);
+    }
+    [Fact]
+    public void DirectInjectedInvalidIdentityIsRejected()
+    {
+        var snapshot = new NumaTopologySnapshot(FactAvailability.Present,
+            [new(1, [new(0, 1)]), new(1, [])]);
+        Assert.Equal(FactAvailability.ReadError, Assert.Single(NumaTopologyService.Collect(At, () => snapshot), f => f.Key == "numa.topology").Availability);
     }
 
-    [Fact]
-    public void 單節點_誠實標桌面常態()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(6)]
+    public void FullGroupResponseAcceptsBothDocumentedNumaRelationshipCodes(int relationship)
     {
-        var facts = NumaTopologyService.Collect(At,
-            highestNodeProbe: () => 0,
-            nodeMaskProbe: _ => (0xFFFFFUL, 0));
-
-        var top = Assert.Single(facts, f => f.Key == "numa.topology");
-        Assert.Contains("單 NUMA 節點", top.Value);
-        Assert.Equal(1, top.NumericValue);
-        var n0 = Assert.Single(facts, f => f.Key == "numa.node.0");
-        Assert.Equal(20, n0.NumericValue); // 0xFFFFF popcount
-    }
-
-    [Fact]
-    public void 單節點_跨節點要標不適用而不是正常()
-    {
-        // 誠實契約：未驗證 ≠ 可用。本機看不到跨節點延遲不代表這台機器有那個能力，
-        // 也不代表沒有——就是沒量到。標「正常」會讓閱讀者以為已經驗過了。
-        var facts = NumaTopologyService.Collect(At,
-            highestNodeProbe: () => 0,
-            nodeMaskProbe: _ => (0xFFFFFUL, 0));
-
-        var x = Assert.Single(facts, f => f.Key == "numa.topology.xnode");
-        Assert.Equal(FactAvailability.NotApplicable, x.Availability);
-        Assert.Contains("無從量測", x.Value);
-        Assert.Contains("未驗證不代表可用", x.UnavailableReason);
-        Assert.Contains("沒量到不等於沒有問題", x.UnavailableReason);
-
-        // 主列的措辭也要帶上這一點，不能只藏在延伸欄位
-        Assert.Contains("未驗證不代表可用", Assert.Single(facts, f => f.Key == "numa.topology").Value);
-    }
-
-    [Fact]
-    public void 多節點_跨節點標為可量測()
-    {
-        var facts = NumaTopologyService.Collect(At,
-            highestNodeProbe: () => 1,
-            nodeMaskProbe: node => node == 0 ? (0xFFUL, (ushort)0) : (0xFF00UL, (ushort)0));
-
-        var x = Assert.Single(facts, f => f.Key == "numa.topology.xnode");
-        Assert.Equal(FactAvailability.Present, x.Availability);
-        Assert.Contains("可量測", x.Value);
-        Assert.Null(x.UnavailableReason);
-    }
-
-    [Fact]
-    public void API不可用整組三態_節點查詢失敗單點三態()
-    {
-        var denied = NumaTopologyService.Collect(At, highestNodeProbe: () => null);
-        var d = Assert.Single(denied);
-        Assert.Equal(FactAvailability.NotSupported, d.Availability);
-
-        var fail = NumaTopologyService.Collect(At,
-            highestNodeProbe: () => 1,
-            nodeMaskProbe: node => node == 0 ? (0xFUL, 0) : null);
-        var n1 = Assert.Single(fail, f => f.Key == "numa.node.1");
-        Assert.Equal(FactAvailability.ReadError, n1.Availability);
-        Assert.Null(n1.NumericValue);
-    }
-
-    [Fact]
-    public void 接線_平台事實組含NUMA與Rowhammer聲明()
-    {
-        var svc = new EvidenceLabService();
-        svc.LoadPlatformFacts();
-
-        // 本機 kernel32 一定可答（測試機為 Windows）：鍵形狀釘住，值不釘（機器相依）。
-        Assert.Contains(svc.PlatformFacts, f => f.Key == "numa.topology");
-        Assert.Contains(svc.PlatformFacts, f => f.Key == "numa.node.0");
-        var rh = Assert.Single(svc.PlatformFacts, f => f.Key == "mem.rowhammer");
-        Assert.Equal(FactAvailability.Present, rh.Availability);
-        Assert.Contains("未施測", rh.Value);
-        Assert.Contains("R-MEM-05", rh.Value);
-
-        // 進韌體安全頁渲染列（分類排序後仍在）。
-        Assert.Contains(svc.FirmwareSecurityRows, r => r.Name == "Rowhammer／記憶體攻擊面");
+        var bytes = Node(17, (3, 0), (12, 1));
+        BitConverter.GetBytes(relationship).CopyTo(bytes, 0);
+        var snapshot = NumaTopologyService.Parse(bytes);
+        Assert.Equal(FactAvailability.Present, snapshot.Availability);
+        Assert.Equal(2, Assert.Single(snapshot.Nodes).Groups.Count);
     }
 }

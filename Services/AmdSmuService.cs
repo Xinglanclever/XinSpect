@@ -52,9 +52,32 @@ public sealed class AmdSmuService
         string CpuVendor();
     }
 
+    // Serializes this process only; it does not establish firmware or other-process ownership.
+    private static readonly SemaphoreSlim SmnTransactionGate = new(1, 1);
+
+    internal interface ISmnSession : IDisposable
+    {
+        uint? Read(uint register);
+        bool WriteIndex(uint register, uint address);
+    }
+
+    private sealed class NativeSmnSession : ISmnSession
+    {
+        private readonly WinRing0Bridge _bridge = WinRing0Bridge.Create();
+        public uint? Read(uint register) => _bridge.PciAvailable
+            ? _bridge.ReadPciConfig(0, 0, 0, register) : null;
+        public bool WriteIndex(uint register, uint address) => _bridge.PciWriteAvailable
+            && _bridge.WritePciForReadProtocol(0, 0, 0, register, address);
+        public void Dispose() => _bridge.Dispose();
+    }
+
     /// <summary>走真實 WinRing0Bridge 的實作。</summary>
     public sealed class WinRing0PciAccess : IPciAccess
     {
+        private readonly Func<ISmnSession> _openSmnSession;
+        public WinRing0PciAccess() : this(() => new NativeSmnSession()) { }
+        internal WinRing0PciAccess(Func<ISmnSession> openSmnSession)
+            => _openSmnSession = openSmnSession ?? throw new ArgumentNullException(nameof(openSmnSession));
         public uint? ReadPci(byte bus, byte dev, byte fn, uint reg)
         {
             using var b = WinRing0Bridge.Create();
@@ -63,8 +86,21 @@ public sealed class AmdSmuService
 
         public bool WritePci(byte bus, byte dev, byte fn, uint reg, uint value)
         {
+            if (!WriteGate.TryAuthorizeHardwareWrite($"PCI {bus}:{dev}.{fn}+0x{reg:X}",
+                    nameof(WinRing0PciAccess), $"0x{value:X8}")) return false;
             using var b = WinRing0Bridge.Create();
-            return b.PciWriteAvailable && b.WritePciForReadProtocol(bus, dev, fn, reg, value);
+            return b.PciWriteAvailable && b.WritePciConfig(bus, dev, fn, reg, value);
+        }
+
+        internal uint? ReadSmn(uint index, uint data, uint address, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!IsReadOnlySmnIndex(index, address) || data != index + 4) return null;
+            using var session = _openSmnSession();
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!session.WriteIndex(index, address)) return null;
+            cancellationToken.ThrowIfCancellationRequested();
+            return session.Read(data);
         }
 
         public string CpuVendor()
@@ -79,6 +115,9 @@ public sealed class AmdSmuService
     }
 
     private const string AmdVendor = "AuthenticAMD";
+
+    internal static bool IsReadOnlySmnIndex(uint reg, uint address)
+        => reg is 0xB8 or 0x60 && address is 0x00050000 or 0x00059800;
 
     // SMN index/data 埠組：不同平台可能用不同的
     private static readonly (uint Index, uint Data)[] SmnPorts =
@@ -103,13 +142,31 @@ public sealed class AmdSmuService
     }
 
     /// <summary>讀取一個 SMN 位址。失敗回 null。</summary>
-    public uint? SmnRead(uint address)
+    public uint? SmnRead(uint address, CancellationToken cancellationToken = default)
     {
-        if (!_probed) Probe();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!IsReadOnlySmnIndex(0xB8, address)) return null;
+        if (!_probed) Probe(cancellationToken);
         if (_smnPort is not { } port) return null;
 
-        if (!_pci.WritePci(0, 0, 0, port.Index, address)) return null;
-        return _pci.ReadPci(0, 0, 0, port.Data);
+        return ReadTransaction(port.Index, port.Data, address, cancellationToken);
+    }
+
+    internal uint? ReadTransaction(uint index, uint data, uint address, CancellationToken cancellationToken)
+    {
+        if (!IsReadOnlySmnIndex(index, address) || data != index + 4) return null;
+        if (!SmnTransactionGate.Wait(TimeSpan.FromSeconds(5), cancellationToken))
+            throw new TimeoutException("SMN transaction is still in progress; no new transaction was started.");
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_pci is WinRing0PciAccess native)
+                return native.ReadSmn(index, data, address, cancellationToken);
+            if (!_pci.WritePci(0, 0, 0, index, address)) return null;
+            cancellationToken.ThrowIfCancellationRequested();
+            return _pci.ReadPci(0, 0, 0, data);
+        }
+        finally { SmnTransactionGate.Release(); }
     }
 
     /// <summary>讀取遙測資料。非 AMD 平台或 SMN 不可存取時回傳降級結果。</summary>
@@ -156,24 +213,25 @@ public sealed class AmdSmuService
     internal static bool IsPlausible(uint? value)
         => value is { } v && v != 0 && v != uint.MaxValue;
 
-    private void Probe()
+    private void Probe(CancellationToken cancellationToken = default)
     {
-        _probed = true;
+        cancellationToken.ThrowIfCancellationRequested();
         _isAmd = _pci.CpuVendor().Contains("AMD", StringComparison.OrdinalIgnoreCase);
-        if (!_isAmd) return;
+        if (!_isAmd) { _probed = true; return; }
 
         // 探測哪一組 SMN 埠可用：讀 bus 0 / dev 0 / fn 0 的 vendor ID，
         // 然後試每組 index/data 看讀回的值是否合理
         foreach (var port in SmnPorts)
         {
             // 寫一個已知的 SMN 位址（0x00050000 = SMU 版本，大多數 Zen 平台都有）
-            if (!_pci.WritePci(0, 0, 0, port.Index, 0x00050000)) continue;
-            var val = _pci.ReadPci(0, 0, 0, port.Data);
+            var val = ReadTransaction(port.Index, port.Data, 0x00050000, cancellationToken);
             if (IsPlausible(val))
             {
                 _smnPort = port;
+                _probed = true;
                 return;
             }
         }
+        _probed = true;
     }
 }

@@ -186,6 +186,127 @@ public class DiskSurfaceIntegrityTests
             DiskSurfaceScanService.ScanProfilesAsync("bad", [4096], repeat: false));
     }
 
+    [Fact]
+    public async Task CancellationBetweenShortReadsStopsBeforeNextRequest()
+    {
+        using var cancel = new CancellationTokenSource();
+        int calls = 0;
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            DiskSurfaceScanService.ReadBlocksAsync("fake", 1024, 1024, 512,
+                (_, _, _) =>
+                {
+                    calls++;
+                    cancel.Cancel();
+                    return ValueTask.FromResult(512);
+                }, ct: cancel.Token));
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
+    public async Task ProfilesAndRepeatShareTenAdditionalAttempts()
+    {
+        int calls = 0;
+        var results = await DiskSurfaceScanService.ReadProfilesAsync("fake", 512,
+            [512, 8192], true, 512, (_, _, _) =>
+            {
+                calls++;
+                return ValueTask.FromException<int>(new IOException("persistent"));
+            });
+        Assert.NotNull(results);
+        Assert.Equal(4, results!.Count);
+        Assert.Equal(14, calls);
+        Assert.Equal(10, results.Sum(result => result.Scan.RetryCount));
+        Assert.All(results, result => Assert.Equal(1, result.Scan.ErrorCount));
+    }
+
+    [Fact]
+    public async Task ProfileProgressIsDeliveredInOrderBeforeCompletion()
+    {
+        var progress = new ProgressSink();
+        var results = await DiskSurfaceScanService.ReadProfilesAsync("fake", 512,
+            [512, 8192], true, 512, (_, memory, _) => ValueTask.FromResult(memory.Length), progress);
+        Assert.NotNull(results);
+        Assert.Equal(new[] { 25, 50, 75, 100 }, progress.Values);
+        Assert.All(results!, result => Assert.Equal(512, result.Scan.TotalBytes));
+    }
+
+    [Fact]
+    public async Task CancellationFromFinalProgressDoesNotReturnCompletedScan()
+    {
+        using var cancel = new CancellationTokenSource();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            DiskSurfaceScanService.ReadBlocksAsync("fake", 512, 512, 512,
+                (_, memory, _) => ValueTask.FromResult(memory.Length),
+                new CancelProgress(cancel), cancel.Token));
+    }
+
+    [Fact]
+    public async Task PublicAsyncScansRejectMoreThan64MiBBeforeDeviceAccess()
+    {
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            DiskSurfaceScanService.ScanAsync("bad", 512, DiskSurfaceScanService.MaxProfileBytes + 1));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            DiskSurfaceScanService.ScanProfilesAsync("bad", [512], false, DiskSurfaceScanService.MaxProfileBytes + 1));
+    }
+
+    [Fact]
+    public async Task ProfileEnumerationStopsAfterFiveElementsBeforeDeviceAccess()
+    {
+        int enumerated = 0;
+        IEnumerable<int> Repeating()
+        {
+            while (true) { enumerated++; yield return 512; }
+        }
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            DiskSurfaceScanService.ScanProfilesAsync("bad", Repeating(), false));
+        Assert.Equal(5, enumerated);
+    }
+
+    [Fact]
+    public void CancellationBetweenMetadataQueriesStopsBeforeGeometry()
+    {
+        using var cancel = new CancellationTokenSource();
+        int geometryCalls = 0;
+        Assert.ThrowsAny<OperationCanceledException>(() => DiskSurfaceScanService.ReadLocalGeometry("fake",
+            _ => { cancel.Cancel(); return 3; },
+            _ => { geometryCalls++; return (true, 512u); }, cancel.Token));
+        Assert.Equal(0, geometryCalls);
+    }
+
+    [Theory]
+    [InlineData(false, 512u)]
+    [InlineData(true, 0u)]
+    [InlineData(true, 513u)]
+    [InlineData(true, 131072u)]
+    public void UnknownOrMalformedSectorGeometryFailsClosed(bool success, uint bytes)
+    {
+        Assert.Equal(0, DiskSurfaceScanService.ReadLocalGeometry("fake", _ => 3,
+            _ => (success, bytes), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CancellationDoesNotReleaseReadBufferBeforePendingIoCompletes()
+    {
+        using var cancel = new CancellationTokenSource();
+        var completion = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Memory<byte> pendingBuffer = default;
+        int calls = 0;
+        var scan = DiskSurfaceScanService.ReadBlocksAsync("fake", 512, 512, 512,
+            (_, memory, _) => { calls++; pendingBuffer = memory; return new ValueTask<int>(completion.Task); }, ct: cancel.Token);
+        cancel.Cancel();
+        Assert.False(scan.IsCompleted); // Caller cancellation does not mean the underlying I/O has completed.
+        Assert.Equal(512, pendingBuffer.Length);
+        pendingBuffer.Span.Fill(0x5a);
+        completion.SetResult(512);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => scan);
+        Assert.Equal(1, calls);
+    }
+
+    private sealed class CancelProgress(CancellationTokenSource cancel) : IProgress<int>
+    {
+        public void Report(int value) => cancel.Cancel();
+    }
+
     private sealed class ProgressSink : IProgress<int>
     {
         public List<int> Values { get; } = [];

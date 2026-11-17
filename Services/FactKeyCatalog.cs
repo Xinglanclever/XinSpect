@@ -1,4 +1,4 @@
-﻿// 事實鍵目錄：由 Services/ 原始碼掃描產生，並由 FactKeyCatalogTests 驗證與原始碼一致。
+// 事實鍵目錄：由 Services/ 原始碼掃描產生，並由 FactKeyCatalogTests 驗證與原始碼一致。
 // 為什麼要這份目錄而不是執行期掃原始碼：發佈版只有單一 exe，沒有 Services/ 目錄——
 // 掃不到時會回報「0 個鍵」，而覆蓋申報會把 0 讀成「全部都覆蓋了」。
 // 那是「掃不到」冒充「沒有問題」，所以改成編譯期固定的目錄＋測試守門。
@@ -588,6 +588,8 @@ public static class FactKeyCatalog
         "mem.ras.summary",
         "mem.rowhammer",
         "mem.wmi.cross",
+        "memory.current",
+        "memory.rate",
         "mon.count",
         "mon.dp",
         "monitor.summary",
@@ -1205,12 +1207,18 @@ public static class FactKeyCatalog
         "vr.zoom",
         "whea.mem.boundary",
         "whea.mem.summary",
+        "whea.pcie.boundary",
+        "whea.pcie.summary",
+        "whea.proc.boundary",
+        "whea.proc.summary",
         "whea.sec.boundary",
         "whea.sec.ipf.legacy",
         "whea.sec.kp.notify",
         "whea.sec.kp.sections",
         "whea.sec.kp.summary",
         "whea.sec.pcie.devtype",
+        "whea.xpf.boundary",
+        "whea.xpf.summary",
         "wmi.bus",
         "wmi.cpu.cache.assoc",
         "wmi.irqres",

@@ -68,6 +68,23 @@ public sealed record WheaMemorySection(
     /// 韌體說「ModuleHandle 有意義」（bit 17）——這是能跟 <c>sb.*</c> 的 SMBIOS 記憶體裝置表對起來的欄位。
     /// </summary>
     public bool HasModuleHandle => (ValidBits & (1UL << 17)) != 0;
+
+    public bool HasErrorStatus => (ValidBits & (1UL << 0)) != 0;
+    public bool HasPhysicalAddressMask => (ValidBits & (1UL << 2)) != 0;
+    public bool HasNode => (ValidBits & (1UL << 3)) != 0;
+    public bool HasCard => (ValidBits & (1UL << 4)) != 0;
+    public bool HasBank => (ValidBits & (1UL << 6)) != 0;
+    public bool HasDevice => (ValidBits & (1UL << 7)) != 0;
+    public bool HasRow => (ValidBits & (1UL << 8)) != 0;
+    public bool HasColumn => (ValidBits & (1UL << 9)) != 0;
+    public bool HasRequesterId => (ValidBits & (1UL << 11)) != 0;
+    public bool HasResponderId => (ValidBits & (1UL << 12)) != 0;
+    public bool HasTargetId => (ValidBits & (1UL << 13)) != 0;
+    public bool HasRankNumber => (ValidBits & (1UL << 15)) != 0;
+    public bool HasCardHandle => (ValidBits & (1UL << 16)) != 0;
+    public ulong RequesterId { get; init; }
+    public ulong ResponderId { get; init; }
+    public ulong TargetId { get; init; }
 }
 
 /// <summary>WHEA_ERROR_STATUS 的旗標位（cper.h：bit 8–15 是 ErrorType，16 起是旗標）。</summary>
@@ -101,7 +118,7 @@ public enum WheaErrorStatusFlags
 /// <para>
 /// <b>界線：</b>只解記憶體節區。處理器節區（<c>WHEA_XPF_*</c>）、PCIe 節區（<c>WHEA_PCIE_*</c>）、
 /// 韌體錯誤資訊（<c>WHEA_FIRMWARE_ERROR_RECORD_REFERENCE</c>）都不在本版範圍；
-/// <c>Extended</c>（ACPI 6.4 的擴充記憶體節區）也不解——它的欄位本版沒有可核的出處。
+/// <c>Extended</c> 位元組與擴充欄位也不解——本版未核定其位義。
 /// </para>
 /// </remarks>
 public static class WheaMemorySectionDecoder
@@ -113,7 +130,8 @@ public static class WheaMemorySectionDecoder
     /// <b>這個數字是算出來的，不是查來的：</b>cper.h 的 <c>CPER_FIELD_CHECK</c> 只驗到
     /// <c>ErrorType</c>（位移 72），後面三個欄位（<c>Extended</c>73／<c>RankNumber</c>74／
     /// <c>CardHandle</c>76／<c>ModuleHandle</c>78）照 struct 宣告順序接下去。
-    /// 取整到 8 之前正好是 80；<c>Extended</c> 標誌著後面接不接擴充節區，而擴充節區本版不解。
+    /// 取整到 8 之前正好是 80；<c>Extended</c> 是結構內的位元組，本版不解其內容，
+    /// 不把它解釋為附加節區存在旗標。
     /// </remarks>
     public const int SectionBytes = 80;
 
@@ -150,27 +168,18 @@ public static class WheaMemorySectionDecoder
     };
 
     /// <summary>
-    /// 這個類型碼是否代表「換一條 RAM 大概是對的處置」。
+    /// 類型碼的解讀界線；不能由類型碼推定嚴重度、位置或維修處置。
     /// </summary>
     /// <remarks>
-    /// <b>這是一個判讀輔助，不是判決。</b>只有單一位元 ECC 與單一符號 chip-kill 屬於
-    /// 「可被更正、且指出具體位置」的那一類；多位 ECC 與多符號 chip-kill 是「該條 DIMM
-    /// 或插槽已經不可靠」；其餘（abort、逾時、位址無效）指向的是<b>路徑</b>而不是顆粒。
-    /// 值裡會把這句一起寫出去，避免它變成「工具說要換 RAM」。
+    /// CPER 的 Section Severity 在節區描述子，不在此記憶體節區。
+    /// 本解碼器沒有取得該欄，故類型不構成已更正、未更正或故障 FRU 證據。
     /// </remarks>
-    [SpecRef("同 WHEA_MEMERRTYPE_* 的語意：0x02／0x04 可更正且指出位置、0x03／0x05 不可更正且指向顆粒、"
-        + "0x06–0x0A 指向路徑或控制器、0x0B 鏡像破、0x0C 韌體已備援切換。"
-        + "界線＝這是判讀輔助不是判決；0x00／0x01 與未收錄碼一律回 null")]
-    public static string? ErrorTypeHint(byte code) => code switch
-    {
-        0x02 or 0x04 => "可更正且指出具體位置——典型處置是觀察該 DIMM 的累積次數",
-        0x03 or 0x05 => "不可更正且指向顆粒——典型處置是檢查該 DIMM 與插槽",
-        0x06 or 0x07 or 0x08 or 0x09 or 0x0A => "指向路徑或控制器，不是顆粒",
-        0x0B => "鏡像已破——這條記憶體失去了備援，不是顆粒壞",
-        0x0C => "韌體做了備援切換——硬體自己已經處理過一次",
-        0x00 or 0x01 => null,
-        _ => null,
-    };
+    [SpecRef("Windows SDK um/cper.h（10.0.26100.0）：WHEA_ERROR_RECORD_SECTION_DESCRIPTOR.SectionSeverity"
+        + " CPER_FIELD_CHECK offset48/4；WHEA_MEMORY_ERROR_SECTION.ErrorType offset72/1 與 WHEA_MEMERRTYPE_*"
+        + " 獨立列舉類型，不提供維修處置。"
+        + "界線＝無 Section Severity、FRU 與平台證據，不能由類型推定更正狀態、故障位置或處置")]
+    public static string? ErrorTypeHint(byte code) => code is >= 2 and <= MaxKnownErrorType
+        ? "僅為錯誤類型；更正狀態、嚴重度與故障位置未由本節區確認" : null;
 
     /// <summary>解析一節的位元組。不足 <see cref="SectionBytes"/> 回 <c>null</c>（不猜欄位）。</summary>
     [SpecRef("Windows SDK um/cper.h（10.0.26100.0）CPER_FIELD_CHECK(WHEA_MEMORY_ERROR_SECTION, …)："
@@ -179,7 +188,7 @@ public static class WheaMemorySectionDecoder
         + "BitPosition 46/2、RequesterId 48/8、ResponderId 56/8、TargetId 64/8、ErrorType 72/1；"
         + "WHEA_ERROR_STATUS：bit 8–15＝ErrorType，16＝Address、17＝Control、18＝Data、19＝Responder、"
         + "20＝Requester、21＝FirstError、22＝Overflow；WHEA_MEMERRTYPE_* 0x00–0x0C。"
-        + "界線＝只解記憶體節區；Extended（ACPI 6.4）與處理器／PCIe 節區不在範圍")]
+        + "界線＝只解記憶體節區；Extended 位元組與擴充欄位、處理器／PCIe 節區不在範圍")]
     public static WheaMemorySection? Parse(byte[] section)
     {
         if (section.Length < SectionBytes) return null;
@@ -214,6 +223,11 @@ public static class WheaMemorySectionDecoder
             s[72],
             U16(s, 74),
             U16(s, 76),
-            U16(s, 78));
+            U16(s, 78))
+        {
+            RequesterId = U64(s, 48),
+            ResponderId = U64(s, 56),
+            TargetId = U64(s, 64),
+        };
     }
 }

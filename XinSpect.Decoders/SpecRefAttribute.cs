@@ -1,4 +1,4 @@
-﻿namespace XinSpect;
+namespace XinSpect;
 
 /// <summary>
 /// 規格引用（V7 M1／WP44）：標注某個解碼方法／型別所依據的規格出處——文件、章節、暫存器、位元位置。
@@ -70,6 +70,9 @@ public static class SpecRefRegistry
         typeof(NtfsBootSectorDecoder), // NTFS 開機磁區 BPB（Microsoft「NTFS Volume Boot Record」逐欄位移）
         typeof(UsbHubNodeDecoder), // USB 根集線器 USB_NODE_INFORMATION（usbioctl.h：NodeType／hub descriptor／bNumberOfPorts）
         typeof(AcpiFadt), // ACPI FADT 指標欄（FACS／DSDT 的 32 與 64 位位址；ACPI Spec 6.4 §5.2.9）
+        typeof(WheaXpfProcessorSectionDecoder), // Saved XPF variable arrays and validity-gated safe check fields
+        typeof(WheaProcessorGenericSectionDecoder), // CPER Processor Generic SDK192-byte scalar projection
+        typeof(WheaPcieSectionDecoder), // CPER PCIe valid bits and SDK208-byte field layout
         typeof(WheaMemorySectionDecoder), // CPER 記憶體錯誤節區（cper.h 的 CPER_FIELD_CHECK 逐欄位移；WHEA_MEMERRTYPE_* 0x00–0x0C）
         typeof(XhciCapabilityDecoder), // xHCI 能力暫存器區與支援協定擴充能力（xHCI 規格 1.1 §5.3／§7.1／§7.2）
         typeof(KernelDumpDecoder), // 核心傾印 PAGEDU64 檔頭＋bugcheck 知識表（真檔驗證＋Microsoft Learn）

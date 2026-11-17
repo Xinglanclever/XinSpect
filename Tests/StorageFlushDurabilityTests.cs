@@ -101,17 +101,116 @@ public class StorageFlushDurabilityTests
         Assert.Contains("非有限或非正數", result.Error, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(1, 128L * 1024 * 1024)]
+    [InlineData(10L * GiB, 1)]
+    public async Task RejectedPreflightRetainsExistingUnownedPlanFile(long freeBytes, long budgetBytes)
+    {
+        string root = Path.GetTempPath();
+        string existing = Path.Combine(root, "XinSpect.deepbench.tmp");
+        var fileSystem = new RecordingDiskFileSystem { AvailableFreeSpace = freeBytes };
+        fileSystem.Files[existing] = true;
+        var engine = new FakeFlushEngine();
+        var result = await new StorageFlushDurabilityService(root, budgetBytes, fileSystem, engine)
+            .RunAsync(CreateContext(), CancellationToken.None);
+        Assert.Equal(DeepBenchFailureKind.NotRun, result.FailureKind);
+        Assert.Equal(0, engine.Calls);
+        Assert.True(fileSystem.Exists(existing));
+        Assert.Empty(fileSystem.CreatedPaths);
+        Assert.Empty(fileSystem.DeletedPaths);
+    }
+
+    [Fact]
+    public async Task PrecancelledRunRetainsExistingUnownedFile()
+    {
+        string root = Path.GetTempPath();
+        string existing = Path.Combine(root, "XinSpect.deepbench.tmp");
+        var fileSystem = new RecordingDiskFileSystem { AvailableFreeSpace = 10 * GiB };
+        fileSystem.Files[existing] = true;
+        var engine = new FakeFlushEngine();
+        var result = await new StorageFlushDurabilityService(root, 128L * 1024 * 1024, fileSystem, engine)
+            .RunAsync(CreateContext(), new CancellationToken(true));
+        Assert.Equal(DeepBenchFailureKind.Cancelled, result.FailureKind);
+        Assert.Equal(0, engine.Calls);
+        Assert.True(fileSystem.Exists(existing));
+        Assert.Empty(fileSystem.CreatedPaths);
+        Assert.Empty(fileSystem.DeletedPaths);
+    }
+
+    [Fact]
+    public async Task DefaultNativeRunRefusesBeforeAnyFilesystemCall()
+    {
+        var fileSystem = new RecordingDiskFileSystem { AvailableFreeSpace = 10 * GiB };
+        var result = await new StorageFlushDurabilityService(Path.GetTempPath(), 128L * 1024 * 1024, fileSystem)
+            .RunAsync(CreateContext(), CancellationToken.None);
+        Assert.Equal(DeepBenchFailureKind.NotRun, result.FailureKind);
+        Assert.Contains("尚未驗證重開物件所有權", result.Error);
+        Assert.Empty(result.Metrics);
+        Assert.Equal(0, fileSystem.Queries);
+        Assert.Empty(fileSystem.CreatedPaths);
+        Assert.Empty(fileSystem.DeletedPaths);
+    }
+
+    [Fact]
+    public async Task InjectedLateSuccessAfterCancellationIsRejectedWithoutServiceDeletion()
+    {
+        using var cancel = new CancellationTokenSource();
+        var completion = new TaskCompletionSource<StorageFlushDurabilityMeasurement>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var fileSystem = new RecordingDiskFileSystem { AvailableFreeSpace = 10 * GiB };
+        string existing = Path.Combine(Path.GetTempPath(), "XinSpect.deepbench.tmp");
+        fileSystem.Files[existing] = true;
+        var running = new StorageFlushDurabilityService(Path.GetTempPath(), 128L * 1024 * 1024,
+            fileSystem, new PendingEngine(completion.Task)).RunAsync(CreateContext(), cancel.Token);
+        cancel.Cancel();
+        Assert.False(running.IsCompleted);
+        Assert.True(fileSystem.Exists(existing));
+        completion.SetResult(new StorageFlushDurabilityMeasurement([FakeFlushEngine.ValidPoint]));
+        var result = await running;
+        Assert.Equal(DeepBenchFailureKind.Cancelled, result.FailureKind);
+        Assert.Empty(result.Metrics);
+        Assert.True(fileSystem.Exists(existing));
+        Assert.Empty(fileSystem.DeletedPaths);
+    }
+
+    [Fact]
+    public async Task InjectedLateFaultAfterCancellationRemainsPlatformErrorWithoutServiceDeletion()
+    {
+        using var cancel = new CancellationTokenSource();
+        var completion = new TaskCompletionSource<StorageFlushDurabilityMeasurement>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var fileSystem = new RecordingDiskFileSystem { AvailableFreeSpace = 10 * GiB };
+        string existing = Path.Combine(Path.GetTempPath(), "XinSpect.deepbench.tmp");
+        fileSystem.Files[existing] = true;
+        var running = new StorageFlushDurabilityService(Path.GetTempPath(), 128L * 1024 * 1024,
+            fileSystem, new PendingEngine(completion.Task)).RunAsync(CreateContext(), cancel.Token);
+        cancel.Cancel();
+        Assert.False(running.IsCompleted);
+        completion.SetException(new IOException("injected late flush failure"));
+        var result = await running;
+        Assert.Equal(DeepBenchFailureKind.PlatformError, result.FailureKind);
+        Assert.Contains("injected late flush failure", result.Error);
+        Assert.Empty(result.Metrics);
+        Assert.True(fileSystem.Exists(existing));
+        Assert.Empty(fileSystem.DeletedPaths);
+    }
+
+    private sealed class PendingEngine(Task<StorageFlushDurabilityMeasurement> pending) : IFlushDurabilityEngine
+    {
+        public Task<StorageFlushDurabilityMeasurement> MeasureAsync(FlushDurabilityContext context, CancellationToken token)
+            => pending;
+    }
+
     private static DeepBenchRunContext CreateContext() =>
         new(Guid.NewGuid(), DeepBenchRunProfile.Quick, new Progress<DeepBenchProgress>());
 
     private sealed class RecordingDiskFileSystem : IDiskIoFileSystem
     {
+        public int Queries;
         public long AvailableFreeSpace { get; set; }
         public Dictionary<string, bool> Files { get; } = new(StringComparer.OrdinalIgnoreCase);
         public List<string> CreatedPaths { get; } = [];
         public List<string> DeletedPaths { get; } = [];
 
-        public long GetAvailableFreeSpace(string root) => AvailableFreeSpace;
+        public long GetAvailableFreeSpace(string root) { Queries++; return AvailableFreeSpace; }
         public bool Exists(string path) => Files.TryGetValue(path, out bool exists) && exists;
         public void Create(string path) { Files[path] = true; CreatedPaths.Add(path); }
         public void Delete(string path) { if (Files.Remove(path)) DeletedPaths.Add(path); }
@@ -139,7 +238,8 @@ public class StorageFlushDurabilityTests
             Calls++;
             LastPath = context.TempFilePath;
             context.FileSystem.Create(context.TempFilePath);
-            return Task.FromResult(new StorageFlushDurabilityMeasurement([Point]));
+            try { return Task.FromResult(new StorageFlushDurabilityMeasurement([Point])); }
+            finally { context.FileSystem.Delete(context.TempFilePath); }
         }
     }
 }

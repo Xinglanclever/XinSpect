@@ -2006,8 +2006,8 @@ CLI 有 12 個旗標，全部離線：
 
 - **`zr.aadj`**：Azure AD Join 狀態。校準：讀 dsregcmd。研究：身分。
 - **`zr.cba`**：憑證式認證。校準：讀原則。研究：無密碼。
-- **`zr.compliance.baseline`**：合規基線。校準：靜態＋目前。研究：稽核。
-- **`zr.compliance.table`**：逐項合規表。校準：逐項三態。研究：差距。
+- **`zr.compliance.baseline`**：使用者清單的判定能力。現有清單只有事實鍵，缺比較條件與期望值，回報 NotSupported；有資料不能算符合。
+- **`zr.compliance.table`**：使用者存在性清單的可讀性、快照日期與來源；表可讀不代表條件已驗證。
 - **`zr.mdm`**：MDM 註冊。校準：讀服務。研究：管理。
 - **`zr.dynlock`**：動態鎖定。校準：讀設定。研究：實體安全。
 - **`zr.passkey`**：通行金鑰支援。校準：讀能力。研究：登入。

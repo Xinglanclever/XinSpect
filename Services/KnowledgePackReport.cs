@@ -65,13 +65,18 @@ public static class KnowledgePackReport
     /// </summary>
     public static HardwareFact ToDigestFact(DateTimeOffset at, KnowledgePackLoad load)
     {
+        if (load.Pack is { } provided && KnowledgePackService.ValidateForConsumption(provided) is { } invalid)
+            return new HardwareFact(DigestKey, Category, "知識包完整性",
+                "知識包拒收", "", Source, FactTrustLevel.Unknown, false, at, null,
+                FactAvailability.ReadError, invalid);
         // 有包時：完整的序列號，一字不截。界線聲明放進 UnavailableReason——
         // 那個欄位在事實語意上是「補充說明」，而「這不是簽章」正是這把鍵
         // 最需要被讀到的一句話（**不得**因為它非空就當成缺陷：Availability 才是判準）。
         if (load.Pack is not null)
             return new HardwareFact(DigestKey, Category, "知識包完整性",
                 load.Pack.SerialNumber, "", Source, FactTrustLevel.Measured, false, at, null,
-                FactAvailability.Present, NonRepudiationNote);
+                FactAvailability.Present, NonRepudiationNote + "；" + string.Join("；",
+                    load.Pack.Tables.Select(t => t.Table + "：" + KnowledgePackService.DescribeProvenance(t))));
 
         // 沒有外掛包時，回退到「載入時宣告的那個序列號」——它仍然值得顯示，
         // 因為拒收的包也有一個被宣告過的雜湊，而那個值正是查證時要比對的東西。
@@ -94,7 +99,8 @@ public static class KnowledgePackReport
     /// </summary>
     public const string NonRepudiationNote =
         "由「不含 serialNumber 欄位的 canonical JSON」以 SHA-256 推導；" +
-        "可偵測改動與截斷，但不是簽章——不能阻止有能力重算雜湊的人改檔";
+        "可偵測改動與截斷，但不是簽章——不能阻止有能力重算雜湊的人改檔；" +
+        "內容雜湊不構成來源鏈；manifest 是包作者自述，未認證 upstream 或抽取過程";
 
     /// <summary>產生 <c>kp.snapshot_date</c>：逐表列出快照日期，並指出最舊的一張。</summary>
     public static HardwareFact ToSnapshotFact(DateTimeOffset at, KnowledgePackLoad load)

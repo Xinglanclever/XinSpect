@@ -27,7 +27,7 @@ public interface IGauntletMultiDomainEngine
     Task<GauntletMultiDomainMeasurement> MeasureAsync(GauntletMultiDomainContext context, CancellationToken cancellationToken);
 }
 
-public sealed class GauntletMultiDomainValidationException(string message) : InvalidOperationException(message);
+public sealed class GauntletMultiDomainValidationException(string message, Exception? innerException = null) : InvalidOperationException(message, innerException);
 
 /// <summary>
 /// 多域 Gauntlet：CPU（整數相依鏈）、記憶體（buffer 偽隨機掃描）、儲存（暫存檔寫入＋讀回驗證）三域
@@ -62,20 +62,12 @@ public sealed class GauntletMultiDomainService(
             GauntletMultiDomainSettings settings = GetSettings(context.Profile);
             string tempDir = Path.Combine(Path.GetTempPath(), "XinSpect.multi-domain");
             Directory.CreateDirectory(tempDir);
-            try
-            {
-                var engineContext = new GauntletMultiDomainContext(settings, tempDir, context.Progress, cancellationToken);
-                GauntletMultiDomainMeasurement measurement = await _engine
-                    .MeasureAsync(engineContext, cancellationToken)
-                    .ConfigureAwait(false);
-                Validate(measurement, settings);
-                return CreateResult(context, started, settings, measurement);
-            }
-            finally
-            {
-                try { Directory.Delete(tempDir, recursive: true); }
-                catch { /* 目錄刪除失敗不掩蓋量測結果；下次啟動會重建 */ }
-            }
+            var engineContext = new GauntletMultiDomainContext(settings, tempDir, context.Progress, cancellationToken);
+            GauntletMultiDomainMeasurement measurement = await _engine
+                .MeasureAsync(engineContext, cancellationToken)
+                .ConfigureAwait(false);
+            Validate(measurement, settings);
+            return CreateResult(context, started, settings, measurement);
         }
         catch (OperationCanceledException)
         {
@@ -141,7 +133,7 @@ public sealed class GauntletMultiDomainService(
             $"{settings.WindowCount} 窗 × {settings.WindowMilliseconds} ms；三域並行",
             metrics,
             [
-                $"三域並行推進 {settings.WindowCount} 窗（含 {settings.WarmupWindows} 暖機窗不計入結果）；儲存域使用 {Path.Combine(Path.GetTempPath(), "XinSpect.multi-domain")} 下的唯一暫存檔，結束後刪除。",
+                $"三域並行推進 {settings.WindowCount} 窗（含 {settings.WarmupWindows} 暖機窗不計入結果）；儲存域使用 {Path.Combine(Path.GetTempPath(), "XinSpect.multi-domain")} 下的本場唯一暫存檔，持有同一 handle 至儲存 worker 結束後要求 OS DeleteOnClose；未另行驗證刪除結果。",
                 $"early/late：CPU {cpuRetention:0.###}、記憶體 {memoryRetention:0.###}、儲存 {storageRetention:0.###}；並行搶資源是設計目的，單域數值低於單獨跑。",
             ],
             Limitations,
@@ -162,17 +154,31 @@ public sealed class GauntletMultiDomainService(
             ["量測不完整時不推算缺失窗。"], kind, error);
 }
 
-/// <summary>Windows 實測引擎：三域各一條專用執行緒，窗邊界用 shared gate 同步取樣。</summary>
+/// <summary>Three dedicated domain workers; completion includes draining every started worker.</summary>
 public sealed class WindowsMultiDomainEngine : IGauntletMultiDomainEngine
 {
     public Task<GauntletMultiDomainMeasurement> MeasureAsync(
         GauntletMultiDomainContext context,
         CancellationToken cancellationToken)
-        => Task.Run(() => Measure(context, cancellationToken), cancellationToken);
+        => Task.Run(() => Measure(context, cancellationToken, null, null), cancellationToken);
+
+    // Uses the production coordinator and exception/drain boundaries, without creating workloads.
+    internal Task<GauntletMultiDomainMeasurement> MeasureAsync(
+        GauntletMultiDomainContext context,
+        CancellationToken cancellationToken,
+        IReadOnlyList<Action<Action<long>, ManualResetEventSlim, CancellationToken>> workers,
+        Action<int>? beforeWorkerStart = null)
+    {
+        ArgumentNullException.ThrowIfNull(workers);
+        if (workers.Count != 3) throw new ArgumentException("Exactly three domain workers are required.", nameof(workers));
+        return Task.Run(() => Measure(context, cancellationToken, workers, beforeWorkerStart), cancellationToken);
+    }
 
     private static GauntletMultiDomainMeasurement Measure(
         GauntletMultiDomainContext context,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlyList<Action<Action<long>, ManualResetEventSlim, CancellationToken>>? injectedWorkers,
+        Action<int>? beforeWorkerStart)
     {
         GauntletMultiDomainSettings settings = context.Settings;
         int totalWindows = settings.WarmupWindows + settings.WindowCount;
@@ -180,35 +186,63 @@ public sealed class WindowsMultiDomainEngine : IGauntletMultiDomainEngine
         var memoryCounters = new WindowCounter();
         var storageCounters = new WindowCounter();
         using var stopSignal = new ManualResetEventSlim(false);
-        using var windowGate = new ManualResetEventSlim(true);
-
-        var cpuWorker = new Thread(() => CpuLoop(cpuCounters, stopSignal, cancellationToken))
-        {
-            IsBackground = true, Name = "XinSpect multi-domain CPU",
-        };
-        var memoryWorker = new Thread(() => MemoryLoop(memoryCounters, stopSignal, cancellationToken))
-        {
-            IsBackground = true, Name = "XinSpect multi-domain memory",
-        };
-        var storageWorker = new Thread(() => StorageLoop(storageCounters, context.TempDirPath, stopSignal, cancellationToken))
-        {
-            IsBackground = true, Name = "XinSpect multi-domain storage",
-        };
-        cpuWorker.Start();
-        memoryWorker.Start();
-        storageWorker.Start();
-
+        var failures = new System.Collections.Concurrent.ConcurrentQueue<Exception>();
+        var started = new List<Thread>(3);
+        System.Runtime.ExceptionServices.ExceptionDispatchInfo? coordinatorFailure = null;
         var windows = new List<GauntletMultiDomainWindow>();
+        var counters = new[] { cpuCounters, memoryCounters, storageCounters };
+        string[] domains = ["CPU", "memory", "storage"];
+
+        void RunWorker(int index)
+        {
+            try
+            {
+                if (injectedWorkers is not null)
+                    injectedWorkers[index](count => counters[index].Add(count), stopSignal, cancellationToken);
+                else if (index == 0) CpuLoop(cpuCounters, stopSignal, cancellationToken);
+                else if (index == 1) MemoryLoop(memoryCounters, stopSignal, cancellationToken);
+                else StorageLoop(storageCounters, context.TempDirPath, stopSignal, cancellationToken);
+            }
+            catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested
+                && exception.CancellationToken == cancellationToken)
+            {
+                // Cancellation is reported by the coordinator only after every worker has drained.
+                stopSignal.Set();
+            }
+            catch (Exception exception)
+            {
+                string message = $"Multi-domain {domains[index]} worker failed: {exception.Message}";
+                failures.Enqueue(exception is GauntletMultiDomainValidationException
+                    ? new GauntletMultiDomainValidationException(message, exception)
+                    : new InvalidOperationException(message, exception));
+                stopSignal.Set();
+            }
+        }
+
         try
         {
+            for (int index = 0; index < 3; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                int workerIndex = index;
+                var worker = new Thread(() => RunWorker(workerIndex))
+                {
+                    IsBackground = true, Name = $"XinSpect multi-domain {domains[index]}",
+                };
+                beforeWorkerStart?.Invoke(index);
+                worker.Start();
+                started.Add(worker);
+            }
             for (int window = 0; window < totalWindows; window++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (stopSignal.IsSet) break;
                 cpuCounters.Reset();
                 memoryCounters.Reset();
                 storageCounters.Reset();
                 long timestamp = Stopwatch.GetTimestamp();
-                SpinWait.SpinUntil(() => Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds >= settings.WindowMilliseconds);
+                // Fault/cancellation wakes the window; no spin or fabricated completed sample.
+                if (stopSignal.Wait(settings.WindowMilliseconds, cancellationToken)) break;
                 double elapsed = Stopwatch.GetElapsedTime(timestamp).TotalSeconds;
 
                 double cpuMops = cpuCounters.SwapOperations() / elapsed / 1_000_000d;
@@ -224,13 +258,31 @@ public sealed class WindowsMultiDomainEngine : IGauntletMultiDomainEngine
                     windows.Add(new GauntletMultiDomainWindow(window - settings.WarmupWindows, cpuMops, memoryMibs, storageMibs));
             }
         }
+        catch (Exception exception)
+        {
+            coordinatorFailure = System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(exception);
+        }
         finally
         {
             stopSignal.Set();
-            cpuWorker.Join(2000);
-            memoryWorker.Join(2000);
-            storageWorker.Join(2000);
+            // Synchronous I/O cannot be forcibly cancelled. Keep its handle and shared state alive
+            // until actual completion; a caller timeout is never treated as successful drainage.
+            foreach (Thread worker in started) worker.Join();
         }
+
+        Exception[] workerFailures = failures.ToArray();
+        if (workerFailures.Length > 0)
+        {
+            // A real worker failure must not disappear behind simultaneous caller cancellation.
+            if (coordinatorFailure is not null && coordinatorFailure.SourceException is not OperationCanceledException)
+                throw new AggregateException("Multi-domain workers and coordinator failed.",
+                    workerFailures.Append(coordinatorFailure.SourceException));
+            if (workerFailures.Length == 1)
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(workerFailures[0]).Throw();
+            throw new AggregateException("Multiple multi-domain workers failed.", workerFailures);
+        }
+        coordinatorFailure?.Throw();
+        cancellationToken.ThrowIfCancellationRequested();
 
         foreach (GauntletMultiDomainWindow window in windows)
         {
@@ -285,7 +337,8 @@ public sealed class WindowsMultiDomainEngine : IGauntletMultiDomainEngine
 
     private static void StorageLoop(WindowCounter counter, string tempDir, ManualResetEventSlim stop, CancellationToken token)
     {
-        string path = Path.Combine(tempDir, "pipeline.tmp");
+        token.ThrowIfCancellationRequested();
+        using OwnedTemporaryFile temp = OwnedTemporaryFile.Create(tempDir, "pipeline");
         byte[] payload = new byte[512 * 1024];
         uint prng = 0x1234567u;
         for (int index = 0; index < payload.Length; index += 4)
@@ -297,25 +350,23 @@ public sealed class WindowsMultiDomainEngine : IGauntletMultiDomainEngine
             payload[index + 3] = (byte)(prng >> 24);
         }
 
-        try
+        while (!stop.IsSet)
         {
-            while (!stop.IsSet)
-            {
-                using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
-                {
-                    stream.Write(payload, 0, payload.Length);
-                }
-                byte[] readBack = File.ReadAllBytes(path);
-                if (!readBack.AsSpan().SequenceEqual(payload))
-                    throw new GauntletMultiDomainValidationException("多域儲存域讀回驗證失敗；整場拒收。");
-                counter.Add(payload.Length);
-            }
-        }
-        finally
-        {
-            try { if (File.Exists(path)) File.Delete(path); } catch { }
             token.ThrowIfCancellationRequested();
+            RandomAccess.Write(temp.Handle, payload, 0);
+            byte[] readBack = new byte[payload.Length];
+            int offset = 0;
+            while (offset < readBack.Length)
+            {
+                int read = RandomAccess.Read(temp.Handle, readBack.AsSpan(offset), offset);
+                if (read == 0) throw new GauntletMultiDomainValidationException("多域儲存域讀回提早結束；整場拒收。");
+                offset += read;
+            }
+            if (!readBack.AsSpan().SequenceEqual(payload))
+                throw new GauntletMultiDomainValidationException("多域儲存域讀回驗證失敗；整場拒收。");
+            counter.Add(payload.Length);
         }
+        token.ThrowIfCancellationRequested();
     }
 
     private sealed class WindowCounter

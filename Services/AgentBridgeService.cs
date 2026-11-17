@@ -23,7 +23,7 @@ public static class AgentBridgeService
         completeDesktopSnapshot = false,
         limitations = new[]
         {
-            "The current collector covers the documented CLI evidence and storage-reliability scopes, not the full WPF hardware inventory or live sensors.",
+            "The current collector covers the documented CLI evidence and storage-reliability scopes, including a complete WMI configured-memory-rate batch when available; it does not collect current controller timings, the full WPF hardware inventory or live sensors.",
             "Underlying low-level readers keep their existing access and audit behavior; transient selector writes may occur. This bridge adds no hardware-write operation, and the snapshot does not contain the separate WriteGate audit record.",
         },
     };

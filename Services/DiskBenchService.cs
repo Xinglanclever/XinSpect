@@ -12,14 +12,14 @@ namespace XinSpect;
 /// 磁碟讀寫效能測試：於所選磁碟建立暫存檔，量測循序讀 / 寫（MB/s）與隨機 4K 讀 / 寫（IOPS）。
 /// 全程採「未緩衝直接 I/O」（FILE_FLAG_NO_BUFFERING）並搭配 WriteThrough 直寫，繞過作業系統的
 /// 讀寫快取，避免循序讀取讀到方才寫入而仍留存於記憶體的內容（此為一般以 FileStream 測試最常見的
-/// 失真來源）；緩衝區以磁區對齊（4 KB）的原生記憶體配置，讀寫大小與檔案位移皆為磁區整數倍以符合
-/// 未緩衝 I/O 的硬性要求。隨機 4K 測試以固定時間預算計時，佇列深度為 1（QD1，逐次同步 I/O）。
+/// 失真來源）；緩衝區固定以 4096 bytes 對齊；本路徑未探測所選裝置的邏輯／實體磁區及對齊要求，
+/// 不以固定值宣稱符合所有裝置的未緩衝 I/O 要求。讀取區塊不完整時整場拒收。隨機 4K 測試以固定時間預算計時，佇列深度為 1（QD1，逐次同步 I/O）。
 /// 測試結束後刪除暫存檔。
 /// </summary>
 public sealed class DiskBenchService : ObservableObject
 {
     private const int Mib = 1024 * 1024;
-    private const int Sector = 4096;             // 未緩衝 I/O 對齊粒度（涵蓋 512e 與 4Kn 磁碟及分頁大小）
+    private const int Sector = 4096;             // 固定配置對齊；不是裝置探測所得的磁區大小
     private const long TestBytes = 512L * Mib;   // 循序測試檔大小（512 MB，為磁區整數倍）
     private const int Chunk = Mib;               // 循序區塊（1 MB，為磁區整數倍）
     private const int RandBlock = Sector;        // 隨機區塊（4 KB）
@@ -31,6 +31,8 @@ public sealed class DiskBenchService : ObservableObject
 
     /// <summary>逐筆延遲的容量：3 秒 ÷ 5 µs。先開好，避免在量測迴圈裡重新配置而自己製造離群值。</summary>
     private const int LatCapacity = 600_000;
+
+    internal const string AlignmentLimitation = "固定 4096-byte 對齊；未查證所選裝置的邏輯／實體磁區與對齊要求。";
 
     private CancellationTokenSource? _cts;
 
@@ -50,7 +52,7 @@ public sealed class DiskBenchService : ObservableObject
     public double ProgressFraction { get => _progress; private set { if (SetProperty(ref _progress, value)) OnPropertyChanged(nameof(ProgressPercent)); } }
     public double ProgressPercent => _progress * 100;
 
-    private string _status = "選擇磁碟後按「開始測試」。採未緩衝直接 I/O，將建立約 512 MB 暫存檔，完成後自動刪除。";
+    private string _status = "選擇磁碟後按「開始測試」。採未緩衝直接 I/O，將建立約 512 MB 暫存檔，完成後自動刪除。" + AlignmentLimitation;
     public string StatusLine { get => _status; private set => SetProperty(ref _status, value); }
 
     private string _seqWrite = "—", _seqRead = "—", _randRead = "—", _randWrite = "—";
@@ -122,7 +124,7 @@ public sealed class DiskBenchService : ObservableObject
         int idx = Math.Clamp(_driveIndex, 0, Drives.Count - 1);
         string label = Drives[idx];
         string root = label.Split('（')[0];
-        string path = Path.Combine(root, "XinSpectDiskBench.tmp");
+        string path = CreateTempPath(root);
 
         IsRunning = true;
         Phase = "測試中";
@@ -130,9 +132,9 @@ public sealed class DiskBenchService : ObservableObject
         SeqWriteText = SeqReadText = RandReadText = RandWriteText = "測試中…";
         RandReadLatency = new DiskLatencyStats();
         RandWriteLatency = new DiskLatencyStats();
-        StatusLine = $"正在測試 {root} …";
+        StatusLine = $"正在測試 {root} … " + AlignmentLimitation;
 
-        var prog = new Progress<(double Frac, string Status)>(t => { ProgressFraction = t.Frac; StatusLine = t.Status; });
+        var prog = new Progress<(double Frac, string Status)>(t => { ProgressFraction = t.Frac; StatusLine = t.Status + " " + AlignmentLimitation; });
         var report = (IProgress<(double, string)>)prog;
 
         try
@@ -142,7 +144,8 @@ public sealed class DiskBenchService : ObservableObject
             if (di.AvailableFreeSpace < TestBytes + 256L * Mib)
                 throw new IOException($"可用空間不足（需約 {(TestBytes + 256L * Mib) / (double)Mib / 1024:0.0} GB）。");
 
-            var r = await Task.Run(() => RunAll(path, ct, report), ct);
+            var r = await Task.Run(() => WithOwnedFile(path, CreateOwnedFile,
+                handle => RunAll(handle, ct, report), ct), ct);
 
             SeqWriteText = $"{r.SeqW:0} MB/s";
             SeqReadText = $"{r.SeqR:0} MB/s";
@@ -153,7 +156,7 @@ public sealed class DiskBenchService : ObservableObject
 
             Phase = "完成";
             ProgressFraction = 1;
-            StatusLine = $"完成 ・ 循序寫 {r.SeqW:0} / 讀 {r.SeqR:0} MB/s ・ 隨機4K 讀 {r.RandR:#,0} / 寫 {r.RandW:#,0} IOPS（未緩衝直接 I/O ・ QD1）";
+            StatusLine = $"完成 ・ 循序寫 {r.SeqW:0} / 讀 {r.SeqR:0} MB/s ・ 隨機4K 讀 {r.RandR:#,0} / 寫 {r.RandW:#,0} IOPS（未緩衝直接 I/O ・ QD1） " + AlignmentLimitation;
         }
         catch (OperationCanceledException)
         {
@@ -163,15 +166,46 @@ public sealed class DiskBenchService : ObservableObject
         catch (Exception ex)
         {
             Phase = "錯誤";
-            StatusLine = "測試失敗：" + ex.Message;
+            StatusLine = "測試失敗：" + ex.Message + " " + AlignmentLimitation;
         }
         finally
         {
-            try { if (File.Exists(path)) File.Delete(path); } catch { /* 暫存檔清理失敗不影響結果 */ }
             IsRunning = false;
             _cts?.Dispose();
             _cts = null;
         }
+    }
+
+    internal static string CreateTempPath(string root)
+        => Path.Combine(root, $"XinSpectDiskBench.{Guid.NewGuid():N}.tmp");
+
+    // The exclusive CreateNew handle owns the file object until all synchronous I/O has ended.
+    // DeleteOnClose removes that object on disposal, including cancellation/exception paths;
+    // no path-based cleanup can delete a pre-existing or subsequently replaced file.
+    private static SafeFileHandle CreateOwnedFile(string path)
+        => File.OpenHandle(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None,
+            NoBuffering | FileOptions.WriteThrough | FileOptions.DeleteOnClose, TestBytes);
+
+    internal static T WithOwnedFile<T>(string path, Func<string, SafeFileHandle> create,
+        Func<SafeFileHandle, T> workload, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var handle = create(path);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (handle.IsInvalid) throw new IOException("Cannot establish temporary-file ownership.");
+        return workload(handle);
+    }
+
+    internal delegate int ReadBlock(SafeFileHandle handle, Span<byte> buffer, long offset);
+
+    // Shared production/injection boundary: a short block is not a completed benchmark operation.
+    // Reject instead of retrying at a potentially unaligned offset under NO_BUFFERING.
+    internal static void ReadFullBlock(SafeFileHandle handle, Span<byte> buffer, long offset,
+        ReadBlock? read = null)
+    {
+        int actual = read is null ? RandomAccess.Read(handle, buffer, offset) : read(handle, buffer, offset);
+        if (actual != buffer.Length)
+            throw new IOException($"磁碟讀取區塊不完整（位移 {offset}，預期 {buffer.Length} bytes，實際 {actual} bytes）；整場結果不採用。");
     }
 
     /// <summary>一次完整測試的結果：四項吞吐，加上兩個隨機階段的逐筆延遲分佈。</summary>
@@ -188,9 +222,9 @@ public sealed class DiskBenchService : ObservableObject
     /// </para>
     /// </summary>
     private static unsafe BenchResult RunAll(
-        string path, CancellationToken ct, IProgress<(double, string)> report)
+        SafeFileHandle h, CancellationToken ct, IProgress<(double, string)> report)
     {
-        // 磁區對齊的原生緩衝區（1 MB）：未緩衝 I/O 要求緩衝區位址、讀寫長度、檔案位移皆為磁區整數倍。
+        // 固定 4096-byte 對齊的原生緩衝區；所選裝置要求未探測，I/O 拒絕會回報失敗。
         void* p = NativeMemory.AlignedAlloc((nuint)Chunk, (nuint)Sector);
         try
         {
@@ -202,8 +236,6 @@ public sealed class DiskBenchService : ObservableObject
             // 1) 循序寫入（未緩衝直寫）
             report.Report((0.02, "循序寫入（未緩衝直寫）…"));
             {
-                using var h = File.OpenHandle(path, FileMode.Create, FileAccess.Write, FileShare.None,
-                                              NoBuffering | FileOptions.WriteThrough, TestBytes);
                 var sw = Stopwatch.StartNew();
                 long off = 0;
                 while (off < TestBytes)
@@ -218,18 +250,16 @@ public sealed class DiskBenchService : ObservableObject
                 seqW = TestBytes / (double)Mib / sw.Elapsed.TotalSeconds;
             }
 
-            // 2) 循序讀取（未緩衝，確保讀自實體磁碟而非系統快取）
+            // 2) 循序讀取（請求未緩衝；不宣稱裝置內部快取已繞過）
             report.Report((0.42, "循序讀取（未緩衝）…"));
             {
-                using var h = File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.None, NoBuffering);
                 var sw = Stopwatch.StartNew();
                 long off = 0;
                 while (off < TestBytes)
                 {
                     ct.ThrowIfCancellationRequested();
-                    int n = RandomAccess.Read(h, buf, off);
-                    if (n <= 0) break;
-                    off += n;
+                    ReadFullBlock(h, buf, off);
+                    off += buf.Length;
                     if ((off & (32 * Mib - 1)) == 0)
                         report.Report((0.42 + 0.30 * off / TestBytes, $"循序讀取… {off / Mib} MB"));
                 }
@@ -247,13 +277,12 @@ public sealed class DiskBenchService : ObservableObject
             report.Report((0.72, "隨機 4K 讀取…"));
             var readLat = new List<long>(LatCapacity);
             {
-                using var h = File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.None, NoBuffering);
                 long t0 = Stopwatch.GetTimestamp(), now = t0, ops = 0;
                 while (now - t0 < RandTicks)
                 {
                     long pos = (long)(rnd.NextDouble() * (blocks - 1)) * RandBlock;   // 4K 對齊
                     long a = Stopwatch.GetTimestamp();
-                    RandomAccess.Read(h, rblk, pos);
+                    ReadFullBlock(h, rblk, pos);
                     now = Stopwatch.GetTimestamp();
                     readLat.Add(now - a);
                     if ((++ops & 255) == 0) ct.ThrowIfCancellationRequested();
@@ -265,8 +294,6 @@ public sealed class DiskBenchService : ObservableObject
             report.Report((0.86, "隨機 4K 寫入…"));
             var writeLat = new List<long>(LatCapacity);
             {
-                using var h = File.OpenHandle(path, FileMode.Open, FileAccess.Write, FileShare.None,
-                                              NoBuffering | FileOptions.WriteThrough);
                 long t0 = Stopwatch.GetTimestamp(), now = t0, ops = 0;
                 while (now - t0 < RandTicks)
                 {

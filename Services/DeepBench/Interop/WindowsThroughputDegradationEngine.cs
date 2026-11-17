@@ -9,11 +9,28 @@ namespace XinSpect;
 /// </summary>
 public sealed class WindowsThroughputDegradationEngine : IThroughputDegradationEngine
 {
-    private const int ProcessorInformation = 11;
-    private const int ProcessorPowerRecordSize = 24;
     private const int WorkSliceIterations = 2048;
 
     private readonly SemaphoreSlim _runLock = new(1, 1);
+    private readonly WindowsProcessorPowerSampler _power;
+    private readonly Func<int> _workerBudget;
+    private readonly Func<int, nint> _allocate;
+    private readonly Action<nint> _free;
+    private readonly Action<int>? _beforeStart;
+
+    public WindowsThroughputDegradationEngine() : this(
+        WindowsProcessorPowerSampler.CreateWindows(), () => Environment.ProcessorCount,
+        bytes => Marshal.AllocHGlobal(bytes), Marshal.FreeHGlobal) { }
+
+    internal WindowsThroughputDegradationEngine(WindowsProcessorPowerSampler power, Func<int> workerBudget,
+        Func<int, nint> allocate, Action<nint> free, Action<int>? beforeStart = null)
+    {
+        _power = power;
+        _workerBudget = workerBudget;
+        _allocate = allocate;
+        _free = free;
+        _beforeStart = beforeStart;
+    }
 
     public async Task<ThroughputDegradationRun> MeasureAsync(
         ThroughputDegradationWorkload workload,
@@ -24,50 +41,58 @@ public sealed class WindowsThroughputDegradationEngine : IThroughputDegradationE
         ArgumentOutOfRangeException.ThrowIfLessThan(workload.WindowMs, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(workload.CooldownMs, 1);
 
-        await _runLock.WaitAsync(cancellationToken).ConfigureAwait(false);
-        int processorCount = Math.Max(1, Environment.ProcessorCount);
-        nint buffer = Marshal.AllocHGlobal(processorCount * ProcessorPowerRecordSize);
-        ThroughputGate gate = new();
-        List<Thread> workers = [];
+        cancellationToken.ThrowIfCancellationRequested();
         try
         {
-            for (int index = 0; index < processorCount; index++)
-            {
-                var worker = new ThroughputWorker(gate);
-                var thread = new Thread(worker.Run)
+            int workerCount = _workerBudget();
+            ProcessorPowerScope scope = _power.CaptureScope();
+            scope.ValidateWorkerCount(workerCount);
+            return await DeepBenchWorkerLifetime.RunAsync<ThroughputGate, ThroughputDegradationRun>(
+                _runLock,
+                workerCount,
+                () => _allocate(scope.BufferBytes),
+                _free,
+                () => new ThroughputGate(),
+                gate => gate.Stop(),
+                null,
+                (gate, index) =>
                 {
-                    IsBackground = true,
-                    Name = $"XinSpect Throughput Window {index + 1}"
-                };
-                workers.Add(thread);
-                thread.Start();
-            }
+                    var worker = new ThroughputWorker(gate);
+                    return new Thread(worker.Run)
+                    {
+                        IsBackground = true,
+                        Name = $"XinSpect Throughput Window {index + 1}"
+                    };
+                },
+                async (gate, buffer) =>
+                {
+                    await RunWarmupAsync(workload, gate, cancellationToken).ConfigureAwait(false);
+                    List<ThroughputWindow> windows = [];
+                    for (int index = 0; index < workload.Windows; index++)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        windows.Add(await MeasureWindowAsync(
+                            index,
+                            workload.WindowMs,
+                            scope,
+                            buffer,
+                            gate,
+                            cancellationToken).ConfigureAwait(false));
+                    }
 
-            await RunWarmupAsync(workload, gate, cancellationToken).ConfigureAwait(false);
-            List<ThroughputWindow> windows = [];
-            for (int index = 0; index < workload.Windows; index++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                windows.Add(await MeasureWindowAsync(
-                    index,
-                    workload.WindowMs,
-                    processorCount,
-                    buffer,
-                    (uint)(processorCount * ProcessorPowerRecordSize),
-                    gate,
-                    cancellationToken).ConfigureAwait(false));
-            }
-
-            await Task.Delay(workload.CooldownMs, cancellationToken).ConfigureAwait(false);
-            return new ThroughputDegradationRun(processorCount, windows);
+                    await Task.Delay(workload.CooldownMs, cancellationToken).ConfigureAwait(false);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    _power.VerifyScope(scope);
+                    return new ThroughputDegradationRun(workerCount, windows);
+                },
+                cancellationToken,
+                beforeStart: _beforeStart,
+                prepare: buffer => _ = _power.Sample(scope, buffer, true, cancellationToken)).ConfigureAwait(false);
         }
-        finally
+        catch (ProcessorPowerUnsupportedException error)
         {
-            gate.Stop();
-            foreach (Thread worker in workers)
-                worker.Join();
-            Marshal.FreeHGlobal(buffer);
-            _runLock.Release();
+            cancellationToken.ThrowIfCancellationRequested();
+            throw new ThroughputDegradationUnsupportedException(error.Message);
         }
     }
 
@@ -83,12 +108,11 @@ public sealed class WindowsThroughputDegradationEngine : IThroughputDegradationE
         gate.WaitIdle();
     }
 
-    private static async Task<ThroughputWindow> MeasureWindowAsync(
+    private async Task<ThroughputWindow> MeasureWindowAsync(
         int index,
         int windowMs,
-        int processorCount,
+        ProcessorPowerScope scope,
         nint buffer,
-        uint bufferBytes,
         ThroughputGate gate,
         CancellationToken cancellationToken)
     {
@@ -104,25 +128,11 @@ public sealed class WindowsThroughputDegradationEngine : IThroughputDegradationE
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            int status = CallNtPowerInformation(
-                ProcessorInformation,
-                0,
-                0,
-                buffer,
-                bufferBytes);
-            if (status != 0)
-            {
-                throw new ThroughputDegradationUnsupportedException(
-                    $"CallNtPowerInformation returned {status}；不輸出部分 throughput degradation 結果。");
-            }
-
-            (currentMin, currentMax, limitMin, limitMax) = ReadFrequencyRange(
-                currentMin,
-                currentMax,
-                limitMin,
-                limitMax,
-                processorCount,
-                buffer);
+            ProcessorPowerRange range = _power.Sample(scope, buffer, true, cancellationToken);
+            currentMin = Math.Min(currentMin, range.CurrentMin);
+            currentMax = Math.Max(currentMax, range.CurrentMax);
+            limitMin = Math.Min(limitMin, range.LimitMin);
+            limitMax = Math.Max(limitMax, range.LimitMax);
 
             double elapsedMs = Stopwatch.GetElapsedTime(start, Stopwatch.GetTimestamp()).TotalMilliseconds;
             if (elapsedMs >= windowMs)
@@ -146,45 +156,6 @@ public sealed class WindowsThroughputDegradationEngine : IThroughputDegradationE
             currentMax,
             limitMin,
             limitMax);
-    }
-
-    private static (double CurrentMin, double CurrentMax, double LimitMin, double LimitMax) ReadFrequencyRange(
-        double currentMin,
-        double currentMax,
-        double limitMin,
-        double limitMax,
-        int processorCount,
-        nint buffer)
-    {
-        for (int index = 0; index < processorCount; index++)
-        {
-            nint record = buffer + index * ProcessorPowerRecordSize;
-            uint number = unchecked((uint)Marshal.ReadInt32(record));
-            uint maxMhz = unchecked((uint)Marshal.ReadInt32(record + 4));
-            uint currentMhz = unchecked((uint)Marshal.ReadInt32(record + 8));
-            uint mhzLimit = unchecked((uint)Marshal.ReadInt32(record + 12));
-            _ = unchecked((uint)Marshal.ReadInt32(record + 16));
-            uint idleState = unchecked((uint)Marshal.ReadInt32(record + 20));
-            if (number >= (uint)processorCount || maxMhz == 0)
-            {
-                throw new ThroughputDegradationUnsupportedException(
-                    $"電源 API 回報的核心索引或 MaxMhz 不完整（processor {number}）；不輸出吞吐窗。");
-            }
-
-            if (currentMhz == 0 || mhzLimit == 0)
-            {
-                throw new ThroughputDegradationUnsupportedException(
-                    $"電源 API 無法判定 processor {number} 的 CurrentMhz 或 MhzLimit；不猜測頻率。");
-            }
-
-            currentMin = Math.Min(currentMin, currentMhz);
-            currentMax = Math.Max(currentMax, currentMhz);
-            limitMin = Math.Min(limitMin, mhzLimit);
-            limitMax = Math.Max(limitMax, mhzLimit);
-            _ = idleState;
-        }
-
-        return (currentMin, currentMax, limitMin, limitMax);
     }
 
     private sealed class ThroughputGate
@@ -220,7 +191,7 @@ public sealed class WindowsThroughputDegradationEngine : IThroughputDegradationE
                 spin.SpinOnce();
         }
 
-        public void RunSlice()
+        public void RunSlice(ref long checksum)
         {
             if (Volatile.Read(ref _active) == 0)
                 return;
@@ -230,13 +201,15 @@ public sealed class WindowsThroughputDegradationEngine : IThroughputDegradationE
             {
                 if (Volatile.Read(ref _active) != 0)
                 {
-                    long local = 1;
+                    // Carry each worker's result into its next slice; the counted work has an observable sink.
+                    long local = Volatile.Read(ref checksum);
                     for (int index = 0; index < WorkSliceIterations; index++)
                     {
                         local = local * 1_664_525L + index + 1_013_904_223L;
                         local ^= local >> 7;
                     }
 
+                    Volatile.Write(ref checksum, local);
                     Interlocked.Add(ref OperationCount, WorkSliceIterations);
                 }
             }
@@ -249,28 +222,18 @@ public sealed class WindowsThroughputDegradationEngine : IThroughputDegradationE
 
     private sealed class ThroughputWorker(ThroughputGate gate)
     {
-        private long _checksum;
+        private long _checksum = 1;
 
         public void Run()
         {
             while (!gate.Stopped)
             {
                 if (gate.Active)
-                    gate.RunSlice();
+                    gate.RunSlice(ref _checksum);
                 else
                     Thread.Yield();
             }
-
-            if (_checksum == long.MinValue)
-                _checksum = 1;
         }
     }
 
-    [DllImport("powrprof.dll")]
-    private static extern int CallNtPowerInformation(
-        int level,
-        nint inputBuffer,
-        uint inputBufferSize,
-        nint outputBuffer,
-        uint outputBufferSize);
 }

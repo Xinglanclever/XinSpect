@@ -3,36 +3,38 @@ using System.Threading;
 
 namespace XinSpect;
 
-/// <summary>
-/// 處理器記憶體控制器（iMC）自己那條 SMBus 的交易狀態機。HEDT／伺服器平台的 DIMM SPD 掛在這裡。
-/// </summary>
-/// <remarks>
-/// <para>
-/// <b>為什麼需要它</b>：本機（i9-7980XE／X299）實測過——PCH 的 SMBus 上八個 SPD 位址全部 NAK，
-/// 連 DDR4 的切頁裝置都不回應，而整台機器只有一個 PCI 類別碼 0x0C05 的裝置。SPD 在處理器
-/// uncore 的 SMBus 區段上，共兩組（所以 CPU-Z 會把兩條不同的模組都標成「SMBus address 0x50」）。
-/// </para>
-/// <para>
-/// <b>這條路徑比 PCH 那條危險一級。</b>控制器的命令暫存器在 PCI 設定空間裡，而設定空間裡有
-/// 一大堆一寫就讓機器當場停住的東西。因此：只寫探測到的那三個位移、裝置位址仍受
-/// <see cref="SpdBusAddresses"/> 白名單約束、狀態機完整跑在假的設定空間上測過。
-/// </para>
-/// <para>
-/// <b>要讓韌體讓路。</b>韌體會週期性輪詢 DIMM 上的溫度感測器（TSOD），用的就是這條匯流排。
-/// <see cref="TryAcquireBus"/> 會把那個輪詢停下來，<see cref="ReleaseBus"/> 把命令暫存器
-/// <i>原樣</i>寫回去。沒還原的話主機板從此讀不到記憶體溫度，風扇曲線會跟著失準——那是使用者
-/// 完全看不出原因、卻真的會壞事的後果。
-/// </para>
-/// <para>
-/// <b>一個誠實的限制</b>：這個控制器只有一個錯誤位，分不出「位址上沒有裝置」與「匯流排錯誤」。
-/// 掃 SPD 的情境下把它歸成 <see cref="SmbusStatus.NoDevice"/>（空插槽）是較合理的一邊，
-/// 但那是推斷而不是硬體告訴我們的。
-/// </para>
-/// </remarks>
-public sealed class ImcSmbusController(IPciConfig pci, ImcSmbusLocation location,
-                                      int transactionTimeoutMs = ImcSmbusController.DefaultTransactionTimeoutMs)
-    : ISpdBus
+/// <summary>Skylake-X 0x9C proxy transaction state machine. Production access remains unsupported until this backend has a verified firmware/host handoff contract.</summary>
+public sealed class ImcSmbusController : ISpdBus
 {
+    private readonly IPciConfig pci;
+    private readonly ImcSmbusLocation location;
+    private readonly int transactionTimeoutMs;
+    private readonly bool _injectedProtocol;
+    private readonly object _sync = new();
+    private bool _faulted;
+    private uint _lastCommand;
+
+    public ImcSmbusController(IPciConfig pci, ImcSmbusLocation location,
+        int transactionTimeoutMs = DefaultTransactionTimeoutMs)
+        : this(pci, location, transactionTimeoutMs, injectedProtocol: false) { }
+
+    // Test-only seam, never an assertion of firmware or cross-process ownership.
+    internal ImcSmbusController(IPciConfig pci, ImcSmbusLocation location,
+        int transactionTimeoutMs, bool injectedProtocol)
+    {
+        this.pci = pci ?? throw new ArgumentNullException(nameof(pci));
+        this.location = location ?? throw new ArgumentNullException(nameof(location));
+        if (location.Segment is < 0 or > 1) throw new ArgumentOutOfRangeException(nameof(location));
+        if (transactionTimeoutMs is <= 0 or > 1000) throw new ArgumentOutOfRangeException(nameof(transactionTimeoutMs));
+        this.transactionTimeoutMs = transactionTimeoutMs;
+        _injectedProtocol = injectedProtocol;
+    }
+
+    // Source boundary: Intel E5-v3 Volume 2, 330784-003 (June 2015),
+    // §§2.1.13–15, printed pp.34–38 document direct SMB_STAT/CMD/CNTL at
+    // device 19/22 function 0, offsets 0x180/0x184/0x188. They do not validate
+    // this 8086:2085 function-5 proxy or establish arbitration with SMM/BMC.
+    // No new register write encoding is inferred from that different interface.
     public const int DefaultTransactionTimeoutMs = 10;
 
     // 暫存器在 PCU function 5 的設定空間裡，兩組控制器相差 4 位元組
@@ -48,7 +50,6 @@ public sealed class ImcSmbusController(IPciConfig pci, ImcSmbusLocation location
     private const uint CmdSelPtr = 0x00040000;       // 「寫指標」——DDR4 切頁走這個
     private const uint CmdTsodActive = 0x00100000;   // 韌體的溫度輪詢正在進行
     private const uint CmdToggle = 0x20000000;
-    private const uint CmdKeepMask = 0xFFEFFFFF;     // 清掉 TSOD 那一位、其餘保留
     private const uint CmdPrefix = CmdToggle | CmdGo;
     private const int CmdAddrShift = 8;
 
@@ -64,65 +65,65 @@ public sealed class ImcSmbusController(IPciConfig pci, ImcSmbusLocation location
     public string Description
         => $"處理器 iMC SMBus（{location.Bus:X2}:{location.Device:X2}.{location.Function} 第 {location.Segment} 組）";
 
-    /// <summary>
-    /// 讓韌體停止輪詢 DIMM 溫度並取得這條匯流排。<b>命令暫存器的原值會記下來，
-    /// 由 <see cref="ReleaseBus"/> 原樣寫回。</b>
-    /// </summary>
-    public bool TryAcquireBus(out string reason)
+    private bool Fail(SmbusStatus status, string message)
     {
-        uint? old = ReadCmd();
-        if (old is null)
-        {
-            reason = "讀不到 iMC SMBus 的命令暫存器（PCI 設定空間存取不可用）。";
-            LastError = reason;
-            LastStatus = SmbusStatus.IoUnavailable;
-            return false;
-        }
-
-        var sw = Stopwatch.StartNew();
-        if ((old.Value & CmdTsodActive) != 0 && !WaitNotBusy(sw, out bool ioFailed))
-        {
-            reason = ioFailed
-                ? "讀不到 iMC SMBus 的狀態暫存器（PCI 設定空間存取不可用）。"
-                : $"韌體的 DIMM 溫度輪詢在 {transactionTimeoutMs} ms 內沒有結束，放棄——不搶。";
-            LastError = reason;
-            LastStatus = ioFailed ? SmbusStatus.IoUnavailable : SmbusStatus.Timeout;
-            return false;
-        }
-
-        // 清掉 TSOD 與 Go：不觸發任何交易，只是把控制器交到我們手上。
-        // 這一步同時也是寫入權限的探針——寫不進去就不該再往下走。
-        if (!WriteCmd((old.Value & CmdKeepMask) & ~CmdGo))
-        {
-            reason = "寫不進 iMC SMBus 的命令暫存器（PCI 設定空間不允許寫入）。";
-            LastError = reason;
-            LastStatus = SmbusStatus.IoUnavailable;
-            return false;
-        }
-
-        if (!WaitGoClear(sw))
-        {
-            reason = $"iMC SMBus 的 Go 位在 {transactionTimeoutMs} ms 內沒有放掉，放棄。";
-            LastError = reason;
-            LastStatus = SmbusStatus.Timeout;
-            // 已經動過命令暫存器，所以就算取不到也要把原值還回去
-            WriteCmd(old.Value);
-            return false;
-        }
-
-        _restoreCmd = old.Value;
-        _acquired = true;
-        reason = "";
-        LastStatus = SmbusStatus.Ok;
-        return true;
+        _faulted = true;
+        LastStatus = status;
+        LastError = message;
+        return false;
     }
 
-    /// <summary>把命令暫存器原樣寫回去，讓韌體接手（含它的溫度輪詢）。</summary>
+    public bool TryAcquireBus(out string reason)
+    {
+        lock (_sync)
+        {
+            if (_faulted) { reason = LastError; return false; }
+            if (!_injectedProtocol)
+            {
+                Fail(SmbusStatus.NotSupported, "Skylake-X iMC 0x9C proxy：尚未核定此通路的 firmware／其他程序 ownership 交接；Intel E5-v3 direct SMBus 規格不是本 proxy 的仲裁契約。未讀寫 PCI；PCH、Windows SMBIOS/WMI 及已授權 CPU-Z 報告來源仍可用。");
+                reason = LastError;
+                return false;
+            }
+            if (_acquired) { reason = "This controller is already acquired."; return false; }
+            uint? old = ReadCmd();
+            uint? status = ReadStatus();
+            if (old is null || status is null || old == uint.MaxValue || status == uint.MaxValue)
+                Fail(SmbusStatus.IoUnavailable, "Cannot verify command/status before acquisition.");
+            else if ((old.Value & (CmdGo | CmdTsodActive)) != 0 || (status.Value & StsBusy) != 0)
+                Fail(SmbusStatus.BusError, "Controller is active or firmware-owned; no ownership change attempted.");
+            else
+            {
+                // No firmware polling change and no probe write. A fake idle image is sufficient only for injected tests.
+                _restoreCmd = _lastCommand = old.Value;
+                _acquired = true;
+                LastStatus = SmbusStatus.Ok;
+                LastError = reason = "";
+                return true;
+            }
+            reason = LastError;
+            return false;
+        }
+    }
+
     public void ReleaseBus()
     {
-        if (!_acquired) return;
-        _acquired = false;
-        WriteCmd(_restoreCmd);
+        lock (_sync)
+        {
+            if (!_acquired) return;
+            _acquired = false;
+            if (_faulted) return; // Timeout is not completion. Never replay a command to clean up.
+            uint? current = ReadCmd();
+            uint? status = ReadStatus();
+            if (current is null || status is null || status == uint.MaxValue)
+            { Fail(SmbusStatus.IoUnavailable, "Release skipped: idle state cannot be verified."); return; }
+            if ((status.Value & StsBusy) != 0 || (current.Value & (CmdGo | CmdTsodActive)) != 0
+                || current != _lastCommand)
+            { Fail(SmbusStatus.BusError, "Release skipped: busy controller or ownership changed."); return; }
+            if (current == _restoreCmd) return;
+            // Only an originally idle, Go-clear image can ever be restored.
+            if (!WriteCmd(_restoreCmd) || ReadCmd() != _restoreCmd)
+                Fail(SmbusStatus.IoUnavailable, "Release restoration failed verification; controller fault latched.");
+        }
     }
 
     /// <inheritdoc/>
@@ -149,17 +150,32 @@ public sealed class ImcSmbusController(IPciConfig pci, ImcSmbusLocation location
     /// </summary>
     public bool WriteByteData(byte slave7, byte command, byte value)
     {
-        LastError = "iMC SMBus 的 Byte-Data 寫入編碼沒有公開文件可核對——DDR5 切頁不在這條路徑上提供。"
-                  + "（DDR5 模組的 SPD hub 在 PCH 的 SMBus 上仍可讀。）";
-        LastStatus = SmbusStatus.NotSupported;
-        return false;
+        lock (_sync)
+        {
+            if (_faulted) return false;
+            LastError = "iMC Byte-Data write encoding is not verified; operation unsupported.";
+            LastStatus = SmbusStatus.NotSupported;
+            return false;
+        }
     }
 
     private byte? Run(uint command, uint expectedDone, bool readsData)
     {
-        if (!_acquired)
-            throw new InvalidOperationException("必須先 TryAcquireBus 讓韌體讓路，才能發起交易。");
+        lock (_sync) return RunLocked(command, expectedDone, readsData);
+    }
 
+    private byte? RunLocked(uint command, uint expectedDone, bool readsData)
+    {
+        if (_faulted) return null;
+        if (!_acquired)
+            throw new InvalidOperationException("必須先 TryAcquireBus；沒有經驗證的取得狀態不能發起交易。");
+
+        uint? before = ReadCmd();
+        uint? beforeStatus = ReadStatus();
+        if (before is null || beforeStatus is null || beforeStatus == uint.MaxValue)
+        { Fail(SmbusStatus.IoUnavailable, "Transaction skipped: command/status unavailable."); return null; }
+        if (before != _lastCommand || (before.Value & (CmdGo | CmdTsodActive)) != 0 || (beforeStatus.Value & StsBusy) != 0)
+        { Fail(SmbusStatus.BusError, "Transaction skipped: busy controller or ownership changed."); return null; }
         LastError = "";
         LastStatus = SmbusStatus.Ok;
         var sw = Stopwatch.StartNew();
@@ -168,6 +184,7 @@ public sealed class ImcSmbusController(IPciConfig pci, ImcSmbusLocation location
         {
             LastError = "寫不進 iMC SMBus 的命令暫存器（PCI 設定空間存取不可用）。";
             LastStatus = SmbusStatus.IoUnavailable;
+            _faulted = true;
             return null;
         }
 
@@ -175,11 +192,12 @@ public sealed class ImcSmbusController(IPciConfig pci, ImcSmbusLocation location
         uint last = 0;
         while (true)
         {
-            uint? sts = pci.Read(location.Bus, location.Device, location.Function, StsRegister(location.Segment));
-            if (sts is null)
+            uint? sts = ReadStatus();
+            if (sts is null || sts == uint.MaxValue)
             {
                 LastError = "輪詢期間讀不到 iMC SMBus 的狀態暫存器（PCI 設定空間存取不可用）。";
                 LastStatus = SmbusStatus.IoUnavailable;
+                _faulted = true;
                 return null;
             }
             last = sts.Value;
@@ -190,6 +208,7 @@ public sealed class ImcSmbusController(IPciConfig pci, ImcSmbusLocation location
                 LastError = $"iMC SMBus 交易逾時（{transactionTimeoutMs} ms 內沒有完成，"
                           + $"狀態 0x{last:X8}）；不重試。";
                 LastStatus = SmbusStatus.Timeout;
+                _faulted = true;
                 return null;
             }
             Thread.SpinWait(64);
@@ -197,54 +216,46 @@ public sealed class ImcSmbusController(IPciConfig pci, ImcSmbusLocation location
 
         if ((last & doneMask) != expectedDone)
         {
-            // 這個控制器只有一個錯誤位，分不出「沒有裝置」與「匯流排錯誤」。
-            // 掃 SPD 時歸成「沒有裝置」是較合理的一邊，但那是推斷，不是硬體說的。
+            // The ambiguous error bit cannot establish an empty slot.
             LastError = $"iMC SMBus 交易失敗（狀態 0x{last:X8}）——"
                       + "位址上沒有裝置，或匯流排出錯；這個控制器的錯誤位分不出是哪一種。";
-            LastStatus = SmbusStatus.NoDevice;
+            LastStatus = SmbusStatus.TransactionFailed;
+            _faulted = true;
             return null;
         }
 
+        uint? completed = ReadCmd();
+        if (completed != (command & ~CmdGo))
+        { Fail(SmbusStatus.BusError, "Completion command differs from the submitted command; ownership not verified."); return null; }
+        _lastCommand = completed.Value;
         if (!readsData) return 0;
 
-        uint? dat = pci.Read(location.Bus, location.Device, location.Function, DatRegister(location.Segment));
+        uint? dat = ReadRegister(DatRegister(location.Segment));
         if (dat is null)
         {
             LastError = "交易完成但讀不到 iMC SMBus 的資料暫存器（PCI 設定空間存取不可用）。";
             LastStatus = SmbusStatus.IoUnavailable;
+            _faulted = true;
             return null;
         }
         return (byte)(dat.Value & 0xFF);
     }
 
-    private bool WaitNotBusy(Stopwatch sw, out bool ioFailed)
-    {
-        ioFailed = false;
-        while (true)
-        {
-            uint? sts = pci.Read(location.Bus, location.Device, location.Function, StsRegister(location.Segment));
-            if (sts is null) { ioFailed = true; return false; }
-            if ((sts.Value & StsBusy) == 0) return true;
-            if (sw.ElapsedMilliseconds > transactionTimeoutMs) return false;
-            Thread.SpinWait(64);
-        }
-    }
-
-    private bool WaitGoClear(Stopwatch sw)
-    {
-        while (true)
-        {
-            uint? cmd = ReadCmd();
-            if (cmd is null) return false;
-            if ((cmd.Value & CmdGo) == 0) return true;
-            if (sw.ElapsedMilliseconds > transactionTimeoutMs) return false;
-            Thread.SpinWait(64);
-        }
-    }
+    private uint? ReadStatus()
+        => ReadRegister(StsRegister(location.Segment));
 
     private uint? ReadCmd()
-        => pci.Read(location.Bus, location.Device, location.Function, CmdRegister(location.Segment));
+        => ReadRegister(CmdRegister(location.Segment));
+
+    private uint? ReadRegister(uint register)
+    {
+        try { return pci.Read(location.Bus, location.Device, location.Function, register); }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { return null; }
+    }
 
     private bool WriteCmd(uint value)
-        => pci.Write(location.Bus, location.Device, location.Function, CmdRegister(location.Segment), value);
+    {
+        try { return pci.Write(location.Bus, location.Device, location.Function, CmdRegister(location.Segment), value); }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { return false; }
+    }
 }

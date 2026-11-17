@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
@@ -267,31 +267,25 @@ public sealed class CpuIdService
     {
         uint len = 0;
         GetLogicalProcessorInformationEx(RelationProcessorCore, 0, ref len);
-        if (len == 0 || Marshal.GetLastWin32Error() != ErrorInsufficientBuffer) return (0, 0);
+        if (!WindowsTopologyBuffer.IsWithinBudget(len) || Marshal.GetLastWin32Error() != ErrorInsufficientBuffer) return (0, 0);
 
+        uint capacity = len;
         nint buf = Marshal.AllocHGlobal((int)len);
         try
         {
-            if (!GetLogicalProcessorInformationEx(RelationProcessorCore, buf, ref len)) return (0, 0);
-            int off = 0, cores = 0, logical = 0;
-            while (off + 8 <= (int)len)
-            {
-                nint rec = buf + off;
-                int size = Marshal.ReadInt32(rec + 4);
-                if (size <= 0) break;
-                nint pl = rec + 8;                                  // PROCESSOR_RELATIONSHIP
-                int groupCount = (ushort)Marshal.ReadInt16(pl + 22);
-                cores++;
-                for (int g = 0; g < groupCount; g++)
-                {
-                    ulong mask = (ulong)Marshal.ReadInt64(pl + 24 + g * 16);   // GROUP_AFFINITY.Mask
-                    logical += BitOperations.PopCount(mask);
-                }
-                off += size;
-            }
-            return (cores, logical);
+            if (!GetLogicalProcessorInformationEx(RelationProcessorCore, buf, ref len) || len > capacity) return (0, 0);
+            var bytes = new byte[(int)len];
+            Marshal.Copy(buf, bytes, 0, bytes.Length);
+            return ParseOsTopology(bytes);
         }
         finally { Marshal.FreeHGlobal(buf); }
+    }
+
+    internal static (int PhysicalCores, int Logical) ParseOsTopology(byte[] bytes)
+    {
+        var records = WindowsTopologyBuffer.Parse(bytes);
+        if (records is null || records.Any(r => r.Relationship != 0)) return (0, 0);
+        return (records.Count, records.Sum(r => r.Affinities.Sum(a => BitOperations.PopCount(a.Mask))));
     }
 
     /// <summary>CPUID 位元解碼的純函式集合（單元測試直接餘 synthetic 暫存器值）。</summary>

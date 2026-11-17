@@ -121,7 +121,10 @@ public class WheaSectionKnowledgeTests
         var facts = Collect();
         var boundary = Fact(facts, WheaSectionFactsService.BoundaryKey);
         Assert.Equal(FactAvailability.Present, boundary.Availability);
-        Assert.Contains("不拆 blob", boundary.Value);
+        Assert.Contains("本知識包不做 I/O", boundary.Value);
+        Assert.Contains("whea.mem／whea.pcie／whea.proc", boundary.Value);
+        Assert.Contains("Processor Generic", boundary.Value);
+        Assert.DoesNotContain("節區位元組本版拿不到", boundary.Value);
         Assert.Contains("未收錄的 GUID 政策", boundary.Value);
         Assert.Contains("沒有解碼實作", boundary.Value);
     }

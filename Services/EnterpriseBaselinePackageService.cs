@@ -1,9 +1,7 @@
-using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 
 namespace XinSpect;
 
@@ -25,7 +23,9 @@ public sealed record EnterpriseBaselineRule(
     EnterpriseBaselineMatch Match,
     string? ExpectedValue = null,
     double? Minimum = null,
-    double? Maximum = null);
+    double? Maximum = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Unit = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? RequirementId = null);
 
 public sealed record EnterpriseBaselinePolicy(
     int SchemaVersion,
@@ -41,7 +41,9 @@ public sealed record EnterpriseBaselineResult(
     string? Source,
     string? Trust,
     DateTimeOffset? MeasuredAtUtc,
-    string Reason);
+    string Reason,
+    string? RequirementId = null,
+    string? EvidenceUnit = null);
 
 public sealed record EnterpriseBaselineEvaluation(
     bool SignatureValid,
@@ -52,7 +54,9 @@ public sealed record EnterpriseBaselineEvaluation(
     int NotSatisfied,
     int Unverifiable,
     IReadOnlyList<EnterpriseBaselineResult> Results,
-    string? FailureReason);
+    string? FailureReason,
+    int? SchemaVersion = null,
+    string? Semantics = null);
 
 /// <summary>
 /// Offline enterprise policy packages. The caller must supply an out-of-band trusted public key;
@@ -60,7 +64,8 @@ public sealed record EnterpriseBaselineEvaluation(
 /// </summary>
 public static class EnterpriseBaselinePackageService
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int LegacySchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
     public const int MaxPackageBytes = 1_048_576;
     public const int MaxKeyPemBytes = 16_384;
     public const int MaxRules = 500;
@@ -86,7 +91,7 @@ public static class EnterpriseBaselinePackageService
         ArgumentException.ThrowIfNullOrWhiteSpace(password);
         if (Encoding.UTF8.GetByteCount(encryptedPrivateKeyPem) > MaxKeyPemBytes)
             throw new ArgumentException("簽署私鑰 PEM 超過安全大小上限。", nameof(encryptedPrivateKeyPem));
-        ValidatePolicy(policy);
+        EnterpriseBaselineConditionEvaluator.ValidatePolicy(policy);
 
         byte[] payload = SerializeCanonical(policy);
         using ECDsa signer = ECDsa.Create();
@@ -96,7 +101,7 @@ public static class EnterpriseBaselinePackageService
 
         byte[] signature = signer.SignData(payload, HashAlgorithmName.SHA256,
             DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
-        var envelope = new Envelope(CurrentSchemaVersion, Algorithm, KeyId(signer),
+        var envelope = new Envelope(policy.SchemaVersion, Algorithm, KeyId(signer),
             Convert.ToBase64String(payload), Convert.ToBase64String(signature));
         string json = JsonSerializer.Serialize(envelope, JsonOptions);
         if (Encoding.UTF8.GetByteCount(json) > MaxPackageBytes)
@@ -109,8 +114,7 @@ public static class EnterpriseBaselinePackageService
         ArgumentException.ThrowIfNullOrWhiteSpace(policyJson);
         if (Encoding.UTF8.GetByteCount(policyJson) > MaxPackageBytes)
             throw new ArgumentException("政策 JSON 超過安全大小上限。", nameof(policyJson));
-        var policy = JsonSerializer.Deserialize<EnterpriseBaselinePolicy>(policyJson, JsonOptions)
-            ?? throw new JsonException("政策內容為空。");
+        var policy = DeserializePolicy(Encoding.UTF8.GetBytes(policyJson));
         return Sign(policy, encryptedPrivateKeyPem, password);
     }
 
@@ -132,7 +136,7 @@ public static class EnterpriseBaselinePackageService
         {
             var envelope = JsonSerializer.Deserialize<Envelope>(packageJson, JsonOptions)
                 ?? throw new JsonException("套件內容為空。");
-            if (envelope.SchemaVersion != CurrentSchemaVersion || envelope.Algorithm != Algorithm)
+            if (envelope.SchemaVersion is not (LegacySchemaVersion or CurrentSchemaVersion) || envelope.Algorithm != Algorithm)
                 return Failed("套件版本或簽章演算法不受支援。");
 
             byte[] payload = Convert.FromBase64String(envelope.Payload);
@@ -145,22 +149,23 @@ public static class EnterpriseBaselinePackageService
                     DSASignatureFormat.IeeeP1363FixedFieldConcatenation))
                 return Failed("簽章驗證失敗；套件可能遭竄改。");
 
-            var policy = JsonSerializer.Deserialize<EnterpriseBaselinePolicy>(payload, JsonOptions)
-                ?? throw new JsonException("簽署的政策內容為空。");
-            ValidatePolicy(policy);
+            var policy = DeserializePolicy(payload);
+            if (policy.SchemaVersion != envelope.SchemaVersion)
+                return Failed("套件與簽署政策的 schema 版本不一致。");
+            EnterpriseBaselineConditionEvaluator.ValidatePolicy(policy);
             if (policy.CreatedAtUtc > nowUtc)
                 return new(true, false, policy.PolicyId, envelope.SignerKeyId, 0, 0, policy.Rules.Count, [],
-                    "政策尚未生效；不評估、不宣告符合。");
+                    "政策尚未生效；不評估、不宣告符合。", policy.SchemaVersion,
+                    EnterpriseBaselineConditionEvaluator.Semantics(policy.SchemaVersion));
             if (policy.ExpiresAtUtc <= nowUtc)
                 return new(true, true, policy.PolicyId, envelope.SignerKeyId, 0, 0, policy.Rules.Count, [],
-                    "政策已過期；不評估、不宣告符合。");
+                    "政策已過期；不評估、不宣告符合。", policy.SchemaVersion,
+                    EnterpriseBaselineConditionEvaluator.Semantics(policy.SchemaVersion));
 
-            var results = policy.Rules.Select(rule => EvaluateRule(rule, facts)).ToArray();
+            var conditions = EnterpriseBaselineConditionEvaluator.Evaluate(policy, facts);
             return new(true, false, policy.PolicyId, envelope.SignerKeyId,
-                results.Count(r => r.Status == EnterpriseBaselineStatus.Satisfied),
-                results.Count(r => r.Status == EnterpriseBaselineStatus.NotSatisfied),
-                results.Count(r => r.Status == EnterpriseBaselineStatus.Unverifiable),
-                results, null);
+                conditions.Satisfied, conditions.NotSatisfied, conditions.Unverifiable,
+                conditions.Results, null, policy.SchemaVersion, conditions.Semantics);
         }
         catch (Exception ex) when (ex is JsonException or FormatException or CryptographicException
                                    or ArgumentException or InvalidOperationException)
@@ -169,88 +174,65 @@ public static class EnterpriseBaselinePackageService
         }
     }
 
-    private static EnterpriseBaselineResult EvaluateRule(
-        EnterpriseBaselineRule rule, IReadOnlyDictionary<string, HardwareFact> facts)
+    // Keep v1's exact field set/order, null operands, timestamp formatting and ordinal key sort.
+    // Adding optional public model members must never change bytes emitted by the v1 signer.
+    private sealed record LegacyRule(string Key, EnterpriseBaselineMatch Match,
+        string? ExpectedValue = null, double? Minimum = null, double? Maximum = null);
+
+    private sealed record LegacyPolicy(int SchemaVersion, string PolicyId,
+        DateTimeOffset CreatedAtUtc, DateTimeOffset ExpiresAtUtc, IReadOnlyList<LegacyRule> Rules);
+
+    private sealed record Version2Rule(string RequirementId, string Key, EnterpriseBaselineMatch Match,
+        string Unit, string? ExpectedValue = null, double? Minimum = null, double? Maximum = null);
+
+    private sealed record Version2Policy(int SchemaVersion, string PolicyId,
+        DateTimeOffset CreatedAtUtc, DateTimeOffset ExpiresAtUtc, IReadOnlyList<Version2Rule> Rules);
+
+    private static EnterpriseBaselinePolicy DeserializePolicy(byte[] payload)
     {
-        if (!facts.TryGetValue(rule.Key, out var fact) || fact is null)
-            return Result(rule, EnterpriseBaselineStatus.Unverifiable,
-                "本次沒有這把事實鍵；缺資料不算符合。", null);
-        if (!string.Equals(fact.Key, rule.Key, StringComparison.Ordinal)
-            || fact.Value is null || HardwareSnapshotService.IsRedacted(fact.Value))
-            return Result(rule, EnterpriseBaselineStatus.Unverifiable,
-                "事實鍵不符或值已遮蔽；無法對照原始證據。", fact);
-        if (fact.Availability != FactAvailability.Present)
-            return Result(rule, EnterpriseBaselineStatus.Unverifiable,
-                $"事實狀態為 {fact.Availability}；原始原因留在本機快照，不複製到報告。缺資料不算符合。", fact);
-
-        bool matches = rule.Match switch
+        using var document = JsonDocument.Parse(payload, new JsonDocumentOptions { MaxDepth = 16 });
+        var root = document.RootElement;
+        if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("schemaVersion", out var version)
+            || version.ValueKind != JsonValueKind.Number || !version.TryGetInt32(out int schemaVersion))
+            throw new JsonException("政策須有整數 schemaVersion。");
+        // Strict typed deserialization below still rejects duplicate and unknown properties.
+        if (schemaVersion == LegacySchemaVersion)
         {
-            EnterpriseBaselineMatch.Exact => string.Equals(fact.Value, rule.ExpectedValue, StringComparison.Ordinal),
-            EnterpriseBaselineMatch.NumericRange => fact.NumericValue is { } value
-                && double.IsFinite(value) && value >= rule.Minimum && value <= rule.Maximum,
-            _ => false,
-        };
-        if (rule.Match == EnterpriseBaselineMatch.NumericRange)
-        {
-            if (fact.NumericValue is not { } numeric || !double.IsFinite(numeric))
-                return Result(rule, EnterpriseBaselineStatus.Unverifiable,
-                    "事實沒有有效數值；不從顯示文字猜數字。", fact);
+            var legacy = JsonSerializer.Deserialize<LegacyPolicy>(payload, JsonOptions)
+                ?? throw new JsonException("簽署的政策內容為空。");
+            return new(legacy.SchemaVersion, legacy.PolicyId, legacy.CreatedAtUtc, legacy.ExpiresAtUtc,
+                legacy.Rules?.Select(rule => rule is null ? null! : new EnterpriseBaselineRule(
+                    rule.Key, rule.Match, rule.ExpectedValue, rule.Minimum, rule.Maximum)).ToArray()!);
         }
-
-        return Result(rule,
-            matches ? EnterpriseBaselineStatus.Satisfied : EnterpriseBaselineStatus.NotSatisfied,
-            matches ? "符合組織自訂基準。這不是整體安全背書。" : "不符合組織自訂基準；這不是故障或安全判決。",
-            fact);
+        if (schemaVersion == CurrentSchemaVersion)
+        {
+            var current = JsonSerializer.Deserialize<Version2Policy>(payload, JsonOptions)
+                ?? throw new JsonException("簽署的政策內容為空。");
+            return new(current.SchemaVersion, current.PolicyId, current.CreatedAtUtc, current.ExpiresAtUtc,
+                current.Rules?.Select(rule => rule is null ? null! : new EnterpriseBaselineRule(
+                    rule.Key, rule.Match, rule.ExpectedValue, rule.Minimum, rule.Maximum,
+                    rule.Unit, rule.RequirementId)).ToArray()!);
+        }
+        throw new ArgumentException("政策 schema 版本不受支援。");
     }
-
-    private static EnterpriseBaselineResult Result(EnterpriseBaselineRule rule,
-        EnterpriseBaselineStatus status, string reason, HardwareFact? fact)
-        => new(rule.Key, status, fact?.Availability.ToString(), fact?.Source,
-            fact?.Trust.ToString(), fact?.MeasuredAtUtc, reason);
 
     private static byte[] SerializeCanonical(EnterpriseBaselinePolicy policy)
     {
-        var canonical = policy with
+        if (policy.SchemaVersion == LegacySchemaVersion)
         {
-            Rules = policy.Rules.OrderBy(r => r.Key, StringComparer.Ordinal).ToArray(),
-        };
-        return JsonSerializer.SerializeToUtf8Bytes(canonical, JsonOptions);
-    }
-
-    private static void ValidatePolicy(EnterpriseBaselinePolicy policy)
-    {
-        if (policy.SchemaVersion != CurrentSchemaVersion)
-            throw new ArgumentException("政策 schema 版本不受支援。");
-        if (string.IsNullOrWhiteSpace(policy.PolicyId) || policy.PolicyId.Length > 128)
-            throw new ArgumentException("政策識別碼必須為 1 至 128 字元。");
-        if (policy.CreatedAtUtc.Offset != TimeSpan.Zero || policy.ExpiresAtUtc.Offset != TimeSpan.Zero
-            || policy.ExpiresAtUtc <= policy.CreatedAtUtc)
-            throw new ArgumentException("政策時間必須為 UTC，且到期時間晚於建立時間。");
-        if (policy.Rules is null || policy.Rules.Count is < 1 or > MaxRules)
-            throw new ArgumentException($"政策規則數必須介於 1 至 {MaxRules}。");
-        if (policy.Rules.Any(rule => rule is null))
-            throw new ArgumentException("政策規則不得包含 null 項目。");
-        if (policy.Rules.Select(r => r.Key).Distinct(StringComparer.Ordinal).Count() != policy.Rules.Count)
-            throw new ArgumentException("政策不得重複指定事實鍵。");
-
-        foreach (var rule in policy.Rules)
-        {
-            if (string.IsNullOrWhiteSpace(rule.Key) || rule.Key.Length > 160
-                || !Regex.IsMatch(rule.Key, @"\A[a-z0-9][a-z0-9._-]*\z", RegexOptions.CultureInvariant))
-                throw new ArgumentException("政策含無效事實鍵。");
-            switch (rule.Match)
-            {
-                case EnterpriseBaselineMatch.Exact when rule.ExpectedValue is { Length: <= 4096 }:
-                    break;
-                case EnterpriseBaselineMatch.NumericRange
-                    when rule.Minimum is { } min && rule.Maximum is { } max
-                         && double.IsFinite(min) && double.IsFinite(max) && min <= max
-                         && rule.ExpectedValue is null:
-                    break;
-                default:
-                    throw new ArgumentException($"政策規則格式無效：{rule.Key}。");
-            }
+            var legacy = new LegacyPolicy(policy.SchemaVersion, policy.PolicyId,
+                policy.CreatedAtUtc, policy.ExpiresAtUtc,
+                policy.Rules.OrderBy(rule => rule.Key, StringComparer.Ordinal)
+                    .Select(rule => new LegacyRule(rule.Key, rule.Match,
+                        rule.ExpectedValue, rule.Minimum, rule.Maximum)).ToArray());
+            return JsonSerializer.SerializeToUtf8Bytes(legacy, JsonOptions);
         }
+        var current = new Version2Policy(policy.SchemaVersion, policy.PolicyId,
+            policy.CreatedAtUtc, policy.ExpiresAtUtc,
+            policy.Rules.OrderBy(rule => rule.RequirementId, StringComparer.Ordinal)
+                .Select(rule => new Version2Rule(rule.RequirementId!, rule.Key, rule.Match,
+                    rule.Unit!, rule.ExpectedValue, rule.Minimum, rule.Maximum)).ToArray());
+        return JsonSerializer.SerializeToUtf8Bytes(current, JsonOptions);
     }
 
     private static string KeyId(ECDsa key) =>

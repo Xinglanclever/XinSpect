@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows.Data;
 
@@ -362,13 +362,13 @@ public sealed class MainViewModel : ObservableObject
     public BootRepairService BootRepair { get; } = new();
 
     /// <summary>CPU 腳座腳位參考：偵測腳座型號並提供腳位分類與關鍵規格（實用工具子頁，唯讀 WMI）。</summary>
-    public CpuPinoutService CpuPinout { get; } = new();
+    public CpuPinoutService CpuPinout { get; }
 
     /// <summary>DIMM 插槽定義：各世代 DIMM 的腳位數、電壓、頻率範圍與關鍵差異（實用工具子頁，唯讀 WMI）。</summary>
-    public DimmReferenceService DimmReference { get; } = new();
+    public DimmReferenceService DimmReference { get; }
 
     /// <summary>M.2 / U.2 介面分析：Key 定義、尺寸對照與已安裝插槽偵測（實用工具子頁，SMBIOS 唯讀）。</summary>
-    public M2AnalysisService M2Analysis { get; } = new();
+    public M2AnalysisService M2Analysis { get; }
 
     // ── 螢幕色域（EDID 解析，開機背景讀取一次）──────────────────────────────
     private IReadOnlyList<MonitorGamutInfo> _monitors = new List<MonitorGamutInfo>();
@@ -514,8 +514,18 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>事件時間軸磁貼的空狀態開關：有任何事件才列列表，否則顯示「尚未有事件」。</summary>
     public bool HasRecentEvents => Events.All.Count > 0;
 
-    public MainViewModel()
+    public MainViewModel() : this(new CpuPinoutService(autoDetect: false),
+        new DimmReferenceService(autoDetect: false), new M2AnalysisService(autoDetect: false)) { }
+
+    internal MainViewModel(CpuPinoutService cpuPinout, DimmReferenceService dimmReference,
+        M2AnalysisService m2Analysis)
     {
+        ArgumentNullException.ThrowIfNull(cpuPinout);
+        ArgumentNullException.ThrowIfNull(dimmReference);
+        ArgumentNullException.ThrowIfNull(m2Analysis);
+        CpuPinout = cpuPinout;
+        DimmReference = dimmReference;
+        M2Analysis = m2Analysis;
         HardwareOperationGate.Bind(Settings);
         // 主殼瑞士工程列：RING0 膠囊要跟著驅動探測狀態走（DriverReady 屬於本次執行的探測結果）
         DriverReady.PropertyChanged += (_, e) =>

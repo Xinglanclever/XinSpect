@@ -45,7 +45,8 @@ public class AiNetworkPathTests
     private static Func<HttpResponseMessage> Status(HttpStatusCode code, string body = "{\"error\":\"boom\"}")
         => () => Json(body, code);
 
-    private static AiService Make(FakeHandler handler, out SettingsService settings, out string folder)
+    private static AiService Make(FakeHandler handler, out SettingsService settings, out string folder,
+        Func<TimeSpan, CancellationToken, Task>? retryDelay = null)
     {
         settings = new SettingsService();
         folder = Path.Combine(Path.GetTempPath(), "XinSpectNet_" + Guid.NewGuid().ToString("N"));
@@ -55,7 +56,15 @@ public class AiNetworkPathTests
         settings.AiStreaming = false;
         settings.AiKeepHistory = false;
         settings.AiHistoryTurns = 12;
-        var ai = new AiService(settings, folder) { HandlerOverride = handler };
+        var ai = new AiService(settings, folder)
+        {
+            HandlerOverride = handler,
+            RetryDelayAsync = retryDelay ?? ((_, ct) =>
+            {
+                ct.ThrowIfCancellationRequested();
+                return Task.CompletedTask;
+            }),
+        };
         return ai;
     }
 
@@ -71,13 +80,19 @@ public class AiNetworkPathTests
     public async Task 授權失敗要如實回報並提供重試()
     {
         var handler = new FakeHandler(Status(HttpStatusCode.Unauthorized, "{\"error\":\"invalid key\"}"));
-        var ai = Make(handler, out var settings, out string folder);
+        var delays = new List<TimeSpan>();
+        var ai = Make(handler, out var settings, out string folder, (delay, _) =>
+        {
+            delays.Add(delay);
+            return Task.CompletedTask;
+        });
         var (p, u, m) = (settings.AiProviderEnum, settings.AiBaseUrl, settings.AiModel);
         try
         {
             await ai.SendAsync("你好");
 
             Assert.Single(handler.Calls);                     // 401 不是暫時性錯誤，不重試
+            Assert.Empty(delays);
             Assert.Single(ai.Messages.Where(x => x.IsUser));
             var reply = ai.Messages[^1];
             Assert.StartsWith("⚠ 呼叫失敗", reply.Text);
@@ -94,13 +109,20 @@ public class AiNetworkPathTests
             Status(HttpStatusCode.ServiceUnavailable),
             Status(HttpStatusCode.BadGateway),
             Answer("收到了"));
-        var ai = Make(handler, out var settings, out string folder);
+        var delays = new List<TimeSpan>();
+        var ai = Make(handler, out var settings, out string folder, (delay, ct) =>
+        {
+            ct.ThrowIfCancellationRequested();
+            delays.Add(delay);
+            return Task.CompletedTask;
+        });
         var (p, u, m) = (settings.AiProviderEnum, settings.AiBaseUrl, settings.AiModel);
         try
         {
             await ai.SendAsync("你好");
 
             Assert.Equal(3, handler.Calls.Count);              // 前兩次重試成功後立即停止
+            Assert.Equal(new[] { TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(4) }, delays);
             Assert.Equal("收到了", ai.Messages[^1].Text);
             Assert.False(ai.CanRetry);                         // 正常回答旁邊不給重試
         }
@@ -112,17 +134,106 @@ public class AiNetworkPathTests
     {
         var handler = new FakeHandler(Enumerable.Range(0, AiRetryPolicy.MaxAttempts)
             .Select(_ => Status(HttpStatusCode.TooManyRequests)).ToArray());
-        var ai = Make(handler, out var settings, out string folder);
+        var delays = new List<TimeSpan>();
+        var ai = Make(handler, out var settings, out string folder, (delay, ct) =>
+        {
+            ct.ThrowIfCancellationRequested();
+            delays.Add(delay);
+            return Task.CompletedTask;
+        });
         var (p, u, m) = (settings.AiProviderEnum, settings.AiBaseUrl, settings.AiModel);
         try
         {
             await ai.SendAsync("你好");
 
             Assert.Equal(AiRetryPolicy.MaxAttempts, handler.Calls.Count);
+            Assert.Equal(11, handler.Calls.Count); // First attempt plus ten retries.
+            Assert.Equal(new[] { 2, 4, 6, 8, 10, 12, 14, 16, 18, 20 }
+                .Select(seconds => TimeSpan.FromSeconds(seconds)), delays);
             Assert.Contains("429", ai.Messages[^1].Text);
             Assert.True(ai.CanRetry);
         }
         finally { Cleanup(settings, folder, p, u, m); }
+    }
+
+    [Theory]
+    [InlineData(3, true)]
+    [InlineData(20, true)]
+    [InlineData(21, false)]
+    public async Task RetryAfter等待值與超限拒絕會接入請求路徑(int seconds, bool retry)
+    {
+        var handler = new FakeHandler(() =>
+        {
+            var response = Json("busy", HttpStatusCode.TooManyRequests);
+            response.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(
+                TimeSpan.FromSeconds(seconds));
+            return response;
+        }, Answer("ok"));
+        var delays = new List<TimeSpan>();
+        var ai = Make(handler, out var settings, out string folder, (delay, ct) =>
+        {
+            ct.ThrowIfCancellationRequested();
+            delays.Add(delay);
+            return Task.CompletedTask;
+        });
+        var (p, u, m) = (settings.AiProviderEnum, settings.AiBaseUrl, settings.AiModel);
+        try
+        {
+            await ai.SendAsync("retry-after");
+            Assert.Equal(retry ? 2 : 1, handler.Calls.Count);
+            if (retry)
+            {
+                Assert.Equal(new[] { TimeSpan.FromSeconds(seconds) }, delays);
+                Assert.Equal("ok", ai.Messages[^1].Text);
+                Assert.False(ai.CanRetry);
+            }
+            else
+            {
+                Assert.Empty(delays);
+                Assert.Contains("429", ai.Messages[^1].Text);
+                Assert.True(ai.CanRetry);
+            }
+        }
+        finally { Cleanup(settings, folder, p, u, m); }
+    }
+
+    [Fact]
+    public async Task 等待退避時取消會傳至排程器且不再發請求()
+    {
+        var handler = new FakeHandler(Status(HttpStatusCode.ServiceUnavailable), Answer("must not run"));
+        var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var delays = new List<TimeSpan>();
+        var ai = Make(handler, out var settings, out string folder, async (delay, ct) =>
+        {
+            delays.Add(delay);
+            var pending = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var registration = ct.Register(() => pending.TrySetCanceled(ct));
+            entered.TrySetResult(ct);
+            await pending.Task;
+        });
+        var (p, u, m) = (settings.AiProviderEnum, settings.AiBaseUrl, settings.AiModel);
+        var sending = ai.SendAsync("cancel during retry");
+        try
+        {
+            var token = await entered.Task.WaitAsync(TimeSpan.FromSeconds(15));
+            Assert.True(token.CanBeCanceled);
+            Assert.False(token.IsCancellationRequested);
+            Assert.Equal(new[] { TimeSpan.FromSeconds(2) }, delays);
+            Assert.Single(handler.Calls);
+            ai.Cancel();
+            await sending.WaitAsync(TimeSpan.FromSeconds(15));
+            Assert.True(token.IsCancellationRequested);
+            Assert.Single(handler.Calls);
+            Assert.Equal("已停止。", ai.StatusText);
+            Assert.Contains("已停止", ai.Messages[^1].Text);
+            Assert.False(ai.IsBusy);
+        }
+        finally
+        {
+            ai.Cancel();
+            await sending.WaitAsync(TimeSpan.FromSeconds(15));
+            Cleanup(settings, folder, p, u, m);
+        }
     }
 
     [Fact]
@@ -183,8 +294,8 @@ public class AiNetworkPathTests
 
             await ai.RetryLastAsync();
 
-            Assert.Single(ai.Messages.Where(x => x.IsUser));      // 使用者氣泡只有一個
-            Assert.Single(ai.Messages.Where(x => !x.IsUser && !x.IsTool));   // 失敗那一則已被換掉
+            Assert.Single(ai.Messages, x => x.IsUser);      // 使用者氣泡只有一個
+            Assert.Single(ai.Messages, x => !x.IsUser && !x.IsTool);   // 失敗那一則已被換掉
             Assert.Equal("第二次成功", ai.Messages[^1].Text);
             Assert.False(ai.CanRetry);
 

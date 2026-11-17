@@ -183,6 +183,59 @@ public class XinSpectCliTests
     }
 
     [Fact]
+    public void MachineWriterBypassesNestedLocalizationWithoutChangingJson()
+    {
+        using var buffer = new StringWriter();
+        var nested = CliLocalization.WrapWriter(CliLocalization.WrapWriter(buffer));
+        const string json = "{\"sourceError\":\"記憶體與快取\"}";
+        try
+        {
+            Assert.True(CliLocalization.TrySet("zh-CN"));
+            Assert.Same(buffer, CliLocalization.MachineWriter(nested));
+            CliLocalization.MachineWriter(nested).Write(json);
+            Assert.Equal(json, buffer.ToString());
+        }
+        finally { CliLocalization.TrySet("zh-TW"); }
+    }
+
+    [Fact]
+    public void InteractiveSensorJsonBypassesConsoleSynchronizationWrapper()
+    {
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        using var buffer = new StringWriter();
+        using var errors = new StringWriter();
+        try
+        {
+            Console.SetOut(buffer);
+            Console.SetError(errors);
+            Assert.True(CliLocalization.TrySet("zh-CN"));
+            CliLocalization.InstallConsoleWriters(false);
+            CliLocalization.InstallConsoleWriters(false);
+            int code = CliService.Run([CliService.SensorCrossCheckArg],
+                () => throw new InvalidOperationException("Full collection must not run."),
+                CliLocalization.MachineWriter(Console.Out), Console.Error,
+                sensorCapture: () => new([], [], "記憶體與快取"));
+
+            Assert.Equal(CliService.ExitPartial, code);
+            using var json = System.Text.Json.JsonDocument.Parse(buffer.ToString());
+            Assert.Equal("記憶體與快取", json.RootElement.GetProperty("sourceError").GetString());
+            Assert.Empty(errors.ToString());
+            buffer.GetStringBuilder().Clear();
+            Console.Write("記憶體與快取");
+            Assert.Equal("内存与缓存", buffer.ToString());
+            Assert.True(CliLocalization.IsMachineFormat([CliService.SensorCrossCheckArg]));
+            Assert.True(CliLocalization.IsMachineFormat(["sensor-crosscheck"]));
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            CliLocalization.TrySet("zh-TW");
+        }
+    }
+
+    [Fact]
     public void CLI設定檢視會遮蔽金鑰密碼與token()
     {
         string json = """{"AiApiKey":"secret-key","nested":{"refreshToken":"secret-token","label":"visible"}}""";

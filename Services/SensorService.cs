@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using LibreHardwareMonitor.Hardware;
@@ -6,12 +7,16 @@ using LibreHardwareMonitor.Hardware;
 namespace XinSpect;
 
 /// <summary>走訪 LHM 硬體樹並更新每個節點的感測器數值。</summary>
-internal sealed class UpdateVisitor : IVisitor
+internal sealed class UpdateVisitor(Action<IHardware, SensorAcquisition>? updated = null,
+    Func<long>? timestamp = null) : IVisitor
 {
+    private readonly Func<long> _timestamp = timestamp ?? Stopwatch.GetTimestamp;
     public void VisitComputer(IComputer computer) => computer.Traverse(this);
     public void VisitHardware(IHardware hardware)
     {
+        long started = _timestamp();
         hardware.Update();
+        updated?.Invoke(hardware, new SensorAcquisition(started, _timestamp()));
         foreach (var sub in hardware.SubHardware) sub.Accept(this);
     }
     public void VisitSensor(ISensor sensor) { }
@@ -24,15 +29,17 @@ internal sealed class UpdateVisitor : IVisitor
 /// </summary>
 public sealed partial class SensorService : ObservableObject, IDisposable
 {
-    private readonly Computer _computer;
-    private readonly UpdateVisitor _visitor = new();
+    private readonly IComputer _computer;
+    private readonly Action _closeComputer;
+    private readonly Func<long> _timestamp;
+    private readonly UpdateVisitor _visitor;
     private readonly List<(ISensor s, SensorRow row)> _sensorRows = new();
 
     // Poll() 於背景執行緒走訪硬體樹，Dispose() 於 UI 執行緒關閉 LHM；關閉視窗時兩者可能並行，
     // 以此鎖與旗標序列化，避免關閉瞬間背景 Poll 存取已 Close 的原生控制代碼而崩潰。
     private readonly object _pollLock = new();
     private volatile bool _disposed;
-    private DateTimeOffset? _lastPollAtUtc;
+    private IReadOnlyList<CoreTemperatureSample> _coreTemperatureSamples = Array.Empty<CoreTemperatureSample>();
 
     private sealed class CoreBind { public int Index; public ISensor? Clk, Load, Temp; public CoreRow Row = null!; }
     private sealed class GpuBind { public ISensor? Temp, HotSpot, VramTemp, Load, CoreClk, MemClk, Fan, FanRpm, Power, VramUsed, VramTotal; public GpuRow Row = null!; }
@@ -74,36 +81,56 @@ public sealed partial class SensorService : ObservableObject, IDisposable
     {
         lock (_pollLock)
         {
-            if (_disposed || _lastPollAtUtc is not DateTimeOffset capturedAt ||
-                string.IsNullOrWhiteSpace(CpuName) || CpuName == "—")
-                return Array.Empty<CoreTemperatureSample>();
-            if (!HasComparableIntelCoreOrder)
-                return Array.Empty<CoreTemperatureSample>();
-            return _cores
-                .Select(core => SensorCrossCheckService.LhmCoreIndex(core.Temp?.Name) is int index
-                    && index >= 0 && Val(core.Temp) is double value
-                    ? new CoreTemperatureSample("LHM", CpuName, index, value, capturedAt)
-                    : null)
-                .Where(sample => sample is not null).Select(sample => sample!).ToArray();
+            return _disposed ? Array.Empty<CoreTemperatureSample>() : _coreTemperatureSamples.ToArray();
         }
     }
 
-    public SensorService()
+    private void CaptureUpdatedCpu(IHardware hardware, SensorAcquisition acquisition)
     {
-        _computer = new Computer
+        if (hardware.HardwareType != HardwareType.Cpu || !HasComparableIntelCoreOrder) return;
+        DateTimeOffset capturedAt = DateTimeOffset.UtcNow;
+        var samples = hardware.Sensors
+            .Where(sensor => sensor.SensorType == SensorType.Temperature)
+            .Select(sensor => SensorCrossCheckService.LhmCoreIndex(sensor.Name) is int index
+                && index >= 0 && Val(sensor) is double value
+                ? new CoreTemperatureSample("LHM", hardware.Name, index, value, capturedAt, acquisition) : null)
+            .Where(sample => sample is not null).Select(sample => sample!).ToArray();
+        var captured = new SensorAcquisition(acquisition.StartedTimestamp, _timestamp());
+        _coreTemperatureSamples = samples.Select(sample => sample with { Acquisition = captured }).ToArray();
+    }
+
+    public SensorService() : this(cpuOnly: false) { }
+
+    internal SensorService(bool cpuOnly) : this(new Computer
+    {
+        IsCpuEnabled = true,
+        IsGpuEnabled = !cpuOnly,
+        IsMemoryEnabled = !cpuOnly,
+        IsMotherboardEnabled = !cpuOnly,
+        IsStorageEnabled = !cpuOnly,
+        IsControllerEnabled = !cpuOnly,
+    }) { }
+
+    private SensorService(Computer computer) : this(computer, computer.Open, computer.Close) { }
+
+    internal SensorService(IComputer computer, Action open, Action close, Func<long>? timestamp = null)
+    {
+        _computer = computer;
+        _closeComputer = close;
+        _timestamp = timestamp ?? Stopwatch.GetTimestamp;
+        _visitor = new UpdateVisitor(CaptureUpdatedCpu, _timestamp);
+        try
         {
-            IsCpuEnabled = true,
-            IsGpuEnabled = true,
-            IsMemoryEnabled = true,
-            IsMotherboardEnabled = true,
-            IsStorageEnabled = true,
-            IsControllerEnabled = true,
-        };
-        _computer.Open();
-        _computer.Accept(_visitor);
-        BuildCache();
-        // Accept above already performs the initial hardware update; publish that sample instead of traversing twice.
-        Publish();
+            open();
+            Poll();
+            BuildCache();
+            Publish();
+        }
+        catch
+        {
+            _closeComputer();
+            throw;
+        }
     }
 
     // ---- 初始化快取 -------------------------------------------------------
@@ -262,8 +289,13 @@ public sealed partial class SensorService : ObservableObject, IDisposable
         lock (_pollLock)
         {
             if (_disposed) return;   // 已釋放後遲到的背景 Poll 直接略過
-            _computer.Accept(_visitor);
-            _lastPollAtUtc = DateTimeOffset.UtcNow;
+            _coreTemperatureSamples = Array.Empty<CoreTemperatureSample>();
+            try { _computer.Accept(_visitor); }
+            catch
+            {
+                _coreTemperatureSamples = Array.Empty<CoreTemperatureSample>();
+                throw;
+            }
         }
     }
 
@@ -445,39 +477,17 @@ public sealed partial class SensorService : ObservableObject, IDisposable
 
     public double CpuClock => _cores.Select(c => Val(c.Clk) ?? 0).DefaultIfEmpty(0).Max();
     public string CpuClockText => CpuClock > 0 ? $"{CpuClock:0} MHz" : "—";
-    public string CpuPowerText => Val(_cpuPower) is double p and > 0 ? $"{p:0.#} W" : "—";
+    public string CpuPowerText => CpuPowerW is double p and > 0 ? $"{p:0.#} W" : "—";
     public string CpuVoltText => Val(_cpuVolt) is double v and > 0 ? $"{v:0.###} V" : "—";
     public string CpuBusText => Val(_cpuBus) is double b and > 0 ? $"{b:0.#} MHz" : "—";
 
     // 超頻模組用的數值型讀值（非格式化字串）：取不到回 null，絕不填假值。
     public double? CpuVoltage => Val(_cpuVolt);
-    private bool? _powerGateResult;
-    /// <summary>審計 #32：LHM 的封裝功率在 RAPL 能量計與功耗脫鉤的平台上是垃圾值（實測 1.2W 恒定）。
-    /// 首讀觸發<b>背景</b>自證（EnsureStarted，射後不理——不在呼叫執行緒上跑 6 秒探測）；
-    /// 未就緒與未通過都回 null（顯示「—」），不冒充瓦數。三態：探測中（null＋狀態字
-    /// 「能量計探測中」）→ 通過（回瓦數）→ 未過（null＋狀態字說明）。
-    /// 探測完成後由下一拍 Publish 重新進本屬性緩存判決。</summary>
-    public double? CpuPowerW
-    {
-        get
-        {
-            if (!_powerGateResult.HasValue)
-            {
-                RaplEnergyGate.EnsureStarted(
-                    () => { try { using var b = WinRing0Bridge.Create(); return b.Available ? b.ReadMsrPair64(0x611) : null; } catch { return null; } },
-                    () => { try { return Val(_cpuPkgTemp); } catch { return null; } });
-                if (RaplEnergyGate.IsProbing) return null;   // 探測中：本拍先缺席，UI 顯示「能量計探測中」
-                _powerGateResult = RaplEnergyGate.Verdict == RaplGateVerdict.Trusted;
-            }
-            return _powerGateResult.Value ? Val(_cpuPower) : null;
-        }
-    }
+    /// <summary>Only reads cached RAPL validation; passive UI/history reads never start a CPU load.</summary>
+    public double? CpuPowerW => RaplEnergyGate.ValidatedPower(Val(_cpuPower));
 
-    /// <summary>功耗欄的三態狀態字：探測中／未過說明／通過（空字串＝正常顯示瓦數，不佔版面）。</summary>
-    public string CpuPowerStateText =>
-        _powerGateResult is null && RaplEnergyGate.IsProbing ? "能量計探測中"
-        : _powerGateResult is false ? (RaplEnergyGate.Note ?? "功率計數器未隨負載，瓦數不可信")
-        : "";
+    /// <summary>Unknown/unverified, probing, failed or trusted cached state; no diagnostic is started here.</summary>
+    public string CpuPowerStateText => RaplEnergyGate.StateText;
     public double? VrmTempC => Val(_vrmTemp);
 
     public double MemLoad => Val(_memLoad) ?? 0;
@@ -610,7 +620,7 @@ public sealed partial class SensorService : ObservableObject, IDisposable
             _disposed = true;
             // 關閉硬體前，先把所有被手動接管的系統風扇交回 BIOS／自動控制，避免風扇卡在固定轉速
             try { RestoreAllFansToAuto(); } catch { }
-            try { _computer.Close(); } catch { }
+            try { _closeComputer(); } catch { }
         }
     }
 }

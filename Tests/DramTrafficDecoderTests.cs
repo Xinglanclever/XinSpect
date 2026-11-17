@@ -76,13 +76,26 @@ public class DramTrafficDecoderTests
     {
         string s = DramTrafficDecoder.TrafficText(misses: 1_000_000, seconds: 1.0, validated: false);
         Assert.Contains("1,000,000", s);
-        Assert.DoesNotContain("GB/s", s);
+        Assert.DoesNotContain("GiB/s", s);
     }
 
     [Fact]
     public void 通過驗證時才換算成頻寬()
     {
         string s = DramTrafficDecoder.TrafficText(1_048_576, 1.0, validated: true);
-        Assert.Contains("GB/s", s);
+        Assert.Contains("GiB/s", s);
+        Assert.Contains("64 MiB", s);
+        Assert.Contains("等效", s);
+        Assert.Contains("非 DRAM 實測", s);
+        Assert.Contains("不是精度校準", DramTrafficDecoder.Validate(1024, 1024).Text);
+    }
+
+    [Fact]
+    public void InvalidCountsAndWorkingSetsCannotPassValidation()
+    {
+        Assert.Null(DramTrafficDecoder.HitPercent(100, -1));
+        Assert.False(DramTrafficDecoder.Validate(0, 1024).Passed);
+        Assert.False(DramTrafficDecoder.Validate(-1, 1024).Passed);
+        Assert.Throws<OverflowException>(() => DramTrafficDecoder.Bytes(long.MaxValue));
     }
 }

@@ -49,7 +49,6 @@ public sealed class CoreTempMapService : ObservableObject
     private readonly SensorService _sensor;
     private readonly CpuTopology _topology;
     private readonly int _physicalCores;
-    private readonly int _threadsPerCore;
 
     public ObservableCollection<CoreTempEntry> Cores { get; } = new();
 
@@ -62,7 +61,6 @@ public sealed class CoreTempMapService : ObservableObject
         _sensor = sensor;
         _topology = topo;
         _physicalCores = Math.Max(topo.PhysicalCores, 1);
-        _threadsPerCore = topo.Smt ? 2 : 1;
 
         // 建立每實體核心一列
         for (int i = 0; i < _physicalCores; i++)
@@ -75,7 +73,8 @@ public sealed class CoreTempMapService : ObservableObject
     /// </summary>
     public void Tick()
     {
-        bool anyTemp = Apply(Cores, _sensor.CpuCores, _threadsPerCore);
+        bool anyTemp = ApplyPrimary(Cores, _sensor.CpuCores, _topology,
+            _sensor.HasComparableIntelCoreOrder);
 
         // 若 LHM 沒有逐核溫度，嘗試 Core Temp 共享記憶體作為備援
         if (!anyTemp)
@@ -95,20 +94,22 @@ public sealed class CoreTempMapService : ObservableObject
     /// 後 9 格起點 18 已超出筆數，整片空白——畫面上就是「只有 9 個核心在跑」。
     /// </para>
     /// <para>
-    /// 現在優先用標籤對位（兩邊的標籤同源：都是「核心 #N」）；標籤對不上才退回比率折疊，
-    /// 比率也由實際筆數推導（筆數／格數），而不是寫死 2。混合架構的 TODO 也因此一併解掉。
+    /// 只接受唯一標籤對位。筆數比例不構成核心身份證據，不能據此折疊或按位置補值。
     /// </para>
     /// </remarks>
     /// <returns>是否至少量到一個溫度（沒有就交給 Core Temp 備援）。</returns>
     internal static bool Apply(IReadOnlyList<CoreTempEntry> entries, IReadOnlyList<CoreRow> src, int threadsPerCore)
     {
-        var byLabel = new Dictionary<string, CoreRow>(StringComparer.Ordinal);
-        foreach (var row in src) byLabel[row.Name] = row;
-
-        bool anyLabelMatch = entries.Any(e => byLabel.ContainsKey(e.Label));
-        int ratio = src.Count >= entries.Count && entries.Count > 0 && src.Count % entries.Count == 0
-            ? Math.Max(1, src.Count / entries.Count)
-            : Math.Max(1, threadsPerCore);
+        foreach (var entry in entries)
+        {
+            entry.Temperature = null;
+            entry.Load = 0;
+        }
+        if (entries.Select(e => e.Label).Distinct(StringComparer.Ordinal).Count() != entries.Count
+            || entries.Select(e => e.PhysicalCoreId).Distinct().Count() != entries.Count
+            || src.Select(r => r.Name).Distinct(StringComparer.Ordinal).Count() != src.Count)
+            return false;
+        var byLabel = src.ToDictionary(row => row.Name, StringComparer.Ordinal);
 
         bool anyTemp = false;
         for (int p = 0; p < entries.Count; p++)
@@ -125,22 +126,6 @@ public sealed class CoreTempMapService : ObservableObject
                 totalLoad += one.LoadPercent;
                 loadCount++;
             }
-            else if (!anyLabelMatch)
-            {
-                int loStart = p * ratio;
-                int loEnd = Math.Min(loStart + ratio, src.Count);
-                for (int li = loStart; li < loEnd; li++)
-                {
-                    var row = src[li];
-                    if (row.TempC.HasValue)
-                    {
-                        maxTemp = maxTemp.HasValue ? Math.Max(maxTemp.Value, row.TempC.Value) : row.TempC.Value;
-                        anyTemp = true;
-                    }
-                    totalLoad += row.LoadPercent;
-                    loadCount++;
-                }
-            }
 
             entry.Temperature = maxTemp;
             entry.Load = loadCount > 0 ? totalLoad / loadCount : 0;
@@ -148,10 +133,21 @@ public sealed class CoreTempMapService : ObservableObject
         return anyTemp;
     }
 
+    internal static bool ApplyPrimary(IReadOnlyList<CoreTempEntry> entries, IReadOnlyList<CoreRow> src,
+        CpuTopology topology, bool knownCoreOrder)
+    {
+        // CoreRow has no socket/group identity; P/E indices may already have been merged upstream.
+        bool knownTopology = topology.Loaded && topology.PhysicalPackages == 1
+            && topology.ProcessorGroups == 1 && topology.PhysicalCores > 0
+            && topology.PhysicalCores == entries.Count && knownCoreOrder;
+        return Apply(entries, knownTopology ? src : Array.Empty<CoreRow>(), threadsPerCore: 1);
+    }
+
     private void FallbackCoreTemp()
     {
         TjMax = null;
-        if (!_topology.Loaded || _topology.PhysicalPackages != 1 || !_sensor.HasComparableIntelCoreOrder
+        if (!_topology.Loaded || _topology.PhysicalPackages != 1 || _topology.ProcessorGroups != 1
+            || _topology.PhysicalCores <= 0 || !_sensor.HasComparableIntelCoreOrder
             || !CoreTempSharedMem.TryRead(out var readings, out _)) return;
         ApplyExternalReadings(Cores, readings, _sensor.CpuName, _topology.PhysicalPackages,
             _sensor.HasComparableIntelCoreOrder, out double? tjMax);

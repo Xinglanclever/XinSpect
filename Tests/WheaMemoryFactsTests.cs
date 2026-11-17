@@ -130,8 +130,27 @@ public class WheaMemoryFactsTests
     {
         Assert.Contains("單一位元", WheaMemorySectionDecoder.ErrorTypeName(0x02)!);
         Assert.Contains("多位", WheaMemorySectionDecoder.ErrorTypeName(0x03)!);
-        Assert.Contains("顆粒", WheaMemorySectionDecoder.ErrorTypeHint(0x03)!);
-        Assert.Contains("控制器", WheaMemorySectionDecoder.ErrorTypeHint(0x09)!);
+        Assert.Contains("未由本節區確認", WheaMemorySectionDecoder.ErrorTypeHint(0x03)!);
+        Assert.Contains("未由本節區確認", WheaMemorySectionDecoder.ErrorTypeHint(0x09)!);
+    }
+
+    [Theory]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(5)]
+    [InlineData(9)]
+    [InlineData(11)]
+    [InlineData(12)]
+    public void 類型不是嚴重度或維修建議(int code)
+    {
+        var fact = Fact(WheaMemoryFactsService.Collect([Rec(Section(errorType: (byte)code))],
+            DateTimeOffset.UnixEpoch), WheaMemoryFactsService.RecordPrefix + "0001");
+        Assert.Contains("更正狀態、嚴重度與故障位置未由本節區確認", fact.Value);
+        Assert.DoesNotContain("典型處置", fact.Value);
+        Assert.DoesNotContain("可更正且", fact.Value);
+        Assert.DoesNotContain("不可更正且", fact.Value);
+        Assert.DoesNotContain("不是顆粒", fact.Value);
     }
 
     [Fact]
@@ -146,6 +165,34 @@ public class WheaMemoryFactsTests
 
     private static WheaMemoryRecord Rec(byte[]? section, int eventId = 46, int daysAgo = 0) =>
         new(eventId, DateTimeOffset.UtcNow.AddDays(-daysAgo), section, section is null ? "測不到" : null);
+
+    [Theory]
+    [InlineData(WheaMemoryReadStatus.Truncated, FactAvailability.Unknown, false)]
+    [InlineData(WheaMemoryReadStatus.Truncated, FactAvailability.Unknown, true)]
+    [InlineData(WheaMemoryReadStatus.TimedOut, FactAvailability.ReadError, false)]
+    [InlineData(WheaMemoryReadStatus.TimedOut, FactAvailability.ReadError, true)]
+    [InlineData(WheaMemoryReadStatus.ReadError, FactAvailability.ReadError, false)]
+    [InlineData(WheaMemoryReadStatus.ReadError, FactAvailability.ReadError, true)]
+    [InlineData(WheaMemoryReadStatus.InsufficientPrivilege, FactAvailability.InsufficientPrivilege, false)]
+    [InlineData(WheaMemoryReadStatus.InsufficientPrivilege, FactAvailability.InsufficientPrivilege, true)]
+    public void IncompleteEnumerationIsPreservedByTheProductionConsumer(WheaMemoryReadStatus status,
+        FactAvailability expected, bool partial)
+    {
+        var end = new DateTimeOffset(2026, 11, 17, 0, 0, 0, TimeSpan.Zero);
+        var records = new WheaMemoryReadResult(partial ? [Rec(Section())] : [], status,
+            end.AddDays(-7), end, "injected failure");
+        var lab = new EvidenceLabService();
+        lab.LoadWheaMemory(records);
+        var summary = Fact(lab.WheaMemoryFacts, WheaMemoryFactsService.SummaryKey);
+        Assert.Equal(expected, summary.Availability);
+        Assert.Null(summary.NumericValue);
+        Assert.Contains(status.ToString(), summary.UnavailableReason);
+        Assert.Contains("injected failure", summary.UnavailableReason);
+        Assert.Contains("非完整總數", summary.Value);
+        Assert.Contains(end.ToString("O"), summary.Value);
+        Assert.Equal(partial ? 1 : 0,
+            lab.WheaMemoryFacts.Count(f => f.Key.StartsWith(WheaMemoryFactsService.RecordPrefix, StringComparison.Ordinal)));
+    }
 
     [Fact]
     public void 空記錄_說沒有記錄可解而不是沒有錯誤()
@@ -166,7 +213,9 @@ public class WheaMemoryFactsTests
         var s = Fact(facts, WheaMemoryFactsService.SummaryKey);
         Assert.Equal(2d, s.NumericValue!.Value);
         Assert.Equal(FactAvailability.Present, s.Availability);
-        Assert.Contains("一筆的節區都解不開", s.Value);
+        Assert.Contains("沒有可解的記憶體節區", s.Value);
+        Assert.Contains("記憶體節區 0 筆", s.Value);
+        Assert.Contains("測不到", s.Value);
         Assert.Contains("46×1", s.Value);
         Assert.Contains("47×1", s.Value);
         Assert.Contains("只是入口，不是錯誤類型", s.Value);
@@ -204,6 +253,105 @@ public class WheaMemoryFactsTests
         Assert.Contains("多位 ECC", rec.Value);
     }
 
+    [Theory]
+    [InlineData(0, "ErrorStatus 0x0000000000010A00")]
+    [InlineData(1, "實體位址 0x20000000000001")]
+    [InlineData(2, "位址遮罩 0x3F")]
+    [InlineData(3, "NUMA 節點 3")]
+    [InlineData(4, "card 4")]
+    [InlineData(5, "模組 5")]
+    [InlineData(6, "bank 6")]
+    [InlineData(7, "device 7")]
+    [InlineData(8, "row 8")]
+    [InlineData(9, "column 9")]
+    [InlineData(10, "出錯位元 10")]
+    [InlineData(11, "RequesterId 0x1111111111111111")]
+    [InlineData(12, "ResponderId 0x2222222222222222")]
+    [InlineData(13, "TargetId 0x3333333333333333")]
+    [InlineData(14, "類型 單一位元 ECC")]
+    [InlineData(15, "rank 15")]
+    [InlineData(16, "SMBIOS card handle 0x0016")]
+    [InlineData(17, "SMBIOS 模組 handle 0x0017")]
+    public void EachValidBitAuthorizesOnlyItsOwnField(int bit, string expected)
+    {
+        // Distinct nonzero bytes expose accidental printing of invalid neighbouring fields.
+        var section = Section(validBits: 1UL << bit, errorStatus: 0x10A00,
+            physicalAddress: 0x20000000000001, mask: 0x3F, node: 3, card: 4,
+            module: 5, bank: 6, device: 7, row: 8, column: 9, bitPosition: 10,
+            errorType: 2, rankNumber: 15, cardHandle: 0x16, moduleHandle: 0x17);
+        BinaryPrimitives.WriteUInt64LittleEndian(section.AsSpan(48, 8), 0x1111111111111111);
+        BinaryPrimitives.WriteUInt64LittleEndian(section.AsSpan(56, 8), 0x2222222222222222);
+        BinaryPrimitives.WriteUInt64LittleEndian(section.AsSpan(64, 8), 0x3333333333333333);
+        string[] allFields = ["ErrorStatus 0x0000000000010A00", "實體位址 0x20000000000001",
+            "位址遮罩 0x3F", "NUMA 節點 3", "card 4", "模組 5", "bank 6", "device 7",
+            "row 8", "column 9", "出錯位元 10", "RequesterId 0x1111111111111111",
+            "ResponderId 0x2222222222222222", "TargetId 0x3333333333333333",
+            "類型 單一位元 ECC", "rank 15", "SMBIOS card handle 0x0016", "SMBIOS 模組 handle 0x0017"];
+        var record = Fact(WheaMemoryFactsService.Collect([Rec(section)], DateTimeOffset.UnixEpoch),
+            WheaMemoryFactsService.RecordPrefix + "0001");
+        Assert.Contains(expected, record.Value);
+        foreach (string other in allFields.Where(value => value != expected))
+            Assert.DoesNotContain(other, record.Value);
+        Assert.Equal(bit is 1 or 11 or 12 or 13, record.Sensitive);
+        Assert.Null(record.NumericValue);
+    }
+
+    [Fact]
+    public void InvalidErrorTypeCannotCreateDiagnosisOrSummaryClassification()
+    {
+        var facts = WheaMemoryFactsService.Collect(
+            [Rec(Section(validBits: 0, errorType: 2))], DateTimeOffset.UnixEpoch);
+        var record = Fact(facts, WheaMemoryFactsService.RecordPrefix + "0001");
+        var summary = Fact(facts, WheaMemoryFactsService.SummaryKey);
+        Assert.DoesNotContain("單一位元 ECC", record.Value);
+        Assert.DoesNotContain("典型處置", record.Value);
+        Assert.DoesNotContain("單一位元 ECC", summary.Value);
+        Assert.Contains("1 筆的錯誤類型未確認", summary.Value);
+    }
+
+    [Fact]
+    public void EventOffsetsAreConvertedBeforeLabellingUtc()
+    {
+        var local = new DateTimeOffset(2026, 11, 17, 12, 0, 0, TimeSpan.FromHours(8));
+        HardwareFact Read(DateTimeOffset when) => Fact(WheaMemoryFactsService.Collect(
+            [new WheaMemoryRecord(46, when, Section(), null)], DateTimeOffset.UnixEpoch),
+            WheaMemoryFactsService.RecordPrefix + "0001");
+        Assert.StartsWith("2026-11-17 04:00:00Z", Read(local).Value);
+        Assert.Equal(Read(local.ToUniversalTime()).Value, Read(local).Value);
+    }
+
+    [Fact]
+    public void PhysicalAddressRemainsExactAndIsRedactedByDefaultExport()
+    {
+        const ulong address = 0x20000000000001; // Cannot be represented exactly as double.
+        var facts = WheaMemoryFactsService.Collect(
+            [Rec(Section(validBits: 1UL << 1, physicalAddress: address))], DateTimeOffset.UnixEpoch);
+        var record = Fact(facts, WheaMemoryFactsService.RecordPrefix + "0001");
+        Assert.Contains("0x20000000000001", record.Value);
+        Assert.Null(record.NumericValue);
+        Assert.True(record.Sensitive);
+        var snapshot = HardwareSnapshotService.Create("3.30", facts, includeSensitive: true);
+        string json = HardwareSnapshotService.ToJson(snapshot);
+        Assert.DoesNotContain("20000000000001", json);
+    }
+
+    [Fact]
+    public void TruncatedEnumerationKeepsTheCperDecodingLimitation()
+    {
+        var at = DateTimeOffset.UnixEpoch;
+        var records = new WheaMemoryReadResult(
+            [new WheaMemoryRecord(46, at, null, WheaMemoryRecordsReader.BlobNotParsed)],
+            WheaMemoryReadStatus.Truncated, at.AddDays(-7), at, "candidate limit");
+        var summary = Fact(WheaMemoryFactsService.Collect(records, at), WheaMemoryFactsService.SummaryKey);
+        Assert.Equal(FactAvailability.Unknown, summary.Availability);
+        Assert.Null(summary.NumericValue);
+        Assert.Contains("非完整總數", summary.Value);
+        Assert.Contains("沒有可解的記憶體節區", summary.Value);
+        Assert.Contains("記憶體節區 0 筆", summary.Value);
+        Assert.Contains(WheaMemoryRecordsReader.BlobNotParsed, summary.Value);
+        Assert.Contains("哪一條 DIMM", summary.Value);
+    }
+
     [Fact]
     public void 未收錄的錯誤類型碼_不命名()
     {
@@ -222,7 +370,7 @@ public class WheaMemoryFactsTests
             [Rec(new byte[40]), Rec(Section())], DateTimeOffset.UnixEpoch);
         var s = Fact(facts, WheaMemoryFactsService.SummaryKey);
         Assert.Contains("1 筆的節區不足 80 位元組", s.Value);
-        Assert.Single(facts.Where(f => f.Key.StartsWith(WheaMemoryFactsService.RecordPrefix)));
+        Assert.Single(facts, f => f.Key.StartsWith(WheaMemoryFactsService.RecordPrefix));
     }
 
     [Fact]
@@ -246,7 +394,9 @@ public class WheaMemoryFactsTests
         };
         var s = Fact(WheaMemoryFactsService.Collect(records, DateTimeOffset.UnixEpoch),
             WheaMemoryFactsService.SummaryKey);
-        Assert.Contains("2 筆 WHEA 記憶體記錄", s.Value);
+        Assert.Contains("2 筆 WHEA-Logger 候選事件", s.Value);
+        Assert.Contains("記憶體節區 2 筆", s.Value);
+        Assert.Equal(2d, s.NumericValue);
         Assert.Contains("1 筆韌體有給實體位址", s.Value);
         Assert.Contains("1 筆有給模組資訊", s.Value);
     }
@@ -267,6 +417,9 @@ public class WheaMemoryFactsTests
     public void 記錄讀取器的候選ID與窗_要和事件事實一致()
     {
         Assert.Equal(EventIdEvidenceFactsService.WindowDays, WheaMemoryRecordsReader.WindowDays);
+        Assert.Equal(new[] { 1, 17, 18, 19, 23, 46, 47 }, WheaMemoryRecordsReader.CandidateEventIds);
+        Assert.Contains(1, WheaMemoryRecordsReader.CandidateEventIds);
+        Assert.Contains(18, WheaMemoryRecordsReader.CandidateEventIds);
         Assert.Contains(17, WheaMemoryRecordsReader.CandidateEventIds);
         Assert.Contains(19, WheaMemoryRecordsReader.CandidateEventIds);
         Assert.Contains(23, WheaMemoryRecordsReader.CandidateEventIds);
@@ -275,9 +428,13 @@ public class WheaMemoryFactsTests
     }
 
     [Fact]
-    public void 讀取器不拆blob_理由要說出來()
+    public void 讀取器沒有可驗證外層時_理由要說出來()
     {
-        Assert.Contains("不去拆 blob", WheaMemoryRecordsReader.BlobNotParsed);
-        Assert.Contains("沒有可核的出處", WheaMemoryRecordsReader.BlobNotParsed);
+        Assert.Contains("未提供可驗證", WheaMemoryRecordsReader.BlobNotParsed);
+        Assert.Contains("RawData 外層", WheaMemoryRecordsReader.BlobNotParsed);
+        var summary = Fact(WheaMemoryFactsService.Collect([new(46, DateTimeOffset.UnixEpoch, null, WheaMemoryRecordsReader.BlobNotParsed)], DateTimeOffset.UnixEpoch), WheaMemoryFactsService.SummaryKey);
+        Assert.Equal(1d, summary.NumericValue);
+        Assert.Contains(WheaMemoryRecordsReader.BlobNotParsed, summary.Value);
+        Assert.Contains("記憶體節區 0 筆", summary.Value);
     }
 }

@@ -9,6 +9,35 @@ namespace XinSpect.Tests;
 /// <summary>離線 Redfish：只讀本機目錄、不連網；壞資料與路徑穿越只記警告，不補 0。</summary>
 public class RedfishBundleTests
 {
+    [Theory]
+    [InlineData("Percent", false)]
+    [InlineData(null, false)]
+    [InlineData("RPM", true)]
+    public void 泛用風扇Reading只有明確RPM才當轉速(string? unit, bool accepted)
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "xinspect-redfish-unit-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            FullBundle(dir);
+            string thermal = JsonSerializer.Serialize(new { Fans = new[] { new { Name = "Fan1", Reading = 40, ReadingUnits = unit } } });
+            Write(dir, "redfish/v1/Chassis/1/Thermal/index.json", thermal);
+            var inventory = RedfishBundleService.Read(dir);
+            var fan = Assert.Single(inventory.Fans);
+            Assert.Equal(accepted ? 40d : (double?)null, fan.ReadingRpm);
+            Assert.Equal(40, fan.RawReading);
+            Assert.Equal(unit, fan.ReadingUnits);
+            if (!accepted)
+            {
+                var fact = RedfishFactsService.Collect(inventory, DateTimeOffset.UnixEpoch)
+                    .Single(f => f.Key.StartsWith("rf.item.fan."));
+                Assert.Contains("不可換算為 RPM", fact.Value);
+                Assert.Contains("40", fact.Value);
+                Assert.Contains(unit ?? "未知", fact.Value);
+            }
+        }
+        finally { if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true); }
+    }
+
     private static void Write(string root, string relative, string json)
     {
         string path = Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar));
@@ -42,7 +71,7 @@ public class RedfishBundleTests
         """);
         Write(root, "redfish/v1/Chassis/1/Thermal/index.json", """
         {"Temperatures":[{"Name":"Inlet","ReadingCelsius":24,"UpperCritical":45,"Status":{"Health":"OK"}}],
-         "Fans":[{"Name":"Fan1","Reading":8000,"Status":{"Health":"OK"}}]}
+         "Fans":[{"Name":"Fan1","Reading":8000,"ReadingUnits":"RPM","Status":{"Health":"OK"}}]}
         """);
         Write(root, "redfish/v1/Chassis/1/Power/index.json", """
         {"PowerSupplies":[{"Name":"PSU1","Model":"PWR-800","FirmwareVersion":"2.0",
@@ -82,6 +111,14 @@ public class RedfishBundleTests
             Assert.Equal(320, root.GetProperty("powerConsumedWatts").GetDouble());
             Assert.Equal(0, root.GetProperty("warnings").GetArrayLength());
             Assert.Contains("不連網", root.GetProperty("note").GetString()!, StringComparison.Ordinal);
+            Assert.Equal(HardwareSnapshotService.RedactedValue, root.GetProperty("chassis")[0].GetProperty("serialNumber").GetString());
+            Assert.Equal(HardwareSnapshotService.RedactedValue, root.GetProperty("systems")[0].GetProperty("serialNumber").GetString());
+            Assert.DoesNotContain("CH-1", stdout.ToString(), StringComparison.Ordinal);
+            Assert.DoesNotContain("SYS-1", stdout.ToString(), StringComparison.Ordinal);
+            var chassisFact = Assert.Single(root.GetProperty("facts").EnumerateArray(),
+                f => f.GetProperty("key").GetString() == "rf.item.chassis.1");
+            Assert.True(chassisFact.GetProperty("sensitive").GetBoolean());
+            Assert.Contains("來源採集時間", chassisFact.GetProperty("source").GetString());
         }
         finally { Directory.Delete(dir, recursive: true); }
     }

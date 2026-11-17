@@ -1,15 +1,34 @@
+using System.Diagnostics;
+
 namespace XinSpect;
 
+/// <summary>Acquisition bounds on this process's monotonic clock; not a provider update time.</summary>
+public sealed record SensorAcquisition(long StartedTimestamp, long CompletedTimestamp);
+
 public sealed record CoreTemperatureSample(
-    string Source, string DeviceIdentity, int CoreIndex, double Celsius, DateTimeOffset CapturedAtUtc);
+    string Source, string DeviceIdentity, int CoreIndex, double Celsius, DateTimeOffset CapturedAtUtc,
+    SensorAcquisition? Acquisition = null);
 
 public sealed record CoreTemperatureComparison(
     string DeviceIdentity, int CoreIndex, double PrimaryCelsius, double ExternalCelsius,
     double DifferenceCelsius, double SampleGapMilliseconds, DateTimeOffset CapturedAtUtc);
 
+public sealed record SensorCrossCheckSnapshot(IReadOnlyList<CoreTemperatureSample> Primary,
+    IReadOnlyList<ExternalReading> External, string? SourceError = null);
+
 public static class SensorCrossCheckService
 {
     public static readonly TimeSpan MaximumSampleGap = TimeSpan.FromSeconds(3);
+
+    internal static SensorCrossCheckSnapshot CaptureCpuOnly()
+    {
+        if (!CoreTempSharedMem.TryRead(out _, out var error))
+            return new([], [], error);
+        using var primary = new SensorService(cpuOnly: true);
+        var samples = primary.CaptureCoreTemperatureSamples();
+        return CoreTempSharedMem.TryRead(out var readings, out error)
+            ? new(samples, readings) : new(samples, [], error);
+    }
 
     // LHM 0.9.6 GenericCpu.CoreString labels non-hybrid cores from 1; Core Temp channels start at 0.
     internal static int LhmCoreIndex(string? name)
@@ -39,7 +58,13 @@ public static class SensorCrossCheckService
         foreach (var (key, p) in primaryGroups)
         {
             if (p.Length != 1 || !externalGroups.TryGetValue(key, out var e) || e.Length != 1) continue;
-            double gap = Math.Abs((p[0].CapturedAtUtc - e[0].CapturedAtUtc).TotalMilliseconds);
+            if (p[0].Acquisition is not { } primaryWindow || e[0].Acquisition is not { } externalWindow
+                || primaryWindow.StartedTimestamp < 0 || externalWindow.StartedTimestamp < 0
+                || primaryWindow.CompletedTimestamp < primaryWindow.StartedTimestamp
+                || externalWindow.CompletedTimestamp < externalWindow.StartedTimestamp) continue;
+            long earliest = Math.Min(primaryWindow.StartedTimestamp, externalWindow.StartedTimestamp);
+            long latest = Math.Max(primaryWindow.CompletedTimestamp, externalWindow.CompletedTimestamp);
+            double gap = (double)(((decimal)latest - earliest) * 1000 / Stopwatch.Frequency);
             if (gap > MaximumSampleGap.TotalMilliseconds) continue;
             results.Add(new CoreTemperatureComparison(key.DeviceIdentity, key.CoreIndex,
                 p[0].Celsius, e[0].Celsius, Math.Abs(p[0].Celsius - e[0].Celsius), gap,
@@ -76,7 +101,7 @@ public static class SensorCrossCheckService
         };
         if (!double.IsFinite(celsius) || celsius is <= 0 or > 130) return null;
         return new CoreTemperatureSample("Core Temp", reading.DeviceIdentity!,
-            reading.ChannelIndex!.Value, celsius, reading.CapturedAtUtc!.Value);
+            reading.ChannelIndex!.Value, celsius, reading.CapturedAtUtc!.Value, reading.Acquisition);
     }
 
     private static (string DeviceIdentity, int CoreIndex) Key(CoreTemperatureSample sample)

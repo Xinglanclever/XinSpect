@@ -1,5 +1,8 @@
 namespace XinSpect;
 
+/// <summary>Comparison requires matching units and reported provenance alongside each numeric value.</summary>
+public sealed record FleetFactMetadata(string Unit, FactAvailability Availability, FactTrustLevel Trust, string Source);
+
 /// <summary>
 /// 一次歷史快照的最小投影：機器識別、時間、以及「這台機器的型號」。
 /// </summary>
@@ -13,7 +16,8 @@ public sealed record FleetSnapshot(
     DateTimeOffset CapturedAtUtc,
     string? ModelKey,
     string? ModelText,
-    IReadOnlyDictionary<string, double> Facts);
+    IReadOnlyDictionary<string, double> Facts,
+    IReadOnlyDictionary<string, FleetFactMetadata>? Metadata = null);
 
 /// <summary>
 /// 同型號族群基線（U10 第三圈 EN-0001）——<b>只在本機彙總，不上傳、不跨機傳輸</b>。
@@ -50,6 +54,10 @@ public static class FleetBaselineFactsService
 
     public static IReadOnlyList<HardwareFact> Collect(IReadOnlyList<FleetSnapshot> snapshots, DateTimeOffset at)
     {
+        if (snapshots is FleetReadResult { Diagnostics.Count: > 0 } readResult)
+            return [new HardwareFact(SummaryKey, Category, "同型號族群基線", "讀取不完整，未建立基線", "", Source,
+                FactTrustLevel.Unknown, false, at, null, FactAvailability.Unknown,
+                string.Join("; ", readResult.Diagnostics)), BoundaryFact(at)];
         if (snapshots.Count == 0)
             return
             [
@@ -61,6 +69,12 @@ public static class FleetBaselineFactsService
             ];
 
         var typed = snapshots.Where(s => !string.IsNullOrWhiteSpace(s.ModelKey)).ToList();
+        var identified = typed.Where(s => !string.IsNullOrWhiteSpace(s.AnonymousMachineId)
+                && s.AnonymousMachineId != "（未提供）" && s.CapturedAtUtc != DateTimeOffset.MinValue)
+            .GroupBy(s => s.AnonymousMachineId, StringComparer.Ordinal)
+            .Where(g => g.Select(s => s.ModelKey).Distinct(StringComparer.Ordinal).Count() == 1)
+            .Where(g => g.Count(s => s.CapturedAtUtc == g.Max(x => x.CapturedAtUtc)) == 1)
+            .Select(g => g.OrderByDescending(s => s.CapturedAtUtc).First()).ToList();
         if (typed.Count == 0)
             return
             [
@@ -72,7 +86,7 @@ public static class FleetBaselineFactsService
             ];
 
         var facts = new List<HardwareFact>();
-        var groups = typed.GroupBy(s => s.ModelKey!, StringComparer.Ordinal)
+        var groups = identified.GroupBy(s => s.ModelKey!, StringComparer.Ordinal)
             .OrderByDescending(g => g.Count())
             .ThenBy(g => g.Key, StringComparer.Ordinal)
             .ToList();
@@ -83,24 +97,25 @@ public static class FleetBaselineFactsService
         foreach (var g in groups)
         {
             if (g.Count() < 2) continue;
-            multiGroups++;
             index++;
             var members = g.OrderBy(s => s.CapturedAtUtc).ToList();
-            facts.Add(PeerFact(index, g.Key, members, at));
+            var peer = PeerFact(index, g.Key, members, at);
+            facts.Add(peer);
+            if (peer.Availability == FactAvailability.Present) multiGroups++;
             groupFaces.Add($"{members[0].ModelText ?? g.Key}×{members.Count}");
         }
 
-        facts.Insert(0, SummaryFact(snapshots.Count, typed.Count, groups.Count, multiGroups, groupFaces, at));
+        facts.Insert(0, SummaryFact(snapshots.Count, typed.Count, identified.Count, groups.Count, multiGroups, groupFaces, index > 0, at));
         facts.Add(BoundaryFact(at));
         return facts;
     }
 
-    private static HardwareFact SummaryFact(int total, int typed, int groups, int multiGroups,
-        List<string> faces, DateTimeOffset at)
+    private static HardwareFact SummaryFact(int total, int typed, int identified, int groups, int multiGroups,
+        List<string> faces, bool hasPeers, DateTimeOffset at)
     {
-        string value = $"{total} 份本機快照・其中 {typed} 份帶得出型號、分成 {groups} 個型號"
+        string value = $"{total} 份本機快照・其中 {typed} 份帶得出型號、{identified} 個匿名識別組最新觀測、分成 {groups} 個型號"
             + (multiGroups == 0
-                ? "・**沒有一個型號出現兩次以上**——分不出「同型不同台」，所以這一輪給不出基線"
+                ? (hasPeers ? "・有同型號匿名識別組，但沒有可比共同鍵" : "・**沒有一個型號出現兩次以上**——沒有可比的第二個匿名識別組")
                 : $"・其中有 {multiGroups} 個型號出現兩次以上：{string.Join("、", faces)}")
             + "・全部計算在本機完成：**不上傳、不跨機傳輸、不查外部資料庫**"
             + "・界線：型號是字串相等，不是 SKU 知識（見 fleet.boundary）";
@@ -108,8 +123,8 @@ public static class FleetBaselineFactsService
         return new HardwareFact(SummaryKey, Category, "同型號族群基線", value, "份", Source,
             multiGroups > 0 ? FactTrustLevel.Derived : FactTrustLevel.Unknown, false, at,
             multiGroups > 0 ? multiGroups : null,
-            multiGroups > 0 ? FactAvailability.Present : FactAvailability.NotApplicable,
-            multiGroups > 0 ? null : "沒有任何型號出現兩次以上——不是「沒有差異」，是「沒有可以比的第二台」");
+            multiGroups > 0 ? FactAvailability.Present : FactAvailability.Unknown,
+            multiGroups > 0 ? null : hasPeers ? "沒有符合 metadata 與有限數值條件的共同鍵" : "沒有可比的第二個匿名識別組；識別碼不證明獨立實體機器");
     }
 
     private static HardwareFact PeerFact(int index, string modelKey, IReadOnlyList<FleetSnapshot> members,
@@ -122,7 +137,12 @@ public static class FleetBaselineFactsService
             .Aggregate((a, b) => a.Keys.Intersect(b.Keys, StringComparer.Ordinal)
                 .ToDictionary(k => k, k => a[k], StringComparer.Ordinal));
         var comparable = common
-            .Where(kv => members.All(m => m.Facts.TryGetValue(kv.Key, out double v) && !double.IsNaN(v)))
+            .Where(kv => members.All(m => m.Facts.TryGetValue(kv.Key, out double v) && double.IsFinite(v)
+                && m.Metadata is not null && m.Metadata.TryGetValue(kv.Key, out var meta)
+                && meta.Availability == FactAvailability.Present
+                && meta.Trust is not FactTrustLevel.Unknown and not FactTrustLevel.Speculative
+                && !string.IsNullOrWhiteSpace(meta.Source))
+                && members.Select(m => m.Metadata![kv.Key]).Distinct().Count() == 1)
             .ToList();
 
         bool enough = members.Count >= MinSamplesForSpread;
@@ -136,21 +156,25 @@ public static class FleetBaselineFactsService
             double median = Median(values);
             double current = latest.Facts[key];
             double dev = current - median;
+            if (!double.IsFinite(median) || !double.IsFinite(dev)) continue;
             double? z = null;
             if (enough)
             {
-                double mean = values.Average();
-                double variance = values.Sum(v => (v - mean) * (v - mean)) / (values.Count - 1);
+                double scale = values.Max(v => Math.Abs(v));
+                var scaled = values.Select(v => scale == 0 ? 0 : v / scale).ToArray();
+                double mean = scaled.Average();
+                double variance = scaled.Sum(v => (v - mean) * (v - mean)) / (values.Count - 1);
                 double sd = Math.Sqrt(variance);
-                z = sd > 0 ? (current - mean) / sd : null;
+                z = sd > 0 ? (current / scale - mean) / sd : null;
             }
             outliers.Add((key, current, median, dev, z));
         }
 
-        var top = outliers
-            .OrderByDescending(o => o.Z is { } z ? Math.Abs(z) : Math.Abs(o.Dev))
-            .Take(5)
-            .ToList();
+        var ranked = enough
+            ? outliers.OrderByDescending(o => o.Z.HasValue).ThenByDescending(o => o.Z.HasValue ? Math.Abs(o.Z.Value) : 0)
+                .ThenBy(o => o.Key, StringComparer.Ordinal)
+            : outliers.OrderBy(o => o.Key, StringComparer.Ordinal);
+        var top = ranked.Take(5).ToList();
 
         string spreadFace;
         if (top.Count == 0)
@@ -173,20 +197,21 @@ public static class FleetBaselineFactsService
         string value = $"型號 {members[0].ModelText ?? modelKey}（{members.Count} 份快照，最新 {latest.CapturedAtUtc:yyyy-MM-dd}）"
             + $"・共 {comparable.Count} 個鍵在每一份都有數值"
             + $"・{spreadFace}"
-            + "・界線：這是**同一台機器不同時間**或**同型號不同台**的快照放在一起比，"
-            + "兩者混在一起時「差異」可能只是時間造成的；"
+            + "・界線：按匿名識別組選取同型號最新快照，"
+            + "每個匿名識別組只取最新觀測；識別碼可能是內容指紋，不證明獨立實體機器；"
             + "**本鍵不判讀差異是好是壞**——它只說「離族群多遠」";
 
         return new HardwareFact(PeerPrefix + index.ToString("0000", System.Globalization.CultureInfo.InvariantCulture),
             Category, $"同型號族群 {index}", value, "份", Source, FactTrustLevel.Derived, false, at,
-            members.Count);
+            members.Count, top.Count > 0 ? FactAvailability.Present : FactAvailability.Unknown,
+            top.Count > 0 ? null : "沒有共同的有限可比數值鍵");
     }
 
     private static double Median(List<double> sorted)
     {
         int n = sorted.Count;
         if (n == 0) return double.NaN;
-        return n % 2 == 1 ? sorted[n / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2.0;
+        return n % 2 == 1 ? sorted[n / 2] : sorted[n / 2 - 1] / 2.0 + sorted[n / 2] / 2.0;
     }
 
     private static string Fmt(double v) =>
@@ -199,8 +224,8 @@ public static class FleetBaselineFactsService
             + "兩台機器型號字串一樣，不代表同一批、同樣散熱、同樣韌體版本；"
             + $"③ 樣本少於 {MinSamplesForSpread} 份時**只給中位數與範圍，不給 z 分數**——"
             + "兩三個樣本的標準差是裝飾品；④ 只比**每一份都有數值**的鍵，"
-            + "缺一份就不是同一個分母；⑤ 同一台機器不同時間的快照與同型號不同台的快照"
-            + "會混在一起，本版**不區分**——「差異」可能只是時間造成的；"
+            + "缺一份就不是同一個分母；⑤ 匿名識別碼可能是內容指紋，不證明實體機器身份；"
+            + "按匿名識別組只取最新一份；缺識別或型號衝突者不進基線；"
             + "⑥ **不判讀差異是好是壞**：離群不等於故障，中位數也不等於正常",
-            "", "專案界線宣告（無外部來源）", FactTrustLevel.Measured, false, at, null);
+            "", "專案界線宣告（無外部來源）", FactTrustLevel.Derived, false, at, null);
 }

@@ -11,8 +11,8 @@ namespace XinSpect;
 /// 這句話接得上「屬於哪一類硬體」。
 /// </para>
 /// <para>
-/// <b>沒有新讀取面：</b>純投影，Collect 不做 I/O、不開行程。事件 data 段的外層包裝本版不拆
-/// （沿第 326 輪界線），所以節區位元組的逐欄解碼器留待下一輪；本輪只有對照表與政策。
+/// <b>沒有新讀取面：</b>純投影，Collect 不做 I/O、不開行程。本知識包只列對照表與政策；
+/// 已接受事件的有界 CPER 記憶體、PCIe、Processor Generic 與 XPF 安全投影由各事實服務處理，不代表所有節區均已支援。
 /// </para>
 /// </remarks>
 public static class WheaSectionFactsService
@@ -39,8 +39,8 @@ public static class WheaSectionFactsService
         [
             new HardwareFact(SummaryKey, Category, "WHEA 節區知識包彙總",
                 $"收錄 {sections} 條節區型別 GUID、{notify} 條通知類型 GUID、{ports} 格 PCIe 埠型別碼"
-                + "・這是**解碼表**（讓事件與節區說的話可以被讀懂），不是行為——本版沒有節區位元組的取得通路，"
-                + "逐欄解碼器待下一輪（見 whea.sec.boundary）"
+                + "・這是**解碼表**（讓事件與節區說的話可以被讀懂），不代表這台機器曾出現這些節區；"
+                + "已接受事件的記憶體、PCIe 與 Processor Generic 節區另由 whea.mem／whea.pcie／whea.proc 事實列出（見 whea.sec.boundary）"
                 + "・Processor Specific: IA64 故意不收：Linux cper.h 該條的 GUID_INIT 位元組參數 9 個（巨集收 8 個），"
                 + "巨集自 IA64 移除後從未被展開所以沒人發現——位元組序列不可信，本版不命名其 GUID",
                 "條", Source, FactTrustLevel.Measured, false, at, sections),
@@ -62,10 +62,10 @@ public static class WheaSectionFactsService
                 + "・兩份公開源（UEFI 規格附錄 N 與 Linux cper.h）無法對出一致的位元組序列＝**待核**，"
                 + "照專案規則無出處不出值"),
             new HardwareFact(BoundaryKey, Category, "WHEA 節區知識包的界線宣告",
-                "① 本版只有**對照表**：節區型別 GUID、通知類型、PCIe 埠型別；處理器／PCIe／PCI-X 節區的"
-                + "逐欄解碼器留待下一輪（第 326 輪已解記憶體節區那一種）；"
-                + "② **節區位元組本版拿不到**——事件 data 段的外層包裝沒有可核出處，不拆 blob；"
-                + "解碼器以純函式形狀存在，位元組由呼叫端提供，沒有就是 NotApplicable 並寫明缺什麼；"
+                "① 本知識包只有**對照表**：節區型別 GUID、通知類型、PCIe 埠型別；處理器專屬／PCI-X 節區的"
+                + "逐欄解碼未全實作；記憶體、PCIe 與 Processor Generic 已接受事件的有界投影由 whea.mem／whea.pcie／whea.proc 服務處理；XPF 處理器專屬安全檢查欄位與 context 結構描述由 whea.xpf 處理，身分／位址／暫存器資料不輸出；"
+                + "② **本知識包不做 I/O**——不自行讀事件或拆 blob；已接受事件外層須通過版本、長度與描述符驗證；"
+                + "未取得可驗證節區不等於硬體不存在，也不代表沒有錯誤；"
                 + "③ **未收錄的 GUID 政策**（U10-WH-0013）：原始列出、不猜語意——查表回 null 就是「知識包沒收錄」，"
                 + "不是「不存在」；"
                 + "④ **GHES 泛用錯誤狀態塊**（U10-WH-0014）：本版只有出處宣告（cper.h／HEST），沒有解碼實作，"

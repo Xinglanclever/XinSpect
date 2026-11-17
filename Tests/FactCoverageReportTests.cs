@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -290,6 +290,22 @@ public class FactCoverageReportTests
         // PCI、I/O 0x80、SMBIOS 與 CPUID 沒有可逐列對應的同義資料。第五條是 Microsoft Learn 全頁
         // 86 類清單 vs 直接 WQL 查詢 22 類的盤點，來源字面由 WmiSupplementFactsTests 逐類對帳，
         // 不是硬體支援率或第二條硬體讀取路徑。不上湊數規則，也不以家族豁免隱藏；上限移到 473。
+        // 2026-11-17 第 356 輪（WH-0006）：+2 條 whea.pcie.summary／whea.pcie.boundary。
+        // 前者統計同一批已保留 WHEA 事件之驗證 PCIe 節區，後者申報解碼與歸因界線；
+        // 兩者皆來自單一 saved-event 投影，沒有獨立第二來源可交叉。保留未覆蓋申報，
+        // 不新增湊數規則或家族豁免；基線由 473 移至 475，合成樣本不代表真機相容。
+        // 2026-11-17 第 357 輪（WH-0002）：+2 條 whea.proc.summary／whea.proc.boundary。
+        // 同一份已保留 WHEA 事件的 Processor Generic 節區投影與歸因界線，沒有獨立第二來源，
+        // 不拿目前 CPU/PnP 盤點比對歷史 ProcessorId；保留未覆蓋，基線475→477，不新增豁免或湊數規則。
+        // 合成payload驗證欄位契約，不是跨系統producer相容或實體CPU故障歸因證據。
+        // R381 WH-0001: +2 XPF summary/boundary facts share saved WHEA evidence; no independent
+        // identity/source exists for cross-validation. Retain uncovered status (477->479), no exemption.
+        // R380/R382: existing memory.current/rate were emitted by an Add wrapper that the static
+        // scanner did not recognize. Moving them to the shared producer makes both visible.
+        // These are two existing keys, not two new capabilities. Their per-quantity selected
+        // provenance does not provide an independent same-scope current-value observation:
+        // WMI configured rate and SPD nominal JEDEC are not controller current measurements.
+        // Retain uncovered status (479->481), with no exemption or fabricated comparison rule.
         var s = FactCoverageReport.Report(ScanFactKeys(), LoadRules());
         int baseline = FactCoverageReport.ReviewedUncoveredBaseline;
         Assert.True(s.Uncovered <= baseline,

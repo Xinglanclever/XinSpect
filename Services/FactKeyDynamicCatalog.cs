@@ -1,4 +1,4 @@
-﻿namespace XinSpect;
+namespace XinSpect;
 
 /// <summary>
 /// 動態鍵前綴目錄——「哪些鍵家族会在執行期出现、但成员编译期数不出来」的显式申报。
@@ -56,6 +56,12 @@ public static class FactKeyDynamicCatalog
                 "離線 Redfish 目錄裡逐項一筆（成員＝離線包裡有幾台管理器／機箱／系統／電源／風扇／溫度，編譯期數不出來）——" +
                 "末段是 BMC 給的 Id 的 ASCII 化（非文數字換連字號、截長 40）；同一份包重讀得同一組鍵；" +
                 "信任等級一律 Reported：值是 BMC 的自我宣告，本工具沒有驗證",
+            ["whea.xpf.rec."] =
+                "逐筆已接受 WHEA 事件的 XPF 處理器專屬節區，成員由該批有效節區決定；最多列16節區，鍵只用列出序號，硬體與事件身分值不輸出",
+            ["whea.proc.rec."] =
+                "逐筆已接受 WHEA 事件的 Processor Generic 節區，成員由事件內的節區 GUID 與描述符索引決定；EventRecordID＋描述符索引作複合身分，最多列16節區，不把 ProcessorId 當 Windows 邏輯 CPU 索引",
+            ["whea.pcie.rec."] =
+                "逐筆已驗證 WHEA 事件的 PCIe 節區；成員由 EventRecordID 與描述符索引決定，另有敏感序號子事實；最多列16節區，成員不是編譯期常數",
             ["whea.mem.rec."] =
                 "逐筆 WHEA 記憶體錯誤記錄一筆（成員＝這台機器回報過幾筆，編譯期數不出來）——" +
                 "序號按時間新到舊；節區讀不到或太短的那一筆不佔成員（它會在彙總裡如實計數）",
@@ -127,7 +133,7 @@ public static class FactKeyDynamicCatalog
             ["storage.reliability."] =
                 "單碟可靠性計數器逐碟逐欄一筆（碟序 × 19 欄）——有幾顆碟、哪幾欄提供者沒給，都是機器與驅動器韌體的事實",
             ["asset.field."] =
-                "SMBIOS 資產欄位逐一筆（欄名來自表定義：系統製造商／主機板序號…）——欄位集是規範的性質不是常數，且缺失欄也要有地方標缺",
+                "SMBIOS 資產欄位逐一筆（成員來自表定義；製造商／型號固定為 system_manufacturer／system_model，其餘沿用欄名）——欄位集是規範的性質不是常數，且缺失欄也要有地方標缺",
             ["sa.ifeo."] =
                 "IFEO 逐映像一筆（映像名來自登錄檔枚舉，任意字串）——哪些映像掛了 Debugger 由機器的事實決定；成員是『掛了東西』的映像，沒掛的不產鍵",
             ["sa.lsp."] =
@@ -141,7 +147,7 @@ public static class FactKeyDynamicCatalog
             ["net.listen."] =
                 "監聽埠逐埠一筆（協定＋埠號）——這台機器在等誰連入是機器狀態，埠集由連線表決定，编译期列不完",
             ["numa.node."] =
-                "NUMA 節點逐個一筆（節點號）——節點數由 GetNumaHighestNodeNumber 回報，單節點到 8 節點的平台都存在",
+                "NUMA 節點與可用記憶體逐節點列示（numa.node.{id}／{id}.available_bytes）——成員由 GetLogicalProcessorInformationEx 實際列舉的節點 ID 決定；可用 bytes 來自 GetNumaAvailableMemoryNodeEx，不是安裝容量或跨節點延遲／頻寬量測",
             ["acpi.table."] = "ACPI 表逐表一筆（簽章＋同簽章序號）——這台機器的韌體提供了哪些表是機器的事實，簽章與數量編譯期列不完；acpi.tables 彙總鍵仍在靜態目錄。",
             ["in.deps."] =
                 "已載入模組逐條一筆（模組檔名）——載入哪些 DLL 由這個行程當下的事實決定，檔名任意；" +

@@ -12,10 +12,10 @@ Where it can read, it gives the value and its source (which register, which WMI 
 
 *Altius, accuratius, stabilius—veracius.*
 
-![Version](https://img.shields.io/badge/version-3.30-4C8DFF)
+![Version](https://img.shields.io/badge/version-3.31-4C8DFF)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![Tests](https://img.shields.io/badge/tests-8235%20passed-3FB950)
+![Tests](https://img.shields.io/badge/tests-9624%20passed-3FB950)
 ![Mutation Score](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 > The 82% Stryker score covers only the pure-function `XinSpect.Decoders` library, not the GUI, CLI, or privileged access layer.
 ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
@@ -25,7 +25,7 @@ A **free, open-source Windows x64** toolbox: machine inspection, monitoring, ove
 
 Ships as a single portable executable. Low-level reads are **read-only by default**; advanced diagnostics and CPU/DRAM stress tests are **off by default**; hardware writes require a second safety switch plus per-action confirmation. It **collects and transmits no user data**.
 
-> **Document scope (v3.30).** This English edition mirrors the structure of the Traditional Chinese reference README. The long-form narrative (page-by-page anatomy, per-key provenance, threshold tables) lives in the Chinese encyclopedia, [docs/百科-v3.17.md](docs/百科-v3.17.md); where the two disagree, the Chinese text is correct.
+> **Document scope (v3.31 Special Edition).** This English edition mirrors the structure of the Traditional Chinese reference README. The long-form narrative (page-by-page anatomy, per-key provenance, threshold tables) lives in the Chinese encyclopedia, [docs/百科-v3.17.md](docs/百科-v3.17.md); where the two disagree, the Chinese text is correct.
 
 ## Contents
 
@@ -91,17 +91,17 @@ Running unelevated is not a fault: those pages show "—" plus the reason. That 
 
 | File | Size | Notes |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.30/XinSpect.exe) | 36,658,841 bytes | Main program. The BlueSquadron guardian is built in; the "control console" button bridges to the xsc terminal |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.30/XinSpectConsole.exe) | 98,552,475 bytes | The xsc terminal (CLI). Runs standalone and is also invoked from the main program; carries the .NET 10 runtime, hence the size |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.30/BlueSquadronBridge.exe) | 6,531,620 bytes | Standalone guardian, for running protection without the main program |
-| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.30/XinSpect-full.exe) | 209,425,088 bytes | Main program, runtime included: bundles the .NET 10 Desktop Runtime (same features as XinSpect.exe) |
-| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.30/XinSpectConsole-nort.exe) | 64,754,694 bytes | xsc terminal for Windows 11 / Server 2025, no runtime: requires .NET 10 Desktop Runtime |
-| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.30/XinSpectConsole-legacy-nort.exe) | 64,750,686 bytes | xsc terminal for Windows 10 / 2016 / 2019 / 2022, plain text, no runtime: requires .NET 10 Desktop Runtime |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.30/XinSpectDeploy.exe) | 29,696 bytes | One-step installer. First pick A (main program) or B (xsc terminal); then pick a download source (GitHub / Drive / acceleration node). Shows progress, speed and time remaining |
-| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.30/XsRegProbe.sys) | 24,064 bytes | XsRegProbe kernel probe driver (whitelisted read-only MSR/MMIO; internal review is not third-party certification). Not Microsoft-signed: the main program installs it into `ProgramData\XinSpect\Driver\` and registers a service; manual loading needs testsigning |
-| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.30/XinSpectConsole-legacy.exe) | 98,548,467 bytes | xsc terminal, **plain-text compatible build** for classic consoles on Windows 10 / Server 2016, 2019, 2022: no colour, no box drawing; facts/book/help behave the same |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.31/XinSpect.exe) | 37,114,521 bytes | Main program. The BlueSquadron guardian is built in; the "control console" button bridges to the xsc terminal |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.31/XinSpectConsole.exe) | 98,740,899 bytes | The xsc terminal (CLI). Runs standalone and is also invoked from the main program; carries the .NET 10 runtime, hence the size |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.31/BlueSquadronBridge.exe) | 6,531,620 bytes | Standalone guardian, for running protection without the main program |
+| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.31/XinSpect-full.exe) | 209,880,768 bytes | Main program, runtime included: bundles the .NET 10 Desktop Runtime (same features as XinSpect.exe) |
+| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.31/XinSpectConsole-nort.exe) | 65,216,518 bytes | xsc terminal for Windows 11 / Server 2025, no runtime: requires .NET 10 Desktop Runtime |
+| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.31/XinSpectConsole-legacy-nort.exe) | 65,216,606 bytes | xsc terminal for Windows 10 / 2016 / 2019 / 2022, plain text, no runtime: requires .NET 10 Desktop Runtime |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.31/XinSpectDeploy.exe) | 29,696 bytes | One-step installer. First pick A (main program) or B (xsc terminal); then pick a download source (GitHub / Drive / acceleration node). Shows progress, speed and time remaining |
+| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.31/XsRegProbe.sys) | 24,064 bytes | XsRegProbe kernel probe driver (whitelisted read-only MSR/MMIO; internal review is not third-party certification). Not Microsoft-signed: the main program installs it into `ProgramData\XinSpect\Driver\` and registers a service; manual loading needs testsigning |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.31/XinSpectConsole-legacy.exe) | 98,740,987 bytes | xsc terminal, **plain-text compatible build** for classic consoles on Windows 10 / Server 2016, 2019, 2022: no colour, no box drawing; facts/book/help behave the same |
 
-> Sizes above are the published bytes of **v3.30**; trust the Release page. Per-asset SHA-256 is in `SHA256SUMS.txt` on the Release page (it guards against transfer corruption — an attacker who can replace the whole Release is out of scope; non-repudiation needs signing, which is scheduled).
+> Sizes above are the published bytes of **v3.31**; trust the Release page. Per-asset SHA-256 is in `SHA256SUMS.txt` on the Release page (it guards against transfer corruption — an attacker who can replace the whole Release is out of scope; non-repudiation needs signing, which is scheduled).
 
 **Requirements**: Windows 10 1903+ / Windows 11, x64. Builds without a runtime need the .NET 10 Desktop Runtime installed; `XinSpect-full.exe` and `XinSpectConsole.exe` already carry it.
 
@@ -116,7 +116,7 @@ Uninstall: the main program is a single executable — delete it. If the XsRegPr
 
 ## The xsc terminal
 
-`XinSpectConsole.exe` (`xsc`) is the terminal and scripting entry point: **49 commands**, sharing the same read-only services as the GUI — no new writes, no daemon, no network.
+`XinSpectConsole.exe` (`xsc`) is the terminal and scripting entry point: **51 commands**, sharing the same read-only services as the GUI — no new writes, no daemon, no network.
 
 ```text
 xsc                          # REPL (history, Tab completion, Ctrl+C to stop)
@@ -140,7 +140,7 @@ xsc --lang zh-TW             # interface language
 
 ## Safety and data sovereignty
 
-- **Read-only by default.** Low-level reads (registers, SPD, SMART, ACPI) never write; advanced diagnostics and CPU/DRAM stress are off by default; hardware writes need a second switch plus per-action confirmation.
+- **Safe reading policy by default.** A read path may use constrained address-selection or control transactions; side effects, ownership and timeouts still require checks. Paths without verified safety conditions are refused. Advanced diagnostics and CPU/DRAM stress are off by default; hardware state changes need a second switch plus per-action confirmation.
 - **No telemetry at all.** No accounts, no cloud sync, nothing collected or uploaded; live data stays on this machine.
 - **Every networked feature is individually opt-in** (five paths in total); everything else runs locally.
 - **API keys are encrypted with Windows DPAPI** before they are written to settings.json. If decryption fails you get "no key, plus the reason", and the settings page shows how the key is actually stored on disk.
@@ -156,16 +156,18 @@ Every number here can be counted on a clean checkout. **How you count is part of
 
 | Item | Count | How to count (from the repo root) |
 |---|---:|---|
-| Catalogue keys / domains | 1,208 / 161 | Members of `Keys` in `Services/FactKeyCatalog.cs`; deduplicated first segment |
-| Dynamic key families | 69 | Members of `Families` in `Services/FactKeyDynamicCatalog.cs` |
+| Catalogue keys / domains | 1,216 / 162 | Members of `Keys` in `Services/FactKeyCatalog.cs`; deduplicated first segment |
+| Dynamic key families | 72 | Members of `Families` in `Services/FactKeyDynamicCatalog.cs` |
 | Reachable pages | 65 | `Key =` entries in `Nav/PageRegistry.cs` |
 | Help entries | 288 | Members of `Entries` in `Nav/HelpCatalog.cs` |
-| Service files | 690 | `find Services -name '*.cs' \| wc -l` |
-| Test cases (baseline) | 8,235 | `ProjectTests` in `Tests/TestSuiteBaseline.cs` |
-| CLI commands | 50 | `grep -c 'case "' XinSpectCli/Program.cs` |
-| Changelog entries | 134 | Members of `Entries` in `Nav/ChangelogCatalog.cs` |
+| Service files | 708 | `find Services -name '*.cs' \| wc -l` |
+| Test cases (baseline) | 9,624 | `ProjectTests` in `Tests/TestSuiteBaseline.cs` |
+| CLI commands | 51 | `grep -c 'case "' XinSpectCli/Program.cs` |
+| Changelog entries | 136 | Members of `Entries` in `Nav/ChangelogCatalog.cs` |
 
-Of 1,208 catalogue keys, most are reachable on mainstream platforms; special chipsets, OEM BIOSes, virtual machines and older platforms fall back to the six states. The fact catalogue (1,208 keys) spans hardware, operating system, security, diagnostics, provenance and governance — it is a catalogue, not a count of hardware readings. All 1,208 keys are listed with provenance in the Chinese encyclopedia.
+Of 1,216 catalogue keys, most are reachable on mainstream platforms; special chipsets, OEM BIOSes, virtual machines and older platforms fall back to the six states. The fact catalogue (1,216 keys) spans hardware, operating system, security, diagnostics, provenance and governance — it is a catalogue, not a count of hardware readings. All 1,216 keys are listed with provenance in the Chinese encyclopedia.
+
+Source snapshot (November 18, 2026): 708 service files, 1,722 C# files and 727 top-level test files; 7,303 public instance Fact methods (including 7 FsCheck Properties) and 502 Theory methods, 7,805 in total. These AST counts are neither runtime cases nor an ULTIMATE-10000 completion rate. The 9,624-case baseline is the v3.31 full regression; source counts are separate evidence.
 
 **What this table does not prove.** A catalogue key is not a hardware reading; the review catalogue (116 items in v3.17, 111 in v3.18) is not a count of confirmed defects and not a third-party audit.
 
@@ -189,7 +191,7 @@ cd XinSpect
 
 dotnet build XinSpect.csproj -c Release
 dotnet build XinSpectCli/XinSpectCli.csproj -c Release
-dotnet test Tests/XinSpect.Tests.csproj          # 8,235-case baseline
+dotnet test Tests/XinSpect.Tests.csproj          # 9,624-case baseline
 
 python Tools/gen-docs-html.py                    # regenerate 百科.html / 手冊.html
 python Tools/gen-readme-domains.py --check       # guard: README domain expansion vs catalogue
@@ -225,10 +227,11 @@ Third-party components (Intel XTU SDK, LibreHardwareMonitor, TraceEvent, NAudio,
 
 ## Version history
 
-The table below lists every release from 2.60 onward with its one-line summary. The complete itemised ledger (135 entries) lives in [docs/百科-v3.17.md](docs/百科-v3.17.md) (part 11); per-release notes are on the [Releases page](https://github.com/Xinglanclever/XinSpect/releases).
+The table below lists every release from 2.60 onward with its one-line summary. The complete itemised ledger (136 entries) lives in [docs/百科-v3.17.md](docs/百科-v3.17.md) (part 11); per-release notes are on the [Releases page](https://github.com/Xinglanclever/XinSpect/releases).
 
 | Version | Date | Summary |
 |---|---|---|
+| 3.31 | 2026-11-18 | Special Edition: CLI memory provenance and PCIe ECAM boundary hardening |
 | 3.30 | 2026-11-16 | Clearer provenance and more reliable measurements |
 | 3.29 | 2026-11-16 | More accurate timing, more reliable hardware scans |
 | 3.28 | 2026-11-14 | Customizable Toolbox and Read-only Agent Bridge |
@@ -309,4 +312,4 @@ If you would like to support individual maintenance, you can buy the author a co
 
 ---
 
-**About this document**: it corresponds to XinSpect v3.30 (2026-11-16). The three READMEs differ only in language; their numbers and safety boundaries are pinned to one source by guard tests.
+**About this document**: it corresponds to XinSpect v3.31 Special Edition (2026-11-18). The three READMEs differ only in language; their numbers and safety boundaries are pinned to one source by guard tests.

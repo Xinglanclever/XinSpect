@@ -32,8 +32,30 @@ namespace XinSpect;
 /// </summary>
 public sealed class BlueSquadronModule : ObservableObject, IDisposable
 {
-    public BlueSquadronModule()
+    private readonly Func<IBlueSquadronBridgeClient> _engineFactory;
+    private readonly Action<Action>? _uiScheduler;
+    private readonly Func<CancellationToken, Task> _pollDelay;
+    private readonly object _bridgeGate = new();
+    private BridgeSession? _session;
+    private long _generation;
+
+    private sealed class BridgeSession(long generation)
     {
+        public long Generation { get; } = generation;
+        public CancellationTokenSource Cancellation { get; } = new();
+        public IBlueSquadronBridgeClient? Client { get; set; }
+        public bool Published { get; set; }
+        public Task Completion { get; set; } = Task.CompletedTask;
+    }
+
+    public BlueSquadronModule() : this(() => new NativeBlueSquadronBridgeClient(), null, null) { }
+
+    internal BlueSquadronModule(Func<IBlueSquadronBridgeClient> engineFactory,
+        Action<Action>? uiScheduler, Func<CancellationToken, Task>? pollDelay)
+    {
+        _engineFactory = engineFactory;
+        _uiScheduler = uiScheduler;
+        _pollDelay = pollDelay ?? (ct => Task.Delay(TimeSpan.FromSeconds(10), ct));
         // 時間軸有無內容要能反映到畫面（空狀態提示）。
         // 繫結 Collection.Count 配 bool 轉換器是行不通的——Count 是 int，
         // 轉換器只認 bool，會恆回同一個結果且不報錯。
@@ -87,25 +109,30 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
     }
 
     private bool _bridgeEnabled;   // 預設關：開關由設定檔決定，未設定（新安裝）時不啟動守護進程
-    /// <summary>安全頁「守護進程」滑動開關：關閉即停止進程與輪詢（唯讀態勢評估照常），選擇記入設定檔。</summary>
+    /// <summary>安全頁「守護進程」滑動開關：關閉即撤銷連線與輪詢；已進入啟動／IPC 的工作結束後清理進程。唯讀態勢評估照常，選擇記入設定檔。</summary>
     public bool BridgeEnabled
     {
-        get => _bridgeEnabled;
+        get { lock (_bridgeGate) return _bridgeEnabled; }
         set
         {
-            if (_bridgeEnabled == value) return;
-            _bridgeEnabled = value;
+            long generation;
+            lock (_bridgeGate)
+            {
+                if (_disposed || _bridgeEnabled == value) return;
+                _bridgeEnabled = value;
+                generation = ++_generation;
+                if (!value)
+                {
+                    _session?.Cancellation.Cancel();
+                    _bridgeAvailable = false;
+                    _bridgeStatus = "Bridge 已停止";
+                }
+            }
             OnPropertyChanged(nameof(BridgeEnabled));
-            if (_settings is not null && _settings.BlueSquadronEnabled != value)
-                _settings.BlueSquadronEnabled = value;
-            if (value)
-            {
-                if (Engine is null) _ = Task.Run(TryStartBridge);
-            }
-            else
-            {
-                StopBridge();
-            }
+            if (_settings is not null && _settings.BlueSquadronEnabled != BridgeEnabled)
+                _settings.BlueSquadronEnabled = BridgeEnabled;
+            if (value) TryStartBridge();
+            else NotifyStopped(generation);
         }
     }
 
@@ -114,8 +141,29 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
 
     // ── Bridge 生命週期 ──────────────────────────────────────────
 
-    public BlueSquadronEngine? Engine { get; private set; }
-    private CancellationTokenSource? _pollCts;
+    public BlueSquadronEngine? Engine
+    {
+        get
+        {
+            lock (_bridgeGate)
+                return _session is { Published: true } session && IsCurrentLocked(session)
+                    ? session.Client?.NativeEngine : null;
+        }
+    }
+
+    internal Task BridgeCompletion
+    {
+        get { lock (_bridgeGate) return _session?.Completion ?? Task.CompletedTask; }
+    }
+
+    private bool IsCurrentLocked(BridgeSession session)
+        => !_disposed && _bridgeEnabled && ReferenceEquals(_session, session)
+            && _generation == session.Generation && !session.Cancellation.IsCancellationRequested;
+
+    private bool IsCurrent(BridgeSession session)
+    {
+        lock (_bridgeGate) return IsCurrentLocked(session);
+    }
     private Dispatcher? _dispatcher;
     private bool _disposed;
 
@@ -132,173 +180,203 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
         _vm = vm;
 
         // 套用已保存的開關狀態：上次關閉守護進程的話，這次開機不再自動拉起
-        _settings = vm.Settings;
-        if (_bridgeEnabled != _settings.BlueSquadronEnabled)
+        long initializationGeneration;
+        lock (_bridgeGate)
         {
+            if (_disposed) return;
+            _settings = vm.Settings;
             _bridgeEnabled = _settings.BlueSquadronEnabled;
-            OnPropertyChanged(nameof(BridgeEnabled));
+            initializationGeneration = _generation;
         }
+        OnPropertyChanged(nameof(BridgeEnabled));
 
         await Task.Delay(3000);  // 讓 PlatformTrust、CpuSecurity、DriverAudit 等先跑完
 
-        // 姿態評估由安全頁 OnActivated 觸發；不在每次啟動時額外掃描整份 WMI/登錄表面。
-        if (!_bridgeEnabled)
+        lock (_bridgeGate)
         {
-            BridgeStatus = "守護進程已關閉（安全態勢於開啟本頁時評估）";
-            return;
+            if (_disposed || _generation != initializationGeneration) return;
+            _bridgeStatus = _bridgeEnabled
+                ? "守護進程啟動中；安全態勢於開啟本頁時評估"
+                : "守護進程已關閉（安全態勢於開啟本頁時評估）";
         }
-
-        BridgeStatus = "守護進程啟動中；安全態勢於開啟本頁時評估";
-        await Task.Run(() => TryStartBridge()).ConfigureAwait(false);
+        OnPropertyChanged(nameof(BridgeStatus));
+        TryStartBridge();
     }
 
     // ── Bridge 啟動 ─────────────────────────────────────────────
 
-    private int _starting;
-
-    /// <summary>帶重入保護的啟動入口：快速來回切換開關或初始化重跑時不會開出第二個進程。</summary>
+    // A retiring session keeps the slot until its owner has finished Start/Send and disposed it.
+    // Rapid OFF/ON never creates a second engine alongside that still-running session.
     private void TryStartBridge()
     {
-        if (Engine is not null) return;
-        if (Interlocked.Exchange(ref _starting, 1) == 1) return;
-        try { TryStartBridgeCore(); }
-        finally { Interlocked.Exchange(ref _starting, 0); }
+        lock (_bridgeGate)
+        {
+            if (_disposed || !_bridgeEnabled || _session is not null) return;
+            var session = new BridgeSession(_generation);
+            _session = session;
+            session.Completion = Task.Run(() => TryStartBridgeCore(session));
+        }
     }
 
-    private void TryStartBridgeCore()
+    private async Task TryStartBridgeCore(BridgeSession session)
     {
-        BlueSquadronEngine engine;
+        IBlueSquadronBridgeClient? engine = null;
+        Action<JsonElement>? alertHandler = null;
         try
         {
-            engine = new BlueSquadronEngine();
-        }
-        catch (System.IO.FileNotFoundException)
-        {
-            RunOnUI(() => BridgeStatus = "守護進程未安裝——將 BlueSquadronBridge.exe 與本程式放同一資料夾即會自動啟用");
-            return;
-        }
-        catch
-        {
-            RunOnUI(() => BridgeStatus = "Bridge 引擎建立失敗");
-            return;
-        }
-
-        bool ok;
-        try
-        {
-            ok = engine.Start();
-        }
-        catch (Exception ex)
-        {
-            engine.Dispose();
-            RunOnUI(() => BridgeStatus = $"Bridge 啟動例外: {ex.Message}");
-            return;
-        }
-
-        if (!ok)
-        {
-            string err = engine.LastError;
-            engine.Dispose();
-            RunOnUI(() =>
+            if (!IsCurrent(session)) return;
+            try
             {
-                BridgeAvailable = false;
-                BridgeStatus = $"Bridge 啟動失敗: {err}";
-            });
-            return;
-        }
-
-        Engine = engine;
-
-        // 送 init 指令做握手
-        try
-        {
-            // init 要枚舉全部驅動（數百筆 WMI 查詢），主程式啟動高峰期可能超過 8 秒；
-            // 逾時會觸發 MarkDead 直接殺掉進程，故給足 30 秒。
-            // P0-13：帶上主程式自己的封鎖清單路徑——Bridge 從 %LOCALAPPDATA% 解壓目錄
-            // 跑，看不到主程式目錄；ByovdCompareService 的預設路徑解析直接複用。
-            // 沒有清單檔時傳空字串，Bridge 如實進降級模式（不沉默）。
-            var initExtra = new Dictionary<string, object>
+                engine = _engineFactory();
+                session.Client = engine;
+            }
+            catch (System.IO.FileNotFoundException)
             {
-                ["blocklistPath"] = ByovdCompareService.DefaultBlocklistPath() ?? "",
-            };
-            var initResp = engine.SendCmd("init", initExtra, 30000);
-            bool driverLoaded = false;
-            int baselineChanges = 0;
-            string blocklistText = "封鎖清單未回報";
-            bool anyUnimplementedBlock = false;
-            if (initResp is { } jr)
+                PublishBridgeState(session, false, "守護進程未安裝——將 BlueSquadronBridge.exe 與本程式放同一資料夾即會自動啟用");
+                return;
+            }
+            catch
             {
-                if (jr.TryGetProperty("driverLoaded", out var dl))
-                    driverLoaded = dl.ValueKind == JsonValueKind.True;
-                if (jr.TryGetProperty("baselineChanges", out var bc)
-                    && bc.TryGetInt32(out int n))
-                    baselineChanges = n;
-                if (jr.TryGetProperty("byovdBlocklist", out var bl)
-                    && bl.ValueKind == JsonValueKind.Object)
-                {
-                    int rules = bl.TryGetProperty("rules", out var rEl)
-                        && rEl.TryGetInt32(out int rn) ? rn : 0;
-                    bool degraded = bl.TryGetProperty("degraded", out var dEl)
-                        && dEl.ValueKind == JsonValueKind.True;
-                    blocklistText = degraded
-                        ? $"封鎖清單=降級模式（{rules} 條後備）"
-                        : $"封鎖清單=全量 {rules} 條";
-                }
+                PublishBridgeState(session, false, "Bridge 引擎建立失敗");
+                return;
             }
 
-            // P0-12：讀一次 status——有防線設過「block」但未實施就明說
-            var statusResp = engine.SendCmd("status", 10000);
-            if (statusResp is { } sr
-                && sr.TryGetProperty("lines", out var ls)
-                && ls.ValueKind == JsonValueKind.Array)
+            bool ok;
+            try
             {
-                foreach (var l in ls.EnumerateArray())
-                {
-                    bool modeIsBlock = l.TryGetProperty("mode", out var mEl)
-                        && mEl.GetString() == "block";
-                    bool implemented = l.TryGetProperty("modeImplemented", out var impEl)
-                        && impEl.ValueKind == JsonValueKind.True;
-                    if (modeIsBlock && !implemented) { anyUnimplementedBlock = true; break; }
-                }
+                if (!IsCurrent(session)) return;
+                ok = engine.Start();
+            }
+            catch (Exception ex)
+            {
+                PublishBridgeState(session, false, $"Bridge 啟動例外: {ex.Message}");
+                return;
             }
 
-            RunOnUI(() =>
+            if (!ok)
             {
-                BridgeAvailable = true;
+                string err = engine.LastError;
+                PublishBridgeState(session, false, $"Bridge 啟動失敗: {err}");
+                return;
+            }
+
+            if (!IsCurrent(session)) return;
+
+            // 送 init 指令做握手
+            try
+            {
+                // init 要枚舉全部驅動（數百筆 WMI 查詢），主程式啟動高峰期可能超過 8 秒；
+                // 逾時會觸發 MarkDead 直接殺掉進程，故給足 30 秒。
+                // P0-13：帶上主程式自己的封鎖清單路徑——Bridge 從 %LOCALAPPDATA% 解壓目錄
+                // 跑，看不到主程式目錄；ByovdCompareService 的預設路徑解析直接複用。
+                // 沒有清單檔時傳空字串，Bridge 如實進降級模式（不沉默）。
+                var initExtra = new Dictionary<string, object>
+                {
+                    ["blocklistPath"] = ByovdCompareService.DefaultBlocklistPath() ?? "",
+                };
+                if (!IsCurrent(session)) return;
+                var initResp = engine.SendCmd("init", initExtra, 30000);
+                bool driverLoaded = false;
+                int baselineChanges = 0;
+                string blocklistText = "封鎖清單未回報";
+                bool anyUnimplementedBlock = false;
+                if (initResp is { } jr)
+                {
+                    if (jr.TryGetProperty("driverLoaded", out var dl))
+                        driverLoaded = dl.ValueKind == JsonValueKind.True;
+                    if (jr.TryGetProperty("baselineChanges", out var bc)
+                        && bc.TryGetInt32(out int n))
+                        baselineChanges = n;
+                    if (jr.TryGetProperty("byovdBlocklist", out var bl)
+                        && bl.ValueKind == JsonValueKind.Object)
+                    {
+                        int rules = bl.TryGetProperty("rules", out var rEl)
+                            && rEl.TryGetInt32(out int rn) ? rn : 0;
+                        bool degraded = bl.TryGetProperty("degraded", out var dEl)
+                            && dEl.ValueKind == JsonValueKind.True;
+                        blocklistText = degraded
+                            ? $"封鎖清單=降級模式（{rules} 條後備）"
+                            : $"封鎖清單=全量 {rules} 條";
+                    }
+                }
+
+                // P0-12：讀一次 status——有防線設過「block」但未實施就明說
+                if (!IsCurrent(session)) return;
+                var statusResp = engine.SendCmd("status", 10000);
+                if (statusResp is { } sr
+                    && sr.TryGetProperty("lines", out var ls)
+                    && ls.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var l in ls.EnumerateArray())
+                    {
+                        bool modeIsBlock = l.TryGetProperty("mode", out var mEl)
+                            && mEl.GetString() == "block";
+                        bool implemented = l.TryGetProperty("modeImplemented", out var impEl)
+                            && impEl.ValueKind == JsonValueKind.True;
+                        if (modeIsBlock && !implemented) { anyUnimplementedBlock = true; break; }
+                    }
+                }
+
                 string mode = anyUnimplementedBlock
                     ? "（注意：有防線設為「阻擋」但未實施——Phase 1 僅偵測）"
                     : "（Phase 1 僅偵測）";
-                BridgeStatus = $"Bridge 已連線（驅動={driverLoaded}, 基線變更={baselineChanges}, " +
-                               $"{blocklistText}）{mode}";
-            });
-        }
-        catch
-        {
-            // init 沒回應但進程在跑——仍可用
-            RunOnUI(() =>
+                PublishBridgeState(session, true,
+                    $"Bridge 已連線（驅動={driverLoaded}, 基線變更={baselineChanges}, {blocklistText}）{mode}");
+            }
+            catch
             {
-                BridgeAvailable = engine.Connected;
-                BridgeStatus = "Bridge 已連線（init 未回應）";
-            });
-        }
+                PublishBridgeState(session, engine.Connected, "Bridge 已連線（init 未回應）");
+            }
 
-        // 訂閱即時警告推送
-        engine.AlertReceived += OnAlertReceived;
+            // 訂閱即時警告推送
+            if (!IsCurrent(session)) return;
+            alertHandler = alert => OnAlertReceived(session, alert);
+            engine.AlertReceived += alertHandler;
 
-        // P0-14：能力帳單進驅動就緒狀態卡（「部分就緒」如實顯示）
-        try
-        {
-            var capsResp = engine.SendCmd("caps", 10000);
-            if (capsResp is { } cr)
+            // P0-14：能力帳單進驅動就緒狀態卡（「部分就緒」如實顯示）
+            try
             {
-                var captured = cr;
-                RunOnUI(() => _vm?.DriverReady.UpdateBlueSquadronDriver(captured));
+                if (!IsCurrent(session)) return;
+                var capsResp = engine.SendCmd("caps", 10000);
+                if (capsResp is { } cr)
+                {
+                    var captured = cr;
+                    RunOnUI(session, () => _vm?.DriverReady.UpdateBlueSquadronDriver(captured));
+                }
+            }
+            catch { /* caps 查不到不影響連線——狀態卡維持「尚未檢測」以外的如實說明 */ }
+
+            // 啟動背景輪詢迴圈
+            lock (_bridgeGate)
+            {
+                if (!IsCurrentLocked(session)) return;
+                session.Published = true;
+            }
+            await StartPollingLoop(session, engine).ConfigureAwait(false);
+        }
+        finally
+        {
+            // Only this owner disposes: OFF/dispose cannot recycle an engine still inside Start/Send.
+            try
+            {
+                if (engine is not null)
+                {
+                    if (alertHandler is not null) engine.AlertReceived -= alertHandler;
+                    engine.Dispose();
+                }
+            }
+            finally
+            {
+                bool restart;
+                lock (_bridgeGate)
+                {
+                    if (ReferenceEquals(_session, session)) _session = null;
+                    restart = !_disposed && _bridgeEnabled && _generation != session.Generation;
+                    session.Cancellation.Dispose();
+                }
+                if (restart) TryStartBridge();
             }
         }
-        catch { /* caps 查不到不影響連線——狀態卡維持「尚未檢測」以外的如實說明 */ }
-
-        // 啟動背景輪詢迴圈
-        StartPollingLoop();
     }
 
     /// <summary>
@@ -308,67 +386,65 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
     /// </summary>
     public async Task<bool> UnloadDriverAsync()
     {
-        var engine = Engine;
-        if (engine is null || !engine.Connected) return false;
+        BridgeSession? session;
+        IBlueSquadronBridgeClient? engine;
+        lock (_bridgeGate)
+        {
+            session = _session;
+            engine = session is not null && IsCurrentLocked(session) ? session.Client : null;
+        }
+        if (session is null || engine is null || !engine.Connected) return false;
         try
         {
             var resp = await Task.Run(() => engine.SendCmd("unload", 10000));
             bool ok = resp is { } r && r.TryGetProperty("ok", out var o) && o.ValueKind == JsonValueKind.True;
-            RunOnUI(() => BridgeStatus = ok
+            RunOnUI(session, () => BridgeStatus = ok
                 ? "BlueSquadron 核心服務已卸載（user-mode 偵測防線仍在運行）。"
                 : "卸載指令送達，但 Bridge 回報未成功——以 caps／status 複核。");
             return ok;
         }
         catch
         {
-            RunOnUI(() => BridgeStatus = "卸載指令失敗（Bridge 無回應或已斷線）。");
+            RunOnUI(session, () => BridgeStatus = "卸載指令失敗（Bridge 無回應或已斷線）。");
             return false;
         }
     }
 
     // ── 輪詢迴圈 ────────────────────────────────────────────────
 
-    private void StartPollingLoop()
+    private async Task StartPollingLoop(BridgeSession session, IBlueSquadronBridgeClient engine)
     {
-        _pollCts?.Cancel();
-        _pollCts?.Dispose();
-
-        var cts = new CancellationTokenSource();
-        _pollCts = cts;
-
-        _ = Task.Run(async () =>
+        var ct = session.Cancellation.Token;
+        while (IsCurrent(session))
         {
-            while (!cts.Token.IsCancellationRequested)
-            {
-                try
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(10), cts.Token)
-                              .ConfigureAwait(false);
-                }
-                catch (OperationCanceledException) { break; }
-
-                PollThreatsOnce(cts.Token);
-            }
-        }, cts.Token);
+            try { await _pollDelay(ct).ConfigureAwait(false); }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
+            if (!IsCurrent(session)) break;
+            await PollThreatsOnce(session, engine, ct).ConfigureAwait(false);
+        }
     }
 
-    private void PollThreatsOnce(CancellationToken ct)
+    private async Task PollThreatsOnce(BridgeSession session, IBlueSquadronBridgeClient engine, CancellationToken ct)
     {
-        if (ct.IsCancellationRequested) return;
-        if (Engine is not { Connected: true } engine)
+        if (ct.IsCancellationRequested || !IsCurrent(session)) return;
+        if (!engine.Connected)
         {
-            RunOnUI(() =>
-            {
-                BridgeAvailable = false;
-                BridgeStatus = "Bridge 處理程序已結束";
-            });
-            _pollCts?.Cancel();
+            PublishBridgeState(session, false, "Bridge 處理程序已結束");
+            session.Cancellation.Cancel();
             return;
         }
 
         try
         {
-            var resp = engine.SendCmd("threats", 5000);
+            Task<JsonElement?> command;
+            lock (_bridgeGate)
+            {
+                if (!IsCurrentLocked(session)) return;
+                // Queue admission and invalidation share a lock. OFF cancels queued work;
+                // a running IPC command retains this session until its actual completion.
+                command = Task.Run(() => engine.SendCmd("threats", 5000), ct);
+            }
+            var resp = await command.ConfigureAwait(false);
             if (resp is not { } json) return;
             if (!json.TryGetProperty("threats", out var arr)) return;
             if (arr.ValueKind != JsonValueKind.Array) return;
@@ -379,7 +455,7 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
                 if (te is null) continue;
 
                 var captured = te;
-                RunOnUI(() =>
+                RunOnUI(session, () =>
                 {
                     // 以 (Timestamp, Title) 去重——Bridge 回傳的 threats 沒有穩定 Id
                     bool dup = false;
@@ -405,13 +481,13 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
 
     // ── 即時警告處理 ────────────────────────────────────────────
 
-    private void OnAlertReceived(JsonElement alertJson)
+    private void OnAlertReceived(BridgeSession session, JsonElement alertJson)
     {
         var te = ParseThreatFromAlert(alertJson);
         if (te is null) return;
 
         var captured = te;
-        RunOnUI(() =>
+        RunOnUI(session, () =>
         {
             // 警告可能在下次輪詢中重複出現，以 (Timestamp, Title) 去重
             bool dup = false;
@@ -515,25 +591,35 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
     // ── 停止 Bridge ─────────────────────────────────────────────
 
     /// <summary>
-    /// 停止 Bridge 進程與輪詢迴圈。可多次呼叫、未啟動時也安全。
+    /// 撤銷 Bridge 連線與輪詢；擁有者待已進入的啟動／IPC 結束後清理進程。可多次呼叫、未啟動時也安全。
     /// </summary>
     public void StopBridge()
     {
-        _pollCts?.Cancel();
-        _pollCts?.Dispose();
-        _pollCts = null;
-
-        if (Engine is { } eng)
+        long generation;
+        lock (_bridgeGate)
         {
-            eng.AlertReceived -= OnAlertReceived;
-            eng.Dispose();
-            Engine = null;
+            _bridgeEnabled = false;
+            generation = ++_generation;
+            _session?.Cancellation.Cancel();
+            _bridgeAvailable = false;
+            _bridgeStatus = "Bridge 已停止";
         }
+        // The worker owns engine and CTS cleanup after outstanding startup/IPC/poll work finishes.
+        NotifyStopped(generation);
+    }
 
+    private void NotifyStopped(long generation)
+    {
         RunOnUI(() =>
         {
-            BridgeAvailable = false;
-            BridgeStatus = "Bridge 已停止";
+            lock (_bridgeGate)
+            {
+                if (_generation != generation) return;
+            }
+            OnPropertyChanged(nameof(BridgeEnabled));
+            OnPropertyChanged(nameof(BridgeAvailable));
+            OnPropertyChanged(nameof(BridgeStatus));
+            OnPropertyChanged(nameof(TimelineHint));
         });
     }
 
@@ -582,22 +668,53 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
 
     // ── UI 執行緒輔助 ───────────────────────────────────────────
 
+    private void PublishBridgeState(BridgeSession session, bool available, string status)
+    {
+        RunOnUI(() =>
+        {
+            lock (_bridgeGate)
+            {
+                if (_disposed || !_bridgeEnabled || _generation != session.Generation) return;
+                // Failure diagnostics may arrive after the failed worker has retired.
+                // A successful connection can only be published by the live owner.
+                if (available && !IsCurrentLocked(session)) return;
+                _bridgeAvailable = available;
+                _bridgeStatus = status;
+            }
+            // Publish the complete state before notifications; a reentrant OFF cannot be
+            // followed by another state write from this callback.
+            OnPropertyChanged(nameof(BridgeAvailable));
+            OnPropertyChanged(nameof(BridgeStatus));
+            OnPropertyChanged(nameof(TimelineHint));
+        });
+    }
+
+    private void RunOnUI(BridgeSession session, Action action)
+    {
+        RunOnUI(() =>
+        {
+            lock (_bridgeGate)
+            {
+                if (!IsCurrentLocked(session)) return;
+                action();
+            }
+        });
+    }
+
     private void RunOnUI(Action action)
     {
-        if (_dispatcher is null || _dispatcher.CheckAccess())
-        {
-            action();
-            return;
-        }
+        if (_uiScheduler is not null) { _uiScheduler(action); return; }
+        if (_dispatcher is null || _dispatcher.CheckAccess()) { action(); return; }
         _dispatcher.BeginInvoke(action, DispatcherPriority.DataBind);
     }
 
-    // ── IDisposable ─────────────────────────────────────────────
-
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        lock (_bridgeGate)
+        {
+            if (_disposed) return;
+            _disposed = true;
+        }
         StopBridge();
     }
 }

@@ -24,10 +24,17 @@ internal sealed class FakeImcPci : IPciConfig
 
     public bool DeviceMissing;
     public bool AccessGone;
+    public bool ThrowOnRead;
+    public bool ThrowOnWrite;
     public bool WritesRejected;
     public bool NeverCompletes;
     public bool BusyForever;
     public bool ErrorOnTransfer;
+    public bool InitiallyBusy;
+    public bool IgnoreRestore;
+    public uint? CommandOverride;
+    public bool FailRestore;
+    private bool _transferred;
 
     /// <summary>初始狀態下韌體正在輪詢 DIMM 溫度感測器。</summary>
     public bool TsodPollingActive;
@@ -65,6 +72,7 @@ internal sealed class FakeImcPci : IPciConfig
     public uint? Read(byte bus, byte device, byte function, uint register)
     {
         ReadCount++;
+        if (ThrowOnRead) throw new InvalidOperationException("Injected PCI read failure");
         if (AccessGone) return null;
         EnsureInit();
         if (DeviceMissing || bus != Bus || device != Dev || function != Fn) return 0xFFFFFFFF;
@@ -74,14 +82,15 @@ internal sealed class FakeImcPci : IPciConfig
         if (seg < 0) return 0xFFFFFFFF;
         if (OnlyOneSegment && seg == 1) return 0xFFFFFFFF;
 
-        if (register == CmdBase + seg * Step) return _cmd[seg];
-        if (register == StsBase + seg * Step) return _sts[seg];
+        if (register == CmdBase + seg * Step) return CommandOverride ?? _cmd[seg];
+        if (register == StsBase + seg * Step) return InitiallyBusy && !_transferred ? StsBusy : _sts[seg];
         if (register == DatBase + seg * Step) return _dat[seg];
         return 0xFFFFFFFF;
     }
 
     public bool Write(byte bus, byte device, byte function, uint register, uint value)
     {
+        if (ThrowOnWrite) throw new InvalidOperationException("Injected PCI write failure");
         if (AccessGone || WritesRejected) return false;
         EnsureInit();
         if (bus != Bus || device != Dev || function != Fn) return false;
@@ -90,8 +99,15 @@ internal sealed class FakeImcPci : IPciConfig
         int seg = Segment(register);
         if (seg < 0 || register != CmdBase + seg * Step) return true;
 
+        if ((value & Go) == 0 && _transferred)
+        {
+            if (FailRestore) return false;
+            if (IgnoreRestore) return true;
+        }
         _cmd[seg] = value;
         if ((value & Go) == 0) return true;                       // 只是還原／清 TSOD，不是觸發
+        _transferred = true;
+        _cmd[seg] &= ~Go;
         if (NeverCompletes) { _sts[seg] = 0; return true; }
         if (BusyForever) { _sts[seg] = StsBusy; return true; }
         if (ErrorOnTransfer) { _sts[seg] = StsError; return true; }

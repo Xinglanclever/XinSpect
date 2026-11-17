@@ -35,11 +35,11 @@ public class KnowledgePackEvolutionTests
     [Fact]
     public void 前版指標納入序列號_同一組內容有無指標序列號不同()
     {
-        string withPointer = KnowledgePackService.ComputeSerial(2, "t", [Table()], "sha256:prev");
-        string without = KnowledgePackService.ComputeSerial(2, "t", [Table()]);
+        string withPointer = KnowledgePackService.ComputeSerial(2, "2026-10-25", [Table()], "sha256:prev");
+        string without = KnowledgePackService.ComputeSerial(2, "2026-10-25", [Table()]);
         Assert.NotEqual(without, withPointer);
         // 同指標同輸出（與既有「同輸入同輸出」契約同款）
-        Assert.Equal(withPointer, KnowledgePackService.ComputeSerial(2, "t", [Table()], "sha256:prev"));
+        Assert.Equal(withPointer, KnowledgePackService.ComputeSerial(2, "2026-10-25", [Table()], "sha256:prev"));
     }
 
     [Fact]
@@ -48,8 +48,8 @@ public class KnowledgePackEvolutionTests
         string path = Path.Combine(Path.GetTempPath(), "kpevo-" + Guid.NewGuid().ToString("N") + ".json");
         try
         {
-            var v1 = KnowledgePackService.Build(1, "t0", [Table()]);
-            var v2 = KnowledgePackService.Evolve(v1, 2, "t1", [Table("oui", "2026-10-25")]);
+            var v1 = KnowledgePackService.Build(1, "2026-10-11", [Table()]);
+            var v2 = KnowledgePackService.Evolve(v1, 2, "2026-10-25", [Table("oui", "2026-10-25")]);
             File.WriteAllText(path, JsonSerializer.Serialize(v2));
 
             var (loaded, reason, declared) = KnowledgePackService.Load(path);
@@ -67,8 +67,8 @@ public class KnowledgePackEvolutionTests
         string path = Path.Combine(Path.GetTempPath(), "kpevo-" + Guid.NewGuid().ToString("N") + ".json");
         try
         {
-            var v1 = KnowledgePackService.Build(1, "t0", [Table()]);
-            var v2 = KnowledgePackService.Evolve(v1, 2, "t1", [Table()]);
+            var v1 = KnowledgePackService.Build(1, "2026-10-11", [Table()]);
+            var v2 = KnowledgePackService.Evolve(v1, 2, "2026-10-25", [Table()]);
             var forged = v2 with { PreviousSerial = v1.SerialNumber[..^1] + (v1.SerialNumber[^1] == '0' ? "1" : "0") };
             Assert.NotEqual(v2.PreviousSerial, forged.PreviousSerial);
             File.WriteAllText(path, JsonSerializer.Serialize(forged));
@@ -112,7 +112,7 @@ public class KnowledgePackEvolutionTests
         string auditPath = Path.Combine(dir, "audit.json");
         try
         {
-            var pack = KnowledgePackService.Build(2, "t", [Table()]);
+            var pack = KnowledgePackService.Build(2, "2026-10-25", [Table()]);
             Assert.True(KnowledgePackService.RecordWithdrawal(pack.SerialNumber,
                 "徵狀：測試會過但我不確定為什麼會過；處置：退回未開工", auditPath, out string withdrawal));
             Assert.Contains("審計鏈", withdrawal);
@@ -147,7 +147,7 @@ public class KnowledgePackEvolutionTests
     public void 撤回後移除包檔_載入如實回內建表_不假裝還有舊版()
     {
         string path = Path.Combine(Path.GetTempPath(), "kpevo-" + Guid.NewGuid().ToString("N") + ".json");
-        var pack = KnowledgePackService.Build(2, "t", [Table()]);
+        var pack = KnowledgePackService.Build(2, "2026-10-25", [Table()]);
         File.WriteAllText(path, JsonSerializer.Serialize(pack));
         File.Delete(path);   // 撤回聲明記完之後的標準動作：移除包檔
 

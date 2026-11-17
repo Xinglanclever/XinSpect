@@ -316,12 +316,10 @@ public sealed class WindowsCoherenceLockEngine : ICoherenceLockEngine
         int operationsPerWorker,
         CancellationToken cancellationToken)
     {
-        ManualResetEventSlim? startGate = null;
-        try
+        using var startGate = new ManualResetEventSlim(false);
         {
             using CountdownEvent ready = new(processors.Count + 1);
             using CountdownEvent finished = new(processors.Count + 1);
-            startGate = new ManualResetEventSlim(false);
             object sync = new();
             var independent = new Box<IndependentLineCounters>();
             var shared = new Box<SharedLineCounters>();
@@ -346,24 +344,21 @@ public sealed class WindowsCoherenceLockEngine : ICoherenceLockEngine
                     Name = $"XinSpect coherence worker {index} G{processors[index].Group}LP{processors[index].Index}",
                 })
                 .ToArray();
-            foreach (Thread thread in threads) thread.Start();
-            ready.Signal();
-            ready.Wait(cancellationToken);
-            if (workers.Any(worker => worker.PinFailed))
+            long timestamp = 0;
+            RunStartedWorkers(threads, startGate, () =>
             {
+                ready.Signal();
+                ready.Wait(cancellationToken);
+                if (workers.Any(worker => worker.PinFailed))
+                    throw new CoherenceLockValidationException("無法完成使用者模式親和性釘選；不偽裝成 pinned coherence 量測。");
+                timestamp = Stopwatch.GetTimestamp();
                 startGate.Set();
-                foreach (Thread thread in threads) thread.Join();
+                finished.Signal();
+                finished.Wait(cancellationToken);
+            }, cancellationToken,
+                () => workers.Select(worker => worker.Error).Where(error => error is not null).Cast<Exception>().ToArray());
+            if (workers.Any(worker => worker.PinFailed))
                 throw new CoherenceLockValidationException("無法完成使用者模式親和性釘選；不偽裝成 pinned coherence 量測。");
-            }
-
-            long timestamp = Stopwatch.GetTimestamp();
-            startGate.Set();
-            finished.Signal();
-            finished.Wait(cancellationToken);
-            foreach (Thread thread in threads) thread.Join();
-            cancellationToken.ThrowIfCancellationRequested();
-            if (workers.Any(worker => worker.Error is not null))
-                throw workers.First(worker => worker.Error is not null).Error!;
 
             double elapsedSeconds = Stopwatch.GetElapsedTime(timestamp).TotalSeconds;
             if (elapsedSeconds <= 0)
@@ -373,10 +368,45 @@ public sealed class WindowsCoherenceLockEngine : ICoherenceLockEngine
                 throw new CoherenceLockValidationException("coherence / lock 合併吞吐非有限或非正數。");
             return throughput;
         }
+    }
+
+    // Coordinator owns thread drainage; caller retains all shared events until this returns.
+    internal static void RunStartedWorkers(IReadOnlyList<Thread> threads, ManualResetEventSlim startGate,
+        Action coordinate, CancellationToken token, Func<IReadOnlyList<Exception>> failures,
+        Action<int>? beforeStart = null)
+    {
+        var started = new List<Thread>(threads.Count);
+        Exception? primary = null;
+        try
+        {
+            for (int index = 0; index < threads.Count; index++)
+            {
+                token.ThrowIfCancellationRequested();
+                beforeStart?.Invoke(index);
+                threads[index].Start();
+                started.Add(threads[index]);
+            }
+            coordinate();
+        }
+        catch (Exception error) { primary = error; }
         finally
         {
-            startGate?.Set();
+            startGate.Set();
+            foreach (Thread thread in started) thread.Join();
         }
+        var errors = failures().Where(error => error is not OperationCanceledException cancelled
+            || !token.IsCancellationRequested || cancelled.CancellationToken != token).ToList();
+        if (primary is not null && (primary is not OperationCanceledException cancelledPrimary
+            || !token.IsCancellationRequested || cancelledPrimary.CancellationToken != token)) errors.Add(primary);
+        if (errors.Count > 1) throw new AggregateException("Coherence workers/coordinator failed.", errors);
+        if (errors.Count == 1)
+        {
+            if (errors[0] is OperationCanceledException foreign)
+                throw new InvalidOperationException("Coherence worker returned unrequested cancellation.", foreign);
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(errors[0]).Throw();
+        }
+        token.ThrowIfCancellationRequested();
+        if (primary is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(primary).Throw();
     }
 
     private enum WorkerMode
@@ -423,20 +453,22 @@ public sealed class WindowsCoherenceLockEngine : ICoherenceLockEngine
 
         public void Run()
         {
-            using CpuAffinity.Pin pin = CpuAffinity.Pinned(processor);
-            PinFailed = !pin.Ok;
-            ready.Signal();
+            bool readySignalled = false;
             try
             {
+                using CpuAffinity.Pin pin = CpuAffinity.Pinned(processor);
+                PinFailed = !pin.Ok;
+                ready.Signal();
+                readySignalled = true;
                 startGate.Wait(cancellationToken);
                 if (!pin.Ok) return;
-
+                cancellationToken.ThrowIfCancellationRequested();
                 Workload();
-                finished.Signal();
             }
-            catch (Exception exception)
+            catch (Exception exception) { Error = exception; }
+            finally
             {
-                Error = exception;
+                if (!readySignalled) ready.Signal();
                 finished.Signal();
             }
         }

@@ -9,6 +9,19 @@
                 <PropertyGroupDescription PropertyName="Category"/>
             </CollectionViewSource.GroupDescriptions>
         </CollectionViewSource>
+        <Style x:Key="RowhammerActionStyle" TargetType="Button" BasedOn="{StaticResource ToolButton}">
+            <Setter Property="IsEnabled" Value="False"/>
+            <Style.Triggers>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding Settings.CanUseHighRiskHardwareOperations}" Value="True"/>
+                        <Condition Binding="{Binding IsChecked, ElementName=RowhammerConsentCheckBox}" Value="True"/>
+                        <Condition Binding="{Binding RowhammerBusy, RelativeSource={RelativeSource AncestorType={x:Type local:FirmwareSecurityView}}}" Value="False"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="IsEnabled" Value="True"/>
+                </MultiDataTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16">
         <StackPanel>
@@ -53,13 +66,13 @@
                                Text="{Binding EvidenceLab.PmuProgrammingNotice}"/>
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <CheckBox x:Name="PmuConsentCheckBox" VerticalAlignment="Center"
-                                  Content="我已了解風險（寫入固定計數器使能位、絕不碰 PMI 位元、每輪還原原值），明確同意執行"/>
+                                  Content="我已了解風險（固定計數器使能位寫入可能影響其他工具；需嘗試還原並核對），明確同意執行"/>
                         <Button x:Name="PmuVerifyButton" AutomationProperties.AutomationId="PmuVerifyButton"
                                 Style="{StaticResource ToolButton}" Content="執行編程驗證（3 輪）" Click="PmuVerify_Click"
                                 Margin="12,0,0,0" IsEnabled="False"/>
                     </StackPanel>
                     <TextBlock x:Name="PmuResultText" Style="{StaticResource Subtitle}" Margin="0,6,0,0"
-                               TextWrapping="Wrap" Text="未執行。逐輪驗證：啟用讀回一致→計數器活動→還原後讀回原值。"/>
+                               TextWrapping="Wrap" Text="未執行。本版原生編程未支援：核心釘選、計數器所有權與寫回能力尚未驗證。"/>
                 </StackPanel>
             </Border>
 
@@ -72,18 +85,36 @@
                                Text="{Binding EvidenceLab.RowhammerDangerText}"/>
                     <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="11"
                                Text="【未經過校驗】本探測的結果沒有對照過任何參考實作（usermode 無 clflush），非保證觸發 Rowhammer；輸出僅代表壓力下自擁有頁面的翻轉觀察，不作為記憶體可靠性的結論。"/>
+                    <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource CriticalBrush}" Margin="0,4,0,0"
+                               Text="{x:Static local:RowhammerProbeService.GateNotice}"/>
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <CheckBox x:Name="RowhammerConsentCheckBox" VerticalAlignment="Center"
-                                  Content="我已了解風險（可能損壞資料、建議專用測試機），明確同意執行"/>
+                                  Content="我已了解風險（可能損壞資料、建議專用測試機），明確同意本次操作"
+                                  IsEnabledChanged="RowhammerConsent_IsEnabledChanged">
+                            <CheckBox.Style>
+                                <Style TargetType="CheckBox">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                    <Style.Triggers>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding Settings.CanUseHighRiskHardwareOperations}" Value="True"/>
+                                                <Condition Binding="{Binding RowhammerBusy, RelativeSource={RelativeSource AncestorType={x:Type local:FirmwareSecurityView}}}" Value="False"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="IsEnabled" Value="True"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </CheckBox.Style>
+                        </CheckBox>
                         <Button x:Name="RowhammerRunButton" AutomationProperties.AutomationId="RowhammerRunButton"
-                                Style="{StaticResource ToolButton}" Content="執行壓力探測（256 MiB）" Click="RowhammerRun_Click"
-                                Margin="12,0,0,0" IsEnabled="False"/>
+                                Style="{StaticResource RowhammerActionStyle}" Content="執行壓力探測（256 MiB）" Click="RowhammerRun_Click"
+                                Margin="12,0,0,0"/>
                         <Button x:Name="RowhammerMultiButton" AutomationProperties.AutomationId="RowhammerMultiButton"
-                                Style="{StaticResource ToolButton}" Content="多輪模式（10 輪・不保證可用）" Click="RowhammerMulti_Click"
-                                Margin="8,0,0,0" IsEnabled="False"/>
+                                Style="{StaticResource RowhammerActionStyle}" Content="多輪模式（10 輪・不保證可用）" Click="RowhammerMulti_Click"
+                                Margin="8,0,0,0"/>
                     </StackPanel>
                     <TextBlock x:Name="RowhammerResultText" Style="{StaticResource Subtitle}" Margin="0,6,0,0"
-                               TextWrapping="Wrap" Text="未執行。勾選同意前按鈕不可用；結果必定帶「未經過校驗」標註。"/>
+                               TextWrapping="Wrap" Text="未執行。需啟用兩級風險開關並逐次勾選同意；關閉開關時於下一檢查點停止，不自動重啟。結果必定帶「未經過校驗」標註。"/>
                 </StackPanel>
             </Border>
 

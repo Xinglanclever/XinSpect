@@ -29,7 +29,7 @@ public class AcpiMadtFactsTests
         foreach (var s in structures) body.AddRange(s);
 
         var table = new byte[AcpiTable.HeaderLength + body.Count];
-        "MADT"u8.CopyTo(table.AsSpan());
+        "APIC"u8.CopyTo(table.AsSpan());
         BitConverter.GetBytes((uint)table.Length).CopyTo(table, 4);
         "TESTID"u8.CopyTo(table.AsSpan(10));
         body.CopyTo(table, AcpiTable.HeaderLength);
@@ -96,6 +96,17 @@ public class AcpiMadtFactsTests
         Assert.Contains("如實拒解", f.UnavailableReason);
     }
 
+    [Fact]
+    public void 名稱MADT不得當成已提供標準APIC表()
+    {
+        var table = Build(Lapic(0, 7, 1));
+        "MADT"u8.CopyTo(table.AsSpan());
+
+        var fact = Assert.Single(AcpiMadtFactsService.Collect(new FakeSource(true, table), At));
+        Assert.Equal(AcpiMadtFactsService.SummaryKey, fact.Key);
+        Assert.Equal(FactAvailability.NotApplicable, fact.Availability);
+        Assert.False(AcpiDeep.HasDedicatedDecoder("MADT"));
+    }
     // ── 彙總與處理器數 ──────────────────────────────────────────────────
 
     [Fact]
@@ -229,8 +240,8 @@ public class AcpiMadtFactsTests
     public void MADT要登記進解碼器覆蓋申報()
     {
         // DecodedSignatures 由測試釘住——新增解碼器時忘了登記，覆蓋申報就會說謊。
-        Assert.True(AcpiDeep.HasDedicatedDecoder("MADT"));
-        Assert.True(AcpiDeep.HasDedicatedDecoder("madt"));
+        Assert.True(AcpiDeep.HasDedicatedDecoder("APIC"));
+        Assert.True(AcpiDeep.HasDedicatedDecoder("apic"));
     }
 
     [Fact]

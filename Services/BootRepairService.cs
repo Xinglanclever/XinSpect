@@ -21,6 +21,20 @@ namespace XinSpect;
 /// </remarks>
 public sealed class BootRepairService : ObservableObject
 {
+    private readonly string _systemDirectory;
+    private readonly Func<string, bool> _fileExists;
+    private readonly Func<ProcessStartInfo, Task<int>>? _commandExecutor;
+
+    public BootRepairService() : this(Environment.SystemDirectory, File.Exists, null) { }
+
+    internal BootRepairService(string systemDirectory, Func<string, bool> fileExists,
+        Func<ProcessStartInfo, Task<int>>? commandExecutor)
+    {
+        _systemDirectory = systemDirectory;
+        _fileExists = fileExists;
+        _commandExecutor = commandExecutor;
+    }
+
     private bool _isRunning;
     public bool IsRunning { get => _isRunning; private set => SetProperty(ref _isRunning, value); }
 
@@ -80,7 +94,7 @@ public sealed class BootRepairService : ObservableObject
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "XinSpect", "bcd-backups", $"BCD-{DateTime.Now:yyyyMMdd-HHmmss}");
         Directory.CreateDirectory(Path.GetDirectoryName(backup)!);
-        string bcdedit = Path.Combine(Environment.SystemDirectory, "bcdedit.exe");
+        const string bcdedit = "bcdedit";
         AppendLog($"[bcdedit /export \"{backup}\"]（P3-20：重建前備份現有 BCD 存放區）");
         int exportCode = await RunCommandAsync(bcdedit, $"/export \"{backup}\"");
         if (exportCode != 0)
@@ -114,6 +128,34 @@ public sealed class BootRepairService : ObservableObject
 
     // ── 內部 ────────────────────────────────────────────────────
 
+    // Resolve only the fixed Windows repair commands. Missing tools (notably bootrec
+    // outside WinRE) fail closed; never search CWD, App Paths or PATH.
+    internal static ProcessStartInfo CreateSystemCommand(string fileName, string arguments,
+        string systemDirectory, Func<string, bool> fileExists)
+    {
+        string executable = fileName.ToLowerInvariant() switch
+        {
+            "sfc" => "sfc.exe",
+            "dism" => "dism.exe",
+            "chkdsk" => "chkdsk.exe",
+            "bootrec" => "bootrec.exe",
+            "bcdedit" => "bcdedit.exe",
+            _ => throw new ArgumentException("不是允許的 Windows 修復工具。", nameof(fileName)),
+        };
+        if (!Path.IsPathFullyQualified(systemDirectory))
+            throw new InvalidOperationException("Windows 系統目錄不是完整絕對路徑，已中止修復命令。");
+        string fullPath = Path.Combine(systemDirectory, executable);
+        if (!fileExists(fullPath))
+            throw new FileNotFoundException("Windows 修復工具不存在於系統目錄，已中止且不搜尋其他位置。", fullPath);
+        return new ProcessStartInfo(fullPath, arguments)
+        {
+            CreateNoWindow = true,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+    }
+
     private async Task<int> RunCommandAsync(string fileName, string arguments)
     {
         if (IsRunning)
@@ -126,13 +168,14 @@ public sealed class BootRepairService : ObservableObject
 
         try
         {
-            var psi = new ProcessStartInfo(fileName, arguments)
+            var psi = CreateSystemCommand(fileName, arguments, _systemDirectory, _fileExists);
+
+            if (_commandExecutor is not null)
             {
-                CreateNoWindow = true,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            };
+                int code = await _commandExecutor(psi);
+                AppendLog($"[結束] 結束代碼 {code}");
+                return code;
+            }
 
             using var process = new Process { StartInfo = psi, EnableRaisingEvents = true };
             process.OutputDataReceived += (_, e) => { if (e.Data is not null) AppendLog(e.Data); };

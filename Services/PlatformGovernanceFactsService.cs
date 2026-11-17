@@ -55,11 +55,31 @@ public static class PlatformGovernanceFactsService
     public delegate BatteryState? BatteryProbe();
     public delegate NicTrendState? NicTrendProbe();
 
+    // The legacy public API retains its ten governance facts and nominal-speed summary.
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at) =>
+        CollectGovernance(at, ReadMixMatch);
+
+    private static IReadOnlyList<HardwareFact> CollectGovernance(DateTimeOffset at, MixMatchProbe mixMatch) =>
     [
-        SddlFact(at), MixMatchFact(at), RasFact(at), DriverListFact(at), RuleHistoryFact(at),
+        SddlFact(at), MixMatchFact(at, mixMatch), RasFact(at), DriverListFact(at), RuleHistoryFact(at),
         UwpFact(at), SdkFact(at), VrrFact(at), BatteryFact(at), NicTrendFact(at),
     ];
+
+    internal sealed record PublicationBatch(IReadOnlyList<HardwareFact> GovernanceFacts,
+        IReadOnlyList<HardwareFact> MemoryTimingFacts, bool MemoryReadComplete);
+
+    internal static PublicationBatch CollectPublicationBatch(DateTimeOffset at,
+        Func<PhysicalMemorySnapshot>? readMemory = null,
+        Func<DateTimeOffset, MixMatchState, IReadOnlyList<HardwareFact>>? collectGovernance = null)
+    {
+        // One materialized WMI batch serves both quantities. No second default MixMatch read.
+        var snapshot = (readMemory ?? PhysicalMemorySnapshotSource.ReadForThisMachine)();
+        var governance = collectGovernance is null
+            ? CollectGovernance(at, () => snapshot.LegacySummary)
+            : collectGovernance(at, snapshot.LegacySummary);
+        var memory = PhysicalMemorySnapshotSource.ProjectConfiguredRate(snapshot, at);
+        return new(Array.AsReadOnly(governance.ToArray()), Array.AsReadOnly(memory.ToArray()), snapshot.Complete);
+    }
 
     public static HardwareFact SddlFact(DateTimeOffset at, SddlProbe? probe = null)
     {
@@ -223,25 +243,7 @@ public static class PlatformGovernanceFactsService
     }
 
     private static MixMatchState? ReadMixMatch()
-    {
-        var manufacturers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var speeds = new HashSet<int>();
-        int modules = 0;
-        try
-        {
-            using var s = new ManagementObjectSearcher("SELECT Manufacturer, Speed FROM Win32_PhysicalMemory");
-            foreach (ManagementObject o in s.Get()) using (o)
-            {
-                modules++;
-                if (o["Manufacturer"] is string m && !string.IsNullOrWhiteSpace(m)) manufacturers.Add(m);
-                if (o["Speed"] is not null) speeds.Add(Convert.ToInt32(o["Speed"]));
-            }
-        }
-        catch { }
-        int spread = 0;
-        if (speeds.Count > 1) spread = speeds.Max() - speeds.Min();
-        return new(modules, manufacturers.Count, 0, spread);
-    }
+        => PhysicalMemorySnapshotSource.ReadForThisMachine().LegacySummary;
 
     public static HardwareFact RasFact(DateTimeOffset at, RasProbe? probe = null)
     {

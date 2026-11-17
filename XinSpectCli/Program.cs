@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Text;
 using BlueSquadron;
 using XinSpect;
@@ -125,6 +125,8 @@ internal static class Program
         {
             if (args[0].Equals("surface", StringComparison.OrdinalIgnoreCase))
                 return RunSurfaceScan(args[1..]);
+            if (args[0].Equals("sensor-crosscheck", StringComparison.OrdinalIgnoreCase))
+                return CliService.Run([CliService.SensorCrossCheckArg, .. args[1..]], Collect, Console.Out, Console.Error);
             if (args[0].ToLowerInvariant() is "safety" or "deepbench" or "ec" or "me" or "chipset" or "ecc")
                 return Execute(CliLocalization.JoinCommandLine(args));
             // xsc compliance --format sarif …：直接轉發既有 CLI 通路後退出
@@ -330,6 +332,9 @@ internal static class Program
                 case "storage": DomainReport("儲存總表", ["st", "ata"],
                     "SMART 原始屬性只有 ata.smart.attr.lookup（ATA 碟；NVMe 一律不讀——第 263 輪實證會卡核心不可中斷等待，理由在百科第 11 部）。"); return 0;
                 case "surface": return RunSurfaceScan(rest.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+                case "sensor-crosscheck": return CliService.Run(
+                    [CliService.SensorCrossCheckArg, .. CliLocalization.SplitCommandLine(rest)], Collect,
+                    CliLocalization.MachineWriter(Console.Out), Console.Error);
                 case "net": DomainReport("網路", ["net", "nw"],
                     "net.* ＝ 傾聽埠／offload/WMI 缺口；nw.* ＝ 藍牙／DNS／Wi-Fi／WoL／USB 等週邊摘要。"); return 0;
                 case "security": DomainReport("安全姿態", ["sec"],
@@ -453,12 +458,12 @@ internal static class Program
             Console.WriteLine($"唯讀掃描 {drive}，每種塊尺最多 64 MiB；Ctrl+C 取消。");
             var results = DiskSurfaceScanService.ScanProfilesAsync(path, sizes, repeat,
                 ct: cancellation.Token).GetAwaiter().GetResult();
-            if (results is null) { Console.Error.WriteLine("無法開啟本機固定卷或取得卷大小。"); return 1; }
+            if (results is null) { Console.Error.WriteLine(DiskSurfaceScanService.PreflightUnavailableMessage); return 1; }
             foreach (var item in results)
             {
                 string sector = item.Scan.LogicalSectorBytes > 0 ? $"{item.Scan.LogicalSectorBytes} B" : "未知";
                 Console.WriteLine($"{item.BlockSizeBytes} B・第 {item.Pass} 次：覆蓋 {item.Scan.TotalBytes / (1024.0 * 1024):F1} MiB，"
-                    + $"磁區 {sector}，OK {item.Scan.OkCount}，慢 {item.Scan.SlowCount}，"
+                    + $"磁區 {sector}，{item.Scan.IoMode}，OK {item.Scan.OkCount}，慢 {item.Scan.SlowCount}，"
                     + $"錯誤 {item.Scan.ErrorCount}，重試 {item.Scan.RetryCount}，{item.Scan.ElapsedSec:F1}s");
             }
             return 0;
@@ -1107,7 +1112,7 @@ internal static class Program
             Console.WriteLine($"      {Dim}走勢{Reset} {Tui.Sparkline(_memHist, 100, 24)}");
             Tui.Separator();
             Console.WriteLine($"  {Pad("CPU 時脈", 12)}{Bold}{(r.CpuClock is null ? "——" : $"{r.CpuClock:0.00}")}{Reset}{Dim} GHz{Reset}   "
-                + $"{Pad("CPU 功率", 12)}{Bold}{(r.CpuPower is null ? "——" : $"{r.CpuPower:0.#}")}{Reset}{Dim}{(r.CpuPower is null && RaplEnergyGate.Verdict == RaplGateVerdict.NotResponding ? $" 能量計未隨負載（原始計數 0x{RaplEnergyGate.LastRawCount:X}）" : r.CpuPower is null && RaplEnergyGate.Verdict == RaplGateVerdict.NoCounter ? " 無能量計" : "")}{(LastPowerWasRapl && RaplEnergyGate.Verdict == RaplGateVerdict.Trusted ? "（RAPL）" : "")}{Reset}   "
+                + $"{Pad("CPU 功率", 12)}{Bold}{(r.CpuPower is null ? "——" : $"{r.CpuPower:0.#}")}{Reset}{Dim}{(r.CpuPower is null && RaplEnergyGate.Verdict == RaplGateVerdict.NotResponding ? $" 能量計未隨負載（原始計數 0x{RaplEnergyGate.LastRawCount:X}）" : r.CpuPower is null && RaplEnergyGate.Verdict == RaplGateVerdict.NoCounter ? " 無能量計" : r.CpuPower is null && RaplEnergyGate.Verdict == RaplGateVerdict.Unknown ? " 能量計未驗證" : "")}{(LastPowerWasRapl && RaplEnergyGate.Verdict == RaplGateVerdict.Trusted ? "（RAPL）" : "")}{Reset}   "
                 + $"{Pad("記憶體用量", 12)}{Bold}{(r.MemUsed is null ? "——" : $"{r.MemUsed:0.0}")}{Reset}{Dim} GB{Reset}");
         }
     }
@@ -1458,12 +1463,7 @@ internal static class Program
             int div = (int)((unit.Value >> 8) & 0x1F);
             double joule = 1.0 / Math.Pow(2, div);
 
-            // 誠實閘門（一次性）：0x611 的速率得先證明會隨負載動，才敢換算成瓦——
-            // 本機（Skylake-X）實測計數器前進但與功耗脫鉤，硬換算得出「18 核滿載 1.2 W」。
-            RaplEnergyGate.RunOnce(
-                () => { var r = PowerConsoleRing0Service.ReadMsr(0x611); return r.Error is null ? r.Value : (ulong?)null; },
-                ReadCpuTemp);
-
+            // Passive sampling consumes only an existing validation result; it never starts a CPU load.
             if (RaplEnergyGate.Verdict == RaplGateVerdict.Trusted)
             {
                 System.Threading.Thread.Sleep(400);   // 能量差分窗（僅在閘門通過後才值得量）
@@ -1586,7 +1586,7 @@ internal static class Program
             var (r0Clock, r0Power, r0Temp) = Ring0CpuSample();
             // Ring0 的時脈已是 GHz；wrapper 對外介面是 MHz（回傳時再除 1000）——別二次除
             cpuClock = r0Clock.HasValue ? r0Clock.Value * 1000.0 : cpuClock;
-            cpuPower = r0Power ?? cpuPower;
+            cpuPower = RaplEnergyGate.ValidatedPower(r0Power ?? cpuPower);
             cpuT = r0Temp ?? cpuT;   // MSR 溫度是權威值（LHM 0.9.6 無驅動時它的溫度來源不明）
             return (cpuT, gpuT, cpuL, memL, cpuClock is null ? null : cpuClock / 1000.0, cpuPower, memUsed);
         }
@@ -1748,12 +1748,7 @@ internal static class Program
 
     /// <summary>與主程式 CLI 同一條採集路徑（EvidenceLabService＋使用者模式事實）。</summary>
     private static IReadOnlyList<HardwareFact> Collect()
-    {
-        var svc = new EvidenceLabService();
-        EvidenceCollection.ReloadInto(svc);
-        EvidenceCollection.LoadUsermodeFacts(svc);
-        return svc.AllFacts;
-    }
+        => EvidenceCollection.CollectForCli();
 
     // ── 行編輯：↑↓ 歷史、Tab 補全 ─────────────────────────────────────────
 

@@ -12,6 +12,7 @@ namespace XinSpect;
 public sealed class BlueSquadronEngine : IDisposable
 {
     private readonly object _lock = new();
+    private readonly object _lifecycleLock = new();
     private Process? _proc;
     private StreamWriter? _stdin;
     private StreamReader? _stdout;
@@ -28,6 +29,16 @@ public sealed class BlueSquadronEngine : IDisposable
     // ── 啟動 ────────────────────────────────────────────────────────────────
 
     public bool Start()
+    {
+        lock (_lifecycleLock)
+        {
+            if (_disposed) { LastError = "Bridge 引擎已處置"; return false; }
+            if (_alive) return true;
+            return StartCore();
+        }
+    }
+
+    private bool StartCore()
     {
         try
         {
@@ -204,6 +215,11 @@ public sealed class BlueSquadronEngine : IDisposable
     }
 
     public void Dispose()
+    {
+        lock (_lifecycleLock) DisposeCore();
+    }
+
+    private void DisposeCore()
     {
         if (_disposed) return;
         _disposed = true;

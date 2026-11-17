@@ -72,6 +72,50 @@ public class AcpiOnceSourceTests
         Assert.Null(once.UnavailableReason);
     }
 
+    [Fact]
+    public void 標準APIC表經同批列舉接到MADT事實與覆蓋申報()
+    {
+        // Windows SDK acpitabl.h APIC_SIGNATURE=0x43495041; MAPIC contains
+        // the 36-byte ACPI header, LAPIC address/flags, then an 8-byte LAPIC.
+        // This SDK-shaped synthetic fixture does not claim real-machine provenance.
+        var table = new byte[52];
+        "APIC"u8.CopyTo(table.AsSpan());
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(table.AsSpan(4, 4), (uint)table.Length);
+        table[8] = 5;
+        "TESTID"u8.CopyTo(table.AsSpan(10));
+        "XINSPECT"u8.CopyTo(table.AsSpan(16));
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(table.AsSpan(36, 4), 0xFEE00000);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(table.AsSpan(40, 4), 1);
+        table[44] = 0;     // Processor Local APIC structure
+        table[45] = 8;
+        table[46] = 3;     // ACPI processor ID
+        table[47] = 7;     // local APIC ID
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(table.AsSpan(48, 4), 1);
+        table[9] = unchecked((byte)(-table.Sum(b => (int)b)));
+        Assert.True(AcpiTable.TryParseHeader(table, out var header));
+        Assert.Equal("APIC", header.Signature);
+        Assert.True(header.ChecksumValid);
+
+        var inner = new CountingSource(table);
+        var once = new OnceAcpiTableSource(inner);
+        var at = DateTimeOffset.UnixEpoch;
+        var inventory = AcpiService.Collect(once, at);
+        var madt = AcpiMadtFactsService.Collect(once, at);
+
+        Assert.Equal(1, inner.Calls);
+        Assert.Equal(1, once.ReadCount);
+        var summary = Assert.Single(madt, f => f.Key == AcpiMadtFactsService.SummaryKey);
+        Assert.Equal(FactAvailability.Present, summary.Availability);
+        Assert.Equal(1d, summary.NumericValue);
+        var lapics = Assert.Single(madt, f => f.Key == AcpiMadtFactsService.LocalApicKey);
+        Assert.Equal(FactAvailability.Present, lapics.Availability);
+        Assert.Contains("7", lapics.Value);
+        var apicHeader = Assert.Single(inventory, f => f.Key == "acpi.table.apic");
+        Assert.Contains("校驗和 正確", apicHeader.Value);
+        Assert.True(AcpiDeep.HasDedicatedDecoder(header.Signature));
+        var gaps = Assert.Single(inventory, f => f.Key == "ac.decode.unrecorded");
+        Assert.Equal(0d, gaps.NumericValue);
+    }
     // ── D7：系統碟不是寫死的 C: ─────────────────────────────────────────
 
     [Fact]

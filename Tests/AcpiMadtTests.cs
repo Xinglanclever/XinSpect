@@ -27,7 +27,7 @@ public class AcpiMadtTests
         foreach (var s in structures) body.AddRange(s);
 
         var table = new byte[AcpiTable.HeaderLength + body.Count];
-        "MADT"u8.CopyTo(table.AsSpan());
+        "APIC"u8.CopyTo(table.AsSpan());
         BitConverter.GetBytes((uint)table.Length).CopyTo(table, 4);
         table[8] = 5;                                          // Revision
         "TESTID"u8.CopyTo(table.AsSpan(10));
@@ -107,6 +107,16 @@ public class AcpiMadtTests
         Assert.Null(AcpiMadt.Header(new byte[40]));
     }
 
+    [Fact]
+    public void 名稱MADT不是表簽章_不得被解碼()
+    {
+        var table = Build(0xFEE00000, 1, Lapic(0, 7, 1));
+        "MADT"u8.CopyTo(table.AsSpan());
+
+        Assert.Null(AcpiMadt.Header(table));
+        Assert.Empty(AcpiMadt.Structures(table));
+        Assert.Empty(AcpiMadt.LocalApics(table));
+    }
     // ── 子結構走訪 ──────────────────────────────────────────────────────
 
     [Fact]

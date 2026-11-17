@@ -258,7 +258,7 @@ public static class SystemInfoService
     // 依 SMBIOS 規範 Type 17（Memory Device）之 Memory Type 欄位對照。
     // 注意：此處讀的是 SMBIOSMemoryType（原始 SMBIOS 碼），與舊版 Win32_PhysicalMemory.MemoryType
     // 列舉（20=DDR、21=DDR2）不同——DDR/DDR2 兩者相差 2，切勿混用。
-    private static string MemType(int code) => code switch
+    internal static string MemType(int code) => code switch
     {
         18 => "DDR", 19 => "DDR2", 20 => "DDR2 FB-DIMM",
         24 => "DDR3", 25 => "FBD2", 26 => "DDR4",

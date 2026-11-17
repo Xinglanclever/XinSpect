@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="XinSpect.EvidenceLabView"
+<UserControl x:Class="XinSpect.EvidenceLabView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect"
@@ -10,6 +10,35 @@
                 <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
                            Text="把每一筆硬體事實的值、來源、可信度和量測時間一起保存；比較兩個時間點時只報實際差異，不把差異自動解讀成故障。"/>
             </StackPanel>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="企業簽章政策 · 已存快照" FontWeight="SemiBold"
+                               Foreground="{DynamicResource PrimaryInkBrush}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,6,0,0" TextWrapping="Wrap"
+                               Text="依序選擇組織預先部署公鑰、簽章政策與已存快照。公鑰信任來源請依組織通道另行核對；不從待驗政策建立信任。"/>
+                    <WrapPanel Margin="0,10,0,0">
+                        <Button x:Name="ImportEnterpriseBaselineButton" AutomationProperties.AutomationId="ImportEnterpriseBaselineButton"
+                                Style="{StaticResource PrimaryButton}" Content="選擇檔案並評估" Click="ImportEnterpriseBaseline_Click"
+                                IsEnabled="{Binding EvidenceLab.EnterpriseBaselineImport.CanRun}" Margin="0,0,8,6"
+                                AutomationProperties.Name="選擇公鑰、簽章政策與已存快照並評估"/>
+                    </WrapPanel>
+                    <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"
+                               Text="{Binding EvidenceLab.EnterpriseBaselineImport.Summary}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" TextWrapping="Wrap" Margin="0,6,0,0"
+                               AutomationProperties.LiveSetting="Polite"
+                               Text="{Binding EvidenceLab.EnterpriseBaselineImport.Status}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,6,0,0"
+                               Text="{Binding EvidenceLab.EnterpriseBaselineImport.PolicySignature}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,4,0,0"
+                               Text="{Binding EvidenceLab.EnterpriseBaselineImport.Schema}"/>
+                    <TextBlock Text="所選公鑰 SHA-256 指紋" Style="{StaticResource FieldLabel}" Margin="0,8,0,0"/>
+                    <TextBlock Style="{StaticResource FieldValue}" FontFamily="Consolas" TextWrapping="Wrap"
+                               Text="{Binding EvidenceLab.EnterpriseBaselineImport.SignerFingerprint}"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="只顯示計數，不列控制識別碼或事實值。政策簽章不證明裝置來源；快照與本次結果未簽章、未做遠端證明。只評估所選已存快照，不重新採集，也不代表目前硬體安全。"/>
+                </StackPanel>
+            </Border>
 
             <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                 <StackPanel>

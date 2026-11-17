@@ -1,4 +1,4 @@
-﻿using Xunit;
+using Xunit;
 
 namespace XinSpect.Tests;
 
@@ -98,6 +98,9 @@ public class DecoderHardeningTests
             "NtfsBootSectorDecoder",
             "UsbHubNodeDecoder",
             "AcpiFadt",
+            "WheaXpfProcessorSectionDecoder",
+            "WheaProcessorGenericSectionDecoder",
+            "WheaPcieSectionDecoder",
             "WheaMemorySectionDecoder",
             "XhciCapabilityDecoder",
             "KernelDumpDecoder",

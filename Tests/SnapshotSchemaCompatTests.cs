@@ -57,6 +57,14 @@ public class SnapshotSchemaCompatTests
         Assert.True(doc.RootElement.TryGetProperty("schemaVersion", out var v), "匯出缺 schemaVersion 欄位");
         Assert.Equal(HardwareSnapshotSchema.CurrentVersion, v.GetInt32());
         Assert.Equal(1, HardwareSnapshotSchema.CurrentVersion);
+        using var schema = JsonDocument.Parse(SchemaText());
+        var required = schema.RootElement.GetProperty("$defs").GetProperty("fact")
+            .GetProperty("required").EnumerateArray().Select(p => p.GetString()!).ToArray();
+        var valid = HardwareSnapshotService.Create(SampleSnapshot(1).Facts, ["fixture"],
+            DateTimeOffset.UnixEpoch, "test");
+        using var actual = JsonDocument.Parse(HardwareSnapshotService.ToJson(valid));
+        foreach (var fact in actual.RootElement.GetProperty("facts").EnumerateArray())
+            foreach (var property in required) Assert.True(fact.TryGetProperty(property, out _), property);
     }
 
     [Fact]
@@ -123,6 +131,10 @@ public class SnapshotSchemaCompatTests
         var values = availability.GetProperty("enum").EnumerateArray()
             .Select(e => e.GetString()!).ToHashSet();
         Assert.Contains("Unknown", values);
+        Assert.Equal("Present", availability.GetProperty("default").GetString());
+        Assert.DoesNotContain(doc.RootElement.GetProperty("$defs").GetProperty("fact")
+            .GetProperty("required").EnumerateArray(), p => p.GetString() == "availability");
+        Assert.DoesNotContain("null", values);
 
         string note = availability.GetProperty("description").GetString() ?? "";
         Assert.Contains("加法擴充", note, StringComparison.Ordinal);

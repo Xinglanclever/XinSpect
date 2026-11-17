@@ -51,6 +51,19 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "3.31",
+            Date = "2026-11-18",
+            Title = "特別版：CLI 記憶體來源與 PCIe ECAM 邊界硬化",
+            Items =
+            [
+                "CLI 共用記憶體採集與發布路徑；WMI 設定速率保留來源與可用狀態，不冒充即時時序或控制器實測。",
+                "修正 ECAM 掃描 bus 255 回繞、完整 4KB 位址邊界與短讀處理；畸形 AER 能力回報讀取錯誤並保留先前結果。",
+                "DIMM 身份僅在唯一有效序號或已確認共同 locator 範圍時配對；WMI 與 AI 記憶體描述保留來源及未知狀態。",
+                "本版全套回歸與硬體實機矩陣結果以發佈驗證記錄為準。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "3.30",
             Date = "2026-11-16",
             Title = "來源更清楚，量測更可靠",

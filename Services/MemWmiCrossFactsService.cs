@@ -24,8 +24,8 @@ public sealed record WmiPhysicalMemoryRow(
 /// </para>
 ///
 /// <para>
-/// 對照面：條數、容量、序號、料號。配對以序號為最強依據（沿用稽核服務的權重慣例），
-/// 配不上就標「未配對」，<b>不以清單順序強配</b>；缺任何一源如實標，不猜。
+/// 對照面：條數、容量、料號。WMI 與原生 SPD／SMBIOS 分別以兩側唯一有效序號配對；
+/// 料號與清單順序不是實體身份，配不上就標「未配對」；缺任何一源如實標，不猜。
 /// 只列矛盾<b>計數</b>，不列序號或料號原值（遮蔽慣例）。
 /// </para>
 /// </summary>
@@ -35,10 +35,21 @@ public static class MemWmiCrossFactsService
 
     private const string Category = "記憶體";
 
-    /// <summary>對照統計。Conflicts 三欄只數「兩面都在且不同」，缺面不算矛盾。</summary>
+    /// <summary>單一來源的對照數；缺欄不算矛盾，不能視為已核一致。</summary>
+    public sealed record MemWmiSourceState(int ComparedModules, int CapacityConflicts, int PartConflicts);
+
+    /// <summary>
+    /// ComparedModules 與衝突各欄按已配對 WMI 列去重，不把同一模組的兩來源算成兩條。
+    /// SerialConflicts 保留介面相容；序號是配對身份，沒有獨立身份就不判序號矛盾。
+    /// NativeComparison／SmbiosComparison 保留每個來源的觀測統計，不宣稱來源獨立。
+    /// </summary>
     public sealed record MemWmiCrossState(
         int WmiModules, int NativeModules, int SmbiosModules,
-        int ComparedModules, int SerialConflicts, int CapacityConflicts, int PartConflicts);
+        int ComparedModules, int SerialConflicts, int CapacityConflicts, int PartConflicts)
+    {
+        public MemWmiSourceState NativeComparison { get; init; } = new(0, 0, 0);
+        public MemWmiSourceState SmbiosComparison { get; init; } = new(0, 0, 0);
+    }
 
     public delegate IReadOnlyList<WmiPhysicalMemoryRow>? WmiProbe();
 
@@ -58,11 +69,14 @@ public static class MemWmiCrossFactsService
         string missing =
             (state.NativeModules == 0 ? "原生 SPD " : "") +
             (state.SmbiosModules == 0 ? (state.NativeModules == 0 ? "、SMBIOS" : "SMBIOS") : "");
-        string missingNote = missing.Length == 0 ? "四源齊備" : $"缺源：{missing}（如實標，不補值）";
+        string missingNote = missing.Length == 0 ? "本次原生 SPD／SMBIOS 輸入齊備" : $"缺源：{missing}（如實標，不補值）";
         string detail =
             $"WMI {state.WmiModules} 條、原生 SPD {state.NativeModules} 條、SMBIOS {state.SmbiosModules} 條；" +
-            $"可配對 {state.ComparedModules} 條，序號矛盾 {state.SerialConflicts}、容量矛盾 {state.CapacityConflicts}、料號矛盾 {state.PartConflicts}。" +
-            $"{missingNote}。矛盾是差異，不等同於偽造；未配對的條不以順序強配。";
+            $"可配對 {state.ComparedModules} 條（按 WMI 列去重），容量矛盾 {state.CapacityConflicts}、料號矛盾 {state.PartConflicts}。" +
+            $"WMI×原生 SPD：配對 {state.NativeComparison.ComparedModules}、容量矛盾 {state.NativeComparison.CapacityConflicts}、料號矛盾 {state.NativeComparison.PartConflicts}；" +
+            $"WMI×SMBIOS：配對 {state.SmbiosComparison.ComparedModules}、容量矛盾 {state.SmbiosComparison.CapacityConflicts}、料號矛盾 {state.SmbiosComparison.PartConflicts}。" +
+            $"{missingNote}。序號僅作配對鍵，不驗證序號真實性；重複或缺序號不以料號／順序猜配。" +
+            "缺欄不計矛盾，不表示已核一致；各通路可能共用 SPD／韌體資料，不構成獨立驗證來源；矛盾是差異，不等同於偽造。";
         return new HardwareFact(MemWmiCrossKey, Category, "WMI 記憶體對照", detail, "條",
             "WMI Win32_PhysicalMemory×既有 SPD 解碼（唯讀）", FactTrustLevel.Reported, false, at,
             state.WmiModules);
@@ -73,38 +87,73 @@ public static class MemWmiCrossFactsService
         IReadOnlyList<SpdAuditSourceInput>? native, IReadOnlyList<SpdAuditSourceInput>? smbios)
     {
         ArgumentNullException.ThrowIfNull(wmi);
-        int nativeCount = native?.Count(x => x.Kind == SpdAuditSourceKind.NativeSpd) ?? 0;
-        int smbiosCount = smbios?.Count(x => x.Kind == SpdAuditSourceKind.Smbios) ?? 0;
-        var candidates = (native ?? []).Concat(smbios ?? []).Where(x => x.Kind is SpdAuditSourceKind.NativeSpd or SpdAuditSourceKind.Smbios).ToList();
-        var unused = new HashSet<int>(Enumerable.Range(0, candidates.Count));
-
-        int compared = 0, serialBad = 0, capacityBad = 0, partBad = 0;
-        foreach (var w in wmi)
+        var nativeRows = (native ?? []).Where(x => x.Kind == SpdAuditSourceKind.NativeSpd).ToArray();
+        var smbiosRows = (smbios ?? []).Where(x => x.Kind == SpdAuditSourceKind.Smbios).ToArray();
+        var n = CompareSource(wmi, nativeRows);
+        var s = CompareSource(wmi, smbiosRows);
+        return new(wmi.Count, nativeRows.Length, smbiosRows.Length,
+            n.Compared.Union(s.Compared).Count(), 0,
+            n.CapacityBad.Union(s.CapacityBad).Count(), n.PartBad.Union(s.PartBad).Count())
         {
-            // 序號唯一精確配對（沿用稽核服務「序號最強」的慣例）；其餘不猜。
-            int? match = null;
-            if (Normalize(w.SerialNumber) is { } wSerial)
-            {
-                var serialHits = unused.Where(j => Normalize(candidates[j].SerialNumber) == wSerial).ToList();
-                if (serialHits.Count == 1) match = serialHits[0];
-            }
-            // 沒有序號可配時，退而以料號唯一精確配對；仍配不上就列「未配對」，不強配。
-            if (match is null && Normalize(w.PartNumber) is { } wPart)
-            {
-                var partHits = unused.Where(j => Normalize(candidates[j].PartNumber) == wPart).ToList();
-                if (partHits.Count == 1) match = partHits[0];
-            }
-            if (match is null) continue;
-            unused.Remove(match.Value);
-            compared++;
-            var c = candidates[match.Value];
+            NativeComparison = new(n.Compared.Count, n.CapacityBad.Count, n.PartBad.Count),
+            SmbiosComparison = new(s.Compared.Count, s.CapacityBad.Count, s.PartBad.Count),
+        };
+    }
 
-            long? wMiB = w.CapacityBytes is > 0 ? w.CapacityBytes / (1024 * 1024) : null;
-            if (wMiB is > 0 && c.CapacityMiB is > 0 && wMiB != c.CapacityMiB) capacityBad++;
-            if (Normalize(w.SerialNumber) is { } ws && Normalize(c.SerialNumber) is { } cs && ws != cs) serialBad++;
-            if (Normalize(w.PartNumber) is { } wp && Normalize(c.PartNumber) is { } cp && wp != cp) partBad++;
+    private sealed record SourceComparison(HashSet<int> Compared, HashSet<int> CapacityBad, HashSet<int> PartBad);
+
+    private static SourceComparison CompareSource(IReadOnlyList<WmiPhysicalMemoryRow> wmi,
+        IReadOnlyList<SpdAuditSourceInput> candidates)
+    {
+        // Build uniqueness from the complete source inventories, never a shrinking unused set.
+        // Duplicate serials on either side remain ambiguous regardless of row order or part.
+        var uniqueWmi = wmi.Select((row, index) => (Row: row, Index: index, Serial: NormalizeSerial(row.SerialNumber)))
+            .Where(x => x.Serial is not null).GroupBy(x => x.Serial!, StringComparer.Ordinal)
+            .Where(g => g.Count() == 1).ToDictionary(g => g.Key, g => g.Single(), StringComparer.Ordinal);
+        var uniqueCandidates = candidates.Select(row => (Row: row, Serial: NormalizeSerial(row.SerialNumber)))
+            .Where(x => x.Serial is not null).GroupBy(x => x.Serial!, StringComparer.Ordinal)
+            .Where(g => g.Count() == 1).ToDictionary(g => g.Key, g => g.Single().Row, StringComparer.Ordinal);
+        var compared = new HashSet<int>();
+        var capacityBad = new HashSet<int>();
+        var partBad = new HashSet<int>();
+        foreach (var (serial, observation) in uniqueWmi)
+        {
+            if (!uniqueCandidates.TryGetValue(serial, out var candidate)) continue;
+            compared.Add(observation.Index);
+            var row = observation.Row;
+            long? wMiB = row.CapacityBytes is > 0 ? row.CapacityBytes / (1024 * 1024) : null;
+            if (wMiB is > 0 && candidate.CapacityMiB is > 0 && wMiB != candidate.CapacityMiB)
+                capacityBad.Add(observation.Index);
+            if (NormalizePart(row.PartNumber) is { } wp && NormalizePart(candidate.PartNumber) is { } cp && wp != cp)
+                partBad.Add(observation.Index);
         }
-        return new(wmi.Count, nativeCount, smbiosCount, compared, serialBad, capacityBad, partBad);
+        return new(compared, capacityBad, partBad);
+    }
+
+    private static string? NormalizeSerial(string? value)
+    {
+        var serial = Normalize(value);
+        return serial is "UNKNOWN" or "NOTSPECIFIED" or "NOTAVAILABLE" or "NOTAPPLICABLE" or "NA"
+            or "NONE" or "NULL" or "DEFAULTSTRING" or "SYSTEMSERIALNUMBER" or "SYSTEMPRODUCTNAME"
+            or "SYSTEMVERSION" or "SYSTEMMANUFACTURER" or "TOBEFILLEDBYOEM"
+            or "MANUFACTURER" or "PARTNUMBER" or "SERIALNUMBER" ? null : serial;
+    }
+
+    private static string? NormalizePart(string? value)
+    {
+        if (value is null) return null;
+        string raw = value.Trim();
+        // Reject explicit raw placeholders before punctuation removal. N/A means missing;
+        // literal NA, PARTNUMBER or SERIALNUMBER may be real parts and must not inherit serial's blacklist.
+        if (SmbiosService.IsPlaceholder(raw)
+            || raw.Equals("N/A", StringComparison.OrdinalIgnoreCase)
+            || raw.Equals("Not Available", StringComparison.OrdinalIgnoreCase)
+            || raw.Equals("Not Applicable", StringComparison.OrdinalIgnoreCase)
+            || raw.Equals("Null", StringComparison.OrdinalIgnoreCase)
+            || raw.Equals("To be filled by OEM", StringComparison.OrdinalIgnoreCase)
+            || raw.Equals("Part Number", StringComparison.OrdinalIgnoreCase)
+            || raw.Equals("Serial Number", StringComparison.OrdinalIgnoreCase)) return null;
+        return Normalize(raw);
     }
 
     /// <summary>WMI 通路（極薄）：實體記憶體的對照欄位；查詢失敗回 null 標三態。</summary>

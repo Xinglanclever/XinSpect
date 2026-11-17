@@ -30,6 +30,13 @@ public static class AiRedactor
 {
     private static readonly (string Kind, Regex Pattern, string Replacement)[] Rules =
     [
+        // Machine-produced storage serial is one JSON string token. Consume the entire
+        // opaque field before UUID/MAC/prose rules, including escaped delimiters and newlines.
+        ("序號",
+         new Regex(@"(?<label>・序號：)(?:""(?:[^""\\\r\n]|\\[^\r\n])*""|null)",
+                   RegexOptions.Compiled | RegexOptions.NonBacktracking),
+         "${label}（已遮蔽：序號）"),
+
         // UUID／GUID：磁碟分割、SMBios UUID、介面 GUID 都是這個形狀。
         ("UUID",
          new Regex(@"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b",
@@ -87,7 +94,7 @@ public static class AiRedactor
                 return replacement.Replace("${label}", m.Groups["label"].Value)
                                   .Replace("${drive}", m.Groups["drive"].Value);
             });
-            if (hit) kinds.Add(kind);
+            if (hit && !kinds.Contains(kind)) kinds.Add(kind);
         }
 
         return new RedactionResult(result, count, kinds);

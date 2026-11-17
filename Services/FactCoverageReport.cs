@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -37,7 +37,7 @@ public static class FactCoverageReport
     /// 放在這裡而不是只寫在測試裡，是為了讓 README 的守門有單一來源可讀：
     /// 一個數字寫在文件、一個寫在測試、第三個寫在腦子裡，遲早三個都不一樣。
     /// </remarks>
-    public const int ReviewedUncoveredBaseline = 473;
+    public const int ReviewedUncoveredBaseline = 481;
 
     /// <summary>明文豁免：刻意不對帳的事實鍵前綴與理由。</summary>
     /// <remarks>
@@ -84,6 +84,7 @@ public static class FactCoverageReport
             ["amd."] = "AMD 專屬事實（SMU／PSP 存在性）本機為 Intel 平台，無法驗證；"
                      + "有真機時應補對帳規則，屆時本條豁免要移除。",
             ["numa."] = "NUMA 拓撲來自 kernel32 與 ACPI SLIT，兩者已在解碼層並列；"
+                      + "逐節點可用 bytes 由 GetNumaAvailableMemoryNodeEx 單一來源回報，不是總／安裝容量，亦非跨節點延遲或頻寬；"
                       + "單節點機器的跨節點項目本來就無從量測。",
 
             // ── 刻意不豁免（列在下方註解，讓它們出現在「未覆蓋」裡）────────────────
@@ -501,7 +502,7 @@ public static class FactCoverageReport
         ["rf.summary"] = "帶外管理摘要（RF-001）：BMC 自我宣告的計數；單一來源，沒有第二條通路。",
         ["rf.boundary"] = "帶外資料邊界（RF-002）：申報文字本身，不是可對帳的量測。",
         ["rf.bundle.warnings"] = "離線目錄警告（RF-003）：讀取過程的警告清單，沒有第二條通路。",
-        ["rf.power.consumed"] = "機箱功耗（RF-004）：BMC 回報的單一數字；本工具未量測。",
+        ["rf.power.consumed"] = "電力控制讀數（RF-004）：僅唯一已解析範圍的 BMC 觀測；非整包總功耗，多筆不選首筆、不加總；原始身份預設遮蔽。",
         ["cpu.smi.cstate.summary"] = "SMI／C-state（CM-002／006）：MSR 差分；SMI 只有次數沒有時間。",
         ["cpu.pl.summary"] = "RAPL 功率牆（CM-015）：MSR 0x606／0x610／0x614；讀不到不宣稱沒有牆。",
         ["hist.memtrain.summary"] = "記憶體訓練時長（CM-017）：開機事件單一來源；無事件不寫 0 毫秒。",
@@ -636,7 +637,7 @@ public static class FactCoverageReport
         ["sg.audio"] = "聲音為什麼斷（SG-010）：只並列 APO／端點／預設三個面向，不斷言元凶——排除法的起點。",
         ["fw.fpdt.post"] = "FPDT 開機階段（FW-024）：版面出處 ACPI 5.2.24＋Linux fpdt.h；表缺席是不適用不是 0 秒，時間軸回捲不回 0。",
         ["ng.checklist"] = "自訂檢查清單（NG-002）：使用者資產，逐行驗證並帶行號；不做靜默部分成功，認不得的鍵名不算錯，只驗證不執行。",
-        ["zr.compliance."] = "裝置合規基線（ZR-004）：使用者提供的合規清單（知識包表）；**缺資料不能偽裝成通過**，快照日期必印，不列條目文字。",
+        ["zr.compliance."] = "裝置合規基線（ZR-004）：使用者提供的存在性清單（知識包表）；**缺資料不能偽裝成通過**，Present 亦不代表符合，缺比較條件及期望值回報 NotSupported；快照日期必印，不列條目文字。",
         ["ag.service"] = "背景服務模式（AG-005）：能力盤點與成本量級；**不建立服務、不註冊排程**——回答「如果要，缺什麼」，「可以做」與「正在做」是兩件事。",
         ["xt.rest"] = "REST 範例集（XT-003）：**明文不做**——出一份可用的範例等於提供連未承諾端點的程式碼；替代路徑為 CLI --json 與檔案交換。",
         ["po.svcboot."] = "服務就緒時間線（PO-005）：相對開機的秒數；**時間是事實、原因不是**，不評級不裁決慢，不列服務名稱。",

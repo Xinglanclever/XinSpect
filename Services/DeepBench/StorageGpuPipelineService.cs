@@ -55,18 +55,22 @@ public sealed class StorageGpuPipelineService(
     private readonly IDiskIoFileSystem _fileSystem = fileSystem ?? new WindowsDiskIoFileSystemAdapter();
     private readonly IGpuPipelineEngine _engine = engine ?? new D3D11PipelineEngine();
 
+    internal Func<DeepBenchRunProfile, GpuPipelineWorkload> WorkloadFactory { get; init; } = GetWorkload;
+
     public string Id => TestId;
 
     public async Task<DeepBenchTestResult> RunAsync(DeepBenchRunContext context, CancellationToken cancellationToken)
     {
         DateTime started = DateTime.UtcNow;
-        string? tempPath = null;
-        context.Progress.Report(new DeepBenchProgress(Id, 0, 1, 0.02, "規劃暫存檔"));
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            GpuPipelineWorkload workload = GetWorkload(context.Profile);
+            context.Progress.Report(new DeepBenchProgress(Id, 0, 1, 0.02, "規劃暫存檔"));
+            cancellationToken.ThrowIfCancellationRequested();
+            GpuPipelineWorkload workload = WorkloadFactory(context.Profile);
+            cancellationToken.ThrowIfCancellationRequested();
             long free = _fileSystem.GetAvailableFreeSpace(_root);
+            cancellationToken.ThrowIfCancellationRequested();
             if (workload.DataBytes > _budgetBytes || workload.DataBytes * 2 > free)
             {
                 return Failed(context, started, DeepBenchFailureKind.NotRun,
@@ -75,28 +79,43 @@ public sealed class StorageGpuPipelineService(
 
             string root = Path.GetFullPath(_root);
             if (!Path.EndsInDirectorySeparator(root)) root += Path.DirectorySeparatorChar;
-            tempPath = Path.Combine(root, "XinSpect.io-gpu.tmp");
-            byte[] data = CreateSyntheticData(workload.DataBytes);
+            cancellationToken.ThrowIfCancellationRequested();
+            using OwnedTemporaryFile temp = OwnedTemporaryFile.Create(root, "XinSpect.io-gpu");
+            cancellationToken.ThrowIfCancellationRequested();
+            byte[] data = CreateSyntheticData(workload.DataBytes, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             context.Progress.Report(new DeepBenchProgress(Id, 0, 2, 0.05, "寫入暫存檔並 FlushToDisk"));
-            WriteAndFlush(tempPath, data);
+            cancellationToken.ThrowIfCancellationRequested();
+            RandomAccess.Write(temp.Handle, data, 0);
+            cancellationToken.ThrowIfCancellationRequested();
+            RandomAccess.FlushToDisk(temp.Handle);
+            cancellationToken.ThrowIfCancellationRequested();
 
             context.Progress.Report(new DeepBenchProgress(Id, 1, 2, 0.15, "磁碟讀取"));
+            cancellationToken.ThrowIfCancellationRequested();
             long readTimestamp = Stopwatch.GetTimestamp();
-            byte[] readBack = File.ReadAllBytes(tempPath);
+            byte[] readBack = new byte[data.Length];
+            cancellationToken.ThrowIfCancellationRequested();
+            ReadExactly(temp.Handle, readBack, cancellationToken);
             double diskReadSeconds = Stopwatch.GetElapsedTime(readTimestamp).TotalSeconds;
             if (readBack.Length != data.Length)
                 throw new GpuPipelineValidationException("磁碟讀回長度與寫入不一致；整場拒收。");
 
             context.Progress.Report(new DeepBenchProgress(Id, 2, 3, 0.3, "上傳到 GPU 並執行"));
+            cancellationToken.ThrowIfCancellationRequested();
+            // Await actual engine completion: cancellation does not release file/data resources early.
             GpuPipelineGpuResult gpuResult = await _engine
                 .ProcessAsync(new GpuPipelineContext(readBack, context.Progress, cancellationToken))
                 .ConfigureAwait(false);
             Validate(workload, gpuResult);
+            cancellationToken.ThrowIfCancellationRequested();
 
-            uint mismatches = CountMismatches(readBack, gpuResult.HashedElements);
+            uint mismatches = CountMismatches(readBack, gpuResult.HashedElements, cancellationToken);
+            if (mismatches == 0) cancellationToken.ThrowIfCancellationRequested();
             return CreateResult(context, started, workload, diskReadSeconds, gpuResult, mismatches);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested
+            && exception.CancellationToken == cancellationToken)
         {
             return Cancelled(context, started);
         }
@@ -112,11 +131,6 @@ public sealed class StorageGpuPipelineService(
         {
             return Failed(context, started, DeepBenchFailureKind.PlatformError, exception.Message);
         }
-        finally
-        {
-            if (tempPath is not null && _fileSystem.Exists(tempPath))
-                _fileSystem.Delete(tempPath);
-        }
     }
 
     internal static GpuPipelineWorkload GetWorkload(DeepBenchRunProfile profile) => profile switch
@@ -127,13 +141,15 @@ public sealed class StorageGpuPipelineService(
     };
 
     /// <summary>確定性 PRNG 內容（xorshift32），長度為 4 的倍數以對齊 uint 元素。</summary>
-    internal static byte[] CreateSyntheticData(long dataBytes)
+    internal static byte[] CreateSyntheticData(long dataBytes, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         long aligned = dataBytes / 4 * 4;
         var data = new byte[aligned];
         uint prng = 0x5DEECE66u;
         for (int index = 0; index < aligned; index += 4)
         {
+            if ((index & 0xFFFF) == 0) cancellationToken.ThrowIfCancellationRequested();
             prng ^= prng << 13; prng ^= prng >> 17; prng ^= prng << 5;
             data[index] = (byte)prng;
             data[index + 1] = (byte)(prng >> 8);
@@ -143,12 +159,16 @@ public sealed class StorageGpuPipelineService(
         return data;
     }
 
-    internal static void WriteAndFlush(string path, byte[] data)
+    private static void ReadExactly(Microsoft.Win32.SafeHandles.SafeFileHandle handle, byte[] data,
+        CancellationToken cancellationToken)
     {
-        using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
+        int offset = 0;
+        while (offset < data.Length)
         {
-            stream.Write(data, 0, data.Length);
-            stream.Flush(flushToDisk: true);
+            cancellationToken.ThrowIfCancellationRequested();
+            int read = RandomAccess.Read(handle, data.AsSpan(offset), offset);
+            if (read == 0) throw new GpuPipelineValidationException("磁碟讀回提早結束；整場拒收。");
+            offset += read;
         }
     }
 
@@ -176,11 +196,12 @@ public sealed class StorageGpuPipelineService(
             throw new GpuPipelineValidationException("GPU 階段計時出現非有限或非正數值；整場拒收。");
     }
 
-    private static uint CountMismatches(byte[] data, uint[] hashed)
+    private static uint CountMismatches(byte[] data, uint[] hashed, CancellationToken cancellationToken)
     {
         uint mismatches = 0;
         for (int index = 0; index < hashed.Length; index++)
         {
+            if (mismatches == 0 && (index & 0x3FFF) == 0) cancellationToken.ThrowIfCancellationRequested();
             if (HashElement(data, index) != hashed[index])
                 mismatches++;
         }
@@ -219,7 +240,7 @@ public sealed class StorageGpuPipelineService(
                 mismatches == 0
                     ? "生命週期驗證通過：磁碟 → RAM → GPU → 回讀逐元素與 CPU 參考一致。"
                     : $"生命週期驗證失敗：{mismatches} 個元素與 CPU 參考不一致。",
-                "暫存檔 XinSpect.io-gpu.tmp 在結束、例外或取消後都會刪除。",
+                "本場唯一暫存檔以同一 handle 完成寫讀，結束後關閉並要求 OS DeleteOnClose；未另行驗證刪除結果。",
             ],
             Limitations,
             mismatches == 0 ? DeepBenchFailureKind.None : DeepBenchFailureKind.Unstable,

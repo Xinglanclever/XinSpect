@@ -68,7 +68,7 @@ public static class AcpiMadt
     [SpecRef("ACPI Spec r6.5, Table 5.19（MADT）：Header 36 bytes＋Local APIC Address u32@36、Flags u32@40；其後每子結構 type u8@0、length u8@1")]
     public static IReadOnlyList<MadtStructure> Structures(ReadOnlySpan<byte> table)
     {
-        if (table.Length < AcpiTable.HeaderLength + 8 || !table[..4].SequenceEqual("MADT"u8)) return [];
+        if (table.Length < AcpiTable.HeaderLength + 8 || !table[..4].SequenceEqual("APIC"u8)) return [];
         var list = new List<MadtStructure>();
         int off = AcpiTable.HeaderLength + 8;
         while (off + 2 <= table.Length)
@@ -86,7 +86,7 @@ public static class AcpiMadt
     /// <summary>MADT 表頭的 Local APIC 位址與旗標（@36／@40）。非 MADT 或過短回 null。</summary>
     [SpecRef("ACPI Spec r6.5, Table 5.19：Local APIC Address u32@36、Flags u32@40")]
     public static (uint Address, uint Flags)? Header(ReadOnlySpan<byte> table)
-        => table.Length >= AcpiTable.HeaderLength + 8 && table[..4].SequenceEqual("MADT"u8)
+        => table.Length >= AcpiTable.HeaderLength + 8 && table[..4].SequenceEqual("APIC"u8)
             ? (BitConverter.ToUInt32(table[36..40]), BitConverter.ToUInt32(table[40..44]))
             : null;
 
