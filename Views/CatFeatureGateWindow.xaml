@@ -20,7 +20,7 @@
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button x:Name="DeclineButton" MinWidth="120" Margin="0,0,10,0"
                         IsCancel="True" IsDefault="True"
-                        Style="{StaticResource ToolButton}" Click="Decline_Click"/>
+                        Style="{StaticResource ToolButton}"/>
                 <Button x:Name="ProceedButton" MinWidth="140" Style="{StaticResource PrimaryButton}"
                         Click="Proceed_Click"/>
             </StackPanel>

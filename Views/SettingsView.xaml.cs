@@ -33,11 +33,7 @@ public partial class SettingsView : UserControl
         this.OnThemeChange(() =>
         {
             RefreshLocalizedThemeNames();
-            if (ThemeCombo.SelectedIndex != ThemeService.ThemeIndex)
-                ThemeCombo.SelectedIndex = ThemeService.ThemeIndex;
             SyncSwissDarkCheck();
-            SyncCatLanguageCheck();
-            RefreshLanguageHint();
             ShowAccentHint();
         });
         SyncSwissDarkCheck();
@@ -52,6 +48,7 @@ public partial class SettingsView : UserControl
                 LanguageService.Changed += OnLanguageChanged;
                 _languageChangedSubscribed = true;
             }
+            RefreshLocalizedThemeNames();
             RefreshLanguageHint();
             SyncKeyBox();
             SetupSharedAiOption();
@@ -475,8 +472,7 @@ public partial class SettingsView : UserControl
     private void SyncCatLanguageCheck()
     {
         if (CatLanguageCheck is null) return;
-        CatLanguageCheck.Visibility = ThemeService.IsCatWorld ? Visibility.Visible : Visibility.Collapsed;
-        CatLanguageCheck.IsChecked = LanguageService.IsCatLanguageSelected;
+        CatLanguageCheck.IsChecked = LanguageService.IsCatLanguage;
     }
 
     private void AdvancedDiagnosticsCheck_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)

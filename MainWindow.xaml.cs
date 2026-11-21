@@ -28,6 +28,7 @@ public partial class MainWindow : Window
     private TrayService? _tray;
     private MiniOverlayWindow? _mini;
     private bool _ocRiskCleared;   // 本次執行是否已通過超頻風險兩階段確認
+    private bool _handlingNavigation;
     private bool _initialized;     // Loaded 可能多次觸發（隱藏至系統匣後再顯示等）；確保只初始化一次
 
     public MainWindow()
@@ -79,7 +80,7 @@ public partial class MainWindow : Window
             // （簡體走 LCMapStringEx、英語查翻譯表），這裡只負責「把樹跑一遍」。
             // 過去只認 IsSimplified——所以英語偏好重啟後主視窗的靜態文字（搜尋／迷你／匯出報告、
             // 紀年名稱）全部停在繁中，只有導覽列因為重建時逐項查表才是英文。2026-10-07 修。
-            if (LanguageService.IsSimplified || LanguageService.IsEnglish)
+            if (LanguageService.IsSimplified || LanguageService.IsEnglish || LanguageService.IsCatLanguage)
                 Dispatcher.InvokeAsync(() => LanguageService.ConvertVisualTree(this, LanguageService.IsSimplified),
                     System.Windows.Threading.DispatcherPriority.Loaded);
         };
@@ -135,40 +136,45 @@ public partial class MainWindow : Window
         var src = new CollectionViewSource { Source = pages };
         src.GroupDescriptions.Add(new PropertyGroupDescription(nameof(PageDef.Group)));
         Nav.ItemsSource = src.View;
+        if (_currentDef is not null) Nav.SelectedItem = _currentDef;
     }
 
     private void Nav_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (Nav.SelectedItem is not PageDef def) return;
+        if (_handlingNavigation || !ReferenceEquals(e.OriginalSource, Nav)
+            || Nav.SelectedItem is not PageDef def || ReferenceEquals(def, _currentDef)) return;
 
-        if (def.RequiresCatConsent && !CatFeatureGate.Confirm(this))
+        // Modal dialogs pump the dispatcher. Restoring selection must not start another navigation.
+        _handlingNavigation = true;
+        try
         {
-            Nav.SelectedItem = e.RemovedItems.Count > 0 ? e.RemovedItems[0] : PageRegistry.Pages[0];
-            return;
-        }
-
-        // 超頻類分頁：進入前的兩階段風險確認。本次執行僅需通過一次；選「今後不再顯示」則永久略過。
-        if (def.RequiresRiskConsent && !_ocRiskCleared)
-        {
-            if (!ConfirmOverclockRisk())
+            if (def.RequiresCatConsent && !CatFeatureGate.Confirm(this))
             {
-                // 使用者放棄進入：還原到先前分頁（若無則回第一頁）
-                Nav.SelectedItem = e.RemovedItems.Count > 0 ? e.RemovedItems[0] : PageRegistry.Pages[0];
+                Nav.SelectedItem = _currentDef;
                 return;
             }
-            _ocRiskCleared = true;
+
+            // 超頻類分頁：既有的兩階段風險確認仍然適用。
+            if (def.RequiresRiskConsent && !_ocRiskCleared)
+            {
+                if (!ConfirmOverclockRisk())
+                {
+                    Nav.SelectedItem = _currentDef;
+                    return;
+                }
+                _ocRiskCleared = true;
+            }
+
+            if (def.Key == "shrine")
+            {
+                Nav.SelectedItem = _currentDef;
+                _ = OpenShrineAsync();
+                return;
+            }
+
+            ShowPage(def);
         }
-
-
-        // 拜神：開視窗而不切頁，選取還原到先前分頁。
-        if (def.Key == "shrine")
-        {
-            Nav.SelectedItem = e.RemovedItems.Count > 0 ? e.RemovedItems[0] : PageRegistry.Pages[0];
-            _ = OpenShrineAsync();
-            return;
-        }
-
-        ShowPage(def);
+        finally { _handlingNavigation = false; }
     }
 
     /// <summary>開拜神視窗。乖度只計近七天可解析的核心 Minidump；讀取不完整時不猜。</summary>

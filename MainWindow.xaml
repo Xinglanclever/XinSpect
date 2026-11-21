@@ -8,7 +8,7 @@
         WindowStartupLocation="CenterScreen"
         FontFamily="{StaticResource AppFont}"
         Background="{DynamicResource PagePlaneBrush}"
-        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextFormattingMode="Display"
         UseLayoutRounding="True"
         PreviewKeyDown="Window_PreviewKeyDown">
     <Grid>
@@ -43,35 +43,11 @@
                             </TextBlock.Style>
                         </TextBlock>
                     </StackPanel>
-                    <!-- 東方之星副標題：僅極限版主題可見，預設模糊，懸停清晰。3.11 起代號改為 Swiss。 -->
-                    <TextBlock x:Name="EasterEggTitle" Text="瑞士" FontSize="28" FontWeight="Normal"
-                               FontFamily="SimSun" FontStyle="Italic"
+                    <!-- 東方之星副標題：僅極限版主題可見。 -->
+                    <TextBlock x:Name="EasterEggTitle" Text="Ultra" FontSize="22" FontWeight="SemiBold"
+                               FontStyle="Italic"
                                Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"
-                               Margin="18,0,0,0" Visibility="Collapsed">
-                        <TextBlock.Effect>
-                            <BlurEffect x:Name="EasterEggBlur" Radius="10"/>
-                        </TextBlock.Effect>
-                        <TextBlock.Triggers>
-                            <EventTrigger RoutedEvent="MouseEnter">
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="EasterEggBlur"
-                                                         Storyboard.TargetProperty="Radius"
-                                                         To="0" Duration="0:0:0.3"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                            <EventTrigger RoutedEvent="MouseLeave">
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="EasterEggBlur"
-                                                         Storyboard.TargetProperty="Radius"
-                                                         To="10" Duration="0:0:0.5"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                        </TextBlock.Triggers>
-                    </TextBlock>
+                               Margin="18,0,0,0" Visibility="Collapsed"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <Button x:Name="PaletteButton" Style="{StaticResource ToolButton}" Click="Palette_Click"

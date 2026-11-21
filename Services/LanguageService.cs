@@ -49,11 +49,8 @@ public static class LanguageService
     /// <summary>目前是否為英語模式。</summary>
     public static bool IsEnglish => _isEnglish;
 
-    /// <summary>貓貓語喵已選取，且只在貓貓世界主題中生效。</summary>
-    public static bool IsCatLanguage => _catLanguageSelected && ThemeService.IsCatWorld;
-
-    /// <summary>貓貓語喵的選取狀態；離開主題時保留，重返後可接續使用。</summary>
-    public static bool IsCatLanguageSelected => _catLanguageSelected;
+    /// <summary>貓貓語喵已選取，與外觀主題無關。</summary>
+    public static bool IsCatLanguage => _catLanguageSelected;
 
     /// <summary>目前語言。</summary>
     public static AppLanguage Language => IsCatLanguage ? AppLanguage.Cat
@@ -100,17 +97,6 @@ public static class LanguageService
         _simplified = settings.SimplifiedChinese;
         _isEnglish = settings.IsEnglish;
         _catLanguageSelected = settings.CatLanguage;
-    }
-
-    /// <summary>主題切換時重套有效語言；Cat 選取只在貓貓世界中生效，底層語系仍保留。</summary>
-    internal static void OnThemeAvailabilityChanged()
-    {
-        if (Shell.Main is { } main)
-        {
-            ConvertVisualTree(main, _simplified);
-            main.RebuildNavIfNeeded();
-        }
-        Changed?.Invoke();
     }
 
     /// <summary>啟用或停用貓貓語喵時保留既有繁／簡／英語偏好。</summary>

@@ -1005,7 +1005,7 @@ public static class EnglishStrings
         ["深度審計與時間軸"] = "Deep audit & timeline",
         ["深度規格 (CPU-Z)"] = "Deep specs (CPU-Z)",
         ["深度識別（CPU-Z）"] = "Deep identification (CPU-Z)",
-        ["五種主題（深色／淺色／極限版／Ultra／貓貓世界）與十種強調色。選擇後整個介面立即換色（無須重啟），並記憶為下次啟動的外觀。"] = "Five themes (dark, light, Extreme Edition, Ultra, and Cat World) and ten accent colours. Switching recolours the entire interface immediately and is remembered for next launch.",
+        ["四種主題（深色／淺色／極限版／瑞士現代主義平面設計）與十種強調色。選擇後整個介面立即換色（無須重啟），並記憶為下次啟動的外觀。"] = "Four themes (Dark, Light, Extreme Edition, and Swiss Modernist Graphic Design) and ten accent colours. Changes apply immediately and are remembered for next launch.",
         ["清理垃圾檔案"] = "Clean junk files",
         ["清理所選"] = "Clean selected",
         ["清空所有工作集"] = "Empty all working sets",
@@ -1152,9 +1152,12 @@ public static class EnglishStrings
         ["系統總覽"] = "System overview",
         ["系統資訊"] = "System info",
         ["機型資訊"] = "Model",
-        ["Ultra 深色模式"] = "Ultra Dark Mode",
-        ["Ultra 的暗色版本：近黑底色、淺色文字、直角與大字排版。"]
-            = "The dark Ultra variant uses a near-black surface, light text, square geometry, and larger type.",
+        ["瑞士現代主義平面設計"] = "Swiss Modernist Graphic Design",
+        ["瑞士深色模式"] = "Swiss Dark Mode",
+        ["瑞士主題的暗色版本：近黑底色、淺色文字、直角與大字排版。"]
+            = "The dark Swiss variant uses a near-black surface, light text, square geometry, and larger type.",
+        ["貓貓語喵（每段介面文字加上喵）"] = "Meow language (adds 喵 to Chinese interface text)",
+        ["自然人類"] = "Human contributors",
         ["隱藏外框（只留底板與讀值）"] = "Hide the outer frame (keep only the panel and readings)",
         ["微架構"] = "Microarchitecture",
         ["本機型號、系統與關鍵硬體參數的摘要；即時數據請到各自的專頁，儀表預設收起。"]

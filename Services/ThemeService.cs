@@ -5,7 +5,7 @@ using System.Windows.Media;
 
 namespace XinSpect;
 
-public enum AppTheme { Dark, Light, ExtremeEdition, Swiss, SwissDark, CatWorld }
+public enum AppTheme { Dark, Light, ExtremeEdition, Swiss, SwissDark }
 
 /// <summary>
 /// 強調色定義：Main 為主色（漸層頂近似），Dim 為暗端（漸層底），GradTop 為漸層頂亮端。
@@ -77,27 +77,14 @@ public static class ThemeService
         set
         {
             if (_theme == value) return;
-            bool catLanguageAvailabilityChanges = (_theme == AppTheme.CatWorld) != (value == AppTheme.CatWorld);
-            if (value == AppTheme.CatWorld && _theme != AppTheme.CatWorld)
-            {
-                _accentBeforeCatWorld = _accent.Key == CatWorldAccent.Key ? "blue" : _accent.Key;
-                _accent = CatWorldAccent;
-            }
-            else if (_theme == AppTheme.CatWorld && value != AppTheme.CatWorld && _accent.Key == CatWorldAccent.Key)
-            {
-                _accent = FindAccent(_accentBeforeCatWorld);
-            }
             _theme = value;
             ApplyAll();
             SavePrefs();
             Changed?.Invoke();
-            if (catLanguageAvailabilityChanges) LanguageService.OnThemeAvailabilityChanged();
         }
     }
 
     private static AccentPreset _accent = Presets[0];
-    private static string _accentBeforeCatWorld = "blue";
-    private static readonly AccentPreset CatWorldAccent = new("cat-world", "貓粉", "#c44f91", "#7f2d5e", "#dc6fae");
     /// <summary>目前強調色。TrayService 圖示與標題輝光取用其色值。</summary>
     public static AccentPreset Accent
     {
@@ -141,7 +128,6 @@ public static class ThemeService
             AppTheme.Light => 1,
             AppTheme.ExtremeEdition => 2,
             AppTheme.Swiss or AppTheme.SwissDark => 3,
-            AppTheme.CatWorld => 4,
             _ => 0,
         };
         set => Theme = value switch
@@ -149,7 +135,6 @@ public static class ThemeService
             1 => AppTheme.Light,
             2 => AppTheme.ExtremeEdition,
             3 => AppTheme.Swiss,
-            4 => AppTheme.CatWorld,
             _ => AppTheme.Dark,
         };
     }
@@ -160,11 +145,8 @@ public static class ThemeService
         LanguageService.TLabel("深色"),
         LanguageService.TLabel("淺色"),
         LanguageService.TLabel("極限版（東方之星）"),
-        "Ultra",
-        LanguageService.IsEnglish ? "Cat World" : LanguageService.IsSimplified ? "吉米国" : "貓貓世界",
+        LanguageService.TLabel("瑞士現代主義平面設計"),
     ];
-
-    public static bool IsCatWorld => _theme == AppTheme.CatWorld;
 
     /// <summary>在深／淺／極限版／瑞士版之間循環（命令面板用）。</summary>
     public static void ToggleTheme() => Theme = _theme switch
@@ -172,7 +154,6 @@ public static class ThemeService
         AppTheme.Dark => AppTheme.Light,
         AppTheme.Light => AppTheme.ExtremeEdition,
         AppTheme.ExtremeEdition => AppTheme.Swiss,
-        AppTheme.Swiss => AppTheme.CatWorld,
         _ => AppTheme.Dark,
     };
 
@@ -202,7 +183,7 @@ public static class ThemeService
     // Extreme Edition「天犼星」：ROG/EVGA 風格——純黑底 + 低飽和暗紅點綴
     private static readonly Palette ExtremeEditionPalette = new(
         "#0A0A0A", "#121212", "#1A1A1A",
-        "#E0E0E0", "#A0A0A0", "#686868",
+        "#E0E0E0", "#A0A0A0", "#929292",
         "#252525", "#303030", "#0E0E0E");
 
     // 瑞士現代主義（深色）：同一個語彙的暗底版——近黑紙面、純白墨、細線，一樣直角與大字。
@@ -211,19 +192,12 @@ public static class ThemeService
         "#ffffff", "#e8e8e8", "#9a9a9a",
         "#2e2e2e", "#4a4a4a", "#111111");
 
-    // 貓貓世界：淡粉與薰衣草紙面，使用深紫墨色確保標籤與數值仍清楚可讀。
-    private static readonly Palette CatWorldPalette = new(
-        "#fff7fc", "#fffdfd", "#f4eafa",
-        "#38263f", "#5b4664", "#786b80",
-        "#e7d7ec", "#d2bfd9", "#faedf7");
-
     private static Palette Current => _theme switch
     {
         AppTheme.Light => LightPalette,
         AppTheme.ExtremeEdition => ExtremeEditionPalette,
         AppTheme.Swiss => SwissPalette,
         AppTheme.SwissDark => SwissDarkPalette,
-        AppTheme.CatWorld => CatWorldPalette,
         _ => DarkPalette,
     };
 
@@ -299,8 +273,7 @@ public static class ThemeService
         Color surface = Hex(p.Surface);
         double tintRatio = _theme == AppTheme.ExtremeEdition ? 0.88
                          : _theme == AppTheme.Dark ? 0.80 : 0.86;
-        Color headerAccent = _theme == AppTheme.CatWorld ? Hex("#cf82b5") : Accent.MainColor;
-        Color tint = Blend(headerAccent, plane, tintRatio);
+        Color tint = Blend(Accent.MainColor, plane, tintRatio);
         if (IsSwiss)
             SetGradientStops("HeaderGradientBrush", (0.0, Hex(p.HeaderMid)), (0.45, Hex(p.HeaderMid)), (1.0, surface));
         else
@@ -310,7 +283,7 @@ public static class ThemeService
             (1.0, surface));
 
         // 狀態色：淺色／瑞士版下原深色版飽和度偏亮，壓暗以維持與紙面的對比
-        if (_theme is not (AppTheme.Light or AppTheme.Swiss or AppTheme.CatWorld))
+        if (_theme is not (AppTheme.Light or AppTheme.Swiss))
         {
             Set("GoodBrush", "#0ca30c");
             Set("WarningBrush", "#fab219");
@@ -373,9 +346,8 @@ public static class ThemeService
                      && Enum.IsDefined(saved)
                 ? saved
                 : AppTheme.Dark;
-            _accent = string.Equals(p.Accent, CatWorldAccent.Key, StringComparison.OrdinalIgnoreCase)
-                ? CatWorldAccent : FindAccent(p.Accent);
-            _accentBeforeCatWorld = FindAccent(p.AccentBeforeCatWorld ?? "blue").Key;
+            _accent = FindAccent(string.Equals(p.Accent, "cat-world", StringComparison.OrdinalIgnoreCase)
+                ? p.AccentBeforeCatWorld : p.Accent);
         }
         catch { /* 偏好毀損則沿用預設（深色 + 曦藍） */ }
     }
@@ -386,7 +358,7 @@ public static class ThemeService
         {
             Directory.CreateDirectory(PrefDir);
             var json = JsonSerializer.Serialize(
-                new Prefs { Theme = _theme.ToString(), Accent = _accent.Key, AccentBeforeCatWorld = _accentBeforeCatWorld },
+                new { Theme = _theme.ToString(), Accent = _accent.Key },
                 new JsonSerializerOptions { WriteIndented = true });
             AtomicWrite.AllText(PrefPath, json);
         }

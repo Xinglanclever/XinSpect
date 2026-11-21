@@ -65,9 +65,7 @@ public partial class AboutView : UserControl
     {
         ContributionRankHeading.Text = LanguageService.T("據作者統計所排名");
         System.Windows.Automation.AutomationProperties.SetName(CatPortrait, LanguageService.T("貓咪插畫"));
-        System.Windows.Automation.AutomationProperties.SetName(PettedCatImage, LanguageService.T("摸摸貓咪"));
         CatPortrait.ToolTip = LanguageService.T("貓咪插畫");
-        PettedCatImage.ToolTip = LanguageService.T("摸摸貓咪");
     }
 
     private bool _showSecondCat;
@@ -75,18 +73,9 @@ public partial class AboutView : UserControl
     private void NotMyCat_Click(object sender, RoutedEventArgs e)
     {
         _showSecondCat = !_showSecondCat;
-        PetCatButton.Visibility = _showSecondCat ? Visibility.Visible : Visibility.Collapsed;
-        PettedCatImage.Visibility = Visibility.Collapsed;
         string asset = _showSecondCat ? "cat-second.jpg" : "catworld-illustration.png";
         CatPortrait.Source = new System.Windows.Media.Imaging.BitmapImage(
             new Uri($"pack://application:,,,/Assets/{asset}", UriKind.Absolute));
-    }
-
-    private void PetCat_Click(object sender, RoutedEventArgs e)
-    {
-        PettedCatImage.Visibility = PettedCatImage.Visibility == Visibility.Visible
-            ? Visibility.Collapsed
-            : Visibility.Visible;
     }
 
     private void SageQuoteHint_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)

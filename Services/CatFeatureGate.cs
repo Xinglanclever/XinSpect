@@ -23,13 +23,14 @@ public static class CatFeatureGate
 
     private static bool ConfirmOnUiThread(Window? owner)
     {
+        if (!LanguageService.IsCatLanguage) return true;
         Window? dialogOwner = owner ?? Shell.Main;
         var dialog = new CatFeatureGateWindow();
         if (dialogOwner is not null) dialog.Owner = dialogOwner;
-        dialog.ShowDialog();
-        if (!dialog.Proceed) return false;
+        if (dialog.ShowDialog() != true) return false;
 
-        string reaction = ReactionText(LanguageService.Language);
+        string reaction = ReactionText(LanguageService.IsEnglish ? AppLanguage.English
+            : LanguageService.IsSimplified ? AppLanguage.Simplified : AppLanguage.Traditional);
         if (dialogOwner is null)
             MessageBox.Show(reaction, "喵！", MessageBoxButton.OK, MessageBoxImage.Warning);
         else

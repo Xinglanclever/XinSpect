@@ -67,11 +67,9 @@
     <!-- 關於頁「By：Xinglanclever」旁的動畫 GIF；以 Resource 編入，pack URI 讀取後逐格輪播 -->
     <Resource Include="Assets\hug.gif" />
     <!-- 關於頁 DeepSeek 旁的大肥魚動圖 -->
-    <Resource Include="Assets\bigfish.gif" />
     <!-- 關於頁貓咪世界畫廊：透明插畫、靜態照片、使用者提供的貓咪影格與輪播 GIF，均內嵌供單檔執行。 -->
     <Resource Include="Assets\catworld-illustration.png" />
     <Resource Include="Assets\cat-second.jpg" />
-    <Resource Include="Assets\cat-petted.gif" />
     <!-- 關於頁「第三方授權」卡的清單來源（U10-UI-0034）：單檔發佈時根目錄實檔不隨 exe 走，
          內嵌為資源（邏輯名對應 Services/ThirdPartyNoticesCatalog.ResourceName）才讀得到；
          讀取順序「資源優先、磁碟檔其次、皆無＝如實標缺」，磁碟檔只是開發機退路。 -->

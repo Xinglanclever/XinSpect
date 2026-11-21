@@ -4,8 +4,6 @@ namespace XinSpect;
 
 public partial class CatFeatureGateWindow : Window
 {
-    public bool Proceed { get; private set; }
-
     public CatFeatureGateWindow()
     {
         InitializeComponent();
@@ -22,15 +20,5 @@ public partial class CatFeatureGateWindow : Window
         DeclineButton.Content = LanguageService.T("那算了吧");
     }
 
-    private void Proceed_Click(object sender, RoutedEventArgs e)
-    {
-        Proceed = true;
-        DialogResult = true;
-    }
-
-    private void Decline_Click(object sender, RoutedEventArgs e)
-    {
-        Proceed = false;
-        DialogResult = false;
-    }
+    private void Proceed_Click(object sender, RoutedEventArgs e) => DialogResult = true;
 }

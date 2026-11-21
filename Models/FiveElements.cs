@@ -42,7 +42,7 @@ public static class FiveElements
         new("", "Claude Opus 5\nClaude Opus 4.8\nClaude Opus 4.6", 0),
         new("", "ChatGPT 5.6 Sol\nChatGPT 6 Astra\nChatGPT 6.1 Sol", 72),
         new("", "Gemini 3.8 Flash\nGemini 4 Argon", 144),
-        new("", "待定", 216),
+        new("", "自然人類", 216),
         new("", "DeepSeek V4.1 Flash\nGLM 5.3 Flash\nGLM 5.3\nQwen 3.8 Flash", 288),
     ];
 

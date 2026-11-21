@@ -156,7 +156,7 @@
                 <StackPanel>
                     <local:SectionHead Text="外觀" HelpKey="settings/外觀"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
-                               Text="五種主題（深色／淺色／極限版／Ultra／貓貓世界）與十種強調色。選擇後整個介面立即換色（無須重啟），並記憶為下次啟動的外觀。"/>
+                               Text="四種主題（深色／淺色／極限版／瑞士現代主義平面設計）與十種強調色。選擇後整個介面立即換色（無須重啟），並記憶為下次啟動的外觀。"/>
 
                     <Grid Margin="0,14,0,0">
                         <Grid.ColumnDefinitions>
@@ -165,15 +165,15 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="主題" VerticalAlignment="Center"/>
                         <ComboBox Grid.Column="1" x:Name="ThemeCombo" Style="{StaticResource DarkCombo}"
-                                  HorizontalAlignment="Left" Width="220"
+                                  HorizontalAlignment="Left" Width="255"
                                   SelectionChanged="Theme_Changed"/>
                     </Grid>
 
-                    <!-- 只在選了 Ultra 時出現：同一套主題規則的暗色版本。 -->
+                    <!-- 只在選了瑞士主題時出現：同一套主題規則的暗色版本。 -->
                     <CheckBox x:Name="SwissDarkCheck" Style="{StaticResource SetCheck}" Margin="155,10,0,0"
-                              Content="Ultra 深色模式" Visibility="Collapsed"
+                              Content="瑞士深色模式" Visibility="Collapsed"
                               Checked="SwissDark_Changed" Unchecked="SwissDark_Changed"
-                              ToolTip="Ultra 的暗色版本：近黑底色、淺色文字、直角與大字排版。"/>
+                              ToolTip="瑞士主題的暗色版本：近黑底色、淺色文字、直角與大字排版。"/>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Text="強調色" Margin="0,16,0,8"/>
                     <ItemsControl x:Name="AccentList">
@@ -209,7 +209,7 @@
                               Click="EnglishToggle_Click"/>
                     <CheckBox Style="{StaticResource SetCheck}" Margin="0,4,0,0"
                               Content="貓貓語喵（每段介面文字加上喵）"
-                              x:Name="CatLanguageCheck" Visibility="Collapsed"
+                              x:Name="CatLanguageCheck"
                               Click="CatLanguageToggle_Click"/>
 
                     <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,16"/>
