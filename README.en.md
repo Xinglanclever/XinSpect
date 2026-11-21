@@ -15,7 +15,7 @@ Where it can read, it gives the value and its source (which register, which WMI 
 ![Version](https://img.shields.io/badge/version-3.33-4C8DFF)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![Tests](https://img.shields.io/badge/tests-9664%20passed-3FB950)
+![Tests](https://img.shields.io/badge/tests-9683%20passed-3FB950)
 ![Mutation Score](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 > The 82% Stryker score covers only the pure-function `XinSpect.Decoders` library, not the GUI, CLI, or privileged access layer.
 ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
@@ -168,15 +168,15 @@ Every number here can be counted on a clean checkout. **How you count is part of
 | Help entries | 287 | Members of `Entries` in `Nav/HelpCatalog.cs` |
 | Service files | 709 | `find Services -name '*.cs' \| wc -l` |
 | Global C# files | 1,729 | Count all `*.cs`, excluding build, publish, work and dependency directories |
-| Latest full test run | 9,664 | Latest full regression, v3.33 |
-| Project test baseline | 9,664 | `TestSuiteBaseline.ProjectTests` in `Tests/TestSuiteBaseline.cs` |
-| Test source inventory | 731 test files; 7,338 Fact methods (including 7 FsCheck Properties) + 504 Theory methods = 7,842 methods | Source-tree and AST counts; not runtime cases |
+| Latest full test run | 9,683 | Latest full regression, v3.33 |
+| Project test baseline | 9,683 | `TestSuiteBaseline.ProjectTests` in `Tests/TestSuiteBaseline.cs` |
+| Test source inventory | 731 test files; 7,340 Fact methods (including 7 FsCheck Properties) + 507 Theory methods = 7,847 methods | Source-tree and AST counts; not runtime cases |
 | CLI commands | 51 | `grep -c 'case "' XinSpectCli/Program.cs` |
 | Changelog entries | 138 | Members of `Entries` in `Nav/ChangelogCatalog.cs` |
 
 Of 1,216 catalogue keys, most are reachable on mainstream platforms; special chipsets, OEM BIOSes, virtual machines and older platforms fall back to the six states. The fact catalogue (1,216 keys) spans hardware, operating system, security, diagnostics, provenance and governance — it is a catalogue, not a count of hardware readings. All 1,216 keys are listed with provenance in the Chinese encyclopedia.
 
-Source snapshot (November 22, 2026): 709 service files, 1,729 C# files and 731 test files; 7,338 public instance Fact methods (including 7 FsCheck Properties) and 504 Theory methods, 7,842 in total. These AST counts are neither runtime cases nor an ULTIMATE-10000 completion rate. The latest full regression (v3.33) passed 9,664 cases; source counts are separate evidence.
+Source snapshot (November 22, 2026): 709 service files, 1,729 C# files and 731 test files; 7,340 public instance Fact methods (including 7 FsCheck Properties) and 507 Theory methods, 7,847 in total. These AST counts are neither runtime cases nor an ULTIMATE-10000 completion rate. The latest full regression (v3.33) passed 9,683 cases; source counts are separate evidence.
 
 **What this table does not prove.** A catalogue key is not a hardware reading; the review catalogue (116 items in v3.17, 111 in v3.18) is not a count of confirmed defects and not a third-party audit.
 
@@ -200,7 +200,7 @@ cd XinSpect
 
 dotnet build XinSpect.csproj -c Release
 dotnet build XinSpectCli/XinSpectCli.csproj -c Release
-dotnet test Tests/XinSpect.Tests.csproj          # latest full regression (v3.33): 9,664 passed
+dotnet test Tests/XinSpect.Tests.csproj          # latest full regression (v3.33): 9,683 passed
 
 python Tools/gen-docs-html.py                    # regenerate 百科.html / 手冊.html
 python Tools/gen-readme-domains.py --check       # guard: README domain expansion vs catalogue

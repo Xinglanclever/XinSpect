@@ -10,7 +10,7 @@ Usage:
   python Tools/publish_release.py --tag v2.54 --title "v2.54 ..." --body-file notes.md \
       --asset XinSpect.exe=publish-254/XinSpect.exe --asset BlueSquadronBridge.exe=... [--repo owner/name]
 """
-import argparse, io, json, re, subprocess, sys, time, urllib.request, urllib.error
+import argparse, hashlib, io, json, re, subprocess, sys, time, urllib.request, urllib.error, urllib.parse
 
 def get_token():
     p = subprocess.run(["git", "credential", "fill"], input="protocol=https\nhost=github.com\n\n",
@@ -43,6 +43,8 @@ def main():
     ap.add_argument("--asset", action="append", default=[])
     ap.add_argument("--prerelease", action="store_true",
                     help="標記為 Pre-release（測試版用；不會蓋掉正式版的 latest）")
+    ap.add_argument("--publish-when-complete", action="store_true",
+                    help="Upload and verify the entire asset set in a draft before publishing")
     ap.add_argument("--repo", default="Xinglanclever/XinSpect")
     args = ap.parse_args()
 
@@ -53,12 +55,18 @@ def main():
     rel = None
     try:
         rel = api(f"{base}/releases/tags/{args.tag}", token)
-    except urllib.error.HTTPError:
-        pass
+    except urllib.error.HTTPError as e:
+        if e.code != 404:
+            raise
+    if rel is None and args.publish_when_complete:
+        releases = api(f"{base}/releases?per_page=100", token)
+        rel = next((r for r in releases if r["tag_name"] == args.tag), None)
+    if args.publish_when_complete and rel is not None and not rel["draft"]:
+        sys.exit("Refusing to replace assets on an already-published release")
     if rel is None:
         rel = api(f"{base}/releases", token, "POST", {
             "tag_name": args.tag, "name": args.title, "body": body,
-            "draft": False, "prerelease": bool(args.prerelease), "target_commitish": "main"})
+            "draft": args.publish_when_complete, "prerelease": bool(args.prerelease), "target_commitish": "main"})
         print(f"created release id={rel['id']}")
     else:
         patch = {"name": args.title, "body": body}
@@ -67,17 +75,23 @@ def main():
         rel = api(f"{base}/releases/{rel['id']}", token, "PATCH", patch)
         print(f"reused release id={rel['id']}")
 
+    expected = {}
     for spec in args.asset:
         name, path = spec.split("=", 1)
         blob = io.open(path, "rb").read()
+        expected[name] = (len(blob), "sha256:" + hashlib.sha256(blob).hexdigest())
+        query = urllib.parse.urlencode({"name": name})
         last_error = None
         for attempt in range(1, 4):
             # 重試前重新查一次：上一次可能其實已上傳成功，只是等回應時斷線。
             current = {a["name"]: a for a in api(f"{base}/releases/{rel['id']}/assets", token)}
             if name in current:
+                if (current[name]["size"], current[name].get("digest")) == expected[name]:
+                    up = current[name]
+                    break
                 api(current[name]["url"], token, "DELETE")
             try:
-                up = api(f"https://uploads.github.com/repos/{args.repo}/releases/{rel['id']}/assets?name={name}",
+                up = api(f"https://uploads.github.com/repos/{args.repo}/releases/{rel['id']}/assets?{query}",
                          token, "POST", raw=blob, content_type="application/octet-stream")
                 break
             except urllib.error.HTTPError as e:
@@ -92,6 +106,14 @@ def main():
             time.sleep(15 * attempt)
         print(f"uploaded {name}: {up['size']} bytes (local {len(blob)})")
         assert up["size"] == len(blob), f"SIZE MISMATCH for {name}"
+
+    if args.publish_when_complete:
+        actual = {a["name"]: (a["size"], a.get("digest"))
+                  for a in api(f"{base}/releases/{rel['id']}/assets", token) if a["state"] == "uploaded"}
+        if not expected or actual != expected:
+            sys.exit("The draft asset names, sizes or SHA-256 digests differ from the local package")
+        rel = api(f"{base}/releases/{rel['id']}", token, "PATCH", {"draft": False})
+        print(f"Published {rel['html_url']} with {len(actual)} verified assets")
 
     print("DONE")
 

@@ -16,7 +16,7 @@
 ![版本](https://img.shields.io/badge/version-3.33-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-9664%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-9683%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 > Stryker 82% 僅涵蓋 `XinSpect.Decoders` 純解碼器類別庫，不代表整個 GUI、CLI 或核心存取層。
 ![授權](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
@@ -169,13 +169,13 @@ xsc --lang zh-S              # 介面語言（簡體中文）
 | 服務檔 | **709** | `find Services -name '*.cs' \| wc -l` |
 | 全域 C# 檔 | **1,729** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`work/`、`publish-*/`、`.git/`、`node_modules/`、`TestResults/`、`_trx/` |
 | 版本紀錄筆數 | **138** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
-| 最近一次完整測試 | **9,664** | v3.33 本版全套回歸實跑結果 |
-| 專案測試基線 | **9,664** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests` |
+| 最近一次完整測試 | **9,683** | v3.33 本版全套回歸實跑結果 |
+| 專案測試基線 | **9,683** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests` |
 | CLI 指令（`Execute` case 標籤） | **51** | `grep -c 'case "' XinSpectCli/Program.cs` |
 | 核心後端接線狀態 | **部分完成** | PawnIO Native 尚未綁定；WMI 是獨立 Windows 回報來源；WinRing0／XsRegProbe 尚未全面共用 `IKernelBackend` 選路；BlueSquadron 驅動未封裝 |
 | AI 輔助內部審查編目 | **116** | `docs/審查報告-v3.17.md` 的編目條目；v3.18 另列 111 條。不是確認缺陷數，也不是第三方審計 |
 
-來源快照（2026-11-22）：709 個服務檔、1,729 個 C# 檔、731 個測試檔；public instance 測試方法為 7,338 個 Fact（含 7 個 FsCheck Property）及 504 個 Theory，共 7,842 個。方法數來自來源 AST，沒有換算成執行期案例或 ULTIMATE-10000 完成率；9,664 為 v3.33 本版全套回歸實跑結果，測試案例與來源方法分開計數。
+來源快照（2026-11-22）：709 個服務檔、1,729 個 C# 檔、731 個測試檔；public instance 測試方法為 7,340 個 Fact（含 7 個 FsCheck Property）及 507 個 Theory，共 7,847 個。方法數來自來源 AST，沒有換算成執行期案例或 ULTIMATE-10000 完成率；9,683 為 v3.33 本版全套回歸實跑結果，測試案例與來源方法分開計數。
 
 **這張表不能證明什麼。** 1,216 是硬體、作業系統、安全、診斷、來源與治理等項目的整體目錄數，不是 1,216 項硬體讀值。審查編目也不是確認缺陷數；報告記錄了代理發現與作者驗證，不能替代獨立第三方審計。
 
@@ -203,7 +203,7 @@ cd XinSpect
 
 dotnet build XinSpect.csproj -c Release          # 主程式
 dotnet build XinSpectCli/XinSpectCli.csproj -c Release
-dotnet test Tests/XinSpect.Tests.csproj          # 最近一次完整回歸：9,664 項通過（v3.33）
+dotnet test Tests/XinSpect.Tests.csproj          # 最近一次完整回歸：9,683 項通過（v3.33）
 
 python Tools/gen-docs-html.py                    # README.md → 百科.html（改了 README 就要重跑）
 python Tools/gen-readme-domains.py --check       # 守門：README 逐域展開與鍵目錄一致

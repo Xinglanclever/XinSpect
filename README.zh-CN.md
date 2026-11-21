@@ -17,7 +17,7 @@
 ![版本](https://img.shields.io/badge/version-3.33-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![测试](https://img.shields.io/badge/tests-9664%20passed-3FB950)
+![测试](https://img.shields.io/badge/tests-9683%20passed-3FB950)
 ![突变分数](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 > Stryker 82% 仅覆盖 `XinSpect.Decoders` 纯解码器类库，不代表整个 GUI、CLI 或内核访问层。
 ![授权](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
@@ -170,14 +170,14 @@ xsc --lang zh-T             # 界面语言（繁體中文）
 | 说明条目 | 287 | `Nav/HelpCatalog.cs` 的 `Entries` 成员数 |
 | 服务文件 | 709 | `find Services -name '*.cs' \| wc -l` |
 | 全局 C# 文件 | 1,729 | 遍历 `*.cs`，排除构建、发布、工作与依赖目录 |
-| 最近一次完整测试 | 9,664 | v3.33 本版全套回归实跑结果 |
-| 项目测试基线 | 9,664（`TestSuiteBaseline.ProjectTests`） | `Tests/TestSuiteBaseline.cs` |
-| 运行期测试案例 | 9,664（`TestSuiteBaseline.ProjectTests`） | v3.33 本版全套回归；方法数另列 |
-| 测试文件与方法 | 731 个测试文件；7,338 个 Fact（含 7 个 FsCheck Property）＋504 个 Theory＝7,842 个方法 | 文件及方法数按源码目录与 AST 计数，不换算成运行期案例 |
+| 最近一次完整测试 | 9,683 | v3.33 本版全套回归实跑结果 |
+| 项目测试基线 | 9,683（`TestSuiteBaseline.ProjectTests`） | `Tests/TestSuiteBaseline.cs` |
+| 运行期测试案例 | 9,683（`TestSuiteBaseline.ProjectTests`） | v3.33 本版全套回归；方法数另列 |
+| 测试文件与方法 | 731 个测试文件；7,340 个 Fact（含 7 个 FsCheck Property）＋507 个 Theory＝7,847 个方法 | 文件及方法数按源码目录与 AST 计数，不换算成运行期案例 |
 | CLI 指令 | 51 | `grep -c 'case "' XinSpectCli/Program.cs` |
 | 版本记录 | 138 | `Nav/ChangelogCatalog.cs` 的 `Entries` 成员数 |
 
-源码快照（2026-11-22）：709 个服务文件、1,729 个 C# 文件、731 个测试文件；public instance 测试方法为 7,338 个 Fact（含 7 个 FsCheck Property）及 504 个 Theory，共 7,842 个。方法数来自源码 AST，不换算为运行期案例或 ULTIMATE-10000 完成率；9,664 为 v3.33 最近一次全绿完整回归实跑结果，测试案例与源码规模分别计数。
+源码快照（2026-11-22）：709 个服务文件、1,729 个 C# 文件、731 个测试文件；public instance 测试方法为 7,340 个 Fact（含 7 个 FsCheck Property）及 507 个 Theory，共 7,847 个。方法数来自源码 AST，不换算为运行期案例或 ULTIMATE-10000 完成率；9,683 为 v3.33 最近一次全绿完整回归实跑结果，测试案例与源码规模分别计数。
 
 **这张表不能证明什么。** 1,216 是硬件、操作系统、安全、诊断、来源与治理等项目的整体目录数，不是 1,216 项硬件读值。
 
@@ -201,7 +201,7 @@ cd XinSpect
 
 dotnet build XinSpect.csproj -c Release
 dotnet build XinSpectCli/XinSpectCli.csproj -c Release
-dotnet test Tests/XinSpect.Tests.csproj          # 最近一次完整回归：9,664 项通过（v3.33）
+dotnet test Tests/XinSpect.Tests.csproj          # 最近一次完整回归：9,683 项通过（v3.33）
 
 python Tools/gen-docs-html.py                    # 生成 百科.html／手册.html
 python Tools/gen-readme-domains.py --check       # 守门：README 逐域展开与键目录一致
