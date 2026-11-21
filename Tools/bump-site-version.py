@@ -85,12 +85,12 @@ def bump(h):
     h2, n = re.subn(r"(no network, v)\d+\.\d+(, quick-start)", r"\g<1>" + V + r"\g<2>", h2)
     changes += n
     # 下載節區 note（日期取 changelog 最新筆）
-    h2, n = re.subn(r"(下載</h2><span class=\"note\">v)\d+\.\d+( ・ ULTIMA )[A-Z]+( ・ )\d{4}-\d{2}-\d{2}",
-                    r"\g<1>" + V + r"\g<2>" + UL + r"\g<3>" + DATE, h2)
+    h2, n = re.subn(r"(下載</h2><span class=\"note\">v)\d+\.\d+( ・ )ULTIMA [A-Z]+( ・ )\d{4}-\d{2}-\d{2}",
+                    r"\g<1>" + V + r"\g<2>ULTIMA " + UL.split(" ")[1] + r"\g<3>" + DATE, h2)
     changes += n
     # EN 下載節區 note
-    h2, n = re.subn(r"(Download</h2><span class=\"note\">v)\d+\.\d+( ・ ULTIMA )[A-Z]+( ・ )\d{4}-\d{2}-\d{2}",
-                    r"\g<1>" + V + r"\g<2>" + UL + r"\g<3>" + DATE, h2)
+    h2, n = re.subn(r"(Download</h2><span class=\"note\">v)\d+\.\d+( ・ )ULTIMA [A-Z]+( ・ )\d{4}-\d{2}-\d{2}",
+                    r"\g<1>" + V + r"\g<2>ULTIMA " + UL.split(" ")[1] + r"\g<3>" + DATE, h2)
     changes += n
     # JSON-LD
     h2, n = re.subn(r'("softwareVersion": ")\d+\.\d+(")', r"\g<1>" + V + r"\g<2>", h2)
