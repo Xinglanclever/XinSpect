@@ -32,7 +32,7 @@ jobs:
     runs-on: [self-hosted, windows, x64]
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: 前置健檢（僵屍進程會讓 WMI 測試互堵——發現即中止並留檔）
         shell: pwsh
