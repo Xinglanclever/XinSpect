@@ -244,9 +244,12 @@ def main(argv=None):
     bk.replace("badge/version-%s-" % OLD, "badge/version-%s-" % V, "百科 徽章")
     bk.replace("releases/download/v%s/" % OLD, "releases/download/v%s/" % V, "百科 下載連結")
     published_note = "本版（v%s）實際發佈的檔案大小" % OLD
+    asset_note = "本版（v%s）的發佈資產。" % OLD
     pending_note = "本版（v%s）的預定發佈資產清單" % OLD
     if published_note in bk.text:
         bk.replace(published_note, "本版（v%s）實際發佈的檔案大小" % V, "百科 註腳")
+    elif asset_note in bk.text:
+        bk.replace(asset_note, "本版（v%s）的發佈資產。" % V, "百科 發佈資產註腳")
     else:
         bk.replace(pending_note, "本版（v%s）的預定發佈資產清單" % V, "百科 候選版註腳")
     bk.replace("最新的一筆是 v%s（" % OLD, "最新的一筆是 v%s（" % V, "百科 11.1")
@@ -293,8 +296,11 @@ def main(argv=None):
     en.replace("badge/version-%s-" % OLD, "badge/version-%s-" % V, "en 徽章")
     en.replace("releases/download/v%s/" % OLD, "releases/download/v%s/" % V, "en 下載連結")
     published_note = "published bytes of **v%s**" % OLD
+    size_note = "The table lists the published file sizes for v%s." % OLD
     if published_note in en.text:
         en.replace(published_note, "published bytes of **v%s**" % V, "en 已發佈資產註記")
+    elif size_note in en.text:
+        en.replace(size_note, "The table lists the published file sizes for v%s." % V, "en 已發佈資產註記")
     else:
         en.replace("The v%s asset list is a release draft." % OLD,
                    "The v%s asset list is a release draft." % V, "en 候選版資產註記")
