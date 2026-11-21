@@ -45,6 +45,7 @@ public class ReleasePipelineTests
         Assert.Contains("trx;LogFileName", s, StringComparison.Ordinal);   // 全綠才准發（以 trx 計數器為準）
         Assert.Contains("ls-remote --tags", s, StringComparison.Ordinal);  // v2.53：--follow-tags 不推 lightweight tag
         Assert.Contains("push origin \"v$Version\"", s, StringComparison.Ordinal); // tag 一律顯式推
+        Assert.Equal(2, s.Split("push origin HEAD:main", StringSplitOptions.None).Length - 1); // managed worktree 上也推目前 HEAD，而非另一個本機 main
         Assert.Contains("PublishSingleFile=true", s, StringComparison.Ordinal);    // 資產必須是單檔版
         Assert.Contains("publish BlueSquadronBridge failed", s, StringComparison.Ordinal); // Bridge 每版從本源碼重建
         Assert.Contains("$P-bridge\\BlueSquadronBridge.exe", s, StringComparison.Ordinal); // 不得回用舊版固定目錄
@@ -72,17 +73,30 @@ public class ReleasePipelineTests
     [Fact]
     public void 三份README的主程式列都是腳本正則能命中的形狀()
     {
-        // 位元組數自動同步依賴這個形狀：zh 兩份是「N,NNN bytes」、en 是概數 MB。
-        // 形狀一變，腳本就會靜默漏改——所以形狀本身也要有測試釘著。
-        string zh = ReadAll(RepoFile("README.md"));
-        string zhCn = ReadAll(RepoFile("README.zh-CN.md"));
-        foreach ((string name, string text) in new[] { ("README.md", zh), ("README.zh-CN.md", zhCn) })
+        // Extract the production expression so this guard cannot silently test a different regex.
+        string script = ReadAll(RepoFile("Tools", "release.ps1"));
+        var rules = System.Text.RegularExpressions.Regex.Matches(script,
+            @"^\s*\$new = \[regex\]::Replace\(\$new, '(?<prefix>[^']*)' \+ \[regex\]::Escape\(\$a\[0\]\) \+ '(?<suffix>[^']*)', \('(?<replacement>[^']*)' \+ \$disp\)\)\s*$",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+        var rule = Assert.Single(rules.Cast<System.Text.RegularExpressions.Match>());
+        var regex = new System.Text.RegularExpressions.Regex(rule.Groups["prefix"].Value
+            + System.Text.RegularExpressions.Regex.Escape("XinSpect.exe") + rule.Groups["suffix"].Value);
+        Assert.Equal("${1}", rule.Groups["replacement"].Value);
+
+        foreach (string name in new[] { "README.md", "README.zh-CN.md", "README.en.md" })
         {
-            var row = text.Split('\n').First(l => l.Contains("/XinSpect.exe) |", StringComparison.Ordinal));
+            string text = ReadAll(RepoFile(name));
+            var match = Assert.Single(regex.Matches(text).Cast<System.Text.RegularExpressions.Match>());
+            var row = text.Split('\n').Single(l => l.Contains("/XinSpect.exe) |", StringComparison.Ordinal));
             Assert.Matches(@"XinSpect\.exe\)\s*\|\s*\d{1,3}(?:,\d{3})+\s+bytes\s*\|", row);
+            const string newSize = "123,456,789,012";
+            Assert.DoesNotContain(newSize, match.Value, StringComparison.Ordinal);
+            string updated = regex.Replace(text, rule.Groups["replacement"].Value + newSize);
+            int numberStart = match.Index + match.Groups[1].Length;
+            string expected = text[..numberStart] + newSize + text[(match.Index + match.Length)..];
+            Assert.Equal(expected, updated);
+            Assert.NotEqual(text, updated);
+            Assert.Single(regex.Matches(updated).Cast<System.Text.RegularExpressions.Match>());
         }
-        string en = ReadAll(RepoFile("README.en.md"));
-        // 概數列仍在（形狀守門，不是數字守門：數字會隨版本長大，寫死十位數就會自己過期）
-        Assert.Matches(@"XinSpect\.exe\)\s*\|\s*\d{1,3}(\.\d+)? MB", en);
     }
 }

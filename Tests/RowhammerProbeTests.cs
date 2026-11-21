@@ -7,12 +7,16 @@ namespace XinSpect.Tests;
 /// ② 樣本填填／驗證是純函式（注入的翻轉必被抓到）；③ 探測結果誠實命名——
 /// 這是「自擁有記憶體內的反覆讀寫壓力探測」，usermode 無 clflush 不能宣稱保證觸發
 /// Rowhammer；④ UI／文件處處標註危險。
+/// R371：兩個原本實跑 2 MiB 的案例改為 scoped fake；原始完整檔與人工實測 harness 另存 R371 manual artifact。
+/// 此類別不建立壓力緩衝區，不以通過宣稱硬體可靠性。
 /// </summary>
+[Collection(HardwareOperationPolicyCollection.Name)]
 public class RowhammerProbeTests
 {
     [Fact]
-    public void 多輪模式_聚合輪次與翻轉_標註不保證可用()
+    public void 多輪模式_fake聚合輪次與翻轉_標註不保證可用()
     {
+        using var fixture = new RowhammerFakeFixture();
         var multi = XinSpect.RowhammerProbeService.RunMultiRound(userConsent: true, rounds: 2, targetMegabytes: 2);
         Assert.Equal(2, multi.Rounds);
         Assert.Equal(0, multi.TotalFlips);
@@ -76,13 +80,14 @@ public class RowhammerProbeTests
     }
 
     [Fact]
-    public void 探測_小緩衝跑完_結果欄位完整()
+    public void 探測_fake回傳_結果欄位完整()
     {
+        using var fixture = new RowhammerFakeFixture();
         var result = XinSpect.RowhammerProbeService.RunConsentedProbe(userConsent: true, targetMegabytes: 2);
         Assert.Equal(2u * 1024 * 1024, result.AllocatedBytes);
         Assert.True(result.Iterations > 0);
         Assert.True(result.ElapsedMs >= 0);
-        // 本機正常記憶體應零翻轉——但結果結構允許非零並逐位址回報
+        // 合成 fixture 回傳零翻轉；這個斷言不再代表真機觀察。原實測斷言完整保留在 R371 manual artifact。
         Assert.Equal(0, result.Flips);
     }
 }

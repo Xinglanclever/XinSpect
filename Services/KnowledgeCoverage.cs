@@ -107,8 +107,8 @@ public static class KnowledgeCoverage
             "回「Device 0xXXXX（未收錄）」——同上，是知識表的邊界不是裝置的缺陷"),
         // 2026-10-27（第 286 輪）：以下三張先前完全沒列進來，但它們的值都會出現在畫面上
         // （SMART 屬性名、藍屏停止代碼與符號名）。條數一律問表本身，不手抄。
-        new("SMART 屬性（六家）", SmartAttributeKnowledge.TotalCount,
-            "六家硬碟廠的 SMART 屬性列（raw／normalized 分欄，逐家出處）", 0,
+        new("SMART 屬性（八個品牌群）", SmartAttributeKnowledge.TotalCount,
+            "八個品牌群的 SMART 屬性列（raw／normalized 分欄，逐列出處與適用系列）", 0,
             "顯示屬性 ID 與原始值——名稱未收錄不代表該屬性不存在，也不代表硬碟有問題"),
         new("BugCheck 停止代碼", BugCheck.Count,
             "常見藍屏停止代碼的白話原因提示（子集）", 0,

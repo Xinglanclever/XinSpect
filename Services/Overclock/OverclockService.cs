@@ -20,8 +20,20 @@ namespace XinSpect;
 public sealed class OverclockService : ObservableObject, IDisposable
 {
     private IOcEngine _engine = new NullOcEngine(OcEngineStatus.NotInitialized, "尚未初始化");
-    private readonly OcSettings _settings = OcSettings.Load();
+    private readonly OcSettings _settings;
+    private readonly TimeProvider _timeProvider;
+    private readonly Func<SiliconProbeService.Options, IProgress<SiliconProbeProgress>?, CancellationToken, SiliconAssessment>
+        _siliconProbe = SiliconProbeService.Run;
     private readonly StressTestService _stress = new();
+
+    // Admission uses only this short state lock. Never wait for engine I/O while holding it.
+    private readonly object _operationState = new();
+    private readonly SemaphoreSlim _engineSerial = new(1, 1);
+    private long _operationGeneration;
+    private long? _activeApplyGeneration;
+    private TaskCompletionSource<OcApplyResult>? _recoveryCompletion;
+    private bool _disposed;
+    private bool _initializationInFlight;
 
     private OcProfile? _rollback;         // 最後確認穩定的設定（看門狗逾時 / 燒機過熱時回復的目標）
     private bool _stressGuardTripped;
@@ -29,12 +41,29 @@ public sealed class OverclockService : ObservableObject, IDisposable
     private bool _hasLastStable;
     private SensorService? _live;            // 最近一次遙測來源（體質特徵化的感測器補位用）
 
-    public OverclockService()
+    public OverclockService() : this(OcSettings.Load()) { }
+
+    internal OverclockService(OcSettings settings) : this(settings, TimeProvider.System) { }
+
+    private OverclockService(OcSettings settings, TimeProvider timeProvider)
     {
+        _settings = settings;
+        _timeProvider = timeProvider;
         OscilloVolt = new MetricHistory(140, "V", null, "0.000");
         OscilloCurrent = new MetricHistory(140, "A", null, "0");
-        WatchdogEnabled = _settings.WatchdogEnabled;
-        BootRestore = _settings.BootRestore;
+        _watchdogEnabled = _settings.WatchdogEnabled;
+        _bootRestore = _settings.BootRestore;
+    }
+
+    // Injected engines exercise the production coordinator without SDK, VRM detection or user files.
+    internal OverclockService(OcSettings settings, IOcEngine engine, TimeProvider? timeProvider = null,
+        Func<SiliconProbeService.Options, IProgress<SiliconProbeProgress>?, CancellationToken, SiliconAssessment>? siliconProbe = null)
+        : this(settings, timeProvider ?? TimeProvider.System)
+    {
+        _engine = engine;
+        if (siliconProbe is not null) _siliconProbe = siliconProbe;
+        Categorize();
+        _rollback = CaptureCurrent("初始基準");
     }
 
     // ── 燒機（本模組專用，獨立於效能分頁的烤機，避免互相干擾）────────────────
@@ -189,7 +218,7 @@ public sealed class OverclockService : ObservableObject, IDisposable
 
     private bool _siTesting;
     public bool SiliconTesting { get => _siTesting; private set { if (SetProperty(ref _siTesting, value)) { OnPropertyChanged(nameof(SiliconCanTest)); OnPropertyChanged(nameof(SiliconTestButtonText)); } } }
-    public bool SiliconCanTest => !_siTesting;
+    public bool SiliconCanTest => !_siTesting && HardwareOperationGate.CanRunAdvancedDiagnostics;
     public string SiliconTestButtonText => _siTesting ? "特徵化中…" : "開始特徵化";
     private double _siProgress;
     public double SiliconProgress { get => _siProgress; private set { if (SetProperty(ref _siProgress, value)) OnPropertyChanged(nameof(SiliconProgressPercent)); } }
@@ -227,7 +256,7 @@ public sealed class OverclockService : ObservableObject, IDisposable
             OnPropertyChanged(nameof(LlcAnnotation));
             // 偵測到 VRM 控制器時，選單變更直接寫入硬體
             if (Vrm?.DetectionResult is { Found: true, Chips: { Count: > 0 } chips })
-                _ = Task.Run(() => Vrm.WriteLlc(chips[0], value));
+                _ = ApplyLlc();
         }
     }
     public string LlcAnnotation
@@ -257,23 +286,25 @@ public sealed class OverclockService : ObservableObject, IDisposable
     /// <returns>寫入成功回 <c>true</c>；未偵測到控制器或寫入失敗回 <c>false</c>。</returns>
     public async Task<bool> ApplyLlc()
     {
-        if (Vrm?.DetectionResult is not { Found: true, Chips: { Count: > 0 } chips })
+        bool ok = false;
+        await RunApplyBatchAsync(async generation =>
         {
-            SetAction("未偵測到 VRM PMBus 控制器，無法寫入 LLC。", Severity.Warning);
-            return false;
-        }
-        int level = _llcIndex;
-        var chip = chips[0];
-        bool ok = await Task.Run(() => Vrm.WriteLlc(chip, level));
-        if (ok)
-        {
-            OnPropertyChanged(nameof(LlcAnnotation));
-            SetAction($"已寫入 {chip.ChipName} LLC = {level}（寫後讀回驗證通過）。", Severity.Warning);
-        }
-        else
-        {
-            SetAction($"LLC 寫入失敗（{chip.ChipName}），請檢查匯流排狀態。", Severity.Critical);
-        }
+            var vrm = Vrm;
+            if (vrm is null || vrm.DetectionResult is not { Found: true, Chips: { Count: > 0 } chips })
+            {
+                SetAction("未偵測到 VRM PMBus 控制器，無法寫入 LLC。", Severity.Warning);
+                return;
+            }
+            int level = _llcIndex;
+            var chip = chips[0];
+            var r = await RunApplyEngineAsync(generation, () => vrm.WriteLlc(chip, level)
+                ? OcApplyResult.Success($"已寫入 {chip.ChipName} LLC = {level}（寫後讀回驗證通過）。", null)
+                : OcApplyResult.Fail($"LLC 寫入失敗（{chip.ChipName}），請檢查匯流排狀態。"));
+            if (r is null || !IsCurrentApply(generation)) return;
+            ok = r.Ok;
+            if (ok) OnPropertyChanged(nameof(LlcAnnotation));
+            SetAction(r.Message, ok ? Severity.Warning : Severity.Critical);
+        });
         return ok;
     }
 
@@ -284,13 +315,18 @@ public sealed class OverclockService : ObservableObject, IDisposable
         get => _watchdogEnabled;
         set { if (SetProperty(ref _watchdogEnabled, value)) { _settings.WatchdogEnabled = value; _settings.Save(); if (!value) DisarmWatchdog(); OnPropertyChanged(nameof(WatchdogStatusText)); } }
     }
+    private static readonly TimeSpan WatchdogWindow = TimeSpan.FromSeconds(30);
+    private ITimer? _watchdogTimer;
+    private long _watchdogArmGeneration;
+    private long _watchdogStarted;
     private bool _watchdogArmed;
-    public bool WatchdogArmed { get => _watchdogArmed; private set { if (SetProperty(ref _watchdogArmed, value)) OnPropertyChanged(nameof(WatchdogStatusText)); } }
+    public bool WatchdogArmed { get { lock (_operationState) return _watchdogArmed; } }
     private int _watchdogLeft;
-    public int WatchdogSecondsLeft { get => _watchdogLeft; private set { if (SetProperty(ref _watchdogLeft, value)) OnPropertyChanged(nameof(WatchdogStatusText)); } }
+    public int WatchdogSecondsLeft { get { lock (_operationState) return _watchdogLeft; } }
 
     public string WatchdogStatusText =>
-        !_watchdogEnabled ? "看門狗未啟用。啟用後，套用高風險項目將開始 30 秒倒數，須按「確認穩定」解除，否則自動回復。"
+        IsRecovering ? "安全回復中：後續套用已停止；已送出的引擎操作須先完成，回復結果尚未確認。"
+        : !_watchdogEnabled ? "看門狗未啟用。啟用後，套用高風險項目將開始 30 秒倒數，須按「確認穩定」解除，否則自動回復。"
         : _watchdogArmed ? $"看門狗已武裝：{_watchdogLeft} 秒內未確認穩定，將自動回復至最後穩定設定。"
         : "看門狗待命中：套用電壓 / 倍頻 / 外頻後將自動開始 30 秒倒數。";
 
@@ -304,7 +340,7 @@ public sealed class OverclockService : ObservableObject, IDisposable
     public bool BootRestore
     {
         get => _bootRestore;
-        set { if (SetProperty(ref _bootRestore, value)) { _settings.BootRestore = value; _settings.Save(); try { _engine.SetBootRestore(value); } catch { } } }
+        set { if (SetProperty(ref _bootRestore, value)) { _settings.BootRestore = value; _settings.Save(); _ = SetBootRestoreAsync(value); } }
     }
 
     // ── Intel Speed Optimizer（可逆一鍵自動超頻）──────────────────────────
@@ -329,11 +365,19 @@ public sealed class OverclockService : ObservableObject, IDisposable
     private Severity _actionSev = Severity.Neutral;
     public Severity ActionSeverity { get => _actionSev; private set => SetProperty(ref _actionSev, value); }
 
-    // 寫入進行中旗標：套用走阻塞式 IPC，改為背景執行緒進行；此旗標防止重入/併發寫入，
-    // 並供 UI 停用按鈕。所有 Apply* 進入時檢查，離開時（finally）復位。
-    private bool _isApplying;
-    public bool IsApplying { get => _isApplying; private set { if (SetProperty(ref _isApplying, value)) OnPropertyChanged(nameof(CanApply)); } }
-    public bool CanApply => !_isApplying;
+    // A revoked batch remains busy until its dispatched operation and continuation really finish.
+    public bool IsApplying
+    {
+        get { lock (_operationState) return _initializationInFlight || _activeApplyGeneration is not null || _recoveryCompletion is not null; }
+    }
+    public bool IsRecovering
+    {
+        get { lock (_operationState) return _recoveryCompletion is not null; }
+    }
+    public bool CanApply
+    {
+        get { lock (_operationState) return !_disposed && !_initializationInFlight && _activeApplyGeneration is null && _recoveryCompletion is null; }
+    }
 
     /// <summary>目前待套用之最高「核心」電壓（Vcore 滑桿目標與各核心電壓旋鈕目標取大值），供 UI 判斷是否需高壓確認；不含記憶體電壓。</summary>
     public double HighestPendingVoltage()
@@ -350,67 +394,125 @@ public sealed class OverclockService : ObservableObject, IDisposable
     // 初始化
     // ═══════════════════════════════════════════════════════════════════════
 
-    public async Task InitializeAsync()
-    {
-        Initializing = true;
-        RaiseEngineStatus();
-
-        var engine = await Task.Run<IOcEngine>(() =>
+    public Task InitializeAsync() => InitializeAsync(
+        () => Task.Run<IOcEngine>(() =>
         {
             var xtu = new XtuOcEngine();
             try { xtu.Initialize(); } catch { }
             if (xtu.Status == OcEngineStatus.Ready) return xtu;
-
             var status = xtu.Status == OcEngineStatus.NotInitialized ? OcEngineStatus.Failed : xtu.Status;
-            string msg = xtu.StatusMessage;
+            string message = xtu.StatusMessage;
             xtu.Dispose();
-            return new NullOcEngine(status, msg);
-        });
+            return new NullOcEngine(status, message);
+        }),
+        () => Task.Run(() => VrmControllerService.TryCreate(out _)), loadUserProfiles: true);
 
-        _engine = engine;
-        Categorize();
-
-        // 套用持久偏好到硬體（開機還原）
-        try { _engine.SetBootRestore(_bootRestore); } catch { }
-
-        // 以目前（開機 / 現行）硬體值作為第一份「穩定基準」，供看門狗逾時回復
-        _rollback = CaptureCurrent("初始基準");
-
-        // VRM PMBus 自動偵測
+    // Factories inject completion timing without opening an SDK, bus, or user profile.
+    // The slot is retained across actual initialization/detection, not released on caller cancellation.
+    internal async Task InitializeAsync(Func<Task<IOcEngine>> createEngine,
+        Func<Task<VrmControllerService?>> createVrm, bool loadUserProfiles)
+    {
+        long generation;
+        lock (_operationState)
+        {
+            if (_disposed || _initializationInFlight || _activeApplyGeneration is not null || _recoveryCompletion is not null) return;
+            _initializationInFlight = true;
+            generation = ++_operationGeneration;
+        }
+        bool ownsSlot = false, adopted = false;
+        IOcEngine? candidate = null;
+        VrmControllerService? candidateVrm = null;
         try
         {
-            var vrm = await Task.Run(() => VrmControllerService.TryCreate(out _));
-            if (vrm is not null)
+            PublishUiNotification(() => Initializing = true);
+            RaiseOperationState();
+            PublishUiNotification(RaiseEngineStatus);
+            await _engineSerial.WaitAsync();
+            ownsSlot = true;
+            if (!IsCurrentInitialization(generation)) return;
+            candidate = await createEngine();
+            IOcEngine prior;
+            lock (_operationState)
             {
-                Vrm = vrm;
-                await vrm.DetectAsync();
-                OnPropertyChanged(nameof(LlcAnnotation));
+                if (_disposed || _operationGeneration != generation) return;
+                prior = _engine;
+                _engine = candidate;
+                adopted = true;
             }
+            await Task.Run(() => { try { prior.Dispose(); } catch { } });
+            if (!IsCurrentInitialization(generation)) return;
+            Categorize();
+            // Recheck on the worker at the dispatch boundary: Dispose may have revoked admission.
+            await Task.Run(() =>
+            {
+                if (!IsCurrentInitialization(generation)) return;
+                try { candidate.SetBootRestore(_bootRestore); }
+                catch (Exception ex)
+                {
+                    // The persisted preference is optional; failure does not establish a hardware result.
+                    try { Diag.Swallow("Overclock boot restore preference", ex,
+                        "Preference write failed; initialization continues without claiming it was applied."); }
+                    catch { }
+                }
+            });
+            if (!IsCurrentInitialization(generation)) return;
+            _rollback = CaptureCurrent("初始基準");
+            try
+            {
+                candidateVrm = await createVrm();
+                if (candidateVrm is not null)
+                {
+                    if (!IsCurrentInitialization(generation)) return;
+                    await candidateVrm.DetectAsync();
+                    if (!IsCurrentInitialization(generation)) return;
+                    // Dispose queues behind this slot, so adopted VRM cannot be freed during detection.
+                    var priorVrm = Vrm;
+                    Vrm = candidateVrm;
+                    candidateVrm = null;
+                    await Task.Run(() => { try { priorVrm?.Dispose(); } catch { } });
+                    if (!IsCurrentInitialization(generation)) return;
+                    PublishUiNotification(() => OnPropertyChanged(nameof(LlcAnnotation)));
+                }
+            }
+            catch { /* Optional VRM detection does not invalidate the CPU engine. */ }
+            if (!IsCurrentInitialization(generation)) return;
+            try { SpeedOptimizerOn = candidate.SpeedOptimizerState > 0; } catch { }
+            SpeedOptimizerStatusText = SpeedOptimizerSupported
+                ? (SpeedOptimizerOn ? "目前為開啟。" : "支援，目前為關閉。") : "此平台不支援。";
+            if (loadUserProfiles)
+            {
+                RefreshProfiles();
+                _hasLastStable = OcSettings.LoadLastStable() is not null;
+            }
+            if (EngineReady)
+                SetAction($"已連接超頻引擎，列出 {candidate.Knobs.Count} 個可調項（可寫 {candidate.Knobs.Count(k => k.Writable)} 個）。"
+                    + (_hasLastStable ? "偵測到『最後穩定設定』，可於下方一鍵回復。" : ""), Severity.Good);
+            else SetAction(candidate.StatusMessage, EngineStatusSeverity);
+            PublishUiNotification(RaisePlanner);
+            foreach (var property in new[] { nameof(HasLastStable), nameof(SpeedOptimizerSupported),
+                nameof(HwWatchdogText), nameof(ProcessorFamilyText) })
+                PublishUiNotification(() => OnPropertyChanged(property));
         }
-        catch { /* VRM 偵測是可選的，不影響其餘功能 */ }
+        finally
+        {
+            // A result arriving after revocation remains locally owned and is disposed before slot release.
+            await Task.Run(() =>
+            {
+                try { candidateVrm?.Dispose(); } catch { }
+                if (!adopted) { try { candidate?.Dispose(); } catch { } }
+            });
+            if (ownsSlot) _engineSerial.Release();
+            lock (_operationState) _initializationInFlight = false;
+            PublishUiNotification(() => Initializing = false);
+            RaiseOperationState();
+            PublishUiNotification(RaiseEngineStatus);
+        }
+    }
 
-        // Speed Optimizer 現況
-        try { SpeedOptimizerOn = _engine.SpeedOptimizerState > 0; } catch { }
-        SpeedOptimizerStatusText = SpeedOptimizerSupported
-            ? (SpeedOptimizerOn ? "目前為開啟。" : "支援，目前為關閉。")
-            : "此平台不支援。";
-
-        RefreshProfiles();
-        _hasLastStable = OcSettings.LoadLastStable() is not null;
-
-        if (EngineReady)
-            SetAction($"已連接超頻引擎，列出 {_engine.Knobs.Count} 個可調項（可寫 {_engine.Knobs.Count(k => k.Writable)} 個）。"
-                      + (_hasLastStable ? "偵測到『最後穩定設定』，可於下方一鍵回復。" : ""), Severity.Good);
-        else
-            SetAction(_engine.StatusMessage, EngineStatusSeverity);
-
-        Initializing = false;
-        RaiseEngineStatus();
-        RaisePlanner();
-        OnPropertyChanged(nameof(HasLastStable));
-        OnPropertyChanged(nameof(SpeedOptimizerSupported));
-        OnPropertyChanged(nameof(HwWatchdogText));
-        OnPropertyChanged(nameof(ProcessorFamilyText));
+    private bool IsCurrentInitialization(long generation)
+    {
+        lock (_operationState)
+            return !_disposed && _initializationInFlight && _operationGeneration == generation;
     }
 
     private void Categorize()
@@ -543,10 +645,11 @@ public sealed class OverclockService : ObservableObject, IDisposable
         {
             try
             {
-                await Task.Run(() =>
+                await RunEngineAsync(() =>
                 {
                     if (needVcore) engineVcore = _engine.ReadCoreVoltage();
                     if (needVrm) engineVrm = _engine.ReadMonitor("VR ", "VRM", "MOS", "VR MOS", "VCCIN");
+                    return true;
                 });
             }
             catch { /* 單次遙測讀取失敗不影響後續 */ }
@@ -558,10 +661,9 @@ public sealed class OverclockService : ObservableObject, IDisposable
     {
         if (Cores is null && live?.CpuCores is not null) { Cores = live.CpuCores; OnPropertyChanged(nameof(Cores)); }
 
-        // 電壓：LHM 優先 → XTU（背景預抓）→ 旋鈕現值
+        // Only measured voltage: control values (especially mV offsets) are not absolute Vcore telemetry.
         double? vcore = live?.CpuVoltage;
         if (vcore is null or <= 0) vcore = engineVcore;
-        if (vcore is null or <= 0 && VcoreKnob is not null) vcore = VcoreKnob.Active;
 
         // 聚合 Vcore：以實測電壓回填滑桿「現值」；首次取得有效電壓時，把目標值種為目前電壓（滑桿起點＝目前電壓）。
         if (VcoreKnob is not null && _vcoreFanout.Count > 0 && vcore is double vc && vc > 0)
@@ -587,7 +689,11 @@ public sealed class OverclockService : ObservableObject, IDisposable
         }
         else
         {
+            VoltmeterValue = 0;
             VoltageValueText = "—";
+            VoltageBadgeText = "—";
+            VoltageBadgeBrush = SeverityToBrushConverter.Neutral;
+            VoltageBadgeFlashing = false;
             OscilloVolt.Push(0);
         }
 
@@ -641,9 +747,7 @@ public sealed class OverclockService : ObservableObject, IDisposable
             {
                 _stressGuardTripped = true;
                 _stress.Cancel();
-                // 回復含阻塞式 IPC，移至背景執行緒，避免凍結 UI（見 RollbackToStable）
-                var r = await Task.Run(RollbackToStable);
-                SetAction($"⚠ 燒機過程偵測到 {ht:0}°C（≥100°C），已自動停止並回復：{r}", Severity.Critical);
+                await RollbackToStableAsync($"⚠ 燒機過程偵測到 {ht:0}°C（≥100°C），已請求停止燒機", Severity.Critical);
             }
             // 誠實告知：讀不到 CPU 溫度時過熱保護無法運作，套用超頻後燒機風險由使用者承擔（僅提示一次）
             else if (temp is null && !_stressTempMissingWarned)
@@ -654,19 +758,18 @@ public sealed class OverclockService : ObservableObject, IDisposable
         }
         else { _stressGuardTripped = false; _stressTempMissingWarned = false; }
 
-        // 看門狗倒數（第一層：軟體自動回復）
-        if (_watchdogArmed)
+        // Display refresh is monotonic too; recovery admission does not depend on telemetry ticks.
+        long arm;
+        bool expired;
+        lock (_operationState)
         {
-            if (WatchdogSecondsLeft > 0) WatchdogSecondsLeft--;
-            if (WatchdogSecondsLeft <= 0)
-            {
-                // 回復含逐項阻塞式 IPC（最壞情況每項 30 秒逾時），移至背景執行緒，
-                // 讓 UI 與下一次心跳照常運作；完成後（續於 UI 執行緒）才解除與回報。
-                var r = await Task.Run(RollbackToStable);
-                DisarmWatchdog();
-                SetAction($"看門狗逾時：未在時限內確認穩定，已自動回復至最後穩定設定。{r}", Severity.Warning);
-            }
+            arm = _watchdogArmGeneration;
+            var left = WatchdogWindow - _timeProvider.GetElapsedTime(_watchdogStarted);
+            _watchdogLeft = _watchdogArmed ? Math.Max(0, (int)Math.Ceiling(left.TotalSeconds)) : 0;
+            expired = _watchdogArmed && left <= TimeSpan.Zero;
         }
+        PublishWatchdogState();
+        if (expired) await ExpireWatchdogAsync(arm);
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -681,6 +784,11 @@ public sealed class OverclockService : ObservableObject, IDisposable
     public async Task RetestSilicon()
     {
         if (_siTesting) return;                 // 防止重入：取樣進行中忽略再次點擊
+        if (!HardwareOperationGate.CanRunAdvancedDiagnostics)
+        {
+            SetAction("CPU 體質特徵化已阻止：請先在設定啟用第一級進階診斷。", Severity.Warning);
+            return;
+        }
         SiliconTesting = true;
         _siCts = new CancellationTokenSource();
         var ct = _siCts.Token;
@@ -717,7 +825,14 @@ public sealed class OverclockService : ObservableObject, IDisposable
 
         try
         {
-            var result = await Task.Run(() => SiliconProbeService.Run(opt, progress, ct), ct);
+            var result = await Task.Run(() =>
+            {
+                ct.ThrowIfCancellationRequested();
+                // Recheck at dispatch: disabling the gate before the worker starts prevents load.
+                if (!HardwareOperationGate.CanRunAdvancedDiagnostics)
+                    throw new InvalidOperationException("第一級進階診斷已停用，未開始體質特徵化。");
+                return _siliconProbe(opt, progress, ct);
+            }, ct);
             PublishSilicon(result);
         }
         catch (OperationCanceledException)
@@ -800,147 +915,195 @@ public sealed class OverclockService : ObservableObject, IDisposable
     // 寫入操作
     // ═══════════════════════════════════════════════════════════════════════
 
-    // 單一旋鈕的實際寫入：阻塞式 IPC 移至背景執行緒，避免凍結 UI（看門狗倒數得以持續）。
-    // 不處理 IsApplying 防重入（由各公開方法統一管理，避免巢狀誤觸）。寫入後回 UI 執行緒套用狀態。
-    private async Task<OcApplyResult> WriteKnobAsync(OcKnob knob, double value)
+    // All normal mutations enter one batch. Recovery revokes that batch before waiting for I/O.
+    private async Task RunApplyBatchAsync(Func<long, Task> apply)
     {
+        long generation;
+        lock (_operationState)
+        {
+            if (_disposed || _initializationInFlight || _activeApplyGeneration is not null || _recoveryCompletion is not null) return;
+            generation = ++_operationGeneration;
+            _activeApplyGeneration = generation;
+        }
+        try
+        {
+            RaiseOperationState();
+            await apply(generation);
+        }
+        catch (Exception ex)
+        {
+            if (IsCurrentApply(generation))
+                SetAction("引擎操作發生例外，硬體狀態須重新確認：" + ex.Message, Severity.Critical);
+        }
+        finally
+        {
+            lock (_operationState)
+            {
+                if (_activeApplyGeneration == generation) _activeApplyGeneration = null;
+            }
+            RaiseOperationState();
+        }
+    }
+
+    private bool IsCurrentApply(long generation)
+    {
+        lock (_operationState)
+            return !_disposed && _activeApplyGeneration == generation
+                && _operationGeneration == generation && _recoveryCompletion is null;
+    }
+
+    // No cancellation/timeout wrapper: a dispatched SDK/IPC call owns the slot until it returns.
+    private async Task<T> RunEngineAsync<T>(Func<T> operation)
+    {
+        await _engineSerial.WaitAsync().ConfigureAwait(false);
+        try { return await Task.Run(operation).ConfigureAwait(false); }
+        finally { _engineSerial.Release(); }
+    }
+
+    private Task<OcApplyResult?> RunApplyEngineAsync(long generation, Func<OcApplyResult> operation)
+        => RunEngineAsync<OcApplyResult?>(() =>
+        {
+            // This check is the dispatch boundary. Recovery waits for any call already dispatched.
+            if (!IsCurrentApply(generation)) return null;
+            return operation();
+        });
+
+    private async Task SetBootRestoreAsync(bool value)
+    {
+        try { await RunEngineAsync(() => { lock (_operationState) { if (_disposed) return false; }
+                _engine.SetBootRestore(value); return true; }); }
+        catch { /* Persisted preference failure does not claim a hardware result. */ }
+    }
+
+    private void RaiseOperationState()
+    {
+        foreach (var property in new[] { nameof(IsApplying), nameof(IsRecovering), nameof(CanApply), nameof(WatchdogStatusText) })
+            PublishUiNotification(() => OnPropertyChanged(property));
+    }
+
+    private static void PublishUiNotification(Action notification)
+    {
+        try { notification(); }
+        catch (Exception ex)
+        {
+            // An observer fault must not strand admission, abandon recovery, or lose its completion.
+            try { Diag.Swallow("超頻 UI 通知", ex, "硬體操作協調仍會完成；部分畫面通知未送達。"); }
+            catch { }
+        }
+    }
+
+    private async Task<OcApplyResult?> WriteKnobAsync(long generation, OcKnob knob, double value)
+    {
+        if (!IsCurrentApply(generation)) return null;
         using var writePermit = HardwareOperationGate.TryBeginHighRiskOperation();
         if (writePermit is null && !HardwareOperationGate.CanWriteHardware)
             return new OcApplyResult(false, "高風險硬體寫入未啟用；未套用此設定。", null);
-        var r = await Task.Run(() => _engine.Apply(knob, value));
+        var r = await RunApplyEngineAsync(generation, () => _engine.Apply(knob, value));
+        if (r is null || !IsCurrentApply(generation)) return null;
         knob.ApplyStatus = r.Message;
         knob.ApplySeverity = r.Ok ? (knob.RequiresReboot ? Severity.Warning : Severity.Good) : Severity.Critical;
         return r;
     }
 
-    public async Task ApplyKnob(OcKnob knob)
+    public Task ApplyKnob(OcKnob knob) => RunApplyBatchAsync(async generation =>
     {
-        if (IsApplying) return;
-        IsApplying = true;
-        try
-        {
-            SetAction($"正在套用「{knob.Label}」…", Severity.Neutral);
-            var r = await WriteKnobAsync(knob, knob.Target);
-            SetAction(r.Message, r.Ok ? (knob.RequiresReboot ? Severity.Warning : Severity.Good) : Severity.Critical);
-            if (r.Ok) ArmWatchdogIfNeeded(knob);
-            RaisePlanner();
-        }
-        finally { IsApplying = false; }
-    }
+        SetAction($"正在套用「{knob.Label}」…", Severity.Neutral);
+        var r = await WriteKnobAsync(generation, knob, knob.Target);
+        if (r is null || !IsCurrentApply(generation)) return;
+        SetAction(r.Message, r.Ok ? (knob.RequiresReboot ? Severity.Warning : Severity.Good) : Severity.Critical);
+        if (r.Ok) ArmWatchdogIfNeeded(knob);
+        RaisePlanner();
+    });
 
-    // 目標時脈規劃：一次套用倍頻 + 外頻（於單一防重入區間內依序寫入）。
-    public async Task ApplyPlannerAsync()
+    public Task ApplyPlannerAsync() => RunApplyBatchAsync(async generation =>
     {
-        if (IsApplying) return;
         var targets = new List<OcKnob>();
         if (CoreRatioKnob is { } ratio) targets.Add(ratio);
         if (BclkKnob is { } bclk) targets.Add(bclk);
         if (targets.Count == 0) { SetAction("此平台無可調整的倍頻／外頻。", Severity.Neutral); return; }
-
-        IsApplying = true;
-        try
+        SetAction("正在套用目標時脈…", Severity.Neutral);
+        int ok = 0; bool armed = false;
+        foreach (var k in targets)
         {
-            SetAction("正在套用目標時脈…", Severity.Neutral);
-            int ok = 0; bool armed = false;
+            var r = await WriteKnobAsync(generation, k, k.Target);
+            if (r is null || !IsCurrentApply(generation)) return;
+            if (r.Ok) { ok++; if (IsRisky(k)) armed = true; }
+        }
+        if (armed && _watchdogEnabled) ArmWatchdog();
+        SetAction($"目標時脈：已套用 {ok} / {targets.Count} 項。" + (ok < targets.Count ? "部分項目未如預期生效，請檢視各項狀態。" : ""),
+                  ok == targets.Count ? Severity.Good : Severity.Warning);
+        RaisePlanner();
+    });
+
+    // Aggregate Vcore is a measured display; a requested target is never assigned to Active.
+    public Task ApplyVcore()
+    {
+        var aggregate = VcoreKnob;
+        if (aggregate is null) return Task.CompletedTask;
+        if (_vcoreFanout.Count == 0) return ApplyKnob(aggregate);
+        return RunApplyBatchAsync(async generation =>
+        {
+            double target = aggregate.Target;
+            var targets = _vcoreFanout.ToArray();
+            foreach (var k in targets) k.Target = target;
+            SetAction($"正在對 {targets.Length} 個核心套用 {target:0.000} V…", Severity.Neutral);
+            int ok = 0; bool risky = false;
             foreach (var k in targets)
             {
-                var r = await WriteKnobAsync(k, k.Target);
-                if (r.Ok) { ok++; if (IsRisky(k)) armed = true; }
-            }
-            if (armed && _watchdogEnabled) ArmWatchdog();
-            SetAction($"目標時脈：已套用 {ok} / {targets.Count} 項。" + (ok < targets.Count ? "部分項目未如預期生效，請檢視各項狀態。" : ""),
-                      ok == targets.Count ? Severity.Good : Severity.Warning);
-            RaisePlanner();
-        }
-        finally { IsApplying = false; }
-    }
-
-    // Vcore 卡「套用電壓」：聚合模式（此平台僅逐核心覆寫）時，把滑桿目標值一次寫入全部核心；
-    // 若 VcoreKnob 為真實的全域旋鈕（例如 K 系列有獨立核心電壓覆寫），則走一般單一寫入。
-    public async Task ApplyVcore()
-    {
-        if (VcoreKnob is null || IsApplying) return;
-        if (_vcoreFanout.Count == 0) { await ApplyKnob(VcoreKnob); return; }
-
-        double target = VcoreKnob.Target;
-        foreach (var k in _vcoreFanout) k.Target = target;   // UI 執行緒：先同步各核心目標值
-
-        IsApplying = true;
-        try
-        {
-            SetAction($"正在對 {_vcoreFanout.Count} 個核心套用 {target:0.000} V…", Severity.Neutral);
-            int ok = 0; bool risky = false;
-            foreach (var k in _vcoreFanout)
-            {
-                var r = await WriteKnobAsync(k, target);
+                var r = await WriteKnobAsync(generation, k, target);
+                if (r is null || !IsCurrentApply(generation)) return;
                 if (r.Ok) { ok++; if (IsRisky(k)) risky = true; }
             }
-            VcoreKnob.Active = target;   // 樂觀回讀；下一次 Tick 會以實測電壓覆蓋
-            bool allok = ok == _vcoreFanout.Count;
-            VcoreKnob.ApplyStatus = allok
-                ? $"已對全部 {_vcoreFanout.Count} 個核心套用 {target:0.000} V"
-                : $"僅 {ok}/{_vcoreFanout.Count} 個核心套用成功，請檢視「每核心獨立調節」各項狀態。";
-            VcoreKnob.ApplySeverity = allok ? Severity.Good : Severity.Warning;
+            bool allok = ok == targets.Length;
+            aggregate.ApplyStatus = allok
+                ? $"已對全部 {targets.Length} 個核心送出 {target:0.000} V；聚合現值等待感測器更新。"
+                : $"僅 {ok}/{targets.Length} 個核心套用成功，請檢視「每核心獨立調節」各項狀態。";
+            aggregate.ApplySeverity = allok ? Severity.Good : Severity.Warning;
             if (risky && _watchdogEnabled) ArmWatchdog();
-            SetAction(VcoreKnob.ApplyStatus, VcoreKnob.ApplySeverity);
+            SetAction(aggregate.ApplyStatus, aggregate.ApplySeverity);
             RaisePlanner();
-        }
-        finally { IsApplying = false; }
+        });
     }
 
-    public async Task ApplyAll()
+    public Task ApplyAll() => RunApplyBatchAsync(async generation =>
     {
-        if (IsApplying) return;
         var dirty = _engine.Knobs.Where(k => k.Writable && k.IsDirty).ToList();
         if (dirty.Count == 0) { SetAction("沒有待套用的變更。", Severity.Neutral); return; }
-
-        IsApplying = true;
-        try
+        SetAction($"正在套用 {dirty.Count} 項變更…", Severity.Neutral);
+        int ok = 0; bool armed = false;
+        foreach (var k in dirty)
         {
-            SetAction($"正在套用 {dirty.Count} 項變更…", Severity.Neutral);
-            int ok = 0; bool armed = false;
-            foreach (var k in dirty)
-            {
-                var r = await WriteKnobAsync(k, k.Target);
-                if (r.Ok) { ok++; if (IsRisky(k)) armed = true; }
-            }
-            if (armed && _watchdogEnabled) ArmWatchdog();
-            SetAction($"已套用 {ok} / {dirty.Count} 項變更。" + (ok < dirty.Count ? "部分項目未如預期生效，請檢視各項狀態。" : ""),
-                      ok == dirty.Count ? Severity.Good : Severity.Warning);
-            RaisePlanner();
+            var r = await WriteKnobAsync(generation, k, k.Target);
+            if (r is null || !IsCurrentApply(generation)) return;
+            if (r.Ok) { ok++; if (IsRisky(k)) armed = true; }
         }
-        finally { IsApplying = false; }
-    }
+        if (armed && _watchdogEnabled) ArmWatchdog();
+        SetAction($"已套用 {ok} / {dirty.Count} 項變更。" + (ok < dirty.Count ? "部分項目未如預期生效，請檢視各項狀態。" : ""),
+                  ok == dirty.Count ? Severity.Good : Severity.Warning);
+        RaisePlanner();
+    });
 
-    public async Task DiscardAll()
+    public Task DiscardAll() => RunApplyBatchAsync(async generation =>
     {
-        if (IsApplying) return;
-        IsApplying = true;
-        try
-        {
-            bool ok = await Task.Run(() => _engine.Discard());
-            foreach (var k in _engine.Knobs) k.ResetTargetToActive();
-            SetAction(ok ? "已取消所有未套用的變更，並重新讀取硬體現值。" : "取消變更失敗（引擎不可用）。", ok ? Severity.Good : Severity.Critical);
-            RaisePlanner();
-        }
-        finally { IsApplying = false; }
-    }
+        var r = await RunApplyEngineAsync(generation, () => _engine.Discard()
+            ? OcApplyResult.Success("已取消所有未套用的變更，並重新讀取硬體現值。", null)
+            : OcApplyResult.Fail("取消變更失敗（引擎不可用）。"));
+        if (r is null || !IsCurrentApply(generation)) return;
+        if (r.Ok) foreach (var k in _engine.Knobs) k.ResetTargetToActive();
+        SetAction(r.Message, r.Ok ? Severity.Good : Severity.Critical);
+        RaisePlanner();
+    });
 
-    public async Task RestoreDefaults()
+    public Task RestoreDefaults() => RunApplyBatchAsync(async generation =>
     {
-        if (IsApplying) return;
         using var recovery = HardwareOperationGate.BeginRecoveryOperation();
-        IsApplying = true;
-        try
-        {
-            SetAction("正在還原預設值…", Severity.Neutral);
-            var r = await Task.Run(() => _engine.RestoreDefaults());
-            SetAction(r.Message, r.Ok ? Severity.Good : Severity.Critical);
-            DisarmWatchdog();
-            RaisePlanner();
-        }
-        finally { IsApplying = false; }
-    }
+        SetAction("正在還原預設值…", Severity.Neutral);
+        var r = await RunApplyEngineAsync(generation, () => _engine.RestoreDefaults());
+        if (r is null || !IsCurrentApply(generation)) return;
+        SetAction(r.Message, r.Ok ? Severity.Good : Severity.Critical);
+        if (r.Ok) DisarmWatchdog();
+        RaisePlanner();
+    });
 
     // ═══════════════════════════════════════════════════════════════════════
     // 設定檔
@@ -971,6 +1134,7 @@ public sealed class OverclockService : ObservableObject, IDisposable
 
     public async Task ApplySelectedProfile()
     {
+        if (IsApplying) return;
         if (_selProfile < 0 || _selProfile >= _profilePaths.Count) { SetAction("請先選擇一個設定檔。", Severity.Neutral); return; }
         var p = OcSettings.LoadProfile(_profilePaths[_selProfile]);
         if (p is null) { SetAction("無法讀取所選設定檔。", Severity.Critical); return; }
@@ -979,6 +1143,7 @@ public sealed class OverclockService : ObservableObject, IDisposable
 
     public async Task ImportProfileFrom(string path)
     {
+        if (IsApplying) return;
         var p = OcSettings.LoadProfile(path);
         if (p is null) { SetAction("無法讀取設定檔：" + path, Severity.Critical); return; }
         await ApplyProfile(p, $"設定檔「{p.Name}」");
@@ -986,27 +1151,42 @@ public sealed class OverclockService : ObservableObject, IDisposable
 
     public async Task ApplyLastStable()
     {
+        if (IsApplying) return;
+        if (!HardwareOperationGate.IsHighRiskModeEnabled)
+        {
+            WriteGate.Record("CPU last-stable profile", nameof(ApplyLastStable),
+                "高風險模式未啟用，未套用歷史設定", succeeded: false);
+            SetAction("套用最後穩定設定需要啟用第二級高風險硬體操作。", Severity.Warning);
+            return;
+        }
         var p = OcSettings.LoadLastStable();
         if (p is null) { SetAction("尚無『最後穩定設定』可回復。", Severity.Neutral); return; }
-        using var recovery = HardwareOperationGate.BeginRecoveryOperation();
         await ApplyProfile(p, "最後穩定設定");
     }
 
     /// <summary>把目前套用的目標值標記為「穩定」：存為 last-stable、更新看門狗回復基準、並解除看門狗。</summary>
     public void ConfirmStable()
     {
-        if (IsApplying) { SetAction("正在套用中，請等套用完成再標記穩定。", Severity.Warning); return; }
-        var p = CaptureCurrent("最後穩定設定");
-        _rollback = p;
+        OcProfile p;
+        ITimer? timer;
+        lock (_operationState)
+        {
+            // Confirmation and deadline admission share the same ordering point.
+            if (_disposed || _initializationInFlight || _activeApplyGeneration is not null || _recoveryCompletion is not null)
+                return;
+            p = CaptureCurrent("最後穩定設定");
+            _rollback = p;
+            timer = DisarmWatchdogLocked();
+        }
+        timer?.Dispose();
+        PublishWatchdogState();
         OcSettings.SaveLastStable(p);
         HasLastStable = true;
-        DisarmWatchdog();
         SetAction("已將目前設定標記為穩定並存檔；看門狗已解除。", Severity.Good);
     }
 
-    public async Task SetSpeedOptimizer(bool on, bool extreme)
+    public Task SetSpeedOptimizer(bool on, bool extreme) => RunApplyBatchAsync(async generation =>
     {
-        if (IsApplying) return;
         using var writePermit = HardwareOperationGate.TryBeginHighRiskOperation();
         if (writePermit is null)
         {
@@ -1014,20 +1194,20 @@ public sealed class OverclockService : ObservableObject, IDisposable
             SetAction("高風險硬體寫入未啟用；未變更 Speed Optimizer。", Severity.Warning);
             return;
         }
-        IsApplying = true;
-        try
+        SetAction(on ? "正在啟用 Intel Speed Optimizer…" : "正在關閉 Intel Speed Optimizer…", Severity.Neutral);
+        var r = await RunApplyEngineAsync(generation, () => _engine.SetSpeedOptimizer(on, extreme));
+        if (r is null || !IsCurrentApply(generation)) return;
+        if (r.Ok)
         {
-            SetAction(on ? "正在啟用 Intel Speed Optimizer…" : "正在關閉 Intel Speed Optimizer…", Severity.Neutral);
-            var r = await Task.Run(() => _engine.SetSpeedOptimizer(on, extreme));
-            if (r.Ok)
+            try
             {
-                try { SpeedOptimizerOn = _engine.SpeedOptimizerState > 0; } catch { SpeedOptimizerOn = on; }
+                SpeedOptimizerOn = _engine.SpeedOptimizerState > 0;
                 SpeedOptimizerStatusText = SpeedOptimizerOn ? "目前為開啟。" : "支援，目前為關閉。";
             }
-            SetAction(r.Message, r.Ok ? Severity.Good : Severity.Critical);
+            catch { SpeedOptimizerStatusText = "引擎已接受操作，但無法確認目前狀態。"; }
         }
-        finally { IsApplying = false; }
-    }
+        SetAction(r.Message, r.Ok ? Severity.Good : Severity.Critical);
+    });
 
     public void StartStress()
     {
@@ -1046,6 +1226,7 @@ public sealed class OverclockService : ObservableObject, IDisposable
     {
         OnPropertyChanged(nameof(CanUseHardwareWrites));
         OnPropertyChanged(nameof(CanWrite));
+        OnPropertyChanged(nameof(SiliconCanTest));
         _stress.RefreshPolicy();
     }
     public void StopStress() { _stress.Cancel(); SetAction("已請求停止燒機。", Severity.Neutral); }
@@ -1054,29 +1235,25 @@ public sealed class OverclockService : ObservableObject, IDisposable
     // 內部工具
     // ═══════════════════════════════════════════════════════════════════════
 
-    private async Task ApplyProfile(OcProfile p, string label)
+    private Task ApplyProfile(OcProfile p, string label) => RunApplyBatchAsync(async generation =>
     {
-        if (IsApplying) return;
-        IsApplying = true;
-        try
+        SetAction($"正在套用{label}…", Severity.Neutral);
+        int ok = 0, total = 0; bool armed = false;
+        foreach (var item in p.Items)
         {
-            SetAction($"正在套用{label}…", Severity.Neutral);
-            int ok = 0, total = 0; bool armed = false;
-            foreach (var item in p.Items)
-            {
-                var k = _engine.Knobs.FirstOrDefault(x => x.Id == item.Id);
-                if (k is null || !k.Writable) continue;
-                total++;
-                k.Target = item.Value;
-                var r = await WriteKnobAsync(k, item.Value);
-                if (r.Ok) { ok++; if (IsRisky(k)) armed = true; }
-            }
-            if (armed && _watchdogEnabled) ArmWatchdog();
-            SetAction($"已套用{label}：{ok} / {total} 項成功。", ok == total && total > 0 ? Severity.Good : Severity.Warning);
-            RaisePlanner();
+            if (!IsCurrentApply(generation)) return;
+            var k = _engine.Knobs.FirstOrDefault(x => x.Id == item.Id);
+            if (k is null || !k.Writable) continue;
+            total++;
+            k.Target = item.Value;
+            var r = await WriteKnobAsync(generation, k, item.Value);
+            if (r is null || !IsCurrentApply(generation)) return;
+            if (r.Ok) { ok++; if (IsRisky(k)) armed = true; }
         }
-        finally { IsApplying = false; }
-    }
+        if (armed && _watchdogEnabled) ArmWatchdog();
+        SetAction($"已套用{label}：{ok} / {total} 項成功。", ok == total && total > 0 ? Severity.Good : Severity.Warning);
+        RaisePlanner();
+    });
 
     /// <summary>擷取目前硬體現值（Active）為一份設定檔，作為回復基準。</summary>
     private OcProfile CaptureCurrent(string name)
@@ -1087,24 +1264,110 @@ public sealed class OverclockService : ObservableObject, IDisposable
         return p;
     }
 
-    /// <summary>回復至最後穩定基準（看門狗逾時 / 燒機過熱時呼叫）。回傳簡短結果供訊息串接。</summary>
-    private string RollbackToStable()
+    private sealed record RecoveryWrite(OcKnob Knob, double Value, OcApplyResult Result);
+    private sealed record RecoveryOutcome(OcApplyResult Result, IReadOnlyList<RecoveryWrite> Writes);
+
+    /// <summary>Revoke later writes immediately, then await dispatched I/O before restoring the full baseline.</summary>
+    internal Task<OcApplyResult> RollbackToStableAsync(string reason, Severity reasonSeverity = Severity.Warning)
+        => BeginRecoveryAsync(reason, reasonSeverity, null);
+
+    private Task<OcApplyResult> ExpireWatchdogAsync(long arm)
+        => BeginRecoveryAsync("看門狗逾時：未在時限內確認穩定", Severity.Warning, arm);
+
+    private Task<OcApplyResult> BeginRecoveryAsync(string reason, Severity reasonSeverity, long? expectedArm)
     {
-        using var recovery = HardwareOperationGate.BeginRecoveryOperation();
-        if (_rollback is null || _rollback.Items.Count == 0)
+        TaskCompletionSource<OcApplyResult> completion;
+        ITimer? timer;
+        lock (_operationState)
         {
-            var r = _engine.RestoreDefaults();
-            return r.Ok ? "（已還原為預設值）" : "（回復失敗：" + r.Message + "）";
+            if (_disposed) return Task.FromResult(OcApplyResult.Fail("服務已結束，未執行回復。"));
+            if (expectedArm is long arm)
+            {
+                if (!_watchdogEnabled || !_watchdogArmed || arm != _watchdogArmGeneration)
+                    return Task.FromResult(OcApplyResult.Fail("看門狗期限已解除或取代。"));
+                var remaining = WatchdogWindow - _timeProvider.GetElapsedTime(_watchdogStarted);
+                if (remaining > TimeSpan.Zero)
+                {
+                    _watchdogTimer?.Change(remaining, Timeout.InfiniteTimeSpan);
+                    return Task.FromResult(OcApplyResult.Fail("尚未到看門狗期限。"));
+                }
+            }
+            if (_recoveryCompletion is not null) return _recoveryCompletion.Task;
+            ++_operationGeneration;
+            _recoveryCompletion = completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            timer = DisarmWatchdogLocked();
         }
-        int ok = 0, total = 0;
-        foreach (var item in _rollback.Items)
+        timer?.Dispose();
+        PublishWatchdogState();
+        RaiseOperationState();
+        SetAction(reason + "：已停止後續套用；正在等待已送出的引擎操作完成，再回復穩定基準。", reasonSeverity);
+        // Own a snapshot: ConfirmStable is blocked while this recovery is pending.
+        var baseline = _rollback is null ? null : new OcProfile
+        {
+            Name = _rollback.Name,
+            Items = _rollback.Items.Select(i => new OcProfileItem { Id = i.Id, Name = i.Name, Value = i.Value }).ToList()
+        };
+        _ = CompleteRecoveryAsync(reason, reasonSeverity, baseline, completion);
+        return completion.Task;
+    }
+
+    private async Task CompleteRecoveryAsync(string reason, Severity reasonSeverity, OcProfile? baseline,
+        TaskCompletionSource<OcApplyResult> completion)
+    {
+        RecoveryOutcome outcome;
+        try
+        {
+            using var recovery = HardwareOperationGate.BeginRecoveryOperation();
+            // Hold the engine slot across the whole restoration, including individual failures.
+            outcome = await RunEngineAsync(() => RestoreStableCore(baseline));
+        }
+        catch (Exception ex)
+        {
+            outcome = new(OcApplyResult.Fail("回復發生例外，硬體狀態尚未確認：" + ex.Message), []);
+        }
+        try
+        {
+            foreach (var write in outcome.Writes)
+            {
+                PublishUiNotification(() => write.Knob.ApplyStatus = write.Result.Message);
+                PublishUiNotification(() => write.Knob.ApplySeverity = write.Result.Ok ? Severity.Warning : Severity.Critical);
+                if (write.Result.Ok) PublishUiNotification(() => write.Knob.Target = write.Value);
+            }
+            SetAction(reason + "：" + outcome.Result.Message,
+                outcome.Result.Ok ? reasonSeverity : Severity.Critical);
+            PublishUiNotification(RaisePlanner);
+        }
+        finally
+        {
+            lock (_operationState)
+            {
+                if (ReferenceEquals(_recoveryCompletion, completion)) _recoveryCompletion = null;
+            }
+            try { RaiseOperationState(); }
+            finally { completion.TrySetResult(outcome.Result); }
+        }
+    }
+
+    private RecoveryOutcome RestoreStableCore(OcProfile? baseline)
+    {
+        if (baseline is null || baseline.Items.Count == 0)
+            return new(_engine.RestoreDefaults(), []);
+        var writes = new List<RecoveryWrite>();
+        foreach (var item in baseline.Items)
         {
             var k = _engine.Knobs.FirstOrDefault(x => x.Id == item.Id);
             if (k is null || !k.Writable) continue;
-            total++;
-            if (_engine.Apply(k, item.Value).Ok) { ok++; k.Target = item.Value; }
+            OcApplyResult r;
+            try { r = _engine.Apply(k, item.Value); }
+            catch (Exception ex) { r = OcApplyResult.Fail("回復此項發生例外：" + ex.Message); }
+            writes.Add(new(k, item.Value, r));
         }
-        return $"（已回復 {ok}/{total} 項至穩定基準）";
+        int ok = writes.Count(w => w.Result.Ok), total = baseline.Items.Count;
+        bool allOk = total > 0 && ok == total;
+        string message = total == 0 ? "沒有可回復的穩定基準項目，硬體狀態尚未確認。"
+            : $"穩定基準回復：{ok}/{total} 項由引擎回報成功。"
+                + (allOk ? "各項讀回限制見調節項狀態。" : "回復未完成，請檢視各項失敗狀態。");
+        return new(new OcApplyResult(allOk, message, null), writes);
     }
 
     private static bool IsRisky(OcKnob k) =>
@@ -1112,8 +1375,61 @@ public sealed class OverclockService : ObservableObject, IDisposable
             or OcKnobKind.MemoryVoltage or OcKnobKind.CoreRatio or OcKnobKind.Bclk;
 
     private void ArmWatchdogIfNeeded(OcKnob k) { if (_watchdogEnabled && IsRisky(k)) ArmWatchdog(); }
-    private void ArmWatchdog() { WatchdogArmed = true; WatchdogSecondsLeft = 30; }
-    private void DisarmWatchdog() { WatchdogArmed = false; WatchdogSecondsLeft = 0; }
+    private void ArmWatchdog()
+    {
+        ITimer? previous;
+        lock (_operationState)
+        {
+            if (_disposed || _recoveryCompletion is not null || !_watchdogEnabled) return;
+            previous = DisarmWatchdogLocked();
+            long arm = ++_watchdogArmGeneration;
+            _watchdogStarted = _timeProvider.GetTimestamp();
+            _watchdogArmed = true;
+            _watchdogLeft = 30;
+            _watchdogTimer = CreateWatchdogTimer(arm);
+            _watchdogTimer.Change(WatchdogWindow, Timeout.InfiniteTimeSpan);
+        }
+        previous?.Dispose();
+        PublishWatchdogState();
+    }
+
+    private ITimer CreateWatchdogTimer(long arm)
+    {
+        // Arming can occur inside a high-risk write scope. Do not let a long-lived
+        // timer inherit that AsyncLocal permit; recovery obtains its own explicit scope.
+        if (ExecutionContext.IsFlowSuppressed())
+            return _timeProvider.CreateTimer(state => { _ = ExpireWatchdogAsync(arm); },
+                null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        using (ExecutionContext.SuppressFlow())
+            return _timeProvider.CreateTimer(state => { _ = ExpireWatchdogAsync(arm); },
+                null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+    }
+
+    // Caller holds _operationState. No UI callbacks or hardware work under this lock.
+    private ITimer? DisarmWatchdogLocked()
+    {
+        var timer = _watchdogTimer;
+        _watchdogTimer = null;
+        ++_watchdogArmGeneration;
+        _watchdogArmed = false;
+        _watchdogLeft = 0;
+        return timer;
+    }
+
+    private void DisarmWatchdog()
+    {
+        ITimer? timer;
+        lock (_operationState) timer = DisarmWatchdogLocked();
+        timer?.Dispose();
+        PublishWatchdogState();
+    }
+
+    private void PublishWatchdogState()
+    {
+        PublishUiNotification(() => OnPropertyChanged(nameof(WatchdogArmed)));
+        PublishUiNotification(() => OnPropertyChanged(nameof(WatchdogSecondsLeft)));
+        PublishUiNotification(() => OnPropertyChanged(nameof(WatchdogStatusText)));
+    }
 
     private void RefreshProfiles()
     {
@@ -1125,7 +1441,11 @@ public sealed class OverclockService : ObservableObject, IDisposable
         }
     }
 
-    private void SetAction(string msg, Severity sev) { ActionStatus = msg; ActionSeverity = sev; }
+    private void SetAction(string msg, Severity sev)
+    {
+        PublishUiNotification(() => ActionStatus = msg);
+        PublishUiNotification(() => ActionSeverity = sev);
+    }
 
     private void RaisePlanner()
     {
@@ -1141,11 +1461,36 @@ public sealed class OverclockService : ObservableObject, IDisposable
             OnPropertyChanged(n);
     }
 
+    private async Task DisposeEngineAsync()
+    {
+        try
+        {
+            await RunEngineAsync(() =>
+            {
+                try { _engine.Dispose(); } catch { }
+                try { Vrm?.Dispose(); } catch { }
+                return true;
+            });
+        }
+        catch { }
+    }
+
     public void Dispose()
     {
         if (CoreRatioKnob is not null) CoreRatioKnob.PropertyChanged -= OnPlannerKnobChanged;
         if (BclkKnob is not null) BclkKnob.PropertyChanged -= OnPlannerKnobChanged;
-        try { _engine.Dispose(); } catch { }
-        try { Vrm?.Dispose(); } catch { }
+        ITimer? timer;
+        lock (_operationState)
+        {
+            if (_disposed) return;
+            _disposed = true;
+            ++_operationGeneration;
+            timer = DisarmWatchdogLocked();
+        }
+        timer?.Dispose();
+        PublishWatchdogState();
+        _ = DisposeEngineAsync();
+        RaiseOperationState();
+
     }
 }

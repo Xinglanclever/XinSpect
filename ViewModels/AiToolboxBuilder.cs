@@ -224,6 +224,13 @@ internal static partial class AiToolboxBuilder
     // ── 儲存 ────────────────────────────────────────────────────────────────
 
     private static void AddStorage(AiToolbox box, MainViewModel vm)
+        => AddStorage(box, () => vm.Live?.Drives, () => vm.PhysicalDisks,
+            () => vm.Volumes.Volumes, () => vm.Volumes.SummaryText);
+
+    // Lazy data-only seam shared by the real registration; avoids constructing native collectors in tests.
+    internal static void AddStorage(AiToolbox box, Func<IEnumerable<StorageRow>?> readDrives,
+        Func<IEnumerable<PhysicalDiskInfo>> readPhysicalDisks, Func<IEnumerable<VolumeInfo>> readVolumes,
+        Func<string> readSummary)
     {
         box.Add("get_disk_health",
             "取得每顆磁碟的健康與容量：型號、介面、韌體、容量、S.M.A.R.T. 剩餘壽命與健康判定、"
@@ -231,7 +238,7 @@ internal static partial class AiToolboxBuilder
             _ =>
             {
                 var sb = new StringBuilder();
-                var drives = vm.Live?.Drives;
+                var drives = readDrives();
                 if (drives is not null)
                     foreach (var d in drives)
                         sb.AppendLine($"磁碟「{d.DisplayModel}」：{d.TypeText}・{d.CapacityText}"
@@ -239,16 +246,16 @@ internal static partial class AiToolboxBuilder
                                       + $"・溫度 {d.TempText}・活動 {d.ActivityText}"
                                       + $"・介面 {d.InterfaceType}・韌體 {d.Firmware}");
 
-                foreach (var p in vm.PhysicalDisks)
+                foreach (var p in readPhysicalDisks())
                     sb.AppendLine($"實體磁碟「{p.Model}」：{p.CapacityText}・{p.TypeText}・介面 {p.InterfaceType}"
-                                  + $"・{p.PartitionsText}・序號 {p.SerialNumber}"
+                                  + $"・{p.PartitionsText}・序號：{System.Text.Json.JsonSerializer.Serialize(p.SerialNumber)}"
                                   + (p.HealthDetail.Length > 0 ? $"・S.M.A.R.T. {p.HealthDetail}" : ""));
 
-                foreach (var v in vm.Volumes.Volumes)
+                foreach (var v in readVolumes())
                     sb.AppendLine($"磁碟區 {v.CaptionText}（{v.TypeText}）：{v.SizeText}・{v.FreeText}"
                                   + $"・已用 {v.CenterPercentText}・空間狀態 {SevText(v.Severity)}");
 
-                Line(sb, "整機儲存", vm.Volumes.SummaryText);
+                Line(sb, "整機儲存", readSummary());
                 return Done(sb, "（未偵測到磁碟）");
             });
     }

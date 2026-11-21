@@ -23,6 +23,26 @@ namespace XinSpect;
 /// </remarks>
 public sealed class BiosMeService : ObservableObject
 {
+
+    private readonly Func<string> _systemDirectory;
+    private readonly Func<string, bool> _systemFileExists;
+    private readonly Func<ProcessStartInfo, bool> _startFirmwareReboot;
+
+    public BiosMeService() : this(() => Environment.SystemDirectory, File.Exists, command =>
+    {
+        using var process = Process.Start(command);
+        return process is not null;
+    }) { }
+
+    // Command-only seam. Constructing the service does not refresh firmware or start a process.
+    internal BiosMeService(Func<string> systemDirectory, Func<string, bool> systemFileExists,
+        Func<ProcessStartInfo, bool> startFirmwareReboot)
+    {
+        _systemDirectory = systemDirectory ?? throw new ArgumentNullException(nameof(systemDirectory));
+        _systemFileExists = systemFileExists ?? throw new ArgumentNullException(nameof(systemFileExists));
+        _startFirmwareReboot = startFirmwareReboot ?? throw new ArgumentNullException(nameof(startFirmwareReboot));
+    }
+
     private bool _loading;
     public bool IsLoading
     {
@@ -368,13 +388,15 @@ public sealed class BiosMeService : ObservableObject
         if (!_riskAccepted) { ActionStatus = "請先勾選風險確認。"; return false; }
         try
         {
-            Process.Start(new ProcessStartInfo("shutdown.exe", "/r /fw /t 0")
+            var command = CreateFirmwareRebootCommand(_systemDirectory(), _systemFileExists);
+            // Path validation is not permission: recheck if confirmation changed before dispatch.
+            if (!_riskAccepted) { ActionStatus = "風險確認已撤銷，未送出重開機要求。"; return false; }
+            if (!_startFirmwareReboot(command))
             {
-                UseShellExecute = true,
-                Verb = "runas",          // /fw 需要系統管理員權限
-                CreateNoWindow = true,
-            });
-            ActionStatus = "已要求重開機進入 UEFI 設定；若沒有反應，代表權限提升被取消或本機為 Legacy 開機。";
+                ActionStatus = "Windows 未回傳啟動確認，無法確認已送出重開機要求。";
+                return false;
+            }
+            ActionStatus = "已送出重開機進入 UEFI 設定的要求；實際執行結果依 Windows 回應。";
             return true;
         }
         catch (Exception ex)
@@ -382,6 +404,23 @@ public sealed class BiosMeService : ObservableObject
             ActionStatus = "無法要求重開機：" + ex.Message;
             return false;
         }
+    }
+
+    internal static ProcessStartInfo CreateFirmwareRebootCommand(string systemDirectory,
+        Func<string, bool> fileExists)
+    {
+        ArgumentNullException.ThrowIfNull(fileExists);
+        if (string.IsNullOrWhiteSpace(systemDirectory) || !Path.IsPathFullyQualified(systemDirectory))
+            throw new InvalidOperationException("Windows 系統目錄不是完整路徑，未送出重開機要求。");
+        string executable = Path.Combine(systemDirectory, "shutdown.exe");
+        if (!fileExists(executable))
+            throw new FileNotFoundException("Windows 系統關機工具不存在，未送出重開機要求。", executable);
+        return new ProcessStartInfo(executable, "/r /fw /t 0")
+        {
+            UseShellExecute = true,
+            Verb = "runas",
+            CreateNoWindow = true,
+        };
     }
 
     /// <summary>開啟本機主機板廠商的官方支援／BIOS 下載頁。比對不到廠商時什麼都不做。</summary>

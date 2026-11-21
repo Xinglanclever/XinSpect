@@ -15,10 +15,15 @@ public static class HardwareDataSourceRunner
     private static readonly Regex StableFactKey = new(
         @"\A[a-z0-9][a-z0-9._-]{0,159}\z", RegexOptions.CultureInvariant);
 
-    public static async Task<HardwareDataSourceRunResult> RunAsync(
+    public static Task<HardwareDataSourceRunResult> RunAsync(
         IHardwareDataSource source, CancellationToken cancellationToken = default)
+        => RunAsync(source, TimeProvider.System, cancellationToken);
+
+    internal static async Task<HardwareDataSourceRunResult> RunAsync(
+        IHardwareDataSource source, TimeProvider timeProvider, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(timeProvider);
         cancellationToken.ThrowIfCancellationRequested();
 
         HardwareDataSourceDescriptor descriptor = source.Descriptor
@@ -29,11 +34,13 @@ public static class HardwareDataSourceRunner
             SupportedFacts = Array.AsReadOnly(descriptor.SupportedFacts.ToArray()),
         };
 
-        DateTimeOffset startedAt = DateTimeOffset.UtcNow;
-        using var timeoutCancellation = new CancellationTokenSource();
+        DateTimeOffset startedAt = timeProvider.GetUtcNow();
+        long startedTimestamp = timeProvider.GetTimestamp();
+        long completedTimestamp = startedTimestamp;
+        bool HasExpired(long timestamp) => timeProvider.GetElapsedTime(startedTimestamp, timestamp) >= descriptor.Timeout;
+        using var timeoutCancellation = new CancellationTokenSource(descriptor.Timeout, timeProvider);
         using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken, timeoutCancellation.Token);
-        timeoutCancellation.CancelAfter(descriptor.Timeout);
 
         Task<IReadOnlyList<HardwareFact>>? collection;
         try
@@ -41,7 +48,20 @@ public static class HardwareDataSourceRunner
             CancellationToken sourceToken = descriptor.SupportsCancellation
                 ? linkedCancellation.Token : CancellationToken.None;
             var invocation = Task.Factory.StartNew(
-                () => source.CollectAsync(startedAt, sourceToken), CancellationToken.None,
+                async () =>
+                {
+                    try
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (HasExpired(timeProvider.GetTimestamp())) throw new TimeoutException();
+                        return await source.CollectAsync(startedAt, sourceToken).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        // Record completion on the source continuation, before the caller can be delayed.
+                        completedTimestamp = timeProvider.GetTimestamp();
+                    }
+                }, CancellationToken.None,
                 TaskCreationOptions.LongRunning, TaskScheduler.Default);
             collection = invocation.Unwrap();
         }
@@ -49,17 +69,20 @@ public static class HardwareDataSourceRunner
         {
             if (cancellationToken.IsCancellationRequested)
                 throw new OperationCanceledException(cancellationToken);
-            return ReadError(descriptor, startedAt, DateTimeOffset.UtcNow, ex.GetType().Name);
+            return ReadError(descriptor, startedAt, timeProvider.GetUtcNow(), ex.GetType().Name);
         }
 
         if (collection is null)
-            return ReadError(descriptor, startedAt, DateTimeOffset.UtcNow, "NullTask");
+            return ReadError(descriptor, startedAt, timeProvider.GetUtcNow(), "NullTask");
 
         try
         {
             IReadOnlyList<HardwareFact>? reported = await collection
                 .WaitAsync(linkedCancellation.Token).ConfigureAwait(false);
-            DateTimeOffset completedAt = DateTimeOffset.UtcNow;
+            cancellationToken.ThrowIfCancellationRequested();
+            DateTimeOffset completedAt = timeProvider.GetUtcNow();
+            // CancelAfter callbacks may be delayed by scheduler load; completion still has a deadline.
+            if (HasExpired(completedTimestamp)) return TimedOut(descriptor, startedAt, completedAt);
             if (reported is null)
                 return ReadError(descriptor, startedAt, completedAt, "NullResult");
             if (reported.Count > MaxFactsPerSource)
@@ -75,11 +98,13 @@ public static class HardwareDataSourceRunner
         catch (OperationCanceledException) when (timeoutCancellation.IsCancellationRequested)
         {
             ObserveLateFault(collection);
-            return TimedOut(descriptor, startedAt, DateTimeOffset.UtcNow);
+            return TimedOut(descriptor, startedAt, timeProvider.GetUtcNow());
         }
         catch (Exception ex)
         {
-            return ReadError(descriptor, startedAt, DateTimeOffset.UtcNow, ex.GetType().Name);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (HasExpired(completedTimestamp)) return TimedOut(descriptor, startedAt, timeProvider.GetUtcNow());
+            return ReadError(descriptor, startedAt, timeProvider.GetUtcNow(), ex.GetType().Name);
         }
     }
 

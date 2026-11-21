@@ -9,7 +9,8 @@ public static class SpdConsistencyAuditService
     private static readonly HashSet<string> GenericValues = new(StringComparer.OrdinalIgnoreCase)
     {
         "", "—", "-", "unknown", "not specified", "not available", "not applicable", "n/a", "na",
-        "none", "null", "default string", "system manufacturer", "to be filled by o.e.m.",
+        "none", "null", "default string", "system serial number", "system product name", "system version",
+        "system manufacturer", "to be filled by o.e.m.",
         "to be filled by oem", "manufacturer", "part number", "serial number", "00000000",
         "0000000000000000", "ffffffff", "ffffffffffffffff",
     };
@@ -62,7 +63,8 @@ public static class SpdConsistencyAuditService
             row.Part,
             row.Serial,
             ParseCapacityMiB(row.Size),
-            ParseSpeedMTs(row.Speed));
+            ParseSpeedMTs(row.Speed),
+            LocatorScope: SpdAuditLocatorScope.SmbiosPhysicalSlot);
     }
 
     public static CurrentMemoryTimingEvidence? FromCurrentTimings(MemoryTimings? timings)
@@ -129,59 +131,57 @@ public static class SpdConsistencyAuditService
     {
         var result = Enumerable.Repeat<SpdAuditSourceInput?>(null, native.Count).ToList();
         var unused = new HashSet<int>(Enumerable.Range(0, candidates.Count));
+        var nativeSerials = native.Select(x => ValidSerial(x.SerialNumber)).ToArray();
+        var candidateSerials = candidates.Select(x => ValidSerial(x.SerialNumber)).ToArray();
 
-        // 唯一的精確 locator 先配，避免多 DIMM 同型號時靠清單順序錯配。
+        // Locator text binds a physical slot only with an independently established shared
+        // scope and uniqueness in both complete inventories. Keep actual serial conflicts.
         for (int i = 0; i < native.Count; i++)
         {
-            string? locator = Normalize(native[i].Locator);
-            if (locator is null) continue;
-            var exact = unused.Where(j => Normalize(candidates[j].Locator) == locator).ToList();
-            if (exact.Count == 1) { result[i] = candidates[exact[0]]; unused.Remove(exact[0]); }
+            if (native[i].LocatorScope != SpdAuditLocatorScope.SmbiosPhysicalSlot) continue;
+            string? locator = IdentityValue(native[i].Locator);
+            if (locator is null || native.Count(x => SameScopedLocator(x, native[i])) != 1) continue;
+            var exact = Enumerable.Range(0, candidates.Count)
+                .Where(j => SameScopedLocator(candidates[j], native[i])).ToArray();
+            if (exact.Length != 1 || !unused.Contains(exact[0])) continue;
+            result[i] = candidates[exact[0]];
+            unused.Remove(exact[0]);
         }
 
-        // 再以識別欄位評分；若最高分並列就不猜。序號最強，料號次之，其餘只輔助。
+        // A valid equal serial must be unique in both complete inventories. Part/vendor,
+        // capacity, speed, date and residual one-to-one counts do not establish identity.
         for (int i = 0; i < native.Count; i++)
         {
-            if (result[i] is not null) continue;
-            int bestScore = 0;
-            var best = new List<int>();
-            foreach (int j in unused)
-            {
-                int score = MatchScore(native[i], candidates[j]);
-                if (score > bestScore) { bestScore = score; best.Clear(); best.Add(j); }
-                else if (score == bestScore && score > 0) best.Add(j);
-            }
-            if (bestScore >= 4 && best.Count == 1)
-            {
-                result[i] = candidates[best[0]];
-                unused.Remove(best[0]);
-            }
-        }
-
-        // 只有雙方都沒有任何可用識別資訊時，單一候選才可按唯一性配對；已有明確但矛盾的資訊就不硬配。
-        var openNative = Enumerable.Range(0, native.Count).Where(i => result[i] is null).ToList();
-        if (openNative.Count == 1 && unused.Count == 1)
-        {
-            int i = openNative[0], j = unused.Single();
-            bool nativeHasIdentity = HasIdentity(native[i]);
-            bool candidateHasIdentity = HasIdentity(candidates[j]);
-            if (!nativeHasIdentity && !candidateHasIdentity) result[i] = candidates[j];
+            if (result[i] is not null || nativeSerials[i] is not { } serial
+                || nativeSerials.Count(x => x == serial) != 1) continue;
+            var exact = Enumerable.Range(0, candidates.Count)
+                .Where(j => candidateSerials[j] == serial).ToArray();
+            if (exact.Length != 1 || !unused.Contains(exact[0])) continue;
+            result[i] = candidates[exact[0]];
+            unused.Remove(exact[0]);
         }
         return result;
 
-        static bool HasIdentity(SpdAuditSourceInput x)
-            => NonGeneric(x.SerialNumber) is not null || NonGeneric(x.PartNumber) is not null
-            || NonGeneric(x.Vendor) is not null || x.CapacityMiB is > 0;
+        static bool SameScopedLocator(SpdAuditSourceInput a, SpdAuditSourceInput b)
+            => a.LocatorScope == SpdAuditLocatorScope.SmbiosPhysicalSlot
+            && a.LocatorScope == b.LocatorScope
+            && IdentityValue(a.Locator) is { } left && IdentityValue(b.Locator) == left;
+
     }
 
-    private static int MatchScore(SpdAuditSourceInput a, SpdAuditSourceInput b)
+    private static string? IdentityValue(string? value)
     {
-        int score = 0;
-        if (EqualValue(a.SerialNumber, b.SerialNumber)) score += 8;
-        if (EqualValue(a.PartNumber, b.PartNumber)) score += 4;
-        if (EqualValue(a.Vendor, b.Vendor)) score += 2;
-        if (a.CapacityMiB is > 0 && a.CapacityMiB == b.CapacityMiB) score++;
-        return score;
+        string? normalized = Normalize(value);
+        if (string.IsNullOrEmpty(normalized)) return null;
+        // Firmware may decorate generic placeholders with punctuation or whitespace.
+        return GenericValues.Any(x => Regex.Replace(x, "[^A-Z0-9]", "", RegexOptions.IgnoreCase)
+            .ToUpperInvariant() == normalized) ? null : normalized;
+    }
+
+    private static string? ValidSerial(string? value)
+    {
+        string? serial = IdentityValue(value);
+        return serial is null || serial.All(x => x == '0') || serial.All(x => x == 'F') ? null : serial;
     }
 
     private static List<SpdAuditFinding> BuildFindings(
@@ -230,11 +230,13 @@ public static class SpdConsistencyAuditService
         Func<SpdAuditSourceInput, string?> selector,
         bool? nativeValidity = null)
     {
-        var values = PresentValues(native, cpuz, smbios, selector);
-        var evidence = SourceEvidence(native, cpuz, smbios, x => Display(selector(x)));
-        bool primaryPresent = NonGeneric(selector(native)) is not null;
+        string? ComparableValue(SpdAuditSourceInput x)
+            => field == SpdAuditField.SerialNumber && ValidSerial(selector(x)) is null ? null : selector(x);
+        var values = PresentValues(native, cpuz, smbios, ComparableValue);
+        var evidence = SourceEvidence(native, cpuz, smbios, x => Display(ComparableValue(x)));
+        bool primaryPresent = NonGeneric(ComparableValue(native)) is not null;
         bool conflict = primaryPresent && values.Any(x => x.Source != native &&
-            !EqualValue(selector(native), selector(x.Source)));
+            !EqualValue(ComparableValue(native), ComparableValue(x.Source)));
         bool parityBad = nativeValidity == false;
         var verdict = conflict ? SpdAuditVerdict.Conflict
             : parityBad ? SpdAuditVerdict.Suspicious
@@ -311,7 +313,7 @@ public static class SpdConsistencyAuditService
         list.Add(new SpdAuditFinding(
             SpdAuditField.SourceAvailability,
             SpdAuditVerdict.MissingData,
-            $"缺少可安全配對的{string.Join("、", missing)}插槽資料；未以清單順序強行配對。",
+            $"缺少可安全配對的{string.Join("、", missing)}插槽資料；尚無唯一有效相同序號或已確認共同範圍的唯一 locator，未把型號或清單順序當作實體身份。",
             missing.Select(x => new SpdAuditEvidence(
                 x == "CPU-Z" ? SpdAuditSourceKind.CpuZ : SpdAuditSourceKind.Smbios,
                 x,

@@ -33,12 +33,30 @@ public static class SpdSurveyor
 {
     /// <summary>呼叫端負責先取得軟體層的匯流排鎖（<see cref="SmbusBusLock"/>）並在結束後釋放。</summary>
     public static SpdSurvey Survey(IEnumerable<ISpdBus> buses, IEnumerable<string>? initialNotes = null,
-                                   CancellationToken cancellationToken = default)
+                                   CancellationToken cancellationToken = default,
+                                   Action<SpdSurvey>? progress = null)
     {
         var modules = new List<SpdDirectRead>();
         var ddr5Modules = new List<SpdDirectRead5>();
         var problems = new List<SpdSlot>();
         var notes = initialNotes?.Where(n => !string.IsNullOrWhiteSpace(n)).ToList() ?? [];
+
+        SpdSurvey Snapshot() => new(modules.ToArray(), problems.ToArray(), notes.ToArray(), ddr5Modules.ToArray());
+        void ReportSlot(ISpdBus bus, SpdSlot slot)
+        {
+            if (slot.Kind == SpdKind.Empty) return;
+            if (slot.Kind == SpdKind.Ddr4 && slot.Raw is not null
+                && SpdDecoder.Decode(slot.Raw) is { } decoded)
+                modules.Add(new SpdDirectRead(bus.Description, slot.Address, slot.Raw, decoded));
+            else if (slot.Kind == SpdKind.Ddr5 && slot.Raw is not null
+                && SpdDecoder5.Decode(slot.Raw) is { } decoded5)
+                ddr5Modules.Add(new SpdDirectRead5(bus.Description, slot.Address, slot.Raw, decoded5));
+            else
+                problems.Add(slot);
+            progress?.Invoke(Snapshot());
+        }
+
+        progress?.Invoke(Snapshot());
 
         foreach (var bus in buses)
         {
@@ -49,39 +67,21 @@ public static class SpdSurveyor
             catch (Exception ex)
             {
                 notes.Add($"{bus.Description}：取得匯流排時發生例外（{ex.GetType().Name}：{ex.Message}）。");
+                progress?.Invoke(Snapshot());
                 continue;
             }
             if (!acquired)
             {
                 notes.Add($"{bus.Description}：{reason}");
+                progress?.Invoke(Snapshot());
                 continue;
             }
 
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var scan = SpdReader.ReadAll(bus, cancellationToken);
+                var scan = SpdReader.ReadAll(bus, cancellationToken, slot => ReportSlot(bus, slot));
                 if (scan.BusNote.Length > 0) notes.Add($"{bus.Description}：{scan.BusNote}");
-
-                foreach (var slot in scan.Slots)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (slot.Kind == SpdKind.Empty) continue;
-
-                    if (slot.Kind == SpdKind.Ddr4 && slot.Raw is not null
-                        && SpdDecoder.Decode(slot.Raw) is { } decoded)
-                    {
-                        modules.Add(new SpdDirectRead(bus.Description, slot.Address, slot.Raw, decoded));
-                        continue;
-                    }
-                    if (slot.Kind == SpdKind.Ddr5 && slot.Raw is not null
-                        && SpdDecoder5.Decode(slot.Raw) is { } decoded5)
-                    {
-                        ddr5Modules.Add(new SpdDirectRead5(bus.Description, slot.Address, slot.Raw, decoded5));
-                        continue;
-                    }
-                    problems.Add(slot);
-                }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -98,10 +98,11 @@ public static class SpdSurveyor
                 {
                     notes.Add($"{bus.Description}：釋放匯流排時發生例外（{ex.GetType().Name}：{ex.Message}）。");
                 }
+                progress?.Invoke(Snapshot());
             }
         }
 
-        return new SpdSurvey(modules, problems, notes, ddr5Modules);
+        return Snapshot();
     }
 }
 

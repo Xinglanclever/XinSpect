@@ -78,34 +78,47 @@ public static class SpdReader
     public const byte PageSelect1 = 0x37;
 
     /// <summary>掃過 0x50–0x57 全部八個位址。呼叫端必須先取得匯流排旗號。</summary>
-    public static SpdScan ReadAll(ISpdBus bus, CancellationToken cancellationToken = default)
+    public static SpdScan ReadAll(ISpdBus bus, CancellationToken cancellationToken = default,
+                                  Action<SpdSlot>? slotRead = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        // 先探切頁裝置。DDR4 的 SPA0（0x36）只有在這條匯流排上真的掛著 DDR4 SPD 時才會回應，
-        // 所以它 NAK 就代表「這條匯流排上沒有 SPD」——那是一句匯流排層級的結論，
-        // 不該變成八個位址各自回一句一模一樣的「讀不到」。
-        if (!bus.SendByte(PageSelect0, 0x00) && bus.LastStatus == SmbusStatus.NoDevice
-            && !Enumerable.Range(0, AddressCount)
-                .Select(i => (byte)(FirstAddress + i))
-                .Any(address =>
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    return ProbeDdr5(bus, address, cancellationToken);
-                }))
+        var guarded = new ScanBus(bus);
+        bus = guarded;
+        // 切頁裝置無回應時再探 SPD hub；只有全部明確回報 NoDevice 才能判定整條匯流排為空。
+        // 交易失敗立即停下，避免把控制器故障當成空插槽並反覆重發交易。
+        if (!bus.SendByte(PageSelect0, 0x00))
         {
-            var empty = new List<SpdSlot>(AddressCount);
+            if (bus.LastStatus != SmbusStatus.NoDevice)
+                return new SpdScan([], $"SPD 切頁裝置探測失敗（{bus.LastStatus}）：{bus.LastError}；已停止此匯流排掃描，無法判定是否有模組。");
+            bool found = false;
             for (int i = 0; i < AddressCount; i++)
-                empty.Add(new SpdSlot((byte)(FirstAddress + i), SpdKind.Empty, null, ""));
-            return new SpdScan(empty,
-                "這條 SMBus 上沒有任何 DDR4／DDR5 SPD——DDR4 切頁裝置 0x36 與 DDR5 hub 暫存器都沒有回應。"
-                + "已檢查標準 SPD 位址 0x50–0x57。HEDT 與伺服器平台也可能將 DIMM SPD 接在另一條處理器 iMC SMBus；整機巡檢會逐條檢查。");
+            {
+                byte address = (byte)(FirstAddress + i);
+                bool? present = ProbeDdr5(bus, address, cancellationToken);
+                if (present is null)
+                    return new SpdScan([], $"SPD 位址 0x{address:X2} 探測失敗（{bus.LastStatus}）：{bus.LastError}；已停止此匯流排掃描，無法判定是否有模組。");
+                if (present.Value) { found = true; break; }
+            }
+            if (!found)
+            {
+                var empty = new List<SpdSlot>(AddressCount);
+                for (int i = 0; i < AddressCount; i++)
+                    empty.Add(new SpdSlot((byte)(FirstAddress + i), SpdKind.Empty, null, ""));
+                return new SpdScan(empty,
+                    "這條 SMBus 上沒有任何 DDR4／DDR5 SPD——DDR4 切頁裝置 0x36 與 DDR5 hub 暫存器都沒有回應。"
+                    + "已檢查標準 SPD 位址 0x50–0x57。HEDT 與伺服器平台也可能將 DIMM SPD 接在另一條處理器 iMC SMBus；整機巡檢會逐條檢查。");
+            }
         }
 
         var slots = new List<SpdSlot>(AddressCount);
         for (int i = 0; i < AddressCount; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            slots.Add(ReadOne(bus, (byte)(FirstAddress + i), cancellationToken));
+            var slot = ReadOne(bus, (byte)(FirstAddress + i), cancellationToken);
+            slots.Add(slot);
+            slotRead?.Invoke(slot);
+            if (guarded.Failed)
+                return new SpdScan(slots, $"SPD 匯流排交易失敗（{bus.LastStatus}）：{bus.LastError}；已停止剩餘插槽掃描。");
         }
         return new SpdScan(slots, "");
     }
@@ -116,10 +129,14 @@ public static class SpdReader
         // 再落回 DDR4 的型別碼讀法——DDR4 EEPROM 的 byte 0/1 是別的內容，不會誤判。
         cancellationToken.ThrowIfCancellationRequested();
         byte? hubIdHigh = bus.ReadByteData(address, 0x00);
+        if (hubIdHigh is null && bus.LastStatus is not (SmbusStatus.NoDevice or SmbusStatus.Ok))
+            return new(address, SpdKind.Unreadable, null, "SPD MR0 探測失敗：" + bus.LastError);
         if (hubIdHigh == Ddr5HubIdHigh)
         {
             cancellationToken.ThrowIfCancellationRequested();
             byte? hubIdLow = bus.ReadByteData(address, 0x01);
+            if (hubIdLow is null && bus.LastStatus is not (SmbusStatus.NoDevice or SmbusStatus.Ok))
+                return new(address, SpdKind.Unreadable, null, "SPD MR1 探測失敗：" + bus.LastError);
             if (hubIdLow == Ddr5HubIdLow)
             {
                 byte[]? raw5 = ReadDdr5Confirmed(bus, address, out string note5, cancellationToken);
@@ -235,9 +252,14 @@ public static class SpdReader
         }
         finally
         {
-            SelectPage(bus, 0);
+            if (!SelectPage(bus, 0))
+            {
+                note += "；SPD 頁復位失敗：" + bus.LastError;
+                if (bus is ScanBus guarded) guarded.Stop();
+            }
         }
 
+        if (note.Length > 0) return null;
         if (IsUniform(raw, out byte fill))
         {
             note = $"位址 0x{address:X2} 的 SPD 前 128 位元組全是 0x{fill:X2}，判為讀不到"
@@ -251,14 +273,16 @@ public static class SpdReader
     private static bool SelectPage(ISpdBus bus, int page)
         => bus.SendByte(page == 0 ? PageSelect0 : PageSelect1, 0x00);
 
-    /// <summary>探 0x50 有沒有 SPD5118 hub（MR0/MR1＝0x51/0x18）。用於匯流排層級的「整條都空」判斷。</summary>
-    private static bool ProbeDdr5(ISpdBus bus, byte address, CancellationToken cancellationToken)
+    /// <summary>探 SPD 位址是否有回應；null 表示交易失敗，不能據此斷言不存在。</summary>
+    private static bool? ProbeDdr5(ISpdBus bus, byte address, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         byte? hi = bus.ReadByteData(address, 0x00);
-        if (hi != Ddr5HubIdHigh) return false;
+        if (hi is null) return bus.LastStatus == SmbusStatus.NoDevice ? false : null;
+        if (hi != Ddr5HubIdHigh) return true;
         cancellationToken.ThrowIfCancellationRequested();
-        return bus.ReadByteData(address, 0x01) == Ddr5HubIdLow;
+        byte? lo = bus.ReadByteData(address, 0x01);
+        return lo is not null || bus.LastStatus == SmbusStatus.NoDevice ? true : null;
     }
 
     /// <summary>
@@ -338,9 +362,14 @@ public static class SpdReader
         }
         finally
         {
-            bus.WriteByteData(address, mr11PageRegister, mr11Base); // 復位回第 0 頁
+            if (!bus.WriteByteData(address, mr11PageRegister, mr11Base))
+            {
+                note += "；DDR5 SPD 頁復位失敗：" + bus.LastError;
+                if (bus is ScanBus guarded) guarded.Stop();
+            }
         }
 
+        if (note.Length > 0) return null;
         if (IsUniform(raw, out byte fill))
         {
             note = $"位址 0x{address:X2} 的 SPD 前 128 位元組全是 0x{fill:X2}，判為讀不到"
@@ -356,5 +385,45 @@ public static class SpdReader
         if (fill is not (0x00 or 0xFF)) return false;
         for (int i = 1; i < 128; i++) if (raw[i] != fill) return false;
         return true;
+    }
+
+    // A transaction timeout does not prove the controller is idle. Retain its
+    // first failure and refuse cleanup/fallback/next-slot commands on this bus.
+    private sealed class ScanBus(ISpdBus inner) : ISpdBus
+    {
+        public bool Failed { get; private set; }
+        public string Description => inner.Description;
+        public string LastError { get; private set; } = "";
+        public SmbusStatus LastStatus { get; private set; }
+        public void Stop() => Failed = true;
+        private void Capture()
+        {
+            LastStatus = inner.LastStatus;
+            LastError = inner.LastError;
+            Failed = LastStatus is not (SmbusStatus.Ok or SmbusStatus.NoDevice);
+        }
+        public byte? ReadByteData(byte address, byte command)
+        {
+            if (Failed) return null;
+            var result = inner.ReadByteData(address, command);
+            Capture();
+            return result;
+        }
+        public bool SendByte(byte address, byte value)
+        {
+            if (Failed) return false;
+            bool result = inner.SendByte(address, value);
+            Capture();
+            return result;
+        }
+        public bool WriteByteData(byte address, byte command, byte value)
+        {
+            if (Failed) return false;
+            bool result = inner.WriteByteData(address, command, value);
+            Capture();
+            return result;
+        }
+        public bool TryAcquireBus(out string reason) => inner.TryAcquireBus(out reason);
+        public void ReleaseBus() => inner.ReleaseBus();
     }
 }

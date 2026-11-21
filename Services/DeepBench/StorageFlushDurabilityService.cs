@@ -40,6 +40,7 @@ public sealed class StorageFlushDurabilityService(
     IFlushDurabilityEngine? engine = null) : IDeepBenchTest
 {
     public const string TestId = "storage.flush-durability";
+    internal const string NativeOwnershipUnavailableReason = "Flush 原生量測未執行：尚未驗證重開物件所有權；未進行檔案 I/O 或負載。";
     public const long FlushBlockBytes = 1024L * 1024;
     private const long ReserveBytes = 8L * 1024 * 1024 * 1024;
     private const long MinimumBudgetBytes = 64L * 1024 * 1024;
@@ -56,20 +57,22 @@ public sealed class StorageFlushDurabilityService(
     {
         DateTime started = DateTime.UtcNow;
         DeepBenchTestResult result;
-        Exception? cleanupFailure = null;
         DiskIoPlan? plan = null;
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (_engine is FlushToDiskEngine)
+                return Failed(context, started, DeepBenchFailureKind.NotRun, NativeOwnershipUnavailableReason);
             long free = _fileSystem.GetAvailableFreeSpace(_root);
-            plan = DiskIoMatrixService.CreatePlan(_root, _budgetBytes, free);
-            string? guardError = ValidatePlan(plan);
+            var candidatePlan = DiskIoMatrixService.CreatePlan(_root, _budgetBytes, free);
+            string? guardError = ValidatePlan(candidatePlan);
             if (guardError is not null)
             {
                 result = Failed(context, started, DeepBenchFailureKind.NotRun, guardError);
             }
             else
             {
+                plan = candidatePlan;
                 FlushDurabilityWorkload workload = GetWorkload(context.Profile);
                 context.Progress.Report(new DeepBenchProgress(Id, 0, workload.Rounds, 0.02, "準備 Flush 圖樣"));
                 FlushDurabilityContext engineContext = new(
@@ -82,6 +85,7 @@ public sealed class StorageFlushDurabilityService(
                 StorageFlushDurabilityMeasurement measurement = await _engine
                     .MeasureAsync(engineContext, cancellationToken)
                     .ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
                 ValidateMeasurement(measurement);
                 IReadOnlyList<DeepBenchMetric> metrics = CreateMetrics(measurement.Points);
                 long mismatchCount = measurement.Points.Sum(point => point.MismatchOffsets.Count);
@@ -95,7 +99,7 @@ public sealed class StorageFlushDurabilityService(
                     $"{workload.Rounds} round(s)；資料長度 {workload.DataLengthBytes / 1024.0 / 1024.0:0} MiB；每 {FlushBlockBytes / 1024.0 / 1024.0:0} MiB FlushToDisk",
                     metrics,
                     [
-                        $"唯一暫存檔：{plan.TempFilePath}；啟動前已揭露路徑。",
+                        "注入引擎自行管理其測試資源；服務不依路徑刪檔。",
                         $"每輪逐 {FlushBlockBytes / 1024.0 / 1024.0:0} MiB 區塊寫入並 FlushToDisk，關閉後重新開檔逐區塊讀回比對。",
                         mismatchCount == 0 ? "所有已讀回區塊逐位元組一致。" : $"偵測到 {mismatchCount} 個不一致位置。",
                     ],
@@ -120,32 +124,7 @@ public sealed class StorageFlushDurabilityService(
         {
             result = Failed(context, started, DeepBenchFailureKind.PlatformError, exception.Message);
         }
-        finally
-        {
-            if (plan is not null)
-            {
-                try
-                {
-                    if (_fileSystem.Exists(plan.TempFilePath)) _fileSystem.Delete(plan.TempFilePath);
-                }
-                catch (Exception exception)
-                {
-                    cleanupFailure = exception;
-                }
-            }
-        }
-
-        if (cleanupFailure is not null)
-        {
-            result = result with
-            {
-                FailureKind = DeepBenchFailureKind.PlatformError,
-                Error = $"量測結束但暫存檔刪除失敗：{cleanupFailure.Message}",
-                Limitations = [.. result.Limitations, "請手動確認 XinSpect.deepbench.tmp 是否仍存在。"],
-            };
-        }
-
-        context.Progress.Report(new DeepBenchProgress(Id, 1, 1, 1, "暫存檔已清理"));
+        context.Progress.Report(new DeepBenchProgress(Id, 1, 1, 1, "Flush 測試流程已結束。"));
         return result;
     }
 
@@ -249,7 +228,7 @@ public sealed class StorageFlushDurabilityService(
     }
 
     private static DeepBenchTestResult Cancelled(DeepBenchRunContext context, DateTime started) =>
-        new(TestId, context.SessionId, context.Profile, started, DateTime.UtcNow, "已取消", [], [], ["取消後關閉並刪除暫存檔。"], DeepBenchFailureKind.Cancelled, "使用者取消。");
+        new(TestId, context.SessionId, context.Profile, started, DateTime.UtcNow, "已取消", [], [], ["取消是請求；注入引擎須自行等待已發出 I/O 結束並管理資源。"], DeepBenchFailureKind.Cancelled, "使用者取消。");
 
     private static DeepBenchTestResult Failed(DeepBenchRunContext context, DateTime started, DeepBenchFailureKind kind, string error) =>
         new(TestId, context.SessionId, context.Profile, started, DateTime.UtcNow, "未完成", [], [], ["不從未完成 Flush round 推算。"], kind, error);
@@ -264,126 +243,21 @@ public sealed class StorageFlushDurabilityService(
         }
 
         public bool Exists(string path) => File.Exists(path);
-        public void Create(string path) { using var _ = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None); }
-        public void Delete(string path) => File.Delete(path);
+        public void Create(string path) => throw new NotSupportedException(NativeOwnershipUnavailableReason);
+        public void Delete(string path) => throw new NotSupportedException(NativeOwnershipUnavailableReason);
     }
 
+    // Native workload removed until an identity-safe close/reopen contract is verified.
     private sealed class FlushToDiskEngine : IFlushDurabilityEngine
     {
-        public async Task<StorageFlushDurabilityMeasurement> MeasureAsync(
-            FlushDurabilityContext context,
-            CancellationToken cancellationToken)
+        public Task<StorageFlushDurabilityMeasurement> MeasureAsync(
+            FlushDurabilityContext context, CancellationToken cancellationToken)
         {
-            if (context.DataLengthBytes % context.FlushBlockBytes != 0)
-            {
-                throw new InvalidFlushDurabilityException("資料長度必須是 Flush 區塊長度的整數倍。");
-            }
-
-            Directory.CreateDirectory(Path.GetDirectoryName(context.TempFilePath)!);
-            context.FileSystem.Create(context.TempFilePath);
-            int rounds = StorageFlushDurabilityService.GetWorkload(context.Profile).Rounds;
-            var points = new List<StorageFlushDurabilityPoint>(rounds);
-            byte[] expected = GC.AllocateUninitializedArray<byte>((int)context.DataLengthBytes);
-            byte[] actual = GC.AllocateUninitializedArray<byte>((int)context.DataLengthBytes);
-
-            for (int round = 0; round < rounds; round++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                context.Progress.Report(new DeepBenchProgress(
-                    StorageFlushDurabilityService.TestId,
-                    round,
-                    rounds,
-                    0.05 + 0.85 * round / rounds,
-                    $"Flush round {round + 1}"));
-
-                StorageFlushDurabilityPoint point = await MeasureRoundAsync(
-                    context.TempFilePath,
-                    expected,
-                    actual,
-                    context.FlushBlockBytes,
-                    round,
-                    cancellationToken).ConfigureAwait(false);
-                points.Add(point);
-            }
-
-            return new StorageFlushDurabilityMeasurement(points);
-        }
-
-        private static async Task<StorageFlushDurabilityPoint> MeasureRoundAsync(
-            string path,
-            byte[] expected,
-            byte[] actual,
-            long blockBytes,
-            int round,
-            CancellationToken cancellationToken)
-        {
-            int blockLength = (int)blockBytes;
-            FillPattern(expected, round, blockLength);
-            var flushLatencies = new List<double>(expected.Length / blockLength);
-            long writeStarted = Stopwatch.GetTimestamp();
-
-            using (SafeFileHandle handle = File.OpenHandle(
-                path, FileMode.Create, FileAccess.Write, FileShare.None, FileOptions.None))
-            {
-                for (long offset = 0; offset < expected.Length; offset += blockBytes)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    await RandomAccess.WriteAsync(
-                        handle,
-                        expected.AsMemory((int)offset, blockLength),
-                        offset,
-                        cancellationToken).ConfigureAwait(false);
-                    long flushStarted = Stopwatch.GetTimestamp();
-                    RandomAccess.FlushToDisk(handle);
-                    flushLatencies.Add(Stopwatch.GetElapsedTime(flushStarted).TotalMilliseconds * 1000.0);
-                }
-            }
-
-            TimeSpan writeElapsed = Stopwatch.GetElapsedTime(writeStarted);
-            long readStarted = Stopwatch.GetTimestamp();
-            using (SafeFileHandle handle = File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.Read))
-            {
-                for (long offset = 0; offset < expected.Length; offset += blockBytes)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    int read = await RandomAccess.ReadAsync(
-                        handle,
-                        actual.AsMemory((int)offset, blockLength),
-                        offset,
-                        cancellationToken).ConfigureAwait(false);
-                    if (read != blockLength)
-                    {
-                        throw new IOException($"Flush 讀回長度不足：offset={offset}, read={read}, expected={blockLength}。");
-                    }
-                }
-            }
-
-            TimeSpan readElapsed = Stopwatch.GetElapsedTime(readStarted);
-            List<long> mismatches = StorageWriteIntegrityService.FindMismatches(expected, actual, 0, MaxReportedMismatches);
-            double mib = expected.Length / (1024.0 * 1024.0);
-            long flushCount = expected.Length / blockLength;
-            return new StorageFlushDurabilityPoint(
-                expected.Length,
-                blockLength,
-                [mib / writeElapsed.TotalSeconds],
-                [.. flushLatencies],
-                [mib / readElapsed.TotalSeconds],
-                flushCount,
-                [.. mismatches]);
-        }
-
-        private static void FillPattern(byte[] target, int round, int blockLength)
-        {
-            for (int offset = 0; offset < target.Length; offset += blockLength)
-            {
-                uint seed = (uint)(round * 0x10000 + offset / blockLength + 1);
-                for (int index = 0; index < blockLength; index++)
-                {
-                    target[offset + index] = (byte)(((seed * 2654435761u) ^ ((uint)index * 40503u + 0x9E3779B9u)) >> 24);
-                }
-            }
+            cancellationToken.ThrowIfCancellationRequested();
+            throw new NotSupportedException(NativeOwnershipUnavailableReason);
         }
     }
+
 }
 
 internal sealed class InvalidFlushDurabilityException : InvalidOperationException

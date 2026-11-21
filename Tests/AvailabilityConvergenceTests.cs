@@ -45,6 +45,9 @@ public class AvailabilityConvergenceTests
                        + "這是「掛載」這件事的狀態，且它與 FactAvailability 之間有明確對映（ToFactAvailability）。",
         ["SourceAvailability"] = "來源在讀取前的可用性——與 FactAvailability（讀取後的實情）刻意分開，"
                                + "且同樣有明確對映（ToFactAvailability）。",
+        ["WheaMemoryRecordsReader.cs"] = "WheaMemoryReadStatus 描述整次事件列舉的完整性，不是單筆事實可用性；"
+                                      + "WheaMemoryFactsService 將截斷映射 Unknown、權限不足映射 InsufficientPrivilege、"
+                                      + "逾時及讀取失敗映射 ReadError，Complete 仍依節區證據決定六態。",
         // FactAvailability 自己的定義處當然會被這個樣式命中——那不是「第二套」。
         ["HardwareSnapshotModels.cs"] = "FactAvailability 六態的唯一定義處；"
                                       + "另一條測試（六態必須是唯一的列舉定義處）釘住「只定義一次」。",

@@ -1,4 +1,4 @@
-﻿using Microsoft.Win32;
+using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -19,6 +19,30 @@ public partial class EvidenceLabView : UserControl
     }
 
     private MainViewModel? Vm => DataContext as MainViewModel ?? Shell.Vm;
+
+    private async void ImportEnterpriseBaseline_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm is not { } vm || !vm.EvidenceLab.EnterpriseBaselineImport.CanRun) return;
+        var import = vm.EvidenceLab.EnterpriseBaselineImport;
+        // Clear the previous result before any dialog: canceling a new selection never leaves a
+        // former success looking like the outcome of the newly selected policy or snapshot.
+        import.ResetSelection();
+        string? trustedKey = PickEnterpriseFile("選擇組織預先部署的信任公鑰（請另行核對來源）",
+            "公鑰 PEM (*.pem)|*.pem|所有檔案 (*.*)|*.*");
+        if (trustedKey is null) return;
+        string? package = PickEnterpriseFile("選擇組織簽章政策套件",
+            "簽章政策 JSON (*.json)|*.json|所有檔案 (*.*)|*.*");
+        if (package is null) return;
+        string? snapshot = PickSnapshot("選擇供政策評估的已存快照（不重新採集）");
+        if (snapshot is null) return;
+        await import.EvaluateAsync(package, trustedKey, snapshot);
+    }
+
+    private static string? PickEnterpriseFile(string title, string filter)
+    {
+        var dialog = new OpenFileDialog { Title = title, Filter = filter, CheckFileExists = true };
+        return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
 
     private async void SaveSnapshot_Click(object sender, RoutedEventArgs e)
     {
@@ -98,7 +122,7 @@ public partial class EvidenceLabView : UserControl
     {
         if (Vm is not { } vm) return;
         var html = HtmlReportService.Build(vm.EvidenceLab.FirmwareSecurityRows,
-            "曦覽 XinSpect ・ 韌體安全報告", DateTimeOffset.UtcNow);
+            "曦覽 XinSpect ・ 韌體安全報告", DateTimeOffset.UtcNow, includeSensitive: IncludeSensitive.IsChecked == true);
         var dlg = new SaveFileDialog
         {
             Title = "匯出 HTML 報告",

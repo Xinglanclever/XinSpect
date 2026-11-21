@@ -60,8 +60,27 @@ public static class DeviceComplianceFactsService
             .ToDictionary(g => g.Key, g => g.Single(), StringComparer.Ordinal);
 
     /// <summary>
+    /// Pure v2 condition adapter only: does not authenticate a policy, load files or run probes.
+    /// Callers must separately verify the signed package and validity period before presenting a
+    /// signed-policy result. Prior compliance output and ambiguous keys are not input evidence.
+    /// GUI signed import and evaluation after the complete collection snapshot remain separate work.
+    /// </summary>
+    internal static EnterpriseBaselineConditions EvaluateConditions(
+        EnterpriseBaselinePolicy policy, IEnumerable<HardwareFact> snapshotFacts)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        ArgumentNullException.ThrowIfNull(snapshotFacts);
+        if (policy.SchemaVersion != EnterpriseBaselinePackageService.CurrentSchemaVersion)
+            throw new ArgumentException("此純 adapter 僅接受有明確單位與控制識別碼的 v2 政策。");
+        var inputs = snapshotFacts.Where(fact => fact is not null && fact.Key is not null
+            && !fact.Key.StartsWith("zr.compliance.", StringComparison.Ordinal)).ToArray();
+        return EnterpriseBaselineConditionEvaluator.Evaluate(policy, IndexUnambiguousFacts(inputs));
+    }
+
+    /// <summary>
     /// 評估一份合規清單。<paramref name="requirements"/> 是「要求識別碼 → 事實鍵」；
     /// <paramref name="facts"/> 是本輪事實（用來查值）。
+    /// 此舊格式沒有比較運算或期望值，任何條目均不能判為 Met。
     /// <b>指向不存在鍵的要求算 Unresolved 而不是 Met</b>——鍵表改版時，
     /// 「查不到」絕不能變成「通過」。
     /// </summary>
@@ -88,8 +107,9 @@ public static class DeviceComplianceFactsService
                     $"{key} 目前是 {fact.Availability}（{fact.UnavailableReason ?? "無原因"}）——缺資料不算符合"));
                 continue;
             }
-            met++;
-            detail.Add(new RequirementResult(id, true, $"{key} 有值"));
+            unresolved++;
+            detail.Add(new RequirementResult(id, false,
+                $"{key} 有值，但清單缺比較條件與期望值——存在不代表符合"));
         }
 
         return new ComplianceEvaluation(snapshotDate, requirements.Count, met, unresolved, detail);
@@ -105,6 +125,12 @@ public static class DeviceComplianceFactsService
         KnowledgePack? pack,
         IReadOnlyDictionary<string, HardwareFact>? facts)
     {
+        if (pack is not null && KnowledgePackService.ValidateForConsumption(pack) is { } invalid)
+            return
+            [
+                Unavailable(at, TableKey, "合規對照清單", FactAvailability.ReadError, "知識包拒收：" + invalid),
+                Unavailable(at, BaselineKey, "裝置合規基線", FactAvailability.ReadError, "知識包拒收：" + invalid),
+            ];
         var table = pack?.Tables.FirstOrDefault(t =>
             string.Equals(t.Table, TableName, StringComparison.OrdinalIgnoreCase));
 
@@ -118,6 +144,8 @@ public static class DeviceComplianceFactsService
                 Unavailable(at, BaselineKey, "裝置合規基線", FactAvailability.NotApplicable,
                     $"沒有「{TableName}」清單可比對——不適用，不是「全部符合」也不是「全部不符合」"),
             ];
+
+        string tableSource = Source + "；" + KnowledgePackService.DescribePrivateProvenance(table);
 
         // 快照日期是清單唯一的新鮮度線索；缺了整包拒收（同 KnowledgePackService 政策）。
         if (string.IsNullOrWhiteSpace(table.SnapshotDate))
@@ -135,7 +163,7 @@ public static class DeviceComplianceFactsService
             [
                 new HardwareFact(TableKey, Cat, "合規對照清單",
                     $"清單存在（快照 {table.SnapshotDate}）但沒有任何要求項目。", "項",
-                    Source, FactTrustLevel.Reported, false, at, 0),
+                    tableSource, FactTrustLevel.Reported, false, at, 0),
                 Unavailable(at, BaselineKey, "裝置合規基線", FactAvailability.NotApplicable,
                     "合規清單是空的——沒有要求可評估"),
             ];
@@ -146,9 +174,9 @@ public static class DeviceComplianceFactsService
 
         string coverage = eval is null
             ? "本輪沒有事實可比對"
-            : $"{eval.Met}／{eval.Total} 項符合"
+            : $"{eval.Unresolved}／{eval.Total} 項無法判定"
               + (eval.Unresolved > 0
-                  ? $"・<b>{eval.Unresolved} 項無法判定</b>（來源讀不到或要求指向不存在的鍵）" +
+                  ? $"・<b>{eval.Unresolved} 項無法判定</b>（缺比較條件、來源讀不到或要求指向不存在的鍵）" +
                     "——<b>這不算符合</b>：缺資料偽裝成通過是這一項最該避免的結果"
                   : "");
 
@@ -162,14 +190,16 @@ public static class DeviceComplianceFactsService
                 "只報「對了幾項、缺了幾項」。" +
                 "清單由使用者提供（放在知識包裡，因此有完整性序列號可驗）；" +
                 "本專案不代為維護合規要求。",
-                "項", Source, FactTrustLevel.Reported, false, at, table.Entries.Count),
+                "項", tableSource, FactTrustLevel.Reported, false, at, table.Entries.Count),
 
             new HardwareFact(BaselineKey, Cat, "裝置合規基線",
                 $"{coverage}。清單快照 {table.SnapshotDate}。" +
+                "清單僅記錄事實鍵，缺比較條件與期望值；存在不代表符合，本版無法判定合規。" +
                 "<b>「符合」不是安全背書</b>：符不符合一份清單，與這台機器安全不安全是兩件事——" +
                 "清單沒涵蓋到的面向不會因為「全部符合」而變成沒問題。" +
                 "本項不做分數、不做等級，只回答「這份清單上的每一項，本機的資料支不支持它成立」。",
-                "項", Source, FactTrustLevel.Derived, false, at, eval?.Met ?? 0),
+                "項", tableSource, FactTrustLevel.Derived, false, at, null,
+                FactAvailability.NotSupported, "清單缺比較條件與期望值，無法判定合規"),
         ];
     }
 

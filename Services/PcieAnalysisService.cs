@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Management;
 
 namespace XinSpect;
@@ -16,7 +16,7 @@ public sealed class PcieAnalysisService : ObservableObject
         new(3, "Gen3", 8.0,  128, 130, "128b/130b"),
         new(4, "Gen4", 16.0, 128, 130, "128b/130b"),
         new(5, "Gen5", 32.0, 128, 130, "128b/130b"),
-        new(6, "Gen6", 64.0, 128, 130, "128b/130b (PAM4)"),
+        new(6, "Gen6", 64.0, 0, 0, "PAM4／FLIT／FEC（頻寬未校核）"),
     ];
 
     private ObservableCollection<PcieSlotAnalysis> _slots = [];
@@ -68,11 +68,7 @@ public sealed class PcieAnalysisService : ObservableObject
                     UsedChipsetLanes = a.ChipsetLanesUsed;
                     TotalCpuLanes = a.TotalCpu;
                     TotalChipsetLanes = a.TotalChipset;
-                    int splitCount = a.Slots.Count(s => s.IsSplitDetected);
-                    Summary = $"共 {a.Slots.Count} 個 PCIe 裝置，" +
-                              $"CPU 通道 {UsedCpuLanes}/{TotalCpuLanes}，" +
-                              $"PCH 通道 {UsedChipsetLanes}/{TotalChipsetLanes}" +
-                              (splitCount > 0 ? $"，{splitCount} 個插槽偵測到拆分組態" : "");
+                    Summary = $"共 {a.Slots.Count} 筆來源記錄（PnP 與設定空間未配對，可能為同一裝置）；鏈路按讀取位置保留，segment 與 CPU／PCH 來源未知，平台通道總數未知。";
                 }
                 IsLoading = false;
             }, TaskScheduler.FromCurrentSynchronizationContext());
@@ -81,40 +77,24 @@ public sealed class PcieAnalysisService : ObservableObject
     private static AnalysisResult CollectAnalysis()
     {
         var devices = EnumeratePcieDevices();
-        var slotList = new List<PcieSlotAnalysis>();
-        var lanes = new List<PcieLaneAllocation>();
-        int cpuLanesUsed = 0, chipsetLanesUsed = 0;
-
-        foreach (var dev in devices)
-        {
-            var slot = AnalyseDevice(dev);
-            slotList.Add(slot);
-            var alloc = new PcieLaneAllocation
-            {
-                DeviceName = slot.DeviceName,
-                BusNumber = slot.BusNumber,
-                NegotiatedWidth = slot.NegotiatedWidth,
-                Source = ClassifyLaneSource(slot.BusNumber),
-            };
-            lanes.Add(alloc);
-            if (alloc.Source == LaneSource.CPU) cpuLanesUsed += slot.NegotiatedWidth;
-            else chipsetLanesUsed += slot.NegotiatedWidth;
-        }
-
-        var (totalCpu, totalChipset) = EstimatePlatformLanes(ReadCpuName());
-        return new AnalysisResult(slotList, lanes, cpuLanesUsed, chipsetLanesUsed, totalCpu, totalChipset);
+        List<PcieLinkRow> links = [];
+        try { links = PcieLinkService.ScanAll().Rows; }
+        catch (Exception ex) { Diag.Swallow("PcieAnalysis.LinkScan", ex, "鏈路讀取失敗，保留 PnP 清單與未知鏈路"); }
+        return Analyse(devices, links);
     }
 
-    private static string ReadCpuName()
+    private static AnalysisResult Analyse(IEnumerable<PciRawDevice> devices, IEnumerable<PcieLinkRow> links)
     {
-        try
-        {
-            using var s = new ManagementObjectSearcher("SELECT Name FROM Win32_Processor");
-            foreach (var o in s.Get()) return o["Name"]?.ToString() ?? "";
-        }
-        catch (Exception ex) { Diag.Swallow("PcieAnalysis.CpuName", ex, "CPU 型號讀取失敗，通道估算用預設值"); }
-        return "";
+        var slots = AnalyseSources(devices, links).ToList();
+        var lanes = slots.Select(slot => new PcieLaneAllocation {
+            DeviceName = slot.DeviceName, BusNumber = slot.BusNumber,
+            NegotiatedWidth = slot.NegotiatedWidth, Source = LaneSource.Unknown }).ToList();
+        return new(slots, lanes, 0, 0, 0, 0);
     }
+
+    public bool PlatformLaneCountsKnown => false;
+    public string CpuLaneCountLabel => "未知";
+    public string ChipsetLaneCountLabel => "未知";
 
     private readonly record struct AnalysisResult(
         List<PcieSlotAnalysis> Slots, List<PcieLaneAllocation> Lanes,
@@ -145,100 +125,84 @@ public sealed class PcieAnalysisService : ObservableObject
         }
         catch (Exception ex) { Diag.Swallow("PcieAnalysis.WMI", ex, "PCIe 裝置清單將為空"); }
 
-        // 試著從登錄檔讀 PCIe Link 資訊
-        EnrichWithPcieLinkData(list);
+        // PnP instance IDs do not supply verified segment/BDF identities. Do not join by model IDs.
+        // PcieLinkService rows have BDF but no instance/segment identity for this mapping.
         return list;
     }
 
-    private static PciRawDevice ParsePciDeviceId(string deviceId)
+    internal static PciRawDevice ParsePciDeviceId(string deviceId)
     {
-        // PCI\VEN_XXXX&DEV_XXXX&SUBSYS_XXXXXXXX&REV_XX\BUS_XX&DEV_XX&FUNC_XX
         var raw = new PciRawDevice { DeviceId = deviceId };
-        try
+        var parts = deviceId.Split('\\');
+        if (parts.Length < 2 || !parts[0].Equals("PCI", StringComparison.OrdinalIgnoreCase)) return raw;
+        foreach (var segment in parts[1].Split('&'))
         {
-            var parts = deviceId.Split('\\');
-            if (parts.Length >= 2)
-            {
-                var idPart = parts[1];
-                foreach (var seg in idPart.Split('&'))
-                {
-                    if (seg.StartsWith("VEN_", StringComparison.OrdinalIgnoreCase))
-                        raw.VendorId = Convert.ToUInt16(seg[4..], 16);
-                    else if (seg.StartsWith("DEV_", StringComparison.OrdinalIgnoreCase))
-                        raw.DeviceIdHex = Convert.ToUInt16(seg[4..], 16);
-                }
-            }
-            if (parts.Length >= 3)
-            {
-                foreach (var seg in parts[2].Split('&'))
-                {
-                    if (seg.StartsWith("BUS_", StringComparison.OrdinalIgnoreCase))
-                        raw.Bus = Convert.ToByte(seg[4..], 16);
-                    else if (seg.StartsWith("DEV_", StringComparison.OrdinalIgnoreCase) && seg.Length <= 6)
-                        raw.Device = Convert.ToByte(seg[4..], 16);
-                    else if (seg.StartsWith("FUNC_", StringComparison.OrdinalIgnoreCase))
-                        raw.Function = Convert.ToByte(seg[5..], 16);
-                }
-            }
+            if (segment.StartsWith("VEN_", StringComparison.OrdinalIgnoreCase) &&
+                ushort.TryParse(segment.AsSpan(4), System.Globalization.NumberStyles.HexNumber, null, out ushort vendor)) raw.VendorId = vendor;
+            if (segment.StartsWith("DEV_", StringComparison.OrdinalIgnoreCase) &&
+                ushort.TryParse(segment.AsSpan(4), System.Globalization.NumberStyles.HexNumber, null, out ushort device)) raw.DeviceIdHex = device;
         }
-        catch (Exception ex) { Diag.Swallow("PcieAnalysis.ParseId", ex, "裝置 ID 解析失敗，留預設值"); }
+        // Instance suffix is opaque; BUS_/DEV_/FUNC_ text is not accepted as topology evidence.
         return raw;
     }
 
-    /// <summary>
-    /// 用 PcieLinkService 已經打通的那條路——直讀 PCI 設定空間的 Link Capabilities 與 Link Status
-    /// ——補上鏈路資訊。登錄檔 Device Parameters 裡的 LinkSpeed/LinkWidth 在絕大多數機器上不存在。
-    /// </summary>
-    private static void EnrichWithPcieLinkData(List<PciRawDevice> devices)
+    internal static IReadOnlyList<PcieSlotAnalysis> AnalyseSources(IEnumerable<PciRawDevice> devices,
+        IEnumerable<PcieLinkRow> links)
     {
-        // 直接呼叫 PcieLinkService 的同步掃描（讀 PCIe Capability 的 Link Cap/Status），
-        // 不再 new 一個服務跑 fire-and-forget Refresh() 再讀空的 Rows——那會讓富集永遠不生效。
-        List<PcieLinkRow> rows;
-        try { rows = PcieLinkService.ScanAll().Rows; }
-        catch (Exception ex) { Diag.Swallow("PcieAnalysis.LinkScan", ex, "PCIe 鏈路掃描失敗，不補鏈路資訊"); return; }
-
-        foreach (var dev in devices)
+        var result = devices.Where(d => !string.IsNullOrWhiteSpace(d.DeviceId))
+            .GroupBy(d => d.DeviceId, StringComparer.OrdinalIgnoreCase)
+            .Select(g => { var raw = ParsePciDeviceId(g.Key); raw.Name = g.First().Name; return AnalyseDevice(raw); }).ToList();
+        // The backend reads by BDF only (WinRing0Bridge.ReadPciConfig), without a segment argument.
+        // Keep its own scoped records; never attach them to a PnP instance by VEN/DEV or bus alone.
+        foreach (var group in links.GroupBy(r => r.Location, StringComparer.OrdinalIgnoreCase))
         {
-            if (dev.VendorId == 0) continue;
-            foreach (var row in rows)
-            {
-                // 以 (VEN, DEV) 配對：PciRawDevice 的 BUS/DEV/FUNC 在 WMI DeviceID 裡拿不到（永遠 0），
-                // 無法用位置配對；(VEN,DEV) 是能拿到的最精確鍵。
-                // 已知殘留限制：兩張「完全相同型號」的卡 (VEN,DEV) 也相同，仍無法逐槽區分——
-                // 那需要位置(B/D/F)，本 WMI 路徑取不到，故不宣稱支援同型多卡的逐槽對應。
-                if (dev.VendorId == row.Ven && dev.DeviceIdHex == row.Dev)
-                {
-                    dev.NegotiatedSpeedGTs = row.CurSpeed;
-                    dev.NegotiatedWidth = row.CurWidth;
-                    dev.CapableSpeedGTs = row.MaxSpeed;
-                    dev.CapableWidth = row.MaxWidth;
-                    break;
-                }
-            }
+            if (group.Count() != 1 || !TryReadLocation(group.Key, out byte bus, out byte device, out byte function)) continue;
+            var row = group.Single();
+            result.Add(AnalyseDevice(new PciRawDevice {
+                DeviceId = "PCI-config-BDF-only:" + group.Key,
+                Name = $"PCI {row.Ven:X4}:{row.Dev:X4}（設定空間記錄，未配對 PnP）",
+                VendorId = row.Ven, DeviceIdHex = row.Dev, Bus = bus, Device = device, Function = function,
+                RawLocation = row.Location,
+                LinkSource = "PcieLinkService.ScanAll / WinRing0 ReadPciConfig(BDF); segment unavailable",
+                NegotiatedSpeedCode = row.CurSpeed, NegotiatedWidth = row.CurWidth,
+                CapableSpeedCode = row.MaxSpeed, CapableWidth = row.MaxWidth }));
         }
+        return result;
     }
 
-    private static PcieSlotAnalysis AnalyseDevice(PciRawDevice raw)
+    private static bool TryReadLocation(string text, out byte bus, out byte device, out byte function)
     {
-        int negGen = SpeedToGen(raw.NegotiatedSpeedGTs);
-        int capGen = SpeedToGen(raw.CapableSpeedGTs);
+        bus = device = function = 0;
+        var match = System.Text.RegularExpressions.Regex.Match(text, @"\A([0-9A-Fa-f]{2}):([0-9A-Fa-f]{2})\.([0-7])\z");
+        return match.Success && byte.TryParse(match.Groups[1].Value, System.Globalization.NumberStyles.HexNumber, null, out bus)
+            && byte.TryParse(match.Groups[2].Value, System.Globalization.NumberStyles.HexNumber, null, out device)
+            && device <= 31 && byte.TryParse(match.Groups[3].Value, out function);
+    }
+
+    internal static PcieSlotAnalysis AnalyseDevice(PciRawDevice raw)
+    {
+        int negGen = ValidGeneration(raw.NegotiatedSpeedCode);
+        int capGen = ValidGeneration(raw.CapableSpeedCode);
 
         double negBw = CalculateBandwidthMBps(negGen, raw.NegotiatedWidth);
         double capBw = CalculateBandwidthMBps(capGen, raw.CapableWidth);
 
-        bool isSplit = raw.CapableWidth > 0 && raw.NegotiatedWidth > 0 &&
-                       raw.NegotiatedWidth < raw.CapableWidth;
+        bool isSplit = false; // A negotiated-width gap does not prove lane bifurcation.
 
         string splitDesc = isSplit
             ? $"x{raw.CapableWidth} → x{raw.NegotiatedWidth}"
-            : "無";
+            : "未驗證";
 
         return new PcieSlotAnalysis
         {
             DeviceName = raw.Name,
-            BusNumber = raw.Bus,
-            DeviceNumber = raw.Device,
-            FunctionNumber = raw.Function,
+            RawInstanceId = raw.DeviceId,
+            Address = raw.Address,
+            RawLocation = raw.RawLocation,
+            LinkSource = raw.LinkSource,
+            BusNumber = raw.Address?.Bus ?? raw.Bus,
+            DeviceNumber = raw.Address?.Device ?? raw.Device,
+            FunctionNumber = raw.Address?.Function ?? raw.Function,
             VendorId = raw.VendorId,
             DeviceIdHex = raw.DeviceIdHex,
             NegotiatedGen = negGen,
@@ -253,62 +217,22 @@ public sealed class PcieAnalysisService : ObservableObject
         };
     }
 
-    private static int SpeedToGen(int speedGTs) => speedGTs switch
-    {
-        >= 64 => 6,
-        >= 32 => 5,
-        >= 16 => 4,
-        >= 8  => 3,
-        >= 5  => 2,
-        >= 2  => 1,
-        _     => 0,
-    };
+    // Link Capabilities/Status bits 3:0 are speed codes (1..6), not rates in GT/s.
+    private static int ValidGeneration(int speedCode) => speedCode is >= 1 and <= 6 ? speedCode : 0;
 
     /// <summary>MB/s = GT/s * 通道數 * 編碼效率 / 8</summary>
     public static double CalculateBandwidthMBps(int gen, int width)
     {
         if (gen <= 0 || width <= 0) return 0;
         var r = GenReferences.FirstOrDefault(g => g.Gen == gen);
-        if (r is null) return 0;
+        if (r is null || !r.BandwidthCalculationSupported) return 0;
         double efficiency = (double)r.DataBits / r.TotalBits;
         return r.TransferRateGTs * width * efficiency * 1000.0 / 8.0; // GT/s → MB/s
     }
 
-    /// <summary>
-    /// 依 BUS 號判斷通道來源。
-    /// 一般而言 Bus 0 上的裝置直接連 CPU Root Complex，
-    /// Bus 號較高的通常經過 PCH。
-    /// </summary>
-    private static LaneSource ClassifyLaneSource(int bus)
-        => bus <= 1 ? LaneSource.CPU : LaneSource.Chipset;
+    // CPU model names and bus numbers do not establish lane budgets or physical routing.
+    internal static (int cpu, int chipset) EstimatePlatformLanes(string cpuName) => (0, 0);
 
-    internal static (int cpu, int chipset) EstimatePlatformLanes(string cpuName)
-    {
-        string upper = cpuName.ToUpperInvariant();
-
-        // Intel 桌機平台
-        if (upper.Contains("14900") || upper.Contains("14700") || upper.Contains("13900") || upper.Contains("13700"))
-            return (20, 24); // LGA1700
-        if (upper.Contains("12900") || upper.Contains("12700") || upper.Contains("12600"))
-            return (20, 24); // LGA1700
-        if (upper.Contains("10900") || upper.Contains("10700") || upper.Contains("10600"))
-            return (16, 24); // LGA1200
-        if (upper.Contains("XEON"))
-            return (48, 24); // HEDT/Server 估算
-
-        // AMD 桌機平台
-        if (upper.Contains("9950X") || upper.Contains("9900X") || upper.Contains("9700X") || upper.Contains("9600X"))
-            return (28, 12); // AM5
-        if (upper.Contains("7950X") || upper.Contains("7900X") || upper.Contains("7700X") || upper.Contains("7600X"))
-            return (28, 12); // AM5
-        if (upper.Contains("5950X") || upper.Contains("5900X") || upper.Contains("5800X") || upper.Contains("5600X"))
-            return (24, 16); // AM4
-        if (upper.Contains("THREADRIPPER"))
-            return (64, 16);
-
-        // 預設估算
-        return (16, 24);
-    }
 }
 
 // ==================================================================
@@ -316,26 +240,41 @@ public sealed class PcieAnalysisService : ObservableObject
 // ==================================================================
 
 public record PcieGenReference(int Gen, string Name, double TransferRateGTs,
-                                int DataBits, int TotalBits, string Encoding);
+                                int DataBits, int TotalBits, string Encoding)
+{
+    public bool BandwidthCalculationSupported => Gen is >= 1 and <= 5 && DataBits > 0 && TotalBits > 0;
+    public double TheoreticalSingleLaneMBps => PcieAnalysisService.CalculateBandwidthMBps(Gen, 1);
+    public string TheoreticalSingleLaneLabel => BandwidthCalculationSupported
+        ? $"{TheoreticalSingleLaneMBps:N2}" : "未校核";
+}
+
+public readonly record struct PcieAddress(ushort Segment, byte Bus, byte Device, byte Function);
 
 public sealed class PciRawDevice
 {
     public string DeviceId { get; set; } = "";
     public string Name { get; set; } = "";
     public string Status { get; set; } = "";
+    public string RawLocation { get; set; } = "";
+    public PcieAddress? Address { get; set; }
+    public string LinkSource { get; set; } = "";
     public ushort VendorId { get; set; }
     public ushort DeviceIdHex { get; set; }
     public byte Bus { get; set; }
     public byte Device { get; set; }
     public byte Function { get; set; }
-    public int NegotiatedSpeedGTs { get; set; }
+    public int NegotiatedSpeedCode { get; set; }
     public int NegotiatedWidth { get; set; }
-    public int CapableSpeedGTs { get; set; }
+    public int CapableSpeedCode { get; set; }
     public int CapableWidth { get; set; }
 }
 
 public sealed class PcieSlotAnalysis
 {
+    public string RawInstanceId { get; init; } = "";
+    public string RawLocation { get; init; } = "";
+    public PcieAddress? Address { get; init; }
+    public string LinkSource { get; init; } = "";
     public string DeviceName { get; init; } = "";
     public int BusNumber { get; init; }
     public int DeviceNumber { get; init; }
@@ -366,11 +305,13 @@ public sealed class PcieSlotAnalysis
         : "未知";
     public string NegotiatedBwLabel => NegotiatedBandwidthMBps > 0
         ? $"{NegotiatedBandwidthMBps:N0} MB/s"
-        : "—";
+        : NegotiatedGen >= 6 ? "未知（未校核）" : "未知";
     public string CapableBwLabel => CapableBandwidthMBps > 0
         ? $"{CapableBandwidthMBps:N0} MB/s"
-        : "—";
-    public string LocationLabel => $"Bus {BusNumber:X2}h, Dev {DeviceNumber:X2}h, Func {FunctionNumber}";
+        : CapableGen >= 6 ? "未知（未校核）" : "未知";
+    public string LocationLabel => Address is { } address
+        ? $"Segment {address.Segment:X4}, Bus {address.Bus:X2}h, Dev {address.Device:X2}h, Func {address.Function}"
+        : RawLocation.Length > 0 ? $"{RawLocation}（segment 未知）" : "未知（缺少可驗證 PCI 位置）";
 }
 
 public sealed class PcieLaneAllocation
@@ -379,7 +320,7 @@ public sealed class PcieLaneAllocation
     public int BusNumber { get; init; }
     public int NegotiatedWidth { get; init; }
     public LaneSource Source { get; init; }
-    public string SourceLabel => Source == LaneSource.CPU ? "CPU" : "PCH 晶片組";
+    public string SourceLabel => Source switch { LaneSource.CPU => "CPU", LaneSource.Chipset => "PCH 晶片組", _ => "未知（未驗證拓撲）" };
 }
 
-public enum LaneSource { CPU, Chipset }
+public enum LaneSource { CPU, Chipset, Unknown }

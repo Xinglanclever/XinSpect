@@ -47,7 +47,7 @@ public static class AcpiMadtFactsService
         foreach (var table in source.ReadAll())
         {
             if (AcpiTable.TryParseHeader(table, out var header)
-                && string.Equals(header.Signature, "MADT", StringComparison.OrdinalIgnoreCase))
+                && string.Equals(header.Signature, "APIC", StringComparison.OrdinalIgnoreCase))
             {
                 madt = table;
                 break;

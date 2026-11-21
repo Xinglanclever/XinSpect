@@ -16,8 +16,9 @@ public class FleetCliTests
             capturedAtUtc = at,
             facts = new object[]
             {
-                new { key = "asset.identify", value = model },
-                new { key = "sensor.cpu", value = "溫度", numericValue = sensor },
+                new { key = "asset.field.系統製造商", value = "ACME", availability = "Present", unit = "", trust = "Reported", source = "fixture" },
+                new { key = "asset.field.系統型號", value = model, availability = "Present", unit = "", trust = "Reported", source = "fixture" },
+                new { key = "sensor.cpu", value = "溫度", numericValue = sensor, unit = "°C", availability = "Present", trust = "Measured", source = "fixture" },
             },
         });
 
@@ -70,4 +71,25 @@ public class FleetCliTests
         }
         finally { Directory.Delete(dir, recursive: true); }
     }
+    [Fact]
+    public void CorruptImportIsUnknownRatherThanNoSnapshots()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "fleet-cli-corrupt-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "bad.json"), "{");
+            using var output = new StringWriter();
+            Assert.Equal(CliService.ExitPartial, CliService.Run(["--fleet", "--snapshots", dir], () => [], output, new StringWriter()));
+            using var doc = JsonDocument.Parse(output.ToString());
+            Assert.False(doc.RootElement.GetProperty("comparable").GetBoolean());
+            var summary = doc.RootElement.GetProperty("facts").EnumerateArray().Single(f => f.GetProperty("key").GetString() == "fleet.summary");
+            Assert.Equal("Unknown", summary.GetProperty("availability").GetString());
+            Assert.Contains("SnapshotReadError", summary.GetProperty("unavailableReason").GetString());
+            Assert.Contains(doc.RootElement.GetProperty("diagnostics").EnumerateArray(),
+                diagnostic => diagnostic.GetString() == "SnapshotReadError");
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
 }

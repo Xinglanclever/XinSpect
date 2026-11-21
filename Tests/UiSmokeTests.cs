@@ -14,8 +14,9 @@ namespace XinSpect.Tests;
 /// ⚠ 本類是「測試不建構 MainViewModel」慣例的唯一例外：繫結路徑必須對著真的屬性形狀求值才有意義，
 /// 手工假物件維護成本高且會隨介面演進爛掉。安全性論證——這裡建構的是<b>未呼叫 Initialize()</b> 的
 /// MainViewModel：StartupSequence／MetricsPump 不會啟動，因此 <b>SensorService／LibreHardwareMonitor
-/// 不會被建立、不碰任何硬體</b>；GpuOcService 的 NVML／NVAPI 亦為延遲初始化。副作用僅限讀取
-/// %APPDATA% 的既有狀態檔，與 WingetService 開機時同款的背景 winget 偵測（唯讀）。
+/// 不會被建立</b>；GpuOcService 的 NVML／NVAPI 亦為延遲初始化。CPU 腳位、DIMM、M.2
+/// 的來源由每個 VM 實例注入，純建構不啟動。這不代表完整 VM 無 I/O：VolumeService 仍會背景
+/// 查詢 DriveInfo，SmbiosService 仍讀韌體表，另有 CPUID、狀態檔、背景 winget 等既有路徑。
 ///
 /// WPF 需要 STA 執行緒與 Application 執行個體（StaticResource 解析用），故全部工作排入一條專屬
 /// STA 執行緒，其餘純函式測試不受影響。視窗類別只建構不 Show()，Loaded 事件在測試中不會觸發。
@@ -62,7 +63,10 @@ public class UiSmokeTests
 
         try
         {
-            var vm = new MainViewModel();   // 唯一例外（見類別註解）；絕不呼叫 Initialize()
+            var vm = new MainViewModel(
+                new CpuPinoutService(autoDetect: false, readSocket: () => "LGA 1700"),
+                new DimmReferenceService(autoDetect: false, readModules: () => []),
+                new M2AnalysisService(autoDetect: false, readDisks: () => [], readSlots: () => []));   // 唯一例外（見類別註解）；絕不呼叫 Initialize()
 
             // ── 自我驗證 ──────────────────────────────────────────────
             // 刻意綁一個不存在的路徑，確認監聽器真的攔得到路徑錯誤——
@@ -491,9 +495,12 @@ public class UiSmokeTests
     /// 再建構真的 <see cref="FirmwareSecurityView"/>、逼它排版，然後檢查兩件事：
     /// 一是 <c>FirmwareRowsSource</c> 這個 CollectionViewSource 真的生出視圖（代表資料到位、
     /// 分組描述能吃這種類別），二是樣板套用過程沒有繫結錯誤。
+    /// 可靠性使用兩碟合成來源，其餘 usermode 來源注入為空收集器；本條證明組裝與 UI 渲染，
+    /// 完整來源及實機行為另由具名 RealHardware 對帳驗證。
     /// </para>
     /// </remarks>
     [Fact]
+    [Trait("Category", "InjectedComposition")]
     public void 證據頁有事實時樣板套用沒有繫結錯誤且真的長出列()
     {
         var failures = new List<string>();
@@ -502,9 +509,8 @@ public class UiSmokeTests
         thread.IsBackground = true;
         thread.Start();
 
-        // 60 秒是**全套同時跑**時實測值的三倍以上（單獨跑約 25 秒）：全套裡它要和
-        // 服務孤兒掃描（讀完整棵原始碼樹）之類的重工作爭 I/O。過短的橋接只會製造
-        // 「這條測試偶爾紅」的假訊號，而那種紅燈最後會訓練大家忽略紅燈。
+        // 保留既有三分鐘上限，讓全套執行時仍有 UI 排版餘裕；注入來源後的實際耗時
+        // 由當輪結果記錄，先前包含完整 usermode 收集的耗時不代表這個渲染案例。
         if (!thread.Join(TimeSpan.FromMinutes(3)))
             failures.Add("證據頁事實列煙霧測試逾時（3 分鐘未完成）。");
 
@@ -525,30 +531,6 @@ public class UiSmokeTests
         ];
     }
 
-    /// <summary>
-    /// 煙霧測試用的儲存讀取器：把 NVMe 探針換成固定的合成值。
-    /// </summary>
-    /// <remarks>
-    /// <b>為什麼需要</b>：<c>EvidenceCollection.LoadUsermodeFacts</c> 會一併跑儲存收口那一支，
-    /// 那裡對<b>真實磁碟</b>下 NVMe 紀錄頁查詢——本機的兩顆碟那個查詢會卡在驅動裡好幾秒，
-    /// 於是這條「驗接線」的測試變成在驗磁碟，還會拖住整個行程。
-    /// 合成值只餵三態與組裝路徑，磁碟本身的行為由儲存類別自己的測試負責。
-    /// </remarks>
-    private sealed class FakeNvmeReaders : StorageAndScenarioReconciliationFactsService.IReaders
-    {
-        public IReadOnlyList<StorageAndScenarioReconciliationFactsService.WearSample>? Wear() =>
-        [
-            new(7, 512.5, 1424, 100),
-        ];
-
-        public (ulong UnsafeShutdowns, ulong PowerCycles)? PowerLoss() => (5, 200);
-
-        public bool? Sanitize() => null;
-    }
-
-    private static IDisposable FakeNvme() =>
-        StorageAndScenarioReconciliationFactsService.UseReaders(new FakeNvmeReaders());
-
     private static void RunFirmwareRows(List<string> failures)
     {
         WpfEnv.Ensure();
@@ -560,13 +542,20 @@ public class UiSmokeTests
 
         try
         {
-            var vm = new MainViewModel();   // 與煙霧測試同一個慣例：絕不呼叫 Initialize()
+            var vm = new MainViewModel(
+                new CpuPinoutService(autoDetect: false, readSocket: () => "LGA 1700"),
+                new DimmReferenceService(autoDetect: false, readModules: () => []),
+                new M2AnalysisService(autoDetect: false, readDisks: () => [], readSlots: () => []));   // 與煙霧測試同一個慣例：絕不呼叫 Initialize()
 
-            // 這一筆是本條測試的重點：走的是 UI 與 CLI 共用的那一條組裝點，
-            // 所以它同時驗證了「接線真的接上了」。儲存收口的 NVMe 探針在這裡改走注入
-            // （見 FakeNvme）：真實裝置上那是幾秒級的驅動查詢，而本條要驗的是接線。
-            using (FakeNvme())
-                EvidenceCollection.LoadUsermodeFacts(vm.EvidenceLab, new TwoDiskStorageSource());
+            // 本條驗證 UI 與 CLI 共用組裝點，以及儲存可靠性事實到達真實頁面。
+            // 其餘 usermode 來源以注入的空收集器替換，避免共用組裝點觸發全機
+            // WMI／EventLog／磁碟探測；VM 其餘既有建構子 I/O 不在此隔離範圍。
+            // 完整來源整合由 RealHardwareFactSnapshot 保留。
+            EvidenceCollection.LoadUsermodeFacts(vm.EvidenceLab, new TwoDiskStorageSource(), _ => { });
+
+            if (!vm.EvidenceLab.AllFacts.Any(f => f.Key == "storage.reliability.0.wear" && f.Value == "12")
+                || !vm.EvidenceLab.AllFacts.Any(f => f.Key == "storage.reliability.1.wear" && f.Value == "33"))
+                failures.Add("可靠性事實沒有進入 AllFacts：兩碟合成來源的磨損值未完整組裝。");
 
             if (!vm.EvidenceLab.FirmwareSecurityRows.Any(r => r.Name.Contains("磨損程度")))
                 failures.Add("資料沒到達頁面：FirmwareSecurityRows 找不到儲存可靠性的列——接線斷了。");

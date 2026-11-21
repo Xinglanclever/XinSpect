@@ -127,7 +127,7 @@ public sealed class SlcCacheBenchService : ObservableObject
         }
         finally
         {
-            try { if (File.Exists(file)) File.Delete(file); } catch { /* 測試檔刪除失敗留給使用者 */ }
+            // The worker owns its exclusive handle through completion; no pathname cleanup.
             IsRunning = false;
             _cts?.Dispose();
             _cts = null;
@@ -139,19 +139,55 @@ public sealed class SlcCacheBenchService : ObservableObject
 
     internal static List<SlcSample> WriteSustained(string file, long target, CancellationToken ct, IProgress<(double, string)> report)
     {
-        const int chunk = 4 * 1024 * 1024;
-        var payload = new byte[chunk];
-        new Random(20260829).NextBytes(payload);
-
+        ct.ThrowIfCancellationRequested();
         long free = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(file))!).AvailableFreeSpace;
+        return WriteOwned(() => OwnedTemporaryFile.CreateAtPath(file), target, free, ct, report);
+    }
+
+    internal static List<SlcSample> WriteUnique(string directory, long target, CancellationToken ct,
+        IProgress<(double, string)> report)
+    {
+        ct.ThrowIfCancellationRequested();
+        long free = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(directory))!).AvailableFreeSpace;
+        return WriteOwned(() => OwnedTemporaryFile.Create(directory, "XinSpect.slc"), target, free, ct, report);
+    }
+
+    private static List<SlcSample> WriteOwned(Func<OwnedTemporaryFile> create, long target, long free,
+        CancellationToken ct, IProgress<(double, string)> report)
+    {
         long reserve = 8L * 1024 * 1024 * 1024;
         long cap = Math.Min(target, free - reserve);
         if (cap < 4L * 1024 * 1024 * 1024)
             throw new InvalidOperationException("該磁碟區可用空間不足（需至少 4 GB，且保留 8 GB 給系統）。");
-
-        var samples = new List<SlcSample>();
+        const int chunk = 4 * 1024 * 1024;
+        var payload = new byte[chunk];
+        new Random(20260829).NextBytes(payload);
+        // Keep the elapsed-clock boundary before file opening, as in the original core.
         var sw = Stopwatch.StartNew();
-        using var fs = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.None, chunk, FileOptions.None);
+        return RunOwned(create, temp =>
+        {
+            using var fs = new FileStream(temp.Handle, FileAccess.Write, chunk, isAsync: false);
+            return WriteSustained(fs, cap, payload, sw, ct, report);
+        }, ct);
+    }
+
+    // Resource ownership is shared by both production entry points and injectable without real I/O.
+    internal static List<SlcSample> RunOwned<T>(Func<T> create, Func<T, List<SlcSample>> write,
+        CancellationToken ct) where T : IDisposable
+    {
+        ct.ThrowIfCancellationRequested();
+        using T owned = create();
+        ct.ThrowIfCancellationRequested();
+        List<SlcSample> samples = write(owned);
+        ct.ThrowIfCancellationRequested();
+        return samples;
+    }
+
+    private static List<SlcSample> WriteSustained(FileStream fs, long cap, byte[] payload, Stopwatch sw,
+        CancellationToken ct, IProgress<(double, string)> report)
+    {
+        const int chunk = 4 * 1024 * 1024;
+        var samples = new List<SlcSample>();
         long written = 0;
         long windowBytes = 0;
         var windowSw = Stopwatch.StartNew();
@@ -163,7 +199,7 @@ public sealed class SlcCacheBenchService : ObservableObject
             written += chunk;
             windowBytes += chunk;
 
-            // 每秒 FlushToDisk 一次並取樣：確保量到的是「真的落到裝置」的速度，不是作業系統快取的假象
+            // 每秒等待 Windows FlushToDisk 返回後取樣；此 API 完成不證明裝置快取已持久化，也不代表斷電安全
             if (sw.Elapsed.TotalSeconds - lastSampleSec >= 1.0)
             {
                 fs.Flush(flushToDisk: true);
@@ -185,26 +221,36 @@ public sealed class SlcCacheBenchService : ObservableObject
 public static class SlcMath
 {
     /// <summary>
-    /// 斷崖定義：某點速度 &lt; 尖峰的 35%，且其後至少 5 個取樣的中位數 &lt; 尖峰的 45%（排除單點雜訊）。
+    /// 斷崖定義：候選點速度 &lt; 尖峰的 35%；候選點加其後 5 點（完整 6 點窗）的中位數 &lt; 尖峰的 45%。偶數中位為中央兩值平均；不足 6 點不判定。
     /// 回傳（尖峰 MB/s、尖峰時刻、斷崖時刻或 -1、斷崖後中位或 0）。
     /// </summary>
     public static (double PeakMbps, double PeakSec, double CliffSec, double PostMedian)
         Analyze(double[] times, double[] mbps)
     {
-        if (times.Length == 0 || mbps.Length == 0) return (0, 0, -1, 0);
+        ArgumentNullException.ThrowIfNull(times);
+        ArgumentNullException.ThrowIfNull(mbps);
+        if (times.Length != mbps.Length) throw new ArgumentException("時間與吞吐樣本數必須相同。");
+        if (times.Length == 0) return (0, 0, -1, 0);
+        for (int i = 0; i < times.Length; i++)
+        {
+            if (!double.IsFinite(times[i]) || times[i] < 0 || (i > 0 && times[i] <= times[i - 1]))
+                throw new ArgumentException("時間必須有限、非負且嚴格遞增。", nameof(times));
+            if (!double.IsFinite(mbps[i]) || mbps[i] <= 0)
+                throw new ArgumentException("吞吐必須為有限正數。", nameof(mbps));
+        }
         int peak = 0;
         for (int i = 1; i < mbps.Length; i++) if (mbps[i] > mbps[peak]) peak = i;
         double peakMbps = mbps[peak];
 
-        for (int j = peak + 1; j + 5 <= mbps.Length; j++)
+        for (int j = peak + 1; j <= mbps.Length - 6; j++)
         {
             if (mbps[j] >= peakMbps * 0.35) continue;
             var window = mbps.Skip(j).Take(6).OrderBy(x => x).ToArray();
-            double med = window[3];
+            double med = window[2] + (window[3] - window[2]) / 2.0;
             if (med < peakMbps * 0.45)
             {
                 var post = mbps.Skip(j).OrderBy(x => x).ToArray();
-                double postMed = post.Length % 2 == 1 ? post[post.Length / 2] : (post[post.Length / 2 - 1] + post[post.Length / 2]) / 2.0;
+                double postMed = post.Length % 2 == 1 ? post[post.Length / 2] : post[post.Length / 2 - 1] + (post[post.Length / 2] - post[post.Length / 2 - 1]) / 2.0;
                 return (peakMbps, times[peak], times[j], postMed);
             }
         }

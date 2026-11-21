@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 
 namespace XinSpect;
 
@@ -9,6 +9,30 @@ namespace XinSpect;
 /// </summary>
 public static class EvidenceCollection
 {
+    /// <summary>Shared real headless composition for both executable entry points.</summary>
+    public static IReadOnlyList<HardwareFact> CollectForCli()
+        => CollectForCli(ReloadInto, null, LoadOtherUsermodeFacts,
+            PhysicalMemorySnapshotSource.ReadForThisMachine, null,
+            () => KnowledgePackService.Load(KnowledgePackService.DefaultPath), StepBudgetMs);
+
+    // Replace only external operations; the platform/rate publication stage cannot be replaced.
+    internal static IReadOnlyList<HardwareFact> CollectForCli(
+        Action<EvidenceLabService> loadDriverFacts, IStorageReliabilitySource? storage,
+        Action<EvidenceLabService> loadOtherUsermodeFacts, Func<PhysicalMemorySnapshot> readMemory,
+        Func<DateTimeOffset, PlatformGovernanceFactsService.MixMatchState, IReadOnlyList<HardwareFact>>? collectGovernance,
+        Func<KnowledgePackLoad>? loadKnowledgePack = null, int platformBudgetMilliseconds = 0)
+    {
+        ArgumentNullException.ThrowIfNull(loadDriverFacts);
+        ArgumentNullException.ThrowIfNull(loadOtherUsermodeFacts);
+        ArgumentNullException.ThrowIfNull(readMemory);
+        var svc = new EvidenceLabService();
+        var lease = svc.BeginPlatformGovernanceCollection(platformBudgetMilliseconds, CancellationToken.None);
+        loadDriverFacts(svc);
+        LoadUsermodeFactsWithPlatform(svc, storage, loadOtherUsermodeFacts, readMemory,
+            collectGovernance, lease, loadKnowledgePack);
+        return svc.AllFacts;
+    }
+
     public static void ReloadInto(EvidenceLabService svc)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -78,7 +102,7 @@ public static class EvidenceCollection
     // 界線（2026-11-07 實測補記）：逾時的執行緒會留在核心等待（與 DiskIo 實測記錄同一代價，
     // 一條步驟換一條執行緒）；且被放棄的步驟之後可能把部分事實寫進共享結構——實測形態是
     // LoadKnowledgePack 的重複鍵也可能來自兩個收集器，並非一定是晚到寫入。
-    // 合規索引已排除有歧義的重複鍵；逾時步驟的晚到寫入隔離仍未實作。
+    // 合規最後擷取不可變輸入並排除自引用／重複鍵；一般逾時來源的晚到寫入隔離仍未實作。
     private static int StepBudgetMs
     {
         get
@@ -88,11 +112,12 @@ public static class EvidenceCollection
         }
     }
 
-    private static void Measure(EvidenceLabService svc, string name, Action action)
+    private static void Measure(EvidenceLabService svc, string name, Action action,
+        Action? onTimeout = null, int? budgetOverride = null)
     {
         long start = Stopwatch.GetTimestamp();
         bool ok = true;
-        int budget = StepBudgetMs;
+        int budget = budgetOverride ?? StepBudgetMs;
         if (budget > 0)
         {
             // 專屬執行緒＋外層預算：逾時就放棄這一步（RecordStep 如實記 false），
@@ -109,6 +134,7 @@ public static class EvidenceCollection
             worker.Start();
             if (!done.Wait(budget))
             {
+                onTimeout?.Invoke(); // Revokes publication only; never aborts source worker/cleanup.
                 svc.RecordStep(name, Stopwatch.GetElapsedTime(start).TotalMilliseconds, false);
                 Console.WriteLine(
                     $"[XinSpect] 採集步驟 {name} 逾時（{budget / 1000.0:0} 秒無回應）——已放棄，該域以三態呈現，收集鏈繼續。");
@@ -124,10 +150,146 @@ public static class EvidenceCollection
         svc.RecordStep(name, Stopwatch.GetElapsedTime(start).TotalMilliseconds, ok);
     }
 
-    public static void LoadUsermodeFacts(EvidenceLabService svc, IStorageReliabilitySource? storageReliability = null)
+    // WHEA and storage reliability opt into domain publication leases; other sources keep their lifecycle.
+    internal static void MeasureWheaMemory(EvidenceLabService svc,
+        Func<IReadOnlyList<WheaMemoryRecord>> readRecords, int budgetMilliseconds,
+        CancellationToken cancellationToken = default)
     {
-        svc.ClearSteps();  // 每次收集重新計時：步驟代價是「這一輪」的，不是累計
-        Measure(svc, "LoadStorageReliability", () => svc.LoadStorageReliability(storageReliability ?? new StorageReliabilityTimeoutSource(new StorageReliabilityWmiSource())));  // 附加功能：讀不到由 StorageReliabilityFactsService 標三態，不在這裡中斷啟動
+        var lease = svc.BeginWheaMemoryCollection(budgetMilliseconds, cancellationToken);
+        Measure(svc, "LoadWheaMemory", () =>
+        {
+            if (!svc.CollectWheaMemory(lease, readRecords))
+                throw new InvalidOperationException("WHEA 本次來源失敗、逾時或發布權已失效");
+        }, () => svc.RevokeWheaMemoryCollection(lease, timedOut: true), budgetMilliseconds);
+    }
+
+    internal static void MeasureStorageReliability(EvidenceLabService svc,
+        IStorageReliabilitySource source, int budgetMilliseconds,
+        CancellationToken cancellationToken = default)
+    {
+        var lease = svc.BeginStorageReliabilityCollection(budgetMilliseconds, cancellationToken);
+        Measure(svc, "LoadStorageReliability", () =>
+        {
+            if (!svc.CollectStorageReliability(lease, source))
+                throw new InvalidOperationException("儲存可靠性本次來源失敗、逾時或發布權已失效");
+        }, () => svc.RevokeStorageReliabilityCollection(lease, timedOut: true), budgetMilliseconds);
+    }
+
+    public static void LoadUsermodeFacts(EvidenceLabService svc, IStorageReliabilitySource? storageReliability = null)
+        => LoadUsermodeFactsWithPlatform(svc, storageReliability, LoadOtherUsermodeFacts,
+            PhysicalMemorySnapshotSource.ReadForThisMachine, null, StepBudgetMs,
+            () => KnowledgePackService.Load(KnowledgePackService.DefaultPath));
+
+    /// <summary>
+    /// 組裝回歸的注入接縫：保留可靠性來源的正式載入與計時，讓測試替換其餘來源的收集。
+    /// 正式入口固定使用 <see cref="LoadOtherUsermodeFacts"/>；完整來源接線由實機對帳另驗。
+    /// 注入的收集器只記錄實際執行的步驟，不為沒有讀取的來源補造成功或耗時。
+    /// </summary>
+    internal static void LoadUsermodeFacts(EvidenceLabService svc, IStorageReliabilitySource? storageReliability,
+        Action<EvidenceLabService> collectOtherUsermodeSources)
+        => LoadUsermodeFacts(svc, storageReliability, collectOtherUsermodeSources, loadKnowledgePack: null);
+
+    // The three-argument injected seam omits package I/O; tests of the final phase inject a loader here.
+    internal static void LoadUsermodeFacts(EvidenceLabService svc, IStorageReliabilitySource? storageReliability,
+        Action<EvidenceLabService> collectOtherUsermodeSources, Func<KnowledgePackLoad>? loadKnowledgePack)
+    {
+        ArgumentNullException.ThrowIfNull(svc);
+        ArgumentNullException.ThrowIfNull(collectOtherUsermodeSources);
+        if (loadKnowledgePack is null)
+        {
+            CollectUsermodeSources(svc, storageReliability, collectOtherUsermodeSources);
+            return;
+        }
+        long generation = LoadUsermodeFactsDeferred(svc, storageReliability, collectOtherUsermodeSources);
+        CompleteUsermodeFacts(svc, generation, loadKnowledgePack);
+    }
+
+    // GUI retains this invocation token until its extra evidence sources have finished.
+    internal static long LoadUsermodeFactsDeferred(EvidenceLabService svc)
+    {
+        var lease = svc.BeginPlatformGovernanceCollection(StepBudgetMs, CancellationToken.None);
+        return LoadUsermodeFactsDeferred(svc, null,
+            lab => LoadUsermodeSourceGraph(lab, LoadOtherUsermodeFacts,
+                PhysicalMemorySnapshotSource.ReadForThisMachine, null, lease));
+    }
+
+    internal static long LoadUsermodeFactsDeferred(EvidenceLabService svc,
+        IStorageReliabilitySource? storageReliability, Action<EvidenceLabService> collectOtherUsermodeSources)
+    {
+        ArgumentNullException.ThrowIfNull(svc);
+        ArgumentNullException.ThrowIfNull(collectOtherUsermodeSources);
+        long generation = svc.BeginKnowledgePackCollection();
+        CollectUsermodeSources(svc, storageReliability, collectOtherUsermodeSources);
+        return generation;
+    }
+
+    private static void CollectUsermodeSources(EvidenceLabService svc,
+        IStorageReliabilitySource? storageReliability, Action<EvidenceLabService> collectOtherUsermodeSources)
+    {
+        svc.ClearSteps();
+        MeasureStorageReliability(svc, storageReliability ?? new StorageReliabilityTimeoutSource(new StorageReliabilityWmiSource()), StepBudgetMs);
+        collectOtherUsermodeSources(svc);
+    }
+
+    internal static void CompleteUsermodeFacts(EvidenceLabService svc, long generation,
+        Func<KnowledgePackLoad>? loadKnowledgePack = null, CancellationToken cancellationToken = default)
+        => Measure(svc, "LoadKnowledgePack", () => svc.CompleteKnowledgePackCollection(generation,
+            loadKnowledgePack ?? (() => KnowledgePackService.Load(KnowledgePackService.DefaultPath, cancellationToken)),
+            cancellationToken));
+
+    // Allocate at refresh entry, before storage/other steps can block. Carry this exact token to the source step.
+    internal static void LoadUsermodeFactsWithPlatform(EvidenceLabService svc,
+        IStorageReliabilitySource? storage, Action<EvidenceLabService> loadOtherUsermodeFacts,
+        Func<PhysicalMemorySnapshot> readMemory,
+        Func<DateTimeOffset, PlatformGovernanceFactsService.MixMatchState, IReadOnlyList<HardwareFact>>? collectGovernance,
+        int platformBudgetMilliseconds, Func<KnowledgePackLoad>? loadKnowledgePack = null)
+    {
+        var lease = svc.BeginPlatformGovernanceCollection(platformBudgetMilliseconds, CancellationToken.None);
+        LoadUsermodeFactsWithPlatform(svc, storage, loadOtherUsermodeFacts, readMemory,
+            collectGovernance, lease, loadKnowledgePack);
+    }
+
+    private static void LoadUsermodeFactsWithPlatform(EvidenceLabService svc,
+        IStorageReliabilitySource? storage, Action<EvidenceLabService> loadOtherUsermodeFacts,
+        Func<PhysicalMemorySnapshot> readMemory,
+        Func<DateTimeOffset, PlatformGovernanceFactsService.MixMatchState, IReadOnlyList<HardwareFact>>? collectGovernance,
+        EvidenceLabService.PlatformGovernancePublicationLease lease, Func<KnowledgePackLoad>? loadKnowledgePack)
+        => LoadUsermodeFacts(svc, storage,
+            lab => LoadUsermodeSourceGraph(lab, loadOtherUsermodeFacts, readMemory, collectGovernance, lease), loadKnowledgePack);
+
+    private static void LoadUsermodeSourceGraph(EvidenceLabService svc,
+        Action<EvidenceLabService> loadOtherUsermodeFacts, Func<PhysicalMemorySnapshot> readMemory,
+        Func<DateTimeOffset, PlatformGovernanceFactsService.MixMatchState, IReadOnlyList<HardwareFact>>? collectGovernance,
+        EvidenceLabService.PlatformGovernancePublicationLease lease)
+    {
+        loadOtherUsermodeFacts(svc);
+        MeasurePlatformGovernance(svc, readMemory, collectGovernance, lease);
+    }
+
+    internal static void MeasurePlatformGovernance(EvidenceLabService svc,
+        Func<PhysicalMemorySnapshot> readMemory,
+        Func<DateTimeOffset, PlatformGovernanceFactsService.MixMatchState, IReadOnlyList<HardwareFact>>? collectGovernance,
+        int budgetMilliseconds, CancellationToken cancellationToken = default)
+    {
+        var lease = svc.BeginPlatformGovernanceCollection(budgetMilliseconds, cancellationToken);
+        MeasurePlatformGovernance(svc, readMemory, collectGovernance, lease);
+    }
+
+    private static void MeasurePlatformGovernance(EvidenceLabService svc,
+        Func<PhysicalMemorySnapshot> readMemory,
+        Func<DateTimeOffset, PlatformGovernanceFactsService.MixMatchState, IReadOnlyList<HardwareFact>>? collectGovernance,
+        EvidenceLabService.PlatformGovernancePublicationLease lease)
+    {
+        Measure(svc, "LoadPlatformGovernance", () =>
+        {
+            if (!svc.CollectPlatformGovernance(lease, () =>
+                PlatformGovernanceFactsService.CollectPublicationBatch(DateTimeOffset.UtcNow, readMemory, collectGovernance)))
+                throw new InvalidOperationException("平台／記憶體設定速率來源失敗、逾時或發布權已失效");
+        }, () => svc.RevokePlatformGovernanceCollection(lease, timedOut: true), lease.BudgetMilliseconds);
+    }
+
+    private static void LoadOtherUsermodeFacts(EvidenceLabService svc)
+    {
         Measure(svc, "LoadDriverInspection", () => svc.LoadDriverInspection());  // 附加功能：讀不到由 DriverInspectionFactsService 標三態，不在這裡中斷啟動
         Measure(svc, "LoadSetupTimeline", () => svc.LoadSetupTimeline());  // 附加功能：讀不到由 SetupApiTimelineService 標三態，不在這裡中斷啟動
         Measure(svc, "LoadEtlReadback", () => svc.LoadEtlReadback());  // 附加功能：讀不到由 EtlReadbackService 標三態，不在這裡中斷啟動
@@ -154,14 +316,13 @@ public static class EvidenceCollection
         // 第 280 輪：事件 ID 的事實（os.ev.*）。十九次事件記錄查詢，唯讀、零特權；
         // 放在有名字的收集步驟而不是事實集 getter——理由同 LoadSmartLookupStats。
         Measure(svc, "LoadEventIdEvidence", () => svc.LoadEventIdEvidence());  // 附加功能：讀不到由 EventIdEvidenceFactsService 標三態，不在這裡中斷啟動
+        MeasureWheaMemory(svc, WheaMemoryRecordsReader.ReadForThisMachine, StepBudgetMs);
         // 第 309 輪：逐裝置的問題碼／狀態旗標／驅動證據（os.dev.*）。唯讀 SetupAPI 列舉，
         // 幾百毫秒級；同樣放在有名字的收集步驟而不是事實集 getter。
         Measure(svc, "LoadDeviceTruth", () => svc.LoadDeviceTruth());
         // 第 312 輪：逐鍵重複性（mt.repeat.*）。連量五輪便宜的即時值，總預算 3 秒。
         Measure(svc, "LoadMeasurementRepeat", () => svc.LoadMeasurementRepeat());
-        // BCD 開機順序（BD-0001／BD-0003）：一次 bcdedit /enum，5 秒上限；唯讀
-        Measure(svc, "LoadBootOrder", () => svc.LoadBootOrder());
-        // BCD 其餘元素（BD-0002／0004～0007／0011／0014／0023／0024／0030）：/enum＋/enum firmware 各一次，唯讀
+        // BCD 開機順序與元素共用 /enum all；韌體順序另讀 /enum firmware，均唯讀且各 5 秒上限。
         Measure(svc, "LoadBcdElements", () => svc.LoadBcdElements());
         // 電池健康三件事（BT-0002～BT-0004）：Win32_Battery 計數＋三條 root\WMI 查詢，唯讀
         Measure(svc, "LoadBatteryHealth", () => svc.LoadBatteryHealth());
@@ -215,7 +376,6 @@ public static class EvidenceCollection
         Measure(svc, "LoadSecurityAuditSupplement", () => svc.LoadSecurityAuditSupplement());  // 附加功能：讀不到由 SecurityAuditSupplementFactsService 標三態，不在這裡中斷啟動
         Measure(svc, "LoadLifecycleMaintenance", () => svc.LoadLifecycleMaintenance());  // 附加功能：讀不到由 LifecycleMaintenanceFactsService 標三態，不在這裡中斷啟動
         Measure(svc, "LoadFirmwareAudit", () => svc.LoadFirmwareAudit());  // 附加功能：讀不到由 FirmwareAuditFactsService 標三態，不在這裡中斷啟動
-        Measure(svc, "LoadPlatformGovernance", () => svc.LoadPlatformGovernance());  // 附加功能：讀不到由 PlatformGovernanceFactsService 標三態，不在這裡中斷啟動
         Measure(svc, "LoadPlatformDeepDive", () => svc.LoadPlatformDeepDive());  // 附加功能：讀不到由 PlatformDeepDiveFactsService 標三態，不在這裡中斷啟動
         Measure(svc, "LoadPlatformExpansion", () => svc.LoadPlatformExpansion());  // 附加功能：讀不到由 PlatformExpansionFactsService 標三態，不在這裡中斷啟動
         Measure(svc, "LoadPlatformReconciliation", () => svc.LoadPlatformReconciliation());  // 附加功能：讀不到由 PlatformReconciliationFactsService 標三態，不在這裡中斷啟動
@@ -254,10 +414,7 @@ public static class EvidenceCollection
         Measure(svc, "LoadSbom", () => svc.LoadSbom());  // 附加功能：讀不到由 SbomService 標三態，不在這裡中斷啟動
         Measure(svc, "LoadLifecycleReports", () => svc.LoadLifecycleReports());  // 附加功能：讀不到由 LifecycleAndReportsFactsService 標三態，不在這裡中斷啟動
         Measure(svc, "LoadGovernanceExtra", () => svc.LoadGovernanceExtra());  // 附加功能：讀不到由 GovernanceExtraFactsService 標三態，不在這裡中斷啟動
-        // Vol 2 批次 B（2026-10-11）：檔案鑑識主線——Shimcache（登錄值，毫秒級）＋MountedDevices（登錄列舉，
-        // 毫秒級）＋Prefetch 檔名層（每檔只讀前 80 位元組，目錄級毫秒）；Amcache（NT hive 解析）與
-        // Prefetch 壓縮內含解壓屬明示觸發範圍，不在啟動路徑上。
-        Measure(svc, "LoadKnowledgePack", () => svc.LoadKnowledgePack());  // 附加功能：讀不到由 KnowledgePackService 標三態，不在這裡中斷啟動
+        // 檔案鑑識／平台／ACPI 仍先完成；知識包合規在外層所有來源步驟結束後才評估。
         Measure(svc, "LoadFsForensics", () => svc.LoadFsForensics());  // 附加功能：讀不到由 ShimcacheFactsService／MountedDevicesFactsService／PrefetchFactsService 標三態，不在這裡中斷啟動
         // 平台拓撲與資產（SMBIOS 表層深化 sb.*／asset.*／role.*／monitor.*／numa.*…）：
         // 這一組原本只有 GUI 啟動序列在載入，CLI 拿不到——同一份程式的兩條入口事實集合不同，

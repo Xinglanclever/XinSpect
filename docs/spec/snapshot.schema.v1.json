@@ -31,10 +31,10 @@
     "fact": {
       "type": "object",
       "additionalProperties": false,
-      "description": "numericValue／unit／unavailableReason 可能整鍵省略（序列化對 null／預設值有條件忽略）——缺失與 null 同義。",
-      "required": ["key", "category", "name", "value", "source", "trust", "sensitive", "measuredAtUtc", "availability"],
+      "description": "numericValue／unit／unavailableReason 可能整鍵省略（序列化對 null／預設值有條件忽略）——缺失與 null 同義。availability 是另一契約：序列化省略預設 Present，只有缺欄時預設 Present；明示 null 或非法值不得當 Present。",
+      "required": ["key", "category", "name", "value", "source", "trust", "sensitive", "measuredAtUtc"],
       "properties": {
-        "key": { "type": "string", "minLength": 1, "description": "事實的穩定識別鍵（跨快照差分的主鍵）。" },
+        "key": { "type": "string", "minLength": 1, "description": "事實的穩定識別鍵（跨快照差分的主鍵）。執行期驗證限最長 160 字元的 ASCII 路徑：小寫字母、數字、點、底線、連字號及方括號。資產製造商／型號使用 asset.field.system_manufacturer／asset.field.system_model，中文欄名保留在 name；沒有開放任意 Unicode 鍵。較舊版本保存時已替換為 snapshot.rejected.* 的欄位不含原始值，無法還原型號。" },
         "category": { "type": "string" },
         "name": { "type": "string" },
         "value": { "type": "string", "description": "人可讀的值。availability 非 Present 時為空字串。" },
@@ -44,7 +44,7 @@
         "trust": { "enum": ["Unknown", "Reported", "Derived", "Measured", "Speculative"], "description": "來源品質標示：Unknown（不可用）／Reported（系統自己記的）／Derived（由其他事實推導）／Measured（本工具量到）／Speculative（推測，非量測；只出現在 infer.* 鍵，值帶【推測】前綴，且不進合規判定與 Merkle）。這是標示不是保證。" },
         "sensitive": { "type": "boolean" },
         "measuredAtUtc": { "type": "string", "format": "date-time" },
-        "availability": { "enum": ["Present", "NotSupported", "InsufficientPrivilege", "ReadError", "NotApplicable", "Unknown"], "description": "可用性契約的型別承載。Present＝讀到且確認（唯一可拿去下結論的狀態）；Unknown＝有值但未確認（快取殘留、來源可疑、多來源尚未仲裁）；NotApplicable／NotSupported＝本機環境事實（不是故障）；InsufficientPrivilege／ReadError＝試過但沒拿到。**2.36 起新增 Unknown**：這是 v1 之內的加法擴充——舊快照（不含 Unknown）仍可讀；但以本 schema 驗證的舊版讀者會拒收含 Unknown 的新快照，因此跨版本交換前請先確認對方支援。格上的強弱序與傳播規則見 docs/spec/METHODOLOGY.md。" },
+        "availability": { "default": "Present", "enum": ["Present", "NotSupported", "InsufficientPrivilege", "ReadError", "NotApplicable", "Unknown"], "description": "可用性契約的型別承載。序列化會省略預設 Present，讀者僅在缺欄時使用 Present；明示 null 或非法值拒收。Present＝讀到且確認（唯一可拿去下結論的狀態）；Unknown＝有值但未確認（快取殘留、來源可疑、多來源尚未仲裁）；NotApplicable／NotSupported＝本機環境事實（不是故障）；InsufficientPrivilege／ReadError＝試過但沒拿到。**2.36 起新增 Unknown**：這是 v1 之內的加法擴充——舊快照（不含 Unknown）仍可讀；但以本 schema 驗證的舊版讀者會拒收含 Unknown 的新快照，因此跨版本交換前請先確認對方支援。格上的強弱序與傳播規則見 docs/spec/METHODOLOGY.md。" },
         "unavailableReason": { "type": ["string", "null"], "description": "availability 非 Present 時的人可讀原因；Present 時為 null。" }
       }
     }

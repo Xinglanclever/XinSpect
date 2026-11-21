@@ -796,7 +796,7 @@ public sealed class ToolboxService : ObservableObject
         if (definition.Arguments is { Length: > 64 }
             || definition.Arguments?.Any(a => a is null || a.Length > 2048 || a.Contains('\0')) == true)
             throw new ArgumentException("啟動參數最多 64 個，每個不可超過 2048 個字元。", nameof(definition));
-        string[] arguments = definition.Arguments?.Select(a => a.Trim()).ToArray() ?? [];
+        string[] arguments = definition.Arguments?.ToArray() ?? [];
 
         string target;
         string identity;
@@ -907,7 +907,7 @@ public sealed class ToolboxService : ObservableObject
     {
         string identity = definition.Kind == ToolKind.WebLink
             ? ToolboxIdentity.ForUrl(definition.Target)
-            : ToolboxIdentity.ForExecutable(definition.Target, definition.Arguments?.Select(a => a.Trim()));
+            : ToolboxIdentity.ForExecutable(definition.Target, definition.Arguments);
         foreach (var alias in source.UserAliases.Append(source.Name))
         {
             destination.AddAlias(alias);
@@ -979,6 +979,11 @@ public sealed class ToolboxService : ObservableObject
         foreach (var identity in GetIdentities(tool))
             if (aliases.TryGetValue(identity, out var names) && names is not null)
                 foreach (var name in names) tool.AddAlias(name);
+        // Keep aliases saved by 3.28, whose executable identity had no length prefixes.
+        if (tool.Kind == ToolKind.CustomApp
+            && aliases.TryGetValue(ToolboxIdentity.LegacyExecutableIdentity(tool.Target, tool.LaunchArguments), out var legacy)
+            && legacy is not null)
+            foreach (var name in legacy) tool.AddAlias(name);
     }
 
     /// <summary>將某工具裝入指定的本機執行檔並持久化。</summary>

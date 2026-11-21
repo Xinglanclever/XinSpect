@@ -153,6 +153,168 @@ public class StorageProbeBreakerTests
         Assert.Contains("StorageProbeBreaker.Report", nvme);
     }
 
+    [Theory]
+    [InlineData(21)]
+    [InlineData(23)]
+    [InlineData(27)]
+    [InlineData(30)]
+    [InlineData(31)]
+    [InlineData(121)]
+    [InlineData(1117)]
+    [InlineData(1167)]
+    [InlineData(1460)]
+    public void SurfaceNativeReadFailureTripsOnlyVerifiedDiskAndOperation(int win32)
+    {
+        int disk = 8760000 + win32;
+        var error = new IOException("injected read failure", unchecked((int)(0x80070000u | (uint)win32)));
+        var observation = new DiskSurfaceScanService.ReadFailureObservation(disk);
+        var actual = Assert.Throws<IOException>(() => observation.Read(() => throw error, CancellationToken.None));
+        Assert.Same(error, actual);
+        Assert.False(StorageProbeBreaker.ShouldSkip(disk, DiskSurfaceScanService.BreakerOperation));
+        observation.Dispose();
+        Assert.True(StorageProbeBreaker.ShouldSkip(disk, DiskSurfaceScanService.BreakerOperation));
+        Assert.False(StorageProbeBreaker.ShouldSkip(disk + 10000, DiskSurfaceScanService.BreakerOperation));
+        Assert.False(StorageProbeBreaker.ShouldSkip(disk, "TryGetBusType"));
+    }
+
+    [Theory]
+    [InlineData(5)]
+    [InlineData(87)]
+    [InlineData(995)]
+    [InlineData(123)]
+    public async Task SurfaceConfigurationPermissionAndAbortDoNotTrip(int win32)
+    {
+        int disk = 8780000 + win32;
+        var error = new IOException("not device evidence", unchecked((int)(0x80070000u | (uint)win32)));
+        using (var observation = new DiskSurfaceScanService.ReadFailureObservation(disk))
+        {
+            Assert.Same(error, Assert.Throws<IOException>(() => observation.Read(() => throw error, CancellationToken.None)));
+            Assert.Same(error, await Assert.ThrowsAsync<IOException>(() => observation.ReadAsync(
+                () => ValueTask.FromException<int>(error), CancellationToken.None).AsTask()));
+        }
+        Assert.False(StorageProbeBreaker.ShouldSkip(disk, DiskSurfaceScanService.BreakerOperation));
+    }
+
+    [Fact]
+    public async Task SurfaceRetryRecoveryRetainsObservedDeviceFaultForNextScan()
+    {
+        const int disk = 8790001;
+        int calls = 0;
+        using (var observation = new DiskSurfaceScanService.ReadFailureObservation(disk))
+        {
+            var result = await DiskSurfaceScanService.ReadBlocksAsync("fake", 512, 512, 512,
+                (_, memory, token) => observation.ReadAsync(() => ++calls == 1
+                    ? ValueTask.FromException<int>(new IOException("CRC", unchecked((int)0x80070017)))
+                    : ValueTask.FromResult(memory.Length), token));
+            Assert.Equal(2, calls);
+            Assert.Equal(1, result!.RetryCount);
+            Assert.Equal(0, result.ErrorCount);
+        }
+        Assert.True(StorageProbeBreaker.ShouldSkip(disk, DiskSurfaceScanService.BreakerOperation));
+    }
+
+    [Fact]
+    public async Task SurfaceCancellationDoesNotBecomeDeviceFailure()
+    {
+        const int disk = 8790002;
+        using var cancel = new CancellationTokenSource();
+        using (var observation = new DiskSurfaceScanService.ReadFailureObservation(disk))
+        {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => observation.ReadAsync(() =>
+            {
+                cancel.Cancel();
+                return ValueTask.FromCanceled<int>(cancel.Token);
+            }, cancel.Token).AsTask());
+        }
+        Assert.False(StorageProbeBreaker.ShouldSkip(disk, DiskSurfaceScanService.BreakerOperation));
+    }
+
+    [Fact]
+    public void SurfaceCancelledIoErrorAndGenericManagedFailureDoNotTrip()
+    {
+        const int disk = 8790003;
+        using var cancel = new CancellationTokenSource();
+        using (var observation = new DiskSurfaceScanService.ReadFailureObservation(disk))
+        {
+            Assert.Throws<IOException>(() => observation.Read(() => throw new IOException("managed"), CancellationToken.None));
+            Assert.Throws<IOException>(() => observation.Read(() =>
+            {
+                cancel.Cancel();
+                throw new IOException("cancellation race", unchecked((int)0x8007045D));
+            }, cancel.Token));
+        }
+        Assert.False(StorageProbeBreaker.ShouldSkip(disk, DiskSurfaceScanService.BreakerOperation));
+    }
+
+    [Fact]
+    public void SurfaceSuccessfulOrShortReadDoesNotClearAnotherSessionsFault()
+    {
+        const int disk = 8790004;
+        using (var observation = new DiskSurfaceScanService.ReadFailureObservation(disk))
+        {
+            Assert.Equal(512, observation.Read(() => 512, CancellationToken.None));
+            StorageProbeBreaker.Trip(disk, DiskSurfaceScanService.BreakerOperation);
+            Assert.Equal(0, observation.Read(() => 0, CancellationToken.None));
+        }
+        Assert.True(StorageProbeBreaker.ShouldSkip(disk, DiskSurfaceScanService.BreakerOperation));
+    }
+
+    [Fact]
+    public async Task SurfaceInvalidParameterStillEscapesBeforeRetryWithoutCooldown()
+    {
+        const int disk = 8790005;
+        int calls = 0;
+        using (var observation = new DiskSurfaceScanService.ReadFailureObservation(disk))
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => DiskSurfaceScanService.ReadBlocksAsync("fake", 512, 512, 512,
+                (offset, memory, token) => DiskSurfaceScanService.ReadAlignedAsync(offset, memory,
+                    new DiskSurfaceBackingDevice.Alignment(512, 4096), (_, _, cancellation) => observation.ReadAsync(() =>
+                    {
+                        calls++;
+                        return ValueTask.FromException<int>(new IOException("invalid parameter", unchecked((int)0x80070057)));
+                    }, cancellation), token)));
+        }
+        Assert.Equal(1, calls);
+        Assert.False(StorageProbeBreaker.ShouldSkip(disk, DiskSurfaceScanService.BreakerOperation));
+    }
+
+    [Fact]
+    public void ExpiredCheckCannotDeleteConcurrentNewTrip()
+    {
+        const int disk = 8790006;
+        const long first = 1000;
+        long expiry = first + StorageProbeBreaker.CooldownMs;
+        int interleavings = 0;
+        StorageProbeBreaker.Trip(disk, DiskSurfaceScanService.BreakerOperation, first);
+        bool skipped = StorageProbeBreaker.ShouldSkip(disk, DiskSurfaceScanService.BreakerOperation, expiry,
+            beforeExpiredRemoval: () =>
+            {
+                interleavings++;
+                StorageProbeBreaker.Trip(disk, DiskSurfaceScanService.BreakerOperation, expiry);
+            });
+        Assert.Equal(1, interleavings);
+        Assert.True(skipped);
+        Assert.True(StorageProbeBreaker.ShouldSkip(disk, DiskSurfaceScanService.BreakerOperation, expiry + 1));
+        Assert.False(StorageProbeBreaker.ShouldSkip(disk, DiskSurfaceScanService.BreakerOperation,
+            expiry + StorageProbeBreaker.CooldownMs));
+    }
+
+    [Fact]
+    public void ExpiredObservedEntryIsRemovedWithoutTouchingAnotherOperation()
+    {
+        const int disk = 8790007;
+        const long first = 2000;
+        long expiry = first + StorageProbeBreaker.CooldownMs;
+        StorageProbeBreaker.Trip(disk, DiskSurfaceScanService.BreakerOperation, first);
+        StorageProbeBreaker.Trip(disk, "other-operation", expiry);
+        int removals = 0;
+        Assert.False(StorageProbeBreaker.ShouldSkip(disk, DiskSurfaceScanService.BreakerOperation, expiry,
+            beforeExpiredRemoval: () => removals++));
+        Assert.Equal(1, removals);
+        Assert.False(StorageProbeBreaker.ShouldSkip(disk, DiskSurfaceScanService.BreakerOperation, expiry + 1));
+        Assert.True(StorageProbeBreaker.ShouldSkip(disk, "other-operation", expiry + 1));
+    }
+
     /// <summary>讀原始碼樹裡的檔案（路徑相對於倉庫根目錄）。從測試輸出目錄往上找 csproj。</summary>
     private static string ReadRepoFile(string relativePath)
     {

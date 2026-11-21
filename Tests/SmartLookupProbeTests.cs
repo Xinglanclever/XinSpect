@@ -95,6 +95,24 @@ public class SmartLookupProbeTests
         Assert.Equal(SmartLookupProbe.ProbeStatus.NotApplicable, result.Status);
     }
 
+    [Theory]
+    [InlineData(10u, "SAS")]
+    [InlineData(16u, "Storage Spaces")]
+    public void SAS與StorageSpaces不推定ATA或NVMe_不得送出SMART命令(uint bus, string name)
+    {
+        var result = SmartLookupProbe.Run(
+            inventory: () => Inv((Usb, "protocol-not-proven")),
+            busOf: _ => bus,
+            readAttributes: (_, _) => throw new InvalidOperationException("不應送出 ATA SMART"));
+        Assert.Equal(SmartLookupProbe.ProbeStatus.NotApplicable, result.Status);
+        Assert.Empty(result.ReadIndexes);
+        Assert.Empty(result.Rows);
+        var skipped = Assert.Single(result.Skipped);
+        Assert.Contains(name, skipped.Reason);
+        Assert.Contains("沒有可用的唯讀直讀通道", skipped.Reason);
+        Assert.DoesNotContain("NVMe 日誌頁", skipped.Reason);
+    }
+
     [Fact]
     public void 沒有Index的碟_記成無法定位而不是略過無聲()
     {

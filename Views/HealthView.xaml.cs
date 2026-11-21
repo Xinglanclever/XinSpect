@@ -10,6 +10,7 @@ namespace XinSpect;
 /// </remarks>
 public partial class HealthView : UserControl, IPageLifecycle
 {
+    private CancellationTokenSource? _surfaceScanCancellation;
     public HealthView()
     {
         InitializeComponent();
@@ -99,32 +100,51 @@ public partial class HealthView : UserControl, IPageLifecycle
     private async void SurfaceScan_Click(object sender, RoutedEventArgs e)
     {
         if (SurfaceDriveCombo.SelectedItem is not (string path, string label)) return;
+        int[] blockSizes = SurfaceBlockSizeCombo.SelectedItem is ComboBoxItem { Tag: "all" }
+            ? [512, 8192, 65536, 131072]
+            : [int.TryParse((SurfaceBlockSizeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString(), out int size) ? size : 8192];
+        using var cancellation = new CancellationTokenSource();
+        _surfaceScanCancellation = cancellation;
         SurfaceScanButton.IsEnabled = false;
+        SurfaceCancelButton.IsEnabled = true;
         SurfaceProgress.Visibility = Visibility.Visible;
         SurfaceProgress.Value = 0;
-        SurfaceStatus.Text = $"正在掃描 {label}…";
+        SurfaceStatus.Text = $"正在掃描 {label}（最多 64 MiB／塊尺）…";
         SurfaceResults.ItemsSource = null;
         try
         {
             var progress = new Progress<int>(v => SurfaceProgress.Value = v);
-            var result = await Task.Run(() => DiskSurfaceScanService.Scan(path, progress: progress));
+            var results = await Task.Run(() => DiskSurfaceScanService.ScanProfilesAsync(path, blockSizes,
+                SurfaceRepeatCheck.IsChecked == true, progress: progress, ct: cancellation.Token));
             SurfaceProgress.Visibility = Visibility.Collapsed;
-            if (result is null)
+            if (results is null)
             {
-                SurfaceStatus.Text = "無法開啟磁碟。邏輯卷需要讀取權限；實體磁碟需系統管理員。";
+                SurfaceStatus.Text = DiskSurfaceScanService.PreflightUnavailableMessage;
                 return;
             }
-            SurfaceStatus.Text = $"{result.DrivePath}・{result.TotalBlocks} 區塊×{result.BlockSize / 1024} KB・"
-                + $"{result.OkCount} OK・{result.SlowCount} 慢・{result.ErrorCount} 錯誤・{result.ElapsedSec:F1} 秒";
-            SurfaceResults.ItemsSource = new[]
+            long coveredBytes = results[0].Scan.TotalBytes;
+            string sectorText = results[0].Scan.LogicalSectorBytes > 0
+                ? $"{results[0].Scan.LogicalSectorBytes} B" : "未知";
+            SurfaceStatus.Text = $"{label}・覆蓋 {coveredBytes / (1024.0 * 1024):F1} MiB・"
+                + $"邏輯磁區 {sectorText}・{results[0].Scan.IoMode}・重試 {results.Sum(x => x.Scan.RetryCount)} 次";
+            SurfaceResults.ItemsSource = results.Select(result => new
             {
-                new { Label = "結果", Ok = $"{result.OkCount}", Slow = $"{result.SlowCount}", Error = $"{result.ErrorCount}", Time = $"{result.ElapsedSec:F1}s" },
-            };
+                Label = $"{result.BlockSizeBytes} B・第 {result.Pass} 次",
+                Ok = $"{result.Scan.OkCount}", Slow = $"{result.Scan.SlowCount}",
+                Error = $"{result.Scan.ErrorCount}", Time = $"{result.Scan.ElapsedSec:F1}s"
+            }).ToArray();
         }
         catch (OperationCanceledException) { SurfaceStatus.Text = "已取消。"; }
         catch (Exception ex) { SurfaceStatus.Text = $"掃描失敗：{ex.Message}"; }
-        finally { SurfaceScanButton.IsEnabled = true; SurfaceProgress.Visibility = Visibility.Collapsed; }
+        finally
+        {
+            _surfaceScanCancellation = null;
+            SurfaceScanButton.IsEnabled = true;
+            SurfaceCancelButton.IsEnabled = false;
+            SurfaceProgress.Visibility = Visibility.Collapsed;
+        }
     }
+    private void SurfaceCancel_Click(object sender, RoutedEventArgs e) => _surfaceScanCancellation?.Cancel();
     private void TrustRefresh_Click(object sender, RoutedEventArgs e)
         => _ = Task.Run(() =>
         {

@@ -2,10 +2,12 @@
 
 > 給 AI 代理：先讀這份，不需要掃整個專案。目標是 30 秒內知道改什麼、去哪改、怎麼驗證。
 
+> XinSpect 全部新工作另須遵守 [`ENGINEERING-CONSTITUTION.md`](ENGINEERING-CONSTITUTION.md)；涉及 ULTIMATE-10000 時，再讀該計劃的當前交接與憲法要求。
+
 ## 專案概要
 
 - WPF 硬體資訊工具，.NET 10 (`net10.0-windows`)，單執行檔
-- 版本 2.1.0，2389 個 xunit 測試，建置 7 秒、測試 14 秒
+- 舊版筆記中的 2.1.0／2389 案例／7 秒建置／14 秒測試是歷史資料；當前版本與驗證狀態讀 `../XinSpect.csproj`、`../Tests/TestSuiteBaseline.cs` 及 `ULTIMATE-10000/HANDOFF-2026-11-16.md`，不把基線預填數當成實測通過。
 - 主要套件：LibreHardwareMonitorLib（感測器）、NVML/NVAPI（NVIDIA 深度資訊）、NAudio
 
 ## 關鍵路徑
@@ -24,10 +26,10 @@
 ## 建置與測試
 
 ```powershell
-# 建置（約 7 秒）
+# 建置（耗時以當次輸出為準）
 dotnet build
 
-# 全部測試（約 14 秒，2389 個）
+# 全部測試（案例數與耗時以當次輸出為準）
 dotnet test Tests\XinSpect.Tests.csproj
 
 # 發佈單檔 exe
@@ -36,8 +38,8 @@ dotnet publish -c Release -r win-x64 /p:PublishSingleFile=true
 
 ## 開發原則
 
-1. **誠實標示**：讀不到就顯示「—」或「不支援」，不用典型值代替
-2. **每改一個功能就跑建置加測試**（完整週期 21 秒）
+1. **誠實標示**：沿用公開方法學六態；讀不到、未知與不支援分別標示，不用典型值代替
+2. **按變更風險完成建置與必要測試**；保留實際結果，不沿用舊版耗時與案例數
 3. **UI 語言**：繁體中文（台灣用語）
 4. **命名**：感測器服務用 `XxxService`，模型用 `XxxRow`/`XxxModels`
 5. **不可破壞現有測試**：有任何紅燈就不算完成

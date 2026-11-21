@@ -2,31 +2,12 @@ using Xunit;
 
 namespace XinSpect.Tests;
 
-/// <summary>
-/// 處理器記憶體控制器（iMC）自己那條 SMBus 的探測與交易狀態機。
-/// </summary>
-/// <remarks>
-/// <para>
-/// 為什麼需要這條路徑：HEDT 與伺服器平台（X299、C621、LGA3647、Threadripper）的 DIMM SPD
-/// <b>不掛在 PCH 的 SMBus 上</b>。本機（i9-7980XE／X299）實測過——PCH 那條上八個 SPD 位址
-/// 全部 NAK，連 DDR4 的切頁裝置都不回應，而整台機器只有一個 PCI 類別碼 0x0C05 的裝置。
-/// SPD 在處理器 uncore 的 SMBus 區段上，共兩組（所以 CPU-Z 會把兩條不同的模組都標成「0x50」）。
-/// </para>
-/// <para>
-/// 這條路徑比 PCH 那條危險一級，理由要寫清楚：控制器的命令暫存器<b>在 PCI 設定空間裡</b>，
-/// 而設定空間裡有一大堆一寫就讓機器當場停住的東西。因此這組測試完全跑在假的設定空間上，
-/// 而且實作只寫探測到的那三個位移、裝置位址仍受 <see cref="SpdBusAddresses"/> 白名單約束。
-/// </para>
-/// <para>
-/// 還有一件必須靠韌體讓路的事：韌體會週期性輪詢 DIMM 上的溫度感測器（TSOD）。交易前要把
-/// 那個輪詢關掉、交易後要原樣還原——沒還原的話主機板從此讀不到記憶體溫度，風扇曲線會跟著失準。
-/// </para>
-/// </remarks>
+/// <summary>Fake-only regression for the Skylake-X proxy state machine; production refuses unverified ownership.</summary>
 public class ImcSmbusControllerTests
 {
     private static ImcSmbusController Make(FakeImcPci pci, int segment = 0)
         => new(pci, new ImcSmbusLocation(FakeImcPci.Bus, FakeImcPci.Dev, FakeImcPci.Fn, segment),
-               transactionTimeoutMs: 30);
+               transactionTimeoutMs: 30, injectedProtocol: true);
 
     private static PciFunctionAddress Target => new(FakeImcPci.Bus, FakeImcPci.Dev, FakeImcPci.Fn);
 
@@ -37,6 +18,150 @@ public class ImcSmbusControllerTests
         for (int i = 0; i < 256; i++) img[256 + i] = (byte)(seed ^ 0x5A ^ i);
         img[2] = SpdReader.Ddr4TypeCode;
         return img;
+    }
+
+    [Fact]
+    public void ProductionEntryRefusesUnverifiedOwnershipWithoutPciAccess()
+    {
+        var pci = new FakeImcPci();
+        var bus = new ImcSmbusController(pci, new(FakeImcPci.Bus, FakeImcPci.Dev, FakeImcPci.Fn, 0));
+        Assert.False(bus.TryAcquireBus(out var reason));
+        Assert.Equal(SmbusStatus.NotSupported, bus.LastStatus);
+        Assert.Contains("ownership", reason);
+        bus.ReleaseBus();
+        Assert.Equal(0, pci.ReadCount);
+        Assert.Empty(pci.Writes);
+    }
+
+    [Fact]
+    public void BusyWithoutTsodNeverWritesAndCannotBeReacquired()
+    {
+        var pci = new FakeImcPci { InitiallyBusy = true };
+        var bus = Make(pci);
+        Assert.False(bus.TryAcquireBus(out _));
+        Assert.Equal(SmbusStatus.BusError, bus.LastStatus);
+        pci.InitiallyBusy = false;
+        int reads = pci.ReadCount;
+        Assert.False(bus.TryAcquireBus(out _));
+        bus.ReleaseBus();
+        Assert.Equal(reads, pci.ReadCount);
+        Assert.Empty(pci.Writes);
+    }
+
+    [Theory]
+    [InlineData(0x20085500u)]
+    [InlineData(0x20105500u)]
+    public void InitialGoOrTsodCannotBeClearedOrReplayed(uint command)
+    {
+        var pci = new FakeImcPci { CommandOverride = command };
+        var bus = Make(pci);
+        Assert.False(bus.TryAcquireBus(out _));
+        bus.ReleaseBus();
+        Assert.Empty(pci.Writes);
+    }
+
+    [Fact]
+    public void TimeoutLatchesOriginalFailureAndReleaseDoesNotReadOrWrite()
+    {
+        var pci = new FakeImcPci { NeverCompletes = true };
+        var bus = Make(pci);
+        Assert.True(bus.TryAcquireBus(out _));
+        Assert.Null(bus.ReadByteData(0x50, 0));
+        Assert.Equal(SmbusStatus.Timeout, bus.LastStatus);
+        string first = bus.LastError;
+        int reads = pci.ReadCount, writes = pci.Writes.Count;
+        pci.NeverCompletes = false;
+        Assert.Null(bus.ReadByteData(0x51, 0));
+        Assert.False(bus.SendByte(0x36, 0));
+        Assert.False(bus.WriteByteData(0x50, 0, 0));
+        bus.ReleaseBus();
+        Assert.False(bus.TryAcquireBus(out _));
+        Assert.Equal(reads, pci.ReadCount);
+        Assert.Equal(writes, pci.Writes.Count);
+        Assert.Equal(first, bus.LastError);
+        Assert.Equal(SmbusStatus.Timeout, bus.LastStatus);
+    }
+
+    [Fact]
+    public void ChangedOwnerBeforeTransactionIsNeverOverwritten()
+    {
+        var pci = new FakeImcPci();
+        var bus = Make(pci);
+        Assert.True(bus.TryAcquireBus(out _));
+        pci.CommandOverride = 0x20006600;
+        Assert.Null(bus.ReadByteData(0x50, 0));
+        bus.ReleaseBus();
+        Assert.Empty(pci.Writes);
+        Assert.Equal(SmbusStatus.BusError, bus.LastStatus);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RestoreMustSucceedAndReadBackOrControllerStaysFaulted(bool reject)
+    {
+        var pci = new FakeImcPci { Modules = { [(0, 0x50)] = Image(0x44) } };
+        var bus = Make(pci);
+        Assert.True(bus.TryAcquireBus(out _));
+        Assert.NotNull(bus.ReadByteData(0x50, 0));
+        pci.FailRestore = reject;
+        pci.IgnoreRestore = !reject;
+        bus.ReleaseBus();
+        Assert.Equal(SmbusStatus.IoUnavailable, bus.LastStatus);
+        Assert.Contains("verification", bus.LastError);
+        int writes = pci.Writes.Count;
+        Assert.False(bus.TryAcquireBus(out _));
+        bus.ReleaseBus();
+        Assert.Equal(writes, pci.Writes.Count);
+        Assert.All(pci.Writes.Skip(1), entry => Assert.Equal(0u, entry.Value & 0x80000u));
+    }
+
+    [Fact]
+    public void ReleaseDoesNotClobberAChangedController()
+    {
+        var pci = new FakeImcPci { Modules = { [(0, 0x50)] = Image(0x44) } };
+        var bus = Make(pci);
+        Assert.True(bus.TryAcquireBus(out _));
+        Assert.NotNull(bus.ReadByteData(0x50, 0));
+        int writes = pci.Writes.Count;
+        pci.CommandOverride = 0x20006600;
+        bus.ReleaseBus();
+        Assert.Equal(writes, pci.Writes.Count);
+        Assert.Equal(SmbusStatus.BusError, bus.LastStatus);
+    }
+
+    [Fact]
+    public void AmbiguousErrorLatchesFailureRatherThanClaimingEmptySlot()
+    {
+        var pci = new FakeImcPci { ErrorOnTransfer = true };
+        var bus = Make(pci);
+        Assert.True(bus.TryAcquireBus(out _));
+        Assert.Null(bus.ReadByteData(0x50, 0));
+        Assert.Equal(SmbusStatus.TransactionFailed, bus.LastStatus);
+        int writes = pci.Writes.Count;
+        Assert.Null(bus.ReadByteData(0x51, 0));
+        bus.ReleaseBus();
+        Assert.Equal(writes, pci.Writes.Count);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void IoExceptionsLatchFailureAndCannotTriggerCleanupTransactions(bool failWrite)
+    {
+        var pci = new FakeImcPci();
+        var bus = Make(pci);
+        Assert.True(bus.TryAcquireBus(out _));
+        pci.ThrowOnWrite = failWrite;
+        pci.ThrowOnRead = !failWrite;
+        Assert.Null(bus.ReadByteData(0x50, 0));
+        Assert.Equal(SmbusStatus.IoUnavailable, bus.LastStatus);
+        int reads = pci.ReadCount;
+        pci.ThrowOnRead = pci.ThrowOnWrite = false;
+        bus.ReleaseBus();
+        Assert.Null(bus.ReadByteData(0x51, 0));
+        Assert.Equal(reads, pci.ReadCount);
+        Assert.Empty(pci.Writes);
     }
 
     // ---- 探測 ----
@@ -126,7 +251,7 @@ public class ImcSmbusControllerTests
 
         Assert.Equal((byte)0x77, bus.ReadByteData(0x50, 0x00));
         Assert.Null(bus.ReadByteData(0x53, 0x00));
-        Assert.Equal(SmbusStatus.NoDevice, bus.LastStatus);
+        Assert.Equal(SmbusStatus.TransactionFailed, bus.LastStatus);
     }
 
     [Fact]
@@ -147,21 +272,17 @@ public class ImcSmbusControllerTests
 
     // ---- 讓韌體讓路：TSOD 輪詢 ----
 
-    /// <summary>
-    /// 韌體正在輪詢 DIMM 溫度感測器時，必須先讓它停下來才能發自己的交易；
-    /// <b>而且結束時要原樣還原</b>——沒還原的話主機板從此讀不到記憶體溫度，風扇曲線跟著失準。
-    /// </summary>
     [Fact]
-    public void 韌體在輪詢溫度時先讓它停下_結束時原樣還原()
+    public void 韌體輪詢活動時拒絕取得且不寫入()
     {
         var pci = new FakeImcPci { TsodPollingActive = true, Modules = { [(0, 0x50)] = Image(0x44) } };
         uint before = pci.Read(FakeImcPci.Bus, FakeImcPci.Dev, FakeImcPci.Fn, 0x9C)!.Value;
         var bus = Make(pci);
 
-        Assert.True(bus.TryAcquireBus(out var reason), reason);
-        Assert.Equal((byte)0x44, bus.ReadByteData(0x50, 0x00));
+        Assert.False(bus.TryAcquireBus(out var reason));
+        Assert.Contains("firmware-owned", reason);
         bus.ReleaseBus();
-
+        Assert.Empty(pci.Writes);
         Assert.Equal(before, pci.Read(FakeImcPci.Bus, FakeImcPci.Dev, FakeImcPci.Fn, 0x9C)!.Value);
     }
 
@@ -209,7 +330,7 @@ public class ImcSmbusControllerTests
         Assert.True(bus.TryAcquireBus(out _));
 
         Assert.Null(bus.ReadByteData(0x50, 0x00));
-        Assert.Equal(SmbusStatus.NoDevice, bus.LastStatus);
+        Assert.Equal(SmbusStatus.TransactionFailed, bus.LastStatus);
     }
 
     [Fact]
@@ -218,16 +339,18 @@ public class ImcSmbusControllerTests
         var bus = Make(new FakeImcPci { AccessGone = true });
 
         Assert.False(bus.TryAcquireBus(out var reason));
-        Assert.Contains("讀不到", reason);
+        Assert.Contains("Cannot verify", reason);
     }
 
     [Fact]
-    public void 設定空間不給寫時取不到匯流排_而不是硬幹()
+    public void AcquisitionDoesNotProbeWritePermissions()
     {
-        var bus = Make(new FakeImcPci { WritesRejected = true });
-
-        Assert.False(bus.TryAcquireBus(out var reason));
-        Assert.Contains("寫", reason);
+        var pci = new FakeImcPci { WritesRejected = true };
+        var bus = Make(pci);
+        Assert.True(bus.TryAcquireBus(out _));
+        Assert.Null(bus.ReadByteData(0x50, 0));
+        Assert.Equal(SmbusStatus.IoUnavailable, bus.LastStatus);
+        Assert.Empty(pci.Writes);
     }
 
     [Fact]
@@ -276,6 +399,8 @@ public class ImcSmbusControllerTests
     {
         var image = Image(0x9C);
         var pci = new FakeImcPci { Modules = { [(0, 0x50)] = image, [(0, 0x52)] = Image(0x6B) } };
+        for (byte address = 0x50; address <= 0x57; address++)
+            if (!pci.Modules.ContainsKey((0, address))) pci.Modules[(0, address)] = Image(address);
         var bus = Make(pci);
         Assert.True(bus.TryAcquireBus(out _));
 
@@ -284,7 +409,7 @@ public class ImcSmbusControllerTests
 
         Assert.Equal(image, scan.Slots.Single(s => s.Address == 0x50).Raw);
         Assert.Equal(SpdKind.Ddr4, scan.Slots.Single(s => s.Address == 0x52).Kind);
-        Assert.Equal(6, scan.Slots.Count(s => s.Kind == SpdKind.Empty));
+        Assert.Equal(8, scan.Slots.Count(s => s.Kind == SpdKind.Ddr4));
         Assert.Equal(0, pci.Page);                          // 讀完頁要復位
     }
 }

@@ -1,4 +1,4 @@
-<UserControl x:Class="XinSpect.PcieLinkView"
+﻿<UserControl x:Class="XinSpect.PcieLinkView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect">
@@ -63,8 +63,10 @@
                                         <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding Kind}" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="3" Style="{StaticResource FieldValue}" Text="{Binding CurrentText}" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="4" Style="{StaticResource FieldValue}" Text="{Binding CapableText}" VerticalAlignment="Center"/>
-                                        <ProgressBar Grid.Column="5" Style="{StaticResource LoadBar}" Maximum="1" VerticalAlignment="Center"
+                                        <ProgressBar x:Name="BandwidthBar" Grid.Column="5" ToolTip="{Binding BandwidthEstimateLabel}" Style="{StaticResource LoadBar}" Maximum="1" VerticalAlignment="Center"
                                                      Value="{Binding BarFraction, Mode=OneWay}"/>
+                                        <TextBlock x:Name="BandwidthUnknown" Grid.Column="5" Style="{StaticResource FieldValue}" FontSize="11"
+                                                   Text="{Binding BandwidthEstimateLabel}" Visibility="Collapsed" TextWrapping="Wrap"/>
                                         <TextBlock Grid.Column="6" Style="{StaticResource FieldValue}" VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis" ToolTip="{Binding GapEvidence}"
                                                    Text="{Binding GapKindText}"
@@ -82,6 +84,10 @@
                                                Foreground="{Binding ErrorBadge, Converter={StaticResource SeverityToBrush}}"/>
                                 </StackPanel>
                                 <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding BandwidthEstimateAvailable}" Value="False">
+                                        <Setter TargetName="BandwidthBar" Property="Visibility" Value="Collapsed"/>
+                                        <Setter TargetName="BandwidthUnknown" Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
                                     <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" Value="True">
                                         <Setter TargetName="Row" Property="Background" Value="{DynamicResource Surface2Brush}"/>
                                     </DataTrigger>

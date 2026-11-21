@@ -53,7 +53,7 @@ public class SpdConsistencyAuditServiceTests
     [Fact]
     public void 全部可用來源匹配時判為一致且每筆Finding可追溯()
     {
-        var result = Audit(Native(), CpuZ(), Smbios(),
+        var result = Audit(Native(), CpuZ(serial: "1234ABCD"), Smbios(),
             new CurrentMemoryTimingEvidence("CPU-Z 目前時序（全機）", "DDR4", 3200, "16-18-18-36 2T"));
 
         Assert.Equal(SpdAuditVerdict.Consistent, result.Verdict);
@@ -81,7 +81,7 @@ public class SpdConsistencyAuditServiceTests
     [Fact]
     public void 單獨CRC壞只報矛盾_不武斷稱為重刷()
     {
-        var result = Audit(Native(baseCrc: false), CpuZ(), Smbios());
+        var result = Audit(Native(baseCrc: false), CpuZ(serial: "1234ABCD"), Smbios());
         var crc = Assert.Single(result.Findings, x => x.Field == SpdAuditField.Checksum);
 
         Assert.Equal(SpdAuditVerdict.Conflict, result.Verdict);
@@ -99,6 +99,7 @@ public class SpdConsistencyAuditServiceTests
         var result = Audit(Native(), CpuZ(), generic);
 
         Assert.NotEqual(SpdAuditVerdict.Conflict, result.Verdict);
+        Assert.DoesNotContain(result.Sources, x => x.Kind is SpdAuditSourceKind.CpuZ or SpdAuditSourceKind.Smbios);
         Assert.Equal(SpdAuditVerdict.MissingData,
             Assert.Single(result.Findings, x => x.Field == SpdAuditField.SerialNumber).Verdict);
         Assert.DoesNotContain(result.Findings, x => x.Field is SpdAuditField.JedecVendor or SpdAuditField.PartNumber
@@ -108,7 +109,10 @@ public class SpdConsistencyAuditServiceTests
     [Fact]
     public void 序號衝突清楚列出兩邊來源和值()
     {
-        var result = Audit(Native(), CpuZ(serial: "1234ABCD"), Smbios(serial: "DEADBEEF"));
+        // Fixture explicitly supplies an independently known physical slot mapping.
+        var result = Audit(Native() with { LocatorScope = SpdAuditLocatorScope.SmbiosPhysicalSlot },
+            CpuZ(serial: "1234ABCD"),
+            Smbios(serial: "DEADBEEF") with { LocatorScope = SpdAuditLocatorScope.SmbiosPhysicalSlot });
         var finding = Assert.Single(result.Findings, x => x.Field == SpdAuditField.SerialNumber);
 
         Assert.Equal(SpdAuditVerdict.Conflict, finding.Verdict);
@@ -120,7 +124,9 @@ public class SpdConsistencyAuditServiceTests
     [Fact]
     public void 多項獨立異常才升級為可疑且措辭保守()
     {
-        var result = Audit(Native(baseCrc: false), CpuZ(), Smbios(serial: "DEADBEEF"));
+        var result = Audit(Native(baseCrc: false) with { LocatorScope = SpdAuditLocatorScope.SmbiosPhysicalSlot },
+            CpuZ(serial: "1234ABCD"),
+            Smbios(serial: "DEADBEEF") with { LocatorScope = SpdAuditLocatorScope.SmbiosPhysicalSlot });
 
         Assert.Equal(SpdAuditVerdict.Suspicious, result.Verdict);
         var finding = Assert.Single(result.Findings, x => x.Verdict == SpdAuditVerdict.Suspicious
@@ -184,6 +190,13 @@ public class SpdConsistencyAuditServiceTests
 
         Assert.Equal("ZhuQue_8G_Y", nativeInput.PartNumber);
         Assert.Equal(8192, nativeInput.CapacityMiB);
-        Assert.Equal(SpdAuditVerdict.Consistent, result.Verdict);
+        Assert.Equal(SpdAuditVerdict.MissingData, result.Verdict);
+        Assert.DoesNotContain(result.Sources, x => x.Kind == SpdAuditSourceKind.CpuZ);
+        Assert.Contains(result.Sources, x => x.Kind == SpdAuditSourceKind.Smbios);
+        Assert.Equal(SpdAuditLocatorScope.Unspecified, nativeInput.LocatorScope);
+        Assert.Equal(SpdAuditLocatorScope.SmbiosPhysicalSlot,
+            SpdConsistencyAuditService.FromSmbios(smbios).LocatorScope);
+        Assert.Contains(result.Findings, x => x.Field == SpdAuditField.SourceAvailability
+            && x.Summary.Contains("CPU-Z", StringComparison.Ordinal));
     }
 }

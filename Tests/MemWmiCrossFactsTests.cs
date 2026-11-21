@@ -5,7 +5,7 @@ namespace XinSpect.Tests;
 /// <summary>
 /// U10-OS-0030（<c>mem.wmi.cross</c>）：Win32_PhysicalMemory 作為 SPD 一致性審計第四源的對照邏輯。
 /// 合成資料：WMI 列與既有正規化輸入（SpdAuditSourceInput），不讀實機；重點是
-/// 配對（序號最強、料號次之、配不上不強配）、矛盾計數（兩面都在才算）、缺源如實標、讀不到三態。
+/// 配對（兩側唯一有效序號；料號不是身份）、矛盾計數（兩面都在才算）、缺源如實標、讀不到三態。
 /// </summary>
 public class MemWmiCrossFactsTests
 {
@@ -32,14 +32,14 @@ public class MemWmiCrossFactsTests
     }
 
     [Fact]
-    public void 序號不同但料號可唯一配對_記序號矛盾一次()
+    public void 序號不同即使料號相同_沒有實體身份不猜序號矛盾()
     {
-        // 空殼序號（全 0／全 F）不算矛盾——那是缺資料；兩面都有真序號且不同才算。
+        // 相同料號不證明同一實體；真序號不同且沒有獨立身份時不造序號矛盾。
         var state = MemWmiCrossFactsService.Cross(
             [Wmi("DEADBEEF", "M425R2GA3PB0", 17179869184L)],
             [Native("A1B2C3", "M425R2GA3PB0", 16384)], null);
-        Assert.Equal(1, state.ComparedModules);
-        Assert.Equal(1, state.SerialConflicts);
+        Assert.Equal(0, state.ComparedModules);
+        Assert.Equal(0, state.SerialConflicts);
         Assert.Equal(0, state.CapacityConflicts);
     }
 
@@ -49,7 +49,7 @@ public class MemWmiCrossFactsTests
         var state = MemWmiCrossFactsService.Cross(
             [Wmi("FFFFFFFF", "M425R2GA3PB0", 17179869184L)],
             [Native("A1B2C3", "M425R2GA3PB0", 16384)], null);
-        Assert.Equal(1, state.ComparedModules);
+        Assert.Equal(0, state.ComparedModules);
         Assert.Equal(0, state.SerialConflicts);
     }
 
@@ -66,12 +66,12 @@ public class MemWmiCrossFactsTests
     [Fact]
     public void 空殼序號不參與配對與矛盾判定()
     {
-        // 兩面都只有全 F 序號＋料號可配：配得上，但序號面如實不算矛盾（空殼＝缺資料）。
+        // 兩面都只有全 F 序號＋相同料號：料號不是實體身份，不配對也不判矛盾。
         var state = MemWmiCrossFactsService.Cross(
             [Wmi("FFFFFFFFFFFFFFFF", "PART-1", 17179869184L)],
             null,
             [new SpdAuditSourceInput(SpdAuditSourceKind.Smbios, "SMBIOS Type 17", "DIMM0", null, "PART-1", "FFFFFFFF", 16384)]);
-        Assert.Equal(1, state.ComparedModules);
+        Assert.Equal(0, state.ComparedModules);
         Assert.Equal(0, state.SerialConflicts);
     }
 

@@ -115,6 +115,38 @@
                     </ItemsControl>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,8" Text="{Binding ExternalSensors.Status}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,6" Text="{Binding ExternalSensors.ComparisonStatus}"
+                               TextWrapping="Wrap"/>
+                    <Grid Margin="0,0,0,3" Visibility="{Binding ExternalSensors.CoreTemperatureComparisons.Count, Converter={StaticResource CountToVis}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="100"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource ColHead}" Text="核心"/>
+                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="LHM" TextAlignment="Right"/>
+                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="Core Temp" TextAlignment="Right"/>
+                        <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="差值" TextAlignment="Right"/>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding ExternalSensors.CoreTemperatureComparisons}" Margin="0,0,0,8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinHeight="24">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="100"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding CoreIndex, StringFormat=核心 #{0}}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding PrimaryCelsius, StringFormat={}{0:F1} °C}" HorizontalAlignment="Right"/>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding ExternalCelsius, StringFormat={}{0:F1} °C}" HorizontalAlignment="Right"/>
+                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldLabel}" Text="{Binding DifferenceCelsius, StringFormat={}{0:F1} °C}" HorizontalAlignment="Right"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
 
                     <!-- 外部讀數表頭 -->
                     <Grid Margin="0,4,0,4" Visibility="{Binding ExternalSensors.Readings.Count, Converter={StaticResource CountToVis}}">

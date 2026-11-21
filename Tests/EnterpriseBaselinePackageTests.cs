@@ -16,7 +16,7 @@ public sealed class EnterpriseBaselinePackageTests : IDisposable
     private string PublicPem => _signer.ExportSubjectPublicKeyInfoPem();
 
     private static EnterpriseBaselinePolicy Policy(params EnterpriseBaselineRule[] rules) => new(
-        EnterpriseBaselinePackageService.CurrentSchemaVersion,
+        EnterpriseBaselinePackageService.LegacySchemaVersion,
         "org-workstation-v1", Now.AddDays(-1), Now.AddDays(30), rules);
 
     private static HardwareFact Fact(string key, string value, double? numeric = null,
@@ -89,6 +89,76 @@ public sealed class EnterpriseBaselinePackageTests : IDisposable
 
         Assert.Equal(1, result.NotSatisfied);
         Assert.Contains("不是故障或安全判決", result.Results[0].Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void 推測鍵或推測信任等級_兩種規則均不得判為符合或不符合()
+    {
+        foreach (var match in new[] { EnterpriseBaselineMatch.Exact, EnterpriseBaselineMatch.NumericRange })
+        {
+            var rules = new[]
+            {
+                new EnterpriseBaselineRule("infer.fixture", match,
+                    ExpectedValue: match == EnterpriseBaselineMatch.Exact ? "expected" : null,
+                    Minimum: match == EnterpriseBaselineMatch.NumericRange ? 0 : null,
+                    Maximum: match == EnterpriseBaselineMatch.NumericRange ? 100 : null),
+                new EnterpriseBaselineRule("sensor.fixture", match,
+                    ExpectedValue: match == EnterpriseBaselineMatch.Exact ? "expected" : null,
+                    Minimum: match == EnterpriseBaselineMatch.NumericRange ? 0 : null,
+                    Maximum: match == EnterpriseBaselineMatch.NumericRange ? 100 : null),
+            };
+            string package = EnterpriseBaselinePackageService.Sign(Policy(rules), PrivatePem, SigningPassword);
+            foreach (var (value, numeric) in new[] { ("expected", 40d), ("different", 200d) })
+            {
+                var facts = new Dictionary<string, HardwareFact>
+                {
+                    ["infer.fixture"] = Fact("infer.fixture", value, numeric),
+                    ["sensor.fixture"] = Fact("sensor.fixture", value, numeric) with { Trust = FactTrustLevel.Speculative },
+                };
+
+                var result = EnterpriseBaselinePackageService.Evaluate(package, PublicPem, facts, Now);
+
+                Assert.True(result.SignatureValid);
+                Assert.Equal(2, result.Unverifiable);
+                Assert.Equal(0, result.Satisfied);
+                Assert.Equal(0, result.NotSatisfied);
+                Assert.All(result.Results, evidence =>
+                {
+                    Assert.Equal(EnterpriseBaselineStatus.Unverifiable, evidence.Status);
+                    Assert.Equal("Present", evidence.EvidenceAvailability);
+                    Assert.Contains("推測", evidence.Reason, StringComparison.Ordinal);
+                });
+                Assert.Equal("Reported", Assert.Single(result.Results, r => r.Key == "infer.fixture").Trust);
+                Assert.Equal("Speculative", Assert.Single(result.Results, r => r.Key == "sensor.fixture").Trust);
+            }
+        }
+    }
+
+    [Fact]
+    public void 非推測的Reported與Derived_仍可依兩種規則評估()
+    {
+        string package = EnterpriseBaselinePackageService.Sign(Policy(
+            new EnterpriseBaselineRule("device.reported", EnterpriseBaselineMatch.Exact, "expected"),
+            new EnterpriseBaselineRule("device.derived", EnterpriseBaselineMatch.NumericRange, Minimum: 0, Maximum: 100)),
+            PrivatePem, SigningPassword);
+        var facts = new Dictionary<string, HardwareFact>
+        {
+            ["device.reported"] = Fact("device.reported", "expected"),
+            ["device.derived"] = Fact("device.derived", "40", 40) with { Trust = FactTrustLevel.Derived },
+        };
+
+        var result = EnterpriseBaselinePackageService.Evaluate(package, PublicPem, facts, Now);
+
+        Assert.True(result.SignatureValid);
+        Assert.Equal(2, result.Satisfied);
+        Assert.Equal(0, result.NotSatisfied);
+        Assert.Equal(0, result.Unverifiable);
+        var reported = Assert.Single(result.Results, r => r.Key == "device.reported");
+        var derived = Assert.Single(result.Results, r => r.Key == "device.derived");
+        Assert.Equal("Reported", reported.Trust);
+        Assert.Equal("Derived", derived.Trust);
+        Assert.Equal(EnterpriseBaselineStatus.Satisfied, reported.Status);
+        Assert.Equal(EnterpriseBaselineStatus.Satisfied, derived.Status);
     }
 
     [Fact]

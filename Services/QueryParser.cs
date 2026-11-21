@@ -38,7 +38,7 @@ public static class QueryParser
             if (value.Length == 0)
                 throw new QueryParseException($"第 {lineNo + 1} 行的「{field}{opText}」沒有值。");
 
-            ValidateField(field, op, value, lineNo + 1);
+            ValidateField(field, op, value, lineNo);
             clauses.Add(new QueryClause(field, op, value));
         }
         return new FactQuery(clauses, queryText);
@@ -102,7 +102,12 @@ public static class QueryParser
             // 2.36 起：有值但未確認。別名刻意取 unconfirmed 而不是 "unknown"——
             // unknown 太容易與「不知道」混用，而這一態的語意是「拿到了東西但不敢背書」。
             "unconfirmed" => FactAvailability.Unknown,
-            _ => Enum.TryParse<FactAvailability>(value, ignoreCase: true, out var parsed) ? parsed : null,
+            // Enum.TryParse alone also accepts numbers and comma-combinations, even for non-Flags enums.
+            // Require one exact declared name; aliases above remain the public grammar.
+            _ => Enum.TryParse<FactAvailability>(normalized, ignoreCase: true, out var parsed)
+                && Enum.IsDefined(parsed)
+                && string.Equals(normalized, parsed.ToString(), StringComparison.OrdinalIgnoreCase)
+                    ? parsed : null,
         };
     }
 

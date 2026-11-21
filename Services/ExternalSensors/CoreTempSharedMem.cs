@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -73,21 +74,28 @@ public static class CoreTempSharedMem
     /// <param name="error">失敗時的錯誤訊息。</param>
     /// <returns>是否成功開啟並解析共享記憶體。</returns>
     public static bool TryRead(out IReadOnlyList<ExternalReading> readings, out string? error)
+        => TryRead(out readings, out error, null);
+
+    internal static bool TryRead(out IReadOnlyList<ExternalReading> readings, out string? error,
+        MemoryMappedViewAccessor? snapshot)
     {
         readings = Array.Empty<ExternalReading>();
         error = null;
 
         MemoryMappedFile? mmf = null;
-        MemoryMappedViewAccessor? accessor = null;
+        MemoryMappedViewAccessor? accessor = snapshot;
         try
         {
-            // 先嘗試較新的 Ex 版本（原生 SDK），不行再試 .NET SDK 的名稱
-            try { mmf = MemoryMappedFile.OpenExisting(SharedMemNameEx, MemoryMappedFileRights.Read); }
-            catch (System.IO.FileNotFoundException)
+            if (accessor is null)
             {
-                mmf = MemoryMappedFile.OpenExisting(SharedMemName, MemoryMappedFileRights.Read);
+                // 先嘗試較新的 Ex 版本（原生 SDK），不行再試 .NET SDK 的名稱
+                try { mmf = MemoryMappedFile.OpenExisting(SharedMemNameEx, MemoryMappedFileRights.Read); }
+                catch (System.IO.FileNotFoundException)
+                {
+                    mmf = MemoryMappedFile.OpenExisting(SharedMemName, MemoryMappedFileRights.Read);
+                }
+                accessor = mmf.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read);
             }
-            accessor = mmf.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read);
 
             if (accessor.Capacity < MinStructSize)
             {
@@ -95,11 +103,13 @@ public static class CoreTempSharedMem
                 return false;
             }
 
+            long readStarted = Stopwatch.GetTimestamp();
             // ── 讀取基本資訊 ──
             uint coreCnt = accessor.ReadUInt32(OffsetCoreCnt);
             uint cpuCnt  = accessor.ReadUInt32(OffsetCpuCnt);
 
-            if (coreCnt == 0 || coreCnt > MaxCores || cpuCnt == 0)
+            if (coreCnt == 0 || coreCnt > MaxCores || cpuCnt is 0 or > 128
+                || (ulong)coreCnt * cpuCnt > MaxCores)
             {
                 error = $"Core Temp 核心數異常：coreCnt={coreCnt}, cpuCnt={cpuCnt}";
                 return false;
@@ -119,13 +129,17 @@ public static class CoreTempSharedMem
             bool isDelta        = deltaFlag != 0;
 
             string tempUnit = isFahrenheit ? "°F" : "°C";
+            DateTimeOffset capturedAt = DateTimeOffset.UtcNow;
 
             var result = new List<ExternalReading>();
 
             // ── 逐核心溫度與負載 ──
-            uint totalCores = coreCnt; // Core Temp 的 coreCnt 已含所有 CPU 核心總數
-            for (uint i = 0; i < totalCores && i < MaxCores; i++)
+            // 官方 SDK Program.cs：index = core + cpu * GetCoreCount；uiCoreCnt 是每顆 CPU 的核心數。
+            uint totalCores = coreCnt * cpuCnt;
+            for (uint i = 0; i < totalCores; i++)
             {
+                string coreLabel = cpuCnt == 1 ? $"{cpuName} 核心 #{i}"
+                    : $"{cpuName} CPU #{i / coreCnt} 核心 #{i % coreCnt}";
                 // 溫度。Core Temp 的「距 TjMax」模式（ucDeltaToTjMax）下 fTemp 是**差值**不是絕對溫度，
                 // 所以另立一個 SensorType 而不是只加後綴字串——後綴會讓下游用 Contains("TjMax")
                 // 找 TjMax 的程式把這些差值一起當成 TjMax 吃掉。
@@ -133,9 +147,12 @@ public static class CoreTempSharedMem
                 result.Add(new ExternalReading(
                     Source:     "Core Temp",
                     SensorType: isDelta ? "TemperatureDelta" : "Temperature",
-                    Label:      isDelta ? $"{cpuName} 核心 #{i} 距 TjMax" : $"{cpuName} 核心 #{i}",
+                    Label:      isDelta ? $"{coreLabel} 距 TjMax" : coreLabel,
                     Value:      Math.Round(temp, 1),
-                    Unit:       tempUnit
+                    Unit:       tempUnit,
+                    DeviceIdentity: cpuCnt == 1 ? cpuName : null,
+                    ChannelIndex: cpuCnt == 1 ? (int)i : null,
+                    CapturedAtUtc: capturedAt
                 ));
 
                 // 負載
@@ -143,28 +160,29 @@ public static class CoreTempSharedMem
                 result.Add(new ExternalReading(
                     Source:     "Core Temp",
                     SensorType: "Usage",
-                    Label:      $"{cpuName} 核心 #{i} 負載",
+                    Label:      $"{coreLabel} 負載",
                     Value:      load,
                     Unit:       "%"
                 ));
             }
 
-            // ── TjMax（各核心的溫度上限） ──
-            // TjMax 陣列最多 128 個（對應每顆 CPU 的每個核心）。
-            // 這個值在 SDK 裡一律是絕對攝氏，不受使用者的華氏設定影響，
-            // 先前沿用 tempUnit 會在華氏模式下標成「100 °F」。
-            uint tjMaxCount = Math.Min(totalCores, 128);
-            for (uint i = 0; i < tjMaxCount; i++)
+            // ── TjMax（各 CPU 的溫度上限；官方 SDK uiTjMax 依處理器索引） ──
+            // TjMax 陣列最多 128 個，每顆 CPU 一筆。
+            // 官方 SDK Program.cs 的 TjMax 與核心溫度共用 IsFahrenheit 所選的 TempType。
+            for (uint i = 0; i < cpuCnt; i++)
             {
                 uint tjMax = accessor.ReadUInt32(OffsetTjMax + i * 4);
-                if (tjMax > 0 && tjMax < 200) // 合理範圍
+                double tjMaxCelsius = isFahrenheit ? (tjMax - 32.0) * 5 / 9 : tjMax;
+                if (tjMaxCelsius > 0 && tjMaxCelsius < 200)
                 {
                     result.Add(new ExternalReading(
                         Source:     "Core Temp",
                         SensorType: "Temperature",
-                        Label:      $"{cpuName} 核心 #{i} TjMax",
+                        Label:      $"{cpuName} CPU #{i} TjMax",
                         Value:      tjMax,
-                        Unit:       "°C"
+                        Unit:       tempUnit,
+                        DeviceIdentity: cpuCnt == 1 ? cpuName : null,
+                        CapturedAtUtc: capturedAt
                     ));
                 }
             }
@@ -221,7 +239,9 @@ public static class CoreTempSharedMem
                 ));
             }
 
-            readings = result;
+            var acquisition = new SensorAcquisition(readStarted, Stopwatch.GetTimestamp());
+            readings = result.Select(reading => reading with
+                { CapturedAtUtc = capturedAt, Acquisition = acquisition }).ToArray();
             return true;
         }
         catch (System.IO.FileNotFoundException)
@@ -236,7 +256,7 @@ public static class CoreTempSharedMem
         }
         finally
         {
-            accessor?.Dispose();
+            if (snapshot is null) accessor?.Dispose();
             mmf?.Dispose();
         }
     }

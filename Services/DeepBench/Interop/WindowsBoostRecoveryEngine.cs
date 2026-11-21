@@ -10,11 +10,28 @@ namespace XinSpect;
 /// </summary>
 public sealed class WindowsBoostRecoveryEngine : IBoostRecoveryEngine
 {
-    private const int ProcessorInformation = 11;
-    private const int ProcessorPowerRecordSize = 24;
     private const int LoadSliceIterations = 4096;
 
     private readonly SemaphoreSlim _runLock = new(1, 1);
+    private readonly WindowsProcessorPowerSampler _power;
+    private readonly Func<int> _workerBudget;
+    private readonly Func<int, nint> _allocate;
+    private readonly Action<nint> _free;
+    private readonly Action<int>? _beforeStart;
+
+    public WindowsBoostRecoveryEngine() : this(
+        WindowsProcessorPowerSampler.CreateWindows(), () => Environment.ProcessorCount,
+        bytes => Marshal.AllocHGlobal(bytes), Marshal.FreeHGlobal) { }
+
+    internal WindowsBoostRecoveryEngine(WindowsProcessorPowerSampler power, Func<int> workerBudget,
+        Func<int, nint> allocate, Action<nint> free, Action<int>? beforeStart = null)
+    {
+        _power = power;
+        _workerBudget = workerBudget;
+        _allocate = allocate;
+        _free = free;
+        _beforeStart = beforeStart;
+    }
 
     public async Task<BoostRecoveryRun> MeasureAsync(
         BoostRecoveryWorkload workload,
@@ -26,60 +43,65 @@ public sealed class WindowsBoostRecoveryEngine : IBoostRecoveryEngine
         ArgumentOutOfRangeException.ThrowIfLessThan(workload.RecoveryMs, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(workload.SamplingIntervalMs, 1);
 
-        await _runLock.WaitAsync(cancellationToken).ConfigureAwait(false);
-        int processorCount = Environment.ProcessorCount;
-        nint buffer = Marshal.AllocHGlobal(processorCount * ProcessorPowerRecordSize);
-        PulseGate gate = new();
-        List<Thread> workers = [];
+        cancellationToken.ThrowIfCancellationRequested();
         try
         {
-            for (int index = 0; index < processorCount; index++)
-            {
-                var worker = new PulseWorker(gate);
-                var thread = new Thread(worker.Run)
+            int workerCount = _workerBudget();
+            ProcessorPowerScope scope = _power.CaptureScope();
+            scope.ValidateWorkerCount(workerCount);
+            return await DeepBenchWorkerLifetime.RunAsync<PulseGate, BoostRecoveryRun>(
+                _runLock,
+                workerCount,
+                () => _allocate(scope.BufferBytes),
+                _free,
+                () => new PulseGate(),
+                gate => gate.Stop(),
+                gate => gate.Dispose(),
+                (gate, index) =>
                 {
-                    IsBackground = true,
-                    Name = $"XinSpect Boost Pulse {index + 1}"
-                };
-                workers.Add(thread);
-                thread.Start();
-            }
+                    var worker = new PulseWorker(gate);
+                    return new Thread(worker.Run)
+                    {
+                        IsBackground = true,
+                        Name = $"XinSpect Boost Pulse {index + 1}"
+                    };
+                },
+                async (gate, buffer) =>
+                {
+                    var rounds = new List<BoostRecoveryRound>(workload.Rounds);
+                    for (int round = 0; round < workload.Rounds; round++)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        rounds.Add(await ObserveRoundAsync(
+                            workload,
+                            scope,
+                            buffer,
+                            gate,
+                            cancellationToken).ConfigureAwait(false));
+                    }
 
-            var rounds = new List<BoostRecoveryRound>(workload.Rounds);
-            for (int round = 0; round < workload.Rounds; round++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                rounds.Add(await ObserveRoundAsync(
-                    workload,
-                    processorCount,
-                    buffer,
-                    (uint)(processorCount * ProcessorPowerRecordSize),
-                    gate,
-                    cancellationToken).ConfigureAwait(false));
-            }
-
-            return new BoostRecoveryRun(processorCount, rounds);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    _power.VerifyScope(scope);
+                    return new BoostRecoveryRun(workerCount, rounds);
+                },
+                cancellationToken,
+                beforeStart: _beforeStart,
+                prepare: buffer => _ = _power.Sample(scope, buffer, false, cancellationToken)).ConfigureAwait(false);
         }
-        finally
+        catch (ProcessorPowerUnsupportedException error)
         {
-            gate.Stop();
-            foreach (Thread worker in workers)
-                worker.Join();
-            gate.Dispose();
-            Marshal.FreeHGlobal(buffer);
-            _runLock.Release();
+            cancellationToken.ThrowIfCancellationRequested();
+            throw new BoostRecoveryUnsupportedException(error.Message);
         }
     }
 
-    private static async Task<BoostRecoveryRound> ObserveRoundAsync(
+    private async Task<BoostRecoveryRound> ObserveRoundAsync(
         BoostRecoveryWorkload workload,
-        int processorCount,
+        ProcessorPowerScope scope,
         nint buffer,
-        uint bufferBytes,
         PulseGate gate,
         CancellationToken cancellationToken)
     {
-        _ = processorCount;
         long roundStart = Stopwatch.GetTimestamp();
         List<BoostRecoverySample> samples = [];
         while (true)
@@ -91,72 +113,19 @@ public sealed class WindowsBoostRecoveryEngine : IBoostRecoveryEngine
 
             bool loadActive = elapsedMs >= workload.IdleMs && elapsedMs < workload.IdleMs + workload.LoadMs;
             gate.SetLoad(loadActive);
-            long queryStart = Stopwatch.GetTimestamp();
-            int status = CallNtPowerInformation(
-                ProcessorInformation,
-                0,
-                0,
-                buffer,
-                bufferBytes);
-            long queryEnd = Stopwatch.GetTimestamp();
-            if (status != 0)
-            {
-                throw new BoostRecoveryUnsupportedException(
-                    $"CallNtPowerInformation returned {status}；不輸出部分 boost recovery 結果。");
-            }
+            ProcessorPowerRange range = _power.Sample(scope, buffer, false, cancellationToken);
+            long queryEnd = range.QueryCompletedTimestamp;
 
-            samples.Add(CreateSample(
+            samples.Add(new BoostRecoverySample(
                 loadActive ? BoostRecoveryPhase.Load
                     : elapsedMs >= workload.IdleMs + workload.LoadMs ? BoostRecoveryPhase.Recovery
                     : BoostRecoveryPhase.Idle,
                 Stopwatch.GetElapsedTime(roundStart, queryEnd).TotalMilliseconds,
-                processorCount,
-                buffer));
+                range.CurrentMin, range.CurrentMax, range.LimitMin, range.LimitMax));
             await Task.Delay(workload.SamplingIntervalMs, cancellationToken).ConfigureAwait(false);
         }
 
         return new BoostRecoveryRound(samples);
-    }
-
-    private static BoostRecoverySample CreateSample(
-        BoostRecoveryPhase phase,
-        double timeMs,
-        int processorCount,
-        nint buffer)
-    {
-        double currentMin = double.MaxValue;
-        double currentMax = 0;
-        double limitMin = double.MaxValue;
-        double limitMax = 0;
-        for (int index = 0; index < processorCount; index++)
-        {
-            nint record = buffer + index * ProcessorPowerRecordSize;
-            uint number = unchecked((uint)Marshal.ReadInt32(record));
-            uint maxMhz = unchecked((uint)Marshal.ReadInt32(record + 4));
-            uint currentMhz = unchecked((uint)Marshal.ReadInt32(record + 8));
-            uint mhzLimit = unchecked((uint)Marshal.ReadInt32(record + 12));
-            _ = unchecked((uint)Marshal.ReadInt32(record + 16));
-            uint idleState = unchecked((uint)Marshal.ReadInt32(record + 20));
-            if (number >= (uint)processorCount || maxMhz == 0)
-            {
-                throw new BoostRecoveryUnsupportedException(
-                    $"電源 API 回報的核心索引或 MaxMhz 不完整（processor {number}）；不輸出脈衝曲線。");
-            }
-
-            if (currentMhz == 0)
-            {
-                throw new BoostRecoveryUnsupportedException(
-                    $"電源 API 無法判定 processor {number} 的 CurrentMhz；不猜測脈衝頻率。");
-            }
-
-            currentMin = Math.Min(currentMin, currentMhz);
-            currentMax = Math.Max(currentMax, currentMhz);
-            limitMin = Math.Min(limitMin, mhzLimit);
-            limitMax = Math.Max(limitMax, mhzLimit);
-            _ = idleState;
-        }
-
-        return new BoostRecoverySample(phase, timeMs, currentMin, currentMax, limitMin, limitMax);
     }
 
     private sealed class PulseGate : IDisposable
@@ -165,7 +134,16 @@ public sealed class WindowsBoostRecoveryEngine : IBoostRecoveryEngine
         private readonly ManualResetEventSlim _stop = new(false);
         private readonly WaitHandle[] _waitHandles;
 
-        public PulseGate() => _waitHandles = [_stop.WaitHandle, _load.WaitHandle];
+        public PulseGate()
+        {
+            try { _waitHandles = [_stop.WaitHandle, _load.WaitHandle]; }
+            catch
+            {
+                _load.Dispose();
+                _stop.Dispose();
+                throw;
+            }
+        }
 
         public void SetLoad(bool active)
         {
@@ -216,11 +194,4 @@ public sealed class WindowsBoostRecoveryEngine : IBoostRecoveryEngine
         }
     }
 
-    [DllImport("powrprof.dll")]
-    private static extern int CallNtPowerInformation(
-        int level,
-        nint inputBuffer,
-        uint inputBufferSize,
-        nint outputBuffer,
-        uint outputBufferSize);
 }

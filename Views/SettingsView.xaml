@@ -199,12 +199,12 @@
                                TextWrapping="Wrap" Margin="27,3,0,0"
                                Text="進階測試會讓 CPU 或記憶體短時間高負載；EC 僅做 ACPI 間接識別，不直接讀寫 EC 埠。測試仍需在各功能頁自行啟動。"/>
                     <CheckBox Style="{StaticResource SetCheck}" Margin="0,12,0,0"
-                              Content="第二級：硬體寫入與合成威脅測試（高風險；預設關閉）"
+                              Content="第二級：硬體寫入、合成威脅與危險記憶體壓力（高風險；預設關閉）"
                               IsChecked="{Binding Settings.HighRiskHardwareOperationsEnabled, Mode=TwoWay}"
                               IsEnabled="{Binding Settings.AdvancedDiagnosticsEnabled}"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Foreground="{DynamicResource CriticalBrush}"
                                TextWrapping="Wrap" Margin="27,3,0,0"
-                               Text="必須先開啟第一級。威脅情境只使用合成資料；硬體寫入會改變即時設定，仍需逐項確認。關閉本級不會自動還原已套用的值，還原控制仍可使用。"/>
+                               Text="必須先開啟第一級。合成威脅情境使用合成資料；Rowhammer 則使用實體記憶體施壓，可能損壞其他處理程序資料，須專用測試機與逐次同意。硬體寫入會改變即時設定，仍需逐項確認。關閉本級不會自動還原已套用的值，還原控制仍可使用；還原許可不能授權壓力測試。"/>
 
                     <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,18,0,0"/>
                     <local:SectionHead Text="動態視覺效果" HelpKey="settings/動態視覺效果" Margin="0,16,0,0"/>

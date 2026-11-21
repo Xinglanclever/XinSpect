@@ -157,6 +157,18 @@ public sealed class MemoryTimings : ObservableObject
     /// <summary>SPD 的 JEDEC 能力表，不是控制器目前運行時序。</summary>
     public bool IsJedecReference { get; set; }
 
+    // Per-quantity provenance survives priority resolution and snapshot projection.
+    public string TimingFactSource { get; set; } = "";
+    public FactTrustLevel? TimingFactTrust { get; set; }
+    public FactAvailability TimingFactAvailability { get; set; } = FactAvailability.Unknown;
+    public string? TimingFactReason { get; set; }
+    public string RateFactSource { get; set; } = "";
+    public FactTrustLevel? RateFactTrust { get; set; }
+    public FactAvailability RateFactAvailability { get; set; } = FactAvailability.Unknown;
+    public string? RateFactReason { get; set; }
+    public bool RateIsConfigured { get; set; }
+    public bool RateIsJedecReference { get; set; }
+
     private string _status = "尚未讀取";
     public string Status { get => _status; set => SetProperty(ref _status, value); }
 

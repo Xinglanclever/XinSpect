@@ -113,6 +113,65 @@ public class DmtKnowledgeTests
     }
 
     [Fact]
+    public void Established位圖位置對應EEDID實際位元()
+    {
+        var first = DmtKnowledge.EstablishedTiming1.Single(e => e.Bit == 0);
+        Assert.Equal(35, first.ByteOffset);
+        Assert.Equal(0x01, first.BitMask);
+        var last = DmtKnowledge.EstablishedTiming1.Single(e => e.Bit == 16);
+        Assert.Equal(37, last.ByteOffset);
+        Assert.Equal(0x80, last.BitMask);
+        var thirdFirst = DmtKnowledge.EstablishedTiming3.Single(e => e.Bit == 0);
+        Assert.Equal(6, thirdFirst.ByteOffset);
+        Assert.Equal(0x80, thirdFirst.BitMask);
+        var thirdLast = DmtKnowledge.EstablishedTiming3.Single(e => e.Bit == 43);
+        Assert.Equal(11, thirdLast.ByteOffset);
+        Assert.Equal(0x10, thirdLast.BitMask);
+    }
+
+    [Fact]
+    public void AppleEstablishedTiming是1152乘870且不冒充DMT()
+    {
+        var apple = DmtKnowledge.EstablishedTiming1.Single(e => e.Bit == 16);
+        Assert.Equal((1152, 870, "75"), (apple.Width, apple.Height, apple.RefreshHz));
+        Assert.Null(DmtKnowledge.ResolveEst1(apple));
+    }
+
+    [Fact]
+    public void EstablishedTiming遺產清單逐列對帳()
+    {
+        var missing = DmtKnowledge.EstablishedTiming1.Where(e => DmtKnowledge.ResolveEst1(e) is null)
+            .Select(e => $"{e.Width}x{e.Height}@{e.RefreshHz}{(e.Interlaced ? "i" : "")}")
+            .OrderBy(x => x, StringComparer.Ordinal).ToArray();
+        Assert.Equal(new[] { "1152x870@75", "640x480@67", "720x400@70", "720x400@88", "832x624@75" }, missing);
+        Assert.Null(DmtKnowledge.ResolveEst1(
+            DmtKnowledge.EstablishedTiming1.Single(e => e.Width == 720 && e.Height == 400 && e.RefreshHz == "70")));
+    }
+
+    [Fact]
+    public void 幾何衝突時不任選DMT()
+    {
+        Assert.Null(DmtKnowledge.FindByGeometry(1366, 768, "60"));
+        Assert.Equal(0x51, DmtKnowledge.FindByTiming(85500, 1366, 1436, 1579, 1792,
+            768, 771, 774, 798, "P", "P", false)?.Code);
+        Assert.Equal(0x56, DmtKnowledge.FindByTiming(72000, 1366, 1380, 1436, 1500,
+            768, 769, 772, 800, "P", "P", false)?.Code);
+        Assert.Null(DmtKnowledge.FindByTiming(72000, 1366, 1436, 1579, 1792,
+            768, 771, 774, 798, "P", "P", false));
+    }
+
+    [Fact]
+    public void 完整時序逐列可唯一回查()
+    {
+        foreach (var m in DmtKnowledge.Modes)
+        {
+            var found = DmtKnowledge.FindByTiming(m.ClockKhz, m.HActive, m.HSyncStart, m.HSyncEnd, m.HTotal,
+                m.VActive, m.VSyncStart, m.VSyncEnd, m.VTotal, m.HSync, m.VSync, m.Interlaced);
+            Assert.Equal(m.Code, found?.Code);
+        }
+    }
+
+    [Fact]
     public void 摘要數字與明細對帳()
     {
         var facts = Collect();

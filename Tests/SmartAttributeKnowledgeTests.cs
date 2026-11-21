@@ -5,7 +5,7 @@ using Xunit;
 namespace XinSpect.Tests;
 
 /// <summary>
-/// SMART 廠商屬性知識表（ULTIMATE-10000 第 14 列）的契約：六家表各自 ID 排序無重複、
+/// SMART 廠商屬性知識表（ULTIMATE-10000 第 14 列）的契約：各品牌群表各自 ID 排序無重複、
 /// 每列有名稱與出處、raw／normalized 欄位語意齊備、未知 ID／未知廠商回未知不丟例外、
 /// 數量有下限（查到多少算多少，訊息如實）、大小有上限（防腐化式膨脹）。
 /// </summary>
@@ -15,16 +15,16 @@ public class SmartAttributeKnowledgeTests
     [
         SmartVendor.Samsung, SmartVendor.Seagate, SmartVendor.WesternDigital,
         SmartVendor.Kingston, SmartVendor.Micron, SmartVendor.SanDisk,
+        SmartVendor.IntelSolidigm, SmartVendor.Hgst,
     ];
 
-    private const int MinRowsPerVendor = 15;   // 下限：查證得到的才收——實際收了多少就是多少
     private const int MaxRowsPerVendor = 45;   // 上限：防止沒有出處的列被慢慢塞進來
     private const int MaxRowsTotal = 200;
 
     // ── 表的形狀 ─────────────────────────────────────────────────────────
 
     [Fact]
-    public void 六家表各自_ID嚴格升冪無重複()
+    public void 各品牌群表各自_ID嚴格升冪無重複()
     {
         foreach (var vendor in Vendors)
         {
@@ -48,19 +48,28 @@ public class SmartAttributeKnowledgeTests
                 Assert.False(string.IsNullOrWhiteSpace(row.Unit), $"{vendor} 屬性 {row.Id} 缺單位");
                 // 出處要能稽核：含抓取日期標記
                 Assert.False(string.IsNullOrWhiteSpace(row.Source), $"{vendor} 屬性 {row.Id} 缺出處");
-                Assert.Contains(SmartAttributeKnowledge.FetchedDate, row.Source);
+                var dates = System.Text.RegularExpressions.Regex.Matches(row.Source, @"20\d{2}-\d{2}-\d{2}");
+                Assert.NotEmpty(dates);
+                foreach (System.Text.RegularExpressions.Match date in dates)
+                {
+                    Assert.True(DateOnly.TryParseExact(date.Value, "yyyy-MM-dd",
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None, out var parsed));
+                    Assert.True(parsed <= DateOnly.ParseExact(SmartAttributeKnowledge.FetchedDate, "yyyy-MM-dd",
+                        System.Globalization.CultureInfo.InvariantCulture));
+                }
             }
         }
     }
 
     [Fact]
-    public void 數量下限_每家至少已解碼十五列()
+    public void 數量守門_只守已查證內容不強迫湊足十五列()
     {
         foreach (var vendor in Vendors)
         {
             int actual = SmartAttributeKnowledge.Count(vendor);
-            Assert.True(actual >= MinRowsPerVendor,
-                $"{vendor} 收錄 {actual} 列，低於下限 {MinRowsPerVendor}——查證不足，缺的如實缺，但下限是守門線");
+            int verified = vendor switch { SmartVendor.IntelSolidigm => 21, SmartVendor.Hgst => 1, _ => 15 };
+            Assert.True(actual >= verified, $"{vendor} 收錄 {actual} 列，已核對內容遺失");
         }
     }
 
@@ -75,7 +84,8 @@ public class SmartAttributeKnowledgeTests
                 $"{vendor} 收錄 {actual} 列，超過上限 {MaxRowsPerVendor}——無出處的列不得慢慢塞進表");
             total += actual;
         }
-        Assert.True(total <= MaxRowsTotal, $"六家合計 {total} 列，超過上限 {MaxRowsTotal}");
+        Assert.Equal(162, total);  // 不把 DEFAULT HDD 欄位冒充 HGST 已驗證覆蓋
+        Assert.True(total <= MaxRowsTotal, $"各品牌群合計 {total} 列，超過上限 {MaxRowsTotal}");
     }
 
     // ── 查詢契約 ─────────────────────────────────────────────────────────
@@ -104,6 +114,52 @@ public class SmartAttributeKnowledgeTests
         var sandisk233 = SmartAttributeKnowledge.Lookup(SmartVendor.SanDisk, 233);
         Assert.NotNull(sandisk233);
         Assert.Equal("GiB", sandisk233.Unit);
+
+        var intel233 = SmartAttributeKnowledge.Lookup(SmartVendor.IntelSolidigm, 233);
+        Assert.NotNull(intel233);
+        Assert.Contains("Media Wearout", intel233.Name);
+        Assert.Contains("drivedb.h 指定", intel233.RawSemantics);
+
+        var intel234 = SmartAttributeKnowledge.Lookup(SmartVendor.IntelSolidigm, 234);
+        Assert.NotNull(intel234);
+        Assert.Contains("raw24/raw32:04321", intel234.RawSemantics);
+        Assert.Contains("不可當作一般整數計數", intel234.RawSemantics);
+
+        var intel241 = SmartAttributeKnowledge.Lookup(SmartVendor.IntelSolidigm, 241);
+        Assert.NotNull(intel241);
+        Assert.Equal("32 MiB/count", intel241.Unit);
+        Assert.Contains("raw × 32 MiB", intel241.RawSemantics);
+
+        var hgst22 = SmartAttributeKnowledge.Lookup(SmartVendor.Hgst, 22);
+        Assert.NotNull(hgst22);
+        Assert.Contains("Helium Level", hgst22.Name);
+        Assert.Contains("不能僅由品牌推定", hgst22.RawSemantics);
+        Assert.Null(SmartAttributeKnowledge.Lookup(SmartVendor.Hgst, 220));
+        Assert.Null(SmartAttributeKnowledge.Lookup(SmartVendor.Hgst, 240));
+        // 型號邊界由上游實際範例固定；NVMe、OEM 與早期不同語意系列不能串表。
+        foreach (string model in new[] { "INTEL SSDSC2BB120G4", "INTEL SSDSC2KB480G7",
+                     "SOLIDIGM SSDSC2KB960GZ", "intel ssdsc2kb960gz ATA Device" })
+        {
+            Assert.Equal("32 MiB/count", SmartAttributeKnowledge.LookupForModel(SmartVendor.IntelSolidigm, model, 241)!.Unit);
+            Assert.NotNull(SmartAttributeKnowledge.LookupForModel(SmartVendor.IntelSolidigm, model, 234));
+            Assert.Null(SmartAttributeKnowledge.LookupForModel(SmartVendor.IntelSolidigm, model, 249));
+        }
+        Assert.NotNull(SmartAttributeKnowledge.LookupForModel(SmartVendor.IntelSolidigm, "INTEL SSDSC2KF480H6", 249));
+        Assert.Null(SmartAttributeKnowledge.LookupForModel(SmartVendor.IntelSolidigm, "INTEL SSDSC2KF480H6", 234));
+        foreach (string model in new[] { "INTEL SSDPE2KX", "Solidigm P44 Pro", "INTEL SSDSA2CW160G3",
+                     "INTEL SSDSC2KB480G7R", "SSDSC2KB480G7R", "INTEL SSDSC2KB038T8L",
+                     "INTEL SSDSC2KB480G7 UNKNOWN", "INTEL", "", new string('X', 200) })
+            Assert.Null(SmartAttributeKnowledge.LookupForModel(SmartVendor.IntelSolidigm, model, 241));
+        foreach (string model in new[] { "HGST HUS726060ALA640", "HGST HUH728080ALE600", "HGST HUH721010ALE600" })
+            Assert.NotNull(SmartAttributeKnowledge.LookupForModel(SmartVendor.Hgst, model, 22));
+        foreach (string model in new[] { "HGST HUS726060ALE614", "HGST Ultrastar He10", "HGST HUS726060ALA640X" })
+            Assert.Null(SmartAttributeKnowledge.LookupForModel(SmartVendor.Hgst, model, 22));
+        Assert.Contains("Available Reserved", SmartAttributeKnowledge.LookupForModel(SmartVendor.IntelSolidigm,
+            "INTEL SSDSC2KB480G7", 0xE8)!.Name); // E8 = 232，不能誤寫為全部未知
+        Assert.Null(SmartAttributeKnowledge.LookupForModel(SmartVendor.IntelSolidigm, "INTEL SSDSC2KB480G7", 0xE7));
+
+        Assert.Null(SmartAttributeKnowledge.Lookup(SmartVendor.IntelSolidigm, 238));
+        Assert.Null(SmartAttributeKnowledge.Lookup(SmartVendor.Hgst, 253));
     }
 
     [Fact]
@@ -127,6 +183,10 @@ public class SmartAttributeKnowledgeTests
         Assert.NotNull(SmartAttributeKnowledge.Lookup("WDC", 194));
         Assert.NotNull(SmartAttributeKnowledge.Lookup("Western Digital", 194));
         Assert.NotNull(SmartAttributeKnowledge.Lookup("Crucial", 202));   // Crucial＝Micron 消費品牌
+        Assert.NotNull(SmartAttributeKnowledge.Lookup("Intel", 233));
+        Assert.NotNull(SmartAttributeKnowledge.Lookup("Solidigm", 234));
+        Assert.NotNull(SmartAttributeKnowledge.Lookup("Intel/Solidigm", 241));
+        Assert.NotNull(SmartAttributeKnowledge.Lookup("HGST", 22));
 
         // 未知廠商與空值——「未知」，不是例外
         Assert.Null(SmartAttributeKnowledge.Lookup("Toshiba", 9));
@@ -143,7 +203,10 @@ public class SmartAttributeKnowledgeTests
         Assert.True(SmartAttributeKnowledge.TryNormalizeVendor("micron", out var v2));
         Assert.Equal(SmartVendor.Micron, v2);
 
-        Assert.False(SmartAttributeKnowledge.TryNormalizeVendor("HGST", out _));
+        Assert.True(SmartAttributeKnowledge.TryNormalizeVendor("HGST", out var hgst));
+        Assert.Equal(SmartVendor.Hgst, hgst);
+        Assert.True(SmartAttributeKnowledge.TryNormalizeVendor("Intel", out var intel));
+        Assert.Equal(SmartVendor.IntelSolidigm, intel);
         Assert.False(SmartAttributeKnowledge.TryNormalizeVendor(null, out _));
     }
 

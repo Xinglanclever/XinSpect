@@ -1,4 +1,4 @@
-<UserControl x:Class="XinSpect.PcieAnalysisView"
+﻿<UserControl x:Class="XinSpect.PcieAnalysisView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect">
@@ -44,12 +44,13 @@
                           RowBackground="Transparent" AlternatingRowBackground="{DynamicResource SurfaceBrush}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="裝置" Binding="{Binding DeviceName}" Width="220"/>
-                        <DataGridTextColumn Header="位置" Binding="{Binding LocationLabel}" Width="160"/>
+                        <DataGridTextColumn Header="位置／範圍" Binding="{Binding LocationLabel}" Width="220"/>
                         <DataGridTextColumn Header="協商鏈路" Binding="{Binding NegotiatedLabel}" Width="100"/>
                         <DataGridTextColumn Header="能力鏈路" Binding="{Binding CapableLabel}" Width="100"/>
-                        <DataGridTextColumn Header="協商頻寬" Binding="{Binding NegotiatedBwLabel}" Width="110"/>
-                        <DataGridTextColumn Header="能力頻寬" Binding="{Binding CapableBwLabel}" Width="110"/>
-                        <DataGridTextColumn Header="拆分" Binding="{Binding SplitDescription}" Width="90"/>
+                        <DataGridTextColumn Header="協商理論頻寬" Binding="{Binding NegotiatedBwLabel}" Width="110"/>
+                        <DataGridTextColumn Header="能力理論頻寬" Binding="{Binding CapableBwLabel}" Width="110"/>
+                        <DataGridTextColumn Header="來源身份" Binding="{Binding RawInstanceId}" Width="220"/>
+                        <DataGridTextColumn Header="拆分證據" Binding="{Binding SplitDescription}" Width="90"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </Border>
@@ -67,16 +68,13 @@
                         <DataGridTextColumn Header="世代" Binding="{Binding Name}" Width="70"/>
                         <DataGridTextColumn Header="傳輸率 (GT/s)" Binding="{Binding TransferRateGTs}" Width="110"/>
                         <DataGridTextColumn Header="編碼" Binding="{Binding Encoding}" Width="140"/>
-                        <DataGridTextColumn Header="x1 頻寬 (MB/s)" Width="120">
-                            <DataGridTextColumn.Binding>
-                                <MultiBinding StringFormat="{}{0:N0}">
-                                    <Binding Path="TransferRateGTs"/>
-                                </MultiBinding>
-                            </DataGridTextColumn.Binding>
-                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="x1 理論單方向 (MB/s)" Binding="{Binding TheoreticalSingleLaneLabel}" Width="180"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </Border>
+
+            <TextBlock Text="頻寬為非 FLIT 編碼模式下扣除線路編碼開銷的理論單方向速率；未扣除封包／協定開銷，不是實測或應用有效吞吐。Gen6 保留原始傳輸率，FLIT／FEC 頻寬尚未校核。"
+                       TextWrapping="Wrap" FontSize="12" Margin="0,0,0,16" Foreground="{DynamicResource SecondaryInkBrush}"/>
 
             <!-- ==== 通道分配 ==== -->
             <TextBlock Text="通道分配" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"
@@ -96,24 +94,18 @@
 
                     <TextBlock Text="CPU 通道" FontSize="13" VerticalAlignment="Center"
                                Foreground="{DynamicResource SecondaryInkBrush}"/>
-                    <ProgressBar Grid.Column="1" Minimum="0"
-                                 Maximum="{Binding PcieAnalysis.TotalCpuLanes}"
-                                 Value="{Binding PcieAnalysis.UsedCpuLanes, Mode=OneWay}"
-                                 Height="18" Margin="8,0"/>
+
                     <TextBlock Grid.Column="2" FontSize="13" VerticalAlignment="Center"
                                Foreground="{DynamicResource PrimaryInkBrush}">
-                        <Run Text="{Binding PcieAnalysis.UsedCpuLanes, Mode=OneWay}"/><Run Text="/"/><Run Text="{Binding PcieAnalysis.TotalCpuLanes, Mode=OneWay}"/>
+                        <Run Text="{Binding PcieAnalysis.CpuLaneCountLabel, Mode=OneWay}"/>
                     </TextBlock>
 
                     <TextBlock Grid.Row="2" Text="PCH 通道" FontSize="13" VerticalAlignment="Center"
                                Foreground="{DynamicResource SecondaryInkBrush}"/>
-                    <ProgressBar Grid.Row="2" Grid.Column="1" Minimum="0"
-                                 Maximum="{Binding PcieAnalysis.TotalChipsetLanes}"
-                                 Value="{Binding PcieAnalysis.UsedChipsetLanes, Mode=OneWay}"
-                                 Height="18" Margin="8,0"/>
+
                     <TextBlock Grid.Row="2" Grid.Column="2" FontSize="13" VerticalAlignment="Center"
                                Foreground="{DynamicResource PrimaryInkBrush}">
-                        <Run Text="{Binding PcieAnalysis.UsedChipsetLanes, Mode=OneWay}"/><Run Text="/"/><Run Text="{Binding PcieAnalysis.TotalChipsetLanes, Mode=OneWay}"/>
+                        <Run Text="{Binding PcieAnalysis.ChipsetLaneCountLabel, Mode=OneWay}"/>
                     </TextBlock>
                 </Grid>
             </Border>

@@ -130,6 +130,35 @@ public class SpdSurveyorTests
     }
 
     [Fact]
+    public void 同一匯流排中途取消仍保留已完成模組快照()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var bus = new StubBus("部分完成", (0x50, RealSpd()), (0x51, RealSpd()));
+        SpdSurvey? partial = null;
+        Assert.Throws<OperationCanceledException>(() => SpdSurveyor.Survey([bus],
+            cancellationToken: cancellation.Token, progress: snapshot =>
+            {
+                partial = snapshot;
+                if (snapshot.Modules.Count == 1) cancellation.Cancel();
+            }));
+        var module = Assert.Single(partial!.Modules);
+        Assert.Equal(0x50, module.Address);
+        Assert.Equal("ZhuQue_8G_Y", module.Decoded.PartNumber);
+        Assert.True(bus.Released);
+    }
+
+    [Fact]
+    public void 巡檢進度快照不被後續模組讀取改寫()
+    {
+        var snapshots = new List<SpdSurvey>();
+        var result = SpdSurveyor.Survey([new StubBus("兩條", (0x50, RealSpd()), (0x51, RealSpd()))],
+            progress: snapshots.Add);
+        Assert.Empty(snapshots[0].Modules);
+        Assert.Single(snapshots[1].Modules);
+        Assert.Equal(2, result.Modules.Count);
+    }
+
+    [Fact]
     public void 讀不到的位址進Problems而不是被吞掉()
     {
         var broken = RealSpd();

@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace XinSpect;
 
@@ -43,73 +43,52 @@ public static class CpuTopologyService
     {
         uint len = 0;
         GetLogicalProcessorInformationEx(RelKind.All, 0, ref len);
-        if (len == 0 || Marshal.GetLastWin32Error() != ERROR_INSUFFICIENT_BUFFER) return;
+        if (!WindowsTopologyBuffer.IsWithinBudget(len) || Marshal.GetLastWin32Error() != ERROR_INSUFFICIENT_BUFFER) return;
 
+        uint capacity = len;
         nint buf = Marshal.AllocHGlobal((int)len);
         try
         {
-            if (!GetLogicalProcessorInformationEx(RelKind.All, buf, ref len)) return;
+            if (!GetLogicalProcessorInformationEx(RelKind.All, buf, ref len) || len > capacity) return;
 
-            // 快取以 (階層, 型態) 匯總：實例數、大小、關聯度、快取行、共用執行緒數
-            var caches = new Dictionary<(int lvl, CacheType type), (int count, int size, int assoc, int line, int shared)>();
-
-            int off = 0;
-            while (off + 8 <= (int)len)
-            {
-                nint rec = buf + off;
-                int rel = Marshal.ReadInt32(rec);
-                int size = Marshal.ReadInt32(rec + 4);
-                if (size <= 0) break;
-                nint pl = rec + 8;   // payload 起點
-
-                switch ((RelKind)rel)
-                {
-                    case RelKind.ProcessorPackage:
-                        t.PhysicalPackages++;
-                        break;
-
-                    case RelKind.NumaNode:
-                        t.NumaNodes++;
-                        break;
-
-                    case RelKind.ProcessorCore:
-                    {
-                        t.PhysicalCores++;
-                        byte flags = Marshal.ReadByte(pl);        // bit0 = LTP_PC_SMT（此核心含多個邏輯處理器）
-                        if ((flags & 0x1) != 0) t.Smt = true;
-                        break;
-                    }
-
-                    case RelKind.Cache:
-                    {
-                        byte level = Marshal.ReadByte(pl);          // +0
-                        byte assoc = Marshal.ReadByte(pl + 1);      // +1（0xFF=全關聯）
-                        ushort line = (ushort)Marshal.ReadInt16(pl + 2);  // +2
-                        int cacheSize = Marshal.ReadInt32(pl + 4);  // +4（位元組）
-                        var type = (CacheType)Marshal.ReadInt32(pl + 8);  // +8
-                        long mask = Marshal.ReadIntPtr(pl + 32).ToInt64(); // GROUP_AFFINITY.Mask（+32）
-                        int shared = PopCount(mask);
-                        var key = (level, type);
-                        if (caches.TryGetValue(key, out var cur))
-                            caches[key] = (cur.count + 1, cacheSize, assoc, line, shared);
-                        else
-                            caches[key] = (1, cacheSize, assoc, line, shared);
-                        break;
-                    }
-                }
-                off += size;
-            }
-
-            foreach (var kv in caches
-                         .OrderBy(k => k.Key.lvl)
-                         .ThenBy(k => k.Key.type == CacheType.Instruction ? 0 : 1))
-            {
-                var (lvl, type) = kv.Key;
-                var (count, sz, assoc, line, shared) = kv.Value;
-                t.Caches.Add(new CpuCacheRow { Label = CacheLabel(lvl, type), Detail = CacheDetail(count, sz, assoc, line, shared) });
-            }
+            if (len > WindowsTopologyBuffer.MaxBufferBytes) return;
+            var bytes = new byte[(int)len];
+            Marshal.Copy(buf, bytes, 0, bytes.Length);
+            var parsed = ParseTopology(bytes);
+            if (parsed is null) return;
+            t.PhysicalPackages = parsed.PhysicalPackages;
+            t.PhysicalCores = parsed.PhysicalCores;
+            t.NumaNodes = parsed.NumaNodes;
+            t.Smt = parsed.Smt;
+            t.Caches.AddRange(parsed.Caches);
         }
         finally { Marshal.FreeHGlobal(buf); }
+    }
+
+    internal static CpuTopology? ParseTopology(byte[] bytes)
+    {
+        var records = WindowsTopologyBuffer.Parse(bytes);
+        if (records is null) return null;
+        var t = new CpuTopology();
+        var nodes = new HashSet<int>();
+        var caches = new Dictionary<(int Level, int Type, uint Size, int Assoc, int Line, int Shared), int>();
+        foreach (var rec in records)
+        {
+            if (rec.Relationship == 3) t.PhysicalPackages++;
+            if (rec.Relationship is 1 or 6) nodes.Add(rec.Aux);
+            if (rec.Relationship == 0) { t.PhysicalCores++; t.Smt |= (rec.Data[8] & 1) != 0; }
+            if (rec.Relationship != 2) continue;
+            var data = rec.Data;
+            var key = ((int)data[8], BitConverter.ToInt32(data, 16), BitConverter.ToUInt32(data, 12),
+                (int)data[9], (int)BitConverter.ToUInt16(data, 10),
+                rec.Affinities.Sum(a => System.Numerics.BitOperations.PopCount(a.Mask)));
+            caches[key] = caches.GetValueOrDefault(key) + 1;
+        }
+        t.NumaNodes = nodes.Count;
+        foreach (var (key, count) in caches.OrderBy(k => k.Key.Level).ThenBy(k => k.Key.Type))
+            t.Caches.Add(new CpuCacheRow { Label = CacheLabel(key.Level, (CacheType)key.Type),
+                Detail = CacheDetail(count, key.Size, key.Assoc, key.Line, key.Shared) });
+        return t;
     }
 
     private static string CacheLabel(int level, CacheType type) => type switch
@@ -120,7 +99,7 @@ public static class CpuTopologyService
         _ => $"L{level} 快取"
     };
 
-    private static string CacheDetail(int count, int sizeBytes, int assoc, int line, int shared)
+    private static string CacheDetail(int count, long sizeBytes, int assoc, int line, int shared)
     {
         string per = SizeText(sizeBytes);
         string total = count > 1 ? $"{count} × {per}（合計 {SizeText((long)sizeBytes * count)}）" : per;
@@ -158,5 +137,59 @@ public static class CpuTopologyService
             try { if (IsProcessorFeaturePresent(id)) t.Features.Add(name); }
             catch (Exception ex) { Diag.Swallow("查詢處理器功能位元", ex, $"「{name}」未列入功能清單（不代表這台機器沒有）"); }
         }
+    }
+}
+
+// Parses copied native records only; no native pointers escape this boundary.
+internal static class WindowsTopologyBuffer
+{
+    // A bounded snapshot supports hundreds of thousands of records without native-size allocations.
+    internal const int MaxBufferBytes = 16 * 1024 * 1024;
+    internal static bool IsWithinBudget(uint length) => length > 0 && length <= MaxBufferBytes;
+    internal sealed record Record(int Relationship, int Aux, byte[] Data,
+        IReadOnlyList<(ulong Mask, ushort Group)> Affinities);
+
+    internal static List<Record>? Parse(byte[] bytes)
+    {
+        if (bytes.Length > MaxBufferBytes) return null;
+        var result = new List<Record>();
+        int offset = 0;
+        while (offset < bytes.Length)
+        {
+            int remaining = bytes.Length - offset;
+            if (remaining < 8) return null;
+            int rel = BitConverter.ToInt32(bytes, offset);
+            int size = BitConverter.ToInt32(bytes, offset + 4);
+            if (size < 8 || size > remaining) return null;
+            int maskOffset = rel == 2 ? 40 : 32;
+            int count = 0;
+            if (rel is 0 or 3 or 5 or 7) {
+                if (size < 32) return null;
+                count = BitConverter.ToUInt16(bytes, offset + 30);
+                if (count == 0) return null;
+            }
+            else if (rel is 1 or 6 or 2) {
+                if (size < maskOffset) return null;
+                count = BitConverter.ToUInt16(bytes, offset + maskOffset - 2);
+                // Older NUMA/cache records use a single GroupMask and reserved zero count.
+                if (count == 0) count = 1;
+            }
+            if (count > 0 && count > (size - maskOffset) / 16) return null;
+            var affinities = new List<(ulong, ushort)>();
+            var groups = new HashSet<ushort>();
+            for (int i = 0; i < count; i++) {
+                int start = offset + maskOffset + i * 16;
+                ulong mask = BitConverter.ToUInt64(bytes, start);
+                ushort group = BitConverter.ToUInt16(bytes, start + 8);
+                if (!groups.Add(group)) return null;
+                // NUMA nodes may be memory-only; processor/cache identities require actual processors.
+                if (mask == 0 && rel is 0 or 2 or 3 or 5 or 7) return null;
+                affinities.Add((mask, group));
+            }
+            result.Add(new Record(rel, size >= 12 ? BitConverter.ToInt32(bytes, offset + 8) : 0,
+                bytes.AsSpan(offset, size).ToArray(), affinities));
+            offset += size;
+        }
+        return result;
     }
 }

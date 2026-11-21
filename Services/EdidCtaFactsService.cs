@@ -30,7 +30,7 @@ namespace XinSpect;
 /// </para>
 ///
 /// <para>
-/// <b>輸入從哪來：</b>預設探針走 <see cref="EdidService.ReadRawAll"/>（唯讀登錄檔、
+    /// <b>輸入從哪來：</b>預設探針走 <see cref="EdidService.ReadRawSnapshot"/>（唯讀登錄檔、
 /// 依內容雜湊去重）；測試注入假探針即可完全離線驗證。空輸入＝NotApplicable 並說明，
 /// <b>不是「0 台顯示器」</b>。
 /// </para>
@@ -83,10 +83,21 @@ public static class EdidCtaFactsService
     private sealed record DisplayExtension(string Label, CtaExtension Extension, bool MultipleExtensions);
 
     /// <summary>收集這一輪的所有 CTA 事實。</summary>
-    public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at, EdidProbe? probe = null)
+    public static IReadOnlyList<HardwareFact> Collect(
+        DateTimeOffset at, EdidProbe? probe = null, IReadOnlyList<string>? readErrors = null)
     {
         IReadOnlyList<(string Label, byte[] Edid)> edids;
-        try { edids = (probe ?? new EdidProbe(EdidService.ReadRawAll))(); }
+        var errors = readErrors?.ToList() ?? [];
+        try
+        {
+            if (probe is null)
+            {
+                var snapshot = EdidService.ReadRawSnapshot();
+                edids = snapshot.Edids;
+                errors.AddRange(snapshot.Errors);
+            }
+            else edids = probe();
+        }
         catch (Exception ex)
         {
             return AllUnavailable(at, FactAvailability.ReadError,
@@ -94,22 +105,35 @@ public static class EdidCtaFactsService
         }
 
         if (edids is null || edids.Count == 0)
+        {
+            if (errors.Count > 0)
+                return AllUnavailable(at, FactAvailability.ReadError,
+                    "EDID 登錄檔讀取不完整，無法判斷 CTA 能力：" + string.Join("；", errors));
             return AllUnavailable(at, FactAvailability.NotApplicable,
                 "沒有讀到任何顯示器的 EDID（登錄檔沒有可解析的 EDID 值）——"
                 + "本服務**不從 WMI 顯示器清單推測 CTA 能力**：那兩者是不同的來源。");
+        }
 
         var found = new List<DisplayExtension>();
+        var parseIssues = errors;
         foreach (var (label, edid) in edids)
         {
-            var extensions = Cta861.ParseExtensions(edid);
+            var parsed = Cta861.ParseExtensionsWithDiagnostics(edid);
+            parseIssues.AddRange(parsed.Issues.Select(issue => $"{label}：{issue}"));
+            var extensions = parsed.Extensions;
             for (int i = 0; i < extensions.Count; i++)
                 found.Add(new DisplayExtension(label, extensions[i], extensions.Count > 1));
         }
 
         if (found.Count == 0)
+        {
+            if (parseIssues.Count > 0)
+                return AllUnavailable(at, FactAvailability.Unknown,
+                    "EDID／CTA 完整性未確認，不能判定顯示器沒有 CTA 宣告：" + string.Join("；", parseIssues));
             return AllUnavailable(at, FactAvailability.NotApplicable,
                 $"{edids.Count} 台顯示器的 EDID 都沒有 CTA-861 擴充塊——"
                 + "那代表這些面板沒有宣告任何 CTA 能力，**不是「宣告了 0 項」**");
+        }
 
         var facts = new List<HardwareFact>();
 
@@ -145,7 +169,15 @@ public static class EdidCtaFactsService
             UnknownBlocksText, ext => Cta861.UndecodedBlocks(ext).Count > 0,
             "本解碼器沒有實作的資料塊（只列編號，不命名）"));
 
-        return facts;
+        if (parseIssues.Count == 0) return facts;
+        string partialReason = "部分 EDID／CTA 資料未通過完整性檢查；以下只列成功解讀部分，整體狀態未確認："
+            + string.Join("；", parseIssues);
+        return facts.Select(f => f with
+        {
+            Availability = FactAvailability.Unknown,
+            NumericValue = null,
+            UnavailableReason = partialReason,
+        }).ToList();
     }
 
     // ── 逐鍵的產生 ────────────────────────────────────────────────────────

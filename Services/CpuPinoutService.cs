@@ -36,12 +36,23 @@ public sealed class CpuPinoutService : ObservableObject
 
     // ── 建構 ────────────────────────────────────────────────
 
-    public CpuPinoutService()
+    private readonly object _detectionLock = new();
+    private readonly Func<string> _readSocket;
+    private Task? _detectionTask;
+    internal bool DetectionStarted { get { lock (_detectionLock) return _detectionTask is not null; } }
+
+    public CpuPinoutService() : this(autoDetect: true) { }
+
+    internal CpuPinoutService(bool autoDetect, Func<string>? readSocket = null)
     {
-        // WMI 查詢移到背景執行緒：本服務在 MainViewModel 建構時就 eager `= new()`，
-        // 若在建構子同步查 WMI 會凍住整個 App 啟動。屬性全為純量／List（無 ObservableCollection），
-        // 背景設值時 WPF 會自動把 PropertyChanged 封送回 UI 執行緒；DetectAndLoad 自帶 try/catch 不會逸出例外。
-        _ = Task.Run(DetectAndLoad);
+        _readSocket = readSocket ?? ReadWmiSocket;
+        if (autoDetect) _ = StartDetectionAsync();
+    }
+
+    internal Task StartDetectionAsync()
+    {
+        lock (_detectionLock)
+            return _detectionTask ??= Task.Run(DetectAndLoad);
     }
 
     // ── 偵測 ────────────────────────────────────────────────
@@ -50,7 +61,7 @@ public sealed class CpuPinoutService : ObservableObject
     {
         try
         {
-            string raw = ReadWmiSocket();
+            string raw = _readSocket();
             DetectedSocket = string.IsNullOrWhiteSpace(raw) ? "（WMI 未回傳）" : raw;
             ApplySocketData(NormalizeSocketName(raw));
         }

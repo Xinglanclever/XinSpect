@@ -71,12 +71,14 @@ internal static class HardwareReadingPriority
         var timing = current is { Loaded: true } ? current
             : report is { Loaded: true } ? report : direct;
         var timingSources = new HashSet<string>();
+        var usedTimingSources = new List<MemoryTimings>();
         string TimingValue(Func<MemoryTimings, string> read)
         {
             var candidates = timing?.IsJedecReference == true ? new[] { timing } : new[] { current, wmi, report };
             var source = candidates.FirstOrDefault(t => t is { Loaded: true } && Known(read(t)));
             if (source is null) return "—";
-            timingSources.Add(Pick(source.SourceText));
+            timingSources.Add(Pick(source.TimingFactSource, source.SourceText));
+            usedTimingSources.Add(source);
             return read(source);
         }
         var frequency = new[] { current, wmi, report, direct }
@@ -104,6 +106,28 @@ internal static class HardwareReadingPriority
             TCCDWRL = TimingValue(t => t.TCCDWRL),
             HostBridge = Pick(current?.HostBridge, report?.HostBridge),
         };
+        result.TimingFactSource = string.Join("＋", timingSources);
+        result.TimingFactAvailability = usedTimingSources.Count > 0
+            ? FactStateLattice.Combine(usedTimingSources.Select(t => t.TimingFactAvailability).ToArray())
+            : FactAvailability.Unknown;
+        result.TimingFactTrust = usedTimingSources.Count > 0
+            && usedTimingSources.All(t => t.TimingFactTrust == FactTrustLevel.Measured)
+                ? FactTrustLevel.Measured
+                : usedTimingSources.Any(t => t.TimingFactTrust is null or FactTrustLevel.Unknown)
+                    ? FactTrustLevel.Unknown
+                    : usedTimingSources.Any(t => t.TimingFactTrust == FactTrustLevel.Speculative)
+                        ? FactTrustLevel.Speculative
+                        : usedTimingSources.Any(t => t.TimingFactTrust == FactTrustLevel.Derived)
+                            ? FactTrustLevel.Derived : FactTrustLevel.Reported;
+        result.TimingFactReason = string.Join("；", usedTimingSources.Select(t => t.TimingFactReason)
+            .Where(x => !string.IsNullOrWhiteSpace(x)).Distinct());
+        result.RateFactSource = frequency is null ? "" : Pick(frequency.RateFactSource, frequency.SourceText);
+        result.RateFactTrust = frequency?.RateFactTrust ?? FactTrustLevel.Unknown;
+        result.RateFactAvailability = frequency?.RateFactAvailability ?? FactAvailability.Unknown;
+        result.RateFactReason = frequency?.RateFactReason;
+        result.RateIsConfigured = frequency?.RateIsConfigured == true;
+        result.RateIsJedecReference = frequency is not null
+            && (frequency.RateIsJedecReference || frequency.IsJedecReference);
         var sources = new List<string>();
         if (frequency is not null) sources.Add("頻率：" + Pick(frequency.SourceText));
         if (result.Loaded) sources.Add("時序：" + string.Join("＋", timingSources));

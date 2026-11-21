@@ -424,13 +424,11 @@ public class CoreHeatmapRenderTests
 
 /// <summary>
 /// 逐核對位（<see cref="CoreTempMapService.Apply"/>）：一實體核心一列時不得再折疊，
-/// 列序變了也要靠標籤對回來，標籤對不上才允許退回比率折疊。
+/// 列序變了也要靠唯一標籤對回來，沒有身份證據時拒絕按位置折疊。
 /// </summary>
 /// <remarks>
 /// 這一組是 2026-11-01「18 核只亮 9 格」那個缺陷的守門測試。
-/// 突變檢查要<b>兩邊一起改</b>才會紅：只關掉標籤對位時，比率由筆數推導仍然會得到 1，
-/// 18 筆對 18 格照樣一格一顆；只把比率寫死 2 時，標籤對位又把每一格救回來。
-/// 所以下面另外補了一條「列序被打亂」的測試——那是唯一能單獨咬住標籤分支的情境。
+/// 另覆蓋列序變動、重複名稱、多插槽、處理器群組與未知核心順序，防止用筆數猜測身份。
 /// </remarks>
 public class CoreTempMapApplyTests
 {
@@ -474,18 +472,14 @@ public class CoreTempMapApplyTests
     }
 
     [Fact]
-    public void 標籤對不上才退回折疊_比率由筆數推導()
+    public void 標籤對不上不能按筆數比例推測核心()
     {
         // 模擬「真的逐執行緒一列」的來源：名稱對不上核心標籤，36 列對 18 格。
         var entries = Entries(18);
         var rows = Rows(36, name: "處理器");
 
-        Assert.True(CoreTempMapService.Apply(entries, rows, threadsPerCore: 1));
-
-        // 比率應由 36／18 推導成 2（不是傳進來的 1）；每格吃兩列取最高溫。
-        Assert.Equal(2, entries[0].Temperature);
-        Assert.Equal(4, entries[1].Temperature);
-        Assert.Equal(36, entries[17].Temperature);
+        Assert.False(CoreTempMapService.Apply(entries, rows, threadsPerCore: 1));
+        Assert.All(entries, entry => Assert.Null(entry.Temperature));
     }
 
     [Fact]
@@ -504,5 +498,50 @@ public class CoreTempMapApplyTests
         Assert.Null(entries[1].Temperature);
         Assert.Equal(43, entries[2].Temperature);
         Assert.Equal(44, entries[3].Temperature);
+    }
+
+    [Fact]
+    public void 重複核心標籤不覆蓋成最後一顆插槽的讀值()
+    {
+        var entries = Entries(4);
+        entries.ForEach(entry => { entry.Temperature = 99; entry.Load = 80; });
+        var rows = Rows(2).Concat(Rows(2)).ToList();
+
+        Assert.False(CoreTempMapService.Apply(entries, rows, threadsPerCore: 2));
+        Assert.All(entries, entry => { Assert.Null(entry.Temperature); Assert.Equal(0, entry.Load); });
+    }
+
+    [Theory]
+    [InlineData(false, 1, 1, 4, true)]
+    [InlineData(true, 0, 1, 4, true)]
+    [InlineData(true, 2, 1, 4, true)]
+    [InlineData(true, 1, 0, 4, true)]
+    [InlineData(true, 1, 2, 4, true)]
+    [InlineData(true, 1, 1, 0, true)]
+    [InlineData(true, 1, 1, 8, true)]
+    [InlineData(true, 1, 1, 4, false)]
+    public void 未確認插槽群組核心身份時清除主路徑舊讀值(
+        bool loaded, int packages, int groups, int cores, bool knownCoreOrder)
+    {
+        var entries = Entries(4);
+        entries.ForEach(entry => { entry.Temperature = 99; entry.Load = 80; });
+        var topology = new CpuTopology { Loaded = loaded, PhysicalPackages = packages,
+            ProcessorGroups = groups, PhysicalCores = cores };
+
+        Assert.False(CoreTempMapService.ApplyPrimary(entries, Rows(4), topology, knownCoreOrder));
+        Assert.All(entries, entry => { Assert.Null(entry.Temperature); Assert.Equal(0, entry.Load); });
+    }
+
+    [Fact]
+    public void 單插槽單群組已知順序仍按核心標籤對位()
+    {
+        var entries = Entries(18);
+        var rows = Rows(18);
+        rows.Reverse();
+        var topology = new CpuTopology { Loaded = true, PhysicalPackages = 1,
+            ProcessorGroups = 1, PhysicalCores = 18, Smt = true };
+
+        Assert.True(CoreTempMapService.ApplyPrimary(entries, rows, topology, knownCoreOrder: true));
+        for (int i = 0; i < entries.Count; i++) Assert.Equal(i + 1, entries[i].Temperature);
     }
 }

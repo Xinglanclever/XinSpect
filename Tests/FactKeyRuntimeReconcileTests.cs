@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Xunit;
@@ -29,20 +29,11 @@ public class RealHardwareReconcileCollection
 {
 }
 
-[Collection("RealHardwareReconcile")]
-public class FactKeyRuntimeReconcileTests
+/// <summary>One production collection, frozen once for the four read-only reconciliation checks.</summary>
+public sealed class RealHardwareFactSnapshot
 {
-    /// <summary>只在互動／特定流程產生的全鍵：鍵 → 為什麼啟動管線不產生。</summary>
-    private static readonly Dictionary<string, string> ConditionalOnly = new(StringComparer.Ordinal)
-    {
-        ["spi.compare"] =
-            "BIOS 區與參考映像的比對結果——只在使用者按下「與參考映像比對」或 CLI --compare-flash 時存在；" +
-            "啟動管線沒有參考映像，不該假裝比對過",
-        ["spi.entropy.regions"] =
-            "SPI 熵圖的區域描述——熵掃描屬手動觸發的深度檢查，預設啟動管線不跑（體積與時間成本）",
-    };
-
-    private const int ConditionalCap = 12;
+    public IReadOnlyList<HardwareFact> Facts { get; }
+    public RealHardwareFactSnapshot() => Facts = Array.AsReadOnly(LoadBothEntries().AllFacts.ToArray());
 
     private static EvidenceLabService LoadBothEntries()
     {
@@ -68,14 +59,33 @@ public class FactKeyRuntimeReconcileTests
         public bool? Sanitize() => null;
     }
 
+}
+
+[Collection("RealHardwareReconcile")]
+public class FactKeyRuntimeReconcileTests : IClassFixture<RealHardwareFactSnapshot>
+{
+    private readonly IReadOnlyList<HardwareFact> _facts;
+    public FactKeyRuntimeReconcileTests(RealHardwareFactSnapshot snapshot) => _facts = snapshot.Facts;
+
+    /// <summary>只在互動／特定流程產生的全鍵：鍵 → 為什麼啟動管線不產生。</summary>
+    private static readonly Dictionary<string, string> ConditionalOnly = new(StringComparer.Ordinal)
+    {
+        ["spi.compare"] =
+            "BIOS 區與參考映像的比對結果——只在使用者按下「與參考映像比對」或 CLI --compare-flash 時存在；" +
+            "啟動管線沒有參考映像，不該假裝比對過",
+        ["spi.entropy.regions"] =
+            "SPI 熵圖的區域描述——熵掃描屬手動觸發的深度檢查，預設啟動管線不跑（體積與時間成本）",
+    };
+
+    private const int ConditionalCap = 12;
+
     [Fact]
     [Trait("Category", "RealHardware")]
     public void 執行期每把鍵都要被目錄或動態家族或條件白名單收錄()
     {
-        var svc = LoadBothEntries();
 
         var catalog = FactKeyCatalog.Keys.ToHashSet(StringComparer.Ordinal);
-        var runtime = svc.AllFacts.Select(f => f.Key).ToHashSet(StringComparer.Ordinal);
+        var runtime = _facts.Select(f => f.Key).ToHashSet(StringComparer.Ordinal);
 
         var homeless = runtime
             .Where(k => !catalog.Contains(k) && !ConditionalOnly.ContainsKey(k) && !FactKeyDynamicCatalog.Matches(k))
@@ -105,9 +115,8 @@ public class FactKeyRuntimeReconcileTests
     [Trait("Category", "RealHardware")]
     public void 每一個非Present的事實都要說得出為什麼()
     {
-        var svc = LoadBothEntries();
 
-        var silent = svc.AllFacts
+        var silent = _facts
             .Where(f => f.Availability != FactAvailability.Present)
             .Where(f => string.IsNullOrWhiteSpace(f.UnavailableReason))
             .Select(f => $"{f.Key}（{f.Availability}）")
@@ -140,10 +149,9 @@ public class FactKeyRuntimeReconcileTests
     [Trait("Category", "RealHardware")]
     public void 事實集的鍵名稱來源與時刻都不得留空()
     {
-        var svc = LoadBothEntries();
         var problems = new List<string>();
 
-        foreach (var f in svc.AllFacts)
+        foreach (var f in _facts)
         {
             if (string.IsNullOrWhiteSpace(f.Key)) problems.Add("（有一筆事實的鍵是空的）");
             if (string.IsNullOrWhiteSpace(f.Name)) problems.Add($"{f.Key}：名稱是空的");
@@ -172,8 +180,7 @@ public class FactKeyRuntimeReconcileTests
     [Trait("Category", "RealHardware")]
     public void 已接線入口的核心鍵執行期必須存在()
     {
-        var svc = LoadBothEntries();
-        var runtime = svc.AllFacts.Select(f => f.Key).ToHashSet(StringComparer.Ordinal);
+        var runtime = _facts.Select(f => f.Key).ToHashSet(StringComparer.Ordinal);
 
         string[] wired = [
             "audio.latency",                            // 平台組（App 啟動路徑）的對照組

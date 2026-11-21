@@ -40,13 +40,13 @@ public class WarningBaselineTests
 
     [Fact]
     [Trait("Category", "BuildAnalysis")]
-    public void 主專案建置警告數不超過基線()
+    public async System.Threading.Tasks.Task 主專案建置警告數不超過基線()
     {
         string root = RepoRoot();
         var psi = new ProcessStartInfo
         {
             FileName = "dotnet",
-            Arguments = "build XinSpect.csproj -c Debug --nologo -t:Rebuild -v n -p:BaseOutputPath=obj/_warncheck/",
+            Arguments = "build XinSpect.csproj -c Debug --nologo -t:Rebuild -v n -m:1 -p:UseSharedCompilation=false -p:BaseOutputPath=obj/_warncheck/",
             WorkingDirectory = root,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -55,9 +55,23 @@ public class WarningBaselineTests
         var sb = new System.Text.StringBuilder();
         using (var proc = Process.Start(psi) ?? throw new InvalidOperationException("dotnet build 啟動失敗"))
         {
-            sb.Append(proc.StandardOutput.ReadToEnd());
-            sb.Append(proc.StandardError.ReadToEnd());
-            proc.WaitForExit();
+            using var budget = new System.Threading.CancellationTokenSource(TimeSpan.FromMinutes(5));
+            // Drain both redirected pipes concurrently: either pipe can fill while MSBuild
+            // is blocked writing the other. Cancellation also bounds inherited pipe handles.
+            var output = proc.StandardOutput.ReadToEndAsync(budget.Token);
+            var error = proc.StandardError.ReadToEndAsync(budget.Token);
+            try
+            {
+                await proc.WaitForExitAsync(budget.Token);
+                sb.Append(await output);
+                sb.Append(await error);
+            }
+            catch (OperationCanceledException) when (budget.IsCancellationRequested)
+            {
+                try { proc.Kill(entireProcessTree: true); }
+                catch (InvalidOperationException) { }
+                throw new TimeoutException("警告基線建置超過 5 分鐘；未取得完整建置證據，不能判定通過。");
+            }
             Assert.True(proc.ExitCode == 0, "建置本身失敗——先看建置錯誤：" + Tail(sb));
         }
 

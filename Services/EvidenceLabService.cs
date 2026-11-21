@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.IO;
 
 namespace XinSpect;
@@ -8,6 +8,9 @@ public sealed class EvidenceLabService : ObservableObject
     private string _status = "尚未擷取。建立時間膠囊後，才能和另一份快照逐欄比較。";
     private string _summary = "—";
     private bool _busy;
+
+    /// <summary>Signed policy assessment of user-selected saved snapshots; no live recollection.</summary>
+    public EnterpriseBaselineImportService EnterpriseBaselineImport { get; } = new();
 
     public ObservableCollection<EvidenceFactRow> Facts { get; } = [];
     public ObservableCollection<EvidenceChangeRow> Changes { get; } = [];
@@ -60,7 +63,107 @@ public sealed class EvidenceLabService : ObservableObject
     /// <summary>以注入的來源載入可靠性計數器（usermode、免管理員；讀不到由服務如實標三態）。</summary>
     public void LoadStorageReliability(IStorageReliabilitySource source)
     {
-        StorageReliabilityFacts = StorageReliabilityFactsService.Collect(DateTimeOffset.UtcNow, source);
+        var lease = BeginStorageReliabilityCollection(0, CancellationToken.None);
+        CollectStorageReliability(lease, source);
+    }
+
+    internal sealed class StorageReliabilityPublicationLease(long generation, int budgetMilliseconds,
+        CancellationToken cancellationToken)
+    {
+        internal long Generation { get; } = generation;
+        internal long Started { get; } = System.Diagnostics.Stopwatch.GetTimestamp();
+        internal int BudgetMilliseconds { get; } = budgetMilliseconds;
+        internal CancellationToken CancellationToken { get; } = cancellationToken;
+        internal bool Finished { get; set; }
+    }
+
+    private readonly object _storageReliabilityPublicationLock = new();
+    private long _storageReliabilityGeneration;
+
+    internal StorageReliabilityPublicationLease BeginStorageReliabilityCollection(int budgetMilliseconds,
+        CancellationToken cancellationToken)
+    {
+        if (budgetMilliseconds < 0) throw new ArgumentOutOfRangeException(nameof(budgetMilliseconds));
+        lock (_storageReliabilityPublicationLock)
+            return new(++_storageReliabilityGeneration, budgetMilliseconds, cancellationToken);
+    }
+
+    internal bool CollectStorageReliability(StorageReliabilityPublicationLease lease,
+        IStorageReliabilitySource source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        IReadOnlyList<HardwareFact> result;
+        bool sourceSucceeded = true;
+        try
+        {
+            lease.CancellationToken.ThrowIfCancellationRequested();
+            result = Array.AsReadOnly(StorageReliabilityFactsService.Collect(DateTimeOffset.UtcNow, source).ToArray());
+            // Collect reports read/provider failures as facts rather than throwing.
+            sourceSucceeded = !result.Any(f => f.Availability == FactAvailability.ReadError);
+        }
+        catch (OperationCanceledException) when (lease.CancellationToken.IsCancellationRequested)
+        {
+            RevokeStorageReliabilityCollection(lease, timedOut: false);
+            throw;
+        }
+        catch (Exception error)
+        {
+            sourceSucceeded = false;
+            result = StorageReliabilityFailure("儲存可靠性來源讀取／投影失敗（" + error.GetType().Name + "）");
+        }
+        bool published = false;
+        bool succeeded = false;
+        lock (_storageReliabilityPublicationLock)
+        {
+            if (lease.Generation == _storageReliabilityGeneration && !lease.Finished)
+            {
+                lease.Finished = true;
+                if (!lease.CancellationToken.IsCancellationRequested)
+                {
+                    // Decide deadline and publication under the SAME gate as timeout revocation.
+                    bool expired = lease.BudgetMilliseconds > 0 &&
+                        System.Diagnostics.Stopwatch.GetElapsedTime(lease.Started).TotalMilliseconds >= lease.BudgetMilliseconds;
+                    StorageReliabilityFacts = expired ? StorageReliabilityFailure("儲存可靠性收集逾時；本次發布權已撤銷，背景來源仍自行完成與清理") : result;
+                    published = true;
+                    succeeded = !expired && sourceSucceeded;
+                }
+            }
+        }
+        if (published) NotifyStorageReliabilityChanged();
+        lease.CancellationToken.ThrowIfCancellationRequested();
+        return succeeded;
+    }
+
+    internal void RevokeStorageReliabilityCollection(StorageReliabilityPublicationLease lease, bool timedOut)
+    {
+        bool published = false;
+        lock (_storageReliabilityPublicationLock)
+        {
+            if (lease.Generation == _storageReliabilityGeneration && !lease.Finished)
+            {
+                lease.Finished = true;
+                if (timedOut && !lease.CancellationToken.IsCancellationRequested)
+                {
+                    StorageReliabilityFacts = StorageReliabilityFailure("儲存可靠性收集逾時；本次發布權已撤銷，背景來源仍自行完成與清理");
+                    published = true;
+                }
+            }
+        }
+        if (published) NotifyStorageReliabilityChanged();
+    }
+
+    private static IReadOnlyList<HardwareFact> StorageReliabilityFailure(string reason) =>
+        Array.AsReadOnly(new[]
+        {
+            new HardwareFact("storage.reliability.available", "儲存裝置",
+                "儲存可靠性計數器", "", "", "儲存可靠性收集發布閘門",
+                FactTrustLevel.Unknown, false, DateTimeOffset.UtcNow, null, FactAvailability.ReadError, reason)
+        });
+
+    private void NotifyStorageReliabilityChanged()
+    {
+        OnPropertyChanged(nameof(StorageReliabilityFacts));
+        OnPropertyChanged(nameof(AllFacts));
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
@@ -114,24 +217,122 @@ public sealed class EvidenceLabService : ObservableObject
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
-    /// <summary>知識包載入（P0-09／EG-002）：離線包完整性驗證；缺包＝內建表如實聲明。</summary>
-    public IReadOnlyList<HardwareFact> KnowledgePackFacts { get; private set; } = [];
+    // package identity, final input and evaluation are published as one instance-owned state.
+    private sealed record KnowledgePackCollectionState(
+        long Generation, KnowledgePackLoad Loaded,
+        IReadOnlyList<HardwareFact> KnowledgeFacts, IReadOnlyList<HardwareFact> Input,
+        IReadOnlyList<HardwareFact> Compliance);
 
-    public void LoadKnowledgePack()
+    private static KnowledgePackCollectionState EmptyKnowledgePackState(long generation) => new(
+        generation, new KnowledgePackLoad(null, "本輪知識包尚未載入或評估完成", null), [], [], []);
+    private readonly object _knowledgePackLock = new();
+    private long _knowledgePackGeneration;
+    private long _knowledgePackFinalizingGeneration;
+    private KnowledgePackCollectionState _knowledgePackState = EmptyKnowledgePackState(0);
+
+    /// <summary>知識包與合規輸入同一載入；getter 不再次開檔。</summary>
+    public IReadOnlyList<HardwareFact> KnowledgePackFacts => Volatile.Read(ref _knowledgePackState).KnowledgeFacts;
+    public IReadOnlyList<HardwareFact> ComplianceFacts => Volatile.Read(ref _knowledgePackState).Compliance;
+    internal IReadOnlyList<HardwareFact> ComplianceInputSnapshot => Volatile.Read(ref _knowledgePackState).Input;
+
+    // Generation belongs to the collection invocation, not to the eventual worker start time.
+    internal long BeginKnowledgePackCollection()
     {
-        var at = DateTimeOffset.UtcNow;
-        KnowledgePackFacts = KnowledgePackService.Collect(at);
-        // ZR-004 裝置合規基線：與知識包同一次載入（清單就是知識包裡的一張表），
-        // 事實來源是本輪已收集到的 AllFacts——不在這裡重跑任何讀取。
-        ComplianceFacts = DeviceComplianceFactsService.Collect(
-            at,
-            KnowledgePackService.Load(KnowledgePackService.DefaultPath).Pack,
-            DeviceComplianceFactsService.IndexUnambiguousFacts(AllFacts));
-        OnPropertyChanged(nameof(FirmwareSecurityRows));
+        long generation;
+        lock (_knowledgePackLock)
+        {
+            generation = ++_knowledgePackGeneration;
+            Volatile.Write(ref _knowledgePackState, EmptyKnowledgePackState(generation));
+        }
+        NotifyKnowledgePackChanged();
+        return generation;
     }
 
-    /// <summary>裝置合規基線（Vol2 ZR-004）：用知識包裡的合規清單對照本輪事實。清單缺席＝不適用。</summary>
-    public IReadOnlyList<HardwareFact> ComplianceFacts { get; private set; } = [];
+    /// <summary>直接重新載入也擷取當下完整投影；正式收集入口在所有來源步驟之後才呼叫 finalizer。</summary>
+    public void LoadKnowledgePack()
+    {
+        long generation = BeginKnowledgePackCollection();
+        CompleteKnowledgePackCollection(generation, () => KnowledgePackService.Load(KnowledgePackService.DefaultPath));
+    }
+
+    internal bool CompleteKnowledgePackCollection(long generation, Func<KnowledgePackLoad> load,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(load);
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_knowledgePackLock)
+        {
+            if (generation != _knowledgePackGeneration || _knowledgePackFinalizingGeneration == generation)
+                return false;
+            _knowledgePackFinalizingGeneration = generation;
+        }
+        var at = DateTimeOffset.UtcNow;
+        KnowledgePackCollectionState next;
+        try
+        {
+            var loaded = FreezeKnowledgePackLoad(load());
+            var knowledge = Array.AsReadOnly(KnowledgePackService.CollectLoaded(at, loaded).ToArray());
+            var pending = new KnowledgePackCollectionState(generation, loaded, knowledge, [], []);
+            // Capture the whole committed fact projection once. Timed-out producers may later
+            // update live facts, but cannot mutate this immutable evaluation input.
+            var input = FreezeComplianceInput(BuildFacts(pending, includeCompliance: false, at));
+            var indexed = new ReadOnlyDictionary<string, HardwareFact>(
+                DeviceComplianceFactsService.IndexUnambiguousFacts(input)
+                    .ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal));
+            var compliance = Array.AsReadOnly(DeviceComplianceFactsService.Collect(at, loaded.Pack, indexed).ToArray());
+            next = pending with { Input = input, Compliance = compliance };
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // Do not retain an earlier round or label a failed finalization as an absent policy.
+            string reason = "知識包最終快照／評估失敗（" + ex.GetType().Name + "）";
+            HardwareFact Failed(string key, string name) => new(key, "零信任", name, "", "", "本輪合規最終快照",
+                FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError, reason);
+            next = new(generation, new KnowledgePackLoad(null, reason, null), [], [],
+                Array.AsReadOnly(new[] { Failed(DeviceComplianceFactsService.TableKey, "合規對照清單"),
+                    Failed(DeviceComplianceFactsService.BaselineKey, "裝置合規基線") }));
+        }
+        lock (_knowledgePackLock)
+        {
+            if (generation != _knowledgePackGeneration) return false;
+            cancellationToken.ThrowIfCancellationRequested();
+            Volatile.Write(ref _knowledgePackState, next);
+        }
+        NotifyKnowledgePackChanged();
+        return true;
+    }
+
+    internal static IReadOnlyList<HardwareFact> FreezeComplianceInput(IEnumerable<HardwareFact> facts) =>
+        Array.AsReadOnly(facts.Where(f => !f.Key.StartsWith("zr.compliance.", StringComparison.Ordinal)).ToArray());
+
+    private static KnowledgePackLoad FreezeKnowledgePackLoad(KnowledgePackLoad loaded)
+    {
+        if (loaded.Pack is not { } pack) return loaded;
+        if (KnowledgePackService.ValidateForConsumption(pack) is { } reason)
+            throw new System.IO.InvalidDataException(reason);
+        // Records are immutable; copy collection ownership, including every entry dictionary.
+        var tables = Array.AsReadOnly(pack.Tables.Select(t => t with
+        {
+            Entries = new ReadOnlyDictionary<string, string>(
+                t.Entries.ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal))
+        }).ToArray());
+        var frozen = pack with { Tables = tables };
+        if (KnowledgePackService.ValidateForConsumption(frozen) is { } frozenReason)
+            throw new System.IO.InvalidDataException(frozenReason);
+        return loaded with { Pack = frozen };
+    }
+
+    private void NotifyKnowledgePackChanged()
+    {
+        OnPropertyChanged(nameof(KnowledgePackFacts));
+        OnPropertyChanged(nameof(ComplianceFacts));
+        OnPropertyChanged(nameof(AllFacts));
+        OnPropertyChanged(nameof(FirmwareSecurityRows));
+    }
 
     /// <summary>
     /// SMART 廠商屬性對照的真值（第 274 輪，<c>ata.smart.attr.lookup</c>）。
@@ -290,25 +491,23 @@ public sealed class EvidenceLabService : ObservableObject
 
     /// <summary>
     /// 讀一次 BCD 的其餘元素（U10-BD-0002／0004～0007／0011／0014／0023／0024／0030，第 333 輪）：
-    /// 與 LoadBootOrder 同一個執行檔的兩次唯讀呼叫（/enum＋/enum firmware），解析共用助手。
+    /// 開機順序與元素共用同一次 /enum all 快照，避免重複開行程與跨快照不一致。
     /// </summary>
     public void LoadBcdElements()
     {
         DateTimeOffset at = DateTimeOffset.UtcNow;
         try
         {
-            var (output, reason) = BootOrderReader.TryReadEnum();
+            var (output, reason) = BootOrderReader.TryReadEnumAll();
             var (fwOutput, fwReason) = BootOrderReader.TryReadEnumFirmware();
+            BootOrderFacts = BootOrderFactsService.Collect(output, reason, at);
             BcdElementsFacts = BcdElementsFactsService.Collect(output, fwOutput, reason, fwReason, at);
         }
         catch (Exception ex)
         {
-            BcdElementsFacts =
-            [
-                new HardwareFact(BcdElementsFactsService.AccessStatementKey, "開機", "BCD 存取法", "", "",
-                    "bcdedit（唯讀）", FactTrustLevel.Unknown, false, at,
-                    null, FactAvailability.ReadError, UserFacingError.Describe(ex))
-            ];
+            string reason = UserFacingError.Describe(ex);
+            BootOrderFacts = BootOrderFactsService.Collect(null, reason, at);
+            BcdElementsFacts = BcdElementsFactsService.Collect(null, null, reason, reason, at);
         }
     }
 
@@ -339,16 +538,22 @@ public sealed class EvidenceLabService : ObservableObject
     public sealed record CollectionStep(string Name, double Milliseconds, bool Succeeded);
 
     private readonly List<CollectionStep> _steps = [];
+    private readonly object _stepsLock = new();
 
     /// <summary>最近一次收集的步驟代價；由 <c>EvidenceCollection</c> 的計時器填入，不由事實集 getter 產生。</summary>
-    public IReadOnlyList<CollectionStep> Steps => _steps;
+    public IReadOnlyList<CollectionStep> Steps
+    {
+        get { lock (_stepsLock) return Array.AsReadOnly(_steps.ToArray()); }
+    }
 
     /// <summary>每次收集重新計時：步驟代價講的是「這一輪」，不是累計。</summary>
-    public void ClearSteps() => _steps.Clear();
+    public void ClearSteps() { lock (_stepsLock) _steps.Clear(); }
 
     /// <summary>記下一個收集步驟的代價（由 <c>EvidenceCollection.Measure</c> 呼叫）。</summary>
     public void RecordStep(string name, double milliseconds, bool succeeded)
-        => _steps.Add(new CollectionStep(name, milliseconds, succeeded));
+    {
+        lock (_stepsLock) _steps.Add(new CollectionStep(name, milliseconds, succeeded));
+    }
 
 
     /// <summary>列舉 PnP 裝置並投影成事實（唯讀 SetupAPI，零特權、零網路）。</summary>
@@ -423,7 +628,10 @@ public sealed class EvidenceLabService : ObservableObject
     /// </remarks>
     public void LoadEdidCta()
     {
-        EdidCtaFacts = EdidCtaFactsService.Collect(DateTimeOffset.UtcNow);
+        var snapshot = EdidService.ReadRawSnapshot();
+        var at = DateTimeOffset.UtcNow;
+        EdidCtaFacts = EdidCtaFactsService.Collect(at, () => snapshot.Edids.ToList(), snapshot.Errors)
+            .Concat(EdidTimingFactsService.Collect(snapshot, at)).ToList();
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
@@ -691,19 +899,117 @@ public sealed class EvidenceLabService : ObservableObject
     private static string? ReadModel(byte[] identify)
     {
         if (identify.Length < 64) return null;
-        string raw = System.Text.Encoding.ASCII.GetString(identify, 24, 40).TrimEnd(' ', ' ').Trim();
+        string raw = System.Text.Encoding.ASCII.GetString(identify, 24, 40).TrimEnd('\0', ' ').Trim();
         return raw.Length == 0 ? null : raw;
     }
 
     private static IMmioReader NotLoadedMmio => new NotLoadedMmioReader();
 
     /// <summary>
-    /// 載入 WHEA 記憶體節區事實。<paramref name="records"/> 由呼叫端從事件記錄取得
-    /// （見 <see cref="WheaMemoryRecordsReader"/>）；本方法只負責投影成事實。
+    /// 載入 WHEA 候選事件與可用的記憶體節區；未注入時使用有完整性狀態的本機 reader。
     /// </summary>
-    public void LoadWheaMemory(IReadOnlyList<WheaMemoryRecord> records)
+    public void LoadWheaMemory(IReadOnlyList<WheaMemoryRecord>? records = null)
     {
-        WheaMemoryFacts = WheaMemoryFactsService.Collect(records, DateTimeOffset.UtcNow);
+        var lease = BeginWheaMemoryCollection(0, CancellationToken.None);
+        CollectWheaMemory(lease, () => records ?? WheaMemoryRecordsReader.ReadForThisMachine());
+    }
+
+    internal sealed class WheaMemoryPublicationLease(long generation, int budgetMilliseconds,
+        CancellationToken cancellationToken)
+    {
+        internal long Generation { get; } = generation;
+        internal long Started { get; } = System.Diagnostics.Stopwatch.GetTimestamp();
+        internal int BudgetMilliseconds { get; } = budgetMilliseconds;
+        internal CancellationToken CancellationToken { get; } = cancellationToken;
+        internal bool Finished { get; set; }
+    }
+
+    private readonly object _wheaMemoryPublicationLock = new();
+    private long _wheaMemoryGeneration;
+
+    internal WheaMemoryPublicationLease BeginWheaMemoryCollection(int budgetMilliseconds,
+        CancellationToken cancellationToken)
+    {
+        if (budgetMilliseconds < 0) throw new ArgumentOutOfRangeException(nameof(budgetMilliseconds));
+        lock (_wheaMemoryPublicationLock)
+            return new(++_wheaMemoryGeneration, budgetMilliseconds, cancellationToken);
+    }
+
+    internal bool CollectWheaMemory(WheaMemoryPublicationLease lease,
+        Func<IReadOnlyList<WheaMemoryRecord>> readRecords)
+    {
+        ArgumentNullException.ThrowIfNull(readRecords);
+        IReadOnlyList<HardwareFact> result;
+        bool sourceSucceeded = true;
+        try
+        {
+            lease.CancellationToken.ThrowIfCancellationRequested();
+            var records = readRecords();
+            result = Array.AsReadOnly(WheaErrorFactsService.Collect(records, DateTimeOffset.UtcNow).ToArray());
+        }
+        catch (OperationCanceledException) when (lease.CancellationToken.IsCancellationRequested)
+        {
+            RevokeWheaMemoryCollection(lease, timedOut: false);
+            throw;
+        }
+        catch (Exception error)
+        {
+            sourceSucceeded = false;
+            result = WheaMemoryFailure("共用 WHEA 節區來源讀取／投影失敗（" + error.GetType().Name + "）");
+        }
+        bool published = false;
+        bool succeeded = false;
+        lock (_wheaMemoryPublicationLock)
+        {
+            if (lease.Generation == _wheaMemoryGeneration && !lease.Finished)
+            {
+                lease.Finished = true;
+                if (!lease.CancellationToken.IsCancellationRequested)
+                {
+                    // Decide deadline and publication under the SAME gate as timeout revocation.
+                    bool expired = lease.BudgetMilliseconds > 0 &&
+                        System.Diagnostics.Stopwatch.GetElapsedTime(lease.Started).TotalMilliseconds >= lease.BudgetMilliseconds;
+                    WheaMemoryFacts = expired ? WheaMemoryFailure("共用 WHEA 節區收集逾時；本次發布權已撤銷，背景來源仍自行完成與清理") : result;
+                    published = true;
+                    succeeded = !expired && sourceSucceeded;
+                }
+            }
+        }
+        if (published) NotifyWheaMemoryChanged();
+        lease.CancellationToken.ThrowIfCancellationRequested();
+        return succeeded;
+    }
+
+    internal void RevokeWheaMemoryCollection(WheaMemoryPublicationLease lease, bool timedOut)
+    {
+        bool published = false;
+        lock (_wheaMemoryPublicationLock)
+        {
+            if (lease.Generation == _wheaMemoryGeneration && !lease.Finished)
+            {
+                lease.Finished = true;
+                if (timedOut && !lease.CancellationToken.IsCancellationRequested)
+                {
+                    WheaMemoryFacts = WheaMemoryFailure("共用 WHEA 節區收集逾時；本次發布權已撤銷，背景來源仍自行完成與清理");
+                    published = true;
+                }
+            }
+        }
+        if (published) NotifyWheaMemoryChanged();
+    }
+
+    private static IReadOnlyList<HardwareFact> WheaMemoryFailure(string reason) =>
+        Array.AsReadOnly(new[]
+        {
+            new HardwareFact(WheaMemoryFactsService.SummaryKey, WheaMemoryFactsService.Category,
+                "共用 WHEA 節區收集失敗", "", "筆", "共用 WHEA 節區收集發布閘門",
+                FactTrustLevel.Unknown, false, DateTimeOffset.UtcNow, null, FactAvailability.ReadError, reason)
+        });
+
+    private void NotifyWheaMemoryChanged()
+    {
+        OnPropertyChanged(nameof(WheaMemoryFacts));
+        OnPropertyChanged(nameof(AllFacts));
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
@@ -1080,6 +1386,7 @@ public sealed class EvidenceLabService : ObservableObject
             .Concat(TimeSyncFactsService.Collect(at, new Win32AcpiTableSource()))
             .Concat(CxlFactsService.Collect(at, new Win32AcpiTableSource()))
             .Concat(UsbTopologyService.Collect(at))
+            .Concat(WmiSupplementFactsService.Collect(at))
             .Concat(MonitorConnectionService.Collect(at))
             .Concat(CameraFactsService.Collect(at))
             .Concat(EnterpriseStorageFactsService.Collect(at))
@@ -1495,12 +1802,68 @@ public sealed class EvidenceLabService : ObservableObject
     public IReadOnlyList<HardwareFact> BaselineFacts { get; private set; } = [];
 
     public void LoadBaselineLearning(HistorySeries? series = null)
+        => LoadBaselineLearningFromHistory(() => series ?? HistorySeries.Empty);
+
+    /// <summary>把歷史查詢納入失敗邊界；查詢失敗不得留下前次成功基線。</summary>
+    public void LoadBaselineLearningFromHistory(Func<HistorySeries> readHistory,
+        CancellationToken cancellationToken = default)
+        => LoadBaselineLearningFromHistory(readHistory, DateTimeOffset.UtcNow,
+            (at, series) => BaselineLearningService.Collect(at, series),
+            at => FleetBaselineFactsService.Collect(FleetSnapshotReader.ReadForThisMachine(), at),
+            cancellationToken);
+
+    // Shared orchestration seam: injected tests do not execute EventLog or snapshot file I/O.
+    internal void LoadBaselineLearningFromHistory(Func<HistorySeries> readHistory, DateTimeOffset attemptedAt,
+        Func<DateTimeOffset, HistorySeries, IReadOnlyList<HardwareFact>> collectBaseline,
+        Func<DateTimeOffset, IReadOnlyList<HardwareFact>> collectFleet,
+        CancellationToken cancellationToken = default)
     {
-        var at = DateTimeOffset.UtcNow;
-        BaselineFacts = BaselineLearningService.Collect(at, series ?? HistorySeries.Empty);
-        // 第 328 輪（EN-0001）：同型號族群基線——只讀本機快照目錄，不上傳。
-        // 與上面那一支共用同一次載入，但**不共用資料**：歷史倉是時序，快照是離散事實。
-        FleetFacts = FleetBaselineFactsService.Collect(FleetSnapshotReader.ReadForThisMachine(), at);
+        ArgumentNullException.ThrowIfNull(readHistory);
+        ArgumentNullException.ThrowIfNull(collectBaseline);
+        ArgumentNullException.ThrowIfNull(collectFleet);
+        cancellationToken.ThrowIfCancellationRequested();
+        IReadOnlyList<HardwareFact> baseline;
+        IReadOnlyList<HardwareFact> fleet;
+        HardwareFact Failed(string key, string name, string source, Exception error) =>
+            new(key, BaselineLearningService.Category, name, "", "", source,
+                FactTrustLevel.Unknown, false, attemptedAt, null, FactAvailability.ReadError,
+                "本次基線來源讀取／投影失敗（" + error.GetType().Name + "）；未沿用前次結果");
+        try
+        {
+            var series = readHistory() ?? throw new InvalidOperationException("History source returned null");
+            cancellationToken.ThrowIfCancellationRequested();
+            baseline = Array.AsReadOnly(collectBaseline(attemptedAt, series).ToArray());
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (Exception error)
+        {
+            baseline = Array.AsReadOnly(new[]
+            {
+                Failed(BaselineLearningService.BaselineKey, "自基線", "歷史倉基線收集", error),
+                Failed(BaselineLearningService.ScoreKey, "異常評分", "歷史倉基線收集", error),
+                Failed(BaselineLearningService.EventsKey, "事件標註", "歷史倉基線收集（本次未完成）", error)
+            });
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        // Fleet uses independent local snapshots, not the history series. Still attempt it if
+        // history failed; replace its previous peers on failure instead of retaining stale data.
+        try { fleet = Array.AsReadOnly(collectFleet(attemptedAt).ToArray()); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (Exception error)
+        {
+            fleet = Array.AsReadOnly(new[]
+            {
+                Failed(FleetBaselineFactsService.SummaryKey, "同型號族群基線", "本機快照目錄（唯讀，不上傳）", error)
+            });
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        // This is a final-boundary source replacement, not a multi-source atomic transaction.
+        // Preserve successful HardwareFact objects and their original MeasuredAtUtc exactly.
+        BaselineFacts = baseline;
+        FleetFacts = fleet;
+        OnPropertyChanged(nameof(BaselineFacts));
+        OnPropertyChanged(nameof(FleetFacts));
+        OnPropertyChanged(nameof(AllFacts));
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
@@ -2043,11 +2406,130 @@ public sealed class EvidenceLabService : ObservableObject
     }
 
     /// <summary>平台治理補充（Vol2 第 273–282 項）：服務 SDDL、混插、SMBIOS RAS、驅動清單、規則史、UWP 權限、SDK、VRR、電池、NIC 錯誤趨勢。</summary>
-    public IReadOnlyList<HardwareFact> PlatformGovernanceFacts { get; private set; } = [];
+    private sealed record PlatformGovernancePublication(
+        IReadOnlyList<HardwareFact> GovernanceFacts, IReadOnlyList<HardwareFact> MemoryTimingFacts);
+    private PlatformGovernancePublication _platformGovernanceState = new([], []);
+    public IReadOnlyList<HardwareFact> PlatformGovernanceFacts => Volatile.Read(ref _platformGovernanceState).GovernanceFacts;
+    public IReadOnlyList<HardwareFact> MemoryTimingFacts => Volatile.Read(ref _platformGovernanceState).MemoryTimingFacts;
+
+    internal sealed class PlatformGovernancePublicationLease(long generation, int budgetMilliseconds,
+        CancellationToken cancellationToken, TimeProvider clock)
+    {
+        internal long Generation { get; } = generation;
+        internal TimeProvider Clock { get; } = clock;
+        internal long Started { get; set; }
+        internal bool HasStarted { get; set; }
+        internal int BudgetMilliseconds { get; } = budgetMilliseconds;
+        internal CancellationToken CancellationToken { get; } = cancellationToken;
+        internal bool Finished { get; set; }
+    }
+
+    private readonly object _platformGovernancePublicationLock = new();
+    private long _platformGovernanceGeneration;
 
     public void LoadPlatformGovernance()
     {
-        PlatformGovernanceFacts = PlatformGovernanceFactsService.Collect(DateTimeOffset.UtcNow);
+        var lease = BeginPlatformGovernanceCollection(0, CancellationToken.None);
+        CollectPlatformGovernance(lease, () => PlatformGovernanceFactsService.CollectPublicationBatch(DateTimeOffset.UtcNow));
+    }
+
+    internal PlatformGovernancePublicationLease BeginPlatformGovernanceCollection(int budgetMilliseconds,
+        CancellationToken cancellationToken, TimeProvider? clock = null)
+    {
+        if (budgetMilliseconds < 0) throw new ArgumentOutOfRangeException(nameof(budgetMilliseconds));
+        cancellationToken.ThrowIfCancellationRequested();
+        PlatformGovernancePublicationLease lease;
+        lock (_platformGovernancePublicationLock)
+        {
+            lease = new(++_platformGovernanceGeneration, budgetMilliseconds, cancellationToken, clock ?? TimeProvider.System);
+            // Refresh removes the previous Present value immediately; it is not this batch's evidence.
+            Volatile.Write(ref _platformGovernanceState, PlatformGovernanceFailure(
+                FactAvailability.Unknown, "本批 Windows 設定速率尚在收集；未沿用上一批值。"));
+        }
+        NotifyPlatformGovernanceChanged();
+        return lease;
+    }
+
+    internal bool CollectPlatformGovernance(PlatformGovernancePublicationLease lease,
+        Func<PlatformGovernanceFactsService.PublicationBatch> collect)
+    {
+        ArgumentNullException.ThrowIfNull(collect);
+        lock (_platformGovernancePublicationLock)
+        {
+            if (lease.Generation != _platformGovernanceGeneration || lease.Finished || lease.HasStarted) return false;
+            // Generation belongs to the refresh entry; the step budget starts at the actual source step.
+            lease.Started = lease.Clock.GetTimestamp();
+            lease.HasStarted = true;
+        }
+        PlatformGovernancePublication result;
+        bool sourceComplete;
+        try
+        {
+            lease.CancellationToken.ThrowIfCancellationRequested();
+            var batch = collect();
+            result = new(Array.AsReadOnly(batch.GovernanceFacts.ToArray()), Array.AsReadOnly(batch.MemoryTimingFacts.ToArray()));
+            sourceComplete = batch.MemoryReadComplete;
+        }
+        catch (OperationCanceledException) when (lease.CancellationToken.IsCancellationRequested)
+        {
+            RevokePlatformGovernanceCollection(lease, timedOut: false);
+            throw;
+        }
+        catch (Exception error)
+        {
+            sourceComplete = false;
+            result = PlatformGovernanceFailure(FactAvailability.ReadError,
+                "平台／記憶體設定速率收集失敗（" + error.GetType().Name + "）。");
+        }
+        bool published = false;
+        bool succeeded = false;
+        lock (_platformGovernancePublicationLock)
+        {
+            if (lease.Generation == _platformGovernanceGeneration && !lease.Finished)
+            {
+                lease.Finished = true;
+                bool canceled = lease.CancellationToken.IsCancellationRequested;
+                bool expired = lease.BudgetMilliseconds > 0 &&
+                    lease.Clock.GetElapsedTime(lease.Started).TotalMilliseconds >= lease.BudgetMilliseconds;
+                var state = canceled ? PlatformGovernanceFailure(FactAvailability.Unknown, "本批收集已取消；未沿用上一批設定速率。")
+                    : expired ? PlatformGovernanceFailure(FactAvailability.ReadError,
+                        "平台／記憶體設定速率收集逾時；本批發布權已撤銷，來源仍自行完成與清理。") : result;
+                Volatile.Write(ref _platformGovernanceState, state);
+                published = true;
+                succeeded = !canceled && !expired && sourceComplete;
+            }
+        }
+        if (published) NotifyPlatformGovernanceChanged();
+        lease.CancellationToken.ThrowIfCancellationRequested();
+        return succeeded;
+    }
+
+    internal void RevokePlatformGovernanceCollection(PlatformGovernancePublicationLease lease, bool timedOut)
+    {
+        bool published = false;
+        lock (_platformGovernancePublicationLock)
+        {
+            if (lease.Generation == _platformGovernanceGeneration && !lease.Finished)
+            {
+                lease.Finished = true;
+                Volatile.Write(ref _platformGovernanceState, PlatformGovernanceFailure(
+                    timedOut ? FactAvailability.ReadError : FactAvailability.Unknown,
+                    timedOut ? "平台／記憶體設定速率收集逾時；本批發布權已撤銷，來源仍自行完成與清理。"
+                        : "本批收集已取消；未沿用上一批設定速率。"));
+                published = true;
+            }
+        }
+        if (published) NotifyPlatformGovernanceChanged();
+    }
+
+    private static PlatformGovernancePublication PlatformGovernanceFailure(FactAvailability availability, string reason)
+        => new([], Array.AsReadOnly(new[] { PhysicalMemorySnapshotSource.UnavailableRate(DateTimeOffset.UtcNow, availability, reason) }));
+
+    private void NotifyPlatformGovernanceChanged()
+    {
+        OnPropertyChanged(nameof(PlatformGovernanceFacts));
+        OnPropertyChanged(nameof(MemoryTimingFacts));
+        OnPropertyChanged(nameof(AllFacts));
         OnPropertyChanged(nameof(FirmwareSecurityRows));
     }
 
@@ -2417,52 +2899,56 @@ public sealed class EvidenceLabService : ObservableObject
     /// 尾端追加能力矩陣彙總（cap.*）與鍵範圍檢查（qs.range）：彙總輸入是前面各組的聯集、
     /// 不含彙總自己——無遞迴。
     /// </summary>
-    public IReadOnlyList<HardwareFact> AllFacts
+    public IReadOnlyList<HardwareFact> AllFacts =>
+        BuildFacts(Volatile.Read(ref _knowledgePackState), includeCompliance: true, DateTimeOffset.UtcNow);
+
+    private IReadOnlyList<HardwareFact> BuildFacts(KnowledgePackCollectionState knowledgeState,
+        bool includeCompliance, DateTimeOffset at)
     {
-        get
-        {
+            var platformGovernance = Volatile.Read(ref _platformGovernanceState);
             var baseFacts = ChipsetFacts.Concat(SpiFlashFacts).Concat(PcieAerFacts).Concat(PciCapabilityFacts).Concat(SpiHashFacts).Concat(FitFacts).Concat(SpiEntropyFacts).Concat(SpiCompareFacts).Concat(PlatformSecurityFacts).Concat(BackendFacts)
                 .Concat(CpuFirmwareFacts).Concat(PmuFacts).Concat(UncorePmuFacts).Concat(MemoryEncryptionFacts).Concat(AmdSecurityFacts).Concat(PsuPmbusFacts).Concat(CStateFacts).Concat(ReconcileFacts).Concat(FirmwareRiskFacts).Concat(FirmwareRiskDeltaFacts).Concat(IoPortFacts).Concat(CmosFacts)
                 .Concat(SmbusFacts).Concat(UefiFacts).Concat(UefiSignatureFacts).Concat(UefiDbtDbrFacts).Concat(EfiVariableFacts).Concat(SuperIoFacts).Concat(HwmFacts).Concat(PciInventoryFacts).Concat(TpmFacts).Concat(TpmViewCrossFacts).Concat(TpmReplayFacts)
                 .Concat(PlatformFacts).Concat(VirtualizationFacts).Concat(VbsStateFacts).Concat(CredentialGuardFacts).Concat(VbsServiceFacts).Concat(SoftwareFacts).Concat(AcpiFacts).Concat(StorageReliabilityFacts).Concat(UefiFvFacts).Concat(DriverInspectionFacts).Concat(SetupTimelineFacts).Concat(EtlReadbackFacts).Concat(EtwFilterViewFacts).Concat(FsMetadataLatencyFacts).Concat(PresentObservationFacts).Concat(SrumReadbackFacts).Concat(AmcacheFacts).Concat(EspScanFacts).Concat(AudioEndpointFacts).Concat(BootTimingFacts).Concat(NetOffloadFacts).Concat(ListenPortFacts).Concat(LocalSecurityAuditFacts)
-                .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(FleetFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(KnowledgePackFacts).Concat(ComplianceFacts).Concat(ServerComplianceFacts).Concat(ServerRoleDeepFacts).Concat(ServerRoleConditionalFacts).Concat(ServerRoleFilePrintFacts).Concat(MaintenanceFacts).Concat(EnvironmentRuntimeFacts).Concat(ClosingFacts).Concat(QueryInsightFacts).Concat(ChecklistFacts).Concat(TrustOpsFacts).Concat(ZeroTrustFacts).Concat(DataSecurityFacts).Concat(EndpointPolicyFacts).Concat(ScenarioFacts).Concat(ScenarioSecondWaveFacts).Concat(MultimediaFacts).Concat(MediaProtectionFacts).Concat(ExportCacheFacts).Concat(MaintenanceDashboardFacts).Concat(VolumeEncryptionFacts).Concat(QueryGovernanceFacts).Concat(LifecycleReportsFacts).Concat(GovernanceExtraFacts).Concat(InterchangeReportFacts).Concat(AutomationGuidanceFacts).Concat(ServiceModeFacts).Concat(RecoveryPowerInteropFacts).Concat(EnvironmentDiagnosticsFacts).Concat(AdvancedSupplementFacts).Concat(OperationsInventoryFacts).Concat(NetworkSystemInventoryFacts).Concat(InventoryGovernanceFacts).Concat(NetworkSecurityInventoryFacts).Concat(FinalInventoryFacts).Concat(RecoveryInventoryFacts).Concat(RecoveryDisplayFacts).Concat(SecurityAuditSupplementFacts).Concat(LifecycleMaintenanceFacts).Concat(FirmwareAuditFacts).Concat(PlatformGovernanceFacts).Concat(PlatformDeepDiveFacts).Concat(PlatformExpansionFacts).Concat(PlatformReconciliationFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(StorageScenarioReconciliationFacts).Concat(PerformanceObservationFacts).Concat(ServiceBootFacts).Concat(DeepBenchSecondWaveFacts).Concat(GovernanceKnowledgeFacts).Concat(BusDeepDiveFacts).Concat(BusCapabilityFacts).Concat(EngineeringGovernanceFacts).Concat(VisualizationFacts).Concat(OfflineAnalysisFacts).Concat(ProductPlatformFacts).Concat(MeasurementMethodologyFacts).Concat(LifecycleSecurityFacts).Concat(DeepBenchMethodology2Facts).Concat(EvidenceExportFacts).Concat(ExportUxFacts).Concat(UserExperience2Facts).Concat(GpuDeepFacts).Concat(FirmwareDeepFacts).Concat(EngineeringGovernance2Facts).Concat(StorageDeepFacts).Concat(FileSystemVolumeFacts).Concat(IscsiSessionFacts).Concat(HyperVInventoryFacts).Concat(BaselineForecastFacts).Concat(DevDiagCorrelationFacts).Concat(SecurityAuditDeepFacts).Concat(BitLockerRecoveryFacts).Concat(AcpiDeepFacts).Concat(CppcCapabilityFacts).Concat(MousePollRateFacts).Concat(DeepTestFacts).Concat(EdidCtaFacts).Concat(EventIdEvidenceFacts).Concat(DeviceTruthFacts).Concat(DeviceTreeFacts).Concat(UsbHubFacts).Concat(MeasurementRepeatFacts).Concat(BootOrderFacts).Concat(BcdElementsFacts).Concat(BatteryHealthFacts).Concat(PciClassFacts).Concat(PcieAccessFacts).Concat(WheaMemoryFacts).Concat(XhciFacts).Concat(NvmeReservedFacts).Concat(BuiltinKnowledgeFacts).Concat(DataSecurityDeepFacts).Concat(ScenarioThirdWaveFacts).Concat(SbomFacts).Concat(SurveillancePlanFacts)
+                .Concat(SelfIntegrityFacts).Concat(BaselineFacts).Concat(FleetFacts).Concat(CveFacts).Concat(FsForensicFacts).Concat(knowledgeState.KnowledgeFacts).Concat(includeCompliance ? knowledgeState.Compliance : Array.Empty<HardwareFact>()).Concat(ServerComplianceFacts).Concat(ServerRoleDeepFacts).Concat(ServerRoleConditionalFacts).Concat(ServerRoleFilePrintFacts).Concat(MaintenanceFacts).Concat(EnvironmentRuntimeFacts).Concat(ClosingFacts).Concat(QueryInsightFacts).Concat(ChecklistFacts).Concat(TrustOpsFacts).Concat(ZeroTrustFacts).Concat(DataSecurityFacts).Concat(EndpointPolicyFacts).Concat(ScenarioFacts).Concat(ScenarioSecondWaveFacts).Concat(MultimediaFacts).Concat(MediaProtectionFacts).Concat(ExportCacheFacts).Concat(MaintenanceDashboardFacts).Concat(VolumeEncryptionFacts).Concat(QueryGovernanceFacts).Concat(LifecycleReportsFacts).Concat(GovernanceExtraFacts).Concat(InterchangeReportFacts).Concat(AutomationGuidanceFacts).Concat(ServiceModeFacts).Concat(RecoveryPowerInteropFacts).Concat(EnvironmentDiagnosticsFacts).Concat(AdvancedSupplementFacts).Concat(OperationsInventoryFacts).Concat(NetworkSystemInventoryFacts).Concat(InventoryGovernanceFacts).Concat(NetworkSecurityInventoryFacts).Concat(FinalInventoryFacts).Concat(RecoveryInventoryFacts).Concat(RecoveryDisplayFacts).Concat(SecurityAuditSupplementFacts).Concat(LifecycleMaintenanceFacts).Concat(FirmwareAuditFacts).Concat(platformGovernance.GovernanceFacts).Concat(platformGovernance.MemoryTimingFacts).Concat(PlatformDeepDiveFacts).Concat(PlatformExpansionFacts).Concat(PlatformReconciliationFacts).Concat(DiskFullFacts).Concat(FreezeFacts).Concat(StorageScenarioReconciliationFacts).Concat(PerformanceObservationFacts).Concat(ServiceBootFacts).Concat(DeepBenchSecondWaveFacts).Concat(GovernanceKnowledgeFacts).Concat(BusDeepDiveFacts).Concat(BusCapabilityFacts).Concat(EngineeringGovernanceFacts).Concat(VisualizationFacts).Concat(OfflineAnalysisFacts).Concat(ProductPlatformFacts).Concat(MeasurementMethodologyFacts).Concat(LifecycleSecurityFacts).Concat(DeepBenchMethodology2Facts).Concat(EvidenceExportFacts).Concat(ExportUxFacts).Concat(UserExperience2Facts).Concat(GpuDeepFacts).Concat(FirmwareDeepFacts).Concat(EngineeringGovernance2Facts).Concat(StorageDeepFacts).Concat(FileSystemVolumeFacts).Concat(IscsiSessionFacts).Concat(HyperVInventoryFacts).Concat(BaselineForecastFacts).Concat(DevDiagCorrelationFacts).Concat(SecurityAuditDeepFacts).Concat(BitLockerRecoveryFacts).Concat(AcpiDeepFacts).Concat(CppcCapabilityFacts).Concat(MousePollRateFacts).Concat(DeepTestFacts).Concat(EdidCtaFacts).Concat(EventIdEvidenceFacts).Concat(DeviceTruthFacts).Concat(DeviceTreeFacts).Concat(UsbHubFacts).Concat(MeasurementRepeatFacts).Concat(BootOrderFacts).Concat(BcdElementsFacts).Concat(BatteryHealthFacts).Concat(PciClassFacts).Concat(PcieAccessFacts).Concat(WheaMemoryFacts).Concat(XhciFacts).Concat(NvmeReservedFacts).Concat(BuiltinKnowledgeFacts).Concat(DataSecurityDeepFacts).Concat(ScenarioThirdWaveFacts).Concat(SbomFacts).Concat(SurveillancePlanFacts)
+                .Where(f => includeCompliance || !f.Key.StartsWith("zr.compliance.", StringComparison.Ordinal))
                 .ToList();
-            baseFacts.AddRange(CapabilityMatrixService.Collect(baseFacts, DateTimeOffset.UtcNow));
+            baseFacts.AddRange(CapabilityMatrixService.Collect(baseFacts, at));
             // 覆蓋統計（NG-006）：與 cap.*／qs.range 同款，輸入是前面各組的聯集、不含自己——無自我指涉
-            baseFacts.AddRange(CoverageFactsService.Collect(DateTimeOffset.UtcNow,
+            baseFacts.AddRange(CoverageFactsService.Collect(at,
                 baseFacts.Select(f => f.Key).Distinct(StringComparer.Ordinal).ToList(), CoverageService.RuntimeRules()));
             // 收集步驟的讀取代價（U10-MT-0004，第 311 輪）：由 EvidenceCollection 的計時器提供，
             // 不在 getter 裡重跑任何讀取；代價是步驟級，逐鍵代價未量（理由寫在服務裡）。
-            baseFacts.AddRange(MeasurementCostFactsService.Collect(Steps, DateTimeOffset.UtcNow));
+            baseFacts.AddRange(MeasurementCostFactsService.Collect(Steps, at));
             // 量測時間戳出處（U10-MT-0003，第 310 輪）：同樣吃前面各組的聯集、不含自己——
             // 含自己會讓「範圍」每跑一次多一筆，永遠算不完。
-            baseFacts.AddRange(MeasurementStampFactsService.Collect(baseFacts, DateTimeOffset.UtcNow));
+            baseFacts.AddRange(MeasurementStampFactsService.Collect(baseFacts, at));
             // 逐域量測預算（U10-MT-0002，第 313 輪）：純陳述、不讀硬體；
             // 放在聯集之後是因為它跟前面各域的量測方式直接對照（視窗／換算／精度由誰決定）。
-            baseFacts.AddRange(MeasurementBudgetFactsService.Collect(DateTimeOffset.UtcNow));
+            baseFacts.AddRange(MeasurementBudgetFactsService.Collect(at));
             // 安全開機四環（U10-SE-0001／SE-0002，第 314 輪）：吃上面已經產生的事實（uefi.pk／
             // uefi.kek.count／uefi.db.count／uefi.dbx.count／uefi.setup_mode），不重讀任何變數。
-            baseFacts.AddRange(SecureBootChainFactsService.Collect(baseFacts, DateTimeOffset.UtcNow));
+            baseFacts.AddRange(SecureBootChainFactsService.Collect(baseFacts, at));
             // WHEA 節區知識包（U10 第四圈批次一，第 331 輪）：純對照表、零讀取面——
             // 讓 os.ev.whea.* 的事件接得上「這是哪一類節區／哪一種通知」。內容不隨機器變化，
             // 放在 getter 的純陳述區（與 MeasurementBudget 同款），不走收集步驟。
-            baseFacts.AddRange(WheaSectionFactsService.Collect(DateTimeOffset.UtcNow));
+            baseFacts.AddRange(WheaSectionFactsService.Collect(at));
             // DMT 時序知識包（U10 第四圈批次二，第 332 輪）：純對照表、零讀取面——
             // 讓 EDID 的 detailed／standard timing 接得上 VESA DMT 的名字（VC-0001～0021／0038／0040／0043）。
-            baseFacts.AddRange(DmtFactsService.Collect(DateTimeOffset.UtcNow));
+            baseFacts.AddRange(DmtFactsService.Collect(at));
             // 鍵範圍檢查（QS-001）與 cap.* 同款：輸入是前面各組的聯集、不含自己——無遞迴
-            baseFacts.Add(KeyRangeGuardService.Collect(DateTimeOffset.UtcNow, baseFacts));
+            baseFacts.Add(KeyRangeGuardService.Collect(at, baseFacts));
             // 診斷報告整合（NG-004）與提權審計／更新儀表（IN-005／UF-010）：同上，分母不含自己
-            baseFacts.Add(MaintenanceFactsService.ReportFact(DateTimeOffset.UtcNow, baseFacts));
-            baseFacts.AddRange(EnvironmentRuntimeFactsService.CollectDerived(DateTimeOffset.UtcNow, baseFacts));
+            baseFacts.Add(MaintenanceFactsService.ReportFact(at, baseFacts));
+            baseFacts.AddRange(EnvironmentRuntimeFactsService.CollectDerived(at, baseFacts));
             // 來源信任分布（QS-002）：同上，分母不含自己
-            baseFacts.Add(ClosingFactsService.TrustFact(DateTimeOffset.UtcNow, baseFacts));
+            baseFacts.Add(ClosingFactsService.TrustFact(at, baseFacts));
             // WPBT 存在性（SE-010）：由 acpi.tables 推導，只宣告存在性
-            baseFacts.Add(ClosingFactsService.WpbtFact(DateTimeOffset.UtcNow, baseFacts));
+            baseFacts.Add(ClosingFactsService.WpbtFact(at, baseFacts));
             // 查詢品質（QS-004 單位、QS-006 索引）與安全摘要分級（SE-014）：分母不含自己
-            baseFacts.AddRange(QueryInsightFactsService.CollectDerived(DateTimeOffset.UtcNow, baseFacts));
+            baseFacts.AddRange(QueryInsightFactsService.CollectDerived(at, baseFacts));
             // 更新時間軸（UF-005）：由既有 wu.history.* 收口成摘要
-            baseFacts.Add(QueryGovernanceFactsService.TimelineFact(DateTimeOffset.UtcNow, baseFacts));
+            baseFacts.Add(QueryGovernanceFactsService.TimelineFact(at, baseFacts));
             // 工具自身的掃描狀態（ULTIMATE-1000 階段一 P1-001–P1-105）：
             // 骨架採用、逾時、供檔零出網、六態分布與格的成文、出處鏈覆蓋、敏感度分級、守門清冊。
             //
@@ -2473,7 +2959,7 @@ public sealed class EvidenceLabService : ObservableObject
             // 接在這裡的理由與其他「分母不含自己」的派生事實相同：它統計的是前面各組，
             // 不含自己——避免自我指涉。
             baseFacts.AddRange(ScanStateFactsService.Collect(
-                DateTimeOffset.UtcNow,
+                at,
                 skeletonAdopted: ScanStateFactsService.Generators
                     .Select(g => g.Generator).Distinct(StringComparer.Ordinal).Count(),
                 skeletonTotal: ScanStateFactsService.Generators
@@ -2491,8 +2977,8 @@ public sealed class EvidenceLabService : ObservableObject
             var pci = KnowledgeLookupCollector.CollectPci(baseFacts);
             var pciLookups = pci.Devices;
             var ouiLookups = KnowledgeLookupCollector.CollectOui(baseFacts);
-            baseFacts.Add(KnowledgeLookupReport.ToPciFact(DateTimeOffset.UtcNow, pci.Names));
-            baseFacts.Add(KnowledgeLookupReport.ToOuiFact(DateTimeOffset.UtcNow, ouiLookups));
+            baseFacts.Add(KnowledgeLookupReport.ToPciFact(at, pci.Names));
+            baseFacts.Add(KnowledgeLookupReport.ToOuiFact(at, ouiLookups));
             // SMART 廠商屬性對照（第 274 輪：接上真值）：這一輪真的讀到的屬性列已在
             // LoadSmartLookupStats 讀完（專屬執行緒＋外層 6 秒預算、只走 ATA），
             // 這裡**只串接結果**——AllFacts 是 getter，不能放會阻塞的碟讀取。
@@ -2502,27 +2988,26 @@ public sealed class EvidenceLabService : ObservableObject
             // 兩者在報告上都表現為 0 次查詢，但一個是沒跑、一個是跑了沒有對象。
             baseFacts.AddRange(SmartLookupFacts.Count > 0
                 ? SmartLookupFacts
-                : [KnowledgeLookupCollector.ToSmartNotLoaded(DateTimeOffset.UtcNow)]);
+                : [KnowledgeLookupCollector.ToSmartNotLoaded(at)]);
 
             // 知識包宣告（P1-033–P1-038）：與既有 LoadKnowledgePack 同一次載入的結果。
             baseFacts.AddRange(KnowledgePackReportCollector.Collect(
-                DateTimeOffset.UtcNow, KnowledgePackService.Load(KnowledgePackService.DefaultPath),
+                at, knowledgeState.Loaded,
                 swaps: 0, recordedSwaps: 0,
                 lookups: pciLookups.Total + ouiLookups.Total,
                 misses: pciLookups.NotListed + pciLookups.Unparsable
                       + ouiLookups.NotListed + ouiLookups.Unparsable));
 
             // 域知識包（P1-041–P1-043）：每一把都讀本機側的真實值；讀不到就三把都標讀不到。
-            baseFacts.AddRange(DomainKnowledgeCollector.Collect(DateTimeOffset.UtcNow, baseFacts));
+            baseFacts.AddRange(DomainKnowledgeCollector.Collect(at, baseFacts));
 
             // 出網政策與資料主權（P1-049／P1-050／P1-051／P1-054）：
             // 本輪沒有任何資料離開本機——但「沒有觸發」與「沒有通路」是分開的兩件事。
             baseFacts.AddRange(EgressReportCollector.Collect(
-                DateTimeOffset.UtcNow, baseFacts, leftMachine: 0, destinations: [],
+                at, baseFacts, leftMachine: 0, destinations: [],
                 declaredClass: SensitivityPolicy.Level.L0));
 
             return baseFacts;
-        }
     }
 
     /// <summary>
@@ -2709,6 +3194,52 @@ public sealed class EvidenceLabService : ObservableObject
         catch { /* 審計為附加功能；本機磁碟不可寫等情況不影響驗機主流程 */ }
     }
 
+    /// <summary>Snapshot producer for the selected timing view; injectable without constructing a VM or reading hardware.</summary>
+    internal static IReadOnlyList<HardwareFact> CollectMemoryTimingFacts(MemoryTimings timings, DateTimeOffset at)
+    {
+        ArgumentNullException.ThrowIfNull(timings);
+        var facts = new List<HardwareFact>();
+        static bool Known(string? text) => !string.IsNullOrWhiteSpace(text) && text.Trim() is not ("—" or "-");
+        string Source(string specific) => Known(specific) ? specific
+            : Known(timings.SourceText) ? timings.SourceText : "記憶體時序（來源未標示）";
+        if (timings.Loaded && Known(timings.PrimaryTimingsText))
+        {
+            bool reference = timings.IsJedecReference;
+            var availability = reference
+                ? FactStateLattice.Weakest(timings.TimingFactAvailability, FactAvailability.Unknown)
+                : timings.TimingFactAvailability;
+            bool complete = Known(timings.CL) && Known(timings.TRCD) && Known(timings.TRP) && Known(timings.TRAS);
+            if (!complete) availability = FactStateLattice.Weakest(availability, FactAvailability.Unknown);
+            string? reason = reference ? $"僅取得 SPD JEDEC 基準（{timings.PrimaryTimingsText}）；沒有取得控制器目前運行時序。"
+                    + (string.IsNullOrWhiteSpace(timings.TimingFactReason) ? "" : "；" + timings.TimingFactReason)
+                : !complete ? "目前時序欄位不完整；缺值未當成零或成功。"
+                : availability != FactAvailability.Present ? (Known(timings.TimingFactReason) ? timings.TimingFactReason : "來源未確認目前時序。") : null;
+            facts.Add(new HardwareFact("memory.current", "記憶體",
+                reference ? "目前時序（僅有 JEDEC 基準）" : "目前時序",
+                timings.PrimaryTimingsText, "", Source(timings.TimingFactSource),
+                timings.TimingFactTrust ?? FactTrustLevel.Unknown, false, at,
+                Availability: availability, UnavailableReason: reason));
+        }
+        if (Known(timings.DataRateText))
+        {
+            bool reference = timings.RateIsJedecReference
+                || timings.IsJedecReference && !Known(timings.RateFactSource);
+            var availability = reference
+                ? FactStateLattice.Weakest(timings.RateFactAvailability, FactAvailability.Unknown)
+                : timings.RateFactAvailability;
+            string? reason = reference ? $"僅取得 SPD JEDEC 標稱速率（{timings.DataRateText}）；沒有取得目前運行或 Windows 設定速率。"
+                    + (string.IsNullOrWhiteSpace(timings.RateFactReason) ? "" : "；" + timings.RateFactReason)
+                : availability != FactAvailability.Present ? (Known(timings.RateFactReason) ? timings.RateFactReason : "來源未確認資料速率。") : null;
+            facts.Add(new HardwareFact("memory.rate", "記憶體",
+                reference ? "目前資料速率（僅有 JEDEC 標稱）"
+                    : timings.RateIsConfigured ? "設定資料速率（WMI 回報）" : "目前資料速率",
+                timings.DataRateText, "", Source(timings.RateFactSource),
+                timings.RateFactTrust ?? FactTrustLevel.Unknown, false, at,
+                Availability: availability, UnavailableReason: reason));
+        }
+        return facts;
+    }
+
     private static List<HardwareFact> Collect(MainViewModel vm)
     {
         var at = DateTimeOffset.UtcNow;
@@ -2741,8 +3272,7 @@ public sealed class EvidenceLabService : ObservableObject
             if (c.Mhz >= 0)
                 f.Add(new HardwareFact($"cpu.effective.g{c.Ref.Group}.lp{c.Ref.Index}", "處理器", c.LpText,
                     c.Mhz.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture), "MHz", "MSR 0xE8/0xE7", FactTrustLevel.Measured, false, freqAt));
-        Add("memory.current", "記憶體", "目前時序", vm.Timings.PrimaryTimingsText, "", "CPU-Z 報告", FactTrustLevel.Derived);
-        Add("memory.rate", "記憶體", "目前資料速率", vm.Timings.DataRateText, "", "CPU-Z 報告", FactTrustLevel.Derived);
+        f.AddRange(CollectMemoryTimingFacts(vm.Timings, at));
 
         var spdOccurrences = new Dictionary<string, int>(StringComparer.Ordinal);
         for (int i = 0; i < vm.SpdModules.Count; i++)

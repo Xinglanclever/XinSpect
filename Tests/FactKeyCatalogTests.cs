@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -170,7 +170,12 @@ public class FactKeyCatalogTests
         // 67 → 68（2026-11-01 第 3.13 輪）：plan.cctv.——成員固定，但只有存過監控規劃才出現。
         // 68 → 69（2026-11-03 第 3.15 輪）：rf.item.——成員＝離線 Redfish 包裡有幾台管理器／機箱／
         // 系統／電源／風扇／溫度；BMC 給的 Id 是任意字串（ASCII 化成鍵段），編譯期列不完。
-        const int FamilyCap = 69;
+        // 69 → 70（2026-11-17 第 356 輪）：whea.pcie.rec.——成員由已保留 WHEA 事件中的驗證 PCIe 節區決定，
+        // EventRecordID＋節區索引保留複合身分，序號另列敏感子鍵；最多列 16 節區，編譯期無法枚舉成員。
+        // 70 → 71（2026-11-17 第 357 輪）：whea.proc.rec.——成員由已接受事件的 Processor Generic 節區決定；
+        // EventRecordID＋描述符索引保持同筆多節區身分，最多列16節區，編譯期無法枚舉事件成員。
+        // R381: XPF records are data-dependent; ordinal keys omit event/hardware identity, cap16.
+        const int FamilyCap = 72;
         Assert.True(FactKeyDynamicCatalog.Families.Count <= FamilyCap,
             $"動態鍵家族已登記 {FactKeyDynamicCatalog.Families.Count} 個——動態面膨脹到這個程度，先回頭數一數哪些其實可以靜態枚舉");
 

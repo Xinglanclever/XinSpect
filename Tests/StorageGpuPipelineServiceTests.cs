@@ -86,21 +86,41 @@ public class StorageGpuPipelineServiceTests
     }
 
     [Fact]
-    public async Task 取消後暫存檔仍會刪除()
+    public async Task 取消後只清理本場實際檔案並保留既有固定檔()
     {
-        byte[] data = StorageGpuPipelineService.CreateSyntheticData(1 * MiB);
-        var fileSystem = new TempFileSystem();
-        var service = new StorageGpuPipelineService(Path.GetTempPath(), 512 * MiB, fileSystem, new CancellingEngine());
+        string root = Path.Combine(Path.GetTempPath(), "XinSpect-pipeline-test." + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        string sentinel = Path.Combine(root, "XinSpect.io-gpu.tmp");
+        string? actualPath = null;
+        try
+        {
+            File.WriteAllBytes(sentinel, [37, 59]);
+            using var cancellation = new CancellationTokenSource();
+            var engine = new ObservingCancellationEngine(() =>
+                actualPath = Assert.Single(Directory.GetFiles(root).Where(path => path != sentinel)), cancellation.Cancel);
+            var service = new StorageGpuPipelineService(root, 512 * MiB, new TempFileSystem(), engine)
+            {
+                WorkloadFactory = _ => new GpuPipelineWorkload(4096),
+            };
+            var context = new DeepBenchRunContext(Guid.NewGuid(), DeepBenchRunProfile.Quick, new Progress<DeepBenchProgress>());
+            DeepBenchTestResult result = await service.RunAsync(context, cancellation.Token);
+            Assert.Equal(DeepBenchFailureKind.Cancelled, result.FailureKind);
+            Assert.Empty(result.Metrics);
+            Assert.NotNull(actualPath);
+            Assert.False(File.Exists(actualPath));
+            Assert.Equal(new byte[] { 37, 59 }, File.ReadAllBytes(sentinel));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
-        var context = new DeepBenchRunContext(Guid.NewGuid(), DeepBenchRunProfile.Quick, new Progress<DeepBenchProgress>());
-        DeepBenchTestResult result = await service.RunAsync(context, cts.Token);
-
-        Assert.Equal(DeepBenchFailureKind.Cancelled, result.FailureKind);
-        Assert.Empty(result.Metrics);
-        Assert.True(File.Exists(Path.Combine(Path.GetTempPath(), "XinSpect.io-gpu.tmp")) is false || true);
-        // 服務直接走 File API 寫暫存檔（不經 IDiskIoFileSystem.Create），驗證的是「結束後檔案不存在」。
-        Assert.False(File.Exists(Path.Combine(Path.GetTempPath(), "XinSpect.io-gpu.tmp")), "暫存檔應在結束後刪除");
+    private sealed class ObservingCancellationEngine(Action observe, Action cancel) : IGpuPipelineEngine
+    {
+        public Task<GpuPipelineGpuResult> ProcessAsync(GpuPipelineContext context)
+        {
+            observe();
+            cancel();
+            return Task.FromException<GpuPipelineGpuResult>(new OperationCanceledException(context.CancellationToken));
+        }
     }
 
     [Fact]

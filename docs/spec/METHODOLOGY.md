@@ -49,4 +49,30 @@
 
 ## 5. 效能預算
 
-冷啟動 ≤3 秒（實測 2.7 秒）；其餘門檻見 `Models/PerfBudget.cs`；自我遙測預設關閉、匿名只記數字與時間。
+冷啟動目標 ≤3 秒；舊紀錄的 2.7 秒是當時環境的歷史結果，不代表目前版本或其他硬體。現況須依限定版本、硬體與採集範圍重新量測。其餘門檻見 `Models/PerfBudget.cs`；自我遙測預設關閉、匿名只記數字與時間。
+
+
+## 記憶體快照的量與來源（R380）
+
+`memory.current` 保留時序各欄實際來源，`memory.rate` 保留速率實際來源；兩者可來自不同通路。
+安全且已支援的控制器目前值、Windows WMI 設定值、CPU-Z 目前值依既有優先序補值，
+SPD JEDEC 是模組能力基準，不能填補成已確認的控制器目前值。
+Windows `ConfiguredClockSpeed` 的速率標為設定值及 `Reported`，不是即時量測。
+僅有 SPD JEDEC 時，兩把相容鍵仍保留基準／標稱文字，但 `availability=Unknown`、
+`NumericValue=null`，名稱與理由明列尚未取得目前值；不供 Present 條件採信。
+目前時序的 CL/tRCD/tRP/tRAS 任一缺值，摘要亦為 Unknown。
+來源六態逐量傳播；新中繼資料未填寫的舊物件預設 Unknown，不自動升為 Present。
+此修正只改快照投影；不新增硬體讀取或控制器能力，不宣稱來源更新時間已知。
+
+## CLI 記憶體設定速率發布（R386）
+
+CLI 與桌面 usermode 證據採集共用既有 `Win32_PhysicalMemory` 混插摘要查詢的一次列舉，
+新增讀取 `ConfiguredClockSpeed`、`SMBIOSMemoryType` 與 `Capacity` 欄位；沒有新增查詢、
+SPD／控制器讀取或 CPU-Z 啟動。舊混插摘要仍按 `Speed` 的標稱值算跨度，不用它填設定速率。
+只有完整列舉且每條模組設定速率同為正值時，`memory.rate` 才以 WMI 設定值、Reported／Present 發布。
+缺值、混速及空集合為 Unknown；列舉中途失敗不採信已保留部分列，權限／讀取錯誤如實保留。
+新批開始即清掉上一批成功值；逾時、取消或被新批取代後不得晚到覆寫。
+此路徑共用 R380 純投影，不提供 CL／tRCD／tRP／tRAS，故不產生 `memory.current`。
+CLI evidence JSON、Agent Bridge snapshot 及 evidence pack 可消費這把設定速率鍵；
+這不等於控制器目前時序、即時量測、完整桌面快照或獨立硬體驗證。
+來源更新時間仍未知，`MeasuredAtUtc` 是本程式投影時刻。

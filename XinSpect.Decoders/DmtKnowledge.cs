@@ -30,26 +30,34 @@ public sealed record DmtModeInfo(
     string HSync, string VSync, bool Interlaced);
 
 /// <summary>
-/// EDID 基本塊 established timing 位圖（位元組 32–34，24 位中 17 位有定義）的一條登記。
+/// EDID 基本塊 established timing 位圖（位元組 35–37，24 位中 17 位有定義）的一條登記。
 /// </summary>
-/// <param name="Bit">位元位置（0 起算，照 E-EDID §3.8.1 的定義順序）。</param>
+/// <param name="Bit">表索引；0–15 為 0x23/0x24 各 byte 由低到高，16 為 0x25 bit7。讀取請用 ByteOffset/BitMask。</param>
 /// <param name="Width">水平可視。</param>
 /// <param name="Height">垂直可視。</param>
 /// <param name="RefreshHz">刷新率。</param>
 /// <param name="Interlaced">是否交錯式（1024x768@43 一條）。</param>
 [SpecRef("VESA E-EDID v1.4 §3.8 Established Timing（經 Linux drm_edid.c 的 edid_est_modes[] 逐條對照）")]
-public sealed record DmtEst1Entry(int Bit, int Width, int Height, string RefreshHz, bool Interlaced);
+public sealed record DmtEst1Entry(int Bit, int Width, int Height, string RefreshHz, bool Interlaced)
+{
+    public int ByteOffset => Bit < 16 ? 35 + Bit / 8 : 37;
+    public int BitMask => Bit < 16 ? 1 << (Bit % 8) : 0x80;
+}
 
 /// <summary>
 /// Established Timing III 描述元位圖的一條登記（6 位元組、44 位有定義）。
 /// </summary>
-/// <param name="Bit">位元位置（從描述元第 0 位元組的 bit7 起算）。</param>
+/// <param name="Bit">位元位置（從描述元第 6 位元組的 bit7 起算）。</param>
 /// <param name="Width">水平可視。</param>
 /// <param name="Height">垂直可視。</param>
 /// <param name="RefreshHz">刷新率。</param>
 /// <param name="ReducedBlanking">是否 CVT-RB 變體。</param>
 [SpecRef("VESA E-EDID Established Timing III descriptor——經 Linux drm_edid.c 的 est3_modes[] 逐條對照")]
-public sealed record DmtEst3Entry(int Bit, int Width, int Height, string RefreshHz, bool ReducedBlanking);
+public sealed record DmtEst3Entry(int Bit, int Width, int Height, string RefreshHz, bool ReducedBlanking)
+{
+    public int ByteOffset => 6 + Bit / 8;
+    public int BitMask => 1 << (7 - Bit % 8);
+}
 
 /// <summary>
 /// DMT 顯示時序知識包（U10 第四圈批次二）：把 VESA DMT 全表、EDID established timing 兩張位圖對照
@@ -164,7 +172,7 @@ public static class DmtKnowledge
         new(0x58, "4096x2160", "59.94", true, 556188, 4096, 4104, 4136, 4176, 2160, 2208, 2216, 2222, "P", "N", false),
     ];
 
-    /// <summary>EDID 位元組 32–34 的 established timing 位圖：17 條（24 位中 7 位保留未定義，如實不列）。</summary>
+    /// <summary>EDID 位元組 35–37 的 established timing 位圖：17 條（其餘 7 位為廠商保留，不猜）。</summary>
     [SpecRef("VESA E-EDID v1.4 §3.8.1（Linux drm_edid.c edid_est_modes[] 對照）")]
     public static IReadOnlyList<DmtEst1Entry> EstablishedTiming1 { get; } =
     [
@@ -184,7 +192,7 @@ public static class DmtKnowledge
         new(13, 832, 624, "75", false),
         new(14, 800, 600, "75", false),
         new(15, 800, 600, "72", false),
-        new(16, 1152, 864, "75", false),
+        new(16, 1152, 870, "75", false),
     ];
 
     /// <summary>Established Timing III 描述元位圖：44 條。</summary>
@@ -240,7 +248,7 @@ public static class DmtKnowledge
     /// <summary>知識包版本與來源宣告（VC-0043）：解碼表隨規格修訂更新的通道。</summary>
     [SpecRef("同上三表的出處")]
     public static string Version =>
-        "DMT v1.0r12（88 條）＋E-EDID established timing（17＋44 條）——經 Linux drm_edid.c 對照，kernel.org 2026-11-15";
+        "DMT v1.0r12（88 條）＋E-EDID established timing（17＋44 條）——Linux v6.12 drm_edid.c；Apple 1152x870 與位圖位置依 v4l-utils edid-decode 校正，2026-11-16";
 
     /// <summary>按代碼查模式；查不到回 <c>null</c>（不猜）。</summary>
     [SpecRef("同 Modes 表出處")]
@@ -253,18 +261,42 @@ public static class DmtKnowledge
     }
 
     /// <summary>
-    /// 按幾何查模式（EDID detailed timing 對照用）：寬、高、刷新率、RB、交錯五者全對才算命中；
-    /// 刷新率以字串比較（59.94 這類非整數原樣比）。
+    /// 按幾何查唯一候選：寬、高、刷新率、RB、交錯五者全對；多個候選回 null。
+    /// 此方法不足以驗證 DTD；完整時序請用 FindByTiming。刷新率以字串比較。
     /// </summary>
     [SpecRef("同 Modes 表出處；「全欄位都對才命中」沿知識包三態規則")]
     public static DmtModeInfo? FindByGeometry(int width, int height, string refreshHz,
         bool reducedBlanking = false, bool interlaced = false)
     {
+        DmtModeInfo? match = null;
         foreach (var m in Modes)
             if (m.HActive == width && m.VActive == height && m.RefreshHz == refreshHz
                 && m.ReducedBlanking == reducedBlanking && m.Interlaced == interlaced)
-                return m;
-        return null;
+            {
+                if (match is not null) return null;
+                match = m;
+            }
+        return match;
+    }
+
+    /// <summary>以完整時序比對 DTD；時脈容差僅為 EDID 10 kHz 編碼的半個量化單位。</summary>
+    [SpecRef("E-EDID 1.4 Detailed Timing Definition：pixel clock 單位 10 kHz；DMT 表需逐欄對照")]
+    public static DmtModeInfo? FindByTiming(int clockKhz,
+        int hActive, int hSyncStart, int hSyncEnd, int hTotal,
+        int vActive, int vSyncStart, int vSyncEnd, int vTotal,
+        string hSync, string vSync, bool interlaced)
+    {
+        DmtModeInfo? match = null;
+        foreach (var m in Modes)
+            if (System.Math.Abs((long)m.ClockKhz - clockKhz) <= 5
+                && m.HActive == hActive && m.HSyncStart == hSyncStart && m.HSyncEnd == hSyncEnd && m.HTotal == hTotal
+                && m.VActive == vActive && m.VSyncStart == vSyncStart && m.VSyncEnd == vSyncEnd && m.VTotal == vTotal
+                && m.HSync == hSync && m.VSync == vSync && m.Interlaced == interlaced)
+            {
+                if (match is not null) return null;
+                match = m;
+            }
+        return match;
     }
 
     /// <summary>est3 位圖條目對應的 DMT 代碼；對不到回 <c>null</c>——這是自校的一部分，不是繞過。</summary>
@@ -273,8 +305,8 @@ public static class DmtKnowledge
         FindByGeometry(e.Width, e.Height, e.RefreshHz, e.ReducedBlanking)?.Code;
 
     /// <summary>
-    /// est1（位元組 32–34）條目對應的 DMT 代碼。<b>對不到是正常且如實的</b>：640x480@67（Apple）、
-    /// 832x624@75（Apple）、720x400@88、1024x768@43i 不在 DMT 表裡——那些是 DMT 之前的遺產模式。
+    /// est1（位元組 35–37）條目對應的 DMT 代碼。五條非 DMT：720x400@70/88、
+    /// 640x480@67、832x624@75、1152x870@75；1024x768@43i 是 DMT 0x0F。
     /// </summary>
     [SpecRef("同 EstablishedTiming1 表出處；非 DMT 遺產模式沿主目錄 VC-0021 的碼號定案")]
     public static int? ResolveEst1(DmtEst1Entry e) =>

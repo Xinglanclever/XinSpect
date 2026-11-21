@@ -2,6 +2,8 @@ using Microsoft.Win32;
 
 namespace XinSpect;
 
+public sealed record EdidReadSnapshot(IReadOnlyList<(string Label, byte[] Edid)> Edids, IReadOnlyList<string> Errors);
+
 /// <summary>單一顯示器的色域資訊（由 EDID 色度座標推算）。</summary>
 public sealed class MonitorGamutInfo
 {
@@ -82,19 +84,27 @@ public static class EdidService
     /// <b>讀不到就回空清單</b>——呼叫端要能把「沒有顯示器」與「讀取失敗」分開陳述。
     /// </para>
     /// </summary>
-    internal static IReadOnlyList<(string Label, byte[] Edid)> ReadRawAll()
+    internal static IReadOnlyList<(string Label, byte[] Edid)> ReadRawAll() =>
+        ReadRawSnapshot().Edids.Where(e => e.Edid.Length >= 128 && ValidHeader(e.Edid)).ToList();
+
+    /// <summary>保留損壞的值與讀取失敗理由，讓時序消費者區分無資料與讀取失敗。</summary>
+    internal static EdidReadSnapshot ReadRawSnapshot()
     {
         var list = new List<(string, byte[])>();
+        var errors = new List<string>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
         try
         {
             using var display = Registry.LocalMachine.OpenSubKey(
                 @"SYSTEM\CurrentControlSet\Enum\DISPLAY");
-            if (display is null) return list;
+            if (display is null) return new(list, errors);
 
             foreach (var modelName in display.GetSubKeyNames())
             {
-                using var model = display.OpenSubKey(modelName);
+                Microsoft.Win32.RegistryKey? model;
+                try { model = display.OpenSubKey(modelName); }
+                catch (Exception ex) { errors.Add($"{modelName}：{ex.Message}"); continue; }
+                using var modelKey = model;
                 if (model is null) continue;
 
                 foreach (var instName in model.GetSubKeyNames())
@@ -103,22 +113,24 @@ public static class EdidService
                     {
                         using var inst = model.OpenSubKey(instName);
                         using var dp = inst?.OpenSubKey("Device Parameters");
-                        if (dp?.GetValue("EDID") is not byte[] edid || edid.Length < 128) continue;
-                        if (!ValidHeader(edid)) continue;
+                        object? value = dp?.GetValue("EDID");
+                        if (value is null) continue;
+                        if (value is not byte[] edid) { errors.Add($"{modelName} 的 EDID 不是二進位資料"); continue; }
 
                         string hash = Convert.ToHexString(
                             System.Security.Cryptography.SHA256.HashData(edid));
                         if (!seen.Add(hash)) continue;
 
-                        string label = $"{ManufacturerId(edid)} {MonitorName(edid) ?? modelName}".Trim();
+                        string label = edid.Length >= 128 && ValidHeader(edid)
+                            ? $"{ManufacturerId(edid)} {MonitorName(edid) ?? modelName}".Trim() : modelName;
                         list.Add((label, edid));
                     }
-                    catch { /* 單一執行個體讀取失敗不影響其餘 */ }
+                    catch (Exception ex) { errors.Add($"{modelName}：{ex.Message}"); }
                 }
             }
         }
-        catch { /* 無存取權或機碼不存在時回傳目前結果 */ }
-        return list;
+        catch (Exception ex) { errors.Add(ex.Message); }
+        return new(list.AsReadOnly(), errors.AsReadOnly());
     }
 
     // 以下兩者為純位元組解析（無登錄／無硬體相依），故放寬至 internal 供單元測試直接餵入 EDID 區塊。

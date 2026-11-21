@@ -75,4 +75,78 @@ public class DeepTestClockDriftTests
         Assert.True(s.QpcTimestamp > 0);
         Assert.True(s.Utc <= DateTimeOffset.UtcNow.AddMinutes(1));
     }
+
+    [Fact]
+    public void 牆鐘大幅回撥_保留累計負差而非誤判次序()
+    {
+        var start = new ClockSessionDriftService.ClockSample(At, 0);
+        var f = ClockSessionDriftService.BuildFact(At, start,
+            (At.AddSeconds(-180), 120 * (long)QpcFrequency), QpcFrequency);
+        Assert.Equal(FactAvailability.Present, f.Availability);
+        Assert.Equal(-300_000.0, f.NumericValue);
+        Assert.Contains("NTP", f.Value);
+        Assert.Null(f.UnavailableReason);
+    }
+
+    [Theory]
+    [InlineData(0.0)]
+    [InlineData(-1.0)]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(double.NegativeInfinity)]
+    public void 非法頻率_拒絕產生量測值(double frequency)
+    {
+        var start = new ClockSessionDriftService.ClockSample(At, 0);
+        var f = ClockSessionDriftService.BuildFact(At, start,
+            (At.AddMinutes(2), 120 * (long)QpcFrequency), frequency);
+        Assert.Equal(FactAvailability.ReadError, f.Availability);
+        Assert.Null(f.NumericValue);
+        Assert.Contains("頻率", f.UnavailableReason);
+    }
+
+    [Theory]
+    [InlineData(double.Epsilon)]
+    [InlineData(1e-300)]
+    public void 換算溢位_不得讓Infinity流入快照(double frequency)
+    {
+        var start = new ClockSessionDriftService.ClockSample(At, 0);
+        var f = ClockSessionDriftService.BuildFact(At, start,
+            (At.AddMinutes(2), long.MaxValue), frequency);
+        Assert.Equal(FactAvailability.ReadError, f.Availability);
+        Assert.Null(f.NumericValue);
+        Assert.Contains("有限數值", f.UnavailableReason);
+    }
+
+    [Fact]
+    public void Qpc大刻度_先相減保留差值且不溢位()
+    {
+        const long delta = 60_000_001;
+        var closeStart = new ClockSessionDriftService.ClockSample(At, long.MaxValue - delta);
+        var close = ClockSessionDriftService.BuildFact(At, closeStart,
+            (At.AddTicks(600_000_010), long.MaxValue), 1_000_000);
+        Assert.Equal(FactAvailability.Present, close.Availability);
+        Assert.Equal(0.0, close.NumericValue!.Value, 6);
+
+        var wideStart = new ClockSessionDriftService.ClockSample(At, long.MinValue);
+        var wide = ClockSessionDriftService.BuildFact(At, wideStart,
+            (At.AddSeconds(120), long.MaxValue), (double)ulong.MaxValue / 120);
+        Assert.Equal(FactAvailability.Present, wide.Availability);
+        Assert.Equal(0.0, wide.NumericValue!.Value, 6);
+    }
+
+    [Fact]
+    public void 短窗門檻以Qpc判定_小差值不冒稱量測精度()
+    {
+        var start = new ClockSessionDriftService.ClockSample(At, 0);
+        var below = ClockSessionDriftService.BuildFact(At, start,
+            (At.AddHours(1), 60 * (long)QpcFrequency - 1), QpcFrequency);
+        Assert.Equal(FactAvailability.Unknown, below.Availability);
+        Assert.Null(below.NumericValue);
+        var exact = ClockSessionDriftService.BuildFact(At, start,
+            (At.AddSeconds(60), 60 * (long)QpcFrequency), QpcFrequency);
+        Assert.Equal(FactAvailability.Present, exact.Availability);
+        Assert.Equal(0.0, exact.NumericValue);
+        Assert.Contains("不代表量測精度", exact.Value);
+        Assert.Contains("非同步讀鐘誤差", exact.Value);
+    }
 }

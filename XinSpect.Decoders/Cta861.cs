@@ -24,6 +24,9 @@ public sealed record CtaDataBlock(int Tag, byte[] Payload)
 public sealed record CtaExtension(
     int Index, byte Revision, int DtdOffset, byte Flags, IReadOnlyList<CtaDataBlock> Blocks);
 
+public sealed record CtaExtensionParseResult(
+    IReadOnlyList<CtaExtension> Extensions, IReadOnlyList<string> Issues);
+
 /// <summary>視訊資料塊裡的一個短視訊描述元（SVD）：VIC ＋ 原生旗標。</summary>
 public sealed record CtaShortVideo(int Vic, bool Native);
 
@@ -152,24 +155,53 @@ public static class Cta861
 
     /// <summary>
     /// 把整份 EDID 裡的 CTA-861 擴充塊全部解出來（依出現順序）。
-    /// 沒有擴充塊、擴充塊標籤不是 0x02、或長度不足 128 的區塊一律跳過——回空集合。
+    /// 有效 CTA 擴充塊依序回傳；要保留 checksum／截斷診斷請用 ParseExtensionsWithDiagnostics。
     /// </summary>
     [SpecRef("EDID 1.4 §3.10：0x7E＝擴充塊數；每個擴充塊 128 位元組，第 1 位元組為 tag（CTA-861 為 0x02）")]
     public static IReadOnlyList<CtaExtension> ParseExtensions(byte[]? edid)
+        => ParseExtensionsWithDiagnostics(edid).Extensions;
+
+    /// <summary>解析 CTA 擴充塊並回報無效標頭、checksum、截斷與資料塊邊界問題。</summary>
+    [SpecRef("E-EDID 1.4 §3.10：基本塊與每個 128-byte extension checksum；CTA-861 §7.3 data block collection bounds")]
+    public static CtaExtensionParseResult ParseExtensionsWithDiagnostics(byte[]? edid)
     {
         var list = new List<CtaExtension>();
-        if (edid is null || edid.Length < 128) return list;
+        var issues = new List<string>();
+        if (edid is null || edid.Length < 128)
+            return new(list, ["EDID 基本塊不足 128 位元組"]);
+
+        ReadOnlySpan<byte> edidHeader = [0, 255, 255, 255, 255, 255, 255, 0];
+        if (!edid.AsSpan(0, 8).SequenceEqual(edidHeader))
+            return new(list, ["EDID 基本塊標頭無效"]);
+        if (!ChecksumValid(edid.AsSpan(0, 128)))
+            return new(list, ["EDID 基本塊 checksum 無效"]);
 
         int extensionCount = edid[0x7E];
+        int expectedLength = (extensionCount + 1) * 128;
+        if (edid.Length < expectedLength)
+            issues.Add($"EDID 宣告 {extensionCount} 個擴充塊，但資料截斷（{edid.Length}/{expectedLength} bytes）");
+        else if (edid.Length > expectedLength)
+            issues.Add($"EDID 多出 {edid.Length - expectedLength} 個未宣告位元組");
+
         for (int i = 0; i < extensionCount; i++)
         {
             int start = 128 * (i + 1);
             if (start + 128 > edid.Length) break;
+            if (!ChecksumValid(edid.AsSpan(start, 128)))
+            {
+                issues.Add($"擴充塊 {i + 1} checksum 無效，未解讀");
+                continue;
+            }
             if (edid[start] != ExtensionTag) continue;
 
             byte revision = edid[start + 1];
             int dtdOffset = edid[start + 2];
             byte flags = edid[start + 3];
+            if (dtdOffset != 0 && dtdOffset is < 4 or > 127)
+            {
+                issues.Add($"CTA 擴充塊 {i + 1} DTD 起點無效（{dtdOffset}）");
+                continue;
+            }
 
             var blocks = new List<CtaDataBlock>();
             // 資料塊集合位於第 4 位元組到 DTD 起點之間；起點超出 4–127 表示區塊壞了，
@@ -183,8 +215,16 @@ public static class Cta861
                     int tag = (header >> 5) & 0x07;
                     int length = header & 0x1F;
                     // 長度 0 的塊如果照公式前進會停在原地——那是無窮迴圈，直接停止。
-                    if (length == 0) break;
-                    if (pos + 1 + length > dtdOffset) break;
+                    if (length == 0)
+                    {
+                        issues.Add($"CTA 擴充塊 {i + 1} 在位移 {pos} 有零長度資料塊");
+                        break;
+                    }
+                    if (pos + 1 + length > dtdOffset)
+                    {
+                        issues.Add($"CTA 擴充塊 {i + 1} 在位移 {pos} 的資料塊超出 DTD 起點");
+                        break;
+                    }
 
                     var payload = new byte[length];
                     Array.Copy(edid, start + pos + 1, payload, 0, length);
@@ -195,7 +235,14 @@ public static class Cta861
 
             list.Add(new CtaExtension(i, revision, dtdOffset, flags, blocks));
         }
-        return list;
+        return new(list.AsReadOnly(), issues.AsReadOnly());
+    }
+
+    private static bool ChecksumValid(ReadOnlySpan<byte> block)
+    {
+        int sum = 0;
+        foreach (byte value in block) sum += value;
+        return (sum & 0xFF) == 0;
     }
 
     /// <summary>

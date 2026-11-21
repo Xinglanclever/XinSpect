@@ -4,8 +4,8 @@ namespace XinSpect.Tests;
 
 /// <summary>
 /// 第 270 輪 SMART 知識包的顯示接線（消費端）：
-/// <see cref="StorageSmartService.AttributeName(byte, string?)"/> 只補強「廠商自訂」那條路徑
-/// （既有對照表認得的 ID 逐字不變）、raw 六位元組按 <c>RawSemantics</c> 附註、
+/// <see cref="StorageSmartService.AttributeName(byte, string?)"/> 的型號適用性、通稱優先次序、
+/// raw 六位元組按 <c>RawSemantics</c> 附註、
 /// <see cref="KnowledgeLookupCollector.CollectSmart"/>／<c>ToSmartFact</c> 的統計與三態。
 /// </summary>
 public class SmartKnowledgeWiringTests
@@ -14,17 +14,18 @@ public class SmartKnowledgeWiringTests
     [
         SmartVendor.Samsung, SmartVendor.Seagate, SmartVendor.WesternDigital,
         SmartVendor.Kingston, SmartVendor.Micron, SmartVendor.SanDisk,
+        SmartVendor.IntelSolidigm, SmartVendor.Hgst,
     ];
 
     private static readonly DateTimeOffset At = new(2026, 10, 25, 12, 0, 0, TimeSpan.Zero);
 
-    /// <summary>找一個六家表都未收錄的屬性 ID（負向測試用，不硬編碼表內容）。</summary>
+    /// <summary>找一個所有品牌群都未收錄的屬性 ID（負向測試用，不硬編碼表內容）。</summary>
     private static byte UnknownIdEverywhere()
     {
         for (int id = 255; id >= 1; id--)
             if (Vendors.All(v => SmartAttributeKnowledge.Lookup(v, (byte)id) is null))
                 return (byte)id;
-        throw new InvalidOperationException("六家表收錄了所有 ID——負向測試失去錨點");
+        throw new InvalidOperationException("所有品牌群收錄了所有 ID——負向測試失去錨點");
     }
 
     // ── AttributeName：既有行為不變 ─────────────────────────────────────
@@ -49,7 +50,15 @@ public class SmartKnowledgeWiringTests
         byte id = UnknownIdEverywhere();
         Assert.Equal("廠商自訂", StorageSmartService.AttributeName(id, "Samsung SSD 870 EVO"));
         Assert.Equal("廠商自訂", StorageSmartService.AttributeName(id, null));
-        Assert.Equal("廠商自訂", StorageSmartService.AttributeName(id, "Intel SSD 660p"));   // 六家之外
+        Assert.Equal("廠商自訂", StorageSmartService.AttributeName(234, "Intel SSDPE2KX"));
+        Assert.Equal("廠商自訂", StorageSmartService.AttributeName(240, "HGST Ultrastar He10"));
+        Assert.Equal("廠商自訂", StorageSmartService.AttributeName(22, "HGST HUS726060ALE614"));
+        Assert.Equal("廠商自訂", StorageSmartService.AttributeName(233, "INTEL SSDSC2KB480G7R"));
+        Assert.Equal("廠商自訂", StorageSmartService.AttributeName(233, "SSDSC2KB480G7R"));
+        Assert.Equal("廠商自訂", StorageSmartService.AttributeName(241, "Intel"));
+        Assert.Equal("廠商自訂", StorageSmartService.AttributeName(241, "HGST"));
+        Assert.Equal("廠商自訂", StorageSmartService.AttributeName(241, "Solidigm P44 Pro"));
+        Assert.Equal("廠商自訂", StorageSmartService.AttributeName(id, "Unknown Storage Model"));
         Assert.Equal("廠商自訂", StorageSmartService.AttributeName(id, ""));                 // 空型號
     }
 
@@ -61,6 +70,12 @@ public class SmartKnowledgeWiringTests
         string name = StorageSmartService.AttributeName(177, "SAMSUNG SSD 870 EVO");
         Assert.StartsWith("廠商自訂（", name);
         Assert.Contains("Wear Leveling Count", name);
+        Assert.Contains("Thermal Throttle", StorageSmartService.AttributeName(234, "INTEL SSDSC2KB480G7"));
+        Assert.Contains("32MiB", StorageSmartService.AttributeName(241, "INTEL SSDSC2KB480G7"));
+        Assert.DoesNotContain("LBA", StorageSmartService.AttributeName(241, "INTEL SSDSC2KB480G7"));
+        Assert.Contains("Case Temperature", StorageSmartService.AttributeName(190, "INTEL SSDSC2BB120G4"));
+        Assert.Contains("Drive Temperature", StorageSmartService.AttributeName(190, "INTEL SSDSC2KB480G7"));
+        Assert.Contains("Helium Level", StorageSmartService.AttributeName(22, "HGST HUH728080ALE600"));
     }
 
     [Fact]
@@ -78,7 +93,15 @@ public class SmartKnowledgeWiringTests
         Assert.Equal(SmartVendor.SanDisk, sd);
         Assert.True(StorageSmartService.TryVendorFromModel("KINGSTON SA400M8240G", out var kg));
         Assert.Equal(SmartVendor.Kingston, kg);
-        Assert.False(StorageSmartService.TryVendorFromModel("Intel SSD 660p", out _));
+        Assert.True(StorageSmartService.TryVendorFromModel("INTEL SSDPEKNW010T8", out var intel));
+        Assert.Equal(SmartVendor.IntelSolidigm, intel);
+        Assert.True(StorageSmartService.TryVendorFromModel("Solidigm P44 Pro", out var solidigm));
+        Assert.Equal(SmartVendor.IntelSolidigm, solidigm);
+        Assert.True(StorageSmartService.TryVendorFromModel("HGST HUS726060ALE614", out var hgst));
+        Assert.Equal(SmartVendor.Hgst, hgst);
+        Assert.False(StorageSmartService.TryVendorFromModel("Unknown Storage Model", out _));
+        Assert.False(StorageSmartService.TryVendorFromModel("NOTINTEL SSDSC2KB480G7", out _));
+        Assert.False(StorageSmartService.TryVendorFromModel("USB HGST enclosure", out _));
         Assert.False(StorageSmartService.TryVendorFromModel(null, out _));
     }
 
@@ -96,7 +119,7 @@ public class SmartKnowledgeWiringTests
     }
 
     [Fact]
-    public void 無型號_名稱與raw欄位與舊版逐字相同()
+    public void 解碼按型號決定名稱語意_無型號保留舊版原值()
     {
         byte id = UnknownIdEverywhere();
         var rows = StorageSmartService.DecodeAtaAttributes(BuildSector(5, id));
@@ -105,6 +128,16 @@ public class SmartKnowledgeWiringTests
         Assert.Equal($"{id} 廠商自訂", rows[1].Name);
         Assert.EndsWith("（LE: 17）", rows[1].RawText);
         Assert.DoesNotContain("；raw：", rows[1].RawText);
+        var intel = StorageSmartService.DecodeAtaAttributes(BuildSector(241, 234), "INTEL SSDSC2KB480G7");
+        Assert.Contains("32MiB", intel[0].Name); // 不能被既有通稱「LBA」截走
+        Assert.Contains("raw × 32 MiB", intel[0].RawText);
+        Assert.Contains("raw24/raw32:04321", intel[1].RawText);
+        Assert.Equal(17UL, intel[1].RawValue); // 語意補註不能更改原始數值
+        Assert.Equal(2, KnowledgeLookupCollector.CollectSmart(intel).Hits);
+        var unknown = StorageSmartService.DecodeAtaAttributes(BuildSector(233, 241), "INTEL SSDSC2KB480G7R");
+        Assert.All(unknown, r => Assert.DoesNotContain("；raw：", r.RawText));
+        Assert.All(unknown, r => Assert.EndsWith("廠商自訂", r.Name));
+        Assert.Equal(2, KnowledgeLookupCollector.CollectSmart(unknown).NotListed);
     }
 
     [Fact]

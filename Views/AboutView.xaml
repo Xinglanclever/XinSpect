@@ -46,7 +46,7 @@
                                Text="硬體資訊總覽 ・ 即時偵測工具"/>
                     <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                         <TextBlock x:Name="VersionMetadata" Style="{StaticResource FieldLabel}"
-                                   Text="版本 3.28 ・ 工具自訂與 Agent 橋接 ・ DIMM SPD 偵測與診斷修正 ・ 便攜單一執行檔"/>
+                                   Text="版本 3.31 ・ Veritas ・ 特別版 ・ CLI 記憶體與 PCIe ECAM 硬化 ・ 便攜單一執行檔"/>
                         <TextBlock x:Name="SageQuoteHint" Text="  · · ·" FontSize="10" Foreground="{DynamicResource MutedInkBrush}" Opacity="0.18" Cursor="Hand" VerticalAlignment="Center" ToolTip="The sages think themselves to be all-knowing, but we alone are wise to the virtue in those acts of folly" MouseLeftButtonUp="SageQuoteHint_Click"/>
                         <TextBlock x:Name="SageQuoteText" Text="The sages think themselves to be all-knowing, but we alone are wise to the virtue in those acts of folly" Visibility="Collapsed" FontSize="10" FontStyle="Italic" Foreground="{DynamicResource MutedInkBrush}" TextWrapping="Wrap" MaxWidth="520" Margin="8,0,0,0" VerticalAlignment="Center"/>
                     </StackPanel>
@@ -411,7 +411,7 @@
                     <local:SectionHead Text="功能模組" HelpKey="about/功能模組"/>
                     <local:FieldRow Label="系統總覽" Value="使用率・溫度・作業系統・主機板摘要・一鍵複製規格摘要"/>
                     <local:FieldRow Label="處理器" Value="規格・各核心時脈與負載・封裝溫度・CPU-Z 深度規格・隱形停頓（SMI 與 C-state 駐留）"/>
-                    <local:FieldRow Label="記憶體" Value="真實時序・使用量・實體模組・SPD／XMP 深度資料・大頁與位址轉換成本・L3 未命中與 DRAM 實際流量"/>
+                    <local:FieldRow Label="記憶體" Value="真實時序・使用量・實體模組・SPD／XMP 深度資料・大頁與位址轉換成本・末級快取事件與等效流量"/>
                     <local:FieldRow Label="主機板" Value="晶片組・BIOS／UEFI・PCIe 連結・LPCIO 超級 I/O"/>
                     <local:FieldRow Label="顯示卡" Value="時脈・使用率・顯示記憶體・溫度・CPU-Z 深度規格"/>
                     <local:FieldRow Label="顯示卡超頻" Value="NVML 功耗／風扇／溫度上限・NVAPI 核心與記憶體時脈偏移"/>

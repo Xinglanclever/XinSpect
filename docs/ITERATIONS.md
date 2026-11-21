@@ -404,7 +404,7 @@
 
 | 輪 | 工作包 | 內容 | 測試數 | commit |
 |---|---|---|---|---|
-| R1 | WP27 | **PMU 編程驗證服務**（PmuProgrammingService＋IPmuMsrAccess／WinRing0PmuMsrAccess）：沙箱方案 S2＋S3＋S4 前哨——最小寫入＝0x38D 固定計數器 0 使能位以 **OR 併入原值**（不覆寫他人位元、**絕不碰 PMI 位元**）、啟用讀回→工作量→計數器活動確認→還原原值讀回確認，**還原在任何路徑（含 finally）保證**，3 輪聚合；同意閘門；FormatNotice 標「多輪測試・不保證可用、S5 未跑不作正式宣稱」 | 3052 | 本批 |
+| R1 | WP27 | **PMU 編程驗證服務**（PmuProgrammingService＋IPmuMsrAccess／WinRing0PmuMsrAccess）：沙箱方案 S2＋S3＋S4 前哨——最小寫入＝0x38D 固定計數器 0 使能位以 **OR 併入原值**（不覆寫他人位元、**絕不碰 PMI 位元**）、啟用讀回→工作量→計數器活動確認→還原原值讀回確認，**歷史上曾宣稱還原保證；Round 348 已撤除此宣稱，原生編程因所有權、核心釘選與寫回未驗而拒絕**，3 輪聚合；同意閘門；FormatNotice 標「多輪測試・不保證可用、S5 未跑不作正式宣稱」 | 3052 | 本批 |
 | R2 | WP22 | **多輪模式**（RunMultiRound＋FormatMultiRound）：10 輪獨立探測聚合，明寫「多輪零翻轉不代表具備 Rowhammer 抗性」，三重標註（多輪測試／不保證可用／未經過校驗）機器釘死 | 3054 | 本批 |
 | R3 | 接線 | **雙卡進韌體安全頁**：PMU 編程驗證卡（3 輪逐輪 ✓✗ 呈現含 0x309 前後值）＋Rowhammer 多輪按鈕——皆同意勾選＋背景執行；Help 條目 Risk=Danger；PmuProgrammingNotice 綁定 | 3054 | 本批 |
 | R4 | 品質 | **Stryker 逃逸補齊**：PlatformTrustDecoder 查表全表釘死（服務／屬性代碼 0–8、hypervisor 簽章 12 併組、VBS 未知碼、Verdict 分支、CodeIntegrity 旗標 16 條）→ **80.50%→82.04%** | 3054 | 本批 |

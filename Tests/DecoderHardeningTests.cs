@@ -1,4 +1,4 @@
-﻿using Xunit;
+using Xunit;
 
 namespace XinSpect.Tests;
 
@@ -98,6 +98,9 @@ public class DecoderHardeningTests
             "NtfsBootSectorDecoder",
             "UsbHubNodeDecoder",
             "AcpiFadt",
+            "WheaXpfProcessorSectionDecoder",
+            "WheaProcessorGenericSectionDecoder",
+            "WheaPcieSectionDecoder",
             "WheaMemorySectionDecoder",
             "XhciCapabilityDecoder",
             "KernelDumpDecoder",
@@ -109,6 +112,8 @@ public class DecoderHardeningTests
             // （EOTF／亮度／VSDB 旗標）全是「錯一格不會拋例外、只會講錯話」那一類，
             // 所以每個公開方法都要有出處，而且被覆蓋檢查釘住。
             "Cta861",
+            "DmtKnowledge",
+            "EdidTimings",
         };
         Assert.Equal(expected, SpecRefRegistry.CoveredDecoders.Select(t => t.Name).ToArray());
         Assert.All(SpecRefRegistry.CoveredDecoders, t => Assert.True(t.IsSealed || t.IsClass));

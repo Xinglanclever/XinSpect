@@ -14,7 +14,7 @@ public static class HtmlReportService
     public const string HashMarkerStart = "<!-- SHA256:";
     public const string HashMarkerEnd = " -->";
 
-    public static string Build(IReadOnlyList<EvidenceFactRow> rows, string title, DateTimeOffset generatedAtUtc)
+    public static string Build(IReadOnlyList<EvidenceFactRow> rows, string title, DateTimeOffset generatedAtUtc, bool includeSensitive = false)
     {
         var body = new StringBuilder();
         body.Append("<!DOCTYPE html>\n<html lang=\"zh-Hant\">\n<head>\n<meta charset=\"utf-8\">\n");
@@ -29,11 +29,19 @@ public static class HtmlReportService
         foreach (var group in rows.GroupBy(r => r.Category, StringComparer.Ordinal).OrderBy(g => g.Key, StringComparer.Ordinal))
         {
             body.Append("<h2>").Append(Escape(group.Key)).Append("</h2>\n<table>\n<thead><tr><th>項目</th><th>值</th><th>來源</th><th>可信度</th></tr></thead>\n<tbody>\n");
-            foreach (var row in group.OrderBy(r => r.Name, StringComparer.Ordinal))
+            foreach (var original in group.OrderBy(r => r.Name, StringComparer.Ordinal))
+            {
+                var row = original.Sensitive && !includeSensitive
+                    ? original with { Value = HardwareSnapshotService.RedactedValue,
+                        UnavailableReason = original.UnavailableReason is null ? null : HardwareSnapshotService.RedactedValue }
+                    : original;
+                AppendRow(row);
+            }
+            void AppendRow(EvidenceFactRow row)
             {
                 string css = row.IsUnavailable ? " class=\"unavail\"" : row.IsWarning ? " class=\"warn\"" : "";
                 body.Append("<tr").Append(css).Append("><td>").Append(Escape(row.Name))
-                    .Append("</td><td>").Append(Escape(row.ValueText))
+                    .Append("</td><td>").Append(Escape(row.Sensitive && !includeSensitive ? HardwareSnapshotService.RedactedValue : row.ValueText))
                     .Append("</td><td>").Append(Escape(row.Source))
                     .Append("</td><td>").Append(Escape(row.Trust)).Append("</td></tr>\n");
             }

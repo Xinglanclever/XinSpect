@@ -105,7 +105,8 @@ public sealed class NvmePowerService : ObservableObject
             for (int i = 0; i < MaxDrives; i++)
             {
                 uint bus = StorageSmartService.TryGetBusType(i, out string name);
-                if (bus is 16 or 17) list.Add(new SmartDriveRow(i, $"PhysicalDrive{i}（{name}）"));
+                if (StorageSmartService.ChannelOf(bus) == StorageSmartService.StorageBusChannel.Nvme)
+                    list.Add(new SmartDriveRow(i, $"PhysicalDrive{i}（{name}）"));
             }
             return list;
         });

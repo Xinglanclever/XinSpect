@@ -17,7 +17,7 @@ namespace XinSpect;
 /// <para>
 /// 誠實界線：①鏈路沒建起來（空插槽）的通訊埠不列出——列出來只是一排「—」；
 /// ②裝置名稱是拿 VEN／DEV 去比對 <c>Win32_PnPEntity</c> 得到的，兩張一模一樣的卡會顯示同一個名字，
-/// 位置欄（bus:device.function）才是唯一的；③閒置降速是正常省電行為，判讀文字會明說，不當成故障。
+/// 位置欄僅識別本次 BDF-only 讀取範圍，segment 與 PnP 對應未知；③速度低於能力只描述快照差異，省電能力不構成降速原因的證據。
 /// </para>
 /// </remarks>
 public sealed class PcieLinkService : ObservableObject
@@ -119,6 +119,7 @@ public sealed class PcieLinkService : ObservableObject
         var names = LoadPnpNames();
         var rows = new List<PcieLinkRow>();
         int present = 0;
+        var topology = new List<PcieTopologyFunction>();
 
         for (int bus = 0; bus <= 255; bus++)
         {
@@ -128,20 +129,26 @@ public sealed class PcieLinkService : ObservableObject
                 if (!IsPresent(id0)) continue;
 
                 // 標頭類型（0x0C 的第 3 個位元組）位 7＝多功能裝置；單功能就不必白掃 function 1–7
-                uint header = bridge.ReadPciConfig((byte)bus, (byte)dev, 0, 0x0C) ?? 0;
-                bool multi = ((header >> 16) & 0x80) != 0;
+                uint? header = bridge.ReadPciConfig((byte)bus, (byte)dev, 0, 0x0C);
+                bool multi = ((header.GetValueOrDefault() >> 16) & 0x80) != 0;
 
                 for (int fn = 0; fn <= (multi ? 7 : 0); fn++)
                 {
                     uint? id = fn == 0 ? id0 : bridge.ReadPciConfig((byte)bus, (byte)dev, (byte)fn, 0x00);
                     if (!IsPresent(id)) continue;
                     present++;
-                    var row = ReadOne(bridge, (byte)bus, (byte)dev, (byte)fn, id!.Value, names);
+                    uint? functionHeader = fn == 0 ? header : bridge.ReadPciConfig((byte)bus, (byte)dev, (byte)fn, 0x0C);
+                    uint? busNumbers = functionHeader is { } h && ((h >> 16) & 0x7F) == 1
+                        ? bridge.ReadPciConfig((byte)bus, (byte)dev, (byte)fn, 0x18) : null;
+                    var row = ReadOne(bridge, (byte)bus, (byte)dev, (byte)fn, id!.Value, names,
+                        functionHeader, busNumbers, out var function);
+                    topology.Add(function);
                     if (row is not null) rows.Add(row);
                 }
             }
         }
 
+        rows = ApplyTopology(rows, topology);
         // 寬度不足的排前面（那才是真的損失），其次是速度較低的，最後照位置排
         rows = rows.OrderByDescending(r => r.Severity)
                    .ThenBy(r => r.Location, StringComparer.OrdinalIgnoreCase)
@@ -153,8 +160,10 @@ public sealed class PcieLinkService : ObservableObject
     private static bool IsPresent(uint? id) => id is { } v && (v & 0xFFFF) != 0xFFFF && v != 0;
 
     private static PcieLinkRow? ReadOne(WinRing0Bridge bridge, byte bus, byte dev, byte fn, uint id,
-                                        Dictionary<(ushort Ven, ushort Dev), string> names)
+                                        Dictionary<(ushort Ven, ushort Dev), string> names,
+                                        uint? header, uint? busNumbers, out PcieTopologyFunction function)
     {
+        function = new(new(bus, dev, fn), header, busNumbers, null, 0, 0, 0, false);
         ushort ven = (ushort)(id & 0xFFFF), did = (ushort)(id >> 16);
 
         // 狀態暫存器（0x04 的高 16 位）位 4：有沒有能力清單
@@ -176,20 +185,18 @@ public sealed class PcieLinkService : ObservableObject
         // Link Control 2（+0x30）只在 PCIe 能力版本 ≥ 2 時存在。讀它是為了取「協商上限」
         // （Target Link Speed）——上限被 BIOS／驅動壓低時，鏈路再怎麼操都上不去，
         // 這一點從 Link Status 本身看不出來。版本不足時如實標「不適用」，不去讀不存在的位址。
-        bool hasControl2 = PcieNegotiationGap.HasLinkControl2(capReg);
+        bool hasControl2 = PcieParentResolver.HasLinkControl2FromCapabilityDword(capReg);
         int targetSpeed = hasControl2
             ? PcieNegotiationGap.DecodeTargetLinkSpeed(bridge.ReadPciConfig(bus, dev, fn, capOffset + 0x30) ?? 0)
             : 0;
 
-        // 上游連接埠的鏈路能力：往同一個 device 的其他 function、以及上游橋接的鏈路能力找。
-        // 這裡只做「同 bus 上編號更小的上游埠」這個常見情形（根埠／下游埠的鏈路能力），
-        // 找不到就留 0——找不到不代表沒有，只是本版不追整棵拓撲，事實文字如實區分。
-        var (upSpeed, upWidth) = ReadUpstreamLink(bridge, bus, dev, fn);
-
+        function = function with { PortType = portType, MaximumSpeed = maxSpeed, MaximumWidth = maxWidth,
+            TargetSpeed = targetSpeed, HasControl2 = hasControl2 };
+        // Parent evidence is resolved only after this bounded snapshot has been collected.
         var gap = PcieNegotiationGap.Judge(new PcieLinkGap(
-            maxSpeed, maxWidth, curSpeed, curWidth, upSpeed, upWidth, targetSpeed, hasControl2));
-        // 判讀用純解碼器的落差分析；速率較低時的省電宣告由 Link Capabilities 補進依據欄
-        bool declaresPowerSaving = PcieNegotiationGap.DeclaresPowerSaving(linkCap);
+            maxSpeed, maxWidth, curSpeed, curWidth, 0, 0,
+            portType is 4 or 6 ? targetSpeed : 0, portType is 4 or 6 && hasControl2));
+        // ASPM／ClockPM 是能力宣告；不代表已啟用，也不解釋本次速度差異。
 
         // 鏈路沒建起來（空插槽／裝置關電）就不列——一排「—」對使用者沒有意義
         if (curSpeed == 0 && curWidth == 0) return null;
@@ -197,9 +204,7 @@ public sealed class PcieLinkService : ObservableObject
 
         var (verdict, severity) = PcieLinkDecoder.Judge(curSpeed, curWidth, maxSpeed, maxWidth);
         if (severity == 1)
-            verdict += declaresPowerSaving
-                ? "（本裝置在 Link Capabilities 中宣告了省電能力，降速是設計行為）"
-                : "（本裝置未宣告省電能力——降速的原因需要進一步確認）";
+            verdict += "（" + PcieNegotiationGap.PowerSavingCapabilityEvidence(linkCap) + "）";
 
         // 錯誤旗標：裝置狀態（PCIe 能力 +0x08 的高半字）與傳統 PCI 狀態（位移 0x04 的高半字）。
         // 兩者都在傳統設定空間內，讀得到；AER 在延伸空間 0x100 起，CF8/CFC 到不了，故不讀。
@@ -213,52 +218,34 @@ public sealed class PcieLinkService : ObservableObject
                                errText, errSev, ven, did, gap);
     }
 
-    /// <summary>
-    /// 找這條鏈路「上游埠」的鏈路能力。做法是掃同一個裝置的其他 function
-    /// （多 function 的根埠／橋接常把鏈路能力放在 function 0），若都沒有，
-    /// 再往同 bus 上編號更小的裝置找一個帶 PCIe 能力的埠。
-    /// <para>
-    /// 這是刻意的近似：本版不建整棵 PCIe 拓撲，所以「找不到」只回 (0,0)，
-    /// 由判讀層把它當成「未知」而<b>非</b>「無限制」——如實區分查不到與真的沒限制。
-    /// </para>
-    /// </summary>
-    internal static (int Speed, int Width) ReadUpstreamLink(WinRing0Bridge bridge, byte bus, byte dev, byte fn)
+    internal static List<PcieLinkRow> ApplyTopology(IReadOnlyList<PcieLinkRow> rows,
+        IReadOnlyList<PcieTopologyFunction> topology)
     {
-        // 同一個裝置的其他 function（含自身所在的那顆）
-        for (byte f = 0; f < 8; f++)
+        var result = new List<PcieLinkRow>();
+        var prepared = PcieParentResolver.Prepare(topology);
+        var byLabel = prepared.Functions.Values.ToDictionary(f => f.Address.Label, StringComparer.OrdinalIgnoreCase);
+        foreach (var row in rows)
         {
-            if (f == fn) continue;
-            if (!IsPresent(bridge.ReadPciConfig(bus, dev, f, 0x00))) continue;
-            uint cap = FindPcieCap(bridge, bus, dev, f);
-            if (cap == 0) continue;
-            var r = DecodeUpstreamAt(bridge, bus, dev, f, cap);
-            if (r.Speed > 0) return r;
+            byLabel.TryGetValue(row.Location, out var child);
+            var parent = child is null ? PcieParentEvidence.Unknown("child identity missing/duplicated")
+                : PcieParentResolver.Resolve(child, prepared);
+            bool validChild = PcieParentResolver.ValidSpeed(row.CurSpeed) && PcieParentResolver.ValidSpeed(row.MaxSpeed)
+                && PcieParentResolver.ValidWidth(row.CurWidth) && PcieParentResolver.ValidWidth(row.MaxWidth)
+                && row.CurSpeed <= row.MaxSpeed && row.CurWidth <= row.MaxWidth;
+            bool conflictsWithParent = parent.Speed > 0 && (row.CurSpeed > parent.Speed || row.CurWidth > parent.Width);
+            var gap = !validChild || conflictsWithParent
+                ? new PcieNegotiationGap.Verdict(PcieNegotiationGap.GapKind.Unknown, "拓撲快照無法驗證",
+                    !validChild ? "子鏈路速度／寬度欄位保留或互相矛盾" : "目前子鏈路超過直接父橋宣告能力；拒絕歸因",
+                    PcieNegotiationGap.GapSeverity.None)
+                : PcieNegotiationGap.Judge(new(row.MaxSpeed, row.MaxWidth, row.CurSpeed, row.CurWidth,
+                    parent.Speed, parent.Width,
+                    child?.PortType is 4 or 6 ? child.TargetSpeed : 0,
+                    child?.PortType is 4 or 6 && child.HasControl2));
+            gap = gap with { Evidence = gap.Evidence + "；" + parent.Evidence };
+            result.Add(new(row.Name, row.Location, row.Kind, row.CurSpeed, row.CurWidth, row.MaxSpeed, row.MaxWidth,
+                row.Verdict, row.Severity, row.ErrorText, row.ErrorSeverity, row.Ven, row.Dev, gap));
         }
-
-        // 同 bus 上編號更小的裝置（上游埠通常在裝置編號上更靠近根複合體）
-        for (int d = dev - 1; d >= 0; d--)
-        {
-            uint id = bridge.ReadPciConfig(bus, (byte)d, 0, 0x00) ?? 0;
-            if (!IsPresent(id)) continue;
-            uint cap = FindPcieCap(bridge, bus, (byte)d, 0);
-            if (cap == 0) continue;
-            var r = DecodeUpstreamAt(bridge, bus, (byte)d, 0, cap);
-            if (r.Speed > 0) return r;
-        }
-
-        return (0, 0);
-    }
-
-    /// <summary>讀某個 function 的 Link Capabilities 並解出（最大速度, 最大寬度）。</summary>
-    private static (int Speed, int Width) DecodeUpstreamAt(WinRing0Bridge bridge, byte bus, byte dev, byte fn, uint capOffset)
-    {
-        uint capReg = bridge.ReadPciConfig(bus, dev, fn, capOffset) ?? 0;
-        int portType = (int)((capReg >> 16 >> 4) & 0xF);
-        // 只認埠類（4＝根埠、5＝上游埠、6＝下游埠、9＝根複合體事件收集器以外的埠）。
-        // 端點（0）的鏈路能力講的是它自己，不是它的上游，拿來當上游依據會誤導。
-        if (portType is not (4 or 5 or 6)) return (0, 0);
-        uint linkCap = bridge.ReadPciConfig(bus, dev, fn, capOffset + 0x0C) ?? 0;
-        return PcieLinkDecoder.DecodeLinkCap(linkCap);
+        return result;
     }
 
     /// <summary>

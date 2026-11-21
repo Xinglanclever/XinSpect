@@ -48,7 +48,15 @@ public static class AssetFactsService
         foreach (var f in record.Fields)
         {
             bool usable = f.Value.Length > 0 && !f.IsPlaceholder;
-            list.Add(new HardwareFact($"asset.field.{f.Label}", Category, f.Label,
+            // Persisted snapshots require ASCII path keys. Keep the display label separate
+            // from the two model fields consumed by Fleet; no arbitrary Unicode key allowance.
+            string keySuffix = f.Label switch
+            {
+                "系統製造商" => "system_manufacturer",
+                "系統型號" => "system_model",
+                _ => f.Label,
+            };
+            list.Add(new HardwareFact($"asset.field.{keySuffix}", Category, f.Label,
                 f.Value.Length > 0 ? f.Value + SmbiosService.PlaceholderNote(f.Value) : "—（讀不到）",
                 "", f.Source, FactTrustLevel.Reported, f.IsIdentity, at, null,
                 usable ? FactAvailability.Present : FactAvailability.NotApplicable,

@@ -62,59 +62,72 @@ public class NtfsVolumeDecoderTests
         Assert.Null(NtfsVolumeDecoder.EstimateRecords(v with { BytesPerFileRecordSegment = 0 }));
     }
 
+    // Independent SDK fixtures: literal lengths/offsets, not decoder constants.
+    // winioctl.h 10.0.28000.0:12233-12274. V0 already includes MaxUsn.
     internal static byte[] BuildUsn(int version)
     {
-        int len = version == 0 ? 48 : 56;
+        int len = version switch { 0 => 56, 1 => 64, 2 => 80, _ => throw new ArgumentOutOfRangeException(nameof(version)) };
         byte[] b = new byte[len];
         BinaryPrimitives.WriteUInt64LittleEndian(b.AsSpan(0, 8), 0xAABBCCDD11223344UL);
-        BinaryPrimitives.WriteInt64LittleEndian(b.AsSpan(8, 8), 0x10000);   // FirstUsn
-        BinaryPrimitives.WriteInt64LittleEndian(b.AsSpan(16, 8), 0x90000);  // NextUsn
-        BinaryPrimitives.WriteInt64LittleEndian(b.AsSpan(24, 8), 0x08000);  // LowestValidUsn
-        if (version == 1)
+        BinaryPrimitives.WriteInt64LittleEndian(b.AsSpan(8, 8), 0x10000);
+        BinaryPrimitives.WriteInt64LittleEndian(b.AsSpan(16, 8), 0x90000);
+        BinaryPrimitives.WriteInt64LittleEndian(b.AsSpan(24, 8), 0x08000);
+        BinaryPrimitives.WriteInt64LittleEndian(b.AsSpan(32, 8), 0x95000); // MaxUsn in every version
+        BinaryPrimitives.WriteUInt64LittleEndian(b.AsSpan(40, 8), 0x2000000); // MaximumSize
+        BinaryPrimitives.WriteUInt64LittleEndian(b.AsSpan(48, 8), 0x100000); // AllocationDelta
+        if (version >= 1)
         {
-            BinaryPrimitives.WriteInt64LittleEndian(b.AsSpan(32, 8), 0x95000); // MaxUsn（V1）
-            BinaryPrimitives.WriteInt64LittleEndian(b.AsSpan(40, 8), 0x2000000); // MaximumSize
-            BinaryPrimitives.WriteInt64LittleEndian(b.AsSpan(48, 8), 0x100000);  // AllocationDelta
+            BinaryPrimitives.WriteUInt16LittleEndian(b.AsSpan(56, 2), 2);
+            BinaryPrimitives.WriteUInt16LittleEndian(b.AsSpan(58, 2), 3);
         }
-        else
+        if (version >= 2)
         {
-            BinaryPrimitives.WriteInt64LittleEndian(b.AsSpan(32, 8), 0x2000000); // MaximumSize（V0）
-            BinaryPrimitives.WriteInt64LittleEndian(b.AsSpan(40, 8), 0x100000);  // AllocationDelta
+            BinaryPrimitives.WriteUInt32LittleEndian(b.AsSpan(60, 4), 1);
+            BinaryPrimitives.WriteUInt64LittleEndian(b.AsSpan(64, 8), 4096);
+            BinaryPrimitives.WriteInt64LittleEndian(b.AsSpan(72, 8), 1_048_576);
         }
         return b;
     }
 
-    [Fact]
-    public void Usn_V0_48位元組逐欄比對()
+    [Theory]
+    [InlineData(0, "V0")]
+    [InlineData(1, "V1")]
+    [InlineData(2, "V2")]
+    public void Usn_SdkLayoutsPreserveCommonFieldsAndVersion(int version, string expectedVersion)
     {
-        var u = NtfsVolumeDecoder.ParseUsnJournal(BuildUsn(0));
+        var u = NtfsVolumeDecoder.ParseUsnJournal(BuildUsn(version));
         Assert.NotNull(u);
-        Assert.Equal("V0", u.Version);
+        Assert.Equal(expectedVersion, u.Version);
         Assert.Equal(0xAABBCCDD11223344UL, u.UsnJournalId);
-        Assert.Equal(0x10000, u.FirstUsn);
-        Assert.Equal(0x90000, u.NextUsn);
-        Assert.Equal(0x2000000, u.MaximumSize);
-        Assert.Equal(0x100000, u.AllocationDelta);
-        Assert.Null(u.MaxUsn);
+        Assert.Equal(0x10000L, u.FirstUsn);
+        Assert.Equal(0x90000L, u.NextUsn);
+        Assert.Equal(0x08000L, u.LowestValidUsn);
+        Assert.Equal(0x95000L, u.MaxUsn);
+        Assert.Equal(0x2000000L, u.MaximumSize);
+        Assert.Equal(0x100000L, u.AllocationDelta);
     }
 
-    [Fact]
-    public void Usn_V1_56位元組_欄位移正確()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(47)]
+    [InlineData(48)]
+    [InlineData(55)]
+    [InlineData(57)]
+    [InlineData(59)]
+    [InlineData(60)]
+    [InlineData(63)]
+    [InlineData(65)]
+    [InlineData(79)]
+    [InlineData(81)]
+    [InlineData(256)]
+    public void Usn_TruncatedOrUnknownLayoutsAreRejected(int returnedBytes)
     {
-        var u = NtfsVolumeDecoder.ParseUsnJournal(BuildUsn(1));
-        Assert.NotNull(u);
-        Assert.Equal("V1", u.Version);
-        Assert.Equal(0x95000, u.MaxUsn);
-        Assert.Equal(0x2000000, u.MaximumSize);
-        Assert.Equal(0x100000, u.AllocationDelta);
-        Assert.Equal(0x10000, u.FirstUsn);
+        var data = new byte[returnedBytes];
+        var source = BuildUsn(2);
+        source.AsSpan(0, Math.Min(data.Length, source.Length)).CopyTo(data);
+        Assert.Null(NtfsVolumeDecoder.ParseUsnJournal(data));
     }
 
-    [Fact]
-    public void Usn_不足48位元組_回null()
-    {
-        Assert.Null(NtfsVolumeDecoder.ParseUsnJournal(new byte[47]));
-    }
 }
 
 /// <summary>假卷冊查詢接縫：固定回傳佇列或錯誤碼。</summary>
@@ -164,6 +177,40 @@ public class NtfsVolumeFactsTests
         Assert.Contains("啟用（V1）", usn.Value);
         Assert.Contains("不是內容", usn.Value);
         Assert.Contains("FS-005", usn.Value);
+    }
+
+    [Theory]
+    [InlineData(0, "V0")]
+    [InlineData(1, "V1")]
+    [InlineData(2, "V2")]
+    public void Usn_SdkVersionsReachPublicFactWithCorrectSizeAndMaxUsn(int version, string expectedVersion)
+    {
+        var probe = new FakeVolumeProbe((BuildVolumeData(), 0u), (NtfsVolumeDecoderTests.BuildUsn(version), 0u));
+        var fact = Assert.Single(NtfsVolumeFactsService.Collect(At, probe), f => f.Key == "fs.usn.state");
+        Assert.Equal(FactAvailability.Present, fact.Availability);
+        Assert.Contains("啟用（" + expectedVersion + "）", fact.Value);
+        Assert.Contains("上限 32 MiB", fact.Value);
+        Assert.Contains("配置增量 1 MiB", fact.Value);
+        Assert.Contains("MaxUsn 610304", fact.Value);
+    }
+
+    [Theory]
+    [InlineData(48)]
+    [InlineData(55)]
+    [InlineData(60)]
+    [InlineData(79)]
+    [InlineData(81)]
+    public void Usn_TruncatedOrUnknownSuccessNeverBecomesPresent(int returnedBytes)
+    {
+        var data = new byte[returnedBytes];
+        var source = NtfsVolumeDecoderTests.BuildUsn(2);
+        source.AsSpan(0, Math.Min(data.Length, source.Length)).CopyTo(data);
+        var probe = new FakeVolumeProbe((BuildVolumeData(), 0u), (data, 0u));
+        var fact = Assert.Single(NtfsVolumeFactsService.Collect(At, probe), f => f.Key == "fs.usn.state");
+        Assert.Equal(FactAvailability.ReadError, fact.Availability);
+        Assert.Equal("", fact.Value);
+        Assert.Null(fact.NumericValue);
+        Assert.Contains("截斷或未知版型", fact.UnavailableReason!);
     }
 
     [Fact]

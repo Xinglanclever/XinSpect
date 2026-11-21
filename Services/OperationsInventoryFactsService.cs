@@ -322,22 +322,26 @@ public static class OperationsInventoryFactsService
             "顆", "Win32_DiskDrive.Size vs MSFT_PhysicalDisk.Size", FactTrustLevel.Derived, false, at, matched);
     }
 
+    internal static ManagementObjectSearcher CreatePhysicalDiskSizeSearcher(bool storageProvider)
+        => new(new ManagementScope(storageProvider ? @"root\Microsoft\Windows\Storage" : @"root\cimv2"),
+            new ObjectQuery(storageProvider ? "SELECT Size FROM MSFT_PhysicalDisk" : "SELECT Size FROM Win32_DiskDrive"));
+
     private static PhysicalDiskSizes ReadPhysicalDiskSizes()
     {
         var wmi = new List<long>();
-        using (var searcher = new ManagementObjectSearcher("SELECT Size FROM Win32_DiskDrive"))
-        foreach (ManagementObject o in searcher.Get())
+        using (var searcher = CreatePhysicalDiskSizeSearcher(storageProvider: false))
+        using (var results = searcher.Get())
+        foreach (ManagementObject o in results)
             using (o)
                 if (o["Size"] is not null) wmi.Add(ToLong(o["Size"]));
         var storage = new List<long>();
-        using (var searcher = new ManagementObjectSearcher(
-            "SELECT Size FROM MSFT_PhysicalDisk", @"root\Microsoft\Windows\Storage"))
-        foreach (ManagementObject o in searcher.Get())
+        using (var searcher = CreatePhysicalDiskSizeSearcher(storageProvider: true))
+        using (var results = searcher.Get())
+        foreach (ManagementObject o in results)
             using (o)
                 if (o["Size"] is not null) storage.Add(ToLong(o["Size"]));
         return new PhysicalDiskSizes(wmi, storage);
     }
-
     // ── ST-019 長尾儲存盤點 ───────────────────────────────────────────────
 
     public static HardwareFact LegacyStorageFact(DateTimeOffset at, LegacyStorageProbe? probe = null)

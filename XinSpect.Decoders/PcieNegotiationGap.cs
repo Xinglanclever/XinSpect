@@ -32,11 +32,8 @@ public readonly record struct PcieLinkGap(
 /// 而不是「我幫你升上去」。
 /// </para>
 /// <para>
-/// <b>為什麼「速度低於能力」不能直接說成故障：</b>PCIe 的鏈路速度是動態電源管理的一部分——
-/// 顯示卡與 NVMe 在閒置時會降到 Gen1 省電，負載一來才升回去。這件事在靜態快照裡看起來
-/// 和「真的只跑得動 Gen1」一模一樣，只有負載中重量才能分辨。寬度則不同：協商寬度通常在
-/// 開機訓練時就定了，x16 的卡跑在 x4 幾乎都是插槽走線、M.2 佔用通道或 BIOS 分流設定造成的，
-/// 那是固定損失、不會自己恢復。
+/// <b>速度低於能力不構成原因判定：</b>單次快照無法區分閒置策略、設定限制、
+/// 訓練結果或其他原因。ASPM／ClockPM 的能力宣告不證明當前已啟用，也不證明會動態降低鏈路速度。
 /// </para>
 /// </remarks>
 public static class PcieNegotiationGap
@@ -50,7 +47,7 @@ public static class PcieNegotiationGap
         WidthLimited,
         /// <summary>速度低於能力，但仍在 PCIe 動態電源管理的合理範圍內（可能是閒置降速）。</summary>
         SpeedMaybeIdle,
-        /// <summary>速度低於能力，且裝置本身就是省電能力的來源——降速是設計行為，不是故障。</summary>
+        /// <summary>保留的歷史分類；現行判讀不由省電能力推論降速為設計行為。</summary>
         SpeedByDesign,
         /// <summary>上游連接埠的能力低於裝置——瓶頸在走線或插槽，不是這張卡。</summary>
         UpstreamLimit,
@@ -75,31 +72,28 @@ public static class PcieNegotiationGap
     /// <param name="Severity">嚴重度。</param>
     public readonly record struct Verdict(GapKind Kind, string Headline, string Evidence, GapSeverity Severity);
 
-    // Link Capabilities（+0x0C）的省電宣告旗標
-    private const uint CapL0sSupport = 1u << 10;
-    private const uint CapL1Support = 1u << 11;
-    private const uint CapAspmSupport = 0x7u << 12;   // bits 14:12；非 0 表示有支援的 ASPM 等級
-    private const uint CapClockPowerManagement = 1u << 9;
+    private const uint CapAspmSupport = 3u << 10;
+    private const uint CapClockPowerManagement = 1u << 18;
 
-    /// <summary>
-    /// 由 Link Capabilities（+0x0C）取出裝置自己宣告的省電能力旗標。
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// bits 11:10 ＝ ASPM Support（00 不支援／01 L0s／10 L1／11 L0s+L1）、bit 12 ＝ L1 Substates、
-    /// bit 18 ＝ Clock Power Management。有這些旗標而目前速度較低時，降速傾向是設計行為而非故障——
-    /// 這是本判讀最重要的區分線，少了它就會把每一張正常閒置的顯卡都報成有問題。
-    /// </para>
-    /// <para>
-    /// <b>bit 18（Clock Power Management）單獨不算數：</b>它與 bit 9（Clock Power Management 的
-    /// 支援宣告）在近年平台上普遍為 1，若把它當成「會降速」的證據，幾乎每條鏈路都會被判成有省電能力，
-    /// 這個旗標就失去區分力。這裡只認 ASPM 相關的位元，並在依據欄如實寫出看到的是哪一個旗標。
-    /// </para>
-    /// </remarks>
-    [SpecRef("PCI Express Base Specification, Link Capabilities Register（PCIe 能力結構 +0x0C）：bits 11:10 ＝ ASPM Support（00＝不支援、01＝L0s、10＝L1、11＝L0s+L1）、bit 12 ＝ L1 Substates（bits 12 與 11:10 合併判讀 L1.1／L1.2 支援）、bit 18 ＝ Clock Power Management。位元位置與 PcieLinkDecoder 的 Link Capabilities 解碼同源；ASPM 與動態鏈路速度的關係見規格 §7.5.3。")]
+    /// <summary>Link Capabilities 宣告 ASPM 或 Clock Power Management 支援；不判斷啟用狀態或降速原因。</summary>
+    [SpecRef("Windows SDK 10.0.28000.0 km/ntddk.h PCI_EXPRESS_LINK_CAPABILITIES_REGISTER：ASPM Support bits 11:10；L0s Exit Latency bits 14:12；L1 Exit Latency bits 17:15；Clock Power Management bit 18。能力不等於啟用，也不證明目前速度降低的原因。")]
     public static bool DeclaresPowerSaving(uint linkCap)
-        => (linkCap & (CapL0sSupport | CapL1Support | CapAspmSupport)) != 0
-           || (linkCap & CapClockPowerManagement) != 0 && (linkCap & (CapL0sSupport | CapL1Support)) != 0;
+        => (linkCap & (CapAspmSupport | CapClockPowerManagement)) != 0;
+
+    /// <summary>顯示兩種獨立能力，並保留啟用狀態和速度成因未知。</summary>
+    [SpecRef("Windows SDK 10.0.28000.0 km/ntddk.h PCI_EXPRESS_LINK_CAPABILITIES_REGISTER；ActiveStatePMSupport bits 11:10、ClockPowerManagement bit 18。此方法不解碼 Link Control 啟用狀態或 L1 Substates extended capability。")]
+    public static string PowerSavingCapabilityEvidence(uint linkCap)
+    {
+        string aspm = ((linkCap >> 10) & 3) switch
+        {
+            1 => "L0s",
+            2 => "L1",
+            3 => "L0s＋L1",
+            _ => "未宣告",
+        };
+        string clock = (linkCap & CapClockPowerManagement) != 0 ? "支援" : "未宣告";
+        return $"Link Capabilities：ASPM {aspm}；ClockPM {clock}。能力不代表已啟用，也不能證明本次降速原因";
+    }
 
     /// <summary>
     /// Link Control 2（+0x30）的 Target Link Speed 欄位（bits 3:0）。
@@ -126,7 +120,7 @@ public static class PcieNegotiationGap
     /// ① 讀不到能力或現況 → 如實說讀不到；
     /// ② 寬度不足 → 固定的損失，成因明確；
     /// ③ 有上游連接埠且它的能力就低於裝置 → 瓶頸在走線／插槽，這條最容易被誤判成顯卡有問題；
-    /// ④ 裝置自己宣告省電能力而速度較低 → 設計行為，不是故障；
+    /// ④ 省電能力僅作能力資訊，不推論降速原因；
     /// ⑤ 其餘速度較低 → 可能閒置降速，也可能真的上不去，只有負載中重量能分辨。
     /// </remarks>
     [SpecRef("PCI Express Base Specification §7.5.3（Link Capabilities／Link Status／Link Control 2 的欄位語意）；動態鏈路速度與電源管理的關係見 PCIe 規格 §5.4（Link Training and Status State Machine 的 L0s／L1 低功耗態與 Active State Power Management）；上游連接埠限制的推論依 PCIe 拓撲（根埠→交換器→端點）中「鏈路速度取雙方較低者」的協商規則。判讀僅比較唯讀欄位，不寫任何暫存器。")]
@@ -190,8 +184,8 @@ public static class PcieNegotiationGap
         return new Verdict(GapKind.SpeedMaybeIdle,
             $"目前 {PcieLink.SpeedName(gap.CurSpeed)}，裝置支援 {PcieLink.SpeedName(gap.CapSpeed)}",
             core
-            + "。PCIe 的鏈路速度是動態電源管理的一部分——顯示卡與 NVMe 閒置時會降到 Gen1 省電，"
-            + "負載一來才升回去；靜態快照分不出「閒置降速」與「真的只跑得動這個速度」。"
+            + "。單次快照無法確認速度較低的原因；可能涉及閒置策略、設定限制或鏈路訓練結果。"
+            + "ASPM／ClockPM 能力不代表已啟用，也不證明本次降速原因。"
             + "要確認請在負載中（跑遊戲、大量讀寫）再量一次，或看本頁重新掃描後的結果。"
             + (gap.TargetSpeedProgrammable && gap.TargetSpeed > 0 && gap.TargetSpeed < gap.CapSpeed
                 ? $"另注意：Link Control 2 的協商上限被設為 {PcieLink.SpeedName(gap.TargetSpeed)}，"

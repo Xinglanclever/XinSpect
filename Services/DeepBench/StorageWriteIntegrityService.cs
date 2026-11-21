@@ -25,7 +25,7 @@ public sealed record StorageWriteIntegrityPoint(
     IReadOnlyList<double> LatencySamplesUs,
     IReadOnlyList<long> MismatchOffsets);
 
-public sealed record StorageWriteIntegrityMeasurement(IReadOnlyList<StorageWriteIntegrityPoint> Points);
+public sealed record StorageWriteIntegrityMeasurement(IReadOnlyList<StorageWriteIntegrityPoint> Points, string? TemporaryFilePath = null);
 
 /// <summary>
 /// 寫入完整性深測：對唯一暫存檔寫入確定圖樣、FlushToDisk 後逐區塊讀回比對。
@@ -60,7 +60,6 @@ public sealed class StorageWriteIntegrityService(
     {
         DateTime started = DateTime.UtcNow;
         DeepBenchTestResult result;
-        Exception? cleanupFailure = null;
         DiskIoPlan? plan = null;
         try
         {
@@ -92,7 +91,7 @@ public sealed class StorageWriteIntegrityService(
                     $"{workload.Rounds} round(s)；資料長度 {workload.DataLengthBytes / 1024.0 / 1024.0:0} MiB；fixed 0x55 / 0xAA / PRNG",
                     metrics,
                     [
-                        $"唯一暫存檔：{plan.TempFilePath}；啟動前已揭露路徑。",
+                        $"引擎回報的自有暫存檔：{measurement.TemporaryFilePath ?? "注入引擎未提供路徑"}。",
                         "每輪使用固定 0x55、固定 0xAA 與確定性 PRNG 圖樣，寫入後 FlushToDisk 再逐區塊讀回比對。",
                         mismatchCount == 0 ? "所有已讀回區塊逐位元組一致。" : $"偵測到 {mismatchCount} 個不一致摘要位置。",
                     ],
@@ -100,6 +99,7 @@ public sealed class StorageWriteIntegrityService(
                         "這是 Windows 檔案 API 可觀察路徑；裝置內建快取、韌體處理與檔案系統行為仍會包含在內。",
                         "FlushToDisk 不模擬斷電；此結果不是斷電級耐用性測試、MemTest86 或儲存裝置認證。",
                         "結果只在本次暫存檔與本機路徑上成立，不代表整碟其他區域。",
+                        "自有暫存檔關閉時要求系統刪除；本結果未驗證刪除成功。",
                     ],
                     mismatchCount == 0 ? DeepBenchFailureKind.None : DeepBenchFailureKind.Unstable,
                     mismatchError);
@@ -117,32 +117,7 @@ public sealed class StorageWriteIntegrityService(
         {
             result = Failed(context, started, DeepBenchFailureKind.PlatformError, exception.Message);
         }
-        finally
-        {
-            if (plan is not null)
-            {
-                try
-                {
-                    if (_fileSystem.Exists(plan.TempFilePath)) _fileSystem.Delete(plan.TempFilePath);
-                }
-                catch (Exception exception)
-                {
-                    cleanupFailure = exception;
-                }
-            }
-        }
-
-        if (cleanupFailure is not null)
-        {
-            result = result with
-            {
-                FailureKind = DeepBenchFailureKind.PlatformError,
-                Error = $"量測結束但暫存檔刪除失敗：{cleanupFailure.Message}",
-                Limitations = [.. result.Limitations, "請手動確認 XinSpect.deepbench.tmp 是否仍存在。"],
-            };
-        }
-
-        context.Progress.Report(new DeepBenchProgress(Id, 1, 1, 1, "暫存檔已清理"));
+        context.Progress.Report(new DeepBenchProgress(Id, 1, 1, 1, "完整性測試流程已結束。"));
         return result;
     }
 
@@ -260,7 +235,7 @@ public sealed class StorageWriteIntegrityService(
     }
 
     private static DeepBenchTestResult Cancelled(DeepBenchRunContext context, DateTime started) =>
-        new(TestId, context.SessionId, context.Profile, started, DateTime.UtcNow, "已取消", [], [], ["取消後關閉並刪除暫存檔。"], DeepBenchFailureKind.Cancelled, "使用者取消。");
+        new(TestId, context.SessionId, context.Profile, started, DateTime.UtcNow, "已取消", [], [], ["取消後等待已發出的 I/O 結束，再關閉自有 handle 並要求系統刪除；未驗證刪除成功。"], DeepBenchFailureKind.Cancelled, "使用者取消。");
 
     private static DeepBenchTestResult Failed(DeepBenchRunContext context, DateTime started, DeepBenchFailureKind kind, string error) =>
         new(TestId, context.SessionId, context.Profile, started, DateTime.UtcNow, "未完成", [], [], ["不從未完成圖樣推算。"], kind, error);
@@ -275,8 +250,21 @@ public sealed class StorageWriteIntegrityService(
         }
 
         public bool Exists(string path) => File.Exists(path);
-        public void Create(string path) { using var _ = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None); }
-        public void Delete(string path) => File.Delete(path);
+        public void Create(string path) => throw new NotSupportedException("Native integrity uses an owned handle, not a caller pathname.");
+        public void Delete(string path) => throw new NotSupportedException("Native integrity cleanup belongs to its owned handle.");
+    }
+
+    // The supplied owner stays alive through actual awaited completion, including cancellation.
+    internal static async Task<T> WithOwnedHandleAsync<T>(IDisposable owner, SafeFileHandle handle,
+        Func<SafeFileHandle, Task<T>> workload, CancellationToken cancellationToken)
+    {
+        using (owner)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            T result = await workload(handle).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            return result;
+        }
     }
 
     private sealed class WriteThroughIntegrityEngine : IWriteIntegrityEngine
@@ -285,7 +273,19 @@ public sealed class StorageWriteIntegrityService(
 
         public async Task<StorageWriteIntegrityMeasurement> MeasureAsync(WriteIntegrityContext context, CancellationToken cancellationToken)
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(context.TempFilePath)!);
+            cancellationToken.ThrowIfCancellationRequested();
+            string directory = Path.GetDirectoryName(context.TempFilePath)!;
+            Directory.CreateDirectory(directory);
+            var lease = OwnedTemporaryFile.Create(directory, "XinSpect.write-integrity",
+                FileOptions.WriteThrough | FileOptions.Asynchronous);
+            return await WithOwnedHandleAsync(lease, lease.Handle,
+                handle => MeasureOnHandleAsync(context, handle, lease.Path, cancellationToken), cancellationToken).ConfigureAwait(false);
+        }
+
+        private static async Task<StorageWriteIntegrityMeasurement> MeasureOnHandleAsync(
+            WriteIntegrityContext context, SafeFileHandle handle, string actualPath, CancellationToken cancellationToken)
+        {
+            context.Progress.Report(new DeepBenchProgress(TestId, 0, 1, 0.03, $"自有暫存檔：{actualPath}"));
             var points = new List<StorageWriteIntegrityPoint>();
             PatternId[] patterns = [PatternId.Fixed55, PatternId.FixedAA, PatternId.Prng];
             int rounds = GetWorkload(context.Profile).Rounds;
@@ -307,7 +307,7 @@ public sealed class StorageWriteIntegrityService(
 
                     FillPattern(expected, pattern, round);
                     (double writeThroughput, double verifyThroughput, List<double> latencies, List<long> mismatches) =
-                        await MeasureRoundAsync(context.TempFilePath, expected, actual, cancellationToken).ConfigureAwait(false);
+                        await MeasureRoundAsync(handle, expected, actual, cancellationToken).ConfigureAwait(false);
                     points.Add(new StorageWriteIntegrityPoint(
                         pattern.ToStringInvariant(),
                         context.DataLengthBytes,
@@ -318,15 +318,13 @@ public sealed class StorageWriteIntegrityService(
                 }
             }
 
-            return new StorageWriteIntegrityMeasurement(points);
+            return new StorageWriteIntegrityMeasurement(points, actualPath);
         }
 
         private static async Task<(double Write, double Verify, List<double> Latencies, List<long> Mismatches)> MeasureRoundAsync(
-            string path, byte[] expected, byte[] actual, CancellationToken cancellationToken)
+            SafeFileHandle handle, byte[] expected, byte[] actual, CancellationToken cancellationToken)
         {
             long timestamp = Stopwatch.GetTimestamp();
-            using (SafeFileHandle handle = File.OpenHandle(
-                path, FileMode.Create, FileAccess.Write, FileShare.None, FileOptions.WriteThrough))
             {
                 for (long offset = 0; offset < expected.Length; offset += BlockBytes)
                 {
@@ -341,7 +339,6 @@ public sealed class StorageWriteIntegrityService(
             TimeSpan writeElapsed = Stopwatch.GetElapsedTime(timestamp);
             timestamp = Stopwatch.GetTimestamp();
             var latencies = new List<double>(expected.Length / BlockBytes);
-            using (SafeFileHandle handle = File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 for (long offset = 0; offset < expected.Length; offset += BlockBytes)
                 {

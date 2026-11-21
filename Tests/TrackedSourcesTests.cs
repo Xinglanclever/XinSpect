@@ -102,8 +102,8 @@ public class TrackedSourcesTests
 
         // 這道閘門必須在 push 之前（否則等於沒有）
         int gate = script.IndexOf("git ls-files --others", StringComparison.Ordinal);
-        int push = script.IndexOf("push origin main", StringComparison.Ordinal);
-        Assert.True(push > 0, "找不到 push origin main");
+        int push = script.IndexOf("push origin HEAD:main", StringComparison.Ordinal);
+        Assert.True(push > 0, "找不到推送目前 HEAD 到 main 的發版步驟");
         Assert.True(gate < push, "未入版控的檢查排在 push 之後——那時已經來不及了");
     }
 }

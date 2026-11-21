@@ -18,7 +18,7 @@ public sealed record NtfsVolumeData(
     long MftZoneStart,
     long MftZoneEnd);
 
-/// <summary>USN 日誌查詢結果。Version：V0（48 位元組）／V1（56＋，含 MaxUsn）。</summary>
+/// <summary>USN 日誌查詢結果；保留 V0/V1/V2 共用的七個 8-byte 欄位（含 MaxUsn）。</summary>
 public sealed record UsnJournalInfo(
     string Version,
     ulong UsnJournalId,
@@ -34,8 +34,9 @@ public sealed record UsnJournalInfo(
 /// <para>
 /// 版面對準 Windows SDK <c>winioctl.h</c>（tpn 鏡像，10.0.16299，2026-10-11 抓取）：
 /// <see cref="NtfsVolumeData"/> ＝ NTFS_VOLUME_DATA_BUFFER v1（5×LARGE_INTEGER＋4×DWORD＋5×LARGE_INTEGER＝96 位元組，
-/// 欄序照原文）；<see cref="UsnJournalInfo"/> ＝ USN_JOURNAL_DATA_V0（48）與 V1（56＋：第 32 位元組起多一個 MaxUsn，
-/// MaximumSize 往後移 8）。新於 V1 的版型以 V1 字首解析並在 Version 裡註明。
+/// 欄序照原文）；<see cref="UsnJournalInfo"/> 對準本機 Windows SDK 10.0.28000.0：
+/// USN_JOURNAL_DATA_V0＝56 bytes，V1＝64 bytes（新增兩個 WORD，含結構尾端對齊），V2＝80 bytes。
+/// 三版前 56 bytes 相同；只輸出共用欄位，版本延伸欄位不在本模型內。
 /// </para>
 /// <para><b>界線</b>：記錄數是 MftValidDataLength ÷ BytesPerFileRecordSegment 的<b>估算</b>——沒有逐條解析 MFT；
 /// USN 跨度是 FirstUsn→NextUsn 的差值（日誌存在性與規模），不是內容。</para>
@@ -79,30 +80,34 @@ public static class NtfsVolumeDecoder
     public static long? EstimateRecords(NtfsVolumeData v) =>
         v.BytesPerFileRecordSegment == 0 ? null : v.MftValidDataLength / v.BytesPerFileRecordSegment;
 
-    /// <summary>解析 FSCTL_QUERY_USN_JOURNAL 輸出：48 位元組＝V0，≥56＝V1 字首（第 32 位元組多 MaxUsn）。不足回 null。</summary>
-    [SpecRef("Windows SDK winioctl.h（tpn 鏡像 10.0.16299，2026-10-11 抓取）USN_JOURNAL_DATA_V0（48：JournalID/First/Next/"
-        + "LowestValid/MaximumSize/AllocationDelta 六個 8 位元組欄）與 USN_JOURNAL_DATA_V1（56＋：LowestValid 後多 MaxUsn，"
-        + "MaximumSize／AllocationDelta 往後移 8）；小端序")]
+    /// <summary>SDK USN_JOURNAL_DATA_V0 的完整最小長度；MaxUsn 自 V0 即存在。</summary>
+    public const int UsnJournalV0Bytes = 56;
+    public const int UsnJournalV1Bytes = 64;
+    public const int UsnJournalV2Bytes = 80;
+
+    /// <summary>只接受完整已知 SDK 結構長度；截斷、部分延伸及未知版型回 null，不猜版本。</summary>
+    [SpecRef("Windows SDK 10.0.28000.0 um/winioctl.h:12233-12274 USN_JOURNAL_DATA_V0/V1/V2："
+        + "V0=56 bytes，JournalID@0/First@8/Next@16/LowestValid@24/MaxUsn@32/MaximumSize@40/AllocationDelta@48；"
+        + "V1=64 bytes，MinSupportedMajorVersion@56/MaxSupportedMajorVersion@58（尾端對齊）；"
+        + "V2=80 bytes，另有Flags@60/RangeTrackChunkSize@64/RangeTrackFileSizeThreshold@72。"
+        + "本模型僅輸出三版共用的56-byte前綴；小端序，完整已知長度以外拒解")]
     public static UsnJournalInfo? ParseUsnJournal(byte[] out_)
     {
-        if (out_.Length < 48) return null;
-        int i = 0;
-        ulong id = BinaryPrimitives.ReadUInt64LittleEndian(out_.AsSpan(i)); i += 8;
-        long first = BinaryPrimitives.ReadInt64LittleEndian(out_.AsSpan(i)); i += 8;
-        long next = BinaryPrimitives.ReadInt64LittleEndian(out_.AsSpan(i)); i += 8;
-        long lowest = BinaryPrimitives.ReadInt64LittleEndian(out_.AsSpan(i)); i += 8;
-        if (out_.Length >= 56)
+        string? version = out_.Length switch
         {
-            long maxUsn = BinaryPrimitives.ReadInt64LittleEndian(out_.AsSpan(i)); i += 8;
-            long max = BinaryPrimitives.ReadInt64LittleEndian(out_.AsSpan(i)); i += 8;
-            long delta = BinaryPrimitives.ReadInt64LittleEndian(out_.AsSpan(i));
-            string ver = out_.Length == 56 ? "V1"
-                : out_.Length >= 80 ? "V2"   // V2＝V1 七個欄位＋Flags＋RangeTrack 兩欄（winioctl.h 原文字首一致）
-                : "V1 字首（輸出 " + out_.Length + " 位元組）";
-            return new UsnJournalInfo(ver, id, first, next, lowest, maxUsn, max, delta);
-        }
-        long maxSize = BinaryPrimitives.ReadInt64LittleEndian(out_.AsSpan(i)); i += 8;
-        long alloc = BinaryPrimitives.ReadInt64LittleEndian(out_.AsSpan(i));
-        return new UsnJournalInfo("V0", id, first, next, lowest, null, maxSize, alloc);
+            UsnJournalV0Bytes => "V0",
+            UsnJournalV1Bytes => "V1",
+            UsnJournalV2Bytes => "V2",
+            _ => null
+        };
+        if (version is null) return null;
+        ulong id = BinaryPrimitives.ReadUInt64LittleEndian(out_.AsSpan(0));
+        long first = BinaryPrimitives.ReadInt64LittleEndian(out_.AsSpan(8));
+        long next = BinaryPrimitives.ReadInt64LittleEndian(out_.AsSpan(16));
+        long lowest = BinaryPrimitives.ReadInt64LittleEndian(out_.AsSpan(24));
+        long maxUsn = BinaryPrimitives.ReadInt64LittleEndian(out_.AsSpan(32));
+        long maxSize = BinaryPrimitives.ReadInt64LittleEndian(out_.AsSpan(40));
+        long allocationDelta = BinaryPrimitives.ReadInt64LittleEndian(out_.AsSpan(48));
+        return new UsnJournalInfo(version, id, first, next, lowest, maxUsn, maxSize, allocationDelta);
     }
 }

@@ -179,7 +179,7 @@ public static class NtfsVolumeFactsService
 
     private static IReadOnlyList<HardwareFact> CollectUsn(DateTimeOffset at, IVolumeProbe probe)
     {
-        var r = probe.Query(SystemVolumeProbe.FsctlQueryUsnJournal, 48);
+        var r = probe.Query(SystemVolumeProbe.FsctlQueryUsnJournal, NtfsVolumeDecoder.UsnJournalV0Bytes);
         if (r.Data is null)
         {
             if (r.Error == ErrorJournalNotActive)
@@ -212,7 +212,7 @@ public static class NtfsVolumeFactsService
             [
                 new HardwareFact(UsnKey, Category, "USN 變更日誌狀態", "", "", Source,
                     FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError,
-                    $"輸出僅 {r.Data.Length} 位元組（< 48）——不猜欄位"),
+                    $"USN 輸出 {r.Data.Length} 位元組：需要完整已知結構（V0 56／V1 64／V2 80）；截斷或未知版型不猜欄位"),
             ];
 
         long span = u.NextUsn - u.FirstUsn;

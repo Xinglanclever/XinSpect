@@ -154,6 +154,27 @@ public class OperationsInventoryFactsTests
         var f = OperationsInventoryFactsService.NtfsAuditFact(At, () => null);
         Assert.Equal(FactAvailability.ReadError, f.Availability);
     }
+    [Theory]
+    [InlineData(false, @"root\cimv2", "SELECT Size FROM Win32_DiskDrive")]
+    [InlineData(true, @"root\Microsoft\Windows\Storage", "SELECT Size FROM MSFT_PhysicalDisk")]
+    public void 磁碟查詢工廠設定真正namespace與WQL但不連線(bool storageProvider, string expectedNamespace, string expectedQuery)
+    {
+        using var searcher = OperationsInventoryFactsService.CreatePhysicalDiskSizeSearcher(storageProvider);
+        Assert.Equal(expectedNamespace, searcher.Scope.Path.NamespacePath, ignoreCase: true);
+        Assert.Equal(expectedQuery, searcher.Query.QueryString);
+        Assert.False(searcher.Scope.IsConnected);
+    }
+
+    [Fact]
+    public void 同容量磁碟保持多重集歧義不冒充裝置身份配對()
+    {
+        var fact = OperationsInventoryFactsService.PhysicalDiskCrossFact(At,
+            () => new([1000L, 1000L], [1000L, 1000L]));
+        Assert.Contains("容量匹配 2", fact.Value);
+        Assert.Contains("同容量歧義群 1", fact.Value);
+        Assert.Contains("不硬配", fact.Value);
+        Assert.Contains("容量多重集", fact.Value);
+    }
     // ── ST-016 實體磁碟交叉 ───────────────────────────────────────────────
 
     [Fact]

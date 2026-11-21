@@ -138,12 +138,13 @@ public class PcieLinkTests
     }
 
     [Fact]
-    public void 判讀_速度較低要明說閒置降速不是故障()
+    public void 判讀_速度較低保留原因未知()
     {
         var (text, severity) = PcieLinkDecoder.Judge(1, 16, 4, 16);
         Assert.Equal(1, severity);
         Assert.DoesNotContain("⚠", text);
-        Assert.Contains("不是故障", text);
+        Assert.DoesNotContain("不是故障", text);
+        Assert.Contains("無法確認降速原因", text);
         Assert.Contains("負載", text);   // 要求使用者在負載中重量一次
     }
 
@@ -203,11 +204,12 @@ public class PcieLinkTests
     }
 
     [Fact]
-    public void 結論_只有速度較低時明說是閒置降速()
+    public void 結論_只有速度較低時保留原因未知()
     {
         var text = PcieLinkDecoder.Summarize([Row(1, 16, 4, 16), Row(4, 16, 4, 16)]);
         Assert.Contains("寬度全部與能力相符", text);
-        Assert.Contains("閒置降速", text);
+        Assert.Contains("無法確認原因", text);
+        Assert.DoesNotContain("就會升回去", text);
     }
 
     [Fact]
@@ -245,4 +247,17 @@ public class PcieLinkTests
     [InlineData(@"PCI\VEN_10DE&DEV_25")]
     public void 裝置ID_格式不對時回null而不是丟例外(string id)
         => Assert.Null(PcieLinkService.ParseVenDev(id));
+    [Fact]
+    public void GenSixBandwidthRemainsUnknownIncludingProgressConsumer()
+    {
+        Assert.Equal(64, PcieLinkDecoder.GtPerSecond(6));
+        Assert.Equal(0, PcieLinkDecoder.BandwidthGbps(6, 16));
+        Assert.Equal(0, PcieLinkDecoder.BandwidthFraction(6, 16, 6, 16));
+        Assert.Equal(0, PcieLinkDecoder.BandwidthFraction(6, 16, 5, 16));
+        var row = new PcieLinkRow("", "00:00.0", "", 6, 16, 6, 16, "", 0);
+        Assert.False(row.BandwidthEstimateAvailable);
+        Assert.Contains("未知", row.BandwidthEstimateLabel);
+        Assert.Equal("Gen6 x16", row.CurrentText);
+        Assert.Equal(0, row.BarFraction);
+    }
 }

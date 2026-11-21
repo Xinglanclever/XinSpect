@@ -1,22 +1,20 @@
 using System.Diagnostics;
+using System.Runtime.Intrinsics.X86;
 
 namespace XinSpect;
 
 /// <summary>
-/// L3 未命中與 DRAM 實際流量：每一次末級快取未命中，就是一條快取行真的從記憶體被搬上來。
+/// 選定邏輯處理器的 LLC 事件與每事件 64 位元組的等效流量；不是 iMC 實測 DRAM 流量。
 /// </summary>
 /// <remarks>
-/// 這張卡片與「記憶體頻寬」那一張問的是不同的問題：那一張問「本程式能達成多少」，
-/// 這一張問「晶片上真的發生了多少次去記憶體的往返」。用的是架構效能事件
+/// 使用選定邏輯處理器的架構效能事件
 /// LONGEST_LAT_CACHE.MISS／REFERENCE（Intel SDM 列為架構事件，跨世代編碼相同），
 /// 不是需要逐微架構查表的 OFFCORE_RESPONSE 遮罩——後者填錯會得到一個看起來合理的假數字。
 /// <para>
-/// 即使用架構事件也<b>先自我驗證</b>：拿一段已知會讀滿 512 MB 的負載去對，計數器算出的位元組
-/// 不在容許範圍內就只顯示原始計數、不換算成頻寬。這與能量計的處理方式一致。
+/// 以讀取 512 MiB 工作集做量級檢查；符合範圍不代表精度校準、逐次 DRAM 傳輸或程序獨占計數。
 /// </para>
 /// <para>
-/// <b>逐通道分佈量不到</b>：那要讀記憶體控制器（iMC）自己的效能監測計數器，而在 Skylake-X
-/// 這類平台上它們只走 MMIO；本程式的唯讀路徑是 MSR 與 PCI 設定空間，到不了。到不了就說到不了。
+/// 本功能未取用 iMC 逐通道計數器，不能列出 DRAM 通道分佈。
 /// </para>
 /// </remarks>
 public sealed class DramTrafficService : ObservableObject
@@ -28,13 +26,14 @@ public sealed class DramTrafficService : ObservableObject
     /// <summary>LONGEST_LAT_CACHE：未命中（umask 0x41）與參照（umask 0x4F），皆為架構事件。</summary>
     private const uint EvLlc = 0x2E, UmMiss = 0x41, UmRef = 0x4F;
 
-    /// <summary>已知負載的大小：必須遠大於 L3，才能保證讀取真的落到 DRAM。</summary>
+    /// <summary>工作集大小；不能保證所有平台都超出 LLC 或每次存取都落到 DRAM。</summary>
     private const long BufferBytes = 512L * 1024 * 1024;
 
     /// <summary>每條快取行只碰一個位元組就夠——要的是「搬了幾條行」，不是算術。</summary>
     private const int Stride = 64;
 
     private bool _busy;
+    private CancellationTokenSource? _measurementCancellation;
     public bool IsBusy
     {
         get => _busy;
@@ -44,9 +43,14 @@ public sealed class DramTrafficService : ObservableObject
     public bool CanMeasure => !_busy && HardwareOperationGate.CanRunAdvancedDiagnostics
         && HardwareOperationGate.CanWriteHardware;
 
-    public void RefreshPolicy() => OnPropertyChanged(nameof(CanMeasure));
+    public void RefreshPolicy()
+    {
+        if (!HardwareOperationGate.IsHighRiskModeEnabled) _measurementCancellation?.Cancel();
+        OnPropertyChanged(nameof(CanMeasure));
+    }
 
-    private string _status = "按下量測後，會跑一段已知大小的讀取負載，並用它驗證計數器。";
+    private const string NativeUnavailableReason = "DRAM PMU 原生量測未支援：CPU／SMT 計數器獨占與跨程序 PMU 所有權尚未驗證；未建立硬體橋接，未執行編程。";
+    private string _status = NativeUnavailableReason;
     public string Status { get => _status; private set => SetProperty(ref _status, value); }
 
     private string _validation = "尚未驗證。";
@@ -69,8 +73,8 @@ public sealed class DramTrafficService : ObservableObject
 
     /// <summary>逐通道為什麼沒有——固定文字，讓「量不到」跟「沒做」長得不一樣。</summary>
     public string ChannelNote =>
-        "逐通道分佈：量不到。那要讀記憶體控制器自己的效能監測計數器，而在本平台上它們只走 MMIO 映射；"
-        + "本程式的唯讀路徑（MSR 與 PCI 設定空間）到不了，因此不列一組猜出來的通道分佈。";
+        "本功能未讀取 iMC 逐通道計數器；LLC 事件不等於 DRAM 實際傳輸。"
+        + "計數涵蓋選定邏輯處理器上的使用者與核心執行，不能排除其他工作負載的影響。";
 
     public void Measure()
     {
@@ -79,126 +83,207 @@ public sealed class DramTrafficService : ObservableObject
         {
             Status = !HardwareOperationGate.CanRunAdvancedDiagnostics
                 ? "DRAM 流量量測已阻止：請先啟用第一級進階診斷。"
-                : "DRAM 流量量測會暫時編程 PMU 計數器；請先啟用第二級高風險硬體操作。";
+                : "DRAM PMU 能力檢查已阻止：請先啟用第二級高風險硬體操作；原生量測仍未支援。";
             return;
         }
-        IsBusy = true;
-        Status = "正在量測（配置 512 MB 並讀滿一次）…";
+        BeginMeasurement();
+        var cancellation = new CancellationTokenSource();
+        _measurementCancellation = cancellation;
 
-        _ = Task.Run(Run).ContinueWith(t =>
+        _ = Task.Run(() => Run(cancellation.Token)).ContinueWith(t =>
         {
-            if (t.IsFaulted) { Diag.Swallow("DramTraffic.Measure", t.Exception!, "背景量測失敗，維持空白並解除忙碌"); IsBusy = false; return; }
-            var r = t.Result;
-            Status = r.Status;
-            ValidationText = r.Validation;
-            Severity = r.Severity;
-            MissText = r.Miss;
-            ReferenceText = r.Reference;
-            HitText = r.Hit;
-            TrafficText = r.Traffic;
-            IsBusy = false;
+            _measurementCancellation = null;
+            cancellation.Dispose();
+            CompleteMeasurement(t);
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
-    private readonly record struct Result(string Status, string Validation, Severity Severity,
+    internal void BeginMeasurement()
+    {
+        ApplyResult(Empty("正在檢查 DRAM PMU 量測能力；尚未執行硬體編程或負載。"));
+        IsBusy = true;
+    }
+
+    internal void CompleteMeasurement(Task<Result> task)
+    {
+        try
+        {
+            if (task.IsCanceled)
+                ApplyResult(Empty("DRAM PMU 能力檢查已取消；沒有取得計數。"));
+            else if (task.IsFaulted)
+            {
+                var error = task.Exception!.GetBaseException();
+                Diag.Swallow("DramTraffic.Measure", task.Exception!, "背景能力檢查失敗，清空讀數並解除忙碌");
+                ApplyResult(Empty($"DRAM PMU 能力檢查失敗：{error.GetType().Name}：{error.Message}"));
+            }
+            else ApplyResult(task.GetAwaiter().GetResult());
+        }
+        finally { IsBusy = false; }
+    }
+
+    private void ApplyResult(Result result)
+    {
+        Status = result.Status;
+        ValidationText = result.Validation;
+        Severity = result.Severity;
+        MissText = result.Miss;
+        ReferenceText = result.Reference;
+        HitText = result.Hit;
+        TrafficText = result.Traffic;
+    }
+
+    internal readonly record struct Result(string Status, string Validation, Severity Severity,
                                           string Miss, string Reference, string Hit, string Traffic);
 
     private static Result Empty(string status) =>
         new(status, "沒有量到計數，因此沒有可驗證的東西。", Severity.Neutral, "—", "—", "—", "—");
 
-    private static Result Run()
+    private static Result Run(CancellationToken cancellationToken)
     {
-        using var writePermit = HardwareOperationGate.TryBeginHighRiskOperation();
-        if (writePermit is null) return Empty("DRAM PMU 計數器寫入未授權，量測未執行。");
-        // 動畫重繪會製造額外的記憶體流量與快取壓力，那會動到自我驗證的比值
-        using var quiet = Motion.Suspend();
-
-        using var bridge = WinRing0Bridge.Create();
-        if (!bridge.Available)
-            return Empty("讀不到效能計數器：" + bridge.Error
-                       + "（需要以系統管理員身分執行；本卡片不會拿估計值頂替）。");
-
-        // 挑最後一顆邏輯處理器：核心 0 要服務中斷，量測期間的干擾最大
-        var all = CpuAffinity.AllLogicalProcessors();
-        if (all.Count == 0) return Empty("列不出邏輯處理器，無法釘選核心。");
-        using var pin = CpuAffinity.Pinned(all[^1]);
-        if (!pin.Ok) return Empty("無法把量測執行緒釘在單一核心上，計數會混到別的核，因此不量。");
-
-        // 緩衝區必須在計數器啟用<b>之前</b>就配置並寫過一遍：寫入本身也會造成 L3 未命中
-        // （write-allocate 要先把行讀進來），把它算進來會讓量到的位元組正好變成兩倍——
-        // 自我驗證第一次就是這樣抓到的。
-        byte[] buf;
-        try { buf = new byte[BufferBytes]; }
-        catch (OutOfMemoryException) { return Empty("配置不到 512 MB，因此不下任何結論。"); }
-        Fill(buf);
-
-        ulong savedGlobal = bridge.ReadMsrPair64(MsrGlobalCtrl) ?? 0;
-        ulong savedSel0 = bridge.ReadMsrPair64(MsrPerfEvtSel0) ?? 0;
-        ulong savedSel1 = bridge.ReadMsrPair64(MsrPerfEvtSel0 + 1) ?? 0;
-
-        long misses, references;
-        double seconds;
-        try
-        {
-            Write(bridge, MsrGlobalCtrl, savedGlobal & ~0x3UL);      // 只停 PMC0、PMC1
-            Write(bridge, MsrPerfEvtSel0, Sel(EvLlc, UmMiss));
-            Write(bridge, MsrPerfEvtSel0 + 1, Sel(EvLlc, UmRef));
-            Write(bridge, MsrPmc0, 0);
-            Write(bridge, MsrPmc0 + 1, 0);
-            Write(bridge, MsrGlobalCtrl, savedGlobal | 0x3UL);
-
-            long t0 = Stopwatch.GetTimestamp();
-            long touched = ReadAll(buf);
-            long t1 = Stopwatch.GetTimestamp();
-
-            misses = (long)(bridge.ReadMsrPair64(MsrPmc0) ?? 0);
-            references = (long)(bridge.ReadMsrPair64(MsrPmc0 + 1) ?? 0);
-            seconds = (t1 - t0) / (double)Stopwatch.Frequency;
-            if (touched == 0) return Empty("負載沒有真的跑起來，因此不下任何結論。");
-        }
-        catch (Exception ex)
-        {
-            Diag.Swallow("DramTrafficService.Run", ex, "DRAM 流量量不到，卡片顯示為「—」。");
-            return Empty("量測中發生例外，已記入診斷紀錄。");
-        }
-        finally
-        {
-            Write(bridge, MsrGlobalCtrl, savedGlobal & ~0x3UL);
-            Write(bridge, MsrPerfEvtSel0, savedSel0);
-            Write(bridge, MsrPerfEvtSel0 + 1, savedSel1);
-            Write(bridge, MsrGlobalCtrl, savedGlobal);
-        }
-
-        var v = DramTrafficDecoder.Validate(BufferBytes, DramTrafficDecoder.Bytes(misses));
-        double? hit = DramTrafficDecoder.HitPercent(references, misses);
-
-        return new Result(
-            Status: $"量測完成：讀滿 {BufferBytes / (1024 * 1024)} MB 花了 {seconds:0.000} 秒，"
-                  + "計數器只在這段期間啟用，結束後已還原成原來的設定。",
-            Validation: v.Text,
-            Severity: v.Passed ? Severity.Good : Severity.Warning,
-            Miss: $"{misses:N0} 次",
-            Reference: references > 0 ? $"{references:N0} 次" : "—",
-            Hit: hit is { } h ? $"{h:0.0}%" : "—（參照計數不可用或與未命中不一致，不硬算）",
-            Traffic: DramTrafficDecoder.TrafficText(misses, seconds, v.Passed));
+        if (cancellationToken.IsCancellationRequested)
+            return Empty("DRAM PMU 能力檢查已取消；沒有取得計數。");
+        if (!HardwareOperationGate.IsHighRiskModeEnabled)
+            return Empty("DRAM PMU 能力檢查未授權，未執行硬體編程或負載。");
+        return Empty(NativeUnavailableReason);
     }
 
     /// <summary>寫一遍讓分頁真的落地（否則讀到的是零頁，不會去記憶體）。<b>不在計數視窗內</b>。</summary>
-    private static void Fill(byte[] buf)
+    private static void Fill(byte[] buf, CancellationToken cancellationToken)
     {
-        for (long i = 0; i < buf.LongLength; i += Stride) buf[i] = 1;
+        for (long i = 0; i < buf.LongLength; i += Stride)
+        {
+            if ((i & 0xFFFF) == 0) CheckPolicy(cancellationToken);
+            buf[i] = 1;
+        }
     }
 
     /// <summary>把緩衝區讀滿一次；回傳實際碰過的位元組數。這一段才是被計數的負載。</summary>
-    private static long ReadAll(byte[] buf)
+    private static long ReadAll(byte[] buf, CancellationToken cancellationToken)
     {
         long sum = 0;
-        for (long i = 0; i < buf.LongLength; i += Stride) sum += buf[i];
+        for (long i = 0; i < buf.LongLength; i += Stride)
+        {
+            if ((i & 0xFFFF) == 0) CheckPolicy(cancellationToken);
+            sum += buf[i];
+        }
         return sum == 0 ? 0 : buf.LongLength;
     }
 
-    private static void Write(WinRing0Bridge b, uint msr, ulong value)
-        => b.WriteMsrPair(msr, (uint)(value & 0xFFFFFFFF), (uint)(value >> 32));
+    private static void CheckPolicy(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!HardwareOperationGate.IsHighRiskModeEnabled)
+            throw new OperationCanceledException("High-risk hardware mode was disabled.");
+    }
+
+    internal readonly record struct CounterResult(ulong Misses, ulong References, double Seconds);
+
+    internal static CounterResult MeasureCounters(IPmuMsrAccess msr, Func<long> workload,
+        CancellationToken cancellationToken = default,
+        Func<uint, (uint Eax, uint Ebx, uint Ecx, uint Edx)>? cpuidProbe = null)
+    {
+        CheckPolicy(cancellationToken);
+        CheckPmuSupport(cpuidProbe ?? ReadCpuId);
+        using var permit = HardwareOperationGate.TryBeginHighRiskOperation();
+        if (permit is null) throw new OperationCanceledException("Hardware writes are not authorized.");
+        uint[] registers = [MsrGlobalCtrl, MsrPerfEvtSel0, MsrPerfEvtSel0 + 1, MsrPmc0, MsrPmc0 + 1];
+        ulong[] saved = registers.Select(index => msr.ReadMsr(index)
+            ?? throw new InvalidOperationException($"Cannot preserve MSR 0x{index:X}.")).ToArray();
+        if ((saved[0] & 3) != 0 || ((saved[1] | saved[2]) & (1UL << 22)) != 0
+            || saved[3] != 0 || saved[4] != 0)
+            throw new InvalidOperationException("PMC0/PMC1 are active or contain unowned state.");
+
+        void Configure(uint index, ulong value)
+        {
+            CheckPolicy(cancellationToken);
+            if (!msr.WriteMsr(index, value))
+                throw new InvalidOperationException($"Cannot program MSR 0x{index:X}.");
+        }
+
+        CounterResult result = default;
+        Exception? primaryFailure = null;
+        var cleanupFailures = new List<Exception>();
+        try
+        {
+            Configure(MsrGlobalCtrl, saved[0] & ~3UL);
+            Configure(MsrPerfEvtSel0, Sel(EvLlc, UmMiss));
+            Configure(MsrPerfEvtSel0 + 1, Sel(EvLlc, UmRef));
+            Configure(MsrPmc0, 0);
+            Configure(MsrPmc0 + 1, 0);
+            Configure(MsrGlobalCtrl, saved[0] | 3);
+            CheckPolicy(cancellationToken);
+            long started = Stopwatch.GetTimestamp();
+            long touched = workload();
+            long ended = Stopwatch.GetTimestamp();
+            CheckPolicy(cancellationToken);
+            if (touched <= 0) throw new InvalidOperationException("The measurement workload did not run.");
+            ulong misses = msr.ReadMsr(MsrPmc0) ?? throw new InvalidOperationException("PMC0 read failed.");
+            ulong references = msr.ReadMsr(MsrPmc0 + 1) ?? throw new InvalidOperationException("PMC1 read failed.");
+            result = new CounterResult(misses, references, Stopwatch.GetElapsedTime(started, ended).TotalSeconds);
+        }
+        catch (Exception ex) { primaryFailure = ex; }
+        finally
+        {
+            // The permit survives revocation only so all original registers can be restored.
+            // Retain every cleanup failure without replacing the setup/workload/cancellation error.
+            void Restore(uint index, ulong value)
+            {
+                try
+                {
+                    if (!msr.WriteMsr(index, value))
+                        cleanupFailures.Add(new InvalidOperationException($"PMU restoration write failed at 0x{index:X}."));
+                }
+                catch (Exception ex) { cleanupFailures.Add(ex); }
+            }
+            Restore(MsrGlobalCtrl, saved[0] & ~3UL);
+            for (int i = 1; i < registers.Length; i++) Restore(registers[i], saved[i]);
+            Restore(MsrGlobalCtrl, saved[0]);
+            for (int i = 0; i < registers.Length; i++)
+            {
+                try
+                {
+                    if (msr.ReadMsr(registers[i]) != saved[i])
+                        cleanupFailures.Add(new InvalidOperationException($"PMU restoration readback failed at 0x{registers[i]:X}."));
+                }
+                catch (Exception ex) { cleanupFailures.Add(ex); }
+            }
+        }
+        if (cleanupFailures.Count != 0)
+        {
+            if (primaryFailure is not null)
+                throw new AggregateException("PMU measurement failed and register restoration could not be verified.",
+                    new[] { primaryFailure }.Concat(cleanupFailures));
+            throw new InvalidOperationException("PMU register restoration could not be verified.",
+                new AggregateException(cleanupFailures));
+        }
+        if (primaryFailure is not null)
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(primaryFailure).Throw();
+        return result;
+    }
+
+    [SpecRef("Intel SDM Vol.2, CPUID leaf 0AH: EAX PMU version/count/width/event-vector length; EBX bits 3/4 indicate architectural LLC reference/miss events are unavailable. Vol.3, Architectural Performance Monitoring: IA32_PERF_GLOBAL_CTRL requires PMU version 2 or later.")]
+    internal static void CheckPmuSupport(Func<uint, (uint Eax, uint Ebx, uint Ecx, uint Edx)> cpuid)
+    {
+        var root = cpuid(0);
+        if (root.Ebx != 0x756E6547 || root.Edx != 0x49656E69 || root.Ecx != 0x6C65746E)
+            throw new NotSupportedException("本量測使用 Intel 架構 PMU 事件；非 Intel 平台不適用。");
+        if (root.Eax < 0xA)
+            throw new NotSupportedException("處理器未提供 CPUID 0xA，無法確認 PMU 能力。");
+        var leaf = cpuid(0xA);
+        var capability = PmuDecoder.DecodeCapability(leaf.Eax, leaf.Edx);
+        if (capability.Version < 2 || capability.GeneralCounters < 2
+            || capability.GeneralWidthBits is < 32 or > 64)
+            throw new NotSupportedException("PMU 版本、通用計數器數量或位寬不支援本量測。");
+        if ((leaf.Eax >> 24) < 5 || (leaf.Ebx & ((1u << 3) | (1u << 4))) != 0)
+            throw new NotSupportedException("處理器未確認支援架構 LLC 參照與未命中事件。");
+    }
+
+    private static (uint Eax, uint Ebx, uint Ecx, uint Edx) ReadCpuId(uint leaf)
+    {
+        if (!X86Base.IsSupported) return default;
+        var value = X86Base.CpuId(unchecked((int)leaf), 0);
+        return ((uint)value.Eax, (uint)value.Ebx, (uint)value.Ecx, (uint)value.Edx);
+    }
 
     /// <summary>PERFEVTSEL：事件、umask、USR＋OS、啟用。</summary>
     private static ulong Sel(uint ev, uint um)

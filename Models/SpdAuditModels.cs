@@ -17,6 +17,16 @@ public enum SpdAuditSourceKind
     CurrentTimings,
 }
 
+/// <summary>
+/// Locator 的物理定位範圍。相同文字不證明相同範圍；原生匯流排地址與 CPU-Z 插槽編號
+/// 不可自行宣告為 SMBIOS 插槽。只有獨立映射已建立時，呼叫端才可明確提供對應範圍。
+/// </summary>
+public enum SpdAuditLocatorScope
+{
+    Unspecified,
+    SmbiosPhysicalSlot,
+}
+
 public enum SpdAuditField
 {
     SourceAvailability,
@@ -48,7 +58,8 @@ public sealed record SpdAuditSourceInput(
     bool? BaseCrcValid = null,
     bool? ModuleCrcValid = null,
     bool? VendorParityValid = null,
-    string? ChecksumText = null);
+    string? ChecksumText = null,
+    SpdAuditLocatorScope LocatorScope = SpdAuditLocatorScope.Unspecified);
 
 /// <summary>單一 finding 內的一筆可追溯證據。</summary>
 public sealed record SpdAuditEvidence(SpdAuditSourceKind Kind, string Source, string Value);

@@ -78,6 +78,46 @@ public sealed class EnterpriseBaselineCliTests : IDisposable
     }
 
     [Fact]
+    public void 已驗完整性的Present推測快照_退出碼2且明示不得用於合規()
+    {
+        const string privateValue = "FIXTURE-SPECULATIVE-VALUE";
+        string policyPath = Write("speculative-policy.json", EnterpriseBaselinePackageService.Sign(
+            new EnterpriseBaselinePolicy(1, "org-speculation-isolation", At.AddDays(-1), At.AddDays(1),
+                [new("infer.fixture", EnterpriseBaselineMatch.Exact, privateValue),
+                 new("sensor.fixture", EnterpriseBaselineMatch.NumericRange, Minimum: 0, Maximum: 100)]),
+            PrivatePem, SigningPassword));
+        string keyPath = Write("trusted-public.pem", _signer.ExportSubjectPublicKeyInfoPem());
+        var snapshot = HardwareSnapshotService.Create("test",
+            [Fact("infer.fixture", privateValue),
+             Fact("sensor.fixture", "【推測】40") with { Trust = FactTrustLevel.Speculative, NumericValue = 40 }],
+            includeSensitive: false);
+        string snapshotPath = Path.Combine(_directory, "speculative-snapshot.json");
+        HardwareSnapshotService.Save(snapshotPath, snapshot);
+        var output = new StringWriter();
+        var error = new StringWriter();
+
+        int exit = CliService.Run(["--enterprise-baseline", policyPath,
+                "--trusted-key", keyPath, "--snapshot", snapshotPath],
+            () => throw new InvalidOperationException("Hardware must not be collected"), output, error);
+
+        Assert.Equal(CliService.ExitPartial, exit);
+        Assert.Empty(error.ToString());
+        Assert.DoesNotContain(privateValue, output.ToString(), StringComparison.Ordinal);
+        using var document = JsonDocument.Parse(output.ToString());
+        var root = document.RootElement;
+        Assert.True(root.GetProperty("policySignatureValid").GetBoolean());
+        Assert.Equal("Unverifiable", root.GetProperty("status").GetString());
+        Assert.Equal(0, root.GetProperty("counts").GetProperty("satisfied").GetInt32());
+        Assert.Equal(0, root.GetProperty("counts").GetProperty("notSatisfied").GetInt32());
+        Assert.Equal(2, root.GetProperty("counts").GetProperty("unverifiable").GetInt32());
+        Assert.All(root.GetProperty("results").EnumerateArray(), evidence =>
+        {
+            Assert.Equal("Present", evidence.GetProperty("evidenceAvailability").GetString());
+            Assert.Contains("推測", evidence.GetProperty("reason").GetString(), StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
     public void 缺少信任金鑰或快照路徑_不啟動評估()
     {
         var output = new StringWriter();

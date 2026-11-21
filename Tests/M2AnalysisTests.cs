@@ -20,8 +20,8 @@ public class M2AnalysisTests
     [Fact]
     public void 注入磁碟清單_NVMe另外成一份清單_SATA不進M2清單()
     {
-        var svc = new M2AnalysisService();
-        var snap = svc.Collect(readDisks: () =>
+        var svc = new M2AnalysisService(autoDetect: false);
+        var snap = svc.Collect(readSlots: () => [], readDisks: () =>
         [
             Disk(0, DiskKind.NvmeSsd),
             Disk(1, DiskKind.NvmeSsd),
@@ -37,9 +37,9 @@ public class M2AnalysisTests
     [Fact]
     public void WMI不回應時_在預算內回來並如實標示略過()
     {
-        var svc = new M2AnalysisService();
+        var svc = new M2AnalysisService(autoDetect: false);
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        var snap = svc.Collect(readDisks: () =>
+        var snap = svc.Collect(readSlots: () => [], readDisks: () =>
         {
             Thread.Sleep(1500);
             return [Disk(0, DiskKind.NvmeSsd)];
@@ -55,8 +55,8 @@ public class M2AnalysisTests
     [Fact]
     public void 讀取快速失敗時_要說讀取失敗而不是WMI無回應()
     {
-        var svc = new M2AnalysisService();
-        var snap = svc.Collect(readDisks: () => throw new InvalidOperationException("access denied"), timeoutMs: 50);
+        var svc = new M2AnalysisService(autoDetect: false);
+        var snap = svc.Collect(readSlots: () => [], readDisks: () => throw new InvalidOperationException("access denied"), timeoutMs: 50);
         Assert.Equal(0, snap.Nvme);
         Assert.Contains(snap.Drives, d => d.Contains("讀取失敗"));
         Assert.DoesNotContain(snap.Drives, d => d.Contains("WMI 無回應"));

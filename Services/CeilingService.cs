@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 
 namespace XinSpect;
@@ -48,6 +47,20 @@ public enum CeilingLoad
 /// </remarks>
 public sealed class CeilingService : ObservableObject
 {
+    private readonly CeilingLoadSession _loadSession;
+    private readonly Func<bool, int, IProgress<(double Frac, string Text)>, CancellationToken, Result>? _measureOverride;
+    internal Task CurrentRun { get; private set; } = Task.CompletedTask;
+
+    public CeilingService() : this(new CeilingLoadSession()) { }
+
+    // A pure measurement seam lets public-entry regressions forbid all native reads.
+    internal CeilingService(CeilingLoadSession loadSession,
+        Func<bool, int, IProgress<(double Frac, string Text)>, CancellationToken, Result>? measure = null)
+    {
+        _loadSession = loadSession ?? throw new ArgumentNullException(nameof(loadSession));
+        _measureOverride = measure;
+    }
+
     // ── MSR 位址 ────────────────────────────────────────────────────────────
     private const uint MsrTsc = 0x10;
     private const uint MsrPlatformInfo = 0xCE;
@@ -145,128 +158,17 @@ public sealed class CeilingService : ObservableObject
         : Avx2.IsSupported ? "本機支援 AVX2 但不支援 AVX-512F，故只跑到 256 位元浮點窗——不會假造一個 512 位元的結果。"
         : "本機不支援 AVX2，故只跑整數負載窗，本頁無法量出向量授權降頻。";
 
-    // ── 負載產生器 ──────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// 自製 CPU 負載。這是本頁唯一「主動做事」的部分：溫度牆、功耗牆與向量降頻在閒置時完全看不見。
-    /// </summary>
-    /// <remarks>
-    /// <b>優先權刻意留在 <see cref="ThreadPriority.Normal"/>，執行緒數也刻意比邏輯處理器少兩個。</b>
-    /// 實測用 <c>Highest</c> 跑滿全部邏輯處理器時，取樣執行緒被餓死到 9.08 秒只取得 3 個樣本，
-    /// 而且窗長超出預定值 50%——量測工具把自己量壞了。降回一般優先權後取樣完全準時。
-    ///
-    /// 每個迴圈都把結果餵回下一輪，並以一個永不成立的條件讀取它，
-    /// 免得 JIT 判定整段沒有副作用而消掉——那樣就會量到「滿載卻沒升溫」。
-    /// </remarks>
-    private sealed class LoadGenerator : IDisposable
-    {
-        private readonly CancellationTokenSource _cts = new();
-        private readonly List<Thread> _threads = [];
-
-        public LoadGenerator(CeilingLoad kind, int threadCount)
-        {
-            if (kind == CeilingLoad.Baseline) return;
-            for (int i = 0; i < threadCount; i++)
-            {
-                var t = new Thread(() => Run(kind, _cts.Token))
-                {
-                    IsBackground = true,
-                    Priority = ThreadPriority.Normal,
-                    Name = "XinSpect 天花板負載",
-                };
-                _threads.Add(t);
-                t.Start();
-            }
-        }
-
-        public int ThreadCount => _threads.Count;
-
-        public void Dispose()
-        {
-            try { _cts.Cancel(); }
-            catch (Exception ex) { Diag.Swallow("取消負載執行緒", ex, "負載執行緒改由行程結束時回收"); }
-            foreach (var t in _threads)
-            {
-                try { t.Join(3000); }
-                catch (Exception ex) { Diag.Swallow("等待負載執行緒結束", ex, "該執行緒為背景執行緒，不阻擋關閉"); }
-            }
-            _cts.Dispose();
-        }
-
-        private static void Run(CeilingLoad kind, CancellationToken ct)
-        {
-            switch (kind)
-            {
-                case CeilingLoad.Integer: Integer(ct); break;
-                case CeilingLoad.Avx2: Avx2Chain(ct); break;
-                case CeilingLoad.Avx512: Avx512Chain(ct); break;
-            }
-        }
-
-        /// <summary>純整數乘加鏈：只用整數乘法器與 ALU，完全不觸發向量單元的頻率授權降級。</summary>
-        private static void Integer(CancellationToken ct)
-        {
-            ulong a = 0x9E3779B97F4A7C15, b = 0xBF58476D1CE4E5B9, c = 0x94D049BB133111EB, d = 1;
-            while (!ct.IsCancellationRequested)
-            {
-                for (int k = 0; k < 300_000; k++)
-                {
-                    a = a * 6364136223846793005UL + 1442695040888963407UL;
-                    b = b * 2862933555777941757UL + 3037000493UL;
-                    c = c * 3935559000370003845UL + 2691343689449507681UL;
-                    d ^= (a >> 13) ^ (b >> 17) ^ (c >> 19);
-                }
-                if (d == 0) return;   // 永不成立；只為讓上面那段有可觀察的結果，不會被最佳化掉
-            }
-        }
-
-        /// <summary>256 位元浮點乘法鏈。四條互不相依的鏈填滿乘法管線，把功耗與溫度真的推上去。</summary>
-        private static void Avx2Chain(CancellationToken ct)
-        {
-            var m = Vector256.Create(1.0000000001);
-            while (!ct.IsCancellationRequested)
-            {
-                var (x, y, z, w) = (Vector256.Create(1.5), Vector256.Create(2.5),
-                                    Vector256.Create(3.5), Vector256.Create(4.5));
-                for (int k = 0; k < 60_000; k++)
-                {
-                    x = Avx.Multiply(x, m); y = Avx.Multiply(y, m);
-                    z = Avx.Multiply(z, m); w = Avx.Multiply(w, m);
-                }
-                if (x.GetElement(0) + y.GetElement(1) + z.GetElement(2) + w.GetElement(3) < 0) return;
-            }
-        }
-
-        /// <summary>512 位元浮點乘法鏈。呼叫端已確認 <see cref="Avx512F.IsSupported"/>。</summary>
-        private static void Avx512Chain(CancellationToken ct)
-        {
-            var m = Vector512.Create(1.0000000001);
-            while (!ct.IsCancellationRequested)
-            {
-                var (x, y, z, w) = (Vector512.Create(1.5), Vector512.Create(2.5),
-                                    Vector512.Create(3.5), Vector512.Create(4.5));
-                for (int k = 0; k < 60_000; k++)
-                {
-                    x = Avx512F.Multiply(x, m); y = Avx512F.Multiply(y, m);
-                    z = Avx512F.Multiply(z, m); w = Avx512F.Multiply(w, m);
-                }
-                if (x.GetElement(0) + y.GetElement(1) + z.GetElement(2) + w.GetElement(3) < 0) return;
-            }
-        }
-
-    }
-
     // ── 執行流程 ────────────────────────────────────────────────────────────
 
     private CancellationTokenSource? _cts;
 
     /// <summary>只做靜態讀取（硬性上限 ＋ 開機至今的黏滯紀錄），不製造任何負載。</summary>
-    public void LoadStatic() => _ = RunAsync(false);
+    public void LoadStatic() { if (!IsRunning) CurrentRun = RunAsync(false); }
 
     /// <summary>完整量測：靜態讀取 ＋ 各負載窗對照 ＋ 判決。期間會自己製造 CPU 負載。</summary>
-    public void Start() => _ = RunAsync(true);
+    public void Start() { if (!IsRunning) CurrentRun = RunAsync(true); }
 
-    /// <summary>中止量測。負載執行緒會在 <see cref="LoadGenerator.Dispose"/> 裡被收掉。</summary>
+    /// <summary>中止量測。負載執行緒由共用 owner 送出停止信號，真正 Join 後才完成量測。</summary>
     public void Stop()
     {
         try { _cts?.Cancel(); }
@@ -276,6 +178,11 @@ public sealed class CeilingService : ObservableObject
     private async Task RunAsync(bool withLoad)
     {
         if (IsRunning) return;
+        if (withLoad)
+        {
+            try { _loadSession.CheckAuthorization(CancellationToken.None); }
+            catch (OperationCanceledException ex) { Status = ex.Message; return; }
+        }
         IsRunning = true;
         Progress = 0;
         Status = withLoad ? "準備量測…" : "讀取靜態上限…";
@@ -288,7 +195,14 @@ public sealed class CeilingService : ObservableObject
         try
         {
             int dur = DurationSec;
-            var r = await Task.Run(() => Measure(withLoad, dur, report, cts.Token), cts.Token);
+            var r = await Task.Run(() =>
+            {
+                if (withLoad) _loadSession.CheckAuthorization(cts.Token);
+                return _measureOverride is null
+                    ? Measure(withLoad, dur, report, cts.Token)
+                    : _measureOverride(withLoad, dur, report, cts.Token);
+            }, cts.Token);
+            if (withLoad) _loadSession.CheckAuthorization(cts.Token);
             Apply(r, withLoad);
         }
         catch (OperationCanceledException)
@@ -325,7 +239,7 @@ public sealed class CeilingService : ObservableObject
         Status = r.StatusText;
     }
 
-    private sealed record Result
+    internal sealed record Result
     {
         public string? Error { get; init; }
         public IReadOnlyList<CeilingRow> Limits { get; init; } = [];
@@ -384,11 +298,16 @@ public sealed class CeilingService : ObservableObject
     private sealed record Core(int Index, ProcessorRef First, string LpText);
 
     /// <summary>逐實體核心掃一顆 MSR：每核只用第一個邏輯處理器，SMT 兄弟不重複計算。</summary>
-    private static ulong[] SweepPerCore(WinRing0Bridge bridge, IReadOnlyList<Core> cores, uint msr)
+    private static ulong[] SweepPerCore(WinRing0Bridge bridge, IReadOnlyList<Core> cores, uint msr, Action check)
     {
         var v = new ulong[cores.Count];
         if (msr == 0) return v;
-        for (int i = 0; i < cores.Count; i++) v[i] = ReadPinned(bridge, cores[i].First, msr) ?? 0;
+        for (int i = 0; i < cores.Count; i++)
+        {
+            check();
+            v[i] = ReadPinned(bridge, cores[i].First, msr) ?? 0;
+            check();
+        }
         return v;
     }
 
@@ -396,10 +315,11 @@ public sealed class CeilingService : ObservableObject
     /// 逐實體核心讀 MPERF／APERF。兩趟共用同一個取樣窗（先全讀起始值、等一個窗、再全讀結束值），
     /// 而不是每顆各等一次——後者每核的量測期落在不同時段，彼此無法比較。
     /// </summary>
-    private static void PerfPass(WinRing0Bridge bridge, IReadOnlyList<Core> cores, ulong[] m, ulong[] a, bool[] ok)
+    private static void PerfPass(WinRing0Bridge bridge, IReadOnlyList<Core> cores, ulong[] m, ulong[] a, bool[] ok, Action check)
     {
         for (int i = 0; i < cores.Count; i++)
         {
+            check();
             using var pin = CpuAffinity.Pinned(cores[i].First);
             if (!pin.Ok) continue;
             try
@@ -408,18 +328,22 @@ public sealed class CeilingService : ObservableObject
                 { m[i] = mv; a[i] = av; ok[i] = true; }
             }
             catch (Exception ex) { Diag.Swallow("MPERF／APERF 讀取", ex, $"核心 {cores[i].Index} 不列入有效倍頻平均"); }
+            check();
         }
     }
 
     /// <summary>可中斷的等待。切成小段是為了讓「停止」按下之後能在 25 ms 內真的停下來。</summary>
-    private static void Sleep(int ms, CancellationToken ct)
+    private static void Sleep(int ms, CancellationToken ct, Action? check = null)
     {
         var sw = Stopwatch.StartNew();
         while (sw.ElapsedMilliseconds < ms)
         {
+            check?.Invoke();
             ct.ThrowIfCancellationRequested();
             Thread.Sleep(Math.Max(1, Math.Min(25, ms - (int)sw.ElapsedMilliseconds)));
         }
+        check?.Invoke();
+        ct.ThrowIfCancellationRequested();
     }
 
     /// <summary>實測 TSC 頻率（Hz）。釘選單一核心，QPC 夾在 MSR 讀取前後取中點，抵銷橋接呼叫本身的延遲。</summary>
@@ -951,31 +875,37 @@ public sealed class CeilingService : ObservableObject
     /// 掃到的就不是這個窗的狀態了。限制原因是逐核暫存器，取樣期間把取樣執行緒<b>釘在一顆有負載的核心上</b>，
     /// 釘在閒置核心上讀只會永遠讀到「什麼都沒發生」。
     /// </remarks>
-    private static CeilingWindow RunWindow(Ctx c, string label, CeilingLoad kind,
-        IProgress<(double, string)> report, double progFrom, double progTo, CancellationToken ct)
+    private CeilingWindow RunWindow(Ctx c, string label, CeilingLoad kind,
+        IProgress<(double, string)> report, double progFrom, double progTo, CancellationToken ct) =>
+        _loadSession.ObserveAsync(kind, c.LoadThreads,
+            (token, check) => Task.FromResult(ObserveWindow(c, label, kind, report, progFrom, progTo, token, check)),
+            ct).GetAwaiter().GetResult();
+
+    private static CeilingWindow ObserveWindow(Ctx c, string label, CeilingLoad kind,
+        IProgress<(double, string)> report, double progFrom, double progTo, CancellationToken ct, Action check)
     {
-        using var load = new LoadGenerator(kind, c.LoadThreads);
+        check();
         string loadNote = kind switch
         {
             CeilingLoad.Baseline => "不製造負載（對照基線）",
-            CeilingLoad.Integer => $"{load.ThreadCount} 條整數乘加執行緒（一般優先權）",
-            CeilingLoad.Avx2 => $"{load.ThreadCount} 條 256 位元浮點乘法執行緒（一般優先權）",
-            CeilingLoad.Avx512 => $"{load.ThreadCount} 條 512 位元浮點乘法執行緒（一般優先權）",
+            CeilingLoad.Integer => $"{c.LoadThreads} 條整數乘加執行緒（一般優先權）",
+            CeilingLoad.Avx2 => $"{c.LoadThreads} 條 256 位元浮點乘法執行緒（一般優先權）",
+            CeilingLoad.Avx512 => $"{c.LoadThreads} 條 512 位元浮點乘法執行緒（一般優先權）",
             _ => "",
         };
 
         report.Report((progFrom, $"{label}：沉降 {SettleMs} ms（等頻率授權等級與功耗控制環穩定）…"));
-        Sleep(SettleMs, ct);
+        Sleep(SettleMs, ct, check);
 
         int n = c.Cores.Count;
-        var reasonStart = SweepPerCore(c.Bridge, c.Cores, c.ReasonMsr);
+        var reasonStart = SweepPerCore(c.Bridge, c.Cores, c.ReasonMsr, check);
         ulong e0 = Read(c.Bridge, MsrPkgEnergyStatus);
         ulong t0 = Read(c.Bridge, MsrPkgPerfStatus);
         ulong pkg0 = Read(c.Bridge, MsrPkgThermStatus);
 
         var m0 = new ulong[n]; var a0 = new ulong[n]; var ok0 = new bool[n];
         var m1 = new ulong[n]; var a1 = new ulong[n]; var ok1 = new bool[n];
-        PerfPass(c.Bridge, c.Cores, m0, a0, ok0);
+        PerfPass(c.Bridge, c.Cores, m0, a0, ok0, check);
 
         var sw = Stopwatch.StartNew();
         ulong union = 0;
@@ -986,6 +916,7 @@ public sealed class CeilingService : ObservableObject
             using var pin = CpuAffinity.Pinned(c.Cores[0].First);
             while (sw.Elapsed.TotalSeconds < c.DurationSec)
             {
+                check();
                 ct.ThrowIfCancellationRequested();
                 try
                 {
@@ -995,11 +926,12 @@ public sealed class CeilingService : ObservableObject
                     samples++;
                 }
                 catch (Exception ex) { lastEx = ex; failed++; }
+                check();
                 double left = c.DurationSec - sw.Elapsed.TotalSeconds;
                 report.Report((progFrom + (progTo - progFrom) * Math.Clamp(sw.Elapsed.TotalSeconds / c.DurationSec, 0, 1),
                     $"{label}：量測中，還有 {Math.Max(0, left):0.0} 秒"
                     + (pkgKnown ? $"（封裝 {pkgMax} °C）" : "")));
-                Thread.Sleep(SampleMs);
+                Sleep(SampleMs, ct, check);
             }
         }
         if (failed > 0) Diag.Swallow("窗內取樣讀取 MSR", lastEx, $"{failed} 次取樣失敗，未列入統計");
@@ -1008,10 +940,10 @@ public sealed class CeilingService : ObservableObject
         ulong e1 = Read(c.Bridge, MsrPkgEnergyStatus);
         ulong t1 = Read(c.Bridge, MsrPkgPerfStatus);
         ulong pkg1 = Read(c.Bridge, MsrPkgThermStatus);
-        PerfPass(c.Bridge, c.Cores, m1, a1, ok1);
+        PerfPass(c.Bridge, c.Cores, m1, a1, ok1, check);
         double sec = sw.Elapsed.TotalSeconds;
-        var thermEnd = SweepPerCore(c.Bridge, c.Cores, MsrThermStatus);
-        var reasonEnd = SweepPerCore(c.Bridge, c.Cores, c.ReasonMsr);
+        var thermEnd = SweepPerCore(c.Bridge, c.Cores, MsrThermStatus, check);
+        var reasonEnd = SweepPerCore(c.Bridge, c.Cores, c.ReasonMsr, check);
 
         // 有效倍頻（相對 TSC）與「這顆核心在窗內醒著多久」。
         // MPERF 只在核心處於 C0 時以 TSC 速率前進，所以 ΔMPERF ÷ (TSC 速率 × 窗長) 就是醒著的比例，
@@ -1048,6 +980,7 @@ public sealed class CeilingService : ObservableObject
         var pkgEnd = CeilingDecoder.DecodeThermReadout(pkg1, c.TccC);
         int pkgTemp = pkgKnown ? pkgMax : pkgEnd.TempKnown ? pkgEnd.TempC : 0;
 
+        check();
         return new CeilingWindow
         {
             Label = label,
@@ -1083,6 +1016,7 @@ public sealed class CeilingService : ObservableObject
     /// </remarks>
     private Result Measure(bool withLoad, int durationSec, IProgress<(double, string)> report, CancellationToken ct)
     {
+        if (withLoad) _loadSession.CheckAuthorization(ct);
         if (!X86Base.IsSupported)
             return new Result { Error = "本頁需要 x86 的 MSR 與 APERF／MPERF 計數器，此平台不提供。" };
 
@@ -1151,13 +1085,13 @@ public sealed class CeilingService : ObservableObject
         var windows = new List<CeilingWindow>(plan.Count);
         for (int i = 0; i < plan.Count; i++)
         {
-            ct.ThrowIfCancellationRequested();
+            _loadSession.CheckAuthorization(ct);
             double from = 0.08 + 0.88 * i / plan.Count;
             double to = 0.08 + 0.88 * (i + 1) / plan.Count;
             if (i > 0)
             {
                 report.Report((from, $"冷卻 {CooldownMs} ms，讓溫度與功耗回落，下一窗才不是接著餘熱在跑…"));
-                Sleep(CooldownMs, ct);
+                Sleep(CooldownMs, ct, () => _loadSession.CheckAuthorization(ct));
             }
             windows.Add(RunWindow(ctx, plan[i].Label, plan[i].Kind, report, from, to, ct));
         }

@@ -50,6 +50,7 @@ public static class CliService
     public const string MerkleArg = "--merkle";
     public const string SpeculationArg = "--speculation";
     public const string AgentBridgeArg = "--agent-bridge";
+    public const string SensorCrossCheckArg = "--sensor-crosscheck";
 
     /// <summary>U10-PF／P1-071／P1-072 追蹤鍵：建立可第三方驗證的證據包（<c>--evidence-pack 目錄</c>）。
     /// 這個命令是 <c>ev.manifest</c> 與 <c>ev.chain.verify</c> 唯一的生產端——兩份產物只有
@@ -78,7 +79,8 @@ public static class CliService
     private static readonly JsonSerializerOptions StdinJsonOptions = new(JsonOptions) { WriteIndented = false };
 
     public static int Run(string[] args, Func<IReadOnlyList<HardwareFact>> collect, TextWriter stdout, TextWriter stderr,
-        Func<byte[], HardwareFact>? compare = null, TextReader? stdin = null)
+        Func<byte[], HardwareFact>? compare = null, TextReader? stdin = null,
+        Func<SensorCrossCheckSnapshot>? sensorCapture = null, string? evidencePackChainPath = null)
     {
         if (args.Length == 0 || args.Contains(HelpArg))
         {
@@ -87,6 +89,8 @@ public static class CliService
         }
         if (args[0] == AgentBridgeArg)
             return RunAgentBridge(args, collect, stdout, stderr);
+        if (args[0] == SensorCrossCheckArg)
+            return RunSensorCrossCheck(args, sensorCapture ?? SensorCrossCheckService.CaptureCpuOnly, stdout, stderr);
         if (args[0] == CompareArg)
             return RunCompare(args, compare, stdout, stderr);
         if (args[0] == VerifyAuditArg)
@@ -104,7 +108,7 @@ public static class CliService
         if (args[0] == DiffReportArg)
             return RunDiffReport(args, stdout, stderr);
         if (args[0] == EvidencePackArg)
-            return RunEvidencePack(args, collect, stdout, stderr);
+            return RunEvidencePack(args, collect, stdout, stderr, evidencePackChainPath ?? AuditLogService.DefaultPath);
         if (args[0] == ComplianceArg)
             return RunCompliance(args, collect, stdout, stderr);
         if (args[0] == ComplianceDiffArg)
@@ -653,7 +657,7 @@ public static class CliService
     /// </para>
     /// </remarks>
     private static int RunEvidencePack(string[] args, Func<IReadOnlyList<HardwareFact>> collect,
-        TextWriter stdout, TextWriter stderr)
+        TextWriter stdout, TextWriter stderr, string chainPath)
     {
         if (args.Length < 2 || args[1].StartsWith("--", StringComparison.Ordinal))
         {
@@ -689,7 +693,7 @@ public static class CliService
         {
             built = EvidencePackBuilder.Build(directory,
                 [("evidence.json", json)],
-                AuditLogService.DefaultPath, at);
+                chainPath, at);
         }
         catch (Exception ex)
         {
@@ -861,7 +865,7 @@ public static class CliService
         try { inventory = RedfishBundleService.Read(args[1]); }
         catch (Exception ex)
         {
-            stderr.WriteLine($"讀取失敗：{ex.GetType().Name}：{ex.Message}");
+            stderr.WriteLine($"讀取失敗：{ex.GetType().Name}（原始路徑不公開）");
             return ExitError;
         }
 
@@ -874,14 +878,17 @@ public static class CliService
             scope = "redfish",
             schemaVersion = RedfishBundleService.SchemaVersion,
             source = RedfishBundleService.Source,
-            directory = inventory.Directory,
+            directory = HardwareSnapshotService.RedactedValue,
             collectedAtUtc = inventory.CollectedAtUtc,
             facts = facts.Select(f => new
             {
                 key = f.Key,
                 name = f.Name,
-                value = f.Value,
+                value = f.Sensitive ? HardwareSnapshotService.RedactedValue : f.Value,
                 unit = f.Unit,
+                source = f.Source,
+                sensitive = f.Sensitive,
+                measuredAtUtc = f.MeasuredAtUtc,
                 trust = f.Trust.ToString(),
                 availability = f.Availability.ToString(),
                 reason = f.UnavailableReason,
@@ -896,15 +903,37 @@ public static class CliService
                 temperatures = inventory.Temperatures.Count,
             },
             managers = inventory.Managers,
-            chassis = inventory.Chassis,
-            systems = inventory.Systems,
+            chassis = inventory.Chassis.Select(c => c with
+                { SerialNumber = string.IsNullOrWhiteSpace(c.SerialNumber) ? c.SerialNumber : HardwareSnapshotService.RedactedValue }),
+            systems = inventory.Systems.Select(s => s with
+                { SerialNumber = string.IsNullOrWhiteSpace(s.SerialNumber) ? s.SerialNumber : HardwareSnapshotService.RedactedValue }),
             powerSupplies = inventory.PowerSupplies,
             fans = inventory.Fans,
             temperatures = inventory.Temperatures,
-            powerConsumedWatts = inventory.PowerConsumedWatts,
+            // Keep the nullable legacy field, but only project a uniquely scoped observation.
+            powerConsumedWatts = RedfishBundleService.SelectPowerConsumed(inventory).Watts,
+            powerConsumedScopeReason = RedfishBundleService.SelectPowerConsumed(inventory).Reason,
+            powerControlsComplete = inventory.PowerControlsComplete,
+            powerControls = inventory.PowerControls.Take(RedfishBundleService.MaxPowerControls).Select(p => new
+            {
+                scopeKey = RedfishFactsService.PowerItemKey(p),
+                // Raw identifiers may contain serials; mirror sensitive fact-value redaction.
+                chassisResourceUri = HardwareSnapshotService.RedactedValue,
+                powerResourceUri = HardwareSnapshotService.RedactedValue,
+                observationLocation = HardwareSnapshotService.RedactedValue,
+                arrayIndex = p.ArrayIndex,
+                memberId = p.MemberId is null ? null : HardwareSnapshotService.RedactedValue,
+                memberUri = p.MemberUri is null ? null : HardwareSnapshotService.RedactedValue,
+                name = p.Name is null ? null : HardwareSnapshotService.RedactedValue,
+                physicalContext = p.PhysicalContext is null ? null : HardwareSnapshotService.RedactedValue,
+                powerConsumedWatts = p.PowerConsumedWatts is { } watts && double.IsFinite(watts) && watts >= 0 ? p.PowerConsumedWatts : null,
+                unavailableReason = p.UnavailableReason,
+            }),
             warnings = inventory.Warnings,
             note = "只讀本機已匯出的 Redfish 目錄樹：不連 BMC、不連網、不送出任何請求。"
                  + "BMC 回報值是 Reported，不是本工具量測；缺少的集合與壞掉的 JSON 只記警告，不補 0。"
+                 + "powerConsumedWatts 僅為唯一具範圍觀測，非整包總功耗；多筆只逐筆保留，不選首筆、不加總。"
+                 + "電力觀測的原始身份可能含序號，預設遮蔽；scopeKey 僅定位離線觀測，不是跨來源裝置身份。"
                  + "退出碼 2 代表沒有讀到管理器／機箱／系統，不代表機器沒有 BMC。",
         };
 
@@ -917,7 +946,7 @@ public static class CliService
         }
         catch (Exception ex)
         {
-            stderr.WriteLine($"寫出失敗：{ex.Message}");
+            stderr.WriteLine($"寫出失敗：{ex.GetType().Name}（原始路徑不公開）");
             return ExitError;
         }
         return any ? ExitOk : ExitPartial;
@@ -931,11 +960,13 @@ public static class CliService
     {
         string directory = OptionValue(args, FleetSnapshotsArg) ?? FleetSnapshotReader.Directory;
         var at = DateTimeOffset.UtcNow;
+        FleetReadResult readResult;
         IReadOnlyList<FleetSnapshot> snapshots;
         IReadOnlyList<HardwareFact> facts;
         try
         {
-            snapshots = FleetSnapshotReader.Read(directory);
+            readResult = FleetSnapshotReader.Read(directory);
+            snapshots = readResult;
             facts = FleetBaselineFactsService.Collect(snapshots, at);
         }
         catch (Exception ex)
@@ -953,6 +984,7 @@ public static class CliService
             schemaVersion = 1,
             directory,
             snapshotCount = snapshots.Count,
+            diagnostics = readResult.Diagnostics,
             comparable,
             facts = facts.Select(f => new
             {
@@ -970,7 +1002,7 @@ public static class CliService
             }),
             note = "只讀本機快照目錄：不上傳、不跨機傳輸、不查外部資料庫。"
                  + "「同型號」是字串相等，不是 SKU 知識；樣本少於 4 份只給中位數與範圍，不給 z 分數。"
-                 + "comparable=false（退出碼 2）代表沒有可比的第二台，不是「沒有差異」。",
+                 + "匿名識別碼可能是內容指紋，不證明獨立實體機器；comparable=false（退出碼 2）代表本輪無法比較，原因見 diagnostics 與 facts。",
         };
 
         string json = JsonSerializer.Serialize(payload, JsonOptions);
@@ -986,7 +1018,7 @@ public static class CliService
             return ExitError;
         }
 
-        return comparable ? ExitOk : ExitPartial;
+        return readResult.Diagnostics.Count > 0 || !comparable ? ExitPartial : ExitOk;
     }
 
     private static string ReadBoundedUtf8File(string path, int maximumBytes, string description)
@@ -1066,7 +1098,7 @@ public static class CliService
             {
                 var snapshot = HardwareSnapshotService.Load(snapshotPath);
                 var facts = snapshot.Facts.ToDictionary(f => f.Key, f => new HardwareFact(
-                    f.Key, f.Category, f.Name, f.Value, f.Unit ?? "", f.Source, f.Trust,
+                    f.Key, f.Category, f.Name, f.Value, f.Unit!, f.Source, f.Trust,
                     f.Sensitive, f.MeasuredAtUtc, f.NumericValue, f.Availability, f.UnavailableReason),
                     StringComparer.Ordinal);
                 evaluation = EnterpriseBaselinePackageService.Evaluate(package, trustedPublicKey, facts,
@@ -1088,7 +1120,8 @@ public static class CliService
         {
             generatedAtUtc = DateTimeOffset.UtcNow,
             scope = "enterprise-baseline",
-            schemaVersion = EnterpriseBaselinePackageService.CurrentSchemaVersion,
+            schemaVersion = evaluation.SchemaVersion,
+            evaluation.Semantics,
             evaluation.PolicyId,
             evaluation.SignerKeyId,
             policySignatureValid = evaluation.SignatureValid,
@@ -1418,11 +1451,56 @@ public static class CliService
         return diff.Identical ? ExitOk : ExitPartial;
     }
 
+    private static int RunSensorCrossCheck(string[] args, Func<SensorCrossCheckSnapshot> capture,
+        TextWriter stdout, TextWriter stderr)
+    {
+        if (args.Length != 1 && (args.Length != 3 || args[1] != OutArg
+                || string.IsNullOrWhiteSpace(args[2]) || args[2].StartsWith("--", StringComparison.Ordinal)))
+        {
+            stderr.WriteLine("用法：--sensor-crosscheck [--out <檔案>]");
+            return ExitError;
+        }
+        try
+        {
+            var snapshot = capture();
+            var pairs = SensorCrossCheckService.CompareCoreTemperatures(snapshot.Primary, snapshot.External);
+            var payload = new
+            {
+                schemaVersion = 1,
+                scope = "sensor-crosscheck",
+                generatedAtUtc = DateTimeOffset.UtcNow,
+                availability = pairs.Count > 0 ? FactAvailability.Present : FactAvailability.Unknown,
+                primaryCount = snapshot.Primary.Count,
+                externalCount = snapshot.External.Count,
+                comparisonCount = pairs.Count,
+                comparisons = pairs,
+                snapshot.SourceError,
+                precisionVerified = false,
+                sourceUpdatedAtUtc = (DateTimeOffset?)null,
+                acquisitionClock = "process-local Stopwatch",
+                note = "僅比較 LHM 與 Core Temp 的同型號、同索引溫度候選；來源更新時間與實體核心對應未經實機驗證，"
+                     + "不構成獨立精度驗證。只啟用 CPU 感測器，不啟動全機事實收集。退出碼 0 只代表有可比較候選。",
+            };
+            string json = JsonSerializer.Serialize(payload, JsonOptions);
+            if (args.Length == 3) File.WriteAllText(args[2], json);
+            else stdout.WriteLine(json);
+            return pairs.Count > 0 ? ExitOk : ExitPartial;
+        }
+        catch (Exception ex)
+        {
+            stderr.WriteLine($"感測器比對失敗：{ex.GetType().Name}：{ex.Message}");
+            return ExitError;
+        }
+    }
+
     private static object FactJson(HardwareFact f) => new
     {
-        f.Key, f.Category, f.Name, f.Value, f.Unit, f.Source, f.Trust,
+        f.Key, f.Category, f.Name,
+        Value = f.Sensitive ? HardwareSnapshotService.RedactedValue : f.Value,
+        f.Unit, f.Source, f.Trust, f.Sensitive,
         availability = f.Availability.ToString(),
-        f.UnavailableReason, f.NumericValue, f.MeasuredAtUtc,
+        UnavailableReason = f.Sensitive && f.UnavailableReason is not null ? HardwareSnapshotService.RedactedValue : f.UnavailableReason,
+        NumericValue = f.Sensitive ? (double?)null : f.NumericValue, f.MeasuredAtUtc,
     };
 
     private static string? OptionValue(string[] args, string name)
@@ -1460,6 +1538,7 @@ public static class CliService
               XinSpect --enterprise-baseline <政策套件.json> --trusted-key <公鑰.pem> --snapshot <快照.json> [--out <報告.json>]
               <密碼管線> | XinSpect --enterprise-baseline-sign <政策.json> --signing-key <加密私鑰.pem> --password-stdin --out <簽章套件.json>（管理端）
               XinSpect --redfish <離線 Redfish 目錄> [--out <檔案>]
+              XinSpect --sensor-crosscheck [--out <檔案>]
               XinSpect --help
 
             範圍：
@@ -1517,6 +1596,9 @@ public static class CliService
                               樣本少於 4 份只給中位數與範圍，不給 z 分數。沒有可比的第二台回退出碼 2。
               redfish         讀取已匯出的離線 Redfish 目錄樹（BMC／機箱／電源／風扇／溫度）；
                               只讀本機 JSON，不連 BMC、不連網。BMC 回報值是 Reported，不是本工具量測。
+              sensor-crosscheck
+                              CPU 專用 LHM／Core Temp 溫度候選差異；使用單調鐘擷取區間，來源更新時間未知。
+                              0＝有候選、2＝無法比較、1＝參數或擷取失敗；不是精度認證。
 
             選項：
               --query <前綴>   只輸出 key 以該前綴開頭的事實（例：--query platform.）

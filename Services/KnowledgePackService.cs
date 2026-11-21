@@ -1,4 +1,5 @@
 using System.IO;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -10,7 +11,17 @@ namespace XinSpect;
 public sealed record KnowledgeTable(
     [property: JsonPropertyName("table")] string Table,
     [property: JsonPropertyName("snapshotDate")] string SnapshotDate,
-    [property: JsonPropertyName("entries")] IReadOnlyDictionary<string, string> Entries);
+    [property: JsonPropertyName("entries")] IReadOnlyDictionary<string, string> Entries,
+    [property: JsonPropertyName("sourceManifest")] KnowledgeSourceManifest? SourceManifest = null);
+
+/// <summary>包作者自述的來源；hash 僅綁定表身，不認證文件、作者或抽取過程。</summary>
+public sealed record KnowledgeSourceManifest(
+    [property: JsonPropertyName("document")] string? Document,
+    [property: JsonPropertyName("revision")] string? Revision,
+    [property: JsonPropertyName("commit")] string? Commit,
+    [property: JsonPropertyName("extractor")] string? Extractor,
+    [property: JsonPropertyName("extractorVersion")] string? ExtractorVersion,
+    [property: JsonPropertyName("tableHash")] string TableHash);
 
 /// <summary>知識包＝版號＋快照＋表集合；serialNumber 由內容雜湊推導（同一組輸入得同一份文件）。</summary>
 /// <remarks>
@@ -39,6 +50,11 @@ public sealed record KnowledgePackLoad(KnowledgePack? Pack, string? Reason, stri
 /// </summary>
 public static class KnowledgePackService
 {
+    public const int MaximumFileBytes = 8 * 1024 * 1024;
+    public const int MaximumTables = 64;
+    public const int MaximumEntries = 100_000;
+    public const int MaximumFieldCharacters = 4096;
+    public const string ProvenanceUnknown = "來源未知：未提供完整 upstream 文件、revision／commit 與抽取器版本；內容雜湊不構成來源鏈";
     /// <summary>U10-EN-0012 追蹤鍵：知識包版本演進與撤回流程（成文與守門見
     /// docs/ULTIMATE-10000/KNOWLEDGE-PACK-PROCEDURE-2026-10-25.md 與 KnowledgePackEvolutionTests）。</summary>
     public const string EvolutionProcKey = "kp.evolution.proc";
@@ -74,13 +90,7 @@ public static class KnowledgePackService
         string? previousSerial = null)
     {
         var orderedTables = tables.OrderBy(t => t.Table, StringComparer.Ordinal)
-            .Select(t => new
-            {
-                table = t.Table,
-                snapshotDate = t.SnapshotDate,
-                entries = new Dictionary<string, string>(
-                    t.Entries.OrderBy(e => e.Key, StringComparer.Ordinal), StringComparer.Ordinal),
-            })
+            .Select(CanonicalTable)
             .ToArray();
         object payload = previousSerial is null
             ? new { packVersion, generatedAt, tables = orderedTables }
@@ -91,6 +101,64 @@ public static class KnowledgePackService
             WriteIndented = false,
         });
         return "sha256:" + Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+    }
+
+    private static Dictionary<string, object?> CanonicalTable(KnowledgeTable table)
+    {
+        var body = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["table"] = table.Table,
+            ["snapshotDate"] = table.SnapshotDate,
+            ["entries"] = new Dictionary<string, string>(
+                table.Entries.OrderBy(e => e.Key, StringComparer.Ordinal), StringComparer.Ordinal),
+        };
+        // Omit absent manifest, preserving every byte of legacy serial payloads.
+        if (table.SourceManifest is not null) body["sourceManifest"] = table.SourceManifest;
+        return body;
+    }
+
+    public static string ComputeTableHash(KnowledgeTable table)
+        => "sha256:" + Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(
+            CanonicalTable(table with { SourceManifest = null })))).ToLowerInvariant();
+
+    public static string DescribeProvenance(KnowledgeTable table)
+    {
+        if (string.Equals(table.Table, DeviceComplianceFactsService.TableName, StringComparison.OrdinalIgnoreCase))
+            return DescribePrivateProvenance(table);
+        if (table.SourceManifest is not { } manifest) return ProvenanceUnknown;
+        string completeness = string.IsNullOrWhiteSpace(manifest.Document)
+            || (string.IsNullOrWhiteSpace(manifest.Revision) && string.IsNullOrWhiteSpace(manifest.Commit))
+            || string.IsNullOrWhiteSpace(manifest.Extractor) || string.IsNullOrWhiteSpace(manifest.ExtractorVersion)
+            ? ProvenanceUnknown + "；部分自述" : "來源 manifest 自述（未認證 upstream 或抽取過程）";
+        return $"{completeness}：文件 {manifest.Document ?? "未知"}；revision {manifest.Revision ?? "未知"}；"
+            + $"commit {manifest.Commit ?? "未知"}；extractor {manifest.Extractor ?? "未知"}／{manifest.ExtractorVersion ?? "未知"}；"
+            + $"tableHash {manifest.TableHash}（僅綁定表身，非防偽）";
+    }
+
+    /// <summary>重新驗證直接傳入的 model，消費端不可假設它曾經 Load。</summary>
+    public static string? ValidateForConsumption(KnowledgePack pack, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        string? invalid = Validate(pack, cancellationToken);
+        if (invalid is not null) return invalid;
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!string.Equals(ComputeSerial(pack.PackVersion, pack.GeneratedAt, pack.Tables, pack.PreviousSerial),
+                pack.SerialNumber, StringComparison.OrdinalIgnoreCase)) return "serialNumber 不符";
+        cancellationToken.ThrowIfCancellationRequested();
+        return null;
+    }
+
+    /// <summary>敏感清單只輸出結構化來源狀態及表指紋，不抄錄自由文字 metadata。</summary>
+    public static string DescribePrivateProvenance(KnowledgeTable table)
+    {
+        var manifest = table.SourceManifest;
+        bool complete = manifest is not null && !string.IsNullOrWhiteSpace(manifest.Document)
+            && (!string.IsNullOrWhiteSpace(manifest.Revision) || !string.IsNullOrWhiteSpace(manifest.Commit))
+            && !string.IsNullOrWhiteSpace(manifest.Extractor) && !string.IsNullOrWhiteSpace(manifest.ExtractorVersion);
+        return (complete ? "來源 manifest 自述（未認證 upstream 或抽取過程）" : ProvenanceUnknown)
+            + (manifest is null ? "" : string.Equals(ComputeTableHash(table), manifest.TableHash, StringComparison.OrdinalIgnoreCase)
+                ? $"；tableHash {manifest.TableHash}（表身已核對，非防偽）"
+                : "；tableHash 不符，表身未核對");
     }
 
     /// <summary>建一份包（含序列號）；<paramref name="previousSerial"/> 是前版序列號（版本演進，可空）。</summary>
@@ -108,39 +176,145 @@ public static class KnowledgePackService
         Build(newPackVersion, generatedAt, tables, prior.SerialNumber);
 
     /// <summary>讀外掛包；缺檔回 (null, 沒有包), 格式／日期／序列號不合格回拒收原因。</summary>
-    public static KnowledgePackLoad Load(string path)
+    public static KnowledgePackLoad Load(string path, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (!File.Exists(path)) return new KnowledgePackLoad(null, "沒有外掛知識包（檔不存在）——內建表繼續服役", null);
         try
         {
-            var doc = JsonDocument.Parse(File.ReadAllText(path));
+            using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            if (input.Length > MaximumFileBytes)
+                return new(null, "知識包超過檔案大小預算", null);
+            // Read at most the budget plus one: a file growing after Length was checked is also rejected.
+            using var buffer = new MemoryStream();
+            byte[] chunk = new byte[8192];
+            while (buffer.Length <= MaximumFileBytes)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                int read = input.Read(chunk, 0, (int)Math.Min(chunk.Length, MaximumFileBytes + 1L - buffer.Length));
+                if (read == 0) break;
+                buffer.Write(chunk, 0, read);
+            }
+            if (buffer.Length > MaximumFileBytes) return new(null, "知識包超過檔案大小預算", null);
+            using var doc = JsonDocument.Parse(buffer.ToArray());
+            cancellationToken.ThrowIfCancellationRequested();
             var root = doc.RootElement;
             string? declared = root.TryGetProperty("serialNumber", out var sn) ? sn.GetString() : null;
             if (string.IsNullOrWhiteSpace(declared))
                 return new KnowledgePackLoad(null, "包缺 serialNumber——完整性無從宣告，整包拒收", null);
             var pack = JsonSerializer.Deserialize<KnowledgePack>(root.GetRawText());
             if (pack is null) return new KnowledgePackLoad(null, "包解析失敗", declared);
-            foreach (var t in pack.Tables)
-                if (string.IsNullOrWhiteSpace(t.SnapshotDate))
-                    return new KnowledgePackLoad(null,
-                        $"表「{t.Table}」缺少 snapshotDate——沒有快照日期的知識表不能載入（讀者無從判斷它多舊）", declared);
+            string? invalid = Validate(pack, cancellationToken);
+            if (invalid is not null) return new(null, invalid, declared);
+            cancellationToken.ThrowIfCancellationRequested();
             string expected = ComputeSerial(pack.PackVersion, pack.GeneratedAt, pack.Tables, pack.PreviousSerial);
+            cancellationToken.ThrowIfCancellationRequested();
             if (!string.Equals(expected, declared, StringComparison.OrdinalIgnoreCase))
                 return new KnowledgePackLoad(null,
                     $"serialNumber 不符（宣告 {declared}／重算 {expected}）——檔案可能被改動或截斷，整包拒收", declared);
             return new KnowledgePackLoad(pack, null, declared);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             return new KnowledgePackLoad(null, $"包解析失敗（{ex.GetType().Name}）：{ex.Message}", null);
         }
     }
 
+    private static string? Validate(KnowledgePack pack, CancellationToken cancellationToken = default)
+    {
+        if (pack.PackVersion <= 0) return "packVersion 必須為正整數";
+        if (pack.GeneratedAt?.Length > 100 || pack.SerialNumber?.Length > 100
+            || pack.PreviousSerial?.Length > 100) return "知識包標頭超過欄位預算";
+        if (string.IsNullOrWhiteSpace(pack.SerialNumber)) return "包缺 serialNumber";
+        if (pack.Tables?.Any(t => t is not null && string.IsNullOrWhiteSpace(t.SnapshotDate)) == true)
+            return "表缺少 snapshotDate——沒有快照日期的知識表不能載入";
+        if (!DateTimeOffset.TryParseExact(pack.GeneratedAt,
+                ["yyyy-MM-dd", "yyyy-MM-dd'T'HH:mm:ss'Z'", "yyyy-MM-dd'T'HH:mm:ss.FFFFFFF'Z'",
+                    "yyyy-MM-dd'T'HH:mm:sszzz", "yyyy-MM-dd'T'HH:mm:ss.FFFFFFFzzz"],
+                CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var generated))
+            return "generatedAt 必須為 ISO 日期或含時區時間";
+        if (pack.Tables is null || pack.Tables.Count is 0 or > MaximumTables)
+            return "知識包 tables 缺少或超過表數預算";
+        int entries = 0;
+        long characters = 0;
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var table in pack.Tables)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (table is null || string.IsNullOrWhiteSpace(table.Table) || table.Table.Length > MaximumFieldCharacters || !names.Add(table.Table))
+                return "知識包表名缺少或重複";
+            if (!DateOnly.TryParseExact(table.SnapshotDate, "yyyy-MM-dd", CultureInfo.InvariantCulture,
+                    DateTimeStyles.None, out var snapshot) || snapshot > DateOnly.FromDateTime(generated.UtcDateTime))
+                return "snapshotDate 無效或晚於 generatedAt";
+            if (table.Entries is null || table.Entries.Count > MaximumEntries - entries)
+                return "知識包 entries 缺少或超過條目預算";
+            entries += table.Entries.Count;
+            if (table.Entries.Any(e => string.IsNullOrWhiteSpace(e.Key) || e.Value is null
+                    || e.Key.Length > MaximumFieldCharacters || e.Value.Length > MaximumFieldCharacters))
+                return "知識包條目鍵或值缺少或超過欄位預算";
+            characters += table.Entries.Sum(e => (long)e.Key.Length + e.Value.Length);
+            if (characters > MaximumFileBytes) return "知識包內容超過字元預算";
+            if (table.SourceManifest is { } manifest)
+            {
+                if (new[] { manifest.Document, manifest.Revision, manifest.Commit, manifest.Extractor,
+                        manifest.ExtractorVersion, manifest.TableHash }.Any(value => value?.Length > 2048))
+                    return "sourceManifest 欄位超過長度預算";
+            }
+        }
+        // The stream overload flushes its bounded serializer buffer as it writes;
+        // escaping and JSON structure count without materializing the entire output.
+        try
+        {
+            using var budget = new JsonBudgetStream(MaximumFileBytes, cancellationToken);
+            JsonSerializer.Serialize(budget, pack);
+        }
+        catch (KnowledgePackBudgetException) { return "知識包超過 JSON UTF-8 大小預算"; }
+        cancellationToken.ThrowIfCancellationRequested();
+        foreach (var table in pack.Tables)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (table.SourceManifest is { } manifest
+                && !string.Equals(ComputeTableHash(table), manifest.TableHash, StringComparison.OrdinalIgnoreCase))
+                return "sourceManifest tableHash 與表身不符";
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+        return null;
+    }
+
+    private sealed class KnowledgePackBudgetException : IOException { }
+
+    private sealed class JsonBudgetStream(long limit, CancellationToken cancellationToken) : Stream
+    {
+        private long _written;
+        public override bool CanRead => false;
+        public override bool CanSeek => false;
+        public override bool CanWrite => true;
+        public override long Length => _written;
+        public override long Position { get => _written; set => throw new NotSupportedException(); }
+        public override void Write(byte[] buffer, int offset, int count) => Write(buffer.AsSpan(offset, count));
+        public override void Write(ReadOnlySpan<byte> buffer)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (buffer.Length > limit - _written) throw new KnowledgePackBudgetException();
+            _written += buffer.Length;
+        }
+        public override void Flush() => cancellationToken.ThrowIfCancellationRequested();
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+    }
+
     /// <summary>本機收集：knowledge.pack.status／tables 兩把固定鍵。</summary>
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at, string? path = null)
     {
         path ??= DefaultPath;
-        var loaded = Load(path);
+        return CollectLoaded(at, Load(path));
+    }
+
+    /// <summary>以同一次載入結果產生事實；不再次開檔。呼叫端保留載入與驗證責任。</summary>
+    internal static IReadOnlyList<HardwareFact> CollectLoaded(DateTimeOffset at, KnowledgePackLoad loaded)
+    {
         if (loaded.Pack is null)
             return
             [
@@ -151,12 +325,12 @@ public static class KnowledgePackService
 
         var pack = loaded.Pack;
         string tableText = string.Join("；", pack.Tables.Select(t =>
-            $"{t.Table}（{t.Entries.Count} 條，快照 {t.SnapshotDate}）"));
+            $"{t.Table}（{t.Entries.Count} 條，快照 {t.SnapshotDate}）・{DescribeProvenance(t)}"));
         return
         [
             new HardwareFact(StatusKey, Category, "知識包載入",
                 $"第 {pack.PackVersion} 版包已載入（生成 {pack.GeneratedAt}／serial {pack.SerialNumber[..Math.Min(18, pack.SerialNumber.Length)]}…）"
-                + $"・完整性＝由內容雜湊推導，同一組輸入得同一份文件・沒有更新通道：內建表過期照樣服役並如實声明",
+                + $"・完整性＝由內容雜湊推導，同一組輸入得同一份文件，非來源認證；逐表來源見知識包內容・沒有更新通道：內建表過期照樣服役並如實声明",
                 "表", Source, FactTrustLevel.Measured, false, at, pack.Tables.Count),
             new HardwareFact(TablesKey, Category, "知識包內容", tableText, "張", Source,
                 FactTrustLevel.Measured, false, at, pack.Tables.Count),

@@ -80,6 +80,9 @@ public sealed class AiService : ObservableObject
 
     private HttpClient? _clientOverride;
 
+    // Instance-scoped test seam: production keeps the real cancellable backoff.
+    internal Func<TimeSpan, CancellationToken, Task> RetryDelayAsync { get; set; } = Task.Delay;
+
     private HttpClient Client
         => HandlerOverride is null
            ? Http
@@ -1061,7 +1064,7 @@ public sealed class AiService : ObservableObject
 
                 StatusText = $"端點暫時無法回應（{decision.Reason}），{decision.Delay.TotalSeconds:F0} 秒後重試"
                              + $"（第 {attempt + 1}/{AiRetryPolicy.MaxAttempts} 次）…";
-                await Task.Delay(decision.Delay, ct);
+                await RetryDelayAsync(decision.Delay, ct);
                 continue;
             }
 
@@ -1313,7 +1316,13 @@ public sealed class AiService : ObservableObject
             string role = prepared.IsUser[i] ? "user" : "assistant";
             // 最後一則使用者訊息且有圖片附件時改用多部件格式
             if (contentParts is not null && i == prepared.Texts.Count - 1 && prepared.IsUser[i])
-                msgs.Add(new { role, content = (object)contentParts });
+            {
+                // ConsumePendingAttachments 的第一段是原始文字；送出時必須換成同一份已遮蔽、已裁長文字。
+                // 另建清單保留原附件，讓重試能依當下設定重新準備文字，圖片 data URL 則原樣沿用。
+                var preparedParts = new List<object> { new { type = "text", text = prepared.Texts[i] } };
+                preparedParts.AddRange(contentParts.Skip(1));
+                msgs.Add(new { role, content = (object)preparedParts });
+            }
             else
                 msgs.Add(new { role, content = (object)prepared.Texts[i] });
         }

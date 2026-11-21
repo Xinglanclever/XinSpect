@@ -12,9 +12,9 @@ namespace XinSpect;
 /// 零特權、唯讀、零網路。
 /// </para>
 /// <para>
-/// 誠實界線：①這個數字包含 NTP 校時——量到漂移是「系統鐘被動過」，不是 RTC 硬體誤差；
-/// ②取樣窗太短（&lt;60 秒）時，系統鐘的更新粒度（1–15.6 ms 量級）會把短窗漂移整個淹掉，
-/// 此時標 Unknown 拒報，不給一個被粒度噪音主導的數字；③本服務不自動長跑——
+/// 誠實界線：①這個數字包含 NTP 校時、兩鐘速率差與取樣誤差，不能單憑差值判定哪個鐘有誤；
+/// ②取樣窗太短（&lt;60 秒）時，保守標 Unknown 拒報；兩次非同步取樣仍包含排程與讀鐘誤差，
+/// 顯示的小數位不代表量測精度；③本服務不自動長跑——
 /// 會話起點由呼叫端（掃描起點）提供，終點在收集時取樣，中間隔多久由呼叫端決定並標註。
 /// </para>
 /// </remarks>
@@ -46,24 +46,35 @@ public static class ClockSessionDriftService
     public static HardwareFact BuildFact(DateTimeOffset at, ClockSample start,
         (DateTimeOffset Utc, long QpcTimestamp) end, double qpcFrequency)
     {
-        double qpcElapsedSec = (end.QpcTimestamp - start.QpcTimestamp) / qpcFrequency;
+        if (!double.IsFinite(qpcFrequency) || qpcFrequency <= 0)
+            return Invalid("QPC 頻率必須為正且有限——無法換算取樣窗");
+
+        // 先在整數域相減，避免 long 溢位，也避免兩個很大的近鄰刻先轉 double 後丟失差值。
+        Int128 elapsedTicks = (Int128)end.QpcTimestamp - start.QpcTimestamp;
+        if (elapsedTicks < 0)
+            return Invalid("單調鐘取樣次序異常（終點早於起點）——樣本不可信");
+        double qpcElapsedSec = (double)elapsedTicks / qpcFrequency;
+        if (!double.IsFinite(qpcElapsedSec))
+            return Invalid("QPC 取樣窗換算超出有限數值範圍——樣本不可信");
+        // UTC 可以被校時回撥；樣本先後只由單調鐘判斷，負的牆鐘差正是需要保留的證據。
         double utcElapsedSec = (end.Utc - start.Utc).TotalSeconds;
-        if (qpcElapsedSec < 0 || utcElapsedSec < 0)
-            return new HardwareFact(Key, Category, "會話期時鐘漂移", "", "", Source,
-                FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError,
-                "取樣次序異常（終點早於起點）——樣本不可信");
         if (qpcElapsedSec < 60)
-            return new HardwareFact(Key, Category, "會話期時鐘漂移",
-                $"取樣窗僅 {qpcElapsedSec:0.#} 秒", "", Source,
+            return new HardwareFact(Key, Category, "會話期時鐘漂移", $"取樣窗僅 {qpcElapsedSec:0.#} 秒", "", Source,
                 FactTrustLevel.Unknown, false, at, null, FactAvailability.Unknown,
-                "取樣窗不足 60 秒——系統鐘的更新粒度（1–15.6 ms 量級）會淹掉短窗漂移，拒報數字");
+                "取樣窗不足 60 秒——保守拒報短窗累計差；未校準取樣誤差");
         double driftMs = (utcElapsedSec - qpcElapsedSec) * 1000.0;
-        string direction = Math.Abs(driftMs) < 0.5 ? "無可測漂移（<0.5 ms）"
+        if (!double.IsFinite(driftMs))
+            return Invalid("時鐘累計差超出有限數值範圍——樣本不可信");
+        string direction = Math.Abs(driftMs) < 0.5 ? "兩次取樣累計差 <0.5 ms（不代表量測精度）"
             : driftMs > 0 ? $"牆鐘快了 {driftMs:0.##} ms（含 NTP 校時的任何介入）"
             : $"牆鐘慢了 {-driftMs:0.##} ms（含 NTP 校時的任何介入）";
         return new HardwareFact(Key, Category, "會話期時鐘漂移",
-            $"{direction}；取樣窗 {qpcElapsedSec:0.#} 秒（牆鐘 {utcElapsedSec:0.#} 秒 vs 單調鐘 {qpcElapsedSec:0.###} 秒）",
+            $"{direction}；取樣窗 {qpcElapsedSec:0.#} 秒（牆鐘 {utcElapsedSec:0.#} 秒 vs 單調鐘 {qpcElapsedSec:0.###} 秒）；含排程與非同步讀鐘誤差",
             "ms", Source, FactTrustLevel.Measured, false, at, driftMs,
             FactAvailability.Present, null);
+
+        HardwareFact Invalid(string reason) =>
+            new(Key, Category, "會話期時鐘漂移", "", "", Source,
+                FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError, reason);
     }
 }

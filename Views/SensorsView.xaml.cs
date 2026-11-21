@@ -29,6 +29,6 @@ public partial class SensorsView : UserControl
 
     private void RefreshExternalSensors()
     {
-        try { Vm?.ExternalSensors.Refresh(); } catch { /* 外部來源為附加功能 */ }
+        try { Vm?.ExternalSensors.Refresh(Vm.Live?.CaptureCoreTemperatureSamples()); } catch { /* 外部來源為附加功能 */ }
     }
 }

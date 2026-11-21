@@ -6,8 +6,8 @@ public sealed record PmuCapability(uint Version, uint GeneralCounters, uint Gene
 
 /// <summary>
 /// WP27 PMU 能力探索的純解碼器：CPUID leaf 0xA——零特權、零副作用。
-/// <b>本解碼器只做能力探索</b>：PMU 編程（寫 IA32_PERFEVTSEL 之類的 MSR）需要沙箱驗證方案
-/// 完成（docs/PMU-SANDBOX-PLAN.md），驗證前不實作。
+/// <b>本解碼器只做能力探索</b>，不授權 PMU 編程。現有服務的 MSR 寫入另受兩級風險閘門控制；
+/// 沙箱實機驗證與跨程序所有權的未完成邊界見 docs/PMU-SANDBOX-PLAN.md。
 /// </summary>
 public static class PmuDecoder
 {

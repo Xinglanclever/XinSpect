@@ -15,7 +15,7 @@ public class SlcSustainedWriteAdapterTests
     }
 
     [Fact]
-    public async Task 成功量測保留原始曲線並只刪除固定暫存檔()
+    public async Task 成功量測保留原始曲線且Adapter不按路徑刪檔()
     {
         string root = Path.Combine(Path.GetTempPath(), "xinspect-slc-sustained");
         string expectedPath = Path.Combine(root, "XinSpect.deepbench.tmp");
@@ -28,7 +28,7 @@ public class SlcSustainedWriteAdapterTests
         Assert.Equal(DeepBenchFailureKind.None, result.FailureKind);
         Assert.Equal(expectedPath, engine.LastPath);
         Assert.Equal(4L * GiB, engine.LastTargetBytes);
-        Assert.Equal([expectedPath], fileSystem.DeletedPaths);
+        Assert.Empty(fileSystem.DeletedPaths);
         Assert.Equal(
         [
             "storage.slc-sustained-write.mibps",
@@ -45,7 +45,7 @@ public class SlcSustainedWriteAdapterTests
         Assert.Contains("曲線推導", limitations, StringComparison.Ordinal);
         Assert.Contains("不是韌體快取尺寸", limitations, StringComparison.Ordinal);
         Assert.Contains("本機此次暫存檔路徑", limitations, StringComparison.Ordinal);
-        Assert.Contains(expectedPath, result.Configuration, StringComparison.Ordinal);
+        Assert.Contains(root, result.Configuration, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -79,7 +79,7 @@ public class SlcSustainedWriteAdapterTests
     }
 
     [Fact]
-    public async Task 引擎失敗仍嘗試刪除暫存檔()
+    public async Task 引擎失敗不刪除非本場持有的固定路徑()
     {
         var fileSystem = new RecordingDiskFileSystem { AvailableFreeSpace = 24 * GiB };
         fileSystem.Files[Path.Combine(fileSystem.Root, "XinSpect.deepbench.tmp")] = true;
@@ -90,7 +90,8 @@ public class SlcSustainedWriteAdapterTests
 
         Assert.Equal(DeepBenchFailureKind.PlatformError, result.FailureKind);
         Assert.Contains("disk busy", result.Error, StringComparison.Ordinal);
-        Assert.Contains(Path.Combine(fileSystem.Root, "XinSpect.deepbench.tmp"), fileSystem.DeletedPaths);
+        Assert.Empty(fileSystem.DeletedPaths);
+        Assert.True(fileSystem.Exists(Path.Combine(fileSystem.Root, "XinSpect.deepbench.tmp")));
     }
 
     private static DeepBenchRunContext CreateContext() =>
@@ -133,7 +134,7 @@ public class SlcSustainedWriteAdapterTests
             LastPath = context.TempFilePath;
             LastTargetBytes = context.TargetBytes;
             if (Throw is not null) throw Throw;
-            context.FileSystem.Create(context.TempFilePath);
+            // Injected engine returns samples without opening a real or fake fixed-path file.
             return Task.FromResult(new SlcSustainedWriteMeasurement(Samples));
         }
     }

@@ -6,7 +6,7 @@
 |---|---|
 | `ULTIMATE-10000-EXPANSION-2026-10-25.md` | **主目錄（唯一正典）**——39 域、10,022 列，十二批展開＋五輪收尾（含 27 列勘誤植入、鍵消歧、待辦處置、79 列判定回寫）。 |
 | `DEDUP-VERDICTS-2026-10-25.md` | 79 列〔查重〕標記之**程式碼級**判定（四證據面：鍵目錄／Services 原始碼／測試／UI；收口 49、新列 30）。與主目錄鍵級稽核（AUDIT-dedup）互補——鍵級看「鍵存在與否」，此表看「能力是否已在程式碼裡」。 |
-| `AUDIT-dedup.md` | 鍵級查重稽核報告（對 FactKeyCatalog 1,044 鍵＋28 家族：淨新 9,930／收口 71／重複 4）。 |
+| `AUDIT-dedup.md` | **2026-10-25 歷史**鍵級稽核（當時 1,044 鍵＋28 家族）；數字不是目前實作完成率。最新重算與限制讀當前交接。 |
 | `AUDIT-semantic.md` | 語意抽審（五域 30 列，正確率 30/30）。 |
 | `AUDIT-pending.md` | 待核 75 列攻堅（定案 65 含 27 列勘誤、部分 7、仍待核 3——缺口為微軟未公開 manifest）。 |
 | `CIRCLE-2-CANDIDATES-2026-10-25.md` | 第二圈 30 項候選（使用者功能層：檢測／圖表／介面／匯出）。 |
@@ -27,12 +27,16 @@
 | `ROUND-328-FLEET-BASELINE-2026-10-30.md` | 第 328 輪（U10-EN-0001）：同型號族群基線（`fleet.summary`／`fleet.peer.*`／`fleet.boundary`）——只讀本機快照目錄、**不上傳**（型別層有守門：兩個檔案不得出現 HttpClient／WebRequest／Socket）；型號是字串相等不是 SKU 知識；樣本少於 4 份只給中位數不給 z 分數；只比每份都有數值的鍵。 |
 | `ROUND-329-NVME-RESERVED-2026-10-30.md` | 第 329 輪（U10-NV-0029）：NVMe Identify 保留區非零掃描（`nvme.rsvd.summary`／`nvme.rsvd.disk.*`／`nvme.rsvd.boundary`）——八段保留區共 1,530 位元組（邊界由 nvme.h 逐欄累加）；廠商區 vs 不算保留區。**同輪抓到已在出貨的缺陷**：WCTEMP 位移寫成 0x14A（實際落在 sanicap 裡），正解是 0x10A——程式與測試用了同一個錯誤假設，所以一路綠燈。 |
 | `ROUND-330-PROCESS-RUNNER-2026-10-30.md` | 第 330 輪（修外部缺陷報告 D4／D9／D10／D11）：① `Services/ProcessRunner.cs`——兩個串流都用非同步讀**且在 `WaitForExit` 之前就開始讀**，逾時殺整棵行程樹（舊寫法下 `timeoutMs` 是安慰劑：子行程灌爆 stderr 時 `WaitForExit` 那行永遠走不到）；② `AtomicWrite` 暫存名由固定 `.tmp` 改為含行程 ID 與序號（多實例併發會把別人的半成品搬成正式檔）；③ `HistoryStore` 尾端垃圾在載入當場重寫（否則下一次 append 接在垃圾後、新的一筆讀在錯位移而丟失）；④ `ExternalReportService` 加 64 MiB 上限並把界線寫進 Status。19 條新測試，含會灌爆 pipe、併發 300 次、造 64 MB 檔案的情境。 |
-| `HANDOFF-2026-11-16.md` | **第四圈交接文檔**：現況總帳（1,202 鍵／8,094 基線）、三輪摘要、剩餘批次的精確規格（WMI 補遺／SMART Intel+HGST／唯讀檢測）、已知問題七條、驗證指令集——給接手者的單一入口。 |
+| `ROUND-334-ACCURACY-EDID-BCD-2026-11-16.md` | 第 334 輪：BCD 錯誤狀態與欄位精度、DMT 位圖／時序校正、EDID/CTA checksum 診斷、Volume 排程與 v3.28 回歸修補；記錄下一批 WMI 候選的查重邊界。 |
+| `HANDOFF-2026-11-16.md` | **第四圈交接文檔**：現況總帳、四輪摘要、剩餘批次的精確規格（WMI 補遺／SMART Intel+HGST／唯讀檢測）、已知問題與驗證指令——給接手者的單一入口。 |
 | `CIRCLE-4-CANDIDATES-2026-11-15.md` | **第四圈 32 項候選（意義層：解碼表讓自述能被讀懂＋BCD 現值＋WMI 補遺）**，六批次（WHEA 知識包／DMT／BCD／WMI／SMART 補遺／唯讀檢測）；附孤兒盤點的工具誤判教訓（`grep` 需 `-a`）。 |
 | `ROUND-333-BCD-ELEMENTS-2026-11-16.md` | 第 333 輪（第四圈批次三）：BCD 開機元素現值十把鍵（toolsdisplayorder／bootsequence／device+path／nx／hypervisorlaunchtype／badmemory／mem.trim／fwbootmgr／BD-0030 界線）——/enum 與 /enum firmware 兩次唯讀呼叫，兩層各自三態。 |
 | `ROUND-332-DMT-KP-2026-11-16.md` | 第 332 輪（第四圈批次二）：DMT 顯示時序知識包——DMT 全表 88 條＋established timing 兩張位圖（17＋44）；est3 全數對到 DMT、est1 四條遺產模式如實列名；表體由抽取腳本從 Linux drm_edid.c 機器生成。 |
 | `ROUND-331-WHEA-SECTION-KP-2026-11-15.md` | 第 331 輪（第四圈批次一）：WHEA 節區知識包——`whea.sec.*` 六把鍵（15 節區 GUID＋8 通知類型＋9 格 PCIe 埠型別）；IA64 條目因 Linux cper.h 的 GUID_INIT 位元組數不符（9≠8、巨集未展開）**不命名、待核**；接手一條既有紅燈（6.2 守門的讀取對象跟著 v3.28 重構搬到百科）。 |
-| `dedup_check.py`／`sample_check.py` | 可重跑之稽核腳本（絕對路徑寫死）。 |
+| `ROUND-346-PARALLEL-INTEGRITY-2026-11-17.md` | 第 346 輪：七路審查整合，SPD、熱力圖、磁碟重試、感測時序、CLI 與硬體寫入閘門修補；含未驗證邊界。 |
+| `ROUND-347-ENTERPRISE-BOUNDARIES-2026-11-17.md` | 第 347 輪：WHEA 有效位、Fleet 可比性、Redfish 匯出、拓撲有界解析、SPD 後續交易及知識包預算；保留失敗與實機缺口。 |
+| `IMPLEMENTATION-QUEUE-2026-11-17.md` | 下一批具體缺陷、候選 ID、驗收證據與分工；不是 10,022 項完成率。 |
+| `dedup_check.py`／`sample_check.py` | `dedup_check.py` 已由腳本位置找倉庫，可指定 `--repo`；`sample_check.py` 是歷史抽樣器，仍依賴外部暫存來源，且預設主目錄路徑過時，不能當成當前驗證證據。 |
 | `ULTIMATE-10000-EXPANSION-2026-10-24.md` | 歷史快照（十二批完成時點；**已被 10-25 版取代**，保留供對帳）。 |
 | `ULTIMATE-5000-RESERVOIR-2026-10-24.md` | 前導文件（歸檔；已被主目錄取代）。 |
 
@@ -40,8 +44,9 @@
 
 ## 目錄性質：候選規格庫，不是待辦清單
 
-主目錄的每一列（`U10-<域>-<編號>`）都是**候選**規格——寫進來不代表要動工。開工的觸發是**圈 ID**：
-只有被明確圈選的 ID 才進入實作排程；沒圈的列只是知識庫的存貨。
+主目錄的每一列（`U10-<域>-<編號>`）都是**候選**規格，寫進來不代表已實作。
+原先以逐項圈 ID 排程；使用者於 2026-11-16 至 2026-11-17 明確授權持續推進並帶現有七個代理全面工作，
+現在可按風險與依賴主動選批，須在當前交接或工作佇列記錄 ID、定義、查重與驗收證據。這項授權不代表全部候選已完成，也不代表後續自動發版。
 同理，**展開不是完工**：把目錄寫滿 10,022 列是規格作業，與「這些能力已經在產品裡量得到」是兩件事。
 
 ## 既定開工順序

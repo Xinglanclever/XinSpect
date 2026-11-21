@@ -14,8 +14,8 @@ public readonly record struct RetryDecision(bool Retry, TimeSpan Delay, string R
 /// </summary>
 public static class AiRetryPolicy
 {
-    /// <summary>總嘗試次數（首次＋重試）。三次之後就照實回報錯誤，不要讓使用者枯等。</summary>
-    public const int MaxAttempts = 3;
+    /// <summary>總嘗試次數（首次＋最多 10 次重試）。</summary>
+    public const int MaxAttempts = 11;
 
     /// <summary>兩次重試之間最多等這麼久；端點要求更久就直接失敗，不要把人卡在「正在重試」。</summary>
     public const int MaxDelaySeconds = 20;

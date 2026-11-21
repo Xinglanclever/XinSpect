@@ -236,6 +236,175 @@ public class SpdReaderTests
         Assert.Equal("", SpdReader.ReadAll(Bus(io)).BusNote);
     }
 
+    [Theory]
+    [InlineData(SmbusStatus.Timeout, -1)]
+    [InlineData(SmbusStatus.Timeout, 0)]
+    [InlineData(SmbusStatus.Timeout, 1)]
+    [InlineData(SmbusStatus.BusError, 0)]
+    [InlineData(SmbusStatus.IoUnavailable, 1)]
+    [InlineData(SmbusStatus.NotSupported, -1)]
+    public void 探測失敗不冒充空匯流排且不重發交易(SmbusStatus failure, int failedCommand)
+    {
+        var bus = new FaultingProbeBus(failure, failedCommand);
+
+        var scan = SpdReader.ReadAll(bus);
+
+        Assert.Empty(scan.Slots);
+        Assert.Contains(failure.ToString(), scan.BusNote);
+        Assert.Contains("無法判定是否有模組", scan.BusNote);
+        Assert.DoesNotContain("沒有任何", scan.BusNote);
+        Assert.Equal(1, bus.PageSelections);
+        Assert.Equal(failedCommand + 1, bus.Reads);
+    }
+
+    private sealed class FaultingProbeBus(SmbusStatus failure, int failedCommand) : ISpdBus
+    {
+        public string Description => "test probe failure";
+        public string LastError => "injected transport failure";
+        public SmbusStatus LastStatus { get; private set; }
+        public int PageSelections { get; private set; }
+        public int Reads { get; private set; }
+        public bool TryAcquireBus(out string reason) { reason = ""; return true; }
+        public void ReleaseBus() { }
+        public bool SendByte(byte address, byte value)
+        {
+            PageSelections++;
+            LastStatus = failedCommand == -1 ? failure : SmbusStatus.NoDevice;
+            return false;
+        }
+        public byte? ReadByteData(byte address, byte command)
+        {
+            Reads++;
+            LastStatus = command == failedCommand ? failure : SmbusStatus.Ok;
+            return command == failedCommand ? null : SpdReader.Ddr5HubIdHigh;
+        }
+        public bool WriteByteData(byte address, byte command, byte value)
+            => throw new InvalidOperationException("Probe must not select DDR5 pages.");
+    }
+
+    [Theory]
+    [InlineData(SmbusStatus.Timeout, 0)]
+    [InlineData(SmbusStatus.BusError, 0)]
+    [InlineData(SmbusStatus.Timeout, 1)]
+    [InlineData(SmbusStatus.BusError, 1)]
+    [InlineData(SmbusStatus.Timeout, 0x40)]
+    [InlineData(SmbusStatus.BusError, 0x40)]
+    public void 模組交易故障後不再復位備援或掃下一插槽(SmbusStatus failure, int command)
+    {
+        var bus = new MidReadBus(failure, command);
+        var scan = SpdReader.ReadAll(bus);
+        Assert.Single(scan.Slots);
+        Assert.Equal(SpdKind.Unreadable, scan.Slots[0].Kind);
+        Assert.Contains(failure.ToString(), scan.BusNote);
+        Assert.Equal(0, bus.CallsAfterFailure);
+    }
+
+    [Fact]
+    public void 復位失敗可見且停止後續插槽()
+    {
+        var bus = new MidReadBus(SmbusStatus.NoDevice, -1);
+        var scan = SpdReader.ReadAll(bus);
+        var slot = Assert.Single(scan.Slots);
+        Assert.Equal(SpdKind.Unreadable, slot.Kind);
+        Assert.Contains("復位失敗", slot.Note);
+        Assert.Contains("停止剩餘插槽", scan.BusNote);
+        Assert.Equal(0, bus.CallsAfterFailure);
+    }
+
+    [Fact]
+    public void 第二條故障保留已完成的第一條()
+    {
+        var scan = SpdReader.ReadAll(new MidReadBus(SmbusStatus.Timeout, 0x40, 0x51));
+        Assert.Equal(2, scan.Slots.Count);
+        Assert.Equal(SpdKind.Ddr4, scan.Slots[0].Kind);
+        Assert.NotNull(scan.Slots[0].Raw);
+        Assert.Equal(SpdKind.Unreadable, scan.Slots[1].Kind);
+        Assert.Contains("停止剩餘插槽", scan.BusNote);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void DDR5中途或復位失敗後不再發交易(bool failRestore)
+    {
+        var bus = new Ddr5FaultBus(failRestore);
+        var scan = SpdReader.ReadAll(bus);
+        var slot = Assert.Single(scan.Slots);
+        Assert.Equal(SpdKind.Unreadable, slot.Kind);
+        Assert.Contains("復位失敗", slot.Note);
+        Assert.Contains("停止剩餘插槽", scan.BusNote);
+        Assert.Equal(0, bus.CallsAfterFailure);
+    }
+
+    private sealed class Ddr5FaultBus(bool failRestore) : ISpdBus
+    {
+        private readonly StubBus5 _inner = new("DDR5 fault", (0x50, Ddr5Image()));
+        private bool _failed;
+        private int _writes;
+        public int CallsAfterFailure;
+        public string Description => _inner.Description;
+        public string LastError => _failed ? "injected DDR5 failure" : _inner.LastError;
+        public SmbusStatus LastStatus => _failed ? SmbusStatus.Timeout : _inner.LastStatus;
+        public bool TryAcquireBus(out string reason) => _inner.TryAcquireBus(out reason);
+        public void ReleaseBus() => _inner.ReleaseBus();
+        public bool SendByte(byte address, byte value)
+        {
+            if (_failed) CallsAfterFailure++;
+            return _inner.SendByte(address, value);
+        }
+        public byte? ReadByteData(byte address, byte command)
+        {
+            if (_failed) CallsAfterFailure++;
+            if (!failRestore && command == 0xC0) { _failed = true; return null; }
+            return _inner.ReadByteData(address, command);
+        }
+        public bool WriteByteData(byte address, byte command, byte value)
+        {
+            if (_failed) CallsAfterFailure++;
+            if (++_writes == 9 && failRestore) { _failed = true; return false; }
+            return _inner.WriteByteData(address, command, value);
+        }
+    }
+
+    private sealed class MidReadBus(SmbusStatus failure, int failedCommand, byte failAddress = 0x50) : ISpdBus
+    {
+        private readonly byte[] _image = Ddr4Image();
+        private bool _failed;
+        private int _page;
+        private bool _pageOneRead;
+        public int CallsAfterFailure;
+        public string Description => "mid-read fault";
+        public string LastError => "injected failure";
+        public SmbusStatus LastStatus { get; private set; }
+        public bool TryAcquireBus(out string reason) { reason = ""; return true; }
+        public void ReleaseBus() { }
+        public byte? ReadByteData(byte address, byte command)
+        {
+            if (_failed) CallsAfterFailure++;
+            if (address == failAddress && command == failedCommand)
+            {
+                _failed = true; LastStatus = failure; return null;
+            }
+            LastStatus = SmbusStatus.Ok;
+            if (failedCommand == 1 && command == 0) return SpdReader.Ddr5HubIdHigh;
+            if (_page == 1) _pageOneRead = true;
+            return _image[_page * 256 + command];
+        }
+        public bool SendByte(byte address, byte value)
+        {
+            if (_failed) CallsAfterFailure++;
+            if (_pageOneRead && address == SpdReader.PageSelect0 && failedCommand == -1)
+            {
+                _failed = true; LastStatus = failure; return false;
+            }
+            LastStatus = SmbusStatus.Ok;
+            _page = address == SpdReader.PageSelect1 ? 1 : 0;
+            return true;
+        }
+        public bool WriteByteData(byte address, byte command, byte value)
+            => throw new InvalidOperationException("Unexpected DDR5 page write.");
+    }
+
     /// <summary>
     /// 實機在 iMC 那條路徑上抓到過：同一條模組的基本段 CRC 對不上，但存起來的 CRC 值與同型號的
     /// 另一條完全相同——也就是讀回來的內容錯了，不是 SPD 被改過。這兩件事在驗機上的意義天差地別，

@@ -113,9 +113,6 @@ public sealed class StorageSmartService : ObservableObject
     private const uint IoctlStorageQueryProperty = 0x2D1400;
     private const uint IoctlSmartRcvDriveData = 0x7C82C;   // CTL_CODE(IOCTL_DISK_BASE, 0x220B, METHOD_BUFFERED, FILE_READ_ACCESS)
     private const uint PropertyIdDeviceProperty = 0;
-    private const uint PropertyIdProtocolSpecificDevice = 51;
-    private const uint ProtocolTypeNvme = 3;
-    private const uint NvmeDataTypeLogPage = 2;
     public const uint NvmeLogPageHealth = 0x02;
     public const uint NvmeLogPageError = 0x01;   // 錯誤資訊紀錄
     /// <summary>
@@ -230,7 +227,7 @@ public sealed class StorageSmartService : ObservableObject
             var task = Task.Run(() =>
             {
                 var bus = TryGetBusType(index, out string busName);
-                // 通道判定問 ChannelOf（唯一一份）；分群與原本寫死的 16/17、3/10/11 逐字相同
+                // 通道判定問 ChannelOf；虛擬層與 SAS 不推定能接受 NVMe／ATA 命令。
                 return ChannelOf(bus) switch
                 {
                     StorageBusChannel.Nvme => TryReadNvmeLog(index) is { } nvme
@@ -336,7 +333,7 @@ public sealed class StorageSmartService : ObservableObject
         None,
         /// <summary>NVMe 協定查詢（IOCTL_STORAGE_QUERY_PROPERTY 加上 ProtocolType = 3）。</summary>
         Nvme,
-        /// <summary>ATA 命令集（SMART_RCV_DRIVE_DATA／IDENTIFY DEVICE）；SAS／SATA 也走這條。</summary>
+        /// <summary>ATA／SATA 命令集（SMART_RCV_DRIVE_DATA／IDENTIFY DEVICE）。</summary>
         Ata,
     }
 
@@ -344,11 +341,11 @@ public sealed class StorageSmartService : ObservableObject
     /// STORAGE_BUS_TYPE 的數值→通道，<b>全專案唯一一份</b>（SMART 直讀與 P2-098 可更新性都問這裡）。
     ///
     /// <para>
-    /// 分群沿用本專案一向的 16／17→NVMe、3／10／11→ATA，理由逐項寫清楚：
-    /// 17＝BusTypeNvme 走 NVMe 協定；16＝BusTypeSpaces（Storage Spaces 的虛擬層）在 Windows 的
-    /// 實作上後端仍是 NVMe，所以照原本一樣先試協定查詢——試不到就是讀不到，不會憑空生成結論。
-    /// 3＝BusTypeAta、10＝BusTypeSas、11＝BusTypeSata 三者都用 ATA 命令集（SAS 只是把 ATA 封裝進去），
-    /// 走同一條直讀。
+    /// 17＝BusTypeNvme 才走現有 NVMe 協定通道；3＝BusTypeAta、11＝BusTypeSata 走 ATA。
+    /// 16＝BusTypeSpaces 只表示 Storage Spaces 虛擬層，不證明底層裝置協定；
+    /// 10＝BusTypeSas 也不證明是可接受 ATA 命令的 SATA 裝置。
+    /// 本專案尚未為這兩者核定 pass-through 通道，回 None 並保留原始匯流排名稱，
+    /// 不把「尚無通道」冒充硬體不支援 SMART。
     /// </para>
     ///
     /// <para>
@@ -360,8 +357,8 @@ public sealed class StorageSmartService : ObservableObject
     /// </summary>
     public static StorageBusChannel ChannelOf(uint bus) => bus switch
     {
-        16 or 17 => StorageBusChannel.Nvme,
-        3 or 10 or 11 => StorageBusChannel.Ata,
+        17 => StorageBusChannel.Nvme,
+        3 or 11 => StorageBusChannel.Ata,
         _ => StorageBusChannel.None,
     };
 
@@ -535,24 +532,16 @@ public sealed class StorageSmartService : ObservableObject
             var ovInit = new Overlapped64 { hEvent = evt };
             Marshal.StructureToPtr(ovInit, ov, false);
 
-            const int header = 48;   // STORAGE_PROPERTY_QUERY(8) + STORAGE_PROTOCOL_SPECIFIC_DATA(40)
-            const int bufLen = header + 512;
+            var scope = logPage == NvmeLogPageHealth ? NvmeProtocolScope.Device : NvmeProtocolScope.Adapter;
+            var cmd = NvmeProtocolQuery.CreateRequest(NvmeProtocolQuery.LogPage, logPage, 512, scope);
+            int bufLen = cmd.Length;
             // 審計 #16：緩衝區改非託管——managed 陣列在 P/Invoke 返回後即解除 pinning，
             // 而逾時路徑的 IRP 可能之後才完成並寫入原位址（堆積毀損）。非託管緩衝在逾時路徑
             // 上刻意洩漏（斷路器不再重問，洩漏有界約 560 bytes／每次卡死的碟），IRP 想多晚完成都安全。
             IntPtr bufLocal = Marshal.AllocHGlobal(bufLen);
             buf = bufLocal;
-            ZeroMemory(buf, bufLen);
-            var cmd = new byte[header];
-            BitConverter.GetBytes(PropertyIdProtocolSpecificDevice).CopyTo(cmd, 0);   // PropertyId
-            BitConverter.GetBytes(0u).CopyTo(cmd, 4);                                 // QueryType = PropertyStandardQuery
-            BitConverter.GetBytes(ProtocolTypeNvme).CopyTo(cmd, 8);                   // ProtocolType
-            BitConverter.GetBytes(NvmeDataTypeLogPage).CopyTo(cmd, 12);               // DataRequested
-            BitConverter.GetBytes(logPage).CopyTo(cmd, 16);                            // RequestValue（0x02 健康／0x01 錯誤）
-            BitConverter.GetBytes(0u).CopyTo(cmd, 20);                                // RequestSubValue
-            BitConverter.GetBytes((uint)header).CopyTo(cmd, 24);                      // ProtocolDataOffset（自緩衝區起算）
-            BitConverter.GetBytes(512u).CopyTo(cmd, 28);                              // ProtocolDataLength
-            Marshal.Copy(cmd, 0, buf, header);
+            ZeroMemory(buf, (UIntPtr)bufLen);
+            Marshal.Copy(cmd, 0, buf, bufLen);
 
             // METHOD_BUFFERED：輸入與輸出共用同一緩衝區，命令頭必須以輸入傳入才會到達驅動
             bool ok = DeviceIoControlNative(handle, IoctlStorageQueryProperty, buf, (uint)bufLen, buf, (uint)bufLen, out uint ret, ov);
@@ -587,13 +576,14 @@ public sealed class StorageSmartService : ObservableObject
                 }
             }
 
-            if (ret < header + 512)
+            if (ret > (uint)bufLen)
             {
                 Marshal.FreeHGlobal(buf); buf = IntPtr.Zero;
                 return (null, false);
             }
-            var log = new byte[512];
-            Marshal.Copy(new IntPtr(buf.ToInt64() + header), log, 0, 512);
+            var response = new byte[(int)ret];
+            Marshal.Copy(buf, response, 0, response.Length);
+            var log = NvmeProtocolQuery.ReadPayload(response, ret, NvmeProtocolQuery.LogPage, 512);
             Marshal.FreeHGlobal(buf); buf = IntPtr.Zero;
             return (log, false);
         }
@@ -727,7 +717,7 @@ public sealed class StorageSmartService : ObservableObject
     /// <summary>SATA SMART READ DATA（512B）→ 30 筆屬性：ID、現值、最差、原始六位元組（十六進位原樣＋小端整數）。</summary>
     /// <remarks>
     /// <paramref name="driveModel"/> 是 Win32_DiskDrive 的 Model（呼叫端從列舉快照帶入）；
-    /// 只影響「廠商自訂」那條路徑——既有對照表認得的 ID，名稱與 raw 欄位逐字不變。
+    /// Intel/Solidigm 與 HGST 先核對完整型號；其餘六組沿用既有補強路徑。
     /// </remarks>
     public static List<SmartRow> DecodeAtaAttributes(byte[] sector, string? driveModel = null)
     {
@@ -747,11 +737,10 @@ public sealed class StorageSmartService : ObservableObject
             string hex = Convert.ToHexString(raw);
             string attrName = AttributeName(id, driveModel);
             string rawText = $"{hex}（LE: {le:N0}）";
-            // 知識表補強路徑（只有既有表回「廠商自訂」、而型號認得出廠商且知識表收錄時才走到）：
-            // raw 六位元組若有語意就按語意附註；原樣十六進位照列，不受附註影響。
+            // 型號限定知識優先於通稱（如 Intel 241 不是 LBA）。原始六位元組始終照列。
             if (attrName != AttributeName(id)
                 && TryVendorFromModel(driveModel, out SmartVendor vendor)
-                && SmartAttributeKnowledge.Lookup(vendor, id) is { } info)
+                && SmartAttributeKnowledge.LookupForModel(vendor, driveModel, id) is { } info)
                 rawText += $"；raw：{info.RawSemantics}";
             rows.Add(new SmartRow(
                 $"{id} {attrName}",
@@ -897,21 +886,28 @@ public sealed class StorageSmartService : ObservableObject
 
     /// <summary>
     /// 帶裝置型號的屬性名（第 270 輪 SMART 知識包的顯示接線）。
-    /// 既有對照表先查——認得的 ID <b>行為逐字不變</b>；只有既有表回「廠商自訂」時，
-    /// 才以型號映射廠商、問 <see cref="SmartAttributeKnowledge"/> 補名稱；
-    /// 廠商或 ID 未收錄就維持「廠商自訂」原樣——未知就是未知，不猜。
+    /// Intel/Solidigm 與 HGST 的完整型號知識優先於通稱，避免把 32 MiB 單位叫作 LBA。
+    /// 型號未核出時不猜衝突 ID；其餘六組維持既有「廠商自訂」補強路徑。
     /// </summary>
     public static string AttributeName(byte id, string? driveModel)
     {
         string known = AttributeName(id);
-        if (known != "廠商自訂") return known;
-        if (TryVendorFromModel(driveModel, out SmartVendor vendor)
-            && SmartAttributeKnowledge.Lookup(vendor, id) is { } info)
-            return $"廠商自訂（{info.Name}）";
+        if (TryVendorFromModel(driveModel, out SmartVendor vendor))
+        {
+            if (SmartAttributeKnowledge.RequiresModelScope(vendor))
+            {
+                if (SmartAttributeKnowledge.LookupForModel(vendor, driveModel, id) is { } scoped)
+                    return $"廠商自訂（{scoped.Name}）";
+                // 品牌不足以決定這些 ID 的語意；例如 OEM Intel 233 可是寫入量，NVMe 也不適用 ATA 表。
+                return id is 190 or 192 or 233 or 241 or 242 ? "廠商自訂" : known;
+            }
+            if (known == "廠商自訂" && SmartAttributeKnowledge.LookupForModel(vendor, driveModel, id) is { } info)
+                return $"廠商自訂（{info.Name}）";
+        }
         return known;
     }
 
-    /// <summary>裝置型號 → SMART 知識表的六家廠商。認不得的回 false（未知廠商不是錯誤）。</summary>
+    /// <summary>裝置型號 → SMART 知識表的品牌群。認不得的回 false（未知廠商不是錯誤）。</summary>
     public static bool TryVendorFromModel(string? model, out SmartVendor vendor)
     {
         string m = (model ?? "").Trim();
@@ -922,6 +918,14 @@ public sealed class StorageSmartService : ObservableObject
         if (m.Contains("Kingston", StringComparison.OrdinalIgnoreCase)) { vendor = SmartVendor.Kingston; return true; }
         if (m.Contains("Crucial", StringComparison.OrdinalIgnoreCase)
             || m.Contains("Micron", StringComparison.OrdinalIgnoreCase)) { vendor = SmartVendor.Micron; return true; }
+        if (m.StartsWith("Solidigm ", StringComparison.OrdinalIgnoreCase)
+            || m.StartsWith("Intel ", StringComparison.OrdinalIgnoreCase)
+            || m.Equals("Intel", StringComparison.OrdinalIgnoreCase)
+            || m.Equals("Solidigm", StringComparison.OrdinalIgnoreCase)
+            // OEM 可能不帶 Intel 品牌；只辨認廠商，不授予型號知識表適用性。
+            || m.StartsWith("SSDSC", StringComparison.OrdinalIgnoreCase)) { vendor = SmartVendor.IntelSolidigm; return true; }
+        if (m.StartsWith("HGST ", StringComparison.OrdinalIgnoreCase)
+            || m.Equals("HGST", StringComparison.OrdinalIgnoreCase)) { vendor = SmartVendor.Hgst; return true; }
         if (m.Contains("Western Digital", StringComparison.OrdinalIgnoreCase)
             || m.Contains("WDC", StringComparison.OrdinalIgnoreCase)
             || m.StartsWith("WD", StringComparison.OrdinalIgnoreCase)) { vendor = SmartVendor.WesternDigital; return true; }
@@ -956,19 +960,25 @@ public sealed class StorageSmartService : ObservableObject
     /// 不套任何廠商公式。讀不到就回 0，由呼叫端顯示「讀不到」，不猜。
     /// </remarks>
     public static long TryReadPowerOnHours(int index)
+        => ReadPowerOnHours(TryGetBusType(index, out _),
+            () => TryReadNvmeLog(index), () => TryReadAtaSmartClassic(index));
+
+    // Production routing/decoding; injected delegates replace only native reads in tests.
+    internal static long ReadPowerOnHours(uint bus, Func<byte[]?> readNvme, Func<byte[]?> readAta)
     {
-        uint bus = TryGetBusType(index, out _);
 
         if (ChannelOf(bus) == StorageBusChannel.Nvme)   // 〔修復 v3.21〕審計 P4-2：走 ChannelOf 單一事實來源，不硬寫 16/17
         {
-            byte[]? log = TryReadNvmeLog(index);
+            byte[]? log = readNvme();
             if (log is null || log.Length < 0x88) return 0;
             ulong v = 0;
             for (int i = 7; i >= 0; i--) v = (v << 8) | log[0x80 + i];
             return v > long.MaxValue ? 0 : (long)v;
         }
 
-        byte[]? sector = TryReadAtaSmartClassic(index);
+        if (ChannelOf(bus) != StorageBusChannel.Ata) return 0;
+
+        byte[]? sector = readAta();
         if (sector is null || sector.Length < 362) return 0;
         // SMART 資料區：偏移 2 起，每 12 位元組一筆屬性；[0]=ID、[5..7]=原始值低三位元組
         for (int o = 2; o + 12 <= 362; o += 12)
@@ -979,9 +989,7 @@ public sealed class StorageSmartService : ObservableObject
         return 0;
     }
 
-    private const uint NvmeDataTypeIdentify = 0;     // CNS=Identify
     private const uint NvmeCnsController = 1;       // CNS=1 為 Controller
-    private const uint NvmeDataTypeFeature = 3;     // STORAGE_PROTOCOL_NVME_DATA_TYPE::NVMeDataTypeFeature
 
     /// <summary>
     /// 嘗試取 NVMe Get Features 的資料區（例如 FID 0x0C＝APST 的 256 位元組表）。
@@ -991,68 +999,37 @@ public sealed class StorageSmartService : ObservableObject
     /// 失敗回 null，由呼叫端如實說明「讀不到」，不要拿規格書的預設值頂替。
     /// </remarks>
     public static byte[]? TryReadNvmeFeature(int index, uint featureId, int length)
-        => GuardedRead(index, $"{nameof(TryReadNvmeFeature)}.{featureId}.{length}", () => ReadNvmeFeatureCore(index, featureId, length));
+    {
+        // 在開裝置／建立背景工作前驗證長度，避免非法請求變成靜默讀不到。
+        var request = NvmeProtocolQuery.CreateRequest(NvmeProtocolQuery.Feature, featureId, length,
+            NvmeProtocolScope.Adapter);
+        return GuardedRead(index, $"{nameof(TryReadNvmeFeature)}.{featureId}.{length}",
+            () => ReadNvmeProtocolCore(index, request, NvmeProtocolQuery.Feature, length));
+    }
 
-    private static byte[]? ReadNvmeFeatureCore(int index, uint featureId, int length)
+    private static byte[]? ReadNvmeProtocolCore(int index, byte[] request, uint dataType, int length)
     {
         var handle = OpenDrive(index);
         if (handle == IntPtr.Zero) return null;
         try
         {
-            const int header = 48;
-            var buf = new byte[header + length];
-            BitConverter.GetBytes(PropertyIdProtocolSpecificDevice).CopyTo(buf, 0);
-            BitConverter.GetBytes(0u).CopyTo(buf, 4);
-            BitConverter.GetBytes(ProtocolTypeNvme).CopyTo(buf, 8);
-            BitConverter.GetBytes(NvmeDataTypeFeature).CopyTo(buf, 12);
-            BitConverter.GetBytes(featureId).CopyTo(buf, 16);      // RequestValue = FID
-            BitConverter.GetBytes(0u).CopyTo(buf, 20);
-            BitConverter.GetBytes((uint)header).CopyTo(buf, 24);
-            BitConverter.GetBytes((uint)length).CopyTo(buf, 28);
-
-            if (!DeviceIoControl(handle, IoctlStorageQueryProperty, buf, (uint)buf.Length, buf, (uint)buf.Length, out uint ret, IntPtr.Zero))
+            if (!DeviceIoControl(handle, IoctlStorageQueryProperty, request, (uint)request.Length,
+                request, (uint)request.Length, out uint ret, IntPtr.Zero))
                 return null;
-            if (ret < header + length) return null;
-            var data = new byte[length];
-            Array.Copy(buf, header, data, 0, length);
-            return data;
+            return NvmeProtocolQuery.ReadPayload(request, ret, dataType, length);
         }
         finally { CloseHandle(handle); }
     }
 
     /// <summary>
-    /// 取得 NVMe Identify Controller 資料區（4096B；回傳前 4096 位元組，後段是命名空間列表，現用不到）。
+    /// 取得 NVMe Identify Controller 資料區（4096B；不包含另一次 Identify Namespace List 的結果）。
     /// 失敗回 null。
     /// </summary>
     public static byte[]? TryReadNvmeIdentify(int index)
-        => GuardedRead(index, nameof(TryReadNvmeIdentify), () => ReadNvmeIdentifyCore(index));
-
-    private static byte[]? ReadNvmeIdentifyCore(int index)
-    {
-        var handle = OpenDrive(index);
-        if (handle == IntPtr.Zero) return null;
-        try
-        {
-            const int header = 48;
-            var buf = new byte[header + 4096];
-            BitConverter.GetBytes(PropertyIdProtocolSpecificDevice).CopyTo(buf, 0);
-            BitConverter.GetBytes(0u).CopyTo(buf, 4);                              // PropertyStandardQuery
-            BitConverter.GetBytes(ProtocolTypeNvme).CopyTo(buf, 8);
-            BitConverter.GetBytes(NvmeDataTypeIdentify).CopyTo(buf, 12);
-            BitConverter.GetBytes(NvmeCnsController).CopyTo(buf, 16);              // RequestValue = CNS=1
-            BitConverter.GetBytes(0u).CopyTo(buf, 20);
-            BitConverter.GetBytes((uint)header).CopyTo(buf, 24);
-            BitConverter.GetBytes(4096u).CopyTo(buf, 28);
-
-            if (!DeviceIoControl(handle, IoctlStorageQueryProperty, buf, (uint)buf.Length, buf, (uint)buf.Length, out uint ret, IntPtr.Zero))
-                return null;
-            if (ret < header + 4096) return null;
-            var data = new byte[4096];
-            Array.Copy(buf, header, data, 0, 4096);
-            return data;
-        }
-        finally { CloseHandle(handle); }
-    }
+        => GuardedRead(index, nameof(TryReadNvmeIdentify), () => ReadNvmeProtocolCore(index,
+            NvmeProtocolQuery.CreateRequest(NvmeProtocolQuery.Identify, NvmeCnsController, 4096,
+                NvmeProtocolScope.Adapter),
+            NvmeProtocolQuery.Identify, 4096));
 
     /// <summary>
     /// 取得 ATA IDENTIFY DEVICE 結果（512B）。用 SMART 0xEC 簽章走 SMART_RCV_DRIVE_DATA 同一路徑。

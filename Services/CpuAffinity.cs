@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace XinSpect;
 
@@ -211,32 +211,37 @@ public static class CpuAffinity
         var list = new List<IReadOnlyList<ProcessorRef>>();
         uint len = 0;
         GetLogicalProcessorInformationEx(RelationProcessorCore, 0, ref len);
-        if (len == 0 || Marshal.GetLastWin32Error() != ErrorInsufficientBuffer) return list;
+        if (!WindowsTopologyBuffer.IsWithinBudget(len) || Marshal.GetLastWin32Error() != ErrorInsufficientBuffer) return list;
 
+        uint capacity = len;
         nint buf = Marshal.AllocHGlobal((int)len);
         try
         {
-            if (!GetLogicalProcessorInformationEx(RelationProcessorCore, buf, ref len)) return list;
-            int off = 0;
-            while (off + 8 <= (int)len)
-            {
-                nint rec = buf + off;
-                int size = Marshal.ReadInt32(rec + 4);
-                if (size <= 0) break;
-                nint pl = rec + 8;                                   // PROCESSOR_RELATIONSHIP
-                ushort groupCount = (ushort)Marshal.ReadInt16(pl + 22);
-                ulong mask = groupCount == 0 ? 0 : (ulong)Marshal.ReadIntPtr(pl + 24).ToInt64();
-                ushort group = groupCount == 0 ? (ushort)0 : (ushort)Marshal.ReadInt16(pl + 32);
-                if (!multiGroup && group == 0) mask &= group0Mask;    // 只用行程真的能跑的邏輯處理器
-                if (mask != 0)
-                {
-                    list.Add([.. IndicesFromMask(mask).Select(index => new ProcessorRef(group, index))]);
-                }
-                off += size;
-            }
+            if (!GetLogicalProcessorInformationEx(RelationProcessorCore, buf, ref len) || len > capacity) return list;
+            var bytes = new byte[(int)len];
+            Marshal.Copy(buf, bytes, 0, bytes.Length);
+            return ParsePhysicalCoreProcessorSets(bytes, multiGroup, group0Mask);
         }
         finally { Marshal.FreeHGlobal(buf); }
-        return list;
+    }
+
+    internal static List<IReadOnlyList<ProcessorRef>> ParsePhysicalCoreProcessorSets(byte[] bytes, bool multiGroup, ulong group0Mask)
+    {
+        var records = WindowsTopologyBuffer.Parse(bytes);
+        if (records is null || records.Any(r => r.Relationship != 0)) return [];
+        var result = new List<IReadOnlyList<ProcessorRef>>();
+        foreach (var record in records)
+        {
+            var processors = new List<ProcessorRef>();
+            foreach (var (originalMask, group) in record.Affinities)
+            {
+                ulong mask = originalMask;
+                if (!multiGroup) { if (group != 0) continue; mask &= group0Mask; }
+                processors.AddRange(IndicesFromMask(mask).Select(index => new ProcessorRef(group, index)));
+            }
+            if (processors.Count > 0) result.Add(processors);
+        }
+        return result;
     }
 
     /// <summary>釘選的作用範圍。<see cref="Ok"/> 為 false 表示沒釘上，呼叫端必須跳過該核心而不是照讀。</summary>
