@@ -22,7 +22,7 @@
 
 ## 部署器
 
-- `XinSpectDeploy.exe` 顯示英文；`XinSpect部署器.exe` 預設繁體中文，並以簡體中文提示「按 K 切换到简体中文」。選單按 `~` 回上一層。
+- `XinSpectDeploy.exe` 顯示英文；`XinSpect部署器.exe` 預設繁體中文，並以簡體中文提示「按 K 切换到简体中文」。GitHub 請下載 `XinSpectDeploy-zh.zip` 並解壓，Google Drive 可直接下載中文檔。選單按 `~` 回上一層。
 - 無法取得校驗清單時，`Y` 將未驗證的檔案另存到桌面上的獨立資料夾，`N` 結束，`K` 回下載來源選單。校驗值存在但檔案不符時，仍會拒絕該檔案。
 - 檔案大小上限改為 128 KB（131,072 bytes）。兩個本機候選檔各為 62,976 bytes，SHA-256 相同，仍由系統的 .NET Framework 執行。
 
