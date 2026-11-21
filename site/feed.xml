@@ -5,7 +5,25 @@
   <description>唯讀的 Windows 硬體事實採集器——版本更新紀錄（最新 20 筆，全程見官網）</description>
   <language>zh-Hant</language>
   <generator>XinSpect site tools (Tools/gen-site-data.py)</generator>
-  <lastBuildDate>2026-11-14T00:00:00Z</lastBuildDate>
+  <lastBuildDate>2026-11-18T00:00:00Z</lastBuildDate>
+    <item>
+      <title>3.31 — 特別版：CLI 記憶體來源與 PCIe ECAM 邊界硬化</title>
+      <link>https://xinspect.de5.net/#log-v3.31</link>
+      <guid isPermaLink="false">xinspect-3.31</guid>
+      <pubDate>2026-11-18T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.30 — 來源更清楚，量測更可靠</title>
+      <link>https://xinspect.de5.net/#log-v3.30</link>
+      <guid isPermaLink="false">xinspect-3.30</guid>
+      <pubDate>2026-11-16T00:00:00Z</pubDate>
+    </item>
+    <item>
+      <title>3.29 — 時序更精確，硬體掃描更可靠</title>
+      <link>https://xinspect.de5.net/#log-v3.29</link>
+      <guid isPermaLink="false">xinspect-3.29</guid>
+      <pubDate>2026-11-16T00:00:00Z</pubDate>
+    </item>
     <item>
       <title>3.28 — 內建工具箱擴充與 Agent 唯讀橋接</title>
       <link>https://xinspect.de5.net/#log-v3.28</link>
@@ -106,24 +124,6 @@
       <title>3.11 — 介面換成瑞士現代風格與 Helvetica（測試版）</title>
       <link>https://xinspect.de5.net/#log-v3.11</link>
       <guid isPermaLink="false">xinspect-3.11</guid>
-      <pubDate>2026-10-31T00:00:00Z</pubDate>
-    </item>
-    <item>
-      <title>3.10 — 總覽先講清楚這台機器是什麼：膠囊摘要＋詳細資訊，儀表預設收起</title>
-      <link>https://xinspect.de5.net/#log-v3.10</link>
-      <guid isPermaLink="false">xinspect-3.10</guid>
-      <pubDate>2026-10-31T00:00:00Z</pubDate>
-    </item>
-    <item>
-      <title>3.09 — 圖示換成品牌插畫：藍色 X ＋ 兩張視窗卡</title>
-      <link>https://xinspect.de5.net/#log-v3.09</link>
-      <guid isPermaLink="false">xinspect-3.09</guid>
-      <pubDate>2026-10-31T00:00:00Z</pubDate>
-    </item>
-    <item>
-      <title>3.08 — 授權在程式裡也寫成雙授權，並寫明適用於所有版本</title>
-      <link>https://xinspect.de5.net/#log-v3.08</link>
-      <guid isPermaLink="false">xinspect-3.08</guid>
       <pubDate>2026-10-31T00:00:00Z</pubDate>
     </item>
 </channel></rss>

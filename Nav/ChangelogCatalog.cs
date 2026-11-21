@@ -51,6 +51,50 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "3.31",
+            Date = "2026-11-18",
+            Title = "特別版：CLI 記憶體來源與 PCIe ECAM 邊界硬化",
+            Items =
+            [
+                "CLI 共用記憶體採集與發布路徑；WMI 設定速率保留來源與可用狀態，不冒充即時時序或控制器實測。",
+                "修正 ECAM 掃描 bus 255 回繞、完整 4KB 位址邊界與短讀處理；畸形 AER 能力回報讀取錯誤並保留先前結果。",
+                "DIMM 身份僅在唯一有效序號或已確認共同 locator 範圍時配對；WMI 與 AI 記憶體描述保留來源及未知狀態。",
+                "本版全套回歸與硬體實機矩陣結果以發佈驗證記錄為準。",
+            ],
+        },
+        new ChangeEntry
+        {
+            Version = "3.30",
+            Date = "2026-11-16",
+            Title = "來源更清楚，量測更可靠",
+            Items =
+            [
+                "WMI 硬體類補遺與官方清單對帳：四類 provider 資料、86 類盤點及 22 類直接查詢分開標示。",
+                "SMART Intel/Solidigm 與 HGST 屬性按已核完整型號解讀；未核 OEM、協定或單位保留未知。",
+                "修正時鐘回撥、NVMe 查詢封包與描述子驗證、SAS／Storage Spaces 協定路由及來源截止判定。",
+                "磁碟唯讀掃描接上桌面與 CLI：可取消、四種塊尺、限定範圍及可選重讀；仍待實機矩陣驗證。",
+                "修正 Core Temp 每 CPU 核心數、TjMax 索引與華氏單位；熱力圖備援先收 TjMax 再換算差值，拒絕歧義核心映射。",
+                "新增 Core Temp／LHM 核心溫度候選差異展示；來源更新時間與實體核心對應未經實機驗證，不作精度認證。",
+                "AI 暫時性 HTTP 錯誤支援首次請求後最多 10 次重試；保留取消、退避與串流輸出後不重試。",
+                "新增工程憲法與代理必讀入口：深度、真實、安全、來源追溯及精確定義成為接手要求。",
+            ],
+        },
+        new ChangeEntry
+        {
+            Version = "3.29",
+            Date = "2026-11-16",
+            Title = "時序更精確，硬體掃描更可靠",
+            Items =
+            [
+                "修正 EDID established timing 位址與 Apple 1152x870 模式，新增 EDID 時序解碼，完整 DTD 才匹配 DMT。",
+                "CTA-861 基本塊與擴充塊加入 checksum 診斷；不完整資料標示 Unknown，保留已驗證的部分宣告。",
+                "BCD 錯誤出口碼、缺少物件、badmemorylist 來源與 truncatememory 單位修正；OS 與韌體讀取各用正確命名空間。",
+                "SPD 掃描逾時保留已完成模組；自訂工具 URL 與 EXE 參數身份避免誤合併。",
+                "修正 XsRegProbe 重疊緩衝區覆寫請求地址，並讓磁碟探測不受共享執行緒集區飽和影響。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "3.28",
             Date = "2026-11-14",
             Title = "內建工具箱擴充與 Agent 唯讀橋接",
