@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace XinSpect;
 
@@ -18,6 +19,12 @@ public partial class SettingsView : UserControl
         _syncingTheme = true;
         try { ThemeCombo.SelectedIndex = ThemeService.ThemeIndex; }
         finally { _syncingTheme = false; }
+        if (KernelBackendCombo is not null)
+        {
+            _syncingKernelBackend = true;
+            try { KernelBackendCombo.SelectedIndex = Vm?.Settings.KernelBackendMode ?? 0; }
+            finally { _syncingKernelBackend = false; }
+        }
         AccentList.ItemsSource = ThemeService.Presets;
         ShowAccentHint();
 
@@ -25,22 +32,42 @@ public partial class SettingsView : UserControl
         // 否則畫面已經是淺色，這裡卻還寫著「目前：深色主題」。
         this.OnThemeChange(() =>
         {
+            RefreshLocalizedThemeNames();
             if (ThemeCombo.SelectedIndex != ThemeService.ThemeIndex)
                 ThemeCombo.SelectedIndex = ThemeService.ThemeIndex;
             SyncSwissDarkCheck();
+            SyncCatLanguageCheck();
+            RefreshLanguageHint();
             ShowAccentHint();
         });
         SyncSwissDarkCheck();
+        SyncCatLanguageCheck();
 
         // 首次進入設定頁時自動跑一次環境自檢（背景偵測，不阻塞 UI）；之後由使用者按鈕手動重檢。
         Loaded += (_, _) =>
         {
+            _kernelBackendReady = true;
+            if (!_languageChangedSubscribed)
+            {
+                LanguageService.Changed += OnLanguageChanged;
+                _languageChangedSubscribed = true;
+            }
+            RefreshLanguageHint();
             SyncKeyBox();
             SetupSharedAiOption();
             Vm?.Diagnostics.Refresh();   // 進頁面就是最新的一份，不必等下一拍心跳
             if (Vm is { } vm && !vm.EnvCheck.HasRun && !vm.EnvCheck.IsRunning)
                 _ = vm.EnvCheck.RunAsync(vm);
             Vm?.Coverage.EnsureLoaded();   // 覆蓋申報：純讀檔與字串掃描，可同步算完
+        };
+        Unloaded += (_, _) =>
+        {
+            if (_languageChangedSubscribed)
+            {
+                LanguageService.Changed -= OnLanguageChanged;
+                _languageChangedSubscribed = false;
+            }
+            _kernelBackendReady = false;
         };
     }
 
@@ -71,6 +98,9 @@ public partial class SettingsView : UserControl
     // ── 外觀 ────────────────────────────────────────────────────────────────
 
     private bool _syncingTheme;
+    private bool _syncingKernelBackend;
+    private bool _kernelBackendReady;
+    private bool _languageChangedSubscribed;
 
     // 主題切換：ThemeService 立即改寫共用筆刷，整棵視覺樹同步換色並持久化。
     private void Theme_Changed(object sender, SelectionChangedEventArgs e)
@@ -79,6 +109,33 @@ public partial class SettingsView : UserControl
         if (ThemeCombo.SelectedIndex >= 0) ThemeService.ThemeIndex = ThemeCombo.SelectedIndex;
         SyncSwissDarkCheck();
         ShowAccentHint();
+    }
+
+    private void RefreshLocalizedThemeNames()
+    {
+        if (ThemeCombo is null) return;
+        int index = ThemeService.ThemeIndex;
+        _syncingTheme = true;
+        try
+        {
+            ThemeCombo.ItemsSource = ThemeService.ThemeNames.ToArray();
+            ThemeCombo.SelectedIndex = index;
+        }
+        finally { _syncingTheme = false; }
+    }
+
+    private void OnLanguageChanged()
+    {
+        RefreshLocalizedThemeNames();
+        RefreshLanguageHint();
+        ShowAccentHint();
+    }
+
+    private void KernelBackendMode_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_kernelBackendReady || _syncingKernelBackend
+            || KernelBackendCombo.SelectedIndex is < 0 or > 2 || Vm is not { } vm) return;
+        vm.Settings.SaveKernelBackendChoice((KernelBackendMode)KernelBackendCombo.SelectedIndex);
     }
 
     /// <summary>瑞士版專屬的「深色模式」開關：只有選了瑞士版才看得到，狀態跟著 ThemeService 走。</summary>
@@ -354,7 +411,6 @@ public partial class SettingsView : UserControl
     private async void Reinit_Click(object sender, RoutedEventArgs e)    {
         var vm = Vm;
         if (vm is null) return;
-        if (ReinitBtn is not null) ReinitBtn.IsEnabled = false;
         if (ReinitHint is not null) ReinitHint.Text = LanguageService.T("正在重新初始化所有功能，請稍候…");
         try
         {
@@ -364,10 +420,6 @@ public partial class SettingsView : UserControl
         catch (Exception ex)
         {
             if (ReinitHint is not null) ReinitHint.Text = LanguageService.T("初始化時發生錯誤：") + ex.Message;
-        }
-        finally
-        {
-            if (ReinitBtn is not null) ReinitBtn.IsEnabled = true;
         }
     }
 
@@ -403,6 +455,13 @@ public partial class SettingsView : UserControl
         RefreshLanguageHint();
     }
 
+    private void CatLanguageToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm is not { } vm || sender is not CheckBox box) return;
+        LanguageService.ApplyCatLanguage(box.IsChecked == true, vm.Settings);
+        RefreshLanguageHint();
+    }
+
     /// <summary>把兩個勾選框同步成目前語言（英語模式下簡體框必須是未勾的）。</summary>
     private void RefreshLanguageHint()
     {
@@ -410,5 +469,39 @@ public partial class SettingsView : UserControl
         bool simplified = LanguageService.IsSimplified;
         if (EnglishCheck is not null) EnglishCheck.IsChecked = english;
         if (SimplifiedCheck is not null) SimplifiedCheck.IsChecked = simplified;
+        SyncCatLanguageCheck();
+    }
+
+    private void SyncCatLanguageCheck()
+    {
+        if (CatLanguageCheck is null) return;
+        CatLanguageCheck.Visibility = ThemeService.IsCatWorld ? Visibility.Visible : Visibility.Collapsed;
+        CatLanguageCheck.IsChecked = LanguageService.IsCatLanguageSelected;
+    }
+
+    private void AdvancedDiagnosticsCheck_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is CheckBox { IsChecked: not true } && !CatFeatureGate.Confirm(Window.GetWindow(this)))
+            e.Handled = true;
+    }
+
+    private void AdvancedDiagnosticsCheck_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key is not (Key.Space or Key.Enter)) return;
+        if (sender is CheckBox { IsChecked: not true } && !CatFeatureGate.Confirm(Window.GetWindow(this)))
+            e.Handled = true;
+    }
+
+    private void HighRiskOperationsCheck_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is CheckBox { IsChecked: not true } && !CatFeatureGate.Confirm(Window.GetWindow(this)))
+            e.Handled = true;
+    }
+
+    private void HighRiskOperationsCheck_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key is not (Key.Space or Key.Enter)) return;
+        if (sender is CheckBox { IsChecked: not true } && !CatFeatureGate.Confirm(Window.GetWindow(this)))
+            e.Handled = true;
     }
 }

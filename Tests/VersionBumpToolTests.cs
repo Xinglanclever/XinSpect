@@ -47,6 +47,7 @@ public class VersionBumpToolTests
                      Path.Combine("docs", "百科-v3.17.md"),
                      Path.Combine("Nav", "ChangelogCatalog.cs"),
                      Path.Combine("Views", "AboutView.xaml"),
+                     Path.Combine("Models", "AppInfo.cs"),
                      Path.Combine(".github", "ISSUE_TEMPLATE", "bug_report.yml"),
                      Path.Combine(".github", "ISSUE_TEMPLATE", "hardware_report.yml"),
                      Path.Combine("Tools", "bump-version.py"),
@@ -145,7 +146,8 @@ public class VersionBumpToolTests
             Assert.Contains($"<Version>{next}</Version>", File.ReadAllText(Path.Combine(box, "XinSpect.csproj")));
             Assert.Contains($"<Version>{next}</Version>", File.ReadAllText(Path.Combine(box, "XinSpectCli", "XinSpectCli.csproj")));
             Assert.Contains($"<Version>{next}</Version>", File.ReadAllText(Path.Combine(box, "XinSpectCli", "XinSpectCli.Legacy.csproj")));
-            Assert.Contains($"版本 {next} ・", File.ReadAllText(Path.Combine(box, "Views", "AboutView.xaml")));
+            Assert.Contains("x:Name=\"VersionMetadata\"", File.ReadAllText(Path.Combine(box, "Views", "AboutView.xaml")));
+            Assert.Contains($"public const string Codename = \"Test Code\"", File.ReadAllText(Path.Combine(box, "Models", "AppInfo.cs")));
             Assert.Contains($"（目前 {next}）", File.ReadAllText(Path.Combine(box, "SECURITY.md")));
             Assert.Contains($"placeholder: \"{next}\"",
                 File.ReadAllText(Path.Combine(box, ".github", "ISSUE_TEMPLATE", "bug_report.yml")));

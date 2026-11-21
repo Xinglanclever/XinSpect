@@ -237,18 +237,20 @@ public sealed class RaplLoadSafetyTests
     }
 
     [Fact]
-    public void PassiveGuiAndCliConsumersNeverInvokeDiagnosticAndShareUnverifiedFilter()
+    public void PassiveGuiAndCliConsumersNeverInvokeDiagnosticOrRecordUnverifiedPower()
     {
         string root = RepoRoot();
         string sensor = File.ReadAllText(Path.Combine(root, "Services", "SensorService.cs"));
         string cli = File.ReadAllText(Path.Combine(root, "XinSpectCli", "Program.cs"));
         Assert.DoesNotContain("RaplEnergyGate.EnsureStarted(", sensor);
+        Assert.DoesNotContain("RaplEnergyGate.EnsureStarted(", cli);
         Assert.DoesNotContain("RaplEnergyGate.RunOnce(", cli);
         Assert.DoesNotContain("RaplEnergyGate.RunOnceAsync(", cli);
         Assert.Contains("public double? CpuPowerW => RaplEnergyGate.ValidatedPower(Val(_cpuPower));", sensor);
         Assert.Contains("public string CpuPowerText => CpuPowerW", sensor);
-        Assert.Contains("cpuPower = RaplEnergyGate.ValidatedPower(r0Power ?? cpuPower);", cli);
-        Assert.Contains("能量計未驗證", cli);
+        Assert.Contains("Tui.SelectCpuPower(r0Power, cpuPower, RaplEnergyGate.Verdict)", cli);
+        Assert.Contains("r.CpuClock, r.CpuPower.VerifiedWatts, r.MemUsed", cli);
+        Assert.DoesNotContain("r.CpuClock, r.CpuPower.Watts, r.MemUsed", cli);
         Assert.Null(RaplEnergyGate.ValidatedPower(75));
         Assert.Contains("未驗證", RaplEnergyGate.StateText);
     }

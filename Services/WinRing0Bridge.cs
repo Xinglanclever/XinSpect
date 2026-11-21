@@ -34,7 +34,8 @@ public sealed class WinRing0Bridge : IDisposable
     /// 「PCIe 鏈路」一頁，找不到 I/O 埠那兩個只影響 SMBus／SPD 直讀，
     /// 不該讓所有靠 MSR 的頁面一起失效。
     /// </remarks>
-    private sealed record Ring0Methods(MethodInfo Open, MethodInfo Close, MethodInfo ReadMsr, MethodInfo WriteMsr,
+    private sealed record Ring0Methods(MethodInfo Open, MethodInfo Close, MethodInfo IsOpen, MethodInfo? Report,
+                                       MethodInfo ReadMsr, MethodInfo WriteMsr,
                                        MethodInfo? ReadPciConfig, MethodInfo? GetPciAddress,
                                        MethodInfo? ReadIoPort, MethodInfo? WriteIoPort,
                                        MethodInfo? WritePciConfig,
@@ -77,7 +78,15 @@ public sealed class WinRing0Bridge : IDisposable
             if (_refs == 0)
             {
                 // 內部會 Extract＋建服務＋啟動；已經開著時重複 Open 是多餘的，所以只在第一位使用者做
-                try { _cached.Open.Invoke(null, null); }
+                try
+                {
+                    _cached.Open.Invoke(null, null);
+                    if (_cached.IsOpen.Invoke(null, null) is not true)
+                    {
+                        var report = (_cached.Report?.Invoke(null, null) as string)?.Trim();
+                        return CreateFailed(string.IsNullOrEmpty(report) ? "WinRing0 裝置未開啟。" : report);
+                    }
+                }
                 catch (Exception ex) { return CreateFailed("驅動開啟失敗：" + ex.Message); }
             }
             _refs++;
@@ -190,6 +199,9 @@ public sealed class WinRing0Bridge : IDisposable
                 ?? throw new InvalidOperationException("找不到 Hardware.Ring0 類別");
             var open = ty.GetMethod("Open", All, Type.EmptyTypes);
             var close = ty.GetMethod("Close", All, Type.EmptyTypes);
+            var isOpen = ty.GetProperty("IsOpen", All)?.GetMethod
+                ?? throw new InvalidOperationException("找不到 Ring0.IsOpen 屬性");
+            var report = ty.GetMethod("GetReport", All, Type.EmptyTypes);
             var read = ty.GetMethod("ReadMsr", All, new[] { typeof(uint), typeof(uint).MakeByRefType(), typeof(uint).MakeByRefType() });
             var write = ty.GetMethod("WriteMsr", All, new[] { typeof(uint), typeof(uint), typeof(uint) });
             if (open is null || close is null || read is null || write is null)
@@ -221,7 +233,7 @@ public sealed class WinRing0Bridge : IDisposable
                 && m.GetParameters()[0].ParameterType == typeof(ulong)
                 && m.GetParameters()[1].ParameterType.IsByRef
                 && m.GetParameters()[1].ParameterType.GetElementType() is { IsArray: true });
-            return new Ring0Methods(open, close, read, write, readPci, pciAddr, readIo, writeIo, writePci, readMemArray);
+            return new Ring0Methods(open, close, isOpen, report, read, write, readPci, pciAddr, readIo, writeIo, writePci, readMemArray);
         }
         catch (Exception ex)
         {

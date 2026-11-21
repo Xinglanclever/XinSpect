@@ -73,8 +73,8 @@ public static class ThirdPartyNoticesCatalog
     }
 
     /// <summary>
-    /// 解析清單裡的元件表（執行期表與建置期表，欄序都是「元件｜版本｜授權｜…」）。
-    /// 表頭與分隔列跳過；候選鍵那種「資源優先」的正文敘述不帶管線列，天然不會被吃進來。
+    /// 解析清單裡的套件表與來源對照表資料列。
+    /// 各表格的已知表頭與分隔列跳過；不含管線列的正文不會被當成資料列。
     /// </summary>
     public static List<LicenseEntry> Parse(string markdown)
     {
@@ -84,12 +84,13 @@ public static class ThirdPartyNoticesCatalog
             string line = raw.TrimEnd('\r').Trim();
             if (!line.StartsWith('|')) continue;
 
-            // cells[0] 是首管線前的空字串；cells[1]=元件、cells[2]=版本、cells[3]=授權。
+            // cells[0] 是首管線前的空字串；cells[1..3] 是前 3 個欄位，第三欄為授權。
             string[] cells = line.Split('|');
             if (cells.Length < 4) continue;
+            if (IsHeaderRow(cells)) continue;
 
             string component = cells[1].Trim();
-            if (component.Length == 0 || component == "元件") continue;          // 表頭
+            if (component.Length == 0) continue;
             if (component.Trim('-', ':', ' ').Length == 0) continue;             // 分隔列 |---|
 
             string license = cells[3].Trim();
@@ -98,6 +99,26 @@ public static class ThirdPartyNoticesCatalog
             entries.Add(new LicenseEntry(component, cells[2].Trim(), license));
         }
         return entries;
+    }
+
+    private static bool IsHeaderRow(string[] cells)
+    {
+        // THIRD-PARTY-NOTICES.md has distinct headers for runtime packages, build-time packages,
+        // and source-attribution rows. Match each complete schema, not just a first-column label.
+        static bool Matches(string[] actual, params string[] expected)
+        {
+            int count = actual.Length - 1; // cells[0] is empty because rows start with '|'.
+            if (count > 0 && actual[^1].Trim().Length == 0) count--; // optional trailing pipe.
+            if (count != expected.Length) return false;
+            for (int i = 0; i < expected.Length; i++)
+                if (!StringComparer.Ordinal.Equals(actual[i + 1].Trim(), expected[i])) return false;
+            return true;
+        }
+
+        return Matches(cells, "元件", "版本", "授權")
+            || Matches(cells, "元件", "版本", "授權", "義務", "來源")
+            || Matches(cells, "元件", "版本", "授權", "用途")
+            || Matches(cells, "來源", "取用範圍", "授權", "處置");
     }
 
     private static LicensesReport Report(string markdown, string source)

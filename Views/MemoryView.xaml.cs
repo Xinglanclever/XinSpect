@@ -24,6 +24,13 @@ public partial class MemoryView : UserControl
         DataContext as MainViewModel
         ?? Shell.Vm;
 
+    private async void ReinitializeAll_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm is not { } vm) return;
+        try { await vm.ReinitializeAllAsync(); }
+        catch (Exception ex) { vm.StatusText = "重新擷取失敗：" + ex.Message; }
+    }
+
     /// <summary>DRAM 流量量測：使用者按下才跑（會編程效能計數器並在結束後還原）。</summary>
     private void DramTrafficMeasure_Click(object sender, RoutedEventArgs e) => Vm?.DramTraffic.Measure();
 

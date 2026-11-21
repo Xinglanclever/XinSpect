@@ -58,6 +58,38 @@ public class ThirdPartyNoticesTests
         var rows = Regex.Matches(notices, @"^\| [^|\- ]", RegexOptions.Multiline);
         Assert.True(rows.Count >= 9, "執行期＋建置期元件表被刪——只許增不許減");
     }
+
+    [Fact]
+    public void Parse_略過套件表與來源對照表表頭但保留資料列()
+    {
+        const string markdown = """
+            | 元件 | 版本 | 授權 | 義務 | 來源 |
+            |---|---|---|---|---|
+            | Example.Package | 1.2.3 | MIT | 保留聲明 | https://example.test |
+            | 元件 | 版本 | 授權 | 用途 |
+            |---|---|---|---|
+            | Build.Package | 4.5.6 | Apache-2.0 | 測試工具 |
+            | 來源 | 取用範圍 | 授權 | 處置 |
+            |---|---|---|---|
+            | pytorch/cpuinfo | `src/x86/uarch.c` 對照表 | BSD-2-Clause | 保留標示 |
+            """;
+
+        var entries = ThirdPartyNoticesCatalog.Parse(markdown);
+
+        Assert.Equal(
+            new[]
+            {
+                ("Example.Package", "1.2.3", "MIT"),
+                ("Build.Package", "4.5.6", "Apache-2.0"),
+                ("pytorch/cpuinfo", "`src/x86/uarch.c` 對照表", "BSD-2-Clause"),
+            },
+            entries.Select(e => (e.Component, e.Version, e.License)));
+        Assert.DoesNotContain(entries, e => e.Component == "來源");
+
+        var actualEntries = ThirdPartyNoticesCatalog.Parse(
+            File.ReadAllText(RepoFile("THIRD-PARTY-NOTICES.md")));
+        Assert.DoesNotContain(actualEntries, e => e.Component == "來源");
+    }
 }
 
 /// <summary>

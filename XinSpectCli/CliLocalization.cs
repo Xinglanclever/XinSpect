@@ -12,6 +12,7 @@ internal enum CliLanguage
 {
     Traditional,
     Simplified,
+    English,
 }
 
 internal static class CliLocalization
@@ -27,12 +28,38 @@ internal static class CliLocalization
         "sensor-crosscheck",
     };
 
+    // Fill the CLI's high-frequency shell/menu strings from the desktop translation catalog.
+    // This keeps the REPL's primary navigation readable in English even where a detailed
+    // command explanation has not yet been added to the shared catalog.
+    private static readonly Dictionary<string, string> EnglishOverrides = new(StringComparer.Ordinal)
+    {
+        ["曦覽終端機"] = "XinSpect CLI", ["快速開始"] = "Quick start",
+        ["指令書"] = "Command book", ["採集與查詢"] = "Collection & queries",
+        ["即時監控"] = "Live monitoring", ["深層探針"] = "Deep probes",
+        ["證據與合規"] = "Evidence & compliance", ["導覽"] = "Navigation",
+        ["系統"] = "System", ["採集一輪全機硬體事實進快取"] = "Collect a full hardware snapshot into cache",
+        ["重新採集事實快取"] = "Refresh the hardware facts cache",
+        ["搜尋靜態事實鍵目錄"] = "Search the static fact-key catalog",
+        ["健康摘要：六態分布與對帳矛盾"] = "Health summary: availability and consistency",
+        ["即時一行 KPI 快照"] = "One-line live KPI snapshot",
+        ["即時表格持續刷新"] = "Live table, continuously refreshed",
+        ["全螢幕即時儀表板"] = "Full-screen live dashboard",
+        ["唯讀"] = "Read-only", ["不寫硬體"] = "no hardware writes", ["不連網"] = "offline",
+        ["目前語言：繁體中文。用 lang zh-T 或 zh-S 切換；按 K 可切換 English／简体中文。"] = "Current language: Traditional Chinese. Use lang zh-T or zh-S to switch; press K for English / Simplified Chinese.",
+        ["目前語言：简体中文。用 lang zh-T 或 zh-S 切換；按 K 可切換 English／简体中文。"] = "Current language: Simplified Chinese. Use lang zh-T or zh-S to switch; press K for English / Simplified Chinese.",
+        ["目前語言：English。用 lang zh-T 或 zh-S 切換；按 K 可切換 English／简体中文。"] = "Current language: English. Use lang zh-T or zh-S to switch; press K to toggle English / Simplified Chinese.",
+        ["已切換至繁體中文。"] = "Switched to Traditional Chinese.",
+        ["已切换到简体中文。"] = "Switched to Simplified Chinese.",
+        ["已切換至 English。"] = "Switched to English.",
+    };
+
     public static CliLanguage Current { get; private set; }
 
     public static void Initialize(SettingsService settings)
     {
         _settings = settings;
-        Current = settings.SimplifiedChinese ? CliLanguage.Simplified : CliLanguage.Traditional;
+        Current = settings.IsEnglish ? CliLanguage.English
+            : settings.SimplifiedChinese ? CliLanguage.Simplified : CliLanguage.Traditional;
     }
 
     public static bool TrySet(string? value)
@@ -41,6 +68,7 @@ internal static class CliLocalization
         {
             case "zh-tw":
             case "zh-hant":
+            case "zh-t":
             case "traditional":
                 Current = CliLanguage.Traditional;
                 if (_settings is not null)
@@ -52,6 +80,7 @@ internal static class CliLocalization
             case "zh-cn":
             case "zh-hans":
             case "simplified":
+            case "zh-s":
                 Current = CliLanguage.Simplified;
                 if (_settings is not null)
                 {
@@ -59,15 +88,58 @@ internal static class CliLocalization
                     _settings.IsEnglish = false;
                 }
                 return true;
+            case "en":
+            case "english":
+                Current = CliLanguage.English;
+                if (_settings is not null)
+                {
+                    _settings.SimplifiedChinese = false;
+                    _settings.IsEnglish = true;
+                }
+                return true;
             default:
                 return false;
         }
     }
 
+    /// <summary>Keyboard cycle requested by the CLI: English → Simplified Chinese → English.</summary>
+    public static void ToggleEnglishSimplified()
+        => TrySet(Current == CliLanguage.English ? "zh-S" : "en");
+
+    public static string LanguageLabel => Current switch
+    {
+        CliLanguage.English => "English",
+        CliLanguage.Simplified => "简体中文",
+        _ => "繁體中文",
+    };
+
+    public static string LanguageCycleLabel => Current switch
+    {
+        CliLanguage.English => "English · K switches to 简体中文",
+        CliLanguage.Simplified => "简体中文 · K 切换到 English",
+        _ => "繁體中文 · 按 K 切換 English／简体中文",
+    };
+
+    public static string FooterLabel => Current switch
+    {
+        CliLanguage.English => "● READY · READ-ONLY · " + LanguageCycleLabel,
+        CliLanguage.Simplified => "● 就绪 · 只读模式 · " + LanguageCycleLabel,
+        _ => "● READY · 唯讀模式 · " + LanguageCycleLabel,
+    };
+
     public static string Translate(string? text)
-        => Current == CliLanguage.Simplified && !string.IsNullOrEmpty(text)
-            ? LanguageService.ToSimplified(text)
-            : text ?? "";
+    {
+        if (string.IsNullOrEmpty(text)) return text ?? "";
+        if (Current == CliLanguage.Simplified) return LanguageService.ToSimplified(text);
+        if (Current == CliLanguage.English)
+        {
+            if (EnglishOverrides.TryGetValue(text, out string? english)) return english;
+            if (EnglishStrings.Lookup(text) is { } exact) return exact;
+            return string.Join(" ・ ", text.Split(" ・ ").Select(part =>
+                EnglishOverrides.TryGetValue(part, out string? item) ? item : EnglishStrings.Lookup(part) ?? part));
+        }
+        return text;
+    }
 
     public static bool IsMachineFormat(IReadOnlyList<string> args)
     {
@@ -181,13 +253,13 @@ internal static class CliLocalization
 
             if (i + 1 >= args.Length)
             {
-                error = "--lang requires zh-TW or zh-CN.";
+            error = "--lang requires en, zh-T or zh-S.";
                 remaining = args;
                 return false;
             }
             if (!TrySet(args[++i]))
             {
-                error = "Unsupported language. Use zh-TW or zh-CN.";
+                error = "Unsupported language. Use en, zh-T or zh-S.";
                 remaining = args;
                 return false;
             }

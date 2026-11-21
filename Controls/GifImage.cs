@@ -12,6 +12,17 @@ namespace XinSpect;
 /// </summary>
 public sealed class GifImage : Image
 {
+    public static readonly DependencyProperty IsAnimationEnabledProperty =
+        DependencyProperty.Register(nameof(IsAnimationEnabled), typeof(bool), typeof(GifImage),
+            new PropertyMetadata(true, OnAnimationEnabledChanged));
+
+    /// <summary>Whether playback is enabled; callers can bind this to the reduced-motion preference.</summary>
+    public bool IsAnimationEnabled
+    {
+        get => (bool)GetValue(IsAnimationEnabledProperty);
+        set => SetValue(IsAnimationEnabledProperty, value);
+    }
+
     public static readonly DependencyProperty GifSourceProperty =
         DependencyProperty.Register(nameof(GifSource), typeof(string), typeof(GifImage),
             new PropertyMetadata(null, OnGifSourceChanged));
@@ -75,7 +86,7 @@ public sealed class GifImage : Image
 
     private void Start()
     {
-        if (_frames is null || _frames.Length <= 1) return;
+        if (!IsVisible || !IsAnimationEnabled || _frames is null || _frames.Length <= 1) return;
         _timer.Interval = TimeSpan.FromMilliseconds(Math.Max(20, _delaysMs![_index]));
         _timer.Start();
     }
@@ -88,5 +99,21 @@ public sealed class GifImage : Image
         _index = (_index + 1) % _frames.Length;
         Source = _frames[_index];
         _timer.Interval = TimeSpan.FromMilliseconds(Math.Max(20, _delaysMs![_index]));
+    }
+
+    private static void OnAnimationEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not GifImage image) return;
+        if ((bool)e.NewValue)
+            image.Start();
+        else
+        {
+            image.Stop();
+            if (image._frames is { Length: > 0 })
+            {
+                image._index = 0;
+                image.Source = image._frames[0];
+            }
+        }
     }
 }

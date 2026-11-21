@@ -260,6 +260,7 @@ public static class PageRegistry
             Keywords = ["oc", "overclock", "xtu", "超頻", "倍頻", "電壓"],
             Advanced = true,
             RequiresRiskConsent = true,
+            RequiresCatConsent = true,
         },
         new()
         {
@@ -270,6 +271,7 @@ public static class PageRegistry
             Hint = "NVML 功耗／風扇 + NVAPI 時脈偏移（測試版）",
             Keywords = ["gpu oc", "nvapi", "nvml", "顯卡超頻", "功耗", "時脈"],
             Advanced = true,
+            RequiresCatConsent = true,
         },
         new()
         {

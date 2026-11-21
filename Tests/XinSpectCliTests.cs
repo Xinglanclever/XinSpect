@@ -31,7 +31,7 @@ public class XinSpectCliTests
             .Matches(book).Select(m => m.Groups[1].Value).ToHashSet();
 
         // BuildCommands 補的別名（文檔外可用指令）
-        names.UnionWith(new[] { "refresh", "mascot", "吉祥物", "百科", "quit", "q", "?" });
+        names.UnionWith(new[] { "refresh", "mascot", "吉祥物", "百科", "quit", "q", "?", "shortcuts" });
         Assert.Contains("手冊.md 是 v2.91 時代的歷史文件", src, StringComparison.Ordinal);
         Assert.DoesNotContain("case \"catalog\"", src, StringComparison.Ordinal);
         Assert.DoesNotContain("catalog <關鍵字>", book, StringComparison.Ordinal);
@@ -164,6 +164,19 @@ public class XinSpectCliTests
         Assert.Contains("requires", missingError, StringComparison.OrdinalIgnoreCase);
         Assert.False(CliLocalization.TryConsumeOption(["--lang", "fr-FR"], out _, out var unsupportedError));
         Assert.Contains("Unsupported", unsupportedError, StringComparison.Ordinal);
+
+        Assert.True(CliLocalization.TryConsumeOption(["--lang", "zh-T", "help"], out var translated, out var langError), langError);
+        Assert.Equal(["help"], translated);
+        Assert.True(CliLocalization.TrySet("en"));
+        Assert.Equal(CliLanguage.English, CliLocalization.Current);
+        Assert.Contains("K", CliLocalization.LanguageCycleLabel, StringComparison.Ordinal);
+        CliLocalization.ToggleEnglishSimplified();
+        Assert.Equal(CliLanguage.Simplified, CliLocalization.Current);
+        CliLocalization.ToggleEnglishSimplified();
+        Assert.Equal(CliLanguage.English, CliLocalization.Current);
+        Assert.Contains("K", CliLocalization.LanguageCycleLabel, StringComparison.Ordinal);
+        CliLocalization.TrySet("zh-T");
+        Assert.Equal(CliLanguage.Traditional, CliLocalization.Current);
     }
 
     [Fact]
@@ -187,6 +200,82 @@ public class XinSpectCliTests
                 buffer.ToString());
         }
         finally { CliLocalization.TrySet("zh-TW"); }
+    }
+
+    [Fact]
+    public void LiveTop在窄終端逐行顯示全部欄位並保留GPU與記憶體數據()
+    {
+        string[][] labelsByLanguage =
+        [
+            ["CPU 溫度", "CPU 占用", "CPU 功率", "CPU 頻率", "GPU 溫度", "GPU 占用", "顯存 GB", "記憶體占用", "記憶體 GB"],
+            ["CPU 温度", "CPU 占用", "CPU 功率", "CPU 频率", "GPU 温度", "GPU 占用", "显存 GB", "内存占用", "内存 GB"],
+            ["CPU °C", "CPU %", "CPU W", "CPU GHz", "GPU °C", "GPU %", "VRAM GB", "MEM %", "MEM GB"],
+        ];
+        string[] languages = ["zh-T", "zh-S", "en"];
+        string[] values = ["49.5 °C", "22.1%", "——", "4.20 GHz", "76.0 °C", "93.2%", "123456.0/654321.0 GB", "68.4%", "12.5/32.0 GB"];
+
+        try
+        {
+            for (int languageIndex = 0; languageIndex < languages.Length; languageIndex++)
+            {
+                Assert.True(CliLocalization.TrySet(languages[languageIndex]));
+                string[] labels = labelsByLanguage[languageIndex];
+                int[] widths = labels.Select((label, index) =>
+                    Math.Max(index is 6 or 8 ? 22 : 16, Tui.VisibleLength(label))).ToArray();
+                string[] header = Tui.FormatLiveMetricCells("時間", labels, widths, 36, header: true);
+                string[] data = Tui.FormatLiveMetricCells("12:34:56", values, widths, 36, header: false);
+                string combined = string.Concat(header.Concat(data)).Replace(" ", string.Empty, StringComparison.Ordinal);
+
+                Assert.All(header.Concat(data), line => Assert.InRange(Tui.VisibleLength(line), 0, 36));
+                Assert.Contains(languageIndex == 2 ? "MEM%" : languageIndex == 1 ? "GPU占用" : "GPU占用", combined, StringComparison.Ordinal);
+                Assert.Contains("93.2%", combined, StringComparison.Ordinal);
+                Assert.Contains("123456.0/654321.0GB", combined, StringComparison.Ordinal);
+                Assert.Contains("12.5/32.0GB", combined, StringComparison.Ordinal);
+                Assert.True(header.Length > 1, "Narrow terminals must put remaining metric headings on continuation lines.");
+                Assert.True(data.Length > 1, "Narrow terminals must put remaining metric values on continuation lines.");
+            }
+        }
+        finally { CliLocalization.TrySet("zh-T"); }
+    }
+
+    [Theory]
+    [InlineData("CPU Package", 52f, 52d)]
+    [InlineData("Package", 1.75f, 1.75d)]
+    [InlineData("CPU Package", 0f, null)]
+    [InlineData("CPU Package", null, null)]
+    [InlineData("CPU Package", float.NaN, null)]
+    [InlineData("CPU Package", 2001f, null)]
+    [InlineData("CPU Cores", 52f, null)]
+    [InlineData("CPU Memory", 52f, null)]
+    [InlineData("CPU Package (SMU rail)", 52f, null)]
+    public void LivePowerUsesOnlyPlausiblePackageReadings(string label, float? raw, double? expected) =>
+        Assert.Equal(expected, Tui.ReadPackageWatts(label, LibreHardwareMonitor.Hardware.SensorType.Power, raw));
+
+    [Theory]
+    [InlineData(RaplGateVerdict.Unknown, 75d, 52d, 52d, null, "unverified")]
+    [InlineData(RaplGateVerdict.Trusted, 75d, 52d, 75d, 75d, "RAPL")]
+    [InlineData(RaplGateVerdict.Trusted, null, 52d, 52d, null, "unverified")]
+    [InlineData(RaplGateVerdict.NotResponding, 75d, 52d, null, null, "no usable reading")]
+    [InlineData(RaplGateVerdict.NoCounter, 75d, null, null, null, "no usable reading")]
+    public void LivePowerSeparatesSensorReadingsFromVerifiedPower(RaplGateVerdict verdict,
+        double? direct, double? reported, double? display, double? verified, string source)
+    {
+        var reading = Tui.SelectCpuPower(direct, reported, verdict);
+        Assert.Equal(display, reading.Watts);
+        Assert.Equal(verified, reading.VerifiedWatts);
+        try
+        {
+            Assert.True(CliLocalization.TrySet("en"));
+            Assert.Contains(source, reading.SourceText, StringComparison.Ordinal);
+            if (source == "unverified")
+            {
+                Assert.True(CliLocalization.TrySet("zh-T"));
+                Assert.Contains("未驗證", reading.SourceText, StringComparison.Ordinal);
+                Assert.True(CliLocalization.TrySet("zh-S"));
+                Assert.Contains("未验证", reading.SourceText, StringComparison.Ordinal);
+            }
+        }
+        finally { CliLocalization.TrySet("zh-T"); }
     }
 
     [Fact]
@@ -274,5 +363,16 @@ public class XinSpectCliTests
         // GUI 頁面清單就是對照表來源
         Assert.Contains("PageRegistry.Pages", src, StringComparison.Ordinal);
         Assert.Contains("PageRegistry.Utilities", src, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CLILanguageKeyAndGlobeMascotDefaultsMatchTheRequestedInteraction()
+    {
+        string source = File.ReadAllText(Path.Combine(RepoRoot(), "XinSpectCli", "Program.cs"));
+        Assert.Contains("key.Key == ConsoleKey.K && buf.Length == 0", source, StringComparison.Ordinal);
+        Assert.Contains("case \"shortcuts\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Shift+K", CliLocalization.LanguageCycleLabel, StringComparison.Ordinal);
+        Assert.Equal(2, Tui.MascotChoice);
+        Assert.Same(Tui.MascotCandidates[2], Tui.MascotFrames);
     }
 }

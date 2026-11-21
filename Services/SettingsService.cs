@@ -74,6 +74,26 @@ public sealed class SettingsService : ObservableObject
     /// </summary>
     public bool FirstRunDone { get => _firstRunDone; set { if (SetProperty(ref _firstRunDone, value)) Save(); } }
 
+    private bool _kernelBackendChoiceMade;
+    /// <summary>使用者是否明確選過核心後端模式；未選時仍採安全的 Auto 預設。</summary>
+    public bool KernelBackendChoiceMade => _kernelBackendChoiceMade;
+    public bool ShouldPromptKernelBackendChoice => !KernelBackendChoiceMade;
+
+    /// <summary>保存明確的首次後端選擇；只有呼叫端取得使用者選擇後才呼叫。</summary>
+    public void SaveKernelBackendChoice(KernelBackendMode mode)
+    {
+        int value = Math.Clamp((int)mode, 0, 2);
+        bool modeChanged = SetProperty(ref _kernelBackendMode, value, nameof(KernelBackendMode));
+        bool choiceChanged = SetProperty(ref _kernelBackendChoiceMade, true, nameof(KernelBackendChoiceMade));
+        if (modeChanged)
+        {
+            OnPropertyChanged(nameof(KernelBackendModeEnum));
+            KernelBackendHost.ApplyMode((KernelBackendMode)value);
+        }
+        if (modeChanged || choiceChanged) Save();
+        if (choiceChanged) OnPropertyChanged(nameof(ShouldPromptKernelBackendChoice));
+    }
+
     private bool _ceremonyPlayed;
     /// <summary>啟程儀式是否已播放（一次即焚）。</summary>
     public bool CeremonyPlayed { get => _ceremonyPlayed; set { if (SetProperty(ref _ceremonyPlayed, value)) Save(); } }
@@ -130,6 +150,10 @@ public sealed class SettingsService : ObservableObject
     /// <summary>英語模式。</summary>
     public bool IsEnglish { get => _isEnglish; set { if (SetProperty(ref _isEnglish, value)) Save(); } }
 
+    private bool _catLanguage;
+    /// <summary>貓貓語喵選項；底層繁／簡／英語偏好獨立保留。</summary>
+    public bool CatLanguage { get => _catLanguage; set { if (SetProperty(ref _catLanguage, value)) Save(); } }
+
     private bool _allowMultiInstance = true;
     /// <summary>
     /// 是否允許同時開多份曦覽。預設允許。
@@ -174,13 +198,20 @@ public sealed class SettingsService : ObservableObject
         set
         {
             var v = Math.Clamp(value, 0, 2);
-            if (!SetProperty(ref _kernelBackendMode, v)) return;
-            OnPropertyChanged(nameof(KernelBackendModeEnum));
-            KernelBackendHost.ApplyMode((KernelBackendMode)v);
-            Save();
+            bool modeChanged = SetProperty(ref _kernelBackendMode, v);
+            if (modeChanged)
+            {
+                OnPropertyChanged(nameof(KernelBackendModeEnum));
+                KernelBackendHost.ApplyMode((KernelBackendMode)v);
+            }
+            if (modeChanged) Save();
         }
     }
-    public KernelBackendMode KernelBackendModeEnum => (KernelBackendMode)_kernelBackendMode;
+    public KernelBackendMode KernelBackendModeEnum
+    {
+        get => (KernelBackendMode)_kernelBackendMode;
+        set => KernelBackendMode = (int)value;
+    }
 
     // ── AI 評價 ──────────────────────────────────────────
     private int _aiProvider;   // 0=Ollama（本機免費）、1=OpenAI 相容 API、2=免費共用（作者提供的中轉）
@@ -546,6 +577,7 @@ public sealed class SettingsService : ObservableObject
         public bool MotionEnabled { get; set; } = true;
         public bool SimpleMode { get; set; }
         public bool FirstRunDone { get; set; }
+        public bool KernelBackendChoiceMade { get; set; }
         public bool AllowMultiInstance { get; set; } = true;
         public bool CeremonyPlayed { get; set; }
         public bool BlueSquadronEnabled { get; set; }
@@ -553,6 +585,7 @@ public sealed class SettingsService : ObservableObject
         public bool HighRiskHardwareOperationsEnabled { get; set; }
         public bool SimplifiedChinese { get; set; }
         public bool IsEnglish { get; set; }
+        public bool CatLanguage { get; set; }
         public string? DashboardTiles { get; set; }
         public Dictionary<string, string>? ToolSlots { get; set; }
         public List<ToolboxCustomTool>? ToolboxCustomTools { get; set; }
@@ -648,12 +681,15 @@ public sealed class SettingsService : ObservableObject
                     _motionEnabled = p.MotionEnabled;
                     _simpleMode = p.SimpleMode;
                     _firstRunDone = p.FirstRunDone;
+                    _kernelBackendChoiceMade = p.KernelBackendChoiceMade
+                        || p.KernelBackendMode == (int)global::XinSpect.KernelBackendMode.UniversalAllowed;
                     _ceremonyPlayed = p.CeremonyPlayed;
                     _blueSquadronEnabled = p.BlueSquadronEnabled;
                     _advancedDiagnosticsEnabled = p.AdvancedDiagnosticsEnabled;
                     _highRiskHardwareOperationsEnabled = _advancedDiagnosticsEnabled && p.HighRiskHardwareOperationsEnabled;
                     _simplifiedChinese = p.SimplifiedChinese;
                     _isEnglish = p.IsEnglish;
+                    _catLanguage = p.CatLanguage;
                     _allowMultiInstance = p.AllowMultiInstance;
                     _dashboardTiles = p.DashboardTiles ?? "";
                     if (p.ToolSlots is not null) _toolSlots = new(p.ToolSlots, StringComparer.Ordinal);
@@ -764,12 +800,14 @@ public sealed class SettingsService : ObservableObject
                 MotionEnabled = _motionEnabled,
                 SimpleMode = _simpleMode,
                 FirstRunDone = _firstRunDone,
+                KernelBackendChoiceMade = _kernelBackendChoiceMade,
                 CeremonyPlayed = _ceremonyPlayed,
                 BlueSquadronEnabled = _blueSquadronEnabled,
                 AdvancedDiagnosticsEnabled = _advancedDiagnosticsEnabled,
                 HighRiskHardwareOperationsEnabled = _highRiskHardwareOperationsEnabled,
                 SimplifiedChinese = _simplifiedChinese,
                 IsEnglish = _isEnglish,
+                CatLanguage = _catLanguage,
                 AllowMultiInstance = _allowMultiInstance,
                 DashboardTiles = _dashboardTiles.Length > 0 ? _dashboardTiles : null,
                 ToolSlots = _toolSlots.Count > 0 ? _toolSlots : null,

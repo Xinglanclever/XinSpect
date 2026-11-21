@@ -203,7 +203,7 @@ public sealed class DriverReadyService : ObservableObject
         }
     }
 
-    /// <summary>以實際載入一次 WinRing0 的方式偵測（經 KernelBackendHost 路由；宿主持有會話至行程結束或模式切換，暴露窗口語義變更見 patch-21.md 第 3 節）。</summary>
+    /// <summary>透過共用路由試讀 MSR；宿主持有會話至行程結束或模式切換。</summary>
     public async Task ProbeAsync(MainViewModel vm)
     {
         if (IsProbing) return;
@@ -231,31 +231,33 @@ public sealed class DriverReadyService : ObservableObject
                 // 在途計數保證後端鏈在讀取完成前不被釋放，驅動句柄不再於讀取中被關。
                 using var use = KernelBackendHost.RouteUse(KernelCapability.MsrRead);
                 var route = use.Route;
-                string? rowReason = null;
+                string? winRing0Reason = null, pawnIoReason = null;
                 foreach (var r in KernelBackendHost.Snapshot())
-                    if (r.Desc.Id == "winring0") { rowReason = r.Reason; break; }
+                {
+                    if (r.Desc.Id == "winring0") winRing0Reason = r.Reason;
+                    if (r.Desc.Id == "pawnio") pawnIoReason = r.Reason;
+                }
 
                 // N3：真跑一次 MSR 試讀。「完成一次 MSR 讀取驗證」的宣稱從此有實據；
                 // 試讀不成功時如實降級（見下方分支），不再把「載入成功」說成「驗證過」。
-                ulong? probeValue = route.Backend?.ReadMsr(ProbeMsrIndex);
+                uint index = route.Backend is PawnIoBackend ? PawnIoBackend.ProbeMsr : ProbeMsrIndex;
+                ulong? probeValue = route.Backend?.ReadMsr(index);
 
                 return (Available: route.Backend is not null,
-                        Error: rowReason ?? route.Explanation,
+                        Error: winRing0Reason ?? route.Explanation,
+                        PawnIoReason: pawnIoReason,
+                        WinRing0Reason: winRing0Reason,
                         Backend: route.Backend is { } b ? b.DisplayName + "・" + b.Tier : "無",
-                        ProbeRead: probeValue);
+                        Index: index,
+                        ProbeRead: probeValue is > 0 ? probeValue : null);
             });
             var result = (Available: probe.Available, Error: probe.Error);
             if (result.Available && probe.ProbeRead is not null)
             {
                 WinRing0Severity = Severity.Good;
                 WinRing0Status = "已就緒";
-                WinRing0Detail = $"驅動已成功載入並完成一次 MSR 試讀（0x{ProbeMsrIndex:X} → 0x{probe.ProbeRead!.Value:X}）。頻率真相、MCA、SPD 直讀等底層功能可用。服務後端：" + probe.Backend + "。";
-                if (!IsAdmin)
-                {
-                    _winRing0Detail += "（注意：本次以一般權限就載入成功，部分平台仍需管理員權限才能讀到完整 MSR。）";
-                    OnPropertyChanged(nameof(WinRing0Detail));
-                    OnPropertyChanged(nameof(HasWinRing0Detail));
-                }
+                WinRing0Detail = $"{probe.Backend} 已完成 MSR 試讀（0x{probe.Index:X} → 0x{probe.ProbeRead!.Value:X}）。其他暫存器與 SPD 尚未在此驗證。"
+                    + (probe.WinRing0Reason is { } reason ? " WinRing0：" + reason : "");
             }
             else if (result.Available)
             {
@@ -263,19 +265,14 @@ public sealed class DriverReadyService : ObservableObject
                 // 後續的 MSR 讀取仍會以三態如實呈現成敗，這裡先把預期講對。
                 WinRing0Severity = Severity.Warning;
                 WinRing0Status = "已載入，MSR 試讀未成功";
-                WinRing0Detail = $"驅動已載入（服務後端：{probe.Backend}），但試讀 MSR 0x{ProbeMsrIndex:X} 未成功" +
+                WinRing0Detail = $"驅動已開啟（服務後端：{probe.Backend}），但試讀 MSR 0x{probe.Index:X} 未成功" +
                                  "——底層讀值功能可能受限（權限／虛擬化／平台差異）；後續讀取仍會三態如實回報。";
             }
             else if (vm.Settings.KernelBackendMode != (int)KernelBackendMode.UniversalAllowed)
             {
-                // Auto 與 SandboxOnly 都不載 WinRing0；本版 PawnIO 尚未接入，所以共用路由可能沒有可用後端。
-                // 這是所選安全模式的預期降級，用中性色如實說明，不套「載入失敗」排障文案。
                 WinRing0Severity = Severity.Neutral;
-                WinRing0Status = "依模式未載入";
-                string modeName = vm.Settings.KernelBackendMode == (int)KernelBackendMode.Auto ? "自動" : "僅沙箱";
-                WinRing0Detail = $"設定為「{modeName}」：WinRing0 刻意未載入；此版 PawnIO 尚未接入，因此 KernelBackendHost 的 MSR 路由目前沒有可用後端。" +
-                                 "要在此共用路由中啟用 WinRing0，請到「設定」明確選擇「允許 WinRing0」。" +
-                                 "此模式只約束已接入 KernelBackendHost 的呼叫端，其他直連讀取路徑不受它約束。";
+                WinRing0Status = "未取得 MSR 路由";
+                WinRing0Detail = $"PawnIO：{probe.PawnIoReason ?? "未取得讀值。"} WinRing0：{result.Error}";
             }
             else if (!IsAdmin)
             {
@@ -293,16 +290,16 @@ public sealed class DriverReadyService : ObservableObject
             {
                 WinRing0Severity = Severity.Critical;
                 WinRing0Status = "載入失敗";
-                WinRing0Detail = result.Error + " 常見原因：資安軟體攔截 WinRing0x64.sys（加入信任清單）、或 Windows 核心隔離／記憶體完整性（HVCI）封鎖未經微軟簽署的驅動——可在「Windows 安全性 › 裝置安全性 › 核心隔離」確認。";
+                WinRing0Detail = result.Error + " 可查閱 Windows 安全性及 Code Integrity 事件，確認驅動是否遭系統封鎖。";
             }
 
-            bool allGood = result.Available && lhmOk;
+            bool allGood = probe.ProbeRead is not null && lhmOk;
             // P0-14：Summary 帶上核心防護列現況（Bs* 若尚未查過，如實說「未查」）
             string bsText = _bsStatus == "尚未檢測"
                 ? "核心防護：尚未查詢（守護進程未連線或尚未回報）"
                 : $"核心防護：{_bsStatus}";
             Summary = (allGood
-                ? "兩項驅動都已就緒，底層功能可用。"
+                ? "感測器已回報數據，共用 MSR 路由已通過試讀。"
                 : "有項目未就緒——上方各列已標明原因與下一步。") + $" {bsText}";
         }
         catch (Exception ex)

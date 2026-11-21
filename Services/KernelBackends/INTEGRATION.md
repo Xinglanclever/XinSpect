@@ -62,8 +62,10 @@
 
 ## 誠實界線（本包不解決的）
 
-- **PawnIO 原生庫未接入**：`Native.IsBound` 恆 false，後端整體缺席——這是申報不是佔位。
-  接入需引官方 PawnIO 二進位＋逐列填 `ModulePins` 官方雜湊。
+- **v3.33 已接入部分 PawnIO 能力**：Windows x64 Intel 上使用 Program Files 中已安裝的 PawnIOLib，
+  校驗 LibreHardwareMonitor 0.9.6 內嵌的 IntelMSR 模組。以 `PLATFORM_INFO` 的非零倍頻自證；
+  只開放 CPU 時脈、溫度及封裝能量相關的白名單 MSR。歷史方案的跨核及交叉後端驗證沒有採用。
+  CLI 被動監控與就緒卡使用共用路由；其餘獨立採集器仍走各自的路徑。
 - **BlueSquadron 作為第三枚**：介面已預留 `KernelTrustTier.Native`，但接進來的前提是
   WHQL/attestation 簽章落地（錢與流程，不是代碼）。
 - **沙箱外的能力**：PCI 寫、I/O 埠、MMIO 目前只有萬能鑰匙能做。`SandboxOnly` 模式下

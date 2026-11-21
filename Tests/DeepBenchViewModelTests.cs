@@ -179,6 +179,22 @@ public class DeepBenchViewModelTests
     }
 
     [Fact]
+    public async Task 深測直接呼叫未取得貓咪確認時不得開始或建立紀錄()
+    {
+        using var store = new TempHistoryStore();
+        var vm = CreateViewModel(store.Store, new FixedDiskFileSystem(256L * 1024 * 1024 * 1024),
+            catConsent: () => false);
+        vm.StorageRoot = "C:\\DeepBench";
+
+        await vm.StartAsync(CancellationToken.None);
+
+        Assert.False(vm.IsRunning);
+        Assert.Null(vm.LastState);
+        Assert.Empty(vm.ResultCards);
+        Assert.Contains(vm.Errors, error => error.Contains("未執行任何測項", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task 取消會保存已完成項目並標示其餘未跑()
     {
         using var store = new TempHistoryStore();
@@ -186,7 +202,7 @@ public class DeepBenchViewModelTests
         var vm = new DeepBenchViewModel(
             new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store.Store,
             fileSystem, new DeepBenchOrchestrator(FakeTests()),
-            advancedDiagnosticsEnabled: () => true);
+            advancedDiagnosticsEnabled: () => true, confirmCatConsent: () => true);
         vm.StorageRoot = "C:\\DeepBench";
         using var cts = new CancellationTokenSource();
 
@@ -311,9 +327,11 @@ public class DeepBenchViewModelTests
     private static DeepBenchViewModel CreateViewModel(
         DeepBenchRunStore store,
         FixedDiskFileSystem fileSystem,
-        bool advancedDiagnosticsEnabled = true) =>
+        bool advancedDiagnosticsEnabled = true,
+        Func<bool>? catConsent = null) =>
         new(new CacheBenchService(), new MemBandwidthService(), new CoreLatencyService(), store, fileSystem,
-            advancedDiagnosticsEnabled: () => advancedDiagnosticsEnabled);
+            advancedDiagnosticsEnabled: () => advancedDiagnosticsEnabled,
+            confirmCatConsent: catConsent ?? (() => true));
 
     private static IReadOnlyList<IDeepBenchTest> FakeTests()
     {

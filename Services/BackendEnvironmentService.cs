@@ -116,7 +116,7 @@ public static class BackendEnvironmentService
         };
     }
 
-    /// <summary>環境矩陣裁決（V7 §2.4）：HVCI 關 → WinRing0 主力；HVCI 開 → PawnIO／自寫驅動路徑（本版 PawnIO 模組未整合）。</summary>
+    /// <summary>依 HVCI 狀態提供後端建議；實際讀取能力仍需試讀。</summary>
     private static HardwareFact BuildDecisionFact(BackendEnvironmentInputs x, DateTimeOffset at)
     {
         const string key = "backend.environment_decision", name = "後端裁決（環境矩陣）", source = "PROGRAM-EVEREST-V7 §2.4";
@@ -124,7 +124,7 @@ public static class BackendEnvironmentService
             ? Unavailable(key, name, source, at, FactAvailability.ReadError, "HVCI 狀態讀不到，無法裁決")
             : new HardwareFact(key, Category, name,
                 (options & CiFlagHvciKmci) != 0
-                    ? "HVCI 開啟：WinRing0 可能被封鎖，應走 PawnIO／自寫驅動路徑（本版 PawnIO 模組未整合，MSR/MMIO 可能整組三態）"
+                    ? "HVCI 開啟：WinRing0 可能被封鎖。已安裝的 PawnIO 可在支援的 Intel 平台試讀白名單 MSR；MMIO 仍需其他後端。"
                     : "HVCI 關閉：WinRing0 為主力後端；XsRegProbe 為允許清單備援",
                 "", source, FactTrustLevel.Derived, false, at);
     }

@@ -8,7 +8,7 @@ namespace XinSpect;
 /// <item><b>模式先於載入</b>：只有 <see cref="KernelBackendMode.UniversalAllowed"/> 才呼叫
 /// <see cref="WinRing0KernelBackend.Create"/>。Auto 與 SandboxOnly 都不載入 WinRing0，
 /// 避免把預設路由當成對通用核心驅動的同意。</item>
-/// <item><b>缺席也申報</b>：PawnIO 本版整體缺席（ModulePins 未成文）、WinRing0 建立失敗、
+/// <item><b>缺席也申報</b>：PawnIO 未安裝或試讀失敗、WinRing0 建立失敗、
 /// 被模式排除——三種「不在鏈上」都以 <see cref="Snapshot"/> 一列如實帶原因，
 /// 驅動就緒卡與 backend.* 事實直接渲染，介面能回答「為什麼這格走這條路」。</item>
 /// </list>
@@ -27,6 +27,7 @@ public static class KernelBackendHost
     private static KernelBackendMode _mode = KernelBackendMode.Auto;
     private static bool _initialized;
     private static Func<(IKernelBackend? Backend, string Error)> _winRing0Factory = CreateWinRing0Backend;
+    private static Func<PawnIoBackend> _pawnIoFactory = PawnIoBackend.Create;
 
     /// <summary>由 <see cref="SettingsService"/> 帶入（設定服務是實例制，宿主不反向持有它）。
     /// N2：模式切換<b>退役</b>舊選擇器而非就地 Dispose——鎖外可能還有 in-flight 的 guard
@@ -90,9 +91,8 @@ public static class KernelBackendHost
         _declared.Clear();
         var candidates = new List<IKernelBackend>();
 
-        // ① PawnIO（沙箱）：本版缺席申報——ModulePins 未成文、Native 未綁定，恆回 None。
-        //    仍放進 candidates（選擇器自行過濾能力 None 者）；缺席原因由 _declared 帶出。
-        var pawn = new PawnIoBackend();
+        // ① 既有 PawnIO：白名單 MSR 試讀通過後才納入路由。
+        var pawn = _pawnIoFactory();
         _declared.Add((new KernelBackendDescriptor(pawn.Id, pawn.DisplayName, pawn.Tier),
                        pawn.Capabilities, pawn.UnavailableReason));
         candidates.Add(pawn);
@@ -130,12 +130,14 @@ public static class KernelBackendHost
         mode == KernelBackendMode.UniversalAllowed;
 
     /// <summary>測試注入點：避免矩陣測試載入真實核心驅動；傳 null 還原正式工廠。</summary>
-    internal static void SetWinRing0FactoryForTests(Func<(IKernelBackend? Backend, string Error)>? factory)
+    internal static void SetFactoriesForTests(Func<(IKernelBackend? Backend, string Error)>? winRing0,
+        Func<PawnIoBackend>? pawnIo = null)
     {
         KernelBackendSelector? retired;
         lock (Gate)
         {
-            _winRing0Factory = factory ?? CreateWinRing0Backend;
+            _winRing0Factory = winRing0 ?? CreateWinRing0Backend;
+            _pawnIoFactory = pawnIo ?? PawnIoBackend.Create;
             retired = _selector;
             _selector = null;
             _declared.Clear();

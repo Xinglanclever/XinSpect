@@ -48,7 +48,8 @@ public class ChangelogTests
     {
         string v = ChangelogCatalog.Latest;
         Assert.Contains($"version-{v.Replace("-", "--")}-", ReadRepoFile("README.md"));
-        Assert.Contains($"版本 {v} ・", ReadRepoFile(Path.Combine("Views", "AboutView.xaml")));
+        Assert.Contains($"Version = \"{v}\"", ReadRepoFile(Path.Combine("Nav", "ChangelogCatalog.cs")));
+        Assert.Contains($"public static string VersionMetadata(bool simplified)", ReadRepoFile(Path.Combine("Models", "AppInfo.cs")));
     }
 
     /// <summary>

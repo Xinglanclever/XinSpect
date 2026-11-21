@@ -125,12 +125,38 @@
             <TextBlock Style="{StaticResource Subtitle}" Margin="0,0,0,14"
                        Text="外觀、更新頻率、開機自啟、感測器記錄與硬體警示。設定即時生效並自動儲存。"/>
 
+            <!-- ═══ 核心讀取路由 ═══ -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <local:SectionHead Text="核心存取後端"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="自動與僅沙箱可使用已安裝且通過試讀的 PawnIO，不會由此路由載入 WinRing0。"/>
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="路由模式" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="KernelBackendCombo" Grid.Column="1" Style="{StaticResource DarkCombo}"
+                                  HorizontalAlignment="Left" Width="360"
+                                  SelectedIndex="{Binding Settings.KernelBackendMode, Mode=TwoWay}"
+                                  SelectionChanged="KernelBackendMode_Changed">
+                            <ComboBoxItem Content="自動（使用已接入的沙箱／原生後端；不載入 WinRing0）"/>
+                            <ComboBoxItem Content="僅沙箱（只使用通過試讀的沙箱後端）"/>
+                            <ComboBoxItem Content="允許 WinRing0（明確同意較廣的核心存取暴露面，才會載入）"/>
+                        </ComboBox>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Text="PawnIO 共用路由目前在 Windows x64 Intel 平台提供白名單 MSR 讀取。LibreHardwareMonitor 感測器、WMI、XsRegProbe 與其他直連功能各有自己的讀取路徑。"/>
+                </StackPanel>
+            </Border>
+
             <!-- ═══ 外觀 ═══ -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <local:SectionHead Text="外觀" HelpKey="settings/外觀"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
-                               Text="四種主題（深色／淺色／極限版／瑞士現代主義平面化設計）與九種強調色。選擇後整個介面立即換色（無須重啟），並記憶為下次啟動的外觀。"/>
+                               Text="五種主題（深色／淺色／極限版／Ultra／貓貓世界）與十種強調色。選擇後整個介面立即換色（無須重啟），並記憶為下次啟動的外觀。"/>
 
                     <Grid Margin="0,14,0,0">
                         <Grid.ColumnDefinitions>
@@ -143,11 +169,11 @@
                                   SelectionChanged="Theme_Changed"/>
                     </Grid>
 
-                    <!-- 只在選了瑞士版時出現：同一個語彙的暗底版本，不是另一個主題。 -->
+                    <!-- 只在選了 Ultra 時出現：同一套主題規則的暗色版本。 -->
                     <CheckBox x:Name="SwissDarkCheck" Style="{StaticResource SetCheck}" Margin="155,10,0,0"
-                              Content="深色模式（深色瑞士風格）" Visibility="Collapsed"
+                              Content="Ultra 深色模式" Visibility="Collapsed"
                               Checked="SwissDark_Changed" Unchecked="SwissDark_Changed"
-                              ToolTip="黑白反轉的同一套規則：近黑紙面、白墨、直角、大字，強調色仍是瑞士紅。"/>
+                              ToolTip="Ultra 的暗色版本：近黑底色、淺色文字、直角與大字排版。"/>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Text="強調色" Margin="0,16,0,8"/>
                     <ItemsControl x:Name="AccentList">
@@ -181,6 +207,10 @@
                               Content="English (switch entire UI immediately, no restart)"
                               x:Name="EnglishCheck"
                               Click="EnglishToggle_Click"/>
+                    <CheckBox Style="{StaticResource SetCheck}" Margin="0,4,0,0"
+                              Content="貓貓語喵（每段介面文字加上喵）"
+                              x:Name="CatLanguageCheck" Visibility="Collapsed"
+                              Click="CatLanguageToggle_Click"/>
 
                     <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,16"/>
                     <local:SectionHead Text="簡易模式" HelpKey="settings/簡易模式"/>
@@ -192,16 +222,20 @@
 
                     <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,18,0,0"/>
                     <local:SectionHead Text="進階診斷與風險政策" Margin="0,16,0,0"/>
-                    <CheckBox Style="{StaticResource SetCheck}" Margin="0,8,0,0"
+                    <CheckBox x:Name="AdvancedDiagnosticsCheck" Style="{StaticResource SetCheck}" Margin="0,8,0,0"
                               Content="第一級：進階診斷與 CPU／DRAM 壓力測試（預設關閉）"
-                              IsChecked="{Binding Settings.AdvancedDiagnosticsEnabled, Mode=TwoWay}"/>
+                              IsChecked="{Binding Settings.AdvancedDiagnosticsEnabled, Mode=TwoWay}"
+                              PreviewMouseLeftButtonDown="AdvancedDiagnosticsCheck_PreviewMouseLeftButtonDown"
+                              PreviewKeyDown="AdvancedDiagnosticsCheck_PreviewKeyDown"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Foreground="{DynamicResource WarningBrush}"
                                TextWrapping="Wrap" Margin="27,3,0,0"
                                Text="進階測試會讓 CPU 或記憶體短時間高負載；EC 僅做 ACPI 間接識別，不直接讀寫 EC 埠。測試仍需在各功能頁自行啟動。"/>
-                    <CheckBox Style="{StaticResource SetCheck}" Margin="0,12,0,0"
+                    <CheckBox x:Name="HighRiskOperationsCheck" Style="{StaticResource SetCheck}" Margin="0,12,0,0"
                               Content="第二級：硬體寫入、合成威脅與危險記憶體壓力（高風險；預設關閉）"
                               IsChecked="{Binding Settings.HighRiskHardwareOperationsEnabled, Mode=TwoWay}"
-                              IsEnabled="{Binding Settings.AdvancedDiagnosticsEnabled}"/>
+                              IsEnabled="{Binding Settings.AdvancedDiagnosticsEnabled}"
+                              PreviewMouseLeftButtonDown="HighRiskOperationsCheck_PreviewMouseLeftButtonDown"
+                              PreviewKeyDown="HighRiskOperationsCheck_PreviewKeyDown"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Foreground="{DynamicResource CriticalBrush}"
                                TextWrapping="Wrap" Margin="27,3,0,0"
                                Text="必須先開啟第一級。合成威脅情境使用合成資料；Rowhammer 則使用實體記憶體施壓，可能損壞其他處理程序資料，須專用測試機與逐次同意。硬體寫入會改變即時設定，仍需逐項確認。關閉本級不會自動還原已套用的值，還原控制仍可使用；還原許可不能授權壓力測試。"/>
@@ -289,7 +323,7 @@
                 <StackPanel>
                     <local:SectionHead Text="驅動就緒" HelpKey="settings/驅動就緒"/>
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
-                               Text="底層驅動的真實狀態與一鍵修復：WinRing0 供 MSR 讀寫與 SPD 直讀（頻率真相、MCA、免疫位元等頁面的基礎）；LHM 感測引擎供溫度／負載／電壓讀值。載入驅動只在你按下按鈕時執行，不會偷偷安裝。"/>
+                               Text="檢查共用核心後端能否讀取 MSR，以及 LibreHardwareMonitor 是否已回報即時讀值。"/>
                     <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
                         <Button Style="{StaticResource PrimaryButton}" MinWidth="120"
                                 Content="檢測驅動" Click="DriverProbe_Click"
@@ -307,7 +341,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <Ellipse Width="11" Height="11" VerticalAlignment="Center" Margin="0,0,12,0"
                                          Fill="{Binding DriverReady.WinRing0Severity, Converter={StaticResource SeverityToBrush}}"/>
-                                <TextBlock Text="WinRing0（MSR／SMBus 底層存取）" Foreground="{DynamicResource PrimaryInkBrush}" FontSize="14" FontWeight="SemiBold"/>
+                                <TextBlock Text="共用核心後端（MSR 試讀）" Foreground="{DynamicResource PrimaryInkBrush}" FontSize="14" FontWeight="SemiBold"/>
                                 <Border CornerRadius="4" Padding="6,1" Margin="10,0,0,0" VerticalAlignment="Center"
                                         Background="{Binding DriverReady.WinRing0Severity, Converter={StaticResource SeverityToBrush}}">
                                     <TextBlock Text="{Binding DriverReady.WinRing0Status}" Foreground="White" FontSize="11.5"/>
@@ -335,31 +369,6 @@
                                        Visibility="{Binding DriverReady.HasLhmDetail, Converter={StaticResource BoolToVis}}"/>
                         </StackPanel>
                     </Border>
-                </StackPanel>
-            </Border>
-
-            <!-- ═══ 核心讀取路由 ═══ -->
-            <Border Style="{StaticResource Card}">
-                <StackPanel>
-                    <local:SectionHead Text="核心存取後端"/>
-                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
-                               Text="選擇共用核心路由的信任模式；設定即時生效並自動儲存。自動與僅沙箱不會載入 WinRing0；目前 PawnIO 尚未接入，因此這兩種模式可能沒有可用路由。"/>
-                    <Grid Margin="0,12,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="150"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="路由模式" VerticalAlignment="Center"/>
-                        <ComboBox Grid.Column="1" Style="{StaticResource DarkCombo}"
-                                  HorizontalAlignment="Left" Width="360"
-                                  SelectedIndex="{Binding Settings.KernelBackendMode, Mode=TwoWay}">
-                            <ComboBoxItem Content="自動（使用已接入的沙箱／原生後端；不載入 WinRing0）"/>
-                            <ComboBoxItem Content="僅沙箱（只使用沙箱後端；目前 PawnIO 未接入，沒有可用路由）"/>
-                            <ComboBoxItem Content="允許 WinRing0（明確同意較廣的核心存取暴露面，才會載入）"/>
-                        </ComboBox>
-                    </Grid>
-                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" TextWrapping="Wrap"
-                               Text="目前界線：PawnIO 原生庫與模組雜湊尚未接入；WMI 是獨立的作業系統回報來源，不是核心後端；XsRegProbe 仍走自己的白名單驅動入口，尚未接入此路由。因此本設定只影響已使用 KernelBackendHost 的呼叫端，並非全倉統一切換。"/>
                 </StackPanel>
             </Border>
 
@@ -935,7 +944,8 @@
                     <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
                                Text="重新執行所有模組的偵測與載入（系統與硬體資訊、感測器引擎、網路／行程、磁碟資訊、螢幕色域、CUDA、超頻／顯示卡超頻引擎、winget、深度規格與體驗指數）。若某項功能在啟動時未就緒，可於此重試，不會中斷每秒監控。"/>
                     <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                        <Button x:Name="ReinitBtn" Style="{StaticResource PrimaryButton}" Content="所有功能一鍵初始化" Click="Reinit_Click"/>
+                        <Button x:Name="ReinitBtn" Style="{StaticResource PrimaryButton}" Content="所有功能一鍵初始化"
+                                IsEnabled="{Binding CanReinitialize}" Click="Reinit_Click"/>
                     </StackPanel>
                     <TextBlock x:Name="ReinitHint" Style="{StaticResource Subtitle}" Margin="0,8,0,0" TextWrapping="Wrap"/>
                 </StackPanel>

@@ -171,13 +171,17 @@ def main(argv=None):
     # 2) AboutView
     about = doc(os.path.join("Views", "AboutView.xaml"))
     old_code = None
-    mc = re.search(r"版本 %s ・ ([^・<]+)・" % re.escape(OLD), about.text)
+    # The About view is often edited while assembling a candidate before the
+    # authoritative assembly version is bumped. Read the version/code actually
+    # present in its metadata row so this step can reconcile that candidate.
+    mc = re.search(r"版本 \d+\.\d+ ・ ([^・<]+)・", about.text)
     if mc:
         old_code = mc.group(1).strip()
     if old_code:
-        about.replace("版本 %s ・ %s" % (OLD, old_code), "版本 %s ・ %s" % (V, args.codename), "AboutView")
+        old_prefix = mc.group(0).split(" ・", 1)[0] + " ・ " + old_code
+        about.replace(old_prefix, "版本 %s ・ %s" % (V, args.codename), "AboutView")
     else:
-        about.replace("版本 %s ・" % OLD, "版本 %s ・ %s ・" % (V, args.codename), "AboutView")
+        about.replace("版本 ", "版本 %s ・ %s ・" % (V, args.codename), "AboutView")
 
     # 2b) AppInfo 代號——標題列與關於頁必須是同一個字；先前只有 AboutView 被改，
     #     AppInfo 還停在 Swiss，於是同一個視窗裡兩個代號（3.13 修）。
@@ -187,8 +191,9 @@ def main(argv=None):
     except (SystemExit, OSError):
         info = None
     if info is not None:
-        if old_code:
-            info.replace('public const string Codename = "%s"' % old_code,
+        current_code = re.search(r'public const string Codename = "([^"]+)"', info.text)
+        if current_code:
+            info.replace('public const string Codename = "%s"' % current_code.group(1),
                          'public const string Codename = "%s"' % args.codename, "AppInfo")
         else:
             info.insert_before('public const string Codename = "',

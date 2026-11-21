@@ -51,7 +51,7 @@ MIRRORS_TXT = os.path.join(ROOT, "Installer", "mirrors.txt")
 REPO = "Xinglanclever/XinSpect"
 
 # 要同步的檔案。百科是 Desktop 點擊下載的獨立資產，雜湊仍由 SHA256SUMS.txt 錨定。
-ASSETS = ["XinSpect.exe", "BlueSquadronBridge.exe", "XinSpectDeploy.exe", "XinSpect-Encyclopedia.html", "SHA256SUMS.txt"]
+ASSETS = ["XinSpect.exe", "BlueSquadronBridge.exe", "XinSpectDeploy.exe", "XinSpect部署器.exe", "XinSpect-Encyclopedia.html", "SHA256SUMS.txt"]
 
 
 def say(msg):
@@ -90,6 +90,7 @@ def local_asset_paths(version):
         "XinSpect.exe": os.path.join(ROOT, "publish-%s" % version, "XinSpect.exe"),
         "BlueSquadronBridge.exe": bridge,
         "XinSpectDeploy.exe": os.path.join(ROOT, "Installer", "XinSpectDeploy.exe"),
+        "XinSpect部署器.exe": os.path.join(ROOT, "Installer", "XinSpect部署器.exe"),
         "XinSpect-Encyclopedia.html": os.path.join(ROOT, "publish-%s" % version, "XinSpect-Encyclopedia.html"),
         "SHA256SUMS.txt": next((p for p in sums if os.path.exists(p)), sums[0]),
     }

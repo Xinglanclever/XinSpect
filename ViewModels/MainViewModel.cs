@@ -19,6 +19,20 @@ namespace XinSpect;
 public sealed class MainViewModel : ObservableObject
 {
     private MetricsPump? _pump;
+    private readonly SemaphoreSlim _reinitializeGate = new(1, 1);
+    private bool _isReinitializing;
+
+    /// <summary>全機重新擷取期間設為 true，供各頁共用停用狀態。</summary>
+    public bool IsReinitializing
+    {
+        get => _isReinitializing;
+        private set
+        {
+            if (SetProperty(ref _isReinitializing, value)) OnPropertyChanged(nameof(CanReinitialize));
+        }
+    }
+
+    public bool CanReinitialize => !IsReinitializing;
 
     private SensorService? _live;
     public SensorService? Live { get => _live; internal set => SetProperty(ref _live, value); }
@@ -541,7 +555,8 @@ public sealed class MainViewModel : ObservableObject
         Chess = new ChessBenchService(Benchmarks);
         SuperPi = new SuperPiService(Benchmarks);
         DeepBench = new DeepBenchViewModel(Cache, MemBandwidth, CoreLatency, new DeepBenchRunStore(),
-            topDown: TopDown, advancedDiagnosticsEnabled: () => Settings.AdvancedDiagnosticsEnabled);
+            topDown: TopDown, advancedDiagnosticsEnabled: () => Settings.AdvancedDiagnosticsEnabled,
+            confirmCatConsent: () => CatFeatureGate.Confirm(Shell.Main));
         Settings.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(SettingsService.AdvancedDiagnosticsEnabled)
@@ -780,7 +795,21 @@ public sealed class MainViewModel : ObservableObject
     }
 
     /// <summary>所有功能一鍵初始化：重新執行各模組的偵測與載入（不重建每秒計時器），供設定頁「一鍵初始化」重整。</summary>
-    public Task ReinitializeAllAsync() => StartupSequence.ReinitializeAsync(this);
+    public async Task ReinitializeAllAsync()
+    {
+        if (!await _reinitializeGate.WaitAsync(0)) return;
+
+        try
+        {
+            IsReinitializing = true;
+            await StartupSequence.ReinitializeAsync(this);
+        }
+        finally
+        {
+            IsReinitializing = false;
+            _reinitializeGate.Release();
+        }
+    }
 
     /// <summary>建立磁碟活動走勢的可切換檢視（獨立 CollectionView，過濾不影響裝置清單）。</summary>
     internal void SetupDiskActivityView()

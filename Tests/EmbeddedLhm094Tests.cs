@@ -64,6 +64,8 @@ public class EmbeddedLhm094Tests
         // 四個必要方法（少一個，WinRing0Bridge 就整個建不起來）
         Assert.NotNull(ty!.GetMethod("Open", All, Type.EmptyTypes));
         Assert.NotNull(ty.GetMethod("Close", All, Type.EmptyTypes));
+        Assert.Equal(typeof(bool), ty.GetProperty("IsOpen", All)?.PropertyType);
+        Assert.Equal(typeof(string), ty.GetMethod("GetReport", All, Type.EmptyTypes)?.ReturnType);
         Assert.NotNull(ty.GetMethod("ReadMsr", All,
             new[] { typeof(uint), typeof(uint).MakeByRefType(), typeof(uint).MakeByRefType() }));
         Assert.NotNull(ty.GetMethod("WriteMsr", All, new[] { typeof(uint), typeof(uint), typeof(uint) }));

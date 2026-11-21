@@ -10,6 +10,50 @@ namespace XinSpect.Tests;
 public sealed class SensorCrossCheckTests
 {
     [Fact]
+    public void CpuPackagePowerDisplayUsesPlausibleLiveLhmReadingWithoutApprovingAnalysisPower()
+    {
+        Assert.False(RaplEnergyGate.IsProbing);
+        float power = 81;
+        var sensor = DispatchProxy.Create<ISensor, HardwareProxy>();
+        ((HardwareProxy)(object)sensor).InvokeMethod = (method, _) => method.Name switch
+        {
+            "get_Name" => "CPU Package",
+            "get_SensorType" => SensorType.Power,
+            "get_Value" => power,
+            _ => throw new InvalidOperationException("Unexpected fake sensor call: " + method.Name),
+        };
+        var cpu = FakeHardware("CPU X", () => { }, [sensor]);
+        var computer = FakeComputer(cpu);
+        using var service = new SensorService(computer, () => { }, () => { });
+
+        Assert.Equal(81, service.CpuPackagePowerSensorW);
+        Assert.Equal("81 W", service.CpuPackagePowerSensorText);
+        Assert.Contains("LibreHardwareMonitor「CPU Package」", service.CpuPowerStateText);
+        Assert.Contains("RAPL", service.CpuPowerStateText);
+        Assert.Null(service.CpuPowerW);
+        Assert.False(RaplEnergyGate.IsProbing);
+
+        power = 99_999;
+        service.Poll();
+        service.Publish();
+        Assert.Null(service.CpuPackagePowerSensorW);
+        Assert.Equal("—", service.CpuPackagePowerSensorText);
+        Assert.Contains("未回有效讀值", service.CpuPowerStateText);
+        Assert.False(RaplEnergyGate.IsProbing);
+    }
+
+    [Fact]
+    public void CpuPackagePowerDisplayExplainsMissingLhmSensor()
+    {
+        using var service = new SensorService(FakeComputer(FakeHardware("CPU X", () => { })),
+            () => { }, () => { });
+
+        Assert.Equal("—", service.CpuPackagePowerSensorText);
+        Assert.Null(service.CpuPackagePowerSensorW);
+        Assert.Contains("未提供 CPU Package／Package 功耗感測器", service.CpuPowerStateText);
+    }
+
+    [Fact]
     public void CpuAcquisitionCallbackCompletesBeforeLaterDeviceUpdate()
     {
         long clock = 10;
@@ -90,6 +134,23 @@ public sealed class SensorCrossCheckTests
             _ => throw new InvalidOperationException("Unexpected fake hardware call: " + method.Name),
         };
         return hardware;
+    }
+
+    private static IComputer FakeComputer(params IHardware[] hardware)
+    {
+        var computer = DispatchProxy.Create<IComputer, HardwareProxy>();
+        ((HardwareProxy)(object)computer).InvokeMethod = (method, args) => method.Name switch
+        {
+            "get_Hardware" => hardware,
+            "Accept" => RunUpdate(() => ((IVisitor)args![0]!).VisitComputer(computer)),
+            "Traverse" => RunUpdate(() =>
+            {
+                var visitor = (IVisitor)args![0]!;
+                foreach (var item in hardware) visitor.VisitHardware(item);
+            }),
+            _ => throw new InvalidOperationException("Unexpected fake computer call: " + method.Name),
+        };
+        return computer;
     }
 
     private static object? RunUpdate(Action update) { update(); return null; }

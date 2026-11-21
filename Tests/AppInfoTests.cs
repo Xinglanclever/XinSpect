@@ -31,6 +31,9 @@ public class AppInfoTests
         Assert.True(dir is not null, "找不到原始碼樹");
 
         string about = File.ReadAllText(Path.Combine(dir!.FullName, "Views", "AboutView.xaml"));
-        Assert.Contains($"版本 {AppInfo.Version} ・ {AppInfo.Codename} ・", about);
+        Assert.Contains("x:Name=\"VersionMetadata\"", about);
+        string codeBehind = File.ReadAllText(Path.Combine(dir.FullName, "Views", "AboutView.xaml.cs"));
+        Assert.Contains("VersionMetadata.Text = AppInfo.VersionMetadata(simplified);", codeBehind);
+        Assert.Contains("VersionTitle.Text = AppInfo.HeaderTitle(simplified);", codeBehind);
     }
 }

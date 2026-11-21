@@ -82,6 +82,21 @@ public class SettingsPersistenceTests
         }
     }
 
+    [Fact]
+    public void 首次啟動提供三種核心後端選擇並保存使用者選項()
+    {
+        string root = RepoRoot();
+        string xaml = File.ReadAllText(Path.Combine(root, "Dialogs", "FirstRunWindow.xaml"));
+        string dialog = File.ReadAllText(Path.Combine(root, "Dialogs", "FirstRunWindow.xaml.cs"));
+        string startup = File.ReadAllText(Path.Combine(root, "MainWindow.xaml.cs"));
+
+        foreach (string name in new[] { "BtnBackendAuto", "BtnBackendSandbox", "BtnBackendUniversal" })
+            Assert.Contains("x:Name=" + (char)34 + name + (char)34, xaml, StringComparison.Ordinal);
+        Assert.Contains("SelectedKernelBackendMode", dialog, StringComparison.Ordinal);
+        Assert.Contains("SaveKernelBackendChoice(dlg.SelectedKernelBackendMode)", startup, StringComparison.Ordinal);
+        Assert.Contains("已安裝的 PawnIO 可在支援的 Intel 平台提供 MSR 讀取", xaml, StringComparison.Ordinal);
+    }
+
     /// <summary>
     /// 藍色中隊的守護進程<b>預設關閉</b>（3.13）。它會在背景常駐輪詢、載入核心驅動，
     /// 這種東西不能替新使用者預設打開：想用的人自己到安全頁開，選擇會記進設定檔。

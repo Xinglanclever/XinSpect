@@ -1,16 +1,16 @@
 ﻿#requires -Version 5.1
-# 一鍵安裝器（XinSpectDeploy.exe）的建置腳本。
+# 一鍵安裝器（XinSpectDeploy.exe／XinSpect部署器.exe）的建置腳本。
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File Tools\build-installer.ps1
 #
 # 為什麼不用 dotnet：部署器由 .NET Framework 4.8 隨附的 csc.exe 直接編譯，
-# 並以 48 KB 上限守住無 runtime 的體積——使用者机器上已有 .NET Framework 4.8，
+# 並以 128 KB 上限守住無 runtime 的體積——使用者机器上已有 .NET Framework 4.8，
 # 所以它能直接開機下載，不需要自帶 runtime、也不需要 dotnet SDK。
 # 副作用：csc 4.8 只支援到 C# 5，所以 Install.cs 裡不能寫插值字串、expression-bodied
 # member、nameof 這些新語法（編譯會直接紅，不會悄悄過）。
 #
-# 這支腳本是為了让「改了 Install.cs 卻忘了重編 Installer\XinSpectDeploy.exe」變成不可能：
-# 發佈前一律跑一次，release.ps1 的上傳步驟取的正是這個輸出路徑。
+# 這支腳本是為了让「改了 Install.cs 卻忘了重編兩個部署器」變成不可能：
+# 先編英文標準版，再以相同位元組產生繁中介面別名；發佈前一律跑一次。
 # 編完之後會用 Installer\tests\ProgressTest.cs 驗一次進度列（含真下載與斷線），
 # 那一步會開本機 HttpListener，需要以系統管理員身分執行。
 $ErrorActionPreference = 'Stop'
@@ -22,6 +22,7 @@ try {
 
     $src = Join-Path 'Installer' 'Install.cs'
     $out = Join-Path 'Installer' 'XinSpectDeploy.exe'
+    $aliasOut = Join-Path 'Installer' 'XinSpect部署器.exe'
     $rsp = Join-Path $env:TEMP 'xinspect-installer.rsp'
     # 用 response file 送參數：路徑裡有反斜線，從 shell 直接傳會被当选项吃掉（踩過兩次）。
     @(
@@ -37,21 +38,25 @@ try {
     if ($LASTEXITCODE -ne 0) { Write-Host "BUILD-FAIL: csc exit $LASTEXITCODE" -ForegroundColor Red; exit 1 }
     if (-not (Test-Path $out)) { Write-Host "BUILD-FAIL: $out 不存在" -ForegroundColor Red; exit 1 }
 
+    # 同一支程式依執行檔名稱選 UI：英文名維持英文，中文名預設繁中並可按 K 轉簡中。
+    Copy-Item -LiteralPath $out -Destination $aliasOut -Force
+    if ((Get-FileHash -LiteralPath $out -Algorithm SHA256).Hash -ne
+        (Get-FileHash -LiteralPath $aliasOut -Algorithm SHA256).Hash) {
+        Write-Host 'BUILD-FAIL: 英文版與中文別名位元組不一致' -ForegroundColor Red
+        exit 1
+    }
+
     $bytes = (Get-Item $out).Length
     Write-Host "BUILD-OK: $out = $bytes bytes"
-    # 安裝器是產品的一部分，所以也要能被驗：這裡只做最小檢查——
-    # 必須是 PE、必須含 .NET 中繼資料、必須在 32 KB 以内（超過就是有人把 runtime 塞進來了）。
-    # 〔修復 v3.21〕門禁 26KB→32KB：patch-22 加固（SHA256SUMS 總表／清單 v2／五關驗證）是真代碼
-    # 增長——v3.18 已 25,600B 貼邊、本版 29,696B；門禁意圖「不帶 runtime」不變。
-    # 〔翻新 UI〕門禁 32KB→48KB：部署器畫風對齊曦覽終端機（瑞士平面：框線 CHA 定位、
-    # spinner、ANSI Shadow 大字標、Fancy／純文字雙降級路徑）是真 UI 程式碼增長；
-    # 門禁意圖「不帶 .NET runtime」不變——48 KB 仍然裝不下一個 runtime。
+    Write-Host "BUILD-OK: $aliasOut = $((Get-Item $aliasOut).Length) bytes（與英文版 SHA-256 相同）"
+    # 雙語版保留完整翻譯，但成品仍須是 128 KB 以內的 .NET Framework PE。
+    $maxBytes = 128 * 1024
     $head = [IO.File]::ReadAllBytes($out)
     if ($head[0] -ne 0x4D -or $head[1] -ne 0x5A) { Write-Host 'BUILD-FAIL: 不是 PE 檔' -ForegroundColor Red; exit 1 }
     $text = [Text.Encoding]::ASCII.GetString($head)
     if ($text -notmatch '_CorDllMain|mscorwks|mscorlib') { Write-Host 'BUILD-FAIL: 看不到 .NET 中繼資料' -ForegroundColor Red; exit 1 }
-    if ($bytes -gt 48000) { Write-Host "BUILD-FAIL: $bytes bytes 超過 48 KB——安裝不該帶 runtime" -ForegroundColor Red; exit 1 }
-    Write-Host 'BUILD-OK: 形態檢查通過（PE + .NET + <48 KB）'
+    if ($bytes -gt $maxBytes) { Write-Host "BUILD-FAIL: $bytes bytes 超過 $maxBytes bytes" -ForegroundColor Red; exit 1 }
+    Write-Host "BUILD-OK: PE + .NET，未超過 $maxBytes bytes"
 
     # 進度列的驗證：載入剛編好的那支 exe（不是原始碼），用反射餵它假的位元組數，
     # 再起一個本機 HTTP 伺服器真的下載三遍——完整、只回一半就斷線、沒有 Content-Length。

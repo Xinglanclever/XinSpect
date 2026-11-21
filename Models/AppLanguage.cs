@@ -9,4 +9,6 @@ public enum AppLanguage
     Simplified = 1,
     /// <summary>English（翻譯表查找；未翻譯的字串回退繁體中文）。</summary>
     English = 2,
+    /// <summary>貓貓語喵（僅在貓貓世界主題中啟用，保留原本語言作為底層語系）。</summary>
+    Cat = 3,
 }

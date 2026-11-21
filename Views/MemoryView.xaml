@@ -6,7 +6,17 @@
         <TabItem Style="{StaticResource PageTabItem}" Header="總覽">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
-            <local:SectionHead Text="記憶體" HelpKey="memory/記憶體"/>
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <local:SectionHead Grid.Column="0" Text="記憶體" HelpKey="memory/記憶體"
+                                   Margin="2,0,0,0" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Style="{StaticResource ToolButton}"
+                        Content="重新擷取最新資料（全機）" IsEnabled="{Binding CanReinitialize}"
+                        Click="ReinitializeAll_Click"/>
+            </Grid>
 
             <!-- 品牌徽章（取第一條模組） -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="0">
@@ -29,7 +39,15 @@
                             <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Timings.Status}"
                                        HorizontalAlignment="Right" VerticalAlignment="Center"/>
                         </Grid>
-                        <local:FieldRow Label="資料來源" Value="{Binding Timings.SourceText}"/>
+                        <Grid Margin="0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="160"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="資料來源"/>
+                            <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}"
+                                       Text="{Binding Timings.SourceText}" TextWrapping="Wrap"/>
+                        </Grid>
                         <local:FieldRow Label="記憶體類型" Value="{Binding Timings.MemoryTypeText}"/>
                         <local:FieldRow Label="通道" Value="{Binding Timings.ChannelsText}"/>
                         <local:FieldRow Label="DRAM 頻率" Value="{Binding Timings.FrequencyText}"/>

@@ -6,7 +6,17 @@
         <TabItem Style="{StaticResource PageTabItem}" Header="總覽">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
-            <local:SectionHead Text="顯示卡" HelpKey="gpu/顯示卡"/>
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <local:SectionHead Grid.Column="0" Text="顯示卡" HelpKey="gpu/顯示卡"
+                                   Margin="2,0,0,0" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Style="{StaticResource ToolButton}"
+                        Content="重新擷取最新資料（全機）" IsEnabled="{Binding CanReinitialize}"
+                        Click="ReinitializeAll_Click"/>
+            </Grid>
 
             <!-- 運算平台（CUDA 版本；無 NVIDIA CUDA 驅動時顯示 ****） -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,12"

@@ -5,7 +5,7 @@
         Title="歡迎使用曦覽"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="False" ResizeMode="NoResize" SizeToContent="Height"
-        Width="580" WindowStartupLocation="CenterScreen"
+        Width="580" MaxHeight="760" WindowStartupLocation="CenterScreen"
         FontFamily="{StaticResource AppFont}" UseLayoutRounding="True">
     <Window.Resources>
         <!-- 兩個版本各一顆大鈕：標題 + 一行說明，點下去就是選擇，不必再按確定 -->
@@ -41,6 +41,7 @@
             <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.55" Color="#000000"/>
         </Border.Effect>
 
+        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="720">
         <StackPanel Margin="28,26,28,22" Background="Transparent" MouseLeftButtonDown="Header_Drag">
             <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                 <Border Width="6" Height="26" CornerRadius="3" Background="{DynamicResource AccentBrush}" Margin="0,0,12,0"/>
@@ -68,6 +69,37 @@
                 </StackPanel>
             </Button>
 
+            <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,8,0,12"/>
+            <TextBlock Text="核心存取後端" FontSize="15" FontWeight="SemiBold"
+                       Foreground="{DynamicResource PrimaryInkBrush}"/>
+            <TextBlock TextWrapping="Wrap" LineHeight="19" FontSize="12" Margin="0,4,0,8"
+                       Foreground="{DynamicResource SecondaryInkBrush}"
+                       Text="可在「設定」最上方更改核心讀取路由。"/>
+            <RadioButton x:Name="BtnBackendAuto" GroupName="KernelBackend" IsChecked="True"
+                         Foreground="{DynamicResource PrimaryInkBrush}" Margin="0,4,0,4">
+                <StackPanel>
+                    <TextBlock Text="自動（建議）" FontWeight="SemiBold"/>
+                    <TextBlock Text="使用已接入的沙箱／原生後端；不會載入 WinRing0。" TextWrapping="Wrap"
+                               FontSize="11.5" Foreground="{DynamicResource SecondaryInkBrush}"/>
+                </StackPanel>
+            </RadioButton>
+            <RadioButton x:Name="BtnBackendSandbox" GroupName="KernelBackend"
+                         Foreground="{DynamicResource PrimaryInkBrush}" Margin="0,4,0,4">
+                <StackPanel>
+                    <TextBlock Text="僅沙箱" FontWeight="SemiBold"/>
+                    <TextBlock Text="只允許通過試讀的沙箱後端。已安裝的 PawnIO 可在支援的 Intel 平台提供 MSR 讀取。" TextWrapping="Wrap"
+                               FontSize="11.5" Foreground="{DynamicResource SecondaryInkBrush}"/>
+                </StackPanel>
+            </RadioButton>
+            <RadioButton x:Name="BtnBackendUniversal" GroupName="KernelBackend"
+                         Foreground="{DynamicResource PrimaryInkBrush}" Margin="0,4,0,4">
+                <StackPanel>
+                    <TextBlock Text="允許 WinRing0" FontWeight="SemiBold"/>
+                    <TextBlock Text="明確允許共用核心路由載入 WinRing0；擴大核心存取暴露面。" TextWrapping="Wrap"
+                               FontSize="11.5" Foreground="{DynamicResource SecondaryInkBrush}"/>
+                </StackPanel>
+            </RadioButton>
+
             <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,18,0,12"/>
 
             <!-- 語言選擇 -->
@@ -89,5 +121,6 @@
                        Foreground="{DynamicResource MutedInkBrush}"
                        Text="之後想換版本：設定 › 外觀 › 簡易模式，勾起來就是「簡略」，取消就是「詳細進階」，即時生效不必重開程式。另外，被收起來的頁面只是不列在側邊欄——隨時按 Ctrl+K 開命令面板，打名字照樣搜得到、打得開。"/>
         </StackPanel>
+        </ScrollViewer>
     </Border>
 </Window>

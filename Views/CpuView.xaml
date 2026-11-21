@@ -6,7 +6,17 @@
         <TabItem Style="{StaticResource PageTabItem}" Header="總覽">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
-            <local:SectionHead Text="處理器" HelpKey="cpu/處理器"/>
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <local:SectionHead Grid.Column="0" Text="處理器" HelpKey="cpu/處理器"
+                                   Margin="2,0,0,0" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Style="{StaticResource ToolButton}"
+                        Content="重新擷取最新資料（全機）" IsEnabled="{Binding CanReinitialize}"
+                        Click="ReinitializeAll_Click"/>
+            </Grid>
 
             <!-- 品牌徽章 -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,14" local:Anim.RevealDelay="0">
@@ -44,7 +54,10 @@
                         <local:FieldRow Label="目前最高時脈" Value="{Binding Live.CpuClockText}"/>
                         <local:FieldRow Label="總使用率" Value="{Binding Live.CpuLoadText}"/>
                         <local:FieldRow Label="封裝溫度" Value="{Binding Live.CpuTempText}"/>
-                        <local:FieldRow Label="封裝功耗" Value="{Binding Live.CpuPowerText}"/>
+                        <local:FieldRow Label="封裝功耗（感測器）" Value="{Binding Live.CpuPackagePowerSensorText}"/>
+                        <TextBlock Style="{StaticResource FieldLabel}"
+                                   Text="{Binding Live.CpuPowerStateText}" TextWrapping="Wrap"
+                                   Margin="160,0,0,4"/>
                         <local:FieldRow Label="核心電壓" Value="{Binding Live.CpuVoltText}"/>
                         <local:FieldRow Label="匯流排時脈" Value="{Binding Live.CpuBusText}"/>
                     </StackPanel>

@@ -41,6 +41,7 @@ public static class LanguageService
 
     private static bool _simplified;
     private static bool _isEnglish;
+    private static bool _catLanguageSelected;
 
     /// <summary>目前是否為簡體模式。</summary>
     public static bool IsSimplified => _simplified;
@@ -48,8 +49,15 @@ public static class LanguageService
     /// <summary>目前是否為英語模式。</summary>
     public static bool IsEnglish => _isEnglish;
 
+    /// <summary>貓貓語喵已選取，且只在貓貓世界主題中生效。</summary>
+    public static bool IsCatLanguage => _catLanguageSelected && ThemeService.IsCatWorld;
+
+    /// <summary>貓貓語喵的選取狀態；離開主題時保留，重返後可接續使用。</summary>
+    public static bool IsCatLanguageSelected => _catLanguageSelected;
+
     /// <summary>目前語言。</summary>
-    public static AppLanguage Language => _isEnglish ? AppLanguage.English
+    public static AppLanguage Language => IsCatLanguage ? AppLanguage.Cat
+        : _isEnglish ? AppLanguage.English
         : _simplified ? AppLanguage.Simplified : AppLanguage.Traditional;
 
     /// <summary>語言切換時觸發。訂閱者應重新產生動態文字。</summary>
@@ -73,12 +81,17 @@ public static class LanguageService
     public static Action? NotifyLanguageDependentLists;
 
     /// <summary>測試用：直接切英語旗標（InternalsVisibleTo；不走 SetLanguage 的 Shell／設定路徑）。</summary>
-    internal static void SetEnglishForTests(bool english) => _isEnglish = english;
+    internal static void SetEnglishForTests(bool english)
+    {
+        _isEnglish = english;
+        _catLanguageSelected = false;
+    }
 
     /// <summary>測試用：直接切簡體旗標（同上；英語優先，故同時把英語關掉）。</summary>
     internal static void SetSimplifiedForTests(bool simplified)
     {
         _simplified = simplified;
+        _catLanguageSelected = false;
         if (simplified) _isEnglish = false;
     }
 
@@ -86,13 +99,49 @@ public static class LanguageService
     {
         _simplified = settings.SimplifiedChinese;
         _isEnglish = settings.IsEnglish;
+        _catLanguageSelected = settings.CatLanguage;
+    }
+
+    /// <summary>主題切換時重套有效語言；Cat 選取只在貓貓世界中生效，底層語系仍保留。</summary>
+    internal static void OnThemeAvailabilityChanged()
+    {
+        if (Shell.Main is { } main)
+        {
+            ConvertVisualTree(main, _simplified);
+            main.RebuildNavIfNeeded();
+        }
+        Changed?.Invoke();
+    }
+
+    /// <summary>啟用或停用貓貓語喵時保留既有繁／簡／英語偏好。</summary>
+    public static void ApplyCatLanguage(bool enabled, SettingsService settings)
+    {
+        _catLanguageSelected = enabled;
+        settings.CatLanguage = enabled;
+        if (Shell.Main is { } main)
+        {
+            ConvertVisualTree(main, _simplified);
+            main.RebuildNavIfNeeded();
+        }
+        Changed?.Invoke();
+        NotifyLanguageDependentLists?.Invoke();
     }
 
     /// <summary>切換語言（三語版）。英文字串未收錄者回退繁中原文。</summary>
     public static void SetLanguage(AppLanguage lang, SettingsService settings)
     {
-        _isEnglish = lang == AppLanguage.English;
-        _simplified = lang == AppLanguage.Simplified && !_isEnglish;
+        if (lang == AppLanguage.Cat)
+        {
+            _catLanguageSelected = true;
+            settings.CatLanguage = true;
+        }
+        else
+        {
+            _catLanguageSelected = false;
+            settings.CatLanguage = false;
+            _isEnglish = lang == AppLanguage.English;
+            _simplified = lang == AppLanguage.Simplified && !_isEnglish;
+        }
         settings.SimplifiedChinese = _simplified;
         settings.IsEnglish = _isEnglish;
         if (Shell.Main is { } main)
@@ -110,6 +159,8 @@ public static class LanguageService
     public static void SetLanguage(bool simplified, SettingsService settings)
     {
         _simplified = simplified;
+        _catLanguageSelected = false;
+        settings.CatLanguage = false;
         settings.SimplifiedChinese = simplified;
 
         // 轉換整棵視覺樹
@@ -130,12 +181,59 @@ public static class LanguageService
     public static string T(string? text)
     {
         if (string.IsNullOrEmpty(text)) return text ?? "";
+        return Catify(text, TranslateBase(text));
+    }
+
+    /// <summary>翻譯短標籤但不加貓貓語句尾，供主題名稱等產品識別文字使用。</summary>
+    internal static string TLabel(string? text) => TranslateBase(text);
+
+    private static string TranslateBase(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return text ?? "";
         if (_isEnglish) return EnglishStrings.Lookup(text) ?? text;
-        if (!_simplified) return text;
-        // 這裡吃到的 text 若是英語模式的產物（T() 寫進控制項又被讀回來的），先反查回繁中再轉簡體。
-        // 沒有這步，切到簡體後這批字串原樣卡英文。
+        // 若輸入是英語模式的產物，先反查繁中再轉，切換語系可往返。
         if (EnglishStrings.Reverse(text) is { } zhOriginal) text = zhOriginal;
-        return ToSimplified(text);
+        return _simplified ? ToSimplified(text) : text;
+    }
+
+    private static string Catify(string source, string localized)
+    {
+        if (!IsCatLanguage || !HasChineseProse(source)) return localized;
+
+        // 逐段加語氣詞；純數字、單位與 ASCII 識別值不含中文 UI 原文，因此保持原樣。
+        string[] sourceLines = source.Split('\n');
+        string[] localizedLines = localized.Split('\n');
+        for (int i = 0; i < localizedLines.Length; i++)
+        {
+            string sourceLine = sourceLines[Math.Min(i, sourceLines.Length - 1)];
+            if (!HasChineseProse(sourceLine) || !HasDisplayWords(localizedLines[i])) continue;
+            string line = localizedLines[i];
+            int end = line.Length;
+            while (end > 0 && char.IsWhiteSpace(line[end - 1])) end--;
+            if (end == 0 || line[..end].EndsWith("喵", StringComparison.Ordinal)) continue;
+            localizedLines[i] = line.Insert(end, "喵");
+        }
+        return string.Join("\n", localizedLines);
+    }
+
+    private static bool HasDisplayWords(string text) => text.Any(char.IsLetter);
+
+    private static bool HasChineseProse(string source)
+        => source.Any(c => c is >= '㐀' and <= '鿿' or >= '豈' and <= '﫿')
+           || EnglishStrings.Reverse(source) is not null;
+
+    private static string RemoveCatEnding(string text)
+    {
+        if (text is "貓貓語喵" or "猫猫语喵") return text;
+        string[] lines = text.Split('\n');
+        for (int i = 0; i < lines.Length; i++)
+        {
+            int end = lines[i].Length;
+            while (end > 0 && char.IsWhiteSpace(lines[i][end - 1])) end--;
+            if (end > 0 && lines[i][..end].EndsWith("喵", StringComparison.Ordinal))
+                lines[i] = lines[i].Remove(end - 1, 1);
+        }
+        return string.Join("\n", lines);
     }
 
     /// <summary>
@@ -147,8 +245,8 @@ public static class LanguageService
     public static string TComposite(string? text)
     {
         if (string.IsNullOrEmpty(text)) return text ?? "";
-        if (!_isEnglish) return T(text);
-        if (EnglishStrings.Lookup(text) is { } whole) return whole;
+        if (!_isEnglish) return Catify(text, TranslateBase(text));
+        if (EnglishStrings.Lookup(text) is { } whole) return Catify(text, whole);
 
         var parts = text.Split(" ・ ");
         for (int i = 0; i < parts.Length; i++)
@@ -168,7 +266,7 @@ public static class LanguageService
                 cut = parts[i].LastIndexOf(' ', cut - 1);
             }
         }
-        return string.Join(" ・ ", parts);
+        return Catify(text, string.Join(" ・ ", parts));
     }
 
     /// <summary>繁體→簡體：先套用產品硬體詞，再以 OpenCC 台灣繁體詞組配置轉換。</summary>
@@ -204,12 +302,14 @@ public static class LanguageService
         // 此時 _isEnglish 已是 false，若只在英語分支做正規化就漏掉這條路，
         // 英文字串被當「原文」釘在槽裡，簡體轉換原樣放行——使用者看到的「簡體模式夾英文」。
         // 正規化必須在讀槽「之前」對 current 做：鍵值零碰撞（有測試釘住）故不會誤傷繁中鍵。
+        current = RemoveCatEnding(current);
         if (EnglishStrings.Reverse(current) is { } zhKey) current = zhKey;
         var map = _orig.GetOrCreateValue(o);
         if (!map.TryGetValue(slot, out var original)) { original = current; map[slot] = current; }
         // 英語模式優先：未收錄回繁中原文。永遠從原文出發，繁／簡／英三方往返可逆、冪等。
-        if (_isEnglish) return EnglishStrings.Lookup(original) ?? original;
-        return simplified ? ToSimplified(original) : original;
+        string localized = _isEnglish ? EnglishStrings.Lookup(original) ?? original
+            : simplified ? ToSimplified(original) : original;
+        return Catify(original, localized);
     }
 
     /// <summary>

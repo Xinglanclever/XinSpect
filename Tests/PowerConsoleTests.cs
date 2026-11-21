@@ -20,17 +20,13 @@ public class PowerConsoleTests
     }
 
     [Fact]
-    public void 主介面有強控台入口_緊鄰匯出報告()
+    public void 主介面不再提供強控台按鈕()
     {
         string xaml = RepoFile("MainWindow.xaml");
-        int console = xaml.IndexOf("x:Name=\"ConsoleButton\"", StringComparison.Ordinal);
-        int mini = xaml.IndexOf("x:Name=\"MiniButton\"", StringComparison.Ordinal);
-        int export = xaml.IndexOf("x:Name=\"ExportButton\"", StringComparison.Ordinal);
-
-        Assert.True(console >= 0, "MainWindow.xaml 沒有強控台入口（ConsoleButton）");
-        // 使用者裁決：強控台在「匯出報告」旁邊（前一格）；迷你 HUD 再往前。
-        Assert.True(mini >= 0 && mini < console && console < export,
-            $"按鈕順序不對：迷你HUD={mini}、強控台={console}、匯出報告={export}");
+        string src = RepoFile("MainWindow.xaml.cs");
+        Assert.DoesNotContain("ConsoleButton", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Console_Click", src, StringComparison.Ordinal);
+        Assert.DoesNotContain("FindXsc", src, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -65,18 +61,15 @@ public class PowerConsoleTests
     }
 
     /// <summary>
-    /// 3.17：主介面強控台按鈕改為橋接 xsc.exe（同一事實引擎的終端視角）。
-    /// 守門：主程式必須找得到 xsc（找不到要跳如實提示，不得靜默），
-    /// 且不得在主程式內自己 new 內嵌視窗——橋接對象仍守唯讀承諾。
+    /// CLI remains a standalone app; no desktop toolbar bridge is required.
     /// </summary>
     [Fact]
-    public void 強控台入口橋接xsc_找不到時如實提示()
+    public void StandaloneCliRemainsSeparateFromTheDesktopToolbar()
     {
         string src = RepoFile("MainWindow.xaml.cs");
-        Assert.Contains("FindXsc", src, StringComparison.Ordinal);
-        Assert.Contains("找不到 xsc.exe", src, StringComparison.Ordinal);
-        // 橋接不能退化成內嵌另一份 GUI：PowerConsoleWindow 視窗檔保留供歷史審閱，但主介面不再 new 它
-        Assert.DoesNotContain("new PowerConsoleWindow()", src, StringComparison.Ordinal);
+        string cliProject = RepoFile(Path.Combine("XinSpectCli", "XinSpectCli.csproj"));
+        Assert.DoesNotContain("Console_Click", src, StringComparison.Ordinal);
+        Assert.Contains("OutputType", cliProject, StringComparison.Ordinal);
     }
 
     [Fact]

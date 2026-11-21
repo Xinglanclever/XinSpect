@@ -358,7 +358,10 @@ public sealed partial class SensorService : ObservableObject, IDisposable
         OnPropertyChanged(nameof(CpuTempPercent));
         OnPropertyChanged(nameof(CpuTempSeverity));
         OnPropertyChanged(nameof(CpuClockText));
+        OnPropertyChanged(nameof(CpuPackagePowerSensorW));
+        OnPropertyChanged(nameof(CpuPackagePowerSensorText));
         OnPropertyChanged(nameof(CpuPowerText));
+        OnPropertyChanged(nameof(CpuPowerStateText));
         OnPropertyChanged(nameof(CpuVoltText));
         OnPropertyChanged(nameof(CpuVoltage));
         OnPropertyChanged(nameof(CpuPowerW));
@@ -477,6 +480,9 @@ public sealed partial class SensorService : ObservableObject, IDisposable
 
     public double CpuClock => _cores.Select(c => Val(c.Clk) ?? 0).DefaultIfEmpty(0).Max();
     public string CpuClockText => CpuClock > 0 ? $"{CpuClock:0} MHz" : "—";
+    /// <summary>Current plausible CPU-package sensor reading from LHM; not gated by RAPL validation and not used for validated analyses.</summary>
+    public double? CpuPackagePowerSensorW => Val(_cpuPower);
+    public string CpuPackagePowerSensorText => CpuPackagePowerSensorW is double p ? $"{p:0.#} W" : "—";
     public string CpuPowerText => CpuPowerW is double p and > 0 ? $"{p:0.#} W" : "—";
     public string CpuVoltText => Val(_cpuVolt) is double v and > 0 ? $"{v:0.###} V" : "—";
     public string CpuBusText => Val(_cpuBus) is double b and > 0 ? $"{b:0.#} MHz" : "—";
@@ -486,8 +492,23 @@ public sealed partial class SensorService : ObservableObject, IDisposable
     /// <summary>Only reads cached RAPL validation; passive UI/history reads never start a CPU load.</summary>
     public double? CpuPowerW => RaplEnergyGate.ValidatedPower(Val(_cpuPower));
 
-    /// <summary>Unknown/unverified, probing, failed or trusted cached state; no diagnostic is started here.</summary>
-    public string CpuPowerStateText => RaplEnergyGate.StateText;
+    /// <summary>Reports sensor provenance and cached RAPL validation state without starting a diagnostic.</summary>
+    public string CpuPowerStateText
+    {
+        get
+        {
+            if (_cpuPower is null)
+                return "來源：LibreHardwareMonitor；未提供 CPU Package／Package 功耗感測器，無可用讀值。";
+
+            string source = $"來源：LibreHardwareMonitor「{_cpuPower.Name}」即時感測器";
+            if (Val(_cpuPower) is not double)
+                return $"{source}；目前未回有效讀值。RAPL 狀態：{RaplEnergyGate.StateText}";
+
+            return RaplEnergyGate.Verdict == RaplGateVerdict.Trusted
+                ? $"{source}；RAPL 能量計已通過自我驗證。"
+                : $"{source}；RAPL 驗證狀態：{RaplEnergyGate.StateText}";
+        }
+    }
     public double? VrmTempC => Val(_vrmTemp);
 
     public double MemLoad => Val(_memLoad) ?? 0;

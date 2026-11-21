@@ -3,7 +3,7 @@ namespace XinSpect;
 /// <summary>後端選擇模式（存進 settings.json 的 <c>KernelBackendMode</c>；整數只追加不調換）。</summary>
 public enum KernelBackendMode
 {
-    /// <summary>自動：優先使用已接入的沙箱／原生後端；不載入 Universal（WinRing0）。本版 PawnIO 未接入時可能無可用路由。</summary>
+    /// <summary>自動：優先使用已就緒的沙箱／原生後端；不載入 Universal（WinRing0）。</summary>
     Auto = 0,
     /// <summary>僅沙箱：只接受 <see cref="KernelTrustTier.Sandboxed"/>——MSR/MMIO 讀不到就三態，不開萬能鑰匙。</summary>
     SandboxOnly = 1,

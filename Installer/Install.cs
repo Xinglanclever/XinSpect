@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Security.Principal;
 using System.Threading;
@@ -35,9 +36,179 @@ using System.Threading;
 internal static class Install
 {
     // 部署器自己的版本號（UserAgent 與開場面板共用）。跟著主專案版號走，發版時順手改這裡。
-    private const string Version = "3.32";
+    private const string Version = "3.33";
     private const string EncyclopediaAsset = "XinSpect-Encyclopedia.html";
     private const long EncyclopediaMaxBytes = 20L * 1024L * 1024L;
+    private static bool ChineseExecutable;
+    private static bool SimplifiedChinese;
+    private static readonly Dictionary<string, string> EnglishPhrases = BuildEnglishPhrases();
+    private static List<string> EnglishPhraseKeys;
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern int LCMapStringW(uint locale, uint flags, string source, int sourceLength,
+        StringBuilder destination, int destinationLength);
+
+    private static string Localize(string text)
+    {
+        if (text == null) return "";
+        if (ChineseExecutable && SimplifiedChinese) return ToSimplifiedChinese(text);
+        if (ChineseExecutable) return text;
+        string exact;
+        if (EnglishPhrases.TryGetValue(text, out exact)) return exact;
+        if (EnglishPhraseKeys == null)
+        {
+            EnglishPhraseKeys = new List<string>(EnglishPhrases.Keys);
+            EnglishPhraseKeys.Sort(delegate(string a, string b) { return b.Length.CompareTo(a.Length); });
+        }
+        for (int i = 0; i < EnglishPhraseKeys.Count; i++)
+        {
+            string phrase = EnglishPhraseKeys[i];
+            if (text.IndexOf(phrase, StringComparison.Ordinal) >= 0)
+                text = text.Replace(phrase, EnglishPhrases[phrase]);
+        }
+        return text;
+    }
+
+    private static string ToSimplifiedChinese(string text)
+    {
+        if (text.Length == 0) return text;
+        try
+        {
+            StringBuilder output = new StringBuilder(text.Length + 8);
+            int written = LCMapStringW(0x0804, 0x02000000, text, text.Length, output, output.Capacity);
+            if (written > 0) return output.ToString(0, written);
+        }
+        catch { }
+        return text;
+    }
+
+    private sealed class LocalizedTextWriter : TextWriter
+    {
+        private readonly TextWriter inner;
+        public LocalizedTextWriter(TextWriter writer) { inner = writer; }
+        public override Encoding Encoding { get { return inner.Encoding; } }
+        public override void Write(string value) { inner.Write(Localize(value)); }
+        public override void Write(char value) { inner.Write(value); }
+        public override void Write(char[] buffer, int index, int count)
+        {
+            if (buffer == null) { inner.Write(buffer, index, count); return; }
+            inner.Write(Localize(new string(buffer, index, count)));
+        }
+        public override void WriteLine(string value) { inner.WriteLine(Localize(value)); }
+        public override void WriteLine() { inner.WriteLine(); }
+        public override void Flush() { inner.Flush(); }
+    }
+
+    private static Dictionary<string, string> BuildEnglishPhrases()
+    {
+        Dictionary<string, string> t = new Dictionary<string, string>(StringComparer.Ordinal);
+        t.Add("拉取鏡像清單 mirrors.txt", "Loading mirror list mirrors.txt");
+        t.Add("所選來源是分享頁，百科改用 GitHub 官方下載及加速備援線路。", "The selected source is a sharing page; the encyclopedia will use GitHub and download mirrors. ");
+        t.Add("取得官方總雜湊清單 SHA256SUMS.txt", "Fetching the official SHA256SUMS.txt checksum manifest");
+        t.Add("無法取得官方總雜湊清單（SHA256SUMS.txt）", "Could not retrieve the official checksum manifest (SHA256SUMS.txt)");
+        t.Add("信任根就位：", "Trusted checksum source: ");
+        t.Add("無法取得官方 SHA256SUMS.txt，完整性尚未驗證。Y＝仍要強制下載，N＝離開，K＝返回上一層來源選單。", "Could not retrieve official SHA256SUMS.txt; file integrity cannot be verified. Y = force download, N = exit, K = return to source selection.");
+        t.Add("輸入 Y / N / K（預設 N）：", "Choose Y / N / K (default N): ");
+        t.Add("下載未驗證的檔案：只存檔，不安裝或啟動。", "Downloading unverified files: save only, without installing or launching them.");
+        t.Add("已切換為簡體中文。", "Switched to Simplified Chinese.");
+        t.Add("已切換為繁體中文。", "Switched to Traditional Chinese.");
+        t.Add("無法取得官方總雜湊清單（SHA256SUMS.txt）。{0}已強制雜湊驗證，無法驗證就不安裝。三個選項：\n", "Cannot retrieve the official checksum manifest (SHA256SUMS.txt). {0} requires checksum verification; installation is blocked without it. Options:\n");
+        t.Add("  ① 稍後重試（可能是 GitHub 暫時連不上）；\n", "  1. Retry later (GitHub may be temporarily unavailable);\n");
+        t.Add("  ② 手動下載後自行核對：https://github.com/Xinglanclever/XinSpect/releases\n", "  2. Download manually and verify it: https://github.com/Xinglanclever/XinSpect/releases\n");
+        t.Add("  ③ 改用分享頁來源（瀏覽器下載，由你自行把關）。", "  3. Use a sharing-page source and review the download yourself.");
+        t.Add("官方格", "official source"); t.Add("此來源", "this source");
+        t.Add("官方來源的雜湊清單不是從官方直連取得的——拒絕在這種狀態下安裝「官方」版。請改用手動下載或稍後重試。", "The official-source checksum manifest did not come directly from GitHub. The official build will not be installed in this state; download manually or retry later.");
+        t.Add("總雜湊清單（來源：{0}）沒有「{1}」——此版未發佈該檔或清單過舊，拒絕安裝未知檔案。", "The checksum manifest from {0} does not list {1}. This file may not be part of this release or the manifest may be stale; refusing to install an unknown file.");
+        t.Add("鏡像清單聲明的雜湊與官方總表矛盾（鏡像 {0} vs 官方 {1}）——清單有被動過手腳的跡象，拒用此鏡像。", "The mirror's declared checksum conflicts with the official manifest (mirror {0}, official {1}); refusing this mirror.");
+        t.Add("輸入 A／B 安裝程式、AC／BC 加百科、C 只下載百科（Enter＝A；~ 離開）：", "Choose A/B to install an app, AC/BC to include the encyclopedia, or C for the encyclopedia only (Enter = A; ~ exits):");
+        t.Add("無效選項「", "Invalid choice '"); t.Add("」，請輸入 A、B、AC、BC 或 C。", "'; enter A, B, AC, BC, or C.");
+        t.Add("選版本", "Select a version");
+        t.Add("1 不帶環境（約 36MB，需 .NET 10 Desktop Runtime）・2 帶環境（免裝，單檔較大）", "1 Framework-dependent (~36 MB, requires .NET 10 Desktop Runtime) · 2 Runtime included (larger single file)");
+        t.Add("按 1 或 2（Enter＝1；~ 返回上一層）：", "Press 1 or 2 (Enter = 1; ~ returns to the previous menu):");
+        t.Add("看不懂「", "Unrecognized choice '"); t.Add("」，用不帶環境的現在版。", "'; using the framework-dependent build.");
+        t.Add("Windows 11／Server 2025・帶環境（免裝 .NET，約 100MB）", "Windows 11 / Server 2025 · runtime included (~100 MB)");
+        t.Add("Windows 10／2016/2019/2022・帶環境（免裝 .NET，純文字界面，約 100MB）", "Windows 10 / Server 2016–2022 · runtime included, plain-text UI (~100 MB)");
+        t.Add("Windows 11／Server 2025・不帶環境（約 60MB，需 .NET 10 Desktop Runtime）", "Windows 11 / Server 2025 · no runtime (~60 MB, requires .NET 10 Desktop Runtime)");
+        t.Add("Windows 10／2016/2019/2022・不帶環境（約 60MB，純文字界面，需 .NET 10 Desktop Runtime）", "Windows 10 / Server 2016–2022 · no runtime, plain-text UI (~60 MB, requires .NET 10 Desktop Runtime)");
+        t.Add("按 1 / 2 / 3 / 4（Enter＝1；~ 返回上一層）：", "Press 1 / 2 / 3 / 4 (Enter = 1; ~ returns to the previous menu):");
+        t.Add("」，用 Windows 11 帶環境版。", "'; using the Windows 11 runtime-included build.");
+        t.Add("純文字相容版（Windows 10／Server 2016、2019、2022）", "plain-text compatibility build (Windows 10 / Server 2016, 2019, 2022)");
+        t.Add("完整 UI 版（Windows 11／Server 2025）", "full UI build (Windows 11 / Server 2025)");
+        t.Add("・不帶環境約 60MB，需 .NET 10 Desktop Runtime", " · no runtime, ~60 MB, requires .NET 10 Desktop Runtime");
+        t.Add("・自含執行階段約 100MB", " · runtime included, ~100 MB");
+        t.Add("來源 / 目標", "Source / destination"); t.Add("來源", "Source"); t.Add("目標", "Destination");
+        t.Add(" 手動放置", " Place manually");
+        t.Add("請在瀏覽器按「下載」，把 ", "Click Download in your browser, then place ");
+        t.Add(" 放到：", " here:");
+        t.Add("下載完成後改名成 XinSpectConsole.exe，放進上面那個資料夾就能直接執行。", "After downloading, rename it to XinSpectConsole.exe and place it in the folder above.");
+        t.Add("下載完成後把 XinSpect.exe 放進上面那個資料夾就能直接執行。", "After downloading, place XinSpect.exe in the folder above.");
+        t.Add("想全自動部署（含守護進程）請重新執行本程式，選 A 後按 1（GitHub）。", "For automatic deployment (including the bridge), rerun this tool, choose A, then select 1 (GitHub).");
+        t.Add(" · 下載", " · Download"); t.Add(" · 下載主程式", " · Download main app");
+        t.Add(" · 下載守護進程", " · Download bridge"); t.Add("BlueSquadronBridge.exe（獨立守護）", "BlueSquadronBridge.exe (separate bridge)");
+        t.Add(" · 部署核心驅動", " · Stage kernel driver"); t.Add("XsRegProbe.sys（深層核心存取）", "XsRegProbe.sys (advanced kernel access)");
+        t.Add("（BlueSquadron 為獨立橋接，尚未完工）", "(BlueSquadron bridge is separate and unfinished)");
+        t.Add("已放進 Desktop\\XinSpect\\", "Placed in Desktop\\XinSpect\\"); t.Add(" · 就位", " · Stage"); t.Add(" · 啟動", " · Launch");
+        t.Add("（曦覽終端機・唯讀硬體事實查詢）", "(XinSpect CLI · read-only hardware facts)");
+        t.Add("（共用離線百科快取）", "(shared offline encyclopedia cache)"); t.Add("位置：", "Location: ");
+        t.Add(" 部署完成", " Deployment complete"); t.Add("現在就開啟曦覽終端機嗎？按 Y 開啟，其他鍵跳過：", "Launch XinSpect CLI now? Press Y to launch; any other key skips:");
+        t.Add("已啟動 XinSpectConsole.exe", "Started XinSpectConsole.exe");
+        t.Add("啟動失敗（", "Launch failed ("); t.Add("）。如果是 nort（不帶環境）版本，請先安裝 .NET 10 Desktop Runtime：", "). If you chose the no-runtime build, install the .NET 10 Desktop Runtime first:");
+        t.Add("已啟動 XinSpect.exe", "Started XinSpect.exe");
+        t.Add("百科下載", "Download encyclopedia"); t.Add("只下載百科，不安裝 XinSpect", "Download the encyclopedia only; do not install XinSpect");
+        t.Add("百科已儲存到共用快取；Desktop 版可直接開啟。", "The encyclopedia is saved in the shared cache and is ready to open in Desktop.");
+        t.Add("（Desktop 版）", "(Desktop build)"); t.Add("（獨立守護進程）", "(separate bridge)");
+        t.Add("鏡像百科下載失敗，改走 GitHub 官方及加速備援線路。", "Mirror download failed; trying GitHub and accelerator fallbacks. ");
+        t.Add("快取", "Cache"); t.Add("部署失敗：", "Deployment failed: "); t.Add(" 手動下載", " Manual download");
+        t.Add("1/1 · 分享頁", "1/1 · Sharing page"); t.Add("已開瀏覽器，請在頁面上按「下載」", "Browser opened; click Download on the page"); t.Add("網址", "URL");
+        t.Add("XsRegProbe.sys 未部署（此版未附驅動檔）——深層核心存取仍可由文件手冊手動建置", "XsRegProbe.sys was not staged (not included in this release); see the manual for advanced kernel access setup");
+        t.Add("（未以管理員執行，未寫入 ProgramData；請把這個檔複製到 ", "(Not run as administrator; nothing was written to ProgramData. Copy this file to ");
+        t.Add("，或以管理員身分重新執行本部署器）", ", or rerun this deployer as administrator)");
+        t.Add("GitHub Releases（官方，永遠是最新版）", "GitHub Releases (official, always latest)");
+        t.Add("Google Drive（鏡像分享頁）", "Google Drive (mirror sharing page)");
+        t.Add("中國加速線路（GitHub 加速節點）", "China accelerator (GitHub proxy)");
+        t.Add("官方直連（信任根）", "Official direct connection (trust root)");
+        t.Add("官方經加速節點（信任＝節點營運者）", "Official via accelerator (trust the operator)");
+        t.Add("所選鏡像自帶（信任＝鏡像營運者）", "Provided by selected mirror (trust the operator)");
+        t.Add("mirrors.txt：忽略對內建來源 ", "mirrors.txt: ignored override for built-in source ");
+        t.Add(" 的覆寫（信任根不可被遠端清單改寫）。", " (the remote list cannot override a trust root).");
+        t.Add("鏡像 ", "Mirror "); t.Add("（來自遠端清單）", " (from remote list)");
+        t.Add("mirrors.txt：第 ", "mirrors.txt: "); t.Add(" 格 direct 條目未附 SHA-256（v2 格式），已拒收。", " entry has no SHA-256 (v2 format); rejected.");
+        t.Add("無法使用來源「", "Cannot use source '"); t.Add("」（沒有提供或沒有這個編號）。", "' (not provided or unknown number).");
+        t.Add("・尚未提供", " · not available"); t.Add(" 選擇下載來源", " Select download source");
+        t.Add("Enter＝1 · GitHub 官方", "Enter = 1 · official GitHub");
+        t.Add("按編號選擇（Enter＝1；~ 返回上一層）：", "Choose a number (Enter = 1; ~ returns to the previous menu):");
+        t.Add("來源「", "Source '"); t.Add("」這版還沒有提供（見上面的「尚未提供」），改用 GitHub。", "' is not available in this release; using GitHub.");
+        t.Add("無此選項「", "Unknown option '"); t.Add("」，請重新選擇來源。", "'; choose a source again.");
+        t.Add("這條線失敗，改用備援線路：", "This route failed; trying fallback: ");
+        t.Add("下載失敗：所有網路節點均無法完成連線。", "Download failed: all network routes were unavailable.");
+        t.Add("{0} 下載回來的不是有效百科 HTML（{1:N0} bytes；內容像是：{2}）。", "{0} was not a valid encyclopedia HTML file ({1:N0} bytes; content begins: {2}).");
+        t.Add("{0} 下載回來的不是 Windows 程式（{1:N0} bytes，開頭不是 MZ；內容像是：{2}）。", "{0} is not a valid Windows program ({1:N0} bytes, no MZ header; content begins: {2}).");
+        t.Add("{0} 雜湊不符（預期 {1}，實得 {2}）——下載被改寫或傳輸損壞，已刪除，不會安裝。請改用其他來源或重試。", "{0} checksum mismatch (expected {1}, got {2}); the download was modified or corrupted, deleted, and will not be installed. Try another source or retry.");
+        t.Add("（無法讀出內容）", "(unable to read content)");
+        t.Add("下載檔案超過允許大小上限（", "Downloaded file exceeds the maximum allowed size (");
+        t.Add("連線中途斷開：只收到 {0:N0} / {1:N0} bytes。請改用其他來源或重試。", "Connection interrupted: received {0:N0} / {1:N0} bytes. Try another source or retry.");
+        t.Add("按任意鍵關閉…", "Press any key to close...");
+        t.Add("曦覽部署器 v", "XinSpect Deployer v"); t.Add("曦覽 XinSpect by xinglanclever", "XinSpect by xinglanclever");
+        t.Add("曦覽部署器 XinSpect Deploy v", "XinSpect Deployer v");
+        t.Add("按 K 切換到簡體中文 · ~ 返回上一層", "Press K to switch to Simplified Chinese · ~ returns to the previous menu");
+        t.Add("放行只認 SHA256SUMS.txt——MZ 開頭檢查只是診斷訊息，不作為依據", "Only SHA256SUMS.txt authorizes a download; the MZ header is diagnostic, not proof.");
+        t.Add("latest/download 404 時現場偵測版號備援，不寫死 tag，避免安靜裝到舊版", "If latest/download returns 404, detect the current tag instead of silently installing an old version.");
+        t.Add("下載到 HTML 是安裝器最常見的假成功：分享頁與病毒掃描警告都會回 200", "An HTML page can masquerade as a successful download: sharing pages and virus-scan prompts may return HTTP 200.");
+        t.Add("半截的 exe 比沒有檔案更危險：有 MZ 頭、大小也像程式——斷線一律刪檔重來", "A partial EXE can look plausible; interrupted downloads are always deleted and retried.");
+        t.Add("百科是獨立 HTML：下載前驗 SHA256SUMS、HTML 結構，Desktop 與部署器共用離線快取", "The standalone encyclopedia is checked against SHA256SUMS and its HTML structure before sharing the offline cache.");
+        t.Add("Drive 的 uc?id= 是單一檔案端點；資料夾分享頁走 page 模式，只開瀏覽器不假裝直連", "Drive uc?id= links target files; folder-sharing pages open in a browser instead of pretending to be direct downloads.");
+        t.Add(" 曦覽部署器 XinSpect Deploy v", " XinSpect Deployer v");
+        t.Add("  [A] Desktop 主程式   [B] CLI 終端機", "  [A] Desktop app   [B] CLI terminal");
+        t.Add("  [AC] Desktop + 百科  [BC] CLI + 百科  [C] 只下載百科", "  [AC] Desktop + book  [BC] CLI + book  [C] book only");
+        t.Add("  小知識：", "  Tip: "); t.Add("  腳本模式：AC／BC／C 或 -xsc [-encyclopedia]；版本參數 -full -legacy -nort", "  Script mode: AC / BC / C or -xsc [-encyclopedia]; variants: -full -legacy -nort");
+        t.Add("曦覽部署器", "XinSpect Deployer"); t.Add("部署內容", "Deployment options"); t.Add(" ・ 輸入代碼後按 Enter", " · Enter a code and press Enter");
+        t.Add(" Desktop 主程式", " Desktop app"); t.Add(" CLI 終端機（自包含百科）", " CLI terminal (embedded encyclopedia)");
+        t.Add(" Desktop + 獨立百科", " Desktop + standalone encyclopedia"); t.Add(" CLI + 獨立百科", " CLI + standalone encyclopedia"); t.Add(" 只下載百科", " Download encyclopedia only");
+        t.Add("下載鏈：GitHub 官方直連 ＞ 加速節點 ＞ 遠端鏡像清單", "Download routes: official GitHub > accelerators > remote mirrors");
+        t.Add("放行條件：SHA256SUMS.txt 全量核對，不符即刪不裝", "Verification: full SHA256SUMS.txt match; mismatches are deleted and rejected");
+        t.Add("小知識：", "Tip: "); t.Add("輸入 A／B／AC／BC／C；腳本模式可用 -xsc [-encyclopedia]", "Choose A / B / AC / BC / C; scripts can use -xsc [-encyclopedia]");
+        return t;
+    }
 
     // 一個下載來源。Direct=true 時 BaseUrl 是「檔案所在目錄」，安裝器自己抓；
     // Direct=false 時 BaseUrl 是分享頁，安裝器只開瀏覽器並說清楚要按什麼。
@@ -107,6 +278,11 @@ internal static class Install
     static int Main(string[] args)
     {
         try { Console.OutputEncoding = Encoding.UTF8; } catch { }
+        Console.SetOut(new LocalizedTextWriter(Console.Out));
+
+        string executable = Environment.GetCommandLineArgs()[0];
+        ChineseExecutable = string.Equals(Path.GetFileNameWithoutExtension(executable),
+            "XinSpect部署器", StringComparison.OrdinalIgnoreCase);
 
         // 畫面件最先就位：VT 開不起來的環境整體退回純文字（見 Ui.EnableAnsi）。
         Ui.EnableAnsi();
@@ -125,41 +301,105 @@ internal static class Install
         }
         ServicePointManager.DefaultConnectionLimit = 32;
 
-        // 第一層選單：A/B 安裝程式，AC/BC 同時下載百科，C 只下載百科。
-        // 第二層選單選下載來源（1/2/3）；命令列 -xsc 與來源編號供腳本／機器驗證用。
-        bool includeEncyclopedia, encyclopediaOnly;
-        bool xsc = ChooseProduct(args, out includeEncyclopedia, out encyclopediaOnly);
-        bool legacy = false, nort = false, full = false;
-        if (!encyclopediaOnly)
+        // 選單層級：產品 → 版本 → 來源。~ 回到上一層；checksum 失敗提示另以 K 回來源選單。
+        while (true)
         {
-            if (xsc) ChooseCliFlavor(args, out legacy, out nort);
-            else full = ChooseDesktopFull(args);
+            bool includeEncyclopedia, encyclopediaOnly, back;
+            bool xsc = ChooseProduct(args, out includeEncyclopedia, out encyclopediaOnly, out back);
+            if (back) return 0;
+
+            while (true)
+            {
+                bool legacy = false, nort = false, full = false;
+                back = false;
+                if (!encyclopediaOnly)
+                {
+                    if (xsc) ChooseCliFlavor(args, out legacy, out nort, out back);
+                    else full = ChooseDesktopFull(args, out back);
+                }
+                if (back) break;
+
+                Ui.Busy("拉取鏡像清單 mirrors.txt");
+                List<Mirror> all = LoadMirrors();
+                Ui.BusyAbort();
+                FlushNotices();
+
+                bool returnToVersion = false;
+                while (true)
+                {
+                    Mirror chosen = ChooseMirror(all, args, out back);
+                    if (back) { returnToVersion = true; break; }
+                    if (chosen == null) { Pause(); return 2; }
+                    if (encyclopediaOnly && !chosen.Direct)
+                        Ui.Note("所選來源是分享頁，百科改用 GitHub 官方下載及加速備援線路。" + chosen.Name);
+
+                    Ui.Busy("取得官方總雜湊清單 SHA256SUMS.txt");
+                    HashList hashes = FetchShaSums(chosen);
+                    if (hashes == null)
+                    {
+                        Ui.BusyEnd(false, "無法取得官方總雜湊清單（SHA256SUMS.txt）");
+                        string action = ChecksumFailureChoice();
+                        if (action == "K") continue;
+                        if (action != "Y") return 0;
+                        string asset = encyclopediaOnly ? null : xsc ? CliAssetName(legacy, nort)
+                            : full ? "XinSpect-full.exe" : "XinSpect.exe";
+                        return DownloadUnverified(chosen, asset, encyclopediaOnly || includeEncyclopedia);
+                    }
+                    else
+                    {
+                        Ui.BusyEnd(true, "信任根就位：" + hashes.Via);
+                    }
+
+                    if (encyclopediaOnly) return DeployEncyclopediaOnly(chosen, hashes);
+                    return xsc
+                        ? DeployXsc(chosen, legacy, nort, hashes, includeEncyclopedia)
+                        : DeployGui(chosen, full, hashes, includeEncyclopedia);
+                }
+                if (returnToVersion) continue;
+            }
         }
+    }
 
-        Ui.Busy("拉取鏡像清單 mirrors.txt");
-        List<Mirror> all = LoadMirrors();
-        Ui.BusyAbort();
-        FlushNotices();
+    private static string ChecksumFailureChoice()
+    {
+        while (true)
+        {
+            Ui.Warn("無法取得官方 SHA256SUMS.txt，完整性尚未驗證。Y＝仍要強制下載，N＝離開，K＝返回上一層來源選單。");
+            Ui.Prompt("輸入 Y / N / K（預設 N）：");
+            string key = ReadChoiceLineRaw().Trim().ToUpperInvariant();
+            if (key.Length == 0) return "N";
+            if (key == "Y" || key == "N" || key == "K") return key;
+        }
+    }
 
-        Mirror chosen = ChooseMirror(all, args);
-        if (chosen == null) { Pause(); return 2; }
-        if (encyclopediaOnly && !chosen.Direct)
-            Ui.Note("所選來源是分享頁，百科改用 GitHub 官方下載及加速備援線路。" + chosen.Name);
-
-        // 官方總雜湊清單：整個部署抓一次、所有檔共用。null＝一份都拿不到——
-        // 各 Deploy* 內的 RequireHash 會據此拒裝並三態告知，不在這裡提早退出
-        // （page 模式的「開瀏覽器」不需要雜湊，退出會把那條活路也關掉）。
-        Ui.Busy("取得官方總雜湊清單 SHA256SUMS.txt");
-        HashList hashes = FetchShaSums(chosen);
-        if (hashes == null)
-            Ui.BusyEnd(false, "無法取得官方總雜湊清單（SHA256SUMS.txt）——直連下載將被拒絕");
-        else
-            Ui.BusyEnd(true, "信任根就位：" + hashes.Via);
-
-        if (encyclopediaOnly) return DeployEncyclopediaOnly(chosen, hashes);
-        return xsc
-            ? DeployXsc(chosen, legacy, nort, hashes, includeEncyclopedia)
-            : DeployGui(chosen, full, hashes, includeEncyclopedia);
+    private static int DownloadUnverified(Mirror chosen, string asset, bool includeEncyclopedia)
+    {
+        try
+        {
+            Ui.Warn("下載未驗證的檔案：只存檔，不安裝或啟動。");
+            bool downloadProduct = asset != null && chosen.Direct;
+            if (asset != null && !chosen.Direct) Panel(chosen.BaseUrl);
+            int total = (downloadProduct ? 1 : 0) + (includeEncyclopedia ? 1 : 0);
+            if (total > 0)
+            {
+                string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+                    "XinSpect-unverified-" + Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(folder);
+                Ui.Info("目標", folder);
+                if (downloadProduct)
+                    DownloadFileWithFallback(chosen, asset, Path.Combine(folder, asset), 1, total,
+                        DownloadValidation.Program, null);
+                if (includeEncyclopedia)
+                    DownloadFileWithFallback(SelectEncyclopediaSource(chosen), EncyclopediaAsset,
+                        Path.Combine(folder, EncyclopediaAsset), total, total, DownloadValidation.EncyclopediaHtml, null);
+            }
+            Pause();
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            return DeployFailed(ex);
+        }
     }
 
     // 遠端清單解析過程中的警告（對內建來源的覆寫、缺雜湊的 direct 條目）先收著——
@@ -202,10 +442,11 @@ internal static class Install
     }
 
     // 第一層：按 A 裝主程式、按 B 裝曦覽終端機。命令列參數以 -xsc（或 --xsc）指定終端機路。
-    private static bool ChooseProduct(string[] args, out bool includeEncyclopedia, out bool encyclopediaOnly)
+    private static bool ChooseProduct(string[] args, out bool includeEncyclopedia, out bool encyclopediaOnly, out bool back)
     {
         includeEncyclopedia = false;
         encyclopediaOnly = false;
+        back = false;
         if (args != null && Array.Exists(args, a =>
                 a.Trim().Equals("-xsc", StringComparison.OrdinalIgnoreCase) ||
                 a.Trim().Equals("--xsc", StringComparison.OrdinalIgnoreCase)))
@@ -239,8 +480,10 @@ internal static class Install
 
         while (true)
         {
-            Ui.Prompt("輸入 A／B 安裝程式、AC／BC 加百科、C 只下載百科（Enter＝A）：");
+            Ui.Prompt("輸入 A／B 安裝程式、AC／BC 加百科、C 只下載百科（Enter＝A；~ 離開）：");
             string key = ReadChoiceLine().Trim().ToUpperInvariant();
+            if (key == "~") { back = true; return false; }
+            if (key == "LANGUAGE_CHANGED") continue;
             if (key.Length == 0) return false;   // Enter ＝ 主程式
             bool xsc, only;
             if (ParseProductChoice(key, out xsc, out includeEncyclopedia, out only))
@@ -267,6 +510,18 @@ internal static class Install
 
     private static string ReadChoiceLine()
     {
+        string key = ReadChoiceLineRaw();
+        if (ChineseExecutable && key.Trim().Equals("K", StringComparison.OrdinalIgnoreCase))
+        {
+            SimplifiedChinese = !SimplifiedChinese;
+            Ui.Note(SimplifiedChinese ? "已切換為簡體中文。" : "已切換為繁體中文。");
+            return "LANGUAGE_CHANGED";
+        }
+        return key;
+    }
+
+    private static string ReadChoiceLineRaw()
+    {
         try
         {
             if (Console.IsInputRedirected) return "";
@@ -279,8 +534,9 @@ internal static class Install
     // [1] 不帶環境：現在版 XinSpect.exe（約 36MB），機器要已裝 .NET 10 Desktop Runtime。
     // [2] 帶環境：XinSpect-full.exe，.NET 10 Desktop Runtime 一併打包，免裝但單檔大一截。
     // 命令列 -full 指定帶環境。
-    private static bool ChooseDesktopFull(string[] args)
+    private static bool ChooseDesktopFull(string[] args, out bool back)
     {
+        back = false;
         if (args != null && Array.Exists(args, a =>
                 a.Trim().Equals("-full", StringComparison.OrdinalIgnoreCase) ||
                 a.Trim().Equals("--full", StringComparison.OrdinalIgnoreCase)))
@@ -288,26 +544,28 @@ internal static class Install
             return true;
         }
 
-        Ui.Section("選版本", "1 不帶環境（約 36MB，需 .NET 10 Desktop Runtime）・2 帶環境（免裝，單檔較大）");
-        Ui.Prompt("按 1 或 2（直接按 Enter 用 1）：");
-
-        string key = ReadKeyOrEmpty();
-        if (key.Length == 0) return false;   // Enter ＝ 不帶環境（現在版）
-        if (key == "2") return true;
-        if (key == "1") return false;
-
-        Ui.Warn("看不懂「" + key + "」，用不帶環境的現在版。");
-        return false;
+        while (true)
+        {
+            Ui.Section("選版本", "1 不帶環境（約 36MB，需 .NET 10 Desktop Runtime）・2 帶環境（免裝，單檔較大）");
+            Ui.Prompt("按 1 或 2（Enter＝1；~ 返回上一層）：");
+            string key = ReadKeyOrEmpty();
+            if (key == "LANGUAGE_CHANGED") continue;
+            if (key == "~") { back = true; return false; }
+            if (key.Length == 0 || key == "1") return false;
+            if (key == "2") return true;
+            Ui.Warn("看不懂「" + key + "」，用不帶環境的現在版。");
+        }
     }
 
     // 第二層（B：終端機）——四版：兩個 Windows 世代 × 帶不帶執行階段。
     // 帶環境（self-contained）免裝 .NET；不帶環境（framework-dependent）約 60MB，要 .NET 10 Desktop Runtime。
     // Windows 10／Server 2016、2019、2022 用 legacy 版（純文字相容界面）。
     // 命令列 -legacy／-nort 分別指定相容版與不帶環境。
-    private static void ChooseCliFlavor(string[] args, out bool legacy, out bool nort)
+    private static void ChooseCliFlavor(string[] args, out bool legacy, out bool nort, out bool back)
     {
         legacy = false;
         nort = false;
+        back = false;
         if (args != null)
         {
             foreach (string a in args)
@@ -321,21 +579,24 @@ internal static class Install
             if (legacy || nort) return;   // 參數給齊就不問
         }
 
-        Ui.Section("選版本", null);
-        Ui.Item("1", "Windows 11／Server 2025・帶環境（免裝 .NET，約 100MB）");
-        Ui.Item("2", "Windows 10／2016/2019/2022・帶環境（免裝 .NET，純文字界面，約 100MB）");
-        Ui.Item("3", "Windows 11／Server 2025・不帶環境（約 60MB，需 .NET 10 Desktop Runtime）");
-        Ui.Item("4", "Windows 10／2016/2019/2022・不帶環境（約 60MB，純文字界面，需 .NET 10 Desktop Runtime）");
-        Ui.Prompt("按 1 / 2 / 3 / 4（直接按 Enter 用 1）：");
+        while (true)
+        {
+            Ui.Section("選版本", null);
+            Ui.Item("1", "Windows 11／Server 2025・帶環境（免裝 .NET，約 100MB）");
+            Ui.Item("2", "Windows 10／2016/2019/2022・帶環境（免裝 .NET，純文字界面，約 100MB）");
+            Ui.Item("3", "Windows 11／Server 2025・不帶環境（約 60MB，需 .NET 10 Desktop Runtime）");
+            Ui.Item("4", "Windows 10／2016/2019/2022・不帶環境（約 60MB，純文字界面，需 .NET 10 Desktop Runtime）");
+            Ui.Prompt("按 1 / 2 / 3 / 4（Enter＝1；~ 返回上一層）：");
 
-        string key = ReadKeyOrEmpty();
-        if (key.Length == 0) return;                       // Enter ＝ 1
-        if (key == "2") { legacy = true; return; }
-        if (key == "3") { nort = true; return; }
-        if (key == "4") { legacy = true; nort = true; return; }
-        if (key == "1") return;
-
-        Ui.Warn("看不懂「" + key + "」，用 Windows 11 帶環境版。");
+            string key = ReadKeyOrEmpty();
+            if (key == "LANGUAGE_CHANGED") continue;
+            if (key == "~") { back = true; return; }
+            if (key.Length == 0 || key == "1") return;
+            if (key == "2") { legacy = true; return; }
+            if (key == "3") { nort = true; return; }
+            if (key == "4") { legacy = true; nort = true; return; }
+            Ui.Warn("看不懂「" + key + "」，用 Windows 11 帶環境版。");
+        }
     }
 
     /// <summary>讀一個鍵；重導輸入（機器驗證）時退回空字串——選單拿預設值。</summary>
@@ -343,11 +604,27 @@ internal static class Install
     {
         try
         {
-            string k = Console.ReadKey(intercept: true).KeyChar.ToString();
+            ConsoleKeyInfo info = Console.ReadKey(intercept: true);
+            if (ChineseExecutable && char.ToUpperInvariant(info.KeyChar) == 'K')
+            {
+                SimplifiedChinese = !SimplifiedChinese;
+                Console.WriteLine();
+                Ui.Note(SimplifiedChinese ? "已切換為簡體中文。" : "已切換為繁體中文。");
+                return "LANGUAGE_CHANGED";
+            }
+            if (info.Key == ConsoleKey.Enter) { Console.WriteLine(); return ""; }
+            string k = info.KeyChar.ToString();
             Console.WriteLine(string.IsNullOrEmpty(k) ? "" : " " + k);
             return k;
         }
         catch { Console.WriteLine(); return ""; }
+    }
+
+    private static string CliAssetName(bool legacy, bool nort)
+    {
+        return legacy
+            ? (nort ? "XinSpectConsole-legacy-nort.exe" : "XinSpectConsole-legacy.exe")
+            : (nort ? "XinSpectConsole-nort.exe" : "XinSpectConsole.exe");
     }
 
     // xsc 部署：單檔下載 → 放進 Desktop\XinSpect\ → 詢問要不要開。
@@ -359,11 +636,8 @@ internal static class Install
             string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
             string dir = Path.Combine(desktop, "XinSpect");
             string dest = Path.Combine(dir, "XinSpectConsole.exe");
-            // 四顆資產：兩個 Windows 世代 × 帶不帶執行階段。落地檔名一律 XinSpectConsole.exe——
-            // 主程式強控台橋接找的是這個名字。
-            string remoteName = legacy
-                ? (nort ? "XinSpectConsole-legacy-nort.exe" : "XinSpectConsole-legacy.exe")
-                : (nort ? "XinSpectConsole-nort.exe" : "XinSpectConsole.exe");
+            // 四顆資產：兩個 Windows 世代 × 帶不帶執行階段。落地檔名一律 XinSpectConsole.exe。
+            string remoteName = CliAssetName(legacy, nort);
             string flavor = legacy ? "純文字相容版（Windows 10／Server 2016、2019、2022）"
                                    : "完整 UI 版（Windows 11／Server 2025）";
             flavor += nort ? "・不帶環境約 60MB，需 .NET 10 Desktop Runtime"
@@ -920,8 +1194,9 @@ internal static class Install
 
     // 選來源：命令列參數優先（第一個非 -xsc 的參數是來源編號，腳本與機器驗證不必有人坐在前面），
     // 沒有參數才進互動選單。編號 1/2/3；A/B 是第一層的產品鍵，不是來源編號。
-    private static Mirror ChooseMirror(List<Mirror> all, string[] args)
+    private static Mirror ChooseMirror(List<Mirror> all, string[] args, out bool back)
     {
+        back = false;
         string srcArg = null;
         if (args != null)
         {
@@ -963,24 +1238,27 @@ internal static class Install
                    + Ui.Dim + "  " + tag + (all[i].BaseUrl.Length == 0 ? "・尚未提供" : "") + Ui.Reset);
         }
         Console.WriteLine();
-        Ui.Panel(width, Ui.BoldMark() + " 選擇下載來源", rows, "Enter＝1 · GitHub 官方");
-        Ui.Prompt("按編號選擇（直接按 Enter 用 1，GitHub）：");
-
-        string key = ReadKeyOrEmpty();
-        if (key.Length == 0) return all[0];
-        key = key.Trim();
-        foreach (Mirror m in all)
+        while (true)
         {
-            if (m.Key == key)
-            {
-                if (m.BaseUrl.Length > 0) return m;
-                Ui.Warn("來源「" + key + "」這版還沒有提供（見上面的「尚未提供」），改用 GitHub。");
-                return all[0];
-            }
-        }
+            Ui.Panel(width, Ui.BoldMark() + " 選擇下載來源", rows, "Enter＝1 · GitHub 官方");
+            Ui.Prompt("按編號選擇（Enter＝1；~ 返回上一層）：");
 
-        Ui.Warn("無此選項「" + key + "」，使用第一組來源。");
-        return all[0];
+            string key = ReadKeyOrEmpty();
+            if (key == "LANGUAGE_CHANGED") continue;
+            if (key == "~") { back = true; return null; }
+            if (key.Length == 0) return all[0];
+            key = key.Trim();
+            foreach (Mirror m in all)
+            {
+                if (m.Key == key)
+                {
+                    if (m.BaseUrl.Length > 0) return m;
+                    Ui.Warn("來源「" + key + "」這版還沒有提供（見上面的「尚未提供」），改用 GitHub。");
+                    return all[0];
+                }
+            }
+            Ui.Warn("無此選項「" + key + "」，請重新選擇來源。");
+        }
     }
 
     private enum DownloadValidation
@@ -1616,18 +1894,19 @@ internal static class Install
 
         public static void Panel(int width, string title, IEnumerable<string> lines, string note)
         {
+            title = Localize(title);
             Console.WriteLine(BoxTop(width, title));
             foreach (string l in lines)
-                Console.WriteLine(BoxRow(width, l == null ? "" : l));
-            Console.WriteLine(BoxBot(width, note ?? ""));
+                Console.WriteLine(BoxRow(width, Localize(l == null ? "" : l)));
+            Console.WriteLine(BoxBot(width, Localize(note ?? "")));
         }
 
         // ── 節區標頭／條目／結果行 ──
         public static void Section(string label, string note)
         {
-            string n = note == null ? "" : "  " + Dim + note + Reset;
+            string n = note == null ? "" : "  " + Dim + Localize(note) + Reset;
             Console.WriteLine();
-            Console.WriteLine("  " + Bullet() + " " + Bold + label.ToUpperInvariant() + Reset + n);
+            Console.WriteLine("  " + Bullet() + " " + Bold + Localize(label).ToUpperInvariant() + Reset + n);
         }
 
         /// <summary>細分隔線：點串——用來隔開「來源／目標」與後面的動作區。</summary>
@@ -1638,25 +1917,26 @@ internal static class Install
 
         public static void Item(string key, string text)
         {
-            Console.WriteLine("    " + Bold + "[" + key + "]" + Reset + " " + text);
+            Console.WriteLine("    " + Bold + "[" + key + "]" + Reset + " " + Localize(text));
         }
 
         /// <summary>左標籤右內容的資訊行：標籤補白到 6 格，整齊而不喧嘩。</summary>
         public static void Info(string label, string text)
         {
-            string l = label.Length == 0 ? "" : Dim + Pad(label, 6) + Reset + " ";
+            label = Localize(label); text = Localize(text);
+            string l = label.Length == 0 ? "" : Dim + Pad(label, 10) + Reset + " ";
             Console.WriteLine("  " + l + text);
         }
 
-        public static void Ok(string msg) { Console.WriteLine("  " + OkMark() + " " + msg); }
-        public static void Warn(string msg) { Console.WriteLine("  " + Amber + Mark("⚠", "!!") + Reset + " " + msg); }
-        public static void Err(string msg) { Console.WriteLine("  " + CrossMark() + " " + msg); }
-        public static void Note(string msg) { Console.WriteLine("  " + Dim + msg + Reset); }
+        public static void Ok(string msg) { Console.WriteLine("  " + OkMark() + " " + Localize(msg)); }
+        public static void Warn(string msg) { Console.WriteLine("  " + Amber + Mark("⚠", "!!") + Reset + " " + Localize(msg)); }
+        public static void Err(string msg) { Console.WriteLine("  " + CrossMark() + " " + Localize(msg)); }
+        public static void Note(string msg) { Console.WriteLine("  " + Dim + Localize(msg) + Reset); }
 
         /// <summary>提示符：品牌紅 ＞——與 xsc 的 InputFrame 同款。</summary>
         public static void Prompt(string text)
         {
-            Console.Write(BrandRed + Bold + ">" + Reset + " " + text);
+            Console.Write(BrandRed + Bold + ">" + Reset + " " + Localize(text));
         }
 
         // ── 大字標（ANSI Shadow，借 xsc 的字母；字母間 1 格，全寬 72 欄）──
@@ -1715,17 +1995,21 @@ internal static class Install
             Console.WriteLine();
             int width = Width();
             string tip = Tips[NewRandom().Next(Tips.Length)];
+            string languageHint = ChineseExecutable
+                ? "按 K 切换到简体中文 · ~ 返回上一层"
+                : "Press ~ to return to the previous menu";
 
             if (!Fancy)
             {
                 // 純文字開場：零色彩、零框線、零定位。
                 Console.WriteLine("  X  I  N  S  P  E  C  T");
                 Console.WriteLine("  " + new string('-', Math.Min(72, Math.Max(8, width - 6))));
-                Console.WriteLine("  " + Mark("*", "*") + " 曦覽部署器 XinSpect Deploy v" + Version);
-                Console.WriteLine("  [A] Desktop 主程式   [B] CLI 終端機");
-                Console.WriteLine("  [AC] Desktop + 百科  [BC] CLI + 百科  [C] 只下載百科");
-                Console.WriteLine("  小知識：" + tip);
-                Console.WriteLine("  腳本模式：AC／BC／C 或 -xsc [-encyclopedia]；版本參數 -full -legacy -nort");
+                Console.WriteLine("  " + Mark("*", "*") + " " + Localize("曦覽部署器 XinSpect Deploy v") + Version);
+                Console.WriteLine("  " + Localize("  [A] Desktop 主程式   [B] CLI 終端機"));
+                Console.WriteLine("  " + Localize("  [AC] Desktop + 百科  [BC] CLI + 百科  [C] 只下載百科"));
+                Console.WriteLine("  " + Localize("  小知識：") + Localize(tip));
+                Console.WriteLine("  " + Localize(languageHint));
+                Console.WriteLine("  " + Localize("  腳本模式：AC／BC／C 或 -xsc [-encyclopedia]；版本參數 -full -legacy -nort"));
                 Console.WriteLine();
                 return;
             }
@@ -1748,23 +2032,24 @@ internal static class Install
             }
 
             Panel(width,
-                Mark("☼", "*") + " " + Bold + "曦覽部署器" + Reset + " " + Dim + "XinSpect Deploy v" + Version + Reset,
+                Mark("☼", "*") + " " + Bold + Localize("曦覽部署器") + Reset + " " + Dim + Localize("XinSpect Deploy v") + Version + Reset,
                 new[]
                 {
                     "",
-                    Bold + "部署內容" + Reset + Dim + " ・ 輸入代碼後按 Enter" + Reset,
-                    Bold + "[A]" + Reset + " Desktop 主程式",
-                    Bold + "[B]" + Reset + " CLI 終端機（自包含百科）",
-                    Bold + "[AC]" + Reset + " Desktop + 獨立百科",
-                    Bold + "[BC]" + Reset + " CLI + 獨立百科",
-                    Bold + "[C]" + Reset + " 只下載百科",
+                    Bold + Localize("部署內容") + Reset + Dim + Localize(" ・ 輸入代碼後按 Enter") + Reset,
+                    Bold + "[A]" + Reset + Localize(" Desktop 主程式"),
+                    Bold + "[B]" + Reset + Localize(" CLI 終端機（自包含百科）"),
+                    Bold + "[AC]" + Reset + Localize(" Desktop + 獨立百科"),
+                    Bold + "[BC]" + Reset + Localize(" CLI + 獨立百科"),
+                    Bold + "[C]" + Reset + Localize(" 只下載百科"),
                     "",
-                    Dim + "下載鏈：GitHub 官方直連 ＞ 加速節點 ＞ 遠端鏡像清單" + Reset,
-                    Dim + "放行條件：SHA256SUMS.txt 全量核對，不符即刪不裝" + Reset,
+                    Dim + Localize("下載鏈：GitHub 官方直連 ＞ 加速節點 ＞ 遠端鏡像清單") + Reset,
+                    Dim + Localize("放行條件：SHA256SUMS.txt 全量核對，不符即刪不裝") + Reset,
                     "",
-                    Dim + "小知識：" + tip + Reset,
+                    Dim + Localize("小知識：") + Localize(tip) + Reset,
+                    Dim + Localize(languageHint) + Reset,
                 },
-                "輸入 A／B／AC／BC／C；腳本模式可用 -xsc [-encyclopedia]");
+                Localize("輸入 A／B／AC／BC／C；腳本模式可用 -xsc [-encyclopedia]"));
             Console.WriteLine();
         }
 
@@ -1778,9 +2063,10 @@ internal static class Install
             if (!Fancy)
             {
                 Console.WriteLine("  " + new string('-', Math.Min(72, Math.Max(8, width - 6))));
-                Console.WriteLine("  " + left + " | " + right);
+            Console.WriteLine("  " + Localize(left) + " | " + Localize(right));
                 return;
             }
+            left = Localize(left); right = Localize(right);
             int pad = width - VisibleLength(left) - VisibleLength(right) - 3;
             if (pad < 1) pad = 1;
             Console.WriteLine(Invert + " " + left + new string(' ', pad) + right + " " + Reset);

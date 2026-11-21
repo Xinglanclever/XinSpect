@@ -41,7 +41,7 @@ internal static class Program
             var name = c.Name.Split(' ')[0];           // 「fact <關鍵字>」→ fact
             if (!names.Contains(name)) names.Add(name);
         }
-        foreach (var alias in new[] { "refresh", "mascot", "吉祥物", "百科", "quit", "q", "?", "language" })
+        foreach (var alias in new[] { "refresh", "mascot", "吉祥物", "百科", "quit", "q", "?", "language", "shortcuts" })
             if (!names.Contains(alias)) names.Add(alias);
         return names.OrderBy(n => n, StringComparer.Ordinal).ToArray();
     }
@@ -59,7 +59,7 @@ internal static class Program
         if (!CliLocalization.TryConsumeOption(args, out string[] remainingArgs, out string? languageError))
         {
             Console.Error.WriteLine(languageError);
-            Console.Error.WriteLine("Usage: xsc [--lang zh-TW|zh-CN] [command]");
+            Console.Error.WriteLine("Usage: xsc [--lang zh-T|zh-S|en] [command]");
             return 2;
         }
         args = remainingArgs;
@@ -116,7 +116,7 @@ internal static class Program
                     ? new[] { "--elevate", "--repair-ring0" }
                     : new[] { "--elevate" };
                 if (CliLocalization.Current == CliLanguage.Simplified)
-                    childArgs = [.. childArgs, "--lang", "zh-CN"];
+                    childArgs = [.. childArgs, "--lang", "zh-S"];
                 return RelaunchElevated(childArgs);
             }
         }
@@ -193,7 +193,7 @@ internal static class Program
         }
         _frameWidth = Tui.CurrentWidth();   // 提交後分隔線的固定寬度
         try { _lastWidth = Console.WindowWidth; } catch { }
-        Tui.Footer("● READY ・ 唯讀模式", "曦覽 XinSpect Console v" + AppInfo.ShortVersion);
+        Tui.Footer(CliLocalization.FooterLabel, "曦覽 XinSpect Console v" + AppInfo.ShortVersion);
         var startupStatus = StatusLine();
         int scol = Math.Max(1, _frameWidth - Tui.VisibleLength(startupStatus) - 1);
         if (Tui.Legacy) Console.WriteLine(Tui.Dim + startupStatus + Tui.Reset);
@@ -248,19 +248,26 @@ internal static class Program
                 case "lang" or "language":
                     if (string.IsNullOrWhiteSpace(rest))
                     {
-                        Console.WriteLine(CliLocalization.Current == CliLanguage.Simplified
-                            ? "目前語言：简体中文。用 lang zh-TW 或 lang zh-CN 切换。"
-                            : "目前語言：繁體中文。用 lang zh-TW 或 lang zh-CN 切換。");
+                        string language = CliLocalization.Current switch
+                        {
+                            CliLanguage.English => "English",
+                            CliLanguage.Simplified => "简体中文",
+                            _ => "繁體中文",
+                        };
+                        Console.WriteLine($"目前語言：{language}。用 lang zh-T 或 zh-S 切換；按 K 可切換 English／简体中文。");
                         return 0;
                     }
                     if (!CliLocalization.TrySet(rest))
                     {
-                        Console.WriteLine("用法：lang zh-TW | zh-CN");
+                        Console.WriteLine("用法：lang zh-T | zh-S | en");
                         return 1;
                     }
-                    Console.WriteLine(CliLocalization.Current == CliLanguage.Simplified
-                        ? "已切换到简体中文。"
-                        : "已切換至繁體中文。");
+                    Console.WriteLine(CliLocalization.Current switch
+                    {
+                        CliLanguage.English => "已切換至 English。",
+                        CliLanguage.Simplified => "已切换到简体中文。",
+                        _ => "已切換至繁體中文。",
+                    });
                     return 0;
                 case "ver":
                     Tui.Frame($"曦覽 XinSpect v{AppInfo.Version}",
@@ -274,7 +281,8 @@ internal static class Program
                 case "pages": ListPages(); return 0;
                 case "page": PageFacts(rest); return 0;
                 case "domain": DomainFacts(rest); return 0;
-                case "keys": ListKeys(rest); return 0;
+                case "keys":
+                case "shortcuts": ListKeys(rest); return 0;
                 case "settings": ShowSettings(); return 0;
                 case "safety": return SafetySettings(rest);
                 case "deepbench": return RunDeepBench(rest);
@@ -1087,18 +1095,21 @@ internal static class Program
         {
             Tui.Section("即時快照", "sys 單拍 ・ top 2 持續 ・ dash 全螢幕");
             var r = svc.Read();
-            PushHistory(r);
+            PushHistory((r.CpuT, r.GpuT, r.CpuL, r.MemL, r.CpuClock, r.CpuPower.VerifiedWatts, r.MemUsed));
             Tui.Kpi("CPU 溫度", r.CpuT, " °C", 100, warnAbove: 75, critAbove: 85);
             Console.WriteLine($"      {Dim}走勢{Reset} {Tui.Sparkline(_cpuHist, 100, 24)}");
             Tui.Kpi("CPU 負載", r.CpuL, " %", 100);
             Tui.Kpi("GPU 溫度", r.GpuT, " °C", 100, warnAbove: 75, critAbove: 85);
             Console.WriteLine($"      {Dim}走勢{Reset} {Tui.Sparkline(_gpuHist, 100, 24)}");
+            Tui.Kpi("GPU 占用", r.GpuL, " %", 100);
             Tui.Kpi("記憶體", r.MemL, " %", 100, warnAbove: 85, critAbove: 95);
             Console.WriteLine($"      {Dim}走勢{Reset} {Tui.Sparkline(_memHist, 100, 24)}");
             Tui.Separator();
             Console.WriteLine($"  {Pad("CPU 時脈", 12)}{Bold}{(r.CpuClock is null ? "——" : $"{r.CpuClock:0.00}")}{Reset}{Dim} GHz{Reset}   "
-                + $"{Pad("CPU 功率", 12)}{Bold}{(r.CpuPower is null ? "——" : $"{r.CpuPower:0.#}")}{Reset}{Dim}{(r.CpuPower is null && RaplEnergyGate.Verdict == RaplGateVerdict.NotResponding ? $" 能量計未隨負載（原始計數 0x{RaplEnergyGate.LastRawCount:X}）" : r.CpuPower is null && RaplEnergyGate.Verdict == RaplGateVerdict.NoCounter ? " 無能量計" : r.CpuPower is null && RaplEnergyGate.Verdict == RaplGateVerdict.Unknown ? " 能量計未驗證" : "")}{(LastPowerWasRapl && RaplEnergyGate.Verdict == RaplGateVerdict.Trusted ? "（RAPL）" : "")}{Reset}   "
-                + $"{Pad("記憶體用量", 12)}{Bold}{(r.MemUsed is null ? "——" : $"{r.MemUsed:0.0}")}{Reset}{Dim} GB{Reset}");
+                + $"{Pad("記憶體用量", 12)}{Bold}{FormatMemoryPair(r.MemUsed, r.MemTotal)}{Reset}{Dim}{Reset}   "
+                + $"{Pad("顯存用量", 12)}{Bold}{FormatMemoryPair(r.GpuMemoryUsed, r.GpuMemoryTotal)}{Reset}");
+            Tui.Kpi("CPU 功率", r.CpuPower.Watts, " W", 253);
+            Console.WriteLine($"  {Dim}{r.CpuPower.SourceText}{Reset}");
         }
     }
 
@@ -1122,7 +1133,7 @@ internal static class Program
                 while (true)
                 {
                     var r = svc.Read();
-                    PushHistory(r);
+                    PushHistory((r.CpuT, r.GpuT, r.CpuL, r.MemL, r.CpuClock, r.CpuPower.VerifiedWatts, r.MemUsed));
                     if (Tui.Legacy) { try { Console.SetCursorPosition(0, 0); } catch { } }
                     else Console.Write("\x1b[H");
                     Console.WriteLine($"{Tui.Dim}┌─ {Tui.Bold}XSC 即時儀表板{Tui.Reset} {Tui.Dim}{new string('─', 44)}{DateTime.Now:HH:mm:ss} ─┐{Tui.Reset}");
@@ -1130,13 +1141,15 @@ internal static class Program
                     DashRow("CPU 溫度", r.CpuT, "°C", 100, 75, 85, _cpuHist, ref _prevCpuT);
                     DashRow("CPU 負載", r.CpuL, "%", 100, null, null, null, ref _prevCpuL);
                     DashRow("GPU 溫度", r.GpuT, "°C", 100, 75, 85, _gpuHist, ref _prevGpuT);
+                    DashRow("GPU 占用", r.GpuL, "%", 100, null, null, null, ref _prevGpuL);
                     DashRow("記憶體", r.MemL, "%", 100, 85, 95, _memHist, ref _prevMem);
                     DashRow("CPU 時脈", r.CpuClock, "GHz", 6, null, null, null, ref _prevClock);
-                    DashRow("CPU 功率", r.CpuPower, "W", 253, 200, 240, null, ref _prevPower);
+                    DashRow("CPU 功率", r.CpuPower.Watts, "W", 253, 200, 240, null, ref _prevPower);
                     Console.WriteLine();
                     // P4-21：Bridge 狀態如實——_ipcEngine 是會話級快取（ipc 指令建立過就在），
                     // 不再寫死「未連線」。
-                    Console.WriteLine($"  {Tui.Dim}記憶體用量 {(r.MemUsed is null ? "——" : r.MemUsed.Value.ToString("0.0") + " GB")} ・ PCI：{(_pci?.Count.ToString() ?? "未掃（pci scan）")} 台 ・ Bridge：{(_ipcEngine is { Connected: true } ? "已連線（ipc 會話存續中）" : "本程序未連線（ipc 可建立）")}{Tui.Reset}");
+                    Console.WriteLine($"  {Tui.Dim}記憶體 {FormatMemoryPair(r.MemUsed, r.MemTotal)} ・ 顯存 {FormatMemoryPair(r.GpuMemoryUsed, r.GpuMemoryTotal)} ・ PCI：{(_pci?.Count.ToString() ?? "未掃（pci scan）")} 台 ・ Bridge：{(_ipcEngine is { Connected: true } ? "已連線（ipc 會話存續中）" : "本程序未連線（ipc 可建立）")}{Tui.Reset}");
+                    Console.WriteLine($"  {Tui.Dim}{r.CpuPower.SourceText}{Tui.Reset}{(Tui.Legacy ? "" : "\x1b[K")}");
                     Console.WriteLine();
                     Console.WriteLine($"{Tui.Dim}  q 離開 ・ 1 秒刷新{Tui.Reset}");
                     Console.Write($"{Tui.SwissRed}{Tui.Bold}xs{Tui.Reset}{Tui.SwissBlue}▸{Tui.Reset} dash");
@@ -1162,7 +1175,7 @@ internal static class Program
     }
 
     // 漲落箭頭用：與上一拍比較（溫度升＝紅▲、降＝綠▼；負載升＝黃▲）
-    private static double? _prevCpuT, _prevCpuL, _prevGpuT, _prevMem, _prevClock, _prevPower;
+    private static double? _prevCpuT, _prevCpuL, _prevGpuT, _prevGpuL, _prevMem, _prevClock, _prevPower;
 
     private static void DashRow(string label, double? v, string unit, double max,
         double? warn, double? crit, List<double?>? hist, ref double? prev)
@@ -1195,19 +1208,39 @@ internal static class Program
         using (svc)
         {
             Console.WriteLine($"{Dim}Q 或 Ctrl+C 停止。{Reset}");
-            Console.WriteLine($"  {"時間",-10}{"CPU 溫度",10}{"CPU 負載",10}{"GPU 溫度",10}{"MEM",8}");
+            string[] labels = LiveTopLabels();
+            int[] widths = labels.Select((label, index) =>
+                Math.Max(index is 6 or 8 ? 22 : 16, Tui.VisibleLength(label))).ToArray();
             // 審計 #17：TreatControlCAsInput 未開時 Ctrl+C 是 SIGINT 直接殺進程——
             // 「提示符會好好回到你手上」的承諾在這裡是假的。開了之後 Ctrl+C 是普通按鍵。
             bool prevCtrlC = false;
             try { prevCtrlC = Console.TreatControlCAsInput; } catch { }
             try { Console.TreatControlCAsInput = true; } catch { }
+            bool headerWritten = false;
             try
             {
                 while (true)
                 {
-                    var (cpuT, gpuT, cpuL, memL, _, _, _) = svc.Read();
-                    Console.WriteLine($"  {DateTime.Now.ToString("HH:mm:ss"),-10}"
-                        + $"{Heat(cpuT, 75, 85),10}{Fmt(cpuL),10}{Heat(gpuT, 75, 85),10}{Heat(memL, 85, 95),8}");
+                    var r = svc.Read();
+                    string[] values =
+                    [
+                        FormatMetric(Heat(r.CpuT, 75, 85), r.CpuT, " °C"),
+                        Fmt(r.CpuL) + (r.CpuL is null ? "" : "%"),
+                        Fmt(r.CpuPower.Watts) + (r.CpuPower.Watts is null ? "" : " W"),
+                        Fmt(r.CpuClock) + (r.CpuClock is null ? "" : " GHz"),
+                        FormatMetric(Heat(r.GpuT, 75, 85), r.GpuT, " °C"),
+                        Fmt(r.GpuL) + (r.GpuL is null ? "" : "%"),
+                        FormatMemoryPair(r.GpuMemoryUsed, r.GpuMemoryTotal),
+                        FormatMetric(Heat(r.MemL, 85, 95), r.MemL, "%"),
+                        FormatMemoryPair(r.MemUsed, r.MemTotal),
+                    ];
+                    if (!headerWritten)
+                    {
+                        WriteLiveTopValues("時間", labels, widths, header: true);
+                        headerWritten = true;
+                    }
+                    WriteLiveTopValues(DateTime.Now.ToString("HH:mm:ss"), values, widths, header: false);
+                    Console.WriteLine($"  {r.CpuPower.SourceText}");
                     // 有按鍵就檢查離開（重導輸入下 KeyAvailable 會丟例外＝沒有按鍵）
                     try
                     {
@@ -1237,6 +1270,31 @@ internal static class Program
                 try { Console.TreatControlCAsInput = prevCtrlC; } catch { }
             }
         }
+    }
+
+    internal static string[] LiveTopLabels() => CliLocalization.Current switch
+    {
+        CliLanguage.English => ["CPU °C", "CPU %", "CPU W", "CPU GHz", "GPU °C", "GPU %", "VRAM GB", "MEM %", "MEM GB"],
+        CliLanguage.Simplified => ["CPU 温度", "CPU 占用", "CPU 功率", "CPU 频率", "GPU 温度", "GPU 占用", "显存 GB", "内存占用", "内存 GB"],
+        _ => ["CPU 溫度", "CPU 占用", "CPU 功率", "CPU 頻率", "GPU 溫度", "GPU 占用", "顯存 GB", "記憶體占用", "記憶體 GB"],
+    };
+
+    internal static string FormatMemoryPair(double? used, double? total)
+        => used is double u && total is double t ? $"{u:0.0}/{t:0.0} GB"
+            : used is double onlyUsed ? $"{onlyUsed:0.0} GB"
+            : total is double onlyTotal ? $"—/{onlyTotal:0.0} GB" : "—";
+
+    /// <summary>Render every metric, wrapping complete cells onto continuation lines at narrow widths.</summary>
+    private static string FormatMetric(string formatted, double? value, string suffix)
+        => value is null ? "—" : formatted + suffix;
+
+    private static void WriteLiveTopValues(string prefix, IReadOnlyList<string> cells, IReadOnlyList<int> widths, bool header)
+    {
+        int width;
+        try { width = Math.Max(1, Console.WindowWidth - 1); }
+        catch { width = 100; }
+        foreach (string line in Tui.FormatLiveMetricCells(prefix, cells, widths, width, header))
+            Console.WriteLine(line);
     }
 
     /// <summary>超過警告／臨界門檻時把數字染黃／染紅（top 表用）。</summary>
@@ -1421,62 +1479,49 @@ internal static class Program
     }
 
     /// <summary>
-    /// Ring0 直讀 CPU 時脈與封裝功率——走 XinSpect 自己的 XsRegProbe（msr 指令同一條路，allowlist 內）。
+    /// 透過使用者選定的共用後端唯讀取樣 CPU 時脈、溫度與封裝功率。
     /// 時脈：IA32_PERF_STATUS（0x198）位元 15:8 ＝ 目前倍頻，× bus(≈100MHz)。
     /// 功率：RAPL 能量計數差分——0x606 給能量單位，0x611（PKG_ENERGY_STATUS）兩拍相除；
-    ///       LHM 0.9.6 已無內核驅動（實證：dll 裡沒有驅動資源），它的功率／時脈在沒有別家驅動的機器上是垃圾值。
-    /// 失敗一律回 null，由呼叫端退回 LHM 的值——兩邊都讀不到就顯示「——」，不編。
+    /// 直讀封裝功率須有已通過的能量計驗證；LHM 上報值另外標示來源。
     /// </summary>
-    /// <summary>上一次取樣的功率是否來自 RAPL（顯示端用來標來源）。</summary>
-    public static bool LastPowerWasRapl;
-
     private static (double? Clock, double? Power, double? Temp) Ring0CpuSample()
     {
         try
         {
+            using var use = KernelBackendHost.RouteUse(KernelCapability.MsrRead);
+            if (use.Route.Backend is not { } backend) return (null, null, null);
             double? clock = null;
-            var perf = PowerConsoleRing0Service.ReadMsr(0x198);
-            if (perf.Error is null)
+            if (backend.ReadMsr(0x198) is ulong perf)
             {
-                uint ratio = (uint)((perf.Value >> 8) & 0xFF);
+                uint ratio = (uint)((perf >> 8) & 0xFF);
                 if (ratio is > 4 and < 120) clock = ratio * 100.0 / 1000.0;   // × bus(100MHz) → GHz
             }
-
-            var unit = PowerConsoleRing0Service.ReadMsr(0x606);
-            var e1 = PowerConsoleRing0Service.ReadMsr(0x611);
-            if (unit.Error is not null || e1.Error is not null) return (clock, null, ReadCpuTemp());
-            int div = (int)((unit.Value >> 8) & 0x1F);
-            double joule = 1.0 / Math.Pow(2, div);
 
             // Passive sampling consumes only an existing validation result; it never starts a CPU load.
             if (RaplEnergyGate.Verdict == RaplGateVerdict.Trusted)
             {
+                if (backend.ReadMsr(0x606) is not ulong unit || unit == 0) return (clock, null, ReadCpuTemp(backend));
+                int div = (int)((unit >> 8) & 0x1F);
+                var elapsed = System.Diagnostics.Stopwatch.StartNew();
+                if (backend.ReadMsr(0x611) is not ulong e1) return (clock, null, ReadCpuTemp(backend));
                 System.Threading.Thread.Sleep(400);   // 能量差分窗（僅在閘門通過後才值得量）
-                var e2 = PowerConsoleRing0Service.ReadMsr(0x611);
-                if (e2.Error is not null) return (clock, null, ReadCpuTemp());
-                ulong delta = e2.Value >= e1.Value ? e2.Value - e1.Value : e2.Value + (ulong.MaxValue - e1.Value) + 1;
-                double power = delta * joule / 0.4;
-                if (power is > 0 and < 1500)
-                {
-                    LastPowerWasRapl = true;
-                    return (clock, power, ReadCpuTemp());
-                }
+                if (backend.ReadMsr(0x611) is not ulong e2) return (clock, null, ReadCpuTemp(backend));
+                uint delta = CeilingDecoder.Delta32(e1, e2);
+                double power = Math.ScaleB(delta, -div) / elapsed.Elapsed.TotalSeconds;
+                if (power is > 0 and < 1500) return (clock, power, ReadCpuTemp(backend));
             }
-            // 閘門未過（計數器與負載脫鉤）或差分超帶：不硬編功率，溫度照樣走 MSR
-            LastPowerWasRapl = false;
-            return (clock, null, ReadCpuTemp());
+            return (clock, null, ReadCpuTemp(backend));
         }
-        catch { LastPowerWasRapl = false; return (null, null, null); }
+        catch { return (null, null, null); }
     }
 
-    /// <summary>核心溫度：TjMax（0x1A2 位元 23:16）− DTS（0x19C 位元 22:16）。XsRegProbe 直讀，實測與負載同步。</summary>
-    private static double? ReadCpuTemp()
+    /// <summary>核心溫度：TjMax（0x1A2 位元 23:16）− DTS（0x19C 位元 22:16）。</summary>
+    private static double? ReadCpuTemp(IKernelBackend backend)
     {
-        var therm = PowerConsoleRing0Service.ReadMsr(0x19C);
-        var target = PowerConsoleRing0Service.ReadMsr(0x1A2);
-        if (therm.Error is not null || target.Error is not null) return null;
-        int dts = (int)((therm.Value >> 16) & 0x7F);
-        int tjMax = (int)((target.Value >> 16) & 0xFF);
+        if (backend.ReadMsr(0x19C) is not ulong therm || (therm & (1UL << 31)) == 0
+            || backend.ReadMsr(0x1A2) is not ulong target) return null;
+        int dts = (int)((therm >> 16) & 0x7F);
+        int tjMax = (int)((target >> 16) & 0xFF);
         double t = tjMax - dts;
         return t is > 0 and < 150 ? t : null;
     }
@@ -1516,20 +1561,22 @@ internal static class Program
             }
             catch { _computer = null; }
         }
-        public (double? CpuT, double? GpuT, double? CpuL, double? MemL, double? CpuClock, double? CpuPower, double? MemUsed) Read()
+        public (double? CpuT, double? GpuT, double? CpuL, double? MemL, double? CpuClock, Tui.LiveCpuPower CpuPower,
+            double? MemUsed, double? GpuL, double? GpuMemoryUsed, double? GpuMemoryTotal, double? MemTotal) Read()
         {
             double? cpuT = null, gpuT = null, cpuL = null, memL = null;
-            double? cpuClock = null, cpuPower = null, memUsed = null;
-            if (_computer is null) return (null, null, null, null, null, null, null);
+            double? cpuClock = null, cpuPower = null, memUsed = null, memAvailable = null;
+            double? gpuL = null, gpuMemoryUsed = null, gpuMemoryTotal = null;
+            if (_computer is null) return default;
             foreach (var hw in _computer.Hardware)
             {
                 hw.Update();
                 if (hw.HardwareType == LibreHardwareMonitor.Hardware.HardwareType.Cpu)
                 {
                     // 比照 GUI SensorService 的選法：溫度取第一顆、負載取 CPU Total；
-                    // 功率優先 Package，找不到就取 Power 感測器最大值（不挑第一個——第一個可能是小軌道）；
+                    // 功率只採用明確標示為封裝總量的感測器。
                     // 時脈取 Core #* 最大，沒有就取非 Bus 時脈最大（MHz→GHz）。
-                    double? pkgPower = null, maxPower = null, coreClock = null, anyClock = null;
+                    double? coreClock = null, anyClock = null;
                     foreach (var s in hw.Sensors)
                     {
                         if (s.Value is not { } v) continue;
@@ -1543,38 +1590,63 @@ internal static class Program
                             }
                             else if (!s.Name.Contains("Bus", StringComparison.OrdinalIgnoreCase) && v > (anyClock ?? 0)) anyClock = v;
                         }
-                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Power)
-                        {
-                            if (s.Name.Contains("Package", StringComparison.OrdinalIgnoreCase))
-                            {
-                                if (v > (pkgPower ?? 0)) pkgPower = v;
-                            }
-                            else if (v > (maxPower ?? 0)) maxPower = v;
-                        }
+                        cpuPower ??= Tui.ReadPackageWatts(s.Name, s.SensorType, v);
                     }
                     cpuClock = coreClock ?? anyClock;
-                    cpuPower = pkgPower ?? maxPower;
                 }
                 if (hw.HardwareType is LibreHardwareMonitor.Hardware.HardwareType.GpuNvidia or LibreHardwareMonitor.Hardware.HardwareType.GpuAmd or LibreHardwareMonitor.Hardware.HardwareType.GpuIntel)
+                {
+                    double? thisGpuLoad = null, thisGpuTemp = null, thisVramUsed = null, thisVramTotal = null;
                     foreach (var s in hw.Sensors)
-                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Temperature && gpuT is null && s.Value is { } v) gpuT = v;
+                    {
+                        if (s.Value is not { } v) continue;
+                        bool gpuCore = s.Name.Contains("GPU Core", StringComparison.OrdinalIgnoreCase)
+                            || s.Name.Equals("GPU", StringComparison.OrdinalIgnoreCase);
+                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Temperature && gpuCore)
+                            thisGpuTemp ??= v;
+                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Load
+                            && (gpuCore || s.Name.Equals("D3D 3D", StringComparison.OrdinalIgnoreCase)))
+                            thisGpuLoad ??= v;
+                        if (s.Name.Equals("GPU Memory Used", StringComparison.OrdinalIgnoreCase)
+                            || s.Name.Equals("D3D Dedicated Memory Used", StringComparison.OrdinalIgnoreCase))
+                            thisVramUsed ??= ToGigabytes(v, s.SensorType);
+                        if (s.Name.Equals("GPU Memory Total", StringComparison.OrdinalIgnoreCase))
+                            thisVramTotal ??= ToGigabytes(v, s.SensorType);
+                    }
+                    gpuT ??= thisGpuTemp;
+                    gpuL ??= thisGpuLoad;
+                    gpuMemoryUsed ??= thisVramUsed;
+                    gpuMemoryTotal ??= thisVramTotal;
+                }
                 if (hw.HardwareType == LibreHardwareMonitor.Hardware.HardwareType.Memory)
                     foreach (var s in hw.Sensors)
                     {
                         if (s.Value is not { } v) continue;
                         if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Load && memL is null) memL = v;
-                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Data && s.Name == "Used Memory") memUsed = v;
+                        if (s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Data)
+                        {
+                            if (s.Name.Equals("Memory Used", StringComparison.OrdinalIgnoreCase)
+                                || s.Name.Equals("Used Memory", StringComparison.OrdinalIgnoreCase)) memUsed = v;
+                            if (s.Name.Equals("Memory Available", StringComparison.OrdinalIgnoreCase)
+                                || s.Name.Equals("Available Memory", StringComparison.OrdinalIgnoreCase)) memAvailable = v;
+                        }
                     }
             }
-            // 功率與時脈優先用 XsRegProbe 的 Ring0 直讀（LHM 0.9.6 無驅動時這兩項是垃圾值）；
-            // XsRegProbe 讀不到才退回 LHM 的值，兩邊都沒有就是 null——顯示「——」，不編。
+            // 直讀值與感測器上報值保留不同來源與驗證狀態。
             var (r0Clock, r0Power, r0Temp) = Ring0CpuSample();
             // Ring0 的時脈已是 GHz；wrapper 對外介面是 MHz（回傳時再除 1000）——別二次除
             cpuClock = r0Clock.HasValue ? r0Clock.Value * 1000.0 : cpuClock;
-            cpuPower = RaplEnergyGate.ValidatedPower(r0Power ?? cpuPower);
+            var power = Tui.SelectCpuPower(r0Power, cpuPower, RaplEnergyGate.Verdict);
             cpuT = r0Temp ?? cpuT;   // MSR 溫度是權威值（LHM 0.9.6 無驅動時它的溫度來源不明）
-            return (cpuT, gpuT, cpuL, memL, cpuClock is null ? null : cpuClock / 1000.0, cpuPower, memUsed);
+            if (memL is null && memUsed is double used && memAvailable is double available && used + available > 0)
+                memL = used * 100.0 / (used + available);
+            double? memTotal = memUsed.HasValue && memAvailable.HasValue ? memUsed.Value + memAvailable.Value : null;
+            return (cpuT, gpuT, cpuL, memL, cpuClock is null ? null : cpuClock / 1000.0,
+                power, memUsed, gpuL, gpuMemoryUsed, gpuMemoryTotal, memTotal);
         }
+
+        private static double ToGigabytes(double value, LibreHardwareMonitor.Hardware.SensorType type)
+            => type == LibreHardwareMonitor.Hardware.SensorType.SmallData ? value / 1024.0 : value;
         /// <summary>風扇轉速：主板／SuperIO 的 Fan 感測器，附最小濾噪（0 RPM 的不列）。</summary>
         public List<(string Name, double Rpm)> ReadFans()
         {
@@ -1737,41 +1809,8 @@ internal static class Program
 
     // ── 行編輯：↑↓ 歷史、Tab 補全 ─────────────────────────────────────────
 
-    /// <summary>狀態行：面前是什麼權限（SYSTEM／administrator／標準）＋Ring0 驅動是否已註冊。
-    /// 全部如實偵測：登錄檔查 WinRing0／XsRegProbe 服務機碼，查無就是未註冊，不編造就緒。</summary>
-    private static string StatusLine()
-    {
-        string priv;
-        try
-        {
-            using var id = System.Security.Principal.WindowsIdentity.GetCurrent();
-            if (id.User == new System.Security.Principal.SecurityIdentifier("S-1-5-18"))
-                priv = "SYSTEM";
-            else if (new System.Security.Principal.WindowsPrincipal(id)
-                     .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator))
-                priv = "administrator";
-            else
-                priv = "標準權限";
-        }
-        catch { priv = "權限不明"; }
-
-        string ring0 = "ring0 未註冊";
-        try
-        {
-            using var services = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services");
-            if (services is not null)
-                foreach (var name in services.GetSubKeyNames())
-                    if (name.StartsWith("WinRing0", StringComparison.OrdinalIgnoreCase)
-                        || name.StartsWith("XsRegProbe", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ring0 = "ring0 驅動已註冊";
-                        break;
-                    }
-        }
-        catch { ring0 = "ring0 —"; }
-
-        return $"{Tui.BrandRed}●{Tui.Reset} {priv} · {ring0}";
-    }
+    /// <summary>啟動識別行，對齊終端狀態欄標示。</summary>
+    private static string StatusLine() => "Winring0.sys";
 
     private static int _lastWidth;
 
@@ -1839,11 +1878,16 @@ internal static class Program
                 int w = Tui.CurrentWidth();
                 _frameWidth = w;
                 Console.WriteLine($"{Tui.Dim}{new string('─', Math.Max(1, w - 1))}{Tui.Reset}");   // 輸入欄底線（整行・不折行）
-                var st = StatusLine();
-                int scol = Math.Max(1, w - Tui.VisibleLength(st) - 1);
-                if (Tui.Legacy) Console.WriteLine(Tui.Dim + st + Tui.Reset);
-                else Console.Write(Tui.Esc + "[" + scol + "G" + Tui.Dim + st + Tui.Reset + Environment.NewLine);
                 return buf.ToString();
+            }
+            // 空提示符按 K 切換 English／简体中文；快捷鍵清單另可用 shortcuts 呼叫。
+            if (key.Key == ConsoleKey.K && buf.Length == 0)
+            {
+                CliLocalization.ToggleEnglishSimplified();
+                Console.WriteLine();
+                Console.WriteLine(Tui.Dim + CliLocalization.LanguageCycleLabel + Tui.Reset);
+                Console.Write($"{Tui.BrandRed}{Tui.Bold}>{Tui.Reset} ");
+                continue;
             }
             if (key.Key == ConsoleKey.Backspace)
             {

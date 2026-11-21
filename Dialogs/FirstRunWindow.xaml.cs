@@ -25,6 +25,10 @@ public partial class FirstRunWindow : Window
     /// <summary>使用者選了簡體中文。</summary>
     public bool SimplifiedChinese { get; private set; }
 
+    public KernelBackendMode SelectedKernelBackendMode => BtnBackendUniversal.IsChecked == true
+        ? KernelBackendMode.UniversalAllowed
+        : BtnBackendSandbox.IsChecked == true ? KernelBackendMode.SandboxOnly : KernelBackendMode.Auto;
+
     public FirstRunWindow() => InitializeComponent();
 
     // 無邊框視窗：允許拖曳移動。

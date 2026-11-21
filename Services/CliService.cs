@@ -1515,7 +1515,7 @@ public static class CliService
             曦覽 XinSpect CLI（V7 WP32）・ headless 事實收集
 
             用法：
-              xsc --lang zh-TW|zh-CN [以下任一命令]（僅切換文字介面；JSON／SARIF 欄位與輸出不變）
+              xsc --lang zh-T|zh-S|en [以下任一命令]（僅切換文字介面；JSON／SARIF 欄位與輸出不變）
               XinSpect --agent-bridge capabilities
               XinSpect --agent-bridge collect_snapshot [--out <檔案>]
               XinSpect --agent-bridge get_fact <完整 key> [--out <檔案>]

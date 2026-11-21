@@ -46,6 +46,7 @@ public sealed class DeepBenchViewModel : ObservableObject
     private readonly IDiskIoFileSystem? _fileSystem;
     private readonly DeepBenchOrchestrator? _injectedOrchestrator;
     private readonly Func<bool> _advancedDiagnosticsEnabled;
+    private readonly Func<bool> _confirmCatConsent;
     private CancellationTokenSource? _runCancellation;
 
     public CacheBenchService Cache => _cache;
@@ -117,7 +118,8 @@ public sealed class DeepBenchViewModel : ObservableObject
         IDiskIoFileSystem? diskIoFileSystem = null,
         DeepBenchOrchestrator? orchestrator = null,
         TopDownService? topDown = null,
-        Func<bool>? advancedDiagnosticsEnabled = null)
+        Func<bool>? advancedDiagnosticsEnabled = null,
+        Func<bool>? confirmCatConsent = null)
     {
         ArgumentNullException.ThrowIfNull(cache);
         ArgumentNullException.ThrowIfNull(memBandwidth);
@@ -131,6 +133,7 @@ public sealed class DeepBenchViewModel : ObservableObject
         _fileSystem = diskIoFileSystem;
         _injectedOrchestrator = orchestrator;
         _advancedDiagnosticsEnabled = advancedDiagnosticsEnabled ?? (() => false);
+        _confirmCatConsent = confirmCatConsent ?? (() => false);
 
         foreach (DeepBenchCatalogEntry entry in DeepBenchCatalog.All) CatalogRows.Add(entry);
         ReloadHistory();
@@ -187,6 +190,13 @@ public sealed class DeepBenchViewModel : ObservableObject
         }
 
         if (!ValidateStorage(selected)) return;
+        using var catOperation = CatOperationScope.TryBegin(_confirmCatConsent);
+        if (catOperation is null)
+        {
+            StateText = "已取消啟動；未執行深測。";
+            AddError("深測已取消；未執行任何測項。");
+            return;
+        }
 
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _runCancellation = linked;

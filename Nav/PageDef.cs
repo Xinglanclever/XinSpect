@@ -33,6 +33,8 @@ public sealed class PageDef
 
     /// <summary>進入前需通過風險兩階段確認（超頻類頁面）。</summary>
     public bool RequiresRiskConsent { get; init; }
+    /// <summary>Whether opening this feature first requires the cat consent prompt.</summary>
+    public bool RequiresCatConsent { get; init; }
 
     /// <summary>
     /// 進階頁：簡易模式下不列在側邊欄。

@@ -101,6 +101,7 @@ public partial class MainWindow : Window
             var dlg = new FirstRunWindow { Owner = this };
             dlg.ShowDialog();
             _vm.Settings.SimpleMode = dlg.SimpleMode;
+            _vm.Settings.SaveKernelBackendChoice(dlg.SelectedKernelBackendMode);
             // 語言選擇
             if (_vm.Settings.IsEnglish)
                 LanguageService.SetLanguage(AppLanguage.English, _vm.Settings);
@@ -139,6 +140,12 @@ public partial class MainWindow : Window
     private void Nav_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (Nav.SelectedItem is not PageDef def) return;
+
+        if (def.RequiresCatConsent && !CatFeatureGate.Confirm(this))
+        {
+            Nav.SelectedItem = e.RemovedItems.Count > 0 ? e.RemovedItems[0] : PageRegistry.Pages[0];
+            return;
+        }
 
         // 超頻類分頁：進入前的兩階段風險確認。本次執行僅需通過一次；選「今後不再顯示」則永久略過。
         if (def.RequiresRiskConsent && !_ocRiskCleared)
@@ -352,57 +359,6 @@ public partial class MainWindow : Window
     }
 
     private void Export_Click(object sender, RoutedEventArgs e) => _vm.ExportReport();
-
-    /// <summary>
-    /// 強控台：橋接到 xsc 終端機（同一份事實引擎的終端視角）。
-    /// </summary>
-    /// <remarks>
-    /// 3.17 起 Power Console 視窗退役，改為開一個 Windows Terminal／主控台跑 xsc.exe：
-    /// xsc 既能獨立執行也能被主程式喚起，兩邊共用同一套只讀事實引擎。
-    /// 尋找順序：exe 同目錄 → 相對上層（開發機從 bin 執行時）。找不到就跳訊息框如實說明，
-    /// 不靜默失敗也不試圖自己重建 xsc。
-    /// </remarks>
-    private void Console_Click(object sender, RoutedEventArgs e)
-    {
-        string? exe = FindXsc();
-        if (exe is null)
-        {
-            MessageBox.Show(this,
-                "找不到 xsc.exe（曦覽終端機）。\n請把它放在 XinSpect.exe 同一個資料夾，或到 GitHub Release 單獨下載。",
-                "強控台", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
-        try
-        {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = exe,
-                UseShellExecute = true,   // 讓它開在自己的主控台視窗
-                WorkingDirectory = System.IO.Path.GetDirectoryName(exe),
-            });
-            _vm.StatusText = "已喚起曦覽終端機（xsc）——唯讀事實查詢，help 看指令。";
-        }
-        catch (Exception ex) { Diag.Swallow("強控台橋接 xsc", ex, "xsc.exe 啟動失敗。"); }
-    }
-
-    /// <summary>xsc.exe 的尋找：與 XinSpect.exe 同目錄優先，開發機再往專案根找一層。</summary>
-    private static string? FindXsc()
-    {
-        string dir = AppContext.BaseDirectory;
-        foreach (string candidate in new[]
-        {
-            System.IO.Path.Combine(dir, "xsc.exe"),
-            System.IO.Path.Combine(dir, "..", "..", "..", "XinSpectCli", "bin", "Debug",
-                "net10.0-windows10.0.19041.0", "win-x64", "xsc.exe"),
-            System.IO.Path.Combine(dir, "..", "..", "..", "XinSpectCli", "bin", "Release",
-                "net10.0-windows10.0.19041.0", "win-x64", "xsc.exe"),
-        })
-        {
-            string full = System.IO.Path.GetFullPath(candidate);
-            if (System.IO.File.Exists(full)) return full;
-        }
-        return null;
-    }
 
     // ===== 迷你浮動監視器 + 系統匣 =====
     private void Mini_Click(object sender, RoutedEventArgs e) => ToggleMini();

@@ -106,10 +106,12 @@ public class ReleasePipelineTests
         string release = ReadAll(RepoFile("Tools", "release.ps1"));
         Assert.Contains("XinSpect-Encyclopedia.html", release, StringComparison.Ordinal);
         Assert.Contains("百科.html", release, StringComparison.Ordinal);
-        Assert.Contains("ten assets + SHA256SUMS.txt", release, StringComparison.Ordinal);
+        Assert.Contains("eleven assets + SHA256SUMS.txt", release, StringComparison.Ordinal);
+        Assert.Contains("@('XinSpect部署器.exe', 'Installer\\XinSpect部署器.exe')", release, StringComparison.Ordinal);
 
         string mirrors = ReadAll(RepoFile("Tools", "sync-mirrors.py"));
         Assert.Contains("XinSpect-Encyclopedia.html", mirrors, StringComparison.Ordinal);
+        Assert.Contains("XinSpect部署器.exe", mirrors, StringComparison.Ordinal);
         Assert.Contains("publish-%s", mirrors, StringComparison.Ordinal);
         Assert.Contains("SHA256SUMS.txt", mirrors, StringComparison.Ordinal);
     }

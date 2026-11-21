@@ -19,6 +19,13 @@ public partial class CpuView : UserControl
 
     private MainViewModel? Vm => DataContext as MainViewModel;
 
+    private async void ReinitializeAll_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm is not { } vm) return;
+        try { await vm.ReinitializeAllAsync(); }
+        catch (Exception ex) { vm.StatusText = "重新擷取失敗：" + ex.Message; }
+    }
+
     // ===== 核心到核心延遲 =====
     /// <summary>隱形停頓：使用者按下才取樣（兩次唯讀 MSR，相隔約一秒）。</summary>
     private void InvisibleStallMeasure_Click(object sender, RoutedEventArgs e) => Vm?.InvisibleStall.Measure();

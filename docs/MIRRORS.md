@@ -27,6 +27,7 @@ GitHub Release 是一次 API 呼叫就完成（`Tools/publish_release.py`）。�
 XinSpect/latest/XinSpect.exe
 XinSpect/latest/BlueSquadronBridge.exe
 XinSpect/latest/XinSpectDeploy.exe
+XinSpect/latest/XinSpect部署器.exe
 XinSpect/latest/SHA256SUMS.txt
 ```
 

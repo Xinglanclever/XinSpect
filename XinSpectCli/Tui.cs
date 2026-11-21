@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using LibreHardwareMonitor.Hardware;
 using XinSpect;
 
 namespace XinSpectCli;
@@ -19,6 +20,33 @@ namespace XinSpectCli;
 /// </remarks>
 internal static class Tui
 {
+    internal readonly record struct LiveCpuPower(double? VerifiedWatts, double? ReportedWatts)
+    {
+        internal double? Watts => VerifiedWatts ?? ReportedWatts;
+
+        internal string SourceText => (CliLocalization.Current, VerifiedWatts, ReportedWatts) switch
+        {
+            (CliLanguage.English, not null, _) => "CPU power: RAPL (verified)",
+            (CliLanguage.English, _, not null) => "CPU power: LHM package (unverified)",
+            (CliLanguage.English, _, _) => "CPU power: no usable reading",
+            (CliLanguage.Simplified, not null, _) => "CPU 功率：RAPL（已验证）",
+            (CliLanguage.Simplified, _, not null) => "CPU 功率：LHM 封装（未验证）",
+            (CliLanguage.Simplified, _, _) => "CPU 功率：无可用读数",
+            (_, not null, _) => "CPU 功率：RAPL（已驗證）",
+            (_, _, not null) => "CPU 功率：LHM 封裝（未驗證）",
+            _ => "CPU 功率：無可用讀值",
+        };
+    }
+
+    internal static double? ReadPackageWatts(string name, SensorType type, float? raw) =>
+        type == SensorType.Power && (name.Equals("CPU Package", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("Package", StringComparison.OrdinalIgnoreCase))
+            ? SensorSanity.Plausible(type, raw) : null;
+
+    internal static LiveCpuPower SelectCpuPower(double? direct, double? reported, RaplGateVerdict verdict) =>
+        verdict == RaplGateVerdict.Trusted && direct is > 0 and < 1500 ? new(direct, null)
+            : new(null, verdict == RaplGateVerdict.NotResponding ? null : reported);
+
     // ── 色票：瑞士紅／瑞士藍／灰墨（深底終端上不刺眼的層級）——定義在上面 Legacy 區塊 ──
 
     /// <summary>
@@ -148,6 +176,142 @@ internal static class Tui
         int gap = width - VisibleLength(s);
         return gap <= 0 ? s : s + new string(' ', gap);
     }
+
+    /// <summary>Formats live metric cells into explicit continuation lines without clipping values.</summary>
+    internal static string[] FormatLiveMetricCells(string prefix, IReadOnlyList<string> cells, IReadOnlyList<int> widths, int consoleWidth, bool header)
+    {
+        if (cells.Count != widths.Count) throw new ArgumentException("Cell and width counts must match.");
+        int width = Math.Max(1, consoleWidth);
+        int indent = Math.Min(12, Math.Max(2, width / 5));
+        int prefixWidth = Math.Min(10, Math.Max(0, width - 1));
+        string first = Pad(prefix, prefixWidth) + (width - prefixWidth >= 2 ? "  " : "");
+        var lines = new List<string>();
+        var line = new StringBuilder(first);
+        int lineWidth = VisibleLength(first);
+        bool hasCell = false;
+
+        for (int i = 0; i < cells.Count; i++)
+        {
+            string cell = cells[i] ?? string.Empty;
+            int requestedWidth = Math.Max(widths[i], VisibleLength(cell));
+            int continuationCapacity = Math.Max(1, width - indent);
+
+            if (requestedWidth > continuationCapacity)
+            {
+                if (lineWidth > 0)
+                {
+                    lines.Add(line.ToString());
+                    line = new StringBuilder(new string(' ', Math.Min(indent, Math.Max(0, width - 1))));
+                    lineWidth = VisibleLength(line.ToString());
+                    hasCell = false;
+                }
+
+                foreach (string piece in SplitVisible(cell, continuationCapacity))
+                {
+                    string continuation = new string(' ', Math.Min(indent, Math.Max(0, width - 1))) + piece;
+                    lines.Add(continuation);
+                }
+                line.Clear();
+                lineWidth = 0;
+                continue;
+            }
+
+            string padded = header ? Pad(cell, requestedWidth) : PadLeftVisible(cell, requestedWidth);
+            int paddedWidth = VisibleLength(padded);
+            const int gap = 2;
+            if (hasCell && lineWidth + gap + paddedWidth > width)
+            {
+                lines.Add(line.ToString());
+                line = new StringBuilder(new string(' ', Math.Min(indent, Math.Max(0, width - 1))));
+                lineWidth = VisibleLength(line.ToString());
+                hasCell = false;
+            }
+            else if (!hasCell && lineWidth + gap + paddedWidth > width && lineWidth > 0)
+            {
+                // The prefix itself may consume a tiny terminal's whole first line.
+                lines.Add(line.ToString());
+                line = new StringBuilder(new string(' ', Math.Min(indent, Math.Max(0, width - 1))));
+                lineWidth = VisibleLength(line.ToString());
+            }
+
+            if (lineWidth + gap + paddedWidth > width)
+            {
+                foreach (string piece in SplitVisible(padded, continuationCapacity))
+                    lines.Add(new string(' ', Math.Min(indent, Math.Max(0, width - 1))) + piece);
+                line.Clear();
+                lineWidth = 0;
+                continue;
+            }
+
+            line.Append(' ', gap).Append(padded);
+            lineWidth += gap + paddedWidth;
+            hasCell = true;
+        }
+
+        if (line.Length > 0) lines.Add(line.ToString());
+        return lines.ToArray();
+    }
+
+    private static string PadLeftVisible(string text, int width)
+    {
+        int gap = width - VisibleLength(text);
+        return gap <= 0 ? text : new string(' ', gap) + text;
+    }
+
+    private static IEnumerable<string> SplitVisible(string text, int maxWidth)
+    {
+        var pieces = new List<string>();
+        var current = new StringBuilder();
+        int currentWidth = 0;
+        string activeSgr = string.Empty;
+
+        for (int i = 0; i < text.Length; i++)
+        {
+            if (text[i] == '\x1b')
+            {
+                int end = i + 1;
+                if (end < text.Length && text[end] == '[')
+                {
+                    end++;
+                    while (end < text.Length && text[end] >= '\u0020' && text[end] <= '\u003f') end++;
+                    if (end < text.Length && text[end] >= '\u0040' && text[end] <= '\u007e') end++;
+                }
+                else
+                {
+                    while (end < text.Length && text[end] != '\u0007') end++;
+                    if (end < text.Length) end++;
+                }
+                string escape = text[i..end];
+                current.Append(escape);
+                if (escape.StartsWith("\x1b[", StringComparison.Ordinal) && escape.EndsWith('m'))
+                    activeSgr = escape.Contains("[0m", StringComparison.Ordinal) ? string.Empty : escape;
+                i = end - 1;
+                continue;
+            }
+
+            int charWidth = VisibleCharWidth(text[i]);
+            if (currentWidth > 0 && currentWidth + charWidth > maxWidth)
+            {
+                if (activeSgr.Length > 0) current.Append("\x1b[0m");
+                pieces.Add(current.ToString());
+                current.Clear();
+                if (activeSgr.Length > 0) current.Append(activeSgr);
+                currentWidth = 0;
+            }
+            current.Append(text[i]);
+            currentWidth += charWidth;
+        }
+
+        if (current.Length > 0) pieces.Add(current.ToString());
+        return pieces;
+    }
+
+    private static int VisibleCharWidth(char c)
+        => char.GetUnicodeCategory(c) == System.Globalization.UnicodeCategory.OtherLetter
+           || (c >= '\uFF01' && c <= '\uFF60')
+           || (c >= '\u3000' && c <= '\u303F')
+           || (c >= '\u2190' && c <= '\u2199')
+           || (c >= '\u2733' && c <= '\u2743') ? 2 : 1;
 
     private static int ConsoleWidth()
     {
@@ -943,8 +1107,8 @@ internal static class Tui
         },
     ];
 
-    /// <summary>目前選用的候選（預設 A）。</summary>
-    public static int MascotChoice;
+    /// <summary>目前選用的候選（預設旋轉地球＋Global Village）。</summary>
+    public static int MascotChoice = 2;
 
     public static string[][] MascotFrames => MascotCandidates[MascotChoice];
 

@@ -77,12 +77,12 @@ try {
     Ok 'preflight: every tracked-buildable .cs is in git'
 
     # ---------- preflight: 安裝器必須現編，不能上傳上一次的成品 ----------
-    # Installer/XinSpectDeploy.exe 是二進位檔：改了 Install.cs 而忘了重編不會有任何編譯錯誤，
+    # Installer 的部署器雙檔名都是二進位檔：改了 Install.cs 而忘了重編不會有任何編譯錯誤，
     # 只會安靜地上傳一個舊安裝器。每次發佈都在這裡重編一次，有改動就一起進發佈提交。
     Write-Host '==> preflight (installer rebuild)'
     & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'build-installer.ps1')
     if ($LASTEXITCODE -ne 0) { Fail 'installer build failed' }
-    $deployChanged = git status --porcelain -- 'Installer/XinSpectDeploy.exe'
+    $deployChanged = git status --porcelain -- 'Installer/XinSpectDeploy.exe' 'Installer/XinSpect部署器.exe'
     if ($deployChanged) { Write-Host "  note: installer rebuilt; it will be part of the release commit" }
     Ok 'preflight: installer rebuilt from Install.cs'
 
@@ -238,7 +238,7 @@ try {
     if (-not (Test-Path $driverSys)) { Fail "driver asset missing after build: $driverSys" }
     Ok "driver $driverSys = $((Get-Item $driverSys).Length) bytes"
 
-    # 十件清單（百科 HTML 是 Desktop 點擊下載的獨立資產）
+    # 十一件清單（英／中部署器別名均保留；百科 HTML 是 Desktop 點擊下載的獨立資產）
     $assets = @(
         @('XinSpect.exe', "$P\XinSpect.exe"),
         @('XinSpect-full.exe', "$P\XinSpect-full.exe"),
@@ -248,6 +248,7 @@ try {
         @('XinSpectConsole-legacy-nort.exe', "$P\XinSpectConsole-legacy-nort.exe"),
         @('BlueSquadronBridge.exe', "$P-bridge\BlueSquadronBridge.exe"),
         @('XinSpectDeploy.exe', 'Installer\XinSpectDeploy.exe'),
+        @('XinSpect部署器.exe', 'Installer\XinSpect部署器.exe'),
         @('XsRegProbe.sys', 'XsRegProbe\Driver\x64build\XsRegProbe.sys'),
         @('XinSpect-Encyclopedia.html', '百科.html')
     )
@@ -290,7 +291,7 @@ try {
     }
 
     # ---------- release + assets ----------
-    Write-Host '==> create/update Release and upload ten assets + SHA256SUMS.txt'
+    Write-Host '==> create/update Release and upload eleven assets + SHA256SUMS.txt'
     $bridge = "$P-bridge\BlueSquadronBridge.exe"
     if (-not (Test-Path $bridge)) { Fail "bridge asset source missing: $bridge" }
 
