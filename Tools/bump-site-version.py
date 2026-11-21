@@ -3,7 +3,22 @@
 # 用法：python -I -X utf8 Tools/bump-site-version.py
 # 依賴：先跑過 python -I Tools/gen-site-data.py（changelog.json 已是最新）。
 import io, json, re, sys
+import subprocess
 import urllib.request
+
+def gh_token():
+    try:
+        out = subprocess.run(
+            ["git", "credential", "fill"],
+            input="protocol=https" + chr(10) + "host=github.com" + chr(10) + chr(10),
+            capture_output=True, text=True, timeout=15,
+        ).stdout
+        for line in out.splitlines():
+            if line.startswith("password="):
+                return line[9:]
+    except Exception:
+        pass
+    return None
 
 NL = chr(10)
 ROOT = __file__.rsplit("\\Tools", 1)[0] if "\\Tools" in __file__ else "."
@@ -32,9 +47,13 @@ N = len(entries)
 # GitHub latest release 實況（含資產大小；失敗則沿用頁面現值）
 gh = {}
 try:
+    _req_headers = {"User-Agent": "xs-site-sync"}
+    _tok = gh_token()
+    if _tok:
+        _req_headers["Authorization"] = "Bearer " + _tok
     req = urllib.request.Request(
         "https://api.github.com/repos/Xinglanclever/XinSpect/releases/latest",
-        headers={"User-Agent": "xs-site-sync"})
+        headers=_req_headers)
     rel = json.load(urllib.request.urlopen(req, timeout=30))
     if rel.get("tag_name") == "v" + V:
         gh = {a["name"]: format(a["size"], ",") for a in rel.get("assets", [])}
