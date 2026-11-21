@@ -5,7 +5,13 @@
   <description>唯讀的 Windows 硬體事實採集器——版本更新紀錄（最新 20 筆，全程見官網）</description>
   <language>zh-Hant</language>
   <generator>XinSpect site tools (Tools/gen-site-data.py)</generator>
-  <lastBuildDate>2026-11-18T00:00:00Z</lastBuildDate>
+  <lastBuildDate>2026-11-21T00:00:00Z</lastBuildDate>
+    <item>
+      <title>3.32 — 百科下載與桌面部署功能更新</title>
+      <link>https://xinspect.de5.net/#log-v3.32</link>
+      <guid isPermaLink="false">xinspect-3.32</guid>
+      <pubDate>2026-11-21T00:00:00Z</pubDate>
+    </item>
     <item>
       <title>3.31 — 特別版：CLI 記憶體來源與 PCIe ECAM 邊界硬化</title>
       <link>https://xinspect.de5.net/#log-v3.31</link>
@@ -119,11 +125,5 @@
       <link>https://xinspect.de5.net/#log-v3.12</link>
       <guid isPermaLink="false">xinspect-3.12</guid>
       <pubDate>2026-11-01T00:00:00Z</pubDate>
-    </item>
-    <item>
-      <title>3.11 — 介面換成瑞士現代風格與 Helvetica（測試版）</title>
-      <link>https://xinspect.de5.net/#log-v3.11</link>
-      <guid isPermaLink="false">xinspect-3.11</guid>
-      <pubDate>2026-10-31T00:00:00Z</pubDate>
     </item>
 </channel></rss>

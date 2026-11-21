@@ -39,8 +39,13 @@ public static class AcpiDmarFactsService
             return [Unavailable(SummaryKey, "DMAR 彙總", at, FactAvailability.NotSupported,
                 "ACPI 表來源不可用（需要管理員權限或韌體不提供）")];
 
+        var tables = source.ReadAll();
+        if (!source.Available)
+            return [Unavailable(SummaryKey, "DMAR 彙總", at, FactAvailability.ReadError,
+                source.UnavailableReason ?? "讀取 ACPI 表時來源失效")];
+
         byte[]? dmar = null;
-        foreach (var table in source.ReadAll())
+        foreach (var table in tables)
         {
             if (AcpiTable.TryParseHeader(table, out var header)
                 && string.Equals(header.Signature, "DMAR", StringComparison.OrdinalIgnoreCase))

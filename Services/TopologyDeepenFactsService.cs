@@ -43,16 +43,24 @@ public static class TopologyDeepenFactsService
     /// <summary>WP21：NUMA 節點距離（SLIT）。無表＝NotApplicable。</summary>
     public static IReadOnlyList<HardwareFact> CollectNumaDistance(DateTimeOffset at, IAcpiTableSource acpi)
     {
+        if (!acpi.Available)
+            return [new HardwareFact("numa.slit.nodes", CategoryNuma, "NUMA 節點距離（SLIT）", "", "",
+                "ACPI 表列（SLIT）", FactTrustLevel.Unknown, false, at, null, FactAvailability.InsufficientPrivilege,
+                acpi.UnavailableReason ?? "無法列舉 ACPI 表")];
+
+        var tables = acpi.ReadAll();
+        if (!acpi.Available)
+            return [new HardwareFact("numa.slit.nodes", CategoryNuma, "NUMA 節點距離（SLIT）", "", "",
+                "ACPI 表列（SLIT）", FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError,
+                acpi.UnavailableReason ?? "讀取 ACPI 表時來源失效")];
+
         byte[]? slit = null;
-        if (acpi.Available)
+        foreach (var table in tables)
         {
-            foreach (var table in acpi.ReadAll())
+            if (AcpiTable.TryParseHeader(table, out var header) && header.Signature == "SLIT")
             {
-                if (AcpiTable.TryParseHeader(table, out var header) && header.Signature == "SLIT")
-                {
-                    slit = table;
-                    break;
-                }
+                slit = table;
+                break;
             }
         }
         if (slit is null)

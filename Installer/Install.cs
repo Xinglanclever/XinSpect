@@ -2,13 +2,41 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Text;
 using System.Security.Principal;
+using System.Threading;
 
+/// <summary>
+/// 曦覽部署器（XinSpectDeploy.exe）——畫風整版翻新（仿曦覽終端機 XinSpectCli 的瑞士平面語彙）。
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>畫風裁決：</b>與 xsc 同一個 Tui 語彙——品牌紅 #E30613、直角框（╭─╮，框線一律 CHA
+/// 絕對定位，不做寬度計算）、■ 大寫小標、⏺／✕／⚠ 結果行、braille spinner、
+/// ANSI Shadow 大字標。歡迎框／提示符／進度條全部對齊終端機的樣子。
+/// </para>
+/// <para>
+/// <b>降級規則：</b>啟動時先打開 conhost 的 ENABLE_VIRTUAL_TERMINAL_PROCESSING；
+/// 打不開（Windows 8.1、重導輸出、極舊主控台）就整體退回純文字——無色彩、無框線、
+/// ASCII spinner、ASCII 進度條。所有「長得像圖案」的字元一律經 <see cref="Ui.Mark"/>，
+/// 純文字版拿到的必是 ASCII。
+/// </para>
+/// <para>
+/// <b>語法紀律：</b>這支仍由 .NET Framework 4.8 的 csc.exe 直編（見 Tools\build-installer.ps1），
+/// 只能寫 C# 5——沒有插值字串、沒有 ?.／??=、沒有 expression-bodied member。編譯會紅，不會悄悄過。
+/// </para>
+/// <para>
+/// <b>不變的部分：</b>下載與信任根邏輯一字未動——SHA256SUMS.txt 為唯一放行條件、
+/// mirrors.txt v2 格式、下載備援鏈、PE／大小／斷線檢查。Installer\tests\ProgressTest.cs
+/// 以反射直接驗編譯後 exe 的 ProgressBar 與 RunDownload，改壞了會被它擋下來。
+/// </para>
+/// </remarks>
 internal static class Install
 {
+    // 部署器自己的版本號（UserAgent 與開場面板共用）。跟著主專案版號走，發版時順手改這裡。
+    private const string Version = "3.28";
+
     // 一個下載來源。Direct=true 時 BaseUrl 是「檔案所在目錄」，安裝器自己抓；
     // Direct=false 時 BaseUrl 是分享頁，安裝器只開瀏覽器並說清楚要按什麼。
     // 要用哪一種，看的是**端點本身**：只有真的能用 GET 取回目錄下檔案的
@@ -78,11 +106,9 @@ internal static class Install
     {
         try { Console.OutputEncoding = Encoding.UTF8; } catch { }
 
-        Console.WriteLine();
-        Console.WriteLine("  ==========================================");
-        Console.WriteLine("     XiLan XinSpect Auto Deploy");
-        Console.WriteLine("  ==========================================");
-        Console.WriteLine();
+        // 畫面件最先就位：VT 開不起來的環境整體退回純文字（見 Ui.EnableAnsi）。
+        Ui.EnableAnsi();
+        Ui.Welcome();
 
         // TLS13 在部分 Windows 上不存在：先試最全的，不行就退回穩態組合。
         try
@@ -103,18 +129,36 @@ internal static class Install
         bool legacy = false, nort = false, full = false;
         if (xsc) ChooseCliFlavor(args, out legacy, out nort);
         else full = ChooseDesktopFull(args);
+
+        Ui.Busy("拉取鏡像清單 mirrors.txt");
         List<Mirror> all = LoadMirrors();
+        Ui.BusyAbort();
+        FlushNotices();
+
         Mirror chosen = ChooseMirror(all, args);
         if (chosen == null) { Pause(); return 2; }
 
         // 官方總雜湊清單：整個部署抓一次、所有檔共用。null＝一份都拿不到——
         // 各 Deploy* 內的 RequireHash 會據此拒裝並三態告知，不在這裡提早退出
         // （page 模式的「開瀏覽器」不需要雜湊，退出會把那條活路也關掉）。
+        Ui.Busy("取得官方總雜湊清單 SHA256SUMS.txt");
         HashList hashes = FetchShaSums(chosen);
         if (hashes == null)
-            Console.WriteLine("  ⚠ 無法取得官方總雜湊清單（SHA256SUMS.txt）——直連下載將被拒絕。");
+            Ui.BusyEnd(false, "無法取得官方總雜湊清單（SHA256SUMS.txt）——直連下載將被拒絕");
+        else
+            Ui.BusyEnd(true, "信任根就位：" + hashes.Via);
 
         return xsc ? DeployXsc(chosen, legacy, nort, hashes) : DeployGui(chosen, full, hashes);
+    }
+
+    // 遠端清單解析過程中的警告（對內建來源的覆寫、缺雜湊的 direct 條目）先收著——
+    // spinner 還在轉的時候印出來會被 \r 重畫洗掉，等 BusyAbort 之後一次倒出來。
+    private static readonly List<string> PendingNotices = new List<string>();
+
+    private static void FlushNotices()
+    {
+        for (int i = 0; i < PendingNotices.Count; i++) Ui.Warn(PendingNotices[i]);
+        PendingNotices.Clear();
     }
 
     // 決定某檔的「必過雜湊」。規則（分層加固的核心）：
@@ -156,29 +200,14 @@ internal static class Install
             return true;
         }
 
-        Console.WriteLine("  要安裝什麼：");
-        Console.WriteLine();
-        Console.WriteLine("    [A] XinSpect.exe 主程式（GUI，含守護進程與驅動）");
-        Console.WriteLine("    [B] XinSpectConsole.exe 曦覽終端機（CLI，單檔自含執行階段、唯讀事實查詢）");
-        Console.WriteLine();
-        Console.Write("  按 A 或 B 選擇（直接按 Enter 預設 A，主程式）：");
-
-        string key = "";
-        try
-        {
-            key = Console.ReadKey(intercept: true).KeyChar.ToString();
-            Console.WriteLine(string.IsNullOrEmpty(key) ? "" : " " + key);
-        }
-        catch { Console.WriteLine(); }
-        Console.WriteLine();
-
-        if (string.IsNullOrEmpty(key) || key == "\r" || key == "\n") return false;   // Enter ＝ 主程式
+        Ui.Prompt("按 A 或 B 選擇（直接按 Enter 預設 A，主程式）：");
+        string key = ReadKeyOrEmpty();
+        if (key.Length == 0) return false;   // Enter ＝ 主程式
         key = key.Trim().ToUpperInvariant();
         if (key == "B") return true;
         if (key == "A") return false;
 
-        Console.WriteLine("  看不懂「" + key + "」，改裝主程式。");
-        Console.WriteLine();
+        Ui.Warn("看不懂「" + key + "」，改裝主程式。");
         return false;
     }
 
@@ -195,20 +224,15 @@ internal static class Install
             return true;
         }
 
-        Console.WriteLine("  選版本：");
-        Console.WriteLine();
-        Console.WriteLine("    [1] 不帶環境（約 36MB；機器要已裝 .NET 10 Desktop Runtime）");
-        Console.WriteLine("    [2] 帶環境（免裝 .NET，單檔較大）");
-        Console.WriteLine();
-        Console.Write("  按 1 或 2（直接按 Enter 用 1）：");
+        Ui.Section("選版本", "1 不帶環境（約 36MB，需 .NET 10 Desktop Runtime）・2 帶環境（免裝，單檔較大）");
+        Ui.Prompt("按 1 或 2（直接按 Enter 用 1）：");
 
         string key = ReadKeyOrEmpty();
         if (key.Length == 0) return false;   // Enter ＝ 不帶環境（現在版）
         if (key == "2") return true;
         if (key == "1") return false;
 
-        Console.WriteLine("  看不懂「" + key + "」，用不帶環境的現在版。");
-        Console.WriteLine();
+        Ui.Warn("看不懂「" + key + "」，用不帶環境的現在版。");
         return false;
     }
 
@@ -233,14 +257,12 @@ internal static class Install
             if (legacy || nort) return;   // 參數給齊就不問
         }
 
-        Console.WriteLine("  選版本：");
-        Console.WriteLine();
-        Console.WriteLine("    [1] Windows 11／Server 2025・帶環境（免裝 .NET，約 100MB）");
-        Console.WriteLine("    [2] Windows 10／2016/2019/2022・帶環境（免裝 .NET，純文字界面，約 100MB）");
-        Console.WriteLine("    [3] Windows 11／Server 2025・不帶環境（約 60MB，需 .NET 10 Desktop Runtime）");
-        Console.WriteLine("    [4] Windows 10／2016/2019/2022・不帶環境（約 60MB，純文字界面，需 .NET 10 Desktop Runtime）");
-        Console.WriteLine();
-        Console.Write("  按 1 / 2 / 3 / 4（直接按 Enter 用 1）：");
+        Ui.Section("選版本", null);
+        Ui.Item("1", "Windows 11／Server 2025・帶環境（免裝 .NET，約 100MB）");
+        Ui.Item("2", "Windows 10／2016/2019/2022・帶環境（免裝 .NET，純文字界面，約 100MB）");
+        Ui.Item("3", "Windows 11／Server 2025・不帶環境（約 60MB，需 .NET 10 Desktop Runtime）");
+        Ui.Item("4", "Windows 10／2016/2019/2022・不帶環境（約 60MB，純文字界面，需 .NET 10 Desktop Runtime）");
+        Ui.Prompt("按 1 / 2 / 3 / 4（直接按 Enter 用 1）：");
 
         string key = ReadKeyOrEmpty();
         if (key.Length == 0) return;                       // Enter ＝ 1
@@ -249,8 +271,7 @@ internal static class Install
         if (key == "4") { legacy = true; nort = true; return; }
         if (key == "1") return;
 
-        Console.WriteLine("  看不懂「" + key + "」，用 Windows 11 帶環境版。");
-        Console.WriteLine();
+        Ui.Warn("看不懂「" + key + "」，用 Windows 11 帶環境版。");
     }
 
     /// <summary>讀一個鍵；重導輸入（機器驗證）時退回空字串——選單拿預設值。</summary>
@@ -279,46 +300,50 @@ internal static class Install
             string remoteName = legacy
                 ? (nort ? "XinSpectConsole-legacy-nort.exe" : "XinSpectConsole-legacy.exe")
                 : (nort ? "XinSpectConsole-nort.exe" : "XinSpectConsole.exe");
-            string flavor = legacy ? "plain-text legacy build for Windows 10 / Server 2016, 2019, 2022"
-                                   : "full UI build for Windows 11 / Server 2025";
-            flavor += nort ? "; needs .NET 10 Desktop Runtime, ~60MB"
-                           : "; includes .NET 10 runtime, ~100MB";
+            string flavor = legacy ? "純文字相容版（Windows 10／Server 2016、2019、2022）"
+                                   : "完整 UI 版（Windows 11／Server 2025）";
+            flavor += nort ? "・不帶環境約 60MB，需 .NET 10 Desktop Runtime"
+                           : "・自含執行階段約 100MB";
 
-            Console.WriteLine("  Source : " + chosen.Name);
-            Console.WriteLine("  Target : " + dest);
-            Console.WriteLine();
+            Ui.Section("來源 / 目標", null);
+            Ui.Info("來源", chosen.Name);
+            Ui.Info("目標", dest);
+            Ui.Rule();
             Directory.CreateDirectory(dir);
 
             if (!chosen.Direct)
             {
                 // 分享頁：只開瀏覽器，不假裝自己抓得到。檔名用全名——xsc.exe 已不存在於 Release。
-                Console.WriteLine("  [1/1] 已開啟分享頁。請在瀏覽器按「下載」，把 " + remoteName + " 放到：");
-                Console.WriteLine("        " + dir);
-                Console.WriteLine("        " + chosen.BaseUrl);
-                Process.Start(new ProcessStartInfo(chosen.BaseUrl) { UseShellExecute = true });
+                Panel(chosen.BaseUrl);
                 Console.WriteLine();
-                Console.WriteLine("  ==========================================");
-                Console.WriteLine("  下載完成後，把它改名成 XinSpectConsole.exe 放進上面那個資料夾就能直接執行。");
-                Console.WriteLine("  ==========================================");
-                Console.WriteLine();
+                Ui.Panel(Width(),
+                    Ui.BoldMark() + " 手動放置",
+                    new[]
+                    {
+                        "請在瀏覽器按「下載」，把 " + remoteName + " 放到：",
+                        Ui.Dim + dir + Ui.Reset,
+                        "下載完成後改名成 XinSpectConsole.exe，放進上面那個資料夾就能直接執行。",
+                    },
+                    null);
+                Footer();
                 Pause();
                 return 0;
             }
 
-            Console.WriteLine("  [1/2] Downloading " + remoteName + " (" + flavor + ")...");
+            Ui.Section("1/2 · 下載", remoteName + "（" + flavor + "）");
             DownloadFileWithFallback(chosen, remoteName, dest, 1, 2, requireProgram: true, expectSha: RequireHash(hashes, chosen, remoteName));
 
-            Console.WriteLine("  [2/2] Deployed to Desktop\\XinSpect folder.");
             Console.WriteLine();
-            Console.WriteLine("  ==========================================");
-            Console.WriteLine("  Deploy complete.");
-            Console.WriteLine(legacy
-                ? "  - XinSpectConsole.exe（曦覽終端機・純文字相容版；read-only hardware facts console）"
-                : "  - XinSpectConsole.exe（曦覽終端機；read-only hardware facts console）");
-            Console.WriteLine("  Location: Desktop\\XinSpect\\");
-            Console.WriteLine("  ==========================================");
-            Console.WriteLine();
-            Console.Write("  現在就開啟曦覽終端機嗎？按 Y 開啟，其他鍵跳過：");
+            Ui.Panel(Width(),
+                Ui.BoldMark() + " 部署完成",
+                new[]
+                {
+                    Ui.CheckMark() + " XinSpectConsole.exe" + Ui.Dim + "（曦覽終端機・唯讀硬體事實查詢）" + Ui.Reset,
+                    Ui.Dim + "位置：" + dir + Ui.Reset,
+                },
+                null);
+
+            Ui.Prompt("現在就開啟曦覽終端機嗎？按 Y 開啟，其他鍵跳過：");
             bool launch = false;
             try
             {
@@ -334,16 +359,15 @@ internal static class Install
                 try
                 {
                     Process.Start(new ProcessStartInfo(dest) { UseShellExecute = true });
+                    Ui.Ok("已啟動 XinSpectConsole.exe");
                 }
                 catch (Exception launchEx)
                 {
-                    Console.WriteLine();
-                    Console.WriteLine("  啟動失敗（" + launchEx.Message + "）。如果是 nort（不帶環境）版本，請先安裝 .NET 10 Desktop Runtime：");
-                    Console.WriteLine("    https://dotnet.microsoft.com/download/dotnet/10.0");
+                    Ui.Warn("啟動失敗（" + launchEx.Message + "）。如果是 nort（不帶環境）版本，請先安裝 .NET 10 Desktop Runtime：");
+                    Ui.Info("", "https://dotnet.microsoft.com/download/dotnet/10.0");
                 }
             }
-            Console.WriteLine();
-            Console.WriteLine("  Press any key to close...");
+            Footer();
             Pause();
             return 0;
         }
@@ -360,61 +384,67 @@ internal static class Install
             string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
             string dir = Path.Combine(desktop, "XinSpect");
 
-            Console.WriteLine("  Source : " + chosen.Name);
-            Console.WriteLine("  Target : " + dir);
-            Console.WriteLine();
+            Ui.Section("來源 / 目標", null);
+            Ui.Info("來源", chosen.Name);
+            Ui.Info("目標", dir);
+            Ui.Rule();
             Directory.CreateDirectory(dir);
 
             if (!chosen.Direct)
             {
                 // 分享頁：只開瀏覽器。網盤的下載要過頁面上的按鈕，有的還要登入或驗證碼——
                 // 安裝器不該代使用者按，也不該把分享頁存成 exe。
-                Console.WriteLine("  [1/1] 已開啟分享頁。請在瀏覽器按「下載」，把 " + (full ? "XinSpect-full.exe" : "XinSpect.exe") + " 放到：");
-                Console.WriteLine("        " + dir);
-                Console.WriteLine("        " + chosen.BaseUrl);
-                Process.Start(new ProcessStartInfo(chosen.BaseUrl) { UseShellExecute = true });
-
+                Panel(chosen.BaseUrl);
                 Console.WriteLine();
-                Console.WriteLine("  ==========================================");
-                Console.WriteLine("  下載完成後，把 XinSpect.exe 放進上面那個資料夾就能直接執行。");
-                Console.WriteLine("  想全自動部署（含守護進程）請重新執行本程式，選 A 後按 1（GitHub）。");
-                Console.WriteLine("  ==========================================");
-                Console.WriteLine();
+                Ui.Panel(Width(),
+                    Ui.BoldMark() + " 手動放置",
+                    new[]
+                    {
+                        "請在瀏覽器按「下載」，把 " + (full ? "XinSpect-full.exe" : "XinSpect.exe") + " 放到：",
+                        Ui.Dim + dir + Ui.Reset,
+                        "下載完成後把 XinSpect.exe 放進上面那個資料夾就能直接執行。",
+                        Ui.Dim + "想全自動部署（含守護進程）請重新執行本程式，選 A 後按 1（GitHub）。" + Ui.Reset,
+                    },
+                    null);
+                Footer();
                 Pause();
                 return 0;
             }
 
             string guiRemote = full ? "XinSpect-full.exe" : "XinSpect.exe";
-            Console.WriteLine("  [1/5] Downloading " + guiRemote + " (includes LHM + WinRing0 driver + BlueSquadron)...");
+            Ui.Section("1/5 · 下載主程式", guiRemote + "（含 LHM＋WinRing0 驅動＋BlueSquadron）");
             DownloadFileWithFallback(chosen, guiRemote, Path.Combine(dir, "XinSpect.exe"), 1, 5, requireProgram: true, expectSha: RequireHash(hashes, chosen, guiRemote));
 
-            Console.WriteLine("  [2/5] Downloading BlueSquadronBridge.exe...");
+            Ui.Section("2/5 · 下載守護進程", "BlueSquadronBridge.exe（獨立守護）");
             DownloadFileWithFallback(chosen, "BlueSquadronBridge.exe", Path.Combine(dir, "BlueSquadronBridge.exe"), 2, 5, requireProgram: true, expectSha: RequireHash(hashes, chosen, "BlueSquadronBridge.exe"));
 
             // 深層核心存取的驅動：程式按「開啟」會自己簽章＋裝服務，但檔案必須先就位。
             // 3.17 起驅動檔不隨 Release 下發——這一步會如實說「未附」，不會假裝成功。
-            Console.WriteLine("  [3/5] Deploying XsRegProbe.sys (deep kernel access driver)...");
+            Ui.Section("3/5 · 部署核心驅動", "XsRegProbe.sys（深層核心存取）");
             string driverNote = DeployDriver(chosen, dir, hashes);
+            Ui.Ok(driverNote);
 
-            Console.WriteLine("  [4/5] Deployed to Desktop\\XinSpect folder.");
-
-            Console.WriteLine("  [5/5] Launching XinSpect...");
+            Ui.Section("4/5 · 就位", "已放進 Desktop\\XinSpect\\");
+            Ui.Section("5/5 · 啟動", "XinSpect.exe");
             Console.WriteLine();
             string exe = Path.Combine(dir, "XinSpect.exe");
             if (File.Exists(exe))
             {
-                try { Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true }); } catch { }
+                try { Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true }); Ui.Ok("已啟動 XinSpect.exe"); } catch { }
             }
 
-            Console.WriteLine("  ==========================================");
-            Console.WriteLine("  Deploy complete.");
-            Console.WriteLine("  - XinSpect.exe (includes WinRing0 + LHM + BlueSquadron)");
-            Console.WriteLine("  - BlueSquadronBridge.exe (standalone guard)");
-            Console.WriteLine("  - " + driverNote);
-            Console.WriteLine("  Location: Desktop\\XinSpect\\");
-            Console.WriteLine("  ==========================================");
             Console.WriteLine();
-            Console.WriteLine("  Press any key to close...");
+            Ui.Panel(Width(),
+                Ui.BoldMark() + " 部署完成",
+                new[]
+                {
+                    Ui.CheckMark() + " XinSpect.exe" + Ui.Dim + "（含 WinRing0＋LHM＋BlueSquadron）" + Ui.Reset,
+                    Ui.CheckMark() + " BlueSquadronBridge.exe" + Ui.Dim + "（獨立守護進程）" + Ui.Reset,
+                    Ui.CheckMark() + " " + driverNote,
+                    Ui.Dim + "位置：" + dir + Ui.Reset,
+                },
+                null);
+            Footer();
             Pause();
             return 0;
         }
@@ -427,14 +457,27 @@ internal static class Install
     private static int DeployFailed(Exception ex)
     {
         Console.WriteLine();
-        Console.WriteLine("  Deploy failed: " + ex.Message);
+        Ui.Err("部署失敗：" + ex.Message);
         Console.WriteLine();
-        Console.WriteLine("  Manual download:");
-        Console.WriteLine("    https://github.com/Xinglanclever/XinSpect/releases");
-        Console.WriteLine();
-        Console.WriteLine("  Press any key to close...");
+        Ui.Panel(Width(),
+            Ui.BoldMark() + " 手動下載",
+            new[]
+            {
+                "https://github.com/Xinglanclever/XinSpect/releases",
+            },
+            null);
+        Footer();
         Pause();
         return 1;
+    }
+
+    // page 模式的「開瀏覽器」收在它自己的小面板裡——網址是最重要的資訊，給它一行專屬。
+    private static void Panel(string url)
+    {
+        Console.WriteLine();
+        Ui.Section("1/1 · 分享頁", "已開瀏覽器，請在頁面上按「下載」");
+        Ui.Info("網址", url);
+        try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); } catch { }
     }
 
     // 部署驅動：下載 XsRegProbe.sys，放進程式指定的固定路徑。
@@ -550,7 +593,7 @@ internal static class Install
         try
         {
             HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
-            req.UserAgent = "XinSpectDeploy/3.22";
+            req.UserAgent = "XinSpectDeploy/" + Version;
             req.Timeout = 6000;
             req.ReadWriteTimeout = 6000;
             req.Proxy = WebRequest.GetSystemWebProxy();
@@ -575,8 +618,8 @@ internal static class Install
 
     private sealed class HashList
     {
-        public System.Collections.Generic.Dictionary<string, string> ByName =
-            new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, string> ByName =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         public string Via = "";          // 這份清單是從哪來的（三態標示給使用者看）
         public bool OfficialDirect;      // true＝官方直連取得（信任根）
     }
@@ -649,7 +692,7 @@ internal static class Install
     //   v1 page  行：key|url|page                     —— page 模式只開瀏覽器，仍收（v1 相容）
     //   v1 direct 行：key|url|direct                  —— 無雜湊，拒收（舊檔的 direct 條目需升級，見 patch-22.md 第 4 節）
     // 鐵律：
-    //   1. 內建 key 1/2/3 是編譯期信任根——遠端清單**不得覆寫**，撞到就忽略並印一行說明。
+    //   1. 內建 key 1/2/3 是編譯期信任根——遠端清單**不得覆寫**，撞到就記一筆說明（ spinner 停了再印）。
     //   2. 只收 https（v1 時代連 http 都收——那是 V2 漏洞的一半）。
     //   3. 重複 key 不收（先到先得，三條抓取線誰先回誰算）。
     private static void ApplyMirrorList(List<Mirror> mirrors, string text)
@@ -669,7 +712,7 @@ internal static class Install
 
             if (key == "1" || key == "2" || key == "3")
             {
-                Console.WriteLine("  mirrors.txt：忽略對內建來源 " + key + " 的覆寫（信任根不可被遠端清單改寫）。");
+                PendingNotices.Add("mirrors.txt：忽略對內建來源 " + key + " 的覆寫（信任根不可被遠端清單改寫）。");
                 continue;
             }
             if (mirrors.Exists(delegate(Mirror m) { return m.Key == key; })) continue;
@@ -685,7 +728,7 @@ internal static class Install
                 }
                 if (nm.Sha256 == null)
                 {
-                    Console.WriteLine("  mirrors.txt：第 " + key + " 格 direct 條目未附 SHA-256（v2 格式），已拒收。");
+                    PendingNotices.Add("mirrors.txt：第 " + key + " 格 direct 條目未附 SHA-256（v2 格式），已拒收。");
                     continue;
                 }
             }
@@ -718,45 +761,36 @@ internal static class Install
             {
                 if (m.Key == srcArg && m.BaseUrl.Length > 0) return m;
             }
-            Console.WriteLine("  無法使用來源「" + srcArg + "」（沒有提供或沒有這個編號）。");
-            Console.WriteLine();
+            Ui.Warn("無法使用來源「" + srcArg + "」（沒有提供或沒有這個編號）。");
             return null;
         }
 
-        Console.WriteLine("  選擇下載來源：");
-        Console.WriteLine();
+        int width = Width();
+        List<string> rows = new List<string>();
         for (int i = 0; i < all.Count; i++)
         {
-            Console.WriteLine("    [" + all[i].Key + "] " + all[i].Name +
-                              (all[i].BaseUrl.Length == 0 ? "  —— 尚未提供" : ""));
+            string tag = all[i].Direct ? "direct" : "page";
+            rows.Add(Ui.Bold + "[" + all[i].Key + "]" + Ui.Reset + " " + all[i].Name
+                   + Ui.Dim + "  " + tag + (all[i].BaseUrl.Length == 0 ? "・尚未提供" : "") + Ui.Reset);
         }
         Console.WriteLine();
-        Console.Write("  按 1 / 2 / 3 選擇（直接按 Enter 用 1，GitHub）：");
+        Ui.Panel(width, Ui.BoldMark() + " 選擇下載來源", rows, "Enter＝1 · GitHub 官方");
+        Ui.Prompt("按編號選擇（直接按 Enter 用 1，GitHub）：");
 
-        string key = "";
-        try
-        {
-            key = Console.ReadKey(intercept: true).KeyChar.ToString();
-            Console.WriteLine(string.IsNullOrEmpty(key) ? "" : " " + key);
-        }
-        catch { Console.WriteLine(); }
-        Console.WriteLine();
-
-        if (string.IsNullOrEmpty(key) || key == "\r" || key == "\n") return all[0];
+        string key = ReadKeyOrEmpty();
+        if (key.Length == 0) return all[0];
         key = key.Trim();
         foreach (Mirror m in all)
         {
             if (m.Key == key)
             {
                 if (m.BaseUrl.Length > 0) return m;
-                Console.WriteLine("  來源「" + key + "」這版還沒有提供（見上面的「尚未提供」），改用 GitHub。");
-                Console.WriteLine();
+                Ui.Warn("來源「" + key + "」這版還沒有提供（見上面的「尚未提供」），改用 GitHub。");
                 return all[0];
             }
         }
 
-        Console.WriteLine("  無此選項「" + key + "」，使用第一組來源。");
-        Console.WriteLine();
+        Ui.Warn("無此選項「" + key + "」，使用第一組來源。");
         return all[0];
     }
 
@@ -802,7 +836,7 @@ internal static class Install
             if (i > 0)
             {
                 Console.WriteLine();
-                Console.WriteLine("  這條線失敗，改用備援線路：" + chain[i]);
+                Ui.Note("這條線失敗，改用備援線路：" + chain[i]);
             }
             for (int attempt = 1; attempt <= 2; attempt++)
             {
@@ -831,7 +865,7 @@ internal static class Install
         try
         {
             HttpWebRequest req = (HttpWebRequest)WebRequest.Create(GitHubBase + "XinSpect.exe");
-            req.UserAgent = "XinSpectDeploy/3.22";
+            req.UserAgent = "XinSpectDeploy/" + Version;
             req.Method = "HEAD";
             req.AllowAutoRedirect = false;   // 只取第一跳的 Location，見上
             req.Timeout = 6000;
@@ -914,64 +948,18 @@ internal static class Install
         double secs = sw.Elapsed.TotalSeconds;
         // 整段的平均速度：和進度列上的即時速度是兩件事，這一條是「從按下到現在」的實測。
         double avg = secs > 0 ? fi.Length / 1048576.0 / secs : 0;
-        bar.Overwrite(string.Format(
-            "  [{0}/{1}] Done: {2:N0} bytes in {3:F1}s ({4:0.0} MB/s)",
-            step, total, fi.Length, secs, avg));
-    }
-
-    private static ProgressBar RunDownload(string url, string dest, int step, int total)
-    {
-        ProgressBar bar = new ProgressBar(step, total);
-        try
-        {
-            HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
-            req.UserAgent = "XinSpectDeploy/3.22";
-            req.AllowAutoRedirect = true;
-            req.Timeout = 90000;
-            req.ReadWriteTimeout = 90000;
-            // 走系統 proxy：公司內網與部分校園網沒有它連 GitHub 根本出不去。
-            req.Proxy = WebRequest.GetSystemWebProxy();
-            req.Proxy.Credentials = CredentialCache.DefaultCredentials;
-            // 不開 AutomaticDecompression：開了之後實收位元組會比 Content-Length 多，
-            // 進度就會跑過 100%，到時要解釋的變成進度條而不是下載。
-            using (WebResponse resp = req.GetResponse())
-            {
-                long expected = resp.ContentLength;
-                long received = 0;
-                using (Stream src = resp.GetResponseStream())
-                using (FileStream dst = File.Create(dest))
-                {
-                    byte[] buf = new byte[64 * 1024];
-                    int n;
-                    while ((n = src.Read(buf, 0, buf.Length)) > 0)
-                    {
-                        dst.Write(buf, 0, n);
-                        received += n;
-                        bar.Report(received, expected);
-                    }
-                    dst.Flush();
-                }
-                if (expected > 0 && received != expected)
-                {
-                    throw new InvalidDataException(string.Format(
-                        "連線中途斷開：只收到 {0:N0} / {1:N0} bytes。請改用其他來源或重試。",
-                        received, expected));
-                }
-            }
-        }
-        catch
-        {
-            // 半截的檔案比沒有檔案更危險：它有 MZ 開頭、有大小的確像個程式。
-            TryDelete(dest);
-            bar.Clear();
-            throw;
-        }
-        return bar;
+        bar.Overwrite(string.Format("  [{0}/{1}] {2} {3} — {4:N0} bytes in {5:F1}s（{6:0.0} MB/s）",
+            step, total, Ui.OkMark(), fileName, fi.Length, secs, avg));
     }
 
     private static void TryDelete(string path)
     {
         try { if (File.Exists(path)) File.Delete(path); } catch { }
+    }
+
+    private static int Width()
+    {
+        return Ui.Width();
     }
 
     /// <summary>
@@ -980,8 +968,10 @@ internal static class Install
     /// <remarks>
     /// 量不到的一律寫「--」，不印一個看起來很肯定的假數字——分塊傳輸沒有
     /// Content-Length，硬湊一個百分比只會讓「卡在 100%」變成另一種誤導。
+    /// 畫風與 xsc 對齊：▓░ 填充條帶品牌紅（Fancy 模式）；純文字模式退回 #-
+    /// Installer\tests\ProgressTest.cs 以反射驗兩種模式的行寬都不得超過 80 欄。
     /// </remarks>
-    private sealed class ProgressBar
+    public sealed class ProgressBar
     {
         // 條子寬度依實際視窗算：固定 24 格在 80 欄主控台會折行，\r 只回最後一行行首，
         // 每畫一次多一行殘影。寧可短一點，也不要折行。
@@ -999,7 +989,7 @@ internal static class Install
         private long _nextMs;
         private long _nextPaintMs;
         private double _speed;
-        private int _printed;
+        private int _printedVis;
 
         public ProgressBar(int step, int total)
         {
@@ -1053,22 +1043,25 @@ internal static class Install
         {
             Write(text);
             Console.WriteLine();
-            _printed = 0;
+            _printedVis = 0;
         }
 
         /// <summary>下載失敗時把進度列擦掉，讓下一行的錯誤訊息從乾淨的行首開始。</summary>
         public void Clear()
         {
-            if (_printed <= 0) return;
-            Console.Write("\r" + new string(' ', _printed) + "\r");
-            _printed = 0;
+            if (_printedVis <= 0) return;
+            Console.Write("\r" + new string(' ', _printedVis) + "\r");
+            _printedVis = 0;
         }
 
         private void Write(string text)
         {
-            // 這一行全是 ASCII，所以字數就是欄位數，補空白不會錯位。
-            if (text.Length < _printed) text += new string(' ', _printed - text.Length);
-            _printed = text.Length;
+            // 補白量用「可見寬度」算：Fancy 模式的行裡有 ANSI 序列，字數不等於欄數。
+            // 上限取新舊可見寬的較大者——新行較短時要把舊行擦乾淨，不能留殘尾。
+            int prev = _printedVis;
+            int vis = Ui.VisibleLength(text);
+            if (prev > vis) text += new string(' ', prev - vis);
+            _printedVis = Math.Max(vis, prev);
             Console.Write("\r" + text);
         }
 
@@ -1096,8 +1089,12 @@ internal static class Install
             double eta = -1;
             if (_speed > 0 && received < expected) eta = (expected - received) / _speed;
 
+            string bar = Ui.Fancy
+                ? Ui.BrandRed + new string('▓', fill) + Ui.Reset + Ui.Dim + new string('░', barWidth - fill) + Ui.Reset
+                : new string('#', fill) + new string('-', barWidth - fill);
+
             return head
-                 + "[" + new string('#', fill) + new string('-', barWidth - fill) + "] "
+                 + "[" + bar + "] "
                  + string.Format("{0,5:0.0}%", pct)
                  + string.Format(" {0,6:0.0}/{1,6:0.0} MB", received / 1048576.0, expected / 1048576.0)
                  + "  " + speed
@@ -1156,8 +1153,458 @@ internal static class Install
         return line.Length == 0 ? "（無法讀出內容）" : line;
     }
 
+    // RunDownload 保留原簽名（string, string, int, int）與回傳值：Installer\tests\ProgressTest.cs
+    // 以反射叫用它跑「完整／斷線／無 Content-Length」三種真下載，動到簽名等於把驗證拆了。
+    private static ProgressBar RunDownload(string url, string dest, int step, int total)
+    {
+        ProgressBar bar = new ProgressBar(step, total);
+        try
+        {
+            HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
+            req.UserAgent = "XinSpectDeploy/" + Version;
+            req.AllowAutoRedirect = true;
+            req.Timeout = 90000;
+            req.ReadWriteTimeout = 90000;
+            // 走系統 proxy：公司內網與部分校園網沒有它連 GitHub 根本出不去。
+            req.Proxy = WebRequest.GetSystemWebProxy();
+            req.Proxy.Credentials = CredentialCache.DefaultCredentials;
+            // 不開 AutomaticDecompression：開了之後實收位元組會比 Content-Length 多，
+            // 進度就會跑過 100%，到時要解釋的變成進度條而不是下載。
+            using (WebResponse resp = req.GetResponse())
+            {
+                long expected = resp.ContentLength;
+                long received = 0;
+                using (Stream src = resp.GetResponseStream())
+                using (FileStream dst = File.Create(dest))
+                {
+                    byte[] buf = new byte[64 * 1024];
+                    int n;
+                    while ((n = src.Read(buf, 0, buf.Length)) > 0)
+                    {
+                        dst.Write(buf, 0, n);
+                        received += n;
+                        bar.Report(received, expected);
+                    }
+                    dst.Flush();
+                }
+                if (expected > 0 && received != expected)
+                {
+                    throw new InvalidDataException(string.Format(
+                        "連線中途斷開：只收到 {0:N0} / {1:N0} bytes。請改用其他來源或重試。",
+                        received, expected));
+                }
+            }
+        }
+        catch
+        {
+            // 半截的檔案比沒有檔案更危險：它有 MZ 開頭、有大小的確像個程式。
+            TryDelete(dest);
+            bar.Clear();
+            throw;
+        }
+        return bar;
+    }
+
     private static void Pause()
     {
+        Console.WriteLine();
+        Console.WriteLine("  " + Ui.Dim + "按任意鍵關閉…" + Ui.Reset);
         try { Console.ReadKey(intercept: true); } catch { }
+    }
+
+    private static void Footer()
+    {
+        Ui.Footer("曦覽部署器 v" + Version, "曦覽 XinSpect by xinglanclever");
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Ui：畫面件。語彙與曦覽終端機的 Tui.cs 同源——瑞士平面、品牌紅、CHA 釘框線。
+    // 全部成員都要在 Fancy=false 時給出可讀的純文字等價物。
+    // ════════════════════════════════════════════════════════════════════════
+    private static class Ui
+    {
+        // ── ANSI 可用性 ──
+        // Windows 10 傳統主控台（conhost）預設不處理 ANSI/VT 序列，所有 ESC[...m、ESC[nG
+        // 會原樣印在畫面上（Windows Terminal 與 Win11 預設開啟）。啟動時主動打開
+        // ENABLE_VIRTUAL_TERMINAL_PROCESSING；打不開就整體退回純文字（Fancy=false），
+        // 不是每個環境都救得動，但不假裝成功。
+        public static bool Fancy;
+
+        private const int StdOutputHandle = -11;
+        private const uint EnableVirtualTerminalProcessing = 0x0004;
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr GetStdHandle(int nStdHandle);
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetConsoleMode(IntPtr hConsoleHandle, out uint lpMode);
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool SetConsoleMode(IntPtr hConsoleHandle, uint dwMode);
+
+        public static void EnableAnsi()
+        {
+            if (Console.IsOutputRedirected) return;
+            try
+            {
+                IntPtr h = GetStdHandle(StdOutputHandle);
+                if (h == IntPtr.Zero || h == (IntPtr)(-1)) return;
+                uint mode;
+                if (!GetConsoleMode(h, out mode)) return;
+                if (!SetConsoleMode(h, mode | EnableVirtualTerminalProcessing)) return;
+                Fancy = true;
+            }
+            catch { /* 非 Windows 或無主控台：走純文字 */ }
+        }
+
+        // ── 色票（屬性而非 const：Fancy=false 一律回空字串，呼叫端寫法不用分流）──
+        public static string Reset { get { return Fancy ? "\x1b[0m" : ""; } }
+        public static string Bold { get { return Fancy ? "\x1b[1m" : ""; } }
+        public static string Dim { get { return Fancy ? "\x1b[90m" : ""; } }
+        public static string SwissRed { get { return Fancy ? "\x1b[91m" : ""; } }
+        public static string SwissGreen { get { return Fancy ? "\x1b[92m" : ""; } }
+        public static string Amber { get { return Fancy ? "\x1b[93m" : ""; } }
+        public static string Invert { get { return Fancy ? "\x1b[7m" : ""; } }
+        /// <summary>品牌紅 #E30613（truecolor）：框線、⏺、提示符專用，不作內文著色——與 xsc 同規矩。</summary>
+        public static string BrandRed { get { return Fancy ? "\x1b[38;2;227;6;19m" : ""; } }
+
+        private const string Esc = "\x1b";
+        private static string ClearLine { get { return Fancy ? "\x1b[2K" : ""; } }
+
+        // ── 圖案字元的純文字等價物：所有「長得像圖案」的字元一律過 Mark ──
+        public static string Mark(string fancyChar, string asciiChar) { return Fancy ? fancyChar : asciiChar; }
+        public static string OkMark() { return BrandRed + Mark("⏺", "*") + Reset; }
+        public static string CrossMark() { return SwissRed + Mark("✕", "x") + Reset; }
+        public static string CheckMark() { return SwissGreen + Mark("✓", "+") + Reset; }
+        public static string Bullet() { return SwissRed + Bold + Mark("■", "*") + Reset; }
+        public static string BoldMark() { return Bold + Mark("■", "*") + Reset; }
+
+        // ── 寬度 ──
+        /// <summary>可見寬度：剝掉 ANSI escape，CJK／全形字記 2 格。</summary>
+        /// <remarks>用 while 而不是 for：for 的 continue 會再跑一次 i++，
+        /// 每個 escape 序列後面都會多吃掉一個字元（xsc 的 Tui.VisibleLength 同款陷阱）。</remarks>
+        public static int VisibleLength(string s)
+        {
+            if (s == null) return 0;
+            int w = 0;
+            int i = 0;
+            while (i < s.Length)
+            {
+                if (s[i] == '\x1b')
+                {
+                    // ECMA-48：ESC [ 後，參數落在 0x20–0x3F、終止位元組落在 0x40–0x7E。
+                    i++;
+                    if (i < s.Length && s[i] == '[')
+                    {
+                        i++;
+                        while (i < s.Length && s[i] >= '\u0020' && s[i] <= '\u003f') i++;
+                        if (i < s.Length && s[i] >= '\u0040' && s[i] <= '\u007e') i++;
+                    }
+                    else
+                    {
+                        while (i < s.Length && s[i] != '\u0007') i++;
+                        if (i < s.Length) i++;   // 吃掉 BEL
+                    }
+                    continue;   // while 的 continue 不會偷跑 i++
+                }
+                char c = s[i];
+                w += char.GetUnicodeCategory(c) == System.Globalization.UnicodeCategory.OtherLetter
+                     || (c >= '\uFF01' && c <= '\uFF60')
+                     || (c >= '\u3000' && c <= '\u303F')
+                     ? 2 : 1;
+                i++;
+            }
+            return w;
+        }
+
+        public static string Pad(string s, int width)
+        {
+            int gap = width - VisibleLength(s);
+            return gap <= 0 ? s : s + new string(' ', gap);
+        }
+
+        public static int Width()
+        {
+            // 下限 58＝雙欄框＋中文說明的最小可用寬；上限 96 免得超寬終端上框線稀稀拉拉。
+            try { return Math.Max(58, Math.Min(96, Console.WindowWidth - 1)); }
+            catch { return 78; }
+        }
+
+        // ── 框線：唯一正解是 CHA 絕對定位（借 xsc Tui 的歷史教訓）──
+        // 全形標點、模糊寬度字元、使用者字型回退都會讓「算出來的寬度」與實際渲染差 1–2 格；
+        // CHA（ESC[<col>G）把游標釘到絕對欄位，永不折行、永不錯位。
+        public static string BoxTop(int width, string title)
+        {
+            if (!Fancy) return "  " + title + "  " + new string('-', Math.Max(4, width - VisibleLength(title) - 8));
+            var sb = new StringBuilder();
+            sb.Append(BrandRed).Append('╭').Append(new string('─', Math.Max(1, width - 3)));
+            sb.Append(Esc).Append('[').Append(width).Append('G').Append('╮').Append(Reset);
+            if (title.Length > 0)
+                sb.Append(Esc).Append("[4G").Append(title).Append(Reset);
+            return sb.ToString();
+        }
+
+        public static string BoxRow(int width, string body)
+        {
+            if (!Fancy) return "  " + body;
+            return BrandRed + "│" + Reset + " " + body + Esc + "[" + width + "G" + BrandRed + "│" + Reset;
+        }
+
+        public static string BoxBot(int width, string note)
+        {
+            if (!Fancy) return note.Length > 0 ? "  " + note : "";
+            var sb = new StringBuilder();
+            sb.Append(BrandRed).Append('╰').Append(new string('─', Math.Max(1, width - 3)));
+            sb.Append(Esc).Append('[').Append(width).Append('G').Append('╯').Append(Reset);
+            if (note.Length > 0)
+                sb.Append(Esc).Append("[").Append(Math.Max(4, width - VisibleLength(note) - 2)).Append('G')
+                  .Append(Dim).Append(note).Append(Reset);
+            return sb.ToString();
+        }
+
+        public static void Panel(int width, string title, IEnumerable<string> lines, string note)
+        {
+            Console.WriteLine(BoxTop(width, title));
+            foreach (string l in lines)
+                Console.WriteLine(BoxRow(width, l == null ? "" : l));
+            Console.WriteLine(BoxBot(width, note ?? ""));
+        }
+
+        // ── 節區標頭／條目／結果行 ──
+        public static void Section(string label, string note)
+        {
+            string n = note == null ? "" : "  " + Dim + note + Reset;
+            Console.WriteLine();
+            Console.WriteLine("  " + Bullet() + " " + Bold + label.ToUpperInvariant() + Reset + n);
+        }
+
+        /// <summary>細分隔線：點串——用來隔開「來源／目標」與後面的動作區。</summary>
+        public static void Rule()
+        {
+            Console.WriteLine("  " + Dim + new string(Fancy ? '·' : '-', Math.Min(72, Math.Max(8, Width() - 4))) + Reset);
+        }
+
+        public static void Item(string key, string text)
+        {
+            Console.WriteLine("    " + Bold + "[" + key + "]" + Reset + " " + text);
+        }
+
+        /// <summary>左標籤右內容的資訊行：標籤補白到 6 格，整齊而不喧嘩。</summary>
+        public static void Info(string label, string text)
+        {
+            string l = label.Length == 0 ? "" : Dim + Pad(label, 6) + Reset + " ";
+            Console.WriteLine("  " + l + text);
+        }
+
+        public static void Ok(string msg) { Console.WriteLine("  " + OkMark() + " " + msg); }
+        public static void Warn(string msg) { Console.WriteLine("  " + Amber + Mark("⚠", "!!") + Reset + " " + msg); }
+        public static void Err(string msg) { Console.WriteLine("  " + CrossMark() + " " + msg); }
+        public static void Note(string msg) { Console.WriteLine("  " + Dim + msg + Reset); }
+
+        /// <summary>提示符：品牌紅 ＞——與 xsc 的 InputFrame 同款。</summary>
+        public static void Prompt(string text)
+        {
+            Console.Write(BrandRed + Bold + ">" + Reset + " " + text);
+        }
+
+        // ── 大字標（ANSI Shadow，借 xsc 的字母；字母間 1 格，全寬 72 欄）──
+        private static readonly string[][] BannerLetters =
+        {
+            new[] { "██╗   ██╗", " ╚██╗ ██╔╝", "  ╚███╔╝ ", " ██╔██╗ ", "╚██╝ ╚██╝" },  // X
+            new[] { "██╗", "██║", "██║", "██║", "██║" },                                            // I
+            new[] { "███╗   ██╗", "████╗  ██║", "██╔██╗ ██║", "██║╚██╗██║", "██║ ╚████║" },         // N
+            new[] { "███████╗", "██╔════╝", "███████╗", "╚════██║", "███████║" },                   // S
+            new[] { "██████╗ ", "██╔══██╗", "██████╔╝", "██╔═══╝ ", "██║     " },                   // P
+            new[] { "███████╗", "██╔════╝", "█████╗  ", "██╔══╝  ", "███████╗" },                   // E
+            new[] { " ██████╗", "██╔════╝", "██║     ", "██║     ", "╚██████╗" },                   // C
+            new[] { "████████╗", "╚══██╔══╝", "   ██║   ", "   ██║   ", "   ██║   " },              // T
+        };
+
+        /// <summary>字母各列左對齊、補到該字母最寬列——ANSI Shadow 是把整列左對齊畫的，截尾的空格要補回來。</summary>
+        private static string[] BannerLetter(int idx)
+        {
+            string[] rows = BannerLetters[idx];
+            int w = 0;
+            for (int r = 0; r < rows.Length; r++) if (rows[r].Length > w) w = rows[r].Length;
+            string[] outRows = new string[rows.Length];
+            for (int r = 0; r < rows.Length; r++) outRows[r] = rows[r] + new string(' ', w - rows[r].Length);
+            return outRows;
+        }
+
+        private static string[] Banner(int gap)
+        {
+            string[] rows = new string[5];
+            for (int r = 0; r < 5; r++)
+            {
+                var sb = new StringBuilder();
+                for (int i = 0; i < 8; i++)
+                {
+                    sb.Append(BannerLetter(i)[r]);
+                    if (i < 7) sb.Append(new string(' ', gap));
+                }
+                rows[r] = sb.ToString();
+            }
+            return rows;
+        }
+
+        // ── 開場 ──
+        private static readonly string[] Tips =
+        {
+            "放行只認 SHA256SUMS.txt——MZ 開頭檢查只是診斷訊息，不作為依據",
+            "latest/download 404 時現場偵測版號備援，不寫死 tag，避免安靜裝到舊版",
+            "下載到 HTML 是安裝器最常見的假成功：分享頁與病毒掃描警告都會回 200",
+            "半截的 exe 比沒有檔案更危險：有 MZ 頭、大小也像程式——斷線一律刪檔重來",
+            "Drive 的 uc?id= 是單一檔案端點；資料夾分享頁走 page 模式，只開瀏覽器不假裝直連",
+        };
+
+        public static void Welcome()
+        {
+            Console.WriteLine();
+            int width = Width();
+            string tip = Tips[NewRandom().Next(Tips.Length)];
+
+            if (!Fancy)
+            {
+                // 純文字開場：零色彩、零框線、零定位。
+                Console.WriteLine("  X  I  N  S  P  E  C  T");
+                Console.WriteLine("  " + new string('-', Math.Min(72, Math.Max(8, width - 6))));
+                Console.WriteLine("  " + Mark("*", "*") + " 曦覽部署器 XinSpect Deploy v" + Version);
+                Console.WriteLine("  [A] XinSpect.exe 主程式（GUI，含守護進程與驅動）");
+                Console.WriteLine("  [B] XinSpectConsole.exe 曦覽終端機（CLI，唯讀事實查詢）");
+                Console.WriteLine("  小知識：" + tip);
+                Console.WriteLine("  腳本模式：-xsc -full -legacy -nort <來源編號>");
+                Console.WriteLine();
+                return;
+            }
+
+            // 大字標 XINSPECT（全寬 72；終端不夠寬就退回間隔大寫）
+            Console.WriteLine();
+            if (width >= 76)
+            {
+                string[] banner = Banner(1);
+                int pad = Math.Max(0, (width - banner[0].Length) / 2);
+                foreach (string row in banner)
+                    Console.WriteLine(new string(' ', pad) + BrandRed + row + Reset);
+                string by = "by: xinglanclever";
+                Console.Write(Esc + "[" + (width - by.Length) + "G" + Dim + by + Reset);
+                Console.WriteLine();
+            }
+            else
+            {
+                Console.WriteLine("  X  I  N  S  P  E  C  T");
+            }
+
+            Panel(width,
+                Mark("☼", "*") + " " + Bold + "曦覽部署器" + Reset + " " + Dim + "XinSpect Deploy v" + Version + Reset,
+                new[]
+                {
+                    "",
+                    Bold + "部署什麼" + Reset + Dim + " ・ Enter 直接開始" + Reset,
+                    Bold + "[A]" + Reset + " XinSpect.exe 主程式（GUI，含守護進程與驅動）",
+                    Bold + "[B]" + Reset + " XinSpectConsole.exe 曦覽終端機（CLI，唯讀事實查詢）",
+                    "",
+                    Dim + "下載鏈：GitHub 官方直連 ＞ 加速節點 ＞ 遠端鏡像清單" + Reset,
+                    Dim + "放行條件：SHA256SUMS.txt 全量核對，不符即刪不裝" + Reset,
+                    "",
+                    Dim + "小知識：" + tip + Reset,
+                },
+                "腳本模式：-xsc -full -legacy -nort <來源編號>");
+            Console.WriteLine();
+        }
+
+        // Random 用完即棄（C# 5 沒有 Random.Shared；只取一個小知識，不必長駐種子）。
+        private static Random NewRandom() { return new Random(); }
+
+        // ── 底部狀態列：整行反白，左狀態、右署名（借 xsc 的 Footer）──
+        public static void Footer(string left, string right)
+        {
+            int width = Width();
+            if (!Fancy)
+            {
+                Console.WriteLine("  " + new string('-', Math.Min(72, Math.Max(8, width - 6))));
+                Console.WriteLine("  " + left + " | " + right);
+                return;
+            }
+            int pad = width - VisibleLength(left) - VisibleLength(right) - 3;
+            if (pad < 1) pad = 1;
+            Console.WriteLine(Invert + " " + left + new string(' ', pad) + right + " " + Reset);
+        }
+
+        // ── Spinner：braille 幀＋經過秒數（借 xsc 的 SparkFrames；純文字版用 ASCII）──
+        private static readonly string[] SpinFrames = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" };
+        private static readonly string[] SpinFramesAscii = { "*", "o", ".", "o" };
+
+        private static Thread _spinThread;
+        private static volatile bool _spinRun;
+        private static string _spinLabel;
+        private static int _spinPad;
+        private static readonly Stopwatch SpinClock = new Stopwatch();
+
+        /// <summary>
+        /// 開始轉圈：抓鏡像清單、抓信任根這類「不知道要多久、也沒有分母」的等待用。
+        /// 有分母的下載走 ProgressBar，不走這裡。重導輸出時不畫動畫，只留 label。
+        /// </summary>
+        public static void Busy(string label)
+        {
+            if (_spinThread != null) return;
+            _spinLabel = label;
+            _spinRun = true;
+            _spinPad = 0;
+            SpinClock.Restart();
+            if (Fancy && !Console.IsOutputRedirected) Console.Write("\x1b[?25l");
+            _spinThread = new Thread(SpinLoop);
+            _spinThread.IsBackground = true;
+            _spinThread.Start();
+        }
+
+        private static void SpinLoop()
+        {
+            bool redirected = Console.IsOutputRedirected;
+            int i = 0;
+            while (_spinRun)
+            {
+                double secs = SpinClock.Elapsed.TotalSeconds;
+                if (!redirected)
+                {
+                    string frame = Fancy ? SpinFrames[i++ % SpinFrames.Length] : SpinFramesAscii[i++ % SpinFramesAscii.Length];
+                    string line = BrandRed + frame + Reset + " " + BrandRed + _spinLabel + Reset + Dim + "…" + Reset
+                                + " " + Bold + string.Format("{0,4:0.0}s", secs) + Reset;
+                    int vis = VisibleLength(line);
+                    string pad = _spinPad > vis ? new string(' ', _spinPad - vis) : "";
+                    _spinPad = Math.Max(vis, _spinPad);
+                    Console.Write("\r" + ClearLine + line + pad);
+                }
+                Thread.Sleep(100);
+            }
+        }
+
+        /// <summary>靜靜收掉轉圈（不印結果行）。</summary>
+        public static void BusyAbort()
+        {
+            BusyEndCore();
+        }
+
+        /// <summary>收掉轉圈並印結果行：ok＝⏺（品牌紅），失敗＝✕（警示紅）。</summary>
+        public static void BusyEnd(bool ok, string msg)
+        {
+            BusyEndCore();
+            if (msg == null) return;
+            if (ok) Ok(msg); else Err(msg);
+        }
+
+        private static void BusyEndCore()
+        {
+            _spinRun = false;
+            Thread t = _spinThread;
+            _spinThread = null;
+            if (t != null) { try { t.Join(400); } catch { } }
+            if (!Console.IsOutputRedirected)
+            {
+                Console.Write("\r" + ClearLine);
+                if (!Fancy && _spinPad > 0) Console.Write(new string(' ', _spinPad) + "\r");
+                if (Fancy) Console.Write("\x1b[?25h");
+            }
+            _spinPad = 0;
+        }
     }
 }

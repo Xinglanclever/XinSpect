@@ -9,6 +9,20 @@ public class PlatformExpansionFactsTests
     [Fact] public void 驅動史_新增移除變更計數() { var prev=new[]{new PlatformExpansionFactsService.DriverVersionRow("a","A","1",null),new PlatformExpansionFactsService.DriverVersionRow("b","B","2",null)}; var now=new[]{new PlatformExpansionFactsService.DriverVersionRow("a","A","3",null),new PlatformExpansionFactsService.DriverVersionRow("c","C","1",null)}; var f=PlatformExpansionFactsService.DriverHistoryFact(At,()=>now,prev); Assert.Contains("版本變更 1",f.Value); Assert.Contains("新增 1",f.Value); Assert.Contains("移除 1",f.Value); }
     [Fact] public void EOL包_驗證狀態與快照必印() { var f=PlatformExpansionFactsService.EolPackFact(At,()=>new(3,"2026-10-13",4,true)); Assert.Contains("快照 2026-10-13",f.Value); Assert.Contains("內容雜湊驗證",f.Value); }
     [Fact] public void AML統計_不解碼本體() { var f=PlatformExpansionFactsService.AmlStatFact(At,()=>new(2,100,10,90)); Assert.Contains("不解碼 AML 本體",f.Value); Assert.Equal(100.0,f.NumericValue); }
+    [Fact] public void AML統計_表數只計DSDT與SSDT()
+    {
+        var source = new TestAcpiSource(
+            BuildTable("DSDT", 1, "OEMAAA", "XINSPECT", 40),
+            BuildTable("SSDT", 1, "OEMAAA", "XINSPECT", 40),
+            BuildTable("FACP", 1, "OEMAAA", "XINSPECT", 40),
+            BuildTable("HEST", 1, "OEMAAA", "XINSPECT", 40));
+
+        var state = PlatformExpansionFactsService.ReadAmlStat(source);
+
+        Assert.NotNull(state);
+        Assert.Equal(2, state.Tables);
+        Assert.Equal(8, state.BytecodeBytes);
+    }
     [Fact] public void SMI_只有次數沒有時間() { var f=PlatformExpansionFactsService.SmiCstateFact(At,()=>new(10,2,50UL,100UL,0.25)); Assert.Contains("沒有時間",f.Value); Assert.Contains("50.00%",f.Value); }
     [Fact] public void 功率牆_讀不到不宣稱沒有牆() { var f=PlatformExpansionFactsService.PowerWallFact(At,()=>null); Assert.Equal(FactAvailability.InsufficientPrivilege,f.Availability); Assert.Contains("不宣稱",f.UnavailableReason); }
     [Fact] public void 功率牆_正常列PL1PL2() { var f=PlatformExpansionFactsService.PowerWallFact(At,()=>new(0xA0E03UL,0x0043FFF800DEFFF8UL,0x00000B58U)); Assert.Contains("PL1",f.Value); Assert.Contains("PL2",f.Value); Assert.Equal(FactAvailability.Present,f.Availability); }
@@ -19,4 +33,32 @@ public class PlatformExpansionFactsTests
     [Fact] public void 崩潰堆疊_未同意永不執行() { var f=PlatformExpansionFactsService.CrashStackFact(At,_=>false); Assert.Equal(FactAvailability.NotApplicable,f.Availability); Assert.Contains("不碰任何行程記憶體",f.UnavailableReason); }
     [Fact] public void 崩潰堆疊_同意但無實作不假裝做過() { var f=PlatformExpansionFactsService.CrashStackFact(At,_=>true); Assert.Equal(FactAvailability.NotSupported,f.Availability); Assert.Contains("不假裝做過",f.UnavailableReason); }
     [Fact] public void 本批十把鍵齊() { var facts=PlatformExpansionFactsService.Collect(At); string[] keys=[PlatformExpansionFactsService.DriverHistoryKey,PlatformExpansionFactsService.EolPackKey,PlatformExpansionFactsService.AmlStatKey,PlatformExpansionFactsService.SmiCstateKey,PlatformExpansionFactsService.PowerWallKey,PlatformExpansionFactsService.MemTrainKey,PlatformExpansionFactsService.HotGuidanceKey,PlatformExpansionFactsService.NicSlowKey,PlatformExpansionFactsService.UpdateStuckKey,PlatformExpansionFactsService.CrashStackKey]; foreach(string k in keys) Assert.Contains(facts,f=>f.Key==k); Assert.Equal(10,facts.Count); }
+
+    private sealed class TestAcpiSource(params byte[][] tables) : IAcpiTableSource
+    {
+        public bool Available => true;
+        public string? UnavailableReason => null;
+        public IReadOnlyList<byte[]> ReadAll() => tables;
+    }
+
+    private static byte[] BuildTable(string sig, byte revision, string oemId, string oemTableId, int totalLength)
+    {
+        var t = new byte[totalLength];
+        System.Text.Encoding.ASCII.GetBytes(sig).CopyTo(t, 0);
+        BitConverter.GetBytes((uint)totalLength).CopyTo(t, 4);
+        t[8] = revision;
+        PadAscii(oemId, 6).CopyTo(t, 10);
+        PadAscii(oemTableId, 8).CopyTo(t, 16);
+        int sum = 0;
+        for (int i = 0; i < t.Length; i++) if (i != 9) sum += t[i];
+        t[9] = (byte)((256 - (sum % 256)) % 256);
+        return t;
+    }
+
+    private static byte[] PadAscii(string s, int len)
+    {
+        var b = new byte[len];
+        System.Text.Encoding.ASCII.GetBytes(s).AsSpan(0, Math.Min(s.Length, len)).CopyTo(b);
+        return b;
+    }
 }

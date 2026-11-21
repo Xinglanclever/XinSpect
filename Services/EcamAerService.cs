@@ -20,7 +20,12 @@ public static class EcamAerService
 
         McfgEntry? primary = null;
         int otherSegments = 0;
-        foreach (var t in acpi.ReadAll())
+        var tables = acpi.ReadAll();
+        if (!acpi.Available)
+            return [UnavailableFact("pcieaer.ecam", "ECAM 基底", "ACPI MCFG", at, FactAvailability.ReadError,
+                acpi.UnavailableReason ?? "讀取 ACPI 表時來源失效")];
+
+        foreach (var t in tables)
         {
             var entries = AcpiTable.McfgEntries(t);
             foreach (var e in entries)

@@ -130,8 +130,13 @@ public static class AcpiFpdtFactsService
             return Unavailable(at, FactAvailability.InsufficientPrivilege,
                 (acpi.UnavailableReason ?? "無法列舉 ACPI 表") + "——讀不到就是不猜 POST 時長");
 
+        var tables = acpi.ReadAll();
+        if (!acpi.Available)
+            return Unavailable(at, FactAvailability.ReadError,
+                (acpi.UnavailableReason ?? "讀取 ACPI 表時來源失效") + "——讀不到就是不猜 POST 時長");
+
         byte[]? fpdt = null;
-        foreach (var t in acpi.ReadAll())
+        foreach (var t in tables)
             if (t.Length >= AcpiTable.HeaderLength && t.AsSpan(0, 4).SequenceEqual("FPDT"u8))
             {
                 fpdt = t;

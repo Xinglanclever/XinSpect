@@ -21,9 +21,19 @@ public static class TimeSyncFactsService
     {
         byte[]? fadt = null;
         bool hpetPresent = false;
-        if (acpi.Available)
+        bool wasAvailable = acpi.Available;
+        bool readError = false;
+        string? acpiError = null;
+        if (!wasAvailable)
         {
-            foreach (var table in acpi.ReadAll())
+            acpiError = acpi.UnavailableReason ?? "無法列舉 ACPI 表";
+        }
+        else
+        {
+            var tables = acpi.ReadAll();
+            readError = !acpi.Available;
+            acpiError = readError ? acpi.UnavailableReason ?? "讀取 ACPI 表時來源失效" : null;
+            foreach (var table in readError ? Array.Empty<byte[]>() : tables)
             {
                 if (AcpiTable.TryParseHeader(table, out var header))
                 {
@@ -33,20 +43,26 @@ public static class TimeSyncFactsService
             }
         }
 
+        var acpiFailure = readError ? FactAvailability.ReadError : FactAvailability.InsufficientPrivilege;
+        FactAvailability hpetAvailability = !wasAvailable || readError ? acpiFailure
+            : hpetPresent ? FactAvailability.Present : FactAvailability.NotSupported;
+        string? hpetReason = !wasAvailable || readError ? acpiError
+            : hpetPresent ? null : "表列裡沒有 HPET 表：平台沒有（或韌體未提供）HPET";
         var hpetFact = new HardwareFact("time.hpet", Category, "HPET 計時器",
             hpetPresent ? "存在（ACPI HPET 表）" : "", "",
-            Source, FactTrustLevel.Reported, false, at, null,
-            hpetPresent ? FactAvailability.Present : FactAvailability.NotSupported,
-            hpetPresent ? null : "表列裡沒有 HPET 表：平台沒有（或韌體未提供）HPET");
+            Source, FactTrustLevel.Reported, false, at, null, hpetAvailability, hpetReason);
 
         uint? pmBlock = fadt is null ? null : DecodePmTimerBlock(fadt);
+        FactAvailability pmAvailability = !wasAvailable || readError ? acpiFailure
+            : pmBlock is not null ? FactAvailability.Present : FactAvailability.ReadError;
+        string? pmReason = !wasAvailable || readError ? acpiError
+            : pmBlock is not null ? null
+            : fadt is null ? "表列裡沒有 FADT" : "FADT 過短，PM_TMR_BLK（offset 76）解不出";
         var pmFact = new HardwareFact("time.pm_timer", Category, "ACPI PM timer 區塊",
             pmBlock is { } block ? $"0x{block:X}（{block}）" : "", "",
             Source, FactTrustLevel.Reported, false, at,
             pmBlock is { } b ? (double)b : null,
-            pmBlock is not null ? FactAvailability.Present : FactAvailability.ReadError,
-            pmBlock is not null ? null
-                : fadt is null ? "表列裡沒有 FADT" : "FADT 過短，PM_TMR_BLK（offset 76）解不出");
+            pmAvailability, pmReason);
 
         var driftFact = DriftFact(at, (driftProbe ?? MeasureDriftWindow)());
         return [hpetFact, pmFact, driftFact];

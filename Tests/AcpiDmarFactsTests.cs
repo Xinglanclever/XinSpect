@@ -107,6 +107,18 @@ public class AcpiDmarFactsTests
         Assert.Equal(FactAvailability.ReadError, f.Availability);
     }
 
+    [Fact]
+    public void 列舉後來源失效要標ReadError而不是缺DMAR()
+    {
+        const string reason = "ACPI 來源於表讀取期間失效";
+        var source = new ChangingAcpiTableSource(reason, true, Build(Drhd(1, 0, 0x1000)));
+
+        var f = Assert.Single(AcpiDmarFactsService.Collect(source, At));
+
+        Assert.Equal(FactAvailability.ReadError, f.Availability);
+        Assert.Contains(reason, f.UnavailableReason);
+    }
+
     // ── 彙總 ────────────────────────────────────────────────────────────
 
     [Fact]

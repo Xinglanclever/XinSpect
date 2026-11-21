@@ -18,8 +18,12 @@ public static class PpttFactsService
         if (!acpi.Available)
             return Na(at, acpi.UnavailableReason ?? "無法列舉 ACPI 表", FactAvailability.InsufficientPrivilege);
 
+        var tables = acpi.ReadAll();
+        if (!acpi.Available)
+            return Na(at, acpi.UnavailableReason ?? "讀取 ACPI 表時來源失效", FactAvailability.ReadError);
+
         byte[]? pptt = null;
-        foreach (var t in acpi.ReadAll())
+        foreach (var t in tables)
             if (t.Length >= AcpiTable.HeaderLength && t[..4].SequenceEqual("PPTT"u8)) { pptt = t; break; }
 
         if (pptt is null)

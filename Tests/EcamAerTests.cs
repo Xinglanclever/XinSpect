@@ -66,6 +66,23 @@ public sealed class EcamAerTests
     }
 
     [Fact]
+    public void 服務_ACPI列舉後失敗_保留讀取錯誤且不啟動MMIO掃描()
+    {
+        const string reason = "GetSystemFirmwareTable 第二階段失敗";
+        var acpi = new ListAcpi([McfgTable()], reason: reason, unavailableAfterRead: true);
+        var mmio = new CountingMmio();
+        Assert.True(acpi.Available);
+
+        var facts = EcamAerService.Collect(mmio, acpi, At);
+
+        var ecam = Assert.Single(facts, f => f.Key == "pcieaer.ecam");
+        Assert.Equal(FactAvailability.ReadError, ecam.Availability);
+        Assert.Contains(reason, ecam.UnavailableReason);
+        Assert.False(acpi.Available);
+        Assert.Equal(0, mmio.ReadCount);
+    }
+
+    [Fact]
     public void 服務_掃到帶AER裝置_解出未修正錯誤()
     {
         // bus 0 dev 2 fn 0：裝置存在、AER 能力在 0x100、未修正狀態 bit14（完成逾時）、可修正 bit0（接收器錯誤）
@@ -233,11 +250,41 @@ public sealed class EcamAerTests
         return page;
     }
 
-    private sealed class ListAcpi(IReadOnlyList<byte[]> tables, bool available = true, string? reason = null) : IAcpiTableSource
+    private sealed class ListAcpi : IAcpiTableSource
     {
-        public bool Available => available;
-        public string? UnavailableReason => reason;
-        public IReadOnlyList<byte[]> ReadAll() => tables;
+        private readonly IReadOnlyList<byte[]> _tables;
+        private readonly string? _reason;
+        private readonly bool _unavailableAfterRead;
+        private bool _available;
+
+        public ListAcpi(IReadOnlyList<byte[]> tables, bool available = true, string? reason = null,
+            bool unavailableAfterRead = false)
+        {
+            _tables = tables;
+            _available = available;
+            _reason = reason;
+            _unavailableAfterRead = unavailableAfterRead;
+        }
+
+        public bool Available => _available;
+        public string? UnavailableReason => _reason;
+        public IReadOnlyList<byte[]> ReadAll()
+        {
+            if (_unavailableAfterRead) _available = false;
+            return _tables;
+        }
+    }
+
+    private sealed class CountingMmio : IMmioReader
+    {
+        public int ReadCount { get; private set; }
+        public bool Available => true;
+        public string? UnavailableReason => null;
+        public byte[]? ReadBlock(ulong physicalAddress, int length)
+        {
+            ReadCount++;
+            return null;
+        }
     }
 
     private sealed class NullMmio : IMmioReader

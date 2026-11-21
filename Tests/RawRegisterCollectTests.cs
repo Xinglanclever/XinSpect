@@ -68,6 +68,21 @@ public sealed class RawRegisterCollectTests
         Assert.Equal(regions.Count, snapshot.Regions.Count);
     }
 
+    [Fact]
+    public void 收集_ACPI列舉後失敗保留錯誤區而不呈現表已移除()
+    {
+        const string reason = "ACPI 讀取於列舉後失敗";
+        var regions = RawRegisterCollectService.Collect(
+            new FakePci(0x20, 0x10),
+            new ChangingAcpiTableSource(reason, true, FakeAcpiTable("DSDT", 64)),
+            FakeMsr.From(), new NotLoadedMmioReader(), At);
+
+        var acpi = Assert.Single(regions, r => r.Source == "acpi:*");
+        Assert.Equal(FactAvailability.ReadError, acpi.Availability);
+        Assert.Contains(reason, acpi.UnavailableReason);
+        Assert.DoesNotContain(regions, r => r.Source == "acpi:DSDT");
+    }
+
     private static byte[] FakeAcpiTable(string sig, int len)
     {
         var t = new byte[len];

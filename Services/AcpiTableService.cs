@@ -64,8 +64,17 @@ public static class AcpiService
             return facts;
         }
 
+        var tables = source.ReadAll();
+        if (!source.Available)
+        {
+            facts.Add(new HardwareFact("acpi.tables", "ACPI", "ACPI 表清單", "", "", "EnumSystemFirmwareTables",
+                FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError,
+                source.UnavailableReason ?? "讀取 ACPI 表時來源失效"));
+            return facts;
+        }
+
         var parsed = new List<(byte[] Bytes, AcpiTableHeader Header)>();
-        foreach (var bytes in source.ReadAll())
+        foreach (var bytes in tables)
             if (AcpiTable.TryParseHeader(bytes, out var h)) parsed.Add((bytes, h));
 
         var sigCount = parsed.GroupBy(p => Slug(p.Header.Signature)).ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
@@ -328,16 +337,25 @@ public sealed class Win32AcpiTableSource : IAcpiTableSource
                 return [];
             }
             var ids = new byte[size];
-            EnumSystemFirmwareTables(AcpiProvider, ids, size);
+            uint enumerated = EnumSystemFirmwareTables(AcpiProvider, ids, size);
+            if (enumerated != size || size % sizeof(uint) != 0)
+                throw new InvalidOperationException(
+                    $"EnumSystemFirmwareTables returned {enumerated} bytes for a {size}-byte ACPI ID buffer");
 
             var tables = new List<byte[]>();
             for (int i = 0; i + 4 <= ids.Length; i += 4)
             {
                 uint id = BitConverter.ToUInt32(ids, i);
                 uint tsize = GetSystemFirmwareTable(AcpiProvider, id, null, 0);
-                if (tsize == 0) continue;
+                if (tsize == 0)
+                    throw new InvalidOperationException(
+                        $"GetSystemFirmwareTable size query failed for ACPI table ID 0x{id:X8} (Win32 {Marshal.GetLastWin32Error()})");
                 var buf = new byte[tsize];
-                if (GetSystemFirmwareTable(AcpiProvider, id, buf, tsize) == tsize) tables.Add(buf);
+                uint read = GetSystemFirmwareTable(AcpiProvider, id, buf, tsize);
+                if (read != tsize)
+                    throw new InvalidOperationException(
+                        $"GetSystemFirmwareTable returned {read} of {tsize} bytes for ACPI table ID 0x{id:X8} (Win32 {Marshal.GetLastWin32Error()})");
+                tables.Add(buf);
             }
             return tables;
         }

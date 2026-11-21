@@ -33,10 +33,12 @@ internal static class ProgressTest
         Assembly asm = Assembly.LoadFrom(Path.GetFullPath(exe));
         Type barType = asm.GetType("Install+ProgressBar", true);
         Type installType = asm.GetType("Install", true);
+        Type uiType = asm.GetType("Install+Ui", true);
 
         Console.WriteLine("== 形態 ==");
         Check(barType != null, "找得到 Install+ProgressBar");
         Check(installType != null, "找得到 Install");
+        Check(uiType != null, "找得到 Install+Ui（畫面件，Fancy 開關在這裡）");
 
         // ── 以反射呼叫私有的 Report / Line ──────────────────────────────
         object bar = Activator.CreateInstance(barType,
@@ -54,14 +56,14 @@ internal static class ProgressTest
         try { Console.SetWindowSize(80, Math.Min(Console.WindowHeight, 25)); } catch { }
 
         Console.WriteLine();
-        Console.WriteLine("== 行寬（模擬 80 欄主控台）==");
+        Console.WriteLine("== 行寬（模擬 80 欄主控台・純文字模式）==");
 
         long total = 38000000;   // 約 36 MB，和實際 XinSpect.exe 同級
         long[] marks = { 0, 1000000, 9500000, 19000000, 37999999, 38000000 };
         int maxLen = 0;
         foreach (long got in marks)
         {
-            string text = (string)line.Invoke(bar, new object[] { got, total });
+            string text = Strip((string)line.Invoke(bar, new object[] { got, total }));
             maxLen = Math.Max(maxLen, text.Length);
             Console.WriteLine("  " + text);
             if (text.Length > 80)
@@ -72,7 +74,7 @@ internal static class ProgressTest
         // ── 沒有 Content-Length 的情況 ────────────────────────────────
         Console.WriteLine();
         Console.WriteLine("== 沒有 Content-Length ==");
-        string unknown = (string)line.Invoke(bar, new object[] { 12345678L, 0L });
+        string unknown = Strip((string)line.Invoke(bar, new object[] { 12345678L, 0L }));
         Console.WriteLine("  " + unknown);
         Check(unknown.IndexOf("--:--") >= 0, "ETA 誠實寫 --:--");
         Check(unknown.IndexOf("%") < 0, "沒有分母時不編百分比");
@@ -109,11 +111,36 @@ internal static class ProgressTest
         Check(!threw, "Report 全程沒有例外");
 
         // 跑完之後把最後那一行抓出來：此時應該已經有速度與 ETA
-        string last = (string)line.Invoke(bar2, new object[] { total / 2, total });
+        string last = Strip((string)line.Invoke(bar2, new object[] { total / 2, total }));
         Console.WriteLine("  " + last);
         Check(last.IndexOf("-- MB/s") < 0, "有速度值（不是 --）");
         Check(last.IndexOf("ETA --:--") < 0, "有 ETA（不是 --:--）");
         Check(last.Length <= 80, "有速度/ETA 時行寬仍 <= 80（實際 " + last.Length + "）");
+
+        // ── Fancy（ANSI 帶色）模式：同樣不得折行 ──────────────────────
+        // 新版進度列在 Fancy 模式會給 ▓░ 填充條上品牌紅色碼——那些序列不佔顯示
+        // 寬度，所以要剝掉再量。這裡翻 Ui.Fancy 開關，把同一組 marks 重量一遍。
+        Console.WriteLine();
+        Console.WriteLine("== 行寬（Fancy・ANSI 帶色模式）==");
+        FieldInfo fancy = uiType != null
+            ? uiType.GetField("Fancy", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+            : null;
+        Check(fancy != null, "找得到 Ui.Fancy 開關");
+        if (fancy != null)
+        {
+            fancy.SetValue(null, true);
+            maxLen = 0;
+            foreach (long got in marks)
+            {
+                string text = Strip((string)line.Invoke(bar, new object[] { got, total }));
+                maxLen = Math.Max(maxLen, text.Length);
+            }
+            Check(maxLen <= 80, "Fancy 模式最寬一行 = " + maxLen + " 欄（剝掉色碼後 <= 80）");
+            string unknownFancy = Strip((string)line.Invoke(bar, new object[] { 12345678L, 0L }));
+            Check(unknownFancy.IndexOf("--:--") >= 0 && unknownFancy.IndexOf("%") < 0,
+                  "Fancy 模式同樣誠實：ETA --:--、不編百分比");
+            fancy.SetValue(null, false);
+        }
 
         Console.WriteLine();
         Console.WriteLine("== 真下載：RunDownload ==");
@@ -122,6 +149,34 @@ internal static class ProgressTest
         Console.WriteLine();
         Console.WriteLine(failures == 0 ? "ALL PASS" : failures + " FAILURE(S)");
         return failures == 0 ? 0 : 1;
+    }
+
+    // 剝掉 ANSI CSI 序列（ESC [ … 終止位元組）：Fancy 模式的行裡有品牌紅色碼，
+    // 序列不佔顯示寬度——「不得折行」斷言量的必須是剝完之後的可見寬度。
+    // 這裡的實作與部署器 Ui.VisibleLength 的剝法同一口徑（ECMA-48 CSI）。
+    private static string Strip(string s)
+    {
+        // 用 while 而不是 for：for 的 continue 會再跑一次 i++，每個 escape 後面
+        // 多吃一個字元——部署器 Ui.VisibleLength 的註解裡記了這個陷阱。
+        var sb = new System.Text.StringBuilder();
+        int i = 0;
+        while (i < s.Length)
+        {
+            if (s[i] == '\x1b')
+            {
+                i++;
+                if (i < s.Length && s[i] == '[')
+                {
+                    i++;
+                    while (i < s.Length && s[i] >= '\u0020' && s[i] <= '\u003f') i++;
+                    if (i < s.Length && s[i] >= '\u0040' && s[i] <= '\u007e') i++;
+                }
+                continue;
+            }
+            sb.Append(s[i]);
+            i++;
+        }
+        return sb.ToString();
     }
 
     // ── 真的起一個 HTTP 伺服器，讓 RunDownload 跑完整條路 ───────────────

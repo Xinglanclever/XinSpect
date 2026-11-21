@@ -107,6 +107,17 @@ public class AcpiMadtFactsTests
         Assert.Equal(FactAvailability.NotApplicable, fact.Availability);
         Assert.False(AcpiDeep.HasDedicatedDecoder("MADT"));
     }
+
+    public void 列舉後來源失效要標ReadError而不是缺MADT()
+    {
+        const string reason = "ACPI 來源於表讀取期間失效";
+        var source = new ChangingAcpiTableSource(reason, true, Build(Lapic(0, 0, 1)));
+
+        var f = Assert.Single(AcpiMadtFactsService.Collect(source, At));
+
+        Assert.Equal(FactAvailability.ReadError, f.Availability);
+        Assert.Contains(reason, f.UnavailableReason);
+    }
     // ── 彙總與處理器數 ──────────────────────────────────────────────────
 
     [Fact]

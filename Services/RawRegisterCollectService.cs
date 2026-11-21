@@ -46,25 +46,38 @@ public static class RawRegisterCollectService
         if (acpi.Available)
         {
             // 同簽章多張表（多個 SSDT 等）要加 occurrence 後綴，來源鍵不可重複——差分按來源鍵配對。
-            var tables = acpi.ReadAll()
-                .Where(t => t.Length >= 8)
-                .Select(t => (Sig: System.Text.Encoding.ASCII.GetString(t[..4]).TrimEnd('\0', ' '), Bytes: t))
-                .Where(t => t.Sig.Length > 0)
-                .ToList();
-            var sigCount = tables.GroupBy(t => t.Sig, StringComparer.Ordinal)
-                .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
-            var occ = new Dictionary<string, int>(StringComparer.Ordinal);
-            foreach (var (sig, bytes) in tables)
+            var acpiTables = acpi.ReadAll();
+            if (!acpi.Available)
             {
-                int n = occ.TryGetValue(sig, out int c) ? c + 1 : 1;
-                occ[sig] = n;
-                string source = sigCount[sig] > 1 ? $"acpi:{sig}.{n}" : $"acpi:{sig}";
                 regions.Add(new RawRegisterRegion
                 {
-                    Source = source,
-                    Bytes = bytes,
-                    Availability = FactAvailability.Present,
+                    Source = "acpi:*",
+                    Availability = FactAvailability.ReadError,
+                    UnavailableReason = acpi.UnavailableReason ?? "讀取 ACPI 表時來源失效",
                 });
+            }
+            else
+            {
+                var tables = acpiTables
+                    .Where(t => t.Length >= 8)
+                    .Select(t => (Sig: System.Text.Encoding.ASCII.GetString(t[..4]).TrimEnd('\0', ' '), Bytes: t))
+                    .Where(t => t.Sig.Length > 0)
+                    .ToList();
+                var sigCount = tables.GroupBy(t => t.Sig, StringComparer.Ordinal)
+                    .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
+                var occ = new Dictionary<string, int>(StringComparer.Ordinal);
+                foreach (var (sig, bytes) in tables)
+                {
+                    int n = occ.TryGetValue(sig, out int c) ? c + 1 : 1;
+                    occ[sig] = n;
+                    string source = sigCount[sig] > 1 ? $"acpi:{sig}.{n}" : $"acpi:{sig}";
+                    regions.Add(new RawRegisterRegion
+                    {
+                        Source = source,
+                        Bytes = bytes,
+                        Availability = FactAvailability.Present,
+                    });
+                }
             }
         }
         else

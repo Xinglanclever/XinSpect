@@ -11,16 +11,24 @@ public static class CxlFactsService
 
     public static IReadOnlyList<HardwareFact> Collect(DateTimeOffset at, IAcpiTableSource acpi)
     {
+        if (!acpi.Available)
+            return [new HardwareFact("cxl.cfmws.count", Category, "CXL 固定記憶體窗口", "", "",
+                Source, FactTrustLevel.Unknown, false, at, null, FactAvailability.InsufficientPrivilege,
+                acpi.UnavailableReason ?? "無法列舉 ACPI 表")];
+
+        var tables = acpi.ReadAll();
+        if (!acpi.Available)
+            return [new HardwareFact("cxl.cfmws.count", Category, "CXL 固定記憶體窗口", "", "",
+                Source, FactTrustLevel.Unknown, false, at, null, FactAvailability.ReadError,
+                acpi.UnavailableReason ?? "讀取 ACPI 表時來源失效")];
+
         byte[]? cedt = null;
-        if (acpi.Available)
+        foreach (var table in tables)
         {
-            foreach (var table in acpi.ReadAll())
+            if (AcpiTable.TryParseHeader(table, out var header) && header.Signature == "CEDT")
             {
-                if (AcpiTable.TryParseHeader(table, out var header) && header.Signature == "CEDT")
-                {
-                    cedt = table;
-                    break;
-                }
+                cedt = table;
+                break;
             }
         }
 

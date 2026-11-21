@@ -133,16 +133,23 @@ public static class PlatformExpansionFactsService
 
     private static AmlStatState? ReadAmlStat()
     {
-        var tables = new Win32AcpiTableSource().ReadAll();
+        return ReadAmlStat(new Win32AcpiTableSource());
+    }
+
+    internal static AmlStatState? ReadAmlStat(IAcpiTableSource source)
+    {
+        var tables = source.ReadAll();
         int bytes = 0, opcodes = 0, unknown = 0;
+        int amlTables = 0;
         foreach (var t in tables)
         {
             if (!AcpiTable.TryParseHeader(t, out var h) || (h.Signature != "DSDT" && h.Signature != "SSDT") || t.Length <= 36) continue;
+            amlTables++;
             bytes += t.Length - 36;
             for (int i = 36; i < t.Length; i++) { if (t[i] == 0xA0 || t[i] == 0xA1 || t[i] == 0x5B) opcodes++; else unknown++; }
         }
         if (bytes == 0) return null;
-        return new AmlStatState(tables.Count, bytes, opcodes, unknown);
+        return new AmlStatState(amlTables, bytes, opcodes, unknown);
     }
 
     public static HardwareFact SmiCstateFact(DateTimeOffset at, SmiCstateProbe? probe = null)

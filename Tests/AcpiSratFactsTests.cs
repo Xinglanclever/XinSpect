@@ -14,6 +14,18 @@ public class AcpiSratFactsTests
 {
     private static readonly DateTimeOffset At = new(2026, 10, 16, 12, 0, 0, TimeSpan.Zero);
 
+    [Fact]
+    public void 列舉後來源失效要標ReadError而不是缺SRAT()
+    {
+        const string reason = "ACPI 來源於表讀取期間失效";
+        var source = new ChangingAcpiTableSource(reason, true, Build(ProcAffinity(0, 0)));
+
+        var f = Assert.Single(AcpiSratFactsService.Collect(source, At));
+
+        Assert.Equal(FactAvailability.ReadError, f.Availability);
+        Assert.Contains(reason, f.UnavailableReason);
+    }
+
     private sealed class FakeSource(bool available, params byte[][] tables) : IAcpiTableSource
     {
         public bool Available { get; } = available;

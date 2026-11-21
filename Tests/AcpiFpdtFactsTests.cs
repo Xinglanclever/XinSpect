@@ -41,11 +41,30 @@ public class AcpiFpdtFactsTests
         return table;
     }
 
-    private sealed class FakeAcpi(byte[]? table, bool available = true, string? reason = null) : IAcpiTableSource
+    private sealed class FakeAcpi : IAcpiTableSource
     {
-        public bool Available => available;
-        public string? UnavailableReason => reason;
-        public IReadOnlyList<byte[]> ReadAll() => table is null ? [] : [table];
+        private readonly byte[]? _table;
+        private readonly string? _reason;
+        private readonly bool _unavailableAfterRead;
+        private bool _available;
+
+        public FakeAcpi(byte[]? table, bool available = true, string? reason = null,
+            bool unavailableAfterRead = false)
+        {
+            _table = table;
+            _available = available;
+            _reason = reason;
+            _unavailableAfterRead = unavailableAfterRead;
+        }
+
+        public bool Available => _available;
+        public string? UnavailableReason => _reason;
+        public IReadOnlyList<byte[]> ReadAll()
+        {
+            IReadOnlyList<byte[]> tables = _table is null ? [] : [_table];
+            if (_unavailableAfterRead) _available = false;
+            return tables;
+        }
     }
 
     // ── 解碼 ─────────────────────────────────────────────────────────────
@@ -166,6 +185,21 @@ public class AcpiFpdtFactsTests
         var f = AcpiFpdtFactsService.Collect(acpi, At);
         Assert.Equal(FactAvailability.InsufficientPrivilege, f.Availability);
         Assert.Contains("需要管理員權限", f.UnavailableReason);
+    }
+
+    [Fact]
+    public void 事實_ACPI列舉後失敗_標ReadError而不是缺FPDT並保留原因()
+    {
+        const string reason = "FPDT 列舉完成後來源讀取失敗";
+        var acpi = new FakeAcpi(null, reason: reason, unavailableAfterRead: true);
+        Assert.True(acpi.Available);
+
+        var f = AcpiFpdtFactsService.Collect(acpi, At);
+
+        Assert.Equal(FactAvailability.ReadError, f.Availability);
+        Assert.Contains(reason, f.UnavailableReason);
+        Assert.Equal("", f.Value);
+        Assert.False(acpi.Available);
     }
 
     [Fact]

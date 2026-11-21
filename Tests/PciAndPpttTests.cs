@@ -197,6 +197,26 @@ public sealed class PciAndPpttTests
         Assert.All(facts, f => Assert.Equal(FactAvailability.NotApplicable, f.Availability));
     }
 
+    [Fact]
+    public void PCI能力_ACPI列舉後失敗_不報缺MCFG也不讀組態空間()
+    {
+        const string reason = "ACPI 表讀取在列舉後失敗";
+        int pageReads = 0;
+        var acpi = new OneTable(null, unavailableAfterRead: true, reason: reason);
+        Assert.True(acpi.Available);
+        var facts = PciCapabilityFactsService.Collect(null!, acpi, At,
+            (_, _, _) => { pageReads++; return null; });
+
+        Assert.Equal(9, facts.Count);
+        Assert.All(facts, f =>
+        {
+            Assert.Equal(FactAvailability.ReadError, f.Availability);
+            Assert.Contains(reason, f.UnavailableReason);
+        });
+        Assert.False(acpi.Available);
+        Assert.Equal(0, pageReads);
+    }
+
     // ── AC-017 PPTT ─────────────────────────────────────────────────────
 
     [Fact]
@@ -226,6 +246,24 @@ public sealed class PciAndPpttTests
         var facts = PpttFactsService.Collect(new OneTable(null), At, 4);
         Assert.All(facts, f => Assert.Equal(FactAvailability.NotApplicable, f.Availability));
         Assert.Contains("ACPI 6.2+ 才引入", facts[0].UnavailableReason!);
+    }
+
+    [Fact]
+    public void PPTT_ACPI列舉後失敗_標ReadError並保留來源原因()
+    {
+        const string reason = "PPTT 列舉完成後來源讀取失敗";
+        var acpi = new OneTable(null, unavailableAfterRead: true, reason: reason);
+        Assert.True(acpi.Available);
+        var facts = PpttFactsService.Collect(acpi, At, 4);
+
+        Assert.Equal(2, facts.Count);
+        Assert.All(facts, f =>
+        {
+            Assert.Equal(FactAvailability.ReadError, f.Availability);
+            Assert.Contains(reason, f.UnavailableReason);
+            Assert.Equal("", f.Value);
+        });
+        Assert.False(acpi.Available);
     }
 
     [Fact]
@@ -271,11 +309,28 @@ public sealed class PciAndPpttTests
 
     // ── 工具 ─────────────────────────────────────────────────────────────
 
-    private sealed class OneTable(byte[]? table) : IAcpiTableSource
+    private sealed class OneTable : IAcpiTableSource
     {
-        public bool Available => true;
-        public string? UnavailableReason => null;
-        public IReadOnlyList<byte[]> ReadAll() => table is null ? [] : [table];
+        private readonly byte[]? _table;
+        private readonly bool _unavailableAfterRead;
+        private readonly string? _reason;
+        private bool _available = true;
+
+        public OneTable(byte[]? table, bool unavailableAfterRead = false, string? reason = null)
+        {
+            _table = table;
+            _unavailableAfterRead = unavailableAfterRead;
+            _reason = reason;
+        }
+
+        public bool Available => _available;
+        public string? UnavailableReason => _reason;
+        public IReadOnlyList<byte[]> ReadAll()
+        {
+            IReadOnlyList<byte[]> tables = _table is null ? [] : [_table];
+            if (_unavailableAfterRead) _available = false;
+            return tables;
+        }
     }
 
     private sealed class NoAcpi : IAcpiTableSource

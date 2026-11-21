@@ -71,4 +71,16 @@ public class CxlFactsTests
         Assert.Equal(FactAvailability.NotApplicable, na.Availability);
         Assert.Contains("沒有 CEDT", na.UnavailableReason);
     }
+
+    [Fact]
+    public void CXL事實_ACPI列舉後來源失效標ReadError()
+    {
+        const string reason = "CEDT 列舉完成後來源失效";
+        var facts = XinSpect.CxlFactsService.Collect(At,
+            new ChangingAcpiTableSource(reason, true, Cedt(0x1000_0000_0000, 0x40_0000_0000, 1)));
+
+        var fact = Assert.Single(facts);
+        Assert.Equal(FactAvailability.ReadError, fact.Availability);
+        Assert.Contains(reason, fact.UnavailableReason);
+    }
 }

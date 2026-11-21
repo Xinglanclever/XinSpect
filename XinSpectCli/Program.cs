@@ -478,28 +478,38 @@ internal static class Program
 
     // ── 事實採集與查詢 ────────────────────────────────────────────────────
 
-    /// <summary>吉祥物候選預覽：mascot（全部依序）／mascot a／mascot b，每個候選播一輪動畫並標名。</summary>
+    /// <summary>吉祥物候選預覽：mascot（全部依序）／mascot a…c，每個候選播兩輪動畫並標名。</summary>
     private static void MascotPreview(string arg)
     {
-        var names = new[] { "A ・ 我的設計（日核菱形）", "B ・ Gemini 設計" };
+        var names = new[]
+        {
+            "A ・ 我的設計（日核菱形）",
+            "B ・ Gemini 設計（曦輪）",
+            "C ・ 旋轉地球＋Global Village（Usenet 1997 ・ Triamme）",
+        };
         int choice = arg.Trim().ToLowerInvariant() switch
         {
             "a" => 0,
             "b" => 1,
+            "c" => 2,
             _ => -1,
         };
-        var list = choice >= 0 ? new[] { choice } : new[] { 0, 1 };
+        var list = choice >= 0 ? new[] { choice } : Enumerable.Range(0, Tui.MascotCandidates.Length).ToArray();
         foreach (var c in list)
         {
+            if (c != list[0]) { try { Console.Clear(); } catch { } }
             Console.WriteLine($"{Tui.BrandRed}{Tui.Bold}候選 {names[c]}{Tui.Reset}");
             Tui.MascotChoice = c;
             if (!Console.IsInputRedirected)
             {
-                for (int round = 0; round < 4; round++)
+                int frames = Tui.MascotFrames.Length;
+                // 長序列（候選 C 30 幀）播一輪就好；短候選補足 4 拍。最後一幀留下定格。
+                for (int round = 0; round < Math.Max(4, frames); round++)
                 {
-                    Console.WriteLine(Tui.MascotBox(round % 2));
-                    System.Threading.Thread.Sleep(350);
-                    try { Console.Clear(); } catch { }
+                    // 幀與幀之間才清屏；最後一幀留下——清了再印提示語會像憑空浮出一行
+                    Console.WriteLine(Tui.MascotBox(round % frames));
+                    System.Threading.Thread.Sleep(280);
+                    if (round < Math.Max(4, frames) - 1) { try { Console.Clear(); } catch { } }
                 }
             }
             else
@@ -508,7 +518,7 @@ internal static class Program
             }
             Console.WriteLine();
         }
-        Console.WriteLine($"{Tui.Dim}跟我說選 A 還是 B（或再看一次：mascot）。選定後我把吉祥物換上。{Tui.Reset}");
+        Console.WriteLine($"{Tui.Dim}跟我說選哪個（A–C，或再看一次：mascot）。選定後我把吉祥物換上。{Tui.Reset}");
     }
 
     private static void EnsureFacts()
@@ -1846,9 +1856,16 @@ internal static class Program
                 var key = Console.ReadKey(intercept: true);
             if (key.Key == ConsoleKey.Enter)
             {
-                Console.WriteLine($"{Tui.Dim}{new string('─', _frameWidth)}{Tui.Reset}");   // 輸入欄底線（固定長直線）
+                // 輸入欄底線：先如實換行，把 Enter 落到提示符列尾——底線若從游標半路起畫
+                // （打過字就不在第 1 欄），整段溢出折行，殘段掉進下一行、狀態行跟著錯位
+                // （2026-11-21 使用者實測：`> help` 後底線黏在同列、複製出 `> help────…`）。
+                // 換行後從第 1 欄畫、寬度即時取，任何視窗寬度、任何輸入長度都恰好一整行。
+                Console.WriteLine();
+                int w = Tui.CurrentWidth();
+                _frameWidth = w;
+                Console.WriteLine($"{Tui.Dim}{new string('─', Math.Max(1, w - 1))}{Tui.Reset}");   // 輸入欄底線（整行・不折行）
                 var st = StatusLine();
-                int scol = Math.Max(1, _frameWidth - Tui.VisibleLength(st) - 1);
+                int scol = Math.Max(1, w - Tui.VisibleLength(st) - 1);
                 if (Tui.Legacy) Console.WriteLine(Tui.Dim + st + Tui.Reset);
                 else Console.Write(Tui.Esc + "[" + scol + "G" + Tui.Dim + st + Tui.Reset + Environment.NewLine);
                 return buf.ToString();

@@ -91,4 +91,20 @@ public class TimeSyncFactsTests
     [Fact]
     public void PMTimer_短FADT如實拒解()
         => Assert.Null(XinSpect.TimeSyncFactsService.DecodePmTimerBlock(new byte[60]));
+
+    [Fact]
+    public void 時間互校_ACPI列舉後失敗不宣稱HPET或FADT缺席()
+    {
+        const string reason = "ACPI 表讀取於列舉後失敗";
+        var facts = XinSpect.TimeSyncFactsService.Collect(At,
+            new ChangingAcpiTableSource(reason, true, Fadt(0x408)),
+            driftProbe: () => (200_000, 200_000));
+
+        Assert.All(facts.Where(f => f.Key is "time.hpet" or "time.pm_timer"), fact =>
+        {
+            Assert.Equal(FactAvailability.ReadError, fact.Availability);
+            Assert.Contains(reason, fact.UnavailableReason);
+        });
+        Assert.Equal(FactAvailability.Present, facts.Single(f => f.Key == "time.drift.ppm").Availability);
+    }
 }

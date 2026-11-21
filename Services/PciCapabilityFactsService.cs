@@ -153,7 +153,14 @@ public static class PciCapabilityFactsService
             reason = acpi.UnavailableReason ?? "無法列舉 ACPI 表";
             return null;
         }
-        foreach (var t in acpi.ReadAll())
+        var tables = acpi.ReadAll();
+        if (!acpi.Available)
+        {
+            reason = acpi.UnavailableReason ?? "讀取 ACPI 表時來源失效";
+            availability = FactAvailability.ReadError;
+            return null;
+        }
+        foreach (var t in tables)
             foreach (var e in AcpiTable.McfgEntries(t))
                 if (e.SegmentGroup == 0 && e.Base != 0) return e;
         reason = "平台未提供 MCFG（segment 0）——無 ECAM 可循";
