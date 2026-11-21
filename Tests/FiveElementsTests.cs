@@ -82,6 +82,31 @@ public class FiveElementsTests
     [Fact]
     public void 圓心文字已更新()
         => Assert.Equal("五族共和\n攜手共進", FiveElements.Caption);
+
+    [Fact]
+    public void ChatGPT協力名單包含指定三個型號()
+    {
+        string label = FiveElements.Nodes.Single(n => n.AngleDeg == 72).Label;
+        Assert.Equal("ChatGPT 5.6 Sol\nChatGPT 6 Astra\nChatGPT 6.1 Sol", label);
+    }
+}
+
+public class AiContributionCatalogTests
+{
+    [Fact]
+    public void 家族與型號排名依指定順序且不含虛構用量()
+    {
+        Assert.Equal(new[] { "Claude", "ChatGPT", "GLM", "DeepSeek", "Qwen", "Gemini" },
+            AiContributionCatalog.Providers.Select(x => x.Name));
+        Assert.Equal(Enumerable.Range(1, 6), AiContributionCatalog.Providers.Select(x => x.Rank));
+        Assert.Equal(new[]
+        {
+            "Claude Opus 5", "ChatGPT 6.1 Sol", "GLM 5.3 Flash", "Claude Opus 4.6",
+            "ChatGPT 5.6 Sol", "Claude Opus 4.8", "DeepSeek V4.1 Flash", "Qwen 3.8 Flash", "GLM 5.3",
+        }, AiContributionCatalog.Models.Select(x => x.Name));
+        Assert.Equal(Enumerable.Range(1, 9), AiContributionCatalog.Models.Select(x => x.Rank));
+        Assert.Contains("不代表消耗量或比例", AiContributionCatalog.UsageAvailabilityNote);
+    }
 }
 
 /// <summary>

@@ -3,7 +3,7 @@ namespace XinSpect;
 /// <summary>後端選擇模式（存進 settings.json 的 <c>KernelBackendMode</c>；整數只追加不調換）。</summary>
 public enum KernelBackendMode
 {
-    /// <summary>自動：沙箱優先，通不過自證才落到萬能鑰匙；每項事實照實記錄服務後端。</summary>
+    /// <summary>自動：優先使用已接入的沙箱／原生後端；不載入 Universal（WinRing0）。本版 PawnIO 未接入時可能無可用路由。</summary>
     Auto = 0,
     /// <summary>僅沙箱：只接受 <see cref="KernelTrustTier.Sandboxed"/>——MSR/MMIO 讀不到就三態，不開萬能鑰匙。</summary>
     SandboxOnly = 1,
@@ -23,9 +23,9 @@ public enum KernelBackendMode
 /// 哪個後端有這個能力且被允許」。
 /// </para>
 /// <para>
-/// <b>切換的語義。</b>模式只約束<b>信任層級</b>，不指定具體後端：<see cref="KernelBackendMode.SandboxOnly"/>
-/// 擋掉 Universal 與 Native；<see cref="KernelBackendMode.UniversalAllowed"/> 全開但仍優先沙箱
-/// （優先序是政策不是使用者偏好——沙箱通過自證時，萬能鑰匙只兜沙箱沒有的能力）。
+/// <b>切換的語義。</b>模式只約束<b>信任層級</b>，不指定具體後端：Auto 禁止 Universal，允許已接入的
+/// Sandboxed／Native 後端；<see cref="KernelBackendMode.SandboxOnly"/> 只接受 Sandboxed；
+/// 只有 <see cref="KernelBackendMode.UniversalAllowed"/> 才允許 Universal（WinRing0），且仍按能力逐項選路。
 /// 每次解析都帶原因；被模式擋掉的後端寫進 <see cref="KernelRoute"/>，介面能回答
 /// 「為什麼這一格走的是這條路」。
 /// </para>
@@ -78,6 +78,11 @@ public sealed class KernelBackendSelector : IDisposable
             if (_mode == KernelBackendMode.SandboxOnly && b.Tier != KernelTrustTier.Sandboxed)
             {
                 rejected.Add($"{b.DisplayName}：被「僅沙箱」模式排除");
+                continue;
+            }
+            if (b.Tier == KernelTrustTier.Universal && _mode != KernelBackendMode.UniversalAllowed)
+            {
+                rejected.Add($"{b.DisplayName}：需要明確選擇「允許 WinRing0」才會納入路由");
                 continue;
             }
             var others = rejected.Count == 0 ? "無前序排除" : string.Join("；", rejected);

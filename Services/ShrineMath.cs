@@ -15,6 +15,26 @@ public static class ShrineMath
     /// <summary>近 7 天每筆藍屏扣的分數。演算法本身是玩笑，這個數字不必認真。</summary>
     private const int BsodPenalty = 25;
 
+    /// <summary>
+    /// Counts only readable, decodable kernel minidumps written during the preceding seven days.
+    /// A missing listing or a recent candidate that cannot be decoded leaves the count unknown;
+    /// the count is never presented as zero when a recent dump may have been missed.
+    /// </summary>
+    public static int? CountRecentMinidumps(IReadOnlyList<DumpListing>? listings, DateTimeOffset nowUtc)
+    {
+        if (listings is null) return null;
+
+        DateTimeOffset cutoff = nowUtc - TimeSpan.FromDays(7);
+        int count = 0;
+        foreach (DumpListing item in listings)
+        {
+            if (item.LastWriteUtc < cutoff || item.LastWriteUtc > nowUtc) continue;
+            if (item.Head is null || KernelDumpDecoder.Parse(item.Head) is null) return null;
+            count++;
+        }
+        return count;
+    }
+
     /// <summary>工程師祈福語池：全部是「願……」的許願句式，不含任何診斷或指示。</summary>
     public static readonly string[] Blessings =
     [

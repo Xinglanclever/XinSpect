@@ -23,6 +23,8 @@
   4. `NetworkStackLatencyAdapter`（DeepBench）——使用者指定的目標位址量延遲；
   5. `UpdateCheckService`——使用者主動點「檢查更新」，只向 GitHub Releases API **查詢**
      最新版本號，不上傳本機任何資料；查不到時如實顯示，不假裝已是最新。
+  6. `EncyclopediaCatalog`——使用者主動點「下載並開啟百科」後，從 GitHub Release 下載百科及 SHA256SUMS.txt，
+     驗證雜湊與 HTML 結構後快取到 `%LOCALAPPDATA%\XinSpect\docs`；之後無網路時可使用已驗證快取。不上傳本機資料。
 - Wi-Fi 訊號讀取（wlanapi）查詢的是本機無線電的狀態，**不連線、不上傳**。
 - 自我遙測（SelfTelemetry）**預設關閉**、本機存取、匿名只記數字與時間。
 

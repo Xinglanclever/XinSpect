@@ -22,9 +22,9 @@
     <AssemblyTitle>曦覽 XinSpect 硬體資訊總覽</AssemblyTitle>
     <Company>Xinglanclever</Company>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
-    <Version>3.31</Version>
+    <Version>3.32</Version>
     <!-- FileVersion 只吃數字，表達不了「-B1」；第四段就是拿來標這種同版號的後續建置的 -->
-    <FileVersion>3.31.0.0</FileVersion>
+    <FileVersion>3.32.0.0</FileVersion>
     <!-- 內嵌 PDB：發佈維持單一執行檔，CrashLog 記錄的堆疊仍帶行號（portable PDB 預設會另產生 XinSpect.pdb） -->
     <DebugType>embedded</DebugType>
     <Copyright>By：Xinglanclever ・ Claude Opus 5 ・ 2026年9月8日</Copyright>
@@ -73,10 +73,7 @@
          讀取順序「資源優先、磁碟檔其次、皆無＝如實標缺」，磁碟檔只是開發機退路。 -->
     <EmbeddedResource Include="THIRD-PARTY-NOTICES.md" LogicalName="XinSpect.THIRD-PARTY-NOTICES.md" />
     <EmbeddedResource Include="ThirdPartyLicenses\OpenCC-Lexicon-Apache-2.0.txt" LogicalName="XinSpect.OpenCC-Lexicon-Apache-2.0.txt" />
-    <!-- 百科（README.md 經 Tools/gen-docs-html.py 產生的自足 HTML）：程式內翻閱用。
-         內嵌而不是帶側檔，單檔發佈才讀得到；內容與倉庫檔逐位元組相同（Tests/DocsHtmlTests 钉住），
-         不會出現「程式裡的百科」與「倉庫裡的百科」各說各話。 -->
-    <EmbeddedResource Include="百科.html" LogicalName="XinSpect.Encyclopedia.html" />
+    <!-- Desktop 百科不隨便攜單檔散布：About 頁由使用者明確點擊後才下載並校驗。 -->
   </ItemGroup>
 
   <!-- WinForms 僅供系統匣（TrayService）使用；移除其全域 using 以免與 WPF 的 System.Windows.* 型別衝突 -->
@@ -176,24 +173,8 @@
        以獨立程序啟動之。單檔發佈時資源隨 XinSpect.dll 一同打包，使用者無須另裝任何檔案。
        Restore 與 Build 分兩次呼叫（避免同次呼叫沿用過期評估）；巢狀 MSBuild 僅傳入 Configuration，
        使 Bridge 以自身預設平台（AnyCPU/PlatformTarget=x64）建置，不受本體 win-x64 影響。 -->
-  <!-- 藍色中隊內嵌（正式發佈）：把 BlueSquadronBridge 發佈成單檔並內嵌為資源，
-       BlueSquadronBootstrap 於執行期解壓（SHA256 驗證＋ACL 鎖定）。Debug 測試不內嵌以保建置速度。 -->
-  <Target Name="BuildAndEmbedBlueSquadronBridge" BeforeTargets="PrepareForBuild;BeforeCompile"
-          Condition="'$(Configuration)' == 'Release'">
-    <PropertyGroup>
-      <BsProj>$(MSBuildProjectDirectory)\BlueSquadron\BlueSquadronBridge.csproj</BsProj>
-      <BsPayloadDir>$(MSBuildProjectDirectory)\BlueSquadron\bin\BridgePayload</BsPayloadDir>
-      <BsExe>$(BsPayloadDir)\BlueSquadronBridge.exe</BsExe>
-    </PropertyGroup>
-    <Exec Command="dotnet publish &quot;$(BsProj)&quot; -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o &quot;$(BsPayloadDir)&quot;" />
-    <Error Condition="!Exists('$(BsExe)')" Text="藍色中隊橋接程式發佈後仍找不到產出：$(BsExe)" />
-    <ItemGroup>
-      <EmbeddedResource Include="$(BsExe)">
-        <LogicalName>XinSpect.bridge.BlueSquadronBridge.exe</LogicalName>
-        <Visible>false</Visible>
-      </EmbeddedResource>
-    </ItemGroup>
-  </Target>
+  <!-- BlueSquadronBridge.exe 是獨立資產，由部署器下載並依官方 SHA256SUMS 驗證；
+       本體只保留 IPC 橋接介面，不會在 Desktop 單檔中內嵌守護進程。 -->
 
   <Target Name="BuildAndEmbedXtuBridge" BeforeTargets="PrepareForBuild;BeforeCompile">
     <PropertyGroup>

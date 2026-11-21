@@ -24,6 +24,26 @@
                 </StackPanel>
             </Border>
         </DataTemplate>
+        <DataTemplate x:Key="ContributionRankTemplate">
+            <Border Margin="0,4,8,4" Padding="9,8" CornerRadius="6"
+                    Background="{DynamicResource Surface2Brush}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="38"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Width="30" Height="30" CornerRadius="15"
+                            Background="{DynamicResource AccentBrush}" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding RankLabel}" FontSize="11" FontWeight="Bold"
+                                   Foreground="{DynamicResource AccentInkBrush}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13.5"
+                               FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center"
+                               Foreground="{DynamicResource PrimaryInkBrush}"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
     </UserControl.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
@@ -46,7 +66,7 @@
                                Text="硬體資訊總覽 ・ 即時偵測工具"/>
                     <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                         <TextBlock x:Name="VersionMetadata" Style="{StaticResource FieldLabel}"
-                                   Text="版本 3.31 ・ Veritas ・ 特別版 ・ CLI 記憶體與 PCIe ECAM 硬化 ・ 便攜單一執行檔"/>
+                                   Text="版本 3.32 ・ ULTIMA XXXII ・ 特別版 ・ CLI 記憶體與 PCIe ECAM 硬化 ・ 便攜單一執行檔"/>
                         <TextBlock x:Name="SageQuoteHint" Text="  · · ·" FontSize="10" Foreground="{DynamicResource MutedInkBrush}" Opacity="0.18" Cursor="Hand" VerticalAlignment="Center" ToolTip="The sages think themselves to be all-knowing, but we alone are wise to the virtue in those acts of folly" MouseLeftButtonUp="SageQuoteHint_Click"/>
                         <TextBlock x:Name="SageQuoteText" Text="The sages think themselves to be all-knowing, but we alone are wise to the virtue in those acts of folly" Visibility="Collapsed" FontSize="10" FontStyle="Italic" Foreground="{DynamicResource MutedInkBrush}" TextWrapping="Wrap" MaxWidth="520" Margin="8,0,0,0" VerticalAlignment="Center"/>
                     </StackPanel>
@@ -106,11 +126,11 @@
                                 Padding="10,4" Margin="8,0,0,0"
                                 Click="CheckUpdate_Click"
                                 ToolTip="僅向 GitHub 查詢最新版本號，不上傳本機任何資料"/>
-                        <Button x:Name="OpenEncyclopediaBtn" Content="開啟百科（可翻閱）"
+                        <Button x:Name="OpenEncyclopediaBtn" Content="下載並開啟百科"
                                 Style="{StaticResource ToolButton}"
                                 Padding="10,4" Margin="8,0,0,0"
                                 Click="OpenEncyclopedia_Click"
-                                ToolTip="內嵌的完整百科：左側目錄可點、標題有錨點、可找字；完全離線"/>
+                                ToolTip="點擊後從官方 Release 下載百科，校驗 SHA-256 並快取於本機；之後可離線閱讀"/>
                     </StackPanel>
                     <TextBlock x:Name="UpdateResultText" Visibility="Collapsed" TextWrapping="Wrap" Margin="0,6,0,0"
                                Style="{StaticResource FieldLabel}"/>
@@ -157,6 +177,37 @@
                         </StackPanel>
                         <local:FiveElementsWheel Grid.Column="1" HorizontalAlignment="Center"/>
                     </Grid>
+
+                    <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,14,0,12"/>
+                    <TextBlock Text="AI 協力貢獻表" FontSize="15" FontWeight="SemiBold"
+                               Foreground="{DynamicResource PrimaryInkBrush}"/>
+                    <TextBlock Text="供應商名次（依指定排序）" Style="{StaticResource FieldLabel}"
+                               Margin="0,6,0,2"/>
+                    <ItemsControl x:Name="ProviderContributionList"
+                                  ItemTemplate="{StaticResource ContributionRankTemplate}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><UniformGrid Columns="2"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                    <Expander x:Name="ModelContributionExpander" Header="查看具體型號名次"
+                              Margin="0,8,0,0" Padding="8,4"
+                              Foreground="{DynamicResource AccentBrush}">
+                        <ItemsControl x:Name="ModelContributionList"
+                                      ItemTemplate="{StaticResource ContributionRankTemplate}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><UniformGrid Columns="2"/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </Expander>
+                    <Border Margin="0,8,0,0" Padding="10,9" CornerRadius="6"
+                            Background="{DynamicResource Surface2Brush}">
+                        <StackPanel>
+                            <TextBlock Text="實際 Token 消耗量" FontSize="12.5" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource PrimaryInkBrush}"/>
+                            <TextBlock x:Name="ContributionUsageNote" Style="{StaticResource FieldLabel}"
+                                       TextWrapping="Wrap" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
 
                     <Button Content="查看特殊型號徽章一覽　▸" Style="{StaticResource PrimaryButton}"
                             HorizontalAlignment="Left" Margin="0,16,0,0"

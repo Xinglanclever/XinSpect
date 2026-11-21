@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""把一版發佈的四件資產同步到鏡像（Google Drive／123 雲盤），並對帳。
+"""把一版發佈的五件資產同步到鏡像（Google Drive／123 雲盤），並對帳。
 
 為什麼要有這支：每一次發版，GitHub Release 是一次 API 呼叫就完成，但 Drive 與
 123 雲盤只能手動上傳——兩邊各自要開瀏覽器、拖檔案、等上傳、複製連結。發一版要
@@ -12,7 +12,7 @@
      蓋掉。分享連結因此**永遠不變**，Installer/mirrors.txt 不用改，安裝器 exe
      也不用重編（它在執行時抓 mirrors.txt）。
 
-  ② 逐檔對帳：上傳完（或任何時候）跑 --check，比對遠端與本地四件資產的檔名、
+  ② 逐檔對帳：上傳完（或任何時候）跑 --check，比對遠端與本地五件資產的檔名、
      大小與雜湊。不一致就回非零——「同步」是驗出來的，不是上傳完自己宣布的。
 
 兩個網盤**同時**上傳（各自一個執行緒），不必等一個跑完再跑另一個。
@@ -50,8 +50,8 @@ CONFIG_PATH = os.path.join(ROOT, "Tools", "mirrors.json")
 MIRRORS_TXT = os.path.join(ROOT, "Installer", "mirrors.txt")
 REPO = "Xinglanclever/XinSpect"
 
-# 要同步的檔案。順序不重要，但四件都必須有——少一件鏡像就是半套。
-ASSETS = ["XinSpect.exe", "BlueSquadronBridge.exe", "XinSpectDeploy.exe", "SHA256SUMS.txt"]
+# 要同步的檔案。百科是 Desktop 點擊下載的獨立資產，雜湊仍由 SHA256SUMS.txt 錨定。
+ASSETS = ["XinSpect.exe", "BlueSquadronBridge.exe", "XinSpectDeploy.exe", "XinSpect-Encyclopedia.html", "SHA256SUMS.txt"]
 
 
 def say(msg):
@@ -90,6 +90,7 @@ def local_asset_paths(version):
         "XinSpect.exe": os.path.join(ROOT, "publish-%s" % version, "XinSpect.exe"),
         "BlueSquadronBridge.exe": bridge,
         "XinSpectDeploy.exe": os.path.join(ROOT, "Installer", "XinSpectDeploy.exe"),
+        "XinSpect-Encyclopedia.html": os.path.join(ROOT, "publish-%s" % version, "XinSpect-Encyclopedia.html"),
         "SHA256SUMS.txt": next((p for p in sums if os.path.exists(p)), sums[0]),
     }
 
@@ -116,7 +117,7 @@ def _download(url, dest):
 
 
 def release_asset_paths(version, workdir):
-    """從 GitHub Release 抓四件資產（不在發版機器上時用）。"""
+    """從 GitHub Release 抓五件資產（不在發版機器上時用）。"""
     os.makedirs(workdir, exist_ok=True)
     out = {}
     for name in ASSETS:
@@ -317,7 +318,7 @@ def run_check(cfg, assets):
     if not enabled:
         # 一家都沒啟用卻回「對帳完成、退出碼 0」，就是什麼都沒驗卻宣稱驗過了。
         die("Tools/mirrors.json 裡沒有啟用的 provider——照 docs/MIRRORS.md 把要用的設成 enabled: true")
-    say("對帳四件資產（%s）" % "、".join(p.get("label") or n for n, p in enabled))
+    say("對帳 %d 件資產（%s）" % (len(ASSETS), "、".join(p.get("label") or n for n, p in enabled)))
     ok = True
     for name, prov in enabled:
         drifted = verify_provider(rclone, prov, assets)

@@ -168,8 +168,15 @@ public partial class ToolboxView : UserControl
             + "確定要啟動嗎？",
             "危險工具確認", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
 
-    // ── 工具箱不做導覽 ────────────────────────────────────────────
-    //    1.6.2 起這一頁沒有任何「跳到曦覽某頁」或「開啟內建檢測視窗」的按鈕：
+    private void OpenSurveillancePlanning_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new SurveillancePlanningWindow { Owner = Window.GetWindow(this) };
+        window.ShowDialog();
+    }
+
+    // ── 工具箱功能入口 ────────────────────────────────────────────
+    //    監控工程規劃是使用者要求放進工具箱的內建設計計算器，以獨立視窗承載其完整表單。
+    //    其他「跳到曦覽某頁」入口仍由左側欄與 Ctrl+K 提供：
     //    硬體檢測搬到「實用工具 → 硬體檢測」，其餘自家功能本來就在左側欄與 Ctrl+K。
     //    1.9.0 起連「曦覽內建：X」那枚不可點的對照標籤也移除了，對照說明只留在主按鈕的提示裡。──
 

@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Buffers.Binary;
+using System.Text;
 using Xunit;
 
 namespace XinSpect.Tests;
@@ -11,6 +13,46 @@ namespace XinSpect.Tests;
 [Collection(WpfCollection.Name)]
 public class ShrineTests
 {
+    private static byte[] MinidumpHead(uint code)
+    {
+        byte[] bytes = new byte[KernelDumpDecoder.HeaderBytes];
+        Encoding.ASCII.GetBytes("PAGEDU64").CopyTo(bytes, 0);
+        BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(0x38, 4), code);
+        return bytes;
+    }
+
+    [Fact]
+    public void 乖度計數_只計近七天內可解析的核心傾印()
+    {
+        var now = new DateTimeOffset(2026, 11, 21, 0, 0, 0, TimeSpan.Zero);
+        var items = new[]
+        {
+            new DumpListing("recent.dmp", now.AddDays(-2), MinidumpHead(0x124)),
+            new DumpListing("old.dmp", now.AddDays(-8), MinidumpHead(0x124)),
+        };
+
+        Assert.Equal(1, ShrineMath.CountRecentMinidumps(items, now));
+        Assert.Null(ShrineMath.CountRecentMinidumps(null, now));
+    }
+
+    [Fact]
+    public void 乖度計數_近期傾印檔頭讀不到時保留未知()
+    {
+        var now = new DateTimeOffset(2026, 11, 21, 0, 0, 0, TimeSpan.Zero);
+        var items = new[] { new DumpListing("unreadable.dmp", now.AddDays(-1), null) };
+
+        Assert.Null(ShrineMath.CountRecentMinidumps(items, now));
+    }
+
+    [Fact]
+    public void 乖度計數_近期傾印格式無法解析時保留未知()
+    {
+        var now = new DateTimeOffset(2026, 11, 21, 0, 0, 0, TimeSpan.Zero);
+        var items = new[] { new DumpListing("unknown-format.dmp", now.AddDays(-1), new byte[KernelDumpDecoder.HeaderBytes]) };
+
+        Assert.Null(ShrineMath.CountRecentMinidumps(items, now));
+    }
+
     // ── 乖度（演算法是玩笑，測試不是玩笑）──────────────────────
 
     [Fact]

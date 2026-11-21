@@ -13,10 +13,10 @@
 
 能讀的給數值與出處（哪個暫存器、哪個 WMI 類別、哪個 API），讀不到的給原因，互相矛盾的紅字具名列出雙方——判讀留給你。
 
-![版本](https://img.shields.io/badge/version-3.31-4C8DFF)
+![版本](https://img.shields.io/badge/version-3.32-4C8DFF)
 ![平台](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![框架](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![測試](https://img.shields.io/badge/tests-9624%20passed-3FB950)
+![測試](https://img.shields.io/badge/tests-9651%20passed-3FB950)
 ![突變分數](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 > Stryker 82% 僅涵蓋 `XinSpect.Decoders` 純解碼器類別庫，不代表整個 GUI、CLI 或核心存取層。
 ![授權](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
@@ -58,21 +58,21 @@
 | 韌體安全 | 防護 |
 |---|---|
 | ![韌體安全](docs/screenshots/firmware-security.png) | ![防護](docs/screenshots/bluesquadron.png) |
-| 讀到就給裁決，缺權限就誠實標示原因 | BlueSquadron 威脅態勢與逐項評分 |
+| 讀到就給裁決，缺權限就誠實標示原因 | 防護頁與獨立橋接入口（尚未完工） |
 
 > 上列畫面擷取自 **v2.5.0**；v3.28 的頁面數量、版面與資訊密度均已變動，實際以程式為準。
 
 ## 主要功能
 
-65 個可到達頁面，依用途分六組：
+63 個可到達導覽頁面，依用途分六組：
 
 | 分組 | 內容 |
 |---|---|
-| **驗機與對帳** | 總覽、處理器（含腳座位位腳圖）、NPU 檢測、記憶體（SPD 直讀／SMBIOS-WMI／CPU-Z 三來源並列）、主機板、顯示卡、儲存裝置（SMART／NVMe）、網路、感測器、硬體目錄、事實地圖 |
+| **驗機與對帳** | 總覽、處理器（含腳座位位腳圖）、NPU 檢測、記憶體（SPD 直讀／SMBIOS-WMI／CPU-Z 三來源並列）、主機板、顯示卡、儲存裝置（SMART／NVMe）、網路、感測器、事實地圖 |
 | **監控與量測** | 即時感測器、歷史回放、感測器儀表板、幀時間（ETW）、DPC 延遲、網路速度、功耗（RAPL 能量計驗證）、健康 |
 | **效能與壓力** | 效能天花板、算力圖、繪圖管線測試、GPU 算繪測試、深測中心（44 項 Run Session）、CPU／DRAM／GPU 壓力測試、磁碟掃描、硬體測試（鍵盤／滑鼠／螢幕）、瓶頸診斷 |
-| **韌體與安全** | 韌體安全（晶片組安全暫存器、ACPI 錯誤表、SPI BIOS 防寫）、驅動分析、系統分析、BlueSquadron 防護（威脅態勢與掃描） |
-| **系統工具** | 終端機（強控台）、DNS、Hosts、右鍵選單、開機修復、啟動項、垃圾清理、記憶體清理、休眠／顯示連結／NVMe 電源、連接埠、藍屏分析、系統遷移、超頻（CPU／GPU）與風扇 |
+| **韌體與安全** | 韌體安全（晶片組安全暫存器、ACPI 錯誤表、SPI BIOS 防寫）、驅動分析、系統分析、BlueSquadron 防護入口（未完工；保留橋接介面） |
+| **系統工具** | 終端機（強控台）、DNS、Hosts、右鍵選單、開機修復、啟動項、垃圾清理、記憶體清理、休眠／顯示連結／NVMe 電源、連接埠、藍屏分析、系統遷移、超頻（CPU／GPU）、風扇、監控規劃（工具箱視窗；日韓標注未完工） |
 | **證據與治理** | 證據實驗室、合規報告、Merkle 證據、審計日誌雜湊鏈、企業離線基準、來源與授權頁 |
 
 另有 **AI 評價**（自備 API 金鑰）與**內建瀏覽器**（只開 http／https，界線見下節）。
@@ -89,21 +89,22 @@
 
 | 檔案 | 大小 | 說明 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.31/XinSpect.exe) | 37,114,521 bytes | 主程式。藍色中隊守護進程已內建；「強控台」按鈕橋接 xsc 終端機 |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.31/XinSpectConsole.exe) | 98,740,899 bytes | 曦覽終端機（CLI）。可獨立執行，也被主程式強控台喚起；自含 .NET 10 執行階段故體積較大（見下方說明） |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.31/BlueSquadronBridge.exe) | 6,531,620 bytes | 獨立守護進程。要脫離主程式單獨跑防護時使用 |
-| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.31/XinSpect-full.exe) | 209,880,768 bytes | 主程式・帶環境版：.NET 10 Desktop Runtime 一併打包，免裝執行階段（功能與 XinSpect.exe 相同） |
-| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.31/XinSpectConsole-nort.exe) | 65,216,518 bytes | 曦覽終端機・Windows 11／Server 2025・不帶環境：需已裝 .NET 10 Desktop Runtime |
-| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.31/XinSpectConsole-legacy-nort.exe) | 65,216,606 bytes | 曦覽終端機・Windows 10／2016/2019/2022・不帶環境：純文字界面，需已裝 .NET 10 Desktop Runtime |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.31/XinSpectDeploy.exe) | 29,696 bytes | 一鍵安裝器。第一層選裝什麼：A 裝主程式（GUI）、B 裝曦覽終端機；第二層 1/2/3 選下載來源（GitHub／Drive／加速節點）；下載時顯示進度條、速度與剩餘時間 |
-| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.31/XsRegProbe.sys) | 24,064 bytes | XsRegProbe 內核探測驅動（白名單唯讀 MSR／MMIO；內部檢視不構成第三方認證）。未微軟簽章：主程式以提權會話安裝到 `ProgramData\XinSpect\Driver\` 並建服務；手動載入需測試簽章環境（testsigning） |
-| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.31/XinSpectConsole-legacy.exe) | 98,740,987 bytes | 曦覽終端機（CLI）**純文字相容版**：給 Windows 10／Windows Server 2016、2019、2022 的傳統主控台——無色彩、無框線定位，其餘功能（facts／book／help）相同 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.32/XinSpect.exe) | 37,114,521 bytes | 主程式；不內嵌藍色中隊。防護頁標示未完工並保留橋接介面；「強控台」按鈕橋接 xsc 終端機 |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.32/XinSpectConsole.exe) | 98,740,899 bytes | 曦覽終端機（CLI）。可獨立執行，也被主程式強控台喚起；自含 .NET 10 執行階段故體積較大（見下方說明） |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.32/BlueSquadronBridge.exe) | 6,531,620 bytes | 獨立橋接資產；藍色中隊功能尚未完工，不會內嵌於 Desktop |
+| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.32/XinSpect-full.exe) | 209,880,768 bytes | 主程式・帶環境版：.NET 10 Desktop Runtime 一併打包，免裝執行階段（功能與 XinSpect.exe 相同） |
+| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.32/XinSpectConsole-nort.exe) | 65,216,518 bytes | 曦覽終端機・Windows 11／Server 2025・不帶環境：需已裝 .NET 10 Desktop Runtime |
+| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.32/XinSpectConsole-legacy-nort.exe) | 65,216,606 bytes | 曦覽終端機・Windows 10／2016/2019/2022・不帶環境：純文字界面，需已裝 .NET 10 Desktop Runtime |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.32/XinSpectDeploy.exe) | 29,696 bytes | 部署器：A＝Desktop、B＝CLI、AC／BC＝產品加百科、C＝只下載百科；產品可選 GitHub／Drive／加速節點，百科固定由 GitHub Release 下載並校驗 |
+| [XinSpect-Encyclopedia.html](https://github.com/Xinglanclever/XinSpect/releases/download/v3.32/XinSpect-Encyclopedia.html) | 獨立 Release 資產 | Desktop 使用者點擊「百科」後自動下載、校驗並快取；CLI 百科仍自包含 |
+| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.32/XsRegProbe.sys) | 24,064 bytes | XsRegProbe 內核探測驅動（白名單唯讀 MSR／MMIO；內部檢視不構成第三方認證）。未微軟簽章：主程式以提權會話安裝到 `ProgramData\XinSpect\Driver\` 並建服務；手動載入需測試簽章環境（testsigning） |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.32/XinSpectConsole-legacy.exe) | 98,740,987 bytes | 曦覽終端機（CLI）**純文字相容版**：給 Windows 10／Windows Server 2016、2019、2022 的傳統主控台——無色彩、無框線定位，其餘功能（facts／book／help）相同 |
 
-> **上表的位元組數為本版（v3.31）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。逐資產 SHA-256 見 Release 頁的 `SHA256SUMS.txt`（防傳輸損毀；能替換整個 Release 的攻擊者防不了——不可否認性需簽名，列排期）。
+> **上表的位元組數為本版（v3.32）實際發佈的檔案大小**；請以 Release 頁面列出的檔案為準。逐資產 SHA-256 見 Release 頁的 `SHA256SUMS.txt`（防傳輸損毀；能替換整個 Release 的攻擊者防不了——不可否認性需簽名，列排期）。
 
 **需求**：Windows 10 1903 以上／Windows 11、x64。不帶環境的版本需先安裝 .NET 10 Desktop Runtime；`XinSpect-full.exe` 與 `XinSpectConsole.exe` 已自帶執行階段。
 
-**安裝器**（`XinSpectDeploy.exe`）第一層先選裝什麼：**A** 是主程式（全自動部署主程式＋守護進程；守護進程自 3.13 起預設不啟用，要自己到安全頁開）、**B** 是曦覽終端機（單檔下載一步到位）。下載完成後一律檢查 PE 標頭與大小門檻，抓到 HTML（分享頁、限流頁）會被擋下、刪檔並說出內容像什麼。注意：走第三方加速節點的位元組只能驗 PE 標頭，驗不了發佈者簽章。
+**安裝器**（`XinSpectDeploy.exe`）接受 **A**（Desktop，另下載獨立橋接檔）、**B**（CLI）、**AC**（Desktop＋百科）、**BC**（CLI＋百科）及 **C**（只下載百科）。百科是獨立 HTML 資產，固定從 GitHub Release 下載並以 `SHA256SUMS.txt` 校驗，不跟隨產品鏡像選擇；CLI 仍自包含百科。執行檔下載則檢查 PE 標頭與大小門檻；第三方加速節點只驗 PE 標頭，不能驗發佈者簽章。
 
 ## 快速開始
 
@@ -116,7 +117,7 @@
 
 ## xsc 終端機
 
-`XinSpectConsole.exe`（`xsc`）是同一個產品對終端與腳本的入口：**51 個指令**，與 GUI 共用同一套唯讀服務——不新增寫入、不常駐、不連網。
+`XinSpectConsole.exe`（`xsc`）是同一個產品對終端與腳本的入口：**50 個指令**，與 GUI 共用同一套唯讀服務——不新增寫入、不常駐、不連網。
 
 ```text
 xsc                          # 進入 REPL（↑↓ 歷史、Tab 補全、Ctrl+C 停）
@@ -130,7 +131,7 @@ xsc pci scan                 # PCI 掃描
 xsc health                   # 健康摘要
 xsc compliance               # 合規證據導出
 xsc merkle                   # Merkle 證據
-xsc book                     # 離線百科（內嵌）
+xsc book                     # 離線百科（CLI 自包含）
 xsc --lang zh-CN             # 介面語言
 ```
 
@@ -160,18 +161,19 @@ xsc --lang zh-CN             # 介面語言
 | 事實域（鍵的第一段前綴） | **162** | 1,216 把鍵各自取第一段後去重 |
 | 動態鍵家族 | **72** | `Services/FactKeyDynamicCatalog.cs` 的 `Families` 成員數 |
 | 一鍵域／≤3 鍵域／≥20 鍵域 | 34／68／12 | 以域分組後計數 |
-| 可到達畫面（`PageRegistry`） | **65** | `Nav/PageRegistry.cs` 的 `Key =` 條目數 |
-| XAML 檔（含對話框與控制項） | **82** | `ls Views/*.xaml` |
-| 全站說明條目（圓圈問號） | **288** | `Nav/HelpCatalog.cs` 的 `Entries` 成員數 |
-| 服務檔 | **708** | `find Services -name '*.cs' \| wc -l` |
-| 全域 C# 檔 | **1,722** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`work/`、`publish-*/`、`.git/`、`node_modules/`、`TestResults/`、`_trx/` |
-| 版本紀錄筆數 | **136** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
-| 專案測試基線 | **9,624** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests`（`dotnet test` 的總數） |
-| CLI 指令（`Execute` case 標籤） | **51** | `grep -c 'case "' XinSpectCli/Program.cs` |
-| 核心／特權後端列項 | **4** | WinRing0（第三方、已接入）／XsRegProbe（自研、已接入）／PawnIO（未接入）／BlueSquadron 核心驅動（未封裝） |
+| 可到達畫面（`PageRegistry`） | **63** | `Nav/PageRegistry.cs` 的 `Key =` 條目數 |
+| XAML 檔（含對話框與控制項） | **81** | `ls Views/*.xaml` |
+| 全站說明條目（圓圈問號） | **287** | `Nav/HelpCatalog.cs` 的 `Entries` 成員數 |
+| 服務檔 | **707** | `find Services -name '*.cs' \| wc -l` |
+| 全域 C# 檔 | **1,725** | 走訪所有 `*.cs`，排除 `obj/`、`bin/`、`work/`、`publish-*/`、`.git/`、`node_modules/`、`TestResults/`、`_trx/` |
+| 版本紀錄筆數 | **137** | `Nav/ChangelogCatalog.cs` 的 `Entries` 成員數 |
+| 最近一次完整測試 | **9,651** | v3.32 本版全套回歸實跑結果 |
+| 專案測試基線 | **9,651** | `Tests/TestSuiteBaseline.cs` 的 `ProjectTests` |
+| CLI 指令（`Execute` case 標籤） | **50** | `grep -c 'case "' XinSpectCli/Program.cs` |
+| 核心後端接線狀態 | **部分完成** | PawnIO Native 尚未綁定；WMI 是獨立 Windows 回報來源；WinRing0／XsRegProbe 尚未全面共用 `IKernelBackend` 選路；BlueSquadron 驅動未封裝 |
 | AI 輔助內部審查編目 | **116** | `docs/審查報告-v3.17.md` 的編目條目；v3.18 另列 111 條。不是確認缺陷數，也不是第三方審計 |
 
-來源快照（2026-11-18）：708 個服務檔、1,722 個 C# 檔、727 個頂層測試檔；public instance 測試方法為 7,303 個 Fact（含 7 個 FsCheck Property）及 502 個 Theory，共 7,805 個。方法數來自來源 AST，沒有換算成執行期案例或 ULTIMATE-10000 完成率；9,624 為本次 v3.31 全套回歸實跑總數，基線與來源規模分別計數。
+來源快照（2026-11-21）：707 個服務檔、1,725 個 C# 檔、730 個測試檔；public instance 測試方法為 7,330 個 Fact（含 7 個 FsCheck Property）及 502 個 Theory，共 7,832 個。方法數來自來源 AST，沒有換算成執行期案例或 ULTIMATE-10000 完成率；9,651 為 v3.32 本版全套回歸實跑結果，測試案例與來源方法分開計數。
 
 **這張表不能證明什麼。** 1,216 是硬體、作業系統、安全、診斷、來源與治理等項目的整體目錄數，不是 1,216 項硬體讀值。審查編目也不是確認缺陷數；報告記錄了代理發現與作者驗證，不能替代獨立第三方審計。
 
@@ -181,7 +183,7 @@ xsc --lang zh-CN             # 介面語言
 
 讀之前，先把不能做的事說清楚：
 
-1. **核心通路面**：生產路徑是第三方 **WinRing0** 與自研 **XsRegProbe**（白名單唯讀 MSR／MMIO）。**PawnIO 未接入**（Native 綁定與 `ModulePins` 未完成）；**BlueSquadron** 的 C 核心驅動僅本機編譯通過，未封裝、未簽章、未執行驗證，**不列為生產核心路徑**。
+1. **核心後端邊界**：共用 `IKernelBackend` 選路只完成部分接線，不能宣稱所有核心讀取都已可互換切換。**PawnIO Native 尚未綁定**；WMI 是獨立的 Windows 回報來源，不是核心後端；WinRing0 與 XsRegProbe 的既有呼叫尚未全面納入共用選路。**BlueSquadron** 的 C 核心驅動未封裝、未簽章、未執行驗證，**不列為生產核心路徑**。
 2. **沒有微軟簽章**（EV 憑證＋WHQL 是錢與流程）。因此「從 GitHub Release 直連下載」是使用者的必要紀律；`SHA256SUMS.txt` 只能防傳輸損毀，不能防替換整個 Release 的攻擊者。
 3. **審查不是第三方認證**。v3.17 的 116 條與 v3.18 的 111 條是作者與 AI 代理輔助的內部檢視，含審計者自己的誤報；完整清單與修復狀態見 [docs/審查報告-v3.17.md](docs/審查報告-v3.17.md)、[docs/審查報告-v3.18.md](docs/審查報告-v3.18.md)。
 4. **硬體長尾**：1,216 把鍵在主流平台上覆蓋良好，特殊晶片組、OEM 客製 BIOS、虛擬機與老平台會落回六態的「讀不到＋原因」，那不是 bug 被藏起來，而是原因被寫出來。
@@ -199,7 +201,7 @@ cd XinSpect
 
 dotnet build XinSpect.csproj -c Release          # 主程式
 dotnet build XinSpectCli/XinSpectCli.csproj -c Release
-dotnet test Tests/XinSpect.Tests.csproj          # 9,624 項基線
+dotnet test Tests/XinSpect.Tests.csproj          # 最近一次完整回歸：9,651 項通過（v3.32）
 
 python Tools/gen-docs-html.py                    # README.md → 百科.html（改了 README 就要重跑）
 python Tools/gen-readme-domains.py --check       # 守門：README 逐域展開與鍵目錄一致
@@ -212,7 +214,7 @@ python Tools/gen-readme-domains.py --check       # 守門：README 逐域展開�
 | 文件 | 內容 |
 |---|---|
 | [官方網站](https://xinspect.de5.net) | 產品總覽、事實目錄、功能與資料源、版本沿革、下載（雙語，不掃描你的電腦） |
-| [百科.html](百科.html) · [手冊.html](手冊.html) | 自足 HTML，含目錄與錨點，離線可讀（程式內「百科」即此檔） |
+| [百科.html](百科.html) · [手冊.html](手冊.html) | 自足 HTML，含目錄與錨點，離線可讀；Desktop 點擊「百科」後下載、校驗並快取，CLI 仍內嵌百科 |
 | [docs/百科-v3.17.md](docs/百科-v3.17.md) | 百科敘事主體（87 萬字）：逐頁解剖、逐鍵出處、門檻速查 |
 | [docs/FEATURE-REFERENCE.md](docs/FEATURE-REFERENCE.md) | 功能與資料源對照 |
 | [docs/AUDIT-CLAIMS-2026-11-12.md](docs/AUDIT-CLAIMS-2026-11-12.md) | 審計指控逐條核查 |
@@ -237,6 +239,7 @@ python Tools/gen-readme-domains.py --check       # 守門：README 逐域展開�
 
 ## 版本沿革（近期）
 
+- **v3.32 百科下載與桌面部署功能更新**（2026-11-21）：百科下載與桌面部署功能更新
 - **v3.31 特別版：CLI 記憶體來源與 PCIe ECAM 邊界硬化**（2026-11-18）：WMI 設定速率保留來源狀態；修正 ECAM bus 255 回繞、短讀及畸形 AER 解碼。
 - **v3.30 來源更清楚，量測更可靠**（2026-11-16）：來源更清楚，量測更可靠
 - **v3.29 時序更精確，硬體掃描更可靠**（2026-11-16）：時序更精確，硬體掃描更可靠
@@ -252,7 +255,7 @@ python Tools/gen-readme-domains.py --check       # 守門：README 逐域展開�
 - **v3.18**（2026-11-07）：審計落實版：116 條修復＋功耗誠實閘門＋按需提權。
 - **v3.17**（2026-11-05）：終端機定稿：Claude Code 式界面、永不崩 REPL、百科嵌入。
 
-完整 136 筆沿革見 [docs/百科-v3.17.md](docs/百科-v3.17.md) 第 11 部；逐版發布說明見 [Release 頁](https://github.com/Xinglanclever/XinSpect/releases)。
+完整 137 筆沿革見 [docs/百科-v3.17.md](docs/百科-v3.17.md) 第 11 部；逐版發布說明見 [Release 頁](https://github.com/Xinglanclever/XinSpect/releases)。
 
 <a id="crypto-sponsorship"></a>
 

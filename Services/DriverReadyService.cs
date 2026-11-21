@@ -266,15 +266,16 @@ public sealed class DriverReadyService : ObservableObject
                 WinRing0Detail = $"驅動已載入（服務後端：{probe.Backend}），但試讀 MSR 0x{ProbeMsrIndex:X} 未成功" +
                                  "——底層讀值功能可能受限（權限／虛擬化／平台差異）；後續讀取仍會三態如實回報。";
             }
-            else if (vm.Settings.KernelBackendMode == 1)
+            else if (vm.Settings.KernelBackendMode != (int)KernelBackendMode.UniversalAllowed)
             {
-                // SandboxOnly 是使用者刻意的選擇，不是故障：狀態用中性色、原因講清楚，
-                // 不套「載入失敗」的紅色與 HVCI 排障文案——那是給「想載載不了」的人看的。
+                // Auto 與 SandboxOnly 都不載 WinRing0；本版 PawnIO 尚未接入，所以共用路由可能沒有可用後端。
+                // 這是所選安全模式的預期降級，用中性色如實說明，不套「載入失敗」排障文案。
                 WinRing0Severity = Severity.Neutral;
                 WinRing0Status = "依模式未載入";
-                WinRing0Detail = "設定為「僅沙箱」：WinRing0 萬能鑰匙刻意不載入。MSR／MMIO 將整片三態，" +
-                                 "目前版本尚未提供設定頁的後端切換入口〔修復 v3.21：原文指引到不存在的 UI〕——" +
-                                 "請手動編輯設定檔中的 KernelBackendMode（0=自動／1=SandboxOnly／2=允許萬能鑰匙）後重啟。";
+                string modeName = vm.Settings.KernelBackendMode == (int)KernelBackendMode.Auto ? "自動" : "僅沙箱";
+                WinRing0Detail = $"設定為「{modeName}」：WinRing0 刻意未載入；此版 PawnIO 尚未接入，因此 KernelBackendHost 的 MSR 路由目前沒有可用後端。" +
+                                 "要在此共用路由中啟用 WinRing0，請到「設定」明確選擇「允許 WinRing0」。" +
+                                 "此模式只約束已接入 KernelBackendHost 的呼叫端，其他直連讀取路徑不受它約束。";
             }
             else if (!IsAdmin)
             {

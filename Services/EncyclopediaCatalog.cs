@@ -1,100 +1,229 @@
 using System;
 using System.IO;
-using System.Reflection;
+using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace XinSpect;
 
 /// <summary>
-/// 百科全書的程式內版本：把倉庫根的 <c>百科.html</c>（由 Tools/gen-docs-html.py 從
-/// <c>README.md</c> 產生，自足、含目錄與錨點）內嵌成資源，供「關於」頁在程式內翻閱。
-///
-/// <para>
-/// 為什麼是 HTML 而不是在程式裡再寫一個 Markdown 渲染器：同一份文件只能有一個渲染器。
-/// HTML 由產生器從 .md 產出、版本控管、`--check` 對帳；程式只負責「把位元組交給 WebView2」。
-/// 兩邊各寫一套渲染，遲早會出現「同一個標題在 GitHub 與程式裡長得不一樣」的漂移，
-/// 而那種漂移沒有任何守門抓得到。
-/// </para>
-///
-/// <para>
-/// 讀取順序與 <see cref="ThirdPartyNoticesCatalog"/> 同一慣例：資源優先、檔案其次、
-/// 皆無＝如實標缺並帶原因（單檔發佈版走資源；開發機資源不在時退回 exe 旁或倉庫根）。
-/// <b>不用空字串冒充百科</b>，也不丟例外。
-/// </para>
+/// Desktop 版百科下載器。百科不再跟著單檔執行檔散布；只有使用者從「關於」頁點開時，
+/// 才從 XinSpect 最新 Release 下載 HTML，並依同一 Release 的 SHA256SUMS 對帳後快取。
+/// CLI 的百科維持各自自包含，不走這條路徑。
 /// </summary>
 public static class EncyclopediaCatalog
 {
-    /// <summary>csproj 內嵌時用的資源邏輯名（與 <c>&lt;EmbeddedResource LogicalName&gt;</c> 一致）。</summary>
-    public const string ResourceName = "XinSpect.Encyclopedia.html";
-
-    /// <summary>檔案名（磁碟退路與倉庫根查找都用它）。</summary>
     public const string FileName = "百科.html";
+    public const string AssetFileName = "XinSpect-Encyclopedia.html";
+    public const string ChecksumsFileName = "SHA256SUMS.txt";
+    public const string MissingReason = "百科下載失敗，而且沒有可用的已驗證快取。";
+    public const int MaxHtmlBytes = 8 * 1024 * 1024;
+    private const int MaxChecksumBytes = 1024 * 1024;
+    private const string CacheMetadataName = "百科.html.sha256";
+    private const string ReleaseBaseUrl = "https://github.com/Xinglanclever/XinSpect/releases/latest/download/";
 
-    /// <summary>讀不到時的固定原因（繁中原文；UI 顯示前過 LanguageService.T）。</summary>
-    public const string MissingReason = "百科檔讀不到";
+    private static readonly HttpClient Http = CreateHttpClient();
+    private static readonly SemaphoreSlim LoadGate = new(1, 1);
 
-    /// <summary>百科內容。<c>Available = false</c> 時 <see cref="Text"/> 為 null。</summary>
-    public sealed record EncyclopediaReport(bool Available, string? UnavailableReason, string? Text, string Source);
+    public sealed record EncyclopediaReport(
+        bool Available, string? UnavailableReason, string? Text, string Source, bool UsedOfflineCache = false);
 
-    public static EncyclopediaReport Load() => Load(
-        () => ReadResource(Assembly.GetExecutingAssembly(), ResourceName),
-        path => File.Exists(path) ? File.ReadAllText(path, Encoding.UTF8) : null);
+    public static string CacheDirectory => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XinSpect", "docs");
 
-    /// <summary>測試注入點：資源與磁碟讀取都可替換。</summary>
-    internal static EncyclopediaReport Load(Func<string?> readResource, Func<string, string?> readFile)
+    public static async Task<EncyclopediaReport> LoadAsync(CancellationToken cancellationToken = default)
     {
-        string? embedded = readResource();
-        if (!string.IsNullOrEmpty(embedded))
-            return new EncyclopediaReport(true, null, embedded, "embedded:" + ResourceName);
-
-        string? beside = readFile(Path.Combine(AppContext.BaseDirectory, FileName));
-        if (!string.IsNullOrEmpty(beside))
-            return new EncyclopediaReport(true, null, beside, "file:" + Path.Combine(AppContext.BaseDirectory, FileName));
-
-        // 開發機：從輸出目錄往上找倉庫根（與 ThirdPartyNoticesCatalog 相同做法）。
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            string candidate = Path.Combine(dir.FullName, FileName);
-            string? text = readFile(candidate);
-            if (!string.IsNullOrEmpty(text))
-                return new EncyclopediaReport(true, null, text, "repo:" + candidate);
-            dir = dir.Parent;
-        }
-
-        return new EncyclopediaReport(false, MissingReason, null, "none");
-    }
-
-    /// <summary>
-    /// 把百科寫到本機快取（給 WebView2 以虛擬主機載入；WebView2 讀不了內嵌資源）。
-    /// 內容沒變就不重寫——每次開啟都寫檔會讓防毒與索引器一直掃同一個大檔。
-    /// </summary>
-    public static string EnsureLocalCopy(string html)
-    {
-        string dir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "XinSpect", "docs");
-        Directory.CreateDirectory(dir);
-        string path = Path.Combine(dir, FileName);
-        var bytes = Encoding.UTF8.GetBytes(html);
-        if (File.Exists(path) && new FileInfo(path).Length == bytes.LongLength)
-            return path;
-        File.WriteAllBytes(path, bytes);
-        return path;
-    }
-
-    private static string? ReadResource(Assembly asm, string name)
-    {
+        await LoadGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            using var stream = asm.GetManifestResourceStream(name);
-            if (stream is null) return null;
-            using var reader = new StreamReader(stream, Encoding.UTF8);
-            return reader.ReadToEnd();
+            string? downloadError = null;
+            try
+            {
+                byte[] sumsBytes = await DownloadAsync(ChecksumsFileName, MaxChecksumBytes, cancellationToken)
+                    .ConfigureAwait(false);
+                string expected = ParseExpectedHash(DecodeUtf8(sumsBytes, ChecksumsFileName));
+                byte[] htmlBytes = await DownloadAsync(AssetFileName, MaxHtmlBytes, cancellationToken)
+                    .ConfigureAwait(false);
+                string text = ValidateHtml(htmlBytes, expected);
+                await WriteCacheAsync(htmlBytes, expected, cancellationToken).ConfigureAwait(false);
+                return new EncyclopediaReport(true, null, text, "release:" + AssetFileName);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                downloadError = ex.GetType().Name + "：" + ex.Message;
+            }
+
+            var cached = await ReadVerifiedCacheAsync(cancellationToken).ConfigureAwait(false);
+            if (cached is not null)
+                return new EncyclopediaReport(true, null, cached, "cache:" + Path.Combine(CacheDirectory, FileName),
+                    UsedOfflineCache: true);
+
+            return new EncyclopediaReport(false, "下載百科失敗（" + downloadError + "）。" + MissingReason,
+                null, "none");
+        }
+        finally
+        {
+            LoadGate.Release();
+        }
+    }
+
+    /// <summary>從 SHA256SUMS 只取唯一且檔名完全相符的百科項目。</summary>
+    public static string ParseExpectedHash(string checksums)
+    {
+        if (string.IsNullOrWhiteSpace(checksums))
+            throw new InvalidDataException("SHA256SUMS.txt 是空的。");
+
+        string? found = null;
+        foreach (string rawLine in checksums.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            string[] fields = rawLine.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            if (fields.Length != 2) continue;
+            string name = fields[1].StartsWith("*", StringComparison.Ordinal) ? fields[1][1..] : fields[1];
+            if (!string.Equals(name, AssetFileName, StringComparison.Ordinal)) continue;
+            if (found is not null)
+                throw new InvalidDataException("SHA256SUMS.txt 對百科有重複項目。");
+            if (fields[0].Length != 64 || !IsHex(fields[0]))
+                throw new InvalidDataException("SHA256SUMS.txt 的百科 SHA-256 格式不正確。");
+            found = fields[0].ToLowerInvariant();
+        }
+
+        return found ?? throw new InvalidDataException("SHA256SUMS.txt 沒有百科項目。");
+    }
+
+    /// <summary>檢查尺寸、SHA-256、UTF-8 與預期的靜態百科結構。</summary>
+    public static string ValidateHtml(byte[] bytes, string expectedHash)
+    {
+        if (bytes is null || bytes.Length == 0 || bytes.Length > MaxHtmlBytes)
+            throw new InvalidDataException("百科 HTML 空白或超過大小上限。");
+        if (expectedHash.Length != 64 || !IsHex(expectedHash))
+            throw new InvalidDataException("百科的預期 SHA-256 格式不正確。");
+
+        byte[] actual = SHA256.HashData(bytes);
+        byte[] expected = Convert.FromHexString(expectedHash);
+        if (!CryptographicOperations.FixedTimeEquals(actual, expected))
+            throw new InvalidDataException("百科 SHA-256 與 Release 清單不符。");
+
+        string html = DecodeUtf8(bytes, AssetFileName);
+        if (!HasExpectedDocumentShape(html))
+            throw new InvalidDataException("下載內容不是可辨認的 XinSpect 百科 HTML。");
+        return html;
+    }
+
+    public static bool HasExpectedDocumentShape(string html)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return false;
+        return html.Contains("<html", StringComparison.OrdinalIgnoreCase)
+               && html.Contains("<head", StringComparison.OrdinalIgnoreCase)
+               && html.Contains("id=\"toc\"", StringComparison.Ordinal)
+               && html.Contains("</html>", StringComparison.OrdinalIgnoreCase)
+               && !html.Contains("<script", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static async Task<byte[]> DownloadAsync(string name, int maxBytes, CancellationToken cancellationToken)
+    {
+        Uri uri = new(ReleaseBaseUrl + Uri.EscapeDataString(name));
+        using HttpResponseMessage response = await Http.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        Uri? finalUri = response.RequestMessage?.RequestUri;
+        if (finalUri is null || finalUri.Scheme != Uri.UriSchemeHttps || !IsGitHubDownloadHost(finalUri.Host))
+            throw new InvalidDataException("百科下載被導向非 GitHub HTTPS 網址。");
+        if (response.Content.Headers.ContentLength is long length && (length < 1 || length > maxBytes))
+            throw new InvalidDataException("下載內容超過允許大小。");
+
+        await using Stream input = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        using var output = new MemoryStream();
+        byte[] buffer = new byte[32 * 1024];
+        int read;
+        while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) > 0)
+        {
+            if (output.Length + read > maxBytes)
+                throw new InvalidDataException("下載內容超過允許大小。");
+            output.Write(buffer, 0, read);
+        }
+        if (output.Length == 0)
+            throw new InvalidDataException("伺服器回傳空檔案。");
+        return output.ToArray();
+    }
+
+    private static async Task WriteCacheAsync(byte[] html, string expectedHash, CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(CacheDirectory);
+        string path = Path.Combine(CacheDirectory, FileName);
+        string metadataPath = Path.Combine(CacheDirectory, CacheMetadataName);
+        string suffix = "." + Guid.NewGuid().ToString("N") + ".tmp";
+        string htmlTemp = path + suffix;
+        string metadataTemp = metadataPath + suffix;
+        try
+        {
+            await File.WriteAllBytesAsync(htmlTemp, html, cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(metadataTemp, expectedHash + Environment.NewLine,
+                new UTF8Encoding(false), cancellationToken).ConfigureAwait(false);
+            File.Move(htmlTemp, path, overwrite: true);
+            File.Move(metadataTemp, metadataPath, overwrite: true);
+        }
+        finally
+        {
+            TryDelete(htmlTemp);
+            TryDelete(metadataTemp);
+        }
+    }
+
+    private static async Task<string?> ReadVerifiedCacheAsync(CancellationToken cancellationToken)
+    {
+        string path = Path.Combine(CacheDirectory, FileName);
+        string metadataPath = Path.Combine(CacheDirectory, CacheMetadataName);
+        try
+        {
+            if (!File.Exists(path) || !File.Exists(metadataPath)) return null;
+            string expected = (await File.ReadAllTextAsync(metadataPath, cancellationToken).ConfigureAwait(false)).Trim();
+            byte[] bytes = await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false);
+            return ValidateHtml(bytes, expected);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch
         {
             return null;
         }
+    }
+
+    private static string DecodeUtf8(byte[] bytes, string description)
+    {
+        try { return new UTF8Encoding(false, true).GetString(bytes); }
+        catch (DecoderFallbackException ex) { throw new InvalidDataException(description + " 不是有效的 UTF-8。", ex); }
+    }
+
+    private static bool IsHex(string value)
+    {
+        foreach (char c in value)
+            if (!Uri.IsHexDigit(c)) return false;
+        return true;
+    }
+
+    private static bool IsGitHubDownloadHost(string host)
+        => host.Equals("github.com", StringComparison.OrdinalIgnoreCase)
+           || host.Equals("release-assets.githubusercontent.com", StringComparison.OrdinalIgnoreCase)
+           || host.Equals("objects.githubusercontent.com", StringComparison.OrdinalIgnoreCase);
+
+    private static void TryDelete(string path)
+    {
+        try { if (File.Exists(path)) File.Delete(path); }
+        catch { /* 暫存檔清理失敗不覆蓋原始下載結果 */ }
+    }
+
+    private static HttpClient CreateHttpClient()
+    {
+        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("XinSpect/" + AppInfo.Version);
+        return client;
     }
 }

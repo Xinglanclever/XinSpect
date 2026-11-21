@@ -51,6 +51,21 @@ public static class ChangelogCatalog
     [
         new ChangeEntry
         {
+            Version = "3.32",
+            Date = "2026-11-21",
+            Title = "百科下載與桌面部署功能更新",
+            Items =
+            [
+                "Desktop 百科改為按鈕下載，校驗官方 SHA-256 後快取供離線閱讀；CLI 仍自包含百科。",
+                "部署器支援 A／B、AC／BC 與 C：C 僅下載百科，百科另做 HTML 與 SHA-256 驗證。",
+                "關於頁加入供應商與型號名次，新增 ChatGPT 6 Astra、ChatGPT 6.1 Sol；名次不代表實際 Token 數量。",
+                "移除歷史型號功能，監控規劃移至工具箱並標註日文／韓文翻譯未完成。",
+                "拜神乖度改用可解析的近期 Minidump，資料不足時保留未知；修正群島名稱與地理說明。",
+                "藍色中隊改為外部橋接下載並標註未完工，修正圓環儀表縮放；後端切換只呈現已接入範圍。",
+            ],
+        },
+        new ChangeEntry
+        {
             Version = "3.31",
             Date = "2026-11-18",
             Title = "特別版：CLI 記憶體來源與 PCIe ECAM 邊界硬化",

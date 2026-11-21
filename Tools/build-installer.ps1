@@ -3,9 +3,9 @@
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File Tools\build-installer.ps1
 #
-# 為什麼不用 dotnet：这个 exe 只有十幾 KB，是拿 .NET Framework 4.8 隨附的 csc.exe
-# 直接編 Installer\Install.cs 出來的——使用者机器上一定裝著 .NET Framework 4.8，
-# 所以一支十幾 KB 的執行檔就能開機下載，不需要 self-contained runtime、也不需要 dotnet SDK。
+# 為什麼不用 dotnet：部署器由 .NET Framework 4.8 隨附的 csc.exe 直接編譯，
+# 並以 48 KB 上限守住無 runtime 的體積——使用者机器上已有 .NET Framework 4.8，
+# 所以它能直接開機下載，不需要自帶 runtime、也不需要 dotnet SDK。
 # 副作用：csc 4.8 只支援到 C# 5，所以 Install.cs 裡不能寫插值字串、expression-bodied
 # member、nameof 這些新語法（編譯會直接紅，不會悄悄過）。
 #

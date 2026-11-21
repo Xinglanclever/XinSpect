@@ -10,14 +10,12 @@ namespace XinSpect.Tests;
 
 /// <summary>
 /// 百科／手冊的自足 HTML：它們是「可翻閱定位」的載體，但本身不是新內容——
-/// 只是 <c>README.md</c>／<c>手冊.md</c> 的另一種呈現。這種東西最容易變成第二個真相：
-/// 有人改了 README、忘了重跑產生器，於是 GitHub 上的說法與程式裡翻閱到的說法不同，
-/// 而兩邊都沒有任何東西在看。
+/// 只是 <c>README.md</c>／<c>手冊.md</c> 的另一種呈現。Desktop 不再內嵌百科；使用者明確點擊後
+/// 才下載 Release 資產，以 SHA256SUMS 驗證，再快取到本機供離線閱讀。CLI 自包含百科由 CLI 專案測試。
 ///
 /// <para>
-/// 四條線釘住它：①產生器在現行樹上是冪等的（<c>--check</c> 回零）；
-/// ②HTML 檔頭記的來源 sha256 ＝ 目前 .md 的 sha256（不靠 python 也能抓漂移）；
-/// ③內嵌進 exe 的那份與倉庫檔逐位元組相同；④內嵌資源真的讀得到（不是退回磁碟檔）。
+/// 生成同步由產生器守門；本類另外驗證下載清單解析、HTML 雜湊和內容結構，並確認 Desktop 不再
+/// 將百科打包為資源。
 /// </para>
 /// </summary>
 public class DocsHtmlTests
@@ -97,30 +95,40 @@ public class DocsHtmlTests
     }
 
     [Fact]
-    public void 內嵌進程式的百科與倉庫檔案逐位元組相同()
+    public void 桌面版不再內嵌百科而是使用獨立Release資產()
     {
-        string path = Path.Combine(RepoRoot(), EncyclopediaCatalog.FileName);
-        Assert.True(File.Exists(path), "倉庫根沒有 " + EncyclopediaCatalog.FileName);
-
+        string project = File.ReadAllText(Path.Combine(RepoRoot(), "XinSpect.csproj"));
         var assembly = typeof(EncyclopediaCatalog).Assembly;
-        using var stream = assembly.GetManifestResourceStream(EncyclopediaCatalog.ResourceName);
-        Assert.True(stream is not null,
-            "XinSpect.csproj 沒有把 " + EncyclopediaCatalog.FileName + " 內嵌為 "
-            + EncyclopediaCatalog.ResourceName + "——單檔發佈版會讀不到百科");
-
-        using var ms = new MemoryStream();
-        stream!.CopyTo(ms);
-        Assert.Equal(File.ReadAllBytes(path), ms.ToArray());
+        Assert.DoesNotContain("XinSpect.Encyclopedia.html", project, StringComparison.Ordinal);
+        Assert.DoesNotContain("XinSpect.Encyclopedia.html", assembly.GetManifestResourceNames());
+        Assert.Equal("XinSpect-Encyclopedia.html", EncyclopediaCatalog.AssetFileName);
+        Assert.Equal("百科.html", Path.GetFileName(Path.Combine(EncyclopediaCatalog.CacheDirectory,
+            EncyclopediaCatalog.FileName)));
     }
 
     [Fact]
-    public void 執行期讀到的百科是內嵌資源而不是磁碟退路()
+    public void Release雜湊清單只接受唯一格式正確的百科項目()
     {
-        var report = EncyclopediaCatalog.Load();
-        Assert.True(report.Available, "百科讀不到：" + report.UnavailableReason);
-        Assert.StartsWith("embedded:", report.Source);
-        Assert.Contains("<html", report.Text!, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("id=\"toc\"", report.Text!, StringComparison.Ordinal);
+        const string hash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        Assert.Equal(hash, EncyclopediaCatalog.ParseExpectedHash("# release" + Environment.NewLine + hash + "  XinSpect-Encyclopedia.html" + Environment.NewLine));
+        Assert.Throws<InvalidDataException>(() => EncyclopediaCatalog.ParseExpectedHash(hash + "  other.html" + Environment.NewLine));
+        Assert.Throws<InvalidDataException>(() => EncyclopediaCatalog.ParseExpectedHash(
+            hash + "  XinSpect-Encyclopedia.html" + Environment.NewLine + hash + "  XinSpect-Encyclopedia.html" + Environment.NewLine));
+        Assert.Throws<InvalidDataException>(() => EncyclopediaCatalog.ParseExpectedHash("not-a-hash  XinSpect-Encyclopedia.html" + Environment.NewLine));
+    }
+
+    [Fact]
+    public void 下載HTML必須通過雜湊UTF8與文件結構校驗()
+    {
+        byte[] valid = Encoding.UTF8.GetBytes("<!doctype html><html><head></head><body><nav id=\"toc\"></nav></body></html>");
+        string hash = Convert.ToHexString(SHA256.HashData(valid)).ToLowerInvariant();
+        Assert.Contains("id=\"toc\"", EncyclopediaCatalog.ValidateHtml(valid, hash), StringComparison.Ordinal);
+
+        Assert.Throws<InvalidDataException>(() => EncyclopediaCatalog.ValidateHtml(valid, new string('0', 64)));
+        byte[] script = Encoding.UTF8.GetBytes("<html><head></head><body><nav id=\"toc\"></nav><script>x()</script></body></html>");
+        string scriptHash = Convert.ToHexString(SHA256.HashData(script)).ToLowerInvariant();
+        Assert.Throws<InvalidDataException>(() => EncyclopediaCatalog.ValidateHtml(script, scriptHash));
+        Assert.Throws<InvalidDataException>(() => EncyclopediaCatalog.ValidateHtml(new byte[] { 0xff }, new string('f', 64)));
     }
 
     [Fact]

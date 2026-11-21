@@ -35,6 +35,24 @@
         <StackPanel>
             <local:SectionHead Text="工具箱" HelpKey="toolbox/工具箱"/>
 
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12" local:Anim.RevealDelay="0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="監控工程規劃" FontSize="15"/>
+                        <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                   Text="NVR、頻寬、PoE、光纖、RAID、無線與 UPS 設計試算；輸入由你提供，結果是公式推導，不是本機量測。"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,5,0,0" Text="日文／韓文翻譯未完成"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Style="{StaticResource ToolButton}" Padding="14,8"
+                            Content="開啟規劃器" Click="OpenSurveillancePlanning_Click"
+                            AutomationProperties.Name="開啟監控工程規劃器"/>
+                </Grid>
+            </Border>
+
             <!-- ===== 工具目錄（內建項目＋第三方導向＋使用者自訂） =====
                  1.6.2 起這裡不再放曦覽自己的功能按鈕：那些頁面本來就在左側欄與 Ctrl+K 裡，
                  在工具箱再擺一排跳頁鈕只是同一件事出現兩次。自家功能改以不可點的

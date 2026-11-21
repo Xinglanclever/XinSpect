@@ -19,6 +19,7 @@ public partial class AboutView : UserControl
         Unloaded += (_, _) => LanguageService.Changed -= OnLanguageChanged;
         ApplyVersionCopy();
         FillChangelog();
+        FillContributions();
         FillLicenses();
         FillShortcuts();
     }
@@ -27,6 +28,7 @@ public partial class AboutView : UserControl
     {
         ApplyVersionCopy();
         FillChangelog();
+        FillContributions();
         FillLicenses();
         FillShortcuts();
     }
@@ -100,6 +102,17 @@ public partial class AboutView : UserControl
                                Title = LanguageService.T(e.Title), ItemsText = LanguageService.T(e.ItemsText) })
             .ToList();
         ChangelogToggle.Content = LanguageService.T($"顯示更早的 {older.Count} 個版本　▾");
+    }
+
+    private void FillContributions()
+    {
+        ProviderContributionList.ItemsSource = AiContributionCatalog.Providers
+            .Select(r => new { r.Rank, r.RankLabel, Name = LanguageService.T(r.Name) })
+            .ToList();
+        ModelContributionList.ItemsSource = AiContributionCatalog.Models
+            .Select(r => new { r.Rank, r.RankLabel, Name = LanguageService.T(r.Name) })
+            .ToList();
+        ContributionUsageNote.Text = LanguageService.T(AiContributionCatalog.UsageAvailabilityNote);
     }
 
     private void JourneyToggle_Click(object sender, RoutedEventArgs e)
@@ -184,8 +197,7 @@ public partial class AboutView : UserControl
 
     private void OpenEncyclopedia_Click(object sender, RoutedEventArgs e)
     {
-        // 內嵌的百科（README.md 產生的自足 HTML）：離線、可翻閱定位。
-        // 讀不到或 WebView2 缺席時，視窗自己會說清楚原因並提供「用瀏覽器開啟」。
+        // 使用者明確點擊後，視窗下載並校驗 Release 百科；下載／WebView2 失敗時可重試。
         var dlg = new EncyclopediaWindow { Owner = Window.GetWindow(this) };
         try { dlg.ShowDialog(); }
         catch (Exception ex) { Diag.Swallow("開啟百科", ex, "本次不開啟百科視窗"); }

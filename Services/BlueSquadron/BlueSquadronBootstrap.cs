@@ -1,15 +1,11 @@
 ﻿using System.IO;
-using System.Reflection;
-using System.Security.AccessControl;
-using System.Security.Cryptography;
-using System.Security.Principal;
 
 namespace XinSpect;
 
 /// <summary>
-/// 把 BlueSquadronBridge.exe 解壓到 %LOCALAPPDATA%\XinSpect\bluesquadron\，
-/// 並確保目錄 ACL 僅限 SYSTEM + Administrators。
-/// 沿用 BridgeBootstrap 的完整性模型：SHA256 校驗 + ACL 鎖定。
+/// 尋找由部署器獨立安裝的 BlueSquadronBridge.exe。
+/// 正式安裝時，部署器會先依 Release SHA256SUMS 驗證橋接檔，再放到主程式旁；
+/// 本類只負責解析本機橋接路徑，保持主程式不內嵌這個獨立元件。
 /// </summary>
 internal static class BlueSquadronBootstrap
 {
@@ -21,78 +17,22 @@ internal static class BlueSquadronBootstrap
 
     public static string EnsureExtracted()
     {
-        // 1) 內嵌資源（正式發佈）
-        var asm = typeof(BlueSquadronBootstrap).Assembly;
-        string? exeRes = asm.GetManifestResourceNames()
-            .FirstOrDefault(n => n.EndsWith(ExeName, StringComparison.OrdinalIgnoreCase));
-        if (exeRes is not null)
-        {
-            try { SecureDir(); }
-            catch (Exception ex) { Console.Error.WriteLine("[BS Bootstrap] SecureDir 失敗（ACL 設定）: " + ex.Message); }
-            string exe = Path.Combine(BridgeDir, ExeName);
-            return ExtractVerified(asm, exeRes, exe);
-        }
-
-        // 2) 已存副本
         string cached = Path.Combine(BridgeDir, ExeName);
-        if (File.Exists(cached)) return cached;
-
-        // 3) 磁碟候選（開發建置）
-        foreach (var cand in DiskCandidates())
-            if (File.Exists(cand)) return cand;
+        string? installed = ResolveLocalPath(DiskCandidates(), cached, File.Exists);
+        if (installed is not null) return installed;
 
         throw new FileNotFoundException(
-            "找不到 BlueSquadronBridge.exe。請先建置 BlueSquadron 專案。");
+            "找不到 BlueSquadronBridge.exe。請執行 XinSpectDeploy，選擇桌面版部署，讓部署器下載並驗證獨立橋接程式。");
     }
 
-    private static void SecureDir()
+    internal static string? ResolveLocalPath(
+        IEnumerable<string> installedCandidates, string cachedPath, Func<string, bool> fileExists)
     {
-        var di = Directory.CreateDirectory(BridgeDir);
-        var sec = di.GetAccessControl();
-        sec.SetAccessRuleProtection(true, false);
-        foreach (var sid in new[]
-                 {
-                     new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null),
-                     new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null),
-                 })
-            sec.AddAccessRule(new FileSystemAccessRule(
-                sid, FileSystemRights.FullControl,
-                InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
-                PropagationFlags.None, AccessControlType.Allow));
-        di.SetAccessControl(sec);
-    }
-
-    private static string ExtractVerified(Assembly asm, string resName, string destPath)
-    {
-        string expectedHash;
-        using (var s = asm.GetManifestResourceStream(resName)!)
-            expectedHash = HashOf(s);
-        if (File.Exists(destPath) && HashOf(destPath) == expectedHash)
-            return destPath;
-
-        Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
-        string tmp = destPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        using (var s = asm.GetManifestResourceStream(resName)!)
-        using (var fs = File.Create(tmp)) s.CopyTo(fs);
-
-        if (HashOf(tmp) != expectedHash)
-        {
-            try { File.Delete(tmp); } catch { }
-            throw new IOException("BlueSquadronBridge 解壓後未通過完整性驗證。");
-        }
-
-        try
-        {
-            if (File.Exists(destPath)) File.Delete(destPath);
-            File.Move(tmp, destPath);
-            return destPath;
-        }
-        catch
-        {
-            string alt = destPath + "." + Guid.NewGuid().ToString("N")[..8] + ".exe";
-            try { File.Move(tmp, alt); return alt; }
-            catch { try { File.Delete(tmp); } catch { } throw; }
-        }
+        // 部署器放在主程式旁的版本優先，確保更新後會用到新橋接檔；
+        // 舊版快取只作從其他位置啟動主程式時的回退。
+        foreach (string candidate in installedCandidates)
+            if (fileExists(candidate)) return candidate;
+        return fileExists(cachedPath) ? cachedPath : null;
     }
 
     private static IEnumerable<string> DiskCandidates()
@@ -115,19 +55,4 @@ internal static class BlueSquadronBootstrap
         }
     }
 
-    private static string HashOf(Stream s)
-    {
-        s.Position = 0;
-        return Convert.ToHexString(SHA256.HashData(s));
-    }
-
-    private static string HashOf(string path)
-    {
-        try
-        {
-            using var fs = File.OpenRead(path);
-            return Convert.ToHexString(SHA256.HashData(fs));
-        }
-        catch { return ""; }
-    }
 }

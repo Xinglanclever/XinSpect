@@ -33,6 +33,8 @@ public class XinSpectCliTests
         // BuildCommands 補的別名（文檔外可用指令）
         names.UnionWith(new[] { "refresh", "mascot", "吉祥物", "百科", "quit", "q", "?" });
         Assert.Contains("手冊.md 是 v2.91 時代的歷史文件", src, StringComparison.Ordinal);
+        Assert.DoesNotContain("case \"catalog\"", src, StringComparison.Ordinal);
+        Assert.DoesNotContain("catalog <關鍵字>", book, StringComparison.Ordinal);
 
         var missing = cases.Where(c => !names.Contains(c)).ToList();
         Assert.True(missing.Count == 0,
@@ -121,8 +123,13 @@ public class XinSpectCliTests
         Assert.DoesNotContain("new string('─'", tui[start..end], StringComparison.Ordinal);
 
         string program = File.ReadAllText(Path.Combine(root, "XinSpectCli", "Program.cs"));
-        Assert.Contains("輸入欄底線（固定長直線）", program, StringComparison.Ordinal);
         Assert.Contains("Tui.InputFrame();", program, StringComparison.Ordinal);
+        int readLine = program.IndexOf("private static string? ReadLineWithHistory()", StringComparison.Ordinal);
+        int submit = program.IndexOf("if (key.Key == ConsoleKey.Enter)", readLine, StringComparison.Ordinal);
+        int separator = program.IndexOf("new string('─', Math.Max(1, w - 1))", submit, StringComparison.Ordinal);
+        Assert.True(readLine >= 0 && submit > readLine && separator > submit,
+            "Enter 後應輸出單條、按視窗寬度計算的分隔線");
+        Assert.Contains("Console.WriteLine();", program[submit..separator], StringComparison.Ordinal);
     }
 
     [Fact]

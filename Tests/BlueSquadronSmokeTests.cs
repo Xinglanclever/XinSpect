@@ -9,7 +9,8 @@ public class BlueSquadronSmokeTests
     {
         var page = PageRegistry.Pages.FirstOrDefault(p => p.Key == "bluesquadron");
         Assert.NotNull(page);
-        Assert.Equal("防護", page.Title);
+        Assert.Equal("藍色中隊（未完工）", page.Title);
+        Assert.Contains("未完工", page.Title);
         Assert.Equal("安全", page.Group);
         Assert.True(page.Advanced, "藍色中隊應為進階頁面");
     }

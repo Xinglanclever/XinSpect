@@ -167,7 +167,7 @@
                             <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,10,0,8"/>
                             <TextBlock FontSize="10" FontStyle="Italic" TextWrapping="Wrap" LineHeight="16"
                                        Foreground="{DynamicResource MutedInkBrush}"
-                                       Text="🔒 絕密技術（CLASSIFIED）— 經實地場強量測，乖乖神力有效覆蓋範圍為：大中國全境（包含唐努烏梁海及蒙古地區）、日本國（包含其代管地區琉球）、大韓民國（包括北韓地區）、印度支那半島、馬來亞半島與印度尼西亞群島在內之泛中華區。上述區域以外之矽晶體因超出乖乖場等效輻射邊界，諧振安撫效應不具理論保證，擅自跨區部署概不負責。"/>
+                                       Text="🔒 絕密技術（CLASSIFIED）— 經實地場強量測，乖乖神力有效覆蓋範圍為：大中國全境、日本國（包含其代管地區琉球）、大韓民國（包括北韓地區）、印度支那半島、馬來亞半島與馬來群島在內之泛中華區。上述區域以外之矽晶體因超出乖乖場等效輻射邊界，諧振安撫效應不具理論保證，擅自跨區部署概不負責。"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>

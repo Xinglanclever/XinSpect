@@ -240,7 +240,8 @@ public sealed class InstallerMirrorsTests
         string src = Source;
         // 用 \r 回到行首、用空白補到上一次的寬度：否則 42% 變 9% 時尾巴會留著舊字。
         Assert.Contains("Console.Write(\"\\r\" + text)", src);
-        Assert.Contains("new string(' ', _printed - text.Length)", src);
+        Assert.Contains("int prev = _printedVis", src);
+        Assert.Contains("if (prev > vis) text += new string(' ', prev - vis)", src);
         // Done 那一行要蓋掉最後一格進度列，不能印在下一行。
         Assert.Contains("public void Overwrite(string text)", src);
     }
@@ -286,19 +287,19 @@ public sealed class InstallerMirrorsTests
         string code = Code;
 
         // ①：Install.cs 的說明段落裡有這些詞，程式碼裡沒有
-        Assert.DoesNotContain("假成功", code);
+        Assert.DoesNotContain("硬湊一個百分比只會讓", code);
         Assert.DoesNotContain("噪訊", code);
+        Assert.Contains("下載到 HTML 是安裝器最常見的假成功", code);
 
         // ②：URL 字串必須活著
         Assert.Contains("https://github.com/Xinglanclever/XinSpect/releases/latest/download/", code);
         Assert.Contains("https://raw.githubusercontent.com/Xinglanclever/XinSpect/main/Installer/mirrors.txt", code);
 
         // ③：真正的程式碼不能一起被削掉
-        // 〔修復建置 2026-11-08〕UserAgent 隨 patch-22 升為 3.18——這裡釘的是「UserAgent 字串
-        // 在去註解後仍活著」，版號跟著樹走。
-        Assert.Contains("private sealed class ProgressBar", code);
-                // 〔修復 v3.21〕審計 R2：UserAgent 版號跟樹走（3.17→3.18→3.21——bump 時手動跟進此釘）。
-        Assert.Contains("XinSpectDeploy/3.22", code);
+        // UserAgent 的版號從共用常數產生，這裡守住格式與來源，避免安裝器版本漂移。
+        Assert.Contains("public sealed class ProgressBar", code);
+        Assert.Contains("req.UserAgent = \"XinSpectDeploy/\" + Version", code);
+        Assert.Contains("private const string Version = \"3.32\"", code);
         Assert.Contains("LooksLikeDownload", code);
 
         // 逐字字串（@@""）與跳脫字串都不能把狀態機帶歪
@@ -314,9 +315,9 @@ public sealed class InstallerMirrorsTests
         Assert.True(File.Exists(exe), "Installer/XinSpectDeploy.exe 不見了");
 
         byte[] bytes = File.ReadAllBytes(exe);
-        // 〔修復 v3.20〕26KB→32KB：patch-22 加固是真代碼增長（本版 29,696B），門禁意圖（不帶 runtime）不變。
-        Assert.True(bytes.Length < 32 * 1024,
-            $"安裝器 {bytes.Length} bytes：超過 26 KB 就是有人把執行階段塞進來了");
+        // UI 與百科選項擴充後，大小上限與 build-installer.ps1 一致（仍不含 .NET runtime）。
+        Assert.True(bytes.Length < 48 * 1024,
+            $"安裝器 {bytes.Length} bytes：超過 48 KB 就超出無 runtime 的部署器門檻");
 
         Assert.True(Contains(bytes, Encoding.Unicode.GetBytes("選擇下載來源")),
             "exe 裡找不到新版選單的字串——Install.cs 改了但沒有重跑 Tools\\build-installer.ps1");

@@ -13,16 +13,15 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 工具列：回到目錄／頁內尋找／用瀏覽器開啟。文件本身是自足 HTML，沒有指令碼，
-             所以「找字」走 WebView2 的 window.find（與內建瀏覽器同一支）。 -->
+        <!-- 工具列：回到目錄／頁內尋找／用瀏覽器開啟已校驗的本機文件。 -->
         <WrapPanel Grid.Row="0" Margin="2,0,0,8">
             <Button Content="回到目錄" Style="{StaticResource ToolButton}" Margin="0,0,6,0"
                     Click="Toc_Click" ToolTip="回到文件開頭與左側目錄"/>
             <TextBox x:Name="FindBox" Width="240" Style="{StaticResource SetTextBox}" Margin="0,0,6,0"
                      KeyDown="FindBox_KeyDown" ToolTip="輸入關鍵字後按 Enter；再按一次找下一個"/>
             <Button Content="找下一個" Style="{StaticResource ToolButton}" Margin="0,0,6,0" Click="FindNext_Click"/>
-            <Button Content="用瀏覽器開啟" Style="{StaticResource ToolButton}" Click="OpenExternal_Click"
-                    ToolTip="以本機 HTML 檔在預設瀏覽器開啟（同樣離線、不上網）"/>
+            <Button Content="用瀏覽器開啟本機百科" Style="{StaticResource ToolButton}" Click="OpenExternal_Click"
+                    ToolTip="以預設瀏覽器開啟已下載並校驗的本機 HTML"/>
             <TextBlock x:Name="StatusText" Style="{StaticResource Subtitle}" VerticalAlignment="Center"
                        Margin="10,0,0,0" TextWrapping="Wrap"/>
         </WrapPanel>
@@ -31,15 +30,20 @@
             <Grid>
                 <wv2:WebView2 x:Name="Web"/>
 
-                <!-- WebView2 執行階段缺失、初始化失敗、或百科讀不到時，說清楚是哪一種 -->
+                <!-- 下載、WebView2 初始化或快取失敗時，清楚顯示原因並允許重試。 -->
                 <Border x:Name="Fallback" Visibility="Collapsed" Background="{DynamicResource SurfaceBrush}">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="620" Margin="24">
-                        <TextBlock Text="百科無法在程式內顯示" FontSize="18" FontWeight="Bold"
+                        <TextBlock Text="百科暫時無法開啟" FontSize="18" FontWeight="Bold"
                                    Foreground="{DynamicResource PrimaryInkBrush}" HorizontalAlignment="Center"/>
                         <TextBlock x:Name="FallbackMsg" TextWrapping="Wrap" Margin="0,10,0,0"
                                    Foreground="{DynamicResource SecondaryInkBrush}" TextAlignment="Center"/>
-                        <Button Content="用瀏覽器開啟" Style="{StaticResource ToolButton}" Margin="0,16,0,0"
-                                HorizontalAlignment="Center" Click="OpenExternal_Click"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0">
+                            <Button x:Name="RetryBtn" Content="重試下載" Style="{StaticResource ToolButton}"
+                                    Click="Retry_Click"/>
+                            <Button x:Name="FallbackBrowserBtn" Content="用瀏覽器開啟本機百科"
+                                    Style="{StaticResource ToolButton}" Margin="8,0,0,0"
+                                    Click="OpenExternal_Click" Visibility="Collapsed"/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
             </Grid>

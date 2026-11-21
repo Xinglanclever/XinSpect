@@ -167,11 +167,11 @@ try {
     Ok "pushed main=$($localHead.Substring(0,7)) + tag v$Version on remote"
 
     # ---------- publish ----------
-    # 八資產矩陣（2026-11-06）：GUI 二版（不帶環境／帶環境）＋ CLI 四版（兩個 Windows 世代 ×
-    # 帶不帶環境）＋ Bridge ＋ 部署器。每顆各自 -o：dotnet publish 會清輸出目錄，
+    # 產品發行矩陣：GUI 二版（不帶環境／帶環境）＋ CLI 四版（兩個 Windows 世代 ×
+    # 帶不帶環境）＋ Bridge ＋ 部署器、XsRegProbe 與獨立百科 HTML。每顆各自 -o：dotnet publish 會清輸出目錄，
     # 多資產共用一個目錄會互相刪檔（2026-11-06 實測）。
     # CLI 的 OutputPath 也各自獨立——預設 bin 被殭屍進程鎖住時不必等重開機。
-    Write-Host '==> dotnet publish (eight assets)'
+    Write-Host '==> dotnet publish (product executables)'
     $P = "publish-$Version"
     $null = New-Item -ItemType Directory -Force -Path $P
 
@@ -238,7 +238,7 @@ try {
     if (-not (Test-Path $driverSys)) { Fail "driver asset missing after build: $driverSys" }
     Ok "driver $driverSys = $((Get-Item $driverSys).Length) bytes"
 
-    # 九件清單（bridge／deployer 由既有產出提供）
+    # 十件清單（百科 HTML 是 Desktop 點擊下載的獨立資產）
     $assets = @(
         @('XinSpect.exe', "$P\XinSpect.exe"),
         @('XinSpect-full.exe', "$P\XinSpect-full.exe"),
@@ -248,7 +248,8 @@ try {
         @('XinSpectConsole-legacy-nort.exe', "$P\XinSpectConsole-legacy-nort.exe"),
         @('BlueSquadronBridge.exe', "$P-bridge\BlueSquadronBridge.exe"),
         @('XinSpectDeploy.exe', 'Installer\XinSpectDeploy.exe'),
-        @('XsRegProbe.sys', 'XsRegProbe\Driver\x64build\XsRegProbe.sys')
+        @('XsRegProbe.sys', 'XsRegProbe\Driver\x64build\XsRegProbe.sys'),
+        @('XinSpect-Encyclopedia.html', '百科.html')
     )
     foreach ($a in $assets) {
         if (-not (Test-Path $a[1])) { Fail "asset missing: $($a[1])" }
@@ -274,6 +275,8 @@ try {
     if ($LASTEXITCODE -ne 0) { Fail 'docs HTML generation failed' }
     & python Tools\gen-docs-html.py --check
     if ($LASTEXITCODE -ne 0) { Fail 'docs HTML is not synchronized after generation' }
+    Copy-Item '百科.html' "$P\XinSpect-Encyclopedia.html" -Force
+    if (-not (Test-Path "$P\XinSpect-Encyclopedia.html")) { Fail 'standalone encyclopedia asset missing after generation' }
     if (git status --porcelain -- '百科.html' '手冊.html') { $changed += @('百科.html', '手冊.html') }
 
     if ($changed.Count -gt 0) {
@@ -287,7 +290,7 @@ try {
     }
 
     # ---------- release + assets ----------
-    Write-Host '==> create/update Release and upload nine assets + SHA256SUMS.txt'
+    Write-Host '==> create/update Release and upload ten assets + SHA256SUMS.txt'
     $bridge = "$P-bridge\BlueSquadronBridge.exe"
     if (-not (Test-Path $bridge)) { Fail "bridge asset source missing: $bridge" }
 

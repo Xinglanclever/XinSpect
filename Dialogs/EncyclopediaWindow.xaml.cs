@@ -2,30 +2,27 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Web.WebView2.Core;
 
 namespace XinSpect;
 
 /// <summary>
-/// 程式內的百科翻閱視窗：把內嵌的 <c>百科.html</c>（由 README.md 產生、自足、含目錄與錨點）
-/// 交給 WebView2 顯示。定位靠三件事：左側可摺疊目錄、每個標題的 ¶ 錨點、上方尋找（window.find）。
-///
-/// <para>
-/// 載入方式刻意不是 <c>NavigateToString</c>（它有 2MB 上限，百科超過），也不是 <c>file://</c>
-/// （本專案的政策是「只認 http／https」，而 file:// 能讀本機任意檔案）。做法是先把內嵌內容
-/// 寫到 <c>%LOCALAPPDATA%\XinSpect\docs\</c>，再用 WebView2 的虛擬主機對應
-/// （<c>SetVirtualHostNameToFolderMapping</c>）以 <c>https://xinspect.docs/百科.html</c> 開啟——
-/// 只映射那一個資料夾，不開 file:// 這條路。
-/// </para>
+/// 使用者從「關於」頁明確點擊百科後才下載並顯示。HTML 先經 Release SHA-256 對帳，
+/// 再以 WebView2 虛擬主機映射快取資料夾，不使用 file://。
 /// </summary>
 public partial class EncyclopediaWindow : Window
 {
     private const string VirtualHost = "xinspect.docs";
 
     private bool _ready;
+    private bool _loading;
+    private bool _closed;
     private string? _localPath;
     private string? _docUrl;
+    private CancellationTokenSource? _loadCts;
 
     public EncyclopediaWindow()
     {
@@ -35,19 +32,32 @@ public partial class EncyclopediaWindow : Window
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
+        => await LoadAndShowAsync();
+
+    private async Task LoadAndShowAsync()
     {
+        if (_loading) return;
+        _loading = true;
+        _loadCts?.Dispose();
+        _loadCts = new CancellationTokenSource();
+        RetryBtn.IsEnabled = false;
+        Fallback.Visibility = Visibility.Visible;
+        FallbackMsg.Text = LanguageService.T("正在從 XinSpect Release 下載並校驗百科…");
+        StatusText.Text = LanguageService.T("正在下載百科…");
         try
         {
-            // P4-10：Catalog.Load／fallback 分支原本在 try 之前同步執行——async void 的
-            // 前置例外沒有 catch 能接，直接炸行程。整段收進 try，失敗走 ShowFallback。
-            var report = EncyclopediaCatalog.Load();
+            EncyclopediaCatalog.EncyclopediaReport report = await EncyclopediaCatalog.LoadAsync(_loadCts.Token);
+            if (_closed || _loadCts.IsCancellationRequested) return;
             if (!report.Available || string.IsNullOrEmpty(report.Text))
             {
-                ShowFallback(report.UnavailableReason ?? EncyclopediaCatalog.MissingReason
-                             + "\n（單檔發佈版應內嵌百科；開發機請確認倉庫根有 百科.html）");
+                ShowFallback(LanguageService.TComposite(report.UnavailableReason ?? EncyclopediaCatalog.MissingReason));
+                StatusText.Text = LanguageService.T("百科下載失敗。");
                 return;
             }
-            _localPath = EncyclopediaCatalog.EnsureLocalCopy(report.Text);
+
+            _localPath = Path.Combine(EncyclopediaCatalog.CacheDirectory, EncyclopediaCatalog.FileName);
+            if (!File.Exists(_localPath))
+                throw new FileNotFoundException("校驗完成後找不到百科快取。", _localPath);
             string folder = Path.GetDirectoryName(_localPath) ?? AppContext.BaseDirectory;
 
             // 多開時第二份實例不能共用同一個 WebView2 使用者資料夾（WebView2 會鎖住它）。
@@ -60,16 +70,13 @@ public partial class EncyclopediaWindow : Window
 
             var env = await CoreWebView2Environment.CreateAsync(userDataFolder: dataFolder);
             await Web.EnsureCoreWebView2Async(env);
+            if (_closed || _loadCts.IsCancellationRequested) return;
 
             var core = Web.CoreWebView2
                        ?? throw new InvalidOperationException("WebView2 初始化後沒有 CoreWebView2");
             core.Settings.AreDefaultContextMenusEnabled = false;
             core.Settings.AreDevToolsEnabled = false;
             core.Settings.IsStatusBarEnabled = true;
-            // 這個視窗本身是深色介面（工具列、目錄樹都是深底），百科的 CSS 也用
-            // prefers-color-scheme 分深淺兩版。WebView2 預設跟隨 Windows 的淺色／深色設定，
-            // 於是淺色系統上會出現「深色外殼、白色內文」的割裂——這裡把文件固定成深色，
-            // 跟外殼一致；用一般瀏覽器開同一個檔案時，仍然照瀏覽器的設定走。
             try { core.Profile.PreferredColorScheme = CoreWebView2PreferredColorScheme.Dark; }
             catch (Exception) { /* 舊版 WebView2 執行階段沒有這個屬性：維持跟隨系統，不影響閱讀 */ }
             core.SetVirtualHostNameToFolderMapping(
@@ -81,23 +88,40 @@ public partial class EncyclopediaWindow : Window
             _docUrl = "https://" + VirtualHost + "/" + Uri.EscapeDataString(EncyclopediaCatalog.FileName);
             _ready = true;
             core.Navigate(_docUrl);
-            StatusText.Text = "離線自足文件 ・ 左側目錄可點 ・ 上方尋找或 Ctrl＋F";
+            Fallback.Visibility = Visibility.Collapsed;
+            StatusText.Text = LanguageService.T(report.UsedOfflineCache
+                ? "使用已驗證的本機百科快取 ・ 目前無法連線至 Release"
+                : "百科已下載並完成 SHA-256 校驗 ・ 目錄可點 ・ 可搜尋");
+        }
+        catch (OperationCanceledException) when (_loadCts?.IsCancellationRequested == true)
+        {
+            // 視窗關閉時取消下載，不顯示錯誤，也不寫入不完整快取。
         }
         catch (Exception ex)
         {
-            ShowFallback("找不到可用的 Microsoft Edge WebView2 執行階段，或其初始化失敗。\n"
-                         + "仍可用「用瀏覽器開啟」閱讀同一份離線 HTML。\n\n（"
-                         + ex.GetType().Name + "：" + ex.Message + "）");
+            ShowFallback(LanguageService.T("百科下載或顯示失敗，請檢查網路後重試。")
+                         + " (" + ex.GetType().Name + ": " + ex.Message + ")");
+            StatusText.Text = LanguageService.T("百科暫時無法開啟。");
+        }
+        finally
+        {
+            _loading = false;
+            if (_loadCts is { IsCancellationRequested: false }) RetryBtn.IsEnabled = true;
         }
     }
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        _closed = true;
+        try { _loadCts?.Cancel(); } catch { }
+        _loadCts?.Dispose();
         try { Web.Dispose(); } catch { /* 關窗時釋放失敗不影響任何資料 */ }
     }
 
-    /// <summary>只允許網頁（http／https）。文件內的 GitHub 連結會在視窗內開啟；
-    /// 其他協定（file:、javascript:、data:）一律擋下並寫出原因。</summary>
+    private void Retry_Click(object sender, RoutedEventArgs e)
+        => _ = LoadAndShowAsync();
+
+    /// <summary>只允許網頁（http／https）。</summary>
     private void Core_NavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
     {
         if (BrowserPolicy.IsNavigationAllowed(Uri.TryCreate(e.Uri, UriKind.Absolute, out var uri) ? uri : null,
@@ -119,8 +143,6 @@ public partial class EncyclopediaWindow : Window
         StatusText.Text = "已擋下一個不是網頁的新視窗連結（" + (uri?.Scheme ?? "未知") + "）。";
     }
 
-    // ── 工具列 ──────────────────────────────────────────────────────────
-
     private void Toc_Click(object sender, RoutedEventArgs e)
     {
         var core = Web.CoreWebView2;
@@ -128,7 +150,7 @@ public partial class EncyclopediaWindow : Window
         string? current = Web.Source?.ToString();
         if (!string.Equals(current, _docUrl, StringComparison.OrdinalIgnoreCase))
         {
-            core.Navigate(_docUrl);                     // 從外部連結回到百科首頁
+            core.Navigate(_docUrl);
             return;
         }
         _ = core.ExecuteScriptAsync("window.scrollTo({top:0,behavior:'instant'})");
@@ -156,15 +178,10 @@ public partial class EncyclopediaWindow : Window
 
     private void OpenExternal_Click(object sender, RoutedEventArgs e)
     {
-        if (_localPath is null || !File.Exists(_localPath))
+        if (string.IsNullOrWhiteSpace(_localPath) || !File.Exists(_localPath))
         {
-            var report = EncyclopediaCatalog.Load();
-            if (!report.Available || string.IsNullOrEmpty(report.Text))
-            {
-                ShowFallback(report.UnavailableReason ?? EncyclopediaCatalog.MissingReason);
-                return;
-            }
-            _localPath = EncyclopediaCatalog.EnsureLocalCopy(report.Text);
+            StatusText.Text = LanguageService.T("尚無已驗證的百科快取；請先下載成功再用瀏覽器開啟。");
+            return;
         }
         try
         {
@@ -172,13 +189,15 @@ public partial class EncyclopediaWindow : Window
         }
         catch (Exception ex)
         {
-            StatusText.Text = "開不了預設瀏覽器（" + ex.GetType().Name + "）：" + _localPath;
+            StatusText.Text = "開不了預設瀏覽器（" + ex.GetType().Name + "）";
         }
     }
 
     private void ShowFallback(string message)
     {
         FallbackMsg.Text = message;
+        FallbackBrowserBtn.Visibility = !string.IsNullOrWhiteSpace(_localPath) && File.Exists(_localPath)
+            ? Visibility.Visible : Visibility.Collapsed;
         Fallback.Visibility = Visibility.Visible;
     }
 }

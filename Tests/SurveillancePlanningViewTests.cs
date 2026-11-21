@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using Xunit;
@@ -5,11 +6,33 @@ using Xunit;
 namespace XinSpect.Tests;
 
 /// <summary>
-/// 監控工程規劃頁的載入煙霧測試：XAML 解析、資源鍵、預設值與第一次計算。
+/// 監控工程規劃視窗的載入煙霧測試：XAML 解析、資源鍵、預設值與第一次計算。
 /// 計算本身由 <see cref="SurveillancePlanningTests"/> 釘住；這裡只確認「頁面打得開、數字有出來」。
 /// </summary>
 public class SurveillancePlanningViewTests
 {
+    [Fact]
+    public void 工具箱提供監控規劃入口且不再把規劃器或歷史型號列為獨立頁()
+    {
+        Assert.Null(PageRegistry.FindAny("surveillance-planning"));
+        Assert.Null(PageRegistry.FindAny("hardware-catalog"));
+
+        string root = RepoRoot();
+        string toolboxXaml = File.ReadAllText(Path.Combine(root, "Views", "ToolboxView.xaml"));
+        string toolboxCode = File.ReadAllText(Path.Combine(root, "Views", "ToolboxView.xaml.cs"));
+        Assert.Contains("日文／韓文翻譯未完成", toolboxXaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"OpenSurveillancePlanning_Click\"", toolboxXaml, StringComparison.Ordinal);
+        Assert.Contains("new SurveillancePlanningWindow", toolboxCode, StringComparison.Ordinal);
+    }
+
+    private static string RepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "XinSpect.csproj")))
+            dir = dir.Parent;
+        return dir?.FullName ?? throw new DirectoryNotFoundException("找不到倉庫根（XinSpect.csproj）。");
+    }
+
     private static void OnSta(Action work)
     {
         Exception? error = null;
@@ -34,7 +57,11 @@ public class SurveillancePlanningViewTests
     {
         OnSta(() =>
         {
-            var view = new SurveillancePlanningView();
+            var window = new SurveillancePlanningWindow();
+            Assert.IsType<SurveillancePlanningView>(window.Content);
+            var view = (SurveillancePlanningView)window.Content;
+            window.ApplyTemplate();
+            window.UpdateLayout();
             view.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
 
             string[] outputs =

@@ -338,6 +338,31 @@
                 </StackPanel>
             </Border>
 
+            <!-- ═══ 核心讀取路由 ═══ -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <local:SectionHead Text="核心存取後端"/>
+                    <TextBlock Style="{StaticResource Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="選擇共用核心路由的信任模式；設定即時生效並自動儲存。自動與僅沙箱不會載入 WinRing0；目前 PawnIO 尚未接入，因此這兩種模式可能沒有可用路由。"/>
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="路由模式" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Column="1" Style="{StaticResource DarkCombo}"
+                                  HorizontalAlignment="Left" Width="360"
+                                  SelectedIndex="{Binding Settings.KernelBackendMode, Mode=TwoWay}">
+                            <ComboBoxItem Content="自動（使用已接入的沙箱／原生後端；不載入 WinRing0）"/>
+                            <ComboBoxItem Content="僅沙箱（只使用沙箱後端；目前 PawnIO 未接入，沒有可用路由）"/>
+                            <ComboBoxItem Content="允許 WinRing0（明確同意較廣的核心存取暴露面，才會載入）"/>
+                        </ComboBox>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Text="目前界線：PawnIO 原生庫與模組雜湊尚未接入；WMI 是獨立的作業系統回報來源，不是核心後端；XsRegProbe 仍走自己的白名單驅動入口，尚未接入此路由。因此本設定只影響已使用 KernelBackendHost 的呼叫端，並非全倉統一切換。"/>
+                </StackPanel>
+            </Border>
+
             <!-- ═══ 環境自檢 ═══ -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>

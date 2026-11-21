@@ -40,6 +40,11 @@ internal static class ProgressTest
         Check(installType != null, "找得到 Install");
         Check(uiType != null, "找得到 Install+Ui（畫面件，Fancy 開關在這裡）");
 
+        Console.WriteLine();
+        Console.WriteLine("== 產品代碼與百科內容檢查 ==");
+        CheckProductChoices(installType);
+        CheckEncyclopediaValidation(installType);
+
         // ── 以反射呼叫私有的 Report / Line ──────────────────────────────
         object bar = Activator.CreateInstance(barType,
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
@@ -149,6 +154,62 @@ internal static class ProgressTest
         Console.WriteLine();
         Console.WriteLine(failures == 0 ? "ALL PASS" : failures + " FAILURE(S)");
         return failures == 0 ? 0 : 1;
+    }
+
+    private static void CheckProductChoices(Type installType)
+    {
+        MethodInfo parse = installType.GetMethod("ParseProductChoice", BindingFlags.Static | BindingFlags.NonPublic);
+        Check(parse != null, "找得到產品代碼解析器");
+        if (parse == null) return;
+
+        CheckChoice(parse, "A", false, false, false);
+        CheckChoice(parse, "B", true, false, false);
+        CheckChoice(parse, "AC", false, true, false);
+        CheckChoice(parse, "BC", true, true, false);
+        CheckChoice(parse, "C", false, true, true);
+        object[] invalid = { "AB", false, false, false };
+        bool accepted = (bool)parse.Invoke(null, invalid);
+        Check(!accepted, "拒絕未定義的產品代碼");
+    }
+
+    private static void CheckChoice(MethodInfo parse, string code, bool cli, bool encyclopedia, bool onlyEncyclopedia)
+    {
+        object[] args = { code, false, false, false };
+        bool accepted = (bool)parse.Invoke(null, args);
+        Check(accepted && (bool)args[1] == cli && (bool)args[2] == encyclopedia && (bool)args[3] == onlyEncyclopedia,
+            code + " 對應正確下載內容");
+    }
+
+    private static void CheckEncyclopediaValidation(Type installType)
+    {
+        Type validationType = installType.GetNestedType("DownloadValidation", BindingFlags.NonPublic);
+        MethodInfo looksLikeDownload = installType.GetMethod("LooksLikeDownload", BindingFlags.Static | BindingFlags.NonPublic);
+        FieldInfo asset = installType.GetField("EncyclopediaAsset", BindingFlags.Static | BindingFlags.NonPublic);
+        Check(validationType != null && looksLikeDownload != null && asset != null, "百科驗證入口與資產名稱存在");
+        if (validationType == null || looksLikeDownload == null || asset == null) return;
+
+        string name = (string)asset.GetRawConstantValue();
+        Check(name == "XinSpect-Encyclopedia.html", "百科資產名和發行資產契約一致");
+        object htmlMode = Enum.Parse(validationType, "EncyclopediaHtml");
+        string dir = Path.Combine(Path.GetTempPath(), "xinspect-installer-html-test");
+        Directory.CreateDirectory(dir);
+        string valid = Path.Combine(dir, "valid.html");
+        string invalid = Path.Combine(dir, "invalid.html");
+        string oversized = Path.Combine(dir, "oversized.html");
+        try
+        {
+            File.WriteAllText(valid, "<!DOCTYPE html>\n<html lang=\"zh-Hant\"><head></head><body>" + new string('x', 256) + "</body></html>", new System.Text.UTF8Encoding(false));
+            File.WriteAllText(invalid, "<!DOCTYPE html><html><body>not closed" + new string('x', 256), new System.Text.UTF8Encoding(false));
+            using (FileStream fs = File.Create(oversized)) fs.SetLength(20L * 1024L * 1024L + 1L);
+
+            Check((bool)looksLikeDownload.Invoke(null, new object[] { valid, htmlMode }), "接受 UTF-8 完整百科 HTML");
+            Check(!(bool)looksLikeDownload.Invoke(null, new object[] { invalid, htmlMode }), "拒絕沒有閉合根標籤的 HTML");
+            Check(!(bool)looksLikeDownload.Invoke(null, new object[] { oversized, htmlMode }), "拒絕超過 20 MiB 的 HTML");
+        }
+        finally
+        {
+            try { Directory.Delete(dir, true); } catch { }
+        }
     }
 
     // 剝掉 ANSI CSI 序列（ESC [ … 終止位元組）：Fancy 模式的行裡有品牌紅色碼，

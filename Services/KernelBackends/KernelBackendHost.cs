@@ -5,18 +5,17 @@ namespace XinSpect;
 /// <list type="number">
 /// <item><b>懶初始化</b>：第一次 <see cref="Route"/>／<see cref="Snapshot"/> 才建後端鏈——
 /// 載不載 WinRing0 驅動由「有沒有人真的要讀」決定，不是程式一開機就載。</item>
-/// <item><b>模式先於載入</b>：<see cref="KernelBackendMode.SandboxOnly"/> 下連
-/// <see cref="WinRing0KernelBackend.Create"/> 都不做——「不開萬能鑰匙」的第一步是
-/// 「不載驅動」，而不是「載了不給用」。</item>
+/// <item><b>模式先於載入</b>：只有 <see cref="KernelBackendMode.UniversalAllowed"/> 才呼叫
+/// <see cref="WinRing0KernelBackend.Create"/>。Auto 與 SandboxOnly 都不載入 WinRing0，
+/// 避免把預設路由當成對通用核心驅動的同意。</item>
 /// <item><b>缺席也申報</b>：PawnIO 本版整體缺席（ModulePins 未成文）、WinRing0 建立失敗、
 /// 被模式排除——三種「不在鏈上」都以 <see cref="Snapshot"/> 一列如實帶原因，
 /// 驅動就緒卡與 backend.* 事實直接渲染，介面能回答「為什麼這格走這條路」。</item>
 /// </list>
 /// <para>
-/// <b>界線（誠實申報）：</b>本宿主只是接線樞紐，不是全倉閘門——在補丁批次遷移完成前，
-/// 倉庫裡還有 20+ 個呼叫端直接 <see cref="WinRing0Bridge.Create"/>，它們不經過這裡、
-/// 也不受模式約束（見補丁文件「3. 行為會變什麼」第 3 條）。在那一刻之前，
-/// <see cref="KernelBackendMode.SandboxOnly"/> 是<b>路由聲明</b>，不是硬保證。
+/// <b>界線（誠實申報）：</b>本宿主只是局部路由，不是全倉閘門；仍有多個生產呼叫端直接建立
+/// <see cref="WinRing0Bridge"/>，不經過此處，也不受本模式約束。
+/// Auto／SandboxOnly 只保證本宿主不建立 WinRing0，不代表整個程式不會由其他路徑載入它。
 /// </para>
 /// </summary>
 public static class KernelBackendHost
@@ -27,6 +26,7 @@ public static class KernelBackendHost
     private static readonly List<(KernelBackendDescriptor Desc, KernelCapability Caps, string? Reason)> _declared = [];
     private static KernelBackendMode _mode = KernelBackendMode.Auto;
     private static bool _initialized;
+    private static Func<(IKernelBackend? Backend, string Error)> _winRing0Factory = CreateWinRing0Backend;
 
     /// <summary>由 <see cref="SettingsService"/> 帶入（設定服務是實例制，宿主不反向持有它）。
     /// N2：模式切換<b>退役</b>舊選擇器而非就地 Dispose——鎖外可能還有 in-flight 的 guard
@@ -97,15 +97,17 @@ public static class KernelBackendHost
                        pawn.Capabilities, pawn.UnavailableReason));
         candidates.Add(pawn);
 
-        // ② WinRing0（萬能鑰匙）：SandboxOnly 模式下不建立——驅動根本不載。
-        if (_mode == KernelBackendMode.SandboxOnly)
+        // ② WinRing0（萬能鑰匙）：只有明確選 UniversalAllowed 才建立——預設／僅沙箱都不載。
+        if (!ShouldLoadWinRing0(_mode))
         {
             _declared.Add((new KernelBackendDescriptor("winring0", "WinRing0（萬能鑰匙）", KernelTrustTier.Universal),
-                           KernelCapability.None, "被「僅沙箱」模式排除——本行程未載入驅動。"));
+                           KernelCapability.None, _mode == KernelBackendMode.Auto
+                               ? "被「自動」模式的安全策略排除——未明確允許 WinRing0，本路由未載入驅動。"
+                               : "被「僅沙箱」模式排除——本路由未載入驅動。"));
         }
         else
         {
-            var w0 = WinRing0KernelBackend.Create(out var createError);
+            var (w0, createError) = _winRing0Factory();
             if (w0 is { } b)
             {
                 _declared.Add((new KernelBackendDescriptor(b.Id, b.DisplayName, b.Tier),
@@ -121,5 +123,30 @@ public static class KernelBackendHost
 
         _selector = new KernelBackendSelector(_mode, candidates);
         _initialized = true;
+    }
+
+    /// <summary>WinRing0 具有較廣核心存取暴露面；只允許明確選 UniversalAllowed 後載入。</summary>
+    internal static bool ShouldLoadWinRing0(KernelBackendMode mode) =>
+        mode == KernelBackendMode.UniversalAllowed;
+
+    /// <summary>測試注入點：避免矩陣測試載入真實核心驅動；傳 null 還原正式工廠。</summary>
+    internal static void SetWinRing0FactoryForTests(Func<(IKernelBackend? Backend, string Error)>? factory)
+    {
+        KernelBackendSelector? retired;
+        lock (Gate)
+        {
+            _winRing0Factory = factory ?? CreateWinRing0Backend;
+            retired = _selector;
+            _selector = null;
+            _declared.Clear();
+            _initialized = false;
+        }
+        retired?.Retire();
+    }
+
+    private static (IKernelBackend? Backend, string Error) CreateWinRing0Backend()
+    {
+        var backend = WinRing0KernelBackend.Create(out var error);
+        return (backend, error);
     }
 }

@@ -355,7 +355,6 @@ internal static class Program
                     "os.* ＝ 版本、授權、更新與安全態勢（Secure Boot／VBS／HVCI／UAC）。"); return 0;
                 case "power": DomainReport("電源與睡眠", ["pw"],
                     "pw.* ＝ 電池（battery 指令看細節）、睡眠能力、喚醒來源、電源計劃漂移。"); return 0;
-                case "catalog": CatalogQuery(rest); return 0;
                 case "history": HistoryReport(); return 0;
                 case "usb": UsbReport(); return 0;
                 case "pcie": PcieReport(); return 0;
@@ -882,30 +881,6 @@ internal static class Program
                 Console.WriteLine($"  {Red}對帳矛盾：{rule}{Reset}");
         else
             Console.WriteLine($"  {Dim}沒有對帳矛盾。{Reset}");
-    }
-
-    /// <summary>歷史型號查詢：2006–2026 CPU／GPU 索引（使用者提供的內建目錄，離線）。</summary>
-    private static void CatalogQuery(string query)
-    {
-        var svc = new HardwareCatalogService();
-        Tui.Section("歷史型號", svc.Status + " ・ " + svc.Limitations);
-        if (query.Length == 0)
-        {
-            Console.WriteLine($"{Dim}用法：catalog <關鍵字>，例如 catalog 5800X、catalog rtx 3080。{Reset}");
-            return;
-        }
-        var rows = svc.Search(query, limit: 20);
-        if (rows.Count == 0)
-        {
-            Console.WriteLine($"{Dim}「{query}」沒有查到——目錄不含主機板（理由見 attribution）。{Reset}");
-            return;
-        }
-        Tui.Table(["型號", "類別", "年份", "摘要"],
-            rows.Select(r => new[]
-            {
-                Trim(r.DisplayName, 34), Trim(r.Kind, 8), r.Year?.ToString() ?? "—", Trim(r.Summary, 44),
-            }));
-        Console.WriteLine($"  {Dim}{svc.Attribution}{Reset}");
     }
 
     /// <summary>歷史回放摘要：讀 HistoryStore 持久化檔，13 指標各給 min／avg／max／P95。</summary>

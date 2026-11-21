@@ -35,7 +35,9 @@ using System.Threading;
 internal static class Install
 {
     // 部署器自己的版本號（UserAgent 與開場面板共用）。跟著主專案版號走，發版時順手改這裡。
-    private const string Version = "3.28";
+    private const string Version = "3.32";
+    private const string EncyclopediaAsset = "XinSpect-Encyclopedia.html";
+    private const long EncyclopediaMaxBytes = 20L * 1024L * 1024L;
 
     // 一個下載來源。Direct=true 時 BaseUrl 是「檔案所在目錄」，安裝器自己抓；
     // Direct=false 時 BaseUrl 是分享頁，安裝器只開瀏覽器並說清楚要按什麼。
@@ -123,12 +125,16 @@ internal static class Install
         }
         ServicePointManager.DefaultConnectionLimit = 32;
 
-        // 第一層選單：裝什麼。A ＝ 主程式（GUI），B ＝ 曦覽終端機。
+        // 第一層選單：A/B 安裝程式，AC/BC 同時下載百科，C 只下載百科。
         // 第二層選單選下載來源（1/2/3）；命令列 -xsc 與來源編號供腳本／機器驗證用。
-        bool xsc = ChooseProduct(args);
+        bool includeEncyclopedia, encyclopediaOnly;
+        bool xsc = ChooseProduct(args, out includeEncyclopedia, out encyclopediaOnly);
         bool legacy = false, nort = false, full = false;
-        if (xsc) ChooseCliFlavor(args, out legacy, out nort);
-        else full = ChooseDesktopFull(args);
+        if (!encyclopediaOnly)
+        {
+            if (xsc) ChooseCliFlavor(args, out legacy, out nort);
+            else full = ChooseDesktopFull(args);
+        }
 
         Ui.Busy("拉取鏡像清單 mirrors.txt");
         List<Mirror> all = LoadMirrors();
@@ -137,6 +143,8 @@ internal static class Install
 
         Mirror chosen = ChooseMirror(all, args);
         if (chosen == null) { Pause(); return 2; }
+        if (encyclopediaOnly && !chosen.Direct)
+            Ui.Note("所選來源是分享頁，百科改用 GitHub 官方下載及加速備援線路。" + chosen.Name);
 
         // 官方總雜湊清單：整個部署抓一次、所有檔共用。null＝一份都拿不到——
         // 各 Deploy* 內的 RequireHash 會據此拒裝並三態告知，不在這裡提早退出
@@ -148,7 +156,10 @@ internal static class Install
         else
             Ui.BusyEnd(true, "信任根就位：" + hashes.Via);
 
-        return xsc ? DeployXsc(chosen, legacy, nort, hashes) : DeployGui(chosen, full, hashes);
+        if (encyclopediaOnly) return DeployEncyclopediaOnly(chosen, hashes);
+        return xsc
+            ? DeployXsc(chosen, legacy, nort, hashes, includeEncyclopedia)
+            : DeployGui(chosen, full, hashes, includeEncyclopedia);
     }
 
     // 遠端清單解析過程中的警告（對內建來源的覆寫、缺雜湊的 direct 條目）先收著——
@@ -191,24 +202,77 @@ internal static class Install
     }
 
     // 第一層：按 A 裝主程式、按 B 裝曦覽終端機。命令列參數以 -xsc（或 --xsc）指定終端機路。
-    private static bool ChooseProduct(string[] args)
+    private static bool ChooseProduct(string[] args, out bool includeEncyclopedia, out bool encyclopediaOnly)
     {
+        includeEncyclopedia = false;
+        encyclopediaOnly = false;
         if (args != null && Array.Exists(args, a =>
                 a.Trim().Equals("-xsc", StringComparison.OrdinalIgnoreCase) ||
                 a.Trim().Equals("--xsc", StringComparison.OrdinalIgnoreCase)))
         {
+            includeEncyclopedia = Array.Exists(args, a =>
+                (a ?? "").Trim().Equals("-encyclopedia", StringComparison.OrdinalIgnoreCase) ||
+                (a ?? "").Trim().Equals("--encyclopedia", StringComparison.OrdinalIgnoreCase));
             return true;
         }
 
-        Ui.Prompt("按 A 或 B 選擇（直接按 Enter 預設 A，主程式）：");
-        string key = ReadKeyOrEmpty();
-        if (key.Length == 0) return false;   // Enter ＝ 主程式
-        key = key.Trim().ToUpperInvariant();
-        if (key == "B") return true;
-        if (key == "A") return false;
+        if (args != null)
+        {
+            foreach (string arg in args)
+            {
+                string token = (arg ?? "").Trim().ToUpperInvariant();
+                if (token == "A" || token == "B" || token == "AC" || token == "BC" || token == "C")
+                {
+                    bool xsc, only;
+                    ParseProductChoice(token, out xsc, out includeEncyclopedia, out only);
+                    encyclopediaOnly = only;
+                    return xsc;
+                }
+            }
+            if (Array.Exists(args, a => (a ?? "").Trim().Equals("-encyclopedia", StringComparison.OrdinalIgnoreCase) ||
+                                        (a ?? "").Trim().Equals("--encyclopedia", StringComparison.OrdinalIgnoreCase)))
+            {
+                includeEncyclopedia = true;
+                return false;
+            }
+        }
 
-        Ui.Warn("看不懂「" + key + "」，改裝主程式。");
+        while (true)
+        {
+            Ui.Prompt("輸入 A／B 安裝程式、AC／BC 加百科、C 只下載百科（Enter＝A）：");
+            string key = ReadChoiceLine().Trim().ToUpperInvariant();
+            if (key.Length == 0) return false;   // Enter ＝ 主程式
+            bool xsc, only;
+            if (ParseProductChoice(key, out xsc, out includeEncyclopedia, out only))
+            {
+                encyclopediaOnly = only;
+                return xsc;
+            }
+            Ui.Warn("無效選項「" + key + "」，請輸入 A、B、AC、BC 或 C。");
+        }
+    }
+
+    private static bool ParseProductChoice(string token, out bool xsc, out bool includeEncyclopedia, out bool encyclopediaOnly)
+    {
+        xsc = false;
+        includeEncyclopedia = false;
+        encyclopediaOnly = false;
+        if (token == "A") return true;
+        if (token == "B") { xsc = true; return true; }
+        if (token == "AC") { includeEncyclopedia = true; return true; }
+        if (token == "BC") { xsc = true; includeEncyclopedia = true; return true; }
+        if (token == "C") { includeEncyclopedia = true; encyclopediaOnly = true; return true; }
         return false;
+    }
+
+    private static string ReadChoiceLine()
+    {
+        try
+        {
+            if (Console.IsInputRedirected) return "";
+            return Console.ReadLine() ?? "";
+        }
+        catch { return ""; }
     }
 
     // 第二層（A：主程式）——帶不帶執行階段。
@@ -288,7 +352,7 @@ internal static class Install
 
     // xsc 部署：單檔下載 → 放進 Desktop\XinSpect\ → 詢問要不要開。
     // 終端機是自含單檔（含 .NET 10 執行階段），不需要 Bridge／驅動，一步到位。
-    private static int DeployXsc(Mirror chosen, bool legacy, bool nort, HashList hashes)
+    private static int DeployXsc(Mirror chosen, bool legacy, bool nort, HashList hashes, bool includeEncyclopedia)
     {
         try
         {
@@ -325,22 +389,35 @@ internal static class Install
                         "下載完成後改名成 XinSpectConsole.exe，放進上面那個資料夾就能直接執行。",
                     },
                     null);
+                if (includeEncyclopedia)
+                {
+                    Console.WriteLine();
+                    DownloadEncyclopediaToCache(chosen, hashes, 2, 2);
+                }
                 Footer();
                 Pause();
                 return 0;
             }
 
-            Ui.Section("1/2 · 下載", remoteName + "（" + flavor + "）");
-            DownloadFileWithFallback(chosen, remoteName, dest, 1, 2, requireProgram: true, expectSha: RequireHash(hashes, chosen, remoteName));
+            int totalSteps = includeEncyclopedia ? 2 : 1;
+            Ui.Section("1/" + totalSteps + " · 下載", remoteName + "（" + flavor + "）");
+            DownloadFileWithFallback(chosen, remoteName, dest, 1, totalSteps, requireProgram: true, expectSha: RequireHash(hashes, chosen, remoteName));
+
+            if (includeEncyclopedia)
+            {
+                Console.WriteLine();
+                DownloadEncyclopediaToCache(chosen, hashes, 2, 2);
+            }
 
             Console.WriteLine();
+            List<string> completed = new List<string>();
+            completed.Add(Ui.CheckMark() + " XinSpectConsole.exe" + Ui.Dim + "（曦覽終端機・唯讀硬體事實查詢）" + Ui.Reset);
+            if (includeEncyclopedia)
+                completed.Add(Ui.CheckMark() + " 百科.html" + Ui.Dim + "（共用離線百科快取）" + Ui.Reset);
+            completed.Add(Ui.Dim + "位置：" + dir + Ui.Reset);
             Ui.Panel(Width(),
                 Ui.BoldMark() + " 部署完成",
-                new[]
-                {
-                    Ui.CheckMark() + " XinSpectConsole.exe" + Ui.Dim + "（曦覽終端機・唯讀硬體事實查詢）" + Ui.Reset,
-                    Ui.Dim + "位置：" + dir + Ui.Reset,
-                },
+                completed,
                 null);
 
             Ui.Prompt("現在就開啟曦覽終端機嗎？按 Y 開啟，其他鍵跳過：");
@@ -377,7 +454,7 @@ internal static class Install
         }
     }
 
-    private static int DeployGui(Mirror chosen, bool full, HashList hashes)
+    private static int DeployGui(Mirror chosen, bool full, HashList hashes, bool includeEncyclopedia)
     {
         try
         {
@@ -406,26 +483,38 @@ internal static class Install
                         Ui.Dim + "想全自動部署（含守護進程）請重新執行本程式，選 A 後按 1（GitHub）。" + Ui.Reset,
                     },
                     null);
+                if (includeEncyclopedia)
+                {
+                    Console.WriteLine();
+                    DownloadEncyclopediaToCache(chosen, hashes, 2, 2);
+                }
                 Footer();
                 Pause();
                 return 0;
             }
 
             string guiRemote = full ? "XinSpect-full.exe" : "XinSpect.exe";
-            Ui.Section("1/5 · 下載主程式", guiRemote + "（含 LHM＋WinRing0 驅動＋BlueSquadron）");
-            DownloadFileWithFallback(chosen, guiRemote, Path.Combine(dir, "XinSpect.exe"), 1, 5, requireProgram: true, expectSha: RequireHash(hashes, chosen, guiRemote));
+            int totalSteps = includeEncyclopedia ? 6 : 5;
+            Ui.Section("1/" + totalSteps + " · 下載主程式", guiRemote + "（BlueSquadron 為獨立橋接，尚未完工）");
+            DownloadFileWithFallback(chosen, guiRemote, Path.Combine(dir, "XinSpect.exe"), 1, totalSteps, requireProgram: true, expectSha: RequireHash(hashes, chosen, guiRemote));
 
-            Ui.Section("2/5 · 下載守護進程", "BlueSquadronBridge.exe（獨立守護）");
-            DownloadFileWithFallback(chosen, "BlueSquadronBridge.exe", Path.Combine(dir, "BlueSquadronBridge.exe"), 2, 5, requireProgram: true, expectSha: RequireHash(hashes, chosen, "BlueSquadronBridge.exe"));
+            Ui.Section("2/" + totalSteps + " · 下載守護進程", "BlueSquadronBridge.exe（獨立守護）");
+            DownloadFileWithFallback(chosen, "BlueSquadronBridge.exe", Path.Combine(dir, "BlueSquadronBridge.exe"), 2, totalSteps, requireProgram: true, expectSha: RequireHash(hashes, chosen, "BlueSquadronBridge.exe"));
 
             // 深層核心存取的驅動：程式按「開啟」會自己簽章＋裝服務，但檔案必須先就位。
             // 3.17 起驅動檔不隨 Release 下發——這一步會如實說「未附」，不會假裝成功。
-            Ui.Section("3/5 · 部署核心驅動", "XsRegProbe.sys（深層核心存取）");
-            string driverNote = DeployDriver(chosen, dir, hashes);
+            Ui.Section("3/" + totalSteps + " · 部署核心驅動", "XsRegProbe.sys（深層核心存取）");
+            string driverNote = DeployDriver(chosen, dir, hashes, 3, totalSteps);
             Ui.Ok(driverNote);
 
-            Ui.Section("4/5 · 就位", "已放進 Desktop\\XinSpect\\");
-            Ui.Section("5/5 · 啟動", "XinSpect.exe");
+            if (includeEncyclopedia)
+            {
+                Console.WriteLine();
+                DownloadEncyclopediaToCache(chosen, hashes, 4, totalSteps);
+            }
+
+            Ui.Section((includeEncyclopedia ? "5/6" : "4/5") + " · 就位", "已放進 Desktop\\XinSpect\\");
+            Ui.Section((includeEncyclopedia ? "6/6" : "5/5") + " · 啟動", "XinSpect.exe");
             Console.WriteLine();
             string exe = Path.Combine(dir, "XinSpect.exe");
             if (File.Exists(exe))
@@ -436,13 +525,7 @@ internal static class Install
             Console.WriteLine();
             Ui.Panel(Width(),
                 Ui.BoldMark() + " 部署完成",
-                new[]
-                {
-                    Ui.CheckMark() + " XinSpect.exe" + Ui.Dim + "（含 WinRing0＋LHM＋BlueSquadron）" + Ui.Reset,
-                    Ui.CheckMark() + " BlueSquadronBridge.exe" + Ui.Dim + "（獨立守護進程）" + Ui.Reset,
-                    Ui.CheckMark() + " " + driverNote,
-                    Ui.Dim + "位置：" + dir + Ui.Reset,
-                },
+                BuildGuiCompletionRows(dir, driverNote, includeEncyclopedia),
                 null);
             Footer();
             Pause();
@@ -452,6 +535,105 @@ internal static class Install
         {
             return DeployFailed(ex);
         }
+    }
+
+    private static int DeployEncyclopediaOnly(Mirror chosen, HashList hashes)
+    {
+        try
+        {
+            string path = EncyclopediaCachePath();
+            Ui.Section("百科下載", "只下載百科，不安裝 XinSpect");
+            Ui.Info("目標", path);
+            Ui.Rule();
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            DownloadEncyclopediaToCache(chosen, hashes, 1, 1);
+            Ui.Ok("百科已儲存到共用快取；Desktop 版可直接開啟。");
+            Footer();
+            Pause();
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            return DeployFailed(ex);
+        }
+    }
+
+    private static List<string> BuildGuiCompletionRows(string dir, string driverNote, bool includeEncyclopedia)
+    {
+        List<string> rows = new List<string>();
+        rows.Add(Ui.CheckMark() + " XinSpect.exe" + Ui.Dim + "（Desktop 版）" + Ui.Reset);
+        rows.Add(Ui.CheckMark() + " BlueSquadronBridge.exe" + Ui.Dim + "（獨立守護進程）" + Ui.Reset);
+        rows.Add(Ui.CheckMark() + " " + driverNote);
+        if (includeEncyclopedia)
+            rows.Add(Ui.CheckMark() + " 百科.html" + Ui.Dim + "（共用離線百科快取）" + Ui.Reset);
+        rows.Add(Ui.Dim + "位置：" + dir + Ui.Reset);
+        return rows;
+    }
+
+    private static string EncyclopediaCachePath()
+    {
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "XinSpect", "docs", "百科.html");
+    }
+
+    private static Mirror SelectEncyclopediaSource(Mirror chosen)
+    {
+        // 真正的 direct 鏡像可沿用使用者選擇；分享頁不是檔案端點，百科改走官方發行資產。
+        if (chosen != null && chosen.Direct) return chosen;
+        return new Mirror("1", "GitHub 官方", GitHubBase, true);
+    }
+
+    private static void DownloadEncyclopediaToCache(Mirror chosen, HashList hashes, int step, int total)
+    {
+        Mirror source = SelectEncyclopediaSource(chosen);
+        HashList trustedHashes = hashes;
+        if (source.Key == "1" && (trustedHashes == null || !trustedHashes.OfficialDirect))
+            trustedHashes = FetchShaSums(source);
+        else if (trustedHashes == null || !trustedHashes.ByName.ContainsKey(EncyclopediaAsset))
+            trustedHashes = FetchShaSums(source);
+        string target = EncyclopediaCachePath();
+        string temp = target + ".part";
+        string sidecar = target + ".sha256";
+        string sidecarTemp = sidecar + ".part";
+        Directory.CreateDirectory(Path.GetDirectoryName(target));
+        try
+        {
+            Ui.Section(step + "/" + total + " · 下載百科", EncyclopediaAsset);
+            try
+            {
+                DownloadFileWithFallback(source, EncyclopediaAsset, temp, step, total,
+                    DownloadValidation.EncyclopediaHtml, RequireHash(trustedHashes, source, EncyclopediaAsset));
+            }
+            catch (Exception)
+            {
+                if (source.Key == "1") throw;
+                // 鏡像取檔失敗時才回官方；官方來源仍要求官方直連 SHA256SUMS 信任根。
+                TryDelete(temp);
+                Mirror official = new Mirror("1", "GitHub 官方", GitHubBase, true);
+                HashList officialHashes = hashes != null && hashes.OfficialDirect ? hashes : FetchShaSums(official);
+                Ui.Note("鏡像百科下載失敗，改走 GitHub 官方及加速備援線路。" + source.Name);
+                DownloadFileWithFallback(official, EncyclopediaAsset, temp, step, total,
+                    DownloadValidation.EncyclopediaHtml, RequireHash(officialHashes, official, EncyclopediaAsset));
+            }
+            string actual = Sha256File(temp);
+            File.WriteAllText(sidecarTemp, actual + "\n", Encoding.ASCII);
+            ReplaceFile(temp, target);
+            ReplaceFile(sidecarTemp, sidecar);
+            Ui.Info("快取", target);
+        }
+        catch
+        {
+            TryDelete(temp);
+            TryDelete(sidecarTemp);
+            throw;
+        }
+    }
+
+    private static void ReplaceFile(string temp, string target)
+    {
+        if (File.Exists(target)) File.Replace(temp, target, null);
+        else File.Move(temp, target);
     }
 
     private static int DeployFailed(Exception ex)
@@ -483,7 +665,7 @@ internal static class Install
     // 部署驅動：下載 XsRegProbe.sys，放進程式指定的固定路徑。
     // 不在這裡簽章、也不裝憑證——那些是程式裡「深層核心存取」開關的工作。
     // 這裡只負責「檔案到位」；遠端沒有這個檔（404）是預期內的缺席，與故障分開說。
-    private static string DeployDriver(Mirror m, string appDir, HashList hashes)
+    private static string DeployDriver(Mirror m, string appDir, HashList hashes, int step, int total)
     {
         bool elevated = IsElevated();
         string driverDir;
@@ -514,7 +696,7 @@ internal static class Install
         string tmp = target + ".part";
         try
         {
-            DownloadFileWithFallback(m, "XsRegProbe.sys", tmp, 3, 5, requireProgram: false, expectSha: RequireHash(hashes, m, "XsRegProbe.sys"));
+            DownloadFileWithFallback(m, "XsRegProbe.sys", tmp, step, total, requireProgram: false, expectSha: RequireHash(hashes, m, "XsRegProbe.sys"));
             if (File.Exists(target)) File.Delete(target);
             File.Move(tmp, target);
         }
@@ -748,10 +930,17 @@ internal static class Install
                 string t = (a ?? "").Trim();
                 if (t.Equals("-xsc", StringComparison.OrdinalIgnoreCase) ||
                     t.Equals("--xsc", StringComparison.OrdinalIgnoreCase) ||
+                    t.Equals("-encyclopedia", StringComparison.OrdinalIgnoreCase) ||
+                    t.Equals("--encyclopedia", StringComparison.OrdinalIgnoreCase) ||
                     t.Equals("-legacy", StringComparison.OrdinalIgnoreCase) ||
                     t.Equals("--legacy", StringComparison.OrdinalIgnoreCase) ||
                     t.Equals("-nort", StringComparison.OrdinalIgnoreCase) ||
-                    t.Equals("--nort", StringComparison.OrdinalIgnoreCase)) continue;
+                    t.Equals("--nort", StringComparison.OrdinalIgnoreCase) ||
+                    t.Equals("A", StringComparison.OrdinalIgnoreCase) ||
+                    t.Equals("B", StringComparison.OrdinalIgnoreCase) ||
+                    t.Equals("AC", StringComparison.OrdinalIgnoreCase) ||
+                    t.Equals("BC", StringComparison.OrdinalIgnoreCase) ||
+                    t.Equals("C", StringComparison.OrdinalIgnoreCase)) continue;
                 if (t.Length > 0) { srcArg = t; break; }
             }
         }
@@ -794,9 +983,23 @@ internal static class Install
         return all[0];
     }
 
+    private enum DownloadValidation
+    {
+        Program,
+        PeFile,
+        EncyclopediaHtml
+    }
+
+    // 舊呼叫保留其語意：程式套用 100KB 門檻，驅動套用 PE 標頭與 1KB 門檻。
+    private static void DownloadFileWithFallback(Mirror m, string fileName, string dest, int step, int total, bool requireProgram, string expectSha)
+    {
+        DownloadFileWithFallback(m, fileName, dest, step, total,
+            requireProgram ? DownloadValidation.Program : DownloadValidation.PeFile, expectSha);
+    }
+
     // 下載備援鏈：直連 → 指定版號（latest 404 時）→ 確認直連（Drive）→ 加速節點前綴。
     // 每條線試 2 次；換線時把要換去哪裡說出來——不讓使用者對著靜默的重試發呆。
-    private static void DownloadFileWithFallback(Mirror m, string fileName, string dest, int step, int total, bool requireProgram, string expectSha)
+    private static void DownloadFileWithFallback(Mirror m, string fileName, string dest, int step, int total, DownloadValidation validation, string expectSha)
     {
         string primary = m.Direct ? m.Url(fileName) : m.BaseUrl;
         List<string> chain = new List<string>();
@@ -842,7 +1045,7 @@ internal static class Install
             {
                 try
                 {
-                    DownloadFile(chain[i], fileName, dest, step, total, requireProgram, expectSha);
+                    DownloadFile(chain[i], fileName, dest, step, total, validation, expectSha);
                     return;
                 }
                 catch (Exception ex)
@@ -911,21 +1114,23 @@ internal static class Install
     // 一次下載＝一條進度列。自己讀回包而不是用 WebClient：同步 DownloadFile 不觸發進度回呼
     // （上一版掛在這裡），而且能比對 Content-Length 與實收位元組——連線中途斷掉時
     // Stream.Read 只回 0 不丟例外，截短過的 exe 照樣有 MZ 開頭，那是更難查的假成功。
-    private static void DownloadFile(string url, string fileName, string dest, int step, int total, bool requireProgram, string expectSha)
+    private static void DownloadFile(string url, string fileName, string dest, int step, int total, DownloadValidation validation, string expectSha)
     {
         Stopwatch sw = Stopwatch.StartNew();
-        ProgressBar bar = RunDownload(url, dest, step, total);
+        long maxBytes = validation == DownloadValidation.EncyclopediaHtml ? EncyclopediaMaxBytes : 0;
+        ProgressBar bar = RunLimitedDownload(url, dest, step, total, maxBytes);
 
-        // 下載到 HTML 是這種安裝器最常見的假成功：分享頁、流量限制頁、病毒掃描警告
-        // 都會回 200。這裡驗 PE 標頭＋大小門檻，不合格就刪掉並說清楚。
-        if (!LooksLikeDownload(dest, requireProgram))
+        // 二進位檔與百科 HTML 各自使用內容檢查；HTML 不會誤走 PE/MZ 驗證。
+        if (!LooksLikeDownload(dest, validation))
         {
             long len = 0;
             string head = "";
             try { len = new FileInfo(dest).Length; head = FirstLine(Head(dest, 400)); } catch { }
             TryDelete(dest);
             throw new InvalidDataException(string.Format(
-                "{0} 下載回來的不是 Windows 程式（{1:N0} bytes，開頭不是 MZ；內容像是：{2}）。",
+                validation == DownloadValidation.EncyclopediaHtml
+                    ? "{0} 下載回來的不是有效百科 HTML（{1:N0} bytes；內容像是：{2}）。"
+                    : "{0} 下載回來的不是 Windows 程式（{1:N0} bytes，開頭不是 MZ；內容像是：{2}）。",
                 fileName, len, head));
         }
 
@@ -1110,11 +1315,49 @@ internal static class Install
         }
     }
 
-    private static bool LooksLikeDownload(string path, bool requireProgram)
+    private static bool LooksLikeDownload(string path, DownloadValidation validation)
     {
+        if (validation == DownloadValidation.EncyclopediaHtml) return LooksLikeHtml(path);
         if (!LooksLikePe(path)) return false;
         // 執行檔門檻 100 KB：幾 KB 的「MZ 開頭」殘片或 stub 不該被當成主程式放行。
-        return new FileInfo(path).Length >= (requireProgram ? 1024 * 100 : 1024);
+        return new FileInfo(path).Length >= (validation == DownloadValidation.Program ? 1024 * 100 : 1024);
+    }
+
+    private static bool LooksLikeHtml(string path)
+    {
+        try
+        {
+            FileInfo fi = new FileInfo(path);
+            if (fi.Length < 128 || fi.Length > EncyclopediaMaxBytes) return false;
+            int count = (int)Math.Min(8192L, fi.Length);
+            byte[] start = new byte[count];
+            using (FileStream fs = File.OpenRead(path))
+            {
+                int read = 0, n;
+                while (read < start.Length && (n = fs.Read(start, read, start.Length - read)) > 0) read += n;
+                if (read != start.Length) return false;
+            }
+            // HTML tags are ASCII in UTF-8, so inspecting their ASCII projection avoids
+            // rejecting a valid document when an 8 KiB sample boundary splits a CJK code point.
+            string head = Encoding.ASCII.GetString(start);
+            if (head.Length > 0 && head[0] == '\uFEFF') head = head.Substring(1);
+            head = head.TrimStart();
+            bool hasRoot = head.IndexOf("<html", StringComparison.OrdinalIgnoreCase) >= 0;
+            bool hasEnd;
+            using (FileStream fs = File.OpenRead(path))
+            {
+                int tailCount = (int)Math.Min(8192L, fi.Length);
+                byte[] tail = new byte[tailCount];
+                fs.Position = fi.Length - tailCount;
+                int read = 0, n;
+                while (read < tail.Length && (n = fs.Read(tail, read, tail.Length - read)) > 0) read += n;
+                if (read != tail.Length) return false;
+                string end = Encoding.ASCII.GetString(tail);
+                hasEnd = end.IndexOf("</html>", StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+            return hasRoot && hasEnd;
+        }
+        catch { return false; }
     }
 
     private static bool LooksLikePe(string path)
@@ -1157,6 +1400,11 @@ internal static class Install
     // 以反射叫用它跑「完整／斷線／無 Content-Length」三種真下載，動到簽名等於把驗證拆了。
     private static ProgressBar RunDownload(string url, string dest, int step, int total)
     {
+        return RunLimitedDownload(url, dest, step, total, 0);
+    }
+
+    private static ProgressBar RunLimitedDownload(string url, string dest, int step, int total, long maxBytes)
+    {
         ProgressBar bar = new ProgressBar(step, total);
         try
         {
@@ -1173,6 +1421,8 @@ internal static class Install
             using (WebResponse resp = req.GetResponse())
             {
                 long expected = resp.ContentLength;
+                if (maxBytes > 0 && expected > maxBytes)
+                    throw new InvalidDataException("下載檔案超過允許大小上限（" + maxBytes.ToString("N0") + " bytes）。");
                 long received = 0;
                 using (Stream src = resp.GetResponseStream())
                 using (FileStream dst = File.Create(dest))
@@ -1181,6 +1431,8 @@ internal static class Install
                     int n;
                     while ((n = src.Read(buf, 0, buf.Length)) > 0)
                     {
+                        if (maxBytes > 0 && received + n > maxBytes)
+                            throw new InvalidDataException("下載檔案超過允許大小上限（" + maxBytes.ToString("N0") + " bytes）。");
                         dst.Write(buf, 0, n);
                         received += n;
                         bar.Report(received, expected);
@@ -1454,6 +1706,7 @@ internal static class Install
             "latest/download 404 時現場偵測版號備援，不寫死 tag，避免安靜裝到舊版",
             "下載到 HTML 是安裝器最常見的假成功：分享頁與病毒掃描警告都會回 200",
             "半截的 exe 比沒有檔案更危險：有 MZ 頭、大小也像程式——斷線一律刪檔重來",
+            "百科是獨立 HTML：下載前驗 SHA256SUMS、HTML 結構，Desktop 與部署器共用離線快取",
             "Drive 的 uc?id= 是單一檔案端點；資料夾分享頁走 page 模式，只開瀏覽器不假裝直連",
         };
 
@@ -1469,10 +1722,10 @@ internal static class Install
                 Console.WriteLine("  X  I  N  S  P  E  C  T");
                 Console.WriteLine("  " + new string('-', Math.Min(72, Math.Max(8, width - 6))));
                 Console.WriteLine("  " + Mark("*", "*") + " 曦覽部署器 XinSpect Deploy v" + Version);
-                Console.WriteLine("  [A] XinSpect.exe 主程式（GUI，含守護進程與驅動）");
-                Console.WriteLine("  [B] XinSpectConsole.exe 曦覽終端機（CLI，唯讀事實查詢）");
+                Console.WriteLine("  [A] Desktop 主程式   [B] CLI 終端機");
+                Console.WriteLine("  [AC] Desktop + 百科  [BC] CLI + 百科  [C] 只下載百科");
                 Console.WriteLine("  小知識：" + tip);
-                Console.WriteLine("  腳本模式：-xsc -full -legacy -nort <來源編號>");
+                Console.WriteLine("  腳本模式：AC／BC／C 或 -xsc [-encyclopedia]；版本參數 -full -legacy -nort");
                 Console.WriteLine();
                 return;
             }
@@ -1499,16 +1752,19 @@ internal static class Install
                 new[]
                 {
                     "",
-                    Bold + "部署什麼" + Reset + Dim + " ・ Enter 直接開始" + Reset,
-                    Bold + "[A]" + Reset + " XinSpect.exe 主程式（GUI，含守護進程與驅動）",
-                    Bold + "[B]" + Reset + " XinSpectConsole.exe 曦覽終端機（CLI，唯讀事實查詢）",
+                    Bold + "部署內容" + Reset + Dim + " ・ 輸入代碼後按 Enter" + Reset,
+                    Bold + "[A]" + Reset + " Desktop 主程式",
+                    Bold + "[B]" + Reset + " CLI 終端機（自包含百科）",
+                    Bold + "[AC]" + Reset + " Desktop + 獨立百科",
+                    Bold + "[BC]" + Reset + " CLI + 獨立百科",
+                    Bold + "[C]" + Reset + " 只下載百科",
                     "",
                     Dim + "下載鏈：GitHub 官方直連 ＞ 加速節點 ＞ 遠端鏡像清單" + Reset,
                     Dim + "放行條件：SHA256SUMS.txt 全量核對，不符即刪不裝" + Reset,
                     "",
                     Dim + "小知識：" + tip + Reset,
                 },
-                "腳本模式：-xsc -full -legacy -nort <來源編號>");
+                "輸入 A／B／AC／BC／C；腳本模式可用 -xsc [-encyclopedia]");
             Console.WriteLine();
         }
 

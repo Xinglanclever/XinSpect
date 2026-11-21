@@ -232,7 +232,7 @@ public sealed class BlueSquadronModule : ObservableObject, IDisposable
             }
             catch (System.IO.FileNotFoundException)
             {
-                PublishBridgeState(session, false, "守護進程未安裝——將 BlueSquadronBridge.exe 與本程式放同一資料夾即會自動啟用");
+                PublishBridgeState(session, false, "守護進程未安裝。請執行 XinSpectDeploy 部署桌面版，讓部署器下載並驗證 BlueSquadronBridge.exe。");
                 return;
             }
             catch

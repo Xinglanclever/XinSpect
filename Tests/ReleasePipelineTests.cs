@@ -99,4 +99,28 @@ public class ReleasePipelineTests
             Assert.Single(regex.Matches(updated).Cast<System.Text.RegularExpressions.Match>());
         }
     }
+
+    [Fact]
+    public void 桌面百科以獨立資產加入Release雜湊與鏡像清單()
+    {
+        string release = ReadAll(RepoFile("Tools", "release.ps1"));
+        Assert.Contains("XinSpect-Encyclopedia.html", release, StringComparison.Ordinal);
+        Assert.Contains("百科.html", release, StringComparison.Ordinal);
+        Assert.Contains("ten assets + SHA256SUMS.txt", release, StringComparison.Ordinal);
+
+        string mirrors = ReadAll(RepoFile("Tools", "sync-mirrors.py"));
+        Assert.Contains("XinSpect-Encyclopedia.html", mirrors, StringComparison.Ordinal);
+        Assert.Contains("publish-%s", mirrors, StringComparison.Ordinal);
+        Assert.Contains("SHA256SUMS.txt", mirrors, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void 部署器百科下載沿用所選鏡像並保留GitHub備援()
+    {
+        string installer = ReadAll(RepoFile("Installer", "Install.cs"));
+        Assert.Contains("Mirror source = SelectEncyclopediaSource(chosen)", installer, StringComparison.Ordinal);
+        Assert.Contains("if (chosen != null && chosen.Direct) return chosen", installer, StringComparison.Ordinal);
+        Assert.Contains("DownloadFileWithFallback(official, EncyclopediaAsset", installer, StringComparison.Ordinal);
+        Assert.Contains("RequireHash(officialHashes, official, EncyclopediaAsset)", installer, StringComparison.Ordinal);
+    }
 }

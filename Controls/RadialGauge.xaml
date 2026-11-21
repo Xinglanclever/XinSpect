@@ -5,30 +5,35 @@
              Width="132" Height="176">
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="132"/>
+            <RowDefinition Height="3*"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0">
-            <!-- 底環 -->
-            <Ellipse Width="112" Height="112" HorizontalAlignment="Center" VerticalAlignment="Center"
-                     Stroke="{DynamicResource HairlineBrush}" StrokeThickness="9"/>
-            <!-- 數值弧（動畫掃掠） -->
-            <Path x:Name="ValueArc" StrokeThickness="9"
-                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                  Stroke="{Binding ArcBrush, RelativeSource={RelativeSource AncestorType={x:Type local:RadialGauge}}}">
-                <Path.Effect>
-                    <DropShadowEffect x:Name="ArcGlow" BlurRadius="12" ShadowDepth="0" Opacity="0.6" Color="#3987e5"/>
-                </Path.Effect>
-            </Path>
-            <!-- 中央數字 + 單位 -->
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock x:Name="NumberText" Text="0" FontSize="27" FontWeight="SemiBold"
-                           Foreground="{DynamicResource PrimaryInkBrush}" VerticalAlignment="Center"/>
-                <TextBlock x:Name="UnitText" FontSize="13" Margin="3,0,0,4"
-                           Foreground="{DynamicResource SecondaryInkBrush}" VerticalAlignment="Bottom"/>
-            </StackPanel>
-        </Grid>
+        <!-- Keep the dial in one square coordinate space. Several pages resize gauges
+             (including 80px mini gauges); a fixed 132px row displaced or clipped them. -->
+        <Viewbox Grid.Row="0" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Grid Width="132" Height="132">
+                <!-- 底環 -->
+                <Ellipse Width="112" Height="112" HorizontalAlignment="Center" VerticalAlignment="Center"
+                         Stroke="{DynamicResource HairlineBrush}" StrokeThickness="9"/>
+                <!-- 數值弧以同一個 132×132 方形座標繪製，避免不同容器寬高拉成橢圓。 -->
+                <Path x:Name="ValueArc" Width="132" Height="132" Stretch="None"
+                      HorizontalAlignment="Center" VerticalAlignment="Center" StrokeThickness="9"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                      Stroke="{Binding ArcBrush, RelativeSource={RelativeSource AncestorType={x:Type local:RadialGauge}}}">
+                    <Path.Effect>
+                        <DropShadowEffect x:Name="ArcGlow" BlurRadius="12" ShadowDepth="0" Opacity="0.6" Color="#3987e5"/>
+                    </Path.Effect>
+                </Path>
+                <!-- 中央數字 + 單位 -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock x:Name="NumberText" Text="0" FontSize="27" FontWeight="SemiBold"
+                               Foreground="{DynamicResource PrimaryInkBrush}" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="UnitText" FontSize="13" Margin="3,0,0,4"
+                               Foreground="{DynamicResource SecondaryInkBrush}" VerticalAlignment="Bottom"/>
+                </StackPanel>
+            </Grid>
+        </Viewbox>
 
         <TextBlock Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center"
                    FontSize="12.5" Foreground="{DynamicResource SecondaryInkBrush}"

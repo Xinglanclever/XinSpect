@@ -219,12 +219,12 @@ public static class PageRegistry
         },
         new()
         {
-            Key = "bluesquadron", Title = "防護", Group = GSecurity,
+            Key = "bluesquadron", Title = "藍色中隊（未完工）", Group = GSecurity,
             IconData = "F1 M12,1 L3,5 V11 C3,16 7,20 12,23 17,20 21,16 21,11 V5 Z "
                      + "M12,3.2 L5,6.1 V11.3 C5,15 8.2,18.5 12,21 15.8,18.5 19,15 19,11.3 V6.1 Z "
                      + "M11,8 H13 V13 H11 Z M11,14.5 H13 V16.5 H11 Z",
             Factory = () => new BlueSquadronView(),
-            Hint = "核心安全態勢評估：六大防線、即時威脅偵測與強化建議",
+            Hint = "藍色中隊仍在開發中；本頁檢查結果以實際回報為準，不代表完整防護",
             Keywords = ["blue squadron", "藍色中隊", "安全", "security", "posture", "核心",
                         "hvci", "secure boot", "驅動簽章", "強化", "hardening", "分數",
                         "dma", "韌體", "byovd", "漏洞驅動", "defender", "防火牆", "攻擊面"],
@@ -305,23 +305,6 @@ public static class PageRegistry
             Hint = "本版實作的每一把事實鍵（1,167 把）攤成一張可搜尋的表：誰讀到了值、誰讀不到、誰這一輪沒跑到",
             Keywords = ["atlas", "fact", "capacity", "index", "事實總表", "能力", "索引", "所有功能", "全部功能",
                         "功能清單", "看不到", "藏在哪", "有哪些功能", "事實鍵", "key"],
-        },
-        new()
-        {
-            Key = "hardware-catalog", Title = "歷史型號", Group = GTools,
-            IconData = "F0 M3,2 H21 V22 H3 Z M6,6 H18 V8 H6 Z M6,10 H18 V12 H6 Z M6,14 H18 V16 H6 Z",
-            Factory = () => new HardwareCatalogView(),
-            Hint = "查詢使用者提供的 2006–2026 CPU／GPU 歷史型號索引；不含 NC 主機板資料",
-            Keywords = ["catalog", "hardware catalog", "歷史型號", "型號查詢", "cpu", "gpu", "處理器", "顯示卡", "2006", "2026"],
-        },
-        new()
-        {
-            Key = "surveillance-planning", Title = "監控規劃", Group = GTools,
-            IconData = "F0 M3,3 H21 V21 H3 Z M6,15 H9 V18 H6 Z M10.5,11 H13.5 V18 H10.5 Z M15,7 H18 V18 H15 Z",
-            Factory = () => new SurveillancePlanningView(),
-            Hint = "NVR 容量、接入頻寬、PoE 預算、交換機背板、光纖衰減、壓降、佈線、RAID、無線與 UPS 的設計試算",
-            Keywords = ["cctv", "surveillance", "nvr", "poe", "raid", "監控", "規劃", "試算", "容量", "頻寬",
-                        "光纖", "衰減", "壓降", "佈線", "無線", "ups", "機櫃", "工程"],
         },
         new()
         {

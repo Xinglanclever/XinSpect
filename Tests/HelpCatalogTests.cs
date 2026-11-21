@@ -23,7 +23,7 @@ public class HelpCatalogTests
     // 但仍以 UserControl 形式 host 在分頁裡，HelpKey 照舊存在。
     private static readonly string[] NonPagePrefixes =
         ["coredetail", "cpupinout", "dimmref", "boardanalysis", "chipsetanalysis",
-         "powerdelivery", "pcieanalysis", "gpuanalysis", "sata", "m2analysis"];
+         "powerdelivery", "pcieanalysis", "gpuanalysis", "sata", "m2analysis", "surveillance-planning"];
 
     [Fact]
     public void 版面上每一個問號都查得到說明()

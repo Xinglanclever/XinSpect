@@ -6,7 +6,7 @@ namespace XinSpect.Tests;
 /// <summary>
 /// WP39 資料主權的機器檢查：事實蒐集與解碼器原始碼**零網路 API**（HttpClient/WebClient/
 /// TcpClient/UdpClient/上傳下載字串）——引入即紅燈。網路功能只允許出現在四個使用者主動
-/// 觸發的 opt-in 檔案（回饋／AI／測速／網路延遲量測），清單與 docs/DATA-SOVEREIGNTY.md 同步。
+/// 觸發的 opt-in 檔案（回饋／AI／測速／更新查詢／按需百科下載），清單與 docs/DATA-SOVEREIGNTY.md 同步。
 /// </summary>
 public class DataSovereigntyTests
 {
@@ -21,6 +21,7 @@ public class DataSovereigntyTests
     [
         "AiService.cs", "FeedbackService.cs", "NetworkSpeedService.cs",
         "NetworkStackLatencyAdapter.cs", "UpdateCheckService.cs",
+        "EncyclopediaCatalog.cs",
     ];
 
     [Fact]

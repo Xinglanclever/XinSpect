@@ -164,20 +164,15 @@ public partial class MainWindow : Window
         ShowPage(def);
     }
 
-    /// <summary>開拜神視窗。乖度輸入必須是真的：Minidump 資料夾讀得到才數近 7 天藍屏。</summary>
+    /// <summary>開拜神視窗。乖度只計近七天可解析的核心 Minidump；讀取不完整時不猜。</summary>
     private async System.Threading.Tasks.Task OpenShrineAsync()
     {
         int? bsod7d = await System.Threading.Tasks.Task.Run(() =>
         {
             try
             {
-                var dir = System.IO.Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "Microsoft", "Windows", "WER", "ReportArchive");
-                if (!System.IO.Directory.Exists(dir)) return (int?)null;
-                var cutoff = DateTime.Now.AddDays(-7);
-                return (int?)System.IO.Directory.EnumerateFiles(dir, "*.dmp", System.IO.SearchOption.AllDirectories)
-                    .Count(p => System.IO.File.GetLastWriteTime(p) >= cutoff);
+                var dumps = MinidumpFactsService.ListRealDirectory();
+                return ShrineMath.CountRecentMinidumps(dumps, DateTimeOffset.UtcNow);
             }
             catch { return null; }
         });
