@@ -93,20 +93,21 @@
 
 | 文件 | 大小 | 说明 |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpect.exe) | 28,536,985 bytes | 主程序；不内嵌蓝色中队。防护页标注未完工并保留桥接接口；关于页面提供 CLI 下载入口 |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole.exe) | 95,807,518 bytes | 曦览终端机（CLI）。可独立运行；自带 .NET 10 运行时故体积较大 |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpect.exe) | 28,893,337 bytes | 主程序；不内嵌蓝色中队。防护页标注未完工并保留桥接接口；关于页面提供 CLI 下载入口 |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole.exe) | 96,155,638 bytes | 曦览终端机（CLI）。可独立运行；自带 .NET 10 运行时故体积较大 |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/BlueSquadronBridge.exe) | 6,531,620 bytes | 独立桥接资产；蓝色中队功能尚未完工，不会内嵌于 Desktop |
-| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpect-full.exe) | 201,303,232 bytes | 主程序・带环境版：.NET 10 Desktop Runtime 一并打包，免装运行时（功能与 XinSpect.exe 相同） |
-| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole-nort.exe) | 56,670,726 bytes | 曦览终端机・Windows 11／Server 2025・不带环境：需已装 .NET 10 Desktop Runtime |
-| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole-legacy-nort.exe) | 56,666,718 bytes | 曦览终端机・Windows 10／2016/2019/2022・不带环境：纯文本界面，需已装 .NET 10 Desktop Runtime |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectDeploy.exe) | 43,520 bytes | 部署器：A＝Desktop、B＝CLI、AC／BC＝产品加百科、C＝只下载百科；产品可选 GitHub／Drive／加速节点，百科固定从 GitHub Release 下载并校验 |
-| [XinSpect-Encyclopedia.html](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpect-Encyclopedia.html) | 独立 Release 资产 | Desktop 用户点击「百科」后自动下载、校验并缓存；CLI 百科仍自包含 |
+| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpect-full.exe) | 201,659,584 bytes | 主程序・带环境版：.NET 10 Desktop Runtime 一并打包，免装运行时（功能与 XinSpect.exe 相同） |
+| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole-nort.exe) | 57,041,926 bytes | 曦览终端机・Windows 11／Server 2025・不带环境：需已装 .NET 10 Desktop Runtime |
+| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole-legacy-nort.exe) | 57,037,918 bytes | 曦览终端机・Windows 10／2016/2019/2022・不带环境：纯文本界面，需已装 .NET 10 Desktop Runtime |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectDeploy.exe) | 62,976 bytes | 部署器：A＝Desktop、B＝CLI、AC／BC＝产品加百科、C＝只下载百科；产品可选 GitHub／Drive／加速节点，百科固定从 GitHub Release 下载并校验 |
+| [XinSpect部署器.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpect部署器.exe) | 62,976 bytes | 中文部署器：默认繁体中文，按 K 切换简体中文 |
+| [XinSpect-Encyclopedia.html](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpect-Encyclopedia.html) | 2,069,492 bytes | Desktop 用户点击「百科」后自动下载、校验并缓存；CLI 百科仍自包含 |
 | [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XsRegProbe.sys) | 24,064 bytes | XsRegProbe 内核探测驱动（白名单只读 MSR／MMIO；内部检视不构成第三方认证）。未微软签名：主程序以提权会话安装到 `ProgramData\XinSpect\Driver\` 并建服务；手动加载需测试签名环境（testsigning） |
-| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole-legacy.exe) | 95,803,510 bytes | 曦览终端机（CLI）**纯文本兼容版**：给 Windows 10／Windows Server 2016、2019、2022 的传统主控台——无色彩、无框线定位，其余功能（facts／book／help）相同 |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole-legacy.exe) | 96,155,726 bytes | 曦览终端机（CLI）**纯文本兼容版**：给 Windows 10／Windows Server 2016、2019、2022 的传统主控台——无色彩、无框线定位，其余功能（facts／book／help）相同 |
 
-> **本版（v3.33）的预定发布资产清单。** v3.33 尚未发布；上表链接为预定位置，字节数暂列 v3.32 供参考。[Releases 页面](https://github.com/Xinglanclever/XinSpect/releases) 提供已发布文件和各版本的 `SHA256SUMS.txt`。
+> 本表字节数为本版（v3.33）实际发布的文件大小；下载后可用 `SHA256SUMS.txt` 校验。
 
-v3.33 提供英文 `XinSpectDeploy.exe` 和默认繁体中文的 `XinSpect部署器.exe`。两个本地候选文件均为 62,976 bytes，部署器大小上限为 128 KB（131,072 bytes）。
+v3.33 提供英文 `XinSpectDeploy.exe` 和默认繁体中文的 `XinSpect部署器.exe`。两个发布文件均为 62,976 bytes，部署器大小上限为 128 KB（131,072 bytes）。
 
 **需求**：Windows 10 1903 以上／Windows 11、x64。不带环境的版本需先安装 .NET 10 Desktop Runtime；`XinSpect-full.exe` 与 `XinSpectConsole.exe` 已自带运行时。
 

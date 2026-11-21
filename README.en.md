@@ -91,20 +91,21 @@ Running unelevated is not a fault: those pages show "—" plus the reason. That 
 
 | File | Size | Notes |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpect.exe) | 28,536,985 bytes | Main program; BlueSquadron is not embedded. Its page is marked unfinished and retains a bridge interface; the About page links to the CLI |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole.exe) | 95,807,518 bytes | The xsc terminal (CLI). Runs standalone; carries the .NET 10 runtime, hence the size |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpect.exe) | 28,893,337 bytes | Main program; BlueSquadron is not embedded. Its page is marked unfinished and retains a bridge interface; the About page links to the CLI |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole.exe) | 96,155,638 bytes | The xsc terminal (CLI). Runs standalone; carries the .NET 10 runtime, hence the size |
 | [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/BlueSquadronBridge.exe) | 6,531,620 bytes | Separate bridge asset; BlueSquadron is unfinished and is not embedded in Desktop |
-| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpect-full.exe) | 201,303,232 bytes | Main program, runtime included: bundles the .NET 10 Desktop Runtime (same features as XinSpect.exe) |
-| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole-nort.exe) | 56,670,726 bytes | xsc terminal for Windows 11 / Server 2025, no runtime: requires .NET 10 Desktop Runtime |
-| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole-legacy-nort.exe) | 56,666,718 bytes | xsc terminal for Windows 10 / 2016 / 2019 / 2022, plain text, no runtime: requires .NET 10 Desktop Runtime |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectDeploy.exe) | 43,520 bytes | Deployer: A = Desktop, B = CLI, AC/BC = product plus encyclopedia, C = encyclopedia only; choose a product source (GitHub / Drive / acceleration node); encyclopedia downloads are pinned to GitHub Releases |
-| [XinSpect-Encyclopedia.html](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpect-Encyclopedia.html) | Separate Release asset | Desktop downloads, verifies SHA-256 and caches it after the user clicks Encyclopedia in About; CLI remains self-contained |
+| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpect-full.exe) | 201,659,584 bytes | Main program, runtime included: bundles the .NET 10 Desktop Runtime (same features as XinSpect.exe) |
+| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole-nort.exe) | 57,041,926 bytes | xsc terminal for Windows 11 / Server 2025, no runtime: requires .NET 10 Desktop Runtime |
+| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole-legacy-nort.exe) | 57,037,918 bytes | xsc terminal for Windows 10 / 2016 / 2019 / 2022, plain text, no runtime: requires .NET 10 Desktop Runtime |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectDeploy.exe) | 62,976 bytes | Deployer: A = Desktop, B = CLI, AC/BC = product plus encyclopedia, C = encyclopedia only; choose a product source (GitHub / Drive / acceleration node); encyclopedia downloads are pinned to GitHub Releases |
+| [XinSpect部署器.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpect部署器.exe) | 62,976 bytes | Chinese deployer: starts in Traditional Chinese; press K for Simplified Chinese |
+| [XinSpect-Encyclopedia.html](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpect-Encyclopedia.html) | 2,069,492 bytes | Desktop downloads, verifies SHA-256 and caches it after the user clicks Encyclopedia in About; CLI remains self-contained |
 | [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XsRegProbe.sys) | 24,064 bytes | XsRegProbe kernel probe driver (whitelisted read-only MSR/MMIO; internal review is not third-party certification). Not Microsoft-signed: the main program installs it into `ProgramData\XinSpect\Driver\` and registers a service; manual loading needs testsigning |
-| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole-legacy.exe) | 95,803,510 bytes | xsc terminal, **plain-text compatible build** for classic consoles on Windows 10 / Server 2016, 2019, 2022: no colour, no box drawing; facts/book/help behave the same |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole-legacy.exe) | 96,155,726 bytes | xsc terminal, **plain-text compatible build** for classic consoles on Windows 10 / Server 2016, 2019, 2022: no colour, no box drawing; facts/book/help behave the same |
 
-> The v3.33 asset list is a release draft. Links show the planned locations; no v3.33 binaries are claimed as published yet. Sizes are from v3.32; see the [Releases page](https://github.com/Xinglanclever/XinSpect/releases) for published files and their `SHA256SUMS.txt`.
+> The table lists the published file sizes for v3.33. Check downloads against `SHA256SUMS.txt`.
 
-v3.33 provides the English `XinSpectDeploy.exe` and `XinSpect部署器.exe`, which defaults to Traditional Chinese. The local candidate binaries are 62,976 bytes each, within the 128 KB (131,072-byte) limit.
+v3.33 provides the English `XinSpectDeploy.exe` and `XinSpect部署器.exe`, which defaults to Traditional Chinese. The deployer binaries are 62,976 bytes each, within the 128 KB (131,072-byte) limit.
 
 **Requirements**: Windows 10 1903+ / Windows 11, x64. Builds without a runtime need the .NET 10 Desktop Runtime installed; `XinSpect-full.exe` and `XinSpectConsole.exe` already carry it.
 
