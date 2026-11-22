@@ -5,7 +5,13 @@
   <description>唯讀的 Windows 硬體事實採集器——版本更新紀錄（最新 20 筆，全程見官網）</description>
   <language>zh-Hant</language>
   <generator>XinSpect site tools (Tools/gen-site-data.py)</generator>
-  <lastBuildDate>2026-11-21T00:00:00Z</lastBuildDate>
+  <lastBuildDate>2026-11-22T00:00:00Z</lastBuildDate>
+    <item>
+      <title>3.33 — 貓貓語、即時監控與雙語部署器</title>
+      <link>https://xinspect.de5.net/#log-v3.33</link>
+      <guid isPermaLink="false">xinspect-3.33</guid>
+      <pubDate>2026-11-22T00:00:00Z</pubDate>
+    </item>
     <item>
       <title>3.32 — 百科下載與桌面部署功能更新</title>
       <link>https://xinspect.de5.net/#log-v3.32</link>
@@ -118,12 +124,6 @@
       <title>3.13 — 監控工程規劃＋藍色中隊新基線</title>
       <link>https://xinspect.de5.net/#log-v3.13</link>
       <guid isPermaLink="false">xinspect-3.13</guid>
-      <pubDate>2026-11-01T00:00:00Z</pubDate>
-    </item>
-    <item>
-      <title>3.12 — 以 3.11 Swiss 為底座：新增歷史型號目錄，補齊發佈資產與缺列防護</title>
-      <link>https://xinspect.de5.net/#log-v3.12</link>
-      <guid isPermaLink="false">xinspect-3.12</guid>
       <pubDate>2026-11-01T00:00:00Z</pubDate>
     </item>
 </channel></rss>
