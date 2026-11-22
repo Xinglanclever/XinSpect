@@ -101,6 +101,17 @@ footer a:hover{color:var(--ink);text-decoration:underline}
 .faq summary::after{content:"+";color:var(--red);font-weight:700;flex:none}
 .faq details[open] summary::after{content:"−"}
 .faq .a{padding:0 26px 22px;font-size:14px;color:#555;max-width:760px}
+.src3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:14px}
+.src3>div{background:var(--paper);padding:20px 22px}
+.src3 .t{font-size:11px;letter-spacing:.18em;color:var(--red);font-weight:700;text-transform:uppercase}
+.src3 .s{font-size:13px;color:#555;margin-top:8px}
+.ev4{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ev4 .e{border:1px solid var(--line);padding:20px 22px}
+.ev4 .e .no{font-size:12px;color:var(--red);font-weight:700;letter-spacing:.2em}
+.ev4 .e h4{font-size:15px;margin:8px 0 6px}
+.ev4 .e p{font-size:13px;color:#555}
+@media(max-width:760px){.src3{grid-template-columns:1fr}.ev4{grid-template-columns:1fr}}
+
 .vids{display:grid;grid-template-columns:1fr;gap:22px;margin-top:26px}
 .vid{border:2px solid var(--ink);background:#000}
 .vid video{width:100%;height:auto;display:block}
@@ -249,6 +260,9 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
     <div role="listitem"><div class="n"><i>72</i></div><div class="l">動態家族 ・ 162 事實域</div></div>
     <div role="listitem"><div class="n">65</div><div class="l">個可到達畫面</div></div>
     <div role="listitem"><div class="n"><i>138</i></div><div class="l">筆沿革全程可考</div></div>
+    <div role="listitem"><div class="n">82</div><div class="l">XAML 檔案</div></div>
+    <div role="listitem"><div class="n">287</div><div class="l">說明條目 HelpCatalog</div></div>
+    <div role="listitem"><div class="n">594</div><div class="l">Services 程式檔（頂層）</div></div>
   </div>
 </div></div>
 
@@ -272,6 +286,22 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
     <div role="listitem"><code>ReadError</code><div class="g">讀取失敗</div></div>
   </div>
   <p style="font-size:13px;color:var(--grey);max-width:820px">由強到弱（偏序格 <code>FactStateLattice</code>）：衍生事實取來源中最弱者；不是 <code>Present</code> 的事實一律不帶數字——「沒有」與「有 0 個」是不同的斷言。詳見 <a style="color:var(--blue);font-weight:700" rel="noopener" href="https://github.com/Xinglanclever/XinSpect/blob/main/docs/%E7%99%BE%E7%A7%91-v3.17.md#03-%E5%85%AD%E6%85%8B%E6%89%BF%E8%AA%8D%E6%B2%92%E6%9C%89%E6%9C%89%E5%85%AD%E7%A8%AE%E8%80%8C%E4%B8%8D%E6%98%AF%E4%B8%80%E7%A8%AE">百科 §0.3</a>。</p>
+  <div style="margin-top:22px;max-width:900px">
+  <p style="font-size:12px;letter-spacing:.2em;color:var(--red);font-weight:700;text-transform:uppercase;margin-bottom:10px">三來源對帳 ・ 不互相代替</p>
+  <div class="src3" role="list">
+    <div role="listitem"><div class="t">01 Hardware</div><div class="s">CPUID、MSR、PCI、LibreHardwareMonitor 感測器，以及 SPD／SMBus、SMART／NVMe 等直接或裝置讀取路徑——硬體自己說的。</div></div>
+    <div role="listitem"><div class="t">02 Firmware</div><div class="s">SMBIOS、ACPI、UEFI 變數與平台宣告——韌體提供的；讀取失敗、未支援與空白欄位分開標示。</div></div>
+    <div role="listitem"><div class="t">03 Windows</div><div class="s">WMI／CIM、效能計數器、驅動與事件紀錄——Windows 回報的不冒充硬體直讀。</div></div>
+  </div>
+  <p style="font-size:13px;color:var(--grey);max-width:820px">對帳只陳述「一致、矛盾或無法驗證」及其依據。<b>不合成單一整機健康分數</b>——缺少來源時不把空白當成通過，也不替使用者下硬體好壞結論。</p>
+  </div>
+  <div class="ev4" style="margin-top:22px">
+    <div class="e"><div class="no">01 ◈</div><h4>版本化「時間膠囊」快照</h4><p>以 JSON 保存當時實際讀到的硬體事實，附建立時間、程式版本及 SHA-256 完整性雜湊；可逐欄比對新增、消失與變更——差異代表讀值不同，不自動推論原因。</p></div>
+    <div class="e"><div class="no">02 ⌕</div><h4>每欄保留資料血統</h4><p>值由哪個來源提供、屬於哪種來源性質、何時讀取，都可回查；沒有讀到的欄位不補成 0。來源回答「誰這樣說」。</p></div>
+    <div class="e"><div class="no">03 ◌</div><h4>分享前檢視隱私欄位</h4><p>快照預設遮蔽標記為敏感的值；匯出或分享前仍應檢查內容——遮蔽範圍取決於事實的敏感標記。</p></div>
+    <div class="e"><div class="no">04 ⛨</div><h4>SHA-256 的界線</h4><p>完整性校驗可檢查修改，不證明作者或來源——不可否認性需簽名，已列入排期。資料只保存當時能讀到的項目。</p></div>
+  </div>
+
 </div>
 <section id="xsc"><div class="wrap">
   <div class="sec-head"><span class="sq"></span><h2>xsc — 像 Claude Code 一樣操作你的機器</h2><span class="note">SWISS TERMINAL</span></div>
@@ -390,6 +420,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
     </div>
   </div>
   <p style="margin-top:18px;font-size:13px;color:var(--grey)">發現安全問題？請依 <a style="color:var(--blue);font-weight:700" rel="noopener" href="https://github.com/Xinglanclever/XinSpect/blob/main/SECURITY.md">SECURITY.md</a> 的私密管道回報——那是唯一保證不公開的入口。</p>
+  <p style="margin-top:14px;font-size:13px;color:var(--grey);max-width:820px"><b style="color:var(--ink)">關於本網站：</b>本站只介紹產品——不呼叫硬體 API、不掃描訪客裝置、不展示假裝即時的硬體讀數；本站與 XinSpect 軟體無任何政治立場，內容僅用於技術資訊、產品說明與工程討論。</p>
 
   <div class="dl-grid" style="margin-top:18px">
     <div class="dl-card">

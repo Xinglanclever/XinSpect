@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # 官網線上驗證：每次改完 site/ 部署後跑一遍，逐項對帳。
+# 注意：本機網路偶有瞬斷——單輪出現隨機 FAIL 時請複跑確認；連續三輪同一項 FAIL 才是真問題。
 # 用法：bash Tools/verify-site.sh [https://xinspect.de5.net]
 set -u
 BASE=${1:-https://xinspect.de5.net}
@@ -61,6 +62,13 @@ for v in MagnumOpus_600s_ZH_TW MagnumOpus_600s_ZH_CN MagnumOpus_600s_EN; do
   chk "影片資產 $v 200（GitHub）"           200 "$(curl -sIL --retry 3 --retry-all-errors --max-time 60 -o /dev/null -w "%{http_code}" "https://github.com/Xinglanclever/XinSpect/releases/download/v3.28/XinSpect_$v.mp4")"
 done
 has "影片節（zh）"                           1   "$(echo "$H" | grep -c 'id="video"')"
+has "三來源對帳條（zh）"                       1   "$(echo "$H" | grep -c 'src3')"
+has "三來源對帳條（en）"                       1   "$(curl -sL "$BASE/index-en.html" | grep -c 'src3')"
+has "證據實驗室卡（zh）"                       1   "$(echo "$H" | grep -c '時間膠囊')"
+has "證據實驗室卡（en）"                       1   "$(curl -sL "$BASE/index-en.html" | grep -c 'time capsule')"
+has "網站自隱私聲明（zh）"                      1   "$(echo "$H" | grep -c '不掃描訪客裝置')"
+has "網站自隱私聲明（en）"                      1   "$(curl -sL "$BASE/index-en.html" | grep -c 'scans your device')"
+has "統計帶擴充卡（zh）"                        1   "$(echo "$H" | grep -c 'HelpCatalog')"
 has "EN 誠實邊界節"                           1   "$(curl -sL "$BASE/index-en.html" | grep -c 'id="limits"')"
 has "三支影片全嵌入（zh）"                     2   "$(echo "$H" | grep -c 'video-poster-ZH_CN\|video-poster-EN')"
 has "三支影片全嵌入（en）"                     1   "$(curl -sL "$BASE/index-en.html" | grep -c 'video-poster-ZH_TW')"

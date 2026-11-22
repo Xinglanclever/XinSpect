@@ -108,6 +108,17 @@ p code{background:#efefe9;padding:2px 6px;font-size:.92em}
 .faq summary::after{content:"+";color:var(--red);font-weight:700;flex:none}
 .faq details[open] summary::after{content:"−"}
 .faq .a{padding:0 26px 22px;font-size:14px;color:#555;max-width:760px}
+.src3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:14px}
+.src3>div{background:var(--paper);padding:20px 22px}
+.src3 .t{font-size:11px;letter-spacing:.18em;color:var(--red);font-weight:700;text-transform:uppercase}
+.src3 .s{font-size:13px;color:#555;margin-top:8px}
+.ev4{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ev4 .e{border:1px solid var(--line);padding:20px 22px}
+.ev4 .e .no{font-size:12px;color:var(--red);font-weight:700;letter-spacing:.2em}
+.ev4 .e h4{font-size:15px;margin:8px 0 6px}
+.ev4 .e p{font-size:13px;color:#555}
+@media(max-width:760px){.src3{grid-template-columns:1fr}.ev4{grid-template-columns:1fr}}
+
 .vids{display:grid;grid-template-columns:1fr;gap:22px;margin-top:26px}
 .vid{border:2px solid var(--ink);background:#000}
 .vid video{width:100%;height:auto;display:block}
@@ -219,6 +230,9 @@ footer a:hover{color:var(--ink);text-decoration:underline}
     <div role="listitem"><div class="n"><i>72</i></div><div class="l">dynamic families ・ 162 domains</div></div>
     <div role="listitem"><div class="n">65</div><div class="l">reachable screens</div></div>
     <div role="listitem"><div class="n"><i>138</i></div><div class="l">release notes, fully traceable</div></div>
+    <div role="listitem"><div class="n">82</div><div class="l">XAML files</div></div>
+    <div role="listitem"><div class="n">287</div><div class="l">help entries (HelpCatalog)</div></div>
+    <div role="listitem"><div class="n">594</div><div class="l">service source files (top-level)</div></div>
   </div>
 </div></div>
 
@@ -265,6 +279,22 @@ footer a:hover{color:var(--ink);text-decoration:underline}
     <div role="listitem"><code>ReadError</code><div class="g">read failed</div></div>
   </div>
   <p style="font-size:13px;color:var(--grey);max-width:820px">Strongest to weakest (the <code>FactStateLattice</code> partial order): a derived fact takes its weakest source; anything not <code>Present</code> never carries a number — "absent" and "zero" are different claims. Details in <a style="color:var(--blue);font-weight:700" rel="noopener" href="https://github.com/Xinglanclever/XinSpect/blob/main/docs/%E7%99%BE%E7%A7%91-v3.17.md#03-%E5%85%AD%E6%85%8B%E6%89%BF%E8%AA%8D%E6%B2%92%E6%9C%89%E6%9C%89%E5%85%AD%E7%A8%AE%E8%80%8C%E4%B8%8D%E6%98%AF%E4%B8%80%E7%A8%AE" lang="zh-Hant">百科 §0.3</a>.</p>
+  <div style="margin-top:22px;max-width:900px">
+  <p style="font-size:12px;letter-spacing:.2em;color:var(--red);font-weight:700;text-transform:uppercase;margin-bottom:10px">Three sources, reconciled ・ never substituted</p>
+  <div class="src3" role="list">
+    <div role="listitem"><div class="t">01 Hardware</div><div class="s">CPUID, MSR, PCI, LibreHardwareMonitor sensors, plus SPD／SMBus and SMART／NVMe device reads — what the hardware itself says.</div></div>
+    <div role="listitem"><div class="t">02 Firmware</div><div class="s">SMBIOS, ACPI, UEFI variables and platform declarations — what the firmware provides; read failures, unsupported and blank fields are labeled separately.</div></div>
+    <div role="listitem"><div class="t">03 Windows</div><div class="s">WMI／CIM, performance counters, drivers and event logs — never passed off as direct hardware reads.</div></div>
+  </div>
+  <p style="font-size:13px;color:var(--grey);max-width:820px">Reconciliation states only "consistent, contradictory, or unverifiable" with evidence. <b>No single overall health score is synthesized</b> — a missing source is never treated as a pass, and no verdicts on whether your hardware is good.</p>
+  </div>
+  <div class="ev4" style="margin-top:22px">
+    <div class="e"><div class="no">01 ◈</div><h4>Versioned "time capsule" snapshots</h4><p>Facts as actually read, stored as JSON with timestamp, app version and a SHA-256 integrity hash; compare additions, disappearances and changes per key — a difference means a different reading, never an automatic cause.</p></div>
+    <div class="e"><div class="no">02 ⌕</div><h4>Per-column provenance</h4><p>Which source provided each value, what kind of source, and when it was read — nothing unread is zero-filled. The source answers "who says so".</p></div>
+    <div class="e"><div class="no">03 ◌</div><h4>Privacy review before sharing</h4><p>Snapshots mask values flagged sensitive by default; still check contents before exporting or sharing — masking depends on each fact's sensitivity mark.</p></div>
+    <div class="e"><div class="no">04 ⛨</div><h4>SHA-256 boundary</h4><p>Integrity checking detects modification but proves neither author nor origin — non-repudiation needs signing, which is honestly scheduled. Snapshots keep only what was readable at the time.</p></div>
+  </div>
+
 </div>
 <section id="download" style="border-top:1px solid var(--line)"><div class="wrap">
   <div class="sec-head"><span class="sq"></span><h2>Download</h2><span class="note">v3.33 ・ ULTIMA XXXIII ・ 2026-11-22</span></div>
@@ -347,6 +377,7 @@ footer a:hover{color:var(--ink);text-decoration:underline}
     <div class="dl-card"><h3 style="font-size:16px">Local encryption & integrity</h3><div class="tag">DPAPI ・ SHA-256</div><p>AI API keys are DPAPI-encrypted before touching disk; downloads always pass PE header and size-floor checks; per-asset SHA-256 lives in the Release's SHA256SUMS.txt. Publisher signing (non-repudiation) is honestly listed as scheduled, not pretended.</p></div>
   </div>
   <p style="margin-top:18px;font-size:13px;color:var(--grey)">Found a security issue? Please use the private channel in <a style="color:var(--blue);font-weight:700" rel="noopener" href="https://github.com/Xinglanclever/XinSpect/blob/main/SECURITY.md">SECURITY.md</a> — the only entry guaranteed to stay private.</p>
+  <p style="margin-top:14px;font-size:13px;color:var(--grey);max-width:820px"><b style="color:var(--ink)">About this website:</b> it only introduces the product — it never calls hardware APIs, scans your device, or shows fake "live" hardware readings; this site and XinSpect take no political stance — content is for technical information, product description and engineering discussion only.</p>
 </div></section>
 
 <section id="limits" style="border-top:1px solid var(--line)"><div class="wrap">
