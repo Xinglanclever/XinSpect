@@ -238,7 +238,21 @@ try {
     if (-not (Test-Path $driverSys)) { Fail "driver asset missing after build: $driverSys" }
     Ok "driver $driverSys = $((Get-Item $driverSys).Length) bytes"
 
-    # 十一件清單（英／中部署器別名均保留；百科 HTML 是 Desktop 點擊下載的獨立資產）
+    # 中文部署器以 ZIP 發佈（可保留中文字檔名）；百科 HTML 是 Desktop 點擊下載的獨立資產。
+    $zhZip = Join-Path $P 'XinSpectDeploy-zh.zip'
+    if (Test-Path -LiteralPath $zhZip) { Remove-Item -LiteralPath $zhZip -Force }
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $zip = [IO.Compression.ZipFile]::Open($zhZip, [IO.Compression.ZipArchiveMode]::Create)
+    try {
+        [IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+            $zip, (Resolve-Path 'Installer\XinSpect部署器.exe').Path, 'XinSpect部署器.exe',
+            [IO.Compression.CompressionLevel]::Optimal) | Out-Null
+    } finally {
+        $zip.Dispose()
+    }
+    Ok "Chinese deployer archive $zhZip = $((Get-Item $zhZip).Length) bytes"
+
+    # 十一件資產清單（英語部署器＋繁中部署器 ZIP；百科 HTML 是 Desktop 獨立資產）
     $assets = @(
         @('XinSpect.exe', "$P\XinSpect.exe"),
         @('XinSpect-full.exe', "$P\XinSpect-full.exe"),
@@ -248,7 +262,7 @@ try {
         @('XinSpectConsole-legacy-nort.exe', "$P\XinSpectConsole-legacy-nort.exe"),
         @('BlueSquadronBridge.exe', "$P-bridge\BlueSquadronBridge.exe"),
         @('XinSpectDeploy.exe', 'Installer\XinSpectDeploy.exe'),
-        @('XinSpect部署器.exe', 'Installer\XinSpect部署器.exe'),
+        @('XinSpectDeploy-zh.zip', $zhZip),
         @('XsRegProbe.sys', 'XsRegProbe\Driver\x64build\XsRegProbe.sys'),
         @('XinSpect-Encyclopedia.html', '百科.html')
     )

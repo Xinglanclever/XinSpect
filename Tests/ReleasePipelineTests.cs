@@ -107,7 +107,10 @@ public class ReleasePipelineTests
         Assert.Contains("XinSpect-Encyclopedia.html", release, StringComparison.Ordinal);
         Assert.Contains("百科.html", release, StringComparison.Ordinal);
         Assert.Contains("eleven assets + SHA256SUMS.txt", release, StringComparison.Ordinal);
-        Assert.Contains("@('XinSpect部署器.exe', 'Installer\\XinSpect部署器.exe')", release, StringComparison.Ordinal);
+        Assert.Contains("XinSpectDeploy-zh.zip", release, StringComparison.Ordinal);
+        Assert.Contains("CreateEntryFromFile", release, StringComparison.Ordinal);
+        Assert.Contains("@('XinSpectDeploy-zh.zip', $zhZip)", release, StringComparison.Ordinal);
+        Assert.DoesNotContain("@('XinSpect部署器.exe', 'Installer\\XinSpect部署器.exe')", release, StringComparison.Ordinal);
 
         string mirrors = ReadAll(RepoFile("Tools", "sync-mirrors.py"));
         Assert.Contains("XinSpect-Encyclopedia.html", mirrors, StringComparison.Ordinal);
