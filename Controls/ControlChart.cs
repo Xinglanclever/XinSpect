@@ -156,7 +156,7 @@ public sealed class ControlChart : FrameworkElement
         var series = Points?.Points ?? [];
         if (series.Length == 0)
         {
-            dc.DrawText(Format("沒有樣本", 12, VizPalette.Muted), new Point(w / 2 - 28, h / 2 - 8));
+            dc.DrawText(Format(LanguageService.T("沒有樣本"), 12, VizPalette.Muted), new Point(w / 2 - 28, h / 2 - 8));
             return;
         }
 
@@ -215,13 +215,18 @@ public sealed class ControlChart : FrameworkElement
 
         // 標題與方法標示：序列名＋統計方法＋越界數。方法要寫明白，
         // 並聲明這是統計監看不是規格判定——不把 ±kσ 說成「合格／不合格」。
+        string centerName = LanguageService.T(CenterMode == SpcCenter.Mean ? "均值" : "中位數");
+        string method = lim.Sigma > 0
+            ? string.Format(CultureInfo.CurrentCulture, LanguageService.T("中心線＝{0} ・ 控制限＝±{1:0.#}σ（樣本標準差）"), centerName, Math.Max(0, K))
+            : string.Format(CultureInfo.CurrentCulture, LanguageService.T("中心線＝{0} ・ 樣本不足或無離散度，控制限退化成中心線"), centerName);
         var head = Format(
             (string.IsNullOrWhiteSpace(SeriesTitle) ? "" : SeriesTitle + " ・ ")
-            + lim.MethodLabel
-            + (outliers.Length > 0 ? $" ・ 越界 {outliers.Length} 點" : " ・ 無越界"),
+            + method
+            + (outliers.Length > 0 ? string.Format(CultureInfo.CurrentCulture,
+                LanguageService.T(" ・ 越界 {0} 點"), outliers.Length) : LanguageService.T(" ・ 無越界")),
             9.5, VizPalette.Muted);
         dc.DrawText(head, new Point(padLeft, 2));
-        var verdict = Format("統計監看：離序列自己的平常樣子有多遠——不是規格判定", 9, VizPalette.Muted);
+        var verdict = Format(LanguageService.T("統計監看：離序列自己的平常樣子有多遠——不是規格判定"), 9, VizPalette.Muted);
         dc.DrawText(verdict, new Point(Math.Max(padLeft, w - padRight - verdict.Width), padTop + plotH - verdict.Height));
     }
 

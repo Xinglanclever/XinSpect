@@ -162,9 +162,9 @@ public sealed class CoreTimeHeatmapChart : FrameworkElement
         }
 
         // 時間方向標示：左舊右新（畫在底軸下方）
-        var old = Format("較早", 9.5, VizPalette.Muted);
+        var old = Format(LanguageService.T("較早"), 9.5, VizPalette.Muted);
         dc.DrawText(old, new Point(padLeft, h - 14));
-        var now = Format("現在", 9.5, VizPalette.Muted);
+        var now = Format(LanguageService.T("現在"), 9.5, VizPalette.Muted);
         dc.DrawText(now, new Point(w - padRight - now.Width, h - 14));
 
         // 色階圖例：由 HeatScale.Legend 導出，溫度文字與色塊同源，不另抄一份溫度表（畫在頂部右側）
@@ -188,7 +188,7 @@ public sealed class CoreTimeHeatmapChart : FrameworkElement
     }
 
     private void DrawEmpty(DrawingContext dc, double w, double h)
-        => dc.DrawText(Format("沒有樣本", 12, VizPalette.Muted), new Point(w / 2 - 28, h / 2 - 8));
+        => dc.DrawText(Format(LanguageService.T("沒有樣本"), 12, VizPalette.Muted), new Point(w / 2 - 28, h / 2 - 8));
 
     private FormattedText Format(string text, double size, Brush brush)
         => new(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,

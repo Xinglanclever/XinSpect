@@ -14,7 +14,7 @@
         <StackPanel VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,26,0,0" IsHitTestVisible="False">
             <TextBlock Text="滑鼠檢測" Foreground="White" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
             <TextBlock Foreground="#9AA0AA" FontSize="12.5" Margin="0,6,0,0" HorizontalAlignment="Center"
-                       Text="移動畫軌跡　按各鍵測試觸發　滾輪測試上下　C：清除計數　Esc：離開"/>
+                       Text="移動畫軌跡　按鍵／滾輪測試　Space：開始／停止取樣　C：全部重設　Esc：離開"/>
         </StackPanel>
 
         <!-- 中央：滑鼠示意圖（按下的鍵會亮起） -->
@@ -35,8 +35,9 @@
         </Viewbox>
 
         <!-- 右側統計 -->
-        <Border HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,42,0" IsHitTestVisible="False"
-                Background="#C0161821" CornerRadius="12" Padding="22,18" Width="316">
+        <Border HorizontalAlignment="Right" Margin="0,100,24,24"
+                Background="#F0161821" CornerRadius="12" Padding="22,18" Width="390">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
                 <TextBlock Text="即時數據" Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
                 <Grid>
@@ -59,17 +60,39 @@
                     <TextBlock x:Name="WheelCount" Grid.Row="5" Grid.Column="1" Text="0 / 0" Foreground="#E6E9EF" FontSize="12.5"/>
                     <TextBlock Grid.Row="6" Text="最短點擊間隔" Foreground="#9AA0AA" FontSize="12.5"/>
                     <TextBlock x:Name="MinIntervalText" Grid.Row="6" Grid.Column="1" Text="—" Foreground="#E6E9EF" FontSize="12.5"/>
-                    <TextBlock Grid.Row="7" Text="估計回報率" Foreground="#9AA0AA" FontSize="12.5"/>
-                    <TextBlock x:Name="PollRateText" Grid.Row="7" Grid.Column="1" Text="—" Foreground="#E6E9EF" FontSize="12.5"/>
                 </Grid>
                 <Border x:Name="ChatterBox" Background="#40E0552E" BorderBrush="#E0552E" BorderThickness="1"
                         CornerRadius="8" Padding="12,8" Margin="0,14,0,0" Visibility="Collapsed">
                     <TextBlock x:Name="ChatterText" Foreground="#FFD9CC" FontSize="12" TextWrapping="Wrap"
                                Text="偵測到極短點擊間隔，可能為微動開關抖動（單擊變雙擊）。"/>
                 </Border>
-                <TextBlock Foreground="#6B7280" FontSize="11" Margin="0,12,0,0" TextWrapping="Wrap"
-                           Text="回報率為估計值，受系統事件合併與畫面更新率影響，僅供參考；精確測量請用專用工具。"/>
+                <Separator Margin="0,16,0,12" Background="#3A4150"/>
+                <TextBlock Text="Raw Input 到達間隔" Foreground="White" FontSize="14" FontWeight="Bold"/>
+                <TextBlock Text="前景取樣，最長 10 秒；持續移動同一隻滑鼠。" Foreground="#B9C2D0" FontSize="12" Margin="0,5,0,10" TextWrapping="Wrap"/>
+                <WrapPanel>
+                    <Button x:Name="StartSampleButton" Content="開始取樣" Click="StartSample_Click" Padding="12,7" Margin="0,0,8,6"
+                            AutomationProperties.Name="開始 Raw Input 滑鼠取樣，最長十秒"/>
+                    <Button x:Name="StopSampleButton" Content="停止" Click="StopSample_Click" IsEnabled="False" Padding="12,7" Margin="0,0,8,6"/>
+                    <Button Content="重設" Click="ResetSample_Click" Padding="12,7" Margin="0,0,0,6"/>
+                </WrapPanel>
+                <Label Target="{Binding ElementName=RawDeviceCombo}" Content="取樣裝置（各自分組）" Foreground="#B9C2D0" Padding="0,6,0,4"/>
+                <ComboBox x:Name="RawDeviceCombo" DisplayMemberPath="DisplayName" SelectionChanged="RawDevice_SelectionChanged"
+                          MinHeight="30" AutomationProperties.Name="選擇 Raw Input 裝置"/>
+                <TextBlock x:Name="RawStatusText" Text="尚未開始；請按開始取樣。" Foreground="#D3DCE8" FontSize="12"
+                           Margin="0,9,0,8" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+                <TextBlock x:Name="PollRateText" Text="— Hz" Foreground="#7DBAFF" FontSize="22" FontWeight="SemiBold"/>
+                <TextBlock x:Name="RawDistributionText" Text="中位間隔 — · P95 — · 抖動 MAD —" Foreground="#E6E9EF" FontSize="12"
+                           Margin="0,6,0,0" TextWrapping="Wrap"/>
+                <TextBlock x:Name="RawSampleCountText" Text="有效間隔 0 筆 · 原始報告 0 筆" Foreground="#B9C2D0" FontSize="12"
+                           Margin="0,6,0,0" TextWrapping="Wrap"/>
+                <TextBlock x:Name="RawWindowText" Text="取樣窗 —" Foreground="#B9C2D0" FontSize="11" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                <TextBlock Foreground="#B9C2D0" FontSize="11" Margin="0,12,0,0" TextWrapping="Wrap"
+                           Text="來源：WM_INPUT／GetRawInputData；QPC 在接收端記時。只計相對移動報告，排除大於 200 ms 的停頓；P95 使用最近秩，抖動為間隔的中位絕對偏差（MAD）。至少需 20 筆有效間隔。"/>
+                <TextBlock Foreground="#F5CC87" FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap"
+                           Text="此值是 OS 報告到達間隔的中位數倒數，不是實體 USB 輪詢頻率、端到端延遲或精度認證。排程／佇列／合併與遠端／虛擬通路都會影響結果；125–8000 Hz 只是常見檔位比對。裝置 ID 為本機介面路徑雜湊，不顯示原始路徑。"/>
+                <Button Content="離開滑鼠檢測（Esc）" Click="Close_Click" Padding="12,7" Margin="0,14,0,0"/>
             </StackPanel>
+            </ScrollViewer>
         </Border>
     </Grid>
 </Window>

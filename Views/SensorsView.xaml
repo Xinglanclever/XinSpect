@@ -14,64 +14,62 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
             <local:SectionHead Text="所有感測器" HelpKey="sensors/所有感測器"/>
-
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="2*"/>
-                            <ColumnDefinition Width="110"/>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="120"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Style="{StaticResource ColHead}" Text="名稱"/>
-                        <TextBlock Grid.Column="1" Style="{StaticResource ColHead}" Text="類型"/>
-                        <TextBlock Grid.Column="2" Style="{StaticResource ColHead}" Text="數值" TextAlignment="Right"/>
-                        <TextBlock Grid.Column="3" Style="{StaticResource ColHead}" Text="最小" TextAlignment="Right"/>
-                        <TextBlock Grid.Column="4" Style="{StaticResource ColHead}" Text="最大" TextAlignment="Right"/>
-                    </Grid>
-                    <Border Height="1" Background="{DynamicResource HairlineBrush}"/>
-
-                    <ItemsControl ItemsSource="{Binding Source={StaticResource GroupedSensors}}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid MinHeight="28">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="2*"/>
-                                        <ColumnDefinition Width="110"/>
-                                        <ColumnDefinition Width="120"/>
-                                        <ColumnDefinition Width="120"/>
-                                        <ColumnDefinition Width="120"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Style="{StaticResource FieldValue}" Text="{Binding Name}"
-                                               TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}" Text="{Binding TypeText}"
-                                               VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldValue}" Text="{Binding ValueText}"
-                                               TextAlignment="Right"/>
-                                    <TextBlock Grid.Column="3" Style="{StaticResource FieldLabel}" Text="{Binding MinText}"
-                                               TextAlignment="Right" VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="4" Style="{StaticResource FieldLabel}" Text="{Binding MaxText}"
-                                               TextAlignment="Right" VerticalAlignment="Center"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                        <ItemsControl.GroupStyle>
-                            <GroupStyle>
-                                <GroupStyle.HeaderTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Name}"
-                                                   Foreground="{DynamicResource AccentBrush}"
-                                                   FontWeight="SemiBold" Margin="0,14,0,4"/>
-                                    </DataTemplate>
-                                </GroupStyle.HeaderTemplate>
-                            </GroupStyle>
-                        </ItemsControl.GroupStyle>
-                    </ItemsControl>
+                    <WrapPanel Margin="0,0,0,8">
+                        <Button Style="{StaticResource PrimaryButton}" Content="{Binding SensorLog.ButtonText, Mode=OneWay, Converter={StaticResource Lang}}" Click="LogToggle_Click" Margin="0,0,8,8"/>
+                        <Button Style="{StaticResource ToolButton}" Content="選取全部記錄" Click="SelectAllLog_Click" Margin="0,0,8,8"/>
+                        <Button Style="{StaticResource ToolButton}" Content="清除選取" Click="ClearLogSelection_Click" Margin="0,0,8,8"/>
+                        <Button Style="{StaticResource ToolButton}" Content="重設統計" Click="ResetStatistics_Click" Margin="0,0,8,8"/>
+                        <Button Style="{StaticResource ToolButton}" Content="自訂告警" Click="OpenAlerts_Click" Margin="0,0,8,8"/>
+                        <Button Style="{StaticResource ToolButton}" Content="自訂感測面板" Click="OpenPanel_Click" Margin="0,0,8,8"/>
+                    </WrapPanel>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Live.StatisticsStatusText, Mode=OneWay, Converter={StaticResource Lang}}" TextWrapping="Wrap" Margin="0,0,0,5"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Live.SensorPollStatusText, Mode=OneWay, Converter={StaticResource Lang}}" TextWrapping="Wrap" Margin="0,0,0,5"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="勾選任意裝置的項目再開始 CSV；本次記錄欄位固定，變更選取在下次記錄生效。來源內部更新時間未知不代表獨立驗證；未確認數值不納入統計、告警或圖表。" TextWrapping="Wrap" Margin="0,0,0,5"/>
+                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding SensorLog.DisplayStatusText, Mode=OneWay}" TextWrapping="Wrap" Margin="0,0,0,5"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding SensorLog.CurrentFile}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                    <DataGrid ItemsSource="{Binding Live.AllSensors}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                              CanUserReorderColumns="True" HeadersVisibility="Column" MinHeight="260" MaxHeight="660"
+                              EnableRowVirtualization="True" EnableColumnVirtualization="True" RowDetailsVisibilityMode="Collapsed"
+                              Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource PrimaryInkBrush}"
+                              BorderBrush="{DynamicResource HairlineBrush}" GridLinesVisibility="Horizontal"
+                              HorizontalGridLinesBrush="{DynamicResource HairlineBrush}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                              AutomationProperties.Name="感測器目前、最小、最大與平均值及來源">
+                        <DataGrid.Resources>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="{DynamicResource Surface2Brush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource SecondaryInkBrush}"/>
+                                <Setter Property="Padding" Value="8,6"/>
+                            </Style>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
+                                <Setter Property="ToolTip" Value="{Binding EvidenceText}"/>
+                                <Setter Property="MinHeight" Value="30"/>
+                            </Style>
+                            <Style x:Key="NumericCell" TargetType="TextBlock">
+                                <Setter Property="TextAlignment" Value="Right"/>
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="Margin" Value="6,3"/>
+                            </Style>
+                        </DataGrid.Resources>
+                        <DataGrid.Columns>
+                            <DataGridCheckBoxColumn Header="記錄" Binding="{Binding IsSelectedForLog, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="52"/>
+                            <DataGridTextColumn Header="裝置" Binding="{Binding Group}" IsReadOnly="True" Width="180"/>
+                            <DataGridTextColumn Header="名稱" Binding="{Binding Name}" IsReadOnly="True" Width="180"/>
+                            <DataGridTextColumn Header="類型" Binding="{Binding TypeText, Mode=OneWay, Converter={StaticResource Lang}}" IsReadOnly="True" Width="64"/>
+                            <DataGridTextColumn Header="目前" Binding="{Binding ValueText, Mode=OneWay, Converter={StaticResource Lang}}" IsReadOnly="True" Width="150" ElementStyle="{StaticResource NumericCell}"/>
+                            <DataGridTextColumn Header="最小" Binding="{Binding MinText}" IsReadOnly="True" Width="102" ElementStyle="{StaticResource NumericCell}"/>
+                            <DataGridTextColumn Header="最大" Binding="{Binding MaxText}" IsReadOnly="True" Width="102" ElementStyle="{StaticResource NumericCell}"/>
+                            <DataGridTextColumn Header="平均" Binding="{Binding AverageText}" IsReadOnly="True" Width="102" ElementStyle="{StaticResource NumericCell}"/>
+                            <DataGridTextColumn Header="有效樣本" Binding="{Binding SampleCount}" IsReadOnly="True" Width="84" ElementStyle="{StaticResource NumericCell}"/>
+                            <DataGridTextColumn Header="狀態" Binding="{Binding StateText, Mode=OneWay, Converter={StaticResource Lang}}" IsReadOnly="True" Width="140"/>
+                            <DataGridTextColumn Header="來源" Binding="{Binding SourceText}" IsReadOnly="True" Width="200"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
                 </StackPanel>
             </Border>
-
             <!-- ===== 外部感測器來源 ===== -->
             <local:SectionHead Text="外部感測器來源" HelpKey="sensors/外部感測器來源" Margin="0,20,0,0"/>
 
@@ -108,14 +106,14 @@
                                         <TextBlock Text="{Binding Name}" FontSize="11" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource AccentBrush}"/>
                                     </Border>
-                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Detail}" VerticalAlignment="Center"/>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding DisplayDetail, Mode=OneWay}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,8" Text="{Binding ExternalSensors.Status}"/>
-                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,6" Text="{Binding ExternalSensors.ComparisonStatus}"
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,8" Text="{Binding ExternalSensors.DisplayStatus, Mode=OneWay}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,6" Text="{Binding ExternalSensors.ComparisonStatus, Mode=OneWay, Converter={StaticResource Lang}}"
                                TextWrapping="Wrap"/>
                     <Grid Margin="0,0,0,3" Visibility="{Binding ExternalSensors.CoreTemperatureComparisons.Count, Converter={StaticResource CountToVis}}">
                         <Grid.ColumnDefinitions>

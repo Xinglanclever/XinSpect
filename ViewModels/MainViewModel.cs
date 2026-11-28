@@ -35,7 +35,38 @@ public sealed class MainViewModel : ObservableObject
     public bool CanReinitialize => !IsReinitializing;
 
     private SensorService? _live;
-    public SensorService? Live { get => _live; internal set => SetProperty(ref _live, value); }
+    public SensorService? Live
+    {
+        get => _live;
+        internal set
+        {
+            if (ReferenceEquals(_live, value)) return;
+            if (_live is not null)
+                foreach (var row in _live.AllSensors) row.PropertyChanged -= SensorSelectionChanged;
+            if (!SetProperty(ref _live, value)) return;
+            if (value is null) return;
+            SetSensorLogSelection(Settings.SensorLogSelection);
+            foreach (var row in value.AllSensors) row.PropertyChanged += SensorSelectionChanged;
+        }
+    }
+    private bool _restoringSensorSelection;
+    private void SensorSelectionChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (!_restoringSensorSelection && args.PropertyName == nameof(SensorRow.IsSelectedForLog) && Live is { } live)
+            Settings.SetSensorLogSelection(live.AllSensors.Where(r => r.IsSelectedForLog).Select(r => r.Id));
+    }
+    public void SetSensorLogSelection(IEnumerable<string> ids)
+    {
+        var selected = ids.ToHashSet(StringComparer.Ordinal);
+        _restoringSensorSelection = true;
+        try
+        {
+            if (Live is { } live)
+                foreach (var row in live.AllSensors) row.IsSelectedForLog = selected.Contains(row.Id);
+        }
+        finally { _restoringSensorSelection = false; }
+        Settings.SetSensorLogSelection(selected);
+    }
 
     private NetworkService? _net;
     public NetworkService? Net { get => _net; internal set => SetProperty(ref _net, value); }

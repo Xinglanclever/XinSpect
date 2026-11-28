@@ -33,8 +33,17 @@ public sealed record SourceStatus(
     /// <summary>是否可用</summary>
     bool IsAvailable,
     /// <summary>狀態描述</summary>
-    string Detail
-);
+    string Detail,
+    int? ReadingCount = null,
+    string? ProductDetail = null)
+{
+    /// <summary>Catalogued status prose is translated; provider diagnostics remain unchanged.</summary>
+    public string DisplayDetail => ProductDetail is not null
+        ? ProductTextProjection.LocalizeKnown(ProductDetail)
+        : ReadingCount is int count
+            ? ProductTextProjection.LocalizeKnown($"{count} 筆讀數")
+            : Detail;
+}
 
 /// <summary>
 /// 外部感測器服務：偵測並讀取第三方硬體監控工具的共享記憶體資料。
@@ -57,8 +66,14 @@ public sealed class ExternalSensorService : ObservableObject
     public string Status
     {
         get => _status;
-        private set => SetProperty(ref _status, value);
+        private set
+        {
+            if (SetProperty(ref _status, value)) OnPropertyChanged(nameof(DisplayStatus));
+        }
     }
+
+    /// <summary>Localized product status; exception content remains an anchored template parameter.</summary>
+    public string DisplayStatus => ProductTextProjection.LocalizeKnown(_status);
 
     private SourceMode _mode = SourceMode.All;
     /// <summary>資料來源模式。</summary>
@@ -105,8 +120,7 @@ public sealed class ExternalSensorService : ObservableObject
             if (_mode is SourceMode.All or SourceMode.HwInfo)
             {
                 bool ok = HwInfoSharedMem.TryRead(out var hwReadings, out string? hwErr);
-                Sources.Add(new SourceStatus("HWiNFO", ok,
-                    ok ? $"{hwReadings.Count} 筆讀數" : hwErr ?? "未知錯誤"));
+                Sources.Add(Source("HWiNFO", ok, hwReadings.Count, hwErr));
                 if (ok)
                 {
                     foreach (var r in hwReadings) Readings.Add(r);
@@ -122,8 +136,7 @@ public sealed class ExternalSensorService : ObservableObject
             if (_mode is SourceMode.All or SourceMode.Aida64)
             {
                 bool ok = Aida64SharedMem.TryRead(out var aidaReadings, out string? aidaErr);
-                Sources.Add(new SourceStatus("AIDA64", ok,
-                    ok ? $"{aidaReadings.Count} 筆讀數" : aidaErr ?? "未知錯誤"));
+                Sources.Add(Source("AIDA64", ok, aidaReadings.Count, aidaErr));
                 if (ok)
                 {
                     foreach (var r in aidaReadings) Readings.Add(r);
@@ -139,8 +152,7 @@ public sealed class ExternalSensorService : ObservableObject
             if (_mode is SourceMode.All or SourceMode.CoreTemp)
             {
                 bool ok = CoreTempSharedMem.TryRead(out var ctReadings, out string? ctErr);
-                Sources.Add(new SourceStatus("Core Temp", ok,
-                    ok ? $"{ctReadings.Count} 筆讀數" : ctErr ?? "未知錯誤"));
+                Sources.Add(Source("Core Temp", ok, ctReadings.Count, ctErr));
                 if (ok)
                 {
                     foreach (var r in ctReadings) Readings.Add(r);
@@ -203,22 +215,30 @@ public sealed class ExternalSensorService : ObservableObject
 
         {
             bool ok = HwInfoSharedMem.TryRead(out var r, out string? err);
-            results.Add(new SourceStatus("HWiNFO", ok,
-                ok ? $"{r.Count} 筆讀數" : err ?? "未偵測到"));
+            results.Add(ok ? Source("HWiNFO", true, r.Count, null)
+                : err is not null ? Source("HWiNFO", false, 0, err)
+                : new SourceStatus("HWiNFO", false, "", ProductDetail: "未偵測到"));
         }
 
         {
             bool ok = Aida64SharedMem.TryRead(out var r, out string? err);
-            results.Add(new SourceStatus("AIDA64", ok,
-                ok ? $"{r.Count} 筆讀數" : err ?? "未偵測到"));
+            results.Add(ok ? Source("AIDA64", true, r.Count, null)
+                : err is not null ? Source("AIDA64", false, 0, err)
+                : new SourceStatus("AIDA64", false, "", ProductDetail: "未偵測到"));
         }
 
         {
             bool ok = CoreTempSharedMem.TryRead(out var r, out string? err);
-            results.Add(new SourceStatus("Core Temp", ok,
-                ok ? $"{r.Count} 筆讀數" : err ?? "未偵測到"));
+            results.Add(ok ? Source("Core Temp", true, r.Count, null)
+                : err is not null ? Source("Core Temp", false, 0, err)
+                : new SourceStatus("Core Temp", false, "", ProductDetail: "未偵測到"));
         }
 
         return results;
     }
+
+    private static SourceStatus Source(string name, bool available, int count, string? error)
+        => available ? new SourceStatus(name, true, "", ReadingCount: count)
+            : error is not null ? new SourceStatus(name, false, error)
+            : new SourceStatus(name, false, "", ProductDetail: "未知錯誤");
 }

@@ -73,6 +73,115 @@ public static class KernelBackendHost
     }
 
     /// <summary>
+    /// Borrow only an already-initialized MSR route. This never calls Ensure, any
+    /// backend factory, a driver loader, or a probe. The lease pins the existing
+    /// selector's lifetime and refuses further reads after policy/mode revocation.
+    /// </summary>
+    internal static ICpuPackagePowerDiagnosticReadLease? TryAcquireExistingPowerReadLease(out string reason)
+    {
+        lock (Gate)
+        {
+            if (!HardwareOperationGate.CanRunAdvancedDiagnostics)
+            {
+                reason = "第一級進階診斷未開啟；未讀取、未初始化後端。";
+                return null;
+            }
+            if (!_initialized || _selector is null)
+            {
+                reason = "共用 MSR 後端尚未開啟；本診斷不載入驅動或初始化通道。";
+                return null;
+            }
+            var owner = _selector;
+            var use = owner.RouteUse(KernelCapability.MsrRead);
+            if (use.Route.Backend is not { } backend)
+            {
+                reason = use.Route.Explanation;
+                use.Dispose();
+                return null;
+            }
+            reason = "借用既有 MSR 通道；不建立其他後端。";
+            try { return new ExistingPowerReadLease(owner, use, backend, _mode); }
+            catch { use.Dispose(); throw; }
+        }
+    }
+
+    private sealed class ExistingPowerReadLease : ICpuPackagePowerDiagnosticReadLease
+    {
+        private readonly KernelBackendSelector _owner;
+        private readonly IKernelBackend _backend;
+        private KernelBackendSelector.KernelRouteUse? _use;
+        private int _activeReads;
+        private bool _disposeRequested;
+        public CpuPackagePowerDiagnosticSource Source { get; }
+
+        internal ExistingPowerReadLease(KernelBackendSelector owner,
+            KernelBackendSelector.KernelRouteUse use, IKernelBackend backend, KernelBackendMode mode)
+        {
+            _owner = owner; _use = use; _backend = backend;
+            Source = new(backend.Id, backend.DisplayName, backend.Tier.ToString(), mode.ToString(),
+                Guid.NewGuid().ToString("D"), typeof(KernelBackendHost).Assembly.GetName().Version?.ToString() ?? "unknown",
+                backend.Id == "pawnio" ? typeof(LibreHardwareMonitor.Hardware.Computer).Assembly.GetName().Version?.ToString()
+                    : "Embedded LHM 0.9.4 bridge; active module hash unavailable",
+                backend.Id == "pawnio" ? typeof(PawnIoBackend).GetField("ModuleSha256",
+                    System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)?.GetRawConstantValue() as string : null);
+        }
+
+        public bool IsCurrent
+        {
+            get
+            {
+                lock (Gate)
+                    return !_disposeRequested && _use is not null && _initialized && ReferenceEquals(_selector, _owner)
+                        && HardwareOperationGate.CanRunAdvancedDiagnostics;
+            }
+        }
+
+        public ulong? Read(uint index)
+        {
+            if (index is not (0x606 or 0x611))
+                throw new ArgumentOutOfRangeException(nameof(index), "被動功耗診斷只允許 MSR 0x606／0x611。");
+            lock (Gate)
+            {
+                if (!IsCurrent) throw new OperationCanceledException("既有通道或第一級診斷政策已變更；停止讀取。");
+                if (_activeReads != 0) throw new InvalidOperationException("此診斷 lease 只允許一個在途讀取。");
+                _activeReads++;
+            }
+            try
+            {
+                // Retain the lifetime reference, not the host lock, during I/O.
+                // Mode retirement remains responsive while the old backend stays
+                // alive until this operation really returns.
+                ulong? value = _backend.ReadMsr(index);
+                // The diagnostic brackets and rechecks this return, retaining a
+                // revoked read only as raw failed evidence, never as a power endpoint.
+                return value;
+            }
+            finally
+            {
+                KernelBackendSelector.KernelRouteUse? release = null;
+                lock (Gate)
+                {
+                    _activeReads--;
+                    if (_disposeRequested) { release = _use; _use = null; }
+                }
+                release?.Dispose();
+            }
+        }
+
+        public void Dispose()
+        {
+            KernelBackendSelector.KernelRouteUse? use;
+            lock (Gate)
+            {
+                _disposeRequested = true;
+                use = _activeReads == 0 ? _use : null;
+                if (_activeReads == 0) _use = null;
+            }
+            use?.Dispose();
+        }
+    }
+
+    /// <summary>
     /// 診斷快照：每一枚後端的健康與能力（含缺席者與被模式排除者）。
     /// 驅動就緒卡與 <c>backend.*</c> 事實鍵的資料源。
     /// </summary>

@@ -32,9 +32,9 @@ public static class CatFeatureGate
         string reaction = ReactionText(LanguageService.IsEnglish ? AppLanguage.English
             : LanguageService.IsSimplified ? AppLanguage.Simplified : AppLanguage.Traditional);
         if (dialogOwner is null)
-            MessageBox.Show(reaction, "喵！", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(reaction, LanguageService.T("喵！"), MessageBoxButton.OK, MessageBoxImage.Warning);
         else
-            MessageBox.Show(dialogOwner, reaction, "喵！", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(dialogOwner, reaction, LanguageService.T("喵！"), MessageBoxButton.OK, MessageBoxImage.Warning);
         return true;
     }
 

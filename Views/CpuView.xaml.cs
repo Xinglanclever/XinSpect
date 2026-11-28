@@ -7,6 +7,7 @@ namespace XinSpect;
 public partial class CpuView : UserControl
 {
     private readonly DispatcherTimer _rdtTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private CpuPackagePowerDiagnosticWindow? _packagePowerDiagnosticWindow;
 
     public CpuView()
     {
@@ -18,6 +19,23 @@ public partial class CpuView : UserControl
     }
 
     private MainViewModel? Vm => DataContext as MainViewModel;
+
+    private void OpenPackagePowerDiagnostic_Click(object sender, RoutedEventArgs e)
+    {
+        if (_packagePowerDiagnosticWindow is { IsLoaded: true } existing)
+        {
+            if (existing.WindowState == WindowState.Minimized) existing.WindowState = WindowState.Normal;
+            existing.Activate();
+            return;
+        }
+
+        var window = new CpuPackagePowerDiagnosticWindow { Owner = Window.GetWindow(this) };
+        window.DataContext ??= DataContext ?? Vm;
+        window.Loaded += (_, _) => LanguageService.ConvertVisualTree(window, LanguageService.IsSimplified);
+        window.Closed += (_, _) => _packagePowerDiagnosticWindow = null;
+        _packagePowerDiagnosticWindow = window;
+        window.Show();
+    }
 
     private async void ReinitializeAll_Click(object sender, RoutedEventArgs e)
     {

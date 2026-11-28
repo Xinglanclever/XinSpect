@@ -112,7 +112,8 @@ public sealed class CoreLatencyHeatmap : FrameworkElement
         // 圖例：最小／中位／最大（真實數字，不是漸層裝飾）
         var legendFg = new SolidColorBrush(Color.FromRgb(0xC9, 0xCE, 0xD6)); legendFg.Freeze();
         dc.DrawText(new FormattedText(
-                $"最小 {lo:0} ns ・ 中位 {med:0} ns ・ 最大 {hi:0} ns（往返；顏色以中位數為中點分段）",
+                string.Format(CultureInfo.CurrentCulture,
+                    LanguageService.T("最小 {0:0} ns ・ 中位 {1:0} ns ・ 最大 {2:0} ns（往返；顏色以中位數為中點分段）"), lo, med, hi),
                 CultureInfo.InvariantCulture, FlowDirection.LeftToRight, typeface, 11, legendFg, dip),
             new Point(_originX, _originY + cell * n + 6));
     }
@@ -152,8 +153,10 @@ public sealed class CoreLatencyHeatmap : FrameworkElement
             _hoverA = a; _hoverB = b;
             var lps = HeatmapMath.LabelsFor(Lps, n);
             HoverText = lps is null
-                ? $"列 {a} ↔ 列 {b}：{m[a, b]:0.0} ns（原子交換往返；邏輯處理器編號尚未就緒）"
-                : $"LP{lps[a]} ↔ LP{lps[b]}：{m[a, b]:0.0} ns（原子交換往返）";
+                ? string.Format(CultureInfo.CurrentCulture,
+                    LanguageService.T("列 {0} ↔ 列 {1}：{2:0.0} ns（原子交換往返；邏輯處理器編號尚未就緒）"), a, b, m[a, b])
+                : string.Format(CultureInfo.CurrentCulture,
+                    LanguageService.T("LP{0} ↔ LP{1}：{2:0.0} ns（原子交換往返）"), lps[a], lps[b], m[a, b]);
         }
         InvalidateVisual();
     }

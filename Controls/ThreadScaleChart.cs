@@ -111,7 +111,7 @@ public sealed class ThreadScaleChart : FrameworkElement
             var satPen = new Pen(new SolidColorBrush(Color.FromArgb(0x66, 0xD0, 0x3B, 0x3B)), 1.0) { DashStyle = DashStyles.Dash };
             satPen.Freeze();
             dc.DrawLine(satPen, new Point(sx, MT), new Point(sx, MT + h));
-            var satLabel = new FormattedText($"{sat} 核飽和", CultureInfo.InvariantCulture,
+            var satLabel = new FormattedText(string.Format(CultureInfo.CurrentCulture, LanguageService.T("{0} 核飽和"), sat), CultureInfo.InvariantCulture,
                     FlowDirection.LeftToRight, typeface, 9, new SolidColorBrush(Color.FromArgb(0x99, 0xD0, 0x3B, 0x3B)), dip);
             dc.DrawText(satLabel, new Point(sx + 2, MT + 3));
         }
@@ -160,7 +160,7 @@ public sealed class ThreadScaleChart : FrameworkElement
     {
         var brush = new SolidColorBrush(color); brush.Freeze();
         dc.DrawRectangle(brush, null, new Rect(x, ly + 3, 10, 3));
-        var text = new FormattedText(label, CultureInfo.InvariantCulture,
+        var text = new FormattedText(LanguageService.T(label), CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight, typeface, 9, new SolidColorBrush(Color.FromRgb(0x9A, 0xA0, 0xAA)), dip);
         dc.DrawText(text, new Point(x + 14, ly));
         ly += text.Height + 4;

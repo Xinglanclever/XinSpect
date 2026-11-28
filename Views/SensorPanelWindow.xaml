@@ -1,0 +1,109 @@
+<Window x:Class="XinSpect.SensorPanelWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="曦覽 — 自訂感測面板" Width="1180" Height="780" MinWidth="800" MinHeight="560"
+        WindowStartupLocation="CenterOwner" FontFamily="{StaticResource AppFont}"
+        Background="{DynamicResource PagePlaneBrush}" Foreground="{DynamicResource PrimaryInkBrush}"
+        UseLayoutRounding="True">
+    <Window.Resources>
+        <Style TargetType="Button" BasedOn="{StaticResource ToolButton}"/>
+        <Style TargetType="TextBox" BasedOn="{StaticResource SetTextBox}">
+            <Setter Property="Padding" Value="7,4"/>
+        </Style>
+        <Style TargetType="ComboBox" BasedOn="{StaticResource DarkCombo}"/>
+        <Style TargetType="CheckBox"><Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/></Style>
+        <Style x:Key="PanelButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="0,0,6,6"/>
+        </Style>
+    </Window.Resources>
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/><RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <TextBlock Text="自訂感測面板" Style="{StaticResource Title}"/>
+        <WrapPanel Grid.Row="1" Margin="0,12,0,6">
+            <Button x:Name="SaveLayoutButton" Content="儲存本機版面" Style="{StaticResource PanelButton}" Click="Save_Click"/>
+            <Button Content="匯入 JSON…" Style="{StaticResource PanelButton}" Click="Import_Click"/>
+            <Button Content="匯出 JSON…" Style="{StaticResource PanelButton}" Click="Export_Click"/>
+            <CheckBox x:Name="TopmostOption" Content="永遠置頂" VerticalAlignment="Center"
+                      Margin="10,0,12,6" Click="Topmost_Click"/>
+            <TextBlock Text="獨立桌面視窗 · 不會注入遊戲" VerticalAlignment="Center" Margin="0,0,0,6"/>
+        </WrapPanel>
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="280"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <Border Style="{StaticResource Card}" Padding="12">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <TextBlock Text="新增感測磁貼" Style="{StaticResource SectionHeader}"/>
+                        <TextBlock Text="搜尋裝置、名稱或識別碼" Margin="0,0,0,5"/>
+                        <TextBox x:Name="SensorSearch" MinHeight="32" TextChanged="Search_Changed"
+                                 AutomationProperties.Name="搜尋感測器"/>
+                        <ListBox x:Name="SensorPicker" Height="170" Margin="0,8,0,8"
+                                 AutomationProperties.Name="可用感測器，包含各張顯示卡與磁碟"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="3,5" ToolTip="{Binding Details}">
+                                        <TextBlock Text="{Binding Label}" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Identity}" FontSize="11" TextTrimming="CharacterEllipsis"
+                                                   Foreground="{DynamicResource SecondaryInkBrush}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock x:Name="CatalogStatus" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                        <TextBlock Text="顯示方式" Margin="0,0,0,5"/>
+                        <ComboBox x:Name="AddKind" SelectedIndex="0" MinHeight="32"
+                                  AutomationProperties.Name="新增磁貼的顯示方式">
+                            <ComboBoxItem Content="數字"/><ComboBoxItem Content="儀表"/><ComboBoxItem Content="歷史折線"/>
+                        </ComboBox>
+                        <Button x:Name="AddTileButton" Content="加入所選感測器" Margin="0,8,0,12" MinHeight="34" Click="Add_Click"/>
+                        <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,0,0,12"/>
+                        <TextBlock Text="編輯所選磁貼" Style="{StaticResource SectionHeader}"/>
+                        <TextBlock x:Name="SelectedLabel" Text="先選取一個磁貼" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                        <StackPanel x:Name="TileEditor" IsEnabled="False">
+                            <TextBlock Text="儀表／歷史圖刻度（原始單位）" Margin="0,0,0,5"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <StackPanel><TextBlock Text="下限"/><TextBox x:Name="ScaleMin" MinHeight="30" AutomationProperties.Name="刻度下限"/></StackPanel>
+                                <StackPanel Grid.Column="2"><TextBlock Text="上限"/><TextBox x:Name="ScaleMax" MinHeight="30" AutomationProperties.Name="刻度上限"/></StackPanel>
+                            </Grid>
+                            <Button x:Name="ApplyScaleButton" Content="套用刻度" Margin="0,8,0,8" MinHeight="32" Click="Scale_Click"/>
+                            <TextBlock Text="移動磁貼（每次 16）" Margin="0,0,0,5"/>
+                            <UniformGrid Columns="4">
+                                <Button Content="左" Tag="left" Click="Geometry_Click" Style="{StaticResource PanelButton}" AutomationProperties.Name="磁貼向左"/>
+                                <Button Content="上" Tag="up" Click="Geometry_Click" Style="{StaticResource PanelButton}" AutomationProperties.Name="磁貼向上"/>
+                                <Button Content="下" Tag="down" Click="Geometry_Click" Style="{StaticResource PanelButton}" AutomationProperties.Name="磁貼向下"/>
+                                <Button x:Name="MoveRightButton" Content="右" Tag="right" Click="Geometry_Click" Style="{StaticResource PanelButton}" AutomationProperties.Name="磁貼向右"/>
+                            </UniformGrid>
+                            <UniformGrid Columns="2">
+                                <Button Content="縮小" Tag="smaller" Click="Geometry_Click" Style="{StaticResource PanelButton}"/>
+                                <Button Content="放大" Tag="larger" Click="Geometry_Click" Style="{StaticResource PanelButton}"/>
+                            </UniformGrid>
+                            <Button x:Name="RemoveTileButton" Content="移除此磁貼" MinHeight="32" Margin="0,4,0,0" Click="Remove_Click"/>
+                        </StackPanel>
+                        <TextBlock Text="拖曳磁貼標頭移動，拖右下角縮放。聚焦標頭後方向鍵移動，Shift＋方向鍵縮放。"
+                                   TextWrapping="Wrap" Margin="0,12,0,0"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+            <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource HairlineBrush}"
+                    Background="{DynamicResource Surface2Brush}">
+                <Grid>
+                    <ScrollViewer x:Name="BoardScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                        <Canvas x:Name="Board" Width="1600" Height="1200" Background="{DynamicResource PagePlaneBrush}"/>
+                    </ScrollViewer>
+                    <TextBlock x:Name="EmptyHint" Text="從左側選取感測器，建立自己的面板。"
+                               IsHitTestVisible="False" TextWrapping="Wrap" MaxWidth="340"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24"/>
+                </Grid>
+            </Border>
+        </Grid>
+        <TextBlock x:Name="StatusText" Grid.Row="3" Margin="0,10,0,0" TextWrapping="Wrap"
+                   AutomationProperties.LiveSetting="Polite"
+                   Text="關閉時自動儲存本機版面。匯出只含版面與感測器身份，不含歷史讀數。"/>
+    </Grid>
+</Window>

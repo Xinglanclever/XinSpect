@@ -13,9 +13,14 @@
                 </Grid.ColumnDefinitions>
                 <local:SectionHead Grid.Column="0" Text="處理器" HelpKey="cpu/處理器"
                                    Margin="2,0,0,0" VerticalAlignment="Center"/>
-                <Button Grid.Column="1" Style="{StaticResource ToolButton}"
-                        Content="重新擷取最新資料（全機）" IsEnabled="{Binding CanReinitialize}"
-                        Click="ReinitializeAll_Click"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Style="{StaticResource ToolButton}" Content="封裝功率唯讀診斷" Margin="0,0,8,0"
+                            AutomationProperties.Name="{Binding Content, RelativeSource={RelativeSource Self}}"
+                            ToolTip="開啟封裝功率唯讀診斷；須開啟進階診斷並明確開始，不會自動擷取或施加負載" Click="OpenPackagePowerDiagnostic_Click"/>
+                    <Button Style="{StaticResource ToolButton}"
+                            Content="重新擷取最新資料（全機）" IsEnabled="{Binding CanReinitialize}"
+                            Click="ReinitializeAll_Click"/>
+                </StackPanel>
             </Grid>
 
             <!-- 品牌徽章 -->

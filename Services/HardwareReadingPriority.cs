@@ -86,6 +86,7 @@ internal static class HardwareReadingPriority
                 || t.DramFrequencyMHz == 0 && Known(t.DataRateText)));
         var result = new MemoryTimings
         {
+            Controller = MemoryControllerService.FromTimings(direct, wmi, report),
             Loaded = timing?.Loaded == true,
             IsJedecReference = timing?.IsJedecReference == true,
             MemoryTypeText = Pick(direct?.MemoryTypeText, wmi?.MemoryTypeText, report?.MemoryTypeText),

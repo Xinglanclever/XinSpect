@@ -19,6 +19,8 @@ namespace XinSpect;
 /// </remarks>
 public sealed class M2KeyDiagram : FrameworkElement
 {
+    public M2KeyDiagram() => this.RepaintOnThemeChange();
+
     private const int TotalPins = 67;
 
     // Key 名稱、缺口腳位範圍（起、迄），可有第二個缺口（B+M）
@@ -95,7 +97,7 @@ public sealed class M2KeyDiagram : FrameworkElement
             }
 
             // 用途
-            var useTxt = new FormattedText(use, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+            var useTxt = new FormattedText(LanguageService.T(use), CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
                 tf, 10, muted, 1.25) { MaxTextWidth = barW - 4 };
             dc.DrawText(useTxt, new Point(x0 + 2, y + 20));
         }

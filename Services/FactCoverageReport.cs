@@ -625,7 +625,7 @@ public static class FactCoverageReport
         ["ac.cpc.summary"] = "CPPC 能力輪廓（AC-002）：CPUID／事件／登錄三個 OS 層來源；**刻意不解碼 AML 的 _CPC 物件**——解不出來卻有值比誠實說沒有更糟。",
         ["gp.present.summary"] = "幀呈現觀測（GP-003）：呈現鏈路 liveness 三態單一來源；**「沒看到」不等於「沒有畫面」**，呈現模式不解析就不顯示。",
         ["gp.present.count"] = "逐行程呈現計數（GP-003）：以 pid 與匿名序號表示，**不列行程名稱**；事件數不是幀數保證，不當 FPS 用。",
-        ["gp.pollrate"] = "滑鼠輪詢率（GP-004）：Raw Input 取樣量測；取樣窗內無輸入是不適用不是 0 Hz，且取樣期間必須標註。",
+        ["gp.pollrate"] = "滑鼠報告到達率（GP-004）：由滑鼠檢測視窗明確啟動 Raw Input 取樣，依裝置分組；未取樣或無輸入為 Unknown，不是 0 Hz 或沒有滑鼠。保留取樣窗，接收端頻率不代表實體 USB 輪詢率。",
         ["uf.retry."] = "更新失敗重試鏈（UF-002）：wu.history 的聚合視角；重試不等於失敗，門檻看失敗次數不是嘗試次數。",
         ["mu.drm.components"] = "DRM 元件盤點（MU-003）：固定候選機碼清單的存在性與版本；元件存在不等於可播，不讀授權、金鑰或內容識別碼。",
         ["mu.spatial.formats"] = "空間音訊格式（MU-006）：格式註冊名稱清單；支援格式與目前使用中是兩件事，格式名不在地化。",

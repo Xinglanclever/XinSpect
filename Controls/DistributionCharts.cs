@@ -290,7 +290,8 @@ public sealed class HistogramChart : FrameworkElement
         dc.DrawText(Format(last, 9.5, VizPalette.Muted), new Point(padLeft + plotW - 64, h - 14));
 
         // 摘要小字（右上）：筆數與分桶方式——標線之外，這張圖怎麼算出來的也要說明白
-        var note = Format($"{result.Used:N0} 筆 ・ {(LogBuckets ? "對數" : "等寬")}分桶", 9.5, VizPalette.Muted);
+        var note = Format(string.Format(CultureInfo.CurrentCulture,
+            LanguageService.T(LogBuckets ? "{0:N0} 筆 ・ 對數分桶" : "{0:N0} 筆 ・ 等寬分桶"), result.Used), 9.5, VizPalette.Muted);
         dc.DrawText(note, new Point(Math.Max(padLeft, w - padRight - note.Width), padTop));
     }
 
@@ -308,7 +309,7 @@ public sealed class HistogramChart : FrameworkElement
     }
 
     private void DrawEmpty(DrawingContext dc, double w, double h)
-        => dc.DrawText(Format("沒有樣本", 12, VizPalette.Muted), new Point(w / 2 - 28, h / 2 - 8));
+        => dc.DrawText(Format(LanguageService.T("沒有樣本"), 12, VizPalette.Muted), new Point(w / 2 - 28, h / 2 - 8));
 
     private void AxisText(DrawingContext dc, string text, double x, double y, bool right)
     {
@@ -363,7 +364,7 @@ public sealed class EcdfChart : FrameworkElement
         var pts = LatencyDistributionMath.Ecdf(Values?.Points ?? []);
         if (pts.Length == 0)
         {
-            dc.DrawText(Format("沒有樣本", 12, VizPalette.Muted), new Point(w / 2 - 28, h / 2 - 8));
+            dc.DrawText(Format(LanguageService.T("沒有樣本"), 12, VizPalette.Muted), new Point(w / 2 - 28, h / 2 - 8));
             return;
         }
 

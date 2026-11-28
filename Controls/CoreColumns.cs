@@ -233,7 +233,8 @@ public sealed class CoreColumns : FrameworkElement
         }
 
         if (!labels)
-            dc.DrawText(new FormattedText($"{n} 核（管子太窄，省略編號；由左至右為核心 0 起算）",
+            dc.DrawText(new FormattedText(string.Format(CultureInfo.CurrentCulture,
+                    LanguageService.T("{0} 核（管子太窄，省略編號；由左至右為核心 0 起算）"), n),
                     CultureInfo.InvariantCulture, FlowDirection.LeftToRight, typeface, 9, muted, dip),
                 new Point(0, h + 2));
     }

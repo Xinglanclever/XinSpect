@@ -9,11 +9,12 @@ namespace XinSpect.Tests;
 
 public sealed class SensorCrossCheckTests
 {
-    [Fact]
-    public void CpuPackagePowerDisplayUsesPlausibleLiveLhmReadingWithoutApprovingAnalysisPower()
+    [Theory]
+    [InlineData(81f, "81 W（未驗證）")]
+    [InlineData(1.3f, "1.3 W（未驗證）")]
+    public void CpuPackagePowerDisplayUsesPlausibleLiveLhmReadingWithoutApprovingAnalysisPower(float power, string expectedDisplay)
     {
         Assert.False(RaplEnergyGate.IsProbing);
-        float power = 81;
         var sensor = DispatchProxy.Create<ISensor, HardwareProxy>();
         ((HardwareProxy)(object)sensor).InvokeMethod = (method, _) => method.Name switch
         {
@@ -26,12 +27,23 @@ public sealed class SensorCrossCheckTests
         var computer = FakeComputer(cpu);
         using var service = new SensorService(computer, () => { }, () => { });
 
-        Assert.Equal(81, service.CpuPackagePowerSensorW);
-        Assert.Equal("81 W", service.CpuPackagePowerSensorText);
+        Assert.Equal((double)power, service.CpuPackagePowerSensorW);
+        Assert.Equal(expectedDisplay, service.CpuPackagePowerSensorText);
         Assert.Contains("LibreHardwareMonitor「CPU Package」", service.CpuPowerStateText);
         Assert.Contains("RAPL", service.CpuPowerStateText);
+        Assert.Contains("不代表已確認的實際封裝功耗", service.CpuPowerStateText);
         Assert.Null(service.CpuPowerW);
         Assert.False(RaplEnergyGate.IsProbing);
+        Assert.Equal("—（驗證未通過）",
+            SensorService.FormatCpuPackagePowerSensorText(power, RaplGateVerdict.NotResponding));
+        Assert.Equal(expectedDisplay,
+            SensorService.FormatCpuPackagePowerSensorText(power, RaplGateVerdict.NoCounter));
+        Assert.Equal(expectedDisplay.Replace("（未驗證）", ""),
+            SensorService.FormatCpuPackagePowerSensorText(power, RaplGateVerdict.Trusted));
+        Assert.Equal("—", SensorService.FormatCpuPackagePowerSensorText(null, RaplGateVerdict.Trusted));
+        var history = new float[HistoryMetrics.Count];
+        HistoryMetrics.Read(service, history);
+        Assert.Equal(0, history[HistoryMetrics.CpuPower]);
 
         power = 99_999;
         service.Poll();

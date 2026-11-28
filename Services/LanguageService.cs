@@ -4,8 +4,6 @@ using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Media;
 using OpenccNetLib;
 
 namespace XinSpect;
@@ -17,7 +15,7 @@ namespace XinSpect;
 /// <para>
 /// 轉換策略分三層：
 /// ① 硬編碼在 XAML 裡的文字 → 頁面載入時由 <see cref="ConvertVisualTree"/> 遍歷轉換。
-/// ② 透過 Binding 顯示的文字 → 由全域 <see cref="ChineseConverter"/> 掛在 Binding.Converter 上。
+/// ② Binding 與稍後變動的顯示文字 → WpfLocalizationBridge 保留原繫結並監看顯示屬性。
 /// ③ 程式碼裡產生的文字（HelpCatalog、Changelog、狀態列）→ 在產出點呼叫 <see cref="T"/>。
 /// </para>
 /// <para>
@@ -27,6 +25,19 @@ namespace XinSpect;
 /// </remarks>
 public static class LanguageService
 {
+    /// <summary>明確標記產品顯示文案；唯讀 TextBox 須選用此標記，原始紀錄／使用者內容維持預設停用。</summary>
+    public static readonly DependencyProperty IsUiTextProperty = DependencyProperty.RegisterAttached(
+        "IsUiText", typeof(bool), typeof(LanguageService), new FrameworkPropertyMetadata(false));
+    public static void SetIsUiText(DependencyObject target, bool value) => target.SetValue(IsUiTextProperty, value);
+    public static bool GetIsUiText(DependencyObject target) => (bool)target.GetValue(IsUiTextProperty);
+
+    /// <summary>原始證據、硬體識別或已逐段組合的字串；此標記連同後代一律不做整串翻譯。</summary>
+    public static readonly DependencyProperty IsRawTextProperty = DependencyProperty.RegisterAttached(
+        "IsRawText", typeof(bool), typeof(LanguageService),
+        new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.Inherits));
+    public static void SetIsRawText(DependencyObject target, bool value) => target.SetValue(IsRawTextProperty, value);
+    public static bool GetIsRawText(DependencyObject target) => (bool)target.GetValue(IsRawTextProperty);
+
     private static readonly Lazy<Opencc> TraditionalToSimplified = new(
         () => new Opencc(OpenccConfig.Tw2Sp, isFrozen: true),
         LazyThreadSafetyMode.ExecutionAndPublication);
@@ -93,10 +104,15 @@ public static class LanguageService
     }
 
     public static void Initialize(SettingsService settings)
+        => Initialize(settings.SimplifiedChinese, settings.IsEnglish, settings.CatLanguage);
+
+    /// <summary>啟動前只載入語言旗標；不建構設定服務、不寫設定、不初始化硬體後端。</summary>
+    internal static void Initialize(bool simplifiedChinese, bool isEnglish, bool catLanguage)
     {
-        _simplified = settings.SimplifiedChinese;
-        _isEnglish = settings.IsEnglish;
-        _catLanguageSelected = settings.CatLanguage;
+        _simplified = simplifiedChinese;
+        _isEnglish = isEnglish;
+        _catLanguageSelected = catLanguage;
+        WpfLocalizationBridge.Initialize();
     }
 
     /// <summary>啟用或停用貓貓語喵時保留既有繁／簡／英語偏好。</summary>
@@ -104,11 +120,7 @@ public static class LanguageService
     {
         _catLanguageSelected = enabled;
         settings.CatLanguage = enabled;
-        if (Shell.Main is { } main)
-        {
-            ConvertVisualTree(main, _simplified);
-            main.RebuildNavIfNeeded();
-        }
+        RefreshPresentation();
         Changed?.Invoke();
         NotifyLanguageDependentLists?.Invoke();
     }
@@ -130,12 +142,7 @@ public static class LanguageService
         }
         settings.SimplifiedChinese = _simplified;
         settings.IsEnglish = _isEnglish;
-        if (Shell.Main is { } main)
-        {
-            // 兩種模式都走同一棵樹：簡體由共用 OpenCC 服務轉，英語由 FromOriginal 的翻譯表分支轉。
-            ConvertVisualTree(main, _simplified);
-            main.RebuildNavIfNeeded();
-        }
+        RefreshPresentation();
         Changed?.Invoke();
     }
 
@@ -143,21 +150,12 @@ public static class LanguageService
     /// 切換語言並立即套用到整棵視覺樹。
     /// </summary>
     public static void SetLanguage(bool simplified, SettingsService settings)
+        => SetLanguage(simplified ? AppLanguage.Simplified : AppLanguage.Traditional, settings);
+
+    private static void RefreshPresentation()
     {
-        _simplified = simplified;
-        _catLanguageSelected = false;
-        settings.CatLanguage = false;
-        settings.SimplifiedChinese = simplified;
-
-        // 轉換整棵視覺樹
-        if (Shell.Main is { } main)
-        {
-            ConvertVisualTree(main, simplified);
-            // 重建導覽（頁面標題需要轉換）
-            main.RebuildNavIfNeeded();
-        }
-
-        Changed?.Invoke();
+        WpfLocalizationBridge.RefreshAll();
+        if (Shell.Main is { } main && main.Dispatcher.CheckAccess()) main.RebuildNavIfNeeded();
     }
 
     /// <summary>
@@ -176,13 +174,14 @@ public static class LanguageService
     private static string TranslateBase(string? text)
     {
         if (string.IsNullOrEmpty(text)) return text ?? "";
-        if (_isEnglish) return EnglishStrings.Lookup(text) ?? text;
+        if (_isEnglish) return UiTextTranslation.ToEnglish(text);
         // 若輸入是英語模式的產物，先反查繁中再轉，切換語系可往返。
         if (EnglishStrings.Reverse(text) is { } zhOriginal) text = zhOriginal;
-        return _simplified ? ToSimplified(text) : text;
+        else if (UiTextTranslation.OriginalFromEnglishTemplate(text) is { } templateOriginal) text = templateOriginal;
+        return UiTextTranslation.TranslateTemplate(text, _simplified) ?? (_simplified ? ToSimplified(text) : text);
     }
 
-    private static string Catify(string source, string localized)
+    internal static string Catify(string source, string localized)
     {
         if (!IsCatLanguage || !HasChineseProse(source)) return localized;
 
@@ -232,6 +231,7 @@ public static class LanguageService
     {
         if (string.IsNullOrEmpty(text)) return text ?? "";
         if (!_isEnglish) return Catify(text, TranslateBase(text));
+        if (UiTextTranslation.ToEnglish(text) is { } translated && translated != text) return Catify(text, translated);
         if (EnglishStrings.Lookup(text) is { } whole) return Catify(text, whole);
 
         var parts = text.Split(" ・ ");
@@ -277,154 +277,53 @@ public static class LanguageService
         return SimplifiedToTraditional.Value.Convert(text);
     }
 
-    // 原文保存：第一次轉換某屬性時把原文（XAML 裡的繁體）存起來，之後永遠從原文出發轉換——
-    // 繁體＝原文（無損）、簡體＝ToSimplified(原文)，往返可逆且冪等（根治「暫存→缓存→快取」漂移）。
-    private static readonly ConditionalWeakTable<DependencyObject, Dictionary<string, string>> _orig = new();
-
-    private static string FromOriginal(DependencyObject o, string slot, string current, bool simplified)
+    private sealed class TextOrigin(string original)
     {
-        // 存槽正規化（無條件）：若 current 是英語模式的產物（翻譯表的值），先反查回繁中鍵再存。
-        // 場景：英語模式下 T() 寫進控制項的英文字串 → 之後切簡體才對這棵樹跑轉換——
-        // 此時 _isEnglish 已是 false，若只在英語分支做正規化就漏掉這條路，
-        // 英文字串被當「原文」釘在槽裡，簡體轉換原樣放行——使用者看到的「簡體模式夾英文」。
-        // 正規化必須在讀槽「之前」對 current 做：鍵值零碰撞（有測試釘住）故不會誤傷繁中鍵。
-        current = RemoveCatEnding(current);
-        if (EnglishStrings.Reverse(current) is { } zhKey) current = zhKey;
-        var map = _orig.GetOrCreateValue(o);
-        if (!map.TryGetValue(slot, out var original)) { original = current; map[slot] = current; }
-        // 英語模式優先：未收錄回繁中原文。永遠從原文出發，繁／簡／英三方往返可逆、冪等。
-        string localized = _isEnglish ? EnglishStrings.Lookup(original) ?? original
-            : simplified ? ToSimplified(original) : original;
-        return Catify(original, localized);
+        public string Original = original;
+        public string LastRendered = original;
     }
 
-    /// <summary>
-    /// 轉換自繪控制項的字串相依屬性（FieldRow.Label、RadialGauge.Caption…）。
-    /// 這類屬性不在 <see cref="TextBlock"/> 上，視覺樹遍歷碰不到；
-    /// 但它們通常以 RelativeSource 繫結到控制項自己的內部 TextBlock，所以改 DP 畫面就會跟著變。
-    /// <b>DP 本身是繫結來的就跳過</b>——直接寫入會把繫結覆蓋掉，來源之後再變也不會更新。
-    /// </summary>
-    private static void TranslateStringDp(DependencyObject d, DependencyProperty prop, string slot, bool simplified)
+    // 原文與最近一次輸出分開保存；程式稍後重新指定文字時，不能還原成第一次載入的舊值。
+    private static readonly ConditionalWeakTable<DependencyObject, Dictionary<string, TextOrigin>> Origins = new();
+
+    internal static string FromOriginal(DependencyObject target, string slot, string current, bool simplified,
+        bool allowEnglishReverse = true, bool knownOnly = false)
     {
-        if (d.GetValue(prop) is not string s || s.Length == 0) return;
-        if (BindingOperations.IsDataBound(d, prop)) return;
-        string converted = FromOriginal(d, slot, s, simplified);
-        if (!ReferenceEquals(converted, s) && converted != s) d.SetValue(prop, converted);
+        var map = Origins.GetOrCreateValue(target);
+        if (!map.TryGetValue(slot, out var origin))
+            map[slot] = origin = new TextOrigin(knownOnly ? current : Normalize(current, allowEnglishReverse));
+        else if (current != origin.LastRendered && current != origin.Original)
+            origin.Original = knownOnly ? current : Normalize(current, allowEnglishReverse);
+
+        string original = origin.Original;
+        string localized = knownOnly ? UiTextTranslation.KnownDisplayText(original, _isEnglish, simplified)
+            : _isEnglish ? UiTextTranslation.ToEnglish(original)
+            : UiTextTranslation.TranslateTemplate(original, simplified)
+              ?? (simplified ? ToSimplified(original) : original);
+        return origin.LastRendered = knownOnly ? localized : Catify(original, localized);
     }
 
-    /// <summary>
-    /// 遍歷視覺樹把硬編碼文字轉為目前語言。永遠從保存的原文出發，故可逆、冪等——
-    /// 快取頁重新顯示、多次往返都不會累積損失。有 Binding 的走 <see cref="ChineseConverter"/>，此處不動。
-    /// 涵蓋 TextBlock.Text／Run 行內文字／ContentControl.Content／Header／任何 FrameworkElement 的字串 ToolTip。
-    /// </summary>
+    private static string Normalize(string text, bool allowEnglishReverse)
+    {
+        text = RemoveCatEnding(text);
+        if (allowEnglishReverse && EnglishStrings.Reverse(text) is { } original) return original;
+        if (allowEnglishReverse && UiTextTranslation.OriginalFromEnglishTemplate(text) is { } templateOriginal)
+            return templateOriginal;
+        if (UiTextTranslation.ContainsChinese(text) && EnglishStrings.Lookup(text) is null)
+        {
+            string traditional = ToTraditional(text);
+            if (EnglishStrings.Lookup(traditional) is not null) return traditional;
+        }
+        return text;
+    }
+
+    /// <summary>轉換顯示樹並持續追蹤後續變動；保留 Binding、converter、StringFormat 與行內格式。</summary>
     public static void ConvertVisualTree(DependencyObject root, bool simplified)
-    {
-        if (root is null) return;
-        ConvertNode(root, simplified);
-        int count = VisualTreeHelper.GetChildrenCount(root);
-        for (int i = 0; i < count; i++)
-            ConvertVisualTree(VisualTreeHelper.GetChild(root, i), simplified);
-    }
+        => WpfLocalizationBridge.ConvertTree(root, simplified);
 
-    private static void ConvertNode(DependencyObject d, bool simplified)
-    {
-        // Popup（ComboBox 下拉、ContextMenu、ToolTip 的宿主）不是視覺子節點，內容要自己走一遍。
-        if (d is System.Windows.Controls.Primitives.Popup { Child: { } popupChild })
-            ConvertVisualTree(popupChild, simplified);
-
-        // 自繪控制項的文字是「自訂相依屬性」，不是 TextBlock.Text——遍歷看不到，翻譯表也永遠碰不到。
-        // 這些屬性大多以 RelativeSource 繫結到自己的內部 TextBlock，所以改 DP 就等於改畫面。
-        // 兩件事必須顧到：
-        // ① 一定要先確認控制項型別。相依屬性的預設值是「整型別共用」的——對任何物件呼叫
-        //    GetValue(AnalogVoltMeter.CaptionProperty) 都會拿到預設字串「電壓錶」，
-        //    不擋型別就會把譯文寫到無關的節點上。
-        // ② DP 本身是繫結來的就跳過（例如 Label="{Binding Label}"），寫入會覆蓋繫結。
-        // 只收「版面標籤」性質的字串：FieldRow.Value 這類承載資料的屬性刻意不碰。
-        switch (d)
-        {
-            case FieldRow:
-                TranslateStringDp(d, FieldRow.LabelProperty, "Label", simplified);
-                break;
-            case RadialGauge:
-                TranslateStringDp(d, RadialGauge.CaptionProperty, "Caption", simplified);
-                TranslateStringDp(d, RadialGauge.UnitProperty, "Unit", simplified);
-                break;
-            case HistoryGraph:
-                TranslateStringDp(d, HistoryGraph.CaptionProperty, "Caption", simplified);
-                break;
-            case Oscilloscope:
-                TranslateStringDp(d, Oscilloscope.CaptionProperty, "Caption", simplified);
-                break;
-            case AnalogVoltMeter:
-                TranslateStringDp(d, AnalogVoltMeter.CaptionProperty, "Caption", simplified);
-                break;
-            case DonutChart:
-                TranslateStringDp(d, DonutChart.CaptionProperty, "Caption", simplified);
-                TranslateStringDp(d, DonutChart.Caption2Property, "Caption2", simplified);
-                TranslateStringDp(d, DonutChart.SubTextProperty, "SubText", simplified);
-                break;
-        }
-
-        if (d is SectionHead sh)
-        {
-            // SectionHead 的標題 TextBlock 是內部繫結，下面的 TextBlock 分支會因「有繫結」而跳過；
-            // 在這裡直接轉外露的 Text 屬性，繫結會把結果帶到內部。
-            TranslateStringDp(sh, SectionHead.TextProperty, "Text", simplified);
-        }
-
-        if (d is TextBlock tb)
-        {
-            // 有繫結的 TextBlock 一律不碰。兩個理由：
-            // ① 它的文字來自 ViewModel，該由 ChineseConverter／LangFormatConverter 翻譯；
-            // ② 更關鍵的是——WPF 會把「繫結來的文字」表示成一個隱式 Run，所以 Inlines.Count > 0
-            //    對有繫結的 TextBlock 也成立。舊碼因此走進 Inlines 分支、直接寫 r.Text，
-            //    這會把繫結覆蓋掉：文字定在翻譯當下的那一版，之後來源再變（時鐘每一拍、
-            //    狀態列、即時讀值）都不會更新。1015 處 Text="{Binding …}" 全中，且繁簡英三模式
-            //    都發生（繁是「原文＝譯文」看不出來，簡英最明顯）。2026-10-08 修。
-            if (tb.GetBindingExpression(TextBlock.TextProperty) is null)
-            {
-                if (tb.Inlines.Count > 0)
-                {
-                    // 先快照成清單再改：改 Run.Text 會觸發 InlineCollection 變更，邊列舉邊改會丟例外。
-                    foreach (var r in tb.Inlines.OfType<Run>().ToList())
-                        if (r.GetBindingExpression(Run.TextProperty) is null && !string.IsNullOrEmpty(r.Text))
-                            r.Text = FromOriginal(r, "Text", r.Text, simplified);
-                }
-                else if (!string.IsNullOrEmpty(tb.Text))
-                {
-                    tb.Text = FromOriginal(tb, "Text", tb.Text, simplified);
-                }
-            }
-        }
-        else if (d is ContentControl cc)   // 涵蓋 Button 等；HeaderedContentControl 亦是，故 Content 與 Header 都查
-        {
-            if (cc.Content is string s && !string.IsNullOrEmpty(s) && cc.GetBindingExpression(ContentControl.ContentProperty) is null)
-                cc.Content = FromOriginal(cc, "Content", s, simplified);
-            if (cc is HeaderedContentControl hcc && hcc.Header is string h && !string.IsNullOrEmpty(h))
-                hcc.Header = FromOriginal(hcc, "Header", h, simplified);
-        }
-        if (d is FrameworkElement fe && fe.ToolTip is string tip && !string.IsNullOrEmpty(tip))
-            fe.ToolTip = FromOriginal(fe, "ToolTip", tip, simplified);
-
-        // 下拉選單／右鍵選單的項目活在 Popup 裡，不是主視窗的視覺子節點——不特別處理就會永遠停在原文。
-        // ComboBoxItem 本身就是 ContentControl，直接轉它的 Content 即可（不必展開下拉）。
-        if (d is ItemsControl items && items.Items.Count > 0)
-        {
-            foreach (var item in items.Items)
-                if (item is DependencyObject child) ConvertNode(child, simplified);
-        }
-        if (d is ContextMenu menu)
-            foreach (var item in menu.Items)
-                if (item is DependencyObject child) ConvertNode(child, simplified);
-        // ToolTip 物件形式（非字串）同樣在 Popup 裡
-        if (d is FrameworkElement fe2 && fe2.ToolTip is DependencyObject tipObj)
-            ConvertNode(tipObj, simplified);
-    }
-
-    /// <summary>
-    /// 頁面顯示時呼叫：把該頁轉為目前語言（含繁體＝還原原文）。冪等，可安全重複呼叫。
-    /// </summary>
+    /// <summary>快取頁面及延後載入頁面共用同一條語言生命週期。</summary>
     public static void ConvertPage(UserControl page) => ConvertVisualTree(page, _simplified);
+
 }
 
 /// <summary>
@@ -436,7 +335,9 @@ public sealed class ChineseConverter : IValueConverter
     public static readonly ChineseConverter Instance = new();
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is string s ? LanguageService.T(s) : value ?? "";
+        // 英文裝置名稱（例如 Memory）、路徑不是繁中 UI 原文，不能用 Reverse 當成翻譯來源。
+        => value is string s && UiTextTranslation.ContainsChinese(s) && !WpfLocalizationBridge.LooksLikePath(s)
+            ? LanguageService.T(s) : value ?? "";
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();

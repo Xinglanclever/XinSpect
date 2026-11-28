@@ -31,6 +31,7 @@ public sealed class DimmMap : FrameworkElement
     public DimmMap()
     {
         this.RepaintOnThemeChange();
+        LanguageService.SetIsRawText(this, true);
         SnapsToDevicePixels = true;
         // 伺服器板一列可能有 12 個插槽；擠不下時寧可裁掉，也不要把字畫到隔壁通道上
         ClipToBounds = true;
@@ -39,6 +40,22 @@ public sealed class DimmMap : FrameworkElement
 
     /// <summary>本次繪製的插槽落點，供滑鼠停留時查出是哪一槽。</summary>
     private readonly List<(Rect Box, DimmSlotView Slot)> _hit = [];
+    private DimmSlotView? _hoveredSlot;
+
+    private static string SlotTip(DimmSlotView slot)
+    {
+        string Line(string template, string value)
+            => string.Format(CultureInfo.CurrentCulture, LanguageService.T(template), value);
+        if (!slot.Occupied) return Line("插槽：{0}", slot.Locator) + "\n" + LanguageService.T("狀態：未安裝模組");
+        return string.Join("\n", new[]
+        {
+            Line("插槽：{0}", slot.Locator),
+            slot.VendorText.Length > 0 ? Line("製造商：{0}", slot.VendorText) : "",
+            slot.PartText.Length > 0 ? Line("型號：{0}", slot.PartText) : "",
+            slot.SizeText.Length > 0 ? Line("容量：{0}", slot.SizeText) : "",
+            slot.SpeedText.Length > 0 ? Line("速率：{0}", slot.SpeedText) : "",
+        }.Where(line => line.Length > 0));
+    }
 
     protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
     {
@@ -47,9 +64,12 @@ public sealed class DimmMap : FrameworkElement
         foreach (var (box, slot) in _hit)
         {
             if (!box.Contains(p)) continue;
-            if (ToolTip as string != slot.Tip) ToolTip = slot.Tip;
+            _hoveredSlot = slot;
+            string tip = SlotTip(slot);
+            if (ToolTip as string != tip) ToolTip = tip;
             return;
         }
+        _hoveredSlot = null;
         ToolTip = null;
     }
 
@@ -70,7 +90,9 @@ public sealed class DimmMap : FrameworkElement
 
         if (view is null || !view.HasData)
         {
-            Text(dc, "沒有插槽資料可畫。", 12.5, faint, 2, 4);
+            _hoveredSlot = null;
+            ToolTip = null;
+            Text(dc, LanguageService.T("沒有插槽資料可畫。"), 12.5, faint, 2, 4);
             return;
         }
 
@@ -78,7 +100,8 @@ public sealed class DimmMap : FrameworkElement
         foreach (var chan in view.Channels)
         {
             // 通道名（推不出通道時 DimmLayout 只給一組，名字是「插槽」）
-            Text(dc, chan.Name, 12.5, faint, 0, y + SlotH / 2 - 9);
+            string channel = UiTextTranslation.KnownDisplayText(chan.Name, LanguageService.IsEnglish, LanguageService.IsSimplified);
+            Text(dc, channel, 12.5, faint, 0, y + SlotH / 2 - 9);
 
             double x = LabelW;
             int n = Math.Max(1, chan.Slots.Count);
@@ -95,6 +118,7 @@ public sealed class DimmMap : FrameworkElement
             }
             y += SlotH + RowGap;
         }
+        if (_hoveredSlot is { } hovered) ToolTip = SlotTip(hovered);
     }
 
     private void DrawSlot(DrawingContext dc, Rect r, DimmSlotView s, Brush ink, Brush faint)
@@ -119,7 +143,7 @@ public sealed class DimmMap : FrameworkElement
 
         // 標籤（A1／DIMM0）＋第二行（容量・速率 或 空）
         var label = Format(s.Label, 12.5, s.Occupied ? ink : faint, r.Width - 12);
-        var detail = Format(s.Detail, 11, faint, r.Width - 12);
+        var detail = Format(s.Occupied ? s.Detail : LanguageService.T("空"), 11, faint, r.Width - 12);
         double th = label.Height + detail.Height;
         double ty = r.Y + (r.Height - th) / 2;
         dc.DrawText(label, new Point(r.X + 8, ty));

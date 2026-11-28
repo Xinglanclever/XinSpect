@@ -16,8 +16,23 @@ namespace XinSpect;
 /// </remarks>
 public static class ThemeAware
 {
-    /// <summary>訂閱外觀變更，變更後對此元件呼叫 <see cref="UIElement.InvalidateVisual"/>。</summary>
-    public static void RepaintOnThemeChange(this FrameworkElement el) => el.OnThemeChange(el.InvalidateVisual);
+    /// <summary>訂閱外觀與語言變更，讓已繪製的文字和配色一起更新。</summary>
+    public static void RepaintOnThemeChange(this FrameworkElement el)
+    {
+        el.OnThemeChange(el.InvalidateVisual);
+        void Handler()
+        {
+            if (el.Dispatcher.CheckAccess()) { el.InvalidateMeasure(); el.InvalidateVisual(); }
+            else el.Dispatcher.BeginInvoke(new Action(Handler));
+        }
+        el.Loaded += (_, _) =>
+        {
+            LanguageService.Changed -= Handler;
+            LanguageService.Changed += Handler;
+            Handler();
+        };
+        el.Unloaded += (_, _) => LanguageService.Changed -= Handler;
+    }
 
     /// <summary>訂閱外觀變更並執行指定動作（自繪內容不是走 <c>OnRender</c> 的元件用這個）。</summary>
     public static void OnThemeChange(this FrameworkElement el, Action redraw)

@@ -1,0 +1,141 @@
+<Window x:Class="XinSpect.DiskSpaceWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:XinSpect"
+        Title="曦覽 · 磁碟空間分析" Width="1200" Height="820" MinWidth="940" MinHeight="650"
+        WindowStartupLocation="CenterOwner" FontFamily="{StaticResource AppFont}"
+        Background="{DynamicResource PagePlaneBrush}" Foreground="{DynamicResource PrimaryInkBrush}"
+        UseLayoutRounding="True" Closing="Window_Closing">
+    <Window.Resources>
+        <HierarchicalDataTemplate DataType="{x:Type local:DiskSpaceNode}" ItemsSource="{Binding Children}">
+            <TextBlock Text="{Binding DisplayText}" ToolTip="{Binding Detail}"/>
+        </HierarchicalDataTemplate>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+        </Style>
+        <Style x:Key="ScanButton" TargetType="Button" BasedOn="{StaticResource ToolButton}">
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Margin" Value="6,0,0,0"/>
+            <Setter Property="MinWidth" Value="80"/>
+        </Style>
+        <Style x:Key="StartScanButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Margin" Value="6,0,0,0"/>
+            <Setter Property="MinWidth" Value="80"/>
+        </Style>
+        <Style TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="CanUserDeleteRows" Value="False"/>
+            <Setter Property="EnableRowVirtualization" Value="True"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="Background" Value="{DynamicResource PagePlaneBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
+        </Style>
+    </Window.Resources>
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel>
+            <TextBlock Text="磁碟空間分析" FontSize="24" FontWeight="SemiBold"/>
+            <TextBlock Margin="0,4,0,12" TextWrapping="Wrap" Foreground="{DynamicResource MutedInkBrush}"
+                       Text="選擇目錄後手動開始；唯讀列舉檔案中繼資料，不讀取內容。結果保留在本機記憶體，匯出時才寫入指定的報告。"/>
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button x:Name="BrowseButton" Content="選擇目錄…" Style="{StaticResource ScanButton}" Click="Browse_Click"/>
+                    <Button x:Name="StartButton" Content="開始分析" Style="{StaticResource StartScanButton}" Click="Start_Click"/>
+                    <Button x:Name="CancelButton" Content="取消" IsEnabled="False" Style="{StaticResource ScanButton}" Click="Cancel_Click"/>
+                </StackPanel>
+                <TextBox x:Name="DirectoryBox" Style="{StaticResource SetTextBox}" VerticalContentAlignment="Center" Padding="6" AutomationProperties.Name="分析目錄完整路徑"/>
+            </DockPanel>
+            <WrapPanel x:Name="BudgetPanel" Margin="0,10,0,0">
+                <TextBlock Text="最多項目" Style="{StaticResource FieldLabel}"/>
+                <TextBox x:Name="EntriesBox" Style="{StaticResource SetTextBox}" Text="200000" Width="90" Padding="5,3" Margin="0,0,16,0" AutomationProperties.Name="最多項目，1 到 1000000"/>
+                <TextBlock Text="深度" Style="{StaticResource FieldLabel}"/>
+                <TextBox x:Name="DepthBox" Style="{StaticResource SetTextBox}" Text="64" Width="55" Padding="5,3" Margin="0,0,16,0" AutomationProperties.Name="目錄深度上限，0 到 256"/>
+                <TextBlock Text="時間預算（秒）" Style="{StaticResource FieldLabel}"/>
+                <TextBox x:Name="SecondsBox" Style="{StaticResource SetTextBox}" Text="30" Width="65" Padding="5,3" Margin="0,0,16,0" AutomationProperties.Name="時間預算秒數，1 到 600"/>
+                <TextBlock Text="模型估算（MiB）" Style="{StaticResource FieldLabel}" ToolTip="保留模型採保守成本估算；不包含 CLR、原生 I/O 與 UI 暫時配置，因此不是 process/CLR heap 的硬上限。"/>
+                <TextBox x:Name="MemoryBox" Style="{StaticResource SetTextBox}" Text="128" Width="65" Padding="5,3" Margin="0,0,16,0" AutomationProperties.Name="保留中繼資料估算預算 MiB，1 到 512"/>
+                <TextBlock Text="根目錄深度為 0；各項上限先到先停。" Style="{StaticResource FieldLabel}" Foreground="{DynamicResource MutedInkBrush}"/>
+            </WrapPanel>
+        </StackPanel>
+        <StackPanel Grid.Row="1" Margin="0,12,0,10">
+            <ProgressBar x:Name="ScanProgress" Height="4" IsIndeterminate="False"/>
+            <TextBlock x:Name="StatusText" Text="尚未掃描。可分析本機目錄或可存取的 UNC 共用；遠端或離線裝置可能較慢。" TextWrapping="Wrap" Margin="0,8,0,0"/>
+            <TextBlock x:Name="CurrentPathText" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MutedInkBrush}" Margin="0,3,0,0"/>
+        </StackPanel>
+        <TextBlock Grid.Row="2" TextWrapping="Wrap" Margin="0,0,0,10" Foreground="{DynamicResource MutedInkBrush}"
+                   Text="取消與時間預算在檔案系統呼叫之間檢查；正在等待的 I/O 無法強制中止。重解析點略過，權限與錯誤列在「略過與限制」。部分結果只代表已讀到的範圍。"/>
+        <TabControl Grid.Row="3" Style="{StaticResource PageTabs}">
+            <TabItem Header="目錄樹與空間圖" Style="{StaticResource PageTabItem}">
+                <Grid Margin="8">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="320"/><ColumnDefinition Width="6"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <TreeView x:Name="FolderTree" SelectedItemChanged="Tree_SelectedItemChanged"
+                              VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling"
+                              ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Auto" Background="{DynamicResource PagePlaneBrush}"/>
+                    <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch"/>
+                    <Grid Grid.Column="2" Margin="10,0,0,0">
+                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                        <DockPanel>
+                            <Button Content="上層" Style="{StaticResource ToolButton}" Padding="9,4" Click="Up_Click" DockPanel.Dock="Left"/>
+                            <ComboBox x:Name="BasisBox" Style="{StaticResource DarkCombo}" SelectedIndex="0" MinWidth="230" MaxWidth="280" Margin="8,0,0,0" DockPanel.Dock="Right" SelectionChanged="Basis_SelectionChanged" AutomationProperties.Name="空間圖面積基準">
+                                <ComboBoxItem Content="邏輯大小（按檔名）"/><ComboBoxItem Content="已確認唯一配置"/>
+                            </ComboBox>
+                            <TextBlock Text="SPACE MAP" VerticalAlignment="Center" Margin="10,0,0,0" FontWeight="SemiBold"/>
+                        </DockPanel>
+                        <TextBlock x:Name="MapPathText" Grid.Row="1" Text="掃描後點選目錄檢視子項目。" Margin="0,8" TextTrimming="CharacterEllipsis"/>
+                        <Border Grid.Row="2" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" Background="{DynamicResource Surface2Brush}">
+                            <Canvas x:Name="MapCanvas" ClipToBounds="True" SizeChanged="Map_SizeChanged"/>
+                        </Border>
+                        <TextBlock x:Name="MapNoteText" Grid.Row="3" TextWrapping="Wrap" Margin="0,7,0,0" Foreground="{DynamicResource MutedInkBrush}"
+                                   Text="矩形面積對應已讀位元組；點選目錄矩形可深入。零大小與未讀項目不佔面積。"/>
+                    </Grid>
+                </Grid>
+            </TabItem>
+            <TabItem Header="檔案類型" Style="{StaticResource PageTabItem}">
+                <DataGrid x:Name="TypesGrid" Margin="8">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="副檔名" Binding="{Binding Extension}" Width="*"/>
+                        <DataGridTextColumn Header="檔名數" Binding="{Binding Files, StringFormat=N0}" Width="110"/>
+                        <DataGridTextColumn Header="邏輯大小" Binding="{Binding LogicalDisplay}" SortMemberPath="LogicalBytes" Width="160"/>
+                        <DataGridTextColumn Header="已確認唯一配置" Binding="{Binding AllocatedDisplay}" SortMemberPath="UniqueAllocatedBytes" Width="190"/>
+                        <DataGridTextColumn Header="配置未知檔案" Binding="{Binding UnknownAllocationFiles}" Width="130"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+            <TabItem Header="最大檔案（最多 500）" Style="{StaticResource PageTabItem}">
+                <DataGrid x:Name="BigFilesGrid" Margin="8" SelectionChanged="BigFiles_SelectionChanged">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="檔案路徑" Binding="{Binding Path}" Width="*"/>
+                        <DataGridTextColumn Header="邏輯大小" Binding="{Binding LogicalDisplay}" SortMemberPath="LogicalBytes" Width="140"/>
+                        <DataGridTextColumn Header="唯一配置貢獻" Binding="{Binding AllocatedDisplay}" SortMemberPath="UniqueAllocatedBytes" Width="170"/>
+                        <DataGridCheckBoxColumn Header="硬連結重複" Binding="{Binding IsHardLinkDuplicate}" Width="110"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+            <TabItem Header="略過與限制" Style="{StaticResource PageTabItem}">
+                <DockPanel Margin="8">
+                    <TextBlock x:Name="IssuesNoteText" DockPanel.Dock="Top" Text="尚無結果。清單最多保留 2,000 條，總數另列；未遍歷的項目數無法推算。" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                    <DataGrid x:Name="IssuesGrid">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="原因類別" Binding="{Binding Kind}" Width="145"/>
+                            <DataGridTextColumn Header="路徑" Binding="{Binding Path}" Width="2*"/>
+                            <DataGridTextColumn Header="說明" Binding="{Binding Reason}" Width="3*"/>
+                            <DataGridTextColumn Header="Win32" Binding="{Binding NativeError}" Width="70"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+        </TabControl>
+        <DockPanel Grid.Row="4" Margin="0,12,0,0">
+            <Button x:Name="ExportButton" DockPanel.Dock="Right" Content="匯出本機 JSON 報告…" Style="{StaticResource ScanButton}" IsEnabled="False" Click="Export_Click"/>
+            <TextBox x:Name="DetailBox" IsReadOnly="True" local:LanguageService.IsUiText="True" TextWrapping="Wrap" BorderThickness="0" Background="Transparent" Foreground="{DynamicResource PrimaryInkBrush}" VerticalScrollBarVisibility="Auto" MaxHeight="90"/>
+        </DockPanel>
+    </Grid>
+</Window>

@@ -68,7 +68,17 @@ internal sealed class MetricsPump
             if (live is not null)
             {
                 // 輪詢可能觸碰 Ring0 驅動而較慢：置於背景；發佈屬性變更回到 UI 執行緒
-                await Task.Run(live.Poll);
+                try { await Task.Run(live.Poll); }
+                catch
+                {
+                    // Publish failed evidence for consumers; do not push cached numbers into histories.
+                    live.PublishSensorObservations();
+                    try { _vm.SensorLog.Sample(live, _vm.Settings); }
+                    catch (Exception ex) { Diag.Swallow("失敗拍感測記錄", ex, "本拍未寫入 CSV"); }
+                    try { _vm.Alerts.CheckFailedFrame(live.CurrentSensorFrame, _vm.Settings.AlertsEnabled); }
+                    catch (Exception ex) { Diag.Swallow("失敗拍警示交付", ex, "本拍未交付感測器缺讀狀態"); }
+                    throw;
+                }
                 live.Publish();
 
                 _vm.CoreLoads.Refresh();

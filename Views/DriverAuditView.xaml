@@ -19,7 +19,16 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="2,0,0,10">
-            <local:SectionHead Text="驅動程式稽核" HelpKey="driver/驅動程式稽核"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <local:SectionHead Text="驅動程式稽核" HelpKey="driver/驅動程式稽核" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Style="{StaticResource ToolButton}" Content="Driver Store 備份／匯出"
+                        AutomationProperties.Name="{Binding Content, RelativeSource={RelativeSource Self}}"
+                        ToolTip="開啟備份與匯出視窗；按盤點後才讀取，不會自動匯出" Click="OpenDriverStore_Click"/>
+            </Grid>
             <TextBlock Style="{StaticResource Subtitle}" Margin="0,2,0,0" TextWrapping="Wrap"
                        Text="列出這台機器實際安裝的每一支驅動，把簽章狀態與驅動日期攤開來比。未簽章的驅動、以及顯示／網路／儲存／晶片組這些關鍵類別裡老到不合理的版本，在裝置管理員裡得一個一個點進內容才看得到。全程唯讀，不安裝也不移除任何驅動。"/>
         </StackPanel>

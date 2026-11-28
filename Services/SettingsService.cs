@@ -42,6 +42,20 @@ public sealed class SettingsService : ObservableObject
     /// <summary>CSV 記錄檔輸出資料夾。</summary>
     public string LogFolder { get => _logFolder; set { if (SetProperty(ref _logFolder, value)) Save(); } }
 
+    private string[] _sensorLogSelection = [];
+    public IReadOnlyList<string> SensorLogSelection => Array.AsReadOnly(_sensorLogSelection);
+    public void SetSensorLogSelection(IEnumerable<string> ids)
+    {
+        var selected = ids.Where(id => !string.IsNullOrWhiteSpace(id) && id.Length <= 512
+                && !id.Contains("session/", StringComparison.Ordinal))
+            .Distinct(StringComparer.Ordinal).OrderBy(id => id, StringComparer.Ordinal)
+            .Take(SensorStatisticsService.MaxSensors).ToArray();
+        if (_sensorLogSelection.SequenceEqual(selected, StringComparer.Ordinal)) return;
+        _sensorLogSelection = selected;
+        OnPropertyChanged(nameof(SensorLogSelection));
+        Save();
+    }
+
     // ── 歷史記錄（歷史回放頁的資料來源）─────────────────────
     private bool _historyEnabled = true;
     /// <summary>是否持續累積歷史資料（關閉後歷史回放頁只剩既有資料）。</summary>
@@ -510,6 +524,18 @@ public sealed class SettingsService : ObservableObject
         catch { return true; }
     }
 
+    /// <summary>主視窗建立前只讀取語言旗標；不建立設定服務、不套用硬體路由，也不寫入設定。</summary>
+    public static (bool SimplifiedChinese, bool IsEnglish, bool CatLanguage) PeekAppLanguage()
+    {
+        try
+        {
+            if (!File.Exists(FilePath)) return default;
+            var persisted = JsonSerializer.Deserialize<Persist>(File.ReadAllText(FilePath));
+            return (persisted?.SimplifiedChinese ?? false, persisted?.IsEnglish ?? false, persisted?.CatLanguage ?? false);
+        }
+        catch { return default; }
+    }
+
     /// <summary>
     /// 現行設定檔結構版本。1 ＝ <see cref="EraMode"/> 於 1.5.1 重編號之後的編號體系。
     /// </summary>
@@ -527,6 +553,7 @@ public sealed class SettingsService : ObservableObject
         public int DefaultEra { get; set; }
         public int LogIntervalSec { get; set; } = 2;
         public string? LogFolder { get; set; }
+        public string[]? SensorLogSelection { get; set; }
         public bool HistoryEnabled { get; set; } = true;
         public int HistoryRetentionDays { get; set; } = 30;
         public bool AlertsEnabled { get; set; } = true;
@@ -613,6 +640,9 @@ public sealed class SettingsService : ObservableObject
                         : EraCalendar.Coerce(p.DefaultEra));
                     _logIntervalSec = Math.Clamp(p.LogIntervalSec, 1, 60);
                     if (!string.IsNullOrWhiteSpace(p.LogFolder)) _logFolder = p.LogFolder;
+                    _sensorLogSelection = (p.SensorLogSelection ?? []).Where(id => !string.IsNullOrWhiteSpace(id)
+                        && id.Length <= 512 && !id.Contains("session/", StringComparison.Ordinal))
+                        .Distinct(StringComparer.Ordinal).Take(SensorStatisticsService.MaxSensors).ToArray();
                     _historyEnabled = p.HistoryEnabled;
                     _historyRetentionDays = Math.Clamp(p.HistoryRetentionDays, 1, 120);
                     _alertsEnabled = p.AlertsEnabled;
@@ -753,6 +783,7 @@ public sealed class SettingsService : ObservableObject
                 DefaultEra = _defaultEra,
                 LogIntervalSec = _logIntervalSec,
                 LogFolder = _logFolder,
+                SensorLogSelection = _sensorLogSelection,
                 HistoryEnabled = _historyEnabled,
                 HistoryRetentionDays = _historyRetentionDays,
                 AlertsEnabled = _alertsEnabled,

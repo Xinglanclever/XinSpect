@@ -39,6 +39,7 @@ public sealed class FiveElementsWheel : FrameworkElement
     public FiveElementsWheel()
     {
         this.RepaintOnThemeChange();
+        LanguageService.SetIsRawText(this, true);
         SnapsToDevicePixels = true;
         // 自繪的圖對螢幕閱讀器是一片空白：整張圖的內容在這裡用一句話交代，
         // 這樣版面上就不必再放一行意思一樣的文字。
@@ -48,8 +49,11 @@ public sealed class FiveElementsWheel : FrameworkElement
 
     /// <summary>整張圖的文字版本（無障礙名稱與滑鼠提示共用）。</summary>
     public static string Describe()
-        => FiveElements.Caption + "：" + string.Join("、",
-            FiveElements.Nodes.Select(n => $"{n.Element} {n.Label}"));
+        => LanguageService.T(FiveElements.Caption) + ": " + string.Join("、",
+            FiveElements.Nodes.Select(n => $"{n.Element} {ShownLabel(n.Label)}"));
+
+    // Model names are identities. Only the application's closed human-participant label translates.
+    private static string ShownLabel(string label) => label == "自然人類" ? LanguageService.T("自然人類") : label;
 
     private static Side SideOf(double angleDeg) => angleDeg switch
     {
@@ -66,7 +70,7 @@ public sealed class FiveElementsWheel : FrameworkElement
 
         foreach (var n in FiveElements.Nodes)
         {
-            var ft = Label(n.Label, Brushes.Black);
+            var ft = Label(ShownLabel(n.Label), Brushes.Black);
             var (ux, uy) = n.Unit;
             double nx = ux * RingR, ny = uy * RingR;      // 節點相對圓心的位置
 
@@ -98,6 +102,9 @@ public sealed class FiveElementsWheel : FrameworkElement
 
     protected override void OnRender(DrawingContext dc)
     {
+        string description = Describe();
+        System.Windows.Automation.AutomationProperties.SetName(this, description);
+        ToolTip = description;
         var (_, c) = Frame();
         var accent = VizPalette.Accent;
         var ink = VizPalette.Ink;
@@ -124,12 +131,12 @@ public sealed class FiveElementsWheel : FrameworkElement
             dc.DrawEllipse(VizPalette.Card, new Pen(accent, 1.6), p, NodeR, NodeR);
 
             // 模型名稱畫在圓圈裡面（置中）
-            var ft = Label(n.Label, name);
+            var ft = Label(ShownLabel(n.Label), name);
             dc.DrawText(ft, new Point(p.X - ft.Width / 2, p.Y - ft.Height / 2));
         }
 
         // 圓心那四個字
-        var cap = Format(FiveElements.Caption, 17, accent, bold: true);
+        var cap = Format(LanguageService.T(FiveElements.Caption), 17, accent, bold: true);
         dc.DrawText(cap, new Point(c.X - cap.Width / 2, c.Y - cap.Height / 2));
     }
 

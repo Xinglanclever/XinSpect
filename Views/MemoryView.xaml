@@ -2,6 +2,29 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:XinSpect">
+    <UserControl.Resources>
+        <DataTemplate x:Key="ControllerReadingTemplate">
+            <StackPanel Margin="0,3,0,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Label, Mode=OneWay, Converter={StaticResource Lang}}" TextWrapping="Wrap"/>
+                    <TextBlock Grid.Column="1" Style="{StaticResource FieldValue}" Text="{Binding ValueText, Mode=OneWay, Converter={StaticResource Lang}}" Margin="8,0"/>
+                    <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" Text="{Binding StateText, Mode=OneWay, Converter={StaticResource Lang}}"/>
+                </Grid>
+                <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding SourceText}" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                <Expander Header="來源欄位與時間" Margin="0,2,0,0">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding DisplayDetailText, Mode=OneWay}" TextWrapping="Wrap"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding TimeText, Mode=OneWay, Converter={StaticResource Lang}}" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Expander>
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
     <TabControl Style="{StaticResource PageTabs}">
         <TabItem Style="{StaticResource PageTabItem}" Header="總覽">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
@@ -50,7 +73,6 @@
                         </Grid>
                         <local:FieldRow Label="記憶體類型" Value="{Binding Timings.MemoryTypeText}"/>
                         <local:FieldRow Label="通道" Value="{Binding Timings.ChannelsText}"/>
-                        <local:FieldRow Label="DRAM 頻率" Value="{Binding Timings.FrequencyText}"/>
                         <local:FieldRow Label="資料速率" Value="{Binding Timings.DataRateText}"/>
                         <local:FieldRow Label="主要時序" Value="{Binding Timings.PrimaryTimingsText}"/>
                         <local:FieldRow Label="CAS 延遲 (CL)" Value="{Binding Timings.CL}"/>
@@ -85,6 +107,29 @@
                     </StackPanel>
                 </Border>
             </Grid>
+
+            <Border x:Name="ControllerPanel" Style="{StaticResource Card}" Margin="0,14,0,0">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource ColHead}" Text="目前控制器時脈與副時序"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding CoverageText, Mode=OneWay, Converter={StaticResource Lang}}" TextWrapping="Wrap" Margin="0,5,0,10"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,14,0">
+                            <ItemsControl ItemsSource="{Binding Clocks}" ItemTemplate="{StaticResource ControllerReadingTemplate}"/>
+                            <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,4,0,8"/>
+                            <ItemsControl ItemsSource="{Binding ConfiguredRates}" ItemTemplate="{StaticResource ControllerReadingTemplate}"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="Windows 設定資料速率與 CPU-Z 報告時脈分開保留；Uncore 不跨平台改名為 UCLK，也不以時脈倍率猜分頻模式。" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="7,0,0,0">
+                            <ItemsControl ItemsSource="{Binding SubTimings}" ItemTemplate="{StaticResource ControllerReadingTemplate}"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding TimingCoverageText, Mode=OneWay, Converter={StaticResource Lang}}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
 
             <!-- 插槽配置圖：先看「哪裡還能插、有沒有插對通道」，再往下看逐條規格 -->
             <Border Style="{StaticResource Card}" Margin="0,14,0,0" local:Anim.RevealDelay="100"

@@ -97,6 +97,9 @@ public partial class App : Application
 
         if (!createdNew && !allowMulti)
         {
+            // 第二份實例不建立 MainViewModel；只讀偏好，讓逾時提示也使用已存語言。
+            var language = SettingsService.PeekAppLanguage();
+            LanguageService.Initialize(language.SimplifiedChinese, language.IsEnglish, language.CatLanguage);
             RequestExistingToShow();
             Shutdown();
             return;

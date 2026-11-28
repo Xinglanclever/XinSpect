@@ -178,8 +178,8 @@ public partial class SettingsView : UserControl
         if (vm is null) return;
         if (vm.SensorLog.IsLogging)
             vm.SensorLog.StopLogging();
-        else
-            vm.SensorLog.StartLogging(vm.Settings);
+        else if (vm.Live is { } live)
+            vm.SensorLog.StartLogging(vm.Settings, live);
     }
 
     // 於檔案總管開啟目前的記錄輸出資料夾。

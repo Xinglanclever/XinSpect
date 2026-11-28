@@ -154,6 +154,9 @@ public sealed class MemoryModuleInfo
 /// <summary>記憶體時序（CPU-Z 報告、SPD 直讀或 WMI 原生來源——來源那一列會寫明是哪一個）。</summary>
 public sealed class MemoryTimings : ObservableObject
 {
+    /// <summary>Keep original current/controller observations separate from resolved configured rates.</summary>
+    public MemoryControllerSnapshot Controller { get; set; } = MemoryControllerSnapshot.Empty;
+
     /// <summary>SPD 的 JEDEC 能力表，不是控制器目前運行時序。</summary>
     public bool IsJedecReference { get; set; }
 
@@ -360,14 +363,58 @@ public sealed class StorageRow : ObservableObject
 /// <summary>感測器總表中的一列（對應 LHM 的單一 ISensor）。</summary>
 public sealed class SensorRow : ObservableObject
 {
-    public SensorRow(string group, string name, string typeText, string unit)
+    public SensorRow(string group, string name, string typeText, string unit,
+        string? id = null, string? deviceId = null, string? deviceName = null)
     {
         Group = group; Name = name; TypeText = typeText; Unit = unit;
+        Id = id ?? "session/" + Guid.NewGuid().ToString("N");
+        DeviceId = deviceId ?? ""; DeviceName = deviceName ?? group;
     }
+    public string Id { get; }
+    public string DeviceId { get; }
+    public string DeviceName { get; }
     public string Group { get; }
     public string Name { get; }
     public string TypeText { get; }
     public string Unit { get; }
+
+    private bool _selectedForLog;
+    public bool IsSelectedForLog { get => _selectedForLog; set => SetProperty(ref _selectedForLog, value); }
+    public SensorReading? Reading { get; private set; }
+    public double? NumericValue => Reading?.IsUsable == true ? Reading.Value : null;
+    public string StateText => Reading is null ? "尚未取得"
+        : Reading.Availability switch
+        {
+            FactAvailability.Present => "可用（來源上報）",
+            FactAvailability.Unknown => "未確認",
+            FactAvailability.NotApplicable => "不適用",
+            FactAvailability.NotSupported => "未支援",
+            FactAvailability.InsufficientPrivilege => "權限不足",
+            _ => "讀取失敗",
+        };
+    public string SourceText => Reading?.Source ?? "—";
+    public string EvidenceText => Reading is not { } r ? "尚未取得感測器讀值"
+        : $"ID：{Id}\n裝置：{DeviceId}\n來源：{r.Source}\n狀態：{r.Availability} / {r.Trust}"
+            + $"\n本程式取得（UTC）：{r.ReadAtUtc:O}\n來源更新時間："
+            + (r.SourceUpdatedAtUtc?.ToString("O") ?? "未知") + "\n" + r.Reason;
+
+    private string _average = "—";
+    public string AverageText { get => _average; set => SetProperty(ref _average, value); }
+    private long _sampleCount;
+    public long SampleCount { get => _sampleCount; private set => SetProperty(ref _sampleCount, value); }
+
+    internal void ApplyObservation(SensorReading reading, SensorStatistics? statistics)
+    {
+        Reading = reading;
+        string raw = SensorValueText.Format(reading.Value, Unit);
+        ValueText = reading.IsUsable ? raw : reading.Value.HasValue ? raw + "（未確認）" : "—";
+        MinText = SensorValueText.Format(statistics?.Minimum, Unit);
+        MaxText = SensorValueText.Format(statistics?.Maximum, Unit);
+        AverageText = SensorValueText.Format(statistics?.Average, Unit);
+        SampleCount = statistics?.Count ?? 0;
+        OnPropertyChanged(nameof(Reading)); OnPropertyChanged(nameof(NumericValue));
+        OnPropertyChanged(nameof(StateText)); OnPropertyChanged(nameof(SourceText)); OnPropertyChanged(nameof(EvidenceText));
+    }
 
     private string _value = "—";
     public string ValueText { get => _value; set => SetProperty(ref _value, value); }

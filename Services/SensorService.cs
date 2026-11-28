@@ -175,6 +175,7 @@ public sealed partial class SensorService : ObservableObject, IDisposable
 
         // 系統風扇控制：列舉主機板／SuperIO 上可由軟體寫入的風扇（顯示卡風扇由顯示卡超頻頁以 NVML 控制）
         CollectFanControls();
+        RebuildSensorObservations();
     }
 
     private void BuildCpu(IHardware hw)
@@ -267,7 +268,7 @@ public sealed partial class SensorService : ObservableObject, IDisposable
     private void EnumerateSensors(IHardware hw, string group)
     {
         foreach (var s in hw.Sensors.OrderBy(x => x.SensorType).ThenBy(x => x.Name))
-            _sensorRows.Add((s, new SensorRow(group, s.Name, TypeZh(s.SensorType), UnitOf(s.SensorType))));
+            _sensorRows.Add((s, CreateSensorRow(hw, s, group)));
         foreach (var sub in hw.SubHardware)
             EnumerateSensors(sub, $"{group} / {sub.Name}");
     }
@@ -289,11 +290,19 @@ public sealed partial class SensorService : ObservableObject, IDisposable
         lock (_pollLock)
         {
             if (_disposed) return;   // 已釋放後遲到的背景 Poll 直接略過
+            long pollStarted = _timestamp();
             _coreTemperatureSamples = Array.Empty<CoreTemperatureSample>();
-            try { _computer.Accept(_visitor); }
-            catch
+            try
+            {
+                _computer.Accept(_visitor);
+                CaptureMemoryControllerPoll(DateTimeOffset.UtcNow);
+                CaptureSensorPoll(true, startedTimestamp: pollStarted);
+            }
+            catch (Exception ex)
             {
                 _coreTemperatureSamples = Array.Empty<CoreTemperatureSample>();
+                InvalidateMemoryControllerPoll();
+                CaptureSensorPoll(false, "本拍 provider 輪詢失敗：" + ex.GetType().Name, pollStarted);
                 throw;
             }
         }
@@ -305,14 +314,7 @@ public sealed partial class SensorService : ObservableObject, IDisposable
     /// </summary>
     public void Publish()
     {
-        // 感測器總表僅在該分頁可見時才格式化（整表逐列 ToString 為每秒最重的一段）
-        if (DetailedSensorsVisible)
-            foreach (var (s, row) in _sensorRows)
-            {
-                row.ValueText = Fmt(s.Value, s.SensorType);
-                row.MinText = Fmt(s.Min, s.SensorType);
-                row.MaxText = Fmt(s.Max, s.SensorType);
-            }
+        PublishSensorObservations();
 
         foreach (var b in _cores)
         {
@@ -482,7 +484,19 @@ public sealed partial class SensorService : ObservableObject, IDisposable
     public string CpuClockText => CpuClock > 0 ? $"{CpuClock:0} MHz" : "—";
     /// <summary>Current plausible CPU-package sensor reading from LHM; not gated by RAPL validation and not used for validated analyses.</summary>
     public double? CpuPackagePowerSensorW => Val(_cpuPower);
-    public string CpuPackagePowerSensorText => CpuPackagePowerSensorW is double p ? $"{p:0.#} W" : "—";
+    public string CpuPackagePowerSensorText => FormatCpuPackagePowerSensorText(CpuPackagePowerSensorW, RaplEnergyGate.Verdict);
+
+    // Keep trust beside the number: a provenance paragraph below it must not make an
+    // unverified report look like measured package power. Retain the raw value above
+    // for diagnostics, but suppress a counter already known not to respond to load.
+    internal static string FormatCpuPackagePowerSensorText(double? reportedPower, RaplGateVerdict verdict) =>
+        reportedPower is not double p ? "—" : verdict switch
+        {
+            RaplGateVerdict.Trusted => $"{p:0.#} W",
+            RaplGateVerdict.NotResponding => "—（驗證未通過）",
+            _ => $"{p:0.#} W（未驗證）",
+        };
+
     public string CpuPowerText => CpuPowerW is double p and > 0 ? $"{p:0.#} W" : "—";
     public string CpuVoltText => Val(_cpuVolt) is double v and > 0 ? $"{v:0.###} V" : "—";
     public string CpuBusText => Val(_cpuBus) is double b and > 0 ? $"{b:0.#} MHz" : "—";
@@ -501,12 +515,15 @@ public sealed partial class SensorService : ObservableObject, IDisposable
                 return "來源：LibreHardwareMonitor；未提供 CPU Package／Package 功耗感測器，無可用讀值。";
 
             string source = $"來源：LibreHardwareMonitor「{_cpuPower.Name}」即時感測器";
-            if (Val(_cpuPower) is not double)
+            if (Val(_cpuPower) is not double reportedPower)
                 return $"{source}；目前未回有效讀值。RAPL 狀態：{RaplEnergyGate.StateText}";
 
-            return RaplEnergyGate.Verdict == RaplGateVerdict.Trusted
-                ? $"{source}；RAPL 能量計已通過自我驗證。"
-                : $"{source}；RAPL 驗證狀態：{RaplEnergyGate.StateText}";
+            return RaplEnergyGate.Verdict switch
+            {
+                RaplGateVerdict.Trusted => $"{source}；RAPL 能量計已通過負載響應檢查，非獨立功率計校準。",
+                RaplGateVerdict.NotResponding => $"{source}；未採用上報值 {reportedPower:0.#} W：能量計驗證未通過。RAPL 狀態：{RaplEnergyGate.StateText}",
+                _ => $"{source}；上報值未驗證，不代表已確認的實際封裝功耗。RAPL 驗證狀態：{RaplEnergyGate.StateText}",
+            };
         }
     }
     public double? VrmTempC => Val(_vrmTemp);
@@ -601,6 +618,9 @@ public sealed partial class SensorService : ObservableObject, IDisposable
         SensorType.Fan => "RPM",
         SensorType.Data => "GB",
         SensorType.SmallData => "MB",
+        SensorType.Current => "A",
+        SensorType.Throughput => "B/s",
+        SensorType.Frequency => "Hz",
         _ => "",
     };
 
@@ -639,6 +659,9 @@ public sealed partial class SensorService : ObservableObject, IDisposable
         {
             if (_disposed) return;
             _disposed = true;
+            InvalidateMemoryControllerPoll();
+            CaptureSensorPoll(false, "感測器服務已關閉；最後觀測不可當成新讀值。");
+            Volatile.Write(ref _currentSensorFrame, _pendingSensorFrame);
             // 關閉硬體前，先把所有被手動接管的系統風扇交回 BIOS／自動控制，避免風扇卡在固定轉速
             try { RestoreAllFansToAuto(); } catch { }
             try { _closeComputer(); } catch { }

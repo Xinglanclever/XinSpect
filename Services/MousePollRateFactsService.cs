@@ -1,148 +1,85 @@
 namespace XinSpect;
 
-/// <summary>
-/// 滑鼠輪詢率實測（Vol2 第 GP-004 項）：<c>gp.pollrate</c>——輸入裝置回報率。
-/// </summary>
-/// <remarks>
-/// <para>
-/// <b>這一項的難點不是量測，是「量不到時怎麼說」。</b>輪詢率要靠連續讀 HID 輸入報告
-/// 量時間間隔，而這需要一個<b>作用中的輸入裝置</b>——沒有滑鼠、遠端連線、
-/// 或使用者根本沒動滑鼠時，量到的數字是 0 而不是「1000 Hz」。
-/// </para>
-/// <para>
-/// <b>紅線：</b>① <b>沒量到＝不適用，不是 0 Hz</b>——「這台機器沒接滑鼠」與
-/// 「滑鼠回報率 0」是完全不同的兩件事，後者在物理上不存在；
-/// ② <b>取樣期間必須標註</b>：量測值只在取樣窗內有效，不同窗量到不同數字是正常的
-/// （尤其是省電模式下 OS 會降取樣率）；
-/// ③ <b>不從裝置型號推論</b>：登錄裡的宣稱值（如「1000Hz 電競滑鼠」）是行銷數字，
-/// 不是實測值，兩者不可混。
-/// </para>
-/// </remarks>
+/// <summary>GP-004：Raw Input 前景接收端的 OS 移動報告到達頻率；不是實體 USB 輪詢頻率。</summary>
 public static class MousePollRateFactsService
 {
     private const string Cat = "遊戲與繪圖";
-    private const string Source = "Raw Input 取樣（唯讀，不注入任何輸入）";
-
-    /// <summary>GP-004 滑鼠輪詢率。</summary>
+    private const string Source = "WM_INPUT / GetRawInputData；QPC 接收端到達間隔（唯讀、不注入輸入）";
     public const string PollRateKey = "gp.pollrate";
 
-    // ── 探針接縫 ──────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// （樣本數, 中位間隔微秒, 換算 Hz, 裝置名稱可讀, 取樣窗毫秒）。
-    /// <see cref="Samples"/> 為 0 ＝取樣窗內沒有任何輸入事件。
-    /// </summary>
-    public sealed record PollSample(int Samples, double MedianIntervalUs, double Hz,
-        bool DeviceReadable, int WindowMs);
-
+    // 保留既有注入接縫；Samples 是有效相鄰間隔數，不是報告總數。
+    public sealed record PollSample(int Samples, double MedianIntervalUs, double Hz, bool DeviceReadable, int WindowMs)
+    {
+        public FactAvailability Availability { get; init; } = FactAvailability.Present;
+        public string? Reason { get; init; }
+        public string? DeviceId { get; init; }
+        public double? P95IntervalUs { get; init; }
+        public double? JitterMadUs { get; init; }
+        public DateTimeOffset? StartedAtUtc { get; init; }
+        public DateTimeOffset? MeasuredAtUtc { get; init; }
+        public int? Reports { get; init; }
+        public int? IdleGaps { get; init; }
+    }
     public delegate PollSample? Probe();
 
-    // ── 判讀（可單獨測試的純函式）─────────────────────────────────────────
-
-    /// <summary>
-    /// 由間隔樣本算輪詢率。<b>用中位數不用平均</b>：使用者移動滑鼠的節奏本身不均勻，
-    /// 平均值會被少數長間隔（手停下來）拉低，中位數反映的是「裝置在報告時報得多快」。
-    /// </summary>
-    /// <param name="intervalsUs">相鄰兩個輸入報告的間隔（微秒）。</param>
-    /// <param name="windowMs">取樣窗長度。</param>
-    public static PollSample Summarize(IReadOnlyList<double> intervalsUs, int windowMs,
-        bool deviceReadable = true)
+    public static PollSample Summarize(IReadOnlyList<double> intervalsUs, int windowMs, bool deviceReadable = true)
     {
-        if (intervalsUs.Count == 0)
-            return new PollSample(0, 0, 0, deviceReadable, windowMs);
-
-        var sorted = intervalsUs.OrderBy(x => x).ToList();
-        // 中位數：偶數取中間兩個的平均（與本專案其他中位數的取法一致）。
-        double median = sorted.Count % 2 == 1
-            ? sorted[sorted.Count / 2]
-            : (sorted[sorted.Count / 2 - 1] + sorted[sorted.Count / 2]) / 2.0;
-
-        double hz = median > 0 ? 1_000_000.0 / median : 0;
-        return new PollSample(sorted.Count, median, hz, deviceReadable, windowMs);
+        var valid = intervalsUs.Where(v => double.IsFinite(v) && v > 0).ToArray();
+        var (median, p95, mad) = RawMouseSampling.Distribution(valid);
+        return new(valid.Length, median, median > 0 ? 1_000_000 / median : 0, deviceReadable, windowMs)
+        { P95IntervalUs = p95, JitterMadUs = mad };
     }
 
-    /// <summary>
-    /// 把量到的 Hz 對到最接近的<b>常見回報率檔位</b>。
-    /// <b>這是標籤不是判決</b>——量到 998 Hz 與 1002 Hz 都是 1000 Hz 檔，
-    /// 但量到 700 Hz 不該被硬歸成 1000 Hz，所以門檻取相對誤差 10%。
-    /// </summary>
+    /// <summary>中位間隔倒數與常見檔位的 ±10% 標籤；不識別 USB 設定或實體輪詢。</summary>
     public static string NearestRateLabel(double hz)
     {
-        if (hz <= 0) return "未量到";
+        if (!double.IsFinite(hz) || hz <= 0) return "未量到";
         double[] tiers = [125, 250, 500, 1000, 2000, 4000, 8000];
-        double best = tiers[0];
-        double bestErr = double.MaxValue;
-        foreach (double t in tiers)
+        double best = tiers[0], bestError = double.MaxValue;
+        foreach (double tier in tiers)
         {
-            double err = Math.Abs(hz - t) / t;
-            if (err < bestErr) { bestErr = err; best = t; }
+            double error = Math.Abs(hz - tier) / tier;
+            if (error < bestError) { bestError = error; best = tier; }
         }
-        return bestErr <= 0.10
-            ? $"≈{best:N0} Hz 檔"
-            : $"未對到常見檔位（量到 {hz:N0} Hz）";
+        return bestError <= .10 ? $"≈{best:N0} Hz 檔" : $"未對到常見檔位（量到 {hz:N0} Hz）";
     }
-
-    // ── 收集 ──────────────────────────────────────────────────────────────
 
     public static HardwareFact Collect(DateTimeOffset at, Probe? probe = null)
     {
-        PollSample? s;
-        try { s = (probe ?? ReadSample)(); }
-        catch { s = null; }
+        PollSample? sample;
+        try { sample = (probe ?? ReadSample)(); }
+        catch { sample = null; }
+        if (sample is null) return Unavailable(at, FactAvailability.ReadError,
+            "滑鼠輸入取樣失敗——不從裝置型號推論回報率。");
+        var measured = sample.MeasuredAtUtc ?? at;
+        if (sample.Availability != FactAvailability.Present)
+            return Unavailable(measured, sample.Availability, sample.Reason ?? "尚未取得可用的 Raw Input 取樣。");
+        // 舊注入接縫的零樣本契約保留；生產通路明確傳 Unknown，不以靜止推論無硬體。
+        if (sample.Samples == 0) return Unavailable(measured, FactAvailability.NotApplicable,
+            $"取樣窗（{sample.WindowMs} ms）沒有可用間隔，不是 0 Hz；以 0 Hz 代表滑鼠回報率在此定義下物理上不存在。無輸入也可能是靜止或遠端輸入。");
+        if (sample.Samples < 0 || sample.WindowMs <= 0 || !double.IsFinite(sample.Hz) || sample.Hz <= 0 ||
+            !double.IsFinite(sample.MedianIntervalUs) || sample.MedianIntervalUs <= 0)
+            return Unavailable(measured, FactAvailability.ReadError, "取樣的間隔、頻率或時間窗無效。");
 
-        if (s is null)
-            return Unavailable(at, FactAvailability.ReadError,
-                "滑鼠輸入取樣失敗——讀不到就是不猜（不從裝置型號推論回報率）");
-
-        var v = s;
-
-        // 取樣窗內一個事件都沒有 → 不適用。這不是 0 Hz。
-        if (v.Samples == 0)
-            return Unavailable(at, FactAvailability.NotApplicable,
-                $"取樣窗（{v.WindowMs} ms）內沒有收到任何滑鼠輸入——不適用，不是 0 Hz。" +
-                "「這台機器沒接滑鼠」與「滑鼠回報率 0」是完全不同的兩件事，後者在物理上不存在；" +
-                "遠端連線、無輸入裝置、或取樣期間沒人動滑鼠都會落到這一態");
-
-        var vv = v;
-        string label = NearestRateLabel(vv.Hz);
-        string device = vv.DeviceReadable
-            ? ""
-            : "・<b>裝置名稱讀不到</b>（型號不在值裡，回報率本來就不需要型號）";
-
-        return new HardwareFact(PollRateKey, Cat, "滑鼠輪詢率",
-            $"{label}・中位間隔 {vv.MedianIntervalUs:N0} µs・樣本 {vv.Samples} 筆" +
-            $"（取樣窗 {vv.WindowMs} ms）{device}。" +
-            "<b>取樣期間必須被記住</b>：量測值只在這個窗內有效——" +
-            "不同窗量到不同數字是正常的（省電模式下作業系統會主動降低取樣率，" +
-            "所以同一隻滑鼠在電池模式可能量到 125 Hz、接電時 1000 Hz）。" +
-            "<b>用中位數不用平均</b>：手的移動節奏本身不均勻，" +
-            "平均值會被「手停下來」的長間隔拉低；中位數反映的是裝置在報告時報得多快。" +
-            "<b>不從型號推論</b>：登錄或包裝上的「1000 Hz 電競滑鼠」是行銷數字，" +
-            "與本機實測值不可混為一談。",
-            "Hz", Source, FactTrustLevel.Measured, false, at, vv.Hz);
+        string details = sample.DeviceId is null ? "" : $"裝置 {sample.DeviceId}・";
+        if (sample.P95IntervalUs is { } p95) details += $"P95 間隔 {p95:N1} µs・";
+        if (sample.JitterMadUs is { } mad) details += $"抖動 MAD {mad:N1} µs・";
+        if (sample.StartedAtUtc is { } start) details += $"UTC {start:O} 至 {measured:O}・";
+        if (sample.Reports is { } reports) details += $"原始報告 {reports} 筆・停頓排除 {sample.IdleGaps ?? 0} 次・";
+        return new(PollRateKey, Cat, "滑鼠 OS 回報到達頻率",
+            $"{NearestRateLabel(sample.Hz)}・中位間隔 {sample.MedianIntervalUs:N0} µs・樣本 {sample.Samples} 筆（取樣窗 {sample.WindowMs} ms）。" +
+            details + (sample.DeviceReadable ? "" : "裝置名稱讀不到・") +
+            "取樣期間必須被記住：這是單裝置相對移動 WM_INPUT 的 QPC 到達間隔；" +
+            "中位間隔倒數是 OS 接收端觀察值，不是實體 USB 輪詢、端到端延遲或精度認證。" +
+            "排除大於 200 ms 的停頓；排程、訊息佇列、合併、無線與遠端通路會改變分布。" +
+            "省電模式下作業系統會主動降低取樣率的情形須另行驗證，不能由這個數值推定原因。" +
+            "不從型號推論：包裝上的行銷數字不能填補實測。",
+            "Hz", Source, FactTrustLevel.Measured, false, measured, sample.Hz);
     }
 
-    // ── 讀取層 ────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// 取樣窗長度。500 ms 足夠量到 125 Hz 的 60+ 個樣本，又短到不會讓收集流程卡住。
-    /// </summary>
-    internal const int SampleWindowMs = 500;
-
-    /// <summary>兩個相鄰輸入報告間隔超過這個值就視為「使用者停頓」，不列入樣本。</summary>
-    internal const double IdleGapUs = 200_000;   // 200 ms
-
-    /// <summary>
-    /// 真實通路：<b>本版刻意不實作即時取樣</b>——
-    /// 讀 Raw Input 需要在收集流程裡掛一個訊息迴圈並等 500 ms，
-    /// 而事實收集是同步的啟動路徑。掛在哪裡都得改架構，不值得為一個事實鍵做這件事。
-    /// 所以回 <c>null</c>（由呼叫端標 ReadError 並說明），並在
-    /// <see cref="Summarize"/> 裡保留完整的判讀邏輯——接縫已經在了，
-    /// 接上取樣器時只要替換這一個方法。
-    /// </summary>
-    internal static PollSample? ReadSample() => null;
-
+    internal const int SampleWindowMs = RawMouseSampling.MaximumDurationMs;
+    internal const double IdleGapUs = RawMouseSampling.IdleGapUs;
+    internal static PollSample ReadSample() => RawMouseSampleStore.Shared.Read(DateTimeOffset.UtcNow);
     private static HardwareFact Unavailable(DateTimeOffset at, FactAvailability availability, string reason)
-        => new(PollRateKey, Cat, "滑鼠輪詢率", "", "", Source,
-            FactTrustLevel.Unknown, false, at, null, availability, reason);
+        => new(PollRateKey, Cat, "滑鼠 OS 回報到達頻率", "", "", Source, FactTrustLevel.Unknown, false, at, null, availability, reason);
 }

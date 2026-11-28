@@ -51,7 +51,7 @@ public sealed class FrameTimeChart : FrameworkElement
         var medPen = new Pen(new SolidColorBrush(Color.FromRgb(0xE0, 0xB3, 0x41)), 1) { DashStyle = DashStyles.Dash };
         medPen.Freeze();
         dc.DrawLine(medPen, new Point(ML, medY), new Point(ML + w, medY));
-        dc.DrawText(new FormattedText($"中位 {median:0.00} ms", CultureInfo.InvariantCulture,
+        dc.DrawText(new FormattedText(string.Format(CultureInfo.CurrentCulture, LanguageService.T("中位 {0:0.00} ms"), median), CultureInfo.InvariantCulture,
                 FlowDirection.LeftToRight, typeface, 10, textBrush, dip),
             new Point(ML + 2, medY - 14));
 
@@ -67,7 +67,8 @@ public sealed class FrameTimeChart : FrameworkElement
                 new Rect(ML + i * barW, MT + h - bh, Math.Max(1, barW - 1), bh), 1, 1);
         }
 
-        dc.DrawText(new FormattedText($"最後 {shown.Length} 幀 ・ 紅＝超過中位 2 倍（明顯異常幀）",
+        dc.DrawText(new FormattedText(string.Format(CultureInfo.CurrentCulture,
+                LanguageService.T("最後 {0} 幀 ・ 紅＝超過中位 2 倍（明顯異常幀）"), shown.Length),
                 CultureInfo.InvariantCulture, FlowDirection.LeftToRight, typeface, 10, textBrush, dip),
             new Point(ML, ActualHeight - 14));
     }

@@ -19,6 +19,8 @@ namespace XinSpect;
 /// </remarks>
 public sealed class CpuSocketDiagram : FrameworkElement
 {
+    public CpuSocketDiagram() => this.RepaintOnThemeChange();
+
     /// <summary>封裝方式字串（含 "LGA" 或 "PGA"）。</summary>
     public static readonly DependencyProperty MountProperty = DependencyProperty.Register(
         nameof(Mount), typeof(string), typeof(CpuSocketDiagram),
@@ -105,7 +107,7 @@ public sealed class CpuSocketDiagram : FrameworkElement
                 tf, 17, text, 1.25);
             dc.DrawText(name, new Point(x0 + side / 2 - name.Width / 2, y0 + side / 2 - name.Height));
         }
-        var mount = new FormattedText(pga ? "PGA · 腳位在 CPU 上" : "LGA · 腳位在腳座上",
+        var mount = new FormattedText(LanguageService.T(pga ? "PGA · 腳位在 CPU 上" : "LGA · 腳位在腳座上"),
             CultureInfo.InvariantCulture, FlowDirection.LeftToRight, tf, 11, accent, 1.25);
         dc.DrawText(mount, new Point(x0 + side / 2 - mount.Width / 2, y0 + side / 2 + 4));
     }

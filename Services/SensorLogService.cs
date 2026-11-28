@@ -1,98 +1,199 @@
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
-using System.Text;
 
 namespace XinSpect;
 
-/// <summary>感測器記錄：把即時感測值依設定間隔持續寫入 CSV，供事後以試算表分析。
-/// 全為真實讀值（來自 <see cref="SensorService"/>），無模擬。</summary>
+/// <summary>Records selected live sensor identities locally. Selection is locked until the next session.</summary>
 public sealed class SensorLogService : ObservableObject
 {
-    private StreamWriter? _writer;
-    private DateTime _lastWrite = DateTime.MinValue;
-    private DateTime _startedAt;
-
+    private readonly object _gate = new();
+    private readonly Func<long> _timestamp;
+    private readonly Func<DateTimeOffset> _utcNow;
+    private readonly Func<string, DateTimeOffset, (string Path, TextWriter Writer)> _createFile;
+    private SensorCsvSession? _session;
+    private SensorLogSensorDefinition[]? _pendingSensors;
+    private long _startedTimestamp;
     private bool _isLogging;
+    private int _rowCount;
+    private long _csvRecordCount;
+    private int _selectedSensorCount;
+    private string _currentFile = "—";
+    private string _statusSource = "尚未記錄";
+    private string? _statusRawPrefix;
+    private string _statusRawSuffix = "";
+    private string _lastError = "";
+
+    public SensorLogService() : this(Stopwatch.GetTimestamp, () => DateTimeOffset.UtcNow, SensorCsvFile.Create) { }
+    internal SensorLogService(Func<long> timestamp, Func<DateTimeOffset> utcNow,
+        Func<string, DateTimeOffset, (string Path, TextWriter Writer)> createFile)
+    {
+        _timestamp = timestamp; _utcNow = utcNow; _createFile = createFile;
+    }
+
     public bool IsLogging { get => _isLogging; private set { if (SetProperty(ref _isLogging, value)) OnPropertyChanged(nameof(ButtonText)); } }
     public string ButtonText => _isLogging ? "停止記錄" : "開始記錄";
-
-    private int _rowCount;
+    /// <summary>Complete sampled frames; CSV has one record per selected sensor in each frame.</summary>
     public int RowCount { get => _rowCount; private set { if (SetProperty(ref _rowCount, value)) OnPropertyChanged(nameof(RowCountText)); } }
-    public string RowCountText => $"已記錄 {_rowCount} 列";
-
-    private string _currentFile = "—";
+    public long CsvRecordCount { get => _csvRecordCount; private set => SetProperty(ref _csvRecordCount, value); }
+    public int SelectedSensorCount { get => _selectedSensorCount; private set => SetProperty(ref _selectedSensorCount, value); }
+    public string RowCountText => $"已記錄 {_rowCount} 次取樣";
     public string CurrentFile { get => _currentFile; private set => SetProperty(ref _currentFile, value); }
+    public string StatusText => _statusRawPrefix is null
+        ? LanguageService.T(_statusSource)
+        : LanguageService.T(_statusRawPrefix) + _statusRawSuffix;
+    /// <summary>Localized status projection; its binding is intentionally not translated as one mixed string.</summary>
+    public string DisplayStatusText => StatusText;
+    /// <summary>Retained after StopLogging; cleared only by an explicit new start.</summary>
+    public string LastError { get => _lastError; private set => SetProperty(ref _lastError, value); }
 
-    private string _statusText = "尚未記錄";
-    public string StatusText { get => _statusText; private set => SetProperty(ref _statusText, value); }
-
-    /// <summary>開始記錄：於設定資料夾建立時間戳 CSV，寫入表頭。</summary>
+    /// <summary>Compatibility entry point. First Sample captures selection before creating any file.</summary>
     public void StartLogging(SettingsService settings)
     {
-        if (_isLogging) return;
-        try
+        ArgumentNullException.ThrowIfNull(settings);
+        lock (_gate)
         {
-            Directory.CreateDirectory(settings.LogFolder);
-            var name = $"XinSpect_感測記錄_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
-            var path = Path.Combine(settings.LogFolder, name);
-            // UTF-8 BOM：讓 Excel 正確辨識中文表頭
-            _writer = new StreamWriter(path, append: false, new UTF8Encoding(true)) { AutoFlush = true };
-            _writer.WriteLine("時間,CPU負載(%),CPU溫度(°C),CPU時脈(MHz),記憶體負載(%),GPU負載(%),GPU溫度(°C),顯示記憶體(MB)");
-            CurrentFile = path;
-            RowCount = 0;
-            _lastWrite = DateTime.MinValue;
-            _startedAt = DateTime.Now;
+            if (_isLogging) return;
+            ResetSessionState();
             IsLogging = true;
-            StatusText = "記錄中…";
-        }
-        catch (Exception ex)
-        {
-            StatusText = "無法開始記錄：" + ex.Message;
-            IsLogging = false;
-            _writer = null;
+            SetStatus("等待感測器取樣與記錄選取…");
         }
     }
 
-    /// <summary>停止記錄並關閉檔案。</summary>
+    public void StartLogging(SettingsService settings, SensorService live)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(live);
+        lock (_gate)
+        {
+            if (_isLogging) return;
+            ResetSessionState();
+            var sensors = CaptureSelection(live);
+            if (sensors.Length == 0) { SetStatus("請先在感測器頁勾選要記錄的感測器。"); return; }
+            _pendingSensors = sensors;
+            SelectedSensorCount = sensors.Length;
+            IsLogging = true;
+            SetStatus("等待感測器取樣…");
+            SampleFrame(settings, live.CurrentSensorFrame);
+        }
+    }
+
+    private static SensorLogSensorDefinition[] CaptureSelection(SensorService live)
+        => live.AllSensors.Where(row => row.IsSelectedForLog).Select(row =>
+            new SensorLogSensorDefinition(row.Id, row.DeviceId, row.DeviceName, row.Name, row.TypeText, row.Unit)).ToArray();
+
+    private void ResetSessionState()
+    {
+        LastError = ""; CurrentFile = "—"; RowCount = 0; CsvRecordCount = 0; SelectedSensorCount = 0;
+        _primaryError = ""; _closeError = null;
+        _pendingSensors = null;
+        _startedTimestamp = _timestamp();
+    }
+
     public void StopLogging()
     {
-        if (!_isLogging && _writer is null) return;
-        try { _writer?.Flush(); _writer?.Dispose(); } catch { }
-        _writer = null;
-        IsLogging = false;
-        StatusText = _rowCount > 0
-            ? $"已停止 ・ 共 {_rowCount} 列 ・ 歷時 {(DateTime.Now - _startedAt):hh\\:mm\\:ss}"
-            : "已停止";
+        lock (_gate)
+        {
+            if (!_isLogging && _session is null) return;
+            CloseSession();
+            IsLogging = false;
+            _pendingSensors = null;
+            if (LastError.Length != 0) { SetErrorStatus(); return; }
+            var elapsed = TimeSpan.FromSeconds(Math.Max(0, ((double)_timestamp() - _startedTimestamp) / Stopwatch.Frequency));
+            SetStatus(_rowCount > 0
+                ? $@"已停止 ・ 共 {_rowCount} 次取樣／{_csvRecordCount} 筆感測值 ・ 歷時 {elapsed:hh\:mm\:ss}"
+                : "已停止；未取得取樣");
+        }
     }
 
-    /// <summary>由主計時器每拍呼叫；依設定間隔決定是否寫入一列。</summary>
     public void Sample(SensorService live, SettingsService settings)
     {
-        if (!_isLogging || _writer is null) return;
-        var now = DateTime.Now;
-        if ((now - _lastWrite).TotalSeconds + 0.05 < settings.LogIntervalSec) return;
-        _lastWrite = now;
-        try
+        ArgumentNullException.ThrowIfNull(live);
+        ArgumentNullException.ThrowIfNull(settings);
+        lock (_gate)
         {
-            var g = live.PrimaryGpu;
-            var sb = new StringBuilder();
-            // invariant：CSV 會被其他機器／試算表以任意文化讀回，時間與數字欄格式必須固定
-            sb.Append(now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)).Append(',');
-            sb.Append(N(live.CpuLoad)).Append(',');
-            sb.Append(live.CpuTemp is double ct ? N(ct) : "").Append(',');
-            sb.Append(N(live.CpuClock)).Append(',');
-            sb.Append(N(live.MemLoad)).Append(',');
-            sb.Append(g is not null ? N(g.LoadPercent) : "").Append(',');
-            sb.Append(g?.TempC is double gt ? N(gt) : "").Append(',');
-            sb.Append(g is not null ? N(g.VramUsedMB) : "");
-            _writer.WriteLine(sb.ToString());
-            RowCount++;
+            if (!_isLogging) return;
+            if (_pendingSensors is null && _session is null)
+            {
+                _pendingSensors = CaptureSelection(live);
+                SelectedSensorCount = _pendingSensors.Length;
+                if (_pendingSensors.Length == 0)
+                {
+                    IsLogging = false; SetStatus("請先在感測器頁勾選要記錄的感測器。"); return;
+                }
+            }
+            SampleFrame(settings, live.CurrentSensorFrame);
         }
+    }
+
+    // Hardware-independent production seam: tests use the same file/session/error handling as Sample.
+    internal void StartFrames(SettingsService settings, IReadOnlyList<SensorReading> selected)
+    {
+        lock (_gate)
+        {
+            if (_isLogging) return;
+            ResetSessionState();
+            if (selected.Count == 0) { SetStatus("請先在感測器頁勾選要記錄的感測器。"); return; }
+            _pendingSensors = selected.Select(SensorLogSensorDefinition.FromReading).ToArray();
+            SelectedSensorCount = selected.Count; IsLogging = true; SetStatus("等待感測器取樣…");
+        }
+    }
+
+    internal void SampleFrame(SettingsService settings, SensorFrame frame)
+    {
+        lock (_gate)
+        {
+            if (!_isLogging || frame.Sequence <= 0 || _pendingSensors is null && _session is null) return;
+            try
+            {
+                long now = _timestamp();
+                if (_session is null)
+                {
+                    var (path, writer) = _createFile(settings.LogFolder, _utcNow());
+                    CurrentFile = path;
+                    try { _session = new SensorCsvSession(writer, _pendingSensors!, _startedTimestamp); }
+                    catch
+                    {
+                        try { writer.Dispose(); } catch { /* Preserve the primary initialization failure. */ }
+                        throw;
+                    }
+                    _pendingSensors = null;
+                }
+                var maxAge = TimeSpan.FromSeconds(Math.Max(5, settings.UpdateIntervalSec * 3));
+                if (_session.TryWriteFrame(frame, now, TimeSpan.FromSeconds(settings.LogIntervalSec), maxAge))
+                {
+                    RowCount = _session.FrameCount; CsvRecordCount = _session.RecordCount;
+                    SetStatus($"記錄中… {_session.SensorCount} 個感測器；選取變更於下次記錄生效");
+                }
+            }
+            catch (Exception ex)
+            {
+                LastError = ex.Message;
+                _statusRawPrefix = null;
+                _statusRawSuffix = "";
+                _primaryError = ex.Message;
+                CloseSession();
+                _pendingSensors = null; IsLogging = false;
+                SetErrorStatus();
+            }
+        }
+    }
+
+    private void CloseSession()
+    {
+        var session = _session; _session = null;
+        try { session?.Dispose(); }
         catch (Exception ex)
         {
-            StatusText = "寫入中斷：" + ex.Message;
-            StopLogging();
+            if (LastError.Length == 0)
+            {
+                LastError = ex.Message;
+                _primaryError = ex.Message;
+            }
+            else
+            {
+                LastError += "；關閉檔案：" + ex.Message;
+                _closeError = ex.Message;
+            }
         }
     }
 
@@ -103,8 +204,37 @@ public sealed class SensorLogService : ObservableObject
             Directory.CreateDirectory(settings.LogFolder);
             Process.Start(new ProcessStartInfo("explorer.exe", $"\"{settings.LogFolder}\"") { UseShellExecute = true });
         }
-        catch { /* 開啟資料夾為選用操作 */ }
+        catch (Exception ex) { SetMixedStatus("無法開啟記錄資料夾：", ex.Message); }
     }
 
-    private static string N(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+    private string _primaryError = "";
+    private string? _closeError;
+
+    private void SetStatus(string source)
+    {
+        _statusSource = source;
+        _statusRawPrefix = null;
+        _statusRawSuffix = "";
+        OnPropertyChanged(nameof(StatusText));
+        OnPropertyChanged(nameof(DisplayStatusText));
+    }
+
+    private void SetMixedStatus(string productPrefix, string rawSuffix)
+    {
+        _statusSource = "";
+        _statusRawPrefix = productPrefix;
+        _statusRawSuffix = rawSuffix;
+        OnPropertyChanged(nameof(StatusText));
+        OnPropertyChanged(nameof(DisplayStatusText));
+    }
+
+    private void SetErrorStatus()
+    {
+        _statusSource = "";
+        _statusRawPrefix = "記錄失敗：";
+        _statusRawSuffix = _primaryError
+            + (_closeError is null ? "" : LanguageService.T("；關閉檔案：") + _closeError);
+        OnPropertyChanged(nameof(StatusText));
+        OnPropertyChanged(nameof(DisplayStatusText));
+    }
 }

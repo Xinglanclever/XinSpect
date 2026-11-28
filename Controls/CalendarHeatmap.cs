@@ -124,14 +124,18 @@ public sealed class CalendarHeatmapChart : FrameworkElement
 
         // 標題：年月與總數——「怎麼算出來的」一併說明（只計有事件的日）
         int total = counts.Values.Sum();
-        var head = Format($"{year} 年 {month} 月 ・ {KindLabel}合計 {total}", 10.5, VizPalette.Ink);
+        string kind = KindLabel == "異常事件" ? LanguageService.T("異常事件") : KindLabel;
+        var head = Format(string.Format(CultureInfo.CurrentCulture,
+            LanguageService.T("{0} 年 {1} 月 ・ {2}合計 {3}"), year, month, kind, total), 10.5, VizPalette.Ink);
         dc.DrawText(head, new Point(padLeft, 2));
 
         // 星期表頭（週一在左）
         double colW = area.Width / 7;
         for (int i = 0; i < 7; i++)
         {
-            var ft = Format(WeekdayHeads[i], 9, VizPalette.Muted);
+            string weekday = LanguageService.IsEnglish
+                ? CultureInfo.InvariantCulture.DateTimeFormat.AbbreviatedDayNames[(i + 1) % 7] : WeekdayHeads[i];
+            var ft = Format(weekday, 9, VizPalette.Muted);
             dc.DrawText(ft, new Point(area.X + i * colW + colW / 2 - ft.Width / 2, area.Y - headH + 1));
         }
 
@@ -172,7 +176,7 @@ public sealed class CalendarHeatmapChart : FrameworkElement
         // 圖例：少 → 多（單色相深淺，不是溫度色階）
         double ly = h - 11;
         double lx = padLeft;
-        var cap0 = Format($"{KindLabel}少", 9, VizPalette.Muted);
+        var cap0 = Format(string.Format(CultureInfo.CurrentCulture, LanguageService.T("{0}少"), kind), 9, VizPalette.Muted);
         dc.DrawText(cap0, new Point(lx, ly - 2));
         lx += cap0.Width + 4;
         for (int i = 0; i < 5; i++)
@@ -183,7 +187,7 @@ public sealed class CalendarHeatmapChart : FrameworkElement
             dc.DrawRectangle(fill, null, new Rect(lx, ly, 14, 7));
             lx += 16;
         }
-        dc.DrawText(Format("多", 9, VizPalette.Muted), new Point(lx + 2, ly - 2));
+        dc.DrawText(Format(LanguageService.T("多"), 9, VizPalette.Muted), new Point(lx + 2, ly - 2));
     }
 
     private FormattedText Format(string text, double size, Brush brush)

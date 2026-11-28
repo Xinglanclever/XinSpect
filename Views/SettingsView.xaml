@@ -644,7 +644,7 @@
                                 <Border Background="{DynamicResource Surface2Brush}" CornerRadius="6" Margin="0,0,0,5" Padding="10,6">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="{Binding Time}" Foreground="{DynamicResource SecondaryInkBrush}" Width="72"/>
-                                        <TextBlock Text="{Binding Message}" Foreground="{DynamicResource PrimaryInkBrush}" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding DisplayMessage, Mode=OneWay}" Foreground="{DynamicResource PrimaryInkBrush}" TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>

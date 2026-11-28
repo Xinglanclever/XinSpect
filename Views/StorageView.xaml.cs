@@ -5,12 +5,31 @@ namespace XinSpect;
 
 public partial class StorageView : UserControl
 {
+    private DiskSpaceWindow? _diskSpaceWindow;
+
     public StorageView() => InitializeComponent();
 
     // Host.Content 延遲載入時 DataContext 由父容器繼承；仍以主視窗為後備。
     private MainViewModel? Vm =>
         DataContext as MainViewModel
         ?? Shell.Vm;
+
+    private void OpenDiskSpace_Click(object sender, RoutedEventArgs e)
+    {
+        if (_diskSpaceWindow is { IsLoaded: true } existing)
+        {
+            if (existing.WindowState == WindowState.Minimized) existing.WindowState = WindowState.Normal;
+            existing.Activate();
+            return;
+        }
+
+        var window = new DiskSpaceWindow { Owner = Window.GetWindow(this) };
+        window.DataContext ??= DataContext ?? Vm;
+        window.Loaded += (_, _) => LanguageService.ConvertVisualTree(window, LanguageService.IsSimplified);
+        window.Closed += (_, _) => _diskSpaceWindow = null;
+        _diskSpaceWindow = window;
+        window.Show();
+    }
 
     /// <summary>
     /// 兩個下拉選單的 SelectedIndex 是 XAML 字面值，但 ItemsSource 是繫結、且 DataContext 由外殼

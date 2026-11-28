@@ -14,9 +14,20 @@ public partial class MemoryView : UserControl
     public MemoryView()
     {
         InitializeComponent();
-        _truthTimer.Tick += (_, _) => Vm?.MemoryTruth.Refresh();
-        Loaded += (_, _) => { Vm?.MemoryTruth.Refresh(); Vm?.LargePage.EnsureChecked(); _truthTimer.Start(); };
+        _truthTimer.Tick += (_, _) => { Vm?.MemoryTruth.Refresh(); RefreshController(); };
+        Loaded += (_, _) => { Vm?.MemoryTruth.Refresh(); Vm?.LargePage.EnsureChecked(); RefreshController(); _truthTimer.Start(); };
+        DataContextChanged += (_, _) => RefreshController();
+        RefreshController();
         Unloaded += (_, _) => _truthTimer.Stop();
+    }
+
+    private void RefreshController()
+    {
+        var vm = Vm;
+        var timingSnapshot = vm?.Timings.Controller;
+        if (timingSnapshot is null || ReferenceEquals(timingSnapshot, MemoryControllerSnapshot.Empty))
+            timingSnapshot = MemoryControllerService.FromTimings(vm?.Timings, null, null);
+        ControllerPanel.DataContext = MemoryControllerService.Merge(vm?.Live?.ControllerSnapshot, timingSnapshot);
     }
 
     // Host.Content 延遲載入時 DataContext 由父容器繼承；仍以主視窗為後備。

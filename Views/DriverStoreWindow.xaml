@@ -1,0 +1,99 @@
+<Window x:Class="XinSpect.DriverStoreWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Driver Store 套件盤點與備份" Width="1180" Height="790" MinWidth="840" MinHeight="600"
+        WindowStartupLocation="CenterOwner" FontFamily="{StaticResource AppFont}"
+        Background="{DynamicResource PagePlaneBrush}" Foreground="{DynamicResource PrimaryInkBrush}"
+        UseLayoutRounding="True" Closing="Window_Closing">
+    <Window.Resources>
+        <Style x:Key="DriverGridCellText" TargetType="TextBlock">
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="ToolTip" Value="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+        </Style>
+        <Style x:Key="DriverGridCell" TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentDimBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource PrimaryInkBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/><RowDefinition Height="155"/><RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel Margin="0,0,0,14">
+            <TextBlock Text="Driver Store 套件盤點與備份" FontSize="23" FontWeight="SemiBold"/>
+            <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource SecondaryInkBrush}"
+                       Text="列出 Windows Driver Store 的套件，另列 WMI 回報的裝置綁定。未回報綁定不代表套件可刪除；本視窗只提供盤點與匯出備份。"/>
+            <TextBlock Margin="0,5,0,0" TextWrapping="Wrap" Foreground="{DynamicResource SecondaryInkBrush}"
+                       Text="來源：DismGetDrivers(AllDrivers=true)；綁定：Win32_PnPSignedDriver。DISM 僅驗證開機關鍵驅動的簽章，其餘可能為未知；日期是廠商宣告日期。"/>
+        </StackPanel>
+        <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,12">
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <Button x:Name="RefreshButton" Content="重新盤點" Click="Refresh_Click" Style="{StaticResource PrimaryButton}" MinHeight="38"/>
+                <StackPanel Grid.Column="1" Margin="16,0">
+                    <Label Target="{Binding ElementName=FilterBox}" Content="搜尋 INF、提供者、類別或版本" Foreground="{DynamicResource PrimaryInkBrush}" Padding="0,0,0,4"/>
+                    <TextBox x:Name="FilterBox" Style="{StaticResource SetTextBox}" TextChanged="Filter_Changed" MaxLength="150" AutomationProperties.Name="搜尋 Driver Store 套件"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                    <Button x:Name="SelectButton" Content="勾選可見的第三方套件" Click="SelectVisible_Click" Style="{StaticResource ToolButton}" MinHeight="30"/>
+                    <Button x:Name="ClearButton" Content="清除全部勾選" Click="Clear_Click" Style="{StaticResource ToolButton}" Margin="0,5,0,0" MinHeight="30"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        <DataGrid Grid.Row="2" x:Name="PackagesGrid" ItemsSource="{Binding Rows}" AutoGenerateColumns="False"
+                  CanUserAddRows="False" CanUserDeleteRows="False" HeadersVisibility="Column"
+                  SelectionMode="Single" SelectionUnit="FullRow" SelectionChanged="Package_SelectionChanged"
+                  EnableRowVirtualization="True" EnableColumnVirtualization="True" CellStyle="{StaticResource DriverGridCell}"
+                  AutomationProperties.Name="Driver Store 套件清單">
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Header="備份" Width="SizeToHeader" MinWidth="58">
+                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  IsEnabled="{Binding Package.CanExport}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                  AutomationProperties.Name="{Binding Package.PublishedName}" ToolTip="勾選此套件作為備份對象；Windows 隨附套件不可匯出"/>
+                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="已發佈 INF" Binding="{Binding Package.PublishedName}" IsReadOnly="True" Width="SizeToHeader" MinWidth="105" ElementStyle="{StaticResource DriverGridCellText}"/>
+                <DataGridTextColumn Header="套件來源" Binding="{Binding Package.OriginText}" IsReadOnly="True" Width="SizeToHeader" MinWidth="125" ElementStyle="{StaticResource DriverGridCellText}"/>
+                <DataGridTextColumn Header="提供者" Binding="{Binding Package.Provider}" IsReadOnly="True" Width="*" MinWidth="115" ElementStyle="{StaticResource DriverGridCellText}"/>
+                <DataGridTextColumn Header="類別" Binding="{Binding Package.ClassName}" IsReadOnly="True" Width="SizeToHeader" MinWidth="75" ElementStyle="{StaticResource DriverGridCellText}"/>
+                <DataGridTextColumn Header="版本" Binding="{Binding Package.Version}" IsReadOnly="True" Width="SizeToHeader" MinWidth="100" ElementStyle="{StaticResource DriverGridCellText}"/>
+                <DataGridTextColumn Header="宣告日期" Binding="{Binding Package.DateText}" IsReadOnly="True" Width="SizeToHeader" MinWidth="100" ElementStyle="{StaticResource DriverGridCellText}"/>
+                <DataGridTextColumn Header="簽章（DISM）" Binding="{Binding Package.SignatureText}" IsReadOnly="True" Width="*" MinWidth="140" ElementStyle="{StaticResource DriverGridCellText}"/>
+                <DataGridTextColumn Header="裝置綁定回報" Binding="{Binding Package.BindingText}" IsReadOnly="True" Width="2*" MinWidth="200" ElementStyle="{StaticResource DriverGridCellText}"/>
+            </DataGrid.Columns>
+        </DataGrid>
+        <GroupBox Grid.Row="3" Header="選取套件的來源與裝置綁定" Margin="0,10,0,10">
+            <TextBox x:Name="DetailsBox" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                     Background="{DynamicResource Surface2Brush}" Foreground="{DynamicResource PrimaryInkBrush}"
+                     BorderThickness="0" Padding="8" AutomationProperties.Name="選取套件明細"
+                     Text="按「重新盤點」讀取；不會自動匯出套件。"/>
+        </GroupBox>
+        <Border Grid.Row="4" Style="{StaticResource Card}">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,12,0">
+                        <Label Content="備份目的地" Target="{Binding ElementName=DestinationBox}" Foreground="{DynamicResource PrimaryInkBrush}" Padding="0,0,0,4"/>
+                        <TextBox x:Name="DestinationBox" Style="{StaticResource SetTextBox}" AutomationProperties.Name="備份目的地"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" x:Name="BrowseButton" Content="選擇資料夾" Click="Browse_Click" Style="{StaticResource ToolButton}" MinHeight="38" VerticalAlignment="Bottom"/>
+                </Grid>
+                <TextBlock TextWrapping="Wrap" Margin="0,7,0,9" Foreground="{DynamicResource SecondaryInkBrush}"
+                           Text="需系統管理員權限；由使用者選取本機目的地，再按匯出。每次建立全新子目錄與 manifest.json，含實際輸出檔案 SHA-256。備份尚未經還原驗證。"/>
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <Button x:Name="CancelButton" Content="取消作業" Click="Cancel_Click" IsEnabled="False" Style="{StaticResource ToolButton}" MinHeight="38" Margin="10,0"/>
+                        <Button x:Name="ExportButton" Content="匯出勾選套件" Click="Export_Click" IsEnabled="False" Style="{StaticResource PrimaryButton}" MinHeight="38"/>
+                    </StackPanel>
+                    <TextBlock x:Name="StatusText" Text="尚未盤點。" TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite"/>
+                </DockPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

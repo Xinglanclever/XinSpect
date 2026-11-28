@@ -19,6 +19,8 @@ namespace XinSpect;
 /// </remarks>
 public sealed class DimmKeyDiagram : FrameworkElement
 {
+    public DimmKeyDiagram() => this.RepaintOnThemeChange();
+
     /// <summary>目前偵測到的世代名稱（例如 "DDR4"）；用來高亮對應那一列。空字串＝都不高亮。</summary>
     public static readonly DependencyProperty DetectedProperty = DependencyProperty.Register(
         nameof(Detected), typeof(string), typeof(DimmKeyDiagram),
@@ -114,7 +116,7 @@ public sealed class DimmKeyDiagram : FrameworkElement
 
             // 缺口位置標註
             var notchTag = new FormattedText(
-                notch < 0.48 ? "缺口偏左" : notch > 0.52 ? "缺口偏右" : "缺口中央",
+                LanguageService.T(notch < 0.48 ? "缺口偏左" : notch > 0.52 ? "缺口偏右" : "缺口中央"),
                 CultureInfo.InvariantCulture, FlowDirection.LeftToRight, tf, 9, muted, 1.25);
             dc.DrawText(notchTag, new Point(notchX - notchTag.Width / 2, y + NotchDepth + 3));
         }

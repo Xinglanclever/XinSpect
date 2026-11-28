@@ -7,7 +7,16 @@
         <TabItem Style="{StaticResource PageTabItem}" Header="總覽">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
         <StackPanel>
-            <local:SectionHead Text="儲存" HelpKey="storage/儲存"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <local:SectionHead Text="儲存" HelpKey="storage/儲存" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Style="{StaticResource ToolButton}" Content="空間分析"
+                        AutomationProperties.Name="{Binding Content, RelativeSource={RelativeSource Self}}"
+                        ToolTip="開啟磁碟空間分析；選擇目錄並按開始後才掃描" Click="OpenDiskSpace_Click"/>
+            </Grid>
 
             <!-- 磁碟空間甜甜圈（各邏輯磁碟已用比例）── 置於最頂 -->
             <Border Style="{StaticResource Card}" local:Anim.RevealDelay="0">

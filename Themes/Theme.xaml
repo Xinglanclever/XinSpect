@@ -68,6 +68,7 @@
     <local:BoolToPromptConverter x:Key="BoolToPrompt"/>
     <local:BoolToPinGlyphConverter x:Key="BoolToPinGlyph"/>
     <local:BoolToCompactGlyphConverter x:Key="BoolToCompactGlyph"/>
+    <local:ChineseConverter x:Key="Lang"/>
     <local:DepthToIndentConverter x:Key="DepthToIndent"/>
     <local:HoursToTextConverter x:Key="HoursToText"/>
     <local:NullToCollapsedConverter x:Key="NullToCollapsed"/>
