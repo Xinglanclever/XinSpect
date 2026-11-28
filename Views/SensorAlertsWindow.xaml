@@ -45,7 +45,7 @@
                             <DataGridTextColumn Header="條件" Binding="{Binding ConditionText, Mode=OneWay, Converter={StaticResource Lang}}" Width="220"/>
                             <DataGridTextColumn Header="原因／來源" Binding="{Binding DisplayDetailText, Mode=OneWay}" Width="*" MinWidth="150"/>
                         </DataGrid.Columns>
-                        <DataGrid.RowStyle><Style TargetType="DataGridRow"><Setter Property="ToolTip"><Setter.Value><TextBlock><Run Text="{Binding SensorId}"/><LineBreak/><Run Text="{Binding Source}"/><LineBreak/><Run Text="{Binding ObservedAtUtc}"/></TextBlock></Setter.Value></Setter></Style></DataGrid.RowStyle>
+                        <DataGrid.RowStyle><Style TargetType="DataGridRow"><Setter Property="ToolTip"><Setter.Value><TextBlock><Run Text="{Binding SensorId, Mode=OneWay}"/><LineBreak/><Run Text="{Binding Source, Mode=OneWay}"/><LineBreak/><Run Text="{Binding ObservedAtUtc, Mode=OneWay}"/></TextBlock></Setter.Value></Setter></Style></DataGrid.RowStyle>
                     </DataGrid>
                     <GroupBox Grid.Row="1" Header="新增或編輯規則" Margin="0,14,0,0" Foreground="{DynamicResource PrimaryInkBrush}">
                         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">

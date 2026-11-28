@@ -12,10 +12,10 @@ Where it can read, it gives the value and its source (which register, which WMI 
 
 *Altius, accuratius, stabilius—veracius.*
 
-![Version](https://img.shields.io/badge/version-3.33-4C8DFF)
+![Version](https://img.shields.io/badge/version-3.34-4C8DFF)
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0A7EA4)
 ![Framework](https://img.shields.io/badge/.NET-10.0--windows%20(WPF)-512BD4)
-![Tests](https://img.shields.io/badge/tests-9683%20passed-3FB950)
+![Tests](https://img.shields.io/badge/tests-10042%20passed-3FB950)
 ![Mutation Score](https://img.shields.io/badge/Stryker-82%25-8B5CF6)
 > The 82% Stryker score covers only the pure-function `XinSpect.Decoders` library, not the GUI, CLI, or privileged access layer.
 ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
@@ -25,7 +25,7 @@ A **free, open-source Windows x64** toolbox: machine inspection, monitoring, ove
 
 Ships as a single portable executable. Low-level reads are **read-only by default**; advanced diagnostics and CPU/DRAM stress tests are **off by default**; hardware writes require a second safety switch plus per-action confirmation. It **collects and transmits no user data**.
 
-> **Document scope (v3.33 Special Edition).** This English edition mirrors the structure of the Traditional Chinese reference README. The long-form narrative (page-by-page anatomy, per-key provenance, threshold tables) lives in the Chinese encyclopedia, [docs/百科-v3.17.md](docs/百科-v3.17.md); where the two disagree, the Chinese text is correct.
+> **Document scope (v3.34 Special Edition).** This English edition mirrors the structure of the Traditional Chinese reference README. The long-form narrative (page-by-page anatomy, per-key provenance, threshold tables) lives in the Chinese encyclopedia, [docs/百科-v3.17.md](docs/百科-v3.17.md); where the two disagree, the Chinese text is correct.
 
 ## Contents
 
@@ -91,19 +91,19 @@ Running unelevated is not a fault: those pages show "—" plus the reason. That 
 
 | File | Size | Notes |
 |---|---|---|
-| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpect.exe) | 27,226,265 bytes | Main program; BlueSquadron is not embedded. Its page is marked unfinished and retains a bridge interface; the About page links to the CLI |
-| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole.exe) | 94,490,308 bytes | The xsc terminal (CLI). Runs standalone; carries the .NET 10 runtime, hence the size |
-| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/BlueSquadronBridge.exe) | 6,531,620 bytes | Separate bridge asset; BlueSquadron is unfinished and is not embedded in Desktop |
-| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpect-full.exe) | 199,992,512 bytes | Main program, runtime included: bundles the .NET 10 Desktop Runtime (same features as XinSpect.exe) |
-| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole-nort.exe) | 55,372,294 bytes | xsc terminal for Windows 11 / Server 2025, no runtime: requires .NET 10 Desktop Runtime |
-| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole-legacy-nort.exe) | 55,368,286 bytes | xsc terminal for Windows 10 / 2016 / 2019 / 2022, plain text, no runtime: requires .NET 10 Desktop Runtime |
-| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectDeploy.exe) | 62,976 bytes | Deployer: A = Desktop, B = CLI, AC/BC = product plus encyclopedia, C = encyclopedia only; choose a product source (GitHub / Drive / acceleration node); encyclopedia downloads are pinned to GitHub Releases |
-| [XinSpectDeploy-zh.zip](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectDeploy-zh.zip) | 26,791 bytes | Extract and run `XinSpect部署器.exe`. Starts in Traditional Chinese; press K for Simplified Chinese |
-| [XinSpect-Encyclopedia.html](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpect-Encyclopedia.html) | 2,069,424 bytes | Desktop downloads, verifies SHA-256 and caches it after the user clicks Encyclopedia in About; CLI remains self-contained |
-| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XsRegProbe.sys) | 24,064 bytes | XsRegProbe kernel probe driver (whitelisted read-only MSR/MMIO; internal review is not third-party certification). Not Microsoft-signed: the main program installs it into `ProgramData\XinSpect\Driver\` and registers a service; manual loading needs testsigning |
-| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.33/XinSpectConsole-legacy.exe) | 94,490,396 bytes | xsc terminal, **plain-text compatible build** for classic consoles on Windows 10 / Server 2016, 2019, 2022: no colour, no box drawing; facts/book/help behave the same |
+| [XinSpect.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.34/XinSpect.exe) | 27,226,265 bytes | Main program; BlueSquadron is not embedded. Its page is marked unfinished and retains a bridge interface; the About page links to the CLI |
+| [XinSpectConsole.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.34/XinSpectConsole.exe) | 94,490,308 bytes | The xsc terminal (CLI). Runs standalone; carries the .NET 10 runtime, hence the size |
+| [BlueSquadronBridge.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.34/BlueSquadronBridge.exe) | 6,531,620 bytes | Separate bridge asset; BlueSquadron is unfinished and is not embedded in Desktop |
+| [XinSpect-full.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.34/XinSpect-full.exe) | 199,992,512 bytes | Main program, runtime included: bundles the .NET 10 Desktop Runtime (same features as XinSpect.exe) |
+| [XinSpectConsole-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.34/XinSpectConsole-nort.exe) | 55,372,294 bytes | xsc terminal for Windows 11 / Server 2025, no runtime: requires .NET 10 Desktop Runtime |
+| [XinSpectConsole-legacy-nort.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.34/XinSpectConsole-legacy-nort.exe) | 55,368,286 bytes | xsc terminal for Windows 10 / 2016 / 2019 / 2022, plain text, no runtime: requires .NET 10 Desktop Runtime |
+| [XinSpectDeploy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.34/XinSpectDeploy.exe) | 62,976 bytes | Deployer: A = Desktop, B = CLI, AC/BC = product plus encyclopedia, C = encyclopedia only; choose a product source (GitHub / Drive / acceleration node); encyclopedia downloads are pinned to GitHub Releases |
+| [XinSpectDeploy-zh.zip](https://github.com/Xinglanclever/XinSpect/releases/download/v3.34/XinSpectDeploy-zh.zip) | 26,791 bytes | Extract and run `XinSpect部署器.exe`. Starts in Traditional Chinese; press K for Simplified Chinese |
+| [XinSpect-Encyclopedia.html](https://github.com/Xinglanclever/XinSpect/releases/download/v3.34/XinSpect-Encyclopedia.html) | 2,069,424 bytes | Desktop downloads, verifies SHA-256 and caches it after the user clicks Encyclopedia in About; CLI remains self-contained |
+| [XsRegProbe.sys](https://github.com/Xinglanclever/XinSpect/releases/download/v3.34/XsRegProbe.sys) | 24,064 bytes | XsRegProbe kernel probe driver (whitelisted read-only MSR/MMIO; internal review is not third-party certification). Not Microsoft-signed: the main program installs it into `ProgramData\XinSpect\Driver\` and registers a service; manual loading needs testsigning |
+| [XinSpectConsole-legacy.exe](https://github.com/Xinglanclever/XinSpect/releases/download/v3.34/XinSpectConsole-legacy.exe) | 94,490,396 bytes | xsc terminal, **plain-text compatible build** for classic consoles on Windows 10 / Server 2016, 2019, 2022: no colour, no box drawing; facts/book/help behave the same |
 
-> The table lists the published file sizes for v3.33. Check downloads against `SHA256SUMS.txt`.
+> The table lists the published file sizes for v3.34. Check downloads against `SHA256SUMS.txt`.
 
 v3.33 provides the English `XinSpectDeploy.exe` and `XinSpect部署器.exe`, which defaults to Traditional Chinese. The deployer binaries are 62,976 bytes each, within the 128 KB (131,072-byte) limit.
 
@@ -165,19 +165,19 @@ Every number here can be counted on a clean checkout. **How you count is part of
 | Catalogue keys / domains | 1,216 / 162 | Members of `Keys` in `Services/FactKeyCatalog.cs`; deduplicated first segment |
 | Dynamic key families | 72 | Members of `Families` in `Services/FactKeyDynamicCatalog.cs` |
 | Reachable navigation pages | 63 | `Key =` entries in `Nav/PageRegistry.cs` |
-| XAML files (including dialogs and controls) | 82 | `ls Views/*.xaml` |
+| XAML files (including dialogs and controls) | 87 | `ls Views/*.xaml` |
 | Help entries | 287 | Members of `Entries` in `Nav/HelpCatalog.cs` |
-| Service files | 709 | `find Services -name '*.cs' \| wc -l` |
-| Global C# files | 1,729 | Count all `*.cs`, excluding build, publish, work and dependency directories |
-| Latest full test run | 9,683 | Latest full regression, v3.33 |
-| Project test baseline | 9,683 | `TestSuiteBaseline.ProjectTests` in `Tests/TestSuiteBaseline.cs` |
-| Test source inventory | 731 test files; 7,340 Fact methods (including 7 FsCheck Properties) + 507 Theory methods = 7,847 methods | Source-tree and AST counts; not runtime cases |
+| Service files | 733 | `find Services -name '*.cs' \| wc -l` |
+| Global C# files | 1,788 | Count all `*.cs`, excluding build, publish, work and dependency directories |
+| Latest full test run | 10,042 | Latest full regression, v3.34 |
+| Project test baseline | 10,042 | `TestSuiteBaseline.ProjectTests` in `Tests/TestSuiteBaseline.cs` |
+| Test source inventory | 753 test files; 7,536 Fact methods (including 7 FsCheck Properties) + 542 Theory methods = 8,078 methods | Source-tree and AST counts; not runtime cases |
 | CLI commands | 51 | `grep -c 'case "' XinSpectCli/Program.cs` |
-| Changelog entries | 138 | Members of `Entries` in `Nav/ChangelogCatalog.cs` |
+| Changelog entries | 139 | Members of `Entries` in `Nav/ChangelogCatalog.cs` |
 
 Of 1,216 catalogue keys, most are reachable on mainstream platforms; special chipsets, OEM BIOSes, virtual machines and older platforms fall back to the six states. The fact catalogue (1,216 keys) spans hardware, operating system, security, diagnostics, provenance and governance — it is a catalogue, not a count of hardware readings. All 1,216 keys are listed with provenance in the Chinese encyclopedia.
 
-Source snapshot (November 22, 2026): 709 service files, 1,729 C# files and 731 test files; 7,340 public instance Fact methods (including 7 FsCheck Properties) and 507 Theory methods, 7,847 in total. These AST counts are neither runtime cases nor an ULTIMATE-10000 completion rate. The latest full regression (v3.33) passed 9,683 cases; source counts are separate evidence.
+Source snapshot (November 28, 2026): 733 service files, 1,788 C# files and 753 test files; 7,536 public instance Fact methods (including 7 FsCheck Properties) and 542 Theory methods, 8,078 in total. These AST counts are neither runtime cases nor an ULTIMATE-10000 completion rate. The latest full regression (v3.34) ran 10,042 cases; source counts are separate evidence.
 
 **What this table does not prove.** A catalogue key is not a hardware reading; the review catalogue (116 items in v3.17, 111 in v3.18) is not a count of confirmed defects and not a third-party audit.
 
@@ -201,7 +201,7 @@ cd XinSpect
 
 dotnet build XinSpect.csproj -c Release
 dotnet build XinSpectCli/XinSpectCli.csproj -c Release
-dotnet test Tests/XinSpect.Tests.csproj          # latest full regression (v3.33): 9,683 passed
+dotnet test Tests/XinSpect.Tests.csproj          # latest full regression (v3.34): 10,042 passed
 
 python Tools/gen-docs-html.py                    # regenerate 百科.html / 手冊.html
 python Tools/gen-readme-domains.py --check       # guard: README domain expansion vs catalogue
@@ -237,10 +237,11 @@ Third-party components (Intel XTU SDK, LibreHardwareMonitor, TraceEvent, NAudio,
 
 ## Version history
 
-The table below lists every release from 2.60 onward with its one-line summary. The complete itemised ledger (138 entries) lives in [docs/百科-v3.17.md](docs/百科-v3.17.md) (part 11); per-release notes are on the [Releases page](https://github.com/Xinglanclever/XinSpect/releases).
+The table below lists every release from 2.60 onward with its one-line summary. The complete itemised ledger (139 entries) lives in [docs/百科-v3.17.md](docs/百科-v3.17.md) (part 11); per-release notes are on the [Releases page](https://github.com/Xinglanclever/XinSpect/releases).
 
 | Version | Date | Summary |
 |---|---|---|
+| 3.34 | 2026-11-28 | Hardware Tools and Localization Updates |
 | 3.33 | 2026-11-22 | Cat World, live monitoring, and localized deployers |
 | 3.32 | 2026-11-21 | On-demand encyclopedia, installer choices and desktop updates |
 | 3.31 | 2026-11-18 | Special Edition: CLI memory provenance and PCIe ECAM boundary hardening |
@@ -324,4 +325,4 @@ If you would like to support individual maintenance, you can buy the author a co
 
 ---
 
-**About this document**: it corresponds to XinSpect v3.33 Special Edition (2026-11-22). The three READMEs differ only in language; their numbers and safety boundaries are pinned to one source by guard tests.
+**About this document**: it corresponds to XinSpect v3.34 Special Edition (2026-11-28). The three READMEs differ only in language; their numbers and safety boundaries are pinned to one source by guard tests.

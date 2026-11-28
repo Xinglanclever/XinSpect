@@ -32,5 +32,5 @@ internal static class TestSuiteBaseline
     /// 而 5476→5505 實際只加了 29 條（見 docs/PROGRESS-PLAN-2026-10-11.md 第 550 項的更正註記）。
     /// </para>
     /// </summary>
-    public const int ProjectTests = 9683;   // 最近一次全綠回歸：v3.33 候選版（2026-11-22）
+    public const int ProjectTests = 10042;  // v3.34 完整回歸測試案例總數（2026-11-28）
 }

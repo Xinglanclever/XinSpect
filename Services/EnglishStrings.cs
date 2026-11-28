@@ -2324,6 +2324,7 @@ public static class EnglishStrings
         ["清除全部勾選"] = "Clear all selections",
         ["清除選取"] = "Clear selection",
         ["版本 3.33 ・ ULTIMA XXXIII ・ 便攜單一執行檔"] = "Version 3.33 · ULTIMA XXXIII · Portable single-file executable",
+        ["版本 3.34 ・ ULTIMA XXXIV ・ 便攜單一執行檔"] = "Version 3.34 · ULTIMA XXXIV · Portable single-file executable",
         ["獨立桌面視窗 · 不會注入遊戲"] = "Separate desktop window · No game injection",
         ["現值 "] = "Current ",
         ["由人類和多個 AI 模型協力完成。"] = "Created by a human working with several AI models.",

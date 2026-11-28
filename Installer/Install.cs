@@ -36,7 +36,7 @@ using System.Threading;
 internal static class Install
 {
     // 部署器自己的版本號（UserAgent 與開場面板共用）。跟著主專案版號走，發版時順手改這裡。
-    private const string Version = "3.33";
+    private const string Version = "3.34";
     private const string EncyclopediaAsset = "XinSpect-Encyclopedia.html";
     private const long EncyclopediaMaxBytes = 20L * 1024L * 1024L;
     private static bool ChineseExecutable;
